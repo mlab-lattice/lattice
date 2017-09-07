@@ -14,7 +14,7 @@ import (
 const (
 	BuildResourceSingular = "build"
 	BuildResourcePlural   = "builds"
-	BuildResourceScope    = apiextensionsv1beta1.ClusterScoped
+	BuildResourceScope    = apiextensionsv1beta1.NamespaceScoped
 )
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
@@ -35,10 +35,11 @@ type BuildStatus struct {
 type BuildState string
 
 const (
-	BuildStateCreated    BuildState = "Created"
-	BuildStateProcessing BuildState = "Processing"
-	BuildStateFailed     BuildState = "Failed"
-	BuildStateSucceeded  BuildState = "Succeeded"
+	BuildStateCreated   BuildState = "Created"
+	BuildStateQueued    BuildState = "Queued"
+	BuildStateRunning   BuildState = "Running"
+	BuildStateSucceeded BuildState = "Succeeded"
+	BuildStateFailed    BuildState = "Failed"
 )
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
@@ -52,6 +53,7 @@ type BuildList struct {
 // It's needed because runtime.Scheme.AddKnownTypes requires the type to implement runtime.interfaces.Object,
 // which includes DeepCopyObject
 // TODO: figure out how to autogen this
+
 // GetGeneratedDeepCopyFuncs returns the generated funcs, since we aren't registering them.
 //
 // Deprecated: deepcopy registration will go away when static deepcopy is fully implemented.
