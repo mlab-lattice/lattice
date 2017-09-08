@@ -117,6 +117,7 @@ func (bc *BuildController) updateBuild(old, cur interface{}) {
 	bc.enqueueBuild(curB)
 }
 
+// FIXME: Job children are not getting GC'd
 func (bc *BuildController) deleteBuild(obj interface{}) {
 	d, ok := obj.(*crv1.Build)
 	if !ok {
