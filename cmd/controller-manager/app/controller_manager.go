@@ -40,7 +40,7 @@ func Run(kubeconfig string) {
 	ctx.InformerFactory.Start(ctx.Stop)
 
 	for resource, informer := range ctx.CRDInformers {
-		glog.V(4).Info("Starting %v informer", resource)
+		glog.V(4).Infof("Starting %v informer", resource)
 		informer.Run(ctx.Stop)
 	}
 }

@@ -56,6 +56,7 @@ func NewBuildController(
 	}
 
 	bc.syncHandler = bc.syncBuild
+	bc.enqueueBuild = bc.enqueue
 
 	bInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    bc.addBuild,
@@ -136,25 +137,25 @@ func (bc *BuildController) deleteBuild(obj interface{}) {
 
 // addJob enqueues the Build that manages a Job when the Job is created.
 func (bc *BuildController) addJob(obj interface{}) {
-	j := obj.(*batchv1.Job)
+	job := obj.(*batchv1.Job)
 
-	if j.DeletionTimestamp != nil {
+	if job.DeletionTimestamp != nil {
 		// On a restart of the controller manager, it's possible for an object to
 		// show up in a state that is already pending deletion.
-		bc.deleteJob(j)
+		bc.deleteJob(job)
 		return
 	}
 
 	// If it has a ControllerRef, that's all that matters.
-	if controllerRef := metav1.GetControllerOf(j); controllerRef != nil {
-		b := bc.resolveControllerRef(controllerRef)
+	if controllerRef := metav1.GetControllerOf(job); controllerRef != nil {
+		b := bc.resolveControllerRef(job.Namespace, controllerRef)
 
 		// Not a Build Job
 		if b == nil {
 			return
 		}
 
-		glog.V(4).Infof("Job %s added.", j.Name)
+		glog.V(4).Infof("Job %s added.", job.Name)
 		bc.enqueueBuild(b)
 		return
 	}
@@ -169,34 +170,35 @@ func (bc *BuildController) addJob(obj interface{}) {
 // (the one referenced in its ControllerRef), so an updated job should
 // have the same controller ref for both the old and current versions.
 func (bc *BuildController) updateJob(old, cur interface{}) {
-	curJ := cur.(*batchv1.Job)
-	oldJ := old.(*batchv1.Job)
-	if curJ.ResourceVersion == oldJ.ResourceVersion {
+	glog.V(5).Info("Got update job")
+	oldJob := old.(*batchv1.Job)
+	curJob := cur.(*batchv1.Job)
+	if curJob.ResourceVersion == oldJob.ResourceVersion {
 		// Periodic resync will send update events for all known jobs.
 		// Two different versions of the same job will always have different RVs.
+		glog.V(5).Info("Job ResourceVersions are the same")
 		return
 	}
 
-	curControllerRef := metav1.GetControllerOf(curJ)
-	oldControllerRef := metav1.GetControllerOf(oldJ)
+	curControllerRef := metav1.GetControllerOf(curJob)
+	oldControllerRef := metav1.GetControllerOf(oldJob)
 	controllerRefChanged := !reflect.DeepEqual(curControllerRef, oldControllerRef)
 	if controllerRefChanged {
 		// The ControllerRef was changed. If this is a Build Job, this shouldn't happen.
-		if b := bc.resolveControllerRef(oldControllerRef); b != nil {
+		if b := bc.resolveControllerRef(oldJob.Namespace, oldControllerRef); b != nil {
 			// TODO: send warn event here, this should not happen
 		}
 	}
 
 	// If it has a ControllerRef, that's all that matters.
 	if curControllerRef != nil {
-		b := bc.resolveControllerRef(curControllerRef)
+		b := bc.resolveControllerRef(curJob.Namespace, curControllerRef)
 
 		// Not a Build Job
 		if b == nil {
 			return
 		}
 
-		glog.V(4).Infof("Job %s updated.", curJ.Name)
 		bc.enqueueBuild(b)
 		return
 	}
@@ -237,7 +239,7 @@ func (bc *BuildController) deleteJob(obj interface{}) {
 		return
 	}
 
-	b := bc.resolveControllerRef(controllerRef)
+	b := bc.resolveControllerRef(job.Namespace, controllerRef)
 
 	// Not a Build job
 	if b == nil {
@@ -261,18 +263,14 @@ func (bc *BuildController) enqueue(build *crv1.Build) {
 // resolveControllerRef returns the controller referenced by a ControllerRef,
 // or nil if the ControllerRef could not be resolved to a matching controller
 // of the correct Kind.
-func (bc *BuildController) resolveControllerRef(controllerRef *metav1.OwnerReference) *crv1.Build {
+func (bc *BuildController) resolveControllerRef(namespace string, controllerRef *metav1.OwnerReference) *crv1.Build {
 	// We can't look up by UID, so look up by Name and then verify UID.
 	// Don't even try to look up by Name if it's the wrong Kind.
 	if controllerRef.Kind != controllerKind.Kind {
 		return nil
 	}
 
-	buildKey, err := cache.MetaNamespaceKeyFunc(controllerRef.Name)
-	if err != nil {
-		return nil
-	}
-
+	buildKey := fmt.Sprintf("%v/%v", namespace, controllerRef.Name)
 	bi, exists, err := bc.buildStore.GetByKey(buildKey)
 	if err != nil || !exists {
 		return nil
@@ -367,6 +365,7 @@ func (bc *BuildController) processNextWorkItem() bool {
 // syncDeployment will sync the deployment with the given key.
 // This function is not meant to be invoked concurrently with the same key.
 func (bc *BuildController) syncBuild(key string) error {
+	glog.Flush()
 	startTime := time.Now()
 	glog.V(4).Infof("Started syncing build %q (%v)", key, startTime)
 	defer func() {
@@ -424,7 +423,7 @@ func (bc *BuildController) syncBuildStatus(build *crv1.Build, job *batchv1.Job) 
 	err := bc.latticeResourceRestClient.Put().
 		Namespace(build.Namespace).
 		Resource(crv1.BuildResourcePlural).
-		SubResource("status").
+		Name(build.Name).
 		Body(build).
 		Do().
 		Into(nil)

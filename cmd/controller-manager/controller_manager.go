@@ -1,4 +1,4 @@
-package controller_manager
+package main
 
 import (
 	"flag"
@@ -10,6 +10,7 @@ var kubeconfig string
 
 func init() {
 	flag.StringVar(&kubeconfig, "kubeconfig", "", "path to kubeconfig file")
+	flag.Parse()
 }
 
 func main() {
