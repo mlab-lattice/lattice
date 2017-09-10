@@ -1,3 +1,6 @@
+# https://stackoverflow.com/questions/18136918/how-to-get-current-relative-directory-of-your-makefile
+DIR := $(patsubst %/,%,$(dir $(abspath $(lastword $(MAKEFILE_LIST)))))
+
 .PHONY: build
 build: gazelle
 	@bazel build //...:all
@@ -26,6 +29,7 @@ local-delete: minikube-delete
 .PHONY: local-bootstrap
 local-bootstrap:
 	@bazel run -- //cmd/bootstrap -kubeconfig ~/.kube/config -logtostderr -provider local
+	$(DIR)/bin/seed-local-build-images.sh
 
 .PHONY: minikube-start
 minikube-start:

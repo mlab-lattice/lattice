@@ -106,6 +106,7 @@ func (bc *BuildController) getGitRepositoryBuildJobSpec(build *crv1.Build) (batc
 				},
 				// TODO: add failure policy once it is supported: https://github.com/kubernetes/kubernetes/issues/30243
 				RestartPolicy: corev1.RestartPolicyNever,
+				DNSPolicy:     corev1.DNSDefault,
 			},
 		},
 	}
