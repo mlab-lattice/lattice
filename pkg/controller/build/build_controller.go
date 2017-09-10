@@ -23,11 +23,14 @@ import (
 	"k8s.io/client-go/util/workqueue"
 
 	crv1 "github.com/mlab-lattice/kubernetes-integration/pkg/api/customresource/v1"
+	"sync"
 )
 
 var controllerKind = crv1.SchemeGroupVersion.WithKind("Build")
 
 type BuildController struct {
+	provider string
+
 	syncHandler  func(bKey string) error
 	enqueueBuild func(build *crv1.Build)
 
@@ -37,19 +40,30 @@ type BuildController struct {
 	buildStore       cache.Store
 	buildStoreSynced cache.InformerSynced
 
+	configStore       cache.Store
+	configStoreSynced cache.InformerSynced
+	configSetChan     chan struct{}
+	configSet         bool
+
 	jobLister       batchlisters.JobLister
 	jobListerSynced cache.InformerSynced
+
+	configLock sync.RWMutex
+	config     crv1.BuildConfig
 
 	queue workqueue.RateLimitingInterface
 }
 
 func NewBuildController(
 	latticeResourceRestClient rest.Interface,
-	bInformer cache.SharedInformer,
-	jInformer batchinformers.JobInformer,
+	buildInformer cache.SharedInformer,
+	configInformer cache.SharedInformer,
+	jobInformer batchinformers.JobInformer,
 	kubeClient clientset.Interface,
+	provider string,
 ) *BuildController {
 	bc := &BuildController{
+		provider:                  provider,
 		latticeResourceRestClient: latticeResourceRestClient,
 		kubeClient:                kubeClient,
 		queue:                     workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "build"),
@@ -58,22 +72,33 @@ func NewBuildController(
 	bc.syncHandler = bc.syncBuild
 	bc.enqueueBuild = bc.enqueue
 
-	bInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+	buildInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    bc.addBuild,
 		UpdateFunc: bc.updateBuild,
 		// This will enter the sync loop and no-op, because the deployment has been deleted from the store.
 		DeleteFunc: bc.deleteBuild,
 	})
-	bc.buildStore = bInformer.GetStore()
-	bc.buildStoreSynced = bInformer.HasSynced
+	bc.buildStore = buildInformer.GetStore()
+	bc.buildStoreSynced = buildInformer.HasSynced
 
-	jInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+	configInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+		// It's assumed there is always one and only one config object.
+		AddFunc:    bc.addConfig,
+		UpdateFunc: bc.updateConfig,
+		// TODO: should we listen for/handle delete?
+	})
+	bc.configStore = configInformer.GetStore()
+	bc.configStoreSynced = configInformer.HasSynced
+
+	bc.configSetChan = make(chan struct{})
+
+	jobInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    bc.addJob,
 		UpdateFunc: bc.updateJob,
 		DeleteFunc: bc.deleteJob,
 	})
-	bc.jobLister = jInformer.Lister()
-	bc.jobListerSynced = jInformer.Informer().HasSynced
+	bc.jobLister = jobInformer.Lister()
+	bc.jobListerSynced = jobInformer.Informer().HasSynced
 
 	return bc
 }
@@ -88,9 +113,14 @@ func (bc *BuildController) Run(workers int, stopCh <-chan struct{}) {
 	defer glog.Infof("Shutting down build controller")
 
 	// wait for your secondary caches to fill before starting your work
-	if !cache.WaitForCacheSync(stopCh, bc.buildStoreSynced, bc.jobListerSynced) {
+	if !cache.WaitForCacheSync(stopCh, bc.buildStoreSynced, bc.configStoreSynced, bc.jobListerSynced) {
 		return
 	}
+
+	glog.V(4).Info("Caches synced. Waiting for config to be set")
+
+	// wait for config to be set
+	<-bc.configSetChan
 
 	// start up your worker threads based on threadiness.  Some controllers
 	// have multiple kinds of workers
@@ -102,6 +132,30 @@ func (bc *BuildController) Run(workers int, stopCh <-chan struct{}) {
 
 	// wait until we're told to stop
 	<-stopCh
+}
+
+func (bc *BuildController) addConfig(obj interface{}) {
+	config := obj.(*crv1.Config)
+	glog.V(4).Infof("Adding Config %s", config.Name)
+
+	bc.configLock.Lock()
+	defer bc.configLock.Unlock()
+	bc.config = config.DeepCopy().Spec.Build
+
+	if !bc.configSet {
+		bc.configSet = true
+		close(bc.configSetChan)
+	}
+}
+
+func (bc *BuildController) updateConfig(old, cur interface{}) {
+	oldConfig := old.(*crv1.Config)
+	curConfig := cur.(*crv1.Config)
+	glog.V(4).Infof("Updating Config %s", oldConfig.Name)
+
+	bc.configLock.Lock()
+	defer bc.configLock.Unlock()
+	bc.config = curConfig.DeepCopy().Spec.Build
 }
 
 func (bc *BuildController) addBuild(obj interface{}) {
@@ -400,7 +454,7 @@ func (bc *BuildController) syncBuild(key string) error {
 }
 
 func (bc *BuildController) createBuildJob(build *crv1.Build) error {
-	job := getBuildJob(build)
+	job := bc.getBuildJob(build)
 	jobResp, err := bc.kubeClient.BatchV1().Jobs(build.Namespace).Create(job)
 	if err != nil {
 		// TODO: send warn event
@@ -413,6 +467,7 @@ func (bc *BuildController) createBuildJob(build *crv1.Build) error {
 }
 
 func (bc *BuildController) syncBuildStatus(build *crv1.Build, job *batchv1.Job) error {
+	// FIXME: add docker image fqn to build spec
 	newStatus := calculateBuildStatus(job)
 
 	if reflect.DeepEqual(build.Status, newStatus) {

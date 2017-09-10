@@ -15,7 +15,7 @@ var (
 
 	SchemeGroupVersion = schema.GroupVersion{Group: GroupName, Version: "v1"}
 
-	TopLevelTypes = []struct {
+	Resources = []struct {
 		Singular string
 		Plural   string
 		Scope    apiextensionsv1beta1.ResourceScope
@@ -33,6 +33,15 @@ var (
 			Type:     &Build{},
 			ListType: &BuildList{},
 		},
+		{
+			Singular: ConfigResourceSingular,
+			Plural:   ConfigResourcePlural,
+			Scope:    ConfigResourceScope,
+			Kind:     "Config",
+			ListKind: "ConfigList",
+			Type:     &Config{},
+			ListType: &ConfigList{},
+		},
 	}
 )
 
@@ -43,10 +52,10 @@ func Resource(resource string) schema.GroupResource {
 
 // addKnownTypes adds the set of types defined in this package to the supplied scheme.
 func addKnownTypes(scheme *runtime.Scheme) error {
-	for _, topLevelType := range TopLevelTypes {
+	for _, resource := range Resources {
 		scheme.AddKnownTypes(SchemeGroupVersion,
-			topLevelType.Type.(runtime.Object),
-			topLevelType.ListType.(runtime.Object),
+			resource.Type.(runtime.Object),
+			resource.ListType.(runtime.Object),
 		)
 	}
 	metav1.AddToGroupVersion(scheme, SchemeGroupVersion)

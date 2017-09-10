@@ -19,7 +19,7 @@ import (
 	"github.com/golang/glog"
 )
 
-func Run(kubeconfig string) {
+func Run(kubeconfig, provider string) {
 	// TODO: create in-cluster config if in cluster
 	config, err := clientcmd.BuildConfigFromFlags("", kubeconfig)
 	if err != nil {
@@ -32,7 +32,7 @@ func Run(kubeconfig string) {
 	}
 
 	// TODO: setting stop as nil for now, won't actually need it until leader-election is used
-	ctx := CreateControllerContext(rest.Interface(latticeResourceClient), config, nil)
+	ctx := CreateControllerContext(rest.Interface(latticeResourceClient), config, provider, nil)
 	glog.V(1).Info("Starting controllers")
 	StartControllers(ctx, CreateControllerInitializers())
 
@@ -41,8 +41,11 @@ func Run(kubeconfig string) {
 
 	for resource, informer := range ctx.CRDInformers {
 		glog.V(4).Infof("Starting %v informer", resource)
-		informer.Run(ctx.Stop)
+		go informer.Run(ctx.Stop)
+
 	}
+
+	select {}
 }
 
 type ClientBuilder struct {
@@ -55,16 +58,16 @@ func (cb ClientBuilder) ClientOrDie(name string) clientset.Interface {
 }
 
 type ControllerContext struct {
+	Provider string
+
 	// InformerFactory gives access to base kubernetes informers.
 	InformerFactory informers.SharedInformerFactory
 
-	CRDInformers map[string]cache.SharedInformer
 	// Need to create shared informers for each of our CRDs.
-	BuildInformer cache.SharedInformer
+	CRDInformers map[string]cache.SharedInformer
 
 	LatticeResourceRestClient rest.Interface
-
-	ClientBuilder ClientBuilder
+	ClientBuilder             ClientBuilder
 
 	// Stop is the stop channel
 	Stop <-chan struct{}
@@ -73,6 +76,7 @@ type ControllerContext struct {
 func CreateControllerContext(
 	latticeResourceClient rest.Interface,
 	kubeconfig *rest.Config,
+	provider string,
 	stop <-chan struct{},
 ) ControllerContext {
 	cb := ClientBuilder{
@@ -95,10 +99,24 @@ func CreateControllerContext(
 		time.Duration(12*time.Hour),
 	)
 
+	configListerWatcher := cache.NewListWatchFromClient(
+		latticeResourceClient,
+		crv1.ConfigResourcePlural,
+		apiv1.NamespaceAll,
+		fields.Everything(),
+	)
+	configInformer := cache.NewSharedInformer(
+		configListerWatcher,
+		&crv1.Config{},
+		time.Duration(12*time.Hour),
+	)
+
 	return ControllerContext{
+		Provider:        provider,
 		InformerFactory: sharedInformers,
 		CRDInformers: map[string]cache.SharedInformer{
-			"build": buildInformer,
+			"build":  buildInformer,
+			"config": configInformer,
 		},
 		LatticeResourceRestClient: latticeResourceClient,
 		ClientBuilder:             cb,
