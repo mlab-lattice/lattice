@@ -1,5 +1,6 @@
 # https://stackoverflow.com/questions/18136918/how-to-get-current-relative-directory-of-your-makefile
 DIR := $(patsubst %/,%,$(dir $(abspath $(lastword $(MAKEFILE_LIST)))))
+MINIKUBE_PROFILE = lattice-kubernetes-integration-dev
 
 .PHONY: build
 build: gazelle
@@ -33,12 +34,17 @@ local-bootstrap: gazelle
 
 .PHONY: minikube-start
 minikube-start:
-	@minikube start
+	@minikube start -p $(MINIKUBE_PROFILE)
 
 .PHONY: minikube-stop
 minikube-stop:
-	@minikube stop
+	@minikube stop -p $(MINIKUBE_PROFILE)
 
 .PHONY: minikube-delete
 minikube-delete:
-	@minikube delete
+	@minikube delete -p $(MINIKUBE_PROFILE)
+
+.PHONY: minikube-ssh
+minikube-ssh:
+	@minikube ssh -p $(MINIKUBE_PROFILE)
+
