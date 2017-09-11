@@ -39,7 +39,7 @@ go_register_toolchains()
 
 go_repository(
     name = "com_github_mlab_lattice_core",
-    commit = "25ae84c7d2aa0a6608c62725be09ca0ec0436a04",
+    commit = "c005ec1b4814af658fa8488f8d883913fb57bfd2",
     importpath = "github.com/mlab-lattice/core",
     remote = "git@github.com:mlab-lattice/core.git",
     vcs = "git",

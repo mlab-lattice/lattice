@@ -2,12 +2,12 @@
 
 cat <<EOF | kubectl create -f -
 apiVersion: lattice.mlab.com/v1
-kind: Build
+kind: ComponentBuild
 metadata:
   name: ${1}
   namespace: default
 spec:
-  BuildDefinitionBlock:
+  definitionBlock:
     command: npm install
     git_repository:
       commit: 16d0ad5a7ef969b34174c39f12a588a38f4ff076

@@ -1,4 +1,4 @@
-package build
+package componentbuild
 
 import (
 	"fmt"
@@ -27,19 +27,19 @@ const (
 	jobDockerFqnAnnotationKey = "docker-image-fqn"
 )
 
-func getBuildJobName(b *crv1.Build) string {
+func getBuildJobName(b *crv1.ComponentBuild) string {
 	return fmt.Sprintf("lattice-build-%s", b.Name)
 }
 
-func (bc *BuildController) getBuildJob(b *crv1.Build) *batchv1.Job {
+func (cbc *ComponentBuildController) getBuildJob(b *crv1.ComponentBuild) *batchv1.Job {
 	// Need a consistent view of our config while generating the Job
-	bc.configLock.RLock()
-	defer bc.configLock.RUnlock()
+	cbc.configLock.RLock()
+	defer cbc.configLock.RUnlock()
 
 	name := getBuildJobName(b)
 
 	// FIXME: get job spec for build.DockerImage as well
-	jobSpec, dockerImageFqn := bc.getGitRepositoryBuildJobSpec(b)
+	jobSpec, dockerImageFqn := cbc.getGitRepositoryBuildJobSpec(b)
 
 	labels := map[string]string{
 		"mlab.lattice.com/build": "true",
@@ -60,14 +60,14 @@ func (bc *BuildController) getBuildJob(b *crv1.Build) *batchv1.Job {
 	return job
 }
 
-func (bc *BuildController) getGitRepositoryBuildJobSpec(build *crv1.Build) (batchv1.JobSpec, string) {
-	pullGitRepoContainer := bc.getPullGitRepoContainer(build)
-	authorizeDockerContainer := bc.getAuthorizeDockerContainer()
-	buildDockerImageContainer, dockerImageFqn := bc.getBuildDockerImageContainer(build)
+func (cbc *ComponentBuildController) getGitRepositoryBuildJobSpec(build *crv1.ComponentBuild) (batchv1.JobSpec, string) {
+	pullGitRepoContainer := cbc.getPullGitRepoContainer(build)
+	authorizeDockerContainer := cbc.getAuthorizeDockerContainer()
+	buildDockerImageContainer, dockerImageFqn := cbc.getBuildDockerImageContainer(build)
 	name := getBuildJobName(build)
 
 	var workingDirectoryVolumeSource corev1.VolumeSource
-	switch bc.provider {
+	switch cbc.provider {
 	case providerutils.Local:
 		workingDirectoryVolumeSource = corev1.VolumeSource{
 			HostPath: &corev1.HostPathVolumeSource{
@@ -121,10 +121,10 @@ func (bc *BuildController) getGitRepositoryBuildJobSpec(build *crv1.Build) (batc
 	return jobSpec, dockerImageFqn
 }
 
-func (bc *BuildController) getPullGitRepoContainer(build *crv1.Build) corev1.Container {
+func (cbc *ComponentBuildController) getPullGitRepoContainer(build *crv1.ComponentBuild) corev1.Container {
 	pullGitRepoContainer := corev1.Container{
 		Name:    "pull-git-repo",
-		Image:   bc.config.PullGitRepoImage,
+		Image:   cbc.config.PullGitRepoImage,
 		Command: []string{"./pull-git-repo.sh"},
 		Env: []corev1.EnvVar{
 			{
@@ -165,10 +165,10 @@ func (bc *BuildController) getPullGitRepoContainer(build *crv1.Build) corev1.Con
 	return pullGitRepoContainer
 }
 
-func (bc *BuildController) getAuthorizeDockerContainer() *corev1.Container {
-	switch bc.provider {
+func (cbc *ComponentBuildController) getAuthorizeDockerContainer() *corev1.Container {
+	switch cbc.provider {
 	case providerutils.AWS:
-		authorizeEcrContainer := bc.getAuthorizeEcrContainer()
+		authorizeEcrContainer := cbc.getAuthorizeEcrContainer()
 		return &authorizeEcrContainer
 	case providerutils.Local:
 		return nil
@@ -177,10 +177,10 @@ func (bc *BuildController) getAuthorizeDockerContainer() *corev1.Container {
 	}
 }
 
-func (bc *BuildController) getAuthorizeEcrContainer() corev1.Container {
+func (cbc *ComponentBuildController) getAuthorizeEcrContainer() corev1.Container {
 	return corev1.Container{
 		Name:    "get-ecr-creds",
-		Image:   bc.config.AuthorizeDockerImage,
+		Image:   cbc.config.AuthorizeDockerImage,
 		Command: []string{"./get-ecr-creds.sh"},
 		Env: []corev1.EnvVar{
 			{
@@ -197,10 +197,10 @@ func (bc *BuildController) getAuthorizeEcrContainer() corev1.Container {
 	}
 }
 
-func (bc *BuildController) getBuildDockerImageContainer(build *crv1.Build) (corev1.Container, string) {
+func (cbc *ComponentBuildController) getBuildDockerImageContainer(build *crv1.ComponentBuild) (corev1.Container, string) {
 	buildDockerImageContainer := corev1.Container{
 		Name:    "build-docker-image",
-		Image:   bc.config.BuildDockerImage,
+		Image:   cbc.config.BuildDockerImage,
 		Command: []string{"./build-docker-image.sh"},
 		Env: []corev1.EnvVar{
 			{
@@ -209,7 +209,7 @@ func (bc *BuildController) getBuildDockerImageContainer(build *crv1.Build) (core
 			},
 			{
 				Name:  "DOCKER_REGISTRY",
-				Value: bc.config.DockerConfig.Registry,
+				Value: cbc.config.DockerConfig.Registry,
 			},
 			{
 				Name:  "BUILD_CMD",
@@ -228,16 +228,16 @@ func (bc *BuildController) getBuildDockerImageContainer(build *crv1.Build) (core
 		},
 	}
 
-	repo := bc.config.DockerConfig.Repository
+	repo := cbc.config.DockerConfig.Repository
 	tag := build.Name
-	if bc.config.DockerConfig.RepositoryPerImage {
+	if cbc.config.DockerConfig.RepositoryPerImage {
 		repo = build.Name
 		tag = fmt.Sprint(time.Now().Unix())
 	}
 
 	dockerImageFqn := fmt.Sprintf(
 		"%v/%v:%v",
-		bc.config.DockerConfig.Registry,
+		cbc.config.DockerConfig.Registry,
 		repo,
 		tag,
 	)
@@ -256,7 +256,7 @@ func (bc *BuildController) getBuildDockerImageContainer(build *crv1.Build) (core
 	)
 
 	push := "0"
-	if bc.config.DockerConfig.Push {
+	if cbc.config.DockerConfig.Push {
 		push = "1"
 	}
 	buildDockerImageContainer.Env = append(

@@ -89,13 +89,13 @@ func CreateControllerContext(
 
 	buildListerWatcher := cache.NewListWatchFromClient(
 		latticeResourceClient,
-		crv1.BuildResourcePlural,
+		crv1.ComponentBuildResourcePlural,
 		apiv1.NamespaceAll,
 		fields.Everything(),
 	)
 	buildInformer := cache.NewSharedInformer(
 		buildListerWatcher,
-		&crv1.Build{},
+		&crv1.ComponentBuild{},
 		time.Duration(12*time.Hour),
 	)
 

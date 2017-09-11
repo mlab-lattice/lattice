@@ -53,10 +53,10 @@ func main() {
 		panic(err)
 	}
 
-	var buildConfig crv1.BuildConfig
+	var buildConfig crv1.ComponentBuildConfig
 	switch provider {
 	case providerutil.Local:
-		buildConfig = crv1.BuildConfig{
+		buildConfig = crv1.ComponentBuildConfig{
 			DockerConfig: crv1.BuildDockerConfig{
 				Registry:           "lattice-local",
 				RepositoryPerImage: true,
@@ -74,7 +74,7 @@ func main() {
 			Name: "global",
 		},
 		Spec: crv1.ConfigSpec{
-			Build: buildConfig,
+			ComponentBuild: buildConfig,
 		},
 	}
 

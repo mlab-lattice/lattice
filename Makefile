@@ -27,7 +27,7 @@ local-down: minikube-stop
 local-delete: minikube-delete
 
 .PHONY: local-bootstrap
-local-bootstrap:
+local-bootstrap: gazelle
 	@bazel run -- //cmd/bootstrap -kubeconfig ~/.kube/config -logtostderr -provider local
 	$(DIR)/bin/seed-local-build-images.sh
 

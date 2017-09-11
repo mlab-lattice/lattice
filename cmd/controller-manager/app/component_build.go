@@ -1,11 +1,11 @@
 package app
 
 import (
-	"github.com/mlab-lattice/kubernetes-integration/pkg/controller/build"
+	"github.com/mlab-lattice/kubernetes-integration/pkg/controller/componentbuild"
 )
 
 func initializeBuildController(ctx ControllerContext) {
-	go build.NewBuildController(
+	go componentbuild.NewComponentBuildController(
 		ctx.LatticeResourceRestClient,
 		ctx.CRDInformers["build"],
 		ctx.CRDInformers["config"],

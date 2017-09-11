@@ -38,12 +38,12 @@ func main() {
 	commit := "16d0ad5a7ef969b34174c39f12a588a38f4ff076"
 	command := "npm install"
 	language := "node:boron"
-	build := &crv1.Build{
+	build := &crv1.ComponentBuild{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "example1",
 		},
-		Spec: crv1.BuildSpec{
-			BuildDefinitionBlock: sdb.Build{
+		Spec: crv1.ComponentBuildSpec{
+			BuildDefinitionBlock: sdb.ComponentBuild{
 				GitRepository: &sdb.GitRepository{
 					Url:    "https://github.com/kevindrosendahl/example__hello-world-service-chaining",
 					Commit: &commit,
@@ -52,16 +52,16 @@ func main() {
 				Language: &language,
 			},
 		},
-		Status: crv1.BuildStatus{
-			State:   crv1.BuildStatePending,
+		Status: crv1.ComponentBuildStatus{
+			State:   crv1.ComponentBuildStatePending,
 			Message: "Created, not processed yet",
 		},
 	}
-	var buildResult crv1.Build
+	var buildResult crv1.ComponentBuild
 
 	err = crClient.Post().
 		Namespace("default").
-		Resource(crv1.BuildResourcePlural).
+		Resource(crv1.ComponentBuildResourcePlural).
 		Body(build).
 		Do().Into(&buildResult)
 	if err == nil {
@@ -72,8 +72,8 @@ func main() {
 		panic(err)
 	}
 
-	buildList := crv1.BuildList{}
-	err = crClient.Get().Resource(crv1.BuildResourcePlural).Do().Into(&buildList)
+	buildList := crv1.ComponentBuildList{}
+	err = crClient.Get().Resource(crv1.ComponentBuildResourcePlural).Do().Into(&buildList)
 	if err != nil {
 		panic(err)
 	}

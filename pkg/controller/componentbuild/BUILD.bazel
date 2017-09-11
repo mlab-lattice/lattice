@@ -3,10 +3,10 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library")
 go_library(
     name = "go_default_library",
     srcs = [
-        "build_controller.go",
+        "component_build_controller.go",
         "job_util.go",
     ],
-    importpath = "github.com/mlab-lattice/kubernetes-integration/pkg/controller/build",
+    importpath = "github.com/mlab-lattice/kubernetes-integration/pkg/controller/componentbuild",
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/api/customresource/v1:go_default_library",

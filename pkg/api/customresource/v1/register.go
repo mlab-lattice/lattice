@@ -25,13 +25,13 @@ var (
 		ListType runtime.Object
 	}{
 		{
-			Singular: BuildResourceSingular,
-			Plural:   BuildResourcePlural,
-			Scope:    BuildResourceScope,
-			Kind:     "Build",
-			ListKind: "BuildList",
-			Type:     &Build{},
-			ListType: &BuildList{},
+			Singular: ComponentBuildResourceSingular,
+			Plural:   ComponentBuildResourcePlural,
+			Scope:    ComponentBuildResourceScope,
+			Kind:     "ComponentBuild",
+			ListKind: "ComponentBuildList",
+			Type:     &ComponentBuild{},
+			ListType: &ComponentBuildList{},
 		},
 		{
 			Singular: ConfigResourceSingular,
@@ -41,6 +41,15 @@ var (
 			ListKind: "ConfigList",
 			Type:     &Config{},
 			ListType: &ConfigList{},
+		},
+		{
+			Singular: ServiceBuildResourceSingular,
+			Plural:   ServiceBuildResourcePlural,
+			Scope:    ServiceBuildResourceScope,
+			Kind:     "ServiceBuild",
+			ListKind: "ServiceBuildList",
+			Type:     &ComponentBuild{},
+			ListType: &ComponentBuildList{},
 		},
 	}
 )
