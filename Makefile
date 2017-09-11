@@ -29,8 +29,8 @@ local-delete: minikube-delete
 
 .PHONY: local-bootstrap
 local-bootstrap: gazelle
-	@bazel run -- //cmd/bootstrap -kubeconfig ~/.kube/config -logtostderr -provider local
-	$(DIR)/bin/seed-local-build-images.sh
+	@bazel run -- //cmd/bootstrap -kubeconfig ~/.kube/config -provider local
+	$(DIR)/bin/seed-local-build-images.sh $(MINIKUBE_PROFILE)
 
 .PHONY: minikube-start
 minikube-start:
@@ -47,4 +47,3 @@ minikube-delete:
 .PHONY: minikube-ssh
 minikube-ssh:
 	@minikube ssh -p $(MINIKUBE_PROFILE)
-

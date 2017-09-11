@@ -5,6 +5,6 @@ COMPONENT_BUILDER_DIR=${DIR}/../../component-builder
 
 cd ${COMPONENT_BUILDER_DIR}
 
-eval $(minikube docker-env)
+eval $(minikube docker-env -p ${1})
 bazel run //docker:pull-git-repo
 bazel run //docker:build-docker-image
