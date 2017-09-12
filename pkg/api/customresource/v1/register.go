@@ -48,8 +48,8 @@ var (
 			Scope:    ServiceBuildResourceScope,
 			Kind:     "ServiceBuild",
 			ListKind: "ServiceBuildList",
-			Type:     &ComponentBuild{},
-			ListType: &ComponentBuildList{},
+			Type:     &ServiceBuild{},
+			ListType: &ServiceBuildList{},
 		},
 	}
 )

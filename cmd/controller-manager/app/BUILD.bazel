@@ -5,6 +5,7 @@ go_library(
     srcs = [
         "component_build.go",
         "controller_manager.go",
+        "service_build.go",
     ],
     importpath = "github.com/mlab-lattice/kubernetes-integration/cmd/controller-manager/app",
     visibility = ["//visibility:public"],
@@ -12,6 +13,7 @@ go_library(
         "//pkg/api/customresource:go_default_library",
         "//pkg/api/customresource/v1:go_default_library",
         "//pkg/controller/componentbuild:go_default_library",
+        "//pkg/controller/servicebuild:go_default_library",
         "@com_github_golang_glog//:go_default_library",
         "@io_k8s_api//core/v1:go_default_library",
         "@io_k8s_apimachinery//pkg/fields:go_default_library",

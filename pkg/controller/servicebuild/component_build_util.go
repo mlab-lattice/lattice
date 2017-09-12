@@ -10,7 +10,7 @@ import (
 )
 
 func getComponentBuildDefinitionHashFromLabel(cBuild *crv1.ComponentBuild) *string {
-	cBuildHashLabel, ok := cBuild.Labels[componentBuildDefinitionHashLabelName]
+	cBuildHashLabel, ok := cBuild.Annotations[componentBuildDefinitionHashMetadataKey]
 	if !ok {
 		return nil
 	}
@@ -22,7 +22,7 @@ func (sbc *ServiceBuildController) getComponentBuildFromInfo(
 	namespace string,
 ) (*crv1.ComponentBuild, bool, error) {
 	if cBuildInfo.Name == nil {
-		return nil, false, fmt.Errorf("ComponentBuildInfo does not contain Name")
+		return nil, false, nil
 	}
 
 	cBuildKey := fmt.Sprintf("%v/%v", namespace, *cBuildInfo.Name)
@@ -46,13 +46,13 @@ func (sbc *ServiceBuildController) getComponentBuildFromApi(namespace, name stri
 }
 
 func getNewComponentBuildFromInfo(cBuildInfo *crv1.ServiceBuildComponentBuildInfo) *crv1.ComponentBuild {
-	labels := map[string]string{
-		componentBuildDefinitionHashLabelName: *cBuildInfo.DefinitionHash,
+	annotations := map[string]string{
+		componentBuildDefinitionHashMetadataKey: *cBuildInfo.DefinitionHash,
 	}
 	return &crv1.ComponentBuild{
 		ObjectMeta: metav1.ObjectMeta{
-			Labels: labels,
-			Name:   string(uuid.NewUUID()),
+			Annotations: annotations,
+			Name:        string(uuid.NewUUID()),
 		},
 		Spec: crv1.ComponentBuildSpec{
 			BuildDefinitionBlock: cBuildInfo.DefinitionBlock,

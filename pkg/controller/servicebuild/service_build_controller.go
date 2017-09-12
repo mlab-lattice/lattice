@@ -2,6 +2,7 @@ package servicebuild
 
 import (
 	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"reflect"
@@ -22,7 +23,7 @@ import (
 	"github.com/golang/glog"
 )
 
-const componentBuildDefinitionHashLabelName = "definition-hash"
+const componentBuildDefinitionHashMetadataKey = "lattice-component-build-definition-hash"
 
 type ServiceBuildController struct {
 	provider string
@@ -70,7 +71,8 @@ func NewServiceBuildController(
 		provider:                  provider,
 		latticeResourceRestClient: latticeResourceRestClient,
 		kubeClient:                kubeClient,
-		queue:                     workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "component-build"),
+		recentComponentBuilds:     make(map[string]map[string]string),
+		queue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "component-build"),
 	}
 
 	sbc.syncHandler = sbc.syncServiceBuild
@@ -328,11 +330,21 @@ func (sbc *ServiceBuildController) syncServiceBuild(key string) error {
 			continue
 		}
 
-		if sbc.componentBuildSuccessful(&cBuildInfo, sBuild.Namespace) {
+		successful, err := sbc.componentBuildSuccessful(&cBuildInfo, sBuild.Namespace)
+		if err != nil {
+			return err
+		}
+
+		if successful {
 			continue
 		}
 
-		if sbc.componentBuildFailed(&cBuildInfo, sBuild.Namespace) {
+		failed, err := sbc.componentBuildFailed(&cBuildInfo, sBuild.Namespace)
+		if err != nil {
+			return err
+		}
+
+		if failed {
 			// No need to do any more work if one of our CBuilds failed.
 			hasFailedCBuild = true
 			break
@@ -381,7 +393,7 @@ func (sbc *ServiceBuildController) componentBuildFailed(cBuildInfo *crv1.Service
 
 func (sbc *ServiceBuildController) createComponentBuilds(sBuild *crv1.ServiceBuild, needsNewCBuildIdx []int) error {
 	for _, newCBuildIdx := range needsNewCBuildIdx {
-		cBuildInfo := sBuild.Spec.ComponentBuildInfos[newCBuildIdx]
+		cBuildInfo := &sBuild.Spec.ComponentBuildInfos[newCBuildIdx]
 
 		// TODO: is json marshalling of a struct deterministic in order? If not could potentially get
 		//		 different SHAs for the same definition. This is OK in the correctness sense, since we'll
@@ -395,7 +407,8 @@ func (sbc *ServiceBuildController) createComponentBuilds(sBuild *crv1.ServiceBui
 		if _, err = h.Write(cBuildDefinitionBlockJson); err != nil {
 			return err
 		}
-		definitionHash := string(h.Sum(nil))
+		//definitionHash := string(h.Sum(nil))
+		definitionHash := hex.EncodeToString(h.Sum(nil))
 		cBuildInfo.DefinitionHash = &definitionHash
 
 		cBuild, err := sbc.findComponentBuildForDefinitionHash(sBuild.Namespace, definitionHash)
@@ -405,6 +418,7 @@ func (sbc *ServiceBuildController) createComponentBuilds(sBuild *crv1.ServiceBui
 
 		// Found an existing ComponentBuild.
 		if cBuild != nil && cBuild.Status.State != crv1.ComponentBuildStateFailed {
+			cBuildInfo.Name = &cBuild.Name
 			continue
 		}
 
@@ -414,20 +428,30 @@ func (sbc *ServiceBuildController) createComponentBuilds(sBuild *crv1.ServiceBui
 			previousCBuildName = &cBuild.Name
 		}
 
-		cBuild, err = sbc.createComponentBuild(sBuild.Namespace, &cBuildInfo, previousCBuildName)
+		cBuild, err = sbc.createComponentBuild(sBuild.Namespace, cBuildInfo, previousCBuildName)
 		if err != nil {
 			return err
 		}
+
+		cBuildInfo.Name = &cBuild.Name
 	}
 
-	// We'll rely on updateServiceBuild being called to sync the status of the ServiceBuild.
-	return sbc.latticeResourceRestClient.Put().
+	response := &crv1.ServiceBuild{}
+	err := sbc.latticeResourceRestClient.Put().
 		Namespace(sBuild.Namespace).
 		Resource(crv1.ServiceBuildResourcePlural).
 		Name(sBuild.Name).
 		Body(sBuild).
 		Do().
-		Into(nil)
+		Into(response)
+
+	if err != nil {
+		return err
+	}
+
+	// Enqueue the ServiceBuild so we can update its status based on the ComponentBuild statuses.
+	sbc.enqueueServiceBuild(response)
+	return nil
 }
 
 func (sbc *ServiceBuildController) findComponentBuildForDefinitionHash(namespace, definitionHash string) (*crv1.ComponentBuild, error) {

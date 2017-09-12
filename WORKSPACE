@@ -253,3 +253,9 @@ go_repository(
     commit = "9aade4d3a3b7e6d876cd3823ad20ec45fc035402",
     importpath = "golang.org/x/sys",
 )
+
+go_repository(
+    name = "com_github_pborman_uuid",
+    commit = "e790cca94e6cc75c7064b1332e63811d4aae1a53",
+    importpath = "github.com/pborman/uuid",
+)

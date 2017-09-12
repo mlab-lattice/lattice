@@ -6,8 +6,6 @@ import (
 	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/types"
-	//"k8s.io/apimachinery/pkg/util/uuid"
 )
 
 const (
@@ -32,7 +30,7 @@ type ServiceBuildSpec struct {
 type ServiceBuildComponentBuildInfo struct {
 	DefinitionBlock systemdefinitionblock.ComponentBuild `json:"definitionBlock"`
 	DefinitionHash  *string                              `json:"definitionHash,omitempty"`
-	Name            *string                              `json:"uid,omitempty"`
+	Name            *string                              `json:"name,omitempty"`
 }
 
 type ServiceBuildStatus struct {

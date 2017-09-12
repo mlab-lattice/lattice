@@ -87,15 +87,27 @@ func CreateControllerContext(
 	// FIXME: defaultResync blindly taken from k8s.io/kubernetes/cmd/controller/options. investigate consequences
 	sharedInformers := informers.NewSharedInformerFactory(versionedClient, time.Duration(12*time.Hour))
 
-	buildListerWatcher := cache.NewListWatchFromClient(
+	componentBuildListerWatcher := cache.NewListWatchFromClient(
 		latticeResourceClient,
 		crv1.ComponentBuildResourcePlural,
 		apiv1.NamespaceAll,
 		fields.Everything(),
 	)
-	buildInformer := cache.NewSharedInformer(
-		buildListerWatcher,
+	componentBuildInformer := cache.NewSharedInformer(
+		componentBuildListerWatcher,
 		&crv1.ComponentBuild{},
+		time.Duration(12*time.Hour),
+	)
+
+	serviceBuildListerWatcher := cache.NewListWatchFromClient(
+		latticeResourceClient,
+		crv1.ServiceBuildResourcePlural,
+		apiv1.NamespaceAll,
+		fields.Everything(),
+	)
+	serviceBuildInformer := cache.NewSharedInformer(
+		serviceBuildListerWatcher,
+		&crv1.ServiceBuild{},
 		time.Duration(12*time.Hour),
 	)
 
@@ -115,8 +127,9 @@ func CreateControllerContext(
 		Provider:        provider,
 		InformerFactory: sharedInformers,
 		CRDInformers: map[string]cache.SharedInformer{
-			"build":  buildInformer,
-			"config": configInformer,
+			"component-build": componentBuildInformer,
+			"config":          configInformer,
+			"service-build":   serviceBuildInformer,
 		},
 		LatticeResourceRestClient: latticeResourceClient,
 		ClientBuilder:             cb,
@@ -129,7 +142,8 @@ type controllerInitializer func(context ControllerContext)
 
 func CreateControllerInitializers() map[string]controllerInitializer {
 	return map[string]controllerInitializer{
-		"build": initializeBuildController,
+		"component-build": initializeComponentBuildController,
+		"service-build":   initializeServiceBuildController,
 	}
 }
 
