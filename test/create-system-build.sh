@@ -6,6 +6,8 @@ kind: SystemBuild
 metadata:
   name: ${1}
   namespace: default
+  labels:
+    build.system.lattice.mlab.com/version: v1.0.0
 spec:
   services:
   - path: "/a/b/c"
