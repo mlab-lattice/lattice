@@ -9,7 +9,6 @@ func initializeServiceBuildController(ctx ControllerContext) {
 		ctx.Provider,
 		ctx.ClientBuilder.ClientOrDie("build-controller"),
 		ctx.LatticeResourceRestClient,
-		ctx.CRDInformers["config"],
 		ctx.CRDInformers["service-build"],
 		ctx.CRDInformers["component-build"],
 	).Run(4, ctx.Stop)

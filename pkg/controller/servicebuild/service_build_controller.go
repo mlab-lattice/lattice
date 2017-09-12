@@ -34,13 +34,6 @@ type ServiceBuildController struct {
 	latticeResourceRestClient rest.Interface
 	kubeClient                clientset.Interface
 
-	configStore       cache.Store
-	configStoreSynced cache.InformerSynced
-	configSetChan     chan struct{}
-	configSet         bool
-	configLock        sync.RWMutex
-	config            crv1.ComponentBuildConfig
-
 	serviceBuildStore       cache.Store
 	serviceBuildStoreSynced cache.InformerSynced
 
@@ -63,7 +56,6 @@ func NewServiceBuildController(
 	provider string,
 	kubeClient clientset.Interface,
 	latticeResourceRestClient rest.Interface,
-	configInformer cache.SharedInformer,
 	serviceBuildInformer cache.SharedInformer,
 	componentBuildInformer cache.SharedInformer,
 ) *ServiceBuildController {
@@ -77,17 +69,6 @@ func NewServiceBuildController(
 
 	sbc.syncHandler = sbc.syncServiceBuild
 	sbc.enqueue = sbc.enqueueServiceBuild
-
-	configInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
-		// It's assumed there is always one and only one config object.
-		AddFunc:    sbc.addConfig,
-		UpdateFunc: sbc.updateConfig,
-		// TODO: for now we'll assume that Config is never deleted
-	})
-	sbc.configStore = configInformer.GetStore()
-	sbc.configStoreSynced = configInformer.HasSynced
-
-	sbc.configSetChan = make(chan struct{})
 
 	serviceBuildInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    sbc.addServiceBuild,
@@ -124,14 +105,11 @@ func (sbc *ServiceBuildController) Run(workers int, stopCh <-chan struct{}) {
 	defer glog.Infof("Shutting down component-build controller")
 
 	// wait for your secondary caches to fill before starting your work
-	if !cache.WaitForCacheSync(stopCh, sbc.configStoreSynced, sbc.componentBuildStoreSynced, sbc.componentBuildStoreSynced) {
+	if !cache.WaitForCacheSync(stopCh, sbc.componentBuildStoreSynced, sbc.componentBuildStoreSynced) {
 		return
 	}
 
 	glog.V(4).Info("Caches synced. Waiting for config to be set")
-
-	// wait for config to be set
-	<-sbc.configSetChan
 
 	// start up your worker threads based on threadiness.  Some controllers
 	// have multiple kinds of workers
@@ -143,30 +121,6 @@ func (sbc *ServiceBuildController) Run(workers int, stopCh <-chan struct{}) {
 
 	// wait until we're told to stop
 	<-stopCh
-}
-
-func (sbc *ServiceBuildController) addConfig(obj interface{}) {
-	config := obj.(*crv1.Config)
-	glog.V(4).Infof("Adding Config %s", config.Name)
-
-	sbc.configLock.Lock()
-	defer sbc.configLock.Unlock()
-	sbc.config = config.DeepCopy().Spec.ComponentBuild
-
-	if !sbc.configSet {
-		sbc.configSet = true
-		close(sbc.configSetChan)
-	}
-}
-
-func (sbc *ServiceBuildController) updateConfig(old, cur interface{}) {
-	oldConfig := old.(*crv1.Config)
-	curConfig := cur.(*crv1.Config)
-	glog.V(4).Infof("Updating Config %s", oldConfig.Name)
-
-	sbc.configLock.Lock()
-	defer sbc.configLock.Unlock()
-	sbc.config = curConfig.DeepCopy().Spec.ComponentBuild
 }
 
 func (sbc *ServiceBuildController) addServiceBuild(obj interface{}) {
