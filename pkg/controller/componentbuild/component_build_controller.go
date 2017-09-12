@@ -3,9 +3,10 @@ package componentbuild
 import (
 	"fmt"
 	"reflect"
+	"sync"
 	"time"
 
-	"github.com/golang/glog"
+	crv1 "github.com/mlab-lattice/kubernetes-integration/pkg/api/customresource/v1"
 
 	batchv1 "k8s.io/api/batch/v1"
 
@@ -22,8 +23,7 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
 
-	crv1 "github.com/mlab-lattice/kubernetes-integration/pkg/api/customresource/v1"
-	"sync"
+	"github.com/golang/glog"
 )
 
 var controllerKind = crv1.SchemeGroupVersion.WithKind("ComponentBuild")

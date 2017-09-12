@@ -4,15 +4,15 @@ import (
 	"fmt"
 	"time"
 
+	providerutils "github.com/mlab-lattice/core/pkg/provider"
+	"github.com/mlab-lattice/core/pkg/system/definition/block"
+
+	crv1 "github.com/mlab-lattice/kubernetes-integration/pkg/api/customresource/v1"
+
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
-	crv1 "github.com/mlab-lattice/kubernetes-integration/pkg/api/customresource/v1"
-
-	providerutils "github.com/mlab-lattice/core/pkg/provider"
-	"github.com/mlab-lattice/core/pkg/system/definition/block"
 )
 
 const (

@@ -5,9 +5,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"reflect"
+	"sync"
 	"time"
 
-	"github.com/golang/glog"
+	crv1 "github.com/mlab-lattice/kubernetes-integration/pkg/api/customresource/v1"
 
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/util/runtime"
@@ -18,11 +19,8 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
 
-	crv1 "github.com/mlab-lattice/kubernetes-integration/pkg/api/customresource/v1"
-	"sync"
+	"github.com/golang/glog"
 )
-
-var controllerKind = crv1.SchemeGroupVersion.WithKind("ServiceBuild")
 
 const componentBuildDefinitionHashLabelName = "definition-hash"
 
@@ -45,9 +43,17 @@ type ServiceBuildController struct {
 	serviceBuildStore       cache.Store
 	serviceBuildStoreSynced cache.InformerSynced
 
-	componentBuildLock        sync.RWMutex
 	componentBuildStore       cache.Store
 	componentBuildStoreSynced cache.InformerSynced
+
+	// recentComponentBuilds holds a map of namespaces which map to a map of definition
+	// hashes which map to the name of a ComponentBuild that was recently created
+	// in the namespace. recentComponentBuilds should always hold the Name of the most
+	// recently created ComponentBuild for a given definition hash.
+	// See createComponentBuilds for more information.
+	// FIXME: add some GC on this map so it doesn't grow forever (maybe remove in addComponentBuild)
+	recentComponentBuildsLock sync.RWMutex
+	recentComponentBuilds     map[string]map[string]string
 
 	queue workqueue.RateLimitingInterface
 }
@@ -214,13 +220,9 @@ func (sbc *ServiceBuildController) getServiceBuildsForComponentBuild(cBuild *crv
 	sBuilds := []*crv1.ServiceBuild{}
 
 	// Find any ServiceBuilds whose ComponentBuildInfos mention this ComponentBuild
-	// TODO: is there a more scalable way to do this? O(#SB * #SB.CBI) isn't great, but is it *actually* a perf issue at any plausible size?
-	// FIXME: there's a race condition if there is a ComponentBuild already running, a ServiceBuild adds this ComponentBuild's name
-	//		  to one of its ComponentBuildInfos, and this is not reflected in this List(). The ServiceBuild will not see
-	//		  that the ComponentBuild has finished until a resync. (A resync may not actually catch this since we're
-	//		  ignoring updated ComponentBuilds with the same RV).
-	//        Could probably be solved by doing a quorem read of the ComponentBuild's status after updating the ServiceBuild's
-	//		  ComponentBuildInfo.
+	// TODO: add a cache mapping ComponentBuild Names to active ServiceBuilds which are waiting on them
+	//       ^^^ tricky because the informers will start and trigger (aka this method will be called) prior
+	//			 to when we could fill the cache
 	for _, sBuildObj := range sbc.serviceBuildStore.List() {
 		sBuild := sBuildObj.(*crv1.ServiceBuild)
 
@@ -378,7 +380,6 @@ func (sbc *ServiceBuildController) componentBuildFailed(cBuildInfo *crv1.Service
 }
 
 func (sbc *ServiceBuildController) createComponentBuilds(sBuild *crv1.ServiceBuild, needsNewCBuildIdx []int) error {
-	hasActiveCBuild := false
 	for _, newCBuildIdx := range needsNewCBuildIdx {
 		cBuildInfo := sBuild.Spec.ComponentBuildInfos[newCBuildIdx]
 
@@ -397,120 +398,157 @@ func (sbc *ServiceBuildController) createComponentBuilds(sBuild *crv1.ServiceBui
 		definitionHash := string(h.Sum(nil))
 		cBuildInfo.DefinitionHash = &definitionHash
 
-		existingCBuild := func() *crv1.ComponentBuild {
-			sbc.componentBuildLock.RLock()
-			defer sbc.componentBuildLock.RUnlock()
-
-			// TODO: similar scalability concerns to getServiceBuildsForComponentBuild
-			for _, cBuildObj := range sbc.componentBuildStore.List() {
-				cBuild := cBuildObj.(*crv1.ComponentBuild)
-				cBuildHashLabel := getComponentBuildDefinitionHashFromLabel(cBuild)
-				if cBuildHashLabel == nil {
-					// FIXME: add warn event
-					continue
-				}
-
-				// If there already exists a ComponentBuild that matches our definition hash and it is not
-				// in a failed state, we'll use it.
-				if *cBuildHashLabel == definitionHash && cBuild.Status.State != crv1.ServiceBuildStateFailed {
-					return cBuild
-				}
-			}
-
-			return nil
-		}()
-
+		cBuild, err := sbc.findComponentBuildForDefinitionHash(sBuild.Namespace, definitionHash)
 		if err != nil {
 			return err
 		}
 
-		if existingCBuild != nil {
-			cBuildInfo.Name = &existingCBuild.Name
-
-			// FIXME: see race condition concerns in getServiceBuildsForComponentBuild
-			if existingCBuild.Status.State != crv1.ComponentBuildStateSucceeded {
-				hasActiveCBuild = true
-			}
-
+		// Found an existing ComponentBuild.
+		if cBuild != nil && cBuild.Status.State != crv1.ComponentBuildStateFailed {
 			continue
 		}
 
-		// We were not able to find an existing ComponentBuild in our cache.
-		// Grab the ComponentBuild Lock elusively, do a quorum read to see if anyone has created a matching
-		// ComponentBuild in the meantime, and if not create one.
-		cBuild, err := func() (*crv1.ComponentBuild, error) {
-			sbc.componentBuildLock.Lock()
-			defer sbc.componentBuildLock.Unlock()
-
-			// TODO: find a way to query for only ComponentBuilds with the matching definition hash label
-			var cBuildList crv1.ComponentBuildList
-			err := sbc.latticeResourceRestClient.Get().
-				Namespace(sBuild.Namespace).
-				Resource(crv1.ComponentBuildResourcePlural).
-				Do().
-				Into(&cBuildList)
-
-			if err != nil {
-				return nil, err
-			}
-
-			var cBuild *crv1.ComponentBuild
-			for _, cBuildItem := range cBuildList.Items {
-				cBuildHashLabel := getComponentBuildDefinitionHashFromLabel(&cBuildItem)
-				if cBuildHashLabel == nil {
-					// FIXME: add warn event
-					continue
-				}
-
-				// If there already exists a ComponentBuild that matches our definition hash and it is not
-				// in a failed state, we'll use it.
-				if *cBuildHashLabel == definitionHash && cBuildItem.Status.State != crv1.ServiceBuildStateFailed {
-					cBuild = &cBuildItem
-				}
-			}
-
-			// Somebody else created a ComponentBuild in the meantime. We'll use it.
-			if cBuild != nil {
-				return cBuild, nil
-			}
-
-			// There's still no ComponentBuild that matches our definition hash. We'll create our own.
-			newCBuild := getNewComponentBuildFromInfo(&cBuildInfo, sBuild.Namespace)
-			result := &crv1.ComponentBuild{}
-			err = sbc.latticeResourceRestClient.Post().
-				Namespace(sBuild.Namespace).
-				Resource(crv1.ComponentBuildResourcePlural).
-				Body(newCBuild).
-				Do().
-				Into(result)
-
-			if err != nil {
-				// FIXME: send warn event
-				return nil, err
-			}
-
-			glog.V(4).Infof("Created ComponentBuild %s", result.Name)
-			return result, nil
-			// FIXME: send normal event
-		}()
-
-		if err != nil {
-			return err
-		}
-
+		// Existing ComponentBuild failed. We'll try it again.
+		var previousCBuildName *string
 		if cBuild != nil {
-			cBuildInfo.Name = &existingCBuild.Name
+			previousCBuildName = &cBuild.Name
+		}
 
-			// FIXME: see race condition concerns in getServiceBuildsForComponentBuild
-			if existingCBuild.Status.State != crv1.ComponentBuildStateSucceeded {
-				hasActiveCBuild = true
-			}
-
-			continue
+		cBuild, err = sbc.createComponentBuild(sBuild.Namespace, &cBuildInfo, previousCBuildName)
+		if err != nil {
+			return err
 		}
 	}
 
-	return sbc.syncServiceBuildStatus(sBuild, false, hasActiveCBuild)
+	// We'll rely on updateServiceBuild being called to sync the status of the ServiceBuild.
+	return sbc.latticeResourceRestClient.Put().
+		Namespace(sBuild.Namespace).
+		Resource(crv1.ServiceBuildResourcePlural).
+		Name(sBuild.Name).
+		Body(sBuild).
+		Do().
+		Into(nil)
+}
+
+func (sbc *ServiceBuildController) findComponentBuildForDefinitionHash(namespace, definitionHash string) (*crv1.ComponentBuild, error) {
+	// Check recent build cache
+	cBuild, err := sbc.findComponentBuildInRecentBuildCache(namespace, definitionHash)
+	if err != nil {
+		return nil, err
+	}
+
+	// If we found a build in the recent build cache return it.
+	if cBuild != nil {
+		return cBuild, nil
+	}
+
+	// We couldn't find a ComponentBuild in our recent builds cache, so we'll check the Store to see if
+	// there's a ComponentBuild we could use in there.
+	return sbc.findComponentBuildInStore(namespace, definitionHash), nil
+}
+
+func (sbc *ServiceBuildController) findComponentBuildInRecentBuildCache(namespace, definitionHash string) (*crv1.ComponentBuild, error) {
+	sbc.recentComponentBuildsLock.RLock()
+	defer sbc.recentComponentBuildsLock.RUnlock()
+
+	cBuildNamespaceCache, ok := sbc.recentComponentBuilds[namespace]
+	if !ok {
+		return nil, nil
+	}
+
+	cBuildName, ok := cBuildNamespaceCache[definitionHash]
+	if !ok {
+		return nil, nil
+	}
+
+	// Check to see if this build is in our ComponentBuild store
+	cBuildObj, exists, err := sbc.componentBuildStore.GetByKey(namespace + "/" + cBuildName)
+	if err != nil {
+		return nil, err
+	}
+
+	// The ComponentBuild exists in our store, so return that cached version.
+	if exists {
+		return cBuildObj.(*crv1.ComponentBuild), nil
+	}
+
+	// The ComponentBuild isn't in our store, so we'll need to read from the API
+	cBuild := &crv1.ComponentBuild{}
+	err = sbc.latticeResourceRestClient.Get().
+		Namespace(namespace).
+		Resource(crv1.ComponentBuildResourcePlural).
+		Name(cBuildName).
+		Do().
+		Into(cBuild)
+
+	if err != nil {
+		if errors.IsNotFound(err) {
+			// FIXME: send warn event, this shouldn't happen
+			return nil, nil
+		}
+		return nil, err
+	}
+
+	return cBuild, nil
+}
+
+func (sbc *ServiceBuildController) findComponentBuildInStore(namespace, definitionHash string) *crv1.ComponentBuild {
+	// TODO: similar scalability concerns to getServiceBuildsForComponentBuild
+	for _, cBuildObj := range sbc.componentBuildStore.List() {
+		cBuild := cBuildObj.(*crv1.ComponentBuild)
+		cBuildHashLabel := getComponentBuildDefinitionHashFromLabel(cBuild)
+		if cBuildHashLabel == nil {
+			// FIXME: add warn event
+			continue
+		}
+
+		if *cBuildHashLabel == definitionHash && cBuild.Status.State != crv1.ServiceBuildStateFailed {
+			return cBuild
+		}
+	}
+
+	return nil
+}
+
+func (sbc *ServiceBuildController) createComponentBuild(
+	namespace string,
+	cBuildInfo *crv1.ServiceBuildComponentBuildInfo,
+	previousCBuildName *string,
+) (*crv1.ComponentBuild, error) {
+	sbc.recentComponentBuildsLock.Lock()
+	defer sbc.recentComponentBuildsLock.Unlock()
+
+	if cBuildNamespaceCache, ok := sbc.recentComponentBuilds[namespace]; ok {
+		// If there is a new entry in the recent build cache, a different service build has attempted to
+		// build the same component. We'll use this ComponentBuild as ours.
+		cBuildName, ok := cBuildNamespaceCache[*cBuildInfo.DefinitionHash]
+		if ok && (previousCBuildName == nil || cBuildName != *previousCBuildName) {
+			return sbc.getComponentBuildFromApi(namespace, cBuildName)
+		}
+	}
+
+	// If there is no new entry in the build cache, create a new ComponentBuild.
+	cBuild := getNewComponentBuildFromInfo(cBuildInfo)
+	result := &crv1.ComponentBuild{}
+	err := sbc.latticeResourceRestClient.Post().
+		Namespace(namespace).
+		Resource(crv1.ComponentBuildResourcePlural).
+		Body(cBuild).
+		Do().
+		Into(result)
+
+	if err != nil {
+		return nil, err
+	}
+
+	cBuildNamespaceCache, ok := sbc.recentComponentBuilds[namespace]
+	if !ok {
+		cBuildNamespaceCache = map[string]string{}
+		sbc.recentComponentBuilds[namespace] = cBuildNamespaceCache
+	}
+	cBuildNamespaceCache[*cBuildInfo.DefinitionHash] = cBuild.Name
+
+	return result, nil
 }
 
 func (sbc *ServiceBuildController) syncServiceBuildStatus(sBuild *crv1.ServiceBuild, hasFailedCBuild, hasActiveCBuild bool) error {

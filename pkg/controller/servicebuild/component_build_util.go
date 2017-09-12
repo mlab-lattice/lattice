@@ -3,10 +3,10 @@ package servicebuild
 import (
 	"fmt"
 
+	crv1 "github.com/mlab-lattice/kubernetes-integration/pkg/api/customresource/v1"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/uuid"
-
-	crv1 "github.com/mlab-lattice/kubernetes-integration/pkg/api/customresource/v1"
 )
 
 func getComponentBuildDefinitionHashFromLabel(cBuild *crv1.ComponentBuild) *string {
@@ -17,7 +17,10 @@ func getComponentBuildDefinitionHashFromLabel(cBuild *crv1.ComponentBuild) *stri
 	return &cBuildHashLabel
 }
 
-func (sbc *ServiceBuildController) getComponentBuildFromInfo(cBuildInfo *crv1.ServiceBuildComponentBuildInfo, namespace string) (*crv1.ComponentBuild, bool, error) {
+func (sbc *ServiceBuildController) getComponentBuildFromInfo(
+	cBuildInfo *crv1.ServiceBuildComponentBuildInfo,
+	namespace string,
+) (*crv1.ComponentBuild, bool, error) {
 	if cBuildInfo.Name == nil {
 		return nil, false, fmt.Errorf("ComponentBuildInfo does not contain Name")
 	}
@@ -31,7 +34,18 @@ func (sbc *ServiceBuildController) getComponentBuildFromInfo(cBuildInfo *crv1.Se
 	return cBuildObj.(*crv1.ComponentBuild), true, nil
 }
 
-func getNewComponentBuildFromInfo(cBuildInfo *crv1.ServiceBuildComponentBuildInfo, namespace string) *crv1.ComponentBuild {
+func (sbc *ServiceBuildController) getComponentBuildFromApi(namespace, name string) (*crv1.ComponentBuild, error) {
+	var cBuild crv1.ComponentBuild
+	err := sbc.latticeResourceRestClient.Get().
+		Namespace(namespace).
+		Resource(crv1.ComponentBuildResourcePlural).
+		Name(name).
+		Do().
+		Into(&cBuild)
+	return &cBuild, err
+}
+
+func getNewComponentBuildFromInfo(cBuildInfo *crv1.ServiceBuildComponentBuildInfo) *crv1.ComponentBuild {
 	labels := map[string]string{
 		componentBuildDefinitionHashLabelName: *cBuildInfo.DefinitionHash,
 	}
