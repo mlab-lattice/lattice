@@ -37,70 +37,73 @@ type ComponentBuildController struct {
 	latticeResourceRestClient rest.Interface
 	kubeClient                clientset.Interface
 
-	componentBuildStore       cache.Store
-	componentBuildStoreSynced cache.InformerSynced
-
 	configStore       cache.Store
 	configStoreSynced cache.InformerSynced
 	configSetChan     chan struct{}
 	configSet         bool
+	configLock        sync.RWMutex
+	config            crv1.ComponentBuildConfig
+
+	componentBuildStore       cache.Store
+	componentBuildStoreSynced cache.InformerSynced
 
 	jobLister       batchlisters.JobLister
 	jobListerSynced cache.InformerSynced
-
-	configLock sync.RWMutex
-	config     crv1.ComponentBuildConfig
 
 	queue workqueue.RateLimitingInterface
 }
 
 func NewComponentBuildController(
-	latticeResourceRestClient rest.Interface,
-	componentBuildInformer cache.SharedInformer,
-	configInformer cache.SharedInformer,
-	jobInformer batchinformers.JobInformer,
-	kubeClient clientset.Interface,
 	provider string,
+	kubeClient clientset.Interface,
+	latticeResourceRestClient rest.Interface,
+	configInformer cache.SharedInformer,
+	componentBuildInformer cache.SharedInformer,
+	jobInformer batchinformers.JobInformer,
 ) *ComponentBuildController {
-	bc := &ComponentBuildController{
+	cbc := &ComponentBuildController{
 		provider:                  provider,
 		latticeResourceRestClient: latticeResourceRestClient,
 		kubeClient:                kubeClient,
 		queue:                     workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "component-build"),
 	}
 
-	bc.syncHandler = bc.syncComponentBuild
-	bc.enqueue = bc.enqueueComponentBuild
-
-	componentBuildInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc:    bc.addComponentBuild,
-		UpdateFunc: bc.updateComponentBuild,
-		// This will enter the sync loop and no-op, because the deployment has been deleted from the store.
-		DeleteFunc: bc.deleteComponentBuild,
-	})
-	bc.componentBuildStore = componentBuildInformer.GetStore()
-	bc.componentBuildStoreSynced = componentBuildInformer.HasSynced
+	cbc.syncHandler = cbc.syncComponentBuild
+	cbc.enqueue = cbc.enqueueComponentBuild
 
 	configInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		// It's assumed there is always one and only one config object.
-		AddFunc:    bc.addConfig,
-		UpdateFunc: bc.updateConfig,
-		// TODO: should we listen for/handle delete?
+		AddFunc:    cbc.addConfig,
+		UpdateFunc: cbc.updateConfig,
+		// TODO: for now it is assumed that ComponentBuilds are not deleted.
+		// in the future we'll probably want to add a GC process for ComponentBuilds.
+		// At that point we should listen here for those deletes.
+		// FIXME: Document CB GC ideas (need to write down last used date, lock properly, etc)
 	})
-	bc.configStore = configInformer.GetStore()
-	bc.configStoreSynced = configInformer.HasSynced
+	cbc.configStore = configInformer.GetStore()
+	cbc.configStoreSynced = configInformer.HasSynced
 
-	bc.configSetChan = make(chan struct{})
+	cbc.configSetChan = make(chan struct{})
+
+	componentBuildInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+		AddFunc:    cbc.addComponentBuild,
+		UpdateFunc: cbc.updateComponentBuild,
+		// TODO: for now we'll assume that Config is never deleted
+	})
+	cbc.componentBuildStore = componentBuildInformer.GetStore()
+	cbc.componentBuildStoreSynced = componentBuildInformer.HasSynced
 
 	jobInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc:    bc.addJob,
-		UpdateFunc: bc.updateJob,
-		DeleteFunc: bc.deleteJob,
+		AddFunc:    cbc.addJob,
+		UpdateFunc: cbc.updateJob,
+		// We should probably never delete BuildComponent jobs, but just in case
+		// we need to pull the plug on one we'll look out for it.
+		DeleteFunc: cbc.deleteJob,
 	})
-	bc.jobLister = jobInformer.Lister()
-	bc.jobListerSynced = jobInformer.Informer().HasSynced
+	cbc.jobLister = jobInformer.Lister()
+	cbc.jobListerSynced = jobInformer.Informer().HasSynced
 
-	return bc
+	return cbc
 }
 
 func (cbc *ComponentBuildController) Run(workers int, stopCh <-chan struct{}) {
@@ -113,7 +116,7 @@ func (cbc *ComponentBuildController) Run(workers int, stopCh <-chan struct{}) {
 	defer glog.Infof("Shutting down component-build controller")
 
 	// wait for your secondary caches to fill before starting your work
-	if !cache.WaitForCacheSync(stopCh, cbc.componentBuildStoreSynced, cbc.configStoreSynced, cbc.jobListerSynced) {
+	if !cache.WaitForCacheSync(stopCh, cbc.configStoreSynced, cbc.componentBuildStoreSynced, cbc.jobListerSynced) {
 		return
 	}
 
@@ -171,26 +174,6 @@ func (cbc *ComponentBuildController) updateComponentBuild(old, cur interface{}) 
 	cbc.enqueueComponentBuild(curCBuild)
 }
 
-// FIXME: Job children are not getting GC'd
-// https://github.com/kubernetes/kubernetes/pull/47665
-func (cbc *ComponentBuildController) deleteComponentBuild(obj interface{}) {
-	d, ok := obj.(*crv1.ComponentBuild)
-	if !ok {
-		tombstone, ok := obj.(cache.DeletedFinalStateUnknown)
-		if !ok {
-			runtime.HandleError(fmt.Errorf("Couldn't get object from tombstone %#v", obj))
-			return
-		}
-		d, ok = tombstone.Obj.(*crv1.ComponentBuild)
-		if !ok {
-			runtime.HandleError(fmt.Errorf("Tombstone contained object that is not a ComponentBuild %#v", obj))
-			return
-		}
-	}
-	glog.V(4).Infof("Deleting ComponentBuild %s", d.Name)
-	cbc.enqueueComponentBuild(d)
-}
-
 // addJob enqueues the ComponentBuild that manages a Job when the Job is created.
 func (cbc *ComponentBuildController) addJob(obj interface{}) {
 	job := obj.(*batchv1.Job)
@@ -242,7 +225,7 @@ func (cbc *ComponentBuildController) updateJob(old, cur interface{}) {
 	if controllerRefChanged {
 		// The ControllerRef was changed. If this is a ComponentBuild Job, this shouldn't happen.
 		if b := cbc.resolveControllerRef(oldJob.Namespace, oldControllerRef); b != nil {
-			// TODO: send warn event here, this should not happen
+			// FIXME: send error event here, this should not happen
 		}
 	}
 
@@ -319,7 +302,7 @@ func (cbc *ComponentBuildController) enqueueComponentBuild(cBuild *crv1.Componen
 // or nil if the ControllerRef could not be resolved to a matching controller
 // of the correct Kind.
 func (cbc *ComponentBuildController) resolveControllerRef(namespace string, controllerRef *metav1.OwnerReference) *crv1.ComponentBuild {
-	// We can't look up by UID, so look up by Name and then verify UID.
+	// We can't look up by Name, so look up by Name and then verify Name.
 	// Don't even try to look up by Name if it's the wrong Kind.
 	if controllerRef.Kind != controllerKind.Kind {
 		return nil
@@ -417,7 +400,7 @@ func (cbc *ComponentBuildController) processNextWorkItem() bool {
 	return true
 }
 
-// syncDeployment will sync the deployment with the given key.
+// syncComponentBuild will sync the ComponentBuild with the given key.
 // This function is not meant to be invoked concurrently with the same key.
 func (cbc *ComponentBuildController) syncComponentBuild(key string) error {
 	glog.Flush()
@@ -459,12 +442,12 @@ func (cbc *ComponentBuildController) createComponentBuildJob(build *crv1.Compone
 	job := cbc.getBuildJob(build)
 	jobResp, err := cbc.kubeClient.BatchV1().Jobs(build.Namespace).Create(job)
 	if err != nil {
-		// TODO: send warn event
+		// FIXME: send warn event
 		return err
 	}
 
 	glog.V(4).Infof("Created Job %s", jobResp.Name)
-	// TODO: send normal event
+	// FIXME: send normal event
 	return cbc.syncComponentBuildStatus(build, jobResp)
 }
 

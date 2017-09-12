@@ -6,11 +6,11 @@ import (
 
 func initializeBuildController(ctx ControllerContext) {
 	go componentbuild.NewComponentBuildController(
-		ctx.LatticeResourceRestClient,
-		ctx.CRDInformers["build"],
-		ctx.CRDInformers["config"],
-		ctx.InformerFactory.Batch().V1().Jobs(),
-		ctx.ClientBuilder.ClientOrDie("build-controller"),
 		ctx.Provider,
+		ctx.ClientBuilder.ClientOrDie("build-controller"),
+		ctx.LatticeResourceRestClient,
+		ctx.CRDInformers["config"],
+		ctx.CRDInformers["build"],
+		ctx.InformerFactory.Batch().V1().Jobs(),
 	).Run(4, ctx.Stop)
 }

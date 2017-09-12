@@ -47,3 +47,7 @@ minikube-delete:
 .PHONY: minikube-ssh
 minikube-ssh:
 	@minikube ssh -p $(MINIKUBE_PROFILE)
+
+.PHONY: minikube-dashboard
+minikube-dashboard:
+	@minikube dashboard -p $(MINIKUBE_PROFILE)
