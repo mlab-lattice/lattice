@@ -31,10 +31,11 @@ func CreateCustomResourceDefinitions(clientset apiextensionsclient.Interface) ([
 				Version: crv1.SchemeGroupVersion.Version,
 				Scope:   resource.Scope,
 				Names: apiextensionsv1beta1.CustomResourceDefinitionNames{
-					Singular: resource.Singular,
-					Plural:   resource.Plural,
-					Kind:     resource.Kind,
-					ListKind: resource.ListKind,
+					Singular:   resource.Singular,
+					Plural:     resource.Plural,
+					ShortNames: resource.ShortNames,
+					Kind:       resource.Kind,
+					ListKind:   resource.ListKind,
 				},
 			},
 		}

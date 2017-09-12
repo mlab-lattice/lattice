@@ -3,14 +3,15 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library")
 go_library(
     name = "go_default_library",
     srcs = [
-        "component_build_util.go",
-        "service_build_controller.go",
+        "service_build_util.go",
+        "system_build_controller.go",
     ],
-    importpath = "github.com/mlab-lattice/kubernetes-integration/pkg/controller/servicebuild",
+    importpath = "github.com/mlab-lattice/kubernetes-integration/pkg/controller/systembuild",
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/api/customresource/v1:go_default_library",
         "@com_github_golang_glog//:go_default_library",
+        "@com_github_mlab_lattice_core//pkg/system/definition:go_default_library",
         "@io_k8s_apimachinery//pkg/api/errors:go_default_library",
         "@io_k8s_apimachinery//pkg/apis/meta/v1:go_default_library",
         "@io_k8s_apimachinery//pkg/util/runtime:go_default_library",

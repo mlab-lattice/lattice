@@ -9,6 +9,7 @@ import (
 	apiv1 "k8s.io/api/core/v1"
 
 	"k8s.io/apimachinery/pkg/fields"
+	"k8s.io/apimachinery/pkg/runtime"
 
 	"k8s.io/client-go/informers"
 	clientset "k8s.io/client-go/kubernetes"
@@ -84,58 +85,70 @@ func CreateControllerContext(
 	}
 
 	versionedClient := cb.ClientOrDie("shared-informers")
-	// FIXME: defaultResync blindly taken from k8s.io/kubernetes/cmd/controller/options. investigate consequences
 	sharedInformers := informers.NewSharedInformerFactory(versionedClient, time.Duration(12*time.Hour))
 
-	componentBuildListerWatcher := cache.NewListWatchFromClient(
-		latticeResourceClient,
-		crv1.ComponentBuildResourcePlural,
-		apiv1.NamespaceAll,
-		fields.Everything(),
-	)
-	componentBuildInformer := cache.NewSharedInformer(
-		componentBuildListerWatcher,
-		&crv1.ComponentBuild{},
-		time.Duration(12*time.Hour),
-	)
-
-	serviceBuildListerWatcher := cache.NewListWatchFromClient(
-		latticeResourceClient,
-		crv1.ServiceBuildResourcePlural,
-		apiv1.NamespaceAll,
-		fields.Everything(),
-	)
-	serviceBuildInformer := cache.NewSharedInformer(
-		serviceBuildListerWatcher,
-		&crv1.ServiceBuild{},
-		time.Duration(12*time.Hour),
-	)
-
-	configListerWatcher := cache.NewListWatchFromClient(
-		latticeResourceClient,
-		crv1.ConfigResourcePlural,
-		apiv1.NamespaceAll,
-		fields.Everything(),
-	)
-	configInformer := cache.NewSharedInformer(
-		configListerWatcher,
-		&crv1.Config{},
-		time.Duration(12*time.Hour),
-	)
-
 	return ControllerContext{
-		Provider:        provider,
-		InformerFactory: sharedInformers,
-		CRDInformers: map[string]cache.SharedInformer{
-			"component-build": componentBuildInformer,
-			"config":          configInformer,
-			"service-build":   serviceBuildInformer,
-		},
+		Provider:                  provider,
+		InformerFactory:           sharedInformers,
+		CRDInformers:              getCRDInformers(latticeResourceClient),
 		LatticeResourceRestClient: latticeResourceClient,
 		ClientBuilder:             cb,
 
 		Stop: stop,
 	}
+}
+
+func getCRDInformers(latticeResourceClient rest.Interface) map[string]cache.SharedInformer {
+	// FIXME: defaultResync blindly taken from k8s.io/kubernetes/cmd/controller/options. investigate consequences
+	crds := []struct {
+		name         string
+		plural       string
+		objType      runtime.Object
+		resyncPeriod time.Duration
+	}{
+		{
+			name:         "component-build",
+			plural:       crv1.ComponentBuildResourcePlural,
+			objType:      &crv1.ComponentBuild{},
+			resyncPeriod: time.Duration(12 * time.Hour),
+		},
+		{
+			name:         "config",
+			plural:       crv1.ConfigResourcePlural,
+			objType:      &crv1.Config{},
+			resyncPeriod: time.Duration(12 * time.Hour),
+		},
+		{
+			name:         "service-build",
+			plural:       crv1.ServiceBuildResourcePlural,
+			objType:      &crv1.ServiceBuild{},
+			resyncPeriod: time.Duration(12 * time.Hour),
+		},
+		{
+			name:         "system-build",
+			plural:       crv1.SystemBuildResourcePlural,
+			objType:      &crv1.SystemBuild{},
+			resyncPeriod: time.Duration(12 * time.Hour),
+		},
+	}
+
+	informersMap := map[string]cache.SharedInformer{}
+	for _, crd := range crds {
+		listerWatcher := cache.NewListWatchFromClient(
+			latticeResourceClient,
+			crd.plural,
+			apiv1.NamespaceAll,
+			fields.Everything(),
+		)
+		informer := cache.NewSharedInformer(
+			listerWatcher,
+			crd.objType,
+			crd.resyncPeriod,
+		)
+		informersMap[crd.name] = informer
+	}
+
+	return informersMap
 }
 
 type controllerInitializer func(context ControllerContext)
@@ -144,6 +157,7 @@ func CreateControllerInitializers() map[string]controllerInitializer {
 	return map[string]controllerInitializer{
 		"component-build": initializeComponentBuildController,
 		"service-build":   initializeServiceBuildController,
+		"system-build":    initializeSystemBuildController,
 	}
 }
 

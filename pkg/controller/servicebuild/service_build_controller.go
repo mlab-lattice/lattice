@@ -15,7 +15,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
 
-	clientset "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
@@ -32,7 +31,6 @@ type ServiceBuildController struct {
 	enqueue     func(cb *crv1.ServiceBuild)
 
 	latticeResourceRestClient rest.Interface
-	kubeClient                clientset.Interface
 
 	serviceBuildStore       cache.Store
 	serviceBuildStoreSynced cache.InformerSynced
@@ -54,7 +52,6 @@ type ServiceBuildController struct {
 
 func NewServiceBuildController(
 	provider string,
-	kubeClient clientset.Interface,
 	latticeResourceRestClient rest.Interface,
 	serviceBuildInformer cache.SharedInformer,
 	componentBuildInformer cache.SharedInformer,
@@ -62,7 +59,6 @@ func NewServiceBuildController(
 	sbc := &ServiceBuildController{
 		provider:                  provider,
 		latticeResourceRestClient: latticeResourceRestClient,
-		kubeClient:                kubeClient,
 		recentComponentBuilds:     make(map[string]map[string]string),
 		queue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "component-build"),
 	}
@@ -74,9 +70,9 @@ func NewServiceBuildController(
 		AddFunc:    sbc.addServiceBuild,
 		UpdateFunc: sbc.updateServiceBuild,
 		// TODO: for now it is assumed that ServiceBuilds are not deleted.
-		// in the future we'll probably want to add a GC process for ComponentBuilds.
+		// in the future we'll probably want to add a GC process for ServiceBuilds.
 		// At that point we should listen here for those deletes.
-		// FIXME: Document SB GC ideas (need to write down last used date, lock properly, etc)
+		// FIXME: Document SvcB GC ideas (need to write down last used date, lock properly, etc)
 	})
 	sbc.serviceBuildStore = serviceBuildInformer.GetStore()
 	sbc.serviceBuildStoreSynced = serviceBuildInformer.HasSynced
@@ -95,45 +91,17 @@ func NewServiceBuildController(
 	return sbc
 }
 
-func (sbc *ServiceBuildController) Run(workers int, stopCh <-chan struct{}) {
-	// don't let panics crash the process
-	defer runtime.HandleCrash()
-	// make sure the work queue is shutdown which will trigger workers to end
-	defer sbc.queue.ShutDown()
-
-	glog.Infof("Starting component-build controller")
-	defer glog.Infof("Shutting down component-build controller")
-
-	// wait for your secondary caches to fill before starting your work
-	if !cache.WaitForCacheSync(stopCh, sbc.componentBuildStoreSynced, sbc.componentBuildStoreSynced) {
-		return
-	}
-
-	glog.V(4).Info("Caches synced. Waiting for config to be set")
-
-	// start up your worker threads based on threadiness.  Some controllers
-	// have multiple kinds of workers
-	for i := 0; i < workers; i++ {
-		// runWorker will loop until "something bad" happens.  The .Until will
-		// then rekick the worker after one second
-		go wait.Until(sbc.runWorker, time.Second, stopCh)
-	}
-
-	// wait until we're told to stop
-	<-stopCh
-}
-
 func (sbc *ServiceBuildController) addServiceBuild(obj interface{}) {
-	sBuild := obj.(*crv1.ServiceBuild)
-	glog.V(4).Infof("Adding ServiceBuild %s", sBuild.Name)
-	sbc.enqueueServiceBuild(sBuild)
+	svcBuild := obj.(*crv1.ServiceBuild)
+	glog.V(4).Infof("Adding ServiceBuild %s", svcBuild.Name)
+	sbc.enqueueServiceBuild(svcBuild)
 }
 
 func (sbc *ServiceBuildController) updateServiceBuild(old, cur interface{}) {
-	oldSBuild := old.(*crv1.ServiceBuild)
-	curSBuild := cur.(*crv1.ServiceBuild)
-	glog.V(4).Infof("Updating ComponentBuild %s", oldSBuild.Name)
-	sbc.enqueueServiceBuild(curSBuild)
+	oldSvcBuild := old.(*crv1.ServiceBuild)
+	curSvcBuild := cur.(*crv1.ServiceBuild)
+	glog.V(4).Infof("Updating ComponentBuild %s", oldSvcBuild.Name)
+	sbc.enqueueServiceBuild(curSvcBuild)
 }
 
 // addComponentBuild enqueues any ServiceBuilds which may be interested in it when
@@ -149,8 +117,8 @@ func (sbc *ServiceBuildController) addComponentBuild(obj interface{}) {
 	}
 
 	glog.V(4).Infof("ComponentBuild %s added.", cBuild.Name)
-	for _, sBuild := range sbc.getServiceBuildsForComponentBuild(cBuild) {
-		sbc.enqueueServiceBuild(sBuild)
+	for _, svcBuild := range sbc.getServiceBuildsForComponentBuild(cBuild) {
+		sbc.enqueueServiceBuild(svcBuild)
 	}
 }
 
@@ -167,40 +135,68 @@ func (sbc *ServiceBuildController) updateComponentBuild(old, cur interface{}) {
 		return
 	}
 
-	for _, sBuild := range sbc.getServiceBuildsForComponentBuild(curCBuild) {
-		sbc.enqueueServiceBuild(sBuild)
+	for _, svcBuild := range sbc.getServiceBuildsForComponentBuild(curCBuild) {
+		sbc.enqueueServiceBuild(svcBuild)
 	}
 }
 
 func (sbc *ServiceBuildController) getServiceBuildsForComponentBuild(cBuild *crv1.ComponentBuild) []*crv1.ServiceBuild {
-	sBuilds := []*crv1.ServiceBuild{}
+	svcBuilds := []*crv1.ServiceBuild{}
 
-	// Find any ServiceBuilds whose ComponentBuildInfos mention this ComponentBuild
+	// Find any ServiceBuilds whose ComponentBuildsInfo mention this ComponentBuild
 	// TODO: add a cache mapping ComponentBuild Names to active ServiceBuilds which are waiting on them
 	//       ^^^ tricky because the informers will start and trigger (aka this method will be called) prior
 	//			 to when we could fill the cache
-	for _, sBuildObj := range sbc.serviceBuildStore.List() {
-		sBuild := sBuildObj.(*crv1.ServiceBuild)
+	for _, svcBuildObj := range sbc.serviceBuildStore.List() {
+		svcBuild := svcBuildObj.(*crv1.ServiceBuild)
 
-		for _, cBuildInfo := range sBuild.Spec.ComponentBuildInfos {
+		for _, cBuildInfo := range svcBuild.Spec.ComponentBuildsInfo {
 			if cBuildInfo.Name != nil && *cBuildInfo.Name == cBuild.Name {
-				sBuilds = append(sBuilds, sBuild)
+				svcBuilds = append(svcBuilds, svcBuild)
 				break
 			}
 		}
 	}
 
-	return sBuilds
+	return svcBuilds
 }
 
-func (sbc *ServiceBuildController) enqueueServiceBuild(sBuild *crv1.ServiceBuild) {
-	key, err := cache.DeletionHandlingMetaNamespaceKeyFunc(sBuild)
+func (sbc *ServiceBuildController) enqueueServiceBuild(svcBuild *crv1.ServiceBuild) {
+	key, err := cache.DeletionHandlingMetaNamespaceKeyFunc(svcBuild)
 	if err != nil {
-		runtime.HandleError(fmt.Errorf("Couldn't get key for object %#v: %v", sBuild, err))
+		runtime.HandleError(fmt.Errorf("Couldn't get key for object %#v: %v", svcBuild, err))
 		return
 	}
 
 	sbc.queue.Add(key)
+}
+
+func (sbc *ServiceBuildController) Run(workers int, stopCh <-chan struct{}) {
+	// don't let panics crash the process
+	defer runtime.HandleCrash()
+	// make sure the work queue is shutdown which will trigger workers to end
+	defer sbc.queue.ShutDown()
+
+	glog.Infof("Starting service-build controller")
+	defer glog.Infof("Shutting down service-build controller")
+
+	// wait for your secondary caches to fill before starting your work
+	if !cache.WaitForCacheSync(stopCh, sbc.serviceBuildStoreSynced, sbc.componentBuildStoreSynced) {
+		return
+	}
+
+	glog.V(4).Info("Caches synced.")
+
+	// start up your worker threads based on threadiness.  Some controllers
+	// have multiple kinds of workers
+	for i := 0; i < workers; i++ {
+		// runWorker will loop until "something bad" happens.  The .Until will
+		// then rekick the worker after one second
+		go wait.Until(sbc.runWorker, time.Second, stopCh)
+	}
+
+	// wait until we're told to stop
+	<-stopCh
 }
 
 func (sbc *ServiceBuildController) runWorker() {
@@ -259,7 +255,7 @@ func (sbc *ServiceBuildController) syncServiceBuild(key string) error {
 		glog.V(4).Infof("Finished syncing ServiceBuild %q (%v)", key, time.Now().Sub(startTime))
 	}()
 
-	sBuildObj, exists, err := sbc.serviceBuildStore.GetByKey(key)
+	svcBuildObj, exists, err := sbc.serviceBuildStore.GetByKey(key)
 	if errors.IsNotFound(err) || !exists {
 		glog.V(2).Infof("ServiceBuild %v has been deleted", key)
 		return nil
@@ -268,13 +264,13 @@ func (sbc *ServiceBuildController) syncServiceBuild(key string) error {
 		return err
 	}
 
-	sBuild := sBuildObj.(*crv1.ServiceBuild)
+	svcBuild := svcBuildObj.(*crv1.ServiceBuild)
 
 	needsNewCBuildIdx := []int{}
 	hasFailedCBuild := false
 	hasActiveCBuild := false
-	for idx, cBuildInfo := range sBuild.Spec.ComponentBuildInfos {
-		exists, err := sbc.componentBuildExists(&cBuildInfo, sBuild.Namespace)
+	for idx, cBuildInfo := range svcBuild.Spec.ComponentBuildsInfo {
+		exists, err := sbc.componentBuildExists(&cBuildInfo, svcBuild.Namespace)
 		if err != nil {
 			return err
 		}
@@ -284,7 +280,7 @@ func (sbc *ServiceBuildController) syncServiceBuild(key string) error {
 			continue
 		}
 
-		successful, err := sbc.componentBuildSuccessful(&cBuildInfo, sBuild.Namespace)
+		successful, err := sbc.componentBuildSuccessful(&cBuildInfo, svcBuild.Namespace)
 		if err != nil {
 			return err
 		}
@@ -293,7 +289,7 @@ func (sbc *ServiceBuildController) syncServiceBuild(key string) error {
 			continue
 		}
 
-		failed, err := sbc.componentBuildFailed(&cBuildInfo, sBuild.Namespace)
+		failed, err := sbc.componentBuildFailed(&cBuildInfo, svcBuild.Namespace)
 		if err != nil {
 			return err
 		}
@@ -308,18 +304,18 @@ func (sbc *ServiceBuildController) syncServiceBuild(key string) error {
 		hasActiveCBuild = true
 	}
 
-	sBuildCopy := sBuild.DeepCopy()
+	svcBuildCopy := svcBuild.DeepCopy()
 
 	// If a ComponentBuild for the ServiceBuild has failed, there's no need to create
 	// any more ComponentBuilds, we can simply fail the ServiceBuild.
 	// If there are no new ComponentBuilds to create, we can simply make sure the
 	// ServiceBuild.Status is up to date.
 	if hasFailedCBuild || len(needsNewCBuildIdx) == 0 {
-		return sbc.syncServiceBuildStatus(sBuildCopy, hasFailedCBuild, hasActiveCBuild)
+		return sbc.syncServiceBuildStatus(svcBuildCopy, hasFailedCBuild, hasActiveCBuild)
 	}
 
 	// Create any ComponentBuilds that need to be created and sync ServiceBuild.Status.
-	return sbc.createComponentBuilds(sBuildCopy, needsNewCBuildIdx)
+	return sbc.createComponentBuilds(svcBuildCopy, needsNewCBuildIdx)
 }
 
 func (sbc *ServiceBuildController) componentBuildExists(cBuildInfo *crv1.ServiceBuildComponentBuildInfo, namespace string) (bool, error) {
@@ -345,9 +341,11 @@ func (sbc *ServiceBuildController) componentBuildFailed(cBuildInfo *crv1.Service
 	return cBuild.Status.State == crv1.ComponentBuildStateFailed, nil
 }
 
-func (sbc *ServiceBuildController) createComponentBuilds(sBuild *crv1.ServiceBuild, needsNewCBuildIdx []int) error {
+// Warning: createComponentBuilds mutates svcBuild. Do not pass in a pointer to a ServiceBuild
+// from the shared cache.
+func (sbc *ServiceBuildController) createComponentBuilds(svcBuild *crv1.ServiceBuild, needsNewCBuildIdx []int) error {
 	for _, newCBuildIdx := range needsNewCBuildIdx {
-		cBuildInfo := &sBuild.Spec.ComponentBuildInfos[newCBuildIdx]
+		cBuildInfo := &svcBuild.Spec.ComponentBuildsInfo[newCBuildIdx]
 
 		// TODO: is json marshalling of a struct deterministic in order? If not could potentially get
 		//		 different SHAs for the same definition. This is OK in the correctness sense, since we'll
@@ -365,7 +363,7 @@ func (sbc *ServiceBuildController) createComponentBuilds(sBuild *crv1.ServiceBui
 		definitionHash := hex.EncodeToString(h.Sum(nil))
 		cBuildInfo.DefinitionHash = &definitionHash
 
-		cBuild, err := sbc.findComponentBuildForDefinitionHash(sBuild.Namespace, definitionHash)
+		cBuild, err := sbc.findComponentBuildForDefinitionHash(svcBuild.Namespace, definitionHash)
 		if err != nil {
 			return err
 		}
@@ -382,7 +380,7 @@ func (sbc *ServiceBuildController) createComponentBuilds(sBuild *crv1.ServiceBui
 			previousCBuildName = &cBuild.Name
 		}
 
-		cBuild, err = sbc.createComponentBuild(sBuild.Namespace, cBuildInfo, previousCBuildName)
+		cBuild, err = sbc.createComponentBuild(svcBuild.Namespace, cBuildInfo, previousCBuildName)
 		if err != nil {
 			return err
 		}
@@ -392,10 +390,10 @@ func (sbc *ServiceBuildController) createComponentBuilds(sBuild *crv1.ServiceBui
 
 	response := &crv1.ServiceBuild{}
 	err := sbc.latticeResourceRestClient.Put().
-		Namespace(sBuild.Namespace).
+		Namespace(svcBuild.Namespace).
 		Resource(crv1.ServiceBuildResourcePlural).
-		Name(sBuild.Name).
-		Body(sBuild).
+		Name(svcBuild.Name).
+		Body(svcBuild).
 		Do().
 		Into(response)
 
@@ -404,6 +402,13 @@ func (sbc *ServiceBuildController) createComponentBuilds(sBuild *crv1.ServiceBui
 	}
 
 	// Enqueue the ServiceBuild so we can update its status based on the ComponentBuild statuses.
+	// This is needed for the following scenario:
+	// ServiceBuild SB needs to build Component C, and finds a Running ComponentBuild CB.
+	// SB decides to use it, so it will update its ComponentBuildsInfo to reflect this.
+	// Before it updates however, CB finishes. When updateComponentBuild is called, SB is not found
+	// as a ServiceBuild to enqueue. Once SB is updated, it may never get notified that CB finishes.
+	// By enqueueing it, we make sure we have up to date status information, then from there can rely
+	// on updateComponentBuild to update SB's Status.
 	sbc.enqueueServiceBuild(response)
 	return nil
 }
@@ -480,7 +485,7 @@ func (sbc *ServiceBuildController) findComponentBuildInStore(namespace, definiti
 			continue
 		}
 
-		if *cBuildHashLabel == definitionHash && cBuild.Status.State != crv1.ServiceBuildStateFailed {
+		if *cBuildHashLabel == definitionHash && cBuild.Status.State != crv1.ComponentBuildStateFailed {
 			return cBuild
 		}
 	}
@@ -529,20 +534,22 @@ func (sbc *ServiceBuildController) createComponentBuild(
 	return result, nil
 }
 
-func (sbc *ServiceBuildController) syncServiceBuildStatus(sBuild *crv1.ServiceBuild, hasFailedCBuild, hasActiveCBuild bool) error {
+// Warning: syncServiceBuildStatus mutates svcBuild. Do not pass in a pointer to a ComponentBuild
+// from the shared cache.
+func (sbc *ServiceBuildController) syncServiceBuildStatus(svcBuild *crv1.ServiceBuild, hasFailedCBuild, hasActiveCBuild bool) error {
 	newStatus := calculateComponentBuildStatus(hasFailedCBuild, hasActiveCBuild)
 
-	if reflect.DeepEqual(sBuild.Status, newStatus) {
+	if reflect.DeepEqual(svcBuild.Status, newStatus) {
 		return nil
 	}
 
-	sBuild.Status = newStatus
+	svcBuild.Status = newStatus
 
 	err := sbc.latticeResourceRestClient.Put().
-		Namespace(sBuild.Namespace).
+		Namespace(svcBuild.Namespace).
 		Resource(crv1.ServiceBuildResourcePlural).
-		Name(sBuild.Name).
-		Body(sBuild).
+		Name(svcBuild.Name).
+		Body(svcBuild).
 		Do().
 		Into(nil)
 

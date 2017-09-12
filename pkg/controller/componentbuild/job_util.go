@@ -31,40 +31,39 @@ func getBuildJobName(b *crv1.ComponentBuild) string {
 	return fmt.Sprintf("lattice-build-%s", b.Name)
 }
 
-func (cbc *ComponentBuildController) getBuildJob(b *crv1.ComponentBuild) *batchv1.Job {
+func (cbc *ComponentBuildController) getBuildJob(cBuild *crv1.ComponentBuild) *batchv1.Job {
 	// Need a consistent view of our config while generating the Job
 	cbc.configLock.RLock()
 	defer cbc.configLock.RUnlock()
 
-	name := getBuildJobName(b)
+	name := getBuildJobName(cBuild)
 
 	// FIXME: get job spec for build.DockerImage as well
-	jobSpec, dockerImageFqn := cbc.getGitRepositoryBuildJobSpec(b)
+	jobSpec, dockerImageFqn := cbc.getGitRepositoryBuildJobSpec(cBuild)
 
 	labels := map[string]string{
-		"mlab.lattice.com/build": "true",
+		crv1.ComponentBuildJobLabelKey: "true",
 	}
 	annotations := map[string]string{
 		jobDockerFqnAnnotationKey: dockerImageFqn,
 	}
-	job := &batchv1.Job{
+
+	return &batchv1.Job{
 		ObjectMeta: metav1.ObjectMeta{
 			Annotations:     annotations,
 			Labels:          labels,
 			Name:            name,
-			OwnerReferences: []metav1.OwnerReference{*metav1.NewControllerRef(b, controllerKind)},
+			OwnerReferences: []metav1.OwnerReference{*metav1.NewControllerRef(cBuild, controllerKind)},
 		},
 		Spec: jobSpec,
 	}
-
-	return job
 }
 
-func (cbc *ComponentBuildController) getGitRepositoryBuildJobSpec(build *crv1.ComponentBuild) (batchv1.JobSpec, string) {
-	pullGitRepoContainer := cbc.getPullGitRepoContainer(build)
+func (cbc *ComponentBuildController) getGitRepositoryBuildJobSpec(cBuild *crv1.ComponentBuild) (batchv1.JobSpec, string) {
+	pullGitRepoContainer := cbc.getPullGitRepoContainer(cBuild)
 	authorizeDockerContainer := cbc.getAuthorizeDockerContainer()
-	buildDockerImageContainer, dockerImageFqn := cbc.getBuildDockerImageContainer(build)
-	name := getBuildJobName(build)
+	buildDockerImageContainer, dockerImageFqn := cbc.getBuildDockerImageContainer(cBuild)
+	name := getBuildJobName(cBuild)
 
 	var workingDirectoryVolumeSource corev1.VolumeSource
 	switch cbc.provider {
@@ -121,7 +120,7 @@ func (cbc *ComponentBuildController) getGitRepositoryBuildJobSpec(build *crv1.Co
 	return jobSpec, dockerImageFqn
 }
 
-func (cbc *ComponentBuildController) getPullGitRepoContainer(build *crv1.ComponentBuild) corev1.Container {
+func (cbc *ComponentBuildController) getPullGitRepoContainer(cBuild *crv1.ComponentBuild) corev1.Container {
 	pullGitRepoContainer := corev1.Container{
 		Name:    "pull-git-repo",
 		Image:   cbc.config.PullGitRepoImage,
@@ -133,7 +132,7 @@ func (cbc *ComponentBuildController) getPullGitRepoContainer(build *crv1.Compone
 			},
 			{
 				Name:  "GIT_URL",
-				Value: build.Spec.BuildDefinitionBlock.GitRepository.Url,
+				Value: cBuild.Spec.BuildDefinitionBlock.GitRepository.Url,
 			},
 		},
 		VolumeMounts: []corev1.VolumeMount{
@@ -144,12 +143,12 @@ func (cbc *ComponentBuildController) getPullGitRepoContainer(build *crv1.Compone
 		},
 	}
 
-	if build.Spec.BuildDefinitionBlock.GitRepository.Commit != nil {
+	if cBuild.Spec.BuildDefinitionBlock.GitRepository.Commit != nil {
 		pullGitRepoContainer.Env = append(
 			pullGitRepoContainer.Env,
 			corev1.EnvVar{
 				Name:  "GIT_CHECKOUT_TARGET",
-				Value: *build.Spec.BuildDefinitionBlock.GitRepository.Commit,
+				Value: *cBuild.Spec.BuildDefinitionBlock.GitRepository.Commit,
 			},
 		)
 	} else {
@@ -157,7 +156,7 @@ func (cbc *ComponentBuildController) getPullGitRepoContainer(build *crv1.Compone
 			pullGitRepoContainer.Env,
 			corev1.EnvVar{
 				Name:  "GIT_CHECKOUT_TARGET",
-				Value: *build.Spec.BuildDefinitionBlock.GitRepository.Tag,
+				Value: *cBuild.Spec.BuildDefinitionBlock.GitRepository.Tag,
 			},
 		)
 	}
@@ -197,7 +196,7 @@ func (cbc *ComponentBuildController) getAuthorizeEcrContainer() corev1.Container
 	}
 }
 
-func (cbc *ComponentBuildController) getBuildDockerImageContainer(build *crv1.ComponentBuild) (corev1.Container, string) {
+func (cbc *ComponentBuildController) getBuildDockerImageContainer(cBuild *crv1.ComponentBuild) (corev1.Container, string) {
 	buildDockerImageContainer := corev1.Container{
 		Name:    "build-docker-image",
 		Image:   cbc.config.BuildDockerImage,
@@ -213,7 +212,7 @@ func (cbc *ComponentBuildController) getBuildDockerImageContainer(build *crv1.Co
 			},
 			{
 				Name:  "BUILD_CMD",
-				Value: *build.Spec.BuildDefinitionBlock.Command,
+				Value: *cBuild.Spec.BuildDefinitionBlock.Command,
 			},
 		},
 		VolumeMounts: []corev1.VolumeMount{
@@ -229,9 +228,9 @@ func (cbc *ComponentBuildController) getBuildDockerImageContainer(build *crv1.Co
 	}
 
 	repo := cbc.config.DockerConfig.Repository
-	tag := build.Name
+	tag := cBuild.Name
 	if cbc.config.DockerConfig.RepositoryPerImage {
-		repo = build.Name
+		repo = cBuild.Name
 		tag = fmt.Sprint(time.Now().Unix())
 	}
 
@@ -268,11 +267,11 @@ func (cbc *ComponentBuildController) getBuildDockerImageContainer(build *crv1.Co
 	)
 
 	var baseImage string
-	if build.Spec.BuildDefinitionBlock.Language != nil {
+	if cBuild.Spec.BuildDefinitionBlock.Language != nil {
 		// TODO: insert custom language images when we have them
-		baseImage = *build.Spec.BuildDefinitionBlock.Language
+		baseImage = *cBuild.Spec.BuildDefinitionBlock.Language
 	} else {
-		baseImage = getDockerImageFqn(build.Spec.BuildDefinitionBlock.DockerImage)
+		baseImage = getDockerImageFqn(cBuild.Spec.BuildDefinitionBlock.DockerImage)
 	}
 	buildDockerImageContainer.Env = append(
 		buildDockerImageContainer.Env,
@@ -289,8 +288,8 @@ func getDockerImageFqn(dockerImage *block.DockerImage) string {
 	return fmt.Sprintf("%v/%v:%v", dockerImage.Registry, dockerImage.Repository, dockerImage.Tag)
 }
 
-func jobStatus(j *batchv1.Job) (finished bool, succeeded bool) {
-	for _, c := range j.Status.Conditions {
+func jobStatus(job *batchv1.Job) (finished bool, succeeded bool) {
+	for _, c := range job.Status.Conditions {
 		if c.Type == batchv1.JobComplete && c.Status == corev1.ConditionTrue {
 			finished = true
 			succeeded = true

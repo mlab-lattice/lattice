@@ -11,6 +11,7 @@ import (
 const (
 	ServiceBuildResourceSingular = "servicebuild"
 	ServiceBuildResourcePlural   = "servicebuilds"
+	ServiceBuildResourceShortName = "svcbuild"
 	// TODO: should this be ClusterScoped?
 	ServiceBuildResourceScope = apiextensionsv1beta1.NamespaceScoped
 )
@@ -24,7 +25,7 @@ type ServiceBuild struct {
 }
 
 type ServiceBuildSpec struct {
-	ComponentBuildInfos []ServiceBuildComponentBuildInfo `json:"componentBuildInfos"`
+	ComponentBuildsInfo []ServiceBuildComponentBuildInfo `json:"componentBuildsInfo"`
 }
 
 type ServiceBuildComponentBuildInfo struct {
@@ -42,9 +43,9 @@ type ServiceBuildState string
 
 const (
 	ServiceBuildStatePending   ServiceBuildState = "Pending"
-	ServiceBuildStateRunning                     = "Running"
-	ServiceBuildStateSucceeded                   = "Succeeded"
-	ServiceBuildStateFailed                      = "Failed"
+	ServiceBuildStateRunning   ServiceBuildState = "Running"
+	ServiceBuildStateSucceeded ServiceBuildState = "Succeeded"
+	ServiceBuildStateFailed    ServiceBuildState = "Failed"
 )
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

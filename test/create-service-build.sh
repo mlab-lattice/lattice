@@ -7,7 +7,7 @@ metadata:
   name: ${1}
   namespace: default
 spec:
-  componentBuildInfos:
+  componentBuildsInfo:
   - definitionBlock:
       command: npm install
       git_repository:

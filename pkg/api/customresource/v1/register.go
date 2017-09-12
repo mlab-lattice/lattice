@@ -16,40 +16,54 @@ var (
 	SchemeGroupVersion = schema.GroupVersion{Group: GroupName, Version: "v1"}
 
 	Resources = []struct {
-		Singular string
-		Plural   string
-		Scope    apiextensionsv1beta1.ResourceScope
-		Kind     string
-		ListKind string
-		Type     runtime.Object
-		ListType runtime.Object
+		Singular   string
+		Plural     string
+		ShortNames []string
+		Scope      apiextensionsv1beta1.ResourceScope
+		Kind       string
+		ListKind   string
+		Type       runtime.Object
+		ListType   runtime.Object
 	}{
 		{
-			Singular: ComponentBuildResourceSingular,
-			Plural:   ComponentBuildResourcePlural,
-			Scope:    ComponentBuildResourceScope,
-			Kind:     "ComponentBuild",
-			ListKind: "ComponentBuildList",
-			Type:     &ComponentBuild{},
-			ListType: &ComponentBuildList{},
+			Singular:   ComponentBuildResourceSingular,
+			Plural:     ComponentBuildResourcePlural,
+			ShortNames: []string{ComponentBuildResourceShortName},
+			Scope:      ComponentBuildResourceScope,
+			Kind:       "ComponentBuild",
+			ListKind:   "ComponentBuildList",
+			Type:       &ComponentBuild{},
+			ListType:   &ComponentBuildList{},
 		},
 		{
-			Singular: ConfigResourceSingular,
-			Plural:   ConfigResourcePlural,
-			Scope:    ConfigResourceScope,
-			Kind:     "Config",
-			ListKind: "ConfigList",
-			Type:     &Config{},
-			ListType: &ConfigList{},
+			Singular:   ConfigResourceSingular,
+			Plural:     ConfigResourcePlural,
+			ShortNames: []string{},
+			Scope:      ConfigResourceScope,
+			Kind:       "Config",
+			ListKind:   "ConfigList",
+			Type:       &Config{},
+			ListType:   &ConfigList{},
 		},
 		{
-			Singular: ServiceBuildResourceSingular,
-			Plural:   ServiceBuildResourcePlural,
-			Scope:    ServiceBuildResourceScope,
-			Kind:     "ServiceBuild",
-			ListKind: "ServiceBuildList",
-			Type:     &ServiceBuild{},
-			ListType: &ServiceBuildList{},
+			Singular:   ServiceBuildResourceSingular,
+			Plural:     ServiceBuildResourcePlural,
+			ShortNames: []string{ServiceBuildResourceShortName},
+			Scope:      ServiceBuildResourceScope,
+			Kind:       "ServiceBuild",
+			ListKind:   "ServiceBuildList",
+			Type:       &ServiceBuild{},
+			ListType:   &ServiceBuildList{},
+		},
+		{
+			Singular:   SystemBuildResourceSingular,
+			Plural:     SystemBuildResourcePlural,
+			ShortNames: []string{SystemBuildResourceShortName},
+			Scope:      SystemBuildResourceScope,
+			Kind:       "SystemBuild",
+			ListKind:   "SystemBuildList",
+			Type:       &SystemBuild{},
+			ListType:   &SystemBuildList{},
 		},
 	}
 )
@@ -62,7 +76,8 @@ func Resource(resource string) schema.GroupResource {
 // addKnownTypes adds the set of types defined in this package to the supplied scheme.
 func addKnownTypes(scheme *runtime.Scheme) error {
 	for _, resource := range Resources {
-		scheme.AddKnownTypes(SchemeGroupVersion,
+		scheme.AddKnownTypes(
+			SchemeGroupVersion,
 			resource.Type.(runtime.Object),
 			resource.ListType.(runtime.Object),
 		)
