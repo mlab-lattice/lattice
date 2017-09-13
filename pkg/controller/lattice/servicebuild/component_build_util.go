@@ -21,11 +21,11 @@ func (sbc *ServiceBuildController) getComponentBuildFromInfo(
 	cBuildInfo *crv1.ServiceBuildComponentBuildInfo,
 	namespace string,
 ) (*crv1.ComponentBuild, bool, error) {
-	if cBuildInfo.Name == nil {
+	if cBuildInfo.ComponentBuildName == nil {
 		return nil, false, nil
 	}
 
-	cBuildKey := fmt.Sprintf("%v/%v", namespace, *cBuildInfo.Name)
+	cBuildKey := fmt.Sprintf("%v/%v", namespace, *cBuildInfo.ComponentBuildName)
 	cBuildObj, exists, err := sbc.componentBuildStore.GetByKey(cBuildKey)
 	if err != nil || !exists {
 		return nil, false, err

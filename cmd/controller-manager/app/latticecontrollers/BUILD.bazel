@@ -1,0 +1,17 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "lattice_controllers.go",
+        "service_build.go",
+        "system_build.go",
+    ],
+    importpath = "github.com/mlab-lattice/kubernetes-integration/cmd/controller-manager/app/latticecontrollers",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//cmd/controller-manager/app/common:go_default_library",
+        "//pkg/controller/lattice/servicebuild:go_default_library",
+        "//pkg/controller/lattice/systembuild:go_default_library",
+    ],
+)

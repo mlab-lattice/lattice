@@ -6,7 +6,7 @@ go_library(
         "component_build_controller.go",
         "job_util.go",
     ],
-    importpath = "github.com/mlab-lattice/kubernetes-integration/pkg/controller/componentbuild",
+    importpath = "github.com/mlab-lattice/kubernetes-integration/pkg/controller/kubernetes/componentbuild",
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/api/customresource/v1:go_default_library",

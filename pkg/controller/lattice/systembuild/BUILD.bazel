@@ -6,7 +6,7 @@ go_library(
         "service_build_util.go",
         "system_build_controller.go",
     ],
-    importpath = "github.com/mlab-lattice/kubernetes-integration/pkg/controller/systembuild",
+    importpath = "github.com/mlab-lattice/kubernetes-integration/pkg/controller/lattice/systembuild",
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/api/customresource/v1:go_default_library",
