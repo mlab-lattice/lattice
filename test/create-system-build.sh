@@ -2,7 +2,7 @@
 
 cat <<EOF | kubectl create -f -
 apiVersion: lattice.mlab.com/v1
-kind: SystemBuild
+kind: LatticeSystemBuild
 metadata:
   name: ${1}
   namespace: default

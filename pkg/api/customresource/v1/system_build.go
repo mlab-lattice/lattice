@@ -11,7 +11,7 @@ import (
 const (
 	SystemBuildResourceSingular  = "systembuild"
 	SystemBuildResourcePlural    = "systembuilds"
-	SystemBuildResourceShortName = "sysbuild"
+	SystemBuildResourceShortName = "lsysb"
 	// TODO: should this be ClusterScoped?
 	SystemBuildResourceScope = apiextensionsv1beta1.NamespaceScoped
 

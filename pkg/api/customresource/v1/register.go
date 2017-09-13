@@ -56,6 +56,16 @@ var (
 			ListType:   &ServiceBuildList{},
 		},
 		{
+			Singular:   ServiceResourceSingular,
+			Plural:     ServiceResourcePlural,
+			ShortNames: []string{ServiceResourceShortName},
+			Scope:      ServiceResourceScope,
+			Kind:       "Service",
+			ListKind:   "ServiceList",
+			Type:       &Service{},
+			ListType:   &ServiceList{},
+		},
+		{
 			Singular:   SystemBuildResourceSingular,
 			Plural:     SystemBuildResourcePlural,
 			ShortNames: []string{SystemBuildResourceShortName},

@@ -5,7 +5,7 @@ import (
 	"time"
 
 	providerutils "github.com/mlab-lattice/core/pkg/provider"
-	"github.com/mlab-lattice/core/pkg/system/definition/block"
+	systemdefinitionblock "github.com/mlab-lattice/core/pkg/system/definition/block"
 
 	crv1 "github.com/mlab-lattice/kubernetes-integration/pkg/api/customresource/v1"
 
@@ -26,10 +26,6 @@ const (
 
 	jobDockerFqnAnnotationKey = "docker-image-fqn"
 )
-
-func getBuildJobName(b *crv1.ComponentBuild) string {
-	return fmt.Sprintf("lattice-build-%s", b.Name)
-}
 
 func (cbc *ComponentBuildController) getBuildJob(cBuild *crv1.ComponentBuild) *batchv1.Job {
 	// Need a consistent view of our config while generating the Job
@@ -57,6 +53,10 @@ func (cbc *ComponentBuildController) getBuildJob(cBuild *crv1.ComponentBuild) *b
 		},
 		Spec: jobSpec,
 	}
+}
+
+func getBuildJobName(b *crv1.ComponentBuild) string {
+	return fmt.Sprintf("lattice-build-%s", b.Name)
 }
 
 func (cbc *ComponentBuildController) getGitRepositoryBuildJobSpec(cBuild *crv1.ComponentBuild) (batchv1.JobSpec, string) {
@@ -284,7 +284,7 @@ func (cbc *ComponentBuildController) getBuildDockerImageContainer(cBuild *crv1.C
 	return buildDockerImageContainer, dockerImageFqn
 }
 
-func getDockerImageFqn(dockerImage *block.DockerImage) string {
+func getDockerImageFqn(dockerImage *systemdefinitionblock.DockerImage) string {
 	return fmt.Sprintf("%v/%v:%v", dockerImage.Registry, dockerImage.Repository, dockerImage.Tag)
 }
 

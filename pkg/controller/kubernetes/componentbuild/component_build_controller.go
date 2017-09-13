@@ -156,15 +156,15 @@ func (cbc *ComponentBuildController) addJob(obj interface{}) {
 
 	// If it has a ControllerRef, that's all that matters.
 	if controllerRef := metav1.GetControllerOf(job); controllerRef != nil {
-		cBuild := cbc.resolveControllerRef(job.Namespace, controllerRef)
+		b := cbc.resolveControllerRef(job.Namespace, controllerRef)
 
 		// Not a ComponentBuild Job
-		if cBuild == nil {
+		if b == nil {
 			return
 		}
 
 		glog.V(4).Infof("Job %s added.", job.Name)
-		cbc.enqueueComponentBuild(cBuild)
+		cbc.enqueueComponentBuild(b)
 		return
 	}
 
@@ -293,36 +293,6 @@ func (cbc *ComponentBuildController) resolveControllerRef(namespace string, cont
 	return cBuild
 }
 
-// getJobForBuild uses ControllerRefManager to retrieve the Job for a ComponentBuild
-func (cbc *ComponentBuildController) getJobForBuild(cBuild *crv1.ComponentBuild) (*batchv1.Job, error) {
-	// List all Jobs to find in the ComponentBuild's namespace to find the Job the ComponentBuild manages.
-	jobList, err := cbc.jobLister.Jobs(cBuild.Namespace).List(labels.Everything())
-	if err != nil {
-		return nil, err
-	}
-
-	matchingJobs := []*batchv1.Job{}
-	cBuildControllerRef := metav1.NewControllerRef(cBuild, controllerKind)
-
-	for _, job := range jobList {
-		jobControllerRef := metav1.GetControllerOf(job)
-
-		if reflect.DeepEqual(cBuildControllerRef, jobControllerRef) {
-			matchingJobs = append(matchingJobs, job)
-		}
-	}
-
-	if len(matchingJobs) == 0 {
-		return nil, nil
-	}
-
-	if len(matchingJobs) > 1 {
-		return nil, fmt.Errorf("ComponentBuild %v has multiple Jobs", cBuild.Name)
-	}
-
-	return matchingJobs[0], nil
-}
-
 func (cbc *ComponentBuildController) Run(workers int, stopCh <-chan struct{}) {
 	// don't let panics crash the process
 	defer runtime.HandleCrash()
@@ -436,7 +406,37 @@ func (cbc *ComponentBuildController) syncComponentBuild(key string) error {
 	return cbc.syncComponentBuildWithJob(cBuildCopy, job)
 }
 
-// Warning: createComponentBuildJob mutates cBuild. Do not pass in a pointer to a ComponentBuild
+// getJobForBuild uses ControllerRefManager to retrieve the Job for a ComponentBuild
+func (cbc *ComponentBuildController) getJobForBuild(cBuild *crv1.ComponentBuild) (*batchv1.Job, error) {
+	// List all Jobs to find in the ComponentBuild's namespace to find the Job the ComponentBuild manages.
+	jobList, err := cbc.jobLister.Jobs(cBuild.Namespace).List(labels.Everything())
+	if err != nil {
+		return nil, err
+	}
+
+	matchingJobs := []*batchv1.Job{}
+	cBuildControllerRef := metav1.NewControllerRef(cBuild, controllerKind)
+
+	for _, job := range jobList {
+		jobControllerRef := metav1.GetControllerOf(job)
+
+		if reflect.DeepEqual(cBuildControllerRef, jobControllerRef) {
+			matchingJobs = append(matchingJobs, job)
+		}
+	}
+
+	if len(matchingJobs) == 0 {
+		return nil, nil
+	}
+
+	if len(matchingJobs) > 1 {
+		return nil, fmt.Errorf("ComponentBuild %v has multiple Jobs", cBuild.Name)
+	}
+
+	return matchingJobs[0], nil
+}
+
+// Warning: createComponentBuildJob mutates cBuild. Please do not pass in a pointer to a ComponentBuild
 // from the shared cache.
 func (cbc *ComponentBuildController) createComponentBuildJob(cBuild *crv1.ComponentBuild) error {
 	job := cbc.getBuildJob(cBuild)
@@ -451,7 +451,7 @@ func (cbc *ComponentBuildController) createComponentBuildJob(cBuild *crv1.Compon
 	return cbc.syncComponentBuildWithJob(cBuild, jobResp)
 }
 
-// Warning; syncComponentBuildWithJob mutates cBuild. Do not pass in a pointer to a ComponentBuild
+// Warning; syncComponentBuildWithJob mutates cBuild. Please do not pass in a pointer to a ComponentBuild
 // from the shared cache.
 func (cbc *ComponentBuildController) syncComponentBuildWithJob(cBuild *crv1.ComponentBuild, job *batchv1.Job) error {
 	// FIXME: add docker image fqn to cBuild spec
@@ -504,8 +504,8 @@ func calculateComponentBuildStatus(job *batchv1.Job) crv1.ComponentBuildStatus {
 	}
 }
 
-func getComponentBuildArtifacts(job *batchv1.Job) crv1.ComponentBuildArtifacts {
-	return crv1.ComponentBuildArtifacts{
+func getComponentBuildArtifacts(job *batchv1.Job) *crv1.ComponentBuildArtifacts {
+	return &crv1.ComponentBuildArtifacts{
 		DockerImageFqn: job.Annotations[jobDockerFqnAnnotationKey],
 	}
 }

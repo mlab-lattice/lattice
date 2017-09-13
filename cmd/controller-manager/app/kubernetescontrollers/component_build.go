@@ -1,10 +1,11 @@
-package app
+package kubernetescontrollers
 
 import (
-	"github.com/mlab-lattice/kubernetes-integration/pkg/controller/componentbuild"
+	controller "github.com/mlab-lattice/kubernetes-integration/cmd/controller-manager/app/common"
+	"github.com/mlab-lattice/kubernetes-integration/pkg/controller/kubernetes/componentbuild"
 )
 
-func initializeComponentBuildController(ctx ControllerContext) {
+func initializeComponentBuildController(ctx controller.Context) {
 	go componentbuild.NewComponentBuildController(
 		ctx.Provider,
 		ctx.ClientBuilder.ClientOrDie("build-controller"),

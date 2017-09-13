@@ -37,6 +37,7 @@ func getNewServiceBuildFromDefinition(sysBuild *crv1.SystemBuild, svcDefinition 
 			componentBuildsInfo,
 			crv1.ServiceBuildComponentBuildInfo{
 				DefinitionBlock: component.Build,
+				ComponentName:   component.Name,
 			},
 		)
 	}

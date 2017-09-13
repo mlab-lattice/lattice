@@ -9,9 +9,9 @@ import (
 )
 
 const (
-	ComponentBuildResourceSingular = "componentbuild"
-	ComponentBuildResourcePlural   = "componentbuilds"
-	ComponentBuildResourceShortName = "cbuild"
+	ComponentBuildResourceSingular  = "componentbuild"
+	ComponentBuildResourcePlural    = "componentbuilds"
+	ComponentBuildResourceShortName = "lcb"
 	// TODO: should this be ClusterScoped?
 	ComponentBuildResourceScope = apiextensionsv1beta1.NamespaceScoped
 
@@ -28,7 +28,7 @@ type ComponentBuild struct {
 
 type ComponentBuildSpec struct {
 	BuildDefinitionBlock systemdefinitionblock.ComponentBuild `json:"definitionBlock"`
-	Artifacts            ComponentBuildArtifacts              `json:"artifacts"`
+	Artifacts            *ComponentBuildArtifacts             `json:"artifacts"`
 }
 
 type ComponentBuildArtifacts struct {

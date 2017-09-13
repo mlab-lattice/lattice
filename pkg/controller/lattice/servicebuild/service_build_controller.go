@@ -151,7 +151,7 @@ func (sbc *ServiceBuildController) getServiceBuildsForComponentBuild(cBuild *crv
 		svcBuild := svcBuildObj.(*crv1.ServiceBuild)
 
 		for _, cBuildInfo := range svcBuild.Spec.ComponentBuildsInfo {
-			if cBuildInfo.Name != nil && *cBuildInfo.Name == cBuild.Name {
+			if cBuildInfo.ComponentBuildName != nil && *cBuildInfo.ComponentBuildName == cBuild.Name {
 				svcBuilds = append(svcBuilds, svcBuild)
 				break
 			}
@@ -370,7 +370,7 @@ func (sbc *ServiceBuildController) createComponentBuilds(svcBuild *crv1.ServiceB
 
 		// Found an existing ComponentBuild.
 		if cBuild != nil && cBuild.Status.State != crv1.ComponentBuildStateFailed {
-			cBuildInfo.Name = &cBuild.Name
+			cBuildInfo.ComponentBuildName = &cBuild.Name
 			continue
 		}
 
@@ -385,7 +385,7 @@ func (sbc *ServiceBuildController) createComponentBuilds(svcBuild *crv1.ServiceB
 			return err
 		}
 
-		cBuildInfo.Name = &cBuild.Name
+		cBuildInfo.ComponentBuildName = &cBuild.Name
 	}
 
 	response := &crv1.ServiceBuild{}
