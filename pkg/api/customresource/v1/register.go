@@ -85,6 +85,16 @@ var (
 			Type:       &SystemBuild{},
 			ListType:   &SystemBuildList{},
 		},
+		{
+			Singular:   SystemRolloutResourceSingular,
+			Plural:     SystemRolloutResourcePlural,
+			ShortNames: []string{SystemRolloutResourceShortName},
+			Scope:      SystemRolloutResourceScope,
+			Kind:       "SystemRollout",
+			ListKind:   "SystemRolloutList",
+			Type:       &SystemRollout{},
+			ListType:   &SystemRolloutList{},
+		},
 	}
 )
 

@@ -4,10 +4,12 @@ import (
 	"flag"
 	"time"
 
-	"github.com/mlab-lattice/core/pkg/constants"
+	coreconstants "github.com/mlab-lattice/core/pkg/constants"
+	coretypes "github.com/mlab-lattice/core/pkg/types"
 
 	crdclient "github.com/mlab-lattice/kubernetes-integration/pkg/api/customresource"
 	crv1 "github.com/mlab-lattice/kubernetes-integration/pkg/api/customresource/v1"
+	"github.com/mlab-lattice/kubernetes-integration/pkg/constants"
 
 	apiextensionsclient "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 
@@ -15,6 +17,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 
+	corev1 "k8s.io/api/core/v1"
+
+	clientset "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
 
 	"github.com/golang/glog"
@@ -22,12 +27,12 @@ import (
 
 var (
 	kubeconfigPath string
-	provider       string
+	providerName   string
 )
 
 func init() {
 	flag.StringVar(&kubeconfigPath, "kubeconfig", "", "path to kubeconfig file")
-	flag.StringVar(&provider, "provider", "", "path to kubeconfig file")
+	flag.StringVar(&providerName, "provider", "", "path to kubeconfig file")
 	flag.Parse()
 }
 
@@ -42,14 +47,22 @@ func main() {
 		panic(err)
 	}
 
+	kubeClientset := clientset.NewForConfigOrDie(kubeconfig)
+	latticeInternalNamespace := &corev1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: constants.InternalNamespace,
+		},
+	}
+
 	err = wait.Poll(500*time.Millisecond, 60*time.Second, func() (bool, error) {
-		_, err = crdclient.CreateCustomResourceDefinitions(apiextensionsclientset)
-		if err != nil {
+		_, err := kubeClientset.CoreV1().Namespaces().Create(latticeInternalNamespace)
+		if err != nil && !apierrors.IsAlreadyExists(err) {
 			return false, nil
 		}
 		return true, nil
 	})
 
+	_, err = crdclient.CreateCustomResourceDefinitions(apiextensionsclientset)
 	if err != nil {
 		panic(err)
 	}
@@ -60,8 +73,8 @@ func main() {
 	}
 
 	var buildConfig crv1.ComponentBuildConfig
-	switch provider {
-	case constants.ProviderLocal:
+	switch coretypes.Provider(providerName) {
+	case coreconstants.ProviderLocal:
 		buildConfig = crv1.ComponentBuildConfig{
 			DockerConfig: crv1.BuildDockerConfig{
 				Registry:           "lattice-local",
@@ -72,7 +85,7 @@ func main() {
 			BuildDockerImage: "bazel/docker:build-docker-image",
 		}
 	default:
-		panic("unsupported provider")
+		panic("unsupported providerName")
 	}
 
 	config := &crv1.Config{

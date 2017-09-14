@@ -39,7 +39,7 @@ go_register_toolchains()
 
 go_repository(
     name = "com_github_mlab_lattice_core",
-    commit = "68d44e7559d2a6d85cd21b32865242b76ab20bba",
+    commit = "9903f28a94c4c57536c9cd3527131a28d396fff3",
     importpath = "github.com/mlab-lattice/core",
     remote = "git@github.com:mlab-lattice/core.git",
     vcs = "git",
@@ -258,4 +258,10 @@ go_repository(
     name = "com_github_pborman_uuid",
     commit = "e790cca94e6cc75c7064b1332e63811d4aae1a53",
     importpath = "github.com/pborman/uuid",
+)
+
+go_repository(
+    name = "com_github_sergi_go_diff",
+    commit = "feef008d51ad2b3778f85d387ccf91735543008d",
+    importpath = "github.com/sergi/go-diff",
 )

@@ -6,6 +6,7 @@ import (
 	"time"
 
 	systemdefinition "github.com/mlab-lattice/core/pkg/system/definition"
+	systemtree "github.com/mlab-lattice/core/pkg/system/tree"
 
 	crv1 "github.com/mlab-lattice/kubernetes-integration/pkg/api/customresource/v1"
 
@@ -299,27 +300,29 @@ func (sc *SystemController) syncSystem(key string) error {
 // Warning: syncSystemServiceStatuses mutates sysBuild. Do not pass in a pointer to a
 // System from the shared cache.
 func (sc *SystemController) syncSystemServiceStatuses(sys *crv1.System) error {
-	for idx, svc := range sys.Spec.Services {
+	for path, svcInfo := range sys.Spec.Services {
 		// Check if we've already created a Service. If so just grab its status.
-		if svc.ServiceName != nil {
-			svcState := sc.getServiceState(sys.Namespace, *svc.ServiceName)
+		if svcInfo.ServiceName != nil {
+			svcState := sc.getServiceState(sys.Namespace, *svcInfo.ServiceName)
 			if svcState == nil {
 				// This shouldn't happen.
 				// FIXME: send error event
 				failedState := crv1.ServiceStateRolloutFailed
-				sys.Spec.Services[idx].ServiceState = &failedState
+				svcState = &failedState
 			}
-			sys.Spec.Services[idx].ServiceState = svcState
+			svcInfo.ServiceState = svcState
+			sys.Spec.Services[path] = svcInfo
 			continue
 		}
 
 		// Otherwise we'll have to create a new Service.
-		svc, err := sc.createService(sys, &svc.Definition, svc.Path, svc.BuildName)
+		svc, err := sc.createService(sys, &svcInfo.Definition, path, svcInfo.BuildName)
 		if err != nil {
 			return err
 		}
-		sys.Spec.Services[idx].ServiceName = &(svc.Name)
-		sys.Spec.Services[idx].ServiceState = &(svc.Status.State)
+		svcInfo.ServiceName = &(svc.Name)
+		svcInfo.ServiceState = &(svc.Status.State)
+		sys.Spec.Services[path] = svcInfo
 	}
 
 	response := &crv1.System{}
@@ -338,7 +341,8 @@ func (sc *SystemController) syncSystemServiceStatuses(sys *crv1.System) error {
 func (sc *SystemController) createService(
 	sys *crv1.System,
 	svcDefinitionBlock *systemdefinition.Service,
-	svcPath, svcBuildName string,
+	svcPath systemtree.NodePath,
+	svcBuildName string,
 ) (*crv1.Service, error) {
 	svc := getNewServiceFromDefinition(sys, svcDefinitionBlock, svcPath, svcBuildName)
 
@@ -360,9 +364,9 @@ func (sc *SystemController) syncSystemStatus(sys *crv1.System) error {
 	hasFailedSvcRollout := false
 	hasActiveSvcRollout := false
 
-	for _, svc := range sys.Spec.Services {
+	for path, svc := range sys.Spec.Services {
 		if svc.ServiceState == nil {
-			return fmt.Errorf("Service %v had no ServiceBuildState in syncSystemStatus", svc.Path)
+			return fmt.Errorf("Service %v had no ServiceBuildState in syncSystemStatus", path)
 		}
 
 		// If there's a failed rollout, no need to look any further, our System has failed.

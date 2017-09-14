@@ -120,6 +120,12 @@ func getCRDInformers(latticeResourceClient rest.Interface) map[string]cache.Shar
 			objType:      &crv1.SystemBuild{},
 			resyncPeriod: time.Duration(12 * time.Hour),
 		},
+		{
+			name:         "system-rollout",
+			plural:       crv1.SystemRolloutResourcePlural,
+			objType:      &crv1.SystemRollout{},
+			resyncPeriod: time.Duration(12 * time.Hour),
+		},
 	}
 
 	informersMap := map[string]cache.SharedInformer{}

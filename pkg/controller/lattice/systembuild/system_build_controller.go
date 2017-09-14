@@ -304,7 +304,7 @@ func (sbc *SystemBuildController) syncSystemBuild(key string) error {
 // Warning: syncSystemBuildServiceStatuses mutates sysBuild. Do not pass in a pointer to a
 // SystemBuild from the shared cache.
 func (sbc *SystemBuildController) syncSystemBuildServiceStatuses(sysBuild *crv1.SystemBuild) error {
-	for idx, svc := range sysBuild.Spec.Services {
+	for path, svc := range sysBuild.Spec.Services {
 		// Check if we've already created a Service. If so just grab its status.
 		if svc.ServiceBuildName != nil {
 			svcBuildState := sbc.getServiceBuildState(sysBuild.Namespace, *svc.ServiceBuildName)
@@ -312,9 +312,12 @@ func (sbc *SystemBuildController) syncSystemBuildServiceStatuses(sysBuild *crv1.
 				// This shouldn't happen.
 				// FIXME: send error event
 				failedState := crv1.ServiceBuildStateFailed
-				sysBuild.Spec.Services[idx].ServiceBuildState = &failedState
+				svcBuildState = &failedState
+				//sysBuild.Spec.Services[idx].ServiceBuildState = &failedState
 			}
-			sysBuild.Spec.Services[idx].ServiceBuildState = svcBuildState
+
+			svc.ServiceBuildState = svcBuildState
+			sysBuild.Spec.Services[path] = svc
 			continue
 		}
 
@@ -323,8 +326,10 @@ func (sbc *SystemBuildController) syncSystemBuildServiceStatuses(sysBuild *crv1.
 		if err != nil {
 			return err
 		}
-		sysBuild.Spec.Services[idx].ServiceBuildName = &(svcBuild.Name)
-		sysBuild.Spec.Services[idx].ServiceBuildState = &(svcBuild.Status.State)
+
+		svc.ServiceBuildName = &(svcBuild.Name)
+		svc.ServiceBuildState = &(svcBuild.Status.State)
+		sysBuild.Spec.Services[path] = svc
 	}
 
 	response := &crv1.SystemBuild{}
@@ -364,9 +369,9 @@ func (sbc *SystemBuildController) syncSystemBuildStatus(sysBuild *crv1.SystemBui
 	hasFailedSvcBuild := false
 	hasActiveSvcBuild := false
 
-	for _, svc := range sysBuild.Spec.Services {
+	for path, svc := range sysBuild.Spec.Services {
 		if svc.ServiceBuildState == nil {
-			return fmt.Errorf("Service %v had no ServiceBuildState in syncSystemBuildStatus", svc.Path)
+			return fmt.Errorf("Service %v had no ServiceBuildState in syncSystemBuildStatus", path)
 		}
 
 		// If there's a failed build, no need to look any further, our SystemBuild has failed.

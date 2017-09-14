@@ -11,5 +11,6 @@ go_library(
     deps = [
         "//pkg/provider/local:go_default_library",
         "@com_github_mlab_lattice_core//pkg/constants:go_default_library",
+        "@com_github_mlab_lattice_core//pkg/types:go_default_library",
     ],
 )

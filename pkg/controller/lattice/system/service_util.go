@@ -2,6 +2,7 @@ package system
 
 import (
 	systemdefinition "github.com/mlab-lattice/core/pkg/system/definition"
+	systemtree "github.com/mlab-lattice/core/pkg/system/tree"
 
 	crv1 "github.com/mlab-lattice/kubernetes-integration/pkg/api/customresource/v1"
 
@@ -19,7 +20,12 @@ func (sc *SystemController) getServiceState(namespace, svcName string) *crv1.Ser
 	return &(svcObj.(*crv1.Service).Status.State)
 }
 
-func getNewServiceFromDefinition(sys *crv1.System, svcDefinition *systemdefinition.Service, svcPath, svcBuildName string) *crv1.Service {
+func getNewServiceFromDefinition(
+	sys *crv1.System,
+	svcDefinition *systemdefinition.Service,
+	svcPath systemtree.NodePath,
+	svcBuildName string,
+) *crv1.Service {
 	labels := map[string]string{}
 
 	sysVersionLabel, ok := sys.Labels[crv1.SystemVersionLabelKey]

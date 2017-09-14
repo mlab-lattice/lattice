@@ -6,8 +6,9 @@ import (
 
 func GetControllerInitializers() map[string]controller.Initializer {
 	return map[string]controller.Initializer{
-		"service-build": initializeServiceBuildController,
-		"system":        initializeSystemController,
-		"system-build":  initializeSystemBuildController,
+		"service-build":  initializeServiceBuildController,
+		"system":         initializeSystemController,
+		"system-build":   initializeSystemBuildController,
+		"system-rollout": initializeSystemRolloutController,
 	}
 }

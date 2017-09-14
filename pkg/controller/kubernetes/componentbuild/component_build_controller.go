@@ -66,6 +66,7 @@ func NewComponentBuildController(
 		provider:                  provider,
 		latticeResourceRestClient: latticeResourceRestClient,
 		kubeClient:                kubeClient,
+		configSetChan:             make(chan struct{}),
 		queue:                     workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "component-build"),
 	}
 
@@ -83,8 +84,6 @@ func NewComponentBuildController(
 	})
 	cbc.configStore = configInformer.GetStore()
 	cbc.configStoreSynced = configInformer.HasSynced
-
-	cbc.configSetChan = make(chan struct{})
 
 	componentBuildInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    cbc.addComponentBuild,

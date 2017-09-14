@@ -54,7 +54,7 @@ func NewServiceBuildController(
 	sbc := &ServiceBuildController{
 		latticeResourceRestClient: latticeResourceRestClient,
 		recentComponentBuilds:     make(map[string]map[string]string),
-		queue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "component-build"),
+		queue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "service-build"),
 	}
 
 	sbc.syncHandler = sbc.syncServiceBuild
@@ -244,14 +244,14 @@ func (sbc *ServiceBuildController) processNextWorkItem() bool {
 func (sbc *ServiceBuildController) syncServiceBuild(key string) error {
 	glog.Flush()
 	startTime := time.Now()
-	glog.V(4).Infof("Started syncing Service %q (%v)", key, startTime)
+	glog.V(4).Infof("Started syncing ServiceBuild %q (%v)", key, startTime)
 	defer func() {
-		glog.V(4).Infof("Finished syncing Service %q (%v)", key, time.Now().Sub(startTime))
+		glog.V(4).Infof("Finished syncing ServiceBuild %q (%v)", key, time.Now().Sub(startTime))
 	}()
 
 	svcBuildObj, exists, err := sbc.serviceBuildStore.GetByKey(key)
 	if errors.IsNotFound(err) || !exists {
-		glog.V(2).Infof("Service %v has been deleted", key)
+		glog.V(2).Infof("ServiceBuild %v has been deleted", key)
 		return nil
 	}
 	if err != nil {
