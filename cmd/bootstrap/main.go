@@ -4,15 +4,15 @@ import (
 	"flag"
 	"fmt"
 
+	"github.com/mlab-lattice/core/pkg/constants"
+
+	crdclient "github.com/mlab-lattice/kubernetes-integration/pkg/api/customresource"
+	crv1 "github.com/mlab-lattice/kubernetes-integration/pkg/api/customresource/v1"
+
 	apiextensionsclient "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/clientcmd"
-
-	providerutil "github.com/mlab-lattice/core/pkg/provider"
-
-	crdclient "github.com/mlab-lattice/kubernetes-integration/pkg/api/customresource"
-	crv1 "github.com/mlab-lattice/kubernetes-integration/pkg/api/customresource/v1"
 
 	"github.com/golang/glog"
 )
@@ -26,10 +26,6 @@ func init() {
 	flag.StringVar(&kubeconfigPath, "kubeconfig", "", "path to kubeconfig file")
 	flag.StringVar(&provider, "provider", "", "path to kubeconfig file")
 	flag.Parse()
-
-	if !providerutil.ValidateProvider(provider) {
-		panic(fmt.Sprintf("Invalid provider %v", provider))
-	}
 }
 
 func main() {
@@ -55,7 +51,7 @@ func main() {
 
 	var buildConfig crv1.ComponentBuildConfig
 	switch provider {
-	case providerutil.Local:
+	case constants.ProviderLocal:
 		buildConfig = crv1.ComponentBuildConfig{
 			DockerConfig: crv1.BuildDockerConfig{
 				Registry:           "lattice-local",

@@ -7,5 +7,6 @@ import (
 func GetControllerInitializers() map[string]controller.Initializer {
 	return map[string]controller.Initializer{
 		"component-build": initializeComponentBuildController,
+		"service":         initializeServiceController,
 	}
 }

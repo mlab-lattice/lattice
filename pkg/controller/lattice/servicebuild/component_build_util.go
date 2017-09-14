@@ -9,6 +9,8 @@ import (
 	"k8s.io/apimachinery/pkg/util/uuid"
 )
 
+const componentBuildDefinitionHashMetadataKey = "lattice-component-build-definition-hash"
+
 func getComponentBuildDefinitionHashFromLabel(cBuild *crv1.ComponentBuild) *string {
 	cBuildHashLabel, ok := cBuild.Annotations[componentBuildDefinitionHashMetadataKey]
 	if !ok {

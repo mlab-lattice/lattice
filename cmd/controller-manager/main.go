@@ -2,27 +2,25 @@ package main
 
 import (
 	"flag"
-	"fmt"
 
-	providerutil "github.com/mlab-lattice/core/pkg/provider"
 	"github.com/mlab-lattice/kubernetes-integration/cmd/controller-manager/app"
+	"github.com/mlab-lattice/kubernetes-integration/pkg/provider"
 )
 
 var (
 	kubeconfig string
-	provider   string
+	p          provider.Interface
 )
 
 func init() {
+	var providerName string
 	flag.StringVar(&kubeconfig, "kubeconfig", "", "path to kubeconfig file")
-	flag.StringVar(&provider, "provider", "", "path to kubeconfig file")
+	flag.StringVar(&providerName, "provider", "", "name of provider")
 	flag.Parse()
 
-	if !providerutil.ValidateProvider(provider) {
-		panic(fmt.Sprintf("Invalid provider %v", provider))
-	}
+	p = provider.GetProvider(providerName)
 }
 
 func main() {
-	app.Run(kubeconfig, provider)
+	app.Run(kubeconfig, p)
 }

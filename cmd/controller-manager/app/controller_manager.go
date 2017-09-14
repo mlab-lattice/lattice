@@ -8,6 +8,7 @@ import (
 	"github.com/mlab-lattice/kubernetes-integration/cmd/controller-manager/app/latticecontrollers"
 	latticeresource "github.com/mlab-lattice/kubernetes-integration/pkg/api/customresource"
 	crv1 "github.com/mlab-lattice/kubernetes-integration/pkg/api/customresource/v1"
+	"github.com/mlab-lattice/kubernetes-integration/pkg/provider"
 
 	apiv1 "k8s.io/api/core/v1"
 
@@ -22,7 +23,7 @@ import (
 	"github.com/golang/glog"
 )
 
-func Run(kubeconfig, provider string) {
+func Run(kubeconfig string, p provider.Interface) {
 	// TODO: create in-cluster config if in cluster
 	config, err := clientcmd.BuildConfigFromFlags("", kubeconfig)
 	if err != nil {
@@ -35,7 +36,7 @@ func Run(kubeconfig, provider string) {
 	}
 
 	// TODO: setting stop as nil for now, won't actually need it until leader-election is used
-	ctx := CreateControllerContext(rest.Interface(latticeResourceClient), config, provider, nil)
+	ctx := CreateControllerContext(rest.Interface(latticeResourceClient), config, p, nil)
 	glog.V(1).Info("Starting controllers")
 	StartControllers(ctx, GetControllerInitializers())
 
@@ -54,7 +55,7 @@ func Run(kubeconfig, provider string) {
 func CreateControllerContext(
 	latticeResourceClient rest.Interface,
 	kubeconfig *rest.Config,
-	provider string,
+	p provider.Interface,
 	stop <-chan struct{},
 ) controller.Context {
 	cb := controller.ClientBuilder{
@@ -65,7 +66,7 @@ func CreateControllerContext(
 	sharedInformers := informers.NewSharedInformerFactory(versionedClient, time.Duration(12*time.Hour))
 
 	return controller.Context{
-		Provider:                  provider,
+		Provider:                  p,
 		InformerFactory:           sharedInformers,
 		CRDInformers:              getCRDInformers(latticeResourceClient),
 		LatticeResourceRestClient: latticeResourceClient,
@@ -93,6 +94,12 @@ func getCRDInformers(latticeResourceClient rest.Interface) map[string]cache.Shar
 			name:         "config",
 			plural:       crv1.ConfigResourcePlural,
 			objType:      &crv1.Config{},
+			resyncPeriod: time.Duration(12 * time.Hour),
+		},
+		{
+			name:         "service",
+			plural:       crv1.ServiceResourcePlural,
+			objType:      &crv1.Service{},
 			resyncPeriod: time.Duration(12 * time.Hour),
 		},
 		{

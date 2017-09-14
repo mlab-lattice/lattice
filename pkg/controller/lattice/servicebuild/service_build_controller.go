@@ -22,11 +22,7 @@ import (
 	"github.com/golang/glog"
 )
 
-const componentBuildDefinitionHashMetadataKey = "lattice-component-build-definition-hash"
-
 type ServiceBuildController struct {
-	provider string
-
 	syncHandler func(bKey string) error
 	enqueue     func(cb *crv1.ServiceBuild)
 
@@ -51,13 +47,11 @@ type ServiceBuildController struct {
 }
 
 func NewServiceBuildController(
-	provider string,
 	latticeResourceRestClient rest.Interface,
 	serviceBuildInformer cache.SharedInformer,
 	componentBuildInformer cache.SharedInformer,
 ) *ServiceBuildController {
 	sbc := &ServiceBuildController{
-		provider:                  provider,
 		latticeResourceRestClient: latticeResourceRestClient,
 		recentComponentBuilds:     make(map[string]map[string]string),
 		queue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "component-build"),

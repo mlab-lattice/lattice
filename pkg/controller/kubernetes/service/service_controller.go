@@ -29,8 +29,6 @@ var controllerKind = crv1.SchemeGroupVersion.WithKind("Service")
 
 // We'll use LatticeService to differentiate between kubernetes' Service
 type ServiceController struct {
-	provider string
-
 	syncHandler    func(bKey string) error
 	enqueueService func(cb *crv1.Service)
 
@@ -40,11 +38,11 @@ type ServiceController struct {
 	serviceStore       cache.Store
 	serviceStoreSynced cache.InformerSynced
 
-	serviceBuildStore  cache.Store
-	serviceStoreSynced cache.InformerSynced
+	serviceBuildStore       cache.Store
+	serviceBuildStoreSynced cache.InformerSynced
 
-	componentBuildStore  cache.Store
-	componentStoreSynced cache.InformerSynced
+	componentBuildStore       cache.Store
+	componentBuildStoreSynced cache.InformerSynced
 
 	// TODO: switch to apps when stabilized https://github.com/kubernetes/features/issues/353
 	deploymentLister       extensionlisters.DeploymentLister
@@ -54,7 +52,6 @@ type ServiceController struct {
 }
 
 func NewServiceController(
-	provider string,
 	kubeClient clientset.Interface,
 	latticeResourceRestClient rest.Interface,
 	serviceInformer cache.SharedInformer,
@@ -63,7 +60,6 @@ func NewServiceController(
 	deploymentInformer extensioninformers.DeploymentInformer,
 ) *ServiceController {
 	sc := &ServiceController{
-		provider:                  provider,
 		latticeResourceRestClient: latticeResourceRestClient,
 		kubeClient:                kubeClient,
 		queue:                     workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "service"),
@@ -80,11 +76,11 @@ func NewServiceController(
 	sc.serviceStore = serviceInformer.GetStore()
 	sc.serviceStoreSynced = serviceInformer.HasSynced
 
-	sc.componentBuildStore = componentBuildInformer.GetStore()
-	sc.componentStoreSynced = componentBuildInformer.HasSynced
-
 	sc.serviceBuildStore = serviceBuildInformer.GetStore()
-	sc.serviceStoreSynced = serviceBuildInformer.HasSynced
+	sc.serviceBuildStoreSynced = serviceBuildInformer.HasSynced
+
+	sc.componentBuildStore = componentBuildInformer.GetStore()
+	sc.componentBuildStoreSynced = componentBuildInformer.HasSynced
 
 	deploymentInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    sc.addDeployment,
@@ -283,7 +279,7 @@ func (sc *ServiceController) Run(workers int, stopCh <-chan struct{}) {
 	defer glog.Infof("Shutting down service controller")
 
 	// wait for your secondary caches to fill before starting your work
-	if !cache.WaitForCacheSync(stopCh, sc.serviceStoreSynced, sc.deploymentListerSynced) {
+	if !cache.WaitForCacheSync(stopCh, sc.serviceStoreSynced, sc.serviceBuildStoreSynced, sc.componentBuildStoreSynced, sc.deploymentListerSynced) {
 		return
 	}
 

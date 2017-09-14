@@ -7,7 +7,7 @@ go_library(
     visibility = ["//visibility:public"],
     deps = [
         "//cmd/controller-manager/app:go_default_library",
-        "@com_github_mlab_lattice_core//pkg/provider:go_default_library",
+        "//pkg/provider:go_default_library",
     ],
 )
 

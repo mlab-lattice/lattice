@@ -7,7 +7,6 @@ import (
 
 func initializeSystemBuildController(ctx controller.Context) {
 	go systembuild.NewSystemBuildController(
-		ctx.Provider,
 		ctx.LatticeResourceRestClient,
 		ctx.CRDInformers["system-build"],
 		ctx.CRDInformers["service-build"],

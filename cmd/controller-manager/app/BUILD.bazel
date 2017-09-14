@@ -11,6 +11,7 @@ go_library(
         "//cmd/controller-manager/app/latticecontrollers:go_default_library",
         "//pkg/api/customresource:go_default_library",
         "//pkg/api/customresource/v1:go_default_library",
+        "//pkg/provider:go_default_library",
         "@com_github_golang_glog//:go_default_library",
         "@io_k8s_api//core/v1:go_default_library",
         "@io_k8s_apimachinery//pkg/fields:go_default_library",

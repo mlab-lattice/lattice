@@ -7,6 +7,7 @@ import (
 	"time"
 
 	crv1 "github.com/mlab-lattice/kubernetes-integration/pkg/api/customresource/v1"
+	"github.com/mlab-lattice/kubernetes-integration/pkg/provider"
 
 	batchv1 "k8s.io/api/batch/v1"
 
@@ -29,7 +30,7 @@ import (
 var controllerKind = crv1.SchemeGroupVersion.WithKind("ComponentBuild")
 
 type ComponentBuildController struct {
-	provider string
+	provider provider.Interface
 
 	syncHandler func(bKey string) error
 	enqueue     func(cb *crv1.ComponentBuild)
@@ -54,7 +55,7 @@ type ComponentBuildController struct {
 }
 
 func NewComponentBuildController(
-	provider string,
+	provider provider.Interface,
 	kubeClient clientset.Interface,
 	latticeResourceRestClient rest.Interface,
 	configInformer cache.SharedInformer,

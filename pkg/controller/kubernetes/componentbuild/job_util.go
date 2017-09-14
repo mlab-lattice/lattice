@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"time"
 
-	providerutils "github.com/mlab-lattice/core/pkg/provider"
 	systemdefinitionblock "github.com/mlab-lattice/core/pkg/system/definition/block"
 
 	crv1 "github.com/mlab-lattice/kubernetes-integration/pkg/api/customresource/v1"
@@ -16,7 +15,6 @@ import (
 )
 
 const (
-	jobLocalWorkingDirectoryVolumePathPrefix = "/data/builder"
 	jobWorkingDirectory                      = "/var/run/builder"
 	jobWorkingDirectoryVolumeName            = "workdir"
 
@@ -61,20 +59,13 @@ func getBuildJobName(b *crv1.ComponentBuild) string {
 
 func (cbc *ComponentBuildController) getGitRepositoryBuildJobSpec(cBuild *crv1.ComponentBuild) (batchv1.JobSpec, string) {
 	pullGitRepoContainer := cbc.getPullGitRepoContainer(cBuild)
-	authorizeDockerContainer := cbc.getAuthorizeDockerContainer()
 	buildDockerImageContainer, dockerImageFqn := cbc.getBuildDockerImageContainer(cBuild)
 	name := getBuildJobName(cBuild)
 
-	var workingDirectoryVolumeSource corev1.VolumeSource
-	switch cbc.provider {
-	case providerutils.Local:
-		workingDirectoryVolumeSource = corev1.VolumeSource{
-			HostPath: &corev1.HostPathVolumeSource{
-				Path: fmt.Sprintf("%v/%v", jobLocalWorkingDirectoryVolumePathPrefix, name),
-			},
-		}
-	default:
-		panic("unreachable")
+	workingDirectoryVolumeSource := corev1.VolumeSource{
+		HostPath: &corev1.HostPathVolumeSource{
+			Path: cbc.provider.ComponentBuildJobWorkingDirectoryVolumePathPrefix() + "/" + name,
+		},
 	}
 
 	jobSpec := batchv1.JobSpec{
@@ -108,13 +99,6 @@ func (cbc *ComponentBuildController) getGitRepositoryBuildJobSpec(cBuild *crv1.C
 				DNSPolicy:     corev1.DNSDefault,
 			},
 		},
-	}
-
-	if authorizeDockerContainer != nil {
-		jobSpec.Template.Spec.InitContainers = append(
-			jobSpec.Template.Spec.InitContainers,
-			*authorizeDockerContainer,
-		)
 	}
 
 	return jobSpec, dockerImageFqn
@@ -162,18 +146,6 @@ func (cbc *ComponentBuildController) getPullGitRepoContainer(cBuild *crv1.Compon
 	}
 
 	return pullGitRepoContainer
-}
-
-func (cbc *ComponentBuildController) getAuthorizeDockerContainer() *corev1.Container {
-	switch cbc.provider {
-	case providerutils.AWS:
-		authorizeEcrContainer := cbc.getAuthorizeEcrContainer()
-		return &authorizeEcrContainer
-	case providerutils.Local:
-		return nil
-	default:
-		panic("unreachable")
-	}
 }
 
 func (cbc *ComponentBuildController) getAuthorizeEcrContainer() corev1.Container {

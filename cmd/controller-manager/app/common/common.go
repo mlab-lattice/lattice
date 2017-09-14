@@ -1,6 +1,8 @@
 package common
 
 import (
+	"github.com/mlab-lattice/kubernetes-integration/pkg/provider"
+
 	"k8s.io/client-go/informers"
 	clientset "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -17,7 +19,7 @@ func (cb ClientBuilder) ClientOrDie(name string) clientset.Interface {
 }
 
 type Context struct {
-	Provider string
+	Provider provider.Interface
 
 	// InformerFactory gives access to base kubernetes informers.
 	InformerFactory informers.SharedInformerFactory

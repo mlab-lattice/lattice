@@ -2,7 +2,6 @@ package service
 
 import (
 	"fmt"
-	"time"
 
 	systemdefinitionblock "github.com/mlab-lattice/core/pkg/system/definition/block"
 
@@ -28,11 +27,13 @@ func (sc *ServiceController) getDeployment(svc *crv1.Service, svcBuild *crv1.Ser
 
 	d := &extensions.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:   name,
-			Labels: labels,
+			Name:            name,
+			Labels:          labels,
+			OwnerReferences: []metav1.OwnerReference{*metav1.NewControllerRef(svc, controllerKind)},
 		},
 		Spec: *dSpec,
 	}
+
 	return d, nil
 }
 
@@ -85,8 +86,10 @@ func (sc *ServiceController) getDeploymentSpec(svc *crv1.Service, svcBuild *crv1
 		containers = append(containers, container)
 	}
 
+	// Spin up the min instances here, then later let autoscaler scale up.
+	replicas := int32(svc.Spec.Definition.Resources.MinInstances)
 	ds := extensions.DeploymentSpec{
-		Replicas: &int32(svc.Spec.Definition.Resources.MaxInstances),
+		Replicas: &replicas,
 		Template: corev1.PodTemplateSpec{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: getDeploymentName(svc),
@@ -136,7 +139,7 @@ func (sc *ServiceController) getComponentDockerImageFqns(svcBuild *crv1.ServiceB
 			return nil, fmt.Errorf("cBuild %v does not have Artifacts", cBuildKey)
 		}
 
-		componentDockerImageFqns[cBuildName] = cBuild.Spec.Artifacts.DockerImageFqn
+		componentDockerImageFqns[cName] = cBuild.Spec.Artifacts.DockerImageFqn
 	}
 
 	return componentDockerImageFqns, nil

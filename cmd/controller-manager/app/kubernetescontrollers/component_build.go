@@ -8,7 +8,7 @@ import (
 func initializeComponentBuildController(ctx controller.Context) {
 	go componentbuild.NewComponentBuildController(
 		ctx.Provider,
-		ctx.ClientBuilder.ClientOrDie("build-controller"),
+		ctx.ClientBuilder.ClientOrDie("kubernetes-build-controller"),
 		ctx.LatticeResourceRestClient,
 		ctx.CRDInformers["config"],
 		ctx.CRDInformers["component-build"],

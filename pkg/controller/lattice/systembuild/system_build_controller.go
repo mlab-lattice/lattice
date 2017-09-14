@@ -24,8 +24,6 @@ import (
 var controllerKind = crv1.SchemeGroupVersion.WithKind("SystemBuild")
 
 type SystemBuildController struct {
-	provider string
-
 	syncHandler        func(bKey string) error
 	enqueueSystemBuild func(sysBuild *crv1.SystemBuild)
 
@@ -41,13 +39,11 @@ type SystemBuildController struct {
 }
 
 func NewSystemBuildController(
-	provider string,
 	latticeResourceRestClient rest.Interface,
 	systemBuildInformer cache.SharedInformer,
 	serviceBuildInformer cache.SharedInformer,
 ) *SystemBuildController {
 	sbc := &SystemBuildController{
-		provider:                  provider,
 		latticeResourceRestClient: latticeResourceRestClient,
 		queue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "system-build"),
 	}
