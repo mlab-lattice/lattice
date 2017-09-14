@@ -2,7 +2,7 @@ package main
 
 import (
 	"flag"
-	"fmt"
+	"time"
 
 	"github.com/mlab-lattice/core/pkg/constants"
 
@@ -10,8 +10,11 @@ import (
 	crv1 "github.com/mlab-lattice/kubernetes-integration/pkg/api/customresource/v1"
 
 	apiextensionsclient "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
+
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/wait"
+
 	"k8s.io/client-go/tools/clientcmd"
 
 	"github.com/golang/glog"
@@ -39,8 +42,15 @@ func main() {
 		panic(err)
 	}
 
-	_, err = crdclient.CreateCustomResourceDefinitions(apiextensionsclientset)
-	if err != nil && !apierrors.IsAlreadyExists(err) {
+	err = wait.Poll(500*time.Millisecond, 60*time.Second, func() (bool, error) {
+		_, err = crdclient.CreateCustomResourceDefinitions(apiextensionsclientset)
+		if err != nil {
+			return false, nil
+		}
+		return true, nil
+	})
+
+	if err != nil {
 		panic(err)
 	}
 

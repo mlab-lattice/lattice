@@ -89,7 +89,7 @@ func (sbc *SystemBuildController) updateSystemBuild(old, cur interface{}) {
 	sbc.enqueueSystemBuild(curSysBuild)
 }
 
-// addServiceBuild enqueues the System that manages a ServiceBuild when the ServiceBuild is created.
+// addServiceBuild enqueues the System that manages a Service when the Service is created.
 func (sbc *SystemBuildController) addServiceBuild(obj interface{}) {
 	svcBuild := obj.(*crv1.ServiceBuild)
 
@@ -109,7 +109,7 @@ func (sbc *SystemBuildController) addServiceBuild(obj interface{}) {
 			return
 		}
 
-		glog.V(4).Infof("ServiceBuild %s added.", svcBuild.Name)
+		glog.V(4).Infof("Service %s added.", svcBuild.Name)
 		sbc.enqueueSystemBuild(sysBuild)
 		return
 	}
@@ -118,11 +118,8 @@ func (sbc *SystemBuildController) addServiceBuild(obj interface{}) {
 	// FIXME: send error event
 }
 
-// updateJob figures out what ComponentBuild manages a Job when the Job
-// is updated and wake them up.
-// Note that a ComponentBuild Job should only ever and should always be owned by a single ComponentBuild
-// (the one referenced in its ControllerRef), so an updated job should
-// have the same controller ref for both the old and current versions.
+// updateServiceBuild figures out what SystemBuild manages a Service when the
+// Service is updated and enqueues them.
 func (sbc *SystemBuildController) updateServiceBuild(old, cur interface{}) {
 	glog.V(5).Info("Got Job update")
 	oldSvcBuild := old.(*crv1.ServiceBuild)
@@ -130,7 +127,7 @@ func (sbc *SystemBuildController) updateServiceBuild(old, cur interface{}) {
 	if curSvcBuild.ResourceVersion == oldSvcBuild.ResourceVersion {
 		// Periodic resync will send update events for all known ServiceBuilds.
 		// Two different versions of the same job will always have different RVs.
-		glog.V(5).Info("ServiceBuild ResourceVersions are the same")
+		glog.V(5).Info("Service ResourceVersions are the same")
 		return
 	}
 
@@ -172,7 +169,7 @@ func (sbc *SystemBuildController) resolveControllerRef(namespace string, control
 		return nil
 	}
 
-	sysBuildKey := fmt.Sprintf("%v/%v", namespace, controllerRef.Name)
+	sysBuildKey := namespace + "/" + controllerRef.Name
 	sysBuildObj, exists, err := sbc.systemBuildStore.GetByKey(sysBuildKey)
 	if err != nil || !exists {
 		// This shouldn't happen.
@@ -308,7 +305,7 @@ func (sbc *SystemBuildController) syncSystemBuild(key string) error {
 // SystemBuild from the shared cache.
 func (sbc *SystemBuildController) syncSystemBuildServiceStatuses(sysBuild *crv1.SystemBuild) error {
 	for idx, svc := range sysBuild.Spec.Services {
-		// Check if we've already created a ServiceBuild. If so just grab its status.
+		// Check if we've already created a Service. If so just grab its status.
 		if svc.ServiceBuildName != nil {
 			svcBuildState := sbc.getServiceBuildState(sysBuild.Namespace, *svc.ServiceBuildName)
 			if svcBuildState == nil {
@@ -321,7 +318,7 @@ func (sbc *SystemBuildController) syncSystemBuildServiceStatuses(sysBuild *crv1.
 			continue
 		}
 
-		// Otherwise we'll have to create a new ServiceBuild.
+		// Otherwise we'll have to create a new Service.
 		svcBuild, err := sbc.createServiceBuild(sysBuild, &svc.Definition)
 		if err != nil {
 			return err
@@ -383,7 +380,7 @@ func (sbc *SystemBuildController) syncSystemBuildStatus(sysBuild *crv1.SystemBui
 		}
 	}
 
-	newStatus := calculateServiceBuildStatus(hasFailedSvcBuild, hasActiveSvcBuild)
+	newStatus := calculateSystemBuildStatus(hasFailedSvcBuild, hasActiveSvcBuild)
 
 	if reflect.DeepEqual(sysBuild.Status, newStatus) {
 		return nil
@@ -402,7 +399,7 @@ func (sbc *SystemBuildController) syncSystemBuildStatus(sysBuild *crv1.SystemBui
 	return err
 }
 
-func calculateServiceBuildStatus(hasFailedSvcBuild, hasActiveSvcBuild bool) crv1.SystemBuildStatus {
+func calculateSystemBuildStatus(hasFailedSvcBuild, hasActiveSvcBuild bool) crv1.SystemBuildStatus {
 	if hasFailedSvcBuild {
 		return crv1.SystemBuildStatus{
 			State: crv1.SystemBuildStateFailed,

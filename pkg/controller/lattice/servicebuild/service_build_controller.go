@@ -23,8 +23,8 @@ import (
 )
 
 type ServiceBuildController struct {
-	syncHandler func(bKey string) error
-	enqueue     func(cb *crv1.ServiceBuild)
+	syncHandler func(svcBuildKey string) error
+	enqueue     func(svcBuild *crv1.ServiceBuild)
 
 	latticeResourceRestClient rest.Interface
 
@@ -87,7 +87,7 @@ func NewServiceBuildController(
 
 func (sbc *ServiceBuildController) addServiceBuild(obj interface{}) {
 	svcBuild := obj.(*crv1.ServiceBuild)
-	glog.V(4).Infof("Adding ServiceBuild %s", svcBuild.Name)
+	glog.V(4).Infof("Adding Service %s", svcBuild.Name)
 	sbc.enqueueServiceBuild(svcBuild)
 }
 
@@ -239,19 +239,19 @@ func (sbc *ServiceBuildController) processNextWorkItem() bool {
 	return true
 }
 
-// syncServiceBuild will sync the ServiceBuild with the given key.
+// syncServiceBuild will sync the Service with the given key.
 // This function is not meant to be invoked concurrently with the same key.
 func (sbc *ServiceBuildController) syncServiceBuild(key string) error {
 	glog.Flush()
 	startTime := time.Now()
-	glog.V(4).Infof("Started syncing ServiceBuild %q (%v)", key, startTime)
+	glog.V(4).Infof("Started syncing Service %q (%v)", key, startTime)
 	defer func() {
-		glog.V(4).Infof("Finished syncing ServiceBuild %q (%v)", key, time.Now().Sub(startTime))
+		glog.V(4).Infof("Finished syncing Service %q (%v)", key, time.Now().Sub(startTime))
 	}()
 
 	svcBuildObj, exists, err := sbc.serviceBuildStore.GetByKey(key)
 	if errors.IsNotFound(err) || !exists {
-		glog.V(2).Infof("ServiceBuild %v has been deleted", key)
+		glog.V(2).Infof("Service %v has been deleted", key)
 		return nil
 	}
 	if err != nil {
@@ -300,15 +300,15 @@ func (sbc *ServiceBuildController) syncServiceBuild(key string) error {
 
 	svcBuildCopy := svcBuild.DeepCopy()
 
-	// If a ComponentBuild for the ServiceBuild has failed, there's no need to create
-	// any more ComponentBuilds, we can simply fail the ServiceBuild.
+	// If a ComponentBuild for the Service has failed, there's no need to create
+	// any more ComponentBuilds, we can simply fail the Service.
 	// If there are no new ComponentBuilds to create, we can simply make sure the
-	// ServiceBuild.Status is up to date.
+	// Service.Status is up to date.
 	if hasFailedCBuild || len(needsNewCBuildIdx) == 0 {
 		return sbc.syncServiceBuildStatus(svcBuildCopy, hasFailedCBuild, hasActiveCBuild)
 	}
 
-	// Create any ComponentBuilds that need to be created and sync ServiceBuild.Status.
+	// Create any ComponentBuilds that need to be created and sync Service.Status.
 	return sbc.createComponentBuilds(svcBuildCopy, needsNewCBuildIdx)
 }
 
@@ -335,7 +335,7 @@ func (sbc *ServiceBuildController) componentBuildFailed(cBuildInfo *crv1.Service
 	return cBuild.Status.State == crv1.ComponentBuildStateFailed, nil
 }
 
-// Warning: createComponentBuilds mutates svcBuild. Do not pass in a pointer to a ServiceBuild
+// Warning: createComponentBuilds mutates svcBuild. Do not pass in a pointer to a Service
 // from the shared cache.
 func (sbc *ServiceBuildController) createComponentBuilds(svcBuild *crv1.ServiceBuild, needsNewCBuildIdx []int) error {
 	for _, newCBuildIdx := range needsNewCBuildIdx {
@@ -395,12 +395,12 @@ func (sbc *ServiceBuildController) createComponentBuilds(svcBuild *crv1.ServiceB
 		return err
 	}
 
-	// Enqueue the ServiceBuild so we can update its status based on the ComponentBuild statuses.
+	// Enqueue the Service so we can update its status based on the ComponentBuild statuses.
 	// This is needed for the following scenario:
-	// ServiceBuild SB needs to build Component C, and finds a Running ComponentBuild CB.
+	// Service SB needs to build Component C, and finds a Running ComponentBuild CB.
 	// SB decides to use it, so it will update its ComponentBuildsInfo to reflect this.
 	// Before it updates however, CB finishes. When updateComponentBuild is called, SB is not found
-	// as a ServiceBuild to enqueue. Once SB is updated, it may never get notified that CB finishes.
+	// as a Service to enqueue. Once SB is updated, it may never get notified that CB finishes.
 	// By enqueueing it, we make sure we have up to date status information, then from there can rely
 	// on updateComponentBuild to update SB's Status.
 	sbc.enqueueServiceBuild(response)

@@ -109,6 +109,12 @@ func getCRDInformers(latticeResourceClient rest.Interface) map[string]cache.Shar
 			resyncPeriod: time.Duration(12 * time.Hour),
 		},
 		{
+			name:         "system",
+			plural:       crv1.SystemResourcePlural,
+			objType:      &crv1.System{},
+			resyncPeriod: time.Duration(12 * time.Hour),
+		},
+		{
 			name:         "system-build",
 			plural:       crv1.SystemBuildResourcePlural,
 			objType:      &crv1.SystemBuild{},

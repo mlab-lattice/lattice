@@ -51,7 +51,7 @@ func CreateCustomResourceDefinitions(clientset apiextensionsclient.Interface) ([
 		}
 
 		// wait for CRD being established
-		err = wait.Poll(500*time.Millisecond, 60*time.Second, func() (bool, error) {
+		err = wait.Poll(500*time.Millisecond, 20*time.Second, func() (bool, error) {
 			crd, err = clientset.ApiextensionsV1beta1().CustomResourceDefinitions().Get(crdName, metav1.GetOptions{})
 			if err != nil {
 				return false, err

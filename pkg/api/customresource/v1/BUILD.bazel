@@ -8,6 +8,7 @@ go_library(
         "register.go",
         "service.go",
         "service_build.go",
+        "system.go",
         "system_build.go",
     ],
     importpath = "github.com/mlab-lattice/kubernetes-integration/pkg/api/customresource/v1",

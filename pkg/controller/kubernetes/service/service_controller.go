@@ -446,7 +446,7 @@ func (sc *ServiceController) getSvcBuildForSvc(svc *crv1.Service) (*crv1.Service
 	}
 
 	if !exists {
-		return nil, fmt.Errorf("Service %v ServiceBuild %v is not in ServiceBuild Store", svc.Name, svcBuildKey)
+		return nil, fmt.Errorf("Service %v Service %v is not in Service Store", svc.Name, svcBuildKey)
 	}
 
 	svcBuild := svcBuildObj.(*crv1.ServiceBuild)
