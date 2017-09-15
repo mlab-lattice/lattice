@@ -15,8 +15,8 @@ import (
 )
 
 const (
-	jobWorkingDirectory                      = "/var/run/builder"
-	jobWorkingDirectoryVolumeName            = "workdir"
+	jobWorkingDirectory           = "/var/run/builder"
+	jobWorkingDirectoryVolumeName = "workdir"
 
 	jobDockerSocketVolumePath = "/var/run/docker.sock"
 	jobDockerSocketPath       = "/var/run/docker.sock"

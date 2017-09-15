@@ -13,7 +13,6 @@ import (
 
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
 
@@ -178,11 +177,11 @@ func (cbc *ComponentBuildController) addJob(obj interface{}) {
 // (the one referenced in its ControllerRef), so an updated job should
 // have the same controller ref for both the old and current versions.
 func (cbc *ComponentBuildController) updateJob(old, cur interface{}) {
-	glog.V(5).Info("Got Job update")
+	glog.V(5).Info("Got Job putComponentBuildUpdate")
 	oldJob := old.(*batchv1.Job)
 	curJob := cur.(*batchv1.Job)
 	if curJob.ResourceVersion == oldJob.ResourceVersion {
-		// Periodic resync will send update events for all known jobs.
+		// Periodic resync will send putComponentBuildUpdate events for all known jobs.
 		// Two different versions of the same job will always have different RVs.
 		glog.V(5).Info("Job ResourceVersions are the same")
 		return
@@ -220,7 +219,7 @@ func (cbc *ComponentBuildController) updateJob(old, cur interface{}) {
 // a DeletionFinalStateUnknown marker item.
 // Note that this should never really happen. ComponentBuild Jobs should not
 // be getting deleted. But if they do, we should write a warn event
-// and update the ComponentBuild.
+// and putComponentBuildUpdate the ComponentBuild.
 func (cbc *ComponentBuildController) deleteJob(obj interface{}) {
 	job, ok := obj.(*batchv1.Job)
 
@@ -391,7 +390,7 @@ func (cbc *ComponentBuildController) syncComponentBuild(key string) error {
 
 	cBuild := cBuildObj.(*crv1.ComponentBuild)
 
-	job, err := cbc.getJobForBuild(cBuild)
+	stateInfo, err := cbc.calculateState(cBuild)
 	if err != nil {
 		return err
 	}
@@ -399,113 +398,16 @@ func (cbc *ComponentBuildController) syncComponentBuild(key string) error {
 	// Deep-copy otherwise we are mutating our cache.
 	cBuildCopy := cBuild.DeepCopy()
 
-	if job == nil {
-		return cbc.createComponentBuildJob(cBuildCopy)
-	}
-
-	return cbc.syncComponentBuildWithJob(cBuildCopy, job)
-}
-
-// getJobForBuild uses ControllerRefManager to retrieve the Job for a ComponentBuild
-func (cbc *ComponentBuildController) getJobForBuild(cBuild *crv1.ComponentBuild) (*batchv1.Job, error) {
-	// List all Jobs to find in the ComponentBuild's namespace to find the Job the ComponentBuild manages.
-	jobList, err := cbc.jobLister.Jobs(cBuild.Namespace).List(labels.Everything())
-	if err != nil {
-		return nil, err
-	}
-
-	matchingJobs := []*batchv1.Job{}
-	cBuildControllerRef := metav1.NewControllerRef(cBuild, controllerKind)
-
-	for _, job := range jobList {
-		jobControllerRef := metav1.GetControllerOf(job)
-
-		if reflect.DeepEqual(cBuildControllerRef, jobControllerRef) {
-			matchingJobs = append(matchingJobs, job)
-		}
-	}
-
-	if len(matchingJobs) == 0 {
-		return nil, nil
-	}
-
-	if len(matchingJobs) > 1 {
-		return nil, fmt.Errorf("ComponentBuild %v has multiple Jobs", cBuild.Name)
-	}
-
-	return matchingJobs[0], nil
-}
-
-// Warning: createComponentBuildJob mutates cBuild. Please do not pass in a pointer to a ComponentBuild
-// from the shared cache.
-func (cbc *ComponentBuildController) createComponentBuildJob(cBuild *crv1.ComponentBuild) error {
-	job := cbc.getBuildJob(cBuild)
-	jobResp, err := cbc.kubeClient.BatchV1().Jobs(cBuild.Namespace).Create(job)
-	if err != nil {
-		// FIXME: send warn event
-		return err
-	}
-
-	glog.V(4).Infof("Created Job %s", jobResp.Name)
-	// FIXME: send normal event
-	return cbc.syncComponentBuildWithJob(cBuild, jobResp)
-}
-
-// Warning; syncComponentBuildWithJob mutates cBuild. Please do not pass in a pointer to a ComponentBuild
-// from the shared cache.
-func (cbc *ComponentBuildController) syncComponentBuildWithJob(cBuild *crv1.ComponentBuild, job *batchv1.Job) error {
-	// FIXME: add docker image fqn to cBuild spec
-	newStatus := calculateComponentBuildStatus(job)
-	newArtifacts := getComponentBuildArtifacts(job)
-
-	if reflect.DeepEqual(cBuild.Status, newStatus) && reflect.DeepEqual(cBuild.Spec.Artifacts, newArtifacts) {
-		return nil
-	}
-
-	cBuild.Status = newStatus
-	cBuild.Spec.Artifacts = newArtifacts
-
-	err := cbc.latticeResourceRestClient.Put().
-		Namespace(cBuild.Namespace).
-		Resource(crv1.ComponentBuildResourcePlural).
-		Name(cBuild.Name).
-		Body(cBuild).
-		Do().
-		Into(nil)
-
-	return err
-}
-
-func calculateComponentBuildStatus(job *batchv1.Job) crv1.ComponentBuildStatus {
-	finished, succeeded := jobStatus(job)
-	if finished {
-		if succeeded {
-			return crv1.ComponentBuildStatus{
-				State: crv1.ComponentBuildStateSucceeded,
-			}
-		}
-
-		return crv1.ComponentBuildStatus{
-			State: crv1.ComponentBuildStateFailed,
-		}
-	}
-
-	// The Job Pods have been able to be scheduled, so the ComponentBuild is "running" even though
-	// a Job Pod may not currently be active.
-	if job.Status.Active > 0 || job.Status.Failed > 0 || job.Status.Succeeded > 0 {
-		return crv1.ComponentBuildStatus{
-			State: crv1.ComponentBuildStateRunning,
-		}
-	}
-
-	// No Job Pods have been scheduled yet, so the ComponentBuild is still "queued".
-	return crv1.ComponentBuildStatus{
-		State: crv1.ComponentBuildStateQueued,
-	}
-}
-
-func getComponentBuildArtifacts(job *batchv1.Job) *crv1.ComponentBuildArtifacts {
-	return &crv1.ComponentBuildArtifacts{
-		DockerImageFqn: job.Annotations[jobDockerFqnAnnotationKey],
+	switch stateInfo.state {
+	case cBuildStateJobNotCreated:
+		return cbc.syncJoblessComponentBuild(cBuildCopy)
+	case cBuildStateJobSucceeded:
+		return cbc.syncSuccessfulComponentBuild(cBuildCopy, stateInfo.job)
+	case cBuildStateJobFailed:
+		return cbc.syncFailedComponentBuild(cBuildCopy)
+	case cBuildStateJobNotFinished:
+		return cbc.syncUnfinishedComponentBuild(cBuildCopy, stateInfo.job)
+	default:
+		panic("unreachable")
 	}
 }
