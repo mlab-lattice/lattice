@@ -5,6 +5,8 @@ go_library(
     srcs = [
         "component_build_util.go",
         "service_build_controller.go",
+        "state.go",
+        "sync.go",
     ],
     importpath = "github.com/mlab-lattice/kubernetes-integration/pkg/controller/lattice/servicebuild",
     visibility = ["//visibility:public"],

@@ -2,6 +2,7 @@ package componentbuild
 
 import (
 	"fmt"
+	"reflect"
 	"time"
 
 	systemdefinitionblock "github.com/mlab-lattice/core/pkg/system/definition/block"
@@ -12,6 +13,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 )
 
 const (
@@ -25,6 +27,36 @@ const (
 	jobDockerFqnAnnotationKey = "docker-image-fqn"
 )
 
+// getJobForBuild uses ControllerRefManager to retrieve the Job for a ComponentBuild
+func (cbc *ComponentBuildController) getJobForBuild(cBuild *crv1.ComponentBuild) (*batchv1.Job, error) {
+	// List all Jobs to find in the ComponentBuild's namespace to find the Job the ComponentBuild manages.
+	jobList, err := cbc.jobLister.Jobs(cBuild.Namespace).List(labels.Everything())
+	if err != nil {
+		return nil, err
+	}
+
+	matchingJobs := []*batchv1.Job{}
+	cBuildControllerRef := metav1.NewControllerRef(cBuild, controllerKind)
+
+	for _, job := range jobList {
+		jobControllerRef := metav1.GetControllerOf(job)
+
+		if reflect.DeepEqual(cBuildControllerRef, jobControllerRef) {
+			matchingJobs = append(matchingJobs, job)
+		}
+	}
+
+	if len(matchingJobs) == 0 {
+		return nil, nil
+	}
+
+	if len(matchingJobs) > 1 {
+		return nil, fmt.Errorf("ComponentBuild %v has multiple Jobs", cBuild.Name)
+	}
+
+	return matchingJobs[0], nil
+}
+
 func (cbc *ComponentBuildController) getBuildJob(cBuild *crv1.ComponentBuild) *batchv1.Job {
 	// Need a consistent view of our config while generating the Job
 	cbc.configLock.RLock()
@@ -35,7 +67,7 @@ func (cbc *ComponentBuildController) getBuildJob(cBuild *crv1.ComponentBuild) *b
 	// FIXME: get job spec for build.DockerImage as well
 	jobSpec, dockerImageFqn := cbc.getGitRepositoryBuildJobSpec(cBuild)
 
-	labels := map[string]string{
+	jobLabels := map[string]string{
 		crv1.ComponentBuildJobLabelKey: "true",
 	}
 	annotations := map[string]string{
@@ -45,7 +77,7 @@ func (cbc *ComponentBuildController) getBuildJob(cBuild *crv1.ComponentBuild) *b
 	return &batchv1.Job{
 		ObjectMeta: metav1.ObjectMeta{
 			Annotations:     annotations,
-			Labels:          labels,
+			Labels:          jobLabels,
 			Name:            name,
 			OwnerReferences: []metav1.OwnerReference{*metav1.NewControllerRef(cBuild, controllerKind)},
 		},

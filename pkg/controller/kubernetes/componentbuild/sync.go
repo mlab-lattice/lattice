@@ -25,7 +25,7 @@ func (cbc *ComponentBuildController) syncJoblessComponentBuild(cBuild *crv1.Comp
 	return cbc.syncUnfinishedComponentBuild(cBuild, jobResp)
 }
 
-// Warning; syncSuccessfulComponentBuild mutates cBuild. Please do not pass in a pointer to a ComponentBuild
+// Warning: syncSuccessfulComponentBuild mutates cBuild. Please do not pass in a pointer to a ComponentBuild
 // from the shared cache.
 func (cbc *ComponentBuildController) syncSuccessfulComponentBuild(cBuild *crv1.ComponentBuild, job *batchv1.Job) error {
 	newStatus := crv1.ComponentBuildStatus{
@@ -43,7 +43,7 @@ func (cbc *ComponentBuildController) syncSuccessfulComponentBuild(cBuild *crv1.C
 	return cbc.putComponentBuildUpdate(cBuild)
 }
 
-// Warning; updateStatusToSucceeded mutates cBuild. Please do not pass in a pointer to a ComponentBuild
+// Warning: updateStatusToSucceeded mutates cBuild. Please do not pass in a pointer to a ComponentBuild
 // from the shared cache.
 func (cbc *ComponentBuildController) syncFailedComponentBuild(cBuild *crv1.ComponentBuild) error {
 	newStatus := crv1.ComponentBuildStatus{
@@ -54,7 +54,7 @@ func (cbc *ComponentBuildController) syncFailedComponentBuild(cBuild *crv1.Compo
 	return cbc.putComponentBuildStatusUpdate(cBuild, newStatus)
 }
 
-// Warning; syncUnfinishedComponentBuild mutates cBuild. Please do not pass in a pointer to a ComponentBuild
+// Warning: syncUnfinishedComponentBuild mutates cBuild. Please do not pass in a pointer to a ComponentBuild
 // from the shared cache.
 func (cbc *ComponentBuildController) syncUnfinishedComponentBuild(cBuild *crv1.ComponentBuild, job *batchv1.Job) error {
 	// The Job Pods have been able to be scheduled, so the ComponentBuild is "running" even though
@@ -73,7 +73,7 @@ func (cbc *ComponentBuildController) syncUnfinishedComponentBuild(cBuild *crv1.C
 	return cbc.putComponentBuildStatusUpdate(cBuild, newStatus)
 }
 
-// Warning; putComponentBuildStatusUpdate mutates cBuild. Please do not pass in a pointer to a ComponentBuild
+// Warning: putComponentBuildStatusUpdate mutates cBuild. Please do not pass in a pointer to a ComponentBuild
 // from the shared cache.
 func (cbc *ComponentBuildController) putComponentBuildStatusUpdate(cBuild *crv1.ComponentBuild, newStatus crv1.ComponentBuildStatus) error {
 	if reflect.DeepEqual(cBuild.Status, newStatus) {

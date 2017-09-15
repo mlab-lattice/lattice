@@ -31,15 +31,11 @@ func getNewServiceBuildFromDefinition(sysBuild *crv1.SystemBuild, svcDefinition 
 		// FIXME: add warn event
 	}
 
-	componentBuildsInfo := []crv1.ServiceBuildComponentBuildInfo{}
+	componentBuildsInfo := map[string]crv1.ServiceBuildComponentBuildInfo{}
 	for _, component := range svcDefinition.Components {
-		componentBuildsInfo = append(
-			componentBuildsInfo,
-			crv1.ServiceBuildComponentBuildInfo{
-				DefinitionBlock: component.Build,
-				ComponentName:   component.Name,
-			},
-		)
+		componentBuildsInfo[component.Name] = crv1.ServiceBuildComponentBuildInfo{
+			DefinitionBlock: component.Build,
+		}
 	}
 
 	return &crv1.ServiceBuild{

@@ -25,13 +25,12 @@ type ServiceBuild struct {
 }
 
 type ServiceBuildSpec struct {
-	ComponentBuildsInfo []ServiceBuildComponentBuildInfo `json:"componentBuildsInfo"`
+	ComponentBuildsInfo map[string]ServiceBuildComponentBuildInfo `json:"componentBuildsInfo"`
 }
 
 type ServiceBuildComponentBuildInfo struct {
 	DefinitionBlock    systemdefinitionblock.ComponentBuild `json:"definitionBlock"`
 	DefinitionHash     *string                              `json:"definitionHash,omitempty"`
-	ComponentName      string                               `json:"componentName"`
 	ComponentBuildName *string                              `json:"componentBuildName,omitempty"`
 }
 

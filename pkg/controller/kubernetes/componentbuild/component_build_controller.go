@@ -405,7 +405,7 @@ func (cbc *ComponentBuildController) syncComponentBuild(key string) error {
 		return cbc.syncSuccessfulComponentBuild(cBuildCopy, stateInfo.job)
 	case cBuildStateJobFailed:
 		return cbc.syncFailedComponentBuild(cBuildCopy)
-	case cBuildStateJobNotFinished:
+	case cBuildStateJobRunning:
 		return cbc.syncUnfinishedComponentBuild(cBuildCopy, stateInfo.job)
 	default:
 		panic("unreachable")
