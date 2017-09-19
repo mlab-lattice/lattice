@@ -34,8 +34,8 @@ type ComponentBuildController struct {
 	syncHandler func(bKey string) error
 	enqueue     func(cb *crv1.ComponentBuild)
 
-	latticeResourceRestClient rest.Interface
-	kubeClient                clientset.Interface
+	latticeResourceClient rest.Interface
+	kubeClient            clientset.Interface
 
 	configStore       cache.Store
 	configStoreSynced cache.InformerSynced
@@ -56,17 +56,17 @@ type ComponentBuildController struct {
 func NewComponentBuildController(
 	provider provider.Interface,
 	kubeClient clientset.Interface,
-	latticeResourceRestClient rest.Interface,
+	latticeResourceClient rest.Interface,
 	configInformer cache.SharedInformer,
 	componentBuildInformer cache.SharedInformer,
 	jobInformer batchinformers.JobInformer,
 ) *ComponentBuildController {
 	cbc := &ComponentBuildController{
-		provider:                  provider,
-		latticeResourceRestClient: latticeResourceRestClient,
-		kubeClient:                kubeClient,
-		configSetChan:             make(chan struct{}),
-		queue:                     workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "component-build"),
+		provider:              provider,
+		latticeResourceClient: latticeResourceClient,
+		kubeClient:            kubeClient,
+		configSetChan:         make(chan struct{}),
+		queue:                 workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "component-build"),
 	}
 
 	cbc.syncHandler = cbc.syncComponentBuild
@@ -130,40 +130,40 @@ func (cbc *ComponentBuildController) updateConfig(old, cur interface{}) {
 }
 
 func (cbc *ComponentBuildController) addComponentBuild(obj interface{}) {
-	cBuild := obj.(*crv1.ComponentBuild)
-	glog.V(4).Infof("Adding ComponentBuild %s", cBuild.Name)
-	cbc.enqueueComponentBuild(cBuild)
+	cb := obj.(*crv1.ComponentBuild)
+	glog.V(4).Infof("Adding ComponentBuild %s", cb.Name)
+	cbc.enqueueComponentBuild(cb)
 }
 
 func (cbc *ComponentBuildController) updateComponentBuild(old, cur interface{}) {
-	oldCBuild := old.(*crv1.ComponentBuild)
-	curCBuild := cur.(*crv1.ComponentBuild)
-	glog.V(4).Infof("Updating ComponentBuild %s", oldCBuild.Name)
-	cbc.enqueueComponentBuild(curCBuild)
+	oldCb := old.(*crv1.ComponentBuild)
+	curCb := cur.(*crv1.ComponentBuild)
+	glog.V(4).Infof("Updating ComponentBuild %s", oldCb.Name)
+	cbc.enqueueComponentBuild(curCb)
 }
 
 // addJob enqueues the ComponentBuild that manages a Job when the Job is created.
 func (cbc *ComponentBuildController) addJob(obj interface{}) {
-	job := obj.(*batchv1.Job)
+	j := obj.(*batchv1.Job)
 
-	if job.DeletionTimestamp != nil {
+	if j.DeletionTimestamp != nil {
 		// On a restart of the controller manager, it's possible for an object to
 		// show up in a state that is already pending deletion.
-		cbc.deleteJob(job)
+		cbc.deleteJob(j)
 		return
 	}
 
 	// If it has a ControllerRef, that's all that matters.
-	if controllerRef := metav1.GetControllerOf(job); controllerRef != nil {
-		b := cbc.resolveControllerRef(job.Namespace, controllerRef)
+	if controllerRef := metav1.GetControllerOf(j); controllerRef != nil {
+		cb := cbc.resolveControllerRef(j.Namespace, controllerRef)
 
 		// Not a ComponentBuild Job
-		if b == nil {
+		if cb == nil {
 			return
 		}
 
-		glog.V(4).Infof("Job %s added.", job.Name)
-		cbc.enqueueComponentBuild(b)
+		glog.V(4).Infof("Job %s added.", j.Name)
+		cbc.enqueueComponentBuild(cb)
 		return
 	}
 
@@ -178,35 +178,35 @@ func (cbc *ComponentBuildController) addJob(obj interface{}) {
 // have the same controller ref for both the old and current versions.
 func (cbc *ComponentBuildController) updateJob(old, cur interface{}) {
 	glog.V(5).Info("Got Job putComponentBuildUpdate")
-	oldJob := old.(*batchv1.Job)
-	curJob := cur.(*batchv1.Job)
-	if curJob.ResourceVersion == oldJob.ResourceVersion {
+	oldJ := old.(*batchv1.Job)
+	curJ := cur.(*batchv1.Job)
+	if curJ.ResourceVersion == oldJ.ResourceVersion {
 		// Periodic resync will send putComponentBuildUpdate events for all known jobs.
 		// Two different versions of the same job will always have different RVs.
 		glog.V(5).Info("Job ResourceVersions are the same")
 		return
 	}
 
-	curControllerRef := metav1.GetControllerOf(curJob)
-	oldControllerRef := metav1.GetControllerOf(oldJob)
+	curControllerRef := metav1.GetControllerOf(curJ)
+	oldControllerRef := metav1.GetControllerOf(oldJ)
 	controllerRefChanged := !reflect.DeepEqual(curControllerRef, oldControllerRef)
 	if controllerRefChanged {
 		// The ControllerRef was changed. If this is a ComponentBuild Job, this shouldn't happen.
-		if b := cbc.resolveControllerRef(oldJob.Namespace, oldControllerRef); b != nil {
+		if b := cbc.resolveControllerRef(oldJ.Namespace, oldControllerRef); b != nil {
 			// FIXME: send error event here, this should not happen
 		}
 	}
 
 	// If it has a ControllerRef, that's all that matters.
 	if curControllerRef != nil {
-		cBuild := cbc.resolveControllerRef(curJob.Namespace, curControllerRef)
+		cb := cbc.resolveControllerRef(curJ.Namespace, curControllerRef)
 
 		// Not a ComponentBuild Job
-		if cBuild == nil {
+		if cb == nil {
 			return
 		}
 
-		cbc.enqueueComponentBuild(cBuild)
+		cbc.enqueueComponentBuild(cb)
 		return
 	}
 
@@ -221,7 +221,7 @@ func (cbc *ComponentBuildController) updateJob(old, cur interface{}) {
 // be getting deleted. But if they do, we should write a warn event
 // and putComponentBuildUpdate the ComponentBuild.
 func (cbc *ComponentBuildController) deleteJob(obj interface{}) {
-	job, ok := obj.(*batchv1.Job)
+	j, ok := obj.(*batchv1.Job)
 
 	// When a delete is dropped, the relist will notice a pod in the store not
 	// in the list, leading to the insertion of a tombstone object which contains
@@ -229,31 +229,31 @@ func (cbc *ComponentBuildController) deleteJob(obj interface{}) {
 	if !ok {
 		tombstone, ok := obj.(cache.DeletedFinalStateUnknown)
 		if !ok {
-			runtime.HandleError(fmt.Errorf("Couldn't get object from tombstone %#v", obj))
+			runtime.HandleError(fmt.Errorf("couldn't get object from tombstone %#v", obj))
 			return
 		}
-		job, ok = tombstone.Obj.(*batchv1.Job)
+		j, ok = tombstone.Obj.(*batchv1.Job)
 		if !ok {
-			runtime.HandleError(fmt.Errorf("Tombstone contained object that is not a Job %#v", obj))
+			runtime.HandleError(fmt.Errorf("tombstone contained object that is not a Job %#v", obj))
 			return
 		}
 	}
 
-	controllerRef := metav1.GetControllerOf(job)
+	controllerRef := metav1.GetControllerOf(j)
 	if controllerRef == nil {
 		// No controller should care about orphans being deleted.
 		return
 	}
 
-	cBuild := cbc.resolveControllerRef(job.Namespace, controllerRef)
+	cb := cbc.resolveControllerRef(j.Namespace, controllerRef)
 
 	// Not a ComponentBuild job
-	if cBuild == nil {
+	if cb == nil {
 		return
 	}
 
-	glog.V(4).Infof("Job %s deleted.", job.Name)
-	cbc.enqueueComponentBuild(cBuild)
+	glog.V(4).Infof("Job %s deleted.", j.Name)
+	cbc.enqueueComponentBuild(cb)
 }
 
 func (cbc *ComponentBuildController) enqueueComponentBuild(cBuild *crv1.ComponentBuild) {
@@ -276,20 +276,20 @@ func (cbc *ComponentBuildController) resolveControllerRef(namespace string, cont
 		return nil
 	}
 
-	cBuildKey := fmt.Sprintf("%v/%v", namespace, controllerRef.Name)
-	cBuildObj, exists, err := cbc.componentBuildStore.GetByKey(cBuildKey)
+	cbKey := fmt.Sprintf("%v/%v", namespace, controllerRef.Name)
+	cbObj, exists, err := cbc.componentBuildStore.GetByKey(cbKey)
 	if err != nil || !exists {
 		return nil
 	}
 
-	cBuild := cBuildObj.(*crv1.ComponentBuild)
+	cb := cbObj.(*crv1.ComponentBuild)
 
-	if cBuild.UID != controllerRef.UID {
+	if cb.UID != controllerRef.UID {
 		// The controller we found with this Name is not the same one that the
 		// ControllerRef points to.
 		return nil
 	}
-	return cBuild
+	return cb
 }
 
 func (cbc *ComponentBuildController) Run(workers int, stopCh <-chan struct{}) {
@@ -379,7 +379,7 @@ func (cbc *ComponentBuildController) syncComponentBuild(key string) error {
 		glog.V(4).Infof("Finished syncing ComponentBuild %q (%v)", key, time.Now().Sub(startTime))
 	}()
 
-	cBuildObj, exists, err := cbc.componentBuildStore.GetByKey(key)
+	cbObj, exists, err := cbc.componentBuildStore.GetByKey(key)
 	if errors.IsNotFound(err) || !exists {
 		glog.V(2).Infof("ComponentBuild %v has been deleted", key)
 		return nil
@@ -388,15 +388,17 @@ func (cbc *ComponentBuildController) syncComponentBuild(key string) error {
 		return err
 	}
 
-	cBuild := cBuildObj.(*crv1.ComponentBuild)
+	cb := cbObj.(*crv1.ComponentBuild)
 
-	stateInfo, err := cbc.calculateState(cBuild)
+	stateInfo, err := cbc.calculateState(cb)
 	if err != nil {
 		return err
 	}
 
+	glog.V(5).Infof("ComponentBuild %v state: %v", cb.Name, stateInfo.state)
+
 	// Deep-copy otherwise we are mutating our cache.
-	cBuildCopy := cBuild.DeepCopy()
+	cBuildCopy := cb.DeepCopy()
 
 	switch stateInfo.state {
 	case cBuildStateJobNotCreated:

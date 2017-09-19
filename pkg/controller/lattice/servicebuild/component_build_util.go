@@ -10,81 +10,78 @@ import (
 
 const componentBuildDefinitionHashMetadataKey = "lattice-component-build-definition-hash"
 
-func getComponentBuildDefinitionHashFromLabel(cBuild *crv1.ComponentBuild) *string {
-	cBuildHashLabel, ok := cBuild.Annotations[componentBuildDefinitionHashMetadataKey]
+func getComponentBuildDefinitionHashFromLabel(cb *crv1.ComponentBuild) *string {
+	cBuildHashLabel, ok := cb.Annotations[componentBuildDefinitionHashMetadataKey]
 	if !ok {
 		return nil
 	}
 	return &cBuildHashLabel
 }
 
-func (sbc *ServiceBuildController) getComponentBuildFromInfo(
-	cBuildInfo *crv1.ServiceBuildComponentBuildInfo,
-	namespace string,
-) (*crv1.ComponentBuild, bool, error) {
-	if cBuildInfo.ComponentBuildName == nil {
+func (sbc *ServiceBuildController) getComponentBuildFromInfo(cbInfo *crv1.ServiceBuildComponentBuildInfo, ns string) (*crv1.ComponentBuild, bool, error) {
+	if cbInfo.ComponentBuildName == nil {
 		return nil, false, nil
 	}
 
-	cBuildKey := namespace + "/" + *cBuildInfo.ComponentBuildName
-	cBuildObj, exists, err := sbc.componentBuildStore.GetByKey(cBuildKey)
+	cbKey := ns + "/" + *cbInfo.ComponentBuildName
+	cbObj, exists, err := sbc.componentBuildStore.GetByKey(cbKey)
 	if err != nil || !exists {
 		return nil, false, err
 	}
 
-	return cBuildObj.(*crv1.ComponentBuild), true, nil
+	return cbObj.(*crv1.ComponentBuild), true, nil
 }
 
-func (sbc *ServiceBuildController) findComponentBuildForDefinitionHash(namespace, definitionHash string) (*crv1.ComponentBuild, error) {
+func (sbc *ServiceBuildController) findComponentBuildForDefinitionHash(ns, definitionHash string) (*crv1.ComponentBuild, error) {
 	// Check recent build cache
-	cBuild, err := sbc.findComponentBuildInRecentBuildCache(namespace, definitionHash)
+	cb, err := sbc.findComponentBuildInRecentBuildCache(ns, definitionHash)
 	if err != nil {
 		return nil, err
 	}
 
 	// If we found a build in the recent build cache return it.
-	if cBuild != nil {
-		return cBuild, nil
+	if cb != nil {
+		return cb, nil
 	}
 
 	// We couldn't find a ComponentBuild in our recent builds cache, so we'll check the Store to see if
 	// there's a ComponentBuild we could use in there.
-	return sbc.findComponentBuildInStore(namespace, definitionHash), nil
+	return sbc.findComponentBuildInStore(ns, definitionHash), nil
 }
 
-func (sbc *ServiceBuildController) findComponentBuildInRecentBuildCache(namespace, definitionHash string) (*crv1.ComponentBuild, error) {
+func (sbc *ServiceBuildController) findComponentBuildInRecentBuildCache(ns, definitionHash string) (*crv1.ComponentBuild, error) {
 	sbc.recentComponentBuildsLock.RLock()
 	defer sbc.recentComponentBuildsLock.RUnlock()
 
-	cBuildNamespaceCache, ok := sbc.recentComponentBuilds[namespace]
+	cbNsCache, ok := sbc.recentComponentBuilds[ns]
 	if !ok {
 		return nil, nil
 	}
 
-	cBuildName, ok := cBuildNamespaceCache[definitionHash]
+	cbName, ok := cbNsCache[definitionHash]
 	if !ok {
 		return nil, nil
 	}
 
 	// Check to see if this build is in our ComponentBuild store
-	cBuildObj, exists, err := sbc.componentBuildStore.GetByKey(namespace + "/" + cBuildName)
+	cbObj, exists, err := sbc.componentBuildStore.GetByKey(ns + "/" + cbName)
 	if err != nil {
 		return nil, err
 	}
 
 	// The ComponentBuild exists in our store, so return that cached version.
 	if exists {
-		return cBuildObj.(*crv1.ComponentBuild), nil
+		return cbObj.(*crv1.ComponentBuild), nil
 	}
 
 	// The ComponentBuild isn't in our store, so we'll need to read from the API
-	cBuild := &crv1.ComponentBuild{}
-	err = sbc.latticeResourceRestClient.Get().
-		Namespace(namespace).
+	cb := &crv1.ComponentBuild{}
+	err = sbc.latticeResourceClient.Get().
+		Namespace(ns).
 		Resource(crv1.ComponentBuildResourcePlural).
-		Name(cBuildName).
+		Name(cbName).
 		Do().
-		Into(cBuild)
+		Into(cb)
 
 	if err != nil {
 		if errors.IsNotFound(err) {
@@ -94,51 +91,47 @@ func (sbc *ServiceBuildController) findComponentBuildInRecentBuildCache(namespac
 		return nil, err
 	}
 
-	return cBuild, nil
+	return cb, nil
 }
 
-func (sbc *ServiceBuildController) findComponentBuildInStore(namespace, definitionHash string) *crv1.ComponentBuild {
+func (sbc *ServiceBuildController) findComponentBuildInStore(ns, definitionHash string) *crv1.ComponentBuild {
 	// TODO: similar scalability concerns to getServiceBuildsForComponentBuild
-	for _, cBuildObj := range sbc.componentBuildStore.List() {
-		cBuild := cBuildObj.(*crv1.ComponentBuild)
-		cBuildHashLabel := getComponentBuildDefinitionHashFromLabel(cBuild)
-		if cBuildHashLabel == nil {
+	for _, cbObj := range sbc.componentBuildStore.List() {
+		cb := cbObj.(*crv1.ComponentBuild)
+		cbHashLabel := getComponentBuildDefinitionHashFromLabel(cb)
+		if cbHashLabel == nil {
 			// FIXME: add warn event
 			continue
 		}
 
-		if *cBuildHashLabel == definitionHash && cBuild.Status.State != crv1.ComponentBuildStateFailed {
-			return cBuild
+		if *cbHashLabel == definitionHash && cb.Status.State != crv1.ComponentBuildStateFailed {
+			return cb
 		}
 	}
 
 	return nil
 }
 
-func (sbc *ServiceBuildController) createComponentBuild(
-	namespace string,
-	cBuildInfo *crv1.ServiceBuildComponentBuildInfo,
-	previousCBuildName *string,
-) (*crv1.ComponentBuild, error) {
+func (sbc *ServiceBuildController) createComponentBuild(ns string, cbInfo *crv1.ServiceBuildComponentBuildInfo, previousCbName *string) (*crv1.ComponentBuild, error) {
 	sbc.recentComponentBuildsLock.Lock()
 	defer sbc.recentComponentBuildsLock.Unlock()
 
-	if cBuildNamespaceCache, ok := sbc.recentComponentBuilds[namespace]; ok {
+	if cbNsCache, ok := sbc.recentComponentBuilds[ns]; ok {
 		// If there is a new entry in the recent build cache, a different service build has attempted to
 		// build the same component. We'll use this ComponentBuild as ours.
-		cBuildName, ok := cBuildNamespaceCache[*cBuildInfo.DefinitionHash]
-		if ok && (previousCBuildName == nil || cBuildName != *previousCBuildName) {
-			return sbc.getComponentBuildFromApi(namespace, cBuildName)
+		cbName, ok := cbNsCache[*cbInfo.DefinitionHash]
+		if ok && (previousCbName == nil || cbName != *previousCbName) {
+			return sbc.getComponentBuildFromApi(ns, cbName)
 		}
 	}
 
 	// If there is no new entry in the build cache, create a new ComponentBuild.
-	cBuild := getNewComponentBuildFromInfo(cBuildInfo)
+	cb := getNewComponentBuildFromInfo(cbInfo)
 	result := &crv1.ComponentBuild{}
-	err := sbc.latticeResourceRestClient.Post().
-		Namespace(namespace).
+	err := sbc.latticeResourceClient.Post().
+		Namespace(ns).
 		Resource(crv1.ComponentBuildResourcePlural).
-		Body(cBuild).
+		Body(cb).
 		Do().
 		Into(result)
 
@@ -146,38 +139,40 @@ func (sbc *ServiceBuildController) createComponentBuild(
 		return nil, err
 	}
 
-	cBuildNamespaceCache, ok := sbc.recentComponentBuilds[namespace]
+	cbNsCache, ok := sbc.recentComponentBuilds[ns]
 	if !ok {
-		cBuildNamespaceCache = map[string]string{}
-		sbc.recentComponentBuilds[namespace] = cBuildNamespaceCache
+		cbNsCache = map[string]string{}
+		sbc.recentComponentBuilds[ns] = cbNsCache
 	}
-	cBuildNamespaceCache[*cBuildInfo.DefinitionHash] = cBuild.Name
+	cbNsCache[*cbInfo.DefinitionHash] = cb.Name
 
 	return result, nil
 }
 
-func (sbc *ServiceBuildController) getComponentBuildFromApi(namespace, name string) (*crv1.ComponentBuild, error) {
+func (sbc *ServiceBuildController) getComponentBuildFromApi(ns, name string) (*crv1.ComponentBuild, error) {
 	var cBuild crv1.ComponentBuild
-	err := sbc.latticeResourceRestClient.Get().
-		Namespace(namespace).
+	err := sbc.latticeResourceClient.Get().
+		Namespace(ns).
 		Resource(crv1.ComponentBuildResourcePlural).
 		Name(name).
 		Do().
 		Into(&cBuild)
+
 	return &cBuild, err
 }
 
-func getNewComponentBuildFromInfo(cBuildInfo *crv1.ServiceBuildComponentBuildInfo) *crv1.ComponentBuild {
-	annotations := map[string]string{
-		componentBuildDefinitionHashMetadataKey: *cBuildInfo.DefinitionHash,
+func getNewComponentBuildFromInfo(cbInfo *crv1.ServiceBuildComponentBuildInfo) *crv1.ComponentBuild {
+	cbAnnotations := map[string]string{
+		componentBuildDefinitionHashMetadataKey: *cbInfo.DefinitionHash,
 	}
+
 	return &crv1.ComponentBuild{
 		ObjectMeta: metav1.ObjectMeta{
-			Annotations: annotations,
+			Annotations: cbAnnotations,
 			Name:        string(uuid.NewUUID()),
 		},
 		Spec: crv1.ComponentBuildSpec{
-			BuildDefinitionBlock: cBuildInfo.DefinitionBlock,
+			BuildDefinitionBlock: cbInfo.DefinitionBlock,
 		},
 		Status: crv1.ComponentBuildStatus{
 			State: crv1.ComponentBuildStatePending,

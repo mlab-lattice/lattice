@@ -1,7 +1,6 @@
 package componentbuild
 
 import (
-
 	crv1 "github.com/mlab-lattice/kubernetes-integration/pkg/api/customresource/v1"
 
 	batchv1 "k8s.io/api/batch/v1"
@@ -21,15 +20,15 @@ type cBuildStateInfo struct {
 	job   *batchv1.Job
 }
 
-func (cbc *ComponentBuildController) calculateState(cBuild *crv1.ComponentBuild) (*cBuildStateInfo, error) {
-	job, err := cbc.getJobForBuild(cBuild)
+func (cbc *ComponentBuildController) calculateState(cb *crv1.ComponentBuild) (*cBuildStateInfo, error) {
+	j, err := cbc.getJobForBuild(cb)
 	if err != nil {
 		return nil, err
 	}
 
 	// FIXME: if a ComponentBuild was successful, but then for some reason the Job is deleted, should it still be
 	// considered successful or should a new Job be spun up? Right now a new Job will be spun up.
-	if job == nil {
+	if j == nil {
 		stateInfo := &cBuildStateInfo{
 			state: cBuildStateJobNotCreated,
 		}
@@ -37,10 +36,10 @@ func (cbc *ComponentBuildController) calculateState(cBuild *crv1.ComponentBuild)
 	}
 
 	stateInfo := &cBuildStateInfo{
-		job: job,
+		job: j,
 	}
 
-	finished, succeeded := jobStatus(job)
+	finished, succeeded := jobStatus(j)
 	if !finished {
 		stateInfo.state = cBuildStateJobRunning
 		return stateInfo, nil

@@ -32,6 +32,11 @@ local-bootstrap: gazelle
 	@bazel run -- //cmd/bootstrap -kubeconfig ~/.kube/config -provider local
 	$(DIR)/bin/seed-local-build-images.sh $(MINIKUBE_PROFILE)
 
+.PHONY: local-clean
+local-clean:
+	$(DIR)/test/clean-crds.sh
+
+
 .PHONY: minikube-start
 minikube-start:
 	@minikube start -p $(MINIKUBE_PROFILE)

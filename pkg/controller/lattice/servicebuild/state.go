@@ -18,57 +18,57 @@ const (
 type svcBuildStateInfo struct {
 	state svcBuildState
 
-	activeCBuilds  []string
-	failedCBuilds  []string
-	needsNewCBuild []string
+	activeCbs  []string
+	failedCbs  []string
+	needsNewCb []string
 }
 
-func (sbc *ServiceBuildController) calculateState(svcBuild *crv1.ServiceBuild) (*svcBuildStateInfo, error) {
-	activeCBuilds := []string{}
-	failedCBuilds := []string{}
-	needsNewCBuilds := []string{}
+func (sbc *ServiceBuildController) calculateState(svcb *crv1.ServiceBuild) (*svcBuildStateInfo, error) {
+	activeCbs := []string{}
+	failedCbs := []string{}
+	needsNewCbs := []string{}
 
-	for componentName, cBuildInfo := range svcBuild.Spec.ComponentBuildsInfo {
-		cBuild, exists, err := sbc.getComponentBuildFromInfo(&cBuildInfo, svcBuild.Namespace)
+	for component, cbInfo := range svcb.Spec.ComponentBuildsInfo {
+		cb, exists, err := sbc.getComponentBuildFromInfo(&cbInfo, svcb.Namespace)
 		if err != nil {
 			return nil, err
 		}
 
 		if !exists {
-			needsNewCBuilds = append(needsNewCBuilds, componentName)
+			needsNewCbs = append(needsNewCbs, component)
 			continue
 		}
 
-		switch cBuild.Status.State {
+		switch cb.Status.State {
 		case crv1.ComponentBuildStatePending, crv1.ComponentBuildStateQueued, crv1.ComponentBuildStateRunning:
-			activeCBuilds = append(activeCBuilds, componentName)
+			activeCbs = append(activeCbs, component)
 		case crv1.ComponentBuildStateFailed:
-			failedCBuilds = append(failedCBuilds, componentName)
+			failedCbs = append(failedCbs, component)
 		case crv1.ComponentBuildStateSucceeded:
 			continue
 		default:
 			// FIXME: send warn event
-			return nil, fmt.Errorf("ComponentBuild %v has unrecognized state %v", cBuild.Name, cBuild.Status.State)
+			return nil, fmt.Errorf("ComponentBuild %v has unrecognized state %v", cb.Name, cb.Status.State)
 		}
 	}
 
 	stateInfo := &svcBuildStateInfo{
-		activeCBuilds:  activeCBuilds,
-		failedCBuilds:  failedCBuilds,
-		needsNewCBuild: needsNewCBuilds,
+		activeCbs:  activeCbs,
+		failedCbs:  failedCbs,
+		needsNewCb: needsNewCbs,
 	}
 
-	if len(failedCBuilds) > 0 {
+	if len(failedCbs) > 0 {
 		stateInfo.state = svcBuildStateHasFailedCBuilds
 		return stateInfo, nil
 	}
 
-	if len(needsNewCBuilds) > 0 {
+	if len(needsNewCbs) > 0 {
 		stateInfo.state = svcBuildStateNoFailuresNeedsNewCBuilds
 		return stateInfo, nil
 	}
 
-	if len(activeCBuilds) > 0 {
+	if len(activeCbs) > 0 {
 		stateInfo.state = svcBuildStateHasOnlyRunningOrSucceededCBuilds
 		return stateInfo, nil
 	}

@@ -1,8 +1,7 @@
 package backend
 
 import (
-	"fmt"
-
+	systemdefinition "github.com/mlab-lattice/core/pkg/system/definition"
 	coretypes "github.com/mlab-lattice/core/pkg/types"
 
 	crv1 "github.com/mlab-lattice/kubernetes-integration/pkg/api/customresource/v1"
@@ -12,18 +11,25 @@ import (
 	"k8s.io/apimachinery/pkg/util/uuid"
 )
 
-func (kb *KubernetesBackend) RollOutSystemBuild(latticeNamespace coretypes.LatticeNamespace, sysBuildId coretypes.SystemBuildId) (string, error) {
-	sysBuild, err := kb.getSystemBuildFromId(latticeNamespace, sysBuildId)
+func (kb *KubernetesBackend) RollOutSystem(ln coretypes.LatticeNamespace, sd *systemdefinition.System, v coretypes.SystemVersion) (string, error) {
+	bid, err := kb.BuildSystem(ln, sd, v)
 	if err != nil {
 		return "", err
 	}
 
-	sysRollout, err := getSystemRollout(latticeNamespace, sysBuild)
+	return kb.RollOutSystemBuild(ln, bid)
+}
+
+func (kb *KubernetesBackend) RollOutSystemBuild(ln coretypes.LatticeNamespace, bid coretypes.SystemBuildId) (string, error) {
+	sysBuild, err := kb.getSystemBuildFromId(ln, bid)
 	if err != nil {
 		return "", err
 	}
 
-	fmt.Printf("%#v", sysRollout)
+	sysRollout, err := getSystemRollout(ln, sysBuild)
+	if err != nil {
+		return "", err
+	}
 
 	result := &crv1.SystemRollout{}
 	err = kb.LatticeResourceRestClient.Post().
@@ -32,20 +38,19 @@ func (kb *KubernetesBackend) RollOutSystemBuild(latticeNamespace coretypes.Latti
 		Body(sysRollout).
 		Do().
 		Into(result)
+
 	return result.Name, err
 }
 
-func (kb *KubernetesBackend) getSystemBuildFromId(
-	latticeNamespace coretypes.LatticeNamespace,
-	sysBuildId coretypes.SystemBuildId,
-) (*crv1.SystemBuild, error) {
+func (kb *KubernetesBackend) getSystemBuildFromId(ln coretypes.LatticeNamespace, bid coretypes.SystemBuildId) (*crv1.SystemBuild, error) {
 	result := &crv1.SystemBuild{}
 	err := kb.LatticeResourceRestClient.Get().
 		Namespace(constants.InternalNamespace).
 		Resource(crv1.SystemBuildResourcePlural).
-		Name(string(sysBuildId)).
+		Name(string(bid)).
 		Do().
 		Into(result)
+
 	return result, err
 }
 

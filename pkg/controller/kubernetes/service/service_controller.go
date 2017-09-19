@@ -111,12 +111,12 @@ func (sc *ServiceController) deleteService(obj interface{}) {
 	if !ok {
 		tombstone, ok := obj.(cache.DeletedFinalStateUnknown)
 		if !ok {
-			runtime.HandleError(fmt.Errorf("Couldn't get object from tombstone %#v", obj))
+			runtime.HandleError(fmt.Errorf("couldn't get object from tombstone %#v", obj))
 			return
 		}
 		svc, ok = tombstone.Obj.(*crv1.Service)
 		if !ok {
-			runtime.HandleError(fmt.Errorf("Tombstone contained object that is not a Service %#v", obj))
+			runtime.HandleError(fmt.Errorf("tombstone contained object that is not a Service %#v", obj))
 			return
 		}
 	}
@@ -157,7 +157,7 @@ func (sc *ServiceController) addDeployment(obj interface{}) {
 // updateDeployment figures out what Service manages a Deployment when the Deployment
 // is updated and enqueues it.
 func (sc *ServiceController) updateDeployment(old, cur interface{}) {
-	glog.V(5).Info("Got Job update")
+	glog.V(5).Info("Got Deployment update")
 	oldD := old.(*extensions.Deployment)
 	curD := cur.(*extensions.Deployment)
 	if curD.ResourceVersion == oldD.ResourceVersion {
@@ -206,12 +206,12 @@ func (sc *ServiceController) deleteDeployment(obj interface{}) {
 	if !ok {
 		tombstone, ok := obj.(cache.DeletedFinalStateUnknown)
 		if !ok {
-			runtime.HandleError(fmt.Errorf("Couldn't get object from tombstone %#v", obj))
+			runtime.HandleError(fmt.Errorf("couldn't get object from tombstone %#v", obj))
 			return
 		}
 		d, ok = tombstone.Obj.(*extensions.Deployment)
 		if !ok {
-			runtime.HandleError(fmt.Errorf("Tombstone contained object that is not a Deployment %#v", obj))
+			runtime.HandleError(fmt.Errorf("tombstone contained object that is not a Deployment %#v", obj))
 			return
 		}
 	}
@@ -236,7 +236,7 @@ func (sc *ServiceController) deleteDeployment(obj interface{}) {
 func (sc *ServiceController) enqueue(svc *crv1.Service) {
 	key, err := cache.DeletionHandlingMetaNamespaceKeyFunc(svc)
 	if err != nil {
-		runtime.HandleError(fmt.Errorf("Couldn't get key for object %#v: %v", svc, err))
+		runtime.HandleError(fmt.Errorf("couldn't get key for object %#v: %v", svc, err))
 		return
 	}
 

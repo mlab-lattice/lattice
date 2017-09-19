@@ -109,7 +109,7 @@ func (sbc *SystemBuildController) addServiceBuild(obj interface{}) {
 			return
 		}
 
-		glog.V(4).Infof("Service %s added.", svcBuild.Name)
+		glog.V(4).Infof("ServiceBuild %s added.", svcBuild.Name)
 		sbc.enqueueSystemBuild(sysBuild)
 		return
 	}
@@ -121,13 +121,13 @@ func (sbc *SystemBuildController) addServiceBuild(obj interface{}) {
 // updateServiceBuild figures out what SystemBuild manages a Service when the
 // Service is updated and enqueues them.
 func (sbc *SystemBuildController) updateServiceBuild(old, cur interface{}) {
-	glog.V(5).Info("Got Job update")
+	glog.V(5).Info("Got ServiceBuild update")
 	oldSvcBuild := old.(*crv1.ServiceBuild)
 	curSvcBuild := cur.(*crv1.ServiceBuild)
 	if curSvcBuild.ResourceVersion == oldSvcBuild.ResourceVersion {
 		// Periodic resync will send update events for all known ServiceBuilds.
 		// Two different versions of the same job will always have different RVs.
-		glog.V(5).Info("Service ResourceVersions are the same")
+		glog.V(5).Info("ServiceBuild ResourceVersions are the same")
 		return
 	}
 
@@ -191,7 +191,7 @@ func (sbc *SystemBuildController) resolveControllerRef(namespace string, control
 func (sbc *SystemBuildController) enqueue(sysBuild *crv1.SystemBuild) {
 	key, err := cache.DeletionHandlingMetaNamespaceKeyFunc(sysBuild)
 	if err != nil {
-		runtime.HandleError(fmt.Errorf("Couldn't get key for object %#v: %v", sysBuild, err))
+		runtime.HandleError(fmt.Errorf("couldn't get key for object %#v: %v", sysBuild, err))
 		return
 	}
 
@@ -277,9 +277,9 @@ func (sbc *SystemBuildController) processNextWorkItem() bool {
 func (sbc *SystemBuildController) syncSystemBuild(key string) error {
 	glog.Flush()
 	startTime := time.Now()
-	glog.V(4).Infof("Started syncing System %q (%v)", key, startTime)
+	glog.V(4).Infof("Started syncing SystemBuild %q (%v)", key, startTime)
 	defer func() {
-		glog.V(4).Infof("Finished syncing System %q (%v)", key, time.Now().Sub(startTime))
+		glog.V(4).Infof("Finished syncing SystemBuild %q (%v)", key, time.Now().Sub(startTime))
 	}()
 
 	sysBuildObj, exists, err := sbc.systemBuildStore.GetByKey(key)
@@ -341,7 +341,7 @@ func (sbc *SystemBuildController) syncSystemBuildServiceStatuses(sysBuild *crv1.
 		Do().
 		Into(response)
 
-	sysBuild = response
+	*sysBuild = *response
 	return err
 }
 
@@ -371,7 +371,7 @@ func (sbc *SystemBuildController) syncSystemBuildStatus(sysBuild *crv1.SystemBui
 
 	for path, svc := range sysBuild.Spec.Services {
 		if svc.ServiceBuildState == nil {
-			return fmt.Errorf("Service %v had no ServiceBuildState in syncSystemBuildStatus", path)
+			return fmt.Errorf("ServiceBuild %v had no ServiceBuildState in syncSystemBuildStatus", path)
 		}
 
 		// If there's a failed build, no need to look any further, our SystemBuild has failed.

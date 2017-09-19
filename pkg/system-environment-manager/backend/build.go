@@ -1,8 +1,6 @@
 package backend
 
 import (
-	"fmt"
-
 	systemdefinition "github.com/mlab-lattice/core/pkg/system/definition"
 	systemtree "github.com/mlab-lattice/core/pkg/system/tree"
 	coretypes "github.com/mlab-lattice/core/pkg/types"
@@ -14,8 +12,8 @@ import (
 	"k8s.io/apimachinery/pkg/util/uuid"
 )
 
-func (kb *KubernetesBackend) BuildSystem(latticeNamespace coretypes.LatticeNamespace, system *systemdefinition.System, version string) (string, error) {
-	systemBuild, err := getSystemBuild(latticeNamespace, system, version)
+func (kb *KubernetesBackend) BuildSystem(ln coretypes.LatticeNamespace, sd *systemdefinition.System, v coretypes.SystemVersion) (coretypes.SystemBuildId, error) {
+	systemBuild, err := getSystemBuild(ln, sd, v)
 	if err != nil {
 		return "", err
 	}
@@ -27,17 +25,17 @@ func (kb *KubernetesBackend) BuildSystem(latticeNamespace coretypes.LatticeNames
 		Body(systemBuild).
 		Do().
 		Into(result)
-	fmt.Println(err)
-	return result.Name, err
+
+	return coretypes.SystemBuildId(result.Name), err
 }
 
-func getSystemBuild(latticeNamespace coretypes.LatticeNamespace, system *systemdefinition.System, version string) (*crv1.SystemBuild, error) {
+func getSystemBuild(ln coretypes.LatticeNamespace, sd *systemdefinition.System, v coretypes.SystemVersion) (*crv1.SystemBuild, error) {
 	labels := map[string]string{
-		constants.LatticeNamespaceLabel: string(latticeNamespace),
-		crv1.SystemVersionLabelKey:      version,
+		constants.LatticeNamespaceLabel: string(ln),
+		crv1.SystemVersionLabelKey:      string(v),
 	}
 
-	root, err := systemtree.NewNode(systemdefinition.Interface(system), nil)
+	root, err := systemtree.NewNode(systemdefinition.Interface(sd), nil)
 	if err != nil {
 		return nil, err
 	}
@@ -49,14 +47,14 @@ func getSystemBuild(latticeNamespace coretypes.LatticeNamespace, system *systemd
 		}
 	}
 
-	sysBuild := &crv1.SystemBuild{
+	sysB := &crv1.SystemBuild{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:   string(uuid.NewUUID()),
 			Labels: labels,
 		},
 		Spec: crv1.SystemBuildSpec{
-			LatticeNamespace: latticeNamespace,
-			Definition:       *system,
+			LatticeNamespace: ln,
+			Definition:       *sd,
 			Services:         services,
 		},
 		Status: crv1.SystemBuildStatus{
@@ -64,5 +62,5 @@ func getSystemBuild(latticeNamespace coretypes.LatticeNamespace, system *systemd
 		},
 	}
 
-	return sysBuild, nil
+	return sysB, nil
 }
