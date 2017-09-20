@@ -57,7 +57,7 @@ func (src *SystemRolloutController) createSystem(sysRollout *crv1.SystemRollout,
 	}
 
 	result := &crv1.System{}
-	err = src.latticeResourceRestClient.Post().
+	err = src.latticeResourceClient.Post().
 		Namespace(sysRollout.Namespace).
 		Resource(crv1.SystemResourcePlural).
 		Body(sys).
@@ -81,5 +81,6 @@ func (src *SystemRolloutController) syncRolloutWithSystem(sysRollout *crv1.Syste
 		}
 	}
 
-	return src.updateStatus(sysRollout, newState)
+	_, err := src.updateStatus(sysRollout, newState)
+	return err
 }

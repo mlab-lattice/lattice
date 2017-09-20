@@ -17,17 +17,20 @@ func (src *SystemRolloutController) syncAcceptedRollout(sysRollout *crv1.SystemR
 			State:   crv1.SystemRolloutStateFailed,
 			Message: fmt.Sprintf("SystemBuild %v failed", systemBuild.Name),
 		}
-		return src.updateStatus(sysRollout, newStatus)
+		_, err := src.updateStatus(sysRollout, newStatus)
+		return err
 
 	case crv1.SystemBuildStateSucceeded:
 		newStatus := crv1.SystemRolloutStatus{
 			State: crv1.SystemRolloutStateInProgress,
 		}
-		if err := src.updateStatus(sysRollout, newStatus); err != nil {
+
+		result, err := src.updateStatus(sysRollout, newStatus)
+		if err != nil {
 			return err
 		}
 
-		return src.syncInProgressRollout(sysRollout)
+		return src.syncInProgressRollout(result)
 	}
 
 	return nil

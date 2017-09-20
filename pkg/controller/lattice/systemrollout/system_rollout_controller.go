@@ -25,7 +25,7 @@ type SystemRolloutController struct {
 	syncHandler          func(sysRolloutKey string) error
 	enqueueSystemRollout func(sysRollout *crv1.SystemRollout)
 
-	latticeResourceRestClient rest.Interface
+	latticeResourceClient rest.Interface
 
 	// Each LatticeNamespace may only have one rollout going on at a time.
 	// A rollout is an "owning" rollout while it is rolling out, and until
@@ -50,15 +50,15 @@ type SystemRolloutController struct {
 }
 
 func NewSystemRolloutController(
-	latticeResourceRestClient rest.Interface,
+	latticeResourceClient rest.Interface,
 	systemRolloutInformer cache.SharedInformer,
 	systemInformer cache.SharedInformer,
 	systemBuildInformer cache.SharedInformer,
 ) *SystemRolloutController {
 	src := &SystemRolloutController{
-		latticeResourceRestClient: latticeResourceRestClient,
-		owningRollouts:            make(map[coretypes.LatticeNamespace]*crv1.SystemRollout),
-		queue:                     workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "system-rollout"),
+		latticeResourceClient: latticeResourceClient,
+		owningRollouts:        make(map[coretypes.LatticeNamespace]*crv1.SystemRollout),
+		queue:                 workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "system-rollout"),
 	}
 
 	src.enqueueSystemRollout = src.enqueue
@@ -92,16 +92,16 @@ func NewSystemRolloutController(
 }
 
 func (src *SystemRolloutController) addSystemRollout(obj interface{}) {
-	sysRollout := obj.(*crv1.SystemRollout)
-	glog.V(4).Infof("Adding SystemRollout %s", sysRollout.Name)
-	src.enqueueSystemRollout(sysRollout)
+	sysr := obj.(*crv1.SystemRollout)
+	glog.V(4).Infof("Adding SystemRollout %s", sysr.Name)
+	src.enqueueSystemRollout(sysr)
 }
 
 func (src *SystemRolloutController) updateSystemRollout(old, cur interface{}) {
-	oldSysRollout := old.(*crv1.SystemRollout)
-	curSysRollout := cur.(*crv1.SystemRollout)
-	glog.V(4).Infof("Updating SystemRollout %s", oldSysRollout.Name)
-	src.enqueueSystemRollout(curSysRollout)
+	oldSysr := old.(*crv1.SystemRollout)
+	curSysr := cur.(*crv1.SystemRollout)
+	glog.V(4).Infof("Updating SystemRollout %s", oldSysr.Name)
+	src.enqueueSystemRollout(curSysr)
 }
 
 func (src *SystemRolloutController) addSystem(obj interface{}) {
@@ -120,9 +120,15 @@ func (src *SystemRolloutController) addSystem(obj interface{}) {
 }
 
 func (src *SystemRolloutController) updateSystem(old, cur interface{}) {
+	glog.V(4).Info("Got System update")
 	oldSys := old.(*crv1.System)
 	curSys := cur.(*crv1.System)
-	glog.V(4).Infof("Updating SystemRollout %s", oldSys.Name)
+	if oldSys.ResourceVersion == curSys.ResourceVersion {
+		// Periodic resync will send update events for all known ServiceBuilds.
+		// Two different versions of the same job will always have different RVs.
+		glog.V(5).Info("System ResourceVersions are the same")
+		return
+	}
 
 	src.owningRolloutsLock.RLock()
 	defer src.owningRolloutsLock.RUnlock()
@@ -136,12 +142,12 @@ func (src *SystemRolloutController) updateSystem(old, cur interface{}) {
 }
 
 func (src *SystemRolloutController) addSystemBuild(obj interface{}) {
-	sysBuild := obj.(*crv1.SystemBuild)
-	glog.V(4).Infof("SystemBuild %s added", sysBuild.Name)
+	sysb := obj.(*crv1.SystemBuild)
+	glog.V(4).Infof("SystemBuild %s added", sysb.Name)
 
 	src.owningRolloutsLock.RLock()
 	defer src.owningRolloutsLock.RUnlock()
-	owningRollout, ok := src.owningRollouts[sysBuild.Spec.LatticeNamespace]
+	owningRollout, ok := src.owningRollouts[sysb.Spec.LatticeNamespace]
 	if !ok {
 		// TODO: send warn event
 		return
@@ -151,13 +157,19 @@ func (src *SystemRolloutController) addSystemBuild(obj interface{}) {
 }
 
 func (src *SystemRolloutController) updateSystemBuild(old, cur interface{}) {
-	oldSysBuild := old.(*crv1.SystemBuild)
-	curSysBuild := cur.(*crv1.SystemBuild)
-	glog.V(4).Infof("Updating SystemBuild %s", oldSysBuild.Name)
+	glog.V(4).Infof("Got SystemBuild update")
+	oldSysb := old.(*crv1.SystemBuild)
+	curSysb := cur.(*crv1.SystemBuild)
+	if oldSysb.ResourceVersion == curSysb.ResourceVersion {
+		// Periodic resync will send update events for all known ServiceBuilds.
+		// Two different versions of the same job will always have different RVs.
+		glog.V(5).Info("SystemBuild ResourceVersions are the same")
+		return
+	}
 
 	src.owningRolloutsLock.RLock()
 	defer src.owningRolloutsLock.RUnlock()
-	owningRollout, ok := src.owningRollouts[curSysBuild.Spec.LatticeNamespace]
+	owningRollout, ok := src.owningRollouts[curSysb.Spec.LatticeNamespace]
 	if !ok {
 		// TODO: send warn event
 		return
@@ -169,7 +181,7 @@ func (src *SystemRolloutController) updateSystemBuild(old, cur interface{}) {
 func (src *SystemRolloutController) enqueue(sysRollout *crv1.SystemRollout) {
 	key, err := cache.DeletionHandlingMetaNamespaceKeyFunc(sysRollout)
 	if err != nil {
-		runtime.HandleError(fmt.Errorf("Couldn't get key for object %#v: %v", sysRollout, err))
+		runtime.HandleError(fmt.Errorf("couldn't get key for object %#v: %v", sysRollout, err))
 		return
 	}
 
@@ -182,8 +194,8 @@ func (src *SystemRolloutController) Run(workers int, stopCh <-chan struct{}) {
 	// make sure the work queue is shutdown which will trigger workers to end
 	defer src.queue.ShutDown()
 
-	glog.Infof("Starting system-build controller")
-	defer glog.Infof("Shutting down system-build controller")
+	glog.Infof("Starting system-rollout controller")
+	defer glog.Infof("Shutting down system-rollout controller")
 
 	// wait for your secondary caches to fill before starting your work
 	if !cache.WaitForCacheSync(stopCh, src.systemRolloutStoreSynced, src.systemStoreSynced, src.systemBuildStoreSynced) {
@@ -215,18 +227,18 @@ func (src *SystemRolloutController) syncOwningRollouts() error {
 	src.owningRolloutsLock.Lock()
 	defer src.owningRolloutsLock.Unlock()
 
-	for _, sysRolloutObj := range src.systemRolloutStore.List() {
-		sysRollout := sysRolloutObj.(*crv1.SystemRollout)
-		if sysRollout.Status.State != crv1.SystemRolloutStateInProgress {
+	for _, sysrObj := range src.systemRolloutStore.List() {
+		sysr := sysrObj.(*crv1.SystemRollout)
+		if sysr.Status.State != crv1.SystemRolloutStateInProgress {
 			continue
 		}
 
-		latticeNamespace := sysRollout.Spec.LatticeNamespace
-		if _, ok := src.owningRollouts[sysRollout.Spec.LatticeNamespace]; ok {
-			return fmt.Errorf("LatticeNamespace %v has multiple owning rollouts", latticeNamespace)
+		lns := sysr.Spec.LatticeNamespace
+		if _, ok := src.owningRollouts[sysr.Spec.LatticeNamespace]; ok {
+			return fmt.Errorf("LatticeNamespace %v has multiple owning rollouts", lns)
 		}
 
-		src.owningRollouts[latticeNamespace] = sysRollout
+		src.owningRollouts[lns] = sysr
 	}
 
 	return nil
@@ -288,7 +300,7 @@ func (src *SystemRolloutController) syncSystemRollout(key string) error {
 		glog.V(4).Infof("Finished syncing SystemRollout %q (%v)", key, time.Now().Sub(startTime))
 	}()
 
-	sysRolloutObj, exists, err := src.systemRolloutStore.GetByKey(key)
+	sysrObj, exists, err := src.systemRolloutStore.GetByKey(key)
 	if errors.IsNotFound(err) || !exists {
 		glog.V(2).Infof("SystemRollout %v has been deleted", key)
 		return nil
@@ -297,38 +309,42 @@ func (src *SystemRolloutController) syncSystemRollout(key string) error {
 		return err
 	}
 
-	sysRollout := sysRolloutObj.(*crv1.SystemRollout)
-	rolloutState := sysRollout.Status.State
-	if rolloutState == crv1.SystemRolloutStateSucceeded || rolloutState == crv1.SystemRolloutStateFailed {
+	sysr := sysrObj.(*crv1.SystemRollout)
+
+	switch sysr.Status.State {
+	case crv1.SystemRolloutStateSucceeded, crv1.SystemRolloutStateFailed:
 		glog.V(4).Infof("SystemRollout %s already completed", key)
 		return nil
-	}
 
-	if rolloutState == crv1.SystemRolloutStateInProgress {
-		return src.syncInProgressRollout(sysRollout)
-	}
+	case crv1.SystemRolloutStateInProgress:
+		return src.syncInProgressRollout(sysr)
 
-	if rolloutState == crv1.SystemRolloutStateAccepted {
-		return src.syncAcceptedRollout(sysRollout)
-	}
+	case crv1.SystemRolloutStateAccepted:
+		return src.syncAcceptedRollout(sysr)
 
-	return src.syncPendingRolloutState(sysRollout)
+	case crv1.SystemRolloutStatePending:
+		return src.syncPendingRolloutState(sysr)
+
+	default:
+		panic("unreachable")
+	}
 }
 
-func (src *SystemRolloutController) updateStatus(sysRollout *crv1.SystemRollout, newStatus crv1.SystemRolloutStatus) error {
-	if reflect.DeepEqual(sysRollout.Status, newStatus) {
-		return nil
+func (src *SystemRolloutController) updateStatus(sysr *crv1.SystemRollout, newStatus crv1.SystemRolloutStatus) (*crv1.SystemRollout, error) {
+	if reflect.DeepEqual(sysr.Status, newStatus) {
+		return sysr, nil
 	}
 
-	sysRollout.Status = newStatus
+	sysr.Status = newStatus
 
-	err := src.latticeResourceRestClient.Put().
-		Namespace(sysRollout.Namespace).
+	result := &crv1.SystemRollout{}
+	err := src.latticeResourceClient.Put().
+		Namespace(sysr.Namespace).
 		Resource(crv1.SystemRolloutResourcePlural).
-		Name(sysRollout.Name).
-		Body(sysRollout).
+		Name(sysr.Name).
+		Body(sysr).
 		Do().
-		Into(nil)
+		Into(result)
 
-	return err
+	return result, err
 }

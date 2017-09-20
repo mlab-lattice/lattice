@@ -62,11 +62,12 @@ func (src *SystemRolloutController) claimOwningRollout(sysRollout *crv1.SystemRo
 	newStatus := crv1.SystemRolloutStatus{
 		State: crv1.SystemRolloutStateAccepted,
 	}
-	if err := src.updateStatus(sysRollout, newStatus); err != nil {
+	result, err :=src.updateStatus(sysRollout, newStatus)
+	if err != nil {
 		return err
 	}
 
-	return src.syncAcceptedRollout(sysRollout)
+	return src.syncAcceptedRollout(result)
 }
 
 func (src *SystemRolloutController) failRolloutDueToExistingActiveRollout(sysRollout *crv1.SystemRollout) error {
@@ -74,5 +75,7 @@ func (src *SystemRolloutController) failRolloutDueToExistingActiveRollout(sysRol
 		State:   crv1.SystemRolloutStateFailed,
 		Message: "Another SystemRollout is active",
 	}
-	return src.updateStatus(sysRollout, newStatus)
+
+	_, err := src.updateStatus(sysRollout, newStatus)
+	return err
 }
