@@ -26,7 +26,7 @@ func getNewSystem(sysRollout *crv1.SystemRollout, sysBuild *crv1.SystemBuild) (*
 
 		services[path] = crv1.SystemServicesInfo{
 			Definition: *(service.Definition().(*systemdefinition.Service)),
-			BuildName:  *svcBuildInfo.ServiceBuildName,
+			BuildName:  *svcBuildInfo.BuildName,
 		}
 	}
 

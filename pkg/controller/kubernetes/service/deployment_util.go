@@ -114,12 +114,12 @@ func (sc *ServiceController) getDeploymentSpec(svc *crv1.Service, svcBuild *crv1
 func (sc *ServiceController) getComponentDockerImageFqns(svcBuild *crv1.ServiceBuild) (map[string]string, error) {
 	componentDockerImageFqns := map[string]string{}
 
-	for cName, cBuildInfo := range svcBuild.Spec.ComponentBuildsInfo {
-		if cBuildInfo.ComponentBuildName == nil {
+	for cName, cBuildInfo := range svcBuild.Spec.Components {
+		if cBuildInfo.BuildName == nil {
 			return nil, fmt.Errorf("svcBuild %v Component %v does not have a ComponentBuildName", svcBuild.Name, cName)
 		}
 
-		cBuildName := *cBuildInfo.ComponentBuildName
+		cBuildName := *cBuildInfo.BuildName
 		cBuildKey := svcBuild.Namespace + "/" + cBuildName
 		cBuildObj, exists, err := sc.componentBuildStore.GetByKey(cBuildKey)
 

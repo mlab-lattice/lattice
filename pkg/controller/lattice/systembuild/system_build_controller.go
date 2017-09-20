@@ -5,8 +5,6 @@ import (
 	"reflect"
 	"time"
 
-	systemdefinition "github.com/mlab-lattice/core/pkg/system/definition"
-
 	crv1 "github.com/mlab-lattice/kubernetes-integration/pkg/api/customresource/v1"
 
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -27,7 +25,7 @@ type SystemBuildController struct {
 	syncHandler        func(bKey string) error
 	enqueueSystemBuild func(sysBuild *crv1.SystemBuild)
 
-	latticeResourceRestClient rest.Interface
+	latticeResourceClient rest.Interface
 
 	systemBuildStore       cache.Store
 	systemBuildStoreSynced cache.InformerSynced
@@ -39,12 +37,12 @@ type SystemBuildController struct {
 }
 
 func NewSystemBuildController(
-	latticeResourceRestClient rest.Interface,
+	latticeResourceClient rest.Interface,
 	systemBuildInformer cache.SharedInformer,
 	serviceBuildInformer cache.SharedInformer,
 ) *SystemBuildController {
 	sbc := &SystemBuildController{
-		latticeResourceRestClient: latticeResourceRestClient,
+		latticeResourceClient: latticeResourceClient,
 		queue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "system-build"),
 	}
 
@@ -77,40 +75,40 @@ func NewSystemBuildController(
 }
 
 func (sbc *SystemBuildController) addSystemBuild(obj interface{}) {
-	sysBuild := obj.(*crv1.SystemBuild)
-	glog.V(4).Infof("Adding SystemBuild %s", sysBuild.Name)
-	sbc.enqueueSystemBuild(sysBuild)
+	sysb := obj.(*crv1.SystemBuild)
+	glog.V(4).Infof("Adding SystemBuild %s", sysb.Name)
+	sbc.enqueueSystemBuild(sysb)
 }
 
 func (sbc *SystemBuildController) updateSystemBuild(old, cur interface{}) {
-	oldSysBuild := old.(*crv1.SystemBuild)
-	curSysBuild := cur.(*crv1.SystemBuild)
-	glog.V(4).Infof("Updating SystemBuild %s", oldSysBuild.Name)
-	sbc.enqueueSystemBuild(curSysBuild)
+	oldSysb := old.(*crv1.SystemBuild)
+	curSysb := cur.(*crv1.SystemBuild)
+	glog.V(4).Infof("Updating SystemBuild %s", oldSysb.Name)
+	sbc.enqueueSystemBuild(curSysb)
 }
 
 // addServiceBuild enqueues the System that manages a Service when the Service is created.
 func (sbc *SystemBuildController) addServiceBuild(obj interface{}) {
-	svcBuild := obj.(*crv1.ServiceBuild)
+	svcb := obj.(*crv1.ServiceBuild)
 
-	if svcBuild.DeletionTimestamp != nil {
+	if svcb.DeletionTimestamp != nil {
 		// We assume for now that ServiceBuilds do not get deleted.
 		// FIXME: send error event
 		return
 	}
 
 	// If it has a ControllerRef, that's all that matters.
-	if controllerRef := metav1.GetControllerOf(svcBuild); controllerRef != nil {
-		sysBuild := sbc.resolveControllerRef(svcBuild.Namespace, controllerRef)
+	if controllerRef := metav1.GetControllerOf(svcb); controllerRef != nil {
+		sysb := sbc.resolveControllerRef(svcb.Namespace, controllerRef)
 
 		// Not a SystemBuild. This shouldn't happen.
-		if sysBuild == nil {
+		if sysb == nil {
 			// FIXME: send error event
 			return
 		}
 
-		glog.V(4).Infof("ServiceBuild %s added.", svcBuild.Name)
-		sbc.enqueueSystemBuild(sysBuild)
+		glog.V(4).Infof("ServiceBuild %s added.", svcb.Name)
+		sbc.enqueueSystemBuild(sysb)
 		return
 	}
 
@@ -122,17 +120,17 @@ func (sbc *SystemBuildController) addServiceBuild(obj interface{}) {
 // Service is updated and enqueues them.
 func (sbc *SystemBuildController) updateServiceBuild(old, cur interface{}) {
 	glog.V(5).Info("Got ServiceBuild update")
-	oldSvcBuild := old.(*crv1.ServiceBuild)
-	curSvcBuild := cur.(*crv1.ServiceBuild)
-	if curSvcBuild.ResourceVersion == oldSvcBuild.ResourceVersion {
+	oldSvcb := old.(*crv1.ServiceBuild)
+	curSvcb := cur.(*crv1.ServiceBuild)
+	if curSvcb.ResourceVersion == oldSvcb.ResourceVersion {
 		// Periodic resync will send update events for all known ServiceBuilds.
 		// Two different versions of the same job will always have different RVs.
 		glog.V(5).Info("ServiceBuild ResourceVersions are the same")
 		return
 	}
 
-	curControllerRef := metav1.GetControllerOf(curSvcBuild)
-	oldControllerRef := metav1.GetControllerOf(oldSvcBuild)
+	curControllerRef := metav1.GetControllerOf(curSvcb)
+	oldControllerRef := metav1.GetControllerOf(oldSvcb)
 	controllerRefChanged := !reflect.DeepEqual(curControllerRef, oldControllerRef)
 	if controllerRefChanged {
 		// This shouldn't happen
@@ -141,15 +139,15 @@ func (sbc *SystemBuildController) updateServiceBuild(old, cur interface{}) {
 
 	// If it has a ControllerRef, that's all that matters.
 	if curControllerRef != nil {
-		sysBuild := sbc.resolveControllerRef(curSvcBuild.Namespace, curControllerRef)
+		sysb := sbc.resolveControllerRef(curSvcb.Namespace, curControllerRef)
 
 		// Not a SystemBuild. This shouldn't happen.
-		if sysBuild == nil {
+		if sysb == nil {
 			// FIXME: send error event
 			return
 		}
 
-		sbc.enqueueSystemBuild(sysBuild)
+		sbc.enqueueSystemBuild(sysb)
 		return
 	}
 
@@ -160,7 +158,7 @@ func (sbc *SystemBuildController) updateServiceBuild(old, cur interface{}) {
 // resolveControllerRef returns the controller referenced by a ControllerRef,
 // or nil if the ControllerRef could not be resolved to a matching controller
 // of the correct Kind.
-func (sbc *SystemBuildController) resolveControllerRef(namespace string, controllerRef *metav1.OwnerReference) *crv1.SystemBuild {
+func (sbc *SystemBuildController) resolveControllerRef(ns string, controllerRef *metav1.OwnerReference) *crv1.SystemBuild {
 	// We can't look up by Name, so look up by Name and then verify Name.
 	// Don't even try to look up by Name if it's the wrong Kind.
 	if controllerRef.Kind != controllerKind.Kind {
@@ -169,29 +167,29 @@ func (sbc *SystemBuildController) resolveControllerRef(namespace string, control
 		return nil
 	}
 
-	sysBuildKey := namespace + "/" + controllerRef.Name
-	sysBuildObj, exists, err := sbc.systemBuildStore.GetByKey(sysBuildKey)
+	sysbKey := ns + "/" + controllerRef.Name
+	sysbObj, exists, err := sbc.systemBuildStore.GetByKey(sysbKey)
 	if err != nil || !exists {
 		// This shouldn't happen.
 		// FIXME: send error event
 		return nil
 	}
 
-	sysBuild := sysBuildObj.(*crv1.SystemBuild)
+	sysb := sysbObj.(*crv1.SystemBuild)
 
-	if sysBuild.UID != controllerRef.UID {
+	if sysb.UID != controllerRef.UID {
 		// The controller we found with this Name is not the same one that the
 		// ControllerRef points to. This shouldn't happen.
 		// FIXME: send error event
 		return nil
 	}
-	return sysBuild
+	return sysb
 }
 
-func (sbc *SystemBuildController) enqueue(sysBuild *crv1.SystemBuild) {
-	key, err := cache.DeletionHandlingMetaNamespaceKeyFunc(sysBuild)
+func (sbc *SystemBuildController) enqueue(sysb *crv1.SystemBuild) {
+	key, err := cache.DeletionHandlingMetaNamespaceKeyFunc(sysb)
 	if err != nil {
-		runtime.HandleError(fmt.Errorf("couldn't get key for object %#v: %v", sysBuild, err))
+		runtime.HandleError(fmt.Errorf("couldn't get key for object %#v: %v", sysb, err))
 		return
 	}
 
@@ -282,7 +280,7 @@ func (sbc *SystemBuildController) syncSystemBuild(key string) error {
 		glog.V(4).Infof("Finished syncing SystemBuild %q (%v)", key, time.Now().Sub(startTime))
 	}()
 
-	sysBuildObj, exists, err := sbc.systemBuildStore.GetByKey(key)
+	sysbObj, exists, err := sbc.systemBuildStore.GetByKey(key)
 	if errors.IsNotFound(err) || !exists {
 		glog.V(2).Infof("SystemBuild %v has been deleted", key)
 		return nil
@@ -291,133 +289,27 @@ func (sbc *SystemBuildController) syncSystemBuild(key string) error {
 		return err
 	}
 
-	sysBuild := sysBuildObj.(*crv1.SystemBuild)
-	sysBuildCopy := sysBuild.DeepCopy()
+	sysb := sysbObj.(*crv1.SystemBuild)
 
-	if err := sbc.syncSystemBuildServiceStatuses(sysBuildCopy); err != nil {
+	stateInfo, err := sbc.calculateState(sysb)
+	if err != nil {
 		return err
 	}
 
-	return sbc.syncSystemBuildStatus(sysBuildCopy)
-}
+	glog.V(5).Infof("SystemBuild %v state: %v", sysb.Name, stateInfo.state)
 
-// Warning: syncSystemBuildServiceStatuses mutates sysBuild. Do not pass in a pointer to a
-// SystemBuild from the shared cache.
-func (sbc *SystemBuildController) syncSystemBuildServiceStatuses(sysBuild *crv1.SystemBuild) error {
-	for path, svc := range sysBuild.Spec.Services {
-		// Check if we've already created a Service. If so just grab its status.
-		if svc.ServiceBuildName != nil {
-			svcBuildState := sbc.getServiceBuildState(sysBuild.Namespace, *svc.ServiceBuildName)
-			if svcBuildState == nil {
-				// This shouldn't happen.
-				// FIXME: send error event
-				failedState := crv1.ServiceBuildStateFailed
-				svcBuildState = &failedState
-				//sysBuild.Spec.Services[idx].ServiceBuildState = &failedState
-			}
+	sysbCopy := sysb.DeepCopy()
 
-			svc.ServiceBuildState = svcBuildState
-			sysBuild.Spec.Services[path] = svc
-			continue
-		}
-
-		// Otherwise we'll have to create a new Service.
-		svcBuild, err := sbc.createServiceBuild(sysBuild, &svc.Definition)
-		if err != nil {
-			return err
-		}
-
-		svc.ServiceBuildName = &(svcBuild.Name)
-		svc.ServiceBuildState = &(svcBuild.Status.State)
-		sysBuild.Spec.Services[path] = svc
-	}
-
-	response := &crv1.SystemBuild{}
-	err := sbc.latticeResourceRestClient.Put().
-		Namespace(sysBuild.Namespace).
-		Resource(crv1.SystemBuildResourcePlural).
-		Name(sysBuild.Name).
-		Body(sysBuild).
-		Do().
-		Into(response)
-
-	*sysBuild = *response
-	return err
-}
-
-func (sbc *SystemBuildController) createServiceBuild(
-	sysBuild *crv1.SystemBuild,
-	svcDefinitionBlock *systemdefinition.Service,
-) (*crv1.ServiceBuild, error) {
-	svcBuild := getNewServiceBuildFromDefinition(sysBuild, svcDefinitionBlock)
-
-	result := &crv1.ServiceBuild{}
-	err := sbc.latticeResourceRestClient.Post().
-		Namespace(sysBuild.Namespace).
-		Resource(crv1.ServiceBuildResourcePlural).
-		Body(svcBuild).
-		Do().
-		Into(result)
-	return result, err
-}
-
-// Warning: syncSystemBuildStatus mutates sysBuild. Do not pass in a pointer to a
-// SystemBuild from the shared cache.
-// syncSystemBuildStatus assumes that all sysBuild.Spec.Services have all had their
-// ServiceBuilds created and ServiceBuildStates populated
-func (sbc *SystemBuildController) syncSystemBuildStatus(sysBuild *crv1.SystemBuild) error {
-	hasFailedSvcBuild := false
-	hasActiveSvcBuild := false
-
-	for path, svc := range sysBuild.Spec.Services {
-		if svc.ServiceBuildState == nil {
-			return fmt.Errorf("ServiceBuild %v had no ServiceBuildState in syncSystemBuildStatus", path)
-		}
-
-		// If there's a failed build, no need to look any further, our SystemBuild has failed.
-		if *svc.ServiceBuildState == crv1.ServiceBuildStateFailed {
-			hasFailedSvcBuild = true
-			break
-		}
-
-		if *svc.ServiceBuildState != crv1.ServiceBuildStateSucceeded {
-			hasActiveSvcBuild = true
-		}
-	}
-
-	newStatus := calculateSystemBuildStatus(hasFailedSvcBuild, hasActiveSvcBuild)
-
-	if reflect.DeepEqual(sysBuild.Status, newStatus) {
-		return nil
-	}
-
-	sysBuild.Status = newStatus
-
-	err := sbc.latticeResourceRestClient.Put().
-		Namespace(sysBuild.Namespace).
-		Resource(crv1.SystemBuildResourcePlural).
-		Name(sysBuild.Name).
-		Body(sysBuild).
-		Do().
-		Into(nil)
-
-	return err
-}
-
-func calculateSystemBuildStatus(hasFailedSvcBuild, hasActiveSvcBuild bool) crv1.SystemBuildStatus {
-	if hasFailedSvcBuild {
-		return crv1.SystemBuildStatus{
-			State: crv1.SystemBuildStateFailed,
-		}
-	}
-
-	if hasActiveSvcBuild {
-		return crv1.SystemBuildStatus{
-			State: crv1.SystemBuildStateRunning,
-		}
-	}
-
-	return crv1.SystemBuildStatus{
-		State: crv1.SystemBuildStateSucceeded,
+	switch stateInfo.state {
+	case sysBuildStateHasFailedCBuilds:
+		return sbc.syncFailedSystemBuild(sysbCopy, stateInfo.failedSvcbs)
+	case sysBuildStateHasOnlyRunningOrSucceededCBuilds:
+		return sbc.syncRunningSystemBuild(sysbCopy, stateInfo.activeSvcbs)
+	case sysBuildStateNoFailuresNeedsNewCBuilds:
+		return sbc.syncMissingServiceBuildsSystemBuild(sysbCopy, stateInfo.activeSvcbs, stateInfo.needsNewSvcb)
+	case sysBuildStateAllCBuildsSucceeded:
+		return sbc.syncSucceededSystemBuild(sysbCopy)
+	default:
+		panic("unreachable")
 	}
 }

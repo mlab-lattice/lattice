@@ -3,7 +3,7 @@ package v1
 import (
 	systemdefinition "github.com/mlab-lattice/core/pkg/system/definition"
 	systemtree "github.com/mlab-lattice/core/pkg/system/tree"
-	coretypes"github.com/mlab-lattice/core/pkg/types"
+	coretypes "github.com/mlab-lattice/core/pkg/types"
 
 	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -35,9 +35,9 @@ type SystemBuildSpec struct {
 }
 
 type SystemBuildServicesInfo struct {
-	Definition        systemdefinition.Service `json:"definition"`
-	ServiceBuildName  *string                  `json:"serviceBuildName,omitempty"`
-	ServiceBuildState *ServiceBuildState       `json:"serviceBuildState"`
+	Definition systemdefinition.Service `json:"definition"`
+	BuildName  *string                  `json:"buildName,omitempty"`
+	BuildState *ServiceBuildState       `json:"buildState"`
 }
 
 type SystemBuildStatus struct {

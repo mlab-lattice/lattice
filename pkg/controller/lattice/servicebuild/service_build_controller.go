@@ -140,8 +140,8 @@ func (sbc *ServiceBuildController) getServiceBuildsForComponentBuild(cb *crv1.Co
 	for _, svcbObj := range sbc.serviceBuildStore.List() {
 		svcb := svcbObj.(*crv1.ServiceBuild)
 
-		for _, cbInfo := range svcb.Spec.ComponentBuildsInfo {
-			if cbInfo.ComponentBuildName != nil && *cbInfo.ComponentBuildName == cb.Name {
+		for _, cbInfo := range svcb.Spec.Components {
+			if cbInfo.BuildName != nil && *cbInfo.BuildName == cb.Name {
 				svcbs = append(svcbs, svcb)
 				break
 			}
@@ -271,9 +271,9 @@ func (sbc *ServiceBuildController) syncServiceBuild(key string) error {
 	case svcBuildStateHasOnlyRunningOrSucceededCBuilds:
 		return sbc.syncRunningServiceBuild(svcbCopy, stateInfo.activeCbs)
 	case svcBuildStateNoFailuresNeedsNewCBuilds:
-		return sbc.syncMissingComponentBuildsServiceBuild(svcbCopy, stateInfo.needsNewCb, stateInfo.needsNewCb)
+		return sbc.syncMissingComponentBuildsServiceBuild(svcbCopy, stateInfo.activeCbs, stateInfo.needsNewCb)
 	case svcBuildStateAllCBuildsSucceeded:
-		return sbc.syncSucceededComponentBuild(svcbCopy)
+		return sbc.syncSucceededServiceBuild(svcbCopy)
 	default:
 		panic("unreachable")
 	}

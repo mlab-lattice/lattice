@@ -21,6 +21,33 @@ func (sbc *SystemBuildController) getServiceBuildState(namespace, svcBuildName s
 	return &(svcBuildObj.(*crv1.ServiceBuild).Status.State)
 }
 
+func (sbc *SystemBuildController) getServiceBuildFromInfo(svcbInfo *crv1.SystemBuildServicesInfo, ns string) (*crv1.ServiceBuild, bool, error) {
+	if svcbInfo.BuildName == nil {
+		return nil, false, nil
+	}
+
+	svcbKey := ns + "/" + *svcbInfo.BuildName
+	svcbObj, exists, err := sbc.serviceBuildStore.GetByKey(svcbKey)
+	if err != nil || !exists {
+		return nil, false, err
+	}
+
+	return svcbObj.(*crv1.ServiceBuild), true, nil
+}
+
+func (sbc *SystemBuildController) createServiceBuild(sysb *crv1.SystemBuild, svcDef *systemdefinition.Service) (*crv1.ServiceBuild, error) {
+	svcBuild := getNewServiceBuildFromDefinition(sysb, svcDef)
+
+	result := &crv1.ServiceBuild{}
+	err := sbc.latticeResourceClient.Post().
+		Namespace(sysb.Namespace).
+		Resource(crv1.ServiceBuildResourcePlural).
+		Body(svcBuild).
+		Do().
+		Into(result)
+	return result, err
+}
+
 func getNewServiceBuildFromDefinition(sysBuild *crv1.SystemBuild, svcDefinition *systemdefinition.Service) *crv1.ServiceBuild {
 	labels := map[string]string{}
 
@@ -45,7 +72,7 @@ func getNewServiceBuildFromDefinition(sysBuild *crv1.SystemBuild, svcDefinition 
 			OwnerReferences: []metav1.OwnerReference{*metav1.NewControllerRef(sysBuild, controllerKind)},
 		},
 		Spec: crv1.ServiceBuildSpec{
-			ComponentBuildsInfo: componentBuildsInfo,
+			Components: componentBuildsInfo,
 		},
 		Status: crv1.ServiceBuildStatus{
 			State: crv1.ServiceBuildStatePending,

@@ -28,7 +28,7 @@ func (sbc *ServiceBuildController) calculateState(svcb *crv1.ServiceBuild) (*svc
 	failedCbs := []string{}
 	needsNewCbs := []string{}
 
-	for component, cbInfo := range svcb.Spec.ComponentBuildsInfo {
+	for component, cbInfo := range svcb.Spec.Components {
 		cb, exists, err := sbc.getComponentBuildFromInfo(&cbInfo, svcb.Namespace)
 		if err != nil {
 			return nil, err

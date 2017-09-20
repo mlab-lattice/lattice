@@ -58,7 +58,7 @@ func (sbc *ServiceBuildController) syncRunningServiceBuild(svcb *crv1.ServiceBui
 
 func (sbc *ServiceBuildController) syncMissingComponentBuildsServiceBuild(svcbs *crv1.ServiceBuild, activeCbs, needsNewCbs []string) error {
 	for _, component := range needsNewCbs {
-		cbInfo := svcbs.Spec.ComponentBuildsInfo[component]
+		cbInfo := svcbs.Spec.Components[component]
 
 		// TODO: is json marshalling of a struct deterministic in order? If not could potentially get
 		//		 different SHAs for the same definition. This is OK in the correctness sense, since we'll
@@ -84,8 +84,8 @@ func (sbc *ServiceBuildController) syncMissingComponentBuildsServiceBuild(svcbs 
 		// Found an existing ComponentBuild.
 		if cb != nil && cb.Status.State != crv1.ComponentBuildStateFailed {
 			glog.V(4).Infof("Found ComponentBuild %v for %v of %v", cb.Name, component, svcbs.Name)
-			cbInfo.ComponentBuildName = &cb.Name
-			svcbs.Spec.ComponentBuildsInfo[component] = cbInfo
+			cbInfo.BuildName = &cb.Name
+			svcbs.Spec.Components[component] = cbInfo
 			continue
 		}
 
@@ -102,8 +102,8 @@ func (sbc *ServiceBuildController) syncMissingComponentBuildsServiceBuild(svcbs 
 		}
 
 		glog.V(4).Infof("Created ComponentBuild %v for %v of %v", cb.Name, component, svcbs.Name)
-		cbInfo.ComponentBuildName = &cb.Name
-		svcbs.Spec.ComponentBuildsInfo[component] = cbInfo
+		cbInfo.BuildName = &cb.Name
+		svcbs.Spec.Components[component] = cbInfo
 	}
 
 	updatedSvcb, err := sbc.putServiceBuildUpdate(svcbs)
@@ -123,7 +123,7 @@ func (sbc *ServiceBuildController) syncMissingComponentBuildsServiceBuild(svcbs 
 	return sbc.syncRunningServiceBuild(updatedSvcb, activeCbs)
 }
 
-func (sbc *ServiceBuildController) syncSucceededComponentBuild(svcb *crv1.ServiceBuild) error {
+func (sbc *ServiceBuildController) syncSucceededServiceBuild(svcb *crv1.ServiceBuild) error {
 	newStatus := crv1.ServiceBuildStatus{
 		State: crv1.ServiceBuildStateSucceeded,
 	}

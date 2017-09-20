@@ -4,6 +4,8 @@ go_library(
     name = "go_default_library",
     srcs = [
         "service_build_util.go",
+        "state.go",
+        "sync.go",
         "system_build_controller.go",
     ],
     importpath = "github.com/mlab-lattice/kubernetes-integration/pkg/controller/lattice/systembuild",
@@ -12,6 +14,7 @@ go_library(
         "//pkg/api/customresource/v1:go_default_library",
         "@com_github_golang_glog//:go_default_library",
         "@com_github_mlab_lattice_core//pkg/system/definition:go_default_library",
+        "@com_github_mlab_lattice_core//pkg/system/tree:go_default_library",
         "@io_k8s_apimachinery//pkg/api/errors:go_default_library",
         "@io_k8s_apimachinery//pkg/apis/meta/v1:go_default_library",
         "@io_k8s_apimachinery//pkg/util/runtime:go_default_library",
