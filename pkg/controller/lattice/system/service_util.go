@@ -38,6 +38,7 @@ func getNewServiceFromDefinition(
 	return &crv1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:            string(uuid.NewUUID()),
+			Namespace:       string(sys.Spec.LatticeNamespace),
 			Labels:          labels,
 			OwnerReferences: []metav1.OwnerReference{*metav1.NewControllerRef(sys, controllerKind)},
 		},

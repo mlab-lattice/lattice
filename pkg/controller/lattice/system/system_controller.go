@@ -348,7 +348,7 @@ func (sc *SystemController) createService(
 
 	result := &crv1.Service{}
 	err := sc.latticeResourceRestClient.Post().
-		Namespace(sys.Namespace).
+		Namespace(svc.Namespace).
 		Resource(crv1.ServiceResourcePlural).
 		Body(svc).
 		Do().

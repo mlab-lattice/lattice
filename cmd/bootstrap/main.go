@@ -62,6 +62,20 @@ func main() {
 		return true, nil
 	})
 
+	latticeUserNamespace := &corev1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: string(coreconstants.UserSystemNamespace),
+		},
+	}
+
+	err = wait.Poll(500*time.Millisecond, 60*time.Second, func() (bool, error) {
+		_, err := kubeClientset.CoreV1().Namespaces().Create(latticeUserNamespace)
+		if err != nil && !apierrors.IsAlreadyExists(err) {
+			return false, nil
+		}
+		return true, nil
+	})
+
 	_, err = crdclient.CreateCustomResourceDefinitions(apiextensionsclientset)
 	if err != nil {
 		panic(err)

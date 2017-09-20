@@ -2,9 +2,11 @@ package service
 
 import (
 	"fmt"
-	crv1 "github.com/mlab-lattice/kubernetes-integration/pkg/api/customresource/v1"
 	"reflect"
 	"time"
+
+	crv1 "github.com/mlab-lattice/kubernetes-integration/pkg/api/customresource/v1"
+	"github.com/mlab-lattice/kubernetes-integration/pkg/constants"
 
 	corev1 "k8s.io/api/core/v1"
 	extensions "k8s.io/api/extensions/v1beta1"
@@ -439,7 +441,7 @@ func (sc *ServiceController) createServiceDeployment(svc *crv1.Service) error {
 }
 
 func (sc *ServiceController) getSvcBuildForSvc(svc *crv1.Service) (*crv1.ServiceBuild, error) {
-	svcBuildKey := svc.Namespace + "/" + svc.Spec.BuildName
+	svcBuildKey := constants.InternalNamespace + "/" + svc.Spec.BuildName
 	svcBuildObj, exists, err := sc.serviceBuildStore.GetByKey(svcBuildKey)
 	if err != nil {
 		return nil, err
