@@ -60,7 +60,7 @@ func NewKubernetesPerNodeBackend(kubeconfig string) (*KubernetesPerNodeBackend, 
 	)
 
 	// FIXME: should we add a stopCh?
-	lSvcInformer.Run(nil)
+	go lSvcInformer.Run(nil)
 	kInformers.Start(nil)
 
 	kEndpointInformer := kInformers.Core().V1().Endpoints()
