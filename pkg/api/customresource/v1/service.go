@@ -39,7 +39,8 @@ type ServiceSpec struct {
 type ComponentPort struct {
 	Name      string `json:"name"`
 	Port      int32  `json:"port"`
-	EnvoyPort int32  `json:"envoy_port"`
+	EnvoyPort int32  `json:"envoyPort"`
+	Protocol  string `json:"protocol"`
 }
 
 type ServiceStatus struct {

@@ -17,8 +17,10 @@ import (
 	"k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
 
+	coreinformers "k8s.io/client-go/informers/core/v1"
 	extensioninformers "k8s.io/client-go/informers/extensions/v1beta1"
 	clientset "k8s.io/client-go/kubernetes"
+	corelisters "k8s.io/client-go/listers/core/v1"
 	extensionlisters "k8s.io/client-go/listers/extensions/v1beta1"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
@@ -50,6 +52,9 @@ type ServiceController struct {
 	deploymentLister       extensionlisters.DeploymentLister
 	deploymentListerSynced cache.InformerSynced
 
+	kubeServiceLister       corelisters.ServiceLister
+	kubeServiceListerSynced cache.InformerSynced
+
 	queue workqueue.RateLimitingInterface
 }
 
@@ -60,6 +65,7 @@ func NewServiceController(
 	serviceBuildInformer cache.SharedInformer,
 	componentBuildInformer cache.SharedInformer,
 	deploymentInformer extensioninformers.DeploymentInformer,
+	kubeServiceInformer coreinformers.ServiceInformer,
 ) *ServiceController {
 	sc := &ServiceController{
 		latticeResourceRestClient: latticeResourceRestClient,
@@ -91,6 +97,9 @@ func NewServiceController(
 	})
 	sc.deploymentLister = deploymentInformer.Lister()
 	sc.deploymentListerSynced = deploymentInformer.Informer().HasSynced
+
+	sc.kubeServiceLister = kubeServiceInformer.Lister()
+	sc.kubeServiceListerSynced = kubeServiceInformer.Informer().HasSynced
 
 	return sc
 }
@@ -281,7 +290,7 @@ func (sc *ServiceController) Run(workers int, stopCh <-chan struct{}) {
 	defer glog.Infof("Shutting down service controller")
 
 	// wait for your secondary caches to fill before starting your work
-	if !cache.WaitForCacheSync(stopCh, sc.serviceStoreSynced, sc.serviceBuildStoreSynced, sc.componentBuildStoreSynced, sc.deploymentListerSynced) {
+	if !cache.WaitForCacheSync(stopCh, sc.serviceStoreSynced, sc.serviceBuildStoreSynced, sc.componentBuildStoreSynced, sc.deploymentListerSynced, sc.kubeServiceListerSynced) {
 		return
 	}
 
@@ -379,12 +388,26 @@ func (sc *ServiceController) syncService(key string) error {
 		return err
 	}
 
-	svcCopy := svc.DeepCopy()
-
 	if d == nil {
-		return sc.createServiceDeployment(svcCopy)
+		dResp, err := sc.createServiceDeployment(svc)
+		if err != nil {
+			return err
+		}
+		d = dResp
 	}
 
+	ksvc, err := sc.getKubeServiceForService(svc)
+	if err != nil {
+		return err
+	}
+
+	if ksvc == nil {
+		if _, err := sc.createKubeService(svc); err != nil {
+			return err
+		}
+	}
+
+	svcCopy := svc.DeepCopy()
 	return sc.syncServiceWithDeployment(svcCopy, d)
 }
 
@@ -418,26 +441,52 @@ func (sc *ServiceController) getDeploymentForService(svc *crv1.Service) (*extens
 	return matchingDeployments[0], nil
 }
 
-func (sc *ServiceController) createServiceDeployment(svc *crv1.Service) error {
+func (sc *ServiceController) createServiceDeployment(svc *crv1.Service) (*extensions.Deployment, error) {
 	svcBuild, err := sc.getSvcBuildForSvc(svc)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	d, err := sc.getDeployment(svc, svcBuild)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	dResp, err := sc.kubeClient.ExtensionsV1beta1().Deployments(svc.Namespace).Create(d)
 	if err != nil {
 		// FIXME: send warn event
-		return err
+		return nil, err
 	}
 
 	glog.V(4).Infof("Created Deployment %s", dResp.Name)
 	// FIXME: send normal event
-	return sc.syncServiceWithDeployment(svc, dResp)
+	return dResp, nil
+}
+
+func (sc *ServiceController) getKubeServiceForService(svc *crv1.Service) (*corev1.Service, error) {
+	ksvc, err := sc.kubeServiceLister.Services(svc.Namespace).Get(svc.Name)
+	if err != nil && !errors.IsNotFound(err) {
+		return nil, err
+	}
+
+	return ksvc, nil
+}
+
+func (sc *ServiceController) createKubeService(svc *crv1.Service) (*corev1.Service, error) {
+	ksvc, err := sc.getKubeService(svc)
+	if err != nil {
+		return nil, err
+	}
+
+	ksvcResp, err := sc.kubeClient.CoreV1().Services(svc.Namespace).Create(ksvc)
+	if err != nil {
+		// FIXME: send warn event
+		return nil, err
+	}
+
+	glog.V(4).Infof("Created Service %s", ksvcResp.Name)
+	// FIXME: send normal event
+	return ksvcResp, nil
 }
 
 func (sc *ServiceController) getSvcBuildForSvc(svc *crv1.Service) (*crv1.ServiceBuild, error) {

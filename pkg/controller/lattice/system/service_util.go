@@ -35,6 +35,22 @@ func getNewServiceFromDefinition(
 		// FIXME: add warn event
 	}
 
+	ports := map[string][]crv1.ComponentPort{}
+	for _, component := range svcDefinition.Components {
+		cPorts := []crv1.ComponentPort{}
+		for _, port := range component.Ports {
+			cPorts = append(cPorts, crv1.ComponentPort{
+				Name: port.Name,
+				Port: int32(port.Port),
+				// FIXME: more intelligently pick an EnvoyPort (this assumers there isn't another port n+1000)
+				EnvoyPort: int32(port.Port) + 1000,
+				Protocol:  port.Protocol,
+			})
+		}
+
+		ports[component.Name] = cPorts
+	}
+
 	return &crv1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:            string(uuid.NewUUID()),
@@ -46,6 +62,7 @@ func getNewServiceFromDefinition(
 			Path:       svcPath,
 			Definition: *svcDefinition,
 			BuildName:  svcBuildName,
+			Ports:      ports,
 		},
 		Status: crv1.ServiceStatus{
 			State: crv1.ServiceStateRollingOut,

@@ -4,6 +4,7 @@ go_library(
     name = "go_default_library",
     srcs = [
         "deployment_util.go",
+        "kube_service_util.go",
         "service_controller.go",
     ],
     importpath = "github.com/mlab-lattice/kubernetes-integration/pkg/controller/kubernetes/service",
@@ -21,8 +22,10 @@ go_library(
         "@io_k8s_apimachinery//pkg/util/intstr:go_default_library",
         "@io_k8s_apimachinery//pkg/util/runtime:go_default_library",
         "@io_k8s_apimachinery//pkg/util/wait:go_default_library",
+        "@io_k8s_client_go//informers/core/v1:go_default_library",
         "@io_k8s_client_go//informers/extensions/v1beta1:go_default_library",
         "@io_k8s_client_go//kubernetes:go_default_library",
+        "@io_k8s_client_go//listers/core/v1:go_default_library",
         "@io_k8s_client_go//listers/extensions/v1beta1:go_default_library",
         "@io_k8s_client_go//rest:go_default_library",
         "@io_k8s_client_go//tools/cache:go_default_library",
