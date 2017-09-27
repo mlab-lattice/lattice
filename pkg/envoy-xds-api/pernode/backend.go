@@ -8,7 +8,7 @@ import (
 	latticeresource "github.com/mlab-lattice/kubernetes-integration/pkg/api/customresource"
 	crv1 "github.com/mlab-lattice/kubernetes-integration/pkg/api/customresource/v1"
 
-	"github.com/mlab-lattice/envoy-xds-api/pkg/backend"
+	"github.com/mlab-lattice/envoy-xds-api-backend/pkg/backend"
 
 	apiv1 "k8s.io/api/core/v1"
 

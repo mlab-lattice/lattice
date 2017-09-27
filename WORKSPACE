@@ -46,10 +46,10 @@ go_repository(
 )
 
 go_repository(
-    name = "com_github_mlab_lattice_envoy_xds_api",
-    commit = "ab7f58b1c39e7bcd44b3d7fc373452c23e3dd52b",
-    importpath = "github.com/mlab-lattice/envoy-xds-api",
-    remote = "git@github.com:mlab-lattice/envoy-xds-api.git",
+    name = "com_github_mlab_lattice_envoy_xds_api_backend",
+    commit = "aea4fd639c24d1593dfcc16b8b3f3ca0ac6955cc",
+    importpath = "github.com/mlab-lattice/envoy-xds-api-backend",
+    remote = "git@github.com:mlab-lattice/envoy-xds-api-backend.git",
     vcs = "git",
 )
 
