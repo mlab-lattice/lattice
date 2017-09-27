@@ -19,7 +19,7 @@ func (kb *KubernetesBackend) BuildSystem(ln coretypes.LatticeNamespace, sd *syst
 	}
 
 	result := &crv1.SystemBuild{}
-	err = kb.LatticeResourceRestClient.Post().
+	err = kb.LatticeResourceClient.Post().
 		Namespace(constants.InternalNamespace).
 		Resource(crv1.SystemBuildResourcePlural).
 		Body(systemBuild).

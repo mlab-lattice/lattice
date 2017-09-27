@@ -46,6 +46,14 @@ go_repository(
 )
 
 go_repository(
+    name = "com_github_mlab_lattice_envoy_xds_api",
+    commit = "ab7f58b1c39e7bcd44b3d7fc373452c23e3dd52b",
+    importpath = "github.com/mlab-lattice/envoy-xds-api",
+    remote = "git@github.com:mlab-lattice/envoy-xds-api.git",
+    vcs = "git",
+)
+
+go_repository(
     name = "io_k8s_apimachinery",
     build_file_generation = "on",
     build_file_name = "BUILD.bazel",

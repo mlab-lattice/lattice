@@ -8,7 +8,7 @@ import (
 )
 
 type KubernetesBackend struct {
-	LatticeResourceRestClient rest.Interface
+	LatticeResourceClient rest.Interface
 }
 
 func NewKubernetesBackend(kubeconfig string) (*KubernetesBackend, error) {
@@ -24,7 +24,7 @@ func NewKubernetesBackend(kubeconfig string) (*KubernetesBackend, error) {
 	}
 
 	kb := &KubernetesBackend{
-		LatticeResourceRestClient: latticeResourceClient,
+		LatticeResourceClient: latticeResourceClient,
 	}
 	return kb, nil
 }
