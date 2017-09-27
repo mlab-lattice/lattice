@@ -15,7 +15,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/fields"
 
-	"github.com/golang/glog"
 	"k8s.io/client-go/informers"
 	clientset "k8s.io/client-go/kubernetes"
 	corelisters "k8s.io/client-go/listers/core/v1"
@@ -64,6 +63,7 @@ func NewKubernetesPerNodeBackend(kubeconfig string) (*KubernetesPerNodeBackend, 
 
 	// FIXME: should we add a stopCh?
 	go lSvcInformer.Run(nil)
+	// FIXME: should we start the shared informer factory instead? Ready() was not working with that
 	go kEndpointInformer.Informer().Run(nil)
 
 	kpnb := &KubernetesPerNodeBackend{
