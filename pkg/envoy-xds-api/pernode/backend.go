@@ -15,6 +15,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/fields"
 
+	"github.com/golang/glog"
 	"k8s.io/client-go/informers"
 	clientset "k8s.io/client-go/kubernetes"
 	corelisters "k8s.io/client-go/listers/core/v1"
@@ -59,11 +60,12 @@ func NewKubernetesPerNodeBackend(kubeconfig string) (*KubernetesPerNodeBackend, 
 		time.Duration(12*time.Hour),
 	)
 
+	kEndpointInformer := kInformers.Core().V1().Endpoints()
+
 	// FIXME: should we add a stopCh?
 	go lSvcInformer.Run(nil)
-	kInformers.Start(nil)
+	go kEndpointInformer.Informer().Run(nil)
 
-	kEndpointInformer := kInformers.Core().V1().Endpoints()
 	kpnb := &KubernetesPerNodeBackend{
 		kEndpointLister:           kEndpointInformer.Lister(),
 		kEndpointListerSynced:     kEndpointInformer.Informer().HasSynced,
