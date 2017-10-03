@@ -87,6 +87,7 @@ func main() {
 	}
 
 	var buildConfig crv1.ComponentBuildConfig
+	var envoyConfig crv1.EnvoyConfig
 	switch coretypes.Provider(providerName) {
 	case coreconstants.ProviderLocal:
 		buildConfig = crv1.ComponentBuildConfig{
@@ -98,6 +99,14 @@ func main() {
 			PullGitRepoImage: "bazel/docker:pull-git-repo",
 			BuildDockerImage: "bazel/docker:build-docker-image",
 		}
+
+		envoyConfig = crv1.EnvoyConfig{
+			PrepareImage:      "lattice-local/prepare-envoy:latest",
+			Image:             "lyft/envoy:latest",
+			EgressPort:        9301,
+			RedirectCidrBlock: "172.16.29.0/16",
+			XdsApiPort:        8080,
+		}
 	default:
 		panic("unsupported providerName")
 	}
@@ -108,6 +117,7 @@ func main() {
 		},
 		Spec: crv1.ConfigSpec{
 			ComponentBuild: buildConfig,
+			Envoy:          envoyConfig,
 		},
 	}
 

@@ -22,6 +22,7 @@ type Config struct {
 
 type ConfigSpec struct {
 	ComponentBuild ComponentBuildConfig
+	Envoy          EnvoyConfig
 }
 
 type ComponentBuildConfig struct {
@@ -44,6 +45,14 @@ type BuildDockerConfig struct {
 	// If true push the image to the repository.
 	// Set to false for the local case.
 	Push bool
+}
+
+type EnvoyConfig struct {
+	PrepareImage      string
+	Image             string
+	EgressPort        int32
+	RedirectCidrBlock string
+	XdsApiPort        int32
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

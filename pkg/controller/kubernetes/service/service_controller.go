@@ -3,10 +3,12 @@ package service
 import (
 	"fmt"
 	"reflect"
+	"sync"
 	"time"
 
 	crv1 "github.com/mlab-lattice/kubernetes-integration/pkg/api/customresource/v1"
 	"github.com/mlab-lattice/kubernetes-integration/pkg/constants"
+	"github.com/mlab-lattice/kubernetes-integration/pkg/provider"
 
 	corev1 "k8s.io/api/core/v1"
 	extensions "k8s.io/api/extensions/v1beta1"
@@ -33,11 +35,20 @@ var controllerKind = crv1.SchemeGroupVersion.WithKind("Service")
 
 // We'll use LatticeService to differentiate between kubernetes' Service
 type ServiceController struct {
+	provider provider.Interface
+
 	syncHandler    func(bKey string) error
 	enqueueService func(cb *crv1.Service)
 
 	latticeResourceRestClient rest.Interface
 	kubeClient                clientset.Interface
+
+	configStore       cache.Store
+	configStoreSynced cache.InformerSynced
+	configSetChan     chan struct{}
+	configSet         bool
+	configLock        sync.RWMutex
+	config            crv1.ConfigSpec
 
 	serviceStore       cache.Store
 	serviceStoreSynced cache.InformerSynced
@@ -59,8 +70,10 @@ type ServiceController struct {
 }
 
 func NewServiceController(
+	provider provider.Interface,
 	kubeClient clientset.Interface,
 	latticeResourceRestClient rest.Interface,
+	configInformer cache.SharedInformer,
 	serviceInformer cache.SharedInformer,
 	serviceBuildInformer cache.SharedInformer,
 	componentBuildInformer cache.SharedInformer,
@@ -75,6 +88,18 @@ func NewServiceController(
 
 	sc.syncHandler = sc.syncService
 	sc.enqueueService = sc.enqueue
+
+	configInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+		// It's assumed there is always one and only one config object.
+		AddFunc:    sc.addConfig,
+		UpdateFunc: sc.updateConfig,
+		// TODO: for now it is assumed that ComponentBuilds are not deleted.
+		// in the future we'll probably want to add a GC process for ComponentBuilds.
+		// At that point we should listen here for those deletes.
+		// FIXME: Document CB GC ideas (need to write down last used date, lock properly, etc)
+	})
+	sc.configStore = configInformer.GetStore()
+	sc.configStoreSynced = configInformer.HasSynced
 
 	serviceInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    sc.addService,
@@ -102,6 +127,30 @@ func NewServiceController(
 	sc.kubeServiceListerSynced = kubeServiceInformer.Informer().HasSynced
 
 	return sc
+}
+
+func (sc *ServiceController) addConfig(obj interface{}) {
+	config := obj.(*crv1.Config)
+	glog.V(4).Infof("Adding Config %s", config.Name)
+
+	sc.configLock.Lock()
+	defer sc.configLock.Unlock()
+	sc.config = config.DeepCopy().Spec
+
+	if !sc.configSet {
+		sc.configSet = true
+		close(sc.configSetChan)
+	}
+}
+
+func (sc *ServiceController) updateConfig(old, cur interface{}) {
+	oldConfig := old.(*crv1.Config)
+	curConfig := cur.(*crv1.Config)
+	glog.V(4).Infof("Updating Config %s", oldConfig.Name)
+
+	sc.configLock.Lock()
+	defer sc.configLock.Unlock()
+	sc.config = curConfig.DeepCopy().Spec
 }
 
 func (sc *ServiceController) addService(obj interface{}) {
@@ -294,7 +343,10 @@ func (sc *ServiceController) Run(workers int, stopCh <-chan struct{}) {
 		return
 	}
 
-	glog.V(4).Info("Caches synced.")
+	glog.V(4).Info("Caches synced. Waiting for config to be set")
+
+	// wait for config to be set
+	<-sc.configSetChan
 
 	// start up your worker threads based on threadiness.  Some controllers
 	// have multiple kinds of workers

@@ -12,9 +12,19 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/apimachinery/pkg/util/uuid"
+)
+
+const (
+	envoyConfigDirectory           = "/etc/envoy"
+	envoyConfigDirectoryVolumeName = "envoyconfig"
 )
 
 func (sc *ServiceController) getDeployment(svc *crv1.Service, svcBuild *crv1.ServiceBuild) (*extensions.Deployment, error) {
+	// Need a consistent view of our config while generating the Job
+	sc.configLock.RLock()
+	defer sc.configLock.RUnlock()
+
 	name := getDeploymentName(svc)
 	labels := map[string]string{
 		crv1.ServiceDeploymentLabelKey: svc.Name,
@@ -44,6 +54,7 @@ func getDeploymentName(svc *crv1.Service) string {
 
 func (sc *ServiceController) getDeploymentSpec(svc *crv1.Service, svcBuild *crv1.ServiceBuild) (*extensions.DeploymentSpec, error) {
 	containers := []corev1.Container{}
+	initContainers := []corev1.Container{}
 	componentDockerImageFqns, err := sc.getComponentDockerImageFqns(svcBuild)
 	if err != nil {
 		return nil, err
@@ -83,8 +94,83 @@ func (sc *ServiceController) getDeploymentSpec(svc *crv1.Service, svcBuild *crv1
 			LivenessProbe: getLivenessProbe(component.HealthCheck),
 		}
 
-		containers = append(containers, container)
+		if component.Init {
+			initContainers = append(initContainers, container)
+		} else {
+			containers = append(containers, container)
+		}
 	}
+
+	// Add envoy containers
+	envoyConfig := sc.config.Envoy
+	initContainers = append(containers, corev1.Container{
+		// add a UUID to deal with the small chance that a user names their
+		// service component the same thing we name our envoy container
+		Name:    fmt.Sprintf("lattice-prepare-envoy-%v", uuid.NewUUID()),
+		Image:   sc.config.Envoy.PrepareImage,
+		Command: []string{"/usr/local/bin/prepare-envoy.sh"},
+		Env: []corev1.EnvVar{
+			{
+				Name:  "ENVOY_EGRESS_PORT",
+				Value: fmt.Sprintf("%v", envoyConfig.EgressPort),
+			},
+			{
+				Name:  "REDIRECT_EGRESS_CIDR_BLOCK",
+				Value: envoyConfig.RedirectCidrBlock,
+			},
+			{
+				Name:  "ENVOY_CONFIG_PATH",
+				Value: envoyConfigDirectory,
+			},
+			{
+				Name: "ENVOY_XDS_API_HOST",
+				ValueFrom: &corev1.EnvVarSource{
+					FieldRef: &corev1.ObjectFieldSelector{
+						FieldPath: "spec.nodeName",
+					},
+				},
+			},
+			{
+				Name:  "ENVOY_XDS_API_PORT",
+				Value: fmt.Sprintf("%v", envoyConfig.XdsApiPort),
+			},
+		},
+		VolumeMounts: []corev1.VolumeMount{
+			{
+				Name:      envoyConfigDirectoryVolumeName,
+				MountPath: envoyConfigDirectory,
+			},
+		},
+		// Need CAP_NET_ADMIN to manipulate iptables
+		SecurityContext: &corev1.SecurityContext{
+			Capabilities: &corev1.Capabilities{
+				Add: []corev1.Capability{"NET_ADMIN"},
+			},
+		},
+	})
+
+	containers = append(containers, corev1.Container{
+		// add a UUID to deal with the small chance that a user names their
+		// service component the same thing we name our envoy container
+		Name:    fmt.Sprintf("lattice-envoy-%v", uuid.NewUUID()),
+		Image:   envoyConfig.Image,
+		Command: []string{"/usr/local/bin/envoy"},
+		Args: []string{
+			"-c",
+			envoyConfigDirectory,
+			"--service-cluster",
+			svc.Namespace,
+			"--service-node",
+			svc.Spec.Path.ToDomain(false, false),
+		},
+		VolumeMounts: []corev1.VolumeMount{
+			{
+				Name:      envoyConfigDirectoryVolumeName,
+				MountPath: envoyConfigDirectory,
+				ReadOnly:  true,
+			},
+		},
+	})
 
 	// Spin up the min instances here, then later let autoscaler scale up.
 	replicas := int32(svc.Spec.Definition.Resources.MinInstances)
@@ -98,9 +184,20 @@ func (sc *ServiceController) getDeploymentSpec(svc *crv1.Service, svcBuild *crv1
 				},
 			},
 			Spec: corev1.PodSpec{
-				// TODO: add Volumes
-				Containers: containers,
-				DNSPolicy:  corev1.DNSDefault,
+				// TODO: add user Volumes
+				Volumes: []corev1.Volume{
+					{
+						Name: envoyConfigDirectoryVolumeName,
+						VolumeSource: corev1.VolumeSource{
+							HostPath: &corev1.HostPathVolumeSource{
+								Path: sc.provider.ServiceEnvoyConfigDirectoryVolumePath(),
+							},
+						},
+					},
+				},
+				InitContainers: initContainers,
+				Containers:     containers,
+				DNSPolicy:      corev1.DNSDefault,
 				// TODO: add NodeSelector (for cloud)
 				// TODO: add Tolerations (for cloud)
 				// TODO: add HostAliases (for local)
