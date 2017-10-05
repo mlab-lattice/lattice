@@ -6,6 +6,7 @@ import (
 
 	crv1 "github.com/mlab-lattice/kubernetes-integration/pkg/api/customresource/v1"
 
+	"fmt"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/uuid"
 )
@@ -25,7 +26,7 @@ func getNewServiceFromDefinition(
 	svcDefinition *systemdefinition.Service,
 	svcPath systemtree.NodePath,
 	svcBuildName string,
-) *crv1.Service {
+) (*crv1.Service, error) {
 	labels := map[string]string{}
 
 	sysVersionLabel, ok := sys.Labels[crv1.SystemVersionLabelKey]
@@ -35,28 +36,65 @@ func getNewServiceFromDefinition(
 		// FIXME: add warn event
 	}
 
-	ports := map[string][]crv1.ComponentPort{}
+	cPortsMap := map[string][]crv1.ComponentPort{}
+	ports := map[int32]bool{}
 	for _, component := range svcDefinition.Components {
 		cPorts := []crv1.ComponentPort{}
 		for _, port := range component.Ports {
 			cPort := crv1.ComponentPort{
-				Name: port.Name,
-				Port: int32(port.Port),
-				// FIXME: more intelligently pick an EnvoyPort (this assumers there isn't another port n+1000)
-				EnvoyPort: int32(port.Port) + 1000,
-				Protocol:  port.Protocol,
-				Public:    false,
+				Name:     port.Name,
+				Port:     int32(port.Port),
+				Protocol: port.Protocol,
+				Public:   false,
 			}
 			if port.ExternalAccess != nil && port.ExternalAccess.Public {
 				cPort.Public = true
 			}
 			cPorts = append(cPorts, cPort)
+			ports[int32(port.Port)] = true
 		}
 
-		ports[component.Name] = cPorts
+		cPortsMap[component.Name] = cPorts
 	}
 
-	return &crv1.Service{
+	var envoyPortIdx int32 = 10000
+	envoyPorts := []int32{}
+
+	// Need to find len(ports) + 1 unique ports to use for envoy
+	// (one for ingress for each component and one for egress)
+	for i := 0; i <= len(ports); i++ {
+
+		// Loop up to len(ports) + 1 times to find an unused port
+		// we can use for envoy.
+		for j := 0; j <= len(ports); j++ {
+
+			// If the current envoyPortIdx is not being used by a component,
+			// we'll use it for envoy. Otherwise, on to the next one.
+			currPortIdx := envoyPortIdx
+			envoyPortIdx += 1
+
+			if _, ok := ports[currPortIdx]; !ok {
+				envoyPorts = append(envoyPorts, currPortIdx)
+				break
+			}
+		}
+	}
+
+	if len(envoyPorts) != len(ports)+1 {
+		return nil, fmt.Errorf("expected %v envoy ports but got %v", len(ports)+1, len(envoyPorts))
+	}
+
+	// Assign an envoy port to each cPort, and pop the used envoy port off the slice each time.
+	for _, component := range svcDefinition.Components {
+		for _, cPort := range cPortsMap[component.Name] {
+			cPort.EnvoyPort = envoyPorts[0]
+			envoyPorts = envoyPorts[1:]
+		}
+	}
+
+	egressPort := envoyPorts[0]
+
+	svc := &crv1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:            string(uuid.NewUUID()),
 			Namespace:       string(sys.Spec.LatticeNamespace),
@@ -64,13 +102,16 @@ func getNewServiceFromDefinition(
 			OwnerReferences: []metav1.OwnerReference{*metav1.NewControllerRef(sys, controllerKind)},
 		},
 		Spec: crv1.ServiceSpec{
-			Path:       svcPath,
-			Definition: *svcDefinition,
-			BuildName:  svcBuildName,
-			Ports:      ports,
+			Path:            svcPath,
+			Definition:      *svcDefinition,
+			BuildName:       svcBuildName,
+			EnvoyEgressPort: egressPort,
+			Ports:           cPortsMap,
 		},
 		Status: crv1.ServiceStatus{
 			State: crv1.ServiceStateRollingOut,
 		},
 	}
+
+	return svc, nil
 }

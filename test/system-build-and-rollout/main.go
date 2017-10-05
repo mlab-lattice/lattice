@@ -138,5 +138,5 @@ func main() {
 		panic(err)
 	}
 
-	fmt.Printf("Created SystemBuild %v\n", rid)
+	fmt.Printf("Created SystemRollout %v\n", rid)
 }

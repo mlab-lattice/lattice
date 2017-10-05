@@ -106,6 +106,7 @@ func (kpnb *KubernetesPerNodeBackend) Services() (map[systemtree.NodePath]*backe
 		}
 
 		bsvc := &backend.Service{
+			EgressPort:  svc.Spec.EnvoyEgressPort,
 			Components:  map[string]backend.Component{},
 			IPAddresses: []string{},
 		}

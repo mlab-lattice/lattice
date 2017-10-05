@@ -28,9 +28,10 @@ type Service struct {
 }
 
 type ServiceSpec struct {
-	Path       systemtree.NodePath      `json:"path"`
-	Definition systemdefinition.Service `json:"definition"`
-	BuildName  string                   `json:"buildName"`
+	Path            systemtree.NodePath      `json:"path"`
+	Definition      systemdefinition.Service `json:"definition"`
+	BuildName       string                   `json:"buildName"`
+	EnvoyEgressPort int32                    `json:"envoyEgressPort"`
 
 	// Ports maps Component names to a list of information about its ports
 	Ports map[string][]ComponentPort `json:"ports"`
