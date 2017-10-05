@@ -344,10 +344,13 @@ func (sc *SystemController) createService(
 	svcPath systemtree.NodePath,
 	svcBuildName string,
 ) (*crv1.Service, error) {
-	svc := getNewServiceFromDefinition(sys, svcDefinitionBlock, svcPath, svcBuildName)
+	svc, err := getNewServiceFromDefinition(sys, svcDefinitionBlock, svcPath, svcBuildName)
+	if err != nil {
+		return nil, err
+	}
 
 	result := &crv1.Service{}
-	err := sc.latticeResourceRestClient.Post().
+	err = sc.latticeResourceRestClient.Post().
 		Namespace(svc.Namespace).
 		Resource(crv1.ServiceResourcePlural).
 		Body(svc).

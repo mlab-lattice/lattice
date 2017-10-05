@@ -112,7 +112,7 @@ func (sc *ServiceController) getDeploymentSpec(svc *crv1.Service, svcBuild *crv1
 		Env: []corev1.EnvVar{
 			{
 				Name:  "ENVOY_EGRESS_PORT",
-				Value: fmt.Sprintf("%v", envoyConfig.EgressPort),
+				Value: fmt.Sprintf("%v", svc.Spec.EnvoyEgressPort),
 			},
 			{
 				Name:  "REDIRECT_EGRESS_CIDR_BLOCK",
@@ -121,6 +121,10 @@ func (sc *ServiceController) getDeploymentSpec(svc *crv1.Service, svcBuild *crv1
 			{
 				Name:  "ENVOY_CONFIG_DIR",
 				Value: envoyConfigDirectory,
+			},
+			{
+				Name:  "ENVOY_ADMIN_PORT",
+				Value: fmt.Sprintf("%v", svc.Spec.EnvoyAdminPort),
 			},
 			{
 				Name: "ENVOY_XDS_API_HOST",
@@ -173,7 +177,7 @@ func (sc *ServiceController) getDeploymentSpec(svc *crv1.Service, svcBuild *crv1
 			"--service-cluster",
 			svc.Namespace,
 			"--service-node",
-			svc.Spec.Path.ToDomain(false, false),
+			svc.Spec.Path.ToDomain(false),
 		},
 		Ports: envoyPorts,
 		VolumeMounts: []corev1.VolumeMount{

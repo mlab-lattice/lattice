@@ -60,9 +60,9 @@ func getNewServiceFromDefinition(
 	var envoyPortIdx int32 = 10000
 	envoyPorts := []int32{}
 
-	// Need to find len(ports) + 1 unique ports to use for envoy
-	// (one for ingress for each component and one for egress)
-	for i := 0; i <= len(ports); i++ {
+	// Need to find len(ports) + 2 unique ports to use for envoy
+	// (one for ingress for each component, one for egress, and one for admin)
+	for i := 0; i <= len(ports)+1; i++ {
 
 		// Loop up to len(ports) + 1 times to find an unused port
 		// we can use for envoy.
@@ -80,19 +80,23 @@ func getNewServiceFromDefinition(
 		}
 	}
 
-	if len(envoyPorts) != len(ports)+1 {
+	if len(envoyPorts) != len(ports)+2 {
 		return nil, fmt.Errorf("expected %v envoy ports but got %v", len(ports)+1, len(envoyPorts))
 	}
 
 	// Assign an envoy port to each cPort, and pop the used envoy port off the slice each time.
 	for _, component := range svcDefinition.Components {
+		cPorts := []crv1.ComponentPort{}
 		for _, cPort := range cPortsMap[component.Name] {
 			cPort.EnvoyPort = envoyPorts[0]
+			cPorts = append(cPorts, cPort)
 			envoyPorts = envoyPorts[1:]
 		}
+		cPortsMap[component.Name] = cPorts
 	}
 
-	egressPort := envoyPorts[0]
+	envoyAdminPort := envoyPorts[0]
+	envoyEgressPort := envoyPorts[1]
 
 	svc := &crv1.Service{
 		ObjectMeta: metav1.ObjectMeta{
@@ -105,7 +109,8 @@ func getNewServiceFromDefinition(
 			Path:            svcPath,
 			Definition:      *svcDefinition,
 			BuildName:       svcBuildName,
-			EnvoyEgressPort: egressPort,
+			EnvoyAdminPort:  envoyAdminPort,
+			EnvoyEgressPort: envoyEgressPort,
 			Ports:           cPortsMap,
 		},
 		Status: crv1.ServiceStatus{
