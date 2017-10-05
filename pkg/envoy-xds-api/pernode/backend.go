@@ -1,6 +1,7 @@
 package pernode
 
 import (
+	"fmt"
 	"time"
 
 	systemtree "github.com/mlab-lattice/core/pkg/system/tree"
@@ -95,7 +96,8 @@ func (kpnb *KubernetesPerNodeBackend) Services() (map[systemtree.NodePath]*backe
 	for _, svcObj := range kpnb.latticeServiceStore.List() {
 		svc := svcObj.(*crv1.Service)
 
-		ep, err := kpnb.kEndpointLister.Endpoints(svc.Namespace).Get(svc.Name)
+		kSvcName := fmt.Sprintf("svc-%v-lattice", svc.Name)
+		ep, err := kpnb.kEndpointLister.Endpoints(svc.Namespace).Get(kSvcName)
 		if err != nil {
 			if errors.IsAlreadyExists(err) {
 				continue

@@ -29,8 +29,8 @@ local-delete: minikube-delete
 
 .PHONY: local-bootstrap
 local-bootstrap: gazelle
-	@bazel run -- //cmd/bootstrap -kubeconfig ~/.kube/config -provider local
 	$(DIR)/bin/seed-local-images.sh $(MINIKUBE_PROFILE)
+	@bazel run -- //cmd/bootstrap -kubeconfig ~/.kube/config -provider local
 
 .PHONY: local-clean
 local-clean:

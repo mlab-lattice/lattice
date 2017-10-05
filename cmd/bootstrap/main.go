@@ -17,8 +17,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 
-	appsv1beta2 "k8s.io/api/apps/v1beta2"
 	corev1 "k8s.io/api/core/v1"
+	extensionsv1beta1 "k8s.io/api/extensions/v1beta1"
 
 	clientset "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
@@ -77,40 +77,6 @@ func main() {
 		}
 		return true, nil
 	})
-
-	// Create envoy-xds-api daemon set
-	envoyApiDaemonSet := appsv1beta2.DaemonSet{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "envoy-xds-api",
-			Namespace: constants.InternalNamespace,
-		},
-		Spec: appsv1beta2.DaemonSetSpec{
-			Template: corev1.PodTemplateSpec{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "envoy-xds-api",
-				},
-				Spec: corev1.PodSpec{
-					Containers: []corev1.Container{
-						{
-							// add a UUID to deal with the small chance that a user names their
-							// service component the same thing we name our envoy container
-							Name:  "envoy-xds-api",
-							Image: "bazel/cmd/kubernetes-per-node-rest:go_image",
-							Ports: []corev1.ContainerPort{
-								{
-									Name:          "http",
-									HostPort:      8080,
-									ContainerPort: 8080,
-								},
-							},
-						},
-					},
-					HostNetwork: true,
-					DNSPolicy:   corev1.DNSDefault,
-				},
-			},
-		},
-	}
 
 	// Create CRDs
 	_, err = crdclient.CreateCustomResourceDefinitions(apiextensionsclientset)
@@ -171,5 +137,53 @@ func main() {
 		}
 
 		glog.Warning("Config already exists")
+	}
+
+	// Create envoy-xds-api daemon set
+	envoyApiDaemonSet := &extensionsv1beta1.DaemonSet{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "envoy-xds-api",
+			Namespace: constants.InternalNamespace,
+		},
+		Spec: extensionsv1beta1.DaemonSetSpec{
+			Template: corev1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "envoy-xds-api",
+					Labels: map[string]string{
+						"envoy.lattice.mlab.com/xds-api": "true",
+					},
+				},
+				Spec: corev1.PodSpec{
+					Containers: []corev1.Container{
+						{
+							// add a UUID to deal with the small chance that a user names their
+							// service component the same thing we name our envoy container
+							Name:  "envoy-xds-api",
+							Image: "bazel/cmd/kubernetes-per-node-rest:go_image",
+							Ports: []corev1.ContainerPort{
+								{
+									Name:          "http",
+									HostPort:      8080,
+									ContainerPort: 8080,
+								},
+							},
+						},
+					},
+					HostNetwork: true,
+					DNSPolicy:   corev1.DNSDefault,
+				},
+			},
+		},
+	}
+
+	err = wait.Poll(500*time.Millisecond, 60*time.Second, func() (bool, error) {
+		_, err = kubeClientset.ExtensionsV1beta1().DaemonSets(constants.InternalNamespace).Create(envoyApiDaemonSet)
+		if err != nil && !apierrors.IsAlreadyExists(err) {
+			return false, nil
+		}
+		return true, nil
+	})
+	if err != nil {
+		panic(err)
 	}
 }
