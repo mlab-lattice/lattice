@@ -7,8 +7,10 @@ import (
 
 func initializeServiceController(ctx controller.Context) {
 	go service.NewServiceController(
+		ctx.Provider,
 		ctx.ClientBuilder.ClientOrDie("kubernetes-service-controller"),
 		ctx.LatticeResourceRestClient,
+		ctx.CRDInformers["config"],
 		ctx.CRDInformers["service"],
 		ctx.CRDInformers["service-build"],
 		ctx.CRDInformers["component-build"],

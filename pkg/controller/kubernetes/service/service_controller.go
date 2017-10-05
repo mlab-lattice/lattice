@@ -81,8 +81,10 @@ func NewServiceController(
 	kubeServiceInformer coreinformers.ServiceInformer,
 ) *ServiceController {
 	sc := &ServiceController{
+		provider:                  provider,
 		latticeResourceRestClient: latticeResourceRestClient,
 		kubeClient:                kubeClient,
+		configSetChan:             make(chan struct{}),
 		queue:                     workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "service"),
 	}
 
@@ -513,15 +515,6 @@ func (sc *ServiceController) createServiceDeployment(svc *crv1.Service) (*extens
 	glog.V(4).Infof("Created Deployment %s", dResp.Name)
 	// FIXME: send normal event
 	return dResp, nil
-}
-
-func (sc *ServiceController) getKubeServiceForService(svc *crv1.Service) (*corev1.Service, error) {
-	ksvc, err := sc.kubeServiceLister.Services(svc.Namespace).Get(svc.Name)
-	if err != nil && !errors.IsNotFound(err) {
-		return nil, err
-	}
-
-	return ksvc, nil
 }
 
 func (sc *ServiceController) createKubeService(svc *crv1.Service) (*corev1.Service, error) {

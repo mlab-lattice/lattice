@@ -17,6 +17,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 
+	appsv1beta2 "k8s.io/api/apps/v1beta2"
 	corev1 "k8s.io/api/core/v1"
 
 	clientset "k8s.io/client-go/kubernetes"
@@ -54,6 +55,7 @@ func main() {
 		},
 	}
 
+	// Create namespaces
 	err = wait.Poll(500*time.Millisecond, 60*time.Second, func() (bool, error) {
 		_, err := kubeClientset.CoreV1().Namespaces().Create(latticeInternalNamespace)
 		if err != nil && !apierrors.IsAlreadyExists(err) {
@@ -76,6 +78,41 @@ func main() {
 		return true, nil
 	})
 
+	// Create envoy-xds-api daemon set
+	envoyApiDaemonSet := appsv1beta2.DaemonSet{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "envoy-xds-api",
+			Namespace: constants.InternalNamespace,
+		},
+		Spec: appsv1beta2.DaemonSetSpec{
+			Template: corev1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "envoy-xds-api",
+				},
+				Spec: corev1.PodSpec{
+					Containers: []corev1.Container{
+						{
+							// add a UUID to deal with the small chance that a user names their
+							// service component the same thing we name our envoy container
+							Name:  "envoy-xds-api",
+							Image: "bazel/cmd/kubernetes-per-node-rest:go_image",
+							Ports: []corev1.ContainerPort{
+								{
+									Name:          "http",
+									HostPort:      8080,
+									ContainerPort: 8080,
+								},
+							},
+						},
+					},
+					HostNetwork: true,
+					DNSPolicy:   corev1.DNSDefault,
+				},
+			},
+		},
+	}
+
+	// Create CRDs
 	_, err = crdclient.CreateCustomResourceDefinitions(apiextensionsclientset)
 	if err != nil {
 		panic(err)
@@ -86,6 +123,7 @@ func main() {
 		panic(err)
 	}
 
+	// Create config
 	var buildConfig crv1.ComponentBuildConfig
 	var envoyConfig crv1.EnvoyConfig
 	switch coretypes.Provider(providerName) {
@@ -101,7 +139,7 @@ func main() {
 		}
 
 		envoyConfig = crv1.EnvoyConfig{
-			PrepareImage:      "lattice-local/prepare-envoy:latest",
+			PrepareImage:      "lattice/local:prepare-envoy",
 			Image:             "lyft/envoy:latest",
 			EgressPort:        9301,
 			RedirectCidrBlock: "172.16.29.0/16",

@@ -36,7 +36,6 @@ local-bootstrap: gazelle
 local-clean:
 	$(DIR)/test/clean-crds.sh
 
-
 .PHONY: minikube-start
 minikube-start:
 	@minikube start -p $(MINIKUBE_PROFILE)
@@ -56,3 +55,7 @@ minikube-ssh:
 .PHONY: minikube-dashboard
 minikube-dashboard:
 	@minikube dashboard -p $(MINIKUBE_PROFILE)
+
+.PHONY: run-controller
+run-controller: gazelle
+	bazel run -- //cmd/controller-manager -kubeconfig ~/.kube/config -v 5 -logtostderr -provider local

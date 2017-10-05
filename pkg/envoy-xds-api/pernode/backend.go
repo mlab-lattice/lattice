@@ -32,8 +32,13 @@ type KubernetesPerNodeBackend struct {
 }
 
 func NewKubernetesPerNodeBackend(kubeconfig string) (*KubernetesPerNodeBackend, error) {
-	// TODO: create in-cluster config if in cluster
-	config, err := clientcmd.BuildConfigFromFlags("", kubeconfig)
+	var config *rest.Config
+	var err error
+	if kubeconfig == "" {
+		config, err = rest.InClusterConfig()
+	} else {
+		config, err = clientcmd.BuildConfigFromFlags("", kubeconfig)
+	}
 	if err != nil {
 		return nil, err
 	}

@@ -103,7 +103,7 @@ func (sc *ServiceController) getDeploymentSpec(svc *crv1.Service, svcBuild *crv1
 
 	// Add envoy containers
 	envoyConfig := sc.config.Envoy
-	initContainers = append(containers, corev1.Container{
+	initContainers = append(initContainers, corev1.Container{
 		// add a UUID to deal with the small chance that a user names their
 		// service component the same thing we name our envoy container
 		Name:    fmt.Sprintf("lattice-prepare-envoy-%v", uuid.NewUUID()),
@@ -119,14 +119,14 @@ func (sc *ServiceController) getDeploymentSpec(svc *crv1.Service, svcBuild *crv1
 				Value: envoyConfig.RedirectCidrBlock,
 			},
 			{
-				Name:  "ENVOY_CONFIG_PATH",
+				Name:  "ENVOY_CONFIG_DIR",
 				Value: envoyConfigDirectory,
 			},
 			{
 				Name: "ENVOY_XDS_API_HOST",
 				ValueFrom: &corev1.EnvVarSource{
 					FieldRef: &corev1.ObjectFieldSelector{
-						FieldPath: "spec.nodeName",
+						FieldPath: "status.hostIP",
 					},
 				},
 			},
@@ -157,7 +157,7 @@ func (sc *ServiceController) getDeploymentSpec(svc *crv1.Service, svcBuild *crv1
 		Command: []string{"/usr/local/bin/envoy"},
 		Args: []string{
 			"-c",
-			envoyConfigDirectory,
+			fmt.Sprintf("%v/config.json", envoyConfigDirectory),
 			"--service-cluster",
 			svc.Namespace,
 			"--service-node",
