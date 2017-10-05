@@ -41,6 +41,7 @@ type ComponentPort struct {
 	Port      int32  `json:"port"`
 	EnvoyPort int32  `json:"envoyPort"`
 	Protocol  string `json:"protocol"`
+	Public    bool   `json:"public"`
 }
 
 type ServiceStatus struct {

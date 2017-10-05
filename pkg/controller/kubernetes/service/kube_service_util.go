@@ -33,11 +33,16 @@ func (sc *ServiceController) getKubeServiceForService(svc *crv1.Service) (*corev
 
 func (sc *ServiceController) getKubeService(svc *crv1.Service) (*corev1.Service, error) {
 	ports := []corev1.ServicePort{}
+	public := false
 	for componentName, cPorts := range svc.Spec.Ports {
 		for _, port := range cPorts {
 			protocol, err := getProtocol(port.Protocol)
 			if err != nil {
 				return nil, err
+			}
+
+			if port.Public {
+				public = true
 			}
 
 			ports = append(ports, corev1.ServicePort{
@@ -63,6 +68,11 @@ func (sc *ServiceController) getKubeService(svc *crv1.Service) (*corev1.Service,
 			ClusterIP: "None",
 			Type:      corev1.ServiceTypeClusterIP,
 		},
+	}
+
+	if public {
+		ksvc.Spec.ClusterIP = ""
+		ksvc.Spec.Type = corev1.ServiceTypeNodePort
 	}
 
 	return ksvc, nil

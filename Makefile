@@ -59,3 +59,7 @@ minikube-dashboard:
 .PHONY: run-controller
 run-controller: gazelle
 	bazel run -- //cmd/controller-manager -kubeconfig ~/.kube/config -v 5 -logtostderr -provider local
+
+.PHONY: seed-rollout
+seed-rollout: gazelle
+	bazel run -- //test/system-build-and-rollout -kubeconfig ~/.kube/config -v 5 -logtostderr

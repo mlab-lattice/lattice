@@ -19,10 +19,11 @@ dest=${BUILD_DOCKER_IMAGE_PATH} make docker-save-build-docker-image
 
 # Build envoy-integration images
 cd ${ENVOY_INTEGRATION_DIR}
+make gazelle
 PREPARE_ENVOY_PATH=${WORKING_DIRECTORY}/prepare-envoy.tar
 dest=${PREPARE_ENVOY_PATH} make docker-save-prepare-envoy
 
-#ENVOY_API_PATH=${WORKING_DIRECTORY}/envoy-api.tar
+ENVOY_API_PATH=${WORKING_DIRECTORY}/envoy-api.tar
 #dest=${ENVOY_API_PATH} make docker-save-kubernetes-per-node-rest
 
 # Load the images into minikube
@@ -32,7 +33,7 @@ images=(
     ${PULL_GIT_REPO_PATH}
     ${BUILD_DOCKER_IMAGE_PATH}
     ${PREPARE_ENVOY_PATH}
-#    ${ENVOY_API_PATH}
+    ${ENVOY_API_PATH}
 )
 
 for i in ${images[@]}; do

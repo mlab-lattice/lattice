@@ -37,7 +37,7 @@ func main() {
 		Subsystems: []systemdefinition.Interface{
 			systemdefinition.Interface(&systemdefinition.Service{
 				Meta: systemdefinitionblock.Metadata{
-					Name: "my-service",
+					Name: "private-service",
 					Type: systemdefinition.ServiceType,
 				},
 				Components: []*systemdefinitionblock.Component{
@@ -64,6 +64,57 @@ func main() {
 								"lib/PrivateHelloService.js",
 								"-p",
 								"9999",
+							},
+						},
+						HealthCheck: &systemdefinitionblock.HealthCheck{
+							Http: &systemdefinitionblock.HttpHealthCheck{
+								Path: "/status",
+								Port: "http",
+							},
+						},
+					},
+				},
+				Resources: systemdefinitionblock.Resources{
+					MinInstances: 1,
+					MaxInstances: 1,
+					InstanceType: &instanceType,
+				},
+			}),
+			systemdefinition.Interface(&systemdefinition.Service{
+				Meta: systemdefinitionblock.Metadata{
+					Name: "public-service",
+					Type: systemdefinition.ServiceType,
+				},
+				Components: []*systemdefinitionblock.Component{
+					{
+						Name: "http",
+						Ports: []*systemdefinitionblock.Port{
+							{
+								Name:     "http",
+								Port:     8888,
+								Protocol: systemdefinitionblock.HttpProtocol,
+								ExternalAccess: &systemdefinitionblock.ExternalAccess{
+									Public: true,
+								},
+							},
+						},
+						Build: systemdefinitionblock.ComponentBuild{
+							GitRepository: &systemdefinitionblock.GitRepository{
+								Url:    "https://github.com/kevindrosendahl/example__hello-world-service-chaining",
+								Commit: &commit,
+							},
+							Language: &language,
+							Command:  &command,
+						},
+						Exec: systemdefinitionblock.Exec{
+							Command: []string{
+								"node",
+								"lib/PublicHelloService.js",
+								"-p",
+								"8888",
+							},
+							Environment: map[string]string{
+								"PRIVATE_HELLO_SERVICE_URL": "http://private-service.my-system:9999",
 							},
 						},
 						HealthCheck: &systemdefinitionblock.HealthCheck{

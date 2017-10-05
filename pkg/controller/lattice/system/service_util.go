@@ -39,13 +39,18 @@ func getNewServiceFromDefinition(
 	for _, component := range svcDefinition.Components {
 		cPorts := []crv1.ComponentPort{}
 		for _, port := range component.Ports {
-			cPorts = append(cPorts, crv1.ComponentPort{
+			cPort := crv1.ComponentPort{
 				Name: port.Name,
 				Port: int32(port.Port),
 				// FIXME: more intelligently pick an EnvoyPort (this assumers there isn't another port n+1000)
 				EnvoyPort: int32(port.Port) + 1000,
 				Protocol:  port.Protocol,
-			})
+				Public:    false,
+			}
+			if port.ExternalAccess != nil && port.ExternalAccess.Public {
+				cPort.Public = true
+			}
+			cPorts = append(cPorts, cPort)
 		}
 
 		ports[component.Name] = cPorts

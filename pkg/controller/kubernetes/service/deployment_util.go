@@ -149,6 +149,18 @@ func (sc *ServiceController) getDeploymentSpec(svc *crv1.Service, svcBuild *crv1
 		},
 	})
 
+	envoyPorts := []corev1.ContainerPort{}
+	for component, ports := range svc.Spec.Ports {
+		for _, port := range ports {
+			envoyPorts = append(
+				envoyPorts,
+				corev1.ContainerPort{
+					Name:          component + "-" + port.Name,
+					ContainerPort: port.EnvoyPort,
+				},
+			)
+		}
+	}
 	containers = append(containers, corev1.Container{
 		// add a UUID to deal with the small chance that a user names their
 		// service component the same thing we name our envoy container
@@ -163,6 +175,7 @@ func (sc *ServiceController) getDeploymentSpec(svc *crv1.Service, svcBuild *crv1
 			"--service-node",
 			svc.Spec.Path.ToDomain(false, false),
 		},
+		Ports: envoyPorts,
 		VolumeMounts: []corev1.VolumeMount{
 			{
 				Name:      envoyConfigDirectoryVolumeName,
@@ -174,11 +187,12 @@ func (sc *ServiceController) getDeploymentSpec(svc *crv1.Service, svcBuild *crv1
 
 	// Spin up the min instances here, then later let autoscaler scale up.
 	replicas := int32(svc.Spec.Definition.Resources.MinInstances)
+	deploymentName := getDeploymentName(svc)
 	ds := extensions.DeploymentSpec{
 		Replicas: &replicas,
 		Template: corev1.PodTemplateSpec{
 			ObjectMeta: metav1.ObjectMeta{
-				Name: getDeploymentName(svc),
+				Name: deploymentName,
 				Labels: map[string]string{
 					crv1.ServiceDeploymentLabelKey: svc.Name,
 				},
@@ -189,15 +203,23 @@ func (sc *ServiceController) getDeploymentSpec(svc *crv1.Service, svcBuild *crv1
 					{
 						Name: envoyConfigDirectoryVolumeName,
 						VolumeSource: corev1.VolumeSource{
-							HostPath: &corev1.HostPathVolumeSource{
-								Path: sc.provider.ServiceEnvoyConfigDirectoryVolumePath(),
-							},
+							//HostPath: &corev1.HostPathVolumeSource{
+							//	Path: sc.provider.ServiceEnvoyConfigDirectoryVolumePathPrefix() + "/" + deploymentName,
+							//},
+							EmptyDir: &corev1.EmptyDirVolumeSource{},
 						},
 					},
 				},
 				InitContainers: initContainers,
 				Containers:     containers,
 				DNSPolicy:      corev1.DNSDefault,
+				// FIXME: remove this
+				HostAliases: []corev1.HostAlias{
+					{
+						IP:        "172.16.29.0",
+						Hostnames: []string{"private-service.my-system"},
+					},
+				},
 				// TODO: add NodeSelector (for cloud)
 				// TODO: add Tolerations (for cloud)
 				// TODO: add HostAliases (for local)

@@ -10,6 +10,6 @@ func (lp *Provider) ComponentBuildJobWorkingDirectoryVolumePathPrefix() string {
 	return "/data/component-builder"
 }
 
-func (lp *Provider) ServiceEnvoyConfigDirectoryVolumePath() string {
+func (lp *Provider) ServiceEnvoyConfigDirectoryVolumePathPrefix() string {
 	return "/data/envoy"
 }

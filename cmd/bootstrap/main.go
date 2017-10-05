@@ -107,7 +107,7 @@ func main() {
 		envoyConfig = crv1.EnvoyConfig{
 			PrepareImage:      "lattice/local:prepare-envoy",
 			Image:             "lyft/envoy:latest",
-			EgressPort:        9301,
+			EgressPort:        9001,
 			RedirectCidrBlock: "172.16.29.0/16",
 			XdsApiPort:        8080,
 		}
