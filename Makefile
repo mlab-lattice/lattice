@@ -63,3 +63,7 @@ run-controller: gazelle
 .PHONY: seed-rollout
 seed-rollout: gazelle
 	bazel run -- //test/system-build-and-rollout -kubeconfig ~/.kube/config -v 5 -logtostderr
+
+.PHONY: local-reset
+local-reset: local-delete local-up seed-rollout run-controller
+	true

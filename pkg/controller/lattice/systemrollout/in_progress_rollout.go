@@ -7,21 +7,22 @@ import (
 )
 
 func (src *SystemRolloutController) syncInProgressRollout(sysRollout *crv1.SystemRollout) error {
-	system, err := src.getSystemForRollout(sysRollout)
+	sysBuild, err := src.getSystemBuildForRollout(sysRollout)
+	if err != nil {
+		return err
+	}
+
+	if sysBuild == nil {
+		// FIXME: send warn event
+		return fmt.Errorf("SystemRollout %v is %v without a SystemBuild", sysRollout.Name, crv1.SystemRolloutStateInProgress)
+	}
+
+	system, err := src.getSystemForRollout(sysRollout, sysBuild)
 	if err != nil {
 		return err
 	}
 
 	if system == nil {
-		sysBuild, err := src.getSystemBuildForRollout(sysRollout)
-		if err != nil {
-			return err
-		}
-
-		if sysBuild == nil {
-			return fmt.Errorf("SystemRollout %v is %v without a SystemBuild", sysRollout.Name, crv1.SystemRolloutStateInProgress)
-		}
-
 		system, err = src.createSystem(sysRollout, sysBuild)
 		if err != nil {
 			return err
@@ -31,14 +32,14 @@ func (src *SystemRolloutController) syncInProgressRollout(sysRollout *crv1.Syste
 	return src.syncRolloutWithSystem(sysRollout, system)
 }
 
-func (src *SystemRolloutController) getSystemForRollout(sysRollout *crv1.SystemRollout) (*crv1.System, error) {
+func (src *SystemRolloutController) getSystemForRollout(sysRollout *crv1.SystemRollout, sysBuild *crv1.SystemBuild) (*crv1.System, error) {
 	var system *crv1.System
 
 	latticeNamespace := sysRollout.Spec.LatticeNamespace
 	for _, sysObj := range src.systemStore.List() {
 		sys := sysObj.(*crv1.System)
 
-		if latticeNamespace == sys.Spec.LatticeNamespace {
+		if string(latticeNamespace) == sys.Namespace {
 			if system != nil {
 				return nil, fmt.Errorf("LatticeNamespace %v contains multiple Systems", latticeNamespace)
 			}
@@ -51,14 +52,14 @@ func (src *SystemRolloutController) getSystemForRollout(sysRollout *crv1.SystemR
 }
 
 func (src *SystemRolloutController) createSystem(sysRollout *crv1.SystemRollout, sysBuild *crv1.SystemBuild) (*crv1.System, error) {
-	sys, err := getNewSystem(sysRollout, sysBuild)
+	sys, err := src.getNewSystem(sysRollout, sysBuild)
 	if err != nil {
 		return nil, err
 	}
 
 	result := &crv1.System{}
 	err = src.latticeResourceClient.Post().
-		Namespace(sysRollout.Namespace).
+		Namespace(string(sysRollout.Spec.LatticeNamespace)).
 		Resource(crv1.SystemResourcePlural).
 		Body(sys).
 		Do().

@@ -68,7 +68,6 @@ func getSystemRollout(latticeNamespace coretypes.LatticeNamespace, sysBuild *crv
 		},
 		Spec: crv1.SystemRolloutSpec{
 			LatticeNamespace: latticeNamespace,
-			Definition:       sysBuild.Spec.Definition,
 			BuildName:        sysBuild.Name,
 		},
 		Status: crv1.SystemRolloutStatus{

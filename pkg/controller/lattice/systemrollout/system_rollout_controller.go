@@ -46,6 +46,12 @@ type SystemRolloutController struct {
 	systemBuildStore       cache.Store
 	systemBuildStoreSynced cache.InformerSynced
 
+	serviceBuildStore       cache.Store
+	serviceBuildStoreSynced cache.InformerSynced
+
+	componentBuildStore       cache.Store
+	componentBuildStoreSynced cache.InformerSynced
+
 	queue workqueue.RateLimitingInterface
 }
 
@@ -54,6 +60,8 @@ func NewSystemRolloutController(
 	systemRolloutInformer cache.SharedInformer,
 	systemInformer cache.SharedInformer,
 	systemBuildInformer cache.SharedInformer,
+	serviceBuildInformer cache.SharedInformer,
+	componentBuildInformer cache.SharedInformer,
 ) *SystemRolloutController {
 	src := &SystemRolloutController{
 		latticeResourceClient: latticeResourceClient,
@@ -88,6 +96,12 @@ func NewSystemRolloutController(
 	src.systemBuildStore = systemBuildInformer.GetStore()
 	src.systemBuildStoreSynced = systemBuildInformer.HasSynced
 
+	src.serviceBuildStore = serviceBuildInformer.GetStore()
+	src.serviceBuildStoreSynced = serviceBuildInformer.HasSynced
+
+	src.componentBuildStore = componentBuildInformer.GetStore()
+	src.componentBuildStoreSynced = componentBuildInformer.HasSynced
+
 	return src
 }
 
@@ -110,7 +124,7 @@ func (src *SystemRolloutController) addSystem(obj interface{}) {
 
 	src.owningRolloutsLock.RLock()
 	defer src.owningRolloutsLock.RUnlock()
-	owningRollout, ok := src.owningRollouts[sys.Spec.LatticeNamespace]
+	owningRollout, ok := src.owningRollouts[coretypes.LatticeNamespace(sys.Namespace)]
 	if !ok {
 		// TODO: send warn event
 		return
@@ -132,7 +146,7 @@ func (src *SystemRolloutController) updateSystem(old, cur interface{}) {
 
 	src.owningRolloutsLock.RLock()
 	defer src.owningRolloutsLock.RUnlock()
-	owningRollout, ok := src.owningRollouts[curSys.Spec.LatticeNamespace]
+	owningRollout, ok := src.owningRollouts[coretypes.LatticeNamespace(curSys.Namespace)]
 	if !ok {
 		// TODO: send warn event
 		return
@@ -198,7 +212,7 @@ func (src *SystemRolloutController) Run(workers int, stopCh <-chan struct{}) {
 	defer glog.Infof("Shutting down system-rollout controller")
 
 	// wait for your secondary caches to fill before starting your work
-	if !cache.WaitForCacheSync(stopCh, src.systemRolloutStoreSynced, src.systemStoreSynced, src.systemBuildStoreSynced) {
+	if !cache.WaitForCacheSync(stopCh, src.systemRolloutStoreSynced, src.systemStoreSynced, src.systemBuildStoreSynced, src.serviceBuildStoreSynced, src.componentBuildStoreSynced) {
 		return
 	}
 
@@ -234,7 +248,7 @@ func (src *SystemRolloutController) syncOwningRollouts() error {
 		}
 
 		lns := sysr.Spec.LatticeNamespace
-		if _, ok := src.owningRollouts[sysr.Spec.LatticeNamespace]; ok {
+		if _, ok := src.owningRollouts[lns]; ok {
 			return fmt.Errorf("LatticeNamespace %v has multiple owning rollouts", lns)
 		}
 

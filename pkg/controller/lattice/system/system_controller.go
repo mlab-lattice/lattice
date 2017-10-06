@@ -5,7 +5,6 @@ import (
 	"reflect"
 	"time"
 
-	systemdefinition "github.com/mlab-lattice/core/pkg/system/definition"
 	systemtree "github.com/mlab-lattice/core/pkg/system/tree"
 
 	crv1 "github.com/mlab-lattice/kubernetes-integration/pkg/api/customresource/v1"
@@ -316,7 +315,7 @@ func (sc *SystemController) syncSystemServiceStatuses(sys *crv1.System) error {
 		}
 
 		// Otherwise we'll have to create a new Service.
-		svc, err := sc.createService(sys, &svcInfo.Definition, path, svcInfo.BuildName)
+		svc, err := sc.createService(sys, &svcInfo, path)
 		if err != nil {
 			return err
 		}
@@ -338,13 +337,8 @@ func (sc *SystemController) syncSystemServiceStatuses(sys *crv1.System) error {
 	return err
 }
 
-func (sc *SystemController) createService(
-	sys *crv1.System,
-	svcDefinitionBlock *systemdefinition.Service,
-	svcPath systemtree.NodePath,
-	svcBuildName string,
-) (*crv1.Service, error) {
-	svc, err := getNewServiceFromDefinition(sys, svcDefinitionBlock, svcPath, svcBuildName)
+func (sc *SystemController) createService(sys *crv1.System, svcInfo *crv1.SystemServicesInfo, svcPath systemtree.NodePath) (*crv1.Service, error) {
+	svc, err := getNewService(sys, svcInfo, svcPath)
 	if err != nil {
 		return nil, err
 	}

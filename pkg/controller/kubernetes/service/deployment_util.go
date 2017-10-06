@@ -13,6 +13,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/apimachinery/pkg/util/uuid"
+	"strconv"
 )
 
 const (
@@ -20,7 +21,8 @@ const (
 	envoyConfigDirectoryVolumeName = "envoyconfig"
 )
 
-func (sc *ServiceController) getDeployment(svc *crv1.Service, svcBuild *crv1.ServiceBuild) (*extensions.Deployment, error) {
+// getDeployment returns an *extensions.Deployment configured for a given Service
+func (sc *ServiceController) getDeployment(svc *crv1.Service) (*extensions.Deployment, error) {
 	// Need a consistent view of our config while generating the Job
 	sc.configLock.RLock()
 	defer sc.configLock.RUnlock()
@@ -30,7 +32,7 @@ func (sc *ServiceController) getDeployment(svc *crv1.Service, svcBuild *crv1.Ser
 		crv1.ServiceDeploymentLabelKey: svc.Name,
 	}
 
-	dSpec, err := sc.getDeploymentSpec(svc, svcBuild)
+	dSpec, err := sc.getDeploymentSpec(svc)
 	if err != nil {
 		return nil, err
 	}
@@ -52,14 +54,13 @@ func getDeploymentName(svc *crv1.Service) string {
 	return fmt.Sprintf("lattice-service-%s", svc.Name)
 }
 
-func (sc *ServiceController) getDeploymentSpec(svc *crv1.Service, svcBuild *crv1.ServiceBuild) (*extensions.DeploymentSpec, error) {
+// getDeploymentSpec returns an *extensions.DeploymentSpec configured for a given Service.
+// N.B.: getDeploymentSpec assumes a RLock is held on sc.configLock when called.
+func (sc *ServiceController) getDeploymentSpec(svc *crv1.Service) (*extensions.DeploymentSpec, error) {
 	containers := []corev1.Container{}
 	initContainers := []corev1.Container{}
-	componentDockerImageFqns, err := sc.getComponentDockerImageFqns(svcBuild)
-	if err != nil {
-		return nil, err
-	}
 
+	// Create a container for each Component in the Service
 	for _, component := range svc.Spec.Definition.Components {
 		ports := []corev1.ContainerPort{}
 		for _, port := range component.Ports {
@@ -85,7 +86,7 @@ func (sc *ServiceController) getDeploymentSpec(svc *crv1.Service, svcBuild *crv1
 
 		container := corev1.Container{
 			Name:    component.Name,
-			Image:   componentDockerImageFqns[component.Name],
+			Image:   svc.Spec.ComponentBuildArtifacts[component.Name].DockerImageFqn,
 			Command: component.Exec.Command,
 			Ports:   ports,
 			Env:     envs,
@@ -112,7 +113,7 @@ func (sc *ServiceController) getDeploymentSpec(svc *crv1.Service, svcBuild *crv1
 		Env: []corev1.EnvVar{
 			{
 				Name:  "ENVOY_EGRESS_PORT",
-				Value: fmt.Sprintf("%v", svc.Spec.EnvoyEgressPort),
+				Value: strconv.Itoa(int(svc.Spec.EnvoyEgressPort)),
 			},
 			{
 				Name:  "REDIRECT_EGRESS_CIDR_BLOCK",
@@ -124,7 +125,7 @@ func (sc *ServiceController) getDeploymentSpec(svc *crv1.Service, svcBuild *crv1
 			},
 			{
 				Name:  "ENVOY_ADMIN_PORT",
-				Value: fmt.Sprintf("%v", svc.Spec.EnvoyAdminPort),
+				Value: strconv.Itoa(int(svc.Spec.EnvoyAdminPort)),
 			},
 			{
 				Name: "ENVOY_XDS_API_HOST",
@@ -190,6 +191,8 @@ func (sc *ServiceController) getDeploymentSpec(svc *crv1.Service, svcBuild *crv1
 	})
 
 	// Spin up the min instances here, then later let autoscaler scale up.
+	// TODO: when doing blue-green deploys, consider looking instead at the current number
+	// 		 of replicas in the existing deployment
 	replicas := int32(svc.Spec.Definition.Resources.MinInstances)
 	deploymentName := getDeploymentName(svc)
 	ds := extensions.DeploymentSpec{
@@ -204,12 +207,10 @@ func (sc *ServiceController) getDeploymentSpec(svc *crv1.Service, svcBuild *crv1
 			Spec: corev1.PodSpec{
 				// TODO: add user Volumes
 				Volumes: []corev1.Volume{
+					// Volume for Envoy config
 					{
 						Name: envoyConfigDirectoryVolumeName,
 						VolumeSource: corev1.VolumeSource{
-							//HostPath: &corev1.HostPathVolumeSource{
-							//	Path: sc.provider.ServiceEnvoyConfigDirectoryVolumePathPrefix() + "/" + deploymentName,
-							//},
 							EmptyDir: &corev1.EmptyDirVolumeSource{},
 						},
 					},
@@ -232,38 +233,6 @@ func (sc *ServiceController) getDeploymentSpec(svc *crv1.Service, svcBuild *crv1
 	}
 
 	return &ds, nil
-}
-
-func (sc *ServiceController) getComponentDockerImageFqns(svcBuild *crv1.ServiceBuild) (map[string]string, error) {
-	componentDockerImageFqns := map[string]string{}
-
-	for cName, cBuildInfo := range svcBuild.Spec.Components {
-		if cBuildInfo.BuildName == nil {
-			return nil, fmt.Errorf("svcBuild %v Component %v does not have a ComponentBuildName", svcBuild.Name, cName)
-		}
-
-		cBuildName := *cBuildInfo.BuildName
-		cBuildKey := svcBuild.Namespace + "/" + cBuildName
-		cBuildObj, exists, err := sc.componentBuildStore.GetByKey(cBuildKey)
-
-		if err != nil {
-			return nil, err
-		}
-
-		if !exists {
-			return nil, fmt.Errorf("cBuild %v not in cBuild Store", cBuildKey)
-		}
-
-		cBuild := cBuildObj.(*crv1.ComponentBuild)
-
-		if cBuild.Spec.Artifacts == nil {
-			return nil, fmt.Errorf("cBuild %v does not have Artifacts", cBuildKey)
-		}
-
-		componentDockerImageFqns[cName] = cBuild.Spec.Artifacts.DockerImageFqn
-	}
-
-	return componentDockerImageFqns, nil
 }
 
 func getLivenessProbe(hc *systemdefinitionblock.HealthCheck) *corev1.Probe {

@@ -38,9 +38,7 @@ func (src *SystemRolloutController) attemptToClaimOwningRollout(sysRollout *crv1
 	src.owningRolloutsLock.Lock()
 	defer src.owningRolloutsLock.Unlock()
 
-	latticeNamespace := sysRollout.Spec.LatticeNamespace
-
-	owningRollout, ok := src.owningRollouts[latticeNamespace]
+	owningRollout, ok := src.owningRollouts[sysRollout.Spec.LatticeNamespace]
 	if !ok {
 		// No owning owningRollout currently, we can claim it.
 		return src.claimOwningRollout(sysRollout)
@@ -62,7 +60,7 @@ func (src *SystemRolloutController) claimOwningRollout(sysRollout *crv1.SystemRo
 	newStatus := crv1.SystemRolloutStatus{
 		State: crv1.SystemRolloutStateAccepted,
 	}
-	result, err :=src.updateStatus(sysRollout, newStatus)
+	result, err := src.updateStatus(sysRollout, newStatus)
 	if err != nil {
 		return err
 	}

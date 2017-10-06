@@ -11,5 +11,7 @@ func initializeSystemRolloutController(ctx controller.Context) {
 		ctx.CRDInformers["system-rollout"],
 		ctx.CRDInformers["system"],
 		ctx.CRDInformers["system-build"],
+		ctx.CRDInformers["service-build"],
+		ctx.CRDInformers["component-build"],
 	).Run(4, ctx.Stop)
 }

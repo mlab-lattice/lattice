@@ -1,7 +1,6 @@
 package system
 
 import (
-	systemdefinition "github.com/mlab-lattice/core/pkg/system/definition"
 	systemtree "github.com/mlab-lattice/core/pkg/system/tree"
 
 	crv1 "github.com/mlab-lattice/kubernetes-integration/pkg/api/customresource/v1"
@@ -21,12 +20,7 @@ func (sc *SystemController) getServiceState(namespace, svcName string) *crv1.Ser
 	return &(svcObj.(*crv1.Service).Status.State)
 }
 
-func getNewServiceFromDefinition(
-	sys *crv1.System,
-	svcDefinition *systemdefinition.Service,
-	svcPath systemtree.NodePath,
-	svcBuildName string,
-) (*crv1.Service, error) {
+func getNewService(sys *crv1.System, svcInfo *crv1.SystemServicesInfo, svcPath systemtree.NodePath) (*crv1.Service, error) {
 	labels := map[string]string{}
 
 	sysVersionLabel, ok := sys.Labels[crv1.SystemVersionLabelKey]
@@ -38,7 +32,7 @@ func getNewServiceFromDefinition(
 
 	cPortsMap := map[string][]crv1.ComponentPort{}
 	ports := map[int32]bool{}
-	for _, component := range svcDefinition.Components {
+	for _, component := range svcInfo.Definition.Components {
 		cPorts := []crv1.ComponentPort{}
 		for _, port := range component.Ports {
 			cPort := crv1.ComponentPort{
@@ -85,7 +79,7 @@ func getNewServiceFromDefinition(
 	}
 
 	// Assign an envoy port to each cPort, and pop the used envoy port off the slice each time.
-	for _, component := range svcDefinition.Components {
+	for _, component := range svcInfo.Definition.Components {
 		cPorts := []crv1.ComponentPort{}
 		for _, cPort := range cPortsMap[component.Name] {
 			cPort.EnvoyPort = envoyPorts[0]
@@ -101,17 +95,19 @@ func getNewServiceFromDefinition(
 	svc := &crv1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:            string(uuid.NewUUID()),
-			Namespace:       string(sys.Spec.LatticeNamespace),
+			Namespace:       sys.Namespace,
 			Labels:          labels,
 			OwnerReferences: []metav1.OwnerReference{*metav1.NewControllerRef(sys, controllerKind)},
 		},
 		Spec: crv1.ServiceSpec{
-			Path:            svcPath,
-			Definition:      *svcDefinition,
-			BuildName:       svcBuildName,
+			Path:       svcPath,
+			Definition: svcInfo.Definition,
+
+			ComponentBuildArtifacts: svcInfo.ComponentBuildArtifacts,
+
+			Ports:           cPortsMap,
 			EnvoyAdminPort:  envoyAdminPort,
 			EnvoyEgressPort: envoyEgressPort,
-			Ports:           cPortsMap,
 		},
 		Status: crv1.ServiceStatus{
 			State: crv1.ServiceStateRollingOut,

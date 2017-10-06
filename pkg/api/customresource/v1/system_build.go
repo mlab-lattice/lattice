@@ -17,7 +17,7 @@ const (
 	// TODO: should this be ClusterScoped?
 	SystemBuildResourceScope = apiextensionsv1beta1.NamespaceScoped
 
-	SystemBuildVersionLabelKey = "build.system.lattice.mlab.com/version"
+	SystemBuildVersionLabelKey = "system.build.lattice.mlab.com/version"
 )
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

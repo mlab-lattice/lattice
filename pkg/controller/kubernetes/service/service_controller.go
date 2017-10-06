@@ -7,7 +7,6 @@ import (
 	"time"
 
 	crv1 "github.com/mlab-lattice/kubernetes-integration/pkg/api/customresource/v1"
-	"github.com/mlab-lattice/kubernetes-integration/pkg/constants"
 	"github.com/mlab-lattice/kubernetes-integration/pkg/provider"
 
 	corev1 "k8s.io/api/core/v1"
@@ -52,12 +51,6 @@ type ServiceController struct {
 
 	serviceStore       cache.Store
 	serviceStoreSynced cache.InformerSynced
-
-	serviceBuildStore       cache.Store
-	serviceBuildStoreSynced cache.InformerSynced
-
-	componentBuildStore       cache.Store
-	componentBuildStoreSynced cache.InformerSynced
 
 	// TODO: switch to apps when stabilized https://github.com/kubernetes/features/issues/353
 	deploymentLister       extensionlisters.DeploymentLister
@@ -110,12 +103,6 @@ func NewServiceController(
 	})
 	sc.serviceStore = serviceInformer.GetStore()
 	sc.serviceStoreSynced = serviceInformer.HasSynced
-
-	sc.serviceBuildStore = serviceBuildInformer.GetStore()
-	sc.serviceBuildStoreSynced = serviceBuildInformer.HasSynced
-
-	sc.componentBuildStore = componentBuildInformer.GetStore()
-	sc.componentBuildStoreSynced = componentBuildInformer.HasSynced
 
 	deploymentInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    sc.addDeployment,
@@ -341,7 +328,7 @@ func (sc *ServiceController) Run(workers int, stopCh <-chan struct{}) {
 	defer glog.Infof("Shutting down service controller")
 
 	// wait for your secondary caches to fill before starting your work
-	if !cache.WaitForCacheSync(stopCh, sc.serviceStoreSynced, sc.serviceBuildStoreSynced, sc.componentBuildStoreSynced, sc.deploymentListerSynced, sc.kubeServiceListerSynced) {
+	if !cache.WaitForCacheSync(stopCh, sc.serviceStoreSynced, sc.deploymentListerSynced, sc.kubeServiceListerSynced) {
 		return
 	}
 
@@ -496,12 +483,7 @@ func (sc *ServiceController) getDeploymentForService(svc *crv1.Service) (*extens
 }
 
 func (sc *ServiceController) createServiceDeployment(svc *crv1.Service) (*extensions.Deployment, error) {
-	svcBuild, err := sc.getSvcBuildForSvc(svc)
-	if err != nil {
-		return nil, err
-	}
-
-	d, err := sc.getDeployment(svc, svcBuild)
+	d, err := sc.getDeployment(svc)
 	if err != nil {
 		return nil, err
 	}
@@ -532,21 +514,6 @@ func (sc *ServiceController) createKubeService(svc *crv1.Service) (*corev1.Servi
 	glog.V(4).Infof("Created Service %s", ksvcResp.Name)
 	// FIXME: send normal event
 	return ksvcResp, nil
-}
-
-func (sc *ServiceController) getSvcBuildForSvc(svc *crv1.Service) (*crv1.ServiceBuild, error) {
-	svcBuildKey := constants.InternalNamespace + "/" + svc.Spec.BuildName
-	svcBuildObj, exists, err := sc.serviceBuildStore.GetByKey(svcBuildKey)
-	if err != nil {
-		return nil, err
-	}
-
-	if !exists {
-		return nil, fmt.Errorf("Service %v Service %v is not in Service Store", svc.Name, svcBuildKey)
-	}
-
-	svcBuild := svcBuildObj.(*crv1.ServiceBuild)
-	return svcBuild, nil
 }
 
 func (sc *ServiceController) syncServiceWithDeployment(svc *crv1.Service, d *extensions.Deployment) error {

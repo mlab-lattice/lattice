@@ -28,19 +28,26 @@ type Service struct {
 }
 
 type ServiceSpec struct {
-	Path            systemtree.NodePath      `json:"path"`
-	Definition      systemdefinition.Service `json:"definition"`
-	BuildName       string                   `json:"buildName"`
-	EnvoyAdminPort  int32                    `json:"envoyAdminPort"`
-	EnvoyEgressPort int32                    `json:"envoyEgressPort"`
+	Path       systemtree.NodePath      `json:"path"`
+	Definition systemdefinition.Service `json:"definition"`
+
+	// ComponentBuildArtifacts maps Component names to the artifacts created by their build
+	ComponentBuildArtifacts map[string]ComponentBuildArtifacts `json:"componentBuildArtifacts"`
 
 	// Ports maps Component names to a list of information about its ports
 	Ports map[string][]ComponentPort `json:"ports"`
+
+	// EnvoyAdminPort is the port assigned to this service to use for the Envoy admin interface
+	EnvoyAdminPort int32 `json:"envoyAdminPort"`
+	// EnvoyEgressPort is the port assigned to this service to use for the Envoy egress listener
+	EnvoyEgressPort int32 `json:"envoyEgressPort"`
 }
 
 type ComponentPort struct {
-	Name      string `json:"name"`
-	Port      int32  `json:"port"`
+	Name string `json:"name"`
+	Port int32  `json:"port"`
+	// EnvoyPort is the port assigned to this service to use for the Envoy ingress listener for
+	// this component port
 	EnvoyPort int32  `json:"envoyPort"`
 	Protocol  string `json:"protocol"`
 	Public    bool   `json:"public"`

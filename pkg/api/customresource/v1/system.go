@@ -3,7 +3,6 @@ package v1
 import (
 	systemdefinition "github.com/mlab-lattice/core/pkg/system/definition"
 	systemtree "github.com/mlab-lattice/core/pkg/system/tree"
-	coretypes "github.com/mlab-lattice/core/pkg/types"
 
 	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -29,15 +28,19 @@ type System struct {
 }
 
 type SystemSpec struct {
-	coretypes.LatticeNamespace `json:"latticeNamespace"`
-	Services                   map[systemtree.NodePath]SystemServicesInfo `json:"services"`
+	Services map[systemtree.NodePath]SystemServicesInfo `json:"services"`
 }
 
 type SystemServicesInfo struct {
-	Definition   systemdefinition.Service `json:"definition"`
-	BuildName    string                   `json:"buildName,omitempty"`
-	ServiceName  *string                  `json:"serviceName,omitempty"`
-	ServiceState *ServiceState            `json:"serviceState"`
+	Definition systemdefinition.Service `json:"definition"`
+
+	// ComponentBuildArtifacts maps Component names to the artifacts created by their build
+	ComponentBuildArtifacts map[string]ComponentBuildArtifacts `json:"componentBuildArtifacts"`
+
+	// ServiceName is the name of the Service CustomResource that is created by the lattice-system-controller
+	ServiceName *string `json:"serviceName,omitempty"`
+	// ServiceState is the last observed state of the Service CustomResource
+	ServiceState *ServiceState `json:"serviceState"`
 }
 
 type SystemStatus struct {
