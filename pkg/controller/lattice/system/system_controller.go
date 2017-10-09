@@ -52,15 +52,15 @@ func NewSystemController(
 	sc.syncHandler = sc.syncSystem
 
 	systemInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc:    sc.addSystem,
-		UpdateFunc: sc.updateSystem,
+		AddFunc:    sc.handleSystemAdd,
+		UpdateFunc: sc.handleSystemUpdate,
 	})
 	sc.systemStore = systemInformer.GetStore()
 	sc.systemStoreSynced = systemInformer.HasSynced
 
 	serviceInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc:    sc.addService,
-		UpdateFunc: sc.updateService,
+		AddFunc:    sc.handleServiceAdd,
+		UpdateFunc: sc.handleServiceUpdate,
 		// TODO: for now it is assumed that ServiceBuilds are not deleted.
 		// in the future we'll probably want to add a GC process for ServiceBuilds.
 		// At that point we should listen here for those deletes.
@@ -72,21 +72,21 @@ func NewSystemController(
 	return sc
 }
 
-func (sc *SystemController) addSystem(obj interface{}) {
+func (sc *SystemController) handleSystemAdd(obj interface{}) {
 	sys := obj.(*crv1.System)
 	glog.V(4).Infof("Adding System %s", sys.Name)
 	sc.enqueueSystem(sys)
 }
 
-func (sc *SystemController) updateSystem(old, cur interface{}) {
+func (sc *SystemController) handleSystemUpdate(old, cur interface{}) {
 	oldSys := old.(*crv1.System)
 	curSys := cur.(*crv1.System)
 	glog.V(4).Infof("Updating System %s", oldSys.Name)
 	sc.enqueueSystem(curSys)
 }
 
-// addService enqueues the System that manages a Service when the Service is created.
-func (sc *SystemController) addService(obj interface{}) {
+// handleServiceAdd enqueues the System that manages a Service when the Service is created.
+func (sc *SystemController) handleServiceAdd(obj interface{}) {
 	svc := obj.(*crv1.Service)
 
 	if svc.DeletionTimestamp != nil {
@@ -114,8 +114,8 @@ func (sc *SystemController) addService(obj interface{}) {
 	// FIXME: send error event
 }
 
-// addService enqueues the System that manages a Service when the Service is update.
-func (sc *SystemController) updateService(old, cur interface{}) {
+// handleServiceAdd enqueues the System that manages a Service when the Service is update.
+func (sc *SystemController) handleServiceUpdate(old, cur interface{}) {
 	glog.V(5).Info("Got Service update")
 	oldSvc := old.(*crv1.Service)
 	curSvc := cur.(*crv1.Service)
@@ -289,6 +289,11 @@ func (sc *SystemController) syncSystem(key string) error {
 	sys := sysObj.(*crv1.System)
 	sysCopy := sys.DeepCopy()
 
+	err = sc.syncSystemServices(sysCopy)
+	if err != nil {
+		return err
+	}
+
 	if err := sc.syncSystemServiceStatuses(sysCopy); err != nil {
 		return err
 	}
@@ -296,7 +301,19 @@ func (sc *SystemController) syncSystem(key string) error {
 	return sc.syncSystemStatus(sysCopy)
 }
 
-// Warning: syncSystemServiceStatuses mutates sysBuild. Do not pass in a pointer to a
+// Warning: syncSystemServices mutates sys. Do not pass in a pointer to a
+// System from the shared cache.
+func (sc *SystemController) syncSystemServices(sys *crv1.System) error {
+	// Loop through the Services defined in the System's Spec, and create/update any that need it
+
+	// Loop through all of the Services that exist in the System's namespace, and delete any
+	// that are no longer a part of the System's Spec
+	// TODO: should we wait until all other services are succesfully rolled out before deleting these?
+	// need to figure out what the rollout/automatic roll-back strategy is
+	return nil
+}
+
+// Warning: syncSystemServiceStatuses mutates sys. Do not pass in a pointer to a
 // System from the shared cache.
 func (sc *SystemController) syncSystemServiceStatuses(sys *crv1.System) error {
 	for path, svcInfo := range sys.Spec.Services {
@@ -324,33 +341,9 @@ func (sc *SystemController) syncSystemServiceStatuses(sys *crv1.System) error {
 		sys.Spec.Services[path] = svcInfo
 	}
 
-	response := &crv1.System{}
-	err := sc.latticeResourceRestClient.Put().
-		Namespace(sys.Namespace).
-		Resource(crv1.SystemResourcePlural).
-		Name(sys.Name).
-		Body(sys).
-		Do().
-		Into(response)
-
-	sys = response
+	response, err := sc.updateSystem(sys)
+	*sys = *response
 	return err
-}
-
-func (sc *SystemController) createService(sys *crv1.System, svcInfo *crv1.SystemServicesInfo, svcPath systemtree.NodePath) (*crv1.Service, error) {
-	svc, err := getNewService(sys, svcInfo, svcPath)
-	if err != nil {
-		return nil, err
-	}
-
-	result := &crv1.Service{}
-	err = sc.latticeResourceRestClient.Post().
-		Namespace(svc.Namespace).
-		Resource(crv1.ServiceResourcePlural).
-		Body(svc).
-		Do().
-		Into(result)
-	return result, err
 }
 
 // Warning: syncSystemStatus mutates sysBuild. Do not pass in a pointer to a
@@ -378,21 +371,29 @@ func (sc *SystemController) syncSystemStatus(sys *crv1.System) error {
 	}
 
 	newStatus := calculateSystemStatus(hasFailedSvcRollout, hasActiveSvcRollout)
+	return sc.updateSystemStatus(sys, newStatus)
+}
 
-	if reflect.DeepEqual(sys.Status, newStatus) {
-		return nil
-	}
-
-	sys.Status = newStatus
-
+func (sc *SystemController) updateSystem(sys *crv1.System) (*crv1.System, error) {
+	result := &crv1.System{}
 	err := sc.latticeResourceRestClient.Put().
 		Namespace(sys.Namespace).
 		Resource(crv1.SystemResourcePlural).
 		Name(sys.Name).
 		Body(sys).
 		Do().
-		Into(nil)
+		Into(result)
 
+	return result, err
+}
+
+func (sc *SystemController) updateSystemStatus(sys *crv1.System, newStatus crv1.SystemStatus) error {
+	if reflect.DeepEqual(sys.Status, newStatus) {
+		return nil
+	}
+
+	sys.Status = newStatus
+	_, err := sc.updateSystem(sys)
 	return err
 }
 

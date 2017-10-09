@@ -6,26 +6,48 @@ import (
 )
 
 func (src *SystemRolloutController) syncAcceptedRollout(sysRollout *crv1.SystemRollout) error {
-	systemBuild, err := src.getSystemBuildForRollout(sysRollout)
+	sysBuild, err := src.getSystemBuildForRollout(sysRollout)
 	if err != nil {
 		return err
 	}
 
-	switch systemBuild.Status.State {
+	switch sysBuild.Status.State {
 	case crv1.SystemBuildStateFailed:
 		newStatus := crv1.SystemRolloutStatus{
 			State:   crv1.SystemRolloutStateFailed,
-			Message: fmt.Sprintf("SystemBuild %v failed", systemBuild.Name),
+			Message: fmt.Sprintf("SystemBuild %v failed", sysBuild.Name),
 		}
-		_, err := src.updateStatus(sysRollout, newStatus)
+		_, err := src.updateSystemRolloutStatus(sysRollout, newStatus)
 		return err
 
 	case crv1.SystemBuildStateSucceeded:
+		system, err := src.getSystemForRollout(sysRollout)
+		if err != nil {
+			return err
+		}
+
+		if system == nil {
+			system, err = src.createSystem(sysRollout, sysBuild)
+			if err != nil {
+				return err
+			}
+		} else {
+			sysSpec, err := src.getNewSystemSpec(sysRollout, sysBuild)
+			if err != nil {
+				return err
+			}
+
+			_, err = src.updateSystem(system, sysSpec)
+			if err != nil {
+				return err
+			}
+		}
+
 		newStatus := crv1.SystemRolloutStatus{
 			State: crv1.SystemRolloutStateInProgress,
 		}
 
-		result, err := src.updateStatus(sysRollout, newStatus)
+		result, err := src.updateSystemRolloutStatus(sysRollout, newStatus)
 		if err != nil {
 			return err
 		}

@@ -7,32 +7,22 @@ import (
 )
 
 func (src *SystemRolloutController) syncInProgressRollout(sysRollout *crv1.SystemRollout) error {
-	sysBuild, err := src.getSystemBuildForRollout(sysRollout)
-	if err != nil {
-		return err
-	}
-
-	if sysBuild == nil {
-		// FIXME: send warn event
-		return fmt.Errorf("SystemRollout %v is %v without a SystemBuild", sysRollout.Name, crv1.SystemRolloutStateInProgress)
-	}
-
-	system, err := src.getSystemForRollout(sysRollout, sysBuild)
+	system, err := src.getSystemForRollout(sysRollout)
 	if err != nil {
 		return err
 	}
 
 	if system == nil {
-		system, err = src.createSystem(sysRollout, sysBuild)
-		if err != nil {
-			return err
-		}
+		// FIXME: send warn event
+		// TODO: this seems kind of against the controller pattern, should we just move the system to an "accepted" state
+		// 		 and resync instead?
+		return fmt.Errorf("SystemRollout %v in-progress with no System", sysRollout.Name)
 	}
 
 	return src.syncRolloutWithSystem(sysRollout, system)
 }
 
-func (src *SystemRolloutController) getSystemForRollout(sysRollout *crv1.SystemRollout, sysBuild *crv1.SystemBuild) (*crv1.System, error) {
+func (src *SystemRolloutController) getSystemForRollout(sysRollout *crv1.SystemRollout) (*crv1.System, error) {
 	var system *crv1.System
 
 	latticeNamespace := sysRollout.Spec.LatticeNamespace
@@ -51,22 +41,6 @@ func (src *SystemRolloutController) getSystemForRollout(sysRollout *crv1.SystemR
 	return system, nil
 }
 
-func (src *SystemRolloutController) createSystem(sysRollout *crv1.SystemRollout, sysBuild *crv1.SystemBuild) (*crv1.System, error) {
-	sys, err := src.getNewSystem(sysRollout, sysBuild)
-	if err != nil {
-		return nil, err
-	}
-
-	result := &crv1.System{}
-	err = src.latticeResourceClient.Post().
-		Namespace(string(sysRollout.Spec.LatticeNamespace)).
-		Resource(crv1.SystemResourcePlural).
-		Body(sys).
-		Do().
-		Into(result)
-	return result, err
-}
-
 func (src *SystemRolloutController) syncRolloutWithSystem(sysRollout *crv1.SystemRollout, sys *crv1.System) error {
 	var newState crv1.SystemRolloutStatus
 	switch sys.Status.State {
@@ -82,6 +56,6 @@ func (src *SystemRolloutController) syncRolloutWithSystem(sysRollout *crv1.Syste
 		}
 	}
 
-	_, err := src.updateStatus(sysRollout, newState)
+	_, err := src.updateSystemRolloutStatus(sysRollout, newState)
 	return err
 }

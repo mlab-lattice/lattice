@@ -116,3 +116,19 @@ func getNewService(sys *crv1.System, svcInfo *crv1.SystemServicesInfo, svcPath s
 
 	return svc, nil
 }
+
+func (sc *SystemController) createService(sys *crv1.System, svcInfo *crv1.SystemServicesInfo, svcPath systemtree.NodePath) (*crv1.Service, error) {
+	svc, err := getNewService(sys, svcInfo, svcPath)
+	if err != nil {
+		return nil, err
+	}
+
+	result := &crv1.Service{}
+	err = sc.latticeResourceRestClient.Post().
+		Namespace(svc.Namespace).
+		Resource(crv1.ServiceResourcePlural).
+		Body(svc).
+		Do().
+		Into(result)
+	return result, err
+}

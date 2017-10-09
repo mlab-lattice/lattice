@@ -73,24 +73,24 @@ func NewSystemRolloutController(
 	src.syncHandler = src.syncSystemRollout
 
 	systemRolloutInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc:    src.addSystemRollout,
-		UpdateFunc: src.updateSystemRollout,
+		AddFunc:    src.handleSystemRolloutAdd,
+		UpdateFunc: src.handleSystemRolloutUpdate,
 		// TODO: for now it is assumed that SystemRollouts are not deleted. Revisit this.
 	})
 	src.systemRolloutStore = systemRolloutInformer.GetStore()
 	src.systemRolloutStoreSynced = systemRolloutInformer.HasSynced
 
 	systemInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc:    src.addSystem,
-		UpdateFunc: src.updateSystem,
+		AddFunc:    src.handleSystemAdd,
+		UpdateFunc: src.handleSystemUpdate,
 		// TODO: for now it is assumed that Systems are not deleted. Revisit this.
 	})
 	src.systemStore = systemInformer.GetStore()
 	src.systemStoreSynced = systemInformer.HasSynced
 
 	systemBuildInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc:    src.addSystemBuild,
-		UpdateFunc: src.updateSystemBuild,
+		AddFunc:    src.handleSystemBuildAdd,
+		UpdateFunc: src.handleSystemBuildUpdate,
 		// TODO: for now it is assumed that SystemBuilds are not deleted. Revisit this.
 	})
 	src.systemBuildStore = systemBuildInformer.GetStore()
@@ -105,20 +105,20 @@ func NewSystemRolloutController(
 	return src
 }
 
-func (src *SystemRolloutController) addSystemRollout(obj interface{}) {
+func (src *SystemRolloutController) handleSystemRolloutAdd(obj interface{}) {
 	sysr := obj.(*crv1.SystemRollout)
 	glog.V(4).Infof("Adding SystemRollout %s", sysr.Name)
 	src.enqueueSystemRollout(sysr)
 }
 
-func (src *SystemRolloutController) updateSystemRollout(old, cur interface{}) {
+func (src *SystemRolloutController) handleSystemRolloutUpdate(old, cur interface{}) {
 	oldSysr := old.(*crv1.SystemRollout)
 	curSysr := cur.(*crv1.SystemRollout)
 	glog.V(4).Infof("Updating SystemRollout %s", oldSysr.Name)
 	src.enqueueSystemRollout(curSysr)
 }
 
-func (src *SystemRolloutController) addSystem(obj interface{}) {
+func (src *SystemRolloutController) handleSystemAdd(obj interface{}) {
 	sys := obj.(*crv1.System)
 	glog.V(4).Infof("System %s added", sys.Name)
 
@@ -133,7 +133,7 @@ func (src *SystemRolloutController) addSystem(obj interface{}) {
 	src.enqueueSystemRollout(owningRollout)
 }
 
-func (src *SystemRolloutController) updateSystem(old, cur interface{}) {
+func (src *SystemRolloutController) handleSystemUpdate(old, cur interface{}) {
 	glog.V(4).Info("Got System update")
 	oldSys := old.(*crv1.System)
 	curSys := cur.(*crv1.System)
@@ -155,7 +155,7 @@ func (src *SystemRolloutController) updateSystem(old, cur interface{}) {
 	src.enqueueSystemRollout(owningRollout)
 }
 
-func (src *SystemRolloutController) addSystemBuild(obj interface{}) {
+func (src *SystemRolloutController) handleSystemBuildAdd(obj interface{}) {
 	sysb := obj.(*crv1.SystemBuild)
 	glog.V(4).Infof("SystemBuild %s added", sysb.Name)
 
@@ -170,7 +170,7 @@ func (src *SystemRolloutController) addSystemBuild(obj interface{}) {
 	src.enqueueSystemRollout(owningRollout)
 }
 
-func (src *SystemRolloutController) updateSystemBuild(old, cur interface{}) {
+func (src *SystemRolloutController) handleSystemBuildUpdate(old, cur interface{}) {
 	glog.V(4).Infof("Got SystemBuild update")
 	oldSysb := old.(*crv1.SystemBuild)
 	curSysb := cur.(*crv1.SystemBuild)
@@ -219,7 +219,7 @@ func (src *SystemRolloutController) Run(workers int, stopCh <-chan struct{}) {
 	glog.V(4).Info("Caches synced. Syncing owning SystemRollouts")
 
 	// It's okay that we're racing with the System and SystemBuild informer add/update functions here.
-	// addSystemRollout and updateSystemRollout will enqueue all of the existing SystemRollouts already
+	// handleSystemRolloutAdd and handleSystemRolloutUpdate will enqueue all of the existing SystemRollouts already
 	// so it's okay if the other informers don't.
 	if err := src.syncOwningRollouts(); err != nil {
 		return
@@ -344,7 +344,7 @@ func (src *SystemRolloutController) syncSystemRollout(key string) error {
 	}
 }
 
-func (src *SystemRolloutController) updateStatus(sysr *crv1.SystemRollout, newStatus crv1.SystemRolloutStatus) (*crv1.SystemRollout, error) {
+func (src *SystemRolloutController) updateSystemRolloutStatus(sysr *crv1.SystemRollout, newStatus crv1.SystemRolloutStatus) (*crv1.SystemRollout, error) {
 	if reflect.DeepEqual(sysr.Status, newStatus) {
 		return sysr, nil
 	}

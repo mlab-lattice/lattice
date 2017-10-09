@@ -12,8 +12,6 @@ func initializeServiceController(ctx controller.Context) {
 		ctx.LatticeResourceRestClient,
 		ctx.CRDInformers["config"],
 		ctx.CRDInformers["service"],
-		ctx.CRDInformers["service-build"],
-		ctx.CRDInformers["component-build"],
 		ctx.InformerFactory.Extensions().V1beta1().Deployments(),
 		ctx.InformerFactory.Core().V1().Services(),
 	).Run(4, ctx.Stop)

@@ -2,6 +2,7 @@ package systemrollout
 
 import (
 	"fmt"
+	"reflect"
 
 	systemdefinition "github.com/mlab-lattice/core/pkg/system/definition"
 	systemtree "github.com/mlab-lattice/core/pkg/system/tree"
@@ -13,6 +14,24 @@ import (
 )
 
 func (src *SystemRolloutController) getNewSystem(sysRollout *crv1.SystemRollout, sysBuild *crv1.SystemBuild) (*crv1.System, error) {
+	sysSpec, err := src.getNewSystemSpec(sysRollout, sysBuild)
+	if err != nil {
+		return nil, err
+	}
+
+	sys := &crv1.System{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: string(sysBuild.Spec.LatticeNamespace),
+		},
+		Spec: *sysSpec,
+		Status: crv1.SystemStatus{
+			State: crv1.SystemStateRollingOut,
+		},
+	}
+	return sys, nil
+}
+
+func (src *SystemRolloutController) getNewSystemSpec(sysRollout *crv1.SystemRollout, sysBuild *crv1.SystemBuild) (*crv1.SystemSpec, error) {
 	root, err := systemtree.NewNode(systemdefinition.Interface(&sysBuild.Spec.Definition), nil)
 	if err != nil {
 		return nil, err
@@ -68,18 +87,11 @@ func (src *SystemRolloutController) getNewSystem(sysRollout *crv1.SystemRollout,
 		}
 	}
 
-	sys := &crv1.System{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: string(sysBuild.Spec.LatticeNamespace),
-		},
-		Spec: crv1.SystemSpec{
-			Services: services,
-		},
-		Status: crv1.SystemStatus{
-			State: crv1.SystemStateRollingOut,
-		},
+	sysSpec := &crv1.SystemSpec{
+		Services: services,
 	}
-	return sys, nil
+
+	return sysSpec, nil
 }
 
 func (src *SystemRolloutController) getSvcBuild(svcBuildName string) (*crv1.ServiceBuild, error) {
@@ -95,4 +107,40 @@ func (src *SystemRolloutController) getSvcBuild(svcBuildName string) (*crv1.Serv
 
 	svcBuild := svcBuildObj.(*crv1.ServiceBuild)
 	return svcBuild, nil
+}
+
+func (src *SystemRolloutController) createSystem(sysRollout *crv1.SystemRollout, sysBuild *crv1.SystemBuild) (*crv1.System, error) {
+	sys, err := src.getNewSystem(sysRollout, sysBuild)
+	if err != nil {
+		return nil, err
+	}
+
+	result := &crv1.System{}
+	err = src.latticeResourceClient.Post().
+		Namespace(string(sysRollout.Spec.LatticeNamespace)).
+		Resource(crv1.SystemResourcePlural).
+		Body(sys).
+		Do().
+		Into(result)
+	return result, err
+}
+
+func (src *SystemRolloutController) updateSystem(sys *crv1.System, sysSpec *crv1.SystemSpec) (*crv1.System, error) {
+	if reflect.DeepEqual(sys.Spec, sysSpec) {
+		return sys, nil
+	}
+
+	sys.Spec = *sysSpec
+	sys.Status.State = crv1.SystemStateRollingOut
+
+	result := &crv1.System{}
+	err := src.latticeResourceClient.Put().
+		Namespace(sys.Namespace).
+		Resource(crv1.SystemResourcePlural).
+		Name(sys.Name).
+		Body(sys).
+		Do().
+		Into(result)
+
+	return result, err
 }

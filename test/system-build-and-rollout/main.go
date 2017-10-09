@@ -25,7 +25,8 @@ func main() {
 		panic(err)
 	}
 
-	commit := "16d0ad5a7ef969b34174c39f12a588a38f4ff076"
+	publicCommit := "16d0ad5a7ef969b34174c39f12a588a38f4ff076"
+	privateCommit := "f1e0ec7719dfdbe6b3d1e27bb453da0ef1f634eb"
 	language := "node:boron"
 	command := "npm install"
 	instanceType := "t2.micro"
@@ -53,7 +54,7 @@ func main() {
 						Build: systemdefinitionblock.ComponentBuild{
 							GitRepository: &systemdefinitionblock.GitRepository{
 								Url:    "https://github.com/kevindrosendahl/example__hello-world-service-chaining",
-								Commit: &commit,
+								Commit: &privateCommit,
 							},
 							Language: &language,
 							Command:  &command,
@@ -101,7 +102,7 @@ func main() {
 						Build: systemdefinitionblock.ComponentBuild{
 							GitRepository: &systemdefinitionblock.GitRepository{
 								Url:    "https://github.com/kevindrosendahl/example__hello-world-service-chaining",
-								Commit: &commit,
+								Commit: &publicCommit,
 							},
 							Language: &language,
 							Command:  &command,

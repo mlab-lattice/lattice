@@ -68,8 +68,6 @@ func NewServiceController(
 	latticeResourceRestClient rest.Interface,
 	configInformer cache.SharedInformer,
 	serviceInformer cache.SharedInformer,
-	serviceBuildInformer cache.SharedInformer,
-	componentBuildInformer cache.SharedInformer,
 	deploymentInformer extensioninformers.DeploymentInformer,
 	kubeServiceInformer coreinformers.ServiceInformer,
 ) *ServiceController {
