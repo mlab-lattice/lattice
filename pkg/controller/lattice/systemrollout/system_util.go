@@ -125,12 +125,15 @@ func (src *SystemRolloutController) createSystem(sysRollout *crv1.SystemRollout,
 	return result, err
 }
 
-func (src *SystemRolloutController) updateSystem(sys *crv1.System, sysSpec *crv1.SystemSpec) (*crv1.System, error) {
+func (src *SystemRolloutController) updateSystemSpec(sys *crv1.System, sysSpec *crv1.SystemSpec) (*crv1.System, error) {
 	if reflect.DeepEqual(sys.Spec, sysSpec) {
 		return sys, nil
 	}
 
 	sys.Spec = *sysSpec
+
+	// FIXME: once CustomResources auto increment generation, remove this (and add observedGeneration)
+	// https://github.com/kubernetes/community/pull/913
 	sys.Status.State = crv1.SystemStateRollingOut
 
 	result := &crv1.System{}

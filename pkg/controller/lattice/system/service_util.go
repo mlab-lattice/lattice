@@ -1,23 +1,42 @@
 package system
 
 import (
+	"fmt"
+	"reflect"
+
 	systemtree "github.com/mlab-lattice/core/pkg/system/tree"
 
 	crv1 "github.com/mlab-lattice/kubernetes-integration/pkg/api/customresource/v1"
 
-	"fmt"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/uuid"
 )
 
-func (sc *SystemController) getServiceState(namespace, svcName string) *crv1.ServiceState {
+func (sc *SystemController) getService(namespace, svcName string) (*crv1.Service, error) {
 	svcKey := namespace + "/" + svcName
 	svcObj, exists, err := sc.serviceStore.GetByKey(svcKey)
-	if err != nil || !exists {
-		return nil
+	if err != nil {
+		return nil, err
 	}
 
-	return &(svcObj.(*crv1.Service).Status.State)
+	if !exists {
+		return nil, nil
+	}
+
+	return svcObj.(*crv1.Service), nil
+}
+
+func (sc *SystemController) getServiceState(namespace, svcName string) (*crv1.ServiceState, error) {
+	svc, err := sc.getService(namespace, svcName)
+	if err != nil {
+		return nil, err
+	}
+
+	if svc == nil {
+		return nil, nil
+	}
+
+	return &(svc.Status.State), nil
 }
 
 func getNewService(sys *crv1.System, svcInfo *crv1.SystemServicesInfo, svcPath systemtree.NodePath) (*crv1.Service, error) {
@@ -30,6 +49,28 @@ func getNewService(sys *crv1.System, svcInfo *crv1.SystemServicesInfo, svcPath s
 		// FIXME: add warn event
 	}
 
+	spec, err := getNewServiceSpec(svcInfo, svcPath)
+	if err != nil {
+		return nil, err
+	}
+
+	svc := &crv1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:            string(uuid.NewUUID()),
+			Namespace:       sys.Namespace,
+			Labels:          labels,
+			OwnerReferences: []metav1.OwnerReference{*metav1.NewControllerRef(sys, controllerKind)},
+		},
+		Spec: *spec,
+		Status: crv1.ServiceStatus{
+			State: crv1.ServiceStateRollingOut,
+		},
+	}
+
+	return svc, nil
+}
+
+func getNewServiceSpec(svcInfo *crv1.SystemServicesInfo, svcPath systemtree.NodePath) (*crv1.ServiceSpec, error) {
 	cPortsMap := map[string][]crv1.ComponentPort{}
 	ports := map[int32]bool{}
 	for _, component := range svcInfo.Definition.Components {
@@ -91,30 +132,18 @@ func getNewService(sys *crv1.System, svcInfo *crv1.SystemServicesInfo, svcPath s
 
 	envoyAdminPort := envoyPorts[0]
 	envoyEgressPort := envoyPorts[1]
+	spec := &crv1.ServiceSpec{
+		Path:       svcPath,
+		Definition: svcInfo.Definition,
 
-	svc := &crv1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:            string(uuid.NewUUID()),
-			Namespace:       sys.Namespace,
-			Labels:          labels,
-			OwnerReferences: []metav1.OwnerReference{*metav1.NewControllerRef(sys, controllerKind)},
-		},
-		Spec: crv1.ServiceSpec{
-			Path:       svcPath,
-			Definition: svcInfo.Definition,
+		ComponentBuildArtifacts: svcInfo.ComponentBuildArtifacts,
 
-			ComponentBuildArtifacts: svcInfo.ComponentBuildArtifacts,
-
-			Ports:           cPortsMap,
-			EnvoyAdminPort:  envoyAdminPort,
-			EnvoyEgressPort: envoyEgressPort,
-		},
-		Status: crv1.ServiceStatus{
-			State: crv1.ServiceStateRollingOut,
-		},
+		Ports:           cPortsMap,
+		EnvoyAdminPort:  envoyAdminPort,
+		EnvoyEgressPort: envoyEgressPort,
 	}
 
-	return svc, nil
+	return spec, nil
 }
 
 func (sc *SystemController) createService(sys *crv1.System, svcInfo *crv1.SystemServicesInfo, svcPath systemtree.NodePath) (*crv1.Service, error) {
@@ -124,11 +153,44 @@ func (sc *SystemController) createService(sys *crv1.System, svcInfo *crv1.System
 	}
 
 	result := &crv1.Service{}
-	err = sc.latticeResourceRestClient.Post().
+	err = sc.latticeResourceClient.Post().
 		Namespace(svc.Namespace).
 		Resource(crv1.ServiceResourcePlural).
 		Body(svc).
 		Do().
 		Into(result)
 	return result, err
+}
+
+func (sc *SystemController) updateServiceSpec(svc *crv1.Service, svcSpec *crv1.ServiceSpec) (*crv1.Service, error) {
+	if reflect.DeepEqual(svc.Spec, svcSpec) {
+		return svc, nil
+	}
+
+	svc.Spec = *svcSpec
+
+	// FIXME: once CustomResources auto increment generation, remove this (and add observedGeneration)
+	// https://github.com/kubernetes/community/pull/913
+	svc.Status.State = crv1.ServiceStateRollingOut
+
+	result := &crv1.Service{}
+	err := sc.latticeResourceClient.Put().
+		Namespace(svc.Namespace).
+		Resource(crv1.ServiceResourcePlural).
+		Name(svc.Name).
+		Body(svc).
+		Do().
+		Into(result)
+
+	return result, err
+}
+
+func (sc *SystemController) deleteService(svc *crv1.Service) error {
+	err := sc.latticeResourceClient.Delete().
+		Namespace(svc.Namespace).
+		Resource(crv1.ServiceResourcePlural).
+		Body(svc).
+		Do().
+		Into(nil)
+	return err
 }

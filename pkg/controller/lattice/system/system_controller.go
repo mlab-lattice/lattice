@@ -5,8 +5,6 @@ import (
 	"reflect"
 	"time"
 
-	systemtree "github.com/mlab-lattice/core/pkg/system/tree"
-
 	crv1 "github.com/mlab-lattice/kubernetes-integration/pkg/api/customresource/v1"
 
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -27,7 +25,7 @@ type SystemController struct {
 	syncHandler   func(sysKey string) error
 	enqueueSystem func(sysBuild *crv1.System)
 
-	latticeResourceRestClient rest.Interface
+	latticeResourceClient rest.Interface
 
 	systemStore       cache.Store
 	systemStoreSynced cache.InformerSynced
@@ -44,7 +42,7 @@ func NewSystemController(
 	serviceInformer cache.SharedInformer,
 ) *SystemController {
 	sc := &SystemController{
-		latticeResourceRestClient: latticeResourceRestClient,
+		latticeResourceClient: latticeResourceRestClient,
 		queue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "system"),
 	}
 
@@ -304,12 +302,79 @@ func (sc *SystemController) syncSystem(key string) error {
 // Warning: syncSystemServices mutates sys. Do not pass in a pointer to a
 // System from the shared cache.
 func (sc *SystemController) syncSystemServices(sys *crv1.System) error {
+	validSvcNames := map[string]bool{}
+
 	// Loop through the Services defined in the System's Spec, and create/update any that need it
+	for path, svcInfo := range sys.Spec.Services {
+		// If the Service doesn't exist already, create one.
+		if svcInfo.ServiceName == nil {
+			svc, err := sc.createService(sys, &svcInfo, path)
+			if err != nil {
+				return err
+			}
+			svcInfo.ServiceName = &(svc.Name)
+			svcInfo.ServiceState = &(svc.Status.State)
+			sys.Spec.Services[path] = svcInfo
+
+			validSvcNames[svc.Name] = true
+			continue
+		}
+
+		// A Service has already been created. Check if its definition is the same
+		// definition. We'll assume that the rest of the spec is properly formed.
+		svc, err := sc.getService(sys.Namespace, *svcInfo.ServiceName)
+		if err != nil {
+			return err
+		}
+
+		if svc == nil {
+			// FIXME: send warn event
+			// TODO: should we just create a new Service here?
+			return fmt.Errorf(
+				"service %v has ServiceName %v but Service does not exist",
+				path,
+				svcInfo.ServiceName,
+			)
+		}
+
+		// If the definitions are the same, assume we're good.
+		if reflect.DeepEqual(svcInfo.Definition, svc.Spec.Definition) {
+			continue
+		}
+
+		// Otherwise, get a new spec and update the service.
+		newSpec, err := getNewServiceSpec(&svcInfo, path)
+		if err != nil {
+			return nil
+		}
+
+		_, err = sc.updateServiceSpec(svc, newSpec)
+		if err != nil {
+			return nil
+		}
+
+		validSvcNames[svc.Name] = true
+	}
 
 	// Loop through all of the Services that exist in the System's namespace, and delete any
 	// that are no longer a part of the System's Spec
-	// TODO: should we wait until all other services are succesfully rolled out before deleting these?
+	// TODO: should we wait until all other services are successfully rolled out before deleting these?
 	// need to figure out what the rollout/automatic roll-back strategy is
+	for _, svcObj := range sc.serviceStore.List() {
+		svc := svcObj.(*crv1.Service)
+		// Only care about Services in this System's Namespace
+		if svc.Namespace != sys.Namespace {
+			continue
+		}
+
+		if _, ok := validSvcNames[svc.Name]; !ok {
+			err := sc.deleteService(svc)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
 	return nil
 }
 
@@ -317,27 +382,23 @@ func (sc *SystemController) syncSystemServices(sys *crv1.System) error {
 // System from the shared cache.
 func (sc *SystemController) syncSystemServiceStatuses(sys *crv1.System) error {
 	for path, svcInfo := range sys.Spec.Services {
-		// Check if we've already created a Service. If so just grab its status.
-		if svcInfo.ServiceName != nil {
-			svcState := sc.getServiceState(sys.Namespace, *svcInfo.ServiceName)
-			if svcState == nil {
-				// This shouldn't happen.
-				// FIXME: send error event
-				failedState := crv1.ServiceStateRolloutFailed
-				svcState = &failedState
-			}
-			svcInfo.ServiceState = svcState
-			sys.Spec.Services[path] = svcInfo
-			continue
+		// Services should have been created already by syncSystemServices.
+		if svcInfo.ServiceName == nil {
+			// FIXME: send warn event
+			return fmt.Errorf("expected Service %v to have ServiceName", path)
 		}
 
-		// Otherwise we'll have to create a new Service.
-		svc, err := sc.createService(sys, &svcInfo, path)
+		svcState, err := sc.getServiceState(sys.Namespace, *svcInfo.ServiceName)
 		if err != nil {
 			return err
 		}
-		svcInfo.ServiceName = &(svc.Name)
-		svcInfo.ServiceState = &(svc.Status.State)
+
+		if svcState == nil {
+			// This shouldn't happen.
+			// FIXME: send error event
+			return fmt.Errorf("Service %v exists but does not have a State", path)
+		}
+		svcInfo.ServiceState = svcState
 		sys.Spec.Services[path] = svcInfo
 	}
 
@@ -376,7 +437,7 @@ func (sc *SystemController) syncSystemStatus(sys *crv1.System) error {
 
 func (sc *SystemController) updateSystem(sys *crv1.System) (*crv1.System, error) {
 	result := &crv1.System{}
-	err := sc.latticeResourceRestClient.Put().
+	err := sc.latticeResourceClient.Put().
 		Namespace(sys.Namespace).
 		Resource(crv1.SystemResourcePlural).
 		Name(sys.Name).

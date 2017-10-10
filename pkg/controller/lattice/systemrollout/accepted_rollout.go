@@ -37,7 +37,7 @@ func (src *SystemRolloutController) syncAcceptedRollout(sysRollout *crv1.SystemR
 				return err
 			}
 
-			_, err = src.updateSystem(system, sysSpec)
+			_, err = src.updateSystemSpec(system, sysSpec)
 			if err != nil {
 				return err
 			}
