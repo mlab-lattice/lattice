@@ -26,10 +26,11 @@ func main() {
 	}
 
 	publicCommit := "16d0ad5a7ef969b34174c39f12a588a38f4ff076"
+	//privateCommit := "16d0ad5a7ef969b34174c39f12a588a38f4ff076"
 	privateCommit := "f1e0ec7719dfdbe6b3d1e27bb453da0ef1f634eb"
 	language := "node:boron"
 	command := "npm install"
-	instanceType := "t2.micro"
+	var one int32 = 1
 	sysDefinition := &systemdefinition.System{
 		Meta: systemdefinitionblock.Metadata{
 			Name: "my-system",
@@ -44,7 +45,7 @@ func main() {
 				Components: []*systemdefinitionblock.Component{
 					{
 						Name: "http",
-						Ports: []*systemdefinitionblock.Port{
+						Ports: []*systemdefinitionblock.ComponentPort{
 							{
 								Name:     "http",
 								Port:     9999,
@@ -59,7 +60,7 @@ func main() {
 							Language: &language,
 							Command:  &command,
 						},
-						Exec: systemdefinitionblock.Exec{
+						Exec: systemdefinitionblock.ComponentExec{
 							Command: []string{
 								"node",
 								"lib/PrivateHelloService.js",
@@ -67,8 +68,8 @@ func main() {
 								"9999",
 							},
 						},
-						HealthCheck: &systemdefinitionblock.HealthCheck{
-							Http: &systemdefinitionblock.HttpHealthCheck{
+						HealthCheck: &systemdefinitionblock.ComponentHealthCheck{
+							Http: &systemdefinitionblock.HttpComponentHealthCheck{
 								Path: "/status",
 								Port: "http",
 							},
@@ -76,9 +77,7 @@ func main() {
 					},
 				},
 				Resources: systemdefinitionblock.Resources{
-					MinInstances: 1,
-					MaxInstances: 1,
-					InstanceType: &instanceType,
+					NumInstances: &one,
 				},
 			}),
 			systemdefinition.Interface(&systemdefinition.Service{
@@ -89,7 +88,7 @@ func main() {
 				Components: []*systemdefinitionblock.Component{
 					{
 						Name: "http",
-						Ports: []*systemdefinitionblock.Port{
+						Ports: []*systemdefinitionblock.ComponentPort{
 							{
 								Name:     "http",
 								Port:     8888,
@@ -107,7 +106,7 @@ func main() {
 							Language: &language,
 							Command:  &command,
 						},
-						Exec: systemdefinitionblock.Exec{
+						Exec: systemdefinitionblock.ComponentExec{
 							Command: []string{
 								"node",
 								"lib/PublicHelloService.js",
@@ -118,8 +117,8 @@ func main() {
 								"PRIVATE_HELLO_SERVICE_URL": "http://private-service.my-system:9999",
 							},
 						},
-						HealthCheck: &systemdefinitionblock.HealthCheck{
-							Http: &systemdefinitionblock.HttpHealthCheck{
+						HealthCheck: &systemdefinitionblock.ComponentHealthCheck{
+							Http: &systemdefinitionblock.HttpComponentHealthCheck{
 								Path: "/status",
 								Port: "http",
 							},
@@ -127,9 +126,7 @@ func main() {
 					},
 				},
 				Resources: systemdefinitionblock.Resources{
-					MinInstances: 1,
-					MaxInstances: 1,
-					InstanceType: &instanceType,
+					NumInstances: &one,
 				},
 			}),
 		},

@@ -308,6 +308,7 @@ func (sc *SystemController) syncSystemServices(sys *crv1.System) error {
 	for path, svcInfo := range sys.Spec.Services {
 		// If the Service doesn't exist already, create one.
 		if svcInfo.ServiceName == nil {
+			glog.V(5).Infof("Did not find a Service for %q, creating one", path)
 			svc, err := sc.createService(sys, &svcInfo, path)
 			if err != nil {
 				return err
@@ -337,6 +338,8 @@ func (sc *SystemController) syncSystemServices(sys *crv1.System) error {
 			)
 		}
 
+		validSvcNames[svc.Name] = true
+
 		// If the definitions are the same, assume we're good.
 		if reflect.DeepEqual(svcInfo.Definition, svc.Spec.Definition) {
 			continue
@@ -352,8 +355,6 @@ func (sc *SystemController) syncSystemServices(sys *crv1.System) error {
 		if err != nil {
 			return nil
 		}
-
-		validSvcNames[svc.Name] = true
 	}
 
 	// Loop through all of the Services that exist in the System's namespace, and delete any
@@ -368,6 +369,7 @@ func (sc *SystemController) syncSystemServices(sys *crv1.System) error {
 		}
 
 		if _, ok := validSvcNames[svc.Name]; !ok {
+			glog.V(4).Infof("Found Service %q in Namespace %q that is no longer in the System Spec", svc.Name, svc.Namespace)
 			err := sc.deleteService(svc)
 			if err != nil {
 				return err
@@ -398,6 +400,7 @@ func (sc *SystemController) syncSystemServiceStatuses(sys *crv1.System) error {
 			// FIXME: send error event
 			return fmt.Errorf("Service %v exists but does not have a State", path)
 		}
+
 		svcInfo.ServiceState = svcState
 		sys.Spec.Services[path] = svcInfo
 	}

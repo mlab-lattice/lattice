@@ -24,7 +24,7 @@ PREPARE_ENVOY_PATH=${WORKING_DIRECTORY}/prepare-envoy.tar
 dest=${PREPARE_ENVOY_PATH} make docker-save-prepare-envoy
 
 ENVOY_API_PATH=${WORKING_DIRECTORY}/envoy-api.tar
-dest=${ENVOY_API_PATH} make docker-save-kubernetes-per-node-rest
+#dest=${ENVOY_API_PATH} make docker-save-kubernetes-per-node-rest
 
 # Load the images into minikube
 eval $(minikube docker-env -p ${1})

@@ -12,6 +12,8 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+
+	"github.com/golang/glog"
 )
 
 func getKubeServiceNameForService(svc *crv1.Service) string {
@@ -63,7 +65,7 @@ func (sc *ServiceController) getKubeService(svc *crv1.Service) (*corev1.Service,
 		Spec: corev1.ServiceSpec{
 			Ports: ports,
 			Selector: map[string]string{
-				crv1.ServiceDeploymentLabelKey: svc.Name,
+				crv1.LabelKeyServiceDeployment: svc.Name,
 			},
 			ClusterIP: "None",
 			Type:      corev1.ServiceTypeClusterIP,
@@ -85,4 +87,21 @@ func getProtocol(protocolString string) (corev1.Protocol, error) {
 	default:
 		return corev1.ProtocolTCP, fmt.Errorf("invalid protocol %v", protocolString)
 	}
+}
+
+func (sc *ServiceController) createKubeService(svc *crv1.Service) (*corev1.Service, error) {
+	ksvc, err := sc.getKubeService(svc)
+	if err != nil {
+		return nil, err
+	}
+
+	ksvcResp, err := sc.kubeClient.CoreV1().Services(svc.Namespace).Create(ksvc)
+	if err != nil {
+		// FIXME: send warn event
+		return nil, err
+	}
+
+	glog.V(4).Infof("Created Service %s", ksvcResp.Name)
+	// FIXME: send normal event
+	return ksvcResp, nil
 }

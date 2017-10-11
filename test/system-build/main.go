@@ -43,7 +43,7 @@ func main() {
 				Components: []*systemdefinitionblock.Component{
 					{
 						Name: "http",
-						Ports: []*systemdefinitionblock.Port{
+						Ports: []*systemdefinitionblock.ComponentPort{
 							{
 								Name:     "http",
 								Port:     9999,
@@ -58,7 +58,7 @@ func main() {
 							Language: &language,
 							Command:  &command,
 						},
-						Exec: systemdefinitionblock.Exec{
+						Exec: systemdefinitionblock.ComponentExec{
 							Command: []string{
 								"node",
 								"lib/PrivateHelloService.js",
@@ -66,8 +66,8 @@ func main() {
 								"9999",
 							},
 						},
-						HealthCheck: &systemdefinitionblock.HealthCheck{
-							Http: &systemdefinitionblock.HttpHealthCheck{
+						HealthCheck: &systemdefinitionblock.ComponentHealthCheck{
+							Http: &systemdefinitionblock.HttpComponentHealthCheck{
 								Path: "/status",
 								Port: "http",
 							},

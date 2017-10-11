@@ -16,7 +16,8 @@ const (
 	// TODO: should this be ClusterScoped?
 	ServiceResourceScope = apiextensionsv1beta1.NamespaceScoped
 
-	ServiceDeploymentLabelKey = "service.lattice.mlab.com"
+	LabelKeyServiceDeployment                = "service.lattice.mlab.com"
+	AnnotationKeyDeploymentServiceDefinition = "service.lattice.mlab.com/definition"
 )
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

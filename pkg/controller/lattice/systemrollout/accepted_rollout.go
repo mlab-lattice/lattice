@@ -21,23 +21,33 @@ func (src *SystemRolloutController) syncAcceptedRollout(sysRollout *crv1.SystemR
 		return err
 
 	case crv1.SystemBuildStateSucceeded:
-		system, err := src.getSystemForRollout(sysRollout)
+		sys, err := src.getSystemForRollout(sysRollout)
 		if err != nil {
 			return err
 		}
 
-		if system == nil {
-			system, err = src.createSystem(sysRollout, sysBuild)
+		if sys == nil {
+			sys, err = src.createSystem(sysRollout, sysBuild)
 			if err != nil {
 				return err
 			}
 		} else {
+			// Generate a fresh new System Spec
 			sysSpec, err := src.getNewSystemSpec(sysRollout, sysBuild)
 			if err != nil {
 				return err
 			}
 
-			_, err = src.updateSystemSpec(system, sysSpec)
+			// For each of the Services in the new System Spec, see if a Service already exists
+			for path, svcInfo := range sysSpec.Services {
+				// If a Service already exists, use it.
+				if existingSvcInfo, ok := sys.Spec.Services[path]; ok {
+					svcInfo.ServiceName = existingSvcInfo.ServiceName
+					sysSpec.Services[path] = svcInfo
+				}
+			}
+
+			_, err = src.updateSystemSpec(sys, sysSpec)
 			if err != nil {
 				return err
 			}

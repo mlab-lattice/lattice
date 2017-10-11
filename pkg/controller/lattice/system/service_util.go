@@ -10,6 +10,8 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/uuid"
+
+	"github.com/golang/glog"
 )
 
 func (sc *SystemController) getService(namespace, svcName string) (*crv1.Service, error) {
@@ -186,10 +188,11 @@ func (sc *SystemController) updateServiceSpec(svc *crv1.Service, svcSpec *crv1.S
 }
 
 func (sc *SystemController) deleteService(svc *crv1.Service) error {
+	glog.V(5).Infof("Deleting Service %q/%q", svc.Namespace, svc.Name)
 	err := sc.latticeResourceClient.Delete().
 		Namespace(svc.Namespace).
 		Resource(crv1.ServiceResourcePlural).
-		Body(svc).
+		Name(svc.Name).
 		Do().
 		Into(nil)
 	return err
