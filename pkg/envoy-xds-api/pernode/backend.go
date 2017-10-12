@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 
+	coreconstants "github.com/mlab-lattice/core/pkg/constants"
 	systemtree "github.com/mlab-lattice/core/pkg/system/tree"
 
 	latticeresource "github.com/mlab-lattice/kubernetes-integration/pkg/api/customresource"
@@ -11,12 +12,13 @@ import (
 
 	"github.com/mlab-lattice/envoy-xds-api-backend/pkg/backend"
 
-	apiv1 "k8s.io/api/core/v1"
+	//apiv1 "k8s.io/api/core/v1"
 
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/fields"
 
-	"k8s.io/client-go/informers"
+	//"k8s.io/client-go/informers"
+	corev1informers "k8s.io/client-go/informers/core/v1"
 	clientset "k8s.io/client-go/kubernetes"
 	corelisters "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/rest"
@@ -51,12 +53,11 @@ func NewKubernetesPerNodeBackend(kubeconfig string) (*KubernetesPerNodeBackend, 
 
 	rest.AddUserAgent(config, "envoy-api-backend")
 	kClient := clientset.NewForConfigOrDie(config)
-	kInformers := informers.NewSharedInformerFactory(kClient, time.Duration(12*time.Hour))
 
 	listerWatcher := cache.NewListWatchFromClient(
 		latticeResourceClient,
 		crv1.ServiceResourcePlural,
-		apiv1.NamespaceAll,
+		string(coreconstants.UserSystemNamespace),
 		fields.Everything(),
 	)
 	lSvcInformer := cache.NewSharedInformer(
@@ -65,16 +66,15 @@ func NewKubernetesPerNodeBackend(kubeconfig string) (*KubernetesPerNodeBackend, 
 		time.Duration(12*time.Hour),
 	)
 
-	kEndpointInformer := kInformers.Core().V1().Endpoints()
+	kEndpointInformer := corev1informers.NewEndpointsInformer(kClient, string(coreconstants.UserSystemNamespace), time.Duration(12*time.Hour), cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc})
 
 	// FIXME: should we add a stopCh?
 	go lSvcInformer.Run(nil)
-	// FIXME: should we start the shared informer factory instead? Ready() was not working with that
-	go kEndpointInformer.Informer().Run(nil)
+	go kEndpointInformer.Run(nil)
 
 	kpnb := &KubernetesPerNodeBackend{
-		kEndpointLister:           kEndpointInformer.Lister(),
-		kEndpointListerSynced:     kEndpointInformer.Informer().HasSynced,
+		kEndpointLister:           corelisters.NewEndpointsLister(kEndpointInformer.GetIndexer()),
+		kEndpointListerSynced:     kEndpointInformer.HasSynced,
 		latticeServiceStore:       lSvcInformer.GetStore(),
 		latticeServiceStoreSynced: lSvcInformer.HasSynced,
 	}

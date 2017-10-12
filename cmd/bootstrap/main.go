@@ -143,7 +143,7 @@ func main() {
 	envoyApiDaemonSet := &extensionsv1beta1.DaemonSet{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "envoy-xds-api",
-			Namespace: constants.InternalNamespace,
+			Namespace: string(coreconstants.UserSystemNamespace),
 		},
 		Spec: extensionsv1beta1.DaemonSetSpec{
 			Template: corev1.PodTemplateSpec{
@@ -177,7 +177,7 @@ func main() {
 	}
 
 	err = wait.Poll(500*time.Millisecond, 60*time.Second, func() (bool, error) {
-		_, err = kubeClientset.ExtensionsV1beta1().DaemonSets(constants.InternalNamespace).Create(envoyApiDaemonSet)
+		_, err = kubeClientset.ExtensionsV1beta1().DaemonSets(string(coreconstants.UserSystemNamespace)).Create(envoyApiDaemonSet)
 		if err != nil && !apierrors.IsAlreadyExists(err) {
 			return false, nil
 		}

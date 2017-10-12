@@ -38,7 +38,7 @@ local-clean:
 
 .PHONY: minikube-start
 minikube-start:
-	@minikube start -p $(MINIKUBE_PROFILE)
+	@minikube start -p $(MINIKUBE_PROFILE) --kubernetes-version v1.8.0 --bootstrapper kubeadm
 
 .PHONY: minikube-stop
 minikube-stop:
