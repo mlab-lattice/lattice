@@ -66,7 +66,12 @@ func NewKubernetesPerNodeBackend(kubeconfig string) (*KubernetesPerNodeBackend, 
 		time.Duration(12*time.Hour),
 	)
 
-	kEndpointInformer := corev1informers.NewEndpointsInformer(kClient, string(coreconstants.UserSystemNamespace), time.Duration(12*time.Hour), cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc})
+	kEndpointInformer := corev1informers.NewEndpointsInformer(
+		kClient,
+		string(coreconstants.UserSystemNamespace),
+		time.Duration(12*time.Hour),
+		cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc},
+	)
 
 	// FIXME: should we add a stopCh?
 	go lSvcInformer.Run(nil)

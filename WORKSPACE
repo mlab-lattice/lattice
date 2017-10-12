@@ -56,7 +56,7 @@ go_repository(
     name = "io_k8s_apimachinery",
     build_file_generation = "on",
     build_file_name = "BUILD.bazel",
-    commit = "dc1f89aff9a7509782bde3b68824c8043a3e58cc",
+    commit = "9d38e20d609d27e00d4ec18f7b9db67105a2bde0",
     importpath = "k8s.io/apimachinery",
 )
 
@@ -72,7 +72,7 @@ go_repository(
     name = "io_k8s_client_go",
     build_file_generation = "on",
     build_file_name = "BUILD.bazel",
-    commit = "7c69e980210777a6292351ac6873de083526f08e",  # Jul 18, 2017 (no releases)
+    commit = "afb4606c45bae77c4dc2c15291d4d7d6d792196c",  # v5.0.0 branch HEAD
     importpath = "k8s.io/client-go",
 )
 
@@ -80,8 +80,16 @@ go_repository(
     name = "io_k8s_api",
     build_file_generation = "on",
     build_file_name = "BUILD.bazel",
-    commit = "4d5cc6efc5e84aa19fb1bd3f911c16a6723c1bb7",  # Jul 19, 2017 (no releases)
+    commit = "fe29995db37613b9c5b2a647544cf627bfa8d299",  # Jul 19, 2017 (no releases)
     importpath = "k8s.io/api",
+)
+
+go_repository(
+    name = "io_k8s_kube_openapi",
+    build_file_generation = "on",
+    build_file_name = "BUILD.bazel",
+    commit = "868f2f29720b192240e18284659231b440f9cda5",
+    importpath = "k8s.io/kube-openapi",
 )
 
 # k8s dependencies
@@ -271,4 +279,28 @@ go_repository(
     name = "com_github_sergi_go_diff",
     commit = "feef008d51ad2b3778f85d387ccf91735543008d",
     importpath = "github.com/sergi/go-diff",
+)
+
+go_repository(
+    name = "com_github_peterbourgon_diskv",
+    commit = "5f041e8faa004a95c88a202771f4cc3e991971e6",
+    importpath = "github.com/peterbourgon/diskv",
+)
+
+go_repository(
+    name = "com_github_gregjones_httpcache",
+    commit = "787624de3eb7bd915c329cba748687a3b22666a6",
+    importpath = "github.com/gregjones/httpcache",
+)
+
+go_repository(
+    name = "com_github_google_btree",
+    commit = "7d79101e329e5a3adf994758c578dab82b90c017",
+    importpath = "github.com/google/btree",
+)
+
+go_repository(
+    name = "com_github_json_iterator_go",
+    commit = "36b14963da70d11297d313183d7e6388c8510e1e",
+    importpath = "github.com/json-iterator/go",
 )

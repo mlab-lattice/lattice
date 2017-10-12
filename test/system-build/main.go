@@ -28,7 +28,7 @@ func main() {
 	commit := "16d0ad5a7ef969b34174c39f12a588a38f4ff076"
 	language := "node:boron"
 	command := "npm install"
-	instanceType := "t2.micro"
+	var one int32 = 1
 	sysDefinition := &systemdefinition.System{
 		Meta: systemdefinitionblock.Metadata{
 			Name: "my-system",
@@ -75,9 +75,7 @@ func main() {
 					},
 				},
 				Resources: systemdefinitionblock.Resources{
-					MinInstances: 1,
-					MaxInstances: 1,
-					InstanceType: &instanceType,
+					NumInstances: &one,
 				},
 			}),
 		},
