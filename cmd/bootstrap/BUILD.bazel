@@ -2,7 +2,14 @@ load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
 
 go_library(
     name = "go_default_library",
-    srcs = ["main.go"],
+    srcs = [
+        "config.go",
+        "crd.go",
+        "envoy-xds-api.go",
+        "main.go",
+        "namespaces.go",
+        "rbac.go",
+    ],
     importpath = "github.com/mlab-lattice/kubernetes-integration/cmd/bootstrap",
     visibility = ["//visibility:private"],
     deps = [
@@ -14,11 +21,13 @@ go_library(
         "@com_github_mlab_lattice_core//pkg/types:go_default_library",
         "@io_k8s_api//core/v1:go_default_library",
         "@io_k8s_api//extensions/v1beta1:go_default_library",
+        "@io_k8s_api//rbac/v1:go_default_library",
         "@io_k8s_apiextensions_apiserver//pkg/client/clientset/clientset:go_default_library",
         "@io_k8s_apimachinery//pkg/api/errors:go_default_library",
         "@io_k8s_apimachinery//pkg/apis/meta/v1:go_default_library",
         "@io_k8s_apimachinery//pkg/util/wait:go_default_library",
         "@io_k8s_client_go//kubernetes:go_default_library",
+        "@io_k8s_client_go//rest:go_default_library",
         "@io_k8s_client_go//tools/clientcmd:go_default_library",
     ],
 )
