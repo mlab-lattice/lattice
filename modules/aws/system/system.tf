@@ -137,7 +137,7 @@ resource "aws_route_table_association" "route_table_association" {
 
 # private zone
 resource "aws_route53_zone" "private_zone" {
-  name          = "internal.lattice"
+  name          = "system.internal"
   vpc_id        = "${aws_vpc.vpc.id}"
   force_destroy = true
 
