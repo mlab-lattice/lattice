@@ -38,7 +38,7 @@ local-clean:
 
 .PHONY: minikube-start
 minikube-start:
-	@minikube start -p $(MINIKUBE_PROFILE) --kubernetes-version v1.8.0 --bootstrapper kubeadm
+	@minikube start -p $(MINIKUBE_PROFILE) --kubernetes-version v1.8.0 --bootstrapper kubeadm --extra-config=kubelet.resolv-conf=$(DIR)/tmp/local-k8s-resolv.conf
 
 .PHONY: minikube-stop
 minikube-stop:
