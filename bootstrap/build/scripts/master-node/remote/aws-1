@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+set -e
+
+echo "Making temporary directory for AWS master-node artifacts"
+mkdir -p /tmp/kubernetes/artifacts/master-node/aws

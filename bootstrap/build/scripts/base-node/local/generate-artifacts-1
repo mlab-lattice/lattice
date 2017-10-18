@@ -1,0 +1,74 @@
+#!/usr/bin/env bash
+
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+BUILD_STATE_DIR=${DIR}/../../../../.state/build
+mkdir -p ${BUILD_STATE_DIR}
+cd ${BUILD_STATE_DIR}
+
+mkdir -p artifacts/base-node
+cd artifacts
+
+set -o pipefail
+set -e
+
+echo "Creating CA"
+cat > ca-config.json <<EOF
+{
+  "signing": {
+    "default": {
+      "expiry": "8760h"
+    },
+    "profiles": {
+      "kubernetes": {
+        "usages": ["signing", "key encipherment", "server auth", "client auth"],
+        "expiry": "8760h"
+      }
+    }
+  }
+}
+EOF
+
+cat > ca-csr.json <<EOF
+{
+  "CN": "Kubernetes",
+  "key": {
+    "algo": "rsa",
+    "size": 2048
+  },
+  "names": [
+    {
+      "C": "US",
+      "L": "San Francisco",
+      "O": "Kubernetes",
+      "OU": "CA",
+      "ST": "California"
+    }
+  ]
+}
+EOF
+
+cfssl gencert -initca ca-csr.json | cfssljson -bare ca
+
+echo "Creating token"
+ADMIN_TOKEN=$(dd if=/dev/urandom bs=128 count=1 2>/dev/null | base64 | tr -d "=+/" | dd bs=32 count=1 2>/dev/null)
+echo ${ADMIN_TOKEN} > admin-token
+
+echo "Creating kubeconfig"
+kubectl config set-cluster lattice \
+    --certificate-authority=ca.pem \
+    --embed-certs=true \
+    --server=https://kube-masters.internal.lattice:6443 \
+    --kubeconfig=kubeconfig
+
+kubectl config set-credentials admin \
+    --token=${ADMIN_TOKEN} \
+    --kubeconfig=kubeconfig
+
+kubectl config set-context default \
+    --cluster=lattice \
+    --user=admin \
+    --kubeconfig=kubeconfig
+
+kubectl config use-context default --kubeconfig=kubeconfig
+
+cp kubeconfig base-node/kubeconfig

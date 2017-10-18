@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+set -e
+
+echo "Installing AWS kubelet override"
+sudo mkdir -p /etc/systemd/system/kubelet.service.d
+sudo mv /tmp/kubernetes/artifacts/base-node/aws/kubelet-override.conf \
+        /etc/systemd/system/kubelet.service.d/aws-override.conf

@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+
+set -o pipefail
+set -e
+
+INSTANCE_ID=$(curl -s http://169.254.169.254/latest/meta-data/instance-id)
+AVAILABILITY_ZONE=$(curl -s http://169.254.169.254/latest/meta-data/placement/availability-zone)
+REGION=$(echo ${AVAILABILITY_ZONE} | sed 's/.$//')
+
+USER_DATA=$(curl -s http://169.254.169.254/latest/user-data)
+
+LATTICE_ID=$(echo ${USER_DATA} | jq '.lattice.lattice_id' | tr -d '"')
+SYSTEM_ID=$(echo ${USER_DATA} | jq '.lattice.system_id' | tr -d '"')
+NAME=$(echo ${USER_DATA} | jq '.lattice.name' | tr -d '"')
+
+STATE_S3_BUCKET=$(echo ${USER_DATA} | jq '.lattice.state_s3_bucket' | tr -d '"')
+STATE_S3_KEY_PREFIX=$(echo ${USER_DATA} | jq '.lattice.state_s3_key_prefix' | tr -d '"')
+
+mkdir -p /tmp/terraform-state/etcd-volume-attachment
+cp /opt/terraform/modules/etcd-volume-attachment/* \
+   /tmp/terraform-state/etcd-volume-attachment
+
+cd /tmp/terraform-state/etcd-volume-attachment
+
+/opt/terraform/bin/terraform init -force-copy \
+    -backend-config="bucket=${STATE_S3_BUCKET}" \
+    -backend-config="key=${STATE_S3_KEY_PREFIX}/etcd-volume/terraform.tfstate" \
+    -backend-config="region=${REGION}"
+
+/opt/terraform/bin/terraform apply -auto-approve \
+    -var "lattice_id=${LATTICE_ID}" \
+    -var "system_id=${SYSTEM_ID}" \
+    -var "region=${REGION}" \
+    -var "name=${NAME}" \
+    -var "instance_id=${INSTANCE_ID}" \
+    -var "device_name=${1}"

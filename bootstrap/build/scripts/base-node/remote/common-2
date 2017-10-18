@@ -1,0 +1,31 @@
+#!/bin/bash
+set -e
+
+echo "Creating /etc directories for kubelet and kube-proxy"
+sudo mkdir -p /etc/opt/kubernetes/kubelet/ \
+              /etc/opt/kubernetes/kube-proxy/
+
+echo "Installing kubelet kubeconfig"
+sudo cp /tmp/kubernetes/artifacts/base-node/kubeconfig /etc/opt/kubernetes/kubelet/kubeconfig
+
+echo "Installing kube-proxy kubeconfig"
+sudo mv /tmp/kubernetes/artifacts/base-node/kubeconfig /etc/opt/kubernetes/kube-proxy/kubeconfig
+
+echo "Installing kube-proxy config"
+sudo mv /tmp/kubernetes/artifacts/base-node/kube-proxy.config /etc/opt/kubernetes/kube-proxy/kube-proxy.config
+
+echo "Enabling kubelet"
+sudo mv /tmp/kubernetes/artifacts/base-node/kubelet.service /etc/systemd/system/kubelet.service
+sudo systemctl daemon-reload
+sudo systemctl enable kubelet
+
+echo "Enabling kube-proxy"
+sudo mv /tmp/kubernetes/artifacts/base-node/kube-proxy.service /etc/systemd/system/kube-proxy.service
+sudo systemctl daemon-reload
+sudo systemctl enable kube-proxy
+
+# Trick ignition into running again when an instance is booted from this AMI
+# https://github.com/coreos/bugs/issues/2090
+echo "Ensuring ignition will run on next boot"
+sudo touch /boot/coreos/first_boot
+sudo rm /etc/machine-id

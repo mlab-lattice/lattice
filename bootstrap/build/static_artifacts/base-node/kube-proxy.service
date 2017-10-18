@@ -1,0 +1,12 @@
+[Unit]
+Description=Kubernetes Kube Proxy
+Documentation=https://kubernetes.io
+
+[Service]
+ExecStart=/opt/kubernetes/bin/kube-proxy \
+  --config=/etc/opt/kubernetes/kube-proxy/kube-proxy.config
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

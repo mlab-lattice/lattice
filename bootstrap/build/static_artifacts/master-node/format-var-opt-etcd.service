@@ -1,0 +1,11 @@
+[Unit]
+# Wait until the device is attached.
+After=attach-dev-xvdf.service
+Requires=attach-dev-xvdf.service
+
+# If the path exists no need to format the device
+ConditionPathExists=!/var/opt/etcd
+
+[Service]
+Type=oneshot
+ExecStart=/usr/sbin/mkfs.ext4 /dev/xvdf

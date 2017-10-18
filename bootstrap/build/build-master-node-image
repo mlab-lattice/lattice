@@ -1,0 +1,47 @@
+#!/usr/bin/env bash
+
+set -o pipefail
+set -e
+
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+
+BUILD_STATE_DIR=${DIR}/../.state/build
+mkdir -p ${BUILD_STATE_DIR}/artifacts/master-node
+
+PACKER_OUTPUT_FILE=${BUILD_STATE_DIR}/.tmp_packer_output.log
+
+if [[ -f ${BUILD_STATE_DIR}/artifacts/master-node-ami-id ]]; then
+    echo "master-node image already built, skipping"
+    exit
+fi
+
+cp -r ${DIR}/static_artifacts/master-node/* ${BUILD_STATE_DIR}/artifacts/master-node
+${DIR}/scripts/master-node/local/generate-artifacts-1
+
+cd ${BUILD_STATE_DIR}
+cp ${DIR}/infrastructure.tf .
+
+onexit() {
+  rm -f ${PACKER_OUTPUT_FILE}
+  cd ${BUILD_STATE_DIR}
+  terraform destroy -force -var 'availability_zones=["us-east-1b", "us-east-1c", "us-east-1d", "us-east-1e"]'
+}
+trap onexit EXIT
+
+terraform init
+terraform apply -var 'availability_zones=["us-east-1b", "us-east-1c", "us-east-1d", "us-east-1e"]'
+
+VPC_ID=$(terraform output | grep vpc_id | awk '{print $3}')
+SUBNET_ID=$(terraform output | grep subnet_id | awk '{print $3}')
+BASE_NODE_AMI_ID=$(cat artifacts/base-node-ami-id)
+
+cd ${DIR}
+packer build -machine-readable \
+    -var "ami_name=lattice-kube-master-node-$(hostname)-$(date +%s)" \
+    -var "vpc_id=${VPC_ID}" \
+    -var "subnet_id=${SUBNET_ID}" \
+    -var "source_ami=${BASE_NODE_AMI_ID}" \
+    ${DIR}/aws-master-node-image.json | tee ${PACKER_OUTPUT_FILE} | cut -d, -f 5
+
+MASTER_NODE_AMI_ID=$(grep -E -o 'ami-[a-f0-9]{8}' ${PACKER_OUTPUT_FILE} | tail -1)
+echo ${MASTER_NODE_AMI_ID} > ${BUILD_STATE_DIR}/artifacts/master-node-ami-id

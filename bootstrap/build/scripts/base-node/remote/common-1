@@ -1,0 +1,38 @@
+#!/usr/bin/env bash
+set -e
+
+mkdir -p ~/tmp
+cd ~/tmp
+
+echo "Installing kubernetes binaries"
+wget https://storage.googleapis.com/kubernetes-release/release/v1.7.3/bin/linux/amd64/kubectl
+wget https://storage.googleapis.com/kubernetes-release/release/v1.7.3/bin/linux/amd64/kube-proxy
+wget https://storage.googleapis.com/kubernetes-release/release/v1.7.3/bin/linux/amd64/kubelet
+
+chmod +x kubectl kube-proxy kubelet
+
+sudo mkdir -p /opt/kubernetes/bin
+sudo mv kubelet kube-proxy kubectl /opt/kubernetes/bin
+
+sudo mkdir -p /opt/bin
+sudo ln /opt/kubernetes/bin/kubectl /opt/bin/kubectl
+
+echo "Installing OCI binaries"
+sudo mkdir -p /opt/cni
+wget https://storage.googleapis.com/kubernetes-release/network-plugins/cni-amd64-0799f5732f2a11b329d9e3d51b9c8f2e3759f2ff.tar.gz
+sudo tar -xvf cni-amd64-0799f5732f2a11b329d9e3d51b9c8f2e3759f2ff.tar.gz -C /opt/cni
+
+# Clean up after ourselves
+cd ~
+rm -rf ~/tmp
+
+echo "Making temporary directory for base-node artifacts"
+mkdir -p /tmp/kubernetes/artifacts/base-node
+
+# https://coreos.com/os/docs/latest/update-strategies.html
+echo "Disabling CoreOS Container Linux automatic updates"
+sudo systemctl stop update-engine
+sudo systemctl mask update-engine
+
+sudo systemctl stop locksmithd
+sudo systemctl mask locksmithd

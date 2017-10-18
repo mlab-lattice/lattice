@@ -1,0 +1,47 @@
+#!/usr/bin/env bash
+
+set -o pipefail
+set -e
+
+AVAILABILITY_ZONE=$(curl -s http://169.254.169.254/latest/meta-data/placement/availability-zone)
+REGION=$(echo ${AVAILABILITY_ZONE} | sed 's/.$//')
+
+USER_DATA=$(curl -s http://169.254.169.254/latest/user-data)
+
+BUILD_ID=${1}
+BUILD_NODE_INSTANCE_TYPE=${2}
+AWS_ACCOUNT_ID=$(echo ${USER_DATA} | jq '.lattice.aws_account_id' | tr -d '"')
+LATTICE_ID=$(echo ${USER_DATA} | jq '.lattice.lattice_id' | tr -d '"')
+SYSTEM_ID=$(echo ${USER_DATA} | jq '.lattice.system_id' | tr -d '"')
+VPC_ID=$(echo ${USER_DATA} | jq '.lattice.vpc_id' | tr -d '"')
+VPC_CIDR_BLOCK=$(echo ${USER_DATA} | jq '.lattice.vpc_cidr_block' | tr -d '"')
+BUILD_SUBNET_IDS=$(echo ${USER_DATA} | jq '.lattice.build_subnet_ids' | tr -d '"')
+BASE_NODE_AMI=$(echo ${USER_DATA} | jq '.lattice.base_node_ami_id' | tr -d '"')
+KEY_NAME=$(echo ${USER_DATA} | jq '.lattice.key_name' | tr -d '"')
+
+STATE_S3_BUCKET=$(echo ${USER_DATA} | jq '.lattice.state_s3_bucket' | tr -d '"')
+
+mkdir -p /tmp/terraform-state/builds/${BUILD_ID}/node/
+cp /opt/terraform/modules/build-node/* \
+   /tmp/terraform-state/builds/${BUILD_ID}/node/
+
+cd /tmp/terraform-state/builds/${BUILD_ID}/node/
+
+/opt/terraform/bin/terraform init -force-copy \
+    -backend-config="bucket=${STATE_S3_BUCKET}" \
+    -backend-config="key=builds/${BUILD_ID}/state/node/terraform.tfstate" \
+    -backend-config="region=${REGION}"
+
+/opt/terraform/bin/terraform apply -auto-approve \
+    -var "aws_account_id=${AWS_ACCOUNT_ID}" \
+    -var "region=${REGION}" \
+    -var "lattice_id=${LATTICE_ID}" \
+    -var "system_id=${SYSTEM_ID}" \
+    -var "vpc_id=${VPC_ID}" \
+    -var "vpc_cidr_block=${VPC_CIDR_BLOCK}" \
+    -var "build_subnet_ids=${BUILD_SUBNET_IDS}" \
+    -var "build_id=${BUILD_ID}" \
+    -var "num_instances=1" \
+    -var "instance_type=${BUILD_NODE_INSTANCE_TYPE}" \
+    -var "ami_id=${BASE_NODE_AMI}" \
+    -var "key_name=${KEY_NAME}"

@@ -1,0 +1,82 @@
+#!/usr/bin/env bash
+set -e
+
+echo "Creating lattice bin directory"
+sudo mkdir -p /opt/lattice/bin
+
+echo "Creating /etc directories for etcd and kube components"
+sudo mkdir -p /etc/opt/etcd \
+              /etc/opt/kubernetes/apiserver \
+              /etc/opt/kubernetes/controller-manager
+
+echo "Installing kube-apiserver certs"
+sudo cp /tmp/kubernetes/artifacts/master-node/kubernetes.pem \
+        /tmp/kubernetes/artifacts/master-node/kubernetes-key.pem \
+        /etc/opt/kubernetes/apiserver
+
+echo "Installing kube-controller-manager certs"
+sudo cp /tmp/kubernetes/artifacts/master-node/kubernetes.pem \
+        /tmp/kubernetes/artifacts/master-node/kubernetes-key.pem \
+        /etc/opt/kubernetes/controller-manager
+
+echo "Installing kube-apiserver known_tokens"
+sudo mv /tmp/kubernetes/artifacts/master-node/known_tokens.csv /etc/opt/kubernetes/apiserver/known_tokens.csv
+
+echo "Installing kube-controller-manager kubeconfig"
+sudo cp /etc/opt/kubernetes/kubelet/kubeconfig /etc/opt/kubernetes/controller-manager/kubeconfig
+
+echo "Adding kubeconfig for kubectl"
+mkdir ~/.kube
+sudo cp /etc/opt/kubernetes/kubelet/kubeconfig ~/.kube
+sudo chown core ~/.kube/kubeconfig
+
+echo "Installing dns master-node register service"
+sudo mv /tmp/kubernetes/artifacts/master-node/register-master-node-dns.service \
+        /etc/systemd/system
+sudo systemctl daemon-reload
+
+echo "Installing etcd volume attachment services"
+sudo mv /tmp/kubernetes/artifacts/master-node/attach-dev-xvdf.service \
+        /tmp/kubernetes/artifacts/master-node/format-var-opt-etcd.service \
+        /tmp/kubernetes/artifacts/master-node/var-opt-etcd.mount \
+        /etc/systemd/system
+sudo systemctl daemon-reload
+
+echo "Enabling etcd"
+sudo mv /tmp/kubernetes/artifacts/master-node/kube-etcd.service /etc/systemd/system/kube-etcd.service
+sudo systemctl daemon-reload
+sudo systemctl enable kube-etcd
+
+echo "Overriding and enabling kubelet"
+sudo mkdir -p /etc/systemd/system/kubelet.service.d
+sudo mv /tmp/kubernetes/artifacts/master-node/kubelet-override.conf /etc/systemd/system/kubelet.service.d/master-override.conf
+sudo systemctl daemon-reload
+sudo systemctl enable kubelet
+
+echo "Adding control plane pods to manifests file"
+sudo mkdir -p /var/opt/kubernetes/manifests
+sudo mv /tmp/kubernetes/artifacts/master-node/kube-apiserver.json \
+        /tmp/kubernetes/artifacts/master-node/kube-scheduler.json \
+        /tmp/kubernetes/artifacts/master-node/kube-controller-manager.json \
+        /var/opt/kubernetes/manifests
+
+echo "Installing bootstrap kube-resources"
+sudo mkdir -p /etc/opt/lattice/bootstrap-kube-resources
+sudo mv /tmp/kubernetes/artifacts/master-node/bootstrap-kube-resources/* \
+        /etc/opt/lattice/bootstrap-kube-resources
+
+echo "Installing bootstrap script"
+sudo mv /tmp/kubernetes/artifacts/master-node/bootstrap \
+        /opt/lattice/bin/master-bootstrap
+sudo chmod +x /opt/lattice/bin/master-bootstrap
+
+echo "Installing seed-build-ssh-key script"
+sudo mv /tmp/kubernetes/artifacts/master-node/seed-build-ssh-key \
+        /opt/lattice/bin/master-seed-build-ssh-key
+sudo chmod +x /opt/lattice/bin/master-seed-build-ssh-key
+
+# Trick ignition into running again when an instance is booted from this AMI
+# https://github.com/coreos/bugs/issues/2090
+echo "Ensuring ignition will run on next boot"
+sudo touch /boot/coreos/first_boot
+sudo rm /etc/machine-id

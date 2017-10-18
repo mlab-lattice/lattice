@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+set -e
+
+echo "Stopping kubelet and kube-proxy"
+sudo systemctl stop kubelet
+sudo systemctl stop kube-proxy
+
+# Setup temp directory
+mkdir -p ~/tmp
+cd ~/tmp
+
+echo "Installing etcd"
+wget https://github.com/coreos/etcd/releases/download/v3.1.4/etcd-v3.1.4-linux-amd64.tar.gz
+tar -xvf etcd-v3.1.4-linux-amd64.tar.gz
+sudo mkdir -p /opt/etcd/bin
+sudo mv etcd-v3.1.4-linux-amd64/etcd* /opt/etcd/bin/
+
+echo "Installing terraform"
+wget https://releases.hashicorp.com/terraform/0.10.0/terraform_0.10.0_linux_amd64.zip
+unzip terraform_0.10.0_linux_amd64.zip
+sudo mkdir -p /opt/terraform/bin
+sudo mv terraform /opt/terraform/bin
+
+echo "Pulling control plane docker images"
+docker pull gcr.io/google_containers/hyperkube:v1.7.3
+
+# Clean up after ourselves
+cd ~
+rm -rf ~/tmp
+
+echo "Making temporary directory for base-node artifacts"
+mkdir -p /tmp/kubernetes/artifacts/master-node

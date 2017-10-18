@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+
+set -e
+set -o pipefail
+
+HOST_IP=$(aws ec2 describe-instances \
+            --filter "Name=tag:Name,Values=lattice.system.${LATTICE_SYSTEM_ID}.master-0" \
+                     'Name=instance-state-name,Values=running' \
+          | jq '.Reservations[0].Instances[0].PublicIpAddress' \
+          | tr -d '"')
+
+ssh -t core@${HOST_IP} $*

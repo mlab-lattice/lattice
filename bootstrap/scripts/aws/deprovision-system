@@ -1,0 +1,40 @@
+#!/usr/bin/env bash
+
+set -e
+set -o pipefail
+
+if [[ -z "${LATTICE_SYSTEM_ID}" ]]; then
+  echo 'LATTICE_SYSTEM_ID must be set' && exit 1
+fi
+
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+STATE_DIR=${DIR}/../../.state
+BUILD_STATE_DIR=${STATE_DIR}/build
+
+# https://stackoverflow.com/questions/33791069/quick-way-to-get-aws-account-number-from-the-cli-tools
+AWS_ACCOUNT_ID=$(aws ec2 describe-security-groups \
+                     --group-names 'Default' \
+                     --query 'SecurityGroups[0].OwnerId' \
+                     --output text)
+
+BASE_NODE_AMI_ID=$(cat ${BUILD_STATE_DIR}/artifacts/base-node-ami-id)
+MASTER_NODE_AMI_ID=$(cat ${BUILD_STATE_DIR}/artifacts/master-node-ami-id)
+
+SYSTEM_STATE_DIR=${STATE_DIR}/systems/${LATTICE_SYSTEM_ID}
+mkdir -p ${SYSTEM_STATE_DIR}
+cd ${SYSTEM_STATE_DIR}
+
+SYSTEM_MODULE_DIR=${DIR}/../../modules/aws/system
+cp -r ${SYSTEM_MODULE_DIR}/* .
+
+terraform init
+terraform destroy -force \
+    -var "aws_account_id=${AWS_ACCOUNT_ID}" \
+    -var "region=us-east-1" \
+    -var 'availability_zones=["us-east-1b", "us-east-1c", "us-east-1d", "us-east-1e"]' \
+    -var "system_id=${LATTICE_SYSTEM_ID}" \
+    -var "base_node_ami_id=${BASE_NODE_AMI_ID}" \
+    -var "master_node_ami_id=${MASTER_NODE_AMI_ID}" \
+    -var "master_node_instance_type=t2.small" \
+    -var "key_name=lattice-dev" \
+    -var "kube_apiserver_port=6443"
