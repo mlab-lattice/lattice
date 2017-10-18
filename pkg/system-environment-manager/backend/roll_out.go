@@ -11,7 +11,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/uuid"
 )
 
-func (kb *KubernetesBackend) RollOutSystem(ln coretypes.LatticeNamespace, sd *systemdefinition.System, v coretypes.SystemVersion) (string, error) {
+func (kb *KubernetesBackend) RollOutSystem(ln coretypes.LatticeNamespace, sd *systemdefinition.System, v coretypes.SystemVersion) (coretypes.SystemRolloutId, error) {
 	bid, err := kb.BuildSystem(ln, sd, v)
 	if err != nil {
 		return "", err
@@ -20,7 +20,7 @@ func (kb *KubernetesBackend) RollOutSystem(ln coretypes.LatticeNamespace, sd *sy
 	return kb.RollOutSystemBuild(ln, bid)
 }
 
-func (kb *KubernetesBackend) RollOutSystemBuild(ln coretypes.LatticeNamespace, bid coretypes.SystemBuildId) (string, error) {
+func (kb *KubernetesBackend) RollOutSystemBuild(ln coretypes.LatticeNamespace, bid coretypes.SystemBuildId) (coretypes.SystemRolloutId, error) {
 	sysBuild, err := kb.getSystemBuildFromId(ln, bid)
 	if err != nil {
 		return "", err
@@ -39,7 +39,7 @@ func (kb *KubernetesBackend) RollOutSystemBuild(ln coretypes.LatticeNamespace, b
 		Do().
 		Into(result)
 
-	return result.Name, err
+	return coretypes.SystemRolloutId(result.Name), err
 }
 
 func (kb *KubernetesBackend) getSystemBuildFromId(ln coretypes.LatticeNamespace, bid coretypes.SystemBuildId) (*crv1.SystemBuild, error) {
