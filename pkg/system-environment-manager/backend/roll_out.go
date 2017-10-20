@@ -33,7 +33,7 @@ func (kb *KubernetesBackend) RollOutSystemBuild(ln coretypes.LatticeNamespace, b
 
 	result := &crv1.SystemRollout{}
 	err = kb.LatticeResourceClient.Post().
-		Namespace(constants.InternalNamespace).
+		Namespace(constants.NamespaceInternal).
 		Resource(crv1.SystemRolloutResourcePlural).
 		Body(sysRollout).
 		Do().
@@ -45,7 +45,7 @@ func (kb *KubernetesBackend) RollOutSystemBuild(ln coretypes.LatticeNamespace, b
 func (kb *KubernetesBackend) getSystemBuildFromId(ln coretypes.LatticeNamespace, bid coretypes.SystemBuildId) (*crv1.SystemBuild, error) {
 	result := &crv1.SystemBuild{}
 	err := kb.LatticeResourceClient.Get().
-		Namespace(constants.InternalNamespace).
+		Namespace(constants.NamespaceInternal).
 		Resource(crv1.SystemBuildResourcePlural).
 		Name(string(bid)).
 		Do().
