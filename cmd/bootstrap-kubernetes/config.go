@@ -21,6 +21,13 @@ func seedConfig(kubeconfig *rest.Config) {
 		panic(err)
 	}
 
+	var dockerRegistry string
+	if dev {
+		dockerRegistry = localDevDockerRegistry
+	} else {
+		dockerRegistry = devDockerRegistry
+	}
+
 	// Create config
 	var buildConfig crv1.ComponentBuildConfig
 	var envoyConfig crv1.EnvoyConfig
@@ -32,13 +39,13 @@ func seedConfig(kubeconfig *rest.Config) {
 				RepositoryPerImage: true,
 				Push:               false,
 			},
-			PullGitRepoImage: "bazel/docker:pull-git-repo",
-			BuildDockerImage: "bazel/docker:build-docker-image",
+			PullGitRepoImage: dockerRegistry + "/pull-git-repo",
+			BuildDockerImage: dockerRegistry + "/build-docker-image",
 		}
 
 		envoyConfig = crv1.EnvoyConfig{
-			PrepareImage:      "lattice/local:prepare-envoy",
-			Image:             "lyft/envoy:latest",
+			PrepareImage:      dockerRegistry + "prepare-envoy",
+			Image:             "lyft/envoy",
 			EgressPort:        9001,
 			RedirectCidrBlock: "172.16.29.0/16",
 			XdsApiPort:        8080,
@@ -57,17 +64,11 @@ func seedConfig(kubeconfig *rest.Config) {
 		},
 	}
 
-	err = crClient.Post().
-		Namespace("default").
-		Resource(crv1.ConfigResourcePlural).
-		Body(config).
-		Do().Into(nil)
-
-	if err != nil {
-		if !apierrors.IsAlreadyExists(err) {
-			panic(err)
-		}
-
-		glog.Warning("Config already exists")
-	}
+	pollKubeResourceCreation(func() (interface{}, error) {
+		return nil, crClient.Post().
+			Namespace("default").
+			Resource(crv1.ConfigResourcePlural).
+			Body(config).
+			Do().Into(nil)
+	})
 }

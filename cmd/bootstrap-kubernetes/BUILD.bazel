@@ -10,7 +10,7 @@ go_library(
         "namespaces.go",
         "rbac.go",
     ],
-    importpath = "github.com/mlab-lattice/kubernetes-integration/cmd/bootstrap",
+    importpath = "github.com/mlab-lattice/kubernetes-integration/cmd/bootstrap-kubernetes",
     visibility = ["//visibility:private"],
     deps = [
         "//pkg/api/customresource:go_default_library",
@@ -35,6 +35,13 @@ go_library(
 go_binary(
     name = "bootstrap",
     importpath = "github.com/mlab-lattice/kubernetes-integration/cmd/bootstrap",
+    library = ":go_default_library",
+    visibility = ["//visibility:public"],
+)
+
+go_binary(
+    name = "bootstrap-kubernetes",
+    importpath = "github.com/mlab-lattice/kubernetes-integration/cmd/bootstrap-kubernetes",
     library = ":go_default_library",
     visibility = ["//visibility:public"],
 )

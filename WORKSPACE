@@ -38,11 +38,19 @@ go_register_toolchains()
 
 go_repository(
     name = "com_github_mlab_lattice_core",
-    commit = "0ba24ad1f62055c194c41c7de29396b76d4feee6",
+    commit = "5a8d96d67315db5f1b4d384f948d5cdddbb18b14",
     importpath = "github.com/mlab-lattice/core",
     remote = "git@github.com:mlab-lattice/core.git",
     vcs = "git",
 )
+
+# Core dependencies
+go_repository(
+    name = "com_github_satori_go_uuid",
+    commit = "5bf94b69c6b68ee1b541973bb8e1144db23a194b",
+    importpath = "github.com/satori/go.uuid",
+)
+
 
 go_repository(
     name = "com_github_mlab_lattice_envoy_xds_api_backend",

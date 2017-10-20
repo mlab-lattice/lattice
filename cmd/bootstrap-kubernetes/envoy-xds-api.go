@@ -1,15 +1,11 @@
 package main
 
 import (
-	"time"
-
 	coreconstants "github.com/mlab-lattice/core/pkg/constants"
 
 	"github.com/mlab-lattice/kubernetes-integration/pkg/constants"
 
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/wait"
 
 	corev1 "k8s.io/api/core/v1"
 	extensionsv1beta1 "k8s.io/api/extensions/v1beta1"
@@ -18,6 +14,13 @@ import (
 )
 
 func seedEnvoyXdsApi(kubeClientset *kubernetes.Clientset) {
+	var dockerRegistry string
+	if dev {
+		dockerRegistry = localDevDockerRegistry
+	} else {
+		dockerRegistry = devDockerRegistry
+	}
+
 	// Create envoy-xds-api daemon set
 	envoyApiDaemonSet := &extensionsv1beta1.DaemonSet{
 		ObjectMeta: metav1.ObjectMeta{
@@ -36,7 +39,7 @@ func seedEnvoyXdsApi(kubeClientset *kubernetes.Clientset) {
 					Containers: []corev1.Container{
 						{
 							Name:  "envoy-xds-api",
-							Image: "bazel/cmd/kubernetes-per-node-rest:go_image",
+							Image: dockerRegistry + "envoy-xds-api-kube-per-node-rest",
 							Ports: []corev1.ContainerPort{
 								{
 									Name:          "http",
@@ -46,6 +49,7 @@ func seedEnvoyXdsApi(kubeClientset *kubernetes.Clientset) {
 							},
 						},
 					},
+					// Use HostNetworking so that envoys can address it just using the hostIp.
 					HostNetwork:        true,
 					DNSPolicy:          corev1.DNSDefault,
 					ServiceAccountName: constants.ServiceAccountEnvoyXdsApi,
@@ -54,14 +58,10 @@ func seedEnvoyXdsApi(kubeClientset *kubernetes.Clientset) {
 		},
 	}
 
-	err := wait.Poll(500*time.Millisecond, 60*time.Second, func() (bool, error) {
-		_, err := kubeClientset.ExtensionsV1beta1().DaemonSets(string(coreconstants.UserSystemNamespace)).Create(envoyApiDaemonSet)
-		if err != nil && !apierrors.IsAlreadyExists(err) {
-			return false, nil
-		}
-		return true, nil
+	pollKubeResourceCreation(func() (interface{}, error) {
+		return kubeClientset.
+			ExtensionsV1beta1().
+			DaemonSets(string(coreconstants.UserSystemNamespace)).
+			Create(envoyApiDaemonSet)
 	})
-	if err != nil {
-		panic(err)
-	}
 }

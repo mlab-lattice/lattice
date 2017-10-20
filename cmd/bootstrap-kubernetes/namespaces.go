@@ -18,7 +18,7 @@ import (
 func seedNamespaces(kubeClientset *kubernetes.Clientset) {
 	latticeInternalNamespace := &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: constants.InternalNamespace,
+			Name: constants.NamespaceInternal,
 		},
 	}
 
