@@ -60,7 +60,7 @@ resource "aws_iam_role" "master_node_role" {
 }
 
 module "assume_role_from_ec2_service_policy_doucment" {
-  source = "git@github.com:mlab-lattice/core.git//modules/aws/iam/sts/assume-role-from-ec2-service-policy-document"
+  source = "../../iam/sts/assume-role-from-ec2-service-policy-document"
 }
 
 ###############################################################################
@@ -144,7 +144,7 @@ data "aws_iam_policy_document" "master_node_role_policy_document" {
 #
 
 module "base_node" {
-  source = "git@github.com:mlab-lattice/core.git//modules/aws/node/base"
+  source = "../base"
 
   system_id  = "${var.system_id}"
   name       = "master-${var.name}"
