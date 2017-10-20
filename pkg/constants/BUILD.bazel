@@ -5,7 +5,9 @@ go_library(
     srcs = [
         "namespace.go",
         "service_account.go",
+        "tolerations.go",
     ],
     importpath = "github.com/mlab-lattice/kubernetes-integration/pkg/constants",
     visibility = ["//visibility:public"],
+    deps = ["@io_k8s_api//core/v1:go_default_library"],
 )

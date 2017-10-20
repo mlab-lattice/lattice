@@ -6,6 +6,7 @@ go_library(
         "config.go",
         "crd.go",
         "envoy-xds-api.go",
+        "lattice-controller-manager.go",
         "main.go",
         "namespaces.go",
         "rbac.go",
