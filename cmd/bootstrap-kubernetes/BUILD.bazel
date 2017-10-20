@@ -17,7 +17,6 @@ go_library(
         "//pkg/api/customresource:go_default_library",
         "//pkg/api/customresource/v1:go_default_library",
         "//pkg/constants:go_default_library",
-        "@com_github_golang_glog//:go_default_library",
         "@com_github_mlab_lattice_core//pkg/constants:go_default_library",
         "@com_github_mlab_lattice_core//pkg/types:go_default_library",
         "@io_k8s_api//core/v1:go_default_library",
@@ -45,4 +44,14 @@ go_binary(
     importpath = "github.com/mlab-lattice/kubernetes-integration/cmd/bootstrap-kubernetes",
     library = ":go_default_library",
     visibility = ["//visibility:public"],
+)
+
+load("@io_bazel_rules_docker//go:image.bzl", "go_image")
+
+go_image(
+    name = "go_image",
+    srcs = ["main.go"],
+    importpath = "github.com/mlab-lattice/kubernetes-integration/cmd/bootstrap-kubernetes",
+    library = ":go_default_library",
+    visibility = ["//visibility:private"],
 )

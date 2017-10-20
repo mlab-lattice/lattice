@@ -7,6 +7,20 @@ BOOTSTRAP_BUILD_STATE_DIR = $(BOOTSTRAP_DIR)/.state/build
 BOOTSTRAP_LATTICE_SYSTEM_ID ?= bootstrapped
 BOOTSTRAP_AWS_SYSTEM_STATE_DIR = $(BOOTSTRAP_DIR)/.state/aws/$(LATTICE_SYSTEM_ID)
 
+LOCAL_REGISTRY = lattice-local
+DEV_REGISTRY = gcr.io/lattice-dev
+DEV_TAG ?= latest
+
+LATTICE_CONTROLLER_MANAGER_IMAGE = lattice-controller-manager
+BAZEL_LATTICE_CONTROLLER_MANAGER_IMAGE = bazel/cmd/controller-manager:go_image
+LOCAL_LATTICE_CONTROLLER_MANAGER_IMAGE = $(LOCAL_REGISTRY)/$(LATTICE_CONTROLLER_MANAGER_IMAGE)
+DEV_LATTICE_CONTROLLER_MANAGER_IMAGE = $(DEV_REGISTRY)/$(LATTICE_CONTROLLER_MANAGER_IMAGE):$(DEV_TAG)
+
+BOOTSTRAP_KUBERNETES_IMAGE = bootstrap-kubernetes
+BAZEL_BOOTSTRAP_KUBERNETES_IMAGE = bazel/cmd/bootstrap-kubernetes:go_image
+LOCAL_BOOTSTRAP_KUBERNETES_IMAGE = $(LOCAL_REGISTRY)/$(BOOTSTRAP_KUBERNETES_IMAGE)
+DEV_BOOTSTRAP_KUBERNETES_IMAGE = $(DEV_REGISTRY)/$(BOOTSTRAP_KUBERNETES_IMAGE):$(DEV_TAG)
+
 # Basic build/clean/test
 .PHONY: build
 build: gazelle
@@ -23,6 +37,72 @@ test: gazelle
 .PHONY: gazelle
 gazelle:
 	@bazel run //:gazelle
+
+# docker
+.PHONY: docker-build
+docker-build: docker-build-lattice-controller-manager docker-build-bootstrap-kubernetes
+
+.PHONY: docker-save
+docker-save:
+	dest=$(dest)/lattice-controller-manager make docker-save-lattice-controller-manager
+	dest=$(dest)/booststrap-kubernetes make docker-save-bootstrap-kubernetes
+
+.PHONY: docker-build-and-save
+docker-build-and-save: docker-build docker-save
+
+.PHONY: docker-push-dev
+docker-push-dev: docker-push-dev-lattice-controller-manager docker-push-dev-bootstrap-kubernetes
+
+.PHONY: docker-build-and-push-dev
+docker-build-and-push-dev: docker-build docker-push-dev
+
+.PHONY: docker-build-bazel-build
+docker-build-bazel-build:
+	docker build $(DIR)/docker -f $(DIR)/docker/Dockerfile.bazel-build -t lattice-build/bazel-build
+
+# lattice-controller-manager
+.PHONY: docker-build-lattice-controller-manager
+docker-build-lattice-controller-manager: docker-build-bazel-build
+	# https://gist.github.com/d11wtq/8699521
+	docker run -v $(DIR):/src -v /var/run/docker.sock:/var/run/docker.sock -v ~/.ssh/id_rsa-github:/root/.ssh/id_rsa-github lattice-build/bazel-build /src/docker/build-lattice-controller-manager.sh
+
+.PHONY: docker-tag-local-lattice-controller-manager
+docker-tag-local-lattice-controller-manager:
+	docker tag $(BAZEL_LATTICE_CONTROLLER_MANAGER_IMAGE) $(LOCAL_LATTICE_CONTROLLER_MANAGER_IMAGE)
+
+.PHONY: docker-save-lattice-controller-manager
+docker-save-lattice-controller-manager: docker-tag-local-lattice-controller-manager
+	docker save $(LOCAL_LATTICE_CONTROLLER_MANAGER_IMAGE) -o $(dest)
+
+.PHONY: docker-tag-dev-lattice-controller-manager
+docker-tag-dev-lattice-controller-manager:
+	docker tag $(BAZEL_LATTICE_CONTROLLER_MANAGER_IMAGE) $(DEV_LATTICE_CONTROLLER_MANAGER_IMAGE)
+
+.PHONY: docker-push-dev-lattice-controller-manager
+docker-push-dev-lattice-controller-manager: docker-tag-dev-lattice-controller-manager
+	gcloud docker -- push $(DEV_LATTICE_CONTROLLER_MANAGER_IMAGE)
+
+# bootstrap-kubernetees
+.PHONY: docker-build-bootstrap-kubernetes
+docker-build-bootstrap-kubernetes: docker-build-bazel-build
+	# https://gist.github.com/d11wtq/8699521
+	docker run -v $(DIR):/src -v /var/run/docker.sock:/var/run/docker.sock -v ~/.ssh/id_rsa-github:/root/.ssh/id_rsa-github lattice-build/bazel-build /src/docker/build-bootstrap-kubernetes.sh
+
+.PHONY: docker-tag-local-bootstrap-kubernetes
+docker-tag-local-bootstrap-kubernetes:
+	docker tag $(BAZEL_BOOTSTRAP_KUBERNETES_IMAGE) $(LOCAL_BOOTSTRAP_KUBERNETES_IMAGE)
+
+.PHONY: docker-save-bootstrap-kubernetes
+docker-save-bootstrap-kubernetes: docker-tag-local-bootstrap-kubernetes
+	docker save $(LOCAL_BOOTSTRAP_KUBERNETES_IMAGE) -o $(dest)
+
+.PHONY: docker-tag-dev-bootstrap-kubernetes
+docker-tag-dev-bootstrap-kubernetes:
+	docker tag $(BAZEL_BOOTSTRAP_KUBERNETES_IMAGE) $(DEV_BOOTSTRAP_KUBERNETES_IMAGE)
+
+.PHONY: docker-push-dev-bootstrap-kubernetes
+docker-push-dev-bootstrap-kubernetes: docker-tag-dev-bootstrap-kubernetes
+	gcloud docker -- push $(DEV_BOOTSTRAP_KUBERNETES_IMAGE)
 
 # minikube
 .PHONY: minikube-start

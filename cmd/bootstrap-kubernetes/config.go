@@ -7,12 +7,9 @@ import (
 	crdclient "github.com/mlab-lattice/kubernetes-integration/pkg/api/customresource"
 	crv1 "github.com/mlab-lattice/kubernetes-integration/pkg/api/customresource/v1"
 
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"k8s.io/client-go/rest"
-
-	"github.com/golang/glog"
 )
 
 func seedConfig(kubeconfig *rest.Config) {

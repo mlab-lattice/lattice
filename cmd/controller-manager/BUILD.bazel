@@ -17,3 +17,13 @@ go_binary(
     library = ":go_default_library",
     visibility = ["//visibility:public"],
 )
+
+load("@io_bazel_rules_docker//go:image.bzl", "go_image")
+
+go_image(
+    name = "go_image",
+    srcs = ["main.go"],
+    importpath = "github.com/mlab-lattice/kubernetes-integration/cmd/controller-manager",
+    library = ":go_default_library",
+    visibility = ["//visibility:private"],
+)
