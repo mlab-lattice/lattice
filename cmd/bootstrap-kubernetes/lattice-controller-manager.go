@@ -11,7 +11,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
-func seedLatticeControllerManager(kubeClientset *kubernetes.Clientset, dev bool) {
+func seedLatticeControllerManager(kubeClientset *kubernetes.Clientset) {
 	var dockerRegistry string
 	if dev {
 		dockerRegistry = localDevDockerRegistry
@@ -40,8 +40,11 @@ func seedLatticeControllerManager(kubeClientset *kubernetes.Clientset, dev bool)
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{
 						{
-							Name:  "controller-manager",
-							Image: dockerRegistry + "lattice-controller-manager",
+							Name:            "controller-manager",
+							Image:           dockerRegistry + "/lattice-controller-manager",
+							ImagePullPolicy: corev1.PullIfNotPresent,
+							Command:         []string{"/app/cmd/controller-manager/go_image.binary"},
+							Args:            []string{"-v", "5", "-logtostderr", "-provider", providerName},
 						},
 					},
 					DNSPolicy:          corev1.DNSDefault,

@@ -24,8 +24,13 @@ import (
 )
 
 func Run(kubeconfig string, p provider.Interface) {
-	// TODO: create in-cluster config if in cluster
-	config, err := clientcmd.BuildConfigFromFlags("", kubeconfig)
+	var config *rest.Config
+	var err error
+	if kubeconfig == "" {
+		config, err = rest.InClusterConfig()
+	} else {
+		config, err = clientcmd.BuildConfigFromFlags("", kubeconfig)
+	}
 	if err != nil {
 		panic(err)
 	}

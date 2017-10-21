@@ -8,11 +8,12 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 
 	clientset "k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 )
 
 const (
-	localDevDockerRegistry = "lattice-local-dev"
+	localDevDockerRegistry = "lattice-local"
 	devDockerRegistry      = "gcr.io/lattice-dev"
 )
 
@@ -30,18 +31,25 @@ func init() {
 }
 
 func main() {
-	kubeconfig, err := clientcmd.BuildConfigFromFlags("", kubeconfigPath)
+	var config *rest.Config
+	var err error
+	if kubeconfigPath == "" {
+		config, err = rest.InClusterConfig()
+	} else {
+		config, err = clientcmd.BuildConfigFromFlags("", kubeconfigPath)
+	}
 	if err != nil {
 		panic(err)
 	}
 
-	kubeClientset := clientset.NewForConfigOrDie(kubeconfig)
+	kubeClientset := clientset.NewForConfigOrDie(config)
 
 	seedNamespaces(kubeClientset)
-	seedCrds(kubeconfig)
+	seedCrds(config)
 	seedRbac(kubeClientset)
-	seedConfig(kubeconfig)
+	seedConfig(config)
 	seedEnvoyXdsApi(kubeClientset)
+	seedLatticeControllerManager(kubeClientset)
 }
 
 func pollKubeResourceCreation(resourceCreationFunc func() (interface{}, error)) {

@@ -38,8 +38,9 @@ func seedEnvoyXdsApi(kubeClientset *kubernetes.Clientset) {
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{
 						{
-							Name:  "envoy-xds-api",
-							Image: dockerRegistry + "envoy-xds-api-kube-per-node-rest",
+							Name:            "envoy-xds-api",
+							Image:           dockerRegistry + "/envoy-xds-api-kubernetes-per-node-rest",
+							ImagePullPolicy: corev1.PullIfNotPresent,
 							Ports: []corev1.ContainerPort{
 								{
 									Name:          "http",

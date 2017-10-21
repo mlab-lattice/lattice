@@ -12,10 +12,16 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
+
+	batchv1 "k8s.io/api/batch/v1"
+	extensions "k8s.io/api/extensions/v1beta1"
 )
 
 const (
 	kubeEndpointReaderRole   = "kube-endpoint-reader"
+	kubeServiceAllRole       = "kube-service-all"
+	kubeDeploymentAllRole    = "kube-deployment-all"
+	kubeJobAllRole           = "kube-job-all"
 	latticeServiceReaderRole = "lattice-service-reader"
 	latticeAllRole           = "lattice-all"
 )
@@ -90,6 +96,66 @@ func seedRbacRoles(kubeClientset *kubernetes.Clientset) {
 			RbacV1().
 			ClusterRoles().
 			Create(latticeResourceAll)
+	})
+
+	kubeServiceAll := &rbacv1.ClusterRole{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: kubeServiceAllRole,
+		},
+		Rules: []rbacv1.PolicyRule{
+			{
+				APIGroups: []string{""},
+				Resources: []string{string(corev1.ResourceServices)},
+				Verbs:     []string{rbacv1.VerbAll},
+			},
+		},
+	}
+
+	pollKubeResourceCreation(func() (interface{}, error) {
+		return kubeClientset.
+			RbacV1().
+			ClusterRoles().
+			Create(kubeServiceAll)
+	})
+
+	kubeDeploymentsAll := &rbacv1.ClusterRole{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: kubeDeploymentAllRole,
+		},
+		Rules: []rbacv1.PolicyRule{
+			{
+				APIGroups: []string{extensions.GroupName},
+				Resources: []string{"deployments"},
+				Verbs:     []string{rbacv1.VerbAll},
+			},
+		},
+	}
+
+	pollKubeResourceCreation(func() (interface{}, error) {
+		return kubeClientset.
+			RbacV1().
+			ClusterRoles().
+			Create(kubeDeploymentsAll)
+	})
+
+	kubeJobAll := &rbacv1.ClusterRole{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: kubeJobAllRole,
+		},
+		Rules: []rbacv1.PolicyRule{
+			{
+				APIGroups: []string{batchv1.GroupName},
+				Resources: []string{"jobs"},
+				Verbs:     []string{rbacv1.VerbAll},
+			},
+		},
+	}
+
+	pollKubeResourceCreation(func() (interface{}, error) {
+		return kubeClientset.
+			RbacV1().
+			ClusterRoles().
+			Create(kubeJobAll)
 	})
 }
 
@@ -182,7 +248,7 @@ func bindEnvoyXdsApiServiceAccountRoles(kubeClientset *kubernetes.Clientset) {
 func bindLatticeControllerMangerServiceAccountRoles(kubeClientset *kubernetes.Clientset) {
 	latticeAllBind := &rbacv1.ClusterRoleBinding{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: "lattice-controller-manager-lattice",
+			Name: "lattice-controller-manager-lattice-all",
 		},
 		Subjects: []rbacv1.Subject{
 			{
@@ -203,5 +269,80 @@ func bindLatticeControllerMangerServiceAccountRoles(kubeClientset *kubernetes.Cl
 			RbacV1().
 			ClusterRoleBindings().
 			Create(latticeAllBind)
+	})
+
+	kubeServiceAllBind := &rbacv1.ClusterRoleBinding{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "lattice-controller-manager-kube-service-all",
+		},
+		Subjects: []rbacv1.Subject{
+			{
+				Kind:      rbacv1.ServiceAccountKind,
+				Name:      constants.ServiceAccountLatticeControllerManager,
+				Namespace: string(constants.NamespaceInternal),
+			},
+		},
+		RoleRef: rbacv1.RoleRef{
+			APIGroup: rbacv1.GroupName,
+			Kind:     "ClusterRole",
+			Name:     kubeServiceAllRole,
+		},
+	}
+
+	pollKubeResourceCreation(func() (interface{}, error) {
+		return kubeClientset.
+			RbacV1().
+			ClusterRoleBindings().
+			Create(kubeServiceAllBind)
+	})
+
+	kubeDeploymentAllBind := &rbacv1.ClusterRoleBinding{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "lattice-controller-manager-kube-deployment-all",
+		},
+		Subjects: []rbacv1.Subject{
+			{
+				Kind:      rbacv1.ServiceAccountKind,
+				Name:      constants.ServiceAccountLatticeControllerManager,
+				Namespace: string(constants.NamespaceInternal),
+			},
+		},
+		RoleRef: rbacv1.RoleRef{
+			APIGroup: rbacv1.GroupName,
+			Kind:     "ClusterRole",
+			Name:     kubeDeploymentAllRole,
+		},
+	}
+
+	pollKubeResourceCreation(func() (interface{}, error) {
+		return kubeClientset.
+			RbacV1().
+			ClusterRoleBindings().
+			Create(kubeDeploymentAllBind)
+	})
+
+	kubeJobAllBind := &rbacv1.ClusterRoleBinding{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "lattice-controller-manager-kube-job-all",
+		},
+		Subjects: []rbacv1.Subject{
+			{
+				Kind:      rbacv1.ServiceAccountKind,
+				Name:      constants.ServiceAccountLatticeControllerManager,
+				Namespace: string(constants.NamespaceInternal),
+			},
+		},
+		RoleRef: rbacv1.RoleRef{
+			APIGroup: rbacv1.GroupName,
+			Kind:     "ClusterRole",
+			Name:     kubeJobAllRole,
+		},
+	}
+
+	pollKubeResourceCreation(func() (interface{}, error) {
+		return kubeClientset.
+			RbacV1().
+			ClusterRoleBindings().
+			Create(kubeJobAllBind)
 	})
 }

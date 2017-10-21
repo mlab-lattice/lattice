@@ -138,9 +138,10 @@ func (cbc *ComponentBuildController) getGitRepositoryBuildJobSpec(cb *crv1.Compo
 
 func (cbc *ComponentBuildController) getPullGitRepoContainer(cb *crv1.ComponentBuild) corev1.Container {
 	pullGitRepoContainer := corev1.Container{
-		Name:    "pull-git-repo",
-		Image:   cbc.config.PullGitRepoImage,
-		Command: []string{"./pull-git-repo.sh"},
+		Name:            "pull-git-repo",
+		Image:           cbc.config.PullGitRepoImage,
+		ImagePullPolicy: corev1.PullIfNotPresent,
+		Command:         []string{"./pull-git-repo.sh"},
 		Env: []corev1.EnvVar{
 			{
 				Name:  "WORK_DIR",
@@ -180,31 +181,12 @@ func (cbc *ComponentBuildController) getPullGitRepoContainer(cb *crv1.ComponentB
 	return pullGitRepoContainer
 }
 
-func (cbc *ComponentBuildController) getAuthorizeEcrContainer() corev1.Container {
-	return corev1.Container{
-		Name:    "get-ecr-creds",
-		Image:   cbc.config.AuthorizeDockerImage,
-		Command: []string{"./get-ecr-creds.sh"},
-		Env: []corev1.EnvVar{
-			{
-				Name:  "WORK_DIR",
-				Value: jobWorkingDirectory,
-			},
-		},
-		VolumeMounts: []corev1.VolumeMount{
-			{
-				Name:      jobWorkingDirectoryVolumeName,
-				MountPath: jobWorkingDirectory,
-			},
-		},
-	}
-}
-
 func (cbc *ComponentBuildController) getBuildDockerImageContainer(cb *crv1.ComponentBuild) (corev1.Container, string) {
 	buildDockerImageContainer := corev1.Container{
-		Name:    "build-docker-image",
-		Image:   cbc.config.BuildDockerImage,
-		Command: []string{"./build-docker-image.sh"},
+		Name:            "build-docker-image",
+		Image:           cbc.config.BuildDockerImage,
+		ImagePullPolicy: corev1.PullIfNotPresent,
+		Command:         []string{"./build-docker-image.sh"},
 		Env: []corev1.EnvVar{
 			{
 				Name:  "WORK_DIR",

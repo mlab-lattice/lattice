@@ -5,31 +5,35 @@ set -e
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 COMPONENT_BUILDER_DIR=${DIR}/../../component-builder
 ENVOY_INTEGRATION_DIR=${DIR}/../../envoy-integration
-WORKING_DIRECTORY=/tmp/lattice-kube-bootstrap-build
+WORKING_DIRECTORY=/tmp/local-lattice-dev
 
 mkdir -p ${WORKING_DIRECTORY}
 
-# Build component-builder images
+# Save kubernetes-integration images
+cd ${DIR}/..
+LATTICE_CONTROLLER_MANAGER_PATH=${WORKING_DIRECTORY}/lattice-controller-manager
+BOOTSTRAP_KUBERNETES_PATH=${WORKING_DIRECTORY}/bootstrap-kubernetes
+dest=${WORKING_DIRECTORY} make docker-save
+
+# Save component-builder images
 cd ${COMPONENT_BUILDER_DIR}
-PULL_GIT_REPO_PATH=${WORKING_DIRECTORY}/pull-git-repo.tar
-dest=${PULL_GIT_REPO_PATH} make docker-save-pull-git-repo
+PULL_GIT_REPO_PATH=${WORKING_DIRECTORY}/pull-git-repo
+BUILD_DOCKER_IMAGE_PATH=${WORKING_DIRECTORY}/build-docker-image
+dest=${WORKING_DIRECTORY} make docker-save
 
-BUILD_DOCKER_IMAGE_PATH=${WORKING_DIRECTORY}/build-docker-image.tar
-dest=${BUILD_DOCKER_IMAGE_PATH} make docker-save-build-docker-image
-
-# Build envoy-integration images
+# Save envoy-integration images
 cd ${ENVOY_INTEGRATION_DIR}
-make gazelle
-PREPARE_ENVOY_PATH=${WORKING_DIRECTORY}/prepare-envoy.tar
-dest=${PREPARE_ENVOY_PATH} make docker-save-prepare-envoy
+PREPARE_ENVOY_PATH=${WORKING_DIRECTORY}/prepare-envoy
+ENVOY_API_PATH=${WORKING_DIRECTORY}/kubernetes-per-node-rest
+dest=${WORKING_DIRECTORY} make docker-save
 
-ENVOY_API_PATH=${WORKING_DIRECTORY}/envoy-api.tar
-dest=${ENVOY_API_PATH} make docker-save-kubernetes-per-node-rest
 
 # Load the images into minikube
 eval $(minikube docker-env -p ${1})
 
 images=(
+    ${LATTICE_CONTROLLER_MANAGER_PATH}
+    ${BOOTSTRAP_KUBERNETES_PATH}
     ${PULL_GIT_REPO_PATH}
     ${BUILD_DOCKER_IMAGE_PATH}
     ${PREPARE_ENVOY_PATH}

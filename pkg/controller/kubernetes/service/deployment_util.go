@@ -109,6 +109,7 @@ func (sc *ServiceController) getDeploymentSpec(svc *crv1.Service) (*extensions.D
 		container := corev1.Container{
 			Name:    component.Name,
 			Image:   svc.Spec.ComponentBuildArtifacts[component.Name].DockerImageFqn,
+			ImagePullPolicy: corev1.PullIfNotPresent,
 			Command: component.Exec.Command,
 			Ports:   ports,
 			Env:     envs,
@@ -131,6 +132,7 @@ func (sc *ServiceController) getDeploymentSpec(svc *crv1.Service) (*extensions.D
 		// service component the same thing we name our envoy container
 		Name:    fmt.Sprintf("lattice-prepare-envoy-%v", uuid.NewUUID()),
 		Image:   sc.config.Envoy.PrepareImage,
+		ImagePullPolicy: corev1.PullIfNotPresent,
 		Command: []string{"/usr/local/bin/prepare-envoy.sh"},
 		Env: []corev1.EnvVar{
 			{
@@ -193,6 +195,7 @@ func (sc *ServiceController) getDeploymentSpec(svc *crv1.Service) (*extensions.D
 		// service component the same thing we name our envoy container
 		Name:    fmt.Sprintf("lattice-envoy-%v", uuid.NewUUID()),
 		Image:   envoyConfig.Image,
+		ImagePullPolicy: corev1.PullIfNotPresent,
 		Command: []string{"/usr/local/bin/envoy"},
 		Args: []string{
 			"-c",

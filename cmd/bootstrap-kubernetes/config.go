@@ -41,7 +41,7 @@ func seedConfig(kubeconfig *rest.Config) {
 		}
 
 		envoyConfig = crv1.EnvoyConfig{
-			PrepareImage:      dockerRegistry + "prepare-envoy",
+			PrepareImage:      dockerRegistry + "/prepare-envoy",
 			Image:             "lyft/envoy",
 			EgressPort:        9001,
 			RedirectCidrBlock: "172.16.29.0/16",

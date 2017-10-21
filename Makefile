@@ -45,7 +45,7 @@ docker-build: docker-build-lattice-controller-manager docker-build-bootstrap-kub
 .PHONY: docker-save
 docker-save:
 	dest=$(dest)/lattice-controller-manager make docker-save-lattice-controller-manager
-	dest=$(dest)/booststrap-kubernetes make docker-save-bootstrap-kubernetes
+	dest=$(dest)/bootstrap-kubernetes make docker-save-bootstrap-kubernetes
 
 .PHONY: docker-build-and-save
 docker-build-and-save: docker-build docker-save
@@ -62,7 +62,7 @@ docker-build-bazel-build:
 
 # lattice-controller-manager
 .PHONY: docker-build-lattice-controller-manager
-docker-build-lattice-controller-manager: docker-build-bazel-build
+docker-build-lattice-controller-manager: gazelle docker-build-bazel-build
 	# https://gist.github.com/d11wtq/8699521
 	docker run -v $(DIR):/src -v /var/run/docker.sock:/var/run/docker.sock -v ~/.ssh/id_rsa-github:/root/.ssh/id_rsa-github lattice-build/bazel-build /src/docker/build-lattice-controller-manager.sh
 
@@ -84,7 +84,7 @@ docker-push-dev-lattice-controller-manager: docker-tag-dev-lattice-controller-ma
 
 # bootstrap-kubernetees
 .PHONY: docker-build-bootstrap-kubernetes
-docker-build-bootstrap-kubernetes: docker-build-bazel-build
+docker-build-bootstrap-kubernetes: gazelle docker-build-bazel-build
 	# https://gist.github.com/d11wtq/8699521
 	docker run -v $(DIR):/src -v /var/run/docker.sock:/var/run/docker.sock -v ~/.ssh/id_rsa-github:/root/.ssh/id_rsa-github lattice-build/bazel-build /src/docker/build-bootstrap-kubernetes.sh
 
@@ -107,7 +107,7 @@ docker-push-dev-bootstrap-kubernetes: docker-tag-dev-bootstrap-kubernetes
 # minikube
 .PHONY: minikube-start
 minikube-start:
-	@minikube start -p $(MINIKUBE_PROFILE) --kubernetes-version v1.8.0 --bootstrapper kubeadm --extra-config=kubelet.resolv-conf=$(DIR)/tmp/local-k8s-resolv.conf
+	@minikube start -p $(MINIKUBE_PROFILE) --kubernetes-version v1.8.0 --bootstrapper kubeadm
 
 .PHONY: minikube-stop
 minikube-stop:
@@ -136,9 +136,8 @@ local-down: minikube-stop
 local-delete: minikube-delete
 
 .PHONY: local-bootstrap
-local-bootstrap: gazelle
+local-bootstrap:
 	$(DIR)/bin/seed-local-images.sh $(MINIKUBE_PROFILE)
-	@bazel run -- //cmd/bootstrap -kubeconfig ~/.kube/config -provider local
 
 .PHONY: local-clean
 local-clean:
