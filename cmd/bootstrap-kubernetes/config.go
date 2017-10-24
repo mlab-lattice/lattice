@@ -6,13 +6,14 @@ import (
 
 	crdclient "github.com/mlab-lattice/kubernetes-integration/pkg/api/customresource"
 	crv1 "github.com/mlab-lattice/kubernetes-integration/pkg/api/customresource/v1"
+	"github.com/mlab-lattice/kubernetes-integration/pkg/constants"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"k8s.io/client-go/rest"
 )
 
-func seedConfig(kubeconfig *rest.Config) {
+func seedConfig(kubeconfig *rest.Config, userSystemUrl string) {
 	crClient, _, err := crdclient.NewClient(kubeconfig)
 	if err != nil {
 		panic(err)
@@ -53,17 +54,21 @@ func seedConfig(kubeconfig *rest.Config) {
 
 	config := &crv1.Config{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: "global",
+			Name:      constants.ConfigGlobal,
+			Namespace: constants.NamespaceInternal,
 		},
 		Spec: crv1.ConfigSpec{
 			ComponentBuild: buildConfig,
 			Envoy:          envoyConfig,
+			UserSystem: crv1.SystemConfig{
+				Url: userSystemUrl,
+			},
 		},
 	}
 
 	pollKubeResourceCreation(func() (interface{}, error) {
 		return nil, crClient.Post().
-			Namespace("default").
+			Namespace(constants.NamespaceInternal).
 			Resource(crv1.ConfigResourcePlural).
 			Body(config).
 			Do().Into(nil)

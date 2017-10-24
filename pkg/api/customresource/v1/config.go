@@ -1,6 +1,8 @@
 package v1
 
 import (
+	coretypes "github.com/mlab-lattice/core/pkg/types"
+
 	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -21,38 +23,43 @@ type Config struct {
 }
 
 type ConfigSpec struct {
-	ComponentBuild ComponentBuildConfig
-	Envoy          EnvoyConfig
+	ComponentBuild ComponentBuildConfig                        `json:"componentBuild"`
+	Envoy          EnvoyConfig                                 `json:"envoy"`
+	SystemConfigs  map[coretypes.LatticeNamespace]SystemConfig `json:"userSystem"`
+}
+
+type SystemConfig struct {
+	Url string `json:"url"`
 }
 
 type ComponentBuildConfig struct {
-	DockerConfig         BuildDockerConfig
-	PullGitRepoImage     string
-	AuthorizeDockerImage string
-	BuildDockerImage     string
+	DockerConfig         BuildDockerConfig `json:"dockerConfig"`
+	PullGitRepoImage     string            `json:"pullGitRepoImage"`
+	AuthorizeDockerImage string            `json:"authorizeDockerImage"`
+	BuildDockerImage     string            `json:"buildDockerImage"`
 }
 
 type BuildDockerConfig struct {
 	// Registry used to tag images.
-	Registry string
+	Registry string `json:"registry"`
 
 	// If true, make a new repository for the image.
 	// If false, use Repository as the repository for the image and give it
 	// a unique tag.
-	RepositoryPerImage bool
-	Repository         string
+	RepositoryPerImage bool   `json:"repositoryPerImage"`
+	Repository         string `json:"repository"`
 
 	// If true push the image to the repository.
 	// Set to false for the local case.
-	Push bool
+	Push bool `json:"push"`
 }
 
 type EnvoyConfig struct {
-	PrepareImage      string
-	Image             string
-	EgressPort        int32
-	RedirectCidrBlock string
-	XdsApiPort        int32
+	PrepareImage      string `json:"prepareImage"`
+	Image             string `json:"image"`
+	EgressPort        int32  `json:"egressPort"`
+	RedirectCidrBlock string `json:"redirectCidrBlock"`
+	XdsApiPort        int32  `json:"xdsApiPort"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

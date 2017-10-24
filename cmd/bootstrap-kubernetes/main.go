@@ -20,12 +20,14 @@ const (
 var (
 	kubeconfigPath string
 	providerName   string
+	userSystemUrl  string
 	dev            bool
 )
 
 func init() {
 	flag.StringVar(&kubeconfigPath, "kubeconfig", "", "path to kubeconfig file")
-	flag.StringVar(&providerName, "provider", "", "path to kubeconfig file")
+	flag.StringVar(&providerName, "provider", "", "name of provider to use")
+	flag.StringVar(&userSystemUrl, "user-system-url", "", "url of the user-system definition")
 	flag.BoolVar(&dev, "dev", false, "configure to use locally built lattice component docker images")
 	flag.Parse()
 }
@@ -47,7 +49,7 @@ func main() {
 	seedNamespaces(kubeClientset)
 	seedCrds(config)
 	seedRbac(kubeClientset)
-	seedConfig(config)
+	seedConfig(config, userSystemUrl)
 	seedEnvoyXdsApi(kubeClientset)
 	seedLatticeControllerManager(kubeClientset)
 }
