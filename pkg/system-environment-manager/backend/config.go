@@ -1,0 +1,29 @@
+package backend
+
+import (
+	systemdefinition "github.com/mlab-lattice/core/pkg/system/definition"
+	systemtree "github.com/mlab-lattice/core/pkg/system/tree"
+	coretypes "github.com/mlab-lattice/core/pkg/types"
+
+	crv1 "github.com/mlab-lattice/kubernetes-integration/pkg/api/customresource/v1"
+	"github.com/mlab-lattice/kubernetes-integration/pkg/constants"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/uuid"
+)
+
+func (kb *KubernetesBackend) GetSystemUrl(ln coretypes.LatticeNamespace) (string, error) {
+	result := &crv1.Config{}
+	err := kb.LatticeResourceClient.Get().
+		Namespace(constants.NamespaceInternal).
+		Resource(crv1.ConfigResourcePlural).
+		Name(constants.ConfigGlobal).
+		Do().
+		Into(result)
+
+	if err != nil {
+		return "", err
+	}
+
+	return result.Spec.SystemConfigs[ln].Url, nil
+}

@@ -7,6 +7,7 @@ import (
 	crv1 "github.com/mlab-lattice/kubernetes-integration/pkg/api/customresource/v1"
 	"github.com/mlab-lattice/kubernetes-integration/pkg/constants"
 
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/uuid"
 )
@@ -76,4 +77,70 @@ func getSystemRollout(latticeNamespace coretypes.LatticeNamespace, sysBuild *crv
 	}
 
 	return sysRollout, nil
+}
+
+func (kb *KubernetesBackend) GetSystemRollout(ln coretypes.LatticeNamespace, rid coretypes.SystemRolloutId) (*coretypes.SystemRollout, bool, error) {
+	result := &crv1.SystemRollout{}
+	err := kb.LatticeResourceClient.Get().
+		Namespace(string(ln)).
+		Resource(crv1.SystemRolloutResourcePlural).
+		Name(string(rid)).
+		Do().
+		Into(result)
+
+	if err != nil {
+		if errors.IsNotFound(err) {
+			return nil, false, nil
+		}
+		return nil, false, err
+	}
+
+	sb := &coretypes.SystemRollout{
+		Id:      rid,
+		BuildId: coretypes.SystemBuildId(result.Spec.BuildName),
+		State:   getSystemRolloutState(result.Status.State),
+	}
+
+	return sb, true, nil
+}
+
+func (kb *KubernetesBackend) ListSystemRollouts(ln coretypes.LatticeNamespace) ([]coretypes.SystemRollout, error) {
+	result := &crv1.SystemRolloutList{}
+	err := kb.LatticeResourceClient.Get().
+		Namespace(string(ln)).
+		Resource(crv1.SystemRolloutResourcePlural).
+		Do().
+		Into(result)
+
+	if err != nil {
+		return nil, err
+	}
+
+	rollouts := []coretypes.SystemRollout{}
+	for _, r := range result.Items {
+		rollouts = append(rollouts, coretypes.SystemRollout{
+			Id:      coretypes.SystemRolloutId(r.Name),
+			BuildId: coretypes.SystemBuildId(r.Spec.BuildName),
+			State:   getSystemRolloutState(r.Status.State),
+		})
+	}
+
+	return rollouts, nil
+}
+
+func getSystemRolloutState(state crv1.SystemRolloutState) coretypes.SystemRolloutState {
+	switch state {
+	case crv1.SystemRolloutStatePending:
+		return coretypes.SystemRolloutStatePending
+	case crv1.SystemRolloutStateAccepted:
+		return coretypes.SystemRolloutStateAccepted
+	case crv1.SystemRolloutStateInProgress:
+		return coretypes.SystemRolloutStateInProgress
+	case crv1.SystemRolloutStateSucceeded:
+		return coretypes.SystemRolloutStateSucceeded
+	case crv1.SystemRolloutStateFailed:
+		return coretypes.SystemRolloutStateFailed
+	default:
+		panic("unreachable")
+	}
 }

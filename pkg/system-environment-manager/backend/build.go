@@ -8,6 +8,7 @@ import (
 	crv1 "github.com/mlab-lattice/kubernetes-integration/pkg/api/customresource/v1"
 	"github.com/mlab-lattice/kubernetes-integration/pkg/constants"
 
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/uuid"
 )
@@ -63,4 +64,68 @@ func getSystemBuild(ln coretypes.LatticeNamespace, sd *systemdefinition.System, 
 	}
 
 	return sysB, nil
+}
+
+func (kb *KubernetesBackend) GetSystemBuild(ln coretypes.LatticeNamespace, bid coretypes.SystemBuildId) (*coretypes.SystemBuild, bool, error) {
+	result := &crv1.SystemBuild{}
+	err := kb.LatticeResourceClient.Get().
+		Namespace(string(ln)).
+		Resource(crv1.SystemBuildResourcePlural).
+		Name(string(bid)).
+		Do().
+		Into(result)
+
+	if err != nil {
+		if errors.IsNotFound(err) {
+			return nil, false, nil
+		}
+		return nil, false, err
+	}
+
+	sb := &coretypes.SystemBuild{
+		Id:      bid,
+		Version: coretypes.SystemVersion(result.Labels[crv1.SystemVersionLabelKey]),
+		State:   getSystemBuildState(result.Status.State),
+	}
+
+	return sb, true, nil
+}
+
+func (kb *KubernetesBackend) ListSystemBuilds(ln coretypes.LatticeNamespace) ([]coretypes.SystemBuild, error) {
+	result := &crv1.SystemBuildList{}
+	err := kb.LatticeResourceClient.Get().
+		Namespace(string(ln)).
+		Resource(crv1.SystemBuildResourcePlural).
+		Do().
+		Into(result)
+
+	if err != nil {
+		return nil, err
+	}
+
+	builds := []coretypes.SystemBuild{}
+	for _, b := range result.Items {
+		builds = append(builds, coretypes.SystemBuild{
+			Id:      coretypes.SystemBuildId(b.Name),
+			Version: coretypes.SystemVersion(b.Labels[crv1.SystemVersionLabelKey]),
+			State:   getSystemBuildState(b.Status.State),
+		})
+	}
+
+	return builds, nil
+}
+
+func getSystemBuildState(state crv1.SystemBuildState) coretypes.SystemBuildState {
+	switch state {
+	case crv1.SystemBuildStatePending:
+		return coretypes.SystemBuildStatePending
+	case crv1.SystemBuildStateRunning:
+		return coretypes.SystemBuildStateRunning
+	case crv1.SystemBuildStateSucceeded:
+		return coretypes.SystemBuildStateSucceeded
+	case crv1.SystemBuildStateFailed:
+		return coretypes.SystemBuildStateFailed
+	default:
+		panic("unreachable")
+	}
 }
