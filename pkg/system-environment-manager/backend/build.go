@@ -1,6 +1,8 @@
 package backend
 
 import (
+	"strings"
+
 	systemdefinition "github.com/mlab-lattice/core/pkg/system/definition"
 	systemtree "github.com/mlab-lattice/core/pkg/system/tree"
 	coretypes "github.com/mlab-lattice/core/pkg/types"
@@ -69,7 +71,7 @@ func getSystemBuild(ln coretypes.LatticeNamespace, sd *systemdefinition.System, 
 func (kb *KubernetesBackend) GetSystemBuild(ln coretypes.LatticeNamespace, bid coretypes.SystemBuildId) (*coretypes.SystemBuild, bool, error) {
 	result := &crv1.SystemBuild{}
 	err := kb.LatticeResourceClient.Get().
-		Namespace(string(ln)).
+		Namespace(constants.NamespaceInternal).
 		Resource(crv1.SystemBuildResourcePlural).
 		Name(string(bid)).
 		Do().
@@ -80,6 +82,11 @@ func (kb *KubernetesBackend) GetSystemBuild(ln coretypes.LatticeNamespace, bid c
 			return nil, false, nil
 		}
 		return nil, false, err
+	}
+
+	// TODO: add this to the query
+	if strings.Compare(result.Labels[constants.LatticeNamespaceLabel], string(ln)) != 0 {
+		return nil, false, nil
 	}
 
 	sb := &coretypes.SystemBuild{
@@ -94,7 +101,7 @@ func (kb *KubernetesBackend) GetSystemBuild(ln coretypes.LatticeNamespace, bid c
 func (kb *KubernetesBackend) ListSystemBuilds(ln coretypes.LatticeNamespace) ([]coretypes.SystemBuild, error) {
 	result := &crv1.SystemBuildList{}
 	err := kb.LatticeResourceClient.Get().
-		Namespace(string(ln)).
+		Namespace(constants.NamespaceInternal).
 		Resource(crv1.SystemBuildResourcePlural).
 		Do().
 		Into(result)
@@ -105,6 +112,11 @@ func (kb *KubernetesBackend) ListSystemBuilds(ln coretypes.LatticeNamespace) ([]
 
 	builds := []coretypes.SystemBuild{}
 	for _, b := range result.Items {
+		// TODO: add this to the query
+		if strings.Compare(b.Labels[constants.LatticeNamespaceLabel], string(ln)) != 0 {
+			continue
+		}
+
 		builds = append(builds, coretypes.SystemBuild{
 			Id:      coretypes.SystemBuildId(b.Name),
 			Version: coretypes.SystemVersion(b.Labels[crv1.SystemVersionLabelKey]),

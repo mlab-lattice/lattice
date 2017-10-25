@@ -1,6 +1,8 @@
 package backend
 
 import (
+	"strings"
+
 	systemdefinition "github.com/mlab-lattice/core/pkg/system/definition"
 	coretypes "github.com/mlab-lattice/core/pkg/types"
 
@@ -82,7 +84,7 @@ func getSystemRollout(latticeNamespace coretypes.LatticeNamespace, sysBuild *crv
 func (kb *KubernetesBackend) GetSystemRollout(ln coretypes.LatticeNamespace, rid coretypes.SystemRolloutId) (*coretypes.SystemRollout, bool, error) {
 	result := &crv1.SystemRollout{}
 	err := kb.LatticeResourceClient.Get().
-		Namespace(string(ln)).
+		Namespace(constants.NamespaceInternal).
 		Resource(crv1.SystemRolloutResourcePlural).
 		Name(string(rid)).
 		Do().
@@ -93,6 +95,11 @@ func (kb *KubernetesBackend) GetSystemRollout(ln coretypes.LatticeNamespace, rid
 			return nil, false, nil
 		}
 		return nil, false, err
+	}
+
+	// TODO: add this to the query
+	if strings.Compare(result.Labels[constants.LatticeNamespaceLabel], string(ln)) != 0 {
+		return nil, false, nil
 	}
 
 	sb := &coretypes.SystemRollout{
@@ -107,7 +114,7 @@ func (kb *KubernetesBackend) GetSystemRollout(ln coretypes.LatticeNamespace, rid
 func (kb *KubernetesBackend) ListSystemRollouts(ln coretypes.LatticeNamespace) ([]coretypes.SystemRollout, error) {
 	result := &crv1.SystemRolloutList{}
 	err := kb.LatticeResourceClient.Get().
-		Namespace(string(ln)).
+		Namespace(constants.NamespaceInternal).
 		Resource(crv1.SystemRolloutResourcePlural).
 		Do().
 		Into(result)
@@ -118,6 +125,11 @@ func (kb *KubernetesBackend) ListSystemRollouts(ln coretypes.LatticeNamespace) (
 
 	rollouts := []coretypes.SystemRollout{}
 	for _, r := range result.Items {
+		// TODO: add this to the query
+		if strings.Compare(r.Labels[constants.LatticeNamespaceLabel], string(ln)) != 0 {
+			continue
+		}
+
 		rollouts = append(rollouts, coretypes.SystemRollout{
 			Id:      coretypes.SystemRolloutId(r.Name),
 			BuildId: coretypes.SystemBuildId(r.Spec.BuildName),
