@@ -1,14 +1,10 @@
 package main
 
 import (
-	"time"
-
 	coreconstants "github.com/mlab-lattice/core/pkg/constants"
 	"github.com/mlab-lattice/kubernetes-integration/pkg/constants"
 
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/wait"
 
 	"k8s.io/client-go/kubernetes"
 
