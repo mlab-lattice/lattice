@@ -16,37 +16,23 @@ import (
 )
 
 func seedNamespaces(kubeClientset *kubernetes.Clientset) {
-	latticeInternalNamespace := &corev1.Namespace{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: constants.NamespaceInternal,
+	namespaces := []*corev1.Namespace{
+		// lattice internal namespace
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: constants.NamespaceInternal,
+			},
+		},
+		// lattice user namespace
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: string(coreconstants.UserSystemNamespace),
+			},
 		},
 	}
-
-	err := wait.Poll(500*time.Millisecond, 60*time.Second, func() (bool, error) {
-		_, err := kubeClientset.CoreV1().Namespaces().Create(latticeInternalNamespace)
-		if err != nil && !apierrors.IsAlreadyExists(err) {
-			return false, nil
-		}
-		return true, nil
-	})
-	if err != nil {
-		panic(err)
-	}
-
-	latticeUserNamespace := &corev1.Namespace{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: string(coreconstants.UserSystemNamespace),
-		},
-	}
-
-	err = wait.Poll(500*time.Millisecond, 60*time.Second, func() (bool, error) {
-		_, err := kubeClientset.CoreV1().Namespaces().Create(latticeUserNamespace)
-		if err != nil && !apierrors.IsAlreadyExists(err) {
-			return false, nil
-		}
-		return true, nil
-	})
-	if err != nil {
-		panic(err)
+	for _, ns := range namespaces {
+		pollKubeResourceCreation(func() (interface{}, error) {
+			return kubeClientset.CoreV1().Namespaces().Create(ns)
+		})
 	}
 }
