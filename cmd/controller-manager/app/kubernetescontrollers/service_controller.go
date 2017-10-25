@@ -11,6 +11,7 @@ func initializeServiceController(ctx controller.Context) {
 		ctx.ClientBuilder.ClientOrDie("kubernetes-service-controller"),
 		ctx.LatticeResourceRestClient,
 		ctx.CRDInformers["config"],
+		ctx.CRDInformers["system"],
 		ctx.CRDInformers["service"],
 		ctx.InformerFactory.Extensions().V1beta1().Deployments(),
 		ctx.InformerFactory.Core().V1().Services(),

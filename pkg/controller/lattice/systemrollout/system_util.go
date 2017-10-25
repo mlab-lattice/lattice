@@ -21,7 +21,7 @@ func (src *SystemRolloutController) getNewSystem(sysRollout *crv1.SystemRollout,
 
 	sys := &crv1.System{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: string(sysBuild.Spec.LatticeNamespace),
+			Name: string(sysRollout.Spec.LatticeNamespace),
 		},
 		Spec: *sysSpec,
 		Status: crv1.SystemStatus{

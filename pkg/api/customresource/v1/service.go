@@ -18,6 +18,8 @@ const (
 
 	LabelKeyServiceDeployment                = "service.lattice.mlab.com"
 	AnnotationKeyDeploymentServiceDefinition = "service.lattice.mlab.com/definition"
+	// FIXME: remove this when local DNS works
+	AnnotationKeySystemServices              = "system.lattice.mlab.com/services"
 )
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

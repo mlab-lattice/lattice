@@ -48,6 +48,10 @@ type ServiceController struct {
 	configLock        sync.RWMutex
 	config            crv1.ConfigSpec
 
+	// FIXME: remove when local DNS server working
+	systemStore       cache.Store
+	systemStoreSynced cache.InformerSynced
+
 	serviceStore       cache.Store
 	serviceStoreSynced cache.InformerSynced
 
@@ -66,6 +70,7 @@ func NewServiceController(
 	kubeClient clientset.Interface,
 	latticeResourceRestClient rest.Interface,
 	configInformer cache.SharedInformer,
+	systemInformer cache.SharedInformer,
 	serviceInformer cache.SharedInformer,
 	deploymentInformer extensioninformers.DeploymentInformer,
 	kubeServiceInformer coreinformers.ServiceInformer,
@@ -92,6 +97,14 @@ func NewServiceController(
 	})
 	sc.configStore = configInformer.GetStore()
 	sc.configStoreSynced = configInformer.HasSynced
+
+	// FIXME: remove when local DNS server working
+	systemInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+		AddFunc:    sc.handleSystemAdd,
+		UpdateFunc: sc.handleSystemUpdate,
+	})
+	sc.systemStore = systemInformer.GetStore()
+	sc.systemStoreSynced = systemInformer.HasSynced
 
 	serviceInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    sc.handleServiceAdd,
@@ -137,6 +150,61 @@ func (sc *ServiceController) handleConfigUpdate(old, cur interface{}) {
 	sc.configLock.Lock()
 	defer sc.configLock.Unlock()
 	sc.config = curConfig.DeepCopy().Spec
+}
+
+func (sc *ServiceController) handleSystemAdd(obj interface{}) {
+	sys := obj.(*crv1.System)
+	glog.V(4).Infof("Adding System %s", sys.Name)
+
+	for _, svcInfo := range sys.Spec.Services {
+		if svcInfo.ServiceName == nil {
+			// FIXME: what to do here?
+			// probably okay not to worry about, this should be temp until local DNS working
+			continue
+		}
+
+		svcKey := fmt.Sprintf("%v/%v", sys.Namespace, svcInfo.ServiceName)
+		svcObj, exists, err := sc.serviceStore.GetByKey(svcKey)
+		if err != nil || !exists {
+			// FIXME: what to do here?
+			// probably okay not to worry about, this should be temp until local DNS working
+			continue
+		}
+
+		svc := svcObj.(*crv1.Service)
+		sc.enqueueService(svc)
+	}
+}
+
+func (sc *ServiceController) handleSystemUpdate(old, cur interface{}) {
+	oldSys := old.(*crv1.System)
+	curSys := cur.(*crv1.System)
+	if oldSys.ResourceVersion == curSys.ResourceVersion {
+		// Periodic resync will send update events for all known Deployments.
+		// Two different versions of the same Deployment will always have different RVs.
+		glog.V(5).Info("System ResourceVersions are the same")
+		return
+	}
+
+	glog.V(4).Infof("Updating System %s", oldSys.Name)
+	for _, svcInfo := range curSys.Spec.Services {
+		if svcInfo.ServiceName == nil {
+			// FIXME: what to do here?
+			// probably okay not to worry about, this should be temp until local DNS working
+			continue
+		}
+
+		svcKey := fmt.Sprintf("%v/%v", curSys.Namespace, svcInfo.ServiceName)
+		svcObj, exists, err := sc.serviceStore.GetByKey(svcKey)
+		if err != nil || !exists {
+			// FIXME: what to do here?
+			// probably okay not to worry about, this should be temp until local DNS working
+			continue
+		}
+
+		svc := svcObj.(*crv1.Service)
+		sc.enqueueService(svc)
+	}
 }
 
 func (sc *ServiceController) handleServiceAdd(obj interface{}) {

@@ -4,10 +4,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"reflect"
+	"sort"
 	"strconv"
 
 	systemdefinition "github.com/mlab-lattice/core/pkg/system/definition"
 	systemdefinitionblock "github.com/mlab-lattice/core/pkg/system/definition/block"
+	systemtree "github.com/mlab-lattice/core/pkg/system/tree"
 
 	crv1 "github.com/mlab-lattice/kubernetes-integration/pkg/api/customresource/v1"
 
@@ -37,7 +39,7 @@ func (sc *ServiceController) getDeployment(svc *crv1.Service) (*extensions.Deplo
 	dLabels := map[string]string{
 		crv1.LabelKeyServiceDeployment: svc.Name,
 	}
-	dAnnotations, err := getDeploymentAnnotations(svc)
+	dAnnotations, err := sc.getDeploymentAnnotations(svc)
 	if err != nil {
 		return nil, err
 	}
@@ -65,7 +67,7 @@ func getDeploymentName(svc *crv1.Service) string {
 	return fmt.Sprintf("lattice-service-%s", svc.Name)
 }
 
-func getDeploymentAnnotations(svc *crv1.Service) (map[string]string, error) {
+func (sc *ServiceController) getDeploymentAnnotations(svc *crv1.Service) (map[string]string, error) {
 	annotations := map[string]string{}
 	svcDefinitionJsonBytes, err := json.Marshal(svc.Spec.Definition)
 	if err != nil {
@@ -73,6 +75,20 @@ func getDeploymentAnnotations(svc *crv1.Service) (map[string]string, error) {
 	}
 
 	annotations[crv1.AnnotationKeyDeploymentServiceDefinition] = string(svcDefinitionJsonBytes)
+
+	// FIXME: remove this when local DNS is working
+	sys, err := sc.getServiceSystem(svc)
+	if err != nil {
+		return nil, err
+	}
+	sysSvcSlice := getSystemServicesSlice(sys)
+	sysSvcJsonBytes, err := json.Marshal(sysSvcSlice)
+	if err != nil {
+		return nil, err
+	}
+
+	annotations[crv1.AnnotationKeySystemServices] = string(sysSvcJsonBytes)
+
 	return annotations, nil
 }
 
@@ -107,12 +123,12 @@ func (sc *ServiceController) getDeploymentSpec(svc *crv1.Service) (*extensions.D
 		}
 
 		container := corev1.Container{
-			Name:    component.Name,
-			Image:   svc.Spec.ComponentBuildArtifacts[component.Name].DockerImageFqn,
+			Name:            component.Name,
+			Image:           svc.Spec.ComponentBuildArtifacts[component.Name].DockerImageFqn,
 			ImagePullPolicy: corev1.PullIfNotPresent,
-			Command: component.Exec.Command,
-			Ports:   ports,
-			Env:     envs,
+			Command:         component.Exec.Command,
+			Ports:           ports,
+			Env:             envs,
 			// TODO: maybe add Resources
 			// TODO: add VolumeMounts
 			LivenessProbe: getLivenessProbe(component.HealthCheck),
@@ -130,10 +146,10 @@ func (sc *ServiceController) getDeploymentSpec(svc *crv1.Service) (*extensions.D
 	initContainers = append(initContainers, corev1.Container{
 		// add a UUID to deal with the small chance that a user names their
 		// service component the same thing we name our envoy container
-		Name:    fmt.Sprintf("lattice-prepare-envoy-%v", uuid.NewUUID()),
-		Image:   sc.config.Envoy.PrepareImage,
+		Name:            fmt.Sprintf("lattice-prepare-envoy-%v", uuid.NewUUID()),
+		Image:           sc.config.Envoy.PrepareImage,
 		ImagePullPolicy: corev1.PullIfNotPresent,
-		Command: []string{"/usr/local/bin/prepare-envoy.sh"},
+		Command:         []string{"/usr/local/bin/prepare-envoy.sh"},
 		Env: []corev1.EnvVar{
 			{
 				Name:  "ENVOY_EGRESS_PORT",
@@ -193,10 +209,10 @@ func (sc *ServiceController) getDeploymentSpec(svc *crv1.Service) (*extensions.D
 	containers = append(containers, corev1.Container{
 		// add a UUID to deal with the small chance that a user names their
 		// service component the same thing we name our envoy container
-		Name:    fmt.Sprintf("lattice-envoy-%v", uuid.NewUUID()),
-		Image:   envoyConfig.Image,
+		Name:            fmt.Sprintf("lattice-envoy-%v", uuid.NewUUID()),
+		Image:           envoyConfig.Image,
 		ImagePullPolicy: corev1.PullIfNotPresent,
-		Command: []string{"/usr/local/bin/envoy"},
+		Command:         []string{"/usr/local/bin/envoy"},
 		Args: []string{
 			"-c",
 			fmt.Sprintf("%v/config.json", envoyConfigDirectory),
@@ -251,6 +267,28 @@ func (sc *ServiceController) getDeploymentSpec(svc *crv1.Service) (*extensions.D
 				// TODO: add NodeSelector (for cloud)
 				// TODO: add Tolerations (for cloud)
 			},
+		},
+	}
+
+	// FIXME: remove when local dns working
+	sys, err := sc.getServiceSystem(svc)
+	if err != nil {
+		return nil, err
+	}
+	sysSvcSlice := getSystemServicesSlice(sys)
+	svcDomains := []string{}
+	for _, svcPath := range sysSvcSlice {
+		path, err := systemtree.NewNodePath(svcPath)
+		if err != nil {
+			return nil, err
+		}
+
+		svcDomains = append(svcDomains, path.ToDomain(true))
+	}
+	ds.Template.Spec.HostAliases = []corev1.HostAlias{
+		{
+			IP:        "172.16.29.0",
+			Hostnames: svcDomains,
 		},
 	}
 
@@ -363,8 +401,24 @@ func (sc *ServiceController) syncDeploymentSpec(svc *crv1.Service, d *extensions
 		return nil, err
 	}
 
+	// FIXME: remove this when local DNS works
+	sysServicesStr, ok := d.Annotations[crv1.AnnotationKeySystemServices]
+	if !ok {
+		return nil, fmt.Errorf("deployment did not have %v annotation", crv1.AnnotationKeySystemServices)
+	}
+
+	sysServices := []string{}
+	err = json.Unmarshal([]byte(sysServicesStr), &sysServices)
+	if err != nil {
+		return nil, err
+	}
+	sys, err := sc.getServiceSystem(svc)
+	if err != nil {
+		return nil, err
+	}
+
 	// If the deployment is already updated for this Service definition, nothing to do.
-	if reflect.DeepEqual(dSvcDef, svc.Spec.Definition) {
+	if reflect.DeepEqual(dSvcDef, svc.Spec.Definition) && reflect.DeepEqual(sysServices, getSystemServicesSlice(sys)) {
 		glog.V(4).Infof("Service %q Deployment Spec already up to date", svc.Name)
 		return d, nil
 	}
@@ -380,7 +434,7 @@ func (sc *ServiceController) syncDeploymentSpec(svc *crv1.Service, d *extensions
 }
 
 func (sc *ServiceController) updateDeploymentSpec(svc *crv1.Service, d *extensions.Deployment, dSpec *extensions.DeploymentSpec) (*extensions.Deployment, error) {
-	dAnnotations, err := getDeploymentAnnotations(svc)
+	dAnnotations, err := sc.getDeploymentAnnotations(svc)
 	if err != nil {
 		return nil, err
 	}
@@ -394,4 +448,30 @@ func (sc *ServiceController) updateDeploymentSpec(svc *crv1.Service, d *extensio
 	// TODO: should we Patch here instead?
 	result, err := sc.kubeClient.ExtensionsV1beta1().Deployments(d.Namespace).Update(d)
 	return result, err
+}
+
+func (sc *ServiceController) getServiceSystem(svc *crv1.Service) (*crv1.System, error) {
+	sysKey := fmt.Sprintf("%v/%v", svc.Namespace, svc.Namespace)
+	sysObj, exists, err := sc.systemStore.GetByKey(sysKey)
+	if err != nil {
+		return nil, err
+	}
+
+	if !exists {
+		return nil, fmt.Errorf("no System in namespace %v", svc.Namespace)
+	}
+
+	sys := sysObj.(*crv1.System)
+	return sys, nil
+}
+
+// FIXME: remove this when local DNS works
+func getSystemServicesSlice(sys *crv1.System) []string {
+	svcPaths := []string{}
+	for path := range sys.Spec.Services {
+		svcPaths = append(svcPaths, string(path))
+	}
+
+	sort.Strings(svcPaths)
+	return svcPaths
 }
