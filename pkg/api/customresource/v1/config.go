@@ -26,6 +26,10 @@ type ConfigSpec struct {
 	ComponentBuild ComponentBuildConfig                        `json:"componentBuild"`
 	Envoy          EnvoyConfig                                 `json:"envoy"`
 	SystemConfigs  map[coretypes.LatticeNamespace]SystemConfig `json:"userSystem"`
+	Provider       coretypes.Provider                          `json:"provider"`
+
+	// If the Provider is local, SystemIP will be the VM's IP address
+	SystemIP *string `json:"systemIp"`
 }
 
 type SystemConfig struct {

@@ -22,3 +22,19 @@ func (kb *KubernetesBackend) GetSystemUrl(ln coretypes.LatticeNamespace) (string
 
 	return result.Spec.SystemConfigs[ln].Url, nil
 }
+
+func (kb *KubernetesBackend) getSystemIP() (*string, error) {
+	result := &crv1.Config{}
+	err := kb.LatticeResourceClient.Get().
+		Namespace(constants.NamespaceInternal).
+		Resource(crv1.ConfigResourcePlural).
+		Name(constants.ConfigGlobal).
+		Do().
+		Into(result)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return result.Spec.SystemIP, nil
+}

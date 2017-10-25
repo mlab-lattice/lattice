@@ -13,7 +13,7 @@ import (
 	"k8s.io/client-go/rest"
 )
 
-func seedConfig(kubeconfig *rest.Config, userSystemUrl string) {
+func seedConfig(kubeconfig *rest.Config, userSystemUrl, systemIP string) {
 	crClient, _, err := crdclient.NewClient(kubeconfig)
 	if err != nil {
 		panic(err)
@@ -27,9 +27,25 @@ func seedConfig(kubeconfig *rest.Config, userSystemUrl string) {
 	}
 
 	// Create config
+	provider := coretypes.Provider(providerName)
+	config := &crv1.Config{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      constants.ConfigGlobal,
+			Namespace: constants.NamespaceInternal,
+		},
+		Spec: crv1.ConfigSpec{
+			SystemConfigs: map[coretypes.LatticeNamespace]crv1.SystemConfig{
+				coreconstants.UserSystemNamespace: {
+					Url: userSystemUrl,
+				},
+			},
+			Provider: provider,
+		},
+	}
+
 	var buildConfig crv1.ComponentBuildConfig
 	var envoyConfig crv1.EnvoyConfig
-	switch coretypes.Provider(providerName) {
+	switch provider {
 	case coreconstants.ProviderLocal:
 		buildConfig = crv1.ComponentBuildConfig{
 			DockerConfig: crv1.BuildDockerConfig{
@@ -48,25 +64,14 @@ func seedConfig(kubeconfig *rest.Config, userSystemUrl string) {
 			RedirectCidrBlock: "172.16.29.0/16",
 			XdsApiPort:        8080,
 		}
+
+		config.Spec.SystemIP = &systemIP
 	default:
 		panic("unsupported providerName")
 	}
 
-	config := &crv1.Config{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      constants.ConfigGlobal,
-			Namespace: constants.NamespaceInternal,
-		},
-		Spec: crv1.ConfigSpec{
-			ComponentBuild: buildConfig,
-			Envoy:          envoyConfig,
-			SystemConfigs: map[coretypes.LatticeNamespace]crv1.SystemConfig{
-				coreconstants.UserSystemNamespace: {
-					Url: userSystemUrl,
-				},
-			},
-		},
-	}
+	config.Spec.ComponentBuild = buildConfig
+	config.Spec.Envoy = envoyConfig
 
 	pollKubeResourceCreation(func() (interface{}, error) {
 		return nil, crClient.Post().
