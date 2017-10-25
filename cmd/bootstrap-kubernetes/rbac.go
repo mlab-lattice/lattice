@@ -411,7 +411,7 @@ func bindLatticeSystemEnvironmentMangerApiServiceAccountRoles(kubeClientset *kub
 		// lattice Rollouts read and create
 		{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "lattice-system-environment-manager-api-builds-read-and-create",
+				Name:      "lattice-system-environment-manager-api-rollouts-read-and-create",
 				Namespace: constants.NamespaceInternal,
 			},
 			Subjects: []rbacv1.Subject{
