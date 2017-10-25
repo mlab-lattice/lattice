@@ -7,6 +7,7 @@ go_library(
         "crd.go",
         "envoy-xds-api.go",
         "lattice-controller-manager.go",
+        "lattice-system-environment-manager-api.go",
         "main.go",
         "namespaces.go",
         "rbac.go",

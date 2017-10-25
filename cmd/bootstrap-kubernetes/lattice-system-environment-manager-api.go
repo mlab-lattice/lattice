@@ -9,7 +9,6 @@ import (
 	extensionsv1beta1 "k8s.io/api/extensions/v1beta1"
 
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/kubernetes/pkg/kubelet/network"
 )
 
 func seedLatticeSystemEnvironmentManagerAPI(kubeClientset *kubernetes.Clientset) {
@@ -43,8 +42,8 @@ func seedLatticeSystemEnvironmentManagerAPI(kubeClientset *kubernetes.Clientset)
 							Args:            []string{"-port", "80"},
 							Ports: []corev1.ContainerPort{
 								{
-									Name: "http",
-									HostPort: 80,
+									Name:          "http",
+									HostPort:      80,
 									ContainerPort: 80,
 								},
 							},
