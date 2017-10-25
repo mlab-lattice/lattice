@@ -2,10 +2,10 @@ FROM ubuntu:xenial
 
 # https://docs.bazel.build/versions/master/install-ubuntu.html
 RUN apt update && apt install -y wget git
-RUN wget https://github.com/bazelbuild/bazel/releases/download/0.5.4/bazel-0.5.4-installer-linux-x86_64.sh
+RUN wget https://github.com/bazelbuild/bazel/releases/download/0.7.0/bazel-0.7.0-installer-linux-x86_64.sh
 RUN apt install -y pkg-config zip g++ zlib1g-dev unzip python
-RUN chmod +x bazel-0.5.4-installer-linux-x86_64.sh
-RUN ./bazel-0.5.4-installer-linux-x86_64.sh --user
+RUN chmod +x bazel-0.7.0-installer-linux-x86_64.sh
+RUN ./bazel-0.7.0-installer-linux-x86_64.sh --user
 RUN /root/bin/bazel version
 
 RUN apt install -y docker.io
