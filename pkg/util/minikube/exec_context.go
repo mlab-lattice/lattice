@@ -1,6 +1,7 @@
 package minikube
 
 import (
+	"io/ioutil"
 	"os/exec"
 	"path/filepath"
 
@@ -11,6 +12,7 @@ const (
 	binaryName = "minikube"
 	startCmd   = "start"
 	deleteCmd  = "delete"
+	ipCmd      = "ip"
 
 	logsDir = "logs"
 )
@@ -46,4 +48,24 @@ func (mec *ExecContext) Start() (int, string, func() error, error) {
 func (mec *ExecContext) Delete() (int, string, func() error, error) {
 	args := []string{deleteCmd, "-p", mec.systemName}
 	return mec.Exec(args...)
+}
+
+func (mec *ExecContext) IP() (string, error) {
+	args := []string{ipCmd, "-p", mec.systemName}
+	_, logFilename, waitFunc, err := mec.Exec(args...)
+	if err != nil {
+		return "", err
+	}
+
+	err = waitFunc()
+	if err != nil {
+		return "", err
+	}
+
+	ipBytes, err := ioutil.ReadFile(filepath.Join(mec.LogPath, logFilename))
+	if err != nil {
+		return "", err
+	}
+
+	return string(ipBytes), nil
 }
