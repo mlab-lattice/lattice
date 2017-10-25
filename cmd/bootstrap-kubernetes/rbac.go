@@ -24,6 +24,8 @@ const (
 	kubeJobAllRole           = "kube-job-all"
 	latticeServiceReaderRole = "lattice-service-reader"
 	latticeAllRole           = "lattice-all"
+	latticeBuildsAllRole     = "lattice-builds-all"
+	latticeRolloutsAllRole   = "lattice-rollouts-all"
 )
 
 func seedRbac(kubeClientset *kubernetes.Clientset) {
@@ -32,6 +34,7 @@ func seedRbac(kubeClientset *kubernetes.Clientset) {
 
 	bindEnvoyXdsApiServiceAccountRoles(kubeClientset)
 	bindLatticeControllerMangerServiceAccountRoles(kubeClientset)
+	bindLatticeSystemEnvironmentMangerApiServiceAccountRoles(kubeClientset)
 }
 
 func seedRbacRoles(kubeClientset *kubernetes.Clientset) {
@@ -98,6 +101,48 @@ func seedRbacRoles(kubeClientset *kubernetes.Clientset) {
 			Create(latticeResourceAll)
 	})
 
+	latticeBuildsAll := &rbacv1.Role{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      latticeBuildsAllRole,
+			Namespace: constants.NamespaceInternal,
+		},
+		Rules: []rbacv1.PolicyRule{
+			{
+				APIGroups: []string{crv1.GroupName},
+				Resources: []string{crv1.SystemBuildResourcePlural},
+				Verbs:     []string{rbacv1.VerbAll},
+			},
+		},
+	}
+
+	pollKubeResourceCreation(func() (interface{}, error) {
+		return kubeClientset.
+			RbacV1().
+			Roles(constants.NamespaceInternal).
+			Create(latticeBuildsAll)
+	})
+
+	latticeRolloutsAll := &rbacv1.Role{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      latticeRolloutsAllRole,
+			Namespace: constants.NamespaceInternal,
+		},
+		Rules: []rbacv1.PolicyRule{
+			{
+				APIGroups: []string{crv1.GroupName},
+				Resources: []string{crv1.SystemRolloutResourcePlural},
+				Verbs:     []string{rbacv1.VerbAll},
+			},
+		},
+	}
+
+	pollKubeResourceCreation(func() (interface{}, error) {
+		return kubeClientset.
+			RbacV1().
+			Roles(constants.NamespaceInternal).
+			Create(latticeRolloutsAll)
+	})
+
 	kubeServiceAll := &rbacv1.ClusterRole{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: kubeServiceAllRole,
@@ -161,7 +206,7 @@ func seedRbacRoles(kubeClientset *kubernetes.Clientset) {
 
 func seedServiceAccounts(kubeClientset *kubernetes.Clientset) {
 	// Create service account for the envoy-xds-api
-	envoyXdsApiSa := &corev1.ServiceAccount{
+	envoyXdsApiSA := &corev1.ServiceAccount{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      constants.ServiceAccountEnvoyXdsApi,
 			Namespace: string(coreconstants.UserSystemNamespace),
@@ -172,22 +217,37 @@ func seedServiceAccounts(kubeClientset *kubernetes.Clientset) {
 		return kubeClientset.
 			CoreV1().
 			ServiceAccounts(string(coreconstants.UserSystemNamespace)).
-			Create(envoyXdsApiSa)
+			Create(envoyXdsApiSA)
 	})
 
 	// Create service account for the lattice-controller-manager
-	latticeControllerManagerSa := &corev1.ServiceAccount{
+	latticeControllerManagerSA := &corev1.ServiceAccount{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      constants.ServiceAccountLatticeControllerManager,
-			Namespace: string(constants.NamespaceInternal),
+			Namespace: constants.NamespaceInternal,
 		},
 	}
 
 	pollKubeResourceCreation(func() (interface{}, error) {
 		return kubeClientset.
 			CoreV1().
-			ServiceAccounts(string(constants.NamespaceInternal)).
-			Create(latticeControllerManagerSa)
+			ServiceAccounts(constants.NamespaceInternal).
+			Create(latticeControllerManagerSA)
+	})
+
+	// Create service account for the lattice-controller-manager
+	latticeSystemEnvironmentManagerAPISA := &corev1.ServiceAccount{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      constants.ServiceAccountLatticeSystemEnvironmentManagerAPI,
+			Namespace: constants.NamespaceInternal,
+		},
+	}
+
+	pollKubeResourceCreation(func() (interface{}, error) {
+		return kubeClientset.
+			CoreV1().
+			ServiceAccounts(constants.NamespaceInternal).
+			Create(latticeSystemEnvironmentManagerAPISA)
 	})
 }
 
@@ -254,7 +314,7 @@ func bindLatticeControllerMangerServiceAccountRoles(kubeClientset *kubernetes.Cl
 			{
 				Kind:      rbacv1.ServiceAccountKind,
 				Name:      constants.ServiceAccountLatticeControllerManager,
-				Namespace: string(constants.NamespaceInternal),
+				Namespace: constants.NamespaceInternal,
 			},
 		},
 		RoleRef: rbacv1.RoleRef{
@@ -279,7 +339,7 @@ func bindLatticeControllerMangerServiceAccountRoles(kubeClientset *kubernetes.Cl
 			{
 				Kind:      rbacv1.ServiceAccountKind,
 				Name:      constants.ServiceAccountLatticeControllerManager,
-				Namespace: string(constants.NamespaceInternal),
+				Namespace: constants.NamespaceInternal,
 			},
 		},
 		RoleRef: rbacv1.RoleRef{
@@ -304,7 +364,7 @@ func bindLatticeControllerMangerServiceAccountRoles(kubeClientset *kubernetes.Cl
 			{
 				Kind:      rbacv1.ServiceAccountKind,
 				Name:      constants.ServiceAccountLatticeControllerManager,
-				Namespace: string(constants.NamespaceInternal),
+				Namespace: constants.NamespaceInternal,
 			},
 		},
 		RoleRef: rbacv1.RoleRef{
@@ -329,7 +389,7 @@ func bindLatticeControllerMangerServiceAccountRoles(kubeClientset *kubernetes.Cl
 			{
 				Kind:      rbacv1.ServiceAccountKind,
 				Name:      constants.ServiceAccountLatticeControllerManager,
-				Namespace: string(constants.NamespaceInternal),
+				Namespace: constants.NamespaceInternal,
 			},
 		},
 		RoleRef: rbacv1.RoleRef{
@@ -344,5 +404,59 @@ func bindLatticeControllerMangerServiceAccountRoles(kubeClientset *kubernetes.Cl
 			RbacV1().
 			ClusterRoleBindings().
 			Create(kubeJobAllBind)
+	})
+}
+
+func bindLatticeSystemEnvironmentMangerApiServiceAccountRoles(kubeClientset *kubernetes.Clientset) {
+	latticeBuildsAllBind := &rbacv1.RoleBinding{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "lattice-system-environment-manager-api-builds-all",
+			Namespace: constants.NamespaceInternal,
+		},
+		Subjects: []rbacv1.Subject{
+			{
+				Kind:      rbacv1.ServiceAccountKind,
+				Name:      constants.ServiceAccountLatticeSystemEnvironmentManagerAPI,
+				Namespace: constants.NamespaceInternal,
+			},
+		},
+		RoleRef: rbacv1.RoleRef{
+			APIGroup: rbacv1.GroupName,
+			Kind:     "Role",
+			Name:     latticeBuildsAllRole,
+		},
+	}
+
+	pollKubeResourceCreation(func() (interface{}, error) {
+		return kubeClientset.
+			RbacV1().
+			RoleBindings(constants.NamespaceInternal).
+			Create(latticeBuildsAllBind)
+	})
+
+	latticeRolloutsAllBind := &rbacv1.RoleBinding{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "lattice-system-environment-manager-api-builds-all",
+			Namespace: constants.NamespaceInternal,
+		},
+		Subjects: []rbacv1.Subject{
+			{
+				Kind:      rbacv1.ServiceAccountKind,
+				Name:      constants.ServiceAccountLatticeSystemEnvironmentManagerAPI,
+				Namespace: constants.NamespaceInternal,
+			},
+		},
+		RoleRef: rbacv1.RoleRef{
+			APIGroup: rbacv1.GroupName,
+			Kind:     "Role",
+			Name:     latticeRolloutsAllRole,
+		},
+	}
+
+	pollKubeResourceCreation(func() (interface{}, error) {
+		return kubeClientset.
+			RbacV1().
+			RoleBindings(constants.NamespaceInternal).
+			Create(latticeRolloutsAllBind)
 	})
 }

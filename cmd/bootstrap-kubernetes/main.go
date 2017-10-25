@@ -38,8 +38,16 @@ func main() {
 	if kubeconfigPath == "" {
 		config, err = rest.InClusterConfig()
 	} else {
-		config, err = clientcmd.BuildConfigFromFlags("", kubeconfigPath)
+		// TODO: support passing in the context when supported
+		// https://github.com/kubernetes/minikube/issues/2100
+		//configOverrides := &clientcmd.ConfigOverrides{CurrentContext: kubeContext}
+		configOverrides := &clientcmd.ConfigOverrides{}
+		config, err = clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
+			&clientcmd.ClientConfigLoadingRules{ExplicitPath: kubeconfigPath},
+			configOverrides,
+		).ClientConfig()
 	}
+
 	if err != nil {
 		panic(err)
 	}
@@ -52,6 +60,7 @@ func main() {
 	seedConfig(config, userSystemUrl)
 	seedEnvoyXdsApi(kubeClientset)
 	seedLatticeControllerManager(kubeClientset)
+	seedLatticeSystemEnvironmentManagerAPI(kubeClientset)
 }
 
 func pollKubeResourceCreation(resourceCreationFunc func() (interface{}, error)) {

@@ -60,8 +60,10 @@ func seedConfig(kubeconfig *rest.Config, userSystemUrl string) {
 		Spec: crv1.ConfigSpec{
 			ComponentBuild: buildConfig,
 			Envoy:          envoyConfig,
-			UserSystem: crv1.SystemConfig{
-				Url: userSystemUrl,
+			SystemConfigs: map[coretypes.LatticeNamespace]crv1.SystemConfig{
+				coreconstants.UserSystemNamespace: {
+					Url: userSystemUrl,
+				},
 			},
 		},
 	}

@@ -9,9 +9,10 @@ import (
 	extensionsv1beta1 "k8s.io/api/extensions/v1beta1"
 
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/kubernetes/pkg/kubelet/network"
 )
 
-func seedLatticeControllerManager(kubeClientset *kubernetes.Clientset) {
+func seedLatticeSystemEnvironmentManagerAPI(kubeClientset *kubernetes.Clientset) {
 	var dockerRegistry string
 	if dev {
 		dockerRegistry = localDevDockerRegistry
@@ -19,36 +20,39 @@ func seedLatticeControllerManager(kubeClientset *kubernetes.Clientset) {
 		dockerRegistry = devDockerRegistry
 	}
 
-	// TODO: for now we'll make a DaemonSet that runs on all the master nodes (aka all nodes in local)
-	//		 and rely on the fact that we don't support multiple master nodes on AWS yet. Eventually we'll
-	//		 either have to figure out how to have multiple lattice-controller-managers running (e.g. use leaderelect
-	//		 in client-go) or find the best way to ensure there's at most one version of something running (maybe
-	//		 StatefulSets?).
-	latticeControllerManagerDaemonSet := &extensionsv1beta1.DaemonSet{
+	latticeSystemEnvironmentManagerAPIDaemonSet := &extensionsv1beta1.DaemonSet{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "lattice-controller-manager",
+			Name:      "lattice-system-environment-manager-api",
 			Namespace: constants.NamespaceInternal,
 		},
 		Spec: extensionsv1beta1.DaemonSetSpec{
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Name: "lattice-controller-manager",
+					Name: "lattice-system-environment-manager-api",
 					Labels: map[string]string{
-						"master.lattice.mlab.com/controller-manager": "true",
+						"master.lattice.mlab.com/system-environment-manager-api": "true",
 					},
 				},
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{
 						{
-							Name:            "controller-manager",
-							Image:           dockerRegistry + "/lattice-controller-manager",
+							Name:            "api",
+							Image:           dockerRegistry + "/system-environment-manager-rest-api-kubernetes",
 							ImagePullPolicy: corev1.PullIfNotPresent,
-							Command:         []string{"/app/cmd/controller-manager/go_image.binary"},
-							Args:            []string{"-v", "5", "-logtostderr", "-provider", providerName},
+							Command:         []string{"/app/cmd/rest-api-kubernetes/go_image.binary"},
+							Args:            []string{"-port", "80"},
+							Ports: []corev1.ContainerPort{
+								{
+									Name: "http",
+									HostPort: 80,
+									ContainerPort: 80,
+								},
+							},
 						},
 					},
+					HostNetwork:        true,
 					DNSPolicy:          corev1.DNSDefault,
-					ServiceAccountName: constants.ServiceAccountLatticeControllerManager,
+					ServiceAccountName: constants.ServiceAccountLatticeSystemEnvironmentManagerAPI,
 					// Can tolerate the master-node taint in the local case when it's not applied harmlessly
 					Tolerations: []corev1.Toleration{
 						constants.TolerationMasterNode,
@@ -70,6 +74,6 @@ func seedLatticeControllerManager(kubeClientset *kubernetes.Clientset) {
 		return kubeClientset.
 			ExtensionsV1beta1().
 			DaemonSets(string(constants.NamespaceInternal)).
-			Create(latticeControllerManagerDaemonSet)
+			Create(latticeSystemEnvironmentManagerAPIDaemonSet)
 	})
 }
