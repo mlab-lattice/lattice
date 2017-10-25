@@ -55,10 +55,18 @@ func main() {
 		panic(err)
 	}
 
-	bootstrap(mec)
+	bootstrap()
+
+	ip, err := mec.IP()
+	if err != nil {
+		panic(err)
+	}
+
+	fmt.Printf("\nSystem Address:\n")
+	fmt.Printf(ip)
 }
 
-func bootstrap(mec *minikube.ExecContext) {
+func bootstrap() {
 	fmt.Println("Bootstrapping")
 	usr, err := user.Current()
 	if err != nil {
@@ -183,12 +191,4 @@ func bootstrap(mec *minikube.ExecContext) {
 	if err != nil {
 		panic(err)
 	}
-
-	ip, err := mec.IP()
-	if err != nil {
-		panic(err)
-	}
-
-	fmt.Printf("\nSystem Address:\n")
-	fmt.Printf(ip)
 }
