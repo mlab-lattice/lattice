@@ -13,8 +13,8 @@ import (
 
 	crv1 "github.com/mlab-lattice/kubernetes-integration/pkg/api/customresource/v1"
 
+	appsv1beta2 "k8s.io/api/apps/v1beta2"
 	corev1 "k8s.io/api/core/v1"
-	extensions "k8s.io/api/extensions/v1beta1"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -30,15 +30,13 @@ const (
 )
 
 // getDeployment returns an *extensions.Deployment configured for a given Service
-func (sc *ServiceController) getDeployment(svc *crv1.Service) (*extensions.Deployment, error) {
+func (sc *ServiceController) getDeployment(svc *crv1.Service) (*appsv1beta2.Deployment, error) {
 	// Need a consistent view of our config while generating the Job
 	sc.configLock.RLock()
 	defer sc.configLock.RUnlock()
 
 	dName := getDeploymentName(svc)
-	dLabels := map[string]string{
-		crv1.LabelKeyServiceDeployment: svc.Name,
-	}
+	dLabels := getDeploymentLabels(svc)
 	dAnnotations, err := sc.getDeploymentAnnotations(svc)
 	if err != nil {
 		return nil, err
@@ -49,7 +47,7 @@ func (sc *ServiceController) getDeployment(svc *crv1.Service) (*extensions.Deplo
 		return nil, err
 	}
 
-	d := &extensions.Deployment{
+	d := &appsv1beta2.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:            dName,
 			Annotations:     dAnnotations,
@@ -65,6 +63,12 @@ func (sc *ServiceController) getDeployment(svc *crv1.Service) (*extensions.Deplo
 func getDeploymentName(svc *crv1.Service) string {
 	// TODO: May change this to UUID when a Service can have multiple Deployments (e.g. Blue/Green & Canary)
 	return fmt.Sprintf("lattice-service-%s", svc.Name)
+}
+
+func getDeploymentLabels(svc *crv1.Service) map[string]string {
+	return map[string]string{
+		crv1.LabelKeyServiceDeployment: svc.Name,
+	}
 }
 
 func (sc *ServiceController) getDeploymentAnnotations(svc *crv1.Service) (map[string]string, error) {
@@ -94,7 +98,7 @@ func (sc *ServiceController) getDeploymentAnnotations(svc *crv1.Service) (map[st
 
 // getDeploymentSpec returns an *extensions.DeploymentSpec configured for a given Service.
 // N.B.: getDeploymentSpec assumes a RLock is held on sc.configLock when called.
-func (sc *ServiceController) getDeploymentSpec(svc *crv1.Service) (*extensions.DeploymentSpec, error) {
+func (sc *ServiceController) getDeploymentSpec(svc *crv1.Service) (*appsv1beta2.DeploymentSpec, error) {
 	containers := []corev1.Container{}
 	initContainers := []corev1.Container{}
 
@@ -240,15 +244,17 @@ func (sc *ServiceController) getDeploymentSpec(svc *crv1.Service) (*extensions.D
 		// 		 of replicas in the existing deployment
 		replicas = *svc.Spec.Definition.Resources.MinInstances
 	}
-	deploymentName := getDeploymentName(svc)
-	ds := extensions.DeploymentSpec{
+	dName := getDeploymentName(svc)
+	dLabels := getDeploymentLabels(svc)
+	ds := appsv1beta2.DeploymentSpec{
 		Replicas: &replicas,
+		Selector: &metav1.LabelSelector{
+			MatchLabels: dLabels,
+		},
 		Template: corev1.PodTemplateSpec{
 			ObjectMeta: metav1.ObjectMeta{
-				Name: deploymentName,
-				Labels: map[string]string{
-					crv1.LabelKeyServiceDeployment: svc.Name,
-				},
+				Name:   dName,
+				Labels: dLabels,
 			},
 			Spec: corev1.PodSpec{
 				// TODO: add user Volumes
@@ -342,14 +348,14 @@ func getLivenessProbe(hc *systemdefinitionblock.ComponentHealthCheck) *corev1.Pr
 	}
 }
 
-func (sc *ServiceController) getDeploymentForService(svc *crv1.Service) (*extensions.Deployment, error) {
+func (sc *ServiceController) getDeploymentForService(svc *crv1.Service) (*appsv1beta2.Deployment, error) {
 	// List all Deployments to find in the Service's namespace to find the Deployment the Service manages.
 	deployments, err := sc.deploymentLister.Deployments(svc.Namespace).List(labels.Everything())
 	if err != nil {
 		return nil, err
 	}
 
-	matchingDeployments := []*extensions.Deployment{}
+	matchingDeployments := []*appsv1beta2.Deployment{}
 	svcControllerRef := metav1.NewControllerRef(svc, controllerKind)
 
 	for _, deployment := range deployments {
@@ -372,13 +378,13 @@ func (sc *ServiceController) getDeploymentForService(svc *crv1.Service) (*extens
 	return matchingDeployments[0], nil
 }
 
-func (sc *ServiceController) createDeployment(svc *crv1.Service) (*extensions.Deployment, error) {
+func (sc *ServiceController) createDeployment(svc *crv1.Service) (*appsv1beta2.Deployment, error) {
 	d, err := sc.getDeployment(svc)
 	if err != nil {
 		return nil, err
 	}
 
-	dResp, err := sc.kubeClient.ExtensionsV1beta1().Deployments(svc.Namespace).Create(d)
+	dResp, err := sc.kubeClient.AppsV1beta2().Deployments(svc.Namespace).Create(d)
 	if err != nil {
 		// FIXME: send warn event
 		return nil, err
@@ -389,7 +395,7 @@ func (sc *ServiceController) createDeployment(svc *crv1.Service) (*extensions.De
 	return dResp, nil
 }
 
-func (sc *ServiceController) syncDeploymentSpec(svc *crv1.Service, d *extensions.Deployment) (*extensions.Deployment, error) {
+func (sc *ServiceController) syncDeploymentSpec(svc *crv1.Service, d *appsv1beta2.Deployment) (*appsv1beta2.Deployment, error) {
 	dSvcDefStr, ok := d.Annotations[crv1.AnnotationKeyDeploymentServiceDefinition]
 	if !ok {
 		return nil, fmt.Errorf("deployment did not have %v annotation", crv1.AnnotationKeyDeploymentServiceDefinition)
@@ -433,7 +439,7 @@ func (sc *ServiceController) syncDeploymentSpec(svc *crv1.Service, d *extensions
 	return sc.updateDeploymentSpec(svc, d, newDSpec)
 }
 
-func (sc *ServiceController) updateDeploymentSpec(svc *crv1.Service, d *extensions.Deployment, dSpec *extensions.DeploymentSpec) (*extensions.Deployment, error) {
+func (sc *ServiceController) updateDeploymentSpec(svc *crv1.Service, d *appsv1beta2.Deployment, dSpec *appsv1beta2.DeploymentSpec) (*appsv1beta2.Deployment, error) {
 	dAnnotations, err := sc.getDeploymentAnnotations(svc)
 	if err != nil {
 		return nil, err
@@ -446,7 +452,7 @@ func (sc *ServiceController) updateDeploymentSpec(svc *crv1.Service, d *extensio
 	d.Spec = *dSpec
 
 	// TODO: should we Patch here instead?
-	result, err := sc.kubeClient.ExtensionsV1beta1().Deployments(d.Namespace).Update(d)
+	result, err := sc.kubeClient.AppsV1beta2().Deployments(d.Namespace).Update(d)
 	return result, err
 }
 

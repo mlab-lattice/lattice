@@ -13,8 +13,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 
+	appsv1beta2 "k8s.io/api/apps/v1beta2"
 	batchv1 "k8s.io/api/batch/v1"
-	extensions "k8s.io/api/extensions/v1beta1"
 )
 
 const (
@@ -173,7 +173,7 @@ func seedRbacRoles(kubeClientset *kubernetes.Clientset) {
 			},
 			Rules: []rbacv1.PolicyRule{
 				{
-					APIGroups: []string{extensions.GroupName},
+					APIGroups: []string{appsv1beta2.GroupName},
 					Resources: []string{"deployments"},
 					Verbs:     []string{rbacv1.VerbAll},
 				},

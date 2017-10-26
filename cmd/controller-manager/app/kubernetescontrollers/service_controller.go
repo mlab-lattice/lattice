@@ -13,7 +13,7 @@ func initializeServiceController(ctx controller.Context) {
 		ctx.CRDInformers["config"],
 		ctx.CRDInformers["system"],
 		ctx.CRDInformers["service"],
-		ctx.InformerFactory.Extensions().V1beta1().Deployments(),
+		ctx.InformerFactory.Apps().V1beta2().Deployments(),
 		ctx.InformerFactory.Core().V1().Services(),
 	).Run(4, ctx.Stop)
 }

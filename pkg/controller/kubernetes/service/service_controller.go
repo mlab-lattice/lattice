@@ -9,19 +9,19 @@ import (
 	crv1 "github.com/mlab-lattice/kubernetes-integration/pkg/api/customresource/v1"
 	"github.com/mlab-lattice/kubernetes-integration/pkg/provider"
 
+	appsv1beta2 "k8s.io/api/apps/v1beta2"
 	corev1 "k8s.io/api/core/v1"
-	extensions "k8s.io/api/extensions/v1beta1"
 
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
 
+	appinformers "k8s.io/client-go/informers/apps/v1beta2"
 	coreinformers "k8s.io/client-go/informers/core/v1"
-	extensioninformers "k8s.io/client-go/informers/extensions/v1beta1"
 	clientset "k8s.io/client-go/kubernetes"
+	appslisters "k8s.io/client-go/listers/apps/v1beta2"
 	corelisters "k8s.io/client-go/listers/core/v1"
-	extensionlisters "k8s.io/client-go/listers/extensions/v1beta1"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
@@ -55,8 +55,7 @@ type ServiceController struct {
 	serviceStore       cache.Store
 	serviceStoreSynced cache.InformerSynced
 
-	// TODO: switch to apps when stabilized https://github.com/kubernetes/features/issues/353
-	deploymentLister       extensionlisters.DeploymentLister
+	deploymentLister       appslisters.DeploymentLister
 	deploymentListerSynced cache.InformerSynced
 
 	kubeServiceLister       corelisters.ServiceLister
@@ -72,7 +71,7 @@ func NewServiceController(
 	configInformer cache.SharedInformer,
 	systemInformer cache.SharedInformer,
 	serviceInformer cache.SharedInformer,
-	deploymentInformer extensioninformers.DeploymentInformer,
+	deploymentInformer appinformers.DeploymentInformer,
 	kubeServiceInformer coreinformers.ServiceInformer,
 ) *ServiceController {
 	sc := &ServiceController{
@@ -240,7 +239,7 @@ func (sc *ServiceController) handleServiceDelete(obj interface{}) {
 
 // handleDeploymentAdd enqueues the Service that manages a Deployment when the Deployment is created.
 func (sc *ServiceController) handleDeploymentAdd(obj interface{}) {
-	d := obj.(*extensions.Deployment)
+	d := obj.(*appsv1beta2.Deployment)
 
 	if d.DeletionTimestamp != nil {
 		// On a restart of the controller manager, it's possible for an object to
@@ -272,8 +271,8 @@ func (sc *ServiceController) handleDeploymentAdd(obj interface{}) {
 // is updated and enqueues it.
 func (sc *ServiceController) handleDeploymentUpdate(old, cur interface{}) {
 	glog.V(5).Info("Got Deployment update")
-	oldD := old.(*extensions.Deployment)
-	curD := cur.(*extensions.Deployment)
+	oldD := old.(*appsv1beta2.Deployment)
+	curD := cur.(*appsv1beta2.Deployment)
 	if curD.ResourceVersion == oldD.ResourceVersion {
 		// Periodic resync will send update events for all known Deployments.
 		// Two different versions of the same Deployment will always have different RVs.
@@ -312,7 +311,7 @@ func (sc *ServiceController) handleDeploymentUpdate(old, cur interface{}) {
 // handleDeploymentDelete enqueues the Service that manages a Deployment when
 // the Deployment is deleted.
 func (sc *ServiceController) handleDeploymentDelete(obj interface{}) {
-	d, ok := obj.(*extensions.Deployment)
+	d, ok := obj.(*appsv1beta2.Deployment)
 
 	// When a delete is dropped, the relist will notice a pod in the store not
 	// in the list, leading to the insertion of a tombstone object which contains
@@ -323,7 +322,7 @@ func (sc *ServiceController) handleDeploymentDelete(obj interface{}) {
 			runtime.HandleError(fmt.Errorf("couldn't get object from tombstone %#v", obj))
 			return
 		}
-		d, ok = tombstone.Obj.(*extensions.Deployment)
+		d, ok = tombstone.Obj.(*appsv1beta2.Deployment)
 		if !ok {
 			runtime.HandleError(fmt.Errorf("tombstone contained object that is not a Deployment %#v", obj))
 			return
@@ -520,23 +519,28 @@ func (sc *ServiceController) syncService(key string) error {
 	return sc.syncServiceWithDeployment(svcCopy, d)
 }
 
-func (sc *ServiceController) syncServiceWithDeployment(svc *crv1.Service, d *extensions.Deployment) error {
+func (sc *ServiceController) syncServiceWithDeployment(svc *crv1.Service, d *appsv1beta2.Deployment) error {
 	newStatus := calculateServiceStatus(d)
 	return sc.updateServiceStatus(svc, newStatus)
 }
 
 // TODO: this is overly simplistic
-func calculateServiceStatus(d *extensions.Deployment) crv1.ServiceStatus {
-	progressing := false
+func calculateServiceStatus(d *appsv1beta2.Deployment) crv1.ServiceStatus {
+	available := false
+	//progressing := false
 	failure := false
 
 	for _, condition := range d.Status.Conditions {
 		switch condition.Type {
-		case extensions.DeploymentProgressing:
+		case appsv1beta2.DeploymentAvailable:
 			if condition.Status == corev1.ConditionTrue {
-				progressing = true
+				available = true
 			}
-		case extensions.DeploymentReplicaFailure:
+		//case appsv1beta2.DeploymentProgressing:
+		//	if condition.Status == corev1.ConditionTrue {
+		//		progressing = true
+		//	}
+		case appsv1beta2.DeploymentReplicaFailure:
 			if condition.Status == corev1.ConditionTrue {
 				failure = true
 			}
@@ -549,14 +553,14 @@ func calculateServiceStatus(d *extensions.Deployment) crv1.ServiceStatus {
 		}
 	}
 
-	if progressing {
+	if available {
 		return crv1.ServiceStatus{
-			State: crv1.ServiceStateRollingOut,
+			State: crv1.ServiceStateRolloutSucceeded,
 		}
 	}
 
 	return crv1.ServiceStatus{
-		State: crv1.ServiceStateRolloutSucceeded,
+		State: crv1.ServiceStateRollingOut,
 	}
 }
 
