@@ -277,7 +277,7 @@ func bindEnvoyXdsApiServiceAccountRoles(kubeClientset *kubernetes.Clientset) {
 			},
 			RoleRef: rbacv1.RoleRef{
 				APIGroup: rbacv1.GroupName,
-				Kind:     "Role",
+				Kind:     "ClusterRole",
 				Name:     latticeServiceReaderRole,
 			},
 		},
