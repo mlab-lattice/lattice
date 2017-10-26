@@ -24,7 +24,7 @@ _go_image_repos()
 
 go_repository(
     name = "com_github_mlab_lattice_core",
-    commit = "2853720713c57faf52c6737f88407c85040befcd",
+    commit = "11be64dd421f92877f309719d86cf9635949e26c",
     importpath = "github.com/mlab-lattice/core",
     remote = "git@github.com:mlab-lattice/core.git",
     vcs = "git",
