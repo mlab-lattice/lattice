@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 
 	executil "github.com/mlab-lattice/core/pkg/util/exec"
+	"strings"
 )
 
 const (
@@ -67,5 +68,5 @@ func (mec *ExecContext) IP() (string, error) {
 		return "", err
 	}
 
-	return string(ipBytes), nil
+	return strings.TrimSpace(string(ipBytes)), nil
 }

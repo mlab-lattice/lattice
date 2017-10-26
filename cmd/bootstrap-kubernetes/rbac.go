@@ -20,6 +20,7 @@ import (
 const (
 	kubeEndpointReaderRole           = "kube-endpoint-reader"
 	kubeServiceAllRole               = "kube-service-all"
+	kubeServiceReadRole              = "kub-service-read"
 	kubeDeploymentAllRole            = "kube-deployment-all"
 	kubeJobAllRole                   = "kube-job-all"
 	latticeServiceReaderRole         = "lattice-service-reader"
@@ -53,20 +54,6 @@ func seedRbacRoles(kubeClientset *kubernetes.Clientset) {
 				{
 					APIGroups: []string{""},
 					Resources: []string{"endpoints"},
-					Verbs:     readVerbs,
-				},
-			},
-		},
-		// lattice Service reader
-		{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      latticeServiceReaderRole,
-				Namespace: string(coreconstants.UserSystemNamespace),
-			},
-			Rules: []rbacv1.PolicyRule{
-				{
-					APIGroups: []string{crv1.GroupName},
-					Resources: []string{crv1.ServiceResourcePlural},
 					Verbs:     readVerbs,
 				},
 			},
@@ -137,6 +124,32 @@ func seedRbacRoles(kubeClientset *kubernetes.Clientset) {
 					APIGroups: []string{crv1.GroupName},
 					Resources: []string{rbacv1.ResourceAll},
 					Verbs:     []string{rbacv1.VerbAll},
+				},
+			},
+		},
+		// lattice Service reader
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: latticeServiceReaderRole,
+			},
+			Rules: []rbacv1.PolicyRule{
+				{
+					APIGroups: []string{crv1.GroupName},
+					Resources: []string{crv1.ServiceResourcePlural},
+					Verbs:     readVerbs,
+				},
+			},
+		},
+		// kube Service reader
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: kubeServiceReadRole,
+			},
+			Rules: []rbacv1.PolicyRule{
+				{
+					APIGroups: []string{""},
+					Resources: []string{string(corev1.ResourceServices)},
+					Verbs:     readVerbs,
 				},
 			},
 		},
@@ -435,6 +448,54 @@ func bindLatticeSystemEnvironmentMangerApiServiceAccountRoles(kubeClientset *kub
 				RbacV1().
 				RoleBindings(rb.Namespace).
 				Create(rb)
+		})
+	}
+
+	clusterRoleBindings := []*rbacv1.ClusterRoleBinding{
+		// kube Service read
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "lattice-system-environment-manager-api-kube-service-read",
+			},
+			Subjects: []rbacv1.Subject{
+				{
+					Kind:      rbacv1.ServiceAccountKind,
+					Name:      constants.ServiceAccountLatticeSystemEnvironmentManagerAPI,
+					Namespace: constants.NamespaceInternal,
+				},
+			},
+			RoleRef: rbacv1.RoleRef{
+				APIGroup: rbacv1.GroupName,
+				Kind:     "ClusterRole",
+				Name:     kubeServiceReadRole,
+			},
+		},
+		// lattice Service read
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "lattice-system-environment-manager-api-lattice-service-read",
+			},
+			Subjects: []rbacv1.Subject{
+				{
+					Kind:      rbacv1.ServiceAccountKind,
+					Name:      constants.ServiceAccountLatticeSystemEnvironmentManagerAPI,
+					Namespace: constants.NamespaceInternal,
+				},
+			},
+			RoleRef: rbacv1.RoleRef{
+				APIGroup: rbacv1.GroupName,
+				Kind:     "ClusterRole",
+				Name:     latticeServiceReaderRole,
+			},
+		},
+	}
+
+	for _, crb := range clusterRoleBindings {
+		pollKubeResourceCreation(func() (interface{}, error) {
+			return kubeClientset.
+				RbacV1().
+				ClusterRoleBindings().
+				Create(crb)
 		})
 	}
 }

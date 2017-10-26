@@ -55,18 +55,18 @@ func main() {
 		panic(err)
 	}
 
-	bootstrap()
-
 	ip, err := mec.IP()
 	if err != nil {
 		panic(err)
 	}
 
+	bootstrap(ip)
+
 	fmt.Printf("\nSystem Address:\n")
-	fmt.Printf(ip)
+	fmt.Println(ip)
 }
 
-func bootstrap() {
+func bootstrap(ip string) {
 	fmt.Println("Bootstrapping")
 	usr, err := user.Current()
 	if err != nil {
@@ -146,7 +146,7 @@ func bootstrap() {
 							Name:    "bootstrap-kubernetes",
 							Image:   devDockerRegistry + "/" + bootstrapImageName,
 							Command: []string{"/app/cmd/bootstrap-kubernetes/go_image.binary"},
-							Args:    []string{"-provider", "local", "-user-system-url", "github.com/foo/bar"},
+							Args:    []string{"-provider", "local", "-user-system-url", "github.com/foo/bar", "-system-ip", ip},
 						},
 					},
 					RestartPolicy:      corev1.RestartPolicyNever,

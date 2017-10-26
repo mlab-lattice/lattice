@@ -9,6 +9,8 @@ import (
 	crv1 "github.com/mlab-lattice/kubernetes-integration/pkg/api/customresource/v1"
 	kubeutil "github.com/mlab-lattice/kubernetes-integration/pkg/util/kubernetes"
 
+	corev1 "k8s.io/api/core/v1"
+
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -66,14 +68,16 @@ func (kb *KubernetesBackend) transformService(svc *crv1.Service) (*coretypes.Ser
 			return nil, err
 		}
 	} else {
-		// Otherwise we found a kube Service
-		sysIP, err := kb.getSystemIP()
-		if err != nil {
-			return nil, err
-		}
+		if kubeSvc.Spec.Type == corev1.ServiceTypeNodePort {
+			// Otherwise we found a kube Service
+			sysIP, err := kb.getSystemIP()
+			if err != nil {
+				return nil, err
+			}
 
-		addrt := fmt.Sprintf("%v:%v", sysIP, kubeSvc.Spec.Ports[0].NodePort)
-		addr = &addrt
+			addrt := fmt.Sprintf("%v:%v", *sysIP, kubeSvc.Spec.Ports[0].NodePort)
+			addr = &addrt
+		}
 	}
 
 	coreSvc := &coretypes.Service{
