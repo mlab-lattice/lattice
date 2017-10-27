@@ -42,7 +42,6 @@ func seedLatticeControllerManager(kubeClientset *kubernetes.Clientset) {
 						{
 							Name:            "controller-manager",
 							Image:           dockerRegistry + "/lattice-controller-manager",
-							ImagePullPolicy: corev1.PullIfNotPresent,
 							Command:         []string{"/app/cmd/controller-manager/go_image.binary"},
 							Args:            []string{"-v", "5", "-logtostderr", "-provider", providerName},
 						},

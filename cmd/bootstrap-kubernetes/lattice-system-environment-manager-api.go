@@ -35,11 +35,10 @@ func seedLatticeSystemEnvironmentManagerAPI(kubeClientset *kubernetes.Clientset)
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{
 						{
-							Name:            "api",
-							Image:           dockerRegistry + "/system-environment-manager-rest-api-kubernetes",
-							ImagePullPolicy: corev1.PullIfNotPresent,
-							Command:         []string{"/app/cmd/rest-api-kubernetes/go_image.binary"},
-							Args:            []string{"-port", "80"},
+							Name:    "api",
+							Image:   dockerRegistry + "/system-environment-manager-rest-api-kubernetes",
+							Command: []string{"/app/cmd/rest-api-kubernetes/go_image.binary"},
+							Args:    []string{"-port", "80"},
 							Ports: []corev1.ContainerPort{
 								{
 									Name:          "http",
