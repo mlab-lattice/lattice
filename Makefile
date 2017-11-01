@@ -38,6 +38,10 @@ test: gazelle
 gazelle:
 	@bazel run //:gazelle
 
+# local-binaries
+.PHONY: update-local-binaries
+update-local-binaries: update-local-binary-provision-system update-local-binary-deprovision-system
+
 # docker
 .PHONY: docker-build
 docker-build: docker-build-lattice-controller-manager docker-build-bootstrap-kubernetes
@@ -103,6 +107,20 @@ docker-tag-dev-bootstrap-kubernetes:
 .PHONY: docker-push-dev-bootstrap-kubernetes
 docker-push-dev-bootstrap-kubernetes: docker-tag-dev-bootstrap-kubernetes
 	gcloud docker -- push $(DEV_BOOTSTRAP_KUBERNETES_IMAGE)
+
+# provision-system
+build-provision-system: gazelle
+	bazel build //cmd/provision-system
+
+update-local-binary-provision-system: build-provision-system
+	cp -f $(DIR)/bazel-bin/cmd/provision-system/provision-system $(DIR)/bin
+
+# deprovision-system
+build-deprovision-system: gazelle
+	bazel build //cmd/deprovision-system
+
+update-local-binary-deprovision-system: build-deprovision-system
+	cp -f $(DIR)/bazel-bin/cmd/deprovision-system/deprovision-system $(DIR)/bin
 
 # minikube
 .PHONY: minikube-start
