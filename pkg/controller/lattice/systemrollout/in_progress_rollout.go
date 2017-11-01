@@ -55,7 +55,7 @@ func (src *SystemRolloutController) syncRolloutWithSystem(sysRollout *crv1.Syste
 	var newState crv1.SystemRolloutStatus
 	switch sys.Status.State {
 	case crv1.SystemStateRollingOut:
-		return nil, nil
+		return sysRollout, nil
 	case crv1.SystemStateRolloutSucceeded:
 		newState = crv1.SystemRolloutStatus{
 			State: crv1.SystemRolloutStateSucceeded,
