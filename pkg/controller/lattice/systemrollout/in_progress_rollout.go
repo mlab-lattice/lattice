@@ -19,7 +19,17 @@ func (src *SystemRolloutController) syncInProgressRollout(sysRollout *crv1.Syste
 		return fmt.Errorf("SystemRollout %v in-progress with no System", sysRollout.Name)
 	}
 
-	return src.syncRolloutWithSystem(sysRollout, system)
+	sysRollout, err = src.syncRolloutWithSystem(sysRollout, system)
+	if err != nil {
+		// FIXME: is it possible that the rollout is locked forever now?
+		return err
+	}
+
+	if sysRollout.Status.State == crv1.SystemRolloutStateSucceeded || sysRollout.Status.State == crv1.SystemRolloutStateFailed {
+		return src.relinquishOwningRolloutClaim(sysRollout)
+	}
+
+	return nil
 }
 
 func (src *SystemRolloutController) getSystemForRollout(sysRollout *crv1.SystemRollout) (*crv1.System, error) {
@@ -41,11 +51,11 @@ func (src *SystemRolloutController) getSystemForRollout(sysRollout *crv1.SystemR
 	return system, nil
 }
 
-func (src *SystemRolloutController) syncRolloutWithSystem(sysRollout *crv1.SystemRollout, sys *crv1.System) error {
+func (src *SystemRolloutController) syncRolloutWithSystem(sysRollout *crv1.SystemRollout, sys *crv1.System) (*crv1.SystemRollout, error) {
 	var newState crv1.SystemRolloutStatus
 	switch sys.Status.State {
 	case crv1.SystemStateRollingOut:
-		return nil
+		return nil, nil
 	case crv1.SystemStateRolloutSucceeded:
 		newState = crv1.SystemRolloutStatus{
 			State: crv1.SystemRolloutStateSucceeded,
@@ -56,6 +66,18 @@ func (src *SystemRolloutController) syncRolloutWithSystem(sysRollout *crv1.Syste
 		}
 	}
 
-	_, err := src.updateSystemRolloutStatus(sysRollout, newState)
-	return err
+	return src.updateSystemRolloutStatus(sysRollout, newState)
+}
+
+func (src *SystemRolloutController) relinquishOwningRolloutClaim(sysRollout *crv1.SystemRollout) error {
+	src.owningRolloutsLock.Lock()
+	defer src.owningRolloutsLock.Unlock()
+
+	owningRollout, ok := src.owningRollouts[sysRollout.Spec.LatticeNamespace]
+	if !ok || owningRollout.Name != sysRollout.Name {
+		return fmt.Errorf("unexpected owning rollout %s in namespace %s", owningRollout.Name, sysRollout.Spec.LatticeNamespace)
+	}
+
+	delete(src.owningRollouts, sysRollout.Spec.LatticeNamespace)
+	return nil
 }
