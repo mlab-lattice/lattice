@@ -7,6 +7,7 @@ import (
 	"github.com/mlab-lattice/core/pkg/constants"
 	systemdefinition "github.com/mlab-lattice/core/pkg/system/definition"
 	systemdefinitionblock "github.com/mlab-lattice/core/pkg/system/definition/block"
+	systemtree "github.com/mlab-lattice/core/pkg/system/tree"
 
 	"github.com/mlab-lattice/kubernetes-integration/pkg/system-environment-manager/backend"
 )
@@ -80,7 +81,13 @@ func main() {
 			}),
 		},
 	}
-	sysBuildId, err := kb.BuildSystem(constants.UserSystemNamespace, sysDefinition, "v1.0.0")
+
+	root, err := systemtree.NewNode(systemdefinition.Interface(sysDefinition), nil)
+	if err != nil {
+		panic(err)
+	}
+
+	sysBuildId, err := kb.BuildSystem(constants.UserSystemNamespace, root, "v1.0.0")
 	if err != nil {
 		panic(err)
 	}

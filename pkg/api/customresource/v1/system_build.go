@@ -30,7 +30,7 @@ type SystemBuild struct {
 
 type SystemBuildSpec struct {
 	coretypes.LatticeNamespace `json:"latticeNamespace"`
-	Definition                 systemdefinition.System                         `json:"definition"`
+	Definition                 systemdefinition.Interface                      `json:"definition"`
 	Services                   map[systemtree.NodePath]SystemBuildServicesInfo `json:"services"`
 }
 
