@@ -32,7 +32,7 @@ func (src *SystemRolloutController) getNewSystem(sysRollout *crv1.SystemRollout,
 }
 
 func (src *SystemRolloutController) getNewSystemSpec(sysRollout *crv1.SystemRollout, sysBuild *crv1.SystemBuild) (*crv1.SystemSpec, error) {
-	root, err := systemtree.NewNode(sysBuild.Spec.Definition, nil)
+	root, err := systemtree.NewNode(systemdefinition.Interface(&sysBuild.Spec.Definition), nil)
 	if err != nil {
 		return nil, err
 	}

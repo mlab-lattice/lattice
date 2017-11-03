@@ -15,8 +15,8 @@ import (
 	"k8s.io/apimachinery/pkg/util/uuid"
 )
 
-func (kb *KubernetesBackend) BuildSystem(ln coretypes.LatticeNamespace, root systemtree.Node, v coretypes.SystemVersion) (coretypes.SystemBuildId, error) {
-	systemBuild, err := getSystemBuild(ln, root, v)
+func (kb *KubernetesBackend) BuildSystem(ln coretypes.LatticeNamespace, sd *systemdefinition.System, v coretypes.SystemVersion) (coretypes.SystemBuildId, error) {
+	systemBuild, err := getSystemBuild(ln, sd, v)
 	if err != nil {
 		return "", err
 	}
@@ -32,10 +32,15 @@ func (kb *KubernetesBackend) BuildSystem(ln coretypes.LatticeNamespace, root sys
 	return coretypes.SystemBuildId(result.Name), err
 }
 
-func getSystemBuild(ln coretypes.LatticeNamespace, root systemtree.Node, v coretypes.SystemVersion) (*crv1.SystemBuild, error) {
+func getSystemBuild(ln coretypes.LatticeNamespace, sd *systemdefinition.System, v coretypes.SystemVersion) (*crv1.SystemBuild, error) {
 	labels := map[string]string{
 		constants.LatticeNamespaceLabel: string(ln),
 		crv1.SystemVersionLabelKey:      string(v),
+	}
+
+	root, err := systemtree.NewNode(systemdefinition.Interface(sd), nil)
+	if err != nil {
+		return nil, err
 	}
 
 	services := map[systemtree.NodePath]crv1.SystemBuildServicesInfo{}
@@ -52,7 +57,7 @@ func getSystemBuild(ln coretypes.LatticeNamespace, root systemtree.Node, v coret
 		},
 		Spec: crv1.SystemBuildSpec{
 			LatticeNamespace: ln,
-			Definition:       root.Definition(),
+			Definition:       *sd,
 			Services:         services,
 		},
 		Status: crv1.SystemBuildStatus{

@@ -3,7 +3,7 @@ package backend
 import (
 	"strings"
 
-	systemtree "github.com/mlab-lattice/core/pkg/system/tree"
+	systemdefinition "github.com/mlab-lattice/core/pkg/system/definition"
 	coretypes "github.com/mlab-lattice/core/pkg/types"
 
 	crv1 "github.com/mlab-lattice/kubernetes-integration/pkg/api/customresource/v1"
@@ -14,8 +14,8 @@ import (
 	"k8s.io/apimachinery/pkg/util/uuid"
 )
 
-func (kb *KubernetesBackend) RollOutSystem(ln coretypes.LatticeNamespace, root systemtree.Node, v coretypes.SystemVersion) (coretypes.SystemRolloutId, error) {
-	bid, err := kb.BuildSystem(ln, root, v)
+func (kb *KubernetesBackend) RollOutSystem(ln coretypes.LatticeNamespace, sd *systemdefinition.System, v coretypes.SystemVersion) (coretypes.SystemRolloutId, error) {
+	bid, err := kb.BuildSystem(ln, sd, v)
 	if err != nil {
 		return "", err
 	}
