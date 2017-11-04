@@ -7,7 +7,7 @@ import (
 	"github.com/mlab-lattice/core/pkg/constants"
 	coretypes "github.com/mlab-lattice/core/pkg/types"
 
-	"github.com/mlab-lattice/kubernetes-integration/pkg/system-environment-manager/backend"
+	"github.com/mlab-lattice/kubernetes-integration/pkg/system-environment/manager/backend"
 )
 
 var (

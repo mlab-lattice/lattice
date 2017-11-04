@@ -9,7 +9,7 @@ go_library(
         "roll_out.go",
         "service.go",
     ],
-    importpath = "github.com/mlab-lattice/kubernetes-integration/pkg/system-environment-manager/backend",
+    importpath = "github.com/mlab-lattice/kubernetes-integration/pkg/system-environment/manager/backend",
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/api/customresource:go_default_library",

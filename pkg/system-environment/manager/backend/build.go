@@ -23,7 +23,7 @@ func (kb *KubernetesBackend) BuildSystem(ln coretypes.LatticeNamespace, sd *syst
 
 	result := &crv1.SystemBuild{}
 	err = kb.LatticeResourceClient.Post().
-		Namespace(constants.NamespaceInternal).
+		Namespace(constants.NamespaceLatticeInternal).
 		Resource(crv1.SystemBuildResourcePlural).
 		Body(systemBuild).
 		Do().
@@ -71,7 +71,7 @@ func getSystemBuild(ln coretypes.LatticeNamespace, sd *systemdefinition.System, 
 func (kb *KubernetesBackend) GetSystemBuild(ln coretypes.LatticeNamespace, bid coretypes.SystemBuildId) (*coretypes.SystemBuild, bool, error) {
 	result := &crv1.SystemBuild{}
 	err := kb.LatticeResourceClient.Get().
-		Namespace(constants.NamespaceInternal).
+		Namespace(constants.NamespaceLatticeInternal).
 		Resource(crv1.SystemBuildResourcePlural).
 		Name(string(bid)).
 		Do().
@@ -101,7 +101,7 @@ func (kb *KubernetesBackend) GetSystemBuild(ln coretypes.LatticeNamespace, bid c
 func (kb *KubernetesBackend) ListSystemBuilds(ln coretypes.LatticeNamespace) ([]coretypes.SystemBuild, error) {
 	result := &crv1.SystemBuildList{}
 	err := kb.LatticeResourceClient.Get().
-		Namespace(constants.NamespaceInternal).
+		Namespace(constants.NamespaceLatticeInternal).
 		Resource(crv1.SystemBuildResourcePlural).
 		Do().
 		Into(result)

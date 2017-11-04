@@ -10,7 +10,7 @@ import (
 func (kb *KubernetesBackend) GetSystemUrl(ln coretypes.LatticeNamespace) (string, error) {
 	result := &crv1.Config{}
 	err := kb.LatticeResourceClient.Get().
-		Namespace(constants.NamespaceInternal).
+		Namespace(constants.NamespaceLatticeInternal).
 		Resource(crv1.ConfigResourcePlural).
 		Name(constants.ConfigGlobal).
 		Do().
@@ -26,7 +26,7 @@ func (kb *KubernetesBackend) GetSystemUrl(ln coretypes.LatticeNamespace) (string
 func (kb *KubernetesBackend) getSystemIP() (*string, error) {
 	result := &crv1.Config{}
 	err := kb.LatticeResourceClient.Get().
-		Namespace(constants.NamespaceInternal).
+		Namespace(constants.NamespaceLatticeInternal).
 		Resource(crv1.ConfigResourcePlural).
 		Name(constants.ConfigGlobal).
 		Do().

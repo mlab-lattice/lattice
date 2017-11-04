@@ -21,12 +21,12 @@ func init() {
 }
 
 func main() {
-	mec, err := minikube.NewMinikubeExecContext(workingDir, systemName)
+	mec, err := minikube.NewMinikubeExecContext(workingDir)
 	if err != nil {
 		panic(err)
 	}
 
-	pid, logFilename, waitFunc, err := mec.Delete()
+	pid, logFilename, waitFunc, err := mec.Delete(systemName)
 	if err != nil {
 		panic(err)
 	}
@@ -38,4 +38,3 @@ func main() {
 		panic(err)
 	}
 }
-

@@ -95,7 +95,7 @@ func (src *SystemRolloutController) getNewSystemSpec(sysRollout *crv1.SystemRoll
 }
 
 func (src *SystemRolloutController) getSvcBuild(svcBuildName string) (*crv1.ServiceBuild, error) {
-	svcBuildKey := constants.NamespaceInternal + "/" + svcBuildName
+	svcBuildKey := constants.NamespaceLatticeInternal + "/" + svcBuildName
 	svcBuildObj, exists, err := src.serviceBuildStore.GetByKey(svcBuildKey)
 	if err != nil {
 		return nil, err

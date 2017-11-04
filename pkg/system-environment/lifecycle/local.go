@@ -1,11 +1,11 @@
-package main
+package lifecycle
 
 import (
-	"flag"
 	"fmt"
 	"os/user"
 	"time"
 
+	"github.com/mlab-lattice/kubernetes-integration/pkg/constants"
 	"github.com/mlab-lattice/kubernetes-integration/pkg/util/minikube"
 
 	batchv1 "k8s.io/api/batch/v1"
@@ -21,56 +21,60 @@ import (
 	"path/filepath"
 )
 
-const (
-	workingDir         = "/tmp/lattice/provision"
-	devDockerRegistry  = "gcr.io/lattice-dev"
-	bootstrapImageName = "bootstrap-kubernetes"
-	defaultNamespace   = "default"
-)
-
-var (
-	systemName string
-)
-
-func init() {
-	flag.StringVar(&systemName, "system-name", "", "name of the system to provision")
-	flag.Parse()
+type LocalProvisioner struct {
+	latticeImageDockerRepository string
+	mec                          *minikube.ExecContext
 }
 
-func main() {
-	mec, err := minikube.NewMinikubeExecContext(workingDir)
+func NewLocalProvisioner(latticeImageDockerRepository, logPath string) (*LocalProvisioner, error) {
+	mec, err := minikube.NewMinikubeExecContext(logPath)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 
-	pid, logFilename, waitFunc, err := mec.Start(systemName)
+	lp := &LocalProvisioner{
+		latticeImageDockerRepository: latticeImageDockerRepository,
+		mec: mec,
+	}
+	return lp, nil
+}
+
+func (lp *LocalProvisioner) Provision(name, url string) error {
+	pid, logFilename, waitFunc, err := lp.mec.Start(name)
 	if err != nil {
-		panic(err)
+		return err
 	}
 
-	fmt.Printf("minikube start\npid: %v\nlogFilename: %v\n\n", pid, logFilename)
+	fmt.Printf("Running minikube start (pid: %v, log file: %v)\n", pid, filepath.Join(lp.mec.LogPath, logFilename))
 
 	err = waitFunc()
 	if err != nil {
-		panic(err)
+		return err
 	}
 
-	ip, err := mec.IP(systemName)
+	address, err := lp.Address(name)
 	if err != nil {
-		panic(err)
+		return err
 	}
 
-	bootstrap(ip)
+	err = lp.bootstrap(address)
+	if err != nil {
+		return err
+	}
 
-	fmt.Printf("\nSystem Address:\n")
-	fmt.Println(ip)
+	fmt.Println("Waiting for System Environment Manager to be ready...")
+	return pollForSystemEnvironmentReadiness(address)
 }
 
-func bootstrap(ip string) {
+func (lp *LocalProvisioner) Address(name string) (string, error) {
+	return lp.mec.IP(name)
+}
+
+func (lp *LocalProvisioner) bootstrap(address string) error {
 	fmt.Println("Bootstrapping")
 	usr, err := user.Current()
 	if err != nil {
-		panic(err)
+		return err
 	}
 	// TODO: support passing in the context when supported
 	// https://github.com/kubernetes/minikube/issues/2100
@@ -82,7 +86,7 @@ func bootstrap(ip string) {
 	).ClientConfig()
 
 	if err != nil {
-		panic(err)
+		return err
 	}
 
 	kubeClientset := clientset.NewForConfigOrDie(config)
@@ -91,16 +95,16 @@ func bootstrap(ip string) {
 	bootstrapSA := &corev1.ServiceAccount{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "kubernetes-bootstrapper",
-			Namespace: defaultNamespace,
+			Namespace: constants.NamespaceDefault,
 		},
 	}
 
 	_, err = kubeClientset.
 		CoreV1().
-		ServiceAccounts(defaultNamespace).
+		ServiceAccounts(constants.NamespaceDefault).
 		Create(bootstrapSA)
 	if err != nil && !apierrors.IsAlreadyExists(err) {
-		panic(err)
+		return err
 	}
 
 	bootstrapClusterAdminRoleBind := rbacv1.ClusterRoleBinding{
@@ -125,7 +129,7 @@ func bootstrap(ip string) {
 		ClusterRoleBindings().
 		Create(&bootstrapClusterAdminRoleBind)
 	if err != nil && !apierrors.IsAlreadyExists(err) {
-		panic(err)
+		return err
 	}
 
 	jobName := "lattice-bootstrap-kubernetes"
@@ -144,9 +148,9 @@ func bootstrap(ip string) {
 					Containers: []corev1.Container{
 						{
 							Name:    "bootstrap-kubernetes",
-							Image:   devDockerRegistry + "/" + bootstrapImageName,
+							Image:   lp.latticeImageDockerRepository + "/" + constants.DockerImageBootstrapKubernetes,
 							Command: []string{"/app/cmd/bootstrap-kubernetes/go_image.binary"},
-							Args:    []string{"-provider", "local", "-user-system-url", "github.com/foo/bar", "-system-ip", ip},
+							Args:    []string{"-provider", "local", "-user-system-url", "github.com/foo/bar", "-system-ip", address},
 						},
 					},
 					RestartPolicy:      corev1.RestartPolicyNever,
@@ -160,15 +164,15 @@ func bootstrap(ip string) {
 	fmt.Println("Creating bootstrap job")
 	_, err = kubeClientset.
 		BatchV1().
-		Jobs(defaultNamespace).
+		Jobs(constants.NamespaceDefault).
 		Create(&job)
 	if err != nil && !apierrors.IsAlreadyExists(err) {
-		panic(err)
+		return err
 	}
 
 	fmt.Println("Polling bootstrap job status")
 	err = wait.Poll(1*time.Second, 300*time.Second, func() (bool, error) {
-		j, err := kubeClientset.BatchV1().Jobs(defaultNamespace).Get(job.Name, metav1.GetOptions{})
+		j, err := kubeClientset.BatchV1().Jobs(constants.NamespaceDefault).Get(job.Name, metav1.GetOptions{})
 		if err != nil {
 			return false, err
 		}
@@ -177,18 +181,26 @@ func bootstrap(ip string) {
 		}
 
 		if j.Status.Failed >= backoffLimit {
-			return false, fmt.Errorf("suprassed backoffLimit")
+			return false, fmt.Errorf("surpassed backoffLimit")
 		}
 
 		return false, nil
 	})
 	if err != nil {
-		panic(err)
+		return err
 	}
 
 	fmt.Println("Deleting bootstrap SA")
-	err = kubeClientset.CoreV1().ServiceAccounts(defaultNamespace).Delete(bootstrapSA.Name, nil)
+	return kubeClientset.CoreV1().ServiceAccounts(constants.NamespaceDefault).Delete(bootstrapSA.Name, nil)
+}
+
+func (lp *LocalProvisioner) Deprovision(name string) error {
+	pid, logFilename, waitFunc, err := lp.mec.Delete(name)
 	if err != nil {
-		panic(err)
+		return err
 	}
+
+	fmt.Printf("Running minikube delete (pid: %v, log file: %v)\n", pid, filepath.Join(lp.mec.LogPath, logFilename))
+
+	return waitFunc()
 }

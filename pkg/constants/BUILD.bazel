@@ -4,6 +4,7 @@ go_library(
     name = "go_default_library",
     srcs = [
         "config.go",
+        "docker_image.go",
         "namespace.go",
         "service_account.go",
         "tolerations.go",

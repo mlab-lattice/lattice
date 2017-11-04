@@ -1,7 +1,8 @@
 package constants
 
 const (
-	NamespaceInternal = "lattice-internal"
+	NamespaceDefault         = "default"
+	NamespaceLatticeInternal = "lattice-internal"
 
 	LatticeNamespaceLabel = "namespace.lattice.mlab.com"
 )

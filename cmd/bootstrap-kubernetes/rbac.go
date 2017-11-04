@@ -62,7 +62,7 @@ func seedRbacRoles(kubeClientset *kubernetes.Clientset) {
 		{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      latticeBuildsReadAndCreateRole,
-				Namespace: constants.NamespaceInternal,
+				Namespace: constants.NamespaceLatticeInternal,
 			},
 			Rules: []rbacv1.PolicyRule{
 				{
@@ -76,7 +76,7 @@ func seedRbacRoles(kubeClientset *kubernetes.Clientset) {
 		{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      latticeRolloutsReadAndCreateRole,
-				Namespace: constants.NamespaceInternal,
+				Namespace: constants.NamespaceLatticeInternal,
 			},
 			Rules: []rbacv1.PolicyRule{
 				{
@@ -90,7 +90,7 @@ func seedRbacRoles(kubeClientset *kubernetes.Clientset) {
 		{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      latticeConfigReadRole,
-				Namespace: constants.NamespaceInternal,
+				Namespace: constants.NamespaceLatticeInternal,
 			},
 			Rules: []rbacv1.PolicyRule{
 				{
@@ -218,7 +218,7 @@ func seedServiceAccounts(kubeClientset *kubernetes.Clientset) {
 		{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      constants.ServiceAccountLatticeControllerManager,
-				Namespace: constants.NamespaceInternal,
+				Namespace: constants.NamespaceLatticeInternal,
 			},
 		},
 		// lattice-system-environment-manager-api
@@ -226,7 +226,7 @@ func seedServiceAccounts(kubeClientset *kubernetes.Clientset) {
 		{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      constants.ServiceAccountLatticeSystemEnvironmentManagerAPI,
-				Namespace: constants.NamespaceInternal,
+				Namespace: constants.NamespaceLatticeInternal,
 			},
 		},
 	}
@@ -306,7 +306,7 @@ func bindLatticeControllerMangerServiceAccountRoles(kubeClientset *kubernetes.Cl
 				{
 					Kind:      rbacv1.ServiceAccountKind,
 					Name:      constants.ServiceAccountLatticeControllerManager,
-					Namespace: constants.NamespaceInternal,
+					Namespace: constants.NamespaceLatticeInternal,
 				},
 			},
 			RoleRef: rbacv1.RoleRef{
@@ -324,7 +324,7 @@ func bindLatticeControllerMangerServiceAccountRoles(kubeClientset *kubernetes.Cl
 				{
 					Kind:      rbacv1.ServiceAccountKind,
 					Name:      constants.ServiceAccountLatticeControllerManager,
-					Namespace: constants.NamespaceInternal,
+					Namespace: constants.NamespaceLatticeInternal,
 				},
 			},
 			RoleRef: rbacv1.RoleRef{
@@ -342,7 +342,7 @@ func bindLatticeControllerMangerServiceAccountRoles(kubeClientset *kubernetes.Cl
 				{
 					Kind:      rbacv1.ServiceAccountKind,
 					Name:      constants.ServiceAccountLatticeControllerManager,
-					Namespace: constants.NamespaceInternal,
+					Namespace: constants.NamespaceLatticeInternal,
 				},
 			},
 			RoleRef: rbacv1.RoleRef{
@@ -360,7 +360,7 @@ func bindLatticeControllerMangerServiceAccountRoles(kubeClientset *kubernetes.Cl
 				{
 					Kind:      rbacv1.ServiceAccountKind,
 					Name:      constants.ServiceAccountLatticeControllerManager,
-					Namespace: constants.NamespaceInternal,
+					Namespace: constants.NamespaceLatticeInternal,
 				},
 			},
 			RoleRef: rbacv1.RoleRef{
@@ -387,13 +387,13 @@ func bindLatticeSystemEnvironmentMangerApiServiceAccountRoles(kubeClientset *kub
 		{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "lattice-system-environment-manager-api-configs-read",
-				Namespace: constants.NamespaceInternal,
+				Namespace: constants.NamespaceLatticeInternal,
 			},
 			Subjects: []rbacv1.Subject{
 				{
 					Kind:      rbacv1.ServiceAccountKind,
 					Name:      constants.ServiceAccountLatticeSystemEnvironmentManagerAPI,
-					Namespace: constants.NamespaceInternal,
+					Namespace: constants.NamespaceLatticeInternal,
 				},
 			},
 			RoleRef: rbacv1.RoleRef{
@@ -406,13 +406,13 @@ func bindLatticeSystemEnvironmentMangerApiServiceAccountRoles(kubeClientset *kub
 		{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "lattice-system-environment-manager-api-builds-read-and-create",
-				Namespace: constants.NamespaceInternal,
+				Namespace: constants.NamespaceLatticeInternal,
 			},
 			Subjects: []rbacv1.Subject{
 				{
 					Kind:      rbacv1.ServiceAccountKind,
 					Name:      constants.ServiceAccountLatticeSystemEnvironmentManagerAPI,
-					Namespace: constants.NamespaceInternal,
+					Namespace: constants.NamespaceLatticeInternal,
 				},
 			},
 			RoleRef: rbacv1.RoleRef{
@@ -425,13 +425,13 @@ func bindLatticeSystemEnvironmentMangerApiServiceAccountRoles(kubeClientset *kub
 		{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "lattice-system-environment-manager-api-rollouts-read-and-create",
-				Namespace: constants.NamespaceInternal,
+				Namespace: constants.NamespaceLatticeInternal,
 			},
 			Subjects: []rbacv1.Subject{
 				{
 					Kind:      rbacv1.ServiceAccountKind,
 					Name:      constants.ServiceAccountLatticeSystemEnvironmentManagerAPI,
-					Namespace: constants.NamespaceInternal,
+					Namespace: constants.NamespaceLatticeInternal,
 				},
 			},
 			RoleRef: rbacv1.RoleRef{
@@ -461,7 +461,7 @@ func bindLatticeSystemEnvironmentMangerApiServiceAccountRoles(kubeClientset *kub
 				{
 					Kind:      rbacv1.ServiceAccountKind,
 					Name:      constants.ServiceAccountLatticeSystemEnvironmentManagerAPI,
-					Namespace: constants.NamespaceInternal,
+					Namespace: constants.NamespaceLatticeInternal,
 				},
 			},
 			RoleRef: rbacv1.RoleRef{
@@ -479,7 +479,7 @@ func bindLatticeSystemEnvironmentMangerApiServiceAccountRoles(kubeClientset *kub
 				{
 					Kind:      rbacv1.ServiceAccountKind,
 					Name:      constants.ServiceAccountLatticeSystemEnvironmentManagerAPI,
-					Namespace: constants.NamespaceInternal,
+					Namespace: constants.NamespaceLatticeInternal,
 				},
 			},
 			RoleRef: rbacv1.RoleRef{

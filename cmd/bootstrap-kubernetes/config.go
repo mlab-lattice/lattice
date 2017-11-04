@@ -31,7 +31,7 @@ func seedConfig(kubeconfig *rest.Config, userSystemUrl, systemIP string) {
 	config := &crv1.Config{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      constants.ConfigGlobal,
-			Namespace: constants.NamespaceInternal,
+			Namespace: constants.NamespaceLatticeInternal,
 		},
 		Spec: crv1.ConfigSpec{
 			SystemConfigs: map[coretypes.LatticeNamespace]crv1.SystemConfig{
@@ -75,7 +75,7 @@ func seedConfig(kubeconfig *rest.Config, userSystemUrl, systemIP string) {
 
 	pollKubeResourceCreation(func() (interface{}, error) {
 		return nil, crClient.Post().
-			Namespace(constants.NamespaceInternal).
+			Namespace(constants.NamespaceLatticeInternal).
 			Resource(crv1.ConfigResourcePlural).
 			Body(config).
 			Do().Into(nil)

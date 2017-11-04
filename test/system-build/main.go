@@ -8,7 +8,7 @@ import (
 	systemdefinition "github.com/mlab-lattice/core/pkg/system/definition"
 	systemdefinitionblock "github.com/mlab-lattice/core/pkg/system/definition/block"
 
-	"github.com/mlab-lattice/kubernetes-integration/pkg/system-environment-manager/backend"
+	"github.com/mlab-lattice/kubernetes-integration/pkg/system-environment/manager/backend"
 )
 
 var kubeconfig string

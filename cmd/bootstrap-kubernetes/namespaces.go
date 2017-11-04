@@ -16,7 +16,7 @@ func seedNamespaces(kubeClientset *kubernetes.Clientset) {
 		// lattice internal namespace
 		{
 			ObjectMeta: metav1.ObjectMeta{
-				Name: constants.NamespaceInternal,
+				Name: constants.NamespaceLatticeInternal,
 			},
 		},
 		// lattice user namespace

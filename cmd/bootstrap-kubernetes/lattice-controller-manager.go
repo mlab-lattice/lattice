@@ -27,7 +27,7 @@ func seedLatticeControllerManager(kubeClientset *kubernetes.Clientset) {
 	latticeControllerManagerDaemonSet := &extensionsv1beta1.DaemonSet{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "lattice-controller-manager",
-			Namespace: constants.NamespaceInternal,
+			Namespace: constants.NamespaceLatticeInternal,
 		},
 		Spec: extensionsv1beta1.DaemonSetSpec{
 			Template: corev1.PodTemplateSpec{
@@ -68,7 +68,7 @@ func seedLatticeControllerManager(kubeClientset *kubernetes.Clientset) {
 	pollKubeResourceCreation(func() (interface{}, error) {
 		return kubeClientset.
 			ExtensionsV1beta1().
-			DaemonSets(string(constants.NamespaceInternal)).
+			DaemonSets(string(constants.NamespaceLatticeInternal)).
 			Create(latticeControllerManagerDaemonSet)
 	})
 }
