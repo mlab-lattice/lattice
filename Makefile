@@ -40,7 +40,7 @@ gazelle:
 
 # local-binaries
 .PHONY: update-local-binaries
-update-local-binaries: update-local-binary-provision-system update-local-binary-deprovision-system
+update-local-binaries: update-local-binary-provision-system update-local-binary-deprovision-system update-local-binary-lattice-system-cli
 
 # docker
 .PHONY: docker-build
@@ -108,17 +108,30 @@ docker-tag-dev-bootstrap-kubernetes:
 docker-push-dev-bootstrap-kubernetes: docker-tag-dev-bootstrap-kubernetes
 	gcloud docker -- push $(DEV_BOOTSTRAP_KUBERNETES_IMAGE)
 
+# lattice-system-cli
+.PHONY: build-lattice-system-cli
+build-lattice-system-cli: gazelle
+	bazel build //cmd/system
+
+.PHONY: update-local-binary-lattice-system-cli
+update-local-binary-lattice-system-cli: build-lattice-system-cli
+	cp -f $(DIR)/bazel-bin/cmd/system/system $(DIR)/bin
+
 # provision-system
+.PHONY: build-provision-system
 build-provision-system: gazelle
 	bazel build //cmd/provision-system
 
+.PHONY: update-local-binary-provision-system
 update-local-binary-provision-system: build-provision-system
 	cp -f $(DIR)/bazel-bin/cmd/provision-system/provision-system $(DIR)/bin
 
 # deprovision-system
+.PHONY: build-deprovision-system
 build-deprovision-system: gazelle
 	bazel build //cmd/deprovision-system
 
+.PHONY: update-local-binary-deprovision-system
 update-local-binary-deprovision-system: build-deprovision-system
 	cp -f $(DIR)/bazel-bin/cmd/deprovision-system/deprovision-system $(DIR)/bin
 
