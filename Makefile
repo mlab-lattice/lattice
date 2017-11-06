@@ -115,7 +115,7 @@ build-lattice-system-cli: gazelle
 
 .PHONY: update-local-binary-lattice-system-cli
 update-local-binary-lattice-system-cli: build-lattice-system-cli
-	cp -f $(DIR)/bazel-bin/cmd/system/system $(DIR)/bin
+	cp -f $(DIR)/bazel-bin/cmd/system/system $(DIR)/bin/lattice-system
 
 # provision-system
 .PHONY: build-provision-system
