@@ -52,6 +52,5 @@ func (mec *ExecContext) IP(name string) (string, error) {
 		return "", nil
 	}
 
-	strings.TrimSpace(stdout)
-	return stdout, nil
+	return strings.TrimSpace(stdout), nil
 }

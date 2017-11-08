@@ -14,7 +14,7 @@ set -e
 echo "Creating kubernetes cert"
 cat > kubernetes-csr.json <<EOF
 {
-  "CN": "kube-masters.internal.lattice",
+  "CN": "kube-masters.system.internal",
   "hosts": [
     "10.32.0.1"
   ],

@@ -87,13 +87,12 @@ func (ap *AWSProvisioner) Provision(name, url string) error {
 		return err
 	}
 
-	address, err := ap.Address(name)
-	if err != nil {
-		return err
-	}
-
-	fmt.Println("Address: " + address)
 	return nil
+	//address, err := ap.Address(name)
+	//if err != nil {
+	//	return err
+	//}
+	//
 	//fmt.Println("Waiting for System Environment Manager to be ready...")
 	//return pollForSystemEnvironmentReadiness(address)
 }
