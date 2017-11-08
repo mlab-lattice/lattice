@@ -1,9 +1,7 @@
 package minikube
 
 import (
-	"io/ioutil"
 	"os/exec"
-	"path/filepath"
 
 	executil "github.com/mlab-lattice/core/pkg/util/exec"
 	"strings"
@@ -26,7 +24,7 @@ func NewMinikubeExecContext(logPath string) (*ExecContext, error) {
 		return nil, err
 	}
 
-	ec, err := executil.NewContext(execPath, logPath, nil)
+	ec, err := executil.NewContext(execPath, &logPath, nil, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -37,32 +35,23 @@ func NewMinikubeExecContext(logPath string) (*ExecContext, error) {
 	return mec, nil
 }
 
-func (mec *ExecContext) Start(name string) (int, string, func() error, error) {
+func (mec *ExecContext) Start(name string) (*executil.Result, string, error) {
 	args := []string{startCmd, "-p", name, "--kubernetes-version", "v1.8.0", "--bootstrapper", "kubeadm"}
-	return mec.Exec("minikube-"+startCmd, args...)
+	return mec.ExecWithLogFile("minikube-"+startCmd, args...)
 }
 
-func (mec *ExecContext) Delete(name string) (int, string, func() error, error) {
+func (mec *ExecContext) Delete(name string) (*executil.Result, string, error) {
 	args := []string{deleteCmd, "-p", name}
-	return mec.Exec("minikube-"+deleteCmd, args...)
+	return mec.ExecWithLogFile("minikube-"+deleteCmd, args...)
 }
 
 func (mec *ExecContext) IP(name string) (string, error) {
 	args := []string{ipCmd, "-p", name}
-	_, logFilename, waitFunc, err := mec.Exec("minikube-"+ipCmd, args...)
+	stdout, _, err := mec.ExecSync(args...)
 	if err != nil {
-		return "", err
+		return "", nil
 	}
 
-	err = waitFunc()
-	if err != nil {
-		return "", err
-	}
-
-	ipBytes, err := ioutil.ReadFile(filepath.Join(mec.LogPath, logFilename))
-	if err != nil {
-		return "", err
-	}
-
-	return strings.TrimSpace(string(ipBytes)), nil
+	strings.TrimSpace(stdout)
+	return stdout, nil
 }
