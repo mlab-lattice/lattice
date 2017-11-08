@@ -8,11 +8,11 @@ import (
 )
 
 const (
-	devDockerRegistry  = "gcr.io/lattice-dev"
+	devDockerRegistry = "gcr.io/lattice-dev"
 )
 
 var (
-	logPath string
+	workingDir string
 )
 
 // RootCmd represents the base command when called without any subcommands
@@ -32,11 +32,11 @@ func Execute() {
 
 func init() {
 	cobra.OnInitialize(initCmd)
-	RootCmd.PersistentFlags().StringVar(&logPath, "log-path", "/tmp/lattice-system/logs", "path where logs from subcommands will be stored")
+	RootCmd.PersistentFlags().StringVar(&workingDir, "working-directory", "/tmp/lattice-system/", "path where subcommands will use as their working directory")
 }
 
 func initCmd() {
-	err := os.MkdirAll(logPath, 0770)
+	err := os.MkdirAll(workingDir, 0770)
 	if err != nil {
 		panic(fmt.Errorf("unable to create log-path: %v", err))
 	}

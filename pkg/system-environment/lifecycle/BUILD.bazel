@@ -3,6 +3,7 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library")
 go_library(
     name = "go_default_library",
     srcs = [
+        "aws.go",
         "common.go",
         "interface.go",
         "local.go",
@@ -11,7 +12,9 @@ go_library(
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/constants:go_default_library",
+        "//pkg/terraform/aws:go_default_library",
         "//pkg/util/minikube:go_default_library",
+        "@com_github_mlab_lattice_core//pkg/util/terraform:go_default_library",
         "@io_k8s_api//batch/v1:go_default_library",
         "@io_k8s_api//core/v1:go_default_library",
         "@io_k8s_api//rbac/v1:go_default_library",

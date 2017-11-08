@@ -40,14 +40,14 @@ func NewLocalProvisioner(latticeImageDockerRepository, logPath string) (*LocalPr
 }
 
 func (lp *LocalProvisioner) Provision(name, url string) error {
-	pid, logFilename, waitFunc, err := lp.mec.Start(name)
+	result, logFilename, err := lp.mec.Start(name)
 	if err != nil {
 		return err
 	}
 
-	fmt.Printf("Running minikube start (pid: %v, log file: %v)\n", pid, filepath.Join(lp.mec.LogPath, logFilename))
+	fmt.Printf("Running minikube start (pid: %v, log file: %v)\n", result.Pid, filepath.Join(*lp.mec.LogPath, logFilename))
 
-	err = waitFunc()
+	err = result.Wait()
 	if err != nil {
 		return err
 	}
@@ -195,12 +195,12 @@ func (lp *LocalProvisioner) bootstrap(address string) error {
 }
 
 func (lp *LocalProvisioner) Deprovision(name string) error {
-	pid, logFilename, waitFunc, err := lp.mec.Delete(name)
+	result, logFilename, err := lp.mec.Delete(name)
 	if err != nil {
 		return err
 	}
 
-	fmt.Printf("Running minikube delete (pid: %v, log file: %v)\n", pid, filepath.Join(lp.mec.LogPath, logFilename))
+	fmt.Printf("Running minikube delete (pid: %v, log file: %v)\n", result.Pid, filepath.Join(*lp.mec.LogPath, logFilename))
 
-	return waitFunc()
+	return result.Wait()
 }

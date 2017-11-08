@@ -5,6 +5,7 @@ go_library(
     srcs = [
         "deprovision_system.go",
         "provision_system.go",
+        "provisioner.go",
         "root.go",
     ],
     importpath = "github.com/mlab-lattice/kubernetes-integration/cmd/system/app",

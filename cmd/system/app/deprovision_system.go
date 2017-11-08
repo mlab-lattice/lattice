@@ -1,12 +1,6 @@
 package app
 
 import (
-	"fmt"
-
-	coreconstants "github.com/mlab-lattice/core/pkg/constants"
-
-	sysenvlifecycle "github.com/mlab-lattice/kubernetes-integration/pkg/system-environment/lifecycle"
-
 	"github.com/spf13/cobra"
 )
 
@@ -19,19 +13,12 @@ var deprovisionSystemCmd = &cobra.Command{
 		providerName := args[0]
 		name := args[1]
 
-		var provisioner sysenvlifecycle.Provisioner
-		switch providerName {
-		case coreconstants.ProviderLocal:
-			lp, err := sysenvlifecycle.NewLocalProvisioner(devDockerRegistry, logPath)
-			if err != nil {
-				panic(err)
-			}
-			provisioner = sysenvlifecycle.Provisioner(lp)
-		default:
-			panic(fmt.Sprintf("unsupported provider: %v", providerName))
+		provisioner, err := getProvisioner(providerName, name)
+		if err != nil {
+			panic(err)
 		}
 
-		err := provisioner.Deprovision(name)
+		err = provisioner.Deprovision(name)
 		if err != nil {
 			panic(err)
 		}
