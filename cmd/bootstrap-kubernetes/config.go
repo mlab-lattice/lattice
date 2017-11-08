@@ -27,7 +27,6 @@ func seedConfig(kubeconfig *rest.Config, userSystemUrl, systemIP string) {
 	}
 
 	// Create config
-	provider := coretypes.Provider(providerName)
 	config := &crv1.Config{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      constants.ConfigGlobal,
@@ -39,13 +38,13 @@ func seedConfig(kubeconfig *rest.Config, userSystemUrl, systemIP string) {
 					Url: userSystemUrl,
 				},
 			},
-			Provider: provider,
+			Provider: providerName,
 		},
 	}
 
 	var buildConfig crv1.ComponentBuildConfig
 	var envoyConfig crv1.EnvoyConfig
-	switch provider {
+	switch providerName {
 	case coreconstants.ProviderLocal:
 		buildConfig = crv1.ComponentBuildConfig{
 			DockerConfig: crv1.BuildDockerConfig{
