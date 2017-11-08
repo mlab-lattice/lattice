@@ -5,9 +5,9 @@ mkdir -p ~/tmp
 cd ~/tmp
 
 echo "Installing kubernetes binaries"
-wget https://storage.googleapis.com/kubernetes-release/release/v1.7.3/bin/linux/amd64/kubectl
-wget https://storage.googleapis.com/kubernetes-release/release/v1.7.3/bin/linux/amd64/kube-proxy
-wget https://storage.googleapis.com/kubernetes-release/release/v1.7.3/bin/linux/amd64/kubelet
+wget https://storage.googleapis.com/kubernetes-release/release/v1.8.0/bin/linux/amd64/kubectl
+wget https://storage.googleapis.com/kubernetes-release/release/v1.8.0/bin/linux/amd64/kube-proxy
+wget https://storage.googleapis.com/kubernetes-release/release/v1.8.0/bin/linux/amd64/kubelet
 
 chmod +x kubectl kube-proxy kubelet
 

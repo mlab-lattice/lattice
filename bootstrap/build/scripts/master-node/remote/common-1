@@ -16,13 +16,13 @@ sudo mkdir -p /opt/etcd/bin
 sudo mv etcd-v3.1.4-linux-amd64/etcd* /opt/etcd/bin/
 
 echo "Installing terraform"
-wget https://releases.hashicorp.com/terraform/0.10.0/terraform_0.10.0_linux_amd64.zip
-unzip terraform_0.10.0_linux_amd64.zip
+wget https://releases.hashicorp.com/terraform/0.10.8/terraform_0.10.8_linux_amd64.zip
+unzip terraform_0.10.8_linux_amd64.zip
 sudo mkdir -p /opt/terraform/bin
 sudo mv terraform /opt/terraform/bin
 
 echo "Pulling control plane docker images"
-docker pull gcr.io/google_containers/hyperkube:v1.7.3
+docker pull gcr.io/google_containers/hyperkube:v1.8.0
 
 # Clean up after ourselves
 cd ~
