@@ -1,6 +1,8 @@
 package main
 
 import (
+	"fmt"
+
 	coreconstants "github.com/mlab-lattice/core/pkg/constants"
 	coretypes "github.com/mlab-lattice/core/pkg/types"
 
@@ -14,6 +16,7 @@ import (
 )
 
 func seedConfig(kubeconfig *rest.Config, userSystemUrl, systemIP string) {
+	fmt.Println("Seeding lattice config...")
 	crClient, _, err := crdclient.NewClient(kubeconfig)
 	if err != nil {
 		panic(err)
@@ -38,39 +41,37 @@ func seedConfig(kubeconfig *rest.Config, userSystemUrl, systemIP string) {
 					Url: userSystemUrl,
 				},
 			},
-			Provider: providerName,
+			Envoy: crv1.EnvoyConfig{
+				PrepareImage:      dockerRegistry + "/prepare-envoy",
+				Image:             "lyft/envoy",
+				RedirectCidrBlock: "172.16.29.0/16",
+				XdsApiPort:        8080,
+			},
+			Provider: provider,
 		},
 	}
 
-	var buildConfig crv1.ComponentBuildConfig
-	var envoyConfig crv1.EnvoyConfig
-	switch providerName {
+	buildConfig := crv1.ComponentBuildConfig{
+		DockerConfig: crv1.BuildDockerConfig{
+			RepositoryPerImage: true,
+			Push:               true,
+		},
+		PullGitRepoImage: dockerRegistry + "/pull-git-repo",
+		BuildDockerImage: dockerRegistry + "/build-docker-image",
+	}
+
+	switch provider {
 	case coreconstants.ProviderLocal:
-		buildConfig = crv1.ComponentBuildConfig{
-			DockerConfig: crv1.BuildDockerConfig{
-				Registry:           "lattice-local",
-				RepositoryPerImage: true,
-				Push:               false,
-			},
-			PullGitRepoImage: dockerRegistry + "/pull-git-repo",
-			BuildDockerImage: dockerRegistry + "/build-docker-image",
-		}
-
-		envoyConfig = crv1.EnvoyConfig{
-			PrepareImage:      dockerRegistry + "/prepare-envoy",
-			Image:             "lyft/envoy",
-			EgressPort:        9001,
-			RedirectCidrBlock: "172.16.29.0/16",
-			XdsApiPort:        8080,
-		}
-
+		buildConfig.DockerConfig.Push = false
+		// TODO: is there a better value for this? are there any security
+		// 		 implications here? what if we own the lattice-local docker hub repo?
+		buildConfig.DockerConfig.Registry = "lattice-local"
 		config.Spec.SystemIP = &systemIP
 	default:
-		panic("unsupported providerName")
+		panic("unsupported provider")
 	}
 
 	config.Spec.ComponentBuild = buildConfig
-	config.Spec.Envoy = envoyConfig
 
 	pollKubeResourceCreation(func() (interface{}, error) {
 		return nil, crClient.Post().

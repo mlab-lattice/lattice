@@ -16,7 +16,8 @@ cat > kubernetes-csr.json <<EOF
 {
   "CN": "kube-masters.system.internal",
   "hosts": [
-    "10.32.0.1"
+    "10.32.0.1",
+    "kube-masters.system.internal"
   ],
   "key": {
     "algo": "rsa",

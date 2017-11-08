@@ -1,19 +1,23 @@
 package main
 
 import (
+	"fmt"
+
 	coreconstants "github.com/mlab-lattice/core/pkg/constants"
 
 	"github.com/mlab-lattice/kubernetes-integration/pkg/constants"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	appsv1beta2 "k8s.io/api/apps/v1beta2"
 	corev1 "k8s.io/api/core/v1"
-	extensionsv1beta1 "k8s.io/api/extensions/v1beta1"
 
 	"k8s.io/client-go/kubernetes"
 )
 
 func seedEnvoyXdsApi(kubeClientset *kubernetes.Clientset) {
+	fmt.Println("Seeding envoy xds api...")
+
 	var dockerRegistry string
 	if dev {
 		dockerRegistry = localDevDockerRegistry
@@ -22,12 +26,12 @@ func seedEnvoyXdsApi(kubeClientset *kubernetes.Clientset) {
 	}
 
 	// Create envoy-xds-api daemon set
-	envoyApiDaemonSet := &extensionsv1beta1.DaemonSet{
+	ds := &appsv1beta2.DaemonSet{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "envoy-xds-api",
 			Namespace: string(coreconstants.UserSystemNamespace),
 		},
-		Spec: extensionsv1beta1.DaemonSetSpec{
+		Spec: appsv1beta2.DaemonSetSpec{
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "envoy-xds-api",
@@ -36,10 +40,11 @@ func seedEnvoyXdsApi(kubeClientset *kubernetes.Clientset) {
 					},
 				},
 				Spec: corev1.PodSpec{
+					// FIXME: add service-node toleration
 					Containers: []corev1.Container{
 						{
-							Name:            "envoy-xds-api",
-							Image:           dockerRegistry + "/envoy-xds-api-kubernetes-per-node-rest",
+							Name:  "envoy-xds-api",
+							Image: dockerRegistry + "/envoy-xds-api-kubernetes-per-node-rest",
 							Ports: []corev1.ContainerPort{
 								{
 									Name:          "http",
@@ -59,9 +64,6 @@ func seedEnvoyXdsApi(kubeClientset *kubernetes.Clientset) {
 	}
 
 	pollKubeResourceCreation(func() (interface{}, error) {
-		return kubeClientset.
-			ExtensionsV1beta1().
-			DaemonSets(string(coreconstants.UserSystemNamespace)).
-			Create(envoyApiDaemonSet)
+		return kubeClientset.AppsV1beta2().DaemonSets(ds.Namespace).Create(ds)
 	})
 }

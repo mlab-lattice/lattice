@@ -19,7 +19,10 @@
       },
       "spec": {
         "containers": [
+
           {
+            "name": "kube-flannel",
+
             "command": [
               "/opt/bin/flanneld",
               "--ip-masq",
@@ -45,8 +48,9 @@
                 }
               }
             ],
+
+
             "image": "quay.io/coreos/flannel:v0.8.0-amd64",
-            "name": "kube-flannel",
             "securityContext": {
               "privileged": true
             },
@@ -62,6 +66,10 @@
               }
             ]
           },
+
+
+
+
           {
             "command": [
               "/bin/sh",

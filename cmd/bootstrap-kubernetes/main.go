@@ -2,7 +2,10 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"time"
+
+	coreconstants "github.com/mlab-lattice/core/pkg/constants"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -19,7 +22,7 @@ const (
 
 var (
 	kubeconfigPath string
-	providerName   string
+	provider       string
 	systemIP       string
 	userSystemUrl  string
 	dev            bool
@@ -27,7 +30,7 @@ var (
 
 func init() {
 	flag.StringVar(&kubeconfigPath, "kubeconfig", "", "path to kubeconfig file")
-	flag.StringVar(&providerName, "provider", "", "name of provider to use")
+	flag.StringVar(&provider, "provider", "", "name of provider to use")
 	flag.StringVar(&systemIP, "system-ip", "", "IP address of the system if -provider=local")
 	flag.StringVar(&userSystemUrl, "user-system-url", "", "url of the user-system definition")
 	flag.BoolVar(&dev, "dev", false, "configure to use locally built lattice component docker images")
@@ -63,6 +66,12 @@ func main() {
 	seedEnvoyXdsApi(kubeClientset)
 	seedLatticeControllerManager(kubeClientset)
 	seedLatticeSystemEnvironmentManagerAPI(kubeClientset)
+
+	if provider == coreconstants.ProviderLocal {
+		seedLocalSpecific(kubeClientset)
+	} else {
+		seedCloudSpecific(kubeClientset)
+	}
 }
 
 func pollKubeResourceCreation(resourceCreationFunc func() (interface{}, error)) {
@@ -70,6 +79,7 @@ func pollKubeResourceCreation(resourceCreationFunc func() (interface{}, error)) 
 		_, err := resourceCreationFunc()
 
 		if err != nil && !apierrors.IsAlreadyExists(err) {
+			fmt.Printf("encountered error from API: %v\n", err)
 			return false, nil
 		}
 		return true, nil

@@ -1,6 +1,8 @@
 package main
 
 import (
+	"fmt"
+
 	"github.com/mlab-lattice/kubernetes-integration/pkg/constants"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -12,6 +14,7 @@ import (
 )
 
 func seedLatticeSystemEnvironmentManagerAPI(kubeClientset *kubernetes.Clientset) {
+	fmt.Println("Seeding lattice-system-environment-manager...")
 	var dockerRegistry string
 	if dev {
 		dockerRegistry = localDevDockerRegistry
@@ -61,11 +64,11 @@ func seedLatticeSystemEnvironmentManagerAPI(kubeClientset *kubernetes.Clientset)
 	}
 
 	// FIXME: add NodeSelector for cloud providers
-	//switch coretypes.Provider(providerName) {
+	//switch coretypes.Provider(provider) {
 	//case coreconstants.ProviderLocal:
 	//
 	//default:
-	//	panic("unsupported providerName")
+	//	panic("unsupported provider")
 	//}
 
 	pollKubeResourceCreation(func() (interface{}, error) {

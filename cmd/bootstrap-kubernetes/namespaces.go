@@ -1,6 +1,8 @@
 package main
 
 import (
+	"fmt"
+
 	coreconstants "github.com/mlab-lattice/core/pkg/constants"
 	"github.com/mlab-lattice/kubernetes-integration/pkg/constants"
 
@@ -12,6 +14,7 @@ import (
 )
 
 func seedNamespaces(kubeClientset *kubernetes.Clientset) {
+	fmt.Println("Seeding namespaces...")
 	namespaces := []*corev1.Namespace{
 		// lattice internal namespace
 		{

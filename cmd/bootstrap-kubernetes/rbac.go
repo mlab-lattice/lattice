@@ -1,6 +1,8 @@
 package main
 
 import (
+	"fmt"
+
 	coreconstants "github.com/mlab-lattice/core/pkg/constants"
 
 	crv1 "github.com/mlab-lattice/kubernetes-integration/pkg/api/customresource/v1"
@@ -31,6 +33,7 @@ const (
 )
 
 func seedRbac(kubeClientset *kubernetes.Clientset) {
+	fmt.Println("Seeding rbac...")
 	seedRbacRoles(kubeClientset)
 	seedServiceAccounts(kubeClientset)
 

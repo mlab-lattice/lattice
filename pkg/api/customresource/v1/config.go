@@ -61,7 +61,6 @@ type BuildDockerConfig struct {
 type EnvoyConfig struct {
 	PrepareImage      string `json:"prepareImage"`
 	Image             string `json:"image"`
-	EgressPort        int32  `json:"egressPort"`
 	RedirectCidrBlock string `json:"redirectCidrBlock"`
 	XdsApiPort        int32  `json:"xdsApiPort"`
 }
