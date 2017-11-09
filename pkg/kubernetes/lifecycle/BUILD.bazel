@@ -5,10 +5,9 @@ go_library(
     srcs = [
         "aws.go",
         "common.go",
-        "interface.go",
         "local.go",
     ],
-    importpath = "github.com/mlab-lattice/system/pkg/kubernetes/system-environment/lifecycle",
+    importpath = "github.com/mlab-lattice/system/pkg/kubernetes/lifecycle",
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/kubernetes/constants:go_default_library",

@@ -6,35 +6,36 @@ import (
 
 	coreconstants "github.com/mlab-lattice/core/pkg/constants"
 
-	sysenvlifecycle "github.com/mlab-lattice/system/pkg/kubernetes/system-environment/lifecycle"
+	kubelifecycle "github.com/mlab-lattice/system/pkg/kubernetes/lifecycle"
+	"github.com/mlab-lattice/system/pkg/lifecycle"
 )
 
-func getProvisioner(provider, systemName string, providerVars []string) (sysenvlifecycle.Provisioner, error) {
+func getProvisioner(provider, systemName string, providerVars []string) (lifecycle.Provisioner, error) {
 	switch provider {
 	case coreconstants.ProviderLocal:
 		lp, err := getLocalProvisioner()
 		if err != nil {
 			return nil, err
 		}
-		return sysenvlifecycle.Provisioner(lp), nil
+		return lifecycle.Provisioner(lp), nil
 
 	case coreconstants.ProviderAWS:
 		ap, err := getAwsProvisioner(systemName, providerVars)
 		if err != nil {
 			return nil, err
 		}
-		return sysenvlifecycle.Provisioner(ap), nil
+		return lifecycle.Provisioner(ap), nil
 
 	default:
 		panic(fmt.Sprintf("unsupported provider: %v", provider))
 	}
 }
 
-func getLocalProvisioner() (*sysenvlifecycle.LocalProvisioner, error) {
-	return sysenvlifecycle.NewLocalProvisioner(devDockerRegistry, workingDir+"logs")
+func getLocalProvisioner() (*kubelifecycle.LocalProvisioner, error) {
+	return kubelifecycle.NewLocalProvisioner(devDockerRegistry, workingDir+"logs")
 }
 
-func getAwsProvisioner(name string, providerVars []string) (*sysenvlifecycle.AWSProvisioner, error) {
+func getAwsProvisioner(name string, providerVars []string) (*kubelifecycle.AWSProvisioner, error) {
 	awsWorkingDir := workingDir + "/aws/" + name
 
 	// TODO: find a better way to do the parsing of the provider variables
@@ -79,7 +80,7 @@ func getAwsProvisioner(name string, providerVars []string) (*sysenvlifecycle.AWS
 		}
 	}
 
-	awsConfig := sysenvlifecycle.AWSProvisionerConfig{
+	awsConfig := kubelifecycle.AWSProvisionerConfig{
 		TerraformModulePath: expectedVars["module-path"].(string),
 		AccountId:           expectedVars["account-id"].(string),
 		Region:              expectedVars["region"].(string),
@@ -91,5 +92,5 @@ func getAwsProvisioner(name string, providerVars []string) (*sysenvlifecycle.AWS
 		BaseNodeAMIId:          expectedVars["base-node-ami-id"].(string),
 	}
 
-	return sysenvlifecycle.NewAWSProvisioner(devDockerRegistry, awsWorkingDir, awsConfig)
+	return kubelifecycle.NewAWSProvisioner(devDockerRegistry, awsWorkingDir, awsConfig)
 }

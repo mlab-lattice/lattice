@@ -10,7 +10,7 @@ import (
 	latticeresource "github.com/mlab-lattice/system/pkg/kubernetes/customresource"
 	crv1 "github.com/mlab-lattice/system/pkg/kubernetes/customresource/v1"
 
-	"github.com/mlab-lattice/envoy-xds-api-backend/pkg/backend"
+	"github.com/mlab-lattice/system/pkg/envoy"
 
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/fields"
@@ -92,8 +92,8 @@ func (kpnb *KubernetesPerNodeBackend) Ready() bool {
 //       so future Services() calls will return the new map.
 // 		 Could also have the backend have a channel passed into it and it could notify the API when an update has occurred.
 //       This could be useful for the GRPC streaming version of the API.
-func (kpnb *KubernetesPerNodeBackend) Services() (map[systemtree.NodePath]*backend.Service, error) {
-	result := map[systemtree.NodePath]*backend.Service{}
+func (kpnb *KubernetesPerNodeBackend) Services() (map[systemtree.NodePath]*envoy.Service, error) {
+	result := map[systemtree.NodePath]*envoy.Service{}
 
 	for _, svcObj := range kpnb.latticeServiceStore.List() {
 		svc := svcObj.(*crv1.Service)
@@ -107,9 +107,9 @@ func (kpnb *KubernetesPerNodeBackend) Services() (map[systemtree.NodePath]*backe
 			return nil, err
 		}
 
-		bsvc := &backend.Service{
+		bsvc := &envoy.Service{
 			EgressPort:  svc.Spec.EnvoyEgressPort,
-			Components:  map[string]backend.Component{},
+			Components:  map[string]envoy.Component{},
 			IPAddresses: []string{},
 		}
 
@@ -125,7 +125,7 @@ func (kpnb *KubernetesPerNodeBackend) Services() (map[systemtree.NodePath]*backe
 		}
 
 		for component, ports := range svc.Spec.Ports {
-			bc := backend.Component{
+			bc := envoy.Component{
 				Ports: map[int32]int32{},
 			}
 

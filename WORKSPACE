@@ -1,7 +1,7 @@
-http_archive(
+git_repository(
     name = "io_bazel_rules_go",
-    url = "https://github.com/bazelbuild/rules_go/releases/download/0.7.0/rules_go-0.7.0.tar.gz",
-    sha256 = "91fca9cf860a1476abdc185a5f675b641b60d3acf0596679a27b580af60bf19c",
+    remote = "https://github.com/bazelbuild/rules_go.git",
+    commit = "9556bc88d7d240d3bcbf07d24282953eb1687ef3",
 )
 
 load("@io_bazel_rules_go//go:def.bzl", "go_rules_dependencies", "go_register_toolchains", "go_repository")
@@ -30,22 +30,6 @@ go_repository(
     commit = "6956ff348e4246bf838955704694873ccc67c14f",
     importpath = "github.com/mlab-lattice/core",
     remote = "git@github.com:mlab-lattice/core.git",
-    vcs = "git",
-)
-
-# Core dependencies
-go_repository(
-    name = "com_github_satori_go_uuid",
-    commit = "5bf94b69c6b68ee1b541973bb8e1144db23a194b",
-    importpath = "github.com/satori/go.uuid",
-)
-
-
-go_repository(
-    name = "com_github_mlab_lattice_envoy_xds_api_backend",
-    commit = "c81bcaffa91a47ce80aa5bbadb4fa878f5465882",
-    importpath = "github.com/mlab-lattice/envoy-xds-api-backend",
-    remote = "git@github.com:mlab-lattice/envoy-xds-api-backend.git",
     vcs = "git",
 )
 
@@ -94,8 +78,20 @@ go_repository(
     importpath = "k8s.io/kube-openapi",
 )
 
-# k8s dependencies
+go_repository(
+    name = "com_github_gin_gonic_gin",
+    commit = "d459835d2b077e44f7c9b453505ee29881d5d12d",  # v1.2
+    importpath = "github.com/gin-gonic/gin",
+)
 
+# Core dependencies
+go_repository(
+    name = "com_github_satori_go_uuid",
+    commit = "5bf94b69c6b68ee1b541973bb8e1144db23a194b",
+    importpath = "github.com/satori/go.uuid",
+)
+
+# k8s dependencies
 go_repository(
     name = "com_github_PuerkitoBio_purell",
     commit = "8a290539e2e8629dbc4e6bad948158f790ec31f4",
@@ -237,6 +233,7 @@ go_repository(
 
 go_repository(
     name = "com_github_googleapis_gnostic",
+    # https://github.com/bazelbuild/rules_go/issues/964
     build_file_generation = "on",
     build_file_name = "BUILD.bazel",
     build_file_proto_mode = "disable",
@@ -308,4 +305,41 @@ go_repository(
     name = "com_github_json_iterator_go",
     commit = "36b14963da70d11297d313183d7e6388c8510e1e",
     importpath = "github.com/json-iterator/go",
+)
+
+# Gin dependencies. Commits from v1.2 vendor/vendor.json
+go_repository(
+    name = "com_github_mattn_go_isatty",
+    commit = "57fdcb988a5c543893cc61bce354a6e24ab70022",
+    importpath = "github.com/mattn/go-isatty",
+)
+
+go_repository(
+    name = "com_github_gin_contrib_sse",
+    commit = "22d885f9ecc78bf4ee5d72b937e4bbcdc58e8cae",
+    importpath = "github.com/gin-contrib/sse",
+)
+
+go_repository(
+    name = "com_github_golang_protobuf",
+    commit = "130e6b02ab059e7b717a096f397c5b60111cae74",
+    importpath = "github.com/golang/protobuf",
+)
+
+go_repository(
+    name = "in_gopkg_yaml_v2",
+    commit = "a5b47d31c556af34a302ce5d659e6fea44d90de0",
+    importpath = "gopkg.in/yaml.v2",
+)
+
+go_repository(
+    name = "in_gopkg_go_playground_validator_v8",
+    commit = "5f57d2222ad794d0dffb07e664ea05e2ee07d60c",
+    importpath = "gopkg.in/go-playground/validator.v8",
+)
+
+go_repository(
+    name = "com_github_ugorji_go",
+    commit = "c88ee250d0221a57af388746f5cf03768c21d6e2",
+    importpath = "github.com/ugorji/go",
 )
