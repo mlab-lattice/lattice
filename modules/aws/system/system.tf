@@ -17,6 +17,7 @@ variable "key_name" {}
 variable "kube_apiserver_port" {
   default = 6443
 }
+
 variable "system_environment_manager_api_port" {
   default = 80
 }
@@ -229,6 +230,16 @@ resource "aws_security_group_rule" "alb_allow_egress_to_master_node_system_envir
   source_security_group_id = "${module.master_node.security_group_id}"
 }
 
+resource "aws_security_group_rule" "alb_allow_ingress" {
+  security_group_id = "${aws_security_group.master_alb.id}"
+
+  type        = "ingress"
+  from_port   = "${var.system_environment_manager_api_port}"
+  to_port     = "${var.system_environment_manager_api_port}"
+  protocol    = "tcp"
+  cidr_blocks = ["0.0.0.0/0"]
+}
+
 ###############################################################################
 # ALB
 
@@ -253,4 +264,31 @@ resource "aws_alb_listener" "master" {
     target_group_arn = "${aws_alb_target_group.master.arn}"
     type             = "forward"
   }
+}
+
+resource "aws_autoscaling_attachment" "master" {
+  autoscaling_group_name = "${module.master_node.autoscaling_group_name}"
+  alb_target_group_arn   = "${aws_alb_target_group.master.arn}"
+}
+
+###############################################################################
+# Build node
+#
+
+module "build_node" {
+  source = "../node/build"
+
+  aws_account_id = "${var.aws_account_id}"
+  region         = "${var.region}"
+
+  system_id        = "${var.system_id}"
+  vpc_id           = "${aws_vpc.vpc.id}"
+  vpc_cidr_block   = "${aws_vpc.vpc.cidr_block}"
+  build_subnet_ids = "${join(",", aws_subnet.subnet.*.id)}"
+
+  build_id         = "0"
+  num_instances    = "1"
+  instance_type    = "${var.master_node_instance_type}"
+  base_node_ami_id = "${var.base_node_ami_id}"
+  key_name         = "${var.key_name}"
 }

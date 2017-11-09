@@ -35,6 +35,10 @@ output "autoscaling_group_id" {
   value = "${module.base_node.autoscaling_group_id}"
 }
 
+output "autoscaling_group_name" {
+  value = "${module.base_node.autoscaling_group_name}"
+}
+
 output "security_group_id" {
   value = "${module.base_node.security_group_id}"
 }
