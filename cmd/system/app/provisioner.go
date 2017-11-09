@@ -80,15 +80,15 @@ func getAwsProvisioner(name string, providerVars []string) (*sysenvlifecycle.AWS
 	}
 
 	awsConfig := sysenvlifecycle.AWSProvisionerConfig{
-		ModulePath:        expectedVars["module-path"].(string),
-		AccountId:         expectedVars["account-id"].(string),
-		Region:            expectedVars["region"].(string),
-		AvailabilityZones: expectedVars["availability-zones"].([]string),
-		KeyName:           expectedVars["key-name"].(string),
+		TerraformModulePath: expectedVars["module-path"].(string),
+		AccountId:           expectedVars["account-id"].(string),
+		Region:              expectedVars["region"].(string),
+		AvailabilityZones:   expectedVars["availability-zones"].([]string),
+		KeyName:             expectedVars["key-name"].(string),
 
 		MasterNodeInstanceType: expectedVars["master-node-instance-type"].(string),
 		MasterNodeAMIId:        expectedVars["master-node-ami-id"].(string),
-		BaseNodeAmiId:          expectedVars["base-node-ami-id"].(string),
+		BaseNodeAMIId:          expectedVars["base-node-ami-id"].(string),
 	}
 
 	return sysenvlifecycle.NewAWSProvisioner(devDockerRegistry, awsWorkingDir, awsConfig)
