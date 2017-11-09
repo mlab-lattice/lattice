@@ -21,11 +21,12 @@ const (
 )
 
 var (
-	kubeconfigPath string
-	provider       string
-	systemIP       string
-	userSystemUrl  string
-	dev            bool
+	kubeconfigPath           string
+	provider                 string
+	systemIP                 string
+	userSystemUrl            string
+	latticeContainerRegistry string
+	componentBuildRegistry   string
 )
 
 func init() {
@@ -33,11 +34,18 @@ func init() {
 	flag.StringVar(&provider, "provider", "", "name of provider to use")
 	flag.StringVar(&systemIP, "system-ip", "", "IP address of the system if -provider=local")
 	flag.StringVar(&userSystemUrl, "user-system-url", "", "url of the user-system definition")
-	flag.BoolVar(&dev, "dev", false, "configure to use locally built lattice component docker images")
+	flag.StringVar(&latticeContainerRegistry, "lattice-container-registry", "", "registry used to pull lattice containers")
+	flag.StringVar(&componentBuildRegistry, "component-build-registry", "", "registry used to push component builds to")
 	flag.Parse()
 }
 
 func main() {
+	switch provider {
+	case coreconstants.ProviderLocal, coreconstants.ProviderAWS:
+	default:
+		panic("unsupported provider")
+	}
+
 	var config *rest.Config
 	var err error
 	if kubeconfigPath == "" {

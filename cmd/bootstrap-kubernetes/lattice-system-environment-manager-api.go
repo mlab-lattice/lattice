@@ -15,12 +15,6 @@ import (
 
 func seedLatticeSystemEnvironmentManagerAPI(kubeClientset *kubernetes.Clientset) {
 	fmt.Println("Seeding lattice-system-environment-manager...")
-	var dockerRegistry string
-	if dev {
-		dockerRegistry = localDevDockerRegistry
-	} else {
-		dockerRegistry = devDockerRegistry
-	}
 
 	latticeSystemEnvironmentManagerAPIDaemonSet := &extensionsv1beta1.DaemonSet{
 		ObjectMeta: metav1.ObjectMeta{
@@ -39,7 +33,7 @@ func seedLatticeSystemEnvironmentManagerAPI(kubeClientset *kubernetes.Clientset)
 					Containers: []corev1.Container{
 						{
 							Name:    "api",
-							Image:   dockerRegistry + "/system-environment-manager-rest-api-kubernetes",
+							Image:   latticeContainerRegistry + "/system-environment-manager-rest-api-kubernetes",
 							Command: []string{"/app/cmd/rest-api-kubernetes/go_image.binary"},
 							Args:    []string{"-port", "80"},
 							Ports: []corev1.ContainerPort{

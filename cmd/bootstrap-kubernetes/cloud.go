@@ -104,15 +104,23 @@ func seedFlannel(kubeClientset *kubernetes.Clientset) {
 	})
 
 	truth := true
+	dsLabels := map[string]string{
+		"system.kubernetes.io/flannel": "true",
+	}
 	ds := &appsv1beta2.DaemonSet{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "kube-flannel-ds",
 			Namespace: constants.NamespaceKubeSystem,
+			Labels:    dsLabels,
 		},
 		Spec: appsv1beta2.DaemonSetSpec{
+			Selector: &metav1.LabelSelector{
+				MatchLabels: dsLabels,
+			},
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Name: "kube-flannel-ds",
+					Name:   "kube-flannel-ds",
+					Labels: dsLabels,
 				},
 				Spec: corev1.PodSpec{
 					HostNetwork: true,

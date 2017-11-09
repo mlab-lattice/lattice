@@ -16,13 +16,6 @@ import (
 func seedLatticeControllerManager(kubeClientset *kubernetes.Clientset) {
 	fmt.Println("Seeding lattice-controller-manager...")
 
-	var dockerRegistry string
-	if dev {
-		dockerRegistry = localDevDockerRegistry
-	} else {
-		dockerRegistry = devDockerRegistry
-	}
-
 	// TODO: for now we'll make a DaemonSet that runs on all the master nodes (aka all nodes in local)
 	//		 and rely on the fact that we don't support multiple master nodes on AWS yet. Eventually we'll
 	//		 either have to figure out how to have multiple lattice-controller-managers running (e.g. use leaderelect
@@ -45,7 +38,7 @@ func seedLatticeControllerManager(kubeClientset *kubernetes.Clientset) {
 					Containers: []corev1.Container{
 						{
 							Name:            "controller-manager",
-							Image:           dockerRegistry + "/lattice-controller-manager",
+							Image:           latticeContainerRegistry + "/lattice-controller-manager",
 							Command:         []string{"/app/cmd/controller-manager/go_image.binary"},
 							Args:            []string{"-v", "5", "-logtostderr", "-provider", provider},
 						},

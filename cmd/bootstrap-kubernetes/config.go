@@ -22,13 +22,6 @@ func seedConfig(kubeconfig *rest.Config, userSystemUrl, systemIP string) {
 		panic(err)
 	}
 
-	var dockerRegistry string
-	if dev {
-		dockerRegistry = localDevDockerRegistry
-	} else {
-		dockerRegistry = devDockerRegistry
-	}
-
 	// Create config
 	config := &crv1.Config{
 		ObjectMeta: metav1.ObjectMeta{
@@ -42,36 +35,30 @@ func seedConfig(kubeconfig *rest.Config, userSystemUrl, systemIP string) {
 				},
 			},
 			Envoy: crv1.EnvoyConfig{
-				PrepareImage:      dockerRegistry + "/prepare-envoy",
-				Image:             "lyft/envoy",
+				PrepareImage:      latticeContainerRegistry + "/prepare-envoy",
+				Image:             "envoyproxy/envoy",
 				RedirectCidrBlock: "172.16.29.0/16",
 				XdsApiPort:        8080,
 			},
-			Provider: provider,
+			ComponentBuild: crv1.ComponentBuildConfig{
+				DockerConfig: crv1.BuildDockerConfig{
+					RepositoryPerImage: true,
+					Push:               true,
+					Registry:           componentBuildRegistry,
+				},
+				PullGitRepoImage: latticeContainerRegistry + "/pull-git-repo",
+				BuildDockerImage: latticeContainerRegistry + "/build-docker-image",
+			},
 		},
-	}
-
-	buildConfig := crv1.ComponentBuildConfig{
-		DockerConfig: crv1.BuildDockerConfig{
-			RepositoryPerImage: true,
-			Push:               true,
-		},
-		PullGitRepoImage: dockerRegistry + "/pull-git-repo",
-		BuildDockerImage: dockerRegistry + "/build-docker-image",
 	}
 
 	switch provider {
 	case coreconstants.ProviderLocal:
-		buildConfig.DockerConfig.Push = false
-		// TODO: is there a better value for this? are there any security
-		// 		 implications here? what if we own the lattice-local docker hub repo?
-		buildConfig.DockerConfig.Registry = "lattice-local"
-		config.Spec.SystemIP = &systemIP
-	default:
-		panic("unsupported provider")
+		config.Spec.ComponentBuild.DockerConfig.Push = false
+		config.Spec.ProviderConfig.Local = &crv1.ProviderConfigLocal{
+			IP: systemIP,
+		}
 	}
-
-	config.Spec.ComponentBuild = buildConfig
 
 	pollKubeResourceCreation(func() (interface{}, error) {
 		return nil, crClient.Post().

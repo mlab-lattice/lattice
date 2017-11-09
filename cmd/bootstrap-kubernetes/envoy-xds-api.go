@@ -18,33 +18,31 @@ import (
 func seedEnvoyXdsApi(kubeClientset *kubernetes.Clientset) {
 	fmt.Println("Seeding envoy xds api...")
 
-	var dockerRegistry string
-	if dev {
-		dockerRegistry = localDevDockerRegistry
-	} else {
-		dockerRegistry = devDockerRegistry
-	}
-
 	// Create envoy-xds-api daemon set
+	labels := map[string]string{
+		"user-system.lattice.mlab.com/envoy-xds-api": "true",
+	}
 	ds := &appsv1beta2.DaemonSet{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "envoy-xds-api",
 			Namespace: string(coreconstants.UserSystemNamespace),
+			Labels:    labels,
 		},
 		Spec: appsv1beta2.DaemonSetSpec{
+			Selector: &metav1.LabelSelector{
+				MatchLabels: labels,
+			},
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Name: "envoy-xds-api",
-					Labels: map[string]string{
-						"envoy.lattice.mlab.com/xds-api": "true",
-					},
+					Name:   "envoy-xds-api",
+					Labels: labels,
 				},
 				Spec: corev1.PodSpec{
 					// FIXME: add service-node toleration
 					Containers: []corev1.Container{
 						{
 							Name:  "envoy-xds-api",
-							Image: dockerRegistry + "/envoy-xds-api-kubernetes-per-node-rest",
+							Image: latticeContainerRegistry + "/envoy-xds-api-kubernetes-per-node-rest",
 							Ports: []corev1.ContainerPort{
 								{
 									Name:          "http",

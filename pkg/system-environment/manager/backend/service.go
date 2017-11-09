@@ -75,7 +75,7 @@ func (kb *KubernetesBackend) transformService(svc *crv1.Service) (*coretypes.Ser
 				return nil, err
 			}
 
-			addrt := fmt.Sprintf("%v:%v", *sysIP, kubeSvc.Spec.Ports[0].NodePort)
+			addrt := fmt.Sprintf("%v:%v", sysIP, kubeSvc.Spec.Ports[0].NodePort)
 			addr = &addrt
 		}
 	}
