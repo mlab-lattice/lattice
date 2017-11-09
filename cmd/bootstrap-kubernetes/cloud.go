@@ -126,7 +126,7 @@ func seedFlannel(kubeClientset *kubernetes.Clientset) {
 					HostNetwork: true,
 					// Do not forget to add new tolerations here
 					Tolerations: []corev1.Toleration{
-						constants.TolerationMasterNode,
+						constants.TolerateAllTaints,
 					},
 					ServiceAccountName: sa.Name,
 					InitContainers: []corev1.Container{
