@@ -57,7 +57,7 @@ func (lp *LocalProvisioner) Provision(name, url string) error {
 		return err
 	}
 
-	err = lp.bootstrap(address)
+	err = lp.bootstrap(address, url)
 	if err != nil {
 		return err
 	}
@@ -70,7 +70,7 @@ func (lp *LocalProvisioner) Address(name string) (string, error) {
 	return lp.mec.IP(name)
 }
 
-func (lp *LocalProvisioner) bootstrap(address string) error {
+func (lp *LocalProvisioner) bootstrap(address, url string) error {
 	fmt.Println("Bootstrapping")
 	usr, err := user.Current()
 	if err != nil {
@@ -150,7 +150,13 @@ func (lp *LocalProvisioner) bootstrap(address string) error {
 							Name:    "bootstrap-kubernetes",
 							Image:   lp.latticeImageDockerRepository + "/" + constants.DockerImageBootstrapKubernetes,
 							Command: []string{"/app/cmd/bootstrap-kubernetes/go_image.binary"},
-							Args:    []string{"-provider", "local", "-user-system-url", "github.com/foo/bar", "-system-ip", address},
+							Args: []string{
+								"-provider", "local",
+								"-user-system-url", url,
+								"-system-ip", address,
+								"-lattice-container-registry", "gcr.io/lattice-dev",
+								"-component-build-registry", "lattice-local",
+							},
 						},
 					},
 					RestartPolicy:      corev1.RestartPolicyNever,
