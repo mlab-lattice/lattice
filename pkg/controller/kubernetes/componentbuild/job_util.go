@@ -9,6 +9,7 @@ import (
 	systemdefinitionblock "github.com/mlab-lattice/core/pkg/system/definition/block"
 
 	crv1 "github.com/mlab-lattice/kubernetes-integration/pkg/api/customresource/v1"
+	"github.com/mlab-lattice/kubernetes-integration/pkg/constants"
 
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -123,12 +124,17 @@ func (cbc *ComponentBuildController) getGitRepositoryBuildJobSpec(cb *crv1.Compo
 		},
 	}
 
+	// FIXME: add build node affinity for cloud case
 	jobSpec := batchv1.JobSpec{
 		Template: corev1.PodTemplateSpec{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: name,
 			},
 			Spec: corev1.PodSpec{
+				Tolerations: []corev1.Toleration{
+					// Can tolerate build node taint even in local case
+					constants.TolerationBuildNode,
+				},
 				Volumes: []corev1.Volume{
 					{
 						Name:         jobWorkingDirectoryVolumeName,

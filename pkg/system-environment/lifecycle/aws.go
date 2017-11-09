@@ -87,14 +87,13 @@ func (ap *AWSProvisioner) Provision(name, url string) error {
 		return err
 	}
 
-	return nil
-	//address, err := ap.Address(name)
-	//if err != nil {
-	//	return err
-	//}
-	//
-	//fmt.Println("Waiting for System Environment Manager to be ready...")
-	//return pollForSystemEnvironmentReadiness(address)
+	address, err := ap.Address(name)
+	if err != nil {
+		return err
+	}
+
+	fmt.Println("Waiting for System Environment Manager to be ready...")
+	return pollForSystemEnvironmentReadiness(address)
 }
 
 func (ap *AWSProvisioner) getSystemTerraformJSON(name string) ([]byte, error) {
