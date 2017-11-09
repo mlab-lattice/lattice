@@ -1,0 +1,11 @@
+[Unit]
+# Wait until the docker is running and the kube-api is responsive
+Requires=docker.service wait-for-kube-api.service
+After=docker.service wait-for-kube-api.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/docker run --network host -v /etc/opt/kubernetes/admin/kubeconfig:/etc/bootstrap-lattice/kubeconfig gcr.io/lattice-dev/bootstrap-kubernetes:latest -kubeconfig /etc/bootstrap-lattice/kubeconfig -provider AWS -lattice-container-registry gcr.io/lattice-dev -component-build-registry foo
+
+[Install]
+WantedBy=multi-user.target

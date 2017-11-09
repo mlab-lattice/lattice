@@ -1,0 +1,11 @@
+[Unit]
+# Wait until the kubelet is running to start polling the api
+Requires=kubelet.service
+After=kubelet.service
+
+[Service]
+Type=oneshot
+ExecStart=/opt/lattice/bin/master-wait-for-kube-api
+
+[Install]
+WantedBy=multi-user.target

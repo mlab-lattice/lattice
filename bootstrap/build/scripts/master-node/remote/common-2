@@ -43,13 +43,15 @@ sudo mv /tmp/kubernetes/artifacts/master-node/attach-dev-xvdf.service \
 sudo systemctl daemon-reload
 
 echo "Enabling etcd"
-sudo mv /tmp/kubernetes/artifacts/master-node/kube-etcd.service /etc/systemd/system/kube-etcd.service
+sudo mv /tmp/kubernetes/artifacts/master-node/kube-etcd.service \
+        /etc/systemd/system/kube-etcd.service
 sudo systemctl daemon-reload
 sudo systemctl enable kube-etcd
 
 echo "Overriding and enabling kubelet"
 sudo mkdir -p /etc/systemd/system/kubelet.service.d
-sudo mv /tmp/kubernetes/artifacts/master-node/kubelet-override.conf /etc/systemd/system/kubelet.service.d/master-override.conf
+sudo mv /tmp/kubernetes/artifacts/master-node/kubelet-override.conf \
+        /etc/systemd/system/kubelet.service.d/master-override.conf
 sudo systemctl daemon-reload
 sudo systemctl enable kubelet
 
@@ -60,20 +62,26 @@ sudo mv /tmp/kubernetes/artifacts/master-node/kube-apiserver.json \
         /tmp/kubernetes/artifacts/master-node/kube-controller-manager.json \
         /var/opt/kubernetes/manifests
 
-echo "Installing bootstrap kube-resources"
+echo "Installing kubeconfig for local admin access"
+sudo mkdir -p /etc/opt/kubernetes/admin
+sudo mv /tmp/kubernetes/artifacts/master-node/admin.kubeconfig \
+        /etc/opt/kubernetes/admin/kubeconfig
+
+echo "Installing wait-for-kube-api"
+sudo mv /tmp/kubernetes/artifacts/master-node/wait-for-kube-api \
+        /opt/lattice/bin/master-wait-for-kube-api
+sudo chmod +x /opt/lattice/bin/master-wait-for-kube-api
+sudo mv /tmp/kubernetes/artifacts/master-node/wait-for-kube-api.service \
+        /etc/systemd/system/wait-for-kube-api.service
+sudo systemctl daemon-reload
+sudo systemctl enable wait-for-kube-api
+
+echo "Installing bootstrap-lattice"
 sudo mkdir -p /etc/opt/lattice/bootstrap-kube-resources
-sudo mv /tmp/kubernetes/artifacts/master-node/bootstrap-kube-resources/* \
-        /etc/opt/lattice/bootstrap-kube-resources
-
-echo "Installing bootstrap script"
-sudo mv /tmp/kubernetes/artifacts/master-node/bootstrap \
-        /opt/lattice/bin/master-bootstrap
-sudo chmod +x /opt/lattice/bin/master-bootstrap
-
-echo "Installing seed-build-ssh-key script"
-sudo mv /tmp/kubernetes/artifacts/master-node/seed-build-ssh-key \
-        /opt/lattice/bin/master-seed-build-ssh-key
-sudo chmod +x /opt/lattice/bin/master-seed-build-ssh-key
+sudo mv /tmp/kubernetes/artifacts/master-node/bootstrap-lattice.service \
+        /etc/systemd/system/bootstrap-lattice.service
+sudo systemctl daemon-reload
+sudo systemctl enable bootstrap-lattice
 
 # Trick ignition into running again when an instance is booted from this AMI
 # https://github.com/coreos/bugs/issues/2090

@@ -51,3 +51,9 @@ EOF
 cp kubernetes.pem kubernetes-key.pem master-node
 cp kubeconfig master-node/kubeconfig
 cp known_tokens.csv master-node/known_tokens.csv
+
+echo "Creating admin localhost kubeconfig"
+kubectl config set-cluster lattice --server=http://localhost:8080 --kubeconfig=admin.kubeconfig
+kubectl config set-context default --cluster=lattice --kubeconfig=admin.kubeconfig
+kubectl config use-context default --kubeconfig=admin.kubeconfig
+cp admin.kubeconfig master-node/admin.kubeconfig

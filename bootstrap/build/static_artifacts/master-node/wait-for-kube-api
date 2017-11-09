@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+
+EXIT_CODE=1
+while [[ "${EXIT_CODE}" != "0" ]]
+do
+  sleep 5
+  /opt/kubernetes/bin/kubectl cluster-info
+  EXIT_CODE=${?}
+done
