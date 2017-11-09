@@ -38,13 +38,6 @@ go_library(
 )
 
 go_binary(
-    name = "bootstrap",
-    importpath = "github.com/mlab-lattice/kubernetes-integration/cmd/bootstrap",
-    library = ":go_default_library",
-    visibility = ["//visibility:public"],
-)
-
-go_binary(
     name = "bootstrap-kubernetes",
     importpath = "github.com/mlab-lattice/kubernetes-integration/cmd/bootstrap-kubernetes",
     library = ":go_default_library",

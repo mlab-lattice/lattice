@@ -1,13 +1,16 @@
-git_repository(
+http_archive(
     name = "io_bazel_rules_go",
-    commit = "567738b9d3b61b162c1eda5f7ed21751379122d6",
-    remote = "https://github.com/bazelbuild/rules_go.git",
+    url = "https://github.com/bazelbuild/rules_go/releases/download/0.7.0/rules_go-0.7.0.tar.gz",
+    sha256 = "91fca9cf860a1476abdc185a5f675b641b60d3acf0596679a27b580af60bf19c",
 )
 
 load("@io_bazel_rules_go//go:def.bzl", "go_rules_dependencies", "go_register_toolchains", "go_repository")
 
 go_rules_dependencies()
 go_register_toolchains()
+
+load("@io_bazel_rules_go//proto:def.bzl", "proto_register_toolchains")
+proto_register_toolchains()
 
 git_repository(
     name = "io_bazel_rules_docker",
@@ -48,32 +51,36 @@ go_repository(
 
 go_repository(
     name = "io_k8s_apimachinery",
+    # https://github.com/bazelbuild/rules_go/issues/964
     build_file_generation = "on",
     build_file_name = "BUILD.bazel",
+    build_file_proto_mode = "disable",
     commit = "9d38e20d609d27e00d4ec18f7b9db67105a2bde0",
     importpath = "k8s.io/apimachinery",
 )
 
 go_repository(
     name = "io_k8s_apiextensions_apiserver",
+    # https://github.com/bazelbuild/rules_go/issues/964
     build_file_generation = "on",
     build_file_name = "BUILD.bazel",
+    build_file_proto_mode = "disable",
     commit = "79ecda8df91cd9304503d6f3e488341eabe2287f",
     importpath = "k8s.io/apiextensions-apiserver",
 )
 
 go_repository(
     name = "io_k8s_client_go",
-    build_file_generation = "on",
-    build_file_name = "BUILD.bazel",
     commit = "afb4606c45bae77c4dc2c15291d4d7d6d792196c",  # v5.0.0 branch HEAD
     importpath = "k8s.io/client-go",
 )
 
 go_repository(
     name = "io_k8s_api",
+    # https://github.com/bazelbuild/rules_go/issues/964
     build_file_generation = "on",
     build_file_name = "BUILD.bazel",
+    build_file_proto_mode = "disable",
     commit = "fe29995db37613b9c5b2a647544cf627bfa8d299",  # Jul 19, 2017 (no releases)
     importpath = "k8s.io/api",
 )
@@ -82,6 +89,7 @@ go_repository(
     name = "io_k8s_kube_openapi",
     build_file_generation = "on",
     build_file_name = "BUILD.bazel",
+    build_file_proto_mode = "disable",
     commit = "868f2f29720b192240e18284659231b440f9cda5",
     importpath = "k8s.io/kube-openapi",
 )
@@ -229,6 +237,9 @@ go_repository(
 
 go_repository(
     name = "com_github_googleapis_gnostic",
+    build_file_generation = "on",
+    build_file_name = "BUILD.bazel",
+    build_file_proto_mode = "disable",
     commit = "ee43cbb60db7bd22502942cccbc39059117352ab",
     importpath = "github.com/googleapis/gnostic",
 )
