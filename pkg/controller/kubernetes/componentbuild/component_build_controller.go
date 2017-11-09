@@ -7,7 +7,6 @@ import (
 	"time"
 
 	crv1 "github.com/mlab-lattice/kubernetes-integration/pkg/api/customresource/v1"
-	"github.com/mlab-lattice/kubernetes-integration/pkg/provider"
 
 	batchv1 "k8s.io/api/batch/v1"
 
@@ -29,8 +28,6 @@ import (
 var controllerKind = crv1.SchemeGroupVersion.WithKind("ComponentBuild")
 
 type ComponentBuildController struct {
-	provider provider.Interface
-
 	syncHandler func(bKey string) error
 	enqueue     func(cb *crv1.ComponentBuild)
 
@@ -42,7 +39,7 @@ type ComponentBuildController struct {
 	configSetChan     chan struct{}
 	configSet         bool
 	configLock        sync.RWMutex
-	config            crv1.ComponentBuildConfig
+	config            *crv1.ConfigSpec
 
 	componentBuildStore       cache.Store
 	componentBuildStoreSynced cache.InformerSynced
@@ -54,7 +51,6 @@ type ComponentBuildController struct {
 }
 
 func NewComponentBuildController(
-	provider provider.Interface,
 	kubeClient clientset.Interface,
 	latticeResourceClient rest.Interface,
 	configInformer cache.SharedInformer,
@@ -62,7 +58,6 @@ func NewComponentBuildController(
 	jobInformer batchinformers.JobInformer,
 ) *ComponentBuildController {
 	cbc := &ComponentBuildController{
-		provider:              provider,
 		latticeResourceClient: latticeResourceClient,
 		kubeClient:            kubeClient,
 		configSetChan:         make(chan struct{}),
@@ -111,7 +106,7 @@ func (cbc *ComponentBuildController) addConfig(obj interface{}) {
 
 	cbc.configLock.Lock()
 	defer cbc.configLock.Unlock()
-	cbc.config = config.DeepCopy().Spec.ComponentBuild
+	cbc.config = &config.DeepCopy().Spec
 
 	if !cbc.configSet {
 		cbc.configSet = true
@@ -126,7 +121,7 @@ func (cbc *ComponentBuildController) updateConfig(old, cur interface{}) {
 
 	cbc.configLock.Lock()
 	defer cbc.configLock.Unlock()
-	cbc.config = curConfig.DeepCopy().Spec.ComponentBuild
+	cbc.config = &curConfig.DeepCopy().Spec
 }
 
 func (cbc *ComponentBuildController) addComponentBuild(obj interface{}) {

@@ -5,6 +5,7 @@ import (
 	"reflect"
 	"time"
 
+	coreconstants "github.com/mlab-lattice/core/pkg/constants"
 	systemdefinitionblock "github.com/mlab-lattice/core/pkg/system/definition/block"
 
 	crv1 "github.com/mlab-lattice/kubernetes-integration/pkg/api/customresource/v1"
@@ -17,6 +18,9 @@ import (
 )
 
 const (
+	workingDirectoryVolumeHostPathPrefixLocal = "/data/component-builder"
+	workingDirectoryVolumeHostPathPrefixCloud = "/var/lib/component-builder"
+
 	jobWorkingDirectory           = "/var/run/builder"
 	jobWorkingDirectoryVolumeName = "workdir"
 
@@ -57,7 +61,7 @@ func (cbc *ComponentBuildController) getJobForBuild(cb *crv1.ComponentBuild) (*b
 	return matchingJobs[0], nil
 }
 
-func (cbc *ComponentBuildController) getBuildJob(cb *crv1.ComponentBuild) *batchv1.Job {
+func (cbc *ComponentBuildController) getBuildJob(cb *crv1.ComponentBuild) (*batchv1.Job, error) {
 	// Need a consistent view of our config while generating the Job
 	cbc.configLock.RLock()
 	defer cbc.configLock.RUnlock()
@@ -65,7 +69,10 @@ func (cbc *ComponentBuildController) getBuildJob(cb *crv1.ComponentBuild) *batch
 	name := getBuildJobName(cb)
 
 	// FIXME: get job spec for build.DockerImage as well
-	jSpec, dockerImageFqn := cbc.getGitRepositoryBuildJobSpec(cb)
+	jSpec, dockerImageFqn, err := cbc.getGitRepositoryBuildJobSpec(cb)
+	if err != nil {
+		return nil, err
+	}
 
 	jLabels := map[string]string{
 		crv1.ComponentBuildJobLabelKey: "true",
@@ -74,7 +81,7 @@ func (cbc *ComponentBuildController) getBuildJob(cb *crv1.ComponentBuild) *batch
 		jobDockerFqnAnnotationKey: dockerImageFqn,
 	}
 
-	return &batchv1.Job{
+	j := &batchv1.Job{
 		ObjectMeta: metav1.ObjectMeta{
 			Annotations:     jAnnotations,
 			Labels:          jLabels,
@@ -83,20 +90,36 @@ func (cbc *ComponentBuildController) getBuildJob(cb *crv1.ComponentBuild) *batch
 		},
 		Spec: jSpec,
 	}
+	return j, nil
 }
 
 func getBuildJobName(cb *crv1.ComponentBuild) string {
 	return fmt.Sprintf("lattice-build-%s", cb.Name)
 }
 
-func (cbc *ComponentBuildController) getGitRepositoryBuildJobSpec(cb *crv1.ComponentBuild) (batchv1.JobSpec, string) {
+func (cbc *ComponentBuildController) getGitRepositoryBuildJobSpec(cb *crv1.ComponentBuild) (batchv1.JobSpec, string, error) {
 	pullGitRepoContainer := cbc.getPullGitRepoContainer(cb)
 	buildDockerImageContainer, dockerImageFqn := cbc.getBuildDockerImageContainer(cb)
 	name := getBuildJobName(cb)
 
+	provider, err := crv1.GetProviderFromConfigSpec(cbc.config)
+	if err != nil {
+		return batchv1.JobSpec{}, "", err
+	}
+
+	var volumeHostPathPrefix string
+	switch provider {
+	case coreconstants.ProviderLocal:
+		volumeHostPathPrefix = workingDirectoryVolumeHostPathPrefixLocal
+	case coreconstants.ProviderAWS:
+		volumeHostPathPrefix = workingDirectoryVolumeHostPathPrefixCloud
+	default:
+		panic(fmt.Sprintf("unsupported provider: %s", provider))
+	}
+
 	workingDirectoryVolumeSource := corev1.VolumeSource{
 		HostPath: &corev1.HostPathVolumeSource{
-			Path: cbc.provider.ComponentBuildJobWorkingDirectoryVolumePathPrefix() + "/" + name,
+			Path: volumeHostPathPrefix + "/" + name,
 		},
 	}
 
@@ -133,13 +156,13 @@ func (cbc *ComponentBuildController) getGitRepositoryBuildJobSpec(cb *crv1.Compo
 		},
 	}
 
-	return jobSpec, dockerImageFqn
+	return jobSpec, dockerImageFqn, nil
 }
 
 func (cbc *ComponentBuildController) getPullGitRepoContainer(cb *crv1.ComponentBuild) corev1.Container {
 	pullGitRepoContainer := corev1.Container{
 		Name:            "pull-git-repo",
-		Image:           cbc.config.PullGitRepoImage,
+		Image:           cbc.config.ComponentBuild.PullGitRepoImage,
 		ImagePullPolicy: corev1.PullIfNotPresent,
 		Command:         []string{"./pull-git-repo.sh"},
 		Env: []corev1.EnvVar{
@@ -184,7 +207,7 @@ func (cbc *ComponentBuildController) getPullGitRepoContainer(cb *crv1.ComponentB
 func (cbc *ComponentBuildController) getBuildDockerImageContainer(cb *crv1.ComponentBuild) (corev1.Container, string) {
 	buildDockerImageContainer := corev1.Container{
 		Name:            "build-docker-image",
-		Image:           cbc.config.BuildDockerImage,
+		Image:           cbc.config.ComponentBuild.BuildDockerImage,
 		ImagePullPolicy: corev1.PullIfNotPresent,
 		Command:         []string{"./build-docker-image.sh"},
 		Env: []corev1.EnvVar{
@@ -194,7 +217,7 @@ func (cbc *ComponentBuildController) getBuildDockerImageContainer(cb *crv1.Compo
 			},
 			{
 				Name:  "DOCKER_REGISTRY",
-				Value: cbc.config.DockerConfig.Registry,
+				Value: cbc.config.ComponentBuild.DockerConfig.Registry,
 			},
 			{
 				Name:  "BUILD_CMD",
@@ -213,16 +236,16 @@ func (cbc *ComponentBuildController) getBuildDockerImageContainer(cb *crv1.Compo
 		},
 	}
 
-	repo := cbc.config.DockerConfig.Repository
+	repo := cbc.config.ComponentBuild.DockerConfig.Repository
 	tag := cb.Name
-	if cbc.config.DockerConfig.RepositoryPerImage {
+	if cbc.config.ComponentBuild.DockerConfig.RepositoryPerImage {
 		repo = cb.Name
 		tag = fmt.Sprint(time.Now().Unix())
 	}
 
 	dockerImageFqn := fmt.Sprintf(
 		"%v/%v:%v",
-		cbc.config.DockerConfig.Registry,
+		cbc.config.ComponentBuild.DockerConfig.Registry,
 		repo,
 		tag,
 	)
@@ -241,7 +264,7 @@ func (cbc *ComponentBuildController) getBuildDockerImageContainer(cb *crv1.Compo
 	)
 
 	push := "0"
-	if cbc.config.DockerConfig.Push {
+	if cbc.config.ComponentBuild.DockerConfig.Push {
 		push = "1"
 	}
 	buildDockerImageContainer.Env = append(

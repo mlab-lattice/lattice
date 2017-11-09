@@ -5,10 +5,7 @@ go_library(
     srcs = ["main.go"],
     importpath = "github.com/mlab-lattice/kubernetes-integration/cmd/controller-manager",
     visibility = ["//visibility:public"],
-    deps = [
-        "//cmd/controller-manager/app:go_default_library",
-        "//pkg/provider:go_default_library",
-    ],
+    deps = ["//cmd/controller-manager/app:go_default_library"],
 )
 
 go_binary(

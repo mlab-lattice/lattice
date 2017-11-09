@@ -12,8 +12,8 @@ go_library(
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/api/customresource/v1:go_default_library",
-        "//pkg/provider:go_default_library",
         "@com_github_golang_glog//:go_default_library",
+        "@com_github_mlab_lattice_core//pkg/constants:go_default_library",
         "@com_github_mlab_lattice_core//pkg/system/definition/block:go_default_library",
         "@io_k8s_api//batch/v1:go_default_library",
         "@io_k8s_api//core/v1:go_default_library",

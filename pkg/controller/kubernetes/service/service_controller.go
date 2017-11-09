@@ -7,7 +7,6 @@ import (
 	"time"
 
 	crv1 "github.com/mlab-lattice/kubernetes-integration/pkg/api/customresource/v1"
-	"github.com/mlab-lattice/kubernetes-integration/pkg/provider"
 
 	appsv1beta2 "k8s.io/api/apps/v1beta2"
 	corev1 "k8s.io/api/core/v1"
@@ -33,8 +32,6 @@ var controllerKind = crv1.SchemeGroupVersion.WithKind("Service")
 
 // We'll use LatticeService to differentiate between kubernetes' Service
 type ServiceController struct {
-	provider provider.Interface
-
 	syncHandler    func(bKey string) error
 	enqueueService func(cb *crv1.Service)
 
@@ -65,7 +62,6 @@ type ServiceController struct {
 }
 
 func NewServiceController(
-	provider provider.Interface,
 	kubeClient clientset.Interface,
 	latticeResourceRestClient rest.Interface,
 	configInformer cache.SharedInformer,
@@ -75,7 +71,6 @@ func NewServiceController(
 	kubeServiceInformer coreinformers.ServiceInformer,
 ) *ServiceController {
 	sc := &ServiceController{
-		provider:                  provider,
 		latticeResourceRestClient: latticeResourceRestClient,
 		kubeClient:                kubeClient,
 		configSetChan:             make(chan struct{}),

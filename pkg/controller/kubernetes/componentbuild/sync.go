@@ -13,7 +13,11 @@ import (
 // Warning: syncJoblessComponentBuild mutates cBuild. Please do not pass in a pointer to a ComponentBuild
 // from the shared cache.
 func (cbc *ComponentBuildController) syncJoblessComponentBuild(cb *crv1.ComponentBuild) error {
-	j := cbc.getBuildJob(cb)
+	j, err := cbc.getBuildJob(cb)
+	if err != nil {
+		return err
+	}
+
 	jResp, err := cbc.kubeClient.BatchV1().Jobs(cb.Namespace).Create(j)
 	if err != nil {
 		// FIXME: send warn event

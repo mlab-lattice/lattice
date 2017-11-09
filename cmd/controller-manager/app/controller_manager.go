@@ -8,7 +8,6 @@ import (
 	"github.com/mlab-lattice/kubernetes-integration/cmd/controller-manager/app/latticecontrollers"
 	latticeresource "github.com/mlab-lattice/kubernetes-integration/pkg/api/customresource"
 	crv1 "github.com/mlab-lattice/kubernetes-integration/pkg/api/customresource/v1"
-	"github.com/mlab-lattice/kubernetes-integration/pkg/provider"
 
 	apiv1 "k8s.io/api/core/v1"
 
@@ -23,7 +22,7 @@ import (
 	"github.com/golang/glog"
 )
 
-func Run(kubeconfig string, p provider.Interface) {
+func Run(kubeconfig, provider string) {
 	var config *rest.Config
 	var err error
 	if kubeconfig == "" {
@@ -41,7 +40,7 @@ func Run(kubeconfig string, p provider.Interface) {
 	}
 
 	// TODO: setting stop as nil for now, won't actually need it until leader-election is used
-	ctx := CreateControllerContext(rest.Interface(latticeResourceClient), config, p, nil)
+	ctx := CreateControllerContext(rest.Interface(latticeResourceClient), config, nil)
 	glog.V(1).Info("Starting controllers")
 	StartControllers(ctx, GetControllerInitializers())
 
@@ -60,7 +59,6 @@ func Run(kubeconfig string, p provider.Interface) {
 func CreateControllerContext(
 	latticeResourceClient rest.Interface,
 	kubeconfig *rest.Config,
-	p provider.Interface,
 	stop <-chan struct{},
 ) controller.Context {
 	cb := controller.ClientBuilder{
@@ -71,7 +69,6 @@ func CreateControllerContext(
 	sharedInformers := informers.NewSharedInformerFactory(versionedClient, time.Duration(12*time.Hour))
 
 	return controller.Context{
-		Provider:                  p,
 		InformerFactory:           sharedInformers,
 		CRDInformers:              getCRDInformers(latticeResourceClient),
 		LatticeResourceRestClient: latticeResourceClient,

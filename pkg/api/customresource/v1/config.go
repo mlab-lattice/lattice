@@ -31,6 +31,7 @@ type ConfigSpec struct {
 
 type ProviderConfig struct {
 	Local *ProviderConfigLocal `json:"local,omitempty"`
+	AWS   *ProviderConfigAWS   `json:"aws,omitempty"`
 }
 
 type ProviderConfigLocal struct {
