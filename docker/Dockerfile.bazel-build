@@ -9,3 +9,6 @@ RUN ./bazel-0.7.0-installer-linux-x86_64.sh --user
 RUN /root/bin/bazel version
 
 RUN apt install -y docker.io
+
+ENV PATH=$PATH:/root/bin
+WORKDIR /src

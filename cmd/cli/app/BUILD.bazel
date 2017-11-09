@@ -8,7 +8,7 @@ go_library(
         "provisioner.go",
         "root.go",
     ],
-    importpath = "github.com/mlab-lattice/system/cmd/system/app",
+    importpath = "github.com/mlab-lattice/system/cmd/cli/app",
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/kubernetes/system-environment/lifecycle:go_default_library",
