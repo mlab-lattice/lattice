@@ -8,10 +8,10 @@ go_library(
         "provisioner.go",
         "root.go",
     ],
-    importpath = "github.com/mlab-lattice/kubernetes-integration/cmd/system/app",
+    importpath = "github.com/mlab-lattice/system/cmd/system/app",
     visibility = ["//visibility:public"],
     deps = [
-        "//pkg/system-environment/lifecycle:go_default_library",
+        "//pkg/kubernetes/system-environment/lifecycle:go_default_library",
         "@com_github_mlab_lattice_core//pkg/constants:go_default_library",
         "@com_github_spf13_cobra//:go_default_library",
     ],

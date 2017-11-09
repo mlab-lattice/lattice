@@ -1,0 +1,33 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "component_build_controller.go",
+        "job_util.go",
+        "state.go",
+        "sync.go",
+    ],
+    importpath = "github.com/mlab-lattice/system/pkg/kubernetes/controller/kubernetes/componentbuild",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//pkg/kubernetes/constants:go_default_library",
+        "//pkg/kubernetes/customresource/v1:go_default_library",
+        "@com_github_golang_glog//:go_default_library",
+        "@com_github_mlab_lattice_core//pkg/constants:go_default_library",
+        "@com_github_mlab_lattice_core//pkg/system/definition/block:go_default_library",
+        "@io_k8s_api//batch/v1:go_default_library",
+        "@io_k8s_api//core/v1:go_default_library",
+        "@io_k8s_apimachinery//pkg/api/errors:go_default_library",
+        "@io_k8s_apimachinery//pkg/apis/meta/v1:go_default_library",
+        "@io_k8s_apimachinery//pkg/labels:go_default_library",
+        "@io_k8s_apimachinery//pkg/util/runtime:go_default_library",
+        "@io_k8s_apimachinery//pkg/util/wait:go_default_library",
+        "@io_k8s_client_go//informers/batch/v1:go_default_library",
+        "@io_k8s_client_go//kubernetes:go_default_library",
+        "@io_k8s_client_go//listers/batch/v1:go_default_library",
+        "@io_k8s_client_go//rest:go_default_library",
+        "@io_k8s_client_go//tools/cache:go_default_library",
+        "@io_k8s_client_go//util/workqueue:go_default_library",
+    ],
+)

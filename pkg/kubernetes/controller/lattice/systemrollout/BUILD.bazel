@@ -1,0 +1,29 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "accepted_rollout.go",
+        "in_progress_rollout.go",
+        "pending_rollout.go",
+        "system_rollout_controller.go",
+        "system_util.go",
+    ],
+    importpath = "github.com/mlab-lattice/system/pkg/kubernetes/controller/lattice/systemrollout",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//pkg/kubernetes/constants:go_default_library",
+        "//pkg/kubernetes/customresource/v1:go_default_library",
+        "@com_github_golang_glog//:go_default_library",
+        "@com_github_mlab_lattice_core//pkg/system/definition:go_default_library",
+        "@com_github_mlab_lattice_core//pkg/system/tree:go_default_library",
+        "@com_github_mlab_lattice_core//pkg/types:go_default_library",
+        "@io_k8s_apimachinery//pkg/api/errors:go_default_library",
+        "@io_k8s_apimachinery//pkg/apis/meta/v1:go_default_library",
+        "@io_k8s_apimachinery//pkg/util/runtime:go_default_library",
+        "@io_k8s_apimachinery//pkg/util/wait:go_default_library",
+        "@io_k8s_client_go//rest:go_default_library",
+        "@io_k8s_client_go//tools/cache:go_default_library",
+        "@io_k8s_client_go//util/workqueue:go_default_library",
+    ],
+)

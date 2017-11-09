@@ -1,0 +1,30 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "build.go",
+        "config.go",
+        "kubernetes_backend.go",
+        "roll_out.go",
+        "service.go",
+    ],
+    importpath = "github.com/mlab-lattice/system/pkg/kubernetes/system-environment/manager/backend",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//pkg/kubernetes/constants:go_default_library",
+        "//pkg/kubernetes/customresource:go_default_library",
+        "//pkg/kubernetes/customresource/v1:go_default_library",
+        "//pkg/kubernetes/util/kubernetes:go_default_library",
+        "@com_github_mlab_lattice_core//pkg/system/definition:go_default_library",
+        "@com_github_mlab_lattice_core//pkg/system/tree:go_default_library",
+        "@com_github_mlab_lattice_core//pkg/types:go_default_library",
+        "@io_k8s_api//core/v1:go_default_library",
+        "@io_k8s_apimachinery//pkg/api/errors:go_default_library",
+        "@io_k8s_apimachinery//pkg/apis/meta/v1:go_default_library",
+        "@io_k8s_apimachinery//pkg/util/uuid:go_default_library",
+        "@io_k8s_client_go//kubernetes:go_default_library",
+        "@io_k8s_client_go//rest:go_default_library",
+        "@io_k8s_client_go//tools/clientcmd:go_default_library",
+    ],
+)

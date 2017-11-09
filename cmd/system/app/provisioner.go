@@ -6,7 +6,7 @@ import (
 
 	coreconstants "github.com/mlab-lattice/core/pkg/constants"
 
-	sysenvlifecycle "github.com/mlab-lattice/kubernetes-integration/pkg/system-environment/lifecycle"
+	sysenvlifecycle "github.com/mlab-lattice/system/pkg/kubernetes/system-environment/lifecycle"
 )
 
 func getProvisioner(provider, systemName string, providerVars []string) (sysenvlifecycle.Provisioner, error) {

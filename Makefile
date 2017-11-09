@@ -1,6 +1,5 @@
 # https://stackoverflow.com/questions/18136918/how-to-get-current-relative-directory-of-your-makefile
 DIR := $(patsubst %/,%,$(dir $(abspath $(lastword $(MAKEFILE_LIST)))))
-MINIKUBE_PROFILE = lattice-kubernetes-integration-dev
 BOOTSTRAP_DIR = $(DIR)/bootstrap
 BOOTSTRAP_BUILD_DIR = $(BOOTSTRAP_DIR)/build
 BOOTSTRAP_BUILD_STATE_DIR = $(BOOTSTRAP_DIR)/.state/build
@@ -11,20 +10,26 @@ LOCAL_REGISTRY = lattice-local
 DEV_REGISTRY = gcr.io/lattice-dev
 DEV_TAG ?= latest
 
-LATTICE_CONTROLLER_MANAGER_IMAGE = lattice-controller-manager
-BAZEL_LATTICE_CONTROLLER_MANAGER_IMAGE = bazel/cmd/controller-manager:go_image
-LOCAL_LATTICE_CONTROLLER_MANAGER_IMAGE = $(LOCAL_REGISTRY)/$(LATTICE_CONTROLLER_MANAGER_IMAGE)
-DEV_LATTICE_CONTROLLER_MANAGER_IMAGE = $(DEV_REGISTRY)/$(LATTICE_CONTROLLER_MANAGER_IMAGE):$(DEV_TAG)
+KUBERNETES_BOOTSTRAP_LATTICE_IMAGE = kubernetes-bootstrap-lattice
+BAZEL_KUBERNETES_BOOTSTRAP_LATTICE_IMAGE = bazel/cmd/kubernetes/bootstrap-lattice:go_image
+LOCAL_KUBERNETES_BOOTSTRAP_LATTICE_IMAGE = $(LOCAL_REGISTRY)/$(KUBERNETES_BOOTSTRAP_LATTICE_IMAGE)
+DEV_KUBERNETES_BOOTSTRAP_LATTICE_IMAGE = $(DEV_REGISTRY)/$(KUBERNETES_BOOTSTRAP_LATTICE_IMAGE):$(DEV_TAG)
 
-BOOTSTRAP_KUBERNETES_IMAGE = bootstrap-kubernetes
-BAZEL_BOOTSTRAP_KUBERNETES_IMAGE = bazel/cmd/bootstrap-kubernetes:go_image
-LOCAL_BOOTSTRAP_KUBERNETES_IMAGE = $(LOCAL_REGISTRY)/$(BOOTSTRAP_KUBERNETES_IMAGE)
-DEV_BOOTSTRAP_KUBERNETES_IMAGE = $(DEV_REGISTRY)/$(BOOTSTRAP_KUBERNETES_IMAGE):$(DEV_TAG)
+KUBERNETES_LATTICE_CONTROLLER_MANAGER_IMAGE = kubernetes-lattice-controller-manager
+BAZEL_KUBERNETES_LATTICE_CONTROLLER_MANAGER_IMAGE = bazel/cmd/kubernetes/lattice-controller-manager:go_image
+LOCAL_KUBERNETES_LATTICE_CONTROLLER_MANAGER_IMAGE = $(LOCAL_REGISTRY)/$(KUBERNETES_LATTICE_CONTROLLER_MANAGER_IMAGE)
+DEV_KUBERNETES_LATTICE_CONTROLLER_MANAGER_IMAGE = $(DEV_REGISTRY)/$(KUBERNETES_LATTICE_CONTROLLER_MANAGER_IMAGE):$(DEV_TAG)
+
 
 # Basic build/clean/test
-.PHONY: build
-build: gazelle
+.PHONY: build-all
+build-all: gazelle
 	@bazel build //...:all
+
+.PHONY: build-all-docker-images
+build-all-docker-images: build-docker-image-kubernetes-lattice-controller-manager \
+ 						 build-docker-image-kubernetes-bootstrap-lattice
+	true
 
 .PHONY: clean
 clean:
@@ -38,75 +43,79 @@ test: gazelle
 gazelle:
 	@bazel run //:gazelle
 
-# local-binaries
-.PHONY: update-local-binaries
-update-local-binaries: update-local-binary-provision-system update-local-binary-deprovision-system update-local-binary-lattice-system-cli
+.PHONY: build-docker-image-kubernetes-lattice-controller-manager
+build-docker-image-kubernetes-lattice-controller-manager: gazelle
+	@bazel run //cmd/kubernetes/lattice-controller-manager:go_image -- --norun
 
-# docker
-.PHONY: docker-build
-docker-build: docker-build-lattice-controller-manager docker-build-bootstrap-kubernetes
+.PHONY: build-docker-image-kubernetes-bootstrap-lattice
+build-docker-image-kubernetes-bootstrap-lattice: gazelle
+	@bazel run //cmd/kubernetes/bootstrap-lattice:go_image -- --norun
 
-.PHONY: docker-save
-docker-save:
-	dest=$(dest)/lattice-controller-manager make docker-save-lattice-controller-manager
-	dest=$(dest)/bootstrap-kubernetes make docker-save-bootstrap-kubernetes
 
-.PHONY: docker-build-and-save
-docker-build-and-save: docker-build docker-save
-
-.PHONY: docker-push-dev
-docker-push-dev: docker-push-dev-lattice-controller-manager docker-push-dev-bootstrap-kubernetes
-
-.PHONY: docker-build-and-push-dev
-docker-build-and-push-dev: docker-build docker-push-dev
+# docker build hackery
+.PHONY: docker-build-all
+docker-build-all:
+	BUILD_CMD="make build-all-docker-images" make docker-build
 
 .PHONY: docker-build-bazel-build
 docker-build-bazel-build:
 	docker build $(DIR)/docker -f $(DIR)/docker/Dockerfile.bazel-build -t lattice-build/bazel-build
 
-# lattice-controller-manager
-.PHONY: docker-build-lattice-controller-manager
-docker-build-lattice-controller-manager: gazelle docker-build-bazel-build
-	# https://gist.github.com/d11wtq/8699521
-	docker run -v $(DIR):/src -v /var/run/docker.sock:/var/run/docker.sock -v ~/.ssh/id_rsa-github:/root/.ssh/id_rsa-github lattice-build/bazel-build /src/docker/build-lattice-controller-manager.sh
+.PHONY: docker-build
+docker-build: docker-build-bazel-build
+	docker run -v $(DIR):/src -v /var/run/docker.sock:/var/run/docker.sock -v ~/.ssh/id_rsa-github:/root/.ssh/id_rsa-github lattice-build/bazel-build /src/docker/build.sh $(BUILD_CMD)
 
-.PHONY: docker-tag-local-lattice-controller-manager
-docker-tag-local-lattice-controller-manager:
-	docker tag $(BAZEL_LATTICE_CONTROLLER_MANAGER_IMAGE) $(LOCAL_LATTICE_CONTROLLER_MANAGER_IMAGE)
 
-.PHONY: docker-save-lattice-controller-manager
-docker-save-lattice-controller-manager: docker-tag-local-lattice-controller-manager
-	docker save $(LOCAL_LATTICE_CONTROLLER_MANAGER_IMAGE) -o $(dest)
+# docker save
+.PHONY: docker-build-and-save-all
+docker-build-and-save-all: docker-build-all docker-save-all
 
-.PHONY: docker-tag-dev-lattice-controller-manager
-docker-tag-dev-lattice-controller-manager:
-	docker tag $(BAZEL_LATTICE_CONTROLLER_MANAGER_IMAGE) $(DEV_LATTICE_CONTROLLER_MANAGER_IMAGE)
+.PHONY: docker-save-all
+docker-save-all:
+	dest=$(dest)/$(KUBERNETES_LATTICE_CONTROLLER_MANAGER_IMAGE) make docker-save-kubernetes-lattice-controller-manager
+	dest=$(dest)/$(KUBERNETES_BOOTSTRAP_LATTICE_IMAGE) make docker-save-bootstrap-kubernetes
 
-.PHONY: docker-push-dev-lattice-controller-manager
-docker-push-dev-lattice-controller-manager: docker-tag-dev-lattice-controller-manager
-	gcloud docker -- push $(DEV_LATTICE_CONTROLLER_MANAGER_IMAGE)
+.PHONY: docker-save-kubernetes-bootstrap-lattice
+docker-save-kubernetes-bootstrap-lattice: docker-tag-local-kubernetes-bootstrap-lattice
+	docker save $(LOCAL_KUBERNETES_BOOTSTRAP_LATTICE_IMAGE) -o $(dest)
 
-# bootstrap-kubernetees
-.PHONY: docker-build-bootstrap-kubernetes
-docker-build-bootstrap-kubernetes: gazelle docker-build-bazel-build
-	# https://gist.github.com/d11wtq/8699521
-	docker run -v $(DIR):/src -v /var/run/docker.sock:/var/run/docker.sock -v ~/.ssh/id_rsa-github:/root/.ssh/id_rsa-github lattice-build/bazel-build /src/docker/build-bootstrap-kubernetes.sh
+.PHONY: docker-save-kubernetes-lattice-controller-manager
+docker-save-kubernetes-lattice-controller-manager: docker-tag-local-kubernetes-lattice-controller-manager
+	docker save $(LOCAL_KUBERNETES_LATTICE_CONTROLLER_MANAGER_IMAGE) -o $(dest)
 
-.PHONY: docker-tag-local-bootstrap-kubernetes
-docker-tag-local-bootstrap-kubernetes:
-	docker tag $(BAZEL_BOOTSTRAP_KUBERNETES_IMAGE) $(LOCAL_BOOTSTRAP_KUBERNETES_IMAGE)
+.PHONY: docker-tag-local-kubernetes-bootstrap-lattice
+docker-tag-local-kubernetes-bootstrap-lattice:
+	docker tag $(BAZEL_KUBERNETES_BOOTSTRAP_LATTICE_IMAGE) $(LOCAL_KUBERNETES_BOOTSTRAP_LATTICE_IMAGE)
 
-.PHONY: docker-save-bootstrap-kubernetes
-docker-save-bootstrap-kubernetes: docker-tag-local-bootstrap-kubernetes
-	docker save $(LOCAL_BOOTSTRAP_KUBERNETES_IMAGE) -o $(dest)
+.PHONY: docker-tag-local-kubernetes-lattice-controller-manager
+docker-tag-local-kubernetes-lattice-controller-manager:
+	docker tag $(BAZEL_KUBERNETES_LATTICE_CONTROLLER_MANAGER_IMAGE) $(LOCAL_KUBERNETES_LATTICE_CONTROLLER_MANAGER_IMAGE)
 
-.PHONY: docker-tag-dev-bootstrap-kubernetes
+
+# docker push-dev
+.PHONY: docker-push-dev-all
+docker-push-dev-all: docker-push-dev-kubernetes-bootstrap-lattice \
+					 docker-push-dev-kubernetes-lattice-controller-manager
+
+.PHONY: docker-build-and-push-dev-all
+docker-build-and-push-dev-all: docker-build-all docker-push-dev-all
+
+.PHONY: docker-push-dev-kubernetes-bootstrap-lattice
+docker-push-dev-kubernetes-bootstrap-lattice: docker-tag-dev-bootstrap-kubernetes
+	gcloud docker -- push $(DEV_KUBERNETES_BOOTSTRAP_LATTICE_IMAGE)
+
+.PHONY: docker-push-dev-kubernetes-lattice-controller-manager
+docker-push-dev-kubernetes-lattice-controller-manager: docker-tag-dev-kubernetes-lattice-controller-manager
+	gcloud docker -- push $(DEV_KUBERNETES_LATTICE_CONTROLLER_MANAGER_IMAGE)
+
+.PHONY: docker-tag-dev-kubernetes-bootstrap-lattice
 docker-tag-dev-bootstrap-kubernetes:
-	docker tag $(BAZEL_BOOTSTRAP_KUBERNETES_IMAGE) $(DEV_BOOTSTRAP_KUBERNETES_IMAGE)
+	docker tag $(BAZEL_KUBERNETES_BOOTSTRAP_LATTICE_IMAGE) $(DEV_KUBERNETES_BOOTSTRAP_LATTICE_IMAGE)
 
-.PHONY: docker-push-dev-bootstrap-kubernetes
-docker-push-dev-bootstrap-kubernetes: docker-tag-dev-bootstrap-kubernetes
-	gcloud docker -- push $(DEV_BOOTSTRAP_KUBERNETES_IMAGE)
+.PHONY: docker-tag-dev-kubernetes-lattice-controller-manager
+docker-tag-dev-kubernetes-lattice-controller-manager:
+	docker tag $(BAZEL_KUBERNETES_LATTICE_CONTROLLER_MANAGER_IMAGE) $(DEV_KUBERNETES_LATTICE_CONTROLLER_MANAGER_IMAGE)
+
 
 # lattice-system-cli
 .PHONY: build-lattice-system-cli
@@ -134,57 +143,6 @@ build-deprovision-system: gazelle
 .PHONY: update-local-binary-deprovision-system
 update-local-binary-deprovision-system: build-deprovision-system
 	cp -f $(DIR)/bazel-bin/cmd/deprovision-system/deprovision-system $(DIR)/bin
-
-# minikube
-.PHONY: minikube-start
-minikube-start:
-	@minikube start -p $(MINIKUBE_PROFILE) --kubernetes-version v1.8.0 --bootstrapper kubeadm
-
-.PHONY: minikube-stop
-minikube-stop:
-	@minikube stop -p $(MINIKUBE_PROFILE)
-
-.PHONY: minikube-delete
-minikube-delete:
-	@minikube delete -p $(MINIKUBE_PROFILE)
-
-.PHONY: minikube-ssh
-minikube-ssh:
-	@minikube ssh -p $(MINIKUBE_PROFILE)
-
-.PHONY: minikube-dashboard
-minikube-dashboard:
-	@minikube dashboard -p $(MINIKUBE_PROFILE)
-
-# local on top of minikube
-.PHONY: local-up
-local-up: minikube-start local-bootstrap
-
-.PHONY: local-down
-local-down: minikube-stop
-
-.PHONY: local-delete
-local-delete: minikube-delete
-
-.PHONY: local-bootstrap
-local-bootstrap:
-	$(DIR)/bin/seed-local-images.sh $(MINIKUBE_PROFILE)
-
-.PHONY: local-clean
-local-clean:
-	$(DIR)/test/clean-crds.sh
-
-.PHONY: run-controller
-run-controller: gazelle
-	bazel run -- //cmd/controller-manager -kubeconfig ~/.kube/config -v 5 -logtostderr -provider local
-
-.PHONY: seed-rollout
-seed-rollout: gazelle
-	bazel run -- //test/system-build-and-rollout -kubeconfig ~/.kube/config -v 5 -logtostderr
-
-.PHONY: local-reset
-local-reset: local-delete local-up seed-rollout run-controller
-	true
 
 # cloud bootstrap
 .PHONY: cloud-bootstrap-build-images

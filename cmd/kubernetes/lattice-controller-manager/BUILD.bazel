@@ -1,0 +1,25 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = ["main.go"],
+    importpath = "github.com/mlab-lattice/system/cmd/kubernetes/lattice-controller-manager",
+    visibility = ["//visibility:private"],
+    deps = ["//cmd/kubernetes/lattice-controller-manager/app:go_default_library"],
+)
+
+go_binary(
+    name = "lattice-controller-manager",
+    importpath = "github.com/mlab-lattice/system/cmd/kubernetes/lattice-controller-manager",
+    library = ":go_default_library",
+    visibility = ["//visibility:public"],
+)
+
+load("@io_bazel_rules_docker//go:image.bzl", "go_image")
+
+go_image(
+    name = "go_image",
+    importpath = "github.com/mlab-lattice/system/cmd/kubernetes/lattice-controller-manager",
+    library = ":go_default_library",
+    visibility = ["//visibility:public"],
+)
