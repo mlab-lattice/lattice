@@ -19,6 +19,7 @@ variable "additional_user_data" {
   type    = "string"
   default = "{}"
 }
+
 variable "kubelet_labels" {}
 variable "kubelet_taints" {}
 

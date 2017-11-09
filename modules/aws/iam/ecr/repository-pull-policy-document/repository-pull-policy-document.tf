@@ -18,6 +18,7 @@ output "json" {
 data "aws_iam_policy_document" "ecr_pull" {
   statement {
     effect = "Allow"
+
     actions = [
       "ecr:GetAuthorizationToken",
       "ecr:BatchCheckLayerAvailability",
@@ -27,6 +28,7 @@ data "aws_iam_policy_document" "ecr_pull" {
       "ecr:ListImages",
       "ecr:BatchGetImage",
     ]
+
     resources = [
       "arn:aws:ecr:${var.region}:${var.aws_account_id}:repository/${var.repository}",
     ]

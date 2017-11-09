@@ -3,6 +3,7 @@
 
 variable "aws_account_id" {}
 variable "region" {}
+
 variable "availability_zones" {
   type = "list"
 }
@@ -13,7 +14,12 @@ variable "master_node_ami_id" {}
 variable "master_node_instance_type" {}
 variable "key_name" {}
 
-variable "system_environment_manager_api_port" {}
+variable "kube_apiserver_port" {
+  default = 6443
+}
+variable "system_environment_manager_api_port" {
+  default = 80
+}
 
 ###############################################################################
 # Output
@@ -173,10 +179,10 @@ module "master_node" {
   base_node_ami_id        = "${var.base_node_ami_id}"
   route53_private_zone_id = "${aws_route53_zone.private_zone.id}"
 
-  name                    = "0"
-  instance_type           = "${var.master_node_instance_type}"
-  ami_id                  = "${var.master_node_ami_id}"
-  key_name                = "${var.key_name}"
+  name          = "0"
+  instance_type = "${var.master_node_instance_type}"
+  ami_id        = "${var.master_node_ami_id}"
+  key_name      = "${var.key_name}"
 }
 
 ###############################################################################
@@ -191,6 +197,16 @@ resource "aws_security_group" "master_alb" {
     KubernetesCluster = "lattice.system.${var.system_id}"
     Name              = "lattice.system.${var.system_id}.master-alb"
   }
+}
+
+resource "aws_security_group_rule" "master_node_allow_internal_ingress_to_kube_apiserver_port" {
+  security_group_id = "${module.master_node.security_group_id}"
+
+  type        = "ingress"
+  from_port   = "${var.kube_apiserver_port}"
+  to_port     = "${var.kube_apiserver_port}"
+  protocol    = "tcp"
+  cidr_blocks = ["${aws_vpc.vpc.cidr_block}"]
 }
 
 resource "aws_security_group_rule" "master_node_allow_ingress_from_alb_to_system_environment_manager_port" {
@@ -217,24 +233,24 @@ resource "aws_security_group_rule" "alb_allow_egress_to_master_node_system_envir
 # ALB
 
 resource "aws_alb" "master" {
-  name = "lattice-system-${var.system_id}-master"
+  name            = "lattice-system-${var.system_id}-master"
   security_groups = ["${aws_security_group.master_alb.id}"]
-  subnets = ["${aws_subnet.subnet.*.id}"]
+  subnets         = ["${aws_subnet.subnet.*.id}"]
 }
 
 resource "aws_alb_target_group" "master" {
-  name = "lattice-system-${var.system_id}-master"
-  port = "${var.system_environment_manager_api_port}"
+  name     = "lattice-system-${var.system_id}-master"
+  port     = "${var.system_environment_manager_api_port}"
   protocol = "HTTP"
-  vpc_id = "${aws_vpc.vpc.id}"
+  vpc_id   = "${aws_vpc.vpc.id}"
 }
 
 resource "aws_alb_listener" "master" {
   load_balancer_arn = "${aws_alb.master.arn}"
-  port = "${var.system_environment_manager_api_port}"
+  port              = "${var.system_environment_manager_api_port}"
 
   "default_action" {
     target_group_arn = "${aws_alb_target_group.master.arn}"
-    type = "forward"
+    type             = "forward"
   }
 }

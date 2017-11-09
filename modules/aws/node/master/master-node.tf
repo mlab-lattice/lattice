@@ -75,9 +75,11 @@ data "aws_iam_policy_document" "master_node_role_policy_document" {
   # Allow all autoscaling
   statement {
     effect = "Allow"
+
     actions = [
       "autoscaling:*",
     ]
+
     resources = [
       "*",
     ]
@@ -86,9 +88,11 @@ data "aws_iam_policy_document" "master_node_role_policy_document" {
   # Allow all ec2
   statement {
     effect = "Allow"
+
     actions = [
       "ec2:*",
     ]
+
     resources = [
       "*",
     ]
@@ -97,9 +101,11 @@ data "aws_iam_policy_document" "master_node_role_policy_document" {
   # Allow all ecr
   statement {
     effect = "Allow"
+
     actions = [
       "ecr:*",
     ]
+
     resources = [
       "*",
     ]
@@ -108,9 +114,11 @@ data "aws_iam_policy_document" "master_node_role_policy_document" {
   # Allow all iam
   statement {
     effect = "Allow"
+
     actions = [
       "iam:*",
     ]
+
     resources = [
       "*",
     ]
@@ -119,9 +127,11 @@ data "aws_iam_policy_document" "master_node_role_policy_document" {
   # Allow all route53
   statement {
     effect = "Allow"
+
     actions = [
       "route53:*",
     ]
+
     resources = [
       "*",
     ]
@@ -130,9 +140,11 @@ data "aws_iam_policy_document" "master_node_role_policy_document" {
   # Allow all s3
   statement {
     effect = "Allow"
+
     actions = [
       "s3:*",
     ]
+
     resources = [
       "*",
     ]
@@ -146,8 +158,8 @@ data "aws_iam_policy_document" "master_node_role_policy_document" {
 module "base_node" {
   source = "../base"
 
-  system_id  = "${var.system_id}"
-  name       = "master-${var.name}"
+  system_id = "${var.system_id}"
+  name      = "master-${var.name}"
 
   kubelet_labels = "node-role.kubernetes.io/master=true"
   kubelet_taints = "node-role.kubernetes.io/master=true:NoSchedule"

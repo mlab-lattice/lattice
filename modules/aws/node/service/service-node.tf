@@ -32,8 +32,9 @@ provider "aws" {
 # Role
 
 resource "aws_iam_role" "service_node_role" {
-  name               = "${var.system_id}.service-${var.service_id}"
-//  name               = "${var.lattice_id}.${var.system_id}.service-${var.service_id}"
+  name = "${var.system_id}.service-${var.service_id}"
+
+  //  name               = "${var.lattice_id}.${var.system_id}.service-${var.service_id}"
   assume_role_policy = "${module.assume_role_from_ec2_service_policy_doucment.json}"
 }
 
@@ -53,9 +54,11 @@ data "aws_iam_policy_document" "service_node_role_policy_document" {
   # Allow ec2 read-only
   statement {
     effect = "Allow"
+
     actions = [
       "ec2:Describe*",
     ]
+
     resources = [
       "*",
     ]
@@ -64,9 +67,11 @@ data "aws_iam_policy_document" "service_node_role_policy_document" {
   # Allow ecr get-authorization-token
   statement {
     effect = "Allow"
+
     actions = [
       "ecr:GetAuthorizationToken",
     ]
+
     resources = [
       "*",
     ]
@@ -75,6 +80,7 @@ data "aws_iam_policy_document" "service_node_role_policy_document" {
   # Allow pull from system repos
   statement {
     effect = "Allow"
+
     actions = [
       "ecr:GetAuthorizationToken",
       "ecr:BatchCheckLayerAvailability",
@@ -84,6 +90,7 @@ data "aws_iam_policy_document" "service_node_role_policy_document" {
       "ecr:ListImages",
       "ecr:BatchGetImage",
     ]
+
     resources = [
       "arn:aws:ecr:${var.region}:${var.aws_account_id}:repository/lattice/systems/${var.system_id}/*",
     ]
@@ -97,8 +104,8 @@ data "aws_iam_policy_document" "service_node_role_policy_document" {
 module "base_node" {
   source = "../base"
 
-  system_id  = "${var.system_id}"
-  name       = "service-${var.service_id}"
+  system_id = "${var.system_id}"
+  name      = "service-${var.service_id}"
 
   kubelet_labels = "lattice/service=${var.service_id}"
   kubelet_taints = "lattice/service=${var.service_id}:NoSchedule"

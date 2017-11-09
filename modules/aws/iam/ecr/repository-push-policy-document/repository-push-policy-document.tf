@@ -18,12 +18,14 @@ output "json" {
 data "aws_iam_policy_document" "ecr_pull" {
   statement {
     effect = "Allow"
+
     actions = [
       "ecr:PutImage",
       "ecr:InitiateLayerUpload",
       "ecr:UploadLayerPart",
       "ecr:CompleteLayerUpload",
     ]
+
     resources = [
       "arn:aws:ecr:${var.region}:${var.aws_account_id}:repository/${var.repository}",
     ]

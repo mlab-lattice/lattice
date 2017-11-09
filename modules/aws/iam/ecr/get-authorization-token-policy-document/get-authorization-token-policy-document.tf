@@ -11,9 +11,11 @@ output "json" {
 data "aws_iam_policy_document" "get_authorization_token" {
   statement {
     effect = "Allow"
+
     actions = [
       "ecr:GetAuthorizationToken",
     ]
+
     resources = [
       "*",
     ]

@@ -52,9 +52,11 @@ data "aws_iam_policy_document" "build_node_role_policy_document" {
   # Allow ec2 read-only
   statement {
     effect = "Allow"
+
     actions = [
       "ec2:Describe*",
     ]
+
     resources = [
       "*",
     ]
@@ -63,9 +65,11 @@ data "aws_iam_policy_document" "build_node_role_policy_document" {
   # Allow ecr get-authorization-token
   statement {
     effect = "Allow"
+
     actions = [
       "ecr:GetAuthorizationToken",
     ]
+
     resources = [
       "*",
     ]
@@ -74,6 +78,7 @@ data "aws_iam_policy_document" "build_node_role_policy_document" {
   # Allow pull from global ecr build repository
   statement {
     effect = "Allow"
+
     actions = [
       "ecr:GetAuthorizationToken",
       "ecr:BatchCheckLayerAvailability",
@@ -83,6 +88,7 @@ data "aws_iam_policy_document" "build_node_role_policy_document" {
       "ecr:ListImages",
       "ecr:BatchGetImage",
     ]
+
     resources = [
       "arn:aws:ecr:${var.region}:${var.aws_account_id}:repository/lattice/global/build/*",
     ]
@@ -91,6 +97,7 @@ data "aws_iam_policy_document" "build_node_role_policy_document" {
   # Allow push to system ecr repos
   statement {
     effect = "Allow"
+
     actions = [
       "ecr:GetAuthorizationToken",
       "ecr:BatchCheckLayerAvailability",
@@ -104,6 +111,7 @@ data "aws_iam_policy_document" "build_node_role_policy_document" {
       "ecr:UploadLayerPart",
       "ecr:CompleteLayerUpload",
     ]
+
     resources = [
       "arn:aws:ecr:${var.region}:${var.aws_account_id}:repository/lattice/systems/${var.system_id}/*",
     ]
@@ -117,11 +125,11 @@ data "aws_iam_policy_document" "build_node_role_policy_document" {
 module "base_node" {
   source = "../base"
 
-  system_id  = "${var.system_id}"
-  name       = "build-${var.build_id}"
+  system_id = "${var.system_id}"
+  name      = "build-${var.build_id}"
 
-  kubelet_labels = "lattice/build=${var.build_id}"
-  kubelet_taints = "lattice/build=${var.build_id}:NoSchedule"
+  kubelet_labels = "node-role.lattice.mlab.com/build:true"
+  kubelet_taints = "node-role.lattice.mlab.com/build:NoSchedule"
 
   region         = "${var.region}"
   vpc_id         = "${var.vpc_id}"
