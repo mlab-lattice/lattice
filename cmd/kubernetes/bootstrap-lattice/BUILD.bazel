@@ -15,7 +15,7 @@ go_library(
         "rbac.go",
     ],
     importpath = "github.com/mlab-lattice/system/cmd/kubernetes/bootstrap-lattice",
-    visibility = ["//visibility:private"],
+    visibility = ["//visibility:public"],
     deps = [
         "//pkg/kubernetes/constants:go_default_library",
         "//pkg/kubernetes/customresource:go_default_library",
@@ -39,15 +39,6 @@ go_library(
 
 go_binary(
     name = "bootstrap-lattice",
-    importpath = "github.com/mlab-lattice/system/cmd/kubernetes/bootstrap-lattice",
-    library = ":go_default_library",
-    visibility = ["//visibility:public"],
-)
-
-load("@io_bazel_rules_docker//go:image.bzl", "go_image")
-
-go_image(
-    name = "go_image",
     importpath = "github.com/mlab-lattice/system/cmd/kubernetes/bootstrap-lattice",
     library = ":go_default_library",
     visibility = ["//visibility:public"],

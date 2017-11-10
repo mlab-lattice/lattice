@@ -6,9 +6,9 @@ import (
 	coreconstants "github.com/mlab-lattice/core/pkg/constants"
 	coretypes "github.com/mlab-lattice/core/pkg/types"
 
+	"github.com/mlab-lattice/system/pkg/kubernetes/constants"
 	crdclient "github.com/mlab-lattice/system/pkg/kubernetes/customresource"
 	crv1 "github.com/mlab-lattice/system/pkg/kubernetes/customresource/v1"
-	"github.com/mlab-lattice/system/pkg/kubernetes/constants"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -35,7 +35,7 @@ func seedConfig(kubeconfig *rest.Config, userSystemUrl, systemIP string) {
 				},
 			},
 			Envoy: crv1.EnvoyConfig{
-				PrepareImage:      latticeContainerRegistry + "/prepare-envoy",
+				PrepareImage:      latticeContainerRegistry + "/envoy-prepare-envoy",
 				Image:             "envoyproxy/envoy",
 				RedirectCidrBlock: "172.16.29.0/16",
 				XdsApiPort:        8080,
@@ -46,8 +46,8 @@ func seedConfig(kubeconfig *rest.Config, userSystemUrl, systemIP string) {
 					Push:               true,
 					Registry:           componentBuildRegistry,
 				},
-				PullGitRepoImage: latticeContainerRegistry + "/pull-git-repo",
-				BuildDockerImage: latticeContainerRegistry + "/build-docker-image",
+				BuildDockerImage: latticeContainerRegistry + "/component-build-build-docker-image",
+				PullGitRepoImage: latticeContainerRegistry + "/component-build-pull-git-repo",
 			},
 		},
 	}

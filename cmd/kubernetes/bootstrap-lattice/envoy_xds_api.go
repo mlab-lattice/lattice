@@ -42,7 +42,7 @@ func seedEnvoyXdsApi(kubeClientset *kubernetes.Clientset) {
 					Containers: []corev1.Container{
 						{
 							Name:  "envoy-xds-api",
-							Image: latticeContainerRegistry + "/envoy-xds-api-kubernetes-per-node-rest",
+							Image: latticeContainerRegistry + "/kubernetes-envoy-xds-api-rest-per-node",
 							Ports: []corev1.ContainerPort{
 								{
 									Name:          "http",

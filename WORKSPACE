@@ -19,6 +19,27 @@ git_repository(
 )
 
 load(
+    "@io_bazel_rules_docker//container:container.bzl",
+    "container_pull",
+    container_repositories = "repositories",
+)
+container_repositories()
+
+container_pull(
+  name = "docker_git",
+  registry = "index.docker.io",
+  repository = "library/docker",
+  tag = "17.06.2-ce-git"
+)
+
+container_pull(
+  name = "ubuntu_with_iptables",
+  registry = "gcr.io/lattice-dev",
+  repository = "ubuntu-with-iptables",
+  tag = "latest"
+)
+
+load(
     "@io_bazel_rules_docker//go:image.bzl",
     _go_image_repos = "repositories",
 )

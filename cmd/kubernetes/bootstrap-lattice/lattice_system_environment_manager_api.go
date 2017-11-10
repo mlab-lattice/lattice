@@ -33,7 +33,7 @@ func seedLatticeSystemEnvironmentManagerAPI(kubeClientset *kubernetes.Clientset)
 					Containers: []corev1.Container{
 						{
 							Name:    "api",
-							Image:   latticeContainerRegistry + "/system-environment-manager-rest-api-kubernetes",
+							Image:   latticeContainerRegistry + "/kubernetes-manager-api-rest",
 							Command: []string{"/app/cmd/rest-api-kubernetes/go_image.binary"},
 							Args:    []string{"-port", "80"},
 							Ports: []corev1.ContainerPort{
