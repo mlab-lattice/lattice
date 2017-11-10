@@ -8,8 +8,8 @@ import (
 	coreconstants "github.com/mlab-lattice/core/pkg/constants"
 	systemdefinitionblock "github.com/mlab-lattice/core/pkg/system/definition/block"
 
-	crv1 "github.com/mlab-lattice/system/pkg/kubernetes/customresource/v1"
 	"github.com/mlab-lattice/system/pkg/kubernetes/constants"
+	crv1 "github.com/mlab-lattice/system/pkg/kubernetes/customresource/v1"
 
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -170,7 +170,6 @@ func (cbc *ComponentBuildController) getPullGitRepoContainer(cb *crv1.ComponentB
 		Name:            "pull-git-repo",
 		Image:           cbc.config.ComponentBuild.PullGitRepoImage,
 		ImagePullPolicy: corev1.PullIfNotPresent,
-		Command:         []string{"./pull-git-repo.sh"},
 		Env: []corev1.EnvVar{
 			{
 				Name:  "WORK_DIR",
@@ -215,7 +214,6 @@ func (cbc *ComponentBuildController) getBuildDockerImageContainer(cb *crv1.Compo
 		Name:            "build-docker-image",
 		Image:           cbc.config.ComponentBuild.BuildDockerImage,
 		ImagePullPolicy: corev1.PullIfNotPresent,
-		Command:         []string{"./build-docker-image.sh"},
 		Env: []corev1.EnvVar{
 			{
 				Name:  "WORK_DIR",

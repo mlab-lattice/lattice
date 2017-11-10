@@ -1,5 +1,5 @@
 package constants
 
 const (
-	DockerImageBootstrapKubernetes = "bootstrap-kubernetes"
+	DockerImageBootstrapKubernetes = "kubernetes-bootstrap-lattice"
 )

@@ -3,19 +3,25 @@ load("@io_bazel_rules_docker//container:container.bzl", "container_image")
 container_image(
     name = "component-build-build-docker-image",
     base = "@docker_git//image",
+    directory = "/usr/local/bin",
     files = ["//bin/component-build:build-docker-image"],
+    entrypoint = "/usr/local/bin/build-docker-image",
 )
 
 container_image(
     name = "component-build-pull-git-repo",
     base = "@docker_git//image",
+    directory = "/usr/local/bin",
     files = ["//bin/component-build:pull-git-repo"],
+    entrypoint = "/usr/local/bin/pull-git-repo",
 )
 
 container_image(
     name = "envoy-prepare-envoy",
     base = "@ubuntu_with_iptables//image",
+    directory = "/usr/local/bin",
     files = ["//bin/envoy:prepare-envoy"],
+    entrypoint = "/usr/local/bin/prepare-envoy",
 )
 
 load("@io_bazel_rules_docker//go:image.bzl", "go_image")

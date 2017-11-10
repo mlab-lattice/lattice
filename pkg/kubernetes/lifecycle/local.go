@@ -26,6 +26,10 @@ type LocalProvisioner struct {
 	mec                          *minikube.ExecContext
 }
 
+const (
+	systemNamePrefixMinikube = "lattice-local-"
+)
+
 func NewLocalProvisioner(latticeImageDockerRepository, logPath string) (*LocalProvisioner, error) {
 	mec, err := minikube.NewMinikubeExecContext(logPath)
 	if err != nil {
@@ -40,7 +44,8 @@ func NewLocalProvisioner(latticeImageDockerRepository, logPath string) (*LocalPr
 }
 
 func (lp *LocalProvisioner) Provision(name, url string) error {
-	result, logFilename, err := lp.mec.Start(name)
+	prefixedName := systemNamePrefixMinikube + name
+	result, logFilename, err := lp.mec.Start(prefixedName)
 	if err != nil {
 		return err
 	}
@@ -67,7 +72,7 @@ func (lp *LocalProvisioner) Provision(name, url string) error {
 }
 
 func (lp *LocalProvisioner) Address(name string) (string, error) {
-	return lp.mec.IP(name)
+	return lp.mec.IP(systemNamePrefixMinikube + name)
 }
 
 func (lp *LocalProvisioner) bootstrap(address, url string) error {
@@ -94,7 +99,7 @@ func (lp *LocalProvisioner) bootstrap(address, url string) error {
 	fmt.Println("Creating bootstrap SA")
 	bootstrapSA := &corev1.ServiceAccount{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "kubernetes-bootstrapper",
+			Name:      "bootstrap-lattice",
 			Namespace: constants.NamespaceDefault,
 		},
 	}
@@ -109,7 +114,7 @@ func (lp *LocalProvisioner) bootstrap(address, url string) error {
 
 	bootstrapClusterAdminRoleBind := rbacv1.ClusterRoleBinding{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: "kubernetes-bootstrapper-cluster-admin",
+			Name: "bootstrap-lattice-cluster-admin",
 		},
 		Subjects: []rbacv1.Subject{
 			{
@@ -132,7 +137,7 @@ func (lp *LocalProvisioner) bootstrap(address, url string) error {
 		return err
 	}
 
-	jobName := "lattice-bootstrap-kubernetes"
+	jobName := "bootstrap-lattice"
 	var backoffLimit int32 = 2
 	job := batchv1.Job{
 		ObjectMeta: metav1.ObjectMeta{
@@ -147,9 +152,8 @@ func (lp *LocalProvisioner) bootstrap(address, url string) error {
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{
 						{
-							Name:    "bootstrap-kubernetes",
-							Image:   lp.latticeImageDockerRepository + "/" + constants.DockerImageBootstrapKubernetes,
-							Command: []string{"/app/cmd/bootstrap-kubernetes/go_image.binary"},
+							Name:  "kubernetes-bootstrap-lattice",
+							Image: lp.latticeImageDockerRepository + "/" + constants.DockerImageBootstrapKubernetes,
 							Args: []string{
 								"-provider", "local",
 								"-user-system-url", url,
@@ -201,7 +205,7 @@ func (lp *LocalProvisioner) bootstrap(address, url string) error {
 }
 
 func (lp *LocalProvisioner) Deprovision(name string) error {
-	result, logFilename, err := lp.mec.Delete(name)
+	result, logFilename, err := lp.mec.Delete(systemNamePrefixMinikube + name)
 	if err != nil {
 		return err
 	}

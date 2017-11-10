@@ -220,6 +220,7 @@ docker-push-dev: docker-push-dev-component-build-build-docker-image \
 				 docker-push-dev-kubernetes-bootstrap-lattice \
  				 docker-push-dev-kubernetes-envoy-xds-api-rest-per-node \
 				 docker-push-dev-kubernetes-lattice-controller-manager \
+				 docker-push-dev-kubernetes-manager-api-rest \
 				 docker-push-dev-lattice-system-cli
 
 .PHONY: docker-build-and-push-dev
@@ -251,7 +252,7 @@ docker-push-dev-kubernetes-lattice-controller-manager: docker-tag-dev-kubernetes
 
 .PHONY: docker-push-dev-kubernetes-manager-api-rest
 docker-push-dev-kubernetes-manager-api-rest: docker-tag-dev-kubernetes-manager-api-rest
-	gcloud docker -- push $(DEV_DOCKER_IMAGE_KUBERNETES_MANAGER_API_REST)
+	gcloud docker -- push $(DOCKER_IMAGE_KUBERNETES_MANAGER_API_REST_DEV)
 
 .PHONY: docker-push-dev-lattice-system-cli
 docker-push-dev-lattice-system-cli: docker-tag-dev-lattice-system-cli
@@ -283,7 +284,7 @@ docker-tag-dev-kubernetes-lattice-controller-manager:
 
 .PHONY: docker-tag-dev-kubernetes-manager-api-rest
 docker-tag-dev-kubernetes-manager-api-rest:
-	docker tag $(DOCKER_IMAGE_KUBERNETES_MANAGER_API_REST_BAZEL) $(DEV_DOCKER_IMAGE_KUBERNETES_MANAGER_API_REST)
+	docker tag $(DOCKER_IMAGE_KUBERNETES_MANAGER_API_REST_BAZEL) $(DOCKER_IMAGE_KUBERNETES_MANAGER_API_REST_DEV)
 
 .PHONY: docker-tag-dev-lattice-system-cli
 docker-tag-dev-lattice-system-cli:
