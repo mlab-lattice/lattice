@@ -20,6 +20,11 @@ BAZEL_KUBERNETES_BOOTSTRAP_LATTICE_IMAGE = bazel/cmd/kubernetes/bootstrap-lattic
 LOCAL_KUBERNETES_BOOTSTRAP_LATTICE_IMAGE = $(LOCAL_REGISTRY)/$(KUBERNETES_BOOTSTRAP_LATTICE_IMAGE)
 DEV_KUBERNETES_BOOTSTRAP_LATTICE_IMAGE = $(DEV_REGISTRY)/$(KUBERNETES_BOOTSTRAP_LATTICE_IMAGE):$(DEV_TAG)
 
+KUBERNETES_ENVOY_XDS_API_REST_PER_NODE_IMAGE = kubernetes-system-manager-api-rest
+BAZEL_KUBERNETES_ENVOY_XDS_API_REST_PER_NODE_IMAGE = bazel/cmd/envoy/xds-api/rest/per-node:go_image
+LOCAL_KUBERNETES_ENVOY_XDS_API_REST_PER_NODE_IMAGE = $(LOCAL_REGISTRY)/$(KUBERNETES_ENVOY_XDS_API_REST_PER_NODE_IMAGE)
+DEV_KUBERNETES_ENVOY_XDS_API_REST_PER_NODE_IMAGE = $(DEV_REGISTRY)/$(KUBERNETES_ENVOY_XDS_API_REST_PER_NODE_IMAGE):$(DEV_TAG)
+
 KUBERNETES_LATTICE_CONTROLLER_MANAGER_IMAGE = kubernetes-lattice-controller-manager
 BAZEL_KUBERNETES_LATTICE_CONTROLLER_MANAGER_IMAGE = bazel/cmd/kubernetes/lattice-controller-manager:go_image
 LOCAL_KUBERNETES_LATTICE_CONTROLLER_MANAGER_IMAGE = $(LOCAL_REGISTRY)/$(KUBERNETES_LATTICE_CONTROLLER_MANAGER_IMAGE)
@@ -42,7 +47,7 @@ build: gazelle
 build-docker-images: build-docker-image-cli \
  					 build-docker-image-kubernetes-bootstrap-lattice \
 					 build-docker-image-kubernetes-lattice-controller-manager \
-					 build-docker-image-manager-api-rest-kubernetes
+					 build-docker-image-kubernetes-manager-api-rest
 	true
 
 .PHONY: clean
@@ -65,12 +70,16 @@ build-docker-image-cli: gazelle
 build-docker-image-kubernetes-bootstrap-lattice: gazelle
 	@bazel run //cmd/kubernetes/bootstrap-lattice:go_image -- --norun
 
+.PHONY: build-docker-image-kubernetes-envoy-xds-api-rest-per-node
+build-docker-image-kubernetes-envoy-xds-api-rest-per-node: gazelle
+	@bazel run //cmd/kubernetes/envoy/xds-api/rest/per-node:go_image -- --norun
+
 .PHONY: build-docker-image-kubernetes-lattice-controller-manager
 build-docker-image-kubernetes-lattice-controller-manager: gazelle
 	@bazel run //cmd/kubernetes/lattice-controller-manager:go_image -- --norun
 
 .PHONY: build-docker-image-kubernetes-manager-api-rest
-build-docker-image-manager-api-rest-kubernetes: gazelle
+build-docker-image-kubernetes-manager-api-rest: gazelle
 	@bazel run //cmd/kubernetes/manager/api-rest:go_image -- --norun
 
 
@@ -94,6 +103,7 @@ docker-build-and-save: docker-build docker-save
 .PHONY: docker-save
 docker-save: docker-save-cli \
 			 docker-save-kubernetes-bootstrap-lattice \
+			 docker-save-kubernetes-envoy-xds-api-rest-per-node \
 			 docker-save-kubernetes-lattice-controller-manager
 
 .PHONY: docker-save-cli
@@ -103,6 +113,10 @@ docker-save-cli: docker-tag-local-cli
 .PHONY: docker-save-kubernetes-bootstrap-lattice
 docker-save-kubernetes-bootstrap-lattice: docker-tag-local-kubernetes-bootstrap-lattice
 	docker save $(LOCAL_KUBERNETES_BOOTSTRAP_LATTICE_IMAGE) -o $(dest)/$(KUBERNETES_BOOTSTRAP_LATTICE_IMAGE)
+
+.PHONY: docker-save-kubernetes-envoy-xds-api-rest-per-node
+docker-save-kubernetes-envoy-xds-api-rest-per-node: docker-tag-local-kubernetes-envoy-xds-api-rest-per-node
+	docker save $(LOCAL_KUBERNETES_ENVOY_XDS_API_REST_PER_NODE_IMAGE) -o $(dest)/$(KUBERNETES_ENVOY_XDS_API_REST_PER_NODE_IMAGE)
 
 .PHONY: docker-save-kubernetes-lattice-controller-manager
 docker-save-kubernetes-lattice-controller-manager: docker-tag-local-kubernetes-lattice-controller-manager
@@ -120,6 +134,10 @@ docker-tag-local-cli:
 docker-tag-local-kubernetes-bootstrap-lattice:
 	docker tag $(BAZEL_KUBERNETES_BOOTSTRAP_LATTICE_IMAGE) $(LOCAL_KUBERNETES_BOOTSTRAP_LATTICE_IMAGE)
 
+.PHONY: docker-tag-local-kubernetes-envoy-xds-api-rest-per-node
+docker-tag-local-kubernetes-envoy-xds-api-rest-per-node:
+	docker tag $(BAZEL_KUBERNETES_ENVOY_XDS_API_REST_PER_NODE_IMAGE) $(LOCAL_KUBERNETES_ENVOY_XDS_API_REST_PER_NODE_IMAGE)
+
 .PHONY: docker-tag-local-kubernetes-lattice-controller-manager
 docker-tag-local-kubernetes-lattice-controller-manager:
 	docker tag $(BAZEL_KUBERNETES_LATTICE_CONTROLLER_MANAGER_IMAGE) $(LOCAL_KUBERNETES_LATTICE_CONTROLLER_MANAGER_IMAGE)
@@ -133,6 +151,7 @@ docker-tag-local-kubernetes-manager-api-rest:
 .PHONY: docker-push-dev
 docker-push-dev: docker-push-dev-cli \
  				 docker-push-dev-kubernetes-bootstrap-lattice \
+ 				 docker-push-dev-kubernetes-envoy-xds-api-rest-per-node \
 				 docker-push-dev-kubernetes-lattice-controller-manager
 
 .PHONY: docker-build-and-push-dev
@@ -143,8 +162,12 @@ docker-push-dev-cli: docker-tag-dev-cli
 	gcloud docker -- push $(DEV_CLI_IMAGE)
 
 .PHONY: docker-push-dev-kubernetes-bootstrap-lattice
-docker-push-dev-kubernetes-bootstrap-lattice: docker-tag-dev-bootstrap-kubernetes
+docker-push-dev-kubernetes-bootstrap-lattice: docker-tag-dev-kubernetes-bootstrap-lattice
 	gcloud docker -- push $(DEV_KUBERNETES_BOOTSTRAP_LATTICE_IMAGE)
+
+.PHONY: docker-push-dev-kubernetes-envoy-xds-api-rest-per-node
+docker-push-dev-kubernetes-envoy-xds-api-rest-per-node: docker-tag-dev-kubernetes-envoy-xds-api-rest-per-node
+	gcloud docker -- push $(DEV_KUBERNETES_ENVOY_XDS_API_REST_PER_NODE_IMAGE)
 
 .PHONY: docker-push-dev-kubernetes-lattice-controller-manager
 docker-push-dev-kubernetes-lattice-controller-manager: docker-tag-dev-kubernetes-lattice-controller-manager
@@ -159,8 +182,12 @@ docker-tag-dev-cli:
 	docker tag $(BAZEL_CLI_IMAGE) $(DEV_CLI_IMAGE)
 
 .PHONY: docker-tag-dev-kubernetes-bootstrap-lattice
-docker-tag-dev-bootstrap-kubernetes:
+docker-tag-dev-kubernetes-bootstrap-lattice:
 	docker tag $(BAZEL_KUBERNETES_BOOTSTRAP_LATTICE_IMAGE) $(DEV_KUBERNETES_BOOTSTRAP_LATTICE_IMAGE)
+
+.PHONY: docker-tag-dev-kubernetes-envoy-xds-api-rest-per-node
+docker-tag-dev-kubernetes-envoy-xds-api-rest-per-node:
+	docker tag $(BAZEL_KUBERNETES_ENVOY_XDS_API_REST_PER_NODE_IMAGE) $(DEV_KUBERNETES_ENVOY_XDS_API_REST_PER_NODE_IMAGE)
 
 .PHONY: docker-tag-dev-kubernetes-lattice-controller-manager
 docker-tag-dev-kubernetes-lattice-controller-manager:
