@@ -8,10 +8,8 @@ import (
 	"k8s.io/apimachinery/pkg/util/uuid"
 )
 
-const componentBuildDefinitionHashMetadataKey = "lattice-component-build-definition-hash"
-
 func getComponentBuildDefinitionHashFromLabel(cb *crv1.ComponentBuild) *string {
-	cBuildHashLabel, ok := cb.Annotations[componentBuildDefinitionHashMetadataKey]
+	cBuildHashLabel, ok := cb.Annotations[crv1.AnnotationKeyComponentBuildDefinitionHash]
 	if !ok {
 		return nil
 	}
@@ -163,7 +161,7 @@ func (sbc *ServiceBuildController) getComponentBuildFromApi(ns, name string) (*c
 
 func getNewComponentBuildFromInfo(cbInfo *crv1.ServiceBuildComponentBuildInfo) *crv1.ComponentBuild {
 	cbAnnotations := map[string]string{
-		componentBuildDefinitionHashMetadataKey: *cbInfo.DefinitionHash,
+		crv1.AnnotationKeyComponentBuildDefinitionHash: *cbInfo.DefinitionHash,
 	}
 
 	return &crv1.ComponentBuild{

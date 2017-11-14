@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+
+set -o pipefail
+set -e
+
+AVAILABILITY_ZONE=$(curl -s http://169.254.169.254/latest/meta-data/placement/availability-zone)
+REGION=$(echo ${AVAILABILITY_ZONE} | sed 's/.$//')
+
+USER_DATA=$(curl -s http://169.254.169.254/latest/user-data)
+AWS_ACCOUNT_ID=$(echo ${USER_DATA} | jq '.lattice.aws_account_id' | tr -d '"')
+
+/usr/bin/docker run \
+    --network host \
+    -v /etc/opt/kubernetes/admin/kubeconfig:/etc/bootstrap-lattice/kubeconfig \
+    gcr.io/lattice-dev/kubernetes-bootstrap-lattice:latest \
+    -kubeconfig /etc/bootstrap-lattice/kubeconfig \
+    -provider AWS \
+    -lattice-container-registry gcr.io/lattice-dev \
+    -component-build-registry ${AWS_ACCOUNT_ID}.dkr.ecr.${REGION}.amazonaws.com \
+    -aws-region ${REGION}

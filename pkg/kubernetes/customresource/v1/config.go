@@ -39,6 +39,7 @@ type ProviderConfigLocal struct {
 }
 
 type ProviderConfigAWS struct {
+	Region string `json:"region"`
 }
 
 type SystemConfig struct {
@@ -46,10 +47,10 @@ type SystemConfig struct {
 }
 
 type ComponentBuildConfig struct {
-	DockerConfig         BuildDockerConfig `json:"dockerConfig"`
-	PullGitRepoImage     string            `json:"pullGitRepoImage"`
-	AuthorizeDockerImage string            `json:"authorizeDockerImage"`
-	BuildDockerImage     string            `json:"buildDockerImage"`
+	DockerConfig     BuildDockerConfig `json:"dockerConfig"`
+	PullGitRepoImage string            `json:"pullGitRepoImage"`
+	GetEcrCredsImage string            `json:"getEcrCredsImage"`
+	BuildDockerImage string            `json:"buildDockerImage"`
 }
 
 type BuildDockerConfig struct {

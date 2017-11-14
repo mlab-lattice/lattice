@@ -90,7 +90,7 @@ data "aws_iam_policy_document" "build_node_role_policy_document" {
     ]
 
     resources = [
-      "arn:aws:ecr:${var.region}:${var.aws_account_id}:repository/lattice/global/build/*",
+      "arn:aws:ecr:${var.region}:${var.aws_account_id}:repository/component-builds",
     ]
   }
 
@@ -113,7 +113,7 @@ data "aws_iam_policy_document" "build_node_role_policy_document" {
     ]
 
     resources = [
-      "arn:aws:ecr:${var.region}:${var.aws_account_id}:repository/lattice/systems/${var.system_id}/*",
+      "arn:aws:ecr:${var.region}:${var.aws_account_id}:repository/component-builds",
     ]
   }
 }

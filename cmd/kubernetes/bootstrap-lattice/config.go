@@ -15,7 +15,7 @@ import (
 	"k8s.io/client-go/rest"
 )
 
-func seedConfig(kubeconfig *rest.Config, userSystemUrl, systemIP string) {
+func seedConfig(kubeconfig *rest.Config, userSystemUrl, systemIP, region string) {
 	fmt.Println("Seeding lattice config...")
 	crClient, _, err := crdclient.NewClient(kubeconfig)
 	if err != nil {
@@ -42,11 +42,13 @@ func seedConfig(kubeconfig *rest.Config, userSystemUrl, systemIP string) {
 			},
 			ComponentBuild: crv1.ComponentBuildConfig{
 				DockerConfig: crv1.BuildDockerConfig{
-					RepositoryPerImage: true,
+					RepositoryPerImage: false,
+					Repository:         constants.DockerRegistryComponentBuildsDefault,
 					Push:               true,
 					Registry:           componentBuildRegistry,
 				},
 				BuildDockerImage: latticeContainerRegistry + "/component-build-build-docker-image",
+				GetEcrCredsImage: latticeContainerRegistry + "/component-build-get-ecr-creds",
 				PullGitRepoImage: latticeContainerRegistry + "/component-build-pull-git-repo",
 			},
 		},
@@ -57,6 +59,10 @@ func seedConfig(kubeconfig *rest.Config, userSystemUrl, systemIP string) {
 		config.Spec.ComponentBuild.DockerConfig.Push = false
 		config.Spec.ProviderConfig.Local = &crv1.ProviderConfigLocal{
 			IP: systemIP,
+		}
+	case coreconstants.ProviderAWS:
+		config.Spec.ProviderConfig.AWS = &crv1.ProviderConfigAWS{
+			Region: region,
 		}
 	}
 

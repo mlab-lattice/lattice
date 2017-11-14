@@ -33,6 +33,13 @@ container_pull(
 )
 
 container_pull(
+  name = "ubuntu_with_aws",
+  registry = "gcr.io/lattice-dev",
+  repository = "ubuntu-with-aws",
+  tag = "latest"
+)
+
+container_pull(
   name = "ubuntu_with_iptables",
   registry = "gcr.io/lattice-dev",
   repository = "ubuntu-with-iptables",

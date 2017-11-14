@@ -103,6 +103,9 @@ func (cbc *ComponentBuildController) getGitRepositoryBuildJobSpec(cb *crv1.Compo
 	buildDockerImageContainer, dockerImageFqn := cbc.getBuildDockerImageContainer(cb)
 	name := getBuildJobName(cb)
 
+	initContainers := []corev1.Container{pullGitRepoContainer}
+	containers := []corev1.Container{buildDockerImageContainer}
+
 	provider, err := crv1.GetProviderFromConfigSpec(cbc.config)
 	if err != nil {
 		return batchv1.JobSpec{}, "", err
@@ -114,6 +117,7 @@ func (cbc *ComponentBuildController) getGitRepositoryBuildJobSpec(cb *crv1.Compo
 		volumeHostPathPrefix = workingDirectoryVolumeHostPathPrefixLocal
 	case coreconstants.ProviderAWS:
 		volumeHostPathPrefix = workingDirectoryVolumeHostPathPrefixCloud
+		initContainers = append(initContainers, cbc.getGetEcrCredsContainer())
 	default:
 		panic(fmt.Sprintf("unsupported provider: %s", provider))
 	}
@@ -149,12 +153,8 @@ func (cbc *ComponentBuildController) getGitRepositoryBuildJobSpec(cb *crv1.Compo
 						},
 					},
 				},
-				InitContainers: []corev1.Container{
-					pullGitRepoContainer,
-				},
-				Containers: []corev1.Container{
-					buildDockerImageContainer,
-				},
+				InitContainers: initContainers,
+				Containers:     containers,
 				// TODO: add failure policy once it is supported: https://github.com/kubernetes/kubernetes/issues/30243
 				RestartPolicy: corev1.RestartPolicyNever,
 				DNSPolicy:     corev1.DNSDefault,
@@ -209,6 +209,32 @@ func (cbc *ComponentBuildController) getPullGitRepoContainer(cb *crv1.ComponentB
 	return pullGitRepoContainer
 }
 
+func (cbc *ComponentBuildController) getGetEcrCredsContainer() corev1.Container {
+	pullGitRepoContainer := corev1.Container{
+		Name:            "get-ecr-creds",
+		Image:           cbc.config.ComponentBuild.GetEcrCredsImage,
+		ImagePullPolicy: corev1.PullIfNotPresent,
+		Env: []corev1.EnvVar{
+			{
+				Name:  "WORK_DIR",
+				Value: jobWorkingDirectory,
+			},
+			{
+				Name:  "REGION",
+				Value: cbc.config.ProviderConfig.AWS.Region,
+			},
+		},
+		VolumeMounts: []corev1.VolumeMount{
+			{
+				Name:      jobWorkingDirectoryVolumeName,
+				MountPath: jobWorkingDirectory,
+			},
+		},
+	}
+
+	return pullGitRepoContainer
+}
+
 func (cbc *ComponentBuildController) getBuildDockerImageContainer(cb *crv1.ComponentBuild) (corev1.Container, string) {
 	buildDockerImageContainer := corev1.Container{
 		Name:            "build-docker-image",
@@ -241,9 +267,9 @@ func (cbc *ComponentBuildController) getBuildDockerImageContainer(cb *crv1.Compo
 	}
 
 	repo := cbc.config.ComponentBuild.DockerConfig.Repository
-	tag := cb.Name
+	tag := cb.Annotations[crv1.AnnotationKeyComponentBuildDefinitionHash]
 	if cbc.config.ComponentBuild.DockerConfig.RepositoryPerImage {
-		repo = cb.Name
+		repo = cb.Annotations[crv1.AnnotationKeyComponentBuildDefinitionHash]
 		tag = fmt.Sprint(time.Now().Unix())
 	}
 

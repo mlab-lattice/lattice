@@ -15,7 +15,8 @@ const (
 	// TODO: should this be ClusterScoped?
 	ComponentBuildResourceScope = apiextensionsv1beta1.NamespaceScoped
 
-	ComponentBuildJobLabelKey = "component.build.lattice.mlab.com/job"
+	ComponentBuildJobLabelKey                 = "component.build.lattice.mlab.com/job"
+	AnnotationKeyComponentBuildDefinitionHash = "component.build.lattice.mlab.com/definition-hash"
 )
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

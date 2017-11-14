@@ -16,42 +16,7 @@ sudo mv /tmp/kubernetes/artifacts/master-node/aws/register-master-node-dns \
         /opt/lattice/bin/master-register-master-node-dns
 sudo chmod +x /opt/lattice/bin/master-register-master-node-dns
 
-echo "Installing provision-ecr-repository script"
-sudo mv /tmp/kubernetes/artifacts/master-node/aws/provision-ecr-repository \
-        /opt/lattice/bin/master-provision-ecr-repository
-sudo chmod +x /opt/lattice/bin/master-provision-ecr-repository
-
-echo "Installing provision-build-node script"
-sudo mv /tmp/kubernetes/artifacts/master-node/aws/provision-build-node \
-        /opt/lattice/bin/master-provision-build-node
-sudo chmod +x /opt/lattice/bin/master-provision-build-node
-
-echo "Installing deprovision-build-node script"
-sudo mv /tmp/kubernetes/artifacts/master-node/aws/deprovision-build-node \
-        /opt/lattice/bin/master-deprovision-build-node
-sudo chmod +x /opt/lattice/bin/master-deprovision-build-node
-
-echo "Installing build-service script"
-sudo mv /tmp/kubernetes/artifacts/master-node/aws/build-service \
-        /opt/lattice/bin/master-build-service
-sudo chmod +x /opt/lattice/bin/master-build-service
-
-echo "Installing provision-service-node script"
-sudo mv /tmp/kubernetes/artifacts/master-node/aws/provision-service-node \
-        /opt/lattice/bin/master-provision-service-node
-sudo chmod +x /opt/lattice/bin/master-provision-service-node
-
-echo "Installing deprovision-service-node script"
-sudo mv /tmp/kubernetes/artifacts/master-node/aws/deprovision-service-node \
-        /opt/lattice/bin/master-deprovision-service-node
-sudo chmod +x /opt/lattice/bin/master-deprovision-service-node
-
-echo "Installing roll-out-service script"
-sudo mv /tmp/kubernetes/artifacts/master-node/aws/roll-out-service \
-        /opt/lattice/bin/master-roll-out-service
-sudo chmod +x /opt/lattice/bin/master-roll-out-service
-
-echo "Installing tear-down-service script"
-sudo mv /tmp/kubernetes/artifacts/master-node/aws/tear-down-service \
-        /opt/lattice/bin/master-tear-down-service
-sudo chmod +x /opt/lattice/bin/master-tear-down-service
+echo "Installing bootstrap-lattice script"
+sudo mv /tmp/kubernetes/artifacts/master-node/aws/bootstrap-lattice \
+        /opt/lattice/bin/master-bootstrap-lattice
+sudo chmod +x /opt/lattice/bin/master-bootstrap-lattice

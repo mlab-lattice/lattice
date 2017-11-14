@@ -23,6 +23,7 @@ const (
 var (
 	kubeconfigPath           string
 	provider                 string
+	awsRegion                string
 	systemIP                 string
 	userSystemUrl            string
 	latticeContainerRegistry string
@@ -32,6 +33,7 @@ var (
 func init() {
 	flag.StringVar(&kubeconfigPath, "kubeconfig", "", "path to kubeconfig file")
 	flag.StringVar(&provider, "provider", "", "name of provider to use")
+	flag.StringVar(&awsRegion, "aws-region", "", "name of aws region to use")
 	flag.StringVar(&systemIP, "system-ip", "", "IP address of the system if -provider=local")
 	flag.StringVar(&userSystemUrl, "user-system-url", "", "url of the user-system definition")
 	flag.StringVar(&latticeContainerRegistry, "lattice-container-registry", "", "registry used to pull lattice containers")
@@ -70,7 +72,7 @@ func main() {
 	seedNamespaces(kubeClientset)
 	seedCrds(config)
 	seedRbac(kubeClientset)
-	seedConfig(config, userSystemUrl, systemIP)
+	seedConfig(config, userSystemUrl, systemIP, awsRegion)
 	seedEnvoyXdsApi(kubeClientset)
 	seedLatticeControllerManager(kubeClientset)
 	seedLatticeSystemEnvironmentManagerAPI(kubeClientset)

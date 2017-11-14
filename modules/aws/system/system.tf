@@ -67,6 +67,15 @@ resource "aws_s3_bucket" "system_bucket" {
 }
 
 ###############################################################################
+# ECR
+#
+
+resource "aws_ecr_repository" "component-builds" {
+  name = "component-builds"
+}
+
+
+###############################################################################
 # Networking
 #
 

@@ -15,10 +15,18 @@ CONTAINER_NAME_BUILD = lattice-system-builder
 BASE_DOCKER_IMAGE_UBUNTU_WITH_IPTABLES = ubuntu-with-iptables
 BASE_DOCKER_IMAGE_UBUNTU_WITH_IPTABLES_DEV = $(DEV_REGISTRY)/$(BASE_DOCKER_IMAGE_UBUNTU_WITH_IPTABLES):$(DEV_TAG)
 
+BASE_DOCKER_IMAGE_UBUNTU_WITH_AWS = ubuntu-with-aws
+BASE_DOCKER_IMAGE_UBUNTU_WITH_AWS_DEV = $(DEV_REGISTRY)/$(BASE_DOCKER_IMAGE_UBUNTU_WITH_AWS):$(DEV_TAG)
+
 DOCKER_IMAGE_COMPONENT_BUILD_BUILD = component-build-build-docker-image
 DOCKER_IMAGE_COMPONENT_BUILD_BUILD_BAZEL = bazel/docker:$(DOCKER_IMAGE_COMPONENT_BUILD_BUILD)
 DOCKER_IMAGE_COMPONENT_BUILD_BUILD_DEV = $(DEV_REGISTRY)/$(DOCKER_IMAGE_COMPONENT_BUILD_BUILD):$(DEV_TAG)
 DOCKER_IMAGE_COMPONENT_BUILD_BUILD_LOCAL = $(LOCAL_REGISTRY)/$(DOCKER_IMAGE_COMPONENT_BUILD_BUILD)
+
+DOCKER_IMAGE_COMPONENT_BUILD_GET_ECR_CREDS = component-build-get-ecr-creds
+DOCKER_IMAGE_COMPONENT_BUILD_GET_ECR_CREDS_BAZEL = bazel/docker:$(DOCKER_IMAGE_COMPONENT_BUILD_GET_ECR_CREDS)
+DOCKER_IMAGE_COMPONENT_BUILD_GET_ECR_CREDS_DEV = $(DEV_REGISTRY)/$(DOCKER_IMAGE_COMPONENT_BUILD_GET_ECR_CREDS):$(DEV_TAG)
+DOCKER_IMAGE_COMPONENT_BUILD_GET_ECR_CREDS_LOCAL = $(LOCAL_REGISTRY)/$(DOCKER_IMAGE_COMPONENT_BUILD_GET_ECR_CREDS)
 
 DOCKER_IMAGE_COMPONENT_BUILD_PULL_GIT_REPO = component-build-pull-git-repo
 DOCKER_IMAGE_COMPONENT_BUILD_PULL_GIT_REPO_BAZEL = bazel/docker:$(DOCKER_IMAGE_COMPONENT_BUILD_PULL_GIT_REPO)
@@ -79,10 +87,12 @@ gazelle:
 .PHONY: docker-build-base-images
 docker-build-base-images:
 	docker build $(DIR)/docker/envoy/ -f $(DIR)/docker/envoy/Dockerfile.iptables -t $(BASE_DOCKER_IMAGE_UBUNTU_WITH_IPTABLES_DEV)
+	docker build $(DIR)/docker/component-build -f $(DIR)/docker/component-build/Dockerfile.aws -t $(BASE_DOCKER_IMAGE_UBUNTU_WITH_AWS_DEV)
 
 .PHONY: docker-push-dev-base-images
 docker-push-dev-base-images:
 	gcloud docker -- push $(BASE_DOCKER_IMAGE_UBUNTU_WITH_IPTABLES_DEV)
+	gcloud docker -- push $(BASE_DOCKER_IMAGE_UBUNTU_WITH_AWS_DEV)
 
 .PHONY: docker-build-and-push-dev-base-images
 docker-build-and-push-dev-base-images: docker-build-base-images docker-push-dev-base-images
@@ -90,6 +100,7 @@ docker-build-and-push-dev-base-images: docker-build-base-images docker-push-dev-
 .PHONY: build-docker-images-sh
 build-docker-images-sh:
 	@bazel run //docker:component-build-build-docker-image
+	@bazel run //docker:component-build-get-ecr-creds
 	@bazel run //docker:component-build-pull-git-repo
 	@bazel run //docker:envoy-prepare-envoy
 
@@ -215,6 +226,7 @@ docker-tag-local-lattice-system-cli:
 # docker push-dev
 .PHONY: docker-push-dev
 docker-push-dev: docker-push-dev-component-build-build-docker-image \
+				 docker-push-dev-component-build-get-ecr-creds \
 				 docker-push-dev-component-build-pull-git-repo \
 				 docker-push-dev-envoy-prepare-envoy \
 				 docker-push-dev-kubernetes-bootstrap-lattice \
@@ -229,6 +241,10 @@ docker-build-and-push-dev: docker-build docker-push-dev
 .PHONY: docker-push-dev-component-build-build-docker-image
 docker-push-dev-component-build-build-docker-image: docker-tag-dev-component-build-build-docker-image
 	gcloud docker -- push $(DOCKER_IMAGE_COMPONENT_BUILD_BUILD_DEV)
+
+.PHONY: docker-push-dev-component-build-get-ecr-creds
+docker-push-dev-component-build-get-ecr-creds: docker-tag-dev-component-build-get-ecr-creds
+	gcloud docker -- push $(DOCKER_IMAGE_COMPONENT_BUILD_GET_ECR_CREDS_DEV)
 
 .PHONY: docker-push-dev-component-build-pull-git-repo
 docker-push-dev-component-build-pull-git-repo: docker-tag-dev-component-build-pull-git-repo
@@ -261,6 +277,10 @@ docker-push-dev-lattice-system-cli: docker-tag-dev-lattice-system-cli
 .PHONY: docker-tag-dev-component-build-build-docker-image
 docker-tag-dev-component-build-build-docker-image:
 	docker tag $(DOCKER_IMAGE_COMPONENT_BUILD_BUILD_BAZEL) $(DOCKER_IMAGE_COMPONENT_BUILD_BUILD_DEV)
+
+.PHONY: docker-tag-dev-component-build-get-ecr-creds
+docker-tag-dev-component-build-get-ecr-creds:
+	docker tag $(DOCKER_IMAGE_COMPONENT_BUILD_GET_ECR_CREDS_BAZEL) $(DOCKER_IMAGE_COMPONENT_BUILD_GET_ECR_CREDS_DEV)
 
 .PHONY: docker-tag-dev-component-build-pull-git-repo
 docker-tag-dev-component-build-pull-git-repo:

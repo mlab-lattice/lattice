@@ -9,6 +9,14 @@ container_image(
 )
 
 container_image(
+    name = "component-build-get-ecr-creds",
+    base = "@ubuntu_with_aws//image",
+    directory = "/usr/local/bin",
+    files = ["//bin/component-build:get-ecr-creds"],
+    entrypoint = "/usr/local/bin/get-ecr-creds",
+)
+
+container_image(
     name = "component-build-pull-git-repo",
     base = "@docker_git//image",
     directory = "/usr/local/bin",
