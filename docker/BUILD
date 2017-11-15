@@ -40,8 +40,9 @@ container_image(
 )
 
 container_image(
-    name = "terraform-modules",
-    tars = ["//terraform:modules-tar"],
+    name = "terraform-modules-kubernetes",
+    directory = "/etc/terraform",
+    tars = ["//terraform/kubernetes:modules-tar"],
     base = ":terraform",
 )
 
@@ -52,6 +53,7 @@ go_image(
     importpath = "github.com/mlab-lattice/system/cmd/cli",
     library = "//cmd/cli:go_default_library",
     visibility = ["//visibility:public"],
+    base = ":terraform-modules-kubernetes",
 )
 
 go_image(
@@ -73,7 +75,7 @@ go_image(
     importpath = "github.com/mlab-lattice/system/cmd/kubernetes/lattice-controller-manager",
     library = "//cmd/kubernetes/lattice-controller-manager:go_default_library",
     visibility = ["//visibility:public"],
-    base = ":terraform-modules",
+    base = ":terraform-modules-kubernetes",
 )
 
 go_image(
