@@ -32,6 +32,19 @@ container_image(
     entrypoint = "/usr/local/bin/prepare-envoy",
 )
 
+container_image(
+    name = "terraform",
+    base = "@go_image_base//image",
+    directory = "/usr/local/bin",
+    files = ["@terraform_bin//:bin"],
+)
+
+container_image(
+    name = "terraform-modules",
+    tars = ["//terraform:modules-tar"],
+    base = ":terraform",
+)
+
 load("@io_bazel_rules_docker//go:image.bzl", "go_image")
 
 go_image(
@@ -60,6 +73,7 @@ go_image(
     importpath = "github.com/mlab-lattice/system/cmd/kubernetes/lattice-controller-manager",
     library = "//cmd/kubernetes/lattice-controller-manager:go_default_library",
     visibility = ["//visibility:public"],
+    base = ":terraform-modules",
 )
 
 go_image(

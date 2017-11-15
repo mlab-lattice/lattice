@@ -18,6 +18,19 @@ git_repository(
     tag = "v0.3.0",
 )
 
+new_http_archive(
+    name = "terraform_bin",
+    url = "https://releases.hashicorp.com/terraform/0.10.8/terraform_0.10.8_linux_amd64.zip",
+    sha256 = "b786c0cf936e24145fad632efd0fe48c831558cc9e43c071fffd93f35e3150db",
+    build_file_content = """
+filegroup(
+    name = "bin",
+    srcs = ["terraform"],
+    visibility = ["//visibility:public"],
+)
+"""
+)
+
 load(
     "@io_bazel_rules_docker//container:container.bzl",
     "container_pull",
