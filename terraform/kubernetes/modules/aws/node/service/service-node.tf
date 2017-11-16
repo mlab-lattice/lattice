@@ -7,14 +7,25 @@ variable "region" {}
 
 variable "system_id" {}
 variable "vpc_id" {}
-variable "vpc_cidr_block" {}
-variable "service_subnet_ids" {}
+variable "subnet_ids" {}
+variable "base_node_ami_id" {}
+variable "key_name" {}
 
 variable "service_id" {}
 variable "num_instances" {}
 variable "instance_type" {}
-variable "ami_id" {}
-variable "key_name" {}
+
+###############################################################################
+# Output
+#
+
+output "autoscaling_group_name" {
+  value = "${module.base_node.autoscaling_group_name}"
+}
+
+output "security_group_id" {
+  value = "${module.base_node.security_group_id}"
+}
 
 ###############################################################################
 # Provider
@@ -92,7 +103,7 @@ data "aws_iam_policy_document" "service_node_role_policy_document" {
     ]
 
     resources = [
-      "arn:aws:ecr:${var.region}:${var.aws_account_id}:repository/lattice/systems/${var.system_id}/*",
+      "arn:aws:ecr:${var.region}:${var.aws_account_id}:repository/component-builds",
     ]
   }
 }
@@ -110,14 +121,13 @@ module "base_node" {
   kubelet_labels = "lattice/service=${var.service_id}"
   kubelet_taints = "lattice/service=${var.service_id}:NoSchedule"
 
-  region         = "${var.region}"
-  vpc_id         = "${var.vpc_id}"
-  vpc_cidr_block = "${var.vpc_cidr_block}"
-  subnet_ids     = "${var.service_subnet_ids}"
-  num_instances  = "${var.num_instances}"
-  instance_type  = "${var.instance_type}"
-  ami_id         = "${var.ami_id}"
-  key_name       = "${var.key_name}"
+  region        = "${var.region}"
+  vpc_id        = "${var.vpc_id}"
+  subnet_ids    = "${var.subnet_ids}"
+  num_instances = "${var.num_instances}"
+  instance_type = "${var.instance_type}"
+  ami_id        = "${var.base_node_ami_id}"
+  key_name      = "${var.key_name}"
 
   iam_instance_profile_role_name = "${aws_iam_role.service_node_role.name}"
 }

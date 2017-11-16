@@ -5,7 +5,6 @@ variable "region" {}
 
 variable "system_id" {}
 variable "vpc_id" {}
-variable "vpc_cidr_block" {}
 variable "subnet_ids" {}
 
 variable "name" {}
@@ -36,6 +35,13 @@ output "autoscaling_group_name" {
 
 output "security_group_id" {
   value = "${aws_security_group.node_auto_scaling_group.id}"
+}
+
+###############################################################################
+# Data
+
+data "aws_vpc" "vpc" {
+  id = "${var.vpc_id}"
 }
 
 ###############################################################################
@@ -97,7 +103,7 @@ resource "aws_security_group_rule" "auto_scalling_group_allow_ingress_flannel_vx
   from_port   = 8472
   to_port     = 8472
   protocol    = "udp"
-  cidr_blocks = ["${var.vpc_cidr_block}"]
+  cidr_blocks = ["${data.aws_vpc.vpc.cidr_block}"]
 
   lifecycle {
     create_before_destroy = true

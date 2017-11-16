@@ -74,7 +74,6 @@ resource "aws_ecr_repository" "component-builds" {
   name = "component-builds"
 }
 
-
 ###############################################################################
 # Networking
 #
@@ -183,7 +182,6 @@ module "master_node" {
   system_id               = "${var.system_id}"
   system_s3_bucket        = "${aws_s3_bucket.system_bucket.id}"
   vpc_id                  = "${aws_vpc.vpc.id}"
-  vpc_cidr_block          = "${aws_vpc.vpc.cidr_block}"
   subnet_id               = "${element(aws_subnet.subnet.*.id, 0)}"
   build_subnet_ids        = "${join(",", aws_subnet.subnet.*.id)}"
   base_node_ami_id        = "${var.base_node_ami_id}"
@@ -292,7 +290,6 @@ module "build_node" {
 
   system_id        = "${var.system_id}"
   vpc_id           = "${aws_vpc.vpc.id}"
-  vpc_cidr_block   = "${aws_vpc.vpc.cidr_block}"
   build_subnet_ids = "${join(",", aws_subnet.subnet.*.id)}"
 
   build_id         = "0"

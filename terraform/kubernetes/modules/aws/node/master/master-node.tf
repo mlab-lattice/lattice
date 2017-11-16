@@ -8,7 +8,6 @@ variable "region" {}
 variable "system_id" {}
 variable "system_s3_bucket" {}
 variable "vpc_id" {}
-variable "vpc_cidr_block" {}
 variable "subnet_id" {}
 variable "build_subnet_ids" {}
 variable "base_node_ami_id" {}
@@ -184,14 +183,13 @@ module "base_node" {
 }
 USER_DATA
 
-  region         = "${var.region}"
-  vpc_id         = "${var.vpc_id}"
-  vpc_cidr_block = "${var.vpc_cidr_block}"
-  subnet_ids     = "${var.subnet_id}"
-  num_instances  = 1
-  instance_type  = "${var.instance_type}"
-  ami_id         = "${var.ami_id}"
-  key_name       = "${var.key_name}"
+  region        = "${var.region}"
+  vpc_id        = "${var.vpc_id}"
+  subnet_ids    = "${var.subnet_id}"
+  num_instances = 1
+  instance_type = "${var.instance_type}"
+  ami_id        = "${var.ami_id}"
+  key_name      = "${var.key_name}"
 
   iam_instance_profile_role_name = "${aws_iam_role.master_node_role.name}"
 }
