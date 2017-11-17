@@ -1,10 +1,10 @@
 # https://stackoverflow.com/questions/18136918/how-to-get-current-relative-directory-of-your-makefile
 DIR := $(patsubst %/,%,$(dir $(abspath $(lastword $(MAKEFILE_LIST)))))
-BOOTSTRAP_DIR = $(DIR)/bootstrap
-BOOTSTRAP_BUILD_DIR = $(BOOTSTRAP_DIR)/build
-BOOTSTRAP_BUILD_STATE_DIR = $(BOOTSTRAP_DIR)/.state/build
-BOOTSTRAP_LATTICE_SYSTEM_ID ?= bootstrapped
-BOOTSTRAP_AWS_SYSTEM_STATE_DIR = $(BOOTSTRAP_DIR)/.state/aws/$(LATTICE_SYSTEM_ID)
+CLOUD_IMAGE_DIR = $(DIR)/bootstrap
+CLOUD_IMAGE_BUILD_DIR = $(BOOTSTRAP_DIR)/build
+CLOUD_IMAGE_BUILD_STATE_DIR = $(BOOTSTRAP_DIR)/.state/build
+CLOUD_IMAGE_LATTICE_SYSTEM_ID ?= bootstrapped
+CLOUD_IMAGE_AWS_SYSTEM_STATE_DIR = $(BOOTSTRAP_DIR)/.state/aws/$(LATTICE_SYSTEM_ID)
 
 LOCAL_REGISTRY = lattice-local
 DEV_REGISTRY = gcr.io/lattice-dev
@@ -317,17 +317,17 @@ cloud-images-build: cloud-images-build-base-node-image cloud-images-build-master
 
 .PHONY: cloud-images-build-base-node-image
 cloud-images-build-base-node-image:
-	$(BOOTSTRAP_BUILD_DIR)/build-base-node-image
+	$(CLOUD_IMAGE_BUILD_DIR)/build-base-node-image
 
 .PHONY: cloud-images-build-master-node-image
 cloud-images-build-master-node-image:
-	$(BOOTSTRAP_BUILD_DIR)/build-master-node-image
+	$(CLOUD_IMAGE_BUILD_DIR)/build-master-node-image
 
 .PHONY: cloud-images-clean
 cloud-images-clean:
-	rm -rf $(BOOTSTRAP_BUILD_STATE_DIR)/artifacts
+	rm -rf $(CLOUD_IMAGE_BUILD_STATE_DIR)/artifacts
 
 .PHONY: cloud-images-clean-master-node-image
 cloud-images-clean-master-node-image:
-	rm -rf $(BOOTSTRAP_BUILD_STATE_DIR)/artifacts/master-node
-	rm -f $(BOOTSTRAP_BUILD_STATE_DIR)/artifacts/master-node-ami-id
+	rm -rf $(CLOUD_IMAGE_BUILD_STATE_DIR)/artifacts/master-node
+	rm -f $(CLOUD_IMAGE_BUILD_STATE_DIR)/artifacts/master-node-ami-id

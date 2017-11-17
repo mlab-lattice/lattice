@@ -2,4 +2,4 @@
 /bazel-*
 
 /tmp
-/bootstrap/.state
+/cloud-images/.state
