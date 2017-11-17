@@ -3,7 +3,7 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library")
 go_library(
     name = "go_default_library",
     srcs = ["exec_context.go"],
-    importpath = "github.com/mlab-lattice/system/pkg/util/terraform",
+    importpath = "github.com/mlab-lattice/system/pkg/terraform",
     visibility = ["//visibility:public"],
     deps = ["@com_github_mlab_lattice_core//pkg/util/exec:go_default_library"],
 )

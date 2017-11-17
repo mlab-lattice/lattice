@@ -2,24 +2,18 @@ package service
 
 import (
 	"fmt"
-	"reflect"
 	"sync"
 	"time"
 
 	crv1 "github.com/mlab-lattice/system/pkg/kubernetes/customresource/v1"
-
-	appsv1beta2 "k8s.io/api/apps/v1beta2"
-	corev1 "k8s.io/api/core/v1"
 
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
 
-	appinformers "k8s.io/client-go/informers/apps/v1beta2"
 	coreinformers "k8s.io/client-go/informers/core/v1"
 	clientset "k8s.io/client-go/kubernetes"
-	appslisters "k8s.io/client-go/listers/apps/v1beta2"
 	corelisters "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
@@ -45,15 +39,8 @@ type ServiceController struct {
 	configLock        sync.RWMutex
 	config            crv1.ConfigSpec
 
-	// FIXME: remove when local DNS server working
-	systemStore       cache.Store
-	systemStoreSynced cache.InformerSynced
-
 	serviceStore       cache.Store
 	serviceStoreSynced cache.InformerSynced
-
-	deploymentLister       appslisters.DeploymentLister
-	deploymentListerSynced cache.InformerSynced
 
 	kubeServiceLister       corelisters.ServiceLister
 	kubeServiceListerSynced cache.InformerSynced
@@ -65,9 +52,7 @@ func NewServiceController(
 	kubeClient clientset.Interface,
 	latticeResourceRestClient rest.Interface,
 	configInformer cache.SharedInformer,
-	systemInformer cache.SharedInformer,
 	serviceInformer cache.SharedInformer,
-	deploymentInformer appinformers.DeploymentInformer,
 	kubeServiceInformer coreinformers.ServiceInformer,
 ) *ServiceController {
 	sc := &ServiceController{
@@ -92,14 +77,6 @@ func NewServiceController(
 	sc.configStore = configInformer.GetStore()
 	sc.configStoreSynced = configInformer.HasSynced
 
-	// FIXME: remove when local DNS server working
-	systemInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc:    sc.handleSystemAdd,
-		UpdateFunc: sc.handleSystemUpdate,
-	})
-	sc.systemStore = systemInformer.GetStore()
-	sc.systemStoreSynced = systemInformer.HasSynced
-
 	serviceInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    sc.handleServiceAdd,
 		UpdateFunc: sc.handleServiceUpdate,
@@ -108,14 +85,11 @@ func NewServiceController(
 	sc.serviceStore = serviceInformer.GetStore()
 	sc.serviceStoreSynced = serviceInformer.HasSynced
 
-	deploymentInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc:    sc.handleDeploymentAdd,
-		UpdateFunc: sc.handleDeploymentUpdate,
-		DeleteFunc: sc.handleDeploymentDelete,
-	})
-	sc.deploymentLister = deploymentInformer.Lister()
-	sc.deploymentListerSynced = deploymentInformer.Informer().HasSynced
-
+	//kubeServiceInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+	//	AddFunc:    sc.handleKubeServiceAdd,
+	//	UpdateFunc: sc.handleKubeServiceUpdate,
+	//	DeleteFunc: sc.handleKubeServiceDelete,
+	//})
 	sc.kubeServiceLister = kubeServiceInformer.Lister()
 	sc.kubeServiceListerSynced = kubeServiceInformer.Informer().HasSynced
 
@@ -146,61 +120,6 @@ func (sc *ServiceController) handleConfigUpdate(old, cur interface{}) {
 	sc.config = curConfig.DeepCopy().Spec
 }
 
-func (sc *ServiceController) handleSystemAdd(obj interface{}) {
-	sys := obj.(*crv1.System)
-	glog.V(4).Infof("Adding System %s", sys.Name)
-
-	for _, svcInfo := range sys.Spec.Services {
-		if svcInfo.ServiceName == nil {
-			// FIXME: what to do here?
-			// probably okay not to worry about, this should be temp until local DNS working
-			continue
-		}
-
-		svcKey := fmt.Sprintf("%v/%v", sys.Namespace, svcInfo.ServiceName)
-		svcObj, exists, err := sc.serviceStore.GetByKey(svcKey)
-		if err != nil || !exists {
-			// FIXME: what to do here?
-			// probably okay not to worry about, this should be temp until local DNS working
-			continue
-		}
-
-		svc := svcObj.(*crv1.Service)
-		sc.enqueueService(svc)
-	}
-}
-
-func (sc *ServiceController) handleSystemUpdate(old, cur interface{}) {
-	oldSys := old.(*crv1.System)
-	curSys := cur.(*crv1.System)
-	if oldSys.ResourceVersion == curSys.ResourceVersion {
-		// Periodic resync will send update events for all known Deployments.
-		// Two different versions of the same Deployment will always have different RVs.
-		glog.V(5).Info("System ResourceVersions are the same")
-		return
-	}
-
-	glog.V(4).Infof("Updating System %s", oldSys.Name)
-	for _, svcInfo := range curSys.Spec.Services {
-		if svcInfo.ServiceName == nil {
-			// FIXME: what to do here?
-			// probably okay not to worry about, this should be temp until local DNS working
-			continue
-		}
-
-		svcKey := fmt.Sprintf("%v/%v", curSys.Namespace, svcInfo.ServiceName)
-		svcObj, exists, err := sc.serviceStore.GetByKey(svcKey)
-		if err != nil || !exists {
-			// FIXME: what to do here?
-			// probably okay not to worry about, this should be temp until local DNS working
-			continue
-		}
-
-		svc := svcObj.(*crv1.Service)
-		sc.enqueueService(svc)
-	}
-}
-
 func (sc *ServiceController) handleServiceAdd(obj interface{}) {
 	svc := obj.(*crv1.Service)
 	glog.V(4).Infof("Adding Service %s", svc.Name)
@@ -229,115 +148,6 @@ func (sc *ServiceController) handleServiceDelete(obj interface{}) {
 		}
 	}
 	glog.V(4).Infof("Deleting Service %s", svc.Name)
-	sc.enqueueService(svc)
-}
-
-// handleDeploymentAdd enqueues the Service that manages a Deployment when the Deployment is created.
-func (sc *ServiceController) handleDeploymentAdd(obj interface{}) {
-	d := obj.(*appsv1beta2.Deployment)
-
-	if d.DeletionTimestamp != nil {
-		// On a restart of the controller manager, it's possible for an object to
-		// show up in a state that is already pending deletion.
-		sc.handleDeploymentDelete(d)
-		return
-	}
-
-	// If it has a ControllerRef, that's all that matters.
-	if controllerRef := metav1.GetControllerOf(d); controllerRef != nil {
-		svc := sc.resolveControllerRef(d.Namespace, controllerRef)
-
-		// Not a Service Deployment.
-		if svc == nil {
-			return
-		}
-
-		glog.V(4).Infof("Deployment %s added.", d.Name)
-		sc.enqueueService(svc)
-		return
-	}
-
-	// Otherwise, it's an orphan. These should never exist. All deployments should be run by some
-	// controller.
-	// FIXME: send warn event
-}
-
-// handleDeploymentUpdate figures out what Service manages a Deployment when the Deployment
-// is updated and enqueues it.
-func (sc *ServiceController) handleDeploymentUpdate(old, cur interface{}) {
-	glog.V(5).Info("Got Deployment update")
-	oldD := old.(*appsv1beta2.Deployment)
-	curD := cur.(*appsv1beta2.Deployment)
-	if curD.ResourceVersion == oldD.ResourceVersion {
-		// Periodic resync will send update events for all known Deployments.
-		// Two different versions of the same Deployment will always have different RVs.
-		glog.V(5).Info("Deployment ResourceVersions are the same")
-		return
-	}
-
-	curControllerRef := metav1.GetControllerOf(curD)
-	oldControllerRef := metav1.GetControllerOf(oldD)
-	controllerRefChanged := !reflect.DeepEqual(curControllerRef, oldControllerRef)
-	if controllerRefChanged {
-		// The ControllerRef was changed. If this is a Service Deployment, this shouldn't happen.
-		if b := sc.resolveControllerRef(oldD.Namespace, oldControllerRef); b != nil {
-			// FIXME: send error event here, this should not happen
-		}
-	}
-
-	// If it has a ControllerRef, that's all that matters.
-	if curControllerRef != nil {
-		svc := sc.resolveControllerRef(curD.Namespace, curControllerRef)
-
-		// Not a Service Deployment
-		if svc == nil {
-			return
-		}
-
-		sc.enqueueService(svc)
-		return
-	}
-
-	// Otherwise, it's an orphan. These should never exist. All deployments should be run by some
-	// controller.
-	// FIXME: send warn event
-}
-
-// handleDeploymentDelete enqueues the Service that manages a Deployment when
-// the Deployment is deleted.
-func (sc *ServiceController) handleDeploymentDelete(obj interface{}) {
-	d, ok := obj.(*appsv1beta2.Deployment)
-
-	// When a delete is dropped, the relist will notice a pod in the store not
-	// in the list, leading to the insertion of a tombstone object which contains
-	// the deleted key/value.
-	if !ok {
-		tombstone, ok := obj.(cache.DeletedFinalStateUnknown)
-		if !ok {
-			runtime.HandleError(fmt.Errorf("couldn't get object from tombstone %#v", obj))
-			return
-		}
-		d, ok = tombstone.Obj.(*appsv1beta2.Deployment)
-		if !ok {
-			runtime.HandleError(fmt.Errorf("tombstone contained object that is not a Deployment %#v", obj))
-			return
-		}
-	}
-
-	controllerRef := metav1.GetControllerOf(d)
-	if controllerRef == nil {
-		// No controller should care about orphans being deleted.
-		return
-	}
-
-	svc := sc.resolveControllerRef(d.Namespace, controllerRef)
-
-	// Not a Service Deployment
-	if svc == nil {
-		return
-	}
-
-	glog.V(4).Infof("Deployment %s deleted.", d.Name)
 	sc.enqueueService(svc)
 }
 
@@ -387,7 +197,7 @@ func (sc *ServiceController) Run(workers int, stopCh <-chan struct{}) {
 	defer glog.Infof("Shutting down service controller")
 
 	// wait for your secondary caches to fill before starting your work
-	if !cache.WaitForCacheSync(stopCh, sc.serviceStoreSynced, sc.deploymentListerSynced, sc.kubeServiceListerSynced) {
+	if !cache.WaitForCacheSync(stopCh, sc.serviceStoreSynced, sc.kubeServiceListerSynced) {
 		return
 	}
 
@@ -474,105 +284,31 @@ func (sc *ServiceController) syncService(key string) error {
 	}
 
 	svc := svcObj.(*crv1.Service)
-
-	// TODO: probably need to change this when adding Blue/Green rollouts or canaries, there will probably be
-	// 		 multiple deployments per Service.
-	d, err := sc.getDeploymentForService(svc)
-	if err != nil {
-		return err
-	}
-
-	if d == nil {
-		glog.V(4).Infof("Did not find Deployment for Service %q, creating one", svc.Name)
-		dResp, err := sc.createDeployment(svc)
-		if err != nil {
-			return err
-		}
-		d = dResp
-	} else {
-		glog.V(4).Infof("Found Deployment for Service %q, syncing its Spec", svc.Name)
-		d, err = sc.syncDeploymentSpec(svc, d)
-		if err != nil {
-			return err
-		}
-	}
-
-	ksvc, err := sc.getKubeServiceForService(svc)
-	if err != nil {
-		return err
-	}
-
-	// FIXME: may have to update kubeService if ports change?
-	if ksvc == nil {
-		glog.V(4).Infof("Did not find kubeService for Service %q, creating one", svc.Name)
-		if _, err := sc.createKubeService(svc); err != nil {
-			return err
-		}
-	}
-
 	svcCopy := svc.DeepCopy()
-	return sc.syncServiceWithDeployment(svcCopy, d)
-}
 
-func (sc *ServiceController) syncServiceWithDeployment(svc *crv1.Service, d *appsv1beta2.Deployment) error {
-	newStatus := calculateServiceStatus(d)
-	return sc.updateServiceStatus(svc, newStatus)
-}
-
-// TODO: this is overly simplistic
-func calculateServiceStatus(d *appsv1beta2.Deployment) crv1.ServiceStatus {
-	available := false
-	//progressing := false
-	failure := false
-
-	for _, condition := range d.Status.Conditions {
-		switch condition.Type {
-		case appsv1beta2.DeploymentAvailable:
-			if condition.Status == corev1.ConditionTrue {
-				available = true
-			}
-		//case appsv1beta2.DeploymentProgressing:
-		//	if condition.Status == corev1.ConditionTrue {
-		//		progressing = true
-		//	}
-		case appsv1beta2.DeploymentReplicaFailure:
-			if condition.Status == corev1.ConditionTrue {
-				failure = true
-			}
-		}
-	}
-
-	if failure {
-		return crv1.ServiceStatus{
-			State: crv1.ServiceStateRolloutFailed,
-		}
-	}
-
-	if available {
-		return crv1.ServiceStatus{
-			State: crv1.ServiceStateRolloutSucceeded,
-		}
-	}
-
-	return crv1.ServiceStatus{
-		State: crv1.ServiceStateRollingOut,
-	}
-}
-
-func (sc *ServiceController) updateServiceStatus(svc *crv1.Service, newStatus crv1.ServiceStatus) error {
-	if reflect.DeepEqual(svc.Status, newStatus) {
+	// Before we start doing any work, we need to add our finalizer to the Service so that we can
+	// clean up anything we have created when the Service gets deleted.
+	err = sc.addFinalizer(svcCopy)
+	if err != nil {
 		return nil
 	}
 
-	svc.Status = newStatus
+	// Next, we need to find ensure that the kubeServices for this Service have been created.
+	kubeSvc, necessary, err := sc.getKubeServiceForService(svcCopy)
 
-	err := sc.latticeResourceRestClient.Put().
-		Namespace(svc.Namespace).
-		Resource(crv1.ServiceResourcePlural).
-		Name(svc.Name).
-		Body(svc).
-		Do().
-		Into(nil)
+	// If this Service requires a kubeService be created and it has not yet been, we'll just say
+	// we're done working on it for now.
+	// When the kubeService gets created, the kubeService Informer handlers will requeue this
+	// service.
+	if necessary && kubeSvc == nil {
+		return nil
+	}
 
-	return err
+	// Otherwise we either don't need a kubeService or it's already created, so we're good to go.
+	err = sc.provisionService(svcCopy)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

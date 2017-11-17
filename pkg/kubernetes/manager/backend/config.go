@@ -36,5 +36,5 @@ func (kb *KubernetesBackend) getSystemIP() (string, error) {
 		return "", err
 	}
 
-	return result.Spec.ProviderConfig.Local.IP, nil
+	return result.Spec.Provider.Local.IP, nil
 }

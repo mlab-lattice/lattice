@@ -38,7 +38,7 @@ provider "aws" {
 # Service node
 
 module "service_node" {
-  source = "../../../node/service"
+  source = "../../../../node/service"
 
   aws_account_id = "${var.aws_account_id}"
   region         = "${var.region}"

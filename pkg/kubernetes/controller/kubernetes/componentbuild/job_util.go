@@ -221,7 +221,7 @@ func (cbc *ComponentBuildController) getGetEcrCredsContainer() corev1.Container 
 			},
 			{
 				Name:  "REGION",
-				Value: cbc.config.ProviderConfig.AWS.Region,
+				Value: cbc.config.Provider.AWS.Region,
 			},
 		},
 		VolumeMounts: []corev1.VolumeMount{

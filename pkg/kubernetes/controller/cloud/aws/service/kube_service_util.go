@@ -17,14 +17,15 @@ import (
 	"github.com/golang/glog"
 )
 
-func (sc *ServiceController) getKubeServiceForService(svc *crv1.Service) (*corev1.Service, error) {
+func (sc *ServiceController) getKubeServiceForService(svc *crv1.Service) (*corev1.Service, bool, error) {
+	// FIXME: look at the component ports of the Service and see if any of them are public
 	ksvcName := kubeutil.GetKubeServiceNameForService(svc)
 	ksvc, err := sc.kubeServiceLister.Services(svc.Namespace).Get(ksvcName)
 	if err != nil && !apierrors.IsNotFound(err) {
-		return nil, err
+		return nil, true, err
 	}
 
-	return ksvc, nil
+	return ksvc, true, nil
 }
 
 func (sc *ServiceController) getKubeService(svc *crv1.Service) (*corev1.Service, error) {

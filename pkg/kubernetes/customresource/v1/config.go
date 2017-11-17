@@ -23,10 +23,12 @@ type Config struct {
 }
 
 type ConfigSpec struct {
-	ProviderConfig ProviderConfig                              `json:"providerConfig"`
+	SystemId       string                                      `json:"systemId"`
+	Provider       ProviderConfig                              `json:"providerConfig"`
 	ComponentBuild ComponentBuildConfig                        `json:"componentBuild"`
 	Envoy          EnvoyConfig                                 `json:"envoy"`
 	SystemConfigs  map[coretypes.LatticeNamespace]SystemConfig `json:"userSystem"`
+	Terraform      TerraformConfig                             `json:"terraform"`
 }
 
 type ProviderConfig struct {
@@ -39,7 +41,12 @@ type ProviderConfigLocal struct {
 }
 
 type ProviderConfigAWS struct {
-	Region string `json:"region"`
+	Region        string   `json:"region"`
+	AccountId     string   `json:"accountId"`
+	VPCId         string   `json:"vpcId"`
+	SubnetIds     []string `json:"subnetIds"`
+	BaseNodeAMIId string   `json:"baseNodeAmiId"`
+	KeyName       string   `json:"keyName"`
 }
 
 type SystemConfig struct {
@@ -73,6 +80,14 @@ type EnvoyConfig struct {
 	Image             string `json:"image"`
 	RedirectCidrBlock string `json:"redirectCidrBlock"`
 	XdsApiPort        int32  `json:"xdsApiPort"`
+}
+
+type TerraformConfig struct {
+	S3Backend TerraformBackendConfigS3 `json:"s3Backend"`
+}
+
+type TerraformBackendConfigS3 struct {
+	Bucket string `json:"bucket"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"path/filepath"
 
-	"github.com/mlab-lattice/system/pkg/util/terraform"
+	"github.com/mlab-lattice/system/pkg/terraform"
 
 	awsterraform "github.com/mlab-lattice/system/pkg/kubernetes/terraform/aws"
 )

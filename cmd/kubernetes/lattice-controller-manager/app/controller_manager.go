@@ -22,7 +22,7 @@ import (
 	"github.com/golang/glog"
 )
 
-func Run(kubeconfig, provider string) {
+func Run(kubeconfig, provider, terraformModulePath string) {
 	var config *rest.Config
 	var err error
 	if kubeconfig == "" {

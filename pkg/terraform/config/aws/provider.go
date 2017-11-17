@@ -1,15 +1,15 @@
-package config
+package aws
 
 import (
 	"encoding/json"
 )
 
-type AWSProvider struct {
+type Provider struct {
 	Region string
 }
 
 // Implement json.Marshaler
-func (p AWSProvider) MarshalJSON() ([]byte, error) {
+func (p Provider) MarshalJSON() ([]byte, error) {
 	moduleMap := map[string]interface{}{
 		"aws": map[string]interface{}{
 			"region": p.Region,
