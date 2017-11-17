@@ -156,7 +156,7 @@ func (lp *LocalProvisioner) bootstrap(address, url string) error {
 							Image: lp.latticeImageDockerRepository + "/" + constants.DockerImageBootstrapKubernetes,
 							Args: []string{
 								"--provider", "local",
-								"--provider-var", "system-ip=address",
+								"--provider-var", "system-ip=" + address,
 								"--system-definition-url", url,
 								"--lattice-container-registry", "gcr.io/lattice-dev",
 								"--component-build-registry", "lattice-local",

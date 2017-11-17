@@ -28,7 +28,7 @@ type ConfigSpec struct {
 	ComponentBuild ComponentBuildConfig                        `json:"componentBuild"`
 	Envoy          EnvoyConfig                                 `json:"envoy"`
 	SystemConfigs  map[coretypes.LatticeNamespace]SystemConfig `json:"userSystem"`
-	Terraform      TerraformConfig                             `json:"terraform"`
+	Terraform      *TerraformConfig                            `json:"terraform,omitempty"`
 }
 
 type ProviderConfig struct {
