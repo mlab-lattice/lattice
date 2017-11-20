@@ -13,7 +13,7 @@ type Config struct {
 func (c Config) MarshalJSON() ([]byte, error) {
 	jsonMap := map[string]interface{}{
 		"provider": c.Provider,
-		"modules":  c.Modules,
+		"module":   c.Modules,
 	}
 
 	if c.Backend != nil {

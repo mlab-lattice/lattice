@@ -30,19 +30,19 @@ func seedConfig(kubeconfig *rest.Config, userSystemUrl string) {
 			Namespace: constants.NamespaceLatticeInternal,
 		},
 		Spec: crv1.ConfigSpec{
-			SystemConfigs: map[coretypes.LatticeNamespace]crv1.SystemConfig{
+			SystemConfigs: map[coretypes.LatticeNamespace]crv1.ConfigSystem{
 				coreconstants.UserSystemNamespace: {
 					Url: userSystemUrl,
 				},
 			},
-			Envoy: crv1.EnvoyConfig{
+			Envoy: crv1.ConfigEnvoy{
 				PrepareImage:      latticeContainerRegistry + "/envoy-prepare-envoy",
 				Image:             "envoyproxy/envoy",
 				RedirectCidrBlock: "172.16.29.0/16",
 				XdsApiPort:        8080,
 			},
-			ComponentBuild: crv1.ComponentBuildConfig{
-				DockerConfig: crv1.BuildDockerConfig{
+			ComponentBuild: crv1.ConfigComponentBuild{
+				DockerConfig: crv1.ConfigBuildDocker{
 					RepositoryPerImage: false,
 					Repository:         constants.DockerRegistryComponentBuildsDefault,
 					Push:               true,
@@ -52,6 +52,7 @@ func seedConfig(kubeconfig *rest.Config, userSystemUrl string) {
 				GetEcrCredsImage: latticeContainerRegistry + "/component-build-get-ecr-creds",
 				PullGitRepoImage: latticeContainerRegistry + "/component-build-pull-git-repo",
 			},
+			SystemId: systemId,
 		},
 	}
 
@@ -71,6 +72,12 @@ func seedConfig(kubeconfig *rest.Config, userSystemUrl string) {
 			panic(err)
 		}
 		config.Spec.Provider.AWS = awsConfig
+
+		terraformConfig, err := getTerraformConfig()
+		if err != nil {
+			panic(err)
+		}
+		config.Spec.Terraform = terraformConfig
 	}
 
 	pollKubeResourceCreation(func() (interface{}, error) {
@@ -82,7 +89,7 @@ func seedConfig(kubeconfig *rest.Config, userSystemUrl string) {
 	})
 }
 
-func getLocalConfig() (*crv1.ProviderConfigLocal, error) {
+func getLocalConfig() (*crv1.ConfigProviderLocal, error) {
 	// TODO: find a better way to do the parsing of the provider variables
 	expectedVars := map[string]interface{}{
 		"system-ip": nil,
@@ -114,14 +121,14 @@ func getLocalConfig() (*crv1.ProviderConfigLocal, error) {
 		}
 	}
 
-	localConfig := &crv1.ProviderConfigLocal{
+	localConfig := &crv1.ConfigProviderLocal{
 		IP: expectedVars["system-ip"].(string),
 	}
 
 	return localConfig, nil
 }
 
-func getAwsConfig() (*crv1.ProviderConfigAWS, error) {
+func getAwsConfig() (*crv1.ConfigProviderAWS, error) {
 	// TODO: find a better way to do the parsing of the provider variables
 	expectedVars := map[string]interface{}{
 		"account-id":       nil,
@@ -162,7 +169,7 @@ func getAwsConfig() (*crv1.ProviderConfigAWS, error) {
 		}
 	}
 
-	awsConfig := &crv1.ProviderConfigAWS{
+	awsConfig := &crv1.ConfigProviderAWS{
 		Region:        expectedVars["region"].(string),
 		AccountId:     expectedVars["account-id"].(string),
 		VPCId:         expectedVars["vpc-id"].(string),
@@ -172,4 +179,60 @@ func getAwsConfig() (*crv1.ProviderConfigAWS, error) {
 	}
 
 	return awsConfig, nil
+}
+
+func getTerraformConfig() (*crv1.ConfigTerraform, error) {
+	switch terraformBackend {
+	case constants.TerraformBackendS3:
+		backendConfigS3, err := getTerraformBackendConfigS3()
+		if err != nil {
+			return nil, err
+		}
+
+		terraformConfig := &crv1.ConfigTerraform{
+			S3Backend: backendConfigS3,
+		}
+		return terraformConfig, nil
+	default:
+		return nil, fmt.Errorf("unrecognized terraform backend " + terraformBackend)
+	}
+}
+
+func getTerraformBackendConfigS3() (*crv1.ConfigTerraformBackendS3, error) {
+	// TODO: find a better way to do the parsing of the provider variables
+	expectedVars := map[string]interface{}{
+		"bucket": nil,
+	}
+
+	for _, terraformBackendVar := range *terraformBackendVars {
+		split := strings.Split(terraformBackendVar, "=")
+		if len(split) != 2 {
+			return nil, fmt.Errorf("invalid terraform backend variable " + terraformBackendVar)
+		}
+
+		key := split[0]
+		var value interface{} = split[1]
+
+		existingVal, ok := expectedVars[key]
+		if !ok {
+			return nil, fmt.Errorf("unexpected terraform backend variable " + key)
+		}
+		if existingVal != nil {
+			return nil, fmt.Errorf("terraform backend variable " + key + " set multiple times")
+		}
+
+		expectedVars[key] = value
+	}
+
+	for k, v := range expectedVars {
+		if v == nil {
+			return nil, fmt.Errorf("missing required terraform backend variable " + k)
+		}
+	}
+
+	terraformBackendConfigS3 := &crv1.ConfigTerraformBackendS3{
+		Bucket: expectedVars["bucket"].(string),
+	}
+
+	return terraformBackendConfigS3, nil
 }

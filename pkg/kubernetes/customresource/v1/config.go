@@ -24,23 +24,23 @@ type Config struct {
 
 type ConfigSpec struct {
 	SystemId       string                                      `json:"systemId"`
-	Provider       ProviderConfig                              `json:"providerConfig"`
-	ComponentBuild ComponentBuildConfig                        `json:"componentBuild"`
-	Envoy          EnvoyConfig                                 `json:"envoy"`
-	SystemConfigs  map[coretypes.LatticeNamespace]SystemConfig `json:"userSystem"`
-	Terraform      *TerraformConfig                            `json:"terraform,omitempty"`
+	Provider       ConfigProvider                              `json:"providerConfig"`
+	ComponentBuild ConfigComponentBuild                        `json:"componentBuild"`
+	Envoy          ConfigEnvoy                                 `json:"envoy"`
+	SystemConfigs  map[coretypes.LatticeNamespace]ConfigSystem `json:"userSystem"`
+	Terraform      *ConfigTerraform                            `json:"terraform,omitempty"`
 }
 
-type ProviderConfig struct {
-	Local *ProviderConfigLocal `json:"local,omitempty"`
-	AWS   *ProviderConfigAWS   `json:"aws,omitempty"`
+type ConfigProvider struct {
+	Local *ConfigProviderLocal `json:"local,omitempty"`
+	AWS   *ConfigProviderAWS   `json:"aws,omitempty"`
 }
 
-type ProviderConfigLocal struct {
+type ConfigProviderLocal struct {
 	IP string `json:"ip"`
 }
 
-type ProviderConfigAWS struct {
+type ConfigProviderAWS struct {
 	Region        string   `json:"region"`
 	AccountId     string   `json:"accountId"`
 	VPCId         string   `json:"vpcId"`
@@ -49,18 +49,18 @@ type ProviderConfigAWS struct {
 	KeyName       string   `json:"keyName"`
 }
 
-type SystemConfig struct {
+type ConfigSystem struct {
 	Url string `json:"url"`
 }
 
-type ComponentBuildConfig struct {
-	DockerConfig     BuildDockerConfig `json:"dockerConfig"`
+type ConfigComponentBuild struct {
+	DockerConfig     ConfigBuildDocker `json:"dockerConfig"`
 	PullGitRepoImage string            `json:"pullGitRepoImage"`
 	GetEcrCredsImage string            `json:"getEcrCredsImage"`
 	BuildDockerImage string            `json:"buildDockerImage"`
 }
 
-type BuildDockerConfig struct {
+type ConfigBuildDocker struct {
 	// Registry used to tag images.
 	Registry string `json:"registry"`
 
@@ -75,18 +75,18 @@ type BuildDockerConfig struct {
 	Push bool `json:"push"`
 }
 
-type EnvoyConfig struct {
+type ConfigEnvoy struct {
 	PrepareImage      string `json:"prepareImage"`
 	Image             string `json:"image"`
 	RedirectCidrBlock string `json:"redirectCidrBlock"`
 	XdsApiPort        int32  `json:"xdsApiPort"`
 }
 
-type TerraformConfig struct {
-	S3Backend TerraformBackendConfigS3 `json:"s3Backend"`
+type ConfigTerraform struct {
+	S3Backend *ConfigTerraformBackendS3 `json:"s3Backend,omitempty"`
 }
 
-type TerraformBackendConfigS3 struct {
+type ConfigTerraformBackendS3 struct {
 	Bucket string `json:"bucket"`
 }
 

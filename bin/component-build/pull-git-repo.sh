@@ -10,7 +10,7 @@ fi
 REPO_DIR=${WORK_DIR}/src
 
 if [ ! -d "${REPO_DIR}" ]; then
-  git clone ${GIT_URL} ${REPO_DIR}
+  git clone --verbose ${GIT_URL} ${REPO_DIR}
 fi
 
 cd ${REPO_DIR}

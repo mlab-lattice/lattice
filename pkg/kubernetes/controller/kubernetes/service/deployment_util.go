@@ -12,6 +12,7 @@ import (
 	systemtree "github.com/mlab-lattice/core/pkg/system/tree"
 
 	crv1 "github.com/mlab-lattice/system/pkg/kubernetes/customresource/v1"
+	kubeutil "github.com/mlab-lattice/system/pkg/kubernetes/util/kubernetes"
 
 	appsv1beta2 "k8s.io/api/apps/v1beta2"
 	corev1 "k8s.io/api/core/v1"
@@ -271,7 +272,9 @@ func (sc *ServiceController) getDeploymentSpec(svc *crv1.Service) (*appsv1beta2.
 				Containers:     containers,
 				DNSPolicy:      corev1.DNSDefault,
 				// TODO: add NodeSelector (for cloud)
-				// TODO: add Tolerations (for cloud)
+				Tolerations: []corev1.Toleration{
+					kubeutil.GetServiceTaintToleration(svc.Name),
+				},
 			},
 		},
 	}

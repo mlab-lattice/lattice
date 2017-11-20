@@ -118,8 +118,8 @@ module "base_node" {
   system_id = "${var.system_id}"
   name      = "service-${var.service_id}"
 
-  kubelet_labels = "lattice/service=${var.service_id}"
-  kubelet_taints = "lattice/service=${var.service_id}:NoSchedule"
+  kubelet_labels = "node-role.lattice.mlab.com/service=${var.service_id}"
+  kubelet_taints = "node-role.lattice.mlab.com/service=${var.service_id}:NoSchedule"
 
   region        = "${var.region}"
   vpc_id        = "${var.vpc_id}"

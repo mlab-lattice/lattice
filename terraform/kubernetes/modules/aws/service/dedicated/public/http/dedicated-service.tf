@@ -4,18 +4,12 @@
 variable "aws_account_id" {}
 variable "region" {}
 
-variable "availability_zones" {
-  type = "list"
-}
-
-variable "system_id" {}
 variable "vpc_id" {}
-variable "subnet_ids" {
-  type = "list"
-}
+variable "subnet_ids" {}
 variable "base_node_ami_id" {}
 variable "key_name" {}
 
+variable "system_id" {}
 variable "service_id" {}
 variable "num_instances" {}
 variable "instance_type" {}
@@ -58,7 +52,7 @@ module "service_node" {
 # ALB
 
 module "load_balancer" {
-  source = "../../load-balancer/application"
+  source = "../../../load-balancer/application"
 
   region = "${var.region}"
 

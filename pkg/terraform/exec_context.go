@@ -62,7 +62,8 @@ func (tec *ExecContext) Destroy(vars map[string]string) (*executil.Result, strin
 }
 
 func (tec *ExecContext) Init() (*executil.Result, string, error) {
-	return tec.ExecWithLogFile("terraform-"+initCmd, initCmd)
+	args := []string{initCmd, "-force-copy"}
+	return tec.ExecWithLogFile("terraform-"+initCmd, args...)
 }
 
 func (tec ExecContext) Output(outputVar string) (string, error) {

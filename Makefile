@@ -1,10 +1,9 @@
 # https://stackoverflow.com/questions/18136918/how-to-get-current-relative-directory-of-your-makefile
 DIR := $(patsubst %/,%,$(dir $(abspath $(lastword $(MAKEFILE_LIST)))))
-CLOUD_IMAGE_DIR = $(DIR)/bootstrap
-CLOUD_IMAGE_BUILD_DIR = $(BOOTSTRAP_DIR)/build
-CLOUD_IMAGE_BUILD_STATE_DIR = $(BOOTSTRAP_DIR)/.state/build
-CLOUD_IMAGE_LATTICE_SYSTEM_ID ?= bootstrapped
-CLOUD_IMAGE_AWS_SYSTEM_STATE_DIR = $(BOOTSTRAP_DIR)/.state/aws/$(LATTICE_SYSTEM_ID)
+CLOUD_IMAGE_DIR = $(DIR)/cloud-images
+CLOUD_IMAGE_BUILD_DIR = $(CLOUD_IMAGE_DIR)/build
+CLOUD_IMAGE_BUILD_STATE_DIR = $(CLOUD_IMAGE_DIR)/.state/build
+CLOUD_IMAGE_AWS_SYSTEM_STATE_DIR = $(CLOUD_IMAGE_DIR)/.state/aws/$(LATTICE_SYSTEM_ID)
 
 LOCAL_REGISTRY = lattice-local
 DEV_REGISTRY = gcr.io/lattice-dev

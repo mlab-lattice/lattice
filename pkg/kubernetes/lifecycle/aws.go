@@ -52,7 +52,7 @@ func NewAWSProvisioner(latticeImageDockerRepository, workingDir string, config A
 
 func (ap *AWSProvisioner) Provision(name, url string) error {
 	// Add system json to working dir
-	sysJSON, err := ap.getSystemTerraformJSON(name)
+	sysJSON, err := ap.getSystemTerraformJSON(name, url)
 	if err != nil {
 		return err
 	}
@@ -97,7 +97,7 @@ func (ap *AWSProvisioner) Provision(name, url string) error {
 	return pollForSystemEnvironmentReadiness(address)
 }
 
-func (ap *AWSProvisioner) getSystemTerraformJSON(name string) ([]byte, error) {
+func (ap *AWSProvisioner) getSystemTerraformJSON(name, url string) ([]byte, error) {
 	sysModule := awsterraform.System{
 		Source: filepath.Join(ap.config.TerraformModulePath, systemModulePath),
 
@@ -106,7 +106,8 @@ func (ap *AWSProvisioner) getSystemTerraformJSON(name string) ([]byte, error) {
 		AvailabilityZones: ap.config.AvailabilityZones,
 		KeyName:           ap.config.KeyName,
 
-		SystemId: name,
+		SystemId:            name,
+		SystemDefinitionUrl: url,
 
 		MasterNodeInstanceType:          ap.config.MasterNodeInstanceType,
 		MasterNodeAMIId:                 ap.config.MasterNodeAMIId,

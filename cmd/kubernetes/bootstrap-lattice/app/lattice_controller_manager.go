@@ -37,9 +37,13 @@ func seedLatticeControllerManager(kubeClientset *kubernetes.Clientset) {
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{
 						{
-							Name:    "controller-manager",
-							Image:   latticeContainerRegistry + "/kubernetes-lattice-controller-manager",
-							Args:    []string{"-v", "5", "-logtostderr"},
+							Name:  "controller-manager",
+							Image: latticeContainerRegistry + "/kubernetes-lattice-controller-manager",
+							Args: []string{
+								"-v", "5",
+								"-logtostderr",
+								"-provider", provider,
+							},
 						},
 					},
 					DNSPolicy:          corev1.DNSDefault,

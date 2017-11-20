@@ -2,10 +2,13 @@ package service
 
 import (
 	"fmt"
+	"reflect"
 	"sync"
 	"time"
 
 	crv1 "github.com/mlab-lattice/system/pkg/kubernetes/customresource/v1"
+
+	corev1 "k8s.io/api/core/v1"
 
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -46,6 +49,8 @@ type ServiceController struct {
 	kubeServiceListerSynced cache.InformerSynced
 
 	queue workqueue.RateLimitingInterface
+
+	terraformModulePath string
 }
 
 func NewServiceController(
@@ -54,12 +59,14 @@ func NewServiceController(
 	configInformer cache.SharedInformer,
 	serviceInformer cache.SharedInformer,
 	kubeServiceInformer coreinformers.ServiceInformer,
+	terraformModulePath string,
 ) *ServiceController {
 	sc := &ServiceController{
 		latticeResourceRestClient: latticeResourceRestClient,
 		kubeClient:                kubeClient,
 		configSetChan:             make(chan struct{}),
 		queue:                     workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "service"),
+		terraformModulePath:       terraformModulePath,
 	}
 
 	sc.syncHandler = sc.syncService
@@ -85,11 +92,11 @@ func NewServiceController(
 	sc.serviceStore = serviceInformer.GetStore()
 	sc.serviceStoreSynced = serviceInformer.HasSynced
 
-	//kubeServiceInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
-	//	AddFunc:    sc.handleKubeServiceAdd,
-	//	UpdateFunc: sc.handleKubeServiceUpdate,
-	//	DeleteFunc: sc.handleKubeServiceDelete,
-	//})
+	kubeServiceInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+		AddFunc:    sc.handleKubeServiceAdd,
+		UpdateFunc: sc.handleKubeServiceUpdate,
+		DeleteFunc: sc.handleKubeServiceDelete,
+	})
 	sc.kubeServiceLister = kubeServiceInformer.Lister()
 	sc.kubeServiceListerSynced = kubeServiceInformer.Informer().HasSynced
 
@@ -159,6 +166,111 @@ func (sc *ServiceController) enqueue(svc *crv1.Service) {
 	}
 
 	sc.queue.Add(key)
+}
+
+// handleKubeServiceAdd enqueues the Service that manages a kubeService when the kubeService is created.
+func (sc *ServiceController) handleKubeServiceAdd(obj interface{}) {
+	kSvc := obj.(*corev1.Service)
+
+	if kSvc.DeletionTimestamp != nil {
+		// On a restart of the controller manager, it'kSvc possible for an object to
+		// show up in a state that is already pending deletion.
+		sc.handleKubeServiceDelete(kSvc)
+		return
+	}
+
+	// If it has a ControllerRef, that'kSvc all that matters.
+	if controllerRef := metav1.GetControllerOf(kSvc); controllerRef != nil {
+		svc := sc.resolveControllerRef(kSvc.Namespace, controllerRef)
+
+		// Not a Service kubeService.
+		if svc == nil {
+			return
+		}
+
+		glog.V(4).Infof("kubeService %v added.", kSvc.Name)
+		sc.enqueueService(svc)
+		return
+	}
+
+	// Otherwise, it's an orphan, and therefore not of interest to us here.
+}
+
+// handleKubeServiceUpdate figures out what Service manages a kubeService when the kubeService
+// is updated and enqueues it.
+func (sc *ServiceController) handleKubeServiceUpdate(old, cur interface{}) {
+	glog.V(5).Info("Got kubeService update")
+	oldKSvc := old.(*corev1.Service)
+	curKSvc := cur.(*corev1.Service)
+	if curKSvc.ResourceVersion == oldKSvc.ResourceVersion {
+		// Periodic resync will send update events for all known Deployments.
+		// Two different versions of the same Deployment will always have different RVs.
+		glog.V(5).Info("kubeService ResourceVersions are the same")
+		return
+	}
+
+	curControllerRef := metav1.GetControllerOf(curKSvc)
+	oldControllerRef := metav1.GetControllerOf(oldKSvc)
+	controllerRefChanged := !reflect.DeepEqual(curControllerRef, oldControllerRef)
+	if controllerRefChanged {
+		// The ControllerRef was changed. If this is a Service Deployment, this shouldn't happen.
+		if b := sc.resolveControllerRef(oldKSvc.Namespace, oldControllerRef); b != nil {
+			// FIXME: send error event here, this should not happen
+		}
+	}
+
+	// If it has a ControllerRef, that's all that matters.
+	if curControllerRef != nil {
+		svc := sc.resolveControllerRef(curKSvc.Namespace, curControllerRef)
+
+		// Not a Service kubeService.
+		if svc == nil {
+			return
+		}
+
+		sc.enqueueService(svc)
+		return
+	}
+
+	// Otherwise, it's an orphan, and therefore not of interest to us here.
+}
+
+// handleDeploymentDelete enqueues the Service that manages a Deployment when
+// the Deployment is deleted.
+func (sc *ServiceController) handleKubeServiceDelete(obj interface{}) {
+	kSvc, ok := obj.(*corev1.Service)
+
+	// When a delete is dropped, the relist will notice a pod in the store not
+	// in the list, leading to the insertion of a tombstone object which contains
+	// the deleted key/value.
+	if !ok {
+		tombstone, ok := obj.(cache.DeletedFinalStateUnknown)
+		if !ok {
+			runtime.HandleError(fmt.Errorf("couldn't get object from tombstone %#v", obj))
+			return
+		}
+		kSvc, ok = tombstone.Obj.(*corev1.Service)
+		if !ok {
+			runtime.HandleError(fmt.Errorf("tombstone contained object that is not a kubeService %#v", obj))
+			return
+		}
+	}
+
+	controllerRef := metav1.GetControllerOf(kSvc)
+	if controllerRef == nil {
+		// No controller should care about orphans being deleted.
+		return
+	}
+
+	svc := sc.resolveControllerRef(kSvc.Namespace, controllerRef)
+
+	// Not a Service kubeService
+	if svc == nil {
+		return
+	}
+
+	glog.V(4).Infof("kubeService %s deleted.", kSvc.Name)
+	sc.enqueueService(svc)
 }
 
 // resolveControllerRef returns the controller referenced by a ControllerRef,
@@ -295,6 +407,11 @@ func (sc *ServiceController) syncService(key string) error {
 
 	// Next, we need to find ensure that the kubeServices for this Service have been created.
 	kubeSvc, necessary, err := sc.getKubeServiceForService(svcCopy)
+
+	// If this service has been deleted, we should deprovision the resources and remove the finalizer.
+	if svcCopy.DeletionTimestamp != nil {
+		return sc.deprovisionService(svcCopy)
+	}
 
 	// If this Service requires a kubeService be created and it has not yet been, we'll just say
 	// we're done working on it for now.

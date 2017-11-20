@@ -28,6 +28,10 @@ type Context struct {
 
 	// Stop is the stop channel
 	Stop <-chan struct{}
+
+	// Some controllers (cloud controllers) care about where
+	// on the filesystem some terraform modules are.
+	TerraformModulePath string
 }
 
 type Initializer func(context Context)

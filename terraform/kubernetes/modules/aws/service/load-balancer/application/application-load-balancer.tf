@@ -29,7 +29,7 @@ provider "aws" {
 
 resource "aws_alb" "service" {
   security_groups = ["${aws_security_group.service_lb.id}"]
-  subnets         = ["${var.subnet_ids}"]
+  subnets         = ["${split(",", var.subnet_ids)}"]
 }
 
 # For each port in ports, create a new aws_alb_target_group that targets the
@@ -48,23 +48,23 @@ resource "aws_alb_target_group" "service" {
 
 # For each port in ports, create a new aws_alb_listener that exposes the
 # relevant port and forwards it to the relevant target group.
-resource "aws_alb_listener" "master" {
+resource "aws_alb_listener" "service" {
   count = "${length(var.ports)}"
 
   load_balancer_arn = "${aws_alb.service.arn}"
   port              = "${element(keys(var.ports), count.index)}"
 
   "default_action" {
-    target_group_arn = "${aws_alb_target_group.service.*.arn}"
+    target_group_arn = "${element(aws_alb_target_group.service.*.arn, count.index)}"
     type             = "forward"
   }
 }
 
-resource "aws_autoscaling_attachment" "master" {
+resource "aws_autoscaling_attachment" "service" {
   count = "${length(var.ports)}"
 
   autoscaling_group_name = "${var.autoscaling_group_name}"
-  alb_target_group_arn   = "${aws_alb_target_group.service.*.arn}"
+  alb_target_group_arn   = "${element(aws_alb_target_group.service.*.arn, count.index)}"
 }
 
 ###############################################################################
@@ -85,8 +85,8 @@ resource "aws_security_group_rule" "service_allow_ingress_from_lb" {
   security_group_id = "${var.service_security_group_id}"
 
   type                     = "ingress"
-  from_port                = "${element(values(ports), count.index)}"
-  to_port                  = "${element(values(ports), count.index)}"
+  from_port                = "${element(values(var.ports), count.index)}"
+  to_port                  = "${element(values(var.ports), count.index)}"
   protocol                 = "tcp"
   source_security_group_id = "${aws_security_group.service_lb.id}"
 }
@@ -97,8 +97,8 @@ resource "aws_security_group_rule" "service_allow_egress_to_lb" {
   security_group_id = "${var.service_security_group_id}"
 
   type                     = "egress"
-  from_port                = "${element(values(ports), count.index)}"
-  to_port                  = "${element(values(ports), count.index)}"
+  from_port                = "${element(values(var.ports), count.index)}"
+  to_port                  = "${element(values(var.ports), count.index)}"
   protocol                 = "tcp"
   source_security_group_id = "${aws_security_group.service_lb.id}"
 }
@@ -109,8 +109,8 @@ resource "aws_security_group_rule" "lb_allow_ingress" {
   security_group_id = "${aws_security_group.service_lb.id}"
 
   type        = "ingress"
-  from_port   = "${element(keys(ports), count.index)}"
-  to_port     = "${element(keys(ports), count.index)}"
+  from_port   = "${element(keys(var.ports), count.index)}"
+  to_port     = "${element(keys(var.ports), count.index)}"
   protocol    = "tcp"
   cidr_blocks = ["0.0.0.0/0"]
 }
@@ -121,8 +121,8 @@ resource "aws_security_group_rule" "lb_allow_egress_to_service" {
   security_group_id = "${aws_security_group.service_lb.id}"
 
   type                     = "egress"
-  from_port                = "${element(values(ports), count.index)}"
-  to_port                  = "${element(values(ports), count.index)}"
+  from_port                = "${element(values(var.ports), count.index)}"
+  to_port                  = "${element(values(var.ports), count.index)}"
   protocol                 = "tcp"
   source_security_group_id = "${var.service_security_group_id}"
 }

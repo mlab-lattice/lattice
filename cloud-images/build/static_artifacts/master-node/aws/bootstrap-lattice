@@ -8,13 +8,29 @@ REGION=$(echo ${AVAILABILITY_ZONE} | sed 's/.$//')
 
 USER_DATA=$(curl -s http://169.254.169.254/latest/user-data)
 AWS_ACCOUNT_ID=$(echo ${USER_DATA} | jq '.lattice.aws_account_id' | tr -d '"')
+VPC_ID=$(echo ${USER_DATA} | jq '.lattice.vpc_id' | tr -d '"')
+SUBNET_IDS=$(echo ${USER_DATA} | jq '.lattice.subnet_ids' | tr -d '"')
+BASE_NODE_AMI_ID=$(echo ${USER_DATA} | jq '.lattice.base_node_ami_id' | tr -d '"')
+KEY_NAME=$(echo ${USER_DATA} | jq '.lattice.key_name' | tr -d '"')
+STATE_S3_BUCKET=$(echo ${USER_DATA} | jq '.lattice.state_s3_bucket' | tr -d '"')
+SYSTEM_ID=$(echo ${USER_DATA} | jq '.lattice.system_id' | tr -d '"')
+SYSTEM_DEFINITION_URL=$(echo ${USER_DATA} | jq '.lattice.system_definition_url' | tr -d '"')
 
 /usr/bin/docker run \
     --network host \
     -v /etc/opt/kubernetes/admin/kubeconfig:/etc/bootstrap-lattice/kubeconfig \
     gcr.io/lattice-dev/kubernetes-bootstrap-lattice:latest \
-    -kubeconfig /etc/bootstrap-lattice/kubeconfig \
-    -provider AWS \
-    -lattice-container-registry gcr.io/lattice-dev \
-    -component-build-registry ${AWS_ACCOUNT_ID}.dkr.ecr.${REGION}.amazonaws.com \
-    -aws-region ${REGION}
+    --kubeconfig-path /etc/bootstrap-lattice/kubeconfig \
+    --lattice-container-registry gcr.io/lattice-dev \
+    --component-build-registry ${AWS_ACCOUNT_ID}.dkr.ecr.${REGION}.amazonaws.com \
+    --system-definition-url ${SYSTEM_DEFINITION_URL} \
+    --system-id ${SYSTEM_ID} \
+    --provider AWS \
+    --provider-var account-id=${AWS_ACCOUNT_ID} \
+    --provider-var region=${REGION} \
+    --provider-var vpc-id=${VPC_ID} \
+    --provider-var subnet-ids=${SUBNET_IDS} \
+    --provider-var base-node-ami-id=${BASE_NODE_AMI_ID} \
+    --provider-var key-name=${KEY_NAME} \
+    --terraform-backend S3 \
+    --terraform-backend-var bucket=${STATE_S3_BUCKET}

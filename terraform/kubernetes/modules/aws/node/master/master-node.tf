@@ -6,10 +6,11 @@ variable "aws_account_id" {}
 variable "region" {}
 
 variable "system_id" {}
+variable "system_definition_url" {}
 variable "system_s3_bucket" {}
 variable "vpc_id" {}
 variable "subnet_id" {}
-variable "build_subnet_ids" {}
+variable "subnet_ids" {}
 variable "base_node_ami_id" {}
 variable "route53_private_zone_id" {}
 
@@ -21,6 +22,10 @@ variable "key_name" {}
 ###############################################################################
 # Data
 #
+
+data "aws_vpc" "vpc" {
+  id = "${var.vpc_id}"
+}
 
 data "aws_subnet" "master_subnet" {
   id = "${var.subnet_id}"
@@ -101,6 +106,19 @@ data "aws_iam_policy_document" "master_node_role_policy_document" {
     ]
   }
 
+  # Allow all elb
+  statement {
+    effect = "Allow"
+
+    actions = [
+      "elasticloadbalancing:*",
+    ]
+
+    resources = [
+      "*",
+    ]
+  }
+
   # Allow all ecr
   statement {
     effect = "Allow"
@@ -171,15 +189,16 @@ module "base_node" {
 {
   "aws_account_id": "${var.aws_account_id}",
   "system_id": "${var.system_id}",
+  "system_definition_url": "${var.system_definition_url}",
   "name": "${var.name}",
   "base_node_ami_id": "${var.base_node_ami_id}",
-  "build_subnet_ids": "${var.build_subnet_ids}",
+  "subnet_ids": "${var.subnet_ids}",
   "key_name": "${var.key_name}",
   "route53_private_zone_id": "${var.route53_private_zone_id}",
   "state_s3_bucket": "${var.system_s3_bucket}",
   "state_s3_key_prefix": "masters/nodes/${var.name}/state",
   "vpc_id": "${var.vpc_id}",
-  "vpc_cidr_block": "${var.vpc_cidr_block}"
+  "vpc_cidr_block": "${data.aws_vpc.vpc.cidr_block}"
 }
 USER_DATA
 

@@ -17,10 +17,13 @@ var (
 	workingDir               string
 	kubeconfigPath           string
 	systemDefinitionUrl      string
+	systemId                 string
 	latticeContainerRegistry string
 	componentBuildRegistry   string
 	provider                 string
 	providerVars             *[]string
+	terraformBackend         string
+	terraformBackendVars     *[]string
 )
 
 // RootCmd represents the base command when called without any subcommands
@@ -84,13 +87,16 @@ func init() {
 	RootCmd.Flags().StringVar(&workingDir, "working-directory", "/tmp/lattice-system/", "path where subcommands will use as their working directory")
 	RootCmd.Flags().StringVar(&kubeconfigPath, "kubeconfig-path", "", "path to kubeconfig to use if not being invoked from within kubernetes")
 	RootCmd.Flags().StringVar(&systemDefinitionUrl, "system-definition-url", "", "url of the system definition repo for the system")
+	RootCmd.Flags().StringVar(&systemId, "system-id", "", "ID of the system")
 	RootCmd.Flags().StringVar(&latticeContainerRegistry, "lattice-container-registry", "", "registry which stores the lattice infrastructure containers")
 	RootCmd.Flags().StringVar(&componentBuildRegistry, "component-build-registry", "", "registry where component builds are tagged and potentially pushed to")
 	RootCmd.Flags().StringVar(&provider, "provider", "", "provider")
+	RootCmd.Flags().StringVar(&terraformBackend, "terraform-backend", "", "backend to use for storing terraform state")
 
 	// Flags().StringArray --provider-var=a,b --provider-var=c results in ["a,b", "c"],
 	// whereas Flags().StringSlice --provider-var=a,b --provider-var=c results in ["a", "b", "c"].
 	// We don't want this because we want to be able to pass in for example
 	// --provider-var=availability-zones=us-east-1a,us-east-1b resulting in ["availability-zones=us-east-1a,us-east-1b"]
 	providerVars = RootCmd.Flags().StringArray("provider-var", nil, "additional variables to pass to the provider")
+	terraformBackendVars = RootCmd.Flags().StringArray("terraform-backend-var", nil, "additional variables to pass to the terraform backend")
 }

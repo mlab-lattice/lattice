@@ -9,6 +9,7 @@ variable "availability_zones" {
 }
 
 variable "system_id" {}
+variable "system_definition_url" {}
 variable "base_node_ami_id" {}
 variable "master_node_ami_id" {}
 variable "master_node_instance_type" {}
@@ -71,7 +72,7 @@ resource "aws_s3_bucket" "system_bucket" {
 #
 
 resource "aws_ecr_repository" "component-builds" {
-  name = "component-builds"
+  name = "${var.system_id}.component-builds"
 }
 
 ###############################################################################
@@ -180,10 +181,11 @@ module "master_node" {
   region         = "${var.region}"
 
   system_id               = "${var.system_id}"
+  system_definition_url   = "${var.system_definition_url}"
   system_s3_bucket        = "${aws_s3_bucket.system_bucket.id}"
   vpc_id                  = "${aws_vpc.vpc.id}"
   subnet_id               = "${element(aws_subnet.subnet.*.id, 0)}"
-  build_subnet_ids        = "${join(",", aws_subnet.subnet.*.id)}"
+  subnet_ids              = "${join(",", aws_subnet.subnet.*.id)}"
   base_node_ami_id        = "${var.base_node_ami_id}"
   route53_private_zone_id = "${aws_route53_zone.private_zone.id}"
 

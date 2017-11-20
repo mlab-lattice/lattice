@@ -36,3 +36,31 @@ func (sc *ServiceController) addFinalizer(svc *crv1.Service) error {
 		Do().
 		Into(svc)
 }
+
+func (sc *ServiceController) removeFinalizer(svc *crv1.Service) error {
+	// Build up a list of all the finalizers except the aws service controller finalizer.
+	finalizers := []string{}
+	found := false
+	for _, finalizer := range svc.Finalizers {
+		if finalizer == kubeFinalizerAWSServiceController {
+			found = true
+			continue
+		}
+		finalizers = append(finalizers, finalizer)
+	}
+
+	// If the finalizer wasn't part of the list, nothing to do.
+	if !found {
+		return nil
+	}
+
+	// The finalizer was in the list, so we should remove it.
+	svc.Finalizers = finalizers
+	return sc.latticeResourceRestClient.Put().
+		Namespace(svc.Namespace).
+		Resource(crv1.ServiceResourcePlural).
+		Name(svc.Name).
+		Body(svc).
+		Do().
+		Into(svc)
+}

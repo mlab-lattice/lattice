@@ -7,6 +7,7 @@ go_library(
         "docker.go",
         "namespace.go",
         "service_account.go",
+        "terraform.go",
         "tolerations.go",
     ],
     importpath = "github.com/mlab-lattice/system/pkg/kubernetes/constants",

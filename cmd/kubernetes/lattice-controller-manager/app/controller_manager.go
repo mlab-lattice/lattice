@@ -3,6 +3,9 @@ package app
 import (
 	"time"
 
+	coreconstants "github.com/mlab-lattice/core/pkg/constants"
+
+	awscontrollers "github.com/mlab-lattice/system/cmd/kubernetes/lattice-controller-manager/app/cloudcontrollers/aws"
 	controller "github.com/mlab-lattice/system/cmd/kubernetes/lattice-controller-manager/app/common"
 	"github.com/mlab-lattice/system/cmd/kubernetes/lattice-controller-manager/app/kubernetescontrollers"
 	"github.com/mlab-lattice/system/cmd/kubernetes/lattice-controller-manager/app/latticecontrollers"
@@ -40,9 +43,9 @@ func Run(kubeconfig, provider, terraformModulePath string) {
 	}
 
 	// TODO: setting stop as nil for now, won't actually need it until leader-election is used
-	ctx := CreateControllerContext(rest.Interface(latticeResourceClient), config, nil)
+	ctx := CreateControllerContext(rest.Interface(latticeResourceClient), config, nil, terraformModulePath)
 	glog.V(1).Info("Starting controllers")
-	StartControllers(ctx, GetControllerInitializers())
+	StartControllers(ctx, GetControllerInitializers(provider))
 
 	glog.V(4).Info("Starting informer factory informers")
 	ctx.InformerFactory.Start(ctx.Stop)
@@ -60,6 +63,7 @@ func CreateControllerContext(
 	latticeResourceClient rest.Interface,
 	kubeconfig *rest.Config,
 	stop <-chan struct{},
+	terraformModulePath string,
 ) controller.Context {
 	cb := controller.ClientBuilder{
 		Kubeconfig: kubeconfig,
@@ -75,6 +79,8 @@ func CreateControllerContext(
 		ClientBuilder:             cb,
 
 		Stop: stop,
+
+		TerraformModulePath: terraformModulePath,
 	}
 }
 
@@ -149,7 +155,7 @@ func getCRDInformers(latticeResourceClient rest.Interface) map[string]cache.Shar
 	return informersMap
 }
 
-func GetControllerInitializers() map[string]controller.Initializer {
+func GetControllerInitializers(provider string) map[string]controller.Initializer {
 	initializers := map[string]controller.Initializer{}
 
 	for name, initializer := range kubernetescontrollers.GetControllerInitializers() {
@@ -158,6 +164,17 @@ func GetControllerInitializers() map[string]controller.Initializer {
 
 	for name, initializer := range latticecontrollers.GetControllerInitializers() {
 		initializers["lattice-"+name] = initializer
+	}
+
+	switch provider {
+	case coreconstants.ProviderAWS:
+		for name, initializer := range awscontrollers.GetControllerInitializers() {
+			initializers["cloud-aws-"+name] = initializer
+		}
+	case coreconstants.ProviderLocal:
+		// Local case doesn't need any extra controllers
+	default:
+		panic("unsupported provider " + provider)
 	}
 
 	return initializers

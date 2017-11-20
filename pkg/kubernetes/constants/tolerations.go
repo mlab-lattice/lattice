@@ -8,6 +8,7 @@ const (
 	TaintMasterNode       = "node-role.kubernetes.io/master"
 	TaintBuildNode        = "node-role.lattice.mlab.com/build"
 	TaintLatticeNamespace = "namespace.lattice.mlab.com"
+	TaintServiceNode      = "node-role.lattice.mlab.com/service"
 )
 
 var TolerateAllTaints corev1.Toleration = corev1.Toleration{

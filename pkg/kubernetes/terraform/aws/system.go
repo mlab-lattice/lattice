@@ -8,7 +8,8 @@ type System struct {
 	AvailabilityZones []string `json:"availability_zones"`
 	KeyName           string   `json:"key_name"`
 
-	SystemId string `json:"system_id"`
+	SystemId            string `json:"system_id"`
+	SystemDefinitionUrl string `json:"system_definition_url"`
 
 	MasterNodeInstanceType          string `json:"master_node_instance_type"`
 	MasterNodeAMIId                 string `json:"master_node_ami_id"`
