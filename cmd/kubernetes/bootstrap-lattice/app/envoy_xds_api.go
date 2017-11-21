@@ -56,6 +56,13 @@ func seedEnvoyXdsApi(kubeClientset *kubernetes.Clientset) {
 					HostNetwork:        true,
 					DNSPolicy:          corev1.DNSDefault,
 					ServiceAccountName: constants.ServiceAccountEnvoyXdsApi,
+					Tolerations: []corev1.Toleration{
+						{
+							Key:      constants.TaintServiceNode,
+							Operator: corev1.TolerationOpExists,
+							Effect:   corev1.TaintEffectNoSchedule,
+						},
+					},
 				},
 			},
 		},
