@@ -7,8 +7,8 @@ import (
 	systemdefinition "github.com/mlab-lattice/core/pkg/system/definition"
 	systemtree "github.com/mlab-lattice/core/pkg/system/tree"
 
-	crv1 "github.com/mlab-lattice/system/pkg/kubernetes/customresource/v1"
 	"github.com/mlab-lattice/system/pkg/kubernetes/constants"
+	crv1 "github.com/mlab-lattice/system/pkg/kubernetes/customresource/v1"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -21,7 +21,8 @@ func (src *SystemRolloutController) getNewSystem(sysRollout *crv1.SystemRollout,
 
 	sys := &crv1.System{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: string(sysRollout.Spec.LatticeNamespace),
+			Name:       string(sysRollout.Spec.LatticeNamespace),
+			Finalizers: []string{constants.KubeFinalizerSystemController},
 		},
 		Spec: *sysSpec,
 		Status: crv1.SystemStatus{

@@ -155,7 +155,7 @@ func (sc *SystemController) createService(sys *crv1.System, svcInfo *crv1.System
 	}
 
 	result := &crv1.Service{}
-	err = sc.latticeResourceClient.Post().
+	err = sc.latticeResourceRestClient.Post().
 		Namespace(svc.Namespace).
 		Resource(crv1.ServiceResourcePlural).
 		Body(svc).
@@ -176,7 +176,7 @@ func (sc *SystemController) updateServiceSpec(svc *crv1.Service, svcSpec *crv1.S
 	svc.Status.State = crv1.ServiceStateRollingOut
 
 	result := &crv1.Service{}
-	err := sc.latticeResourceClient.Put().
+	err := sc.latticeResourceRestClient.Put().
 		Namespace(svc.Namespace).
 		Resource(crv1.ServiceResourcePlural).
 		Name(svc.Name).
@@ -189,7 +189,7 @@ func (sc *SystemController) updateServiceSpec(svc *crv1.Service, svcSpec *crv1.S
 
 func (sc *SystemController) deleteService(svc *crv1.Service) error {
 	glog.V(5).Infof("Deleting Service %q/%q", svc.Namespace, svc.Name)
-	err := sc.latticeResourceClient.Delete().
+	err := sc.latticeResourceRestClient.Delete().
 		Namespace(svc.Namespace).
 		Resource(crv1.ServiceResourcePlural).
 		Name(svc.Name).

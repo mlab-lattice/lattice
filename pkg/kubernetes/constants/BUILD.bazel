@@ -5,10 +5,11 @@ go_library(
     srcs = [
         "config.go",
         "docker.go",
+        "finalizer.go",
         "namespace.go",
         "service_account.go",
         "terraform.go",
-        "tolerations.go",
+        "toleration.go",
     ],
     importpath = "github.com/mlab-lattice/system/pkg/kubernetes/constants",
     visibility = ["//visibility:public"],

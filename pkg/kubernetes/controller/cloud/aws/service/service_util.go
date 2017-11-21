@@ -2,6 +2,8 @@ package service
 
 import (
 	crv1 "github.com/mlab-lattice/system/pkg/kubernetes/customresource/v1"
+
+	"github.com/golang/glog"
 )
 
 const (
@@ -12,6 +14,7 @@ func (sc *ServiceController) addFinalizer(svc *crv1.Service) error {
 	// Check to see if the finalizer already exists. If so nothing needs to be done.
 	for _, finalizer := range svc.Finalizers {
 		if finalizer == kubeFinalizerAWSServiceController {
+			glog.V(5).Infof("Service %v has %v finalizer", svc.Name, kubeFinalizerAWSServiceController)
 			return nil
 		}
 	}
@@ -28,6 +31,7 @@ func (sc *ServiceController) addFinalizer(svc *crv1.Service) error {
 	// and handled concurrently, which breaks some invariants. I don't think this should be
 	// the case)
 	svc.Finalizers = append(svc.Finalizers, kubeFinalizerAWSServiceController)
+	glog.V(5).Infof("Service %v missing %v finalizer, adding it", svc.Name, kubeFinalizerAWSServiceController)
 	return sc.latticeResourceRestClient.Put().
 		Namespace(svc.Namespace).
 		Resource(crv1.ServiceResourcePlural).

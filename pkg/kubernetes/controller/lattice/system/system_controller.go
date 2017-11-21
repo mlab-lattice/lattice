@@ -25,7 +25,7 @@ type SystemController struct {
 	syncHandler   func(sysKey string) error
 	enqueueSystem func(sysBuild *crv1.System)
 
-	latticeResourceClient rest.Interface
+	latticeResourceRestClient rest.Interface
 
 	systemStore       cache.Store
 	systemStoreSynced cache.InformerSynced
@@ -42,7 +42,7 @@ func NewSystemController(
 	serviceInformer cache.SharedInformer,
 ) *SystemController {
 	sc := &SystemController{
-		latticeResourceClient: latticeResourceRestClient,
+		latticeResourceRestClient: latticeResourceRestClient,
 		queue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "system"),
 	}
 
@@ -59,10 +59,7 @@ func NewSystemController(
 	serviceInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    sc.handleServiceAdd,
 		UpdateFunc: sc.handleServiceUpdate,
-		// TODO: for now it is assumed that ServiceBuilds are not deleted.
-		// in the future we'll probably want to add a GC process for ServiceBuilds.
-		// At that point we should listen here for those deletes.
-		// FIXME: Document SvcB GC ideas (need to write down last used date, lock properly, etc)
+		DeleteFunc: sc.handleServiceDelete,
 	})
 	sc.serviceStore = serviceInformer.GetStore()
 	sc.serviceStoreSynced = serviceInformer.HasSynced
@@ -147,6 +144,40 @@ func (sc *SystemController) handleServiceUpdate(old, cur interface{}) {
 	}
 
 	// Otherwise, it's an orphan. This should not happen.
+	// FIXME: send error event
+}
+
+func (sc *SystemController) handleServiceDelete(obj interface{}) {
+	svc, ok := obj.(*crv1.Service)
+	if !ok {
+		tombstone, ok := obj.(cache.DeletedFinalStateUnknown)
+		if !ok {
+			runtime.HandleError(fmt.Errorf("couldn't get object from tombstone %#v", obj))
+			return
+		}
+		svc, ok = tombstone.Obj.(*crv1.Service)
+		if !ok {
+			runtime.HandleError(fmt.Errorf("tombstone contained object that is not a Service %#v", obj))
+			return
+		}
+	}
+	glog.V(4).Infof("Service %s deleted", svc.Name)
+	// If it has a ControllerRef, that's all that matters.
+	if controllerRef := metav1.GetControllerOf(svc); controllerRef != nil {
+		sys := sc.resolveControllerRef(svc.Namespace, controllerRef)
+
+		// Not a SystemBuild. This shouldn't happen.
+		if sys == nil {
+			// FIXME: send error event
+			return
+		}
+
+		glog.V(4).Infof("Service %s added.", svc.Name)
+		sc.enqueueSystem(sys)
+		return
+	}
+
+	// It's an orphan. This shouldn't happen.
 	// FIXME: send error event
 }
 
@@ -287,6 +318,10 @@ func (sc *SystemController) syncSystem(key string) error {
 	sys := sysObj.(*crv1.System)
 	sysCopy := sys.DeepCopy()
 
+	if sysCopy.DeletionTimestamp != nil {
+		return sc.syncDeletedSystem(sysCopy)
+	}
+
 	err = sc.syncSystemServices(sysCopy)
 	if err != nil {
 		return err
@@ -297,6 +332,33 @@ func (sc *SystemController) syncSystem(key string) error {
 	}
 
 	return sc.syncSystemStatus(sysCopy)
+}
+
+// Warning: syncDeletedSystem mutates sys. Do not pass in a pointer to a
+// System from the shared cache.
+func (sc *SystemController) syncDeletedSystem(sys *crv1.System) error {
+	deletedSvc := false
+	// Delete all Services in our namespace
+	for _, svcObj := range sc.serviceStore.List() {
+		svc := svcObj.(*crv1.Service)
+		// Only care about Services in this System's Namespace
+		if svc.Namespace != sys.Namespace {
+			continue
+		}
+
+		glog.V(4).Infof("Found Service %q in Namespace %q, deleting", svc.Name, svc.Namespace)
+		deletedSvc = true
+		err := sc.deleteService(svc)
+		if err != nil {
+			return err
+		}
+	}
+
+	if !deletedSvc {
+		return sc.removeFinalizer(sys)
+	}
+
+	return nil
 }
 
 // Warning: syncSystemServices mutates sys. Do not pass in a pointer to a
@@ -440,7 +502,7 @@ func (sc *SystemController) syncSystemStatus(sys *crv1.System) error {
 
 func (sc *SystemController) updateSystem(sys *crv1.System) (*crv1.System, error) {
 	result := &crv1.System{}
-	err := sc.latticeResourceClient.Put().
+	err := sc.latticeResourceRestClient.Put().
 		Namespace(sys.Namespace).
 		Resource(crv1.SystemResourcePlural).
 		Name(sys.Name).

@@ -402,11 +402,14 @@ func (sc *ServiceController) syncService(key string) error {
 	// clean up anything we have created when the Service gets deleted.
 	err = sc.addFinalizer(svcCopy)
 	if err != nil {
-		return nil
+		return err
 	}
 
 	// Next, we need to find ensure that the kubeServices for this Service have been created.
 	kubeSvc, necessary, err := sc.getKubeServiceForService(svcCopy)
+	if err != nil {
+		return err
+	}
 
 	// If this service has been deleted, we should deprovision the resources and remove the finalizer.
 	if svcCopy.DeletionTimestamp != nil {
