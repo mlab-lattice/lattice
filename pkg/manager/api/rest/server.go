@@ -4,8 +4,9 @@ import (
 	"fmt"
 	"net/http"
 
+	coreconstants "github.com/mlab-lattice/core/pkg/constants"
 	systemdefinition "github.com/mlab-lattice/core/pkg/system/definition"
-	systemdefinitionblock "github.com/mlab-lattice/core/pkg/system/definition/block"
+	systemresolver "github.com/mlab-lattice/core/pkg/system/resolver"
 	systemtree "github.com/mlab-lattice/core/pkg/system/tree"
 	coretypes "github.com/mlab-lattice/core/pkg/types"
 
@@ -15,14 +16,18 @@ import (
 )
 
 type restServer struct {
-	router  *gin.Engine
-	backend backend.Interface
+	router   *gin.Engine
+	backend  backend.Interface
+	resolver systemresolver.SystemResolver
 }
 
-func RunNewRestServer(b backend.Interface, port int32) {
+func RunNewRestServer(b backend.Interface, port int32, workingDirectory string) {
 	s := restServer{
 		router:  gin.Default(),
 		backend: b,
+		resolver: systemresolver.SystemResolver{
+			WorkDirectory: workingDirectory + "/resolver",
+		},
 	}
 
 	s.mountHandlers()
@@ -30,8 +35,8 @@ func RunNewRestServer(b backend.Interface, port int32) {
 }
 
 type systemVersionResponse struct {
-	Id         string                   `json:"id"`
-	Definition *systemdefinition.System `json:"definition"`
+	Id         string                     `json:"id"`
+	Definition systemdefinition.Interface `json:"definition"`
 }
 
 type buildSystemRequest struct {
@@ -69,15 +74,20 @@ func (r *restServer) mountHandlers() {
 			versions := namespace.Group("/versions")
 			{
 				versions.GET("", func(c *gin.Context) {
-					//namespace := c.Param("namespace_id")
-					versions := getSystemVersions()
+					namespace := c.Param("namespace_id")
+					versions, err := r.getSystemVersions(namespace)
+					if err != nil {
+						c.String(http.StatusInternalServerError, err.Error())
+						return
+					}
+
 					c.JSON(http.StatusOK, versions)
 				})
 
 				versions.GET("/:version_id", func(c *gin.Context) {
-					//namespace := c.Param("namespace_id")
+					namespace := c.Param("namespace_id")
 					version := c.Param("version_id")
-					sysDef, err := getSystemRoot(version)
+					sysDef, err := r.getSystemRoot(namespace, version)
 					if err != nil {
 						c.String(http.StatusInternalServerError, err.Error())
 						return
@@ -85,7 +95,7 @@ func (r *restServer) mountHandlers() {
 
 					c.JSON(http.StatusOK, systemVersionResponse{
 						Id:         version,
-						Definition: sysDef,
+						Definition: sysDef.Definition(),
 					})
 				})
 			}
@@ -102,7 +112,7 @@ func (r *restServer) mountHandlers() {
 						return
 					}
 
-					root, err := getSystemRoot(req.Version)
+					root, err := r.getSystemRoot(namespace, req.Version)
 					if err != nil {
 						c.String(http.StatusInternalServerError, err.Error())
 						return
@@ -184,7 +194,7 @@ func (r *restServer) mountHandlers() {
 					var err error
 					if req.Version != nil {
 						// FIXME: get system definition
-						root, err := getSystemRoot(*req.Version)
+						root, err := r.getSystemRoot(namespace, *req.Version)
 						if err != nil {
 							c.String(http.StatusInternalServerError, err.Error())
 							return
@@ -342,120 +352,24 @@ func (r *restServer) mountHandlers() {
 	}
 }
 
-func getSystemRoot(version string) (*systemdefinition.System, error) {
-	var wwwCommit string
-	if version == "v1.0.0" {
-
-		wwwCommit = "3d2acf451eb031694915c8aa755555a09037db80"
-	} else if version == "v2.0.0" {
-		wwwCommit = "3d2acf451eb031694915c8aa755555a09037db80"
-	} else {
-		return nil, fmt.Errorf("invalid version %v", version)
-	}
-	serviceCommit := "7651060c28687531116837cdeb685d5e5be5a02b"
-
-	language := "node:boron"
-
-	clientInstallCommand := "npm install && npm run build"
-	serviceInstallCommand := "npm install"
-	var one int32 = 1
-	t2small := "t2.small"
-
-	sysDefinition := &systemdefinition.System{
-		Meta: systemdefinitionblock.Metadata{
-			Name: "petflix",
-			Type: systemdefinition.SystemType,
-		},
-		Subsystems: []systemdefinition.Interface{
-			systemdefinition.Interface(&systemdefinition.Service{
-				Meta: systemdefinitionblock.Metadata{
-					Name: "www",
-					Type: systemdefinition.ServiceType,
-				},
-				Components: []*systemdefinitionblock.Component{
-					{
-						Name: "http",
-						Ports: []*systemdefinitionblock.ComponentPort{
-							{
-								Name:     "http",
-								Port:     8080,
-								Protocol: systemdefinitionblock.HttpProtocol,
-								ExternalAccess: &systemdefinitionblock.ExternalAccess{
-									Public: true,
-								},
-							},
-						},
-						Build: systemdefinitionblock.ComponentBuild{
-							GitRepository: &systemdefinitionblock.GitRepository{
-								Url:    "https://github.com/mlab-lattice/example-petflix-www",
-								Commit: &wwwCommit,
-							},
-							Language: &language,
-							Command:  &clientInstallCommand,
-						},
-						Exec: systemdefinitionblock.ComponentExec{
-							Command: []string{
-								"node",
-								"app.js",
-							},
-							Environment: map[string]string{
-								"PETFLIX_API_URI": "http://api.petflix",
-							},
-						},
-					},
-				},
-				Resources: systemdefinitionblock.Resources{
-					NumInstances: &one,
-					InstanceType: &t2small,
-				},
-			}),
-			systemdefinition.Interface(&systemdefinition.Service{
-				Meta: systemdefinitionblock.Metadata{
-					Name: "api",
-					Type: systemdefinition.ServiceType,
-				},
-				Components: []*systemdefinitionblock.Component{
-					{
-						Name: "http",
-						Ports: []*systemdefinitionblock.ComponentPort{
-							{
-								Name:     "http",
-								Port:     80,
-								Protocol: systemdefinitionblock.HttpProtocol,
-							},
-						},
-						Build: systemdefinitionblock.ComponentBuild{
-							GitRepository: &systemdefinitionblock.GitRepository{
-								Url:    "https://github.com/mlab-lattice/example-petflix-service",
-								Commit: &serviceCommit,
-							},
-							Language: &language,
-							Command:  &serviceInstallCommand,
-						},
-						Exec: systemdefinitionblock.ComponentExec{
-							Command: []string{
-								"node",
-								"index.js",
-							},
-							Environment: map[string]string{
-								"PORT":        "80",
-								"MONGODB_URI": "connection_string_goes_here",
-							},
-						},
-					},
-				},
-				Resources: systemdefinitionblock.Resources{
-					NumInstances: &one,
-					InstanceType: &t2small,
-				},
-			}),
-		},
+func (r *restServer) getSystemRoot(ln string, version string) (systemtree.Node, error) {
+	url, err := r.backend.GetSystemUrl(coretypes.LatticeNamespace(ln))
+	if err != nil {
+		return nil, err
 	}
 
-	return sysDefinition, nil
-	//return systemtree.NewNode(sysDefinition, nil)
+	return r.resolver.ResolveDefinition(
+		fmt.Sprintf("%v#%v", url, version),
+		coreconstants.SystemDefinitionRootPathDefault,
+		&systemresolver.ResolveOptions{},
+	)
 }
 
-func getSystemVersions() []string {
-	return []string{"v1.0.0"}
+func (r *restServer) getSystemVersions(ln string) ([]string, error) {
+	url, err := r.backend.GetSystemUrl(coretypes.LatticeNamespace(ln))
+	if err != nil {
+		return nil, err
+	}
+
+	return r.resolver.ListDefinitionVersions(url, &systemresolver.ResolveOptions{})
 }

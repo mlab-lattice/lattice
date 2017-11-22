@@ -11,6 +11,9 @@ DEV_TAG ?= latest
 
 CONTAINER_NAME_BUILD = lattice-system-builder
 
+BASE_DOCKER_IMAGE_DEBIAN_WITH_SSH = debian-with-ssh
+BASE_DOCKER_IMAGE_DEBIAN_WITH_SSH_DEV = $(DEV_REGISTRY)/$(BASE_DOCKER_IMAGE_DEBIAN_WITH_SSH):$(DEV_TAG)
+
 BASE_DOCKER_IMAGE_UBUNTU_WITH_IPTABLES = ubuntu-with-iptables
 BASE_DOCKER_IMAGE_UBUNTU_WITH_IPTABLES_DEV = $(DEV_REGISTRY)/$(BASE_DOCKER_IMAGE_UBUNTU_WITH_IPTABLES):$(DEV_TAG)
 
@@ -87,11 +90,13 @@ gazelle:
 docker-build-base-images:
 	docker build $(DIR)/docker/envoy/ -f $(DIR)/docker/envoy/Dockerfile.iptables -t $(BASE_DOCKER_IMAGE_UBUNTU_WITH_IPTABLES_DEV)
 	docker build $(DIR)/docker/component-build -f $(DIR)/docker/component-build/Dockerfile.aws -t $(BASE_DOCKER_IMAGE_UBUNTU_WITH_AWS_DEV)
+	docker build $(DIR)/docker/debian -f $(DIR)/docker/debian/Dockerfile.ssh -t $(BASE_DOCKER_IMAGE_DEBIAN_WITH_SSH_DEV)
 
 .PHONY: docker-push-dev-base-images
 docker-push-dev-base-images:
 	gcloud docker -- push $(BASE_DOCKER_IMAGE_UBUNTU_WITH_IPTABLES_DEV)
 	gcloud docker -- push $(BASE_DOCKER_IMAGE_UBUNTU_WITH_AWS_DEV)
+	gcloud docker -- push $(BASE_DOCKER_IMAGE_DEBIAN_WITH_SSH_DEV)
 
 .PHONY: docker-build-and-push-dev-base-images
 docker-build-and-push-dev-base-images: docker-build-base-images docker-push-dev-base-images

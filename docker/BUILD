@@ -41,19 +41,34 @@ container_image(
 
 container_image(
     name = "terraform-modules-kubernetes",
+    base = ":terraform",
     directory = "/etc/terraform",
     tars = ["//terraform/kubernetes:modules-tar"],
-    base = ":terraform",
+)
+
+container_image(
+    name = "wrap-with-ssh-agent",
+    base = "@debian_with_ssh//image",
+    directory = "/usr/local/bin",
+    files = ["//bin/ssh:wrap-with-ssh-agent"],
+    entrypoint = "/usr/local/bin/wrap-with-ssh-agent",
+)
+
+container_image(
+    name = "wrap-with-ssh-agent-and-known-hosts",
+    base = ":wrap-with-ssh-agent",
+    directory = "/etc/ssh",
+    files = ["//docker/kubernetes/manager/api/ssh:ssh_known_hosts"],
 )
 
 load("@io_bazel_rules_docker//go:image.bzl", "go_image")
 
 go_image(
     name = "lattice-system-cli",
+    base = ":terraform-modules-kubernetes",
     importpath = "github.com/mlab-lattice/system/cmd/cli",
     library = "//cmd/cli:go_default_library",
     visibility = ["//visibility:public"],
-    base = ":terraform-modules-kubernetes",
 )
 
 go_image(
@@ -72,15 +87,26 @@ go_image(
 
 go_image(
     name = "kubernetes-lattice-controller-manager",
+    base = ":terraform-modules-kubernetes",
     importpath = "github.com/mlab-lattice/system/cmd/kubernetes/lattice-controller-manager",
     library = "//cmd/kubernetes/lattice-controller-manager:go_default_library",
     visibility = ["//visibility:public"],
-    base = ":terraform-modules-kubernetes",
 )
 
-go_image(
+#go_image(
+#    name = "kubernetes-manager-api-rest",
+#    importpath = "github.com/mlab-lattice/system/cmd/kubernetes/manager/api-rest",
+#    library = "//cmd/kubernetes/manager/api-rest:go_default_library",
+#    visibility = ["//visibility:public"],
+#    base = "@debian_with_ssh//image",
+#)
+container_image(
     name = "kubernetes-manager-api-rest",
-    importpath = "github.com/mlab-lattice/system/cmd/kubernetes/manager/api-rest",
-    library = "//cmd/kubernetes/manager/api-rest:go_default_library",
-    visibility = ["//visibility:public"],
+    base = ":wrap-with-ssh-agent-and-known-hosts",
+    directory = "/app/docker",
+    files = ["//cmd/kubernetes/manager/api-rest"],
+    entrypoint = [
+        "/usr/local/bin/wrap-with-ssh-agent",
+        "/app/docker/api-rest"
+    ],
 )

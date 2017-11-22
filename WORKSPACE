@@ -46,6 +46,13 @@ container_pull(
 )
 
 container_pull(
+  name = "debian_with_ssh",
+  registry = "gcr.io/lattice-dev",
+  repository = "debian-with-ssh",
+  tag = "latest"
+)
+
+container_pull(
   name = "ubuntu_with_aws",
   registry = "gcr.io/lattice-dev",
   repository = "ubuntu-with-aws",
@@ -68,7 +75,7 @@ _go_image_repos()
 
 go_repository(
     name = "com_github_mlab_lattice_core",
-    commit = "524743e4acbab0212708937b3b307c725333b8f8",
+    commit = "ab702b6ce0def365ed37e364dfe7848e06b6d8c5",
     importpath = "github.com/mlab-lattice/core",
     remote = "git@github.com:mlab-lattice/core.git",
     vcs = "git",
@@ -127,9 +134,78 @@ go_repository(
 
 # Core dependencies
 go_repository(
+    name = "com_github_sergi_go_diff",
+    commit = "feef008d51ad2b3778f85d387ccf91735543008d",
+    importpath = "github.com/sergi/go-diff",
+)
+
+go_repository(
     name = "com_github_satori_go_uuid",
     commit = "5bf94b69c6b68ee1b541973bb8e1144db23a194b",
     importpath = "github.com/satori/go.uuid",
+)
+
+go_repository(
+    name = "in_gopkg_src_d_go_git_v4",
+    commit = "f9879dd043f84936a1f8acb8a53b74332a7ae135",
+    importpath = "gopkg.in/src-d/go-git.v4",
+)
+
+go_repository(
+    name = "org_golang_x_crypto",
+    build_file_name = "BUILD.bazel",  # darwin build: case insensitive file system problem
+    commit = "bd6f299fb381e4c3393d1c4b1f0b94f5e77650c8",
+    importpath = "golang.org/x/crypto",
+)
+
+go_repository(
+    name = "com_github_xanzy_ssh_agent",
+    commit = "ba9c9e33906f58169366275e3450db66139a31a9",
+    importpath = "github.com/xanzy/ssh-agent",
+)
+
+go_repository(
+    name = "com_github_mitchellh_go_homedir",
+    commit = "b8bc1bf767474819792c23f32d8286a45736f1c6",
+    importpath = "github.com/mitchellh/go-homedir",
+)
+
+go_repository(
+    name = "in_gopkg_src_d_go_billy_v3",
+    commit = "c329b7bc7b9d24905d2bc1b85bfa29f7ae266314",
+    importpath = "gopkg.in/src-d/go-billy.v3",
+)
+
+go_repository(
+    name = "org_golang_x_text",
+    build_file_name = "BUILD.bazel",  # darwin build: case insensitive file system problem
+    commit = "88f656faf3f37f690df1a32515b479415e1a6769",
+    importpath = "golang.org/x/text",
+)
+
+go_repository(
+    name = "com_github_jbenet_go_context",
+    commit = "d14ea06fba99483203c19d92cfcd13ebe73135f4",
+    importpath = "github.com/jbenet/go-context",
+)
+
+go_repository(
+    name = "org_golang_x_net",
+    build_file_name = "BUILD.bazel",  # darwin build: case insensitive file system problem
+    commit = "9dfe39835686865bff950a07b394c12a98ddc811",
+    importpath = "golang.org/x/net",
+)
+
+go_repository(
+    name = "com_github_src_d_gcfg",
+    commit = "f187355171c936ac84a82793659ebb4936bc1c23",
+    importpath = "github.com/src-d/gcfg",
+)
+
+go_repository(
+    name = "in_gopkg_warnings_v0",
+    commit = "ec4a0fea49c7b46c2aeb0b51aac55779c607e52b",
+    importpath = "gopkg.in/warnings.v0",
 )
 
 # k8s dependencies
