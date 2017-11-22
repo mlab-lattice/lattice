@@ -51,6 +51,10 @@ type rollOutSystemResponse struct {
 	RolloutId coretypes.SystemRolloutId `json:"rolloutId"`
 }
 
+type tearDownSystemResponse struct {
+	TeardownId coretypes.SystemTeardownId `json:"teardownId"`
+}
+
 func (r *restServer) mountHandlers() {
 	// Status
 	r.router.GET("/status", func(c *gin.Context) {
@@ -241,6 +245,58 @@ func (r *restServer) mountHandlers() {
 				})
 			}
 
+			// Teardowns
+			teardowns := namespace.Group("/teardowns")
+			{
+				// tear-down-system
+				teardowns.POST("", func(c *gin.Context) {
+					namespace := c.Param("namespace_id")
+
+					tid, err := r.backend.TearDownSystem(coretypes.LatticeNamespace(namespace))
+
+					if err != nil {
+						c.String(http.StatusInternalServerError, err.Error())
+						return
+					}
+
+					c.JSON(http.StatusOK, tearDownSystemResponse{
+						TeardownId: tid,
+					})
+				})
+
+				// list-teardowns
+				teardowns.GET("", func(c *gin.Context) {
+					namespace := c.Param("namespace_id")
+
+					ts, err := r.backend.ListSystemTeardowns(coretypes.LatticeNamespace(namespace))
+					if err != nil {
+						c.String(http.StatusInternalServerError, err.Error())
+						return
+					}
+
+					c.JSON(http.StatusOK, ts)
+				})
+
+				// get-teardown
+				teardowns.GET("/:teardown_id", func(c *gin.Context) {
+					namespace := c.Param("namespace_id")
+					tid := c.Param("teardown_id")
+
+					t, exists, err := r.backend.GetSystemTeardown(coretypes.LatticeNamespace(namespace), coretypes.SystemTeardownId(tid))
+					if err != nil {
+						c.String(http.StatusInternalServerError, err.Error())
+						return
+					}
+
+					if !exists {
+						c.String(http.StatusNotFound, "")
+						return
+					}
+
+					c.JSON(http.StatusOK, t)
+				})
+			}
+
 			// Services
 			services := namespace.Group("/services")
 			{
@@ -303,6 +359,7 @@ func getSystemRoot(version string) (*systemdefinition.System, error) {
 	clientInstallCommand := "npm install && npm run build"
 	serviceInstallCommand := "npm install"
 	var one int32 = 1
+	t2small := "t2.small"
 
 	sysDefinition := &systemdefinition.System{
 		Meta: systemdefinitionblock.Metadata{
@@ -349,6 +406,7 @@ func getSystemRoot(version string) (*systemdefinition.System, error) {
 				},
 				Resources: systemdefinitionblock.Resources{
 					NumInstances: &one,
+					InstanceType: &t2small,
 				},
 			}),
 			systemdefinition.Interface(&systemdefinition.Service{
@@ -388,6 +446,7 @@ func getSystemRoot(version string) (*systemdefinition.System, error) {
 				},
 				Resources: systemdefinitionblock.Resources{
 					NumInstances: &one,
+					InstanceType: &t2small,
 				},
 			}),
 		},
@@ -398,5 +457,5 @@ func getSystemRoot(version string) (*systemdefinition.System, error) {
 }
 
 func getSystemVersions() []string {
-	return []string{"v1.0.0", "v2.0.0"}
+	return []string{"v1.0.0"}
 }

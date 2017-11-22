@@ -95,6 +95,16 @@ var (
 			Type:       &SystemRollout{},
 			ListType:   &SystemRolloutList{},
 		},
+		{
+			Singular:   SystemTeardownResourceSingular,
+			Plural:     SystemTeardownResourcePlural,
+			ShortNames: []string{SystemTeardownResourceShortName},
+			Scope:      SystemTeardownResourceScope,
+			Kind:       "SystemTeardown",
+			ListKind:   "SystemTeardownList",
+			Type:       &SystemTeardown{},
+			ListType:   &SystemTeardownList{},
+		},
 	}
 )
 

@@ -11,6 +11,7 @@ go_library(
         "system.go",
         "system_build.go",
         "system_rollout.go",
+        "system_teardown.go",
         "util.go",
     ],
     importpath = "github.com/mlab-lattice/system/pkg/kubernetes/customresource/v1",
