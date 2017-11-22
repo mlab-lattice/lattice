@@ -33,14 +33,9 @@ func (src *SystemRolloutController) getNewSystem(sysRollout *crv1.SystemRollout,
 }
 
 func (src *SystemRolloutController) getNewSystemSpec(sysRollout *crv1.SystemRollout, sysBuild *crv1.SystemBuild) (*crv1.SystemSpec, error) {
-	root, err := systemtree.NewNode(systemdefinition.Interface(&sysBuild.Spec.Definition), nil)
-	if err != nil {
-		return nil, err
-	}
-
-	// Create crv1.SystemServicesInfo for each service in the sysBuild.Spec.Definition
+	// Create crv1.SystemServicesInfo for each service in the sysBuild.Spec.DefinitionRoot
 	services := map[systemtree.NodePath]crv1.SystemServicesInfo{}
-	for path, service := range root.Services() {
+	for path, service := range sysBuild.Spec.DefinitionRoot.Services() {
 		svcBuildInfo, ok := sysBuild.Spec.Services[path]
 		if !ok {
 			// FIXME: send warn event

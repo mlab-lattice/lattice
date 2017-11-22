@@ -7,16 +7,16 @@ import (
 	systemtree "github.com/mlab-lattice/core/pkg/system/tree"
 	coretypes "github.com/mlab-lattice/core/pkg/types"
 
-	crv1 "github.com/mlab-lattice/system/pkg/kubernetes/customresource/v1"
 	"github.com/mlab-lattice/system/pkg/kubernetes/constants"
+	crv1 "github.com/mlab-lattice/system/pkg/kubernetes/customresource/v1"
 
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/uuid"
 )
 
-func (kb *KubernetesBackend) BuildSystem(ln coretypes.LatticeNamespace, sd *systemdefinition.System, v coretypes.SystemVersion) (coretypes.SystemBuildId, error) {
-	systemBuild, err := getSystemBuild(ln, sd, v)
+func (kb *KubernetesBackend) BuildSystem(ln coretypes.LatticeNamespace, definitionRoot systemtree.Node, v coretypes.SystemVersion) (coretypes.SystemBuildId, error) {
+	systemBuild, err := getSystemBuild(ln, definitionRoot, v)
 	if err != nil {
 		return "", err
 	}
@@ -32,19 +32,14 @@ func (kb *KubernetesBackend) BuildSystem(ln coretypes.LatticeNamespace, sd *syst
 	return coretypes.SystemBuildId(result.Name), err
 }
 
-func getSystemBuild(ln coretypes.LatticeNamespace, sd *systemdefinition.System, v coretypes.SystemVersion) (*crv1.SystemBuild, error) {
+func getSystemBuild(ln coretypes.LatticeNamespace, definitionRoot systemtree.Node, v coretypes.SystemVersion) (*crv1.SystemBuild, error) {
 	labels := map[string]string{
 		constants.LatticeNamespaceLabel: string(ln),
 		crv1.SystemVersionLabelKey:      string(v),
 	}
 
-	root, err := systemtree.NewNode(systemdefinition.Interface(sd), nil)
-	if err != nil {
-		return nil, err
-	}
-
 	services := map[systemtree.NodePath]crv1.SystemBuildServicesInfo{}
-	for path, svcNode := range root.Services() {
+	for path, svcNode := range definitionRoot.Services() {
 		services[path] = crv1.SystemBuildServicesInfo{
 			Definition: *(svcNode.Definition().(*systemdefinition.Service)),
 		}
@@ -57,7 +52,7 @@ func getSystemBuild(ln coretypes.LatticeNamespace, sd *systemdefinition.System, 
 		},
 		Spec: crv1.SystemBuildSpec{
 			LatticeNamespace: ln,
-			Definition:       *sd,
+			DefinitionRoot:   definitionRoot,
 			Services:         services,
 		},
 		Status: crv1.SystemBuildStatus{

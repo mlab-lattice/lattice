@@ -1,6 +1,8 @@
 package v1
 
 import (
+	"encoding/json"
+
 	systemdefinition "github.com/mlab-lattice/core/pkg/system/definition"
 	systemtree "github.com/mlab-lattice/core/pkg/system/tree"
 	coretypes "github.com/mlab-lattice/core/pkg/types"
@@ -29,9 +31,48 @@ type SystemBuild struct {
 }
 
 type SystemBuildSpec struct {
+	coretypes.LatticeNamespace                                     `json:"latticeNamespace"`
+	DefinitionRoot systemtree.Node                                 `json:"definition"`
+	Services       map[systemtree.NodePath]SystemBuildServicesInfo `json:"services"`
+}
+
+type systemBuildSpecRaw struct {
 	coretypes.LatticeNamespace `json:"latticeNamespace"`
-	Definition                 systemdefinition.System                         `json:"definition"`
 	Services                   map[systemtree.NodePath]SystemBuildServicesInfo `json:"services"`
+	Definition                 json.RawMessage
+}
+
+func (sbs *SystemBuildSpec) MarshalJSON() ([]byte, error) {
+	jsonMap := map[string]interface{}{
+		"latticeNamespace": sbs.LatticeNamespace,
+		"definition":       sbs.DefinitionRoot.Definition(),
+		"services":         sbs.Services,
+	}
+	return json.Marshal(jsonMap)
+}
+
+func (sbs *SystemBuildSpec) UnmarshalJSON(data []byte) error {
+	var raw systemBuildSpecRaw
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+
+	definition, err := systemdefinition.UnmarshalJSON(raw.Definition)
+	if err != nil {
+		return err
+	}
+
+	rootNode, err := systemtree.NewNode(definition, nil)
+	if err != nil {
+		return err
+	}
+
+	*sbs = SystemBuildSpec{
+		LatticeNamespace: raw.LatticeNamespace,
+		DefinitionRoot:   rootNode,
+		Services:         raw.Services,
+	}
+	return nil
 }
 
 type SystemBuildServicesInfo struct {
