@@ -1,4 +1,4 @@
-package systemrollout
+package systemlifecycle
 
 import (
 	"fmt"
@@ -6,8 +6,8 @@ import (
 	crv1 "github.com/mlab-lattice/system/pkg/kubernetes/customresource/v1"
 )
 
-func (src *SystemRolloutController) syncInProgressRollout(sysRollout *crv1.SystemRollout) error {
-	system, err := src.getSystemForRollout(sysRollout)
+func (slc *SystemLifecycleController) syncInProgressRollout(sysRollout *crv1.SystemRollout) error {
+	system, err := slc.getSystemForRollout(sysRollout)
 	if err != nil {
 		return err
 	}
@@ -19,24 +19,24 @@ func (src *SystemRolloutController) syncInProgressRollout(sysRollout *crv1.Syste
 		return fmt.Errorf("SystemRollout %v in-progress with no System", sysRollout.Name)
 	}
 
-	sysRollout, err = src.syncRolloutWithSystem(sysRollout, system)
+	sysRollout, err = slc.syncRolloutWithSystem(sysRollout, system)
 	if err != nil {
 		// FIXME: is it possible that the rollout is locked forever now?
 		return err
 	}
 
 	if sysRollout.Status.State == crv1.SystemRolloutStateSucceeded || sysRollout.Status.State == crv1.SystemRolloutStateFailed {
-		return src.relinquishOwningRolloutClaim(sysRollout)
+		return slc.relinquishOwningRolloutClaim(sysRollout)
 	}
 
 	return nil
 }
 
-func (src *SystemRolloutController) getSystemForRollout(sysRollout *crv1.SystemRollout) (*crv1.System, error) {
+func (slc *SystemLifecycleController) getSystemForRollout(sysRollout *crv1.SystemRollout) (*crv1.System, error) {
 	var system *crv1.System
 
 	latticeNamespace := sysRollout.Spec.LatticeNamespace
-	for _, sysObj := range src.systemStore.List() {
+	for _, sysObj := range slc.systemStore.List() {
 		sys := sysObj.(*crv1.System)
 
 		if string(latticeNamespace) == sys.Namespace {
@@ -51,7 +51,7 @@ func (src *SystemRolloutController) getSystemForRollout(sysRollout *crv1.SystemR
 	return system, nil
 }
 
-func (src *SystemRolloutController) syncRolloutWithSystem(sysRollout *crv1.SystemRollout, sys *crv1.System) (*crv1.SystemRollout, error) {
+func (slc *SystemLifecycleController) syncRolloutWithSystem(sysRollout *crv1.SystemRollout, sys *crv1.System) (*crv1.SystemRollout, error) {
 	var newState crv1.SystemRolloutStatus
 	switch sys.Status.State {
 	case crv1.SystemStateRollingOut:
@@ -66,18 +66,18 @@ func (src *SystemRolloutController) syncRolloutWithSystem(sysRollout *crv1.Syste
 		}
 	}
 
-	return src.updateSystemRolloutStatus(sysRollout, newState)
+	return slc.updateSystemRolloutStatus(sysRollout, newState)
 }
 
-func (src *SystemRolloutController) relinquishOwningRolloutClaim(sysRollout *crv1.SystemRollout) error {
-	src.owningRolloutsLock.Lock()
-	defer src.owningRolloutsLock.Unlock()
+func (slc *SystemLifecycleController) relinquishOwningRolloutClaim(sysRollout *crv1.SystemRollout) error {
+	slc.owningRolloutsLock.Lock()
+	defer slc.owningRolloutsLock.Unlock()
 
-	owningRollout, ok := src.owningRollouts[sysRollout.Spec.LatticeNamespace]
+	owningRollout, ok := slc.owningRollouts[sysRollout.Spec.LatticeNamespace]
 	if !ok || owningRollout.Name != sysRollout.Name {
 		return fmt.Errorf("unexpected owning rollout %s in namespace %s", owningRollout.Name, sysRollout.Spec.LatticeNamespace)
 	}
 
-	delete(src.owningRollouts, sysRollout.Spec.LatticeNamespace)
+	delete(slc.owningRollouts, sysRollout.Spec.LatticeNamespace)
 	return nil
 }

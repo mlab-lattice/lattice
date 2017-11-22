@@ -1,4 +1,4 @@
-package systemrollout
+package systemlifecycle
 
 import (
 	"fmt"
@@ -21,7 +21,7 @@ import (
 	"github.com/golang/glog"
 )
 
-type SystemRolloutController struct {
+type SystemLifecycleController struct {
 	syncHandler          func(sysRolloutKey string) error
 	enqueueSystemRollout func(sysRollout *crv1.SystemRollout)
 
@@ -55,15 +55,15 @@ type SystemRolloutController struct {
 	queue workqueue.RateLimitingInterface
 }
 
-func NewSystemRolloutController(
+func NewSystemLifecycleController(
 	latticeResourceClient rest.Interface,
 	systemRolloutInformer cache.SharedInformer,
 	systemInformer cache.SharedInformer,
 	systemBuildInformer cache.SharedInformer,
 	serviceBuildInformer cache.SharedInformer,
 	componentBuildInformer cache.SharedInformer,
-) *SystemRolloutController {
-	src := &SystemRolloutController{
+) *SystemLifecycleController {
+	src := &SystemLifecycleController{
 		latticeResourceClient: latticeResourceClient,
 		owningRollouts:        make(map[coretypes.LatticeNamespace]*crv1.SystemRollout),
 		queue:                 workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "system-rollout"),
@@ -105,35 +105,35 @@ func NewSystemRolloutController(
 	return src
 }
 
-func (src *SystemRolloutController) handleSystemRolloutAdd(obj interface{}) {
+func (slc *SystemLifecycleController) handleSystemRolloutAdd(obj interface{}) {
 	sysr := obj.(*crv1.SystemRollout)
 	glog.V(4).Infof("Adding SystemRollout %s", sysr.Name)
-	src.enqueueSystemRollout(sysr)
+	slc.enqueueSystemRollout(sysr)
 }
 
-func (src *SystemRolloutController) handleSystemRolloutUpdate(old, cur interface{}) {
+func (slc *SystemLifecycleController) handleSystemRolloutUpdate(old, cur interface{}) {
 	oldSysr := old.(*crv1.SystemRollout)
 	curSysr := cur.(*crv1.SystemRollout)
 	glog.V(4).Infof("Updating SystemRollout %s", oldSysr.Name)
-	src.enqueueSystemRollout(curSysr)
+	slc.enqueueSystemRollout(curSysr)
 }
 
-func (src *SystemRolloutController) handleSystemAdd(obj interface{}) {
+func (slc *SystemLifecycleController) handleSystemAdd(obj interface{}) {
 	sys := obj.(*crv1.System)
 	glog.V(4).Infof("System %s added", sys.Name)
 
-	src.owningRolloutsLock.RLock()
-	defer src.owningRolloutsLock.RUnlock()
-	owningRollout, ok := src.owningRollouts[coretypes.LatticeNamespace(sys.Namespace)]
+	slc.owningRolloutsLock.RLock()
+	defer slc.owningRolloutsLock.RUnlock()
+	owningRollout, ok := slc.owningRollouts[coretypes.LatticeNamespace(sys.Namespace)]
 	if !ok {
 		// TODO: send warn event
 		return
 	}
 
-	src.enqueueSystemRollout(owningRollout)
+	slc.enqueueSystemRollout(owningRollout)
 }
 
-func (src *SystemRolloutController) handleSystemUpdate(old, cur interface{}) {
+func (slc *SystemLifecycleController) handleSystemUpdate(old, cur interface{}) {
 	glog.V(4).Info("Got System update")
 	oldSys := old.(*crv1.System)
 	curSys := cur.(*crv1.System)
@@ -144,33 +144,33 @@ func (src *SystemRolloutController) handleSystemUpdate(old, cur interface{}) {
 		return
 	}
 
-	src.owningRolloutsLock.RLock()
-	defer src.owningRolloutsLock.RUnlock()
-	owningRollout, ok := src.owningRollouts[coretypes.LatticeNamespace(curSys.Namespace)]
+	slc.owningRolloutsLock.RLock()
+	defer slc.owningRolloutsLock.RUnlock()
+	owningRollout, ok := slc.owningRollouts[coretypes.LatticeNamespace(curSys.Namespace)]
 	if !ok {
 		// TODO: send warn event
 		return
 	}
 
-	src.enqueueSystemRollout(owningRollout)
+	slc.enqueueSystemRollout(owningRollout)
 }
 
-func (src *SystemRolloutController) handleSystemBuildAdd(obj interface{}) {
+func (slc *SystemLifecycleController) handleSystemBuildAdd(obj interface{}) {
 	sysb := obj.(*crv1.SystemBuild)
 	glog.V(4).Infof("SystemBuild %s added", sysb.Name)
 
-	src.owningRolloutsLock.RLock()
-	defer src.owningRolloutsLock.RUnlock()
-	owningRollout, ok := src.owningRollouts[sysb.Spec.LatticeNamespace]
+	slc.owningRolloutsLock.RLock()
+	defer slc.owningRolloutsLock.RUnlock()
+	owningRollout, ok := slc.owningRollouts[sysb.Spec.LatticeNamespace]
 	if !ok {
 		// TODO: send warn event
 		return
 	}
 
-	src.enqueueSystemRollout(owningRollout)
+	slc.enqueueSystemRollout(owningRollout)
 }
 
-func (src *SystemRolloutController) handleSystemBuildUpdate(old, cur interface{}) {
+func (slc *SystemLifecycleController) handleSystemBuildUpdate(old, cur interface{}) {
 	glog.V(4).Infof("Got SystemBuild update")
 	oldSysb := old.(*crv1.SystemBuild)
 	curSysb := cur.(*crv1.SystemBuild)
@@ -181,38 +181,38 @@ func (src *SystemRolloutController) handleSystemBuildUpdate(old, cur interface{}
 		return
 	}
 
-	src.owningRolloutsLock.RLock()
-	defer src.owningRolloutsLock.RUnlock()
-	owningRollout, ok := src.owningRollouts[curSysb.Spec.LatticeNamespace]
+	slc.owningRolloutsLock.RLock()
+	defer slc.owningRolloutsLock.RUnlock()
+	owningRollout, ok := slc.owningRollouts[curSysb.Spec.LatticeNamespace]
 	if !ok {
 		// TODO: send warn event
 		return
 	}
 
-	src.enqueueSystemRollout(owningRollout)
+	slc.enqueueSystemRollout(owningRollout)
 }
 
-func (src *SystemRolloutController) enqueue(sysRollout *crv1.SystemRollout) {
+func (slc *SystemLifecycleController) enqueue(sysRollout *crv1.SystemRollout) {
 	key, err := cache.DeletionHandlingMetaNamespaceKeyFunc(sysRollout)
 	if err != nil {
 		runtime.HandleError(fmt.Errorf("couldn't get key for object %#v: %v", sysRollout, err))
 		return
 	}
 
-	src.queue.Add(key)
+	slc.queue.Add(key)
 }
 
-func (src *SystemRolloutController) Run(workers int, stopCh <-chan struct{}) {
+func (slc *SystemLifecycleController) Run(workers int, stopCh <-chan struct{}) {
 	// don't let panics crash the process
 	defer runtime.HandleCrash()
 	// make sure the work queue is shutdown which will trigger workers to end
-	defer src.queue.ShutDown()
+	defer slc.queue.ShutDown()
 
 	glog.Infof("Starting system-rollout controller")
 	defer glog.Infof("Shutting down system-rollout controller")
 
 	// wait for your secondary caches to fill before starting your work
-	if !cache.WaitForCacheSync(stopCh, src.systemRolloutStoreSynced, src.systemStoreSynced, src.systemBuildStoreSynced, src.serviceBuildStoreSynced, src.componentBuildStoreSynced) {
+	if !cache.WaitForCacheSync(stopCh, slc.systemRolloutStoreSynced, slc.systemStoreSynced, slc.systemBuildStoreSynced, slc.serviceBuildStoreSynced, slc.componentBuildStoreSynced) {
 		return
 	}
 
@@ -221,7 +221,7 @@ func (src *SystemRolloutController) Run(workers int, stopCh <-chan struct{}) {
 	// It's okay that we're racing with the System and SystemBuild informer add/update functions here.
 	// handleSystemRolloutAdd and handleSystemRolloutUpdate will enqueue all of the existing SystemRollouts already
 	// so it's okay if the other informers don't.
-	if err := src.syncOwningRollouts(); err != nil {
+	if err := slc.syncOwningRollouts(); err != nil {
 		return
 	}
 
@@ -230,62 +230,62 @@ func (src *SystemRolloutController) Run(workers int, stopCh <-chan struct{}) {
 	for i := 0; i < workers; i++ {
 		// runWorker will loop until "something bad" happens.  The .Until will
 		// then rekick the worker after one second
-		go wait.Until(src.runWorker, time.Second, stopCh)
+		go wait.Until(slc.runWorker, time.Second, stopCh)
 	}
 
 	// wait until we're told to stop
 	<-stopCh
 }
 
-func (src *SystemRolloutController) syncOwningRollouts() error {
-	src.owningRolloutsLock.Lock()
-	defer src.owningRolloutsLock.Unlock()
+func (slc *SystemLifecycleController) syncOwningRollouts() error {
+	slc.owningRolloutsLock.Lock()
+	defer slc.owningRolloutsLock.Unlock()
 
-	for _, sysrObj := range src.systemRolloutStore.List() {
+	for _, sysrObj := range slc.systemRolloutStore.List() {
 		sysr := sysrObj.(*crv1.SystemRollout)
 		if sysr.Status.State != crv1.SystemRolloutStateInProgress {
 			continue
 		}
 
 		lns := sysr.Spec.LatticeNamespace
-		if _, ok := src.owningRollouts[lns]; ok {
+		if _, ok := slc.owningRollouts[lns]; ok {
 			return fmt.Errorf("LatticeNamespace %v has multiple owning rollouts", lns)
 		}
 
-		src.owningRollouts[lns] = sysr
+		slc.owningRollouts[lns] = sysr
 	}
 
 	return nil
 }
 
-func (src *SystemRolloutController) runWorker() {
+func (slc *SystemLifecycleController) runWorker() {
 	// hot loop until we're told to stop.  processNextWorkItem will
 	// automatically wait until there's work available, so we don't worry
 	// about secondary waits
-	for src.processNextWorkItem() {
+	for slc.processNextWorkItem() {
 	}
 }
 
 // processNextWorkItem deals with one key off the queue.  It returns false
 // when it's time to quit.
-func (src *SystemRolloutController) processNextWorkItem() bool {
+func (slc *SystemLifecycleController) processNextWorkItem() bool {
 	// pull the next work item from queue.  It should be a key we use to lookup
 	// something in a cache
-	key, quit := src.queue.Get()
+	key, quit := slc.queue.Get()
 	if quit {
 		return false
 	}
 	// you always have to indicate to the queue that you've completed a piece of
 	// work
-	defer src.queue.Done(key)
+	defer slc.queue.Done(key)
 
 	// do your work on the key.  This method will contains your "do stuff" logic
-	err := src.syncHandler(key.(string))
+	err := slc.syncHandler(key.(string))
 	if err == nil {
 		// if you had no error, tell the queue to stop tracking history for your
 		// key. This will reset things like failure counts for per-item rate
 		// limiting
-		src.queue.Forget(key)
+		slc.queue.Forget(key)
 		return true
 	}
 
@@ -299,14 +299,14 @@ func (src *SystemRolloutController) processNextWorkItem() bool {
 	// (they're probably still not going to work right away) and overall
 	// controller protection (everything I've done is broken, this controller
 	// needs to calm down or it can starve other useful work) cases.
-	src.queue.AddRateLimited(key)
+	slc.queue.AddRateLimited(key)
 
 	return true
 }
 
 // syncSystemBuild will sync the SystemBuild with the given key.
 // This function is not meant to be invoked concurrently with the same key.
-func (src *SystemRolloutController) syncSystemRollout(key string) error {
+func (slc *SystemLifecycleController) syncSystemRollout(key string) error {
 	glog.Flush()
 	startTime := time.Now()
 	glog.V(4).Infof("Started syncing SystemRollout %q (%v)", key, startTime)
@@ -314,7 +314,7 @@ func (src *SystemRolloutController) syncSystemRollout(key string) error {
 		glog.V(4).Infof("Finished syncing SystemRollout %q (%v)", key, time.Now().Sub(startTime))
 	}()
 
-	sysrObj, exists, err := src.systemRolloutStore.GetByKey(key)
+	sysrObj, exists, err := slc.systemRolloutStore.GetByKey(key)
 	if errors.IsNotFound(err) || !exists {
 		glog.V(2).Infof("SystemRollout %v has been deleted", key)
 		return nil
@@ -331,20 +331,20 @@ func (src *SystemRolloutController) syncSystemRollout(key string) error {
 		return nil
 
 	case crv1.SystemRolloutStateInProgress:
-		return src.syncInProgressRollout(sysr)
+		return slc.syncInProgressRollout(sysr)
 
 	case crv1.SystemRolloutStateAccepted:
-		return src.syncAcceptedRollout(sysr)
+		return slc.syncAcceptedRollout(sysr)
 
 	case crv1.SystemRolloutStatePending:
-		return src.syncPendingRolloutState(sysr)
+		return slc.syncPendingRolloutState(sysr)
 
 	default:
 		panic("unreachable")
 	}
 }
 
-func (src *SystemRolloutController) updateSystemRolloutStatus(sysr *crv1.SystemRollout, newStatus crv1.SystemRolloutStatus) (*crv1.SystemRollout, error) {
+func (slc *SystemLifecycleController) updateSystemRolloutStatus(sysr *crv1.SystemRollout, newStatus crv1.SystemRolloutStatus) (*crv1.SystemRollout, error) {
 	if reflect.DeepEqual(sysr.Status, newStatus) {
 		return sysr, nil
 	}
@@ -352,7 +352,7 @@ func (src *SystemRolloutController) updateSystemRolloutStatus(sysr *crv1.SystemR
 	sysr.Status = newStatus
 
 	result := &crv1.SystemRollout{}
-	err := src.latticeResourceClient.Put().
+	err := slc.latticeResourceClient.Put().
 		Namespace(sysr.Namespace).
 		Resource(crv1.SystemRolloutResourcePlural).
 		Name(sysr.Name).

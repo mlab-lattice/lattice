@@ -1,4 +1,4 @@
-package systemrollout
+package systemlifecycle
 
 import (
 	"fmt"
@@ -13,8 +13,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func (src *SystemRolloutController) getNewSystem(sysRollout *crv1.SystemRollout, sysBuild *crv1.SystemBuild) (*crv1.System, error) {
-	sysSpec, err := src.getNewSystemSpec(sysRollout, sysBuild)
+func (slc *SystemLifecycleController) getNewSystem(sysRollout *crv1.SystemRollout, sysBuild *crv1.SystemBuild) (*crv1.System, error) {
+	sysSpec, err := slc.getNewSystemSpec(sysRollout, sysBuild)
 	if err != nil {
 		return nil, err
 	}
@@ -32,7 +32,7 @@ func (src *SystemRolloutController) getNewSystem(sysRollout *crv1.SystemRollout,
 	return sys, nil
 }
 
-func (src *SystemRolloutController) getNewSystemSpec(sysRollout *crv1.SystemRollout, sysBuild *crv1.SystemBuild) (*crv1.SystemSpec, error) {
+func (slc *SystemLifecycleController) getNewSystemSpec(sysRollout *crv1.SystemRollout, sysBuild *crv1.SystemBuild) (*crv1.SystemSpec, error) {
 	// Create crv1.SystemServicesInfo for each service in the sysBuild.Spec.DefinitionRoot
 	services := map[systemtree.NodePath]crv1.SystemServicesInfo{}
 	for path, service := range sysBuild.Spec.DefinitionRoot.Services() {
@@ -42,7 +42,7 @@ func (src *SystemRolloutController) getNewSystemSpec(sysRollout *crv1.SystemRoll
 			return nil, fmt.Errorf("SystemBuild does not have expected Service %v", path)
 		}
 
-		svcBuild, err := src.getSvcBuild(*svcBuildInfo.BuildName)
+		svcBuild, err := slc.getSvcBuild(*svcBuildInfo.BuildName)
 		if err != nil {
 			return nil, err
 		}
@@ -57,7 +57,7 @@ func (src *SystemRolloutController) getNewSystemSpec(sysRollout *crv1.SystemRoll
 
 			cBuildName := *cBuildInfo.BuildName
 			cBuildKey := svcBuild.Namespace + "/" + cBuildName
-			cBuildObj, exists, err := src.componentBuildStore.GetByKey(cBuildKey)
+			cBuildObj, exists, err := slc.componentBuildStore.GetByKey(cBuildKey)
 
 			if err != nil {
 				return nil, err
@@ -90,9 +90,9 @@ func (src *SystemRolloutController) getNewSystemSpec(sysRollout *crv1.SystemRoll
 	return sysSpec, nil
 }
 
-func (src *SystemRolloutController) getSvcBuild(svcBuildName string) (*crv1.ServiceBuild, error) {
+func (slc *SystemLifecycleController) getSvcBuild(svcBuildName string) (*crv1.ServiceBuild, error) {
 	svcBuildKey := constants.NamespaceLatticeInternal + "/" + svcBuildName
-	svcBuildObj, exists, err := src.serviceBuildStore.GetByKey(svcBuildKey)
+	svcBuildObj, exists, err := slc.serviceBuildStore.GetByKey(svcBuildKey)
 	if err != nil {
 		return nil, err
 	}
@@ -105,14 +105,14 @@ func (src *SystemRolloutController) getSvcBuild(svcBuildName string) (*crv1.Serv
 	return svcBuild, nil
 }
 
-func (src *SystemRolloutController) createSystem(sysRollout *crv1.SystemRollout, sysBuild *crv1.SystemBuild) (*crv1.System, error) {
-	sys, err := src.getNewSystem(sysRollout, sysBuild)
+func (slc *SystemLifecycleController) createSystem(sysRollout *crv1.SystemRollout, sysBuild *crv1.SystemBuild) (*crv1.System, error) {
+	sys, err := slc.getNewSystem(sysRollout, sysBuild)
 	if err != nil {
 		return nil, err
 	}
 
 	result := &crv1.System{}
-	err = src.latticeResourceClient.Post().
+	err = slc.latticeResourceClient.Post().
 		Namespace(string(sysRollout.Spec.LatticeNamespace)).
 		Resource(crv1.SystemResourcePlural).
 		Body(sys).
@@ -121,7 +121,7 @@ func (src *SystemRolloutController) createSystem(sysRollout *crv1.SystemRollout,
 	return result, err
 }
 
-func (src *SystemRolloutController) updateSystemSpec(sys *crv1.System, sysSpec *crv1.SystemSpec) (*crv1.System, error) {
+func (slc *SystemLifecycleController) updateSystemSpec(sys *crv1.System, sysSpec *crv1.SystemSpec) (*crv1.System, error) {
 	if reflect.DeepEqual(sys.Spec, sysSpec) {
 		return sys, nil
 	}
@@ -133,7 +133,7 @@ func (src *SystemRolloutController) updateSystemSpec(sys *crv1.System, sysSpec *
 	sys.Status.State = crv1.SystemStateRollingOut
 
 	result := &crv1.System{}
-	err := src.latticeResourceClient.Put().
+	err := slc.latticeResourceClient.Put().
 		Namespace(sys.Namespace).
 		Resource(crv1.SystemResourcePlural).
 		Name(sys.Name).

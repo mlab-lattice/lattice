@@ -3,10 +3,11 @@ package latticecontrollers
 import (
 	controller "github.com/mlab-lattice/system/cmd/kubernetes/lattice-controller-manager/app/common"
 	"github.com/mlab-lattice/system/pkg/kubernetes/controller/lattice/systemrollout"
+	"github.com/mlab-lattice/system/pkg/kubernetes/controller/lattice/systemlifecycle"
 )
 
 func initializeSystemRolloutController(ctx controller.Context) {
-	go systemrollout.NewSystemRolloutController(
+	go systemlifecycle.NewSystemLifecycleController(
 		ctx.LatticeResourceRestClient,
 		ctx.CRDInformers["system-rollout"],
 		ctx.CRDInformers["system"],

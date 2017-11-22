@@ -1,12 +1,12 @@
-package systemrollout
+package systemlifecycle
 
 import (
 	"fmt"
 	crv1 "github.com/mlab-lattice/system/pkg/kubernetes/customresource/v1"
 )
 
-func (src *SystemRolloutController) syncAcceptedRollout(sysRollout *crv1.SystemRollout) error {
-	sysBuild, err := src.getSystemBuildForRollout(sysRollout)
+func (slc *SystemLifecycleController) syncAcceptedRollout(sysRollout *crv1.SystemRollout) error {
+	sysBuild, err := slc.getSystemBuildForRollout(sysRollout)
 	if err != nil {
 		return err
 	}
@@ -17,23 +17,27 @@ func (src *SystemRolloutController) syncAcceptedRollout(sysRollout *crv1.SystemR
 			State:   crv1.SystemRolloutStateFailed,
 			Message: fmt.Sprintf("SystemBuild %v failed", sysBuild.Name),
 		}
-		_, err := src.updateSystemRolloutStatus(sysRollout, newStatus)
-		return err
+		_, err := slc.updateSystemRolloutStatus(sysRollout, newStatus)
+		if err != nil {
+			return err
+		}
+
+		return slc.relinquishOwningRolloutClaim(sysRollout)
 
 	case crv1.SystemBuildStateSucceeded:
-		sys, err := src.getSystemForRollout(sysRollout)
+		sys, err := slc.getSystemForRollout(sysRollout)
 		if err != nil {
 			return err
 		}
 
 		if sys == nil {
-			sys, err = src.createSystem(sysRollout, sysBuild)
+			sys, err = slc.createSystem(sysRollout, sysBuild)
 			if err != nil {
 				return err
 			}
 		} else {
 			// Generate a fresh new System Spec
-			sysSpec, err := src.getNewSystemSpec(sysRollout, sysBuild)
+			sysSpec, err := slc.getNewSystemSpec(sysRollout, sysBuild)
 			if err != nil {
 				return err
 			}
@@ -47,7 +51,7 @@ func (src *SystemRolloutController) syncAcceptedRollout(sysRollout *crv1.SystemR
 				}
 			}
 
-			_, err = src.updateSystemSpec(sys, sysSpec)
+			_, err = slc.updateSystemSpec(sys, sysSpec)
 			if err != nil {
 				return err
 			}
@@ -57,20 +61,20 @@ func (src *SystemRolloutController) syncAcceptedRollout(sysRollout *crv1.SystemR
 			State: crv1.SystemRolloutStateInProgress,
 		}
 
-		result, err := src.updateSystemRolloutStatus(sysRollout, newStatus)
+		result, err := slc.updateSystemRolloutStatus(sysRollout, newStatus)
 		if err != nil {
 			return err
 		}
 
-		return src.syncInProgressRollout(result)
+		return slc.syncInProgressRollout(result)
 	}
 
 	return nil
 }
 
-func (src *SystemRolloutController) getSystemBuildForRollout(sysRollout *crv1.SystemRollout) (*crv1.SystemBuild, error) {
+func (slc *SystemLifecycleController) getSystemBuildForRollout(sysRollout *crv1.SystemRollout) (*crv1.SystemBuild, error) {
 	sysBuildKey := sysRollout.Namespace + "/" + sysRollout.Spec.BuildName
-	sysBuildObj, exists, err := src.systemBuildStore.GetByKey(sysBuildKey)
+	sysBuildObj, exists, err := slc.systemBuildStore.GetByKey(sysBuildKey)
 	if err != nil {
 		return nil, err
 	}
