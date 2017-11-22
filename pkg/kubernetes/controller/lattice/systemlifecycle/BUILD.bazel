@@ -5,11 +5,13 @@ go_library(
     srcs = [
         "accepted_rollout.go",
         "in_progress_rollout.go",
+        "in_progress_teardown.go",
         "pending_rollout.go",
-        "system_rollout_controller.go",
+        "pending_teardown.go",
+        "system_lifecycle_controller.go",
         "system_util.go",
     ],
-    importpath = "github.com/mlab-lattice/system/pkg/kubernetes/controller/lattice/systemrollout",
+    importpath = "github.com/mlab-lattice/system/pkg/kubernetes/controller/lattice/systemlifecycle",
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/kubernetes/constants:go_default_library",

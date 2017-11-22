@@ -7,7 +7,7 @@ go_library(
         "service_build.go",
         "system.go",
         "system_build.go",
-        "system_rollout.go",
+        "system_lifecycle.go",
     ],
     importpath = "github.com/mlab-lattice/system/cmd/kubernetes/lattice-controller-manager/app/latticecontrollers",
     visibility = ["//visibility:public"],
@@ -16,6 +16,6 @@ go_library(
         "//pkg/kubernetes/controller/lattice/servicebuild:go_default_library",
         "//pkg/kubernetes/controller/lattice/system:go_default_library",
         "//pkg/kubernetes/controller/lattice/systembuild:go_default_library",
-        "//pkg/kubernetes/controller/lattice/systemrollout:go_default_library",
+        "//pkg/kubernetes/controller/lattice/systemlifecycle:go_default_library",
     ],
 )

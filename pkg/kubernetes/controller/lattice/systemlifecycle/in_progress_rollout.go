@@ -69,15 +69,23 @@ func (slc *SystemLifecycleController) syncRolloutWithSystem(sysRollout *crv1.Sys
 	return slc.updateSystemRolloutStatus(sysRollout, newState)
 }
 
-func (slc *SystemLifecycleController) relinquishOwningRolloutClaim(sysRollout *crv1.SystemRollout) error {
-	slc.owningRolloutsLock.Lock()
-	defer slc.owningRolloutsLock.Unlock()
+func (slc *SystemLifecycleController) relinquishOwningRolloutClaim(sysr *crv1.SystemRollout) error {
+	slc.owningLifecycleActionsLock.Lock()
+	defer slc.owningLifecycleActionsLock.Unlock()
 
-	owningRollout, ok := slc.owningRollouts[sysRollout.Spec.LatticeNamespace]
-	if !ok || owningRollout.Name != sysRollout.Name {
-		return fmt.Errorf("unexpected owning rollout %s in namespace %s", owningRollout.Name, sysRollout.Spec.LatticeNamespace)
+	owningAction, ok := slc.owningLifecycleActions[sysr.Spec.LatticeNamespace]
+	if !ok {
+		return fmt.Errorf("expected rollout %v to be owning action but there was no owning action", sysr.Name)
 	}
 
-	delete(slc.owningRollouts, sysRollout.Spec.LatticeNamespace)
+	if owningAction.rollout == nil {
+		return fmt.Errorf("expected rollout %v to be owning action but owning action was teardown %v", sysr.Name, owningAction.teardown.Name)
+	}
+
+	if owningAction.rollout.Name != sysr.Name {
+		return fmt.Errorf("expected rollout %v to be owning action but owning action was rollout %v", sysr.Name, owningAction.rollout.Name)
+	}
+
+	delete(slc.owningLifecycleActions, sysr.Spec.LatticeNamespace)
 	return nil
 }
