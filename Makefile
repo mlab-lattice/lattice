@@ -136,6 +136,12 @@ build-docker-image-lattice-system-cli: gazelle
 	@bazel run //docker:lattice-system-cli -- --norun
 
 
+# local binaries
+.PHONY: update-local-binary-cli
+update-local-binary-cli:
+	@bazel build //cmd/cli
+	cp -f $(DIR)/bazel-bin/cmd/cli/cli $(DIR)/bin/lattice-system
+
 # docker build hackery
 .PHONY: docker-build
 docker-build: docker-build-start-build-container
