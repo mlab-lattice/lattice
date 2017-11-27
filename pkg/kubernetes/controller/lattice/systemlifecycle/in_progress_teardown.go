@@ -2,6 +2,7 @@ package systemlifecycle
 
 import (
 	"fmt"
+	"time"
 
 	crv1 "github.com/mlab-lattice/system/pkg/kubernetes/customresource/v1"
 )
@@ -22,6 +23,10 @@ func (slc *SystemLifecycleController) syncInProgressTeardown(syst *crv1.SystemTe
 		}
 
 		return slc.relinquishOwningTeardownClaim(syst)
+	}
+
+	if system.DeletionTimestamp != nil {
+		slc.teardownQueue.AddAfter(syst, 30*time.Second)
 	}
 
 	return slc.latticeResourceClient.Delete().

@@ -140,6 +140,16 @@ func (ap *AWSProvisioner) Address(name string) (string, error) {
 }
 
 func (ap *AWSProvisioner) Deprovision(name string) error {
+	address, err := ap.Address(name)
+	if err != nil {
+		return err
+	}
+
+	err = tearDownAndWaitForSuccess(address)
+	if err != nil {
+		return err
+	}
+
 	// Run `terraform destroy`
 	result, logFilename, err := ap.tec.Destroy(nil)
 	if err != nil {
