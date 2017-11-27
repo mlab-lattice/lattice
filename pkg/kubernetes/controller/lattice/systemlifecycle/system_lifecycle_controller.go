@@ -294,6 +294,12 @@ func (slc *SystemLifecycleController) Run(workers int, stopCh <-chan struct{}) {
 		go wait.Until(slc.runRolloutWorker, time.Second, stopCh)
 	}
 
+	for i := 0; i < workers; i++ {
+		// runWorker will loop until "something bad" happens.  The .Until will
+		// then rekick the worker after one second
+		go wait.Until(slc.runTeardownWorker, time.Second, stopCh)
+	}
+
 	// wait until we're told to stop
 	<-stopCh
 }
@@ -460,7 +466,7 @@ func (slc *SystemLifecycleController) syncSystemTeardown(key string) error {
 		glog.V(4).Infof("Finished syncing SystemTeardown %q (%v)", key, time.Now().Sub(startTime))
 	}()
 
-	systObj, exists, err := slc.systemRolloutStore.GetByKey(key)
+	systObj, exists, err := slc.systemTeardownStore.GetByKey(key)
 	if errors.IsNotFound(err) || !exists {
 		glog.V(2).Infof("SystemTeardown %v has been deleted", key)
 		return nil

@@ -17,7 +17,11 @@ func (slc *SystemLifecycleController) syncInProgressTeardown(syst *crv1.SystemTe
 			State: crv1.SystemTeardownStateSucceeded,
 		}
 		_, err := slc.updateSystemTeardownStatus(syst, newState)
-		return err
+		if err != nil {
+			return err
+		}
+
+		return slc.relinquishOwningTeardownClaim(syst)
 	}
 
 	return slc.latticeResourceClient.Delete().

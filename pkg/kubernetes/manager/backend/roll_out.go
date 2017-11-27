@@ -6,12 +6,13 @@ import (
 	systemtree "github.com/mlab-lattice/core/pkg/system/tree"
 	coretypes "github.com/mlab-lattice/core/pkg/types"
 
-	crv1 "github.com/mlab-lattice/system/pkg/kubernetes/customresource/v1"
 	"github.com/mlab-lattice/system/pkg/kubernetes/constants"
+	crv1 "github.com/mlab-lattice/system/pkg/kubernetes/customresource/v1"
 
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/uuid"
+
+	"github.com/satori/go.uuid"
 )
 
 func (kb *KubernetesBackend) RollOutSystem(ln coretypes.LatticeNamespace, definitionRoot systemtree.Node, v coretypes.SystemVersion) (coretypes.SystemRolloutId, error) {
@@ -29,7 +30,7 @@ func (kb *KubernetesBackend) RollOutSystemBuild(ln coretypes.LatticeNamespace, b
 		return "", err
 	}
 
-	sysRollout, err := getSystemRollout(ln, sysBuild)
+	sysRollout, err := getNewSystemRollout(ln, sysBuild)
 	if err != nil {
 		return "", err
 	}
@@ -57,7 +58,7 @@ func (kb *KubernetesBackend) getSystemBuildFromId(ln coretypes.LatticeNamespace,
 	return result, err
 }
 
-func getSystemRollout(latticeNamespace coretypes.LatticeNamespace, sysBuild *crv1.SystemBuild) (*crv1.SystemRollout, error) {
+func getNewSystemRollout(latticeNamespace coretypes.LatticeNamespace, sysBuild *crv1.SystemBuild) (*crv1.SystemRollout, error) {
 	labels := map[string]string{
 		constants.LatticeNamespaceLabel:   string(latticeNamespace),
 		crv1.SystemRolloutVersionLabelKey: sysBuild.Labels[crv1.SystemBuildVersionLabelKey],
@@ -66,7 +67,7 @@ func getSystemRollout(latticeNamespace coretypes.LatticeNamespace, sysBuild *crv
 
 	sysRollout := &crv1.SystemRollout{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:   string(uuid.NewUUID()),
+			Name:   uuid.NewV4().String(),
 			Labels: labels,
 		},
 		Spec: crv1.SystemRolloutSpec{

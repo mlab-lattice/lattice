@@ -9,9 +9,9 @@ import (
 	crv1 "github.com/mlab-lattice/system/pkg/kubernetes/customresource/v1"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/uuid"
 
 	"github.com/golang/glog"
+	"github.com/satori/go.uuid"
 )
 
 func (sc *SystemController) getService(namespace, svcName string) (*crv1.Service, error) {
@@ -58,7 +58,7 @@ func getNewService(sys *crv1.System, svcInfo *crv1.SystemServicesInfo, svcPath s
 
 	svc := &crv1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:            string(uuid.NewUUID()),
+			Name:            uuid.NewV4().String(),
 			Namespace:       sys.Namespace,
 			Labels:          labels,
 			OwnerReferences: []metav1.OwnerReference{*metav1.NewControllerRef(sys, controllerKind)},

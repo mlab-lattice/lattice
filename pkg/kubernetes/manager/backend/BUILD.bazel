@@ -20,6 +20,7 @@ go_library(
         "@com_github_mlab_lattice_core//pkg/system/definition:go_default_library",
         "@com_github_mlab_lattice_core//pkg/system/tree:go_default_library",
         "@com_github_mlab_lattice_core//pkg/types:go_default_library",
+        "@com_github_satori_go_uuid//:go_default_library",
         "@io_k8s_api//core/v1:go_default_library",
         "@io_k8s_apimachinery//pkg/api/errors:go_default_library",
         "@io_k8s_apimachinery//pkg/apis/meta/v1:go_default_library",

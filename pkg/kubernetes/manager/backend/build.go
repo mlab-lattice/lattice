@@ -12,11 +12,12 @@ import (
 
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/uuid"
+
+	"github.com/satori/go.uuid"
 )
 
 func (kb *KubernetesBackend) BuildSystem(ln coretypes.LatticeNamespace, definitionRoot systemtree.Node, v coretypes.SystemVersion) (coretypes.SystemBuildId, error) {
-	systemBuild, err := getSystemBuild(ln, definitionRoot, v)
+	systemBuild, err := getNewSystemBuild(ln, definitionRoot, v)
 	if err != nil {
 		return "", err
 	}
@@ -32,7 +33,7 @@ func (kb *KubernetesBackend) BuildSystem(ln coretypes.LatticeNamespace, definiti
 	return coretypes.SystemBuildId(result.Name), err
 }
 
-func getSystemBuild(ln coretypes.LatticeNamespace, definitionRoot systemtree.Node, v coretypes.SystemVersion) (*crv1.SystemBuild, error) {
+func getNewSystemBuild(ln coretypes.LatticeNamespace, definitionRoot systemtree.Node, v coretypes.SystemVersion) (*crv1.SystemBuild, error) {
 	labels := map[string]string{
 		constants.LatticeNamespaceLabel: string(ln),
 		crv1.SystemVersionLabelKey:      string(v),
@@ -47,7 +48,7 @@ func getSystemBuild(ln coretypes.LatticeNamespace, definitionRoot systemtree.Nod
 
 	sysB := &crv1.SystemBuild{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:   string(uuid.NewUUID()),
+			Name:   uuid.NewV4().String(),
 			Labels: labels,
 		},
 		Spec: crv1.SystemBuildSpec{

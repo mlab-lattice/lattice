@@ -112,6 +112,8 @@ func getSystemTeardownState(state crv1.SystemTeardownState) coretypes.SystemTear
 	switch state {
 	case crv1.SystemTeardownStatePending:
 		return coretypes.SystemTeardownStatePending
+	case crv1.SystemTeardownStateInProgress:
+		return coretypes.SystemTeardownStateInProgress
 	case crv1.SystemTeardownStateSucceeded:
 		return coretypes.SystemTeardownStateSucceeded
 	case crv1.SystemTeardownStateFailed:
