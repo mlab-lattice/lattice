@@ -19,7 +19,8 @@ func pollForSystemEnvironmentReadiness(address string) error {
 	return wait.Poll(1*time.Second, 300*time.Second, func() (bool, error) {
 		resp, err := client.Get("http://" + address + "/status")
 		if err != nil {
-			return false, err
+			fmt.Printf("Got error polling /status: %v\n", err)
+			return false, nil
 		}
 		defer resp.Body.Close()
 

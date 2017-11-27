@@ -5,6 +5,8 @@ import (
 	"time"
 
 	crv1 "github.com/mlab-lattice/system/pkg/kubernetes/customresource/v1"
+
+	"github.com/golang/glog"
 )
 
 func (slc *SystemLifecycleController) syncInProgressTeardown(syst *crv1.SystemTeardown) error {
@@ -26,7 +28,9 @@ func (slc *SystemLifecycleController) syncInProgressTeardown(syst *crv1.SystemTe
 	}
 
 	if system.DeletionTimestamp != nil {
-		slc.teardownQueue.AddAfter(syst, 30*time.Second)
+		glog.V(4).Infof("System %v still deleting, requeueing in 30 seconds", system.Name)
+		slc.teardownQueue.AddAfter(syst.Namespace+"/"+syst.Name, 30*time.Second)
+		return nil
 	}
 
 	return slc.latticeResourceClient.Delete().
