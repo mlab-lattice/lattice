@@ -147,6 +147,10 @@ update-local-binary-cli:
 docker-build: docker-build-start-build-container
 	docker exec $(CONTAINER_NAME_BUILD) ./docker/bazel-builder/wrap-ssh-creds-and-exec.sh make build-docker-images
 
+.PHONY: docker-build-kubernetes-master-components
+docker-build-kubernetes-master-components: docker-build-start-build-container
+	docker exec $(CONTAINER_NAME_BUILD) ./docker/bazel-builder/wrap-ssh-creds-and-exec.sh "make build-docker-image-kubernetes-lattice-controller-manager && make build-docker-image-kubernetes-manager-api-rest"
+
 .PHONY: docker-build-bazel-build
 docker-build-bazel-build:
 	docker build $(DIR)/docker -f $(DIR)/docker/bazel-builder/Dockerfile.bazel-build -t lattice-build/bazel-build
@@ -248,6 +252,15 @@ docker-push-dev: docker-push-dev-component-build-build-docker-image \
 .PHONY: docker-build-and-push-dev
 docker-build-and-push-dev: docker-build docker-push-dev
 
+.PHONY: docker-build-and-push-dev-kubernetes-master-components
+docker-build-and-push-dev-kubernetes-master-components: docker-build-kubernetes-master-components \
+														docker-push-dev-kubernetes-master-components
+
+.PHONY: docker-push-dev-kubernetes-master-components
+docker-push-dev-kubernetes-master-components: docker-tag-dev-kubernetes-master-components \
+											  docker-push-dev-kubernetes-lattice-controller-manager \
+											  docker-push-dev-kubernetes-manager-api-rest
+
 .PHONY: docker-push-dev-component-build-build-docker-image
 docker-push-dev-component-build-build-docker-image: docker-tag-dev-component-build-build-docker-image
 	gcloud docker -- push $(DOCKER_IMAGE_COMPONENT_BUILD_BUILD_DEV)
@@ -283,6 +296,10 @@ docker-push-dev-kubernetes-manager-api-rest: docker-tag-dev-kubernetes-manager-a
 .PHONY: docker-push-dev-lattice-system-cli
 docker-push-dev-lattice-system-cli: docker-tag-dev-lattice-system-cli
 	gcloud docker -- push $(DOCKER_IMAGE_LATTICE_SYSTEM_CLI_DEV)
+
+.PHONY: docker-tag-dev-kubernetes-master-components
+docker-tag-dev-kubernetes-master-components: docker-tag-dev-kubernetes-lattice-controller-manager \
+											 docker-tag-dev-kubernetes-manager-api-rest
 
 .PHONY: docker-tag-dev-component-build-build-docker-image
 docker-tag-dev-component-build-build-docker-image:

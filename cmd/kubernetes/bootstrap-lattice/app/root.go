@@ -67,7 +67,7 @@ var RootCmd = &cobra.Command{
 		seedLatticeSystemEnvironmentManagerAPI(kubeClientset)
 
 		if provider == coreconstants.ProviderLocal {
-			seedLocalSpecific(kubeClientset)
+			seedLocalSpecific(kubeClientset, systemId)
 		} else {
 			seedCloudSpecific(kubeClientset)
 		}

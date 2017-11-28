@@ -37,4 +37,5 @@ func (r *restServer) mountHandlers() {
 	})
 
 	r.mountNamespaceHandlers()
+	r.mountAdminHandlers()
 }

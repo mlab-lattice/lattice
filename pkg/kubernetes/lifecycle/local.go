@@ -62,7 +62,7 @@ func (lp *LocalProvisioner) Provision(name, url string) error {
 		return err
 	}
 
-	err = lp.bootstrap(address, url)
+	err = lp.bootstrap(address, url, name)
 	if err != nil {
 		return err
 	}
@@ -75,7 +75,7 @@ func (lp *LocalProvisioner) Address(name string) (string, error) {
 	return lp.mec.IP(systemNamePrefixMinikube + name)
 }
 
-func (lp *LocalProvisioner) bootstrap(address, url string) error {
+func (lp *LocalProvisioner) bootstrap(address, url, name string) error {
 	fmt.Println("Bootstrapping")
 	usr, err := user.Current()
 	if err != nil {
@@ -158,6 +158,7 @@ func (lp *LocalProvisioner) bootstrap(address, url string) error {
 								"--provider", "local",
 								"--provider-var", "system-ip=" + address,
 								"--system-definition-url", url,
+								"--system-id", systemNamePrefixMinikube + name,
 								"--lattice-container-registry", "gcr.io/lattice-dev",
 								"--component-build-registry", "lattice-local",
 							},

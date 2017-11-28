@@ -6,6 +6,7 @@ go_library(
         "config.go",
         "docker.go",
         "finalizer.go",
+        "master_node.go",
         "namespace.go",
         "service_account.go",
         "terraform.go",

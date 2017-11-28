@@ -35,7 +35,7 @@ func (r *restServer) mountAdminMasterNodeHandlers() {
 			// get-master-component-logs
 			component.GET("/logs", func(c *gin.Context) {
 				nodeId := c.Param("master_node_id")
-				component := c.Param("component")
+				component := c.Param("component_id")
 
 				log, err := r.backend.GetMasterNodeComponentLog(nodeId, component)
 				if err != nil {
@@ -49,7 +49,7 @@ func (r *restServer) mountAdminMasterNodeHandlers() {
 			// restart-master-component
 			component.POST("/restart", func(c *gin.Context) {
 				nodeId := c.Param("master_node_id")
-				component := c.Param("component")
+				component := c.Param("component_id")
 
 				err := r.backend.RestartMasterNodeComponent(nodeId, component)
 

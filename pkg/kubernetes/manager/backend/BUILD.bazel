@@ -3,12 +3,13 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library")
 go_library(
     name = "go_default_library",
     srcs = [
-        "build.go",
+        "admin_master_node_component.go",
         "config.go",
         "kubernetes_backend.go",
-        "roll_out.go",
-        "service.go",
-        "tear_down.go",
+        "namespace_build.go",
+        "namespace_roll_out.go",
+        "namespace_service.go",
+        "namespace_tear_down.go",
     ],
     importpath = "github.com/mlab-lattice/system/pkg/kubernetes/manager/backend",
     visibility = ["//visibility:public"],

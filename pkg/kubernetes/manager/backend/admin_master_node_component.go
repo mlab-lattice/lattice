@@ -2,6 +2,7 @@ package backend
 
 import (
 	"fmt"
+	"io/ioutil"
 
 	"github.com/mlab-lattice/system/pkg/kubernetes/constants"
 
@@ -20,7 +21,7 @@ func (kb *KubernetesBackend) GetMasterNodeComponents(nodeId string) ([]string, e
 	// For now we'll assume that all master nodes run all of the components.
 	components := []string{
 		constants.MasterNodeComponentLatticeControllerMaster,
-		constants.MasterNodeComponentManagementApi,
+		constants.MasterNodeComponentManagerApi,
 	}
 	return components, nil
 }
@@ -31,14 +32,22 @@ func (kb *KubernetesBackend) GetMasterNodeComponentLog(nodeId, componentName str
 		return "", err
 	}
 
-	podsClient := kb.KubeClientset.CoreV1().Pods(componentPod.Namespace)
-	res := podsClient.GetLogs(componentPod.Name, &corev1.PodLogOptions{}).Do()
-	log, err := res.Raw()
+	req := kb.KubeClientset.CoreV1().
+		Pods(componentPod.Namespace).
+		GetLogs(componentPod.Name, &corev1.PodLogOptions{})
+
+	readCloser, err := req.Stream()
+	if err != nil {
+		return "", err
+	}
+	defer readCloser.Close()
+
+	bytes, err := ioutil.ReadAll(readCloser)
 	if err != nil {
 		return "", err
 	}
 
-	return string(log), nil
+	return string(bytes), nil
 }
 
 func (kb *KubernetesBackend) RestartMasterNodeComponent(nodeId, componentName string) error {
@@ -47,7 +56,9 @@ func (kb *KubernetesBackend) RestartMasterNodeComponent(nodeId, componentName st
 		return err
 	}
 
-	return kb.KubeClientset.CoreV1().Pods(componentPod.Namespace).Delete(componentPod.Name, &metav1.DeleteOptions{})
+	return kb.KubeClientset.CoreV1().
+		Pods(componentPod.Namespace).
+		Delete(componentPod.Name, &metav1.DeleteOptions{})
 }
 
 func (kb *KubernetesBackend) getMasterNode(nodeId string) (*corev1.Node, error) {
@@ -71,19 +82,9 @@ func (kb *KubernetesBackend) getMasterNode(nodeId string) (*corev1.Node, error) 
 }
 
 func (kb *KubernetesBackend) getMasterNodeComponentPod(nodeId, componentName string) (*corev1.Pod, error) {
-	var componentLabel string
-	switch componentName {
-	case constants.MasterNodeComponentLatticeControllerMaster:
-		componentLabel = constants.MasterNodeLabelComponentLatticeControllerMaster
-	case constants.MasterNodeComponentManagementApi:
-		componentLabel = constants.MasterNodeLabelComponentManagementApi
-	default:
-		return nil, fmt.Errorf("invalid component %v", componentName)
-	}
-
 	podsClient := kb.KubeClientset.CoreV1().Pods(constants.NamespaceLatticeInternal)
 	pods, err := podsClient.List(metav1.ListOptions{
-		LabelSelector: componentLabel,
+		LabelSelector: constants.MasterNodeLabelComponent,
 	})
 	if err != nil {
 		return nil, err
@@ -95,6 +96,10 @@ func (kb *KubernetesBackend) getMasterNodeComponentPod(nodeId, componentName str
 	}
 
 	for _, pod := range pods.Items {
+		if pod.Labels[constants.MasterNodeLabelComponent] != componentName {
+			continue
+		}
+
 		if pod.Spec.NodeName == masterNode.Name {
 			return &pod, nil
 		}
