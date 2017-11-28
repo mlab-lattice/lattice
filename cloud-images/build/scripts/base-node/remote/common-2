@@ -29,3 +29,8 @@ sudo systemctl enable kube-proxy
 echo "Ensuring ignition will run on next boot"
 sudo touch /boot/coreos/first_boot
 sudo rm /etc/machine-id
+
+# If we do not remove this file, every instance provisioned from this AMI will think its hostname
+# is that of the instance that the AMI was snapshotted from
+echo "Removing /etc/hostname"
+sudo rm /etc/hostname
