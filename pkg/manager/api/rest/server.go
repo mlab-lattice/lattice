@@ -34,32 +34,6 @@ func RunNewRestServer(b backend.Interface, port int32, workingDirectory string) 
 	s.router.Run(fmt.Sprintf(":%v", port))
 }
 
-type systemVersionResponse struct {
-	Id         string                     `json:"id"`
-	Definition systemdefinition.Interface `json:"definition"`
-}
-
-type buildSystemRequest struct {
-	Version string `json:"version"`
-}
-
-type buildSystemResponse struct {
-	BuildId coretypes.SystemBuildId `json:"buildId"`
-}
-
-type rollOutSystemRequest struct {
-	Version *string                  `json:"version,omitempty"`
-	BuildId *coretypes.SystemBuildId `json:"buildId,omitempty"`
-}
-
-type rollOutSystemResponse struct {
-	RolloutId coretypes.SystemRolloutId `json:"rolloutId"`
-}
-
-type tearDownSystemResponse struct {
-	TeardownId coretypes.SystemTeardownId `json:"teardownId"`
-}
-
 func (r *restServer) mountHandlers() {
 	// Status
 	r.router.GET("/status", func(c *gin.Context) {
@@ -71,6 +45,11 @@ func (r *restServer) mountHandlers() {
 	r.mountRolloutHandlers()
 	r.mountTeardownHandlers()
 	r.mountServiceHandlers()
+}
+
+type systemVersionResponse struct {
+	Id         string                     `json:"id"`
+	Definition systemdefinition.Interface `json:"definition"`
 }
 
 func (r *restServer) mountVersionHandlers() {
@@ -104,6 +83,14 @@ func (r *restServer) mountVersionHandlers() {
 			})
 		})
 	}
+}
+
+type buildSystemRequest struct {
+	Version string `json:"version"`
+}
+
+type buildSystemResponse struct {
+	BuildId coretypes.SystemBuildId `json:"buildId"`
 }
 
 func (r *restServer) mountBuildHandlers() {
@@ -173,6 +160,15 @@ func (r *restServer) mountBuildHandlers() {
 			c.JSON(http.StatusOK, b)
 		})
 	}
+}
+
+type rollOutSystemRequest struct {
+	Version *string                  `json:"version,omitempty"`
+	BuildId *coretypes.SystemBuildId `json:"buildId,omitempty"`
+}
+
+type rollOutSystemResponse struct {
+	RolloutId coretypes.SystemRolloutId `json:"rolloutId"`
 }
 
 func (r *restServer) mountRolloutHandlers() {
@@ -261,6 +257,10 @@ func (r *restServer) mountRolloutHandlers() {
 			c.JSON(http.StatusOK, r)
 		})
 	}
+}
+
+type tearDownSystemResponse struct {
+	TeardownId coretypes.SystemTeardownId `json:"teardownId"`
 }
 
 func (r *restServer) mountTeardownHandlers() {
