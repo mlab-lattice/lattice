@@ -58,7 +58,7 @@ func tearDownAndWaitForSuccess(address string) error {
 		return err
 	}
 
-	return wait.Poll(1*time.Second, 300*time.Second, func() (bool, error) {
+	return wait.Poll(5*time.Second, 300*time.Second, func() (bool, error) {
 		resp, err := client.Get("http://" + address + "/namespaces/lattice-user-system/teardowns/" + teardownResponse.TeardownId)
 		if err != nil {
 			// FIXME: print these out at a certain verbosity

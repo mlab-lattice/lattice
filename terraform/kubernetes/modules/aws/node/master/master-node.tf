@@ -182,7 +182,7 @@ module "base_node" {
   system_id = "${var.system_id}"
   name      = "master-${var.name}"
 
-  kubelet_labels = "node-role.kubernetes.io/master=true"
+  kubelet_labels = "node-role.kubernetes.io/master=true,node.master.lattice.mlab.com/id=${var.name}"
   kubelet_taints = "node-role.kubernetes.io/master=true:NoSchedule"
 
   additional_user_data = <<USER_DATA

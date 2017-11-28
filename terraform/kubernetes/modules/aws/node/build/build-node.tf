@@ -133,8 +133,8 @@ module "base_node" {
   system_id = "${var.system_id}"
   name      = "build-${var.build_id}"
 
-  kubelet_labels = "node-role.lattice.mlab.com/build=true"
-  kubelet_taints = "node-role.lattice.mlab.com/build=true:NoSchedule"
+  kubelet_labels = "node-role.kubernetes.io/build=true"
+  kubelet_taints = "node-role.kubernetes.io/build=true:NoSchedule"
 
   region        = "${var.region}"
   vpc_id        = "${var.vpc_id}"

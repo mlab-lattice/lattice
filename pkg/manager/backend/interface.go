@@ -6,6 +6,8 @@ import (
 )
 
 type Interface interface {
+	// Namespace
+
 	// Utils
 	GetSystemUrl(ln coretypes.LatticeNamespace) (url string, err error)
 
@@ -28,4 +30,11 @@ type Interface interface {
 	// Services
 	ListSystemServices(ln coretypes.LatticeNamespace) (svcs []coretypes.Service, err error)
 	GetSystemService(ln coretypes.LatticeNamespace, p systemtree.NodePath) (svc *coretypes.Service, err error)
+
+	// Admin
+
+	// Master Node Components
+	GetMasterNodeComponents(nodeId string) ([]string, error)
+	GetMasterNodeComponentLog(nodeId, componentName string) (string, error)
+	RestartMasterNodeComponent(nodeId, componentName string) error
 }
