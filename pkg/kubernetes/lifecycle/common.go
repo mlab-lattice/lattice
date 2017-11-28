@@ -85,7 +85,7 @@ func tearDownAndWaitForSuccess(address string) error {
 		case coretypes.SystemTeardownStateFailed:
 			return false, fmt.Errorf("teardown %v failed", teardownResponse.TeardownId)
 		case coretypes.SystemTeardownStatePending, coretypes.SystemTeardownStateInProgress:
-			fmt.Printf("teardown %v in state %v", teardownResponse.TeardownId, teardown.State)
+			fmt.Printf("teardown %v in state %v\n", teardownResponse.TeardownId, teardown.State)
 			return false, nil
 		default:
 			panic("unreachable")
