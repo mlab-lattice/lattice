@@ -41,12 +41,13 @@ type ConfigProviderLocal struct {
 }
 
 type ConfigProviderAWS struct {
-	Region        string   `json:"region"`
-	AccountId     string   `json:"accountId"`
-	VPCId         string   `json:"vpcId"`
-	SubnetIds     []string `json:"subnetIds"`
-	BaseNodeAMIId string   `json:"baseNodeAmiId"`
-	KeyName       string   `json:"keyName"`
+	Region                    string   `json:"region"`
+	AccountId                 string   `json:"accountId"`
+	VPCId                     string   `json:"vpcId"`
+	SubnetIds                 []string `json:"subnetIds"`
+	MasterNodeSecurityGroupID string   `json:"masterNodeSecurityGroupId"`
+	BaseNodeAMIId             string   `json:"baseNodeAmiId"`
+	KeyName                   string   `json:"keyName"`
 }
 
 type ConfigSystem struct {

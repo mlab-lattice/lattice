@@ -198,7 +198,8 @@ module "base_node" {
   "state_s3_bucket": "${var.system_s3_bucket}",
   "state_s3_key_prefix": "masters/nodes/${var.name}/state",
   "vpc_id": "${var.vpc_id}",
-  "vpc_cidr_block": "${data.aws_vpc.vpc.cidr_block}"
+  "vpc_cidr_block": "${data.aws_vpc.vpc.cidr_block}",
+  "master_node_security_group_id": "${module.base_node.security_group_id}"
 }
 USER_DATA
 

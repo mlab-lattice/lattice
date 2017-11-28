@@ -168,10 +168,11 @@ func (sc *ServiceController) getServiceDedicatedPrivateTerraformModule(svc *crv1
 		AWSAccountId: awsConfig.AccountId,
 		Region:       awsConfig.Region,
 
-		VPCId:         awsConfig.VPCId,
-		SubnetIds:     strings.Join(awsConfig.SubnetIds, ","),
-		BaseNodeAmiId: awsConfig.BaseNodeAMIId,
-		KeyName:       awsConfig.KeyName,
+		VPCId:                     awsConfig.VPCId,
+		SubnetIds:                 strings.Join(awsConfig.SubnetIds, ","),
+		MasterNodeSecurityGroupId: awsConfig.MasterNodeSecurityGroupID,
+		BaseNodeAmiId:             awsConfig.BaseNodeAMIId,
+		KeyName:                   awsConfig.KeyName,
 
 		SystemId:  sc.config.SystemId,
 		ServiceId: svc.Name,
@@ -206,10 +207,11 @@ func (sc *ServiceController) getServiceDedicatedPublicHttpTerraformModule(svc *c
 		AWSAccountId: awsConfig.AccountId,
 		Region:       awsConfig.Region,
 
-		VPCId:         awsConfig.VPCId,
-		SubnetIds:     strings.Join(awsConfig.SubnetIds, ","),
-		BaseNodeAmiId: awsConfig.BaseNodeAMIId,
-		KeyName:       awsConfig.KeyName,
+		VPCId:                     awsConfig.VPCId,
+		SubnetIds:                 strings.Join(awsConfig.SubnetIds, ","),
+		MasterNodeSecurityGroupId: awsConfig.MasterNodeSecurityGroupID,
+		BaseNodeAmiId:             awsConfig.BaseNodeAMIId,
+		KeyName:                   awsConfig.KeyName,
 
 		SystemId:  sc.config.SystemId,
 		ServiceId: svc.Name,

@@ -15,6 +15,12 @@ variable "instance_type" {}
 variable "base_node_ami_id" {}
 variable "key_name" {}
 
+variable "master_node_security_group_id" {}
+
+variable "kubelet_port" {
+  default = 10250
+}
+
 ###############################################################################
 # Provider
 #
@@ -139,4 +145,17 @@ module "base_node" {
   key_name      = "${var.key_name}"
 
   iam_instance_profile_role_name = "${aws_iam_role.build_node_role.name}"
+}
+
+###############################################################################
+# Security Group
+
+resource "aws_security_group_rule" "allow_kubelet_from_master" {
+  security_group_id = "${module.base_node.security_group_id}"
+
+  protocol                 = "tcp"
+  from_port                = "${var.kubelet_port}"
+  to_port                  = "${var.kubelet_port}"
+  type                     = "ingress"
+  source_security_group_id = "${var.master_node_security_group_id}"
 }

@@ -14,6 +14,8 @@ variable "service_id" {}
 variable "num_instances" {}
 variable "instance_type" {}
 
+variable "master_node_security_group_id" {}
+
 # The port_numbers variable maps the port that the load balancer should expose to
 # the port on the autoscaling group that it should target.
 
@@ -46,6 +48,8 @@ module "service_node" {
   instance_type    = "${var.instance_type}"
   base_node_ami_id = "${var.base_node_ami_id}"
   key_name         = "${var.key_name}"
+
+  master_node_security_group_id = "${var.master_node_security_group_id}"
 }
 
 ###############################################################################

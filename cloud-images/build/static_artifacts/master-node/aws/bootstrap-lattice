@@ -10,6 +10,7 @@ USER_DATA=$(curl -s http://169.254.169.254/latest/user-data)
 AWS_ACCOUNT_ID=$(echo ${USER_DATA} | jq '.lattice.aws_account_id' | tr -d '"')
 VPC_ID=$(echo ${USER_DATA} | jq '.lattice.vpc_id' | tr -d '"')
 SUBNET_IDS=$(echo ${USER_DATA} | jq '.lattice.subnet_ids' | tr -d '"')
+MASTER_NODE_SECURITY_GROUP_ID=$(echo ${USER_DATA} | jq '.lattice.master_node_security_group_id' | tr -d '"')
 BASE_NODE_AMI_ID=$(echo ${USER_DATA} | jq '.lattice.base_node_ami_id' | tr -d '"')
 KEY_NAME=$(echo ${USER_DATA} | jq '.lattice.key_name' | tr -d '"')
 STATE_S3_BUCKET=$(echo ${USER_DATA} | jq '.lattice.state_s3_bucket' | tr -d '"')
@@ -30,6 +31,7 @@ SYSTEM_DEFINITION_URL=$(echo ${USER_DATA} | jq '.lattice.system_definition_url' 
     --provider-var region=${REGION} \
     --provider-var vpc-id=${VPC_ID} \
     --provider-var subnet-ids=${SUBNET_IDS} \
+    --provider-var master-node-security-group-id=${MASTER_NODE_SECURITY_GROUP_ID} \
     --provider-var base-node-ami-id=${BASE_NODE_AMI_ID} \
     --provider-var key-name=${KEY_NAME} \
     --terraform-backend S3 \

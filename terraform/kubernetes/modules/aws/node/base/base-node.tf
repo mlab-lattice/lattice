@@ -110,6 +110,9 @@ resource "aws_security_group_rule" "auto_scalling_group_allow_ingress_flannel_vx
   }
 }
 
+# FIXME: add rule allowing traffic from master node to kubelet port (10250) for logs
+# TODO: find out why it's 10250
+
 # FIXME: TEMPORARY FOR TESTING
 resource "aws_security_group" "temporary_ssh_group" {
   name = "lattice-system-${var.system_id}-${var.name} TEMPORARY SSH RULE"

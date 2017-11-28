@@ -131,12 +131,13 @@ func getLocalConfig() (*crv1.ConfigProviderLocal, error) {
 func getAwsConfig() (*crv1.ConfigProviderAWS, error) {
 	// TODO: find a better way to do the parsing of the provider variables
 	expectedVars := map[string]interface{}{
-		"account-id":       nil,
-		"region":           nil,
-		"vpc-id":           nil,
-		"subnet-ids":       nil,
-		"base-node-ami-id": nil,
-		"key-name":         nil,
+		"account-id":                    nil,
+		"region":                        nil,
+		"vpc-id":                        nil,
+		"subnet-ids":                    nil,
+		"master-node-security-group-id": nil,
+		"base-node-ami-id":              nil,
+		"key-name":                      nil,
 	}
 
 	for _, providerVar := range *providerVars {
@@ -170,12 +171,13 @@ func getAwsConfig() (*crv1.ConfigProviderAWS, error) {
 	}
 
 	awsConfig := &crv1.ConfigProviderAWS{
-		Region:        expectedVars["region"].(string),
-		AccountId:     expectedVars["account-id"].(string),
-		VPCId:         expectedVars["vpc-id"].(string),
-		SubnetIds:     expectedVars["subnet-ids"].([]string),
-		BaseNodeAMIId: expectedVars["base-node-ami-id"].(string),
-		KeyName:       expectedVars["key-name"].(string),
+		Region:                    expectedVars["region"].(string),
+		AccountId:                 expectedVars["account-id"].(string),
+		VPCId:                     expectedVars["vpc-id"].(string),
+		SubnetIds:                 expectedVars["subnet-ids"].([]string),
+		MasterNodeSecurityGroupID: expectedVars["master-node-security-group-id"].(string),
+		BaseNodeAMIId:             expectedVars["base-node-ami-id"].(string),
+		KeyName:                   expectedVars["key-name"].(string),
 	}
 
 	return awsConfig, nil

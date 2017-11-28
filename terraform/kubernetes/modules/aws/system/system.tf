@@ -299,4 +299,6 @@ module "build_node" {
   instance_type    = "${var.master_node_instance_type}"
   base_node_ami_id = "${var.base_node_ami_id}"
   key_name         = "${var.key_name}"
+
+  master_node_security_group_id = "${module.master_node.security_group_id}"
 }
