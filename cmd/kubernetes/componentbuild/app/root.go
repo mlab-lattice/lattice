@@ -3,23 +3,29 @@ package app
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"os"
 
 	systemdefinitionblock "github.com/mlab-lattice/core/pkg/system/definition/block"
+	coretypes "github.com/mlab-lattice/core/pkg/types"
 
 	"github.com/mlab-lattice/system/pkg/componentbuild"
+	kubecomponentbuild "github.com/mlab-lattice/system/pkg/kubernetes/componentbuild"
 
 	"github.com/spf13/cobra"
 )
 
 var (
-	workDirectory  string
-	componentBuild string
+	workDirectory    string
+	componentBuildID string
 
 	dockerRegistry   string
 	dockerRepository string
 	dockerTag        string
 	dockerPush       bool
+
+	kubeconfig               string
+	componentBuildDefinition string
 )
 
 // RootCmd represents the base command when called without any subcommands
@@ -28,9 +34,9 @@ var RootCmd = &cobra.Command{
 	Short: "Bootstraps a kubernetes cluster to run lattice",
 	Run: func(cmd *cobra.Command, args []string) {
 		cb := &systemdefinitionblock.ComponentBuild{}
-		err := json.Unmarshal([]byte(componentBuild), cb)
+		err := json.Unmarshal([]byte(componentBuildDefinition), cb)
 		if err != nil {
-			panic("error unmarshaling component build: " + err.Error())
+			log.Fatal("error unmarshaling component build: " + err.Error())
 		}
 
 		dockerOptions := &componentbuild.DockerOptions{
@@ -40,13 +46,18 @@ var RootCmd = &cobra.Command{
 			Push:       dockerPush,
 		}
 
-		builder, err := componentbuild.NewBuilder(workDirectory, dockerOptions, nil, cb, nil)
+		statusUpdater, err := kubecomponentbuild.NewKubernetesStatusUpdater(kubeconfig)
 		if err != nil {
-			panic("error getting builder: " + err.Error())
+			log.Fatal("error getting status updater: " + err.Error())
+		}
+
+		builder, err := componentbuild.NewBuilder(coretypes.ComponentBuildID(componentBuildID), workDirectory, dockerOptions, nil, cb, statusUpdater)
+		if err != nil {
+			log.Fatal("error getting builder: " + err.Error())
 		}
 
 		if err = builder.Build(); err != nil {
-			panic("error building: " + err.Error())
+			os.Exit(1)
 		}
 	},
 }
@@ -61,10 +72,12 @@ func Execute() {
 }
 
 func init() {
-	RootCmd.Flags().StringVar(&workDirectory, "work-directory", "/tmp/lattice-system/", "path to use to store build artifacts")
-	RootCmd.Flags().StringVar(&componentBuild, "component-build", "", "JSON serialized version of the component build definition block")
+	RootCmd.Flags().StringVar(&componentBuildID, "component-build-id", "", "ID of the component build")
+	RootCmd.Flags().StringVar(&componentBuildDefinition, "component-build-definition", "", "JSON serialized version of the component build definition block")
 	RootCmd.Flags().StringVar(&dockerRegistry, "docker-registry", "", "registry to tag the docker image artifact with")
 	RootCmd.Flags().StringVar(&dockerRepository, "docker-repository", "", "repository to tag the docker image artifact with")
 	RootCmd.Flags().StringVar(&dockerTag, "docker-tag", "", "tag to tag the docker image artifact with")
 	RootCmd.Flags().BoolVar(&dockerPush, "docker-push", false, "whether or not the image should be pushed to the registry")
+	RootCmd.Flags().StringVar(&kubeconfig, "kubeconfig", "", "path to kubeconfig")
+	RootCmd.Flags().StringVar(&workDirectory, "work-directory", "/tmp/component-build", "path to use to store build artifacts")
 }

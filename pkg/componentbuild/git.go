@@ -11,13 +11,12 @@ import (
 func (b *Builder) buildGitRepositoryComponent() error {
 	color.Blue("Cloning git repository...")
 
+	fmt.Printf("status updater: %#v", b.StatusUpdater)
 	if b.StatusUpdater != nil {
 		// For now ignore status update errors, don't need to fail a build because the status could
 		// not be updated.
-		b.StatusUpdater.UpdateProgress(Progress{
-			Phase: PhasePullingGitRepository,
-			State: PhaseStateInProgress,
-		})
+		err := b.StatusUpdater.UpdateProgress(b.BuildID, PhasePullingGitRepository)
+		fmt.Printf("err: %v", err)
 	}
 
 	gitRepo := b.ComponentBuildBlock.GitRepository

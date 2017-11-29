@@ -64,21 +64,6 @@ container_image(
 load("@io_bazel_rules_docker//go:image.bzl", "go_image")
 
 go_image(
-    name = "component-builder",
-    importpath = "github.com/mlab-lattice/system/cmd/componentbuild",
-    library = "//cmd/componentbuild:go_default_library",
-    visibility = ["//visibility:public"],
-)
-
-container_push(
-    name = "component-builder-push",
-    format = "Docker",
-    image = ":component-builder",
-    registry = "gcr.io/lattice-dev",
-    repository = "component-builder",
-)
-
-go_image(
     name = "lattice-system-cli",
     base = ":terraform-modules-kubernetes",
     importpath = "github.com/mlab-lattice/system/cmd/cli",
@@ -107,6 +92,21 @@ container_push(
     image = ":kubernetes-bootstrap-lattice",
     registry = "gcr.io/lattice-dev",
     repository = "kubernetes-bootstrap-lattice",
+)
+
+go_image(
+    name = "kubernetes-component-builder",
+    importpath = "github.com/mlab-lattice/system/cmd/kubernetes/componentbuild",
+    library = "//cmd/kubernetes/componentbuild:go_default_library",
+    visibility = ["//visibility:public"],
+)
+
+container_push(
+    name = "kubernetes-component-builder-push",
+    format = "Docker",
+    image = ":kubernetes-component-builder",
+    registry = "gcr.io/lattice-dev",
+    repository = "kubernetes-component-builder",
 )
 
 go_image(

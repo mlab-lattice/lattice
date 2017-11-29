@@ -154,9 +154,10 @@ func (cbc *ComponentBuildController) getGitRepositoryBuildJobSpec(cb *crv1.Compo
 						},
 					},
 				},
-				Containers:    []corev1.Container{*buildContainer},
-				RestartPolicy: corev1.RestartPolicyNever,
-				DNSPolicy:     corev1.DNSDefault,
+				Containers:         []corev1.Container{*buildContainer},
+				ServiceAccountName: constants.ServiceAccountComponentBuilder,
+				RestartPolicy:      corev1.RestartPolicyNever,
+				DNSPolicy:          corev1.DNSDefault,
 			},
 		},
 	}
@@ -178,7 +179,8 @@ func (cbc *ComponentBuildController) getBuildContainer(cb *crv1.ComponentBuild) 
 	}
 
 	args := []string{
-		"--component-build", string(componentBuildJson),
+		"--component-build-id", cb.Name,
+		"--component-build-definition", string(componentBuildJson),
 		"--docker-registry", cbc.config.ComponentBuild.DockerConfig.Registry,
 		"--docker-repository", repo,
 		"--docker-tag", tag,

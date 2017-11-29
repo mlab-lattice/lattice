@@ -4,6 +4,7 @@ import (
 	"os"
 
 	systemdefinitionblock "github.com/mlab-lattice/core/pkg/system/definition/block"
+	coretypes "github.com/mlab-lattice/core/pkg/types"
 	gitutil "github.com/mlab-lattice/core/pkg/util/git"
 
 	dockerclient "github.com/docker/docker/client"
@@ -11,13 +12,14 @@ import (
 )
 
 type Builder struct {
+	BuildID             coretypes.ComponentBuildID
 	WorkingDir          string
 	ComponentBuildBlock *systemdefinitionblock.ComponentBuild
 	DockerOptions       *DockerOptions
 	DockerClient        *dockerclient.Client
 	GitResolver         *gitutil.Resolver
 	GitResolverOptions  *GitResolverOptions
-	StatusUpdater       ProgressUpdater
+	StatusUpdater       StatusUpdater
 }
 
 type DockerOptions struct {
@@ -60,12 +62,18 @@ func (e *ErrorInternal) Error() string {
 	return e.message
 }
 
+type Failure struct {
+	Error error
+	Phase Phase
+}
+
 func NewBuilder(
+	buildID coretypes.ComponentBuildID,
 	workDirectory string,
 	dockerOptions *DockerOptions,
 	gitResolverOptions *GitResolverOptions,
 	componentBuildBlock *systemdefinitionblock.ComponentBuild,
-	updater ProgressUpdater,
+	updater StatusUpdater,
 ) (*Builder, error) {
 	if workDirectory == "" {
 		return nil, newErrorInternal("workDirectory not supplied")
@@ -96,6 +104,7 @@ func NewBuilder(
 	color.NoColor = false
 
 	b := &Builder{
+		BuildID:             buildID,
 		WorkingDir:          workDirectory,
 		ComponentBuildBlock: componentBuildBlock,
 		DockerOptions:       dockerOptions,
@@ -113,8 +122,30 @@ func (b *Builder) Build() error {
 	}
 
 	if b.ComponentBuildBlock.GitRepository != nil {
-		return b.buildGitRepositoryComponent()
+		return b.handleError(b.buildGitRepositoryComponent())
 	}
 
 	return newErrorUser("unsupported component build type")
+}
+
+func (b *Builder) handleError(err error) error {
+	if err == nil {
+		return nil
+	}
+
+	color.Red("✘ Failed")
+
+	if b.StatusUpdater == nil {
+		return err
+	}
+
+	switch err.(type) {
+	case *ErrorUser:
+		b.StatusUpdater.UpdateError(b.BuildID, false, err)
+	default:
+		// TODO: is there a reason to differentiate between an ErrorInternal and a non ErrorUser?
+		b.StatusUpdater.UpdateError(b.BuildID, true, err)
+	}
+
+	return err
 }

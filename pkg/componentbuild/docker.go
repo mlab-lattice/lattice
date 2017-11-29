@@ -23,16 +23,13 @@ func (b *Builder) buildDockerImage(sourceDirectory string) error {
 	if b.StatusUpdater != nil {
 		// For now ignore status update errors, don't need to fail a build because the status could
 		// not be updated.
-		b.StatusUpdater.UpdateProgress(Progress{
-			Phase: PhaseBuildingDockerImage,
-			State: PhaseStateInProgress,
-		})
+		b.StatusUpdater.UpdateProgress(b.BuildID, PhaseBuildingDockerImage)
 	}
 
 	// Get Dockerfile contents and write them to the directory
 	dockerfileContents, err := b.getDockerfileContents(sourceDirectory)
 	if err != nil {
-		return err
+		return newErrorInternal("could not get Dockerfile contents: " + err.Error())
 	}
 
 	err = ioutil.WriteFile(filepath.Join(b.WorkingDir, "Dockerfile"), []byte(dockerfileContents), 0444)
@@ -84,52 +81,6 @@ func (b *Builder) buildDockerImage(sourceDirectory string) error {
 	return b.pushDockerImage()
 }
 
-func (b *Builder) pushDockerImage() error {
-	color.Blue("Pushing docker image...")
-
-	if b.StatusUpdater != nil {
-		// For now ignore status update errors, don't need to fail a build because the status could
-		// not be updated.
-		b.StatusUpdater.UpdateProgress(Progress{
-			Phase: PhaseBuildingDockerImage,
-			State: PhaseStateInProgress,
-		})
-	}
-
-	// Assumes the image has already been built and tagged.
-	dockerImageFQN := getDockerImageFQN(b.DockerOptions.Registry, b.DockerOptions.Repository, b.DockerOptions.Tag)
-
-	// Include creds if they were passed in
-	pushOptions := dockertypes.ImagePushOptions{}
-	if b.DockerOptions.RegistryAuth != nil {
-		pushOptions.RegistryAuth = *b.DockerOptions.RegistryAuth
-	}
-
-	responseBody, err := b.DockerClient.ImagePush(context.Background(), dockerImageFQN, pushOptions)
-	if err != nil {
-		return newErrorInternal("pushing docker image failed: " + err.Error())
-	}
-	defer responseBody.Close()
-
-	// A little help here from https://github.com/docker/cli/blob/1ff73f867df382cb5a19df4579da3570f4daaff5/cli/command/image/build.go#L393-L426
-	err = jsonmessage.DisplayJSONMessagesStream(responseBody, os.Stdout, os.Stdout.Fd(), true, nil)
-	if err != nil {
-		if jerr, ok := err.(*jsonmessage.JSONError); ok {
-			// Build failed with a message, report this message as a user error.
-			return newErrorUser("docker image push failed: " + jerr.Message)
-		}
-
-		// If the displaying of the stream failed, it cannot be told whether the push succeeded or failed.
-		// Report this as a user error rather than swallowing it to take no chances.
-		return newErrorInternal("docker image push stream failed: " + err.Error())
-	}
-
-	color.Green("✓ Success!")
-	fmt.Println()
-
-	return nil
-}
-
 func (b *Builder) getDockerfileContents(sourceDirectory string) (string, error) {
 	if b.ComponentBuildBlock.Command == nil {
 		return "", newErrorUser("component build command cannot be nil")
@@ -179,6 +130,49 @@ func getDockerImageFQNFromDockerImageBlock(image *systemdefinitionblock.DockerIm
 	}
 
 	return getDockerImageFQN(image.Registry, image.Repository, image.Tag), nil
+}
+
+func (b *Builder) pushDockerImage() error {
+	color.Blue("Pushing docker image...")
+
+	if b.StatusUpdater != nil {
+		// For now ignore status update errors, don't need to fail a build because the status could
+		// not be updated.
+		b.StatusUpdater.UpdateProgress(b.BuildID, PhasePushingDockerImage)
+	}
+
+	// Assumes the image has already been built and tagged.
+	dockerImageFQN := getDockerImageFQN(b.DockerOptions.Registry, b.DockerOptions.Repository, b.DockerOptions.Tag)
+
+	// Include creds if they were passed in
+	pushOptions := dockertypes.ImagePushOptions{}
+	if b.DockerOptions.RegistryAuth != nil {
+		pushOptions.RegistryAuth = *b.DockerOptions.RegistryAuth
+	}
+
+	responseBody, err := b.DockerClient.ImagePush(context.Background(), dockerImageFQN, pushOptions)
+	if err != nil {
+		return newErrorInternal("pushing docker image failed: " + err.Error())
+	}
+	defer responseBody.Close()
+
+	// A little help here from https://github.com/docker/cli/blob/1ff73f867df382cb5a19df4579da3570f4daaff5/cli/command/image/build.go#L393-L426
+	err = jsonmessage.DisplayJSONMessagesStream(responseBody, os.Stdout, os.Stdout.Fd(), true, nil)
+	if err != nil {
+		if jerr, ok := err.(*jsonmessage.JSONError); ok {
+			// Build failed with a message, report this message as a user error.
+			return newErrorUser("docker image push failed: " + jerr.Message)
+		}
+
+		// If the displaying of the stream failed, it cannot be told whether the push succeeded or failed.
+		// Report this as a user error rather than swallowing it to take no chances.
+		return newErrorInternal("docker image push stream failed: " + err.Error())
+	}
+
+	color.Green("✓ Success!")
+	fmt.Println()
+
+	return nil
 }
 
 func getDockerImageFQN(registry, repository, tag string) string {

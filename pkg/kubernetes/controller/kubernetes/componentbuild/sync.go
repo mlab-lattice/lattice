@@ -32,19 +32,15 @@ func (cbc *ComponentBuildController) syncJoblessComponentBuild(cb *crv1.Componen
 // Warning: syncSuccessfulComponentBuild mutates cBuild. Please do not pass in a pointer to a ComponentBuild
 // from the shared cache.
 func (cbc *ComponentBuildController) syncSuccessfulComponentBuild(cb *crv1.ComponentBuild, j *batchv1.Job) error {
-	newStatus := crv1.ComponentBuildStatus{
-		State: crv1.ComponentBuildStateSucceeded,
-	}
-
 	newArtifacts := &crv1.ComponentBuildArtifacts{
 		DockerImageFqn: j.Annotations[jobDockerFqnAnnotationKey],
 	}
 
-	if reflect.DeepEqual(cb.Status, newStatus) && reflect.DeepEqual(cb.Spec.Artifacts, newArtifacts) {
+	if reflect.DeepEqual(cb.Status.State, crv1.ComponentBuildStateSucceeded) && reflect.DeepEqual(cb.Spec.Artifacts, newArtifacts) {
 		return nil
 	}
 
-	cb.Status = newStatus
+	cb.Status.State = crv1.ComponentBuildStateSucceeded
 	cb.Spec.Artifacts = newArtifacts
 
 	return cbc.putComponentBuildUpdate(cb)
@@ -53,12 +49,7 @@ func (cbc *ComponentBuildController) syncSuccessfulComponentBuild(cb *crv1.Compo
 // Warning: updateStatusToSucceeded mutates cBuild. Please do not pass in a pointer to a ComponentBuild
 // from the shared cache.
 func (cbc *ComponentBuildController) syncFailedComponentBuild(cb *crv1.ComponentBuild) error {
-	newStatus := crv1.ComponentBuildStatus{
-		State: crv1.ComponentBuildStateFailed,
-		// TODO: add message explaining failure (from job logs or something?)
-	}
-
-	return cbc.putComponentBuildStatusUpdate(cb, newStatus)
+	return cbc.updateComponentBuildState(cb, crv1.ComponentBuildStateFailed)
 }
 
 // Warning: syncUnfinishedComponentBuild mutates cBuild. Please do not pass in a pointer to a ComponentBuild
@@ -67,27 +58,20 @@ func (cbc *ComponentBuildController) syncUnfinishedComponentBuild(cb *crv1.Compo
 	// The Job Pods have been able to be scheduled, so the ComponentBuild is "running" even though
 	// a Job Pod may not currently be active.
 	if j.Status.Active > 0 || j.Status.Failed > 0 {
-		newStatus := crv1.ComponentBuildStatus{
-			State: crv1.ComponentBuildStateRunning,
-		}
-		return cbc.putComponentBuildStatusUpdate(cb, newStatus)
+		return cbc.updateComponentBuildState(cb, crv1.ComponentBuildStateRunning)
 	}
 
-	// No Jobs have started executing, so we're still queued.
-	newStatus := crv1.ComponentBuildStatus{
-		State: crv1.ComponentBuildStateQueued,
-	}
-	return cbc.putComponentBuildStatusUpdate(cb, newStatus)
+	return cbc.updateComponentBuildState(cb, crv1.ComponentBuildStateQueued)
 }
 
 // Warning: putComponentBuildStatusUpdate mutates cBuild. Please do not pass in a pointer to a ComponentBuild
 // from the shared cache.
-func (cbc *ComponentBuildController) putComponentBuildStatusUpdate(cb *crv1.ComponentBuild, newStatus crv1.ComponentBuildStatus) error {
-	if reflect.DeepEqual(cb.Status, newStatus) {
+func (cbc *ComponentBuildController) updateComponentBuildState(cb *crv1.ComponentBuild, newState crv1.ComponentBuildState) error {
+	if reflect.DeepEqual(cb.Status.State, newState) {
 		return nil
 	}
 
-	cb.Status = newStatus
+	cb.Status.State = newState
 	return cbc.putComponentBuildUpdate(cb)
 }
 

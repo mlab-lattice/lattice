@@ -13,7 +13,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/uuid"
 )
 
-func (kb *KubernetesBackend) TearDownSystem(ln coretypes.LatticeNamespace) (coretypes.SystemTeardownId, error) {
+func (kb *KubernetesBackend) TearDownSystem(ln coretypes.LatticeNamespace) (coretypes.SystemTeardownID, error) {
 	systemTeardown, err := getSystemTeardown(ln)
 	if err != nil {
 		return "", err
@@ -27,7 +27,7 @@ func (kb *KubernetesBackend) TearDownSystem(ln coretypes.LatticeNamespace) (core
 		Do().
 		Into(result)
 
-	return coretypes.SystemTeardownId(result.Name), err
+	return coretypes.SystemTeardownID(result.Name), err
 }
 
 func getSystemTeardown(ln coretypes.LatticeNamespace) (*crv1.SystemTeardown, error) {
@@ -51,7 +51,7 @@ func getSystemTeardown(ln coretypes.LatticeNamespace) (*crv1.SystemTeardown, err
 	return sysT, nil
 }
 
-func (kb *KubernetesBackend) GetSystemTeardown(ln coretypes.LatticeNamespace, tid coretypes.SystemTeardownId) (*coretypes.SystemTeardown, bool, error) {
+func (kb *KubernetesBackend) GetSystemTeardown(ln coretypes.LatticeNamespace, tid coretypes.SystemTeardownID) (*coretypes.SystemTeardown, bool, error) {
 	result := &crv1.SystemTeardown{}
 	err := kb.LatticeResourceClient.Get().
 		Namespace(constants.NamespaceLatticeInternal).
@@ -73,7 +73,7 @@ func (kb *KubernetesBackend) GetSystemTeardown(ln coretypes.LatticeNamespace, ti
 	}
 
 	sb := &coretypes.SystemTeardown{
-		Id:    tid,
+		ID:    tid,
 		State: getSystemTeardownState(result.Status.State),
 	}
 
@@ -100,7 +100,7 @@ func (kb *KubernetesBackend) ListSystemTeardowns(ln coretypes.LatticeNamespace) 
 		}
 
 		teardowns = append(teardowns, coretypes.SystemTeardown{
-			Id:    coretypes.SystemTeardownId(b.Name),
+			ID:    coretypes.SystemTeardownID(b.Name),
 			State: getSystemTeardownState(b.Status.State),
 		})
 	}

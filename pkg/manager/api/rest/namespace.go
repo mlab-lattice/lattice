@@ -64,7 +64,7 @@ type buildSystemRequest struct {
 }
 
 type buildSystemResponse struct {
-	BuildId coretypes.SystemBuildId `json:"buildId"`
+	BuildId coretypes.SystemBuildID `json:"buildId"`
 }
 
 func (r *restServer) mountNamespaceBuildHandlers() {
@@ -120,7 +120,7 @@ func (r *restServer) mountNamespaceBuildHandlers() {
 			namespace := c.Param("namespace_id")
 			bid := c.Param("build_id")
 
-			b, exists, err := r.backend.GetSystemBuild(coretypes.LatticeNamespace(namespace), coretypes.SystemBuildId(bid))
+			b, exists, err := r.backend.GetSystemBuild(coretypes.LatticeNamespace(namespace), coretypes.SystemBuildID(bid))
 			if err != nil {
 				c.String(http.StatusInternalServerError, err.Error())
 				return
@@ -138,11 +138,11 @@ func (r *restServer) mountNamespaceBuildHandlers() {
 
 type rollOutSystemRequest struct {
 	Version *string                  `json:"version,omitempty"`
-	BuildId *coretypes.SystemBuildId `json:"buildId,omitempty"`
+	BuildId *coretypes.SystemBuildID `json:"buildId,omitempty"`
 }
 
 type rollOutSystemResponse struct {
-	RolloutId coretypes.SystemRolloutId `json:"rolloutId"`
+	RolloutId coretypes.SystemRolloutID `json:"rolloutId"`
 }
 
 func (r *restServer) mountNamespaceRolloutHandlers() {
@@ -167,7 +167,7 @@ func (r *restServer) mountNamespaceRolloutHandlers() {
 				return
 			}
 
-			var rid coretypes.SystemRolloutId
+			var rid coretypes.SystemRolloutID
 			var err error
 			if req.Version != nil {
 				root, err := r.getSystemRoot(namespace, *req.Version)
@@ -184,7 +184,7 @@ func (r *restServer) mountNamespaceRolloutHandlers() {
 			} else {
 				rid, err = r.backend.RollOutSystemBuild(
 					coretypes.LatticeNamespace(namespace),
-					coretypes.SystemBuildId(*req.BuildId),
+					coretypes.SystemBuildID(*req.BuildId),
 				)
 			}
 
@@ -216,7 +216,7 @@ func (r *restServer) mountNamespaceRolloutHandlers() {
 			namespace := c.Param("namespace_id")
 			rid := c.Param("rollout_id")
 
-			r, exists, err := r.backend.GetSystemRollout(coretypes.LatticeNamespace(namespace), coretypes.SystemRolloutId(rid))
+			r, exists, err := r.backend.GetSystemRollout(coretypes.LatticeNamespace(namespace), coretypes.SystemRolloutID(rid))
 			if err != nil {
 				c.String(http.StatusInternalServerError, err.Error())
 				return
@@ -233,7 +233,7 @@ func (r *restServer) mountNamespaceRolloutHandlers() {
 }
 
 type tearDownSystemResponse struct {
-	TeardownId coretypes.SystemTeardownId `json:"teardownId"`
+	TeardownId coretypes.SystemTeardownID `json:"teardownId"`
 }
 
 func (r *restServer) mountNamespaceTeardownHandlers() {
@@ -273,7 +273,7 @@ func (r *restServer) mountNamespaceTeardownHandlers() {
 			namespace := c.Param("namespace_id")
 			tid := c.Param("teardown_id")
 
-			t, exists, err := r.backend.GetSystemTeardown(coretypes.LatticeNamespace(namespace), coretypes.SystemTeardownId(tid))
+			t, exists, err := r.backend.GetSystemTeardown(coretypes.LatticeNamespace(namespace), coretypes.SystemTeardownID(tid))
 			if err != nil {
 				c.String(http.StatusInternalServerError, err.Error())
 				return

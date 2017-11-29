@@ -26,12 +26,12 @@ type ComponentBuild struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata"`
 	Spec              ComponentBuildSpec   `json:"spec"`
-	Status            ComponentBuildStatus `json:"status,omitempty"`
+	Status            ComponentBuildStatus `json:"status"`
 }
 
 type ComponentBuildSpec struct {
 	BuildDefinitionBlock systemdefinitionblock.ComponentBuild `json:"definitionBlock"`
-	Artifacts            *ComponentBuildArtifacts             `json:"artifacts"`
+	Artifacts            *ComponentBuildArtifacts             `json:"artifacts,omitempty"`
 }
 
 type ComponentBuildArtifacts struct {
@@ -39,9 +39,9 @@ type ComponentBuildArtifacts struct {
 }
 
 type ComponentBuildStatus struct {
-	State    ComponentBuildState      `json:"state,omitempty"`
-	Message  string                   `json:"message,omitempty"`
-	Progress *componentbuild.Progress `json:"progress,omitempty"`
+	State             ComponentBuildState        `json:"state"`
+	LastObservedPhase *componentbuild.Phase      `json:"lastObservedPhase,omitempty"`
+	FailureInfo       *ComponentBuildFailureInfo `json:"failureInfo,omitempty"`
 }
 
 type ComponentBuildState string
@@ -53,6 +53,11 @@ const (
 	ComponentBuildStateSucceeded ComponentBuildState = "Succeeded"
 	ComponentBuildStateFailed    ComponentBuildState = "Failed"
 )
+
+type ComponentBuildFailureInfo struct {
+	Message  string `json:"message"`
+	Internal bool   `json:"internal"`
+}
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 type ComponentBuildList struct {

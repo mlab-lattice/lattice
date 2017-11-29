@@ -48,7 +48,7 @@ func seedConfig(kubeconfig *rest.Config, userSystemUrl string) {
 					Push:               true,
 					Registry:           componentBuildRegistry,
 				},
-				BuildImage: latticeContainerRegistry + "/component-builder",
+				BuildImage: latticeContainerRegistry + "/kubernetes-component-builder",
 			},
 			SystemId: systemId,
 		},

@@ -81,7 +81,7 @@ func (kb *KubernetesBackend) transformService(svc *crv1.Service) (*coretypes.Ser
 	}
 
 	coreSvc := &coretypes.Service{
-		Id:      svc.Name,
+		ID:      svc.Name,
 		Path:    svc.Spec.Path,
 		Address: addr,
 	}

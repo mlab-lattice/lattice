@@ -15,7 +15,7 @@ import (
 	"github.com/satori/go.uuid"
 )
 
-func (kb *KubernetesBackend) RollOutSystem(ln coretypes.LatticeNamespace, definitionRoot systemtree.Node, v coretypes.SystemVersion) (coretypes.SystemRolloutId, error) {
+func (kb *KubernetesBackend) RollOutSystem(ln coretypes.LatticeNamespace, definitionRoot systemtree.Node, v coretypes.SystemVersion) (coretypes.SystemRolloutID, error) {
 	bid, err := kb.BuildSystem(ln, definitionRoot, v)
 	if err != nil {
 		return "", err
@@ -24,7 +24,7 @@ func (kb *KubernetesBackend) RollOutSystem(ln coretypes.LatticeNamespace, defini
 	return kb.RollOutSystemBuild(ln, bid)
 }
 
-func (kb *KubernetesBackend) RollOutSystemBuild(ln coretypes.LatticeNamespace, bid coretypes.SystemBuildId) (coretypes.SystemRolloutId, error) {
+func (kb *KubernetesBackend) RollOutSystemBuild(ln coretypes.LatticeNamespace, bid coretypes.SystemBuildID) (coretypes.SystemRolloutID, error) {
 	sysBuild, err := kb.getSystemBuildFromId(ln, bid)
 	if err != nil {
 		return "", err
@@ -43,10 +43,10 @@ func (kb *KubernetesBackend) RollOutSystemBuild(ln coretypes.LatticeNamespace, b
 		Do().
 		Into(result)
 
-	return coretypes.SystemRolloutId(result.Name), err
+	return coretypes.SystemRolloutID(result.Name), err
 }
 
-func (kb *KubernetesBackend) getSystemBuildFromId(ln coretypes.LatticeNamespace, bid coretypes.SystemBuildId) (*crv1.SystemBuild, error) {
+func (kb *KubernetesBackend) getSystemBuildFromId(ln coretypes.LatticeNamespace, bid coretypes.SystemBuildID) (*crv1.SystemBuild, error) {
 	result := &crv1.SystemBuild{}
 	err := kb.LatticeResourceClient.Get().
 		Namespace(constants.NamespaceLatticeInternal).
@@ -82,7 +82,7 @@ func getNewSystemRollout(latticeNamespace coretypes.LatticeNamespace, sysBuild *
 	return sysRollout, nil
 }
 
-func (kb *KubernetesBackend) GetSystemRollout(ln coretypes.LatticeNamespace, rid coretypes.SystemRolloutId) (*coretypes.SystemRollout, bool, error) {
+func (kb *KubernetesBackend) GetSystemRollout(ln coretypes.LatticeNamespace, rid coretypes.SystemRolloutID) (*coretypes.SystemRollout, bool, error) {
 	result := &crv1.SystemRollout{}
 	err := kb.LatticeResourceClient.Get().
 		Namespace(constants.NamespaceLatticeInternal).
@@ -104,8 +104,8 @@ func (kb *KubernetesBackend) GetSystemRollout(ln coretypes.LatticeNamespace, rid
 	}
 
 	sb := &coretypes.SystemRollout{
-		Id:      rid,
-		BuildId: coretypes.SystemBuildId(result.Spec.BuildName),
+		ID:      rid,
+		BuildId: coretypes.SystemBuildID(result.Spec.BuildName),
 		State:   getSystemRolloutState(result.Status.State),
 	}
 
@@ -132,8 +132,8 @@ func (kb *KubernetesBackend) ListSystemRollouts(ln coretypes.LatticeNamespace) (
 		}
 
 		rollouts = append(rollouts, coretypes.SystemRollout{
-			Id:      coretypes.SystemRolloutId(r.Name),
-			BuildId: coretypes.SystemBuildId(r.Spec.BuildName),
+			ID:      coretypes.SystemRolloutID(r.Name),
+			BuildId: coretypes.SystemBuildID(r.Spec.BuildName),
 			State:   getSystemRolloutState(r.Status.State),
 		})
 	}

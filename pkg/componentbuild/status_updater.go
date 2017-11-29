@@ -1,5 +1,9 @@
 package componentbuild
 
+import (
+	coretypes "github.com/mlab-lattice/core/pkg/types"
+)
+
 type Phase string
 
 const (
@@ -8,18 +12,7 @@ const (
 	PhasePushingDockerImage   = "pushing docker image"
 )
 
-type PhaseState string
-
-const (
-	PhaseStateInProgress = "in progress"
-	PhaseStateFailed     = "failed"
-)
-
-type Progress struct {
-	Phase Phase      `json:"phase"`
-	State PhaseState `json:"state"`
-}
-
-type ProgressUpdater interface {
-	UpdateProgress(Progress) error
+type StatusUpdater interface {
+	UpdateProgress(coretypes.ComponentBuildID, Phase) error
+	UpdateError(buildID coretypes.ComponentBuildID, internal bool, err error) error
 }

@@ -21,14 +21,82 @@ import (
 
 func seedRbac(kubeClientset *kubernetes.Clientset) {
 	fmt.Println("Seeding rbac...")
+	seedRbacComponentBuilder(kubeClientset)
 	seedRbacEnvoyXdsApi(kubeClientset)
 	seedRbacLatticeControllerManger(kubeClientset)
 	seedRbacManagerApi(kubeClientset)
 }
 
-var readVerbs []string = []string{"get", "watch", "list"}
-var readAndCreateVerbs []string = []string{"get", "watch", "list", "create"}
-var readAndDeleteVerbs []string = []string{"get", "watch", "list", "delete"}
+var (
+	readVerbs          = []string{"get", "watch", "list"}
+	readAndCreateVerbs = []string{"get", "watch", "list", "create"}
+	readAndDeleteVerbs = []string{"get", "watch", "list", "delete"}
+	readAndUpdateVerbs = []string{"get", "watch", "list", "update"}
+)
+
+func seedRbacComponentBuilder(kubeClientset *kubernetes.Clientset) {
+	role := &rbacv1.Role{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "component-builder",
+			Namespace: constants.NamespaceLatticeInternal,
+		},
+		Rules: []rbacv1.PolicyRule{
+			// Read and update lattice component builds
+			{
+				APIGroups: []string{crv1.GroupName},
+				Resources: []string{crv1.ComponentBuildResourcePlural},
+				Verbs:     readAndUpdateVerbs,
+			},
+		},
+	}
+
+	pollKubeResourceCreation(func() (interface{}, error) {
+		return kubeClientset.
+			RbacV1().
+			Roles(role.Namespace).
+			Create(role)
+	})
+
+	sa := &corev1.ServiceAccount{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      constants.ServiceAccountComponentBuilder,
+			Namespace: role.Namespace,
+		},
+	}
+
+	pollKubeResourceCreation(func() (interface{}, error) {
+		return kubeClientset.
+			CoreV1().
+			ServiceAccounts(sa.Namespace).
+			Create(sa)
+	})
+
+	rb := &rbacv1.RoleBinding{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "component-builder",
+			Namespace: role.Namespace,
+		},
+		Subjects: []rbacv1.Subject{
+			{
+				Kind:      rbacv1.ServiceAccountKind,
+				Name:      sa.Name,
+				Namespace: sa.Namespace,
+			},
+		},
+		RoleRef: rbacv1.RoleRef{
+			APIGroup: rbacv1.GroupName,
+			Kind:     "Role",
+			Name:     role.Name,
+		},
+	}
+
+	pollKubeResourceCreation(func() (interface{}, error) {
+		return kubeClientset.
+			RbacV1().
+			RoleBindings(rb.Namespace).
+			Create(rb)
+	})
+}
 
 func seedRbacEnvoyXdsApi(kubeClientset *kubernetes.Clientset) {
 	role := &rbacv1.Role{

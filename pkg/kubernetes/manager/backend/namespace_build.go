@@ -16,7 +16,7 @@ import (
 	"github.com/satori/go.uuid"
 )
 
-func (kb *KubernetesBackend) BuildSystem(ln coretypes.LatticeNamespace, definitionRoot systemtree.Node, v coretypes.SystemVersion) (coretypes.SystemBuildId, error) {
+func (kb *KubernetesBackend) BuildSystem(ln coretypes.LatticeNamespace, definitionRoot systemtree.Node, v coretypes.SystemVersion) (coretypes.SystemBuildID, error) {
 	systemBuild, err := getNewSystemBuild(ln, definitionRoot, v)
 	if err != nil {
 		return "", err
@@ -30,7 +30,7 @@ func (kb *KubernetesBackend) BuildSystem(ln coretypes.LatticeNamespace, definiti
 		Do().
 		Into(result)
 
-	return coretypes.SystemBuildId(result.Name), err
+	return coretypes.SystemBuildID(result.Name), err
 }
 
 func getNewSystemBuild(ln coretypes.LatticeNamespace, definitionRoot systemtree.Node, v coretypes.SystemVersion) (*crv1.SystemBuild, error) {
@@ -64,7 +64,7 @@ func getNewSystemBuild(ln coretypes.LatticeNamespace, definitionRoot systemtree.
 	return sysB, nil
 }
 
-func (kb *KubernetesBackend) GetSystemBuild(ln coretypes.LatticeNamespace, bid coretypes.SystemBuildId) (*coretypes.SystemBuild, bool, error) {
+func (kb *KubernetesBackend) GetSystemBuild(ln coretypes.LatticeNamespace, bid coretypes.SystemBuildID) (*coretypes.SystemBuild, bool, error) {
 	result := &crv1.SystemBuild{}
 	err := kb.LatticeResourceClient.Get().
 		Namespace(constants.NamespaceLatticeInternal).
@@ -86,7 +86,7 @@ func (kb *KubernetesBackend) GetSystemBuild(ln coretypes.LatticeNamespace, bid c
 	}
 
 	sb := &coretypes.SystemBuild{
-		Id:      bid,
+		ID:      bid,
 		Version: coretypes.SystemVersion(result.Labels[crv1.SystemVersionLabelKey]),
 		State:   getSystemBuildState(result.Status.State),
 	}
@@ -114,7 +114,7 @@ func (kb *KubernetesBackend) ListSystemBuilds(ln coretypes.LatticeNamespace) ([]
 		}
 
 		builds = append(builds, coretypes.SystemBuild{
-			Id:      coretypes.SystemBuildId(b.Name),
+			ID:      coretypes.SystemBuildID(b.Name),
 			Version: coretypes.SystemVersion(b.Labels[crv1.SystemVersionLabelKey]),
 			State:   getSystemBuildState(b.Status.State),
 		})
