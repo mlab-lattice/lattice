@@ -145,7 +145,6 @@ update-local-binary-cli:
 # docker build hackery
 .PHONY: docker-enter-build-shell
 docker-enter-build-shell: docker-build-start-build-container
-	gcloud auth login
 	docker exec -it $(CONTAINER_NAME_BUILD) ./docker/bazel-builder/wrap-creds-and-exec.sh /bin/bash
 
 .PHONY: docker-build-bazel-build
