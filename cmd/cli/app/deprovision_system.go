@@ -16,7 +16,7 @@ var deprovisionSystemCmd = &cobra.Command{
 		providerName := args[0]
 		name := args[1]
 
-		provisioner, err := getProvisioner(providerName, name, *deprovisionVars)
+		provisioner, err := getProvisioner(providerName, name, actionDeprovision, *deprovisionVars)
 		if err != nil {
 			panic(err)
 		}

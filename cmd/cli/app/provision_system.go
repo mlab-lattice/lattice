@@ -19,7 +19,7 @@ var provisionSystemCmd = &cobra.Command{
 		name := args[1]
 		url := args[2]
 
-		provisioner, err := getProvisioner(providerName, name, *providerVars)
+		provisioner, err := getProvisioner(providerName, name, actionProvision, *providerVars)
 		if err != nil {
 			panic(err)
 		}
