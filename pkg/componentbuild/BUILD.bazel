@@ -13,6 +13,7 @@ go_library(
         "//pkg/util/tar:go_default_library",
         "@com_github_docker_docker//api/types:go_default_library",
         "@com_github_docker_docker//client:go_default_library",
+        "@com_github_docker_docker//pkg/jsonmessage:go_default_library",
         "@com_github_mlab_lattice_core//pkg/system/definition/block:go_default_library",
         "@com_github_mlab_lattice_core//pkg/util/git:go_default_library",
         "@org_golang_x_net//context:go_default_library",

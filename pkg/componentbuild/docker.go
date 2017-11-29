@@ -14,6 +14,7 @@ import (
 	tarutil "github.com/mlab-lattice/system/pkg/util/tar"
 
 	dockertypes "github.com/docker/docker/api/types"
+	"github.com/docker/docker/pkg/jsonmessage"
 )
 
 func (b *Builder) buildDockerImage(sourceDirectory string) error {
@@ -42,14 +43,26 @@ func (b *Builder) buildDockerImage(sourceDirectory string) error {
 		Tags: []string{dockerImageFQN},
 	}
 
-	buildResponse, err := b.DockerClient.ImageBuild(context.Background(), buildContext, buildOptions)
+	response, err := b.DockerClient.ImageBuild(context.Background(), buildContext, buildOptions)
 	if err != nil {
-		return newErrorUser("docker image build failed: " + err.Error())
+		// The build should at least be able to be sent to the daemon even if the user has an error, so
+		// if this fails, label it as internal.
+		return newErrorInternal("docker image build request failed: " + err.Error())
 	}
-	defer buildResponse.Body.Close()
+	defer response.Body.Close()
 
-	// Ignoring the potential error here, shouldn't fail the build because we couldn't log to stdout
-	io.Copy(os.Stdout, buildResponse.Body)
+	// A little help here from https://github.com/docker/cli/blob/1ff73f867df382cb5a19df4579da3570f4daaff5/cli/command/image/build.go#L393-L426
+	err = jsonmessage.DisplayJSONMessagesStream(response.Body, os.Stdout, os.Stdout.Fd(), true, nil)
+	if err != nil {
+		if jerr, ok := err.(*jsonmessage.JSONError); ok {
+			// Build failed with a message, report this message as a user error.
+			return newErrorUser("docker image build failed: " + jerr.Message)
+		}
+
+		// If the displaying of the stream failed, it cannot be told whether the build succeeded or failed.
+		// Report this as a user error rather than swallowing it to take no chances.
+		return newErrorInternal("docker image build stream failed: " + err.Error())
+	}
 
 	// If the image is not to be pushed, there's no more to do
 	if !b.DockerOptions.Push {
