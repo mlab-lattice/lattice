@@ -9,6 +9,8 @@ import (
 	"strings"
 )
 
+// ArchiveDirectory takes in the path to a directory and will attempt to return an io.Reader
+// containing the directory as a tarball.
 func ArchiveDirectory(directoryRoot string) (io.Reader, error) {
 	// With a little help from https://golang.org/src/archive/tar/example_test.go
 	// and https://medium.com/@skdomino/taring-untaring-files-in-go-6b07cf56bc07
