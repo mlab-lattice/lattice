@@ -341,7 +341,7 @@ func (r *restServer) getSystemRoot(ln string, version string) (systemtree.Node, 
 	return r.resolver.ResolveDefinition(
 		fmt.Sprintf("%v#%v", url, version),
 		coreconstants.SystemDefinitionRootPathDefault,
-		&systemresolver.ResolveOptions{},
+		&systemresolver.GitResolveOptions{},
 	)
 }
 
@@ -351,5 +351,5 @@ func (r *restServer) getSystemVersions(ln string) ([]string, error) {
 		return nil, err
 	}
 
-	return r.resolver.ListDefinitionVersions(url, &systemresolver.ResolveOptions{})
+	return r.resolver.ListDefinitionVersions(url, &systemresolver.GitResolveOptions{})
 }

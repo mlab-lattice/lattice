@@ -75,7 +75,7 @@ _go_image_repos()
 
 go_repository(
     name = "com_github_mlab_lattice_core",
-    commit = "ab702b6ce0def365ed37e364dfe7848e06b6d8c5",
+    commit = "e5687b550c2532a0695dae6cf45f1b1ff964a976",
     importpath = "github.com/mlab-lattice/core",
     remote = "git@github.com:mlab-lattice/core.git",
     vcs = "git",
@@ -206,6 +206,44 @@ go_repository(
     name = "in_gopkg_warnings_v0",
     commit = "ec4a0fea49c7b46c2aeb0b51aac55779c607e52b",
     importpath = "gopkg.in/warnings.v0",
+)
+
+go_repository(
+    name = "com_github_docker_docker",
+    commit = "f5ec1e2936dcbe7b5001c2b817188b095c700c27",
+    importpath = "github.com/docker/docker",
+)
+
+# docker dependencies
+# versions taken from https://github.com/moby/moby/blob/f5ec1e2936dcbe7b5001c2b817188b095c700c27/vendor.conf
+go_repository(
+    name = "com_github_docker_go_units",
+    commit = "8a7beacffa3009a9ac66bad506b18ffdd110cf97",
+    importpath = "github.com/docker/go-units",
+)
+
+go_repository(
+    name = "com_github_docker_go_connections",
+    commit = "ecb4cb2dd420ada7df7f2593d6c25441f65f69f2",
+    importpath = "github.com/docker/go-connections",
+)
+
+go_repository(
+    name = "com_github_docker_distribution",
+    commit = "28602af35aceda2f8d571bad7ca37a54cf0250bc",
+    importpath = "github.com/docker/distribution",
+)
+
+go_repository(
+    name = "com_github_pkg_errors",
+    commit = "839d9e913e063e28dfd0e6c7b7512793e0a48be9",
+    importpath = "github.com/pkg/errors",
+)
+
+go_repository(
+    name = "com_github_Sirupsen_logrus",
+    tag = "v0.11.0",
+    importpath = "github.com/Sirupsen/logrus",
 )
 
 # k8s dependencies
