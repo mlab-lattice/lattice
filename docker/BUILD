@@ -1,4 +1,4 @@
-load("@io_bazel_rules_docker//container:container.bzl", "container_image")
+load("@io_bazel_rules_docker//container:container.bzl", "container_image", "container_push")
 
 container_image(
     name = "component-build-build-docker-image",
@@ -64,11 +64,34 @@ container_image(
 load("@io_bazel_rules_docker//go:image.bzl", "go_image")
 
 go_image(
+    name = "component-builder",
+    importpath = "github.com/mlab-lattice/system/cmd/componentbuild",
+    library = "//cmd/componentbuild:go_default_library",
+    visibility = ["//visibility:public"],
+)
+
+container_push(
+    name = "component-builder-push",
+    format = "Docker",
+    image = ":component-builder",
+    registry = "gcr.io/lattice-dev",
+    repository = "component-builder",
+)
+
+go_image(
     name = "lattice-system-cli",
     base = ":terraform-modules-kubernetes",
     importpath = "github.com/mlab-lattice/system/cmd/cli",
     library = "//cmd/cli:go_default_library",
     visibility = ["//visibility:public"],
+)
+
+container_push(
+    name = "lattice-system-cli-push",
+    format = "Docker",
+    image = ":lattice-system-cli",
+    registry = "gcr.io/lattice-dev",
+    repository = "lattice-system-cli",
 )
 
 go_image(
@@ -78,11 +101,27 @@ go_image(
     visibility = ["//visibility:public"],
 )
 
+container_push(
+    name = "kubernetes-bootstrap-lattice-push",
+    format = "Docker",
+    image = ":kubernetes-bootstrap-lattice",
+    registry = "gcr.io/lattice-dev",
+    repository = "kubernetes-bootstrap-lattice",
+)
+
 go_image(
     name = "kubernetes-envoy-xds-api-rest-per-node",
     importpath = "github.com/mlab-lattice/system/cmd/kubernetes/envoy/xds-api/rest/per-node",
     library = "//cmd/kubernetes/envoy/xds-api/rest/per-node:go_default_library",
     visibility = ["//visibility:public"],
+)
+
+container_push(
+    name = "kubernetes-envoy-xds-api-rest-per-node-push",
+    format = "Docker",
+    image = ":kubernetes-envoy-xds-api-rest-per-node",
+    registry = "gcr.io/lattice-dev",
+    repository = "kubernetes-envoy-xds-api-rest-per-node",
 )
 
 go_image(
@@ -93,13 +132,14 @@ go_image(
     visibility = ["//visibility:public"],
 )
 
-#go_image(
-#    name = "kubernetes-manager-api-rest",
-#    importpath = "github.com/mlab-lattice/system/cmd/kubernetes/manager/api-rest",
-#    library = "//cmd/kubernetes/manager/api-rest:go_default_library",
-#    visibility = ["//visibility:public"],
-#    base = "@debian_with_ssh//image",
-#)
+container_push(
+    name = "kubernetes-lattice-controller-manager-push",
+    format = "Docker",
+    image = ":kubernetes-lattice-controller-manager",
+    registry = "gcr.io/lattice-dev",
+    repository = "kubernetes-lattice-controller-manager",
+)
+
 container_image(
     name = "kubernetes-manager-api-rest",
     base = ":wrap-with-ssh-agent-and-known-hosts",
@@ -109,4 +149,12 @@ container_image(
         "/usr/local/bin/wrap-with-ssh-agent",
         "/app/docker/api-rest"
     ],
+)
+
+container_push(
+    name = "kubernetes-manager-api-rest-push",
+    format = "Docker",
+    image = ":kubernetes-manager-api-rest",
+    registry = "gcr.io/lattice-dev",
+    repository = "kubernetes-manager-api-rest",
 )

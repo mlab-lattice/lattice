@@ -10,5 +10,11 @@ RUN /root/bin/bazel version
 
 RUN apt install -y docker.io
 
+RUN wget https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-sdk-180.0.1-linux-x86_64.tar.gz
+RUN tar xvzf google-cloud-sdk-180.0.1-linux-x86_64.tar.gz
+ENV PATH=$PATH:/google-cloud-sdk/bin
+RUN gcloud components install docker-credential-gcr
+RUN docker-credential-gcr configure-docker
+
 ENV PATH=$PATH:/root/bin
 WORKDIR /src

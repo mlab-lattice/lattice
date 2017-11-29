@@ -56,9 +56,7 @@ type ConfigSystem struct {
 
 type ConfigComponentBuild struct {
 	DockerConfig     ConfigBuildDocker `json:"dockerConfig"`
-	PullGitRepoImage string            `json:"pullGitRepoImage"`
-	GetEcrCredsImage string            `json:"getEcrCredsImage"`
-	BuildDockerImage string            `json:"buildDockerImage"`
+	BuildImage       string            `json:"buildImage"`
 }
 
 type ConfigBuildDocker struct {

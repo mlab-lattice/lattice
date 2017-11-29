@@ -15,7 +15,7 @@ BASE_DOCKER_IMAGE_DEBIAN_WITH_SSH = debian-with-ssh
 BASE_DOCKER_IMAGE_DEBIAN_WITH_SSH_DEV = $(DEV_REGISTRY)/$(BASE_DOCKER_IMAGE_DEBIAN_WITH_SSH):$(DEV_TAG)
 
 BASE_DOCKER_IMAGE_UBUNTU_WITH_IPTABLES = ubuntu-with-iptables
-BASE_DOCKER_IMAGE_UBUNTU_WITH_IPTABLES_DEV = $(DEV_REGISTRY)/$(BASE_DOCKER_IMAGE_UBUNTU_WITH_IPTABLES):$(DEV_TAG)
+BASE_DOCKER_IMAGE_DEBIAN_WITH_IPTABLES_DEV = $(DEV_REGISTRY)/$(BASE_DOCKER_IMAGE_UBUNTU_WITH_IPTABLES):$(DEV_TAG)
 
 BASE_DOCKER_IMAGE_UBUNTU_WITH_AWS = ubuntu-with-aws
 BASE_DOCKER_IMAGE_UBUNTU_WITH_AWS_DEV = $(DEV_REGISTRY)/$(BASE_DOCKER_IMAGE_UBUNTU_WITH_AWS):$(DEV_TAG)
@@ -88,15 +88,15 @@ gazelle:
 
 .PHONY: docker-build-base-images
 docker-build-base-images:
-	docker build $(DIR)/docker/envoy/ -f $(DIR)/docker/envoy/Dockerfile.iptables -t $(BASE_DOCKER_IMAGE_UBUNTU_WITH_IPTABLES_DEV)
 	docker build $(DIR)/docker/component-build -f $(DIR)/docker/component-build/Dockerfile.aws -t $(BASE_DOCKER_IMAGE_UBUNTU_WITH_AWS_DEV)
+	docker build $(DIR)/docker/debian -f $(DIR)/docker/debian/Dockerfile.iptables -t $(BASE_DOCKER_IMAGE_DEBIAN_WITH_IPTABLES_DEV)
 	docker build $(DIR)/docker/debian -f $(DIR)/docker/debian/Dockerfile.ssh -t $(BASE_DOCKER_IMAGE_DEBIAN_WITH_SSH_DEV)
 
 .PHONY: docker-push-dev-base-images
 docker-push-dev-base-images:
-	gcloud docker -- push $(BASE_DOCKER_IMAGE_UBUNTU_WITH_IPTABLES_DEV)
-	gcloud docker -- push $(BASE_DOCKER_IMAGE_UBUNTU_WITH_AWS_DEV)
+	gcloud docker -- push $(BASE_DOCKER_IMAGE_DEBIAN_WITH_IPTABLES_DEV)
 	gcloud docker -- push $(BASE_DOCKER_IMAGE_DEBIAN_WITH_SSH_DEV)
+	gcloud docker -- push $(BASE_DOCKER_IMAGE_UBUNTU_WITH_AWS_DEV)
 
 .PHONY: docker-build-and-push-dev-base-images
 docker-build-and-push-dev-base-images: docker-build-base-images docker-push-dev-base-images
@@ -143,13 +143,10 @@ update-local-binary-cli:
 	cp -f $(DIR)/bazel-bin/cmd/cli/cli $(DIR)/bin/lattice-system
 
 # docker build hackery
-.PHONY: docker-build
-docker-build: docker-build-start-build-container
-	docker exec $(CONTAINER_NAME_BUILD) ./docker/bazel-builder/wrap-ssh-creds-and-exec.sh make build-docker-images
-
-.PHONY: docker-build-kubernetes-master-components
-docker-build-kubernetes-master-components: docker-build-start-build-container
-	docker exec $(CONTAINER_NAME_BUILD) ./docker/bazel-builder/wrap-ssh-creds-and-exec.sh "make build-docker-image-kubernetes-lattice-controller-manager && make build-docker-image-kubernetes-manager-api-rest"
+.PHONY: docker-enter-build-shell
+docker-enter-build-shell: docker-build-start-build-container
+	gcloud auth login
+	docker exec -it $(CONTAINER_NAME_BUILD) ./docker/bazel-builder/wrap-creds-and-exec.sh /bin/bash
 
 .PHONY: docker-build-bazel-build
 docker-build-bazel-build:

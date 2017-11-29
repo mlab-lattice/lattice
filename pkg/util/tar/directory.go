@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 func ArchiveDirectory(directoryRoot string) (io.Reader, error) {
@@ -25,8 +26,14 @@ func ArchiveDirectory(directoryRoot string) (io.Reader, error) {
 			return err
 		}
 
+		header.Name = strings.TrimPrefix(strings.Replace(file, directoryRoot, "", -1), string(filepath.Separator))
+
 		if err = tw.WriteHeader(header); err != nil {
 			return err
+		}
+
+		if !fi.Mode().IsRegular() {
+			return nil
 		}
 
 		f, err := os.Open(file)

@@ -1,12 +1,12 @@
 package componentbuild
 
 import (
+	"encoding/json"
 	"fmt"
 	"reflect"
 	"time"
 
 	coreconstants "github.com/mlab-lattice/core/pkg/constants"
-	systemdefinitionblock "github.com/mlab-lattice/core/pkg/system/definition/block"
 
 	"github.com/mlab-lattice/system/pkg/kubernetes/constants"
 	crv1 "github.com/mlab-lattice/system/pkg/kubernetes/customresource/v1"
@@ -99,12 +99,12 @@ func getBuildJobName(cb *crv1.ComponentBuild) string {
 }
 
 func (cbc *ComponentBuildController) getGitRepositoryBuildJobSpec(cb *crv1.ComponentBuild) (batchv1.JobSpec, string, error) {
-	pullGitRepoContainer := cbc.getPullGitRepoContainer(cb)
-	buildDockerImageContainer, dockerImageFqn := cbc.getBuildDockerImageContainer(cb)
-	name := getBuildJobName(cb)
+	buildContainer, dockerImageFQN, err := cbc.getBuildContainer(cb)
+	if err != nil {
+		return batchv1.JobSpec{}, "", err
+	}
 
-	initContainers := []corev1.Container{pullGitRepoContainer}
-	containers := []corev1.Container{buildDockerImageContainer}
+	name := getBuildJobName(cb)
 
 	provider, err := crv1.GetProviderFromConfigSpec(cbc.config)
 	if err != nil {
@@ -117,7 +117,6 @@ func (cbc *ComponentBuildController) getGitRepositoryBuildJobSpec(cb *crv1.Compo
 		volumeHostPathPrefix = workingDirectoryVolumeHostPathPrefixLocal
 	case coreconstants.ProviderAWS:
 		volumeHostPathPrefix = workingDirectoryVolumeHostPathPrefixCloud
-		initContainers = append(initContainers, cbc.getGetEcrCredsContainer())
 	default:
 		panic(fmt.Sprintf("unsupported provider: %s", provider))
 	}
@@ -129,7 +128,9 @@ func (cbc *ComponentBuildController) getGitRepositoryBuildJobSpec(cb *crv1.Compo
 	}
 
 	// FIXME: add build node affinity for cloud case
+	var one int32 = 1
 	jobSpec := batchv1.JobSpec{
+		BackoffLimit: &one,
 		Template: corev1.PodTemplateSpec{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: name,
@@ -153,107 +154,45 @@ func (cbc *ComponentBuildController) getGitRepositoryBuildJobSpec(cb *crv1.Compo
 						},
 					},
 				},
-				InitContainers: initContainers,
-				Containers:     containers,
-				// TODO: add failure policy once it is supported: https://github.com/kubernetes/kubernetes/issues/30243
+				Containers:    []corev1.Container{*buildContainer},
 				RestartPolicy: corev1.RestartPolicyNever,
 				DNSPolicy:     corev1.DNSDefault,
 			},
 		},
 	}
 
-	return jobSpec, dockerImageFqn, nil
+	return jobSpec, dockerImageFQN, nil
 }
 
-func (cbc *ComponentBuildController) getPullGitRepoContainer(cb *crv1.ComponentBuild) corev1.Container {
-	pullGitRepoContainer := corev1.Container{
-		Name:            "pull-git-repo",
-		Image:           cbc.config.ComponentBuild.PullGitRepoImage,
-		ImagePullPolicy: corev1.PullIfNotPresent,
-		Env: []corev1.EnvVar{
-			{
-				Name:  "WORK_DIR",
-				Value: jobWorkingDirectory,
-			},
-			{
-				Name:  "GIT_URL",
-				Value: cb.Spec.BuildDefinitionBlock.GitRepository.Url,
-			},
-		},
-		VolumeMounts: []corev1.VolumeMount{
-			{
-				Name:      jobWorkingDirectoryVolumeName,
-				MountPath: jobWorkingDirectory,
-			},
-		},
+func (cbc *ComponentBuildController) getBuildContainer(cb *crv1.ComponentBuild) (*corev1.Container, string, error) {
+	componentBuildJson, err := json.Marshal(&cb.Spec.BuildDefinitionBlock)
+	if err != nil {
+		return nil, "", err
 	}
 
-	if cb.Spec.BuildDefinitionBlock.GitRepository.Commit != nil {
-		pullGitRepoContainer.Env = append(
-			pullGitRepoContainer.Env,
-			corev1.EnvVar{
-				Name:  "GIT_CHECKOUT_TARGET",
-				Value: *cb.Spec.BuildDefinitionBlock.GitRepository.Commit,
-			},
-		)
-	} else {
-		pullGitRepoContainer.Env = append(
-			pullGitRepoContainer.Env,
-			corev1.EnvVar{
-				Name:  "GIT_CHECKOUT_TARGET",
-				Value: *cb.Spec.BuildDefinitionBlock.GitRepository.Tag,
-			},
-		)
+	repo := cbc.config.ComponentBuild.DockerConfig.Repository
+	tag := cb.Annotations[crv1.AnnotationKeyComponentBuildDefinitionHash]
+	if cbc.config.ComponentBuild.DockerConfig.RepositoryPerImage {
+		repo = cb.Annotations[crv1.AnnotationKeyComponentBuildDefinitionHash]
+		tag = fmt.Sprint(time.Now().Unix())
 	}
 
-	return pullGitRepoContainer
-}
-
-func (cbc *ComponentBuildController) getGetEcrCredsContainer() corev1.Container {
-	pullGitRepoContainer := corev1.Container{
-		Name:            "get-ecr-creds",
-		Image:           cbc.config.ComponentBuild.GetEcrCredsImage,
-		ImagePullPolicy: corev1.PullIfNotPresent,
-		Env: []corev1.EnvVar{
-			{
-				Name:  "WORK_DIR",
-				Value: jobWorkingDirectory,
-			},
-			{
-				Name:  "REGION",
-				Value: cbc.config.Provider.AWS.Region,
-			},
-		},
-		VolumeMounts: []corev1.VolumeMount{
-			{
-				Name:      jobWorkingDirectoryVolumeName,
-				MountPath: jobWorkingDirectory,
-			},
-		},
+	args := []string{
+		"--component-build", string(componentBuildJson),
+		"--docker-registry", cbc.config.ComponentBuild.DockerConfig.Registry,
+		"--docker-repository", repo,
+		"--docker-tag", tag,
+		"--work-directory", jobWorkingDirectory,
 	}
 
-	return pullGitRepoContainer
-}
+	if cbc.config.ComponentBuild.DockerConfig.Push {
+		args = append(args, "--docker-push")
+	}
 
-func (cbc *ComponentBuildController) getBuildDockerImageContainer(cb *crv1.ComponentBuild) (corev1.Container, string) {
-	buildDockerImageContainer := corev1.Container{
-		Name:            "build-docker-image",
-		Image:           cbc.config.ComponentBuild.BuildDockerImage,
-		ImagePullPolicy: corev1.PullIfNotPresent,
-		Env: []corev1.EnvVar{
-			{
-				Name:  "WORK_DIR",
-				Value: jobWorkingDirectory,
-			},
-			{
-				Name:  "DOCKER_REGISTRY",
-				Value: cbc.config.ComponentBuild.DockerConfig.Registry,
-			},
-			{
-				Name:  "BUILD_CMD",
-				Value: *cb.Spec.BuildDefinitionBlock.Command,
-			},
-		},
+	buildContainer := &corev1.Container{
+		Name:  "build",
+		Image: cbc.config.ComponentBuild.BuildImage,
+		Args:  args,
 		VolumeMounts: []corev1.VolumeMount{
 			{
 				Name:      jobWorkingDirectoryVolumeName,
@@ -266,65 +205,14 @@ func (cbc *ComponentBuildController) getBuildDockerImageContainer(cb *crv1.Compo
 		},
 	}
 
-	repo := cbc.config.ComponentBuild.DockerConfig.Repository
-	tag := cb.Annotations[crv1.AnnotationKeyComponentBuildDefinitionHash]
-	if cbc.config.ComponentBuild.DockerConfig.RepositoryPerImage {
-		repo = cb.Annotations[crv1.AnnotationKeyComponentBuildDefinitionHash]
-		tag = fmt.Sprint(time.Now().Unix())
-	}
-
-	dockerImageFqn := fmt.Sprintf(
+	dockerImageFQN := fmt.Sprintf(
 		"%v/%v:%v",
 		cbc.config.ComponentBuild.DockerConfig.Registry,
 		repo,
 		tag,
 	)
 
-	buildDockerImageContainer.Env = append(
-		buildDockerImageContainer.Env,
-		// TODO: should this be Namespace/Name? should builds be namespaced?
-		corev1.EnvVar{
-			Name:  "DOCKER_REPOSITORY",
-			Value: repo,
-		},
-		corev1.EnvVar{
-			Name:  "DOCKER_IMAGE_TAG",
-			Value: tag,
-		},
-	)
-
-	push := "0"
-	if cbc.config.ComponentBuild.DockerConfig.Push {
-		push = "1"
-	}
-	buildDockerImageContainer.Env = append(
-		buildDockerImageContainer.Env,
-		corev1.EnvVar{
-			Name:  "DOCKER_PUSH",
-			Value: push,
-		},
-	)
-
-	var baseImage string
-	if cb.Spec.BuildDefinitionBlock.Language != nil {
-		// TODO: insert custom language images when we have them
-		baseImage = *cb.Spec.BuildDefinitionBlock.Language
-	} else {
-		baseImage = getDockerImageFqn(cb.Spec.BuildDefinitionBlock.DockerImage)
-	}
-	buildDockerImageContainer.Env = append(
-		buildDockerImageContainer.Env,
-		corev1.EnvVar{
-			Name:  "DOCKER_BASE_IMAGE",
-			Value: baseImage,
-		},
-	)
-
-	return buildDockerImageContainer, dockerImageFqn
-}
-
-func getDockerImageFqn(di *systemdefinitionblock.DockerImage) string {
-	return fmt.Sprintf("%v/%v:%v", di.Registry, di.Repository, di.Tag)
+	return buildContainer, dockerImageFQN, nil
 }
 
 func jobStatus(j *batchv1.Job) (finished bool, succeeded bool) {

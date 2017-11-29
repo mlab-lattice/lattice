@@ -103,9 +103,10 @@ WORKDIR /usr/src/app
 
 COPY %v /usr/src/app
 
-RUN ${BUILD_CMD}`,
+RUN %v`,
 		baseDockerImage,
 		relativeSourceDirectory,
+		*b.ComponentBuildBlock.Command,
 	)
 
 	return dockerfileContents, nil

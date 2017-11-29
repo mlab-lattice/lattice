@@ -7,6 +7,9 @@ ssh-add /root/.ssh/id_rsa-github
 ssh-keyscan -t rsa github.com >> ~/.ssh/known_hosts
 
 PATH=${PATH}:/root/bin
+#
+#gcloud auth login
+#docker-credential-gcr configure-docker
 
 cd /src
 eval ${@}

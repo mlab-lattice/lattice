@@ -246,6 +246,14 @@ go_repository(
     importpath = "github.com/Sirupsen/logrus",
 )
 
+# Commit in vendor.conf is 54296cf40ad8143b62dbcaa1d90e520a2136ddfe, but bazel did not like this (said it was not a tree).
+# Seems to be cherry pick of c7ebda72acad31929e35b4fc6c2739013cf4fadd, so using that instead.
+go_repository(
+    name = "com_github_opencontainers_runc",
+    commit = "c7ebda72acad31929e35b4fc6c2739013cf4fadd",
+    importpath = "github.com/opencontainers/runc",
+)
+
 # k8s dependencies
 go_repository(
     name = "com_github_PuerkitoBio_purell",
