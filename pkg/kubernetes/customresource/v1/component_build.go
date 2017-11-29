@@ -3,6 +3,8 @@ package v1
 import (
 	systemdefinitionblock "github.com/mlab-lattice/core/pkg/system/definition/block"
 
+	"github.com/mlab-lattice/system/pkg/componentbuild"
+
 	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -37,8 +39,9 @@ type ComponentBuildArtifacts struct {
 }
 
 type ComponentBuildStatus struct {
-	State   ComponentBuildState `json:"state,omitempty"`
-	Message string              `json:"message,omitempty"`
+	State    ComponentBuildState      `json:"state,omitempty"`
+	Message  string                   `json:"message,omitempty"`
+	Progress *componentbuild.Progress `json:"progress,omitempty"`
 }
 
 type ComponentBuildState string

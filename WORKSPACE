@@ -127,9 +127,21 @@ go_repository(
 )
 
 go_repository(
+    name = "com_github_docker_docker",
+    commit = "f5ec1e2936dcbe7b5001c2b817188b095c700c27",
+    importpath = "github.com/docker/docker",
+)
+
+go_repository(
     name = "com_github_gin_gonic_gin",
     commit = "d459835d2b077e44f7c9b453505ee29881d5d12d",  # v1.2
     importpath = "github.com/gin-gonic/gin",
+)
+
+go_repository(
+    name = "com_github_fatih_color",
+    tag = "v1.5.0",
+    importpath = "github.com/fatih/color",
 )
 
 # Core dependencies
@@ -206,12 +218,6 @@ go_repository(
     name = "in_gopkg_warnings_v0",
     commit = "ec4a0fea49c7b46c2aeb0b51aac55779c607e52b",
     importpath = "gopkg.in/warnings.v0",
-)
-
-go_repository(
-    name = "com_github_docker_docker",
-    commit = "f5ec1e2936dcbe7b5001c2b817188b095c700c27",
-    importpath = "github.com/docker/docker",
 )
 
 # docker dependencies
@@ -505,4 +511,11 @@ go_repository(
     name = "com_github_ugorji_go",
     commit = "c88ee250d0221a57af388746f5cf03768c21d6e2",
     importpath = "github.com/ugorji/go",
+)
+
+# Color dependencies
+go_repository(
+    name = "com_github_mattn_go_colorable",
+    commit = "5411d3eea5978e6cdc258b30de592b60df6aba96",
+    importpath = "github.com/mattn/go-colorable",
 )

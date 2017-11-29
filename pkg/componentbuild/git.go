@@ -4,10 +4,21 @@ import (
 	"fmt"
 
 	gitutil "github.com/mlab-lattice/core/pkg/util/git"
+
+	"github.com/fatih/color"
 )
 
 func (b *Builder) buildGitRepositoryComponent() error {
-	fmt.Println("Cloning git repository...")
+	color.Blue("Cloning git repository...")
+
+	if b.StatusUpdater != nil {
+		// For now ignore status update errors, don't need to fail a build because the status could
+		// not be updated.
+		b.StatusUpdater.UpdateProgress(Progress{
+			Phase: PhasePullingGitRepository,
+			State: PhaseStateInProgress,
+		})
+	}
 
 	gitRepo := b.ComponentBuildBlock.GitRepository
 	if err := gitRepo.Validate(nil); err != nil {
@@ -28,6 +39,9 @@ func (b *Builder) buildGitRepositoryComponent() error {
 	if err = b.checkOutGitRepository(uri); err != nil {
 		return newErrorUser("git repository checkout failed: " + err.Error())
 	}
+
+	color.Green("✓ Success!")
+	fmt.Println()
 
 	sourceDirectory := b.GitResolver.GetRepositoryPath(b.getGitResolverContext(uri))
 	return b.buildDockerImage(sourceDirectory)

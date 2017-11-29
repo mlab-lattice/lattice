@@ -7,6 +7,7 @@ import (
 	gitutil "github.com/mlab-lattice/core/pkg/util/git"
 
 	dockerclient "github.com/docker/docker/client"
+	"github.com/fatih/color"
 )
 
 type Builder struct {
@@ -16,6 +17,7 @@ type Builder struct {
 	DockerClient        *dockerclient.Client
 	GitResolver         *gitutil.Resolver
 	GitResolverOptions  *GitResolverOptions
+	StatusUpdater       ProgressUpdater
 }
 
 type DockerOptions struct {
@@ -63,6 +65,7 @@ func NewBuilder(
 	dockerOptions *DockerOptions,
 	gitResolverOptions *GitResolverOptions,
 	componentBuildBlock *systemdefinitionblock.ComponentBuild,
+	updater ProgressUpdater,
 ) (*Builder, error) {
 	if workDirectory == "" {
 		return nil, newErrorInternal("workDirectory not supplied")
@@ -89,12 +92,16 @@ func NewBuilder(
 		return nil, newErrorInternal("error getting docker client: " + err.Error())
 	}
 
+	// Otherwise color detects it's not actually in a terminal and disables itself
+	color.NoColor = false
+
 	b := &Builder{
 		WorkingDir:          workDirectory,
 		ComponentBuildBlock: componentBuildBlock,
 		DockerOptions:       dockerOptions,
 		DockerClient:        dockerClient,
 		GitResolverOptions:  gitResolverOptions,
+		StatusUpdater:       updater,
 	}
 	return b, nil
 }

@@ -40,7 +40,7 @@ var RootCmd = &cobra.Command{
 			Push:       dockerPush,
 		}
 
-		builder, err := componentbuild.NewBuilder(workDirectory, dockerOptions, nil, cb)
+		builder, err := componentbuild.NewBuilder(workDirectory, dockerOptions, nil, cb, nil)
 		if err != nil {
 			panic("error getting builder: " + err.Error())
 		}
