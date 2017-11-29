@@ -20,6 +20,7 @@ var (
 	systemId                 string
 	latticeContainerRegistry string
 	componentBuildRegistry   string
+	dockerAPIVersion         string
 	provider                 string
 	providerVars             *[]string
 	terraformBackend         string
@@ -90,6 +91,7 @@ func init() {
 	RootCmd.Flags().StringVar(&systemId, "system-id", "", "ID of the system")
 	RootCmd.Flags().StringVar(&latticeContainerRegistry, "lattice-container-registry", "", "registry which stores the lattice infrastructure containers")
 	RootCmd.Flags().StringVar(&componentBuildRegistry, "component-build-registry", "", "registry where component builds are tagged and potentially pushed to")
+	RootCmd.Flags().StringVar(&dockerAPIVersion, "docker-api-version", "", "version of the docker API used by the docker daemons")
 	RootCmd.Flags().StringVar(&provider, "provider", "", "provider")
 	RootCmd.Flags().StringVar(&terraformBackend, "terraform-backend", "", "backend to use for storing terraform state")
 

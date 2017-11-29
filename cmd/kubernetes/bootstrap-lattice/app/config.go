@@ -47,6 +47,7 @@ func seedConfig(kubeconfig *rest.Config, userSystemUrl string) {
 					Repository:         constants.DockerRegistryComponentBuildsDefault,
 					Push:               true,
 					Registry:           componentBuildRegistry,
+					APIVersion:         dockerAPIVersion,
 				},
 				BuildImage: latticeContainerRegistry + "/kubernetes-component-builder",
 			},

@@ -39,7 +39,7 @@ packer build -machine-readable \
     -var "ami_name=lattice-kube-base-node-$(hostname)-$(date +%s)" \
     -var "vpc_id=${VPC_ID}" \
     -var "subnet_id=${SUBNET_ID}" \
-    -var "source_ami=ami-4feafd59" \
+    -var "source_ami=ami-a89d3ad2" \
     aws-base-node-image.json | tee ${PACKER_OUTPUT_FILE} | cut -d, -f 5
 
 BASE_NODE_AMI_ID=$(grep -E -o 'ami-[a-f0-9]{8}' ${PACKER_OUTPUT_FILE} | tail -1)

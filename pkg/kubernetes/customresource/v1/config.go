@@ -55,8 +55,8 @@ type ConfigSystem struct {
 }
 
 type ConfigComponentBuild struct {
-	DockerConfig     ConfigBuildDocker `json:"dockerConfig"`
-	BuildImage       string            `json:"buildImage"`
+	DockerConfig ConfigBuildDocker `json:"dockerConfig"`
+	BuildImage   string            `json:"buildImage"`
 }
 
 type ConfigBuildDocker struct {
@@ -72,6 +72,9 @@ type ConfigBuildDocker struct {
 	// If true push the image to the repository.
 	// Set to false for the local case.
 	Push bool `json:"push"`
+
+	// Version of the docker API used by the build node docker daemons
+	APIVersion string `json:"apiVersion"`
 }
 
 type ConfigEnvoy struct {

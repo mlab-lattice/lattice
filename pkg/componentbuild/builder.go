@@ -7,6 +7,8 @@ import (
 	coretypes "github.com/mlab-lattice/core/pkg/types"
 	gitutil "github.com/mlab-lattice/core/pkg/util/git"
 
+	dockerutil "github.com/mlab-lattice/system/pkg/util/docker"
+
 	dockerclient "github.com/docker/docker/client"
 	"github.com/fatih/color"
 )
@@ -23,11 +25,11 @@ type Builder struct {
 }
 
 type DockerOptions struct {
-	Registry     string
-	Repository   string
-	Tag          string
-	Push         bool
-	RegistryAuth *string
+	Registry             string
+	Repository           string
+	Tag                  string
+	Push                 bool
+	RegistryAuthProvider dockerutil.RegistryLoginProvider
 }
 
 type GitResolverOptions struct {

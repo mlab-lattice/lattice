@@ -14,8 +14,7 @@ func (b *Builder) buildGitRepositoryComponent() error {
 	if b.StatusUpdater != nil {
 		// For now ignore status update errors, don't need to fail a build because the status could
 		// not be updated.
-		err := b.StatusUpdater.UpdateProgress(b.BuildID, PhasePullingGitRepository)
-		fmt.Printf("err: %v", err)
+		b.StatusUpdater.UpdateProgress(b.BuildID, PhasePullingGitRepository)
 	}
 
 	gitRepo := b.ComponentBuildBlock.GitRepository

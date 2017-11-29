@@ -24,6 +24,7 @@ SYSTEM_DEFINITION_URL=$(echo ${USER_DATA} | jq '.lattice.system_definition_url' 
     --kubeconfig-path /etc/bootstrap-lattice/kubeconfig \
     --lattice-container-registry gcr.io/lattice-dev \
     --component-build-registry ${AWS_ACCOUNT_ID}.dkr.ecr.${REGION}.amazonaws.com \
+    --docker-api-version '1.24' \
     --system-definition-url ${SYSTEM_DEFINITION_URL} \
     --system-id ${SYSTEM_ID} \
     --provider AWS \

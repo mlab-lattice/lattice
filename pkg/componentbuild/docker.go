@@ -1,6 +1,8 @@
 package componentbuild
 
 import (
+	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -146,8 +148,26 @@ func (b *Builder) pushDockerImage() error {
 
 	// Include creds if they were passed in
 	pushOptions := dockertypes.ImagePushOptions{}
-	if b.DockerOptions.RegistryAuth != nil {
-		pushOptions.RegistryAuth = *b.DockerOptions.RegistryAuth
+	if b.DockerOptions.RegistryAuthProvider != nil {
+		user, pass, err := b.DockerOptions.RegistryAuthProvider.GetLoginCredentials(b.DockerOptions.Registry)
+		if err != nil {
+			return newErrorInternal("failed to retrieve registry auth token: " + err.Error())
+		}
+
+		// A little help here from https://github.com/docker/cli/blob/042575aac918c90e9838c67c9ac9e2ff2810c326/cli/command/image/trust.go#L168-L180
+		// and https://github.com/docker/cli/blob/74af31be7f2d956a021f097af894ed9adf89272f/cli/command/registry.go#L40-L47
+		authConfig := dockertypes.AuthConfig{
+			Username:      user,
+			Password:      pass,
+			ServerAddress: "https://" + b.DockerOptions.Registry,
+		}
+
+		buf, err := json.Marshal(authConfig)
+		if err != nil {
+			return newErrorInternal("marshalling auth config to JSON failed: " + err.Error())
+		}
+
+		pushOptions.RegistryAuth = base64.URLEncoding.EncodeToString(buf)
 	}
 
 	responseBody, err := b.DockerClient.ImagePush(context.Background(), dockerImageFQN, pushOptions)

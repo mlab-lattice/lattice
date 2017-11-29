@@ -127,6 +127,12 @@ go_repository(
 )
 
 go_repository(
+    name = "com_github_satori_go_uuid",
+    commit = "5bf94b69c6b68ee1b541973bb8e1144db23a194b",
+    importpath = "github.com/satori/go.uuid",
+)
+
+go_repository(
     name = "com_github_docker_docker",
     commit = "f5ec1e2936dcbe7b5001c2b817188b095c700c27",
     importpath = "github.com/docker/docker",
@@ -144,19 +150,19 @@ go_repository(
     importpath = "github.com/fatih/color",
 )
 
+go_repository(
+    name = "com_github_fatih_color",
+    tag = "v1.5.0",
+    importpath = "github.com/fatih/color",
+)
+
+go_repository(
+    name = "com_github_aws_aws_sdk_go",
+    tag = "v1.12.35",
+    importpath = "github.com/aws/aws-sdk-go",
+)
+
 # Core dependencies
-go_repository(
-    name = "com_github_sergi_go_diff",
-    commit = "feef008d51ad2b3778f85d387ccf91735543008d",
-    importpath = "github.com/sergi/go-diff",
-)
-
-go_repository(
-    name = "com_github_satori_go_uuid",
-    commit = "5bf94b69c6b68ee1b541973bb8e1144db23a194b",
-    importpath = "github.com/satori/go.uuid",
-)
-
 go_repository(
     name = "in_gopkg_src_d_go_git_v4",
     commit = "f9879dd043f84936a1f8acb8a53b74332a7ae135",
@@ -220,7 +226,7 @@ go_repository(
     importpath = "gopkg.in/warnings.v0",
 )
 
-# docker dependencies
+# github.com/docker/docker dependencies
 # versions taken from https://github.com/moby/moby/blob/f5ec1e2936dcbe7b5001c2b817188b095c700c27/vendor.conf
 go_repository(
     name = "com_github_docker_go_units",
@@ -513,9 +519,24 @@ go_repository(
     importpath = "github.com/ugorji/go",
 )
 
-# Color dependencies
+# github.com/fatih/go dependencies
+# version taken from: https://github.com/fatih/color/blob/570b54cabe6b8eb0bc2dfce68d964677d63b5260/vendor/manifest
 go_repository(
     name = "com_github_mattn_go_colorable",
     commit = "5411d3eea5978e6cdc258b30de592b60df6aba96",
     importpath = "github.com/mattn/go-colorable",
+)
+
+# github.com/aws/aws-sdk-go dependencies
+# versions taken from: https://github.com/aws/aws-sdk-go/blob/v1.12.35/Gopkg.lock
+go_repository(
+    name = "com_github_go_ini_ini",
+    tag = "v1.25.4",
+    importpath = "github.com/go-ini/ini",
+)
+
+go_repository(
+    name = "com_github_jmespath_go_jmespath",
+    commit = "0b12d6b521d83fc7f755e7cfc1b1fbdd35a01a74",
+    importpath = "github.com/jmespath/go-jmespath",
 )

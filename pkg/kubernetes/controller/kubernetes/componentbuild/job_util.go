@@ -10,6 +10,7 @@ import (
 
 	"github.com/mlab-lattice/system/pkg/kubernetes/constants"
 	crv1 "github.com/mlab-lattice/system/pkg/kubernetes/customresource/v1"
+	dockerutil "github.com/mlab-lattice/system/pkg/util/docker"
 
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -191,10 +192,30 @@ func (cbc *ComponentBuildController) getBuildContainer(cb *crv1.ComponentBuild) 
 		args = append(args, "--docker-push")
 	}
 
+	provider, err := crv1.GetProviderFromConfigSpec(cbc.config)
+	if err != nil {
+		return nil, "", err
+	}
+
+	switch provider {
+	case coreconstants.ProviderLocal:
+		// nothing to do here
+	case coreconstants.ProviderAWS:
+		args = append(args, "--docker-registry-auth-type", dockerutil.DockerRegistryAuthAWSEC2Role)
+	default:
+		panic(fmt.Sprintf("unsupported provider: %s", provider))
+	}
+
 	buildContainer := &corev1.Container{
 		Name:  "build",
 		Image: cbc.config.ComponentBuild.BuildImage,
 		Args:  args,
+		Env: []corev1.EnvVar{
+			{
+				Name:  constants.EnvVarNameDockerAPIVersion,
+				Value: cbc.config.ComponentBuild.DockerConfig.APIVersion,
+			},
+		},
 		VolumeMounts: []corev1.VolumeMount{
 			{
 				Name:      jobWorkingDirectoryVolumeName,
