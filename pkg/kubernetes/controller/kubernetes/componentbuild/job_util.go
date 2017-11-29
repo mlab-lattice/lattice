@@ -128,9 +128,9 @@ func (cbc *ComponentBuildController) getGitRepositoryBuildJobSpec(cb *crv1.Compo
 	}
 
 	// FIXME: add build node affinity for cloud case
-	var one int32 = 1
+	var zero int32 = 0
 	jobSpec := batchv1.JobSpec{
-		BackoffLimit: &one,
+		BackoffLimit: &zero,
 		Template: corev1.PodTemplateSpec{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: name,
