@@ -31,7 +31,7 @@ func (ac *AdminClient) makeRequest(req *http.Request) (*http.Response, error) {
 }
 
 func (ac *AdminClient) url(endpoint string) string {
-	return adminEndpontPath + endpoint
+	return ac.managerAPIURL + adminEndpontPath + endpoint
 }
 
 func (ac *AdminClient) Master() *MasterClient {
@@ -43,7 +43,12 @@ func getRequest(url string) (*http.Request, error) {
 }
 
 func postRequest(url string, contentType string, body io.Reader) (*http.Request, error) {
-	return http.NewRequest(http.MethodPost, url, nil)
+	req, err := http.NewRequest(http.MethodPost, url, body)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", contentType)
+	return req, nil
 }
 
 func postRequestJSON(url string, body interface{}) (*http.Request, error) {

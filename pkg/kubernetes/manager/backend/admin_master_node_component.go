@@ -26,17 +26,21 @@ func (kb *KubernetesBackend) GetMasterNodeComponents(nodeId string) ([]string, e
 	return components, nil
 }
 
-func (kb *KubernetesBackend) GetMasterNodeComponentLog(nodeId, componentName string, follow bool) (io.ReadCloser, error) {
+func (kb *KubernetesBackend) GetMasterNodeComponentLog(nodeId, componentName string, follow bool) (io.ReadCloser, bool, error) {
 	componentPod, err := kb.getMasterNodeComponentPod(nodeId, componentName)
 	if err != nil {
-		return nil, err
+		return nil, false, err
+	}
+	if componentPod == nil {
+		return nil, false, nil
 	}
 
 	req := kb.KubeClientset.CoreV1().
 		Pods(componentPod.Namespace).
 		GetLogs(componentPod.Name, &corev1.PodLogOptions{Follow: follow})
 
-	return req.Stream()
+	log, err := req.Stream()
+	return log, true, err
 }
 
 func (kb *KubernetesBackend) RestartMasterNodeComponent(nodeId, componentName string) error {
@@ -94,5 +98,5 @@ func (kb *KubernetesBackend) getMasterNodeComponentPod(nodeId, componentName str
 		}
 	}
 
-	return nil, fmt.Errorf("component %v is not running on node %v", componentName, nodeId)
+	return nil, nil
 }

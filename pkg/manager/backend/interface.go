@@ -60,6 +60,6 @@ type Interface interface {
 
 	// Master Node Components
 	GetMasterNodeComponents(nodeId string) ([]string, error)
-	GetMasterNodeComponentLog(nodeId, componentName string, follow bool) (io.ReadCloser, error)
+	GetMasterNodeComponentLog(nodeId, componentName string, follow bool) (rc io.ReadCloser, exists bool, err error)
 	RestartMasterNodeComponent(nodeId, componentName string) error
 }

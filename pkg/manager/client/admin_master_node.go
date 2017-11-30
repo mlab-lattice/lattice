@@ -7,9 +7,10 @@ import (
 )
 
 const (
-	masterNodeSubpath              = "/master"
-	masterNodeComponentSubpath     = "/component"
-	masterNodeComponentLogsSubpath = "/logs"
+	masterNodeSubpath                 = "/master"
+	masterNodeComponentSubpath        = "/components"
+	masterNodeComponentLogsSubpath    = "/logs"
+	masterNodeComponentRestartSubpath = "/restart"
 )
 
 type MasterClient struct {
@@ -53,7 +54,7 @@ func (mnc *MasterNodeClient) Components() ([]string, error) {
 	}
 
 	components := []string{}
-	err = extractBodyJSON(resp, components)
+	err = extractBodyJSON(resp, &components)
 	return components, err
 }
 
@@ -70,7 +71,7 @@ func (mnc *MasterNodeClient) get(endpoint string) (*http.Response, error) {
 }
 
 func (mnc *MasterNodeClient) url(endpoint string) string {
-	return mnc.client.url("/" + string(mnc.node) + endpoint)
+	return mnc.client.url(fmt.Sprintf("/%v%v", mnc.node, endpoint))
 }
 
 func (mnc *MasterNodeClient) Component(component string) *MasterNodeComponentClient {
@@ -90,7 +91,7 @@ func newMasterNodeComponentClient(client *MasterNodeClient, component string) *M
 }
 
 func (mncc *MasterNodeComponentClient) url(endpoint string) string {
-	return mncc.client.url("/" + mncc.component + endpoint)
+	return mncc.client.url(fmt.Sprintf("%v/%v%v", masterNodeComponentSubpath, mncc.component, endpoint))
 }
 
 func (mncc *MasterNodeComponentClient) get(endpoint string) (*http.Response, error) {
@@ -119,6 +120,6 @@ func (mncc *MasterNodeComponentClient) Logs(follow bool) (io.ReadCloser, error) 
 }
 
 func (mncc *MasterNodeComponentClient) Restart() error {
-	_, err := mncc.postJSON(mncc.url(""), nil)
+	_, err := mncc.postJSON(masterNodeComponentRestartSubpath, nil)
 	return err
 }

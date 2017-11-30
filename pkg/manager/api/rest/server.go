@@ -2,6 +2,8 @@ package rest
 
 import (
 	"fmt"
+	"io"
+	"io/ioutil"
 	"net/http"
 
 	systemresolver "github.com/mlab-lattice/core/pkg/system/resolver"
@@ -46,4 +48,29 @@ func (r *restServer) mountHandlers() {
 
 	r.mountNamespaceHandlers()
 	r.mountAdminHandlers()
+}
+
+func logEndpoint(c *gin.Context, log io.ReadCloser, follow bool) {
+	defer log.Close()
+
+	if !follow {
+		logContents, err := ioutil.ReadAll(log)
+		if err != nil {
+			c.String(http.StatusInternalServerError, "")
+			return
+		}
+		c.String(http.StatusOK, string(logContents))
+		return
+	}
+
+	buf := make([]byte, logStreamChunkSize)
+	c.Stream(func(w io.Writer) bool {
+		n, err := log.Read(buf)
+		if err != nil {
+			return false
+		}
+
+		w.Write(buf[:n])
+		return true
+	})
 }

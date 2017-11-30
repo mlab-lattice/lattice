@@ -46,15 +46,21 @@ func (r *restServer) mountAdminMasterNodeHandlers() {
 					follow = true
 				default:
 					c.String(http.StatusBadRequest, "invalid value for follow query")
-				}
-
-				log, err := r.backend.GetMasterNodeComponentLog(nodeId, component, follow)
-				if err != nil {
-					c.String(http.StatusInternalServerError, err.Error())
 					return
 				}
 
-				c.JSON(http.StatusOK, log)
+				log, exists, err := r.backend.GetMasterNodeComponentLog(nodeId, component, follow)
+				if err != nil {
+					c.String(http.StatusInternalServerError, "")
+					return
+				}
+
+				if exists == false {
+					c.String(http.StatusNotFound, err.Error())
+					return
+				}
+
+				logEndpoint(c, log, follow)
 			})
 
 			// restart-master-component

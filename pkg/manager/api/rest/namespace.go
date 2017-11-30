@@ -2,7 +2,6 @@ package rest
 
 import (
 	"fmt"
-	"io/ioutil"
 	"net/http"
 
 	coreconstants "github.com/mlab-lattice/core/pkg/constants"
@@ -14,7 +13,6 @@ import (
 	"github.com/mlab-lattice/system/pkg/manager/backend"
 
 	"github.com/gin-gonic/gin"
-	"io"
 )
 
 func (r *restServer) mountNamespaceHandlers() {
@@ -202,33 +200,7 @@ func (r *restServer) mountNamespaceComponentBuildHandlers() {
 				return
 			}
 
-			if err != nil {
-				c.String(http.StatusInternalServerError, "")
-			}
-			defer log.Close()
-
-			if !follow {
-				logContents, err := ioutil.ReadAll(log)
-				if err != nil {
-					c.String(http.StatusInternalServerError, "")
-					return
-				}
-				c.String(http.StatusOK, string(logContents))
-				return
-			}
-
-			buf := make([]byte, logStreamChunkSize)
-			c.Stream(func(w io.Writer) bool {
-				n, err := log.Read(buf)
-				if err != nil {
-					return false
-				}
-
-				w.Write(buf[:n])
-				return true
-			})
-
-			return
+			logEndpoint(c, log, follow)
 		})
 	}
 }
