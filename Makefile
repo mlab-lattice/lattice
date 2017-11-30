@@ -53,10 +53,18 @@ docker-push-dev-base-images:
 docker-build-and-push-dev-base-images: docker-build-base-images docker-push-dev-base-images
 
 # local binaries
-.PHONY: update-local-binary-cli
-update-local-binary-cli:
-	@bazel build //cmd/cli
-	cp -f $(DIR)/bazel-bin/cmd/cli/cli $(DIR)/bin/lattice-system
+.PHONY: update-binaries
+update-binaries: update-binary-cli-admin update-binary-cli-user
+
+.PHONY: update-binary-cli-admin
+update-binary-cli-admin:
+	@bazel build //cmd/cli/admin
+	cp -f $(DIR)/bazel-bin/cmd/cli/admin/admin $(DIR)/bin/lattice-admin
+
+.PHONY: update-binary-cli-user
+update-binary-cli-user:
+	@bazel build //cmd/cli/user
+	cp -f $(DIR)/bazel-bin/cmd/cli/user/user $(DIR)/bin/lattice-system
 
 # docker build hackery
 .PHONY: docker-enter-build-shell
