@@ -64,19 +64,19 @@ container_image(
 load("@io_bazel_rules_docker//go:image.bzl", "go_image")
 
 go_image(
-    name = "lattice-system-cli",
+    name = "cli-user",
     base = ":terraform-modules-kubernetes",
-    importpath = "github.com/mlab-lattice/system/cmd/cli",
-    library = "//cmd/cli:go_default_library",
+    importpath = "github.com/mlab-lattice/system/cmd/cli/user",
+    library = "//cmd/cli/user:go_default_library",
     visibility = ["//visibility:public"],
 )
 
 container_push(
-    name = "lattice-system-cli-push",
+    name = "cli-user-push",
     format = "Docker",
-    image = ":lattice-system-cli",
+    image = ":cli-user",
     registry = "gcr.io/lattice-dev",
-    repository = "lattice-system-cli",
+    repository = "lattice-cli-user",
 )
 
 go_image(

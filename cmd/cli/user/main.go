@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/mlab-lattice/system/cmd/cli/app"
+	"github.com/mlab-lattice/system/cmd/cli/user/app"
 )
 
 func main() {
