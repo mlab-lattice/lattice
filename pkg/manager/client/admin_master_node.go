@@ -14,64 +14,43 @@ const (
 )
 
 type MasterClient struct {
-	client *AdminClient
+	*AdminClient
 }
 
-func newMasterClient(client *AdminClient) *MasterClient {
+func newMasterClient(ac *AdminClient) *MasterClient {
 	return &MasterClient{
-		client: client,
+		AdminClient: ac,
 	}
+}
+
+func (mc *MasterClient) url(endpoint string) string {
+	return mc.AdminClient.url(masterNodeSubpath + endpoint)
 }
 
 func (mc *MasterClient) Node(node int32) *MasterNodeClient {
 	return newMasterNodeClient(mc, node)
 }
 
-func (mc *MasterClient) makeRequest(req *http.Request) (*http.Response, error) {
-	return mc.client.makeRequest(req)
-}
-
-func (mc *MasterClient) url(endpoint string) string {
-	return mc.client.url(masterNodeSubpath + endpoint)
-}
-
 type MasterNodeClient struct {
-	client *MasterClient
-	node   int32
+	*MasterClient
+	node int32
 }
 
-func newMasterNodeClient(client *MasterClient, node int32) *MasterNodeClient {
+func newMasterNodeClient(mc *MasterClient, node int32) *MasterNodeClient {
 	return &MasterNodeClient{
-		client: client,
-		node:   node,
+		MasterClient: mc,
+		node:         node,
 	}
-}
-
-func (mnc *MasterNodeClient) Components() ([]string, error) {
-	resp, err := mnc.get(masterNodeComponentSubpath)
-	if err != nil {
-		return nil, err
-	}
-
-	components := []string{}
-	err = extractBodyJSON(resp, &components)
-	return components, err
-}
-
-func (mnc *MasterNodeClient) makeRequest(req *http.Request) (*http.Response, error) {
-	return mnc.client.makeRequest(req)
-}
-
-func (mnc *MasterNodeClient) get(endpoint string) (*http.Response, error) {
-	req, err := getRequest(mnc.url(endpoint))
-	if err != nil {
-		return nil, err
-	}
-	return mnc.client.makeRequest(req)
 }
 
 func (mnc *MasterNodeClient) url(endpoint string) string {
-	return mnc.client.url(fmt.Sprintf("/%v%v", mnc.node, endpoint))
+	return mnc.MasterClient.url(fmt.Sprintf("/%v%v", mnc.node, endpoint))
+}
+
+func (mnc *MasterNodeClient) Components() ([]string, error) {
+	components := []string{}
+	err := getRequestBodyJSON(mnc, masterNodeComponentSubpath, &components)
+	return components, err
 }
 
 func (mnc *MasterNodeClient) Component(component string) *MasterNodeComponentClient {
@@ -79,47 +58,33 @@ func (mnc *MasterNodeClient) Component(component string) *MasterNodeComponentCli
 }
 
 type MasterNodeComponentClient struct {
-	client    *MasterNodeClient
+	*MasterNodeClient
 	component string
 }
 
-func newMasterNodeComponentClient(client *MasterNodeClient, component string) *MasterNodeComponentClient {
+func newMasterNodeComponentClient(mnc *MasterNodeClient, component string) *MasterNodeComponentClient {
 	return &MasterNodeComponentClient{
-		client:    client,
-		component: component,
+		MasterNodeClient: mnc,
+		component:        component,
 	}
 }
 
 func (mncc *MasterNodeComponentClient) url(endpoint string) string {
-	return mncc.client.url(fmt.Sprintf("%v/%v%v", masterNodeComponentSubpath, mncc.component, endpoint))
-}
-
-func (mncc *MasterNodeComponentClient) get(endpoint string) (*http.Response, error) {
-	req, err := getRequest(mncc.url(endpoint))
-	if err != nil {
-		return nil, err
-	}
-	return mncc.client.makeRequest(req)
-}
-
-func (mncc *MasterNodeComponentClient) postJSON(endpoint string, body interface{}) (*http.Response, error) {
-	req, err := postRequestJSON(mncc.url(endpoint), body)
-	if err != nil {
-		return nil, err
-	}
-	return mncc.client.makeRequest(req)
+	return mncc.MasterNodeClient.url(fmt.Sprintf("%v/%v%v", masterNodeComponentSubpath, mncc.component, endpoint))
 }
 
 func (mncc *MasterNodeComponentClient) Logs(follow bool) (io.ReadCloser, error) {
-	resp, err := mncc.get(fmt.Sprintf("%v?follow=%v", masterNodeComponentLogsSubpath, follow))
-	if err != nil {
-		return nil, err
-	}
-
-	return extractBody(resp)
+	return getRequestBody(mncc, fmt.Sprintf("%v?follow=%v", masterNodeComponentLogsSubpath, follow))
 }
 
 func (mncc *MasterNodeComponentClient) Restart() error {
-	_, err := mncc.postJSON(masterNodeComponentRestartSubpath, nil)
-	return err
+	resp, err := postRequestJSON(mncc, masterNodeComponentRestartSubpath, nil)
+	if err != nil {
+		return err
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("unexpected status code: %v", resp.StatusCode)
+	}
+	return nil
 }
