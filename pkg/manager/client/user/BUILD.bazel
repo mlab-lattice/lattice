@@ -4,6 +4,7 @@ go_library(
     name = "go_default_library",
     srcs = [
         "client.go",
+        "component_build.go",
         "namespace.go",
     ],
     importpath = "github.com/mlab-lattice/system/pkg/manager/client/user",

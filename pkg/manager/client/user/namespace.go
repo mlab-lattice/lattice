@@ -37,25 +37,3 @@ func (nc *NamespaceClient) ComponentBuilds() ([]coretypes.ComponentBuild, error)
 func (nc *NamespaceClient) ComponentBuild(id coretypes.ComponentBuildID) *ComponentBuildClient {
 	return newComponentBuildClient(nc, id)
 }
-
-type ComponentBuildClient struct {
-	*NamespaceClient
-	id coretypes.ComponentBuildID
-}
-
-func newComponentBuildClient(nc *NamespaceClient, id coretypes.ComponentBuildID) *ComponentBuildClient {
-	return &ComponentBuildClient{
-		NamespaceClient: nc,
-		id:              id,
-	}
-}
-
-func (cbc *ComponentBuildClient) URL(endpoint string) string {
-	return cbc.NamespaceClient.URL(fmt.Sprintf("%v/%v%v", componentBuildSubpath, cbc.id, endpoint))
-}
-
-func (cbc *ComponentBuildClient) Get() (*coretypes.ComponentBuild, error) {
-	build := &coretypes.ComponentBuild{}
-	err := requester.GetRequestBodyJSON(cbc, "", build)
-	return build, err
-}
