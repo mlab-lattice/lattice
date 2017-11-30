@@ -3,7 +3,6 @@ package app
 import (
 	"fmt"
 	"io"
-	//"io/ioutil"
 	"log"
 	"os"
 
@@ -19,7 +18,7 @@ var masterCmd = &cobra.Command{
 	Use:  "master",
 	Args: cobra.ExactArgs(0),
 	Run: func(cmd *cobra.Command, args []string) {
-		RootCmd.Help()
+		cmd.Help()
 		os.Exit(1)
 	},
 }

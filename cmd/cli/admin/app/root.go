@@ -5,13 +5,14 @@ import (
 	"os"
 
 	"github.com/mlab-lattice/system/pkg/manager/client"
+	"github.com/mlab-lattice/system/pkg/manager/client/admin"
 
 	"github.com/spf13/cobra"
 )
 
 var (
 	url         string
-	adminClient *client.AdminClient
+	adminClient *admin.Client
 )
 
 // RootCmd represents the base command when called without any subcommands
@@ -36,5 +37,5 @@ func init() {
 }
 
 func initCmd() {
-	adminClient = client.NewClient(url)
+	adminClient = client.NewAdminClient(url)
 }

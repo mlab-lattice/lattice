@@ -11,7 +11,7 @@ var (
 )
 
 var provisionSystemCmd = &cobra.Command{
-	Use:   "provision-system [PROVIDER] [NAME] [URL]",
+	Use:   "provision [PROVIDER] [NAME] [URL]",
 	Short: "Provision a system",
 	Args:  cobra.ExactArgs(3),
 	Run: func(cmd *cobra.Command, args []string) {

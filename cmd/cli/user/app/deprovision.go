@@ -9,7 +9,7 @@ var (
 )
 
 var deprovisionSystemCmd = &cobra.Command{
-	Use:   "deprovision-system [PROVIDER] [NAME]",
+	Use:   "deprovision [PROVIDER] [NAME]",
 	Short: "Deprovision a system",
 	Args:  cobra.ExactArgs(2),
 	Run: func(cmd *cobra.Command, args []string) {

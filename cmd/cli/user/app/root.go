@@ -4,6 +4,12 @@ import (
 	"fmt"
 	"os"
 
+	coreconstants "github.com/mlab-lattice/core/pkg/constants"
+	coretypes "github.com/mlab-lattice/core/pkg/types"
+
+	"github.com/mlab-lattice/system/pkg/manager/client"
+	"github.com/mlab-lattice/system/pkg/manager/client/user"
+
 	"github.com/spf13/cobra"
 )
 
@@ -12,7 +18,12 @@ const (
 )
 
 var (
-	workingDir string
+	workingDir      string
+	namespaceString string
+	url             string
+	namespace       coretypes.LatticeNamespace
+	userClient      *user.Client
+	namespaceClient *user.NamespaceClient
 )
 
 // RootCmd represents the base command when called without any subcommands
@@ -33,6 +44,8 @@ func Execute() {
 func init() {
 	cobra.OnInitialize(initCmd)
 	RootCmd.PersistentFlags().StringVar(&workingDir, "working-directory", "/tmp/lattice-system/", "path where subcommands will use as their working directory")
+	RootCmd.PersistentFlags().StringVar(&url, "url", "", "URL of the manager-api for the system")
+	RootCmd.PersistentFlags().StringVar(&namespaceString, "namespace", string(coreconstants.UserSystemNamespace), "namespace to use")
 }
 
 func initCmd() {
@@ -40,4 +53,9 @@ func initCmd() {
 	if err != nil {
 		panic(fmt.Errorf("unable to create log-path: %v", err))
 	}
+
+	namespace = coretypes.LatticeNamespace(namespaceString)
+
+	userClient = client.NewUserClient(url)
+	namespaceClient = userClient.Namespace(namespace)
 }

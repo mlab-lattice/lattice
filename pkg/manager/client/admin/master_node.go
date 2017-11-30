@@ -1,9 +1,11 @@
-package client
+package admin
 
 import (
 	"fmt"
 	"io"
 	"net/http"
+
+	"github.com/mlab-lattice/system/pkg/manager/client/requester"
 )
 
 const (
@@ -14,17 +16,17 @@ const (
 )
 
 type MasterClient struct {
-	*AdminClient
+	*Client
 }
 
-func newMasterClient(ac *AdminClient) *MasterClient {
+func newMasterClient(ac *Client) *MasterClient {
 	return &MasterClient{
-		AdminClient: ac,
+		Client: ac,
 	}
 }
 
-func (mc *MasterClient) url(endpoint string) string {
-	return mc.AdminClient.url(masterNodeSubpath + endpoint)
+func (mc *MasterClient) URL(endpoint string) string {
+	return mc.Client.URL(masterNodeSubpath + endpoint)
 }
 
 func (mc *MasterClient) Node(node int32) *MasterNodeClient {
@@ -43,13 +45,13 @@ func newMasterNodeClient(mc *MasterClient, node int32) *MasterNodeClient {
 	}
 }
 
-func (mnc *MasterNodeClient) url(endpoint string) string {
-	return mnc.MasterClient.url(fmt.Sprintf("/%v%v", mnc.node, endpoint))
+func (mnc *MasterNodeClient) URL(endpoint string) string {
+	return mnc.MasterClient.URL(fmt.Sprintf("/%v%v", mnc.node, endpoint))
 }
 
 func (mnc *MasterNodeClient) Components() ([]string, error) {
 	components := []string{}
-	err := getRequestBodyJSON(mnc, masterNodeComponentSubpath, &components)
+	err := requester.GetRequestBodyJSON(mnc, masterNodeComponentSubpath, &components)
 	return components, err
 }
 
@@ -69,16 +71,16 @@ func newMasterNodeComponentClient(mnc *MasterNodeClient, component string) *Mast
 	}
 }
 
-func (mncc *MasterNodeComponentClient) url(endpoint string) string {
-	return mncc.MasterNodeClient.url(fmt.Sprintf("%v/%v%v", masterNodeComponentSubpath, mncc.component, endpoint))
+func (mncc *MasterNodeComponentClient) URL(endpoint string) string {
+	return mncc.MasterNodeClient.URL(fmt.Sprintf("%v/%v%v", masterNodeComponentSubpath, mncc.component, endpoint))
 }
 
 func (mncc *MasterNodeComponentClient) Logs(follow bool) (io.ReadCloser, error) {
-	return getRequestBody(mncc, fmt.Sprintf("%v?follow=%v", masterNodeComponentLogsSubpath, follow))
+	return requester.GetRequestBody(mncc, fmt.Sprintf("%v?follow=%v", masterNodeComponentLogsSubpath, follow))
 }
 
 func (mncc *MasterNodeComponentClient) Restart() error {
-	resp, err := postRequestJSON(mncc, masterNodeComponentRestartSubpath, nil)
+	resp, err := requester.PostRequestJSON(mncc, masterNodeComponentRestartSubpath, nil)
 	if err != nil {
 		return err
 	}
