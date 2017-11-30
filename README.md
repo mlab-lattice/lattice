@@ -1,2 +1,2 @@
-# kubernetes
-packages and binaries for interfacing with kubernetes
+# system
+packages and binaries for running Lattice systems
