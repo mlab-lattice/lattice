@@ -2,7 +2,7 @@ package backend
 
 import (
 	"fmt"
-	"io/ioutil"
+	"io"
 
 	"github.com/mlab-lattice/system/pkg/kubernetes/constants"
 
@@ -26,28 +26,17 @@ func (kb *KubernetesBackend) GetMasterNodeComponents(nodeId string) ([]string, e
 	return components, nil
 }
 
-func (kb *KubernetesBackend) GetMasterNodeComponentLog(nodeId, componentName string) (string, error) {
+func (kb *KubernetesBackend) GetMasterNodeComponentLog(nodeId, componentName string, follow bool) (io.ReadCloser, error) {
 	componentPod, err := kb.getMasterNodeComponentPod(nodeId, componentName)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	req := kb.KubeClientset.CoreV1().
 		Pods(componentPod.Namespace).
-		GetLogs(componentPod.Name, &corev1.PodLogOptions{})
+		GetLogs(componentPod.Name, &corev1.PodLogOptions{Follow: follow})
 
-	readCloser, err := req.Stream()
-	if err != nil {
-		return "", err
-	}
-	defer readCloser.Close()
-
-	bytes, err := ioutil.ReadAll(readCloser)
-	if err != nil {
-		return "", err
-	}
-
-	return string(bytes), nil
+	return req.Stream()
 }
 
 func (kb *KubernetesBackend) RestartMasterNodeComponent(nodeId, componentName string) error {

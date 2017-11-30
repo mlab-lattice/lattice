@@ -261,11 +261,23 @@ func seedRbacManagerApi(kubeClientset *kubernetes.Clientset) {
 				Resources: []string{crv1.ConfigResourcePlural},
 				Verbs:     readVerbs,
 			},
-			// lattice build read and create
+			// lattice system build read and create
 			{
 				APIGroups: []string{crv1.GroupName},
 				Resources: []string{crv1.SystemBuildResourcePlural},
 				Verbs:     readAndCreateVerbs,
+			},
+			// lattice service build read
+			{
+				APIGroups: []string{crv1.GroupName},
+				Resources: []string{crv1.ComponentBuildResourcePlural},
+				Verbs:     readVerbs,
+			},
+			// lattice component build read
+			{
+				APIGroups: []string{crv1.GroupName},
+				Resources: []string{crv1.ComponentBuildResourcePlural},
+				Verbs:     readVerbs,
 			},
 			// lattice rollout build and create
 			{
@@ -276,8 +288,20 @@ func seedRbacManagerApi(kubeClientset *kubernetes.Clientset) {
 			// kube pod read and delete
 			{
 				APIGroups: []string{corev1.GroupName},
-				Resources: []string{"pods", "pods/log"},
+				Resources: []string{"pods"},
 				Verbs:     readAndDeleteVerbs,
+			},
+			// kube pod/log read
+			{
+				APIGroups: []string{corev1.GroupName},
+				Resources: []string{"pods/log"},
+				Verbs:     readVerbs,
+			},
+			// kube job read
+			{
+				APIGroups: []string{batchv1.GroupName},
+				Resources: []string{"jobs"},
+				Verbs:     readVerbs,
 			},
 		},
 	}

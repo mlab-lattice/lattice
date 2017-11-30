@@ -2,6 +2,7 @@ package rest
 
 import (
 	"fmt"
+	"io/ioutil"
 	"net/http"
 
 	coreconstants "github.com/mlab-lattice/core/pkg/constants"
@@ -10,12 +11,16 @@ import (
 	systemtree "github.com/mlab-lattice/core/pkg/system/tree"
 	coretypes "github.com/mlab-lattice/core/pkg/types"
 
+	"github.com/mlab-lattice/system/pkg/manager/backend"
+
 	"github.com/gin-gonic/gin"
+	"io"
 )
 
 func (r *restServer) mountNamespaceHandlers() {
 	r.mountNamespaceVersionHandlers()
-	r.mountNamespaceBuildHandlers()
+	r.mountNamespaceSystemBuildHandlers()
+	r.mountNamespaceComponentBuildHandlers()
 	r.mountNamespaceRolloutHandlers()
 	r.mountNamespaceTeardownHandlers()
 	r.mountNamespaceServiceHandlers()
@@ -67,11 +72,11 @@ type buildSystemResponse struct {
 	BuildId coretypes.SystemBuildID `json:"buildId"`
 }
 
-func (r *restServer) mountNamespaceBuildHandlers() {
-	builds := r.router.Group("/namespaces/:namespace_id/builds")
+func (r *restServer) mountNamespaceSystemBuildHandlers() {
+	sysbs := r.router.Group("/namespaces/:namespace_id/system-builds")
 	{
 		// build-system
-		builds.POST("", func(c *gin.Context) {
+		sysbs.POST("", func(c *gin.Context) {
 			namespace := c.Param("namespace_id")
 			var req buildSystemRequest
 			if err := c.BindJSON(&req); err != nil {
@@ -101,12 +106,11 @@ func (r *restServer) mountNamespaceBuildHandlers() {
 			})
 		})
 
-		// list-builds
-		builds.GET("", func(c *gin.Context) {
+		// list-system-builds
+		sysbs.GET("", func(c *gin.Context) {
 			namespace := c.Param("namespace_id")
 
 			bs, err := r.backend.ListSystemBuilds(coretypes.LatticeNamespace(namespace))
-			fmt.Printf("%#v\n", bs)
 			if err != nil {
 				c.String(http.StatusInternalServerError, err.Error())
 				return
@@ -115,8 +119,8 @@ func (r *restServer) mountNamespaceBuildHandlers() {
 			c.JSON(http.StatusOK, bs)
 		})
 
-		// get-build
-		builds.GET("/:build_id", func(c *gin.Context) {
+		// get-system-build
+		sysbs.GET("/:build_id", func(c *gin.Context) {
 			namespace := c.Param("namespace_id")
 			bid := c.Param("build_id")
 
@@ -132,6 +136,99 @@ func (r *restServer) mountNamespaceBuildHandlers() {
 			}
 
 			c.JSON(http.StatusOK, b)
+		})
+	}
+}
+
+func (r *restServer) mountNamespaceComponentBuildHandlers() {
+	sysbs := r.router.Group("/namespaces/:namespace_id/component-builds")
+	{
+		// list-component-builds
+		sysbs.GET("", func(c *gin.Context) {
+			namespace := c.Param("namespace_id")
+
+			bs, err := r.backend.ListComponentBuilds(coretypes.LatticeNamespace(namespace))
+			if err != nil {
+				c.String(http.StatusInternalServerError, err.Error())
+				return
+			}
+
+			c.JSON(http.StatusOK, bs)
+		})
+
+		// get-system-build
+		sysbs.GET("/:build_id", func(c *gin.Context) {
+			namespace := c.Param("namespace_id")
+			bid := c.Param("build_id")
+
+			b, exists, err := r.backend.GetComponentBuild(coretypes.LatticeNamespace(namespace), coretypes.ComponentBuildID(bid))
+			if err != nil {
+				c.String(http.StatusInternalServerError, err.Error())
+				return
+			}
+
+			if !exists {
+				c.String(http.StatusNotFound, "")
+				return
+			}
+
+			c.JSON(http.StatusOK, b)
+		})
+
+		// get-system-build-logs
+		sysbs.GET("/:build_id/logs", func(c *gin.Context) {
+			namespace := c.Param("namespace_id")
+			bid := c.Param("build_id")
+			followQuery := c.DefaultQuery("follow", "false")
+
+			var follow bool
+			switch followQuery {
+			case "false":
+				follow = false
+			case "true":
+				follow = true
+			default:
+				c.String(http.StatusBadRequest, "invalid value for follow query")
+			}
+
+			log, exists, err := r.backend.GetComponentBuildLogs(coretypes.LatticeNamespace(namespace), coretypes.ComponentBuildID(bid), follow)
+			if exists == false {
+				switch err.(type) {
+				case *backend.UserError:
+					c.String(http.StatusNotFound, err.Error())
+				default:
+					c.String(http.StatusInternalServerError, "")
+				}
+				return
+			}
+
+			if err != nil {
+				c.String(http.StatusInternalServerError, "")
+			}
+			defer log.Close()
+
+			if !follow {
+				logContents, err := ioutil.ReadAll(log)
+				if err != nil {
+					c.String(http.StatusInternalServerError, "")
+					return
+				}
+				c.String(http.StatusOK, string(logContents))
+				return
+			}
+
+			buf := make([]byte, logStreamChunkSize)
+			c.Stream(func(w io.Writer) bool {
+				n, err := log.Read(buf)
+				if err != nil {
+					return false
+				}
+
+				w.Write(buf[:n])
+				return true
+			})
+
+			return
 		})
 	}
 }

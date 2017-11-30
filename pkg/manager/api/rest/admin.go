@@ -36,8 +36,19 @@ func (r *restServer) mountAdminMasterNodeHandlers() {
 			component.GET("/logs", func(c *gin.Context) {
 				nodeId := c.Param("master_node_id")
 				component := c.Param("component_id")
+				followQuery := c.DefaultQuery("follow", "false")
 
-				log, err := r.backend.GetMasterNodeComponentLog(nodeId, component)
+				var follow bool
+				switch followQuery {
+				case "false":
+					follow = false
+				case "true":
+					follow = true
+				default:
+					c.String(http.StatusBadRequest, "invalid value for follow query")
+				}
+
+				log, err := r.backend.GetMasterNodeComponentLog(nodeId, component, follow)
 				if err != nil {
 					c.String(http.StatusInternalServerError, err.Error())
 					return

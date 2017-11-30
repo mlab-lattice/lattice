@@ -3,7 +3,6 @@ package componentbuild
 import (
 	"encoding/json"
 	"fmt"
-	"reflect"
 	"time"
 
 	coreconstants "github.com/mlab-lattice/core/pkg/constants"
@@ -17,6 +16,7 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/selection"
 )
 
 const (
@@ -35,32 +35,27 @@ const (
 
 // getJobForBuild uses ControllerRefManager to retrieve the Job for a ComponentBuild
 func (cbc *ComponentBuildController) getJobForBuild(cb *crv1.ComponentBuild) (*batchv1.Job, error) {
-	// List all Jobs to find in the ComponentBuild's namespace to find the Job the ComponentBuild manages.
-	jList, err := cbc.jobLister.Jobs(cb.Namespace).List(labels.Everything())
+	selector := labels.NewSelector()
+	requirement, err := labels.NewRequirement(constants.LabelKeyComponentBuildID, selection.Equals, []string{cb.Name})
 	if err != nil {
 		return nil, err
 	}
 
-	matchingJobs := []*batchv1.Job{}
-	cbControllerRef := metav1.NewControllerRef(cb, controllerKind)
-
-	for _, j := range jList {
-		jControllerRef := metav1.GetControllerOf(j)
-
-		if reflect.DeepEqual(cbControllerRef, jControllerRef) {
-			matchingJobs = append(matchingJobs, j)
-		}
+	selector = selector.Add(*requirement)
+	jobs, err := cbc.jobLister.Jobs(cb.Namespace).List(selector)
+	if err != nil {
+		return nil, err
 	}
 
-	if len(matchingJobs) == 0 {
+	if len(jobs) == 0 {
 		return nil, nil
 	}
 
-	if len(matchingJobs) > 1 {
+	if len(jobs) > 1 {
 		return nil, fmt.Errorf("ComponentBuild %v has multiple Jobs", cb.Name)
 	}
 
-	return matchingJobs[0], nil
+	return jobs[0], nil
 }
 
 func (cbc *ComponentBuildController) getBuildJob(cb *crv1.ComponentBuild) (*batchv1.Job, error) {
@@ -76,17 +71,14 @@ func (cbc *ComponentBuildController) getBuildJob(cb *crv1.ComponentBuild) (*batc
 		return nil, err
 	}
 
-	jLabels := map[string]string{
-		crv1.ComponentBuildJobLabelKey: "true",
-	}
-	jAnnotations := map[string]string{
-		jobDockerFqnAnnotationKey: dockerImageFqn,
-	}
-
 	j := &batchv1.Job{
 		ObjectMeta: metav1.ObjectMeta{
-			Annotations:     jAnnotations,
-			Labels:          jLabels,
+			Annotations: map[string]string{
+				jobDockerFqnAnnotationKey: dockerImageFqn,
+			},
+			Labels: map[string]string{
+				constants.LabelKeyComponentBuildID: cb.Name,
+			},
 			Name:            name,
 			OwnerReferences: []metav1.OwnerReference{*metav1.NewControllerRef(cb, controllerKind)},
 		},
@@ -135,6 +127,9 @@ func (cbc *ComponentBuildController) getGitRepositoryBuildJobSpec(cb *crv1.Compo
 		Template: corev1.PodTemplateSpec{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: name,
+				Labels: map[string]string{
+					constants.LabelKeyComponentBuildID: cb.Name,
+				},
 			},
 			Spec: corev1.PodSpec{
 				Tolerations: []corev1.Toleration{
