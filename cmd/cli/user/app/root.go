@@ -7,8 +7,8 @@ import (
 	coreconstants "github.com/mlab-lattice/core/pkg/constants"
 	coretypes "github.com/mlab-lattice/core/pkg/types"
 
-	"github.com/mlab-lattice/system/pkg/manager/client"
-	"github.com/mlab-lattice/system/pkg/manager/client/user"
+	restclient "github.com/mlab-lattice/system/pkg/manager/api/client/rest"
+	"github.com/mlab-lattice/system/pkg/manager/api/client/rest/user"
 
 	"github.com/spf13/cobra"
 )
@@ -56,6 +56,6 @@ func initCmd() {
 
 	namespace = coretypes.LatticeNamespace(namespaceString)
 
-	userClient = client.NewUserClient(url)
+	userClient = restclient.NewUserClient(url)
 	namespaceClient = userClient.Namespace(namespace)
 }

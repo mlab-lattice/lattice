@@ -7,7 +7,7 @@ go_library(
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/kubernetes/manager/backend:go_default_library",
-        "//pkg/manager/api/rest:go_default_library",
+        "//pkg/manager/api/server/rest:go_default_library",
     ],
 )
 

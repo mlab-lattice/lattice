@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/mlab-lattice/system/pkg/manager/client"
-	"github.com/mlab-lattice/system/pkg/manager/client/admin"
+	restclient "github.com/mlab-lattice/system/pkg/manager/api/client/rest"
+	"github.com/mlab-lattice/system/pkg/manager/api/client/rest/admin"
 
 	"github.com/spf13/cobra"
 )
@@ -37,5 +37,5 @@ func init() {
 }
 
 func initCmd() {
-	adminClient = client.NewAdminClient(url)
+	adminClient = restclient.NewAdminClient(url)
 }

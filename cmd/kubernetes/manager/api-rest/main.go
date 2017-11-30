@@ -4,7 +4,7 @@ import (
 	"flag"
 
 	"github.com/mlab-lattice/system/pkg/kubernetes/manager/backend"
-	"github.com/mlab-lattice/system/pkg/manager/api/rest"
+	"github.com/mlab-lattice/system/pkg/manager/api/server/rest"
 )
 
 var (
