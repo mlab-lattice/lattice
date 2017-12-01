@@ -87,11 +87,11 @@ func addIPTableRedirect(env map[string]string) error {
 	}
 
 	rulespecs := []string{
-		"-p tcp",
-		fmt.Sprintf("-d %v", env[envVarRedirectEgressCIDRBlock]),
-		"-j REDIRECT",
-		fmt.Sprintf("--to-port %v", env[envVarEgressPort]),
-		"-m comment --comment \"lattice redirect to envoy\"",
+		"-p", "tcp",
+		"-d", env[envVarRedirectEgressCIDRBlock],
+		"-j", "REDIRECT",
+		"--to-port", env[envVarEgressPort],
+		"-m", "comment", "--comment", "\"lattice redirect to envoy\"",
 	}
 	return ipt.Append(tableNAT, chainOutput, rulespecs...)
 }
