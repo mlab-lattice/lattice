@@ -11,12 +11,6 @@ DEV_TAG ?= latest
 
 CONTAINER_NAME_BUILD = lattice-system-builder
 
-BASE_DOCKER_IMAGE_DEBIAN_WITH_SSH = debian-with-ssh
-BASE_DOCKER_IMAGE_DEBIAN_WITH_SSH_DEV = $(DEV_REGISTRY)/$(BASE_DOCKER_IMAGE_DEBIAN_WITH_SSH):$(DEV_TAG)
-
-BASE_DOCKER_IMAGE_DEBIAN_WITH_IPTABLES = debian-with-iptables
-BASE_DOCKER_IMAGE_DEBIAN_WITH_IPTABLES_DEV = $(DEV_REGISTRY)/$(BASE_DOCKER_IMAGE_DEBIAN_WITH_IPTABLES):$(DEV_TAG)
-
 # Basic build/clean/test
 .PHONY: build
 build: gazelle
@@ -33,19 +27,6 @@ test: gazelle
 .PHONY: gazelle
 gazelle:
 	@bazel run //:gazelle
-
-.PHONY: docker-build-base-images
-docker-build-base-images:
-	docker build $(DIR)/docker/debian -f $(DIR)/docker/debian/Dockerfile.iptables -t $(BASE_DOCKER_IMAGE_DEBIAN_WITH_IPTABLES_DEV)
-	docker build $(DIR)/docker/debian -f $(DIR)/docker/debian/Dockerfile.ssh -t $(BASE_DOCKER_IMAGE_DEBIAN_WITH_SSH_DEV)
-
-.PHONY: docker-push-dev-base-images
-docker-push-dev-base-images:
-	gcloud docker -- push $(BASE_DOCKER_IMAGE_DEBIAN_WITH_IPTABLES_DEV)
-	gcloud docker -- push $(BASE_DOCKER_IMAGE_DEBIAN_WITH_SSH_DEV)
-
-.PHONY: docker-build-and-push-dev-base-images
-docker-build-and-push-dev-base-images: docker-build-base-images docker-push-dev-base-images
 
 # local binaries
 .PHONY: update-binaries

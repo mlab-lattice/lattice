@@ -15,7 +15,7 @@ proto_register_toolchains()
 git_repository(
     name = "io_bazel_rules_docker",
     remote = "https://github.com/bazelbuild/rules_docker.git",
-    tag = "v0.3.0",
+    commit = "caa55f1e00e5909dbd689f298e2c6d3ef3e65d81",
 )
 
 new_http_archive(
@@ -31,6 +31,44 @@ filegroup(
 """
 )
 
+git_repository(
+    name = "distroless",
+    remote = "https://github.com/GoogleCloudPlatform/distroless.git",
+    commit = "e5854b38a12bb37adaf0edb193f97b32a3bcaee0",
+)
+
+load(
+    "@distroless//package_manager:package_manager.bzl",
+    "package_manager_repositories",
+    "dpkg_src",
+    "dpkg_list",
+)
+
+package_manager_repositories()
+
+dpkg_src(
+    name = "debian_stretch",
+    arch = "amd64",
+    distro = "stretch",
+    sha256 = "9aea0e4c9ce210991c6edcb5370cb9b11e9e554a0f563e7754a4028a8fd0cb73",
+    snapshot = "20171101T160520Z",
+    url = "http://snapshot.debian.org/archive",
+)
+
+dpkg_list(
+    name = "package_bundle",
+    packages = [
+        # iptables and dependencies (from https://packages.debian.org/sid/iptables)
+        "iptables",
+        "libip4tc0",
+        "libip6tc0",
+        "libxtables12",
+    ],
+    sources = [
+        "@debian_stretch//file:Packages.json",
+    ],
+)
+
 load(
     "@io_bazel_rules_docker//container:container.bzl",
     "container_pull",
@@ -39,16 +77,9 @@ load(
 container_repositories()
 
 container_pull(
-  name = "debian_with_ssh",
-  registry = "gcr.io/lattice-dev",
-  repository = "debian-with-ssh",
-  tag = "latest"
-)
-
-container_pull(
-  name = "debian_with_iptables",
-  registry = "gcr.io/lattice-dev",
-  repository = "debian-with-iptables",
+  name = "distroless_base",
+  registry = "gcr.io/distroless",
+  repository = "base",
   tag = "latest"
 )
 

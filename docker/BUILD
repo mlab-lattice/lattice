@@ -1,8 +1,45 @@
 load("@io_bazel_rules_docker//container:container.bzl", "container_image", "container_push")
+load("@io_bazel_rules_docker//go:image.bzl", "go_image")
+load("@package_bundle//file:packages.bzl", "packages")
+
+# base images
+container_image(
+    name = "iptables",
+    base = "@distroless_base//image",
+    debs = [
+        # See WORKSPACE for more info.
+        packages["iptables"],
+        packages["libip4tc0"],
+        packages["libip6tc0"],
+        packages["libxtables12"],
+    ],
+)
 
 container_image(
+    name = "terraform-bin",
+    directory = "/usr/local/bin",
+    files = ["@terraform_bin//:bin"],
+)
+
+container_image(
+    name = "terraform-modules-kubernetes",
+    directory = "/etc/terraform",
+    tars = ["//terraform/kubernetes:modules-tar"],
+)
+
+container_image(
+    name = "terraform",
+    base = "@go_image_base//image",
+    tars = [
+        ":terraform-bin",
+        ":terraform-modules-kubernetes",
+    ]
+)
+
+# actual image/push
+container_image(
     name = "envoy-prepare-envoy",
-    base = "@debian_with_iptables//image",
+    base = ":iptables",
     directory = "/usr/local/bin",
     files = ["//bin/envoy:prepare-envoy"],
     entrypoint = "/usr/local/bin/prepare-envoy",
@@ -15,37 +52,6 @@ container_push(
     registry = "gcr.io/lattice-dev",
     repository = "envoy-prepare-envoy",
 )
-
-container_image(
-    name = "terraform",
-    base = "@go_image_base//image",
-    directory = "/usr/local/bin",
-    files = ["@terraform_bin//:bin"],
-)
-
-container_image(
-    name = "terraform-modules-kubernetes",
-    base = ":terraform",
-    directory = "/etc/terraform",
-    tars = ["//terraform/kubernetes:modules-tar"],
-)
-
-container_image(
-    name = "wrap-with-ssh-agent",
-    base = "@debian_with_ssh//image",
-    directory = "/usr/local/bin",
-    files = ["//bin/ssh:wrap-with-ssh-agent"],
-    entrypoint = "/usr/local/bin/wrap-with-ssh-agent",
-)
-
-container_image(
-    name = "wrap-with-ssh-agent-and-known-hosts",
-    base = ":wrap-with-ssh-agent",
-    directory = "/etc/ssh",
-    files = ["//docker/kubernetes/manager/api/ssh:ssh_known_hosts"],
-)
-
-load("@io_bazel_rules_docker//go:image.bzl", "go_image")
 
 go_image(
     name = "kubernetes-bootstrap-lattice",
@@ -94,7 +100,7 @@ container_push(
 
 go_image(
     name = "kubernetes-lattice-controller-manager",
-    base = ":terraform-modules-kubernetes",
+    base = ":terraform",
     importpath = "github.com/mlab-lattice/system/cmd/kubernetes/lattice-controller-manager",
     library = "//cmd/kubernetes/lattice-controller-manager:go_default_library",
     visibility = ["//visibility:public"],
@@ -108,15 +114,11 @@ container_push(
     repository = "kubernetes-lattice-controller-manager",
 )
 
-container_image(
+go_image(
     name = "kubernetes-manager-api-rest",
-    base = ":wrap-with-ssh-agent-and-known-hosts",
-    directory = "/app/docker",
-    files = ["//cmd/kubernetes/manager/api-rest"],
-    entrypoint = [
-        "/usr/local/bin/wrap-with-ssh-agent",
-        "/app/docker/api-rest"
-    ],
+    importpath = "github.com/mlab-lattice/system/cmd/kubernetes/manager/api-rest",
+    library = "//cmd/kubernetes/manager/api-rest:go_default_library",
+    visibility = ["//visibility:public"],
 )
 
 container_push(
