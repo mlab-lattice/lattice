@@ -18,14 +18,14 @@ const (
 type svcBuildStateInfo struct {
 	state svcBuildState
 
-	activeCbs  []string
-	failedCbs  []string
+	activeCbs  map[string]*crv1.ComponentBuild
+	failedCbs  map[string]*crv1.ComponentBuild
 	needsNewCb []string
 }
 
 func (sbc *ServiceBuildController) calculateState(svcb *crv1.ServiceBuild) (*svcBuildStateInfo, error) {
-	activeCbs := []string{}
-	failedCbs := []string{}
+	activeCbs := map[string]*crv1.ComponentBuild{}
+	failedCbs := map[string]*crv1.ComponentBuild{}
 	needsNewCbs := []string{}
 
 	for component, cbInfo := range svcb.Spec.Components {
@@ -41,9 +41,9 @@ func (sbc *ServiceBuildController) calculateState(svcb *crv1.ServiceBuild) (*svc
 
 		switch cb.Status.State {
 		case crv1.ComponentBuildStatePending, crv1.ComponentBuildStateQueued, crv1.ComponentBuildStateRunning:
-			activeCbs = append(activeCbs, component)
+			activeCbs[component] = cb
 		case crv1.ComponentBuildStateFailed:
-			failedCbs = append(failedCbs, component)
+			failedCbs[component] = cb
 		case crv1.ComponentBuildStateSucceeded:
 			continue
 		default:

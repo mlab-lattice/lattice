@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"reflect"
 	"sort"
 
@@ -14,12 +15,55 @@ import (
 
 // Warning: syncFailedServiceBuild mutates cBuild. Please do not pass in a pointer to a ComponentBuild
 // from the shared cache.
-func (sbc *ServiceBuildController) syncFailedServiceBuild(svcb *crv1.ServiceBuild, failedCbs []string) error {
+func (sbc *ServiceBuildController) syncComponentBuildStates(svcb *crv1.ServiceBuild, info *svcBuildStateInfo) error {
+	for component, cb := range info.activeCbs {
+		err := updateComponentBuildInfoState(svcb, component, cb)
+		if err != nil {
+			return err
+		}
+	}
+
+	for component, cb := range info.failedCbs {
+		err := updateComponentBuildInfoState(svcb, component, cb)
+		if err != nil {
+			return err
+		}
+	}
+
+	result, err := sbc.putServiceBuildUpdate(svcb)
+	if err != nil {
+		return err
+	}
+	*svcb = *result
+	return nil
+}
+
+func updateComponentBuildInfoState(svcb *crv1.ServiceBuild, component string, cb *crv1.ComponentBuild) error {
+	componentInfo, ok := svcb.Spec.Components[component]
+	if !ok {
+		return fmt.Errorf("ServiceBuild %v Spec.Components did not contain expected component", svcb.Name, component)
+	}
+
+	componentInfo.BuildState = &cb.Status.State
+	componentInfo.LastObservedPhase = cb.Status.LastObservedPhase
+	componentInfo.FailureInfo = cb.Status.FailureInfo
+	svcb.Spec.Components[component] = componentInfo
+	return nil
+}
+
+// Warning: syncFailedServiceBuild mutates cBuild. Please do not pass in a pointer to a ComponentBuild
+// from the shared cache.
+func (sbc *ServiceBuildController) syncFailedServiceBuild(svcb *crv1.ServiceBuild, failedCbs map[string]*crv1.ComponentBuild) error {
 	// Sort the ComponentBuild names so the Status.Message is the same for the same failed ComponentBuilds
-	sort.Strings(failedCbs)
+	failedComponents := []string{}
+	for component := range failedCbs {
+		failedComponents = append(failedComponents, component)
+	}
+
+	sort.Strings(failedComponents)
 
 	message := "The following components failed to build:"
-	for i, component := range failedCbs {
+	for i, component := range failedComponents {
 		if i != 0 {
 			message = message + ","
 		}
@@ -35,12 +79,17 @@ func (sbc *ServiceBuildController) syncFailedServiceBuild(svcb *crv1.ServiceBuil
 	return err
 }
 
-func (sbc *ServiceBuildController) syncRunningServiceBuild(svcb *crv1.ServiceBuild, activeCbs []string) error {
+func (sbc *ServiceBuildController) syncRunningServiceBuild(svcb *crv1.ServiceBuild, activeCbs map[string]*crv1.ComponentBuild) error {
 	// Sort the ComponentBuild names so the Status.Message is the same for the same active ComponentBuilds
-	sort.Strings(activeCbs)
+	activeComponents := []string{}
+	for component := range activeCbs {
+		activeComponents = append(activeComponents, component)
+	}
+
+	sort.Strings(activeComponents)
 
 	message := "The following components are still building:"
-	for i, component := range activeCbs {
+	for i, component := range activeComponents {
 		if i != 0 {
 			message = message + ","
 		}
@@ -56,7 +105,7 @@ func (sbc *ServiceBuildController) syncRunningServiceBuild(svcb *crv1.ServiceBui
 	return err
 }
 
-func (sbc *ServiceBuildController) syncMissingComponentBuildsServiceBuild(svcbs *crv1.ServiceBuild, activeCbs, needsNewCbs []string) error {
+func (sbc *ServiceBuildController) syncMissingComponentBuildsServiceBuild(svcbs *crv1.ServiceBuild, needsNewCbs []string) error {
 	for _, component := range needsNewCbs {
 		cbInfo := svcbs.Spec.Components[component]
 
@@ -106,7 +155,7 @@ func (sbc *ServiceBuildController) syncMissingComponentBuildsServiceBuild(svcbs 
 		svcbs.Spec.Components[component] = cbInfo
 	}
 
-	updatedSvcb, err := sbc.putServiceBuildUpdate(svcbs)
+	_, err := sbc.putServiceBuildUpdate(svcbs)
 	if err != nil {
 		return err
 	}
@@ -119,8 +168,8 @@ func (sbc *ServiceBuildController) syncMissingComponentBuildsServiceBuild(svcbs 
 	// as a Service to enqueue. Once SB is updated, it may never get notified that CB finishes.
 	// By enqueueing it, we make sure we have up to date status information, then from there can rely
 	// on updateComponentBuild to update SB's Status.
-	activeCbs = append(activeCbs, needsNewCbs...)
-	return sbc.syncRunningServiceBuild(updatedSvcb, activeCbs)
+	sbc.queue.Add(fmt.Sprintf("%v/%v", svcbs.Namespace, svcbs.Name))
+	return nil
 }
 
 func (sbc *ServiceBuildController) syncSucceededServiceBuild(svcb *crv1.ServiceBuild) error {

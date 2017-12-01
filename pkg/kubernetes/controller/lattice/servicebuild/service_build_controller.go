@@ -265,13 +265,18 @@ func (sbc *ServiceBuildController) syncServiceBuild(key string) error {
 
 	svcbCopy := svcb.DeepCopy()
 
+	err = sbc.syncComponentBuildStates(svcbCopy, stateInfo)
+	if err != nil {
+		return nil
+	}
+
 	switch stateInfo.state {
 	case svcBuildStateHasFailedCBuilds:
 		return sbc.syncFailedServiceBuild(svcbCopy, stateInfo.failedCbs)
 	case svcBuildStateHasOnlyRunningOrSucceededCBuilds:
 		return sbc.syncRunningServiceBuild(svcbCopy, stateInfo.activeCbs)
 	case svcBuildStateNoFailuresNeedsNewCBuilds:
-		return sbc.syncMissingComponentBuildsServiceBuild(svcbCopy, stateInfo.activeCbs, stateInfo.needsNewCb)
+		return sbc.syncMissingComponentBuildsServiceBuild(svcbCopy, stateInfo.needsNewCb)
 	case svcBuildStateAllCBuildsSucceeded:
 		return sbc.syncSucceededServiceBuild(svcbCopy)
 	default:
