@@ -466,7 +466,7 @@ go_repository(
 )
 
 
-# Gin dependencies.
+# github.com/gin-gonic/gin dependencies
 # commits from https://github.com/gin-gonic/gin/blob/d459835d2b077e44f7c9b453505ee29881d5d12d/vendor/vendor.json
 go_repository(
     name = "com_github_mattn_go_isatty",
