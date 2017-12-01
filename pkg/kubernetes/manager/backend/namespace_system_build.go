@@ -128,6 +128,7 @@ func transformSystemBuild(build *crv1.SystemBuild) coretypes.SystemBuild {
 	sysb := coretypes.SystemBuild{
 		ID:            coretypes.SystemBuildID(build.Name),
 		State:         getSystemBuildState(build.Status.State),
+		Version:       coretypes.SystemVersion(build.Labels[crv1.SystemVersionLabelKey]),
 		ServiceBuilds: map[systemtree.NodePath]*coretypes.ServiceBuild{},
 	}
 
