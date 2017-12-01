@@ -46,7 +46,7 @@ func tearDownAndWaitForSuccess(address string) error {
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode != http.StatusOK {
+	if resp.StatusCode != http.StatusCreated {
 		return fmt.Errorf("got unexpected status code %v when enqueueing teardown", resp.StatusCode)
 	}
 
