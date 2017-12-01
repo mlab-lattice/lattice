@@ -2,8 +2,8 @@ load("@io_bazel_rules_docker//container:container.bzl", "container_image", "cont
 load("@io_bazel_rules_docker//go:image.bzl", "go_image")
 
 go_base_images = {
-    False: "@go_debug_image_base//image",
-    True: "@go_image_base//image",
+    False: "@go_image_base//image",
+    True: "@go_debug_image_base//image",
 }
 
 

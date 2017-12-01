@@ -1,8 +1,9 @@
-# go (needs to be called first since some of the docker commands use it)
+# include go rules (needs to be called first since some of the docker commands use it)
+# https://github.com/bazelbuild/rules_go
 git_repository(
     name = "io_bazel_rules_go",
     remote = "https://github.com/bazelbuild/rules_go.git",
-    commit = "9556bc88d7d240d3bcbf07d24282953eb1687ef3",
+    commit = "5d38fce29b80d051dbe27afd45be788af42af3d5",
 )
 load("@io_bazel_rules_go//go:def.bzl", "go_rules_dependencies", "go_register_toolchains", "go_repository")
 go_rules_dependencies()
@@ -11,7 +12,8 @@ load("@io_bazel_rules_go//proto:def.bzl", "proto_register_toolchains")
 proto_register_toolchains()
 
 
-# docker
+# include docker rules
+# https://github.com/bazelbuild/rules_docker
 git_repository(
     name = "io_bazel_rules_docker",
     remote = "https://github.com/bazelbuild/rules_docker.git",
@@ -24,7 +26,8 @@ load(
 _go_image_repos()
 
 
-# distroless repo contains rules about downloading debs
+# include package_manager rules
+# https://github.com/GoogleCloudPlatform/distroless/tree/master/package_manager
 git_repository(
     name = "distroless",
     remote = "https://github.com/GoogleCloudPlatform/distroless.git",
@@ -38,8 +41,6 @@ load(
 )
 package_manager_repositories()
 
-# this will download debs from a snapshot of the debian archive
-# more information: https://github.com/GoogleCloudPlatform/distroless/tree/master/package_manager
 dpkg_src(
     name = "debian_stretch",
     arch = "amd64",
@@ -49,7 +50,7 @@ dpkg_src(
     url = "http://snapshot.debian.org/archive",
 )
 
-# download actual debs needed to create base docker image layers
+# download packages needed to create base docker image layers
 dpkg_list(
     name = "package_bundle",
     packages = [
@@ -359,6 +360,7 @@ go_repository(
     importpath = "github.com/golang/glog",
 )
 
+# also depended on by gin
 go_repository(
     name = "com_github_golang_protobuf",
     commit = "4bd1920723d7b7c925de087aa32e2187708897f7",
@@ -402,17 +404,19 @@ go_repository(
 )
 
 go_repository(
-    name = "com_github_ugorji_go",
-    commit = "ded73eae5db7e7a0ef6f55aace87a2873c5d2b74",
-    importpath = "github.com/ugorji/go",
-)
-
-go_repository(
     name = "com_github_ghodss_yaml",
     commit = "73d445a93680fa1a78ae23a5839bad48f32ba1ee",
     importpath = "github.com/ghodss/yaml",
 )
 
+# also depended upon by gin
+go_repository(
+    name = "com_github_ugorji_go",
+    commit = "ded73eae5db7e7a0ef6f55aace87a2873c5d2b74",
+    importpath = "github.com/ugorji/go",
+)
+
+# also depended upon by gin
 go_repository(
     name = "in_gopkg_yaml_v2",
     commit = "53feefa2559fb8dfa8d81baad31be332c97d6c77",
@@ -499,27 +503,9 @@ go_repository(
 )
 
 go_repository(
-    name = "com_github_golang_protobuf",
-    commit = "130e6b02ab059e7b717a096f397c5b60111cae74",
-    importpath = "github.com/golang/protobuf",
-)
-
-go_repository(
-    name = "in_gopkg_yaml_v2",
-    commit = "a5b47d31c556af34a302ce5d659e6fea44d90de0",
-    importpath = "gopkg.in/yaml.v2",
-)
-
-go_repository(
     name = "in_gopkg_go_playground_validator_v8",
     commit = "5f57d2222ad794d0dffb07e664ea05e2ee07d60c",
     importpath = "gopkg.in/go-playground/validator.v8",
-)
-
-go_repository(
-    name = "com_github_ugorji_go",
-    commit = "c88ee250d0221a57af388746f5cf03768c21d6e2",
-    importpath = "github.com/ugorji/go",
 )
 
 
