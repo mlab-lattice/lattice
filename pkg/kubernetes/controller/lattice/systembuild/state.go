@@ -20,12 +20,14 @@ const (
 type sysBuildStateInfo struct {
 	state sysBuildState
 
-	activeSvcbs  map[systemtree.NodePath]*crv1.ServiceBuild
-	failedSvcbs  map[systemtree.NodePath]*crv1.ServiceBuild
-	needsNewSvcb []systemtree.NodePath
+	successfulSvcbs map[systemtree.NodePath]*crv1.ServiceBuild
+	activeSvcbs     map[systemtree.NodePath]*crv1.ServiceBuild
+	failedSvcbs     map[systemtree.NodePath]*crv1.ServiceBuild
+	needsNewSvcb    []systemtree.NodePath
 }
 
 func (sbc *SystemBuildController) calculateState(sysb *crv1.SystemBuild) (*sysBuildStateInfo, error) {
+	successfulSvcbs := map[systemtree.NodePath]*crv1.ServiceBuild{}
 	activeSvcbs := map[systemtree.NodePath]*crv1.ServiceBuild{}
 	failedSvcbs := map[systemtree.NodePath]*crv1.ServiceBuild{}
 	needsNewSvcbs := []systemtree.NodePath{}
@@ -47,7 +49,7 @@ func (sbc *SystemBuildController) calculateState(sysb *crv1.SystemBuild) (*sysBu
 		case crv1.ServiceBuildStateFailed:
 			failedSvcbs[service] = svcb
 		case crv1.ServiceBuildStateSucceeded:
-			continue
+			successfulSvcbs[service] = svcb
 		default:
 			// FIXME: send warn event
 			return nil, fmt.Errorf("SystemBuild %v has unrecognized state %v", svcb.Name, svcb.Status.State)
@@ -55,9 +57,10 @@ func (sbc *SystemBuildController) calculateState(sysb *crv1.SystemBuild) (*sysBu
 	}
 
 	stateInfo := &sysBuildStateInfo{
-		activeSvcbs:  activeSvcbs,
-		failedSvcbs:  failedSvcbs,
-		needsNewSvcb: needsNewSvcbs,
+		successfulSvcbs: successfulSvcbs,
+		activeSvcbs:     activeSvcbs,
+		failedSvcbs:     failedSvcbs,
+		needsNewSvcb:    needsNewSvcbs,
 	}
 
 	if len(failedSvcbs) > 0 {

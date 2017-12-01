@@ -18,12 +18,14 @@ const (
 type svcBuildStateInfo struct {
 	state svcBuildState
 
-	activeCbs  map[string]*crv1.ComponentBuild
-	failedCbs  map[string]*crv1.ComponentBuild
-	needsNewCb []string
+	successfulCbs map[string]*crv1.ComponentBuild
+	activeCbs     map[string]*crv1.ComponentBuild
+	failedCbs     map[string]*crv1.ComponentBuild
+	needsNewCb    []string
 }
 
 func (sbc *ServiceBuildController) calculateState(svcb *crv1.ServiceBuild) (*svcBuildStateInfo, error) {
+	successfulCbs := map[string]*crv1.ComponentBuild{}
 	activeCbs := map[string]*crv1.ComponentBuild{}
 	failedCbs := map[string]*crv1.ComponentBuild{}
 	needsNewCbs := []string{}
@@ -45,7 +47,7 @@ func (sbc *ServiceBuildController) calculateState(svcb *crv1.ServiceBuild) (*svc
 		case crv1.ComponentBuildStateFailed:
 			failedCbs[component] = cb
 		case crv1.ComponentBuildStateSucceeded:
-			continue
+			successfulCbs[component] = cb
 		default:
 			// FIXME: send warn event
 			return nil, fmt.Errorf("ComponentBuild %v has unrecognized state %v", cb.Name, cb.Status.State)
@@ -53,6 +55,7 @@ func (sbc *ServiceBuildController) calculateState(svcb *crv1.ServiceBuild) (*svc
 	}
 
 	stateInfo := &svcBuildStateInfo{
+		successfulCbs: successfulCbs,
 		activeCbs:  activeCbs,
 		failedCbs:  failedCbs,
 		needsNewCb: needsNewCbs,

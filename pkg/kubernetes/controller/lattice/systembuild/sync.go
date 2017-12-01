@@ -13,6 +13,13 @@ import (
 // Warning: syncServiceBuildStates mutates svcb. Please do not pass in a pointer to a ComponentBuild
 // from the shared cache.
 func (sbc *SystemBuildController) syncServiceBuildStates(sysb *crv1.SystemBuild, info *sysBuildStateInfo) error {
+	for service, svcb := range info.successfulSvcbs {
+		err := updateServiceBuildInfoState(sysb, service, svcb)
+		if err != nil {
+			return err
+		}
+	}
+
 	for service, svcb := range info.activeSvcbs {
 		err := updateServiceBuildInfoState(sysb, service, svcb)
 		if err != nil {

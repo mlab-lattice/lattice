@@ -44,8 +44,8 @@ lattice_base_container_images(base_images)
 # lattice container images
 # this will yield the following rules:
 # (container-image) foo
-# (container-push) push-foo
 # (container-image) debug-foo
+# (container-push) push-foo
 # (container-push) push-debug-foo
 go_targets = [
     ("envoy-prepare", "iptables", "cmd/envoy/prepare"),
