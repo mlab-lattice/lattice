@@ -10,7 +10,7 @@ go_library(
 
 go_binary(
     name = "prepare",
+    embed = [":go_default_library"],
     importpath = "github.com/mlab-lattice/system/cmd/envoy/prepare",
-    library = ":go_default_library",
     visibility = ["//visibility:public"],
 )

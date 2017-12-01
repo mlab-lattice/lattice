@@ -3,7 +3,7 @@
 git_repository(
     name = "io_bazel_rules_go",
     remote = "https://github.com/bazelbuild/rules_go.git",
-    commit = "5d38fce29b80d051dbe27afd45be788af42af3d5",
+    commit = "44b3bdf7d3645cbf0cfd786c5f105d0af4cf49ca",
 )
 load("@io_bazel_rules_go//go:def.bzl", "go_rules_dependencies", "go_register_toolchains", "go_repository")
 go_rules_dependencies()
@@ -148,9 +148,10 @@ go_repository(
 
 go_repository(
     name = "io_k8s_apimachinery",
-    # https://github.com/bazelbuild/rules_go/issues/964
+    # Not sure why build files need to be forced to be generated here and that it has to be BUILD.bazel but it does
     build_file_generation = "on",
     build_file_name = "BUILD.bazel",
+    # https://github.com/bazelbuild/rules_go/issues/964
     build_file_proto_mode = "disable",
     commit = "9d38e20d609d27e00d4ec18f7b9db67105a2bde0",
     importpath = "k8s.io/apimachinery",
@@ -158,9 +159,10 @@ go_repository(
 
 go_repository(
     name = "io_k8s_apiextensions_apiserver",
-    # https://github.com/bazelbuild/rules_go/issues/964
+    # Not sure why build files need to be forced to be generated here and that it has to be BUILD.bazel but it does
     build_file_generation = "on",
     build_file_name = "BUILD.bazel",
+    # https://github.com/bazelbuild/rules_go/issues/964
     build_file_proto_mode = "disable",
     commit = "79ecda8df91cd9304503d6f3e488341eabe2287f",
     importpath = "k8s.io/apiextensions-apiserver",
@@ -175,8 +177,6 @@ go_repository(
 go_repository(
     name = "io_k8s_api",
     # https://github.com/bazelbuild/rules_go/issues/964
-    build_file_generation = "on",
-    build_file_name = "BUILD.bazel",
     build_file_proto_mode = "disable",
     commit = "fe29995db37613b9c5b2a647544cf627bfa8d299",  # Jul 19, 2017 (no releases)
     importpath = "k8s.io/api",
@@ -184,12 +184,19 @@ go_repository(
 
 go_repository(
     name = "io_k8s_kube_openapi",
-    build_file_generation = "on",
-    build_file_name = "BUILD.bazel",
-    build_file_proto_mode = "disable",
     commit = "868f2f29720b192240e18284659231b440f9cda5",
     importpath = "k8s.io/kube-openapi",
 )
+
+# also depended on by k8s.io
+# for some reason even though we directly rely on this in the controllers, bazel is somehow
+# magically building without it...
+# FIXME: figure this out ^^^
+#go_repository(
+#    name = "com_github_golang_glog",
+#    commit = "44145f04b68cf362d9c4df2182967c2275eaefed",
+#    importpath = "github.com/golang/glog",
+#)
 
 
 # github.com/mlab-lattice/core dependencies
@@ -234,20 +241,6 @@ go_repository(
     name = "org_golang_x_crypto",
     commit = "81e90905daefcd6fd217b62423c0908922eadb30",
     importpath = "golang.org/x/crypto",
-)
-
-# also depended on by k8s.io, version taken from same place as the rest of k8s.io dependencies
-go_repository(
-    name = "org_golang_x_text",
-    commit = "b19bf474d317b857955b12035d2c5acb57ce8b01",
-    importpath = "golang.org/x/text",
-)
-
-# also depended on by k8s.io, version taken from same place as the rest of k8s.io dependencies
-go_repository(
-    name = "org_golang_x_net",
-    commit = "1c05540f6879653db88113bc4a2b70aec4bd491f",
-    importpath = "golang.org/x/net",
 )
 
 go_repository(
@@ -355,19 +348,6 @@ go_repository(
 )
 
 go_repository(
-    name = "com_github_golang_glog",
-    commit = "44145f04b68cf362d9c4df2182967c2275eaefed",
-    importpath = "github.com/golang/glog",
-)
-
-# also depended on by gin
-go_repository(
-    name = "com_github_golang_protobuf",
-    commit = "4bd1920723d7b7c925de087aa32e2187708897f7",
-    importpath = "github.com/golang/protobuf",
-)
-
-go_repository(
     name = "com_github_google_gofuzz",
     commit = "44d81051d367757e1c7c6a5a86423ece9afcf63c",
     importpath = "github.com/google/gofuzz",
@@ -426,8 +406,6 @@ go_repository(
 go_repository(
     name = "com_github_googleapis_gnostic",
     # https://github.com/bazelbuild/rules_go/issues/964
-    build_file_generation = "on",
-    build_file_name = "BUILD.bazel",
     build_file_proto_mode = "disable",
     commit = "0c5108395e2debce0d731cf0287ddf7242066aba",
     importpath = "github.com/googleapis/gnostic",

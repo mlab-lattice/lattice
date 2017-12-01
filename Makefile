@@ -57,6 +57,15 @@ docker-hack-enter-build-shell: docker-hack-build-start-build-container
 docker-hack-push-image: docker-hack-build-start-build-container
 	docker exec $(CONTAINER_NAME_BUILD) ./docker/bazel-builder/wrap-creds-and-exec.sh make docker-push-image IMAGE=$(IMAGE)
 
+.PHONY: docker-hack-push-all-images
+docker-hack-push-all-images: docker-hack-build-start-build-container
+	make docker-hack-push-image IMAGE=envoy-prepare
+	make docker-hack-push-image IMAGE=kubernetes-bootstrap-lattice
+	make docker-hack-push-image IMAGE=kubernetes-component-builder
+	make docker-hack-push-image IMAGE=kubernetes-envoy-xds-api-rest-per-node
+	make docker-hack-push-image IMAGE=kubernetes-lattice-controller-manager
+	make docker-hack-push-image IMAGE=kubernetes-manager-api-rest
+
 .PHONY: docker-hack-build-bazel-build
 docker-hack-build-bazel-build:
 	docker build $(DIR)/docker -f $(DIR)/docker/bazel-builder/Dockerfile.bazel-build -t lattice-build/bazel-build
