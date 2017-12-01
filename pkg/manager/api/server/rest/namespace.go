@@ -99,7 +99,7 @@ func (r *restServer) mountNamespaceSystemBuildHandlers() {
 				return
 			}
 
-			c.JSON(http.StatusOK, buildSystemResponse{
+			c.JSON(http.StatusCreated, buildSystemResponse{
 				BuildId: bid,
 			})
 		})
@@ -262,7 +262,7 @@ func (r *restServer) mountNamespaceRolloutHandlers() {
 				return
 			}
 
-			c.JSON(http.StatusOK, rollOutSystemResponse{
+			c.JSON(http.StatusCreated, rollOutSystemResponse{
 				RolloutId: rid,
 			})
 		})
@@ -319,7 +319,7 @@ func (r *restServer) mountNamespaceTeardownHandlers() {
 				return
 			}
 
-			c.JSON(http.StatusOK, tearDownSystemResponse{
+			c.JSON(http.StatusCreated, tearDownSystemResponse{
 				TeardownId: tid,
 			})
 		})
