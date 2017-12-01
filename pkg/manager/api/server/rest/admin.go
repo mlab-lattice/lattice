@@ -56,7 +56,7 @@ func (r *restServer) mountAdminMasterNodeHandlers() {
 				}
 
 				if exists == false {
-					c.String(http.StatusNotFound, err.Error())
+					c.String(http.StatusNotFound, "")
 					return
 				}
 
@@ -68,10 +68,15 @@ func (r *restServer) mountAdminMasterNodeHandlers() {
 				nodeId := c.Param("master_node_id")
 				component := c.Param("component_id")
 
-				err := r.backend.RestartMasterNodeComponent(nodeId, component)
+				exists, err := r.backend.RestartMasterNodeComponent(nodeId, component)
 
 				if err != nil {
-					c.String(http.StatusInternalServerError, err.Error())
+					c.String(http.StatusInternalServerError, "")
+					return
+				}
+
+				if !exists {
+					c.String(http.StatusNotFound, "")
 					return
 				}
 

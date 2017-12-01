@@ -27,6 +27,15 @@ var masterComponentsCommand = &cobra.Command{
 	Use:  "components",
 	Args: cobra.ExactArgs(0),
 	Run: func(cmd *cobra.Command, args []string) {
+		cmd.Help()
+		os.Exit(1)
+	},
+}
+
+var masterComponentsListCommand = &cobra.Command{
+	Use:  "list",
+	Args: cobra.ExactArgs(0),
+	Run: func(cmd *cobra.Command, args []string) {
 		components, err := adminClient.Master().Node(masterNode).Components()
 		if err != nil {
 			log.Fatal(err)
@@ -37,7 +46,7 @@ var masterComponentsCommand = &cobra.Command{
 }
 
 var masterComponentsLogsCommand = &cobra.Command{
-	Use:  "logs",
+	Use:  "logs [component]",
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		component := args[0]
@@ -52,7 +61,7 @@ var masterComponentsLogsCommand = &cobra.Command{
 }
 
 var masterComponentsRestartCommand = &cobra.Command{
-	Use:  "restart",
+	Use:  "restart [component]",
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		component := args[0]
@@ -68,6 +77,8 @@ func init() {
 
 	masterCmd.PersistentFlags().Int32Var(&masterNode, "node", 0, "master node to query")
 	masterCmd.AddCommand(masterComponentsCommand)
+
+	masterComponentsCommand.AddCommand(masterComponentsListCommand)
 
 	masterComponentsCommand.AddCommand(masterComponentsLogsCommand)
 	masterComponentsLogsCommand.Flags().BoolVar(&masterComponentLogsFollow, "follow", false, "whether or not to follow the logs")

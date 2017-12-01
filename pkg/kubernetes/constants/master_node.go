@@ -2,10 +2,10 @@ package constants
 
 const (
 	MasterNodeComponentLatticeControllerMaster = "lattice-controller-master"
-	MasterNodeComponentManagerApi              = "management-api"
+	MasterNodeComponentManagerApi              = "manager-api"
 
 	masterNodeLabel   = "node.master.lattice.mlab.com"
 	MasterNodeLabelID = masterNodeLabel + "/id"
 
-	MasterNodeLabelComponent                        = masterNodeLabel + "/component"
+	MasterNodeLabelComponent = masterNodeLabel + "/component"
 )

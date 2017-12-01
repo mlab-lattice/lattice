@@ -43,15 +43,20 @@ func (kb *KubernetesBackend) GetMasterNodeComponentLog(nodeId, componentName str
 	return log, true, err
 }
 
-func (kb *KubernetesBackend) RestartMasterNodeComponent(nodeId, componentName string) error {
+func (kb *KubernetesBackend) RestartMasterNodeComponent(nodeId, componentName string) (bool, error) {
 	componentPod, err := kb.getMasterNodeComponentPod(nodeId, componentName)
 	if err != nil {
-		return err
+		return false, err
 	}
 
-	return kb.KubeClientset.CoreV1().
+	if componentPod == nil {
+		return false, nil
+	}
+
+	err = kb.KubeClientset.CoreV1().
 		Pods(componentPod.Namespace).
 		Delete(componentPod.Name, &metav1.DeleteOptions{})
+	return true, err
 }
 
 func (kb *KubernetesBackend) getMasterNode(nodeId string) (*corev1.Node, error) {
