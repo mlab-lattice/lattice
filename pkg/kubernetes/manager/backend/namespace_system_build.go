@@ -128,12 +128,12 @@ func transformSystemBuild(build *crv1.SystemBuild) coretypes.SystemBuild {
 	sysb := coretypes.SystemBuild{
 		ID:            coretypes.SystemBuildID(build.Name),
 		State:         getSystemBuildState(build.Status.State),
-		ServiceBuilds: map[string]*coretypes.ServiceBuild{},
+		ServiceBuilds: map[systemtree.NodePath]*coretypes.ServiceBuild{},
 	}
 
 	for service, svcbInfo := range build.Spec.Services {
 		if svcbInfo.BuildName == nil {
-			sysb.ServiceBuilds[string(service)] = nil
+			sysb.ServiceBuilds[service] = nil
 			continue
 		}
 		id := coretypes.ServiceBuildID(*svcbInfo.BuildName)
@@ -175,7 +175,7 @@ func transformSystemBuild(build *crv1.SystemBuild) coretypes.SystemBuild {
 			}
 		}
 
-		sysb.ServiceBuilds[string(service)] = svcb
+		sysb.ServiceBuilds[service] = svcb
 	}
 
 	return sysb
