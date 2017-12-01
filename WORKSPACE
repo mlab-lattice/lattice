@@ -191,6 +191,7 @@ go_repository(
 # also depended on by k8s.io
 # for some reason even though we directly rely on this in the controllers, bazel is somehow
 # magically building without it...
+# also seems to be the case with golang.org/x/text and possibly golang.org/x/net
 # FIXME: figure this out ^^^
 #go_repository(
 #    name = "com_github_golang_glog",
