@@ -65,7 +65,42 @@ func getNewSystemBuild(ln coretypes.LatticeNamespace, definitionRoot systemtree.
 	return sysB, nil
 }
 
+func (kb *KubernetesBackend) ListSystemBuilds(ln coretypes.LatticeNamespace) ([]coretypes.SystemBuild, error) {
+	result := &crv1.SystemBuildList{}
+	err := kb.LatticeResourceClient.Get().
+		Namespace(constants.NamespaceLatticeInternal).
+		Resource(crv1.SystemBuildResourcePlural).
+		Do().
+		Into(result)
+
+	if err != nil {
+		return nil, err
+	}
+
+	builds := []coretypes.SystemBuild{}
+	for _, build := range result.Items {
+		// TODO: add this to the query
+		if strings.Compare(build.Labels[constants.LatticeNamespaceLabel], string(ln)) != 0 {
+			continue
+		}
+
+		builds = append(builds, transformSystemBuild(&build))
+	}
+
+	return builds, nil
+}
+
 func (kb *KubernetesBackend) GetSystemBuild(ln coretypes.LatticeNamespace, bid coretypes.SystemBuildID) (*coretypes.SystemBuild, bool, error) {
+	build, exists, err := kb.getInternalSystemBuild(ln, bid)
+	if err != nil || !exists {
+		return nil, exists, err
+	}
+
+	coreBuild := transformSystemBuild(build)
+	return &coreBuild, true, nil
+}
+
+func (kb *KubernetesBackend) getInternalSystemBuild(ln coretypes.LatticeNamespace, bid coretypes.SystemBuildID) (*crv1.SystemBuild, bool, error) {
 	result := &crv1.SystemBuild{}
 	err := kb.LatticeResourceClient.Get().
 		Namespace(constants.NamespaceLatticeInternal).
@@ -86,42 +121,64 @@ func (kb *KubernetesBackend) GetSystemBuild(ln coretypes.LatticeNamespace, bid c
 		return nil, false, nil
 	}
 
-	sb := &coretypes.SystemBuild{
-		ID:      bid,
-		Version: coretypes.SystemVersion(result.Labels[crv1.SystemVersionLabelKey]),
-		State:   getSystemBuildState(result.Status.State),
-	}
-
-	return sb, true, nil
+	return result, true, nil
 }
 
-func (kb *KubernetesBackend) ListSystemBuilds(ln coretypes.LatticeNamespace) ([]coretypes.SystemBuild, error) {
-	result := &crv1.SystemBuildList{}
-	err := kb.LatticeResourceClient.Get().
-		Namespace(constants.NamespaceLatticeInternal).
-		Resource(crv1.SystemBuildResourcePlural).
-		Do().
-		Into(result)
-
-	if err != nil {
-		return nil, err
+func transformSystemBuild(build *crv1.SystemBuild) coretypes.SystemBuild {
+	sysb := coretypes.SystemBuild{
+		ID:            coretypes.SystemBuildID(build.Name),
+		State:         getSystemBuildState(build.Status.State),
+		ServiceBuilds: map[string]*coretypes.ServiceBuild{},
 	}
 
-	builds := []coretypes.SystemBuild{}
-	for _, b := range result.Items {
-		// TODO: add this to the query
-		if strings.Compare(b.Labels[constants.LatticeNamespaceLabel], string(ln)) != 0 {
+	for service, svcbInfo := range build.Spec.Services {
+		if svcbInfo.BuildName == nil {
+			sysb.ServiceBuilds[string(service)] = nil
 			continue
 		}
+		id := coretypes.ServiceBuildID(*svcbInfo.BuildName)
 
-		builds = append(builds, coretypes.SystemBuild{
-			ID:      coretypes.SystemBuildID(b.Name),
-			Version: coretypes.SystemVersion(b.Labels[crv1.SystemVersionLabelKey]),
-			State:   getSystemBuildState(b.Status.State),
-		})
+		state := coreconstants.ServiceBuildStatePending
+		if svcbInfo.BuildState != nil {
+			state = getServiceBuildState(*svcbInfo.BuildState)
+		}
+
+		svcb := &coretypes.ServiceBuild{
+			ID:              id,
+			State:           state,
+			ComponentBuilds: map[string]*coretypes.ComponentBuild{},
+		}
+
+		for component, cbInfo := range svcbInfo.Components {
+			if cbInfo.BuildName == nil {
+				svcb.ComponentBuilds[component] = nil
+				continue
+			}
+			id := coretypes.ComponentBuildID(*cbInfo.BuildName)
+
+			state := coreconstants.ComponentBuildStatePending
+			if cbInfo.BuildState != nil {
+				state = getComponentBuildState(*cbInfo.BuildState)
+			}
+
+			var failureMessage *string
+			if cbInfo.FailureInfo != nil {
+				failMessage := getComponentBuildFailureMessage(*cbInfo.FailureInfo)
+				failureMessage = &failMessage
+			}
+
+			svcb.ComponentBuilds[component] = &coretypes.ComponentBuild{
+				ID:                id,
+				State:             state,
+				LastObservedPhase: cbInfo.LastObservedPhase,
+				FailureMessage:    failureMessage,
+			}
+		}
+
+		sysb.ServiceBuilds[string(service)] = svcb
 	}
 
-	return builds, nil
+	return sysb
 }
 
 func getSystemBuildState(state crv1.SystemBuildState) coretypes.SystemBuildState {

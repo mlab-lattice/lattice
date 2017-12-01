@@ -171,7 +171,7 @@ func seedRbacEnvoyXdsApi(kubeClientset *kubernetes.Clientset) {
 func seedRbacLatticeControllerManger(kubeClientset *kubernetes.Clientset) {
 	clusterRole := &rbacv1.ClusterRole{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: constants.MasterNodeComponentLatticeControllerMaster,
+			Name: constants.MasterNodeComponentLatticeControllerManager,
 		},
 		Rules: []rbacv1.PolicyRule{
 			// lattice all
@@ -224,7 +224,7 @@ func seedRbacLatticeControllerManger(kubeClientset *kubernetes.Clientset) {
 
 	crb := &rbacv1.ClusterRoleBinding{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: constants.MasterNodeComponentLatticeControllerMaster,
+			Name: constants.MasterNodeComponentLatticeControllerManager,
 		},
 		Subjects: []rbacv1.Subject{
 			{
@@ -270,7 +270,7 @@ func seedRbacManagerApi(kubeClientset *kubernetes.Clientset) {
 			// lattice service build read
 			{
 				APIGroups: []string{crv1.GroupName},
-				Resources: []string{crv1.ComponentBuildResourcePlural},
+				Resources: []string{crv1.ServiceBuildResourcePlural},
 				Verbs:     readVerbs,
 			},
 			// lattice component build read

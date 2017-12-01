@@ -109,18 +109,13 @@ func transformComponentBuild(build *crv1.ComponentBuild) coretypes.ComponentBuil
 	}
 
 	if build.Status.FailureInfo != nil {
-		var failureMessage string
-		if build.Status.FailureInfo.Internal {
-			failureMessage = "failed due to an internal error"
-		} else {
-			failureMessage = build.Status.FailureInfo.Message
-		}
-
+		failureMessage := getComponentBuildFailureMessage(*build.Status.FailureInfo)
 		cb.FailureMessage = &failureMessage
 	}
 
 	return cb
 }
+
 
 func getComponentBuildState(state crv1.ComponentBuildState) coretypes.ComponentBuildState {
 	switch state {
@@ -137,6 +132,13 @@ func getComponentBuildState(state crv1.ComponentBuildState) coretypes.ComponentB
 	default:
 		panic("unreachable")
 	}
+}
+
+func getComponentBuildFailureMessage(failureInfo crv1.ComponentBuildFailureInfo) string {
+	if failureInfo.Internal {
+		return"failed due to an internal error"
+	}
+	return failureInfo.Message
 }
 
 func (kb *KubernetesBackend) getPodForComponentBuild(cb *crv1.ComponentBuild) (*corev1.Pod, error) {

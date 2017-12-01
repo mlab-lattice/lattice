@@ -86,7 +86,7 @@ filegroup(
 # direct github.com/mlab-lattice/system dependencies
 go_repository(
     name = "com_github_mlab_lattice_core",
-    commit = "a3f242adc8984b32121e069b8e9d876a76362407",
+    commit = "d5176692e6421d54c0099cbf4c538c4b5de03dd3",
     importpath = "github.com/mlab-lattice/core",
     remote = "git@github.com:mlab-lattice/core.git",
     vcs = "git",

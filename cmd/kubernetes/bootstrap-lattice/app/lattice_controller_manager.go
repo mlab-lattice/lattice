@@ -23,21 +23,21 @@ func seedLatticeControllerManager(kubeClientset *kubernetes.Clientset) {
 	//		 StatefulSets?).
 	latticeControllerManagerDaemonSet := &extensionsv1beta1.DaemonSet{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      constants.MasterNodeComponentLatticeControllerMaster,
+			Name:      constants.MasterNodeComponentLatticeControllerManager,
 			Namespace: constants.NamespaceLatticeInternal,
 		},
 		Spec: extensionsv1beta1.DaemonSetSpec{
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Name: constants.MasterNodeComponentLatticeControllerMaster,
+					Name: constants.MasterNodeComponentLatticeControllerManager,
 					Labels: map[string]string{
-						constants.MasterNodeLabelComponent: constants.MasterNodeComponentLatticeControllerMaster,
+						constants.MasterNodeLabelComponent: constants.MasterNodeComponentLatticeControllerManager,
 					},
 				},
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{
 						{
-							Name:  constants.MasterNodeComponentLatticeControllerMaster,
+							Name:  constants.MasterNodeComponentLatticeControllerManager,
 							Image: getContainerImageFQN(constants.DockerImageLatticeControllerManager),
 							Args: []string{
 								"-v", "5",

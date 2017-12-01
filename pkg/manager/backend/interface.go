@@ -36,7 +36,11 @@ type Interface interface {
 	ListSystemBuilds(coretypes.LatticeNamespace) ([]coretypes.SystemBuild, error)
 	GetSystemBuild(coretypes.LatticeNamespace, coretypes.SystemBuildID) (b *coretypes.SystemBuild, exists bool, err error)
 
-	//Component
+	// Service
+	ListServiceBuilds(coretypes.LatticeNamespace) ([]coretypes.ServiceBuild, error)
+	GetServiceBuild(coretypes.LatticeNamespace, coretypes.ServiceBuildID) (b *coretypes.ServiceBuild, exists bool, err error)
+
+	// Component
 	ListComponentBuilds(coretypes.LatticeNamespace) ([]coretypes.ComponentBuild, error)
 	GetComponentBuild(coretypes.LatticeNamespace, coretypes.ComponentBuildID) (b *coretypes.ComponentBuild, exists bool, err error)
 	GetComponentBuildLogs(ln coretypes.LatticeNamespace, bid coretypes.ComponentBuildID, follow bool) (rc io.ReadCloser, exists bool, err error)

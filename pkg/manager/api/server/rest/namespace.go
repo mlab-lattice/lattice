@@ -18,6 +18,7 @@ import (
 func (r *restServer) mountNamespaceHandlers() {
 	r.mountNamespaceVersionHandlers()
 	r.mountNamespaceSystemBuildHandlers()
+	r.mountNamespaceServiceBuildHandlers()
 	r.mountNamespaceComponentBuildHandlers()
 	r.mountNamespaceRolloutHandlers()
 	r.mountNamespaceTeardownHandlers()
@@ -123,6 +124,43 @@ func (r *restServer) mountNamespaceSystemBuildHandlers() {
 			bid := c.Param("build_id")
 
 			b, exists, err := r.backend.GetSystemBuild(coretypes.LatticeNamespace(namespace), coretypes.SystemBuildID(bid))
+			if err != nil {
+				c.String(http.StatusInternalServerError, err.Error())
+				return
+			}
+
+			if !exists {
+				c.String(http.StatusNotFound, "")
+				return
+			}
+
+			c.JSON(http.StatusOK, b)
+		})
+	}
+}
+
+func (r *restServer) mountNamespaceServiceBuildHandlers() {
+	sysbs := r.router.Group("/namespaces/:namespace_id/service-builds")
+	{
+		// list-service-builds
+		sysbs.GET("", func(c *gin.Context) {
+			namespace := c.Param("namespace_id")
+
+			bs, err := r.backend.ListServiceBuilds(coretypes.LatticeNamespace(namespace))
+			if err != nil {
+				c.String(http.StatusInternalServerError, err.Error())
+				return
+			}
+
+			c.JSON(http.StatusOK, bs)
+		})
+
+		// get-service-build
+		sysbs.GET("/:build_id", func(c *gin.Context) {
+			namespace := c.Param("namespace_id")
+			bid := c.Param("build_id")
+
+			b, exists, err := r.backend.GetServiceBuild(coretypes.LatticeNamespace(namespace), coretypes.ServiceBuildID(bid))
 			if err != nil {
 				c.String(http.StatusInternalServerError, err.Error())
 				return

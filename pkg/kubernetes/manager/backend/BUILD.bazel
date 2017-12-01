@@ -8,6 +8,7 @@ go_library(
         "kubernetes_backend.go",
         "namespace_component_build.go",
         "namespace_service.go",
+        "namespace_service_build.go",
         "namespace_system_build.go",
         "namespace_system_roll_out.go",
         "namespace_system_tear_down.go",

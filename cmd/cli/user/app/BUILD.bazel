@@ -8,6 +8,8 @@ go_library(
         "provision.go",
         "provisioner.go",
         "root.go",
+        "service_build.go",
+        "system_build.go",
     ],
     importpath = "github.com/mlab-lattice/system/cmd/cli/user/app",
     visibility = ["//visibility:public"],
