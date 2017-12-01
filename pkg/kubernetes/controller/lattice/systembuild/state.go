@@ -20,14 +20,14 @@ const (
 type sysBuildStateInfo struct {
 	state sysBuildState
 
-	activeSvcbs  []systemtree.NodePath
-	failedSvcbs  []systemtree.NodePath
+	activeSvcbs  map[systemtree.NodePath]*crv1.ServiceBuild
+	failedSvcbs  map[systemtree.NodePath]*crv1.ServiceBuild
 	needsNewSvcb []systemtree.NodePath
 }
 
 func (sbc *SystemBuildController) calculateState(sysb *crv1.SystemBuild) (*sysBuildStateInfo, error) {
-	activeSvcbs := []systemtree.NodePath{}
-	failedSvcbs := []systemtree.NodePath{}
+	activeSvcbs := map[systemtree.NodePath]*crv1.ServiceBuild{}
+	failedSvcbs := map[systemtree.NodePath]*crv1.ServiceBuild{}
 	needsNewSvcbs := []systemtree.NodePath{}
 
 	for service, svcbInfo := range sysb.Spec.Services {
@@ -43,9 +43,9 @@ func (sbc *SystemBuildController) calculateState(sysb *crv1.SystemBuild) (*sysBu
 
 		switch svcb.Status.State {
 		case crv1.ServiceBuildStatePending, crv1.ServiceBuildStateRunning:
-			activeSvcbs = append(activeSvcbs, service)
+			activeSvcbs[service] = svcb
 		case crv1.ServiceBuildStateFailed:
-			failedSvcbs = append(failedSvcbs, service)
+			failedSvcbs[service] = svcb
 		case crv1.ServiceBuildStateSucceeded:
 			continue
 		default:

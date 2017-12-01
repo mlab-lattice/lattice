@@ -300,13 +300,18 @@ func (sbc *SystemBuildController) syncSystemBuild(key string) error {
 
 	sysbCopy := sysb.DeepCopy()
 
+	err = sbc.syncServiceBuildStates(sysbCopy, stateInfo)
+	if err != nil {
+		return nil
+	}
+
 	switch stateInfo.state {
 	case sysBuildStateHasFailedCBuilds:
 		return sbc.syncFailedSystemBuild(sysbCopy, stateInfo.failedSvcbs)
 	case sysBuildStateHasOnlyRunningOrSucceededCBuilds:
 		return sbc.syncRunningSystemBuild(sysbCopy, stateInfo.activeSvcbs)
 	case sysBuildStateNoFailuresNeedsNewCBuilds:
-		return sbc.syncMissingServiceBuildsSystemBuild(sysbCopy, stateInfo.activeSvcbs, stateInfo.needsNewSvcb)
+		return sbc.syncMissingServiceBuildsSystemBuild(sysbCopy, stateInfo.needsNewSvcb)
 	case sysBuildStateAllCBuildsSucceeded:
 		return sbc.syncSucceededSystemBuild(sysbCopy)
 	default:

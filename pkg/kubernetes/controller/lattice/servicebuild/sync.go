@@ -13,7 +13,7 @@ import (
 	"github.com/golang/glog"
 )
 
-// Warning: syncFailedServiceBuild mutates cBuild. Please do not pass in a pointer to a ComponentBuild
+// Warning: syncComponentBuildStates mutates svcb. Please do not pass in a pointer to a ComponentBuild
 // from the shared cache.
 func (sbc *ServiceBuildController) syncComponentBuildStates(svcb *crv1.ServiceBuild, info *svcBuildStateInfo) error {
 	for component, cb := range info.activeCbs {
@@ -51,7 +51,7 @@ func updateComponentBuildInfoState(svcb *crv1.ServiceBuild, component string, cb
 	return nil
 }
 
-// Warning: syncFailedServiceBuild mutates cBuild. Please do not pass in a pointer to a ComponentBuild
+// Warning: syncFailedServiceBuild mutates svcb. Please do not pass in a pointer to a ServiceBuild
 // from the shared cache.
 func (sbc *ServiceBuildController) syncFailedServiceBuild(svcb *crv1.ServiceBuild, failedCbs map[string]*crv1.ComponentBuild) error {
 	// Sort the ComponentBuild names so the Status.Message is the same for the same failed ComponentBuilds

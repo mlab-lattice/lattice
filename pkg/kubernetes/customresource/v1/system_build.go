@@ -31,11 +31,13 @@ type SystemBuild struct {
 }
 
 type SystemBuildSpec struct {
-	coretypes.LatticeNamespace                                     `json:"latticeNamespace"`
-	DefinitionRoot systemtree.Node                                 `json:"definition"`
-	Services       map[systemtree.NodePath]SystemBuildServicesInfo `json:"services"`
+	coretypes.LatticeNamespace `json:"latticeNamespace"`
+	DefinitionRoot             systemtree.Node                                 `json:"definition"`
+	Services                   map[systemtree.NodePath]SystemBuildServicesInfo `json:"services"`
 }
 
+// Some JSON (un)marshalling trickiness needed to deal with the fact that we have an interface
+// type in our SystemBuildSpec (DefinitionRoot)
 type systemBuildSpecRaw struct {
 	coretypes.LatticeNamespace `json:"latticeNamespace"`
 	Services                   map[systemtree.NodePath]SystemBuildServicesInfo `json:"services"`
@@ -76,9 +78,17 @@ func (sbs *SystemBuildSpec) UnmarshalJSON(data []byte) error {
 }
 
 type SystemBuildServicesInfo struct {
-	Definition systemdefinition.Service `json:"definition"`
-	BuildName  *string                  `json:"buildName,omitempty"`
-	BuildState *ServiceBuildState       `json:"buildState"`
+	Definition systemdefinition.Service                        `json:"definition"`
+	BuildName  *string                                         `json:"buildName,omitempty"`
+	BuildState *ServiceBuildState                              `json:"buildState"`
+	Components map[string]SystemBuildServicesInfoComponentInfo `json:"components"`
+}
+
+type SystemBuildServicesInfoComponentInfo struct {
+	BuildName         *string                        `json:"buildName,omitempty"`
+	BuildState        *ComponentBuildState           `json:"buildState"`
+	LastObservedPhase *coretypes.ComponentBuildPhase `json:"lastObservedPhase,omitempty"`
+	FailureInfo       *ComponentBuildFailureInfo     `json:"failureInfo,omitempty"`
 }
 
 type SystemBuildStatus struct {
