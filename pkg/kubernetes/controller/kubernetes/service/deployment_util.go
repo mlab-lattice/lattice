@@ -154,10 +154,9 @@ func (sc *ServiceController) getDeploymentSpec(svc *crv1.Service) (*appsv1beta2.
 		Name:            fmt.Sprintf("lattice-prepare-envoy-%v", uuid.NewUUID()),
 		Image:           sc.config.Envoy.PrepareImage,
 		ImagePullPolicy: corev1.PullIfNotPresent,
-		Command:         []string{"/usr/local/bin/prepare-envoy.sh"},
 		Env: []corev1.EnvVar{
 			{
-				Name:  "ENVOY_EGRESS_PORT",
+				Name:  "EGRESS_PORT",
 				Value: strconv.Itoa(int(svc.Spec.EnvoyEgressPort)),
 			},
 			{
@@ -165,15 +164,15 @@ func (sc *ServiceController) getDeploymentSpec(svc *crv1.Service) (*appsv1beta2.
 				Value: envoyConfig.RedirectCidrBlock,
 			},
 			{
-				Name:  "ENVOY_CONFIG_DIR",
+				Name:  "CONFIG_DIR",
 				Value: envoyConfigDirectory,
 			},
 			{
-				Name:  "ENVOY_ADMIN_PORT",
+				Name:  "ADMIN_PORT",
 				Value: strconv.Itoa(int(svc.Spec.EnvoyAdminPort)),
 			},
 			{
-				Name: "ENVOY_XDS_API_HOST",
+				Name: "XDS_API_HOST",
 				ValueFrom: &corev1.EnvVarSource{
 					FieldRef: &corev1.ObjectFieldSelector{
 						FieldPath: "status.hostIP",
@@ -181,7 +180,7 @@ func (sc *ServiceController) getDeploymentSpec(svc *crv1.Service) (*appsv1beta2.
 				},
 			},
 			{
-				Name:  "ENVOY_XDS_API_PORT",
+				Name:  "XDS_API_PORT",
 				Value: fmt.Sprintf("%v", envoyConfig.XdsApiPort),
 			},
 		},

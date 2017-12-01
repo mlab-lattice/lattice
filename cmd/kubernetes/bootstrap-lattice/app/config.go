@@ -36,7 +36,7 @@ func seedConfig(kubeconfig *rest.Config, userSystemUrl string) {
 				},
 			},
 			Envoy: crv1.ConfigEnvoy{
-				PrepareImage:      latticeContainerRegistry + "/envoy-prepare-envoy",
+				PrepareImage:      latticeContainerRegistry + "/envoy-prepare",
 				Image:             "envoyproxy/envoy-alpine",
 				RedirectCidrBlock: "172.16.29.0/16",
 				XdsApiPort:        8080,

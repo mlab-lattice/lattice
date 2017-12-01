@@ -70,20 +70,6 @@ dpkg_list(
 )
 
 load(
-    "@io_bazel_rules_docker//container:container.bzl",
-    "container_pull",
-    container_repositories = "repositories",
-)
-container_repositories()
-
-container_pull(
-  name = "distroless_base",
-  registry = "gcr.io/distroless",
-  repository = "base",
-  tag = "latest"
-)
-
-load(
     "@io_bazel_rules_docker//go:image.bzl",
     _go_image_repos = "repositories",
 )
@@ -177,6 +163,15 @@ go_repository(
     name = "com_github_aws_aws_sdk_go",
     tag = "v1.12.35",
     importpath = "github.com/aws/aws-sdk-go",
+)
+
+go_repository(
+    name = "com_github_coreos_go_iptables",
+    # repo has a file named "build", so have to force gazelle to generate a bazel build file
+    build_file_generation = "on",
+    build_file_name = "BUILD.bazel",
+    commit = "17b936e6ccb6f6e424f7d89c614164e796df1661",
+    importpath = "github.com/coreos/go-iptables",
 )
 
 # Core dependencies

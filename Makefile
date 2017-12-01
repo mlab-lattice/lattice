@@ -28,6 +28,12 @@ test: gazelle
 gazelle:
 	@bazel run //:gazelle
 
+# docker
+.PHONY: docker-push-image
+docker-push-image:
+	bazel run //docker:push-$(IMAGE)
+	bazel run //docker:push-debug-$(IMAGE)
+
 # local binaries
 .PHONY: update-binaries
 update-binaries: update-binary-cli-admin update-binary-cli-user
@@ -43,16 +49,20 @@ update-binary-cli-user:
 	cp -f $(DIR)/bazel-bin/cmd/cli/user/user $(DIR)/bin/lattice-system
 
 # docker build hackery
-.PHONY: docker-enter-build-shell
-docker-enter-build-shell: docker-build-start-build-container
+.PHONY: docker-hack-enter-build-shell
+docker-hack-enter-build-shell: docker-hack-build-start-build-container
 	docker exec -it $(CONTAINER_NAME_BUILD) ./docker/bazel-builder/wrap-creds-and-exec.sh /bin/bash
 
-.PHONY: docker-build-bazel-build
-docker-build-bazel-build:
+.PHONY: docker-hack-push-image
+docker-hack-push-image: docker-hack-build-start-build-container
+	docker exec $(CONTAINER_NAME_BUILD) ./docker/bazel-builder/wrap-creds-and-exec.sh make docker-push-image IMAGE=$(IMAGE)
+
+.PHONY: docker-hack-build-bazel-build
+docker-hack-build-bazel-build:
 	docker build $(DIR)/docker -f $(DIR)/docker/bazel-builder/Dockerfile.bazel-build -t lattice-build/bazel-build
 
-.PHONY: docker-build-start-build-container
-docker-build-start-build-container: docker-build-bazel-build
+.PHONY: docker-hack-build-start-build-container
+docker-hack-build-start-build-container: docker-hack-build-bazel-build
 	$(DIR)/docker/bazel-builder/start-build-container.sh
 
 # cloud images
