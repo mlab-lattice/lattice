@@ -18,6 +18,7 @@ go_library(
     importpath = "github.com/mlab-lattice/system/cmd/kubernetes/bootstrap-lattice/app",
     visibility = ["//visibility:public"],
     deps = [
+        "//pkg/constants:go_default_library",
         "//pkg/kubernetes/constants:go_default_library",
         "//pkg/kubernetes/customresource:go_default_library",
         "//pkg/kubernetes/customresource/v1:go_default_library",

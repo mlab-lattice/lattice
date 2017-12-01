@@ -129,7 +129,7 @@ func seedRbacEnvoyXdsApi(kubeClientset *kubernetes.Clientset) {
 
 	sa := &corev1.ServiceAccount{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      constants.ServiceAccountEnvoyXdsApi,
+			Name:      constants.ServiceAccountEnvoyXDSAPI,
 			Namespace: role.Namespace,
 		},
 	}
@@ -251,7 +251,7 @@ func seedRbacLatticeControllerManger(kubeClientset *kubernetes.Clientset) {
 func seedRbacManagerApi(kubeClientset *kubernetes.Clientset) {
 	role := &rbacv1.Role{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      constants.MasterNodeComponentManagerApi,
+			Name:      constants.MasterNodeComponentManagerAPI,
 			Namespace: constants.NamespaceLatticeInternal,
 		},
 		Rules: []rbacv1.PolicyRule{
@@ -315,7 +315,7 @@ func seedRbacManagerApi(kubeClientset *kubernetes.Clientset) {
 
 	clusterRole := &rbacv1.ClusterRole{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: constants.MasterNodeComponentManagerApi,
+			Name: constants.MasterNodeComponentManagerAPI,
 		},
 		Rules: []rbacv1.PolicyRule{
 			// lattice service read
@@ -348,7 +348,7 @@ func seedRbacManagerApi(kubeClientset *kubernetes.Clientset) {
 
 	sa := &corev1.ServiceAccount{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      constants.ServiceAccountManagementApi,
+			Name:      constants.ServiceAccountManagementAPI,
 			Namespace: constants.NamespaceLatticeInternal,
 		},
 	}
@@ -362,7 +362,7 @@ func seedRbacManagerApi(kubeClientset *kubernetes.Clientset) {
 
 	rb := &rbacv1.RoleBinding{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      constants.MasterNodeComponentManagerApi,
+			Name:      constants.MasterNodeComponentManagerAPI,
 			Namespace: role.Namespace,
 		},
 		Subjects: []rbacv1.Subject{
@@ -388,7 +388,7 @@ func seedRbacManagerApi(kubeClientset *kubernetes.Clientset) {
 
 	crb := &rbacv1.ClusterRoleBinding{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: constants.MasterNodeComponentManagerApi,
+			Name: constants.MasterNodeComponentManagerAPI,
 		},
 		Subjects: []rbacv1.Subject{
 			{

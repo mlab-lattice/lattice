@@ -18,22 +18,22 @@ func seedLatticeSystemEnvironmentManagerAPI(kubeClientset *kubernetes.Clientset)
 
 	latticeSystemEnvironmentManagerAPIDaemonSet := &extensionsv1beta1.DaemonSet{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      constants.MasterNodeComponentManagerApi,
+			Name:      constants.MasterNodeComponentManagerAPI,
 			Namespace: constants.NamespaceLatticeInternal,
 		},
 		Spec: extensionsv1beta1.DaemonSetSpec{
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Name: constants.MasterNodeComponentManagerApi,
+					Name: constants.MasterNodeComponentManagerAPI,
 					Labels: map[string]string{
-						constants.MasterNodeLabelComponent: constants.MasterNodeComponentManagerApi,
+						constants.MasterNodeLabelComponent: constants.MasterNodeComponentManagerAPI,
 					},
 				},
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{
 						{
 							Name:  "api",
-							Image: latticeContainerRegistry + "/kubernetes-manager-api-rest",
+							Image: getContainerImageFQN(constants.DockerImageManagerAPIRest),
 							Args:  []string{"-port", "80"},
 							Ports: []corev1.ContainerPort{
 								{
@@ -46,7 +46,7 @@ func seedLatticeSystemEnvironmentManagerAPI(kubeClientset *kubernetes.Clientset)
 					},
 					HostNetwork:        true,
 					DNSPolicy:          corev1.DNSDefault,
-					ServiceAccountName: constants.ServiceAccountManagementApi,
+					ServiceAccountName: constants.ServiceAccountManagementAPI,
 					// Can tolerate the master-node taint in the local case when it's not applied harmlessly
 					Tolerations: []corev1.Toleration{
 						constants.TolerationMasterNode,

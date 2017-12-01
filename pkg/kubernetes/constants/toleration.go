@@ -5,10 +5,10 @@ import (
 )
 
 const (
-	nodeRoleTaint         = "node-role.kubernetes.io"
-	TaintMasterNode       = nodeRoleTaint + "/master"
-	TaintBuildNode        = nodeRoleTaint + "/build"
-	TaintServiceNode      = nodeRoleTaint + "/service"
+	nodeRoleTaint    = "node-role.kubernetes.io"
+	TaintMasterNode  = nodeRoleTaint + "/master"
+	TaintBuildNode   = nodeRoleTaint + "/build"
+	TaintServiceNode = nodeRoleTaint + "/service"
 )
 
 var TolerateAllTaints corev1.Toleration = corev1.Toleration{

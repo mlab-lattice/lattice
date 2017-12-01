@@ -16,6 +16,7 @@ import (
 var (
 	workingDir               string
 	kubeconfigPath           string
+	debug                    bool
 	systemDefinitionUrl      string
 	systemId                 string
 	latticeContainerRegistry string
@@ -87,6 +88,7 @@ func Execute() {
 func init() {
 	RootCmd.Flags().StringVar(&workingDir, "working-directory", "/tmp/lattice-system/", "path where subcommands will use as their working directory")
 	RootCmd.Flags().StringVar(&kubeconfigPath, "kubeconfig-path", "", "path to kubeconfig to use if not being invoked from within kubernetes")
+	RootCmd.Flags().BoolVar(&debug, "debug", false, "whether or not to use the debug version of container images")
 	RootCmd.Flags().StringVar(&systemDefinitionUrl, "system-definition-url", "", "url of the system definition repo for the system")
 	RootCmd.Flags().StringVar(&systemId, "system-id", "", "ID of the system")
 	RootCmd.Flags().StringVar(&latticeContainerRegistry, "lattice-container-registry", "", "registry which stores the lattice infrastructure containers")

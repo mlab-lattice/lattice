@@ -7,7 +7,8 @@ import (
 	coreconstants "github.com/mlab-lattice/core/pkg/constants"
 	coretypes "github.com/mlab-lattice/core/pkg/types"
 
-	"github.com/mlab-lattice/system/pkg/kubernetes/constants"
+	systemconstants "github.com/mlab-lattice/system/pkg/constants"
+	kubeconstants "github.com/mlab-lattice/system/pkg/kubernetes/constants"
 	crdclient "github.com/mlab-lattice/system/pkg/kubernetes/customresource"
 	crv1 "github.com/mlab-lattice/system/pkg/kubernetes/customresource/v1"
 
@@ -26,8 +27,8 @@ func seedConfig(kubeconfig *rest.Config, userSystemUrl string) {
 	// Create config
 	config := &crv1.Config{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      constants.ConfigGlobal,
-			Namespace: constants.NamespaceLatticeInternal,
+			Name:      kubeconstants.ConfigGlobal,
+			Namespace: kubeconstants.NamespaceLatticeInternal,
 		},
 		Spec: crv1.ConfigSpec{
 			SystemConfigs: map[coretypes.LatticeNamespace]crv1.ConfigSystem{
@@ -36,7 +37,7 @@ func seedConfig(kubeconfig *rest.Config, userSystemUrl string) {
 				},
 			},
 			Envoy: crv1.ConfigEnvoy{
-				PrepareImage:      latticeContainerRegistry + "/envoy-prepare",
+				PrepareImage:      getContainerImageFQN(systemconstants.DockerImageEnvoyPrepare),
 				Image:             "envoyproxy/envoy-alpine",
 				RedirectCidrBlock: "172.16.29.0/16",
 				XdsApiPort:        8080,
@@ -44,12 +45,12 @@ func seedConfig(kubeconfig *rest.Config, userSystemUrl string) {
 			ComponentBuild: crv1.ConfigComponentBuild{
 				DockerConfig: crv1.ConfigBuildDocker{
 					RepositoryPerImage: false,
-					Repository:         constants.DockerRegistryComponentBuildsDefault,
+					Repository:         kubeconstants.DockerRegistryComponentBuildsDefault,
 					Push:               true,
 					Registry:           componentBuildRegistry,
 					APIVersion:         dockerAPIVersion,
 				},
-				BuildImage: latticeContainerRegistry + "/kubernetes-component-builder",
+				BuildImage: getContainerImageFQN(kubeconstants.DockerImageComponentBuilder),
 			},
 			SystemId: systemId,
 		},
@@ -81,7 +82,7 @@ func seedConfig(kubeconfig *rest.Config, userSystemUrl string) {
 
 	pollKubeResourceCreation(func() (interface{}, error) {
 		return nil, crClient.Post().
-			Namespace(constants.NamespaceLatticeInternal).
+			Namespace(kubeconstants.NamespaceLatticeInternal).
 			Resource(crv1.ConfigResourcePlural).
 			Body(config).
 			Do().Into(nil)
@@ -184,7 +185,7 @@ func getAwsConfig() (*crv1.ConfigProviderAWS, error) {
 
 func getTerraformConfig() (*crv1.ConfigTerraform, error) {
 	switch terraformBackend {
-	case constants.TerraformBackendS3:
+	case kubeconstants.TerraformBackendS3:
 		backendConfigS3, err := getTerraformBackendConfigS3()
 		if err != nil {
 			return nil, err

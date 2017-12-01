@@ -2,7 +2,7 @@ package constants
 
 const (
 	ServiceAccountComponentBuilder         = "component-builder"
-	ServiceAccountEnvoyXdsApi              = "envoy-xds-api"
+	ServiceAccountEnvoyXDSAPI              = "envoy-xds-api"
 	ServiceAccountLatticeControllerManager = "lattice-controller-manager"
-	ServiceAccountManagementApi            = "manager-api"
+	ServiceAccountManagementAPI            = "manager-api"
 )

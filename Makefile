@@ -58,7 +58,7 @@ docker-hack-push-image: docker-hack-build-start-build-container
 	docker exec $(CONTAINER_NAME_BUILD) ./docker/bazel-builder/wrap-creds-and-exec.sh make docker-push-image IMAGE=$(IMAGE)
 
 .PHONY: docker-hack-push-all-images
-docker-hack-push-all-images: docker-hack-build-start-build-container
+docker-hack-push-all-images:
 	make docker-hack-push-image IMAGE=envoy-prepare
 	make docker-hack-push-image IMAGE=kubernetes-bootstrap-lattice
 	make docker-hack-push-image IMAGE=kubernetes-component-builder

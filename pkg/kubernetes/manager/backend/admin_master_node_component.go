@@ -21,7 +21,7 @@ func (kb *KubernetesBackend) GetMasterNodeComponents(nodeId string) ([]string, e
 	// For now we'll assume that all master nodes run all of the components.
 	components := []string{
 		constants.MasterNodeComponentLatticeControllerMaster,
-		constants.MasterNodeComponentManagerApi,
+		constants.MasterNodeComponentManagerAPI,
 	}
 	return components, nil
 }

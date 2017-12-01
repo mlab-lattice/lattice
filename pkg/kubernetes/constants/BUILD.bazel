@@ -4,7 +4,6 @@ go_library(
     name = "go_default_library",
     srcs = [
         "config.go",
-        "controller.go",
         "docker.go",
         "finalizer.go",
         "label.go",
@@ -16,8 +15,5 @@ go_library(
     ],
     importpath = "github.com/mlab-lattice/system/pkg/kubernetes/constants",
     visibility = ["//visibility:public"],
-    deps = [
-        "//pkg/kubernetes/customresource/v1:go_default_library",
-        "@io_k8s_api//core/v1:go_default_library",
-    ],
+    deps = ["@io_k8s_api//core/v1:go_default_library"],
 )

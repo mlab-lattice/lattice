@@ -5,7 +5,7 @@ import (
 
 	coreconstants "github.com/mlab-lattice/core/pkg/constants"
 
-	"github.com/mlab-lattice/system/pkg/kubernetes/constants"
+	kubeconstants "github.com/mlab-lattice/system/pkg/kubernetes/constants"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -42,7 +42,7 @@ func seedEnvoyXdsApi(kubeClientset *kubernetes.Clientset) {
 					Containers: []corev1.Container{
 						{
 							Name:  "envoy-xds-api",
-							Image: latticeContainerRegistry + "/kubernetes-envoy-xds-api-rest-per-node",
+							Image: getContainerImageFQN(kubeconstants.DockerImageEnvoyXDSAPIRestPerNode),
 							Ports: []corev1.ContainerPort{
 								{
 									Name:          "http",
@@ -55,10 +55,10 @@ func seedEnvoyXdsApi(kubeClientset *kubernetes.Clientset) {
 					// Use HostNetworking so that envoys can address it just using the hostIp.
 					HostNetwork:        true,
 					DNSPolicy:          corev1.DNSDefault,
-					ServiceAccountName: constants.ServiceAccountEnvoyXdsApi,
+					ServiceAccountName: kubeconstants.ServiceAccountEnvoyXDSAPI,
 					Tolerations: []corev1.Toleration{
 						{
-							Key:      constants.TaintServiceNode,
+							Key:      kubeconstants.TaintServiceNode,
 							Operator: corev1.TolerationOpExists,
 							Effect:   corev1.TaintEffectNoSchedule,
 						},

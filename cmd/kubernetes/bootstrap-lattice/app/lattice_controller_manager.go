@@ -38,7 +38,7 @@ func seedLatticeControllerManager(kubeClientset *kubernetes.Clientset) {
 					Containers: []corev1.Container{
 						{
 							Name:  constants.MasterNodeComponentLatticeControllerMaster,
-							Image: latticeContainerRegistry + "/kubernetes-lattice-controller-manager",
+							Image: getContainerImageFQN(constants.DockerImageLatticeControllerManager),
 							Args: []string{
 								"-v", "5",
 								"-logtostderr",

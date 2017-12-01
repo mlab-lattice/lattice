@@ -21,6 +21,7 @@ SYSTEM_DEFINITION_URL=$(echo ${USER_DATA} | jq '.lattice.system_definition_url' 
     --network host \
     -v /etc/opt/kubernetes/admin/kubeconfig:/etc/bootstrap-lattice/kubeconfig \
     gcr.io/lattice-dev/kubernetes-bootstrap-lattice:latest \
+    --debug \
     --kubeconfig-path /etc/bootstrap-lattice/kubeconfig \
     --lattice-container-registry gcr.io/lattice-dev \
     --component-build-registry ${AWS_ACCOUNT_ID}.dkr.ecr.${REGION}.amazonaws.com \
