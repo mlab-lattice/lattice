@@ -1,4 +1,0 @@
-FROM ubuntu:xenial
-RUN apt update && apt install -y python-pip && pip install --upgrade pip
-RUN pip install awscli --upgrade --user
-RUN mv /root/.local/bin/aws /usr/local/bin/aws

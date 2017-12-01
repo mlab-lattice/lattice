@@ -39,13 +39,6 @@ load(
 container_repositories()
 
 container_pull(
-  name = "docker_git",
-  registry = "index.docker.io",
-  repository = "library/docker",
-  tag = "17.06.2-ce-git"
-)
-
-container_pull(
   name = "debian_with_ssh",
   registry = "gcr.io/lattice-dev",
   repository = "debian-with-ssh",
@@ -53,16 +46,9 @@ container_pull(
 )
 
 container_pull(
-  name = "ubuntu_with_aws",
+  name = "debian_with_iptables",
   registry = "gcr.io/lattice-dev",
-  repository = "ubuntu-with-aws",
-  tag = "latest"
-)
-
-container_pull(
-  name = "ubuntu_with_iptables",
-  registry = "gcr.io/lattice-dev",
-  repository = "ubuntu-with-iptables",
+  repository = "debian-with-iptables",
   tag = "latest"
 )
 

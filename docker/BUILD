@@ -1,35 +1,19 @@
 load("@io_bazel_rules_docker//container:container.bzl", "container_image", "container_push")
 
 container_image(
-    name = "component-build-build-docker-image",
-    base = "@docker_git//image",
-    directory = "/usr/local/bin",
-    files = ["//bin/component-build:build-docker-image"],
-    entrypoint = "/usr/local/bin/build-docker-image",
-)
-
-container_image(
-    name = "component-build-get-ecr-creds",
-    base = "@ubuntu_with_aws//image",
-    directory = "/usr/local/bin",
-    files = ["//bin/component-build:get-ecr-creds"],
-    entrypoint = "/usr/local/bin/get-ecr-creds",
-)
-
-container_image(
-    name = "component-build-pull-git-repo",
-    base = "@docker_git//image",
-    directory = "/usr/local/bin",
-    files = ["//bin/component-build:pull-git-repo"],
-    entrypoint = "/usr/local/bin/pull-git-repo",
-)
-
-container_image(
     name = "envoy-prepare-envoy",
-    base = "@ubuntu_with_iptables//image",
+    base = "@debian_with_iptables//image",
     directory = "/usr/local/bin",
     files = ["//bin/envoy:prepare-envoy"],
     entrypoint = "/usr/local/bin/prepare-envoy",
+)
+
+container_push(
+    name = "envoy-prepare-envoy-push",
+    format = "Docker",
+    image = ":envoy-prepare-envoy",
+    registry = "gcr.io/lattice-dev",
+    repository = "envoy-prepare-envoy",
 )
 
 container_image(
@@ -62,22 +46,6 @@ container_image(
 )
 
 load("@io_bazel_rules_docker//go:image.bzl", "go_image")
-
-go_image(
-    name = "cli-user",
-    base = ":terraform-modules-kubernetes",
-    importpath = "github.com/mlab-lattice/system/cmd/cli/user",
-    library = "//cmd/cli/user:go_default_library",
-    visibility = ["//visibility:public"],
-)
-
-container_push(
-    name = "cli-user-push",
-    format = "Docker",
-    image = ":cli-user",
-    registry = "gcr.io/lattice-dev",
-    repository = "lattice-cli-user",
-)
 
 go_image(
     name = "kubernetes-bootstrap-lattice",

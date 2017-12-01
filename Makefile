@@ -17,9 +17,6 @@ BASE_DOCKER_IMAGE_DEBIAN_WITH_SSH_DEV = $(DEV_REGISTRY)/$(BASE_DOCKER_IMAGE_DEBI
 BASE_DOCKER_IMAGE_DEBIAN_WITH_IPTABLES = debian-with-iptables
 BASE_DOCKER_IMAGE_DEBIAN_WITH_IPTABLES_DEV = $(DEV_REGISTRY)/$(BASE_DOCKER_IMAGE_DEBIAN_WITH_IPTABLES):$(DEV_TAG)
 
-BASE_DOCKER_IMAGE_UBUNTU_WITH_AWS = ubuntu-with-aws
-BASE_DOCKER_IMAGE_UBUNTU_WITH_AWS_DEV = $(DEV_REGISTRY)/$(BASE_DOCKER_IMAGE_UBUNTU_WITH_AWS):$(DEV_TAG)
-
 # Basic build/clean/test
 .PHONY: build
 build: gazelle
@@ -39,7 +36,6 @@ gazelle:
 
 .PHONY: docker-build-base-images
 docker-build-base-images:
-	docker build $(DIR)/docker/component-build -f $(DIR)/docker/component-build/Dockerfile.aws -t $(BASE_DOCKER_IMAGE_UBUNTU_WITH_AWS_DEV)
 	docker build $(DIR)/docker/debian -f $(DIR)/docker/debian/Dockerfile.iptables -t $(BASE_DOCKER_IMAGE_DEBIAN_WITH_IPTABLES_DEV)
 	docker build $(DIR)/docker/debian -f $(DIR)/docker/debian/Dockerfile.ssh -t $(BASE_DOCKER_IMAGE_DEBIAN_WITH_SSH_DEV)
 
@@ -47,7 +43,6 @@ docker-build-base-images:
 docker-push-dev-base-images:
 	gcloud docker -- push $(BASE_DOCKER_IMAGE_DEBIAN_WITH_IPTABLES_DEV)
 	gcloud docker -- push $(BASE_DOCKER_IMAGE_DEBIAN_WITH_SSH_DEV)
-	gcloud docker -- push $(BASE_DOCKER_IMAGE_UBUNTU_WITH_AWS_DEV)
 
 .PHONY: docker-build-and-push-dev-base-images
 docker-build-and-push-dev-base-images: docker-build-base-images docker-push-dev-base-images
