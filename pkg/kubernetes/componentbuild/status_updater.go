@@ -3,7 +3,6 @@ package componentbuild
 import (
 	coretypes "github.com/mlab-lattice/core/pkg/types"
 
-	"github.com/mlab-lattice/system/pkg/componentbuild"
 	"github.com/mlab-lattice/system/pkg/kubernetes/constants"
 	latticeresource "github.com/mlab-lattice/system/pkg/kubernetes/customresource"
 	crv1 "github.com/mlab-lattice/system/pkg/kubernetes/customresource/v1"
@@ -39,12 +38,12 @@ func NewKubernetesStatusUpdater(kubeconfig string) (*KubernetesStatusUpdater, er
 	return kb, nil
 }
 
-func (ksu *KubernetesStatusUpdater) UpdateProgress(buildID coretypes.ComponentBuildID, phase componentbuild.Phase) error {
+func (ksu *KubernetesStatusUpdater) UpdateProgress(buildID coretypes.ComponentBuildID, phase coretypes.ComponentBuildPhase) error {
 	// Retry once since we may lose a race against the controller at the beginning updating the Status.State
 	return ksu.updateProgressInternal(buildID, phase, 1)
 }
 
-func (ksu *KubernetesStatusUpdater) updateProgressInternal(buildID coretypes.ComponentBuildID, phase componentbuild.Phase, numRetries int) error {
+func (ksu *KubernetesStatusUpdater) updateProgressInternal(buildID coretypes.ComponentBuildID, phase coretypes.ComponentBuildPhase, numRetries int) error {
 	cb := &crv1.ComponentBuild{}
 	err := ksu.LatticeResourceClient.Get().
 		Namespace(constants.NamespaceLatticeInternal).

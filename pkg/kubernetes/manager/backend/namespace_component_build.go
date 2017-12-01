@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 
+	coreconstants "github.com/mlab-lattice/core/pkg/constants"
 	coretypes "github.com/mlab-lattice/core/pkg/types"
 
 	"github.com/mlab-lattice/system/pkg/kubernetes/constants"
@@ -102,13 +103,9 @@ func (kb *KubernetesBackend) getInternalComponentBuild(ln coretypes.LatticeNames
 
 func transformComponentBuild(build *crv1.ComponentBuild) coretypes.ComponentBuild {
 	cb := coretypes.ComponentBuild{
-		ID:    coretypes.ComponentBuildID(build.Name),
-		State: getComponentBuildState(build.Status.State),
-	}
-
-	if build.Status.LastObservedPhase != nil {
-		phase := string(*build.Status.LastObservedPhase)
-		cb.LastObservedPhase = &phase
+		ID:                coretypes.ComponentBuildID(build.Name),
+		State:             getComponentBuildState(build.Status.State),
+		LastObservedPhase: build.Status.LastObservedPhase,
 	}
 
 	if build.Status.FailureInfo != nil {
@@ -128,15 +125,15 @@ func transformComponentBuild(build *crv1.ComponentBuild) coretypes.ComponentBuil
 func getComponentBuildState(state crv1.ComponentBuildState) coretypes.ComponentBuildState {
 	switch state {
 	case crv1.ComponentBuildStatePending:
-		return coretypes.ComponentBuildStatePending
+		return coreconstants.ComponentBuildStatePending
 	case crv1.ComponentBuildStateQueued:
-		return coretypes.ComponentBuildStateQueued
+		return coreconstants.ComponentBuildStateQueued
 	case crv1.ComponentBuildStateRunning:
-		return coretypes.ComponentBuildStateRunning
+		return coreconstants.ComponentBuildStateRunning
 	case crv1.ComponentBuildStateSucceeded:
-		return coretypes.ComponentBuildStateSucceeded
+		return coreconstants.ComponentBuildStateSucceeded
 	case crv1.ComponentBuildStateFailed:
-		return coretypes.ComponentBuildStateFailed
+		return coreconstants.ComponentBuildStateFailed
 	default:
 		panic("unreachable")
 	}

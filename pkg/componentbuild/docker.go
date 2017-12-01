@@ -10,6 +10,7 @@ import (
 
 	"golang.org/x/net/context"
 
+	coreconstants "github.com/mlab-lattice/core/pkg/constants"
 	systemdefinitionblock "github.com/mlab-lattice/core/pkg/system/definition/block"
 
 	tarutil "github.com/mlab-lattice/system/pkg/util/tar"
@@ -25,7 +26,7 @@ func (b *Builder) buildDockerImage(sourceDirectory string) error {
 	if b.StatusUpdater != nil {
 		// For now ignore status update errors, don't need to fail a build because the status could
 		// not be updated.
-		b.StatusUpdater.UpdateProgress(b.BuildID, PhaseBuildingDockerImage)
+		b.StatusUpdater.UpdateProgress(b.BuildID, coreconstants.ComponentBuildPhaseBuildingDockerImage)
 	}
 
 	// Get Dockerfile contents and write them to the directory
@@ -140,7 +141,7 @@ func (b *Builder) pushDockerImage() error {
 	if b.StatusUpdater != nil {
 		// For now ignore status update errors, don't need to fail a build because the status could
 		// not be updated.
-		b.StatusUpdater.UpdateProgress(b.BuildID, PhasePushingDockerImage)
+		b.StatusUpdater.UpdateProgress(b.BuildID, coreconstants.ComponentBuildPhasePushingDockerImage)
 	}
 
 	// Assumes the image has already been built and tagged.

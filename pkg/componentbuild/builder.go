@@ -66,7 +66,7 @@ func (e *ErrorInternal) Error() string {
 
 type Failure struct {
 	Error error
-	Phase Phase
+	Phase coretypes.ComponentBuildPhase
 }
 
 func NewBuilder(

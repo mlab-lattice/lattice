@@ -3,6 +3,7 @@ package backend
 import (
 	"strings"
 
+	coreconstants "github.com/mlab-lattice/core/pkg/constants"
 	systemdefinition "github.com/mlab-lattice/core/pkg/system/definition"
 	systemtree "github.com/mlab-lattice/core/pkg/system/tree"
 	coretypes "github.com/mlab-lattice/core/pkg/types"
@@ -126,13 +127,13 @@ func (kb *KubernetesBackend) ListSystemBuilds(ln coretypes.LatticeNamespace) ([]
 func getSystemBuildState(state crv1.SystemBuildState) coretypes.SystemBuildState {
 	switch state {
 	case crv1.SystemBuildStatePending:
-		return coretypes.SystemBuildStatePending
+		return coreconstants.SystemBuildStatePending
 	case crv1.SystemBuildStateRunning:
-		return coretypes.SystemBuildStateRunning
+		return coreconstants.SystemBuildStateRunning
 	case crv1.SystemBuildStateSucceeded:
-		return coretypes.SystemBuildStateSucceeded
+		return coreconstants.SystemBuildStateSucceeded
 	case crv1.SystemBuildStateFailed:
-		return coretypes.SystemBuildStateFailed
+		return coreconstants.SystemBuildStateFailed
 	default:
 		panic("unreachable")
 	}

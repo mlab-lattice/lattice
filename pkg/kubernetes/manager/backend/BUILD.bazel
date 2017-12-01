@@ -20,6 +20,7 @@ go_library(
         "//pkg/kubernetes/customresource/v1:go_default_library",
         "//pkg/kubernetes/util/kubernetes:go_default_library",
         "//pkg/manager/backend:go_default_library",
+        "@com_github_mlab_lattice_core//pkg/constants:go_default_library",
         "@com_github_mlab_lattice_core//pkg/system/definition:go_default_library",
         "@com_github_mlab_lattice_core//pkg/system/tree:go_default_library",
         "@com_github_mlab_lattice_core//pkg/types:go_default_library",

@@ -3,6 +3,7 @@ package backend
 import (
 	"strings"
 
+	coreconstants "github.com/mlab-lattice/core/pkg/constants"
 	coretypes "github.com/mlab-lattice/core/pkg/types"
 
 	"github.com/mlab-lattice/system/pkg/kubernetes/constants"
@@ -111,13 +112,13 @@ func (kb *KubernetesBackend) ListSystemTeardowns(ln coretypes.LatticeNamespace) 
 func getSystemTeardownState(state crv1.SystemTeardownState) coretypes.SystemTeardownState {
 	switch state {
 	case crv1.SystemTeardownStatePending:
-		return coretypes.SystemTeardownStatePending
+		return coreconstants.SystemTeardownStatePending
 	case crv1.SystemTeardownStateInProgress:
-		return coretypes.SystemTeardownStateInProgress
+		return coreconstants.SystemTeardownStateInProgress
 	case crv1.SystemTeardownStateSucceeded:
-		return coretypes.SystemTeardownStateSucceeded
+		return coreconstants.SystemTeardownStateSucceeded
 	case crv1.SystemTeardownStateFailed:
-		return coretypes.SystemTeardownStateFailed
+		return coreconstants.SystemTeardownStateFailed
 	default:
 		panic("unreachable")
 	}
