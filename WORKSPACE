@@ -469,6 +469,7 @@ go_repository(
 
 # github.com/gin-gonic/gin dependencies
 # commits from https://github.com/gin-gonic/gin/blob/d459835d2b077e44f7c9b453505ee29881d5d12d/vendor/vendor.json
+# also depended upon by github.com/fatih/color
 go_repository(
     name = "com_github_mattn_go_isatty",
     commit = "57fdcb988a5c543893cc61bce354a6e24ab70022",
@@ -488,7 +489,7 @@ go_repository(
 )
 
 
-# github.com/fatih/go dependencies
+# github.com/fatih/color dependencies
 # commits taken from: https://github.com/gin-gonic/gin/blob/v1.2/vendor/vendor.json
 go_repository(
     name = "com_github_mattn_go_colorable",
