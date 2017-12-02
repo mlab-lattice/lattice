@@ -12,7 +12,7 @@ const (
 	RegistryTypeUnknown = "unknown"
 
 	ecrDomain = "amazonaws"
-	ecrTLD = ".com"
+	ecrTLD    = ".com"
 )
 
 func RegistryType(registry string) string {
@@ -24,7 +24,7 @@ func RegistryType(registry string) string {
 	hostParts := strings.Split(urlInfo.Hostname(), ".")
 
 	// Example ECR registry: <account_id>.dkr.ecr.us-east-1.amazonaws.com
-	if len(hostParts) == 6 && hostParts[len(hostParts) - 1] == ecrTLD && hostParts[len(hostParts) - 2] == ecrDomain {
+	if len(hostParts) == 6 && hostParts[len(hostParts)-1] == ecrTLD && hostParts[len(hostParts)-2] == ecrDomain {
 		return RegistryTypeECR
 	}
 

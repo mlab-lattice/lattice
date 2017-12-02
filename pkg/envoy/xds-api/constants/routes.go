@@ -1,5 +1,5 @@
 package constants
 
 const (
-	RouteNameEgress  = "egress"
+	RouteNameEgress = "egress"
 )

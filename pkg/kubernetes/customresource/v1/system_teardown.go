@@ -32,7 +32,7 @@ type SystemTeardownSpec struct {
 
 type SystemTeardownStatus struct {
 	State   SystemTeardownState `json:"state,omitempty"`
-	Message string             `json:"message,omitempty"`
+	Message string              `json:"message,omitempty"`
 }
 
 type SystemTeardownState string

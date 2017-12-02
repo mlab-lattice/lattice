@@ -26,6 +26,11 @@ test: gazelle
 gazelle:
 	@bazel run //:gazelle
 
+.PHONY: format
+format:
+	gofmt -w .
+	terraform fmt .
+
 # docker
 .PHONY: docker-push-image
 docker-push-image:

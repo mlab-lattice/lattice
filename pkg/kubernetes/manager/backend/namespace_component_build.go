@@ -116,7 +116,6 @@ func transformComponentBuild(build *crv1.ComponentBuild) coretypes.ComponentBuil
 	return cb
 }
 
-
 func getComponentBuildState(state crv1.ComponentBuildState) coretypes.ComponentBuildState {
 	switch state {
 	case crv1.ComponentBuildStatePending:
@@ -136,7 +135,7 @@ func getComponentBuildState(state crv1.ComponentBuildState) coretypes.ComponentB
 
 func getComponentBuildFailureMessage(failureInfo crv1.ComponentBuildFailureInfo) string {
 	if failureInfo.Internal {
-		return"failed due to an internal error"
+		return "failed due to an internal error"
 	}
 	return failureInfo.Message
 }

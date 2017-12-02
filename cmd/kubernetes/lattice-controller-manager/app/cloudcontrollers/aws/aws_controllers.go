@@ -6,6 +6,6 @@ import (
 
 func GetControllerInitializers() map[string]controller.Initializer {
 	return map[string]controller.Initializer{
-		"service":         initializeServiceController,
+		"service": initializeServiceController,
 	}
 }

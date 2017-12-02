@@ -3,8 +3,8 @@ package backend
 import (
 	coretypes "github.com/mlab-lattice/core/pkg/types"
 
-	crv1 "github.com/mlab-lattice/system/pkg/kubernetes/customresource/v1"
 	"github.com/mlab-lattice/system/pkg/kubernetes/constants"
+	crv1 "github.com/mlab-lattice/system/pkg/kubernetes/customresource/v1"
 )
 
 func (kb *KubernetesBackend) GetSystemUrl(ln coretypes.LatticeNamespace) (string, error) {

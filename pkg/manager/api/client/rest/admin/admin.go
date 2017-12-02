@@ -9,13 +9,13 @@ const (
 )
 
 type Client struct {
-	httpClient        *http.Client
+	httpClient    *http.Client
 	managerAPIURL string
 }
 
 func NewClient(managerAPIURL string) *Client {
 	return &Client{
-		httpClient:        http.DefaultClient,
+		httpClient:    http.DefaultClient,
 		managerAPIURL: managerAPIURL,
 	}
 }

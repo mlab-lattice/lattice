@@ -56,9 +56,9 @@ func (sbc *ServiceBuildController) calculateState(svcb *crv1.ServiceBuild) (*svc
 
 	stateInfo := &svcBuildStateInfo{
 		successfulCbs: successfulCbs,
-		activeCbs:  activeCbs,
-		failedCbs:  failedCbs,
-		needsNewCb: needsNewCbs,
+		activeCbs:     activeCbs,
+		failedCbs:     failedCbs,
+		needsNewCb:    needsNewCbs,
 	}
 
 	if len(failedCbs) > 0 {

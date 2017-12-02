@@ -9,8 +9,8 @@ import (
 )
 
 const (
-	systemBuildSubpath = "/system-builds"
-	serviceBuildSubpath = "/service-builds"
+	systemBuildSubpath    = "/system-builds"
+	serviceBuildSubpath   = "/service-builds"
 	componentBuildSubpath = "/component-builds"
 )
 
