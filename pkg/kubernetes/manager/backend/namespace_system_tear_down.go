@@ -11,7 +11,8 @@ import (
 
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/uuid"
+
+	"github.com/satori/go.uuid"
 )
 
 func (kb *KubernetesBackend) TearDownSystem(ln coretypes.LatticeNamespace) (coretypes.SystemTeardownID, error) {
@@ -38,7 +39,7 @@ func getSystemTeardown(ln coretypes.LatticeNamespace) (*crv1.SystemTeardown, err
 
 	sysT := &crv1.SystemTeardown{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:   string(uuid.NewUUID()),
+			Name:   uuid.NewV4().String(),
 			Labels: labels,
 		},
 		Spec: crv1.SystemTeardownSpec{

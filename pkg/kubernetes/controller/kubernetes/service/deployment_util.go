@@ -20,9 +20,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"k8s.io/apimachinery/pkg/util/uuid"
 
 	"github.com/golang/glog"
+	"github.com/satori/go.uuid"
 )
 
 const (
@@ -151,7 +151,7 @@ func (sc *ServiceController) getDeploymentSpec(svc *crv1.Service) (*appsv1beta2.
 	initContainers = append(initContainers, corev1.Container{
 		// add a UUID to deal with the small chance that a user names their
 		// service component the same thing we name our envoy container
-		Name:            fmt.Sprintf("lattice-prepare-envoy-%v", uuid.NewUUID()),
+		Name:            fmt.Sprintf("lattice-prepare-envoy-%v", uuid.NewV4().String()),
 		Image:           sc.config.Envoy.PrepareImage,
 		ImagePullPolicy: corev1.PullIfNotPresent,
 		Env: []corev1.EnvVar{
@@ -213,7 +213,7 @@ func (sc *ServiceController) getDeploymentSpec(svc *crv1.Service) (*appsv1beta2.
 	containers = append(containers, corev1.Container{
 		// add a UUID to deal with the small chance that a user names their
 		// service component the same thing we name our envoy container
-		Name:            fmt.Sprintf("lattice-envoy-%v", uuid.NewUUID()),
+		Name:            fmt.Sprintf("lattice-envoy-%v", uuid.NewV4().String()),
 		Image:           envoyConfig.Image,
 		ImagePullPolicy: corev1.PullIfNotPresent,
 		Command:         []string{"/usr/local/bin/envoy"},

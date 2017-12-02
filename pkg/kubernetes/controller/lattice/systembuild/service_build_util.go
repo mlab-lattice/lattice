@@ -8,7 +8,8 @@ import (
 	crv1 "github.com/mlab-lattice/system/pkg/kubernetes/customresource/v1"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/uuid"
+
+	"github.com/satori/go.uuid"
 )
 
 func (sbc *SystemBuildController) getServiceBuildState(namespace, svcBuildName string) *crv1.ServiceBuildState {
@@ -67,7 +68,7 @@ func getNewServiceBuildFromDefinition(sysBuild *crv1.SystemBuild, svcDefinition 
 
 	return &crv1.ServiceBuild{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:            string(uuid.NewUUID()),
+			Name:            uuid.NewV4().String(),
 			Labels:          labels,
 			OwnerReferences: []metav1.OwnerReference{*metav1.NewControllerRef(sysBuild, controllerKind)},
 		},

@@ -5,7 +5,8 @@ import (
 
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/uuid"
+
+	"github.com/satori/go.uuid"
 )
 
 func getComponentBuildDefinitionHashFromLabel(cb *crv1.ComponentBuild) *string {
@@ -167,7 +168,7 @@ func getNewComponentBuildFromInfo(cbInfo *crv1.ServiceBuildComponentBuildInfo) *
 	return &crv1.ComponentBuild{
 		ObjectMeta: metav1.ObjectMeta{
 			Annotations: cbAnnotations,
-			Name:        string(uuid.NewUUID()),
+			Name:        uuid.NewV4().String(),
 		},
 		Spec: crv1.ComponentBuildSpec{
 			BuildDefinitionBlock: cbInfo.DefinitionBlock,
