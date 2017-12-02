@@ -10,6 +10,8 @@ To get you started though, we'll give a brief overview of Bazel and the capabili
 
 ### Overview
 
+There's a decent amount to take in here. I'd recommend reading [Commands](#commands) but pushing through any questions you may have, then reading [Go](#go) and following along with the example, referencing back to the information in [Commands](#commands) as needed.
+
 #### Commands
 
 Bazel has two main commands to be aware of:
@@ -36,7 +38,7 @@ This file contains a list of all of the external dependencies needed to build ta
 
 #### Targets
 
-Bazel defines targets for the previous mentioned command through `BUILD` files containing rules. These rules are defined in a language called [Skylark](https://github.com/google/skylark), which is almost a subset of Python.
+Bazel defines targets for the previously mentioned commands through `BUILD` files containing rules. These rules are defined in a language called [Skylark](https://github.com/google/skylark), which is almost a subset of Python.
 
 A `BUILD` file may then look like this:
 
@@ -65,29 +67,15 @@ $ tree
     └── BUILD
 ```
 
-A target's `label` is `//` then the path from the path from the workspace root to the `BUILD` file containing the desired target, a `:`, then the name of the rule being targeted.
+A target's `label` is `//` then the path from the workspace root to the `BUILD` file containing the desired target, a `:`, then the name of the rule being targeted.
 
 So if we're trying to target the rule in the file `/a/b/BUILD`, the `label` would be `//a/b:foo`.
 
 The rule in `/BUILD` would be targeted with the label `//:foo`.
 
-To build `//a/b:foo` simply run `bazel build //a/b:foo`.
+To build `//a/b:foo` simply run `bazel build //a/b:foo`. Finally, if a rule has the same name as the directory it's in, you can leave off the `:rule_name`. So if we had `//a/b:b` we could reference this as `//a/b`.
 
-The [Bazel docs](https://docs.bazel.build) contain information about built in rules.
-
-An external dependency declared in the `WORKSPACE` file can be referenced in `BUILD` files via the name `@<dependency_name>`.
-
-So if your `WORKSPACE` file contained a rule:
-
-```
-external_dependency(
-    name = "other_repo",
-    *args,
-    **kwargs,
-)
-```
-
-you could reference this in a `BUILD` file via `@other_repo`.
+There are a number of built-in rules that you can always use in `BUILD` files, the [Bazel docs](https://docs.bazel.build) contain information about the built-in rules.
 
 You can load custom (not built in) rules via the built in `load(label, rules...)` function.
 
@@ -124,6 +112,20 @@ my_rule(
     **kwargs,
 )
 ```
+
+As mentioned earlier, the `WORKSPACE` file containes external dependency declarations. An external dependency declared in the `WORKSPACE` file can be referenced in `BUILD` files via the name `@<dependency_name>`.
+
+So if your `WORKSPACE` file contained a rule:
+
+```
+external_dependency(
+    name = "other_repo",
+    *args,
+    **kwargs,
+)
+```
+
+you could reference this in a `BUILD` file via `@other_repo`.
 
 ### Go
 
@@ -184,7 +186,7 @@ go_register_toolchains()
 EOF
 ```
 
-Then, in order to let Bazel know that our repo is "github.com/acme/hello", we need to add the following to the file `BUILD`:
+Then, in order to let Bazel know that our repo is `github.com/acme/hello`, we need to add the following to the file `BUILD`:
 
 ```
 $ cat > BUILD << EOF
@@ -239,13 +241,11 @@ $ tree
   └── hello
       ├── BUILD
       └── hello.go
-
-3 directories, 6 files
 ```
 
 This will create three targets: `//pkg/hello:hello_library`, `//cmd:cmd_library`, and `//cmd:cmd` (aka `//cmd`).
 
-Note that we had to explicitly list all our non standard library dependencies (deps in `//cmd:cmd_library`)
+Note that we had to explicitly list all our non standard library dependencies (`deps` in `//cmd:cmd_library`)
 
 We should have the following directory:
 
@@ -268,17 +268,11 @@ That's all great, but it's a lot of manual work. Luckily, rules_go includes a bi
 If instead of creating the two specific files `pkg/hello/BUILD` and `cmd/BUILD`, if we instead wrote `BUILD` as:
 
 ```
-$ rm -f BUILD && cat > BUILD << EOF
+$ rm -f pkg/hello/BUILD cmd/BUILD BUILD && cat > BUILD << EOF
 load("@io_bazel_rules_go//go:def.bzl", "go_prefix", "gazelle")
 go_prefix("github.com/acme/hello")
 gazelle(name = "gazelle")
 EOF
-```
-
-and removed our old build files:
-
-```
-$ rm -f pkg/hello/BUILD cmd/BUILD
 ```
 
 You could then run `bazel run //:gazelle`, and `gazelle` would walk the filesystem, generating the proper `BUILD` files (it calls them `BUILD.bazel`) with the `go_library` and `go_binary` rules, with correct dependencies and all.
@@ -295,8 +289,6 @@ $ tree
 └── pkg
     └── hello
         └── hello.go
-
-8 directories, 4 files
 
 $ bazel run //:gazelle
 INFO: Found 1 target...
@@ -318,8 +310,6 @@ $ tree
     └── hello
         ├── BUILD.bazel
         └── hello.go
-
-8 directories, 6 files
 
 $ bazel run //cmd
 INFO: Found 1 target...
@@ -492,7 +482,7 @@ Notably, we generate a `container_push` rule in `docker/BUILD` in lattice for ea
 
 Via the custom rule generator defined in `docker/lattice_targets.bzl`, we generate a `container_push` rule for `kubernetes-bootstrap-lattice` whose `label` is `//docker:push-kubernetes-bootstrap-lattice`.
 
-When you run `bazel run //docker:push-kubernetes-bootstrap-lattice`, it will build `//cmd/kubernetes/bootstrap-lattice`, put it in a docker image, and push it to `gcr.io/lattice-dev`.
+When you run `bazel run //docker:push-kubernetes-bootstrap-lattice`, it will build `//cmd/kubernetes/bootstrap-lattice`, put it in a docker image, and push it to `gcr.io/lattice-dev/kubernetes-bootstrap-lattice`.
 
 #### IMPORTANT NOTE
 
@@ -505,7 +495,7 @@ See the [docker-hack section](#docker-hack) below for more information about ove
 Lattice has a Makefile that contains a few convenience targets.
 
 - `make build`
-  - Builds all bazel targets, including docker images (but will not tag, export, or push them) (`bazel build //...`)
+  - Runs gazelle and builds all bazel targets, including docker images (but will not tag, export, or push them) (`bazel build //...`)
 - `make clean`
   - Clears the Bazel artifact cache (`bazel clean`)
 - `make test`
@@ -513,8 +503,8 @@ Lattice has a Makefile that contains a few convenience targets.
 - `make gazelle`
   - Runs gazelle (`bazel run //:gazelle`)
 - `make docker-push-image IMAGE=<target-name>`
-  Pushes the target production and debug versions of the target to `gcr.io/lattice-dev` (`bazel run //docker:push-$IMAGE && bazel run //docker:push-debug-$IMAGE`)
-    - Will fail if not being run on Linux
+  - Pushes the target production and debug versions of the target to `gcr.io/lattice-dev` (`bazel run //docker:push-$IMAGE && bazel run //docker:push-debug-$IMAGE`)
+  - Will fail if not being run on Linux
 - `make docker-push-all-images`
   - Pushes all docker images to `gcr.io/lattice-dev`
   - Will fail if not being run on Linux
@@ -525,7 +515,7 @@ As stated above, as of now the cross compile story is not good enough to run `//
 
 This is solved by running a docker container which has Bazel installed and mounting the lattice repo into the container, and running Bazel commands from inside.
 
-There are two options to use this:
+There are three options to use this:
 
 - `make docker-hack-enter-build-shell`
   - Drops you into a shell insider the build container. From there you can correctly build/run the `//docker:*` targets.
@@ -533,3 +523,7 @@ There are two options to use this:
   - Enters the build container and runs `make docker-push-image IMAGE=<target-name>`
 - `make docker-hack-push-all-images`
   - Enters the build container and runs `make docker-push-all-images`
+
+### Best practices
+
+In general, you should always default to simply running `make build`. This will run `gazelle` to make sure you have up-to-date `BUILD` files as well as ensure that everything can compile.
