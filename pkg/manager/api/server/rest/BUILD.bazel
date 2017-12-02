@@ -10,12 +10,12 @@ go_library(
     importpath = "github.com/mlab-lattice/system/pkg/manager/api/server/rest",
     visibility = ["//visibility:public"],
     deps = [
+        "//pkg/constants:go_default_library",
+        "//pkg/definition:go_default_library",
+        "//pkg/definition/resolver:go_default_library",
+        "//pkg/definition/tree:go_default_library",
         "//pkg/manager/backend:go_default_library",
+        "//pkg/types:go_default_library",
         "@com_github_gin_gonic_gin//:go_default_library",
-        "@com_github_mlab_lattice_core//pkg/constants:go_default_library",
-        "@com_github_mlab_lattice_core//pkg/system/definition:go_default_library",
-        "@com_github_mlab_lattice_core//pkg/system/resolver:go_default_library",
-        "@com_github_mlab_lattice_core//pkg/system/tree:go_default_library",
-        "@com_github_mlab_lattice_core//pkg/types:go_default_library",
     ],
 )

@@ -4,13 +4,11 @@ import (
 	"fmt"
 	"time"
 
-	coreconstants "github.com/mlab-lattice/core/pkg/constants"
-	systemtree "github.com/mlab-lattice/core/pkg/system/tree"
-
+	"github.com/mlab-lattice/system/pkg/constants"
+	"github.com/mlab-lattice/system/pkg/definition/tree"
+	"github.com/mlab-lattice/system/pkg/envoy"
 	latticeresource "github.com/mlab-lattice/system/pkg/kubernetes/customresource"
 	crv1 "github.com/mlab-lattice/system/pkg/kubernetes/customresource/v1"
-
-	"github.com/mlab-lattice/system/pkg/envoy"
 
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/fields"
@@ -54,7 +52,7 @@ func NewKubernetesPerNodeBackend(kubeconfig string) (*KubernetesPerNodeBackend, 
 	listerWatcher := cache.NewListWatchFromClient(
 		latticeResourceClient,
 		crv1.ServiceResourcePlural,
-		string(coreconstants.UserSystemNamespace),
+		string(constants.UserSystemNamespace),
 		fields.Everything(),
 	)
 	lSvcInformer := cache.NewSharedInformer(
@@ -65,7 +63,7 @@ func NewKubernetesPerNodeBackend(kubeconfig string) (*KubernetesPerNodeBackend, 
 
 	kEndpointInformer := corev1informers.NewEndpointsInformer(
 		kClient,
-		string(coreconstants.UserSystemNamespace),
+		string(constants.UserSystemNamespace),
 		time.Duration(12*time.Hour),
 		cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc},
 	)
@@ -92,8 +90,8 @@ func (kpnb *KubernetesPerNodeBackend) Ready() bool {
 //       so future Services() calls will return the new map.
 // 		 Could also have the backend have a channel passed into it and it could notify the API when an update has occurred.
 //       This could be useful for the GRPC streaming version of the API.
-func (kpnb *KubernetesPerNodeBackend) Services() (map[systemtree.NodePath]*envoy.Service, error) {
-	result := map[systemtree.NodePath]*envoy.Service{}
+func (kpnb *KubernetesPerNodeBackend) Services() (map[tree.NodePath]*envoy.Service, error) {
+	result := map[tree.NodePath]*envoy.Service{}
 
 	for _, svcObj := range kpnb.latticeServiceStore.List() {
 		svc := svcObj.(*crv1.Service)

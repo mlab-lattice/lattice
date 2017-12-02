@@ -3,8 +3,7 @@ package service
 import (
 	"fmt"
 
-	systemdefinitionblock "github.com/mlab-lattice/core/pkg/system/definition/block"
-
+	"github.com/mlab-lattice/system/pkg/definition/block"
 	crv1 "github.com/mlab-lattice/system/pkg/kubernetes/customresource/v1"
 	kubeutil "github.com/mlab-lattice/system/pkg/kubernetes/util/kubernetes"
 
@@ -76,7 +75,7 @@ func (sc *ServiceController) getKubeService(svc *crv1.Service) (*corev1.Service,
 
 func getProtocol(protocolString string) (corev1.Protocol, error) {
 	switch protocolString {
-	case systemdefinitionblock.HttpProtocol, systemdefinitionblock.TcpProtocol:
+	case block.HttpProtocol, block.TcpProtocol:
 		return corev1.ProtocolTCP, nil
 	default:
 		return corev1.ProtocolTCP, fmt.Errorf("invalid protocol %v", protocolString)

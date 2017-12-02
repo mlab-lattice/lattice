@@ -1,19 +1,18 @@
 package backend
 
 import (
-	coreconstants "github.com/mlab-lattice/core/pkg/constants"
-	coretypes "github.com/mlab-lattice/core/pkg/types"
-
-	"github.com/mlab-lattice/system/pkg/kubernetes/constants"
+	"github.com/mlab-lattice/system/pkg/constants"
+	kubeconstants "github.com/mlab-lattice/system/pkg/kubernetes/constants"
 	crv1 "github.com/mlab-lattice/system/pkg/kubernetes/customresource/v1"
+	"github.com/mlab-lattice/system/pkg/types"
 
 	"k8s.io/apimachinery/pkg/api/errors"
 )
 
-func (kb *KubernetesBackend) ListServiceBuilds(ln coretypes.LatticeNamespace) ([]coretypes.ServiceBuild, error) {
+func (kb *KubernetesBackend) ListServiceBuilds(ln types.LatticeNamespace) ([]types.ServiceBuild, error) {
 	result := &crv1.ServiceBuildList{}
 	err := kb.LatticeResourceClient.Get().
-		Namespace(constants.NamespaceLatticeInternal).
+		Namespace(kubeconstants.NamespaceLatticeInternal).
 		Resource(crv1.ServiceBuildResourcePlural).
 		Do().
 		Into(result)
@@ -22,7 +21,7 @@ func (kb *KubernetesBackend) ListServiceBuilds(ln coretypes.LatticeNamespace) ([
 		return nil, err
 	}
 
-	builds := []coretypes.ServiceBuild{}
+	builds := []types.ServiceBuild{}
 	for _, build := range result.Items {
 		// FIXME: should add a label to component builds for the lattice namespace
 		builds = append(builds, transformServiceBuild(&build))
@@ -31,7 +30,7 @@ func (kb *KubernetesBackend) ListServiceBuilds(ln coretypes.LatticeNamespace) ([
 	return builds, nil
 }
 
-func (kb *KubernetesBackend) GetServiceBuild(ln coretypes.LatticeNamespace, bid coretypes.ServiceBuildID) (*coretypes.ServiceBuild, bool, error) {
+func (kb *KubernetesBackend) GetServiceBuild(ln types.LatticeNamespace, bid types.ServiceBuildID) (*types.ServiceBuild, bool, error) {
 	build, exists, err := kb.getInternalServiceBuild(ln, bid)
 	if err != nil || !exists {
 		return nil, exists, err
@@ -42,10 +41,10 @@ func (kb *KubernetesBackend) GetServiceBuild(ln coretypes.LatticeNamespace, bid 
 	return &coreBuild, true, nil
 }
 
-func (kb *KubernetesBackend) getInternalServiceBuild(ln coretypes.LatticeNamespace, bid coretypes.ServiceBuildID) (*crv1.ServiceBuild, bool, error) {
+func (kb *KubernetesBackend) getInternalServiceBuild(ln types.LatticeNamespace, bid types.ServiceBuildID) (*crv1.ServiceBuild, bool, error) {
 	result := &crv1.ServiceBuild{}
 	err := kb.LatticeResourceClient.Get().
-		Namespace(constants.NamespaceLatticeInternal).
+		Namespace(kubeconstants.NamespaceLatticeInternal).
 		Resource(crv1.ServiceBuildResourcePlural).
 		Name(string(bid)).
 		Do().
@@ -61,11 +60,11 @@ func (kb *KubernetesBackend) getInternalServiceBuild(ln coretypes.LatticeNamespa
 	return result, true, nil
 }
 
-func transformServiceBuild(build *crv1.ServiceBuild) coretypes.ServiceBuild {
-	svcb := coretypes.ServiceBuild{
-		ID:              coretypes.ServiceBuildID(build.Name),
+func transformServiceBuild(build *crv1.ServiceBuild) types.ServiceBuild {
+	svcb := types.ServiceBuild{
+		ID:              types.ServiceBuildID(build.Name),
 		State:           getServiceBuildState(build.Status.State),
-		ComponentBuilds: map[string]*coretypes.ComponentBuild{},
+		ComponentBuilds: map[string]*types.ComponentBuild{},
 	}
 
 	for component, cbInfo := range build.Spec.Components {
@@ -73,9 +72,9 @@ func transformServiceBuild(build *crv1.ServiceBuild) coretypes.ServiceBuild {
 			svcb.ComponentBuilds[component] = nil
 			continue
 		}
-		id := coretypes.ComponentBuildID(*cbInfo.BuildName)
+		id := types.ComponentBuildID(*cbInfo.BuildName)
 
-		state := coreconstants.ComponentBuildStatePending
+		state := constants.ComponentBuildStatePending
 		if cbInfo.BuildState != nil {
 			state = getComponentBuildState(*cbInfo.BuildState)
 		}
@@ -86,7 +85,7 @@ func transformServiceBuild(build *crv1.ServiceBuild) coretypes.ServiceBuild {
 			failureMessage = &failMessage
 		}
 
-		svcb.ComponentBuilds[component] = &coretypes.ComponentBuild{
+		svcb.ComponentBuilds[component] = &types.ComponentBuild{
 			ID:                id,
 			State:             state,
 			LastObservedPhase: cbInfo.LastObservedPhase,
@@ -97,16 +96,16 @@ func transformServiceBuild(build *crv1.ServiceBuild) coretypes.ServiceBuild {
 	return svcb
 }
 
-func getServiceBuildState(state crv1.ServiceBuildState) coretypes.ServiceBuildState {
+func getServiceBuildState(state crv1.ServiceBuildState) types.ServiceBuildState {
 	switch state {
 	case crv1.ServiceBuildStatePending:
-		return coreconstants.ServiceBuildStatePending
+		return constants.ServiceBuildStatePending
 	case crv1.ServiceBuildStateRunning:
-		return coreconstants.ServiceBuildStateRunning
+		return constants.ServiceBuildStateRunning
 	case crv1.ServiceBuildStateSucceeded:
-		return coreconstants.ServiceBuildStateSucceeded
+		return constants.ServiceBuildStateSucceeded
 	case crv1.ServiceBuildStateFailed:
-		return coreconstants.ServiceBuildStateFailed
+		return constants.ServiceBuildStateFailed
 	default:
 		panic("unreachable")
 	}

@@ -84,14 +84,6 @@ filegroup(
 # go dependencies
 
 # direct github.com/mlab-lattice/system dependencies
-go_repository(
-    name = "com_github_mlab_lattice_core",
-    commit = "006f573436285aea09c14e38f363c8b90f1711f4",
-    importpath = "github.com/mlab-lattice/core",
-    remote = "git@github.com:mlab-lattice/core.git",
-    vcs = "git",
-)
-
 # also depended upon by k8s.io
 # jumping ahead of their requirement to include: https://github.com/spf13/cobra/pull/502
 go_repository(
@@ -199,8 +191,6 @@ go_repository(
 #    importpath = "github.com/golang/glog",
 #)
 
-
-# github.com/mlab-lattice/core dependencies
 go_repository(
     name = "in_gopkg_src_d_go_git_v4",
     commit = "f9879dd043f84936a1f8acb8a53b74332a7ae135",

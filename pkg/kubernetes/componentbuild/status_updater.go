@@ -1,11 +1,10 @@
 package componentbuild
 
 import (
-	coretypes "github.com/mlab-lattice/core/pkg/types"
-
 	"github.com/mlab-lattice/system/pkg/kubernetes/constants"
-	latticeresource "github.com/mlab-lattice/system/pkg/kubernetes/customresource"
+	"github.com/mlab-lattice/system/pkg/kubernetes/customresource"
 	crv1 "github.com/mlab-lattice/system/pkg/kubernetes/customresource/v1"
+	"github.com/mlab-lattice/system/pkg/types"
 
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
@@ -27,7 +26,7 @@ func NewKubernetesStatusUpdater(kubeconfig string) (*KubernetesStatusUpdater, er
 		return nil, err
 	}
 
-	latticeResourceClient, _, err := latticeresource.NewClient(config)
+	latticeResourceClient, _, err := customresource.NewClient(config)
 	if err != nil {
 		return nil, err
 	}
@@ -38,12 +37,12 @@ func NewKubernetesStatusUpdater(kubeconfig string) (*KubernetesStatusUpdater, er
 	return kb, nil
 }
 
-func (ksu *KubernetesStatusUpdater) UpdateProgress(buildID coretypes.ComponentBuildID, phase coretypes.ComponentBuildPhase) error {
+func (ksu *KubernetesStatusUpdater) UpdateProgress(buildID types.ComponentBuildID, phase types.ComponentBuildPhase) error {
 	// Retry once since we may lose a race against the controller at the beginning updating the Status.State
 	return ksu.updateProgressInternal(buildID, phase, 1)
 }
 
-func (ksu *KubernetesStatusUpdater) updateProgressInternal(buildID coretypes.ComponentBuildID, phase coretypes.ComponentBuildPhase, numRetries int) error {
+func (ksu *KubernetesStatusUpdater) updateProgressInternal(buildID types.ComponentBuildID, phase types.ComponentBuildPhase, numRetries int) error {
 	cb := &crv1.ComponentBuild{}
 	err := ksu.LatticeResourceClient.Get().
 		Namespace(constants.NamespaceLatticeInternal).
@@ -75,12 +74,12 @@ func (ksu *KubernetesStatusUpdater) updateProgressInternal(buildID coretypes.Com
 	return nil
 }
 
-func (ksu *KubernetesStatusUpdater) UpdateError(buildID coretypes.ComponentBuildID, internal bool, err error) error {
+func (ksu *KubernetesStatusUpdater) UpdateError(buildID types.ComponentBuildID, internal bool, err error) error {
 	// Retry once since we may lose a race against the controller at the beginning updating the Status.State
 	return ksu.updateErrorInternal(buildID, internal, err, 1)
 }
 
-func (ksu *KubernetesStatusUpdater) updateErrorInternal(buildID coretypes.ComponentBuildID, internal bool, updateErr error, numRetries int) error {
+func (ksu *KubernetesStatusUpdater) updateErrorInternal(buildID types.ComponentBuildID, internal bool, updateErr error, numRetries int) error {
 	cb := &crv1.ComponentBuild{}
 	err := ksu.LatticeResourceClient.Get().
 		Namespace(constants.NamespaceLatticeInternal).

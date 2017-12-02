@@ -3,7 +3,7 @@ package app
 import (
 	"fmt"
 
-	crdclient "github.com/mlab-lattice/system/pkg/kubernetes/customresource"
+	"github.com/mlab-lattice/system/pkg/kubernetes/customresource"
 
 	apiextensionsclient "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 
@@ -17,7 +17,7 @@ func seedCrds(kubeconfig *rest.Config) {
 	if err != nil {
 		panic(err)
 	}
-	_, err = crdclient.CreateCustomResourceDefinitions(apiextensionsclientset)
+	_, err = customresource.CreateCustomResourceDefinitions(apiextensionsclientset)
 	if err != nil {
 		panic(err)
 	}

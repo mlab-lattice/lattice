@@ -6,7 +6,7 @@ import (
 	"log"
 	"os"
 
-	coretypes "github.com/mlab-lattice/core/pkg/types"
+	"github.com/mlab-lattice/system/pkg/types"
 
 	"github.com/spf13/cobra"
 )
@@ -43,7 +43,7 @@ var serviceBuildGetCmd = &cobra.Command{
 	Short: "get service build",
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		id := coretypes.ServiceBuildID(args[0])
+		id := types.ServiceBuildID(args[0])
 		build, err := namespaceClient.ServiceBuild(id).Get()
 		if err != nil {
 			log.Fatal(err)

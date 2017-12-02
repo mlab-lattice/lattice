@@ -3,8 +3,8 @@ package backend
 import (
 	"io"
 
-	systemtree "github.com/mlab-lattice/core/pkg/system/tree"
-	coretypes "github.com/mlab-lattice/core/pkg/types"
+	"github.com/mlab-lattice/system/pkg/definition/tree"
+	"github.com/mlab-lattice/system/pkg/types"
 )
 
 // UserError is an error that should be exposed to an end user.
@@ -28,37 +28,37 @@ type Interface interface {
 	// Namespace
 
 	// Utils
-	GetSystemUrl(coretypes.LatticeNamespace) (string, error)
+	GetSystemUrl(types.LatticeNamespace) (string, error)
 
 	// Builds
 	// System
-	BuildSystem(ln coretypes.LatticeNamespace, definitionRoot systemtree.Node, v coretypes.SystemVersion) (coretypes.SystemBuildID, error)
-	ListSystemBuilds(coretypes.LatticeNamespace) ([]coretypes.SystemBuild, error)
-	GetSystemBuild(coretypes.LatticeNamespace, coretypes.SystemBuildID) (b *coretypes.SystemBuild, exists bool, err error)
+	BuildSystem(ln types.LatticeNamespace, definitionRoot tree.Node, v types.SystemVersion) (types.SystemBuildID, error)
+	ListSystemBuilds(types.LatticeNamespace) ([]types.SystemBuild, error)
+	GetSystemBuild(types.LatticeNamespace, types.SystemBuildID) (b *types.SystemBuild, exists bool, err error)
 
 	// Service
-	ListServiceBuilds(coretypes.LatticeNamespace) ([]coretypes.ServiceBuild, error)
-	GetServiceBuild(coretypes.LatticeNamespace, coretypes.ServiceBuildID) (b *coretypes.ServiceBuild, exists bool, err error)
+	ListServiceBuilds(types.LatticeNamespace) ([]types.ServiceBuild, error)
+	GetServiceBuild(types.LatticeNamespace, types.ServiceBuildID) (b *types.ServiceBuild, exists bool, err error)
 
 	// Component
-	ListComponentBuilds(coretypes.LatticeNamespace) ([]coretypes.ComponentBuild, error)
-	GetComponentBuild(coretypes.LatticeNamespace, coretypes.ComponentBuildID) (b *coretypes.ComponentBuild, exists bool, err error)
-	GetComponentBuildLogs(ln coretypes.LatticeNamespace, bid coretypes.ComponentBuildID, follow bool) (rc io.ReadCloser, exists bool, err error)
+	ListComponentBuilds(types.LatticeNamespace) ([]types.ComponentBuild, error)
+	GetComponentBuild(types.LatticeNamespace, types.ComponentBuildID) (b *types.ComponentBuild, exists bool, err error)
+	GetComponentBuildLogs(ln types.LatticeNamespace, bid types.ComponentBuildID, follow bool) (rc io.ReadCloser, exists bool, err error)
 
 	// Rollouts
-	RollOutSystemBuild(coretypes.LatticeNamespace, coretypes.SystemBuildID) (coretypes.SystemRolloutID, error)
-	RollOutSystem(ln coretypes.LatticeNamespace, definitionRoot systemtree.Node, v coretypes.SystemVersion) (coretypes.SystemRolloutID, error)
-	ListSystemRollouts(coretypes.LatticeNamespace) ([]coretypes.SystemRollout, error)
-	GetSystemRollout(coretypes.LatticeNamespace, coretypes.SystemRolloutID) (r *coretypes.SystemRollout, exists bool, err error)
+	RollOutSystemBuild(types.LatticeNamespace, types.SystemBuildID) (types.SystemRolloutID, error)
+	RollOutSystem(ln types.LatticeNamespace, definitionRoot tree.Node, v types.SystemVersion) (types.SystemRolloutID, error)
+	ListSystemRollouts(types.LatticeNamespace) ([]types.SystemRollout, error)
+	GetSystemRollout(types.LatticeNamespace, types.SystemRolloutID) (r *types.SystemRollout, exists bool, err error)
 
 	// Teardowns
-	TearDownSystem(coretypes.LatticeNamespace) (coretypes.SystemTeardownID, error)
-	ListSystemTeardowns(coretypes.LatticeNamespace) ([]coretypes.SystemTeardown, error)
-	GetSystemTeardown(coretypes.LatticeNamespace, coretypes.SystemTeardownID) (t *coretypes.SystemTeardown, exists bool, err error)
+	TearDownSystem(types.LatticeNamespace) (types.SystemTeardownID, error)
+	ListSystemTeardowns(types.LatticeNamespace) ([]types.SystemTeardown, error)
+	GetSystemTeardown(types.LatticeNamespace, types.SystemTeardownID) (t *types.SystemTeardown, exists bool, err error)
 
 	// Services
-	ListSystemServices(coretypes.LatticeNamespace) ([]coretypes.Service, error)
-	GetSystemService(coretypes.LatticeNamespace, systemtree.NodePath) (*coretypes.Service, error)
+	ListSystemServices(types.LatticeNamespace) ([]types.Service, error)
+	GetSystemService(types.LatticeNamespace, tree.NodePath) (*types.Service, error)
 
 	// Admin
 

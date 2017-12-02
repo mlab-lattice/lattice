@@ -4,12 +4,11 @@ import (
 	"fmt"
 	"io"
 
-	coreconstants "github.com/mlab-lattice/core/pkg/constants"
-	coretypes "github.com/mlab-lattice/core/pkg/types"
-
-	"github.com/mlab-lattice/system/pkg/kubernetes/constants"
+	"github.com/mlab-lattice/system/pkg/constants"
+	kubeconstants "github.com/mlab-lattice/system/pkg/kubernetes/constants"
 	crv1 "github.com/mlab-lattice/system/pkg/kubernetes/customresource/v1"
 	"github.com/mlab-lattice/system/pkg/manager/backend"
+	"github.com/mlab-lattice/system/pkg/types"
 
 	corev1 "k8s.io/api/core/v1"
 
@@ -17,10 +16,10 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func (kb *KubernetesBackend) ListComponentBuilds(ln coretypes.LatticeNamespace) ([]coretypes.ComponentBuild, error) {
+func (kb *KubernetesBackend) ListComponentBuilds(ln types.LatticeNamespace) ([]types.ComponentBuild, error) {
 	result := &crv1.ComponentBuildList{}
 	err := kb.LatticeResourceClient.Get().
-		Namespace(constants.NamespaceLatticeInternal).
+		Namespace(kubeconstants.NamespaceLatticeInternal).
 		Resource(crv1.ComponentBuildResourcePlural).
 		Do().
 		Into(result)
@@ -29,7 +28,7 @@ func (kb *KubernetesBackend) ListComponentBuilds(ln coretypes.LatticeNamespace) 
 		return nil, err
 	}
 
-	builds := []coretypes.ComponentBuild{}
+	builds := []types.ComponentBuild{}
 	for _, build := range result.Items {
 		// FIXME: should add a label to component builds for the lattice namespace
 		builds = append(builds, transformComponentBuild(&build))
@@ -38,7 +37,7 @@ func (kb *KubernetesBackend) ListComponentBuilds(ln coretypes.LatticeNamespace) 
 	return builds, nil
 }
 
-func (kb *KubernetesBackend) GetComponentBuild(ln coretypes.LatticeNamespace, bid coretypes.ComponentBuildID) (*coretypes.ComponentBuild, bool, error) {
+func (kb *KubernetesBackend) GetComponentBuild(ln types.LatticeNamespace, bid types.ComponentBuildID) (*types.ComponentBuild, bool, error) {
 	build, exists, err := kb.getInternalComponentBuild(ln, bid)
 	if err != nil || !exists {
 		return nil, exists, err
@@ -49,7 +48,7 @@ func (kb *KubernetesBackend) GetComponentBuild(ln coretypes.LatticeNamespace, bi
 	return &coreBuild, true, nil
 }
 
-func (kb *KubernetesBackend) GetComponentBuildLogs(ln coretypes.LatticeNamespace, bid coretypes.ComponentBuildID, follow bool) (io.ReadCloser, bool, error) {
+func (kb *KubernetesBackend) GetComponentBuildLogs(ln types.LatticeNamespace, bid types.ComponentBuildID, follow bool) (io.ReadCloser, bool, error) {
 	build, exists, err := kb.getInternalComponentBuild(ln, bid)
 	if err != nil {
 		return nil, false, err
@@ -82,10 +81,10 @@ func (kb *KubernetesBackend) GetComponentBuildLogs(ln coretypes.LatticeNamespace
 	return readCloser, true, err
 }
 
-func (kb *KubernetesBackend) getInternalComponentBuild(ln coretypes.LatticeNamespace, bid coretypes.ComponentBuildID) (*crv1.ComponentBuild, bool, error) {
+func (kb *KubernetesBackend) getInternalComponentBuild(ln types.LatticeNamespace, bid types.ComponentBuildID) (*crv1.ComponentBuild, bool, error) {
 	result := &crv1.ComponentBuild{}
 	err := kb.LatticeResourceClient.Get().
-		Namespace(constants.NamespaceLatticeInternal).
+		Namespace(kubeconstants.NamespaceLatticeInternal).
 		Resource(crv1.ComponentBuildResourcePlural).
 		Name(string(bid)).
 		Do().
@@ -101,9 +100,9 @@ func (kb *KubernetesBackend) getInternalComponentBuild(ln coretypes.LatticeNames
 	return result, true, nil
 }
 
-func transformComponentBuild(build *crv1.ComponentBuild) coretypes.ComponentBuild {
-	cb := coretypes.ComponentBuild{
-		ID:                coretypes.ComponentBuildID(build.Name),
+func transformComponentBuild(build *crv1.ComponentBuild) types.ComponentBuild {
+	cb := types.ComponentBuild{
+		ID:                types.ComponentBuildID(build.Name),
 		State:             getComponentBuildState(build.Status.State),
 		LastObservedPhase: build.Status.LastObservedPhase,
 	}
@@ -116,18 +115,18 @@ func transformComponentBuild(build *crv1.ComponentBuild) coretypes.ComponentBuil
 	return cb
 }
 
-func getComponentBuildState(state crv1.ComponentBuildState) coretypes.ComponentBuildState {
+func getComponentBuildState(state crv1.ComponentBuildState) types.ComponentBuildState {
 	switch state {
 	case crv1.ComponentBuildStatePending:
-		return coreconstants.ComponentBuildStatePending
+		return constants.ComponentBuildStatePending
 	case crv1.ComponentBuildStateQueued:
-		return coreconstants.ComponentBuildStateQueued
+		return constants.ComponentBuildStateQueued
 	case crv1.ComponentBuildStateRunning:
-		return coreconstants.ComponentBuildStateRunning
+		return constants.ComponentBuildStateRunning
 	case crv1.ComponentBuildStateSucceeded:
-		return coreconstants.ComponentBuildStateSucceeded
+		return constants.ComponentBuildStateSucceeded
 	case crv1.ComponentBuildStateFailed:
-		return coreconstants.ComponentBuildStateFailed
+		return constants.ComponentBuildStateFailed
 	default:
 		panic("unreachable")
 	}
@@ -142,7 +141,7 @@ func getComponentBuildFailureMessage(failureInfo crv1.ComponentBuildFailureInfo)
 
 func (kb *KubernetesBackend) getPodForComponentBuild(cb *crv1.ComponentBuild) (*corev1.Pod, error) {
 	listOptions := metav1.ListOptions{
-		LabelSelector: fmt.Sprintf("%v=%v", constants.LabelKeyComponentBuildID, cb.Name),
+		LabelSelector: fmt.Sprintf("%v=%v", kubeconstants.LabelKeyComponentBuildID, cb.Name),
 	}
 	podsList, err := kb.KubeClientset.CoreV1().Pods(cb.Namespace).List(listOptions)
 	if err != nil {

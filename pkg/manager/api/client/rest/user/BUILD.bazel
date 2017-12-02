@@ -13,6 +13,6 @@ go_library(
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/manager/api/client/rest/requester:go_default_library",
-        "@com_github_mlab_lattice_core//pkg/types:go_default_library",
+        "//pkg/types:go_default_library",
     ],
 )

@@ -3,9 +3,9 @@ package v1
 import (
 	"encoding/json"
 
-	systemdefinition "github.com/mlab-lattice/core/pkg/system/definition"
-	systemtree "github.com/mlab-lattice/core/pkg/system/tree"
-	coretypes "github.com/mlab-lattice/core/pkg/types"
+	"github.com/mlab-lattice/system/pkg/definition"
+	"github.com/mlab-lattice/system/pkg/definition/tree"
+	"github.com/mlab-lattice/system/pkg/types"
 
 	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -31,17 +31,17 @@ type SystemBuild struct {
 }
 
 type SystemBuildSpec struct {
-	coretypes.LatticeNamespace `json:"latticeNamespace"`
-	DefinitionRoot             systemtree.Node                                 `json:"definition"`
-	Services                   map[systemtree.NodePath]SystemBuildServicesInfo `json:"services"`
+	LatticeNamespace types.LatticeNamespace                    `json:"latticeNamespace"`
+	DefinitionRoot   tree.Node                                 `json:"definition"`
+	Services         map[tree.NodePath]SystemBuildServicesInfo `json:"services"`
 }
 
 // Some JSON (un)marshalling trickiness needed to deal with the fact that we have an interface
 // type in our SystemBuildSpec (DefinitionRoot)
 type systemBuildSpecRaw struct {
-	coretypes.LatticeNamespace `json:"latticeNamespace"`
-	Services                   map[systemtree.NodePath]SystemBuildServicesInfo `json:"services"`
-	Definition                 json.RawMessage
+	LatticeNamespace types.LatticeNamespace                    `json:"latticeNamespace"`
+	Services         map[tree.NodePath]SystemBuildServicesInfo `json:"services"`
+	Definition       json.RawMessage
 }
 
 func (sbs *SystemBuildSpec) MarshalJSON() ([]byte, error) {
@@ -59,12 +59,12 @@ func (sbs *SystemBuildSpec) UnmarshalJSON(data []byte) error {
 		return err
 	}
 
-	definition, err := systemdefinition.UnmarshalJSON(raw.Definition)
+	def, err := definition.UnmarshalJSON(raw.Definition)
 	if err != nil {
 		return err
 	}
 
-	rootNode, err := systemtree.NewNode(definition, nil)
+	rootNode, err := tree.NewNode(def, nil)
 	if err != nil {
 		return err
 	}
@@ -78,17 +78,17 @@ func (sbs *SystemBuildSpec) UnmarshalJSON(data []byte) error {
 }
 
 type SystemBuildServicesInfo struct {
-	Definition systemdefinition.Service                        `json:"definition"`
+	Definition definition.Service                              `json:"definition"`
 	BuildName  *string                                         `json:"buildName,omitempty"`
 	BuildState *ServiceBuildState                              `json:"buildState"`
 	Components map[string]SystemBuildServicesInfoComponentInfo `json:"components"`
 }
 
 type SystemBuildServicesInfoComponentInfo struct {
-	BuildName         *string                        `json:"buildName,omitempty"`
-	BuildState        *ComponentBuildState           `json:"buildState"`
-	LastObservedPhase *coretypes.ComponentBuildPhase `json:"lastObservedPhase,omitempty"`
-	FailureInfo       *ComponentBuildFailureInfo     `json:"failureInfo,omitempty"`
+	BuildName         *string                    `json:"buildName,omitempty"`
+	BuildState        *ComponentBuildState       `json:"buildState"`
+	LastObservedPhase *types.ComponentBuildPhase `json:"lastObservedPhase,omitempty"`
+	FailureInfo       *ComponentBuildFailureInfo `json:"failureInfo,omitempty"`
 }
 
 type SystemBuildStatus struct {

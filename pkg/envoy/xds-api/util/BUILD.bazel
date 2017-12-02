@@ -5,5 +5,5 @@ go_library(
     srcs = ["util.go"],
     importpath = "github.com/mlab-lattice/system/pkg/envoy/xds-api/util",
     visibility = ["//visibility:public"],
-    deps = ["@com_github_mlab_lattice_core//pkg/system/tree:go_default_library"],
+    deps = ["//pkg/definition/tree:go_default_library"],
 )

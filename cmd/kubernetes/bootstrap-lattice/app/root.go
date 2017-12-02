@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	coreconstants "github.com/mlab-lattice/core/pkg/constants"
+	"github.com/mlab-lattice/system/pkg/constants"
 
 	"github.com/spf13/cobra"
 
@@ -34,7 +34,7 @@ var RootCmd = &cobra.Command{
 	Short: "Bootstraps a kubernetes cluster to run lattice",
 	Run: func(cmd *cobra.Command, args []string) {
 		switch provider {
-		case coreconstants.ProviderLocal, coreconstants.ProviderAWS:
+		case constants.ProviderLocal, constants.ProviderAWS:
 		default:
 			panic("unsupported provider")
 		}
@@ -68,7 +68,7 @@ var RootCmd = &cobra.Command{
 		seedLatticeControllerManager(kubeClientset)
 		seedLatticeSystemEnvironmentManagerAPI(kubeClientset)
 
-		if provider == coreconstants.ProviderLocal {
+		if provider == constants.ProviderLocal {
 			seedLocalSpecific(kubeClientset, systemId)
 		} else {
 			seedCloudSpecific(kubeClientset)

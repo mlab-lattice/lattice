@@ -3,8 +3,7 @@ package cds
 import (
 	"fmt"
 
-	systemtree "github.com/mlab-lattice/core/pkg/system/tree"
-
+	"github.com/mlab-lattice/system/pkg/definition/tree"
 	"github.com/mlab-lattice/system/pkg/envoy"
 	"github.com/mlab-lattice/system/pkg/envoy/xds-api/constants"
 	"github.com/mlab-lattice/system/pkg/envoy/xds-api/types"
@@ -26,7 +25,7 @@ func (r *RequestHandler) GetResponse(serviceCluster, serviceNode string) (*Respo
 		return nil, err
 	}
 
-	servicePath, err := systemtree.NodePathFromDomain(serviceNode)
+	servicePath, err := tree.NodePathFromDomain(serviceNode)
 	if err != nil {
 		return nil, err
 	}

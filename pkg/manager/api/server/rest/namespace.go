@@ -4,13 +4,12 @@ import (
 	"fmt"
 	"net/http"
 
-	coreconstants "github.com/mlab-lattice/core/pkg/constants"
-	systemdefinition "github.com/mlab-lattice/core/pkg/system/definition"
-	systemresolver "github.com/mlab-lattice/core/pkg/system/resolver"
-	systemtree "github.com/mlab-lattice/core/pkg/system/tree"
-	coretypes "github.com/mlab-lattice/core/pkg/types"
-
+	"github.com/mlab-lattice/system/pkg/constants"
+	"github.com/mlab-lattice/system/pkg/definition"
+	"github.com/mlab-lattice/system/pkg/definition/resolver"
+	"github.com/mlab-lattice/system/pkg/definition/tree"
 	"github.com/mlab-lattice/system/pkg/manager/backend"
+	"github.com/mlab-lattice/system/pkg/types"
 
 	"github.com/gin-gonic/gin"
 )
@@ -26,8 +25,8 @@ func (r *restServer) mountNamespaceHandlers() {
 }
 
 type systemVersionResponse struct {
-	Id         string                     `json:"id"`
-	Definition systemdefinition.Interface `json:"definition"`
+	Id         string               `json:"id"`
+	Definition definition.Interface `json:"definition"`
 }
 
 func (r *restServer) mountNamespaceVersionHandlers() {
@@ -68,7 +67,7 @@ type buildSystemRequest struct {
 }
 
 type buildSystemResponse struct {
-	BuildId coretypes.SystemBuildID `json:"buildId"`
+	BuildId types.SystemBuildID `json:"buildId"`
 }
 
 func (r *restServer) mountNamespaceSystemBuildHandlers() {
@@ -90,9 +89,9 @@ func (r *restServer) mountNamespaceSystemBuildHandlers() {
 			}
 
 			bid, err := r.backend.BuildSystem(
-				coretypes.LatticeNamespace(namespace),
+				types.LatticeNamespace(namespace),
 				root,
-				coretypes.SystemVersion(req.Version),
+				types.SystemVersion(req.Version),
 			)
 
 			if err != nil {
@@ -109,7 +108,7 @@ func (r *restServer) mountNamespaceSystemBuildHandlers() {
 		sysbs.GET("", func(c *gin.Context) {
 			namespace := c.Param("namespace_id")
 
-			bs, err := r.backend.ListSystemBuilds(coretypes.LatticeNamespace(namespace))
+			bs, err := r.backend.ListSystemBuilds(types.LatticeNamespace(namespace))
 			if err != nil {
 				c.String(http.StatusInternalServerError, err.Error())
 				return
@@ -123,7 +122,7 @@ func (r *restServer) mountNamespaceSystemBuildHandlers() {
 			namespace := c.Param("namespace_id")
 			bid := c.Param("build_id")
 
-			b, exists, err := r.backend.GetSystemBuild(coretypes.LatticeNamespace(namespace), coretypes.SystemBuildID(bid))
+			b, exists, err := r.backend.GetSystemBuild(types.LatticeNamespace(namespace), types.SystemBuildID(bid))
 			if err != nil {
 				c.String(http.StatusInternalServerError, err.Error())
 				return
@@ -146,7 +145,7 @@ func (r *restServer) mountNamespaceServiceBuildHandlers() {
 		sysbs.GET("", func(c *gin.Context) {
 			namespace := c.Param("namespace_id")
 
-			bs, err := r.backend.ListServiceBuilds(coretypes.LatticeNamespace(namespace))
+			bs, err := r.backend.ListServiceBuilds(types.LatticeNamespace(namespace))
 			if err != nil {
 				c.String(http.StatusInternalServerError, err.Error())
 				return
@@ -160,7 +159,7 @@ func (r *restServer) mountNamespaceServiceBuildHandlers() {
 			namespace := c.Param("namespace_id")
 			bid := c.Param("build_id")
 
-			b, exists, err := r.backend.GetServiceBuild(coretypes.LatticeNamespace(namespace), coretypes.ServiceBuildID(bid))
+			b, exists, err := r.backend.GetServiceBuild(types.LatticeNamespace(namespace), types.ServiceBuildID(bid))
 			if err != nil {
 				c.String(http.StatusInternalServerError, err.Error())
 				return
@@ -183,7 +182,7 @@ func (r *restServer) mountNamespaceComponentBuildHandlers() {
 		sysbs.GET("", func(c *gin.Context) {
 			namespace := c.Param("namespace_id")
 
-			bs, err := r.backend.ListComponentBuilds(coretypes.LatticeNamespace(namespace))
+			bs, err := r.backend.ListComponentBuilds(types.LatticeNamespace(namespace))
 			if err != nil {
 				c.String(http.StatusInternalServerError, err.Error())
 				return
@@ -197,7 +196,7 @@ func (r *restServer) mountNamespaceComponentBuildHandlers() {
 			namespace := c.Param("namespace_id")
 			bid := c.Param("build_id")
 
-			b, exists, err := r.backend.GetComponentBuild(coretypes.LatticeNamespace(namespace), coretypes.ComponentBuildID(bid))
+			b, exists, err := r.backend.GetComponentBuild(types.LatticeNamespace(namespace), types.ComponentBuildID(bid))
 			if err != nil {
 				c.String(http.StatusInternalServerError, err.Error())
 				return
@@ -227,7 +226,7 @@ func (r *restServer) mountNamespaceComponentBuildHandlers() {
 				c.String(http.StatusBadRequest, "invalid value for follow query")
 			}
 
-			log, exists, err := r.backend.GetComponentBuildLogs(coretypes.LatticeNamespace(namespace), coretypes.ComponentBuildID(bid), follow)
+			log, exists, err := r.backend.GetComponentBuildLogs(types.LatticeNamespace(namespace), types.ComponentBuildID(bid), follow)
 			if exists == false {
 				switch err.(type) {
 				case *backend.UserError:
@@ -244,12 +243,12 @@ func (r *restServer) mountNamespaceComponentBuildHandlers() {
 }
 
 type rollOutSystemRequest struct {
-	Version *string                  `json:"version,omitempty"`
-	BuildId *coretypes.SystemBuildID `json:"buildId,omitempty"`
+	Version *string              `json:"version,omitempty"`
+	BuildId *types.SystemBuildID `json:"buildId,omitempty"`
 }
 
 type rollOutSystemResponse struct {
-	RolloutId coretypes.SystemRolloutID `json:"rolloutId"`
+	RolloutId types.SystemRolloutID `json:"rolloutId"`
 }
 
 func (r *restServer) mountNamespaceRolloutHandlers() {
@@ -274,7 +273,7 @@ func (r *restServer) mountNamespaceRolloutHandlers() {
 				return
 			}
 
-			var rid coretypes.SystemRolloutID
+			var rid types.SystemRolloutID
 			var err error
 			if req.Version != nil {
 				root, err := r.getSystemRoot(namespace, *req.Version)
@@ -284,14 +283,14 @@ func (r *restServer) mountNamespaceRolloutHandlers() {
 				}
 
 				rid, err = r.backend.RollOutSystem(
-					coretypes.LatticeNamespace(namespace),
+					types.LatticeNamespace(namespace),
 					root,
-					coretypes.SystemVersion(*req.Version),
+					types.SystemVersion(*req.Version),
 				)
 			} else {
 				rid, err = r.backend.RollOutSystemBuild(
-					coretypes.LatticeNamespace(namespace),
-					coretypes.SystemBuildID(*req.BuildId),
+					types.LatticeNamespace(namespace),
+					types.SystemBuildID(*req.BuildId),
 				)
 			}
 
@@ -309,7 +308,7 @@ func (r *restServer) mountNamespaceRolloutHandlers() {
 		rollouts.GET("", func(c *gin.Context) {
 			namespace := c.Param("namespace_id")
 
-			rs, err := r.backend.ListSystemRollouts(coretypes.LatticeNamespace(namespace))
+			rs, err := r.backend.ListSystemRollouts(types.LatticeNamespace(namespace))
 			if err != nil {
 				c.String(http.StatusInternalServerError, err.Error())
 				return
@@ -323,7 +322,7 @@ func (r *restServer) mountNamespaceRolloutHandlers() {
 			namespace := c.Param("namespace_id")
 			rid := c.Param("rollout_id")
 
-			r, exists, err := r.backend.GetSystemRollout(coretypes.LatticeNamespace(namespace), coretypes.SystemRolloutID(rid))
+			r, exists, err := r.backend.GetSystemRollout(types.LatticeNamespace(namespace), types.SystemRolloutID(rid))
 			if err != nil {
 				c.String(http.StatusInternalServerError, err.Error())
 				return
@@ -340,7 +339,7 @@ func (r *restServer) mountNamespaceRolloutHandlers() {
 }
 
 type tearDownSystemResponse struct {
-	TeardownId coretypes.SystemTeardownID `json:"teardownId"`
+	TeardownId types.SystemTeardownID `json:"teardownId"`
 }
 
 func (r *restServer) mountNamespaceTeardownHandlers() {
@@ -350,7 +349,7 @@ func (r *restServer) mountNamespaceTeardownHandlers() {
 		teardowns.POST("", func(c *gin.Context) {
 			namespace := c.Param("namespace_id")
 
-			tid, err := r.backend.TearDownSystem(coretypes.LatticeNamespace(namespace))
+			tid, err := r.backend.TearDownSystem(types.LatticeNamespace(namespace))
 
 			if err != nil {
 				c.String(http.StatusInternalServerError, err.Error())
@@ -366,7 +365,7 @@ func (r *restServer) mountNamespaceTeardownHandlers() {
 		teardowns.GET("", func(c *gin.Context) {
 			namespace := c.Param("namespace_id")
 
-			ts, err := r.backend.ListSystemTeardowns(coretypes.LatticeNamespace(namespace))
+			ts, err := r.backend.ListSystemTeardowns(types.LatticeNamespace(namespace))
 			if err != nil {
 				c.String(http.StatusInternalServerError, err.Error())
 				return
@@ -380,7 +379,7 @@ func (r *restServer) mountNamespaceTeardownHandlers() {
 			namespace := c.Param("namespace_id")
 			tid := c.Param("teardown_id")
 
-			t, exists, err := r.backend.GetSystemTeardown(coretypes.LatticeNamespace(namespace), coretypes.SystemTeardownID(tid))
+			t, exists, err := r.backend.GetSystemTeardown(types.LatticeNamespace(namespace), types.SystemTeardownID(tid))
 			if err != nil {
 				c.String(http.StatusInternalServerError, err.Error())
 				return
@@ -403,7 +402,7 @@ func (r *restServer) mountNamespaceServiceHandlers() {
 		services.GET("", func(c *gin.Context) {
 			namespace := c.Param("namespace_id")
 
-			svcs, err := r.backend.ListSystemServices(coretypes.LatticeNamespace(namespace))
+			svcs, err := r.backend.ListSystemServices(types.LatticeNamespace(namespace))
 			if err != nil {
 				c.String(http.StatusInternalServerError, err.Error())
 				return
@@ -417,13 +416,13 @@ func (r *restServer) mountNamespaceServiceHandlers() {
 			namespace := c.Param("namespace_id")
 			svcDomain := c.Param("svc_domain")
 
-			svcPath, err := systemtree.NodePathFromDomain(svcDomain)
+			svcPath, err := tree.NodePathFromDomain(svcDomain)
 			if err != nil {
 				c.String(http.StatusInternalServerError, err.Error())
 				return
 			}
 
-			svc, err := r.backend.GetSystemService(coretypes.LatticeNamespace(namespace), svcPath)
+			svc, err := r.backend.GetSystemService(types.LatticeNamespace(namespace), svcPath)
 			if err != nil {
 				c.String(http.StatusInternalServerError, err.Error())
 				return
@@ -439,24 +438,24 @@ func (r *restServer) mountNamespaceServiceHandlers() {
 	}
 }
 
-func (r *restServer) getSystemRoot(ln string, version string) (systemtree.Node, error) {
-	url, err := r.backend.GetSystemUrl(coretypes.LatticeNamespace(ln))
+func (r *restServer) getSystemRoot(ln string, version string) (tree.Node, error) {
+	url, err := r.backend.GetSystemUrl(types.LatticeNamespace(ln))
 	if err != nil {
 		return nil, err
 	}
 
 	return r.resolver.ResolveDefinition(
 		fmt.Sprintf("%v#%v", url, version),
-		coreconstants.SystemDefinitionRootPathDefault,
-		&systemresolver.GitResolveOptions{},
+		constants.SystemDefinitionRootPathDefault,
+		&resolver.GitResolveOptions{},
 	)
 }
 
 func (r *restServer) getSystemVersions(ln string) ([]string, error) {
-	url, err := r.backend.GetSystemUrl(coretypes.LatticeNamespace(ln))
+	url, err := r.backend.GetSystemUrl(types.LatticeNamespace(ln))
 	if err != nil {
 		return nil, err
 	}
 
-	return r.resolver.ListDefinitionVersions(url, &systemresolver.GitResolveOptions{})
+	return r.resolver.ListDefinitionVersions(url, &resolver.GitResolveOptions{})
 }

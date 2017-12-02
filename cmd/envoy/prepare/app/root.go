@@ -2,12 +2,12 @@ package app
 
 import (
 	"fmt"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 
 	"github.com/coreos/go-iptables/iptables"
 	"github.com/spf13/cobra"
-	"io/ioutil"
 )
 
 const (

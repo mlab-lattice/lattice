@@ -1,7 +1,7 @@
 package backend
 
 import (
-	latticeresource "github.com/mlab-lattice/system/pkg/kubernetes/customresource"
+	"github.com/mlab-lattice/system/pkg/kubernetes/customresource"
 
 	clientset "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -30,7 +30,7 @@ func NewKubernetesBackend(kubeconfig string) (*KubernetesBackend, error) {
 		return nil, err
 	}
 
-	latticeResourceClient, _, err := latticeresource.NewClient(config)
+	latticeResourceClient, _, err := customresource.NewClient(config)
 	if err != nil {
 		return nil, err
 	}

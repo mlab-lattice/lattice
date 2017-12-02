@@ -3,8 +3,7 @@ package lds
 import (
 	"fmt"
 
-	systemtree "github.com/mlab-lattice/core/pkg/system/tree"
-
+	"github.com/mlab-lattice/system/pkg/definition/tree"
 	"github.com/mlab-lattice/system/pkg/envoy"
 	"github.com/mlab-lattice/system/pkg/envoy/xds-api/constants"
 	"github.com/mlab-lattice/system/pkg/envoy/xds-api/types"
@@ -20,7 +19,7 @@ type Response struct {
 }
 
 func (r *RequestHandler) GetResponse(serviceCluster, serviceNode string) (*Response, error) {
-	path, err := systemtree.NodePathFromDomain(serviceNode)
+	path, err := tree.NodePathFromDomain(serviceNode)
 	if err != nil {
 		return nil, err
 	}

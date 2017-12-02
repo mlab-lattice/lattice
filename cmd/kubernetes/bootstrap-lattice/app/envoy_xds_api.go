@@ -3,8 +3,7 @@ package app
 import (
 	"fmt"
 
-	coreconstants "github.com/mlab-lattice/core/pkg/constants"
-
+	"github.com/mlab-lattice/system/pkg/constants"
 	kubeconstants "github.com/mlab-lattice/system/pkg/kubernetes/constants"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -25,7 +24,7 @@ func seedEnvoyXdsApi(kubeClientset *kubernetes.Clientset) {
 	ds := &appsv1beta2.DaemonSet{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "envoy-xds-api",
-			Namespace: string(coreconstants.UserSystemNamespace),
+			Namespace: string(constants.UserSystemNamespace),
 			Labels:    labels,
 		},
 		Spec: appsv1beta2.DaemonSetSpec{

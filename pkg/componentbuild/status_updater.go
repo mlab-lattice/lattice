@@ -1,10 +1,10 @@
 package componentbuild
 
 import (
-	coretypes "github.com/mlab-lattice/core/pkg/types"
+	"github.com/mlab-lattice/system/pkg/types"
 )
 
 type StatusUpdater interface {
-	UpdateProgress(coretypes.ComponentBuildID, coretypes.ComponentBuildPhase) error
-	UpdateError(buildID coretypes.ComponentBuildID, internal bool, err error) error
+	UpdateProgress(types.ComponentBuildID, types.ComponentBuildPhase) error
+	UpdateError(buildID types.ComponentBuildID, internal bool, err error) error
 }

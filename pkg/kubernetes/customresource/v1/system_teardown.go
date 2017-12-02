@@ -1,7 +1,8 @@
 package v1
 
 import (
-	"github.com/mlab-lattice/core/pkg/types"
+	"github.com/mlab-lattice/system/pkg/types"
+
 	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -13,9 +14,6 @@ const (
 	SystemTeardownResourceShortName = "lsyst"
 	// TODO: should this be ClusterScoped?
 	SystemTeardownResourceScope = apiextensionsv1beta1.NamespaceScoped
-
-	SystemTeardownVersionLabelKey = "teardown.system.lattice.mlab.com/version"
-	SystemTeardownBuildIdLabelKey = "teardown.system.lattice.mlab.com/build"
 )
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

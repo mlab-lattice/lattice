@@ -7,7 +7,7 @@ import (
 	"log"
 	"os"
 
-	coretypes "github.com/mlab-lattice/core/pkg/types"
+	"github.com/mlab-lattice/system/pkg/types"
 
 	"github.com/spf13/cobra"
 )
@@ -48,7 +48,7 @@ var componentBuildGetCmd = &cobra.Command{
 	Short: "get component build",
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		id := coretypes.ComponentBuildID(args[0])
+		id := types.ComponentBuildID(args[0])
 		build, err := namespaceClient.ComponentBuild(id).Get()
 		if err != nil {
 			log.Fatal(err)
@@ -67,7 +67,7 @@ var componentBuildLogsCmd = &cobra.Command{
 	Short: "get component build logs",
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		id := coretypes.ComponentBuildID(args[0])
+		id := types.ComponentBuildID(args[0])
 		logs, err := namespaceClient.ComponentBuild(id).Logs(componentBuildLogsFollow)
 		if err != nil {
 			log.Fatal(err)

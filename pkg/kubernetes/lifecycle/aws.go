@@ -5,9 +5,8 @@ import (
 	"fmt"
 	"path/filepath"
 
-	"github.com/mlab-lattice/system/pkg/terraform"
-
 	awsterraform "github.com/mlab-lattice/system/pkg/kubernetes/terraform/aws"
+	"github.com/mlab-lattice/system/pkg/terraform"
 )
 
 type AWSProvisioner struct {

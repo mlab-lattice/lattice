@@ -7,9 +7,9 @@ import (
 	"sort"
 	"strconv"
 
-	systemdefinition "github.com/mlab-lattice/core/pkg/system/definition"
-	systemdefinitionblock "github.com/mlab-lattice/core/pkg/system/definition/block"
-	systemtree "github.com/mlab-lattice/core/pkg/system/tree"
+	"github.com/mlab-lattice/system/pkg/definition"
+	"github.com/mlab-lattice/system/pkg/definition/block"
+	"github.com/mlab-lattice/system/pkg/definition/tree"
 
 	crv1 "github.com/mlab-lattice/system/pkg/kubernetes/customresource/v1"
 	kubeutil "github.com/mlab-lattice/system/pkg/kubernetes/util/kubernetes"
@@ -286,7 +286,7 @@ func (sc *ServiceController) getDeploymentSpec(svc *crv1.Service) (*appsv1beta2.
 	sysSvcSlice := getSystemServicesSlice(sys)
 	svcDomains := []string{}
 	for _, svcPath := range sysSvcSlice {
-		path, err := systemtree.NewNodePath(svcPath)
+		path, err := tree.NewNodePath(svcPath)
 		if err != nil {
 			return nil, err
 		}
@@ -303,7 +303,7 @@ func (sc *ServiceController) getDeploymentSpec(svc *crv1.Service) (*appsv1beta2.
 	return &ds, nil
 }
 
-func getLivenessProbe(hc *systemdefinitionblock.ComponentHealthCheck) *corev1.Probe {
+func getLivenessProbe(hc *block.ComponentHealthCheck) *corev1.Probe {
 	if hc == nil {
 		return nil
 	}
@@ -403,7 +403,7 @@ func (sc *ServiceController) syncDeploymentSpec(svc *crv1.Service, d *appsv1beta
 		return nil, fmt.Errorf("deployment did not have %v annotation", crv1.AnnotationKeyDeploymentServiceDefinition)
 	}
 
-	dSvcDef := systemdefinition.Service{}
+	dSvcDef := definition.Service{}
 	err := json.Unmarshal([]byte(dSvcDefStr), &dSvcDef)
 	if err != nil {
 		return nil, err

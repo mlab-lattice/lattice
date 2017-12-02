@@ -5,5 +5,5 @@ go_library(
     srcs = ["exec_context.go"],
     importpath = "github.com/mlab-lattice/system/pkg/terraform",
     visibility = ["//visibility:public"],
-    deps = ["@com_github_mlab_lattice_core//pkg/util/exec:go_default_library"],
+    deps = ["//pkg/util/exec:go_default_library"],
 )

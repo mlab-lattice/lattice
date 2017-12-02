@@ -4,9 +4,8 @@ import (
 	"fmt"
 	"io"
 
-	coretypes "github.com/mlab-lattice/core/pkg/types"
-
 	"github.com/mlab-lattice/system/pkg/manager/api/client/rest/requester"
+	"github.com/mlab-lattice/system/pkg/types"
 )
 
 const (
@@ -15,10 +14,10 @@ const (
 
 type ComponentBuildClient struct {
 	*NamespaceClient
-	id coretypes.ComponentBuildID
+	id types.ComponentBuildID
 }
 
-func newComponentBuildClient(nc *NamespaceClient, id coretypes.ComponentBuildID) *ComponentBuildClient {
+func newComponentBuildClient(nc *NamespaceClient, id types.ComponentBuildID) *ComponentBuildClient {
 	return &ComponentBuildClient{
 		NamespaceClient: nc,
 		id:              id,
@@ -29,8 +28,8 @@ func (cbc *ComponentBuildClient) URL(endpoint string) string {
 	return cbc.NamespaceClient.URL(fmt.Sprintf("%v/%v%v", componentBuildSubpath, cbc.id, endpoint))
 }
 
-func (cbc *ComponentBuildClient) Get() (*coretypes.ComponentBuild, error) {
-	build := &coretypes.ComponentBuild{}
+func (cbc *ComponentBuildClient) Get() (*types.ComponentBuild, error) {
+	build := &types.ComponentBuild{}
 	err := requester.GetRequestBodyJSON(cbc, "", build)
 	return build, err
 }

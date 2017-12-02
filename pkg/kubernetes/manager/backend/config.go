@@ -1,13 +1,12 @@
 package backend
 
 import (
-	coretypes "github.com/mlab-lattice/core/pkg/types"
-
 	"github.com/mlab-lattice/system/pkg/kubernetes/constants"
 	crv1 "github.com/mlab-lattice/system/pkg/kubernetes/customresource/v1"
+	"github.com/mlab-lattice/system/pkg/types"
 )
 
-func (kb *KubernetesBackend) GetSystemUrl(ln coretypes.LatticeNamespace) (string, error) {
+func (kb *KubernetesBackend) GetSystemUrl(ln types.LatticeNamespace) (string, error) {
 	result := &crv1.Config{}
 	err := kb.LatticeResourceClient.Get().
 		Namespace(constants.NamespaceLatticeInternal).

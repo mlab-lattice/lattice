@@ -3,11 +3,10 @@ package backend
 import (
 	"fmt"
 
-	systemtree "github.com/mlab-lattice/core/pkg/system/tree"
-	coretypes "github.com/mlab-lattice/core/pkg/types"
-
+	"github.com/mlab-lattice/system/pkg/definition/tree"
 	crv1 "github.com/mlab-lattice/system/pkg/kubernetes/customresource/v1"
 	kubeutil "github.com/mlab-lattice/system/pkg/kubernetes/util/kubernetes"
+	"github.com/mlab-lattice/system/pkg/types"
 
 	corev1 "k8s.io/api/core/v1"
 
@@ -15,7 +14,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func (kb *KubernetesBackend) ListSystemServices(ln coretypes.LatticeNamespace) ([]coretypes.Service, error) {
+func (kb *KubernetesBackend) ListSystemServices(ln types.LatticeNamespace) ([]types.Service, error) {
 	result := &crv1.ServiceList{}
 	err := kb.LatticeResourceClient.Get().
 		Namespace(string(ln)).
@@ -27,7 +26,7 @@ func (kb *KubernetesBackend) ListSystemServices(ln coretypes.LatticeNamespace) (
 		return nil, err
 	}
 
-	svcs := []coretypes.Service{}
+	svcs := []types.Service{}
 	for _, r := range result.Items {
 		coreSvc, err := kb.transformService(&r)
 		if err != nil {
@@ -40,7 +39,7 @@ func (kb *KubernetesBackend) ListSystemServices(ln coretypes.LatticeNamespace) (
 	return svcs, nil
 }
 
-func (kb *KubernetesBackend) GetSystemService(ln coretypes.LatticeNamespace, path systemtree.NodePath) (*coretypes.Service, error) {
+func (kb *KubernetesBackend) GetSystemService(ln types.LatticeNamespace, path tree.NodePath) (*types.Service, error) {
 	// FIXME: find a way to query this
 	svcs, err := kb.ListSystemServices(ln)
 	if err != nil {
@@ -56,7 +55,7 @@ func (kb *KubernetesBackend) GetSystemService(ln coretypes.LatticeNamespace, pat
 	return nil, nil
 }
 
-func (kb *KubernetesBackend) transformService(svc *crv1.Service) (*coretypes.Service, error) {
+func (kb *KubernetesBackend) transformService(svc *crv1.Service) (*types.Service, error) {
 	// FIXME: this only works for local systems with a single port
 	kubeSvcName := kubeutil.GetKubeServiceNameForService(svc)
 	kubeSvc, err := kb.KubeClientset.CoreV1().Services(svc.Namespace).Get(kubeSvcName, metav1.GetOptions{})
@@ -80,7 +79,7 @@ func (kb *KubernetesBackend) transformService(svc *crv1.Service) (*coretypes.Ser
 		}
 	}
 
-	coreSvc := &coretypes.Service{
+	coreSvc := &types.Service{
 		ID:      svc.Name,
 		Path:    svc.Spec.Path,
 		Address: addr,

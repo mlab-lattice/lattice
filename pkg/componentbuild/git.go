@@ -3,8 +3,8 @@ package componentbuild
 import (
 	"fmt"
 
-	coreconstants "github.com/mlab-lattice/core/pkg/constants"
-	gitutil "github.com/mlab-lattice/core/pkg/util/git"
+	"github.com/mlab-lattice/system/pkg/constants"
+	"github.com/mlab-lattice/system/pkg/util/git"
 
 	"github.com/fatih/color"
 )
@@ -15,7 +15,7 @@ func (b *Builder) buildGitRepositoryComponent() error {
 	if b.StatusUpdater != nil {
 		// For now ignore status update errors, don't need to fail a build because the status could
 		// not be updated.
-		b.StatusUpdater.UpdateProgress(b.BuildID, coreconstants.ComponentBuildPhasePullingGitRepository)
+		b.StatusUpdater.UpdateProgress(b.BuildID, constants.ComponentBuildPhasePullingGitRepository)
 	}
 
 	gitRepo := b.ComponentBuildBlock.GitRepository
@@ -23,13 +23,13 @@ func (b *Builder) buildGitRepositoryComponent() error {
 		return newErrorUser("invalid git repository config: " + err.Error())
 	}
 
-	gitResolver, err := gitutil.NewResolver(b.WorkingDir + "/git")
+	gitResolver, err := git.NewResolver(b.WorkingDir + "/git")
 	if err != nil {
 		return newErrorInternal("failed to create git resolver: " + err.Error())
 	}
 	b.GitResolver = gitResolver
 
-	uri, err := gitutil.GetGitURIFromComponentBuild(gitRepo)
+	uri, err := git.GetGitURIFromComponentBuild(gitRepo)
 	if err != nil {
 		return newErrorInternal("failed to get git URI from component build: " + err.Error())
 	}
@@ -49,8 +49,8 @@ func (b *Builder) checkOutGitRepository(uri string) error {
 	return b.GitResolver.Checkout(b.getGitResolverContext(uri))
 }
 
-func (b *Builder) getGitResolverContext(uri string) *gitutil.Context {
-	return &gitutil.Context{
+func (b *Builder) getGitResolverContext(uri string) *git.Context {
+	return &git.Context{
 		SSHKey: b.GitResolverOptions.SSHKey,
 		URI:    uri,
 	}

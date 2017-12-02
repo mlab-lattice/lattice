@@ -4,9 +4,8 @@ import (
 	"fmt"
 	"reflect"
 
-	systemdefinition "github.com/mlab-lattice/core/pkg/system/definition"
-	systemtree "github.com/mlab-lattice/core/pkg/system/tree"
-
+	"github.com/mlab-lattice/system/pkg/definition"
+	"github.com/mlab-lattice/system/pkg/definition/tree"
 	"github.com/mlab-lattice/system/pkg/kubernetes/constants"
 	crv1 "github.com/mlab-lattice/system/pkg/kubernetes/customresource/v1"
 
@@ -34,7 +33,7 @@ func (slc *SystemLifecycleController) getNewSystem(sysRollout *crv1.SystemRollou
 
 func (slc *SystemLifecycleController) getNewSystemSpec(sysRollout *crv1.SystemRollout, sysBuild *crv1.SystemBuild) (*crv1.SystemSpec, error) {
 	// Create crv1.SystemServicesInfo for each service in the sysBuild.Spec.DefinitionRoot
-	services := map[systemtree.NodePath]crv1.SystemServicesInfo{}
+	services := map[tree.NodePath]crv1.SystemServicesInfo{}
 	for path, service := range sysBuild.Spec.DefinitionRoot.Services() {
 		svcBuildInfo, ok := sysBuild.Spec.Services[path]
 		if !ok {
@@ -78,7 +77,7 @@ func (slc *SystemLifecycleController) getNewSystemSpec(sysRollout *crv1.SystemRo
 		}
 
 		services[path] = crv1.SystemServicesInfo{
-			Definition:              *(service.Definition().(*systemdefinition.Service)),
+			Definition:              *(service.Definition().(*definition.Service)),
 			ComponentBuildArtifacts: cBuildArtifacts,
 		}
 	}

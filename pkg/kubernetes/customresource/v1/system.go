@@ -1,8 +1,8 @@
 package v1
 
 import (
-	systemdefinition "github.com/mlab-lattice/core/pkg/system/definition"
-	systemtree "github.com/mlab-lattice/core/pkg/system/tree"
+	"github.com/mlab-lattice/system/pkg/definition"
+	"github.com/mlab-lattice/system/pkg/definition/tree"
 
 	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -28,11 +28,11 @@ type System struct {
 }
 
 type SystemSpec struct {
-	Services map[systemtree.NodePath]SystemServicesInfo `json:"services"`
+	Services map[tree.NodePath]SystemServicesInfo `json:"services"`
 }
 
 type SystemServicesInfo struct {
-	Definition systemdefinition.Service `json:"definition"`
+	Definition definition.Service `json:"definition"`
 
 	// ComponentBuildArtifacts maps Component names to the artifacts created by their build
 	ComponentBuildArtifacts map[string]ComponentBuildArtifacts `json:"componentBuildArtifacts"`

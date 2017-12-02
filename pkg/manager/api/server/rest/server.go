@@ -6,8 +6,7 @@ import (
 	"io/ioutil"
 	"net/http"
 
-	systemresolver "github.com/mlab-lattice/core/pkg/system/resolver"
-
+	"github.com/mlab-lattice/system/pkg/definition/resolver"
 	"github.com/mlab-lattice/system/pkg/manager/backend"
 
 	"github.com/gin-gonic/gin"
@@ -21,11 +20,11 @@ const (
 type restServer struct {
 	router   *gin.Engine
 	backend  backend.Interface
-	resolver *systemresolver.SystemResolver
+	resolver *resolver.SystemResolver
 }
 
 func RunNewRestServer(b backend.Interface, port int32, workingDirectory string) {
-	resolver, err := systemresolver.NewSystemResolver(workingDirectory + "/resolver")
+	res, err := resolver.NewSystemResolver(workingDirectory + "/resolver")
 	if err != nil {
 		panic(err)
 	}
@@ -33,7 +32,7 @@ func RunNewRestServer(b backend.Interface, port int32, workingDirectory string) 
 	s := restServer{
 		router:   gin.Default(),
 		backend:  b,
-		resolver: resolver,
+		resolver: res,
 	}
 
 	s.mountHandlers()

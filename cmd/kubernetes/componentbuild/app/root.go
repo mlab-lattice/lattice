@@ -6,13 +6,12 @@ import (
 	"log"
 	"os"
 
-	systemdefinitionblock "github.com/mlab-lattice/core/pkg/system/definition/block"
-	coretypes "github.com/mlab-lattice/core/pkg/types"
-
 	"github.com/mlab-lattice/system/pkg/componentbuild"
+	"github.com/mlab-lattice/system/pkg/definition/block"
 	kubecomponentbuild "github.com/mlab-lattice/system/pkg/kubernetes/componentbuild"
-	awsutil "github.com/mlab-lattice/system/pkg/util/aws"
-	dockerutil "github.com/mlab-lattice/system/pkg/util/docker"
+	"github.com/mlab-lattice/system/pkg/types"
+	"github.com/mlab-lattice/system/pkg/util/aws"
+	"github.com/mlab-lattice/system/pkg/util/docker"
 
 	"github.com/spf13/cobra"
 )
@@ -36,7 +35,7 @@ var RootCmd = &cobra.Command{
 	Use:   "bootstrap-lattice",
 	Short: "Bootstraps a kubernetes cluster to run lattice",
 	Run: func(cmd *cobra.Command, args []string) {
-		cb := &systemdefinitionblock.ComponentBuild{}
+		cb := &block.ComponentBuild{}
 		err := json.Unmarshal([]byte(componentBuildDefinition), cb)
 		if err != nil {
 			log.Fatal("error unmarshaling component build: " + err.Error())
@@ -49,8 +48,8 @@ var RootCmd = &cobra.Command{
 			Push:       dockerPush,
 		}
 
-		if dockerRegistryAuthType == dockerutil.DockerRegistryAuthAWSEC2Role {
-			dockerOptions.RegistryAuthProvider = &awsutil.ECRRegistryAuthProvider{}
+		if dockerRegistryAuthType == docker.DockerRegistryAuthAWSEC2Role {
+			dockerOptions.RegistryAuthProvider = &aws.ECRRegistryAuthProvider{}
 		}
 
 		statusUpdater, err := kubecomponentbuild.NewKubernetesStatusUpdater(kubeconfig)
@@ -58,7 +57,7 @@ var RootCmd = &cobra.Command{
 			log.Fatal("error getting status updater: " + err.Error())
 		}
 
-		builder, err := componentbuild.NewBuilder(coretypes.ComponentBuildID(componentBuildID), workDirectory, dockerOptions, nil, cb, statusUpdater)
+		builder, err := componentbuild.NewBuilder(types.ComponentBuildID(componentBuildID), workDirectory, dockerOptions, nil, cb, statusUpdater)
 		if err != nil {
 			log.Fatal("error getting builder: " + err.Error())
 		}

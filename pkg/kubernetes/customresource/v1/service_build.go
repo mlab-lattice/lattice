@@ -1,8 +1,8 @@
 package v1
 
 import (
-	systemdefinitionblock "github.com/mlab-lattice/core/pkg/system/definition/block"
-	coretypes "github.com/mlab-lattice/core/pkg/types"
+	"github.com/mlab-lattice/system/pkg/definition/block"
+	"github.com/mlab-lattice/system/pkg/types"
 
 	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -30,12 +30,12 @@ type ServiceBuildSpec struct {
 }
 
 type ServiceBuildComponentBuildInfo struct {
-	DefinitionBlock   systemdefinitionblock.ComponentBuild `json:"definitionBlock"`
-	DefinitionHash    *string                              `json:"definitionHash,omitempty"`
-	BuildName         *string                              `json:"buildName,omitempty"`
-	BuildState        *ComponentBuildState                 `json:"buildState"`
-	LastObservedPhase *coretypes.ComponentBuildPhase       `json:"lastObservedPhase,omitempty"`
-	FailureInfo       *ComponentBuildFailureInfo           `json:"failureInfo,omitempty"`
+	DefinitionBlock   block.ComponentBuild       `json:"definitionBlock"`
+	DefinitionHash    *string                    `json:"definitionHash,omitempty"`
+	BuildName         *string                    `json:"buildName,omitempty"`
+	BuildState        *ComponentBuildState       `json:"buildState"`
+	LastObservedPhase *types.ComponentBuildPhase `json:"lastObservedPhase,omitempty"`
+	FailureInfo       *ComponentBuildFailureInfo `json:"failureInfo,omitempty"`
 }
 
 type ServiceBuildStatus struct {

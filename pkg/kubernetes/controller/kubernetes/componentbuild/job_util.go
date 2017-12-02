@@ -5,11 +5,10 @@ import (
 	"fmt"
 	"time"
 
-	coreconstants "github.com/mlab-lattice/core/pkg/constants"
-
-	"github.com/mlab-lattice/system/pkg/kubernetes/constants"
+	"github.com/mlab-lattice/system/pkg/constants"
+	kubeconstants "github.com/mlab-lattice/system/pkg/kubernetes/constants"
 	crv1 "github.com/mlab-lattice/system/pkg/kubernetes/customresource/v1"
-	dockerutil "github.com/mlab-lattice/system/pkg/util/docker"
+	"github.com/mlab-lattice/system/pkg/util/docker"
 
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -36,7 +35,7 @@ const (
 // getJobForBuild uses ControllerRefManager to retrieve the Job for a ComponentBuild
 func (cbc *ComponentBuildController) getJobForBuild(cb *crv1.ComponentBuild) (*batchv1.Job, error) {
 	selector := labels.NewSelector()
-	requirement, err := labels.NewRequirement(constants.LabelKeyComponentBuildID, selection.Equals, []string{cb.Name})
+	requirement, err := labels.NewRequirement(kubeconstants.LabelKeyComponentBuildID, selection.Equals, []string{cb.Name})
 	if err != nil {
 		return nil, err
 	}
@@ -77,7 +76,7 @@ func (cbc *ComponentBuildController) getBuildJob(cb *crv1.ComponentBuild) (*batc
 				jobDockerFqnAnnotationKey: dockerImageFqn,
 			},
 			Labels: map[string]string{
-				constants.LabelKeyComponentBuildID: cb.Name,
+				kubeconstants.LabelKeyComponentBuildID: cb.Name,
 			},
 			Name:            name,
 			OwnerReferences: []metav1.OwnerReference{*metav1.NewControllerRef(cb, controllerKind)},
@@ -106,9 +105,9 @@ func (cbc *ComponentBuildController) getGitRepositoryBuildJobSpec(cb *crv1.Compo
 
 	var volumeHostPathPrefix string
 	switch provider {
-	case coreconstants.ProviderLocal:
+	case constants.ProviderLocal:
 		volumeHostPathPrefix = workingDirectoryVolumeHostPathPrefixLocal
-	case coreconstants.ProviderAWS:
+	case constants.ProviderAWS:
 		volumeHostPathPrefix = workingDirectoryVolumeHostPathPrefixCloud
 	default:
 		panic(fmt.Sprintf("unsupported provider: %s", provider))
@@ -128,13 +127,13 @@ func (cbc *ComponentBuildController) getGitRepositoryBuildJobSpec(cb *crv1.Compo
 			ObjectMeta: metav1.ObjectMeta{
 				Name: name,
 				Labels: map[string]string{
-					constants.LabelKeyComponentBuildID: cb.Name,
+					kubeconstants.LabelKeyComponentBuildID: cb.Name,
 				},
 			},
 			Spec: corev1.PodSpec{
 				Tolerations: []corev1.Toleration{
 					// Can tolerate build node taint even in local case
-					constants.TolerationBuildNode,
+					kubeconstants.TolerationBuildNode,
 				},
 				Volumes: []corev1.Volume{
 					{
@@ -151,7 +150,7 @@ func (cbc *ComponentBuildController) getGitRepositoryBuildJobSpec(cb *crv1.Compo
 					},
 				},
 				Containers:         []corev1.Container{*buildContainer},
-				ServiceAccountName: constants.ServiceAccountComponentBuilder,
+				ServiceAccountName: kubeconstants.ServiceAccountComponentBuilder,
 				RestartPolicy:      corev1.RestartPolicyNever,
 				DNSPolicy:          corev1.DNSDefault,
 			},
@@ -193,10 +192,10 @@ func (cbc *ComponentBuildController) getBuildContainer(cb *crv1.ComponentBuild) 
 	}
 
 	switch provider {
-	case coreconstants.ProviderLocal:
+	case constants.ProviderLocal:
 		// nothing to do here
-	case coreconstants.ProviderAWS:
-		args = append(args, "--docker-registry-auth-type", dockerutil.DockerRegistryAuthAWSEC2Role)
+	case constants.ProviderAWS:
+		args = append(args, "--docker-registry-auth-type", docker.DockerRegistryAuthAWSEC2Role)
 	default:
 		panic(fmt.Sprintf("unsupported provider: %s", provider))
 	}
@@ -207,7 +206,7 @@ func (cbc *ComponentBuildController) getBuildContainer(cb *crv1.ComponentBuild) 
 		Args:  args,
 		Env: []corev1.EnvVar{
 			{
-				Name:  constants.EnvVarNameDockerAPIVersion,
+				Name:  kubeconstants.EnvVarNameDockerAPIVersion,
 				Value: cbc.config.ComponentBuild.DockerConfig.APIVersion,
 			},
 		},

@@ -3,8 +3,8 @@ package app
 import (
 	"fmt"
 
-	coreconstants "github.com/mlab-lattice/core/pkg/constants"
-	"github.com/mlab-lattice/system/pkg/kubernetes/constants"
+	"github.com/mlab-lattice/system/pkg/constants"
+	kubeconstants "github.com/mlab-lattice/system/pkg/kubernetes/constants"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -19,13 +19,13 @@ func seedNamespaces(kubeClientset *kubernetes.Clientset) {
 		// lattice internal namespace
 		{
 			ObjectMeta: metav1.ObjectMeta{
-				Name: constants.NamespaceLatticeInternal,
+				Name: kubeconstants.NamespaceLatticeInternal,
 			},
 		},
 		// lattice user namespace
 		{
 			ObjectMeta: metav1.ObjectMeta{
-				Name: string(coreconstants.UserSystemNamespace),
+				Name: string(constants.UserSystemNamespace),
 			},
 		},
 	}

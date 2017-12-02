@@ -3,8 +3,7 @@ package systembuild
 import (
 	"fmt"
 
-	systemdefinition "github.com/mlab-lattice/core/pkg/system/definition"
-
+	"github.com/mlab-lattice/system/pkg/definition"
 	crv1 "github.com/mlab-lattice/system/pkg/kubernetes/customresource/v1"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -36,7 +35,7 @@ func (sbc *SystemBuildController) getServiceBuildFromInfo(svcbInfo *crv1.SystemB
 	return svcbObj.(*crv1.ServiceBuild), true, nil
 }
 
-func (sbc *SystemBuildController) createServiceBuild(sysb *crv1.SystemBuild, svcDef *systemdefinition.Service) (*crv1.ServiceBuild, error) {
+func (sbc *SystemBuildController) createServiceBuild(sysb *crv1.SystemBuild, svcDef *definition.Service) (*crv1.ServiceBuild, error) {
 	svcBuild := getNewServiceBuildFromDefinition(sysb, svcDef)
 
 	result := &crv1.ServiceBuild{}
@@ -49,7 +48,7 @@ func (sbc *SystemBuildController) createServiceBuild(sysb *crv1.SystemBuild, svc
 	return result, err
 }
 
-func getNewServiceBuildFromDefinition(sysBuild *crv1.SystemBuild, svcDefinition *systemdefinition.Service) *crv1.ServiceBuild {
+func getNewServiceBuildFromDefinition(sysBuild *crv1.SystemBuild, svcDefinition *definition.Service) *crv1.ServiceBuild {
 	labels := map[string]string{}
 
 	sysBuildVersionLabel, ok := sysBuild.Labels[crv1.SystemBuildVersionLabelKey]

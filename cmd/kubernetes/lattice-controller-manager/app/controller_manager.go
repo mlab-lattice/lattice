@@ -3,13 +3,12 @@ package app
 import (
 	"time"
 
-	coreconstants "github.com/mlab-lattice/core/pkg/constants"
-
 	awscontrollers "github.com/mlab-lattice/system/cmd/kubernetes/lattice-controller-manager/app/cloudcontrollers/aws"
 	controller "github.com/mlab-lattice/system/cmd/kubernetes/lattice-controller-manager/app/common"
 	"github.com/mlab-lattice/system/cmd/kubernetes/lattice-controller-manager/app/kubernetescontrollers"
 	"github.com/mlab-lattice/system/cmd/kubernetes/lattice-controller-manager/app/latticecontrollers"
-	latticeresource "github.com/mlab-lattice/system/pkg/kubernetes/customresource"
+	"github.com/mlab-lattice/system/pkg/constants"
+	"github.com/mlab-lattice/system/pkg/kubernetes/customresource"
 	crv1 "github.com/mlab-lattice/system/pkg/kubernetes/customresource/v1"
 
 	apiv1 "k8s.io/api/core/v1"
@@ -37,7 +36,7 @@ func Run(kubeconfig, provider, terraformModulePath string) {
 		panic(err)
 	}
 
-	latticeResourceClient, _, err := latticeresource.NewClient(config)
+	latticeResourceClient, _, err := customresource.NewClient(config)
 	if err != nil {
 		panic(err)
 	}
@@ -173,11 +172,11 @@ func GetControllerInitializers(provider string) map[string]controller.Initialize
 	}
 
 	switch provider {
-	case coreconstants.ProviderAWS:
+	case constants.ProviderAWS:
 		for name, initializer := range awscontrollers.GetControllerInitializers() {
 			initializers["cloud-aws-"+name] = initializer
 		}
-	case coreconstants.ProviderLocal:
+	case constants.ProviderLocal:
 		// Local case doesn't need any extra controllers
 	default:
 		panic("unsupported provider " + provider)

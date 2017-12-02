@@ -3,13 +3,12 @@ package backend
 import (
 	"strings"
 
-	coreconstants "github.com/mlab-lattice/core/pkg/constants"
-	systemdefinition "github.com/mlab-lattice/core/pkg/system/definition"
-	systemtree "github.com/mlab-lattice/core/pkg/system/tree"
-	coretypes "github.com/mlab-lattice/core/pkg/types"
-
-	"github.com/mlab-lattice/system/pkg/kubernetes/constants"
+	"github.com/mlab-lattice/system/pkg/constants"
+	"github.com/mlab-lattice/system/pkg/definition"
+	"github.com/mlab-lattice/system/pkg/definition/tree"
+	kubeconstants "github.com/mlab-lattice/system/pkg/kubernetes/constants"
 	crv1 "github.com/mlab-lattice/system/pkg/kubernetes/customresource/v1"
+	"github.com/mlab-lattice/system/pkg/types"
 
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -17,7 +16,7 @@ import (
 	"github.com/satori/go.uuid"
 )
 
-func (kb *KubernetesBackend) BuildSystem(ln coretypes.LatticeNamespace, definitionRoot systemtree.Node, v coretypes.SystemVersion) (coretypes.SystemBuildID, error) {
+func (kb *KubernetesBackend) BuildSystem(ln types.LatticeNamespace, definitionRoot tree.Node, v types.SystemVersion) (types.SystemBuildID, error) {
 	systemBuild, err := getNewSystemBuild(ln, definitionRoot, v)
 	if err != nil {
 		return "", err
@@ -25,25 +24,25 @@ func (kb *KubernetesBackend) BuildSystem(ln coretypes.LatticeNamespace, definiti
 
 	result := &crv1.SystemBuild{}
 	err = kb.LatticeResourceClient.Post().
-		Namespace(constants.NamespaceLatticeInternal).
+		Namespace(kubeconstants.NamespaceLatticeInternal).
 		Resource(crv1.SystemBuildResourcePlural).
 		Body(systemBuild).
 		Do().
 		Into(result)
 
-	return coretypes.SystemBuildID(result.Name), err
+	return types.SystemBuildID(result.Name), err
 }
 
-func getNewSystemBuild(ln coretypes.LatticeNamespace, definitionRoot systemtree.Node, v coretypes.SystemVersion) (*crv1.SystemBuild, error) {
+func getNewSystemBuild(ln types.LatticeNamespace, definitionRoot tree.Node, v types.SystemVersion) (*crv1.SystemBuild, error) {
 	labels := map[string]string{
-		constants.LatticeNamespaceLabel: string(ln),
-		crv1.SystemVersionLabelKey:      string(v),
+		kubeconstants.LatticeNamespaceLabel: string(ln),
+		crv1.SystemVersionLabelKey:          string(v),
 	}
 
-	services := map[systemtree.NodePath]crv1.SystemBuildServicesInfo{}
+	services := map[tree.NodePath]crv1.SystemBuildServicesInfo{}
 	for path, svcNode := range definitionRoot.Services() {
 		services[path] = crv1.SystemBuildServicesInfo{
-			Definition: *(svcNode.Definition().(*systemdefinition.Service)),
+			Definition: *(svcNode.Definition().(*definition.Service)),
 		}
 	}
 
@@ -65,10 +64,10 @@ func getNewSystemBuild(ln coretypes.LatticeNamespace, definitionRoot systemtree.
 	return sysB, nil
 }
 
-func (kb *KubernetesBackend) ListSystemBuilds(ln coretypes.LatticeNamespace) ([]coretypes.SystemBuild, error) {
+func (kb *KubernetesBackend) ListSystemBuilds(ln types.LatticeNamespace) ([]types.SystemBuild, error) {
 	result := &crv1.SystemBuildList{}
 	err := kb.LatticeResourceClient.Get().
-		Namespace(constants.NamespaceLatticeInternal).
+		Namespace(kubeconstants.NamespaceLatticeInternal).
 		Resource(crv1.SystemBuildResourcePlural).
 		Do().
 		Into(result)
@@ -77,10 +76,10 @@ func (kb *KubernetesBackend) ListSystemBuilds(ln coretypes.LatticeNamespace) ([]
 		return nil, err
 	}
 
-	builds := []coretypes.SystemBuild{}
+	builds := []types.SystemBuild{}
 	for _, build := range result.Items {
 		// TODO: add this to the query
-		if strings.Compare(build.Labels[constants.LatticeNamespaceLabel], string(ln)) != 0 {
+		if strings.Compare(build.Labels[kubeconstants.LatticeNamespaceLabel], string(ln)) != 0 {
 			continue
 		}
 
@@ -90,7 +89,7 @@ func (kb *KubernetesBackend) ListSystemBuilds(ln coretypes.LatticeNamespace) ([]
 	return builds, nil
 }
 
-func (kb *KubernetesBackend) GetSystemBuild(ln coretypes.LatticeNamespace, bid coretypes.SystemBuildID) (*coretypes.SystemBuild, bool, error) {
+func (kb *KubernetesBackend) GetSystemBuild(ln types.LatticeNamespace, bid types.SystemBuildID) (*types.SystemBuild, bool, error) {
 	build, exists, err := kb.getInternalSystemBuild(ln, bid)
 	if err != nil || !exists {
 		return nil, exists, err
@@ -100,10 +99,10 @@ func (kb *KubernetesBackend) GetSystemBuild(ln coretypes.LatticeNamespace, bid c
 	return &coreBuild, true, nil
 }
 
-func (kb *KubernetesBackend) getInternalSystemBuild(ln coretypes.LatticeNamespace, bid coretypes.SystemBuildID) (*crv1.SystemBuild, bool, error) {
+func (kb *KubernetesBackend) getInternalSystemBuild(ln types.LatticeNamespace, bid types.SystemBuildID) (*crv1.SystemBuild, bool, error) {
 	result := &crv1.SystemBuild{}
 	err := kb.LatticeResourceClient.Get().
-		Namespace(constants.NamespaceLatticeInternal).
+		Namespace(kubeconstants.NamespaceLatticeInternal).
 		Resource(crv1.SystemBuildResourcePlural).
 		Name(string(bid)).
 		Do().
@@ -117,19 +116,19 @@ func (kb *KubernetesBackend) getInternalSystemBuild(ln coretypes.LatticeNamespac
 	}
 
 	// TODO: add this to the query
-	if strings.Compare(result.Labels[constants.LatticeNamespaceLabel], string(ln)) != 0 {
+	if strings.Compare(result.Labels[kubeconstants.LatticeNamespaceLabel], string(ln)) != 0 {
 		return nil, false, nil
 	}
 
 	return result, true, nil
 }
 
-func transformSystemBuild(build *crv1.SystemBuild) coretypes.SystemBuild {
-	sysb := coretypes.SystemBuild{
-		ID:            coretypes.SystemBuildID(build.Name),
+func transformSystemBuild(build *crv1.SystemBuild) types.SystemBuild {
+	sysb := types.SystemBuild{
+		ID:            types.SystemBuildID(build.Name),
 		State:         getSystemBuildState(build.Status.State),
-		Version:       coretypes.SystemVersion(build.Labels[crv1.SystemVersionLabelKey]),
-		ServiceBuilds: map[systemtree.NodePath]*coretypes.ServiceBuild{},
+		Version:       types.SystemVersion(build.Labels[crv1.SystemVersionLabelKey]),
+		ServiceBuilds: map[tree.NodePath]*types.ServiceBuild{},
 	}
 
 	for service, svcbInfo := range build.Spec.Services {
@@ -137,17 +136,17 @@ func transformSystemBuild(build *crv1.SystemBuild) coretypes.SystemBuild {
 			sysb.ServiceBuilds[service] = nil
 			continue
 		}
-		id := coretypes.ServiceBuildID(*svcbInfo.BuildName)
+		id := types.ServiceBuildID(*svcbInfo.BuildName)
 
-		state := coreconstants.ServiceBuildStatePending
+		state := constants.ServiceBuildStatePending
 		if svcbInfo.BuildState != nil {
 			state = getServiceBuildState(*svcbInfo.BuildState)
 		}
 
-		svcb := &coretypes.ServiceBuild{
+		svcb := &types.ServiceBuild{
 			ID:              id,
 			State:           state,
-			ComponentBuilds: map[string]*coretypes.ComponentBuild{},
+			ComponentBuilds: map[string]*types.ComponentBuild{},
 		}
 
 		for component, cbInfo := range svcbInfo.Components {
@@ -155,9 +154,9 @@ func transformSystemBuild(build *crv1.SystemBuild) coretypes.SystemBuild {
 				svcb.ComponentBuilds[component] = nil
 				continue
 			}
-			id := coretypes.ComponentBuildID(*cbInfo.BuildName)
+			id := types.ComponentBuildID(*cbInfo.BuildName)
 
-			state := coreconstants.ComponentBuildStatePending
+			state := constants.ComponentBuildStatePending
 			if cbInfo.BuildState != nil {
 				state = getComponentBuildState(*cbInfo.BuildState)
 			}
@@ -168,7 +167,7 @@ func transformSystemBuild(build *crv1.SystemBuild) coretypes.SystemBuild {
 				failureMessage = &failMessage
 			}
 
-			svcb.ComponentBuilds[component] = &coretypes.ComponentBuild{
+			svcb.ComponentBuilds[component] = &types.ComponentBuild{
 				ID:                id,
 				State:             state,
 				LastObservedPhase: cbInfo.LastObservedPhase,
@@ -182,16 +181,16 @@ func transformSystemBuild(build *crv1.SystemBuild) coretypes.SystemBuild {
 	return sysb
 }
 
-func getSystemBuildState(state crv1.SystemBuildState) coretypes.SystemBuildState {
+func getSystemBuildState(state crv1.SystemBuildState) types.SystemBuildState {
 	switch state {
 	case crv1.SystemBuildStatePending:
-		return coreconstants.SystemBuildStatePending
+		return constants.SystemBuildStatePending
 	case crv1.SystemBuildStateRunning:
-		return coreconstants.SystemBuildStateRunning
+		return constants.SystemBuildStateRunning
 	case crv1.SystemBuildStateSucceeded:
-		return coreconstants.SystemBuildStateSucceeded
+		return constants.SystemBuildStateSucceeded
 	case crv1.SystemBuildStateFailed:
-		return coreconstants.SystemBuildStateFailed
+		return constants.SystemBuildStateFailed
 	default:
 		panic("unreachable")
 	}

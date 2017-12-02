@@ -6,10 +6,10 @@ go_library(
     importpath = "github.com/mlab-lattice/system/pkg/envoy/xds-api/lds",
     visibility = ["//visibility:public"],
     deps = [
+        "//pkg/definition/tree:go_default_library",
         "//pkg/envoy:go_default_library",
         "//pkg/envoy/xds-api/constants:go_default_library",
         "//pkg/envoy/xds-api/types:go_default_library",
         "//pkg/envoy/xds-api/util:go_default_library",
-        "@com_github_mlab_lattice_core//pkg/system/tree:go_default_library",
     ],
 )

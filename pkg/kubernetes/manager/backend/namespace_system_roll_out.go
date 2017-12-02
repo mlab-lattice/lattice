@@ -3,12 +3,11 @@ package backend
 import (
 	"strings"
 
-	coreconstants "github.com/mlab-lattice/core/pkg/constants"
-	systemtree "github.com/mlab-lattice/core/pkg/system/tree"
-	coretypes "github.com/mlab-lattice/core/pkg/types"
-
-	"github.com/mlab-lattice/system/pkg/kubernetes/constants"
+	"github.com/mlab-lattice/system/pkg/constants"
+	"github.com/mlab-lattice/system/pkg/definition/tree"
+	kubeconstants "github.com/mlab-lattice/system/pkg/kubernetes/constants"
 	crv1 "github.com/mlab-lattice/system/pkg/kubernetes/customresource/v1"
+	"github.com/mlab-lattice/system/pkg/types"
 
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -16,7 +15,7 @@ import (
 	"github.com/satori/go.uuid"
 )
 
-func (kb *KubernetesBackend) RollOutSystem(ln coretypes.LatticeNamespace, definitionRoot systemtree.Node, v coretypes.SystemVersion) (coretypes.SystemRolloutID, error) {
+func (kb *KubernetesBackend) RollOutSystem(ln types.LatticeNamespace, definitionRoot tree.Node, v types.SystemVersion) (types.SystemRolloutID, error) {
 	bid, err := kb.BuildSystem(ln, definitionRoot, v)
 	if err != nil {
 		return "", err
@@ -25,7 +24,7 @@ func (kb *KubernetesBackend) RollOutSystem(ln coretypes.LatticeNamespace, defini
 	return kb.RollOutSystemBuild(ln, bid)
 }
 
-func (kb *KubernetesBackend) RollOutSystemBuild(ln coretypes.LatticeNamespace, bid coretypes.SystemBuildID) (coretypes.SystemRolloutID, error) {
+func (kb *KubernetesBackend) RollOutSystemBuild(ln types.LatticeNamespace, bid types.SystemBuildID) (types.SystemRolloutID, error) {
 	sysBuild, err := kb.getSystemBuildFromId(ln, bid)
 	if err != nil {
 		return "", err
@@ -38,19 +37,19 @@ func (kb *KubernetesBackend) RollOutSystemBuild(ln coretypes.LatticeNamespace, b
 
 	result := &crv1.SystemRollout{}
 	err = kb.LatticeResourceClient.Post().
-		Namespace(constants.NamespaceLatticeInternal).
+		Namespace(kubeconstants.NamespaceLatticeInternal).
 		Resource(crv1.SystemRolloutResourcePlural).
 		Body(sysRollout).
 		Do().
 		Into(result)
 
-	return coretypes.SystemRolloutID(result.Name), err
+	return types.SystemRolloutID(result.Name), err
 }
 
-func (kb *KubernetesBackend) getSystemBuildFromId(ln coretypes.LatticeNamespace, bid coretypes.SystemBuildID) (*crv1.SystemBuild, error) {
+func (kb *KubernetesBackend) getSystemBuildFromId(ln types.LatticeNamespace, bid types.SystemBuildID) (*crv1.SystemBuild, error) {
 	result := &crv1.SystemBuild{}
 	err := kb.LatticeResourceClient.Get().
-		Namespace(constants.NamespaceLatticeInternal).
+		Namespace(kubeconstants.NamespaceLatticeInternal).
 		Resource(crv1.SystemBuildResourcePlural).
 		Name(string(bid)).
 		Do().
@@ -59,11 +58,11 @@ func (kb *KubernetesBackend) getSystemBuildFromId(ln coretypes.LatticeNamespace,
 	return result, err
 }
 
-func getNewSystemRollout(latticeNamespace coretypes.LatticeNamespace, sysBuild *crv1.SystemBuild) (*crv1.SystemRollout, error) {
+func getNewSystemRollout(latticeNamespace types.LatticeNamespace, sysBuild *crv1.SystemBuild) (*crv1.SystemRollout, error) {
 	labels := map[string]string{
-		constants.LatticeNamespaceLabel:   string(latticeNamespace),
-		crv1.SystemRolloutVersionLabelKey: sysBuild.Labels[crv1.SystemBuildVersionLabelKey],
-		crv1.SystemRolloutBuildIdLabelKey: sysBuild.Name,
+		kubeconstants.LatticeNamespaceLabel: string(latticeNamespace),
+		crv1.SystemRolloutVersionLabelKey:   sysBuild.Labels[crv1.SystemBuildVersionLabelKey],
+		crv1.SystemRolloutBuildIdLabelKey:   sysBuild.Name,
 	}
 
 	sysRollout := &crv1.SystemRollout{
@@ -83,10 +82,10 @@ func getNewSystemRollout(latticeNamespace coretypes.LatticeNamespace, sysBuild *
 	return sysRollout, nil
 }
 
-func (kb *KubernetesBackend) GetSystemRollout(ln coretypes.LatticeNamespace, rid coretypes.SystemRolloutID) (*coretypes.SystemRollout, bool, error) {
+func (kb *KubernetesBackend) GetSystemRollout(ln types.LatticeNamespace, rid types.SystemRolloutID) (*types.SystemRollout, bool, error) {
 	result := &crv1.SystemRollout{}
 	err := kb.LatticeResourceClient.Get().
-		Namespace(constants.NamespaceLatticeInternal).
+		Namespace(kubeconstants.NamespaceLatticeInternal).
 		Resource(crv1.SystemRolloutResourcePlural).
 		Name(string(rid)).
 		Do().
@@ -100,23 +99,23 @@ func (kb *KubernetesBackend) GetSystemRollout(ln coretypes.LatticeNamespace, rid
 	}
 
 	// TODO: add this to the query
-	if strings.Compare(result.Labels[constants.LatticeNamespaceLabel], string(ln)) != 0 {
+	if strings.Compare(result.Labels[kubeconstants.LatticeNamespaceLabel], string(ln)) != 0 {
 		return nil, false, nil
 	}
 
-	sb := &coretypes.SystemRollout{
+	sb := &types.SystemRollout{
 		ID:      rid,
-		BuildId: coretypes.SystemBuildID(result.Spec.BuildName),
+		BuildId: types.SystemBuildID(result.Spec.BuildName),
 		State:   getSystemRolloutState(result.Status.State),
 	}
 
 	return sb, true, nil
 }
 
-func (kb *KubernetesBackend) ListSystemRollouts(ln coretypes.LatticeNamespace) ([]coretypes.SystemRollout, error) {
+func (kb *KubernetesBackend) ListSystemRollouts(ln types.LatticeNamespace) ([]types.SystemRollout, error) {
 	result := &crv1.SystemRolloutList{}
 	err := kb.LatticeResourceClient.Get().
-		Namespace(constants.NamespaceLatticeInternal).
+		Namespace(kubeconstants.NamespaceLatticeInternal).
 		Resource(crv1.SystemRolloutResourcePlural).
 		Do().
 		Into(result)
@@ -125,16 +124,16 @@ func (kb *KubernetesBackend) ListSystemRollouts(ln coretypes.LatticeNamespace) (
 		return nil, err
 	}
 
-	rollouts := []coretypes.SystemRollout{}
+	rollouts := []types.SystemRollout{}
 	for _, r := range result.Items {
 		// TODO: add this to the query
-		if strings.Compare(r.Labels[constants.LatticeNamespaceLabel], string(ln)) != 0 {
+		if strings.Compare(r.Labels[kubeconstants.LatticeNamespaceLabel], string(ln)) != 0 {
 			continue
 		}
 
-		rollouts = append(rollouts, coretypes.SystemRollout{
-			ID:      coretypes.SystemRolloutID(r.Name),
-			BuildId: coretypes.SystemBuildID(r.Spec.BuildName),
+		rollouts = append(rollouts, types.SystemRollout{
+			ID:      types.SystemRolloutID(r.Name),
+			BuildId: types.SystemBuildID(r.Spec.BuildName),
 			State:   getSystemRolloutState(r.Status.State),
 		})
 	}
@@ -142,18 +141,18 @@ func (kb *KubernetesBackend) ListSystemRollouts(ln coretypes.LatticeNamespace) (
 	return rollouts, nil
 }
 
-func getSystemRolloutState(state crv1.SystemRolloutState) coretypes.SystemRolloutState {
+func getSystemRolloutState(state crv1.SystemRolloutState) types.SystemRolloutState {
 	switch state {
 	case crv1.SystemRolloutStatePending:
-		return coreconstants.SystemRolloutStatePending
+		return constants.SystemRolloutStatePending
 	case crv1.SystemRolloutStateAccepted:
-		return coreconstants.SystemRolloutStateAccepted
+		return constants.SystemRolloutStateAccepted
 	case crv1.SystemRolloutStateInProgress:
-		return coreconstants.SystemRolloutStateInProgress
+		return constants.SystemRolloutStateInProgress
 	case crv1.SystemRolloutStateSucceeded:
-		return coreconstants.SystemRolloutStateSucceeded
+		return constants.SystemRolloutStateSucceeded
 	case crv1.SystemRolloutStateFailed:
-		return coreconstants.SystemRolloutStateFailed
+		return constants.SystemRolloutStateFailed
 	default:
 		panic("unreachable")
 	}

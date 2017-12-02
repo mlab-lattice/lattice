@@ -2,9 +2,9 @@ package minikube
 
 import (
 	"os/exec"
-
-	executil "github.com/mlab-lattice/core/pkg/util/exec"
 	"strings"
+
+	executil "github.com/mlab-lattice/system/pkg/util/exec"
 )
 
 const (

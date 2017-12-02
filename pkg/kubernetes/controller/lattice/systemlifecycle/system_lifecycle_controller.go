@@ -6,9 +6,8 @@ import (
 	"sync"
 	"time"
 
-	coretypes "github.com/mlab-lattice/core/pkg/types"
-
 	crv1 "github.com/mlab-lattice/system/pkg/kubernetes/customresource/v1"
+	"github.com/mlab-lattice/system/pkg/types"
 
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/util/runtime"
@@ -39,7 +38,7 @@ type SystemLifecycleController struct {
 	// rollout. Then SystemRollout B is created. It is accepted because the existing
 	// owning rollout is not running. Now B is the owning rollout)
 	owningLifecycleActionsLock sync.RWMutex
-	owningLifecycleActions     map[coretypes.LatticeNamespace]*lifecycleAction
+	owningLifecycleActions     map[types.LatticeNamespace]*lifecycleAction
 
 	systemRolloutStore       cache.Store
 	systemRolloutStoreSynced cache.InformerSynced
@@ -74,7 +73,7 @@ func NewSystemLifecycleController(
 ) *SystemLifecycleController {
 	src := &SystemLifecycleController{
 		latticeResourceClient:  latticeResourceClient,
-		owningLifecycleActions: make(map[coretypes.LatticeNamespace]*lifecycleAction),
+		owningLifecycleActions: make(map[types.LatticeNamespace]*lifecycleAction),
 		rolloutQueue:           workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "system-rollout"),
 		teardownQueue:          workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "system-teardown"),
 	}
@@ -154,7 +153,7 @@ func (slc *SystemLifecycleController) handleSystemAdd(obj interface{}) {
 
 	slc.owningLifecycleActionsLock.RLock()
 	defer slc.owningLifecycleActionsLock.RUnlock()
-	owningAction, ok := slc.owningLifecycleActions[coretypes.LatticeNamespace(sys.Namespace)]
+	owningAction, ok := slc.owningLifecycleActions[types.LatticeNamespace(sys.Namespace)]
 	if !ok {
 		// TODO: send warn event
 		return
@@ -180,7 +179,7 @@ func (slc *SystemLifecycleController) handleSystemUpdate(old, cur interface{}) {
 
 	slc.owningLifecycleActionsLock.RLock()
 	defer slc.owningLifecycleActionsLock.RUnlock()
-	owningAction, ok := slc.owningLifecycleActions[coretypes.LatticeNamespace(curSys.Namespace)]
+	owningAction, ok := slc.owningLifecycleActions[types.LatticeNamespace(curSys.Namespace)]
 	if !ok {
 		// TODO: send warn event
 		return

@@ -3,7 +3,7 @@ package v1
 import (
 	"fmt"
 
-	coreconstants "github.com/mlab-lattice/core/pkg/constants"
+	"github.com/mlab-lattice/system/pkg/constants"
 )
 
 func GetProviderFromConfigSpec(config *ConfigSpec) (string, error) {
@@ -14,11 +14,11 @@ func GetProviderFromConfigSpec(config *ConfigSpec) (string, error) {
 	providers := []string{}
 
 	if config.Provider.Local != nil {
-		providers = append(providers, coreconstants.ProviderLocal)
+		providers = append(providers, constants.ProviderLocal)
 	}
 
 	if config.Provider.AWS != nil {
-		providers = append(providers, coreconstants.ProviderAWS)
+		providers = append(providers, constants.ProviderAWS)
 	}
 
 	if len(providers) == 0 {

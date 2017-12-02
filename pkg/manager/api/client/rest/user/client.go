@@ -3,7 +3,7 @@ package user
 import (
 	"net/http"
 
-	coretypes "github.com/mlab-lattice/core/pkg/types"
+	"github.com/mlab-lattice/system/pkg/types"
 )
 
 const (
@@ -30,6 +30,6 @@ func (uc *Client) URL(endpoint string) string {
 	return uc.managerAPIURL + endpoint
 }
 
-func (ac *Client) Namespace(namespace coretypes.LatticeNamespace) *NamespaceClient {
+func (ac *Client) Namespace(namespace types.LatticeNamespace) *NamespaceClient {
 	return newNamespaceClient(ac, namespace)
 }

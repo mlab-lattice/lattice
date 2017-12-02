@@ -1,7 +1,8 @@
 package kubernetes
 
 import (
-	constants "github.com/mlab-lattice/system/pkg/kubernetes/constants"
+	"github.com/mlab-lattice/system/pkg/kubernetes/constants"
+
 	corev1 "k8s.io/api/core/v1"
 )
 

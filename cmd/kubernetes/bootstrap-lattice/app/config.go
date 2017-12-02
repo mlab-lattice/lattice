@@ -4,13 +4,11 @@ import (
 	"fmt"
 	"strings"
 
-	coreconstants "github.com/mlab-lattice/core/pkg/constants"
-	coretypes "github.com/mlab-lattice/core/pkg/types"
-
-	systemconstants "github.com/mlab-lattice/system/pkg/constants"
+	"github.com/mlab-lattice/system/pkg/constants"
 	kubeconstants "github.com/mlab-lattice/system/pkg/kubernetes/constants"
-	crdclient "github.com/mlab-lattice/system/pkg/kubernetes/customresource"
+	"github.com/mlab-lattice/system/pkg/kubernetes/customresource"
 	crv1 "github.com/mlab-lattice/system/pkg/kubernetes/customresource/v1"
+	"github.com/mlab-lattice/system/pkg/types"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -19,7 +17,7 @@ import (
 
 func seedConfig(kubeconfig *rest.Config, userSystemUrl string) {
 	fmt.Println("Seeding lattice config...")
-	crClient, _, err := crdclient.NewClient(kubeconfig)
+	crClient, _, err := customresource.NewClient(kubeconfig)
 	if err != nil {
 		panic(err)
 	}
@@ -31,13 +29,13 @@ func seedConfig(kubeconfig *rest.Config, userSystemUrl string) {
 			Namespace: kubeconstants.NamespaceLatticeInternal,
 		},
 		Spec: crv1.ConfigSpec{
-			SystemConfigs: map[coretypes.LatticeNamespace]crv1.ConfigSystem{
-				coreconstants.UserSystemNamespace: {
+			SystemConfigs: map[types.LatticeNamespace]crv1.ConfigSystem{
+				constants.UserSystemNamespace: {
 					Url: userSystemUrl,
 				},
 			},
 			Envoy: crv1.ConfigEnvoy{
-				PrepareImage:      getContainerImageFQN(systemconstants.DockerImageEnvoyPrepare),
+				PrepareImage:      getContainerImageFQN(constants.DockerImageEnvoyPrepare),
 				Image:             "envoyproxy/envoy-alpine",
 				RedirectCidrBlock: "172.16.29.0/16",
 				XdsApiPort:        8080,
@@ -57,7 +55,7 @@ func seedConfig(kubeconfig *rest.Config, userSystemUrl string) {
 	}
 
 	switch provider {
-	case coreconstants.ProviderLocal:
+	case constants.ProviderLocal:
 		config.Spec.ComponentBuild.DockerConfig.Push = false
 
 		localConfig, err := getLocalConfig()
@@ -66,7 +64,7 @@ func seedConfig(kubeconfig *rest.Config, userSystemUrl string) {
 		}
 
 		config.Spec.Provider.Local = localConfig
-	case coreconstants.ProviderAWS:
+	case constants.ProviderAWS:
 		awsConfig, err := getAwsConfig()
 		if err != nil {
 			panic(err)

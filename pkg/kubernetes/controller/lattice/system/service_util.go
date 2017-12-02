@@ -4,8 +4,7 @@ import (
 	"fmt"
 	"reflect"
 
-	systemtree "github.com/mlab-lattice/core/pkg/system/tree"
-
+	"github.com/mlab-lattice/system/pkg/definition/tree"
 	crv1 "github.com/mlab-lattice/system/pkg/kubernetes/customresource/v1"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -41,7 +40,7 @@ func (sc *SystemController) getServiceState(namespace, svcName string) (*crv1.Se
 	return &(svc.Status.State), nil
 }
 
-func getNewService(sys *crv1.System, svcInfo *crv1.SystemServicesInfo, svcPath systemtree.NodePath) (*crv1.Service, error) {
+func getNewService(sys *crv1.System, svcInfo *crv1.SystemServicesInfo, svcPath tree.NodePath) (*crv1.Service, error) {
 	labels := map[string]string{}
 
 	sysVersionLabel, ok := sys.Labels[crv1.SystemVersionLabelKey]
@@ -72,7 +71,7 @@ func getNewService(sys *crv1.System, svcInfo *crv1.SystemServicesInfo, svcPath s
 	return svc, nil
 }
 
-func getNewServiceSpec(svcInfo *crv1.SystemServicesInfo, svcPath systemtree.NodePath) (*crv1.ServiceSpec, error) {
+func getNewServiceSpec(svcInfo *crv1.SystemServicesInfo, svcPath tree.NodePath) (*crv1.ServiceSpec, error) {
 	cPortsMap := map[string][]crv1.ComponentPort{}
 	ports := map[int32]bool{}
 	for _, component := range svcInfo.Definition.Components {
@@ -148,7 +147,7 @@ func getNewServiceSpec(svcInfo *crv1.SystemServicesInfo, svcPath systemtree.Node
 	return spec, nil
 }
 
-func (sc *SystemController) createService(sys *crv1.System, svcInfo *crv1.SystemServicesInfo, svcPath systemtree.NodePath) (*crv1.Service, error) {
+func (sc *SystemController) createService(sys *crv1.System, svcInfo *crv1.SystemServicesInfo, svcPath tree.NodePath) (*crv1.Service, error) {
 	svc, err := getNewService(sys, svcInfo, svcPath)
 	if err != nil {
 		return nil, err

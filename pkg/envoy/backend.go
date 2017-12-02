@@ -1,10 +1,10 @@
 package envoy
 
 import (
-	systemtree "github.com/mlab-lattice/core/pkg/system/tree"
+	"github.com/mlab-lattice/system/pkg/definition/tree"
 )
 
 type Backend interface {
 	Ready() bool
-	Services() (map[systemtree.NodePath]*Service, error)
+	Services() (map[tree.NodePath]*Service, error)
 }

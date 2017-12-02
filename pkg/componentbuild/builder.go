@@ -3,23 +3,22 @@ package componentbuild
 import (
 	"os"
 
-	systemdefinitionblock "github.com/mlab-lattice/core/pkg/system/definition/block"
-	coretypes "github.com/mlab-lattice/core/pkg/types"
-	gitutil "github.com/mlab-lattice/core/pkg/util/git"
-
-	dockerutil "github.com/mlab-lattice/system/pkg/util/docker"
+	"github.com/mlab-lattice/system/pkg/definition/block"
+	"github.com/mlab-lattice/system/pkg/types"
+	"github.com/mlab-lattice/system/pkg/util/docker"
+	"github.com/mlab-lattice/system/pkg/util/git"
 
 	dockerclient "github.com/docker/docker/client"
 	"github.com/fatih/color"
 )
 
 type Builder struct {
-	BuildID             coretypes.ComponentBuildID
+	BuildID             types.ComponentBuildID
 	WorkingDir          string
-	ComponentBuildBlock *systemdefinitionblock.ComponentBuild
+	ComponentBuildBlock *block.ComponentBuild
 	DockerOptions       *DockerOptions
 	DockerClient        *dockerclient.Client
-	GitResolver         *gitutil.Resolver
+	GitResolver         *git.Resolver
 	GitResolverOptions  *GitResolverOptions
 	StatusUpdater       StatusUpdater
 }
@@ -29,7 +28,7 @@ type DockerOptions struct {
 	Repository           string
 	Tag                  string
 	Push                 bool
-	RegistryAuthProvider dockerutil.RegistryLoginProvider
+	RegistryAuthProvider docker.RegistryLoginProvider
 }
 
 type GitResolverOptions struct {
@@ -66,15 +65,15 @@ func (e *ErrorInternal) Error() string {
 
 type Failure struct {
 	Error error
-	Phase coretypes.ComponentBuildPhase
+	Phase types.ComponentBuildPhase
 }
 
 func NewBuilder(
-	buildID coretypes.ComponentBuildID,
+	buildID types.ComponentBuildID,
 	workDirectory string,
 	dockerOptions *DockerOptions,
 	gitResolverOptions *GitResolverOptions,
-	componentBuildBlock *systemdefinitionblock.ComponentBuild,
+	componentBuildBlock *block.ComponentBuild,
 	updater StatusUpdater,
 ) (*Builder, error) {
 	if workDirectory == "" {

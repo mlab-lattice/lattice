@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	executil "github.com/mlab-lattice/core/pkg/util/exec"
+	executil "github.com/mlab-lattice/system/pkg/util/exec"
 )
 
 const (

@@ -6,8 +6,8 @@ import (
 	"net/http"
 	"time"
 
-	coreconstants "github.com/mlab-lattice/core/pkg/constants"
-	coretypes "github.com/mlab-lattice/core/pkg/types"
+	"github.com/mlab-lattice/system/pkg/constants"
+	"github.com/mlab-lattice/system/pkg/types"
 
 	"k8s.io/apimachinery/pkg/util/wait"
 )
@@ -74,18 +74,18 @@ func tearDownAndWaitForSuccess(address string) error {
 			return false, nil
 		}
 
-		teardown := &coretypes.SystemTeardown{}
+		teardown := &types.SystemTeardown{}
 		err = json.NewDecoder(resp.Body).Decode(teardown)
 		if err != nil {
 			return false, err
 		}
 
 		switch teardown.State {
-		case coreconstants.SystemTeardownStateSucceeded:
+		case constants.SystemTeardownStateSucceeded:
 			return true, nil
-		case coreconstants.SystemTeardownStateFailed:
+		case constants.SystemTeardownStateFailed:
 			return false, fmt.Errorf("teardown %v failed", teardownResponse.TeardownId)
-		case coreconstants.SystemTeardownStatePending, coreconstants.SystemTeardownStateInProgress:
+		case constants.SystemTeardownStatePending, constants.SystemTeardownStateInProgress:
 			fmt.Printf("teardown %v in state %v\n", teardownResponse.TeardownId, teardown.State)
 			return false, nil
 		default:

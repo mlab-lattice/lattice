@@ -3,8 +3,7 @@ package systembuild
 import (
 	"fmt"
 
-	systemtree "github.com/mlab-lattice/core/pkg/system/tree"
-
+	"github.com/mlab-lattice/system/pkg/definition/tree"
 	crv1 "github.com/mlab-lattice/system/pkg/kubernetes/customresource/v1"
 )
 
@@ -20,17 +19,17 @@ const (
 type sysBuildStateInfo struct {
 	state sysBuildState
 
-	successfulSvcbs map[systemtree.NodePath]*crv1.ServiceBuild
-	activeSvcbs     map[systemtree.NodePath]*crv1.ServiceBuild
-	failedSvcbs     map[systemtree.NodePath]*crv1.ServiceBuild
-	needsNewSvcb    []systemtree.NodePath
+	successfulSvcbs map[tree.NodePath]*crv1.ServiceBuild
+	activeSvcbs     map[tree.NodePath]*crv1.ServiceBuild
+	failedSvcbs     map[tree.NodePath]*crv1.ServiceBuild
+	needsNewSvcb    []tree.NodePath
 }
 
 func (sbc *SystemBuildController) calculateState(sysb *crv1.SystemBuild) (*sysBuildStateInfo, error) {
-	successfulSvcbs := map[systemtree.NodePath]*crv1.ServiceBuild{}
-	activeSvcbs := map[systemtree.NodePath]*crv1.ServiceBuild{}
-	failedSvcbs := map[systemtree.NodePath]*crv1.ServiceBuild{}
-	needsNewSvcbs := []systemtree.NodePath{}
+	successfulSvcbs := map[tree.NodePath]*crv1.ServiceBuild{}
+	activeSvcbs := map[tree.NodePath]*crv1.ServiceBuild{}
+	failedSvcbs := map[tree.NodePath]*crv1.ServiceBuild{}
+	needsNewSvcbs := []tree.NodePath{}
 
 	for service, svcbInfo := range sysb.Spec.Services {
 		svcb, exists, err := sbc.getServiceBuildFromInfo(&svcbInfo, sysb.Namespace)

@@ -4,8 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	coreconstants "github.com/mlab-lattice/core/pkg/constants"
-
+	"github.com/mlab-lattice/system/pkg/constants"
 	kubelifecycle "github.com/mlab-lattice/system/pkg/kubernetes/lifecycle"
 	"github.com/mlab-lattice/system/pkg/lifecycle"
 )
@@ -17,14 +16,14 @@ var (
 
 func getProvisioner(provider, systemName, action string, providerVars []string) (lifecycle.Provisioner, error) {
 	switch provider {
-	case coreconstants.ProviderLocal:
+	case constants.ProviderLocal:
 		lp, err := getLocalProvisioner()
 		if err != nil {
 			return nil, err
 		}
 		return lifecycle.Provisioner(lp), nil
 
-	case coreconstants.ProviderAWS:
+	case constants.ProviderAWS:
 		ap, err := getAWSProvisioner(systemName, action, providerVars)
 		if err != nil {
 			return nil, err

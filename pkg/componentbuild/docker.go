@@ -10,10 +10,9 @@ import (
 
 	"golang.org/x/net/context"
 
-	coreconstants "github.com/mlab-lattice/core/pkg/constants"
-	systemdefinitionblock "github.com/mlab-lattice/core/pkg/system/definition/block"
-
-	tarutil "github.com/mlab-lattice/system/pkg/util/tar"
+	"github.com/mlab-lattice/system/pkg/constants"
+	"github.com/mlab-lattice/system/pkg/definition/block"
+	"github.com/mlab-lattice/system/pkg/util/tar"
 
 	dockertypes "github.com/docker/docker/api/types"
 	"github.com/docker/docker/pkg/jsonmessage"
@@ -26,7 +25,7 @@ func (b *Builder) buildDockerImage(sourceDirectory string) error {
 	if b.StatusUpdater != nil {
 		// For now ignore status update errors, don't need to fail a build because the status could
 		// not be updated.
-		b.StatusUpdater.UpdateProgress(b.BuildID, coreconstants.ComponentBuildPhaseBuildingDockerImage)
+		b.StatusUpdater.UpdateProgress(b.BuildID, constants.ComponentBuildPhaseBuildingDockerImage)
 	}
 
 	// Get Dockerfile contents and write them to the directory
@@ -41,7 +40,7 @@ func (b *Builder) buildDockerImage(sourceDirectory string) error {
 	}
 
 	// Tar up the directory to send it as the build context to the docker daemon
-	buildContext, err := tarutil.ArchiveDirectory(b.WorkingDir)
+	buildContext, err := tar.ArchiveDirectory(b.WorkingDir)
 	if err != nil {
 		return newErrorInternal("docker build context could not be tar-ed: " + err.Error())
 	}
@@ -127,7 +126,7 @@ func (b *Builder) getBaseDockerImage() (string, error) {
 	return "", newErrorUser("component build must have base_docker_image or language")
 }
 
-func getDockerImageFQNFromDockerImageBlock(image *systemdefinitionblock.DockerImage) (string, error) {
+func getDockerImageFQNFromDockerImageBlock(image *block.DockerImage) (string, error) {
 	if image == nil {
 		return "", newErrorInternal("cannot get docker image FQN from nil image")
 	}
@@ -141,7 +140,7 @@ func (b *Builder) pushDockerImage() error {
 	if b.StatusUpdater != nil {
 		// For now ignore status update errors, don't need to fail a build because the status could
 		// not be updated.
-		b.StatusUpdater.UpdateProgress(b.BuildID, coreconstants.ComponentBuildPhasePushingDockerImage)
+		b.StatusUpdater.UpdateProgress(b.BuildID, constants.ComponentBuildPhasePushingDockerImage)
 	}
 
 	// Assumes the image has already been built and tagged.
