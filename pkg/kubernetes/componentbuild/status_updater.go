@@ -1,10 +1,10 @@
 package componentbuild
 
 import (
-	"github.com/mlab-lattice/system/pkg/types"
 	"github.com/mlab-lattice/system/pkg/kubernetes/constants"
 	"github.com/mlab-lattice/system/pkg/kubernetes/customresource"
 	crv1 "github.com/mlab-lattice/system/pkg/kubernetes/customresource/v1"
+	"github.com/mlab-lattice/system/pkg/types"
 
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"

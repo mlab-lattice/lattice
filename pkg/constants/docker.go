@@ -1,7 +1,7 @@
 package constants
 
 const (
-	DockerDebugPrefix       = "debug-"
+	DockerDebugPrefix = "debug-"
 
 	DockerImageEnvoyPrepare = "envoy-prepare"
 
