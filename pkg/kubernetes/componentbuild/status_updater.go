@@ -26,7 +26,7 @@ func NewKubernetesStatusUpdater(kubeconfig string) (*KubernetesStatusUpdater, er
 		return nil, err
 	}
 
-	latticeResourceClient, _, err := customresource.NewClient(config)
+	latticeResourceClient, _, err := customresource.NewRESTClient(config)
 	if err != nil {
 		return nil, err
 	}

@@ -8,7 +8,7 @@ import (
 	crv1 "github.com/mlab-lattice/system/pkg/kubernetes/customresource/v1"
 )
 
-func NewClient(cfg *rest.Config) (*rest.RESTClient, *runtime.Scheme, error) {
+func NewRESTClient(cfg *rest.Config) (*rest.RESTClient, *runtime.Scheme, error) {
 	scheme := runtime.NewScheme()
 	if err := crv1.AddToScheme(scheme); err != nil {
 		return nil, nil, err

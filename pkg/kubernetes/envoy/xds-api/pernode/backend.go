@@ -41,7 +41,7 @@ func NewKubernetesPerNodeBackend(kubeconfig string) (*KubernetesPerNodeBackend, 
 		return nil, err
 	}
 
-	latticeResourceClient, _, err := latticeresource.NewClient(config)
+	latticeResourceClient, _, err := latticeresource.NewRESTClient(config)
 	if err != nil {
 		return nil, err
 	}

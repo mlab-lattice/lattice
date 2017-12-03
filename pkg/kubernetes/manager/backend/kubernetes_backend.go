@@ -30,7 +30,7 @@ func NewKubernetesBackend(kubeconfig string) (*KubernetesBackend, error) {
 		return nil, err
 	}
 
-	latticeResourceClient, _, err := customresource.NewClient(config)
+	latticeResourceClient, _, err := customresource.NewRESTClient(config)
 	if err != nil {
 		return nil, err
 	}

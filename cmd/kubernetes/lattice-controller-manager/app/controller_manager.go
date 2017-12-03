@@ -36,7 +36,7 @@ func Run(kubeconfig, provider, terraformModulePath string) {
 		panic(err)
 	}
 
-	latticeResourceClient, _, err := customresource.NewClient(config)
+	latticeResourceClient, _, err := customresource.NewRESTClient(config)
 	if err != nil {
 		panic(err)
 	}

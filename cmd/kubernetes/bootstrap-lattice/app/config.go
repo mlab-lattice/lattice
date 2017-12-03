@@ -17,7 +17,7 @@ import (
 
 func seedConfig(kubeconfig *rest.Config, userSystemUrl string) {
 	fmt.Println("Seeding lattice config...")
-	crClient, _, err := customresource.NewClient(kubeconfig)
+	crClient, _, err := customresource.NewRESTClient(kubeconfig)
 	if err != nil {
 		panic(err)
 	}
