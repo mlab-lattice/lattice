@@ -12,11 +12,13 @@ type ComponentPort struct {
 	ExternalAccess *ExternalAccess `json:"external_access,omitempty"`
 }
 
-const MinPortNumber = 1
-const MaxPortNumber = 65535
+const (
+	MinPortNumber = 1
+	MaxPortNumber = 65535
 
-const TcpProtocol = "TCP"
-const HttpProtocol = "HTTP"
+	TcpProtocol  = "TCP"
+	HttpProtocol = "HTTP"
+)
 
 var ValidPortProtocols = map[string]bool{
 	TcpProtocol:  true,

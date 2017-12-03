@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/mlab-lattice/system/pkg/definition"
+	"github.com/mlab-lattice/system/pkg/kubernetes/constants"
 	crv1 "github.com/mlab-lattice/system/pkg/kubernetes/customresource/v1"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -41,7 +42,7 @@ func (sbc *SystemBuildController) createServiceBuild(sysb *crv1.SystemBuild, svc
 	result := &crv1.ServiceBuild{}
 	err := sbc.latticeResourceClient.Post().
 		Namespace(sysb.Namespace).
-		Resource(crv1.ServiceBuildResourcePlural).
+		Resource(crv1.ResourcePluralServiceBuild).
 		Body(svcBuild).
 		Do().
 		Into(result)
@@ -51,9 +52,9 @@ func (sbc *SystemBuildController) createServiceBuild(sysb *crv1.SystemBuild, svc
 func getNewServiceBuildFromDefinition(sysBuild *crv1.SystemBuild, svcDefinition *definition.Service) *crv1.ServiceBuild {
 	labels := map[string]string{}
 
-	sysBuildVersionLabel, ok := sysBuild.Labels[crv1.SystemBuildVersionLabelKey]
+	sysBuildVersionLabel, ok := sysBuild.Labels[constants.LabelKeySystemBuildVersion]
 	if ok {
-		labels[crv1.SystemBuildVersionLabelKey] = sysBuildVersionLabel
+		labels[constants.LabelKeySystemBuildVersion] = sysBuildVersionLabel
 	} else {
 		// FIXME: add warn event
 	}

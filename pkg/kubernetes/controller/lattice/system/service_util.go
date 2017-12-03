@@ -5,6 +5,7 @@ import (
 	"reflect"
 
 	"github.com/mlab-lattice/system/pkg/definition/tree"
+	"github.com/mlab-lattice/system/pkg/kubernetes/constants"
 	crv1 "github.com/mlab-lattice/system/pkg/kubernetes/customresource/v1"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -43,9 +44,9 @@ func (sc *SystemController) getServiceState(namespace, svcName string) (*crv1.Se
 func getNewService(sys *crv1.System, svcInfo *crv1.SystemServicesInfo, svcPath tree.NodePath) (*crv1.Service, error) {
 	labels := map[string]string{}
 
-	sysVersionLabel, ok := sys.Labels[crv1.SystemVersionLabelKey]
+	sysVersionLabel, ok := sys.Labels[constants.LabelKeySystemVersion]
 	if ok {
-		labels[crv1.SystemVersionLabelKey] = sysVersionLabel
+		labels[constants.LabelKeySystemVersion] = sysVersionLabel
 	} else {
 		// FIXME: add warn event
 	}
@@ -156,7 +157,7 @@ func (sc *SystemController) createService(sys *crv1.System, svcInfo *crv1.System
 	result := &crv1.Service{}
 	err = sc.latticeResourceRestClient.Post().
 		Namespace(svc.Namespace).
-		Resource(crv1.ServiceResourcePlural).
+		Resource(crv1.ResourcePluralService).
 		Body(svc).
 		Do().
 		Into(result)
@@ -177,7 +178,7 @@ func (sc *SystemController) updateServiceSpec(svc *crv1.Service, svcSpec *crv1.S
 	result := &crv1.Service{}
 	err := sc.latticeResourceRestClient.Put().
 		Namespace(svc.Namespace).
-		Resource(crv1.ServiceResourcePlural).
+		Resource(crv1.ResourcePluralService).
 		Name(svc.Name).
 		Body(svc).
 		Do().
@@ -190,7 +191,7 @@ func (sc *SystemController) deleteService(svc *crv1.Service) error {
 	glog.V(5).Infof("Deleting Service %q/%q", svc.Namespace, svc.Name)
 	err := sc.latticeResourceRestClient.Delete().
 		Namespace(svc.Namespace).
-		Resource(crv1.ServiceResourcePlural).
+		Resource(crv1.ResourcePluralService).
 		Name(svc.Name).
 		Do().
 		Into(nil)

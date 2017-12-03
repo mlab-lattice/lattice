@@ -10,11 +10,10 @@ import (
 )
 
 const (
-	ServiceBuildResourceSingular  = "servicebuild"
-	ServiceBuildResourcePlural    = "servicebuilds"
-	ServiceBuildResourceShortName = "lsvcb"
-	// TODO: should this be ClusterScoped?
-	ServiceBuildResourceScope = apiextensionsv1beta1.NamespaceScoped
+	ResourceSingularServiceBuild  = "servicebuild"
+	ResourcePluralServiceBuild    = "servicebuilds"
+	ResourceShortNameServiceBuild = "lsvcb"
+	ResourceScopeServiceBuild     = apiextensionsv1beta1.NamespaceScoped
 )
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

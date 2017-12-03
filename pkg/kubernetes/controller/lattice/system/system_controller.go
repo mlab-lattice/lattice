@@ -504,7 +504,7 @@ func (sc *SystemController) updateSystem(sys *crv1.System) (*crv1.System, error)
 	result := &crv1.System{}
 	err := sc.latticeResourceRestClient.Put().
 		Namespace(sys.Namespace).
-		Resource(crv1.SystemResourcePlural).
+		Resource(crv1.ResourcePluralSystem).
 		Name(sys.Name).
 		Body(sys).
 		Do().

@@ -23,7 +23,7 @@ func (kb *KubernetesBackend) TearDownSystem(ln types.LatticeNamespace) (types.Sy
 	result := &crv1.SystemTeardown{}
 	err = kb.LatticeResourceClient.Post().
 		Namespace(kubeconstants.NamespaceLatticeInternal).
-		Resource(crv1.SystemTeardownResourcePlural).
+		Resource(crv1.ResourcePluralSystemTeardown).
 		Body(systemTeardown).
 		Do().
 		Into(result)
@@ -56,7 +56,7 @@ func (kb *KubernetesBackend) GetSystemTeardown(ln types.LatticeNamespace, tid ty
 	result := &crv1.SystemTeardown{}
 	err := kb.LatticeResourceClient.Get().
 		Namespace(kubeconstants.NamespaceLatticeInternal).
-		Resource(crv1.SystemTeardownResourcePlural).
+		Resource(crv1.ResourcePluralSystemTeardown).
 		Name(string(tid)).
 		Do().
 		Into(result)
@@ -85,7 +85,7 @@ func (kb *KubernetesBackend) ListSystemTeardowns(ln types.LatticeNamespace) ([]t
 	result := &crv1.SystemTeardownList{}
 	err := kb.LatticeResourceClient.Get().
 		Namespace(kubeconstants.NamespaceLatticeInternal).
-		Resource(crv1.SystemTeardownResourcePlural).
+		Resource(crv1.ResourcePluralSystemTeardown).
 		Do().
 		Into(result)
 

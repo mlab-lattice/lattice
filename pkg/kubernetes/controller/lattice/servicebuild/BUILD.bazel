@@ -11,6 +11,7 @@ go_library(
     importpath = "github.com/mlab-lattice/system/pkg/kubernetes/controller/lattice/servicebuild",
     visibility = ["//visibility:public"],
     deps = [
+        "//pkg/kubernetes/constants:go_default_library",
         "//pkg/kubernetes/customresource/v1:go_default_library",
         "@com_github_golang_glog//:go_default_library",
         "@com_github_satori_go_uuid//:go_default_library",

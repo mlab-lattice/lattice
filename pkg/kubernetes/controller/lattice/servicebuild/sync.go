@@ -203,7 +203,7 @@ func (sbc *ServiceBuildController) putServiceBuildUpdate(svcb *crv1.ServiceBuild
 	response := &crv1.ServiceBuild{}
 	err := sbc.latticeResourceClient.Put().
 		Namespace(svcb.Namespace).
-		Resource(crv1.ServiceBuildResourcePlural).
+		Resource(crv1.ResourcePluralServiceBuild).
 		Name(svcb.Name).
 		Body(svcb).
 		Do().

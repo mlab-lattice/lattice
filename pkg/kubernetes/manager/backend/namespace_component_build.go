@@ -20,7 +20,7 @@ func (kb *KubernetesBackend) ListComponentBuilds(ln types.LatticeNamespace) ([]t
 	result := &crv1.ComponentBuildList{}
 	err := kb.LatticeResourceClient.Get().
 		Namespace(kubeconstants.NamespaceLatticeInternal).
-		Resource(crv1.ComponentBuildResourcePlural).
+		Resource(crv1.ResourcePluralComponentBuild).
 		Do().
 		Into(result)
 
@@ -85,7 +85,7 @@ func (kb *KubernetesBackend) getInternalComponentBuild(ln types.LatticeNamespace
 	result := &crv1.ComponentBuild{}
 	err := kb.LatticeResourceClient.Get().
 		Namespace(kubeconstants.NamespaceLatticeInternal).
-		Resource(crv1.ComponentBuildResourcePlural).
+		Resource(crv1.ResourcePluralComponentBuild).
 		Name(string(bid)).
 		Do().
 		Into(result)

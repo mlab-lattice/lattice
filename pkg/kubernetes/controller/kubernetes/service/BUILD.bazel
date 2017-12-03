@@ -13,6 +13,7 @@ go_library(
         "//pkg/definition:go_default_library",
         "//pkg/definition/block:go_default_library",
         "//pkg/definition/tree:go_default_library",
+        "//pkg/kubernetes/constants:go_default_library",
         "//pkg/kubernetes/customresource/v1:go_default_library",
         "//pkg/kubernetes/util/kubernetes:go_default_library",
         "@com_github_golang_glog//:go_default_library",

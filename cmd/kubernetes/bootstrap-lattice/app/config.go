@@ -81,7 +81,7 @@ func seedConfig(kubeconfig *rest.Config, userSystemUrl string) {
 	pollKubeResourceCreation(func() (interface{}, error) {
 		return nil, crClient.Post().
 			Namespace(kubeconstants.NamespaceLatticeInternal).
-			Resource(crv1.ConfigResourcePlural).
+			Resource(crv1.ResourcePluralConfig).
 			Body(config).
 			Do().Into(nil)
 	})

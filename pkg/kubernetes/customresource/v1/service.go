@@ -10,16 +10,10 @@ import (
 )
 
 const (
-	ServiceResourceSingular  = "service"
-	ServiceResourcePlural    = "services"
-	ServiceResourceShortName = "lsvc"
-	// TODO: should this be ClusterScoped?
-	ServiceResourceScope = apiextensionsv1beta1.NamespaceScoped
-
-	LabelKeyServiceDeployment                = "service.lattice.mlab.com"
-	AnnotationKeyDeploymentServiceDefinition = "service.lattice.mlab.com/definition"
-	// FIXME: remove this when local DNS works
-	AnnotationKeySystemServices = "system.lattice.mlab.com/services"
+	ResourceSingularService  = "service"
+	ResourcePluralService    = "services"
+	ResourceShortNameService = "lsvc"
+	ResourceScopeService     = apiextensionsv1beta1.NamespaceScoped
 )
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

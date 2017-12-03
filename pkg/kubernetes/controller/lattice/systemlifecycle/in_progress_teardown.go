@@ -35,7 +35,7 @@ func (slc *SystemLifecycleController) syncInProgressTeardown(syst *crv1.SystemTe
 
 	return slc.latticeResourceClient.Delete().
 		Namespace(string(syst.Spec.LatticeNamespace)).
-		Resource(crv1.SystemResourcePlural).
+		Resource(crv1.ResourcePluralSystem).
 		Name(string(syst.Spec.LatticeNamespace)).
 		Do().
 		Into(nil)

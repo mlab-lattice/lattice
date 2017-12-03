@@ -446,7 +446,7 @@ func (slc *SystemLifecycleController) updateSystemRolloutStatus(sysr *crv1.Syste
 	result := &crv1.SystemRollout{}
 	err := slc.latticeResourceClient.Put().
 		Namespace(sysr.Namespace).
-		Resource(crv1.SystemRolloutResourcePlural).
+		Resource(crv1.ResourcePluralSystemRollout).
 		Name(sysr.Name).
 		Body(sysr).
 		Do().
@@ -502,7 +502,7 @@ func (slc *SystemLifecycleController) updateSystemTeardownStatus(syst *crv1.Syst
 	result := &crv1.SystemTeardown{}
 	err := slc.latticeResourceClient.Put().
 		Namespace(syst.Namespace).
-		Resource(crv1.SystemTeardownResourcePlural).
+		Resource(crv1.ResourcePluralSystemTeardown).
 		Name(syst.Name).
 		Body(syst).
 		Do().

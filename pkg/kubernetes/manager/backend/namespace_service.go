@@ -18,7 +18,7 @@ func (kb *KubernetesBackend) ListSystemServices(ln types.LatticeNamespace) ([]ty
 	result := &crv1.ServiceList{}
 	err := kb.LatticeResourceClient.Get().
 		Namespace(string(ln)).
-		Resource(crv1.ServiceResourcePlural).
+		Resource(crv1.ResourcePluralService).
 		Do().
 		Into(result)
 

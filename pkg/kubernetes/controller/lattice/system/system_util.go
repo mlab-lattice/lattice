@@ -26,7 +26,7 @@ func (sc *SystemController) removeFinalizer(sys *crv1.System) error {
 	sys.Finalizers = finalizers
 	return sc.latticeResourceRestClient.Put().
 		Namespace(sys.Namespace).
-		Resource(crv1.SystemResourcePlural).
+		Resource(crv1.ResourcePluralSystem).
 		Name(sys.Name).
 		Body(sys).
 		Do().

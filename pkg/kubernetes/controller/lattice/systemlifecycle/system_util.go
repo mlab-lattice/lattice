@@ -113,7 +113,7 @@ func (slc *SystemLifecycleController) createSystem(sysRollout *crv1.SystemRollou
 	result := &crv1.System{}
 	err = slc.latticeResourceClient.Post().
 		Namespace(string(sysRollout.Spec.LatticeNamespace)).
-		Resource(crv1.SystemResourcePlural).
+		Resource(crv1.ResourcePluralSystem).
 		Body(sys).
 		Do().
 		Into(result)
@@ -134,7 +134,7 @@ func (slc *SystemLifecycleController) updateSystemSpec(sys *crv1.System, sysSpec
 	result := &crv1.System{}
 	err := slc.latticeResourceClient.Put().
 		Namespace(sys.Namespace).
-		Resource(crv1.SystemResourcePlural).
+		Resource(crv1.ResourcePluralSystem).
 		Name(sys.Name).
 		Body(sys).
 		Do().

@@ -8,7 +8,6 @@ import (
 	"github.com/mlab-lattice/system/pkg/constants"
 	kubeconstants "github.com/mlab-lattice/system/pkg/kubernetes/constants"
 	crv1 "github.com/mlab-lattice/system/pkg/kubernetes/customresource/v1"
-	"github.com/mlab-lattice/system/pkg/util/docker"
 
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -167,9 +166,9 @@ func (cbc *ComponentBuildController) getBuildContainer(cb *crv1.ComponentBuild) 
 	}
 
 	repo := cbc.config.ComponentBuild.DockerConfig.Repository
-	tag := cb.Annotations[crv1.AnnotationKeyComponentBuildDefinitionHash]
+	tag := cb.Annotations[kubeconstants.AnnotationKeyComponentBuildDefinitionHash]
 	if cbc.config.ComponentBuild.DockerConfig.RepositoryPerImage {
-		repo = cb.Annotations[crv1.AnnotationKeyComponentBuildDefinitionHash]
+		repo = cb.Annotations[kubeconstants.AnnotationKeyComponentBuildDefinitionHash]
 		tag = fmt.Sprint(time.Now().Unix())
 	}
 
@@ -195,7 +194,7 @@ func (cbc *ComponentBuildController) getBuildContainer(cb *crv1.ComponentBuild) 
 	case constants.ProviderLocal:
 		// nothing to do here
 	case constants.ProviderAWS:
-		args = append(args, "--docker-registry-auth-type", docker.DockerRegistryAuthAWSEC2Role)
+		args = append(args, "--docker-registry-auth-type", constants.DockerRegistryAuthAWSEC2Role)
 	default:
 		panic(fmt.Sprintf("unsupported provider: %s", provider))
 	}

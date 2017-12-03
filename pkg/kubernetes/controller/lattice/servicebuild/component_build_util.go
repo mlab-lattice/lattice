@@ -1,6 +1,7 @@
 package servicebuild
 
 import (
+	"github.com/mlab-lattice/system/pkg/kubernetes/constants"
 	crv1 "github.com/mlab-lattice/system/pkg/kubernetes/customresource/v1"
 
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -10,7 +11,7 @@ import (
 )
 
 func getComponentBuildDefinitionHashFromLabel(cb *crv1.ComponentBuild) *string {
-	cBuildHashLabel, ok := cb.Annotations[crv1.AnnotationKeyComponentBuildDefinitionHash]
+	cBuildHashLabel, ok := cb.Annotations[constants.AnnotationKeyComponentBuildDefinitionHash]
 	if !ok {
 		return nil
 	}
@@ -77,7 +78,7 @@ func (sbc *ServiceBuildController) findComponentBuildInRecentBuildCache(ns, defi
 	cb := &crv1.ComponentBuild{}
 	err = sbc.latticeResourceClient.Get().
 		Namespace(ns).
-		Resource(crv1.ComponentBuildResourcePlural).
+		Resource(crv1.ResourcePluralComponentBuild).
 		Name(cbName).
 		Do().
 		Into(cb)
@@ -129,7 +130,7 @@ func (sbc *ServiceBuildController) createComponentBuild(ns string, cbInfo *crv1.
 	result := &crv1.ComponentBuild{}
 	err := sbc.latticeResourceClient.Post().
 		Namespace(ns).
-		Resource(crv1.ComponentBuildResourcePlural).
+		Resource(crv1.ResourcePluralComponentBuild).
 		Body(cb).
 		Do().
 		Into(result)
@@ -152,7 +153,7 @@ func (sbc *ServiceBuildController) getComponentBuildFromApi(ns, name string) (*c
 	var cBuild crv1.ComponentBuild
 	err := sbc.latticeResourceClient.Get().
 		Namespace(ns).
-		Resource(crv1.ComponentBuildResourcePlural).
+		Resource(crv1.ResourcePluralComponentBuild).
 		Name(name).
 		Do().
 		Into(&cBuild)
@@ -162,7 +163,7 @@ func (sbc *ServiceBuildController) getComponentBuildFromApi(ns, name string) (*c
 
 func getNewComponentBuildFromInfo(cbInfo *crv1.ServiceBuildComponentBuildInfo) *crv1.ComponentBuild {
 	cbAnnotations := map[string]string{
-		crv1.AnnotationKeyComponentBuildDefinitionHash: *cbInfo.DefinitionHash,
+		constants.AnnotationKeyComponentBuildDefinitionHash: *cbInfo.DefinitionHash,
 	}
 
 	return &crv1.ComponentBuild{

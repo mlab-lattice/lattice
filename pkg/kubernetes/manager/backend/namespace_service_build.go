@@ -13,7 +13,7 @@ func (kb *KubernetesBackend) ListServiceBuilds(ln types.LatticeNamespace) ([]typ
 	result := &crv1.ServiceBuildList{}
 	err := kb.LatticeResourceClient.Get().
 		Namespace(kubeconstants.NamespaceLatticeInternal).
-		Resource(crv1.ServiceBuildResourcePlural).
+		Resource(crv1.ResourcePluralServiceBuild).
 		Do().
 		Into(result)
 
@@ -45,7 +45,7 @@ func (kb *KubernetesBackend) getInternalServiceBuild(ln types.LatticeNamespace, 
 	result := &crv1.ServiceBuild{}
 	err := kb.LatticeResourceClient.Get().
 		Namespace(kubeconstants.NamespaceLatticeInternal).
-		Resource(crv1.ServiceBuildResourcePlural).
+		Resource(crv1.ResourcePluralServiceBuild).
 		Name(string(bid)).
 		Do().
 		Into(result)

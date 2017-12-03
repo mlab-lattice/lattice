@@ -10,14 +10,10 @@ import (
 )
 
 const (
-	ComponentBuildResourceSingular  = "componentbuild"
-	ComponentBuildResourcePlural    = "componentbuilds"
-	ComponentBuildResourceShortName = "lcb"
-	// TODO: should this be ClusterScoped?
-	ComponentBuildResourceScope = apiextensionsv1beta1.NamespaceScoped
-
-	ComponentBuildJobLabelKey                 = "component.build.lattice.mlab.com/job"
-	AnnotationKeyComponentBuildDefinitionHash = "component.build.lattice.mlab.com/definition-hash"
+	ResourceSingularComponentBuild  = "componentbuild"
+	ResourcePluralComponentBuild    = "componentbuilds"
+	ResourceShortNameComponentBuild = "lcb"
+	ResourceScopeComponentBuild     = apiextensionsv1beta1.NamespaceScoped
 )
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

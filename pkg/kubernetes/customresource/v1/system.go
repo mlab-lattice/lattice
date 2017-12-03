@@ -10,13 +10,10 @@ import (
 )
 
 const (
-	SystemResourceSingular  = "system"
-	SystemResourcePlural    = "systems"
-	SystemResourceShortName = "lsys"
-	// TODO: should this be ClusterScoped?
-	SystemResourceScope = apiextensionsv1beta1.NamespaceScoped
-
-	SystemVersionLabelKey = "system.lattice.mlab.com/version"
+	ResourceSingularSystem  = "system"
+	ResourcePluralSystem    = "systems"
+	ResourceShortNameSystem = "lsys"
+	ResourceScopeSystem     = apiextensionsv1beta1.NamespaceScoped
 )
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

@@ -43,7 +43,7 @@ func seedRbacComponentBuilder(kubeClientset *kubernetes.Clientset) {
 			// Read and update lattice component builds
 			{
 				APIGroups: []string{crv1.GroupName},
-				Resources: []string{crv1.ComponentBuildResourcePlural},
+				Resources: []string{crv1.ResourcePluralComponentBuild},
 				Verbs:     readAndUpdateVerbs,
 			},
 		},
@@ -113,7 +113,7 @@ func seedRbacEnvoyXdsApi(kubeClientset *kubernetes.Clientset) {
 			// Read lattice services
 			{
 				APIGroups: []string{crv1.GroupName},
-				Resources: []string{crv1.ServiceResourcePlural},
+				Resources: []string{crv1.ResourcePluralService},
 				Verbs:     readVerbs,
 			},
 		},
@@ -257,31 +257,31 @@ func seedRbacManagerApi(kubeClientset *kubernetes.Clientset) {
 			// lattice config read
 			{
 				APIGroups: []string{crv1.GroupName},
-				Resources: []string{crv1.ConfigResourcePlural},
+				Resources: []string{crv1.ResourcePluralConfig},
 				Verbs:     readVerbs,
 			},
 			// lattice system build read and create
 			{
 				APIGroups: []string{crv1.GroupName},
-				Resources: []string{crv1.SystemBuildResourcePlural},
+				Resources: []string{crv1.ResourcePluralSystemBuild},
 				Verbs:     readAndCreateVerbs,
 			},
 			// lattice service build read
 			{
 				APIGroups: []string{crv1.GroupName},
-				Resources: []string{crv1.ServiceBuildResourcePlural},
+				Resources: []string{crv1.ResourcePluralServiceBuild},
 				Verbs:     readVerbs,
 			},
 			// lattice component build read
 			{
 				APIGroups: []string{crv1.GroupName},
-				Resources: []string{crv1.ComponentBuildResourcePlural},
+				Resources: []string{crv1.ResourcePluralComponentBuild},
 				Verbs:     readVerbs,
 			},
 			// lattice rollout build and create
 			{
 				APIGroups: []string{crv1.GroupName},
-				Resources: []string{crv1.SystemRolloutResourcePlural},
+				Resources: []string{crv1.ResourcePluralSystemRollout},
 				Verbs:     readAndCreateVerbs,
 			},
 			// kube pod read and delete
@@ -320,7 +320,7 @@ func seedRbacManagerApi(kubeClientset *kubernetes.Clientset) {
 			// lattice service read
 			{
 				APIGroups: []string{crv1.GroupName},
-				Resources: []string{crv1.ServiceResourcePlural},
+				Resources: []string{crv1.ResourcePluralService},
 				Verbs:     readVerbs,
 			},
 			// kube service read

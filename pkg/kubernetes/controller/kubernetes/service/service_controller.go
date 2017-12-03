@@ -568,7 +568,7 @@ func (sc *ServiceController) updateServiceStatus(svc *crv1.Service, newStatus cr
 
 	err := sc.latticeResourceRestClient.Put().
 		Namespace(svc.Namespace).
-		Resource(crv1.ServiceResourcePlural).
+		Resource(crv1.ResourcePluralService).
 		Name(svc.Name).
 		Body(svc).
 		Do().

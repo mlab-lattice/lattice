@@ -1,10 +1,10 @@
 package componentbuild
 
 import (
+	"github.com/mlab-lattice/system/pkg/types"
 	"github.com/mlab-lattice/system/pkg/kubernetes/constants"
 	"github.com/mlab-lattice/system/pkg/kubernetes/customresource"
 	crv1 "github.com/mlab-lattice/system/pkg/kubernetes/customresource/v1"
-	"github.com/mlab-lattice/system/pkg/types"
 
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
@@ -46,7 +46,7 @@ func (ksu *KubernetesStatusUpdater) updateProgressInternal(buildID types.Compone
 	cb := &crv1.ComponentBuild{}
 	err := ksu.LatticeResourceClient.Get().
 		Namespace(constants.NamespaceLatticeInternal).
-		Resource(crv1.ComponentBuildResourcePlural).
+		Resource(crv1.ResourcePluralComponentBuild).
 		Name(string(buildID)).
 		Do().
 		Into(cb)
@@ -60,7 +60,7 @@ func (ksu *KubernetesStatusUpdater) updateProgressInternal(buildID types.Compone
 	cb.Status.LastObservedPhase = &phase
 	err = ksu.LatticeResourceClient.Put().
 		Namespace(cb.Namespace).
-		Resource(crv1.ComponentBuildResourcePlural).
+		Resource(crv1.ResourcePluralComponentBuild).
 		Name(cb.Name).
 		Body(cb).
 		Do().
@@ -83,7 +83,7 @@ func (ksu *KubernetesStatusUpdater) updateErrorInternal(buildID types.ComponentB
 	cb := &crv1.ComponentBuild{}
 	err := ksu.LatticeResourceClient.Get().
 		Namespace(constants.NamespaceLatticeInternal).
-		Resource(crv1.ComponentBuildResourcePlural).
+		Resource(crv1.ResourcePluralComponentBuild).
 		Name(string(buildID)).
 		Do().
 		Into(cb)
@@ -100,7 +100,7 @@ func (ksu *KubernetesStatusUpdater) updateErrorInternal(buildID types.ComponentB
 	}
 	err = ksu.LatticeResourceClient.Put().
 		Namespace(cb.Namespace).
-		Resource(crv1.ComponentBuildResourcePlural).
+		Resource(crv1.ResourcePluralComponentBuild).
 		Name(cb.Name).
 		Body(cb).
 		Do().

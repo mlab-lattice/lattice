@@ -51,7 +51,7 @@ func NewKubernetesPerNodeBackend(kubeconfig string) (*KubernetesPerNodeBackend, 
 
 	listerWatcher := cache.NewListWatchFromClient(
 		latticeResourceClient,
-		crv1.ServiceResourcePlural,
+		crv1.ResourcePluralService,
 		string(constants.UserSystemNamespace),
 		fields.Everything(),
 	)

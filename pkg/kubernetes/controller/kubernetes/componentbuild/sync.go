@@ -78,7 +78,7 @@ func (cbc *ComponentBuildController) updateComponentBuildState(cb *crv1.Componen
 func (cbc *ComponentBuildController) putComponentBuildUpdate(cb *crv1.ComponentBuild) error {
 	err := cbc.latticeResourceClient.Put().
 		Namespace(cb.Namespace).
-		Resource(crv1.ComponentBuildResourcePlural).
+		Resource(crv1.ResourcePluralComponentBuild).
 		Name(cb.Name).
 		Body(cb).
 		Do().

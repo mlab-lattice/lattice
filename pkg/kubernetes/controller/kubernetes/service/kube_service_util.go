@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/mlab-lattice/system/pkg/definition/block"
+	"github.com/mlab-lattice/system/pkg/kubernetes/constants"
 	crv1 "github.com/mlab-lattice/system/pkg/kubernetes/customresource/v1"
 	kubeutil "github.com/mlab-lattice/system/pkg/kubernetes/util/kubernetes"
 
@@ -58,7 +59,7 @@ func (sc *ServiceController) getKubeService(svc *crv1.Service) (*corev1.Service,
 		Spec: corev1.ServiceSpec{
 			Ports: ports,
 			Selector: map[string]string{
-				crv1.LabelKeyServiceDeployment: svc.Name,
+				constants.LabelKeyServiceDeployment: svc.Name,
 			},
 			ClusterIP: "None",
 			Type:      corev1.ServiceTypeClusterIP,

@@ -9,11 +9,10 @@ import (
 )
 
 const (
-	SystemTeardownResourceSingular  = "systemteardown"
-	SystemTeardownResourcePlural    = "systemteardowns"
-	SystemTeardownResourceShortName = "lsyst"
-	// TODO: should this be ClusterScoped?
-	SystemTeardownResourceScope = apiextensionsv1beta1.NamespaceScoped
+	ResourceSingularSystemTeardown  = "systemteardown"
+	ResourcePluralSystemTeardown    = "systemteardowns"
+	ResourceShortNameSystemTeardown = "lsyst"
+	ResourceScopeSystemTeardown     = apiextensionsv1beta1.NamespaceScoped
 )
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

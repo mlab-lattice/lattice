@@ -9,10 +9,9 @@ import (
 )
 
 const (
-	ConfigResourceSingular = "config"
-	ConfigResourcePlural   = "configs"
-	// TODO: should this be cluster scoped?
-	ConfigResourceScope = apiextensionsv1beta1.NamespaceScoped
+	ResourceSingularConfig = "config"
+	ResourcePluralConfig   = "configs"
+	ResourceScopeConfig    = apiextensionsv1beta1.NamespaceScoped
 )
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

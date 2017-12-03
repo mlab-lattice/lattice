@@ -38,7 +38,7 @@ func (kb *KubernetesBackend) RollOutSystemBuild(ln types.LatticeNamespace, bid t
 	result := &crv1.SystemRollout{}
 	err = kb.LatticeResourceClient.Post().
 		Namespace(kubeconstants.NamespaceLatticeInternal).
-		Resource(crv1.SystemRolloutResourcePlural).
+		Resource(crv1.ResourcePluralSystemRollout).
 		Body(sysRollout).
 		Do().
 		Into(result)
@@ -50,7 +50,7 @@ func (kb *KubernetesBackend) getSystemBuildFromId(ln types.LatticeNamespace, bid
 	result := &crv1.SystemBuild{}
 	err := kb.LatticeResourceClient.Get().
 		Namespace(kubeconstants.NamespaceLatticeInternal).
-		Resource(crv1.SystemBuildResourcePlural).
+		Resource(crv1.ResourcePluralSystemBuild).
 		Name(string(bid)).
 		Do().
 		Into(result)
@@ -60,9 +60,9 @@ func (kb *KubernetesBackend) getSystemBuildFromId(ln types.LatticeNamespace, bid
 
 func getNewSystemRollout(latticeNamespace types.LatticeNamespace, sysBuild *crv1.SystemBuild) (*crv1.SystemRollout, error) {
 	labels := map[string]string{
-		kubeconstants.LatticeNamespaceLabel: string(latticeNamespace),
-		crv1.SystemRolloutVersionLabelKey:   sysBuild.Labels[crv1.SystemBuildVersionLabelKey],
-		crv1.SystemRolloutBuildIdLabelKey:   sysBuild.Name,
+		kubeconstants.LatticeNamespaceLabel:        string(latticeNamespace),
+		kubeconstants.LabelKeySystemRolloutVersion: sysBuild.Labels[kubeconstants.LabelKeySystemBuildVersion],
+		kubeconstants.LabelKeySystemRolloutBuildId: sysBuild.Name,
 	}
 
 	sysRollout := &crv1.SystemRollout{
@@ -86,7 +86,7 @@ func (kb *KubernetesBackend) GetSystemRollout(ln types.LatticeNamespace, rid typ
 	result := &crv1.SystemRollout{}
 	err := kb.LatticeResourceClient.Get().
 		Namespace(kubeconstants.NamespaceLatticeInternal).
-		Resource(crv1.SystemRolloutResourcePlural).
+		Resource(crv1.ResourcePluralSystemRollout).
 		Name(string(rid)).
 		Do().
 		Into(result)
@@ -116,7 +116,7 @@ func (kb *KubernetesBackend) ListSystemRollouts(ln types.LatticeNamespace) ([]ty
 	result := &crv1.SystemRolloutList{}
 	err := kb.LatticeResourceClient.Get().
 		Namespace(kubeconstants.NamespaceLatticeInternal).
-		Resource(crv1.SystemRolloutResourcePlural).
+		Resource(crv1.ResourcePluralSystemRollout).
 		Do().
 		Into(result)
 

@@ -10,6 +10,7 @@ import (
 	"github.com/mlab-lattice/system/pkg/definition"
 	"github.com/mlab-lattice/system/pkg/definition/block"
 	"github.com/mlab-lattice/system/pkg/definition/tree"
+	"github.com/mlab-lattice/system/pkg/kubernetes/constants"
 
 	crv1 "github.com/mlab-lattice/system/pkg/kubernetes/customresource/v1"
 	kubeutil "github.com/mlab-lattice/system/pkg/kubernetes/util/kubernetes"
@@ -68,7 +69,7 @@ func getDeploymentName(svc *crv1.Service) string {
 
 func getDeploymentLabels(svc *crv1.Service) map[string]string {
 	return map[string]string{
-		crv1.LabelKeyServiceDeployment: svc.Name,
+		constants.LabelKeyServiceDeployment: svc.Name,
 	}
 }
 
@@ -79,7 +80,7 @@ func (sc *ServiceController) getDeploymentAnnotations(svc *crv1.Service) (map[st
 		return nil, err
 	}
 
-	annotations[crv1.AnnotationKeyDeploymentServiceDefinition] = string(svcDefinitionJsonBytes)
+	annotations[constants.AnnotationKeyDeploymentServiceDefinition] = string(svcDefinitionJsonBytes)
 
 	// FIXME: remove this when local DNS is working
 	sys, err := sc.getServiceSystem(svc)
@@ -92,7 +93,7 @@ func (sc *ServiceController) getDeploymentAnnotations(svc *crv1.Service) (map[st
 		return nil, err
 	}
 
-	annotations[crv1.AnnotationKeySystemServices] = string(sysSvcJsonBytes)
+	annotations[constants.AnnotationKeySystemServices] = string(sysSvcJsonBytes)
 
 	return annotations, nil
 }
@@ -398,9 +399,9 @@ func (sc *ServiceController) createDeployment(svc *crv1.Service) (*appsv1beta2.D
 }
 
 func (sc *ServiceController) syncDeploymentSpec(svc *crv1.Service, d *appsv1beta2.Deployment) (*appsv1beta2.Deployment, error) {
-	dSvcDefStr, ok := d.Annotations[crv1.AnnotationKeyDeploymentServiceDefinition]
+	dSvcDefStr, ok := d.Annotations[constants.AnnotationKeyDeploymentServiceDefinition]
 	if !ok {
-		return nil, fmt.Errorf("deployment did not have %v annotation", crv1.AnnotationKeyDeploymentServiceDefinition)
+		return nil, fmt.Errorf("deployment did not have %v annotation", constants.AnnotationKeyDeploymentServiceDefinition)
 	}
 
 	dSvcDef := definition.Service{}
@@ -410,9 +411,9 @@ func (sc *ServiceController) syncDeploymentSpec(svc *crv1.Service, d *appsv1beta
 	}
 
 	// FIXME: remove this when local DNS works
-	sysServicesStr, ok := d.Annotations[crv1.AnnotationKeySystemServices]
+	sysServicesStr, ok := d.Annotations[constants.AnnotationKeySystemServices]
 	if !ok {
-		return nil, fmt.Errorf("deployment did not have %v annotation", crv1.AnnotationKeySystemServices)
+		return nil, fmt.Errorf("deployment did not have %v annotation", constants.AnnotationKeySystemServices)
 	}
 
 	sysServices := []string{}

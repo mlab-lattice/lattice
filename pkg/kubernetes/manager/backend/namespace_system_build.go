@@ -25,7 +25,7 @@ func (kb *KubernetesBackend) BuildSystem(ln types.LatticeNamespace, definitionRo
 	result := &crv1.SystemBuild{}
 	err = kb.LatticeResourceClient.Post().
 		Namespace(kubeconstants.NamespaceLatticeInternal).
-		Resource(crv1.SystemBuildResourcePlural).
+		Resource(crv1.ResourcePluralSystemBuild).
 		Body(systemBuild).
 		Do().
 		Into(result)
@@ -36,7 +36,7 @@ func (kb *KubernetesBackend) BuildSystem(ln types.LatticeNamespace, definitionRo
 func getNewSystemBuild(ln types.LatticeNamespace, definitionRoot tree.Node, v types.SystemVersion) (*crv1.SystemBuild, error) {
 	labels := map[string]string{
 		kubeconstants.LatticeNamespaceLabel: string(ln),
-		crv1.SystemVersionLabelKey:          string(v),
+		kubeconstants.LabelKeySystemVersion: string(v),
 	}
 
 	services := map[tree.NodePath]crv1.SystemBuildServicesInfo{}
@@ -68,7 +68,7 @@ func (kb *KubernetesBackend) ListSystemBuilds(ln types.LatticeNamespace) ([]type
 	result := &crv1.SystemBuildList{}
 	err := kb.LatticeResourceClient.Get().
 		Namespace(kubeconstants.NamespaceLatticeInternal).
-		Resource(crv1.SystemBuildResourcePlural).
+		Resource(crv1.ResourcePluralSystemBuild).
 		Do().
 		Into(result)
 
@@ -103,7 +103,7 @@ func (kb *KubernetesBackend) getInternalSystemBuild(ln types.LatticeNamespace, b
 	result := &crv1.SystemBuild{}
 	err := kb.LatticeResourceClient.Get().
 		Namespace(kubeconstants.NamespaceLatticeInternal).
-		Resource(crv1.SystemBuildResourcePlural).
+		Resource(crv1.ResourcePluralSystemBuild).
 		Name(string(bid)).
 		Do().
 		Into(result)
@@ -127,7 +127,7 @@ func transformSystemBuild(build *crv1.SystemBuild) types.SystemBuild {
 	sysb := types.SystemBuild{
 		ID:            types.SystemBuildID(build.Name),
 		State:         getSystemBuildState(build.Status.State),
-		Version:       types.SystemVersion(build.Labels[crv1.SystemVersionLabelKey]),
+		Version:       types.SystemVersion(build.Labels[kubeconstants.LabelKeySystemVersion]),
 		ServiceBuilds: map[tree.NodePath]*types.ServiceBuild{},
 	}
 

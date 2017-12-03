@@ -7,11 +7,11 @@ go_library(
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/componentbuild:go_default_library",
+        "//pkg/constants:go_default_library",
         "//pkg/definition/block:go_default_library",
         "//pkg/kubernetes/componentbuild:go_default_library",
         "//pkg/types:go_default_library",
         "//pkg/util/aws:go_default_library",
-        "//pkg/util/docker:go_default_library",
         "@com_github_spf13_cobra//:go_default_library",
     ],
 )

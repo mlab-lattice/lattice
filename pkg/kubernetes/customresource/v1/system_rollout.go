@@ -9,14 +9,10 @@ import (
 )
 
 const (
-	SystemRolloutResourceSingular  = "systemrollout"
-	SystemRolloutResourcePlural    = "systemrollouts"
-	SystemRolloutResourceShortName = "lsysr"
-	// TODO: should this be ClusterScoped?
-	SystemRolloutResourceScope = apiextensionsv1beta1.NamespaceScoped
-
-	SystemRolloutVersionLabelKey = "rollout.system.lattice.mlab.com/version"
-	SystemRolloutBuildIdLabelKey = "rollout.system.lattice.mlab.com/build"
+	ResourceSingularSystemRollout  = "systemrollout"
+	ResourcePluralSystemRollout    = "systemrollouts"
+	ResourceShortNameSystemRollout = "lsysr"
+	ResourceScopeSystemRollout     = apiextensionsv1beta1.NamespaceScoped
 )
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

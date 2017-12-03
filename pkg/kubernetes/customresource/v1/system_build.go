@@ -13,13 +13,10 @@ import (
 )
 
 const (
-	SystemBuildResourceSingular  = "systembuild"
-	SystemBuildResourcePlural    = "systembuilds"
-	SystemBuildResourceShortName = "lsysb"
-	// TODO: should this be ClusterScoped?
-	SystemBuildResourceScope = apiextensionsv1beta1.NamespaceScoped
-
-	SystemBuildVersionLabelKey = "system.build.lattice.mlab.com/version"
+	ResourceSingularSystemBuild  = "systembuild"
+	ResourcePluralSystemBuild    = "systembuilds"
+	ResourceShortNameSystemBuild = "lsysb"
+	ResourceScopeSystemBuild     = apiextensionsv1beta1.NamespaceScoped
 )
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
