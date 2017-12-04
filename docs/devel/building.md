@@ -472,6 +472,19 @@ $ bazel run //cmd
 
 I now realize using colorized output isn't a great example seeing as that can't be put in a `.md`, but if you've been following along, you'd now see "hello world" in green.
 
+#### Macros
+
+At the time of writing this, the transitive closure of external Go dependencies includes over 60 different repositories. As one could imagine, the `WORKSPACE` file became very bloated and hard to parse.
+
+To combat this, custom macro rules were written which when called generate the `go_repository` rules. These rules can be found in the [bazel](../../bazel) directory.
+
+So instead of calling `go_repository` 60 times, we can include the custom macro that generates those rules, and simply call it:
+
+```
+load(":bazel/dependencies.bzl", "go_dependencies")
+go_dependencies()
+```
+
 ### Docker
 
 Bazel also has rules building and pushing Docker images in the [rules_docker repository](https://github.com/bazelbuild/rules_docker).
