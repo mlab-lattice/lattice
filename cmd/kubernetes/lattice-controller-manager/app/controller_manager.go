@@ -8,7 +8,6 @@ import (
 	"github.com/mlab-lattice/system/cmd/kubernetes/lattice-controller-manager/app/kubernetescontrollers"
 	"github.com/mlab-lattice/system/cmd/kubernetes/lattice-controller-manager/app/latticecontrollers"
 	"github.com/mlab-lattice/system/pkg/constants"
-	"github.com/mlab-lattice/system/pkg/kubernetes/customresource"
 	crv1 "github.com/mlab-lattice/system/pkg/kubernetes/customresource/v1"
 
 	apiv1 "k8s.io/api/core/v1"
@@ -36,13 +35,8 @@ func Run(kubeconfig, provider, terraformModulePath string) {
 		panic(err)
 	}
 
-	latticeResourceClient, _, err := customresource.NewRESTClient(config)
-	if err != nil {
-		panic(err)
-	}
-
 	// TODO: setting stop as nil for now, won't actually need it until leader-election is used
-	ctx := CreateControllerContext(rest.Interface(latticeResourceClient), config, nil, terraformModulePath)
+	ctx := CreateControllerContext(config, nil, terraformModulePath)
 	glog.V(1).Info("Starting controllers")
 	StartControllers(ctx, GetControllerInitializers(provider))
 
@@ -54,7 +48,6 @@ func Run(kubeconfig, provider, terraformModulePath string) {
 }
 
 func CreateControllerContext(
-	latticeResourceClient rest.Interface,
 	kubeconfig *rest.Config,
 	stop <-chan struct{},
 	terraformModulePath string,
@@ -66,12 +59,14 @@ func CreateControllerContext(
 		Kubeconfig: kubeconfig,
 	}
 
-	versionedClient := kcb.ClientOrDie("shared-informers")
-	sharedInformers := informers.NewSharedInformerFactory(versionedClient, time.Duration(12*time.Hour))
+	versionedKubeClient := kcb.ClientOrDie("shared-informers")
+	sharedInformers := informers.NewSharedInformerFactory(versionedKubeClient, time.Duration(12*time.Hour))
+
+	latticeClient := lcb.ClientOrDie("shared-informers")
 
 	return controller.Context{
 		InformerFactory:      sharedInformers,
-		CRInformers:          getCRDInformers(latticeResourceClient),
+		CRInformers:          getCRDInformers(latticeClient.V1().RESTClient()),
 		KubeClientBuilder:    kcb,
 		LatticeClientBuilder: lcb,
 

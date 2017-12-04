@@ -9,7 +9,7 @@ go_library(
         "//pkg/constants:go_default_library",
         "//pkg/definition/tree:go_default_library",
         "//pkg/envoy:go_default_library",
-        "//pkg/kubernetes/customresource:go_default_library",
+        "//pkg/kubernetes/customresource/client:go_default_library",
         "//pkg/kubernetes/customresource/v1:go_default_library",
         "@io_k8s_apimachinery//pkg/api/errors:go_default_library",
         "@io_k8s_apimachinery//pkg/fields:go_default_library",

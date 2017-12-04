@@ -9,11 +9,9 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	extensionsv1beta1 "k8s.io/api/extensions/v1beta1"
-
-	"k8s.io/client-go/kubernetes"
 )
 
-func seedLatticeControllerManager(kubeClientset *kubernetes.Clientset) {
+func seedLatticeControllerManager() {
 	fmt.Println("Seeding lattice-controller-manager...")
 
 	// TODO: for now we'll make a DaemonSet that runs on all the master nodes (aka all nodes in local)
@@ -66,7 +64,7 @@ func seedLatticeControllerManager(kubeClientset *kubernetes.Clientset) {
 	//}
 
 	pollKubeResourceCreation(func() (interface{}, error) {
-		return kubeClientset.
+		return kubeClient.
 			ExtensionsV1beta1().
 			DaemonSets(string(constants.NamespaceLatticeInternal)).
 			Create(latticeControllerManagerDaemonSet)

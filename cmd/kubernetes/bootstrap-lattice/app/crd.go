@@ -6,14 +6,12 @@ import (
 	"github.com/mlab-lattice/system/pkg/kubernetes/customresource"
 
 	apiextensionsclient "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
-
-	"k8s.io/client-go/rest"
 )
 
-func seedCrds(kubeconfig *rest.Config) {
+func seedCrds() {
 	fmt.Println("Seeding CRDs...")
 
-	apiextensionsclientset, err := apiextensionsclient.NewForConfig(kubeconfig)
+	apiextensionsclientset, err := apiextensionsclient.NewForConfig(kubeConfig)
 	if err != nil {
 		panic(err)
 	}

@@ -10,11 +10,9 @@ import (
 
 	appsv1beta2 "k8s.io/api/apps/v1beta2"
 	corev1 "k8s.io/api/core/v1"
-
-	"k8s.io/client-go/kubernetes"
 )
 
-func seedEnvoyXdsApi(kubeClientset *kubernetes.Clientset) {
+func seedEnvoyXdsApi() {
 	fmt.Println("Seeding envoy xds api...")
 
 	// Create envoy-xds-api daemon set
@@ -68,6 +66,6 @@ func seedEnvoyXdsApi(kubeClientset *kubernetes.Clientset) {
 	}
 
 	pollKubeResourceCreation(func() (interface{}, error) {
-		return kubeClientset.AppsV1beta2().DaemonSets(ds.Namespace).Create(ds)
+		return kubeClient.AppsV1beta2().DaemonSets(ds.Namespace).Create(ds)
 	})
 }

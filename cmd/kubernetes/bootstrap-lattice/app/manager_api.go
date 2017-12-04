@@ -9,11 +9,9 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	extensionsv1beta1 "k8s.io/api/extensions/v1beta1"
-
-	"k8s.io/client-go/kubernetes"
 )
 
-func seedLatticeSystemEnvironmentManagerAPI(kubeClientset *kubernetes.Clientset) {
+func seedLatticeSystemEnvironmentManagerAPI() {
 	fmt.Println("Seeding lattice-system-environment-manager...")
 
 	latticeSystemEnvironmentManagerAPIDaemonSet := &extensionsv1beta1.DaemonSet{
@@ -65,7 +63,7 @@ func seedLatticeSystemEnvironmentManagerAPI(kubeClientset *kubernetes.Clientset)
 	//}
 
 	pollKubeResourceCreation(func() (interface{}, error) {
-		return kubeClientset.
+		return kubeClient.
 			ExtensionsV1beta1().
 			DaemonSets(string(constants.NamespaceLatticeInternal)).
 			Create(latticeSystemEnvironmentManagerAPIDaemonSet)

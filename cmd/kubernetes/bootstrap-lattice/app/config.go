@@ -6,21 +6,14 @@ import (
 
 	"github.com/mlab-lattice/system/pkg/constants"
 	kubeconstants "github.com/mlab-lattice/system/pkg/kubernetes/constants"
-	"github.com/mlab-lattice/system/pkg/kubernetes/customresource"
 	crv1 "github.com/mlab-lattice/system/pkg/kubernetes/customresource/v1"
 	"github.com/mlab-lattice/system/pkg/types"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
-	"k8s.io/client-go/rest"
 )
 
-func seedConfig(kubeconfig *rest.Config, userSystemUrl string) {
+func seedConfig(userSystemUrl string) {
 	fmt.Println("Seeding lattice config...")
-	crClient, _, err := customresource.NewRESTClient(kubeconfig)
-	if err != nil {
-		panic(err)
-	}
 
 	// Create config
 	config := &crv1.Config{
@@ -79,11 +72,7 @@ func seedConfig(kubeconfig *rest.Config, userSystemUrl string) {
 	}
 
 	pollKubeResourceCreation(func() (interface{}, error) {
-		return nil, crClient.Post().
-			Namespace(kubeconstants.NamespaceLatticeInternal).
-			Resource(crv1.ResourcePluralConfig).
-			Body(config).
-			Do().Into(nil)
+		return latticeClient.V1().Configs(kubeconstants.NamespaceLatticeInternal).Create(config)
 	})
 }
 

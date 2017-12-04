@@ -10,16 +10,14 @@ import (
 	appsv1beta2 "k8s.io/api/apps/v1beta2"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
-
-	"k8s.io/client-go/kubernetes"
 )
 
-func seedCloudSpecific(kubeClientset *kubernetes.Clientset) {
+func seedCloudSpecific() {
 	fmt.Println("Seeding cloud specific resources...")
-	seedFlannel(kubeClientset)
+	seedFlannel()
 }
 
-func seedFlannel(kubeClientset *kubernetes.Clientset) {
+func seedFlannel() {
 	// Translated from: https://github.com/coreos/flannel/blob/317b7d199e3fe937f04ecb39beed025e47316430/Documentation/kube-flannel.yml
 	sa := &corev1.ServiceAccount{
 		ObjectMeta: metav1.ObjectMeta{
@@ -29,7 +27,7 @@ func seedFlannel(kubeClientset *kubernetes.Clientset) {
 	}
 
 	pollKubeResourceCreation(func() (interface{}, error) {
-		return kubeClientset.CoreV1().ServiceAccounts(sa.Namespace).Create(sa)
+		return kubeClient.CoreV1().ServiceAccounts(sa.Namespace).Create(sa)
 	})
 
 	cr := &rbacv1.ClusterRole{
@@ -56,7 +54,7 @@ func seedFlannel(kubeClientset *kubernetes.Clientset) {
 	}
 
 	pollKubeResourceCreation(func() (interface{}, error) {
-		return kubeClientset.RbacV1().ClusterRoles().Create(cr)
+		return kubeClient.RbacV1().ClusterRoles().Create(cr)
 	})
 
 	crb := &rbacv1.ClusterRoleBinding{
@@ -78,7 +76,7 @@ func seedFlannel(kubeClientset *kubernetes.Clientset) {
 	}
 
 	pollKubeResourceCreation(func() (interface{}, error) {
-		return kubeClientset.RbacV1().ClusterRoleBindings().Create(crb)
+		return kubeClient.RbacV1().ClusterRoleBindings().Create(crb)
 	})
 
 	cm := &corev1.ConfigMap{
@@ -100,7 +98,7 @@ func seedFlannel(kubeClientset *kubernetes.Clientset) {
 	}
 
 	pollKubeResourceCreation(func() (interface{}, error) {
-		return kubeClientset.CoreV1().ConfigMaps(cm.Namespace).Create(cm)
+		return kubeClient.CoreV1().ConfigMaps(cm.Namespace).Create(cm)
 	})
 
 	truth := true
@@ -227,6 +225,6 @@ func seedFlannel(kubeClientset *kubernetes.Clientset) {
 	}
 
 	pollKubeResourceCreation(func() (interface{}, error) {
-		return kubeClientset.AppsV1beta2().DaemonSets(ds.Namespace).Create(ds)
+		return kubeClient.AppsV1beta2().DaemonSets(ds.Namespace).Create(ds)
 	})
 }

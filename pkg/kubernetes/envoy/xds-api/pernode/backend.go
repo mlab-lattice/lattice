@@ -7,14 +7,14 @@ import (
 	"github.com/mlab-lattice/system/pkg/constants"
 	"github.com/mlab-lattice/system/pkg/definition/tree"
 	"github.com/mlab-lattice/system/pkg/envoy"
-	latticeresource "github.com/mlab-lattice/system/pkg/kubernetes/customresource"
+	latticeclientset "github.com/mlab-lattice/system/pkg/kubernetes/customresource/client"
 	crv1 "github.com/mlab-lattice/system/pkg/kubernetes/customresource/v1"
 
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/fields"
 
 	corev1informers "k8s.io/client-go/informers/core/v1"
-	clientset "k8s.io/client-go/kubernetes"
+	kubeclientset "k8s.io/client-go/kubernetes"
 	corelisters "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
@@ -41,16 +41,19 @@ func NewKubernetesPerNodeBackend(kubeconfig string) (*KubernetesPerNodeBackend, 
 		return nil, err
 	}
 
-	latticeResourceClient, _, err := latticeresource.NewRESTClient(config)
+	rest.AddUserAgent(config, "envoy-api-backend")
+	latticeClient, err := latticeclientset.NewForConfig(config)
 	if err != nil {
 		return nil, err
 	}
 
-	rest.AddUserAgent(config, "envoy-api-backend")
-	kClient := clientset.NewForConfigOrDie(config)
+	kubeClient, err := kubeclientset.NewForConfig(config)
+	if err != nil {
+		return nil, err
+	}
 
 	listerWatcher := cache.NewListWatchFromClient(
-		latticeResourceClient,
+		latticeClient.V1().RESTClient(),
 		crv1.ResourcePluralService,
 		string(constants.UserSystemNamespace),
 		fields.Everything(),
@@ -62,7 +65,7 @@ func NewKubernetesPerNodeBackend(kubeconfig string) (*KubernetesPerNodeBackend, 
 	)
 
 	kEndpointInformer := corev1informers.NewEndpointsInformer(
-		kClient,
+		kubeClient,
 		string(constants.UserSystemNamespace),
 		time.Duration(12*time.Hour),
 		cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc},

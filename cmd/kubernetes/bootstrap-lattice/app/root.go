@@ -5,12 +5,13 @@ import (
 	"os"
 
 	"github.com/mlab-lattice/system/pkg/constants"
+	latticeclientset "github.com/mlab-lattice/system/pkg/kubernetes/customresource/client"
 
-	"github.com/spf13/cobra"
-
-	clientset "k8s.io/client-go/kubernetes"
+	kubeclientset "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
+
+	"github.com/spf13/cobra"
 )
 
 var (
@@ -26,6 +27,10 @@ var (
 	providerVars             *[]string
 	terraformBackend         string
 	terraformBackendVars     *[]string
+
+	kubeConfig    *rest.Config
+	kubeClient    kubeclientset.Interface
+	latticeClient latticeclientset.Interface
 )
 
 // RootCmd represents the base command when called without any subcommands
@@ -33,45 +38,19 @@ var RootCmd = &cobra.Command{
 	Use:   "bootstrap-lattice",
 	Short: "Bootstraps a kubernetes cluster to run lattice",
 	Run: func(cmd *cobra.Command, args []string) {
-		switch provider {
-		case constants.ProviderLocal, constants.ProviderAWS:
-		default:
-			panic("unsupported provider")
-		}
 
-		var config *rest.Config
-		var err error
-		if kubeconfigPath == "" {
-			config, err = rest.InClusterConfig()
-		} else {
-			// TODO: support passing in the context when supported
-			// https://github.com/kubernetes/minikube/issues/2100
-			//configOverrides := &clientcmd.ConfigOverrides{CurrentContext: kubeContext}
-			configOverrides := &clientcmd.ConfigOverrides{}
-			config, err = clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
-				&clientcmd.ClientConfigLoadingRules{ExplicitPath: kubeconfigPath},
-				configOverrides,
-			).ClientConfig()
-		}
-
-		if err != nil {
-			panic(err)
-		}
-
-		kubeClientset := clientset.NewForConfigOrDie(config)
-
-		seedNamespaces(kubeClientset)
-		seedCrds(config)
-		seedRbac(kubeClientset)
-		seedConfig(config, systemDefinitionUrl)
-		seedEnvoyXdsApi(kubeClientset)
-		seedLatticeControllerManager(kubeClientset)
-		seedLatticeSystemEnvironmentManagerAPI(kubeClientset)
+		seedNamespaces()
+		seedCrds()
+		seedRbac()
+		seedConfig(systemDefinitionUrl)
+		seedEnvoyXdsApi()
+		seedLatticeControllerManager()
+		seedLatticeSystemEnvironmentManagerAPI()
 
 		if provider == constants.ProviderLocal {
-			seedLocalSpecific(kubeClientset, systemId)
+			seedLocalSpecific(systemId)
 		} else {
-			seedCloudSpecific(kubeClientset)
+			seedCloudSpecific()
 		}
 	},
 }
@@ -103,4 +82,33 @@ func init() {
 	// --provider-var=availability-zones=us-east-1a,us-east-1b resulting in ["availability-zones=us-east-1a,us-east-1b"]
 	providerVars = RootCmd.Flags().StringArray("provider-var", nil, "additional variables to pass to the provider")
 	terraformBackendVars = RootCmd.Flags().StringArray("terraform-backend-var", nil, "additional variables to pass to the terraform backend")
+}
+
+func initializeClients() {
+	switch provider {
+	case constants.ProviderLocal, constants.ProviderAWS:
+	default:
+		panic("unsupported provider")
+	}
+
+	var err error
+	if kubeconfigPath == "" {
+		kubeConfig, err = rest.InClusterConfig()
+	} else {
+		// TODO: support passing in the context when supported
+		// https://github.com/kubernetes/minikube/issues/2100
+		//configOverrides := &clientcmd.ConfigOverrides{CurrentContext: kubeContext}
+		configOverrides := &clientcmd.ConfigOverrides{}
+		kubeConfig, err = clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
+			&clientcmd.ClientConfigLoadingRules{ExplicitPath: kubeconfigPath},
+			configOverrides,
+		).ClientConfig()
+	}
+
+	if err != nil {
+		panic(err)
+	}
+
+	kubeClient = kubeclientset.NewForConfigOrDie(kubeConfig)
+	latticeClient = latticeclientset.NewForConfigOrDie(kubeConfig)
 }

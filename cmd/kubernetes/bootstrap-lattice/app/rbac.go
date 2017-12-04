@@ -9,8 +9,6 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"k8s.io/client-go/kubernetes"
-
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 
@@ -18,12 +16,12 @@ import (
 	batchv1 "k8s.io/api/batch/v1"
 )
 
-func seedRbac(kubeClientset *kubernetes.Clientset) {
+func seedRbac() {
 	fmt.Println("Seeding rbac...")
-	seedRbacComponentBuilder(kubeClientset)
-	seedRbacEnvoyXdsApi(kubeClientset)
-	seedRbacLatticeControllerManger(kubeClientset)
-	seedRbacManagerApi(kubeClientset)
+	seedRbacComponentBuilder()
+	seedRbacEnvoyXdsApi()
+	seedRbacLatticeControllerManger()
+	seedRbacManagerApi()
 }
 
 var (
@@ -33,7 +31,7 @@ var (
 	readAndUpdateVerbs = []string{"get", "watch", "list", "update"}
 )
 
-func seedRbacComponentBuilder(kubeClientset *kubernetes.Clientset) {
+func seedRbacComponentBuilder() {
 	role := &rbacv1.Role{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "component-builder",
@@ -50,7 +48,7 @@ func seedRbacComponentBuilder(kubeClientset *kubernetes.Clientset) {
 	}
 
 	pollKubeResourceCreation(func() (interface{}, error) {
-		return kubeClientset.
+		return kubeClient.
 			RbacV1().
 			Roles(role.Namespace).
 			Create(role)
@@ -64,7 +62,7 @@ func seedRbacComponentBuilder(kubeClientset *kubernetes.Clientset) {
 	}
 
 	pollKubeResourceCreation(func() (interface{}, error) {
-		return kubeClientset.
+		return kubeClient.
 			CoreV1().
 			ServiceAccounts(sa.Namespace).
 			Create(sa)
@@ -90,14 +88,14 @@ func seedRbacComponentBuilder(kubeClientset *kubernetes.Clientset) {
 	}
 
 	pollKubeResourceCreation(func() (interface{}, error) {
-		return kubeClientset.
+		return kubeClient.
 			RbacV1().
 			RoleBindings(rb.Namespace).
 			Create(rb)
 	})
 }
 
-func seedRbacEnvoyXdsApi(kubeClientset *kubernetes.Clientset) {
+func seedRbacEnvoyXdsApi() {
 	role := &rbacv1.Role{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "envoy-xds-api",
@@ -120,7 +118,7 @@ func seedRbacEnvoyXdsApi(kubeClientset *kubernetes.Clientset) {
 	}
 
 	pollKubeResourceCreation(func() (interface{}, error) {
-		return kubeClientset.
+		return kubeClient.
 			RbacV1().
 			Roles(role.Namespace).
 			Create(role)
@@ -134,7 +132,7 @@ func seedRbacEnvoyXdsApi(kubeClientset *kubernetes.Clientset) {
 	}
 
 	pollKubeResourceCreation(func() (interface{}, error) {
-		return kubeClientset.
+		return kubeClient.
 			CoreV1().
 			ServiceAccounts(sa.Namespace).
 			Create(sa)
@@ -160,14 +158,14 @@ func seedRbacEnvoyXdsApi(kubeClientset *kubernetes.Clientset) {
 	}
 
 	pollKubeResourceCreation(func() (interface{}, error) {
-		return kubeClientset.
+		return kubeClient.
 			RbacV1().
 			RoleBindings(rb.Namespace).
 			Create(rb)
 	})
 }
 
-func seedRbacLatticeControllerManger(kubeClientset *kubernetes.Clientset) {
+func seedRbacLatticeControllerManger() {
 	clusterRole := &rbacv1.ClusterRole{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: kubeconstants.MasterNodeComponentLatticeControllerManager,
@@ -201,7 +199,7 @@ func seedRbacLatticeControllerManger(kubeClientset *kubernetes.Clientset) {
 	}
 
 	pollKubeResourceCreation(func() (interface{}, error) {
-		return kubeClientset.
+		return kubeClient.
 			RbacV1().
 			ClusterRoles().
 			Create(clusterRole)
@@ -215,7 +213,7 @@ func seedRbacLatticeControllerManger(kubeClientset *kubernetes.Clientset) {
 	}
 
 	pollKubeResourceCreation(func() (interface{}, error) {
-		return kubeClientset.
+		return kubeClient.
 			CoreV1().
 			ServiceAccounts(sa.Namespace).
 			Create(sa)
@@ -240,14 +238,14 @@ func seedRbacLatticeControllerManger(kubeClientset *kubernetes.Clientset) {
 	}
 
 	pollKubeResourceCreation(func() (interface{}, error) {
-		return kubeClientset.
+		return kubeClient.
 			RbacV1().
 			ClusterRoleBindings().
 			Create(crb)
 	})
 }
 
-func seedRbacManagerApi(kubeClientset *kubernetes.Clientset) {
+func seedRbacManagerApi() {
 	role := &rbacv1.Role{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      kubeconstants.MasterNodeComponentManagerAPI,
@@ -306,7 +304,7 @@ func seedRbacManagerApi(kubeClientset *kubernetes.Clientset) {
 	}
 
 	pollKubeResourceCreation(func() (interface{}, error) {
-		return kubeClientset.
+		return kubeClient.
 			RbacV1().
 			Roles(role.Namespace).
 			Create(role)
@@ -339,7 +337,7 @@ func seedRbacManagerApi(kubeClientset *kubernetes.Clientset) {
 	}
 
 	pollKubeResourceCreation(func() (interface{}, error) {
-		return kubeClientset.
+		return kubeClient.
 			RbacV1().
 			ClusterRoles().
 			Create(clusterRole)
@@ -353,7 +351,7 @@ func seedRbacManagerApi(kubeClientset *kubernetes.Clientset) {
 	}
 
 	pollKubeResourceCreation(func() (interface{}, error) {
-		return kubeClientset.
+		return kubeClient.
 			CoreV1().
 			ServiceAccounts(sa.Namespace).
 			Create(sa)
@@ -379,7 +377,7 @@ func seedRbacManagerApi(kubeClientset *kubernetes.Clientset) {
 	}
 
 	pollKubeResourceCreation(func() (interface{}, error) {
-		return kubeClientset.
+		return kubeClient.
 			RbacV1().
 			RoleBindings(rb.Namespace).
 			Create(rb)
@@ -404,7 +402,7 @@ func seedRbacManagerApi(kubeClientset *kubernetes.Clientset) {
 	}
 
 	pollKubeResourceCreation(func() (interface{}, error) {
-		return kubeClientset.
+		return kubeClient.
 			RbacV1().
 			ClusterRoleBindings().
 			Create(crb)
