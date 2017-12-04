@@ -3,7 +3,7 @@
 set -e
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-LATTICE_ROOT=${DIR}/..
+LATTICE_ROOT=${DIR}/../..
 cd ${LATTICE_ROOT}
 
 make gazelle
