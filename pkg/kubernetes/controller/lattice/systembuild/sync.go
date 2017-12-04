@@ -44,7 +44,7 @@ func (sbc *SystemBuildController) syncServiceBuildStates(sysb *crv1.SystemBuild,
 func updateServiceBuildInfoState(sysb *crv1.SystemBuild, service tree.NodePath, svcb *crv1.ServiceBuild) error {
 	serviceInfo, ok := sysb.Spec.Services[service]
 	if !ok {
-		return fmt.Errorf("SystemBuild %v Spec.Services did not contain expected service", svcb.Name, service)
+		return fmt.Errorf("SystemBuild %v Spec.Services did not contain expected service %v", svcb.Name, service)
 	}
 
 	serviceInfo.BuildState = &svcb.Status.State

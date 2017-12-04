@@ -48,7 +48,7 @@ func (sbc *ServiceBuildController) syncComponentBuildStates(svcb *crv1.ServiceBu
 func updateComponentBuildInfoState(svcb *crv1.ServiceBuild, component string, cb *crv1.ComponentBuild) error {
 	componentInfo, ok := svcb.Spec.Components[component]
 	if !ok {
-		return fmt.Errorf("ServiceBuild %v Spec.Components did not contain expected component", svcb.Name, component)
+		return fmt.Errorf("ServiceBuild %v Spec.Components did not contain expected component %v", svcb.Name, component)
 	}
 
 	componentInfo.BuildState = &cb.Status.State

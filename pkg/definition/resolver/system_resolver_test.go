@@ -46,7 +46,7 @@ func testV1(t *testing.T) {
 
 	defNode, err := res.ResolveDefinition(TEST_REPO_GIT_URI_V1, "system.json", &GitResolveOptions{})
 	if err != nil {
-		t.Fatalf("Error is not nil: ", err)
+		t.Fatalf("Error is not nil: %v", err)
 	}
 
 	if defNode.Name() != "my-system-v1" {

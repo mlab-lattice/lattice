@@ -128,7 +128,7 @@ func (sc *ServiceController) getServiceTerraformConfig(svc *crv1.Service) (inter
 	var serviceModule interface{}
 	if necessary {
 		if kubeSvc == nil {
-			return nil, fmt.Errorf("Service %v requires kubeSvc but it does not exist")
+			return nil, fmt.Errorf("Service %v requires kubeSvc but it does not exist", svc.Name)
 		}
 
 		serviceModule = sc.getServiceDedicatedPublicHttpTerraformModule(svc, kubeSvc)
