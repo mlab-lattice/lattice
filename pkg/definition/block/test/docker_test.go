@@ -12,7 +12,7 @@ func TestDockerImage_Validate(t *testing.T) {
 }
 
 func TestDockerImage_JSON(t *testing.T) {
-	TestJSON(
+	JSON(
 		t,
 		reflect.TypeOf(block.DockerImage{}),
 		[]JSONTest{

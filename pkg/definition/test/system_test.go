@@ -21,7 +21,7 @@ func TestSystem_Validate(t *testing.T) {
 	subsystemSystem := MockSystem()
 	subsystemSystemDefinition := definition.Interface(subsystemSystem)
 
-	sdbt.TestValidate(
+	sdbt.Validate(
 		t,
 		nil,
 

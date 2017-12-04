@@ -16,7 +16,7 @@ type ValidateTest struct {
 	Information     interface{}
 }
 
-func TestValidate(
+func Validate(
 	t *testing.T,
 	defaultInformation interface{},
 	expectFailureTests,
@@ -89,7 +89,7 @@ type JSONTest struct {
 	ValuePtr    interface{}
 }
 
-func TestJSON(t *testing.T, valueType reflect.Type, tests []JSONTest) {
+func JSON(t *testing.T, valueType reflect.Type, tests []JSONTest) {
 	marshalTests := []MarshalJSONTest{}
 	unmarshalTests := []UnmarshalJSONTest{}
 
@@ -106,8 +106,8 @@ func TestJSON(t *testing.T, valueType reflect.Type, tests []JSONTest) {
 		})
 	}
 
-	TestMarshalJSON(t, marshalTests)
-	TestUnmarshalJSON(t, valueType, unmarshalTests)
+	MarshalJSON(t, marshalTests)
+	UnmarshalJSON(t, valueType, unmarshalTests)
 }
 
 type MarshalJSONTest struct {
@@ -116,7 +116,7 @@ type MarshalJSONTest struct {
 	ExpectedBytes []byte
 }
 
-func TestMarshalJSON(t *testing.T, tests []MarshalJSONTest) {
+func MarshalJSON(t *testing.T, tests []MarshalJSONTest) {
 	for _, test := range tests {
 		testutil.ValidateToJSON(t, test.Description, test.BytesProducer, test.ExpectedBytes)
 	}
@@ -128,7 +128,7 @@ type UnmarshalJSONTest struct {
 	ExpectedPtr interface{}
 }
 
-func TestUnmarshalJSON(t *testing.T, expectedType reflect.Type, tests []UnmarshalJSONTest) {
+func UnmarshalJSON(t *testing.T, expectedType reflect.Type, tests []UnmarshalJSONTest) {
 	for _, test := range tests {
 		actual := reflect.New(expectedType).Interface()
 		if err := json.Unmarshal(test.Bytes, &actual); err != nil {

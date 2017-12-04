@@ -10,7 +10,7 @@ import (
 )
 
 func TestService_Validate(t *testing.T) {
-	blocktest.TestValidate(
+	blocktest.Validate(
 		t,
 		nil,
 
@@ -83,7 +83,7 @@ func TestService_Validate(t *testing.T) {
 }
 
 func TestService_JSON(t *testing.T) {
-	blocktest.TestJSON(
+	blocktest.JSON(
 		t,
 		reflect.TypeOf(definition.Service{}),
 		[]blocktest.JSONTest{

@@ -8,7 +8,7 @@ import (
 )
 
 func TestPort_Validate(t *testing.T) {
-	TestValidate(
+	Validate(
 		t,
 		nil,
 
@@ -97,7 +97,7 @@ func TestPort_Validate(t *testing.T) {
 }
 
 func TestPort_JSON(t *testing.T) {
-	TestJSON(
+	JSON(
 		t,
 		reflect.TypeOf(block.ComponentPort{}),
 		[]JSONTest{
@@ -126,7 +126,7 @@ func TestPort_JSON(t *testing.T) {
 }
 
 func TestExternalAccess_Validate(t *testing.T) {
-	TestValidate(
+	Validate(
 		t,
 		nil,
 
@@ -156,7 +156,7 @@ func TestExternalAccess_Validate(t *testing.T) {
 }
 
 func TestExternalAccess_JSON(t *testing.T) {
-	TestJSON(
+	JSON(
 		t,
 		reflect.TypeOf(block.ExternalAccess{}),
 		[]JSONTest{

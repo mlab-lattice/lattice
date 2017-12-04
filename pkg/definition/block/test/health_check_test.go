@@ -11,7 +11,7 @@ func TestHealthCheck_Validate(t *testing.T) {
 	httpHealthCheck := MockHTTPHealthCheck()
 	tcpHealthCheck := MockTCPHealthCheck()
 
-	TestValidate(
+	Validate(
 		t,
 		map[string]*block.ComponentPort{},
 
@@ -149,7 +149,7 @@ func TestHealthCheck_Validate(t *testing.T) {
 }
 
 func TestHealthCheck_JSON(t *testing.T) {
-	TestJSON(
+	JSON(
 		t,
 		reflect.TypeOf(block.ComponentHealthCheck{}),
 		[]JSONTest{
@@ -173,7 +173,7 @@ func TestHealthCheck_JSON(t *testing.T) {
 }
 
 func TestHTTPHealthCheck_Validate(t *testing.T) {
-	TestValidate(
+	Validate(
 		t,
 		map[string]*block.ComponentPort{},
 
@@ -245,7 +245,7 @@ func TestHTTPHealthCheck_Validate(t *testing.T) {
 }
 
 func TestHTTPHealthCheck_JSON(t *testing.T) {
-	TestJSON(
+	JSON(
 		t,
 		reflect.TypeOf(block.HTTPComponentHealthCheck{}),
 		[]JSONTest{
@@ -264,7 +264,7 @@ func TestHTTPHealthCheck_JSON(t *testing.T) {
 }
 
 func TestTCPHealthCheck_Validate(t *testing.T) {
-	TestValidate(
+	Validate(
 		t,
 		map[string]*block.ComponentPort{},
 
@@ -307,7 +307,7 @@ func TestTCPHealthCheck_Validate(t *testing.T) {
 }
 
 func TestTCPHealthCheck_JSON(t *testing.T) {
-	TestJSON(
+	JSON(
 		t,
 		reflect.TypeOf(block.TCPComponentHealthCheck{}),
 		[]JSONTest{
@@ -321,7 +321,7 @@ func TestTCPHealthCheck_JSON(t *testing.T) {
 }
 
 func TestExecHealthCheck_Validate(t *testing.T) {
-	TestValidate(
+	Validate(
 		t,
 		nil,
 
@@ -358,7 +358,7 @@ func TestExecHealthCheck_Validate(t *testing.T) {
 }
 
 func TestExecHealthCheck_JSON(t *testing.T) {
-	TestJSON(
+	JSON(
 		t,
 		reflect.TypeOf(block.ExecComponentHealthCheck{}),
 		[]JSONTest{

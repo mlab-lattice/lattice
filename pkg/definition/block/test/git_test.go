@@ -10,7 +10,7 @@ import (
 func TestGitRepository_Validate(t *testing.T) {
 	tag := "v1.0.0"
 	commit := "0d8934873e7191349a76f8e8b90c417e6b63f65f"
-	TestValidate(
+	Validate(
 		t,
 		nil,
 
@@ -48,7 +48,7 @@ func TestGitRepository_Validate(t *testing.T) {
 }
 
 func TestGitRepository_JSON(t *testing.T) {
-	TestJSON(
+	JSON(
 		t,
 		reflect.TypeOf(block.GitRepository{}),
 		[]JSONTest{

@@ -8,7 +8,7 @@ import (
 )
 
 func TestMetadata_Validate(t *testing.T) {
-	TestValidate(
+	Validate(
 		t,
 		nil,
 
@@ -54,7 +54,7 @@ func TestMetadata_Validate(t *testing.T) {
 }
 
 func TestMetadata_JSON(t *testing.T) {
-	TestJSON(
+	JSON(
 		t,
 		reflect.TypeOf(block.Metadata{}),
 		[]JSONTest{

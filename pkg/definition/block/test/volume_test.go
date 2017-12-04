@@ -8,7 +8,7 @@ import (
 )
 
 func TestVolume_Validate(t *testing.T) {
-	TestValidate(
+	Validate(
 		t,
 		nil,
 
@@ -47,7 +47,7 @@ func TestVolume_Validate(t *testing.T) {
 }
 
 func TestVolume_JSON(t *testing.T) {
-	TestJSON(
+	JSON(
 		t,
 		reflect.TypeOf(block.Volume{}),
 		[]JSONTest{
@@ -61,7 +61,7 @@ func TestVolume_JSON(t *testing.T) {
 }
 
 func TestVolumeMount_Validate(t *testing.T) {
-	TestValidate(
+	Validate(
 		t,
 		nil,
 
@@ -108,7 +108,7 @@ func TestVolumeMount_Validate(t *testing.T) {
 }
 
 func TestVolumeMount_JSON(t *testing.T) {
-	TestJSON(
+	JSON(
 		t,
 		reflect.TypeOf(block.ComponentVolumeMount{}),
 		[]JSONTest{

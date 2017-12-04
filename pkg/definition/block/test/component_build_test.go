@@ -10,7 +10,7 @@ import (
 func TestBuild_Validate(t *testing.T) {
 	language := "foobar"
 	command := "install"
-	TestValidate(
+	Validate(
 		t,
 		nil,
 
@@ -115,7 +115,7 @@ func TestBuild_Validate(t *testing.T) {
 }
 
 func TestBuild_JSON(t *testing.T) {
-	TestJSON(
+	JSON(
 		t,
 		reflect.TypeOf(block.ComponentBuild{}),
 		[]JSONTest{

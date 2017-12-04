@@ -11,7 +11,7 @@ func TestResources_Validate(t *testing.T) {
 	instanceType := "instance-type"
 	var one int32 = 1
 	var two int32 = 2
-	TestValidate(
+	Validate(
 		t,
 		nil,
 
@@ -103,7 +103,7 @@ func TestResources_Validate(t *testing.T) {
 }
 
 func TestResources_JSON(t *testing.T) {
-	TestJSON(
+	JSON(
 		t,
 		reflect.TypeOf(block.Resources{}),
 		[]JSONTest{

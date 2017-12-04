@@ -8,7 +8,7 @@ import (
 )
 
 func TestExec_Validate(t *testing.T) {
-	TestValidate(
+	Validate(
 		t,
 		nil,
 
@@ -45,7 +45,7 @@ func TestExec_Validate(t *testing.T) {
 }
 
 func TestExec_JSON(t *testing.T) {
-	TestJSON(
+	JSON(
 		t,
 		reflect.TypeOf(block.ComponentExec{}),
 		[]JSONTest{

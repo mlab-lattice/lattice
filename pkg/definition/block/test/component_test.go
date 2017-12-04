@@ -8,7 +8,7 @@ import (
 )
 
 func TestComponent_Validate(t *testing.T) {
-	TestValidate(
+	Validate(
 		t,
 		map[string]*block.Volume{},
 
@@ -205,7 +205,7 @@ func TestComponent_Validate(t *testing.T) {
 }
 
 func TestComponent_JSON(t *testing.T) {
-	TestJSON(
+	JSON(
 		t,
 		reflect.TypeOf(block.Component{}),
 		[]JSONTest{
