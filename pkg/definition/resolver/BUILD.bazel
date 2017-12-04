@@ -14,6 +14,7 @@ go_library(
 
 go_test(
     name = "go_default_test",
+    size = "small",
     srcs = ["system_resolver_test.go"],
     embed = [":go_default_library"],
     importpath = "github.com/mlab-lattice/system/pkg/definition/resolver",

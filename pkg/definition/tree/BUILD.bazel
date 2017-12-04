@@ -15,6 +15,7 @@ go_library(
 
 go_test(
     name = "go_default_test",
+    size = "small",
     srcs = [
         "node_path_test.go",
         "node_test.go",

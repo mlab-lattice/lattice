@@ -27,6 +27,7 @@ go_library(
 
 go_test(
     name = "go_default_test",
+    size = "small",
     srcs = [
         "component_build_test.go",
         "component_test.go",
