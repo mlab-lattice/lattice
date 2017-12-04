@@ -2,10 +2,7 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library")
 
 go_library(
     name = "go_default_library",
-    srcs = [
-        "client.go",
-        "cr.go",
-    ],
+    srcs = ["cr.go"],
     importpath = "github.com/mlab-lattice/system/pkg/kubernetes/customresource",
     visibility = ["//visibility:public"],
     deps = [
@@ -15,10 +12,7 @@ go_library(
         "@io_k8s_apiextensions_apiserver//pkg/client/clientset/clientset:go_default_library",
         "@io_k8s_apimachinery//pkg/api/errors:go_default_library",
         "@io_k8s_apimachinery//pkg/apis/meta/v1:go_default_library",
-        "@io_k8s_apimachinery//pkg/runtime:go_default_library",
-        "@io_k8s_apimachinery//pkg/runtime/serializer:go_default_library",
         "@io_k8s_apimachinery//pkg/util/errors:go_default_library",
         "@io_k8s_apimachinery//pkg/util/wait:go_default_library",
-        "@io_k8s_client_go//rest:go_default_library",
     ],
 )
