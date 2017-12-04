@@ -54,12 +54,12 @@ func TestGitRepository_JSON(t *testing.T) {
 		[]JSONTest{
 			{
 				Description: "MockCommitGitRepository",
-				Bytes:       MockCommitGitRepositoryExpectedJson(),
+				Bytes:       MockCommitGitRepositoryExpectedJSON(),
 				ValuePtr:    MockCommitGitRepository(),
 			},
 			{
 				Description: "MockTagGitRepository",
-				Bytes:       MockTagGitRepositoryExpectedJson(),
+				Bytes:       MockTagGitRepositoryExpectedJSON(),
 				ValuePtr:    MockTagGitRepository(),
 			},
 		},

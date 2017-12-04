@@ -13,7 +13,7 @@ type Resources struct {
 	InstanceType *string `json:"instance_type,omitempty"`
 }
 
-// Implement Interface
+// Validate implements Interface
 func (r *Resources) Validate(interface{}) error {
 	if r.MinInstances == nil && r.MaxInstances == nil && r.NumInstances == nil {
 		return errors.New("must set either num_instances or min_instances and max_instances")

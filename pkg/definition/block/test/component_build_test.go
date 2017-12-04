@@ -121,17 +121,17 @@ func TestBuild_JSON(t *testing.T) {
 		[]JSONTest{
 			{
 				Description: "MockComponentDockerImageBuild",
-				Bytes:       MockDockerImageComponentBuildExpectedJson(),
+				Bytes:       MockDockerImageComponentBuildExpectedJSON(),
 				ValuePtr:    MockComponentDockerImageBuild(),
 			},
 			{
 				Description: "MockGitRepositoryLanguageComponentBuild",
-				Bytes:       MockGitRepositoryLanguageComponentBuildExpectedJson(),
+				Bytes:       MockGitRepositoryLanguageComponentBuildExpectedJSON(),
 				ValuePtr:    MockGitRepositoryLanguageComponentBuild(),
 			},
 			{
 				Description: "MockGitRepositoryBaseDockerImageComponentBuild",
-				Bytes:       MockGitRepositoryBaseDockerImageComponentBuildExpectedJson(),
+				Bytes:       MockGitRepositoryBaseDockerImageComponentBuildExpectedJSON(),
 				ValuePtr:    MockGitRepositoryBaseDockerImageComponentBuild(),
 			},
 		},

@@ -5,7 +5,7 @@ import (
 	crv1 "github.com/mlab-lattice/system/pkg/kubernetes/customresource/v1"
 )
 
-func (sc *SystemController) removeFinalizer(sys *crv1.System) error {
+func (sc *Controller) removeFinalizer(sys *crv1.System) error {
 	// Build up a list of all the finalizers except the system controller finalizer.
 	finalizers := []string{}
 	found := false

@@ -15,14 +15,14 @@ func MockService() *definition.Service {
 	}
 }
 
-func MockServiceExpectedJson() []byte {
-	return GenerateServiceExpectedJson(
-		sdbt.MockServiceMetadataExpectedJson(),
+func MockServiceExpectedJSON() []byte {
+	return GenerateServiceExpectedJSON(
+		sdbt.MockServiceMetadataExpectedJSON(),
 		nil,
 		jsonutil.GenerateArrayBytes([][]byte{
-			sdbt.MockComponentExpectedJson(),
+			sdbt.MockComponentExpectedJSON(),
 		}),
-		sdbt.MockResourcesExpectedJson(),
+		sdbt.MockResourcesExpectedJSON(),
 	)
 }
 
@@ -34,14 +34,14 @@ func MockServiceDifferentName() *definition.Service {
 	}
 }
 
-func MockServiceDifferentNameExpectedJson() []byte {
-	return GenerateServiceExpectedJson(
-		sdbt.MockServiceDifferentNameMetadataExpectedJson(),
+func MockServiceDifferentNameExpectedJSON() []byte {
+	return GenerateServiceExpectedJSON(
+		sdbt.MockServiceDifferentNameMetadataExpectedJSON(),
 		nil,
 		jsonutil.GenerateArrayBytes([][]byte{
-			sdbt.MockComponentExpectedJson(),
+			sdbt.MockComponentExpectedJSON(),
 		}),
-		sdbt.MockResourcesExpectedJson(),
+		sdbt.MockResourcesExpectedJSON(),
 	)
 }
 
@@ -54,20 +54,20 @@ func MockServiceWithVolume() *definition.Service {
 	}
 }
 
-func MockServiceWithVolumeExpectedJson() []byte {
-	return GenerateServiceExpectedJson(
-		sdbt.MockServiceMetadataExpectedJson(),
+func MockServiceWithVolumeExpectedJSON() []byte {
+	return GenerateServiceExpectedJSON(
+		sdbt.MockServiceMetadataExpectedJSON(),
 		jsonutil.GenerateArrayBytes([][]byte{
-			sdbt.MockVolumeExpectedJson(),
+			sdbt.MockVolumeExpectedJSON(),
 		}),
 		jsonutil.GenerateArrayBytes([][]byte{
-			sdbt.MockComponentWithVolumeMountExpectedJson(),
+			sdbt.MockComponentWithVolumeMountExpectedJSON(),
 		}),
-		sdbt.MockResourcesExpectedJson(),
+		sdbt.MockResourcesExpectedJSON(),
 	)
 }
 
-func GenerateServiceExpectedJson(
+func GenerateServiceExpectedJSON(
 	metadata,
 	volumes,
 	components,

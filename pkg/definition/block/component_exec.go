@@ -9,7 +9,7 @@ type ComponentExec struct {
 	Environment map[string]string `json:"environment,omitempty"`
 }
 
-// Implement Interface
+// Validate implements Interface
 func (e *ComponentExec) Validate(interface{}) error {
 	if len(e.Command) == 0 {
 		return errors.New("command must have at least one element")

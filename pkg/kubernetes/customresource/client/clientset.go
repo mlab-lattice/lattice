@@ -8,17 +8,17 @@ import (
 )
 
 type Interface interface {
-	V1() v1.V1Interface
+	V1() v1.Interface
 }
 
 // Clientset contains the clients for groups. Each group has exactly one
 // version included in a Clientset.
 type Clientset struct {
-	v1 *v1.V1Client
+	v1 *v1.Client
 }
 
-// V1 retrieves the V1Client
-func (c *Clientset) V1() v1.V1Interface {
+// V1 retrieves the Client
+func (c *Clientset) V1() v1.Interface {
 	return c.v1
 }
 

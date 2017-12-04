@@ -10,7 +10,7 @@ const (
 	kubeFinalizerAWSServiceController = "aws.cloud.controllers.lattice.mlab.com/service"
 )
 
-func (sc *ServiceController) addFinalizer(svc *crv1.Service) error {
+func (sc *Controller) addFinalizer(svc *crv1.Service) error {
 	// Check to see if the finalizer already exists. If so nothing needs to be done.
 	for _, finalizer := range svc.Finalizers {
 		if finalizer == kubeFinalizerAWSServiceController {
@@ -40,7 +40,7 @@ func (sc *ServiceController) addFinalizer(svc *crv1.Service) error {
 	return nil
 }
 
-func (sc *ServiceController) removeFinalizer(svc *crv1.Service) error {
+func (sc *Controller) removeFinalizer(svc *crv1.Service) error {
 	// Build up a list of all the finalizers except the aws service controller finalizer.
 	finalizers := []string{}
 	found := false

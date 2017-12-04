@@ -29,7 +29,7 @@ func TestPort_Validate(t *testing.T) {
 				Description: "no ComponentPort",
 				DefinitionBlock: &block.ComponentPort{
 					Name:     "foo",
-					Protocol: block.HttpProtocol,
+					Protocol: block.ProtocolHTTP,
 				},
 			},
 			{
@@ -45,7 +45,7 @@ func TestPort_Validate(t *testing.T) {
 				DefinitionBlock: &block.ComponentPort{
 					Name:     "foo",
 					Port:     0,
-					Protocol: block.HttpProtocol,
+					Protocol: block.ProtocolHTTP,
 				},
 			},
 			{
@@ -53,14 +53,14 @@ func TestPort_Validate(t *testing.T) {
 				DefinitionBlock: &block.ComponentPort{
 					Name:     "foo",
 					Port:     100000,
-					Protocol: block.HttpProtocol,
+					Protocol: block.ProtocolHTTP,
 				},
 			},
 			{
 				Description: "Empty name",
 				DefinitionBlock: &block.ComponentPort{
 					Port:     1234,
-					Protocol: block.HttpProtocol,
+					Protocol: block.ProtocolHTTP,
 				},
 			},
 		},
@@ -68,27 +68,27 @@ func TestPort_Validate(t *testing.T) {
 		// Valid Builds
 		[]ValidateTest{
 			{
-				Description: "Protocol Http, ExternalAccess nil",
+				Description: "Protocol HTTP, ExternalAccess nil",
 				DefinitionBlock: &block.ComponentPort{
 					Name:     "foo",
 					Port:     1234,
-					Protocol: block.HttpProtocol,
+					Protocol: block.ProtocolHTTP,
 				},
 			},
 			{
-				Description: "Protocol Tcp, ExternalAccess nil",
+				Description: "Protocol TCP, ExternalAccess nil",
 				DefinitionBlock: &block.ComponentPort{
 					Name:     "foo",
 					Port:     1234,
-					Protocol: block.TcpProtocol,
+					Protocol: block.ProtocolTCP,
 				},
 			},
 			{
-				Description: "ComponentPort, Protocol Http, public ExternalAccess",
+				Description: "ComponentPort, Protocol HTTP, public ExternalAccess",
 				DefinitionBlock: &block.ComponentPort{
 					Name:           "foo",
 					Port:           1234,
-					Protocol:       block.HttpProtocol,
+					Protocol:       block.ProtocolHTTP,
 					ExternalAccess: MockPublicExternalAccess(),
 				},
 			},
@@ -102,24 +102,24 @@ func TestPort_JSON(t *testing.T) {
 		reflect.TypeOf(block.ComponentPort{}),
 		[]JSONTest{
 			{
-				Description: "MockPrivateHttpPort",
-				Bytes:       MockPrivateHttpPortExpectedJson(),
-				ValuePtr:    MockPrivateHttpPort(),
+				Description: "MockPrivateHTTPPort",
+				Bytes:       MockPrivateHTTPPortExpectedJSON(),
+				ValuePtr:    MockPrivateHTTPPort(),
 			},
 			{
-				Description: "MockPublicHttpPort",
-				Bytes:       MockPublicHttpPortExpectedJson(),
-				ValuePtr:    MockPublicHttpPort(),
+				Description: "MockPublicHTTPPort",
+				Bytes:       MockPublicHTTPPortExpectedJSON(),
+				ValuePtr:    MockPublicHTTPPort(),
 			},
 			{
-				Description: "MockPrivateTcpPort",
-				Bytes:       MockPrivateTcpPortExpectedJson(),
-				ValuePtr:    MockPrivateTcpPort(),
+				Description: "MockPrivateTCPPort",
+				Bytes:       MockPrivateTCPPortExpectedJSON(),
+				ValuePtr:    MockPrivateTCPPort(),
 			},
 			{
-				Description: "MockPublicTcpPort",
-				Bytes:       MockPublicTcpPortExpectedJson(),
-				ValuePtr:    MockPublicTcpPort(),
+				Description: "MockPublicTCPPort",
+				Bytes:       MockPublicTCPPortExpectedJSON(),
+				ValuePtr:    MockPublicTCPPort(),
 			},
 		},
 	)
@@ -162,7 +162,7 @@ func TestExternalAccess_JSON(t *testing.T) {
 		[]JSONTest{
 			{
 				Description: "MockPublicExternalAccess",
-				Bytes:       MockPublicExternalAccessExpectedJson(),
+				Bytes:       MockPublicExternalAccessExpectedJSON(),
 				ValuePtr:    MockPublicExternalAccess(),
 			},
 		},

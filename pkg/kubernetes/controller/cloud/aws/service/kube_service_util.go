@@ -9,7 +9,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 )
 
-func (sc *ServiceController) getKubeServiceForService(svc *crv1.Service) (*corev1.Service, bool, error) {
+func (sc *Controller) getKubeServiceForService(svc *crv1.Service) (*corev1.Service, bool, error) {
 	necessary := false
 	for _, component := range svc.Spec.Definition.Components {
 		for _, port := range component.Ports {

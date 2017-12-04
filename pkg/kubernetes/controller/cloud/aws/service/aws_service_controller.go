@@ -28,7 +28,7 @@ import (
 var controllerKind = crv1.SchemeGroupVersion.WithKind("Service")
 
 // We'll use LatticeService to differentiate between kubernetes' Service
-type ServiceController struct {
+type Controller struct {
 	syncHandler    func(bKey string) error
 	enqueueService func(cb *crv1.Service)
 
@@ -53,15 +53,15 @@ type ServiceController struct {
 	terraformModulePath string
 }
 
-func NewServiceController(
+func NewController(
 	kubeClient kubeclientset.Interface,
 	latticeClient latticeclientset.Interface,
 	configInformer cache.SharedInformer,
 	serviceInformer cache.SharedInformer,
 	kubeServiceInformer coreinformers.ServiceInformer,
 	terraformModulePath string,
-) *ServiceController {
-	sc := &ServiceController{
+) *Controller {
+	sc := &Controller{
 		kubeClient:          kubeClient,
 		latticeClient:       latticeClient,
 		configSetChan:       make(chan struct{}),
@@ -103,7 +103,7 @@ func NewServiceController(
 	return sc
 }
 
-func (sc *ServiceController) handleConfigAdd(obj interface{}) {
+func (sc *Controller) handleConfigAdd(obj interface{}) {
 	config := obj.(*crv1.Config)
 	glog.V(4).Infof("Adding Config %s", config.Name)
 
@@ -117,7 +117,7 @@ func (sc *ServiceController) handleConfigAdd(obj interface{}) {
 	}
 }
 
-func (sc *ServiceController) handleConfigUpdate(old, cur interface{}) {
+func (sc *Controller) handleConfigUpdate(old, cur interface{}) {
 	oldConfig := old.(*crv1.Config)
 	curConfig := cur.(*crv1.Config)
 	glog.V(4).Infof("Updating Config %s", oldConfig.Name)
@@ -127,20 +127,20 @@ func (sc *ServiceController) handleConfigUpdate(old, cur interface{}) {
 	sc.config = curConfig.DeepCopy().Spec
 }
 
-func (sc *ServiceController) handleServiceAdd(obj interface{}) {
+func (sc *Controller) handleServiceAdd(obj interface{}) {
 	svc := obj.(*crv1.Service)
 	glog.V(4).Infof("Adding Service %s", svc.Name)
 	sc.enqueueService(svc)
 }
 
-func (sc *ServiceController) handleServiceUpdate(old, cur interface{}) {
+func (sc *Controller) handleServiceUpdate(old, cur interface{}) {
 	oldSvc := old.(*crv1.Service)
 	curSvc := cur.(*crv1.Service)
 	glog.V(4).Infof("Updating Service %s", oldSvc.Name)
 	sc.enqueueService(curSvc)
 }
 
-func (sc *ServiceController) handleServiceDelete(obj interface{}) {
+func (sc *Controller) handleServiceDelete(obj interface{}) {
 	svc, ok := obj.(*crv1.Service)
 	if !ok {
 		tombstone, ok := obj.(cache.DeletedFinalStateUnknown)
@@ -158,7 +158,7 @@ func (sc *ServiceController) handleServiceDelete(obj interface{}) {
 	sc.enqueueService(svc)
 }
 
-func (sc *ServiceController) enqueue(svc *crv1.Service) {
+func (sc *Controller) enqueue(svc *crv1.Service) {
 	key, err := cache.DeletionHandlingMetaNamespaceKeyFunc(svc)
 	if err != nil {
 		runtime.HandleError(fmt.Errorf("couldn't get key for object %#v: %v", svc, err))
@@ -169,26 +169,26 @@ func (sc *ServiceController) enqueue(svc *crv1.Service) {
 }
 
 // handleKubeServiceAdd enqueues the Service that manages a kubeService when the kubeService is created.
-func (sc *ServiceController) handleKubeServiceAdd(obj interface{}) {
-	kSvc := obj.(*corev1.Service)
+func (sc *Controller) handleKubeServiceAdd(obj interface{}) {
+	kubeSvc := obj.(*corev1.Service)
 
-	if kSvc.DeletionTimestamp != nil {
-		// On a restart of the controller manager, it'kSvc possible for an object to
+	if kubeSvc.DeletionTimestamp != nil {
+		// On a restart of the controller manager, it'kubeSvc possible for an object to
 		// show up in a state that is already pending deletion.
-		sc.handleKubeServiceDelete(kSvc)
+		sc.handleKubeServiceDelete(kubeSvc)
 		return
 	}
 
-	// If it has a ControllerRef, that'kSvc all that matters.
-	if controllerRef := metav1.GetControllerOf(kSvc); controllerRef != nil {
-		svc := sc.resolveControllerRef(kSvc.Namespace, controllerRef)
+	// If it has a ControllerRef, that'kubeSvc all that matters.
+	if controllerRef := metav1.GetControllerOf(kubeSvc); controllerRef != nil {
+		svc := sc.resolveControllerRef(kubeSvc.Namespace, controllerRef)
 
 		// Not a Service kubeService.
 		if svc == nil {
 			return
 		}
 
-		glog.V(4).Infof("kubeService %v added.", kSvc.Name)
+		glog.V(4).Infof("kubeService %v added.", kubeSvc.Name)
 		sc.enqueueService(svc)
 		return
 	}
@@ -198,7 +198,7 @@ func (sc *ServiceController) handleKubeServiceAdd(obj interface{}) {
 
 // handleKubeServiceUpdate figures out what Service manages a kubeService when the kubeService
 // is updated and enqueues it.
-func (sc *ServiceController) handleKubeServiceUpdate(old, cur interface{}) {
+func (sc *Controller) handleKubeServiceUpdate(old, cur interface{}) {
 	glog.V(5).Info("Got kubeService update")
 	oldKSvc := old.(*corev1.Service)
 	curKSvc := cur.(*corev1.Service)
@@ -237,8 +237,8 @@ func (sc *ServiceController) handleKubeServiceUpdate(old, cur interface{}) {
 
 // handleDeploymentDelete enqueues the Service that manages a Deployment when
 // the Deployment is deleted.
-func (sc *ServiceController) handleKubeServiceDelete(obj interface{}) {
-	kSvc, ok := obj.(*corev1.Service)
+func (sc *Controller) handleKubeServiceDelete(obj interface{}) {
+	kubeSvc, ok := obj.(*corev1.Service)
 
 	// When a delete is dropped, the relist will notice a pod in the store not
 	// in the list, leading to the insertion of a tombstone object which contains
@@ -249,34 +249,34 @@ func (sc *ServiceController) handleKubeServiceDelete(obj interface{}) {
 			runtime.HandleError(fmt.Errorf("couldn't get object from tombstone %#v", obj))
 			return
 		}
-		kSvc, ok = tombstone.Obj.(*corev1.Service)
+		kubeSvc, ok = tombstone.Obj.(*corev1.Service)
 		if !ok {
 			runtime.HandleError(fmt.Errorf("tombstone contained object that is not a kubeService %#v", obj))
 			return
 		}
 	}
 
-	controllerRef := metav1.GetControllerOf(kSvc)
+	controllerRef := metav1.GetControllerOf(kubeSvc)
 	if controllerRef == nil {
 		// No controller should care about orphans being deleted.
 		return
 	}
 
-	svc := sc.resolveControllerRef(kSvc.Namespace, controllerRef)
+	svc := sc.resolveControllerRef(kubeSvc.Namespace, controllerRef)
 
 	// Not a Service kubeService
 	if svc == nil {
 		return
 	}
 
-	glog.V(4).Infof("kubeService %s deleted.", kSvc.Name)
+	glog.V(4).Infof("kubeService %s deleted.", kubeSvc.Name)
 	sc.enqueueService(svc)
 }
 
 // resolveControllerRef returns the controller referenced by a ControllerRef,
 // or nil if the ControllerRef could not be resolved to a matching controller
 // of the correct Kind.
-func (sc *ServiceController) resolveControllerRef(namespace string, controllerRef *metav1.OwnerReference) *crv1.Service {
+func (sc *Controller) resolveControllerRef(namespace string, controllerRef *metav1.OwnerReference) *crv1.Service {
 	// We can't look up by Name, so look up by Name and then verify Name.
 	// Don't even try to look up by Name if it's the wrong Kind.
 	if controllerRef.Kind != controllerKind.Kind {
@@ -299,7 +299,7 @@ func (sc *ServiceController) resolveControllerRef(namespace string, controllerRe
 	return svc
 }
 
-func (sc *ServiceController) Run(workers int, stopCh <-chan struct{}) {
+func (sc *Controller) Run(workers int, stopCh <-chan struct{}) {
 	// don't let panics crash the process
 	defer runtime.HandleCrash()
 	// make sure the work queue is shutdown which will trigger workers to end
@@ -330,7 +330,7 @@ func (sc *ServiceController) Run(workers int, stopCh <-chan struct{}) {
 	<-stopCh
 }
 
-func (sc *ServiceController) runWorker() {
+func (sc *Controller) runWorker() {
 	// hot loop until we're told to stop.  processNextWorkItem will
 	// automatically wait until there's work available, so we don't worry
 	// about secondary waits
@@ -340,7 +340,7 @@ func (sc *ServiceController) runWorker() {
 
 // processNextWorkItem deals with one key off the queue.  It returns false
 // when it's time to quit.
-func (sc *ServiceController) processNextWorkItem() bool {
+func (sc *Controller) processNextWorkItem() bool {
 	// pull the next work item from queue.  It should be a key we use to lookup
 	// something in a cache
 	key, quit := sc.queue.Get()
@@ -378,7 +378,7 @@ func (sc *ServiceController) processNextWorkItem() bool {
 
 // syncService will sync the Service with the given key.
 // This function is not meant to be invoked concurrently with the same key.
-func (sc *ServiceController) syncService(key string) error {
+func (sc *Controller) syncService(key string) error {
 	glog.Flush()
 	startTime := time.Now()
 	glog.V(4).Infof("Started syncing Service %q (%v)", key, startTime)

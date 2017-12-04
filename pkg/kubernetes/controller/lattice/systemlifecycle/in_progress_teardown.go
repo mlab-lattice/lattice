@@ -11,7 +11,7 @@ import (
 	"github.com/golang/glog"
 )
 
-func (slc *SystemLifecycleController) syncInProgressTeardown(syst *crv1.SystemTeardown) error {
+func (slc *Controller) syncInProgressTeardown(syst *crv1.SystemTeardown) error {
 	system, err := slc.getSystemForTeardown(syst)
 	if err != nil {
 		return err
@@ -39,7 +39,7 @@ func (slc *SystemLifecycleController) syncInProgressTeardown(syst *crv1.SystemTe
 	return slc.latticeClient.V1().Systems(ns).Delete(ns, &metav1.DeleteOptions{})
 }
 
-func (slc *SystemLifecycleController) getSystemForTeardown(syst *crv1.SystemTeardown) (*crv1.System, error) {
+func (slc *Controller) getSystemForTeardown(syst *crv1.SystemTeardown) (*crv1.System, error) {
 	var system *crv1.System
 
 	latticeNamespace := syst.Spec.LatticeNamespace
@@ -58,7 +58,7 @@ func (slc *SystemLifecycleController) getSystemForTeardown(syst *crv1.SystemTear
 	return system, nil
 }
 
-func (slc *SystemLifecycleController) relinquishOwningTeardownClaim(syst *crv1.SystemTeardown) error {
+func (slc *Controller) relinquishOwningTeardownClaim(syst *crv1.SystemTeardown) error {
 	slc.owningLifecycleActionsLock.Lock()
 	defer slc.owningLifecycleActionsLock.Unlock()
 

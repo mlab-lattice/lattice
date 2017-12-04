@@ -4,7 +4,7 @@ import (
 	crv1 "github.com/mlab-lattice/system/pkg/kubernetes/customresource/v1"
 )
 
-func (slc *SystemLifecycleController) syncPendingTeardown(syst *crv1.SystemTeardown) error {
+func (slc *Controller) syncPendingTeardown(syst *crv1.SystemTeardown) error {
 	previousOwningAction, err := slc.attemptToClaimOwningTeardown(syst)
 	if err != nil {
 		return err
@@ -17,7 +17,7 @@ func (slc *SystemLifecycleController) syncPendingTeardown(syst *crv1.SystemTeard
 	return slc.failTeardownDueToExistingOwningAction(syst, previousOwningAction)
 }
 
-func (slc *SystemLifecycleController) attemptToClaimOwningTeardown(syst *crv1.SystemTeardown) (*lifecycleAction, error) {
+func (slc *Controller) attemptToClaimOwningTeardown(syst *crv1.SystemTeardown) (*lifecycleAction, error) {
 	slc.owningLifecycleActionsLock.Lock()
 	defer slc.owningLifecycleActionsLock.Unlock()
 
@@ -31,7 +31,7 @@ func (slc *SystemLifecycleController) attemptToClaimOwningTeardown(syst *crv1.Sy
 	return owningAction, nil
 }
 
-func (slc *SystemLifecycleController) claimOwningTeardown(syst *crv1.SystemTeardown) error {
+func (slc *Controller) claimOwningTeardown(syst *crv1.SystemTeardown) error {
 	slc.owningLifecycleActions[syst.Spec.LatticeNamespace] = &lifecycleAction{
 		teardown: syst,
 	}
@@ -47,7 +47,7 @@ func (slc *SystemLifecycleController) claimOwningTeardown(syst *crv1.SystemTeard
 	return slc.syncInProgressTeardown(result)
 }
 
-func (slc *SystemLifecycleController) failTeardownDueToExistingOwningAction(syst *crv1.SystemTeardown, owningAction *lifecycleAction) error {
+func (slc *Controller) failTeardownDueToExistingOwningAction(syst *crv1.SystemTeardown, owningAction *lifecycleAction) error {
 	message := "Another lifecycle action is active: "
 	if owningAction.rollout != nil {
 		message += "rollout " + owningAction.rollout.Name

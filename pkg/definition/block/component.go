@@ -15,7 +15,7 @@ type Component struct {
 	HealthCheck  *ComponentHealthCheck   `json:"health_check,omitempty"`
 }
 
-// Implement Interface
+// Validate implements Interface
 func (c *Component) Validate(information interface{}) error {
 	if c.Name == "" {
 		return errors.New("name is required")

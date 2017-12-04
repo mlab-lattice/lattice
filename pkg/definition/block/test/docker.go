@@ -13,15 +13,15 @@ func MockDockerImage() *block.DockerImage {
 	}
 }
 
-func MockDockerImageExpectedJson() []byte {
-	return GenerateDockerImageExpectedJson(
+func MockDockerImageExpectedJSON() []byte {
+	return GenerateDockerImageExpectedJSON(
 		[]byte(`"registry.company.com"`),
 		[]byte(`"foobar"`),
 		[]byte(`"v1.0.0"`),
 	)
 }
 
-func GenerateDockerImageExpectedJson(
+func GenerateDockerImageExpectedJSON(
 	registry,
 	repository,
 	tag []byte,

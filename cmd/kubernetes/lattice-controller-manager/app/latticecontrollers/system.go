@@ -6,7 +6,7 @@ import (
 )
 
 func initializeSystemController(ctx controller.Context) {
-	go system.NewSystemController(
+	go system.NewController(
 		ctx.LatticeClientBuilder.ClientOrDie("lattice-controller-lattice-system"),
 		ctx.CRInformers.System,
 		ctx.CRInformers.Service,

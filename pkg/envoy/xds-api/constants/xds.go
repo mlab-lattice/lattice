@@ -1,5 +1,5 @@
 package constants
 
 const (
-	XdsApiClusterName = "xds-api"
+	HTTPXDSApiClusterName = "xds-api"
 )

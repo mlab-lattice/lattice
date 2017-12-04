@@ -118,7 +118,7 @@ type MarshalJSONTest struct {
 
 func TestMarshalJSON(t *testing.T, tests []MarshalJSONTest) {
 	for _, test := range tests {
-		testutil.ValidateToJson(t, test.Description, test.BytesProducer, test.ExpectedBytes)
+		testutil.ValidateToJSON(t, test.Description, test.BytesProducer, test.ExpectedBytes)
 	}
 }
 

@@ -22,7 +22,7 @@ func ErrorDiffs(t *testing.T, description, expected, actual string) {
 	)
 }
 
-func ValidateToJson(t *testing.T, description string, actualMarshaler interface{}, expected []byte) {
+func ValidateToJSON(t *testing.T, description string, actualMarshaler interface{}, expected []byte) {
 	actual, err := json.Marshal(actualMarshaler)
 
 	if err != nil {

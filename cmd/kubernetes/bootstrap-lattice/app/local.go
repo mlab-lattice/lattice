@@ -8,15 +8,15 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func seedLocalSpecific(systemId string) {
+func seedLocalSpecific(systemID string) {
 	nodeClient := kubeClient.CoreV1().Nodes()
-	node, err := nodeClient.Get(systemId, metav1.GetOptions{})
+	node, err := nodeClient.Get(systemID, metav1.GetOptions{})
 	if err != nil {
 		panic(err)
 	}
 
 	if node == nil {
-		panic(fmt.Errorf("could not find node %v", systemId))
+		panic(fmt.Errorf("could not find node %v", systemID))
 	}
 
 	node.Labels[constants.MasterNodeLabelID] = "0"

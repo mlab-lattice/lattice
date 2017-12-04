@@ -37,7 +37,7 @@ type SystemRollouts struct {
 }
 
 // newSystemRollouts returns a SystemRollouts
-func newSystemRollouts(c *V1Client, namespace string) *SystemRollouts {
+func newSystemRollouts(c *Client, namespace string) *SystemRollouts {
 	return &SystemRollouts{
 		client: c.RESTClient(),
 		ns:     namespace,

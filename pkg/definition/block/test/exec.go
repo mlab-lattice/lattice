@@ -15,8 +15,8 @@ func MockExec() *block.ComponentExec {
 	}
 }
 
-func MockExecExpectedJson() []byte {
-	return GenerateExecExpectedJson(
+func MockExecExpectedJSON() []byte {
+	return GenerateExecExpectedJSON(
 		jsonutil.GenerateArrayBytes([][]byte{
 			[]byte(`"./start"`),
 			[]byte(`"--my-app"`),
@@ -34,7 +34,7 @@ func MockExecExpectedJson() []byte {
 	)
 }
 
-func GenerateExecExpectedJson(
+func GenerateExecExpectedJSON(
 	command,
 	environment []byte,
 ) []byte {

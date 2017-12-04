@@ -15,7 +15,7 @@ func GetGitURIFromComponentBuild(gitRepo *block.GitRepository) (string, error) {
 		return "", fmt.Errorf("invalid component build git_repository: %v", err.Error())
 	}
 
-	uri := gitRepo.Url
+	uri := gitRepo.URL
 	if gitRepo.Commit != nil {
 		uri += "#" + *gitRepo.Commit
 	} else {

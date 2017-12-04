@@ -18,14 +18,14 @@ type AWSProvisioner struct {
 type AWSProvisionerConfig struct {
 	TerraformModulePath string
 
-	AccountId         string
+	AccountID         string
 	Region            string
 	AvailabilityZones []string
 	KeyName           string
 
 	MasterNodeInstanceType string
-	MasterNodeAMIId        string
-	BaseNodeAMIId          string
+	MasterNodeAMIID        string
+	BaseNodeAMIID          string
 }
 
 const (
@@ -100,19 +100,19 @@ func (ap *AWSProvisioner) getSystemTerraformJSON(name, url string) ([]byte, erro
 	sysModule := awsterraform.System{
 		Source: filepath.Join(ap.config.TerraformModulePath, systemModulePath),
 
-		AWSAccountId:      ap.config.AccountId,
+		AWSAccountID:      ap.config.AccountID,
 		Region:            ap.config.Region,
 		AvailabilityZones: ap.config.AvailabilityZones,
 		KeyName:           ap.config.KeyName,
 
-		SystemId:            name,
-		SystemDefinitionUrl: url,
+		SystemID:            name,
+		SystemDefinitionURL: url,
 
 		MasterNodeInstanceType:          ap.config.MasterNodeInstanceType,
-		MasterNodeAMIId:                 ap.config.MasterNodeAMIId,
+		MasterNodeAMIID:                 ap.config.MasterNodeAMIID,
 		SystemEnvironmentManagerAPIPort: systemEnvironmentManagerAPIPort,
 
-		BaseNodeAmiId: ap.config.BaseNodeAMIId,
+		BaseNodeAMIID: ap.config.BaseNodeAMIID,
 	}
 
 	jsonMap := map[string]interface{}{

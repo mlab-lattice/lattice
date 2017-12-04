@@ -18,8 +18,8 @@ var (
 	workingDir               string
 	kubeconfigPath           string
 	debug                    bool
-	systemDefinitionUrl      string
-	systemId                 string
+	systemDefinitionURL      string
+	systemID                 string
 	latticeContainerRegistry string
 	componentBuildRegistry   string
 	dockerAPIVersion         string
@@ -41,14 +41,14 @@ var RootCmd = &cobra.Command{
 
 		seedNamespaces()
 		seedCrds()
-		seedRbac()
-		seedConfig(systemDefinitionUrl)
-		seedEnvoyXdsApi()
+		seedRBAC()
+		seedConfig(systemDefinitionURL)
+		seedEnvoyXDSAPI()
 		seedLatticeControllerManager()
 		seedLatticeSystemEnvironmentManagerAPI()
 
 		if provider == constants.ProviderLocal {
-			seedLocalSpecific(systemId)
+			seedLocalSpecific(systemID)
 		} else {
 			seedCloudSpecific()
 		}
@@ -68,8 +68,8 @@ func init() {
 	RootCmd.Flags().StringVar(&workingDir, "working-directory", "/tmp/lattice-system/", "path where subcommands will use as their working directory")
 	RootCmd.Flags().StringVar(&kubeconfigPath, "kubeconfig-path", "", "path to kubeconfig to use if not being invoked from within kubernetes")
 	RootCmd.Flags().BoolVar(&debug, "debug", false, "whether or not to use the debug version of container images")
-	RootCmd.Flags().StringVar(&systemDefinitionUrl, "system-definition-url", "", "url of the system definition repo for the system")
-	RootCmd.Flags().StringVar(&systemId, "system-id", "", "ID of the system")
+	RootCmd.Flags().StringVar(&systemDefinitionURL, "system-definition-url", "", "url of the system definition repo for the system")
+	RootCmd.Flags().StringVar(&systemID, "system-id", "", "ID of the system")
 	RootCmd.Flags().StringVar(&latticeContainerRegistry, "lattice-container-registry", "", "registry which stores the lattice infrastructure containers")
 	RootCmd.Flags().StringVar(&componentBuildRegistry, "component-build-registry", "", "registry where component builds are tagged and potentially pushed to")
 	RootCmd.Flags().StringVar(&dockerAPIVersion, "docker-api-version", "", "version of the docker API used by the docker daemons")

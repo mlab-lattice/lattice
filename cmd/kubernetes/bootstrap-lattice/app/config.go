@@ -12,7 +12,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func seedConfig(userSystemUrl string) {
+func seedConfig(userSystemURL string) {
 	fmt.Println("Seeding lattice config...")
 
 	// Create config
@@ -24,14 +24,14 @@ func seedConfig(userSystemUrl string) {
 		Spec: crv1.ConfigSpec{
 			SystemConfigs: map[types.LatticeNamespace]crv1.ConfigSystem{
 				constants.UserSystemNamespace: {
-					Url: userSystemUrl,
+					URL: userSystemURL,
 				},
 			},
 			Envoy: crv1.ConfigEnvoy{
 				PrepareImage:      getContainerImageFQN(constants.DockerImageEnvoyPrepare),
 				Image:             "envoyproxy/envoy-alpine",
 				RedirectCidrBlock: "172.16.29.0/16",
-				XdsApiPort:        8080,
+				XDSAPIPort:        8080,
 			},
 			ComponentBuild: crv1.ConfigComponentBuild{
 				DockerConfig: crv1.ConfigBuildDocker{
@@ -43,7 +43,7 @@ func seedConfig(userSystemUrl string) {
 				},
 				BuildImage: getContainerImageFQN(kubeconstants.DockerImageComponentBuilder),
 			},
-			SystemId: systemId,
+			SystemID: systemID,
 		},
 	}
 
@@ -159,11 +159,11 @@ func getAwsConfig() (*crv1.ConfigProviderAWS, error) {
 
 	awsConfig := &crv1.ConfigProviderAWS{
 		Region:                    expectedVars["region"].(string),
-		AccountId:                 expectedVars["account-id"].(string),
-		VPCId:                     expectedVars["vpc-id"].(string),
-		SubnetIds:                 expectedVars["subnet-ids"].([]string),
+		AccountID:                 expectedVars["account-id"].(string),
+		VPCID:                     expectedVars["vpc-id"].(string),
+		SubnetIDs:                 expectedVars["subnet-ids"].([]string),
 		MasterNodeSecurityGroupID: expectedVars["master-node-security-group-id"].(string),
-		BaseNodeAMIId:             expectedVars["base-node-ami-id"].(string),
+		BaseNodeAMIID:             expectedVars["base-node-ami-id"].(string),
 		KeyName:                   expectedVars["key-name"].(string),
 	}
 

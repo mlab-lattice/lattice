@@ -20,7 +20,7 @@ type cBuildStateInfo struct {
 	job   *batchv1.Job
 }
 
-func (cbc *ComponentBuildController) calculateState(cb *crv1.ComponentBuild) (*cBuildStateInfo, error) {
+func (cbc *Controller) calculateState(cb *crv1.ComponentBuild) (*cBuildStateInfo, error) {
 	j, err := cbc.getJobForBuild(cb)
 	if err != nil {
 		return nil, err

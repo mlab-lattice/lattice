@@ -6,7 +6,7 @@ import (
 )
 
 func initializeServiceController(ctx controller.Context) {
-	go service.NewServiceController(
+	go service.NewController(
 		ctx.KubeClientBuilder.ClientOrDie("lattice-controller-cloud-aws-service"),
 		ctx.LatticeClientBuilder.ClientOrDie("lattice-controller-cloud-aws-service"),
 		ctx.CRInformers.Config,

@@ -4,6 +4,6 @@ import (
 	"fmt"
 )
 
-func GetS3BackendStatePathRoot(systemId string) string {
-	return fmt.Sprintf("lattice/terraform/state/%v", systemId)
+func GetS3BackendStatePathRoot(systemID string) string {
+	return fmt.Sprintf("lattice/terraform/state/%v", systemID)
 }

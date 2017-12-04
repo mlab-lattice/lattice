@@ -39,82 +39,82 @@ func TestComponent_Validate(t *testing.T) {
 				},
 			},
 
-			// HttpComponentHealthCheck
+			// HTTPComponentHealthCheck
 			{
-				Description: "HttpComponentHealthCheck with no Ports",
+				Description: "HTTPComponentHealthCheck with no Ports",
 				DefinitionBlock: &block.Component{
 					Name:        "foo",
 					Build:       *MockComponentBuild(),
 					Exec:        *MockExec(),
-					HealthCheck: MockHealthCheckHttp(),
+					HealthCheck: MockHealthCheckHTTP(),
 				},
 			},
 			{
-				Description: "HttpComponentHealthCheck with invalid Ports",
+				Description: "HTTPComponentHealthCheck with invalid Ports",
 				DefinitionBlock: &block.Component{
 					Name:        "foo",
 					Build:       *MockComponentBuild(),
 					Exec:        *MockExec(),
-					HealthCheck: MockHealthCheckHttp(),
+					HealthCheck: MockHealthCheckHTTP(),
 					Ports: []*block.ComponentPort{
 						{
 							Name:     "foo",
-							Protocol: block.HttpProtocol,
+							Protocol: block.ProtocolHTTP,
 						},
 					},
 				},
 			},
 			{
-				Description: "HttpComponentHealthCheck with wrong Protocol",
+				Description: "HTTPComponentHealthCheck with wrong Protocol",
 				DefinitionBlock: &block.Component{
 					Name:        "foo",
 					Build:       *MockComponentBuild(),
 					Exec:        *MockExec(),
-					HealthCheck: MockHealthCheckHttp(),
+					HealthCheck: MockHealthCheckHTTP(),
 					Ports: []*block.ComponentPort{
 						{
 							Name:     "http",
-							Protocol: block.TcpProtocol,
+							Protocol: block.ProtocolTCP,
 						},
 					},
 				},
 			},
 
-			// TcpComponentHealthCheck
+			// TCPComponentHealthCheck
 			{
-				Description: "TcpComponentHealthCheck with no Ports",
+				Description: "TCPComponentHealthCheck with no Ports",
 				DefinitionBlock: &block.Component{
 					Name:        "foo",
 					Build:       *MockComponentBuild(),
 					Exec:        *MockExec(),
-					HealthCheck: MockHealthCheckTcp(),
+					HealthCheck: MockHealthCheckTCP(),
 				},
 			},
 			{
-				Description: "TcpComponentHealthCheck with invalid ComponentPort",
+				Description: "TCPComponentHealthCheck with invalid ComponentPort",
 				DefinitionBlock: &block.Component{Name: "foo",
 					Build:       *MockComponentBuild(),
 					Exec:        *MockExec(),
-					HealthCheck: MockHealthCheckTcp(),
+					HealthCheck: MockHealthCheckTCP(),
 					Ports: []*block.ComponentPort{
 						{
 							Name:     "foo",
-							Protocol: block.TcpProtocol,
+							Protocol: block.ProtocolTCP,
 						},
 					},
 				},
 			},
 			{
-				Description: "TcpComponentHealthCheck with wrong Protocol",
+				Description: "TCPComponentHealthCheck with wrong Protocol",
 				DefinitionBlock: &block.Component{
 					Name:        "foo",
 					Build:       *MockComponentBuild(),
 					Exec:        *MockExec(),
-					HealthCheck: MockHealthCheckTcp(),
+					HealthCheck: MockHealthCheckTCP(),
 					Ports: []*block.ComponentPort{
 						{
 							Name:     "tcp",
-							Protocol: block.HttpProtocol,
+							Protocol: block.ProtocolHTTP,
 						},
 					},
 				},
@@ -166,23 +166,23 @@ func TestComponent_Validate(t *testing.T) {
 				},
 			},
 			{
-				Description: "HttpComponentHealthCheck",
+				Description: "HTTPComponentHealthCheck",
 				DefinitionBlock: &block.Component{
 					Name:        "foo",
 					Build:       *MockComponentBuild(),
 					Exec:        *MockExec(),
-					HealthCheck: MockHealthCheckHttp(),
-					Ports:       []*block.ComponentPort{MockHttpPort()},
+					HealthCheck: MockHealthCheckHTTP(),
+					Ports:       []*block.ComponentPort{MockHTTPPort()},
 				},
 			},
 			{
-				Description: "TcpComponentHealthCheck",
+				Description: "TCPComponentHealthCheck",
 				DefinitionBlock: &block.Component{
 					Name:        "foo",
 					Build:       *MockComponentBuild(),
 					Exec:        *MockExec(),
-					HealthCheck: MockHealthCheckTcp(),
-					Ports:       []*block.ComponentPort{MockTcpPort()},
+					HealthCheck: MockHealthCheckTCP(),
+					Ports:       []*block.ComponentPort{MockTCPPort()},
 				},
 			},
 			{
@@ -211,27 +211,27 @@ func TestComponent_JSON(t *testing.T) {
 		[]JSONTest{
 			{
 				Description: "MockComponent",
-				Bytes:       MockComponentExpectedJson(),
+				Bytes:       MockComponentExpectedJSON(),
 				ValuePtr:    MockComponent(),
 			},
 			{
 				Description: "MockComponentInitTrue",
-				Bytes:       MockComponentInitTrueExpectedJson(),
+				Bytes:       MockComponentInitTrueExpectedJSON(),
 				ValuePtr:    MockComponentInitTrue(),
 			},
 			{
-				Description: "MockComponentWithHttpPort",
-				Bytes:       MockComponentWithHttpPortExpectedJson(),
-				ValuePtr:    MockComponentWithHttpPort(),
+				Description: "MockComponentWithHTTPPort",
+				Bytes:       MockComponentWithHTTPPortExpectedJSON(),
+				ValuePtr:    MockComponentWithHTTPPort(),
 			},
 			{
-				Description: "MockComponentWithHttpPortHttpHealthCheck",
-				Bytes:       MockComponentWithHttpPortHttpHealthCheckExpectedJson(),
-				ValuePtr:    MockComponentWithHttpPortHttpHealthCheck(),
+				Description: "MockComponentWithHTTPPortHTTPHealthCheck",
+				Bytes:       MockComponentWithHTTPPortHTTPHealthCheckExpectedJSON(),
+				ValuePtr:    MockComponentWithHTTPPortHTTPHealthCheck(),
 			},
 			{
 				Description: "MockComponentWithVolumeMount",
-				Bytes:       MockComponentWithVolumeMountExpectedJson(),
+				Bytes:       MockComponentWithVolumeMountExpectedJSON(),
 				ValuePtr:    MockComponentWithVolumeMount(),
 			},
 		},

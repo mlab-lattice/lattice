@@ -15,15 +15,15 @@ func MockResources() *block.Resources {
 	}
 }
 
-func MockResourcesExpectedJson() []byte {
-	return GenerateResourcesExpectedJson(
+func MockResourcesExpectedJSON() []byte {
+	return GenerateResourcesExpectedJSON(
 		[]byte(`1`),
 		[]byte(`1`),
 		[]byte(`"mock.instance.type"`),
 	)
 }
 
-func GenerateResourcesExpectedJson(minInstances, maxInstances, instanceType []byte) []byte {
+func GenerateResourcesExpectedJSON(minInstances, maxInstances, instanceType []byte) []byte {
 	return jsonutil.GenerateObjectBytes([]jsonutil.FieldBytes{
 		{
 			Name:  "min_instances",

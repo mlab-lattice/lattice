@@ -12,7 +12,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func (slc *SystemLifecycleController) getNewSystem(sysRollout *crv1.SystemRollout, sysBuild *crv1.SystemBuild) (*crv1.System, error) {
+func (slc *Controller) getNewSystem(sysRollout *crv1.SystemRollout, sysBuild *crv1.SystemBuild) (*crv1.System, error) {
 	sysSpec, err := slc.getNewSystemSpec(sysRollout, sysBuild)
 	if err != nil {
 		return nil, err
@@ -31,7 +31,7 @@ func (slc *SystemLifecycleController) getNewSystem(sysRollout *crv1.SystemRollou
 	return sys, nil
 }
 
-func (slc *SystemLifecycleController) getNewSystemSpec(sysRollout *crv1.SystemRollout, sysBuild *crv1.SystemBuild) (*crv1.SystemSpec, error) {
+func (slc *Controller) getNewSystemSpec(sysRollout *crv1.SystemRollout, sysBuild *crv1.SystemBuild) (*crv1.SystemSpec, error) {
 	// Create crv1.SystemServicesInfo for each service in the sysBuild.Spec.DefinitionRoot
 	services := map[tree.NodePath]crv1.SystemServicesInfo{}
 	for path, service := range sysBuild.Spec.DefinitionRoot.Services() {
@@ -89,7 +89,7 @@ func (slc *SystemLifecycleController) getNewSystemSpec(sysRollout *crv1.SystemRo
 	return sysSpec, nil
 }
 
-func (slc *SystemLifecycleController) getSvcBuild(svcBuildName string) (*crv1.ServiceBuild, error) {
+func (slc *Controller) getSvcBuild(svcBuildName string) (*crv1.ServiceBuild, error) {
 	svcBuildKey := constants.NamespaceLatticeInternal + "/" + svcBuildName
 	svcBuildObj, exists, err := slc.serviceBuildStore.GetByKey(svcBuildKey)
 	if err != nil {
@@ -104,7 +104,7 @@ func (slc *SystemLifecycleController) getSvcBuild(svcBuildName string) (*crv1.Se
 	return svcBuild, nil
 }
 
-func (slc *SystemLifecycleController) createSystem(sysRollout *crv1.SystemRollout, sysBuild *crv1.SystemBuild) (*crv1.System, error) {
+func (slc *Controller) createSystem(sysRollout *crv1.SystemRollout, sysBuild *crv1.SystemBuild) (*crv1.System, error) {
 	sys, err := slc.getNewSystem(sysRollout, sysBuild)
 	if err != nil {
 		return nil, err
@@ -113,7 +113,7 @@ func (slc *SystemLifecycleController) createSystem(sysRollout *crv1.SystemRollou
 	return slc.latticeClient.V1().Systems(string(sysRollout.Spec.LatticeNamespace)).Create(sys)
 }
 
-func (slc *SystemLifecycleController) updateSystemSpec(sys *crv1.System, sysSpec *crv1.SystemSpec) (*crv1.System, error) {
+func (slc *Controller) updateSystemSpec(sys *crv1.System, sysSpec *crv1.SystemSpec) (*crv1.System, error) {
 	if reflect.DeepEqual(sys.Spec, sysSpec) {
 		return sys, nil
 	}

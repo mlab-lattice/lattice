@@ -14,7 +14,7 @@ type Volume struct {
 	SizeInGb uint32 `json:"size_in_gb"`
 }
 
-// Implement Interface
+// Validate implements Interface
 func (v *Volume) Validate(interface{}) error {
 	if v.Name == "" {
 		return errors.New("name is required")
@@ -37,7 +37,7 @@ type ComponentVolumeMount struct {
 	ReadOnly   bool   `json:"read_only"`
 }
 
-// Implement Interface
+// Validate implements Interface
 func (v *ComponentVolumeMount) Validate(interface{}) error {
 	if v.Name == "" {
 		return errors.New("name is required")

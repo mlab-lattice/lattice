@@ -4,5 +4,5 @@ const (
 	modulePathRoot                       = "/aws"
 	modulePathServiceDedicated           = modulePathRoot + "/service/dedicated"
 	ModulePathServiceDedicatedPrivate    = modulePathServiceDedicated + "/private"
-	ModulePathServiceDedicatedPublicHttp = modulePathServiceDedicated + "/public/http"
+	ModulePathServiceDedicatedPublicHTTP = modulePathServiceDedicated + "/public/http"
 )

@@ -37,7 +37,7 @@ type Configs struct {
 }
 
 // newConfigs returns a Configs
-func newConfigs(c *V1Client, namespace string) *Configs {
+func newConfigs(c *Client, namespace string) *Configs {
 	return &Configs{
 		client: c.RESTClient(),
 		ns:     namespace,

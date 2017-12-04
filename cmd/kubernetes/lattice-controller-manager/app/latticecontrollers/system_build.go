@@ -6,7 +6,7 @@ import (
 )
 
 func initializeSystemBuildController(ctx controller.Context) {
-	go systembuild.NewSystemBuildController(
+	go systembuild.NewController(
 		ctx.LatticeClientBuilder.ClientOrDie("lattice-controller-lattice-system-build"),
 		ctx.CRInformers.SystemBuild,
 		ctx.CRInformers.ServiceBuild,

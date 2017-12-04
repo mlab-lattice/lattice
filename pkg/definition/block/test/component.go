@@ -13,14 +13,14 @@ func MockComponent() *block.Component {
 	}
 }
 
-func MockComponentExpectedJson() []byte {
-	return GenerateComponentExpectedJson(
+func MockComponentExpectedJSON() []byte {
+	return GenerateComponentExpectedJSON(
 		[]byte(`"service"`),
 		[]byte(`false`),
 		nil,
 		nil,
-		MockComponentBuildExpectedJson(),
-		MockExecExpectedJson(),
+		MockComponentBuildExpectedJSON(),
+		MockExecExpectedJSON(),
 		nil,
 	)
 }
@@ -34,58 +34,58 @@ func MockComponentInitTrue() *block.Component {
 	}
 }
 
-func MockComponentInitTrueExpectedJson() []byte {
-	return GenerateComponentExpectedJson(
+func MockComponentInitTrueExpectedJSON() []byte {
+	return GenerateComponentExpectedJSON(
 		[]byte(`"service"`),
 		[]byte(`true`),
 		nil,
 		nil,
-		MockComponentBuildExpectedJson(),
-		MockExecExpectedJson(),
+		MockComponentBuildExpectedJSON(),
+		MockExecExpectedJSON(),
 		nil,
 	)
 }
 
-func MockComponentWithHttpPort() *block.Component {
+func MockComponentWithHTTPPort() *block.Component {
 	return &block.Component{
 		Name:  "service",
-		Ports: []*block.ComponentPort{MockHttpPort()},
+		Ports: []*block.ComponentPort{MockHTTPPort()},
 		Build: *MockComponentBuild(),
 		Exec:  *MockExec(),
 	}
 }
 
-func MockComponentWithHttpPortExpectedJson() []byte {
-	return GenerateComponentExpectedJson(
+func MockComponentWithHTTPPortExpectedJSON() []byte {
+	return GenerateComponentExpectedJSON(
 		[]byte(`"service"`),
 		[]byte(`false`),
-		jsonutil.GenerateArrayBytes([][]byte{MockHttpPortExpectedJson()}),
+		jsonutil.GenerateArrayBytes([][]byte{MockHTTPPortExpectedJSON()}),
 		nil,
-		MockComponentBuildExpectedJson(),
-		MockExecExpectedJson(),
+		MockComponentBuildExpectedJSON(),
+		MockExecExpectedJSON(),
 		nil,
 	)
 }
 
-func MockComponentWithHttpPortHttpHealthCheck() *block.Component {
+func MockComponentWithHTTPPortHTTPHealthCheck() *block.Component {
 	return &block.Component{
 		Name:        "service",
-		Ports:       []*block.ComponentPort{MockHttpPort()},
+		Ports:       []*block.ComponentPort{MockHTTPPort()},
 		Build:       *MockComponentBuild(),
 		Exec:        *MockExec(),
-		HealthCheck: MockHealthCheckHttp(),
+		HealthCheck: MockHealthCheckHTTP(),
 	}
 }
 
-func MockComponentWithHttpPortHttpHealthCheckExpectedJson() []byte {
-	return GenerateComponentExpectedJson(
+func MockComponentWithHTTPPortHTTPHealthCheckExpectedJSON() []byte {
+	return GenerateComponentExpectedJSON(
 		[]byte(`"service"`),
 		[]byte(`false`),
-		jsonutil.GenerateArrayBytes([][]byte{MockHttpPortExpectedJson()}),
+		jsonutil.GenerateArrayBytes([][]byte{MockHTTPPortExpectedJSON()}),
 		nil,
-		MockComponentBuildExpectedJson(),
-		MockExecExpectedJson(),
-		MockHealthCheckHttpExpectedJson(),
+		MockComponentBuildExpectedJSON(),
+		MockExecExpectedJSON(),
+		MockHealthCheckHTTPExpectedJSON(),
 	)
 }
 
@@ -98,19 +98,19 @@ func MockComponentWithVolumeMount() *block.Component {
 	}
 }
 
-func MockComponentWithVolumeMountExpectedJson() []byte {
-	return GenerateComponentExpectedJson(
+func MockComponentWithVolumeMountExpectedJSON() []byte {
+	return GenerateComponentExpectedJSON(
 		[]byte(`"service"`),
 		[]byte(`false`),
 		nil,
-		jsonutil.GenerateArrayBytes([][]byte{MockVolumeMountReadOnlyFalseExpectedJson()}),
-		MockComponentBuildExpectedJson(),
-		MockExecExpectedJson(),
+		jsonutil.GenerateArrayBytes([][]byte{MockVolumeMountReadOnlyFalseExpectedJSON()}),
+		MockComponentBuildExpectedJSON(),
+		MockExecExpectedJSON(),
 		nil,
 	)
 }
 
-func GenerateComponentExpectedJson(
+func GenerateComponentExpectedJSON(
 	name,
 	init,
 	ports,

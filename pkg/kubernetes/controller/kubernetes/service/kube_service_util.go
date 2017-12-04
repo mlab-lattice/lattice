@@ -17,7 +17,7 @@ import (
 	"github.com/golang/glog"
 )
 
-func (sc *ServiceController) getKubeServiceForService(svc *crv1.Service) (*corev1.Service, error) {
+func (sc *Controller) getKubeServiceForService(svc *crv1.Service) (*corev1.Service, error) {
 	ksvcName := kubeutil.GetKubeServiceNameForService(svc)
 	ksvc, err := sc.kubeServiceLister.Services(svc.Namespace).Get(ksvcName)
 	if err != nil && !apierrors.IsNotFound(err) {
@@ -27,7 +27,7 @@ func (sc *ServiceController) getKubeServiceForService(svc *crv1.Service) (*corev
 	return ksvc, nil
 }
 
-func (sc *ServiceController) getKubeService(svc *crv1.Service) (*corev1.Service, error) {
+func (sc *Controller) getKubeService(svc *crv1.Service) (*corev1.Service, error) {
 	ports := []corev1.ServicePort{}
 	public := false
 	for componentName, cPorts := range svc.Spec.Ports {
@@ -76,14 +76,14 @@ func (sc *ServiceController) getKubeService(svc *crv1.Service) (*corev1.Service,
 
 func getProtocol(protocolString string) (corev1.Protocol, error) {
 	switch protocolString {
-	case block.HttpProtocol, block.TcpProtocol:
+	case block.ProtocolHTTP, block.ProtocolTCP:
 		return corev1.ProtocolTCP, nil
 	default:
 		return corev1.ProtocolTCP, fmt.Errorf("invalid protocol %v", protocolString)
 	}
 }
 
-func (sc *ServiceController) createKubeService(svc *crv1.Service) (*corev1.Service, error) {
+func (sc *Controller) createKubeService(svc *crv1.Service) (*corev1.Service, error) {
 	ksvc, err := sc.getKubeService(svc)
 	if err != nil {
 		return nil, err

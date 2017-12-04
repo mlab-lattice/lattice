@@ -24,7 +24,7 @@ type svcBuildStateInfo struct {
 	needsNewCb    []string
 }
 
-func (sbc *ServiceBuildController) calculateState(svcb *crv1.ServiceBuild) (*svcBuildStateInfo, error) {
+func (sbc *Controller) calculateState(svcb *crv1.ServiceBuild) (*svcBuildStateInfo, error) {
 	successfulCbs := map[string]*crv1.ComponentBuild{}
 	activeCbs := map[string]*crv1.ComponentBuild{}
 	failedCbs := map[string]*crv1.ComponentBuild{}

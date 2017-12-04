@@ -13,12 +13,12 @@ type NetworkFilter struct {
 
 type FilterConfig interface{}
 
-type HttpConnectionManagerConfig struct {
+type HTTPConnectionManagerConfig struct {
 	CodecType   string       `json:"codec_type"`
 	StatPrefix  string       `json:"stat_prefix"`
 	RDS         *RDSConfig   `json:"rds,omitempty"`
 	RouteConfig *RouteConfig `json:"route_config,omitempty"`
-	Filters     []HttpFilter `json:"filters"`
+	Filters     []HTTPFilter `json:"filters"`
 }
 
 type RDSConfig struct {
@@ -27,13 +27,13 @@ type RDSConfig struct {
 	RefreshDelayMs  *int32 `json:"refresh_delay_ms,omitempty"`
 }
 
-type HttpFilter struct {
+type HTTPFilter struct {
 	Name   string           `json:"name"`
-	Config HttpFilterConfig `json:"config"`
+	Config HTTPFilterConfig `json:"config"`
 }
 
-type HttpFilterConfig interface{}
+type HTTPFilterConfig interface{}
 
-type RouterHttpFilterConfig struct {
+type RouterHTTPFilterConfig struct {
 	DynamicStats *bool `json:"dynamic_stats,omitempty"`
 }

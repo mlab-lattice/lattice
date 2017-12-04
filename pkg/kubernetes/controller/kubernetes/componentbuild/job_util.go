@@ -32,7 +32,7 @@ const (
 )
 
 // getJobForBuild uses ControllerRefManager to retrieve the Job for a ComponentBuild
-func (cbc *ComponentBuildController) getJobForBuild(cb *crv1.ComponentBuild) (*batchv1.Job, error) {
+func (cbc *Controller) getJobForBuild(cb *crv1.ComponentBuild) (*batchv1.Job, error) {
 	selector := labels.NewSelector()
 	requirement, err := labels.NewRequirement(kubeconstants.LabelKeyComponentBuildID, selection.Equals, []string{cb.Name})
 	if err != nil {
@@ -56,7 +56,7 @@ func (cbc *ComponentBuildController) getJobForBuild(cb *crv1.ComponentBuild) (*b
 	return jobs[0], nil
 }
 
-func (cbc *ComponentBuildController) getBuildJob(cb *crv1.ComponentBuild) (*batchv1.Job, error) {
+func (cbc *Controller) getBuildJob(cb *crv1.ComponentBuild) (*batchv1.Job, error) {
 	// Need a consistent view of our config while generating the Job
 	cbc.configLock.RLock()
 	defer cbc.configLock.RUnlock()
@@ -89,7 +89,7 @@ func getBuildJobName(cb *crv1.ComponentBuild) string {
 	return fmt.Sprintf("lattice-build-%s", cb.Name)
 }
 
-func (cbc *ComponentBuildController) getGitRepositoryBuildJobSpec(cb *crv1.ComponentBuild) (batchv1.JobSpec, string, error) {
+func (cbc *Controller) getGitRepositoryBuildJobSpec(cb *crv1.ComponentBuild) (batchv1.JobSpec, string, error) {
 	buildContainer, dockerImageFQN, err := cbc.getBuildContainer(cb)
 	if err != nil {
 		return batchv1.JobSpec{}, "", err
@@ -119,7 +119,7 @@ func (cbc *ComponentBuildController) getGitRepositoryBuildJobSpec(cb *crv1.Compo
 	}
 
 	// FIXME: add build node affinity for cloud case
-	var zero int32 = 0
+	var zero int32
 	jobSpec := batchv1.JobSpec{
 		BackoffLimit: &zero,
 		Template: corev1.PodTemplateSpec{
@@ -159,8 +159,8 @@ func (cbc *ComponentBuildController) getGitRepositoryBuildJobSpec(cb *crv1.Compo
 	return jobSpec, dockerImageFQN, nil
 }
 
-func (cbc *ComponentBuildController) getBuildContainer(cb *crv1.ComponentBuild) (*corev1.Container, string, error) {
-	componentBuildJson, err := json.Marshal(&cb.Spec.BuildDefinitionBlock)
+func (cbc *Controller) getBuildContainer(cb *crv1.ComponentBuild) (*corev1.Container, string, error) {
+	buildJSON, err := json.Marshal(&cb.Spec.BuildDefinitionBlock)
 	if err != nil {
 		return nil, "", err
 	}
@@ -174,7 +174,7 @@ func (cbc *ComponentBuildController) getBuildContainer(cb *crv1.ComponentBuild) 
 
 	args := []string{
 		"--component-build-id", cb.Name,
-		"--component-build-definition", string(componentBuildJson),
+		"--component-build-definition", string(buildJSON),
 		"--docker-registry", cbc.config.ComponentBuild.DockerConfig.Registry,
 		"--docker-repository", repo,
 		"--docker-tag", tag,

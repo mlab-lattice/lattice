@@ -16,12 +16,12 @@ type Service struct {
 	Resources  block.Resources    `json:"resources"`
 }
 
-// Implement Interface
+// Metadata implements Interface
 func (s *Service) Metadata() *block.Metadata {
 	return &s.Meta
 }
 
-// Implement block.Interface
+// Validate implements block.Interface
 func (s *Service) Validate(interface{}) error {
 	if s == nil {
 		return errors.New("cannot have nil Service definition")

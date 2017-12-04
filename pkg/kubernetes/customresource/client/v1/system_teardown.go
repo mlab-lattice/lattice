@@ -37,7 +37,7 @@ type SystemTeardowns struct {
 }
 
 // newSystemTeardowns returns a SystemTeardowns
-func newSystemTeardowns(c *V1Client, namespace string) *SystemTeardowns {
+func newSystemTeardowns(c *Client, namespace string) *SystemTeardowns {
 	return &SystemTeardowns{
 		client: c.RESTClient(),
 		ns:     namespace,

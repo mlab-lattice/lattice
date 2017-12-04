@@ -19,9 +19,9 @@ func (r *restServer) mountAdminMasterNodeHandlers() {
 	{
 		// get-master-components
 		components.GET("", func(c *gin.Context) {
-			nodeId := c.Param("master_node_id")
+			nodeID := c.Param("master_node_id")
 
-			components, err := r.backend.GetMasterNodeComponents(nodeId)
+			components, err := r.backend.GetMasterNodeComponents(nodeID)
 			if err != nil {
 				handleInternalError(c, err)
 				return
@@ -34,7 +34,7 @@ func (r *restServer) mountAdminMasterNodeHandlers() {
 		{
 			// get-master-component-logs
 			component.GET("/logs", func(c *gin.Context) {
-				nodeId := c.Param("master_node_id")
+				nodeID := c.Param("master_node_id")
 				component := c.Param("component_id")
 				followQuery := c.DefaultQuery("follow", "false")
 
@@ -49,7 +49,7 @@ func (r *restServer) mountAdminMasterNodeHandlers() {
 					return
 				}
 
-				log, exists, err := r.backend.GetMasterNodeComponentLog(nodeId, component, follow)
+				log, exists, err := r.backend.GetMasterNodeComponentLog(nodeID, component, follow)
 				if err != nil {
 					handleInternalError(c, err)
 					return
@@ -65,10 +65,10 @@ func (r *restServer) mountAdminMasterNodeHandlers() {
 
 			// restart-master-component
 			component.POST("/restart", func(c *gin.Context) {
-				nodeId := c.Param("master_node_id")
+				nodeID := c.Param("master_node_id")
 				component := c.Param("component_id")
 
-				exists, err := r.backend.RestartMasterNodeComponent(nodeId, component)
+				exists, err := r.backend.RestartMasterNodeComponent(nodeID, component)
 
 				if err != nil {
 					handleInternalError(c, err)

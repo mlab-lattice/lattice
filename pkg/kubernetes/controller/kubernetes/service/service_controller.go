@@ -31,7 +31,7 @@ import (
 var controllerKind = crv1.SchemeGroupVersion.WithKind("Service")
 
 // We'll use LatticeService to differentiate between kubernetes' Service
-type ServiceController struct {
+type Controller struct {
 	syncHandler    func(bKey string) error
 	enqueueService func(cb *crv1.Service)
 
@@ -61,7 +61,7 @@ type ServiceController struct {
 	queue workqueue.RateLimitingInterface
 }
 
-func NewServiceController(
+func NewController(
 	kubeClient kubeclientset.Interface,
 	latticeClient latticeclientset.Interface,
 	configInformer cache.SharedInformer,
@@ -69,8 +69,8 @@ func NewServiceController(
 	serviceInformer cache.SharedInformer,
 	deploymentInformer appinformers.DeploymentInformer,
 	kubeServiceInformer coreinformers.ServiceInformer,
-) *ServiceController {
-	sc := &ServiceController{
+) *Controller {
+	sc := &Controller{
 		kubeClient:    kubeClient,
 		latticeClient: latticeClient,
 		configSetChan: make(chan struct{}),
@@ -122,7 +122,7 @@ func NewServiceController(
 	return sc
 }
 
-func (sc *ServiceController) handleConfigAdd(obj interface{}) {
+func (sc *Controller) handleConfigAdd(obj interface{}) {
 	config := obj.(*crv1.Config)
 	glog.V(4).Infof("Adding Config %s", config.Name)
 
@@ -136,7 +136,7 @@ func (sc *ServiceController) handleConfigAdd(obj interface{}) {
 	}
 }
 
-func (sc *ServiceController) handleConfigUpdate(old, cur interface{}) {
+func (sc *Controller) handleConfigUpdate(old, cur interface{}) {
 	oldConfig := old.(*crv1.Config)
 	curConfig := cur.(*crv1.Config)
 	glog.V(4).Infof("Updating Config %s", oldConfig.Name)
@@ -146,7 +146,7 @@ func (sc *ServiceController) handleConfigUpdate(old, cur interface{}) {
 	sc.config = curConfig.DeepCopy().Spec
 }
 
-func (sc *ServiceController) handleSystemAdd(obj interface{}) {
+func (sc *Controller) handleSystemAdd(obj interface{}) {
 	sys := obj.(*crv1.System)
 	glog.V(4).Infof("Adding System %s", sys.Name)
 
@@ -170,7 +170,7 @@ func (sc *ServiceController) handleSystemAdd(obj interface{}) {
 	}
 }
 
-func (sc *ServiceController) handleSystemUpdate(old, cur interface{}) {
+func (sc *Controller) handleSystemUpdate(old, cur interface{}) {
 	oldSys := old.(*crv1.System)
 	curSys := cur.(*crv1.System)
 	if oldSys.ResourceVersion == curSys.ResourceVersion {
@@ -201,20 +201,20 @@ func (sc *ServiceController) handleSystemUpdate(old, cur interface{}) {
 	}
 }
 
-func (sc *ServiceController) handleServiceAdd(obj interface{}) {
+func (sc *Controller) handleServiceAdd(obj interface{}) {
 	svc := obj.(*crv1.Service)
 	glog.V(4).Infof("Adding Service %s", svc.Name)
 	sc.enqueueService(svc)
 }
 
-func (sc *ServiceController) handleServiceUpdate(old, cur interface{}) {
+func (sc *Controller) handleServiceUpdate(old, cur interface{}) {
 	oldSvc := old.(*crv1.Service)
 	curSvc := cur.(*crv1.Service)
 	glog.V(4).Infof("Updating Service %s", oldSvc.Name)
 	sc.enqueueService(curSvc)
 }
 
-func (sc *ServiceController) handleServiceDelete(obj interface{}) {
+func (sc *Controller) handleServiceDelete(obj interface{}) {
 	svc, ok := obj.(*crv1.Service)
 	if !ok {
 		tombstone, ok := obj.(cache.DeletedFinalStateUnknown)
@@ -233,7 +233,7 @@ func (sc *ServiceController) handleServiceDelete(obj interface{}) {
 }
 
 // handleDeploymentAdd enqueues the Service that manages a Deployment when the Deployment is created.
-func (sc *ServiceController) handleDeploymentAdd(obj interface{}) {
+func (sc *Controller) handleDeploymentAdd(obj interface{}) {
 	d := obj.(*appsv1beta2.Deployment)
 
 	if d.DeletionTimestamp != nil {
@@ -264,7 +264,7 @@ func (sc *ServiceController) handleDeploymentAdd(obj interface{}) {
 
 // handleDeploymentUpdate figures out what Service manages a Deployment when the Deployment
 // is updated and enqueues it.
-func (sc *ServiceController) handleDeploymentUpdate(old, cur interface{}) {
+func (sc *Controller) handleDeploymentUpdate(old, cur interface{}) {
 	glog.V(5).Info("Got Deployment update")
 	oldD := old.(*appsv1beta2.Deployment)
 	curD := cur.(*appsv1beta2.Deployment)
@@ -305,7 +305,7 @@ func (sc *ServiceController) handleDeploymentUpdate(old, cur interface{}) {
 
 // handleDeploymentDelete enqueues the Service that manages a Deployment when
 // the Deployment is deleted.
-func (sc *ServiceController) handleDeploymentDelete(obj interface{}) {
+func (sc *Controller) handleDeploymentDelete(obj interface{}) {
 	d, ok := obj.(*appsv1beta2.Deployment)
 
 	// When a delete is dropped, the relist will notice a pod in the store not
@@ -341,7 +341,7 @@ func (sc *ServiceController) handleDeploymentDelete(obj interface{}) {
 	sc.enqueueService(svc)
 }
 
-func (sc *ServiceController) enqueue(svc *crv1.Service) {
+func (sc *Controller) enqueue(svc *crv1.Service) {
 	key, err := cache.DeletionHandlingMetaNamespaceKeyFunc(svc)
 	if err != nil {
 		runtime.HandleError(fmt.Errorf("couldn't get key for object %#v: %v", svc, err))
@@ -354,7 +354,7 @@ func (sc *ServiceController) enqueue(svc *crv1.Service) {
 // resolveControllerRef returns the controller referenced by a ControllerRef,
 // or nil if the ControllerRef could not be resolved to a matching controller
 // of the correct Kind.
-func (sc *ServiceController) resolveControllerRef(namespace string, controllerRef *metav1.OwnerReference) *crv1.Service {
+func (sc *Controller) resolveControllerRef(namespace string, controllerRef *metav1.OwnerReference) *crv1.Service {
 	// We can't look up by Name, so look up by Name and then verify Name.
 	// Don't even try to look up by Name if it's the wrong Kind.
 	if controllerRef.Kind != controllerKind.Kind {
@@ -377,7 +377,7 @@ func (sc *ServiceController) resolveControllerRef(namespace string, controllerRe
 	return svc
 }
 
-func (sc *ServiceController) Run(workers int, stopCh <-chan struct{}) {
+func (sc *Controller) Run(workers int, stopCh <-chan struct{}) {
 	// don't let panics crash the process
 	defer runtime.HandleCrash()
 	// make sure the work queue is shutdown which will trigger workers to end
@@ -408,7 +408,7 @@ func (sc *ServiceController) Run(workers int, stopCh <-chan struct{}) {
 	<-stopCh
 }
 
-func (sc *ServiceController) runWorker() {
+func (sc *Controller) runWorker() {
 	// hot loop until we're told to stop.  processNextWorkItem will
 	// automatically wait until there's work available, so we don't worry
 	// about secondary waits
@@ -418,7 +418,7 @@ func (sc *ServiceController) runWorker() {
 
 // processNextWorkItem deals with one key off the queue.  It returns false
 // when it's time to quit.
-func (sc *ServiceController) processNextWorkItem() bool {
+func (sc *Controller) processNextWorkItem() bool {
 	// pull the next work item from queue.  It should be a key we use to lookup
 	// something in a cache
 	key, quit := sc.queue.Get()
@@ -456,7 +456,7 @@ func (sc *ServiceController) processNextWorkItem() bool {
 
 // syncService will sync the Service with the given key.
 // This function is not meant to be invoked concurrently with the same key.
-func (sc *ServiceController) syncService(key string) error {
+func (sc *Controller) syncService(key string) error {
 	glog.Flush()
 	startTime := time.Now()
 	glog.V(4).Infof("Started syncing Service %q (%v)", key, startTime)
@@ -514,7 +514,7 @@ func (sc *ServiceController) syncService(key string) error {
 	return sc.syncServiceWithDeployment(svcCopy, d)
 }
 
-func (sc *ServiceController) syncServiceWithDeployment(svc *crv1.Service, d *appsv1beta2.Deployment) error {
+func (sc *Controller) syncServiceWithDeployment(svc *crv1.Service, d *appsv1beta2.Deployment) error {
 	newStatus := calculateServiceStatus(d)
 	return sc.updateServiceStatus(svc, newStatus)
 }
@@ -559,7 +559,7 @@ func calculateServiceStatus(d *appsv1beta2.Deployment) crv1.ServiceStatus {
 	}
 }
 
-func (sc *ServiceController) updateServiceStatus(svc *crv1.Service, newStatus crv1.ServiceStatus) error {
+func (sc *Controller) updateServiceStatus(svc *crv1.Service, newStatus crv1.ServiceStatus) error {
 	if reflect.DeepEqual(svc.Status, newStatus) {
 		return nil
 	}

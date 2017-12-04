@@ -51,7 +51,7 @@ func TestExec_JSON(t *testing.T) {
 		[]JSONTest{
 			{
 				Description: "MockExec",
-				Bytes:       MockExecExpectedJson(),
+				Bytes:       MockExecExpectedJSON(),
 				ValuePtr:    MockExec(),
 			},
 		},

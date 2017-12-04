@@ -42,18 +42,18 @@ func (r *RequestHandler) GetResponse(serviceCluster, serviceNode string) (*Respo
 			Address: fmt.Sprintf("tcp://0.0.0.0:%v", service.EgressPort),
 			Filters: []types.NetworkFilter{
 				{
-					Name: constants.FilterNameHttpConnectionManager,
-					Config: types.HttpConnectionManagerConfig{
+					Name: constants.FilterNameHTTPConnectionManager,
+					Config: types.HTTPConnectionManagerConfig{
 						CodecType:  constants.CodecTypeAuto,
 						StatPrefix: egress,
 						RDS: &types.RDSConfig{
-							Cluster:         constants.XdsApiClusterName,
+							Cluster:         constants.HTTPXDSApiClusterName,
 							RouteConfigName: constants.RouteNameEgress,
 						},
-						Filters: []types.HttpFilter{
+						Filters: []types.HTTPFilter{
 							{
-								Name:   constants.HttpFilterNameRouter,
-								Config: types.RouterHttpFilterConfig{},
+								Name:   constants.HTTPFilterNameRouter,
+								Config: types.RouterHTTPFilterConfig{},
 							},
 						},
 					},
@@ -71,8 +71,8 @@ func (r *RequestHandler) GetResponse(serviceCluster, serviceNode string) (*Respo
 				Address: fmt.Sprintf("tcp://0.0.0.0:%v", envoyPort),
 				Filters: []types.NetworkFilter{
 					{
-						Name: constants.FilterNameHttpConnectionManager,
-						Config: types.HttpConnectionManagerConfig{
+						Name: constants.FilterNameHTTPConnectionManager,
+						Config: types.HTTPConnectionManagerConfig{
 							CodecType:  constants.CodecTypeAuto,
 							StatPrefix: listenerName,
 							RouteConfig: &types.RouteConfig{
@@ -89,10 +89,10 @@ func (r *RequestHandler) GetResponse(serviceCluster, serviceNode string) (*Respo
 									},
 								},
 							},
-							Filters: []types.HttpFilter{
+							Filters: []types.HTTPFilter{
 								{
-									Name:   constants.HttpFilterNameRouter,
-									Config: types.RouterHttpFilterConfig{},
+									Name:   constants.HTTPFilterNameRouter,
+									Config: types.RouterHTTPFilterConfig{},
 								},
 								// FIXME: add health_check filter
 								// FIXME: look into other filters (buffer, potentially add fault injection for testing)

@@ -37,7 +37,7 @@ type Services struct {
 }
 
 // newServices returns a Services
-func newServices(c *V1Client, namespace string) *Services {
+func newServices(c *Client, namespace string) *Services {
 	return &Services{
 		client: c.RESTClient(),
 		ns:     namespace,

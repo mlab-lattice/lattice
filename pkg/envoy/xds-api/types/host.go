@@ -5,7 +5,7 @@ type StaticHost struct {
 }
 
 type SDSHost struct {
-	IpAddress string `json:"ip_address"`
+	IPAddress string `json:"ip_address"`
 	Port      int32  `json:"port"`
 	// TODO: reexamine other fields
 }

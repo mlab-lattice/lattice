@@ -53,7 +53,7 @@ func TestVolume_JSON(t *testing.T) {
 		[]JSONTest{
 			{
 				Description: "MockVolume",
-				Bytes:       MockVolumeExpectedJson(),
+				Bytes:       MockVolumeExpectedJSON(),
 				ValuePtr:    MockVolume(),
 			},
 		},
@@ -114,12 +114,12 @@ func TestVolumeMount_JSON(t *testing.T) {
 		[]JSONTest{
 			{
 				Description: "MockVolumeMountReadOnlyFalse",
-				Bytes:       MockVolumeMountReadOnlyFalseExpectedJson(),
+				Bytes:       MockVolumeMountReadOnlyFalseExpectedJSON(),
 				ValuePtr:    MockVolumeMountReadOnlyFalse(),
 			},
 			{
 				Description: "MockVolumeMountReadOnlyTrue",
-				Bytes:       MockVolumeMountReadOnlyTrueExpectedJson(),
+				Bytes:       MockVolumeMountReadOnlyTrueExpectedJSON(),
 				ValuePtr:    MockVolumeMountReadOnlyTrue(),
 			},
 		},

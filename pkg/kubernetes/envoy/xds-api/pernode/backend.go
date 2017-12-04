@@ -22,8 +22,8 @@ import (
 )
 
 type KubernetesPerNodeBackend struct {
-	kEndpointLister       corelisters.EndpointsLister
-	kEndpointListerSynced cache.InformerSynced
+	kubeEndpointLister       corelisters.EndpointsLister
+	kubeEndpointListerSynced cache.InformerSynced
 
 	latticeServiceStore       cache.Store
 	latticeServiceStoreSynced cache.InformerSynced
@@ -58,13 +58,13 @@ func NewKubernetesPerNodeBackend(kubeconfig string) (*KubernetesPerNodeBackend, 
 		string(constants.UserSystemNamespace),
 		fields.Everything(),
 	)
-	lSvcInformer := cache.NewSharedInformer(
+	latticeSvcInformer := cache.NewSharedInformer(
 		listerWatcher,
 		&crv1.Service{},
 		time.Duration(12*time.Hour),
 	)
 
-	kEndpointInformer := corev1informers.NewEndpointsInformer(
+	kubeEndpointInformer := corev1informers.NewEndpointsInformer(
 		kubeClient,
 		string(constants.UserSystemNamespace),
 		time.Duration(12*time.Hour),
@@ -72,20 +72,20 @@ func NewKubernetesPerNodeBackend(kubeconfig string) (*KubernetesPerNodeBackend, 
 	)
 
 	// FIXME: should we add a stopCh?
-	go lSvcInformer.Run(nil)
-	go kEndpointInformer.Run(nil)
+	go latticeSvcInformer.Run(nil)
+	go kubeEndpointInformer.Run(nil)
 
 	kpnb := &KubernetesPerNodeBackend{
-		kEndpointLister:           corelisters.NewEndpointsLister(kEndpointInformer.GetIndexer()),
-		kEndpointListerSynced:     kEndpointInformer.HasSynced,
-		latticeServiceStore:       lSvcInformer.GetStore(),
-		latticeServiceStoreSynced: lSvcInformer.HasSynced,
+		kubeEndpointLister:        corelisters.NewEndpointsLister(kubeEndpointInformer.GetIndexer()),
+		kubeEndpointListerSynced:  kubeEndpointInformer.HasSynced,
+		latticeServiceStore:       latticeSvcInformer.GetStore(),
+		latticeServiceStoreSynced: latticeSvcInformer.HasSynced,
 	}
 	return kpnb, nil
 }
 
 func (kpnb *KubernetesPerNodeBackend) Ready() bool {
-	return cache.WaitForCacheSync(nil, kpnb.kEndpointListerSynced, kpnb.latticeServiceStoreSynced)
+	return cache.WaitForCacheSync(nil, kpnb.kubeEndpointListerSynced, kpnb.latticeServiceStoreSynced)
 }
 
 // TODO: probably want to have Services return a cached snapshot of the service state so we don't have to recompute this every time
@@ -99,8 +99,8 @@ func (kpnb *KubernetesPerNodeBackend) Services() (map[tree.NodePath]*envoy.Servi
 	for _, svcObj := range kpnb.latticeServiceStore.List() {
 		svc := svcObj.(*crv1.Service)
 
-		kSvcName := fmt.Sprintf("svc-%v-lattice", svc.Name)
-		ep, err := kpnb.kEndpointLister.Endpoints(svc.Namespace).Get(kSvcName)
+		kubeSvcName := fmt.Sprintf("svc-%v-lattice", svc.Name)
+		ep, err := kpnb.kubeEndpointLister.Endpoints(svc.Namespace).Get(kubeSvcName)
 		if err != nil {
 			if errors.IsAlreadyExists(err) {
 				continue

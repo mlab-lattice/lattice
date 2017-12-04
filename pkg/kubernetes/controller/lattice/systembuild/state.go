@@ -25,7 +25,7 @@ type sysBuildStateInfo struct {
 	needsNewSvcb    []tree.NodePath
 }
 
-func (sbc *SystemBuildController) calculateState(sysb *crv1.SystemBuild) (*sysBuildStateInfo, error) {
+func (sbc *Controller) calculateState(sysb *crv1.SystemBuild) (*sysBuildStateInfo, error) {
 	successfulSvcbs := map[tree.NodePath]*crv1.ServiceBuild{}
 	activeSvcbs := map[tree.NodePath]*crv1.ServiceBuild{}
 	failedSvcbs := map[tree.NodePath]*crv1.ServiceBuild{}

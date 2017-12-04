@@ -12,7 +12,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
-func seedEnvoyXdsApi() {
+func seedEnvoyXDSAPI() {
 	fmt.Println("Seeding envoy xds api...")
 
 	// Create envoy-xds-api daemon set

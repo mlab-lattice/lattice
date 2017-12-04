@@ -45,7 +45,7 @@ func (r *RequestHandler) GetResponse(serviceName string) (*Response, error) {
 	hosts := []types.SDSHost{}
 	for _, address := range svc.IPAddresses {
 		hosts = append(hosts, types.SDSHost{
-			IpAddress: address,
+			IPAddress: address,
 			Port:      envoyPort,
 		})
 	}

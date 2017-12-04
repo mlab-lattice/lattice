@@ -3,12 +3,12 @@ package block
 import "errors"
 
 type GitRepository struct {
-	Url    string  `json:"url"`
+	URL    string  `json:"url"`
 	Tag    *string `json:"tag,omitempty"`
 	Commit *string `json:"commit,omitempty"`
 }
 
-// Implement Interface
+// Validate implements Interface
 func (gr *GitRepository) Validate(interface{}) error {
 	// TODO: validate url here
 

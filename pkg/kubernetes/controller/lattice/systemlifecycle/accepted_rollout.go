@@ -5,7 +5,7 @@ import (
 	crv1 "github.com/mlab-lattice/system/pkg/kubernetes/customresource/v1"
 )
 
-func (slc *SystemLifecycleController) syncAcceptedRollout(sysRollout *crv1.SystemRollout) error {
+func (slc *Controller) syncAcceptedRollout(sysRollout *crv1.SystemRollout) error {
 	sysBuild, err := slc.getSystemBuildForRollout(sysRollout)
 	if err != nil {
 		return err
@@ -72,7 +72,7 @@ func (slc *SystemLifecycleController) syncAcceptedRollout(sysRollout *crv1.Syste
 	return nil
 }
 
-func (slc *SystemLifecycleController) getSystemBuildForRollout(sysRollout *crv1.SystemRollout) (*crv1.SystemBuild, error) {
+func (slc *Controller) getSystemBuildForRollout(sysRollout *crv1.SystemRollout) (*crv1.SystemBuild, error) {
 	sysBuildKey := sysRollout.Namespace + "/" + sysRollout.Spec.BuildName
 	sysBuildObj, exists, err := slc.systemBuildStore.GetByKey(sysBuildKey)
 	if err != nil {

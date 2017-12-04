@@ -37,7 +37,7 @@ type SystemBuilds struct {
 }
 
 // newSystemBuilds returns a SystemBuilds
-func newSystemBuilds(c *V1Client, namespace string) *SystemBuilds {
+func newSystemBuilds(c *Client, namespace string) *SystemBuilds {
 	return &SystemBuilds{
 		client: c.RESTClient(),
 		ns:     namespace,

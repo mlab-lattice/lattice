@@ -37,7 +37,7 @@ type ComponentBuilds struct {
 }
 
 // newComponentBuilds returns a ComponentBuilds
-func newComponentBuilds(c *V1Client, namespace string) *ComponentBuilds {
+func newComponentBuilds(c *Client, namespace string) *ComponentBuilds {
 	return &ComponentBuilds{
 		client: c.RESTClient(),
 		ns:     namespace,

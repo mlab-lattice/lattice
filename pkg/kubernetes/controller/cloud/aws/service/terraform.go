@@ -18,7 +18,7 @@ const (
 	terraformStatePathService = "/services"
 )
 
-func (sc *ServiceController) provisionService(svc *crv1.Service) error {
+func (sc *Controller) provisionService(svc *crv1.Service) error {
 	var svcTfConfig interface{}
 	{
 		// Need a consistent view of our config while generating the config
@@ -66,7 +66,7 @@ func (sc *ServiceController) provisionService(svc *crv1.Service) error {
 	return result.Wait()
 }
 
-func (sc *ServiceController) deprovisionService(svc *crv1.Service) error {
+func (sc *Controller) deprovisionService(svc *crv1.Service) error {
 	var svcTfConfig interface{}
 	{
 		// Need a consistent view of our config while generating the config
@@ -119,7 +119,7 @@ func (sc *ServiceController) deprovisionService(svc *crv1.Service) error {
 	return sc.removeFinalizer(svc)
 }
 
-func (sc *ServiceController) getServiceTerraformConfig(svc *crv1.Service) (interface{}, error) {
+func (sc *Controller) getServiceTerraformConfig(svc *crv1.Service) (interface{}, error) {
 	kubeSvc, necessary, err := sc.getKubeServiceForService(svc)
 	if err != nil {
 		return nil, err
@@ -131,7 +131,7 @@ func (sc *ServiceController) getServiceTerraformConfig(svc *crv1.Service) (inter
 			return nil, fmt.Errorf("Service %v requires kubeSvc but it does not exist", svc.Name)
 		}
 
-		serviceModule = sc.getServiceDedicatedPublicHttpTerraformModule(svc, kubeSvc)
+		serviceModule = sc.getServiceDedicatedPublicHTTPTerraformModule(svc, kubeSvc)
 	} else {
 		serviceModule = sc.getServiceDedicatedPrivateTerraformModule(svc)
 	}
@@ -146,7 +146,7 @@ func (sc *ServiceController) getServiceTerraformConfig(svc *crv1.Service) (inter
 			Region: awsConfig.Region,
 			Bucket: sc.config.Terraform.S3Backend.Bucket,
 			Key: fmt.Sprintf("%v%v/%v",
-				kubetf.GetS3BackendStatePathRoot(sc.config.SystemId),
+				kubetf.GetS3BackendStatePathRoot(sc.config.SystemID),
 				terraformStatePathService,
 				svc.Name),
 			Encrypt: true,
@@ -159,30 +159,30 @@ func (sc *ServiceController) getServiceTerraformConfig(svc *crv1.Service) (inter
 	return config, nil
 }
 
-func (sc *ServiceController) getServiceDedicatedPrivateTerraformModule(svc *crv1.Service) interface{} {
+func (sc *Controller) getServiceDedicatedPrivateTerraformModule(svc *crv1.Service) interface{} {
 	awsConfig := sc.config.Provider.AWS
 
 	return kubetf.ServiceDedicatedPrivate{
 		Source: sc.terraformModulePath + kubetf.ModulePathServiceDedicatedPrivate,
 
-		AWSAccountId: awsConfig.AccountId,
+		AWSAccountID: awsConfig.AccountID,
 		Region:       awsConfig.Region,
 
-		VPCId:                     awsConfig.VPCId,
-		SubnetIds:                 strings.Join(awsConfig.SubnetIds, ","),
-		MasterNodeSecurityGroupId: awsConfig.MasterNodeSecurityGroupID,
-		BaseNodeAmiId:             awsConfig.BaseNodeAMIId,
+		VPCID:                     awsConfig.VPCID,
+		SubnetIDs:                 strings.Join(awsConfig.SubnetIDs, ","),
+		MasterNodeSecurityGroupID: awsConfig.MasterNodeSecurityGroupID,
+		BaseNodeAmiID:             awsConfig.BaseNodeAMIID,
 		KeyName:                   awsConfig.KeyName,
 
-		SystemId:  sc.config.SystemId,
-		ServiceId: svc.Name,
+		SystemID:  sc.config.SystemID,
+		ServiceID: svc.Name,
 		// FIXME: support min/max instances
 		NumInstances: *svc.Spec.Definition.Resources.NumInstances,
 		InstanceType: *svc.Spec.Definition.Resources.InstanceType,
 	}
 }
 
-func (sc *ServiceController) getServiceDedicatedPublicHttpTerraformModule(svc *crv1.Service, kubeSvc *corev1.Service) interface{} {
+func (sc *Controller) getServiceDedicatedPublicHTTPTerraformModule(svc *crv1.Service, kubeSvc *corev1.Service) interface{} {
 	awsConfig := sc.config.Provider.AWS
 
 	publicComponentPorts := map[int32]bool{}
@@ -201,20 +201,20 @@ func (sc *ServiceController) getServiceDedicatedPublicHttpTerraformModule(svc *c
 		}
 	}
 
-	return kubetf.ServiceDedicatedPublicHttp{
-		Source: sc.terraformModulePath + kubetf.ModulePathServiceDedicatedPublicHttp,
+	return kubetf.ServiceDedicatedPublicHTTP{
+		Source: sc.terraformModulePath + kubetf.ModulePathServiceDedicatedPublicHTTP,
 
-		AWSAccountId: awsConfig.AccountId,
+		AWSAccountID: awsConfig.AccountID,
 		Region:       awsConfig.Region,
 
-		VPCId:                     awsConfig.VPCId,
-		SubnetIds:                 strings.Join(awsConfig.SubnetIds, ","),
-		MasterNodeSecurityGroupId: awsConfig.MasterNodeSecurityGroupID,
-		BaseNodeAmiId:             awsConfig.BaseNodeAMIId,
+		VPCID:                     awsConfig.VPCID,
+		SubnetIDs:                 strings.Join(awsConfig.SubnetIDs, ","),
+		MasterNodeSecurityGroupID: awsConfig.MasterNodeSecurityGroupID,
+		BaseNodeAmiID:             awsConfig.BaseNodeAMIID,
 		KeyName:                   awsConfig.KeyName,
 
-		SystemId:  sc.config.SystemId,
-		ServiceId: svc.Name,
+		SystemID:  sc.config.SystemID,
+		ServiceID: svc.Name,
 		// FIXME: support min/max instances
 		NumInstances: *svc.Spec.Definition.Resources.NumInstances,
 		InstanceType: *svc.Spec.Definition.Resources.InstanceType,

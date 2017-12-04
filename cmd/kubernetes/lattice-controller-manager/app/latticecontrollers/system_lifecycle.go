@@ -6,7 +6,7 @@ import (
 )
 
 func initializeSystemRolloutController(ctx controller.Context) {
-	go systemlifecycle.NewSystemLifecycleController(
+	go systemlifecycle.NewController(
 		ctx.LatticeClientBuilder.ClientOrDie("lattice-controller-lattice-system-lifecycle"),
 		ctx.CRInformers.SystemRollout,
 		ctx.CRInformers.SystemTeardown,

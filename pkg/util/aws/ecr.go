@@ -24,7 +24,7 @@ func (erap *ECRRegistryAuthProvider) GetLoginCredentials(registryURI string) (st
 	}
 
 	input := &ecr.GetAuthorizationTokenInput{
-		RegistryIds: []*string{&registry.accountId},
+		RegistryIds: []*string{&registry.accountID},
 	}
 	output, err := svc.GetAuthorizationToken(input)
 	if err != nil {
@@ -54,7 +54,7 @@ func getECR(region string) (*ecr.ECR, error) {
 }
 
 type ecrRegistry struct {
-	accountId string
+	accountID string
 	region    string
 }
 
@@ -66,7 +66,7 @@ func parseECRRegistryURI(registryURI string) (ecrRegistry, error) {
 	}
 
 	registry := ecrRegistry{
-		accountId: registryParts[0],
+		accountID: registryParts[0],
 		region:    registryParts[3],
 	}
 	return registry, nil

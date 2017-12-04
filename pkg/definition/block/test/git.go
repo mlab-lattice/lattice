@@ -9,20 +9,20 @@ func MockGitRepository() *block.GitRepository {
 	return MockCommitGitRepository()
 }
 
-func MockGitRepositoryExpectedJson() []byte {
-	return MockCommitGitRepositoryExpectedJson()
+func MockGitRepositoryExpectedJSON() []byte {
+	return MockCommitGitRepositoryExpectedJSON()
 }
 
 func MockCommitGitRepository() *block.GitRepository {
 	commit := "0d8934873e7191349a76f8e8b90c417e6b63f65f"
 	return &block.GitRepository{
-		Url:    "github.com/foo/bar",
+		URL:    "github.com/foo/bar",
 		Commit: &commit,
 	}
 }
 
-func MockCommitGitRepositoryExpectedJson() []byte {
-	return GenerateGitRepositoryExpectedJson(
+func MockCommitGitRepositoryExpectedJSON() []byte {
+	return GenerateGitRepositoryExpectedJSON(
 		[]byte(`"github.com/foo/bar"`),
 		nil,
 		[]byte(`"0d8934873e7191349a76f8e8b90c417e6b63f65f"`),
@@ -32,20 +32,20 @@ func MockCommitGitRepositoryExpectedJson() []byte {
 func MockTagGitRepository() *block.GitRepository {
 	tag := "v1.0.0"
 	return &block.GitRepository{
-		Url: "github.com/foo/bar",
+		URL: "github.com/foo/bar",
 		Tag: &tag,
 	}
 }
 
-func MockTagGitRepositoryExpectedJson() []byte {
-	return GenerateGitRepositoryExpectedJson(
+func MockTagGitRepositoryExpectedJSON() []byte {
+	return GenerateGitRepositoryExpectedJSON(
 		[]byte(`"github.com/foo/bar"`),
 		[]byte(`"v1.0.0"`),
 		nil,
 	)
 }
 
-func GenerateGitRepositoryExpectedJson(url, tag, commit []byte) []byte {
+func GenerateGitRepositoryExpectedJSON(url, tag, commit []byte) []byte {
 	return jsonutil.GenerateObjectBytes([]jsonutil.FieldBytes{
 		{
 			Name:  "url",

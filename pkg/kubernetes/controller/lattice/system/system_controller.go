@@ -21,7 +21,7 @@ import (
 
 var controllerKind = crv1.SchemeGroupVersion.WithKind("System")
 
-type SystemController struct {
+type Controller struct {
 	syncHandler   func(sysKey string) error
 	enqueueSystem func(sysBuild *crv1.System)
 
@@ -36,12 +36,12 @@ type SystemController struct {
 	queue workqueue.RateLimitingInterface
 }
 
-func NewSystemController(
+func NewController(
 	latticeClient latticeclientset.Interface,
 	systemInformer cache.SharedInformer,
 	serviceInformer cache.SharedInformer,
-) *SystemController {
-	sc := &SystemController{
+) *Controller {
+	sc := &Controller{
 		latticeClient: latticeClient,
 		queue:         workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "system"),
 	}
@@ -67,13 +67,13 @@ func NewSystemController(
 	return sc
 }
 
-func (sc *SystemController) handleSystemAdd(obj interface{}) {
+func (sc *Controller) handleSystemAdd(obj interface{}) {
 	sys := obj.(*crv1.System)
 	glog.V(4).Infof("Adding System %s", sys.Name)
 	sc.enqueueSystem(sys)
 }
 
-func (sc *SystemController) handleSystemUpdate(old, cur interface{}) {
+func (sc *Controller) handleSystemUpdate(old, cur interface{}) {
 	oldSys := old.(*crv1.System)
 	curSys := cur.(*crv1.System)
 	glog.V(4).Infof("Updating System %s", oldSys.Name)
@@ -81,7 +81,7 @@ func (sc *SystemController) handleSystemUpdate(old, cur interface{}) {
 }
 
 // handleServiceAdd enqueues the System that manages a Service when the Service is created.
-func (sc *SystemController) handleServiceAdd(obj interface{}) {
+func (sc *Controller) handleServiceAdd(obj interface{}) {
 	svc := obj.(*crv1.Service)
 
 	if svc.DeletionTimestamp != nil {
@@ -110,7 +110,7 @@ func (sc *SystemController) handleServiceAdd(obj interface{}) {
 }
 
 // handleServiceAdd enqueues the System that manages a Service when the Service is update.
-func (sc *SystemController) handleServiceUpdate(old, cur interface{}) {
+func (sc *Controller) handleServiceUpdate(old, cur interface{}) {
 	glog.V(5).Info("Got Service update")
 	oldSvc := old.(*crv1.Service)
 	curSvc := cur.(*crv1.Service)
@@ -147,7 +147,7 @@ func (sc *SystemController) handleServiceUpdate(old, cur interface{}) {
 	// FIXME: send error event
 }
 
-func (sc *SystemController) handleServiceDelete(obj interface{}) {
+func (sc *Controller) handleServiceDelete(obj interface{}) {
 	svc, ok := obj.(*crv1.Service)
 	if !ok {
 		tombstone, ok := obj.(cache.DeletedFinalStateUnknown)
@@ -184,7 +184,7 @@ func (sc *SystemController) handleServiceDelete(obj interface{}) {
 // resolveControllerRef returns the controller referenced by a ControllerRef,
 // or nil if the ControllerRef could not be resolved to a matching controller
 // of the correct Kind.
-func (sc *SystemController) resolveControllerRef(namespace string, controllerRef *metav1.OwnerReference) *crv1.System {
+func (sc *Controller) resolveControllerRef(namespace string, controllerRef *metav1.OwnerReference) *crv1.System {
 	// We can't look up by Name, so look up by Name and then verify Name.
 	// Don't even try to look up by Name if it's the wrong Kind.
 	if controllerRef.Kind != controllerKind.Kind {
@@ -212,7 +212,7 @@ func (sc *SystemController) resolveControllerRef(namespace string, controllerRef
 	return sys
 }
 
-func (sc *SystemController) enqueue(sys *crv1.System) {
+func (sc *Controller) enqueue(sys *crv1.System) {
 	key, err := cache.DeletionHandlingMetaNamespaceKeyFunc(sys)
 	if err != nil {
 		runtime.HandleError(fmt.Errorf("Couldn't get key for object %#v: %v", sys, err))
@@ -222,7 +222,7 @@ func (sc *SystemController) enqueue(sys *crv1.System) {
 	sc.queue.Add(key)
 }
 
-func (sc *SystemController) Run(workers int, stopCh <-chan struct{}) {
+func (sc *Controller) Run(workers int, stopCh <-chan struct{}) {
 	// don't let panics crash the process
 	defer runtime.HandleCrash()
 	// make sure the work queue is shutdown which will trigger workers to end
@@ -250,7 +250,7 @@ func (sc *SystemController) Run(workers int, stopCh <-chan struct{}) {
 	<-stopCh
 }
 
-func (sc *SystemController) runWorker() {
+func (sc *Controller) runWorker() {
 	// hot loop until we're told to stop.  processNextWorkItem will
 	// automatically wait until there's work available, so we don't worry
 	// about secondary waits
@@ -260,7 +260,7 @@ func (sc *SystemController) runWorker() {
 
 // processNextWorkItem deals with one key off the queue.  It returns false
 // when it's time to quit.
-func (sc *SystemController) processNextWorkItem() bool {
+func (sc *Controller) processNextWorkItem() bool {
 	// pull the next work item from queue.  It should be a key we use to lookup
 	// something in a cache
 	key, quit := sc.queue.Get()
@@ -298,7 +298,7 @@ func (sc *SystemController) processNextWorkItem() bool {
 
 // syncSystem will sync the SystemBuild with the given key.
 // This function is not meant to be invoked concurrently with the same key.
-func (sc *SystemController) syncSystem(key string) error {
+func (sc *Controller) syncSystem(key string) error {
 	glog.Flush()
 	startTime := time.Now()
 	glog.V(4).Infof("Started syncing System %q (%v)", key, startTime)
@@ -336,7 +336,7 @@ func (sc *SystemController) syncSystem(key string) error {
 
 // Warning: syncDeletedSystem mutates sys. Do not pass in a pointer to a
 // System from the shared cache.
-func (sc *SystemController) syncDeletedSystem(sys *crv1.System) error {
+func (sc *Controller) syncDeletedSystem(sys *crv1.System) error {
 	deletedSvc := false
 	// Delete all Services in our namespace
 	for _, svcObj := range sc.serviceStore.List() {
@@ -363,7 +363,7 @@ func (sc *SystemController) syncDeletedSystem(sys *crv1.System) error {
 
 // Warning: syncSystemServices mutates sys. Do not pass in a pointer to a
 // System from the shared cache.
-func (sc *SystemController) syncSystemServices(sys *crv1.System) error {
+func (sc *Controller) syncSystemServices(sys *crv1.System) error {
 	validSvcNames := map[string]bool{}
 
 	// Loop through the Services defined in the System's Spec, and create/update any that need it
@@ -448,7 +448,7 @@ func (sc *SystemController) syncSystemServices(sys *crv1.System) error {
 
 // Warning: syncSystemServiceStatuses mutates sys. Do not pass in a pointer to a
 // System from the shared cache.
-func (sc *SystemController) syncSystemServiceStatuses(sys *crv1.System) error {
+func (sc *Controller) syncSystemServiceStatuses(sys *crv1.System) error {
 	for path, svcInfo := range sys.Spec.Services {
 		// Services should have been created already by syncSystemServices.
 		if svcInfo.ServiceName == nil {
@@ -484,7 +484,7 @@ func (sc *SystemController) syncSystemServiceStatuses(sys *crv1.System) error {
 // SystemBuild from the shared cache.
 // syncSystemStatus assumes that all sysBuild.Spec.Services have all had their
 // ServiceBuilds created and ServiceBuildStates populated
-func (sc *SystemController) syncSystemStatus(sys *crv1.System) error {
+func (sc *Controller) syncSystemStatus(sys *crv1.System) error {
 	hasFailedSvcRollout := false
 	hasActiveSvcRollout := false
 
@@ -514,7 +514,7 @@ func (sc *SystemController) syncSystemStatus(sys *crv1.System) error {
 	return nil
 }
 
-func (sc *SystemController) updateSystem(sys *crv1.System) (*crv1.System, error) {
+func (sc *Controller) updateSystem(sys *crv1.System) (*crv1.System, error) {
 	return sc.latticeClient.V1().Systems(sys.Namespace).Update(sys)
 }
 

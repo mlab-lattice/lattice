@@ -15,16 +15,16 @@ func MockSystem() *definition.System {
 	}
 }
 
-func MockSystemExpectedJson() []byte {
-	return GenerateSystemExpectedJson(
-		blocktest.MockSystemMetadataExpectedJson(),
+func MockSystemExpectedJSON() []byte {
+	return GenerateSystemExpectedJSON(
+		blocktest.MockSystemMetadataExpectedJSON(),
 		jsonutil.GenerateArrayBytes([][]byte{
-			MockServiceExpectedJson(),
+			MockServiceExpectedJSON(),
 		}),
 	)
 }
 
-func GenerateSystemExpectedJson(metadata, subsystems []byte) []byte {
+func GenerateSystemExpectedJSON(metadata, subsystems []byte) []byte {
 	return jsonutil.GenerateObjectBytes([]jsonutil.FieldBytes{
 		{
 			Name:  "$",

@@ -30,6 +30,6 @@ func (uc *Client) URL(endpoint string) string {
 	return uc.managerAPIURL + endpoint
 }
 
-func (ac *Client) Namespace(namespace types.LatticeNamespace) *NamespaceClient {
-	return newNamespaceClient(ac, namespace)
+func (uc *Client) Namespace(namespace types.LatticeNamespace) *NamespaceClient {
+	return newNamespaceClient(uc, namespace)
 }

@@ -6,7 +6,7 @@ type DockerImage struct {
 	Tag        string `json:"tag"`
 }
 
-// Implement Interface
+// Validate implements Interface
 func (di *DockerImage) Validate(interface{}) error {
 	return nil
 }

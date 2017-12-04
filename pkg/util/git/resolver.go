@@ -118,7 +118,7 @@ func (r *Resolver) GetCommit(ctx *Context) (*gitplumbingobject.Commit, error) {
 	}
 
 	// If no ref is specified, default to HEAD.
-	uriInfo := parseGitUri(ctx.URI)
+	uriInfo := parseGitURI(ctx.URI)
 	if uriInfo.Ref == "" {
 		head, err := repository.Head()
 		if err != nil {
@@ -193,7 +193,7 @@ func (r *Resolver) FileContents(ctx *Context, fileName string) ([]byte, error) {
 }
 
 func (r *Resolver) GetRepositoryPath(ctx *Context) string {
-	uriInfo := parseGitUri(ctx.URI)
+	uriInfo := parseGitURI(ctx.URI)
 	return path.Join(r.WorkDirectory, uriInfo.CloneURI)
 }
 
@@ -231,10 +231,10 @@ type uriInfo struct {
 	RepoName string
 }
 
-func parseGitUri(gitUri string) uriInfo {
-	partByRef := strings.Split(gitUri, "#")
-	cloneUri := partByRef[0]
-	repoNameParts := strings.Split(cloneUri, "/")
+func parseGitURI(gitURI string) uriInfo {
+	partByRef := strings.Split(gitURI, "#")
+	cloneURI := partByRef[0]
+	repoNameParts := strings.Split(cloneURI, "/")
 	repoName := strings.Replace(repoNameParts[len(repoNameParts)-1], ".git", "", 1)
 
 	var ref string
@@ -242,8 +242,8 @@ func parseGitUri(gitUri string) uriInfo {
 		ref = partByRef[1]
 	}
 	return uriInfo{
-		FullURI:  gitUri,
-		CloneURI: cloneUri,
+		FullURI:  gitURI,
+		CloneURI: cloneURI,
 		RepoName: repoName,
 		Ref:      ref,
 	}

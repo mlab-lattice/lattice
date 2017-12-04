@@ -27,7 +27,7 @@ import (
 
 var controllerKind = crv1.SchemeGroupVersion.WithKind("ComponentBuild")
 
-type ComponentBuildController struct {
+type Controller struct {
 	syncHandler func(bKey string) error
 	enqueue     func(cb *crv1.ComponentBuild)
 
@@ -50,14 +50,14 @@ type ComponentBuildController struct {
 	queue workqueue.RateLimitingInterface
 }
 
-func NewComponentBuildController(
+func NewController(
 	kubeClient kubeclientset.Interface,
 	latticeClient latticeclientset.Interface,
 	configInformer cache.SharedInformer,
 	componentBuildInformer cache.SharedInformer,
 	jobInformer batchinformers.JobInformer,
-) *ComponentBuildController {
-	cbc := &ComponentBuildController{
+) *Controller {
+	cbc := &Controller{
 		kubeClient:    kubeClient,
 		latticeClient: latticeClient,
 		configSetChan: make(chan struct{}),
@@ -100,7 +100,7 @@ func NewComponentBuildController(
 	return cbc
 }
 
-func (cbc *ComponentBuildController) addConfig(obj interface{}) {
+func (cbc *Controller) addConfig(obj interface{}) {
 	config := obj.(*crv1.Config)
 	glog.V(4).Infof("Adding Config %s", config.Name)
 
@@ -114,7 +114,7 @@ func (cbc *ComponentBuildController) addConfig(obj interface{}) {
 	}
 }
 
-func (cbc *ComponentBuildController) updateConfig(old, cur interface{}) {
+func (cbc *Controller) updateConfig(old, cur interface{}) {
 	oldConfig := old.(*crv1.Config)
 	curConfig := cur.(*crv1.Config)
 	glog.V(4).Infof("Updating Config %s", oldConfig.Name)
@@ -124,13 +124,13 @@ func (cbc *ComponentBuildController) updateConfig(old, cur interface{}) {
 	cbc.config = &curConfig.DeepCopy().Spec
 }
 
-func (cbc *ComponentBuildController) addComponentBuild(obj interface{}) {
+func (cbc *Controller) addComponentBuild(obj interface{}) {
 	cb := obj.(*crv1.ComponentBuild)
 	glog.V(4).Infof("Adding ComponentBuild %s", cb.Name)
 	cbc.enqueueComponentBuild(cb)
 }
 
-func (cbc *ComponentBuildController) updateComponentBuild(old, cur interface{}) {
+func (cbc *Controller) updateComponentBuild(old, cur interface{}) {
 	oldCb := old.(*crv1.ComponentBuild)
 	curCb := cur.(*crv1.ComponentBuild)
 	glog.V(4).Infof("Updating ComponentBuild %s", oldCb.Name)
@@ -138,7 +138,7 @@ func (cbc *ComponentBuildController) updateComponentBuild(old, cur interface{}) 
 }
 
 // addJob enqueues the ComponentBuild that manages a Job when the Job is created.
-func (cbc *ComponentBuildController) addJob(obj interface{}) {
+func (cbc *Controller) addJob(obj interface{}) {
 	j := obj.(*batchv1.Job)
 
 	if j.DeletionTimestamp != nil {
@@ -171,7 +171,7 @@ func (cbc *ComponentBuildController) addJob(obj interface{}) {
 // Note that a ComponentBuild Job should only ever and should always be owned by a single ComponentBuild
 // (the one referenced in its ControllerRef), so an updated job should
 // have the same controller ref for both the old and current versions.
-func (cbc *ComponentBuildController) updateJob(old, cur interface{}) {
+func (cbc *Controller) updateJob(old, cur interface{}) {
 	glog.V(5).Info("Got Job putComponentBuildUpdate")
 	oldJ := old.(*batchv1.Job)
 	curJ := cur.(*batchv1.Job)
@@ -215,7 +215,7 @@ func (cbc *ComponentBuildController) updateJob(old, cur interface{}) {
 // Note that this should never really happen. ComponentBuild Jobs should not
 // be getting deleted. But if they do, we should write a warn event
 // and putComponentBuildUpdate the ComponentBuild.
-func (cbc *ComponentBuildController) deleteJob(obj interface{}) {
+func (cbc *Controller) deleteJob(obj interface{}) {
 	j, ok := obj.(*batchv1.Job)
 
 	// When a delete is dropped, the relist will notice a pod in the store not
@@ -251,7 +251,7 @@ func (cbc *ComponentBuildController) deleteJob(obj interface{}) {
 	cbc.enqueueComponentBuild(cb)
 }
 
-func (cbc *ComponentBuildController) enqueueComponentBuild(cBuild *crv1.ComponentBuild) {
+func (cbc *Controller) enqueueComponentBuild(cBuild *crv1.ComponentBuild) {
 	key, err := cache.DeletionHandlingMetaNamespaceKeyFunc(cBuild)
 	if err != nil {
 		runtime.HandleError(fmt.Errorf("Couldn't get key for object %#v: %v", cBuild, err))
@@ -264,7 +264,7 @@ func (cbc *ComponentBuildController) enqueueComponentBuild(cBuild *crv1.Componen
 // resolveControllerRef returns the controller referenced by a ControllerRef,
 // or nil if the ControllerRef could not be resolved to a matching controller
 // of the correct Kind.
-func (cbc *ComponentBuildController) resolveControllerRef(namespace string, controllerRef *metav1.OwnerReference) *crv1.ComponentBuild {
+func (cbc *Controller) resolveControllerRef(namespace string, controllerRef *metav1.OwnerReference) *crv1.ComponentBuild {
 	// We can't look up by Name, so look up by Name and then verify Name.
 	// Don't even try to look up by Name if it's the wrong Kind.
 	if controllerRef.Kind != controllerKind.Kind {
@@ -287,7 +287,7 @@ func (cbc *ComponentBuildController) resolveControllerRef(namespace string, cont
 	return cb
 }
 
-func (cbc *ComponentBuildController) Run(workers int, stopCh <-chan struct{}) {
+func (cbc *Controller) Run(workers int, stopCh <-chan struct{}) {
 	// don't let panics crash the process
 	defer runtime.HandleCrash()
 	// make sure the work queue is shutdown which will trigger workers to end
@@ -318,7 +318,7 @@ func (cbc *ComponentBuildController) Run(workers int, stopCh <-chan struct{}) {
 	<-stopCh
 }
 
-func (cbc *ComponentBuildController) runWorker() {
+func (cbc *Controller) runWorker() {
 	// hot loop until we're told to stop.  processNextWorkItem will
 	// automatically wait until there's work available, so we don't worry
 	// about secondary waits
@@ -328,7 +328,7 @@ func (cbc *ComponentBuildController) runWorker() {
 
 // processNextWorkItem deals with one key off the queue.  It returns false
 // when it's time to quit.
-func (cbc *ComponentBuildController) processNextWorkItem() bool {
+func (cbc *Controller) processNextWorkItem() bool {
 	// pull the next work item from queue.  It should be a key we use to lookup
 	// something in a cache
 	key, quit := cbc.queue.Get()
@@ -366,7 +366,7 @@ func (cbc *ComponentBuildController) processNextWorkItem() bool {
 
 // syncComponentBuild will sync the ComponentBuild with the given key.
 // This function is not meant to be invoked concurrently with the same key.
-func (cbc *ComponentBuildController) syncComponentBuild(key string) error {
+func (cbc *Controller) syncComponentBuild(key string) error {
 	glog.Flush()
 	startTime := time.Now()
 	glog.V(4).Infof("Started syncing ComponentBuild %q (%v)", key, startTime)

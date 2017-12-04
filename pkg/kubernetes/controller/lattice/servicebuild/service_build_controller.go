@@ -18,7 +18,7 @@ import (
 	"github.com/golang/glog"
 )
 
-type ServiceBuildController struct {
+type Controller struct {
 	syncHandler func(svcBuildKey string) error
 	enqueue     func(svcBuild *crv1.ServiceBuild)
 
@@ -42,12 +42,12 @@ type ServiceBuildController struct {
 	queue workqueue.RateLimitingInterface
 }
 
-func NewServiceBuildController(
+func NewController(
 	latticeClient latticeclientset.Interface,
 	serviceBuildInformer cache.SharedInformer,
 	componentBuildInformer cache.SharedInformer,
-) *ServiceBuildController {
-	sbc := &ServiceBuildController{
+) *Controller {
+	sbc := &Controller{
 		latticeClient:         latticeClient,
 		recentComponentBuilds: make(map[string]map[string]string),
 		queue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "service-build"),
@@ -81,13 +81,13 @@ func NewServiceBuildController(
 	return sbc
 }
 
-func (sbc *ServiceBuildController) addServiceBuild(obj interface{}) {
+func (sbc *Controller) addServiceBuild(obj interface{}) {
 	svcb := obj.(*crv1.ServiceBuild)
 	glog.V(4).Infof("Adding ServiceBuild %s", svcb.Name)
 	sbc.enqueueServiceBuild(svcb)
 }
 
-func (sbc *ServiceBuildController) updateServiceBuild(old, cur interface{}) {
+func (sbc *Controller) updateServiceBuild(old, cur interface{}) {
 	oldSvcb := old.(*crv1.ServiceBuild)
 	curSvcb := cur.(*crv1.ServiceBuild)
 	glog.V(4).Infof("Updating ServiceBuild %s", oldSvcb.Name)
@@ -96,7 +96,7 @@ func (sbc *ServiceBuildController) updateServiceBuild(old, cur interface{}) {
 
 // addComponentBuild enqueues any ServiceBuilds which may be interested in it when
 // a ComponentBuild is added.
-func (sbc *ServiceBuildController) addComponentBuild(obj interface{}) {
+func (sbc *Controller) addComponentBuild(obj interface{}) {
 	cb := obj.(*crv1.ComponentBuild)
 
 	if cb.DeletionTimestamp != nil {
@@ -114,7 +114,7 @@ func (sbc *ServiceBuildController) addComponentBuild(obj interface{}) {
 
 // updateComponentBuild enqueues any ServiceBuilds which may be interested in it when
 // a ComponentBuild is updated.
-func (sbc *ServiceBuildController) updateComponentBuild(old, cur interface{}) {
+func (sbc *Controller) updateComponentBuild(old, cur interface{}) {
 	glog.V(5).Info("Got ComponentBuild update")
 	oldCb := old.(*crv1.ComponentBuild)
 	curCb := cur.(*crv1.ComponentBuild)
@@ -130,7 +130,7 @@ func (sbc *ServiceBuildController) updateComponentBuild(old, cur interface{}) {
 	}
 }
 
-func (sbc *ServiceBuildController) getServiceBuildsForComponentBuild(cb *crv1.ComponentBuild) []*crv1.ServiceBuild {
+func (sbc *Controller) getServiceBuildsForComponentBuild(cb *crv1.ComponentBuild) []*crv1.ServiceBuild {
 	svcbs := []*crv1.ServiceBuild{}
 
 	// Find any ServiceBuilds whose ComponentBuildsInfo mention this ComponentBuild
@@ -151,7 +151,7 @@ func (sbc *ServiceBuildController) getServiceBuildsForComponentBuild(cb *crv1.Co
 	return svcbs
 }
 
-func (sbc *ServiceBuildController) enqueueServiceBuild(svcb *crv1.ServiceBuild) {
+func (sbc *Controller) enqueueServiceBuild(svcb *crv1.ServiceBuild) {
 	key, err := cache.DeletionHandlingMetaNamespaceKeyFunc(svcb)
 	if err != nil {
 		runtime.HandleError(fmt.Errorf("couldn't get key for object %#v: %v", svcb, err))
@@ -161,7 +161,7 @@ func (sbc *ServiceBuildController) enqueueServiceBuild(svcb *crv1.ServiceBuild) 
 	sbc.queue.Add(key)
 }
 
-func (sbc *ServiceBuildController) Run(workers int, stopCh <-chan struct{}) {
+func (sbc *Controller) Run(workers int, stopCh <-chan struct{}) {
 	// don't let panics crash the process
 	defer runtime.HandleCrash()
 	// make sure the work queue is shutdown which will trigger workers to end
@@ -189,7 +189,7 @@ func (sbc *ServiceBuildController) Run(workers int, stopCh <-chan struct{}) {
 	<-stopCh
 }
 
-func (sbc *ServiceBuildController) runWorker() {
+func (sbc *Controller) runWorker() {
 	// hot loop until we're told to stop.  processNextWorkItem will
 	// automatically wait until there's work available, so we don't worry
 	// about secondary waits
@@ -199,7 +199,7 @@ func (sbc *ServiceBuildController) runWorker() {
 
 // processNextWorkItem deals with one key off the queue.  It returns false
 // when it's time to quit.
-func (sbc *ServiceBuildController) processNextWorkItem() bool {
+func (sbc *Controller) processNextWorkItem() bool {
 	// pull the next work item from queue.  It should be a key we use to lookup
 	// something in a cache
 	key, quit := sbc.queue.Get()
@@ -237,7 +237,7 @@ func (sbc *ServiceBuildController) processNextWorkItem() bool {
 
 // syncServiceBuild will sync the Service with the given key.
 // This function is not meant to be invoked concurrently with the same key.
-func (sbc *ServiceBuildController) syncServiceBuild(key string) error {
+func (sbc *Controller) syncServiceBuild(key string) error {
 	glog.Flush()
 	startTime := time.Now()
 	glog.V(4).Infof("Started syncing ServiceBuild %q (%v)", key, startTime)

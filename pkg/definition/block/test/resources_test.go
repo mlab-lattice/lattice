@@ -109,7 +109,7 @@ func TestResources_JSON(t *testing.T) {
 		[]JSONTest{
 			{
 				Description: "MockResources",
-				Bytes:       MockResourcesExpectedJson(),
+				Bytes:       MockResourcesExpectedJSON(),
 				ValuePtr:    MockResources(),
 			},
 		},

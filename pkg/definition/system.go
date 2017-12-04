@@ -14,7 +14,7 @@ type System struct {
 	Subsystems []Interface    `json:"subsystems"`
 }
 
-// Implement json.Unmarshaler
+// UnmarshalJSON implements json.Unmarshaler
 func (s *System) UnmarshalJSON(data []byte) error {
 	definition, err := UnmarshalJSON(data)
 	if err != nil {
@@ -28,12 +28,12 @@ func (s *System) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// Implement Interface
+// Metadata implements Interface
 func (s *System) Metadata() *block.Metadata {
 	return &s.Meta
 }
 
-// Implement block.Interface
+// Validate implement block.Interface
 func (s *System) Validate(interface{}) error {
 	if s == nil {
 		return errors.New("cannot have nil System definition")

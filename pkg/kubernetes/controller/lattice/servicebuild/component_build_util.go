@@ -18,7 +18,7 @@ func getComponentBuildDefinitionHashFromLabel(cb *crv1.ComponentBuild) *string {
 	return &cBuildHashLabel
 }
 
-func (sbc *ServiceBuildController) getComponentBuildFromInfo(cbInfo *crv1.ServiceBuildComponentBuildInfo, ns string) (*crv1.ComponentBuild, bool, error) {
+func (sbc *Controller) getComponentBuildFromInfo(cbInfo *crv1.ServiceBuildComponentBuildInfo, ns string) (*crv1.ComponentBuild, bool, error) {
 	if cbInfo.BuildName == nil {
 		return nil, false, nil
 	}
@@ -32,7 +32,7 @@ func (sbc *ServiceBuildController) getComponentBuildFromInfo(cbInfo *crv1.Servic
 	return cbObj.(*crv1.ComponentBuild), true, nil
 }
 
-func (sbc *ServiceBuildController) findComponentBuildForDefinitionHash(ns, definitionHash string) (*crv1.ComponentBuild, error) {
+func (sbc *Controller) findComponentBuildForDefinitionHash(ns, definitionHash string) (*crv1.ComponentBuild, error) {
 	// Check recent build cache
 	cb, err := sbc.findComponentBuildInRecentBuildCache(ns, definitionHash)
 	if err != nil {
@@ -49,7 +49,7 @@ func (sbc *ServiceBuildController) findComponentBuildForDefinitionHash(ns, defin
 	return sbc.findComponentBuildInStore(ns, definitionHash), nil
 }
 
-func (sbc *ServiceBuildController) findComponentBuildInRecentBuildCache(ns, definitionHash string) (*crv1.ComponentBuild, error) {
+func (sbc *Controller) findComponentBuildInRecentBuildCache(ns, definitionHash string) (*crv1.ComponentBuild, error) {
 	sbc.recentComponentBuildsLock.RLock()
 	defer sbc.recentComponentBuildsLock.RUnlock()
 
@@ -87,7 +87,7 @@ func (sbc *ServiceBuildController) findComponentBuildInRecentBuildCache(ns, defi
 	return cb, nil
 }
 
-func (sbc *ServiceBuildController) findComponentBuildInStore(ns, definitionHash string) *crv1.ComponentBuild {
+func (sbc *Controller) findComponentBuildInStore(ns, definitionHash string) *crv1.ComponentBuild {
 	// TODO: similar scalability concerns to getServiceBuildsForComponentBuild
 	for _, cbObj := range sbc.componentBuildStore.List() {
 		cb := cbObj.(*crv1.ComponentBuild)
@@ -105,7 +105,7 @@ func (sbc *ServiceBuildController) findComponentBuildInStore(ns, definitionHash 
 	return nil
 }
 
-func (sbc *ServiceBuildController) createComponentBuild(ns string, cbInfo *crv1.ServiceBuildComponentBuildInfo, previousCbName *string) (*crv1.ComponentBuild, error) {
+func (sbc *Controller) createComponentBuild(ns string, cbInfo *crv1.ServiceBuildComponentBuildInfo, previousCbName *string) (*crv1.ComponentBuild, error) {
 	sbc.recentComponentBuildsLock.Lock()
 	defer sbc.recentComponentBuildsLock.Unlock()
 
@@ -114,7 +114,7 @@ func (sbc *ServiceBuildController) createComponentBuild(ns string, cbInfo *crv1.
 		// build the same component. We'll use this ComponentBuild as ours.
 		cbName, ok := cbNsCache[*cbInfo.DefinitionHash]
 		if ok && (previousCbName == nil || cbName != *previousCbName) {
-			return sbc.getComponentBuildFromApi(ns, cbName)
+			return sbc.getComponentBuildFromAPI(ns, cbName)
 		}
 	}
 
@@ -135,7 +135,7 @@ func (sbc *ServiceBuildController) createComponentBuild(ns string, cbInfo *crv1.
 	return result, nil
 }
 
-func (sbc *ServiceBuildController) getComponentBuildFromApi(ns, name string) (*crv1.ComponentBuild, error) {
+func (sbc *Controller) getComponentBuildFromAPI(ns, name string) (*crv1.ComponentBuild, error) {
 	return sbc.latticeClient.V1().ComponentBuilds(ns).Get(name, metav1.GetOptions{})
 }
 

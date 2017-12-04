@@ -13,7 +13,7 @@ type ComponentBuild struct {
 	DockerImage     *DockerImage   `json:"docker_image,omitempty"`
 }
 
-// Implement Interface
+// Validate implements Interface
 func (cb *ComponentBuild) Validate(interface{}) error {
 	if cb.GitRepository != nil && cb.DockerImage != nil {
 		return errors.New("cannot specify both git_repository and docker_image")

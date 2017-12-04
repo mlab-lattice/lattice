@@ -15,7 +15,7 @@ import (
 
 // Warning: syncComponentBuildStates mutates svcb. Please do not pass in a pointer to a ComponentBuild
 // from the shared cache.
-func (sbc *ServiceBuildController) syncComponentBuildStates(svcb *crv1.ServiceBuild, info *svcBuildStateInfo) error {
+func (sbc *Controller) syncComponentBuildStates(svcb *crv1.ServiceBuild, info *svcBuildStateInfo) error {
 	for component, cb := range info.successfulCbs {
 		err := updateComponentBuildInfoState(svcb, component, cb)
 		if err != nil {
@@ -60,7 +60,7 @@ func updateComponentBuildInfoState(svcb *crv1.ServiceBuild, component string, cb
 
 // Warning: syncFailedServiceBuild mutates svcb. Please do not pass in a pointer to a ServiceBuild
 // from the shared cache.
-func (sbc *ServiceBuildController) syncFailedServiceBuild(svcb *crv1.ServiceBuild, failedCbs map[string]*crv1.ComponentBuild) error {
+func (sbc *Controller) syncFailedServiceBuild(svcb *crv1.ServiceBuild, failedCbs map[string]*crv1.ComponentBuild) error {
 	// Sort the ComponentBuild names so the Status.Message is the same for the same failed ComponentBuilds
 	failedComponents := []string{}
 	for component := range failedCbs {
@@ -86,7 +86,7 @@ func (sbc *ServiceBuildController) syncFailedServiceBuild(svcb *crv1.ServiceBuil
 	return err
 }
 
-func (sbc *ServiceBuildController) syncRunningServiceBuild(svcb *crv1.ServiceBuild, activeCbs map[string]*crv1.ComponentBuild) error {
+func (sbc *Controller) syncRunningServiceBuild(svcb *crv1.ServiceBuild, activeCbs map[string]*crv1.ComponentBuild) error {
 	// Sort the ComponentBuild names so the Status.Message is the same for the same active ComponentBuilds
 	activeComponents := []string{}
 	for component := range activeCbs {
@@ -112,20 +112,20 @@ func (sbc *ServiceBuildController) syncRunningServiceBuild(svcb *crv1.ServiceBui
 	return err
 }
 
-func (sbc *ServiceBuildController) syncMissingComponentBuildsServiceBuild(svcbs *crv1.ServiceBuild, needsNewCbs []string) error {
+func (sbc *Controller) syncMissingComponentBuildsServiceBuild(svcbs *crv1.ServiceBuild, needsNewCbs []string) error {
 	for _, component := range needsNewCbs {
 		cbInfo := svcbs.Spec.Components[component]
 
 		// TODO: is json marshalling of a struct deterministic in order? If not could potentially get
 		//		 different SHAs for the same definition. This is OK in the correctness sense, since we'll
 		//		 just be duplicating work, but still not ideal
-		cbDefinitionBlockJson, err := json.Marshal(cbInfo.DefinitionBlock)
+		definitionJSON, err := json.Marshal(cbInfo.DefinitionBlock)
 		if err != nil {
 			return err
 		}
 
 		h := sha256.New()
-		if _, err = h.Write(cbDefinitionBlockJson); err != nil {
+		if _, err = h.Write(definitionJSON); err != nil {
 			return err
 		}
 
@@ -179,7 +179,7 @@ func (sbc *ServiceBuildController) syncMissingComponentBuildsServiceBuild(svcbs 
 	return nil
 }
 
-func (sbc *ServiceBuildController) syncSucceededServiceBuild(svcb *crv1.ServiceBuild) error {
+func (sbc *Controller) syncSucceededServiceBuild(svcb *crv1.ServiceBuild) error {
 	newStatus := crv1.ServiceBuildStatus{
 		State: crv1.ServiceBuildStateSucceeded,
 	}
@@ -190,7 +190,7 @@ func (sbc *ServiceBuildController) syncSucceededServiceBuild(svcb *crv1.ServiceB
 
 // Warning: putServiceBuildStatusUpdate mutates cBuild. Please do not pass in a pointer to a ComponentBuild
 // from the shared cache.
-func (sbc *ServiceBuildController) putServiceBuildStatusUpdate(svcb *crv1.ServiceBuild, newStatus crv1.ServiceBuildStatus) (*crv1.ServiceBuild, error) {
+func (sbc *Controller) putServiceBuildStatusUpdate(svcb *crv1.ServiceBuild, newStatus crv1.ServiceBuildStatus) (*crv1.ServiceBuild, error) {
 	if reflect.DeepEqual(svcb.Status, newStatus) {
 		return svcb, nil
 	}
@@ -199,6 +199,6 @@ func (sbc *ServiceBuildController) putServiceBuildStatusUpdate(svcb *crv1.Servic
 	return sbc.putServiceBuildUpdate(svcb)
 }
 
-func (sbc *ServiceBuildController) putServiceBuildUpdate(svcb *crv1.ServiceBuild) (*crv1.ServiceBuild, error) {
+func (sbc *Controller) putServiceBuildUpdate(svcb *crv1.ServiceBuild) (*crv1.ServiceBuild, error) {
 	return sbc.latticeClient.V1().ServiceBuilds(svcb.Namespace).Update(svcb)
 }

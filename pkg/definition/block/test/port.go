@@ -6,34 +6,34 @@ import (
 )
 
 func MockPort() *block.ComponentPort {
-	return MockHttpPort()
+	return MockHTTPPort()
 }
 
-func MockPortExpectedJson() []byte {
-	return MockHttpPortExpectedJson()
+func MockPortExpectedJSON() []byte {
+	return MockHTTPPortExpectedJSON()
 }
 
-func MockHttpPort() *block.ComponentPort {
-	return MockPrivateHttpPort()
+func MockHTTPPort() *block.ComponentPort {
+	return MockPrivateHTTPPort()
 }
 
-func MockHttpPortExpectedJson() []byte {
-	return MockPrivateHttpPortExpectedJson()
+func MockHTTPPortExpectedJSON() []byte {
+	return MockPrivateHTTPPortExpectedJSON()
 }
 
-func MockPrivateHttpPort() *block.ComponentPort {
+func MockPrivateHTTPPort() *block.ComponentPort {
 	return &block.ComponentPort{
 		Name:     "http",
 		Port:     80,
-		Protocol: block.HttpProtocol,
+		Protocol: block.ProtocolHTTP,
 	}
 }
 
-func MockPrivateHttpPortExpectedJson() []byte {
+func MockPrivateHTTPPortExpectedJSON() []byte {
 	httpProtocolBytes := []byte(`"`)
-	httpProtocolBytes = append(httpProtocolBytes, []byte(block.HttpProtocol)...)
+	httpProtocolBytes = append(httpProtocolBytes, []byte(block.ProtocolHTTP)...)
 	httpProtocolBytes = append(httpProtocolBytes, []byte(`"`)...)
-	return GeneratePortExpectedJson(
+	return GeneratePortExpectedJSON(
 		[]byte(`"http"`),
 		[]byte(`80`),
 		httpProtocolBytes,
@@ -41,48 +41,48 @@ func MockPrivateHttpPortExpectedJson() []byte {
 	)
 }
 
-func MockPublicHttpPort() *block.ComponentPort {
+func MockPublicHTTPPort() *block.ComponentPort {
 	return &block.ComponentPort{
 		Name:           "http",
 		Port:           80,
-		Protocol:       block.HttpProtocol,
+		Protocol:       block.ProtocolHTTP,
 		ExternalAccess: MockPublicExternalAccess(),
 	}
 }
 
-func MockPublicHttpPortExpectedJson() []byte {
+func MockPublicHTTPPortExpectedJSON() []byte {
 	httpProtocolBytes := []byte(`"`)
-	httpProtocolBytes = append(httpProtocolBytes, []byte(block.HttpProtocol)...)
+	httpProtocolBytes = append(httpProtocolBytes, []byte(block.ProtocolHTTP)...)
 	httpProtocolBytes = append(httpProtocolBytes, []byte(`"`)...)
-	return GeneratePortExpectedJson(
+	return GeneratePortExpectedJSON(
 		[]byte(`"http"`),
 		[]byte(`80`),
 		httpProtocolBytes,
-		MockPublicExternalAccessExpectedJson(),
+		MockPublicExternalAccessExpectedJSON(),
 	)
 }
 
-func MockTcpPort() *block.ComponentPort {
-	return MockPrivateTcpPort()
+func MockTCPPort() *block.ComponentPort {
+	return MockPrivateTCPPort()
 }
 
-func MockTcpPortExpectedJson() []byte {
-	return MockPrivateTcpPortExpectedJson()
+func MockTCPPortExpectedJSON() []byte {
+	return MockPrivateTCPPortExpectedJSON()
 }
 
-func MockPrivateTcpPort() *block.ComponentPort {
+func MockPrivateTCPPort() *block.ComponentPort {
 	return &block.ComponentPort{
 		Name:     "tcp",
 		Port:     80,
-		Protocol: block.TcpProtocol,
+		Protocol: block.ProtocolTCP,
 	}
 }
 
-func MockPrivateTcpPortExpectedJson() []byte {
+func MockPrivateTCPPortExpectedJSON() []byte {
 	tcpProtocolBytes := []byte(`"`)
-	tcpProtocolBytes = append(tcpProtocolBytes, []byte(block.TcpProtocol)...)
+	tcpProtocolBytes = append(tcpProtocolBytes, []byte(block.ProtocolTCP)...)
 	tcpProtocolBytes = append(tcpProtocolBytes, []byte(`"`)...)
-	return GeneratePortExpectedJson(
+	return GeneratePortExpectedJSON(
 		[]byte(`"tcp"`),
 		[]byte(`80`),
 		tcpProtocolBytes,
@@ -90,28 +90,28 @@ func MockPrivateTcpPortExpectedJson() []byte {
 	)
 }
 
-func MockPublicTcpPort() *block.ComponentPort {
+func MockPublicTCPPort() *block.ComponentPort {
 	return &block.ComponentPort{
 		Name:           "tcp",
 		Port:           80,
-		Protocol:       block.TcpProtocol,
+		Protocol:       block.ProtocolTCP,
 		ExternalAccess: MockPublicExternalAccess(),
 	}
 }
 
-func MockPublicTcpPortExpectedJson() []byte {
+func MockPublicTCPPortExpectedJSON() []byte {
 	tcpProtocolBytes := []byte(`"`)
-	tcpProtocolBytes = append(tcpProtocolBytes, []byte(block.TcpProtocol)...)
+	tcpProtocolBytes = append(tcpProtocolBytes, []byte(block.ProtocolTCP)...)
 	tcpProtocolBytes = append(tcpProtocolBytes, []byte(`"`)...)
-	return GeneratePortExpectedJson(
+	return GeneratePortExpectedJSON(
 		[]byte(`"tcp"`),
 		[]byte(`80`),
 		tcpProtocolBytes,
-		MockPublicExternalAccessExpectedJson(),
+		MockPublicExternalAccessExpectedJSON(),
 	)
 }
 
-func GeneratePortExpectedJson(name, port, protocol, externalAccess []byte) []byte {
+func GeneratePortExpectedJSON(name, port, protocol, externalAccess []byte) []byte {
 	return jsonutil.GenerateObjectBytes([]jsonutil.FieldBytes{
 		{
 			Name:  "name",
@@ -137,8 +137,8 @@ func MockExternalAccess() *block.ExternalAccess {
 	return MockPublicExternalAccess()
 }
 
-func MockExternalAccessExpectedJson() []byte {
-	return MockPublicExternalAccessExpectedJson()
+func MockExternalAccessExpectedJSON() []byte {
+	return MockPublicExternalAccessExpectedJSON()
 }
 
 func MockPublicExternalAccess() *block.ExternalAccess {
@@ -147,11 +147,11 @@ func MockPublicExternalAccess() *block.ExternalAccess {
 	}
 }
 
-func MockPublicExternalAccessExpectedJson() []byte {
-	return GenerateExternalAccessExpectedJson([]byte(`true`))
+func MockPublicExternalAccessExpectedJSON() []byte {
+	return GenerateExternalAccessExpectedJSON([]byte(`true`))
 }
 
-func GenerateExternalAccessExpectedJson(public []byte) []byte {
+func GenerateExternalAccessExpectedJSON(public []byte) []byte {
 	return jsonutil.GenerateObjectBytes([]jsonutil.FieldBytes{
 		{
 			Name:  "public",

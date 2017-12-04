@@ -60,17 +60,17 @@ func TestMetadata_JSON(t *testing.T) {
 		[]JSONTest{
 			{
 				Description: "MockSystemMetadata",
-				Bytes:       MockSystemMetadataExpectedJson(),
+				Bytes:       MockSystemMetadataExpectedJSON(),
 				ValuePtr:    MockSystemMetadata(),
 			},
 			{
 				Description: "MockServiceMetadata",
-				Bytes:       MockServiceMetadataExpectedJson(),
+				Bytes:       MockServiceMetadataExpectedJSON(),
 				ValuePtr:    MockServiceMetadata(),
 			},
 			{
 				Description: "MockServiceDifferentNameMetadata",
-				Bytes:       MockServiceDifferentNameMetadataExpectedJson(),
+				Bytes:       MockServiceDifferentNameMetadataExpectedJSON(),
 				ValuePtr:    MockServiceDifferentNameMetadata(),
 			},
 		},

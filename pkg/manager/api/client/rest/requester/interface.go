@@ -40,7 +40,7 @@ func PostRequest(requester Interface, url string, contentType string, body io.Re
 }
 
 func PostRequestJSON(requester Interface, url string, body interface{}) (*http.Response, error) {
-	var r io.Reader = nil
+	var r io.Reader
 	if body != nil {
 		buf, err := json.Marshal(body)
 		if err != nil {

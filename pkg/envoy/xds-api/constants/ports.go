@@ -1,5 +1,5 @@
 package constants
 
 const (
-	PortHttpDefault int32 = 80
+	PortHTTPDefault int32 = 80
 )

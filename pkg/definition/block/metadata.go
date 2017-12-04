@@ -11,7 +11,7 @@ type Metadata struct {
 	Parameters  map[string]MetadataParameter `json:"parameters,omitempty"`
 }
 
-// Implement Interface
+// Validate implements Interface
 func (m *Metadata) Validate(interface{}) error {
 	if m.Name == "" {
 		return errors.New("name is required")
@@ -30,7 +30,7 @@ type MetadataParameter struct {
 	Description string `json:"description"`
 }
 
-// Implement Interface
+// Validate implements Interface
 func (m *MetadataParameter) Validate(interface{}) error {
 	// TODO: add parameter validation
 	return nil

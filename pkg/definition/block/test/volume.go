@@ -12,7 +12,7 @@ func MockVolume() *block.Volume {
 	}
 }
 
-func MockVolumeExpectedJson() []byte {
+func MockVolumeExpectedJSON() []byte {
 	return jsonutil.GenerateObjectBytes([]jsonutil.FieldBytes{
 		{
 			Name:  "name",
@@ -29,8 +29,8 @@ func MockVolumeMount() *block.ComponentVolumeMount {
 	return MockVolumeMountReadOnlyFalse()
 }
 
-func MockVolumeMountExpectedJson() []byte {
-	return MockVolumeMountReadOnlyFalseExpectedJson()
+func MockVolumeMountExpectedJSON() []byte {
+	return MockVolumeMountReadOnlyFalseExpectedJSON()
 }
 
 func MockVolumeMountReadOnlyFalse() *block.ComponentVolumeMount {
@@ -41,8 +41,8 @@ func MockVolumeMountReadOnlyFalse() *block.ComponentVolumeMount {
 	}
 }
 
-func MockVolumeMountReadOnlyFalseExpectedJson() []byte {
-	return GenerateVolumeMountExpectedJson(
+func MockVolumeMountReadOnlyFalseExpectedJSON() []byte {
+	return GenerateVolumeMountExpectedJSON(
 		[]byte(`"read-write"`),
 		[]byte(`"/foobar"`),
 		[]byte(`false`),
@@ -57,15 +57,15 @@ func MockVolumeMountReadOnlyTrue() *block.ComponentVolumeMount {
 	}
 }
 
-func MockVolumeMountReadOnlyTrueExpectedJson() []byte {
-	return GenerateVolumeMountExpectedJson(
+func MockVolumeMountReadOnlyTrueExpectedJSON() []byte {
+	return GenerateVolumeMountExpectedJSON(
 		[]byte(`"read-only"`),
 		[]byte(`"/foobar"`),
 		[]byte(`true`),
 	)
 }
 
-func GenerateVolumeMountExpectedJson(name, mountPoint, readOnly []byte) []byte {
+func GenerateVolumeMountExpectedJSON(name, mountPoint, readOnly []byte) []byte {
 	return jsonutil.GenerateObjectBytes([]jsonutil.FieldBytes{
 		{
 			Name:  "name",

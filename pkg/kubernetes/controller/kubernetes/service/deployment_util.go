@@ -32,7 +32,7 @@ const (
 )
 
 // getDeployment returns an *extensions.Deployment configured for a given Service
-func (sc *ServiceController) getDeployment(svc *crv1.Service) (*appsv1beta2.Deployment, error) {
+func (sc *Controller) getDeployment(svc *crv1.Service) (*appsv1beta2.Deployment, error) {
 	// Need a consistent view of our config while generating the Job
 	sc.configLock.RLock()
 	defer sc.configLock.RUnlock()
@@ -73,34 +73,34 @@ func getDeploymentLabels(svc *crv1.Service) map[string]string {
 	}
 }
 
-func (sc *ServiceController) getDeploymentAnnotations(svc *crv1.Service) (map[string]string, error) {
+func (sc *Controller) getDeploymentAnnotations(svc *crv1.Service) (map[string]string, error) {
 	annotations := map[string]string{}
-	svcDefinitionJsonBytes, err := json.Marshal(svc.Spec.Definition)
+	definitionJSONBytes, err := json.Marshal(svc.Spec.Definition)
 	if err != nil {
 		return nil, err
 	}
 
-	annotations[constants.AnnotationKeyDeploymentServiceDefinition] = string(svcDefinitionJsonBytes)
+	annotations[constants.AnnotationKeyDeploymentServiceDefinition] = string(definitionJSONBytes)
 
 	// FIXME: remove this when local DNS is working
 	sys, err := sc.getServiceSystem(svc)
 	if err != nil {
 		return nil, err
 	}
-	sysSvcSlice := getSystemServicesSlice(sys)
-	sysSvcJsonBytes, err := json.Marshal(sysSvcSlice)
+	services := getSystemServicesSlice(sys)
+	servicesJSONBytes, err := json.Marshal(services)
 	if err != nil {
 		return nil, err
 	}
 
-	annotations[constants.AnnotationKeySystemServices] = string(sysSvcJsonBytes)
+	annotations[constants.AnnotationKeySystemServices] = string(servicesJSONBytes)
 
 	return annotations, nil
 }
 
 // getDeploymentSpec returns an *extensions.DeploymentSpec configured for a given Service.
 // N.B.: getDeploymentSpec assumes a RLock is held on sc.configLock when called.
-func (sc *ServiceController) getDeploymentSpec(svc *crv1.Service) (*appsv1beta2.DeploymentSpec, error) {
+func (sc *Controller) getDeploymentSpec(svc *crv1.Service) (*appsv1beta2.DeploymentSpec, error) {
 	containers := []corev1.Container{}
 	initContainers := []corev1.Container{}
 
@@ -182,7 +182,7 @@ func (sc *ServiceController) getDeploymentSpec(svc *crv1.Service) (*appsv1beta2.
 			},
 			{
 				Name:  "XDS_API_PORT",
-				Value: fmt.Sprintf("%v", envoyConfig.XdsApiPort),
+				Value: fmt.Sprintf("%v", envoyConfig.XDSAPIPort),
 			},
 		},
 		VolumeMounts: []corev1.VolumeMount{
@@ -319,9 +319,9 @@ func getLivenessProbe(hc *block.ComponentHealthCheck) *corev1.Probe {
 		}
 	}
 
-	if hc.Http != nil {
+	if hc.HTTP != nil {
 		headers := []corev1.HTTPHeader{}
-		for k, v := range hc.Http.Headers {
+		for k, v := range hc.HTTP.Headers {
 			headers = append(
 				headers,
 				corev1.HTTPHeader{
@@ -334,8 +334,8 @@ func getLivenessProbe(hc *block.ComponentHealthCheck) *corev1.Probe {
 		return &corev1.Probe{
 			Handler: corev1.Handler{
 				HTTPGet: &corev1.HTTPGetAction{
-					Path:        hc.Http.Path,
-					Port:        intstr.FromString(hc.Http.Port),
+					Path:        hc.HTTP.Path,
+					Port:        intstr.FromString(hc.HTTP.Port),
 					HTTPHeaders: headers,
 				},
 			},
@@ -345,13 +345,13 @@ func getLivenessProbe(hc *block.ComponentHealthCheck) *corev1.Probe {
 	return &corev1.Probe{
 		Handler: corev1.Handler{
 			TCPSocket: &corev1.TCPSocketAction{
-				Port: intstr.FromString(hc.Tcp.Port),
+				Port: intstr.FromString(hc.TCP.Port),
 			},
 		},
 	}
 }
 
-func (sc *ServiceController) getDeploymentForService(svc *crv1.Service) (*appsv1beta2.Deployment, error) {
+func (sc *Controller) getDeploymentForService(svc *crv1.Service) (*appsv1beta2.Deployment, error) {
 	// List all Deployments to find in the Service's namespace to find the Deployment the Service manages.
 	deployments, err := sc.deploymentLister.Deployments(svc.Namespace).List(labels.Everything())
 	if err != nil {
@@ -381,7 +381,7 @@ func (sc *ServiceController) getDeploymentForService(svc *crv1.Service) (*appsv1
 	return matchingDeployments[0], nil
 }
 
-func (sc *ServiceController) createDeployment(svc *crv1.Service) (*appsv1beta2.Deployment, error) {
+func (sc *Controller) createDeployment(svc *crv1.Service) (*appsv1beta2.Deployment, error) {
 	d, err := sc.getDeployment(svc)
 	if err != nil {
 		return nil, err
@@ -398,7 +398,7 @@ func (sc *ServiceController) createDeployment(svc *crv1.Service) (*appsv1beta2.D
 	return dResp, nil
 }
 
-func (sc *ServiceController) syncDeploymentSpec(svc *crv1.Service, d *appsv1beta2.Deployment) (*appsv1beta2.Deployment, error) {
+func (sc *Controller) syncDeploymentSpec(svc *crv1.Service, d *appsv1beta2.Deployment) (*appsv1beta2.Deployment, error) {
 	dSvcDefStr, ok := d.Annotations[constants.AnnotationKeyDeploymentServiceDefinition]
 	if !ok {
 		return nil, fmt.Errorf("deployment did not have %v annotation", constants.AnnotationKeyDeploymentServiceDefinition)
@@ -442,7 +442,7 @@ func (sc *ServiceController) syncDeploymentSpec(svc *crv1.Service, d *appsv1beta
 	return sc.updateDeploymentSpec(svc, d, newDSpec)
 }
 
-func (sc *ServiceController) updateDeploymentSpec(svc *crv1.Service, d *appsv1beta2.Deployment, dSpec *appsv1beta2.DeploymentSpec) (*appsv1beta2.Deployment, error) {
+func (sc *Controller) updateDeploymentSpec(svc *crv1.Service, d *appsv1beta2.Deployment, dSpec *appsv1beta2.DeploymentSpec) (*appsv1beta2.Deployment, error) {
 	dAnnotations, err := sc.getDeploymentAnnotations(svc)
 	if err != nil {
 		return nil, err
@@ -459,7 +459,7 @@ func (sc *ServiceController) updateDeploymentSpec(svc *crv1.Service, d *appsv1be
 	return result, err
 }
 
-func (sc *ServiceController) getServiceSystem(svc *crv1.Service) (*crv1.System, error) {
+func (sc *Controller) getServiceSystem(svc *crv1.Service) (*crv1.System, error) {
 	sysKey := fmt.Sprintf("%v/%v", svc.Namespace, svc.Namespace)
 	sysObj, exists, err := sc.systemStore.GetByKey(sysKey)
 	if err != nil {

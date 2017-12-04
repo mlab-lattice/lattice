@@ -12,7 +12,7 @@ import (
 
 // Warning: syncJoblessComponentBuild mutates cBuild. Please do not pass in a pointer to a ComponentBuild
 // from the shared cache.
-func (cbc *ComponentBuildController) syncJoblessComponentBuild(cb *crv1.ComponentBuild) error {
+func (cbc *Controller) syncJoblessComponentBuild(cb *crv1.ComponentBuild) error {
 	j, err := cbc.getBuildJob(cb)
 	if err != nil {
 		return err
@@ -31,7 +31,7 @@ func (cbc *ComponentBuildController) syncJoblessComponentBuild(cb *crv1.Componen
 
 // Warning: syncSuccessfulComponentBuild mutates cBuild. Please do not pass in a pointer to a ComponentBuild
 // from the shared cache.
-func (cbc *ComponentBuildController) syncSuccessfulComponentBuild(cb *crv1.ComponentBuild, j *batchv1.Job) error {
+func (cbc *Controller) syncSuccessfulComponentBuild(cb *crv1.ComponentBuild, j *batchv1.Job) error {
 	newArtifacts := &crv1.ComponentBuildArtifacts{
 		DockerImageFqn: j.Annotations[jobDockerFqnAnnotationKey],
 	}
@@ -48,13 +48,13 @@ func (cbc *ComponentBuildController) syncSuccessfulComponentBuild(cb *crv1.Compo
 
 // Warning: updateStatusToSucceeded mutates cBuild. Please do not pass in a pointer to a ComponentBuild
 // from the shared cache.
-func (cbc *ComponentBuildController) syncFailedComponentBuild(cb *crv1.ComponentBuild) error {
+func (cbc *Controller) syncFailedComponentBuild(cb *crv1.ComponentBuild) error {
 	return cbc.updateComponentBuildState(cb, crv1.ComponentBuildStateFailed)
 }
 
 // Warning: syncUnfinishedComponentBuild mutates cBuild. Please do not pass in a pointer to a ComponentBuild
 // from the shared cache.
-func (cbc *ComponentBuildController) syncUnfinishedComponentBuild(cb *crv1.ComponentBuild, j *batchv1.Job) error {
+func (cbc *Controller) syncUnfinishedComponentBuild(cb *crv1.ComponentBuild, j *batchv1.Job) error {
 	// The Job Pods have been able to be scheduled, so the ComponentBuild is "running" even though
 	// a Job Pod may not currently be active.
 	if j.Status.Active > 0 || j.Status.Failed > 0 {
@@ -66,7 +66,7 @@ func (cbc *ComponentBuildController) syncUnfinishedComponentBuild(cb *crv1.Compo
 
 // Warning: putComponentBuildStatusUpdate mutates cBuild. Please do not pass in a pointer to a ComponentBuild
 // from the shared cache.
-func (cbc *ComponentBuildController) updateComponentBuildState(cb *crv1.ComponentBuild, newState crv1.ComponentBuildState) error {
+func (cbc *Controller) updateComponentBuildState(cb *crv1.ComponentBuild, newState crv1.ComponentBuildState) error {
 	if reflect.DeepEqual(cb.Status.State, newState) {
 		return nil
 	}
@@ -75,7 +75,7 @@ func (cbc *ComponentBuildController) updateComponentBuildState(cb *crv1.Componen
 	return cbc.putComponentBuildUpdate(cb)
 }
 
-func (cbc *ComponentBuildController) putComponentBuildUpdate(cb *crv1.ComponentBuild) error {
+func (cbc *Controller) putComponentBuildUpdate(cb *crv1.ComponentBuild) error {
 	_, err := cbc.latticeClient.V1().ComponentBuilds(cb.Namespace).Update(cb)
 	return err
 }

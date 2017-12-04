@@ -11,7 +11,7 @@ import (
 
 // Warning: syncServiceBuildStates mutates svcb. Please do not pass in a pointer to a ComponentBuild
 // from the shared cache.
-func (sbc *SystemBuildController) syncServiceBuildStates(sysb *crv1.SystemBuild, info *sysBuildStateInfo) error {
+func (sbc *Controller) syncServiceBuildStates(sysb *crv1.SystemBuild, info *sysBuildStateInfo) error {
 	for service, svcb := range info.successfulSvcbs {
 		err := updateServiceBuildInfoState(sysb, service, svcb)
 		if err != nil {
@@ -68,7 +68,7 @@ func updateServiceBuildInfoState(sysb *crv1.SystemBuild, service tree.NodePath, 
 
 // Warning: syncFailedServiceBuild mutates sysb. Do not pass in a pointer to a SystemBuild
 // from the shared cache.
-func (sbc *SystemBuildController) syncFailedSystemBuild(sysb *crv1.SystemBuild, failedSvcbs map[tree.NodePath]*crv1.ServiceBuild) error {
+func (sbc *Controller) syncFailedSystemBuild(sysb *crv1.SystemBuild, failedSvcbs map[tree.NodePath]*crv1.ServiceBuild) error {
 	// Sort the ServiceBuild paths so the Status.Message is the same for the same failed ServiceBuilds
 	failedServices := []tree.NodePath{}
 	for service := range failedSvcbs {
@@ -98,7 +98,7 @@ func (sbc *SystemBuildController) syncFailedSystemBuild(sysb *crv1.SystemBuild, 
 
 // Warning: syncRunningSystemBuild mutates sysb. Do not pass in a pointer to a SystemBuild
 // from the shared cache.
-func (sbc *SystemBuildController) syncRunningSystemBuild(sysb *crv1.SystemBuild, activeSvcbs map[tree.NodePath]*crv1.ServiceBuild) error {
+func (sbc *Controller) syncRunningSystemBuild(sysb *crv1.SystemBuild, activeSvcbs map[tree.NodePath]*crv1.ServiceBuild) error {
 	// Sort the ServiceBuild paths so the Status.Message is the same for the same failed ServiceBuilds
 	activeServices := []tree.NodePath{}
 	for service := range activeSvcbs {
@@ -128,7 +128,7 @@ func (sbc *SystemBuildController) syncRunningSystemBuild(sysb *crv1.SystemBuild,
 
 // Warning: syncMissingServiceBuildsSystemBuild mutates sysb. Do not pass in a pointer to a SystemBuild
 // from the shared cache.
-func (sbc *SystemBuildController) syncMissingServiceBuildsSystemBuild(sysb *crv1.SystemBuild, needsNewSvcbs []tree.NodePath) error {
+func (sbc *Controller) syncMissingServiceBuildsSystemBuild(sysb *crv1.SystemBuild, needsNewSvcbs []tree.NodePath) error {
 	for _, service := range needsNewSvcbs {
 		svcbInfo := sysb.Spec.Services[service]
 
@@ -168,7 +168,7 @@ func (sbc *SystemBuildController) syncMissingServiceBuildsSystemBuild(sysb *crv1
 	return nil
 }
 
-func (sbc *SystemBuildController) syncSucceededSystemBuild(svcb *crv1.SystemBuild) error {
+func (sbc *Controller) syncSucceededSystemBuild(svcb *crv1.SystemBuild) error {
 	newStatus := crv1.SystemBuildStatus{
 		State: crv1.SystemBuildStateSucceeded,
 	}
@@ -179,7 +179,7 @@ func (sbc *SystemBuildController) syncSucceededSystemBuild(svcb *crv1.SystemBuil
 
 // Warning: putSystemBuildStatusUpdate mutates cBuild. Please do not pass in a pointer to a ComponentBuild
 // from the shared cache.
-func (sbc *SystemBuildController) putSystemBuildStatusUpdate(sysb *crv1.SystemBuild, newStatus crv1.SystemBuildStatus) (*crv1.SystemBuild, error) {
+func (sbc *Controller) putSystemBuildStatusUpdate(sysb *crv1.SystemBuild, newStatus crv1.SystemBuildStatus) (*crv1.SystemBuild, error) {
 	if reflect.DeepEqual(sysb.Status, newStatus) {
 		return sysb, nil
 	}
@@ -188,6 +188,6 @@ func (sbc *SystemBuildController) putSystemBuildStatusUpdate(sysb *crv1.SystemBu
 	return sbc.putSystemBuildUpdate(sysb)
 }
 
-func (sbc *SystemBuildController) putSystemBuildUpdate(sysb *crv1.SystemBuild) (*crv1.SystemBuild, error) {
+func (sbc *Controller) putSystemBuildUpdate(sysb *crv1.SystemBuild) (*crv1.SystemBuild, error) {
 	return sbc.latticeClient.V1().SystemBuilds(sysb.Namespace).Update(sysb)
 }

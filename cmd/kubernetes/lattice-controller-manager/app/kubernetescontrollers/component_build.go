@@ -6,7 +6,7 @@ import (
 )
 
 func initializeComponentBuildController(ctx controller.Context) {
-	go componentbuild.NewComponentBuildController(
+	go componentbuild.NewController(
 		ctx.KubeClientBuilder.ClientOrDie("kubernetes-build-controller"),
 		ctx.LatticeClientBuilder.ClientOrDie("kubernetes-build-controller"),
 		ctx.CRInformers.Config,

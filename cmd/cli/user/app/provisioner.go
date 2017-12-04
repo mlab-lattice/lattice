@@ -100,14 +100,14 @@ func getAWSConfig(providerVars []string) (*kubelifecycle.AWSProvisionerConfig, e
 
 	awsConfig := &kubelifecycle.AWSProvisionerConfig{
 		TerraformModulePath: expectedVars["module-path"].(string),
-		AccountId:           expectedVars["account-id"].(string),
+		AccountID:           expectedVars["account-id"].(string),
 		Region:              expectedVars["region"].(string),
 		AvailabilityZones:   expectedVars["availability-zones"].([]string),
 		KeyName:             expectedVars["key-name"].(string),
 
 		MasterNodeInstanceType: expectedVars["master-node-instance-type"].(string),
-		MasterNodeAMIId:        expectedVars["master-node-ami-id"].(string),
-		BaseNodeAMIId:          expectedVars["base-node-ami-id"].(string),
+		MasterNodeAMIID:        expectedVars["master-node-ami-id"].(string),
+		BaseNodeAMIID:          expectedVars["base-node-ami-id"].(string),
 	}
 
 	return awsConfig, nil

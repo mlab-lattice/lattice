@@ -4,7 +4,7 @@ import (
 	crv1 "github.com/mlab-lattice/system/pkg/kubernetes/customresource/v1"
 )
 
-func (slc *SystemLifecycleController) syncPendingRolloutState(sysRollout *crv1.SystemRollout) error {
+func (slc *Controller) syncPendingRolloutState(sysRollout *crv1.SystemRollout) error {
 	previousOwningAction, err := slc.attemptToClaimOwningRollout(sysRollout)
 	if err != nil {
 		return err
@@ -17,7 +17,7 @@ func (slc *SystemLifecycleController) syncPendingRolloutState(sysRollout *crv1.S
 	return slc.failRolloutDueToExistingOwningAction(sysRollout, previousOwningAction)
 }
 
-func (slc *SystemLifecycleController) attemptToClaimOwningRollout(sysRollout *crv1.SystemRollout) (*lifecycleAction, error) {
+func (slc *Controller) attemptToClaimOwningRollout(sysRollout *crv1.SystemRollout) (*lifecycleAction, error) {
 	slc.owningLifecycleActionsLock.Lock()
 	defer slc.owningLifecycleActionsLock.Unlock()
 
@@ -31,7 +31,7 @@ func (slc *SystemLifecycleController) attemptToClaimOwningRollout(sysRollout *cr
 	return owningAction, nil
 }
 
-func (slc *SystemLifecycleController) claimOwningRollout(sysRollout *crv1.SystemRollout) error {
+func (slc *Controller) claimOwningRollout(sysRollout *crv1.SystemRollout) error {
 	slc.owningLifecycleActions[sysRollout.Spec.LatticeNamespace] = &lifecycleAction{
 		rollout: sysRollout,
 	}
@@ -47,7 +47,7 @@ func (slc *SystemLifecycleController) claimOwningRollout(sysRollout *crv1.System
 	return slc.syncAcceptedRollout(result)
 }
 
-func (slc *SystemLifecycleController) failRolloutDueToExistingOwningAction(sysr *crv1.SystemRollout, owningAction *lifecycleAction) error {
+func (slc *Controller) failRolloutDueToExistingOwningAction(sysr *crv1.SystemRollout, owningAction *lifecycleAction) error {
 	message := "Another lifecycle action is active: "
 	if owningAction.rollout != nil {
 		message += "rollout " + owningAction.rollout.Name

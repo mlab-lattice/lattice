@@ -5,30 +5,30 @@ import (
 	jsonutil "github.com/mlab-lattice/system/pkg/util/json"
 )
 
-func MockHealthCheckHttp() *block.ComponentHealthCheck {
+func MockHealthCheckHTTP() *block.ComponentHealthCheck {
 	return &block.ComponentHealthCheck{
-		Http: MockHttpHealthCheck(),
+		HTTP: MockHTTPHealthCheck(),
 	}
 }
 
-func MockHealthCheckHttpExpectedJson() []byte {
-	return GenerateHealthCheckExpectedJson(
-		MockHttpHealthCheckExpectedJson(),
+func MockHealthCheckHTTPExpectedJSON() []byte {
+	return GenerateHealthCheckExpectedJSON(
+		MockHTTPHealthCheckExpectedJSON(),
 		nil,
 		nil,
 	)
 }
 
-func MockHealthCheckTcp() *block.ComponentHealthCheck {
+func MockHealthCheckTCP() *block.ComponentHealthCheck {
 	return &block.ComponentHealthCheck{
-		Tcp: MockTcpHealthCheck(),
+		TCP: MockTCPHealthCheck(),
 	}
 }
 
-func MockHealthCheckTcpExpectedJson() []byte {
-	return GenerateHealthCheckExpectedJson(
+func MockHealthCheckTCPExpectedJSON() []byte {
+	return GenerateHealthCheckExpectedJSON(
 		nil,
-		MockTcpHealthCheckExpectedJson(),
+		MockTCPHealthCheckExpectedJSON(),
 		nil,
 	)
 }
@@ -39,15 +39,15 @@ func MockHealthCheckExec() *block.ComponentHealthCheck {
 	}
 }
 
-func MockHealthCheckExecExpectedJson() []byte {
-	return GenerateHealthCheckExpectedJson(
+func MockHealthCheckExecExpectedJSON() []byte {
+	return GenerateHealthCheckExpectedJSON(
 		nil,
 		nil,
-		MockExecHealthCheckExpectedJson(),
+		MockExecHealthCheckExpectedJSON(),
 	)
 }
 
-func GenerateHealthCheckExpectedJson(http, tcp, exec []byte) []byte {
+func GenerateHealthCheckExpectedJSON(http, tcp, exec []byte) []byte {
 	return jsonutil.GenerateObjectBytes([]jsonutil.FieldBytes{
 		{
 			Name:      "http",
@@ -67,31 +67,31 @@ func GenerateHealthCheckExpectedJson(http, tcp, exec []byte) []byte {
 	})
 }
 
-func MockHttpHealthCheck() *block.HttpComponentHealthCheck {
-	return MockHttpHealthCheckNoHeaders()
+func MockHTTPHealthCheck() *block.HTTPComponentHealthCheck {
+	return MockHTTPHealthCheckNoHeaders()
 }
 
-func MockHttpHealthCheckExpectedJson() []byte {
-	return MockHttpHealthCheckNoHeadersExpectedJson()
+func MockHTTPHealthCheckExpectedJSON() []byte {
+	return MockHTTPHealthCheckNoHeadersExpectedJSON()
 }
 
-func MockHttpHealthCheckNoHeaders() *block.HttpComponentHealthCheck {
-	return &block.HttpComponentHealthCheck{
+func MockHTTPHealthCheckNoHeaders() *block.HTTPComponentHealthCheck {
+	return &block.HTTPComponentHealthCheck{
 		Path: "/status",
 		Port: "http",
 	}
 }
 
-func MockHttpHealthCheckNoHeadersExpectedJson() []byte {
-	return GenerateHttpHealthCheckExpectedJson(
+func MockHTTPHealthCheckNoHeadersExpectedJSON() []byte {
+	return GenerateHTTPHealthCheckExpectedJSON(
 		[]byte(`"/status"`),
 		[]byte(`"http"`),
 		nil,
 	)
 }
 
-func MockHttpHealthCheckWithHeaders() *block.HttpComponentHealthCheck {
-	return &block.HttpComponentHealthCheck{
+func MockHTTPHealthCheckWithHeaders() *block.HTTPComponentHealthCheck {
+	return &block.HTTPComponentHealthCheck{
 		Path: "/status",
 		Port: "http",
 		Headers: map[string]string{
@@ -101,8 +101,8 @@ func MockHttpHealthCheckWithHeaders() *block.HttpComponentHealthCheck {
 	}
 }
 
-func MockHttpHealthCheckWithHeadersExpectedJson() []byte {
-	return GenerateHttpHealthCheckExpectedJson(
+func MockHTTPHealthCheckWithHeadersExpectedJSON() []byte {
+	return GenerateHTTPHealthCheckExpectedJSON(
 		[]byte(`"/status"`),
 		[]byte(`"http"`),
 		jsonutil.GenerateObjectBytes([]jsonutil.FieldBytes{
@@ -118,7 +118,7 @@ func MockHttpHealthCheckWithHeadersExpectedJson() []byte {
 	)
 }
 
-func GenerateHttpHealthCheckExpectedJson(path, port, headers []byte) []byte {
+func GenerateHTTPHealthCheckExpectedJSON(path, port, headers []byte) []byte {
 	return jsonutil.GenerateObjectBytes([]jsonutil.FieldBytes{
 		{
 			Name:  "path",
@@ -136,13 +136,13 @@ func GenerateHttpHealthCheckExpectedJson(path, port, headers []byte) []byte {
 	})
 }
 
-func MockTcpHealthCheck() *block.TcpComponentHealthCheck {
-	return &block.TcpComponentHealthCheck{
+func MockTCPHealthCheck() *block.TCPComponentHealthCheck {
+	return &block.TCPComponentHealthCheck{
 		Port: "tcp",
 	}
 }
 
-func MockTcpHealthCheckExpectedJson() []byte {
+func MockTCPHealthCheckExpectedJSON() []byte {
 	return jsonutil.GenerateObjectBytes([]jsonutil.FieldBytes{
 		{
 			Name:  "port",
@@ -157,7 +157,7 @@ func MockExecHealthCheck() *block.ExecComponentHealthCheck {
 	}
 }
 
-func MockExecHealthCheckExpectedJson() []byte {
+func MockExecHealthCheckExpectedJSON() []byte {
 	return jsonutil.GenerateObjectBytes([]jsonutil.FieldBytes{
 		{
 			Name: "command",

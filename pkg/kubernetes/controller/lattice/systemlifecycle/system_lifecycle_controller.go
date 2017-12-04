@@ -25,7 +25,7 @@ type lifecycleAction struct {
 	teardown *crv1.SystemTeardown
 }
 
-type SystemLifecycleController struct {
+type Controller struct {
 	syncHandler func(sysRolloutKey string) error
 
 	latticeClient latticeclientset.Interface
@@ -62,7 +62,7 @@ type SystemLifecycleController struct {
 	teardownQueue workqueue.RateLimitingInterface
 }
 
-func NewSystemLifecycleController(
+func NewController(
 	latticeClient latticeclientset.Interface,
 	systemRolloutInformer cache.SharedInformer,
 	systemTeardownInformer cache.SharedInformer,
@@ -70,8 +70,8 @@ func NewSystemLifecycleController(
 	systemBuildInformer cache.SharedInformer,
 	serviceBuildInformer cache.SharedInformer,
 	componentBuildInformer cache.SharedInformer,
-) *SystemLifecycleController {
-	src := &SystemLifecycleController{
+) *Controller {
+	src := &Controller{
 		latticeClient:          latticeClient,
 		owningLifecycleActions: make(map[types.LatticeNamespace]*lifecycleAction),
 		rolloutQueue:           workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "system-rollout"),
@@ -121,33 +121,33 @@ func NewSystemLifecycleController(
 	return src
 }
 
-func (slc *SystemLifecycleController) handleSystemRolloutAdd(obj interface{}) {
+func (slc *Controller) handleSystemRolloutAdd(obj interface{}) {
 	sysr := obj.(*crv1.SystemRollout)
 	glog.V(4).Infof("Adding SystemRollout %s", sysr.Name)
 	slc.enqueueSystemRollout(sysr)
 }
 
-func (slc *SystemLifecycleController) handleSystemRolloutUpdate(old, cur interface{}) {
+func (slc *Controller) handleSystemRolloutUpdate(old, cur interface{}) {
 	oldSysr := old.(*crv1.SystemRollout)
 	curSysr := cur.(*crv1.SystemRollout)
 	glog.V(4).Infof("Updating SystemRollout %s", oldSysr.Name)
 	slc.enqueueSystemRollout(curSysr)
 }
 
-func (slc *SystemLifecycleController) handleSystemTeardownAdd(obj interface{}) {
+func (slc *Controller) handleSystemTeardownAdd(obj interface{}) {
 	syst := obj.(*crv1.SystemTeardown)
 	glog.V(4).Infof("Adding SystemTeardown %s", syst.Name)
 	slc.enqueueSystemTeardown(syst)
 }
 
-func (slc *SystemLifecycleController) handleSystemTeardownUpdate(old, cur interface{}) {
+func (slc *Controller) handleSystemTeardownUpdate(old, cur interface{}) {
 	oldSyst := old.(*crv1.SystemTeardown)
 	curSyst := cur.(*crv1.SystemTeardown)
 	glog.V(4).Infof("Updating SystemTeardown %s", oldSyst.Name)
 	slc.enqueueSystemTeardown(curSyst)
 }
 
-func (slc *SystemLifecycleController) handleSystemAdd(obj interface{}) {
+func (slc *Controller) handleSystemAdd(obj interface{}) {
 	sys := obj.(*crv1.System)
 	glog.V(4).Infof("System %s added", sys.Name)
 
@@ -166,7 +166,7 @@ func (slc *SystemLifecycleController) handleSystemAdd(obj interface{}) {
 	}
 }
 
-func (slc *SystemLifecycleController) handleSystemUpdate(old, cur interface{}) {
+func (slc *Controller) handleSystemUpdate(old, cur interface{}) {
 	glog.V(4).Info("Got System update")
 	oldSys := old.(*crv1.System)
 	curSys := cur.(*crv1.System)
@@ -192,7 +192,7 @@ func (slc *SystemLifecycleController) handleSystemUpdate(old, cur interface{}) {
 	}
 }
 
-func (slc *SystemLifecycleController) handleSystemBuildAdd(obj interface{}) {
+func (slc *Controller) handleSystemBuildAdd(obj interface{}) {
 	sysb := obj.(*crv1.SystemBuild)
 	glog.V(4).Infof("SystemBuild %s added", sysb.Name)
 
@@ -209,7 +209,7 @@ func (slc *SystemLifecycleController) handleSystemBuildAdd(obj interface{}) {
 	}
 }
 
-func (slc *SystemLifecycleController) handleSystemBuildUpdate(old, cur interface{}) {
+func (slc *Controller) handleSystemBuildUpdate(old, cur interface{}) {
 	glog.V(4).Infof("Got SystemBuild update")
 	oldSysb := old.(*crv1.SystemBuild)
 	curSysb := cur.(*crv1.SystemBuild)
@@ -233,7 +233,7 @@ func (slc *SystemLifecycleController) handleSystemBuildUpdate(old, cur interface
 	}
 }
 
-func (slc *SystemLifecycleController) enqueueSystemRollout(sysRollout *crv1.SystemRollout) {
+func (slc *Controller) enqueueSystemRollout(sysRollout *crv1.SystemRollout) {
 	key, err := cache.DeletionHandlingMetaNamespaceKeyFunc(sysRollout)
 	if err != nil {
 		runtime.HandleError(fmt.Errorf("couldn't get key for object %#v: %v", sysRollout, err))
@@ -243,7 +243,7 @@ func (slc *SystemLifecycleController) enqueueSystemRollout(sysRollout *crv1.Syst
 	slc.rolloutQueue.Add(key)
 }
 
-func (slc *SystemLifecycleController) enqueueSystemTeardown(syst *crv1.SystemTeardown) {
+func (slc *Controller) enqueueSystemTeardown(syst *crv1.SystemTeardown) {
 	key, err := cache.DeletionHandlingMetaNamespaceKeyFunc(syst)
 	if err != nil {
 		runtime.HandleError(fmt.Errorf("couldn't get key for object %#v: %v", syst, err))
@@ -253,7 +253,7 @@ func (slc *SystemLifecycleController) enqueueSystemTeardown(syst *crv1.SystemTea
 	slc.teardownQueue.Add(key)
 }
 
-func (slc *SystemLifecycleController) Run(workers int, stopCh <-chan struct{}) {
+func (slc *Controller) Run(workers int, stopCh <-chan struct{}) {
 	// don't let panics crash the process
 	defer runtime.HandleCrash()
 	// make sure the work queue is shutdown which will trigger workers to end
@@ -303,7 +303,7 @@ func (slc *SystemLifecycleController) Run(workers int, stopCh <-chan struct{}) {
 	<-stopCh
 }
 
-func (slc *SystemLifecycleController) syncOwningActions() error {
+func (slc *Controller) syncOwningActions() error {
 	slc.owningLifecycleActionsLock.Lock()
 	defer slc.owningLifecycleActionsLock.Unlock()
 
@@ -342,7 +342,7 @@ func (slc *SystemLifecycleController) syncOwningActions() error {
 	return nil
 }
 
-func (slc *SystemLifecycleController) runRolloutWorker() {
+func (slc *Controller) runRolloutWorker() {
 	// hot loop until we're told to stop.  processNextWorkItem will
 	// automatically wait until there's work available, so we don't worry
 	// about secondary waits
@@ -350,7 +350,7 @@ func (slc *SystemLifecycleController) runRolloutWorker() {
 	}
 }
 
-func (slc *SystemLifecycleController) runTeardownWorker() {
+func (slc *Controller) runTeardownWorker() {
 	// hot loop until we're told to stop.  processNextWorkItem will
 	// automatically wait until there's work available, so we don't worry
 	// about secondary waits
@@ -360,7 +360,7 @@ func (slc *SystemLifecycleController) runTeardownWorker() {
 
 // processNextWorkItem deals with one key off the queue.  It returns false
 // when it's time to quit.
-func (slc *SystemLifecycleController) processNextWorkItem(queue workqueue.RateLimitingInterface, syncHandler func(string) error) bool {
+func (slc *Controller) processNextWorkItem(queue workqueue.RateLimitingInterface, syncHandler func(string) error) bool {
 	// pull the next work item from queue.  It should be a key we use to lookup
 	// something in a cache
 	key, quit := queue.Get()
@@ -398,7 +398,7 @@ func (slc *SystemLifecycleController) processNextWorkItem(queue workqueue.RateLi
 
 // syncSystemBuild will sync the SystemBuild with the given key.
 // This function is not meant to be invoked concurrently with the same key.
-func (slc *SystemLifecycleController) syncSystemRollout(key string) error {
+func (slc *Controller) syncSystemRollout(key string) error {
 	glog.Flush()
 	startTime := time.Now()
 	glog.V(4).Infof("Started syncing SystemRollout %q (%v)", key, startTime)
@@ -436,7 +436,7 @@ func (slc *SystemLifecycleController) syncSystemRollout(key string) error {
 	}
 }
 
-func (slc *SystemLifecycleController) updateSystemRolloutStatus(sysr *crv1.SystemRollout, newStatus crv1.SystemRolloutStatus) (*crv1.SystemRollout, error) {
+func (slc *Controller) updateSystemRolloutStatus(sysr *crv1.SystemRollout, newStatus crv1.SystemRolloutStatus) (*crv1.SystemRollout, error) {
 	if reflect.DeepEqual(sysr.Status, newStatus) {
 		return sysr, nil
 	}
@@ -447,7 +447,7 @@ func (slc *SystemLifecycleController) updateSystemRolloutStatus(sysr *crv1.Syste
 
 // syncSystemBuild will sync the SystemBuild with the given key.
 // This function is not meant to be invoked concurrently with the same key.
-func (slc *SystemLifecycleController) syncSystemTeardown(key string) error {
+func (slc *Controller) syncSystemTeardown(key string) error {
 	glog.Flush()
 	startTime := time.Now()
 	glog.V(4).Infof("Started syncing SystemTeardown %q (%v)", key, startTime)
@@ -482,7 +482,7 @@ func (slc *SystemLifecycleController) syncSystemTeardown(key string) error {
 	}
 }
 
-func (slc *SystemLifecycleController) updateSystemTeardownStatus(syst *crv1.SystemTeardown, newStatus crv1.SystemTeardownStatus) (*crv1.SystemTeardown, error) {
+func (slc *Controller) updateSystemTeardownStatus(syst *crv1.SystemTeardown, newStatus crv1.SystemTeardownStatus) (*crv1.SystemTeardown, error) {
 	if reflect.DeepEqual(syst.Status, newStatus) {
 		return syst, nil
 	}

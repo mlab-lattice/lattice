@@ -9,7 +9,7 @@ import (
 	"k8s.io/client-go/rest"
 )
 
-type V1Interface interface {
+type Interface interface {
 	RESTClient() rest.Interface
 	ComponentBuildsGetter
 	ConfigsGetter
@@ -21,45 +21,45 @@ type V1Interface interface {
 	SystemTeardownsGetter
 }
 
-// V1Client is used to interact with features provided by the V1 group.
-type V1Client struct {
+// Client is used to interact with features provided by the V1 group.
+type Client struct {
 	restClient rest.Interface
 }
 
-func (c *V1Client) ComponentBuilds(namespace string) ComponentBuildInterface {
+func (c *Client) ComponentBuilds(namespace string) ComponentBuildInterface {
 	return newComponentBuilds(c, namespace)
 }
 
-func (c *V1Client) Configs(namespace string) ConfigInterface {
+func (c *Client) Configs(namespace string) ConfigInterface {
 	return newConfigs(c, namespace)
 }
 
-func (c *V1Client) Services(namespace string) ServiceInterface {
+func (c *Client) Services(namespace string) ServiceInterface {
 	return newServices(c, namespace)
 }
 
-func (c *V1Client) ServiceBuilds(namespace string) ServiceBuildInterface {
+func (c *Client) ServiceBuilds(namespace string) ServiceBuildInterface {
 	return newServiceBuilds(c, namespace)
 }
 
-func (c *V1Client) Systems(namespace string) SystemInterface {
+func (c *Client) Systems(namespace string) SystemInterface {
 	return newSystems(c, namespace)
 }
 
-func (c *V1Client) SystemBuilds(namespace string) SystemBuildInterface {
+func (c *Client) SystemBuilds(namespace string) SystemBuildInterface {
 	return newSystemBuilds(c, namespace)
 }
 
-func (c *V1Client) SystemRollouts(namespace string) SystemRolloutInterface {
+func (c *Client) SystemRollouts(namespace string) SystemRolloutInterface {
 	return newSystemRollouts(c, namespace)
 }
 
-func (c *V1Client) SystemTeardowns(namespace string) SystemTeardownInterface {
+func (c *Client) SystemTeardowns(namespace string) SystemTeardownInterface {
 	return newSystemTeardowns(c, namespace)
 }
 
-// NewForConfig creates a new V1Client for the given config.
-func NewForConfig(c *rest.Config) (*V1Client, error) {
+// NewForConfig creates a new Client for the given config.
+func NewForConfig(c *rest.Config) (*Client, error) {
 	config := *c
 	if err := setConfigDefaults(&config); err != nil {
 		return nil, err
@@ -68,12 +68,12 @@ func NewForConfig(c *rest.Config) (*V1Client, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &V1Client{client}, nil
+	return &Client{client}, nil
 }
 
-// NewForConfigOrDie creates a new V1Client for the given config and
+// NewForConfigOrDie creates a new Client for the given config and
 // panics if there is an error in the config.
-func NewForConfigOrDie(c *rest.Config) *V1Client {
+func NewForConfigOrDie(c *rest.Config) *Client {
 	client, err := NewForConfig(c)
 	if err != nil {
 		panic(err)
@@ -81,9 +81,9 @@ func NewForConfigOrDie(c *rest.Config) *V1Client {
 	return client
 }
 
-// New creates a new V1Client for the given RESTClient.
-func New(c rest.Interface) *V1Client {
-	return &V1Client{c}
+// New creates a new Client for the given RESTClient.
+func New(c rest.Interface) *Client {
+	return &Client{c}
 }
 
 func setConfigDefaults(config *rest.Config) error {
@@ -102,7 +102,7 @@ func setConfigDefaults(config *rest.Config) error {
 
 // RESTClient returns a RESTClient that is used to communicate
 // with API server by this client implementation.
-func (c *V1Client) RESTClient() rest.Interface {
+func (c *Client) RESTClient() rest.Interface {
 	if c == nil {
 		return nil
 	}

@@ -13,7 +13,7 @@ import (
 	"github.com/satori/go.uuid"
 )
 
-func (sc *SystemController) getService(namespace, svcName string) (*crv1.Service, error) {
+func (sc *Controller) getService(namespace, svcName string) (*crv1.Service, error) {
 	svcKey := namespace + "/" + svcName
 	svcObj, exists, err := sc.serviceStore.GetByKey(svcKey)
 	if err != nil {
@@ -27,7 +27,7 @@ func (sc *SystemController) getService(namespace, svcName string) (*crv1.Service
 	return svcObj.(*crv1.Service), nil
 }
 
-func (sc *SystemController) getServiceState(namespace, svcName string) (*crv1.ServiceState, error) {
+func (sc *Controller) getServiceState(namespace, svcName string) (*crv1.ServiceState, error) {
 	svc, err := sc.getService(namespace, svcName)
 	if err != nil {
 		return nil, err
@@ -107,7 +107,7 @@ func getNewServiceSpec(svcInfo *crv1.SystemServicesInfo, svcPath tree.NodePath) 
 			// If the current envoyPortIdx is not being used by a component,
 			// we'll use it for envoy. Otherwise, on to the next one.
 			currPortIdx := envoyPortIdx
-			envoyPortIdx += 1
+			envoyPortIdx++
 
 			if _, ok := ports[currPortIdx]; !ok {
 				envoyPorts = append(envoyPorts, currPortIdx)
@@ -147,7 +147,7 @@ func getNewServiceSpec(svcInfo *crv1.SystemServicesInfo, svcPath tree.NodePath) 
 	return spec, nil
 }
 
-func (sc *SystemController) createService(sys *crv1.System, svcInfo *crv1.SystemServicesInfo, svcPath tree.NodePath) (*crv1.Service, error) {
+func (sc *Controller) createService(sys *crv1.System, svcInfo *crv1.SystemServicesInfo, svcPath tree.NodePath) (*crv1.Service, error) {
 	svc, err := getNewService(sys, svcInfo, svcPath)
 	if err != nil {
 		return nil, err
@@ -156,11 +156,11 @@ func (sc *SystemController) createService(sys *crv1.System, svcInfo *crv1.System
 	return sc.latticeClient.V1().Services(svc.Namespace).Create(svc)
 }
 
-func (sc *SystemController) updateService(svc *crv1.Service) (*crv1.Service, error) {
+func (sc *Controller) updateService(svc *crv1.Service) (*crv1.Service, error) {
 	return sc.latticeClient.V1().Services(svc.Namespace).Update(svc)
 }
 
-func (sc *SystemController) deleteService(svc *crv1.Service) error {
+func (sc *Controller) deleteService(svc *crv1.Service) error {
 	glog.V(5).Infof("Deleting Service %q/%q", svc.Namespace, svc.Name)
 	return sc.latticeClient.V1().Services(svc.Namespace).Delete(svc.Name, &metav1.DeleteOptions{})
 }

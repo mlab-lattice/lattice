@@ -16,12 +16,12 @@ import (
 	batchv1 "k8s.io/api/batch/v1"
 )
 
-func seedRbac() {
+func seedRBAC() {
 	fmt.Println("Seeding rbac...")
-	seedRbacComponentBuilder()
-	seedRbacEnvoyXdsApi()
-	seedRbacLatticeControllerManger()
-	seedRbacManagerApi()
+	seedRBACComponentBuilder()
+	seedRBACEnvoyXDSAPI()
+	seedRBACLatticeControllerManger()
+	seedRBACManagerAPI()
 }
 
 var (
@@ -31,7 +31,7 @@ var (
 	readAndUpdateVerbs = []string{"get", "watch", "list", "update"}
 )
 
-func seedRbacComponentBuilder() {
+func seedRBACComponentBuilder() {
 	role := &rbacv1.Role{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "component-builder",
@@ -95,7 +95,7 @@ func seedRbacComponentBuilder() {
 	})
 }
 
-func seedRbacEnvoyXdsApi() {
+func seedRBACEnvoyXDSAPI() {
 	role := &rbacv1.Role{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "envoy-xds-api",
@@ -165,7 +165,7 @@ func seedRbacEnvoyXdsApi() {
 	})
 }
 
-func seedRbacLatticeControllerManger() {
+func seedRBACLatticeControllerManger() {
 	clusterRole := &rbacv1.ClusterRole{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: kubeconstants.MasterNodeComponentLatticeControllerManager,
@@ -245,7 +245,7 @@ func seedRbacLatticeControllerManger() {
 	})
 }
 
-func seedRbacManagerApi() {
+func seedRBACManagerAPI() {
 	role := &rbacv1.Role{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      kubeconstants.MasterNodeComponentManagerAPI,

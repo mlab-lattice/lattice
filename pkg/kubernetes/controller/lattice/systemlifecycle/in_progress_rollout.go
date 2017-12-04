@@ -6,7 +6,7 @@ import (
 	crv1 "github.com/mlab-lattice/system/pkg/kubernetes/customresource/v1"
 )
 
-func (slc *SystemLifecycleController) syncInProgressRollout(sysRollout *crv1.SystemRollout) error {
+func (slc *Controller) syncInProgressRollout(sysRollout *crv1.SystemRollout) error {
 	system, err := slc.getSystemForRollout(sysRollout)
 	if err != nil {
 		return err
@@ -32,7 +32,7 @@ func (slc *SystemLifecycleController) syncInProgressRollout(sysRollout *crv1.Sys
 	return nil
 }
 
-func (slc *SystemLifecycleController) getSystemForRollout(sysRollout *crv1.SystemRollout) (*crv1.System, error) {
+func (slc *Controller) getSystemForRollout(sysRollout *crv1.SystemRollout) (*crv1.System, error) {
 	var system *crv1.System
 
 	latticeNamespace := sysRollout.Spec.LatticeNamespace
@@ -51,7 +51,7 @@ func (slc *SystemLifecycleController) getSystemForRollout(sysRollout *crv1.Syste
 	return system, nil
 }
 
-func (slc *SystemLifecycleController) syncRolloutWithSystem(sysRollout *crv1.SystemRollout, sys *crv1.System) (*crv1.SystemRollout, error) {
+func (slc *Controller) syncRolloutWithSystem(sysRollout *crv1.SystemRollout, sys *crv1.System) (*crv1.SystemRollout, error) {
 	var newState crv1.SystemRolloutStatus
 	switch sys.Status.State {
 	case crv1.SystemStateRollingOut:
@@ -69,7 +69,7 @@ func (slc *SystemLifecycleController) syncRolloutWithSystem(sysRollout *crv1.Sys
 	return slc.updateSystemRolloutStatus(sysRollout, newState)
 }
 
-func (slc *SystemLifecycleController) relinquishOwningRolloutClaim(sysr *crv1.SystemRollout) error {
+func (slc *Controller) relinquishOwningRolloutClaim(sysr *crv1.SystemRollout) error {
 	slc.owningLifecycleActionsLock.Lock()
 	defer slc.owningLifecycleActionsLock.Unlock()
 

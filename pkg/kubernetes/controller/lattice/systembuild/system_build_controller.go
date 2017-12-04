@@ -21,7 +21,7 @@ import (
 
 var controllerKind = crv1.SchemeGroupVersion.WithKind("SystemBuild")
 
-type SystemBuildController struct {
+type Controller struct {
 	syncHandler        func(bKey string) error
 	enqueueSystemBuild func(sysBuild *crv1.SystemBuild)
 
@@ -36,12 +36,12 @@ type SystemBuildController struct {
 	queue workqueue.RateLimitingInterface
 }
 
-func NewSystemBuildController(
+func NewController(
 	latticeClient latticeclientset.Interface,
 	systemBuildInformer cache.SharedInformer,
 	serviceBuildInformer cache.SharedInformer,
-) *SystemBuildController {
-	sbc := &SystemBuildController{
+) *Controller {
+	sbc := &Controller{
 		latticeClient: latticeClient,
 		queue:         workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "system-build"),
 	}
@@ -74,13 +74,13 @@ func NewSystemBuildController(
 	return sbc
 }
 
-func (sbc *SystemBuildController) addSystemBuild(obj interface{}) {
+func (sbc *Controller) addSystemBuild(obj interface{}) {
 	sysb := obj.(*crv1.SystemBuild)
 	glog.V(4).Infof("Adding SystemBuild %s", sysb.Name)
 	sbc.enqueueSystemBuild(sysb)
 }
 
-func (sbc *SystemBuildController) updateSystemBuild(old, cur interface{}) {
+func (sbc *Controller) updateSystemBuild(old, cur interface{}) {
 	oldSysb := old.(*crv1.SystemBuild)
 	curSysb := cur.(*crv1.SystemBuild)
 	glog.V(4).Infof("Updating SystemBuild %s", oldSysb.Name)
@@ -88,7 +88,7 @@ func (sbc *SystemBuildController) updateSystemBuild(old, cur interface{}) {
 }
 
 // addServiceBuild enqueues the System that manages a Service when the Service is created.
-func (sbc *SystemBuildController) addServiceBuild(obj interface{}) {
+func (sbc *Controller) addServiceBuild(obj interface{}) {
 	svcb := obj.(*crv1.ServiceBuild)
 
 	if svcb.DeletionTimestamp != nil {
@@ -118,7 +118,7 @@ func (sbc *SystemBuildController) addServiceBuild(obj interface{}) {
 
 // updateServiceBuild figures out what SystemBuild manages a Service when the
 // Service is updated and enqueues them.
-func (sbc *SystemBuildController) updateServiceBuild(old, cur interface{}) {
+func (sbc *Controller) updateServiceBuild(old, cur interface{}) {
 	glog.V(5).Info("Got ServiceBuild update")
 	oldSvcb := old.(*crv1.ServiceBuild)
 	curSvcb := cur.(*crv1.ServiceBuild)
@@ -158,7 +158,7 @@ func (sbc *SystemBuildController) updateServiceBuild(old, cur interface{}) {
 // resolveControllerRef returns the controller referenced by a ControllerRef,
 // or nil if the ControllerRef could not be resolved to a matching controller
 // of the correct Kind.
-func (sbc *SystemBuildController) resolveControllerRef(ns string, controllerRef *metav1.OwnerReference) *crv1.SystemBuild {
+func (sbc *Controller) resolveControllerRef(ns string, controllerRef *metav1.OwnerReference) *crv1.SystemBuild {
 	// We can't look up by Name, so look up by Name and then verify Name.
 	// Don't even try to look up by Name if it's the wrong Kind.
 	if controllerRef.Kind != controllerKind.Kind {
@@ -186,7 +186,7 @@ func (sbc *SystemBuildController) resolveControllerRef(ns string, controllerRef 
 	return sysb
 }
 
-func (sbc *SystemBuildController) enqueue(sysb *crv1.SystemBuild) {
+func (sbc *Controller) enqueue(sysb *crv1.SystemBuild) {
 	key, err := cache.DeletionHandlingMetaNamespaceKeyFunc(sysb)
 	if err != nil {
 		runtime.HandleError(fmt.Errorf("couldn't get key for object %#v: %v", sysb, err))
@@ -196,7 +196,7 @@ func (sbc *SystemBuildController) enqueue(sysb *crv1.SystemBuild) {
 	sbc.queue.Add(key)
 }
 
-func (sbc *SystemBuildController) Run(workers int, stopCh <-chan struct{}) {
+func (sbc *Controller) Run(workers int, stopCh <-chan struct{}) {
 	// don't let panics crash the process
 	defer runtime.HandleCrash()
 	// make sure the work queue is shutdown which will trigger workers to end
@@ -224,7 +224,7 @@ func (sbc *SystemBuildController) Run(workers int, stopCh <-chan struct{}) {
 	<-stopCh
 }
 
-func (sbc *SystemBuildController) runWorker() {
+func (sbc *Controller) runWorker() {
 	// hot loop until we're told to stop.  processNextWorkItem will
 	// automatically wait until there's work available, so we don't worry
 	// about secondary waits
@@ -234,7 +234,7 @@ func (sbc *SystemBuildController) runWorker() {
 
 // processNextWorkItem deals with one key off the queue.  It returns false
 // when it's time to quit.
-func (sbc *SystemBuildController) processNextWorkItem() bool {
+func (sbc *Controller) processNextWorkItem() bool {
 	// pull the next work item from queue.  It should be a key we use to lookup
 	// something in a cache
 	key, quit := sbc.queue.Get()
@@ -272,7 +272,7 @@ func (sbc *SystemBuildController) processNextWorkItem() bool {
 
 // syncSystemBuild will sync the SystemBuild with the given key.
 // This function is not meant to be invoked concurrently with the same key.
-func (sbc *SystemBuildController) syncSystemBuild(key string) error {
+func (sbc *Controller) syncSystemBuild(key string) error {
 	glog.Flush()
 	startTime := time.Now()
 	glog.V(4).Infof("Started syncing SystemBuild %q (%v)", key, startTime)

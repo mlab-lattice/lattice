@@ -9,8 +9,8 @@ func MockComponentBuild() *block.ComponentBuild {
 	return MockComponentDockerImageBuild()
 }
 
-func MockComponentBuildExpectedJson() []byte {
-	return MockDockerImageComponentBuildExpectedJson()
+func MockComponentBuildExpectedJSON() []byte {
+	return MockDockerImageComponentBuildExpectedJSON()
 }
 
 func MockComponentDockerImageBuild() *block.ComponentBuild {
@@ -19,13 +19,13 @@ func MockComponentDockerImageBuild() *block.ComponentBuild {
 	}
 }
 
-func MockDockerImageComponentBuildExpectedJson() []byte {
-	return GenerateComponentBuildExpectedJson(
+func MockDockerImageComponentBuildExpectedJSON() []byte {
+	return GenerateComponentBuildExpectedJSON(
 		nil,
 		nil,
 		nil,
 		nil,
-		MockDockerImageExpectedJson(),
+		MockDockerImageExpectedJSON(),
 	)
 }
 
@@ -39,9 +39,9 @@ func MockGitRepositoryLanguageComponentBuild() *block.ComponentBuild {
 	}
 }
 
-func MockGitRepositoryLanguageComponentBuildExpectedJson() []byte {
-	return GenerateComponentBuildExpectedJson(
-		MockGitRepositoryExpectedJson(),
+func MockGitRepositoryLanguageComponentBuildExpectedJSON() []byte {
+	return GenerateComponentBuildExpectedJSON(
+		MockGitRepositoryExpectedJSON(),
 		[]byte(`"foobar"`),
 		nil,
 		[]byte(`"install"`),
@@ -58,17 +58,17 @@ func MockGitRepositoryBaseDockerImageComponentBuild() *block.ComponentBuild {
 	}
 }
 
-func MockGitRepositoryBaseDockerImageComponentBuildExpectedJson() []byte {
-	return GenerateComponentBuildExpectedJson(
-		MockGitRepositoryExpectedJson(),
+func MockGitRepositoryBaseDockerImageComponentBuildExpectedJSON() []byte {
+	return GenerateComponentBuildExpectedJSON(
+		MockGitRepositoryExpectedJSON(),
 		nil,
-		MockDockerImageExpectedJson(),
+		MockDockerImageExpectedJSON(),
 		[]byte(`"install"`),
 		nil,
 	)
 }
 
-func GenerateComponentBuildExpectedJson(
+func GenerateComponentBuildExpectedJSON(
 	gitRepository,
 	language,
 	baseDockerImage,

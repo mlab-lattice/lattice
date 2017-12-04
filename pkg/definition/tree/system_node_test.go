@@ -15,7 +15,7 @@ func TestSystemNode(t *testing.T) {
 		t.Errorf("unexpected error: %v", err)
 	}
 
-	testutil.ValidateToJson(t, "SystemNode", s, definitiontest.MockSystemExpectedJson())
+	testutil.ValidateToJSON(t, "SystemNode", s, definitiontest.MockSystemExpectedJSON())
 
 	if s.Parent() != nil {
 		t.Error("Parent() != nil")

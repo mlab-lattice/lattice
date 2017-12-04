@@ -12,7 +12,7 @@ import (
 	"github.com/satori/go.uuid"
 )
 
-func (sbc *SystemBuildController) getServiceBuildState(namespace, svcBuildName string) *crv1.ServiceBuildState {
+func (sbc *Controller) getServiceBuildState(namespace, svcBuildName string) *crv1.ServiceBuildState {
 	svcBuildKey := fmt.Sprintf("%v/%v", namespace, svcBuildName)
 	svcBuildObj, exists, err := sbc.serviceBuildStore.GetByKey(svcBuildKey)
 	if err != nil || !exists {
@@ -22,7 +22,7 @@ func (sbc *SystemBuildController) getServiceBuildState(namespace, svcBuildName s
 	return &(svcBuildObj.(*crv1.ServiceBuild).Status.State)
 }
 
-func (sbc *SystemBuildController) getServiceBuildFromInfo(svcbInfo *crv1.SystemBuildServicesInfo, ns string) (*crv1.ServiceBuild, bool, error) {
+func (sbc *Controller) getServiceBuildFromInfo(svcbInfo *crv1.SystemBuildServicesInfo, ns string) (*crv1.ServiceBuild, bool, error) {
 	if svcbInfo.BuildName == nil {
 		return nil, false, nil
 	}
@@ -36,7 +36,7 @@ func (sbc *SystemBuildController) getServiceBuildFromInfo(svcbInfo *crv1.SystemB
 	return svcbObj.(*crv1.ServiceBuild), true, nil
 }
 
-func (sbc *SystemBuildController) createServiceBuild(sysb *crv1.SystemBuild, svcDef *definition.Service) (*crv1.ServiceBuild, error) {
+func (sbc *Controller) createServiceBuild(sysb *crv1.SystemBuild, svcDef *definition.Service) (*crv1.ServiceBuild, error) {
 	svcBuild := getNewServiceBuildFromDefinition(sysb, svcDef)
 	return sbc.latticeClient.V1().ServiceBuilds(sysb.Namespace).Create(svcBuild)
 }

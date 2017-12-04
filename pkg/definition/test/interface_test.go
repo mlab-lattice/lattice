@@ -13,27 +13,27 @@ func TestInterface_NewServiceFromJSON(t *testing.T) {
 	tests := []struct {
 		Description string
 		Expected    *definition.Service
-		Json        []byte
+		JSON        []byte
 	}{
 		{
 			Description: "MockService",
 			Expected:    MockService(),
-			Json:        MockServiceExpectedJson(),
+			JSON:        MockServiceExpectedJSON(),
 		},
 		{
 			Description: "MockServiceDifferentName",
 			Expected:    MockServiceDifferentName(),
-			Json:        MockServiceDifferentNameExpectedJson(),
+			JSON:        MockServiceDifferentNameExpectedJSON(),
 		},
 		{
 			Description: "MockServiceWithVolume",
 			Expected:    MockServiceWithVolume(),
-			Json:        MockServiceWithVolumeExpectedJson(),
+			JSON:        MockServiceWithVolumeExpectedJSON(),
 		},
 	}
 
 	for _, test := range tests {
-		def, err := definition.UnmarshalJSON(test.Json)
+		def, err := definition.UnmarshalJSON(test.JSON)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -58,17 +58,17 @@ func TestInterface_NewSystemFromJSON(t *testing.T) {
 	tests := []struct {
 		Description string
 		Expected    *definition.System
-		Json        []byte
+		JSON        []byte
 	}{
 		{
 			Description: "MockSystem",
 			Expected:    MockSystem(),
-			Json:        MockSystemExpectedJson(),
+			JSON:        MockSystemExpectedJSON(),
 		},
 	}
 
 	for _, test := range tests {
-		def, err := definition.UnmarshalJSON(test.Json)
+		def, err := definition.UnmarshalJSON(test.JSON)
 		if err != nil {
 			t.Fatal(err)
 		}

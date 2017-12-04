@@ -37,7 +37,7 @@ func (r *RequestHandler) GetResponse(routeName, serviceCluster, serviceNode stri
 				// Should be able to access an HTTP component on port 80 via either:
 				//   - http://path.to.service:80
 				//   - http://path.to.service
-				if port == constants.PortHttpDefault {
+				if port == constants.PortHTTPDefault {
 					domains = append(domains, pathDomain)
 				}
 

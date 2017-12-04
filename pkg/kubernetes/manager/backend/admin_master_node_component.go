@@ -11,8 +11,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func (kb *KubernetesBackend) GetMasterNodeComponents(nodeId string) ([]string, error) {
-	_, err := kb.getMasterNode(nodeId)
+func (kb *KubernetesBackend) GetMasterNodeComponents(nodeID string) ([]string, error) {
+	_, err := kb.getMasterNode(nodeID)
 	if err != nil {
 		return nil, err
 	}
@@ -26,8 +26,8 @@ func (kb *KubernetesBackend) GetMasterNodeComponents(nodeId string) ([]string, e
 	return components, nil
 }
 
-func (kb *KubernetesBackend) GetMasterNodeComponentLog(nodeId, componentName string, follow bool) (io.ReadCloser, bool, error) {
-	componentPod, err := kb.getMasterNodeComponentPod(nodeId, componentName)
+func (kb *KubernetesBackend) GetMasterNodeComponentLog(nodeID, componentName string, follow bool) (io.ReadCloser, bool, error) {
+	componentPod, err := kb.getMasterNodeComponentPod(nodeID, componentName)
 	if err != nil {
 		return nil, false, err
 	}
@@ -43,8 +43,8 @@ func (kb *KubernetesBackend) GetMasterNodeComponentLog(nodeId, componentName str
 	return log, true, err
 }
 
-func (kb *KubernetesBackend) RestartMasterNodeComponent(nodeId, componentName string) (bool, error) {
-	componentPod, err := kb.getMasterNodeComponentPod(nodeId, componentName)
+func (kb *KubernetesBackend) RestartMasterNodeComponent(nodeID, componentName string) (bool, error) {
+	componentPod, err := kb.getMasterNodeComponentPod(nodeID, componentName)
 	if err != nil {
 		return false, err
 	}
@@ -59,8 +59,8 @@ func (kb *KubernetesBackend) RestartMasterNodeComponent(nodeId, componentName st
 	return true, err
 }
 
-func (kb *KubernetesBackend) getMasterNode(nodeId string) (*corev1.Node, error) {
-	masterNodeLabel := constants.MasterNodeLabelID + "=" + nodeId
+func (kb *KubernetesBackend) getMasterNode(nodeID string) (*corev1.Node, error) {
+	masterNodeLabel := constants.MasterNodeLabelID + "=" + nodeID
 	nodes, err := kb.KubeClient.CoreV1().Nodes().List(metav1.ListOptions{
 		LabelSelector: masterNodeLabel,
 	})
@@ -69,7 +69,7 @@ func (kb *KubernetesBackend) getMasterNode(nodeId string) (*corev1.Node, error) 
 	}
 
 	if len(nodes.Items) == 0 {
-		return nil, fmt.Errorf("invalid node ID %v", nodeId)
+		return nil, fmt.Errorf("invalid node ID %v", nodeID)
 	}
 
 	if len(nodes.Items) > 1 {
@@ -79,7 +79,7 @@ func (kb *KubernetesBackend) getMasterNode(nodeId string) (*corev1.Node, error) 
 	return &nodes.Items[0], nil
 }
 
-func (kb *KubernetesBackend) getMasterNodeComponentPod(nodeId, componentName string) (*corev1.Pod, error) {
+func (kb *KubernetesBackend) getMasterNodeComponentPod(nodeID, componentName string) (*corev1.Pod, error) {
 	podsClient := kb.KubeClient.CoreV1().Pods(constants.NamespaceLatticeInternal)
 	pods, err := podsClient.List(metav1.ListOptions{
 		LabelSelector: constants.MasterNodeLabelComponent,
@@ -88,7 +88,7 @@ func (kb *KubernetesBackend) getMasterNodeComponentPod(nodeId, componentName str
 		return nil, err
 	}
 
-	masterNode, err := kb.getMasterNode(nodeId)
+	masterNode, err := kb.getMasterNode(nodeID)
 	if err != nil {
 		return nil, err
 	}

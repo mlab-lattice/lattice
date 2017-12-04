@@ -28,7 +28,7 @@ type Interface interface {
 	// Namespace
 
 	// Utils
-	GetSystemUrl(types.LatticeNamespace) (string, error)
+	GetSystemURL(types.LatticeNamespace) (string, error)
 
 	// Builds
 	// System
@@ -63,7 +63,7 @@ type Interface interface {
 	// Admin
 
 	// Master Node Components
-	GetMasterNodeComponents(nodeId string) ([]string, error)
-	GetMasterNodeComponentLog(nodeId, componentName string, follow bool) (rc io.ReadCloser, exists bool, err error)
-	RestartMasterNodeComponent(nodeId, componentName string) (exists bool, err error)
+	GetMasterNodeComponents(nodeID string) ([]string, error)
+	GetMasterNodeComponentLog(nodeID, componentName string, follow bool) (rc io.ReadCloser, exists bool, err error)
+	RestartMasterNodeComponent(nodeID, componentName string) (exists bool, err error)
 }

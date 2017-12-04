@@ -80,18 +80,18 @@ func TestSystem_MarshalJSON(t *testing.T) {
 	}{
 		"MockSystem": {
 			system:        MockSystem(),
-			expectedBytes: MockSystemExpectedJson(),
+			expectedBytes: MockSystemExpectedJSON(),
 		},
 	}
 
 	for description, test := range tests {
-		testutil.ValidateToJson(t, description, test.system, test.expectedBytes)
+		testutil.ValidateToJSON(t, description, test.system, test.expectedBytes)
 	}
 }
 
 func TestSystem_UnmarshalJSON(t *testing.T) {
 	sys := &definition.System{}
-	err := json.Unmarshal(MockSystemExpectedJson(), sys)
+	err := json.Unmarshal(MockSystemExpectedJSON(), sys)
 	if err != nil {
 		t.Fatal(err)
 	}

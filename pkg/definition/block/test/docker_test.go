@@ -18,7 +18,7 @@ func TestDockerImage_JSON(t *testing.T) {
 		[]JSONTest{
 			{
 				Description: "MockDockerImage",
-				Bytes:       MockDockerImageExpectedJson(),
+				Bytes:       MockDockerImageExpectedJSON(),
 				ValuePtr:    MockDockerImage(),
 			},
 		},

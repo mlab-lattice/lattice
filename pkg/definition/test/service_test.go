@@ -89,17 +89,17 @@ func TestService_JSON(t *testing.T) {
 		[]blocktest.JSONTest{
 			{
 				Description: "MockService",
-				Bytes:       MockServiceExpectedJson(),
+				Bytes:       MockServiceExpectedJSON(),
 				ValuePtr:    MockService(),
 			},
 			{
 				Description: "MockServiceDifferentName",
-				Bytes:       MockServiceDifferentNameExpectedJson(),
+				Bytes:       MockServiceDifferentNameExpectedJSON(),
 				ValuePtr:    MockServiceDifferentName(),
 			},
 			{
 				Description: "MockServiceWithVolume",
-				Bytes:       MockServiceWithVolumeExpectedJson(),
+				Bytes:       MockServiceWithVolumeExpectedJSON(),
 				ValuePtr:    MockServiceWithVolume(),
 			},
 		},

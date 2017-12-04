@@ -16,16 +16,16 @@ const (
 	MinPortNumber = 1
 	MaxPortNumber = 65535
 
-	TcpProtocol  = "TCP"
-	HttpProtocol = "HTTP"
+	ProtocolHTTP = "HTTP"
+	ProtocolTCP  = "TCP"
 )
 
 var ValidPortProtocols = map[string]bool{
-	TcpProtocol:  true,
-	HttpProtocol: true,
+	ProtocolTCP:  true,
+	ProtocolHTTP: true,
 }
 
-// Implement Interface
+// Validate implements Interface
 func (p *ComponentPort) Validate(interface{}) error {
 	if p.Name == "" {
 		return errors.New("name is required")
@@ -51,7 +51,7 @@ type ExternalAccess struct {
 	Public bool `json:"public"`
 }
 
-// Implement Interface
+// Validate implements Interface
 func (ea *ExternalAccess) Validate(interface{}) error {
 	return nil
 }

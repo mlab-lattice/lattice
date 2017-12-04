@@ -25,7 +25,7 @@ func (r *restServer) mountNamespaceHandlers() {
 }
 
 type systemVersionResponse struct {
-	Id         string               `json:"id"`
+	ID         string               `json:"id"`
 	Definition definition.Interface `json:"definition"`
 }
 
@@ -55,7 +55,7 @@ func (r *restServer) mountNamespaceVersionHandlers() {
 			}
 
 			c.JSON(http.StatusOK, systemVersionResponse{
-				Id:         version,
+				ID:         version,
 				Definition: sysDef.Definition(),
 			})
 		})
@@ -67,7 +67,7 @@ type buildSystemRequest struct {
 }
 
 type buildSystemResponse struct {
-	BuildId types.SystemBuildID `json:"buildId"`
+	BuildID types.SystemBuildID `json:"buildId"`
 }
 
 func (r *restServer) mountNamespaceSystemBuildHandlers() {
@@ -100,7 +100,7 @@ func (r *restServer) mountNamespaceSystemBuildHandlers() {
 			}
 
 			c.JSON(http.StatusCreated, buildSystemResponse{
-				BuildId: bid,
+				BuildID: bid,
 			})
 		})
 
@@ -244,11 +244,11 @@ func (r *restServer) mountNamespaceComponentBuildHandlers() {
 
 type rollOutSystemRequest struct {
 	Version *string              `json:"version,omitempty"`
-	BuildId *types.SystemBuildID `json:"buildId,omitempty"`
+	BuildID *types.SystemBuildID `json:"buildId,omitempty"`
 }
 
 type rollOutSystemResponse struct {
-	RolloutId types.SystemRolloutID `json:"rolloutId"`
+	RolloutID types.SystemRolloutID `json:"rolloutId"`
 }
 
 func (r *restServer) mountNamespaceRolloutHandlers() {
@@ -263,12 +263,12 @@ func (r *restServer) mountNamespaceRolloutHandlers() {
 				return
 			}
 
-			if req.Version != nil && req.BuildId != nil {
+			if req.Version != nil && req.BuildID != nil {
 				c.String(http.StatusBadRequest, "can only specify version or buildId")
 				return
 			}
 
-			if req.Version == nil && req.BuildId == nil {
+			if req.Version == nil && req.BuildID == nil {
 				c.String(http.StatusBadRequest, "must specify version or buildId")
 				return
 			}
@@ -290,7 +290,7 @@ func (r *restServer) mountNamespaceRolloutHandlers() {
 			} else {
 				rid, err = r.backend.RollOutSystemBuild(
 					types.LatticeNamespace(namespace),
-					types.SystemBuildID(*req.BuildId),
+					types.SystemBuildID(*req.BuildID),
 				)
 			}
 
@@ -300,7 +300,7 @@ func (r *restServer) mountNamespaceRolloutHandlers() {
 			}
 
 			c.JSON(http.StatusCreated, rollOutSystemResponse{
-				RolloutId: rid,
+				RolloutID: rid,
 			})
 		})
 
@@ -339,7 +339,7 @@ func (r *restServer) mountNamespaceRolloutHandlers() {
 }
 
 type tearDownSystemResponse struct {
-	TeardownId types.SystemTeardownID `json:"teardownId"`
+	TeardownID types.SystemTeardownID `json:"teardownId"`
 }
 
 func (r *restServer) mountNamespaceTeardownHandlers() {
@@ -357,7 +357,7 @@ func (r *restServer) mountNamespaceTeardownHandlers() {
 			}
 
 			c.JSON(http.StatusCreated, tearDownSystemResponse{
-				TeardownId: tid,
+				TeardownID: tid,
 			})
 		})
 
@@ -439,7 +439,7 @@ func (r *restServer) mountNamespaceServiceHandlers() {
 }
 
 func (r *restServer) getSystemRoot(ln string, version string) (tree.Node, error) {
-	url, err := r.backend.GetSystemUrl(types.LatticeNamespace(ln))
+	url, err := r.backend.GetSystemURL(types.LatticeNamespace(ln))
 	if err != nil {
 		return nil, err
 	}
@@ -452,7 +452,7 @@ func (r *restServer) getSystemRoot(ln string, version string) (tree.Node, error)
 }
 
 func (r *restServer) getSystemVersions(ln string) ([]string, error) {
-	url, err := r.backend.GetSystemUrl(types.LatticeNamespace(ln))
+	url, err := r.backend.GetSystemURL(types.LatticeNamespace(ln))
 	if err != nil {
 		return nil, err
 	}

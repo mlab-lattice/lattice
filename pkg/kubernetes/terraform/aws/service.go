@@ -3,35 +3,35 @@ package aws
 type ServiceDedicatedPrivate struct {
 	Source string `json:"source"`
 
-	AWSAccountId string `json:"aws_account_id"`
+	AWSAccountID string `json:"aws_account_id"`
 	Region       string `json:"region"`
 
-	VPCId                     string `json:"vpc_id"`
-	SubnetIds                 string `json:"subnet_ids"`
-	MasterNodeSecurityGroupId string `json:"master_node_security_group_id"`
-	BaseNodeAmiId             string `json:"base_node_ami_id"`
+	VPCID                     string `json:"vpc_id"`
+	SubnetIDs                 string `json:"subnet_ids"`
+	MasterNodeSecurityGroupID string `json:"master_node_security_group_id"`
+	BaseNodeAmiID             string `json:"base_node_ami_id"`
 	KeyName                   string `json:"key_name"`
 
-	SystemId     string `json:"system_id"`
-	ServiceId    string `json:"service_id"`
+	SystemID     string `json:"system_id"`
+	ServiceID    string `json:"service_id"`
 	NumInstances int32  `json:"num_instances"`
 	InstanceType string `json:"instance_type"`
 }
 
-type ServiceDedicatedPublicHttp struct {
+type ServiceDedicatedPublicHTTP struct {
 	Source string `json:"source"`
 
-	AWSAccountId string `json:"aws_account_id"`
+	AWSAccountID string `json:"aws_account_id"`
 	Region       string `json:"region"`
 
-	VPCId                     string `json:"vpc_id"`
-	SubnetIds                 string `json:"subnet_ids"`
-	MasterNodeSecurityGroupId string `json:"master_node_security_group_id"`
-	BaseNodeAmiId             string `json:"base_node_ami_id"`
+	VPCID                     string `json:"vpc_id"`
+	SubnetIDs                 string `json:"subnet_ids"`
+	MasterNodeSecurityGroupID string `json:"master_node_security_group_id"`
+	BaseNodeAmiID             string `json:"base_node_ami_id"`
 	KeyName                   string `json:"key_name"`
 
-	SystemId     string `json:"system_id"`
-	ServiceId    string `json:"service_id"`
+	SystemID     string `json:"system_id"`
+	ServiceID    string `json:"service_id"`
 	NumInstances int32  `json:"num_instances"`
 	InstanceType string `json:"instance_type"`
 

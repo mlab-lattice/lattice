@@ -14,11 +14,11 @@ func MockSystemMetadata() *block.Metadata {
 	}
 }
 
-func MockSystemMetadataExpectedJson() []byte {
+func MockSystemMetadataExpectedJSON() []byte {
 	serviceTypeBytes := []byte(`"`)
 	serviceTypeBytes = append(serviceTypeBytes, []byte(sd.SystemType)...)
 	serviceTypeBytes = append(serviceTypeBytes, []byte(`"`)...)
-	return GenerateMetadataExpectedJson(
+	return GenerateMetadataExpectedJSON(
 		[]byte(`"my-system"`),
 		serviceTypeBytes,
 		[]byte(`"This is my system"`),
@@ -34,11 +34,11 @@ func MockServiceMetadata() *block.Metadata {
 	}
 }
 
-func MockServiceMetadataExpectedJson() []byte {
+func MockServiceMetadataExpectedJSON() []byte {
 	serviceTypeBytes := []byte(`"`)
 	serviceTypeBytes = append(serviceTypeBytes, []byte(sd.ServiceType)...)
 	serviceTypeBytes = append(serviceTypeBytes, []byte(`"`)...)
-	return GenerateMetadataExpectedJson(
+	return GenerateMetadataExpectedJSON(
 		[]byte(`"my-service"`),
 		serviceTypeBytes,
 		[]byte(`"This is my service"`),
@@ -54,11 +54,11 @@ func MockServiceDifferentNameMetadata() *block.Metadata {
 	}
 }
 
-func MockServiceDifferentNameMetadataExpectedJson() []byte {
+func MockServiceDifferentNameMetadataExpectedJSON() []byte {
 	serviceTypeBytes := []byte(`"`)
 	serviceTypeBytes = append(serviceTypeBytes, []byte(sd.ServiceType)...)
 	serviceTypeBytes = append(serviceTypeBytes, []byte(`"`)...)
-	return GenerateMetadataExpectedJson(
+	return GenerateMetadataExpectedJSON(
 		[]byte(`"my-other-service"`),
 		serviceTypeBytes,
 		[]byte(`"This is my service"`),
@@ -66,7 +66,7 @@ func MockServiceDifferentNameMetadataExpectedJson() []byte {
 	)
 }
 
-func GenerateMetadataExpectedJson(name, _type, description, parameters []byte) []byte {
+func GenerateMetadataExpectedJSON(name, _type, description, parameters []byte) []byte {
 	return jsonutil.GenerateObjectBytes([]jsonutil.FieldBytes{
 		{
 			Name:  "name",

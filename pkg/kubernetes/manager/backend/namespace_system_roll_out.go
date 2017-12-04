@@ -25,7 +25,7 @@ func (kb *KubernetesBackend) RollOutSystem(ln types.LatticeNamespace, definition
 }
 
 func (kb *KubernetesBackend) RollOutSystemBuild(ln types.LatticeNamespace, bid types.SystemBuildID) (types.SystemRolloutID, error) {
-	sysBuild, err := kb.getSystemBuildFromId(ln, bid)
+	sysBuild, err := kb.getSystemBuildFromID(ln, bid)
 	if err != nil {
 		return "", err
 	}
@@ -42,7 +42,7 @@ func (kb *KubernetesBackend) RollOutSystemBuild(ln types.LatticeNamespace, bid t
 	return types.SystemRolloutID(result.Name), err
 }
 
-func (kb *KubernetesBackend) getSystemBuildFromId(ln types.LatticeNamespace, bid types.SystemBuildID) (*crv1.SystemBuild, error) {
+func (kb *KubernetesBackend) getSystemBuildFromID(ln types.LatticeNamespace, bid types.SystemBuildID) (*crv1.SystemBuild, error) {
 	return kb.LatticeClient.V1().SystemBuilds(kubeconstants.NamespaceLatticeInternal).Get(string(bid), metav1.GetOptions{})
 }
 
@@ -50,7 +50,7 @@ func getNewSystemRollout(latticeNamespace types.LatticeNamespace, sysBuild *crv1
 	labels := map[string]string{
 		kubeconstants.LatticeNamespaceLabel:        string(latticeNamespace),
 		kubeconstants.LabelKeySystemRolloutVersion: sysBuild.Labels[kubeconstants.LabelKeySystemBuildVersion],
-		kubeconstants.LabelKeySystemRolloutBuildId: sysBuild.Name,
+		kubeconstants.LabelKeySystemRolloutBuildID: sysBuild.Name,
 	}
 
 	sysRollout := &crv1.SystemRollout{
@@ -86,7 +86,7 @@ func (kb *KubernetesBackend) GetSystemRollout(ln types.LatticeNamespace, rid typ
 
 	sb := &types.SystemRollout{
 		ID:      rid,
-		BuildId: types.SystemBuildID(result.Spec.BuildName),
+		BuildID: types.SystemBuildID(result.Spec.BuildName),
 		State:   getSystemRolloutState(result.Status.State),
 	}
 
@@ -108,7 +108,7 @@ func (kb *KubernetesBackend) ListSystemRollouts(ln types.LatticeNamespace) ([]ty
 
 		rollouts = append(rollouts, types.SystemRollout{
 			ID:      types.SystemRolloutID(r.Name),
-			BuildId: types.SystemBuildID(r.Spec.BuildName),
+			BuildID: types.SystemBuildID(r.Spec.BuildName),
 			State:   getSystemRolloutState(r.Status.State),
 		})
 	}

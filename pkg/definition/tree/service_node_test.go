@@ -15,7 +15,7 @@ func TestServiceNode(t *testing.T) {
 		t.Errorf("unexpected error: %v", err)
 	}
 
-	testutil.ValidateToJson(t, "ServiceNode", s, definitiontest.MockServiceExpectedJson())
+	testutil.ValidateToJSON(t, "ServiceNode", s, definitiontest.MockServiceExpectedJSON())
 
 	if s.Parent() != nil {
 		t.Error("Parent() != nil")
