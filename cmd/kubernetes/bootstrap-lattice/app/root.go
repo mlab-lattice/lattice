@@ -65,6 +65,7 @@ func Execute() {
 }
 
 func init() {
+	cobra.OnInitialize(initCmd)
 	RootCmd.Flags().StringVar(&workingDir, "working-directory", "/tmp/lattice-system/", "path where subcommands will use as their working directory")
 	RootCmd.Flags().StringVar(&kubeconfigPath, "kubeconfig-path", "", "path to kubeconfig to use if not being invoked from within kubernetes")
 	RootCmd.Flags().BoolVar(&debug, "debug", false, "whether or not to use the debug version of container images")
@@ -82,6 +83,10 @@ func init() {
 	// --provider-var=availability-zones=us-east-1a,us-east-1b resulting in ["availability-zones=us-east-1a,us-east-1b"]
 	providerVars = RootCmd.Flags().StringArray("provider-var", nil, "additional variables to pass to the provider")
 	terraformBackendVars = RootCmd.Flags().StringArray("terraform-backend-var", nil, "additional variables to pass to the terraform backend")
+}
+
+func initCmd() {
+	initializeClients()
 }
 
 func initializeClients() {
