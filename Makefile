@@ -27,7 +27,7 @@ gazelle:
 	@bazel run //:gazelle
 
 .PHONY: check
-check: format vet lint-no-comments
+check: gazelle format vet lint-no-comments
 
 .PHONY: format
 format:

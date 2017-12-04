@@ -50,7 +50,7 @@ my_rule(
 )
 ```
 
-This defines a rule `foo`. The target produced by by this rule depends on the build file's location to the `WORKSPACE` file.
+This defines a rule `foo`. The target produced by by this rule depends on the build file's location relative to the `WORKSPACE` file.
 
 For example, say the project looked like this, with the each `BUILD` file looking like above:
 
@@ -247,8 +247,6 @@ This will create three targets: `//pkg/hello:hello_library`, `//cmd:cmd_library`
 
 Note that we had to explicitly list all our non standard library dependencies (`deps` in `//cmd:cmd_library`)
 
-We should have the following directory:
-
 Now, if you run `bazel run //cmd`, you would see something like the following:
 
 ```
@@ -263,7 +261,7 @@ hello world
 ```
 
 #### Automatic BUILD file generation with gazelle
-That's all great, but it's a lot of manual work. Luckily, rules_go includes a binary that does all of this work for us, called `gazelle`.
+That's all great, but it's a lot of manual work. Luckily, `rules_go` includes a binary that does all of this work for us, called `gazelle`.
 
 If instead of creating the two specific files `pkg/hello/BUILD` and `cmd/BUILD`, if we instead wrote `BUILD` as:
 
@@ -474,7 +472,7 @@ I now realize using colorized output isn't a great example seeing as that can't 
 
 #### Macros
 
-At the time of writing this, the transitive closure of external Go dependencies includes over 60 different repositories. As one could imagine, the `WORKSPACE` file became very bloated and hard to visually parse.
+At the time of writing this, the transitive closure of Lattice's external Go dependencies includes over 60 different repositories. As one could imagine, the `WORKSPACE` file became very bloated and hard to visually parse.
 
 To combat this, custom macro rules were written which when called generate the `go_repository` rules. These rules can be found in the [bazel](../../bazel) directory.
 

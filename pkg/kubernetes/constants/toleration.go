@@ -6,9 +6,9 @@ import (
 
 const (
 	nodeRoleTaint    = "node-role.kubernetes.io"
-	TaintMasterNode  = nodeRoleTaint + "/master"
-	TaintBuildNode   = nodeRoleTaint + "/build"
-	TaintServiceNode = nodeRoleTaint + "/service"
+	TaintMasterNode  = nodeRoleTaint + "/lattice-master"
+	TaintBuildNode   = nodeRoleTaint + "/lattice-build"
+	TaintServiceNode = nodeRoleTaint + "/lattice-service"
 )
 
 var TolerateAllTaints corev1.Toleration = corev1.Toleration{
