@@ -474,7 +474,7 @@ I now realize using colorized output isn't a great example seeing as that can't 
 
 #### Macros
 
-At the time of writing this, the transitive closure of external Go dependencies includes over 60 different repositories. As one could imagine, the `WORKSPACE` file became very bloated and hard to parse.
+At the time of writing this, the transitive closure of external Go dependencies includes over 60 different repositories. As one could imagine, the `WORKSPACE` file became very bloated and hard to visually parse.
 
 To combat this, custom macro rules were written which when called generate the `go_repository` rules. These rules can be found in the [bazel](../../bazel) directory.
 
