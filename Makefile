@@ -26,10 +26,34 @@ test: gazelle
 gazelle:
 	@bazel run //:gazelle
 
+.PHONY: check
+check: format vet lint-no-comments
+
 .PHONY: format
 format:
-	gofmt -w .
-	terraform fmt .
+	@gofmt -w .
+	@terraform fmt .
+
+.PHONY: lint
+lint: install-golint
+	@golint ./...
+
+.PHONY: lint-no-comments
+lint-no-comments: install-golint
+	@golint ./... | grep -v "comment"
+
+.PHONY: install-golint
+install-golint:
+	@which golint > /dev/null; if [ $$? -ne 0 ]; then go get github.com/golang/lint/golint; fi
+
+.PHONY: vet
+vet: install-govet
+	@go tool vet .
+
+.PHONY: install-govet
+install-govet:
+	@go tool vet 2>/dev/null; if [ $$? -eq 3 ]; then go get golang.org/x/tools/cmd/vet; fi
+
 
 # docker
 .PHONY: docker-push-image
