@@ -35,7 +35,7 @@ func (kb *KubernetesBackend) GetMasterNodeComponentLog(nodeId, componentName str
 		return nil, false, nil
 	}
 
-	req := kb.KubeClientset.CoreV1().
+	req := kb.KubeClient.CoreV1().
 		Pods(componentPod.Namespace).
 		GetLogs(componentPod.Name, &corev1.PodLogOptions{Follow: follow})
 
@@ -53,7 +53,7 @@ func (kb *KubernetesBackend) RestartMasterNodeComponent(nodeId, componentName st
 		return false, nil
 	}
 
-	err = kb.KubeClientset.CoreV1().
+	err = kb.KubeClient.CoreV1().
 		Pods(componentPod.Namespace).
 		Delete(componentPod.Name, &metav1.DeleteOptions{})
 	return true, err
@@ -61,7 +61,7 @@ func (kb *KubernetesBackend) RestartMasterNodeComponent(nodeId, componentName st
 
 func (kb *KubernetesBackend) getMasterNode(nodeId string) (*corev1.Node, error) {
 	masterNodeLabel := constants.MasterNodeLabelID + "=" + nodeId
-	nodes, err := kb.KubeClientset.CoreV1().Nodes().List(metav1.ListOptions{
+	nodes, err := kb.KubeClient.CoreV1().Nodes().List(metav1.ListOptions{
 		LabelSelector: masterNodeLabel,
 	})
 	if err != nil {
@@ -80,7 +80,7 @@ func (kb *KubernetesBackend) getMasterNode(nodeId string) (*corev1.Node, error) 
 }
 
 func (kb *KubernetesBackend) getMasterNodeComponentPod(nodeId, componentName string) (*corev1.Pod, error) {
-	podsClient := kb.KubeClientset.CoreV1().Pods(constants.NamespaceLatticeInternal)
+	podsClient := kb.KubeClient.CoreV1().Pods(constants.NamespaceLatticeInternal)
 	pods, err := podsClient.List(metav1.ListOptions{
 		LabelSelector: constants.MasterNodeLabelComponent,
 	})

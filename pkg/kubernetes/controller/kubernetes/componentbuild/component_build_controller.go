@@ -6,6 +6,7 @@ import (
 	"sync"
 	"time"
 
+	latticeclientset "github.com/mlab-lattice/system/pkg/kubernetes/customresource/client"
 	crv1 "github.com/mlab-lattice/system/pkg/kubernetes/customresource/v1"
 
 	batchv1 "k8s.io/api/batch/v1"
@@ -16,9 +17,8 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 
 	batchinformers "k8s.io/client-go/informers/batch/v1"
-	clientset "k8s.io/client-go/kubernetes"
+	kubeclientset "k8s.io/client-go/kubernetes"
 	batchlisters "k8s.io/client-go/listers/batch/v1"
-	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
 
@@ -31,8 +31,8 @@ type ComponentBuildController struct {
 	syncHandler func(bKey string) error
 	enqueue     func(cb *crv1.ComponentBuild)
 
-	latticeResourceClient rest.Interface
-	kubeClient            clientset.Interface
+	kubeClient    kubeclientset.Interface
+	latticeClient latticeclientset.Interface
 
 	configStore       cache.Store
 	configStoreSynced cache.InformerSynced
@@ -51,17 +51,17 @@ type ComponentBuildController struct {
 }
 
 func NewComponentBuildController(
-	kubeClient clientset.Interface,
-	latticeResourceClient rest.Interface,
+	kubeClient kubeclientset.Interface,
+	latticeClient latticeclientset.Interface,
 	configInformer cache.SharedInformer,
 	componentBuildInformer cache.SharedInformer,
 	jobInformer batchinformers.JobInformer,
 ) *ComponentBuildController {
 	cbc := &ComponentBuildController{
-		latticeResourceClient: latticeResourceClient,
-		kubeClient:            kubeClient,
-		configSetChan:         make(chan struct{}),
-		queue:                 workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "component-build"),
+		kubeClient:    kubeClient,
+		latticeClient: latticeClient,
+		configSetChan: make(chan struct{}),
+		queue:         workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "component-build"),
 	}
 
 	cbc.syncHandler = cbc.syncComponentBuild

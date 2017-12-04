@@ -8,7 +8,6 @@ import (
 
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 )
 
@@ -52,7 +51,7 @@ func (c *ComponentBuilds) Get(name string, options meta_v1.GetOptions) (result *
 		Namespace(c.ns).
 		Resource(v1.ResourcePluralComponentBuild).
 		Name(name).
-		VersionedParams(&options, scheme.ParameterCodec).
+		VersionedParams(&options, ParameterCodec).
 		Do().
 		Into(result)
 	return
@@ -64,7 +63,7 @@ func (c *ComponentBuilds) List(opts meta_v1.ListOptions) (result *v1.ComponentBu
 	err = c.client.Get().
 		Namespace(c.ns).
 		Resource(v1.ResourcePluralComponentBuild).
-		VersionedParams(&opts, scheme.ParameterCodec).
+		VersionedParams(&opts, ParameterCodec).
 		Do().
 		Into(result)
 	return
@@ -76,7 +75,7 @@ func (c *ComponentBuilds) Watch(opts meta_v1.ListOptions) (watch.Interface, erro
 	return c.client.Get().
 		Namespace(c.ns).
 		Resource(v1.ResourcePluralComponentBuild).
-		VersionedParams(&opts, scheme.ParameterCodec).
+		VersionedParams(&opts, ParameterCodec).
 		Watch()
 }
 
@@ -135,7 +134,7 @@ func (c *ComponentBuilds) DeleteCollection(options *meta_v1.DeleteOptions, listO
 	return c.client.Delete().
 		Namespace(c.ns).
 		Resource(v1.ResourcePluralComponentBuild).
-		VersionedParams(&listOptions, scheme.ParameterCodec).
+		VersionedParams(&listOptions, ParameterCodec).
 		Body(options).
 		Do().
 		Error()

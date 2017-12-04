@@ -37,7 +37,7 @@ func (r *restServer) mountNamespaceVersionHandlers() {
 			namespace := c.Param("namespace_id")
 			versions, err := r.getSystemVersions(namespace)
 			if err != nil {
-				c.String(http.StatusInternalServerError, err.Error())
+				handleInternalError(c, err)
 				return
 			}
 
@@ -50,7 +50,7 @@ func (r *restServer) mountNamespaceVersionHandlers() {
 			version := c.Param("version_id")
 			sysDef, err := r.getSystemRoot(namespace, version)
 			if err != nil {
-				c.String(http.StatusInternalServerError, err.Error())
+				handleInternalError(c, err)
 				return
 			}
 
@@ -78,13 +78,13 @@ func (r *restServer) mountNamespaceSystemBuildHandlers() {
 			namespace := c.Param("namespace_id")
 			var req buildSystemRequest
 			if err := c.BindJSON(&req); err != nil {
-				c.String(http.StatusInternalServerError, err.Error())
+				handleInternalError(c, err)
 				return
 			}
 
 			root, err := r.getSystemRoot(namespace, req.Version)
 			if err != nil {
-				c.String(http.StatusInternalServerError, err.Error())
+				handleInternalError(c, err)
 				return
 			}
 
@@ -95,7 +95,7 @@ func (r *restServer) mountNamespaceSystemBuildHandlers() {
 			)
 
 			if err != nil {
-				c.String(http.StatusInternalServerError, err.Error())
+				handleInternalError(c, err)
 				return
 			}
 
@@ -110,7 +110,7 @@ func (r *restServer) mountNamespaceSystemBuildHandlers() {
 
 			bs, err := r.backend.ListSystemBuilds(types.LatticeNamespace(namespace))
 			if err != nil {
-				c.String(http.StatusInternalServerError, err.Error())
+				handleInternalError(c, err)
 				return
 			}
 
@@ -124,7 +124,7 @@ func (r *restServer) mountNamespaceSystemBuildHandlers() {
 
 			b, exists, err := r.backend.GetSystemBuild(types.LatticeNamespace(namespace), types.SystemBuildID(bid))
 			if err != nil {
-				c.String(http.StatusInternalServerError, err.Error())
+				handleInternalError(c, err)
 				return
 			}
 
@@ -147,7 +147,7 @@ func (r *restServer) mountNamespaceServiceBuildHandlers() {
 
 			bs, err := r.backend.ListServiceBuilds(types.LatticeNamespace(namespace))
 			if err != nil {
-				c.String(http.StatusInternalServerError, err.Error())
+				handleInternalError(c, err)
 				return
 			}
 
@@ -161,7 +161,7 @@ func (r *restServer) mountNamespaceServiceBuildHandlers() {
 
 			b, exists, err := r.backend.GetServiceBuild(types.LatticeNamespace(namespace), types.ServiceBuildID(bid))
 			if err != nil {
-				c.String(http.StatusInternalServerError, err.Error())
+				handleInternalError(c, err)
 				return
 			}
 
@@ -184,7 +184,7 @@ func (r *restServer) mountNamespaceComponentBuildHandlers() {
 
 			bs, err := r.backend.ListComponentBuilds(types.LatticeNamespace(namespace))
 			if err != nil {
-				c.String(http.StatusInternalServerError, err.Error())
+				handleInternalError(c, err)
 				return
 			}
 
@@ -198,7 +198,7 @@ func (r *restServer) mountNamespaceComponentBuildHandlers() {
 
 			b, exists, err := r.backend.GetComponentBuild(types.LatticeNamespace(namespace), types.ComponentBuildID(bid))
 			if err != nil {
-				c.String(http.StatusInternalServerError, err.Error())
+				handleInternalError(c, err)
 				return
 			}
 
@@ -230,9 +230,9 @@ func (r *restServer) mountNamespaceComponentBuildHandlers() {
 			if exists == false {
 				switch err.(type) {
 				case *backend.UserError:
-					c.String(http.StatusNotFound, err.Error())
+					c.String(http.StatusNotFound, "")
 				default:
-					c.String(http.StatusInternalServerError, "")
+					handleInternalError(c, err)
 				}
 				return
 			}
@@ -259,7 +259,7 @@ func (r *restServer) mountNamespaceRolloutHandlers() {
 			namespace := c.Param("namespace_id")
 			var req rollOutSystemRequest
 			if err := c.BindJSON(&req); err != nil {
-				c.String(http.StatusInternalServerError, err.Error())
+				handleInternalError(c, err)
 				return
 			}
 
@@ -278,7 +278,7 @@ func (r *restServer) mountNamespaceRolloutHandlers() {
 			if req.Version != nil {
 				root, err := r.getSystemRoot(namespace, *req.Version)
 				if err != nil {
-					c.String(http.StatusInternalServerError, err.Error())
+					handleInternalError(c, err)
 					return
 				}
 
@@ -295,7 +295,7 @@ func (r *restServer) mountNamespaceRolloutHandlers() {
 			}
 
 			if err != nil {
-				c.String(http.StatusInternalServerError, err.Error())
+				handleInternalError(c, err)
 				return
 			}
 
@@ -310,7 +310,7 @@ func (r *restServer) mountNamespaceRolloutHandlers() {
 
 			rs, err := r.backend.ListSystemRollouts(types.LatticeNamespace(namespace))
 			if err != nil {
-				c.String(http.StatusInternalServerError, err.Error())
+				handleInternalError(c, err)
 				return
 			}
 
@@ -324,7 +324,7 @@ func (r *restServer) mountNamespaceRolloutHandlers() {
 
 			r, exists, err := r.backend.GetSystemRollout(types.LatticeNamespace(namespace), types.SystemRolloutID(rid))
 			if err != nil {
-				c.String(http.StatusInternalServerError, err.Error())
+				handleInternalError(c, err)
 				return
 			}
 
@@ -352,7 +352,7 @@ func (r *restServer) mountNamespaceTeardownHandlers() {
 			tid, err := r.backend.TearDownSystem(types.LatticeNamespace(namespace))
 
 			if err != nil {
-				c.String(http.StatusInternalServerError, err.Error())
+				handleInternalError(c, err)
 				return
 			}
 
@@ -367,7 +367,7 @@ func (r *restServer) mountNamespaceTeardownHandlers() {
 
 			ts, err := r.backend.ListSystemTeardowns(types.LatticeNamespace(namespace))
 			if err != nil {
-				c.String(http.StatusInternalServerError, err.Error())
+				handleInternalError(c, err)
 				return
 			}
 
@@ -381,7 +381,7 @@ func (r *restServer) mountNamespaceTeardownHandlers() {
 
 			t, exists, err := r.backend.GetSystemTeardown(types.LatticeNamespace(namespace), types.SystemTeardownID(tid))
 			if err != nil {
-				c.String(http.StatusInternalServerError, err.Error())
+				handleInternalError(c, err)
 				return
 			}
 
@@ -404,7 +404,7 @@ func (r *restServer) mountNamespaceServiceHandlers() {
 
 			svcs, err := r.backend.ListSystemServices(types.LatticeNamespace(namespace))
 			if err != nil {
-				c.String(http.StatusInternalServerError, err.Error())
+				handleInternalError(c, err)
 				return
 			}
 
@@ -418,13 +418,13 @@ func (r *restServer) mountNamespaceServiceHandlers() {
 
 			svcPath, err := tree.NodePathFromDomain(svcDomain)
 			if err != nil {
-				c.String(http.StatusInternalServerError, err.Error())
+				handleInternalError(c, err)
 				return
 			}
 
 			svc, err := r.backend.GetSystemService(types.LatticeNamespace(namespace), svcPath)
 			if err != nil {
-				c.String(http.StatusInternalServerError, err.Error())
+				handleInternalError(c, err)
 				return
 			}
 

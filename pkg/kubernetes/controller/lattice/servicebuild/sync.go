@@ -200,14 +200,5 @@ func (sbc *ServiceBuildController) putServiceBuildStatusUpdate(svcb *crv1.Servic
 }
 
 func (sbc *ServiceBuildController) putServiceBuildUpdate(svcb *crv1.ServiceBuild) (*crv1.ServiceBuild, error) {
-	response := &crv1.ServiceBuild{}
-	err := sbc.latticeResourceClient.Put().
-		Namespace(svcb.Namespace).
-		Resource(crv1.ResourcePluralServiceBuild).
-		Name(svcb.Name).
-		Body(svcb).
-		Do().
-		Into(response)
-
-	return response, err
+	return sbc.latticeClient.V1().ServiceBuilds(svcb.Namespace).Update(svcb)
 }

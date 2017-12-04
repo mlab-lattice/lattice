@@ -10,6 +10,7 @@ import (
 	"github.com/mlab-lattice/system/pkg/manager/backend"
 
 	"github.com/gin-gonic/gin"
+	"github.com/golang/glog"
 )
 
 const (
@@ -72,4 +73,9 @@ func logEndpoint(c *gin.Context, log io.ReadCloser, follow bool) {
 		w.Write(buf[:n])
 		return true
 	})
+}
+
+func handleInternalError(c *gin.Context, err error) {
+	glog.Errorf("encountered error: %v", err.Error())
+	c.String(http.StatusInternalServerError, "")
 }

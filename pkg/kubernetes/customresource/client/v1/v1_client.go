@@ -3,9 +3,9 @@ package v1
 import (
 	"github.com/mlab-lattice/system/pkg/kubernetes/customresource/v1"
 
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 
-	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 )
 
@@ -90,7 +90,8 @@ func setConfigDefaults(config *rest.Config) error {
 	gv := v1.SchemeGroupVersion
 	config.GroupVersion = &gv
 	config.APIPath = "/apis"
-	config.NegotiatedSerializer = serializer.DirectCodecFactory{CodecFactory: scheme.Codecs}
+	config.ContentType = runtime.ContentTypeJSON
+	config.NegotiatedSerializer = serializer.DirectCodecFactory{CodecFactory: serializer.NewCodecFactory(Scheme)}
 
 	if config.UserAgent == "" {
 		config.UserAgent = rest.DefaultKubernetesUserAgent()
@@ -106,4 +107,16 @@ func (c *V1Client) RESTClient() rest.Interface {
 		return nil
 	}
 	return c.restClient
+}
+
+var Scheme = runtime.NewScheme()
+var Codecs = serializer.NewCodecFactory(Scheme)
+var ParameterCodec = runtime.NewParameterCodec(Scheme)
+
+func init() {
+	AddToScheme(Scheme)
+}
+
+func AddToScheme(scheme *runtime.Scheme) {
+	v1.AddToScheme(scheme)
 }

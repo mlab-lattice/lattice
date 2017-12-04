@@ -5,13 +5,13 @@ import (
 	"sync"
 	"time"
 
+	latticeclientset "github.com/mlab-lattice/system/pkg/kubernetes/customresource/client"
 	crv1 "github.com/mlab-lattice/system/pkg/kubernetes/customresource/v1"
 
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
 
-	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
 
@@ -22,7 +22,7 @@ type ServiceBuildController struct {
 	syncHandler func(svcBuildKey string) error
 	enqueue     func(svcBuild *crv1.ServiceBuild)
 
-	latticeResourceClient rest.Interface
+	latticeClient latticeclientset.Interface
 
 	serviceBuildStore       cache.Store
 	serviceBuildStoreSynced cache.InformerSynced
@@ -43,12 +43,12 @@ type ServiceBuildController struct {
 }
 
 func NewServiceBuildController(
-	latticeResourceClient rest.Interface,
+	latticeClient latticeclientset.Interface,
 	serviceBuildInformer cache.SharedInformer,
 	componentBuildInformer cache.SharedInformer,
 ) *ServiceBuildController {
 	sbc := &ServiceBuildController{
-		latticeResourceClient: latticeResourceClient,
+		latticeClient:         latticeClient,
 		recentComponentBuilds: make(map[string]map[string]string),
 		queue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "service-build"),
 	}

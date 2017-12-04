@@ -48,12 +48,7 @@ func Run(kubeconfig, provider, terraformModulePath string) {
 
 	glog.V(4).Info("Starting informer factory informers")
 	ctx.InformerFactory.Start(ctx.Stop)
-
-	for resource, informer := range ctx.CRDInformers {
-		glog.V(4).Infof("Starting %v informer", resource)
-		go informer.Run(ctx.Stop)
-
-	}
+	ctx.CRInformers.Start(ctx.Stop)
 
 	select {}
 }
@@ -64,18 +59,21 @@ func CreateControllerContext(
 	stop <-chan struct{},
 	terraformModulePath string,
 ) controller.Context {
-	cb := controller.ClientBuilder{
+	kcb := controller.KubeClientBuilder{
+		Kubeconfig: kubeconfig,
+	}
+	lcb := controller.LatticeClientBuilder{
 		Kubeconfig: kubeconfig,
 	}
 
-	versionedClient := cb.ClientOrDie("shared-informers")
+	versionedClient := kcb.ClientOrDie("shared-informers")
 	sharedInformers := informers.NewSharedInformerFactory(versionedClient, time.Duration(12*time.Hour))
 
 	return controller.Context{
-		InformerFactory:           sharedInformers,
-		CRDInformers:              getCRDInformers(latticeResourceClient),
-		LatticeResourceRestClient: latticeResourceClient,
-		ClientBuilder:             cb,
+		InformerFactory:      sharedInformers,
+		CRInformers:          getCRDInformers(latticeResourceClient),
+		KubeClientBuilder:    kcb,
+		LatticeClientBuilder: lcb,
 
 		Stop: stop,
 
@@ -83,65 +81,65 @@ func CreateControllerContext(
 	}
 }
 
-func getCRDInformers(latticeResourceClient rest.Interface) map[string]cache.SharedInformer {
+func getCRDInformers(latticeResourceClient rest.Interface) *controller.CRInformers {
+	crdInformers := &controller.CRInformers{}
 	// FIXME: defaultResync blindly taken from k8s.io/kubernetes/cmd/controller/options. investigate consequences
 	crds := []struct {
-		name         string
+		dest         *cache.SharedInformer
 		plural       string
 		objType      runtime.Object
 		resyncPeriod time.Duration
 	}{
 		{
-			name:         "component-build",
+			dest:         &crdInformers.ComponentBuild,
 			plural:       crv1.ResourcePluralComponentBuild,
 			objType:      &crv1.ComponentBuild{},
 			resyncPeriod: time.Duration(12 * time.Hour),
 		},
 		{
-			name:         "config",
+			dest:         &crdInformers.Config,
 			plural:       crv1.ResourcePluralConfig,
 			objType:      &crv1.Config{},
 			resyncPeriod: time.Duration(12 * time.Hour),
 		},
 		{
-			name:         "service",
+			dest:         &crdInformers.Service,
 			plural:       crv1.ResourcePluralService,
 			objType:      &crv1.Service{},
 			resyncPeriod: time.Duration(12 * time.Hour),
 		},
 		{
-			name:         "service-build",
+			dest:         &crdInformers.ServiceBuild,
 			plural:       crv1.ResourcePluralServiceBuild,
 			objType:      &crv1.ServiceBuild{},
 			resyncPeriod: time.Duration(12 * time.Hour),
 		},
 		{
-			name:         "system",
+			dest:         &crdInformers.System,
 			plural:       crv1.ResourcePluralSystem,
 			objType:      &crv1.System{},
 			resyncPeriod: time.Duration(12 * time.Hour),
 		},
 		{
-			name:         "system-build",
+			dest:         &crdInformers.SystemBuild,
 			plural:       crv1.ResourcePluralSystemBuild,
 			objType:      &crv1.SystemBuild{},
 			resyncPeriod: time.Duration(12 * time.Hour),
 		},
 		{
-			name:         "system-rollout",
+			dest:         &crdInformers.SystemRollout,
 			plural:       crv1.ResourcePluralSystemRollout,
 			objType:      &crv1.SystemRollout{},
 			resyncPeriod: time.Duration(12 * time.Hour),
 		},
 		{
-			name:         "system-teardown",
+			dest:         &crdInformers.SystemTeardown,
 			plural:       crv1.ResourcePluralSystemTeardown,
 			objType:      &crv1.SystemTeardown{},
 			resyncPeriod: time.Duration(12 * time.Hour),
 		},
 	}
 
-	informersMap := map[string]cache.SharedInformer{}
 	for _, crd := range crds {
 		listerWatcher := cache.NewListWatchFromClient(
 			latticeResourceClient,
@@ -154,10 +152,10 @@ func getCRDInformers(latticeResourceClient rest.Interface) map[string]cache.Shar
 			crd.objType,
 			crd.resyncPeriod,
 		)
-		informersMap[crd.name] = informer
+		*crd.dest = informer
 	}
 
-	return informersMap
+	return crdInformers
 }
 
 func GetControllerInitializers(provider string) map[string]controller.Initializer {

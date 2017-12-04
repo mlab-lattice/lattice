@@ -5,6 +5,7 @@ import (
 	"reflect"
 	"time"
 
+	latticeclientset "github.com/mlab-lattice/system/pkg/kubernetes/customresource/client"
 	crv1 "github.com/mlab-lattice/system/pkg/kubernetes/customresource/v1"
 
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -12,7 +13,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
 
-	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
 
@@ -25,7 +25,7 @@ type SystemController struct {
 	syncHandler   func(sysKey string) error
 	enqueueSystem func(sysBuild *crv1.System)
 
-	latticeResourceRestClient rest.Interface
+	latticeClient latticeclientset.Interface
 
 	systemStore       cache.Store
 	systemStoreSynced cache.InformerSynced
@@ -37,13 +37,13 @@ type SystemController struct {
 }
 
 func NewSystemController(
-	latticeResourceRestClient rest.Interface,
+	latticeClient latticeclientset.Interface,
 	systemInformer cache.SharedInformer,
 	serviceInformer cache.SharedInformer,
 ) *SystemController {
 	sc := &SystemController{
-		latticeResourceRestClient: latticeResourceRestClient,
-		queue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "system"),
+		latticeClient: latticeClient,
+		queue:         workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "system"),
 	}
 
 	sc.enqueueSystem = sc.enqueue
@@ -412,8 +412,12 @@ func (sc *SystemController) syncSystemServices(sys *crv1.System) error {
 		if err != nil {
 			return nil
 		}
+		svc.Spec = newSpec
 
-		_, err = sc.updateServiceSpec(svc, newSpec)
+		// Need to update that we're rolling out again.
+		svc.Status.State = crv1.ServiceStateRollingOut
+
+		_, err = sc.updateService(svc)
 		if err != nil {
 			return nil
 		}
@@ -467,9 +471,13 @@ func (sc *SystemController) syncSystemServiceStatuses(sys *crv1.System) error {
 		sys.Spec.Services[path] = svcInfo
 	}
 
-	response, err := sc.updateSystem(sys)
-	*sys = *response
-	return err
+	result, err := sc.updateSystem(sys)
+	if err != nil {
+		return err
+	}
+
+	*sys = *result
+	return nil
 }
 
 // Warning: syncSystemStatus mutates sysBuild. Do not pass in a pointer to a
@@ -496,47 +504,28 @@ func (sc *SystemController) syncSystemStatus(sys *crv1.System) error {
 		}
 	}
 
-	newStatus := calculateSystemStatus(hasFailedSvcRollout, hasActiveSvcRollout)
-	return sc.updateSystemStatus(sys, newStatus)
+	sys.Status.State = calculateSystemState(hasFailedSvcRollout, hasActiveSvcRollout)
+	result, err := sc.updateSystem(sys)
+	if err != nil {
+		return err
+	}
+
+	*sys = *result
+	return nil
 }
 
 func (sc *SystemController) updateSystem(sys *crv1.System) (*crv1.System, error) {
-	result := &crv1.System{}
-	err := sc.latticeResourceRestClient.Put().
-		Namespace(sys.Namespace).
-		Resource(crv1.ResourcePluralSystem).
-		Name(sys.Name).
-		Body(sys).
-		Do().
-		Into(result)
-
-	return result, err
+	return sc.latticeClient.V1().Systems(sys.Namespace).Update(sys)
 }
 
-func (sc *SystemController) updateSystemStatus(sys *crv1.System, newStatus crv1.SystemStatus) error {
-	if reflect.DeepEqual(sys.Status, newStatus) {
-		return nil
-	}
-
-	sys.Status = newStatus
-	_, err := sc.updateSystem(sys)
-	return err
-}
-
-func calculateSystemStatus(hasFailedSvcRollout, hasActiveSvcRollout bool) crv1.SystemStatus {
+func calculateSystemState(hasFailedSvcRollout, hasActiveSvcRollout bool) crv1.SystemState {
 	if hasFailedSvcRollout {
-		return crv1.SystemStatus{
-			State: crv1.SystemStateRolloutFailed,
-		}
+		return crv1.SystemStateRolloutFailed
 	}
 
 	if hasActiveSvcRollout {
-		return crv1.SystemStatus{
-			State: crv1.SystemStateRollingOut,
-		}
+		return crv1.SystemStateRollingOut
 	}
 
-	return crv1.SystemStatus{
-		State: crv1.SystemStateRolloutSucceeded,
-	}
+	return crv1.SystemStateRolloutSucceeded
 }

@@ -1,11 +1,11 @@
 package customresource
 
 import (
+	crv1 "github.com/mlab-lattice/system/pkg/kubernetes/customresource/v1"
+
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/client-go/rest"
-
-	crv1 "github.com/mlab-lattice/system/pkg/kubernetes/customresource/v1"
 )
 
 func NewRESTClient(cfg *rest.Config) (*rest.RESTClient, *runtime.Scheme, error) {

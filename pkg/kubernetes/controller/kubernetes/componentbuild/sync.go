@@ -76,13 +76,6 @@ func (cbc *ComponentBuildController) updateComponentBuildState(cb *crv1.Componen
 }
 
 func (cbc *ComponentBuildController) putComponentBuildUpdate(cb *crv1.ComponentBuild) error {
-	err := cbc.latticeResourceClient.Put().
-		Namespace(cb.Namespace).
-		Resource(crv1.ResourcePluralComponentBuild).
-		Name(cb.Name).
-		Body(cb).
-		Do().
-		Into(nil)
-
+	_, err := cbc.latticeClient.V1().ComponentBuilds(cb.Namespace).Update(cb)
 	return err
 }

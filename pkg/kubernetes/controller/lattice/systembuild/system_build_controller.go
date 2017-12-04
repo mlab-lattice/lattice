@@ -5,6 +5,7 @@ import (
 	"reflect"
 	"time"
 
+	latticeclientset "github.com/mlab-lattice/system/pkg/kubernetes/customresource/client"
 	crv1 "github.com/mlab-lattice/system/pkg/kubernetes/customresource/v1"
 
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -12,7 +13,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
 
-	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
 
@@ -25,7 +25,7 @@ type SystemBuildController struct {
 	syncHandler        func(bKey string) error
 	enqueueSystemBuild func(sysBuild *crv1.SystemBuild)
 
-	latticeResourceClient rest.Interface
+	latticeClient latticeclientset.Interface
 
 	systemBuildStore       cache.Store
 	systemBuildStoreSynced cache.InformerSynced
@@ -37,13 +37,13 @@ type SystemBuildController struct {
 }
 
 func NewSystemBuildController(
-	latticeResourceClient rest.Interface,
+	latticeClient latticeclientset.Interface,
 	systemBuildInformer cache.SharedInformer,
 	serviceBuildInformer cache.SharedInformer,
 ) *SystemBuildController {
 	sbc := &SystemBuildController{
-		latticeResourceClient: latticeResourceClient,
-		queue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "system-build"),
+		latticeClient: latticeClient,
+		queue:         workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "system-build"),
 	}
 
 	sbc.enqueueSystemBuild = sbc.enqueue

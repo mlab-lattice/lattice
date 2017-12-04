@@ -35,27 +35,15 @@ func (kb *KubernetesBackend) RollOutSystemBuild(ln types.LatticeNamespace, bid t
 		return "", err
 	}
 
-	result := &crv1.SystemRollout{}
-	err = kb.LatticeResourceClient.Post().
-		Namespace(kubeconstants.NamespaceLatticeInternal).
-		Resource(crv1.ResourcePluralSystemRollout).
-		Body(sysRollout).
-		Do().
-		Into(result)
-
+	result, err := kb.LatticeClient.V1().SystemRollouts(kubeconstants.NamespaceLatticeInternal).Create(sysRollout)
+	if err != nil {
+		return "", err
+	}
 	return types.SystemRolloutID(result.Name), err
 }
 
 func (kb *KubernetesBackend) getSystemBuildFromId(ln types.LatticeNamespace, bid types.SystemBuildID) (*crv1.SystemBuild, error) {
-	result := &crv1.SystemBuild{}
-	err := kb.LatticeResourceClient.Get().
-		Namespace(kubeconstants.NamespaceLatticeInternal).
-		Resource(crv1.ResourcePluralSystemBuild).
-		Name(string(bid)).
-		Do().
-		Into(result)
-
-	return result, err
+	return kb.LatticeClient.V1().SystemBuilds(kubeconstants.NamespaceLatticeInternal).Get(string(bid), metav1.GetOptions{})
 }
 
 func getNewSystemRollout(latticeNamespace types.LatticeNamespace, sysBuild *crv1.SystemBuild) (*crv1.SystemRollout, error) {
@@ -83,14 +71,7 @@ func getNewSystemRollout(latticeNamespace types.LatticeNamespace, sysBuild *crv1
 }
 
 func (kb *KubernetesBackend) GetSystemRollout(ln types.LatticeNamespace, rid types.SystemRolloutID) (*types.SystemRollout, bool, error) {
-	result := &crv1.SystemRollout{}
-	err := kb.LatticeResourceClient.Get().
-		Namespace(kubeconstants.NamespaceLatticeInternal).
-		Resource(crv1.ResourcePluralSystemRollout).
-		Name(string(rid)).
-		Do().
-		Into(result)
-
+	result, err := kb.LatticeClient.V1().SystemRollouts(kubeconstants.NamespaceLatticeInternal).Get(string(rid), metav1.GetOptions{})
 	if err != nil {
 		if errors.IsNotFound(err) {
 			return nil, false, nil
@@ -113,13 +94,7 @@ func (kb *KubernetesBackend) GetSystemRollout(ln types.LatticeNamespace, rid typ
 }
 
 func (kb *KubernetesBackend) ListSystemRollouts(ln types.LatticeNamespace) ([]types.SystemRollout, error) {
-	result := &crv1.SystemRolloutList{}
-	err := kb.LatticeResourceClient.Get().
-		Namespace(kubeconstants.NamespaceLatticeInternal).
-		Resource(crv1.ResourcePluralSystemRollout).
-		Do().
-		Into(result)
-
+	result, err := kb.LatticeClient.V1().SystemRollouts(kubeconstants.NamespaceLatticeInternal).List(metav1.ListOptions{})
 	if err != nil {
 		return nil, err
 	}

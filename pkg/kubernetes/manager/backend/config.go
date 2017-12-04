@@ -4,36 +4,28 @@ import (
 	"github.com/mlab-lattice/system/pkg/kubernetes/constants"
 	crv1 "github.com/mlab-lattice/system/pkg/kubernetes/customresource/v1"
 	"github.com/mlab-lattice/system/pkg/types"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func (kb *KubernetesBackend) GetSystemUrl(ln types.LatticeNamespace) (string, error) {
-	result := &crv1.Config{}
-	err := kb.LatticeResourceClient.Get().
-		Namespace(constants.NamespaceLatticeInternal).
-		Resource(crv1.ResourcePluralConfig).
-		Name(constants.ConfigGlobal).
-		Do().
-		Into(result)
-
+	config, err := kb.getConfig()
 	if err != nil {
 		return "", err
 	}
 
-	return result.Spec.SystemConfigs[ln].Url, nil
+	return config.Spec.SystemConfigs[ln].Url, nil
 }
 
 func (kb *KubernetesBackend) getSystemIP() (string, error) {
-	result := &crv1.Config{}
-	err := kb.LatticeResourceClient.Get().
-		Namespace(constants.NamespaceLatticeInternal).
-		Resource(crv1.ResourcePluralConfig).
-		Name(constants.ConfigGlobal).
-		Do().
-		Into(result)
-
+	config, err := kb.getConfig()
 	if err != nil {
 		return "", err
 	}
 
-	return result.Spec.Provider.Local.IP, nil
+	return config.Spec.Provider.Local.IP, nil
+}
+
+func (kb *KubernetesBackend) getConfig() (*crv1.Config, error) {
+	return kb.LatticeClient.V1().Configs(constants.NamespaceLatticeInternal).Get(constants.ConfigGlobal, metav1.GetOptions{})
 }

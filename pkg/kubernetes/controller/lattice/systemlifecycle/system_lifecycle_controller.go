@@ -6,6 +6,7 @@ import (
 	"sync"
 	"time"
 
+	latticeclientset "github.com/mlab-lattice/system/pkg/kubernetes/customresource/client"
 	crv1 "github.com/mlab-lattice/system/pkg/kubernetes/customresource/v1"
 	"github.com/mlab-lattice/system/pkg/types"
 
@@ -13,7 +14,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
 
-	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
 
@@ -28,7 +28,7 @@ type lifecycleAction struct {
 type SystemLifecycleController struct {
 	syncHandler func(sysRolloutKey string) error
 
-	latticeResourceClient rest.Interface
+	latticeClient latticeclientset.Interface
 
 	// Each LatticeNamespace may only have one rollout going on at a time.
 	// A rollout is an "owning" rollout while it is rolling out, and until
@@ -63,7 +63,7 @@ type SystemLifecycleController struct {
 }
 
 func NewSystemLifecycleController(
-	latticeResourceClient rest.Interface,
+	latticeClient latticeclientset.Interface,
 	systemRolloutInformer cache.SharedInformer,
 	systemTeardownInformer cache.SharedInformer,
 	systemInformer cache.SharedInformer,
@@ -72,7 +72,7 @@ func NewSystemLifecycleController(
 	componentBuildInformer cache.SharedInformer,
 ) *SystemLifecycleController {
 	src := &SystemLifecycleController{
-		latticeResourceClient:  latticeResourceClient,
+		latticeClient:          latticeClient,
 		owningLifecycleActions: make(map[types.LatticeNamespace]*lifecycleAction),
 		rolloutQueue:           workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "system-rollout"),
 		teardownQueue:          workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "system-teardown"),
@@ -442,17 +442,7 @@ func (slc *SystemLifecycleController) updateSystemRolloutStatus(sysr *crv1.Syste
 	}
 
 	sysr.Status = newStatus
-
-	result := &crv1.SystemRollout{}
-	err := slc.latticeResourceClient.Put().
-		Namespace(sysr.Namespace).
-		Resource(crv1.ResourcePluralSystemRollout).
-		Name(sysr.Name).
-		Body(sysr).
-		Do().
-		Into(result)
-
-	return result, err
+	return slc.latticeClient.V1().SystemRollouts(sysr.Namespace).Update(sysr)
 }
 
 // syncSystemBuild will sync the SystemBuild with the given key.
@@ -498,15 +488,5 @@ func (slc *SystemLifecycleController) updateSystemTeardownStatus(syst *crv1.Syst
 	}
 
 	syst.Status = newStatus
-
-	result := &crv1.SystemTeardown{}
-	err := slc.latticeResourceClient.Put().
-		Namespace(syst.Namespace).
-		Resource(crv1.ResourcePluralSystemTeardown).
-		Name(syst.Name).
-		Body(syst).
-		Do().
-		Into(result)
-
-	return result, err
+	return slc.latticeClient.V1().SystemTeardowns(syst.Namespace).Update(syst)
 }

@@ -1,16 +1,16 @@
 package backend
 
 import (
-	"github.com/mlab-lattice/system/pkg/kubernetes/customresource"
+	latticeclientset "github.com/mlab-lattice/system/pkg/kubernetes/customresource/client"
 
-	clientset "k8s.io/client-go/kubernetes"
+	kubeclientset "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 )
 
 type KubernetesBackend struct {
-	LatticeResourceClient rest.Interface
-	KubeClientset         clientset.Interface
+	KubeClient    kubeclientset.Interface
+	LatticeClient latticeclientset.Interface
 }
 
 func NewKubernetesBackend(kubeconfig string) (*KubernetesBackend, error) {
@@ -25,19 +25,19 @@ func NewKubernetesBackend(kubeconfig string) (*KubernetesBackend, error) {
 		return nil, err
 	}
 
-	kubeClientset, err := clientset.NewForConfig(config)
+	kubeClient, err := kubeclientset.NewForConfig(config)
 	if err != nil {
 		return nil, err
 	}
 
-	latticeResourceClient, _, err := customresource.NewRESTClient(config)
+	latticeClient, err := latticeclientset.NewForConfig(config)
 	if err != nil {
 		return nil, err
 	}
 
 	kb := &KubernetesBackend{
-		LatticeResourceClient: latticeResourceClient,
-		KubeClientset:         kubeClientset,
+		KubeClient:    kubeClient,
+		LatticeClient: latticeClient,
 	}
 	return kb, nil
 }

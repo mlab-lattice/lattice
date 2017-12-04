@@ -75,14 +75,7 @@ func (sbc *ServiceBuildController) findComponentBuildInRecentBuildCache(ns, defi
 	}
 
 	// The ComponentBuild isn't in our store, so we'll need to read from the API
-	cb := &crv1.ComponentBuild{}
-	err = sbc.latticeResourceClient.Get().
-		Namespace(ns).
-		Resource(crv1.ResourcePluralComponentBuild).
-		Name(cbName).
-		Do().
-		Into(cb)
-
+	cb, err := sbc.latticeClient.V1().ComponentBuilds(ns).Get(cbName, metav1.GetOptions{})
 	if err != nil {
 		if errors.IsNotFound(err) {
 			// FIXME: send warn event, this shouldn't happen
@@ -127,14 +120,7 @@ func (sbc *ServiceBuildController) createComponentBuild(ns string, cbInfo *crv1.
 
 	// If there is no new entry in the build cache, create a new ComponentBuild.
 	cb := getNewComponentBuildFromInfo(cbInfo)
-	result := &crv1.ComponentBuild{}
-	err := sbc.latticeResourceClient.Post().
-		Namespace(ns).
-		Resource(crv1.ResourcePluralComponentBuild).
-		Body(cb).
-		Do().
-		Into(result)
-
+	result, err := sbc.latticeClient.V1().ComponentBuilds(ns).Create(cb)
 	if err != nil {
 		return nil, err
 	}
@@ -150,15 +136,7 @@ func (sbc *ServiceBuildController) createComponentBuild(ns string, cbInfo *crv1.
 }
 
 func (sbc *ServiceBuildController) getComponentBuildFromApi(ns, name string) (*crv1.ComponentBuild, error) {
-	var cBuild crv1.ComponentBuild
-	err := sbc.latticeResourceClient.Get().
-		Namespace(ns).
-		Resource(crv1.ResourcePluralComponentBuild).
-		Name(name).
-		Do().
-		Into(&cBuild)
-
-	return &cBuild, err
+	return sbc.latticeClient.V1().ComponentBuilds(ns).Get(name, metav1.GetOptions{})
 }
 
 func getNewComponentBuildFromInfo(cbInfo *crv1.ServiceBuildComponentBuildInfo) *crv1.ComponentBuild {

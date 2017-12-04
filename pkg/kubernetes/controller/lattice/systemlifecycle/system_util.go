@@ -110,14 +110,7 @@ func (slc *SystemLifecycleController) createSystem(sysRollout *crv1.SystemRollou
 		return nil, err
 	}
 
-	result := &crv1.System{}
-	err = slc.latticeResourceClient.Post().
-		Namespace(string(sysRollout.Spec.LatticeNamespace)).
-		Resource(crv1.ResourcePluralSystem).
-		Body(sys).
-		Do().
-		Into(result)
-	return result, err
+	return slc.latticeClient.V1().Systems(string(sysRollout.Spec.LatticeNamespace)).Create(sys)
 }
 
 func (slc *SystemLifecycleController) updateSystemSpec(sys *crv1.System, sysSpec *crv1.SystemSpec) (*crv1.System, error) {
@@ -131,14 +124,5 @@ func (slc *SystemLifecycleController) updateSystemSpec(sys *crv1.System, sysSpec
 	// https://github.com/kubernetes/community/pull/913
 	sys.Status.State = crv1.SystemStateRollingOut
 
-	result := &crv1.System{}
-	err := slc.latticeResourceClient.Put().
-		Namespace(sys.Namespace).
-		Resource(crv1.ResourcePluralSystem).
-		Name(sys.Name).
-		Body(sys).
-		Do().
-		Into(result)
-
-	return result, err
+	return slc.latticeClient.V1().Systems(sys.Namespace).Update(sys)
 }

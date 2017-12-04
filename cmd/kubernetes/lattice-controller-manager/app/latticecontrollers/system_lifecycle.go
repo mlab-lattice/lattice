@@ -7,12 +7,12 @@ import (
 
 func initializeSystemRolloutController(ctx controller.Context) {
 	go systemlifecycle.NewSystemLifecycleController(
-		ctx.LatticeResourceRestClient,
-		ctx.CRDInformers["system-rollout"],
-		ctx.CRDInformers["system-teardown"],
-		ctx.CRDInformers["system"],
-		ctx.CRDInformers["system-build"],
-		ctx.CRDInformers["service-build"],
-		ctx.CRDInformers["component-build"],
+		ctx.LatticeClientBuilder.ClientOrDie("lattice-controller-lattice-system-lifecycle"),
+		ctx.CRInformers.SystemRollout,
+		ctx.CRInformers.SystemTeardown,
+		ctx.CRInformers.System,
+		ctx.CRInformers.SystemBuild,
+		ctx.CRInformers.ServiceBuild,
+		ctx.CRInformers.ComponentBuild,
 	).Run(4, ctx.Stop)
 }

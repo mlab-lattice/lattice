@@ -20,13 +20,10 @@ func (kb *KubernetesBackend) TearDownSystem(ln types.LatticeNamespace) (types.Sy
 		return "", err
 	}
 
-	result := &crv1.SystemTeardown{}
-	err = kb.LatticeResourceClient.Post().
-		Namespace(kubeconstants.NamespaceLatticeInternal).
-		Resource(crv1.ResourcePluralSystemTeardown).
-		Body(systemTeardown).
-		Do().
-		Into(result)
+	result, err := kb.LatticeClient.V1().SystemTeardowns(kubeconstants.NamespaceLatticeInternal).Create(systemTeardown)
+	if err != nil {
+		return "", err
+	}
 
 	return types.SystemTeardownID(result.Name), err
 }
@@ -53,14 +50,7 @@ func getSystemTeardown(ln types.LatticeNamespace) (*crv1.SystemTeardown, error) 
 }
 
 func (kb *KubernetesBackend) GetSystemTeardown(ln types.LatticeNamespace, tid types.SystemTeardownID) (*types.SystemTeardown, bool, error) {
-	result := &crv1.SystemTeardown{}
-	err := kb.LatticeResourceClient.Get().
-		Namespace(kubeconstants.NamespaceLatticeInternal).
-		Resource(crv1.ResourcePluralSystemTeardown).
-		Name(string(tid)).
-		Do().
-		Into(result)
-
+	result, err := kb.LatticeClient.V1().SystemTeardowns(kubeconstants.NamespaceLatticeInternal).Get(string(tid), metav1.GetOptions{})
 	if err != nil {
 		if errors.IsNotFound(err) {
 			return nil, false, nil
@@ -82,13 +72,7 @@ func (kb *KubernetesBackend) GetSystemTeardown(ln types.LatticeNamespace, tid ty
 }
 
 func (kb *KubernetesBackend) ListSystemTeardowns(ln types.LatticeNamespace) ([]types.SystemTeardown, error) {
-	result := &crv1.SystemTeardownList{}
-	err := kb.LatticeResourceClient.Get().
-		Namespace(kubeconstants.NamespaceLatticeInternal).
-		Resource(crv1.ResourcePluralSystemTeardown).
-		Do().
-		Into(result)
-
+	result, err := kb.LatticeClient.V1().SystemTeardowns(kubeconstants.NamespaceLatticeInternal).List(metav1.ListOptions{})
 	if err != nil {
 		return nil, err
 	}

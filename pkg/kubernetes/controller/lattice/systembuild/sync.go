@@ -189,14 +189,5 @@ func (sbc *SystemBuildController) putSystemBuildStatusUpdate(sysb *crv1.SystemBu
 }
 
 func (sbc *SystemBuildController) putSystemBuildUpdate(sysb *crv1.SystemBuild) (*crv1.SystemBuild, error) {
-	response := &crv1.SystemBuild{}
-	err := sbc.latticeResourceClient.Put().
-		Namespace(sysb.Namespace).
-		Resource(crv1.ResourcePluralSystemBuild).
-		Name(sysb.Name).
-		Body(sysb).
-		Do().
-		Into(response)
-
-	return response, err
+	return sbc.latticeClient.V1().SystemBuilds(sysb.Namespace).Update(sysb)
 }

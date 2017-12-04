@@ -6,6 +6,8 @@ import (
 
 	crv1 "github.com/mlab-lattice/system/pkg/kubernetes/customresource/v1"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	"github.com/golang/glog"
 )
 
@@ -33,12 +35,8 @@ func (slc *SystemLifecycleController) syncInProgressTeardown(syst *crv1.SystemTe
 		return nil
 	}
 
-	return slc.latticeResourceClient.Delete().
-		Namespace(string(syst.Spec.LatticeNamespace)).
-		Resource(crv1.ResourcePluralSystem).
-		Name(string(syst.Spec.LatticeNamespace)).
-		Do().
-		Into(nil)
+	ns := string(syst.Spec.LatticeNamespace)
+	return slc.latticeClient.V1().Systems(ns).Delete(ns, &metav1.DeleteOptions{})
 }
 
 func (slc *SystemLifecycleController) getSystemForTeardown(syst *crv1.SystemTeardown) (*crv1.System, error) {

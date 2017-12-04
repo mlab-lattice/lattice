@@ -22,13 +22,10 @@ func (kb *KubernetesBackend) BuildSystem(ln types.LatticeNamespace, definitionRo
 		return "", err
 	}
 
-	result := &crv1.SystemBuild{}
-	err = kb.LatticeResourceClient.Post().
-		Namespace(kubeconstants.NamespaceLatticeInternal).
-		Resource(crv1.ResourcePluralSystemBuild).
-		Body(systemBuild).
-		Do().
-		Into(result)
+	result, err := kb.LatticeClient.V1().SystemBuilds(kubeconstants.NamespaceLatticeInternal).Create(systemBuild)
+	if err != nil {
+		return "", err
+	}
 
 	return types.SystemBuildID(result.Name), err
 }
@@ -65,13 +62,7 @@ func getNewSystemBuild(ln types.LatticeNamespace, definitionRoot tree.Node, v ty
 }
 
 func (kb *KubernetesBackend) ListSystemBuilds(ln types.LatticeNamespace) ([]types.SystemBuild, error) {
-	result := &crv1.SystemBuildList{}
-	err := kb.LatticeResourceClient.Get().
-		Namespace(kubeconstants.NamespaceLatticeInternal).
-		Resource(crv1.ResourcePluralSystemBuild).
-		Do().
-		Into(result)
-
+	result, err := kb.LatticeClient.V1().SystemBuilds(kubeconstants.NamespaceLatticeInternal).List(metav1.ListOptions{})
 	if err != nil {
 		return nil, err
 	}
@@ -100,14 +91,7 @@ func (kb *KubernetesBackend) GetSystemBuild(ln types.LatticeNamespace, bid types
 }
 
 func (kb *KubernetesBackend) getInternalSystemBuild(ln types.LatticeNamespace, bid types.SystemBuildID) (*crv1.SystemBuild, bool, error) {
-	result := &crv1.SystemBuild{}
-	err := kb.LatticeResourceClient.Get().
-		Namespace(kubeconstants.NamespaceLatticeInternal).
-		Resource(crv1.ResourcePluralSystemBuild).
-		Name(string(bid)).
-		Do().
-		Into(result)
-
+	result, err := kb.LatticeClient.V1().SystemBuilds(kubeconstants.NamespaceLatticeInternal).Get(string(bid), metav1.GetOptions{})
 	if err != nil {
 		if errors.IsNotFound(err) {
 			return nil, false, nil

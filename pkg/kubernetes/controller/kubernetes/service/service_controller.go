@@ -6,6 +6,7 @@ import (
 	"sync"
 	"time"
 
+	latticeclientset "github.com/mlab-lattice/system/pkg/kubernetes/customresource/client"
 	crv1 "github.com/mlab-lattice/system/pkg/kubernetes/customresource/v1"
 
 	appsv1beta2 "k8s.io/api/apps/v1beta2"
@@ -18,10 +19,9 @@ import (
 
 	appinformers "k8s.io/client-go/informers/apps/v1beta2"
 	coreinformers "k8s.io/client-go/informers/core/v1"
-	clientset "k8s.io/client-go/kubernetes"
+	kubeclientset "k8s.io/client-go/kubernetes"
 	appslisters "k8s.io/client-go/listers/apps/v1beta2"
 	corelisters "k8s.io/client-go/listers/core/v1"
-	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
 
@@ -35,8 +35,8 @@ type ServiceController struct {
 	syncHandler    func(bKey string) error
 	enqueueService func(cb *crv1.Service)
 
-	latticeResourceRestClient rest.Interface
-	kubeClient                clientset.Interface
+	kubeClient    kubeclientset.Interface
+	latticeClient latticeclientset.Interface
 
 	configStore       cache.Store
 	configStoreSynced cache.InformerSynced
@@ -62,8 +62,8 @@ type ServiceController struct {
 }
 
 func NewServiceController(
-	kubeClient clientset.Interface,
-	latticeResourceRestClient rest.Interface,
+	kubeClient kubeclientset.Interface,
+	latticeClient latticeclientset.Interface,
 	configInformer cache.SharedInformer,
 	systemInformer cache.SharedInformer,
 	serviceInformer cache.SharedInformer,
@@ -71,10 +71,10 @@ func NewServiceController(
 	kubeServiceInformer coreinformers.ServiceInformer,
 ) *ServiceController {
 	sc := &ServiceController{
-		latticeResourceRestClient: latticeResourceRestClient,
-		kubeClient:                kubeClient,
-		configSetChan:             make(chan struct{}),
-		queue:                     workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "service"),
+		kubeClient:    kubeClient,
+		latticeClient: latticeClient,
+		configSetChan: make(chan struct{}),
+		queue:         workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "service"),
 	}
 
 	sc.syncHandler = sc.syncService
@@ -565,14 +565,6 @@ func (sc *ServiceController) updateServiceStatus(svc *crv1.Service, newStatus cr
 	}
 
 	svc.Status = newStatus
-
-	err := sc.latticeResourceRestClient.Put().
-		Namespace(svc.Namespace).
-		Resource(crv1.ResourcePluralService).
-		Name(svc.Name).
-		Body(svc).
-		Do().
-		Into(nil)
-
+	_, err := sc.latticeClient.V1().Services(svc.Namespace).Update(svc)
 	return err
 }

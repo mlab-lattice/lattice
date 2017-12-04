@@ -7,16 +7,11 @@ import (
 	"github.com/mlab-lattice/system/pkg/types"
 
 	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func (kb *KubernetesBackend) ListServiceBuilds(ln types.LatticeNamespace) ([]types.ServiceBuild, error) {
-	result := &crv1.ServiceBuildList{}
-	err := kb.LatticeResourceClient.Get().
-		Namespace(kubeconstants.NamespaceLatticeInternal).
-		Resource(crv1.ResourcePluralServiceBuild).
-		Do().
-		Into(result)
-
+	result, err := kb.LatticeClient.V1().ServiceBuilds(kubeconstants.NamespaceLatticeInternal).List(metav1.ListOptions{})
 	if err != nil {
 		return nil, err
 	}
@@ -42,14 +37,7 @@ func (kb *KubernetesBackend) GetServiceBuild(ln types.LatticeNamespace, bid type
 }
 
 func (kb *KubernetesBackend) getInternalServiceBuild(ln types.LatticeNamespace, bid types.ServiceBuildID) (*crv1.ServiceBuild, bool, error) {
-	result := &crv1.ServiceBuild{}
-	err := kb.LatticeResourceClient.Get().
-		Namespace(kubeconstants.NamespaceLatticeInternal).
-		Resource(crv1.ResourcePluralServiceBuild).
-		Name(string(bid)).
-		Do().
-		Into(result)
-
+	result, err := kb.LatticeClient.V1().ServiceBuilds(kubeconstants.NamespaceLatticeInternal).Get(string(bid), metav1.GetOptions{})
 	if err != nil {
 		if errors.IsNotFound(err) {
 			return nil, false, nil

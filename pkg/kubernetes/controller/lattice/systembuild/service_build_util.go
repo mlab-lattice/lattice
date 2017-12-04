@@ -38,15 +38,7 @@ func (sbc *SystemBuildController) getServiceBuildFromInfo(svcbInfo *crv1.SystemB
 
 func (sbc *SystemBuildController) createServiceBuild(sysb *crv1.SystemBuild, svcDef *definition.Service) (*crv1.ServiceBuild, error) {
 	svcBuild := getNewServiceBuildFromDefinition(sysb, svcDef)
-
-	result := &crv1.ServiceBuild{}
-	err := sbc.latticeResourceClient.Post().
-		Namespace(sysb.Namespace).
-		Resource(crv1.ResourcePluralServiceBuild).
-		Body(svcBuild).
-		Do().
-		Into(result)
-	return result, err
+	return sbc.latticeClient.V1().ServiceBuilds(sysb.Namespace).Create(svcBuild)
 }
 
 func getNewServiceBuildFromDefinition(sysBuild *crv1.SystemBuild, svcDefinition *definition.Service) *crv1.ServiceBuild {

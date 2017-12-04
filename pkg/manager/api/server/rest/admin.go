@@ -23,7 +23,7 @@ func (r *restServer) mountAdminMasterNodeHandlers() {
 
 			components, err := r.backend.GetMasterNodeComponents(nodeId)
 			if err != nil {
-				c.String(http.StatusInternalServerError, err.Error())
+				handleInternalError(c, err)
 				return
 			}
 
@@ -51,7 +51,7 @@ func (r *restServer) mountAdminMasterNodeHandlers() {
 
 				log, exists, err := r.backend.GetMasterNodeComponentLog(nodeId, component, follow)
 				if err != nil {
-					c.String(http.StatusInternalServerError, "")
+					handleInternalError(c, err)
 					return
 				}
 
@@ -71,7 +71,7 @@ func (r *restServer) mountAdminMasterNodeHandlers() {
 				exists, err := r.backend.RestartMasterNodeComponent(nodeId, component)
 
 				if err != nil {
-					c.String(http.StatusInternalServerError, "")
+					handleInternalError(c, err)
 					return
 				}
 

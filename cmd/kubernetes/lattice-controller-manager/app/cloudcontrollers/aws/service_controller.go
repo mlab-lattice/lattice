@@ -7,10 +7,10 @@ import (
 
 func initializeServiceController(ctx controller.Context) {
 	go service.NewServiceController(
-		ctx.ClientBuilder.ClientOrDie("lattice-controller-cloud-aws-service"),
-		ctx.LatticeResourceRestClient,
-		ctx.CRDInformers["config"],
-		ctx.CRDInformers["service"],
+		ctx.KubeClientBuilder.ClientOrDie("lattice-controller-cloud-aws-service"),
+		ctx.LatticeClientBuilder.ClientOrDie("lattice-controller-cloud-aws-service"),
+		ctx.CRInformers.Config,
+		ctx.CRInformers.Service,
 		ctx.InformerFactory.Core().V1().Services(),
 		ctx.TerraformModulePath,
 	).Run(128, ctx.Stop)

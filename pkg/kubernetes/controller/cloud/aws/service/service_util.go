@@ -32,13 +32,12 @@ func (sc *ServiceController) addFinalizer(svc *crv1.Service) error {
 	// the case)
 	svc.Finalizers = append(svc.Finalizers, kubeFinalizerAWSServiceController)
 	glog.V(5).Infof("Service %v missing %v finalizer, adding it", svc.Name, kubeFinalizerAWSServiceController)
-	return sc.latticeResourceRestClient.Put().
-		Namespace(svc.Namespace).
-		Resource(crv1.ResourcePluralService).
-		Name(svc.Name).
-		Body(svc).
-		Do().
-		Into(svc)
+	result, err := sc.latticeClient.V1().Services(svc.Namespace).Update(svc)
+	if err != nil {
+		return err
+	}
+	*svc = *result
+	return nil
 }
 
 func (sc *ServiceController) removeFinalizer(svc *crv1.Service) error {
@@ -60,11 +59,10 @@ func (sc *ServiceController) removeFinalizer(svc *crv1.Service) error {
 
 	// The finalizer was in the list, so we should remove it.
 	svc.Finalizers = finalizers
-	return sc.latticeResourceRestClient.Put().
-		Namespace(svc.Namespace).
-		Resource(crv1.ResourcePluralService).
-		Name(svc.Name).
-		Body(svc).
-		Do().
-		Into(svc)
+	result, err := sc.latticeClient.V1().Services(svc.Namespace).Update(svc)
+	if err != nil {
+		return err
+	}
+	*svc = *result
+	return nil
 }

@@ -6,6 +6,7 @@ import (
 	"sync"
 	"time"
 
+	latticeclientset "github.com/mlab-lattice/system/pkg/kubernetes/customresource/client"
 	crv1 "github.com/mlab-lattice/system/pkg/kubernetes/customresource/v1"
 
 	corev1 "k8s.io/api/core/v1"
@@ -16,9 +17,8 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 
 	coreinformers "k8s.io/client-go/informers/core/v1"
-	clientset "k8s.io/client-go/kubernetes"
+	kubeclientset "k8s.io/client-go/kubernetes"
 	corelisters "k8s.io/client-go/listers/core/v1"
-	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
 
@@ -32,8 +32,8 @@ type ServiceController struct {
 	syncHandler    func(bKey string) error
 	enqueueService func(cb *crv1.Service)
 
-	latticeResourceRestClient rest.Interface
-	kubeClient                clientset.Interface
+	kubeClient    kubeclientset.Interface
+	latticeClient latticeclientset.Interface
 
 	configStore       cache.Store
 	configStoreSynced cache.InformerSynced
@@ -54,19 +54,19 @@ type ServiceController struct {
 }
 
 func NewServiceController(
-	kubeClient clientset.Interface,
-	latticeResourceRestClient rest.Interface,
+	kubeClient kubeclientset.Interface,
+	latticeClient latticeclientset.Interface,
 	configInformer cache.SharedInformer,
 	serviceInformer cache.SharedInformer,
 	kubeServiceInformer coreinformers.ServiceInformer,
 	terraformModulePath string,
 ) *ServiceController {
 	sc := &ServiceController{
-		latticeResourceRestClient: latticeResourceRestClient,
-		kubeClient:                kubeClient,
-		configSetChan:             make(chan struct{}),
-		queue:                     workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "service"),
-		terraformModulePath:       terraformModulePath,
+		kubeClient:          kubeClient,
+		latticeClient:       latticeClient,
+		configSetChan:       make(chan struct{}),
+		queue:               workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "service"),
+		terraformModulePath: terraformModulePath,
 	}
 
 	sc.syncHandler = sc.syncService

@@ -24,11 +24,10 @@ func (sc *SystemController) removeFinalizer(sys *crv1.System) error {
 
 	// The finalizer was in the list, so we should remove it.
 	sys.Finalizers = finalizers
-	return sc.latticeResourceRestClient.Put().
-		Namespace(sys.Namespace).
-		Resource(crv1.ResourcePluralSystem).
-		Name(sys.Name).
-		Body(sys).
-		Do().
-		Into(sys)
+	result, err := sc.latticeClient.V1().Systems(sys.Namespace).Update(sys)
+	if err != nil {
+		return err
+	}
+	*sys = *result
+	return nil
 }

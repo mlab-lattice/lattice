@@ -15,13 +15,7 @@ import (
 )
 
 func (kb *KubernetesBackend) ListSystemServices(ln types.LatticeNamespace) ([]types.Service, error) {
-	result := &crv1.ServiceList{}
-	err := kb.LatticeResourceClient.Get().
-		Namespace(string(ln)).
-		Resource(crv1.ResourcePluralService).
-		Do().
-		Into(result)
-
+	result, err := kb.LatticeClient.V1().Services(string(ln)).List(metav1.ListOptions{})
 	if err != nil {
 		return nil, err
 	}
@@ -58,7 +52,7 @@ func (kb *KubernetesBackend) GetSystemService(ln types.LatticeNamespace, path tr
 func (kb *KubernetesBackend) transformService(svc *crv1.Service) (*types.Service, error) {
 	// FIXME: this only works for local systems with a single port
 	kubeSvcName := kubeutil.GetKubeServiceNameForService(svc)
-	kubeSvc, err := kb.KubeClientset.CoreV1().Services(svc.Namespace).Get(kubeSvcName, metav1.GetOptions{})
+	kubeSvc, err := kb.KubeClient.CoreV1().Services(svc.Namespace).Get(kubeSvcName, metav1.GetOptions{})
 
 	var addr *string
 	if err != nil {
