@@ -27,7 +27,6 @@ import (
 
 var controllerKind = crv1.SchemeGroupVersion.WithKind("Service")
 
-// We'll use LatticeService to differentiate between kubernetes' Service
 type Controller struct {
 	syncHandler    func(bKey string) error
 	enqueueService func(cb *crv1.Service)

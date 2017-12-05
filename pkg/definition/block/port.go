@@ -46,8 +46,8 @@ func (p *ComponentPort) Validate(interface{}) error {
 	return nil
 }
 
-// TODO: add peering
 type ExternalAccess struct {
+	// TODO: add peering
 	Public bool `json:"public"`
 }
 

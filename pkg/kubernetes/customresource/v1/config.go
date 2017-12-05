@@ -14,7 +14,6 @@ const (
 	ResourceScopeConfig    = apiextensionsv1beta1.NamespaceScoped
 )
 
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 type Config struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata"`
@@ -91,7 +90,6 @@ type ConfigTerraformBackendS3 struct {
 	Bucket string `json:"bucket"`
 }
 
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 type ConfigList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata"`

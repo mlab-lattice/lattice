@@ -13,7 +13,7 @@ import (
 	"github.com/satori/go.uuid"
 )
 
-// A Context is a set of information surrounding how to execute a certain executable. It provides utilities for
+// Context is a set of information surrounding how to execute a certain executable. It provides utilities for
 // executing the same executable multiple times with the same working directory and log path, and allows for
 // adding files to the working directory, setting the environment, and retrieving log files.
 type Context struct {
@@ -53,12 +53,12 @@ func NewContext(executablePath string, logPath, workingDir *string, envVars map[
 	return ec, nil
 }
 
-// Overrides the existing EnvVars for the
+// SetEnvVars overrides the existing EnvVars for the
 func (ec *Context) SetEnvVars(envVars map[string]string) {
 	ec.envVars = envVars
 }
 
-// Adds a new file with the contents to the working directory of the Context.
+// AddFile adds a new file with the contents to the working directory of the Context.
 func (ec *Context) AddFile(filename string, content []byte) error {
 	if ec.WorkingDir == nil {
 		return fmt.Errorf("cannot add file to ExecContext with no WorkingDir")

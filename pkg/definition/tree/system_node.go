@@ -44,12 +44,11 @@ func NewSystemNode(definition *definition.System, parent Node) (*SystemNode, err
 	return s, nil
 }
 
-// Implement the encoding/json.Marshaller interface.
+// MarshalJSON implements the encoding/json.Marshaller interface.
 func (s *SystemNode) MarshalJSON() ([]byte, error) {
 	return json.Marshal(s.definition)
 }
 
-// Implement the Node interface.
 func (s *SystemNode) Parent() Node {
 	return s.parent
 }

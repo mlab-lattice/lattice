@@ -16,7 +16,6 @@ const (
 	ResourceScopeComponentBuild     = apiextensionsv1beta1.NamespaceScoped
 )
 
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 type ComponentBuild struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata"`
@@ -54,7 +53,6 @@ type ComponentBuildFailureInfo struct {
 	Internal bool   `json:"internal"`
 }
 
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 type ComponentBuildList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata"`

@@ -1,5 +1,6 @@
 # Style
 
+
 ## Go
 
 ### Formatting
@@ -31,3 +32,9 @@ You can run the linter without warnings about exported values not being commente
 All Go code should be formatted with `terraform fmt`. This is enforced by the `pre-commit` hook.
 
 Code can be easily formatted by running `make format`.
+
+## Check
+
+`make check` will run `gazelle`, `gofmt`, `terraform fmt`, `go vet` and `lint-no-export-comments`.
+
+Try to run `make check` often and make sure it passes.

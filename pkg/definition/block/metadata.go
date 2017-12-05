@@ -24,9 +24,9 @@ func (m *Metadata) Validate(interface{}) error {
 	return nil
 }
 
-// TODO: add type
-// TODO: add default
 type MetadataParameter struct {
+	// TODO: add type
+	// TODO: add default
 	Description string `json:"description"`
 }
 

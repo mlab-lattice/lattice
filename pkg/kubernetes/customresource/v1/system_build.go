@@ -19,7 +19,6 @@ const (
 	ResourceScopeSystemBuild     = apiextensionsv1beta1.NamespaceScoped
 )
 
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 type SystemBuild struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata"`
@@ -102,7 +101,6 @@ const (
 	SystemBuildStateFailed    SystemBuildState = "Failed"
 )
 
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 type SystemBuildList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata"`

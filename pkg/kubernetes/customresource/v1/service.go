@@ -16,7 +16,6 @@ const (
 	ResourceScopeService     = apiextensionsv1beta1.NamespaceScoped
 )
 
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 type Service struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata"`
@@ -63,7 +62,6 @@ const (
 	ServiceStateRolloutFailed    ServiceState = "RolloutFailed"
 )
 
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 type ServiceList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata"`

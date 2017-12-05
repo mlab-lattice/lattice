@@ -11,7 +11,7 @@ type S3Backend struct {
 	Encrypt bool
 }
 
-// Implement json.Marshaler
+// MarshalJSON implements json.Marshaler
 func (b S3Backend) MarshalJSON() ([]byte, error) {
 	moduleMap := map[string]interface{}{
 		"s3": map[string]interface{}{

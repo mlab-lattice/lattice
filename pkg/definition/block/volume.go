@@ -6,7 +6,6 @@ import (
 	"strings"
 )
 
-// TODO: review this limit
 const MaxVolumeSizeInGb = 1024
 
 type Volume struct {

@@ -25,12 +25,11 @@ func NewServiceNode(definition *definition.Service, parent Node) (*ServiceNode, 
 	return s, nil
 }
 
-// Implement the encoding/json.Marshaller interface.
+// MarshalJSON implements the encoding/json.Marshaller interface.
 func (s *ServiceNode) MarshalJSON() ([]byte, error) {
 	return json.Marshal(s.definition)
 }
 
-// Implement the Node interface.
 func (s *ServiceNode) Parent() Node {
 	return s.parent
 }

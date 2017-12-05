@@ -4,9 +4,9 @@ import (
 	"errors"
 )
 
-// TODO: add resource pool
-// TODO: add scaling
 type Resources struct {
+	// TODO: add resource pool
+	// TODO: add scaling
 	MinInstances *int32  `json:"min_instances,omitempty"`
 	MaxInstances *int32  `json:"max_instances,omitempty"`
 	NumInstances *int32  `json:"num_instances,omitempty"`

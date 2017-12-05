@@ -88,12 +88,13 @@ func (kpnb *KubernetesPerNodeBackend) Ready() bool {
 	return cache.WaitForCacheSync(nil, kpnb.kubeEndpointListerSynced, kpnb.latticeServiceStoreSynced)
 }
 
-// TODO: probably want to have Services return a cached snapshot of the service state so we don't have to recompute this every time
-// 	     For example, could add hooks to the informers which creates a new Services map and changes the pointer to point to the new one
-//       so future Services() calls will return the new map.
-// 		 Could also have the backend have a channel passed into it and it could notify the API when an update has occurred.
-//       This could be useful for the GRPC streaming version of the API.
 func (kpnb *KubernetesPerNodeBackend) Services() (map[tree.NodePath]*envoy.Service, error) {
+	// TODO: probably want to have Services return a cached snapshot of the service state so we don't have to recompute this every time
+	// 	     For example, could add hooks to the informers which creates a new Services map and changes the pointer to point to the new one
+	//       so future Services() calls will return the new map.
+	// 		 Could also have the backend have a channel passed into it and it could notify the API when an update has occurred.
+	//       This could be useful for the GRPC streaming version of the API.
+	// N.B.: keep an eye on https://github.com/envoyproxy/go-control-plane
 	result := map[tree.NodePath]*envoy.Service{}
 
 	for _, svcObj := range kpnb.latticeServiceStore.List() {

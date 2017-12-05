@@ -20,13 +20,13 @@ const (
 	remoteNameOrigin = "origin"
 )
 
-// The git Resolver provides utility methods for manipulating git repositories
+// Resolver provides utility methods for manipulating git repositories
 // under a specific working directory on the filesystem.
 type Resolver struct {
 	WorkDirectory string
 }
 
-// ResolverContext contains information about the current operation being invoked.
+// Context contains information about the current operation being invoked.
 type Context struct {
 	URI    string
 	SSHKey []byte
@@ -48,9 +48,8 @@ func NewResolver(workDirectory string) (*Resolver, error) {
 	return sr, nil
 }
 
-// If the repository specified in the Context has already been cloned, Clone will
-// open the repository and return it, otherwise it will attempt to clone the repository
-// and on success return the cloned repository
+// Clone will  open the repository and return it If the repository specified in the Context has already been cloned,
+// otherwise it will attempt to clone the repository and on success return the cloned repository
 func (r *Resolver) Clone(ctx *Context) (*git.Repository, error) {
 	repoDir := r.GetRepositoryPath(ctx)
 
