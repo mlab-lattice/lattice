@@ -27,7 +27,7 @@ gazelle:
 	@bazel run //:gazelle
 
 .PHONY: check
-check: gazelle format vet lint-no-comments
+check: gazelle format vet lint-no-export-comments
 
 .PHONY: format
 format:
@@ -38,9 +38,9 @@ format:
 lint: install-golint
 	@golint ./...
 
-.PHONY: lint-no-comments
-lint-no-comments: install-golint
-	@golint ./... | grep -v "comment"
+.PHONY: lint-no-export-comments
+lint-no-export-comments: install-golint
+	@golint ./... | grep -v " or be unexported"
 
 .PHONY: install-golint
 install-golint:

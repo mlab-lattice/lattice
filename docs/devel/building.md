@@ -535,6 +535,8 @@ There are three options to use this:
 - `make docker-hack-push-all-images`
   - Enters the build container and runs `make docker-push-all-images`
 
-### Best practices
+### Best practices and enforcement
 
 In general, you should always default to simply running `make build`. This will run `gazelle` to make sure you have up-to-date `BUILD` files as well as ensure that everything can compile.
+
+The `pre-push` git hook for the repository will in fact ensure that `make build` and `make test` both succeed, so it behooves you to usually be running `make build` so that your push will be fast. This may or may not be revisited in the future.
