@@ -102,11 +102,11 @@ The `lattice-service-build` controller then notices each of the `ServiceBuild`s 
 The `kubernetes-component-build` controller notices each of the `ComponentBuild`s that were created. For each it will:
 
 - Create a [Kubernetes Job](https://kubernetes.io/docs/api-reference/v1.8/#job-v1-batch) that will run the component-builder (more on that below)
-- Add a [toleration](https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/) and [nodeSelector](https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#nodeselector) to the job so that it will only run on nodes that have been tainted and labeled with the key `node-role.kubernetes.io/lattice-build`[[0]][local-difference-0]
+- Add a [toleration](https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/) and [nodeSelector](https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#nodeselector) to the job so that it will only run on nodes that have been tainted and labeled with the key `node-role.kubernetes.io/lattice-build`[[0]][#local-difference-0]
 
 #### cloud-component-build controller
 
-The `cloud-component-build` controller notices there are pending `ComponentBuilds`[[1]][local-difference-1]:
+The `cloud-component-build` controller notices there are pending `ComponentBuilds`[[1]][#local-difference-1]:
 
 - It will check to see if it has already provisioned a build node, and if so nothing happens
 - If there is no build node provisioned, the `cloud-component-build` controller will provision a new node that is both tainted and labeled with `node-role.kubernetes.io/lattice-build`
@@ -153,7 +153,7 @@ The `lattice-system` controller notices the new `System`:
 The `kubernetes-service` controller notices the new `Service` and:
 
 - Creates a [Kubernetes deployment](https://kubernetes.io/docs/api-reference/v1.8/#deployment-v1beta2-apps)
-  - has a [toleration](https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/) and [nodeSelector](https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#nodeselector) so that it will only run on nodes that have been tainted and labeled with `node-role.kubernetes.io/lattice-service=<Service.Name>`[[0]][local-difference-0]
+  - has a [toleration](https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/) and [nodeSelector](https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#nodeselector) so that it will only run on nodes that have been tainted and labeled with `node-role.kubernetes.io/lattice-service=<Service.Name>`[[0]][#local-difference-0]
   - has an [init-container](https://kubernetes.io/docs/api-reference/v1.8/#container-v1-core) to prepare iptables for envoy (more on this later), a [container](https://kubernetes.io/docs/api-reference/v1.8/#container-v1-core) for each component, and a container for envoy (more on this later)
 - If the deployment contains no public component ports:
   - Creates a [Kubernetes headless service](https://kubernetes.io/docs/concepts/services-networking/service/#headless-services) targeting the deployment
@@ -162,12 +162,12 @@ The `kubernetes-service` controller notices the new `Service` and:
 
 #### cloud-service controller
 
-The `cloud-service` controller notices the new `Services`[[1]][local-difference-1]:
+The `cloud-service` controller notices the new `Services`[[1]][#local-difference-1]:
 
 - The `cloud-component-build` controller will provision new nodes that are both tainted and labeled with `node-role.kubernetes.io/lattice-service=<Service.Name>`
   - e.g. on AWS, creates an [autoscaling group](https://www.terraform.io/docs/providers/aws/r/autoscaling_group.html)
 - If the `Service` contains components with public ports, it will also provision a load balancer targeting the nodes and the port exposed by the NodePort service
-- Add a DNS entry for `<SERVICE_PATH_DOMAIN>.system.internal`[[2]][local-difference-2]
+- Add a DNS entry for `<SERVICE_PATH_DOMAIN>.system.internal`[[2]][#local-difference-2]
   - e.g for a service `/foo/bar/buzz` add `buzz.bar.foo.system.internal`
   - for a normal stateless service, this DNS entry will be an `A` record mapping to the first IP of a configured CIDR block (more on this below)
 
@@ -179,7 +179,7 @@ When the service node gets provisioned, Kubernetes will assign one of the Pods f
   - via `iptables`, redirect all traffic from a configured CIDR block to the `localhost` port that `envoy` will be listening on
     - the effect of this is that when a service does a name look up on another lattice service (e.g. to the `buzz.bar.foo.system.internal` mentioned above) the traffic is trapped to `envoy`, which will know how to forward it along (more on this below)
 
-As part of seeding Lattice, along side RBAC and the master components, there was also [DaemonSet](https://kubernetes.io/docs/concepts/workloads/controllers/daemonset/) running the `envoy-xds-api` on nodes tagged with `node-role.kubernetes.io/lattice-service`[[3]][local-difference-3]:
+As part of seeding Lattice, along side RBAC and the master components, there was also [DaemonSet](https://kubernetes.io/docs/concepts/workloads/controllers/daemonset/) running the `envoy-xds-api` on nodes tagged with `node-role.kubernetes.io/lattice-service`[[3]][#local-difference-3]:
 - `envoy-xds-api` watches the [Kubernetes Endpoints](https://kubernetes.io/docs/api-reference/v1.8/#endpoints-v1-core) collection, and serves up information to the `envoy` running locally about what other services exist, and how to send traffic to them
 
 Finally, once the `initContainer` succeeds, each component's container is run, alongside `envoy`, which in turn starts asking the local `envoy-xds-api` about the topology of the service mesh and in turn handling requests to/from the user components
@@ -206,10 +206,14 @@ A similar process would apply for something such as scaling up the number of ins
 
 # lattice-local differences
 
-[local-difference-0]: Jobs and Deployments running locally are not given `nodeSelector`s since there is only one Kubernetes node in the local case
+## local difference 0
+Jobs and Deployments running locally are not given `nodeSelector`s since there is only one Kubernetes node in the local case
 
-[local-difference-1]: Cloud controllers are not run in the local case. Everything is run on the single node.
+## local difference 1
+Cloud controllers are not run in the local case. Everything is run on the single node.
 
-[local-difference-2]: Eventually, the goal is to run a basic DNS server in the local case which watches the Lattice `Service` resources and the Kubernetes `Endpoint` resources, but we just add an entry for every single service into the `Pod.Spec.hostAlias` array
+## local difference 2
+Eventually, the goal is to run a basic DNS server in the local case which watches the Lattice `Service` resources and the Kubernetes `Endpoint` resources, but we just add an entry for every single service into the `Pod.Spec.hostAlias` array
 
-[local-difference-3]: As there is only one node in the local case, the `envoy-xds-api` DaemonSet is not applied with a `nodeSelector`
+## local difference 3
+As there is only one node in the local case, the `envoy-xds-api` DaemonSet is not applied with a `nodeSelector`
