@@ -4,10 +4,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var (
-	deprovisionVars *[]string
-)
-
 var deprovisionSystemCmd = &cobra.Command{
 	Use:   "deprovision [PROVIDER] [NAME]",
 	Short: "Deprovision a system",
@@ -16,7 +12,7 @@ var deprovisionSystemCmd = &cobra.Command{
 		providerName := args[0]
 		name := args[1]
 
-		provisioner, err := getProvisioner(providerName, name, actionDeprovision, *deprovisionVars)
+		provisioner, err := getProvisioner(providerName, name, actionDeprovision, nil)
 		if err != nil {
 			panic(err)
 		}
@@ -30,10 +26,4 @@ var deprovisionSystemCmd = &cobra.Command{
 
 func init() {
 	RootCmd.AddCommand(deprovisionSystemCmd)
-
-	// Flags().StringArray --provider-var=a,b --provider-var=c results in ["a,b", "c"],
-	// whereas Flags().StringSlice --provider-var=a,b --provider-var=c results in ["a", "b", "c"].
-	// We don't want this because we want to be able to pass in for example
-	// --provider-var=availability-zones=us-east-1a,us-east-1b resulting in ["availability-zones=us-east-1a,us-east-1b"]
-	deprovisionVars = deprovisionSystemCmd.Flags().StringArray("provider-var", nil, "additional variables to pass to the provider")
 }

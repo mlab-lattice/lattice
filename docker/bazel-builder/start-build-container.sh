@@ -22,7 +22,7 @@ fi
 set -e
 docker run -d --name ${BUILD_CONTAINER_NAME} \
     -v ${ROOT_DIR}:/src -v /var/run/docker.sock:/var/run/docker.sock \
-    -v ~/.ssh/id_rsa-github:/root/.ssh/id_rsa-github \
-    -v ~/.config/gcloud:/root/.config/gcloud \
+    -v ~/.ssh/id_rsa-github:/tmp/.ssh/id_rsa-github \
+    -v ~/.config/gcloud:/home/${USER}/.config/gcloud \
     lattice-build/bazel-build \
     sleep infinity

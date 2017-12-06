@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/mlab-lattice/system/pkg/constants"
-
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/util/wait"
 )
@@ -26,9 +24,5 @@ func pollKubeResourceCreation(resourceCreationFunc func() (interface{}, error)) 
 }
 
 func getContainerImageFQN(repository string) string {
-	if debug {
-		repository = constants.DockerDebugPrefix + repository
-	}
-
-	return fmt.Sprintf("%v/%v", latticeContainerRegistry, repository)
+	return fmt.Sprintf("%v/%v%v", latticeContainerRegistry, latticeContainerRepoPrefix, repository)
 }

@@ -6,6 +6,7 @@ CLOUD_IMAGE_BUILD_STATE_DIR = $(CLOUD_IMAGE_DIR)/.state/build
 CLOUD_IMAGE_AWS_SYSTEM_STATE_DIR = $(CLOUD_IMAGE_DIR)/.state/aws/$(LATTICE_SYSTEM_ID)
 
 OS := $(shell uname)
+USER := $(shell whoami)
 
 CONTAINER_NAME_BUILD = lattice-system-builder
 
@@ -56,20 +57,35 @@ install-govet:
 
 
 # docker
-.PHONY: docker-push-image
-docker-push-image:
+.PHONY: docker-push-image-stable
+docker-push-image-stable:
 	@if [ $(OS) != Linux ]; then echo "Must run docker-push-image on Linux" && exit 1; fi
-	bazel run //docker:push-$(IMAGE)
-	bazel run //docker:push-debug-$(IMAGE)
+	bazel run //docker:push-stable-$(IMAGE)
+	bazel run //docker:push-stable-debug-$(IMAGE)
 
-.PHONY: docker-push-all-images
-docker-push-all-images:
-	make docker-push-image IMAGE=envoy-prepare
-	make docker-push-image IMAGE=kubernetes-bootstrap-lattice
-	make docker-push-image IMAGE=kubernetes-component-builder
-	make docker-push-image IMAGE=kubernetes-envoy-xds-api-rest-per-node
-	make docker-push-image IMAGE=kubernetes-lattice-controller-manager
-	make docker-push-image IMAGE=kubernetes-manager-api-rest
+.PHONY: docker-push-image-user
+docker-push-image-user:
+	@if [ $(OS) != Linux ]; then echo "Must run docker-push-image on Linux" && exit 1; fi
+	bazel run //docker:push-user-$(IMAGE)
+	bazel run //docker:push-user-debug-$(IMAGE)
+
+.PHONY: docker-push-all-images-stable
+docker-push-all-images-stable:
+	make docker-push-image-stable IMAGE=envoy-prepare
+	make docker-push-image-stable IMAGE=kubernetes-bootstrap-lattice
+	make docker-push-image-stable IMAGE=kubernetes-component-builder
+	make docker-push-image-stable IMAGE=kubernetes-envoy-xds-api-rest-per-node
+	make docker-push-image-stable IMAGE=kubernetes-lattice-controller-manager
+	make docker-push-image-stable IMAGE=kubernetes-manager-api-rest
+
+.PHONY: docker-push-all-images-user
+docker-push-all-images-user:
+	make docker-push-image-user IMAGE=envoy-prepare
+	make docker-push-image-user IMAGE=kubernetes-bootstrap-lattice
+	make docker-push-image-user IMAGE=kubernetes-component-builder
+	make docker-push-image-user IMAGE=kubernetes-envoy-xds-api-rest-per-node
+	make docker-push-image-user IMAGE=kubernetes-lattice-controller-manager
+	make docker-push-image-user IMAGE=kubernetes-manager-api-rest
 
 # local binaries
 .PHONY: update-binaries
@@ -88,23 +104,27 @@ update-binary-cli-user:
 # docker build hackery
 .PHONY: docker-hack-enter-build-shell
 docker-hack-enter-build-shell: docker-hack-build-start-build-container
-	docker exec -it $(CONTAINER_NAME_BUILD) ./docker/bazel-builder/wrap-creds-and-exec.sh /bin/bash
+	docker exec -it -e USER=$(USER) $(CONTAINER_NAME_BUILD) ./docker/bazel-builder/wrap-creds-and-exec.sh /bin/bash
 
 .PHONY: docker-hack-push-image
 docker-hack-push-image: docker-hack-build-start-build-container
-	docker exec $(CONTAINER_NAME_BUILD) ./docker/bazel-builder/wrap-creds-and-exec.sh make docker-push-image IMAGE=$(IMAGE)
+	docker exec -e USER=$(USER) $(CONTAINER_NAME_BUILD) ./docker/bazel-builder/wrap-creds-and-exec.sh make docker-push-image IMAGE=$(IMAGE)
 
-.PHONY: docker-hack-push-all-images
-docker-hack-push-all-images:
-	docker exec $(CONTAINER_NAME_BUILD) ./docker/bazel-builder/wrap-creds-and-exec.sh make docker-push-all-images IMAGE=$(IMAGE)
+.PHONY: docker-hack-push-all-images-stable
+docker-hack-push-all-images-stable: docker-hack-build-start-build-container
+	docker exec -e USER=$(USER) $(CONTAINER_NAME_BUILD) ./docker/bazel-builder/wrap-creds-and-exec.sh make docker-push-all-images-stable IMAGE=$(IMAGE)
+
+.PHONY: docker-hack-push-all-images-user
+docker-hack-push-all-images-user: docker-hack-build-start-build-container
+	docker exec -e USER=$(USER) $(CONTAINER_NAME_BUILD) ./docker/bazel-builder/wrap-creds-and-exec.sh make docker-push-all-images-user IMAGE=$(IMAGE)
 
 .PHONY: docker-hack-build-bazel-build
 docker-hack-build-bazel-build:
-	docker build $(DIR)/docker -f $(DIR)/docker/bazel-builder/Dockerfile.bazel-build -t lattice-build/bazel-build
+	docker build --build-arg user=$(USER) $(DIR)/docker -f $(DIR)/docker/bazel-builder/Dockerfile.bazel-build -t lattice-build/bazel-build
 
 .PHONY: docker-hack-build-start-build-container
 docker-hack-build-start-build-container: docker-hack-build-bazel-build
-	$(DIR)/docker/bazel-builder/start-build-container.sh
+	USER=$(USER) $(DIR)/docker/bazel-builder/start-build-container.sh
 
 # cloud images
 .PHONY: cloud-images-build

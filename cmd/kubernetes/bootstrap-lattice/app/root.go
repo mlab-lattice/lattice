@@ -15,18 +15,18 @@ import (
 )
 
 var (
-	workingDir               string
-	kubeconfigPath           string
-	debug                    bool
-	systemDefinitionURL      string
-	systemID                 string
-	latticeContainerRegistry string
-	componentBuildRegistry   string
-	dockerAPIVersion         string
-	provider                 string
-	providerVars             *[]string
-	terraformBackend         string
-	terraformBackendVars     *[]string
+	workingDir                 string
+	kubeconfigPath             string
+	systemDefinitionURL        string
+	systemID                   string
+	latticeContainerRegistry   string
+	latticeContainerRepoPrefix string
+	componentBuildRegistry     string
+	dockerAPIVersion           string
+	provider                   string
+	providerVars               *[]string
+	terraformBackend           string
+	terraformBackendVars       *[]string
 
 	kubeConfig    *rest.Config
 	kubeClient    kubeclientset.Interface
@@ -38,7 +38,6 @@ var RootCmd = &cobra.Command{
 	Use:   "bootstrap-lattice",
 	Short: "Bootstraps a kubernetes cluster to run lattice",
 	Run: func(cmd *cobra.Command, args []string) {
-
 		seedNamespaces()
 		seedCrds()
 		seedRBAC()
@@ -68,14 +67,20 @@ func init() {
 	cobra.OnInitialize(initCmd)
 	RootCmd.Flags().StringVar(&workingDir, "working-directory", "/tmp/lattice-system/", "path where subcommands will use as their working directory")
 	RootCmd.Flags().StringVar(&kubeconfigPath, "kubeconfig-path", "", "path to kubeconfig to use if not being invoked from within kubernetes")
-	RootCmd.Flags().BoolVar(&debug, "debug", false, "whether or not to use the debug version of container images")
 	RootCmd.Flags().StringVar(&systemDefinitionURL, "system-definition-url", "", "url of the system definition repo for the system")
 	RootCmd.Flags().StringVar(&systemID, "system-id", "", "ID of the system")
 	RootCmd.Flags().StringVar(&latticeContainerRegistry, "lattice-container-registry", "", "registry which stores the lattice infrastructure containers")
+	RootCmd.Flags().StringVar(&latticeContainerRepoPrefix, "lattice-container-repo-prefix", "", "prefix to append to expected docker image name")
 	RootCmd.Flags().StringVar(&componentBuildRegistry, "component-build-registry", "", "registry where component builds are tagged and potentially pushed to")
 	RootCmd.Flags().StringVar(&dockerAPIVersion, "docker-api-version", "", "version of the docker API used by the docker daemons")
 	RootCmd.Flags().StringVar(&provider, "provider", "", "provider")
 	RootCmd.Flags().StringVar(&terraformBackend, "terraform-backend", "", "backend to use for storing terraform state")
+
+	RootCmd.MarkFlagRequired("system-definition-url")
+	RootCmd.MarkFlagRequired("system-id")
+	RootCmd.MarkFlagRequired("lattice-container-registry")
+	RootCmd.MarkFlagRequired("component-build-registry")
+	RootCmd.MarkFlagRequired("provider")
 
 	// Flags().StringArray --provider-var=a,b --provider-var=c results in ["a,b", "c"],
 	// whereas Flags().StringSlice --provider-var=a,b --provider-var=c results in ["a", "b", "c"].

@@ -7,6 +7,10 @@ import (
 )
 
 var (
+	dockerAPIVersion           string
+	latticeContainerRegistry   string
+	latticeContainerRepoPrefix string
+
 	providerVars *[]string
 )
 
@@ -40,6 +44,12 @@ var provisionSystemCmd = &cobra.Command{
 
 func init() {
 	RootCmd.AddCommand(provisionSystemCmd)
+
+	provisionSystemCmd.Flags().StringVar(&dockerAPIVersion, "docker-api-version", "", "version of the docker API used by the docker daemons")
+	provisionSystemCmd.Flags().StringVar(&latticeContainerRegistry, "lattice-container-registry", "", "registry which stores the lattice infrastructure containers")
+	provisionSystemCmd.Flags().StringVar(&latticeContainerRepoPrefix, "lattice-container-repo-prefix", "", "prefix to append to expected docker image name")
+
+	provisionSystemCmd.MarkFlagRequired("lattice-container-registry")
 
 	// Flags().StringArray --provider-var=a,b --provider-var=c results in ["a,b", "c"],
 	// whereas Flags().StringSlice --provider-var=a,b --provider-var=c results in ["a", "b", "c"].

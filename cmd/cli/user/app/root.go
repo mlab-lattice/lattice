@@ -12,10 +12,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const (
-	devDockerRegistry = "gcr.io/lattice-dev"
-)
-
 var (
 	workingDir      string
 	namespaceString string

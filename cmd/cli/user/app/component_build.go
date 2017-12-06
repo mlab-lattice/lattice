@@ -86,6 +86,5 @@ func init() {
 	componentBuildCmd.AddCommand(componentBuildGetCmd)
 
 	componentBuildCmd.AddCommand(componentBuildLogsCmd)
-	componentBuildLogsCmd.Flags().BoolVar(&componentBuildLogsFollow, "follow", false, "whether or not to follow the logs")
-
+	componentBuildLogsCmd.Flags().BoolVarP(&componentBuildLogsFollow, "follow", "f", false, "whether or not to follow the logs")
 }

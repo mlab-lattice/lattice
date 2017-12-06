@@ -36,7 +36,7 @@ func getProvisioner(provider, systemName, action string, providerVars []string) 
 }
 
 func getLocalProvisioner() (*kubelifecycle.LocalProvisioner, error) {
-	return kubelifecycle.NewLocalProvisioner(devDockerRegistry, workingDir+"logs")
+	return kubelifecycle.NewLocalProvisioner(dockerAPIVersion, latticeContainerRegistry, latticeContainerRepoPrefix, workingDir+"logs")
 }
 
 func getAWSProvisioner(name, action string, providerVars []string) (*kubelifecycle.AWSProvisioner, error) {
@@ -52,7 +52,7 @@ func getAWSProvisioner(name, action string, providerVars []string) (*kubelifecyc
 		awsConfig = *config
 	}
 
-	return kubelifecycle.NewAWSProvisioner(devDockerRegistry, awsWorkingDir, awsConfig)
+	return kubelifecycle.NewAWSProvisioner(latticeContainerRegistry, latticeContainerRepoPrefix, awsWorkingDir, awsConfig)
 }
 
 func getAWSConfig(providerVars []string) (*kubelifecycle.AWSProvisionerConfig, error) {

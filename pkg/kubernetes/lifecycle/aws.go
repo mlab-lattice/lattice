@@ -10,9 +10,10 @@ import (
 )
 
 type AWSProvisioner struct {
-	latticeImageDockerRepository string
-	tec                          *terraform.ExecContext
-	config                       AWSProvisionerConfig
+	latticeContainerRegistry   string
+	latticeContainerRepoPrefix string
+	tec                        *terraform.ExecContext
+	config                     AWSProvisionerConfig
 }
 
 type AWSProvisionerConfig struct {
@@ -35,14 +36,15 @@ const (
 	systemManagerAddressOutputVariable = "system_environment_manager_address"
 )
 
-func NewAWSProvisioner(latticeImageDockerRepository, workingDir string, config AWSProvisionerConfig) (*AWSProvisioner, error) {
+func NewAWSProvisioner(latticeImageDockerRepository, latticeContainerRepoPrefix, workingDir string, config AWSProvisionerConfig) (*AWSProvisioner, error) {
 	tec, err := terraform.NewTerrafromExecContext(workingDir, nil)
 	if err != nil {
 		return nil, err
 	}
 
 	ap := &AWSProvisioner{
-		latticeImageDockerRepository: latticeImageDockerRepository,
+		latticeContainerRegistry:   latticeImageDockerRepository,
+		latticeContainerRepoPrefix: latticeContainerRepoPrefix,
 		tec:    tec,
 		config: config,
 	}

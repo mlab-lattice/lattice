@@ -22,22 +22,31 @@ import (
 )
 
 type LocalProvisioner struct {
-	latticeImageDockerRepository string
-	mec                          *minikube.ExecContext
+	dockerAPIVersion           string
+	latticeContainerRegistry   string
+	latticeContainerRepoPrefix string
+	mec                        *minikube.ExecContext
 }
 
 const (
+	defaultDockerAPIVersion  = "1.24"
 	systemNamePrefixMinikube = "lattice-local-"
 )
 
-func NewLocalProvisioner(latticeImageDockerRepository, logPath string) (*LocalProvisioner, error) {
+func NewLocalProvisioner(dockerAPIVersion, latticeContainerRegistry, latticeContainerRepoPrefix, logPath string) (*LocalProvisioner, error) {
 	mec, err := minikube.NewMinikubeExecContext(logPath)
 	if err != nil {
 		return nil, err
 	}
 
+	if dockerAPIVersion == "" {
+		dockerAPIVersion = defaultDockerAPIVersion
+	}
+
 	lp := &LocalProvisioner{
-		latticeImageDockerRepository: latticeImageDockerRepository,
+		dockerAPIVersion:           dockerAPIVersion,
+		latticeContainerRegistry:   latticeContainerRegistry,
+		latticeContainerRepoPrefix: latticeContainerRepoPrefix,
 		mec: mec,
 	}
 	return lp, nil
@@ -153,14 +162,15 @@ func (lp *LocalProvisioner) bootstrap(address, url, name string) error {
 					Containers: []corev1.Container{
 						{
 							Name:  "kubernetes-bootstrap-lattice",
-							Image: lp.latticeImageDockerRepository + "/" + constants.DockerImageBootstrapKubernetes,
+							Image: lp.latticeContainerRegistry + "/" + lp.latticeContainerRepoPrefix + constants.DockerImageBootstrapKubernetes,
 							Args: []string{
-								"--debug",
+								"--docker-api-version", lp.dockerAPIVersion,
 								"--provider", "local",
 								"--provider-var", "system-ip=" + address,
 								"--system-definition-url", url,
 								"--system-id", systemNamePrefixMinikube + name,
-								"--lattice-container-registry", "gcr.io/lattice-dev",
+								"--lattice-container-registry", lp.latticeContainerRegistry,
+								"--lattice-container-repo-prefix", lp.latticeContainerRepoPrefix,
 								"--component-build-registry", "lattice-local",
 							},
 						},
