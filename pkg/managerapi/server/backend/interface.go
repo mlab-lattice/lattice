@@ -63,7 +63,7 @@ type Interface interface {
 	// Admin
 
 	// Master Node Components
-	GetMasterNodeComponents(nodeID string) ([]string, error)
-	GetMasterNodeComponentLog(nodeID, componentName string, follow bool) (rc io.ReadCloser, exists bool, err error)
-	RestartMasterNodeComponent(nodeID, componentName string) (exists bool, err error)
+	GetMasterComponents() ([]string, error)
+	GetMasterComponentLog(nodeID, componentName string, follow bool) (rc io.ReadCloser, exists bool, err error)
+	RestartMasterComponent(nodeID, componentName string) (exists bool, err error)
 }

@@ -11,13 +11,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func (kb *KubernetesBackend) GetMasterNodeComponents(nodeID string) ([]string, error) {
-	_, err := kb.getMasterNode(nodeID)
-	if err != nil {
-		return nil, err
-	}
-
-	// TODO: at some point we may want to check to see what components are actually running on the node
+func (kb *KubernetesBackend) GetMasterComponents() ([]string, error) {
+	// TODO: at some point we may want to check to see what components are actually running on a node
 	// For now we'll assume that all master nodes run all of the components.
 	components := []string{
 		constants.MasterNodeComponentLatticeControllerManager,
@@ -26,7 +21,7 @@ func (kb *KubernetesBackend) GetMasterNodeComponents(nodeID string) ([]string, e
 	return components, nil
 }
 
-func (kb *KubernetesBackend) GetMasterNodeComponentLog(nodeID, componentName string, follow bool) (io.ReadCloser, bool, error) {
+func (kb *KubernetesBackend) GetMasterComponentLog(nodeID, componentName string, follow bool) (io.ReadCloser, bool, error) {
 	componentPod, err := kb.getMasterNodeComponentPod(nodeID, componentName)
 	if err != nil {
 		return nil, false, err
@@ -43,7 +38,7 @@ func (kb *KubernetesBackend) GetMasterNodeComponentLog(nodeID, componentName str
 	return log, true, err
 }
 
-func (kb *KubernetesBackend) RestartMasterNodeComponent(nodeID, componentName string) (bool, error) {
+func (kb *KubernetesBackend) RestartMasterComponent(nodeID, componentName string) (bool, error) {
 	componentPod, err := kb.getMasterNodeComponentPod(nodeID, componentName)
 	if err != nil {
 		return false, err

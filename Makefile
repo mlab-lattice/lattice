@@ -92,12 +92,12 @@ docker-push-all-images-user:
 update-binaries: update-binary-cli-admin update-binary-cli-user
 
 .PHONY: update-binary-cli-admin
-update-binary-cli-admin:
+update-binary-cli-admin: build
 	@bazel build //cmd/cli/admin
 	cp -f $(DIR)/bazel-bin/cmd/cli/admin/admin $(DIR)/bin/lattice-admin
 
 .PHONY: update-binary-cli-user
-update-binary-cli-user:
+update-binary-cli-user: build
 	@bazel build //cmd/cli/user
 	cp -f $(DIR)/bazel-bin/cmd/cli/user/user $(DIR)/bin/lattice-system
 

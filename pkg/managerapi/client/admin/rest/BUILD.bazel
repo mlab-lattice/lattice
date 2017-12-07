@@ -4,7 +4,7 @@ go_library(
     name = "go_default_library",
     srcs = [
         "admin.go",
-        "master_node.go",
+        "master.go",
     ],
     importpath = "github.com/mlab-lattice/system/pkg/managerapi/client/admin/rest",
     visibility = ["//visibility:public"],

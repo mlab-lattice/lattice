@@ -88,7 +88,7 @@ func (dc *DefaultClient) Get(url string) *RequestContext {
 func (dc *DefaultClient) Post(url, contentType string, body io.Reader) *RequestContext {
 	return &RequestContext{
 		Client: dc.client,
-		Method: http.MethodGet,
+		Method: http.MethodPost,
 		Headers: map[string]string{
 			headerContentType: contentType,
 		},

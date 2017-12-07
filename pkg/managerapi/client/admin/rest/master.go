@@ -29,7 +29,7 @@ func newMasterClient(c rest.Client, baseURL string) admin.MasterClient {
 
 func (mc *MasterClient) Components() ([]string, error) {
 	components := []string{}
-	err := mc.restClient.Get(mc.baseURL + masterNodeComponentSubpath).JSON(components)
+	err := mc.restClient.Get(mc.baseURL + masterNodeComponentSubpath).JSON(&components)
 	return components, err
 }
 
@@ -54,6 +54,6 @@ func (mcc *MasterComponentClient) Logs(nodeID string, follow bool) (io.ReadClose
 }
 
 func (mcc *MasterComponentClient) Restart(nodeID string) error {
-	_, err := mcc.restClient.Post(mcc.baseURL+masterNodeComponentRestartSubpath+fmt.Sprintf("?nodeId=%vv", nodeID), rest.ContentTypeJSON, nil).Do()
+	_, err := mcc.restClient.Post(mcc.baseURL+masterNodeComponentRestartSubpath+fmt.Sprintf("?nodeId=%v", nodeID), rest.ContentTypeJSON, nil).Do()
 	return err
 }
