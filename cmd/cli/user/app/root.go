@@ -5,8 +5,8 @@ import (
 	"os"
 
 	"github.com/mlab-lattice/system/pkg/constants"
-	restclient "github.com/mlab-lattice/system/pkg/manager/api/client/rest"
-	"github.com/mlab-lattice/system/pkg/manager/api/client/rest/user"
+	"github.com/mlab-lattice/system/pkg/managerapi/client/user"
+	"github.com/mlab-lattice/system/pkg/managerapi/client/user/rest"
 	"github.com/mlab-lattice/system/pkg/types"
 
 	"github.com/spf13/cobra"
@@ -17,8 +17,8 @@ var (
 	namespaceString string
 	url             string
 	namespace       types.LatticeNamespace
-	userClient      *user.Client
-	namespaceClient *user.NamespaceClient
+	userClient      user.Client
+	namespaceClient user.NamespaceClient
 )
 
 // RootCmd represents the base command when called without any subcommands
@@ -51,6 +51,6 @@ func initCmd() {
 
 	namespace = types.LatticeNamespace(namespaceString)
 
-	userClient = restclient.NewUserClient(url)
+	userClient = rest.NewClient(url)
 	namespaceClient = userClient.Namespace(namespace)
 }

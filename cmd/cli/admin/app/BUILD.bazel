@@ -9,8 +9,8 @@ go_library(
     importpath = "github.com/mlab-lattice/system/cmd/cli/admin/app",
     visibility = ["//visibility:public"],
     deps = [
-        "//pkg/manager/api/client/rest:go_default_library",
-        "//pkg/manager/api/client/rest/admin:go_default_library",
+        "//pkg/managerapi/client/admin:go_default_library",
+        "//pkg/managerapi/client/admin/rest:go_default_library",
         "@com_github_spf13_cobra//:go_default_library",
     ],
 )

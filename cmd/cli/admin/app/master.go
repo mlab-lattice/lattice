@@ -10,7 +10,7 @@ import (
 )
 
 var (
-	masterNode                int32
+	nodeID                    string
 	masterComponentLogsFollow bool
 )
 
@@ -36,7 +36,7 @@ var masterComponentsListCommand = &cobra.Command{
 	Use:  "list",
 	Args: cobra.ExactArgs(0),
 	Run: func(cmd *cobra.Command, args []string) {
-		components, err := adminClient.Master().Node(masterNode).Components()
+		components, err := adminClient.Master().Components()
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -50,7 +50,7 @@ var masterComponentsLogsCommand = &cobra.Command{
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		component := args[0]
-		logs, err := adminClient.Master().Node(masterNode).Component(component).Logs(masterComponentLogsFollow)
+		logs, err := adminClient.Master().Component(component).Logs(nodeID, masterComponentLogsFollow)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -65,7 +65,7 @@ var masterComponentsRestartCommand = &cobra.Command{
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		component := args[0]
-		err := adminClient.Master().Node(masterNode).Component(component).Restart()
+		err := adminClient.Master().Component(component).Restart(nodeID)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -75,13 +75,13 @@ var masterComponentsRestartCommand = &cobra.Command{
 func init() {
 	RootCmd.AddCommand(masterCmd)
 
-	masterCmd.PersistentFlags().Int32Var(&masterNode, "node", 0, "master node to query")
+	masterCmd.PersistentFlags().StringVar(&nodeID, "node", "0", "master node to query")
 	masterCmd.AddCommand(masterComponentsCommand)
 
 	masterComponentsCommand.AddCommand(masterComponentsListCommand)
 
 	masterComponentsCommand.AddCommand(masterComponentsLogsCommand)
-	masterComponentsLogsCommand.Flags().BoolVar(&masterComponentLogsFollow, "follow", false, "whether or not to follow the logs")
+	masterComponentsLogsCommand.Flags().BoolVarP(&masterComponentLogsFollow, "follow", "f", false, "whether or not to follow the logs")
 
 	masterComponentsCommand.AddCommand(masterComponentsRestartCommand)
 }
