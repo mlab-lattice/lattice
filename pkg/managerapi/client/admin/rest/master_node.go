@@ -23,7 +23,7 @@ type MasterClient struct {
 func newMasterClient(c rest.Client, baseURL string) admin.MasterClient {
 	return &MasterClient{
 		restClient: c,
-		baseURL: baseURL + masterNodeSubpath,
+		baseURL:    baseURL + masterNodeSubpath,
 	}
 }
 
@@ -45,7 +45,7 @@ type MasterComponentClient struct {
 func newMasterComponentClient(c rest.Client, baseURL, component string) admin.MasterComponentClient {
 	return &MasterComponentClient{
 		restClient: c,
-		baseURL: baseURL + masterNodeComponentSubpath + "/" + component,
+		baseURL:    baseURL + masterNodeComponentSubpath + "/" + component,
 	}
 }
 
@@ -54,6 +54,6 @@ func (mcc *MasterComponentClient) Logs(nodeID string, follow bool) (io.ReadClose
 }
 
 func (mcc *MasterComponentClient) Restart(nodeID string) error {
-	_, err := mcc.restClient.Post(mcc.baseURL + masterNodeComponentRestartSubpath + fmt.Sprintf("?nodeId=%vv", nodeID), rest.ContentTypeJSON, nil).Do()
+	_, err := mcc.restClient.Post(mcc.baseURL+masterNodeComponentRestartSubpath+fmt.Sprintf("?nodeId=%vv", nodeID), rest.ContentTypeJSON, nil).Do()
 	return err
 }

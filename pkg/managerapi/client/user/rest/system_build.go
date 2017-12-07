@@ -10,14 +10,14 @@ import (
 type SystemBuildClient struct {
 	restClient rest.Client
 	baseURL    string
-	id types.SystemBuildID
+	id         types.SystemBuildID
 }
 
 func newSystemBuildClient(c rest.Client, baseURL string, id types.SystemBuildID) *SystemBuildClient {
 	return &SystemBuildClient{
 		restClient: c,
 		baseURL:    fmt.Sprintf("%v%v/%v", baseURL, systemBuildSubpath, id),
-		id:              id,
+		id:         id,
 	}
 }
 

@@ -10,7 +10,7 @@ import (
 type ServiceBuildClient struct {
 	restClient rest.Client
 	baseURL    string
-	id types.ServiceBuildID
+	id         types.ServiceBuildID
 }
 
 func newServiceBuildClient(c rest.Client, baseURL string, id types.ServiceBuildID) *ServiceBuildClient {

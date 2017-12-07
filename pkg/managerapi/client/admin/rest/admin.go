@@ -17,7 +17,7 @@ type Client struct {
 func NewClient(managerAPIURL string) *Client {
 	return &Client{
 		restClient: rest.NewClient(),
-		baseURL: managerAPIURL + adminEndpointPath,
+		baseURL:    managerAPIURL + adminEndpointPath,
 	}
 }
 
