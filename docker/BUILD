@@ -51,7 +51,7 @@ go_targets = [
     ("envoy-prepare", "iptables", "cmd/envoy/prepare"),
     ("kubernetes-bootstrap-lattice", None, "cmd/kubernetes/bootstrap-lattice"),
     ("kubernetes-component-builder", None, "cmd/kubernetes/componentbuild"),
-    ("kubernetes-envoy-xds-api-rest-per-node", None, "cmd/kubernetes/envoy/xds-api/rest/per-node"),
+    ("kubernetes-envoy-xds-api-rest-per-node", None, "cmd/kubernetes/envoy/xdsapi/v1/rest/per-node"),
     ("kubernetes-lattice-controller-manager", "terraform", "cmd/kubernetes/lattice-controller-manager"),
     ("kubernetes-manager-api-rest", None, "cmd/kubernetes/manager-api/rest"),
 ]
