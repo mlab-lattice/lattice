@@ -15,7 +15,7 @@ import (
 )
 
 func (kb *KubernetesBackend) ListSystemServices(ln types.LatticeNamespace) ([]types.Service, error) {
-	result, err := kb.LatticeClient.V1().Services(string(ln)).List(metav1.ListOptions{})
+	result, err := kb.LatticeClient.LatticeV1().Services(string(ln)).List(metav1.ListOptions{})
 	if err != nil {
 		return nil, err
 	}

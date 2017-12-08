@@ -24,7 +24,7 @@ func (sc *Controller) removeFinalizer(sys *crv1.System) error {
 
 	// The finalizer was in the list, so we should remove it.
 	sys.Finalizers = finalizers
-	result, err := sc.latticeClient.V1().Systems(sys.Namespace).Update(sys)
+	result, err := sc.latticeClient.LatticeV1().Systems(sys.Namespace).Update(sys)
 	if err != nil {
 		return err
 	}

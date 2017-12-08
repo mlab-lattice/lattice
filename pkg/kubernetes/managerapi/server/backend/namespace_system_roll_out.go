@@ -35,7 +35,7 @@ func (kb *KubernetesBackend) RollOutSystemBuild(ln types.LatticeNamespace, bid t
 		return "", err
 	}
 
-	result, err := kb.LatticeClient.V1().SystemRollouts(kubeconstants.NamespaceLatticeInternal).Create(sysRollout)
+	result, err := kb.LatticeClient.LatticeV1().SystemRollouts(kubeconstants.NamespaceLatticeInternal).Create(sysRollout)
 	if err != nil {
 		return "", err
 	}
@@ -43,7 +43,7 @@ func (kb *KubernetesBackend) RollOutSystemBuild(ln types.LatticeNamespace, bid t
 }
 
 func (kb *KubernetesBackend) getSystemBuildFromID(ln types.LatticeNamespace, bid types.SystemBuildID) (*crv1.SystemBuild, error) {
-	return kb.LatticeClient.V1().SystemBuilds(kubeconstants.NamespaceLatticeInternal).Get(string(bid), metav1.GetOptions{})
+	return kb.LatticeClient.LatticeV1().SystemBuilds(kubeconstants.NamespaceLatticeInternal).Get(string(bid), metav1.GetOptions{})
 }
 
 func getNewSystemRollout(latticeNamespace types.LatticeNamespace, sysBuild *crv1.SystemBuild) (*crv1.SystemRollout, error) {
@@ -71,7 +71,7 @@ func getNewSystemRollout(latticeNamespace types.LatticeNamespace, sysBuild *crv1
 }
 
 func (kb *KubernetesBackend) GetSystemRollout(ln types.LatticeNamespace, rid types.SystemRolloutID) (*types.SystemRollout, bool, error) {
-	result, err := kb.LatticeClient.V1().SystemRollouts(kubeconstants.NamespaceLatticeInternal).Get(string(rid), metav1.GetOptions{})
+	result, err := kb.LatticeClient.LatticeV1().SystemRollouts(kubeconstants.NamespaceLatticeInternal).Get(string(rid), metav1.GetOptions{})
 	if err != nil {
 		if errors.IsNotFound(err) {
 			return nil, false, nil
@@ -94,7 +94,7 @@ func (kb *KubernetesBackend) GetSystemRollout(ln types.LatticeNamespace, rid typ
 }
 
 func (kb *KubernetesBackend) ListSystemRollouts(ln types.LatticeNamespace) ([]types.SystemRollout, error) {
-	result, err := kb.LatticeClient.V1().SystemRollouts(kubeconstants.NamespaceLatticeInternal).List(metav1.ListOptions{})
+	result, err := kb.LatticeClient.LatticeV1().SystemRollouts(kubeconstants.NamespaceLatticeInternal).List(metav1.ListOptions{})
 	if err != nil {
 		return nil, err
 	}

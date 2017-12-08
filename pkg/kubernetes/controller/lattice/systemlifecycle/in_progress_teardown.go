@@ -7,6 +7,7 @@ import (
 	crv1 "github.com/mlab-lattice/system/pkg/kubernetes/customresource/apis/lattice/v1"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 
 	"github.com/golang/glog"
 )
@@ -36,16 +37,19 @@ func (slc *Controller) syncInProgressTeardown(syst *crv1.SystemTeardown) error {
 	}
 
 	ns := string(syst.Spec.LatticeNamespace)
-	return slc.latticeClient.V1().Systems(ns).Delete(ns, &metav1.DeleteOptions{})
+	return slc.latticeClient.LatticeV1().Systems(ns).Delete(ns, &metav1.DeleteOptions{})
 }
 
 func (slc *Controller) getSystemForTeardown(syst *crv1.SystemTeardown) (*crv1.System, error) {
 	var system *crv1.System
 
 	latticeNamespace := syst.Spec.LatticeNamespace
-	for _, sysObj := range slc.systemStore.List() {
-		sys := sysObj.(*crv1.System)
+	syss, err := slc.systemLister.List(labels.Everything())
+	if err != nil {
+		return nil, err
+	}
 
+	for _, sys := range syss {
 		if string(latticeNamespace) == sys.Namespace {
 			if system != nil {
 				return nil, fmt.Errorf("LatticeNamespace %v contains multiple Systems", latticeNamespace)

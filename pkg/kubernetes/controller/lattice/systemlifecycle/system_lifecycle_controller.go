@@ -7,10 +7,13 @@ import (
 	"time"
 
 	crv1 "github.com/mlab-lattice/system/pkg/kubernetes/customresource/apis/lattice/v1"
-	latticeclientset "github.com/mlab-lattice/system/pkg/kubernetes/customresource/client"
+	latticeclientset "github.com/mlab-lattice/system/pkg/kubernetes/customresource/generated/clientset/versioned"
+	latticeinformers "github.com/mlab-lattice/system/pkg/kubernetes/customresource/generated/informers/externalversions/lattice/v1"
+	latticelisters "github.com/mlab-lattice/system/pkg/kubernetes/customresource/generated/listers/lattice/v1"
 	"github.com/mlab-lattice/system/pkg/types"
 
 	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
 
@@ -40,23 +43,23 @@ type Controller struct {
 	owningLifecycleActionsLock sync.RWMutex
 	owningLifecycleActions     map[types.LatticeNamespace]*lifecycleAction
 
-	systemRolloutStore       cache.Store
-	systemRolloutStoreSynced cache.InformerSynced
+	systemRolloutLister       latticelisters.SystemRolloutLister
+	systemRolloutListerSynced cache.InformerSynced
 
-	systemTeardownStore       cache.Store
-	systemTeardownStoreSynced cache.InformerSynced
+	systemTeardownLister       latticelisters.SystemTeardownLister
+	systemTeardownListerSynced cache.InformerSynced
 
-	systemStore       cache.Store
-	systemStoreSynced cache.InformerSynced
+	systemLister       latticelisters.SystemLister
+	systemListerSynced cache.InformerSynced
 
-	systemBuildStore       cache.Store
-	systemBuildStoreSynced cache.InformerSynced
+	systemBuildLister       latticelisters.SystemBuildLister
+	systemBuildListerSynced cache.InformerSynced
 
-	serviceBuildStore       cache.Store
-	serviceBuildStoreSynced cache.InformerSynced
+	serviceBuildLister       latticelisters.ServiceBuildLister
+	serviceBuildListerSynced cache.InformerSynced
 
-	componentBuildStore       cache.Store
-	componentBuildStoreSynced cache.InformerSynced
+	componentBuildLister       latticelisters.ComponentBuildLister
+	componentBuildListerSynced cache.InformerSynced
 
 	rolloutQueue  workqueue.RateLimitingInterface
 	teardownQueue workqueue.RateLimitingInterface
@@ -64,12 +67,12 @@ type Controller struct {
 
 func NewController(
 	latticeClient latticeclientset.Interface,
-	systemRolloutInformer cache.SharedInformer,
-	systemTeardownInformer cache.SharedInformer,
-	systemInformer cache.SharedInformer,
-	systemBuildInformer cache.SharedInformer,
-	serviceBuildInformer cache.SharedInformer,
-	componentBuildInformer cache.SharedInformer,
+	systemRolloutInformer latticeinformers.SystemRolloutInformer,
+	systemTeardownInformer latticeinformers.SystemTeardownInformer,
+	systemInformer latticeinformers.SystemInformer,
+	systemBuildInformer latticeinformers.SystemBuildInformer,
+	serviceBuildInformer latticeinformers.ServiceBuildInformer,
+	componentBuildInformer latticeinformers.ComponentBuildInformer,
 ) *Controller {
 	src := &Controller{
 		latticeClient:          latticeClient,
@@ -80,43 +83,43 @@ func NewController(
 
 	src.syncHandler = src.syncSystemRollout
 
-	systemRolloutInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+	systemRolloutInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    src.handleSystemRolloutAdd,
 		UpdateFunc: src.handleSystemRolloutUpdate,
 		// TODO: for now it is assumed that SystemRollouts are not deleted. Revisit this.
 	})
-	src.systemRolloutStore = systemRolloutInformer.GetStore()
-	src.systemRolloutStoreSynced = systemRolloutInformer.HasSynced
+	src.systemRolloutLister = systemRolloutInformer.Lister()
+	src.systemRolloutListerSynced = systemRolloutInformer.Informer().HasSynced
 
-	systemTeardownInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+	systemTeardownInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    src.handleSystemTeardownAdd,
 		UpdateFunc: src.handleSystemTeardownUpdate,
 		// TODO: for now it is assumed that SystemRollouts are not deleted. Revisit this.
 	})
-	src.systemTeardownStore = systemTeardownInformer.GetStore()
-	src.systemTeardownStoreSynced = systemTeardownInformer.HasSynced
+	src.systemTeardownLister = systemTeardownInformer.Lister()
+	src.systemTeardownListerSynced = systemTeardownInformer.Informer().HasSynced
 
-	systemInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+	systemInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    src.handleSystemAdd,
 		UpdateFunc: src.handleSystemUpdate,
 		// TODO: for now it is assumed that Systems are not deleted. Revisit this.
 	})
-	src.systemStore = systemInformer.GetStore()
-	src.systemStoreSynced = systemInformer.HasSynced
+	src.systemLister = systemInformer.Lister()
+	src.systemListerSynced = systemInformer.Informer().HasSynced
 
-	systemBuildInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+	systemBuildInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    src.handleSystemBuildAdd,
 		UpdateFunc: src.handleSystemBuildUpdate,
 		// TODO: for now it is assumed that SystemBuilds are not deleted. Revisit this.
 	})
-	src.systemBuildStore = systemBuildInformer.GetStore()
-	src.systemBuildStoreSynced = systemBuildInformer.HasSynced
+	src.systemBuildLister = systemBuildInformer.Lister()
+	src.systemBuildListerSynced = systemBuildInformer.Informer().HasSynced
 
-	src.serviceBuildStore = serviceBuildInformer.GetStore()
-	src.serviceBuildStoreSynced = serviceBuildInformer.HasSynced
+	src.serviceBuildLister = serviceBuildInformer.Lister()
+	src.serviceBuildListerSynced = serviceBuildInformer.Informer().HasSynced
 
-	src.componentBuildStore = componentBuildInformer.GetStore()
-	src.componentBuildStoreSynced = componentBuildInformer.HasSynced
+	src.componentBuildLister = componentBuildInformer.Lister()
+	src.componentBuildListerSynced = componentBuildInformer.Informer().HasSynced
 
 	return src
 }
@@ -266,12 +269,12 @@ func (slc *Controller) Run(workers int, stopCh <-chan struct{}) {
 	// wait for your secondary caches to fill before starting your work
 	if !cache.WaitForCacheSync(
 		stopCh,
-		slc.systemRolloutStoreSynced,
-		slc.systemTeardownStoreSynced,
-		slc.systemStoreSynced,
-		slc.systemBuildStoreSynced,
-		slc.serviceBuildStoreSynced,
-		slc.componentBuildStoreSynced,
+		slc.systemRolloutListerSynced,
+		slc.systemTeardownListerSynced,
+		slc.systemListerSynced,
+		slc.systemBuildListerSynced,
+		slc.serviceBuildListerSynced,
+		slc.componentBuildListerSynced,
 	) {
 		return
 	}
@@ -307,8 +310,12 @@ func (slc *Controller) syncOwningActions() error {
 	slc.owningLifecycleActionsLock.Lock()
 	defer slc.owningLifecycleActionsLock.Unlock()
 
-	for _, sysrObj := range slc.systemRolloutStore.List() {
-		sysr := sysrObj.(*crv1.SystemRollout)
+	sysrs, err := slc.systemRolloutLister.List(labels.Everything())
+	if err != nil {
+		return err
+	}
+
+	for _, sysr := range sysrs {
 		if sysr.Status.State != crv1.SystemRolloutStateInProgress {
 			continue
 		}
@@ -323,8 +330,12 @@ func (slc *Controller) syncOwningActions() error {
 		}
 	}
 
-	for _, systObj := range slc.systemTeardownStore.List() {
-		syst := systObj.(*crv1.SystemTeardown)
+	systs, err := slc.systemTeardownLister.List(labels.Everything())
+	if err != nil {
+		return err
+	}
+
+	for _, syst := range systs {
 		if syst.Status.State != crv1.SystemTeardownStateInProgress {
 			continue
 		}
@@ -406,16 +417,18 @@ func (slc *Controller) syncSystemRollout(key string) error {
 		glog.V(4).Infof("Finished syncing SystemRollout %q (%v)", key, time.Now().Sub(startTime))
 	}()
 
-	sysrObj, exists, err := slc.systemRolloutStore.GetByKey(key)
-	if errors.IsNotFound(err) || !exists {
+	namespace, name, err := cache.SplitMetaNamespaceKey(key)
+	if err != nil {
+		return err
+	}
+	sysr, err := slc.systemRolloutLister.SystemRollouts(namespace).Get(name)
+	if errors.IsNotFound(err) {
 		glog.V(2).Infof("SystemRollout %v has been deleted", key)
 		return nil
 	}
 	if err != nil {
 		return err
 	}
-
-	sysr := sysrObj.(*crv1.SystemRollout)
 
 	switch sysr.Status.State {
 	case crv1.SystemRolloutStateSucceeded, crv1.SystemRolloutStateFailed:
@@ -442,7 +455,7 @@ func (slc *Controller) updateSystemRolloutStatus(sysr *crv1.SystemRollout, newSt
 	}
 
 	sysr.Status = newStatus
-	return slc.latticeClient.V1().SystemRollouts(sysr.Namespace).Update(sysr)
+	return slc.latticeClient.LatticeV1().SystemRollouts(sysr.Namespace).Update(sysr)
 }
 
 // syncSystemBuild will sync the SystemBuild with the given key.
@@ -455,16 +468,18 @@ func (slc *Controller) syncSystemTeardown(key string) error {
 		glog.V(4).Infof("Finished syncing SystemTeardown %q (%v)", key, time.Now().Sub(startTime))
 	}()
 
-	systObj, exists, err := slc.systemTeardownStore.GetByKey(key)
-	if errors.IsNotFound(err) || !exists {
+	namespace, name, err := cache.SplitMetaNamespaceKey(key)
+	if err != nil {
+		return err
+	}
+	syst, err := slc.systemTeardownLister.SystemTeardowns(namespace).Get(name)
+	if errors.IsNotFound(err) {
 		glog.V(2).Infof("SystemTeardown %v has been deleted", key)
 		return nil
 	}
 	if err != nil {
 		return err
 	}
-
-	syst := systObj.(*crv1.SystemTeardown)
 
 	switch syst.Status.State {
 	case crv1.SystemTeardownStateSucceeded, crv1.SystemTeardownStateFailed:
@@ -488,5 +503,5 @@ func (slc *Controller) updateSystemTeardownStatus(syst *crv1.SystemTeardown, new
 	}
 
 	syst.Status = newStatus
-	return slc.latticeClient.V1().SystemTeardowns(syst.Namespace).Update(syst)
+	return slc.latticeClient.LatticeV1().SystemTeardowns(syst.Namespace).Update(syst)
 }

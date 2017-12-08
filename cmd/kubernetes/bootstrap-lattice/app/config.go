@@ -72,7 +72,7 @@ func seedConfig(userSystemURL string) {
 	}
 
 	pollKubeResourceCreation(func() (interface{}, error) {
-		return latticeClient.V1().Configs(kubeconstants.NamespaceLatticeInternal).Create(config)
+		return latticeClient.LatticeV1().Configs(kubeconstants.NamespaceLatticeInternal).Create(config)
 	})
 }
 

@@ -10,7 +10,7 @@ go_library(
         "//pkg/definition/tree:go_default_library",
         "//pkg/envoy:go_default_library",
         "//pkg/kubernetes/customresource/apis/lattice/v1:go_default_library",
-        "//pkg/kubernetes/customresource/client:go_default_library",
+        "//pkg/kubernetes/customresource/generated/clientset/versioned:go_default_library",
         "@io_k8s_apimachinery//pkg/api/errors:go_default_library",
         "@io_k8s_apimachinery//pkg/fields:go_default_library",
         "@io_k8s_client_go//informers/core/v1:go_default_library",

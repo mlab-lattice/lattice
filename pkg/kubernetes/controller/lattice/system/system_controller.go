@@ -6,10 +6,13 @@ import (
 	"time"
 
 	crv1 "github.com/mlab-lattice/system/pkg/kubernetes/customresource/apis/lattice/v1"
-	latticeclientset "github.com/mlab-lattice/system/pkg/kubernetes/customresource/client"
+	latticeclientset "github.com/mlab-lattice/system/pkg/kubernetes/customresource/generated/clientset/versioned"
+	latticeinformers "github.com/mlab-lattice/system/pkg/kubernetes/customresource/generated/informers/externalversions/lattice/v1"
+	latticelisters "github.com/mlab-lattice/system/pkg/kubernetes/customresource/generated/listers/lattice/v1"
 
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
 
@@ -27,19 +30,19 @@ type Controller struct {
 
 	latticeClient latticeclientset.Interface
 
-	systemStore       cache.Store
-	systemStoreSynced cache.InformerSynced
+	systemLister       latticelisters.SystemLister
+	systemListerSynced cache.InformerSynced
 
-	serviceStore       cache.Store
-	serviceStoreSynced cache.InformerSynced
+	serviceLister       latticelisters.ServiceLister
+	serviceListerSynced cache.InformerSynced
 
 	queue workqueue.RateLimitingInterface
 }
 
 func NewController(
 	latticeClient latticeclientset.Interface,
-	systemInformer cache.SharedInformer,
-	serviceInformer cache.SharedInformer,
+	systemInformer latticeinformers.SystemInformer,
+	serviceInformer latticeinformers.ServiceInformer,
 ) *Controller {
 	sc := &Controller{
 		latticeClient: latticeClient,
@@ -49,20 +52,20 @@ func NewController(
 	sc.enqueueSystem = sc.enqueue
 	sc.syncHandler = sc.syncSystem
 
-	systemInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+	systemInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    sc.handleSystemAdd,
 		UpdateFunc: sc.handleSystemUpdate,
 	})
-	sc.systemStore = systemInformer.GetStore()
-	sc.systemStoreSynced = systemInformer.HasSynced
+	sc.systemLister = systemInformer.Lister()
+	sc.systemListerSynced = systemInformer.Informer().HasSynced
 
-	serviceInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+	serviceInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    sc.handleServiceAdd,
 		UpdateFunc: sc.handleServiceUpdate,
 		DeleteFunc: sc.handleServiceDelete,
 	})
-	sc.serviceStore = serviceInformer.GetStore()
-	sc.serviceStoreSynced = serviceInformer.HasSynced
+	sc.serviceLister = serviceInformer.Lister()
+	sc.serviceListerSynced = serviceInformer.Informer().HasSynced
 
 	return sc
 }
@@ -193,15 +196,12 @@ func (sc *Controller) resolveControllerRef(namespace string, controllerRef *meta
 		return nil
 	}
 
-	sysKey := namespace + "/" + controllerRef.Name
-	sysObj, exists, err := sc.systemStore.GetByKey(sysKey)
-	if err != nil || !exists {
+	sys, err := sc.systemLister.Systems(namespace).Get(controllerRef.Name)
+	if err != nil {
 		// This shouldn't happen.
 		// FIXME: send error event
 		return nil
 	}
-
-	sys := sysObj.(*crv1.System)
 
 	if sys.UID != controllerRef.UID {
 		// The controller we found with this Name is not the same one that the
@@ -232,7 +232,7 @@ func (sc *Controller) Run(workers int, stopCh <-chan struct{}) {
 	defer glog.Infof("Shutting down system controller")
 
 	// wait for your secondary caches to fill before starting your work
-	if !cache.WaitForCacheSync(stopCh, sc.systemStoreSynced, sc.serviceStoreSynced) {
+	if !cache.WaitForCacheSync(stopCh, sc.systemListerSynced, sc.serviceListerSynced) {
 		return
 	}
 
@@ -306,8 +306,12 @@ func (sc *Controller) syncSystem(key string) error {
 		glog.V(4).Infof("Finished syncing System %q (%v)", key, time.Now().Sub(startTime))
 	}()
 
-	sysObj, exists, err := sc.systemStore.GetByKey(key)
-	if errors.IsNotFound(err) || !exists {
+	namespace, name, err := cache.SplitMetaNamespaceKey(key)
+	if err != nil {
+		return err
+	}
+	sys, err := sc.systemLister.Systems(namespace).Get(name)
+	if errors.IsNotFound(err) {
 		glog.V(2).Infof("System %v has been deleted", key)
 		return nil
 	}
@@ -315,7 +319,6 @@ func (sc *Controller) syncSystem(key string) error {
 		return err
 	}
 
-	sys := sysObj.(*crv1.System)
 	sysCopy := sys.DeepCopy()
 
 	if sysCopy.DeletionTimestamp != nil {
@@ -339,13 +342,11 @@ func (sc *Controller) syncSystem(key string) error {
 func (sc *Controller) syncDeletedSystem(sys *crv1.System) error {
 	deletedSvc := false
 	// Delete all Services in our namespace
-	for _, svcObj := range sc.serviceStore.List() {
-		svc := svcObj.(*crv1.Service)
-		// Only care about Services in this System's Namespace
-		if svc.Namespace != sys.Namespace {
-			continue
-		}
-
+	svcs, err := sc.serviceLister.Services(sys.Namespace).List(labels.Everything())
+	if err != nil {
+		return err
+	}
+	for _, svc := range svcs {
 		glog.V(4).Infof("Found Service %q in Namespace %q, deleting", svc.Name, svc.Namespace)
 		deletedSvc = true
 		err := sc.deleteService(svc)
@@ -427,8 +428,11 @@ func (sc *Controller) syncSystemServices(sys *crv1.System) error {
 	// that are no longer a part of the System's Spec
 	// TODO: should we wait until all other services are successfully rolled out before deleting these?
 	// need to figure out what the rollout/automatic roll-back strategy is
-	for _, svcObj := range sc.serviceStore.List() {
-		svc := svcObj.(*crv1.Service)
+	svcs, err := sc.serviceLister.Services(sys.Namespace).List(labels.Everything())
+	if err != nil {
+		return err
+	}
+	for _, svc := range svcs {
 		// Only care about Services in this System's Namespace
 		if svc.Namespace != sys.Namespace {
 			continue
@@ -515,7 +519,7 @@ func (sc *Controller) syncSystemStatus(sys *crv1.System) error {
 }
 
 func (sc *Controller) updateSystem(sys *crv1.System) (*crv1.System, error) {
-	return sc.latticeClient.V1().Systems(sys.Namespace).Update(sys)
+	return sc.latticeClient.LatticeV1().Systems(sys.Namespace).Update(sys)
 }
 
 func calculateSystemState(hasFailedSvcRollout, hasActiveSvcRollout bool) crv1.SystemState {

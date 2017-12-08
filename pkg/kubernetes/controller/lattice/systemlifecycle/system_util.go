@@ -54,24 +54,15 @@ func (slc *Controller) getNewSystemSpec(sysRollout *crv1.SystemRollout, sysBuild
 				return nil, fmt.Errorf("svcBuild %v Component %v does not have a ComponentBuildName", svcBuild.Name, component)
 			}
 
-			cBuildName := *cBuildInfo.BuildName
-			cBuildKey := svcBuild.Namespace + "/" + cBuildName
-			cBuildObj, exists, err := slc.componentBuildStore.GetByKey(cBuildKey)
+			cBuild, err := slc.componentBuildLister.ComponentBuilds(svcBuild.Namespace).Get(*cBuildInfo.BuildName)
 
 			if err != nil {
 				return nil, err
 			}
 
-			if !exists {
-				// FIXME: send warn event
-				return nil, fmt.Errorf("cBuild %v not in cBuild Store", cBuildKey)
-			}
-
-			cBuild := cBuildObj.(*crv1.ComponentBuild)
-
 			if cBuild.Spec.Artifacts == nil {
 				// FIXME: send warn event
-				return nil, fmt.Errorf("cBuild %v does not have Artifacts", cBuildKey)
+				return nil, fmt.Errorf("cBuild %v does not have Artifacts", *cBuildInfo.BuildName)
 			}
 			cBuildArtifacts[component] = *cBuild.Spec.Artifacts
 		}
@@ -90,18 +81,7 @@ func (slc *Controller) getNewSystemSpec(sysRollout *crv1.SystemRollout, sysBuild
 }
 
 func (slc *Controller) getSvcBuild(svcBuildName string) (*crv1.ServiceBuild, error) {
-	svcBuildKey := constants.NamespaceLatticeInternal + "/" + svcBuildName
-	svcBuildObj, exists, err := slc.serviceBuildStore.GetByKey(svcBuildKey)
-	if err != nil {
-		return nil, err
-	}
-
-	if !exists {
-		return nil, fmt.Errorf("ServiceBuild %v is not in ServiceBuild Store", svcBuildKey)
-	}
-
-	svcBuild := svcBuildObj.(*crv1.ServiceBuild)
-	return svcBuild, nil
+	return slc.serviceBuildLister.ServiceBuilds(constants.NamespaceLatticeInternal).Get(svcBuildName)
 }
 
 func (slc *Controller) createSystem(sysRollout *crv1.SystemRollout, sysBuild *crv1.SystemBuild) (*crv1.System, error) {
@@ -110,7 +90,7 @@ func (slc *Controller) createSystem(sysRollout *crv1.SystemRollout, sysBuild *cr
 		return nil, err
 	}
 
-	return slc.latticeClient.V1().Systems(string(sysRollout.Spec.LatticeNamespace)).Create(sys)
+	return slc.latticeClient.LatticeV1().Systems(string(sysRollout.Spec.LatticeNamespace)).Create(sys)
 }
 
 func (slc *Controller) updateSystemSpec(sys *crv1.System, sysSpec *crv1.SystemSpec) (*crv1.System, error) {
@@ -124,5 +104,5 @@ func (slc *Controller) updateSystemSpec(sys *crv1.System, sysSpec *crv1.SystemSp
 	// https://github.com/kubernetes/community/pull/913
 	sys.Status.State = crv1.SystemStateRollingOut
 
-	return slc.latticeClient.V1().Systems(sys.Namespace).Update(sys)
+	return slc.latticeClient.LatticeV1().Systems(sys.Namespace).Update(sys)
 }

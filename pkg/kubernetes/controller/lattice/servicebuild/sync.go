@@ -200,5 +200,5 @@ func (sbc *Controller) putServiceBuildStatusUpdate(svcb *crv1.ServiceBuild, newS
 }
 
 func (sbc *Controller) putServiceBuildUpdate(svcb *crv1.ServiceBuild) (*crv1.ServiceBuild, error) {
-	return sbc.latticeClient.V1().ServiceBuilds(svcb.Namespace).Update(svcb)
+	return sbc.latticeClient.LatticeV1().ServiceBuilds(svcb.Namespace).Update(svcb)
 }

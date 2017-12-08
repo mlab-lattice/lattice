@@ -21,7 +21,7 @@ go_library(
         "//pkg/definition/tree:go_default_library",
         "//pkg/kubernetes/constants:go_default_library",
         "//pkg/kubernetes/customresource/apis/lattice/v1:go_default_library",
-        "//pkg/kubernetes/customresource/client:go_default_library",
+        "//pkg/kubernetes/customresource/generated/clientset/versioned:go_default_library",
         "//pkg/kubernetes/util/kubernetes:go_default_library",
         "//pkg/managerapi/server/backend:go_default_library",
         "//pkg/types:go_default_library",

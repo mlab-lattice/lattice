@@ -73,15 +73,5 @@ func (slc *Controller) syncAcceptedRollout(sysRollout *crv1.SystemRollout) error
 }
 
 func (slc *Controller) getSystemBuildForRollout(sysRollout *crv1.SystemRollout) (*crv1.SystemBuild, error) {
-	sysBuildKey := sysRollout.Namespace + "/" + sysRollout.Spec.BuildName
-	sysBuildObj, exists, err := slc.systemBuildStore.GetByKey(sysBuildKey)
-	if err != nil {
-		return nil, err
-	}
-
-	if !exists {
-		return nil, fmt.Errorf("SystemBuild %v does not exist", sysBuildKey)
-	}
-
-	return sysBuildObj.(*crv1.SystemBuild), nil
+	return slc.systemBuildLister.SystemBuilds(sysRollout.Namespace).Get(sysRollout.Spec.BuildName)
 }

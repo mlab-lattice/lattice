@@ -76,6 +76,6 @@ func (cbc *Controller) updateComponentBuildState(cb *crv1.ComponentBuild, newSta
 }
 
 func (cbc *Controller) putComponentBuildUpdate(cb *crv1.ComponentBuild) error {
-	_, err := cbc.latticeClient.V1().ComponentBuilds(cb.Namespace).Update(cb)
+	_, err := cbc.latticeClient.LatticeV1().ComponentBuilds(cb.Namespace).Update(cb)
 	return err
 }

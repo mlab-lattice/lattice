@@ -9,8 +9,8 @@ func initializeComponentBuildController(ctx controller.Context) {
 	go componentbuild.NewController(
 		ctx.KubeClientBuilder.ClientOrDie("kubernetes-build-controller"),
 		ctx.LatticeClientBuilder.ClientOrDie("kubernetes-build-controller"),
-		ctx.CRInformers.Config,
-		ctx.CRInformers.ComponentBuild,
-		ctx.InformerFactory.Batch().V1().Jobs(),
+		ctx.LatticeInformerFactory.Lattice().V1().Configs(),
+		ctx.LatticeInformerFactory.Lattice().V1().ComponentBuilds(),
+		ctx.KubeInformerFactory.Batch().V1().Jobs(),
 	).Run(4, ctx.Stop)
 }

@@ -17,7 +17,7 @@ import (
 )
 
 func (kb *KubernetesBackend) ListComponentBuilds(ln types.LatticeNamespace) ([]types.ComponentBuild, error) {
-	result, err := kb.LatticeClient.V1().ComponentBuilds(kubeconstants.NamespaceLatticeInternal).List(metav1.ListOptions{})
+	result, err := kb.LatticeClient.LatticeV1().ComponentBuilds(kubeconstants.NamespaceLatticeInternal).List(metav1.ListOptions{})
 	if err != nil {
 		return nil, err
 	}
@@ -76,7 +76,7 @@ func (kb *KubernetesBackend) GetComponentBuildLogs(ln types.LatticeNamespace, bi
 }
 
 func (kb *KubernetesBackend) getInternalComponentBuild(ln types.LatticeNamespace, bid types.ComponentBuildID) (*crv1.ComponentBuild, bool, error) {
-	result, err := kb.LatticeClient.V1().ComponentBuilds(kubeconstants.NamespaceLatticeInternal).Get(string(bid), metav1.GetOptions{})
+	result, err := kb.LatticeClient.LatticeV1().ComponentBuilds(kubeconstants.NamespaceLatticeInternal).Get(string(bid), metav1.GetOptions{})
 	if err != nil {
 		if errors.IsNotFound(err) {
 			return nil, false, nil

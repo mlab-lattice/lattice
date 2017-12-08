@@ -22,7 +22,7 @@ go_library(
         "//pkg/kubernetes/constants:go_default_library",
         "//pkg/kubernetes/customresource:go_default_library",
         "//pkg/kubernetes/customresource/apis/lattice/v1:go_default_library",
-        "//pkg/kubernetes/customresource/client:go_default_library",
+        "//pkg/kubernetes/customresource/generated/clientset/versioned:go_default_library",
         "//pkg/types:go_default_library",
         "@com_github_spf13_cobra//:go_default_library",
         "@io_k8s_api//apps/v1beta2:go_default_library",

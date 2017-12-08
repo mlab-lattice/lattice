@@ -8,11 +8,11 @@ import (
 func initializeSystemRolloutController(ctx controller.Context) {
 	go systemlifecycle.NewController(
 		ctx.LatticeClientBuilder.ClientOrDie("lattice-controller-lattice-system-lifecycle"),
-		ctx.CRInformers.SystemRollout,
-		ctx.CRInformers.SystemTeardown,
-		ctx.CRInformers.System,
-		ctx.CRInformers.SystemBuild,
-		ctx.CRInformers.ServiceBuild,
-		ctx.CRInformers.ComponentBuild,
+		ctx.LatticeInformerFactory.Lattice().V1().SystemRollouts(),
+		ctx.LatticeInformerFactory.Lattice().V1().SystemTeardowns(),
+		ctx.LatticeInformerFactory.Lattice().V1().Systems(),
+		ctx.LatticeInformerFactory.Lattice().V1().SystemBuilds(),
+		ctx.LatticeInformerFactory.Lattice().V1().ServiceBuilds(),
+		ctx.LatticeInformerFactory.Lattice().V1().ComponentBuilds(),
 	).Run(4, ctx.Stop)
 }

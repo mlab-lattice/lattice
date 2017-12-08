@@ -6,7 +6,9 @@ import (
 	"time"
 
 	crv1 "github.com/mlab-lattice/system/pkg/kubernetes/customresource/apis/lattice/v1"
-	latticeclientset "github.com/mlab-lattice/system/pkg/kubernetes/customresource/client"
+	latticeclientset "github.com/mlab-lattice/system/pkg/kubernetes/customresource/generated/clientset/versioned"
+	latticeinformers "github.com/mlab-lattice/system/pkg/kubernetes/customresource/generated/informers/externalversions/lattice/v1"
+	latticelisters "github.com/mlab-lattice/system/pkg/kubernetes/customresource/generated/listers/lattice/v1"
 
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -27,19 +29,20 @@ type Controller struct {
 
 	latticeClient latticeclientset.Interface
 
-	systemBuildStore       cache.Store
-	systemBuildStoreSynced cache.InformerSynced
+	systemBuildLister       latticelisters.SystemBuildLister
+	systemBuildListerSynced cache.InformerSynced
 
-	serviceBuildStore       cache.Store
-	serviceBuildStoreSynced cache.InformerSynced
+	serviceBuildLister       latticelisters.ServiceBuildLister
+	serviceBuildListerSynced cache.InformerSynced
 
 	queue workqueue.RateLimitingInterface
 }
 
 func NewController(
 	latticeClient latticeclientset.Interface,
-	systemBuildInformer cache.SharedInformer,
-	serviceBuildInformer cache.SharedInformer,
+	systemBuildInformer latticeinformers.SystemBuildInformer,
+	serviceBuildInformer latticeinformers.ServiceBuildInformer,
+
 ) *Controller {
 	sbc := &Controller{
 		latticeClient: latticeClient,
@@ -49,7 +52,7 @@ func NewController(
 	sbc.enqueueSystemBuild = sbc.enqueue
 	sbc.syncHandler = sbc.syncSystemBuild
 
-	systemBuildInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+	systemBuildInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    sbc.addSystemBuild,
 		UpdateFunc: sbc.updateSystemBuild,
 		// TODO: for now it is assumed that SystemBuilds are not deleted.
@@ -57,10 +60,10 @@ func NewController(
 		// At that point we should listen here for those deletes.
 		// FIXME: Document SysB GC ideas (need to write down last used date, lock properly, etc)
 	})
-	sbc.systemBuildStore = systemBuildInformer.GetStore()
-	sbc.systemBuildStoreSynced = systemBuildInformer.HasSynced
+	sbc.systemBuildLister = systemBuildInformer.Lister()
+	sbc.systemBuildListerSynced = systemBuildInformer.Informer().HasSynced
 
-	serviceBuildInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+	serviceBuildInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    sbc.addServiceBuild,
 		UpdateFunc: sbc.updateServiceBuild,
 		// TODO: for now it is assumed that ServiceBuilds are not deleted.
@@ -68,8 +71,8 @@ func NewController(
 		// At that point we should listen here for those deletes.
 		// FIXME: Document SvcB GC ideas (need to write down last used date, lock properly, etc)
 	})
-	sbc.serviceBuildStore = serviceBuildInformer.GetStore()
-	sbc.serviceBuildStoreSynced = serviceBuildInformer.HasSynced
+	sbc.serviceBuildLister = serviceBuildInformer.Lister()
+	sbc.serviceBuildListerSynced = serviceBuildInformer.Informer().HasSynced
 
 	return sbc
 }
@@ -158,7 +161,7 @@ func (sbc *Controller) updateServiceBuild(old, cur interface{}) {
 // resolveControllerRef returns the controller referenced by a ControllerRef,
 // or nil if the ControllerRef could not be resolved to a matching controller
 // of the correct Kind.
-func (sbc *Controller) resolveControllerRef(ns string, controllerRef *metav1.OwnerReference) *crv1.SystemBuild {
+func (sbc *Controller) resolveControllerRef(namespace string, controllerRef *metav1.OwnerReference) *crv1.SystemBuild {
 	// We can't look up by Name, so look up by Name and then verify Name.
 	// Don't even try to look up by Name if it's the wrong Kind.
 	if controllerRef.Kind != controllerKind.Kind {
@@ -167,15 +170,12 @@ func (sbc *Controller) resolveControllerRef(ns string, controllerRef *metav1.Own
 		return nil
 	}
 
-	sysbKey := ns + "/" + controllerRef.Name
-	sysbObj, exists, err := sbc.systemBuildStore.GetByKey(sysbKey)
-	if err != nil || !exists {
+	sysb, err := sbc.systemBuildLister.SystemBuilds(namespace).Get(controllerRef.Name)
+	if err != nil {
 		// This shouldn't happen.
 		// FIXME: send error event
 		return nil
 	}
-
-	sysb := sysbObj.(*crv1.SystemBuild)
 
 	if sysb.UID != controllerRef.UID {
 		// The controller we found with this Name is not the same one that the
@@ -206,7 +206,7 @@ func (sbc *Controller) Run(workers int, stopCh <-chan struct{}) {
 	defer glog.Infof("Shutting down system-build controller")
 
 	// wait for your secondary caches to fill before starting your work
-	if !cache.WaitForCacheSync(stopCh, sbc.systemBuildStoreSynced, sbc.serviceBuildStoreSynced) {
+	if !cache.WaitForCacheSync(stopCh, sbc.systemBuildListerSynced, sbc.serviceBuildListerSynced) {
 		return
 	}
 
@@ -280,16 +280,18 @@ func (sbc *Controller) syncSystemBuild(key string) error {
 		glog.V(4).Infof("Finished syncing SystemBuild %q (%v)", key, time.Now().Sub(startTime))
 	}()
 
-	sysbObj, exists, err := sbc.systemBuildStore.GetByKey(key)
-	if errors.IsNotFound(err) || !exists {
+	namespace, name, err := cache.SplitMetaNamespaceKey(key)
+	if err != nil {
+		return err
+	}
+	sysb, err := sbc.systemBuildLister.SystemBuilds(namespace).Get(name)
+	if errors.IsNotFound(err) {
 		glog.V(2).Infof("SystemBuild %v has been deleted", key)
 		return nil
 	}
 	if err != nil {
 		return err
 	}
-
-	sysb := sysbObj.(*crv1.SystemBuild)
 
 	stateInfo, err := sbc.calculateState(sysb)
 	if err != nil {

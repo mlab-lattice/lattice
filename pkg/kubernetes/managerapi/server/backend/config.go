@@ -27,5 +27,5 @@ func (kb *KubernetesBackend) getSystemIP() (string, error) {
 }
 
 func (kb *KubernetesBackend) getConfig() (*crv1.Config, error) {
-	return kb.LatticeClient.V1().Configs(constants.NamespaceLatticeInternal).Get(constants.ConfigGlobal, metav1.GetOptions{})
+	return kb.LatticeClient.LatticeV1().Configs(constants.NamespaceLatticeInternal).Get(constants.ConfigGlobal, metav1.GetOptions{})
 }

@@ -8,7 +8,7 @@ import (
 func initializeSystemBuildController(ctx controller.Context) {
 	go systembuild.NewController(
 		ctx.LatticeClientBuilder.ClientOrDie("lattice-controller-lattice-system-build"),
-		ctx.CRInformers.SystemBuild,
-		ctx.CRInformers.ServiceBuild,
+		ctx.LatticeInformerFactory.Lattice().V1().SystemBuilds(),
+		ctx.LatticeInformerFactory.Lattice().V1().ServiceBuilds(),
 	).Run(4, ctx.Stop)
 }

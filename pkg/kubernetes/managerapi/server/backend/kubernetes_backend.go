@@ -1,7 +1,7 @@
 package backend
 
 import (
-	latticeclientset "github.com/mlab-lattice/system/pkg/kubernetes/customresource/client"
+	latticeclientset "github.com/mlab-lattice/system/pkg/kubernetes/customresource/generated/clientset/versioned"
 
 	kubeclientset "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"

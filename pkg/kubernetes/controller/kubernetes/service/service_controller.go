@@ -7,7 +7,9 @@ import (
 	"time"
 
 	crv1 "github.com/mlab-lattice/system/pkg/kubernetes/customresource/apis/lattice/v1"
-	latticeclientset "github.com/mlab-lattice/system/pkg/kubernetes/customresource/client"
+	latticeclientset "github.com/mlab-lattice/system/pkg/kubernetes/customresource/generated/clientset/versioned"
+	latticeinformers "github.com/mlab-lattice/system/pkg/kubernetes/customresource/generated/informers/externalversions/lattice/v1"
+	latticelisters "github.com/mlab-lattice/system/pkg/kubernetes/customresource/generated/listers/lattice/v1"
 
 	appsv1beta2 "k8s.io/api/apps/v1beta2"
 	corev1 "k8s.io/api/core/v1"
@@ -37,19 +39,19 @@ type Controller struct {
 	kubeClient    kubeclientset.Interface
 	latticeClient latticeclientset.Interface
 
-	configStore       cache.Store
-	configStoreSynced cache.InformerSynced
-	configSetChan     chan struct{}
-	configSet         bool
-	configLock        sync.RWMutex
-	config            crv1.ConfigSpec
+	configLister       latticelisters.ConfigLister
+	configListerSynced cache.InformerSynced
+	configSetChan      chan struct{}
+	configSet          bool
+	configLock         sync.RWMutex
+	config             crv1.ConfigSpec
 
 	// FIXME: remove when local DNS server working
-	systemStore       cache.Store
-	systemStoreSynced cache.InformerSynced
+	systemLister       latticelisters.SystemLister
+	systemListerSynced cache.InformerSynced
 
-	serviceStore       cache.Store
-	serviceStoreSynced cache.InformerSynced
+	serviceLister       latticelisters.ServiceLister
+	serviceListerSynced cache.InformerSynced
 
 	deploymentLister       appslisters.DeploymentLister
 	deploymentListerSynced cache.InformerSynced
@@ -63,9 +65,9 @@ type Controller struct {
 func NewController(
 	kubeClient kubeclientset.Interface,
 	latticeClient latticeclientset.Interface,
-	configInformer cache.SharedInformer,
-	systemInformer cache.SharedInformer,
-	serviceInformer cache.SharedInformer,
+	configInformer latticeinformers.ConfigInformer,
+	systemInformer latticeinformers.SystemInformer,
+	serviceInformer latticeinformers.ServiceInformer,
 	deploymentInformer appinformers.DeploymentInformer,
 	kubeServiceInformer coreinformers.ServiceInformer,
 ) *Controller {
@@ -79,7 +81,7 @@ func NewController(
 	sc.syncHandler = sc.syncService
 	sc.enqueueService = sc.enqueue
 
-	configInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+	configInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		// It's assumed there is always one and only one config object.
 		AddFunc:    sc.handleConfigAdd,
 		UpdateFunc: sc.handleConfigUpdate,
@@ -88,24 +90,24 @@ func NewController(
 		// At that point we should listen here for those deletes.
 		// FIXME: Document CB GC ideas (need to write down last used date, lock properly, etc)
 	})
-	sc.configStore = configInformer.GetStore()
-	sc.configStoreSynced = configInformer.HasSynced
+	sc.configLister = configInformer.Lister()
+	sc.configListerSynced = configInformer.Informer().HasSynced
 
 	// FIXME: remove when local DNS server working
-	systemInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+	systemInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    sc.handleSystemAdd,
 		UpdateFunc: sc.handleSystemUpdate,
 	})
-	sc.systemStore = systemInformer.GetStore()
-	sc.systemStoreSynced = systemInformer.HasSynced
+	sc.systemLister = systemInformer.Lister()
+	sc.systemListerSynced = systemInformer.Informer().HasSynced
 
-	serviceInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+	serviceInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    sc.handleServiceAdd,
 		UpdateFunc: sc.handleServiceUpdate,
 		DeleteFunc: sc.handleServiceDelete,
 	})
-	sc.serviceStore = serviceInformer.GetStore()
-	sc.serviceStoreSynced = serviceInformer.HasSynced
+	sc.serviceLister = serviceInformer.Lister()
+	sc.serviceListerSynced = serviceInformer.Informer().HasSynced
 
 	deploymentInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    sc.handleDeploymentAdd,
@@ -156,15 +158,13 @@ func (sc *Controller) handleSystemAdd(obj interface{}) {
 			continue
 		}
 
-		svcKey := fmt.Sprintf("%v/%v", sys.Namespace, svcInfo.ServiceName)
-		svcObj, exists, err := sc.serviceStore.GetByKey(svcKey)
-		if err != nil || !exists {
+		svc, err := sc.serviceLister.Services(sys.Namespace).Get(*svcInfo.ServiceName)
+		if err != nil {
 			// FIXME: what to do here?
 			// probably okay not to worry about, this should be temp until local DNS working
 			continue
 		}
 
-		svc := svcObj.(*crv1.Service)
 		sc.enqueueService(svc)
 	}
 }
@@ -187,15 +187,13 @@ func (sc *Controller) handleSystemUpdate(old, cur interface{}) {
 			continue
 		}
 
-		svcKey := fmt.Sprintf("%v/%v", curSys.Namespace, svcInfo.ServiceName)
-		svcObj, exists, err := sc.serviceStore.GetByKey(svcKey)
-		if err != nil || !exists {
+		svc, err := sc.serviceLister.Services(curSys.Namespace).Get(*svcInfo.ServiceName)
+		if err != nil {
 			// FIXME: what to do here?
 			// probably okay not to worry about, this should be temp until local DNS working
 			continue
 		}
 
-		svc := svcObj.(*crv1.Service)
 		sc.enqueueService(svc)
 	}
 }
@@ -360,13 +358,11 @@ func (sc *Controller) resolveControllerRef(namespace string, controllerRef *meta
 		return nil
 	}
 
-	svcKey := fmt.Sprintf("%v/%v", namespace, controllerRef.Name)
-	svcObj, exists, err := sc.serviceStore.GetByKey(svcKey)
-	if err != nil || !exists {
+	svc, err := sc.serviceLister.Services(namespace).Get(controllerRef.Name)
+	if err != nil {
+		// FIXME: send error?
 		return nil
 	}
-
-	svc := svcObj.(*crv1.Service)
 
 	if svc.UID != controllerRef.UID {
 		// The controller we found with this Name is not the same one that the
@@ -386,7 +382,7 @@ func (sc *Controller) Run(workers int, stopCh <-chan struct{}) {
 	defer glog.Infof("Shutting down service controller")
 
 	// wait for your secondary caches to fill before starting your work
-	if !cache.WaitForCacheSync(stopCh, sc.serviceStoreSynced, sc.deploymentListerSynced, sc.kubeServiceListerSynced) {
+	if !cache.WaitForCacheSync(stopCh, sc.serviceListerSynced, sc.deploymentListerSynced, sc.kubeServiceListerSynced) {
 		return
 	}
 
@@ -463,16 +459,18 @@ func (sc *Controller) syncService(key string) error {
 		glog.V(4).Infof("Finished syncing Service %q (%v)", key, time.Now().Sub(startTime))
 	}()
 
-	svcObj, exists, err := sc.serviceStore.GetByKey(key)
-	if errors.IsNotFound(err) || !exists {
+	namespace, name, err := cache.SplitMetaNamespaceKey(key)
+	if err != nil {
+		return err
+	}
+	svc, err := sc.serviceLister.Services(namespace).Get(name)
+	if errors.IsNotFound(err) {
 		glog.V(2).Infof("Service %v has been deleted", key)
 		return nil
 	}
 	if err != nil {
 		return err
 	}
-
-	svc := svcObj.(*crv1.Service)
 
 	// TODO: probably need to change this when adding Blue/Green rollouts or canaries, there will probably be
 	// 		 multiple deployments per Service.
@@ -564,6 +562,6 @@ func (sc *Controller) updateServiceStatus(svc *crv1.Service, newStatus crv1.Serv
 	}
 
 	svc.Status = newStatus
-	_, err := sc.latticeClient.V1().Services(svc.Namespace).Update(svc)
+	_, err := sc.latticeClient.LatticeV1().Services(svc.Namespace).Update(svc)
 	return err
 }

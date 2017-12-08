@@ -460,18 +460,7 @@ func (sc *Controller) updateDeploymentSpec(svc *crv1.Service, d *appsv1beta2.Dep
 }
 
 func (sc *Controller) getServiceSystem(svc *crv1.Service) (*crv1.System, error) {
-	sysKey := fmt.Sprintf("%v/%v", svc.Namespace, svc.Namespace)
-	sysObj, exists, err := sc.systemStore.GetByKey(sysKey)
-	if err != nil {
-		return nil, err
-	}
-
-	if !exists {
-		return nil, fmt.Errorf("no System in namespace %v", svc.Namespace)
-	}
-
-	sys := sysObj.(*crv1.System)
-	return sys, nil
+	return sc.systemLister.Systems(svc.Namespace).Get(svc.Namespace)
 }
 
 // FIXME: remove this when local DNS works

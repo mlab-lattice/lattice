@@ -6,6 +6,7 @@ import (
 
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 
 	"github.com/satori/go.uuid"
 )
@@ -23,13 +24,15 @@ func (sbc *Controller) getComponentBuildFromInfo(cbInfo *crv1.ServiceBuildCompon
 		return nil, false, nil
 	}
 
-	cbKey := ns + "/" + *cbInfo.BuildName
-	cbObj, exists, err := sbc.componentBuildStore.GetByKey(cbKey)
-	if err != nil || !exists {
+	cb, err := sbc.componentBuildLister.ComponentBuilds(ns).Get(*cbInfo.BuildName)
+	if err != nil {
+		if errors.IsNotFound(err) {
+			return nil, false, nil
+		}
 		return nil, false, err
 	}
 
-	return cbObj.(*crv1.ComponentBuild), true, nil
+	return cb, true, nil
 }
 
 func (sbc *Controller) findComponentBuildForDefinitionHash(ns, definitionHash string) (*crv1.ComponentBuild, error) {
@@ -46,7 +49,7 @@ func (sbc *Controller) findComponentBuildForDefinitionHash(ns, definitionHash st
 
 	// We couldn't find a ComponentBuild in our recent builds cache, so we'll check the Store to see if
 	// there's a ComponentBuild we could use in there.
-	return sbc.findComponentBuildInStore(ns, definitionHash), nil
+	return sbc.findComponentBuildInStore(ns, definitionHash)
 }
 
 func (sbc *Controller) findComponentBuildInRecentBuildCache(ns, definitionHash string) (*crv1.ComponentBuild, error) {
@@ -64,18 +67,17 @@ func (sbc *Controller) findComponentBuildInRecentBuildCache(ns, definitionHash s
 	}
 
 	// Check to see if this build is in our ComponentBuild store
-	cbObj, exists, err := sbc.componentBuildStore.GetByKey(ns + "/" + cbName)
-	if err != nil {
+	cb, err := sbc.componentBuildLister.ComponentBuilds(ns).Get(cbName)
+	if err == nil {
+		return cb, nil
+	}
+
+	if !errors.IsNotFound(err) {
 		return nil, err
 	}
 
-	// The ComponentBuild exists in our store, so return that cached version.
-	if exists {
-		return cbObj.(*crv1.ComponentBuild), nil
-	}
-
 	// The ComponentBuild isn't in our store, so we'll need to read from the API
-	cb, err := sbc.latticeClient.V1().ComponentBuilds(ns).Get(cbName, metav1.GetOptions{})
+	cb, err = sbc.latticeClient.LatticeV1().ComponentBuilds(ns).Get(cbName, metav1.GetOptions{})
 	if err != nil {
 		if errors.IsNotFound(err) {
 			// FIXME: send warn event, this shouldn't happen
@@ -87,10 +89,13 @@ func (sbc *Controller) findComponentBuildInRecentBuildCache(ns, definitionHash s
 	return cb, nil
 }
 
-func (sbc *Controller) findComponentBuildInStore(ns, definitionHash string) *crv1.ComponentBuild {
+func (sbc *Controller) findComponentBuildInStore(ns, definitionHash string) (*crv1.ComponentBuild, error) {
 	// TODO: similar scalability concerns to getServiceBuildsForComponentBuild
-	for _, cbObj := range sbc.componentBuildStore.List() {
-		cb := cbObj.(*crv1.ComponentBuild)
+	cbs, err := sbc.componentBuildLister.List(labels.Everything())
+	if err != nil {
+		return nil, err
+	}
+	for _, cb := range cbs {
 		cbHashLabel := getComponentBuildDefinitionHashFromLabel(cb)
 		if cbHashLabel == nil {
 			// FIXME: add warn event
@@ -98,11 +103,11 @@ func (sbc *Controller) findComponentBuildInStore(ns, definitionHash string) *crv
 		}
 
 		if *cbHashLabel == definitionHash && cb.Status.State != crv1.ComponentBuildStateFailed {
-			return cb
+			return cb, nil
 		}
 	}
 
-	return nil
+	return nil, nil
 }
 
 func (sbc *Controller) createComponentBuild(ns string, cbInfo *crv1.ServiceBuildComponentBuildInfo, previousCbName *string) (*crv1.ComponentBuild, error) {
@@ -120,7 +125,7 @@ func (sbc *Controller) createComponentBuild(ns string, cbInfo *crv1.ServiceBuild
 
 	// If there is no new entry in the build cache, create a new ComponentBuild.
 	cb := getNewComponentBuildFromInfo(cbInfo)
-	result, err := sbc.latticeClient.V1().ComponentBuilds(ns).Create(cb)
+	result, err := sbc.latticeClient.LatticeV1().ComponentBuilds(ns).Create(cb)
 	if err != nil {
 		return nil, err
 	}
@@ -136,7 +141,7 @@ func (sbc *Controller) createComponentBuild(ns string, cbInfo *crv1.ServiceBuild
 }
 
 func (sbc *Controller) getComponentBuildFromAPI(ns, name string) (*crv1.ComponentBuild, error) {
-	return sbc.latticeClient.V1().ComponentBuilds(ns).Get(name, metav1.GetOptions{})
+	return sbc.latticeClient.LatticeV1().ComponentBuilds(ns).Get(name, metav1.GetOptions{})
 }
 
 func getNewComponentBuildFromInfo(cbInfo *crv1.ServiceBuildComponentBuildInfo) *crv1.ComponentBuild {

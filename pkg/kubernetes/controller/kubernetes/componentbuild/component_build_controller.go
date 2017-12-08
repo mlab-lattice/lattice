@@ -7,7 +7,9 @@ import (
 	"time"
 
 	crv1 "github.com/mlab-lattice/system/pkg/kubernetes/customresource/apis/lattice/v1"
-	latticeclientset "github.com/mlab-lattice/system/pkg/kubernetes/customresource/client"
+	latticeclientset "github.com/mlab-lattice/system/pkg/kubernetes/customresource/generated/clientset/versioned"
+	latticeinformers "github.com/mlab-lattice/system/pkg/kubernetes/customresource/generated/informers/externalversions/lattice/v1"
+	latticelisters "github.com/mlab-lattice/system/pkg/kubernetes/customresource/generated/listers/lattice/v1"
 
 	batchv1 "k8s.io/api/batch/v1"
 
@@ -34,15 +36,15 @@ type Controller struct {
 	kubeClient    kubeclientset.Interface
 	latticeClient latticeclientset.Interface
 
-	configStore       cache.Store
-	configStoreSynced cache.InformerSynced
-	configSetChan     chan struct{}
-	configSet         bool
-	configLock        sync.RWMutex
-	config            *crv1.ConfigSpec
+	configLister       latticelisters.ConfigLister
+	configListerSynced cache.InformerSynced
+	configSetChan      chan struct{}
+	configSet          bool
+	configLock         sync.RWMutex
+	config             *crv1.ConfigSpec
 
-	componentBuildStore       cache.Store
-	componentBuildStoreSynced cache.InformerSynced
+	componentBuildLister       latticelisters.ComponentBuildLister
+	componentBuildListerSynced cache.InformerSynced
 
 	jobLister       batchlisters.JobLister
 	jobListerSynced cache.InformerSynced
@@ -53,8 +55,8 @@ type Controller struct {
 func NewController(
 	kubeClient kubeclientset.Interface,
 	latticeClient latticeclientset.Interface,
-	configInformer cache.SharedInformer,
-	componentBuildInformer cache.SharedInformer,
+	configInformer latticeinformers.ConfigInformer,
+	componentBuildInformer latticeinformers.ComponentBuildInformer,
 	jobInformer batchinformers.JobInformer,
 ) *Controller {
 	cbc := &Controller{
@@ -67,7 +69,7 @@ func NewController(
 	cbc.syncHandler = cbc.syncComponentBuild
 	cbc.enqueue = cbc.enqueueComponentBuild
 
-	configInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+	configInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		// It's assumed there is always one and only one config object.
 		AddFunc:    cbc.addConfig,
 		UpdateFunc: cbc.updateConfig,
@@ -76,16 +78,16 @@ func NewController(
 		// At that point we should listen here for those deletes.
 		// FIXME: Document CB GC ideas (need to write down last used date, lock properly, etc)
 	})
-	cbc.configStore = configInformer.GetStore()
-	cbc.configStoreSynced = configInformer.HasSynced
+	cbc.configLister = configInformer.Lister()
+	cbc.configListerSynced = configInformer.Informer().HasSynced
 
-	componentBuildInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+	componentBuildInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    cbc.addComponentBuild,
 		UpdateFunc: cbc.updateComponentBuild,
 		// TODO: for now we'll assume that Config is never deleted
 	})
-	cbc.componentBuildStore = componentBuildInformer.GetStore()
-	cbc.componentBuildStoreSynced = componentBuildInformer.HasSynced
+	cbc.componentBuildLister = componentBuildInformer.Lister()
+	cbc.componentBuildListerSynced = componentBuildInformer.Informer().HasSynced
 
 	jobInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    cbc.addJob,
@@ -271,13 +273,10 @@ func (cbc *Controller) resolveControllerRef(namespace string, controllerRef *met
 		return nil
 	}
 
-	cbKey := fmt.Sprintf("%v/%v", namespace, controllerRef.Name)
-	cbObj, exists, err := cbc.componentBuildStore.GetByKey(cbKey)
-	if err != nil || !exists {
+	cb, err := cbc.componentBuildLister.ComponentBuilds(namespace).Get(controllerRef.Name)
+	if err != nil {
 		return nil
 	}
-
-	cb := cbObj.(*crv1.ComponentBuild)
 
 	if cb.UID != controllerRef.UID {
 		// The controller we found with this Name is not the same one that the
@@ -297,7 +296,7 @@ func (cbc *Controller) Run(workers int, stopCh <-chan struct{}) {
 	defer glog.Infof("Shutting down component-build controller")
 
 	// wait for your secondary caches to fill before starting your work
-	if !cache.WaitForCacheSync(stopCh, cbc.configStoreSynced, cbc.componentBuildStoreSynced, cbc.jobListerSynced) {
+	if !cache.WaitForCacheSync(stopCh, cbc.configListerSynced, cbc.componentBuildListerSynced, cbc.jobListerSynced) {
 		return
 	}
 
@@ -374,16 +373,18 @@ func (cbc *Controller) syncComponentBuild(key string) error {
 		glog.V(4).Infof("Finished syncing ComponentBuild %q (%v)", key, time.Now().Sub(startTime))
 	}()
 
-	cbObj, exists, err := cbc.componentBuildStore.GetByKey(key)
-	if errors.IsNotFound(err) || !exists {
+	namespace, name, err := cache.SplitMetaNamespaceKey(key)
+	if err != nil {
+		return err
+	}
+	cb, err := cbc.componentBuildLister.ComponentBuilds(namespace).Get(name)
+	if errors.IsNotFound(err) {
 		glog.V(2).Infof("ComponentBuild %v has been deleted", key)
 		return nil
 	}
 	if err != nil {
 		return err
 	}
-
-	cb := cbObj.(*crv1.ComponentBuild)
 
 	stateInfo, err := cbc.calculateState(cb)
 	if err != nil {

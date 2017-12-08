@@ -8,7 +8,7 @@ import (
 func initializeServiceBuildController(ctx controller.Context) {
 	go servicebuild.NewController(
 		ctx.LatticeClientBuilder.ClientOrDie("lattice-controller-lattice-service"),
-		ctx.CRInformers.ServiceBuild,
-		ctx.CRInformers.ComponentBuild,
+		ctx.LatticeInformerFactory.Lattice().V1().ServiceBuilds(),
+		ctx.LatticeInformerFactory.Lattice().V1().ComponentBuilds(),
 	).Run(4, ctx.Stop)
 }

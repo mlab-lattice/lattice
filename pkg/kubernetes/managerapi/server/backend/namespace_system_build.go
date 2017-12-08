@@ -22,7 +22,7 @@ func (kb *KubernetesBackend) BuildSystem(ln types.LatticeNamespace, definitionRo
 		return "", err
 	}
 
-	result, err := kb.LatticeClient.V1().SystemBuilds(kubeconstants.NamespaceLatticeInternal).Create(systemBuild)
+	result, err := kb.LatticeClient.LatticeV1().SystemBuilds(kubeconstants.NamespaceLatticeInternal).Create(systemBuild)
 	if err != nil {
 		return "", err
 	}
@@ -62,7 +62,7 @@ func getNewSystemBuild(ln types.LatticeNamespace, definitionRoot tree.Node, v ty
 }
 
 func (kb *KubernetesBackend) ListSystemBuilds(ln types.LatticeNamespace) ([]types.SystemBuild, error) {
-	result, err := kb.LatticeClient.V1().SystemBuilds(kubeconstants.NamespaceLatticeInternal).List(metav1.ListOptions{})
+	result, err := kb.LatticeClient.LatticeV1().SystemBuilds(kubeconstants.NamespaceLatticeInternal).List(metav1.ListOptions{})
 	if err != nil {
 		return nil, err
 	}
@@ -91,7 +91,7 @@ func (kb *KubernetesBackend) GetSystemBuild(ln types.LatticeNamespace, bid types
 }
 
 func (kb *KubernetesBackend) getInternalSystemBuild(ln types.LatticeNamespace, bid types.SystemBuildID) (*crv1.SystemBuild, bool, error) {
-	result, err := kb.LatticeClient.V1().SystemBuilds(kubeconstants.NamespaceLatticeInternal).Get(string(bid), metav1.GetOptions{})
+	result, err := kb.LatticeClient.LatticeV1().SystemBuilds(kubeconstants.NamespaceLatticeInternal).Get(string(bid), metav1.GetOptions{})
 	if err != nil {
 		if errors.IsNotFound(err) {
 			return nil, false, nil

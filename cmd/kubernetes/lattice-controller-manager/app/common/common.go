@@ -1,9 +1,10 @@
 package common
 
 import (
-	latticeclientset "github.com/mlab-lattice/system/pkg/kubernetes/customresource/client"
+	latticeclientset "github.com/mlab-lattice/system/pkg/kubernetes/customresource/generated/clientset/versioned"
+	latticeinformers "github.com/mlab-lattice/system/pkg/kubernetes/customresource/generated/informers/externalversions"
 
-	"k8s.io/client-go/informers"
+	kubeinformers "k8s.io/client-go/informers"
 	kubeclientset "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
@@ -30,11 +31,11 @@ func (cb LatticeClientBuilder) ClientOrDie(name string) latticeclientset.Interfa
 }
 
 type Context struct {
-	// InformerFactory gives access to base kubernetes informers.
-	InformerFactory informers.SharedInformerFactory
+	// KubeInformerFactory gives access to base kubernetes kubeinformers.
+	KubeInformerFactory kubeinformers.SharedInformerFactory
 
-	// Need to create shared informers for each of our CRDs.
-	CRInformers *CRInformers
+	// Need to create shared kubeinformers for each of our CRDs.
+	LatticeInformerFactory latticeinformers.SharedInformerFactory
 
 	KubeClientBuilder    KubeClientBuilder
 	LatticeClientBuilder LatticeClientBuilder

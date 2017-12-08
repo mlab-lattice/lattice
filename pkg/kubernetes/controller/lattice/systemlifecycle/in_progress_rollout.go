@@ -4,6 +4,8 @@ import (
 	"fmt"
 
 	crv1 "github.com/mlab-lattice/system/pkg/kubernetes/customresource/apis/lattice/v1"
+
+	"k8s.io/apimachinery/pkg/labels"
 )
 
 func (slc *Controller) syncInProgressRollout(sysRollout *crv1.SystemRollout) error {
@@ -36,9 +38,12 @@ func (slc *Controller) getSystemForRollout(sysRollout *crv1.SystemRollout) (*crv
 	var system *crv1.System
 
 	latticeNamespace := sysRollout.Spec.LatticeNamespace
-	for _, sysObj := range slc.systemStore.List() {
-		sys := sysObj.(*crv1.System)
+	syss, err := slc.systemLister.List(labels.Everything())
+	if err != nil {
+		return nil, err
+	}
 
+	for _, sys := range syss {
 		if string(latticeNamespace) == sys.Namespace {
 			if system != nil {
 				return nil, fmt.Errorf("LatticeNamespace %v contains multiple Systems", latticeNamespace)

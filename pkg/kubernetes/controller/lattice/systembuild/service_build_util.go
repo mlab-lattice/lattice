@@ -1,25 +1,23 @@
 package systembuild
 
 import (
-	"fmt"
-
 	"github.com/mlab-lattice/system/pkg/definition"
 	"github.com/mlab-lattice/system/pkg/kubernetes/constants"
 	crv1 "github.com/mlab-lattice/system/pkg/kubernetes/customresource/apis/lattice/v1"
 
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/satori/go.uuid"
 )
 
 func (sbc *Controller) getServiceBuildState(namespace, svcBuildName string) *crv1.ServiceBuildState {
-	svcBuildKey := fmt.Sprintf("%v/%v", namespace, svcBuildName)
-	svcBuildObj, exists, err := sbc.serviceBuildStore.GetByKey(svcBuildKey)
-	if err != nil || !exists {
+	svcb, err := sbc.serviceBuildLister.ServiceBuilds(namespace).Get(svcBuildName)
+	if err != nil {
 		return nil
 	}
 
-	return &(svcBuildObj.(*crv1.ServiceBuild).Status.State)
+	return &(svcb.Status.State)
 }
 
 func (sbc *Controller) getServiceBuildFromInfo(svcbInfo *crv1.SystemBuildServicesInfo, ns string) (*crv1.ServiceBuild, bool, error) {
@@ -27,18 +25,19 @@ func (sbc *Controller) getServiceBuildFromInfo(svcbInfo *crv1.SystemBuildService
 		return nil, false, nil
 	}
 
-	svcbKey := ns + "/" + *svcbInfo.BuildName
-	svcbObj, exists, err := sbc.serviceBuildStore.GetByKey(svcbKey)
-	if err != nil || !exists {
-		return nil, false, err
+	svcb, err := sbc.serviceBuildLister.ServiceBuilds(ns).Get(*svcbInfo.BuildName)
+	if err != nil {
+		if errors.IsNotFound(err) {
+			return nil, false, err
+		}
 	}
 
-	return svcbObj.(*crv1.ServiceBuild), true, nil
+	return svcb, true, nil
 }
 
 func (sbc *Controller) createServiceBuild(sysb *crv1.SystemBuild, svcDef *definition.Service) (*crv1.ServiceBuild, error) {
 	svcBuild := getNewServiceBuildFromDefinition(sysb, svcDef)
-	return sbc.latticeClient.V1().ServiceBuilds(sysb.Namespace).Create(svcBuild)
+	return sbc.latticeClient.LatticeV1().ServiceBuilds(sysb.Namespace).Create(svcBuild)
 }
 
 func getNewServiceBuildFromDefinition(sysBuild *crv1.SystemBuild, svcDefinition *definition.Service) *crv1.ServiceBuild {

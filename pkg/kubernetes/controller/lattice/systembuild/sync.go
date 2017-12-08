@@ -189,5 +189,5 @@ func (sbc *Controller) putSystemBuildStatusUpdate(sysb *crv1.SystemBuild, newSta
 }
 
 func (sbc *Controller) putSystemBuildUpdate(sysb *crv1.SystemBuild) (*crv1.SystemBuild, error) {
-	return sbc.latticeClient.V1().SystemBuilds(sysb.Namespace).Update(sysb)
+	return sbc.latticeClient.LatticeV1().SystemBuilds(sysb.Namespace).Update(sysb)
 }

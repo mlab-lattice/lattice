@@ -6,9 +6,12 @@ import (
 	"time"
 
 	crv1 "github.com/mlab-lattice/system/pkg/kubernetes/customresource/apis/lattice/v1"
-	latticeclientset "github.com/mlab-lattice/system/pkg/kubernetes/customresource/client"
+	latticeclientset "github.com/mlab-lattice/system/pkg/kubernetes/customresource/generated/clientset/versioned"
+	latticeinformers "github.com/mlab-lattice/system/pkg/kubernetes/customresource/generated/informers/externalversions/lattice/v1"
+	latticelisters "github.com/mlab-lattice/system/pkg/kubernetes/customresource/generated/listers/lattice/v1"
 
 	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
 
@@ -24,11 +27,11 @@ type Controller struct {
 
 	latticeClient latticeclientset.Interface
 
-	serviceBuildStore       cache.Store
-	serviceBuildStoreSynced cache.InformerSynced
+	serviceBuildLister       latticelisters.ServiceBuildLister
+	serviceBuildListerSynced cache.InformerSynced
 
-	componentBuildStore       cache.Store
-	componentBuildStoreSynced cache.InformerSynced
+	componentBuildLister       latticelisters.ComponentBuildLister
+	componentBuildListerSynced cache.InformerSynced
 
 	// recentComponentBuilds holds a map of namespaces which map to a map of definition
 	// hashes which map to the name of a ComponentBuild that was recently created
@@ -44,8 +47,8 @@ type Controller struct {
 
 func NewController(
 	latticeClient latticeclientset.Interface,
-	serviceBuildInformer cache.SharedInformer,
-	componentBuildInformer cache.SharedInformer,
+	serviceBuildInformer latticeinformers.ServiceBuildInformer,
+	componentBuildInformer latticeinformers.ComponentBuildInformer,
 ) *Controller {
 	sbc := &Controller{
 		latticeClient:         latticeClient,
@@ -56,7 +59,7 @@ func NewController(
 	sbc.syncHandler = sbc.syncServiceBuild
 	sbc.enqueue = sbc.enqueueServiceBuild
 
-	serviceBuildInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+	serviceBuildInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    sbc.addServiceBuild,
 		UpdateFunc: sbc.updateServiceBuild,
 		// TODO: for now it is assumed that ServiceBuilds are not deleted.
@@ -64,10 +67,10 @@ func NewController(
 		// At that point we should listen here for those deletes.
 		// FIXME: Document SvcB GC ideas (need to write down last used date, lock properly, etc)
 	})
-	sbc.serviceBuildStore = serviceBuildInformer.GetStore()
-	sbc.serviceBuildStoreSynced = serviceBuildInformer.HasSynced
+	sbc.serviceBuildLister = serviceBuildInformer.Lister()
+	sbc.serviceBuildListerSynced = serviceBuildInformer.Informer().HasSynced
 
-	componentBuildInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+	componentBuildInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    sbc.addComponentBuild,
 		UpdateFunc: sbc.updateComponentBuild,
 		// TODO: for now it is assumed that ComponentBuilds are not deleted.
@@ -75,8 +78,8 @@ func NewController(
 		// At that point we should listen here for those deletes.
 		// FIXME: Document CB GC ideas (need to write down last used date, lock properly, etc)
 	})
-	sbc.componentBuildStore = componentBuildInformer.GetStore()
-	sbc.componentBuildStoreSynced = componentBuildInformer.HasSynced
+	sbc.componentBuildLister = componentBuildInformer.Lister()
+	sbc.componentBuildListerSynced = componentBuildInformer.Informer().HasSynced
 
 	return sbc
 }
@@ -107,7 +110,11 @@ func (sbc *Controller) addComponentBuild(obj interface{}) {
 	}
 
 	glog.V(4).Infof("ComponentBuild %s added.", cb.Name)
-	for _, svcb := range sbc.getServiceBuildsForComponentBuild(cb) {
+	svcbs, err := sbc.getServiceBuildsForComponentBuild(cb)
+	if err != nil {
+		// FIXME: send error event?
+	}
+	for _, svcb := range svcbs {
 		sbc.enqueueServiceBuild(svcb)
 	}
 }
@@ -125,21 +132,29 @@ func (sbc *Controller) updateComponentBuild(old, cur interface{}) {
 		return
 	}
 
-	for _, svcb := range sbc.getServiceBuildsForComponentBuild(curCb) {
+	svcbs, err := sbc.getServiceBuildsForComponentBuild(curCb)
+	if err != nil {
+		// FIXME: send error event?
+	}
+	for _, svcb := range svcbs {
 		sbc.enqueueServiceBuild(svcb)
 	}
 }
 
-func (sbc *Controller) getServiceBuildsForComponentBuild(cb *crv1.ComponentBuild) []*crv1.ServiceBuild {
+func (sbc *Controller) getServiceBuildsForComponentBuild(cb *crv1.ComponentBuild) ([]*crv1.ServiceBuild, error) {
 	svcbs := []*crv1.ServiceBuild{}
 
 	// Find any ServiceBuilds whose ComponentBuildsInfo mention this ComponentBuild
 	// TODO: add a cache mapping ComponentBuild Names to active ServiceBuilds which are waiting on them
 	//       ^^^ tricky because the informers will start and trigger (aka this method will be called) prior
 	//			 to when we could fill the cache
-	for _, svcbObj := range sbc.serviceBuildStore.List() {
-		svcb := svcbObj.(*crv1.ServiceBuild)
 
+	svcBuilds, err := sbc.serviceBuildLister.List(labels.Everything())
+	if err != nil {
+		return nil, err
+	}
+
+	for _, svcb := range svcBuilds {
 		for _, cbInfo := range svcb.Spec.Components {
 			if cbInfo.BuildName != nil && *cbInfo.BuildName == cb.Name {
 				svcbs = append(svcbs, svcb)
@@ -148,7 +163,7 @@ func (sbc *Controller) getServiceBuildsForComponentBuild(cb *crv1.ComponentBuild
 		}
 	}
 
-	return svcbs
+	return svcbs, nil
 }
 
 func (sbc *Controller) enqueueServiceBuild(svcb *crv1.ServiceBuild) {
@@ -171,7 +186,7 @@ func (sbc *Controller) Run(workers int, stopCh <-chan struct{}) {
 	defer glog.Infof("Shutting down service-build controller")
 
 	// wait for your secondary caches to fill before starting your work
-	if !cache.WaitForCacheSync(stopCh, sbc.serviceBuildStoreSynced, sbc.componentBuildStoreSynced) {
+	if !cache.WaitForCacheSync(stopCh, sbc.serviceBuildListerSynced, sbc.componentBuildListerSynced) {
 		return
 	}
 
@@ -245,16 +260,18 @@ func (sbc *Controller) syncServiceBuild(key string) error {
 		glog.V(4).Infof("Finished syncing ServiceBuild %q (%v)", key, time.Now().Sub(startTime))
 	}()
 
-	svcbObj, exists, err := sbc.serviceBuildStore.GetByKey(key)
-	if errors.IsNotFound(err) || !exists {
+	namespace, name, err := cache.SplitMetaNamespaceKey(key)
+	if err != nil {
+		return err
+	}
+	svcb, err := sbc.serviceBuildLister.ServiceBuilds(namespace).Get(name)
+	if errors.IsNotFound(err) {
 		glog.V(2).Infof("ServiceBuild %v has been deleted", key)
 		return nil
 	}
 	if err != nil {
 		return err
 	}
-
-	svcb := svcbObj.(*crv1.ServiceBuild)
 
 	stateInfo, err := sbc.calculateState(svcb)
 	if err != nil {

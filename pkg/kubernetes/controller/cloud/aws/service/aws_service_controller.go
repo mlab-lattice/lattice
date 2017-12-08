@@ -7,7 +7,9 @@ import (
 	"time"
 
 	crv1 "github.com/mlab-lattice/system/pkg/kubernetes/customresource/apis/lattice/v1"
-	latticeclientset "github.com/mlab-lattice/system/pkg/kubernetes/customresource/client"
+	latticeclientset "github.com/mlab-lattice/system/pkg/kubernetes/customresource/generated/clientset/versioned"
+	latticeinformers "github.com/mlab-lattice/system/pkg/kubernetes/customresource/generated/informers/externalversions/lattice/v1"
+	latticelisters "github.com/mlab-lattice/system/pkg/kubernetes/customresource/generated/listers/lattice/v1"
 
 	corev1 "k8s.io/api/core/v1"
 
@@ -34,15 +36,15 @@ type Controller struct {
 	kubeClient    kubeclientset.Interface
 	latticeClient latticeclientset.Interface
 
-	configStore       cache.Store
-	configStoreSynced cache.InformerSynced
-	configSetChan     chan struct{}
-	configSet         bool
-	configLock        sync.RWMutex
-	config            crv1.ConfigSpec
+	configLister       latticelisters.ConfigLister
+	configListerSynced cache.InformerSynced
+	configSetChan      chan struct{}
+	configSet          bool
+	configLock         sync.RWMutex
+	config             crv1.ConfigSpec
 
-	serviceStore       cache.Store
-	serviceStoreSynced cache.InformerSynced
+	serviceLister       latticelisters.ServiceLister
+	serviceListerSynced cache.InformerSynced
 
 	kubeServiceLister       corelisters.ServiceLister
 	kubeServiceListerSynced cache.InformerSynced
@@ -55,8 +57,8 @@ type Controller struct {
 func NewController(
 	kubeClient kubeclientset.Interface,
 	latticeClient latticeclientset.Interface,
-	configInformer cache.SharedInformer,
-	serviceInformer cache.SharedInformer,
+	configInformer latticeinformers.ConfigInformer,
+	serviceInformer latticeinformers.ServiceInformer,
 	kubeServiceInformer coreinformers.ServiceInformer,
 	terraformModulePath string,
 ) *Controller {
@@ -71,7 +73,7 @@ func NewController(
 	sc.syncHandler = sc.syncService
 	sc.enqueueService = sc.enqueue
 
-	configInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+	configInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		// It's assumed there is always one and only one config object.
 		AddFunc:    sc.handleConfigAdd,
 		UpdateFunc: sc.handleConfigUpdate,
@@ -80,16 +82,16 @@ func NewController(
 		// At that point we should listen here for those deletes.
 		// FIXME: Document CB GC ideas (need to write down last used date, lock properly, etc)
 	})
-	sc.configStore = configInformer.GetStore()
-	sc.configStoreSynced = configInformer.HasSynced
+	sc.configLister = configInformer.Lister()
+	sc.configListerSynced = configInformer.Informer().HasSynced
 
-	serviceInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+	serviceInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    sc.handleServiceAdd,
 		UpdateFunc: sc.handleServiceUpdate,
 		DeleteFunc: sc.handleServiceDelete,
 	})
-	sc.serviceStore = serviceInformer.GetStore()
-	sc.serviceStoreSynced = serviceInformer.HasSynced
+	sc.serviceLister = serviceInformer.Lister()
+	sc.serviceListerSynced = serviceInformer.Informer().HasSynced
 
 	kubeServiceInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    sc.handleKubeServiceAdd,
@@ -282,13 +284,10 @@ func (sc *Controller) resolveControllerRef(namespace string, controllerRef *meta
 		return nil
 	}
 
-	svcKey := fmt.Sprintf("%v/%v", namespace, controllerRef.Name)
-	svcObj, exists, err := sc.serviceStore.GetByKey(svcKey)
-	if err != nil || !exists {
+	svc, err := sc.serviceLister.Services(namespace).Get(controllerRef.Name)
+	if err != nil {
 		return nil
 	}
-
-	svc := svcObj.(*crv1.Service)
 
 	if svc.UID != controllerRef.UID {
 		// The controller we found with this Name is not the same one that the
@@ -308,7 +307,7 @@ func (sc *Controller) Run(workers int, stopCh <-chan struct{}) {
 	defer glog.Infof("Shutting down service controller")
 
 	// wait for your secondary caches to fill before starting your work
-	if !cache.WaitForCacheSync(stopCh, sc.serviceStoreSynced, sc.kubeServiceListerSynced) {
+	if !cache.WaitForCacheSync(stopCh, sc.serviceListerSynced, sc.kubeServiceListerSynced) {
 		return
 	}
 
@@ -385,8 +384,13 @@ func (sc *Controller) syncService(key string) error {
 		glog.V(4).Infof("Finished syncing Service %q (%v)", key, time.Now().Sub(startTime))
 	}()
 
-	svcObj, exists, err := sc.serviceStore.GetByKey(key)
-	if errors.IsNotFound(err) || !exists {
+	namespace, name, err := cache.SplitMetaNamespaceKey(key)
+	if err != nil {
+		return err
+	}
+	svc, err := sc.serviceLister.Services(namespace).Get(name)
+	if errors.IsNotFound(err) {
+		//svcObj, exists, err := sc.serviceLister.GetByKey(key)
 		glog.V(2).Infof("Service %v has been deleted", key)
 		return nil
 	}
@@ -394,7 +398,6 @@ func (sc *Controller) syncService(key string) error {
 		return err
 	}
 
-	svc := svcObj.(*crv1.Service)
 	svcCopy := svc.DeepCopy()
 
 	// Before we start doing any work, we need to add our finalizer to the Service so that we can

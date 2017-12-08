@@ -12,7 +12,9 @@ go_library(
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/kubernetes/customresource/apis/lattice/v1:go_default_library",
-        "//pkg/kubernetes/customresource/client:go_default_library",
+        "//pkg/kubernetes/customresource/generated/clientset/versioned:go_default_library",
+        "//pkg/kubernetes/customresource/generated/informers/externalversions/lattice/v1:go_default_library",
+        "//pkg/kubernetes/customresource/generated/listers/lattice/v1:go_default_library",
         "//pkg/kubernetes/terraform/aws:go_default_library",
         "//pkg/kubernetes/util/kubernetes:go_default_library",
         "//pkg/terraform:go_default_library",

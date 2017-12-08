@@ -7,6 +7,7 @@ import (
 	"github.com/mlab-lattice/system/pkg/kubernetes/constants"
 	crv1 "github.com/mlab-lattice/system/pkg/kubernetes/customresource/apis/lattice/v1"
 
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/golang/glog"
@@ -14,17 +15,15 @@ import (
 )
 
 func (sc *Controller) getService(namespace, svcName string) (*crv1.Service, error) {
-	svcKey := namespace + "/" + svcName
-	svcObj, exists, err := sc.serviceStore.GetByKey(svcKey)
+	svc, err := sc.serviceLister.Services(namespace).Get(svcName)
 	if err != nil {
+		if errors.IsNotFound(err) {
+			return nil, nil
+		}
 		return nil, err
 	}
 
-	if !exists {
-		return nil, nil
-	}
-
-	return svcObj.(*crv1.Service), nil
+	return svc, nil
 }
 
 func (sc *Controller) getServiceState(namespace, svcName string) (*crv1.ServiceState, error) {
@@ -153,14 +152,14 @@ func (sc *Controller) createService(sys *crv1.System, svcInfo *crv1.SystemServic
 		return nil, err
 	}
 
-	return sc.latticeClient.V1().Services(svc.Namespace).Create(svc)
+	return sc.latticeClient.LatticeV1().Services(svc.Namespace).Create(svc)
 }
 
 func (sc *Controller) updateService(svc *crv1.Service) (*crv1.Service, error) {
-	return sc.latticeClient.V1().Services(svc.Namespace).Update(svc)
+	return sc.latticeClient.LatticeV1().Services(svc.Namespace).Update(svc)
 }
 
 func (sc *Controller) deleteService(svc *crv1.Service) error {
 	glog.V(5).Infof("Deleting Service %q/%q", svc.Namespace, svc.Name)
-	return sc.latticeClient.V1().Services(svc.Namespace).Delete(svc.Name, &metav1.DeleteOptions{})
+	return sc.latticeClient.LatticeV1().Services(svc.Namespace).Delete(svc.Name, &metav1.DeleteOptions{})
 }
