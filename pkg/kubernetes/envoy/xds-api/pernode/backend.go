@@ -7,8 +7,8 @@ import (
 	"github.com/mlab-lattice/system/pkg/constants"
 	"github.com/mlab-lattice/system/pkg/definition/tree"
 	"github.com/mlab-lattice/system/pkg/envoy"
+	crv1 "github.com/mlab-lattice/system/pkg/kubernetes/customresource/apis/lattice/v1"
 	latticeclientset "github.com/mlab-lattice/system/pkg/kubernetes/customresource/client"
-	crv1 "github.com/mlab-lattice/system/pkg/kubernetes/customresource/v1"
 
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/fields"

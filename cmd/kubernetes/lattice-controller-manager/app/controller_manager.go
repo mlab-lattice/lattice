@@ -8,7 +8,7 @@ import (
 	"github.com/mlab-lattice/system/cmd/kubernetes/lattice-controller-manager/app/kubernetescontrollers"
 	"github.com/mlab-lattice/system/cmd/kubernetes/lattice-controller-manager/app/latticecontrollers"
 	"github.com/mlab-lattice/system/pkg/constants"
-	crv1 "github.com/mlab-lattice/system/pkg/kubernetes/customresource/v1"
+	crv1 "github.com/mlab-lattice/system/pkg/kubernetes/customresource/apis/lattice/v1"
 
 	apiv1 "k8s.io/api/core/v1"
 

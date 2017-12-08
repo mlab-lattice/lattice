@@ -6,7 +6,7 @@ import (
 	"sort"
 
 	"github.com/mlab-lattice/system/pkg/definition/tree"
-	crv1 "github.com/mlab-lattice/system/pkg/kubernetes/customresource/v1"
+	crv1 "github.com/mlab-lattice/system/pkg/kubernetes/customresource/apis/lattice/v1"
 )
 
 // Warning: syncServiceBuildStates mutates svcb. Please do not pass in a pointer to a ComponentBuild

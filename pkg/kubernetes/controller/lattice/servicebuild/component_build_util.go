@@ -2,7 +2,7 @@ package servicebuild
 
 import (
 	"github.com/mlab-lattice/system/pkg/kubernetes/constants"
-	crv1 "github.com/mlab-lattice/system/pkg/kubernetes/customresource/v1"
+	crv1 "github.com/mlab-lattice/system/pkg/kubernetes/customresource/apis/lattice/v1"
 
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"

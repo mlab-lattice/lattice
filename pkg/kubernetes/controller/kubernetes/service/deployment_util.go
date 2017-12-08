@@ -12,7 +12,7 @@ import (
 	"github.com/mlab-lattice/system/pkg/definition/tree"
 	"github.com/mlab-lattice/system/pkg/kubernetes/constants"
 
-	crv1 "github.com/mlab-lattice/system/pkg/kubernetes/customresource/v1"
+	crv1 "github.com/mlab-lattice/system/pkg/kubernetes/customresource/apis/lattice/v1"
 	kubeutil "github.com/mlab-lattice/system/pkg/kubernetes/util/kubernetes"
 
 	appsv1beta2 "k8s.io/api/apps/v1beta2"

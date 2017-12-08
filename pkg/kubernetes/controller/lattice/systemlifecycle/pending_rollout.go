@@ -1,7 +1,7 @@
 package systemlifecycle
 
 import (
-	crv1 "github.com/mlab-lattice/system/pkg/kubernetes/customresource/v1"
+	crv1 "github.com/mlab-lattice/system/pkg/kubernetes/customresource/apis/lattice/v1"
 )
 
 func (slc *Controller) syncPendingRolloutState(sysRollout *crv1.SystemRollout) error {

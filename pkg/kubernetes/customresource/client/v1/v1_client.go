@@ -1,7 +1,7 @@
 package v1
 
 import (
-	"github.com/mlab-lattice/system/pkg/kubernetes/customresource/v1"
+	"github.com/mlab-lattice/system/pkg/kubernetes/customresource/apis/lattice/v1"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"

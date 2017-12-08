@@ -6,7 +6,7 @@ import (
 	"github.com/mlab-lattice/system/pkg/constants"
 	"github.com/mlab-lattice/system/pkg/definition/tree"
 	kubeconstants "github.com/mlab-lattice/system/pkg/kubernetes/constants"
-	crv1 "github.com/mlab-lattice/system/pkg/kubernetes/customresource/v1"
+	crv1 "github.com/mlab-lattice/system/pkg/kubernetes/customresource/apis/lattice/v1"
 	"github.com/mlab-lattice/system/pkg/types"
 
 	"k8s.io/apimachinery/pkg/api/errors"

@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/mlab-lattice/system/pkg/definition/tree"
-	crv1 "github.com/mlab-lattice/system/pkg/kubernetes/customresource/v1"
+	crv1 "github.com/mlab-lattice/system/pkg/kubernetes/customresource/apis/lattice/v1"
 )
 
 type sysBuildState string

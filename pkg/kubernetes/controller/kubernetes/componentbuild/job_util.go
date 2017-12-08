@@ -7,7 +7,7 @@ import (
 
 	"github.com/mlab-lattice/system/pkg/constants"
 	kubeconstants "github.com/mlab-lattice/system/pkg/kubernetes/constants"
-	crv1 "github.com/mlab-lattice/system/pkg/kubernetes/customresource/v1"
+	crv1 "github.com/mlab-lattice/system/pkg/kubernetes/customresource/apis/lattice/v1"
 
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"

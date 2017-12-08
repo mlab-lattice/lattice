@@ -2,7 +2,7 @@ package system
 
 import (
 	"github.com/mlab-lattice/system/pkg/kubernetes/constants"
-	crv1 "github.com/mlab-lattice/system/pkg/kubernetes/customresource/v1"
+	crv1 "github.com/mlab-lattice/system/pkg/kubernetes/customresource/apis/lattice/v1"
 )
 
 func (sc *Controller) removeFinalizer(sys *crv1.System) error {

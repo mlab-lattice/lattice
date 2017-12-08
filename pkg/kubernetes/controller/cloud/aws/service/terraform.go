@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	crv1 "github.com/mlab-lattice/system/pkg/kubernetes/customresource/v1"
+	crv1 "github.com/mlab-lattice/system/pkg/kubernetes/customresource/apis/lattice/v1"
 	kubetf "github.com/mlab-lattice/system/pkg/kubernetes/terraform/aws"
 	tf "github.com/mlab-lattice/system/pkg/terraform"
 	tfconfig "github.com/mlab-lattice/system/pkg/terraform/config"

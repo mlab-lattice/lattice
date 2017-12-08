@@ -6,8 +6,8 @@ import (
 	"sync"
 	"time"
 
+	crv1 "github.com/mlab-lattice/system/pkg/kubernetes/customresource/apis/lattice/v1"
 	latticeclientset "github.com/mlab-lattice/system/pkg/kubernetes/customresource/client"
-	crv1 "github.com/mlab-lattice/system/pkg/kubernetes/customresource/v1"
 
 	corev1 "k8s.io/api/core/v1"
 

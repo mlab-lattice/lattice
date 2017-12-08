@@ -1,7 +1,7 @@
 package service
 
 import (
-	crv1 "github.com/mlab-lattice/system/pkg/kubernetes/customresource/v1"
+	crv1 "github.com/mlab-lattice/system/pkg/kubernetes/customresource/apis/lattice/v1"
 	kubeutil "github.com/mlab-lattice/system/pkg/kubernetes/util/kubernetes"
 
 	corev1 "k8s.io/api/core/v1"

@@ -3,7 +3,7 @@ package kubernetes
 import (
 	"fmt"
 
-	crv1 "github.com/mlab-lattice/system/pkg/kubernetes/customresource/v1"
+	crv1 "github.com/mlab-lattice/system/pkg/kubernetes/customresource/apis/lattice/v1"
 )
 
 func GetKubeServiceNameForService(svc *crv1.Service) string {

@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	crv1 "github.com/mlab-lattice/system/pkg/kubernetes/customresource/v1"
+	crv1 "github.com/mlab-lattice/system/pkg/kubernetes/customresource/apis/lattice/v1"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 

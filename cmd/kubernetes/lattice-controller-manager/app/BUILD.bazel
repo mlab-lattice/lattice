@@ -11,7 +11,7 @@ go_library(
         "//cmd/kubernetes/lattice-controller-manager/app/kubernetescontrollers:go_default_library",
         "//cmd/kubernetes/lattice-controller-manager/app/latticecontrollers:go_default_library",
         "//pkg/constants:go_default_library",
-        "//pkg/kubernetes/customresource/v1:go_default_library",
+        "//pkg/kubernetes/customresource/apis/lattice/v1:go_default_library",
         "@com_github_golang_glog//:go_default_library",
         "@io_k8s_api//core/v1:go_default_library",
         "@io_k8s_apimachinery//pkg/fields:go_default_library",

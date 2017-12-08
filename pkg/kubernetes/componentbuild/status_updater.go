@@ -2,8 +2,8 @@ package componentbuild
 
 import (
 	"github.com/mlab-lattice/system/pkg/kubernetes/constants"
+	crv1 "github.com/mlab-lattice/system/pkg/kubernetes/customresource/apis/lattice/v1"
 	latticeclientset "github.com/mlab-lattice/system/pkg/kubernetes/customresource/client"
-	crv1 "github.com/mlab-lattice/system/pkg/kubernetes/customresource/v1"
 	"github.com/mlab-lattice/system/pkg/types"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
