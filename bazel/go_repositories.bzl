@@ -59,7 +59,7 @@ GO_REPOSITORIES = {
         "name": "io_k8s_api",
         # https://github.com/bazelbuild/rules_go/issues/964
         "build_file_proto_mode": "disable",
-        "commit": "fe29995db37613b9c5b2a647544cf627bfa8d299",  # Jul 19, 2017 (no releases)
+        "tag": "kubernetes-1.8.5",
         "importpath": "k8s.io/api",
     },
     "k8s.io/apimachinery": {
@@ -69,7 +69,7 @@ GO_REPOSITORIES = {
         "build_file_name": "BUILD.bazel",
         # https://github.com/bazelbuild/rules_go/issues/964
         "build_file_proto_mode": "disable",
-        "commit": "9d38e20d609d27e00d4ec18f7b9db67105a2bde0",
+        "tag": "kubernetes-1.8.5",
         "importpath": "k8s.io/apimachinery",
     },
     "k8s.io/apiextensions-apiserver": {
@@ -79,12 +79,12 @@ GO_REPOSITORIES = {
         "build_file_name": "BUILD.bazel",
         # https://github.com/bazelbuild/rules_go/issues/964
         "build_file_proto_mode": "disable",
-        "commit": "79ecda8df91cd9304503d6f3e488341eabe2287f",
+        "tag": "kubernetes-1.8.5",
         "importpath": "k8s.io/apiextensions-apiserver",
     },
     "k8s.io/client-go": {
         "name": "io_k8s_client_go",
-        "commit": "afb4606c45bae77c4dc2c15291d4d7d6d792196c",  # v5.0.0 branch HEAD
+        "tag": "kubernetes-1.8.5",
         "importpath": "k8s.io/client-go",
     },
     
@@ -204,7 +204,8 @@ GO_REPOSITORIES = {
     },
     
     # k8s.io dependencies
-    # commits from https://github.com/kubernetes/kubernetes/blob/9befc2b8928a9426501d3bf62f72849d5cbcd5a3/Godeps/Godeps.json
+    # commits from https://github.com/kubernetes/kubernetes/blob/cce11c6a185279d037023e02ac5249e14daa22bf/Godeps/Godeps.json
+    # aka v1.8.5
     "github.com/PuerkitoBio/purell": {
         "name": "com_github_PuerkitoBio_purell",
         "commit": "8a290539e2e8629dbc4e6bad948158f790ec31f4",
