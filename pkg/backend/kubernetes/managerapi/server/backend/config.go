@@ -14,7 +14,7 @@ func (kb *KubernetesBackend) GetSystemURL(ln types.LatticeNamespace) (string, er
 		return "", err
 	}
 
-	return config.Spec.SystemConfigs[ln].URL, nil
+	return config.Spec.SystemConfigs[ln].DefinitionURL, nil
 }
 
 func (kb *KubernetesBackend) getSystemIP() (string, error) {

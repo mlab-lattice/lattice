@@ -3,13 +3,16 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library")
 go_library(
     name = "go_default_library",
     srcs = [
+        "affinity.go",
         "annotation.go",
         "config.go",
         "docker.go",
         "finalizer.go",
+        "internal_component.go",
         "label.go",
         "master_node.go",
         "namespace.go",
+        "node_selector.go",
         "service_account.go",
         "terraform.go",
         "toleration.go",

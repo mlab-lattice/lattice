@@ -146,7 +146,7 @@ func (sc *Controller) getServiceTerraformConfig(svc *crv1.Service) (interface{},
 			Region: awsConfig.Region,
 			Bucket: sc.config.Terraform.S3Backend.Bucket,
 			Key: fmt.Sprintf("%v%v/%v",
-				kubetf.GetS3BackendStatePathRoot(sc.config.SystemID),
+				kubetf.GetS3BackendStatePathRoot(sc.config.KubernetesNamespacePrefix),
 				terraformStatePathService,
 				svc.Name),
 			Encrypt: true,
@@ -174,7 +174,7 @@ func (sc *Controller) getServiceDedicatedPrivateTerraformModule(svc *crv1.Servic
 		BaseNodeAmiID:             awsConfig.BaseNodeAMIID,
 		KeyName:                   awsConfig.KeyName,
 
-		SystemID:  sc.config.SystemID,
+		SystemID:  sc.config.KubernetesNamespacePrefix,
 		ServiceID: svc.Name,
 		// FIXME: support min/max instances
 		NumInstances: *svc.Spec.Definition.Resources.NumInstances,
@@ -213,7 +213,7 @@ func (sc *Controller) getServiceDedicatedPublicHTTPTerraformModule(svc *crv1.Ser
 		BaseNodeAmiID:             awsConfig.BaseNodeAMIID,
 		KeyName:                   awsConfig.KeyName,
 
-		SystemID:  sc.config.SystemID,
+		SystemID:  sc.config.KubernetesNamespacePrefix,
 		ServiceID: svc.Name,
 		// FIXME: support min/max instances
 		NumInstances: *svc.Spec.Definition.Resources.NumInstances,

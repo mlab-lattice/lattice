@@ -8,7 +8,7 @@ import (
 
 func GetServiceTaintToleration(svcName string) corev1.Toleration {
 	return corev1.Toleration{
-		Key:      constants.TaintServiceNode,
+		Key:      constants.LabelKeyServiceNode,
 		Operator: corev1.TolerationOpEqual,
 		Value:    svcName,
 		Effect:   corev1.TaintEffectNoSchedule,

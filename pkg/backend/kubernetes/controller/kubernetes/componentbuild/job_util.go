@@ -165,9 +165,9 @@ func (cbc *Controller) getBuildContainer(cb *crv1.ComponentBuild) (*corev1.Conta
 		return nil, "", err
 	}
 
-	repo := cbc.config.ComponentBuild.DockerConfig.Repository
+	repo := cbc.config.ComponentBuild.DockerArtifact.Repository
 	tag := cb.Annotations[kubeconstants.AnnotationKeyComponentBuildDefinitionHash]
-	if cbc.config.ComponentBuild.DockerConfig.RepositoryPerImage {
+	if cbc.config.ComponentBuild.DockerArtifact.RepositoryPerImage {
 		repo = cb.Annotations[kubeconstants.AnnotationKeyComponentBuildDefinitionHash]
 		tag = fmt.Sprint(time.Now().Unix())
 	}
@@ -175,13 +175,13 @@ func (cbc *Controller) getBuildContainer(cb *crv1.ComponentBuild) (*corev1.Conta
 	args := []string{
 		"--component-build-id", cb.Name,
 		"--component-build-definition", string(buildJSON),
-		"--docker-registry", cbc.config.ComponentBuild.DockerConfig.Registry,
+		"--docker-registry", cbc.config.ComponentBuild.DockerArtifact.Registry,
 		"--docker-repository", repo,
 		"--docker-tag", tag,
 		"--work-directory", jobWorkingDirectory,
 	}
 
-	if cbc.config.ComponentBuild.DockerConfig.Push {
+	if cbc.config.ComponentBuild.DockerArtifact.Push {
 		args = append(args, "--docker-push")
 	}
 
@@ -201,12 +201,12 @@ func (cbc *Controller) getBuildContainer(cb *crv1.ComponentBuild) (*corev1.Conta
 
 	buildContainer := &corev1.Container{
 		Name:  "build",
-		Image: cbc.config.ComponentBuild.BuildImage,
+		Image: cbc.config.ComponentBuild.Builder.Image,
 		Args:  args,
 		Env: []corev1.EnvVar{
 			{
 				Name:  kubeconstants.EnvVarNameDockerAPIVersion,
-				Value: cbc.config.ComponentBuild.DockerConfig.APIVersion,
+				Value: cbc.config.ComponentBuild.Builder.DockerAPIVersion,
 			},
 		},
 		VolumeMounts: []corev1.VolumeMount{
@@ -223,7 +223,7 @@ func (cbc *Controller) getBuildContainer(cb *crv1.ComponentBuild) (*corev1.Conta
 
 	dockerImageFQN := fmt.Sprintf(
 		"%v/%v:%v",
-		cbc.config.ComponentBuild.DockerConfig.Registry,
+		cbc.config.ComponentBuild.DockerArtifact.Registry,
 		repo,
 		tag,
 	)

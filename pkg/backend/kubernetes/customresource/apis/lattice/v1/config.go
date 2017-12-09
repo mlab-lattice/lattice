@@ -24,12 +24,12 @@ type Config struct {
 }
 
 type ConfigSpec struct {
-	SystemID       string                                  `json:"systemID"`
-	Provider       ConfigProvider                          `json:"providerConfig"`
-	ComponentBuild ConfigComponentBuild                    `json:"componentBuild"`
-	Envoy          ConfigEnvoy                             `json:"envoy"`
-	SystemConfigs  map[types.LatticeNamespace]ConfigSystem `json:"userSystem"`
-	Terraform      *ConfigTerraform                        `json:"terraform,omitempty"`
+	KubernetesNamespacePrefix string                                  `json:"systemID"`
+	Provider                  ConfigProvider                          `json:"providerConfig"`
+	ComponentBuild            ConfigComponentBuild                    `json:"componentBuild"`
+	Envoy                     ConfigEnvoy                             `json:"envoy"`
+	SystemConfigs             map[types.LatticeNamespace]ConfigSystem `json:"userSystem"`
+	Terraform                 *ConfigTerraform                        `json:"terraform,omitempty"`
 }
 
 type ConfigProvider struct {
@@ -52,15 +52,22 @@ type ConfigProviderAWS struct {
 }
 
 type ConfigSystem struct {
-	URL string `json:"url"`
+	DefinitionURL string `json:"url"`
 }
 
 type ConfigComponentBuild struct {
-	DockerConfig ConfigBuildDocker `json:"dockerConfig"`
-	BuildImage   string            `json:"buildImage"`
+	Builder        ConfigComponentBuildBuilder        `json:"builderConfig"`
+	DockerArtifact ConfigComponentBuildDockerArtifact `json:"dockerConfig"`
 }
 
-type ConfigBuildDocker struct {
+type ConfigComponentBuildBuilder struct {
+	Image string `json:"image"`
+
+	// Version of the docker API used by the build node docker daemons
+	DockerAPIVersion string `json:"dockerApiVersion"`
+}
+
+type ConfigComponentBuildDockerArtifact struct {
 	// Registry used to tag images.
 	Registry string `json:"registry"`
 
@@ -73,9 +80,6 @@ type ConfigBuildDocker struct {
 	// If true push the image to the repository.
 	// Set to false for the local case.
 	Push bool `json:"push"`
-
-	// Version of the docker API used by the build node docker daemons
-	APIVersion string `json:"apiVersion"`
 }
 
 type ConfigEnvoy struct {

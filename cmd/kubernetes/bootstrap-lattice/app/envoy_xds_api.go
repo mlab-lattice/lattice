@@ -55,7 +55,7 @@ func seedEnvoyXDSAPI() {
 					ServiceAccountName: kubeconstants.ServiceAccountEnvoyXDSAPI,
 					Tolerations: []corev1.Toleration{
 						{
-							Key:      kubeconstants.TaintServiceNode,
+							Key:      kubeconstants.LabelKeyServiceNode,
 							Operator: corev1.TolerationOpExists,
 							Effect:   corev1.TaintEffectNoSchedule,
 						},

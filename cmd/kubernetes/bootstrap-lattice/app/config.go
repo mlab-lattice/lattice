@@ -24,7 +24,7 @@ func seedConfig(userSystemURL string) {
 		Spec: crv1.ConfigSpec{
 			SystemConfigs: map[types.LatticeNamespace]crv1.ConfigSystem{
 				constants.UserSystemNamespace: {
-					URL: userSystemURL,
+					DefinitionURL: userSystemURL,
 				},
 			},
 			Envoy: crv1.ConfigEnvoy{
@@ -34,22 +34,24 @@ func seedConfig(userSystemURL string) {
 				XDSAPIPort:        8080,
 			},
 			ComponentBuild: crv1.ConfigComponentBuild{
-				DockerConfig: crv1.ConfigBuildDocker{
+				DockerArtifact: crv1.ConfigComponentBuildDockerArtifact{
 					RepositoryPerImage: false,
 					Repository:         kubeconstants.DockerRegistryComponentBuildsDefault,
 					Push:               true,
 					Registry:           componentBuildRegistry,
-					APIVersion:         dockerAPIVersion,
 				},
-				BuildImage: getContainerImageFQN(kubeconstants.DockerImageComponentBuilder),
+				Builder: crv1.ConfigComponentBuildBuilder{
+					Image:            getContainerImageFQN(kubeconstants.DockerImageComponentBuilder),
+					DockerAPIVersion: dockerAPIVersion,
+				},
 			},
-			SystemID: systemID,
+			KubernetesNamespacePrefix: systemID,
 		},
 	}
 
 	switch provider {
 	case constants.ProviderLocal:
-		config.Spec.ComponentBuild.DockerConfig.Push = false
+		config.Spec.ComponentBuild.DockerArtifact.Push = false
 
 		localConfig, err := getLocalConfig()
 		if err != nil {
