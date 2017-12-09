@@ -18,6 +18,7 @@ func (b *DefaultBootstrapper) seedMasterComponents() error {
 
 	seedMasterComponentFuncs := []func() error{
 		b.seedLatticeControllerManager,
+		b.seedManagerAPI,
 	}
 
 	for _, seedFunc := range seedMasterComponentFuncs {
@@ -39,18 +40,24 @@ func (b *DefaultBootstrapper) seedLatticeControllerManager() error {
 	namespace := kubeutil.GetFullNamespace(b.Options.Config.KubernetesNamespacePrefix, constants.NamespaceLatticeInternal)
 	args := []string{"--provider", b.Provider}
 	args = append(args, b.Options.MasterComponents.LatticeControllerManager.Args...)
+	labels := map[string]string{
+		constants.MasterNodeLabelComponent: constants.MasterNodeComponentLatticeControllerManager,
+	}
+
 	latticeControllerManagerDaemonSet := &appsv1beta2.DaemonSet{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      constants.MasterNodeComponentLatticeControllerManager,
 			Namespace: namespace,
+			Labels:    labels,
 		},
 		Spec: appsv1beta2.DaemonSetSpec{
+			Selector: &metav1.LabelSelector{
+				MatchLabels: labels,
+			},
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Name: constants.MasterNodeComponentLatticeControllerManager,
-					Labels: map[string]string{
-						constants.MasterNodeLabelComponent: constants.MasterNodeComponentLatticeControllerManager,
-					},
+					Name:   constants.MasterNodeComponentLatticeControllerManager,
+					Labels: labels,
 				},
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{
@@ -88,18 +95,24 @@ func (b *DefaultBootstrapper) seedManagerAPI() error {
 	namespace := kubeutil.GetFullNamespace(b.Options.Config.KubernetesNamespacePrefix, constants.NamespaceLatticeInternal)
 	args := []string{"--port", strconv.Itoa(int(b.Options.MasterComponents.ManagerAPI.Port))}
 	args = append(args, b.Options.MasterComponents.ManagerAPI.Args...)
+	labels := map[string]string{
+		constants.MasterNodeLabelComponent: constants.MasterNodeComponentLatticeControllerManager,
+	}
+
 	latticeControllerManagerDaemonSet := &appsv1beta2.DaemonSet{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      constants.MasterNodeComponentManagerAPI,
 			Namespace: namespace,
+			Labels:    labels,
 		},
 		Spec: appsv1beta2.DaemonSetSpec{
+			Selector: &metav1.LabelSelector{
+				MatchLabels: labels,
+			},
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Name: constants.MasterNodeComponentManagerAPI,
-					Labels: map[string]string{
-						constants.MasterNodeLabelComponent: constants.MasterNodeComponentManagerAPI,
-					},
+					Name:   constants.MasterNodeComponentManagerAPI,
+					Labels: labels,
 				},
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{

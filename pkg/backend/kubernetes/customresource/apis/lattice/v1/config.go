@@ -24,12 +24,15 @@ type Config struct {
 }
 
 type ConfigSpec struct {
-	KubernetesNamespacePrefix string                                  `json:"systemID"`
-	Provider                  ConfigProvider                          `json:"providerConfig"`
-	ComponentBuild            ConfigComponentBuild                    `json:"componentBuild"`
-	Envoy                     ConfigEnvoy                             `json:"envoy"`
-	SystemConfigs             map[types.LatticeNamespace]ConfigSystem `json:"userSystem"`
-	Terraform                 *ConfigTerraform                        `json:"terraform,omitempty"`
+	// FIXME: this shouldn't be dynamic config
+	KubernetesNamespacePrefix string               `json:"systemID"`
+	Provider                  ConfigProvider       `json:"providerConfig"`
+	ComponentBuild            ConfigComponentBuild `json:"componentBuild"`
+	Envoy                     ConfigEnvoy          `json:"envoy"`
+	// FIXME: this shouldn't be dynamic config
+	// FIXME: create empty System and add definition URL to system.Spec
+	SystemConfigs map[types.LatticeNamespace]ConfigSystem `json:"userSystem"`
+	Terraform     *ConfigTerraform                        `json:"terraform,omitempty"`
 }
 
 type ConfigProvider struct {
@@ -38,17 +41,23 @@ type ConfigProvider struct {
 }
 
 type ConfigProviderLocal struct {
+	// FIXME: this shouldn't be dynamic config
 	IP string `json:"ip"`
 }
 
 type ConfigProviderAWS struct {
-	Region                    string   `json:"region"`
-	AccountID                 string   `json:"accountID"`
-	VPCID                     string   `json:"vpcId"`
-	SubnetIDs                 []string `json:"subnetIds"`
-	MasterNodeSecurityGroupID string   `json:"masterNodeSecurityGroupId"`
-	BaseNodeAMIID             string   `json:"baseNodeAmiId"`
-	KeyName                   string   `json:"keyName"`
+	// FIXME: this shouldn't be dynamic config
+	Region string `json:"region"`
+	// FIXME: this shouldn't be dynamic config
+	AccountID string `json:"accountID"`
+	// FIXME: this shouldn't be dynamic config
+	VPCID string `json:"vpcId"`
+	// FIXME: this shouldn't be dynamic config
+	SubnetIDs []string `json:"subnetIds"`
+	// FIXME: this shouldn't be dynamic config
+	MasterNodeSecurityGroupID string `json:"masterNodeSecurityGroupId"`
+	BaseNodeAMIID             string `json:"baseNodeAmiId"`
+	KeyName                   string `json:"keyName"`
 }
 
 type ConfigSystem struct {

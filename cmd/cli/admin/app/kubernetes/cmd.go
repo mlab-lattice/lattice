@@ -10,7 +10,7 @@ import (
 
 var Cmd = &cobra.Command{
 	Use:   "kubernetes",
-	Short: "commands for managing a Kubernets backend",
+	Short: "commands for managing a Kubernetes backend",
 	Args:  cobra.ExactArgs(0),
 	Run: func(cmd *cobra.Command, args []string) {
 		cmd.Help()

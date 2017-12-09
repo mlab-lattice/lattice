@@ -5,8 +5,9 @@ import (
 	"os/user"
 	"time"
 
-	"github.com/mlab-lattice/system/pkg/backend/kubernetes/constants"
+	kubeconstants "github.com/mlab-lattice/system/pkg/backend/kubernetes/constants"
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/util/minikube"
+	"github.com/mlab-lattice/system/pkg/constants"
 
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -109,13 +110,13 @@ func (lp *LocalProvisioner) bootstrap(address, url, name string) error {
 	bootstrapSA := &corev1.ServiceAccount{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "bootstrap-lattice",
-			Namespace: constants.NamespaceDefault,
+			Namespace: kubeconstants.NamespaceDefault,
 		},
 	}
 
 	_, err = kubeClientset.
 		CoreV1().
-		ServiceAccounts(constants.NamespaceDefault).
+		ServiceAccounts(kubeconstants.NamespaceDefault).
 		Create(bootstrapSA)
 	if err != nil && !apierrors.IsAlreadyExists(err) {
 		return err
@@ -161,17 +162,20 @@ func (lp *LocalProvisioner) bootstrap(address, url, name string) error {
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{
 						{
-							Name:  "kubernetes-bootstrap-lattice",
-							Image: lp.latticeContainerRegistry + "/" + lp.latticeContainerRepoPrefix + constants.DockerImageBootstrapKubernetes,
+							Name:  "bootstrap-lattice",
+							Image: lp.getLatticeContainerImage(constants.DockerImageLatticeCLIAdmin),
 							Args: []string{
-								"--docker-api-version", lp.dockerAPIVersion,
+								"kubernetes", "bootstrap",
 								"--provider", "local",
 								"--provider-var", "system-ip=" + address,
-								"--system-definition-url", url,
-								"--system-id", systemNamePrefixMinikube + name,
-								"--lattice-container-registry", lp.latticeContainerRegistry,
-								"--lattice-container-repo-prefix", lp.latticeContainerRepoPrefix,
-								"--component-build-registry", "lattice-local",
+								"--lattice-controller-manager-image", lp.getLatticeContainerImage(kubeconstants.DockerImageLatticeControllerManager),
+								"--manager-api-image", lp.getLatticeContainerImage(kubeconstants.DockerImageManagerAPIRest),
+								"--component-builder-image", lp.getLatticeContainerImage("kubernetes-" + kubeconstants.DockerImageComponentBuilder),
+								"--component-build-docker-artifact-registry", "lattice-local",
+								"--component-build-docker-artifact-repository-per-image", "true",
+								"--component-build-docker-artifact-push", "false",
+								"--envoy-prepare-image", lp.getLatticeContainerImage(constants.DockerImageEnvoyPrepare),
+								"--envoy-redirect-cidr-block", "172.16.0.0/16",
 							},
 						},
 					},
@@ -186,7 +190,7 @@ func (lp *LocalProvisioner) bootstrap(address, url, name string) error {
 	fmt.Println("Creating bootstrap job")
 	_, err = kubeClientset.
 		BatchV1().
-		Jobs(constants.NamespaceDefault).
+		Jobs(kubeconstants.NamespaceDefault).
 		Create(&job)
 	if err != nil && !apierrors.IsAlreadyExists(err) {
 		return err
@@ -194,7 +198,7 @@ func (lp *LocalProvisioner) bootstrap(address, url, name string) error {
 
 	fmt.Println("Polling bootstrap job status")
 	err = wait.Poll(1*time.Second, 300*time.Second, func() (bool, error) {
-		j, err := kubeClientset.BatchV1().Jobs(constants.NamespaceDefault).Get(job.Name, metav1.GetOptions{})
+		j, err := kubeClientset.BatchV1().Jobs(kubeconstants.NamespaceDefault).Get(job.Name, metav1.GetOptions{})
 		if err != nil {
 			return false, err
 		}
@@ -213,7 +217,7 @@ func (lp *LocalProvisioner) bootstrap(address, url, name string) error {
 	}
 
 	fmt.Println("Deleting bootstrap SA")
-	return kubeClientset.CoreV1().ServiceAccounts(constants.NamespaceDefault).Delete(bootstrapSA.Name, nil)
+	return kubeClientset.CoreV1().ServiceAccounts(kubeconstants.NamespaceDefault).Delete(bootstrapSA.Name, nil)
 }
 
 func (lp *LocalProvisioner) Deprovision(name string) error {
@@ -225,4 +229,8 @@ func (lp *LocalProvisioner) Deprovision(name string) error {
 	fmt.Printf("Running minikube delete (pid: %v, log file: %v)\n", result.Pid, filepath.Join(*lp.mec.LogPath, logFilename))
 
 	return result.Wait()
+}
+
+func (lp *LocalProvisioner) getLatticeContainerImage(image string) string {
+	return lp.latticeContainerRegistry + "/" + lp.latticeContainerRepoPrefix + image
 }

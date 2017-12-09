@@ -53,5 +53,6 @@ go_targets = [
     ("kubernetes-envoy-xds-api-rest-per-node", None, "cmd/kubernetes/envoy/xdsapi/v1/rest/per-node"),
     ("kubernetes-lattice-controller-manager", "terraform", "cmd/kubernetes/lattice-controller-manager"),
     ("kubernetes-manager-api-rest", None, "cmd/kubernetes/manager-api/rest"),
+    ("lattice-cli-admin", None, "cmd/cli/admin"),
 ]
 lattice_container_images(go_targets)

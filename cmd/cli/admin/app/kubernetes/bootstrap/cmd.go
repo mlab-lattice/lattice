@@ -56,10 +56,15 @@ var (
 )
 
 var Cmd = &cobra.Command{
-	Use:   "kubernetes",
-	Short: "commands for managing a Kubernetes backend",
-	Args:  cobra.ExactArgs(0),
+	Use:   "bootstrap",
+	Short: "bootstraps a kubernetes cluster to run Lattice",
+	// FIXME: figure out why it thinks two args are getting passed in
+	Args: cobra.ExactArgs(2),
 	Run: func(cmd *cobra.Command, args []string) {
+		if !componentBuildDockerArtifactRepositoryPerImage && componentBuildDockerArtifactRepository == "" {
+			panic("must specify component-build-docker-artifact-repository if not component-build-docker-artifact-repository-per-image")
+		}
+
 		kubeconfig, err := kubeutil.NewConfig(kubeconfigPath, "")
 		if err != nil {
 			panic(err)
@@ -129,8 +134,6 @@ var Cmd = &cobra.Command{
 }
 
 func init() {
-	cobra.OnInitialize(initCmd)
-
 	Cmd.Flags().StringVar(&kubeconfigPath, "kubeconfig", "", "path to kubeconfig")
 	Cmd.Flags().StringVar(&kubeconfigContext, "kubeconfig-context", "", "context in the kubeconfig to use")
 
@@ -154,12 +157,11 @@ func init() {
 	Cmd.MarkFlagRequired("component-build-docker-artifact-registry")
 	Cmd.Flags().BoolVar(&componentBuildDockerArtifactRepositoryPerImage, "component-build-docker-artifact-repository-per-image", false, "if false, one repository with a new tag for each artifact will be use, if true a new repository for each artifact will be used")
 	Cmd.Flags().StringVar(&componentBuildDockerArtifactRepository, "component-build-docker-artifact-repository", "", "repository to tag component build docker artifacts with, required if component-build-docker-artifact-repository-per-image is false")
-	Cmd.Flags().BoolVar(&componentBuildDockerArtifactPush, "component-build-docker-artifact-push", false, "whether or not the component-builder should push the docker artifact (use false for local)")
+	Cmd.Flags().BoolVar(&componentBuildDockerArtifactPush, "component-build-docker-artifact-push", true, "whether or not the component-builder should push the docker artifact (use false for local)")
 
 	Cmd.Flags().StringVar(&envoyPrepareImage, "envoy-prepare-image", "", "image to use for envoy-prepare")
 	Cmd.MarkFlagRequired("envoy-prepare-image")
-	Cmd.Flags().StringVar(&envoyImage, "envoy-image", "", "image to use for envoy")
-	Cmd.MarkFlagRequired("envoy-image")
+	Cmd.Flags().StringVar(&envoyImage, "envoy-image", "envoyproxy/envoy-alpine", "image to use for envoy")
 	Cmd.Flags().StringVar(&envoyRedirectCIDRBlock, "envoy-redirect-cidr-block", "", "CIDR block to use to redirect traffic to envoy")
 	Cmd.MarkFlagRequired("envoy-redirect-cidr-block")
 	Cmd.Flags().Int32Var(&envoyXDSAPIPort, "envoy-xds-api-port", 8080, "port that the envoy-xds-api should listen on")
@@ -169,12 +171,6 @@ func init() {
 
 	Cmd.Flags().StringVar(&terraformBackend, "terraform-backend", "", "backend to use for terraform")
 	Cmd.Flags().StringArrayVar(&terraformBackendVars, "terraform-backend-var", nil, "additional variables for the terraform backend")
-}
-
-func initCmd() {
-	if !componentBuildDockerArtifactRepositoryPerImage && componentBuildDockerArtifactRepository == "" {
-		panic("must specify component-build-docker-artifact-repository if not component-build-docker-artifact-repository-per-image")
-	}
 }
 
 func parseProviderVars() (*crv1.ConfigProvider, error) {
@@ -268,6 +264,10 @@ func parseProviderVarsAWS() (*crv1.ConfigProviderAWS, error) {
 }
 
 func parseTerraformVars() (*crv1.ConfigTerraform, error) {
+	if terraformBackend == "" {
+		return nil, nil
+	}
+
 	var config *crv1.ConfigTerraform
 	switch terraformBackend {
 	case kubeconstants.TerraformBackendS3:
@@ -281,7 +281,7 @@ func parseTerraformVars() (*crv1.ConfigTerraform, error) {
 			},
 		}
 	default:
-		return nil, fmt.Errorf("unsupported provider: %v", provider)
+		return nil, fmt.Errorf("unsupported terraform backend: %v", terraformBackend)
 	}
 
 	return config, nil

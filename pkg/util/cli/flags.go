@@ -25,9 +25,7 @@ func (ef *EmbeddedFlag) init() {
 	for key, value := range ef.Expected {
 		ef.expected[key] = struct{}{}
 
-		fmt.Printf("found key %v\n", key)
 		if value.Required {
-			fmt.Printf("key %v is required\n", key)
 			ef.required[key] = struct{}{}
 		}
 

@@ -76,6 +76,7 @@ docker-push-all-images-stable:
 	make docker-push-image-stable IMAGE=kubernetes-envoy-xds-api-rest-per-node
 	make docker-push-image-stable IMAGE=kubernetes-lattice-controller-manager
 	make docker-push-image-stable IMAGE=kubernetes-manager-api-rest
+	make docker-push-image-user IMAGE=lattice-cli-admin
 
 .PHONY: docker-push-all-images-user
 docker-push-all-images-user:
@@ -84,6 +85,7 @@ docker-push-all-images-user:
 	make docker-push-image-user IMAGE=kubernetes-envoy-xds-api-rest-per-node
 	make docker-push-image-user IMAGE=kubernetes-lattice-controller-manager
 	make docker-push-image-user IMAGE=kubernetes-manager-api-rest
+	make docker-push-image-user IMAGE=lattice-cli-admin
 
 # local binaries
 .PHONY: update-binaries
@@ -104,9 +106,13 @@ update-binary-cli-user: build
 docker-hack-enter-build-shell: docker-hack-build-start-build-container
 	docker exec -it -e USER=$(USER) $(CONTAINER_NAME_BUILD) ./docker/bazel-builder/wrap-creds-and-exec.sh /bin/bash
 
-.PHONY: docker-hack-push-image
-docker-hack-push-image: docker-hack-build-start-build-container
-	docker exec -e USER=$(USER) $(CONTAINER_NAME_BUILD) ./docker/bazel-builder/wrap-creds-and-exec.sh make docker-push-image IMAGE=$(IMAGE)
+.PHONY: docker-hack-push-image-stable
+docker-hack-push-image-stable: docker-hack-build-start-build-container
+	docker exec -e USER=$(USER) $(CONTAINER_NAME_BUILD) ./docker/bazel-builder/wrap-creds-and-exec.sh make docker-push-image-stable IMAGE=$(IMAGE)
+
+.PHONY: docker-hack-push-image-user
+docker-hack-push-image-user: docker-hack-build-start-build-container
+	docker exec -e USER=$(USER) $(CONTAINER_NAME_BUILD) ./docker/bazel-builder/wrap-creds-and-exec.sh make docker-push-image-user IMAGE=$(IMAGE)
 
 .PHONY: docker-hack-push-all-images-stable
 docker-hack-push-all-images-stable: docker-hack-build-start-build-container

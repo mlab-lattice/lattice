@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/mlab-lattice/system/cmd/cli/admin/app/deprovision"
+	"github.com/mlab-lattice/system/cmd/cli/admin/app/kubernetes"
 	"github.com/mlab-lattice/system/cmd/cli/admin/app/provision"
 
 	"github.com/spf13/cobra"
@@ -26,6 +27,7 @@ func Execute() {
 }
 
 func init() {
-	RootCmd.AddCommand(provision.Cmd)
 	RootCmd.AddCommand(deprovision.Cmd)
+	RootCmd.AddCommand(kubernetes.Cmd)
+	RootCmd.AddCommand(provision.Cmd)
 }

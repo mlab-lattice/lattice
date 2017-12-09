@@ -32,8 +32,6 @@ var Cmd = &cobra.Command{
 				panic(fmt.Sprintf("error parsing kubernetes backend vars: %v", err))
 			}
 
-			fmt.Println(config)
-			return
 			provisioner, err = getKubernetesProvisioner(provider, name, config)
 			if err != nil {
 				panic(err)

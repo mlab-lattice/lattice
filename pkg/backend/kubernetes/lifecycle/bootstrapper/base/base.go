@@ -73,6 +73,7 @@ func (b *DefaultBootstrapper) BaseBootstrap() error {
 		b.seedCRD,
 		b.seedRBAC,
 		b.seedConfig,
+		b.seedMasterComponents,
 	}
 
 	for _, bootstrapFunc := range bootstrapFuncs {
