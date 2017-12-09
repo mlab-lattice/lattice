@@ -3,8 +3,6 @@ package bootstrapper
 import (
 	"fmt"
 
-	"github.com/mlab-lattice/system/pkg/lifecycle/bootstrapper"
-
 	crv1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	latticeclientset "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/clientset/versioned"
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/bootstrapper/base"
@@ -14,6 +12,10 @@ import (
 	kubeclientset "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 )
+
+type Interface interface {
+	Bootstrap() error
+}
 
 type BaseBootstrapper interface {
 	BaseBootstrap() error
@@ -28,13 +30,12 @@ type CloudBootstrapper interface {
 }
 
 type Options struct {
-	KubeNamespacePrefix string
-	Config              crv1.ConfigSpec
-	MasterComponents    base.MasterComponentOptions
-	Networking          *cloud.NetworkingOptions
+	Config           crv1.ConfigSpec
+	MasterComponents base.MasterComponentOptions
+	Networking       *cloud.NetworkingOptions
 }
 
-func NewBootstrapper(options *Options, kubeConfig *rest.Config) (bootstrapper.Interface, error) {
+func NewBootstrapper(options *Options, kubeConfig *rest.Config) (Interface, error) {
 	if options == nil {
 		return nil, fmt.Errorf("options required")
 	}
@@ -76,9 +77,8 @@ func NewLocalBootstrapper(
 	}
 
 	baseOptions := &base.Options{
-		KubeNamespacePrefix: options.KubeNamespacePrefix,
-		Config:              options.Config,
-		MasterComponents:    options.MasterComponents,
+		Config:           options.Config,
+		MasterComponents: options.MasterComponents,
 	}
 	baseBootstrapper, err := base.NewBootstrapper(baseOptions, kubeConfig, kubeClient, latticeClient)
 	if err != nil {
@@ -120,9 +120,8 @@ func NewCloudBootstrapper(
 	}
 
 	baseOptions := &base.Options{
-		KubeNamespacePrefix: options.KubeNamespacePrefix,
-		Config:              options.Config,
-		MasterComponents:    options.MasterComponents,
+		Config:           options.Config,
+		MasterComponents: options.MasterComponents,
 	}
 	baseBootstrapper, err := base.NewBootstrapper(baseOptions, kubeConfig, kubeClient, latticeClient)
 	if err != nil {

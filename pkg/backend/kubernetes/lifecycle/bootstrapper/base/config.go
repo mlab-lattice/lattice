@@ -13,7 +13,7 @@ import (
 func (b *DefaultBootstrapper) seedConfig() error {
 	fmt.Println("Seeding base lattice config")
 
-	namespace := kubeutil.GetFullNamespace(b.Options.KubeNamespacePrefix, kubeconstants.NamespaceLatticeInternal)
+	namespace := kubeutil.GetFullNamespace(b.Options.Config.KubernetesNamespacePrefix, kubeconstants.NamespaceLatticeInternal)
 
 	// Create config
 	config := &crv1.Config{

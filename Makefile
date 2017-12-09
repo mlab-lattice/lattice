@@ -72,7 +72,6 @@ docker-push-image-user:
 .PHONY: docker-push-all-images-stable
 docker-push-all-images-stable:
 	make docker-push-image-stable IMAGE=envoy-prepare
-	make docker-push-image-stable IMAGE=kubernetes-bootstrap-lattice
 	make docker-push-image-stable IMAGE=kubernetes-component-builder
 	make docker-push-image-stable IMAGE=kubernetes-envoy-xds-api-rest-per-node
 	make docker-push-image-stable IMAGE=kubernetes-lattice-controller-manager
@@ -81,7 +80,6 @@ docker-push-all-images-stable:
 .PHONY: docker-push-all-images-user
 docker-push-all-images-user:
 	make docker-push-image-user IMAGE=envoy-prepare
-	make docker-push-image-user IMAGE=kubernetes-bootstrap-lattice
 	make docker-push-image-user IMAGE=kubernetes-component-builder
 	make docker-push-image-user IMAGE=kubernetes-envoy-xds-api-rest-per-node
 	make docker-push-image-user IMAGE=kubernetes-lattice-controller-manager

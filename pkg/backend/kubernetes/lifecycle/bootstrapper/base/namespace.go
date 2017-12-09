@@ -17,7 +17,7 @@ func (b *DefaultBootstrapper) seedNamespaces() error {
 		// lattice internal namespace
 		{
 			ObjectMeta: metav1.ObjectMeta{
-				Name: kubeutil.GetFullNamespace(b.Options.KubeNamespacePrefix, kubeconstants.NamespaceLatticeInternal),
+				Name: kubeutil.GetFullNamespace(b.Options.Config.KubernetesNamespacePrefix, kubeconstants.NamespaceLatticeInternal),
 			},
 		},
 	}

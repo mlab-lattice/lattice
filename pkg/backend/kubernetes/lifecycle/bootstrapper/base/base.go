@@ -11,8 +11,6 @@ import (
 )
 
 type Options struct {
-	KubeNamespacePrefix string
-
 	Config           crv1.ConfigSpec
 	MasterComponents MasterComponentOptions
 }
@@ -28,8 +26,10 @@ type LatticeControllerManagerOptions struct {
 }
 
 type ManagerAPIOptions struct {
-	Image string
-	Args  []string
+	Image       string
+	Port        int32
+	HostNetwork bool
+	Args        []string
 }
 
 func NewBootstrapper(
@@ -42,10 +42,16 @@ func NewBootstrapper(
 		return nil, fmt.Errorf("options required")
 	}
 
+	provider, err := crv1.GetProviderFromConfigSpec(&options.Config)
+	if err != nil {
+		return nil, err
+	}
+
 	b := &DefaultBootstrapper{
 		Options:       options,
 		KubeConfig:    kubeConfig,
 		KubeClient:    kubeClient,
+		Provider:      provider,
 		LatticeClient: latticeClient,
 	}
 	return b, nil
@@ -55,6 +61,8 @@ type DefaultBootstrapper struct {
 	Options    *Options
 	KubeConfig *rest.Config
 	KubeClient kubeclientset.Interface
+
+	Provider string
 
 	LatticeClient latticeclientset.Interface
 }

@@ -2,6 +2,7 @@ package base
 
 import (
 	"fmt"
+	"strconv"
 
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/constants"
 	kubeutil "github.com/mlab-lattice/system/pkg/backend/kubernetes/util/kubernetes"
@@ -35,7 +36,9 @@ func (b *DefaultBootstrapper) seedLatticeControllerManager() error {
 	//		 either have to figure out how to have multiple lattice-controller-managers running (e.g. use leaderelect
 	//		 in client-go) or find the best way to ensure there's at most one version of something running (maybe
 	//		 StatefulSets?).
-	namespace := kubeutil.GetFullNamespace(b.Options.KubeNamespacePrefix, constants.NamespaceLatticeInternal)
+	namespace := kubeutil.GetFullNamespace(b.Options.Config.KubernetesNamespacePrefix, constants.NamespaceLatticeInternal)
+	args := []string{"--provider", b.Provider}
+	args = append(args, b.Options.MasterComponents.LatticeControllerManager.Args...)
 	latticeControllerManagerDaemonSet := &appsv1beta2.DaemonSet{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      constants.MasterNodeComponentLatticeControllerManager,
@@ -54,7 +57,7 @@ func (b *DefaultBootstrapper) seedLatticeControllerManager() error {
 						{
 							Name:  constants.MasterNodeComponentLatticeControllerManager,
 							Image: b.Options.MasterComponents.LatticeControllerManager.Image,
-							Args:  b.Options.MasterComponents.LatticeControllerManager.Args,
+							Args:  args,
 						},
 					},
 					DNSPolicy:          corev1.DNSDefault,
@@ -82,7 +85,9 @@ func (b *DefaultBootstrapper) seedManagerAPI() error {
 	//		 either have to figure out how to have multiple lattice-controller-managers running (e.g. use leaderelect
 	//		 in client-go) or find the best way to ensure there's at most one version of something running (maybe
 	//		 StatefulSets?).
-	namespace := kubeutil.GetFullNamespace(b.Options.KubeNamespacePrefix, constants.NamespaceLatticeInternal)
+	namespace := kubeutil.GetFullNamespace(b.Options.Config.KubernetesNamespacePrefix, constants.NamespaceLatticeInternal)
+	args := []string{"--port", strconv.Itoa(int(b.Options.MasterComponents.ManagerAPI.Port))}
+	args = append(args, b.Options.MasterComponents.ManagerAPI.Args...)
 	latticeControllerManagerDaemonSet := &appsv1beta2.DaemonSet{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      constants.MasterNodeComponentManagerAPI,
@@ -101,9 +106,17 @@ func (b *DefaultBootstrapper) seedManagerAPI() error {
 						{
 							Name:  constants.MasterNodeComponentManagerAPI,
 							Image: b.Options.MasterComponents.ManagerAPI.Image,
-							Args:  b.Options.MasterComponents.ManagerAPI.Args,
+							Args:  args,
+							Ports: []corev1.ContainerPort{
+								{
+									Name:          "http",
+									HostPort:      b.Options.MasterComponents.ManagerAPI.Port,
+									ContainerPort: b.Options.MasterComponents.ManagerAPI.Port,
+								},
+							},
 						},
 					},
+					HostNetwork:        b.Options.MasterComponents.ManagerAPI.HostNetwork,
 					DNSPolicy:          corev1.DNSDefault,
 					ServiceAccountName: constants.ServiceAccountLatticeControllerManager,
 					Tolerations: []corev1.Toleration{

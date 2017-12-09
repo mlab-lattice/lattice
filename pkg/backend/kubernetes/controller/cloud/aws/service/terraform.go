@@ -144,7 +144,7 @@ func (sc *Controller) getServiceTerraformConfig(svc *crv1.Service) (interface{},
 		},
 		Backend: awstf.S3Backend{
 			Region: awsConfig.Region,
-			Bucket: sc.config.Terraform.S3Backend.Bucket,
+			Bucket: sc.config.Terraform.Backend.S3.Bucket,
 			Key: fmt.Sprintf("%v%v/%v",
 				kubetf.GetS3BackendStatePathRoot(sc.config.KubernetesNamespacePrefix),
 				terraformStatePathService,

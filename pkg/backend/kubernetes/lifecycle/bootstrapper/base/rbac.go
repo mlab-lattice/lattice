@@ -42,7 +42,7 @@ func (b *DefaultBootstrapper) seedRBAC() error {
 }
 
 func (b *DefaultBootstrapper) seedRBACComponentBuilder() error {
-	namespace := kubeutil.GetFullNamespace(b.Options.KubeNamespacePrefix, kubeconstants.NamespaceLatticeInternal)
+	namespace := kubeutil.GetFullNamespace(b.Options.Config.KubernetesNamespacePrefix, kubeconstants.NamespaceLatticeInternal)
 	role := &rbacv1.Role{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      kubeconstants.InternalComponentComponentBuilder,
@@ -162,7 +162,7 @@ func (b *DefaultBootstrapper) seedRBACLatticeControllerManger() error {
 		return err
 	}
 
-	namespace := kubeutil.GetFullNamespace(b.Options.KubeNamespacePrefix, kubeconstants.NamespaceLatticeInternal)
+	namespace := kubeutil.GetFullNamespace(b.Options.Config.KubernetesNamespacePrefix, kubeconstants.NamespaceLatticeInternal)
 
 	sa := &corev1.ServiceAccount{
 		ObjectMeta: metav1.ObjectMeta{
@@ -200,7 +200,7 @@ func (b *DefaultBootstrapper) seedRBACLatticeControllerManger() error {
 }
 
 func (b *DefaultBootstrapper) seedRBACManagerAPI() error {
-	namespace := kubeutil.GetFullNamespace(b.Options.KubeNamespacePrefix, kubeconstants.NamespaceLatticeInternal)
+	namespace := kubeutil.GetFullNamespace(b.Options.Config.KubernetesNamespacePrefix, kubeconstants.NamespaceLatticeInternal)
 	role := &rbacv1.Role{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      kubeconstants.MasterNodeComponentManagerAPI,

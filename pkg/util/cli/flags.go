@@ -10,15 +10,17 @@ type EmbeddedFlag struct {
 	Expected map[string]EmbeddedFlagValue
 	Target   interface{}
 
-	expected  map[string]struct{}
-	required  map[string]struct{}
-	arrayVars map[string][]string
+	expected      map[string]struct{}
+	required      map[string]struct{}
+	arrayVars     map[string][]string
+	encodingNames map[string]string
 }
 
 func (ef *EmbeddedFlag) init() {
 	ef.expected = map[string]struct{}{}
 	ef.required = map[string]struct{}{}
 	ef.arrayVars = map[string][]string{}
+	ef.encodingNames = map[string]string{}
 
 	for key, value := range ef.Expected {
 		ef.expected[key] = struct{}{}
@@ -28,6 +30,12 @@ func (ef *EmbeddedFlag) init() {
 			fmt.Printf("key %v is required\n", key)
 			ef.required[key] = struct{}{}
 		}
+
+		ef.encodingNames[key] = key
+		if value.EncodingName != "" {
+			ef.encodingNames[key] = value.EncodingName
+		}
+
 	}
 }
 
@@ -89,6 +97,11 @@ func (ef *EmbeddedFlag) Parse(values []string) error {
 		if _, ok := result[expectedKey]; !ok {
 			result[expectedKey] = ef.Expected[expectedKey].Default
 		}
+
+		if val, ok := result[expectedKey]; ok {
+			delete(result, expectedKey)
+			result[ef.encodingNames[expectedKey]] = val
+		}
 	}
 
 	data, err := json.Marshal(result)
@@ -105,6 +118,7 @@ type EmbeddedFlagValue struct {
 	Required         bool
 	Default          interface{}
 	Array            bool
+	EncodingName     string
 }
 
 func parseEmbeddedFlagValue(value string) (string, string, error) {

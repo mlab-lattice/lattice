@@ -162,7 +162,7 @@ func (sc *Controller) getDeploymentSpec(svc *crv1.Service) (*appsv1beta2.Deploym
 			},
 			{
 				Name:  "REDIRECT_EGRESS_CIDR_BLOCK",
-				Value: envoyConfig.RedirectCidrBlock,
+				Value: envoyConfig.RedirectCIDRBlock,
 			},
 			{
 				Name:  "CONFIG_DIR",

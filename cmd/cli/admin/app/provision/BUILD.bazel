@@ -1,0 +1,19 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "backend_vars.go",
+        "cmd.go",
+        "provisioner.go",
+    ],
+    importpath = "github.com/mlab-lattice/system/cmd/cli/admin/app/provision",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//pkg/backend/kubernetes/lifecycle/provisioner:go_default_library",
+        "//pkg/constants:go_default_library",
+        "//pkg/lifecycle/provisioner:go_default_library",
+        "//pkg/util/cli:go_default_library",
+        "@com_github_spf13_cobra//:go_default_library",
+    ],
+)

@@ -44,10 +44,10 @@ type ConfigProviderLocal struct {
 type ConfigProviderAWS struct {
 	Region                    string   `json:"region"`
 	AccountID                 string   `json:"accountID"`
-	VPCID                     string   `json:"vpcID"`
-	SubnetIDs                 []string `json:"subnetIDs"`
-	MasterNodeSecurityGroupID string   `json:"masterNodeSecurityGroupID"`
-	BaseNodeAMIID             string   `json:"baseNodeAmiID"`
+	VPCID                     string   `json:"vpcId"`
+	SubnetIDs                 []string `json:"subnetIds"`
+	MasterNodeSecurityGroupID string   `json:"masterNodeSecurityGroupId"`
+	BaseNodeAMIID             string   `json:"baseNodeAmiId"`
 	KeyName                   string   `json:"keyName"`
 }
 
@@ -85,12 +85,16 @@ type ConfigComponentBuildDockerArtifact struct {
 type ConfigEnvoy struct {
 	PrepareImage      string `json:"prepareImage"`
 	Image             string `json:"image"`
-	RedirectCidrBlock string `json:"redirectCidrBlock"`
+	RedirectCIDRBlock string `json:"redirectCidrBlock"`
 	XDSAPIPort        int32  `json:"xdsApiPort"`
 }
 
 type ConfigTerraform struct {
-	S3Backend *ConfigTerraformBackendS3 `json:"s3Backend,omitempty"`
+	Backend *ConfigTerraformBackend
+}
+
+type ConfigTerraformBackend struct {
+	S3 *ConfigTerraformBackendS3 `json:"s3,omitempty"`
 }
 
 type ConfigTerraformBackendS3 struct {
