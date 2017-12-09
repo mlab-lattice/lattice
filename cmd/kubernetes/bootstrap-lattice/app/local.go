@@ -3,7 +3,7 @@ package app
 import (
 	"fmt"
 
-	"github.com/mlab-lattice/system/pkg/kubernetes/constants"
+	"github.com/mlab-lattice/system/pkg/backend/kubernetes/constants"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )

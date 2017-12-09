@@ -6,10 +6,10 @@ import (
 	"log"
 	"os"
 
+	kubecomponentbuild "github.com/mlab-lattice/system/pkg/backend/kubernetes/componentbuild"
 	"github.com/mlab-lattice/system/pkg/componentbuild"
 	"github.com/mlab-lattice/system/pkg/constants"
 	"github.com/mlab-lattice/system/pkg/definition/block"
-	kubecomponentbuild "github.com/mlab-lattice/system/pkg/kubernetes/componentbuild"
 	"github.com/mlab-lattice/system/pkg/types"
 	"github.com/mlab-lattice/system/pkg/util/aws"
 

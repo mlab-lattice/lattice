@@ -2,7 +2,7 @@ package latticecontrollers
 
 import (
 	controller "github.com/mlab-lattice/system/cmd/kubernetes/lattice-controller-manager/app/common"
-	"github.com/mlab-lattice/system/pkg/kubernetes/controller/lattice/system"
+	"github.com/mlab-lattice/system/pkg/backend/kubernetes/controller/lattice/system"
 )
 
 func initializeSystemController(ctx controller.Context) {

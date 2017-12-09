@@ -3,8 +3,8 @@ package app
 import (
 	"fmt"
 
+	kubelifecycle "github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle"
 	"github.com/mlab-lattice/system/pkg/constants"
-	kubelifecycle "github.com/mlab-lattice/system/pkg/kubernetes/lifecycle"
 	"github.com/mlab-lattice/system/pkg/lifecycle"
 )
 

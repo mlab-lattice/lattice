@@ -6,8 +6,8 @@ go_library(
     importpath = "github.com/mlab-lattice/system/cmd/kubernetes/envoy/xdsapi/v1/rest/per-node",
     visibility = ["//visibility:public"],
     deps = [
+        "//pkg/backend/kubernetes/envoy/xdsapi/v1/pernode:go_default_library",
         "//pkg/envoy/xdsapi/v1/rest:go_default_library",
-        "//pkg/kubernetes/envoy/xdsapi/v1/pernode:go_default_library",
     ],
 )
 

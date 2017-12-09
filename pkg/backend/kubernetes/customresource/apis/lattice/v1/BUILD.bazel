@@ -1,0 +1,34 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "component_build.go",
+        "config.go",
+        "deepcopy.go",
+        "doc.go",
+        "register.go",
+        "service.go",
+        "service_build.go",
+        "system.go",
+        "system_build.go",
+        "system_rollout.go",
+        "system_teardown.go",
+        "util.go",
+        "zz_generated.deepcopy.go",
+    ],
+    importpath = "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//pkg/constants:go_default_library",
+        "//pkg/definition:go_default_library",
+        "//pkg/definition/block:go_default_library",
+        "//pkg/definition/tree:go_default_library",
+        "//pkg/types:go_default_library",
+        "@io_k8s_apiextensions_apiserver//pkg/apis/apiextensions/v1beta1:go_default_library",
+        "@io_k8s_apimachinery//pkg/apis/meta/v1:go_default_library",
+        "@io_k8s_apimachinery//pkg/conversion:go_default_library",
+        "@io_k8s_apimachinery//pkg/runtime:go_default_library",
+        "@io_k8s_apimachinery//pkg/runtime/schema:go_default_library",
+    ],
+)

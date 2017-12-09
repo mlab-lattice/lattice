@@ -2,7 +2,7 @@ package kubernetescontrollers
 
 import (
 	controller "github.com/mlab-lattice/system/cmd/kubernetes/lattice-controller-manager/app/common"
-	"github.com/mlab-lattice/system/pkg/kubernetes/controller/kubernetes/service"
+	"github.com/mlab-lattice/system/pkg/backend/kubernetes/controller/kubernetes/service"
 )
 
 func initializeServiceController(ctx controller.Context) {

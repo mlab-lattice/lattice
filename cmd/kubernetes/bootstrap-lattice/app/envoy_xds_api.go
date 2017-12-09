@@ -3,8 +3,8 @@ package app
 import (
 	"fmt"
 
+	kubeconstants "github.com/mlab-lattice/system/pkg/backend/kubernetes/constants"
 	"github.com/mlab-lattice/system/pkg/constants"
-	kubeconstants "github.com/mlab-lattice/system/pkg/kubernetes/constants"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 

@@ -3,9 +3,9 @@ package app
 import (
 	"fmt"
 
+	kubeconstants "github.com/mlab-lattice/system/pkg/backend/kubernetes/constants"
+	crv1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	"github.com/mlab-lattice/system/pkg/constants"
-	kubeconstants "github.com/mlab-lattice/system/pkg/kubernetes/constants"
-	crv1 "github.com/mlab-lattice/system/pkg/kubernetes/customresource/apis/lattice/v1"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 

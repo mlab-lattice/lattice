@@ -3,7 +3,7 @@ package main
 import (
 	"flag"
 
-	"github.com/mlab-lattice/system/pkg/kubernetes/managerapi/server/backend"
+	"github.com/mlab-lattice/system/pkg/backend/kubernetes/managerapi/server/backend"
 	"github.com/mlab-lattice/system/pkg/managerapi/server/rest"
 )
 
