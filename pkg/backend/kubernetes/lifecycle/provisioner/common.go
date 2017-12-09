@@ -1,4 +1,4 @@
-package lifecycle
+package provisioner
 
 import (
 	"encoding/json"

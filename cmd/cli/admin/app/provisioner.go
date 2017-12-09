@@ -3,9 +3,9 @@ package app
 import (
 	"fmt"
 
-	kubelifecycle "github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle"
+	kubeprovisioner "github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/provisioner"
 	"github.com/mlab-lattice/system/pkg/constants"
-	"github.com/mlab-lattice/system/pkg/lifecycle"
+	"github.com/mlab-lattice/system/pkg/lifecycle/provisioner"
 )
 
 var (
@@ -13,38 +13,38 @@ var (
 	actionDeprovision = "deprovision"
 )
 
-func getKubernetesProvisioner(provider, systemName, action string, config *backendConfigKubernetes) (lifecycle.Provisioner, error) {
+func getKubernetesProvisioner(provider, systemName, action string, config *backendConfigKubernetes) (provisioner.Interface, error) {
 	switch provider {
 	case constants.ProviderLocal:
 		lp, err := getLocalProvisioner(config)
 		if err != nil {
 			return nil, err
 		}
-		return lifecycle.Provisioner(lp), nil
+		return provisioner.Interface(lp), nil
 
 	case constants.ProviderAWS:
 		ap, err := getAWSProvisioner(systemName, action, config)
 		if err != nil {
 			return nil, err
 		}
-		return lifecycle.Provisioner(ap), nil
+		return provisioner.Interface(ap), nil
 
 	default:
 		panic(fmt.Sprintf("unsupported provider: %v", provider))
 	}
 }
 
-func getLocalProvisioner(config *backendConfigKubernetes) (*kubelifecycle.LocalProvisioner, error) {
-	return kubelifecycle.NewLocalProvisioner(config.DockerAPIVersion, config.LatticeContainerRegistry, config.LatticeContainerRepoPrefix, workingDir+"logs")
+func getLocalProvisioner(config *backendConfigKubernetes) (*kubeprovisioner.LocalProvisioner, error) {
+	return kubeprovisioner.NewLocalProvisioner(config.DockerAPIVersion, config.LatticeContainerRegistry, config.LatticeContainerRepoPrefix, workingDir+"logs")
 }
 
-func getAWSProvisioner(name, action string, config *backendConfigKubernetes) (*kubelifecycle.AWSProvisioner, error) {
+func getAWSProvisioner(name, action string, config *backendConfigKubernetes) (*kubeprovisioner.AWSProvisioner, error) {
 	awsWorkingDir := workingDir + "/aws/" + name
 
-	var awsConfig kubelifecycle.AWSProvisionerConfig
+	var awsConfig kubeprovisioner.AWSProvisionerConfig
 	if action == actionProvision {
 		awsConfigVars := config.ProviderConfig.(backendConfigKubernetesProviderAWS)
-		awsConfig = kubelifecycle.AWSProvisionerConfig{
+		awsConfig = kubeprovisioner.AWSProvisionerConfig{
 			TerraformModulePath: awsConfigVars.ModulePath,
 
 			AccountID:         awsConfigVars.AccountID,
@@ -58,5 +58,5 @@ func getAWSProvisioner(name, action string, config *backendConfigKubernetes) (*k
 		}
 	}
 
-	return kubelifecycle.NewAWSProvisioner(config.LatticeContainerRegistry, config.LatticeContainerRepoPrefix, awsWorkingDir, awsConfig)
+	return kubeprovisioner.NewAWSProvisioner(config.LatticeContainerRegistry, config.LatticeContainerRepoPrefix, awsWorkingDir, awsConfig)
 }

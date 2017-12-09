@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/mlab-lattice/system/pkg/constants"
-	"github.com/mlab-lattice/system/pkg/lifecycle"
+	"github.com/mlab-lattice/system/pkg/lifecycle/provisioner"
 
 	"github.com/spf13/cobra"
 )
@@ -23,7 +23,7 @@ var provisionSystemCmd = &cobra.Command{
 		name := args[1]
 		url := args[2]
 
-		var provisioner lifecycle.Provisioner
+		var provisioner provisioner.Interface
 		switch backend {
 		case constants.BackendTypeKubernetes:
 			config, err := parseBackendKubernetesVars(provider)

@@ -2,7 +2,7 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library")
 
 go_library(
     name = "go_default_library",
-    srcs = ["provisioner.go"],
-    importpath = "github.com/mlab-lattice/system/pkg/lifecycle",
+    srcs = ["interface.go"],
+    importpath = "github.com/mlab-lattice/system/pkg/lifecycle/provisioner",
     visibility = ["//visibility:public"],
 )

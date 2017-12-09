@@ -7,7 +7,7 @@ go_library(
         "common.go",
         "local.go",
     ],
-    importpath = "github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle",
+    importpath = "github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/provisioner",
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/backend/kubernetes/constants:go_default_library",
