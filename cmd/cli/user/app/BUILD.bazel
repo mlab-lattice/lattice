@@ -4,9 +4,6 @@ go_library(
     name = "go_default_library",
     srcs = [
         "component_build.go",
-        "deprovision.go",
-        "provision.go",
-        "provisioner.go",
         "root.go",
         "service_build.go",
         "system_build.go",
@@ -15,8 +12,6 @@ go_library(
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/constants:go_default_library",
-        "//pkg/kubernetes/lifecycle:go_default_library",
-        "//pkg/lifecycle:go_default_library",
         "//pkg/managerapi/client/user:go_default_library",
         "//pkg/managerapi/client/user/rest:go_default_library",
         "//pkg/types:go_default_library",

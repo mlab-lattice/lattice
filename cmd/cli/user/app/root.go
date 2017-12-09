@@ -13,7 +13,6 @@ import (
 )
 
 var (
-	workingDir      string
 	namespaceString string
 	url             string
 	namespace       types.LatticeNamespace
@@ -38,17 +37,12 @@ func Execute() {
 
 func init() {
 	cobra.OnInitialize(initCmd)
-	RootCmd.PersistentFlags().StringVar(&workingDir, "working-directory", "/tmp/lattice-system/", "path where subcommands will use as their working directory")
+
 	RootCmd.PersistentFlags().StringVar(&url, "url", "", "URL of the manager-api for the system")
 	RootCmd.PersistentFlags().StringVar(&namespaceString, "namespace", string(constants.UserSystemNamespace), "namespace to use")
 }
 
 func initCmd() {
-	err := os.MkdirAll(workingDir, 0770)
-	if err != nil {
-		panic(fmt.Errorf("unable to create log-path: %v", err))
-	}
-
 	namespace = types.LatticeNamespace(namespaceString)
 
 	userClient = rest.NewClient(url)
