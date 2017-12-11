@@ -8,17 +8,17 @@ import (
 	"github.com/mlab-lattice/system/pkg/lifecycle/provisioner"
 )
 
-func getKubernetesProvisioner(provider, systemName string, config *backendConfigKubernetes) (provisioner.Interface, error) {
+func getKubernetesProvisioner(provider, systemName string) (provisioner.Interface, error) {
 	switch provider {
 	case constants.ProviderLocal:
-		lp, err := getLocalProvisioner(config)
+		lp, err := getLocalProvisioner()
 		if err != nil {
 			return nil, err
 		}
 		return provisioner.Interface(lp), nil
 
 	case constants.ProviderAWS:
-		ap, err := getAWSProvisioner(systemName, config)
+		ap, err := getAWSProvisioner(systemName)
 		if err != nil {
 			return nil, err
 		}
@@ -29,12 +29,12 @@ func getKubernetesProvisioner(provider, systemName string, config *backendConfig
 	}
 }
 
-func getLocalProvisioner(config *backendConfigKubernetes) (*kubeprovisioner.LocalProvisioner, error) {
-	return kubeprovisioner.NewLocalProvisioner(config.DockerAPIVersion, config.LatticeContainerRegistry, config.LatticeContainerRepoPrefix, workingDir+"logs")
+func getLocalProvisioner() (*kubeprovisioner.LocalProvisioner, error) {
+	return kubeprovisioner.NewLocalProvisioner(backendConfigKubernetes.DockerAPIVersion, backendConfigKubernetes.LatticeContainerRegistry, backendConfigKubernetes.LatticeContainerRepoPrefix, workingDir+"logs")
 }
 
-func getAWSProvisioner(name string, config *backendConfigKubernetes) (*kubeprovisioner.AWSProvisioner, error) {
+func getAWSProvisioner(name string) (*kubeprovisioner.AWSProvisioner, error) {
 	awsWorkingDir := workingDir + "/aws/" + name
-	awsConfig := config.ProviderConfig.(kubeprovisioner.AWSProvisionerConfig)
-	return kubeprovisioner.NewAWSProvisioner(config.LatticeContainerRegistry, config.LatticeContainerRepoPrefix, awsWorkingDir, awsConfig)
+	awsConfig := backendConfigKubernetes.ProviderConfig.(kubeprovisioner.AWSProvisionerConfig)
+	return kubeprovisioner.NewAWSProvisioner(backendConfigKubernetes.LatticeContainerRegistry, backendConfigKubernetes.LatticeContainerRepoPrefix, awsWorkingDir, awsConfig)
 }
