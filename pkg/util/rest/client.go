@@ -103,7 +103,7 @@ func (dc *DefaultClient) Post(url, contentType string, body io.Reader) *RequestC
 	for k, v := range dc.defaultHeaders {
 		headers[k] = v
 	}
-	headers[headerContentType] = ContentTypeJSON
+	headers[headerContentType] = contentType
 
 	return &RequestContext{
 		Client:      dc.client,
@@ -112,4 +112,8 @@ func (dc *DefaultClient) Post(url, contentType string, body io.Reader) *RequestC
 		RequestBody: body,
 		URL:         url,
 	}
+}
+
+func (dc *DefaultClient) PostJSON(url string, body io.Reader) *RequestContext {
+	return dc.Post(url, ContentTypeJSON, body)
 }
