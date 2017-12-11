@@ -7,6 +7,7 @@ import (
 )
 
 type Options struct {
+	DryRun     bool
 	Networking *NetworkingOptions
 }
 
@@ -36,15 +37,18 @@ type DefaultBootstrapper struct {
 	KubeClient kubeclientset.Interface
 }
 
-func (b *DefaultBootstrapper) CloudBootstrap() error {
-	bootstrapFuncs := []func() error{
+func (b *DefaultBootstrapper) CloudBootstrap() ([]interface{}, error) {
+	bootstrapFuncs := []func() ([]interface{}, error){
 		b.bootstrapNetworking,
 	}
 
+	objects := []interface{}{}
 	for _, bootstrapFunc := range bootstrapFuncs {
-		if err := bootstrapFunc(); err != nil {
-			return err
+		additionalObjects, err := bootstrapFunc()
+		if err != nil {
+			return nil, err
 		}
+		objects = append(objects, additionalObjects...)
 	}
-	return nil
+	return objects, nil
 }

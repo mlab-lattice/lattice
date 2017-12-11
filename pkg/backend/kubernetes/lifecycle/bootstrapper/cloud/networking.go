@@ -12,31 +12,35 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 )
 
-func (b *DefaultBootstrapper) bootstrapNetworking() error {
+func (b *DefaultBootstrapper) bootstrapNetworking() ([]interface{}, error) {
 	if b.Options.Networking == nil {
-		return nil
+		return []interface{}{}, nil
 	}
 
 	if b.Options.Networking.Flannel != nil {
 		return b.bootstrapNetworkingFlannel()
 	}
-	return nil
+	return []interface{}{}, nil
 }
 
-func (b *DefaultBootstrapper) bootstrapNetworkingFlannel() error {
+func (b *DefaultBootstrapper) bootstrapNetworkingFlannel() ([]interface{}, error) {
 	// Translated from: https://github.com/coreos/flannel/blob/317b7d199e3fe937f04ecb39beed025e47316430/Documentation/kube-flannel.yml
 	sa := &corev1.ServiceAccount{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "ServiceAccount",
+			APIVersion: rbacv1.GroupName + "/v1",
+		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "flannel",
 			Namespace: constants.NamespaceKubeSystem,
 		},
 	}
 
-	if _, err := b.KubeClient.CoreV1().ServiceAccounts(sa.Namespace).Create(sa); err != nil {
-		return err
-	}
-
 	cr := &rbacv1.ClusterRole{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "ClusterRole",
+			APIVersion: rbacv1.GroupName + "/v1",
+		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "flannel",
 		},
@@ -59,11 +63,11 @@ func (b *DefaultBootstrapper) bootstrapNetworkingFlannel() error {
 		},
 	}
 
-	if _, err := b.KubeClient.RbacV1().ClusterRoles().Create(cr); err != nil {
-		return err
-	}
-
 	crb := &rbacv1.ClusterRoleBinding{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "ClusterRoleBinding",
+			APIVersion: rbacv1.GroupName + "/v1",
+		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "flannel",
 		},
@@ -79,10 +83,6 @@ func (b *DefaultBootstrapper) bootstrapNetworkingFlannel() error {
 			Kind:     "ClusterRole",
 			Name:     cr.Name,
 		},
-	}
-
-	if _, err := b.KubeClient.RbacV1().ClusterRoleBindings().Create(crb); err != nil {
-		return err
 	}
 
 	netConf := fmt.Sprintf(`{
@@ -105,15 +105,15 @@ func (b *DefaultBootstrapper) bootstrapNetworkingFlannel() error {
 		},
 	}
 
-	if _, err := b.KubeClient.CoreV1().ConfigMaps(cm.Namespace).Create(cm); err != nil {
-		return err
-	}
-
 	truth := true
 	dsLabels := map[string]string{
 		"system.kubernetes.io/flannel": "true",
 	}
 	ds := &appsv1beta2.DaemonSet{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "DaemonSet",
+			APIVersion: appsv1beta2.GroupName + "/v1beta2",
+		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "kube-flannel-ds",
 			Namespace: constants.NamespaceKubeSystem,
@@ -231,8 +231,27 @@ func (b *DefaultBootstrapper) bootstrapNetworkingFlannel() error {
 		},
 	}
 
-	if _, err := b.KubeClient.AppsV1beta2().DaemonSets(ds.Namespace).Create(ds); err != nil {
-		return err
+	if b.Options.DryRun {
+		return []interface{}{sa, cr, crb, cm, ds}, nil
 	}
-	return nil
+
+	if _, err := b.KubeClient.CoreV1().ServiceAccounts(sa.Namespace).Create(sa); err != nil {
+		return nil, err
+	}
+
+	if _, err := b.KubeClient.RbacV1().ClusterRoles().Create(cr); err != nil {
+		return nil, err
+	}
+
+	if _, err := b.KubeClient.RbacV1().ClusterRoleBindings().Create(crb); err != nil {
+		return nil, err
+	}
+	if _, err := b.KubeClient.CoreV1().ConfigMaps(cm.Namespace).Create(cm); err != nil {
+		return nil, err
+	}
+
+	if _, err := b.KubeClient.AppsV1beta2().DaemonSets(ds.Namespace).Create(ds); err != nil {
+		return nil, err
+	}
+	return []interface{}{sa, cr, crb, cm, ds}, nil
 }

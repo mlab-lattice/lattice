@@ -14,10 +14,14 @@ import (
 	"github.com/mlab-lattice/system/pkg/types"
 	"github.com/mlab-lattice/system/pkg/util/cli"
 
+	"k8s.io/client-go/rest"
+
+	"github.com/ghodss/yaml"
 	"github.com/spf13/cobra"
 )
 
 var (
+	dryRun              bool
 	kubeconfigPath      string
 	kubeconfigContext   string
 	kubeNamespacePrefix string
@@ -65,9 +69,13 @@ var Cmd = &cobra.Command{
 			panic("must specify component-build-docker-artifact-repository if not component-build-docker-artifact-repository-per-image")
 		}
 
-		kubeconfig, err := kubeutil.NewConfig(kubeconfigPath, "")
-		if err != nil {
-			panic(err)
+		var kubeconfig *rest.Config
+		if !dryRun {
+			var err error
+			kubeconfig, err = kubeutil.NewConfig(kubeconfigPath, "")
+			if err != nil {
+				panic(err)
+			}
 		}
 
 		providerConfig, err := parseProviderVars()
@@ -81,6 +89,7 @@ var Cmd = &cobra.Command{
 		}
 
 		options := &bootstrapper.Options{
+			DryRun: dryRun,
 			Config: crv1.ConfigSpec{
 				KubernetesNamespacePrefix: kubeNamespacePrefix,
 				ComponentBuild: crv1.ConfigComponentBuild{
@@ -127,13 +136,28 @@ var Cmd = &cobra.Command{
 			panic(err)
 		}
 
-		if err := b.Bootstrap(); err != nil {
+		objects, err := b.Bootstrap()
+		if err != nil {
 			panic(err)
+		}
+
+		if dryRun {
+			for idx, object := range objects {
+				if idx != 0 {
+					fmt.Println("---")
+				}
+				data, err := yaml.Marshal(object)
+				if err != nil {
+					panic(err)
+				}
+				fmt.Printf(string(data))
+			}
 		}
 	},
 }
 
 func init() {
+	Cmd.Flags().BoolVar(&dryRun, "dry-run", false, "if set, will not actually bootstrap the cluster but will instead print out the resources needed to bootstrap the cluster")
 	Cmd.Flags().StringVar(&kubeconfigPath, "kubeconfig", "", "path to kubeconfig")
 	Cmd.Flags().StringVar(&kubeconfigContext, "kubeconfig-context", "", "context in the kubeconfig to use")
 

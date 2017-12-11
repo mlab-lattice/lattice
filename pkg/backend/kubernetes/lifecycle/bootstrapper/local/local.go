@@ -4,25 +4,35 @@ import (
 	kubeclientset "k8s.io/client-go/kubernetes"
 )
 
-func NewBootstrapper(kubeClient kubeclientset.Interface) *DefaultBootstrapper {
+type Options struct {
+	DryRun bool
+}
+
+func NewBootstrapper(options *Options, kubeClient kubeclientset.Interface) *DefaultBootstrapper {
 	return &DefaultBootstrapper{
+		Options:    options,
 		KubeClient: kubeClient,
 	}
 }
 
 type DefaultBootstrapper struct {
+	Options *Options
+
 	KubeClient kubeclientset.Interface
 }
 
-func (b *DefaultBootstrapper) LocalBootstrap() error {
-	bootstrapFuncs := []func() error{
+func (b *DefaultBootstrapper) LocalBootstrap() ([]interface{}, error) {
+	bootstrapFuncs := []func() ([]interface{}, error){
 		b.bootstrapLocalNode,
 	}
 
+	objects := []interface{}{}
 	for _, bootstrapFunc := range bootstrapFuncs {
-		if err := bootstrapFunc(); err != nil {
-			return err
+		additionalObjects, err := bootstrapFunc()
+		if err != nil {
+			return nil, err
 		}
+		objects = append(objects, additionalObjects...)
 	}
-	return nil
+	return objects, nil
 }

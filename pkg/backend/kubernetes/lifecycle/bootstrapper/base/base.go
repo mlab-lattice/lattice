@@ -11,6 +11,7 @@ import (
 )
 
 type Options struct {
+	DryRun           bool
 	Config           crv1.ConfigSpec
 	MasterComponents MasterComponentOptions
 }
@@ -67,8 +68,8 @@ type DefaultBootstrapper struct {
 	LatticeClient latticeclientset.Interface
 }
 
-func (b *DefaultBootstrapper) BaseBootstrap() error {
-	bootstrapFuncs := []func() error{
+func (b *DefaultBootstrapper) BaseBootstrap() ([]interface{}, error) {
+	bootstrapFuncs := []func() ([]interface{}, error){
 		b.seedNamespaces,
 		b.seedCRD,
 		b.seedRBAC,
@@ -76,10 +77,13 @@ func (b *DefaultBootstrapper) BaseBootstrap() error {
 		b.seedMasterComponents,
 	}
 
+	objects := []interface{}{}
 	for _, bootstrapFunc := range bootstrapFuncs {
-		if err := bootstrapFunc(); err != nil {
-			return err
+		additionalObjects, err := bootstrapFunc()
+		if err != nil {
+			return nil, err
 		}
+		objects = append(objects, additionalObjects...)
 	}
-	return nil
+	return objects, nil
 }

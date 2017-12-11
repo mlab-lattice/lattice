@@ -13,25 +13,28 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
-func (b *DefaultBootstrapper) seedMasterComponents() error {
-	fmt.Println("Seeding master components")
+func (b *DefaultBootstrapper) seedMasterComponents() ([]interface{}, error) {
+	if !b.Options.DryRun {
+		fmt.Println("Seeding master components")
+	}
 
-	seedMasterComponentFuncs := []func() error{
+	seedMasterComponentFuncs := []func() ([]interface{}, error){
 		b.seedLatticeControllerManager,
 		b.seedManagerAPI,
 	}
 
-	for _, seedFunc := range seedMasterComponentFuncs {
-		if err := seedFunc(); err != nil {
-			return err
+	objects := []interface{}{}
+	for _, seedMasterComponentFunc := range seedMasterComponentFuncs {
+		additionalObjects, err := seedMasterComponentFunc()
+		if err != nil {
+			return nil, err
 		}
+		objects = append(objects, additionalObjects...)
 	}
-	return nil
+	return objects, nil
 }
 
-func (b *DefaultBootstrapper) seedLatticeControllerManager() error {
-	fmt.Println("Seeding lattice-controller-manager")
-
+func (b *DefaultBootstrapper) seedLatticeControllerManager() ([]interface{}, error) {
 	// TODO: for now we'll make a DaemonSet that runs on all the master nodes (aka all nodes in local)
 	//		 and rely on the fact that we don't support multiple master nodes on AWS yet. Eventually we'll
 	//		 either have to figure out how to have multiple lattice-controller-managers running (e.g. use leaderelect
@@ -45,6 +48,10 @@ func (b *DefaultBootstrapper) seedLatticeControllerManager() error {
 	}
 
 	latticeControllerManagerDaemonSet := &appsv1beta2.DaemonSet{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "DaemonSet",
+			APIVersion: appsv1beta2.GroupName + "/v1beta2",
+		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      constants.MasterNodeComponentLatticeControllerManager,
 			Namespace: namespace,
@@ -80,13 +87,15 @@ func (b *DefaultBootstrapper) seedLatticeControllerManager() error {
 		},
 	}
 
-	_, err := b.KubeClient.AppsV1beta2().DaemonSets(namespace).Create(latticeControllerManagerDaemonSet)
-	return err
+	if b.Options.DryRun {
+		return []interface{}{latticeControllerManagerDaemonSet}, nil
+	}
+
+	latticeControllerManagerDaemonSet, err := b.KubeClient.AppsV1beta2().DaemonSets(namespace).Create(latticeControllerManagerDaemonSet)
+	return []interface{}{latticeControllerManagerDaemonSet}, err
 }
 
-func (b *DefaultBootstrapper) seedManagerAPI() error {
-	fmt.Println("Seeding manager-api")
-
+func (b *DefaultBootstrapper) seedManagerAPI() ([]interface{}, error) {
 	// TODO: for now we'll make a DaemonSet that runs on all the master nodes (aka all nodes in local)
 	//		 and rely on the fact that we don't support multiple master nodes on AWS yet. Eventually we'll
 	//		 either have to figure out how to have multiple lattice-controller-managers running (e.g. use leaderelect
@@ -99,7 +108,11 @@ func (b *DefaultBootstrapper) seedManagerAPI() error {
 		constants.MasterNodeLabelComponent: constants.MasterNodeComponentLatticeControllerManager,
 	}
 
-	latticeControllerManagerDaemonSet := &appsv1beta2.DaemonSet{
+	managerAPIDaemonSet := &appsv1beta2.DaemonSet{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "DaemonSet",
+			APIVersion: appsv1beta2.GroupName + "/v1beta2",
+		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      constants.MasterNodeComponentManagerAPI,
 			Namespace: namespace,
@@ -143,6 +156,10 @@ func (b *DefaultBootstrapper) seedManagerAPI() error {
 		},
 	}
 
-	_, err := b.KubeClient.AppsV1beta2().DaemonSets(namespace).Create(latticeControllerManagerDaemonSet)
-	return err
+	if b.Options.DryRun {
+		return []interface{}{managerAPIDaemonSet}, nil
+	}
+
+	managerAPIDaemonSet, err := b.KubeClient.AppsV1beta2().DaemonSets(namespace).Create(managerAPIDaemonSet)
+	return []interface{}{managerAPIDaemonSet}, err
 }

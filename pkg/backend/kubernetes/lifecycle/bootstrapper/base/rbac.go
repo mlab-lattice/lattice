@@ -23,27 +23,36 @@ var (
 	readAndUpdateVerbs = []string{"get", "watch", "list", "update"}
 ) /**/
 
-func (b *DefaultBootstrapper) seedRBAC() error {
-	fmt.Println("Seeding rbac")
+func (b *DefaultBootstrapper) seedRBAC() ([]interface{}, error) {
+	if !b.Options.DryRun {
+		fmt.Println("Seeding rbac")
+	}
 
-	rbacSeedFuncs := []func() error{
+	rbacSeedFuncs := []func() ([]interface{}, error){
 		b.seedRBACComponentBuilder,
 		b.seedRBACEnvoyXDSAPI,
 		b.seedRBACLatticeControllerManger,
 		b.seedRBACManagerAPI,
 	}
 
+	objects := []interface{}{}
 	for _, rbacSeedFunc := range rbacSeedFuncs {
-		if err := rbacSeedFunc(); err != nil {
-			return err
+		additionalObjects, err := rbacSeedFunc()
+		if err != nil {
+			return nil, err
 		}
+		objects = append(objects, additionalObjects...)
 	}
-	return nil
+	return objects, nil
 }
 
-func (b *DefaultBootstrapper) seedRBACComponentBuilder() error {
+func (b *DefaultBootstrapper) seedRBACComponentBuilder() ([]interface{}, error) {
 	namespace := kubeutil.GetFullNamespace(b.Options.Config.KubernetesNamespacePrefix, kubeconstants.NamespaceLatticeInternal)
 	role := &rbacv1.Role{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "Role",
+			APIVersion: rbacv1.GroupName + "/v1",
+		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      kubeconstants.InternalComponentComponentBuilder,
 			Namespace: namespace,
@@ -58,22 +67,22 @@ func (b *DefaultBootstrapper) seedRBACComponentBuilder() error {
 		},
 	}
 
-	if _, err := b.KubeClient.RbacV1().Roles(role.Namespace).Create(role); err != nil {
-		return err
-	}
-
 	sa := &corev1.ServiceAccount{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "ServiceAccount",
+			APIVersion: rbacv1.GroupName + "/v1",
+		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      kubeconstants.ServiceAccountComponentBuilder,
 			Namespace: role.Namespace,
 		},
 	}
 
-	if _, err := b.KubeClient.CoreV1().ServiceAccounts(sa.Namespace).Create(sa); err != nil {
-		return err
-	}
-
 	rb := &rbacv1.RoleBinding{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "RoleBinding",
+			APIVersion: rbacv1.GroupName + "/v1",
+		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      kubeconstants.InternalComponentComponentBuilder,
 			Namespace: role.Namespace,
@@ -92,14 +101,30 @@ func (b *DefaultBootstrapper) seedRBACComponentBuilder() error {
 		},
 	}
 
-	if _, err := b.KubeClient.RbacV1().RoleBindings(rb.Namespace).Create(rb); err != nil {
-		return err
+	if b.Options.DryRun {
+		return []interface{}{role, sa, rb}, nil
 	}
-	return nil
+
+	if _, err := b.KubeClient.RbacV1().Roles(role.Namespace).Create(role); err != nil {
+		return nil, err
+	}
+
+	if _, err := b.KubeClient.CoreV1().ServiceAccounts(sa.Namespace).Create(sa); err != nil {
+		return nil, err
+	}
+
+	if _, err := b.KubeClient.RbacV1().RoleBindings(rb.Namespace).Create(rb); err != nil {
+		return nil, err
+	}
+	return []interface{}{role, sa, rb}, nil
 }
 
-func (b *DefaultBootstrapper) seedRBACEnvoyXDSAPI() error {
+func (b *DefaultBootstrapper) seedRBACEnvoyXDSAPI() ([]interface{}, error) {
 	clusterRole := &rbacv1.ClusterRole{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "ClusterRole",
+			APIVersion: rbacv1.GroupName + "/v1",
+		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name: kubeconstants.InternalComponentEnvoyXDSAPI,
 		},
@@ -119,14 +144,22 @@ func (b *DefaultBootstrapper) seedRBACEnvoyXDSAPI() error {
 		},
 	}
 
-	if _, err := b.KubeClient.RbacV1().ClusterRoles().Create(clusterRole); err != nil {
-		return err
+	if b.Options.DryRun {
+		return []interface{}{clusterRole}, nil
 	}
-	return nil
+
+	if _, err := b.KubeClient.RbacV1().ClusterRoles().Create(clusterRole); err != nil {
+		return nil, err
+	}
+	return []interface{}{clusterRole}, nil
 }
 
-func (b *DefaultBootstrapper) seedRBACLatticeControllerManger() error {
+func (b *DefaultBootstrapper) seedRBACLatticeControllerManger() ([]interface{}, error) {
 	clusterRole := &rbacv1.ClusterRole{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "ClusterRole",
+			APIVersion: rbacv1.GroupName + "/v1",
+		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name: kubeconstants.MasterNodeComponentLatticeControllerManager,
 		},
@@ -158,24 +191,24 @@ func (b *DefaultBootstrapper) seedRBACLatticeControllerManger() error {
 		},
 	}
 
-	if _, err := b.KubeClient.RbacV1().ClusterRoles().Create(clusterRole); err != nil {
-		return err
-	}
-
 	namespace := kubeutil.GetFullNamespace(b.Options.Config.KubernetesNamespacePrefix, kubeconstants.NamespaceLatticeInternal)
 
 	sa := &corev1.ServiceAccount{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "ServiceAccount",
+			APIVersion: rbacv1.GroupName + "/v1",
+		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      kubeconstants.ServiceAccountLatticeControllerManager,
 			Namespace: namespace,
 		},
 	}
 
-	if _, err := b.KubeClient.CoreV1().ServiceAccounts(sa.Namespace).Create(sa); err != nil {
-		return err
-	}
-
 	crb := &rbacv1.ClusterRoleBinding{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "ClusterRoleBinding",
+			APIVersion: rbacv1.GroupName + "/v1",
+		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name: kubeconstants.MasterNodeComponentLatticeControllerManager,
 		},
@@ -193,15 +226,31 @@ func (b *DefaultBootstrapper) seedRBACLatticeControllerManger() error {
 		},
 	}
 
-	if _, err := b.KubeClient.RbacV1().ClusterRoleBindings().Create(crb); err != nil {
-		return err
+	if b.Options.DryRun {
+		return []interface{}{clusterRole, sa, crb}, nil
 	}
-	return nil
+
+	if _, err := b.KubeClient.RbacV1().ClusterRoles().Create(clusterRole); err != nil {
+		return nil, err
+	}
+
+	if _, err := b.KubeClient.CoreV1().ServiceAccounts(sa.Namespace).Create(sa); err != nil {
+		return nil, err
+	}
+
+	if _, err := b.KubeClient.RbacV1().ClusterRoleBindings().Create(crb); err != nil {
+		return nil, err
+	}
+	return []interface{}{clusterRole, sa, crb}, nil
 }
 
-func (b *DefaultBootstrapper) seedRBACManagerAPI() error {
+func (b *DefaultBootstrapper) seedRBACManagerAPI() ([]interface{}, error) {
 	namespace := kubeutil.GetFullNamespace(b.Options.Config.KubernetesNamespacePrefix, kubeconstants.NamespaceLatticeInternal)
 	role := &rbacv1.Role{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "Role",
+			APIVersion: rbacv1.GroupName + "/v1",
+		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      kubeconstants.MasterNodeComponentManagerAPI,
 			Namespace: namespace,
@@ -258,11 +307,11 @@ func (b *DefaultBootstrapper) seedRBACManagerAPI() error {
 		},
 	}
 
-	if _, err := b.KubeClient.RbacV1().Roles(role.Namespace).Create(role); err != nil {
-		return err
-	}
-
 	clusterRole := &rbacv1.ClusterRole{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "ClusterRole",
+			APIVersion: rbacv1.GroupName + "/v1",
+		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name: kubeconstants.MasterNodeComponentManagerAPI,
 		},
@@ -288,22 +337,22 @@ func (b *DefaultBootstrapper) seedRBACManagerAPI() error {
 		},
 	}
 
-	if _, err := b.KubeClient.RbacV1().ClusterRoles().Create(clusterRole); err != nil {
-		return err
-	}
-
 	sa := &corev1.ServiceAccount{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "ServiceAccount",
+			APIVersion: rbacv1.GroupName + "/v1",
+		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      kubeconstants.ServiceAccountManagementAPI,
 			Namespace: role.Namespace,
 		},
 	}
 
-	if _, err := b.KubeClient.CoreV1().ServiceAccounts(sa.Namespace).Create(sa); err != nil {
-		return err
-	}
-
 	rb := &rbacv1.RoleBinding{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "RoleBinding",
+			APIVersion: rbacv1.GroupName + "/v1",
+		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      kubeconstants.MasterNodeComponentManagerAPI,
 			Namespace: role.Namespace,
@@ -322,11 +371,11 @@ func (b *DefaultBootstrapper) seedRBACManagerAPI() error {
 		},
 	}
 
-	if _, err := b.KubeClient.RbacV1().RoleBindings(rb.Namespace).Create(rb); err != nil {
-		return err
-	}
-
 	crb := &rbacv1.ClusterRoleBinding{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "ClusterRoleBinding",
+			APIVersion: rbacv1.GroupName + "/v1",
+		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name: kubeconstants.MasterNodeComponentManagerAPI,
 		},
@@ -344,8 +393,27 @@ func (b *DefaultBootstrapper) seedRBACManagerAPI() error {
 		},
 	}
 
-	if _, err := b.KubeClient.RbacV1().ClusterRoleBindings().Create(crb); err != nil {
-		return err
+	if b.Options.DryRun {
+		return []interface{}{role, clusterRole, sa, rb, crb}, nil
 	}
-	return nil
+
+	if _, err := b.KubeClient.RbacV1().Roles(role.Namespace).Create(role); err != nil {
+		return nil, err
+	}
+	if _, err := b.KubeClient.RbacV1().ClusterRoles().Create(clusterRole); err != nil {
+		return nil, err
+	}
+
+	if _, err := b.KubeClient.CoreV1().ServiceAccounts(sa.Namespace).Create(sa); err != nil {
+		return nil, err
+	}
+
+	if _, err := b.KubeClient.RbacV1().RoleBindings(rb.Namespace).Create(rb); err != nil {
+		return nil, err
+	}
+
+	if _, err := b.KubeClient.RbacV1().ClusterRoleBindings().Create(crb); err != nil {
+		return nil, err
+	}
+	return []interface{}{role, clusterRole, sa, rb, crb}, nil
 }

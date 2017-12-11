@@ -14,22 +14,23 @@ import (
 )
 
 type Interface interface {
-	Bootstrap() error
+	Bootstrap() ([]interface{}, error)
 }
 
 type BaseBootstrapper interface {
-	BaseBootstrap() error
+	BaseBootstrap() ([]interface{}, error)
 }
 
 type LocalBootstrapper interface {
-	LocalBootstrap() error
+	LocalBootstrap() ([]interface{}, error)
 }
 
 type CloudBootstrapper interface {
-	CloudBootstrap() error
+	CloudBootstrap() ([]interface{}, error)
 }
 
 type Options struct {
+	DryRun           bool
 	Config           crv1.ConfigSpec
 	MasterComponents base.MasterComponentOptions
 	Networking       *cloud.NetworkingOptions
@@ -40,14 +41,19 @@ func NewBootstrapper(options *Options, kubeConfig *rest.Config) (Interface, erro
 		return nil, fmt.Errorf("options required")
 	}
 
-	kubeClient, err := kubeclientset.NewForConfig(kubeConfig)
-	if err != nil {
-		return nil, err
-	}
+	var kubeClient kubeclientset.Interface
+	var latticeClient latticeclientset.Interface
+	var err error
+	if !options.DryRun {
+		kubeClient, err = kubeclientset.NewForConfig(kubeConfig)
+		if err != nil {
+			return nil, err
+		}
 
-	latticeClient, err := latticeclientset.NewForConfig(kubeConfig)
-	if err != nil {
-		return nil, err
+		latticeClient, err = latticeclientset.NewForConfig(kubeConfig)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	if options.Config.Provider.Local != nil {
@@ -77,6 +83,7 @@ func NewLocalBootstrapper(
 	}
 
 	baseOptions := &base.Options{
+		DryRun:           options.DryRun,
 		Config:           options.Config,
 		MasterComponents: options.MasterComponents,
 	}
@@ -85,7 +92,10 @@ func NewLocalBootstrapper(
 		return nil, err
 	}
 
-	localBootstrapper := local.NewBootstrapper(kubeClient)
+	localOptions := &local.Options{
+		DryRun: options.DryRun,
+	}
+	localBootstrapper := local.NewBootstrapper(localOptions, kubeClient)
 
 	b := &DefaultLocalBootstrapper{
 		BaseBootstrapper:  baseBootstrapper,
@@ -94,14 +104,21 @@ func NewLocalBootstrapper(
 	return b, nil
 }
 
-func (b *DefaultLocalBootstrapper) Bootstrap() error {
-	if err := b.BaseBootstrapper.BaseBootstrap(); err != nil {
-		return err
+func (b *DefaultLocalBootstrapper) Bootstrap() ([]interface{}, error) {
+	objects := []interface{}{}
+	additionalObjects, err := b.BaseBootstrapper.BaseBootstrap()
+	if err != nil {
+		return nil, err
 	}
-	if err := b.LocalBootstrapper.LocalBootstrap(); err != nil {
-		return err
+	objects = append(objects, additionalObjects...)
+
+	additionalObjects, err = b.LocalBootstrapper.LocalBootstrap()
+	if err != nil {
+		return nil, err
 	}
-	return nil
+	objects = append(objects, additionalObjects...)
+
+	return objects, nil
 }
 
 type DefaultCloudBootstrapper struct {
@@ -120,6 +137,7 @@ func NewCloudBootstrapper(
 	}
 
 	baseOptions := &base.Options{
+		DryRun:           options.DryRun,
 		Config:           options.Config,
 		MasterComponents: options.MasterComponents,
 	}
@@ -129,6 +147,7 @@ func NewCloudBootstrapper(
 	}
 
 	cloudOptions := &cloud.Options{
+		DryRun:     options.DryRun,
 		Networking: options.Networking,
 	}
 	cloudBootstrapper, err := cloud.NewBootstrapper(cloudOptions, kubeClient)
@@ -143,12 +162,19 @@ func NewCloudBootstrapper(
 	return b, nil
 }
 
-func (b *DefaultCloudBootstrapper) Bootstrap() error {
-	if err := b.BaseBootstrapper.BaseBootstrap(); err != nil {
-		return err
+func (b *DefaultCloudBootstrapper) Bootstrap() ([]interface{}, error) {
+	objects := []interface{}{}
+	additionalObjects, err := b.BaseBootstrapper.BaseBootstrap()
+	if err != nil {
+		return nil, err
 	}
-	if err := b.CloudBootstrapper.CloudBootstrap(); err != nil {
-		return err
+	objects = append(objects, additionalObjects...)
+
+	additionalObjects, err = b.CloudBootstrapper.CloudBootstrap()
+	if err != nil {
+		return nil, err
 	}
-	return nil
+	objects = append(objects, additionalObjects...)
+
+	return objects, nil
 }

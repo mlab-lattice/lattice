@@ -8,14 +8,18 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func (b *DefaultBootstrapper) bootstrapLocalNode() error {
+func (b *DefaultBootstrapper) bootstrapLocalNode() ([]interface{}, error) {
+	if b.Options.DryRun {
+		return []interface{}{}, nil
+	}
+
 	nodes, err := b.KubeClient.CoreV1().Nodes().List(metav1.ListOptions{})
 	if err != nil {
-		return err
+		return []interface{}{}, err
 	}
 
 	if len(nodes.Items) != 1 {
-		return fmt.Errorf("expected exactly 1 node, found %v", len(nodes.Items))
+		return []interface{}{}, fmt.Errorf("expected exactly 1 node, found %v", len(nodes.Items))
 	}
 
 	node := nodes.Items[0]
@@ -23,5 +27,5 @@ func (b *DefaultBootstrapper) bootstrapLocalNode() error {
 	node.Labels[constants.LabelKeyMasterNode] = "true"
 
 	_, err = b.KubeClient.CoreV1().Nodes().Update(&node)
-	return err
+	return []interface{}{}, err
 }

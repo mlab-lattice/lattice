@@ -10,13 +10,15 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func (b *DefaultBootstrapper) seedConfig() error {
-	fmt.Println("Seeding base lattice config")
-
+func (b *DefaultBootstrapper) seedConfig() ([]interface{}, error) {
 	namespace := kubeutil.GetFullNamespace(b.Options.Config.KubernetesNamespacePrefix, kubeconstants.NamespaceLatticeInternal)
 
 	// Create config
 	config := &crv1.Config{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "Config",
+			APIVersion: crv1.GroupName + "/v1",
+		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      kubeconstants.ConfigGlobal,
 			Namespace: namespace,
@@ -24,6 +26,12 @@ func (b *DefaultBootstrapper) seedConfig() error {
 		Spec: b.Options.Config,
 	}
 
-	_, err := b.LatticeClient.LatticeV1().Configs(namespace).Create(config)
-	return err
+	if b.Options.DryRun {
+		return []interface{}{config}, nil
+	}
+
+	fmt.Println("Seeding base lattice config")
+
+	config, err := b.LatticeClient.LatticeV1().Configs(namespace).Create(config)
+	return []interface{}{config}, err
 }
