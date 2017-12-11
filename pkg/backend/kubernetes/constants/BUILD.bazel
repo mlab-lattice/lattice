@@ -12,6 +12,7 @@ go_library(
         "label.go",
         "master_node.go",
         "namespace.go",
+        "networking.go",
         "node_selector.go",
         "service_account.go",
         "terraform.go",
