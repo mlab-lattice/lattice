@@ -1,4 +1,4 @@
-package app
+package systembuild
 
 import (
 	"encoding/json"
@@ -6,12 +6,23 @@ import (
 	"log"
 	"os"
 
+	"github.com/mlab-lattice/system/pkg/constants"
+	"github.com/mlab-lattice/system/pkg/managerapi/client/user"
+	"github.com/mlab-lattice/system/pkg/managerapi/client/user/rest"
 	"github.com/mlab-lattice/system/pkg/types"
 
 	"github.com/spf13/cobra"
 )
 
-var systemBuildCmd = &cobra.Command{
+var (
+	namespaceString string
+	url             string
+	namespace       types.LatticeNamespace
+	userClient      user.Client
+	namespaceClient user.NamespaceClient
+)
+
+var Cmd = &cobra.Command{
 	Use:  "system-build",
 	Args: cobra.ExactArgs(0),
 	Run: func(cmd *cobra.Command, args []string) {
@@ -20,7 +31,7 @@ var systemBuildCmd = &cobra.Command{
 	},
 }
 
-var systemBuildListCmd = &cobra.Command{
+var listCmd = &cobra.Command{
 	Use:   "list",
 	Short: "list system builds",
 	Args:  cobra.ExactArgs(0),
@@ -38,7 +49,7 @@ var systemBuildListCmd = &cobra.Command{
 	},
 }
 
-var systemBuildGetCmd = &cobra.Command{
+var getCmd = &cobra.Command{
 	Use:   "get",
 	Short: "get system build",
 	Args:  cobra.ExactArgs(1),
@@ -58,8 +69,18 @@ var systemBuildGetCmd = &cobra.Command{
 }
 
 func init() {
-	RootCmd.AddCommand(systemBuildCmd)
+	cobra.OnInitialize(initCmd)
 
-	systemBuildCmd.AddCommand(systemBuildListCmd)
-	systemBuildCmd.AddCommand(systemBuildGetCmd)
+	Cmd.PersistentFlags().StringVar(&url, "url", "", "URL of the manager-api for the system")
+	Cmd.PersistentFlags().StringVar(&namespaceString, "namespace", string(constants.NamespaceDefault), "namespace to use")
+
+	Cmd.AddCommand(listCmd)
+	Cmd.AddCommand(getCmd)
+}
+
+func initCmd() {
+	namespace = types.LatticeNamespace(namespaceString)
+
+	userClient = rest.NewClient(url)
+	namespaceClient = userClient.Namespace(namespace)
 }

@@ -1,4 +1,4 @@
-package app
+package servicebuild
 
 import (
 	"encoding/json"
@@ -6,12 +6,23 @@ import (
 	"log"
 	"os"
 
+	"github.com/mlab-lattice/system/pkg/constants"
+	"github.com/mlab-lattice/system/pkg/managerapi/client/user"
+	"github.com/mlab-lattice/system/pkg/managerapi/client/user/rest"
 	"github.com/mlab-lattice/system/pkg/types"
 
 	"github.com/spf13/cobra"
 )
 
-var serviceBuildCmd = &cobra.Command{
+var (
+	namespaceString string
+	url             string
+	namespace       types.LatticeNamespace
+	userClient      user.Client
+	namespaceClient user.NamespaceClient
+)
+
+var Cmd = &cobra.Command{
 	Use:  "service-build",
 	Args: cobra.ExactArgs(0),
 	Run: func(cmd *cobra.Command, args []string) {
@@ -20,7 +31,7 @@ var serviceBuildCmd = &cobra.Command{
 	},
 }
 
-var serviceBuildListCmd = &cobra.Command{
+var listCmd = &cobra.Command{
 	Use:   "list",
 	Short: "list service builds",
 	Args:  cobra.ExactArgs(0),
@@ -38,7 +49,7 @@ var serviceBuildListCmd = &cobra.Command{
 	},
 }
 
-var serviceBuildGetCmd = &cobra.Command{
+var getCmd = &cobra.Command{
 	Use:   "get",
 	Short: "get service build",
 	Args:  cobra.ExactArgs(1),
@@ -58,8 +69,18 @@ var serviceBuildGetCmd = &cobra.Command{
 }
 
 func init() {
-	RootCmd.AddCommand(serviceBuildCmd)
+	cobra.OnInitialize(initCmd)
 
-	serviceBuildCmd.AddCommand(serviceBuildListCmd)
-	serviceBuildCmd.AddCommand(serviceBuildGetCmd)
+	Cmd.PersistentFlags().StringVar(&url, "url", "", "URL of the manager-api for the system")
+	Cmd.PersistentFlags().StringVar(&namespaceString, "namespace", string(constants.NamespaceDefault), "namespace to use")
+
+	Cmd.AddCommand(listCmd)
+	Cmd.AddCommand(getCmd)
+}
+
+func initCmd() {
+	namespace = types.LatticeNamespace(namespaceString)
+
+	userClient = rest.NewClient(url)
+	namespaceClient = userClient.Namespace(namespace)
 }
