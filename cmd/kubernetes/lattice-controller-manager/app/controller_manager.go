@@ -56,7 +56,7 @@ func CreateControllerContext(
 	versionedKubeClient := kcb.ClientOrDie("shared-kubeinformers")
 	kubeInformers := kubeinformers.NewSharedInformerFactory(versionedKubeClient, time.Duration(12*time.Hour))
 
-	versionedLatticeClient := lcb.ClientOrDie("shared-kubeinformers")
+	versionedLatticeClient := lcb.ClientOrDie("shared-latticeinformers")
 	latticeInformers := latticeinformers.NewSharedInformerFactory(versionedLatticeClient, time.Duration(12*time.Hour))
 
 	return controller.Context{

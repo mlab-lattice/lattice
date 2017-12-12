@@ -102,16 +102,16 @@ var Cmd = &cobra.Command{
 		}
 
 		if options.DryRun {
-			for idx, object := range objects {
-				if idx != 0 {
-					fmt.Println("---")
-				}
+			output := ""
+			for _, object := range objects {
+				output += "---\n"
 				data, err := yaml.Marshal(object)
 				if err != nil {
 					panic(err)
 				}
-				fmt.Printf(string(data))
+				output += string(data)
 			}
+			fmt.Printf(output)
 		}
 	},
 }
