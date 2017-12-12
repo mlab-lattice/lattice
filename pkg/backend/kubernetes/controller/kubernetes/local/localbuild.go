@@ -19,7 +19,6 @@ type Controller struct {
 	latticeClient latticeclientset.Interface
 
 	addressLister latticelisters.SystemLister
-	//What is the purpose of this guy
 	addressListerSynced cache.InformerSynced
 }
 
@@ -32,10 +31,11 @@ func NewController(
 		latticeClient: latticeClient,
 	}
 
-	//Add event handlers.
+	//Add event handlers
 	addressInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: sbc.addAddress,
 		UpdateFunc: sbc.updateAddress,
+		DeleteFunc: sbc.deleteAddress,
 	})
 	sbc.addressLister = addressInformer.Lister()
 	sbc.addressListerSynced = addressInformer.Informer().HasSynced
@@ -60,6 +60,11 @@ func (sbc *Controller) addAddress(obj interface{}) {
 func (sbc *Controller) updateAddress(old, cur interface{}) {
 	// Address object has been modified
 	glog.V(1).Infof("MyController just got an update")
+}
+
+func (sbc *Controller) deleteAddress(obj interface{}) {
+	// Address object has been modified
+	glog.V(1).Infof("MyController just got a delete")
 }
 
 // Naive solution for now - on any update, completely rewrite the resolv.config we are using, and send SIGHUP

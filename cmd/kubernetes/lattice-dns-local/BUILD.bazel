@@ -1,12 +1,15 @@
-load("@io_bazel_rules_go//go:def.bzl", "go_library")
+load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
 
 go_library(
     name = "go_default_library",
-    srcs = ["controller_manager.go"],
-    importpath = "github.com/mlab-lattice/system/cmd/kubernetes/lattice-controller-manager/app",
-    visibility = ["//visibility:public"],
+    srcs = [
+        "local_dns.go",
+        "main.go",
+    ],
+    importpath = "github.com/mlab-lattice/system/cmd/kubernetes/lattice-dns-local",
+    visibility = ["//visibility:private"],
     deps = [
-        "//cmd/kubernetes/lattice-controller-manager/app/cloudcontrollers/aws:go_default_library",
+        "//cmd/kubernetes/lattice-controller-manager/app:go_default_library",
         "//cmd/kubernetes/lattice-controller-manager/app/cloudcontrollers/localcontrollers:go_default_library",
         "//cmd/kubernetes/lattice-controller-manager/app/common:go_default_library",
         "//cmd/kubernetes/lattice-controller-manager/app/kubernetescontrollers:go_default_library",
@@ -18,4 +21,11 @@ go_library(
         "@io_k8s_client_go//rest:go_default_library",
         "@io_k8s_client_go//tools/clientcmd:go_default_library",
     ],
+)
+
+go_binary(
+    name = "lattice-dns-local",
+    embed = [":go_default_library"],
+    importpath = "github.com/mlab-lattice/system/cmd/kubernetes/lattice-dns-local",
+    visibility = ["//visibility:public"],
 )
