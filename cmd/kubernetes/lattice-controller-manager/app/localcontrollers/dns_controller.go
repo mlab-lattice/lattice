@@ -6,11 +6,9 @@ import (
 )
 
 func initialiseAddressController(ctx controller.Context) {
-	go componentbuild.NewController(
-		ctx.KubeClientBuilder.ClientOrDie("kubernetes-build-controller"),
-		ctx.LatticeClientBuilder.ClientOrDie("kubernetes-build-controller"),
-		ctx.LatticeInformerFactory.Lattice().V1().Configs(),
-		ctx.LatticeInformerFactory.Lattice().V1().ComponentBuilds(),
-		ctx.KubeInformerFactory.Batch().V1().Jobs(),
+	go local.NewController(
+		ctx.LatticeClientBuilder.ClientOrDie("lattice-controller-lattice-system-build"),
+		// To become an Address informer?
+		ctx.LatticeInformerFactory.Lattice().V1().Systems(),
 	).Run(4, ctx.Stop)
 }
