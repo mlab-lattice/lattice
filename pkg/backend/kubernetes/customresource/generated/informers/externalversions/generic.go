@@ -40,8 +40,14 @@ func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Lattice().V1().ComponentBuilds().Informer()}, nil
 	case v1.SchemeGroupVersion.WithResource("configs"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Lattice().V1().Configs().Informer()}, nil
+	case v1.SchemeGroupVersion.WithResource("endpoints"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Lattice().V1().Endpoints().Informer()}, nil
+	case v1.SchemeGroupVersion.WithResource("nodepools"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Lattice().V1().NodePools().Informer()}, nil
 	case v1.SchemeGroupVersion.WithResource("services"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Lattice().V1().Services().Informer()}, nil
+	case v1.SchemeGroupVersion.WithResource("serviceaddresses"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Lattice().V1().ServiceAddresses().Informer()}, nil
 	case v1.SchemeGroupVersion.WithResource("servicebuilds"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Lattice().V1().ServiceBuilds().Informer()}, nil
 	case v1.SchemeGroupVersion.WithResource("systems"):

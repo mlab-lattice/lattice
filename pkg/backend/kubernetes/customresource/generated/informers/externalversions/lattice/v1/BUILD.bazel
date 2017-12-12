@@ -5,8 +5,11 @@ go_library(
     srcs = [
         "componentbuild.go",
         "config.go",
+        "endpoint.go",
         "interface.go",
+        "nodepool.go",
         "service.go",
+        "serviceaddress.go",
         "servicebuild.go",
         "system.go",
         "systembuild.go",

@@ -23,10 +23,8 @@ type Endpoint struct {
 }
 
 type EndpointSpec struct {
-	Alias            *string `json:"alias,omitempty"`
 	ExternalEndpoint *string `json:"externalEndpoint,omitempty"`
 	IP               *string `json:"ip,omitempty"`
-	Internal         *bool   `json:"internal,omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

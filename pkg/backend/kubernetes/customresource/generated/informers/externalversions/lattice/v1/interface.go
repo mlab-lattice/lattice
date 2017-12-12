@@ -12,8 +12,14 @@ type Interface interface {
 	ComponentBuilds() ComponentBuildInformer
 	// Configs returns a ConfigInformer.
 	Configs() ConfigInformer
+	// Endpoints returns a EndpointInformer.
+	Endpoints() EndpointInformer
+	// NodePools returns a NodePoolInformer.
+	NodePools() NodePoolInformer
 	// Services returns a ServiceInformer.
 	Services() ServiceInformer
+	// ServiceAddresses returns a ServiceAddressInformer.
+	ServiceAddresses() ServiceAddressInformer
 	// ServiceBuilds returns a ServiceBuildInformer.
 	ServiceBuilds() ServiceBuildInformer
 	// Systems returns a SystemInformer.
@@ -45,9 +51,24 @@ func (v *version) Configs() ConfigInformer {
 	return &configInformer{factory: v.SharedInformerFactory}
 }
 
+// Endpoints returns a EndpointInformer.
+func (v *version) Endpoints() EndpointInformer {
+	return &endpointInformer{factory: v.SharedInformerFactory}
+}
+
+// NodePools returns a NodePoolInformer.
+func (v *version) NodePools() NodePoolInformer {
+	return &nodePoolInformer{factory: v.SharedInformerFactory}
+}
+
 // Services returns a ServiceInformer.
 func (v *version) Services() ServiceInformer {
 	return &serviceInformer{factory: v.SharedInformerFactory}
+}
+
+// ServiceAddresses returns a ServiceAddressInformer.
+func (v *version) ServiceAddresses() ServiceAddressInformer {
+	return &serviceAddressInformer{factory: v.SharedInformerFactory}
 }
 
 // ServiceBuilds returns a ServiceBuildInformer.

@@ -18,6 +18,22 @@ type ConfigListerExpansion interface{}
 // ConfigNamespaceLister.
 type ConfigNamespaceListerExpansion interface{}
 
+// EndpointListerExpansion allows custom methods to be added to
+// EndpointLister.
+type EndpointListerExpansion interface{}
+
+// EndpointNamespaceListerExpansion allows custom methods to be added to
+// EndpointNamespaceLister.
+type EndpointNamespaceListerExpansion interface{}
+
+// NodePoolListerExpansion allows custom methods to be added to
+// NodePoolLister.
+type NodePoolListerExpansion interface{}
+
+// NodePoolNamespaceListerExpansion allows custom methods to be added to
+// NodePoolNamespaceLister.
+type NodePoolNamespaceListerExpansion interface{}
+
 // ServiceListerExpansion allows custom methods to be added to
 // ServiceLister.
 type ServiceListerExpansion interface{}
@@ -25,6 +41,14 @@ type ServiceListerExpansion interface{}
 // ServiceNamespaceListerExpansion allows custom methods to be added to
 // ServiceNamespaceLister.
 type ServiceNamespaceListerExpansion interface{}
+
+// ServiceAddressListerExpansion allows custom methods to be added to
+// ServiceAddressLister.
+type ServiceAddressListerExpansion interface{}
+
+// ServiceAddressNamespaceListerExpansion allows custom methods to be added to
+// ServiceAddressNamespaceLister.
+type ServiceAddressNamespaceListerExpansion interface{}
 
 // ServiceBuildListerExpansion allows custom methods to be added to
 // ServiceBuildLister.
