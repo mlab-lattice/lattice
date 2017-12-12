@@ -4,6 +4,7 @@ import (
 	"time"
 
 	awscontrollers "github.com/mlab-lattice/system/cmd/kubernetes/lattice-controller-manager/app/cloudcontrollers/aws"
+	localcontrollers "github.com/mlab-lattice/system/cmd/kubernetes/lattice-controller-manager/app/cloudcontrollers/localcontrollers"
 	controller "github.com/mlab-lattice/system/cmd/kubernetes/lattice-controller-manager/app/common"
 	"github.com/mlab-lattice/system/cmd/kubernetes/lattice-controller-manager/app/kubernetescontrollers"
 	"github.com/mlab-lattice/system/cmd/kubernetes/lattice-controller-manager/app/latticecontrollers"
@@ -18,6 +19,7 @@ import (
 )
 
 func Run(kubeconfig, provider, terraformModulePath string) {
+
 	var config *rest.Config
 	var err error
 	if kubeconfig == "" {
@@ -53,6 +55,7 @@ func CreateControllerContext(
 		Kubeconfig: kubeconfig,
 	}
 
+	//here informer of system builds
 	versionedKubeClient := kcb.ClientOrDie("shared-kubeinformers")
 	kubeInformers := kubeinformers.NewSharedInformerFactory(versionedKubeClient, time.Duration(12*time.Hour))
 
@@ -88,7 +91,9 @@ func GetControllerInitializers(provider string) map[string]controller.Initialize
 			initializers["cloud-aws-"+name] = initializer
 		}
 	case constants.ProviderLocal:
-		// Local case doesn't need any extra controllers
+		for name, initializer := range localcontrollers.GetControllerInitializers() {
+			initializers["local-"+name] = initializer
+		}
 	default:
 		panic("unsupported provider " + provider)
 	}

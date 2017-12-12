@@ -14,6 +14,7 @@ import (
 	"github.com/mlab-lattice/system/pkg/util/aws"
 
 	"github.com/spf13/cobra"
+	"golang.org/x/net/html/atom"
 )
 
 var (

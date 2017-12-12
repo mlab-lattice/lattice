@@ -1,0 +1,12 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = ["backend.go"],
+    importpath = "github.com/mlab-lattice/system/pkg/backend/kubernetes/local-dns",
+    visibility = ["//visibility:public"],
+    deps = [
+        "@io_k8s_client_go//rest:go_default_library",
+        "@io_k8s_client_go//tools/clientcmd:go_default_library",
+    ],
+)

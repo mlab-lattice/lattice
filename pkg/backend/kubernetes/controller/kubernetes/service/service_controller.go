@@ -81,6 +81,11 @@ func NewController(
 	sc.syncHandler = sc.syncService
 	sc.enqueueService = sc.enqueue
 
+	// TODO :: Looks to be how event handlers are added.
+	// I.e. retrieve our AddressInformer, update the DNS backend
+
+	// For now, pass a new temporary informer which watches systems rather than address
+
 	configInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		// It's assumed there is always one and only one config object.
 		AddFunc:    sc.handleConfigAdd,
