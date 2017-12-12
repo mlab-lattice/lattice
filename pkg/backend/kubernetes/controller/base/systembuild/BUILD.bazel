@@ -8,7 +8,7 @@ go_library(
         "sync.go",
         "system_build_controller.go",
     ],
-    importpath = "github.com/mlab-lattice/system/pkg/backend/kubernetes/controller/lattice/systembuild",
+    importpath = "github.com/mlab-lattice/system/pkg/backend/kubernetes/controller/base/systembuild",
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/backend/kubernetes/constants:go_default_library",

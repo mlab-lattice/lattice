@@ -3,10 +3,9 @@ package app
 import (
 	"time"
 
+	"github.com/mlab-lattice/system/cmd/kubernetes/lattice-controller-manager/app/basecontrollers"
 	awscontrollers "github.com/mlab-lattice/system/cmd/kubernetes/lattice-controller-manager/app/cloudcontrollers/aws"
 	controller "github.com/mlab-lattice/system/cmd/kubernetes/lattice-controller-manager/app/common"
-	"github.com/mlab-lattice/system/cmd/kubernetes/lattice-controller-manager/app/kubernetescontrollers"
-	"github.com/mlab-lattice/system/cmd/kubernetes/lattice-controller-manager/app/latticecontrollers"
 	latticeinformers "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/informers/externalversions"
 	"github.com/mlab-lattice/system/pkg/constants"
 
@@ -74,12 +73,8 @@ func CreateControllerContext(
 func GetControllerInitializers(provider string) map[string]controller.Initializer {
 	initializers := map[string]controller.Initializer{}
 
-	for name, initializer := range kubernetescontrollers.GetControllerInitializers() {
-		initializers["kubernetes-"+name] = initializer
-	}
-
-	for name, initializer := range latticecontrollers.GetControllerInitializers() {
-		initializers["lattice-"+name] = initializer
+	for name, initializer := range basecontrollers.GetControllerInitializers() {
+		initializers["base-"+name] = initializer
 	}
 
 	switch provider {

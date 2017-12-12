@@ -11,7 +11,7 @@ go_library(
         "system_lifecycle_controller.go",
         "system_util.go",
     ],
-    importpath = "github.com/mlab-lattice/system/pkg/backend/kubernetes/controller/lattice/systemlifecycle",
+    importpath = "github.com/mlab-lattice/system/pkg/backend/kubernetes/controller/base/systemlifecycle",
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/backend/kubernetes/constants:go_default_library",
