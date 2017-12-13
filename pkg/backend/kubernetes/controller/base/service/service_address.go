@@ -120,6 +120,7 @@ func serviceAddressSpec(service *crv1.Service) (*crv1.ServiceAddressSpec, error)
 
 func serviceAddressHTTPPort(componentPort crv1.ComponentPort) (*crv1.ServiceAddressPortHTTPConfig, error) {
 	target := crv1.ServiceAddressPortHTTPTargetConfig{
+		Port:          componentPort.EnvoyPort,
 		EndpointGroup: "service",
 		Weight:        100,
 	}

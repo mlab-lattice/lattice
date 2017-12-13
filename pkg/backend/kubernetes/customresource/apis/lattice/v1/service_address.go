@@ -49,6 +49,7 @@ type ServiceAddressPortHTTPConfig struct {
 
 type ServiceAddressPortHTTPTargetConfig struct {
 	EndpointGroup string                                   `json:"endpointGroup"`
+	Port          int32                                    `json:"port"`
 	Weight        int32                                    `json:"weight"`
 	HealthCheck   *ServiceAddressPortHTTPHealthCheckConfig `json:"healthCheck, omitempty"`
 }

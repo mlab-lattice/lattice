@@ -12,7 +12,7 @@ import (
 )
 
 func ServicesForNodePool(latticeClient latticeclientset.Interface, nodePool *crv1.NodePool) ([]crv1.Service, error) {
-	// TODO: will have to change query's namespace when supporting cluster-level node pools
+	// TODO(kevinrosendahl): will have to change query's namespace when supporting cluster-level node pools
 	nodePoolLabelValue := kubeutil.NodePoolIDLabelValue(nodePool)
 	listOptions := metav1.ListOptions{
 		LabelSelector: fmt.Sprintf("%v == %v", kubeconstants.LabelKeyNodePoolID, nodePoolLabelValue),
