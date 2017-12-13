@@ -18,7 +18,7 @@ import (
 func (c *Controller) syncServiceNodePool(service *crv1.Service) (*crv1.Service, *crv1.NodePool, error) {
 	nodePoolID, ok := service.Labels[kubeconstants.LabelKeyNodePoolID]
 	if !ok {
-		// TODO: add support here for shared node pools
+		// TODO(kevinrosendahl): add support here for shared node pools
 		return c.createNewNodePool(service)
 	}
 
@@ -45,7 +45,7 @@ func (c *Controller) syncServiceNodePool(service *crv1.Service) (*crv1.Service, 
 }
 
 func (c *Controller) syncExistingNodePool(service *crv1.Service, nodePool *crv1.NodePool) (*crv1.NodePool, error) {
-	// TODO: only change NodePool spec for dedicated node pools
+	// TODO(kevinrosendahl): only change NodePool spec for dedicated node pools
 	desiredSpec, err := nodePoolSpec(service)
 	if err != nil {
 		return nil, err

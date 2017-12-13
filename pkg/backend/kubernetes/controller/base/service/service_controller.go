@@ -46,10 +46,6 @@ type Controller struct {
 	configLock         sync.RWMutex
 	config             crv1.ConfigSpec
 
-	// FIXME: remove when local DNS server working
-	systemLister       latticelisters.SystemLister
-	systemListerSynced cache.InformerSynced
-
 	serviceLister       latticelisters.ServiceLister
 	serviceListerSynced cache.InformerSynced
 
@@ -69,7 +65,6 @@ func NewController(
 	kubeClient kubeclientset.Interface,
 	latticeClient latticeclientset.Interface,
 	configInformer latticeinformers.ConfigInformer,
-	systemInformer latticeinformers.SystemInformer,
 	serviceInformer latticeinformers.ServiceInformer,
 	nodePoolInformer latticeinformers.NodePoolInformer,
 	deploymentInformer appinformers.DeploymentInformer,
@@ -89,21 +84,10 @@ func NewController(
 		// It's assumed there is always one and only one config object.
 		AddFunc:    sc.handleConfigAdd,
 		UpdateFunc: sc.handleConfigUpdate,
-		// TODO: for now it is assumed that ComponentBuilds are not deleted.
-		// in the future we'll probably want to add a GC process for ComponentBuilds.
-		// At that point we should listen here for those deletes.
-		// FIXME: Document CB GC ideas (need to write down last used date, lock properly, etc)
+		// TODO(kevinrosendahl): for now it is assumed that ComponentBuilds are not deleted.
 	})
 	sc.configLister = configInformer.Lister()
 	sc.configListerSynced = configInformer.Informer().HasSynced
-
-	// FIXME: remove when local DNS server working
-	systemInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc:    sc.handleSystemAdd,
-		UpdateFunc: sc.handleSystemUpdate,
-	})
-	sc.systemLister = systemInformer.Lister()
-	sc.systemListerSynced = systemInformer.Informer().HasSynced
 
 	serviceInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    sc.handleServiceAdd,
@@ -189,57 +173,6 @@ func (c *Controller) handleConfigUpdate(old, cur interface{}) {
 	c.config = curConfig.DeepCopy().Spec
 }
 
-func (c *Controller) handleSystemAdd(obj interface{}) {
-	sys := obj.(*crv1.System)
-	glog.V(4).Infof("Adding System %s", sys.Name)
-
-	for _, svcInfo := range sys.Spec.Services {
-		if svcInfo.ServiceName == nil {
-			// FIXME: what to do here?
-			// probably okay not to worry about, this should be temp until local DNS working
-			continue
-		}
-
-		svc, err := c.serviceLister.Services(sys.Namespace).Get(*svcInfo.ServiceName)
-		if err != nil {
-			// FIXME: what to do here?
-			// probably okay not to worry about, this should be temp until local DNS working
-			continue
-		}
-
-		c.enqueueService(svc)
-	}
-}
-
-func (c *Controller) handleSystemUpdate(old, cur interface{}) {
-	oldSys := old.(*crv1.System)
-	curSys := cur.(*crv1.System)
-	if oldSys.ResourceVersion == curSys.ResourceVersion {
-		// Periodic resync will send update events for all known Deployments.
-		// Two different versions of the same Deployment will always have different RVs.
-		glog.V(5).Info("System ResourceVersions are the same")
-		return
-	}
-
-	glog.V(4).Infof("Updating System %s", oldSys.Name)
-	for _, svcInfo := range curSys.Spec.Services {
-		if svcInfo.ServiceName == nil {
-			// FIXME: what to do here?
-			// probably okay not to worry about, this should be temp until local DNS working
-			continue
-		}
-
-		svc, err := c.serviceLister.Services(curSys.Namespace).Get(*svcInfo.ServiceName)
-		if err != nil {
-			// FIXME: what to do here?
-			// probably okay not to worry about, this should be temp until local DNS working
-			continue
-		}
-
-		c.enqueueService(svc)
-	}
-}
-
 func (c *Controller) handleServiceAdd(obj interface{}) {
 	svc := obj.(*crv1.Service)
 	glog.V(4).Infof("Adding Service %s", svc.Name)
@@ -277,7 +210,7 @@ func (c *Controller) handleNodePoolAdd(obj interface{}) {
 
 	services, err := util.ServicesForNodePool(c.latticeClient, nodePool)
 	if err != nil {
-		// FIXME: what to do here?
+		// FIXME(kevinrosendahl): what to do here?
 		return
 	}
 
@@ -300,7 +233,7 @@ func (c *Controller) handleNodePoolUpdate(old, cur interface{}) {
 
 	services, err := util.ServicesForNodePool(c.latticeClient, curNodePool)
 	if err != nil {
-		// FIXME: what to do here?
+		// FIXME(kevinrosendahl): what to do here?
 		return
 	}
 
@@ -336,7 +269,7 @@ func (c *Controller) handleDeploymentAdd(obj interface{}) {
 
 	// Otherwise, it's an orphan. These should never exist. All deployments should be run by some
 	// controller.
-	// FIXME: send warn event
+	// FIXME(kevinrosendahl): send warn event
 }
 
 // handleDeploymentUpdate figures out what Service manages a Deployment when the Deployment
@@ -358,7 +291,7 @@ func (c *Controller) handleDeploymentUpdate(old, cur interface{}) {
 	if controllerRefChanged {
 		// The ControllerRef was changed. If this is a Service Deployment, this shouldn't happen.
 		if b := c.resolveControllerRef(oldD.Namespace, oldControllerRef); b != nil {
-			// FIXME: send error event here, this should not happen
+			// FIXME(kevinrosendahl): send error event here, this should not happen
 		}
 	}
 
@@ -377,7 +310,7 @@ func (c *Controller) handleDeploymentUpdate(old, cur interface{}) {
 
 	// Otherwise, it's an orphan. These should never exist. All deployments should be run by some
 	// controller.
-	// FIXME: send warn event
+	// FIXME(kevinrosendahl): send warn event
 }
 
 // handleDeploymentDelete enqueues the Service that manages a Deployment when
@@ -440,7 +373,7 @@ func (c *Controller) resolveControllerRef(namespace string, controllerRef *metav
 
 	svc, err := c.serviceLister.Services(namespace).Get(controllerRef.Name)
 	if err != nil {
-		// FIXME: send error?
+		// FIXME(kevinrosendahl): send error?
 		return nil
 	}
 

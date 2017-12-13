@@ -149,7 +149,7 @@ func (c *Controller) newDeployment(service *crv1.Service, nodePool *crv1.NodePoo
 }
 
 func deploymentName(service *crv1.Service) string {
-	// TODO: May change this to UUID when a Service can have multiple Deployments (e.g. Blue/Green & Canary)
+	// TODO(kevinrosendahl): May change this to UUID when a Service can have multiple Deployments (e.g. Blue/Green & Canary)
 	return fmt.Sprintf("lattice-service-%s", service.Name)
 }
 
@@ -188,7 +188,7 @@ func deploymentSpec(service *crv1.Service, name string, deploymentLabels map[str
 		// so this TopologyKey doesn't really matter (besides being required).
 		TopologyKey: kubeconstants.LabelKeyNodeRoleNodePool,
 	}
-	// TODO: Make this a PreferredDuringScheduling PodAntiAffinity if the service is running on a shared NodePool
+	// TODO(kevinrosendahl): Make this a PreferredDuringScheduling PodAntiAffinity if the service is running on a shared NodePool
 	podAntiAffinity := &corev1.PodAntiAffinity{
 		RequiredDuringSchedulingIgnoredDuringExecution: []corev1.PodAffinityTerm{podAffinityTerm},
 	}
@@ -261,8 +261,8 @@ func containerFromComponent(component *block.Component, buildArtifacts *crv1.Com
 		Command:         component.Exec.Command,
 		Ports:           ports,
 		Env:             envVars,
-		// TODO: maybe add Resources
-		// TODO: add VolumeMounts
+		// TODO(kevinrosendahl): maybe add Resources
+		// TODO(kevinrosendahl): add VolumeMounts
 		LivenessProbe: deploymentLivenessProbe(component.HealthCheck),
 	}
 }

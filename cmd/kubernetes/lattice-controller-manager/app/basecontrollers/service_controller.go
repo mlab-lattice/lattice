@@ -10,7 +10,6 @@ func initializeServiceController(ctx controller.Context) {
 		ctx.KubeClientBuilder.ClientOrDie("kubernetes-service-controller"),
 		ctx.LatticeClientBuilder.ClientOrDie("kubernetes-service-controller"),
 		ctx.LatticeInformerFactory.Lattice().V1().Configs(),
-		ctx.LatticeInformerFactory.Lattice().V1().Systems(),
 		ctx.LatticeInformerFactory.Lattice().V1().Services(),
 		ctx.LatticeInformerFactory.Lattice().V1().NodePools(),
 		ctx.KubeInformerFactory.Apps().V1beta2().Deployments(),

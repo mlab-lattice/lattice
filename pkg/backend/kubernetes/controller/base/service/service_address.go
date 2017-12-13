@@ -124,7 +124,7 @@ func serviceAddressHTTPPort(componentPort crv1.ComponentPort) (*crv1.ServiceAddr
 		Weight:        100,
 	}
 
-	// FIXME: add health check
+	// FIXME(kevinrosendahl): add health check
 
 	config := &crv1.ServiceAddressPortHTTPConfig{
 		Targets: []crv1.ServiceAddressPortHTTPTargetConfig{target},
@@ -137,6 +137,6 @@ func serviceAddressTCPPort(componentPort crv1.ComponentPort) (*crv1.ServiceAddre
 		EndpointGroup: "service",
 	}
 
-	// FIXME: add health check
+	// FIXME(kevinrosendahl): add health check
 	return config, nil
 }
