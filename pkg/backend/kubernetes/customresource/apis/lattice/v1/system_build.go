@@ -101,10 +101,10 @@ type SystemBuildStatus struct {
 type SystemBuildState string
 
 const (
-	SystemBuildStatePending   SystemBuildState = "Pending"
-	SystemBuildStateRunning   SystemBuildState = "Running"
-	SystemBuildStateSucceeded SystemBuildState = "Succeeded"
-	SystemBuildStateFailed    SystemBuildState = "Failed"
+	SystemBuildStatePending   SystemBuildState = "pending"
+	SystemBuildStateRunning   SystemBuildState = "running"
+	SystemBuildStateSucceeded SystemBuildState = "succeeded"
+	SystemBuildStateFailed    SystemBuildState = "failed"
 )
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

@@ -52,9 +52,9 @@ type SystemStatus struct {
 type SystemState string
 
 const (
-	SystemStateRollingOut       SystemState = "RollingOut"
-	SystemStateRolloutSucceeded SystemState = "RolloutSucceeded"
-	SystemStateRolloutFailed    SystemState = "RolloutFailed"
+	SystemStateScaling       SystemState = "scaling"
+	SystemStateStable        SystemState = "stable"
+	SystemStateRolloutFailed SystemState = "failed"
 )
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

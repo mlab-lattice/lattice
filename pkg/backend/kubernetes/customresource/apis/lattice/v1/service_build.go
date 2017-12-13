@@ -49,10 +49,10 @@ type ServiceBuildStatus struct {
 type ServiceBuildState string
 
 const (
-	ServiceBuildStatePending   ServiceBuildState = "Pending"
-	ServiceBuildStateRunning   ServiceBuildState = "Running"
-	ServiceBuildStateSucceeded ServiceBuildState = "Succeeded"
-	ServiceBuildStateFailed    ServiceBuildState = "Failed"
+	ServiceBuildStatePending   ServiceBuildState = "pending"
+	ServiceBuildStateRunning   ServiceBuildState = "running"
+	ServiceBuildStateSucceeded ServiceBuildState = "succeeded"
+	ServiceBuildStateFailed    ServiceBuildState = "failed"
 )
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

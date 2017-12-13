@@ -28,7 +28,7 @@ const (
 
 func (c *Controller) syncServiceDeployment(service *crv1.Service, nodePool *crv1.NodePool) (*appsv1beta2.Deployment, error) {
 	selector := kubelabels.NewSelector()
-	requirement, err := kubelabels.NewRequirement(kubeconstants.LabelKeyDeploymentServiceID, selection.Equals, []string{service.Name})
+	requirement, err := kubelabels.NewRequirement(kubeconstants.LabelKeyServiceID, selection.Equals, []string{service.Name})
 	if err != nil {
 		return nil, err
 	}
@@ -45,19 +45,10 @@ func (c *Controller) syncServiceDeployment(service *crv1.Service, nodePool *crv1
 	}
 
 	if len(deployments) == 0 {
-		return c.createNewServiceDeployment(service, nodePool)
+		return c.createNewDeployment(service, nodePool)
 	}
 
 	return c.syncExistingDeployment(service, nodePool, deployments[0])
-}
-
-func (c *Controller) createNewServiceDeployment(service *crv1.Service, nodePool *crv1.NodePool) (*appsv1beta2.Deployment, error) {
-	deployment, err := c.newDeployment(service, nodePool)
-	if err != nil {
-		return nil, err
-	}
-
-	return c.kubeClient.AppsV1beta2().Deployments(service.Namespace).Create(deployment)
 }
 
 func (c *Controller) syncExistingDeployment(service *crv1.Service, nodePool *crv1.NodePool, deployment *appsv1beta2.Deployment) (*appsv1beta2.Deployment, error) {
@@ -81,32 +72,32 @@ func (c *Controller) syncExistingDeployment(service *crv1.Service, nodePool *crv
 	podTemplatesSemanticallyEqual := util.PodTemplateSpecsSemanticallyEqual(desiredPodTemplate, deployment.Spec.Template)
 	if !podTemplatesSemanticallyEqual {
 		glog.V(4).Infof("Deployment %v for Service %v/%v had out of date pod template, updating", deployment.Name, service.Namespace, service.Name)
-		return c.updateDeploymentSpec(deployment, desiredSpec, service)
+		return c.updateDeploymentSpec(deployment, desiredSpec)
 	}
 
 	if deployment.Spec.Replicas != desiredSpec.Replicas {
 		glog.V(4).Infof("Deployment %v for Service %v/%v had out of date number of desired replicas, updating", deployment.Name, service.Namespace, service.Name)
-		return c.updateDeploymentSpec(deployment, desiredSpec, service)
+		return c.updateDeploymentSpec(deployment, desiredSpec)
 	}
 
 	if deployment.Spec.Strategy != desiredSpec.Strategy {
 		glog.V(4).Infof("Deployment %v for Service %v/%v had out of date strategy, updating", deployment.Name, service.Namespace, service.Name)
-		return c.updateDeploymentSpec(deployment, desiredSpec, service)
+		return c.updateDeploymentSpec(deployment, desiredSpec)
 	}
 
 	if deployment.Spec.MinReadySeconds != desiredSpec.MinReadySeconds {
 		glog.V(4).Infof("Deployment %v for Service %v/%v had out of date min ready seconds, updating", deployment.Name, service.Namespace, service.Name)
-		return c.updateDeploymentSpec(deployment, desiredSpec, service)
+		return c.updateDeploymentSpec(deployment, desiredSpec)
 	}
 
 	if deployment.Spec.Paused != desiredSpec.Paused {
 		glog.V(4).Infof("Deployment %v for Service %v/%v had out of paused switch, updating", deployment.Name, service.Namespace, service.Name)
-		return c.updateDeploymentSpec(deployment, desiredSpec, service)
+		return c.updateDeploymentSpec(deployment, desiredSpec)
 	}
 
 	if deployment.Spec.ProgressDeadlineSeconds != desiredSpec.ProgressDeadlineSeconds {
 		glog.V(4).Infof("Deployment %v for Service %v/%v had out of date progress deadline seconds, updating", deployment.Name, service.Namespace, service.Name)
-		return c.updateDeploymentSpec(deployment, desiredSpec, service)
+		return c.updateDeploymentSpec(deployment, desiredSpec)
 	}
 
 	// It's assumed we won't update the RevisionHistoryLimit or the Selector.
@@ -114,9 +105,18 @@ func (c *Controller) syncExistingDeployment(service *crv1.Service, nodePool *crv
 	return deployment, nil
 }
 
-func (c *Controller) updateDeploymentSpec(deployment *appsv1beta2.Deployment, desiredSpec *appsv1beta2.DeploymentSpec, service *crv1.Service) (*appsv1beta2.Deployment, error) {
+func (c *Controller) updateDeploymentSpec(deployment *appsv1beta2.Deployment, desiredSpec *appsv1beta2.DeploymentSpec) (*appsv1beta2.Deployment, error) {
 	deployment.Spec = *desiredSpec
 	return c.kubeClient.AppsV1beta2().Deployments(deployment.Namespace).Update(deployment)
+}
+
+func (c *Controller) createNewDeployment(service *crv1.Service, nodePool *crv1.NodePool) (*appsv1beta2.Deployment, error) {
+	deployment, err := c.newDeployment(service, nodePool)
+	if err != nil {
+		return nil, err
+	}
+
+	return c.kubeClient.AppsV1beta2().Deployments(service.Namespace).Create(deployment)
 }
 
 func (c *Controller) newDeployment(service *crv1.Service, nodePool *crv1.NodePool) (*appsv1beta2.Deployment, error) {
@@ -155,14 +155,15 @@ func deploymentName(service *crv1.Service) string {
 
 func deploymentLabels(service *crv1.Service) map[string]string {
 	return map[string]string{
-		kubeconstants.LabelKeyDeploymentServiceID: service.Name,
+		kubeconstants.LabelKeyServiceID: service.Name,
 	}
 }
 
 func deploymentSpec(service *crv1.Service, name string, deploymentLabels map[string]string, nodePool *crv1.NodePool, envoyConfig *crv1.ConfigEnvoy) (*appsv1beta2.DeploymentSpec, error) {
-	var containers []corev1.Container
+	replicas := service.Spec.NumInstances
 
 	// Create a container for each Component in the Service
+	var containers []corev1.Container
 	for _, component := range service.Spec.Definition.Components {
 		buildArtifacts := service.Spec.ComponentBuildArtifacts[component.Name]
 		container := containerFromComponent(component, &buildArtifacts)
@@ -174,17 +175,7 @@ func deploymentSpec(service *crv1.Service, name string, deploymentLabels map[str
 	initContainers := []corev1.Container{prepareEnvoyContainer}
 	containers = append(containers, envoyContainer)
 
-	var replicas int32
-	if service.Spec.Definition.Resources.NumInstances != nil {
-		replicas = *service.Spec.Definition.Resources.NumInstances
-	} else {
-		// Spin up the min instances here, then later let autoscaler scale up.
-		// TODO: when doing blue-green deploys, consider looking instead at the current number
-		// 		 of replicas in the existing deployment
-		replicas = *service.Spec.Definition.Resources.MinInstances
-	}
-
-	podAffinnityTerm := corev1.PodAffinityTerm{
+	podAffinityTerm := corev1.PodAffinityTerm{
 		LabelSelector: &metav1.LabelSelector{
 			MatchLabels: deploymentLabels,
 		},
@@ -199,7 +190,7 @@ func deploymentSpec(service *crv1.Service, name string, deploymentLabels map[str
 	}
 	// TODO: Make this a PreferredDuringScheduling PodAntiAffinity if the service is running on a shared NodePool
 	podAntiAffinity := &corev1.PodAntiAffinity{
-		RequiredDuringSchedulingIgnoredDuringExecution: []corev1.PodAffinityTerm{podAffinnityTerm},
+		RequiredDuringSchedulingIgnoredDuringExecution: []corev1.PodAffinityTerm{podAffinityTerm},
 	}
 
 	deploymentSpec := appsv1beta2.DeploymentSpec{

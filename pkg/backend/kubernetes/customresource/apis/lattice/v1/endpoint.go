@@ -27,6 +27,14 @@ type EndpointSpec struct {
 	IP               *string `json:"ip,omitempty"`
 }
 
+type EndpointState string
+
+const (
+	EndpointStatePending   EndpointState = "pending"
+	EndpointStateSucceeded EndpointState = "created"
+	EndpointStateFailed    EndpointState = "failed"
+)
+
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 type EndpointList struct {

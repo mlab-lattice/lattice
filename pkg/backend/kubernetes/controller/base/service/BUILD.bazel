@@ -4,7 +4,10 @@ go_library(
     name = "go_default_library",
     srcs = [
         "deployment.go",
-        "kube_service_util.go",
+        "kube_service.go",
+        "node_pool.go",
+        "service.go",
+        "service_address.go",
         "service_controller.go",
     ],
     importpath = "github.com/mlab-lattice/system/pkg/backend/kubernetes/controller/base/service",

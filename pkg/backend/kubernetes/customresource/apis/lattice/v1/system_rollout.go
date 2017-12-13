@@ -39,11 +39,11 @@ type SystemRolloutStatus struct {
 type SystemRolloutState string
 
 const (
-	SystemRolloutStatePending    SystemRolloutState = "Pending"
-	SystemRolloutStateAccepted   SystemRolloutState = "Accepted"
-	SystemRolloutStateInProgress SystemRolloutState = "InProgress"
-	SystemRolloutStateSucceeded  SystemRolloutState = "Succeeded"
-	SystemRolloutStateFailed     SystemRolloutState = "Failed"
+	SystemRolloutStatePending    SystemRolloutState = "pending"
+	SystemRolloutStateAccepted   SystemRolloutState = "accepted"
+	SystemRolloutStateInProgress SystemRolloutState = "in progress"
+	SystemRolloutStateSucceeded  SystemRolloutState = "succeeded"
+	SystemRolloutStateFailed     SystemRolloutState = "failed"
 )
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

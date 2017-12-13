@@ -19,18 +19,18 @@ const (
 type ServiceAddress struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata"`
-	Spec              ServiceAddressSpec `json:"spec"`
+	Spec              ServiceAddressSpec   `json:"spec"`
+	Status            ServiceAddressStatus `json:"status"`
 }
 
 type ServiceAddressSpec struct {
 	EndpointGroups map[string]ServiceAddressEndpointGroup `json:"endpoints"`
-	Ports          map[string]ServiceAddressPort          `json:"ports,omitempty"`
+	Ports          map[int32]ServiceAddressPort           `json:"ports,omitempty"`
 }
 
 type ServiceAddressEndpointGroup struct {
-	Service     *string  `json:"service"`
-	IP          []string `json:"ip"`
-	Port        int32    `json:"port"`
+	Service     *string  `json:"service,omitempty"`
+	IP          []string `json:"ip,omitempty"`
 	LoadBalance *ServiceAddressPortEndpointGroupLoadBalanceConfig
 }
 
@@ -39,18 +39,18 @@ type ServiceAddressPortEndpointGroupLoadBalanceConfig struct {
 }
 
 type ServiceAddressPort struct {
-	Port int32                         `json:"port"`
 	HTTP *ServiceAddressPortHTTPConfig `json:"http,omitempty"`
 	TCP  *ServiceAddressPortTCPConfig  `json:"tcp"`
 }
 
 type ServiceAddressPortHTTPConfig struct {
-	EndpointGroups map[string]ServiceAddressPortHTTPEndpointGroupConfig
+	Targets []ServiceAddressPortHTTPTargetConfig
 }
 
-type ServiceAddressPortHTTPEndpointGroupConfig struct {
-	Weight      int32                                    `json:"weight"`
-	HealthCheck *ServiceAddressPortHTTPHealthCheckConfig `json:"healthCheck, omitempty"`
+type ServiceAddressPortHTTPTargetConfig struct {
+	EndpointGroup string                                   `json:"endpointGroup"`
+	Weight        int32                                    `json:"weight"`
+	HealthCheck   *ServiceAddressPortHTTPHealthCheckConfig `json:"healthCheck, omitempty"`
 }
 
 type ServiceAddressPortHTTPHealthCheckConfig struct {
@@ -75,6 +75,18 @@ type ServiceAddressPortTCPHealthCheckConfig struct {
 	Payload          *string `json:"payload"`
 	ExpectedResponse *string `json:"expectedResponse"`
 }
+
+type ServiceAddressStatus struct {
+	State ServiceAddressState `json:"state,omitempty"`
+}
+
+type ServiceAddressState string
+
+const (
+	ServiceAddressStatePending   ServiceAddressState = "pending"
+	ServiceAddressStateSucceeded ServiceAddressState = "created"
+	ServiceAddressStateFailed    ServiceAddressState = "failed"
+)
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 

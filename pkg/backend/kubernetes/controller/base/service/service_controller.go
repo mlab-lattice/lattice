@@ -6,13 +6,13 @@ import (
 	"sync"
 	"time"
 
+	"github.com/mlab-lattice/system/pkg/backend/kubernetes/controller/base/service/util"
 	crv1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	latticeclientset "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/clientset/versioned"
 	latticeinformers "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/informers/externalversions/lattice/v1"
 	latticelisters "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/listers/lattice/v1"
 
 	appsv1beta2 "k8s.io/api/apps/v1beta2"
-	corev1 "k8s.io/api/core/v1"
 
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -53,6 +53,9 @@ type Controller struct {
 	serviceLister       latticelisters.ServiceLister
 	serviceListerSynced cache.InformerSynced
 
+	nodePoolLister       latticelisters.NodePoolLister
+	nodePoolListerSynced cache.InformerSynced
+
 	deploymentLister       appslisters.DeploymentLister
 	deploymentListerSynced cache.InformerSynced
 
@@ -68,6 +71,7 @@ func NewController(
 	configInformer latticeinformers.ConfigInformer,
 	systemInformer latticeinformers.SystemInformer,
 	serviceInformer latticeinformers.ServiceInformer,
+	nodePoolInformer latticeinformers.NodePoolInformer,
 	deploymentInformer appinformers.DeploymentInformer,
 	kubeServiceInformer coreinformers.ServiceInformer,
 ) *Controller {
@@ -108,6 +112,13 @@ func NewController(
 	})
 	sc.serviceLister = serviceInformer.Lister()
 	sc.serviceListerSynced = serviceInformer.Informer().HasSynced
+
+	nodePoolInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+		AddFunc:    sc.handleNodePoolAdd,
+		UpdateFunc: sc.handleNodePoolUpdate,
+	})
+	sc.nodePoolLister = nodePoolInformer.Lister()
+	sc.nodePoolListerSynced = nodePoolInformer.Informer().HasSynced
 
 	deploymentInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    sc.handleDeploymentAdd,
@@ -152,99 +163,6 @@ func (c *Controller) Run(workers int, stopCh <-chan struct{}) {
 
 	// wait until we're told to stop
 	<-stopCh
-}
-
-func (c *Controller) runWorker() {
-	// hot loop until we're told to stop.  processNextWorkItem will
-	// automatically wait until there's work available, so we don't worry
-	// about secondary waits
-	for c.processNextWorkItem() {
-	}
-}
-
-// processNextWorkItem deals with one key off the queue.  It returns false
-// when it's time to quit.
-func (c *Controller) processNextWorkItem() bool {
-	// pull the next work item from queue.  It should be a key we use to lookup
-	// something in a cache
-	key, quit := c.queue.Get()
-	if quit {
-		return false
-	}
-	// you always have to indicate to the queue that you've completed a piece of
-	// work
-	defer c.queue.Done(key)
-
-	// do your work on the key.  This method will contains your "do stuff" logic
-	err := c.syncHandler(key.(string))
-	if err == nil {
-		// if you had no error, tell the queue to stop tracking history for your
-		// key. This will reset things like failure counts for per-item rate
-		// limiting
-		c.queue.Forget(key)
-		return true
-	}
-
-	// there was a failure so be sure to report it.  This method allows for
-	// pluggable error handling which can be used for things like
-	// cluster-monitoring
-	runtime.HandleError(fmt.Errorf("%v failed with : %v", key, err))
-
-	// since we failed, we should requeue the item to work on later.  This
-	// method will add a backoff to avoid hotlooping on particular items
-	// (they're probably still not going to work right away) and overall
-	// controller protection (everything I've done is broken, this controller
-	// needs to calm down or it can starve other useful work) cases.
-	c.queue.AddRateLimited(key)
-
-	return true
-}
-
-// syncService will sync the Service with the given key.
-// This function is not meant to be invoked concurrently with the same key.
-func (c *Controller) syncService(key string) error {
-	glog.Flush()
-	startTime := time.Now()
-	glog.V(4).Infof("Started syncing Service %q (%v)", key, startTime)
-	defer func() {
-		glog.V(4).Infof("Finished syncing Service %q (%v)", key, time.Now().Sub(startTime))
-	}()
-
-	namespace, name, err := cache.SplitMetaNamespaceKey(key)
-	if err != nil {
-		return err
-	}
-	service, err := c.serviceLister.Services(namespace).Get(name)
-	if errors.IsNotFound(err) {
-		glog.V(2).Infof("Service %v has been deleted", key)
-		return nil
-	}
-	if err != nil {
-		return err
-	}
-
-	nodePool, err := c.syncServiceNodePool(service)
-	if err != nil {
-		return err
-	}
-
-	d, err := c.syncServiceDeployment(service, nodePool)
-	if err != nil {
-		return err
-	}
-
-	kubeSvc, err := c.syncServiceKubeService(service)
-	if err != nil {
-		return err
-	}
-
-	serviceAddress, err := c.syncServiceServiceAddress(service)
-	if err != nil {
-		return err
-	}
-
-	svcCopy := service.DeepCopy()
-	return c.syncServiceStatus(svcCopy, d, kubeSvc, nodePool, serviceAddress)
 }
 
 func (c *Controller) handleConfigAdd(obj interface{}) {
@@ -351,6 +269,44 @@ func (c *Controller) handleServiceDelete(obj interface{}) {
 	}
 	glog.V(4).Infof("Deleting Service %s", svc.Name)
 	c.enqueueService(svc)
+}
+
+func (c *Controller) handleNodePoolAdd(obj interface{}) {
+	nodePool := obj.(*crv1.NodePool)
+	glog.V(4).Infof("Adding NodePool %s/%s", nodePool.Namespace, nodePool.Name)
+
+	services, err := util.ServicesForNodePool(c.latticeClient, nodePool)
+	if err != nil {
+		// FIXME: what to do here?
+		return
+	}
+
+	for _, service := range services {
+		c.enqueueService(&service)
+	}
+}
+
+func (c *Controller) handleNodePoolUpdate(old, cur interface{}) {
+	oldNodePool := old.(*crv1.NodePool)
+	curNodePool := cur.(*crv1.NodePool)
+	glog.V(4).Infof("Updating NodePool %s/%s", curNodePool.Namespace, curNodePool.Name)
+
+	if oldNodePool.ResourceVersion == curNodePool.ResourceVersion {
+		// Periodic resync will send update events for all known Deployments.
+		// Two different versions of the same Deployment will always have different RVs.
+		glog.V(5).Info("NodePool ResourceVersions are the same")
+		return
+	}
+
+	services, err := util.ServicesForNodePool(c.latticeClient, curNodePool)
+	if err != nil {
+		// FIXME: what to do here?
+		return
+	}
+
+	for _, service := range services {
+		c.enqueueService(&service)
+	}
 }
 
 // handleDeploymentAdd enqueues the Service that manages a Deployment when the Deployment is created.
@@ -494,4 +450,103 @@ func (c *Controller) resolveControllerRef(namespace string, controllerRef *metav
 		return nil
 	}
 	return svc
+}
+
+func (c *Controller) runWorker() {
+	// hot loop until we're told to stop.  processNextWorkItem will
+	// automatically wait until there's work available, so we don't worry
+	// about secondary waits
+	for c.processNextWorkItem() {
+	}
+}
+
+// processNextWorkItem deals with one key off the queue.  It returns false
+// when it's time to quit.
+func (c *Controller) processNextWorkItem() bool {
+	// pull the next work item from queue.  It should be a key we use to lookup
+	// something in a cache
+	key, quit := c.queue.Get()
+	if quit {
+		return false
+	}
+	// you always have to indicate to the queue that you've completed a piece of
+	// work
+	defer c.queue.Done(key)
+
+	// do your work on the key.  This method will contains your "do stuff" logic
+	err := c.syncHandler(key.(string))
+	if err == nil {
+		// if you had no error, tell the queue to stop tracking history for your
+		// key. This will reset things like failure counts for per-item rate
+		// limiting
+		c.queue.Forget(key)
+		return true
+	}
+
+	// there was a failure so be sure to report it.  This method allows for
+	// pluggable error handling which can be used for things like
+	// cluster-monitoring
+	runtime.HandleError(fmt.Errorf("%v failed with : %v", key, err))
+
+	// since we failed, we should requeue the item to work on later.  This
+	// method will add a backoff to avoid hotlooping on particular items
+	// (they're probably still not going to work right away) and overall
+	// controller protection (everything I've done is broken, this controller
+	// needs to calm down or it can starve other useful work) cases.
+	c.queue.AddRateLimited(key)
+
+	return true
+}
+
+// syncService will sync the Service with the given key.
+// This function is not meant to be invoked concurrently with the same key.
+func (c *Controller) syncService(key string) error {
+	glog.Flush()
+	startTime := time.Now()
+	glog.V(4).Infof("Started syncing Service %q (%v)", key, startTime)
+	defer func() {
+		glog.V(4).Infof("Finished syncing Service %q (%v)", key, time.Now().Sub(startTime))
+	}()
+
+	namespace, name, err := cache.SplitMetaNamespaceKey(key)
+	if err != nil {
+		return err
+	}
+	service, err := c.serviceLister.Services(namespace).Get(name)
+	if errors.IsNotFound(err) {
+		glog.V(2).Infof("Service %v has been deleted", key)
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+
+	service, nodePool, err := c.syncServiceNodePool(service)
+	if err != nil {
+		return err
+	}
+
+	deployment, err := c.syncServiceDeployment(service, nodePool)
+	if err != nil {
+		return err
+	}
+
+	kubeService, err := c.syncServiceKubeService(service)
+	if err != nil {
+		return err
+	}
+
+	// The cloud controller is responsible for creating the Kubernetes Service.
+	// If it isn't created yet we'll just return, and we'll re-sync when the Service is added.
+	if kubeService == nil {
+		glog.V(4).Infof("Kubernetes Service for Service %v/%v has not been created yet", service.Namespace, service.Name)
+		return nil
+	}
+
+	serviceAddress, err := c.syncServiceServiceAddress(service)
+	if err != nil {
+		return err
+	}
+
+	return c.syncServiceStatus(service, deployment, kubeService, nodePool, serviceAddress)
 }

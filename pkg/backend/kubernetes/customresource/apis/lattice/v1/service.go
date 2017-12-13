@@ -41,6 +41,8 @@ type ServiceSpec struct {
 	EnvoyAdminPort int32 `json:"envoyAdminPort"`
 	// EnvoyEgressPort is the port assigned to this service to use for the Envoy egress listener
 	EnvoyEgressPort int32 `json:"envoyEgressPort"`
+
+	NumInstances int32 `json:"numInstances"`
 }
 
 // +k8s:deepcopy-gen=false
@@ -55,17 +57,28 @@ type ComponentPort struct {
 }
 
 type ServiceStatus struct {
-	State   ServiceState `json:"state,omitempty"`
-	Message string       `json:"message,omitempty"`
+	State            ServiceState        `json:"state,omitempty"`
+	UpdatedInstances int32               `json:"updatedInstances"`
+	StaleInstances   int32               `json:"staleInstances"`
+	FailureInfo      *ServiceFailureInfo `json:"failureInfo,omitempty"`
 }
 
 type ServiceState string
 
 const (
-	ServiceStateRollingOut       ServiceState = "RollingOut"
-	ServiceStateRolloutSucceeded ServiceState = "RolloutSucceeded"
-	ServiceStateRolloutFailed    ServiceState = "RolloutFailed"
+	ServiceStatePending     ServiceState = "pending"
+	ServiceStateScalingDown ServiceState = "scaling down"
+	ServiceStateScalingUp   ServiceState = "scaling up"
+	ServiceStateUpdating    ServiceState = "updating"
+	ServiceStateStable      ServiceState = "stable"
+	ServiceStateFailed      ServiceState = "failed"
 )
+
+type ServiceFailureInfo struct {
+	Message  string      `json:"message"`
+	Internal bool        `json:"internal"`
+	Time     metav1.Time `json:"time"`
+}
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 

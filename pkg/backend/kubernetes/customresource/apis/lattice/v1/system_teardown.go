@@ -37,10 +37,10 @@ type SystemTeardownStatus struct {
 type SystemTeardownState string
 
 const (
-	SystemTeardownStatePending    SystemTeardownState = "Pending"
-	SystemTeardownStateInProgress SystemTeardownState = "InProgress"
-	SystemTeardownStateSucceeded  SystemTeardownState = "Succeeded"
-	SystemTeardownStateFailed     SystemTeardownState = "Failed"
+	SystemTeardownStatePending    SystemTeardownState = "pending"
+	SystemTeardownStateInProgress SystemTeardownState = "in progress"
+	SystemTeardownStateSucceeded  SystemTeardownState = "succeeded"
+	SystemTeardownStateFailed     SystemTeardownState = "failed"
 )
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

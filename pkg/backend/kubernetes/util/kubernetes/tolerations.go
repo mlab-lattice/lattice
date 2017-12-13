@@ -11,7 +11,7 @@ func NodePoolToleration(nodePool *crv1.NodePool) corev1.Toleration {
 	return corev1.Toleration{
 		Key:      constants.LabelKeyNodeRoleNodePool,
 		Operator: corev1.TolerationOpEqual,
-		Value:    NodePoolNodeRoleLabelValue(nodePool),
+		Value:    NodePoolIDLabelValue(nodePool),
 		Effect:   corev1.TaintEffectNoSchedule,
 	}
 }

@@ -16,7 +16,7 @@ func NodePoolNodeAffinity(nodePool *crv1.NodePool) *corev1.NodeAffinity {
 						{
 							Key:      constants.LabelKeyNodeRoleNodePool,
 							Operator: corev1.NodeSelectorOpIn,
-							Values:   []string{NodePoolNodeRoleLabelValue(nodePool)},
+							Values:   []string{NodePoolIDLabelValue(nodePool)},
 						},
 					},
 				},

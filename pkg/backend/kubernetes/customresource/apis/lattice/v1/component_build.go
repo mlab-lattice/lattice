@@ -46,11 +46,11 @@ type ComponentBuildStatus struct {
 type ComponentBuildState string
 
 const (
-	ComponentBuildStatePending   ComponentBuildState = "Pending"
-	ComponentBuildStateQueued    ComponentBuildState = "Queued"
-	ComponentBuildStateRunning   ComponentBuildState = "Running"
-	ComponentBuildStateSucceeded ComponentBuildState = "Succeeded"
-	ComponentBuildStateFailed    ComponentBuildState = "Failed"
+	ComponentBuildStatePending   ComponentBuildState = "pending"
+	ComponentBuildStateQueued    ComponentBuildState = "queued"
+	ComponentBuildStateRunning   ComponentBuildState = "running"
+	ComponentBuildStateSucceeded ComponentBuildState = "succeeded"
+	ComponentBuildStateFailed    ComponentBuildState = "failed"
 )
 
 type ComponentBuildFailureInfo struct {

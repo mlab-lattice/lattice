@@ -8,9 +8,10 @@ const (
 	LabelKeyNodeRoleNodePool     = LabelKeyKubernetesNodeRole + "/lattice-node-pool"
 	LabelKeyComponentBuildID     = "component.build.lattice.mlab.com/id"
 	LabelKeyInternalComponent    = "component.lattice.mlab.com/internal"
+	LabelKeyNodePoolID           = "node-pool.lattice.mlab.com/id"
 	LabelKeySystemRolloutVersion = "rollout.system.lattice.mlab.com/version"
 	LabelKeySystemRolloutBuildID = "rollout.system.lattice.mlab.com/build"
-	LabelKeyDeploymentServiceID  = "service.lattice.mlab.com/id"
+	LabelKeyServiceID            = "service.lattice.mlab.com/id"
 	LabelKeySystemBuildVersion   = "system.build.lattice.mlab.com/version"
 	LabelKeySystemVersion        = "system.lattice.mlab.com/version"
 )
