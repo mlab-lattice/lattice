@@ -17,9 +17,9 @@ import (
 	"github.com/golang/glog"
 )
 
-func (sc *Controller) getKubeServiceForService(svc *crv1.Service) (*corev1.Service, error) {
+func (c *Controller) getKubeServiceForService(svc *crv1.Service) (*corev1.Service, error) {
 	ksvcName := kubeutil.GetKubeServiceNameForService(svc)
-	ksvc, err := sc.kubeServiceLister.Services(svc.Namespace).Get(ksvcName)
+	ksvc, err := c.kubeServiceLister.Services(svc.Namespace).Get(ksvcName)
 	if err != nil && !apierrors.IsNotFound(err) {
 		return nil, err
 	}
@@ -27,7 +27,7 @@ func (sc *Controller) getKubeServiceForService(svc *crv1.Service) (*corev1.Servi
 	return ksvc, nil
 }
 
-func (sc *Controller) getKubeService(svc *crv1.Service) (*corev1.Service, error) {
+func (c *Controller) getKubeService(svc *crv1.Service) (*corev1.Service, error) {
 	ports := []corev1.ServicePort{}
 	public := false
 	for componentName, cPorts := range svc.Spec.Ports {
@@ -83,13 +83,13 @@ func getProtocol(protocolString string) (corev1.Protocol, error) {
 	}
 }
 
-func (sc *Controller) createKubeService(svc *crv1.Service) (*corev1.Service, error) {
-	ksvc, err := sc.getKubeService(svc)
+func (c *Controller) createKubeService(svc *crv1.Service) (*corev1.Service, error) {
+	ksvc, err := c.getKubeService(svc)
 	if err != nil {
 		return nil, err
 	}
 
-	ksvcResp, err := sc.kubeClient.CoreV1().Services(svc.Namespace).Create(ksvc)
+	ksvcResp, err := c.kubeClient.CoreV1().Services(svc.Namespace).Create(ksvc)
 	if err != nil {
 		// FIXME: send warn event
 		return nil, err

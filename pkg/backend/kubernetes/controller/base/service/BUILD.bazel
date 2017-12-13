@@ -3,7 +3,7 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library")
 go_library(
     name = "go_default_library",
     srcs = [
-        "deployment_util.go",
+        "deployment.go",
         "kube_service_util.go",
         "service_controller.go",
     ],
@@ -11,14 +11,13 @@ go_library(
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/backend/kubernetes/constants:go_default_library",
+        "//pkg/backend/kubernetes/controller/base/service/util:go_default_library",
         "//pkg/backend/kubernetes/customresource/apis/lattice/v1:go_default_library",
         "//pkg/backend/kubernetes/customresource/generated/clientset/versioned:go_default_library",
         "//pkg/backend/kubernetes/customresource/generated/informers/externalversions/lattice/v1:go_default_library",
         "//pkg/backend/kubernetes/customresource/generated/listers/lattice/v1:go_default_library",
         "//pkg/backend/kubernetes/util/kubernetes:go_default_library",
-        "//pkg/definition:go_default_library",
         "//pkg/definition/block:go_default_library",
-        "//pkg/definition/tree:go_default_library",
         "@com_github_golang_glog//:go_default_library",
         "@com_github_satori_go_uuid//:go_default_library",
         "@io_k8s_api//apps/v1beta2:go_default_library",
@@ -26,6 +25,7 @@ go_library(
         "@io_k8s_apimachinery//pkg/api/errors:go_default_library",
         "@io_k8s_apimachinery//pkg/apis/meta/v1:go_default_library",
         "@io_k8s_apimachinery//pkg/labels:go_default_library",
+        "@io_k8s_apimachinery//pkg/selection:go_default_library",
         "@io_k8s_apimachinery//pkg/util/intstr:go_default_library",
         "@io_k8s_apimachinery//pkg/util/runtime:go_default_library",
         "@io_k8s_apimachinery//pkg/util/wait:go_default_library",
