@@ -38,23 +38,23 @@ type SystemServicesInfo struct {
 	// ComponentBuildArtifacts maps Component names to the artifacts created by their build
 	ComponentBuildArtifacts map[string]ComponentBuildArtifacts `json:"componentBuildArtifacts"`
 
-	// ServiceName is the name of the Service CustomResource that is created by the lattice-system-controller
-	ServiceName *string `json:"serviceName,omitempty"`
-	// ServiceState is the last observed state of the Service CustomResource
-	ServiceState *ServiceState `json:"serviceState"`
+	// Name is the name of the Service CustomResource that is created by the lattice-system-controller
+	Name *string `json:"serviceName,omitempty"`
+	// State is the last observed state of the Service CustomResource
+	State *ServiceState `json:"serviceState"`
 }
 
 type SystemStatus struct {
-	State   SystemState `json:"state,omitempty"`
-	Message string      `json:"message,omitempty"`
+	State SystemState `json:"state,omitempty"`
 }
 
 type SystemState string
 
 const (
-	SystemStateScaling       SystemState = "scaling"
-	SystemStateStable        SystemState = "stable"
-	SystemStateRolloutFailed SystemState = "failed"
+	SystemStateScaling  SystemState = "scaling"
+	SystemStateUpdating SystemState = "updating"
+	SystemStateStable   SystemState = "stable"
+	SystemStateFailed   SystemState = "failed"
 )
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

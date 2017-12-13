@@ -41,10 +41,6 @@ func (c *Controller) syncExistingServiceAddress(service *crv1.Service, serviceAd
 	}
 
 	glog.V(4).Infof("ServiceAddress for Service %v/%v had out of date spec, updating", serviceAddress.Name, service.Namespace, service.Name)
-	return c.updateServiceAddressSpec(serviceAddress, desiredSpec)
-}
-
-func (c *Controller) updateServiceAddressSpec(serviceAddress *crv1.ServiceAddress, desiredSpec *crv1.ServiceAddressSpec) (*crv1.ServiceAddress, error) {
 	serviceAddress.Spec = *desiredSpec
 	return c.latticeClient.LatticeV1().ServiceAddresses(serviceAddress.Namespace).Update(serviceAddress)
 }

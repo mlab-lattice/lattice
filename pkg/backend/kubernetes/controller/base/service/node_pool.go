@@ -103,8 +103,10 @@ func (c *Controller) createNewNodePool(service *crv1.Service) (*crv1.Service, *c
 }
 
 func (c *Controller) addNodePoolLabel(service *crv1.Service, nodePool *crv1.NodePool) (*crv1.Service, error) {
-	serviceCopy := service.DeepCopy()
-	serviceCopy.Labels[kubeconstants.LabelKeyNodePoolID] = kubeutil.NodePoolIDLabelValue(nodePool)
+	// Copy the service so the shared cache isn't mutated
+	service = service.DeepCopy()
+	service.Labels[kubeconstants.LabelKeyNodePoolID] = kubeutil.NodePoolIDLabelValue(nodePool)
+
 	return c.latticeClient.LatticeV1().Services(service.Namespace).Update(service)
 }
 

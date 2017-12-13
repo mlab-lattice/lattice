@@ -46,7 +46,7 @@ func (slc *Controller) syncAcceptedRollout(sysRollout *crv1.SystemRollout) error
 			for path, svcInfo := range sysSpec.Services {
 				// If a Service already exists, use it.
 				if existingSvcInfo, ok := sys.Spec.Services[path]; ok {
-					svcInfo.ServiceName = existingSvcInfo.ServiceName
+					svcInfo.Name = existingSvcInfo.Name
 					sysSpec.Services[path] = svcInfo
 				}
 			}

@@ -28,9 +28,6 @@ func (c *Controller) syncServiceStatus(
 	failureMessage := ""
 	var failureTime *metav1.Time
 
-	//scalingUp := false
-	//scalingDown := false
-
 	desiredInstances := service.Spec.NumInstances
 	updatedInstances := deployment.Status.UpdatedReplicas
 	totalInstances := deployment.Status.Replicas
@@ -55,12 +52,14 @@ func (c *Controller) syncServiceStatus(
 		state = crv1.ServiceStateScalingDown
 	}
 
-	// If we have any stale instances though, we are updating (which can include scaling) so use ServiceStateUpdating
+	// If we have any stale instances though, we are updating (which can include scaling)
+	// An updating status takes priority over a scaling/stable state
 	if staleInstances != 0 {
 		state = crv1.ServiceStateUpdating
 	}
 
-	// But if we have a failure, our updating or scaling has failed, so use ServiceStateFailed
+	// But if we have a failure, our updating or scaling has failed
+	// A failed status takes priority over an updating status
 	var failureInfo *crv1.ServiceFailureInfo
 	if failed {
 		state = crv1.ServiceStateFailed
@@ -90,8 +89,10 @@ func (c *Controller) syncServiceStatus(
 		return nil
 	}
 
+	// Copy the service so the shared cache isn't mutated
 	service = service.DeepCopy()
 	service.Status = status
+
 	_, err := c.latticeClient.LatticeV1().Services(service.Namespace).Update(service)
 	return err
 }

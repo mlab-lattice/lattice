@@ -11,8 +11,10 @@ import (
 	latticeclientset "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/clientset/versioned"
 	latticeinformers "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/informers/externalversions/lattice/v1"
 	latticelisters "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/listers/lattice/v1"
+	kubeutil "github.com/mlab-lattice/system/pkg/backend/kubernetes/util/kubernetes"
 
 	appsv1beta2 "k8s.io/api/apps/v1beta2"
+	corev1 "k8s.io/api/core/v1"
 
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -112,6 +114,10 @@ func NewController(
 	sc.deploymentLister = deploymentInformer.Lister()
 	sc.deploymentListerSynced = deploymentInformer.Informer().HasSynced
 
+	kubeServiceInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+		AddFunc:    sc.handleKubeServiceAdd,
+		UpdateFunc: sc.handleKubeServiceUpdate,
+	})
 	sc.kubeServiceLister = kubeServiceInformer.Lister()
 	sc.kubeServiceListerSynced = kubeServiceInformer.Informer().HasSynced
 
@@ -351,6 +357,92 @@ func (c *Controller) handleDeploymentDelete(obj interface{}) {
 	c.enqueueService(svc)
 }
 
+func (c *Controller) handleKubeServiceAdd(obj interface{}) {
+	kubeService := obj.(*corev1.Service)
+	glog.V(4).Infof("kube Service %v/%v added", kubeService.Namespace, kubeService.Name)
+
+	if kubeService.DeletionTimestamp != nil {
+		// On a restart of the controller manager, it's possible for an object to
+		// show up in a state that is already pending deletion.
+		c.handleKubeServiceDelete(kubeService)
+		return
+	}
+
+	name, err := kubeutil.GetServiceNameForKubeService(kubeService)
+	if err != nil {
+		// The kube service wasn't for a Service
+		return
+	}
+
+	service, err := c.serviceLister.Services(kubeService.Namespace).Get(name)
+	if err != nil {
+		// FIXME(kevinrosendahl): send warn event
+		return
+	}
+
+	c.enqueueService(service)
+}
+
+func (c *Controller) handleKubeServiceUpdate(old, cur interface{}) {
+	glog.V(5).Info("Got kube Service update")
+	oldKubeService := old.(*corev1.Service)
+	curKubeService := cur.(*corev1.Service)
+	if curKubeService.ResourceVersion == oldKubeService.ResourceVersion {
+		// Periodic resync will send update events for all known Services.
+		// Two different versions of the same Service will always have different RVs.
+		glog.V(5).Info("kube Service %v/%v ResourceVersions are the same", curKubeService.Namespace, curKubeService.Name)
+		return
+	}
+
+	name, err := kubeutil.GetServiceNameForKubeService(curKubeService)
+	if err != nil {
+		// The kube service wasn't for a Service
+		return
+	}
+
+	service, err := c.serviceLister.Services(curKubeService.Namespace).Get(name)
+	if err != nil {
+		// FIXME(kevinrosendahl): send warn event
+		return
+	}
+
+	c.enqueueService(service)
+}
+
+func (c *Controller) handleKubeServiceDelete(obj interface{}) {
+	kubeService, ok := obj.(*corev1.Service)
+
+	// When a delete is dropped, the relist will notice a pod in the store not
+	// in the list, leading to the insertion of a tombstone object which contains
+	// the deleted key/value.
+	if !ok {
+		tombstone, ok := obj.(cache.DeletedFinalStateUnknown)
+		if !ok {
+			runtime.HandleError(fmt.Errorf("couldn't get object from tombstone %#v", obj))
+			return
+		}
+		kubeService, ok = tombstone.Obj.(*corev1.Service)
+		if !ok {
+			runtime.HandleError(fmt.Errorf("tombstone contained object that is not a Service %#v", obj))
+			return
+		}
+	}
+
+	name, err := kubeutil.GetServiceNameForKubeService(kubeService)
+	if err != nil {
+		// The kube service wasn't for a Service
+		return
+	}
+
+	service, err := c.serviceLister.Services(kubeService.Namespace).Get(name)
+	if err != nil {
+		// FIXME(kevinrosendahl): send warn event
+		return
+	}
+
+	c.enqueueService(service)
+}
+
 func (c *Controller) enqueue(svc *crv1.Service) {
 	key, err := cache.DeletionHandlingMetaNamespaceKeyFunc(svc)
 	if err != nil {
@@ -470,7 +562,7 @@ func (c *Controller) syncService(key string) error {
 	}
 
 	// The cloud controller is responsible for creating the Kubernetes Service.
-	// If it isn't created yet we'll just return, and we'll re-sync when the Service is added.
+	// If it isn't created yet we'll just return and re-sync when the Service is added.
 	if kubeService == nil {
 		glog.V(4).Infof("Kubernetes Service for Service %v/%v has not been created yet", service.Namespace, service.Name)
 		return nil
