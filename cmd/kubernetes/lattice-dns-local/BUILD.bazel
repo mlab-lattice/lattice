@@ -10,10 +10,10 @@ go_library(
     visibility = ["//visibility:private"],
     deps = [
         "//cmd/kubernetes/lattice-controller-manager/app:go_default_library",
-        "//cmd/kubernetes/lattice-controller-manager/app/cloudcontrollers/localcontrollers:go_default_library",
         "//cmd/kubernetes/lattice-controller-manager/app/common:go_default_library",
         "//cmd/kubernetes/lattice-controller-manager/app/kubernetescontrollers:go_default_library",
         "//cmd/kubernetes/lattice-controller-manager/app/latticecontrollers:go_default_library",
+        "//cmd/kubernetes/lattice-dns-local/localcontrollers:go_default_library",
         "//pkg/backend/kubernetes/customresource/generated/informers/externalversions:go_default_library",
         "//pkg/constants:go_default_library",
         "@com_github_golang_glog//:go_default_library",
