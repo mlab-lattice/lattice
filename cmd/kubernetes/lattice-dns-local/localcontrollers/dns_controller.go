@@ -7,8 +7,8 @@ import (
 
 func initialiseAddressController(ctx controller.Context) {
 	go local.NewController(
-		ctx.LatticeClientBuilder.ClientOrDie("lattice-controller-lattice-system-build"),
-		// To become an Address informer?
+		ctx.LatticeClientBuilder.ClientOrDie("local-dns-lattice-address"),
+		// To become an Address informer, now a System informer for debugging.
 		ctx.LatticeInformerFactory.Lattice().V1().Systems(),
 	).Run(4, ctx.Stop)
 }

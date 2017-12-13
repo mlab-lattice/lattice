@@ -3,7 +3,7 @@ package main
 import (
 	"time"
 
-	localcontrollers "github.com/mlab-lattice/system/cmd/kubernetes/lattice-controller-manager/app/cloudcontrollers/localcontrollers"
+	localcontrollers "github.com/mlab-lattice/system/cmd/kubernetes/lattice-dns-local/localcontrollers"
 	controller "github.com/mlab-lattice/system/cmd/kubernetes/lattice-controller-manager/app/common"
 	"github.com/mlab-lattice/system/cmd/kubernetes/lattice-controller-manager/app/kubernetescontrollers"
 	controllermanager "github.com/mlab-lattice/system/cmd/kubernetes/lattice-controller-manager/app"
@@ -41,7 +41,7 @@ func Run(kubeconfig, provider, terraformModulePath string) {
 			initializers["local-"+name] = initializer
 		}
 	default:
-		panic("lattice-local-dns only supported for local provider.")
+		panic("lattice-local-dns is only supported for local provider.")
 	}
 
 	glog.V(1).Info("Starting controllers")
