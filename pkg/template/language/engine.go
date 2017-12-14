@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/mlab-lattice/system/pkg/util/git"
+	"github.com/mlab-lattice/system/pkg/util/stack"
 	"strings"
 )
 
@@ -30,7 +31,33 @@ func (gitWrapper GitResolverWrapper) FileContents(fileName string) ([]byte, erro
 /**********************************************************************************************************************/
 // Environment. Template Rendering Environment
 type Environment struct {
-	variables map[string]interface{}
+	variableStack *stack.Stack
+}
+
+func newEnvironment() *Environment {
+	env := &Environment{
+		variableStack: stack.NewStack(10),
+	}
+
+	return env
+}
+
+func (env *Environment) pushVariables(variables map[string]interface{}) {
+	env.variableStack.Push(variables)
+}
+
+func (env *Environment) popVariables() error {
+	_, err := env.variableStack.Pop()
+	return err
+}
+
+func (env *Environment) getCurrentVariables() (map[string]interface{}, error) {
+	variables, err := env.variableStack.Peek()
+	if err != nil {
+		return nil, err
+	}
+
+	return variables.(map[string]interface{}), nil
 }
 
 /**********************************************************************************************************************/
@@ -63,15 +90,15 @@ func NewEngine(fileResolver FileResolver) *TemplateEngine {
 
 // ParseTemplate
 func (engine *TemplateEngine) ParseTemplate(url string, variables map[string]interface{}) (*Template, error) {
-	env := &Environment{
-		variables: variables,
-	}
+	env := newEnvironment()
 
-	return engine.doParseTemplate(env, url)
+	return engine.doParseTemplate(env, url, variables)
 }
 
-func (engine *TemplateEngine) doParseTemplate(env *Environment, url string) (*Template, error) {
+func (engine *TemplateEngine) doParseTemplate(env *Environment, url string, variables map[string]interface{}) (*Template, error) {
 
+	// Push Variables to stack
+	env.pushVariables(variables)
 	rawMap, err := engine.readMapFromFile(env, url)
 
 	if err != nil {
@@ -85,6 +112,14 @@ func (engine *TemplateEngine) doParseTemplate(env *Environment, url string) (*Te
 	}
 
 	var template = &Template{Value: val.(map[string]interface{})}
+
+	// Pop
+	err = env.popVariables()
+
+	if err != nil {
+		return nil, err
+	}
+
 	return template, nil
 }
 
@@ -154,11 +189,15 @@ func (engine *TemplateEngine) evalArray(arrayVal []interface{}, env *Environment
 
 // evalutes a string val
 func (engine *TemplateEngine) evalString(s string, env *Environment) (interface{}, error) {
+	envVariables, err := env.getCurrentVariables()
+	if err != nil {
+		return nil, err
+	}
 
 	// quick hack to evaluate variable references
 	if strings.HasPrefix(s, "${") {
 		varName := strings.TrimSuffix(strings.TrimPrefix(s, "${"), "}")
-		return env.variables[varName], nil
+		return envVariables[varName], nil
 	}
 
 	return s, nil
@@ -240,13 +279,18 @@ func (evaluator *IncludeEvaluator) EvalOperand(env *Environment, engine *Templat
 	}
 
 	url := includeObject["url"].(string)
-	template, err := engine.ParseTemplate(url, childVars)
+
+	template, err := engine.doParseTemplate(env, url, childVars)
+	if err != nil {
+		return nil, err
+	}
 
 	if err != nil {
 		return nil, err
-	} else {
-		return template.Value, nil
 	}
+
+	return template.Value, nil
+
 }
 
 func (evaluator *IncludeEvaluator) evaluateParameters(env *Environment, engine *TemplateEngine, parameters map[string]interface{}) (map[string]interface{}, error) {
@@ -270,13 +314,16 @@ type VariablesEvaluator struct {
 
 func (evaluator *VariablesEvaluator) EvalOperand(env *Environment, engine *TemplateEngine, operand interface{}) (interface{}, error) {
 	variablesMap := operand.(map[string]interface{})
-
+	envVariables, err := env.getCurrentVariables()
+	if err != nil {
+		return nil, err
+	}
 	for name, rawVal := range variablesMap {
 		val, err := engine.Eval(rawVal, env)
 		if err != nil {
 			return nil, err
 		}
-		env.variables[name] = val
+		envVariables[name] = val
 	}
 
 	// NOOP
@@ -305,18 +352,22 @@ func (evaluator *ParametersEvaluator) EvalOperand(env *Environment, engine *Temp
 }
 
 func (evaluator *ParametersEvaluator) processParam(env *Environment, name string, paramDef map[string]interface{}) error {
+	envVariables, err := env.getCurrentVariables()
 
+	if err != nil {
+		return err
+	}
 	// validate required
 	if isRequired, requiredIsSet := paramDef["required"]; requiredIsSet && isRequired.(bool) {
-		if _, paramIsSet := env.variables[name]; !paramIsSet {
+		if _, paramIsSet := envVariables[name]; !paramIsSet {
 			return fmt.Errorf("parameter %s is required", name)
 		}
 	}
 
 	// default param as needed
 	if defaultValue, hasDefault := paramDef["required"]; hasDefault {
-		if _, paramIsSet := env.variables[name]; !paramIsSet {
-			env.variables[name] = defaultValue
+		if _, paramIsSet := envVariables[name]; !paramIsSet {
+			envVariables[name] = defaultValue
 		}
 	}
 
