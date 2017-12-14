@@ -30,28 +30,13 @@ func (gitWrapper GitResolverWrapper) FileContents(fileName string) ([]byte, erro
 /**********************************************************************************************************************/
 // Environment. Template Rendering Environment
 type Environment struct {
-	currentTemplate *Template
-	Variables       map[string]interface{}
-}
-
-// NewEnvironment
-func NewEnvironment() *Environment {
-
-	env := &Environment{
-		Variables: make(map[string]interface{}),
-	}
-
-	return env
+	variables map[string]interface{}
 }
 
 /**********************************************************************************************************************/
 // Template Object. Template Rendering Artifact
 type Template struct {
-	Parent       *Template
-	RawMap       map[string]interface{}
-	EvaluatedMap map[string]interface{}
-	engine       *TemplateEngine
-	env          *Environment
+	Value map[string]interface{}
 }
 
 /**********************************************************************************************************************/
@@ -77,40 +62,30 @@ func NewEngine(fileResolver FileResolver) *TemplateEngine {
 }
 
 // ParseTemplate
-func (engine *TemplateEngine) ParseTemplate(url string, env *Environment) (*Template, error) {
+func (engine *TemplateEngine) ParseTemplate(url string, variables map[string]interface{}) (*Template, error) {
+	env := &Environment{
+		variables: variables,
+	}
+
+	return engine.doParseTemplate(env, url)
+}
+
+func (engine *TemplateEngine) doParseTemplate(env *Environment, url string) (*Template, error) {
+
 	rawMap, err := engine.readMapFromFile(env, url)
 
 	if err != nil {
 		return nil, err
 	}
 
-	var template = &Template{
-		RawMap: rawMap,
-	}
-
-	env.currentTemplate = template
-
-	evaluatedMap, err := engine.Eval(rawMap, env)
+	val, err := engine.Eval(rawMap, env)
 
 	if err != nil {
 		return nil, err
 	}
 
-	template.EvaluatedMap = evaluatedMap.(map[string]interface{})
-
+	var template = &Template{Value: val.(map[string]interface{})}
 	return template, nil
-}
-
-func (engine *TemplateEngine) parseChildTemplate(url string, parentTemplate *Template, env *Environment) (*Template, error) {
-	childTemplate, err := engine.ParseTemplate(url, env)
-
-	if err != nil {
-		return nil, err
-	}
-
-	childTemplate.Parent = parentTemplate
-
-	return childTemplate, nil
 }
 
 // eval resolves a single json value. i.e. deals with special values such as $include
@@ -183,30 +158,10 @@ func (engine *TemplateEngine) evalString(s string, env *Environment) (interface{
 	// quick hack to evaluate variable references
 	if strings.HasPrefix(s, "${") {
 		varName := strings.TrimSuffix(strings.TrimPrefix(s, "${"), "}")
-		return env.Variables[varName], nil
+		return env.variables[varName], nil
 	}
 
 	return s, nil
-}
-
-// reads/consolidates json map form a file.
-func (engine *TemplateEngine) readConsolidatedJsonMapFromFile(env *Environment, fileName string) (map[string]interface{}, error) {
-
-	jsonBytes, err := engine.FileResolver.FileContents(fileName)
-	if err != nil {
-		return nil, err
-	}
-	result := make(map[string]interface{})
-	err = json.Unmarshal(jsonBytes, &result)
-
-	if err != nil {
-		return nil, err
-	}
-
-	// resolve json and bytes
-	engine.Eval(result, env)
-
-	return result, nil
 }
 
 func (engine *TemplateEngine) readMapFromFile(env *Environment, fileName string) (map[string]interface{}, error) {
@@ -274,36 +229,38 @@ func (evaluator *IncludeEvaluator) EvalOperand(env *Environment, engine *Templat
 	}
 
 	//evaluate parameters if present
-	childEnv := NewEnvironment()
 
+	var childVars map[string]interface{}
 	if parameters, hasParams := includeObject["$parameters"]; hasParams {
-		err := evaluator.evaluateParameters(childEnv, engine, parameters.(map[string]interface{}))
+		var err error
+		childVars, err = evaluator.evaluateParameters(env, engine, parameters.(map[string]interface{}))
 		if err != nil {
 			return nil, err
 		}
 	}
 
 	url := includeObject["url"].(string)
-	template, err := engine.parseChildTemplate(url, env.currentTemplate, childEnv)
+	template, err := engine.ParseTemplate(url, childVars)
 
 	if err != nil {
 		return nil, err
 	} else {
-		return template.EvaluatedMap, nil
+		return template.Value, nil
 	}
 }
 
-func (evaluator *IncludeEvaluator) evaluateParameters(env *Environment, engine *TemplateEngine, parameters map[string]interface{}) error {
+func (evaluator *IncludeEvaluator) evaluateParameters(env *Environment, engine *TemplateEngine, parameters map[string]interface{}) (map[string]interface{}, error) {
 
+	variables := make(map[string]interface{})
 	for name, rawVal := range parameters {
 		paramVal, err := engine.Eval(rawVal, env)
 		if err != nil {
-			return err
+			return nil, err
 		}
-		env.Variables[name] = paramVal
+		variables[name] = paramVal
 	}
 
-	return nil
+	return variables, nil
 }
 
 /**********************************************************************************************************************/
@@ -319,7 +276,7 @@ func (evaluator *VariablesEvaluator) EvalOperand(env *Environment, engine *Templ
 		if err != nil {
 			return nil, err
 		}
-		env.Variables[name] = val
+		env.variables[name] = val
 	}
 
 	// NOOP
@@ -351,15 +308,15 @@ func (evaluator *ParametersEvaluator) processParam(env *Environment, name string
 
 	// validate required
 	if isRequired, requiredIsSet := paramDef["required"]; requiredIsSet && isRequired.(bool) {
-		if _, paramIsSet := env.Variables[name]; !paramIsSet {
+		if _, paramIsSet := env.variables[name]; !paramIsSet {
 			return fmt.Errorf("parameter %s is required", name)
 		}
 	}
 
 	// default param as needed
 	if defaultValue, hasDefault := paramDef["required"]; hasDefault {
-		if _, paramIsSet := env.Variables[name]; !paramIsSet {
-			env.Variables[name] = defaultValue
+		if _, paramIsSet := env.variables[name]; !paramIsSet {
+			env.variables[name] = defaultValue
 		}
 	}
 
