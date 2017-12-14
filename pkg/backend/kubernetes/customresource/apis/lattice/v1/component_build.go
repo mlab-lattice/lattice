@@ -2,7 +2,6 @@ package v1
 
 import (
 	"github.com/mlab-lattice/system/pkg/definition/block"
-	"github.com/mlab-lattice/system/pkg/types"
 
 	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -31,11 +30,12 @@ type ComponentBuildSpec struct {
 }
 
 type ComponentBuildStatus struct {
-	State              ComponentBuildState        `json:"state"`
-	ObservedGeneration int64                      `json:"observedGeneration"`
-	LastObservedPhase  *types.ComponentBuildPhase `json:"lastObservedPhase,omitempty"`
-	FailureInfo        *ComponentBuildFailureInfo `json:"failureInfo,omitempty"`
-	Artifacts          *ComponentBuildArtifacts   `json:"artifacts,omitempty"`
+	State              ComponentBuildState      `json:"state"`
+	ObservedGeneration int64                    `json:"observedGeneration"`
+	Artifacts          *ComponentBuildArtifacts `json:"artifacts,omitempty"`
+	// FIXME: move these into annotations
+	//LastObservedPhase  *types.ComponentBuildPhase `json:"lastObservedPhase,omitempty"`
+	//FailureInfo        *ComponentBuildFailureInfo `json:"failureInfo,omitempty"`
 }
 
 type ComponentBuildState string
@@ -47,11 +47,6 @@ const (
 	ComponentBuildStateSucceeded ComponentBuildState = "succeeded"
 	ComponentBuildStateFailed    ComponentBuildState = "failed"
 )
-
-type ComponentBuildFailureInfo struct {
-	Message  string `json:"message"`
-	Internal bool   `json:"internal"`
-}
 
 type ComponentBuildArtifacts struct {
 	DockerImageFQN string `json:"dockerImageFqn"`

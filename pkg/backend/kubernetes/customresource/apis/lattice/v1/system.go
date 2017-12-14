@@ -39,8 +39,9 @@ type SystemSpecServiceInfo struct {
 }
 
 type SystemStatus struct {
-	State    SystemState                               `json:"state"`
-	Services map[tree.NodePath]SystemStatusServiceInfo `json:"services"`
+	State              SystemState                               `json:"state"`
+	ObservedGeneration int64                                     `json:"observedGeneration"`
+	Services           map[tree.NodePath]SystemStatusServiceInfo `json:"services"`
 }
 
 type SystemState string

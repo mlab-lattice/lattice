@@ -26,8 +26,9 @@ type SystemTeardownSpec struct {
 }
 
 type SystemTeardownStatus struct {
-	State   SystemTeardownState `json:"state"`
-	Message string              `json:"message"`
+	State              SystemTeardownState `json:"state"`
+	ObservedGeneration int64               `json:"observedGeneration"`
+	Message            string              `json:"message"`
 }
 
 type SystemTeardownState string

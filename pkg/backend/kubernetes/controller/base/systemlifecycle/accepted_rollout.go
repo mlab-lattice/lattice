@@ -12,21 +12,20 @@ func (c *Controller) syncAcceptedRollout(rollout *crv1.SystemRollout) error {
 		return err
 	}
 
+	// Check to see if the system build controller has processed updates to its Spec.
+	// If it hasn't, the build.Status.State is not up to date. Return no error
+	// and wait until the System has been updated to resync.
+	// TODO: don't think we actually need this here
+	if !isSystemBuildStatusCurrent(build) {
+		return nil
+	}
+
 	switch build.Status.State {
 	case crv1.SystemBuildStatePending, crv1.SystemBuildStateRunning:
 		return nil
 
 	case crv1.SystemBuildStateFailed:
-		status := crv1.SystemRolloutStatus{
-			State:   crv1.SystemRolloutStateFailed,
-			Message: fmt.Sprintf("SystemBuild %v failed", build.Name),
-		}
-
-		// Copy rollout so the shared cache is not mutated
-		rollout = rollout.DeepCopy()
-		rollout.Status = status
-
-		_, err := c.latticeClient.LatticeV1().SystemRollouts(rollout.Namespace).Update(rollout)
+		_, err := c.updateRolloutStatus(rollout, crv1.SystemRolloutStateFailed, fmt.Sprintf("SystemBuild %v failed", build.Name))
 		if err != nil {
 			return err
 		}
@@ -45,35 +44,16 @@ func (c *Controller) syncAcceptedRollout(rollout *crv1.SystemRollout) error {
 			return err
 		}
 
-		// For each of the Services in the new System Spec, see if a Service already exists
-		for path, svcInfo := range spec.Services {
-			// If a Service already exists, use it.
-			if existingSvcInfo, ok := system.Spec.Services[path]; ok {
-				svcInfo.Name = existingSvcInfo.Name
-				svcInfo.Status = existingSvcInfo.Status
-				spec.Services[path] = svcInfo
-			}
-		}
-
 		// Copy so the shared cache isn't mutated
 		system = system.DeepCopy()
-		system.Spec = *spec
-		system.Status.State = crv1.SystemStateUpdating
+		system.Spec = spec
 
 		_, err = c.latticeClient.LatticeV1().Systems(system.Namespace).Update(system)
 		if err != nil {
 			return err
 		}
 
-		status := crv1.SystemRolloutStatus{
-			State: crv1.SystemRolloutStateInProgress,
-		}
-
-		// Copy so the shared cache isn't mutated
-		rollout = rollout.DeepCopy()
-		rollout.Status = status
-
-		_, err = c.latticeClient.LatticeV1().SystemRollouts(rollout.Namespace).Update(rollout)
+		_, err = c.updateRolloutStatus(rollout, crv1.SystemRolloutStateInProgress, "")
 		return err
 
 	default:

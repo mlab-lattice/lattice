@@ -19,6 +19,7 @@ type EndpointsGetter interface {
 type EndpointInterface interface {
 	Create(*v1.Endpoint) (*v1.Endpoint, error)
 	Update(*v1.Endpoint) (*v1.Endpoint, error)
+	UpdateStatus(*v1.Endpoint) (*v1.Endpoint, error)
 	Delete(name string, options *meta_v1.DeleteOptions) error
 	DeleteCollection(options *meta_v1.DeleteOptions, listOptions meta_v1.ListOptions) error
 	Get(name string, options meta_v1.GetOptions) (*v1.Endpoint, error)
@@ -96,6 +97,22 @@ func (c *endpoints) Update(endpoint *v1.Endpoint) (result *v1.Endpoint, err erro
 		Namespace(c.ns).
 		Resource("endpoints").
 		Name(endpoint.Name).
+		Body(endpoint).
+		Do().
+		Into(result)
+	return
+}
+
+// UpdateStatus was generated because the type contains a Status member.
+// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
+
+func (c *endpoints) UpdateStatus(endpoint *v1.Endpoint) (result *v1.Endpoint, err error) {
+	result = &v1.Endpoint{}
+	err = c.client.Put().
+		Namespace(c.ns).
+		Resource("endpoints").
+		Name(endpoint.Name).
+		SubResource("status").
 		Body(endpoint).
 		Do().
 		Into(result)

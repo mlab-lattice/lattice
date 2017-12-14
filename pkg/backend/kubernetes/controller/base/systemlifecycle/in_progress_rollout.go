@@ -12,6 +12,13 @@ func (c *Controller) syncInProgressRollout(rollout *crv1.SystemRollout) error {
 		return err
 	}
 
+	// Check to see if the system controller has processed updates to its Spec.
+	// If it hasn't, the system.Status.State is not up to date. Return no error
+	// and wait until the System has been updated to resync.
+	if !isSystemStatusCurrent(system) {
+		return nil
+	}
+
 	var state crv1.SystemRolloutState
 	switch system.Status.State {
 	case crv1.SystemStateUpdating, crv1.SystemStateScaling:
@@ -28,11 +35,7 @@ func (c *Controller) syncInProgressRollout(rollout *crv1.SystemRollout) error {
 		return fmt.Errorf("System %v/%v in unexpected state %v", system.Namespace, system.Name, system.Status.State)
 	}
 
-	// Copy so the shared cache isn't mutated
-	rollout = rollout.DeepCopy()
-	rollout.Status.State = state
-
-	rollout, err = c.latticeClient.LatticeV1().SystemRollouts(rollout.Namespace).Update(rollout)
+	rollout, err = c.updateRolloutStatus(rollout, state, "")
 	if err != nil {
 		// FIXME: is it possible that the rollout is locked forever now?
 		return err

@@ -82,6 +82,18 @@ func (c *FakeEndpoints) Update(endpoint *lattice_v1.Endpoint) (result *lattice_v
 	return obj.(*lattice_v1.Endpoint), err
 }
 
+// UpdateStatus was generated because the type contains a Status member.
+// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
+func (c *FakeEndpoints) UpdateStatus(endpoint *lattice_v1.Endpoint) (*lattice_v1.Endpoint, error) {
+	obj, err := c.Fake.
+		Invokes(testing.NewUpdateSubresourceAction(endpointsResource, "status", c.ns, endpoint), &lattice_v1.Endpoint{})
+
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*lattice_v1.Endpoint), err
+}
+
 // Delete takes name of the endpoint and deletes it. Returns an error if one occurs.
 func (c *FakeEndpoints) Delete(name string, options *v1.DeleteOptions) error {
 	_, err := c.Fake.

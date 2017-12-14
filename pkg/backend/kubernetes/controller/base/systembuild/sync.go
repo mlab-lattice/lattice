@@ -132,5 +132,5 @@ func (c *Controller) updateSystemBuildStatus(
 	// Copy so the shared cache isn't mutated
 	build = build.DeepCopy()
 	build.Status = status
-	return c.latticeClient.LatticeV1().SystemBuilds(build.Namespace).Update(build)
+	return c.latticeClient.LatticeV1().SystemBuilds(build.Namespace).UpdateStatus(build)
 }

@@ -36,6 +36,13 @@ func (c *Controller) syncInProgressTeardown(teardown *crv1.SystemTeardown) error
 		}
 	}
 
+	// Check to see if the system controller has processed updates to its Spec.
+	// If it hasn't, the system.Status.State is not up to date. Return no error
+	// and wait until the System has been updated to resync.
+	if !isSystemStatusCurrent(system) {
+		return nil
+	}
+
 	var state crv1.SystemTeardownState
 	switch system.Status.State {
 	case crv1.SystemStateUpdating, crv1.SystemStateScaling:
@@ -52,11 +59,7 @@ func (c *Controller) syncInProgressTeardown(teardown *crv1.SystemTeardown) error
 		return fmt.Errorf("System %v/%v in unexpected state %v", system.Namespace, system.Name, system.Status.State)
 	}
 
-	// Copy the teardown so the shared cache isn't mutated
-	teardown = teardown.DeepCopy()
-	teardown.Status.State = state
-
-	teardown, err = c.latticeClient.LatticeV1().SystemTeardowns(teardown.Namespace).Update(teardown)
+	teardown, err = c.updateTeardownStatus(teardown, state, "")
 	if err != nil {
 		// FIXME: is it possible that the teardown is locked forever now?
 		return err

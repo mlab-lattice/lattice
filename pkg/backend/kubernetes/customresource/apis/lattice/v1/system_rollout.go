@@ -22,14 +22,14 @@ type SystemRollout struct {
 	Status            SystemRolloutStatus `json:"status"`
 }
 
-// +k8s:deepcopy-gen=false
 type SystemRolloutSpec struct {
 	BuildName string `json:"buildName"`
 }
 
 type SystemRolloutStatus struct {
-	State   SystemRolloutState `json:"state"`
-	Message string             `json:"message"`
+	State              SystemRolloutState `json:"state"`
+	ObservedGeneration int64              `json:"observedGeneration"`
+	Message            string             `json:"message"`
 }
 
 type SystemRolloutState string

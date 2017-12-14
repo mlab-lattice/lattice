@@ -7,22 +7,12 @@ import (
 )
 
 func (c *Controller) syncPendingRollout(rollout *crv1.SystemRollout) error {
-	previousOwningAction := c.attemptToClaimRolloutOwningAction(rollout)
-
-	status := crv1.SystemRolloutStatus{
-		State: crv1.SystemRolloutStateAccepted,
-	}
-	if previousOwningAction != nil {
-		status = crv1.SystemRolloutStatus{
-			State:   crv1.SystemRolloutStateFailed,
-			Message: fmt.Sprintf("another lifecycle action is active: %v", previousOwningAction.String()),
-		}
+	currentOwningAction := c.attemptToClaimRolloutOwningAction(rollout)
+	if currentOwningAction != nil {
+		_, err := c.updateRolloutStatus(rollout, crv1.SystemRolloutStateFailed, fmt.Sprintf("another lifecycle action is active: %v", currentOwningAction.String()))
+		return err
 	}
 
-	// Copy so the shared cache isn't mutated
-	rollout = rollout.DeepCopy()
-	rollout.Status = status
-
-	_, err := c.latticeClient.LatticeV1().SystemRollouts(rollout.Namespace).Update(rollout)
+	_, err := c.updateRolloutStatus(rollout, crv1.SystemRolloutStateAccepted, "")
 	return err
 }

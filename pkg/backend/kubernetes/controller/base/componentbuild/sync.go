@@ -30,12 +30,7 @@ func (c *Controller) syncSuccessfulComponentBuild(build *crv1.ComponentBuild, j 
 		return nil
 	}
 
-	status := build.Status.DeepCopy()
-
-	status.State = crv1.ComponentBuildStateSucceeded
-	status.Artifacts = artifacts
-
-	_, err := c.updateComponentBuildStatus(build, *status)
+	_, err := c.updateComponentBuildStatus(build, crv1.ComponentBuildStateSucceeded, artifacts)
 	return err
 }
 
@@ -57,12 +52,16 @@ func (c *Controller) syncUnfinishedComponentBuild(cb *crv1.ComponentBuild, j *ba
 }
 
 func (c *Controller) updateComponentBuildState(build *crv1.ComponentBuild, state crv1.ComponentBuildState) (*crv1.ComponentBuild, error) {
-	status := build.Status.DeepCopy()
-	status.State = state
-	return c.updateComponentBuildStatus(build, *status)
+	return c.updateComponentBuildStatus(build, state, build.Status.Artifacts)
 }
 
-func (c *Controller) updateComponentBuildStatus(build *crv1.ComponentBuild, status crv1.ComponentBuildStatus) (*crv1.ComponentBuild, error) {
+func (c *Controller) updateComponentBuildStatus(build *crv1.ComponentBuild, state crv1.ComponentBuildState, artifacts *crv1.ComponentBuildArtifacts) (*crv1.ComponentBuild, error) {
+	status := crv1.ComponentBuildStatus{
+		State:              state,
+		ObservedGeneration: build.Generation,
+		Artifacts:          artifacts,
+	}
+
 	if reflect.DeepEqual(build.Status, status) {
 		return build, nil
 	}
@@ -70,6 +69,5 @@ func (c *Controller) updateComponentBuildStatus(build *crv1.ComponentBuild, stat
 	// Copy so the shared cache isn't mutated
 	build = build.DeepCopy()
 	build.Status = status
-	build.Status.ObservedGeneration = build.Generation
-	return c.latticeClient.LatticeV1().ComponentBuilds(build.Namespace).Update(build)
+	return c.latticeClient.LatticeV1().ComponentBuilds(build.Namespace).UpdateStatus(build)
 }

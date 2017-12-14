@@ -10,3 +10,8 @@ type ComponentBuild struct {
 	LastObservedPhase *ComponentBuildPhase `json:"lastObservedPhase,omitempty"`
 	FailureMessage    *string              `json:"failureMessage,omitempty"`
 }
+
+type ComponentBuildFailureInfo struct {
+	Message  string `json:"message"`
+	Internal bool   `json:"internal"`
+}

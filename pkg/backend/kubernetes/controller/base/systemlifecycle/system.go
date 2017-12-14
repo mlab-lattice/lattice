@@ -7,8 +7,13 @@ import (
 	"github.com/mlab-lattice/system/pkg/definition"
 	"github.com/mlab-lattice/system/pkg/definition/tree"
 
+	"k8s.io/apimachinery/pkg/api/errors"
 	kubelabels "k8s.io/apimachinery/pkg/labels"
 )
+
+func isSystemStatusCurrent(system *crv1.System) bool {
+	return system.Status.ObservedGeneration == system.Generation
+}
 
 func (c *Controller) getSystem(namespace string) (*crv1.System, error) {
 	systems, err := c.systemLister.Systems(namespace).List(kubelabels.Everything())
@@ -23,13 +28,13 @@ func (c *Controller) getSystem(namespace string) (*crv1.System, error) {
 	return systems[0], nil
 }
 
-func (c *Controller) systemSpec(rollout *crv1.SystemRollout, build *crv1.SystemBuild) (*crv1.SystemSpec, error) {
+func (c *Controller) systemSpec(rollout *crv1.SystemRollout, build *crv1.SystemBuild) (crv1.SystemSpec, error) {
 	services, err := c.systemServices(rollout, build)
 	if err != nil {
-		return nil, err
+		return crv1.SystemSpec{}, err
 	}
 
-	sysSpec := &crv1.SystemSpec{
+	sysSpec := crv1.SystemSpec{
 		Services: services,
 	}
 
@@ -43,37 +48,46 @@ func (c *Controller) systemServices(rollout *crv1.SystemRollout, build *crv1.Sys
 
 	services := map[tree.NodePath]crv1.SystemSpecServiceInfo{}
 	for path, service := range build.Spec.DefinitionRoot.Services() {
-		serviceBuildInfo, ok := build.Spec.Services[path]
+		serviceBuildName, ok := build.Status.ServiceBuilds[path]
 		if !ok {
 			// FIXME: send warn event
-			return nil, fmt.Errorf("SystemBuild does not have expected Service %v", path)
+			return nil, fmt.Errorf("SystemBuild %v/%v does not have expected Service %v", build.Namespace, build.Name, path)
 		}
 
-		serviceBuild, err := c.serviceBuildLister.ServiceBuilds(build.Namespace).Get(*serviceBuildInfo.Name)
+		serviceBuild, err := c.serviceBuildLister.ServiceBuilds(build.Namespace).Get(serviceBuildName)
 		if err != nil {
+			if errors.IsNotFound(err) {
+				err = fmt.Errorf(
+					"SystemBuild %v/%v has ServiceBuild %v for Service %v but it does not exist",
+					build.Namespace,
+					build.Name,
+					serviceBuildName,
+					path,
+				)
+				return nil, err
+			}
 			return nil, err
 		}
 
 		// Create crv1.ComponentBuildArtifacts for each Component in the Service
 		componentBuildArtifacts := map[string]crv1.ComponentBuildArtifacts{}
-		for component, componentBuildInfo := range serviceBuild.Spec.Components {
-			if componentBuildInfo.Name == nil {
+		for component := range serviceBuild.Spec.Components {
+			componentBuildName, ok := serviceBuild.Status.ComponentBuilds[component]
+			if !ok {
+				return nil, fmt.Errorf("ServiceBuild %v/%v component %v does not have a ComponentBuild", serviceBuild.Namespace, serviceBuild.Name, component)
+			}
+
+			componentBuildStatus, ok := serviceBuild.Status.ComponentBuildStatuses[componentBuildName]
+			if !ok {
+				return nil, fmt.Errorf("ServiceBuild %v/%v ComponentBuild %v does not have a ComponentBuildStatus", serviceBuild.Namespace, serviceBuild.Name, componentBuildName)
+			}
+
+			if componentBuildStatus.Artifacts == nil {
 				// FIXME: send warn event
-				return nil, fmt.Errorf("ServiceBuild %v Component %v does not have a ComponentBuildName", serviceBuild.Name, component)
+				return nil, fmt.Errorf("ComponentBuild %v/%v Status does not have Artifacts", build.Namespace, componentBuildName)
 			}
 
-			componentBuild, err := c.componentBuildLister.ComponentBuilds(serviceBuild.Namespace).Get(*componentBuildInfo.Name)
-
-			if err != nil {
-				return nil, err
-			}
-
-			if componentBuild.Spec.Artifacts == nil {
-				// FIXME: send warn event
-				return nil, fmt.Errorf("ComponentBuild %v does not have Artifacts", *componentBuildInfo.Name)
-			}
-
-			componentBuildArtifacts[component] = *componentBuild.Spec.Artifacts
+			componentBuildArtifacts[component] = *componentBuildStatus.Artifacts
 		}
 
 		services[path] = crv1.SystemSpecServiceInfo{
