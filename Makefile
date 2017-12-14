@@ -76,6 +76,7 @@ docker-push-all-images-stable:
 	make docker-push-image-stable IMAGE=kubernetes-envoy-xds-api-rest-per-node
 	make docker-push-image-stable IMAGE=kubernetes-lattice-controller-manager
 	make docker-push-image-stable IMAGE=kubernetes-manager-api-rest
+	make docker-push-image-stable IMAGE=lattice-local-dns
 	make docker-push-image-user IMAGE=lattice-cli-admin
 
 .PHONY: docker-push-all-images-user
@@ -86,6 +87,7 @@ docker-push-all-images-user:
 	make docker-push-image-user IMAGE=kubernetes-lattice-controller-manager
 	make docker-push-image-user IMAGE=kubernetes-manager-api-rest
 	make docker-push-image-user IMAGE=lattice-cli-admin
+	make docker-push-image-user IMAGE=lattice-local-dns
 
 # local binaries
 .PHONY: update-binaries

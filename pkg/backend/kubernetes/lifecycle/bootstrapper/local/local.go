@@ -1,8 +1,9 @@
 package local
 
 import (
+	"fmt"
+
 	kubeclientset "k8s.io/client-go/kubernetes"
-	"github.com/mlab-lattice/system/bazel-system/external/go_sdk/src/fmt"
 )
 
 type Options struct {

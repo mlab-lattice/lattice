@@ -11,6 +11,7 @@ go_library(
         "//pkg/backend/kubernetes/lifecycle/bootstrapper:go_default_library",
         "//pkg/backend/kubernetes/lifecycle/bootstrapper/base:go_default_library",
         "//pkg/backend/kubernetes/lifecycle/bootstrapper/cloud:go_default_library",
+        "//pkg/backend/kubernetes/lifecycle/bootstrapper/local:go_default_library",
         "//pkg/backend/kubernetes/util/kubernetes:go_default_library",
         "//pkg/constants:go_default_library",
         "//pkg/util/cli:go_default_library",
