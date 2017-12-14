@@ -80,17 +80,15 @@ func (sbs *SystemBuildSpec) UnmarshalJSON(data []byte) error {
 // +k8s:deepcopy-gen=false
 type SystemBuildServicesInfo struct {
 	Definition definition.Service                              `json:"definition"`
-	BuildName  *string                                         `json:"buildName,omitempty"`
-	BuildState *ServiceBuildState                              `json:"buildState"`
-	Components map[string]SystemBuildServicesInfoComponentInfo `json:"components"`
+	Name       *string                                         `json:"name,omitempty"`
+	Status     *ServiceBuildStatus                             `json:"status,omitempty"`
+	Components map[string]SystemBuildServicesInfoComponentInfo `json:"components,omitempty"`
 }
 
 // +k8s:deepcopy-gen=false
 type SystemBuildServicesInfoComponentInfo struct {
-	BuildName         *string                    `json:"buildName,omitempty"`
-	BuildState        *ComponentBuildState       `json:"buildState"`
-	LastObservedPhase *types.ComponentBuildPhase `json:"lastObservedPhase,omitempty"`
-	FailureInfo       *ComponentBuildFailureInfo `json:"failureInfo,omitempty"`
+	Name   *string               `json:"name,omitempty"`
+	Status *ComponentBuildStatus `json:"status,omitempty"`
 }
 
 type SystemBuildStatus struct {

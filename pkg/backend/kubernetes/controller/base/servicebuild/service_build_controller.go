@@ -156,7 +156,7 @@ func (sbc *Controller) getServiceBuildsForComponentBuild(cb *crv1.ComponentBuild
 
 	for _, svcb := range svcBuilds {
 		for _, cbInfo := range svcb.Spec.Components {
-			if cbInfo.BuildName != nil && *cbInfo.BuildName == cb.Name {
+			if cbInfo.Name != nil && *cbInfo.Name == cb.Name {
 				svcbs = append(svcbs, svcb)
 				break
 			}

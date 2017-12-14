@@ -47,15 +47,15 @@ func updateServiceBuildInfoState(sysb *crv1.SystemBuild, service tree.NodePath, 
 		return fmt.Errorf("SystemBuild %v Spec.Services did not contain expected service %v", svcb.Name, service)
 	}
 
-	serviceInfo.BuildState = &svcb.Status.State
+	serviceInfo.State = &svcb.Status.State
 	if serviceInfo.Components == nil {
 		serviceInfo.Components = map[string]crv1.SystemBuildServicesInfoComponentInfo{}
 	}
 
 	for component, cbInfo := range svcb.Spec.Components {
 		componentInfo := crv1.SystemBuildServicesInfoComponentInfo{
-			BuildName:         cbInfo.BuildName,
-			BuildState:        cbInfo.BuildState,
+			Name:              cbInfo.Name,
+			Status:            cbInfo.Status,
 			LastObservedPhase: cbInfo.LastObservedPhase,
 			FailureInfo:       cbInfo.FailureInfo,
 		}
@@ -133,8 +133,8 @@ func (sbc *Controller) syncMissingServiceBuildsSystemBuild(sysb *crv1.SystemBuil
 		svcbInfo := sysb.Spec.Services[service]
 
 		// Check if we've already created a Service. If so just grab its status.
-		if svcbInfo.BuildName != nil {
-			svcBuildState := sbc.getServiceBuildState(sysb.Namespace, *svcbInfo.BuildName)
+		if svcbInfo.Name != nil {
+			svcBuildState := sbc.getServiceBuildState(sysb.Namespace, *svcbInfo.Name)
 			if svcBuildState == nil {
 				// This shouldn't happen.
 				// FIXME: send error event
@@ -143,7 +143,7 @@ func (sbc *Controller) syncMissingServiceBuildsSystemBuild(sysb *crv1.SystemBuil
 				//sysBuild.Spec.Services[idx].Service = &failedState
 			}
 
-			svcbInfo.BuildState = svcBuildState
+			svcbInfo.State = svcBuildState
 			sysb.Spec.Services[service] = svcbInfo
 			continue
 		}
@@ -154,8 +154,8 @@ func (sbc *Controller) syncMissingServiceBuildsSystemBuild(sysb *crv1.SystemBuil
 			return err
 		}
 
-		svcbInfo.BuildName = &(svcb.Name)
-		svcbInfo.BuildState = &(svcb.Status.State)
+		svcbInfo.Name = &(svcb.Name)
+		svcbInfo.State = &(svcb.Status.State)
 		sysb.Spec.Services[service] = svcbInfo
 	}
 

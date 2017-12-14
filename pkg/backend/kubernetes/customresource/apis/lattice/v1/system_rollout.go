@@ -1,8 +1,6 @@
 package v1
 
 import (
-	"github.com/mlab-lattice/system/pkg/types"
-
 	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -27,8 +25,7 @@ type SystemRollout struct {
 
 // +k8s:deepcopy-gen=false
 type SystemRolloutSpec struct {
-	BuildName        string `json:"buildName"`
-	LatticeNamespace types.LatticeNamespace
+	BuildName string `json:"buildName"`
 }
 
 type SystemRolloutStatus struct {

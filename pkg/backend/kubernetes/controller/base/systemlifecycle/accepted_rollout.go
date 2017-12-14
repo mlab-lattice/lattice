@@ -2,76 +2,83 @@ package systemlifecycle
 
 import (
 	"fmt"
+
 	crv1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 )
 
-func (slc *Controller) syncAcceptedRollout(sysRollout *crv1.SystemRollout) error {
-	sysBuild, err := slc.getSystemBuildForRollout(sysRollout)
+func (c *Controller) syncAcceptedRollout(rollout *crv1.SystemRollout) error {
+	build, err := c.systemBuildLister.SystemBuilds(rollout.Namespace).Get(rollout.Spec.BuildName)
 	if err != nil {
 		return err
 	}
 
-	switch sysBuild.Status.State {
+	switch build.Status.State {
+	case crv1.SystemBuildStatePending, crv1.SystemBuildStateRunning:
+		return nil
+
 	case crv1.SystemBuildStateFailed:
-		newStatus := crv1.SystemRolloutStatus{
+		status := crv1.SystemRolloutStatus{
 			State:   crv1.SystemRolloutStateFailed,
-			Message: fmt.Sprintf("SystemBuild %v failed", sysBuild.Name),
+			Message: fmt.Sprintf("SystemBuild %v failed", build.Name),
 		}
-		_, err := slc.updateSystemRolloutStatus(sysRollout, newStatus)
+
+		// Copy rollout so the shared cache is not mutated
+		rollout = rollout.DeepCopy()
+		rollout.Status = status
+
+		_, err := c.latticeClient.LatticeV1().SystemRollouts(rollout.Namespace).Update(rollout)
 		if err != nil {
 			return err
 		}
 
-		return slc.relinquishOwningRolloutClaim(sysRollout)
+		return c.relinquishRolloutOwningActionClaim(rollout)
 
 	case crv1.SystemBuildStateSucceeded:
-		sys, err := slc.getSystemForRollout(sysRollout)
+		system, err := c.getSystem(rollout.Namespace)
 		if err != nil {
 			return err
 		}
 
-		if sys == nil {
-			sys, err = slc.createSystem(sysRollout, sysBuild)
-			if err != nil {
-				return err
-			}
-		} else {
-			// Generate a fresh new System Spec
-			sysSpec, err := slc.getNewSystemSpec(sysRollout, sysBuild)
-			if err != nil {
-				return err
-			}
+		// Generate a fresh new System Spec
+		spec, err := c.systemSpec(rollout, build)
+		if err != nil {
+			return err
+		}
 
-			// For each of the Services in the new System Spec, see if a Service already exists
-			for path, svcInfo := range sysSpec.Services {
-				// If a Service already exists, use it.
-				if existingSvcInfo, ok := sys.Spec.Services[path]; ok {
-					svcInfo.Name = existingSvcInfo.Name
-					sysSpec.Services[path] = svcInfo
-				}
-			}
-
-			_, err = slc.updateSystemSpec(sys, sysSpec)
-			if err != nil {
-				return err
+		// For each of the Services in the new System Spec, see if a Service already exists
+		for path, svcInfo := range spec.Services {
+			// If a Service already exists, use it.
+			if existingSvcInfo, ok := system.Spec.Services[path]; ok {
+				svcInfo.Name = existingSvcInfo.Name
+				svcInfo.Status = existingSvcInfo.Status
+				spec.Services[path] = svcInfo
 			}
 		}
 
-		newStatus := crv1.SystemRolloutStatus{
+		// Copy so the shared cache isn't mutated
+		system = system.DeepCopy()
+		system.Spec = *spec
+		system.Status.State = crv1.SystemStateUpdating
+
+		_, err = c.latticeClient.LatticeV1().Systems(system.Namespace).Update(system)
+		if err != nil {
+			return err
+		}
+
+		status := crv1.SystemRolloutStatus{
 			State: crv1.SystemRolloutStateInProgress,
 		}
 
-		result, err := slc.updateSystemRolloutStatus(sysRollout, newStatus)
-		if err != nil {
-			return err
-		}
+		// Copy so the shared cache isn't mutated
+		rollout = rollout.DeepCopy()
+		rollout.Status = status
 
-		return slc.syncInProgressRollout(result)
+		_, err = c.latticeClient.LatticeV1().SystemRollouts(rollout.Namespace).Update(rollout)
+		return err
+
+	default:
+		return fmt.Errorf("SystemBuild %v/%v in unexpected state %v", build.Namespace, build.Name, build.Status.State)
 	}
 
 	return nil
-}
-
-func (slc *Controller) getSystemBuildForRollout(sysRollout *crv1.SystemRollout) (*crv1.SystemBuild, error) {
-	return slc.systemBuildLister.SystemBuilds(sysRollout.Namespace).Get(sysRollout.Spec.BuildName)
 }

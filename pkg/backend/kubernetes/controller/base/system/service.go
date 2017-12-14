@@ -30,7 +30,7 @@ func (c *Controller) syncSystemServices(system *crv1.System) (*crv1.System, erro
 				return nil, err
 			}
 			serviceInfo.Name = &service.Name
-			serviceInfo.State = &service.Status.State
+			serviceInfo.Status = &service.Status
 
 			servicesInfo[path] = serviceInfo
 			validServiceNames[service.Name] = true
@@ -60,6 +60,7 @@ func (c *Controller) syncSystemServices(system *crv1.System) (*crv1.System, erro
 		// FIXME(kevinrosendahl): should we get a new spec here? If calculating envoy ports is cheap *and* deterministic, we probably should.
 		// If we don't, and we update what a Service.Spec looks like for a given definition, it may never get updated.
 		if reflect.DeepEqual(serviceInfo.Definition, service.Spec.Definition) {
+			serviceInfo.Status = &service.Status
 			servicesInfo[path] = serviceInfo
 			continue
 		}
@@ -78,7 +79,7 @@ func (c *Controller) syncSystemServices(system *crv1.System) (*crv1.System, erro
 			return nil, err
 		}
 
-		serviceInfo.State = &service.Status.State
+		serviceInfo.Status = &service.Status
 		servicesInfo[path] = serviceInfo
 	}
 

@@ -2,83 +2,68 @@ package systemlifecycle
 
 import (
 	"fmt"
-	"time"
+	"reflect"
 
 	crv1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
-
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
-
-	"github.com/golang/glog"
+	"github.com/mlab-lattice/system/pkg/definition/tree"
 )
 
-func (slc *Controller) syncInProgressTeardown(syst *crv1.SystemTeardown) error {
-	system, err := slc.getSystemForTeardown(syst)
+func (c *Controller) syncInProgressTeardown(teardown *crv1.SystemTeardown) error {
+	system, err := c.getSystem(teardown.Namespace)
 	if err != nil {
 		return err
 	}
 
-	if system == nil {
-		newState := crv1.SystemTeardownStatus{
-			State: crv1.SystemTeardownStateSucceeded,
-		}
-		_, err := slc.updateSystemTeardownStatus(syst, newState)
+	spec := crv1.SystemSpec{
+		Services: map[tree.NodePath]crv1.SystemServicesInfo{},
+	}
+
+	// This needs to happen in here because we don't have an "Accepted" intermediate state like SystemRollout does.
+	// We can't atomically update both teardown.Status.State and change system.Spec, and we need to move teardown into
+	// "in progress" so on controller restart the controller can figure out that it is the owning object. Therefore,
+	// we must update the teardown.Status.State first. If we were then to try to update system.Spec in syncPendingTeardown
+	// and it failed, it would never get rerun since syncInProgressTeardown would always be called from there on out.
+	// So instead we set the system.Spec in here to make sure it gets run even after failures.
+	if !reflect.DeepEqual(system.Spec, spec) {
+		// Copy so the shared cache isn't mutated
+		system = system.DeepCopy()
+		system.Spec = spec
+		system.Status.State = crv1.SystemStateUpdating
+
+		system, err = c.latticeClient.LatticeV1().Systems(system.Namespace).Update(system)
 		if err != nil {
 			return err
 		}
-
-		return slc.relinquishOwningTeardownClaim(syst)
 	}
 
-	if system.DeletionTimestamp != nil {
-		glog.V(4).Infof("System %v still deleting, requeueing in 30 seconds", system.Name)
-		slc.teardownQueue.AddAfter(syst.Namespace+"/"+syst.Name, 30*time.Second)
+	var state crv1.SystemTeardownState
+	switch system.Status.State {
+	case crv1.SystemStateUpdating, crv1.SystemStateScaling:
+		// Still in progress, nothing more to do
 		return nil
+
+	case crv1.SystemStateStable:
+		state = crv1.SystemTeardownStateSucceeded
+
+	case crv1.SystemStateFailed:
+		state = crv1.SystemTeardownStateFailed
+
+	default:
+		return fmt.Errorf("System %v/%v in unexpected state %v", system.Namespace, system.Name, system.Status.State)
 	}
 
-	ns := string(syst.Spec.LatticeNamespace)
-	return slc.latticeClient.LatticeV1().Systems(ns).Delete(ns, &metav1.DeleteOptions{})
-}
+	// Copy the teardown so the shared cache isn't mutated
+	teardown = teardown.DeepCopy()
+	teardown.Status.State = state
 
-func (slc *Controller) getSystemForTeardown(syst *crv1.SystemTeardown) (*crv1.System, error) {
-	var system *crv1.System
-
-	latticeNamespace := syst.Spec.LatticeNamespace
-	syss, err := slc.systemLister.List(labels.Everything())
+	teardown, err = c.latticeClient.LatticeV1().SystemTeardowns(teardown.Namespace).Update(teardown)
 	if err != nil {
-		return nil, err
+		// FIXME: is it possible that the teardown is locked forever now?
+		return err
 	}
 
-	for _, sys := range syss {
-		if string(latticeNamespace) == sys.Namespace {
-			if system != nil {
-				return nil, fmt.Errorf("LatticeNamespace %v contains multiple Systems", latticeNamespace)
-			}
-
-			system = sys
-		}
+	if teardown.Status.State == crv1.SystemTeardownStateSucceeded || teardown.Status.State == crv1.SystemTeardownStateFailed {
+		return c.relinquishTeardownOwningActionClaim(teardown)
 	}
-
-	return system, nil
-}
-
-func (slc *Controller) relinquishOwningTeardownClaim(syst *crv1.SystemTeardown) error {
-	slc.owningLifecycleActionsLock.Lock()
-	defer slc.owningLifecycleActionsLock.Unlock()
-
-	owningAction, ok := slc.owningLifecycleActions[syst.Spec.LatticeNamespace]
-	if !ok {
-		return fmt.Errorf("expected teardown %v to be owning action but there was no owning action", syst.Name)
-	}
-
-	if owningAction.teardown == nil {
-		return fmt.Errorf("expected teardown %v to be owning action but owning action was rollout %v", syst.Name, owningAction.rollout.Name)
-	}
-
-	if owningAction.teardown.Name != syst.Name {
-		return fmt.Errorf("expected teardown %v to be owning action but owning action was teardown %v", syst.Name, owningAction.teardown.Name)
-	}
-
-	delete(slc.owningLifecycleActions, syst.Spec.LatticeNamespace)
 	return nil
 }

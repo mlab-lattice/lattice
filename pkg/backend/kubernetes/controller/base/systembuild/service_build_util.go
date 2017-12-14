@@ -21,11 +21,11 @@ func (sbc *Controller) getServiceBuildState(namespace, svcBuildName string) *crv
 }
 
 func (sbc *Controller) getServiceBuildFromInfo(svcbInfo *crv1.SystemBuildServicesInfo, ns string) (*crv1.ServiceBuild, bool, error) {
-	if svcbInfo.BuildName == nil {
+	if svcbInfo.Name == nil {
 		return nil, false, nil
 	}
 
-	svcb, err := sbc.serviceBuildLister.ServiceBuilds(ns).Get(*svcbInfo.BuildName)
+	svcb, err := sbc.serviceBuildLister.ServiceBuilds(ns).Get(*svcbInfo.Name)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			return nil, false, err

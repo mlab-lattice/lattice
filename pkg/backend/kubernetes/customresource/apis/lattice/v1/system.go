@@ -39,9 +39,9 @@ type SystemServicesInfo struct {
 	ComponentBuildArtifacts map[string]ComponentBuildArtifacts `json:"componentBuildArtifacts"`
 
 	// Name is the name of the Service CustomResource that is created by the lattice-system-controller
-	Name *string `json:"serviceName,omitempty"`
-	// State is the last observed state of the Service CustomResource
-	State *ServiceState `json:"serviceState"`
+	Name *string `json:"name,omitempty"`
+	// Status is the last observed status of the Service CustomResource
+	Status *ServiceStatus `json:"status"`
 }
 
 type SystemStatus struct {

@@ -2,7 +2,6 @@ package systemlifecycle
 
 import (
 	"fmt"
-	"reflect"
 	"sync"
 	"time"
 
@@ -10,7 +9,6 @@ import (
 	latticeclientset "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/clientset/versioned"
 	latticeinformers "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/informers/externalversions/lattice/v1"
 	latticelisters "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/listers/lattice/v1"
-	"github.com/mlab-lattice/system/pkg/types"
 
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
@@ -41,7 +39,7 @@ type Controller struct {
 	// rollout. Then SystemRollout B is created. It is accepted because the existing
 	// owning rollout is not running. Now B is the owning rollout)
 	owningLifecycleActionsLock sync.RWMutex
-	owningLifecycleActions     map[types.LatticeNamespace]*lifecycleAction
+	owningLifecycleActions     map[string]*lifecycleAction
 
 	systemRolloutLister       latticelisters.SystemRolloutLister
 	systemRolloutListerSynced cache.InformerSynced
@@ -76,7 +74,7 @@ func NewController(
 ) *Controller {
 	src := &Controller{
 		latticeClient:          latticeClient,
-		owningLifecycleActions: make(map[types.LatticeNamespace]*lifecycleAction),
+		owningLifecycleActions: make(map[string]*lifecycleAction),
 		rolloutQueue:           workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "system-rollout"),
 		teardownQueue:          workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "system-teardown"),
 	}
@@ -124,144 +122,12 @@ func NewController(
 	return src
 }
 
-func (slc *Controller) handleSystemRolloutAdd(obj interface{}) {
-	sysr := obj.(*crv1.SystemRollout)
-	glog.V(4).Infof("Adding SystemRollout %s", sysr.Name)
-	slc.enqueueSystemRollout(sysr)
-}
-
-func (slc *Controller) handleSystemRolloutUpdate(old, cur interface{}) {
-	oldSysr := old.(*crv1.SystemRollout)
-	curSysr := cur.(*crv1.SystemRollout)
-	glog.V(4).Infof("Updating SystemRollout %s", oldSysr.Name)
-	slc.enqueueSystemRollout(curSysr)
-}
-
-func (slc *Controller) handleSystemTeardownAdd(obj interface{}) {
-	syst := obj.(*crv1.SystemTeardown)
-	glog.V(4).Infof("Adding SystemTeardown %s", syst.Name)
-	slc.enqueueSystemTeardown(syst)
-}
-
-func (slc *Controller) handleSystemTeardownUpdate(old, cur interface{}) {
-	oldSyst := old.(*crv1.SystemTeardown)
-	curSyst := cur.(*crv1.SystemTeardown)
-	glog.V(4).Infof("Updating SystemTeardown %s", oldSyst.Name)
-	slc.enqueueSystemTeardown(curSyst)
-}
-
-func (slc *Controller) handleSystemAdd(obj interface{}) {
-	sys := obj.(*crv1.System)
-	glog.V(4).Infof("System %s added", sys.Name)
-
-	slc.owningLifecycleActionsLock.RLock()
-	defer slc.owningLifecycleActionsLock.RUnlock()
-	owningAction, ok := slc.owningLifecycleActions[types.LatticeNamespace(sys.Namespace)]
-	if !ok {
-		// TODO: send warn event
-		return
-	}
-
-	if owningAction.rollout != nil {
-		slc.enqueueSystemRollout(owningAction.rollout)
-	} else {
-		// TODO send warn here, a system shouldnt be added while a teardown is in progress
-	}
-}
-
-func (slc *Controller) handleSystemUpdate(old, cur interface{}) {
-	glog.V(4).Info("Got System update")
-	oldSys := old.(*crv1.System)
-	curSys := cur.(*crv1.System)
-	if oldSys.ResourceVersion == curSys.ResourceVersion {
-		// Periodic resync will send update events for all known ServiceBuilds.
-		// Two different versions of the same job will always have different RVs.
-		glog.V(5).Info("System ResourceVersions are the same")
-		return
-	}
-
-	slc.owningLifecycleActionsLock.RLock()
-	defer slc.owningLifecycleActionsLock.RUnlock()
-	owningAction, ok := slc.owningLifecycleActions[types.LatticeNamespace(curSys.Namespace)]
-	if !ok {
-		// TODO: send warn event
-		return
-	}
-
-	if owningAction.rollout != nil {
-		slc.enqueueSystemRollout(owningAction.rollout)
-	} else {
-		slc.enqueueSystemTeardown(owningAction.teardown)
-	}
-}
-
-func (slc *Controller) handleSystemBuildAdd(obj interface{}) {
-	sysb := obj.(*crv1.SystemBuild)
-	glog.V(4).Infof("SystemBuild %s added", sysb.Name)
-
-	slc.owningLifecycleActionsLock.RLock()
-	defer slc.owningLifecycleActionsLock.RUnlock()
-	owningAction, ok := slc.owningLifecycleActions[sysb.Spec.LatticeNamespace]
-	if !ok {
-		// TODO: send warn event
-		return
-	}
-
-	if owningAction.rollout != nil {
-		slc.enqueueSystemRollout(owningAction.rollout)
-	}
-}
-
-func (slc *Controller) handleSystemBuildUpdate(old, cur interface{}) {
-	glog.V(4).Infof("Got SystemBuild update")
-	oldSysb := old.(*crv1.SystemBuild)
-	curSysb := cur.(*crv1.SystemBuild)
-	if oldSysb.ResourceVersion == curSysb.ResourceVersion {
-		// Periodic resync will send update events for all known ServiceBuilds.
-		// Two different versions of the same job will always have different RVs.
-		glog.V(5).Info("SystemBuild ResourceVersions are the same")
-		return
-	}
-
-	slc.owningLifecycleActionsLock.RLock()
-	defer slc.owningLifecycleActionsLock.RUnlock()
-	owningAction, ok := slc.owningLifecycleActions[curSysb.Spec.LatticeNamespace]
-	if !ok {
-		// TODO: send warn event
-		return
-	}
-
-	if owningAction.rollout != nil {
-		slc.enqueueSystemRollout(owningAction.rollout)
-	}
-}
-
-func (slc *Controller) enqueueSystemRollout(sysRollout *crv1.SystemRollout) {
-	key, err := cache.DeletionHandlingMetaNamespaceKeyFunc(sysRollout)
-	if err != nil {
-		runtime.HandleError(fmt.Errorf("couldn't get key for object %#v: %v", sysRollout, err))
-		return
-	}
-
-	slc.rolloutQueue.Add(key)
-}
-
-func (slc *Controller) enqueueSystemTeardown(syst *crv1.SystemTeardown) {
-	key, err := cache.DeletionHandlingMetaNamespaceKeyFunc(syst)
-	if err != nil {
-		runtime.HandleError(fmt.Errorf("couldn't get key for object %#v: %v", syst, err))
-		return
-	}
-
-	slc.teardownQueue.Add(key)
-}
-
-func (slc *Controller) Run(workers int, stopCh <-chan struct{}) {
+func (c *Controller) Run(workers int, stopCh <-chan struct{}) {
 	// don't let panics crash the process
 	defer runtime.HandleCrash()
 	// make sure the work queue is shutdown which will trigger workers to end
-	defer slc.rolloutQueue.ShutDown()
-	defer slc.teardownQueue.ShutDown()
+	defer c.rolloutQueue.ShutDown()
+	defer c.teardownQueue.ShutDown()
 
 	glog.Infof("Starting system-rollout controller")
 	defer glog.Infof("Shutting down system-rollout controller")
@@ -269,12 +135,12 @@ func (slc *Controller) Run(workers int, stopCh <-chan struct{}) {
 	// wait for your secondary caches to fill before starting your work
 	if !cache.WaitForCacheSync(
 		stopCh,
-		slc.systemRolloutListerSynced,
-		slc.systemTeardownListerSynced,
-		slc.systemListerSynced,
-		slc.systemBuildListerSynced,
-		slc.serviceBuildListerSynced,
-		slc.componentBuildListerSynced,
+		c.systemRolloutListerSynced,
+		c.systemTeardownListerSynced,
+		c.systemListerSynced,
+		c.systemBuildListerSynced,
+		c.serviceBuildListerSynced,
+		c.componentBuildListerSynced,
 	) {
 		return
 	}
@@ -284,7 +150,7 @@ func (slc *Controller) Run(workers int, stopCh <-chan struct{}) {
 	// It's okay that we're racing with the System and SystemBuild informer add/update functions here.
 	// handleSystemRolloutAdd and handleSystemRolloutUpdate will enqueue all of the existing SystemRollouts already
 	// so it's okay if the other informers don't.
-	if err := slc.syncOwningActions(); err != nil {
+	if err := c.syncOwningActions(); err != nil {
 		return
 	}
 
@@ -293,85 +159,261 @@ func (slc *Controller) Run(workers int, stopCh <-chan struct{}) {
 	for i := 0; i < workers; i++ {
 		// runWorker will loop until "something bad" happens.  The .Until will
 		// then rekick the worker after one second
-		go wait.Until(slc.runRolloutWorker, time.Second, stopCh)
+		go wait.Until(c.runRolloutWorker, time.Second, stopCh)
 	}
 
 	for i := 0; i < workers; i++ {
 		// runWorker will loop until "something bad" happens.  The .Until will
 		// then rekick the worker after one second
-		go wait.Until(slc.runTeardownWorker, time.Second, stopCh)
+		go wait.Until(c.runTeardownWorker, time.Second, stopCh)
 	}
 
 	// wait until we're told to stop
 	<-stopCh
 }
 
-func (slc *Controller) syncOwningActions() error {
-	slc.owningLifecycleActionsLock.Lock()
-	defer slc.owningLifecycleActionsLock.Unlock()
+func (c *Controller) handleSystemRolloutAdd(obj interface{}) {
+	rollout := obj.(*crv1.SystemRollout)
+	glog.V(4).Infof("Adding SystemRollout %v/%v", rollout.Namespace, rollout.Name)
+	c.enqueueSystemRollout(rollout)
+}
 
-	sysrs, err := slc.systemRolloutLister.List(labels.Everything())
+func (c *Controller) handleSystemRolloutUpdate(old, cur interface{}) {
+	oldRollout := old.(*crv1.SystemRollout)
+	curRollout := cur.(*crv1.SystemRollout)
+	if oldRollout.ResourceVersion == curRollout.ResourceVersion {
+		// Periodic resync will send update events for all known SystemRollout.
+		// Two different versions of the same job will always have different RVs.
+		glog.V(5).Info("SystemRollout ResourceVersions are the same")
+		return
+	}
+
+	glog.V(4).Infof("Updating SystemRollout %s/%s", curRollout.Namespace, curRollout.Name)
+	c.enqueueSystemRollout(curRollout)
+}
+
+func (c *Controller) handleSystemTeardownAdd(obj interface{}) {
+	syst := obj.(*crv1.SystemTeardown)
+	glog.V(4).Infof("Adding SystemTeardown %s", syst.Name)
+	c.enqueueSystemTeardown(syst)
+}
+
+func (c *Controller) handleSystemTeardownUpdate(old, cur interface{}) {
+	oldTeardown := old.(*crv1.SystemTeardown)
+	curTeardown := cur.(*crv1.SystemTeardown)
+	if oldTeardown.ResourceVersion == curTeardown.ResourceVersion {
+		// Periodic resync will send update events for all known SystemRollout.
+		// Two different versions of the same job will always have different RVs.
+		glog.V(5).Info("SystemRollout ResourceVersions are the same")
+		return
+	}
+
+	glog.V(4).Infof("Updating SystemTeardown %s", oldTeardown.Name)
+	c.enqueueSystemTeardown(curTeardown)
+}
+
+func (c *Controller) handleSystemAdd(obj interface{}) {
+	system := obj.(*crv1.System)
+	glog.V(4).Infof("System %s added", system.Name)
+
+	action, exists := c.getOwningAction(system.Namespace)
+	if !exists {
+		// No ongoing action
+		return
+	}
+
+	if action == nil {
+		// FIXME: send warn event
+		return
+	}
+
+	if action.rollout != nil {
+		c.enqueueSystemRollout(action.rollout)
+		return
+	}
+
+	if action.teardown != nil {
+		c.enqueueSystemTeardown(action.teardown)
+		return
+	}
+
+	// FIXME: Send warn event
+}
+
+func (c *Controller) handleSystemUpdate(old, cur interface{}) {
+	glog.V(4).Info("Got System update")
+	oldSystem := old.(*crv1.System)
+	curSystem := cur.(*crv1.System)
+	if oldSystem.ResourceVersion == curSystem.ResourceVersion {
+		// Periodic resync will send update events for all known ServiceBuilds.
+		// Two different versions of the same job will always have different RVs.
+		glog.V(5).Info("System ResourceVersions are the same")
+		return
+	}
+
+	action, exists := c.getOwningAction(curSystem.Namespace)
+	if !exists {
+		// No ongoing action
+		return
+	}
+
+	if action == nil {
+		// FIXME: send warn event
+		return
+	}
+
+	if action.rollout != nil {
+		c.enqueueSystemRollout(action.rollout)
+		return
+	}
+
+	if action.teardown != nil {
+		c.enqueueSystemTeardown(action.teardown)
+		return
+	}
+
+	// FIXME: Send warn event
+}
+
+func (c *Controller) handleSystemBuildAdd(obj interface{}) {
+	build := obj.(*crv1.SystemBuild)
+	glog.V(4).Infof("SystemBuild %s added", build.Name)
+
+	action, exists := c.getOwningAction(build.Namespace)
+	if !exists {
+		// No ongoing action
+		return
+	}
+
+	if action == nil {
+		// FIXME: send warn event
+		return
+	}
+
+	if action.rollout != nil {
+		c.enqueueSystemRollout(action.rollout)
+		return
+	}
+
+	// only need to update rollouts on builds finishing
+}
+
+func (c *Controller) handleSystemBuildUpdate(old, cur interface{}) {
+	glog.V(4).Infof("Got SystemBuild update")
+	oldBuild := old.(*crv1.SystemBuild)
+	curBuild := cur.(*crv1.SystemBuild)
+	if oldBuild.ResourceVersion == curBuild.ResourceVersion {
+		// Periodic resync will send update events for all known ServiceBuilds.
+		// Two different versions of the same job will always have different RVs.
+		glog.V(5).Info("SystemBuild ResourceVersions are the same")
+		return
+	}
+
+	action, exists := c.getOwningAction(curBuild.Namespace)
+	if !exists {
+		// No ongoing action
+		return
+	}
+
+	if action == nil {
+		// FIXME: send warn event
+		return
+	}
+
+	if action.rollout != nil {
+		c.enqueueSystemRollout(action.rollout)
+		return
+	}
+
+	// only need to update rollouts on builds finishing
+}
+
+func (c *Controller) enqueueSystemRollout(sysRollout *crv1.SystemRollout) {
+	key, err := cache.DeletionHandlingMetaNamespaceKeyFunc(sysRollout)
+	if err != nil {
+		runtime.HandleError(fmt.Errorf("couldn't get key for object %#v: %v", sysRollout, err))
+		return
+	}
+
+	c.rolloutQueue.Add(key)
+}
+
+func (c *Controller) enqueueSystemTeardown(syst *crv1.SystemTeardown) {
+	key, err := cache.DeletionHandlingMetaNamespaceKeyFunc(syst)
+	if err != nil {
+		runtime.HandleError(fmt.Errorf("couldn't get key for object %#v: %v", syst, err))
+		return
+	}
+
+	c.teardownQueue.Add(key)
+}
+
+func (c *Controller) syncOwningActions() error {
+	c.owningLifecycleActionsLock.Lock()
+	defer c.owningLifecycleActionsLock.Unlock()
+
+	rollouts, err := c.systemRolloutLister.List(labels.Everything())
 	if err != nil {
 		return err
 	}
 
-	for _, sysr := range sysrs {
-		if sysr.Status.State != crv1.SystemRolloutStateInProgress {
+	for _, rollout := range rollouts {
+		if rollout.Status.State != crv1.SystemRolloutStateInProgress {
 			continue
 		}
 
-		lns := sysr.Spec.LatticeNamespace
-		if _, ok := slc.owningLifecycleActions[lns]; ok {
-			return fmt.Errorf("LatticeNamespace %v has multiple owning rollouts", lns)
+		_, exists := c.getOwningAction(rollout.Namespace)
+		if exists {
+			return fmt.Errorf("System %v has multiple owning actions", rollout.Namespace)
 		}
 
-		slc.owningLifecycleActions[lns] = &lifecycleAction{
-			rollout: sysr,
+		c.owningLifecycleActions[rollout.Namespace] = &lifecycleAction{
+			rollout: rollout,
 		}
 	}
 
-	systs, err := slc.systemTeardownLister.List(labels.Everything())
+	teardowns, err := c.systemTeardownLister.List(labels.Everything())
 	if err != nil {
 		return err
 	}
 
-	for _, syst := range systs {
-		if syst.Status.State != crv1.SystemTeardownStateInProgress {
+	for _, teardown := range teardowns {
+		if teardown.Status.State != crv1.SystemTeardownStateInProgress {
 			continue
 		}
 
-		lns := syst.Spec.LatticeNamespace
-		if _, ok := slc.owningLifecycleActions[lns]; ok {
-			return fmt.Errorf("LatticeNamespace %v has multiple owning actions", lns)
+		_, exists := c.getOwningAction(teardown.Namespace)
+		if exists {
+			return fmt.Errorf("System %v has multiple owning actions", teardown.Namespace)
 		}
 
-		slc.owningLifecycleActions[lns] = &lifecycleAction{
-			teardown: syst,
+		c.owningLifecycleActions[teardown.Namespace] = &lifecycleAction{
+			teardown: teardown,
 		}
 	}
 
 	return nil
 }
 
-func (slc *Controller) runRolloutWorker() {
+func (c *Controller) runRolloutWorker() {
 	// hot loop until we're told to stop.  processNextWorkItem will
 	// automatically wait until there's work available, so we don't worry
 	// about secondary waits
-	for slc.processNextWorkItem(slc.rolloutQueue, slc.syncSystemRollout) {
+	for c.processNextWorkItem(c.rolloutQueue, c.syncSystemRollout) {
 	}
 }
 
-func (slc *Controller) runTeardownWorker() {
+func (c *Controller) runTeardownWorker() {
 	// hot loop until we're told to stop.  processNextWorkItem will
 	// automatically wait until there's work available, so we don't worry
 	// about secondary waits
-	for slc.processNextWorkItem(slc.teardownQueue, slc.syncSystemTeardown) {
+	for c.processNextWorkItem(c.teardownQueue, c.syncSystemTeardown) {
 	}
 }
 
 // processNextWorkItem deals with one key off the queue.  It returns false
 // when it's time to quit.
-func (slc *Controller) processNextWorkItem(queue workqueue.RateLimitingInterface, syncHandler func(string) error) bool {
+func (c *Controller) processNextWorkItem(queue workqueue.RateLimitingInterface, syncHandler func(string) error) bool {
 	// pull the next work item from queue.  It should be a key we use to lookup
 	// something in a cache
 	key, quit := queue.Get()
@@ -409,7 +451,7 @@ func (slc *Controller) processNextWorkItem(queue workqueue.RateLimitingInterface
 
 // syncSystemBuild will sync the SystemBuild with the given key.
 // This function is not meant to be invoked concurrently with the same key.
-func (slc *Controller) syncSystemRollout(key string) error {
+func (c *Controller) syncSystemRollout(key string) error {
 	glog.Flush()
 	startTime := time.Now()
 	glog.V(4).Infof("Started syncing SystemRollout %q (%v)", key, startTime)
@@ -421,7 +463,7 @@ func (slc *Controller) syncSystemRollout(key string) error {
 	if err != nil {
 		return err
 	}
-	sysr, err := slc.systemRolloutLister.SystemRollouts(namespace).Get(name)
+	rollout, err := c.systemRolloutLister.SystemRollouts(namespace).Get(name)
 	if errors.IsNotFound(err) {
 		glog.V(2).Infof("SystemRollout %v has been deleted", key)
 		return nil
@@ -430,37 +472,28 @@ func (slc *Controller) syncSystemRollout(key string) error {
 		return err
 	}
 
-	switch sysr.Status.State {
+	switch rollout.Status.State {
 	case crv1.SystemRolloutStateSucceeded, crv1.SystemRolloutStateFailed:
 		glog.V(4).Infof("SystemRollout %s already completed", key)
 		return nil
 
 	case crv1.SystemRolloutStateInProgress:
-		return slc.syncInProgressRollout(sysr)
+		return c.syncInProgressRollout(rollout)
 
 	case crv1.SystemRolloutStateAccepted:
-		return slc.syncAcceptedRollout(sysr)
+		return c.syncAcceptedRollout(rollout)
 
 	case crv1.SystemRolloutStatePending:
-		return slc.syncPendingRolloutState(sysr)
+		return c.syncPendingRollout(rollout)
 
 	default:
-		panic("unreachable")
+		return fmt.Errorf("SystemRollout %v has unexpected state: %v", key, rollout.Status.State)
 	}
-}
-
-func (slc *Controller) updateSystemRolloutStatus(sysr *crv1.SystemRollout, newStatus crv1.SystemRolloutStatus) (*crv1.SystemRollout, error) {
-	if reflect.DeepEqual(sysr.Status, newStatus) {
-		return sysr, nil
-	}
-
-	sysr.Status = newStatus
-	return slc.latticeClient.LatticeV1().SystemRollouts(sysr.Namespace).Update(sysr)
 }
 
 // syncSystemBuild will sync the SystemBuild with the given key.
 // This function is not meant to be invoked concurrently with the same key.
-func (slc *Controller) syncSystemTeardown(key string) error {
+func (c *Controller) syncSystemTeardown(key string) error {
 	glog.Flush()
 	startTime := time.Now()
 	glog.V(4).Infof("Started syncing SystemTeardown %q (%v)", key, startTime)
@@ -472,7 +505,7 @@ func (slc *Controller) syncSystemTeardown(key string) error {
 	if err != nil {
 		return err
 	}
-	syst, err := slc.systemTeardownLister.SystemTeardowns(namespace).Get(name)
+	teardown, err := c.systemTeardownLister.SystemTeardowns(namespace).Get(name)
 	if errors.IsNotFound(err) {
 		glog.V(2).Infof("SystemTeardown %v has been deleted", key)
 		return nil
@@ -481,27 +514,18 @@ func (slc *Controller) syncSystemTeardown(key string) error {
 		return err
 	}
 
-	switch syst.Status.State {
+	switch teardown.Status.State {
 	case crv1.SystemTeardownStateSucceeded, crv1.SystemTeardownStateFailed:
 		glog.V(4).Infof("SystemTeardown %s already completed", key)
 		return nil
 
 	case crv1.SystemTeardownStateInProgress:
-		return slc.syncInProgressTeardown(syst)
+		return c.syncInProgressTeardown(teardown)
 
 	case crv1.SystemTeardownStatePending:
-		return slc.syncPendingTeardown(syst)
+		return c.syncPendingTeardown(teardown)
 
 	default:
-		panic("unreachable")
+		return fmt.Errorf("SystemTeardown %v has unexpected state: %v", key, teardown.Status.State)
 	}
-}
-
-func (slc *Controller) updateSystemTeardownStatus(syst *crv1.SystemTeardown, newStatus crv1.SystemTeardownStatus) (*crv1.SystemTeardown, error) {
-	if reflect.DeepEqual(syst.Status, newStatus) {
-		return syst, nil
-	}
-
-	syst.Status = newStatus
-	return slc.latticeClient.LatticeV1().SystemTeardowns(syst.Namespace).Update(syst)
 }

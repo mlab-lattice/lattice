@@ -56,15 +56,15 @@ func transformServiceBuild(build *crv1.ServiceBuild) types.ServiceBuild {
 	}
 
 	for component, cbInfo := range build.Spec.Components {
-		if cbInfo.BuildName == nil {
+		if cbInfo.Name == nil {
 			svcb.ComponentBuilds[component] = nil
 			continue
 		}
-		id := types.ComponentBuildID(*cbInfo.BuildName)
+		id := types.ComponentBuildID(*cbInfo.Name)
 
 		state := constants.ComponentBuildStatePending
-		if cbInfo.BuildState != nil {
-			state = getComponentBuildState(*cbInfo.BuildState)
+		if cbInfo.Status != nil {
+			state = getComponentBuildState(*cbInfo.Status)
 		}
 
 		var failureMessage *string

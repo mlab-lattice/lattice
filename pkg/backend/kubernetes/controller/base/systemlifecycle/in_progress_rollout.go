@@ -4,93 +4,43 @@ import (
 	"fmt"
 
 	crv1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
-
-	"k8s.io/apimachinery/pkg/labels"
 )
 
-func (slc *Controller) syncInProgressRollout(sysRollout *crv1.SystemRollout) error {
-	system, err := slc.getSystemForRollout(sysRollout)
+func (c *Controller) syncInProgressRollout(rollout *crv1.SystemRollout) error {
+	system, err := c.getSystem(rollout.Namespace)
 	if err != nil {
 		return err
 	}
 
-	if system == nil {
-		// FIXME: send warn event
-		// TODO: this seems kind of against the controller pattern, should we just move the system to an "accepted" state
-		// 		 and resync instead?
-		return fmt.Errorf("SystemRollout %v in-progress with no System", sysRollout.Name)
+	var state crv1.SystemRolloutState
+	switch system.Status.State {
+	case crv1.SystemStateUpdating, crv1.SystemStateScaling:
+		// Still in progress, nothing more to do
+		return nil
+
+	case crv1.SystemStateStable:
+		state = crv1.SystemRolloutStateSucceeded
+
+	case crv1.SystemStateFailed:
+		state = crv1.SystemRolloutStateFailed
+
+	default:
+		return fmt.Errorf("System %v/%v in unexpected state %v", system.Namespace, system.Name, system.Status.State)
 	}
 
-	sysRollout, err = slc.syncRolloutWithSystem(sysRollout, system)
+	// Copy so the shared cache isn't mutated
+	rollout = rollout.DeepCopy()
+	rollout.Status.State = state
+
+	rollout, err = c.latticeClient.LatticeV1().SystemRollouts(rollout.Namespace).Update(rollout)
 	if err != nil {
 		// FIXME: is it possible that the rollout is locked forever now?
 		return err
 	}
 
-	if sysRollout.Status.State == crv1.SystemRolloutStateSucceeded || sysRollout.Status.State == crv1.SystemRolloutStateFailed {
-		return slc.relinquishOwningRolloutClaim(sysRollout)
+	if rollout.Status.State == crv1.SystemRolloutStateSucceeded || rollout.Status.State == crv1.SystemRolloutStateFailed {
+		return c.relinquishRolloutOwningActionClaim(rollout)
 	}
 
-	return nil
-}
-
-func (slc *Controller) getSystemForRollout(sysRollout *crv1.SystemRollout) (*crv1.System, error) {
-	var system *crv1.System
-
-	latticeNamespace := sysRollout.Spec.LatticeNamespace
-	syss, err := slc.systemLister.List(labels.Everything())
-	if err != nil {
-		return nil, err
-	}
-
-	for _, sys := range syss {
-		if string(latticeNamespace) == sys.Namespace {
-			if system != nil {
-				return nil, fmt.Errorf("LatticeNamespace %v contains multiple Systems", latticeNamespace)
-			}
-
-			system = sys
-		}
-	}
-
-	return system, nil
-}
-
-func (slc *Controller) syncRolloutWithSystem(sysRollout *crv1.SystemRollout, sys *crv1.System) (*crv1.SystemRollout, error) {
-	var newState crv1.SystemRolloutStatus
-	switch sys.Status.State {
-	case crv1.SystemStateRollingOut:
-		return sysRollout, nil
-	case crv1.SystemStateRolloutSucceeded:
-		newState = crv1.SystemRolloutStatus{
-			State: crv1.SystemRolloutStateSucceeded,
-		}
-	case crv1.SystemStateRolloutFailed:
-		newState = crv1.SystemRolloutStatus{
-			State: crv1.SystemRolloutStateFailed,
-		}
-	}
-
-	return slc.updateSystemRolloutStatus(sysRollout, newState)
-}
-
-func (slc *Controller) relinquishOwningRolloutClaim(sysr *crv1.SystemRollout) error {
-	slc.owningLifecycleActionsLock.Lock()
-	defer slc.owningLifecycleActionsLock.Unlock()
-
-	owningAction, ok := slc.owningLifecycleActions[sysr.Spec.LatticeNamespace]
-	if !ok {
-		return fmt.Errorf("expected rollout %v to be owning action but there was no owning action", sysr.Name)
-	}
-
-	if owningAction.rollout == nil {
-		return fmt.Errorf("expected rollout %v to be owning action but owning action was teardown %v", sysr.Name, owningAction.teardown.Name)
-	}
-
-	if owningAction.rollout.Name != sysr.Name {
-		return fmt.Errorf("expected rollout %v to be owning action but owning action was rollout %v", sysr.Name, owningAction.rollout.Name)
-	}
-
-	delete(slc.owningLifecycleActions, sysr.Spec.LatticeNamespace)
 	return nil
 }

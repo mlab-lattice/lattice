@@ -51,7 +51,7 @@ func updateComponentBuildInfoState(svcb *crv1.ServiceBuild, component string, cb
 		return fmt.Errorf("ServiceBuild %v Spec.Components did not contain expected component %v", svcb.Name, component)
 	}
 
-	componentInfo.BuildState = &cb.Status.State
+	componentInfo.Status = &cb.Status.State
 	componentInfo.LastObservedPhase = cb.Status.LastObservedPhase
 	componentInfo.FailureInfo = cb.Status.FailureInfo
 	svcb.Spec.Components[component] = componentInfo
@@ -140,7 +140,7 @@ func (sbc *Controller) syncMissingComponentBuildsServiceBuild(svcbs *crv1.Servic
 		// Found an existing ComponentBuild.
 		if cb != nil && cb.Status.State != crv1.ComponentBuildStateFailed {
 			glog.V(4).Infof("Found ComponentBuild %v for %v of %v", cb.Name, component, svcbs.Name)
-			cbInfo.BuildName = &cb.Name
+			cbInfo.Name = &cb.Name
 			svcbs.Spec.Components[component] = cbInfo
 			continue
 		}
@@ -158,7 +158,7 @@ func (sbc *Controller) syncMissingComponentBuildsServiceBuild(svcbs *crv1.Servic
 		}
 
 		glog.V(4).Infof("Created ComponentBuild %v for %v of %v", cb.Name, component, svcbs.Name)
-		cbInfo.BuildName = &cb.Name
+		cbInfo.Name = &cb.Name
 		svcbs.Spec.Components[component] = cbInfo
 	}
 

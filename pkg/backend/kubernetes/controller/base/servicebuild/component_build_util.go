@@ -20,11 +20,11 @@ func getComponentBuildDefinitionHashFromLabel(cb *crv1.ComponentBuild) *string {
 }
 
 func (sbc *Controller) getComponentBuildFromInfo(cbInfo *crv1.ServiceBuildComponentBuildInfo, ns string) (*crv1.ComponentBuild, bool, error) {
-	if cbInfo.BuildName == nil {
+	if cbInfo.Name == nil {
 		return nil, false, nil
 	}
 
-	cb, err := sbc.componentBuildLister.ComponentBuilds(ns).Get(*cbInfo.BuildName)
+	cb, err := sbc.componentBuildLister.ComponentBuilds(ns).Get(*cbInfo.Name)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			return nil, false, nil

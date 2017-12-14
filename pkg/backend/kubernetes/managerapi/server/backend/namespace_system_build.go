@@ -116,15 +116,15 @@ func transformSystemBuild(build *crv1.SystemBuild) types.SystemBuild {
 	}
 
 	for service, svcbInfo := range build.Spec.Services {
-		if svcbInfo.BuildName == nil {
+		if svcbInfo.Name == nil {
 			sysb.ServiceBuilds[service] = nil
 			continue
 		}
-		id := types.ServiceBuildID(*svcbInfo.BuildName)
+		id := types.ServiceBuildID(*svcbInfo.Name)
 
 		state := constants.ServiceBuildStatePending
-		if svcbInfo.BuildState != nil {
-			state = getServiceBuildState(*svcbInfo.BuildState)
+		if svcbInfo.State != nil {
+			state = getServiceBuildState(*svcbInfo.State)
 		}
 
 		svcb := &types.ServiceBuild{
@@ -134,15 +134,15 @@ func transformSystemBuild(build *crv1.SystemBuild) types.SystemBuild {
 		}
 
 		for component, cbInfo := range svcbInfo.Components {
-			if cbInfo.BuildName == nil {
+			if cbInfo.Name == nil {
 				svcb.ComponentBuilds[component] = nil
 				continue
 			}
-			id := types.ComponentBuildID(*cbInfo.BuildName)
+			id := types.ComponentBuildID(*cbInfo.Name)
 
 			state := constants.ComponentBuildStatePending
-			if cbInfo.BuildState != nil {
-				state = getComponentBuildState(*cbInfo.BuildState)
+			if cbInfo.Status != nil {
+				state = getComponentBuildState(*cbInfo.Status)
 			}
 
 			var failureMessage *string

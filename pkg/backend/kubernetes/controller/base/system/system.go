@@ -5,6 +5,11 @@ import (
 	"reflect"
 
 	crv1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
+	"github.com/mlab-lattice/system/pkg/definition/tree"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/golang/glog"
 )
 
 func (c *Controller) syncSystemStatus(system *crv1.System) error {
@@ -13,28 +18,27 @@ func (c *Controller) syncSystemStatus(system *crv1.System) error {
 	hasScalingService := false
 
 	for path, service := range system.Spec.Services {
-		if service.State == nil {
-			return fmt.Errorf("System %v's Service %v had no ServiceBuildState in syncSystemStatus", system.Namespace, path)
+		if service.Status == nil {
+			return fmt.Errorf("System %v's Service %v had no Status", system.Namespace, path)
 		}
 
-		// If there's a failed service, no need to look any further, our System has failed.
-		if *service.State == crv1.ServiceStateFailed {
+		if (*service.Status).State == crv1.ServiceStateFailed {
 			hasFailedService = true
-			break
+			continue
 		}
 
-		if *service.State == crv1.ServiceStateUpdating || *service.State == crv1.ServiceStatePending {
+		if (*service.Status).State == crv1.ServiceStateUpdating || (*service.Status).State == crv1.ServiceStatePending {
 			hasUpdatingService = true
 			continue
 		}
 
-		if *service.State == crv1.ServiceStateScalingDown || *service.State == crv1.ServiceStateScalingUp {
+		if (*service.Status).State == crv1.ServiceStateScalingDown || (*service.Status).State == crv1.ServiceStateScalingUp {
 			hasScalingService = true
 			continue
 		}
 
-		if *service.State != crv1.ServiceStateStable {
-			return fmt.Errorf("System %v's Service %v had unexpected state: %v", system.Namespace, path, *service.State)
+		if (*service.Status).State != crv1.ServiceStateStable {
+			return fmt.Errorf("System %v's Service %v had unexpected state: %v", system.Namespace, path, (*service.Status).State)
 		}
 	}
 
