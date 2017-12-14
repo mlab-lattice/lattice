@@ -102,65 +102,96 @@ func NewController(
 	return cbc
 }
 
-func (cbc *Controller) addConfig(obj interface{}) {
+func (c *Controller) Run(workers int, stopCh <-chan struct{}) {
+	// don't let panics crash the process
+	defer runtime.HandleCrash()
+	// make sure the work queue is shutdown which will trigger workers to end
+	defer c.queue.ShutDown()
+
+	glog.Infof("Starting component-build controller")
+	defer glog.Infof("Shutting down component-build controller")
+
+	// wait for your secondary caches to fill before starting your work
+	if !cache.WaitForCacheSync(stopCh, c.configListerSynced, c.componentBuildListerSynced, c.jobListerSynced) {
+		return
+	}
+
+	glog.V(4).Info("Caches synced. Waiting for config to be set")
+
+	// wait for config to be set
+	<-c.configSetChan
+
+	// start up your worker threads based on threadiness.  Some controllers
+	// have multiple kinds of workers
+	for i := 0; i < workers; i++ {
+		// runWorker will loop until "something bad" happens.  The .Until will
+		// then rekick the worker after one second
+		go wait.Until(c.runWorker, time.Second, stopCh)
+	}
+
+	// wait until we're told to stop
+	<-stopCh
+}
+
+func (c *Controller) addConfig(obj interface{}) {
 	config := obj.(*crv1.Config)
 	glog.V(4).Infof("Adding Config %s", config.Name)
 
-	cbc.configLock.Lock()
-	defer cbc.configLock.Unlock()
-	cbc.config = &config.DeepCopy().Spec
+	c.configLock.Lock()
+	defer c.configLock.Unlock()
+	c.config = &config.DeepCopy().Spec
 
-	if !cbc.configSet {
-		cbc.configSet = true
-		close(cbc.configSetChan)
+	if !c.configSet {
+		c.configSet = true
+		close(c.configSetChan)
 	}
 }
 
-func (cbc *Controller) updateConfig(old, cur interface{}) {
+func (c *Controller) updateConfig(old, cur interface{}) {
 	oldConfig := old.(*crv1.Config)
 	curConfig := cur.(*crv1.Config)
 	glog.V(4).Infof("Updating Config %s", oldConfig.Name)
 
-	cbc.configLock.Lock()
-	defer cbc.configLock.Unlock()
-	cbc.config = &curConfig.DeepCopy().Spec
+	c.configLock.Lock()
+	defer c.configLock.Unlock()
+	c.config = &curConfig.DeepCopy().Spec
 }
 
-func (cbc *Controller) addComponentBuild(obj interface{}) {
+func (c *Controller) addComponentBuild(obj interface{}) {
 	cb := obj.(*crv1.ComponentBuild)
 	glog.V(4).Infof("Adding ComponentBuild %s", cb.Name)
-	cbc.enqueueComponentBuild(cb)
+	c.enqueueComponentBuild(cb)
 }
 
-func (cbc *Controller) updateComponentBuild(old, cur interface{}) {
+func (c *Controller) updateComponentBuild(old, cur interface{}) {
 	oldCb := old.(*crv1.ComponentBuild)
 	curCb := cur.(*crv1.ComponentBuild)
 	glog.V(4).Infof("Updating ComponentBuild %s", oldCb.Name)
-	cbc.enqueueComponentBuild(curCb)
+	c.enqueueComponentBuild(curCb)
 }
 
 // addJob enqueues the ComponentBuild that manages a Job when the Job is created.
-func (cbc *Controller) addJob(obj interface{}) {
-	j := obj.(*batchv1.Job)
+func (c *Controller) addJob(obj interface{}) {
+	job := obj.(*batchv1.Job)
 
-	if j.DeletionTimestamp != nil {
+	if job.DeletionTimestamp != nil {
 		// On a restart of the controller manager, it's possible for an object to
 		// show up in a state that is already pending deletion.
-		cbc.deleteJob(j)
+		c.deleteJob(job)
 		return
 	}
 
 	// If it has a ControllerRef, that's all that matters.
-	if controllerRef := metav1.GetControllerOf(j); controllerRef != nil {
-		cb := cbc.resolveControllerRef(j.Namespace, controllerRef)
+	if controllerRef := metav1.GetControllerOf(job); controllerRef != nil {
+		cb := c.resolveControllerRef(job.Namespace, controllerRef)
 
 		// Not a ComponentBuild Job
 		if cb == nil {
 			return
 		}
 
-		glog.V(4).Infof("Job %s added.", j.Name)
-		cbc.enqueueComponentBuild(cb)
+		glog.V(4).Infof("Job %s added.", job.Name)
+		c.enqueueComponentBuild(cb)
 		return
 	}
 
@@ -173,37 +204,37 @@ func (cbc *Controller) addJob(obj interface{}) {
 // Note that a ComponentBuild Job should only ever and should always be owned by a single ComponentBuild
 // (the one referenced in its ControllerRef), so an updated job should
 // have the same controller ref for both the old and current versions.
-func (cbc *Controller) updateJob(old, cur interface{}) {
+func (c *Controller) updateJob(old, cur interface{}) {
 	glog.V(5).Info("Got Job putComponentBuildUpdate")
-	oldJ := old.(*batchv1.Job)
-	curJ := cur.(*batchv1.Job)
-	if curJ.ResourceVersion == oldJ.ResourceVersion {
+	oldJob := old.(*batchv1.Job)
+	curJob := cur.(*batchv1.Job)
+	if curJob.ResourceVersion == oldJob.ResourceVersion {
 		// Periodic resync will send putComponentBuildUpdate events for all known jobs.
 		// Two different versions of the same job will always have different RVs.
 		glog.V(5).Info("Job ResourceVersions are the same")
 		return
 	}
 
-	curControllerRef := metav1.GetControllerOf(curJ)
-	oldControllerRef := metav1.GetControllerOf(oldJ)
+	curControllerRef := metav1.GetControllerOf(curJob)
+	oldControllerRef := metav1.GetControllerOf(oldJob)
 	controllerRefChanged := !reflect.DeepEqual(curControllerRef, oldControllerRef)
 	if controllerRefChanged {
 		// The ControllerRef was changed. If this is a ComponentBuild Job, this shouldn't happen.
-		if b := cbc.resolveControllerRef(oldJ.Namespace, oldControllerRef); b != nil {
+		if b := c.resolveControllerRef(oldJob.Namespace, oldControllerRef); b != nil {
 			// FIXME: send error event here, this should not happen
 		}
 	}
 
 	// If it has a ControllerRef, that's all that matters.
 	if curControllerRef != nil {
-		cb := cbc.resolveControllerRef(curJ.Namespace, curControllerRef)
+		cb := c.resolveControllerRef(curJob.Namespace, curControllerRef)
 
 		// Not a ComponentBuild Job
 		if cb == nil {
 			return
 		}
 
-		cbc.enqueueComponentBuild(cb)
+		c.enqueueComponentBuild(cb)
 		return
 	}
 
@@ -217,8 +248,8 @@ func (cbc *Controller) updateJob(old, cur interface{}) {
 // Note that this should never really happen. ComponentBuild Jobs should not
 // be getting deleted. But if they do, we should write a warn event
 // and putComponentBuildUpdate the ComponentBuild.
-func (cbc *Controller) deleteJob(obj interface{}) {
-	j, ok := obj.(*batchv1.Job)
+func (c *Controller) deleteJob(obj interface{}) {
+	job, ok := obj.(*batchv1.Job)
 
 	// When a delete is dropped, the relist will notice a pod in the store not
 	// in the list, leading to the insertion of a tombstone object which contains
@@ -229,122 +260,91 @@ func (cbc *Controller) deleteJob(obj interface{}) {
 			runtime.HandleError(fmt.Errorf("couldn't get object from tombstone %#v", obj))
 			return
 		}
-		j, ok = tombstone.Obj.(*batchv1.Job)
+		job, ok = tombstone.Obj.(*batchv1.Job)
 		if !ok {
 			runtime.HandleError(fmt.Errorf("tombstone contained object that is not a Job %#v", obj))
 			return
 		}
 	}
 
-	controllerRef := metav1.GetControllerOf(j)
+	controllerRef := metav1.GetControllerOf(job)
 	if controllerRef == nil {
 		// No controller should care about orphans being deleted.
 		return
 	}
 
-	cb := cbc.resolveControllerRef(j.Namespace, controllerRef)
+	build := c.resolveControllerRef(job.Namespace, controllerRef)
 
 	// Not a ComponentBuild job
-	if cb == nil {
+	if build == nil {
 		return
 	}
 
-	glog.V(4).Infof("Job %s deleted.", j.Name)
-	cbc.enqueueComponentBuild(cb)
+	glog.V(4).Infof("Job %s deleted.", job.Name)
+	c.enqueueComponentBuild(build)
 }
 
-func (cbc *Controller) enqueueComponentBuild(cBuild *crv1.ComponentBuild) {
+func (c *Controller) enqueueComponentBuild(cBuild *crv1.ComponentBuild) {
 	key, err := cache.DeletionHandlingMetaNamespaceKeyFunc(cBuild)
 	if err != nil {
 		runtime.HandleError(fmt.Errorf("Couldn't get key for object %#v: %v", cBuild, err))
 		return
 	}
 
-	cbc.queue.Add(key)
+	c.queue.Add(key)
 }
 
 // resolveControllerRef returns the controller referenced by a ControllerRef,
 // or nil if the ControllerRef could not be resolved to a matching controller
 // of the correct Kind.
-func (cbc *Controller) resolveControllerRef(namespace string, controllerRef *metav1.OwnerReference) *crv1.ComponentBuild {
+func (c *Controller) resolveControllerRef(namespace string, controllerRef *metav1.OwnerReference) *crv1.ComponentBuild {
 	// We can't look up by Name, so look up by Name and then verify Name.
 	// Don't even try to look up by Name if it's the wrong Kind.
 	if controllerRef.Kind != controllerKind.Kind {
 		return nil
 	}
 
-	cb, err := cbc.componentBuildLister.ComponentBuilds(namespace).Get(controllerRef.Name)
+	build, err := c.componentBuildLister.ComponentBuilds(namespace).Get(controllerRef.Name)
 	if err != nil {
 		return nil
 	}
 
-	if cb.UID != controllerRef.UID {
+	if build.UID != controllerRef.UID {
 		// The controller we found with this Name is not the same one that the
 		// ControllerRef points to.
 		return nil
 	}
-	return cb
+	return build
 }
 
-func (cbc *Controller) Run(workers int, stopCh <-chan struct{}) {
-	// don't let panics crash the process
-	defer runtime.HandleCrash()
-	// make sure the work queue is shutdown which will trigger workers to end
-	defer cbc.queue.ShutDown()
-
-	glog.Infof("Starting component-build controller")
-	defer glog.Infof("Shutting down component-build controller")
-
-	// wait for your secondary caches to fill before starting your work
-	if !cache.WaitForCacheSync(stopCh, cbc.configListerSynced, cbc.componentBuildListerSynced, cbc.jobListerSynced) {
-		return
-	}
-
-	glog.V(4).Info("Caches synced. Waiting for config to be set")
-
-	// wait for config to be set
-	<-cbc.configSetChan
-
-	// start up your worker threads based on threadiness.  Some controllers
-	// have multiple kinds of workers
-	for i := 0; i < workers; i++ {
-		// runWorker will loop until "something bad" happens.  The .Until will
-		// then rekick the worker after one second
-		go wait.Until(cbc.runWorker, time.Second, stopCh)
-	}
-
-	// wait until we're told to stop
-	<-stopCh
-}
-
-func (cbc *Controller) runWorker() {
+func (c *Controller) runWorker() {
 	// hot loop until we're told to stop.  processNextWorkItem will
 	// automatically wait until there's work available, so we don't worry
 	// about secondary waits
-	for cbc.processNextWorkItem() {
+	for c.processNextWorkItem() {
 	}
 }
 
 // processNextWorkItem deals with one key off the queue.  It returns false
 // when it's time to quit.
-func (cbc *Controller) processNextWorkItem() bool {
+func (c *Controller) processNextWorkItem() bool {
 	// pull the next work item from queue.  It should be a key we use to lookup
 	// something in a cache
-	key, quit := cbc.queue.Get()
+	key, quit := c.queue.Get()
 	if quit {
 		return false
 	}
 	// you always have to indicate to the queue that you've completed a piece of
 	// work
-	defer cbc.queue.Done(key)
+	defer c.queue.Done(key)
 
 	// do your work on the key.  This method will contains your "do stuff" logic
-	err := cbc.syncHandler(key.(string))
+	err := c.syncHandler(key.(string))
 	if err == nil {
 		// if you had no error, tell the queue to stop tracking history for your
 		// key. This will reset things like failure counts for per-item rate
 		// limiting
-		cbc.queue.Forget(key)
+		c.queue.Forget(key)
 		return true
 	}
 
@@ -358,14 +358,14 @@ func (cbc *Controller) processNextWorkItem() bool {
 	// (they're probably still not going to work right away) and overall
 	// controller protection (everything I've done is broken, this controller
 	// needs to calm down or it can starve other useful work) cases.
-	cbc.queue.AddRateLimited(key)
+	c.queue.AddRateLimited(key)
 
 	return true
 }
 
 // syncComponentBuild will sync the ComponentBuild with the given key.
 // This function is not meant to be invoked concurrently with the same key.
-func (cbc *Controller) syncComponentBuild(key string) error {
+func (c *Controller) syncComponentBuild(key string) error {
 	glog.Flush()
 	startTime := time.Now()
 	glog.V(4).Infof("Started syncing ComponentBuild %q (%v)", key, startTime)
@@ -377,7 +377,7 @@ func (cbc *Controller) syncComponentBuild(key string) error {
 	if err != nil {
 		return err
 	}
-	cb, err := cbc.componentBuildLister.ComponentBuilds(namespace).Get(name)
+	build, err := c.componentBuildLister.ComponentBuilds(namespace).Get(name)
 	if errors.IsNotFound(err) {
 		glog.V(2).Infof("ComponentBuild %v has been deleted", key)
 		return nil
@@ -386,26 +386,23 @@ func (cbc *Controller) syncComponentBuild(key string) error {
 		return err
 	}
 
-	stateInfo, err := cbc.calculateState(cb)
+	stateInfo, err := c.calculateState(build)
 	if err != nil {
 		return err
 	}
 
-	glog.V(5).Infof("ComponentBuild %v state: %v", cb.Name, stateInfo.state)
-
-	// Deep-copy otherwise we are mutating our cache.
-	cBuildCopy := cb.DeepCopy()
+	glog.V(5).Infof("ComponentBuild %v state: %v", key, stateInfo.state)
 
 	switch stateInfo.state {
-	case cBuildStateJobNotCreated:
-		return cbc.syncJoblessComponentBuild(cBuildCopy)
-	case cBuildStateJobSucceeded:
-		return cbc.syncSuccessfulComponentBuild(cBuildCopy, stateInfo.job)
-	case cBuildStateJobFailed:
-		return cbc.syncFailedComponentBuild(cBuildCopy)
-	case cBuildStateJobRunning:
-		return cbc.syncUnfinishedComponentBuild(cBuildCopy, stateInfo.job)
+	case stateJobNotCreated:
+		return c.syncJoblessComponentBuild(build)
+	case stateJobSucceeded:
+		return c.syncSuccessfulComponentBuild(build, stateInfo.job)
+	case stateJobFailed:
+		return c.syncFailedComponentBuild(build)
+	case stateJobRunning:
+		return c.syncUnfinishedComponentBuild(build, stateInfo.job)
 	default:
-		panic("unreachable")
+		return fmt.Errorf("ComponentBuild %v in unexpected state %v", key, stateInfo.state)
 	}
 }

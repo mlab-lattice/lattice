@@ -10,72 +10,65 @@ import (
 	"github.com/golang/glog"
 )
 
-// Warning: syncJoblessComponentBuild mutates cBuild. Please do not pass in a pointer to a ComponentBuild
-// from the shared cache.
-func (cbc *Controller) syncJoblessComponentBuild(cb *crv1.ComponentBuild) error {
-	j, err := cbc.getBuildJob(cb)
+func (c *Controller) syncJoblessComponentBuild(build *crv1.ComponentBuild) error {
+	job, err := c.createNewJob(build)
 	if err != nil {
 		return err
 	}
 
-	jResp, err := cbc.kubeClient.BatchV1().Jobs(cb.Namespace).Create(j)
-	if err != nil {
-		// FIXME: send warn event
-		return err
-	}
-
-	glog.V(4).Infof("Created Job %s", jResp.Name)
+	glog.V(4).Infof("Created Job %s", job.Name)
 	// FIXME: send normal event
-	return cbc.syncUnfinishedComponentBuild(cb, jResp)
+	return c.syncUnfinishedComponentBuild(build, job)
 }
 
-// Warning: syncSuccessfulComponentBuild mutates cBuild. Please do not pass in a pointer to a ComponentBuild
-// from the shared cache.
-func (cbc *Controller) syncSuccessfulComponentBuild(cb *crv1.ComponentBuild, j *batchv1.Job) error {
-	newArtifacts := &crv1.ComponentBuildArtifacts{
+func (c *Controller) syncSuccessfulComponentBuild(build *crv1.ComponentBuild, j *batchv1.Job) error {
+	artifacts := &crv1.ComponentBuildArtifacts{
 		DockerImageFQN: j.Annotations[jobDockerFqnAnnotationKey],
 	}
 
-	if reflect.DeepEqual(cb.Status.State, crv1.ComponentBuildStateSucceeded) && reflect.DeepEqual(cb.Spec.Artifacts, newArtifacts) {
+	if reflect.DeepEqual(build.Status.State, crv1.ComponentBuildStateSucceeded) && reflect.DeepEqual(build.Status.Artifacts, artifacts) {
 		return nil
 	}
 
-	cb.Status.State = crv1.ComponentBuildStateSucceeded
-	cb.Spec.Artifacts = newArtifacts
+	status := build.Status.DeepCopy()
 
-	return cbc.putComponentBuildUpdate(cb)
+	status.State = crv1.ComponentBuildStateSucceeded
+	status.Artifacts = artifacts
+
+	_, err := c.updateComponentBuildStatus(build, *status)
+	return err
 }
 
-// Warning: updateStatusToSucceeded mutates cBuild. Please do not pass in a pointer to a ComponentBuild
-// from the shared cache.
-func (cbc *Controller) syncFailedComponentBuild(cb *crv1.ComponentBuild) error {
-	return cbc.updateComponentBuildState(cb, crv1.ComponentBuildStateFailed)
+func (c *Controller) syncFailedComponentBuild(cb *crv1.ComponentBuild) error {
+	_, err := c.updateComponentBuildState(cb, crv1.ComponentBuildStateFailed)
+	return err
 }
 
-// Warning: syncUnfinishedComponentBuild mutates cBuild. Please do not pass in a pointer to a ComponentBuild
-// from the shared cache.
-func (cbc *Controller) syncUnfinishedComponentBuild(cb *crv1.ComponentBuild, j *batchv1.Job) error {
+func (c *Controller) syncUnfinishedComponentBuild(cb *crv1.ComponentBuild, j *batchv1.Job) error {
 	// The Job Pods have been able to be scheduled, so the ComponentBuild is "running" even though
 	// a Job Pod may not currently be active.
 	if j.Status.Active > 0 || j.Status.Failed > 0 {
-		return cbc.updateComponentBuildState(cb, crv1.ComponentBuildStateRunning)
+		_, err := c.updateComponentBuildState(cb, crv1.ComponentBuildStateRunning)
+		return err
 	}
 
-	return cbc.updateComponentBuildState(cb, crv1.ComponentBuildStateQueued)
-}
-
-// Warning: putComponentBuildStatusUpdate mutates cBuild. Please do not pass in a pointer to a ComponentBuild
-// from the shared cache.
-func (cbc *Controller) updateComponentBuildState(cb *crv1.ComponentBuild, newState crv1.ComponentBuildState) error {
-	if reflect.DeepEqual(cb.Status.State, newState) {
-		return nil
-	}
-
-	cb.Status.State = newState
-	return cbc.putComponentBuildUpdate(cb)
-}
-
-func (cbc *Controller) putComponentBuildUpdate(cb *crv1.ComponentBuild) error {
-	_, err := cbc.latticeClient.LatticeV1().ComponentBuilds(cb.Namespace).Update(cb)
+	_, err := c.updateComponentBuildState(cb, crv1.ComponentBuildStateQueued)
 	return err
+}
+
+func (c *Controller) updateComponentBuildState(build *crv1.ComponentBuild, state crv1.ComponentBuildState) (*crv1.ComponentBuild, error) {
+	status := build.Status.DeepCopy()
+	status.State = state
+	return c.updateComponentBuildStatus(build, *status)
+}
+
+func (c *Controller) updateComponentBuildStatus(build *crv1.ComponentBuild, status crv1.ComponentBuildStatus) (*crv1.ComponentBuild, error) {
+	if reflect.DeepEqual(build.Status, status) {
+		return build, nil
+	}
+
+	// Copy so the shared cache isn't mutated
+	build = build.DeepCopy()
+	build.Status = status
+	return c.latticeClient.LatticeV1().ComponentBuilds(build.Namespace).Update(build)
 }

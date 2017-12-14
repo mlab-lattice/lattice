@@ -9,10 +9,10 @@ import (
 type cBuildState string
 
 const (
-	cBuildStateJobNotCreated cBuildState = "job-not-created"
-	cBuildStateJobRunning    cBuildState = "job-running"
-	cBuildStateJobSucceeded  cBuildState = "job-succeeded"
-	cBuildStateJobFailed     cBuildState = "job-failed"
+	stateJobNotCreated cBuildState = "job-not-created"
+	stateJobRunning    cBuildState = "job-running"
+	stateJobSucceeded  cBuildState = "job-succeeded"
+	stateJobFailed     cBuildState = "job-failed"
 )
 
 type cBuildStateInfo struct {
@@ -20,8 +20,8 @@ type cBuildStateInfo struct {
 	job   *batchv1.Job
 }
 
-func (cbc *Controller) calculateState(cb *crv1.ComponentBuild) (*cBuildStateInfo, error) {
-	j, err := cbc.getJobForBuild(cb)
+func (c *Controller) calculateState(cb *crv1.ComponentBuild) (*cBuildStateInfo, error) {
+	j, err := c.getJobForBuild(cb)
 	if err != nil {
 		return nil, err
 	}
@@ -30,7 +30,7 @@ func (cbc *Controller) calculateState(cb *crv1.ComponentBuild) (*cBuildStateInfo
 	// considered successful or should a new Job be spun up? Right now a new Job will be spun up.
 	if j == nil {
 		stateInfo := &cBuildStateInfo{
-			state: cBuildStateJobNotCreated,
+			state: stateJobNotCreated,
 		}
 		return stateInfo, nil
 	}
@@ -41,13 +41,13 @@ func (cbc *Controller) calculateState(cb *crv1.ComponentBuild) (*cBuildStateInfo
 
 	finished, succeeded := jobStatus(j)
 	if !finished {
-		stateInfo.state = cBuildStateJobRunning
+		stateInfo.state = stateJobRunning
 		return stateInfo, nil
 	}
 
-	stateInfo.state = cBuildStateJobSucceeded
+	stateInfo.state = stateJobSucceeded
 	if !succeeded {
-		stateInfo.state = cBuildStateJobFailed
+		stateInfo.state = stateJobFailed
 	}
 
 	return stateInfo, nil

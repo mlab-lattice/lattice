@@ -32,7 +32,7 @@ const (
 )
 
 // getJobForBuild uses ControllerRefManager to retrieve the Job for a ComponentBuild
-func (cbc *Controller) getJobForBuild(cb *crv1.ComponentBuild) (*batchv1.Job, error) {
+func (c *Controller) getJobForBuild(cb *crv1.ComponentBuild) (*batchv1.Job, error) {
 	selector := labels.NewSelector()
 	requirement, err := labels.NewRequirement(kubeconstants.LabelKeyComponentBuildID, selection.Equals, []string{cb.Name})
 	if err != nil {
@@ -40,7 +40,7 @@ func (cbc *Controller) getJobForBuild(cb *crv1.ComponentBuild) (*batchv1.Job, er
 	}
 
 	selector = selector.Add(*requirement)
-	jobs, err := cbc.jobLister.Jobs(cb.Namespace).List(selector)
+	jobs, err := c.jobLister.Jobs(cb.Namespace).List(selector)
 	if err != nil {
 		return nil, err
 	}
@@ -56,48 +56,57 @@ func (cbc *Controller) getJobForBuild(cb *crv1.ComponentBuild) (*batchv1.Job, er
 	return jobs[0], nil
 }
 
-func (cbc *Controller) getBuildJob(cb *crv1.ComponentBuild) (*batchv1.Job, error) {
-	// Need a consistent view of our config while generating the Job
-	cbc.configLock.RLock()
-	defer cbc.configLock.RUnlock()
-
-	name := getBuildJobName(cb)
-
-	// FIXME: get job spec for build.DockerImage as well
-	jSpec, dockerImageFqn, err := cbc.getGitRepositoryBuildJobSpec(cb)
+func (c *Controller) createNewJob(build *crv1.ComponentBuild) (*batchv1.Job, error) {
+	job, err := c.newJob(build)
 	if err != nil {
 		return nil, err
 	}
 
-	j := &batchv1.Job{
-		ObjectMeta: metav1.ObjectMeta{
-			Annotations: map[string]string{
-				jobDockerFqnAnnotationKey: dockerImageFqn,
-			},
-			Labels: map[string]string{
-				kubeconstants.LabelKeyComponentBuildID: cb.Name,
-			},
-			Name:            name,
-			OwnerReferences: []metav1.OwnerReference{*metav1.NewControllerRef(cb, controllerKind)},
-		},
-		Spec: jSpec,
-	}
-	return j, nil
+	return c.kubeClient.BatchV1().Jobs(build.Namespace).Create(job)
 }
 
-func getBuildJobName(cb *crv1.ComponentBuild) string {
+func (c *Controller) newJob(build *crv1.ComponentBuild) (*batchv1.Job, error) {
+	// Need a consistent view of our config while generating the Job
+	c.configLock.RLock()
+	defer c.configLock.RUnlock()
+
+	name := jobName(build)
+
+	// FIXME: get job spec for build.DockerImage as well
+	spec, dockerImageFQN, err := c.gitRepositoryBuildJobSpec(build)
+	if err != nil {
+		return nil, err
+	}
+
+	job := &batchv1.Job{
+		ObjectMeta: metav1.ObjectMeta{
+			Annotations: map[string]string{
+				jobDockerFqnAnnotationKey: dockerImageFQN,
+			},
+			Labels: map[string]string{
+				kubeconstants.LabelKeyComponentBuildID: build.Name,
+			},
+			Name:            name,
+			OwnerReferences: []metav1.OwnerReference{*metav1.NewControllerRef(build, controllerKind)},
+		},
+		Spec: spec,
+	}
+	return job, nil
+}
+
+func jobName(cb *crv1.ComponentBuild) string {
 	return fmt.Sprintf("lattice-build-%s", cb.Name)
 }
 
-func (cbc *Controller) getGitRepositoryBuildJobSpec(cb *crv1.ComponentBuild) (batchv1.JobSpec, string, error) {
-	buildContainer, dockerImageFQN, err := cbc.getBuildContainer(cb)
+func (c *Controller) gitRepositoryBuildJobSpec(build *crv1.ComponentBuild) (batchv1.JobSpec, string, error) {
+	buildContainer, dockerImageFQN, err := c.getBuildContainer(build)
 	if err != nil {
 		return batchv1.JobSpec{}, "", err
 	}
 
-	name := getBuildJobName(cb)
+	name := jobName(build)
 
-	provider, err := crv1.GetProviderFromConfigSpec(cbc.config)
+	provider, err := crv1.GetProviderFromConfigSpec(c.config)
 	if err != nil {
 		return batchv1.JobSpec{}, "", err
 	}
@@ -109,7 +118,7 @@ func (cbc *Controller) getGitRepositoryBuildJobSpec(cb *crv1.ComponentBuild) (ba
 	case constants.ProviderAWS:
 		volumeHostPathPrefix = workingDirectoryVolumeHostPathPrefixCloud
 	default:
-		panic(fmt.Sprintf("unsupported provider: %s", provider))
+		return batchv1.JobSpec{}, "", fmt.Errorf("unsupported provider: %s", provider)
 	}
 
 	workingDirectoryVolumeSource := corev1.VolumeSource{
@@ -118,15 +127,15 @@ func (cbc *Controller) getGitRepositoryBuildJobSpec(cb *crv1.ComponentBuild) (ba
 		},
 	}
 
-	// FIXME: add build node affinity for cloud case
 	var zero int32
-	jobSpec := batchv1.JobSpec{
+	spec := batchv1.JobSpec{
+		// Only †ry to run the build once
 		BackoffLimit: &zero,
 		Template: corev1.PodTemplateSpec{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: name,
 				Labels: map[string]string{
-					kubeconstants.LabelKeyComponentBuildID: cb.Name,
+					kubeconstants.LabelKeyComponentBuildID: build.Name,
 				},
 			},
 			Spec: corev1.PodSpec{
@@ -152,22 +161,27 @@ func (cbc *Controller) getGitRepositoryBuildJobSpec(cb *crv1.ComponentBuild) (ba
 				ServiceAccountName: kubeconstants.ServiceAccountComponentBuilder,
 				RestartPolicy:      corev1.RestartPolicyNever,
 				DNSPolicy:          corev1.DNSDefault,
+				Affinity: &corev1.Affinity{
+					NodeAffinity: &corev1.NodeAffinity{
+						RequiredDuringSchedulingIgnoredDuringExecution: &kubeconstants.NodeSelectorBuildNode,
+					},
+				},
 			},
 		},
 	}
 
-	return jobSpec, dockerImageFQN, nil
+	return spec, dockerImageFQN, nil
 }
 
-func (cbc *Controller) getBuildContainer(cb *crv1.ComponentBuild) (*corev1.Container, string, error) {
+func (c *Controller) getBuildContainer(cb *crv1.ComponentBuild) (*corev1.Container, string, error) {
 	buildJSON, err := json.Marshal(&cb.Spec.BuildDefinitionBlock)
 	if err != nil {
 		return nil, "", err
 	}
 
-	repo := cbc.config.ComponentBuild.DockerArtifact.Repository
+	repo := c.config.ComponentBuild.DockerArtifact.Repository
 	tag := cb.Annotations[kubeconstants.AnnotationKeyComponentBuildDefinitionHash]
-	if cbc.config.ComponentBuild.DockerArtifact.RepositoryPerImage {
+	if c.config.ComponentBuild.DockerArtifact.RepositoryPerImage {
 		repo = cb.Annotations[kubeconstants.AnnotationKeyComponentBuildDefinitionHash]
 		tag = fmt.Sprint(time.Now().Unix())
 	}
@@ -175,17 +189,17 @@ func (cbc *Controller) getBuildContainer(cb *crv1.ComponentBuild) (*corev1.Conta
 	args := []string{
 		"--component-build-id", cb.Name,
 		"--component-build-definition", string(buildJSON),
-		"--docker-registry", cbc.config.ComponentBuild.DockerArtifact.Registry,
+		"--docker-registry", c.config.ComponentBuild.DockerArtifact.Registry,
 		"--docker-repository", repo,
 		"--docker-tag", tag,
 		"--work-directory", jobWorkingDirectory,
 	}
 
-	if cbc.config.ComponentBuild.DockerArtifact.Push {
+	if c.config.ComponentBuild.DockerArtifact.Push {
 		args = append(args, "--docker-push")
 	}
 
-	provider, err := crv1.GetProviderFromConfigSpec(cbc.config)
+	provider, err := crv1.GetProviderFromConfigSpec(c.config)
 	if err != nil {
 		return nil, "", err
 	}
@@ -196,17 +210,17 @@ func (cbc *Controller) getBuildContainer(cb *crv1.ComponentBuild) (*corev1.Conta
 	case constants.ProviderAWS:
 		args = append(args, "--docker-registry-auth-type", constants.DockerRegistryAuthAWSEC2Role)
 	default:
-		panic(fmt.Sprintf("unsupported provider: %s", provider))
+		return nil, "", fmt.Errorf("unsupported provider: %s", provider)
 	}
 
 	buildContainer := &corev1.Container{
 		Name:  "build",
-		Image: cbc.config.ComponentBuild.Builder.Image,
+		Image: c.config.ComponentBuild.Builder.Image,
 		Args:  args,
 		Env: []corev1.EnvVar{
 			{
 				Name:  kubeconstants.EnvVarNameDockerAPIVersion,
-				Value: cbc.config.ComponentBuild.Builder.DockerAPIVersion,
+				Value: c.config.ComponentBuild.Builder.DockerAPIVersion,
 			},
 		},
 		VolumeMounts: []corev1.VolumeMount{
@@ -223,7 +237,7 @@ func (cbc *Controller) getBuildContainer(cb *crv1.ComponentBuild) (*corev1.Conta
 
 	dockerImageFQN := fmt.Sprintf(
 		"%v/%v:%v",
-		cbc.config.ComponentBuild.DockerArtifact.Registry,
+		c.config.ComponentBuild.DockerArtifact.Registry,
 		repo,
 		tag,
 	)
