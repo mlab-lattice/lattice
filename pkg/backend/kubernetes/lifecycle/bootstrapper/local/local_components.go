@@ -1,6 +1,7 @@
 package local
 
 import (
+	"fmt"
 
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/constants"
 	kubeutil "github.com/mlab-lattice/system/pkg/backend/kubernetes/util/kubernetes"
@@ -12,6 +13,9 @@ import (
 )
 
 func (b *DefaultBootstrapper) seedDNS() ([]interface{}, error) {
+	if !b.Options.DryRun {
+		fmt.Println("Seeding local DNS server...")
+	}
 
 	// Create some constants to refer to my image TBD where they will actually place
 	my_const := "value"
