@@ -12,10 +12,10 @@ import (
 type state string
 
 const (
-	stateHasFailedCBuilds                 state = "has-failed-cbuilds"
-	stateHasOnlyRunningOrSucceededCBuilds state = "has-only-succeeded-or-running-cbuilds"
-	stateNoFailuresNeedsNewCBuilds        state = "no-failures-needs-new-cbuilds"
-	stateAllCBuildsSucceeded              state = "all-cbuilds-succeeded"
+	stateHasFailedComponentBuilds                 state = "has-failed-component-builds"
+	stateHasOnlyRunningOrSucceededComponentBuilds state = "has-only-succeeded-or-running-component-builds"
+	stateNoFailuresNeedsNewComponentBuilds        state = "no-failures-needs-new-component-builds"
+	stateAllComponentBuildsSucceeded              state = "all-component-builds-succeeded"
 )
 
 type stateInfo struct {
@@ -26,6 +26,10 @@ type stateInfo struct {
 	failedComponentBuilds     map[string]*crv1.ComponentBuild
 	needsNewComponentBuilds   []string
 
+	// Maps a component's name to the Name of the ComponentBuild that's responsible for it
+	componentBuilds map[string]string
+
+	// Maps a ComponentBuild.Name to its ComponentBuild.Status
 	componentBuildStatuses map[string]crv1.ComponentBuildStatus
 }
 
@@ -35,6 +39,7 @@ func (c *Controller) calculateState(build *crv1.ServiceBuild) (stateInfo, error)
 	failedComponentBuilds := map[string]*crv1.ComponentBuild{}
 	var needsNewComponentBuilds []string
 
+	componentBuilds := map[string]string{}
 	componentBuildStatuses := map[string]crv1.ComponentBuildStatus{}
 
 	for component := range build.Spec.Components {
@@ -60,6 +65,7 @@ func (c *Controller) calculateState(build *crv1.ServiceBuild) (stateInfo, error)
 			return stateInfo{}, err
 		}
 
+		componentBuilds[component] = componentBuild.Name
 		componentBuildStatuses[componentBuild.Name] = componentBuild.Status
 
 		switch componentBuild.Status.State {
@@ -80,23 +86,26 @@ func (c *Controller) calculateState(build *crv1.ServiceBuild) (stateInfo, error)
 		activeComponentBuilds:     activeComponentBuilds,
 		failedComponentBuilds:     failedComponentBuilds,
 		needsNewComponentBuilds:   needsNewComponentBuilds,
+
+		componentBuilds:        componentBuilds,
+		componentBuildStatuses: componentBuildStatuses,
 	}
 
 	if len(failedComponentBuilds) > 0 {
-		stateInfo.state = stateHasFailedCBuilds
+		stateInfo.state = stateHasFailedComponentBuilds
 		return stateInfo, nil
 	}
 
 	if len(needsNewComponentBuilds) > 0 {
-		stateInfo.state = stateNoFailuresNeedsNewCBuilds
+		stateInfo.state = stateNoFailuresNeedsNewComponentBuilds
 		return stateInfo, nil
 	}
 
 	if len(activeComponentBuilds) > 0 {
-		stateInfo.state = stateHasOnlyRunningOrSucceededCBuilds
+		stateInfo.state = stateHasOnlyRunningOrSucceededComponentBuilds
 		return stateInfo, nil
 	}
 
-	stateInfo.state = stateAllCBuildsSucceeded
+	stateInfo.state = stateAllComponentBuildsSucceeded
 	return stateInfo, nil
 }

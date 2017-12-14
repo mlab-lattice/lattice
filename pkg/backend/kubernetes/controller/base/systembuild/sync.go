@@ -1,7 +1,6 @@
 package systembuild
 
 import (
-	"fmt"
 	"reflect"
 	"sort"
 
@@ -9,69 +8,10 @@ import (
 	"github.com/mlab-lattice/system/pkg/definition/tree"
 )
 
-// Warning: syncServiceBuildStates mutates svcb. Please do not pass in a pointer to a ComponentBuild
-// from the shared cache.
-func (sbc *Controller) syncServiceBuildStates(sysb *crv1.SystemBuild, info *sysBuildStateInfo) error {
-	for service, svcb := range info.successfulSvcbs {
-		err := updateServiceBuildInfoState(sysb, service, svcb)
-		if err != nil {
-			return err
-		}
-	}
-
-	for service, svcb := range info.activeSvcbs {
-		err := updateServiceBuildInfoState(sysb, service, svcb)
-		if err != nil {
-			return err
-		}
-	}
-
-	for service, svcb := range info.failedSvcbs {
-		err := updateServiceBuildInfoState(sysb, service, svcb)
-		if err != nil {
-			return err
-		}
-	}
-
-	result, err := sbc.putSystemBuildUpdate(sysb)
-	if err != nil {
-		return err
-	}
-	*sysb = *result
-	return nil
-}
-
-func updateServiceBuildInfoState(sysb *crv1.SystemBuild, service tree.NodePath, svcb *crv1.ServiceBuild) error {
-	serviceInfo, ok := sysb.Spec.Services[service]
-	if !ok {
-		return fmt.Errorf("SystemBuild %v Spec.Services did not contain expected service %v", svcb.Name, service)
-	}
-
-	serviceInfo.State = &svcb.Status.State
-	if serviceInfo.Components == nil {
-		serviceInfo.Components = map[string]crv1.SystemBuildStatusServiceInfoComponentInfo{}
-	}
-
-	for component, cbInfo := range svcb.Spec.Components {
-		componentInfo := crv1.SystemBuildStatusServiceInfoComponentInfo{
-			Name:              cbInfo.Name,
-			Status:            cbInfo.Status,
-			LastObservedPhase: cbInfo.LastObservedPhase,
-			FailureInfo:       cbInfo.FailureInfo,
-		}
-		serviceInfo.Components[component] = componentInfo
-	}
-
-	sysb.Spec.Services[service] = serviceInfo
-	return nil
-}
-
-// Warning: syncFailedServiceBuild mutates sysb. Do not pass in a pointer to a SystemBuild
-// from the shared cache.
-func (sbc *Controller) syncFailedSystemBuild(sysb *crv1.SystemBuild, failedSvcbs map[tree.NodePath]*crv1.ServiceBuild) error {
+func (c *Controller) syncFailedSystemBuild(build *crv1.SystemBuild, stateInfo stateInfo) error {
 	// Sort the ServiceBuild paths so the Status.Message is the same for the same failed ServiceBuilds
-	failedServices := []tree.NodePath{}
-	for service := range failedSvcbs {
+	var failedServices []tree.NodePath
+	for service := range stateInfo.failedServiceBuilds {
 		failedServices = append(failedServices, service)
 	}
 
@@ -87,21 +27,20 @@ func (sbc *Controller) syncFailedSystemBuild(sysb *crv1.SystemBuild, failedSvcbs
 		message = message + " " + string(service)
 	}
 
-	newStatus := crv1.SystemBuildStatus{
-		State:   crv1.SystemBuildStateFailed,
-		Message: message,
-	}
-
-	_, err := sbc.putSystemBuildStatusUpdate(sysb, newStatus)
+	_, err := c.updateSystemBuildStatus(
+		build,
+		crv1.SystemBuildStateFailed,
+		message,
+		stateInfo.serviceBuilds,
+		stateInfo.serviceBuildStatuses,
+	)
 	return err
 }
 
-// Warning: syncRunningSystemBuild mutates sysb. Do not pass in a pointer to a SystemBuild
-// from the shared cache.
-func (sbc *Controller) syncRunningSystemBuild(sysb *crv1.SystemBuild, activeSvcbs map[tree.NodePath]*crv1.ServiceBuild) error {
+func (c *Controller) syncRunningSystemBuild(build *crv1.SystemBuild, stateInfo stateInfo) error {
 	// Sort the ServiceBuild paths so the Status.Message is the same for the same failed ServiceBuilds
-	activeServices := []tree.NodePath{}
-	for service := range activeSvcbs {
+	var activeServices []tree.NodePath
+	for service := range stateInfo.activeServiceBuilds {
 		activeServices = append(activeServices, service)
 	}
 
@@ -117,77 +56,81 @@ func (sbc *Controller) syncRunningSystemBuild(sysb *crv1.SystemBuild, activeSvcb
 		message = message + " " + string(service)
 	}
 
-	newStatus := crv1.SystemBuildStatus{
-		State:   crv1.SystemBuildStateRunning,
-		Message: message,
-	}
-
-	_, err := sbc.putSystemBuildStatusUpdate(sysb, newStatus)
+	_, err := c.updateSystemBuildStatus(
+		build,
+		crv1.SystemBuildStateRunning,
+		message,
+		stateInfo.serviceBuilds,
+		stateInfo.serviceBuildStatuses,
+	)
 	return err
 }
 
-// Warning: syncMissingServiceBuildsSystemBuild mutates sysb. Do not pass in a pointer to a SystemBuild
-// from the shared cache.
-func (sbc *Controller) syncMissingServiceBuildsSystemBuild(sysb *crv1.SystemBuild, needsNewSvcbs []tree.NodePath) error {
-	for _, service := range needsNewSvcbs {
-		svcbInfo := sysb.Spec.Services[service]
+func (c *Controller) syncMissingServiceBuildsSystemBuild(build *crv1.SystemBuild, stateInfo stateInfo) error {
+	// Copy so the shared cache isn't mutated
+	status := build.Status.DeepCopy()
+	serviceBuilds := status.ServiceBuilds
+	serviceBuildStatuses := status.ServiceBuildStatuses
 
-		// Check if we've already created a Service. If so just grab its status.
-		if svcbInfo.Name != nil {
-			svcBuildState := sbc.getServiceBuildState(sysb.Namespace, *svcbInfo.Name)
-			if svcBuildState == nil {
-				// This shouldn't happen.
-				// FIXME: send error event
-				failedState := crv1.ServiceBuildStateFailed
-				svcBuildState = &failedState
-				//sysBuild.Spec.Services[idx].Service = &failedState
-			}
-
-			svcbInfo.State = svcBuildState
-			sysb.Spec.Services[service] = svcbInfo
-			continue
-		}
+	for _, service := range stateInfo.needsNewServiceBuilds {
+		serviceInfo := build.Spec.Services[service]
 
 		// Otherwise we'll have to create a new Service.
-		svcb, err := sbc.createServiceBuild(sysb, &svcbInfo.Definition)
+		serviceBuild, err := c.createNewServiceBuild(build, service, &serviceInfo.Definition)
 		if err != nil {
 			return err
 		}
 
-		svcbInfo.Name = &(svcb.Name)
-		svcbInfo.State = &(svcb.Status.State)
-		sysb.Spec.Services[service] = svcbInfo
+		serviceBuilds[service] = serviceBuild.Name
+		serviceBuildStatuses[serviceBuild.Name] = serviceBuild.Status
 	}
 
-	_, err := sbc.putSystemBuildUpdate(sysb)
-	if err != nil {
-		return err
-	}
-
-	sbc.queue.Add(fmt.Sprintf("%v/%v", sysb.Namespace, sysb.Name))
-	return nil
-}
-
-func (sbc *Controller) syncSucceededSystemBuild(svcb *crv1.SystemBuild) error {
-	newStatus := crv1.SystemBuildStatus{
-		State: crv1.SystemBuildStateSucceeded,
-	}
-
-	_, err := sbc.putSystemBuildStatusUpdate(svcb, newStatus)
+	_, err := c.updateSystemBuildStatus(
+		build,
+		crv1.SystemBuildStateRunning,
+		"",
+		serviceBuilds,
+		serviceBuildStatuses,
+	)
 	return err
 }
 
-// Warning: putSystemBuildStatusUpdate mutates cBuild. Please do not pass in a pointer to a ComponentBuild
-// from the shared cache.
-func (sbc *Controller) putSystemBuildStatusUpdate(sysb *crv1.SystemBuild, newStatus crv1.SystemBuildStatus) (*crv1.SystemBuild, error) {
-	if reflect.DeepEqual(sysb.Status, newStatus) {
-		return sysb, nil
-	}
-
-	sysb.Status = newStatus
-	return sbc.putSystemBuildUpdate(sysb)
+func (c *Controller) syncSucceededSystemBuild(build *crv1.SystemBuild, stateInfo stateInfo) error {
+	_, err := c.updateSystemBuildStatus(
+		build,
+		crv1.SystemBuildStateSucceeded,
+		"",
+		stateInfo.serviceBuilds,
+		stateInfo.serviceBuildStatuses,
+	)
+	return err
 }
 
-func (sbc *Controller) putSystemBuildUpdate(sysb *crv1.SystemBuild) (*crv1.SystemBuild, error) {
-	return sbc.latticeClient.LatticeV1().SystemBuilds(sysb.Namespace).Update(sysb)
+func (c *Controller) putSystemBuildUpdate(sysb *crv1.SystemBuild) (*crv1.SystemBuild, error) {
+	return c.latticeClient.LatticeV1().SystemBuilds(sysb.Namespace).Update(sysb)
+}
+
+func (c *Controller) updateSystemBuildStatus(
+	build *crv1.SystemBuild,
+	state crv1.SystemBuildState,
+	message string,
+	serviceBuilds map[tree.NodePath]string,
+	serviceBuildStatuses map[string]crv1.ServiceBuildStatus,
+) (*crv1.SystemBuild, error) {
+	status := crv1.SystemBuildStatus{
+		State:                state,
+		ObservedGeneration:   build.Generation,
+		Message:              message,
+		ServiceBuilds:        serviceBuilds,
+		ServiceBuildStatuses: serviceBuildStatuses,
+	}
+
+	if reflect.DeepEqual(build.Status, status) {
+		return build, nil
+	}
+
+	// Copy so the shared cache isn't mutated
+	build = build.DeepCopy()
+	build.Status = status
+	return c.latticeClient.LatticeV1().SystemBuilds(build.Namespace).Update(build)
 }

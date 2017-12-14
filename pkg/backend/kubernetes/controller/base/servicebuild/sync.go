@@ -59,7 +59,7 @@ func (c *Controller) syncRunningServiceBuild(build *crv1.ServiceBuild, stateInfo
 
 	_, err := c.updateServiceBuildStatus(
 		build,
-		crv1.ServiceBuildStateFailed,
+		crv1.ServiceBuildStateRunning,
 		message,
 		build.Status.ComponentBuilds,
 		stateInfo.componentBuildStatuses,
@@ -68,10 +68,8 @@ func (c *Controller) syncRunningServiceBuild(build *crv1.ServiceBuild, stateInfo
 }
 
 func (c *Controller) syncMissingComponentBuildsServiceBuild(build *crv1.ServiceBuild, stateInfo stateInfo) error {
-	// Copy so the shared cache isn't mutated
-	status := build.Status.DeepCopy()
-	componentBuilds := status.ComponentBuilds
-	componentBuildStatuses := status.ComponentBuildStatuses
+	componentBuilds := stateInfo.componentBuilds
+	componentBuildStatuses := stateInfo.componentBuildStatuses
 
 	for _, component := range stateInfo.needsNewComponentBuilds {
 		componentInfo := build.Spec.Components[component]
@@ -110,6 +108,9 @@ func (c *Controller) syncMissingComponentBuildsServiceBuild(build *crv1.ServiceB
 			previousCbName = &componentBuild.Name
 		}
 
+		// TODO: there's a race here. We could create a new component build and fail before updating build.Status
+		// This shouldn't actually matter in the ComponentBuild case. On the next try, the controller would find the
+		// ComponentBuild thanks to the definition hash, and would use it anyways.
 		glog.V(4).Infof("No ComponentBuild found for %v/%v component %v", build.Namespace, build.Name, component)
 		componentBuild, err = c.createNewComponentBuild(build.Namespace, componentInfo, definitionHash, previousCbName)
 		if err != nil {
@@ -118,6 +119,7 @@ func (c *Controller) syncMissingComponentBuildsServiceBuild(build *crv1.ServiceB
 
 		glog.V(4).Infof("Created ComponentBuild %v for %v/%v component %v", componentBuild.Name, build.Namespace, build.Name, component)
 		componentBuilds[component] = componentBuild.Name
+		componentBuildStatuses[componentBuild.Name] = componentBuild.Status
 	}
 
 	_, err := c.updateServiceBuildStatus(
@@ -146,7 +148,7 @@ func (c *Controller) syncMissingComponentBuildsServiceBuild(build *crv1.ServiceB
 func (c *Controller) syncSucceededServiceBuild(build *crv1.ServiceBuild, stateInfo stateInfo) error {
 	_, err := c.updateServiceBuildStatus(
 		build,
-		crv1.ServiceBuildStateRunning,
+		crv1.ServiceBuildStateSucceeded,
 		"",
 		build.Status.ComponentBuilds,
 		stateInfo.componentBuildStatuses,

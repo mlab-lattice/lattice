@@ -77,8 +77,15 @@ type SystemBuildSpecServiceInfo struct {
 }
 
 type SystemBuildStatus struct {
-	State   SystemBuildState `json:"state"`
-	Message string           `json:"message,omitempty"`
+	State              SystemBuildState `json:"state"`
+	ObservedGeneration int64            `json:"observedGeneration"`
+	Message            string           `json:"message"`
+
+	// Maps a service path to the ServiceBuild.Name responsible for it
+	ServiceBuilds map[tree.NodePath]string `json:"serviceBuilds"`
+
+	// Maps a ServiceBuild.Name to the ServiceBuild.Status
+	ServiceBuildStatuses map[string]ServiceBuildStatus `json:"serviceBuildStatuses"`
 }
 
 type SystemBuildState string

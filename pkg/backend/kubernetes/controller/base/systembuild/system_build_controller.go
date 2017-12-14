@@ -77,136 +77,17 @@ func NewController(
 	return sbc
 }
 
-func (sbc *Controller) addSystemBuild(obj interface{}) {
-	sysb := obj.(*crv1.SystemBuild)
-	glog.V(4).Infof("Adding SystemBuild %s", sysb.Name)
-	sbc.enqueueSystemBuild(sysb)
-}
-
-func (sbc *Controller) updateSystemBuild(old, cur interface{}) {
-	oldSysb := old.(*crv1.SystemBuild)
-	curSysb := cur.(*crv1.SystemBuild)
-	glog.V(4).Infof("Updating SystemBuild %s", oldSysb.Name)
-	sbc.enqueueSystemBuild(curSysb)
-}
-
-// addServiceBuild enqueues the System that manages a Service when the Service is created.
-func (sbc *Controller) addServiceBuild(obj interface{}) {
-	svcb := obj.(*crv1.ServiceBuild)
-
-	if svcb.DeletionTimestamp != nil {
-		// We assume for now that ServiceBuilds do not get deleted.
-		// FIXME: send error event
-		return
-	}
-
-	// If it has a ControllerRef, that's all that matters.
-	if controllerRef := metav1.GetControllerOf(svcb); controllerRef != nil {
-		sysb := sbc.resolveControllerRef(svcb.Namespace, controllerRef)
-
-		// Not a SystemBuild. This shouldn't happen.
-		if sysb == nil {
-			// FIXME: send error event
-			return
-		}
-
-		glog.V(4).Infof("ServiceBuild %s added.", svcb.Name)
-		sbc.enqueueSystemBuild(sysb)
-		return
-	}
-
-	// It's an orphan. This shouldn't happen.
-	// FIXME: send error event
-}
-
-// updateServiceBuild figures out what SystemBuild manages a Service when the
-// Service is updated and enqueues them.
-func (sbc *Controller) updateServiceBuild(old, cur interface{}) {
-	glog.V(5).Info("Got ServiceBuild update")
-	oldSvcb := old.(*crv1.ServiceBuild)
-	curSvcb := cur.(*crv1.ServiceBuild)
-	if curSvcb.ResourceVersion == oldSvcb.ResourceVersion {
-		// Periodic resync will send update events for all known ServiceBuilds.
-		// Two different versions of the same job will always have different RVs.
-		glog.V(5).Info("ServiceBuild ResourceVersions are the same")
-		return
-	}
-
-	curControllerRef := metav1.GetControllerOf(curSvcb)
-	oldControllerRef := metav1.GetControllerOf(oldSvcb)
-	controllerRefChanged := !reflect.DeepEqual(curControllerRef, oldControllerRef)
-	if controllerRefChanged {
-		// This shouldn't happen
-		// FIXME: send error event
-	}
-
-	// If it has a ControllerRef, that's all that matters.
-	if curControllerRef != nil {
-		sysb := sbc.resolveControllerRef(curSvcb.Namespace, curControllerRef)
-
-		// Not a SystemBuild. This shouldn't happen.
-		if sysb == nil {
-			// FIXME: send error event
-			return
-		}
-
-		sbc.enqueueSystemBuild(sysb)
-		return
-	}
-
-	// Otherwise, it's an orphan. This should not happen.
-	// FIXME: send error event
-}
-
-// resolveControllerRef returns the controller referenced by a ControllerRef,
-// or nil if the ControllerRef could not be resolved to a matching controller
-// of the correct Kind.
-func (sbc *Controller) resolveControllerRef(namespace string, controllerRef *metav1.OwnerReference) *crv1.SystemBuild {
-	// We can't look up by Name, so look up by Name and then verify Name.
-	// Don't even try to look up by Name if it's the wrong Kind.
-	if controllerRef.Kind != controllerKind.Kind {
-		// This shouldn't happen
-		// FIXME: send error event
-		return nil
-	}
-
-	sysb, err := sbc.systemBuildLister.SystemBuilds(namespace).Get(controllerRef.Name)
-	if err != nil {
-		// This shouldn't happen.
-		// FIXME: send error event
-		return nil
-	}
-
-	if sysb.UID != controllerRef.UID {
-		// The controller we found with this Name is not the same one that the
-		// ControllerRef points to. This shouldn't happen.
-		// FIXME: send error event
-		return nil
-	}
-	return sysb
-}
-
-func (sbc *Controller) enqueue(sysb *crv1.SystemBuild) {
-	key, err := cache.DeletionHandlingMetaNamespaceKeyFunc(sysb)
-	if err != nil {
-		runtime.HandleError(fmt.Errorf("couldn't get key for object %#v: %v", sysb, err))
-		return
-	}
-
-	sbc.queue.Add(key)
-}
-
-func (sbc *Controller) Run(workers int, stopCh <-chan struct{}) {
+func (c *Controller) Run(workers int, stopCh <-chan struct{}) {
 	// don't let panics crash the process
 	defer runtime.HandleCrash()
 	// make sure the work queue is shutdown which will trigger workers to end
-	defer sbc.queue.ShutDown()
+	defer c.queue.ShutDown()
 
 	glog.Infof("Starting system-build controller")
 	defer glog.Infof("Shutting down system-build controller")
 
 	// wait for your secondary caches to fill before starting your work
-	if !cache.WaitForCacheSync(stopCh, sbc.systemBuildListerSynced, sbc.serviceBuildListerSynced) {
+	if !cache.WaitForCacheSync(stopCh, c.systemBuildListerSynced, c.serviceBuildListerSynced) {
 		return
 	}
 
@@ -217,41 +98,160 @@ func (sbc *Controller) Run(workers int, stopCh <-chan struct{}) {
 	for i := 0; i < workers; i++ {
 		// runWorker will loop until "something bad" happens.  The .Until will
 		// then rekick the worker after one second
-		go wait.Until(sbc.runWorker, time.Second, stopCh)
+		go wait.Until(c.runWorker, time.Second, stopCh)
 	}
 
 	// wait until we're told to stop
 	<-stopCh
 }
 
-func (sbc *Controller) runWorker() {
+func (c *Controller) addSystemBuild(obj interface{}) {
+	build := obj.(*crv1.SystemBuild)
+	glog.V(4).Infof("Adding SystemBuild %s", build.Name)
+	c.enqueueSystemBuild(build)
+}
+
+func (c *Controller) updateSystemBuild(old, cur interface{}) {
+	oldBuild := old.(*crv1.SystemBuild)
+	curBuild := cur.(*crv1.SystemBuild)
+	glog.V(4).Infof("Updating SystemBuild %s", oldBuild.Name)
+	c.enqueueSystemBuild(curBuild)
+}
+
+// addServiceBuild enqueues the System that manages a Service when the Service is created.
+func (c *Controller) addServiceBuild(obj interface{}) {
+	serviceBuild := obj.(*crv1.ServiceBuild)
+
+	if serviceBuild.DeletionTimestamp != nil {
+		// We assume for now that ServiceBuilds do not get deleted.
+		// FIXME: send error event
+		return
+	}
+
+	// If it has a ControllerRef, that's all that matters.
+	if controllerRef := metav1.GetControllerOf(serviceBuild); controllerRef != nil {
+		build := c.resolveControllerRef(serviceBuild.Namespace, controllerRef)
+
+		// Not a SystemBuild. This shouldn't happen.
+		if build == nil {
+			// FIXME: send error event
+			return
+		}
+
+		glog.V(4).Infof("ServiceBuild %s added.", serviceBuild.Name)
+		c.enqueueSystemBuild(build)
+		return
+	}
+
+	// It's an orphan. This shouldn't happen.
+	// FIXME: send error event
+}
+
+// updateServiceBuild figures out what SystemBuild manages a Service when the
+// Service is updated and enqueues them.
+func (c *Controller) updateServiceBuild(old, cur interface{}) {
+	glog.V(5).Info("Got ServiceBuild update")
+	oldServiceBuild := old.(*crv1.ServiceBuild)
+	curServiceBuild := cur.(*crv1.ServiceBuild)
+	if curServiceBuild.ResourceVersion == oldServiceBuild.ResourceVersion {
+		// Periodic resync will send update events for all known ServiceBuilds.
+		// Two different versions of the same job will always have different RVs.
+		glog.V(5).Info("ServiceBuild ResourceVersions are the same")
+		return
+	}
+
+	curControllerRef := metav1.GetControllerOf(curServiceBuild)
+	oldControllerRef := metav1.GetControllerOf(oldServiceBuild)
+	controllerRefChanged := !reflect.DeepEqual(curControllerRef, oldControllerRef)
+	if controllerRefChanged {
+		// This shouldn't happen
+		// FIXME: send error event
+	}
+
+	// If it has a ControllerRef, that's all that matters.
+	if curControllerRef != nil {
+		build := c.resolveControllerRef(curServiceBuild.Namespace, curControllerRef)
+
+		// Not a SystemBuild. This shouldn't happen.
+		if build == nil {
+			// FIXME: send error event
+			return
+		}
+
+		c.enqueueSystemBuild(build)
+		return
+	}
+
+	// Otherwise, it's an orphan. This should not happen.
+	// FIXME: send error event
+}
+
+// resolveControllerRef returns the controller referenced by a ControllerRef,
+// or nil if the ControllerRef could not be resolved to a matching controller
+// of the correct Kind.
+func (c *Controller) resolveControllerRef(namespace string, controllerRef *metav1.OwnerReference) *crv1.SystemBuild {
+	// We can't look up by Name, so look up by Name and then verify Name.
+	// Don't even try to look up by Name if it's the wrong Kind.
+	if controllerRef.Kind != controllerKind.Kind {
+		// This shouldn't happen
+		// FIXME: send error event
+		return nil
+	}
+
+	build, err := c.systemBuildLister.SystemBuilds(namespace).Get(controllerRef.Name)
+	if err != nil {
+		// This shouldn't happen.
+		// FIXME: send error event
+		return nil
+	}
+
+	if build.UID != controllerRef.UID {
+		// The controller we found with this Name is not the same one that the
+		// ControllerRef points to. This shouldn't happen.
+		// FIXME: send error event
+		return nil
+	}
+	return build
+}
+
+func (c *Controller) enqueue(sysb *crv1.SystemBuild) {
+	key, err := cache.DeletionHandlingMetaNamespaceKeyFunc(sysb)
+	if err != nil {
+		runtime.HandleError(fmt.Errorf("couldn't get key for object %#v: %v", sysb, err))
+		return
+	}
+
+	c.queue.Add(key)
+}
+
+func (c *Controller) runWorker() {
 	// hot loop until we're told to stop.  processNextWorkItem will
 	// automatically wait until there's work available, so we don't worry
 	// about secondary waits
-	for sbc.processNextWorkItem() {
+	for c.processNextWorkItem() {
 	}
 }
 
 // processNextWorkItem deals with one key off the queue.  It returns false
 // when it's time to quit.
-func (sbc *Controller) processNextWorkItem() bool {
+func (c *Controller) processNextWorkItem() bool {
 	// pull the next work item from queue.  It should be a key we use to lookup
 	// something in a cache
-	key, quit := sbc.queue.Get()
+	key, quit := c.queue.Get()
 	if quit {
 		return false
 	}
 	// you always have to indicate to the queue that you've completed a piece of
 	// work
-	defer sbc.queue.Done(key)
+	defer c.queue.Done(key)
 
 	// do your work on the key.  This method will contains your "do stuff" logic
-	err := sbc.syncHandler(key.(string))
+	err := c.syncHandler(key.(string))
 	if err == nil {
 		// if you had no error, tell the queue to stop tracking history for your
 		// key. This will reset things like failure counts for per-item rate
 		// limiting
-		sbc.queue.Forget(key)
+		c.queue.Forget(key)
 		return true
 	}
 
@@ -265,14 +265,14 @@ func (sbc *Controller) processNextWorkItem() bool {
 	// (they're probably still not going to work right away) and overall
 	// controller protection (everything I've done is broken, this controller
 	// needs to calm down or it can starve other useful work) cases.
-	sbc.queue.AddRateLimited(key)
+	c.queue.AddRateLimited(key)
 
 	return true
 }
 
 // syncSystemBuild will sync the SystemBuild with the given key.
 // This function is not meant to be invoked concurrently with the same key.
-func (sbc *Controller) syncSystemBuild(key string) error {
+func (c *Controller) syncSystemBuild(key string) error {
 	glog.Flush()
 	startTime := time.Now()
 	glog.V(4).Infof("Started syncing SystemBuild %q (%v)", key, startTime)
@@ -284,7 +284,8 @@ func (sbc *Controller) syncSystemBuild(key string) error {
 	if err != nil {
 		return err
 	}
-	sysb, err := sbc.systemBuildLister.SystemBuilds(namespace).Get(name)
+
+	build, err := c.systemBuildLister.SystemBuilds(namespace).Get(name)
 	if errors.IsNotFound(err) {
 		glog.V(2).Infof("SystemBuild %v has been deleted", key)
 		return nil
@@ -293,29 +294,22 @@ func (sbc *Controller) syncSystemBuild(key string) error {
 		return err
 	}
 
-	stateInfo, err := sbc.calculateState(sysb)
+	stateInfo, err := c.calculateState(build)
 	if err != nil {
 		return err
 	}
 
-	glog.V(5).Infof("SystemBuild %v state: %v", sysb.Name, stateInfo.state)
-
-	sysbCopy := sysb.DeepCopy()
-
-	err = sbc.syncServiceBuildStates(sysbCopy, stateInfo)
-	if err != nil {
-		return nil
-	}
+	glog.V(5).Infof("SystemBuild %v state: %v", key, stateInfo.state)
 
 	switch stateInfo.state {
-	case sysBuildStateHasFailedCBuilds:
-		return sbc.syncFailedSystemBuild(sysbCopy, stateInfo.failedSvcbs)
-	case sysBuildStateHasOnlyRunningOrSucceededCBuilds:
-		return sbc.syncRunningSystemBuild(sysbCopy, stateInfo.activeSvcbs)
-	case sysBuildStateNoFailuresNeedsNewCBuilds:
-		return sbc.syncMissingServiceBuildsSystemBuild(sysbCopy, stateInfo.needsNewSvcb)
-	case sysBuildStateAllCBuildsSucceeded:
-		return sbc.syncSucceededSystemBuild(sysbCopy)
+	case stateHasFailedServiceBuilds:
+		return c.syncFailedSystemBuild(build, stateInfo)
+	case stateHasOnlyRunningOrSucceededServiceBuilds:
+		return c.syncRunningSystemBuild(build, stateInfo)
+	case stateNoFailuresNeedsNewServiceBuilds:
+		return c.syncMissingServiceBuildsSystemBuild(build, stateInfo)
+	case stateAllServiceBuildsSucceeded:
+		return c.syncSucceededSystemBuild(build, stateInfo)
 	default:
 		panic("unreachable")
 	}

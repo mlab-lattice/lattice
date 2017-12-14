@@ -272,16 +272,16 @@ func (c *Controller) syncServiceBuild(key string) error {
 		return err
 	}
 
-	glog.V(5).Infof("ServiceBuild %v state: %v", build.Name, stateInfo.state)
+	glog.V(5).Infof("ServiceBuild %v state: %v", key, stateInfo.state)
 
 	switch stateInfo.state {
-	case stateHasFailedCBuilds:
+	case stateHasFailedComponentBuilds:
 		return c.syncFailedServiceBuild(build, stateInfo)
-	case stateHasOnlyRunningOrSucceededCBuilds:
+	case stateHasOnlyRunningOrSucceededComponentBuilds:
 		return c.syncRunningServiceBuild(build, stateInfo)
-	case stateNoFailuresNeedsNewCBuilds:
+	case stateNoFailuresNeedsNewComponentBuilds:
 		return c.syncMissingComponentBuildsServiceBuild(build, stateInfo)
-	case stateAllCBuildsSucceeded:
+	case stateAllComponentBuildsSucceeded:
 		return c.syncSucceededServiceBuild(build, stateInfo)
 	default:
 		return fmt.Errorf("ServiceBuild %v in unexpected state %v", key, stateInfo.state)
