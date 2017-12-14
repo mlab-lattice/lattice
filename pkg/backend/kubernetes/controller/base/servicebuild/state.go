@@ -4,78 +4,99 @@ import (
 	"fmt"
 
 	crv1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
+
+	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-type svcBuildState string
+type state string
 
 const (
-	svcBuildStateHasFailedCBuilds                 svcBuildState = "has-failed-cbuilds"
-	svcBuildStateHasOnlyRunningOrSucceededCBuilds svcBuildState = "has-only-succeeded-or-running-cbuilds"
-	svcBuildStateNoFailuresNeedsNewCBuilds        svcBuildState = "no-failures-needs-new-cbuilds"
-	svcBuildStateAllCBuildsSucceeded              svcBuildState = "all-cbuilds-succeeded"
+	stateHasFailedCBuilds                 state = "has-failed-cbuilds"
+	stateHasOnlyRunningOrSucceededCBuilds state = "has-only-succeeded-or-running-cbuilds"
+	stateNoFailuresNeedsNewCBuilds        state = "no-failures-needs-new-cbuilds"
+	stateAllCBuildsSucceeded              state = "all-cbuilds-succeeded"
 )
 
-type svcBuildStateInfo struct {
-	state svcBuildState
+type stateInfo struct {
+	state state
 
-	successfulCbs map[string]*crv1.ComponentBuild
-	activeCbs     map[string]*crv1.ComponentBuild
-	failedCbs     map[string]*crv1.ComponentBuild
-	needsNewCb    []string
+	successfulComponentBuilds map[string]*crv1.ComponentBuild
+	activeComponentBuilds     map[string]*crv1.ComponentBuild
+	failedComponentBuilds     map[string]*crv1.ComponentBuild
+	needsNewComponentBuilds   []string
+
+	componentBuildStatuses map[string]crv1.ComponentBuildStatus
 }
 
-func (sbc *Controller) calculateState(svcb *crv1.ServiceBuild) (*svcBuildStateInfo, error) {
-	successfulCbs := map[string]*crv1.ComponentBuild{}
-	activeCbs := map[string]*crv1.ComponentBuild{}
-	failedCbs := map[string]*crv1.ComponentBuild{}
-	needsNewCbs := []string{}
+func (c *Controller) calculateState(build *crv1.ServiceBuild) (stateInfo, error) {
+	successfulComponentBuilds := map[string]*crv1.ComponentBuild{}
+	activeComponentBuilds := map[string]*crv1.ComponentBuild{}
+	failedComponentBuilds := map[string]*crv1.ComponentBuild{}
+	var needsNewComponentBuilds []string
 
-	for component, cbInfo := range svcb.Spec.Components {
-		cb, exists, err := sbc.getComponentBuildFromInfo(&cbInfo, svcb.Namespace)
-		if err != nil {
-			return nil, err
-		}
+	componentBuildStatuses := map[string]crv1.ComponentBuildStatus{}
 
-		if !exists {
-			needsNewCbs = append(needsNewCbs, component)
+	for component := range build.Spec.Components {
+		componentBuildName, ok := build.Status.ComponentBuilds[component]
+		if !ok {
+			needsNewComponentBuilds = append(needsNewComponentBuilds, component)
 			continue
 		}
 
-		switch cb.Status.State {
+		componentBuild, err := c.latticeClient.LatticeV1().ComponentBuilds(build.Namespace).Get(componentBuildName, metav1.GetOptions{})
+		if err != nil {
+			if errors.IsNotFound(err) {
+				err := fmt.Errorf(
+					"ServiceBuild %v/%v has ComponentBuild.Name %v for component %v, but ComponentBuild does not exist",
+					build.Namespace,
+					build.Name,
+					componentBuildName,
+					component,
+				)
+				return stateInfo{}, err
+			}
+
+			return stateInfo{}, err
+		}
+
+		componentBuildStatuses[componentBuild.Name] = componentBuild.Status
+
+		switch componentBuild.Status.State {
 		case crv1.ComponentBuildStatePending, crv1.ComponentBuildStateQueued, crv1.ComponentBuildStateRunning:
-			activeCbs[component] = cb
+			activeComponentBuilds[component] = componentBuild
 		case crv1.ComponentBuildStateFailed:
-			failedCbs[component] = cb
+			failedComponentBuilds[component] = componentBuild
 		case crv1.ComponentBuildStateSucceeded:
-			successfulCbs[component] = cb
+			successfulComponentBuilds[component] = componentBuild
 		default:
 			// FIXME: send warn event
-			return nil, fmt.Errorf("ComponentBuild %v has unrecognized state %v", cb.Name, cb.Status.State)
+			return stateInfo{}, fmt.Errorf("ComponentBuild %v/%v has unexpected state %v", componentBuild.Namespace, componentBuild.Name, componentBuild.Status.State)
 		}
 	}
 
-	stateInfo := &svcBuildStateInfo{
-		successfulCbs: successfulCbs,
-		activeCbs:     activeCbs,
-		failedCbs:     failedCbs,
-		needsNewCb:    needsNewCbs,
+	stateInfo := stateInfo{
+		successfulComponentBuilds: successfulComponentBuilds,
+		activeComponentBuilds:     activeComponentBuilds,
+		failedComponentBuilds:     failedComponentBuilds,
+		needsNewComponentBuilds:   needsNewComponentBuilds,
 	}
 
-	if len(failedCbs) > 0 {
-		stateInfo.state = svcBuildStateHasFailedCBuilds
+	if len(failedComponentBuilds) > 0 {
+		stateInfo.state = stateHasFailedCBuilds
 		return stateInfo, nil
 	}
 
-	if len(needsNewCbs) > 0 {
-		stateInfo.state = svcBuildStateNoFailuresNeedsNewCBuilds
+	if len(needsNewComponentBuilds) > 0 {
+		stateInfo.state = stateNoFailuresNeedsNewCBuilds
 		return stateInfo, nil
 	}
 
-	if len(activeCbs) > 0 {
-		stateInfo.state = svcBuildStateHasOnlyRunningOrSucceededCBuilds
+	if len(activeComponentBuilds) > 0 {
+		stateInfo.state = stateHasOnlyRunningOrSucceededCBuilds
 		return stateInfo, nil
 	}
 
-	stateInfo.state = svcBuildStateAllCBuildsSucceeded
+	stateInfo.state = stateAllCBuildsSucceeded
 	return stateInfo, nil
 }

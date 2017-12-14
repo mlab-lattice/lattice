@@ -31,10 +31,11 @@ type ComponentBuildSpec struct {
 }
 
 type ComponentBuildStatus struct {
-	State             ComponentBuildState        `json:"state"`
-	LastObservedPhase *types.ComponentBuildPhase `json:"lastObservedPhase,omitempty"`
-	FailureInfo       *ComponentBuildFailureInfo `json:"failureInfo,omitempty"`
-	Artifacts         *ComponentBuildArtifacts   `json:"artifacts,omitempty"`
+	State              ComponentBuildState        `json:"state"`
+	ObservedGeneration int64                      `json:"observedGeneration"`
+	LastObservedPhase  *types.ComponentBuildPhase `json:"lastObservedPhase,omitempty"`
+	FailureInfo        *ComponentBuildFailureInfo `json:"failureInfo,omitempty"`
+	Artifacts          *ComponentBuildArtifacts   `json:"artifacts,omitempty"`
 }
 
 type ComponentBuildState string

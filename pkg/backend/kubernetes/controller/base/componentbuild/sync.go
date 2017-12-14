@@ -70,5 +70,6 @@ func (c *Controller) updateComponentBuildStatus(build *crv1.ComponentBuild, stat
 	// Copy so the shared cache isn't mutated
 	build = build.DeepCopy()
 	build.Status = status
+	build.Status.ObservedGeneration = build.Generation
 	return c.latticeClient.LatticeV1().ComponentBuilds(build.Namespace).Update(build)
 }

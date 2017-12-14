@@ -32,13 +32,18 @@ type ServiceBuildSpec struct {
 // +k8s:deepcopy-gen=false
 type ServiceBuildSpecComponentBuildInfo struct {
 	DefinitionBlock block.ComponentBuild `json:"definitionBlock"`
-	DefinitionHash  *string              `json:"definitionHash,omitempty"`
 }
 
 type ServiceBuildStatus struct {
-	State      ServiceBuildState                               `json:"state"`
-	Message    string                                          `json:"message"`
-	Components map[string]ServiceBuildStatusComponentBuildInfo `json:"components"`
+	State              ServiceBuildState `json:"state"`
+	ObservedGeneration int64             `json:"observedGeneration"`
+	Message            string            `json:"message"`
+
+	// Maps a component name to the ComponentBuild.Name responsible for it
+	ComponentBuilds map[string]string `json:"componentsBuilds"`
+
+	// Maps a ComponentBuild.Name to the ComponentBuild.Status
+	ComponentBuildStatuses map[string]ComponentBuildStatus `json:"componentBuildStatuses"`
 }
 
 type ServiceBuildState string
@@ -49,11 +54,6 @@ const (
 	ServiceBuildStateSucceeded ServiceBuildState = "succeeded"
 	ServiceBuildStateFailed    ServiceBuildState = "failed"
 )
-
-type ServiceBuildStatusComponentBuildInfo struct {
-	Name   string               `json:"name"`
-	Status ComponentBuildStatus `json:"status"`
-}
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 

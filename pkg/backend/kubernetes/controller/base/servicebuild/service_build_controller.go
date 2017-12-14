@@ -84,109 +84,17 @@ func NewController(
 	return sbc
 }
 
-func (sbc *Controller) addServiceBuild(obj interface{}) {
-	svcb := obj.(*crv1.ServiceBuild)
-	glog.V(4).Infof("Adding ServiceBuild %s", svcb.Name)
-	sbc.enqueueServiceBuild(svcb)
-}
-
-func (sbc *Controller) updateServiceBuild(old, cur interface{}) {
-	oldSvcb := old.(*crv1.ServiceBuild)
-	curSvcb := cur.(*crv1.ServiceBuild)
-	glog.V(4).Infof("Updating ServiceBuild %s", oldSvcb.Name)
-	sbc.enqueueServiceBuild(curSvcb)
-}
-
-// addComponentBuild enqueues any ServiceBuilds which may be interested in it when
-// a ComponentBuild is added.
-func (sbc *Controller) addComponentBuild(obj interface{}) {
-	cb := obj.(*crv1.ComponentBuild)
-
-	if cb.DeletionTimestamp != nil {
-		// On a restart of the controller manager, it's possible for an object to
-		// show up in a state that is already pending deletion.
-		// FIXME: send error event
-		return
-	}
-
-	glog.V(4).Infof("ComponentBuild %s added.", cb.Name)
-	svcbs, err := sbc.getServiceBuildsForComponentBuild(cb)
-	if err != nil {
-		// FIXME: send error event?
-	}
-	for _, svcb := range svcbs {
-		sbc.enqueueServiceBuild(svcb)
-	}
-}
-
-// updateComponentBuild enqueues any ServiceBuilds which may be interested in it when
-// a ComponentBuild is updated.
-func (sbc *Controller) updateComponentBuild(old, cur interface{}) {
-	glog.V(5).Info("Got ComponentBuild update")
-	oldCb := old.(*crv1.ComponentBuild)
-	curCb := cur.(*crv1.ComponentBuild)
-	if curCb.ResourceVersion == oldCb.ResourceVersion {
-		// Periodic resync will send update events for all known ComponentBuilds.
-		// Two different versions of the same job will always have different RVs.
-		glog.V(5).Info("ComponentBuild ResourceVersions are the same")
-		return
-	}
-
-	svcbs, err := sbc.getServiceBuildsForComponentBuild(curCb)
-	if err != nil {
-		// FIXME: send error event?
-	}
-	for _, svcb := range svcbs {
-		sbc.enqueueServiceBuild(svcb)
-	}
-}
-
-func (sbc *Controller) getServiceBuildsForComponentBuild(cb *crv1.ComponentBuild) ([]*crv1.ServiceBuild, error) {
-	svcbs := []*crv1.ServiceBuild{}
-
-	// Find any ServiceBuilds whose ComponentBuildsInfo mention this ComponentBuild
-	// TODO: add a cache mapping ComponentBuild Names to active ServiceBuilds which are waiting on them
-	//       ^^^ tricky because the informers will start and trigger (aka this method will be called) prior
-	//			 to when we could fill the cache
-
-	svcBuilds, err := sbc.serviceBuildLister.List(labels.Everything())
-	if err != nil {
-		return nil, err
-	}
-
-	for _, svcb := range svcBuilds {
-		for _, cbInfo := range svcb.Spec.Components {
-			if cbInfo.Name != nil && *cbInfo.Name == cb.Name {
-				svcbs = append(svcbs, svcb)
-				break
-			}
-		}
-	}
-
-	return svcbs, nil
-}
-
-func (sbc *Controller) enqueueServiceBuild(svcb *crv1.ServiceBuild) {
-	key, err := cache.DeletionHandlingMetaNamespaceKeyFunc(svcb)
-	if err != nil {
-		runtime.HandleError(fmt.Errorf("couldn't get key for object %#v: %v", svcb, err))
-		return
-	}
-
-	sbc.queue.Add(key)
-}
-
-func (sbc *Controller) Run(workers int, stopCh <-chan struct{}) {
+func (c *Controller) Run(workers int, stopCh <-chan struct{}) {
 	// don't let panics crash the process
 	defer runtime.HandleCrash()
 	// make sure the work queue is shutdown which will trigger workers to end
-	defer sbc.queue.ShutDown()
+	defer c.queue.ShutDown()
 
 	glog.Infof("Starting service-build controller")
 	defer glog.Infof("Shutting down service-build controller")
 
 	// wait for your secondary caches to fill before starting your work
-	if !cache.WaitForCacheSync(stopCh, sbc.serviceBuildListerSynced, sbc.componentBuildListerSynced) {
+	if !cache.WaitForCacheSync(stopCh, c.serviceBuildListerSynced, c.componentBuildListerSynced) {
 		return
 	}
 
@@ -197,41 +105,126 @@ func (sbc *Controller) Run(workers int, stopCh <-chan struct{}) {
 	for i := 0; i < workers; i++ {
 		// runWorker will loop until "something bad" happens.  The .Until will
 		// then rekick the worker after one second
-		go wait.Until(sbc.runWorker, time.Second, stopCh)
+		go wait.Until(c.runWorker, time.Second, stopCh)
 	}
 
 	// wait until we're told to stop
 	<-stopCh
 }
 
-func (sbc *Controller) runWorker() {
+func (c *Controller) addServiceBuild(obj interface{}) {
+	build := obj.(*crv1.ServiceBuild)
+	glog.V(4).Infof("Adding ServiceBuild %s", build.Name)
+	c.enqueueServiceBuild(build)
+}
+
+func (c *Controller) updateServiceBuild(old, cur interface{}) {
+	oldBuild := old.(*crv1.ServiceBuild)
+	curBuild := cur.(*crv1.ServiceBuild)
+	glog.V(4).Infof("Updating ServiceBuild %s", oldBuild.Name)
+	c.enqueueServiceBuild(curBuild)
+}
+
+// addComponentBuild enqueues any ServiceBuilds which may be interested in it when
+// a ComponentBuild is added.
+func (c *Controller) addComponentBuild(obj interface{}) {
+	componentBuild := obj.(*crv1.ComponentBuild)
+
+	if componentBuild.DeletionTimestamp != nil {
+		// On a restart of the controller manager, it's possible for an object to
+		// show up in a state that is already pending deletion.
+		// FIXME: send error event
+		return
+	}
+
+	glog.V(4).Infof("ComponentBuild %s added.", componentBuild.Name)
+	builds, err := c.getServiceBuildsForComponentBuild(componentBuild)
+	if err != nil {
+		// FIXME: send error event?
+	}
+	for _, build := range builds {
+		c.enqueueServiceBuild(build)
+	}
+}
+
+// updateComponentBuild enqueues any ServiceBuilds which may be interested in it when
+// a ComponentBuild is updated.
+func (c *Controller) updateComponentBuild(old, cur interface{}) {
+	glog.V(5).Info("Got ComponentBuild update")
+	oldComponentBuild := old.(*crv1.ComponentBuild)
+	curComponentBuild := cur.(*crv1.ComponentBuild)
+	if curComponentBuild.ResourceVersion == oldComponentBuild.ResourceVersion {
+		// Periodic resync will send update events for all known ComponentBuilds.
+		// Two different versions of the same job will always have different RVs.
+		glog.V(5).Info("ComponentBuild ResourceVersions are the same")
+		return
+	}
+
+	builds, err := c.getServiceBuildsForComponentBuild(curComponentBuild)
+	if err != nil {
+		// FIXME: send error event?
+	}
+	for _, build := range builds {
+		c.enqueueServiceBuild(build)
+	}
+}
+
+func (c *Controller) getServiceBuildsForComponentBuild(componentBuild *crv1.ComponentBuild) ([]*crv1.ServiceBuild, error) {
+	// TODO: this could eventually get expensive
+	builds, err := c.serviceBuildLister.List(labels.Everything())
+	if err != nil {
+		return nil, err
+	}
+
+	var matchingBuilds []*crv1.ServiceBuild
+	for _, build := range builds {
+		// Check to see if the ServiceBuild is waiting on this ComponentBuild
+		if _, ok := build.Status.ComponentBuildStatuses[componentBuild.Name]; ok {
+			matchingBuilds = append(matchingBuilds, build)
+		}
+	}
+
+	return matchingBuilds, nil
+}
+
+func (c *Controller) enqueueServiceBuild(build *crv1.ServiceBuild) {
+	key, err := cache.DeletionHandlingMetaNamespaceKeyFunc(build)
+	if err != nil {
+		runtime.HandleError(fmt.Errorf("couldn't get key for object %#v: %v", build, err))
+		return
+	}
+
+	c.queue.Add(key)
+}
+
+func (c *Controller) runWorker() {
 	// hot loop until we're told to stop.  processNextWorkItem will
 	// automatically wait until there's work available, so we don't worry
 	// about secondary waits
-	for sbc.processNextWorkItem() {
+	for c.processNextWorkItem() {
 	}
 }
 
 // processNextWorkItem deals with one key off the queue.  It returns false
 // when it's time to quit.
-func (sbc *Controller) processNextWorkItem() bool {
+func (c *Controller) processNextWorkItem() bool {
 	// pull the next work item from queue.  It should be a key we use to lookup
 	// something in a cache
-	key, quit := sbc.queue.Get()
+	key, quit := c.queue.Get()
 	if quit {
 		return false
 	}
 	// you always have to indicate to the queue that you've completed a piece of
 	// work
-	defer sbc.queue.Done(key)
+	defer c.queue.Done(key)
 
 	// do your work on the key.  This method will contains your "do stuff" logic
-	err := sbc.syncHandler(key.(string))
+	err := c.syncHandler(key.(string))
 	if err == nil {
 		// if you had no error, tell the queue to stop tracking history for your
 		// key. This will reset things like failure counts for per-item rate
 		// limiting
-		sbc.queue.Forget(key)
+		c.queue.Forget(key)
 		return true
 	}
 
@@ -245,14 +238,14 @@ func (sbc *Controller) processNextWorkItem() bool {
 	// (they're probably still not going to work right away) and overall
 	// controller protection (everything I've done is broken, this controller
 	// needs to calm down or it can starve other useful work) cases.
-	sbc.queue.AddRateLimited(key)
+	c.queue.AddRateLimited(key)
 
 	return true
 }
 
 // syncServiceBuild will sync the Service with the given key.
 // This function is not meant to be invoked concurrently with the same key.
-func (sbc *Controller) syncServiceBuild(key string) error {
+func (c *Controller) syncServiceBuild(key string) error {
 	glog.Flush()
 	startTime := time.Now()
 	glog.V(4).Infof("Started syncing ServiceBuild %q (%v)", key, startTime)
@@ -264,7 +257,8 @@ func (sbc *Controller) syncServiceBuild(key string) error {
 	if err != nil {
 		return err
 	}
-	svcb, err := sbc.serviceBuildLister.ServiceBuilds(namespace).Get(name)
+
+	build, err := c.serviceBuildLister.ServiceBuilds(namespace).Get(name)
 	if errors.IsNotFound(err) {
 		glog.V(2).Infof("ServiceBuild %v has been deleted", key)
 		return nil
@@ -273,30 +267,23 @@ func (sbc *Controller) syncServiceBuild(key string) error {
 		return err
 	}
 
-	stateInfo, err := sbc.calculateState(svcb)
+	stateInfo, err := c.calculateState(build)
 	if err != nil {
 		return err
 	}
 
-	glog.V(5).Infof("ServiceBuild %v state: %v", svcb.Name, stateInfo.state)
-
-	svcbCopy := svcb.DeepCopy()
-
-	err = sbc.syncComponentBuildStates(svcbCopy, stateInfo)
-	if err != nil {
-		return nil
-	}
+	glog.V(5).Infof("ServiceBuild %v state: %v", build.Name, stateInfo.state)
 
 	switch stateInfo.state {
-	case svcBuildStateHasFailedCBuilds:
-		return sbc.syncFailedServiceBuild(svcbCopy, stateInfo.failedCbs)
-	case svcBuildStateHasOnlyRunningOrSucceededCBuilds:
-		return sbc.syncRunningServiceBuild(svcbCopy, stateInfo.activeCbs)
-	case svcBuildStateNoFailuresNeedsNewCBuilds:
-		return sbc.syncMissingComponentBuildsServiceBuild(svcbCopy, stateInfo.needsNewCb)
-	case svcBuildStateAllCBuildsSucceeded:
-		return sbc.syncSucceededServiceBuild(svcbCopy)
+	case stateHasFailedCBuilds:
+		return c.syncFailedServiceBuild(build, stateInfo)
+	case stateHasOnlyRunningOrSucceededCBuilds:
+		return c.syncRunningServiceBuild(build, stateInfo)
+	case stateNoFailuresNeedsNewCBuilds:
+		return c.syncMissingComponentBuildsServiceBuild(build, stateInfo)
+	case stateAllCBuildsSucceeded:
+		return c.syncSucceededServiceBuild(build, stateInfo)
 	default:
-		panic("unreachable")
+		return fmt.Errorf("ServiceBuild %v in unexpected state %v", key, stateInfo.state)
 	}
 }

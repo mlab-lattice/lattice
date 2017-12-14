@@ -13,57 +13,10 @@ import (
 	"github.com/golang/glog"
 )
 
-// Warning: syncComponentBuildStates mutates svcb. Please do not pass in a pointer to a ComponentBuild
-// from the shared cache.
-func (sbc *Controller) syncComponentBuildStates(svcb *crv1.ServiceBuild, info *svcBuildStateInfo) error {
-	for component, cb := range info.successfulCbs {
-		err := updateComponentBuildInfoState(svcb, component, cb)
-		if err != nil {
-			return err
-		}
-	}
-
-	for component, cb := range info.activeCbs {
-		err := updateComponentBuildInfoState(svcb, component, cb)
-		if err != nil {
-			return err
-		}
-	}
-
-	for component, cb := range info.failedCbs {
-		err := updateComponentBuildInfoState(svcb, component, cb)
-		if err != nil {
-			return err
-		}
-	}
-
-	result, err := sbc.putServiceBuildUpdate(svcb)
-	if err != nil {
-		return err
-	}
-	*svcb = *result
-	return nil
-}
-
-func updateComponentBuildInfoState(svcb *crv1.ServiceBuild, component string, cb *crv1.ComponentBuild) error {
-	componentInfo, ok := svcb.Spec.Components[component]
-	if !ok {
-		return fmt.Errorf("ServiceBuild %v Spec.Components did not contain expected component %v", svcb.Name, component)
-	}
-
-	componentInfo.Status = &cb.Status.State
-	componentInfo.LastObservedPhase = cb.Status.LastObservedPhase
-	componentInfo.FailureInfo = cb.Status.FailureInfo
-	svcb.Spec.Components[component] = componentInfo
-	return nil
-}
-
-// Warning: syncFailedServiceBuild mutates svcb. Please do not pass in a pointer to a ServiceBuild
-// from the shared cache.
-func (sbc *Controller) syncFailedServiceBuild(svcb *crv1.ServiceBuild, failedCbs map[string]*crv1.ComponentBuild) error {
+func (c *Controller) syncFailedServiceBuild(build *crv1.ServiceBuild, stateInfo stateInfo) error {
 	// Sort the ComponentBuild names so the Status.Message is the same for the same failed ComponentBuilds
-	failedComponents := []string{}
-	for component := range failedCbs {
+	var failedComponents []string
+	for component := range stateInfo.failedComponentBuilds {
 		failedComponents = append(failedComponents, component)
 	}
 
@@ -77,19 +30,20 @@ func (sbc *Controller) syncFailedServiceBuild(svcb *crv1.ServiceBuild, failedCbs
 		message = message + " " + component
 	}
 
-	newStatus := crv1.ServiceBuildStatus{
-		State:   crv1.ServiceBuildStateFailed,
-		Message: message,
-	}
-
-	_, err := sbc.putServiceBuildStatusUpdate(svcb, newStatus)
+	_, err := c.updateServiceBuildStatus(
+		build,
+		crv1.ServiceBuildStateFailed,
+		message,
+		build.Status.ComponentBuilds,
+		stateInfo.componentBuildStatuses,
+	)
 	return err
 }
 
-func (sbc *Controller) syncRunningServiceBuild(svcb *crv1.ServiceBuild, activeCbs map[string]*crv1.ComponentBuild) error {
+func (c *Controller) syncRunningServiceBuild(build *crv1.ServiceBuild, stateInfo stateInfo) error {
 	// Sort the ComponentBuild names so the Status.Message is the same for the same active ComponentBuilds
-	activeComponents := []string{}
-	for component := range activeCbs {
+	var activeComponents []string
+	for component := range stateInfo.activeComponentBuilds {
 		activeComponents = append(activeComponents, component)
 	}
 
@@ -103,23 +57,29 @@ func (sbc *Controller) syncRunningServiceBuild(svcb *crv1.ServiceBuild, activeCb
 		message = message + " " + component
 	}
 
-	newStatus := crv1.ServiceBuildStatus{
-		State:   crv1.ServiceBuildStateRunning,
-		Message: message,
-	}
-
-	_, err := sbc.putServiceBuildStatusUpdate(svcb, newStatus)
+	_, err := c.updateServiceBuildStatus(
+		build,
+		crv1.ServiceBuildStateFailed,
+		message,
+		build.Status.ComponentBuilds,
+		stateInfo.componentBuildStatuses,
+	)
 	return err
 }
 
-func (sbc *Controller) syncMissingComponentBuildsServiceBuild(svcbs *crv1.ServiceBuild, needsNewCbs []string) error {
-	for _, component := range needsNewCbs {
-		cbInfo := svcbs.Spec.Components[component]
+func (c *Controller) syncMissingComponentBuildsServiceBuild(build *crv1.ServiceBuild, stateInfo stateInfo) error {
+	// Copy so the shared cache isn't mutated
+	status := build.Status.DeepCopy()
+	componentBuilds := status.ComponentBuilds
+	componentBuildStatuses := status.ComponentBuildStatuses
+
+	for _, component := range stateInfo.needsNewComponentBuilds {
+		componentInfo := build.Spec.Components[component]
 
 		// TODO: is json marshalling of a struct deterministic in order? If not could potentially get
 		//		 different SHAs for the same definition. This is OK in the correctness sense, since we'll
 		//		 just be duplicating work, but still not ideal
-		definitionJSON, err := json.Marshal(cbInfo.DefinitionBlock)
+		definitionJSON, err := json.Marshal(componentInfo.DefinitionBlock)
 		if err != nil {
 			return err
 		}
@@ -130,39 +90,43 @@ func (sbc *Controller) syncMissingComponentBuildsServiceBuild(svcbs *crv1.Servic
 		}
 
 		definitionHash := hex.EncodeToString(h.Sum(nil))
-		cbInfo.DefinitionHash = &definitionHash
 
-		cb, err := sbc.findComponentBuildForDefinitionHash(svcbs.Namespace, definitionHash)
+		componentBuild, err := c.findComponentBuildForDefinitionHash(build.Namespace, definitionHash)
 		if err != nil {
 			return err
 		}
 
 		// Found an existing ComponentBuild.
-		if cb != nil && cb.Status.State != crv1.ComponentBuildStateFailed {
-			glog.V(4).Infof("Found ComponentBuild %v for %v of %v", cb.Name, component, svcbs.Name)
-			cbInfo.Name = &cb.Name
-			svcbs.Spec.Components[component] = cbInfo
+		if componentBuild != nil && componentBuild.Status.State != crv1.ComponentBuildStateFailed {
+			glog.V(4).Infof("Found ComponentBuild %v for %v of %v/%v", componentBuild.Name, component, build.Namespace, build.Name)
+			componentBuilds[component] = componentBuild.Name
+			componentBuildStatuses[componentBuild.Name] = componentBuild.Status
 			continue
 		}
 
 		// Existing ComponentBuild failed. We'll try it again.
 		var previousCbName *string
-		if cb != nil {
-			previousCbName = &cb.Name
+		if componentBuild != nil {
+			previousCbName = &componentBuild.Name
 		}
 
-		glog.V(4).Infof("No ComponentBuild found for %v of %v", component, svcbs.Name)
-		cb, err = sbc.createComponentBuild(svcbs.Namespace, &cbInfo, previousCbName)
+		glog.V(4).Infof("No ComponentBuild found for %v/%v component %v", build.Namespace, build.Name, component)
+		componentBuild, err = c.createNewComponentBuild(build.Namespace, componentInfo, definitionHash, previousCbName)
 		if err != nil {
 			return err
 		}
 
-		glog.V(4).Infof("Created ComponentBuild %v for %v of %v", cb.Name, component, svcbs.Name)
-		cbInfo.Name = &cb.Name
-		svcbs.Spec.Components[component] = cbInfo
+		glog.V(4).Infof("Created ComponentBuild %v for %v/%v component %v", componentBuild.Name, build.Namespace, build.Name, component)
+		componentBuilds[component] = componentBuild.Name
 	}
 
-	_, err := sbc.putServiceBuildUpdate(svcbs)
+	_, err := c.updateServiceBuildStatus(
+		build,
+		crv1.ServiceBuildStateRunning,
+		"",
+		componentBuilds,
+		componentBuildStatuses,
+	)
 	if err != nil {
 		return err
 	}
@@ -175,30 +139,42 @@ func (sbc *Controller) syncMissingComponentBuildsServiceBuild(svcbs *crv1.Servic
 	// as a Service to enqueue. Once SB is updated, it may never get notified that CB finishes.
 	// By enqueueing it, we make sure we have up to date status information, then from there can rely
 	// on updateComponentBuild to update SB's Status.
-	sbc.queue.Add(fmt.Sprintf("%v/%v", svcbs.Namespace, svcbs.Name))
+	c.queue.Add(fmt.Sprintf("%v/%v", build.Namespace, build.Name))
 	return nil
 }
 
-func (sbc *Controller) syncSucceededServiceBuild(svcb *crv1.ServiceBuild) error {
-	newStatus := crv1.ServiceBuildStatus{
-		State: crv1.ServiceBuildStateSucceeded,
-	}
-
-	_, err := sbc.putServiceBuildStatusUpdate(svcb, newStatus)
+func (c *Controller) syncSucceededServiceBuild(build *crv1.ServiceBuild, stateInfo stateInfo) error {
+	_, err := c.updateServiceBuildStatus(
+		build,
+		crv1.ServiceBuildStateRunning,
+		"",
+		build.Status.ComponentBuilds,
+		stateInfo.componentBuildStatuses,
+	)
 	return err
 }
 
-// Warning: putServiceBuildStatusUpdate mutates cBuild. Please do not pass in a pointer to a ComponentBuild
-// from the shared cache.
-func (sbc *Controller) putServiceBuildStatusUpdate(svcb *crv1.ServiceBuild, newStatus crv1.ServiceBuildStatus) (*crv1.ServiceBuild, error) {
-	if reflect.DeepEqual(svcb.Status, newStatus) {
-		return svcb, nil
+func (c *Controller) updateServiceBuildStatus(
+	build *crv1.ServiceBuild,
+	state crv1.ServiceBuildState,
+	message string,
+	componentBuilds map[string]string,
+	componentBuildStatuses map[string]crv1.ComponentBuildStatus,
+) (*crv1.ServiceBuild, error) {
+	status := crv1.ServiceBuildStatus{
+		State:                  state,
+		ObservedGeneration:     build.Generation,
+		Message:                message,
+		ComponentBuilds:        componentBuilds,
+		ComponentBuildStatuses: componentBuildStatuses,
 	}
 
-	svcb.Status = newStatus
-	return sbc.putServiceBuildUpdate(svcb)
-}
+	if reflect.DeepEqual(build.Status, status) {
+		return build, nil
+	}
 
-func (sbc *Controller) putServiceBuildUpdate(svcb *crv1.ServiceBuild) (*crv1.ServiceBuild, error) {
-	return sbc.latticeClient.LatticeV1().ServiceBuilds(svcb.Namespace).Update(svcb)
+	// Copy so the shared cache isn't mutated
+	build = build.DeepCopy()
+	build.Status = status
+	return c.latticeClient.LatticeV1().ServiceBuilds(build.Namespace).Update(build)
 }

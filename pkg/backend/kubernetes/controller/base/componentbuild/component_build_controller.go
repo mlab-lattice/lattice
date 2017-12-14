@@ -377,6 +377,7 @@ func (c *Controller) syncComponentBuild(key string) error {
 	if err != nil {
 		return err
 	}
+
 	build, err := c.componentBuildLister.ComponentBuilds(namespace).Get(name)
 	if errors.IsNotFound(err) {
 		glog.V(2).Infof("ComponentBuild %v has been deleted", key)
