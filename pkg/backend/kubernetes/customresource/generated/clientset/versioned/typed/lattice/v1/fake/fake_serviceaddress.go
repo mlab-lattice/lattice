@@ -82,6 +82,18 @@ func (c *FakeServiceAddresses) Update(serviceAddress *lattice_v1.ServiceAddress)
 	return obj.(*lattice_v1.ServiceAddress), err
 }
 
+// UpdateStatus was generated because the type contains a Status member.
+// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
+func (c *FakeServiceAddresses) UpdateStatus(serviceAddress *lattice_v1.ServiceAddress) (*lattice_v1.ServiceAddress, error) {
+	obj, err := c.Fake.
+		Invokes(testing.NewUpdateSubresourceAction(serviceaddressesResource, "status", c.ns, serviceAddress), &lattice_v1.ServiceAddress{})
+
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*lattice_v1.ServiceAddress), err
+}
+
 // Delete takes name of the serviceAddress and deletes it. Returns an error if one occurs.
 func (c *FakeServiceAddresses) Delete(name string, options *v1.DeleteOptions) error {
 	_, err := c.Fake.

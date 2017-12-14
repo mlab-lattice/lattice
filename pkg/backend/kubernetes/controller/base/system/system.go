@@ -5,11 +5,6 @@ import (
 	"reflect"
 
 	crv1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
-	"github.com/mlab-lattice/system/pkg/definition/tree"
-
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
-	"github.com/golang/glog"
 )
 
 func (c *Controller) syncSystemStatus(system *crv1.System) error {

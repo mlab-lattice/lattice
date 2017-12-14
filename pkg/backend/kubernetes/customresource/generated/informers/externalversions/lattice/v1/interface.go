@@ -33,65 +33,67 @@ type Interface interface {
 }
 
 type version struct {
-	internalinterfaces.SharedInformerFactory
+	factory          internalinterfaces.SharedInformerFactory
+	namespace        string
+	tweakListOptions internalinterfaces.TweakListOptionsFunc
 }
 
 // New returns a new Interface.
-func New(f internalinterfaces.SharedInformerFactory) Interface {
-	return &version{f}
+func New(f internalinterfaces.SharedInformerFactory, namespace string, tweakListOptions internalinterfaces.TweakListOptionsFunc) Interface {
+	return &version{factory: f, namespace: namespace, tweakListOptions: tweakListOptions}
 }
 
 // ComponentBuilds returns a ComponentBuildInformer.
 func (v *version) ComponentBuilds() ComponentBuildInformer {
-	return &componentBuildInformer{factory: v.SharedInformerFactory}
+	return &componentBuildInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
 }
 
 // Configs returns a ConfigInformer.
 func (v *version) Configs() ConfigInformer {
-	return &configInformer{factory: v.SharedInformerFactory}
+	return &configInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
 }
 
 // Endpoints returns a EndpointInformer.
 func (v *version) Endpoints() EndpointInformer {
-	return &endpointInformer{factory: v.SharedInformerFactory}
+	return &endpointInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
 }
 
 // NodePools returns a NodePoolInformer.
 func (v *version) NodePools() NodePoolInformer {
-	return &nodePoolInformer{factory: v.SharedInformerFactory}
+	return &nodePoolInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
 }
 
 // Services returns a ServiceInformer.
 func (v *version) Services() ServiceInformer {
-	return &serviceInformer{factory: v.SharedInformerFactory}
+	return &serviceInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
 }
 
 // ServiceAddresses returns a ServiceAddressInformer.
 func (v *version) ServiceAddresses() ServiceAddressInformer {
-	return &serviceAddressInformer{factory: v.SharedInformerFactory}
+	return &serviceAddressInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
 }
 
 // ServiceBuilds returns a ServiceBuildInformer.
 func (v *version) ServiceBuilds() ServiceBuildInformer {
-	return &serviceBuildInformer{factory: v.SharedInformerFactory}
+	return &serviceBuildInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
 }
 
 // Systems returns a SystemInformer.
 func (v *version) Systems() SystemInformer {
-	return &systemInformer{factory: v.SharedInformerFactory}
+	return &systemInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
 }
 
 // SystemBuilds returns a SystemBuildInformer.
 func (v *version) SystemBuilds() SystemBuildInformer {
-	return &systemBuildInformer{factory: v.SharedInformerFactory}
+	return &systemBuildInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
 }
 
 // SystemRollouts returns a SystemRolloutInformer.
 func (v *version) SystemRollouts() SystemRolloutInformer {
-	return &systemRolloutInformer{factory: v.SharedInformerFactory}
+	return &systemRolloutInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
 }
 
 // SystemTeardowns returns a SystemTeardownInformer.
 func (v *version) SystemTeardowns() SystemTeardownInformer {
-	return &systemTeardownInformer{factory: v.SharedInformerFactory}
+	return &systemTeardownInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
 }

@@ -22,19 +22,34 @@ type ComponentBuildInformer interface {
 }
 
 type componentBuildInformer struct {
-	factory internalinterfaces.SharedInformerFactory
+	factory          internalinterfaces.SharedInformerFactory
+	tweakListOptions internalinterfaces.TweakListOptionsFunc
+	namespace        string
 }
 
 // NewComponentBuildInformer constructs a new informer for ComponentBuild type.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
 func NewComponentBuildInformer(client versioned.Interface, namespace string, resyncPeriod time.Duration, indexers cache.Indexers) cache.SharedIndexInformer {
+	return NewFilteredComponentBuildInformer(client, namespace, resyncPeriod, indexers, nil)
+}
+
+// NewFilteredComponentBuildInformer constructs a new informer for ComponentBuild type.
+// Always prefer using an informer factory to get a shared informer instead of getting an independent
+// one. This reduces memory footprint and number of connections to the server.
+func NewFilteredComponentBuildInformer(client versioned.Interface, namespace string, resyncPeriod time.Duration, indexers cache.Indexers, tweakListOptions internalinterfaces.TweakListOptionsFunc) cache.SharedIndexInformer {
 	return cache.NewSharedIndexInformer(
 		&cache.ListWatch{
 			ListFunc: func(options meta_v1.ListOptions) (runtime.Object, error) {
+				if tweakListOptions != nil {
+					tweakListOptions(&options)
+				}
 				return client.LatticeV1().ComponentBuilds(namespace).List(options)
 			},
 			WatchFunc: func(options meta_v1.ListOptions) (watch.Interface, error) {
+				if tweakListOptions != nil {
+					tweakListOptions(&options)
+				}
 				return client.LatticeV1().ComponentBuilds(namespace).Watch(options)
 			},
 		},
@@ -44,12 +59,12 @@ func NewComponentBuildInformer(client versioned.Interface, namespace string, res
 	)
 }
 
-func defaultComponentBuildInformer(client versioned.Interface, resyncPeriod time.Duration) cache.SharedIndexInformer {
-	return NewComponentBuildInformer(client, meta_v1.NamespaceAll, resyncPeriod, cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc})
+func (f *componentBuildInformer) defaultInformer(client versioned.Interface, resyncPeriod time.Duration) cache.SharedIndexInformer {
+	return NewFilteredComponentBuildInformer(client, f.namespace, resyncPeriod, cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}, f.tweakListOptions)
 }
 
 func (f *componentBuildInformer) Informer() cache.SharedIndexInformer {
-	return f.factory.InformerFor(&lattice_v1.ComponentBuild{}, defaultComponentBuildInformer)
+	return f.factory.InformerFor(&lattice_v1.ComponentBuild{}, f.defaultInformer)
 }
 
 func (f *componentBuildInformer) Lister() v1.ComponentBuildLister {

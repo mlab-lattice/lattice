@@ -19,6 +19,7 @@ type NodePoolsGetter interface {
 type NodePoolInterface interface {
 	Create(*v1.NodePool) (*v1.NodePool, error)
 	Update(*v1.NodePool) (*v1.NodePool, error)
+	UpdateStatus(*v1.NodePool) (*v1.NodePool, error)
 	Delete(name string, options *meta_v1.DeleteOptions) error
 	DeleteCollection(options *meta_v1.DeleteOptions, listOptions meta_v1.ListOptions) error
 	Get(name string, options meta_v1.GetOptions) (*v1.NodePool, error)
@@ -96,6 +97,22 @@ func (c *nodePools) Update(nodePool *v1.NodePool) (result *v1.NodePool, err erro
 		Namespace(c.ns).
 		Resource("nodepools").
 		Name(nodePool.Name).
+		Body(nodePool).
+		Do().
+		Into(result)
+	return
+}
+
+// UpdateStatus was generated because the type contains a Status member.
+// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
+
+func (c *nodePools) UpdateStatus(nodePool *v1.NodePool) (result *v1.NodePool, err error) {
+	result = &v1.NodePool{}
+	err = c.client.Put().
+		Namespace(c.ns).
+		Resource("nodepools").
+		Name(nodePool.Name).
+		SubResource("status").
 		Body(nodePool).
 		Do().
 		Into(result)

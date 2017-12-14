@@ -19,6 +19,7 @@ type SystemsGetter interface {
 type SystemInterface interface {
 	Create(*v1.System) (*v1.System, error)
 	Update(*v1.System) (*v1.System, error)
+	UpdateStatus(*v1.System) (*v1.System, error)
 	Delete(name string, options *meta_v1.DeleteOptions) error
 	DeleteCollection(options *meta_v1.DeleteOptions, listOptions meta_v1.ListOptions) error
 	Get(name string, options meta_v1.GetOptions) (*v1.System, error)
@@ -96,6 +97,22 @@ func (c *systems) Update(system *v1.System) (result *v1.System, err error) {
 		Namespace(c.ns).
 		Resource("systems").
 		Name(system.Name).
+		Body(system).
+		Do().
+		Into(result)
+	return
+}
+
+// UpdateStatus was generated because the type contains a Status member.
+// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
+
+func (c *systems) UpdateStatus(system *v1.System) (result *v1.System, err error) {
+	result = &v1.System{}
+	err = c.client.Put().
+		Namespace(c.ns).
+		Resource("systems").
+		Name(system.Name).
+		SubResource("status").
 		Body(system).
 		Do().
 		Into(result)

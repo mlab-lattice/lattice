@@ -82,6 +82,18 @@ func (c *FakeNodePools) Update(nodePool *lattice_v1.NodePool) (result *lattice_v
 	return obj.(*lattice_v1.NodePool), err
 }
 
+// UpdateStatus was generated because the type contains a Status member.
+// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
+func (c *FakeNodePools) UpdateStatus(nodePool *lattice_v1.NodePool) (*lattice_v1.NodePool, error) {
+	obj, err := c.Fake.
+		Invokes(testing.NewUpdateSubresourceAction(nodepoolsResource, "status", c.ns, nodePool), &lattice_v1.NodePool{})
+
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*lattice_v1.NodePool), err
+}
+
 // Delete takes name of the nodePool and deletes it. Returns an error if one occurs.
 func (c *FakeNodePools) Delete(name string, options *v1.DeleteOptions) error {
 	_, err := c.Fake.

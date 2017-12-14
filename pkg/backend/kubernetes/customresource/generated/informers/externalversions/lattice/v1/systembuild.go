@@ -22,19 +22,34 @@ type SystemBuildInformer interface {
 }
 
 type systemBuildInformer struct {
-	factory internalinterfaces.SharedInformerFactory
+	factory          internalinterfaces.SharedInformerFactory
+	tweakListOptions internalinterfaces.TweakListOptionsFunc
+	namespace        string
 }
 
 // NewSystemBuildInformer constructs a new informer for SystemBuild type.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
 func NewSystemBuildInformer(client versioned.Interface, namespace string, resyncPeriod time.Duration, indexers cache.Indexers) cache.SharedIndexInformer {
+	return NewFilteredSystemBuildInformer(client, namespace, resyncPeriod, indexers, nil)
+}
+
+// NewFilteredSystemBuildInformer constructs a new informer for SystemBuild type.
+// Always prefer using an informer factory to get a shared informer instead of getting an independent
+// one. This reduces memory footprint and number of connections to the server.
+func NewFilteredSystemBuildInformer(client versioned.Interface, namespace string, resyncPeriod time.Duration, indexers cache.Indexers, tweakListOptions internalinterfaces.TweakListOptionsFunc) cache.SharedIndexInformer {
 	return cache.NewSharedIndexInformer(
 		&cache.ListWatch{
 			ListFunc: func(options meta_v1.ListOptions) (runtime.Object, error) {
+				if tweakListOptions != nil {
+					tweakListOptions(&options)
+				}
 				return client.LatticeV1().SystemBuilds(namespace).List(options)
 			},
 			WatchFunc: func(options meta_v1.ListOptions) (watch.Interface, error) {
+				if tweakListOptions != nil {
+					tweakListOptions(&options)
+				}
 				return client.LatticeV1().SystemBuilds(namespace).Watch(options)
 			},
 		},
@@ -44,12 +59,12 @@ func NewSystemBuildInformer(client versioned.Interface, namespace string, resync
 	)
 }
 
-func defaultSystemBuildInformer(client versioned.Interface, resyncPeriod time.Duration) cache.SharedIndexInformer {
-	return NewSystemBuildInformer(client, meta_v1.NamespaceAll, resyncPeriod, cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc})
+func (f *systemBuildInformer) defaultInformer(client versioned.Interface, resyncPeriod time.Duration) cache.SharedIndexInformer {
+	return NewFilteredSystemBuildInformer(client, f.namespace, resyncPeriod, cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}, f.tweakListOptions)
 }
 
 func (f *systemBuildInformer) Informer() cache.SharedIndexInformer {
-	return f.factory.InformerFor(&lattice_v1.SystemBuild{}, defaultSystemBuildInformer)
+	return f.factory.InformerFor(&lattice_v1.SystemBuild{}, f.defaultInformer)
 }
 
 func (f *systemBuildInformer) Lister() v1.SystemBuildLister {

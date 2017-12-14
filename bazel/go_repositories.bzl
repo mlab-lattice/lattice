@@ -59,7 +59,7 @@ GO_REPOSITORIES = {
         "name": "io_k8s_api",
         # https://github.com/bazelbuild/rules_go/issues/964
         "build_file_proto_mode": "disable",
-        "tag": "kubernetes-1.8.5",
+        "tag": "kubernetes-1.9.0-beta.2",
         "importpath": "k8s.io/api",
     },
     "k8s.io/apimachinery": {
@@ -69,7 +69,7 @@ GO_REPOSITORIES = {
         "build_file_name": "BUILD.bazel",
         # https://github.com/bazelbuild/rules_go/issues/964
         "build_file_proto_mode": "disable",
-        "tag": "kubernetes-1.8.5",
+        "tag": "kubernetes-1.9.0-beta.2",
         "importpath": "k8s.io/apimachinery",
     },
     "k8s.io/apiextensions-apiserver": {
@@ -79,12 +79,12 @@ GO_REPOSITORIES = {
         "build_file_name": "BUILD.bazel",
         # https://github.com/bazelbuild/rules_go/issues/964
         "build_file_proto_mode": "disable",
-        "tag": "kubernetes-1.8.5",
+        "tag": "kubernetes-1.9.0-beta.2",
         "importpath": "k8s.io/apiextensions-apiserver",
     },
     "k8s.io/client-go": {
         "name": "io_k8s_client_go",
-        "tag": "kubernetes-1.8.5",
+        "tag": "kubernetes-1.9.0-beta.2",
         "importpath": "k8s.io/client-go",
     },
     
