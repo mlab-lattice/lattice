@@ -1,17 +1,12 @@
 package main
 
 import (
-	"time"
 
 	localcontrollers "github.com/mlab-lattice/system/cmd/kubernetes/lattice-dns-local/localcontrollers"
 	controller "github.com/mlab-lattice/system/cmd/kubernetes/lattice-controller-manager/app/common"
-	"github.com/mlab-lattice/system/cmd/kubernetes/lattice-controller-manager/app/kubernetescontrollers"
 	controllermanager "github.com/mlab-lattice/system/cmd/kubernetes/lattice-controller-manager/app"
-	"github.com/mlab-lattice/system/cmd/kubernetes/lattice-controller-manager/app/latticecontrollers"
-	latticeinformers "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/informers/externalversions"
 	"github.com/mlab-lattice/system/pkg/constants"
 
-	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 
@@ -48,7 +43,7 @@ func Run(kubeconfig, provider, terraformModulePath string) {
 	StartControllers(ctx, initializers)
 
 	glog.V(4).Info("Starting informer factory")
-	latticeinformers.Start(ctx.Stop)
+	ctx.LatticeInformerFactory.Start(ctx.Stop)
 
 	select {}
 }

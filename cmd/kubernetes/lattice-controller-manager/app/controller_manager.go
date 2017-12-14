@@ -4,7 +4,6 @@ import (
 	"time"
 
 	awscontrollers "github.com/mlab-lattice/system/cmd/kubernetes/lattice-controller-manager/app/cloudcontrollers/aws"
-	localcontrollers "github.com/mlab-lattice/system/cmd/kubernetes/lattice-controller-manager/app/cloudcontrollers/localcontrollers"
 	controller "github.com/mlab-lattice/system/cmd/kubernetes/lattice-controller-manager/app/common"
 	"github.com/mlab-lattice/system/cmd/kubernetes/lattice-controller-manager/app/kubernetescontrollers"
 	"github.com/mlab-lattice/system/cmd/kubernetes/lattice-controller-manager/app/latticecontrollers"
@@ -91,9 +90,6 @@ func GetControllerInitializers(provider string) map[string]controller.Initialize
 			initializers["cloud-aws-"+name] = initializer
 		}
 	case constants.ProviderLocal:
-		for name, initializer := range localcontrollers.GetControllerInitializers() {
-			initializers["local-"+name] = initializer
-		}
 	default:
 		panic("unsupported provider " + provider)
 	}

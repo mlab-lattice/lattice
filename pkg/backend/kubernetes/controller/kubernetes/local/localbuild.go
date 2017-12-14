@@ -84,7 +84,7 @@ func (sbc *Controller) addAddress(obj interface{}) {
 func (sbc *Controller) updateAddress(old, cur interface{}) {
 	// Address object has been modified
 	glog.V(1).Infof("MyController just got an update")
-	address := obj.(*crv1.SystemBuild)
+	address := cur.(*crv1.SystemBuild)
 
 	sbc.enqueueAddressUpdate(address)
 }
@@ -106,4 +106,5 @@ func (sbc *Controller) rewriteDNS(key string) error {
 	}()
 
 	// Work with the cache here.
+	return nil
 }

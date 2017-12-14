@@ -54,5 +54,6 @@ go_targets = [
     ("kubernetes-lattice-controller-manager", "terraform", "cmd/kubernetes/lattice-controller-manager"),
     ("kubernetes-manager-api-rest", None, "cmd/kubernetes/manager-api/rest"),
     ("lattice-cli-admin", None, "cmd/cli/admin"),
+    ("lattice-local-dns", None, "cmd/kubernetes/lattice-dns-local")
 ]
 lattice_container_images(go_targets)
