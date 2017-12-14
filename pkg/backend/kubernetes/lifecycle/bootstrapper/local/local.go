@@ -2,17 +2,34 @@ package local
 
 import (
 	kubeclientset "k8s.io/client-go/kubernetes"
+	"github.com/mlab-lattice/system/bazel-system/external/go_sdk/src/fmt"
 )
 
 type Options struct {
-	DryRun bool
+	DryRun          bool
+	LocalComponents LocalComponentOptions
 }
 
-func NewBootstrapper(options *Options, kubeClient kubeclientset.Interface) *DefaultBootstrapper {
-	return &DefaultBootstrapper{
+type LocalComponentOptions struct {
+	LocalDNS LocalDNSOptions
+}
+
+type LocalDNSOptions struct {
+	Image string
+	Args  []string
+}
+
+func NewBootstrapper(options *Options, kubeClient kubeclientset.Interface) (*DefaultBootstrapper, error) {
+	if options == nil {
+		return nil, fmt.Errorf("options required")
+	}
+
+	b := &DefaultBootstrapper{
 		Options:    options,
 		KubeClient: kubeClient,
 	}
+
+	return b, nil
 }
 
 type DefaultBootstrapper struct {
@@ -24,6 +41,7 @@ type DefaultBootstrapper struct {
 func (b *DefaultBootstrapper) LocalBootstrap() ([]interface{}, error) {
 	bootstrapFuncs := []func() ([]interface{}, error){
 		b.bootstrapLocalNode,
+		b.seedDNS,
 	}
 
 	objects := []interface{}{}

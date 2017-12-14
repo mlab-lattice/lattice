@@ -33,6 +33,7 @@ type Options struct {
 	DryRun           bool
 	Config           crv1.ConfigSpec
 	MasterComponents base.MasterComponentOptions
+	LocalComponents	 local.LocalComponentOptions
 	Networking       *cloud.NetworkingOptions
 }
 
@@ -94,8 +95,12 @@ func NewLocalBootstrapper(
 
 	localOptions := &local.Options{
 		DryRun: options.DryRun,
+		LocalComponents: options.LocalComponents,
 	}
-	localBootstrapper := local.NewBootstrapper(localOptions, kubeClient)
+	localBootstrapper, err := local.NewBootstrapper(localOptions, kubeClient)
+	if err != nil {
+		return nil, err
+	}
 
 	b := &DefaultLocalBootstrapper{
 		BaseBootstrapper:  baseBootstrapper,
