@@ -56,6 +56,12 @@ install-govet:
 	@go tool vet 2>/dev/null; if [ $$? -eq 3 ]; then go get golang.org/x/tools/cmd/vet; fi
 
 
+# kubernetes
+.PHONY: kubernetes.update-dependencies
+kubernetes.update-dependencies:
+	LATTICE_ROOT=$(DIR) KUBERNETES_VERSION=$(VERSION) $(DIR)/scripts/k8s/dependencies/update-kubernetes-version.sh
+	KUBERNETES_VERSION=$(VERSION) $(DIR)/scripts/k8s/codegen/regenerate.sh
+
 # docker
 .PHONY: docker-push-image-stable
 docker-push-image-stable:
