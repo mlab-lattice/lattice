@@ -154,7 +154,6 @@ func init() {
 	Cmd.Flags().BoolVar(&options.MasterComponents.ManagerAPI.HostNetwork, "manager-api-host-network", true, "whether or not the manager-api should be on the host network")
 	Cmd.Flags().StringArrayVar(&options.MasterComponents.ManagerAPI.Args, "manager-api-args", defaultManagerAPIArgs, "extra arguments (besides --provider) to pass to the lattice-controller-manager")
 
-	// TODO :: Required flag only if local
 	Cmd.Flags().StringVar(&options.LocalComponents.LocalDNS.Image, "local-dns-controller-image", "", "docker image to use for the local-dns controller")
 	Cmd.MarkFlagRequired("local-dns-controller-image")
 	Cmd.Flags().StringArrayVar(&options.LocalComponents.LocalDNS.Args, "local-dns-controller-args", defaultLatticeControllerManagerArgs, "extra arguments (besides --provider) to pass to the local-dns-controller")

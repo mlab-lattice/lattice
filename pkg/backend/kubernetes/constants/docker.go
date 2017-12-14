@@ -6,6 +6,7 @@ const (
 	DockerImageEnvoyXDSAPIRestPerNode   = "kubernetes-envoy-xds-api-rest-per-node"
 	DockerImageLatticeControllerManager = "kubernetes-lattice-controller-manager"
 	DockerImageManagerAPIRest           = "kubernetes-manager-api-rest"
+	DockerImageLocalDNS                 = "lattice-local-dns"
 
 	DockerRegistryComponentBuildsDefault = "component-builds"
 
