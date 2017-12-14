@@ -17,3 +17,11 @@ type SystemBuild struct {
 	// ServiceBuild for that service in the SystemBuild.
 	ServiceBuilds map[tree.NodePath]*ServiceBuild `json:"serviceBuilds"`
 }
+
+func (sb SystemBuild) GetRenderMap() map[string]string {
+	return map[string]string{
+		"ID":      string(sb.ID),
+		"State":   string(sb.State),
+		"Version": string(sb.Version),
+	}
+}

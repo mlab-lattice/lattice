@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 
+	"github.com/mlab-lattice/system/pkg/cli"
 	"github.com/mlab-lattice/system/pkg/constants"
 	"github.com/mlab-lattice/system/pkg/managerapi/client/user"
 	"github.com/mlab-lattice/system/pkg/managerapi/client/user/rest"
@@ -15,6 +16,7 @@ import (
 )
 
 var (
+	asJSON          bool
 	namespaceString string
 	url             string
 	namespace       types.LatticeNamespace
@@ -59,12 +61,7 @@ var getCmd = &cobra.Command{
 		if err != nil {
 			log.Fatal(err)
 		}
-
-		buf, err := json.MarshalIndent(build, "", "  ")
-		if err != nil {
-			log.Fatal(err)
-		}
-		fmt.Println(string(buf))
+		cli.ShowResource(build, asJSON)
 	},
 }
 
@@ -76,6 +73,7 @@ func init() {
 
 	Cmd.AddCommand(listCmd)
 	Cmd.AddCommand(getCmd)
+	getCmd.Flags().BoolVarP(&asJSON, "json", "", false, "whether or not to display output as JSON")
 }
 
 func initCmd() {

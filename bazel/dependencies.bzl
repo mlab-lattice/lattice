@@ -11,6 +11,7 @@ def go_dependencies():
         "github.com/satori/go.uuid",
         "github.com/sergi/go-diff",
         "github.com/spf13/cobra",
+        "github.com/olekukonko/tablewriter",
         "golang.org/x/crypto",
         "gopkg.in/src-d/go-git.v4",
         "k8s.io/api",
@@ -27,8 +28,17 @@ def go_dependencies():
     _go_dependencies_com_github_fatih_color()
     _go_dependencies_com_github_gin_gonic_gin()
     _go_dependencies_com_github_spf13_cobra()
+    _go_dependencies_com_github_olekukonko_tablewriter()
     _go_dependencies_in_gopkg_src_d_go_git_v4()
     _go_dependencies_io_k8s()
+
+def _go_dependencies_com_github_olekukonko_tablewriter():
+  dependencies = [
+      "github.com/mattn/go-runewidth",
+  ]
+
+  for dep in dependencies:
+    go_repository(**GO_REPOSITORIES[dep])
 
 def _go_dependencies_com_github_aws_aws_sdk_go():
   dependencies = [

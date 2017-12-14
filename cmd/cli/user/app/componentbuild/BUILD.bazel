@@ -6,6 +6,7 @@ go_library(
     importpath = "github.com/mlab-lattice/system/cmd/cli/user/app/componentbuild",
     visibility = ["//visibility:public"],
     deps = [
+        "//pkg/cli:go_default_library",
         "//pkg/constants:go_default_library",
         "//pkg/managerapi/client/user:go_default_library",
         "//pkg/managerapi/client/user/rest:go_default_library",

@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 
+	"github.com/mlab-lattice/system/pkg/cli"
 	"github.com/mlab-lattice/system/pkg/constants"
 	"github.com/mlab-lattice/system/pkg/managerapi/client/user"
 	"github.com/mlab-lattice/system/pkg/managerapi/client/user/rest"
@@ -17,6 +18,7 @@ import (
 
 var (
 	follow bool
+	asJSON bool
 
 	namespaceString string
 	url             string
@@ -63,11 +65,7 @@ var getCmd = &cobra.Command{
 			log.Fatal(err)
 		}
 
-		buf, err := json.MarshalIndent(build, "", "  ")
-		if err != nil {
-			log.Fatal(err)
-		}
-		fmt.Println(string(buf))
+		cli.ShowResource(build, asJSON)
 	},
 }
 
@@ -97,6 +95,7 @@ func init() {
 	Cmd.AddCommand(getCmd)
 	Cmd.AddCommand(logsCmd)
 	logsCmd.Flags().BoolVarP(&follow, "follow", "f", false, "whether or not to follow the logs")
+	getCmd.Flags().BoolVarP(&asJSON, "json", "", false, "whether or not to display output as JSON")
 }
 
 func initCmd() {
