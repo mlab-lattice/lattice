@@ -36,12 +36,12 @@ func (c *Controller) systemSpec(rollout *crv1.SystemRollout, build *crv1.SystemB
 	return sysSpec, nil
 }
 
-func (c *Controller) systemServices(rollout *crv1.SystemRollout, build *crv1.SystemBuild) (map[tree.NodePath]crv1.SystemServicesInfo, error) {
+func (c *Controller) systemServices(rollout *crv1.SystemRollout, build *crv1.SystemBuild) (map[tree.NodePath]crv1.SystemSpecServiceInfo, error) {
 	if build.Status.State != crv1.SystemBuildStateSucceeded {
 		return nil, fmt.Errorf("cannot get system services for build %v/%v, must be in state %v but is in %v", build.Namespace, build.Name, crv1.SystemBuildStateSucceeded, build.Status.State)
 	}
 
-	services := map[tree.NodePath]crv1.SystemServicesInfo{}
+	services := map[tree.NodePath]crv1.SystemSpecServiceInfo{}
 	for path, service := range build.Spec.DefinitionRoot.Services() {
 		serviceBuildInfo, ok := build.Spec.Services[path]
 		if !ok {
@@ -76,7 +76,7 @@ func (c *Controller) systemServices(rollout *crv1.SystemRollout, build *crv1.Sys
 			componentBuildArtifacts[component] = *componentBuild.Spec.Artifacts
 		}
 
-		services[path] = crv1.SystemServicesInfo{
+		services[path] = crv1.SystemSpecServiceInfo{
 			Definition:              *(service.Definition().(*definition.Service)),
 			ComponentBuildArtifacts: componentBuildArtifacts,
 		}

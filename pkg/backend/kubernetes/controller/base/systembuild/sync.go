@@ -49,11 +49,11 @@ func updateServiceBuildInfoState(sysb *crv1.SystemBuild, service tree.NodePath, 
 
 	serviceInfo.State = &svcb.Status.State
 	if serviceInfo.Components == nil {
-		serviceInfo.Components = map[string]crv1.SystemBuildServicesInfoComponentInfo{}
+		serviceInfo.Components = map[string]crv1.SystemBuildStatusServiceInfoComponentInfo{}
 	}
 
 	for component, cbInfo := range svcb.Spec.Components {
-		componentInfo := crv1.SystemBuildServicesInfoComponentInfo{
+		componentInfo := crv1.SystemBuildStatusServiceInfoComponentInfo{
 			Name:              cbInfo.Name,
 			Status:            cbInfo.Status,
 			LastObservedPhase: cbInfo.LastObservedPhase,

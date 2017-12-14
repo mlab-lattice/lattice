@@ -5,7 +5,6 @@ import (
 
 	"github.com/mlab-lattice/system/pkg/definition"
 	"github.com/mlab-lattice/system/pkg/definition/tree"
-	"github.com/mlab-lattice/system/pkg/types"
 
 	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -30,24 +29,21 @@ type SystemBuild struct {
 
 // +k8s:deepcopy-gen=false
 type SystemBuildSpec struct {
-	LatticeNamespace types.LatticeNamespace                    `json:"latticeNamespace"`
-	DefinitionRoot   tree.Node                                 `json:"definition"`
-	Services         map[tree.NodePath]SystemBuildServicesInfo `json:"services"`
+	DefinitionRoot tree.Node                                    `json:"definition"`
+	Services       map[tree.NodePath]SystemBuildSpecServiceInfo `json:"services"`
 }
 
 // Some JSON (un)marshalling trickiness needed to deal with the fact that we have an interface
 // type in our SystemBuildSpec (DefinitionRoot)
 type systemBuildSpecRaw struct {
-	LatticeNamespace types.LatticeNamespace                    `json:"latticeNamespace"`
-	Services         map[tree.NodePath]SystemBuildServicesInfo `json:"services"`
-	Definition       json.RawMessage
+	Services   map[tree.NodePath]SystemBuildSpecServiceInfo `json:"services"`
+	Definition json.RawMessage
 }
 
 func (sbs *SystemBuildSpec) MarshalJSON() ([]byte, error) {
 	jsonMap := map[string]interface{}{
-		"latticeNamespace": sbs.LatticeNamespace,
-		"definition":       sbs.DefinitionRoot.Definition(),
-		"services":         sbs.Services,
+		"definition": sbs.DefinitionRoot.Definition(),
+		"services":   sbs.Services,
 	}
 	return json.Marshal(jsonMap)
 }
@@ -69,29 +65,19 @@ func (sbs *SystemBuildSpec) UnmarshalJSON(data []byte) error {
 	}
 
 	*sbs = SystemBuildSpec{
-		LatticeNamespace: raw.LatticeNamespace,
-		DefinitionRoot:   rootNode,
-		Services:         raw.Services,
+		DefinitionRoot: rootNode,
+		Services:       raw.Services,
 	}
 	return nil
 }
 
 // +k8s:deepcopy-gen=false
-type SystemBuildServicesInfo struct {
-	Definition definition.Service                              `json:"definition"`
-	Name       *string                                         `json:"name,omitempty"`
-	Status     *ServiceBuildStatus                             `json:"status,omitempty"`
-	Components map[string]SystemBuildServicesInfoComponentInfo `json:"components,omitempty"`
-}
-
-// +k8s:deepcopy-gen=false
-type SystemBuildServicesInfoComponentInfo struct {
-	Name   *string               `json:"name,omitempty"`
-	Status *ComponentBuildStatus `json:"status,omitempty"`
+type SystemBuildSpecServiceInfo struct {
+	Definition definition.Service `json:"definition"`
 }
 
 type SystemBuildStatus struct {
-	State   SystemBuildState `json:"state,omitempty"`
+	State   SystemBuildState `json:"state"`
 	Message string           `json:"message,omitempty"`
 }
 
@@ -103,6 +89,17 @@ const (
 	SystemBuildStateSucceeded SystemBuildState = "succeeded"
 	SystemBuildStateFailed    SystemBuildState = "failed"
 )
+
+type SystemBuildStatusServiceInfo struct {
+	Name       string                                               `json:"name"`
+	Status     ServiceBuildStatus                                   `json:"status"`
+	Components map[string]SystemBuildStatusServiceInfoComponentInfo `json:"components"`
+}
+
+type SystemBuildStatusServiceInfoComponentInfo struct {
+	Name   string               `json:"name"`
+	Status ComponentBuildStatus `json:"status"`
+}
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 

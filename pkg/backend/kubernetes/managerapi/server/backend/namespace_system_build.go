@@ -36,9 +36,9 @@ func getNewSystemBuild(ln types.LatticeNamespace, definitionRoot tree.Node, v ty
 		kubeconstants.LabelKeySystemVersion: string(v),
 	}
 
-	services := map[tree.NodePath]crv1.SystemBuildServicesInfo{}
+	services := map[tree.NodePath]crv1.SystemBuildSpecServiceInfo{}
 	for path, svcNode := range definitionRoot.Services() {
-		services[path] = crv1.SystemBuildServicesInfo{
+		services[path] = crv1.SystemBuildSpecServiceInfo{
 			Definition: *(svcNode.Definition().(*definition.Service)),
 		}
 	}

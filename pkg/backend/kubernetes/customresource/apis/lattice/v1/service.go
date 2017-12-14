@@ -56,7 +56,7 @@ type ComponentPort struct {
 }
 
 type ServiceStatus struct {
-	State            ServiceState        `json:"state,omitempty"`
+	State            ServiceState        `json:"state"`
 	UpdatedInstances int32               `json:"updatedInstances"`
 	StaleInstances   int32               `json:"staleInstances"`
 	FailureInfo      *ServiceFailureInfo `json:"failureInfo,omitempty"`

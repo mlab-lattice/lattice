@@ -33,7 +33,7 @@ func (cbc *Controller) syncJoblessComponentBuild(cb *crv1.ComponentBuild) error 
 // from the shared cache.
 func (cbc *Controller) syncSuccessfulComponentBuild(cb *crv1.ComponentBuild, j *batchv1.Job) error {
 	newArtifacts := &crv1.ComponentBuildArtifacts{
-		DockerImageFqn: j.Annotations[jobDockerFqnAnnotationKey],
+		DockerImageFQN: j.Annotations[jobDockerFqnAnnotationKey],
 	}
 
 	if reflect.DeepEqual(cb.Status.State, crv1.ComponentBuildStateSucceeded) && reflect.DeepEqual(cb.Spec.Artifacts, newArtifacts) {

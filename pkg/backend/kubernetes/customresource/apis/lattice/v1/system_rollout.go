@@ -19,7 +19,7 @@ type SystemRollout struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata"`
 	Spec              SystemRolloutSpec   `json:"spec"`
-	Status            SystemRolloutStatus `json:"status,omitempty"`
+	Status            SystemRolloutStatus `json:"status"`
 }
 
 // +k8s:deepcopy-gen=false
@@ -28,8 +28,8 @@ type SystemRolloutSpec struct {
 }
 
 type SystemRolloutStatus struct {
-	State   SystemRolloutState `json:"state,omitempty"`
-	Message string             `json:"message,omitempty"`
+	State   SystemRolloutState `json:"state"`
+	Message string             `json:"message"`
 }
 
 type SystemRolloutState string

@@ -28,7 +28,7 @@ type NodePoolSpec struct {
 }
 
 type NodePoolStatus struct {
-	State NodePoolState `json:"state,omitempty"`
+	State NodePoolState `json:"state"`
 }
 
 type NodePoolState string

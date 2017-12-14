@@ -27,19 +27,14 @@ type ComponentBuild struct {
 
 // +k8s:deepcopy-gen=false
 type ComponentBuildSpec struct {
-	BuildDefinitionBlock block.ComponentBuild     `json:"definitionBlock"`
-	Artifacts            *ComponentBuildArtifacts `json:"artifacts,omitempty"`
-}
-
-// +k8s:deepcopy-gen=false
-type ComponentBuildArtifacts struct {
-	DockerImageFqn string `json:"dockerImageFqn"`
+	BuildDefinitionBlock block.ComponentBuild `json:"definitionBlock"`
 }
 
 type ComponentBuildStatus struct {
 	State             ComponentBuildState        `json:"state"`
 	LastObservedPhase *types.ComponentBuildPhase `json:"lastObservedPhase,omitempty"`
 	FailureInfo       *ComponentBuildFailureInfo `json:"failureInfo,omitempty"`
+	Artifacts         *ComponentBuildArtifacts   `json:"artifacts,omitempty"`
 }
 
 type ComponentBuildState string
@@ -55,6 +50,10 @@ const (
 type ComponentBuildFailureInfo struct {
 	Message  string `json:"message"`
 	Internal bool   `json:"internal"`
+}
+
+type ComponentBuildArtifacts struct {
+	DockerImageFQN string `json:"dockerImageFqn"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

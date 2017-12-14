@@ -26,20 +26,19 @@ type ServiceBuild struct {
 
 // +k8s:deepcopy-gen=false
 type ServiceBuildSpec struct {
-	Components map[string]ServiceBuildComponentBuildInfo `json:"components"`
+	Components map[string]ServiceBuildSpecComponentBuildInfo `json:"components"`
 }
 
 // +k8s:deepcopy-gen=false
-type ServiceBuildComponentBuildInfo struct {
-	DefinitionBlock block.ComponentBuild  `json:"definitionBlock"`
-	DefinitionHash  *string               `json:"definitionHash,omitempty"`
-	Name            *string               `json:"name,omitempty"`
-	Status          *ComponentBuildStatus `json:"status"`
+type ServiceBuildSpecComponentBuildInfo struct {
+	DefinitionBlock block.ComponentBuild `json:"definitionBlock"`
+	DefinitionHash  *string              `json:"definitionHash,omitempty"`
 }
 
 type ServiceBuildStatus struct {
-	State   ServiceBuildState `json:"state,omitempty"`
-	Message string            `json:"message,omitempty"`
+	State      ServiceBuildState                               `json:"state"`
+	Message    string                                          `json:"message"`
+	Components map[string]ServiceBuildStatusComponentBuildInfo `json:"components"`
 }
 
 type ServiceBuildState string
@@ -50,6 +49,11 @@ const (
 	ServiceBuildStateSucceeded ServiceBuildState = "succeeded"
 	ServiceBuildStateFailed    ServiceBuildState = "failed"
 )
+
+type ServiceBuildStatusComponentBuildInfo struct {
+	Name   string               `json:"name"`
+	Status ComponentBuildStatus `json:"status"`
+}
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 

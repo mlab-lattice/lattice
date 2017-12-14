@@ -19,7 +19,7 @@ func getComponentBuildDefinitionHashFromLabel(cb *crv1.ComponentBuild) *string {
 	return &cBuildHashLabel
 }
 
-func (sbc *Controller) getComponentBuildFromInfo(cbInfo *crv1.ServiceBuildComponentBuildInfo, ns string) (*crv1.ComponentBuild, bool, error) {
+func (sbc *Controller) getComponentBuildFromInfo(cbInfo *crv1.ServiceBuildSpecComponentBuildInfo, ns string) (*crv1.ComponentBuild, bool, error) {
 	if cbInfo.Name == nil {
 		return nil, false, nil
 	}
@@ -110,7 +110,7 @@ func (sbc *Controller) findComponentBuildInStore(ns, definitionHash string) (*cr
 	return nil, nil
 }
 
-func (sbc *Controller) createComponentBuild(ns string, cbInfo *crv1.ServiceBuildComponentBuildInfo, previousCbName *string) (*crv1.ComponentBuild, error) {
+func (sbc *Controller) createComponentBuild(ns string, cbInfo *crv1.ServiceBuildSpecComponentBuildInfo, previousCbName *string) (*crv1.ComponentBuild, error) {
 	sbc.recentComponentBuildsLock.Lock()
 	defer sbc.recentComponentBuildsLock.Unlock()
 
@@ -144,7 +144,7 @@ func (sbc *Controller) getComponentBuildFromAPI(ns, name string) (*crv1.Componen
 	return sbc.latticeClient.LatticeV1().ComponentBuilds(ns).Get(name, metav1.GetOptions{})
 }
 
-func getNewComponentBuildFromInfo(cbInfo *crv1.ServiceBuildComponentBuildInfo) *crv1.ComponentBuild {
+func getNewComponentBuildFromInfo(cbInfo *crv1.ServiceBuildSpecComponentBuildInfo) *crv1.ComponentBuild {
 	cbAnnotations := map[string]string{
 		constants.AnnotationKeyComponentBuildDefinitionHash: *cbInfo.DefinitionHash,
 	}

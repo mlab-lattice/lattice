@@ -20,7 +20,7 @@ func (c *Controller) syncSystemServices(system *crv1.System) (*crv1.System, erro
 	validServiceNames := map[string]bool{}
 
 	// Loop through the Services defined in the System's Spec, and create/update any that need it
-	servicesInfo := map[tree.NodePath]crv1.SystemServicesInfo{}
+	servicesInfo := map[tree.NodePath]crv1.SystemSpecServiceInfo{}
 	for path, serviceInfo := range system.Spec.Services {
 		// If the Service doesn't exist already, create one.
 		if serviceInfo.Name == nil {
@@ -130,7 +130,7 @@ func (c *Controller) getService(namespace, name string) (*crv1.Service, error) {
 	return svc, nil
 }
 
-func (c *Controller) createNewService(system *crv1.System, serviceInfo *crv1.SystemServicesInfo, path tree.NodePath) (*crv1.Service, error) {
+func (c *Controller) createNewService(system *crv1.System, serviceInfo *crv1.SystemSpecServiceInfo, path tree.NodePath) (*crv1.Service, error) {
 	svc, err := newService(system, serviceInfo, path)
 	if err != nil {
 		return nil, err
@@ -139,7 +139,7 @@ func (c *Controller) createNewService(system *crv1.System, serviceInfo *crv1.Sys
 	return c.latticeClient.LatticeV1().Services(svc.Namespace).Create(svc)
 }
 
-func newService(system *crv1.System, serviceInfo *crv1.SystemServicesInfo, path tree.NodePath) (*crv1.Service, error) {
+func newService(system *crv1.System, serviceInfo *crv1.SystemSpecServiceInfo, path tree.NodePath) (*crv1.Service, error) {
 	spec, err := serviceSpec(serviceInfo, path)
 	if err != nil {
 		return nil, err
@@ -159,7 +159,7 @@ func newService(system *crv1.System, serviceInfo *crv1.SystemServicesInfo, path 
 	return service, nil
 }
 
-func serviceSpec(serviceInfo *crv1.SystemServicesInfo, path tree.NodePath) (*crv1.ServiceSpec, error) {
+func serviceSpec(serviceInfo *crv1.SystemSpecServiceInfo, path tree.NodePath) (*crv1.ServiceSpec, error) {
 	componentPorts, portSet := servicePorts(serviceInfo)
 	envoyPorts, err := envoyPorts(portSet)
 	if err != nil {
@@ -191,7 +191,7 @@ func serviceSpec(serviceInfo *crv1.SystemServicesInfo, path tree.NodePath) (*crv
 	return spec, nil
 }
 
-func servicePorts(serviceInfo *crv1.SystemServicesInfo) (map[string][]crv1.ComponentPort, map[int32]struct{}) {
+func servicePorts(serviceInfo *crv1.SystemSpecServiceInfo) (map[string][]crv1.ComponentPort, map[int32]struct{}) {
 	componentPorts := map[string][]crv1.ComponentPort{}
 	portSet := map[int32]struct{}{}
 

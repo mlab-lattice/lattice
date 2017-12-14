@@ -18,12 +18,17 @@ const (
 type Endpoint struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata"`
-	Spec              EndpointSpec `json:"spec"`
+	Spec              EndpointSpec   `json:"spec"`
+	Status            EndpointStatus `json:"status"`
 }
 
 type EndpointSpec struct {
 	ExternalEndpoint *string `json:"externalEndpoint,omitempty"`
 	IP               *string `json:"ip,omitempty"`
+}
+
+type EndpointStatus struct {
+	State EndpointState `json:"state"`
 }
 
 type EndpointState string

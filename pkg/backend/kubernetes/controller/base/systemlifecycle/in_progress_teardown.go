@@ -15,7 +15,7 @@ func (c *Controller) syncInProgressTeardown(teardown *crv1.SystemTeardown) error
 	}
 
 	spec := crv1.SystemSpec{
-		Services: map[tree.NodePath]crv1.SystemServicesInfo{},
+		Services: map[tree.NodePath]crv1.SystemSpecServiceInfo{},
 	}
 
 	// This needs to happen in here because we don't have an "Accepted" intermediate state like SystemRollout does.

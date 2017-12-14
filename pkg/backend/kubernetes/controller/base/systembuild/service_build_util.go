@@ -20,7 +20,7 @@ func (sbc *Controller) getServiceBuildState(namespace, svcBuildName string) *crv
 	return &(svcb.Status.State)
 }
 
-func (sbc *Controller) getServiceBuildFromInfo(svcbInfo *crv1.SystemBuildServicesInfo, ns string) (*crv1.ServiceBuild, bool, error) {
+func (sbc *Controller) getServiceBuildFromInfo(svcbInfo *crv1.SystemBuildSpecServiceInfo, ns string) (*crv1.ServiceBuild, bool, error) {
 	if svcbInfo.Name == nil {
 		return nil, false, nil
 	}
@@ -50,9 +50,9 @@ func getNewServiceBuildFromDefinition(sysBuild *crv1.SystemBuild, svcDefinition 
 		// FIXME: add warn event
 	}
 
-	componentBuildsInfo := map[string]crv1.ServiceBuildComponentBuildInfo{}
+	componentBuildsInfo := map[string]crv1.ServiceBuildSpecComponentBuildInfo{}
 	for _, component := range svcDefinition.Components {
-		componentBuildsInfo[component.Name] = crv1.ServiceBuildComponentBuildInfo{
+		componentBuildsInfo[component.Name] = crv1.ServiceBuildSpecComponentBuildInfo{
 			DefinitionBlock: component.Build,
 		}
 	}

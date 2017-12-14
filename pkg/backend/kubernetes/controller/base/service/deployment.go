@@ -256,7 +256,7 @@ func containerFromComponent(component *block.Component, buildArtifacts *crv1.Com
 
 	return corev1.Container{
 		Name:            component.Name,
-		Image:           buildArtifacts.DockerImageFqn,
+		Image:           buildArtifacts.DockerImageFQN,
 		ImagePullPolicy: corev1.PullIfNotPresent,
 		Command:         component.Exec.Command,
 		Ports:           ports,
