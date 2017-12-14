@@ -7,8 +7,9 @@ import (
 	kubeconstants "github.com/mlab-lattice/system/pkg/backend/kubernetes/constants"
 	crv1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/bootstrapper"
-	baseboostrapper "github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/bootstrapper/base"
-	cloudboostrapper "github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/bootstrapper/cloud"
+	basebootstrapper "github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/bootstrapper/base"
+	cloudbootstrapper "github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/bootstrapper/cloud"
+	localbootstrapper "github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/bootstrapper/local"
 	kubeutil "github.com/mlab-lattice/system/pkg/backend/kubernetes/util/kubernetes"
 	"github.com/mlab-lattice/system/pkg/constants"
 	"github.com/mlab-lattice/system/pkg/util/cli"
@@ -48,9 +49,12 @@ var options = &bootstrapper.Options{
 		},
 		Envoy: crv1.ConfigEnvoy{},
 	},
-	MasterComponents: baseboostrapper.MasterComponentOptions{
-		LatticeControllerManager: baseboostrapper.LatticeControllerManagerOptions{},
-		ManagerAPI:               baseboostrapper.ManagerAPIOptions{},
+	MasterComponents: basebootstrapper.MasterComponentOptions{
+		LatticeControllerManager: basebootstrapper.LatticeControllerManagerOptions{},
+		ManagerAPI:               basebootstrapper.ManagerAPIOptions{},
+	},
+	LocalComponents: localbootstrapper.LocalComponentOptions{
+		LocalDNS: localbootstrapper.LocalDNSOptions{},
 	},
 }
 
@@ -150,9 +154,10 @@ func init() {
 	Cmd.Flags().BoolVar(&options.MasterComponents.ManagerAPI.HostNetwork, "manager-api-host-network", true, "whether or not the manager-api should be on the host network")
 	Cmd.Flags().StringArrayVar(&options.MasterComponents.ManagerAPI.Args, "manager-api-args", defaultManagerAPIArgs, "extra arguments (besides --provider) to pass to the lattice-controller-manager")
 
-	Cmd.Flags().StringVar(&provider, "provider", "", "provider that the cluster is being bootstrapped on")
-	Cmd.MarkFlagRequired("provider")
-	Cmd.Flags().StringArrayVar(&providerVars, "provider-var", nil, "additional variables for the provider")
+	// TODO :: Required flag only if local
+	Cmd.Flags().StringVar(&options.LocalComponents.LocalDNS.Image, "local-dns-controller-image", "", "docker image to use for the local-dns controller")
+	Cmd.MarkFlagRequired("local-dns-controller-image")
+	Cmd.Flags().StringArrayVar(&options.LocalComponents.LocalDNS.Args, "local-dns-controller-args", defaultLatticeControllerManagerArgs, "extra arguments (besides --provider) to pass to the local-dns-controller")
 
 	Cmd.Flags().StringVar(&terraformBackend, "terraform-backend", "", "backend to use for terraform")
 	Cmd.Flags().StringArrayVar(&terraformBackendVars, "terraform-backend-var", nil, "additional variables for the terraform backend")
@@ -293,19 +298,19 @@ func parseTerraformVarsS3() (*crv1.ConfigTerraformBackendS3, error) {
 	return s3Config, nil
 }
 
-func parseNetworkingVars() (*cloudboostrapper.NetworkingOptions, error) {
+func parseNetworkingVars() (*cloudbootstrapper.NetworkingOptions, error) {
 	if networkingProvider == "" {
 		return nil, nil
 	}
 
-	var options *cloudboostrapper.NetworkingOptions
+	var options *cloudbootstrapper.NetworkingOptions
 	switch terraformBackend {
 	case kubeconstants.NetworkingProviderFlannel:
 		flannelOptions, err := parseNetworkingVarsFlannel()
 		if err != nil {
 			return nil, err
 		}
-		options = &cloudboostrapper.NetworkingOptions{
+		options = &cloudbootstrapper.NetworkingOptions{
 			Flannel: flannelOptions,
 		}
 	default:
@@ -315,8 +320,8 @@ func parseNetworkingVars() (*cloudboostrapper.NetworkingOptions, error) {
 	return options, nil
 }
 
-func parseNetworkingVarsFlannel() (*cloudboostrapper.FlannelOptions, error) {
-	flannelOptions := &cloudboostrapper.FlannelOptions{}
+func parseNetworkingVarsFlannel() (*cloudbootstrapper.FlannelOptions, error) {
+	flannelOptions := &cloudbootstrapper.FlannelOptions{}
 	flags := cli.EmbeddedFlag{
 		Target: &flannelOptions,
 		Expected: map[string]cli.EmbeddedFlagValue{
