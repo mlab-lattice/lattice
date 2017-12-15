@@ -9,6 +9,8 @@ import (
 
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	kubelabels "k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/selection"
 )
 
 type state string
@@ -54,42 +56,58 @@ func (c *Controller) calculateState(build *crv1.SystemBuild) (stateInfo, error) 
 			// this cache lookup miss. That said, I don't think there is any real downside to orphaning a ServiceBuild,
 			// so we'll optimize here for assuming we don't hit the unfortunate error timing _and_ lose the race, and
 			// if we do we'll orphan a ServiceBuild, which is okay.
-			labelSelector := fmt.Sprintf("%v==%v,%v==%v", constants.LabelKeySystemBuildID, build.Name, constants.LabelKeyServicePath, service)
-			listOptions := metav1.ListOptions{
-				LabelSelector: labelSelector,
+			selector := kubelabels.NewSelector()
+			requirement, err := kubelabels.NewRequirement(constants.LabelKeySystemBuildID, selection.Equals, []string{build.Name})
+			if err != nil {
+				return stateInfo{}, err
 			}
-			serviceBuilds, err := c.latticeClient.LatticeV1().ServiceBuilds(build.Namespace).List(listOptions)
+			selector = selector.Add(*requirement)
+
+			requirement, err = kubelabels.NewRequirement(constants.LabelKeyServicePath, selection.Equals, []string{string(service)})
+			if err != nil {
+				return stateInfo{}, err
+			}
+			selector = selector.Add(*requirement)
+
+			serviceBuilds, err := c.serviceBuildLister.ServiceBuilds(build.Namespace).List(selector)
 			if err != nil {
 				return stateInfo{}, err
 			}
 
-			if len(serviceBuilds.Items) == 0 {
+			if len(serviceBuilds) == 0 {
 				needsNewServiceBuilds = append(needsNewServiceBuilds, service)
 				continue
 			}
 
 			// It's possible that we lost the race multiple times. Assume that this is what happened if we get
 			// multiple ServiceBuilds back. They should all be the same, so just choose the first one.
-			serviceBuild = &serviceBuilds.Items[0]
+			serviceBuild = serviceBuilds[0]
 		}
 
 		// If we already knew the name of the ServiceBuild, go find it
 		if serviceBuild == nil {
 			var err error
-			serviceBuild, err = c.latticeClient.LatticeV1().ServiceBuilds(build.Namespace).Get(serviceBuildName, metav1.GetOptions{})
+			serviceBuild, err = c.serviceBuildLister.ServiceBuilds(build.Namespace).Get(serviceBuildName)
 			if err != nil {
-				if errors.IsNotFound(err) {
-					err := fmt.Errorf(
-						"SystemBuild %v/%v has ServiceBuild.Name %v for service %v, but ServiceBuild does not exist",
-						build.Namespace,
-						build.Name,
-						serviceBuildName,
-						service,
-					)
+				if !errors.IsNotFound(err) {
 					return stateInfo{}, err
 				}
 
-				return stateInfo{}, err
+				serviceBuild, err = c.latticeClient.LatticeV1().ServiceBuilds(build.Namespace).Get(serviceBuildName, metav1.GetOptions{})
+				if err != nil {
+					if errors.IsNotFound(err) {
+						err := fmt.Errorf(
+							"SystemBuild %v/%v has ServiceBuild.Name %v for service %v, but ServiceBuild does not exist",
+							build.Namespace,
+							build.Name,
+							serviceBuildName,
+							service,
+						)
+						return stateInfo{}, err
+					}
+
+					return stateInfo{}, err
+				}
 			}
 		}
 

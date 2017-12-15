@@ -49,20 +49,28 @@ func (c *Controller) calculateState(build *crv1.ServiceBuild) (stateInfo, error)
 			continue
 		}
 
-		componentBuild, err := c.latticeClient.LatticeV1().ComponentBuilds(build.Namespace).Get(componentBuildName, metav1.GetOptions{})
+		componentBuild, err := c.componentBuildLister.ComponentBuilds(build.Namespace).Get(componentBuildName)
 		if err != nil {
-			if errors.IsNotFound(err) {
-				err := fmt.Errorf(
-					"ServiceBuild %v/%v has ComponentBuild.Name %v for component %v, but ComponentBuild does not exist",
-					build.Namespace,
-					build.Name,
-					componentBuildName,
-					component,
-				)
+			if !errors.IsNotFound(err) {
 				return stateInfo{}, err
 			}
 
-			return stateInfo{}, err
+			// If the ComponentBuild wasn't in the cache, double check with the API.
+			componentBuild, err = c.latticeClient.LatticeV1().ComponentBuilds(build.Namespace).Get(componentBuildName, metav1.GetOptions{})
+			if err != nil {
+				if errors.IsNotFound(err) {
+					err := fmt.Errorf(
+						"ServiceBuild %v/%v has ComponentBuild.Name %v for component %v, but ComponentBuild does not exist",
+						build.Namespace,
+						build.Name,
+						componentBuildName,
+						component,
+					)
+					return stateInfo{}, err
+				}
+
+				return stateInfo{}, err
+			}
 		}
 
 		componentBuilds[component] = componentBuild.Name

@@ -6,40 +6,40 @@ import (
 	batchv1 "k8s.io/api/batch/v1"
 )
 
-type cBuildState string
+type state string
 
 const (
-	stateJobNotCreated cBuildState = "job-not-created"
-	stateJobRunning    cBuildState = "job-running"
-	stateJobSucceeded  cBuildState = "job-succeeded"
-	stateJobFailed     cBuildState = "job-failed"
+	stateJobNotCreated state = "job-not-created"
+	stateJobRunning    state = "job-running"
+	stateJobSucceeded  state = "job-succeeded"
+	stateJobFailed     state = "job-failed"
 )
 
-type cBuildStateInfo struct {
-	state cBuildState
+type stateInfo struct {
+	state state
 	job   *batchv1.Job
 }
 
-func (c *Controller) calculateState(cb *crv1.ComponentBuild) (*cBuildStateInfo, error) {
-	j, err := c.getJobForBuild(cb)
+func (c *Controller) calculateState(build *crv1.ComponentBuild) (*stateInfo, error) {
+	job, err := c.getJobForBuild(build)
 	if err != nil {
 		return nil, err
 	}
 
 	// FIXME: if a ComponentBuild was successful, but then for some reason the Job is deleted, should it still be
 	// considered successful or should a new Job be spun up? Right now a new Job will be spun up.
-	if j == nil {
-		stateInfo := &cBuildStateInfo{
+	if job == nil {
+		stateInfo := &stateInfo{
 			state: stateJobNotCreated,
 		}
 		return stateInfo, nil
 	}
 
-	stateInfo := &cBuildStateInfo{
-		job: j,
+	stateInfo := &stateInfo{
+		job: job,
 	}
 
-	finished, succeeded := jobStatus(j)
+	finished, succeeded := jobStatus(job)
 	if !finished {
 		stateInfo.state = stateJobRunning
 		return stateInfo, nil

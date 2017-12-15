@@ -11,7 +11,7 @@ import (
 	kubeutil "github.com/mlab-lattice/system/pkg/backend/kubernetes/util/kubernetes"
 	"github.com/mlab-lattice/system/pkg/definition/block"
 
-	appsv1beta2 "k8s.io/api/apps/v1beta2"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kubelabels "k8s.io/apimachinery/pkg/labels"
@@ -27,7 +27,7 @@ const (
 	envoyConfigDirectoryVolumeName = "envoyconfig"
 )
 
-func (c *Controller) syncServiceDeployment(service *crv1.Service, nodePool *crv1.NodePool) (*appsv1beta2.Deployment, error) {
+func (c *Controller) syncServiceDeployment(service *crv1.Service, nodePool *crv1.NodePool) (*appsv1.Deployment, error) {
 	selector := kubelabels.NewSelector()
 	requirement, err := kubelabels.NewRequirement(kubeconstants.LabelKeyServiceID, selection.Equals, []string{service.Name})
 	if err != nil {
@@ -52,7 +52,7 @@ func (c *Controller) syncServiceDeployment(service *crv1.Service, nodePool *crv1
 	return c.syncExistingDeployment(service, nodePool, deployments[0])
 }
 
-func (c *Controller) syncExistingDeployment(service *crv1.Service, nodePool *crv1.NodePool, deployment *appsv1beta2.Deployment) (*appsv1beta2.Deployment, error) {
+func (c *Controller) syncExistingDeployment(service *crv1.Service, nodePool *crv1.NodePool, deployment *appsv1.Deployment) (*appsv1.Deployment, error) {
 	// Need a consistent view of our config while generating the deployment spec
 	var configCopy *crv1.ConfigSpec
 	{
@@ -106,7 +106,7 @@ func (c *Controller) syncExistingDeployment(service *crv1.Service, nodePool *crv
 	return deployment, nil
 }
 
-func (c *Controller) updateDeploymentSpec(deployment *appsv1beta2.Deployment, spec appsv1beta2.DeploymentSpec) (*appsv1beta2.Deployment, error) {
+func (c *Controller) updateDeploymentSpec(deployment *appsv1.Deployment, spec appsv1.DeploymentSpec) (*appsv1.Deployment, error) {
 	if reflect.DeepEqual(deployment.Spec, spec) {
 		return deployment, nil
 	}
@@ -115,19 +115,19 @@ func (c *Controller) updateDeploymentSpec(deployment *appsv1beta2.Deployment, sp
 	deployment = deployment.DeepCopy()
 	deployment.Spec = spec
 
-	return c.kubeClient.AppsV1beta2().Deployments(deployment.Namespace).Update(deployment)
+	return c.kubeClient.AppsV1().Deployments(deployment.Namespace).Update(deployment)
 }
 
-func (c *Controller) createNewDeployment(service *crv1.Service, nodePool *crv1.NodePool) (*appsv1beta2.Deployment, error) {
+func (c *Controller) createNewDeployment(service *crv1.Service, nodePool *crv1.NodePool) (*appsv1.Deployment, error) {
 	deployment, err := c.newDeployment(service, nodePool)
 	if err != nil {
 		return nil, err
 	}
 
-	return c.kubeClient.AppsV1beta2().Deployments(service.Namespace).Create(deployment)
+	return c.kubeClient.AppsV1().Deployments(service.Namespace).Create(deployment)
 }
 
-func (c *Controller) newDeployment(service *crv1.Service, nodePool *crv1.NodePool) (*appsv1beta2.Deployment, error) {
+func (c *Controller) newDeployment(service *crv1.Service, nodePool *crv1.NodePool) (*appsv1.Deployment, error) {
 	var configCopy *crv1.ConfigSpec
 	{
 		// Need a consistent view of our config while generating the deployment spec
@@ -144,7 +144,7 @@ func (c *Controller) newDeployment(service *crv1.Service, nodePool *crv1.NodePoo
 		return nil, err
 	}
 
-	d := &appsv1beta2.Deployment{
+	d := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:            name,
 			Labels:          labels,
@@ -167,7 +167,7 @@ func deploymentLabels(service *crv1.Service) map[string]string {
 	}
 }
 
-func deploymentSpec(service *crv1.Service, name string, deploymentLabels map[string]string, nodePool *crv1.NodePool, envoyConfig *crv1.ConfigEnvoy) (appsv1beta2.DeploymentSpec, error) {
+func deploymentSpec(service *crv1.Service, name string, deploymentLabels map[string]string, nodePool *crv1.NodePool, envoyConfig *crv1.ConfigEnvoy) (appsv1.DeploymentSpec, error) {
 	replicas := service.Spec.NumInstances
 
 	// Create a container for each Component in the Service
@@ -201,7 +201,7 @@ func deploymentSpec(service *crv1.Service, name string, deploymentLabels map[str
 		RequiredDuringSchedulingIgnoredDuringExecution: []corev1.PodAffinityTerm{podAffinityTerm},
 	}
 
-	deploymentSpec := appsv1beta2.DeploymentSpec{
+	deploymentSpec := appsv1.DeploymentSpec{
 		Replicas: &replicas,
 		Selector: &metav1.LabelSelector{
 			MatchLabels: deploymentLabels,

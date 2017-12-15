@@ -463,6 +463,7 @@ func (c *Controller) syncSystemRollout(key string) error {
 	if err != nil {
 		return err
 	}
+
 	rollout, err := c.systemRolloutLister.SystemRollouts(namespace).Get(name)
 	if errors.IsNotFound(err) {
 		glog.V(2).Infof("SystemRollout %v has been deleted", key)
@@ -505,6 +506,7 @@ func (c *Controller) syncSystemTeardown(key string) error {
 	if err != nil {
 		return err
 	}
+
 	teardown, err := c.systemTeardownLister.SystemTeardowns(namespace).Get(name)
 	if errors.IsNotFound(err) {
 		glog.V(2).Infof("SystemTeardown %v has been deleted", key)

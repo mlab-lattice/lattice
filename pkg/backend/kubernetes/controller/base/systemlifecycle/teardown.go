@@ -17,5 +17,9 @@ func (c *Controller) updateTeardownStatus(teardown *crv1.SystemTeardown, state c
 		return teardown, nil
 	}
 
+	// Copy so the shared cache isn't mutated
+	teardown = teardown.DeepCopy()
+	teardown.Status = status
+
 	return c.latticeClient.LatticeV1().SystemTeardowns(teardown.Namespace).UpdateStatus(teardown)
 }

@@ -6,7 +6,7 @@ import (
 
 	crv1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 
-	appsv1beta2 "k8s.io/api/apps/v1beta2"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -18,7 +18,7 @@ const (
 
 func (c *Controller) syncServiceStatus(
 	service *crv1.Service,
-	deployment *appsv1beta2.Deployment,
+	deployment *appsv1.Deployment,
 	kubeService *corev1.Service,
 	nodePool *crv1.NodePool,
 	serviceAddress *crv1.ServiceAddress,
@@ -34,7 +34,7 @@ func (c *Controller) syncServiceStatus(
 	staleInstances := totalInstances - updatedInstances
 
 	for _, condition := range deployment.Status.Conditions {
-		if condition.Type == appsv1beta2.DeploymentReplicaFailure && condition.Status == corev1.ConditionTrue {
+		if condition.Type == appsv1.DeploymentReplicaFailure && condition.Status == corev1.ConditionTrue {
 			failed = true
 			failureReason = condition.Reason
 			failureMessage = condition.Message

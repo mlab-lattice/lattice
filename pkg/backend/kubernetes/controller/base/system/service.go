@@ -81,18 +81,26 @@ func (c *Controller) syncSystemServices(system *crv1.System) (map[tree.NodePath]
 			var err error
 			service, err = c.serviceLister.Services(system.Namespace).Get(serviceName)
 			if err != nil {
-				if errors.IsNotFound(err) {
-					// FIXME: send warn event
-					// TODO: should we just create a new Service here?
-					return nil, nil, nil, fmt.Errorf(
-						"Service %v in namespace %v has Name %v but Service does not exist",
-						path,
-						system.Namespace,
-						serviceName,
-					)
+				if !errors.IsNotFound(err) {
+					return nil, nil, nil, err
 				}
 
-				return nil, nil, nil, err
+				// the Service wasn't in our cache, so check with the API
+				service, err = c.latticeClient.LatticeV1().Services(system.Namespace).Get(serviceName, metav1.GetOptions{})
+				if err != nil {
+					if errors.IsNotFound(err) {
+						// FIXME: send warn event
+						// TODO: should we just create a new Service here?
+						return nil, nil, nil, fmt.Errorf(
+							"Service %v in namespace %v has Name %v but Service does not exist",
+							path,
+							system.Namespace,
+							serviceName,
+						)
+					}
+
+					return nil, nil, nil, err
+				}
 			}
 		}
 

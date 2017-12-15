@@ -55,7 +55,11 @@ func (c *Controller) updateComponentBuildState(build *crv1.ComponentBuild, state
 	return c.updateComponentBuildStatus(build, state, build.Status.Artifacts)
 }
 
-func (c *Controller) updateComponentBuildStatus(build *crv1.ComponentBuild, state crv1.ComponentBuildState, artifacts *crv1.ComponentBuildArtifacts) (*crv1.ComponentBuild, error) {
+func (c *Controller) updateComponentBuildStatus(
+	build *crv1.ComponentBuild,
+	state crv1.ComponentBuildState,
+	artifacts *crv1.ComponentBuildArtifacts,
+) (*crv1.ComponentBuild, error) {
 	status := crv1.ComponentBuildStatus{
 		State:              state,
 		ObservedGeneration: build.Generation,

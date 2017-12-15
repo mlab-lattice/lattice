@@ -13,7 +13,7 @@ import (
 	latticelisters "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/listers/lattice/v1"
 	kubeutil "github.com/mlab-lattice/system/pkg/backend/kubernetes/util/kubernetes"
 
-	appsv1beta2 "k8s.io/api/apps/v1beta2"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -21,10 +21,10 @@ import (
 	"k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
 
-	appinformers "k8s.io/client-go/informers/apps/v1beta2"
+	appinformers "k8s.io/client-go/informers/apps/v1"
 	coreinformers "k8s.io/client-go/informers/core/v1"
 	kubeclientset "k8s.io/client-go/kubernetes"
-	appslisters "k8s.io/client-go/listers/apps/v1beta2"
+	appslisters "k8s.io/client-go/listers/apps/v1"
 	corelisters "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
@@ -261,7 +261,7 @@ func (c *Controller) handleNodePoolUpdate(old, cur interface{}) {
 
 // handleDeploymentAdd enqueues the Service that manages a Deployment when the Deployment is created.
 func (c *Controller) handleDeploymentAdd(obj interface{}) {
-	d := obj.(*appsv1beta2.Deployment)
+	d := obj.(*appsv1.Deployment)
 
 	if d.DeletionTimestamp != nil {
 		// On a restart of the controller manager, it's possible for an object to
@@ -293,8 +293,8 @@ func (c *Controller) handleDeploymentAdd(obj interface{}) {
 // is updated and enqueues it.
 func (c *Controller) handleDeploymentUpdate(old, cur interface{}) {
 	glog.V(5).Info("Got Deployment update")
-	oldD := old.(*appsv1beta2.Deployment)
-	curD := cur.(*appsv1beta2.Deployment)
+	oldD := old.(*appsv1.Deployment)
+	curD := cur.(*appsv1.Deployment)
 	if curD.ResourceVersion == oldD.ResourceVersion {
 		// Periodic resync will send update events for all known Deployments.
 		// Two different versions of the same Deployment will always have different RVs.
@@ -333,7 +333,7 @@ func (c *Controller) handleDeploymentUpdate(old, cur interface{}) {
 // handleDeploymentDelete enqueues the Service that manages a Deployment when
 // the Deployment is deleted.
 func (c *Controller) handleDeploymentDelete(obj interface{}) {
-	d, ok := obj.(*appsv1beta2.Deployment)
+	d, ok := obj.(*appsv1.Deployment)
 
 	// When a delete is dropped, the relist will notice a pod in the store not
 	// in the list, leading to the insertion of a tombstone object which contains
@@ -344,7 +344,7 @@ func (c *Controller) handleDeploymentDelete(obj interface{}) {
 			runtime.HandleError(fmt.Errorf("couldn't get object from tombstone %#v", obj))
 			return
 		}
-		d, ok = tombstone.Obj.(*appsv1beta2.Deployment)
+		d, ok = tombstone.Obj.(*appsv1.Deployment)
 		if !ok {
 			runtime.HandleError(fmt.Errorf("tombstone contained object that is not a Deployment %#v", obj))
 			return
@@ -616,6 +616,7 @@ func (c *Controller) syncService(key string) error {
 	if err != nil {
 		return err
 	}
+
 	service, err := c.serviceLister.Services(namespace).Get(name)
 	if errors.IsNotFound(err) {
 		glog.V(2).Infof("Service %v has been deleted", key)

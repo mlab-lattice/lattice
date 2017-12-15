@@ -44,11 +44,7 @@ func (c *Controller) syncAcceptedRollout(rollout *crv1.SystemRollout) error {
 			return err
 		}
 
-		// Copy so the shared cache isn't mutated
-		system = system.DeepCopy()
-		system.Spec = spec
-
-		_, err = c.latticeClient.LatticeV1().Systems(system.Namespace).Update(system)
+		_, err = c.updateSystemSpec(system, spec)
 		if err != nil {
 			return err
 		}

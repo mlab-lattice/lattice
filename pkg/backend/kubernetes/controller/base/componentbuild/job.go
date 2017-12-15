@@ -32,28 +32,45 @@ const (
 )
 
 // getJobForBuild uses ControllerRefManager to retrieve the Job for a ComponentBuild
-func (c *Controller) getJobForBuild(cb *crv1.ComponentBuild) (*batchv1.Job, error) {
+func (c *Controller) getJobForBuild(build *crv1.ComponentBuild) (*batchv1.Job, error) {
 	selector := labels.NewSelector()
-	requirement, err := labels.NewRequirement(kubeconstants.LabelKeyComponentBuildID, selection.Equals, []string{cb.Name})
+	requirement, err := labels.NewRequirement(kubeconstants.LabelKeyComponentBuildID, selection.Equals, []string{build.Name})
 	if err != nil {
 		return nil, err
 	}
 
 	selector = selector.Add(*requirement)
-	jobs, err := c.jobLister.Jobs(cb.Namespace).List(selector)
+	jobs, err := c.jobLister.Jobs(build.Namespace).List(selector)
 	if err != nil {
 		return nil, err
 	}
 
-	if len(jobs) == 0 {
-		return nil, nil
+	if len(jobs) == 1 {
+		return jobs[0], nil
 	}
 
 	if len(jobs) > 1 {
-		return nil, fmt.Errorf("ComponentBuild %v has multiple Jobs", cb.Name)
+		return nil, fmt.Errorf("ComponentBuild %v has multiple Jobs", build.Name)
 	}
 
-	return jobs[0], nil
+	// Didn't find anything in the cache. Will do a full API query to see if one exists.
+	listOptions := metav1.ListOptions{
+		LabelSelector: selector.String(),
+	}
+	jobItems, err := c.kubeClient.BatchV1().Jobs(build.Namespace).List(listOptions)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(jobItems.Items) == 0 {
+		return nil, nil
+	}
+
+	if len(jobItems.Items) > 1 {
+		return nil, fmt.Errorf("ComponentBuild %v has multiple Jobs", build.Name)
+	}
+
+	return &jobItems.Items[0], nil
 }
 
 func (c *Controller) createNewJob(build *crv1.ComponentBuild) (*batchv1.Job, error) {
@@ -72,8 +89,7 @@ func (c *Controller) newJob(build *crv1.ComponentBuild) (*batchv1.Job, error) {
 
 	name := jobName(build)
 
-	// FIXME: get job spec for build.DockerImage as well
-	spec, dockerImageFQN, err := c.gitRepositoryBuildJobSpec(build)
+	spec, dockerImageFQN, err := c.jobSpec(build)
 	if err != nil {
 		return nil, err
 	}
@@ -98,7 +114,7 @@ func jobName(cb *crv1.ComponentBuild) string {
 	return fmt.Sprintf("lattice-build-%s", cb.Name)
 }
 
-func (c *Controller) gitRepositoryBuildJobSpec(build *crv1.ComponentBuild) (batchv1.JobSpec, string, error) {
+func (c *Controller) jobSpec(build *crv1.ComponentBuild) (batchv1.JobSpec, string, error) {
 	buildContainer, dockerImageFQN, err := c.getBuildContainer(build)
 	if err != nil {
 		return batchv1.JobSpec{}, "", err

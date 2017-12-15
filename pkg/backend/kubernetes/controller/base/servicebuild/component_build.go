@@ -1,6 +1,8 @@
 package servicebuild
 
 import (
+	"fmt"
+
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/constants"
 	crv1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 
@@ -11,17 +13,17 @@ import (
 	"github.com/satori/go.uuid"
 )
 
-func getComponentBuildDefinitionHashFromLabel(cb *crv1.ComponentBuild) *string {
-	cBuildHashLabel, ok := cb.Annotations[constants.AnnotationKeyComponentBuildDefinitionHash]
+func getComponentBuildDefinitionHashFromLabel(componentBuild *crv1.ComponentBuild) *string {
+	cBuildHashLabel, ok := componentBuild.Annotations[constants.AnnotationKeyComponentBuildDefinitionHash]
 	if !ok {
 		return nil
 	}
 	return &cBuildHashLabel
 }
 
-func (c *Controller) findComponentBuildForDefinitionHash(ns, definitionHash string) (*crv1.ComponentBuild, error) {
+func (c *Controller) findComponentBuildForDefinitionHash(namespace, definitionHash string) (*crv1.ComponentBuild, error) {
 	// Check recent build cache
-	cb, err := c.findComponentBuildInRecentBuildCache(ns, definitionHash)
+	cb, err := c.findComponentBuildInRecentBuildCache(namespace, definitionHash)
 	if err != nil {
 		return nil, err
 	}
@@ -33,27 +35,27 @@ func (c *Controller) findComponentBuildForDefinitionHash(ns, definitionHash stri
 
 	// We couldn't find a ComponentBuild in our recent builds cache, so we'll check the Store to see if
 	// there's a ComponentBuild we could use in there.
-	return c.findComponentBuildInStore(ns, definitionHash)
+	return c.findComponentBuildInStore(namespace, definitionHash)
 }
 
-func (c *Controller) findComponentBuildInRecentBuildCache(ns, definitionHash string) (*crv1.ComponentBuild, error) {
+func (c *Controller) findComponentBuildInRecentBuildCache(namespace, definitionHash string) (*crv1.ComponentBuild, error) {
 	c.recentComponentBuildsLock.RLock()
 	defer c.recentComponentBuildsLock.RUnlock()
 
-	cbNsCache, ok := c.recentComponentBuilds[ns]
+	cbNsCache, ok := c.recentComponentBuilds[namespace]
 	if !ok {
 		return nil, nil
 	}
 
-	cbName, ok := cbNsCache[definitionHash]
+	componentBuildName, ok := cbNsCache[definitionHash]
 	if !ok {
 		return nil, nil
 	}
 
 	// Check to see if this build is in our ComponentBuild store
-	cb, err := c.componentBuildLister.ComponentBuilds(ns).Get(cbName)
+	componentBuild, err := c.componentBuildLister.ComponentBuilds(namespace).Get(componentBuildName)
 	if err == nil {
-		return cb, nil
+		return componentBuild, nil
 	}
 
 	if !errors.IsNotFound(err) {
@@ -61,19 +63,18 @@ func (c *Controller) findComponentBuildInRecentBuildCache(ns, definitionHash str
 	}
 
 	// The ComponentBuild isn't in our store, so we'll need to read from the API
-	cb, err = c.latticeClient.LatticeV1().ComponentBuilds(ns).Get(cbName, metav1.GetOptions{})
+	componentBuild, err = c.latticeClient.LatticeV1().ComponentBuilds(namespace).Get(componentBuildName, metav1.GetOptions{})
 	if err != nil {
 		if errors.IsNotFound(err) {
-			// FIXME: send warn event, this shouldn't happen
-			return nil, nil
+			return nil, fmt.Errorf("namespace %v had ComponentBuild %v in cache but it does not exist", namespace, componentBuildName)
 		}
 		return nil, err
 	}
 
-	return cb, nil
+	return componentBuild, nil
 }
 
-func (c *Controller) findComponentBuildInStore(ns, definitionHash string) (*crv1.ComponentBuild, error) {
+func (c *Controller) findComponentBuildInStore(namespace, definitionHash string) (*crv1.ComponentBuild, error) {
 	// TODO: similar scalability concerns to getServiceBuildsForComponentBuild
 	cbs, err := c.componentBuildLister.List(labels.Everything())
 	if err != nil {
@@ -94,41 +95,58 @@ func (c *Controller) findComponentBuildInStore(ns, definitionHash string) (*crv1
 	return nil, nil
 }
 
-func (c *Controller) createNewComponentBuild(ns string, cbInfo crv1.ServiceBuildSpecComponentBuildInfo, definitionHash string, previousCbName *string) (*crv1.ComponentBuild, error) {
+func (c *Controller) createNewComponentBuild(
+	namespace string,
+	componentBuildInfo crv1.ServiceBuildSpecComponentBuildInfo,
+	definitionHash string,
+	previousCbName *string,
+) (*crv1.ComponentBuild, error) {
 	c.recentComponentBuildsLock.Lock()
 	defer c.recentComponentBuildsLock.Unlock()
 
-	if cbNsCache, ok := c.recentComponentBuilds[ns]; ok {
+	if namespaceCache, ok := c.recentComponentBuilds[namespace]; ok {
 		// If there is a new entry in the recent build cache, a different service build has attempted to
 		// build the same component. We'll use this ComponentBuild as ours.
-		cbName, ok := cbNsCache[definitionHash]
-		if ok && (previousCbName == nil || cbName != *previousCbName) {
-			return c.getComponentBuildFromAPI(ns, cbName)
+		componentBuildName, ok := namespaceCache[definitionHash]
+		if ok && (previousCbName == nil || componentBuildName != *previousCbName) {
+			componentBuild, err := c.componentBuildLister.ComponentBuilds(namespace).Get(componentBuildName)
+			if err != nil {
+				if !errors.IsNotFound(err) {
+					return nil, err
+				}
+
+				componentBuild, err = c.latticeClient.LatticeV1().ComponentBuilds(namespace).Get(componentBuildName, metav1.GetOptions{})
+				if err != nil {
+					if errors.IsNotFound(err) {
+						return nil, fmt.Errorf("namespace %v had ComponentBuild %v in cache but it does not exist", namespace, componentBuildName)
+					}
+
+					return nil, err
+				}
+
+				return componentBuild, nil
+			}
 		}
 	}
 
 	// If there is no new entry in the build cache, create a new ComponentBuild.
-	cb := getNewComponentBuildFromInfo(cbInfo, definitionHash)
-	result, err := c.latticeClient.LatticeV1().ComponentBuilds(ns).Create(cb)
+	componentBuild := newComponentBuild(componentBuildInfo, definitionHash)
+	componentBuild, err := c.latticeClient.LatticeV1().ComponentBuilds(namespace).Create(componentBuild)
 	if err != nil {
 		return nil, err
 	}
 
-	cbNsCache, ok := c.recentComponentBuilds[ns]
+	namespaceCache, ok := c.recentComponentBuilds[namespace]
 	if !ok {
-		cbNsCache = map[string]string{}
-		c.recentComponentBuilds[ns] = cbNsCache
+		namespaceCache = map[string]string{}
+		c.recentComponentBuilds[namespace] = namespaceCache
 	}
-	cbNsCache[definitionHash] = cb.Name
+	namespaceCache[definitionHash] = componentBuild.Name
 
-	return result, nil
+	return componentBuild, nil
 }
 
-func (c *Controller) getComponentBuildFromAPI(ns, name string) (*crv1.ComponentBuild, error) {
-	return c.latticeClient.LatticeV1().ComponentBuilds(ns).Get(name, metav1.GetOptions{})
-}
-
-func getNewComponentBuildFromInfo(cbInfo crv1.ServiceBuildSpecComponentBuildInfo, definitionHash string) *crv1.ComponentBuild {
+func newComponentBuild(cbInfo crv1.ServiceBuildSpecComponentBuildInfo, definitionHash string) *crv1.ComponentBuild {
 	cbAnnotations := map[string]string{
 		constants.AnnotationKeyComponentBuildDefinitionHash: definitionHash,
 	}

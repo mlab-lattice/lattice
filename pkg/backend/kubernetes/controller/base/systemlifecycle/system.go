@@ -2,14 +2,28 @@ package systemlifecycle
 
 import (
 	"fmt"
+	"reflect"
 
 	crv1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	"github.com/mlab-lattice/system/pkg/definition"
 	"github.com/mlab-lattice/system/pkg/definition/tree"
 
 	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kubelabels "k8s.io/apimachinery/pkg/labels"
 )
+
+func (c *Controller) updateSystemSpec(system *crv1.System, spec crv1.SystemSpec) (*crv1.System, error) {
+	if reflect.DeepEqual(system.Spec, spec) {
+		return system, nil
+	}
+
+	// Copy so the shared cache isn't mutated
+	system = system.DeepCopy()
+	system.Spec = spec
+
+	return c.latticeClient.LatticeV1().Systems(system.Namespace).Update(system)
+}
 
 func isSystemStatusCurrent(system *crv1.System) bool {
 	return system.Status.ObservedGeneration == system.Generation
@@ -21,11 +35,28 @@ func (c *Controller) getSystem(namespace string) (*crv1.System, error) {
 		return nil, err
 	}
 
-	if len(systems) != 0 {
-		return nil, fmt.Errorf("expected a System in namespace %v but found %v", namespace, len(systems))
+	if len(systems) > 1 {
+		return nil, fmt.Errorf("expected one System in namespace %v but found %v", namespace, len(systems))
 	}
 
-	return systems[0], nil
+	if len(systems) == 1 {
+		return systems[0], nil
+	}
+
+	systemList, err := c.latticeClient.LatticeV1().Systems(namespace).List(metav1.ListOptions{})
+	if err != nil {
+		return nil, err
+	}
+
+	if len(systemList.Items) > 1 {
+		return nil, fmt.Errorf("expected one System in namespace %v but found %v", namespace, len(systemList.Items))
+	}
+
+	if len(systemList.Items) == 1 {
+		return &systemList.Items[0], nil
+	}
+
+	return nil, fmt.Errorf("expected one System in namespace %v but found %v", namespace, len(systemList.Items))
 }
 
 func (c *Controller) systemSpec(rollout *crv1.SystemRollout, build *crv1.SystemBuild) (crv1.SystemSpec, error) {
