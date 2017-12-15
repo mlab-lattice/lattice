@@ -2,8 +2,6 @@ package main
 
 import (
 	"flag"
-
-	"github.com/mlab-lattice/system/cmd/kubernetes/lattice-controller-manager/app"
 )
 
 var (
@@ -20,5 +18,5 @@ func init() {
 }
 
 func main() {
-	app.Run(kubeconfig, provider, terraformModulePath)
+	Run(kubeconfig, provider, terraformModulePath)
 }
