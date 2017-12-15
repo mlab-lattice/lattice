@@ -2,12 +2,12 @@ package componentbuilder
 
 import (
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/constants"
-	crv1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	latticeclientset "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/clientset/versioned"
 	"github.com/mlab-lattice/system/pkg/types"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"encoding/json"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 )
@@ -45,7 +45,7 @@ func (ksu *KubernetesStatusUpdater) UpdateProgress(buildID types.ComponentBuildI
 }
 
 func (ksu *KubernetesStatusUpdater) updateProgressInternal(buildID types.ComponentBuildID, phase types.ComponentBuildPhase, numRetries int) error {
-	cb, err := ksu.LatticeClient.LatticeV1().ComponentBuilds(constants.NamespaceLatticeInternal).Get(string(buildID), metav1.GetOptions{})
+	build, err := ksu.LatticeClient.LatticeV1().ComponentBuilds(constants.NamespaceLatticeInternal).Get(string(buildID), metav1.GetOptions{})
 	if err != nil {
 		if numRetries <= 0 {
 			return err
@@ -53,8 +53,9 @@ func (ksu *KubernetesStatusUpdater) updateProgressInternal(buildID types.Compone
 		return ksu.updateProgressInternal(buildID, phase, numRetries-1)
 	}
 
-	cb.Status.LastObservedPhase = &phase
-	_, err = ksu.LatticeClient.LatticeV1().ComponentBuilds(cb.Namespace).Update(cb)
+	build.Annotations[constants.AnnotationKeyComponentBuildLastObservedPhase] = string(phase)
+
+	_, err = ksu.LatticeClient.LatticeV1().ComponentBuilds(build.Namespace).Update(build)
 	if err != nil {
 		if numRetries <= 0 {
 			return err
@@ -70,7 +71,7 @@ func (ksu *KubernetesStatusUpdater) UpdateError(buildID types.ComponentBuildID, 
 }
 
 func (ksu *KubernetesStatusUpdater) updateErrorInternal(buildID types.ComponentBuildID, internal bool, updateErr error, numRetries int) error {
-	cb, err := ksu.LatticeClient.LatticeV1().ComponentBuilds(constants.NamespaceLatticeInternal).Get(string(buildID), metav1.GetOptions{})
+	build, err := ksu.LatticeClient.LatticeV1().ComponentBuilds(constants.NamespaceLatticeInternal).Get(string(buildID), metav1.GetOptions{})
 	if err != nil {
 		if numRetries <= 0 {
 			return err
@@ -78,11 +79,18 @@ func (ksu *KubernetesStatusUpdater) updateErrorInternal(buildID types.ComponentB
 		return ksu.updateErrorInternal(buildID, internal, updateErr, numRetries-1)
 	}
 
-	cb.Status.FailureInfo = &crv1.ComponentBuildFailureInfo{
+	failureInfo := types.ComponentBuildFailureInfo{
 		Message:  updateErr.Error(),
 		Internal: internal,
 	}
-	_, err = ksu.LatticeClient.LatticeV1().ComponentBuilds(cb.Namespace).Update(cb)
+	data, err := json.Marshal(failureInfo)
+	if err != nil {
+		return err
+	}
+
+	build.Annotations[constants.AnnotationKeyComponentBuildFailureInfo] = string(data)
+
+	_, err = ksu.LatticeClient.LatticeV1().ComponentBuilds(build.Namespace).Update(build)
 	if err != nil {
 		if numRetries <= 0 {
 			return err
