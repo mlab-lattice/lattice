@@ -17,8 +17,9 @@ import (
 )
 
 var (
-	workDirectory    string
-	componentBuildID string
+	workDirectory           string
+	componentBuildID        string
+	componentBuildNamespace string
 
 	dockerRegistry         string
 	dockerRegistryAuthType string
@@ -57,7 +58,7 @@ var RootCmd = &cobra.Command{
 			log.Fatal("error getting status updater: " + err.Error())
 		}
 
-		builder, err := componentbuilder.NewBuilder(types.ComponentBuildID(componentBuildID), workDirectory, dockerOptions, nil, cb, statusUpdater)
+		builder, err := componentbuilder.NewBuilder(types.ComponentBuildID(componentBuildID), types.LatticeNamespace(componentBuildNamespace), workDirectory, dockerOptions, nil, cb, statusUpdater)
 		if err != nil {
 			log.Fatal("error getting builder: " + err.Error())
 		}
@@ -79,6 +80,7 @@ func Execute() {
 
 func init() {
 	RootCmd.Flags().StringVar(&componentBuildID, "component-build-id", "", "ID of the component build")
+	RootCmd.Flags().StringVar(&componentBuildNamespace, "component-build-namespace", "", "namespace of the component build")
 	RootCmd.Flags().StringVar(&componentBuildDefinition, "component-build-definition", "", "JSON serialized version of the component build definition block")
 
 	RootCmd.Flags().StringVar(&dockerRegistry, "docker-registry", "", "registry to tag the docker image artifact with")

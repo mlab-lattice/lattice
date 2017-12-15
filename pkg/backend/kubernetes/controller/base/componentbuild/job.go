@@ -110,8 +110,8 @@ func (c *Controller) newJob(build *crv1.ComponentBuild) (*batchv1.Job, error) {
 	return job, nil
 }
 
-func jobName(cb *crv1.ComponentBuild) string {
-	return fmt.Sprintf("lattice-build-%s", cb.Name)
+func jobName(build *crv1.ComponentBuild) string {
+	return fmt.Sprintf("lattice-build-%s", build.Name)
 }
 
 func (c *Controller) jobSpec(build *crv1.ComponentBuild) (batchv1.JobSpec, string, error) {
@@ -189,21 +189,22 @@ func (c *Controller) jobSpec(build *crv1.ComponentBuild) (batchv1.JobSpec, strin
 	return spec, dockerImageFQN, nil
 }
 
-func (c *Controller) getBuildContainer(cb *crv1.ComponentBuild) (*corev1.Container, string, error) {
-	buildJSON, err := json.Marshal(&cb.Spec.BuildDefinitionBlock)
+func (c *Controller) getBuildContainer(build *crv1.ComponentBuild) (*corev1.Container, string, error) {
+	buildJSON, err := json.Marshal(&build.Spec.BuildDefinitionBlock)
 	if err != nil {
 		return nil, "", err
 	}
 
 	repo := c.config.ComponentBuild.DockerArtifact.Repository
-	tag := cb.Annotations[kubeconstants.AnnotationKeyComponentBuildDefinitionHash]
+	tag := build.Annotations[kubeconstants.AnnotationKeyComponentBuildDefinitionHash]
 	if c.config.ComponentBuild.DockerArtifact.RepositoryPerImage {
-		repo = cb.Annotations[kubeconstants.AnnotationKeyComponentBuildDefinitionHash]
+		repo = build.Annotations[kubeconstants.AnnotationKeyComponentBuildDefinitionHash]
 		tag = fmt.Sprint(time.Now().Unix())
 	}
 
 	args := []string{
-		"--component-build-id", cb.Name,
+		"--component-build-id", build.Name,
+		"--component-build-namespace", build.Namespace,
 		"--component-build-definition", string(buildJSON),
 		"--docker-registry", c.config.ComponentBuild.DockerArtifact.Registry,
 		"--docker-repository", repo,

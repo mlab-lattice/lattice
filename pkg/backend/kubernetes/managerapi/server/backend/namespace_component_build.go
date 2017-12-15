@@ -17,15 +17,14 @@ import (
 )
 
 func (kb *KubernetesBackend) ListComponentBuilds(ln types.LatticeNamespace) ([]types.ComponentBuild, error) {
-	result, err := kb.LatticeClient.LatticeV1().ComponentBuilds(kubeconstants.NamespaceLatticeInternal).List(metav1.ListOptions{})
+	buildList, err := kb.LatticeClient.LatticeV1().ComponentBuilds(string(ln)).List(metav1.ListOptions{})
 	if err != nil {
 		return nil, err
 	}
 
-	builds := []types.ComponentBuild{}
-	for _, build := range result.Items {
-		// FIXME: should add a label to component builds for the lattice namespace
-		builds = append(builds, transformComponentBuild(&build))
+	var builds []types.ComponentBuild
+	for _, build := range buildList.Items {
+		builds = append(builds, transformComponentBuild(build.Name, build.Status))
 	}
 
 	return builds, nil
@@ -37,9 +36,8 @@ func (kb *KubernetesBackend) GetComponentBuild(ln types.LatticeNamespace, bid ty
 		return nil, exists, err
 	}
 
-	coreBuild := transformComponentBuild(build)
-	// FIXME: should add a label to component builds for the lattice namespace
-	return &coreBuild, true, nil
+	externalBuild := transformComponentBuild(build.Name, build.Status)
+	return &externalBuild, true, nil
 }
 
 func (kb *KubernetesBackend) GetComponentBuildLogs(ln types.LatticeNamespace, bid types.ComponentBuildID, follow bool) (io.ReadCloser, bool, error) {
@@ -76,7 +74,7 @@ func (kb *KubernetesBackend) GetComponentBuildLogs(ln types.LatticeNamespace, bi
 }
 
 func (kb *KubernetesBackend) getInternalComponentBuild(ln types.LatticeNamespace, bid types.ComponentBuildID) (*crv1.ComponentBuild, bool, error) {
-	result, err := kb.LatticeClient.LatticeV1().ComponentBuilds(kubeconstants.NamespaceLatticeInternal).Get(string(bid), metav1.GetOptions{})
+	result, err := kb.LatticeClient.LatticeV1().ComponentBuilds(string(ln)).Get(string(bid), metav1.GetOptions{})
 	if err != nil {
 		if errors.IsNotFound(err) {
 			return nil, false, nil
@@ -87,19 +85,21 @@ func (kb *KubernetesBackend) getInternalComponentBuild(ln types.LatticeNamespace
 	return result, true, nil
 }
 
-func transformComponentBuild(build *crv1.ComponentBuild) types.ComponentBuild {
-	cb := types.ComponentBuild{
-		ID:                types.ComponentBuildID(build.Name),
-		State:             getComponentBuildState(build.Status.State),
-		LastObservedPhase: build.Status.LastObservedPhase,
+func transformComponentBuild(name string, status crv1.ComponentBuildStatus) types.ComponentBuild {
+	var failureMessage *string
+	if status.FailureInfo != nil {
+		message := getComponentBuildFailureMessage(*status.FailureInfo)
+		failureMessage = &message
 	}
 
-	if build.Status.FailureInfo != nil {
-		failureMessage := getComponentBuildFailureMessage(*build.Status.FailureInfo)
-		cb.FailureMessage = &failureMessage
+	externalBuild := types.ComponentBuild{
+		ID:                types.ComponentBuildID(name),
+		State:             getComponentBuildState(status.State),
+		LastObservedPhase: status.LastObservedPhase,
+		FailureMessage:    failureMessage,
 	}
 
-	return cb
+	return externalBuild
 }
 
 func getComponentBuildState(state crv1.ComponentBuildState) types.ComponentBuildState {
@@ -119,7 +119,7 @@ func getComponentBuildState(state crv1.ComponentBuildState) types.ComponentBuild
 	}
 }
 
-func getComponentBuildFailureMessage(failureInfo crv1.ComponentBuildFailureInfo) string {
+func getComponentBuildFailureMessage(failureInfo types.ComponentBuildFailureInfo) string {
 	if failureInfo.Internal {
 		return "failed due to an internal error"
 	}

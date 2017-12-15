@@ -1,6 +1,7 @@
 package backend
 
 import (
+	"fmt"
 	"strings"
 
 	kubeconstants "github.com/mlab-lattice/system/pkg/backend/kubernetes/constants"
@@ -22,7 +23,7 @@ func (kb *KubernetesBackend) BuildSystem(ln types.LatticeNamespace, definitionRo
 		return "", err
 	}
 
-	result, err := kb.LatticeClient.LatticeV1().SystemBuilds(kubeconstants.NamespaceLatticeInternal).Create(systemBuild)
+	result, err := kb.LatticeClient.LatticeV1().SystemBuilds(string(ln)).Create(systemBuild)
 	if err != nil {
 		return "", err
 	}
@@ -49,9 +50,8 @@ func getNewSystemBuild(ln types.LatticeNamespace, definitionRoot tree.Node, v ty
 			Labels: labels,
 		},
 		Spec: crv1.SystemBuildSpec{
-			LatticeNamespace: ln,
-			DefinitionRoot:   definitionRoot,
-			Services:         services,
+			DefinitionRoot: definitionRoot,
+			Services:       services,
 		},
 		Status: crv1.SystemBuildStatus{
 			State: crv1.SystemBuildStatePending,
@@ -62,19 +62,24 @@ func getNewSystemBuild(ln types.LatticeNamespace, definitionRoot tree.Node, v ty
 }
 
 func (kb *KubernetesBackend) ListSystemBuilds(ln types.LatticeNamespace) ([]types.SystemBuild, error) {
-	result, err := kb.LatticeClient.LatticeV1().SystemBuilds(kubeconstants.NamespaceLatticeInternal).List(metav1.ListOptions{})
+	buildList, err := kb.LatticeClient.LatticeV1().SystemBuilds(string(ln)).List(metav1.ListOptions{})
 	if err != nil {
 		return nil, err
 	}
 
-	builds := []types.SystemBuild{}
-	for _, build := range result.Items {
+	var builds []types.SystemBuild
+	for _, build := range buildList.Items {
 		// TODO: add this to the query
 		if strings.Compare(build.Labels[kubeconstants.LatticeNamespaceLabel], string(ln)) != 0 {
 			continue
 		}
 
-		builds = append(builds, transformSystemBuild(&build))
+		externalBuild, err := transformSystemBuild(&build)
+		if err != nil {
+			return nil, err
+		}
+
+		builds = append(builds, externalBuild)
 	}
 
 	return builds, nil
@@ -86,12 +91,16 @@ func (kb *KubernetesBackend) GetSystemBuild(ln types.LatticeNamespace, bid types
 		return nil, exists, err
 	}
 
-	coreBuild := transformSystemBuild(build)
-	return &coreBuild, true, nil
+	externalBuild, err := transformSystemBuild(build)
+	if err != nil {
+		return nil, true, err
+	}
+
+	return &externalBuild, true, nil
 }
 
 func (kb *KubernetesBackend) getInternalSystemBuild(ln types.LatticeNamespace, bid types.SystemBuildID) (*crv1.SystemBuild, bool, error) {
-	result, err := kb.LatticeClient.LatticeV1().SystemBuilds(kubeconstants.NamespaceLatticeInternal).Get(string(bid), metav1.GetOptions{})
+	result, err := kb.LatticeClient.LatticeV1().SystemBuilds(string(ln)).Get(string(bid), metav1.GetOptions{})
 	if err != nil {
 		if errors.IsNotFound(err) {
 			return nil, false, nil
@@ -107,62 +116,60 @@ func (kb *KubernetesBackend) getInternalSystemBuild(ln types.LatticeNamespace, b
 	return result, true, nil
 }
 
-func transformSystemBuild(build *crv1.SystemBuild) types.SystemBuild {
-	sysb := types.SystemBuild{
+func transformSystemBuild(build *crv1.SystemBuild) (types.SystemBuild, error) {
+	externalBuild := types.SystemBuild{
 		ID:            types.SystemBuildID(build.Name),
 		State:         getSystemBuildState(build.Status.State),
 		Version:       types.SystemVersion(build.Labels[kubeconstants.LabelKeySystemVersion]),
 		ServiceBuilds: map[tree.NodePath]*types.ServiceBuild{},
 	}
 
-	for service, svcbInfo := range build.Spec.Services {
-		if svcbInfo.Name == nil {
-			sysb.ServiceBuilds[service] = nil
+	for service := range build.Spec.Services {
+		serviceBuildName, ok := build.Status.ServiceBuilds[service]
+		if !ok {
+			externalBuild.ServiceBuilds[service] = nil
 			continue
 		}
-		id := types.ServiceBuildID(*svcbInfo.Name)
 
-		state := constants.ServiceBuildStatePending
-		if svcbInfo.State != nil {
-			state = getServiceBuildState(*svcbInfo.State)
+		serviceBuildStatus, ok := build.Status.ServiceBuildStatuses[serviceBuildName]
+		if !ok {
+			err := fmt.Errorf(
+				"Service build %v/%v has ComponentBuild %v but no Status for it",
+				build.Namespace,
+				build.Name,
+				serviceBuildName,
+			)
+			return types.SystemBuild{}, err
 		}
 
-		svcb := &types.ServiceBuild{
+		id := types.ServiceBuildID(serviceBuildName)
+		state := getServiceBuildState(serviceBuildStatus.State)
+
+		serviceBuild := &types.ServiceBuild{
 			ID:              id,
 			State:           state,
 			ComponentBuilds: map[string]*types.ComponentBuild{},
 		}
 
-		for component, cbInfo := range svcbInfo.Components {
-			if cbInfo.Name == nil {
-				svcb.ComponentBuilds[component] = nil
-				continue
-			}
-			id := types.ComponentBuildID(*cbInfo.Name)
-
-			state := constants.ComponentBuildStatePending
-			if cbInfo.Status != nil {
-				state = getComponentBuildState(*cbInfo.Status)
-			}
-
-			var failureMessage *string
-			if cbInfo.FailureInfo != nil {
-				failMessage := getComponentBuildFailureMessage(*cbInfo.FailureInfo)
-				failureMessage = &failMessage
+		for component := range serviceBuildStatus.ComponentBuilds {
+			externalComponentBuild, err := transformServiceBuildComponent(
+				build.Name,
+				build.Namespace,
+				component,
+				serviceBuildStatus.ComponentBuilds,
+				serviceBuildStatus.ComponentBuildStatuses,
+			)
+			if err != nil {
+				return types.SystemBuild{}, err
 			}
 
-			svcb.ComponentBuilds[component] = &types.ComponentBuild{
-				ID:                id,
-				State:             state,
-				LastObservedPhase: cbInfo.LastObservedPhase,
-				FailureMessage:    failureMessage,
-			}
+			serviceBuild.ComponentBuilds[component] = externalComponentBuild
 		}
 
-		sysb.ServiceBuilds[service] = svcb
+		externalBuild.ServiceBuilds[service] = serviceBuild
 	}
 
-	return sysb
+	return externalBuild, nil
 }
 
 func getSystemBuildState(state crv1.SystemBuildState) types.SystemBuildState {

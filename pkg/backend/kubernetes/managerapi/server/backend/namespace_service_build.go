@@ -1,7 +1,8 @@
 package backend
 
 import (
-	kubeconstants "github.com/mlab-lattice/system/pkg/backend/kubernetes/constants"
+	"fmt"
+
 	crv1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	"github.com/mlab-lattice/system/pkg/constants"
 	"github.com/mlab-lattice/system/pkg/types"
@@ -11,15 +12,19 @@ import (
 )
 
 func (kb *KubernetesBackend) ListServiceBuilds(ln types.LatticeNamespace) ([]types.ServiceBuild, error) {
-	result, err := kb.LatticeClient.LatticeV1().ServiceBuilds(kubeconstants.NamespaceLatticeInternal).List(metav1.ListOptions{})
+	buildList, err := kb.LatticeClient.LatticeV1().ServiceBuilds(string(ln)).List(metav1.ListOptions{})
 	if err != nil {
 		return nil, err
 	}
 
-	builds := []types.ServiceBuild{}
-	for _, build := range result.Items {
-		// FIXME: should add a label to component builds for the lattice namespace
-		builds = append(builds, transformServiceBuild(&build))
+	var builds []types.ServiceBuild
+	for _, build := range buildList.Items {
+		externalServiceBuild, err := transformServiceBuild(&build)
+		if err != nil {
+			return nil, err
+		}
+
+		builds = append(builds, externalServiceBuild)
 	}
 
 	return builds, nil
@@ -31,13 +36,16 @@ func (kb *KubernetesBackend) GetServiceBuild(ln types.LatticeNamespace, bid type
 		return nil, exists, err
 	}
 
-	coreBuild := transformServiceBuild(build)
-	// FIXME: should add a label to component builds for the lattice namespace
-	return &coreBuild, true, nil
+	externalServiceBuild, err := transformServiceBuild(build)
+	if err != nil {
+		return nil, true, err
+	}
+
+	return &externalServiceBuild, true, nil
 }
 
 func (kb *KubernetesBackend) getInternalServiceBuild(ln types.LatticeNamespace, bid types.ServiceBuildID) (*crv1.ServiceBuild, bool, error) {
-	result, err := kb.LatticeClient.LatticeV1().ServiceBuilds(kubeconstants.NamespaceLatticeInternal).Get(string(bid), metav1.GetOptions{})
+	result, err := kb.LatticeClient.LatticeV1().ServiceBuilds(string(ln)).Get(string(bid), metav1.GetOptions{})
 	if err != nil {
 		if errors.IsNotFound(err) {
 			return nil, false, nil
@@ -48,40 +56,55 @@ func (kb *KubernetesBackend) getInternalServiceBuild(ln types.LatticeNamespace, 
 	return result, true, nil
 }
 
-func transformServiceBuild(build *crv1.ServiceBuild) types.ServiceBuild {
-	svcb := types.ServiceBuild{
+func transformServiceBuild(build *crv1.ServiceBuild) (types.ServiceBuild, error) {
+	externalBuild := types.ServiceBuild{
 		ID:              types.ServiceBuildID(build.Name),
 		State:           getServiceBuildState(build.Status.State),
 		ComponentBuilds: map[string]*types.ComponentBuild{},
 	}
 
-	for component, cbInfo := range build.Spec.Components {
-		if cbInfo.Name == nil {
-			svcb.ComponentBuilds[component] = nil
-			continue
-		}
-		id := types.ComponentBuildID(*cbInfo.Name)
-
-		state := constants.ComponentBuildStatePending
-		if cbInfo.Status != nil {
-			state = getComponentBuildState(*cbInfo.Status)
-		}
-
-		var failureMessage *string
-		if cbInfo.FailureInfo != nil {
-			failMessage := getComponentBuildFailureMessage(*cbInfo.FailureInfo)
-			failureMessage = &failMessage
+	for component := range build.Spec.Components {
+		externalComponentBuild, err := transformServiceBuildComponent(
+			build.Name,
+			build.Namespace,
+			component,
+			build.Status.ComponentBuilds,
+			build.Status.ComponentBuildStatuses,
+		)
+		if err != nil {
+			return types.ServiceBuild{}, err
 		}
 
-		svcb.ComponentBuilds[component] = &types.ComponentBuild{
-			ID:                id,
-			State:             state,
-			LastObservedPhase: cbInfo.LastObservedPhase,
-			FailureMessage:    failureMessage,
-		}
+		externalBuild.ComponentBuilds[component] = externalComponentBuild
 	}
 
-	return svcb
+	return externalBuild, nil
+}
+
+func transformServiceBuildComponent(
+	name, namespace, component string,
+	componentBuilds map[string]string,
+	componentBuildStatuses map[string]crv1.ComponentBuildStatus,
+) (*types.ComponentBuild, error) {
+	componentBuildName, ok := componentBuilds[component]
+	if !ok {
+		return nil, nil
+	}
+
+	componentBuildStatus, ok := componentBuildStatuses[componentBuildName]
+	if !ok {
+		err := fmt.Errorf(
+			"ServiceBuild %v/%v has ComponentBuild %v for component %v but does not have its status",
+			namespace,
+			name,
+			componentBuildName,
+			component,
+		)
+		return nil, err
+	}
+
+	externalComponentBuild := transformComponentBuild(componentBuildName, componentBuildStatus)
+	return &externalComponentBuild, nil
 }
 
 func getServiceBuildState(state crv1.ServiceBuildState) types.ServiceBuildState {

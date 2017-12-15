@@ -14,6 +14,7 @@ import (
 
 type Builder struct {
 	BuildID             types.ComponentBuildID
+	Namespace           types.LatticeNamespace
 	WorkingDir          string
 	ComponentBuildBlock *block.ComponentBuild
 	DockerOptions       *DockerOptions
@@ -70,6 +71,7 @@ type Failure struct {
 
 func NewBuilder(
 	buildID types.ComponentBuildID,
+	namespace types.LatticeNamespace,
 	workDirectory string,
 	dockerOptions *DockerOptions,
 	gitResolverOptions *GitResolverOptions,
@@ -142,10 +144,10 @@ func (b *Builder) handleError(err error) error {
 
 	switch err.(type) {
 	case *ErrorUser:
-		b.StatusUpdater.UpdateError(b.BuildID, false, err)
+		b.StatusUpdater.UpdateError(b.BuildID, b.Namespace, false, err)
 	default:
 		// TODO: is there a reason to differentiate between an ErrorInternal and a non ErrorUser?
-		b.StatusUpdater.UpdateError(b.BuildID, true, err)
+		b.StatusUpdater.UpdateError(b.BuildID, b.Namespace, true, err)
 	}
 
 	return err

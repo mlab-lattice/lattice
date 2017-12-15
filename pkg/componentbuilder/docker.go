@@ -25,7 +25,7 @@ func (b *Builder) buildDockerImage(sourceDirectory string) error {
 	if b.StatusUpdater != nil {
 		// For now ignore status update errors, don't need to fail a build because the status could
 		// not be updated.
-		b.StatusUpdater.UpdateProgress(b.BuildID, constants.ComponentBuildPhaseBuildingDockerImage)
+		b.StatusUpdater.UpdateProgress(b.BuildID, b.Namespace, constants.ComponentBuildPhaseBuildingDockerImage)
 	}
 
 	// Get Dockerfile contents and write them to the directory
@@ -140,7 +140,7 @@ func (b *Builder) pushDockerImage() error {
 	if b.StatusUpdater != nil {
 		// For now ignore status update errors, don't need to fail a build because the status could
 		// not be updated.
-		b.StatusUpdater.UpdateProgress(b.BuildID, constants.ComponentBuildPhasePushingDockerImage)
+		b.StatusUpdater.UpdateProgress(b.BuildID, b.Namespace, constants.ComponentBuildPhasePushingDockerImage)
 	}
 
 	// Assumes the image has already been built and tagged.

@@ -1,9 +1,12 @@
 package componentbuild
 
 import (
+	"encoding/json"
 	"reflect"
 
+	kubeconstants "github.com/mlab-lattice/system/pkg/backend/kubernetes/constants"
 	crv1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
+	"github.com/mlab-lattice/system/pkg/types"
 
 	batchv1 "k8s.io/api/batch/v1"
 
@@ -60,10 +63,29 @@ func (c *Controller) updateComponentBuildStatus(
 	state crv1.ComponentBuildState,
 	artifacts *crv1.ComponentBuildArtifacts,
 ) (*crv1.ComponentBuild, error) {
+	var phasePtr *types.ComponentBuildPhase
+	if phase, ok := build.Annotations[kubeconstants.AnnotationKeyComponentBuildLastObservedPhase]; ok {
+		phase := types.ComponentBuildPhase(phase)
+		phasePtr = &phase
+	}
+
+	var failureInfoPtr *types.ComponentBuildFailureInfo
+	if failureInfoData, ok := build.Annotations[kubeconstants.AnnotationKeyComponentBuildFailureInfo]; ok {
+		failureInfo := types.ComponentBuildFailureInfo{}
+		err := json.Unmarshal([]byte(failureInfoData), &failureInfo)
+		if err != nil {
+			return nil, err
+		}
+
+		failureInfoPtr = &failureInfo
+	}
+
 	status := crv1.ComponentBuildStatus{
 		State:              state,
 		ObservedGeneration: build.Generation,
 		Artifacts:          artifacts,
+		LastObservedPhase:  phasePtr,
+		FailureInfo:        failureInfoPtr,
 	}
 
 	if reflect.DeepEqual(build.Status, status) {

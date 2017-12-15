@@ -1,8 +1,6 @@
 package backend
 
 import (
-	"strings"
-
 	kubeconstants "github.com/mlab-lattice/system/pkg/backend/kubernetes/constants"
 	crv1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	"github.com/mlab-lattice/system/pkg/constants"
@@ -35,7 +33,7 @@ func (kb *KubernetesBackend) RollOutSystemBuild(ln types.LatticeNamespace, bid t
 		return "", err
 	}
 
-	result, err := kb.LatticeClient.LatticeV1().SystemRollouts(kubeconstants.NamespaceLatticeInternal).Create(sysRollout)
+	result, err := kb.LatticeClient.LatticeV1().SystemRollouts(string(ln)).Create(sysRollout)
 	if err != nil {
 		return "", err
 	}
@@ -43,7 +41,7 @@ func (kb *KubernetesBackend) RollOutSystemBuild(ln types.LatticeNamespace, bid t
 }
 
 func (kb *KubernetesBackend) getSystemBuildFromID(ln types.LatticeNamespace, bid types.SystemBuildID) (*crv1.SystemBuild, error) {
-	return kb.LatticeClient.LatticeV1().SystemBuilds(kubeconstants.NamespaceLatticeInternal).Get(string(bid), metav1.GetOptions{})
+	return kb.LatticeClient.LatticeV1().SystemBuilds(string(ln)).Get(string(bid), metav1.GetOptions{})
 }
 
 func getNewSystemRollout(latticeNamespace types.LatticeNamespace, sysBuild *crv1.SystemBuild) (*crv1.SystemRollout, error) {
@@ -59,8 +57,7 @@ func getNewSystemRollout(latticeNamespace types.LatticeNamespace, sysBuild *crv1
 			Labels: labels,
 		},
 		Spec: crv1.SystemRolloutSpec{
-			LatticeNamespace: latticeNamespace,
-			BuildName:        sysBuild.Name,
+			BuildName: sysBuild.Name,
 		},
 		Status: crv1.SystemRolloutStatus{
 			State: crv1.SystemRolloutStatePending,
@@ -71,17 +68,12 @@ func getNewSystemRollout(latticeNamespace types.LatticeNamespace, sysBuild *crv1
 }
 
 func (kb *KubernetesBackend) GetSystemRollout(ln types.LatticeNamespace, rid types.SystemRolloutID) (*types.SystemRollout, bool, error) {
-	result, err := kb.LatticeClient.LatticeV1().SystemRollouts(kubeconstants.NamespaceLatticeInternal).Get(string(rid), metav1.GetOptions{})
+	result, err := kb.LatticeClient.LatticeV1().SystemRollouts(string(ln)).Get(string(rid), metav1.GetOptions{})
 	if err != nil {
 		if errors.IsNotFound(err) {
 			return nil, false, nil
 		}
 		return nil, false, err
-	}
-
-	// TODO: add this to the query
-	if strings.Compare(result.Labels[kubeconstants.LatticeNamespaceLabel], string(ln)) != 0 {
-		return nil, false, nil
 	}
 
 	sb := &types.SystemRollout{
@@ -94,18 +86,13 @@ func (kb *KubernetesBackend) GetSystemRollout(ln types.LatticeNamespace, rid typ
 }
 
 func (kb *KubernetesBackend) ListSystemRollouts(ln types.LatticeNamespace) ([]types.SystemRollout, error) {
-	result, err := kb.LatticeClient.LatticeV1().SystemRollouts(kubeconstants.NamespaceLatticeInternal).List(metav1.ListOptions{})
+	result, err := kb.LatticeClient.LatticeV1().SystemRollouts(string(ln)).List(metav1.ListOptions{})
 	if err != nil {
 		return nil, err
 	}
 
 	rollouts := []types.SystemRollout{}
 	for _, r := range result.Items {
-		// TODO: add this to the query
-		if strings.Compare(r.Labels[kubeconstants.LatticeNamespaceLabel], string(ln)) != 0 {
-			continue
-		}
-
 		rollouts = append(rollouts, types.SystemRollout{
 			ID:      types.SystemRolloutID(r.Name),
 			BuildID: types.SystemBuildID(r.Spec.BuildName),
