@@ -98,40 +98,40 @@ func (c *Controller) Run(workers int, stopCh <-chan struct{}) {
 }
 
 func (c *Controller) handleSystemAdd(obj interface{}) {
-	sys := obj.(*crv1.System)
-	glog.V(4).Infof("Adding System %s", sys.Name)
-	c.enqueueSystem(sys)
+	system := obj.(*crv1.System)
+	glog.V(4).Infof("Adding System %s", system.Name)
+	c.enqueueSystem(system)
 }
 
 func (c *Controller) handleSystemUpdate(old, cur interface{}) {
-	oldSys := old.(*crv1.System)
-	curSys := cur.(*crv1.System)
-	glog.V(4).Infof("Updating System %s", oldSys.Name)
-	c.enqueueSystem(curSys)
+	oldSystem := old.(*crv1.System)
+	curSystem := cur.(*crv1.System)
+	glog.V(4).Infof("Updating System %s", oldSystem.Name)
+	c.enqueueSystem(curSystem)
 }
 
 // handleServiceAdd enqueues the System that manages a Service when the Service is created.
 func (c *Controller) handleServiceAdd(obj interface{}) {
-	svc := obj.(*crv1.Service)
+	service := obj.(*crv1.Service)
 
-	if svc.DeletionTimestamp != nil {
+	if service.DeletionTimestamp != nil {
 		// We assume for now that ServiceBuilds do not get deleted.
 		// FIXME: send error event
 		return
 	}
 
 	// If it has a ControllerRef, that's all that matters.
-	if controllerRef := metav1.GetControllerOf(svc); controllerRef != nil {
-		sys := c.resolveControllerRef(svc.Namespace, controllerRef)
+	if controllerRef := metav1.GetControllerOf(service); controllerRef != nil {
+		system := c.resolveControllerRef(service.Namespace, controllerRef)
 
 		// Not a SystemBuild. This shouldn't happen.
-		if sys == nil {
+		if system == nil {
 			// FIXME: send error event
 			return
 		}
 
-		glog.V(4).Infof("Service %s added.", svc.Name)
-		c.enqueueSystem(sys)
+		glog.V(4).Infof("Service %s added.", service.Name)
+		c.enqueueSystem(system)
 		return
 	}
 
@@ -142,17 +142,17 @@ func (c *Controller) handleServiceAdd(obj interface{}) {
 // handleServiceAdd enqueues the System that manages a Service when the Service is update.
 func (c *Controller) handleServiceUpdate(old, cur interface{}) {
 	glog.V(5).Info("Got Service update")
-	oldSvc := old.(*crv1.Service)
-	curSvc := cur.(*crv1.Service)
-	if curSvc.ResourceVersion == oldSvc.ResourceVersion {
+	oldService := old.(*crv1.Service)
+	curService := cur.(*crv1.Service)
+	if curService.ResourceVersion == oldService.ResourceVersion {
 		// Periodic resync will send update events for all known ServiceBuilds.
 		// Two different versions of the same job will always have different RVs.
 		glog.V(5).Info("Service ResourceVersions are the same")
 		return
 	}
 
-	curControllerRef := metav1.GetControllerOf(curSvc)
-	oldControllerRef := metav1.GetControllerOf(oldSvc)
+	curControllerRef := metav1.GetControllerOf(curService)
+	oldControllerRef := metav1.GetControllerOf(oldService)
 	controllerRefChanged := !reflect.DeepEqual(curControllerRef, oldControllerRef)
 	if controllerRefChanged {
 		// This shouldn't happen
@@ -161,15 +161,15 @@ func (c *Controller) handleServiceUpdate(old, cur interface{}) {
 
 	// If it has a ControllerRef, that's all that matters.
 	if curControllerRef != nil {
-		sys := c.resolveControllerRef(curSvc.Namespace, curControllerRef)
+		system := c.resolveControllerRef(curService.Namespace, curControllerRef)
 
 		// Not a SystemBuild. This shouldn't happen.
-		if sys == nil {
+		if system == nil {
 			// FIXME: send error event
 			return
 		}
 
-		c.enqueueSystem(sys)
+		c.enqueueSystem(system)
 		return
 	}
 
@@ -178,32 +178,32 @@ func (c *Controller) handleServiceUpdate(old, cur interface{}) {
 }
 
 func (c *Controller) handleServiceDelete(obj interface{}) {
-	svc, ok := obj.(*crv1.Service)
+	service, ok := obj.(*crv1.Service)
 	if !ok {
 		tombstone, ok := obj.(cache.DeletedFinalStateUnknown)
 		if !ok {
 			runtime.HandleError(fmt.Errorf("couldn't get object from tombstone %#v", obj))
 			return
 		}
-		svc, ok = tombstone.Obj.(*crv1.Service)
+		service, ok = tombstone.Obj.(*crv1.Service)
 		if !ok {
 			runtime.HandleError(fmt.Errorf("tombstone contained object that is not a Service %#v", obj))
 			return
 		}
 	}
-	glog.V(4).Infof("Service %s deleted", svc.Name)
+	glog.V(4).Infof("Service %s deleted", service.Name)
 	// If it has a ControllerRef, that's all that matters.
-	if controllerRef := metav1.GetControllerOf(svc); controllerRef != nil {
-		sys := c.resolveControllerRef(svc.Namespace, controllerRef)
+	if controllerRef := metav1.GetControllerOf(service); controllerRef != nil {
+		system := c.resolveControllerRef(service.Namespace, controllerRef)
 
 		// Not a SystemBuild. This shouldn't happen.
-		if sys == nil {
+		if system == nil {
 			// FIXME: send error event
 			return
 		}
 
-		glog.V(4).Infof("Service %s added.", svc.Name)
-		c.enqueueSystem(sys)
+		glog.V(4).Infof("Service %s added.", service.Name)
+		c.enqueueSystem(system)
 		return
 	}
 
@@ -223,20 +223,20 @@ func (c *Controller) resolveControllerRef(namespace string, controllerRef *metav
 		return nil
 	}
 
-	sys, err := c.systemLister.Systems(namespace).Get(controllerRef.Name)
+	system, err := c.systemLister.Systems(namespace).Get(controllerRef.Name)
 	if err != nil {
 		// This shouldn't happen.
 		// FIXME: send error event
 		return nil
 	}
 
-	if sys.UID != controllerRef.UID {
+	if system.UID != controllerRef.UID {
 		// The controller we found with this Name is not the same one that the
 		// ControllerRef points to. This shouldn't happen.
 		// FIXME: send error event
 		return nil
 	}
-	return sys
+	return system
 }
 
 func (c *Controller) enqueue(sys *crv1.System) {
@@ -309,6 +309,7 @@ func (c *Controller) syncSystem(key string) error {
 	if err != nil {
 		return err
 	}
+
 	system, err := c.systemLister.Systems(namespace).Get(name)
 	if errors.IsNotFound(err) {
 		glog.V(2).Infof("System %v has been deleted", key)
@@ -318,10 +319,10 @@ func (c *Controller) syncSystem(key string) error {
 		return err
 	}
 
-	system, err = c.syncSystemServices(system)
+	services, serviceStatuses, deletedServices, err := c.syncSystemServices(system)
 	if err != nil {
 		return err
 	}
 
-	return c.syncSystemStatus(system)
+	return c.syncSystemStatus(system, services, serviceStatuses, deletedServices)
 }

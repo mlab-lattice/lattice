@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"reflect"
 
+	kubeconstants "github.com/mlab-lattice/system/pkg/backend/kubernetes/constants"
 	crv1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	"github.com/mlab-lattice/system/pkg/definition/block"
 	"github.com/mlab-lattice/system/pkg/definition/tree"
@@ -14,120 +15,127 @@ import (
 
 	"github.com/golang/glog"
 	"github.com/satori/go.uuid"
+	"k8s.io/apimachinery/pkg/selection"
 )
 
-func (c *Controller) syncSystemServices(system *crv1.System) (*crv1.System, error) {
-	validServiceNames := map[string]bool{}
+func (c *Controller) syncSystemServices(system *crv1.System) (map[tree.NodePath]string, map[string]crv1.ServiceStatus, []string, error) {
+	// Maps Service path to Service.Name of the Service
+	services := map[tree.NodePath]string{}
+
+	// Maps Service.Name to Service.Status
+	serviceStatuses := map[string]crv1.ServiceStatus{}
 
 	// Loop through the Services defined in the System's Spec, and create/update any that need it
-	servicesInfo := map[tree.NodePath]crv1.SystemSpecServiceInfo{}
 	for path, serviceInfo := range system.Spec.Services {
-		// If the Service doesn't exist already, create one.
-		if serviceInfo.Name == nil {
-			glog.V(5).Infof("Did not find a Service for %q, creating one", path)
-			service, err := c.createNewService(system, &serviceInfo, path)
+		var service *crv1.Service
+
+		serviceName, ok := system.Status.Services[path]
+		if !ok {
+			// We don't have the name of the Service in our Status, but it may still have been created already.
+			// First, look in the cache for a Service with the proper label.
+			selector := kubelabels.NewSelector()
+			requirement, err := kubelabels.NewRequirement(kubeconstants.LabelKeyServicePath, selection.Equals, []string{string(path)})
 			if err != nil {
-				return nil, err
-			}
-			serviceInfo.Name = &service.Name
-			serviceInfo.Status = &service.Status
-
-			servicesInfo[path] = serviceInfo
-			validServiceNames[service.Name] = true
-			continue
-		}
-
-		// A Service has already been created. Check if its definition is the same
-		// definition. We'll assume that the rest of the spec is properly formed.
-		service, err := c.serviceLister.Services(system.Namespace).Get(*serviceInfo.Name)
-		if err != nil {
-			if errors.IsNotFound(err) {
-				// FIXME: send warn event
-				// TODO: should we just create a new Service here?
-				return nil, fmt.Errorf(
-					"Service %v has Name %v but Service does not exist",
-					path,
-					serviceInfo.Name,
-				)
+				return nil, nil, nil, err
 			}
 
-			return nil, err
+			selector = selector.Add(*requirement)
+			services, err := c.serviceLister.Services(system.Namespace).List(selector)
+			if err != nil {
+				return nil, nil, nil, err
+			}
+
+			if len(services) > 1 {
+				return nil, nil, nil, fmt.Errorf("multiple Services in the %v namespace are labeled with %v = %v", system.Namespace, kubeconstants.LabelKeyServicePath, string(path))
+			}
+
+			if len(services) == 1 {
+				service = services[0]
+			}
+
+			if len(services) == 0 {
+				// The cache did not have a Service matching the label.
+				// However, it would be a constraint violation to have multiple Services for the same path,
+				// so we'll have to do a quorum read from the API to make sure that the Service does not exist.
+				services, err := c.latticeClient.LatticeV1().Services(system.Namespace).List(metav1.ListOptions{LabelSelector: selector.String()})
+				if err != nil {
+					return nil, nil, nil, err
+				}
+
+				if len(services.Items) > 1 {
+					return nil, nil, nil, fmt.Errorf("multiple Services in the %v namespace are labeled with %v = %v", system.Namespace, kubeconstants.LabelKeyServicePath, string(path))
+				}
+
+				if len(services.Items) == 1 {
+					service = &services.Items[0]
+				}
+
+				if len(services.Items) == 0 {
+					// We are now sure that the Service does not exist, so now we can create it.
+					service, err = c.createNewService(system, &serviceInfo, path)
+				}
+			}
 		}
 
-		validServiceNames[service.Name] = true
+		if service == nil {
+			var err error
+			service, err = c.serviceLister.Services(system.Namespace).Get(serviceName)
+			if err != nil {
+				if errors.IsNotFound(err) {
+					// FIXME: send warn event
+					// TODO: should we just create a new Service here?
+					return nil, nil, nil, fmt.Errorf(
+						"Service %v in namespace %v has Name %v but Service does not exist",
+						path,
+						system.Namespace,
+						serviceName,
+					)
+				}
 
-		// If the definitions are the same, there's nothing to update.
-		// FIXME(kevinrosendahl): should we get a new spec here? If calculating envoy ports is cheap *and* deterministic, we probably should.
-		// If we don't, and we update what a Service.Spec looks like for a given definition, it may never get updated.
-		if reflect.DeepEqual(serviceInfo.Definition, service.Spec.Definition) {
-			serviceInfo.Status = &service.Status
-			servicesInfo[path] = serviceInfo
-			continue
+				return nil, nil, nil, err
+			}
 		}
 
 		// Otherwise, get a new spec and update the service
 		spec, err := serviceSpec(&serviceInfo, path)
 		if err != nil {
-			return nil, err
+			return nil, nil, nil, err
 		}
 
-		service.Spec = *spec
-		service.Status.State = crv1.ServiceStateUpdating
-
-		service, err = c.latticeClient.LatticeV1().Services(service.Namespace).Update(service)
+		service, err = c.updateServiceSpec(service, spec)
 		if err != nil {
-			return nil, err
+			return nil, nil, nil, err
 		}
 
-		serviceInfo.Status = &service.Status
-		servicesInfo[path] = serviceInfo
-	}
-
-	// update system if necessary
-	if !reflect.DeepEqual(system.Spec.Services, servicesInfo) {
-		// Copy system so the shared cache isn't mutated
-		system = system.DeepCopy()
-		system.Spec.Services = servicesInfo
-
-		var err error
-		system, err = c.latticeClient.LatticeV1().Systems(system.Namespace).Update(system)
-		if err != nil {
-			return nil, err
-		}
+		services[path] = service.Name
+		serviceStatuses[service.Name] = service.Status
 	}
 
 	// Loop through all of the Services that exist in the System's namespace, and delete any
 	// that are no longer a part of the System's Spec
 	// TODO(kevinrosendahl): should we wait until all other services are successfully rolled out before deleting these?
 	// need to figure out what the rollout/automatic roll-back strategy is
-	services, err := c.serviceLister.Services(system.Namespace).List(kubelabels.Everything())
+	allServices, err := c.serviceLister.Services(system.Namespace).List(kubelabels.Everything())
 	if err != nil {
-		return nil, err
+		return nil, nil, nil, err
 	}
 
-	for _, service := range services {
-		if _, ok := validServiceNames[service.Name]; !ok {
+	var deletedServices []string
+	for _, service := range allServices {
+		if _, ok := serviceStatuses[service.Name]; !ok {
 			glog.V(4).Infof("Found Service %q in Namespace %q that is no longer in the System Spec", service.Name, service.Namespace)
-			err := c.latticeClient.LatticeV1().Services(service.Namespace).Delete(service.Name, &metav1.DeleteOptions{})
-			if err != nil {
-				return nil, err
+			deletedServices = append(deletedServices, service.Name)
+
+			if service.DeletionTimestamp == nil {
+				err := c.latticeClient.LatticeV1().Services(service.Namespace).Delete(service.Name, &metav1.DeleteOptions{})
+				if err != nil {
+					return nil, nil, nil, err
+				}
 			}
 		}
 	}
 
-	return system, nil
-}
-
-func (c *Controller) getService(namespace, name string) (*crv1.Service, error) {
-	svc, err := c.serviceLister.Services(namespace).Get(name)
-	if err != nil {
-		if errors.IsNotFound(err) {
-			return nil, nil
-		}
-		return nil, err
-	}
-
-	return svc, nil
+	return services, serviceStatuses, deletedServices, nil
 }
 
 func (c *Controller) createNewService(system *crv1.System, serviceInfo *crv1.SystemSpecServiceInfo, path tree.NodePath) (*crv1.Service, error) {
@@ -140,6 +148,10 @@ func (c *Controller) createNewService(system *crv1.System, serviceInfo *crv1.Sys
 }
 
 func newService(system *crv1.System, serviceInfo *crv1.SystemSpecServiceInfo, path tree.NodePath) (*crv1.Service, error) {
+	labels := map[string]string{
+		kubeconstants.LabelKeyServicePath: string(path),
+	}
+
 	spec, err := serviceSpec(serviceInfo, path)
 	if err != nil {
 		return nil, err
@@ -150,8 +162,9 @@ func newService(system *crv1.System, serviceInfo *crv1.SystemSpecServiceInfo, pa
 			Name:            uuid.NewV4().String(),
 			Namespace:       system.Namespace,
 			OwnerReferences: []metav1.OwnerReference{*metav1.NewControllerRef(system, controllerKind)},
+			Labels:          labels,
 		},
-		Spec: *spec,
+		Spec: spec,
 		Status: crv1.ServiceStatus{
 			State: crv1.ServiceStatePending,
 		},
@@ -159,26 +172,26 @@ func newService(system *crv1.System, serviceInfo *crv1.SystemSpecServiceInfo, pa
 	return service, nil
 }
 
-func serviceSpec(serviceInfo *crv1.SystemSpecServiceInfo, path tree.NodePath) (*crv1.ServiceSpec, error) {
+func serviceSpec(serviceInfo *crv1.SystemSpecServiceInfo, path tree.NodePath) (crv1.ServiceSpec, error) {
 	componentPorts, portSet := servicePorts(serviceInfo)
 	envoyPorts, err := envoyPorts(portSet)
 	if err != nil {
-		return nil, err
+		return crv1.ServiceSpec{}, err
 	}
 
 	componentPorts, remainingEnvoyPorts, err := assignEnvoyPorts(serviceInfo.Definition.Components, componentPorts, envoyPorts)
 	if err != nil {
-		return nil, err
+		return crv1.ServiceSpec{}, err
 	}
 
 	if len(remainingEnvoyPorts) != 2 {
-		return nil, fmt.Errorf("expected 2 remaining envoy ports, got %v", len(remainingEnvoyPorts))
+		return crv1.ServiceSpec{}, fmt.Errorf("expected 2 remaining envoy ports, got %v", len(remainingEnvoyPorts))
 	}
 
 	envoyAdminPort := remainingEnvoyPorts[0]
 	envoyEgressPort := remainingEnvoyPorts[1]
 
-	spec := &crv1.ServiceSpec{
+	spec := crv1.ServiceSpec{
 		Path:       path,
 		Definition: serviceInfo.Definition,
 
@@ -269,4 +282,16 @@ func assignEnvoyPorts(components []*block.Component, componentPorts map[string][
 	}
 
 	return componentPorts, envoyPorts, nil
+}
+
+func (c *Controller) updateServiceSpec(service *crv1.Service, spec crv1.ServiceSpec) (*crv1.Service, error) {
+	if reflect.DeepEqual(service.Spec, spec) {
+		return service, nil
+	}
+
+	// Copy so the cache isn't mutated
+	service = service.DeepCopy()
+	service.Spec = spec
+
+	return c.latticeClient.LatticeV1().Services(service.Namespace).Update(service)
 }

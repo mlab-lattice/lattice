@@ -38,10 +38,16 @@ type SystemSpecServiceInfo struct {
 	ComponentBuildArtifacts map[string]ComponentBuildArtifacts `json:"componentBuildArtifacts"`
 }
 
+// +k8s:deepcopy-gen=false
 type SystemStatus struct {
-	State              SystemState                               `json:"state"`
-	ObservedGeneration int64                                     `json:"observedGeneration"`
-	Services           map[tree.NodePath]SystemStatusServiceInfo `json:"services"`
+	State              SystemState `json:"state"`
+	ObservedGeneration int64       `json:"observedGeneration"`
+
+	// Maps a Service path to its Service.Name
+	Services map[tree.NodePath]string `json:"services"`
+
+	// Maps a Service.Name to its Service.Status
+	ServiceStatuses map[string]ServiceStatus `json:"serviceStatuses"`
 }
 
 type SystemState string

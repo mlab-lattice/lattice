@@ -64,8 +64,11 @@ func (c *Controller) syncExistingNodePool(service *crv1.Service, nodePool *crv1.
 	return nodePool, nil
 }
 
-func (c *Controller) updateNodePoolSpec(nodePool *crv1.NodePool, desiredSpec *crv1.NodePoolSpec) (*crv1.NodePool, error) {
-	nodePool.Spec = *desiredSpec
+func (c *Controller) updateNodePoolSpec(nodePool *crv1.NodePool, desiredSpec crv1.NodePoolSpec) (*crv1.NodePool, error) {
+	// Copy so the shared cache isn't mutated
+	nodePool = nodePool.DeepCopy()
+	nodePool.Spec = desiredSpec
+
 	return c.latticeClient.LatticeV1().NodePools(nodePool.Namespace).Update(nodePool)
 }
 
@@ -120,7 +123,7 @@ func newNodePool(service *crv1.Service) (*crv1.NodePool, error) {
 		ObjectMeta: metav1.ObjectMeta{
 			Name: service.Name,
 		},
-		Spec: *spec,
+		Spec: spec,
 		Status: crv1.NodePoolStatus{
 			State: crv1.NodePoolStatePending,
 		},
@@ -129,9 +132,9 @@ func newNodePool(service *crv1.Service) (*crv1.NodePool, error) {
 	return nodePool, nil
 }
 
-func nodePoolSpec(service *crv1.Service) (*crv1.NodePoolSpec, error) {
+func nodePoolSpec(service *crv1.Service) (crv1.NodePoolSpec, error) {
 	if service.Spec.Definition.Resources.InstanceType == nil {
-		return nil, fmt.Errorf("cannot create NodePool for Service with no resources.instance_type")
+		return crv1.NodePoolSpec{}, fmt.Errorf("cannot create NodePool for Service with no resources.instance_type")
 	}
 	instanceType := *service.Spec.Definition.Resources.InstanceType
 
@@ -141,10 +144,10 @@ func nodePoolSpec(service *crv1.Service) (*crv1.NodePoolSpec, error) {
 	} else if service.Spec.Definition.Resources.MinInstances != nil {
 		numInstances = *service.Spec.Definition.Resources.MinInstances
 	} else {
-		return nil, fmt.Errorf("cannot create NodePool for Service with neither resources.num_instances nor resources.min_instances")
+		return crv1.NodePoolSpec{}, fmt.Errorf("cannot create NodePool for Service with neither resources.num_instances nor resources.min_instances")
 	}
 
-	spec := &crv1.NodePoolSpec{
+	spec := crv1.NodePoolSpec{
 		NumInstances: numInstances,
 		InstanceType: instanceType,
 	}

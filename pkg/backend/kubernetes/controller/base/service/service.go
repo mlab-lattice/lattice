@@ -22,7 +22,7 @@ func (c *Controller) syncServiceStatus(
 	kubeService *corev1.Service,
 	nodePool *crv1.NodePool,
 	serviceAddress *crv1.ServiceAddress,
-) error {
+) (*crv1.Service, error) {
 	failed := false
 	failureReason := ""
 	failureMessage := ""
@@ -78,21 +78,30 @@ func (c *Controller) syncServiceStatus(
 		}
 	}
 
+	return c.updateServiceStatus(service, state, updatedInstances, staleInstances, failureInfo)
+}
+
+func (c *Controller) updateServiceStatus(
+	service *crv1.Service,
+	state crv1.ServiceState,
+	updatedInstances, staleInstances int32,
+	failureInfo *crv1.ServiceFailureInfo,
+) (*crv1.Service, error) {
 	status := crv1.ServiceStatus{
-		State:            state,
-		UpdatedInstances: updatedInstances,
-		StaleInstances:   staleInstances,
-		FailureInfo:      failureInfo,
+		State:              state,
+		ObservedGeneration: service.Generation,
+		UpdatedInstances:   updatedInstances,
+		StaleInstances:     staleInstances,
+		FailureInfo:        failureInfo,
 	}
 
 	if reflect.DeepEqual(service.Status, status) {
-		return nil
+		return service, nil
 	}
 
 	// Copy the service so the shared cache isn't mutated
 	service = service.DeepCopy()
 	service.Status = status
 
-	_, err := c.latticeClient.LatticeV1().Services(service.Namespace).Update(service)
-	return err
+	return c.latticeClient.LatticeV1().Services(service.Namespace).Update(service)
 }

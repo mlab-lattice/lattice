@@ -2,6 +2,7 @@ package service
 
 import (
 	"fmt"
+	"reflect"
 	"strconv"
 
 	kubeconstants "github.com/mlab-lattice/system/pkg/backend/kubernetes/constants"
@@ -105,8 +106,15 @@ func (c *Controller) syncExistingDeployment(service *crv1.Service, nodePool *crv
 	return deployment, nil
 }
 
-func (c *Controller) updateDeploymentSpec(deployment *appsv1beta2.Deployment, desiredSpec *appsv1beta2.DeploymentSpec) (*appsv1beta2.Deployment, error) {
-	deployment.Spec = *desiredSpec
+func (c *Controller) updateDeploymentSpec(deployment *appsv1beta2.Deployment, spec appsv1beta2.DeploymentSpec) (*appsv1beta2.Deployment, error) {
+	if reflect.DeepEqual(deployment.Spec, spec) {
+		return deployment, nil
+	}
+
+	// Copy so the shared cache isn't mutated
+	deployment = deployment.DeepCopy()
+	deployment.Spec = spec
+
 	return c.kubeClient.AppsV1beta2().Deployments(deployment.Namespace).Update(deployment)
 }
 
@@ -142,7 +150,7 @@ func (c *Controller) newDeployment(service *crv1.Service, nodePool *crv1.NodePoo
 			Labels:          labels,
 			OwnerReferences: []metav1.OwnerReference{*metav1.NewControllerRef(service, controllerKind)},
 		},
-		Spec: *spec,
+		Spec: spec,
 	}
 
 	return d, nil
@@ -159,7 +167,7 @@ func deploymentLabels(service *crv1.Service) map[string]string {
 	}
 }
 
-func deploymentSpec(service *crv1.Service, name string, deploymentLabels map[string]string, nodePool *crv1.NodePool, envoyConfig *crv1.ConfigEnvoy) (*appsv1beta2.DeploymentSpec, error) {
+func deploymentSpec(service *crv1.Service, name string, deploymentLabels map[string]string, nodePool *crv1.NodePool, envoyConfig *crv1.ConfigEnvoy) (appsv1beta2.DeploymentSpec, error) {
 	replicas := service.Spec.NumInstances
 
 	// Create a container for each Component in the Service
@@ -228,7 +236,7 @@ func deploymentSpec(service *crv1.Service, name string, deploymentLabels map[str
 		},
 	}
 
-	return &deploymentSpec, nil
+	return deploymentSpec, nil
 }
 
 func containerFromComponent(component *block.Component, buildArtifacts *crv1.ComponentBuildArtifacts) corev1.Container {

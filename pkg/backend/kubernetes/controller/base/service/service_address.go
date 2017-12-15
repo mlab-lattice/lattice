@@ -13,10 +13,21 @@ import (
 )
 
 func (c *Controller) syncServiceServiceAddress(service *crv1.Service) (*crv1.ServiceAddress, error) {
-	serviceAddress, err := c.latticeClient.LatticeV1().ServiceAddresses(service.Namespace).Get(service.Name, metav1.GetOptions{})
+	serviceAddress, err := c.serviceAddressLister.ServiceAddresses(service.Namespace).Get(service.Name)
 	if err != nil {
 		if errors.IsNotFound(err) {
-			return c.createNewServiceAddress(service)
+			// ServiceAddress not found in our cache, but its possible it could still have been created,
+			// check the API to see it exists.
+			// TODO: would it be better to just try to create it and check for a Conflict? Could save a round of queries per new rollout.
+			serviceAddress, err = c.latticeClient.LatticeV1().ServiceAddresses(service.Namespace).Get(service.Name, metav1.GetOptions{})
+			if err != nil {
+				if errors.IsNotFound(err) {
+					// ServiceAddress definitely doesn't exist, so we can create it.
+					return c.createNewServiceAddress(service)
+				}
+			}
+
+			return nil, err
 		}
 
 		return nil, err
@@ -30,19 +41,26 @@ func (c *Controller) syncServiceServiceAddress(service *crv1.Service) (*crv1.Ser
 	return serviceAddress, nil
 }
 
-func (c *Controller) syncExistingServiceAddress(service *crv1.Service, serviceAddress *crv1.ServiceAddress) (*crv1.ServiceAddress, error) {
-	desiredSpec, err := serviceAddressSpec(service)
+func (c *Controller) syncExistingServiceAddress(service *crv1.Service, address *crv1.ServiceAddress) (*crv1.ServiceAddress, error) {
+	spec, err := serviceAddressSpec(service)
 	if err != nil {
 		return nil, err
 	}
 
-	if reflect.DeepEqual(serviceAddress.Spec, desiredSpec) {
-		return serviceAddress, nil
+	glog.V(4).Infof("ServiceAddress for Service %v/%v had out of date spec, updating", address.Name, service.Namespace, service.Name)
+	return c.updateServiceAddressSpec(address, spec)
+}
+
+func (c *Controller) updateServiceAddressSpec(address *crv1.ServiceAddress, spec crv1.ServiceAddressSpec) (*crv1.ServiceAddress, error) {
+	if reflect.DeepEqual(address.Spec, spec) {
+		return address, nil
 	}
 
-	glog.V(4).Infof("ServiceAddress for Service %v/%v had out of date spec, updating", serviceAddress.Name, service.Namespace, service.Name)
-	serviceAddress.Spec = *desiredSpec
-	return c.latticeClient.LatticeV1().ServiceAddresses(serviceAddress.Namespace).Update(serviceAddress)
+	// Copy so the shared cache isn't mutated
+	address = address.DeepCopy()
+	address.Spec = spec
+
+	return c.latticeClient.LatticeV1().ServiceAddresses(address.Namespace).Update(address)
 }
 
 func (c *Controller) createNewServiceAddress(service *crv1.Service) (*crv1.ServiceAddress, error) {
@@ -64,7 +82,7 @@ func newServiceAddress(service *crv1.Service) (*crv1.ServiceAddress, error) {
 		ObjectMeta: metav1.ObjectMeta{
 			Name: service.Name,
 		},
-		Spec: *spec,
+		Spec: spec,
 		Status: crv1.ServiceAddressStatus{
 			State: crv1.ServiceAddressStatePending,
 		},
@@ -73,7 +91,7 @@ func newServiceAddress(service *crv1.Service) (*crv1.ServiceAddress, error) {
 	return serviceAddress, nil
 }
 
-func serviceAddressSpec(service *crv1.Service) (*crv1.ServiceAddressSpec, error) {
+func serviceAddressSpec(service *crv1.Service) (crv1.ServiceAddressSpec, error) {
 	endpointGroups := map[string]crv1.ServiceAddressEndpointGroup{
 		"service": {
 			Service: &service.Name,
@@ -87,7 +105,7 @@ func serviceAddressSpec(service *crv1.Service) (*crv1.ServiceAddressSpec, error)
 			case block.ProtocolHTTP:
 				httpPortConfig, err := serviceAddressHTTPPort(componentPort)
 				if err != nil {
-					return nil, err
+					return crv1.ServiceAddressSpec{}, err
 				}
 
 				ports[componentPort.Port] = crv1.ServiceAddressPort{
@@ -97,7 +115,7 @@ func serviceAddressSpec(service *crv1.Service) (*crv1.ServiceAddressSpec, error)
 			case block.ProtocolTCP:
 				tcpPortConfig, err := serviceAddressTCPPort(componentPort)
 				if err != nil {
-					return nil, err
+					return crv1.ServiceAddressSpec{}, err
 				}
 
 				ports[componentPort.Port] = crv1.ServiceAddressPort{
@@ -107,7 +125,7 @@ func serviceAddressSpec(service *crv1.Service) (*crv1.ServiceAddressSpec, error)
 		}
 	}
 
-	spec := &crv1.ServiceAddressSpec{
+	spec := crv1.ServiceAddressSpec{
 		EndpointGroups: endpointGroups,
 		Ports:          ports,
 	}

@@ -60,6 +60,9 @@ type Controller struct {
 	kubeServiceLister       corelisters.ServiceLister
 	kubeServiceListerSynced cache.InformerSynced
 
+	serviceAddressLister       latticelisters.ServiceAddressLister
+	serviceAddressListerSynced cache.InformerSynced
+
 	queue workqueue.RateLimitingInterface
 }
 
@@ -71,6 +74,7 @@ func NewController(
 	nodePoolInformer latticeinformers.NodePoolInformer,
 	deploymentInformer appinformers.DeploymentInformer,
 	kubeServiceInformer coreinformers.ServiceInformer,
+	serviceAddressInformer latticeinformers.ServiceAddressInformer,
 ) *Controller {
 	sc := &Controller{
 		kubeClient:    kubeClient,
@@ -120,6 +124,13 @@ func NewController(
 	})
 	sc.kubeServiceLister = kubeServiceInformer.Lister()
 	sc.kubeServiceListerSynced = kubeServiceInformer.Informer().HasSynced
+
+	serviceAddressInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+		AddFunc:    sc.handleServiceAddressAdd,
+		UpdateFunc: sc.handleServiceAddressUpdate,
+	})
+	sc.serviceAddressLister = serviceAddressInformer.Lister()
+	sc.serviceAddressListerSynced = serviceAddressInformer.Informer().HasSynced
 
 	return sc
 }
@@ -443,6 +454,74 @@ func (c *Controller) handleKubeServiceDelete(obj interface{}) {
 	c.enqueueService(service)
 }
 
+func (c *Controller) handleServiceAddressAdd(obj interface{}) {
+	address := obj.(*crv1.ServiceAddress)
+	glog.V(4).Infof("ServiceAddress %v/%v added", address.Namespace, address.Name)
+
+	if address.DeletionTimestamp != nil {
+		// On a restart of the controller manager, it's possible for an object to
+		// show up in a state that is already pending deletion.
+		c.handleKubeServiceDelete(address)
+		return
+	}
+
+	service, err := c.serviceLister.Services(address.Namespace).Get(address.Name)
+	if err != nil {
+		// FIXME(kevinrosendahl): send warn event
+		return
+	}
+
+	c.enqueueService(service)
+}
+
+func (c *Controller) handleServiceAddressUpdate(old, cur interface{}) {
+	glog.V(5).Info("Got kube Service update")
+	oldAddress := old.(*crv1.ServiceAddress)
+	curAddress := cur.(*crv1.ServiceAddress)
+	if curAddress.ResourceVersion == oldAddress.ResourceVersion {
+		// Periodic resync will send update events for all known Services.
+		// Two different versions of the same Service will always have different RVs.
+		glog.V(5).Info("kube Service %v/%v ResourceVersions are the same", curAddress.Namespace, curAddress.Name)
+		return
+	}
+
+	service, err := c.serviceLister.Services(curAddress.Namespace).Get(curAddress.Name)
+	if err != nil {
+		// FIXME(kevinrosendahl): send warn event
+		return
+	}
+
+	c.enqueueService(service)
+}
+
+func (c *Controller) handleServiceAddressDelete(obj interface{}) {
+	address, ok := obj.(*crv1.ServiceAddress)
+
+	// When a delete is dropped, the relist will notice a pod in the store not
+	// in the list, leading to the insertion of a tombstone object which contains
+	// the deleted key/value.
+	if !ok {
+		tombstone, ok := obj.(cache.DeletedFinalStateUnknown)
+		if !ok {
+			runtime.HandleError(fmt.Errorf("couldn't get object from tombstone %#v", obj))
+			return
+		}
+		address, ok = tombstone.Obj.(*crv1.ServiceAddress)
+		if !ok {
+			runtime.HandleError(fmt.Errorf("tombstone contained object that is not a Service %#v", obj))
+			return
+		}
+	}
+
+	service, err := c.serviceLister.Services(address.Namespace).Get(address.Name)
+	if err != nil {
+		// FIXME(kevinrosendahl): send warn event
+		return
+	}
+
+	c.enqueueService(service)
+}
+
 func (c *Controller) enqueue(svc *crv1.Service) {
 	key, err := cache.DeletionHandlingMetaNamespaceKeyFunc(svc)
 	if err != nil {
@@ -573,5 +652,6 @@ func (c *Controller) syncService(key string) error {
 		return err
 	}
 
-	return c.syncServiceStatus(service, deployment, kubeService, nodePool, serviceAddress)
+	_, err = c.syncServiceStatus(service, deployment, kubeService, nodePool, serviceAddress)
+	return err
 }
