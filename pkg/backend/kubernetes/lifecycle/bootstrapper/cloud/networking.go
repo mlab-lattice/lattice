@@ -7,7 +7,7 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	appsv1beta2 "k8s.io/api/apps/v1beta2"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 )
@@ -109,17 +109,17 @@ func (b *DefaultBootstrapper) bootstrapNetworkingFlannel() ([]interface{}, error
 	dsLabels := map[string]string{
 		"system.kubernetes.io/flannel": "true",
 	}
-	ds := &appsv1beta2.DaemonSet{
+	ds := &appsv1.DaemonSet{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "DaemonSet",
-			APIVersion: appsv1beta2.GroupName + "/v1beta2",
+			APIVersion: appsv1.GroupName + "/v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "kube-flannel-ds",
 			Namespace: constants.NamespaceKubeSystem,
 			Labels:    dsLabels,
 		},
-		Spec: appsv1beta2.DaemonSetSpec{
+		Spec: appsv1.DaemonSetSpec{
 			Selector: &metav1.LabelSelector{
 				MatchLabels: dsLabels,
 			},
@@ -250,7 +250,7 @@ func (b *DefaultBootstrapper) bootstrapNetworkingFlannel() ([]interface{}, error
 		return nil, err
 	}
 
-	if _, err := b.KubeClient.AppsV1beta2().DaemonSets(ds.Namespace).Create(ds); err != nil {
+	if _, err := b.KubeClient.AppsV1().DaemonSets(ds.Namespace).Create(ds); err != nil {
 		return nil, err
 	}
 	return []interface{}{sa, cr, crb, cm, ds}, nil

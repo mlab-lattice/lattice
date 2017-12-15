@@ -9,7 +9,7 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	appsv1beta2 "k8s.io/api/apps/v1beta2"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 )
 
@@ -47,17 +47,17 @@ func (b *DefaultBootstrapper) seedLatticeControllerManager() ([]interface{}, err
 		constants.MasterNodeLabelComponent: constants.MasterNodeComponentLatticeControllerManager,
 	}
 
-	latticeControllerManagerDaemonSet := &appsv1beta2.DaemonSet{
+	latticeControllerManagerDaemonSet := &appsv1.DaemonSet{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "DaemonSet",
-			APIVersion: appsv1beta2.GroupName + "/v1beta2",
+			APIVersion: appsv1.GroupName + "/v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      constants.MasterNodeComponentLatticeControllerManager,
 			Namespace: namespace,
 			Labels:    labels,
 		},
-		Spec: appsv1beta2.DaemonSetSpec{
+		Spec: appsv1.DaemonSetSpec{
 			Selector: &metav1.LabelSelector{
 				MatchLabels: labels,
 			},
@@ -91,7 +91,7 @@ func (b *DefaultBootstrapper) seedLatticeControllerManager() ([]interface{}, err
 		return []interface{}{latticeControllerManagerDaemonSet}, nil
 	}
 
-	latticeControllerManagerDaemonSet, err := b.KubeClient.AppsV1beta2().DaemonSets(namespace).Create(latticeControllerManagerDaemonSet)
+	latticeControllerManagerDaemonSet, err := b.KubeClient.AppsV1().DaemonSets(namespace).Create(latticeControllerManagerDaemonSet)
 	return []interface{}{latticeControllerManagerDaemonSet}, err
 }
 
@@ -108,17 +108,17 @@ func (b *DefaultBootstrapper) seedManagerAPI() ([]interface{}, error) {
 		constants.MasterNodeLabelComponent: constants.MasterNodeComponentLatticeControllerManager,
 	}
 
-	managerAPIDaemonSet := &appsv1beta2.DaemonSet{
+	managerAPIDaemonSet := &appsv1.DaemonSet{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "DaemonSet",
-			APIVersion: appsv1beta2.GroupName + "/v1beta2",
+			APIVersion: appsv1.GroupName + "/v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      constants.MasterNodeComponentManagerAPI,
 			Namespace: namespace,
 			Labels:    labels,
 		},
-		Spec: appsv1beta2.DaemonSetSpec{
+		Spec: appsv1.DaemonSetSpec{
 			Selector: &metav1.LabelSelector{
 				MatchLabels: labels,
 			},
@@ -160,6 +160,6 @@ func (b *DefaultBootstrapper) seedManagerAPI() ([]interface{}, error) {
 		return []interface{}{managerAPIDaemonSet}, nil
 	}
 
-	managerAPIDaemonSet, err := b.KubeClient.AppsV1beta2().DaemonSets(namespace).Create(managerAPIDaemonSet)
+	managerAPIDaemonSet, err := b.KubeClient.AppsV1().DaemonSets(namespace).Create(managerAPIDaemonSet)
 	return []interface{}{managerAPIDaemonSet}, err
 }

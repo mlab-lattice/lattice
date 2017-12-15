@@ -12,7 +12,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 
-	appsv1beta2 "k8s.io/api/apps/v1beta2"
+	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
 )
 
@@ -178,7 +178,7 @@ func (b *DefaultBootstrapper) seedRBACLatticeControllerManger() ([]interface{}, 
 			},
 			// kube deployment all
 			{
-				APIGroups: []string{appsv1beta2.GroupName},
+				APIGroups: []string{appsv1.GroupName},
 				Resources: []string{"deployments"},
 				Verbs:     []string{rbacv1.VerbAll},
 			},
