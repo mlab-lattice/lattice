@@ -14,19 +14,15 @@ import (
 
 func (b *DefaultBootstrapper) seedDNS() ([]interface{}, error) {
 	if !b.Options.DryRun {
-		fmt.Println("Seeding local DNS server...")
+		fmt.Println("Seeding local DNS server")
 	}
-
-	// Create some constants to refer to my image TBD where they will actually place
-	my_const := "value"
-	sa_name_const := "value"
 
 	// TODO :: Handle namespace
 	namespace := kubeutil.GetFullNamespace("lattice", constants.NamespaceLatticeInternal)
 	args := []string{}
 	args = append(args, b.Options.LocalComponents.LocalDNS.Args...)
 	labels := map[string]string{
-		"key" : my_const,
+		"key" : constants.MasterNodeDNSServer,
 	}
 
 	// Create a daemon set for my image
@@ -36,7 +32,7 @@ func (b *DefaultBootstrapper) seedDNS() ([]interface{}, error) {
 			APIVersion: appsv1beta2.GroupName + "/v1beta2",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:		my_const,
+			Name:		constants.MasterNodeDNSServer,
 			Namespace: 	namespace,
 			Labels:		labels,
 		},
@@ -46,19 +42,20 @@ func (b *DefaultBootstrapper) seedDNS() ([]interface{}, error) {
 			},
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:   my_const,
+					Name:   constants.MasterNodeDNSServer,
 					Labels: labels,
 				},
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{
 						{
-							Name:  my_const,
+							Name:  constants.MasterNodeDNSServer,
 							Image: b.Options.LocalComponents.LocalDNS.Image,
 							Args:  args,
 						},
 					},
 					DNSPolicy:          corev1.DNSDefault,
-					ServiceAccountName: sa_name_const,
+					// TODO :: This is default until I know what SA, if any, to use for the DNS.
+					ServiceAccountName: constants.ServiceAccountLatticeControllerManager,
 					Tolerations: []corev1.Toleration{
 						constants.TolerationMasterNode,
 					},
