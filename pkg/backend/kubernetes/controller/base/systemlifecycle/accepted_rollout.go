@@ -59,6 +59,4 @@ func (c *Controller) syncAcceptedRollout(rollout *crv1.SystemRollout) error {
 	default:
 		return fmt.Errorf("SystemBuild %v/%v in unexpected state %v", build.Namespace, build.Name, build.Status.State)
 	}
-
-	return nil
 }
