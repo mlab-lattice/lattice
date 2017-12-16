@@ -6,8 +6,8 @@ import (
 )
 
 const (
-	ResourceSingularServiceAddress  = "ServiceAddress"
-	ResourcePluralServiceAddress    = "ServiceAddresses"
+	ResourceSingularServiceAddress  = "serviceaddress"
+	ResourcePluralServiceAddress    = "serviceaddresses"
 	ResourceShortNameServiceAddress = "laddr"
 	ResourceScopeServiceAddress     = apiextensionsv1beta1.NamespaceScoped
 )

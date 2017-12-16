@@ -5,6 +5,7 @@ import (
 	"strconv"
 
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/constants"
+	"github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/bootstrapper/util"
 	kubeutil "github.com/mlab-lattice/system/pkg/backend/kubernetes/util/kubernetes"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -23,7 +24,7 @@ func (b *DefaultBootstrapper) seedMasterComponents() ([]interface{}, error) {
 		b.seedManagerAPI,
 	}
 
-	objects := []interface{}{}
+	var objects []interface{}
 	for _, seedMasterComponentFunc := range seedMasterComponentFuncs {
 		additionalObjects, err := seedMasterComponentFunc()
 		if err != nil {
@@ -91,8 +92,14 @@ func (b *DefaultBootstrapper) seedLatticeControllerManager() ([]interface{}, err
 		return []interface{}{latticeControllerManagerDaemonSet}, nil
 	}
 
-	latticeControllerManagerDaemonSet, err := b.KubeClient.AppsV1().DaemonSets(namespace).Create(latticeControllerManagerDaemonSet)
-	return []interface{}{latticeControllerManagerDaemonSet}, err
+	result, err := util.IdempotentSeed(func() (interface{}, error) {
+		return b.KubeClient.AppsV1().DaemonSets(namespace).Create(latticeControllerManagerDaemonSet)
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return []interface{}{result}, nil
 }
 
 func (b *DefaultBootstrapper) seedManagerAPI() ([]interface{}, error) {
@@ -160,6 +167,12 @@ func (b *DefaultBootstrapper) seedManagerAPI() ([]interface{}, error) {
 		return []interface{}{managerAPIDaemonSet}, nil
 	}
 
-	managerAPIDaemonSet, err := b.KubeClient.AppsV1().DaemonSets(namespace).Create(managerAPIDaemonSet)
-	return []interface{}{managerAPIDaemonSet}, err
+	result, err := util.IdempotentSeed(func() (interface{}, error) {
+		return b.KubeClient.AppsV1().DaemonSets(namespace).Create(managerAPIDaemonSet)
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return []interface{}{result}, nil
 }

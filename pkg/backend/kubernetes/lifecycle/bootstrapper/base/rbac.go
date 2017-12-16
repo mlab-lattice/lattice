@@ -5,6 +5,7 @@ import (
 
 	kubeconstants "github.com/mlab-lattice/system/pkg/backend/kubernetes/constants"
 	crv1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
+	"github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/bootstrapper/util"
 	kubeutil "github.com/mlab-lattice/system/pkg/backend/kubernetes/util/kubernetes"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -105,18 +106,28 @@ func (b *DefaultBootstrapper) seedRBACComponentBuilder() ([]interface{}, error) 
 		return []interface{}{role, sa, rb}, nil
 	}
 
-	if _, err := b.KubeClient.RbacV1().Roles(role.Namespace).Create(role); err != nil {
+	roleResult, err := util.IdempotentSeed(func() (interface{}, error) {
+		return b.KubeClient.RbacV1().Roles(role.Namespace).Create(role)
+	})
+	if err != nil {
 		return nil, err
 	}
 
-	if _, err := b.KubeClient.CoreV1().ServiceAccounts(sa.Namespace).Create(sa); err != nil {
+	saResult, err := util.IdempotentSeed(func() (interface{}, error) {
+		return b.KubeClient.CoreV1().ServiceAccounts(sa.Namespace).Create(sa)
+	})
+	if err != nil {
 		return nil, err
 	}
 
-	if _, err := b.KubeClient.RbacV1().RoleBindings(rb.Namespace).Create(rb); err != nil {
+	rbResult, err := util.IdempotentSeed(func() (interface{}, error) {
+		return b.KubeClient.RbacV1().RoleBindings(rb.Namespace).Create(rb)
+	})
+	if err != nil {
 		return nil, err
 	}
-	return []interface{}{role, sa, rb}, nil
+
+	return []interface{}{roleResult, saResult, rbResult}, nil
 }
 
 func (b *DefaultBootstrapper) seedRBACEnvoyXDSAPI() ([]interface{}, error) {
@@ -148,10 +159,14 @@ func (b *DefaultBootstrapper) seedRBACEnvoyXDSAPI() ([]interface{}, error) {
 		return []interface{}{clusterRole}, nil
 	}
 
-	if _, err := b.KubeClient.RbacV1().ClusterRoles().Create(clusterRole); err != nil {
+	clusterRoleResult, err := util.IdempotentSeed(func() (interface{}, error) {
+		return b.KubeClient.RbacV1().ClusterRoles().Create(clusterRole)
+	})
+	if err != nil {
 		return nil, err
 	}
-	return []interface{}{clusterRole}, nil
+
+	return []interface{}{clusterRoleResult}, nil
 }
 
 func (b *DefaultBootstrapper) seedRBACLatticeControllerManger() ([]interface{}, error) {
@@ -230,18 +245,28 @@ func (b *DefaultBootstrapper) seedRBACLatticeControllerManger() ([]interface{}, 
 		return []interface{}{clusterRole, sa, crb}, nil
 	}
 
-	if _, err := b.KubeClient.RbacV1().ClusterRoles().Create(clusterRole); err != nil {
+	clusterRoleResult, err := util.IdempotentSeed(func() (interface{}, error) {
+		return b.KubeClient.RbacV1().ClusterRoles().Create(clusterRole)
+	})
+	if err != nil {
 		return nil, err
 	}
 
-	if _, err := b.KubeClient.CoreV1().ServiceAccounts(sa.Namespace).Create(sa); err != nil {
+	saResult, err := util.IdempotentSeed(func() (interface{}, error) {
+		return b.KubeClient.CoreV1().ServiceAccounts(sa.Namespace).Create(sa)
+	})
+	if err != nil {
 		return nil, err
 	}
 
-	if _, err := b.KubeClient.RbacV1().ClusterRoleBindings().Create(crb); err != nil {
+	crbResult, err := util.IdempotentSeed(func() (interface{}, error) {
+		return b.KubeClient.RbacV1().ClusterRoleBindings().Create(crb)
+	})
+	if err != nil {
 		return nil, err
 	}
-	return []interface{}{clusterRole, sa, crb}, nil
+
+	return []interface{}{clusterRoleResult, saResult, crbResult}, nil
 }
 
 func (b *DefaultBootstrapper) seedRBACManagerAPI() ([]interface{}, error) {
@@ -397,23 +422,40 @@ func (b *DefaultBootstrapper) seedRBACManagerAPI() ([]interface{}, error) {
 		return []interface{}{role, clusterRole, sa, rb, crb}, nil
 	}
 
-	if _, err := b.KubeClient.RbacV1().Roles(role.Namespace).Create(role); err != nil {
-		return nil, err
-	}
-	if _, err := b.KubeClient.RbacV1().ClusterRoles().Create(clusterRole); err != nil {
-		return nil, err
-	}
-
-	if _, err := b.KubeClient.CoreV1().ServiceAccounts(sa.Namespace).Create(sa); err != nil {
+	roleResult, err := util.IdempotentSeed(func() (interface{}, error) {
+		return b.KubeClient.RbacV1().Roles(role.Namespace).Create(role)
+	})
+	if err != nil {
 		return nil, err
 	}
 
-	if _, err := b.KubeClient.RbacV1().RoleBindings(rb.Namespace).Create(rb); err != nil {
+	clusterRoleResult, err := util.IdempotentSeed(func() (interface{}, error) {
+		return b.KubeClient.RbacV1().ClusterRoles().Create(clusterRole)
+	})
+	if err != nil {
 		return nil, err
 	}
 
-	if _, err := b.KubeClient.RbacV1().ClusterRoleBindings().Create(crb); err != nil {
+	saResult, err := util.IdempotentSeed(func() (interface{}, error) {
+		return b.KubeClient.CoreV1().ServiceAccounts(sa.Namespace).Create(sa)
+	})
+	if err != nil {
 		return nil, err
 	}
-	return []interface{}{role, clusterRole, sa, rb, crb}, nil
+
+	rbResult, err := util.IdempotentSeed(func() (interface{}, error) {
+		return b.KubeClient.RbacV1().RoleBindings(rb.Namespace).Create(rb)
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	crbResult, err := util.IdempotentSeed(func() (interface{}, error) {
+		return b.KubeClient.RbacV1().ClusterRoleBindings().Create(crb)
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return []interface{}{roleResult, clusterRoleResult, saResult, rbResult, crbResult}, nil
 }
