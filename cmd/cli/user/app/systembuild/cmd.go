@@ -1,9 +1,6 @@
 package systembuild
 
 import (
-	"encoding/json"
-	"fmt"
-	"log"
 	"os"
 
 	"github.com/mlab-lattice/system/pkg/cli"
@@ -21,7 +18,7 @@ var (
 	url             string
 	namespace       types.LatticeNamespace
 	userClient      user.Client
-	namespaceClient user.NamespaceClient
+	namespaceClient cli.NamespaceClient
 )
 
 var Cmd = &cobra.Command{
@@ -38,16 +35,7 @@ var listCmd = &cobra.Command{
 	Short: "list system builds",
 	Args:  cobra.ExactArgs(0),
 	Run: func(cmd *cobra.Command, args []string) {
-		builds, err := namespaceClient.SystemBuilds()
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		buf, err := json.MarshalIndent(builds, "", "  ")
-		if err != nil {
-			log.Fatal(err)
-		}
-		fmt.Println(string(buf))
+		namespaceClient.SystemBuilds().List()
 	},
 }
 
@@ -57,11 +45,7 @@ var getCmd = &cobra.Command{
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		id := types.SystemBuildID(args[0])
-		build, err := namespaceClient.SystemBuild(id).Get()
-		if err != nil {
-			log.Fatal(err)
-		}
-		cli.ShowResource(build, asJSON)
+		namespaceClient.SystemBuilds().Show(id)
 	},
 }
 
@@ -69,16 +53,17 @@ func init() {
 	cobra.OnInitialize(initCmd)
 
 	Cmd.PersistentFlags().StringVar(&url, "url", "", "URL of the manager-api for the system")
-	Cmd.PersistentFlags().StringVar(&namespaceString, "namespace", string(constants.NamespaceDefault), "namespace to use")
+	Cmd.PersistentFlags().StringVar(&namespaceString, "namespace", string(constants.UserSystemNamespace), "namespace to use")
+	Cmd.PersistentFlags().BoolVarP(&asJSON, "json", "", false, "whether or not to display output as JSON")
 
 	Cmd.AddCommand(listCmd)
 	Cmd.AddCommand(getCmd)
-	getCmd.Flags().BoolVarP(&asJSON, "json", "", false, "whether or not to display output as JSON")
 }
 
 func initCmd() {
 	namespace = types.LatticeNamespace(namespaceString)
 
 	userClient = rest.NewClient(url)
-	namespaceClient = userClient.Namespace(namespace)
+	restClient := userClient.Namespace(namespace)
+	namespaceClient = cli.NewNamespaceClient(restClient, asJSON)
 }

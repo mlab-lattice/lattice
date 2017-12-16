@@ -1,10 +1,6 @@
 package componentbuild
 
 import (
-	"encoding/json"
-	"fmt"
-	"io"
-	"log"
 	"os"
 
 	"github.com/mlab-lattice/system/pkg/cli"
@@ -24,7 +20,7 @@ var (
 	url             string
 	namespace       types.LatticeNamespace
 	userClient      user.Client
-	namespaceClient user.NamespaceClient
+	namespaceClient cli.NamespaceClient
 )
 
 var Cmd = &cobra.Command{
@@ -41,16 +37,7 @@ var listCmd = &cobra.Command{
 	Short: "list component builds",
 	Args:  cobra.ExactArgs(0),
 	Run: func(cmd *cobra.Command, args []string) {
-		builds, err := namespaceClient.ComponentBuilds()
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		buf, err := json.MarshalIndent(builds, "", "  ")
-		if err != nil {
-			log.Fatal(err)
-		}
-		fmt.Println(string(buf))
+		namespaceClient.ComponentBuilds().List()
 	},
 }
 
@@ -60,12 +47,7 @@ var getCmd = &cobra.Command{
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		id := types.ComponentBuildID(args[0])
-		build, err := namespaceClient.ComponentBuild(id).Get()
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		cli.ShowResource(build, asJSON)
+		namespaceClient.ComponentBuilds().Show(id)
 	},
 }
 
@@ -75,13 +57,7 @@ var logsCmd = &cobra.Command{
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		id := types.ComponentBuildID(args[0])
-		logs, err := namespaceClient.ComponentBuild(id).Logs(follow)
-		if err != nil {
-			log.Fatal(err)
-		}
-		defer logs.Close()
-
-		io.Copy(os.Stdout, logs)
+		namespaceClient.ComponentBuilds().GetLogs(id, follow)
 	},
 }
 
@@ -89,18 +65,20 @@ func init() {
 	cobra.OnInitialize(initCmd)
 
 	Cmd.PersistentFlags().StringVar(&url, "url", "", "URL of the manager-api for the system")
-	Cmd.PersistentFlags().StringVar(&namespaceString, "namespace", string(constants.NamespaceDefault), "namespace to use")
+	Cmd.PersistentFlags().StringVar(&namespaceString, "namespace", string(constants.UserSystemNamespace), "namespace to use")
 
 	Cmd.AddCommand(listCmd)
 	Cmd.AddCommand(getCmd)
 	Cmd.AddCommand(logsCmd)
 	logsCmd.Flags().BoolVarP(&follow, "follow", "f", false, "whether or not to follow the logs")
 	getCmd.Flags().BoolVarP(&asJSON, "json", "", false, "whether or not to display output as JSON")
+	listCmd.Flags().BoolVarP(&asJSON, "json", "", false, "whether or not to display output as JSON")
 }
 
 func initCmd() {
 	namespace = types.LatticeNamespace(namespaceString)
 
 	userClient = rest.NewClient(url)
-	namespaceClient = userClient.Namespace(namespace)
+	restClient := userClient.Namespace(namespace)
+	namespaceClient = cli.NewNamespaceClient(restClient, asJSON)
 }

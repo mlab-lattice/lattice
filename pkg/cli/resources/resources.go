@@ -1,4 +1,4 @@
-package cli
+package resources
 
 import (
 	"encoding/json"
@@ -33,7 +33,27 @@ func ShowResource(resource EndpointResource, asJSON bool) {
 }
 
 func ListResources(resources []EndpointResource, asJSON bool) {
-	for _, v := range resources {
-		ShowResource(v, asJSON)
+	if asJSON {
+		buf, err := json.MarshalIndent(resources, "", "  ")
+		if err != nil {
+			log.Fatal(err)
+		}
+		fmt.Println(string(buf))
+	} else if len(resources) > 0 {
+		keys := []string{}
+		for k := range resources[0].GetRenderMap() {
+			keys = append(keys, k)
+		}
+		table := tablewriter.NewWriter(os.Stdout)
+		table.SetHeader(keys)
+		for _, r := range resources {
+			m := r.GetRenderMap()
+			line := make([]string, 0, len(keys))
+			for _, k := range keys {
+				line = append(line, m[k])
+			}
+			table.Append(line)
+		}
+		table.Render()
 	}
 }
