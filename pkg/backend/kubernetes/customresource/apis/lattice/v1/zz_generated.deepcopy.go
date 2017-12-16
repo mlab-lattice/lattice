@@ -101,6 +101,24 @@ func (in *ComponentBuildStatus) DeepCopyInto(out *ComponentBuildStatus) {
 			**out = **in
 		}
 	}
+	if in.LastObservedPhase != nil {
+		in, out := &in.LastObservedPhase, &out.LastObservedPhase
+		if *in == nil {
+			*out = nil
+		} else {
+			*out = new(types.ComponentBuildPhase)
+			**out = **in
+		}
+	}
+	if in.FailureInfo != nil {
+		in, out := &in.FailureInfo, &out.FailureInfo
+		if *in == nil {
+			*out = nil
+		} else {
+			*out = new(types.ComponentBuildFailureInfo)
+			**out = **in
+		}
+	}
 	return
 }
 
