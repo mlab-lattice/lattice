@@ -9,6 +9,7 @@ import (
 	"github.com/mlab-lattice/system/cmd/kubernetes/lattice-controller-manager/app/basecontrollers"
 	awscontrollers "github.com/mlab-lattice/system/cmd/kubernetes/lattice-controller-manager/app/cloudcontrollers/aws"
 	controller "github.com/mlab-lattice/system/cmd/kubernetes/lattice-controller-manager/app/common"
+	"github.com/mlab-lattice/system/pkg/backend/kubernetes/cloudprovider"
 	latticeinformers "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/informers/externalversions"
 	"github.com/mlab-lattice/system/pkg/constants"
 	"github.com/mlab-lattice/system/pkg/types"
@@ -47,7 +48,11 @@ var RootCmd = &cobra.Command{
 		clusterID := types.ClusterID(clusterIDString)
 
 		// TODO: setting stop as nil for now, won't actually need it until leader-election is used
-		ctx := CreateControllerContext(clusterID, config, nil, terraformModulePath)
+		ctx, err := CreateControllerContext(clusterID, config, nil, terraformModulePath)
+		if err != nil {
+			panic(err)
+		}
+
 		glog.V(1).Info("Starting controllers")
 		StartControllers(ctx, GetControllerInitializers(provider))
 
@@ -92,7 +97,12 @@ func CreateControllerContext(
 	kubeconfig *rest.Config,
 	stop <-chan struct{},
 	terraformModulePath string,
-) controller.Context {
+) (controller.Context, error) {
+	cloudProvider, err := cloudprovider.NewCloudProvider(provider)
+	if err != nil {
+		return controller.Context{}, err
+	}
+
 	kcb := controller.KubeClientBuilder{
 		Kubeconfig: kubeconfig,
 	}
@@ -106,8 +116,9 @@ func CreateControllerContext(
 	versionedLatticeClient := lcb.ClientOrDie("shared-latticeinformers")
 	latticeInformers := latticeinformers.NewSharedInformerFactory(versionedLatticeClient, time.Duration(12*time.Hour))
 
-	return controller.Context{
-		ClusterID: clusterID,
+	ctx := controller.Context{
+		ClusterID:     clusterID,
+		CloudProvider: cloudProvider,
 
 		KubeInformerFactory:    kubeInformers,
 		LatticeInformerFactory: latticeInformers,
@@ -118,6 +129,7 @@ func CreateControllerContext(
 
 		TerraformModulePath: terraformModulePath,
 	}
+	return ctx, nil
 }
 
 func GetControllerInitializers(provider string) map[string]controller.Initializer {

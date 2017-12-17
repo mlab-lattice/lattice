@@ -145,7 +145,7 @@ func (c *Controller) jobSpec(build *crv1.ComponentBuild) (batchv1.JobSpec, strin
 	}
 
 	var zero int32
-	spec := batchv1.JobSpec{
+	spec := &batchv1.JobSpec{
 		// Only †ry to run the build once
 		BackoffLimit: &zero,
 		Template: corev1.PodTemplateSpec{
@@ -187,7 +187,9 @@ func (c *Controller) jobSpec(build *crv1.ComponentBuild) (batchv1.JobSpec, strin
 		},
 	}
 
-	return spec, dockerImageFQN, nil
+	spec = c.cloudProvider.TransformComponentBuildJobSpec(spec)
+
+	return *spec, dockerImageFQN, nil
 }
 
 func (c *Controller) getBuildContainer(build *crv1.ComponentBuild) (*corev1.Container, string, error) {

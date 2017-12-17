@@ -64,7 +64,7 @@ func (c *Controller) syncExistingDeployment(service *crv1.Service, nodePool *crv
 	name := deploymentName(service)
 	labels := deploymentLabels(service)
 
-	desiredSpec, err := deploymentSpec(service, name, labels, nodePool, &configCopy.Envoy)
+	desiredSpec, err := c.deploymentSpec(service, name, labels, nodePool, &configCopy.Envoy)
 	if err != nil {
 		return nil, err
 	}
@@ -139,7 +139,7 @@ func (c *Controller) newDeployment(service *crv1.Service, nodePool *crv1.NodePoo
 	name := deploymentName(service)
 	labels := deploymentLabels(service)
 
-	spec, err := deploymentSpec(service, name, labels, nodePool, &configCopy.Envoy)
+	spec, err := c.deploymentSpec(service, name, labels, nodePool, &configCopy.Envoy)
 	if err != nil {
 		return nil, err
 	}
@@ -167,7 +167,7 @@ func deploymentLabels(service *crv1.Service) map[string]string {
 	}
 }
 
-func deploymentSpec(service *crv1.Service, name string, deploymentLabels map[string]string, nodePool *crv1.NodePool, envoyConfig *crv1.ConfigEnvoy) (appsv1.DeploymentSpec, error) {
+func (c *Controller) deploymentSpec(service *crv1.Service, name string, deploymentLabels map[string]string, nodePool *crv1.NodePool, envoyConfig *crv1.ConfigEnvoy) (appsv1.DeploymentSpec, error) {
 	replicas := service.Spec.NumInstances
 
 	// Create a container for each Component in the Service
@@ -201,7 +201,7 @@ func deploymentSpec(service *crv1.Service, name string, deploymentLabels map[str
 		RequiredDuringSchedulingIgnoredDuringExecution: []corev1.PodAffinityTerm{podAffinityTerm},
 	}
 
-	deploymentSpec := appsv1.DeploymentSpec{
+	spec := &appsv1.DeploymentSpec{
 		Replicas: &replicas,
 		Selector: &metav1.LabelSelector{
 			MatchLabels: deploymentLabels,
@@ -236,7 +236,9 @@ func deploymentSpec(service *crv1.Service, name string, deploymentLabels map[str
 		},
 	}
 
-	return deploymentSpec, nil
+	spec = c.cloudProvider.TransformServiceDeploymentSpec(spec)
+
+	return *spec, nil
 }
 
 func containerFromComponent(component *block.Component, buildArtifacts *crv1.ComponentBuildArtifacts) corev1.Container {

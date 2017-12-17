@@ -6,6 +6,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/mlab-lattice/system/pkg/backend/kubernetes/cloudprovider"
 	crv1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	latticeclientset "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/clientset/versioned"
 	latticeinformers "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/informers/externalversions/lattice/v1"
@@ -34,7 +35,8 @@ type Controller struct {
 	syncHandler func(bKey string) error
 	enqueue     func(cb *crv1.ComponentBuild)
 
-	clusterID types.ClusterID
+	clusterID     types.ClusterID
+	cloudProvider cloudprovider.Interface
 
 	kubeClient    kubeclientset.Interface
 	latticeClient latticeclientset.Interface
@@ -57,6 +59,7 @@ type Controller struct {
 
 func NewController(
 	clusterID types.ClusterID,
+	cloudProvider cloudprovider.Interface,
 	kubeClient kubeclientset.Interface,
 	latticeClient latticeclientset.Interface,
 	configInformer latticeinformers.ConfigInformer,
@@ -65,6 +68,7 @@ func NewController(
 ) *Controller {
 	cbc := &Controller{
 		clusterID:     clusterID,
+		cloudProvider: cloudProvider,
 		kubeClient:    kubeClient,
 		latticeClient: latticeClient,
 		configSetChan: make(chan struct{}),

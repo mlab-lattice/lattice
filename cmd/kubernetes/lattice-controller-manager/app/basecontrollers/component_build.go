@@ -8,6 +8,7 @@ import (
 func initializeComponentBuildController(ctx controller.Context) {
 	go componentbuild.NewController(
 		ctx.ClusterID,
+		ctx.CloudProvider,
 		ctx.KubeClientBuilder.ClientOrDie("kubernetes-build-controller"),
 		ctx.LatticeClientBuilder.ClientOrDie("kubernetes-build-controller"),
 		ctx.LatticeInformerFactory.Lattice().V1().Configs(),
