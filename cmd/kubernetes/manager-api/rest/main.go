@@ -3,7 +3,7 @@ package main
 import (
 	"flag"
 
-	"github.com/mlab-lattice/system/pkg/backend/kubernetes/managerapi/server/backend"
+	"github.com/mlab-lattice/system/pkg/backend/kubernetes/managerapi/server/user/backend"
 	"github.com/mlab-lattice/system/pkg/managerapi/server/rest"
 )
 
@@ -21,10 +21,10 @@ func init() {
 }
 
 func main() {
-	b, err := backend.NewKubernetesBackend(kubeconfig)
+	kubernetesBackend, err := backend.NewKubernetesBackend(kubeconfig)
 	if err != nil {
 		panic(err)
 	}
 
-	rest.RunNewRestServer(b, int32(port), workingDirectory)
+	rest.RunNewRestServer(kubernetesBackend, int32(port), workingDirectory)
 }

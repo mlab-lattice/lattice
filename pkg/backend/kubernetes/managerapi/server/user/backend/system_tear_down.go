@@ -14,13 +14,13 @@ import (
 	"github.com/satori/go.uuid"
 )
 
-func (kb *KubernetesBackend) TearDownSystem(ln types.LatticeNamespace) (types.SystemTeardownID, error) {
-	systemTeardown, err := getSystemTeardown(ln)
+func (kb *KubernetesBackend) TearDownSystem(id types.SystemID) (types.SystemTeardownID, error) {
+	systemTeardown, err := getSystemTeardown(id)
 	if err != nil {
 		return "", err
 	}
 
-	result, err := kb.LatticeClient.LatticeV1().SystemTeardowns(string(ln)).Create(systemTeardown)
+	result, err := kb.LatticeClient.LatticeV1().SystemTeardowns(string(id)).Create(systemTeardown)
 	if err != nil {
 		return "", err
 	}
@@ -28,9 +28,9 @@ func (kb *KubernetesBackend) TearDownSystem(ln types.LatticeNamespace) (types.Sy
 	return types.SystemTeardownID(result.Name), err
 }
 
-func getSystemTeardown(ln types.LatticeNamespace) (*crv1.SystemTeardown, error) {
+func getSystemTeardown(id types.SystemID) (*crv1.SystemTeardown, error) {
 	labels := map[string]string{
-		kubeconstants.LatticeNamespaceLabel: string(ln),
+		kubeconstants.LatticeNamespaceLabel: string(id),
 	}
 
 	sysT := &crv1.SystemTeardown{
@@ -47,8 +47,8 @@ func getSystemTeardown(ln types.LatticeNamespace) (*crv1.SystemTeardown, error) 
 	return sysT, nil
 }
 
-func (kb *KubernetesBackend) GetSystemTeardown(ln types.LatticeNamespace, tid types.SystemTeardownID) (*types.SystemTeardown, bool, error) {
-	result, err := kb.LatticeClient.LatticeV1().SystemTeardowns(string(ln)).Get(string(tid), metav1.GetOptions{})
+func (kb *KubernetesBackend) GetSystemTeardown(id types.SystemID, tid types.SystemTeardownID) (*types.SystemTeardown, bool, error) {
+	result, err := kb.LatticeClient.LatticeV1().SystemTeardowns(string(id)).Get(string(tid), metav1.GetOptions{})
 	if err != nil {
 		if errors.IsNotFound(err) {
 			return nil, false, nil
@@ -57,7 +57,7 @@ func (kb *KubernetesBackend) GetSystemTeardown(ln types.LatticeNamespace, tid ty
 	}
 
 	// TODO: add this to the query
-	if strings.Compare(result.Labels[kubeconstants.LatticeNamespaceLabel], string(ln)) != 0 {
+	if strings.Compare(result.Labels[kubeconstants.LatticeNamespaceLabel], string(id)) != 0 {
 		return nil, false, nil
 	}
 
@@ -69,8 +69,8 @@ func (kb *KubernetesBackend) GetSystemTeardown(ln types.LatticeNamespace, tid ty
 	return sb, true, nil
 }
 
-func (kb *KubernetesBackend) ListSystemTeardowns(ln types.LatticeNamespace) ([]types.SystemTeardown, error) {
-	result, err := kb.LatticeClient.LatticeV1().SystemTeardowns(string(ln)).List(metav1.ListOptions{})
+func (kb *KubernetesBackend) ListSystemTeardowns(id types.SystemID) ([]types.SystemTeardown, error) {
+	result, err := kb.LatticeClient.LatticeV1().SystemTeardowns(string(id)).List(metav1.ListOptions{})
 	if err != nil {
 		return nil, err
 	}
@@ -78,7 +78,7 @@ func (kb *KubernetesBackend) ListSystemTeardowns(ln types.LatticeNamespace) ([]t
 	teardowns := []types.SystemTeardown{}
 	for _, b := range result.Items {
 		// TODO: add this to the query
-		if strings.Compare(b.Labels[kubeconstants.LatticeNamespaceLabel], string(ln)) != 0 {
+		if strings.Compare(b.Labels[kubeconstants.LatticeNamespaceLabel], string(id)) != 0 {
 			continue
 		}
 

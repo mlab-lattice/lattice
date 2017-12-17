@@ -13,38 +13,38 @@ import (
 	"github.com/satori/go.uuid"
 )
 
-func (kb *KubernetesBackend) RollOutSystem(ln types.LatticeNamespace, definitionRoot tree.Node, v types.SystemVersion) (types.SystemRolloutID, error) {
-	bid, err := kb.BuildSystem(ln, definitionRoot, v)
+func (kb *KubernetesBackend) RollOutSystem(id types.SystemID, definitionRoot tree.Node, v types.SystemVersion) (types.SystemRolloutID, error) {
+	bid, err := kb.BuildSystem(id, definitionRoot, v)
 	if err != nil {
 		return "", err
 	}
 
-	return kb.RollOutSystemBuild(ln, bid)
+	return kb.RollOutSystemBuild(id, bid)
 }
 
-func (kb *KubernetesBackend) RollOutSystemBuild(ln types.LatticeNamespace, bid types.SystemBuildID) (types.SystemRolloutID, error) {
-	sysBuild, err := kb.getSystemBuildFromID(ln, bid)
+func (kb *KubernetesBackend) RollOutSystemBuild(id types.SystemID, bid types.SystemBuildID) (types.SystemRolloutID, error) {
+	sysBuild, err := kb.getSystemBuildFromID(id, bid)
 	if err != nil {
 		return "", err
 	}
 
-	sysRollout, err := getNewSystemRollout(ln, sysBuild)
+	sysRollout, err := getNewSystemRollout(id, sysBuild)
 	if err != nil {
 		return "", err
 	}
 
-	result, err := kb.LatticeClient.LatticeV1().SystemRollouts(string(ln)).Create(sysRollout)
+	result, err := kb.LatticeClient.LatticeV1().SystemRollouts(string(id)).Create(sysRollout)
 	if err != nil {
 		return "", err
 	}
 	return types.SystemRolloutID(result.Name), err
 }
 
-func (kb *KubernetesBackend) getSystemBuildFromID(ln types.LatticeNamespace, bid types.SystemBuildID) (*crv1.SystemBuild, error) {
-	return kb.LatticeClient.LatticeV1().SystemBuilds(string(ln)).Get(string(bid), metav1.GetOptions{})
+func (kb *KubernetesBackend) getSystemBuildFromID(id types.SystemID, bid types.SystemBuildID) (*crv1.SystemBuild, error) {
+	return kb.LatticeClient.LatticeV1().SystemBuilds(string(id)).Get(string(bid), metav1.GetOptions{})
 }
 
-func getNewSystemRollout(latticeNamespace types.LatticeNamespace, sysBuild *crv1.SystemBuild) (*crv1.SystemRollout, error) {
+func getNewSystemRollout(latticeNamespace types.SystemID, sysBuild *crv1.SystemBuild) (*crv1.SystemRollout, error) {
 	labels := map[string]string{
 		kubeconstants.LatticeNamespaceLabel:        string(latticeNamespace),
 		kubeconstants.LabelKeySystemRolloutVersion: sysBuild.Labels[kubeconstants.LabelKeySystemBuildVersion],
@@ -67,8 +67,8 @@ func getNewSystemRollout(latticeNamespace types.LatticeNamespace, sysBuild *crv1
 	return sysRollout, nil
 }
 
-func (kb *KubernetesBackend) GetSystemRollout(ln types.LatticeNamespace, rid types.SystemRolloutID) (*types.SystemRollout, bool, error) {
-	result, err := kb.LatticeClient.LatticeV1().SystemRollouts(string(ln)).Get(string(rid), metav1.GetOptions{})
+func (kb *KubernetesBackend) GetSystemRollout(id types.SystemID, rid types.SystemRolloutID) (*types.SystemRollout, bool, error) {
+	result, err := kb.LatticeClient.LatticeV1().SystemRollouts(string(id)).Get(string(rid), metav1.GetOptions{})
 	if err != nil {
 		if errors.IsNotFound(err) {
 			return nil, false, nil
@@ -85,8 +85,8 @@ func (kb *KubernetesBackend) GetSystemRollout(ln types.LatticeNamespace, rid typ
 	return sb, true, nil
 }
 
-func (kb *KubernetesBackend) ListSystemRollouts(ln types.LatticeNamespace) ([]types.SystemRollout, error) {
-	result, err := kb.LatticeClient.LatticeV1().SystemRollouts(string(ln)).List(metav1.ListOptions{})
+func (kb *KubernetesBackend) ListSystemRollouts(id types.SystemID) ([]types.SystemRollout, error) {
+	result, err := kb.LatticeClient.LatticeV1().SystemRollouts(string(id)).List(metav1.ListOptions{})
 	if err != nil {
 		return nil, err
 	}

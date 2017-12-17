@@ -6,9 +6,10 @@ import (
 
 	crv1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	latticeclientset "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/clientset/versioned"
-	"github.com/mlab-lattice/system/pkg/constants"
 	"github.com/mlab-lattice/system/pkg/definition/tree"
 	xdsapi "github.com/mlab-lattice/system/pkg/envoy/xdsapi/v1"
+
+	corev1 "k8s.io/api/core/v1"
 
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/fields"
@@ -55,7 +56,7 @@ func NewKubernetesPerNodeBackend(kubeconfig string) (*KubernetesPerNodeBackend, 
 	listerWatcher := cache.NewListWatchFromClient(
 		latticeClient.LatticeV1().RESTClient(),
 		crv1.ResourcePluralService,
-		string(constants.UserSystemNamespace),
+		corev1.NamespaceAll,
 		fields.Everything(),
 	)
 	latticeSvcInformer := cache.NewSharedInformer(
@@ -66,7 +67,7 @@ func NewKubernetesPerNodeBackend(kubeconfig string) (*KubernetesPerNodeBackend, 
 
 	kubeEndpointInformer := corev1informers.NewEndpointsInformer(
 		kubeClient,
-		string(constants.UserSystemNamespace),
+		corev1.NamespaceAll,
 		time.Duration(12*time.Hour),
 		cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc},
 	)

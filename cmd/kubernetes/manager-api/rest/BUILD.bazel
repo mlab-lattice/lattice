@@ -6,7 +6,7 @@ go_library(
     importpath = "github.com/mlab-lattice/system/cmd/kubernetes/manager-api/rest",
     visibility = ["//visibility:public"],
     deps = [
-        "//pkg/backend/kubernetes/managerapi/server/backend:go_default_library",
+        "//pkg/backend/kubernetes/managerapi/server/user/backend:go_default_library",
         "//pkg/managerapi/server/rest:go_default_library",
     ],
 )

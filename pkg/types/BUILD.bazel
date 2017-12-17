@@ -4,7 +4,6 @@ go_library(
     name = "go_default_library",
     srcs = [
         "component_build.go",
-        "namespace.go",
         "service.go",
         "service_build.go",
         "system.go",

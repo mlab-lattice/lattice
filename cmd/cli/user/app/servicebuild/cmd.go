@@ -15,11 +15,11 @@ import (
 )
 
 var (
-	namespaceString string
-	url             string
-	namespace       types.LatticeNamespace
-	userClient      user.Client
-	namespaceClient user.NamespaceClient
+	systemIDString string
+	url            string
+	systemID       types.SystemID
+	userClient     user.Client
+	systemClient   user.SystemClient
 )
 
 var Cmd = &cobra.Command{
@@ -36,7 +36,7 @@ var listCmd = &cobra.Command{
 	Short: "list service builds",
 	Args:  cobra.ExactArgs(0),
 	Run: func(cmd *cobra.Command, args []string) {
-		builds, err := namespaceClient.ServiceBuilds()
+		builds, err := systemClient.ServiceBuilds()
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -55,7 +55,7 @@ var getCmd = &cobra.Command{
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		id := types.ServiceBuildID(args[0])
-		build, err := namespaceClient.ServiceBuild(id).Get()
+		build, err := systemClient.ServiceBuild(id).Get()
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -72,15 +72,15 @@ func init() {
 	cobra.OnInitialize(initCmd)
 
 	Cmd.PersistentFlags().StringVar(&url, "url", "", "URL of the manager-api for the system")
-	Cmd.PersistentFlags().StringVar(&namespaceString, "namespace", string(constants.NamespaceDefault), "namespace to use")
+	Cmd.PersistentFlags().StringVar(&systemIDString, "system", string(constants.SystemIDDefault), "system to use")
 
 	Cmd.AddCommand(listCmd)
 	Cmd.AddCommand(getCmd)
 }
 
 func initCmd() {
-	namespace = types.LatticeNamespace(namespaceString)
+	systemID = types.SystemID(systemIDString)
 
 	userClient = rest.NewClient(url)
-	namespaceClient = userClient.Namespace(namespace)
+	systemClient = userClient.System(systemID)
 }

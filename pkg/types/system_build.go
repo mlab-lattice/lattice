@@ -13,7 +13,7 @@ type SystemBuild struct {
 	State SystemBuildState `json:"state"`
 
 	Version SystemVersion `json:"version"`
-	// ServiceBuilds maps service paths (e.g. /foo/bar/buzz) to the
+	// Services maps service paths (e.g. /foo/bar/buzz) to the
 	// ServiceBuild for that service in the SystemBuild.
-	ServiceBuilds map[tree.NodePath]*ServiceBuild `json:"serviceBuilds"`
+	Services map[tree.NodePath]ServiceBuild `json:"serviceBuilds"`
 }

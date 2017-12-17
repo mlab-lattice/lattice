@@ -17,13 +17,13 @@ import (
 	"github.com/satori/go.uuid"
 )
 
-func (kb *KubernetesBackend) BuildSystem(ln types.LatticeNamespace, definitionRoot tree.Node, v types.SystemVersion) (types.SystemBuildID, error) {
-	systemBuild, err := systemBuild(ln, definitionRoot, v)
+func (kb *KubernetesBackend) BuildSystem(id types.SystemID, definitionRoot tree.Node, v types.SystemVersion) (types.SystemBuildID, error) {
+	systemBuild, err := systemBuild(id, definitionRoot, v)
 	if err != nil {
 		return "", err
 	}
 
-	result, err := kb.LatticeClient.LatticeV1().SystemBuilds(string(ln)).Create(systemBuild)
+	result, err := kb.LatticeClient.LatticeV1().SystemBuilds(string(id)).Create(systemBuild)
 	if err != nil {
 		return "", err
 	}
@@ -31,9 +31,9 @@ func (kb *KubernetesBackend) BuildSystem(ln types.LatticeNamespace, definitionRo
 	return types.SystemBuildID(result.Name), err
 }
 
-func systemBuild(ln types.LatticeNamespace, definitionRoot tree.Node, v types.SystemVersion) (*crv1.SystemBuild, error) {
+func systemBuild(id types.SystemID, definitionRoot tree.Node, v types.SystemVersion) (*crv1.SystemBuild, error) {
 	labels := map[string]string{
-		kubeconstants.LatticeNamespaceLabel: string(ln),
+		kubeconstants.LatticeNamespaceLabel: string(id),
 		kubeconstants.LabelKeySystemVersion: string(v),
 	}
 
@@ -61,8 +61,8 @@ func systemBuild(ln types.LatticeNamespace, definitionRoot tree.Node, v types.Sy
 	return sysB, nil
 }
 
-func (kb *KubernetesBackend) ListSystemBuilds(ln types.LatticeNamespace) ([]types.SystemBuild, error) {
-	buildList, err := kb.LatticeClient.LatticeV1().SystemBuilds(string(ln)).List(metav1.ListOptions{})
+func (kb *KubernetesBackend) ListSystemBuilds(id types.SystemID) ([]types.SystemBuild, error) {
+	buildList, err := kb.LatticeClient.LatticeV1().SystemBuilds(string(id)).List(metav1.ListOptions{})
 	if err != nil {
 		return nil, err
 	}
@@ -70,7 +70,7 @@ func (kb *KubernetesBackend) ListSystemBuilds(ln types.LatticeNamespace) ([]type
 	var builds []types.SystemBuild
 	for _, build := range buildList.Items {
 		// TODO: add this to the query
-		if strings.Compare(build.Labels[kubeconstants.LatticeNamespaceLabel], string(ln)) != 0 {
+		if strings.Compare(build.Labels[kubeconstants.LatticeNamespaceLabel], string(id)) != 0 {
 			continue
 		}
 
@@ -85,8 +85,8 @@ func (kb *KubernetesBackend) ListSystemBuilds(ln types.LatticeNamespace) ([]type
 	return builds, nil
 }
 
-func (kb *KubernetesBackend) GetSystemBuild(ln types.LatticeNamespace, bid types.SystemBuildID) (*types.SystemBuild, bool, error) {
-	build, exists, err := kb.getInternalSystemBuild(ln, bid)
+func (kb *KubernetesBackend) GetSystemBuild(id types.SystemID, bid types.SystemBuildID) (*types.SystemBuild, bool, error) {
+	build, exists, err := kb.getInternalSystemBuild(id, bid)
 	if err != nil || !exists {
 		return nil, exists, err
 	}
@@ -99,8 +99,8 @@ func (kb *KubernetesBackend) GetSystemBuild(ln types.LatticeNamespace, bid types
 	return &externalBuild, true, nil
 }
 
-func (kb *KubernetesBackend) getInternalSystemBuild(ln types.LatticeNamespace, bid types.SystemBuildID) (*crv1.SystemBuild, bool, error) {
-	result, err := kb.LatticeClient.LatticeV1().SystemBuilds(string(ln)).Get(string(bid), metav1.GetOptions{})
+func (kb *KubernetesBackend) getInternalSystemBuild(id types.SystemID, bid types.SystemBuildID) (*crv1.SystemBuild, bool, error) {
+	result, err := kb.LatticeClient.LatticeV1().SystemBuilds(string(id)).Get(string(bid), metav1.GetOptions{})
 	if err != nil {
 		if errors.IsNotFound(err) {
 			return nil, false, nil
@@ -109,7 +109,7 @@ func (kb *KubernetesBackend) getInternalSystemBuild(ln types.LatticeNamespace, b
 	}
 
 	// TODO: add this to the query
-	if strings.Compare(result.Labels[kubeconstants.LatticeNamespaceLabel], string(ln)) != 0 {
+	if strings.Compare(result.Labels[kubeconstants.LatticeNamespaceLabel], string(id)) != 0 {
 		return nil, false, nil
 	}
 
@@ -118,23 +118,17 @@ func (kb *KubernetesBackend) getInternalSystemBuild(ln types.LatticeNamespace, b
 
 func transformSystemBuild(build *crv1.SystemBuild) (types.SystemBuild, error) {
 	externalBuild := types.SystemBuild{
-		ID:            types.SystemBuildID(build.Name),
-		State:         getSystemBuildState(build.Status.State),
-		Version:       types.SystemVersion(build.Labels[kubeconstants.LabelKeySystemVersion]),
-		ServiceBuilds: map[tree.NodePath]*types.ServiceBuild{},
+		ID:       types.SystemBuildID(build.Name),
+		State:    getSystemBuildState(build.Status.State),
+		Version:  types.SystemVersion(build.Labels[kubeconstants.LabelKeySystemVersion]),
+		Services: map[tree.NodePath]types.ServiceBuild{},
 	}
 
-	for service := range build.Spec.Services {
-		serviceBuildName, ok := build.Status.ServiceBuilds[service]
-		if !ok {
-			externalBuild.ServiceBuilds[service] = nil
-			continue
-		}
-
+	for service, serviceBuildName := range build.Status.ServiceBuilds {
 		serviceBuildStatus, ok := build.Status.ServiceBuildStatuses[serviceBuildName]
 		if !ok {
 			err := fmt.Errorf(
-				"Service build %v/%v has ComponentBuild %v but no Status for it",
+				"System build %v/%v has ServiceBuild %v but no Status for it",
 				build.Namespace,
 				build.Name,
 				serviceBuildName,
@@ -142,31 +136,12 @@ func transformSystemBuild(build *crv1.SystemBuild) (types.SystemBuild, error) {
 			return types.SystemBuild{}, err
 		}
 
-		id := types.ServiceBuildID(serviceBuildName)
-		state := getServiceBuildState(serviceBuildStatus.State)
-
-		serviceBuild := &types.ServiceBuild{
-			ID:              id,
-			State:           state,
-			ComponentBuilds: map[string]*types.ComponentBuild{},
+		externalServiceBuild, err := transformServiceBuild(build.Namespace, serviceBuildName, &serviceBuildStatus)
+		if err != nil {
+			return types.SystemBuild{}, err
 		}
 
-		for component := range serviceBuildStatus.ComponentBuilds {
-			externalComponentBuild, err := transformServiceBuildComponent(
-				build.Name,
-				build.Namespace,
-				component,
-				serviceBuildStatus.ComponentBuilds,
-				serviceBuildStatus.ComponentBuildStatuses,
-			)
-			if err != nil {
-				return types.SystemBuild{}, err
-			}
-
-			serviceBuild.ComponentBuilds[component] = externalComponentBuild
-		}
-
-		externalBuild.ServiceBuilds[service] = serviceBuild
+		externalBuild.Services[service] = externalServiceBuild
 	}
 
 	return externalBuild, nil

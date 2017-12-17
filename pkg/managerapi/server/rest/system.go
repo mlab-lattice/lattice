@@ -8,20 +8,20 @@ import (
 	"github.com/mlab-lattice/system/pkg/definition"
 	"github.com/mlab-lattice/system/pkg/definition/resolver"
 	"github.com/mlab-lattice/system/pkg/definition/tree"
-	"github.com/mlab-lattice/system/pkg/managerapi/server/backend"
+	"github.com/mlab-lattice/system/pkg/managerapi/server/user"
 	"github.com/mlab-lattice/system/pkg/types"
 
 	"github.com/gin-gonic/gin"
 )
 
-func (r *restServer) mountNamespaceHandlers() {
-	r.mountNamespaceVersionHandlers()
-	r.mountNamespaceSystemBuildHandlers()
-	r.mountNamespaceServiceBuildHandlers()
-	r.mountNamespaceComponentBuildHandlers()
-	r.mountNamespaceRolloutHandlers()
-	r.mountNamespaceTeardownHandlers()
-	r.mountNamespaceServiceHandlers()
+func (r *restServer) mountSystemHandlers() {
+	r.mountSystemVersionHandlers()
+	r.mountSystemSystemBuildHandlers()
+	r.mountSystemServiceBuildHandlers()
+	r.mountSystemComponentBuildHandlers()
+	r.mountSystemRolloutHandlers()
+	r.mountSystemTeardownHandlers()
+	r.mountSystemServiceHandlers()
 }
 
 type systemVersionResponse struct {
@@ -29,13 +29,14 @@ type systemVersionResponse struct {
 	Definition definition.Interface `json:"definition"`
 }
 
-func (r *restServer) mountNamespaceVersionHandlers() {
-	versions := r.router.Group("/namespaces/:namespace_id/versions")
+func (r *restServer) mountSystemVersionHandlers() {
+	versions := r.router.Group("/systems/:system_id/versions")
 	{
 		// list-system-versions
 		versions.GET("", func(c *gin.Context) {
-			namespace := c.Param("namespace_id")
-			versions, err := r.getSystemVersions(namespace)
+			systemID := c.Param("system_id")
+
+			versions, err := r.getSystemVersions(systemID)
 			if err != nil {
 				handleInternalError(c, err)
 				return
@@ -46,9 +47,10 @@ func (r *restServer) mountNamespaceVersionHandlers() {
 
 		// get-system-version
 		versions.GET("/:version_id", func(c *gin.Context) {
-			namespace := c.Param("namespace_id")
+			systemID := c.Param("system_id")
 			version := c.Param("version_id")
-			sysDef, err := r.getSystemRoot(namespace, version)
+
+			definitionRoot, err := r.getSystemDefinitionRoot(systemID, version)
 			if err != nil {
 				handleInternalError(c, err)
 				return
@@ -56,7 +58,7 @@ func (r *restServer) mountNamespaceVersionHandlers() {
 
 			c.JSON(http.StatusOK, systemVersionResponse{
 				ID:         version,
-				Definition: sysDef.Definition(),
+				Definition: definitionRoot.Definition(),
 			})
 		})
 	}
@@ -70,26 +72,27 @@ type buildSystemResponse struct {
 	BuildID types.SystemBuildID `json:"buildId"`
 }
 
-func (r *restServer) mountNamespaceSystemBuildHandlers() {
-	sysbs := r.router.Group("/namespaces/:namespace_id/system-builds")
+func (r *restServer) mountSystemSystemBuildHandlers() {
+	systemBuilds := r.router.Group("/systems/:system_id/system-builds")
 	{
 		// build-system
-		sysbs.POST("", func(c *gin.Context) {
-			namespace := c.Param("namespace_id")
+		systemBuilds.POST("", func(c *gin.Context) {
+			systemID := c.Param("system_id")
+
 			var req buildSystemRequest
 			if err := c.BindJSON(&req); err != nil {
 				handleInternalError(c, err)
 				return
 			}
 
-			root, err := r.getSystemRoot(namespace, req.Version)
+			root, err := r.getSystemDefinitionRoot(systemID, req.Version)
 			if err != nil {
 				handleInternalError(c, err)
 				return
 			}
 
 			bid, err := r.backend.BuildSystem(
-				types.LatticeNamespace(namespace),
+				types.SystemID(systemID),
 				root,
 				types.SystemVersion(req.Version),
 			)
@@ -105,10 +108,10 @@ func (r *restServer) mountNamespaceSystemBuildHandlers() {
 		})
 
 		// list-system-builds
-		sysbs.GET("", func(c *gin.Context) {
-			namespace := c.Param("namespace_id")
+		systemBuilds.GET("", func(c *gin.Context) {
+			systemID := c.Param("system_id")
 
-			bs, err := r.backend.ListSystemBuilds(types.LatticeNamespace(namespace))
+			bs, err := r.backend.ListSystemBuilds(types.SystemID(systemID))
 			if err != nil {
 				handleInternalError(c, err)
 				return
@@ -118,11 +121,11 @@ func (r *restServer) mountNamespaceSystemBuildHandlers() {
 		})
 
 		// get-system-build
-		sysbs.GET("/:build_id", func(c *gin.Context) {
-			namespace := c.Param("namespace_id")
-			bid := c.Param("build_id")
+		systemBuilds.GET("/:build_id", func(c *gin.Context) {
+			systemID := c.Param("system_id")
+			buildID := c.Param("build_id")
 
-			b, exists, err := r.backend.GetSystemBuild(types.LatticeNamespace(namespace), types.SystemBuildID(bid))
+			b, exists, err := r.backend.GetSystemBuild(types.SystemID(systemID), types.SystemBuildID(buildID))
 			if err != nil {
 				handleInternalError(c, err)
 				return
@@ -138,28 +141,28 @@ func (r *restServer) mountNamespaceSystemBuildHandlers() {
 	}
 }
 
-func (r *restServer) mountNamespaceServiceBuildHandlers() {
-	sysbs := r.router.Group("/namespaces/:namespace_id/service-builds")
+func (r *restServer) mountSystemServiceBuildHandlers() {
+	serviceBuilds := r.router.Group("/systems/:system_id/service-builds")
 	{
 		// list-service-builds
-		sysbs.GET("", func(c *gin.Context) {
-			namespace := c.Param("namespace_id")
+		serviceBuilds.GET("", func(c *gin.Context) {
+			systemID := c.Param("system_id")
 
-			bs, err := r.backend.ListServiceBuilds(types.LatticeNamespace(namespace))
+			builds, err := r.backend.ListServiceBuilds(types.SystemID(systemID))
 			if err != nil {
 				handleInternalError(c, err)
 				return
 			}
 
-			c.JSON(http.StatusOK, bs)
+			c.JSON(http.StatusOK, builds)
 		})
 
 		// get-service-build
-		sysbs.GET("/:build_id", func(c *gin.Context) {
-			namespace := c.Param("namespace_id")
-			bid := c.Param("build_id")
+		serviceBuilds.GET("/:build_id", func(c *gin.Context) {
+			systemID := c.Param("system_id")
+			buildID := c.Param("build_id")
 
-			b, exists, err := r.backend.GetServiceBuild(types.LatticeNamespace(namespace), types.ServiceBuildID(bid))
+			build, exists, err := r.backend.GetServiceBuild(types.SystemID(systemID), types.ServiceBuildID(buildID))
 			if err != nil {
 				handleInternalError(c, err)
 				return
@@ -170,33 +173,33 @@ func (r *restServer) mountNamespaceServiceBuildHandlers() {
 				return
 			}
 
-			c.JSON(http.StatusOK, b)
+			c.JSON(http.StatusOK, build)
 		})
 	}
 }
 
-func (r *restServer) mountNamespaceComponentBuildHandlers() {
-	sysbs := r.router.Group("/namespaces/:namespace_id/component-builds")
+func (r *restServer) mountSystemComponentBuildHandlers() {
+	componentBuilds := r.router.Group("/systems/:system_id/component-builds")
 	{
 		// list-component-builds
-		sysbs.GET("", func(c *gin.Context) {
-			namespace := c.Param("namespace_id")
+		componentBuilds.GET("", func(c *gin.Context) {
+			systemID := c.Param("system_id")
 
-			bs, err := r.backend.ListComponentBuilds(types.LatticeNamespace(namespace))
+			builds, err := r.backend.ListComponentBuilds(types.SystemID(systemID))
 			if err != nil {
 				handleInternalError(c, err)
 				return
 			}
 
-			c.JSON(http.StatusOK, bs)
+			c.JSON(http.StatusOK, builds)
 		})
 
 		// get-system-build
-		sysbs.GET("/:build_id", func(c *gin.Context) {
-			namespace := c.Param("namespace_id")
-			bid := c.Param("build_id")
+		componentBuilds.GET("/:build_id", func(c *gin.Context) {
+			systemID := c.Param("system_id")
+			buildID := c.Param("build_id")
 
-			b, exists, err := r.backend.GetComponentBuild(types.LatticeNamespace(namespace), types.ComponentBuildID(bid))
+			build, exists, err := r.backend.GetComponentBuild(types.SystemID(systemID), types.ComponentBuildID(buildID))
 			if err != nil {
 				handleInternalError(c, err)
 				return
@@ -207,13 +210,13 @@ func (r *restServer) mountNamespaceComponentBuildHandlers() {
 				return
 			}
 
-			c.JSON(http.StatusOK, b)
+			c.JSON(http.StatusOK, build)
 		})
 
 		// get-system-build-logs
-		sysbs.GET("/:build_id/logs", func(c *gin.Context) {
-			namespace := c.Param("namespace_id")
-			bid := c.Param("build_id")
+		componentBuilds.GET("/:build_id/logs", func(c *gin.Context) {
+			systemID := c.Param("system_id")
+			buildID := c.Param("build_id")
 			followQuery := c.DefaultQuery("follow", "false")
 
 			var follow bool
@@ -226,10 +229,10 @@ func (r *restServer) mountNamespaceComponentBuildHandlers() {
 				c.String(http.StatusBadRequest, "invalid value for follow query")
 			}
 
-			log, exists, err := r.backend.GetComponentBuildLogs(types.LatticeNamespace(namespace), types.ComponentBuildID(bid), follow)
+			log, exists, err := r.backend.GetComponentBuildLogs(types.SystemID(systemID), types.ComponentBuildID(buildID), follow)
 			if exists == false {
 				switch err.(type) {
-				case *backend.UserError:
+				case *user.UserError:
 					c.String(http.StatusNotFound, "")
 				default:
 					handleInternalError(c, err)
@@ -251,12 +254,13 @@ type rollOutSystemResponse struct {
 	RolloutID types.SystemRolloutID `json:"rolloutId"`
 }
 
-func (r *restServer) mountNamespaceRolloutHandlers() {
-	rollouts := r.router.Group("/namespaces/:namespace_id/rollouts")
+func (r *restServer) mountSystemRolloutHandlers() {
+	rollouts := r.router.Group("/systems/:system_id/rollouts")
 	{
 		// roll-out-system
 		rollouts.POST("", func(c *gin.Context) {
-			namespace := c.Param("namespace_id")
+			systemID := c.Param("system_id")
+
 			var req rollOutSystemRequest
 			if err := c.BindJSON(&req); err != nil {
 				handleInternalError(c, err)
@@ -273,23 +277,23 @@ func (r *restServer) mountNamespaceRolloutHandlers() {
 				return
 			}
 
-			var rid types.SystemRolloutID
+			var rolloutID types.SystemRolloutID
 			var err error
 			if req.Version != nil {
-				root, err := r.getSystemRoot(namespace, *req.Version)
+				root, err := r.getSystemDefinitionRoot(systemID, *req.Version)
 				if err != nil {
 					handleInternalError(c, err)
 					return
 				}
 
-				rid, err = r.backend.RollOutSystem(
-					types.LatticeNamespace(namespace),
+				rolloutID, err = r.backend.RollOutSystem(
+					types.SystemID(systemID),
 					root,
 					types.SystemVersion(*req.Version),
 				)
 			} else {
-				rid, err = r.backend.RollOutSystemBuild(
-					types.LatticeNamespace(namespace),
+				rolloutID, err = r.backend.RollOutSystemBuild(
+					types.SystemID(systemID),
 					types.SystemBuildID(*req.BuildID),
 				)
 			}
@@ -300,29 +304,29 @@ func (r *restServer) mountNamespaceRolloutHandlers() {
 			}
 
 			c.JSON(http.StatusCreated, rollOutSystemResponse{
-				RolloutID: rid,
+				RolloutID: rolloutID,
 			})
 		})
 
 		// list-rollouts
 		rollouts.GET("", func(c *gin.Context) {
-			namespace := c.Param("namespace_id")
+			systemID := c.Param("system_id")
 
-			rs, err := r.backend.ListSystemRollouts(types.LatticeNamespace(namespace))
+			rollouts, err := r.backend.ListSystemRollouts(types.SystemID(systemID))
 			if err != nil {
 				handleInternalError(c, err)
 				return
 			}
 
-			c.JSON(http.StatusOK, rs)
+			c.JSON(http.StatusOK, rollouts)
 		})
 
 		// get-rollout
 		rollouts.GET("/:rollout_id", func(c *gin.Context) {
-			namespace := c.Param("namespace_id")
-			rid := c.Param("rollout_id")
+			systemID := c.Param("system_id")
+			rolloutID := c.Param("rollout_id")
 
-			r, exists, err := r.backend.GetSystemRollout(types.LatticeNamespace(namespace), types.SystemRolloutID(rid))
+			rollout, exists, err := r.backend.GetSystemRollout(types.SystemID(systemID), types.SystemRolloutID(rolloutID))
 			if err != nil {
 				handleInternalError(c, err)
 				return
@@ -333,7 +337,7 @@ func (r *restServer) mountNamespaceRolloutHandlers() {
 				return
 			}
 
-			c.JSON(http.StatusOK, r)
+			c.JSON(http.StatusOK, rollout)
 		})
 	}
 }
@@ -342,14 +346,14 @@ type tearDownSystemResponse struct {
 	TeardownID types.SystemTeardownID `json:"teardownId"`
 }
 
-func (r *restServer) mountNamespaceTeardownHandlers() {
-	teardowns := r.router.Group("/namespaces/:namespace_id/teardowns")
+func (r *restServer) mountSystemTeardownHandlers() {
+	teardowns := r.router.Group("/systems/:system_id/teardowns")
 	{
 		// tear-down-system
 		teardowns.POST("", func(c *gin.Context) {
-			namespace := c.Param("namespace_id")
+			systemID := c.Param("system_id")
 
-			tid, err := r.backend.TearDownSystem(types.LatticeNamespace(namespace))
+			teardownID, err := r.backend.TearDownSystem(types.SystemID(systemID))
 
 			if err != nil {
 				handleInternalError(c, err)
@@ -357,29 +361,29 @@ func (r *restServer) mountNamespaceTeardownHandlers() {
 			}
 
 			c.JSON(http.StatusCreated, tearDownSystemResponse{
-				TeardownID: tid,
+				TeardownID: teardownID,
 			})
 		})
 
 		// list-teardowns
 		teardowns.GET("", func(c *gin.Context) {
-			namespace := c.Param("namespace_id")
+			systemID := c.Param("system_id")
 
-			ts, err := r.backend.ListSystemTeardowns(types.LatticeNamespace(namespace))
+			teardowns, err := r.backend.ListSystemTeardowns(types.SystemID(systemID))
 			if err != nil {
 				handleInternalError(c, err)
 				return
 			}
 
-			c.JSON(http.StatusOK, ts)
+			c.JSON(http.StatusOK, teardowns)
 		})
 
 		// get-teardown
 		teardowns.GET("/:teardown_id", func(c *gin.Context) {
-			namespace := c.Param("namespace_id")
-			tid := c.Param("teardown_id")
+			systemID := c.Param("system_id")
+			teardownID := c.Param("teardown_id")
 
-			t, exists, err := r.backend.GetSystemTeardown(types.LatticeNamespace(namespace), types.SystemTeardownID(tid))
+			teardown, exists, err := r.backend.GetSystemTeardown(types.SystemID(systemID), types.SystemTeardownID(teardownID))
 			if err != nil {
 				handleInternalError(c, err)
 				return
@@ -390,72 +394,72 @@ func (r *restServer) mountNamespaceTeardownHandlers() {
 				return
 			}
 
-			c.JSON(http.StatusOK, t)
+			c.JSON(http.StatusOK, teardown)
 		})
 	}
 }
 
-func (r *restServer) mountNamespaceServiceHandlers() {
-	services := r.router.Group("/namespaces/:namespace_id/services")
+func (r *restServer) mountSystemServiceHandlers() {
+	services := r.router.Group("/systems/:system_id/services")
 	{
 		// list-services
 		services.GET("", func(c *gin.Context) {
-			namespace := c.Param("namespace_id")
+			systemID := c.Param("system_id")
 
-			svcs, err := r.backend.ListSystemServices(types.LatticeNamespace(namespace))
+			services, err := r.backend.ListServices(types.SystemID(systemID))
 			if err != nil {
 				handleInternalError(c, err)
 				return
 			}
 
-			c.JSON(http.StatusOK, svcs)
+			c.JSON(http.StatusOK, services)
 		})
 
 		// get-service
 		services.GET("/:svc_domain", func(c *gin.Context) {
-			namespace := c.Param("namespace_id")
-			svcDomain := c.Param("svc_domain")
+			systemID := c.Param("system_id")
+			serviceDomain := c.Param("svc_domain")
 
-			svcPath, err := tree.NodePathFromDomain(svcDomain)
+			servicePath, err := tree.NodePathFromDomain(serviceDomain)
 			if err != nil {
 				handleInternalError(c, err)
 				return
 			}
 
-			svc, err := r.backend.GetSystemService(types.LatticeNamespace(namespace), svcPath)
+			service, err := r.backend.GetService(types.SystemID(systemID), servicePath)
 			if err != nil {
 				handleInternalError(c, err)
 				return
 			}
 
-			if svc == nil {
+			if service == nil {
 				c.String(http.StatusNotFound, "")
 				return
 			}
 
-			c.JSON(http.StatusOK, svc)
+			c.JSON(http.StatusOK, service)
 		})
 	}
 }
 
-func (r *restServer) getSystemRoot(ln string, version string) (tree.Node, error) {
-	url, err := r.backend.GetSystemDefinitionURL(types.LatticeNamespace(ln))
+func (r *restServer) getSystemDefinitionRoot(systemID string, version string) (tree.Node, error) {
+	system, err := r.backend.GetSystem(types.SystemID(systemID))
 	if err != nil {
 		return nil, err
 	}
 
 	return r.resolver.ResolveDefinition(
-		fmt.Sprintf("%v#%v", url, version),
+		fmt.Sprintf("%v#%v", system.DefinitionURL, version),
 		constants.SystemDefinitionRootPathDefault,
 		&resolver.GitResolveOptions{},
 	)
 }
 
-func (r *restServer) getSystemVersions(ln string) ([]string, error) {
-	url, err := r.backend.GetSystemDefinitionURL(types.LatticeNamespace(ln))
+func (r *restServer) getSystemVersions(systemID string) ([]string, error) {
+	system, err := r.backend.GetSystem(types.SystemID(systemID))
 	if err != nil {
 		return nil, err
 	}
 
-	return r.resolver.ListDefinitionVersions(url, &resolver.GitResolveOptions{})
+	return r.resolver.ListDefinitionVersions(system.DefinitionURL, &resolver.GitResolveOptions{})
 }

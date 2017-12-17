@@ -204,7 +204,7 @@ func (c *Controller) getBuildContainer(build *crv1.ComponentBuild) (*corev1.Cont
 
 	args := []string{
 		"--component-build-id", build.Name,
-		"--component-build-namespace", build.Namespace,
+		"--system-id", c.config.KubernetesNamespacePrefix,
 		"--component-build-definition", string(buildJSON),
 		"--docker-registry", c.config.ComponentBuild.DockerArtifact.Registry,
 		"--docker-repository", repo,

@@ -2,6 +2,7 @@ package lattice
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/constants"
 	crv1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
@@ -35,14 +36,14 @@ func CreateNewSystem(
 		}
 	}
 
-	system, err = latticeClient.LatticeV1().Systems(system.Name).Create(system)
+	system, err = latticeClient.LatticeV1().Systems(namespace.Name).Create(system)
 	return system, namespace, err
 }
 
 func NewSystem(name, namespacePrefix, definitionURL string) (*crv1.System, *corev1.Namespace) {
 	system := &crv1.System{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: SystemName(name, namespacePrefix),
+			Name: name,
 		},
 		Spec: crv1.SystemSpec{
 			DefinitionURL: definitionURL,
@@ -59,13 +60,22 @@ func NewSystem(name, namespacePrefix, definitionURL string) (*crv1.System, *core
 			APIVersion: "v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name: system.Name,
+			Name: SystemNamespace(name, namespacePrefix),
 		},
 	}
 
 	return system, namespace
 }
 
-func SystemName(name, namespacePrefix string) string {
+func SystemNamespace(name, namespacePrefix string) string {
 	return fmt.Sprintf("%v%v-%v", namespacePrefix, constants.NamespacePrefixLatticeSystem, name)
+}
+
+func SystemName(namespace string) (string, error) {
+	parts := strings.Split("-", namespace)
+	if len(parts) < 3 {
+		return "", fmt.Errorf("unexpected system namespace format: %v", namespace)
+	}
+
+	return strings.Join(parts[2:], "-"), nil
 }

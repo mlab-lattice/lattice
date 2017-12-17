@@ -7,7 +7,7 @@ import (
 	kubeconstants "github.com/mlab-lattice/system/pkg/backend/kubernetes/constants"
 	crv1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	"github.com/mlab-lattice/system/pkg/constants"
-	"github.com/mlab-lattice/system/pkg/managerapi/server/backend"
+	backend "github.com/mlab-lattice/system/pkg/managerapi/server/user"
 	"github.com/mlab-lattice/system/pkg/types"
 
 	corev1 "k8s.io/api/core/v1"
@@ -16,8 +16,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func (kb *KubernetesBackend) ListComponentBuilds(ln types.LatticeNamespace) ([]types.ComponentBuild, error) {
-	buildList, err := kb.LatticeClient.LatticeV1().ComponentBuilds(string(ln)).List(metav1.ListOptions{})
+func (kb *KubernetesBackend) ListComponentBuilds(id types.SystemID) ([]types.ComponentBuild, error) {
+	buildList, err := kb.LatticeClient.LatticeV1().ComponentBuilds(string(id)).List(metav1.ListOptions{})
 	if err != nil {
 		return nil, err
 	}
@@ -30,8 +30,8 @@ func (kb *KubernetesBackend) ListComponentBuilds(ln types.LatticeNamespace) ([]t
 	return builds, nil
 }
 
-func (kb *KubernetesBackend) GetComponentBuild(ln types.LatticeNamespace, bid types.ComponentBuildID) (*types.ComponentBuild, bool, error) {
-	build, exists, err := kb.getInternalComponentBuild(ln, bid)
+func (kb *KubernetesBackend) GetComponentBuild(id types.SystemID, bid types.ComponentBuildID) (*types.ComponentBuild, bool, error) {
+	build, exists, err := kb.getInternalComponentBuild(id, bid)
 	if err != nil || !exists {
 		return nil, exists, err
 	}
@@ -40,8 +40,8 @@ func (kb *KubernetesBackend) GetComponentBuild(ln types.LatticeNamespace, bid ty
 	return &externalBuild, true, nil
 }
 
-func (kb *KubernetesBackend) GetComponentBuildLogs(ln types.LatticeNamespace, bid types.ComponentBuildID, follow bool) (io.ReadCloser, bool, error) {
-	build, exists, err := kb.getInternalComponentBuild(ln, bid)
+func (kb *KubernetesBackend) GetComponentBuildLogs(id types.SystemID, bid types.ComponentBuildID, follow bool) (io.ReadCloser, bool, error) {
+	build, exists, err := kb.getInternalComponentBuild(id, bid)
 	if err != nil {
 		return nil, false, err
 	}
@@ -73,8 +73,8 @@ func (kb *KubernetesBackend) GetComponentBuildLogs(ln types.LatticeNamespace, bi
 	return readCloser, true, err
 }
 
-func (kb *KubernetesBackend) getInternalComponentBuild(ln types.LatticeNamespace, bid types.ComponentBuildID) (*crv1.ComponentBuild, bool, error) {
-	result, err := kb.LatticeClient.LatticeV1().ComponentBuilds(string(ln)).Get(string(bid), metav1.GetOptions{})
+func (kb *KubernetesBackend) getInternalComponentBuild(id types.SystemID, bid types.ComponentBuildID) (*crv1.ComponentBuild, bool, error) {
+	result, err := kb.LatticeClient.LatticeV1().ComponentBuilds(string(id)).Get(string(bid), metav1.GetOptions{})
 	if err != nil {
 		if errors.IsNotFound(err) {
 			return nil, false, nil

@@ -7,7 +7,7 @@ import (
 	"net/http"
 
 	"github.com/mlab-lattice/system/pkg/definition/resolver"
-	"github.com/mlab-lattice/system/pkg/managerapi/server/backend"
+	"github.com/mlab-lattice/system/pkg/managerapi/server/user"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang/glog"
@@ -20,11 +20,11 @@ const (
 
 type restServer struct {
 	router   *gin.Engine
-	backend  backend.Interface
+	backend  user.Backend
 	resolver *resolver.SystemResolver
 }
 
-func RunNewRestServer(b backend.Interface, port int32, workingDirectory string) {
+func RunNewRestServer(b user.Backend, port int32, workingDirectory string) {
 	res, err := resolver.NewSystemResolver(workingDirectory + "/resolver")
 	if err != nil {
 		panic(err)
@@ -46,8 +46,7 @@ func (r *restServer) mountHandlers() {
 		c.String(http.StatusOK, "")
 	})
 
-	r.mountNamespaceHandlers()
-	r.mountAdminHandlers()
+	r.mountSystemHandlers()
 }
 
 func logEndpoint(c *gin.Context, log io.ReadCloser, follow bool) {
