@@ -344,6 +344,7 @@ func envoyContainers(service *crv1.Service, config *crv1.ConfigEnvoy) (corev1.Co
 	envoy := corev1.Container{
 		// add a UUID to deal with the small chance that a user names their
 		// service component the same thing we name our envoy container
+		// FIXME: this is make this not deterministic
 		Name:            fmt.Sprintf("lattice-envoy-%v", uuid.NewV4().String()),
 		Image:           config.Image,
 		ImagePullPolicy: corev1.PullIfNotPresent,
