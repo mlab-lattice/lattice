@@ -3,62 +3,48 @@ package service
 import (
 	"fmt"
 
-	kubeconstants "github.com/mlab-lattice/system/pkg/backend/kubernetes/constants"
 	crv1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
-	kubeutil "github.com/mlab-lattice/system/pkg/backend/kubernetes/util/kubernetes"
 
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"k8s.io/client-go/tools/cache"
-
 	"github.com/golang/glog"
 )
 
-func (c *Controller) syncServiceNodePool(service *crv1.Service) (*crv1.Service, *crv1.NodePool, error) {
-	nodePoolID, ok := service.Labels[kubeconstants.LabelKeyNodePoolID]
-	if !ok {
-		// TODO(kevinrosendahl): add support here for shared node pools
-		return c.createNewNodePool(service)
-	}
-
-	namespace, name, err := cache.SplitMetaNamespaceKey(nodePoolID)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	nodePool, err := c.nodePoolLister.NodePools(namespace).Get(name)
+func (c *Controller) syncServiceNodePool(service *crv1.Service) (*crv1.NodePool, error) {
+	// TODO(kevinrosendahl): add support for shared node pools
+	nodePool, err := c.nodePoolLister.NodePools(service.Namespace).Get(service.Name)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			return c.createNewNodePool(service)
 		}
 
-		return nil, nil, err
+		return nil, err
 	}
 
 	nodePool, err = c.syncExistingNodePool(service, nodePool)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
-	return service, nodePool, nil
+	return nodePool, nil
 }
 
 func (c *Controller) syncExistingNodePool(service *crv1.Service, nodePool *crv1.NodePool) (*crv1.NodePool, error) {
 	// TODO(kevinrosendahl): only change NodePool spec for dedicated node pools
-	desiredSpec, err := nodePoolSpec(service)
+	spec, err := nodePoolSpec(service)
 	if err != nil {
 		return nil, err
 	}
 
-	if desiredSpec.InstanceType != nodePool.Spec.InstanceType {
+	if spec.InstanceType != nodePool.Spec.InstanceType {
 		glog.V(4).Infof("NodePool %v for Service %v/%v had out of date instance type, updating", nodePool.Name, service.Namespace, service.Name)
-		return c.updateNodePoolSpec(nodePool, desiredSpec)
+		return c.updateNodePoolSpec(nodePool, spec)
 	}
 
-	if desiredSpec.NumInstances != nodePool.Spec.NumInstances {
+	if spec.NumInstances != nodePool.Spec.NumInstances {
 		glog.V(4).Infof("NodePool %v for Service %v/%v had out of date num instances, updating", nodePool.Name, service.Namespace, service.Name)
-		return c.updateNodePoolSpec(nodePool, desiredSpec)
+		return c.updateNodePoolSpec(nodePool, spec)
 	}
 
 	return nodePool, nil
@@ -72,45 +58,18 @@ func (c *Controller) updateNodePoolSpec(nodePool *crv1.NodePool, desiredSpec crv
 	return c.latticeClient.LatticeV1().NodePools(nodePool.Namespace).Update(nodePool)
 }
 
-func (c *Controller) createNewNodePool(service *crv1.Service) (*crv1.Service, *crv1.NodePool, error) {
-	nodePool, err := c.nodePoolLister.NodePools(service.Namespace).Get(service.Name)
-	if err == nil {
-		// If the node pool already exists, then the Service simply hasn't been labelled with it.
-		service, err := c.addNodePoolLabel(service, nodePool)
-		if err != nil {
-			return nil, nil, err
-		}
-		return service, nodePool, nil
-	}
-
-	if err != nil && errors.IsNotFound(err) {
-		return nil, nil, err
-	}
-
-	nodePool, err = newNodePool(service)
+func (c *Controller) createNewNodePool(service *crv1.Service) (*crv1.NodePool, error) {
+	nodePool, err := newNodePool(service)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	nodePool, err = c.latticeClient.LatticeV1().NodePools(service.Namespace).Create(nodePool)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
-	service, err = c.addNodePoolLabel(service, nodePool)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	return service, nodePool, nil
-}
-
-func (c *Controller) addNodePoolLabel(service *crv1.Service, nodePool *crv1.NodePool) (*crv1.Service, error) {
-	// Copy the service so the shared cache isn't mutated
-	service = service.DeepCopy()
-	service.Labels[kubeconstants.LabelKeyNodePoolID] = kubeutil.NodePoolIDLabelValue(nodePool)
-
-	return c.latticeClient.LatticeV1().Services(service.Namespace).Update(service)
+	return nodePool, nil
 }
 
 func newNodePool(service *crv1.Service) (*crv1.NodePool, error) {

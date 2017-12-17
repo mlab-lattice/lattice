@@ -44,6 +44,9 @@ type SystemStatus struct {
 	State              SystemState `json:"state"`
 	ObservedGeneration int64       `json:"observedGeneration"`
 
+	// FIXME: remove this when ObservedGeneration is supported for CRD
+	UpdateProcessed bool `json:"updated"`
+
 	// Maps a Service path to its Service.Name
 	Services map[tree.NodePath]string `json:"services"`
 

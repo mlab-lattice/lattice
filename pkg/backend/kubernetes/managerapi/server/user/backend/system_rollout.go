@@ -42,7 +42,8 @@ func (kb *KubernetesBackend) RollOutSystemBuild(id types.SystemID, bid types.Sys
 }
 
 func (kb *KubernetesBackend) getSystemBuildFromID(id types.SystemID, bid types.SystemBuildID) (*crv1.SystemBuild, error) {
-	return kb.LatticeClient.LatticeV1().SystemBuilds(string(id)).Get(string(bid), metav1.GetOptions{})
+	namespace := kubeutil.SystemNamespace(kb.ClusterID, id)
+	return kb.LatticeClient.LatticeV1().SystemBuilds(namespace).Get(string(bid), metav1.GetOptions{})
 }
 
 func getNewSystemRollout(latticeNamespace types.SystemID, sysBuild *crv1.SystemBuild) (*crv1.SystemRollout, error) {

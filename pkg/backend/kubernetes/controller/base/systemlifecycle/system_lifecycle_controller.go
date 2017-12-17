@@ -473,6 +473,8 @@ func (c *Controller) syncSystemRollout(key string) error {
 		return err
 	}
 
+	glog.V(5).Infof("SystemRollout %v state: %v", key, rollout.Status.State)
+
 	switch rollout.Status.State {
 	case crv1.SystemRolloutStateSucceeded, crv1.SystemRolloutStateFailed:
 		glog.V(4).Infof("SystemRollout %s already completed", key)

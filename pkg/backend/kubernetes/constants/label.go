@@ -11,7 +11,8 @@ const (
 
 	LabelKeyInternalComponent = "component.lattice.mlab.com/internal"
 
-	LabelKeyNodePoolID = "node-pool.lattice.mlab.com/id"
+	LabelKeyNodePoolID        = "node-pool.lattice.mlab.com/id"
+	LabelKeyNodePoolNamespace = "node-pool.lattice.mlab.com/namespace"
 
 	LabelKeySystemRolloutVersion = "rollout.system.lattice.mlab.com/version"
 	LabelKeySystemRolloutBuildID = "rollout.system.lattice.mlab.com/build"

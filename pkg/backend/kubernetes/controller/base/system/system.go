@@ -59,8 +59,10 @@ func (c *Controller) updateSystemStatus(system *crv1.System, state crv1.SystemSt
 	status := crv1.SystemStatus{
 		State:              state,
 		ObservedGeneration: system.Generation,
-		Services:           services,
-		ServiceStatuses:    serviceStatuses,
+		// FIXME: remove this when ObservedGeneration is supported for CRD
+		UpdateProcessed: true,
+		Services:        services,
+		ServiceStatuses: serviceStatuses,
 	}
 
 	if reflect.DeepEqual(system.Status, status) {

@@ -67,8 +67,7 @@ var options = &bootstrapper.Options{
 var Cmd = &cobra.Command{
 	Use:   "bootstrap",
 	Short: "bootstraps a kubernetes cluster to run Lattice",
-	// FIXME: figure out why it thinks two args are getting passed in
-	Args: cobra.ExactArgs(2),
+	Args:  cobra.ExactArgs(0),
 	Run: func(cmd *cobra.Command, args []string) {
 		if !options.Config.ComponentBuild.DockerArtifact.RepositoryPerImage && options.Config.ComponentBuild.DockerArtifact.Repository == "" {
 			panic("must specify component-build-docker-artifact-repository if not component-build-docker-artifact-repository-per-image")

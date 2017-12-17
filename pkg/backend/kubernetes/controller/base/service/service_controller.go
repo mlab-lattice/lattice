@@ -632,7 +632,7 @@ func (c *Controller) syncService(key string) error {
 		return err
 	}
 
-	service, nodePool, err := c.syncServiceNodePool(service)
+	nodePool, err := c.syncServiceNodePool(service)
 	if err != nil {
 		return err
 	}
