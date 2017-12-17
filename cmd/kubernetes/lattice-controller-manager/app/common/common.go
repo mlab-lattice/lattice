@@ -3,6 +3,7 @@ package common
 import (
 	latticeclientset "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/clientset/versioned"
 	latticeinformers "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/informers/externalversions"
+	"github.com/mlab-lattice/system/pkg/types"
 
 	kubeinformers "k8s.io/client-go/informers"
 	kubeclientset "k8s.io/client-go/kubernetes"
@@ -31,6 +32,8 @@ func (cb LatticeClientBuilder) ClientOrDie(name string) latticeclientset.Interfa
 }
 
 type Context struct {
+	ClusterID types.ClusterID
+
 	// KubeInformerFactory gives access to base kubernetes kubeinformers.
 	KubeInformerFactory kubeinformers.SharedInformerFactory
 

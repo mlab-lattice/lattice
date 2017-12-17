@@ -3,7 +3,6 @@ package base
 import (
 	"fmt"
 
-	kubeconstants "github.com/mlab-lattice/system/pkg/backend/kubernetes/constants"
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/bootstrapper/util"
 	kubeutil "github.com/mlab-lattice/system/pkg/backend/kubernetes/util/kubernetes"
 
@@ -19,7 +18,7 @@ func (b *DefaultBootstrapper) seedNamespaces() ([]interface{}, error) {
 			APIVersion: "v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name: kubeutil.GetFullNamespace(b.Options.Config.KubernetesNamespacePrefix, kubeconstants.NamespaceLatticeInternal),
+			Name: kubeutil.InternalNamespace(b.ClusterID),
 		},
 	}
 

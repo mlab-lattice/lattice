@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/mlab-lattice/system/pkg/backend/kubernetes/constants"
 	crv1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	latticeclientset "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/clientset/versioned"
 	"github.com/mlab-lattice/system/pkg/definition/tree"
+	"github.com/mlab-lattice/system/pkg/types"
 
 	corev1 "k8s.io/api/core/v1"
 
@@ -18,11 +18,13 @@ import (
 )
 
 func CreateNewSystem(
-	name, namespacePrefix, definitionURL string,
+	clusterID types.ClusterID,
+	systemID types.SystemID,
+	definitionURL string,
 	kubeClient kubeclientset.Interface,
 	latticeClient latticeclientset.Interface,
 ) (*crv1.System, *corev1.Namespace, error) {
-	system, namespace := NewSystem(name, namespacePrefix, definitionURL)
+	system, namespace := NewSystem(clusterID, systemID, definitionURL)
 
 	namespace, err := kubeClient.CoreV1().Namespaces().Create(namespace)
 	if err != nil {
@@ -40,10 +42,10 @@ func CreateNewSystem(
 	return system, namespace, err
 }
 
-func NewSystem(name, namespacePrefix, definitionURL string) (*crv1.System, *corev1.Namespace) {
+func NewSystem(clusterID types.ClusterID, systemID types.SystemID, definitionURL string) (*crv1.System, *corev1.Namespace) {
 	system := &crv1.System{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: name,
+			Name: string(systemID),
 		},
 		Spec: crv1.SystemSpec{
 			DefinitionURL: definitionURL,
@@ -60,22 +62,18 @@ func NewSystem(name, namespacePrefix, definitionURL string) (*crv1.System, *core
 			APIVersion: "v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name: SystemNamespace(name, namespacePrefix),
+			Name: SystemNamespace(clusterID, systemID),
 		},
 	}
 
 	return system, namespace
 }
 
-func SystemNamespace(name, namespacePrefix string) string {
-	return fmt.Sprintf("%v%v-%v", namespacePrefix, constants.NamespacePrefixLatticeSystem, name)
-}
-
-func SystemName(namespace string) (string, error) {
+func SystemID(namespace string) (types.ClusterID, error) {
 	parts := strings.Split("-", namespace)
 	if len(parts) < 3 {
 		return "", fmt.Errorf("unexpected system namespace format: %v", namespace)
 	}
 
-	return strings.Join(parts[2:], "-"), nil
+	return types.ClusterID(strings.Join(parts[2:], "-")), nil
 }

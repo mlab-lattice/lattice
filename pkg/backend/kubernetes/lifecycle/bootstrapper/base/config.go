@@ -12,7 +12,7 @@ import (
 )
 
 func (b *DefaultBootstrapper) seedConfig() ([]interface{}, error) {
-	namespace := kubeutil.GetFullNamespace(b.Options.Config.KubernetesNamespacePrefix, kubeconstants.NamespaceLatticeInternal)
+	namespace := kubeutil.InternalNamespace(b.ClusterID)
 
 	// Create config
 	config := &crv1.Config{

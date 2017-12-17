@@ -22,12 +22,10 @@ type Config struct {
 }
 
 type ConfigSpec struct {
-	// FIXME: this shouldn't be dynamic config
-	KubernetesNamespacePrefix string               `json:"kubernetesNamespacePrefix"`
-	Provider                  ConfigProvider       `json:"providerConfig"`
-	ComponentBuild            ConfigComponentBuild `json:"componentBuild"`
-	Envoy                     ConfigEnvoy          `json:"envoy"`
-	Terraform                 *ConfigTerraform     `json:"terraform,omitempty"`
+	Provider       ConfigProvider       `json:"providerConfig"`
+	ComponentBuild ConfigComponentBuild `json:"componentBuild"`
+	Envoy          ConfigEnvoy          `json:"envoy"`
+	Terraform      *ConfigTerraform     `json:"terraform,omitempty"`
 }
 
 type ConfigProvider struct {

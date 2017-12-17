@@ -12,12 +12,7 @@ import (
 )
 
 func (kb *KubernetesBackend) GetSystem(id types.SystemID) (*types.System, error) {
-	config, err := kb.getConfig()
-	if err != nil {
-		return nil, err
-	}
-
-	namespace := kubeutil.SystemNamespace(string(id), config.Spec.KubernetesNamespacePrefix)
+	namespace := kubeutil.SystemNamespace(kb.ClusterID, id)
 	system, err := kb.LatticeClient.LatticeV1().Systems(namespace).Get(string(id), metav1.GetOptions{})
 	if err != nil {
 		return nil, err
@@ -27,7 +22,7 @@ func (kb *KubernetesBackend) GetSystem(id types.SystemID) (*types.System, error)
 }
 
 func (kb *KubernetesBackend) transformSystem(system *crv1.System) (*types.System, error) {
-	name, err := kubeutil.SystemName(system.Namespace)
+	name, err := kubeutil.SystemID(system.Namespace)
 	if err != nil {
 		return nil, err
 	}

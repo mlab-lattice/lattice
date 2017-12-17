@@ -12,6 +12,7 @@ import (
 	cloudboostrapper "github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/bootstrapper/cloud"
 	kubeutil "github.com/mlab-lattice/system/pkg/backend/kubernetes/util/kubernetes"
 	"github.com/mlab-lattice/system/pkg/constants"
+	"github.com/mlab-lattice/system/pkg/types"
 	"github.com/mlab-lattice/system/pkg/util/cli"
 
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -34,7 +35,9 @@ var (
 
 	defaultManagerAPIArgs = []string{}
 
-	initialSystemName          string
+	clusterIDString string
+
+	initialSystemIDString      string
 	initialSystemDefinitionURL string
 
 	provider     string
@@ -71,6 +74,9 @@ var Cmd = &cobra.Command{
 			panic("must specify component-build-docker-artifact-repository if not component-build-docker-artifact-repository-per-image")
 		}
 
+		clusterID := types.ClusterID(clusterIDString)
+		initialSystemID := types.SystemID(clusterIDString)
+
 		var kubeconfig *rest.Config
 		if !options.DryRun {
 			var err error
@@ -98,7 +104,7 @@ var Cmd = &cobra.Command{
 		}
 		options.Networking = networkingOptions
 
-		b, err := bootstrapper.NewBootstrapper(options, kubeconfig)
+		b, err := bootstrapper.NewBootstrapper(clusterID, options, kubeconfig)
 		if err != nil {
 			panic(err)
 		}
@@ -110,7 +116,7 @@ var Cmd = &cobra.Command{
 
 		if options.DryRun {
 			if initialSystemDefinitionURL != "" {
-				system, namespace := kubeutil.NewSystem(initialSystemName, options.Config.KubernetesNamespacePrefix, initialSystemDefinitionURL)
+				system, namespace := kubeutil.NewSystem(clusterID, initialSystemID, initialSystemDefinitionURL)
 				objects = append(objects, []interface{}{system, namespace}...)
 			}
 
@@ -128,12 +134,12 @@ var Cmd = &cobra.Command{
 		}
 
 		if initialSystemDefinitionURL != "" {
-			fmt.Printf("Seeding initial system \"%v\"\n", initialSystemName)
+			fmt.Printf("Seeding initial system \"%v\"\n", initialSystemIDString)
 			kubeClient := kubeclientset.NewForConfigOrDie(kubeconfig)
 			latticeClient := latticeclientset.NewForConfigOrDie(kubeconfig)
 			_, _, err := kubeutil.CreateNewSystem(
-				initialSystemName,
-				options.Config.KubernetesNamespacePrefix,
+				clusterID,
+				initialSystemID,
 				initialSystemDefinitionURL,
 				kubeClient,
 				latticeClient,
@@ -150,7 +156,7 @@ func init() {
 	Cmd.Flags().StringVar(&kubeconfigPath, "kubeconfig", "", "path to kubeconfig")
 	Cmd.Flags().StringVar(&kubeconfigContext, "kubeconfig-context", "", "context in the kubeconfig to use")
 
-	Cmd.Flags().StringVar(&options.Config.KubernetesNamespacePrefix, "namespace-prefix", "lattice", "prefix to add to namespaces that lattice will create and own")
+	Cmd.Flags().StringVar(&clusterIDString, "cluster-id", "lattice", "lattice cluster ID")
 
 	Cmd.Flags().StringVar(&options.Config.ComponentBuild.Builder.Image, "component-builder-image", "", "docker image to user for the component-builder")
 	Cmd.MarkFlagRequired("component-builder-image")
@@ -179,7 +185,7 @@ func init() {
 	Cmd.Flags().BoolVar(&options.MasterComponents.ManagerAPI.HostNetwork, "manager-api-host-network", true, "whether or not the manager-api should be on the host network")
 	Cmd.Flags().StringArrayVar(&options.MasterComponents.ManagerAPI.Args, "manager-api-args", defaultManagerAPIArgs, "extra arguments (besides --provider) to pass to the lattice-controller-manager")
 
-	Cmd.Flags().StringVar(&initialSystemName, "initial-system-name", "default", "name to use for the initial system if --initial-system-definition-url is set")
+	Cmd.Flags().StringVar(&initialSystemIDString, "initial-system-name", "default", "name to use for the initial system if --initial-system-definition-url is set")
 	Cmd.Flags().StringVar(&initialSystemDefinitionURL, "initial-system-definition-url", "", "URL to use for the definition of the optional initial system")
 
 	Cmd.Flags().StringVar(&provider, "provider", "", "provider that the cluster is being bootstrapped on")

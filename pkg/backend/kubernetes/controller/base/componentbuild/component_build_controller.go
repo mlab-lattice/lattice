@@ -10,6 +10,7 @@ import (
 	latticeclientset "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/clientset/versioned"
 	latticeinformers "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/informers/externalversions/lattice/v1"
 	latticelisters "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/listers/lattice/v1"
+	"github.com/mlab-lattice/system/pkg/types"
 
 	batchv1 "k8s.io/api/batch/v1"
 
@@ -33,6 +34,8 @@ type Controller struct {
 	syncHandler func(bKey string) error
 	enqueue     func(cb *crv1.ComponentBuild)
 
+	clusterID types.ClusterID
+
 	kubeClient    kubeclientset.Interface
 	latticeClient latticeclientset.Interface
 
@@ -53,6 +56,7 @@ type Controller struct {
 }
 
 func NewController(
+	clusterID types.ClusterID,
 	kubeClient kubeclientset.Interface,
 	latticeClient latticeclientset.Interface,
 	configInformer latticeinformers.ConfigInformer,
@@ -60,6 +64,7 @@ func NewController(
 	jobInformer batchinformers.JobInformer,
 ) *Controller {
 	cbc := &Controller{
+		clusterID:     clusterID,
 		kubeClient:    kubeClient,
 		latticeClient: latticeClient,
 		configSetChan: make(chan struct{}),

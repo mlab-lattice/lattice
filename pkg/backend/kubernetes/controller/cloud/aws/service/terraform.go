@@ -7,10 +7,12 @@ import (
 
 	crv1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	kubetf "github.com/mlab-lattice/system/pkg/backend/kubernetes/terraform/aws"
+	kubeutil "github.com/mlab-lattice/system/pkg/backend/kubernetes/util/kubernetes"
 	tf "github.com/mlab-lattice/system/pkg/terraform"
 	tfconfig "github.com/mlab-lattice/system/pkg/terraform/config"
 	awstf "github.com/mlab-lattice/system/pkg/terraform/config/aws"
 
+	"github.com/mlab-lattice/system/pkg/types"
 	corev1 "k8s.io/api/core/v1"
 )
 
@@ -18,14 +20,14 @@ const (
 	terraformStatePathService = "/services"
 )
 
-func (sc *Controller) provisionService(svc *crv1.Service) error {
+func (c *Controller) provisionService(svc *crv1.Service) error {
 	var svcTfConfig interface{}
 	{
 		// Need a consistent view of our config while generating the config
-		sc.configLock.RLock()
-		defer sc.configLock.RUnlock()
+		c.configLock.RLock()
+		defer c.configLock.RUnlock()
 
-		svcTf, err := sc.getServiceTerraformConfig(svc)
+		svcTf, err := c.getServiceTerraformConfig(svc)
 		if err != nil {
 			return err
 		}
@@ -66,14 +68,14 @@ func (sc *Controller) provisionService(svc *crv1.Service) error {
 	return result.Wait()
 }
 
-func (sc *Controller) deprovisionService(svc *crv1.Service) error {
+func (c *Controller) deprovisionService(svc *crv1.Service) error {
 	var svcTfConfig interface{}
 	{
 		// Need a consistent view of our config while generating the config
-		sc.configLock.RLock()
-		defer sc.configLock.RUnlock()
+		c.configLock.RLock()
+		defer c.configLock.RUnlock()
 
-		svcTf, err := sc.getServiceTerraformConfig(svc)
+		svcTf, err := c.getServiceTerraformConfig(svc)
 		if err != nil {
 			return err
 		}
@@ -116,11 +118,16 @@ func (sc *Controller) deprovisionService(svc *crv1.Service) error {
 		return err
 	}
 
-	return sc.removeFinalizer(svc)
+	return c.removeFinalizer(svc)
 }
 
-func (sc *Controller) getServiceTerraformConfig(svc *crv1.Service) (interface{}, error) {
-	kubeSvc, necessary, err := sc.getKubeServiceForService(svc)
+func (c *Controller) getServiceTerraformConfig(service *crv1.Service) (interface{}, error) {
+	systemName, err := kubeutil.SystemID(service.Namespace)
+	if err != nil {
+		return nil, err
+	}
+
+	kubeSvc, necessary, err := c.getKubeServiceForService(service)
 	if err != nil {
 		return nil, err
 	}
@@ -128,15 +135,18 @@ func (sc *Controller) getServiceTerraformConfig(svc *crv1.Service) (interface{},
 	var serviceModule interface{}
 	if necessary {
 		if kubeSvc == nil {
-			return nil, fmt.Errorf("Service %v requires kubeSvc but it does not exist", svc.Name)
+			return nil, fmt.Errorf("Service %v requires kubeSvc but it does not exist", service.Name)
 		}
 
-		serviceModule = sc.getServiceDedicatedPublicHTTPTerraformModule(svc, kubeSvc)
+		serviceModule, err = c.getServiceDedicatedPublicHTTPTerraformModule(service, kubeSvc)
 	} else {
-		serviceModule = sc.getServiceDedicatedPrivateTerraformModule(svc)
+		serviceModule, err = c.getServiceDedicatedPrivateTerraformModule(service)
+	}
+	if err != nil {
+		return nil, err
 	}
 
-	awsConfig := sc.config.Provider.AWS
+	awsConfig := c.config.Provider.AWS
 
 	config := tfconfig.Config{
 		Provider: awstf.Provider{
@@ -144,11 +154,11 @@ func (sc *Controller) getServiceTerraformConfig(svc *crv1.Service) (interface{},
 		},
 		Backend: awstf.S3Backend{
 			Region: awsConfig.Region,
-			Bucket: sc.config.Terraform.Backend.S3.Bucket,
+			Bucket: c.config.Terraform.Backend.S3.Bucket,
 			Key: fmt.Sprintf("%v%v/%v",
-				kubetf.GetS3BackendStatePathRoot(sc.config.KubernetesNamespacePrefix),
+				kubetf.GetS3BackendStatePathRoot(c.clusterID, types.SystemID(systemName)),
 				terraformStatePathService,
-				svc.Name),
+				service.Name),
 			Encrypt: true,
 		},
 		Modules: map[string]interface{}{
@@ -159,11 +169,16 @@ func (sc *Controller) getServiceTerraformConfig(svc *crv1.Service) (interface{},
 	return config, nil
 }
 
-func (sc *Controller) getServiceDedicatedPrivateTerraformModule(svc *crv1.Service) interface{} {
-	awsConfig := sc.config.Provider.AWS
+func (c *Controller) getServiceDedicatedPrivateTerraformModule(service *crv1.Service) (interface{}, error) {
+	awsConfig := c.config.Provider.AWS
 
-	return kubetf.ServiceDedicatedPrivate{
-		Source: sc.terraformModulePath + kubetf.ModulePathServiceDedicatedPrivate,
+	systemID, err := kubeutil.SystemID(service.Namespace)
+	if err != nil {
+		return nil, err
+	}
+
+	module := kubetf.ServiceDedicatedPrivate{
+		Source: c.terraformModulePath + kubetf.ModulePathServiceDedicatedPrivate,
 
 		AWSAccountID: awsConfig.AccountID,
 		Region:       awsConfig.Region,
@@ -174,19 +189,25 @@ func (sc *Controller) getServiceDedicatedPrivateTerraformModule(svc *crv1.Servic
 		BaseNodeAmiID:             awsConfig.BaseNodeAMIID,
 		KeyName:                   awsConfig.KeyName,
 
-		SystemID:  sc.config.KubernetesNamespacePrefix,
-		ServiceID: svc.Name,
+		SystemID:  string(systemID),
+		ServiceID: service.Name,
 		// FIXME: support min/max instances
-		NumInstances: *svc.Spec.Definition.Resources.NumInstances,
-		InstanceType: *svc.Spec.Definition.Resources.InstanceType,
+		NumInstances: *service.Spec.Definition.Resources.NumInstances,
+		InstanceType: *service.Spec.Definition.Resources.InstanceType,
 	}
+	return module, nil
 }
 
-func (sc *Controller) getServiceDedicatedPublicHTTPTerraformModule(svc *crv1.Service, kubeSvc *corev1.Service) interface{} {
-	awsConfig := sc.config.Provider.AWS
+func (c *Controller) getServiceDedicatedPublicHTTPTerraformModule(service *crv1.Service, kubeSvc *corev1.Service) (interface{}, error) {
+	awsConfig := c.config.Provider.AWS
+
+	systemName, err := kubeutil.SystemID(service.Namespace)
+	if err != nil {
+		return nil, err
+	}
 
 	publicComponentPorts := map[int32]bool{}
-	for _, component := range svc.Spec.Definition.Components {
+	for _, component := range service.Spec.Definition.Components {
 		for _, port := range component.Ports {
 			if port.ExternalAccess != nil && port.ExternalAccess.Public {
 				publicComponentPorts[port.Port] = true
@@ -201,8 +222,8 @@ func (sc *Controller) getServiceDedicatedPublicHTTPTerraformModule(svc *crv1.Ser
 		}
 	}
 
-	return kubetf.ServiceDedicatedPublicHTTP{
-		Source: sc.terraformModulePath + kubetf.ModulePathServiceDedicatedPublicHTTP,
+	module := kubetf.ServiceDedicatedPublicHTTP{
+		Source: c.terraformModulePath + kubetf.ModulePathServiceDedicatedPublicHTTP,
 
 		AWSAccountID: awsConfig.AccountID,
 		Region:       awsConfig.Region,
@@ -213,14 +234,15 @@ func (sc *Controller) getServiceDedicatedPublicHTTPTerraformModule(svc *crv1.Ser
 		BaseNodeAmiID:             awsConfig.BaseNodeAMIID,
 		KeyName:                   awsConfig.KeyName,
 
-		SystemID:  sc.config.KubernetesNamespacePrefix,
-		ServiceID: svc.Name,
+		SystemID:  string(systemName),
+		ServiceID: service.Name,
 		// FIXME: support min/max instances
-		NumInstances: *svc.Spec.Definition.Resources.NumInstances,
-		InstanceType: *svc.Spec.Definition.Resources.InstanceType,
+		NumInstances: *service.Spec.Definition.Resources.NumInstances,
+		InstanceType: *service.Spec.Definition.Resources.InstanceType,
 
 		Ports: ports,
 	}
+	return module, nil
 }
 
 func getWorkingDirectory(svc *crv1.Service) string {

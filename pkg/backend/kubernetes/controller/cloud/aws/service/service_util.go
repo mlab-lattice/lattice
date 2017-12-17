@@ -10,7 +10,7 @@ const (
 	kubeFinalizerAWSServiceController = "aws.cloud.controllers.lattice.mlab.com/service"
 )
 
-func (sc *Controller) addFinalizer(svc *crv1.Service) error {
+func (c *Controller) addFinalizer(svc *crv1.Service) error {
 	// Check to see if the finalizer already exists. If so nothing needs to be done.
 	for _, finalizer := range svc.Finalizers {
 		if finalizer == kubeFinalizerAWSServiceController {
@@ -32,7 +32,7 @@ func (sc *Controller) addFinalizer(svc *crv1.Service) error {
 	// the case)
 	svc.Finalizers = append(svc.Finalizers, kubeFinalizerAWSServiceController)
 	glog.V(5).Infof("Service %v missing %v finalizer, adding it", svc.Name, kubeFinalizerAWSServiceController)
-	result, err := sc.latticeClient.LatticeV1().Services(svc.Namespace).Update(svc)
+	result, err := c.latticeClient.LatticeV1().Services(svc.Namespace).Update(svc)
 	if err != nil {
 		return err
 	}
@@ -40,7 +40,7 @@ func (sc *Controller) addFinalizer(svc *crv1.Service) error {
 	return nil
 }
 
-func (sc *Controller) removeFinalizer(svc *crv1.Service) error {
+func (c *Controller) removeFinalizer(svc *crv1.Service) error {
 	// Build up a list of all the finalizers except the aws service controller finalizer.
 	finalizers := []string{}
 	found := false
@@ -59,7 +59,7 @@ func (sc *Controller) removeFinalizer(svc *crv1.Service) error {
 
 	// The finalizer was in the list, so we should remove it.
 	svc.Finalizers = finalizers
-	result, err := sc.latticeClient.LatticeV1().Services(svc.Namespace).Update(svc)
+	result, err := c.latticeClient.LatticeV1().Services(svc.Namespace).Update(svc)
 	if err != nil {
 		return err
 	}

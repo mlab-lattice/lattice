@@ -41,8 +41,8 @@ func (b *DefaultBootstrapper) seedLatticeControllerManager() ([]interface{}, err
 	//		 either have to figure out how to have multiple lattice-controller-managers running (e.g. use leaderelect
 	//		 in client-go) or find the best way to ensure there's at most one version of something running (maybe
 	//		 StatefulSets?).
-	namespace := kubeutil.GetFullNamespace(b.Options.Config.KubernetesNamespacePrefix, constants.NamespaceLatticeInternal)
-	args := []string{"--provider", b.Provider}
+	namespace := kubeutil.InternalNamespace(b.ClusterID)
+	args := []string{"--provider", b.Provider, "--cluster-id", string(b.ClusterID)}
 	args = append(args, b.Options.MasterComponents.LatticeControllerManager.Args...)
 	labels := map[string]string{
 		constants.MasterNodeLabelComponent: constants.MasterNodeComponentLatticeControllerManager,
@@ -108,8 +108,8 @@ func (b *DefaultBootstrapper) seedManagerAPI() ([]interface{}, error) {
 	//		 either have to figure out how to have multiple lattice-controller-managers running (e.g. use leaderelect
 	//		 in client-go) or find the best way to ensure there's at most one version of something running (maybe
 	//		 StatefulSets?).
-	namespace := kubeutil.GetFullNamespace(b.Options.Config.KubernetesNamespacePrefix, constants.NamespaceLatticeInternal)
-	args := []string{"--port", strconv.Itoa(int(b.Options.MasterComponents.ManagerAPI.Port))}
+	namespace := kubeutil.InternalNamespace(b.ClusterID)
+	args := []string{"--port", strconv.Itoa(int(b.Options.MasterComponents.ManagerAPI.Port)), "--cluster-id", string(b.ClusterID)}
 	args = append(args, b.Options.MasterComponents.ManagerAPI.Args...)
 	labels := map[string]string{
 		constants.MasterNodeLabelComponent: constants.MasterNodeComponentLatticeControllerManager,

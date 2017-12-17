@@ -8,6 +8,7 @@ import (
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/bootstrapper/base"
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/bootstrapper/cloud"
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/bootstrapper/local"
+	"github.com/mlab-lattice/system/pkg/types"
 
 	kubeclientset "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -36,7 +37,7 @@ type Options struct {
 	Networking       *cloud.NetworkingOptions
 }
 
-func NewBootstrapper(options *Options, kubeConfig *rest.Config) (Interface, error) {
+func NewBootstrapper(clusterID types.ClusterID, options *Options, kubeConfig *rest.Config) (Interface, error) {
 	if options == nil {
 		return nil, fmt.Errorf("options required")
 	}
@@ -57,11 +58,11 @@ func NewBootstrapper(options *Options, kubeConfig *rest.Config) (Interface, erro
 	}
 
 	if options.Config.Provider.Local != nil {
-		return NewLocalBootstrapper(options, kubeConfig, kubeClient, latticeClient)
+		return NewLocalBootstrapper(clusterID, options, kubeConfig, kubeClient, latticeClient)
 	}
 
 	if options.Config.Provider.AWS != nil {
-		return NewCloudBootstrapper(options, kubeConfig, kubeClient, latticeClient)
+		return NewCloudBootstrapper(clusterID, options, kubeConfig, kubeClient, latticeClient)
 	}
 
 	return nil, fmt.Errorf("must specify Provider in Config")
@@ -73,6 +74,7 @@ type DefaultLocalBootstrapper struct {
 }
 
 func NewLocalBootstrapper(
+	clusterID types.ClusterID,
 	options *Options,
 	kubeConfig *rest.Config,
 	kubeClient kubeclientset.Interface,
@@ -87,7 +89,7 @@ func NewLocalBootstrapper(
 		Config:           options.Config,
 		MasterComponents: options.MasterComponents,
 	}
-	baseBootstrapper, err := base.NewBootstrapper(baseOptions, kubeConfig, kubeClient, latticeClient)
+	baseBootstrapper, err := base.NewBootstrapper(clusterID, baseOptions, kubeConfig, kubeClient, latticeClient)
 	if err != nil {
 		return nil, err
 	}
@@ -127,6 +129,7 @@ type DefaultCloudBootstrapper struct {
 }
 
 func NewCloudBootstrapper(
+	clusterID types.ClusterID,
 	options *Options,
 	kubeConfig *rest.Config,
 	kubeClient kubeclientset.Interface,
@@ -141,7 +144,7 @@ func NewCloudBootstrapper(
 		Config:           options.Config,
 		MasterComponents: options.MasterComponents,
 	}
-	baseBootstrapper, err := base.NewBootstrapper(baseOptions, kubeConfig, kubeClient, latticeClient)
+	baseBootstrapper, err := base.NewBootstrapper(clusterID, baseOptions, kubeConfig, kubeClient, latticeClient)
 	if err != nil {
 		return nil, err
 	}

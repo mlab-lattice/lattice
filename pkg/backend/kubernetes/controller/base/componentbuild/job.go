@@ -7,6 +7,7 @@ import (
 
 	kubeconstants "github.com/mlab-lattice/system/pkg/backend/kubernetes/constants"
 	crv1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
+	kubeutil "github.com/mlab-lattice/system/pkg/backend/kubernetes/util/kubernetes"
 	"github.com/mlab-lattice/system/pkg/constants"
 
 	batchv1 "k8s.io/api/batch/v1"
@@ -202,9 +203,15 @@ func (c *Controller) getBuildContainer(build *crv1.ComponentBuild) (*corev1.Cont
 		tag = fmt.Sprint(time.Now().Unix())
 	}
 
+	systemID, err := kubeutil.SystemID(build.Namespace)
+	if err != nil {
+		return nil, "", err
+	}
+
 	args := []string{
 		"--component-build-id", build.Name,
-		"--system-id", c.config.KubernetesNamespacePrefix,
+		"--cluster-id", string(c.clusterID),
+		"--system-id", string(systemID),
 		"--component-build-definition", string(buildJSON),
 		"--docker-registry", c.config.ComponentBuild.DockerArtifact.Registry,
 		"--docker-repository", repo,

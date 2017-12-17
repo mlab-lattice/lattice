@@ -48,7 +48,7 @@ func (b *DefaultBootstrapper) seedRBAC() ([]interface{}, error) {
 }
 
 func (b *DefaultBootstrapper) seedRBACComponentBuilder() ([]interface{}, error) {
-	namespace := kubeutil.GetFullNamespace(b.Options.Config.KubernetesNamespacePrefix, kubeconstants.NamespaceLatticeInternal)
+	namespace := kubeutil.InternalNamespace(b.ClusterID)
 	role := &rbacv1.Role{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "Role",
@@ -206,7 +206,7 @@ func (b *DefaultBootstrapper) seedRBACLatticeControllerManger() ([]interface{}, 
 		},
 	}
 
-	namespace := kubeutil.GetFullNamespace(b.Options.Config.KubernetesNamespacePrefix, kubeconstants.NamespaceLatticeInternal)
+	namespace := kubeutil.InternalNamespace(b.ClusterID)
 
 	sa := &corev1.ServiceAccount{
 		TypeMeta: metav1.TypeMeta{
@@ -270,7 +270,7 @@ func (b *DefaultBootstrapper) seedRBACLatticeControllerManger() ([]interface{}, 
 }
 
 func (b *DefaultBootstrapper) seedRBACManagerAPI() ([]interface{}, error) {
-	namespace := kubeutil.GetFullNamespace(b.Options.Config.KubernetesNamespacePrefix, kubeconstants.NamespaceLatticeInternal)
+	namespace := kubeutil.InternalNamespace(b.ClusterID)
 	role := &rbacv1.Role{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "Role",

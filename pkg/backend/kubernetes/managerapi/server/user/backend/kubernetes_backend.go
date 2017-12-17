@@ -3,17 +3,19 @@ package backend
 import (
 	latticeclientset "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/clientset/versioned"
 
+	"github.com/mlab-lattice/system/pkg/types"
 	kubeclientset "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 )
 
 type KubernetesBackend struct {
+	ClusterID     types.ClusterID
 	KubeClient    kubeclientset.Interface
 	LatticeClient latticeclientset.Interface
 }
 
-func NewKubernetesBackend(kubeconfig string) (*KubernetesBackend, error) {
+func NewKubernetesBackend(clusterID types.ClusterID, kubeconfig string) (*KubernetesBackend, error) {
 	var config *rest.Config
 	var err error
 	if kubeconfig == "" {
@@ -36,6 +38,7 @@ func NewKubernetesBackend(kubeconfig string) (*KubernetesBackend, error) {
 	}
 
 	kb := &KubernetesBackend{
+		ClusterID:     clusterID,
 		KubeClient:    kubeClient,
 		LatticeClient: latticeClient,
 	}

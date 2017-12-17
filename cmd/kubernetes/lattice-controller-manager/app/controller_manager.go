@@ -8,6 +8,7 @@ import (
 	controller "github.com/mlab-lattice/system/cmd/kubernetes/lattice-controller-manager/app/common"
 	latticeinformers "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/informers/externalversions"
 	"github.com/mlab-lattice/system/pkg/constants"
+	"github.com/mlab-lattice/system/pkg/types"
 
 	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/rest"
@@ -16,7 +17,7 @@ import (
 	"github.com/golang/glog"
 )
 
-func Run(kubeconfig, provider, terraformModulePath string) {
+func Run(clusterID types.ClusterID, kubeconfig, provider, terraformModulePath string) {
 	var config *rest.Config
 	var err error
 	if kubeconfig == "" {
@@ -29,7 +30,7 @@ func Run(kubeconfig, provider, terraformModulePath string) {
 	}
 
 	// TODO: setting stop as nil for now, won't actually need it until leader-election is used
-	ctx := CreateControllerContext(config, nil, terraformModulePath)
+	ctx := CreateControllerContext(clusterID, config, nil, terraformModulePath)
 	glog.V(1).Info("Starting controllers")
 	StartControllers(ctx, GetControllerInitializers(provider))
 
@@ -41,6 +42,7 @@ func Run(kubeconfig, provider, terraformModulePath string) {
 }
 
 func CreateControllerContext(
+	clusterID types.ClusterID,
 	kubeconfig *rest.Config,
 	stop <-chan struct{},
 	terraformModulePath string,
@@ -59,6 +61,8 @@ func CreateControllerContext(
 	latticeInformers := latticeinformers.NewSharedInformerFactory(versionedLatticeClient, time.Duration(12*time.Hour))
 
 	return controller.Context{
+		ClusterID: clusterID,
+
 		KubeInformerFactory:    kubeInformers,
 		LatticeInformerFactory: latticeInformers,
 		KubeClientBuilder:      kcb,
