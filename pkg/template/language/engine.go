@@ -3,81 +3,26 @@ package language
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/mlab-lattice/system/pkg/util/git"
-	"github.com/mlab-lattice/system/pkg/util/stack"
 	"strings"
 )
 
 const OPERATOR_PREFIX = "$"
 
-/**********************************************************************************************************************/
-// FileResolver interface
-type FileResolver interface {
-	FileContents(fileName string) ([]byte, error)
-}
 
-/**********************************************************************************************************************/
-// Git FileResolver implementation
-type GitResolverWrapper struct {
-	gitURI             string
-	GitResolverContext *git.Context
-	GitResolver        *git.Resolver
-}
-
-func (gitWrapper GitResolverWrapper) FileContents(fileName string) ([]byte, error) {
-	return gitWrapper.GitResolver.FileContents(gitWrapper.GitResolverContext, fileName)
-}
-
-/**********************************************************************************************************************/
-// Environment. Template Rendering Environment
-type Environment struct {
-	variableStack *stack.Stack
-}
-
-func newEnvironment() *Environment {
-	env := &Environment{
-		variableStack: stack.NewStack(10),
-	}
-
-	return env
-}
-
-func (env *Environment) pushVariables(variables map[string]interface{}) {
-	env.variableStack.Push(variables)
-}
-
-func (env *Environment) popVariables() error {
-	_, err := env.variableStack.Pop()
-	return err
-}
-
-func (env *Environment) getCurrentVariables() (map[string]interface{}, error) {
-	variables, err := env.variableStack.Peek()
-	if err != nil {
-		return nil, err
-	}
-
-	return variables.(map[string]interface{}), nil
-}
-
-/**********************************************************************************************************************/
 // Template Object. Template Rendering Artifact
 type Template struct {
 	Value map[string]interface{}
 }
 
-/**********************************************************************************************************************/
 // TemplateEngine
 type TemplateEngine struct {
-	FileResolver       FileResolver
 	operatorEvaluators map[string]OperatorEvaluator
 }
 
 // NewEngine
-func NewEngine(fileResolver FileResolver) *TemplateEngine {
+func NewEngine() *TemplateEngine {
 
 	engine := &TemplateEngine{
-		FileResolver: fileResolver,
 		operatorEvaluators: map[string]OperatorEvaluator{
 			"$include":    &IncludeEvaluator{},
 			"$variables":  &VariablesEvaluator{},
@@ -89,16 +34,19 @@ func NewEngine(fileResolver FileResolver) *TemplateEngine {
 }
 
 // ParseTemplate
-func (engine *TemplateEngine) ParseTemplate(url string, variables map[string]interface{}) (*Template, error) {
+func (engine *TemplateEngine) ParseTemplate(url string, variables map[string]interface{}, fileResolver FileResolver) (*Template, error) {
 	env := newEnvironment()
+	// Push Variables to stack
+	env.stack.Push(&environmentStackFrame{
+		variables:    variables,
+		fileResolver: fileResolver,
+	})
 
-	return engine.doParseTemplate(env, url, variables)
+	return engine.doParseTemplate(env, url)
 }
 
-func (engine *TemplateEngine) doParseTemplate(env *Environment, url string, variables map[string]interface{}) (*Template, error) {
+func (engine *TemplateEngine) doParseTemplate(env *Environment, url string) (*Template, error) {
 
-	// Push Variables to stack
-	env.pushVariables(variables)
 	rawMap, err := engine.readMapFromFile(env, url)
 
 	if err != nil {
@@ -112,9 +60,6 @@ func (engine *TemplateEngine) doParseTemplate(env *Environment, url string, vari
 	}
 
 	var template = &Template{Value: val.(map[string]interface{})}
-
-	// Pop
-	err = env.popVariables()
 
 	if err != nil {
 		return nil, err
@@ -189,7 +134,8 @@ func (engine *TemplateEngine) evalArray(arrayVal []interface{}, env *Environment
 
 // evalutes a string val
 func (engine *TemplateEngine) evalString(s string, env *Environment) (interface{}, error) {
-	envVariables, err := env.getCurrentVariables()
+	// get current frame
+	currentFrame, err := env.stack.Peek()
 	if err != nil {
 		return nil, err
 	}
@@ -197,7 +143,7 @@ func (engine *TemplateEngine) evalString(s string, env *Environment) (interface{
 	// quick hack to evaluate variable references
 	if strings.HasPrefix(s, "${") {
 		varName := strings.TrimSuffix(strings.TrimPrefix(s, "${"), "}")
-		return envVariables[varName], nil
+		return currentFrame.variables[varName], nil
 	}
 
 	return s, nil
@@ -205,7 +151,14 @@ func (engine *TemplateEngine) evalString(s string, env *Environment) (interface{
 
 func (engine *TemplateEngine) readMapFromFile(env *Environment, fileName string) (map[string]interface{}, error) {
 
-	jsonBytes, err := engine.FileResolver.FileContents(fileName)
+	// get current frame
+	currentFrame, err := env.stack.Peek()
+
+	if err != nil {
+		return nil, err
+	}
+
+	jsonBytes, err := currentFrame.fileResolver.FileContents(fileName)
 	if err != nil {
 		return nil, err
 	}
@@ -225,152 +178,5 @@ func (engine *TemplateEngine) readMapFromFile(env *Environment, fileName string)
 	} else {
 		return nil, error(fmt.Errorf("Unsupported file %s", fileName))
 	}
-
-}
-
-/**********************************************************************************************************************/
-// OperatorEvaluator
-
-type OperatorEvaluator interface {
-	EvalOperand(env *Environment, engine *TemplateEngine, operand interface{}) (interface{}, error)
-}
-
-/**********************************************************************************************************************/
-// Used to indicate if the result of the Evaluator is a NOOP
-type NOOP int
-
-const NOOP_VAL NOOP = 0
-
-/**********************************************************************************************************************/
-// IncludeEvaluator. evaluates
-type IncludeEvaluator struct {
-}
-
-func (evaluator *IncludeEvaluator) EvalOperand(env *Environment, engine *TemplateEngine, operand interface{}) (interface{}, error) {
-
-	// construct the include object. We allow the include to be an object or a string.
-	// string will be converted to to {url: val}
-	var includeObject map[string]interface{}
-
-	if _, isMap := operand.(map[string]interface{}); isMap {
-		includeObject = operand.(map[string]interface{})
-	} else if _, isString := operand.(string); isString {
-		includeObject = map[string]interface{}{
-			"url": operand,
-		}
-	} else {
-		return nil, fmt.Errorf("Invalid $include %s", includeObject)
-	}
-
-	// validate include object
-	if _, hasUrl := includeObject["url"]; !hasUrl {
-		return nil, fmt.Errorf("$include has no url %s", includeObject)
-	}
-
-	//evaluate parameters if present
-
-	var childVars map[string]interface{}
-	if parameters, hasParams := includeObject["$parameters"]; hasParams {
-		var err error
-		childVars, err = evaluator.evaluateParameters(env, engine, parameters.(map[string]interface{}))
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	url := includeObject["url"].(string)
-
-	template, err := engine.doParseTemplate(env, url, childVars)
-	if err != nil {
-		return nil, err
-	}
-
-	if err != nil {
-		return nil, err
-	}
-
-	return template.Value, nil
-
-}
-
-func (evaluator *IncludeEvaluator) evaluateParameters(env *Environment, engine *TemplateEngine, parameters map[string]interface{}) (map[string]interface{}, error) {
-
-	variables := make(map[string]interface{})
-	for name, rawVal := range parameters {
-		paramVal, err := engine.Eval(rawVal, env)
-		if err != nil {
-			return nil, err
-		}
-		variables[name] = paramVal
-	}
-
-	return variables, nil
-}
-
-/**********************************************************************************************************************/
-// VariablesEvaluator. evaluates
-type VariablesEvaluator struct {
-}
-
-func (evaluator *VariablesEvaluator) EvalOperand(env *Environment, engine *TemplateEngine, operand interface{}) (interface{}, error) {
-	variablesMap := operand.(map[string]interface{})
-	envVariables, err := env.getCurrentVariables()
-	if err != nil {
-		return nil, err
-	}
-	for name, rawVal := range variablesMap {
-		val, err := engine.Eval(rawVal, env)
-		if err != nil {
-			return nil, err
-		}
-		envVariables[name] = val
-	}
-
-	// NOOP
-	return NOOP_VAL, nil
-
-}
-
-/**********************************************************************************************************************/
-// ParametersEvaluator. evaluates
-type ParametersEvaluator struct {
-}
-
-func (evaluator *ParametersEvaluator) EvalOperand(env *Environment, engine *TemplateEngine, operand interface{}) (interface{}, error) {
-	paramMap := operand.(map[string]interface{})
-
-	for name, paramDef := range paramMap {
-		err := evaluator.processParam(env, name, paramDef.(map[string]interface{}))
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	// NOOP
-	return NOOP_VAL, nil
-
-}
-
-func (evaluator *ParametersEvaluator) processParam(env *Environment, name string, paramDef map[string]interface{}) error {
-	envVariables, err := env.getCurrentVariables()
-
-	if err != nil {
-		return err
-	}
-	// validate required
-	if isRequired, requiredIsSet := paramDef["required"]; requiredIsSet && isRequired.(bool) {
-		if _, paramIsSet := envVariables[name]; !paramIsSet {
-			return fmt.Errorf("parameter %s is required", name)
-		}
-	}
-
-	// default param as needed
-	if defaultValue, hasDefault := paramDef["required"]; hasDefault {
-		if _, paramIsSet := envVariables[name]; !paramIsSet {
-			envVariables[name] = defaultValue
-		}
-	}
-
-	return nil
 
 }
