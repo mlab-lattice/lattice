@@ -18,7 +18,7 @@ import (
 )
 
 func (kb *KubernetesBackend) BuildSystem(ln types.LatticeNamespace, definitionRoot tree.Node, v types.SystemVersion) (types.SystemBuildID, error) {
-	systemBuild, err := getNewSystemBuild(ln, definitionRoot, v)
+	systemBuild, err := systemBuild(ln, definitionRoot, v)
 	if err != nil {
 		return "", err
 	}
@@ -31,7 +31,7 @@ func (kb *KubernetesBackend) BuildSystem(ln types.LatticeNamespace, definitionRo
 	return types.SystemBuildID(result.Name), err
 }
 
-func getNewSystemBuild(ln types.LatticeNamespace, definitionRoot tree.Node, v types.SystemVersion) (*crv1.SystemBuild, error) {
+func systemBuild(ln types.LatticeNamespace, definitionRoot tree.Node, v types.SystemVersion) (*crv1.SystemBuild, error) {
 	labels := map[string]string{
 		kubeconstants.LatticeNamespaceLabel: string(ln),
 		kubeconstants.LabelKeySystemVersion: string(v),

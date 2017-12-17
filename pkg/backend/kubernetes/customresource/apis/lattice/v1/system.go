@@ -27,7 +27,8 @@ type System struct {
 
 // +k8s:deepcopy-gen=false
 type SystemSpec struct {
-	Services map[tree.NodePath]SystemSpecServiceInfo `json:"services"`
+	DefinitionURL string                                  `json:"definitionUrl"`
+	Services      map[tree.NodePath]SystemSpecServiceInfo `json:"services"`
 }
 
 // +k8s:deepcopy-gen=false

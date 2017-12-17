@@ -176,6 +176,7 @@ func (lp *LocalProvisioner) bootstrap(address, url, name string) error {
 								"--component-build-docker-artifact-push", "false",
 								"--envoy-prepare-image", lp.getLatticeContainerImage(constants.DockerImageEnvoyPrepare),
 								"--envoy-redirect-cidr-block", "172.16.0.0/16",
+								"--initial-system-definition-url", url,
 							},
 						},
 					},

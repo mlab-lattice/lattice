@@ -1,8 +1,6 @@
 package v1
 
 import (
-	"github.com/mlab-lattice/system/pkg/types"
-
 	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -25,14 +23,11 @@ type Config struct {
 
 type ConfigSpec struct {
 	// FIXME: this shouldn't be dynamic config
-	KubernetesNamespacePrefix string               `json:"systemID"`
+	KubernetesNamespacePrefix string               `json:"kubernetesNamespacePrefix"`
 	Provider                  ConfigProvider       `json:"providerConfig"`
 	ComponentBuild            ConfigComponentBuild `json:"componentBuild"`
 	Envoy                     ConfigEnvoy          `json:"envoy"`
-	// FIXME: this shouldn't be dynamic config
-	// FIXME: create empty System and add definition URL to system.Spec
-	SystemConfigs map[types.LatticeNamespace]ConfigSystem `json:"userSystem"`
-	Terraform     *ConfigTerraform                        `json:"terraform,omitempty"`
+	Terraform                 *ConfigTerraform     `json:"terraform,omitempty"`
 }
 
 type ConfigProvider struct {
@@ -52,16 +47,12 @@ type ConfigProviderAWS struct {
 	AccountID string `json:"accountID"`
 	// FIXME: this shouldn't be dynamic config
 	VPCID string `json:"vpcId"`
-	// FIXME: this shouldn't be dynamic config
+	// FIXME: maybe this shouldn't be dynamic config
 	SubnetIDs []string `json:"subnetIds"`
 	// FIXME: this shouldn't be dynamic config
 	MasterNodeSecurityGroupID string `json:"masterNodeSecurityGroupId"`
 	BaseNodeAMIID             string `json:"baseNodeAmiId"`
 	KeyName                   string `json:"keyName"`
-}
-
-type ConfigSystem struct {
-	DefinitionURL string `json:"url"`
 }
 
 type ConfigComponentBuild struct {

@@ -439,7 +439,7 @@ func (r *restServer) mountNamespaceServiceHandlers() {
 }
 
 func (r *restServer) getSystemRoot(ln string, version string) (tree.Node, error) {
-	url, err := r.backend.GetSystemURL(types.LatticeNamespace(ln))
+	url, err := r.backend.GetSystemDefinitionURL(types.LatticeNamespace(ln))
 	if err != nil {
 		return nil, err
 	}
@@ -452,7 +452,7 @@ func (r *restServer) getSystemRoot(ln string, version string) (tree.Node, error)
 }
 
 func (r *restServer) getSystemVersions(ln string) ([]string, error) {
-	url, err := r.backend.GetSystemURL(types.LatticeNamespace(ln))
+	url, err := r.backend.GetSystemDefinitionURL(types.LatticeNamespace(ln))
 	if err != nil {
 		return nil, err
 	}

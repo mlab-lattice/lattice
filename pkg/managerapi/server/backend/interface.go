@@ -28,7 +28,7 @@ type Interface interface {
 	// Namespace
 
 	// Utils
-	GetSystemURL(types.LatticeNamespace) (string, error)
+	GetSystemDefinitionURL(types.LatticeNamespace) (string, error)
 
 	// Builds
 	// System

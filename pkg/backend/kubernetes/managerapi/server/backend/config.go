@@ -8,13 +8,13 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func (kb *KubernetesBackend) GetSystemURL(ln types.LatticeNamespace) (string, error) {
-	config, err := kb.getConfig()
+func (kb *KubernetesBackend) GetSystemDefinitionURL(ln types.LatticeNamespace) (string, error) {
+	system, err := kb.LatticeClient.LatticeV1().Systems(string(ln)).Get(string(ln), metav1.GetOptions{})
 	if err != nil {
 		return "", err
 	}
 
-	return config.Spec.SystemConfigs[ln].DefinitionURL, nil
+	return system.Spec.DefinitionURL, nil
 }
 
 func (kb *KubernetesBackend) getSystemIP() (string, error) {
