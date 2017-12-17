@@ -4,12 +4,14 @@ import (
 	"fmt"
 	"strings"
 
+	kubeconstants "github.com/mlab-lattice/system/pkg/backend/kubernetes/constants"
 	crv1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	latticeclientset "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/clientset/versioned"
 	"github.com/mlab-lattice/system/pkg/definition/tree"
 	"github.com/mlab-lattice/system/pkg/types"
 
 	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -17,32 +19,87 @@ import (
 	kubeclientset "k8s.io/client-go/kubernetes"
 )
 
+type SystemResources struct {
+	System          *crv1.System
+	Namespace       *corev1.Namespace
+	ServiceAccounts []corev1.ServiceAccount
+	RoleBindings    []rbacv1.RoleBinding
+}
+
 func CreateNewSystem(
 	clusterID types.ClusterID,
 	systemID types.SystemID,
 	definitionURL string,
 	kubeClient kubeclientset.Interface,
 	latticeClient latticeclientset.Interface,
-) (*crv1.System, *corev1.Namespace, error) {
-	system, namespace := NewSystem(clusterID, systemID, definitionURL)
+) (*SystemResources, error) {
+	resources := NewSystem(clusterID, systemID, definitionURL)
 
-	namespace, err := kubeClient.CoreV1().Namespaces().Create(namespace)
+	namespace, err := kubeClient.CoreV1().Namespaces().Create(resources.Namespace)
 	if err != nil {
 		if !errors.IsAlreadyExists(err) {
-			return nil, nil, err
+			return nil, err
 		}
 
 		namespace, err = kubeClient.CoreV1().Namespaces().Get(namespace.Name, metav1.GetOptions{})
 		if err != nil {
-			return nil, nil, err
+			return nil, err
 		}
 	}
 
-	system, err = latticeClient.LatticeV1().Systems(namespace.Name).Create(system)
-	return system, namespace, err
+	var serviceAccounts []corev1.ServiceAccount
+	for _, sa := range resources.ServiceAccounts {
+		sa, err := kubeClient.CoreV1().ServiceAccounts(namespace.Name).Create(&sa)
+		if err != nil {
+			if !errors.IsAlreadyExists(err) {
+				return nil, err
+			}
+
+			sa, err = kubeClient.CoreV1().ServiceAccounts(namespace.Name).Get(sa.Name, metav1.GetOptions{})
+			if err != nil {
+				return nil, err
+			}
+		}
+
+		serviceAccounts = append(serviceAccounts, *sa)
+	}
+
+	var roleBindings []rbacv1.RoleBinding
+	for _, roleBinding := range resources.RoleBindings {
+		roleBinding, err := kubeClient.RbacV1().RoleBindings(namespace.Name).Create(&roleBinding)
+		if err != nil {
+			if !errors.IsAlreadyExists(err) {
+				return nil, err
+			}
+
+			roleBinding, err = kubeClient.RbacV1().RoleBindings(namespace.Name).Get(roleBinding.Name, metav1.GetOptions{})
+			if err != nil {
+				return nil, err
+			}
+		}
+
+		roleBindings = append(roleBindings, *roleBinding)
+	}
+
+	system, err := latticeClient.LatticeV1().Systems(namespace.Name).Create(resources.System)
+	if err != nil {
+		return nil, err
+	}
+
+	resources = &SystemResources{
+		System:          system,
+		Namespace:       namespace,
+		ServiceAccounts: serviceAccounts,
+		RoleBindings:    roleBindings,
+	}
+	return resources, err
 }
 
-func NewSystem(clusterID types.ClusterID, systemID types.SystemID, definitionURL string) (*crv1.System, *corev1.Namespace) {
+func NewSystem(
+	clusterID types.ClusterID,
+	systemID types.SystemID,
+	definitionURL string,
+) *SystemResources {
 	system := &crv1.System{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: string(systemID),
@@ -66,7 +123,46 @@ func NewSystem(clusterID types.ClusterID, systemID types.SystemID, definitionURL
 		},
 	}
 
-	return system, namespace
+	componentBuilderSA := corev1.ServiceAccount{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "ServiceAccount",
+			APIVersion: rbacv1.GroupName + "/v1",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      kubeconstants.ServiceAccountComponentBuilder,
+			Namespace: namespace.Name,
+		},
+	}
+
+	componentBuilderRB := rbacv1.RoleBinding{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "RoleBinding",
+			APIVersion: rbacv1.GroupName + "/v1",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      kubeconstants.InternalComponentComponentBuilder,
+			Namespace: componentBuilderSA.Namespace,
+		},
+		Subjects: []rbacv1.Subject{
+			{
+				Kind:      rbacv1.ServiceAccountKind,
+				Name:      componentBuilderSA.Name,
+				Namespace: componentBuilderSA.Namespace,
+			},
+		},
+		RoleRef: rbacv1.RoleRef{
+			APIGroup: rbacv1.GroupName,
+			Kind:     "ClusterRole",
+			Name:     kubeconstants.InternalComponentComponentBuilder,
+		},
+	}
+
+	return &SystemResources{
+		System:          system,
+		Namespace:       namespace,
+		ServiceAccounts: []corev1.ServiceAccount{componentBuilderSA},
+		RoleBindings:    []rbacv1.RoleBinding{componentBuilderRB},
+	}
 }
 
 func SystemID(namespace string) (types.ClusterID, error) {

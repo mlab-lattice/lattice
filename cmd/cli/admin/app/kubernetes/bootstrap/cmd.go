@@ -116,8 +116,16 @@ var Cmd = &cobra.Command{
 
 		if options.DryRun {
 			if initialSystemDefinitionURL != "" {
-				system, namespace := kubeutil.NewSystem(clusterID, initialSystemID, initialSystemDefinitionURL)
-				objects = append(objects, []interface{}{system, namespace}...)
+				resources := kubeutil.NewSystem(clusterID, initialSystemID, initialSystemDefinitionURL)
+				objects = append(objects, []interface{}{resources.System, resources.Namespace}...)
+
+				for _, sa := range resources.ServiceAccounts {
+					objects = append(objects, interface{}(sa))
+				}
+
+				for _, roleBinding := range resources.RoleBindings {
+					objects = append(objects, interface{}(roleBinding))
+				}
 			}
 
 			output := ""
@@ -137,7 +145,7 @@ var Cmd = &cobra.Command{
 			fmt.Printf("Seeding initial system \"%v\"\n", initialSystemIDString)
 			kubeClient := kubeclientset.NewForConfigOrDie(kubeconfig)
 			latticeClient := latticeclientset.NewForConfigOrDie(kubeconfig)
-			_, _, err := kubeutil.CreateNewSystem(
+			_, err := kubeutil.CreateNewSystem(
 				clusterID,
 				initialSystemID,
 				initialSystemDefinitionURL,

@@ -170,7 +170,7 @@ func (lp *LocalProvisioner) bootstrap(address, url, name string) error {
 								"--provider-var", "system-ip=" + address,
 								"--lattice-controller-manager-image", lp.getLatticeContainerImage(kubeconstants.DockerImageLatticeControllerManager),
 								"--manager-api-image", lp.getLatticeContainerImage(kubeconstants.DockerImageManagerAPIRest),
-								"--component-builder-image", lp.getLatticeContainerImage("kubernetes-" + kubeconstants.DockerImageComponentBuilder),
+								"--component-builder-image", lp.getLatticeContainerImage(kubeconstants.DockerImageComponentBuilder),
 								"--component-build-docker-artifact-registry", "lattice-local",
 								"--component-build-docker-artifact-repository-per-image", "true",
 								"--component-build-docker-artifact-push", "false",

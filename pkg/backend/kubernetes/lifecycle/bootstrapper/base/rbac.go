@@ -22,7 +22,7 @@ var (
 	readAndCreateVerbs = []string{"get", "watch", "list", "create"}
 	readAndDeleteVerbs = []string{"get", "watch", "list", "delete"}
 	readAndUpdateVerbs = []string{"get", "watch", "list", "update"}
-) /**/
+)
 
 func (b *DefaultBootstrapper) seedRBAC() ([]interface{}, error) {
 	if !b.Options.DryRun {
@@ -36,7 +36,7 @@ func (b *DefaultBootstrapper) seedRBAC() ([]interface{}, error) {
 		b.seedRBACManagerAPI,
 	}
 
-	objects := []interface{}{}
+	var objects []interface{}
 	for _, rbacSeedFunc := range rbacSeedFuncs {
 		additionalObjects, err := rbacSeedFunc()
 		if err != nil {
@@ -48,15 +48,13 @@ func (b *DefaultBootstrapper) seedRBAC() ([]interface{}, error) {
 }
 
 func (b *DefaultBootstrapper) seedRBACComponentBuilder() ([]interface{}, error) {
-	namespace := kubeutil.InternalNamespace(b.ClusterID)
-	role := &rbacv1.Role{
+	clusterRole := &rbacv1.ClusterRole{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "Role",
 			APIVersion: rbacv1.GroupName + "/v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      kubeconstants.InternalComponentComponentBuilder,
-			Namespace: namespace,
+			Name: kubeconstants.InternalComponentComponentBuilder,
 		},
 		Rules: []rbacv1.PolicyRule{
 			// Read and update lattice component builds
@@ -68,66 +66,18 @@ func (b *DefaultBootstrapper) seedRBACComponentBuilder() ([]interface{}, error) 
 		},
 	}
 
-	sa := &corev1.ServiceAccount{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "ServiceAccount",
-			APIVersion: rbacv1.GroupName + "/v1",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      kubeconstants.ServiceAccountComponentBuilder,
-			Namespace: role.Namespace,
-		},
-	}
-
-	rb := &rbacv1.RoleBinding{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "RoleBinding",
-			APIVersion: rbacv1.GroupName + "/v1",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      kubeconstants.InternalComponentComponentBuilder,
-			Namespace: role.Namespace,
-		},
-		Subjects: []rbacv1.Subject{
-			{
-				Kind:      rbacv1.ServiceAccountKind,
-				Name:      sa.Name,
-				Namespace: sa.Namespace,
-			},
-		},
-		RoleRef: rbacv1.RoleRef{
-			APIGroup: rbacv1.GroupName,
-			Kind:     "Role",
-			Name:     role.Name,
-		},
-	}
-
 	if b.Options.DryRun {
-		return []interface{}{role, sa, rb}, nil
+		return []interface{}{clusterRole}, nil
 	}
 
-	roleResult, err := util.IdempotentSeed(func() (interface{}, error) {
-		return b.KubeClient.RbacV1().Roles(role.Namespace).Create(role)
+	clusteRoleResult, err := util.IdempotentSeed(func() (interface{}, error) {
+		return b.KubeClient.RbacV1().ClusterRoles().Create(clusterRole)
 	})
 	if err != nil {
 		return nil, err
 	}
 
-	saResult, err := util.IdempotentSeed(func() (interface{}, error) {
-		return b.KubeClient.CoreV1().ServiceAccounts(sa.Namespace).Create(sa)
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	rbResult, err := util.IdempotentSeed(func() (interface{}, error) {
-		return b.KubeClient.RbacV1().RoleBindings(rb.Namespace).Create(rb)
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	return []interface{}{roleResult, saResult, rbResult}, nil
+	return []interface{}{clusteRoleResult}, nil
 }
 
 func (b *DefaultBootstrapper) seedRBACEnvoyXDSAPI() ([]interface{}, error) {
@@ -270,15 +220,15 @@ func (b *DefaultBootstrapper) seedRBACLatticeControllerManger() ([]interface{}, 
 }
 
 func (b *DefaultBootstrapper) seedRBACManagerAPI() ([]interface{}, error) {
-	namespace := kubeutil.InternalNamespace(b.ClusterID)
-	role := &rbacv1.Role{
+	internalNamespace := kubeutil.InternalNamespace(b.ClusterID)
+
+	clusterRole := &rbacv1.ClusterRole{
 		TypeMeta: metav1.TypeMeta{
-			Kind:       "Role",
+			Kind:       "ClusterRole",
 			APIVersion: rbacv1.GroupName + "/v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      kubeconstants.MasterNodeComponentManagerAPI,
-			Namespace: namespace,
+			Name: kubeconstants.MasterNodeComponentManagerAPI,
 		},
 		Rules: []rbacv1.PolicyRule{
 			// lattice config read
@@ -329,18 +279,6 @@ func (b *DefaultBootstrapper) seedRBACManagerAPI() ([]interface{}, error) {
 				Resources: []string{"jobs"},
 				Verbs:     readVerbs,
 			},
-		},
-	}
-
-	clusterRole := &rbacv1.ClusterRole{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "ClusterRole",
-			APIVersion: rbacv1.GroupName + "/v1",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name: kubeconstants.MasterNodeComponentManagerAPI,
-		},
-		Rules: []rbacv1.PolicyRule{
 			// lattice service read
 			{
 				APIGroups: []string{crv1.GroupName},
@@ -369,30 +307,7 @@ func (b *DefaultBootstrapper) seedRBACManagerAPI() ([]interface{}, error) {
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      kubeconstants.ServiceAccountManagementAPI,
-			Namespace: role.Namespace,
-		},
-	}
-
-	rb := &rbacv1.RoleBinding{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "RoleBinding",
-			APIVersion: rbacv1.GroupName + "/v1",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      kubeconstants.MasterNodeComponentManagerAPI,
-			Namespace: role.Namespace,
-		},
-		Subjects: []rbacv1.Subject{
-			{
-				Kind:      rbacv1.ServiceAccountKind,
-				Name:      sa.Name,
-				Namespace: sa.Namespace,
-			},
-		},
-		RoleRef: rbacv1.RoleRef{
-			APIGroup: rbacv1.GroupName,
-			Kind:     "Role",
-			Name:     role.Name,
+			Namespace: internalNamespace,
 		},
 	}
 
@@ -419,14 +334,7 @@ func (b *DefaultBootstrapper) seedRBACManagerAPI() ([]interface{}, error) {
 	}
 
 	if b.Options.DryRun {
-		return []interface{}{role, clusterRole, sa, rb, crb}, nil
-	}
-
-	roleResult, err := util.IdempotentSeed(func() (interface{}, error) {
-		return b.KubeClient.RbacV1().Roles(role.Namespace).Create(role)
-	})
-	if err != nil {
-		return nil, err
+		return []interface{}{clusterRole, sa, crb}, nil
 	}
 
 	clusterRoleResult, err := util.IdempotentSeed(func() (interface{}, error) {
@@ -443,13 +351,6 @@ func (b *DefaultBootstrapper) seedRBACManagerAPI() ([]interface{}, error) {
 		return nil, err
 	}
 
-	rbResult, err := util.IdempotentSeed(func() (interface{}, error) {
-		return b.KubeClient.RbacV1().RoleBindings(rb.Namespace).Create(rb)
-	})
-	if err != nil {
-		return nil, err
-	}
-
 	crbResult, err := util.IdempotentSeed(func() (interface{}, error) {
 		return b.KubeClient.RbacV1().ClusterRoleBindings().Create(crb)
 	})
@@ -457,5 +358,5 @@ func (b *DefaultBootstrapper) seedRBACManagerAPI() ([]interface{}, error) {
 		return nil, err
 	}
 
-	return []interface{}{roleResult, clusterRoleResult, saResult, rbResult, crbResult}, nil
+	return []interface{}{clusterRoleResult, saResult, crbResult}, nil
 }
