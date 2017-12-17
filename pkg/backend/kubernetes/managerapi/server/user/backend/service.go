@@ -5,7 +5,7 @@ import (
 
 	kubeconstants "github.com/mlab-lattice/system/pkg/backend/kubernetes/constants"
 	crv1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
-	latticeutil "github.com/mlab-lattice/system/pkg/backend/kubernetes/util/lattice"
+	kubeutil "github.com/mlab-lattice/system/pkg/backend/kubernetes/util/kubernetes"
 	"github.com/mlab-lattice/system/pkg/definition/tree"
 	"github.com/mlab-lattice/system/pkg/types"
 
@@ -46,7 +46,7 @@ func (kb *KubernetesBackend) GetService(id types.SystemID, path tree.NodePath) (
 		LabelSelector: selector.String(),
 	}
 
-	namespace := latticeutil.SystemNamespace(string(id), config.Spec.KubernetesNamespacePrefix)
+	namespace := kubeutil.SystemNamespace(string(id), config.Spec.KubernetesNamespacePrefix)
 	services, err := kb.LatticeClient.LatticeV1().Services(namespace).List(listOptions)
 	if err != nil {
 		return nil, err

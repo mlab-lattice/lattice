@@ -3,7 +3,7 @@ package componentbuilder
 import (
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/constants"
 	latticeclientset "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/clientset/versioned"
-	latticeutil "github.com/mlab-lattice/system/pkg/backend/kubernetes/util/lattice"
+	kubeutil "github.com/mlab-lattice/system/pkg/backend/kubernetes/util/kubernetes"
 	"github.com/mlab-lattice/system/pkg/types"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -48,7 +48,7 @@ func (ksu *KubernetesStatusUpdater) UpdateProgress(buildID types.ComponentBuildI
 }
 
 func (ksu *KubernetesStatusUpdater) updateProgressInternal(buildID types.ComponentBuildID, systemID types.SystemID, phase types.ComponentBuildPhase, numRetries int) error {
-	namespace := latticeutil.SystemNamespace(string(systemID), ksu.KubeNamespacePrefix)
+	namespace := kubeutil.SystemNamespace(string(systemID), ksu.KubeNamespacePrefix)
 	build, err := ksu.LatticeClient.LatticeV1().ComponentBuilds(namespace).Get(string(buildID), metav1.GetOptions{})
 	if err != nil {
 		if numRetries <= 0 {
@@ -75,7 +75,7 @@ func (ksu *KubernetesStatusUpdater) UpdateError(buildID types.ComponentBuildID, 
 }
 
 func (ksu *KubernetesStatusUpdater) updateErrorInternal(buildID types.ComponentBuildID, systemID types.SystemID, internal bool, updateErr error, numRetries int) error {
-	namespace := latticeutil.SystemNamespace(string(systemID), ksu.KubeNamespacePrefix)
+	namespace := kubeutil.SystemNamespace(string(systemID), ksu.KubeNamespacePrefix)
 	build, err := ksu.LatticeClient.LatticeV1().ComponentBuilds(namespace).Get(string(buildID), metav1.GetOptions{})
 	if err != nil {
 		if numRetries <= 0 {

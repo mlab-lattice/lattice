@@ -11,7 +11,6 @@ import (
 	baseboostrapper "github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/bootstrapper/base"
 	cloudboostrapper "github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/bootstrapper/cloud"
 	kubeutil "github.com/mlab-lattice/system/pkg/backend/kubernetes/util/kubernetes"
-	latticeutil "github.com/mlab-lattice/system/pkg/backend/kubernetes/util/lattice"
 	"github.com/mlab-lattice/system/pkg/constants"
 	"github.com/mlab-lattice/system/pkg/util/cli"
 
@@ -111,7 +110,7 @@ var Cmd = &cobra.Command{
 
 		if options.DryRun {
 			if initialSystemDefinitionURL != "" {
-				system, namespace := latticeutil.NewSystem(initialSystemName, options.Config.KubernetesNamespacePrefix, initialSystemDefinitionURL)
+				system, namespace := kubeutil.NewSystem(initialSystemName, options.Config.KubernetesNamespacePrefix, initialSystemDefinitionURL)
 				objects = append(objects, []interface{}{system, namespace}...)
 			}
 
@@ -132,7 +131,7 @@ var Cmd = &cobra.Command{
 			fmt.Printf("Seeding initial system \"%v\"\n", initialSystemName)
 			kubeClient := kubeclientset.NewForConfigOrDie(kubeconfig)
 			latticeClient := latticeclientset.NewForConfigOrDie(kubeconfig)
-			_, _, err := latticeutil.CreateNewSystem(
+			_, _, err := kubeutil.CreateNewSystem(
 				initialSystemName,
 				options.Config.KubernetesNamespacePrefix,
 				initialSystemDefinitionURL,

@@ -8,7 +8,7 @@ go_library(
     deps = [
         "//pkg/backend/kubernetes/constants:go_default_library",
         "//pkg/backend/kubernetes/customresource/generated/clientset/versioned:go_default_library",
-        "//pkg/backend/kubernetes/util/lattice:go_default_library",
+        "//pkg/backend/kubernetes/util/kubernetes:go_default_library",
         "//pkg/types:go_default_library",
         "@io_k8s_apimachinery//pkg/apis/meta/v1:go_default_library",
         "@io_k8s_client_go//rest:go_default_library",

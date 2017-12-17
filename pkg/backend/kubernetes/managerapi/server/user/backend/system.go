@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	crv1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
-	latticeutil "github.com/mlab-lattice/system/pkg/backend/kubernetes/util/lattice"
+	kubeutil "github.com/mlab-lattice/system/pkg/backend/kubernetes/util/kubernetes"
 	"github.com/mlab-lattice/system/pkg/definition/tree"
 	"github.com/mlab-lattice/system/pkg/types"
 
@@ -17,7 +17,7 @@ func (kb *KubernetesBackend) GetSystem(id types.SystemID) (*types.System, error)
 		return nil, err
 	}
 
-	namespace := latticeutil.SystemNamespace(string(id), config.Spec.KubernetesNamespacePrefix)
+	namespace := kubeutil.SystemNamespace(string(id), config.Spec.KubernetesNamespacePrefix)
 	system, err := kb.LatticeClient.LatticeV1().Systems(namespace).Get(string(id), metav1.GetOptions{})
 	if err != nil {
 		return nil, err
@@ -27,7 +27,7 @@ func (kb *KubernetesBackend) GetSystem(id types.SystemID) (*types.System, error)
 }
 
 func (kb *KubernetesBackend) transformSystem(system *crv1.System) (*types.System, error) {
-	name, err := latticeutil.SystemName(system.Namespace)
+	name, err := kubeutil.SystemName(system.Namespace)
 	if err != nil {
 		return nil, err
 	}
