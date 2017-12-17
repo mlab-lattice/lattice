@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	crv1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
+	kubeutil "github.com/mlab-lattice/system/pkg/backend/kubernetes/util/kubernetes"
 	"github.com/mlab-lattice/system/pkg/types"
 
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -11,7 +12,8 @@ import (
 )
 
 func (kb *KubernetesBackend) ListServiceBuilds(id types.SystemID) ([]types.ServiceBuild, error) {
-	buildList, err := kb.LatticeClient.LatticeV1().ServiceBuilds(string(id)).List(metav1.ListOptions{})
+	namespace := kubeutil.SystemNamespace(kb.ClusterID, id)
+	buildList, err := kb.LatticeClient.LatticeV1().ServiceBuilds(namespace).List(metav1.ListOptions{})
 	if err != nil {
 		return nil, err
 	}
@@ -44,7 +46,8 @@ func (kb *KubernetesBackend) GetServiceBuild(id types.SystemID, bid types.Servic
 }
 
 func (kb *KubernetesBackend) getInternalServiceBuild(id types.SystemID, bid types.ServiceBuildID) (*crv1.ServiceBuild, bool, error) {
-	result, err := kb.LatticeClient.LatticeV1().ServiceBuilds(string(id)).Get(string(bid), metav1.GetOptions{})
+	namespace := kubeutil.SystemNamespace(kb.ClusterID, id)
+	result, err := kb.LatticeClient.LatticeV1().ServiceBuilds(namespace).Get(string(bid), metav1.GetOptions{})
 	if err != nil {
 		if errors.IsNotFound(err) {
 			return nil, false, nil

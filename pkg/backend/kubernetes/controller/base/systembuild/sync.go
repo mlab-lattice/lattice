@@ -70,7 +70,14 @@ func (c *Controller) syncMissingServiceBuildsSystemBuild(build *crv1.SystemBuild
 	// Copy so the shared cache isn't mutated
 	status := build.Status.DeepCopy()
 	serviceBuilds := status.ServiceBuilds
+	if serviceBuilds == nil {
+		serviceBuilds = map[tree.NodePath]string{}
+	}
+
 	serviceBuildStatuses := status.ServiceBuildStatuses
+	if serviceBuildStatuses == nil {
+		serviceBuildStatuses = map[string]crv1.ServiceBuildStatus{}
+	}
 
 	for _, service := range stateInfo.needsNewServiceBuilds {
 		serviceInfo := build.Spec.Services[service]
@@ -132,5 +139,9 @@ func (c *Controller) updateSystemBuildStatus(
 	// Copy so the shared cache isn't mutated
 	build = build.DeepCopy()
 	build.Status = status
-	return c.latticeClient.LatticeV1().SystemBuilds(build.Namespace).UpdateStatus(build)
+	return c.latticeClient.LatticeV1().SystemBuilds(build.Namespace).Update(build)
+
+	// TODO: switch to this when https://github.com/kubernetes/kubernetes/issues/38113 is merged
+	// TODO: also watch https://github.com/kubernetes/kubernetes/pull/55168
+	//return c.latticeClient.LatticeV1().SystemBuilds(build.Namespace).UpdateStatus(build)
 }

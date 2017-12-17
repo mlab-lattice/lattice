@@ -17,5 +17,9 @@ func (c *Controller) updateRolloutStatus(rollout *crv1.SystemRollout, state crv1
 		return rollout, nil
 	}
 
-	return c.latticeClient.LatticeV1().SystemRollouts(rollout.Namespace).UpdateStatus(rollout)
+	return c.latticeClient.LatticeV1().SystemRollouts(rollout.Namespace).Update(rollout)
+
+	// TODO: switch to this when https://github.com/kubernetes/kubernetes/issues/38113 is merged
+	// TODO: also watch https://github.com/kubernetes/kubernetes/pull/55168
+	//return c.latticeClient.LatticeV1().SystemRollouts(rollout.Namespace).UpdateStatus(rollout)
 }

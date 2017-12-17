@@ -51,19 +51,7 @@ func (c *Controller) syncSystemStatus(system *crv1.System, services map[tree.Nod
 		state = crv1.SystemStateFailed
 	}
 
-	status := crv1.SystemStatus{
-		State: state,
-	}
-
-	if reflect.DeepEqual(system.Status, status) {
-		return nil
-	}
-
-	// Copy the system so the shared cache is not mutated
-	system = system.DeepCopy()
-	system.Status = status
-
-	_, err := c.latticeClient.LatticeV1().Systems(system.Namespace).Update(system)
+	_, err := c.updateSystemStatus(system, state, services, serviceStatuses)
 	return err
 }
 
@@ -83,5 +71,9 @@ func (c *Controller) updateSystemStatus(system *crv1.System, state crv1.SystemSt
 	system = system.DeepCopy()
 	system.Status = status
 
-	return c.latticeClient.LatticeV1().Systems(system.Namespace).UpdateStatus(system)
+	return c.latticeClient.LatticeV1().Systems(system.Namespace).Update(system)
+
+	// TODO: switch to this when https://github.com/kubernetes/kubernetes/issues/38113 is merged
+	// TODO: also watch https://github.com/kubernetes/kubernetes/pull/55168
+	//return c.latticeClient.LatticeV1().Systems(system.Namespace).UpdateStatus(system)
 }

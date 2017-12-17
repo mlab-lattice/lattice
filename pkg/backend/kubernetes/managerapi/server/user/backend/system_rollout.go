@@ -3,6 +3,7 @@ package backend
 import (
 	kubeconstants "github.com/mlab-lattice/system/pkg/backend/kubernetes/constants"
 	crv1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
+	kubeutil "github.com/mlab-lattice/system/pkg/backend/kubernetes/util/kubernetes"
 	"github.com/mlab-lattice/system/pkg/definition/tree"
 	"github.com/mlab-lattice/system/pkg/types"
 
@@ -32,7 +33,8 @@ func (kb *KubernetesBackend) RollOutSystemBuild(id types.SystemID, bid types.Sys
 		return "", err
 	}
 
-	result, err := kb.LatticeClient.LatticeV1().SystemRollouts(string(id)).Create(sysRollout)
+	namespace := kubeutil.SystemNamespace(kb.ClusterID, id)
+	result, err := kb.LatticeClient.LatticeV1().SystemRollouts(namespace).Create(sysRollout)
 	if err != nil {
 		return "", err
 	}
@@ -67,7 +69,8 @@ func getNewSystemRollout(latticeNamespace types.SystemID, sysBuild *crv1.SystemB
 }
 
 func (kb *KubernetesBackend) GetSystemRollout(id types.SystemID, rid types.SystemRolloutID) (*types.SystemRollout, bool, error) {
-	result, err := kb.LatticeClient.LatticeV1().SystemRollouts(string(id)).Get(string(rid), metav1.GetOptions{})
+	namespace := kubeutil.SystemNamespace(kb.ClusterID, id)
+	result, err := kb.LatticeClient.LatticeV1().SystemRollouts(namespace).Get(string(rid), metav1.GetOptions{})
 	if err != nil {
 		if errors.IsNotFound(err) {
 			return nil, false, nil
@@ -85,7 +88,8 @@ func (kb *KubernetesBackend) GetSystemRollout(id types.SystemID, rid types.Syste
 }
 
 func (kb *KubernetesBackend) ListSystemRollouts(id types.SystemID) ([]types.SystemRollout, error) {
-	result, err := kb.LatticeClient.LatticeV1().SystemRollouts(string(id)).List(metav1.ListOptions{})
+	namespace := kubeutil.SystemNamespace(kb.ClusterID, id)
+	result, err := kb.LatticeClient.LatticeV1().SystemRollouts(namespace).List(metav1.ListOptions{})
 	if err != nil {
 		return nil, err
 	}

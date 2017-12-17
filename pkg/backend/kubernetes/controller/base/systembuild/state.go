@@ -46,9 +46,9 @@ func (c *Controller) calculateState(build *crv1.SystemBuild) (stateInfo, error) 
 	serviceBuilds := map[tree.NodePath]string{}
 	serviceBuildStatuses := map[string]crv1.ServiceBuildStatus{}
 
-	for service := range build.Spec.Services {
+	for servicePath := range build.Spec.Services {
 		var serviceBuild *crv1.ServiceBuild
-		serviceBuildName, ok := build.Status.ServiceBuilds[service]
+		serviceBuildName, ok := build.Status.ServiceBuilds[servicePath]
 		if !ok {
 			// It's possible that the ServiceBuild was created, but prior to updating build.Status there was an error.
 			// So first check to see if there's a ServiceBuild with the proper labels.
@@ -63,7 +63,7 @@ func (c *Controller) calculateState(build *crv1.SystemBuild) (stateInfo, error) 
 			}
 			selector = selector.Add(*requirement)
 
-			requirement, err = kubelabels.NewRequirement(constants.LabelKeyServicePath, selection.Equals, []string{string(service)})
+			requirement, err = kubelabels.NewRequirement(constants.LabelKeyServicePathDomain, selection.Equals, []string{servicePath.ToDomain(true)})
 			if err != nil {
 				return stateInfo{}, err
 			}
@@ -75,7 +75,7 @@ func (c *Controller) calculateState(build *crv1.SystemBuild) (stateInfo, error) 
 			}
 
 			if len(serviceBuilds) == 0 {
-				needsNewServiceBuilds = append(needsNewServiceBuilds, service)
+				needsNewServiceBuilds = append(needsNewServiceBuilds, servicePath)
 				continue
 			}
 
@@ -97,11 +97,11 @@ func (c *Controller) calculateState(build *crv1.SystemBuild) (stateInfo, error) 
 				if err != nil {
 					if errors.IsNotFound(err) {
 						err := fmt.Errorf(
-							"SystemBuild %v/%v has ServiceBuild.Name %v for service %v, but ServiceBuild does not exist",
+							"SystemBuild %v/%v has ServiceBuild.Name %v for servicePath %v, but ServiceBuild does not exist",
 							build.Namespace,
 							build.Name,
 							serviceBuildName,
-							service,
+							servicePath,
 						)
 						return stateInfo{}, err
 					}
@@ -111,16 +111,16 @@ func (c *Controller) calculateState(build *crv1.SystemBuild) (stateInfo, error) 
 			}
 		}
 
-		serviceBuilds[service] = serviceBuild.Name
+		serviceBuilds[servicePath] = serviceBuild.Name
 		serviceBuildStatuses[serviceBuild.Name] = serviceBuild.Status
 
 		switch serviceBuild.Status.State {
 		case crv1.ServiceBuildStatePending, crv1.ServiceBuildStateRunning:
-			activeServiceBuilds[service] = serviceBuild
+			activeServiceBuilds[servicePath] = serviceBuild
 		case crv1.ServiceBuildStateFailed:
-			failedServiceBuilds[service] = serviceBuild
+			failedServiceBuilds[servicePath] = serviceBuild
 		case crv1.ServiceBuildStateSucceeded:
-			successfulServiceBuilds[service] = serviceBuild
+			successfulServiceBuilds[servicePath] = serviceBuild
 		default:
 			// FIXME: send warn event
 			return stateInfo{}, fmt.Errorf("ServiceBuild %v/%v has unexpected state %v", serviceBuild.Namespace, serviceBuild.Name, serviceBuild.Status.State)

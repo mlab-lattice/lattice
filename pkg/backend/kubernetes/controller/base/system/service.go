@@ -31,10 +31,11 @@ func (c *Controller) syncSystemServices(system *crv1.System) (map[tree.NodePath]
 
 		serviceName, ok := system.Status.Services[path]
 		if !ok {
+			pathDomain := path.ToDomain(true)
 			// We don't have the name of the Service in our Status, but it may still have been created already.
 			// First, look in the cache for a Service with the proper label.
 			selector := kubelabels.NewSelector()
-			requirement, err := kubelabels.NewRequirement(kubeconstants.LabelKeyServicePath, selection.Equals, []string{string(path)})
+			requirement, err := kubelabels.NewRequirement(kubeconstants.LabelKeyServicePathDomain, selection.Equals, []string{pathDomain})
 			if err != nil {
 				return nil, nil, nil, err
 			}
@@ -46,7 +47,7 @@ func (c *Controller) syncSystemServices(system *crv1.System) (map[tree.NodePath]
 			}
 
 			if len(services) > 1 {
-				return nil, nil, nil, fmt.Errorf("multiple Services in the %v namespace are labeled with %v = %v", system.Namespace, kubeconstants.LabelKeyServicePath, string(path))
+				return nil, nil, nil, fmt.Errorf("multiple Services in the %v namespace are labeled with %v = %v", system.Namespace, kubeconstants.LabelKeyServicePathDomain, pathDomain)
 			}
 
 			if len(services) == 1 {
@@ -63,7 +64,7 @@ func (c *Controller) syncSystemServices(system *crv1.System) (map[tree.NodePath]
 				}
 
 				if len(services.Items) > 1 {
-					return nil, nil, nil, fmt.Errorf("multiple Services in the %v namespace are labeled with %v = %v", system.Namespace, kubeconstants.LabelKeyServicePath, string(path))
+					return nil, nil, nil, fmt.Errorf("multiple Services in the %v namespace are labeled with %v = %v", system.Namespace, kubeconstants.LabelKeyServicePathDomain, pathDomain)
 				}
 
 				if len(services.Items) == 1 {
@@ -157,7 +158,7 @@ func (c *Controller) createNewService(system *crv1.System, serviceInfo *crv1.Sys
 
 func newService(system *crv1.System, serviceInfo *crv1.SystemSpecServiceInfo, path tree.NodePath) (*crv1.Service, error) {
 	labels := map[string]string{
-		kubeconstants.LabelKeyServicePath: string(path),
+		kubeconstants.LabelKeyServicePathDomain: path.ToDomain(true),
 	}
 
 	spec, err := serviceSpec(serviceInfo, path)

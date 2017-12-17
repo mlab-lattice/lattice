@@ -1,10 +1,9 @@
 package backend
 
 import (
-	"strings"
-
 	kubeconstants "github.com/mlab-lattice/system/pkg/backend/kubernetes/constants"
 	crv1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
+	kubeutil "github.com/mlab-lattice/system/pkg/backend/kubernetes/util/kubernetes"
 	"github.com/mlab-lattice/system/pkg/types"
 
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -19,7 +18,8 @@ func (kb *KubernetesBackend) TearDownSystem(id types.SystemID) (types.SystemTear
 		return "", err
 	}
 
-	result, err := kb.LatticeClient.LatticeV1().SystemTeardowns(string(id)).Create(systemTeardown)
+	namespace := kubeutil.SystemNamespace(kb.ClusterID, id)
+	result, err := kb.LatticeClient.LatticeV1().SystemTeardowns(namespace).Create(systemTeardown)
 	if err != nil {
 		return "", err
 	}
@@ -47,17 +47,13 @@ func getSystemTeardown(id types.SystemID) (*crv1.SystemTeardown, error) {
 }
 
 func (kb *KubernetesBackend) GetSystemTeardown(id types.SystemID, tid types.SystemTeardownID) (*types.SystemTeardown, bool, error) {
-	result, err := kb.LatticeClient.LatticeV1().SystemTeardowns(string(id)).Get(string(tid), metav1.GetOptions{})
+	namespace := kubeutil.SystemNamespace(kb.ClusterID, id)
+	result, err := kb.LatticeClient.LatticeV1().SystemTeardowns(namespace).Get(string(tid), metav1.GetOptions{})
 	if err != nil {
 		if errors.IsNotFound(err) {
 			return nil, false, nil
 		}
 		return nil, false, err
-	}
-
-	// TODO: add this to the query
-	if strings.Compare(result.Labels[kubeconstants.LatticeNamespaceLabel], string(id)) != 0 {
-		return nil, false, nil
 	}
 
 	sb := &types.SystemTeardown{
@@ -69,18 +65,14 @@ func (kb *KubernetesBackend) GetSystemTeardown(id types.SystemID, tid types.Syst
 }
 
 func (kb *KubernetesBackend) ListSystemTeardowns(id types.SystemID) ([]types.SystemTeardown, error) {
-	result, err := kb.LatticeClient.LatticeV1().SystemTeardowns(string(id)).List(metav1.ListOptions{})
+	namespace := kubeutil.SystemNamespace(kb.ClusterID, id)
+	result, err := kb.LatticeClient.LatticeV1().SystemTeardowns(namespace).List(metav1.ListOptions{})
 	if err != nil {
 		return nil, err
 	}
 
-	teardowns := []types.SystemTeardown{}
+	var teardowns []types.SystemTeardown
 	for _, b := range result.Items {
-		// TODO: add this to the query
-		if strings.Compare(b.Labels[kubeconstants.LatticeNamespaceLabel], string(id)) != 0 {
-			continue
-		}
-
 		teardowns = append(teardowns, types.SystemTeardown{
 			ID:    types.SystemTeardownID(b.Name),
 			State: getSystemTeardownState(b.Status.State),

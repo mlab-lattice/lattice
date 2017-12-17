@@ -31,7 +31,7 @@ func (kb *KubernetesBackend) ListServices(id types.SystemID) ([]types.Service, e
 
 func (kb *KubernetesBackend) GetService(id types.SystemID, path tree.NodePath) (*types.Service, error) {
 	selector := kubelabels.NewSelector()
-	requirement, err := kubelabels.NewRequirement(kubeconstants.LabelKeyServicePath, selection.Equals, []string{string(path)})
+	requirement, err := kubelabels.NewRequirement(kubeconstants.LabelKeyServicePathDomain, selection.Equals, []string{path.ToDomain(true)})
 	if err != nil {
 		return nil, err
 	}

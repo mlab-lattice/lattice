@@ -18,8 +18,8 @@ func (c *Controller) createNewServiceBuild(build *crv1.SystemBuild, servicePath 
 
 func serviceBuild(build *crv1.SystemBuild, servicePath tree.NodePath, serviceDefinition *definition.Service) *crv1.ServiceBuild {
 	labels := map[string]string{
-		constants.LabelKeySystemBuildID: build.Name,
-		constants.LabelKeyServicePath:   string(servicePath),
+		constants.LabelKeySystemBuildID:     build.Name,
+		constants.LabelKeyServicePathDomain: servicePath.ToDomain(true),
 	}
 
 	spec := serviceBuildSpec(serviceDefinition)

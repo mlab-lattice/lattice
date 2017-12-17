@@ -6,6 +6,7 @@ import (
 
 	kubeconstants "github.com/mlab-lattice/system/pkg/backend/kubernetes/constants"
 	crv1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
+	kubeutil "github.com/mlab-lattice/system/pkg/backend/kubernetes/util/kubernetes"
 	backend "github.com/mlab-lattice/system/pkg/managerapi/server/user"
 	"github.com/mlab-lattice/system/pkg/types"
 
@@ -16,7 +17,8 @@ import (
 )
 
 func (kb *KubernetesBackend) ListComponentBuilds(id types.SystemID) ([]types.ComponentBuild, error) {
-	buildList, err := kb.LatticeClient.LatticeV1().ComponentBuilds(string(id)).List(metav1.ListOptions{})
+	namespace := kubeutil.SystemNamespace(kb.ClusterID, id)
+	buildList, err := kb.LatticeClient.LatticeV1().ComponentBuilds(namespace).List(metav1.ListOptions{})
 	if err != nil {
 		return nil, err
 	}
@@ -73,7 +75,8 @@ func (kb *KubernetesBackend) GetComponentBuildLogs(id types.SystemID, bid types.
 }
 
 func (kb *KubernetesBackend) getInternalComponentBuild(id types.SystemID, bid types.ComponentBuildID) (*crv1.ComponentBuild, bool, error) {
-	result, err := kb.LatticeClient.LatticeV1().ComponentBuilds(string(id)).Get(string(bid), metav1.GetOptions{})
+	namespace := kubeutil.SystemNamespace(kb.ClusterID, id)
+	result, err := kb.LatticeClient.LatticeV1().ComponentBuilds(namespace).Get(string(bid), metav1.GetOptions{})
 	if err != nil {
 		if errors.IsNotFound(err) {
 			return nil, false, nil

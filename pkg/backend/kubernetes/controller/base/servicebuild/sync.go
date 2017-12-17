@@ -69,7 +69,14 @@ func (c *Controller) syncRunningServiceBuild(build *crv1.ServiceBuild, stateInfo
 
 func (c *Controller) syncMissingComponentBuildsServiceBuild(build *crv1.ServiceBuild, stateInfo stateInfo) error {
 	componentBuilds := stateInfo.componentBuilds
+	if componentBuilds == nil {
+		componentBuilds = map[string]string{}
+	}
+
 	componentBuildStatuses := stateInfo.componentBuildStatuses
+	if componentBuildStatuses == nil {
+		componentBuildStatuses = map[string]crv1.ComponentBuildStatus{}
+	}
 
 	for _, component := range stateInfo.needsNewComponentBuilds {
 		componentInfo := build.Spec.Components[component]
@@ -178,5 +185,9 @@ func (c *Controller) updateServiceBuildStatus(
 	// Copy so the shared cache isn't mutated
 	build = build.DeepCopy()
 	build.Status = status
-	return c.latticeClient.LatticeV1().ServiceBuilds(build.Namespace).UpdateStatus(build)
+	return c.latticeClient.LatticeV1().ServiceBuilds(build.Namespace).Update(build)
+
+	// TODO: switch to this when https://github.com/kubernetes/kubernetes/issues/38113 is merged
+	// TODO: also watch https://github.com/kubernetes/kubernetes/pull/55168
+	//return c.latticeClient.LatticeV1().ServiceBuilds(build.Namespace).UpdateStatus(build)
 }

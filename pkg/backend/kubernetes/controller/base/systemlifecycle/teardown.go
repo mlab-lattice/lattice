@@ -21,5 +21,9 @@ func (c *Controller) updateTeardownStatus(teardown *crv1.SystemTeardown, state c
 	teardown = teardown.DeepCopy()
 	teardown.Status = status
 
-	return c.latticeClient.LatticeV1().SystemTeardowns(teardown.Namespace).UpdateStatus(teardown)
+	return c.latticeClient.LatticeV1().SystemTeardowns(teardown.Namespace).Update(teardown)
+
+	// TODO: switch to this when https://github.com/kubernetes/kubernetes/issues/38113 is merged
+	// TODO: also watch https://github.com/kubernetes/kubernetes/pull/55168
+	//return c.latticeClient.LatticeV1().SystemTeardowns(teardown.Namespace).UpdateStatus(teardown)
 }

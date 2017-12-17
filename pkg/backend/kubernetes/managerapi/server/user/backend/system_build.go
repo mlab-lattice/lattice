@@ -6,6 +6,7 @@ import (
 
 	kubeconstants "github.com/mlab-lattice/system/pkg/backend/kubernetes/constants"
 	crv1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
+	kubeutil "github.com/mlab-lattice/system/pkg/backend/kubernetes/util/kubernetes"
 	"github.com/mlab-lattice/system/pkg/definition"
 	"github.com/mlab-lattice/system/pkg/definition/tree"
 	"github.com/mlab-lattice/system/pkg/types"
@@ -22,7 +23,8 @@ func (kb *KubernetesBackend) BuildSystem(id types.SystemID, definitionRoot tree.
 		return "", err
 	}
 
-	result, err := kb.LatticeClient.LatticeV1().SystemBuilds(string(id)).Create(systemBuild)
+	namespace := kubeutil.SystemNamespace(kb.ClusterID, id)
+	result, err := kb.LatticeClient.LatticeV1().SystemBuilds(namespace).Create(systemBuild)
 	if err != nil {
 		return "", err
 	}
@@ -61,18 +63,14 @@ func systemBuild(id types.SystemID, definitionRoot tree.Node, v types.SystemVers
 }
 
 func (kb *KubernetesBackend) ListSystemBuilds(id types.SystemID) ([]types.SystemBuild, error) {
-	buildList, err := kb.LatticeClient.LatticeV1().SystemBuilds(string(id)).List(metav1.ListOptions{})
+	namespace := kubeutil.SystemNamespace(kb.ClusterID, id)
+	buildList, err := kb.LatticeClient.LatticeV1().SystemBuilds(namespace).List(metav1.ListOptions{})
 	if err != nil {
 		return nil, err
 	}
 
 	var builds []types.SystemBuild
 	for _, build := range buildList.Items {
-		// TODO: add this to the query
-		if strings.Compare(build.Labels[kubeconstants.LatticeNamespaceLabel], string(id)) != 0 {
-			continue
-		}
-
 		externalBuild, err := transformSystemBuild(&build)
 		if err != nil {
 			return nil, err
@@ -99,7 +97,8 @@ func (kb *KubernetesBackend) GetSystemBuild(id types.SystemID, bid types.SystemB
 }
 
 func (kb *KubernetesBackend) getInternalSystemBuild(id types.SystemID, bid types.SystemBuildID) (*crv1.SystemBuild, bool, error) {
-	result, err := kb.LatticeClient.LatticeV1().SystemBuilds(string(id)).Get(string(bid), metav1.GetOptions{})
+	namespace := kubeutil.SystemNamespace(kb.ClusterID, id)
+	result, err := kb.LatticeClient.LatticeV1().SystemBuilds(namespace).Get(string(bid), metav1.GetOptions{})
 	if err != nil {
 		if errors.IsNotFound(err) {
 			return nil, false, nil
