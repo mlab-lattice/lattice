@@ -4,7 +4,7 @@ const (
 	NamespaceDefault             = "default"
 	NamespaceKubeSystem          = "kube-system"
 	NamespaceLatticeInternal     = "internal"
-	NamespacePrefixLatticeSystem = "-system"
+	NamespacePrefixLatticeSystem = "system-"
 
 	LatticeNamespaceLabel = "namespace.lattice.mlab.com"
 )

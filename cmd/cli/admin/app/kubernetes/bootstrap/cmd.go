@@ -30,7 +30,7 @@ var (
 
 	defaultLatticeControllerManagerArgs = []string{
 		"-v", "5",
-		"-logtostderr",
+		"--logtostderr",
 	}
 
 	defaultManagerAPIArgs = []string{}
@@ -75,7 +75,7 @@ var Cmd = &cobra.Command{
 		}
 
 		clusterID := types.ClusterID(clusterIDString)
-		initialSystemID := types.SystemID(clusterIDString)
+		initialSystemID := types.SystemID(initialSystemIDString)
 
 		var kubeconfig *rest.Config
 		if !options.DryRun {

@@ -70,7 +70,7 @@ func NewSystem(clusterID types.ClusterID, systemID types.SystemID, definitionURL
 }
 
 func SystemID(namespace string) (types.ClusterID, error) {
-	parts := strings.Split("-", namespace)
+	parts := strings.Split(namespace, "-")
 	if len(parts) < 3 {
 		return "", fmt.Errorf("unexpected system namespace format: %v", namespace)
 	}

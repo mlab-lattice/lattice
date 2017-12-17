@@ -16,5 +16,5 @@ func InternalNamespace(clusterID types.ClusterID) string {
 }
 
 func SystemNamespace(clusterID types.ClusterID, systemID types.SystemID) string {
-	return ClusterNamespace(clusterID, fmt.Sprintf("%v-%v", kubeconstants.NamespacePrefixLatticeSystem, systemID))
+	return ClusterNamespace(clusterID, fmt.Sprintf("%v%v", kubeconstants.NamespacePrefixLatticeSystem, systemID))
 }

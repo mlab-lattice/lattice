@@ -19,6 +19,7 @@ import (
 
 	"github.com/golang/glog"
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 )
 
 var (
@@ -69,6 +70,9 @@ func Execute() {
 
 func init() {
 	cobra.OnInitialize(initCmd)
+
+	// https://flowerinthenight.com/blog/2017/12/01/golang-cobra-glog
+	pflag.CommandLine.AddGoFlagSet(goflag.CommandLine)
 
 	RootCmd.Flags().StringVar(&kubeconfig, "kubeconfig", "", "path to kubeconfig file")
 	RootCmd.Flags().StringVar(&clusterIDString, "cluster-id", "", "id of the cluster")

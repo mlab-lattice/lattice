@@ -10,6 +10,7 @@ import (
 	"github.com/mlab-lattice/system/pkg/types"
 
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 )
 
 var (
@@ -46,10 +47,15 @@ func Execute() {
 }
 
 func init() {
-	goflag.StringVar(&kubeconfig, "kubeconfig", "", "path to kubeconfig file")
-	goflag.StringVar(&clusterIDString, "cluster-id", "", "id of the lattice cluster")
-	goflag.StringVar(&workingDirectory, "workingDirectory", "/tmp/lattice-manager-api", "working directory to use")
-	goflag.IntVar(&port, "port", 8080, "port to bind to")
+	cobra.OnInitialize(initCmd)
+
+	// https://flowerinthenight.com/blog/2017/12/01/golang-cobra-glog
+	pflag.CommandLine.AddGoFlagSet(goflag.CommandLine)
+
+	RootCmd.Flags().StringVar(&kubeconfig, "kubeconfig", "", "path to kubeconfig file")
+	RootCmd.Flags().StringVar(&clusterIDString, "cluster-id", "", "id of the lattice cluster")
+	RootCmd.Flags().StringVar(&workingDirectory, "workingDirectory", "/tmp/lattice-manager-api", "working directory to use")
+	RootCmd.Flags().IntVar(&port, "port", 8080, "port to bind to")
 }
 
 func initCmd() {

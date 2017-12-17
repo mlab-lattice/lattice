@@ -112,7 +112,7 @@ func (b *DefaultBootstrapper) seedManagerAPI() ([]interface{}, error) {
 	args := []string{"--port", strconv.Itoa(int(b.Options.MasterComponents.ManagerAPI.Port)), "--cluster-id", string(b.ClusterID)}
 	args = append(args, b.Options.MasterComponents.ManagerAPI.Args...)
 	labels := map[string]string{
-		constants.MasterNodeLabelComponent: constants.MasterNodeComponentLatticeControllerManager,
+		constants.MasterNodeLabelComponent: constants.MasterNodeComponentManagerAPI,
 	}
 
 	managerAPIDaemonSet := &appsv1.DaemonSet{
