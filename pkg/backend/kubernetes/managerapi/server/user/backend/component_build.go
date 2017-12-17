@@ -6,7 +6,6 @@ import (
 
 	kubeconstants "github.com/mlab-lattice/system/pkg/backend/kubernetes/constants"
 	crv1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
-	"github.com/mlab-lattice/system/pkg/constants"
 	backend "github.com/mlab-lattice/system/pkg/managerapi/server/user"
 	"github.com/mlab-lattice/system/pkg/types"
 
@@ -105,15 +104,15 @@ func transformComponentBuild(name string, status crv1.ComponentBuildStatus) type
 func getComponentBuildState(state crv1.ComponentBuildState) types.ComponentBuildState {
 	switch state {
 	case crv1.ComponentBuildStatePending:
-		return constants.ComponentBuildStatePending
+		return types.ComponentBuildStatePending
 	case crv1.ComponentBuildStateQueued:
-		return constants.ComponentBuildStateQueued
+		return types.ComponentBuildStateQueued
 	case crv1.ComponentBuildStateRunning:
-		return constants.ComponentBuildStateRunning
+		return types.ComponentBuildStateRunning
 	case crv1.ComponentBuildStateSucceeded:
-		return constants.ComponentBuildStateSucceeded
+		return types.ComponentBuildStateSucceeded
 	case crv1.ComponentBuildStateFailed:
-		return constants.ComponentBuildStateFailed
+		return types.ComponentBuildStateFailed
 	default:
 		panic("unreachable")
 	}

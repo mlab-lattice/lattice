@@ -5,7 +5,6 @@ import (
 
 	kubeconstants "github.com/mlab-lattice/system/pkg/backend/kubernetes/constants"
 	crv1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
-	"github.com/mlab-lattice/system/pkg/constants"
 	"github.com/mlab-lattice/system/pkg/types"
 
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -94,13 +93,13 @@ func (kb *KubernetesBackend) ListSystemTeardowns(id types.SystemID) ([]types.Sys
 func getSystemTeardownState(state crv1.SystemTeardownState) types.SystemTeardownState {
 	switch state {
 	case crv1.SystemTeardownStatePending:
-		return constants.SystemTeardownStatePending
+		return types.SystemTeardownStatePending
 	case crv1.SystemTeardownStateInProgress:
-		return constants.SystemTeardownStateInProgress
+		return types.SystemTeardownStateInProgress
 	case crv1.SystemTeardownStateSucceeded:
-		return constants.SystemTeardownStateSucceeded
+		return types.SystemTeardownStateSucceeded
 	case crv1.SystemTeardownStateFailed:
-		return constants.SystemTeardownStateFailed
+		return types.SystemTeardownStateFailed
 	default:
 		panic("unreachable")
 	}

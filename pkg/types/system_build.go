@@ -8,6 +8,13 @@ import (
 type SystemBuildID string
 type SystemBuildState string
 
+const (
+	SystemBuildStatePending   SystemBuildState = "Pending"
+	SystemBuildStateRunning   SystemBuildState = "Running"
+	SystemBuildStateSucceeded SystemBuildState = "Succeeded"
+	SystemBuildStateFailed    SystemBuildState = "Failed"
+)
+
 type SystemBuild struct {
 	ID    SystemBuildID    `json:"id"`
 	State SystemBuildState `json:"state"`

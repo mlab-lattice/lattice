@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	crv1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
-	"github.com/mlab-lattice/system/pkg/constants"
 	"github.com/mlab-lattice/system/pkg/types"
 
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -86,13 +85,13 @@ func transformServiceBuild(namespace, name string, status *crv1.ServiceBuildStat
 func getServiceBuildState(state crv1.ServiceBuildState) types.ServiceBuildState {
 	switch state {
 	case crv1.ServiceBuildStatePending:
-		return constants.ServiceBuildStatePending
+		return types.ServiceBuildStatePending
 	case crv1.ServiceBuildStateRunning:
-		return constants.ServiceBuildStateRunning
+		return types.ServiceBuildStateRunning
 	case crv1.ServiceBuildStateSucceeded:
-		return constants.ServiceBuildStateSucceeded
+		return types.ServiceBuildStateSucceeded
 	case crv1.ServiceBuildStateFailed:
-		return constants.ServiceBuildStateFailed
+		return types.ServiceBuildStateFailed
 	default:
 		panic("unreachable")
 	}

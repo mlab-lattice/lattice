@@ -34,6 +34,7 @@ func (kb *KubernetesBackend) transformSystem(system *crv1.System) (*types.System
 
 	externalSystem := &types.System{
 		ID:            types.SystemID(name),
+		State:         getSystemState(system.Status.State),
 		DefinitionURL: system.Spec.DefinitionURL,
 	}
 
@@ -56,4 +57,19 @@ func (kb *KubernetesBackend) transformSystem(system *crv1.System) (*types.System
 
 	externalSystem.Services = externalServices
 	return externalSystem, nil
+}
+
+func getSystemState(state crv1.SystemState) types.SystemState {
+	switch state {
+	case crv1.SystemStateScaling:
+		return types.SystemStateScaling
+	case crv1.SystemStateUpdating:
+		return types.SystemStateUpdating
+	case crv1.SystemStateStable:
+		return types.SystemStateStable
+	case crv1.SystemStateFailed:
+		return types.SystemStateFailed
+	default:
+		panic("unreachable")
+	}
 }

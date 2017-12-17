@@ -6,7 +6,6 @@ import (
 
 	kubeconstants "github.com/mlab-lattice/system/pkg/backend/kubernetes/constants"
 	crv1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
-	"github.com/mlab-lattice/system/pkg/constants"
 	"github.com/mlab-lattice/system/pkg/definition"
 	"github.com/mlab-lattice/system/pkg/definition/tree"
 	"github.com/mlab-lattice/system/pkg/types"
@@ -150,13 +149,13 @@ func transformSystemBuild(build *crv1.SystemBuild) (types.SystemBuild, error) {
 func getSystemBuildState(state crv1.SystemBuildState) types.SystemBuildState {
 	switch state {
 	case crv1.SystemBuildStatePending:
-		return constants.SystemBuildStatePending
+		return types.SystemBuildStatePending
 	case crv1.SystemBuildStateRunning:
-		return constants.SystemBuildStateRunning
+		return types.SystemBuildStateRunning
 	case crv1.SystemBuildStateSucceeded:
-		return constants.SystemBuildStateSucceeded
+		return types.SystemBuildStateSucceeded
 	case crv1.SystemBuildStateFailed:
-		return constants.SystemBuildStateFailed
+		return types.SystemBuildStateFailed
 	default:
 		panic("unreachable")
 	}

@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/mlab-lattice/system/pkg/constants"
 	"github.com/mlab-lattice/system/pkg/types"
 
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -60,7 +59,8 @@ func tearDownAndWaitForSuccess(address string) error {
 	}
 
 	return wait.Poll(5*time.Second, 300*time.Second, func() (bool, error) {
-		resp, err := client.Get("http://" + address + "/namespaces/lattice-user-system/teardowns/" + teardownResponse.TeardownID)
+		// FIXME: support different system ids
+		resp, err := client.Get("http://" + address + "/systems/default/teardowns/" + teardownResponse.TeardownID)
 		if err != nil {
 			// FIXME: print these out at a certain verbosity
 			fmt.Printf("Got error polling teardown %v: %v\n", teardownResponse.TeardownID, err)
@@ -81,11 +81,11 @@ func tearDownAndWaitForSuccess(address string) error {
 		}
 
 		switch teardown.State {
-		case constants.SystemTeardownStateSucceeded:
+		case types.SystemTeardownStateSucceeded:
 			return true, nil
-		case constants.SystemTeardownStateFailed:
+		case types.SystemTeardownStateFailed:
 			return false, fmt.Errorf("teardown %v failed", teardownResponse.TeardownID)
-		case constants.SystemTeardownStatePending, constants.SystemTeardownStateInProgress:
+		case types.SystemTeardownStatePending, types.SystemTeardownStateInProgress:
 			fmt.Printf("teardown %v in state %v\n", teardownResponse.TeardownID, teardown.State)
 			return false, nil
 		default:

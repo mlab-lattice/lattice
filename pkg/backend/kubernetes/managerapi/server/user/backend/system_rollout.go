@@ -3,7 +3,6 @@ package backend
 import (
 	kubeconstants "github.com/mlab-lattice/system/pkg/backend/kubernetes/constants"
 	crv1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
-	"github.com/mlab-lattice/system/pkg/constants"
 	"github.com/mlab-lattice/system/pkg/definition/tree"
 	"github.com/mlab-lattice/system/pkg/types"
 
@@ -106,15 +105,15 @@ func (kb *KubernetesBackend) ListSystemRollouts(id types.SystemID) ([]types.Syst
 func getSystemRolloutState(state crv1.SystemRolloutState) types.SystemRolloutState {
 	switch state {
 	case crv1.SystemRolloutStatePending:
-		return constants.SystemRolloutStatePending
+		return types.SystemRolloutStatePending
 	case crv1.SystemRolloutStateAccepted:
-		return constants.SystemRolloutStateAccepted
+		return types.SystemRolloutStateAccepted
 	case crv1.SystemRolloutStateInProgress:
-		return constants.SystemRolloutStateInProgress
+		return types.SystemRolloutStateInProgress
 	case crv1.SystemRolloutStateSucceeded:
-		return constants.SystemRolloutStateSucceeded
+		return types.SystemRolloutStateSucceeded
 	case crv1.SystemRolloutStateFailed:
-		return constants.SystemRolloutStateFailed
+		return types.SystemRolloutStateFailed
 	default:
 		panic("unreachable")
 	}
