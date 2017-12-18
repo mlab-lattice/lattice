@@ -2,10 +2,11 @@ package main
 
 import (
 
-	localcontrollers "github.com/mlab-lattice/system/cmd/kubernetes/lattice-dns-local/localcontrollers"
+	"github.com/mlab-lattice/system/cmd/kubernetes/lattice-dns-local/localcontrollers"
 	controller "github.com/mlab-lattice/system/cmd/kubernetes/lattice-controller-manager/app/common"
 	controllermanager "github.com/mlab-lattice/system/cmd/kubernetes/lattice-controller-manager/app"
 	"github.com/mlab-lattice/system/pkg/constants"
+	"github.com/mlab-lattice/system/pkg/types"
 
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
@@ -13,7 +14,7 @@ import (
 	"github.com/golang/glog"
 )
 
-func Run(kubeconfig, provider, terraformModulePath string) {
+func Run(clusterIDString, kubeconfig, provider, terraformModulePath string) {
 
 	var config *rest.Config
 	var err error
@@ -26,7 +27,13 @@ func Run(kubeconfig, provider, terraformModulePath string) {
 		panic(err)
 	}
 
-	ctx := controllermanager.CreateControllerContext(config, nil, terraformModulePath)
+	clusterID := types.ClusterID(clusterIDString)
+
+	ctx, err := controllermanager.CreateControllerContext(clusterID ,config, nil, terraformModulePath)
+
+	if err != nil {
+		panic(err)
+	}
 
 	initializers := map[string]controller.Initializer{}
 

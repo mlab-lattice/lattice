@@ -18,7 +18,7 @@ func (b *DefaultBootstrapper) seedDNS() ([]interface{}, error) {
 	}
 
 	// TODO :: Handle namespace
-	namespace := kubeutil.GetFullNamespace("lattice", constants.NamespaceLatticeInternal)
+	namespace := kubeutil.InternalNamespace("lattice")
 	args := []string{}
 	args = append(args, b.Options.LocalComponents.LocalDNS.Args...)
 	labels := map[string]string{

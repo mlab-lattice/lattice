@@ -177,21 +177,21 @@ func (addrc *Controller) rewriteDNS(key string) error {
 	}()
 
 	// Work with the cache here.
-	lister, err := addrc.addressLister.List()
-
-	if err != nil {
-		return err
-	}
-
-	for address := range lister {
-		// switch based on type of address.
-
-		// cname change
-			// -- involves restarting the dnsmasq process after a certain amount of time
-
-		// host change
-			// -- involves sending sighup after rewriting hosts file
-	}
+	//lister, err := addrc.addressLister.List()
+	//
+	//if err != nil {
+	//	return err
+	//}
+	//
+	//for address := range lister {
+	//	// switch based on type of address.
+	//
+	//	// cname change
+	//		// -- involves restarting the dnsmasq process after a certain amount of time
+	//
+	//	// host change
+	//		// -- involves sending sighup after rewriting hosts file
+	//}
 
 	return nil
 }

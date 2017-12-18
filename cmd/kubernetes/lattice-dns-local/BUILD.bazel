@@ -13,6 +13,7 @@ go_library(
         "//cmd/kubernetes/lattice-controller-manager/app/common:go_default_library",
         "//cmd/kubernetes/lattice-dns-local/localcontrollers:go_default_library",
         "//pkg/constants:go_default_library",
+        "//pkg/types:go_default_library",
         "@com_github_golang_glog//:go_default_library",
         "@io_k8s_client_go//rest:go_default_library",
         "@io_k8s_client_go//tools/clientcmd:go_default_library",
