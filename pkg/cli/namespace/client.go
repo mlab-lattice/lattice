@@ -28,29 +28,27 @@ type NamespaceClient struct {
 	resources.BuildClient
 }
 
+func (ns *NamespaceClient) getBuildClient() resources.BuildClient {
+	return resources.BuildClient{
+		RestClient:    ns.RestClient,
+		DisplayAsJSON: ns.DisplayAsJSON,
+	}
+}
+
 func (ns *NamespaceClient) ComponentBuilds() ComponentBuildClient {
 	return componentbuilds.ComponentBuildClient{
-		BuildClient: resources.BuildClient{
-			RestClient:    ns.RestClient,
-			DisplayAsJSON: ns.DisplayAsJSON,
-		},
+		BuildClient: ns.getBuildClient(),
 	}
 }
 
 func (ns *NamespaceClient) ServiceBuilds() ServiceBuildClient {
 	return servicebuilds.ServiceBuildClient{
-		BuildClient: resources.BuildClient{
-			RestClient:    ns.RestClient,
-			DisplayAsJSON: ns.DisplayAsJSON,
-		},
+		BuildClient: ns.getBuildClient(),
 	}
 }
 
 func (ns *NamespaceClient) SystemBuilds() SystemBuildClient {
 	return systembuilds.SystemBuildClient{
-		BuildClient: resources.BuildClient{
-			RestClient:    ns.RestClient,
-			DisplayAsJSON: ns.DisplayAsJSON,
-		},
+		BuildClient: ns.getBuildClient(),
 	}
 }
