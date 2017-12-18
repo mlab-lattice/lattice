@@ -7,7 +7,7 @@ import (
 	crv1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	latticeclientset "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/clientset/versioned"
 	"github.com/mlab-lattice/system/pkg/definition/tree"
-	xdsapi "github.com/mlab-lattice/system/pkg/envoy/xdsapi/v1"
+	xdsapi "github.com/mlab-lattice/system/pkg/servicemesh/envoy/xdsapi/v1"
 
 	corev1 "k8s.io/api/core/v1"
 

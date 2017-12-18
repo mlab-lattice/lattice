@@ -4,11 +4,11 @@ import (
 	"fmt"
 	"net/http"
 
-	xdsapi "github.com/mlab-lattice/system/pkg/envoy/xdsapi/v1"
-	"github.com/mlab-lattice/system/pkg/envoy/xdsapi/v1/cds"
-	"github.com/mlab-lattice/system/pkg/envoy/xdsapi/v1/lds"
-	"github.com/mlab-lattice/system/pkg/envoy/xdsapi/v1/rds"
-	"github.com/mlab-lattice/system/pkg/envoy/xdsapi/v1/sds"
+	xdsapi "github.com/mlab-lattice/system/pkg/servicemesh/envoy/xdsapi/v1"
+	"github.com/mlab-lattice/system/pkg/servicemesh/envoy/xdsapi/v1/cds"
+	"github.com/mlab-lattice/system/pkg/servicemesh/envoy/xdsapi/v1/lds"
+	"github.com/mlab-lattice/system/pkg/servicemesh/envoy/xdsapi/v1/rds"
+	"github.com/mlab-lattice/system/pkg/servicemesh/envoy/xdsapi/v1/sds"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang/glog"

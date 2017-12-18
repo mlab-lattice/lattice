@@ -24,7 +24,6 @@ go_library(
         "//pkg/backend/kubernetes/util/kubernetes:go_default_library",
         "//pkg/definition/block:go_default_library",
         "@com_github_golang_glog//:go_default_library",
-        "@com_github_satori_go_uuid//:go_default_library",
         "@io_k8s_api//apps/v1:go_default_library",
         "@io_k8s_api//core/v1:go_default_library",
         "@io_k8s_apimachinery//pkg/api/errors:go_default_library",

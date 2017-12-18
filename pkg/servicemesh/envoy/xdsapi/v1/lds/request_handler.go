@@ -4,10 +4,10 @@ import (
 	"fmt"
 
 	"github.com/mlab-lattice/system/pkg/definition/tree"
-	xdsapi "github.com/mlab-lattice/system/pkg/envoy/xdsapi/v1"
-	"github.com/mlab-lattice/system/pkg/envoy/xdsapi/v1/constants"
-	"github.com/mlab-lattice/system/pkg/envoy/xdsapi/v1/types"
-	"github.com/mlab-lattice/system/pkg/envoy/xdsapi/v1/util"
+	xdsapi "github.com/mlab-lattice/system/pkg/servicemesh/envoy/xdsapi/v1"
+	"github.com/mlab-lattice/system/pkg/servicemesh/envoy/xdsapi/v1/constants"
+	"github.com/mlab-lattice/system/pkg/servicemesh/envoy/xdsapi/v1/types"
+	"github.com/mlab-lattice/system/pkg/servicemesh/envoy/xdsapi/v1/util"
 )
 
 type RequestHandler struct {

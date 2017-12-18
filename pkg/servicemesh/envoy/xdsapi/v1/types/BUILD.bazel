@@ -8,6 +8,6 @@ go_library(
         "listener.go",
         "route.go",
     ],
-    importpath = "github.com/mlab-lattice/system/pkg/envoy/xdsapi/v1/types",
+    importpath = "github.com/mlab-lattice/system/pkg/servicemesh/envoy/xdsapi/v1/types",
     visibility = ["//visibility:public"],
 )

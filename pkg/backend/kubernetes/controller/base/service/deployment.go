@@ -3,7 +3,6 @@ package service
 import (
 	"fmt"
 	"reflect"
-	"strconv"
 
 	kubeconstants "github.com/mlab-lattice/system/pkg/backend/kubernetes/constants"
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/controller/base/service/util"
@@ -19,12 +18,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 
 	"github.com/golang/glog"
-	"github.com/satori/go.uuid"
-)
-
-const (
-	envoyConfigDirectory           = "/etc/envoy"
-	envoyConfigDirectoryVolumeName = "envoyconfig"
 )
 
 func (c *Controller) syncServiceDeployment(service *crv1.Service, nodePool *crv1.NodePool) (*appsv1.Deployment, error) {
