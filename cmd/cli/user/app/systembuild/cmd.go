@@ -1,6 +1,7 @@
 package systembuild
 
 import (
+	"log"
 	"os"
 
 	"github.com/mlab-lattice/system/pkg/cli"
@@ -18,7 +19,7 @@ var (
 	url             string
 	namespace       types.LatticeNamespace
 	userClient      user.Client
-	namespaceClient cli.NamespaceClient
+	namespaceClient user.NamespaceClient
 )
 
 var Cmd = &cobra.Command{
@@ -35,7 +36,16 @@ var listCmd = &cobra.Command{
 	Short: "list system builds",
 	Args:  cobra.ExactArgs(0),
 	Run: func(cmd *cobra.Command, args []string) {
-		namespaceClient.SystemBuilds().List()
+		builds, err := namespaceClient.SystemBuilds()
+		if err != nil {
+			log.Panic(err)
+		}
+
+		if asJSON {
+			cli.DisplayAsJSON(builds)
+		} else {
+			cli.ShowSystemBuilds(builds)
+		}
 	},
 }
 
@@ -45,7 +55,16 @@ var getCmd = &cobra.Command{
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		id := types.SystemBuildID(args[0])
-		namespaceClient.SystemBuilds().Show(id)
+		build, err := namespaceClient.SystemBuild(id).Get()
+		if err != nil {
+			log.Panic(err)
+		}
+
+		if asJSON {
+			cli.DisplayAsJSON(build)
+		} else {
+			cli.ShowSystemBuild(*build)
+		}
 	},
 }
 
@@ -64,6 +83,5 @@ func initCmd() {
 	namespace = types.LatticeNamespace(namespaceString)
 
 	userClient = rest.NewClient(url)
-	restClient := userClient.Namespace(namespace)
-	namespaceClient = cli.NewNamespaceClient(restClient, asJSON)
+	namespaceClient = userClient.Namespace(namespace)
 }

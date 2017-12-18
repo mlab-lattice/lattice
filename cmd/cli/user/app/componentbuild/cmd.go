@@ -1,6 +1,7 @@
 package componentbuild
 
 import (
+	"log"
 	"os"
 
 	"github.com/mlab-lattice/system/pkg/cli"
@@ -20,7 +21,7 @@ var (
 	url             string
 	namespace       types.LatticeNamespace
 	userClient      user.Client
-	namespaceClient cli.NamespaceClient
+	namespaceClient user.NamespaceClient
 )
 
 var Cmd = &cobra.Command{
@@ -37,7 +38,17 @@ var listCmd = &cobra.Command{
 	Short: "list component builds",
 	Args:  cobra.ExactArgs(0),
 	Run: func(cmd *cobra.Command, args []string) {
-		namespaceClient.ComponentBuilds().List()
+		builds, err := namespaceClient.ComponentBuilds()
+		if err != nil {
+			log.Panic(err)
+		}
+
+		if asJSON {
+			cli.DisplayAsJSON(builds)
+		} else {
+			cli.ShowComponentBuilds(builds)
+		}
+
 	},
 }
 
@@ -47,7 +58,16 @@ var getCmd = &cobra.Command{
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		id := types.ComponentBuildID(args[0])
-		namespaceClient.ComponentBuilds().Show(id)
+		build, err := namespaceClient.ComponentBuild(id).Get()
+		if err != nil {
+			log.Panic(err)
+		}
+
+		if asJSON {
+			cli.DisplayAsJSON(build)
+		} else {
+			cli.ShowComponentBuild(*build)
+		}
 	},
 }
 
@@ -57,7 +77,11 @@ var logsCmd = &cobra.Command{
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		id := types.ComponentBuildID(args[0])
-		namespaceClient.ComponentBuilds().GetLogs(id, follow)
+		logs, err := namespaceClient.ComponentBuild(id).Logs(follow)
+		if err != nil {
+			log.Fatal(err)
+		}
+		cli.ShowComponentBuildLog(logs)
 	},
 }
 
@@ -79,6 +103,5 @@ func initCmd() {
 	namespace = types.LatticeNamespace(namespaceString)
 
 	userClient = rest.NewClient(url)
-	restClient := userClient.Namespace(namespace)
-	namespaceClient = cli.NewNamespaceClient(restClient, asJSON)
+	namespaceClient = userClient.Namespace(namespace)
 }

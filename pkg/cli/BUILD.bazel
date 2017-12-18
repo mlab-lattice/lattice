@@ -2,12 +2,20 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library")
 
 go_library(
     name = "go_default_library",
-    srcs = ["namespace.go"],
+    srcs = [
+        "component_builds.go",
+        "namespace.go",
+        "service_builds.go",
+        "system_builds.go",
+        "utils.go",
+    ],
     importpath = "github.com/mlab-lattice/system/pkg/cli",
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/cli/namespace:go_default_library",
         "//pkg/cli/resources:go_default_library",
         "//pkg/managerapi/client/user:go_default_library",
+        "//pkg/types:go_default_library",
+        "@com_github_olekukonko_tablewriter//:go_default_library",
     ],
 )
