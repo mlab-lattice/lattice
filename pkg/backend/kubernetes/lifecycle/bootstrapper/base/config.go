@@ -5,13 +5,14 @@ import (
 
 	kubeconstants "github.com/mlab-lattice/system/pkg/backend/kubernetes/constants"
 	crv1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
+	"github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/bootstrapper/util"
 	kubeutil "github.com/mlab-lattice/system/pkg/backend/kubernetes/util/kubernetes"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func (b *DefaultBootstrapper) seedConfig() ([]interface{}, error) {
-	namespace := kubeutil.GetFullNamespace(b.Options.Config.KubernetesNamespacePrefix, kubeconstants.NamespaceLatticeInternal)
+	namespace := kubeutil.InternalNamespace(b.ClusterID)
 
 	// Create config
 	config := &crv1.Config{
@@ -32,6 +33,12 @@ func (b *DefaultBootstrapper) seedConfig() ([]interface{}, error) {
 
 	fmt.Println("Seeding base lattice config")
 
-	config, err := b.LatticeClient.LatticeV1().Configs(namespace).Create(config)
-	return []interface{}{config}, err
+	result, err := util.IdempotentSeed(func() (interface{}, error) {
+		return b.LatticeClient.LatticeV1().Configs(namespace).Create(config)
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return []interface{}{result}, nil
 }

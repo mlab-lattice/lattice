@@ -18,6 +18,6 @@ func NewClient(managerAPIURL string) *Client {
 	}
 }
 
-func (uc *Client) Namespace(namespace types.LatticeNamespace) user.NamespaceClient {
-	return newNamespaceClient(uc.restClient, uc.baseURL, namespace)
+func (uc *Client) System(systemID types.SystemID) user.SystemClient {
+	return newNamespaceClient(uc.restClient, uc.baseURL, systemID)
 }

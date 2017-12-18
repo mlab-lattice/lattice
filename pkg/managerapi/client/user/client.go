@@ -9,10 +9,10 @@ import (
 type Client interface {
 	// TODO: add Namespaces() ([]types.LatticeNamespace, error)
 
-	Namespace(types.LatticeNamespace) NamespaceClient
+	System(types.SystemID) SystemClient
 }
 
-type NamespaceClient interface {
+type SystemClient interface {
 	SystemBuilds() ([]types.SystemBuild, error)
 	ServiceBuilds() ([]types.ServiceBuild, error)
 	ComponentBuilds() ([]types.ComponentBuild, error)

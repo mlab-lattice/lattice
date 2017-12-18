@@ -19,6 +19,7 @@ type SystemRolloutsGetter interface {
 type SystemRolloutInterface interface {
 	Create(*v1.SystemRollout) (*v1.SystemRollout, error)
 	Update(*v1.SystemRollout) (*v1.SystemRollout, error)
+	UpdateStatus(*v1.SystemRollout) (*v1.SystemRollout, error)
 	Delete(name string, options *meta_v1.DeleteOptions) error
 	DeleteCollection(options *meta_v1.DeleteOptions, listOptions meta_v1.ListOptions) error
 	Get(name string, options meta_v1.GetOptions) (*v1.SystemRollout, error)
@@ -96,6 +97,22 @@ func (c *systemRollouts) Update(systemRollout *v1.SystemRollout) (result *v1.Sys
 		Namespace(c.ns).
 		Resource("systemrollouts").
 		Name(systemRollout.Name).
+		Body(systemRollout).
+		Do().
+		Into(result)
+	return
+}
+
+// UpdateStatus was generated because the type contains a Status member.
+// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
+
+func (c *systemRollouts) UpdateStatus(systemRollout *v1.SystemRollout) (result *v1.SystemRollout, err error) {
+	result = &v1.SystemRollout{}
+	err = c.client.Put().
+		Namespace(c.ns).
+		Resource("systemrollouts").
+		Name(systemRollout.Name).
+		SubResource("status").
 		Body(systemRollout).
 		Do().
 		Into(result)

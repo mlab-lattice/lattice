@@ -30,7 +30,7 @@ func (b *DefaultBootstrapper) seedCRD() ([]interface{}, error) {
 }
 
 func convertCRDsToInterface(crds []*apiextensionsv1beta1.CustomResourceDefinition) []interface{} {
-	interfaces := []interface{}{}
+	var interfaces []interface{}
 	for _, crd := range crds {
 		interfaces = append(interfaces, interface{}(crd))
 	}

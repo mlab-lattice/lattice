@@ -10,4 +10,5 @@ go_library(
     ],
     importpath = "github.com/mlab-lattice/system/pkg/backend/kubernetes/terraform/aws",
     visibility = ["//visibility:public"],
+    deps = ["//pkg/types:go_default_library"],
 )

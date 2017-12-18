@@ -5,6 +5,7 @@ import (
 
 	crv1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	latticeclientset "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/clientset/versioned"
+	"github.com/mlab-lattice/system/pkg/types"
 
 	kubeclientset "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -34,6 +35,7 @@ type ManagerAPIOptions struct {
 }
 
 func NewBootstrapper(
+	clusterID types.ClusterID,
 	options *Options,
 	kubeConfig *rest.Config,
 	kubeClient kubeclientset.Interface,
@@ -50,6 +52,7 @@ func NewBootstrapper(
 
 	b := &DefaultBootstrapper{
 		Options:       options,
+		ClusterID:     clusterID,
 		KubeConfig:    kubeConfig,
 		KubeClient:    kubeClient,
 		Provider:      provider,
@@ -60,6 +63,7 @@ func NewBootstrapper(
 
 type DefaultBootstrapper struct {
 	Options    *Options
+	ClusterID  types.ClusterID
 	KubeConfig *rest.Config
 	KubeClient kubeclientset.Interface
 

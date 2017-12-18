@@ -3,7 +3,7 @@ package base
 import (
 	"fmt"
 
-	kubeconstants "github.com/mlab-lattice/system/pkg/backend/kubernetes/constants"
+	"github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/bootstrapper/util"
 	kubeutil "github.com/mlab-lattice/system/pkg/backend/kubernetes/util/kubernetes"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -18,7 +18,7 @@ func (b *DefaultBootstrapper) seedNamespaces() ([]interface{}, error) {
 			APIVersion: "v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name: kubeutil.GetFullNamespace(b.Options.Config.KubernetesNamespacePrefix, kubeconstants.NamespaceLatticeInternal),
+			Name: kubeutil.InternalNamespace(b.ClusterID),
 		},
 	}
 
@@ -28,9 +28,12 @@ func (b *DefaultBootstrapper) seedNamespaces() ([]interface{}, error) {
 
 	fmt.Println("Seeding namespaces")
 
-	namespace, err := b.KubeClient.CoreV1().Namespaces().Create(namespace)
+	result, err := util.IdempotentSeed(func() (interface{}, error) {
+		return b.KubeClient.CoreV1().Namespaces().Create(namespace)
+	})
 	if err != nil {
 		return nil, err
 	}
-	return []interface{}{namespace}, nil
+
+	return []interface{}{result}, nil
 }

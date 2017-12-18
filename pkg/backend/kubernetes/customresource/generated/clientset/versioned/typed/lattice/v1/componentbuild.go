@@ -19,6 +19,7 @@ type ComponentBuildsGetter interface {
 type ComponentBuildInterface interface {
 	Create(*v1.ComponentBuild) (*v1.ComponentBuild, error)
 	Update(*v1.ComponentBuild) (*v1.ComponentBuild, error)
+	UpdateStatus(*v1.ComponentBuild) (*v1.ComponentBuild, error)
 	Delete(name string, options *meta_v1.DeleteOptions) error
 	DeleteCollection(options *meta_v1.DeleteOptions, listOptions meta_v1.ListOptions) error
 	Get(name string, options meta_v1.GetOptions) (*v1.ComponentBuild, error)
@@ -96,6 +97,22 @@ func (c *componentBuilds) Update(componentBuild *v1.ComponentBuild) (result *v1.
 		Namespace(c.ns).
 		Resource("componentbuilds").
 		Name(componentBuild.Name).
+		Body(componentBuild).
+		Do().
+		Into(result)
+	return
+}
+
+// UpdateStatus was generated because the type contains a Status member.
+// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
+
+func (c *componentBuilds) UpdateStatus(componentBuild *v1.ComponentBuild) (result *v1.ComponentBuild, err error) {
+	result = &v1.ComponentBuild{}
+	err = c.client.Put().
+		Namespace(c.ns).
+		Resource("componentbuilds").
+		Name(componentBuild.Name).
+		SubResource("status").
 		Body(componentBuild).
 		Do().
 		Into(result)

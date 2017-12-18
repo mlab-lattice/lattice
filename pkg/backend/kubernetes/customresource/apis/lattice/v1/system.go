@@ -16,7 +16,6 @@ const (
 )
 
 // +genclient
-// +genclient:noStatus
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 type System struct {
@@ -28,34 +27,46 @@ type System struct {
 
 // +k8s:deepcopy-gen=false
 type SystemSpec struct {
-	Services map[tree.NodePath]SystemServicesInfo `json:"services"`
+	DefinitionURL string                                  `json:"definitionUrl"`
+	Services      map[tree.NodePath]SystemSpecServiceInfo `json:"services"`
 }
 
 // +k8s:deepcopy-gen=false
-type SystemServicesInfo struct {
+type SystemSpecServiceInfo struct {
 	Definition definition.Service `json:"definition"`
 
 	// ComponentBuildArtifacts maps Component names to the artifacts created by their build
 	ComponentBuildArtifacts map[string]ComponentBuildArtifacts `json:"componentBuildArtifacts"`
-
-	// ServiceName is the name of the Service CustomResource that is created by the lattice-system-controller
-	ServiceName *string `json:"serviceName,omitempty"`
-	// ServiceState is the last observed state of the Service CustomResource
-	ServiceState *ServiceState `json:"serviceState"`
 }
 
+// +k8s:deepcopy-gen=false
 type SystemStatus struct {
-	State   SystemState `json:"state,omitempty"`
-	Message string      `json:"message,omitempty"`
+	State              SystemState `json:"state"`
+	ObservedGeneration int64       `json:"observedGeneration"`
+
+	// FIXME: remove this when ObservedGeneration is supported for CRD
+	UpdateProcessed bool `json:"updated"`
+
+	// Maps a Service path to its Service.Name
+	Services map[tree.NodePath]string `json:"services"`
+
+	// Maps a Service.Name to its Service.Status
+	ServiceStatuses map[string]ServiceStatus `json:"serviceStatuses"`
 }
 
 type SystemState string
 
 const (
-	SystemStateRollingOut       SystemState = "RollingOut"
-	SystemStateRolloutSucceeded SystemState = "RolloutSucceeded"
-	SystemStateRolloutFailed    SystemState = "RolloutFailed"
+	SystemStateScaling  SystemState = "scaling"
+	SystemStateUpdating SystemState = "updating"
+	SystemStateStable   SystemState = "stable"
+	SystemStateFailed   SystemState = "failed"
 )
+
+type SystemStatusServiceInfo struct {
+	Name   string        `json:"name"`
+	Status ServiceStatus `json:"status"`
+}
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 

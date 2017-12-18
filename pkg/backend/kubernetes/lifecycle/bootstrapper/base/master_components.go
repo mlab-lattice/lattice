@@ -5,11 +5,12 @@ import (
 	"strconv"
 
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/constants"
+	"github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/bootstrapper/util"
 	kubeutil "github.com/mlab-lattice/system/pkg/backend/kubernetes/util/kubernetes"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	appsv1beta2 "k8s.io/api/apps/v1beta2"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 )
 
@@ -23,7 +24,7 @@ func (b *DefaultBootstrapper) seedMasterComponents() ([]interface{}, error) {
 		b.seedManagerAPI,
 	}
 
-	objects := []interface{}{}
+	var objects []interface{}
 	for _, seedMasterComponentFunc := range seedMasterComponentFuncs {
 		additionalObjects, err := seedMasterComponentFunc()
 		if err != nil {
@@ -40,24 +41,24 @@ func (b *DefaultBootstrapper) seedLatticeControllerManager() ([]interface{}, err
 	//		 either have to figure out how to have multiple lattice-controller-managers running (e.g. use leaderelect
 	//		 in client-go) or find the best way to ensure there's at most one version of something running (maybe
 	//		 StatefulSets?).
-	namespace := kubeutil.GetFullNamespace(b.Options.Config.KubernetesNamespacePrefix, constants.NamespaceLatticeInternal)
-	args := []string{"--provider", b.Provider}
+	namespace := kubeutil.InternalNamespace(b.ClusterID)
+	args := []string{"--provider", b.Provider, "--cluster-id", string(b.ClusterID)}
 	args = append(args, b.Options.MasterComponents.LatticeControllerManager.Args...)
 	labels := map[string]string{
 		constants.MasterNodeLabelComponent: constants.MasterNodeComponentLatticeControllerManager,
 	}
 
-	latticeControllerManagerDaemonSet := &appsv1beta2.DaemonSet{
+	latticeControllerManagerDaemonSet := &appsv1.DaemonSet{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "DaemonSet",
-			APIVersion: appsv1beta2.GroupName + "/v1beta2",
+			APIVersion: appsv1.GroupName + "/v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      constants.MasterNodeComponentLatticeControllerManager,
 			Namespace: namespace,
 			Labels:    labels,
 		},
-		Spec: appsv1beta2.DaemonSetSpec{
+		Spec: appsv1.DaemonSetSpec{
 			Selector: &metav1.LabelSelector{
 				MatchLabels: labels,
 			},
@@ -91,8 +92,14 @@ func (b *DefaultBootstrapper) seedLatticeControllerManager() ([]interface{}, err
 		return []interface{}{latticeControllerManagerDaemonSet}, nil
 	}
 
-	latticeControllerManagerDaemonSet, err := b.KubeClient.AppsV1beta2().DaemonSets(namespace).Create(latticeControllerManagerDaemonSet)
-	return []interface{}{latticeControllerManagerDaemonSet}, err
+	result, err := util.IdempotentSeed(func() (interface{}, error) {
+		return b.KubeClient.AppsV1().DaemonSets(namespace).Create(latticeControllerManagerDaemonSet)
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return []interface{}{result}, nil
 }
 
 func (b *DefaultBootstrapper) seedManagerAPI() ([]interface{}, error) {
@@ -101,24 +108,24 @@ func (b *DefaultBootstrapper) seedManagerAPI() ([]interface{}, error) {
 	//		 either have to figure out how to have multiple lattice-controller-managers running (e.g. use leaderelect
 	//		 in client-go) or find the best way to ensure there's at most one version of something running (maybe
 	//		 StatefulSets?).
-	namespace := kubeutil.GetFullNamespace(b.Options.Config.KubernetesNamespacePrefix, constants.NamespaceLatticeInternal)
-	args := []string{"--port", strconv.Itoa(int(b.Options.MasterComponents.ManagerAPI.Port))}
+	namespace := kubeutil.InternalNamespace(b.ClusterID)
+	args := []string{"--port", strconv.Itoa(int(b.Options.MasterComponents.ManagerAPI.Port)), "--cluster-id", string(b.ClusterID)}
 	args = append(args, b.Options.MasterComponents.ManagerAPI.Args...)
 	labels := map[string]string{
-		constants.MasterNodeLabelComponent: constants.MasterNodeComponentLatticeControllerManager,
+		constants.MasterNodeLabelComponent: constants.MasterNodeComponentManagerAPI,
 	}
 
-	managerAPIDaemonSet := &appsv1beta2.DaemonSet{
+	managerAPIDaemonSet := &appsv1.DaemonSet{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "DaemonSet",
-			APIVersion: appsv1beta2.GroupName + "/v1beta2",
+			APIVersion: appsv1.GroupName + "/v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      constants.MasterNodeComponentManagerAPI,
 			Namespace: namespace,
 			Labels:    labels,
 		},
-		Spec: appsv1beta2.DaemonSetSpec{
+		Spec: appsv1.DaemonSetSpec{
 			Selector: &metav1.LabelSelector{
 				MatchLabels: labels,
 			},
@@ -160,6 +167,12 @@ func (b *DefaultBootstrapper) seedManagerAPI() ([]interface{}, error) {
 		return []interface{}{managerAPIDaemonSet}, nil
 	}
 
-	managerAPIDaemonSet, err := b.KubeClient.AppsV1beta2().DaemonSets(namespace).Create(managerAPIDaemonSet)
-	return []interface{}{managerAPIDaemonSet}, err
+	result, err := util.IdempotentSeed(func() (interface{}, error) {
+		return b.KubeClient.AppsV1().DaemonSets(namespace).Create(managerAPIDaemonSet)
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return []interface{}{result}, nil
 }
