@@ -58,6 +58,11 @@ func (c *Controller) syncServiceStatus(
 		state = crv1.ServiceStateUpdating
 	}
 
+	// The cloud controller is responsible for creating the Kubernetes Service.
+	if kubeService == nil {
+		state = crv1.ServiceStateUpdating
+	}
+
 	// But if we have a failure, our updating or scaling has failed
 	// A failed status takes priority over an updating status
 	var failureInfo *crv1.ServiceFailureInfo

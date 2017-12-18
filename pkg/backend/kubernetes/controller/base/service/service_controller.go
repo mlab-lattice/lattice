@@ -12,6 +12,7 @@ import (
 	latticeclientset "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/clientset/versioned"
 	latticeinformers "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/informers/externalversions/lattice/v1"
 	latticelisters "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/listers/lattice/v1"
+	"github.com/mlab-lattice/system/pkg/backend/kubernetes/servicemesh"
 	kubeutil "github.com/mlab-lattice/system/pkg/backend/kubernetes/util/kubernetes"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -40,6 +41,7 @@ type Controller struct {
 	enqueueService func(cb *crv1.Service)
 
 	cloudProvider cloudprovider.Interface
+	serviceMesh   servicemesh.Interface
 
 	kubeClient    kubeclientset.Interface
 	latticeClient latticeclientset.Interface
@@ -180,6 +182,14 @@ func (c *Controller) handleConfigAdd(obj interface{}) {
 	defer c.configLock.Unlock()
 	c.config = config.DeepCopy().Spec
 
+	serviceMesh, err := servicemesh.NewCloudProvider(&c.config.ServiceMesh)
+	if err != nil {
+		// FIXME: what to do here?
+		return
+	}
+
+	c.serviceMesh = serviceMesh
+
 	if !c.configSet {
 		c.configSet = true
 		close(c.configSetChan)
@@ -194,6 +204,14 @@ func (c *Controller) handleConfigUpdate(old, cur interface{}) {
 	c.configLock.Lock()
 	defer c.configLock.Unlock()
 	c.config = curConfig.DeepCopy().Spec
+
+	serviceMesh, err := servicemesh.NewCloudProvider(&c.config.ServiceMesh)
+	if err != nil {
+		// FIXME: what to do here?
+		return
+	}
+
+	c.serviceMesh = serviceMesh
 }
 
 func (c *Controller) handleServiceAdd(obj interface{}) {
@@ -645,13 +663,6 @@ func (c *Controller) syncService(key string) error {
 	kubeService, err := c.syncServiceKubeService(service)
 	if err != nil {
 		return err
-	}
-
-	// The cloud controller is responsible for creating the Kubernetes Service.
-	// If it isn't created yet we'll just return and re-sync when the Service is added.
-	if kubeService == nil {
-		glog.V(4).Infof("Kubernetes Service for Service %v/%v has not been created yet", service.Namespace, service.Name)
-		return nil
 	}
 
 	serviceAddress, err := c.syncServiceServiceAddress(service)

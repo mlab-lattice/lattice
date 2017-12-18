@@ -24,6 +24,7 @@ type Config struct {
 type ConfigSpec struct {
 	Provider       ConfigProvider       `json:"providerConfig"`
 	ComponentBuild ConfigComponentBuild `json:"componentBuild"`
+	ServiceMesh    ConfigServiceMesh    `json:"serviceMesh"`
 	Envoy          ConfigEnvoy          `json:"envoy"`
 	Terraform      *ConfigTerraform     `json:"terraform,omitempty"`
 }
@@ -78,6 +79,10 @@ type ConfigComponentBuildDockerArtifact struct {
 	// If true push the image to the repository.
 	// Set to false for the local case.
 	Push bool `json:"push"`
+}
+
+type ConfigServiceMesh struct {
+	Envoy *ConfigEnvoy `json:"envoy"`
 }
 
 type ConfigEnvoy struct {

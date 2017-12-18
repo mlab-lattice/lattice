@@ -178,11 +178,6 @@ func (c *Controller) deploymentSpec(service *crv1.Service, name string, deployme
 		containers = append(containers, container)
 	}
 
-	// Add envoy containers
-	prepareEnvoyContainer, envoyContainer := envoyContainers(service, envoyConfig)
-	initContainers := []corev1.Container{prepareEnvoyContainer}
-	containers = append(containers, envoyContainer)
-
 	podAffinityTerm := corev1.PodAffinityTerm{
 		LabelSelector: &metav1.LabelSelector{
 			MatchLabels: deploymentLabels,
@@ -196,6 +191,7 @@ func (c *Controller) deploymentSpec(service *crv1.Service, name string, deployme
 		// so this TopologyKey doesn't really matter (besides being required).
 		TopologyKey: kubeconstants.LabelKeyNodeRoleNodePool,
 	}
+
 	// TODO(kevinrosendahl): Make this a PreferredDuringScheduling PodAntiAffinity if the service is running on a shared NodePool
 	podAntiAffinity := &corev1.PodAntiAffinity{
 		RequiredDuringSchedulingIgnoredDuringExecution: []corev1.PodAffinityTerm{podAffinityTerm},
@@ -212,19 +208,8 @@ func (c *Controller) deploymentSpec(service *crv1.Service, name string, deployme
 				Labels: deploymentLabels,
 			},
 			Spec: corev1.PodSpec{
-				// TODO: add user Volumes
-				Volumes: []corev1.Volume{
-					// Volume for Envoy config
-					{
-						Name: envoyConfigDirectoryVolumeName,
-						VolumeSource: corev1.VolumeSource{
-							EmptyDir: &corev1.EmptyDirVolumeSource{},
-						},
-					},
-				},
-				InitContainers: initContainers,
-				Containers:     containers,
-				DNSPolicy:      corev1.DNSDefault,
+				Containers: containers,
+				DNSPolicy:  corev1.DNSDefault,
 				Affinity: &corev1.Affinity{
 					NodeAffinity:    kubeutil.NodePoolNodeAffinity(nodePool),
 					PodAntiAffinity: podAntiAffinity,
@@ -238,6 +223,7 @@ func (c *Controller) deploymentSpec(service *crv1.Service, name string, deployme
 	}
 
 	spec = c.cloudProvider.TransformServiceDeploymentSpec(spec)
+	spec = c.serviceMesh.TransformServiceDeploymentSpec(service, spec)
 
 	return *spec, nil
 }
@@ -276,98 +262,6 @@ func containerFromComponent(component *block.Component, buildArtifacts *crv1.Com
 		// TODO(kevinrosendahl): add VolumeMounts
 		LivenessProbe: deploymentLivenessProbe(component.HealthCheck),
 	}
-}
-
-func envoyContainers(service *crv1.Service, config *crv1.ConfigEnvoy) (corev1.Container, corev1.Container) {
-	prepareEnvoy := corev1.Container{
-		// add a UUID to deal with the small chance that a user names their
-		// service component the same thing we name our envoy container
-		Name:  fmt.Sprintf("lattice-prepare-envoy-%v", uuid.NewV4().String()),
-		Image: config.PrepareImage,
-		Env: []corev1.EnvVar{
-			{
-				Name:  "EGRESS_PORT",
-				Value: strconv.Itoa(int(service.Spec.EnvoyEgressPort)),
-			},
-			{
-				Name:  "REDIRECT_EGRESS_CIDR_BLOCK",
-				Value: config.RedirectCIDRBlock,
-			},
-			{
-				Name:  "CONFIG_DIR",
-				Value: envoyConfigDirectory,
-			},
-			{
-				Name:  "ADMIN_PORT",
-				Value: strconv.Itoa(int(service.Spec.EnvoyAdminPort)),
-			},
-			{
-				Name: "XDS_API_HOST",
-				ValueFrom: &corev1.EnvVarSource{
-					FieldRef: &corev1.ObjectFieldSelector{
-						FieldPath: "status.hostIP",
-					},
-				},
-			},
-			{
-				Name:  "XDS_API_PORT",
-				Value: fmt.Sprintf("%v", config.XDSAPIPort),
-			},
-		},
-		VolumeMounts: []corev1.VolumeMount{
-			{
-				Name:      envoyConfigDirectoryVolumeName,
-				MountPath: envoyConfigDirectory,
-			},
-		},
-		// Need CAP_NET_ADMIN to manipulate iptables
-		SecurityContext: &corev1.SecurityContext{
-			Capabilities: &corev1.Capabilities{
-				Add: []corev1.Capability{"NET_ADMIN"},
-			},
-		},
-	}
-
-	var envoyPorts []corev1.ContainerPort
-	for component, ports := range service.Spec.Ports {
-		for _, port := range ports {
-			envoyPorts = append(
-				envoyPorts,
-				corev1.ContainerPort{
-					Name:          component + "-" + port.Name,
-					ContainerPort: port.EnvoyPort,
-				},
-			)
-		}
-	}
-
-	envoy := corev1.Container{
-		// add a UUID to deal with the small chance that a user names their
-		// service component the same thing we name our envoy container
-		// FIXME: this is make this not deterministic
-		Name:            fmt.Sprintf("lattice-envoy-%v", uuid.NewV4().String()),
-		Image:           config.Image,
-		ImagePullPolicy: corev1.PullIfNotPresent,
-		Command:         []string{"/usr/local/bin/envoy"},
-		Args: []string{
-			"-c",
-			fmt.Sprintf("%v/config.json", envoyConfigDirectory),
-			"--service-cluster",
-			service.Namespace,
-			"--service-node",
-			service.Spec.Path.ToDomain(false),
-		},
-		Ports: envoyPorts,
-		VolumeMounts: []corev1.VolumeMount{
-			{
-				Name:      envoyConfigDirectoryVolumeName,
-				MountPath: envoyConfigDirectory,
-				ReadOnly:  true,
-			},
-		},
-	}
-
-	return prepareEnvoy, envoy
 }
 
 func deploymentLivenessProbe(hc *block.ComponentHealthCheck) *corev1.Probe {
