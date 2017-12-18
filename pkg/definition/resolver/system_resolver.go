@@ -86,8 +86,8 @@ func (resolver *SystemResolver) readNodeFromFile(ctx *resolveContext, fileName s
 		GitResolverContext: gitResolverContext,
 	}
 
-	engine := language.NewEngine(fileResolver)
-	template, err := engine.ParseTemplate(fileName, make(map[string]interface{}))
+	engine := language.NewEngine()
+	template, err := engine.ParseTemplate(fileName, make(map[string]interface{}), fileResolver)
 
 	if err != nil {
 		return nil, err
