@@ -1,7 +1,6 @@
 package cli
 
 import (
-	"errors"
 	"io"
 	"os"
 
@@ -23,7 +22,7 @@ func ShowComponentBuild(build *types.ComponentBuild, output OutputFormat) error 
 	case OutputFormatJSON:
 		DisplayAsJSON(build)
 	default:
-		return errors.New("Invalid output format")
+		return newOutputFormatError(output)
 	}
 	return nil
 }
@@ -39,7 +38,7 @@ func ShowComponentBuilds(builds []types.ComponentBuild, output OutputFormat) err
 	case OutputFormatJSON:
 		DisplayAsJSON(builds)
 	default:
-		return errors.New("Invalid output format")
+		return newOutputFormatError(output)
 	}
 	return nil
 }

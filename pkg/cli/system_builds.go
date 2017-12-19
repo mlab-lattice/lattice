@@ -1,8 +1,6 @@
 package cli
 
 import (
-	"errors"
-
 	"github.com/mlab-lattice/system/pkg/types"
 )
 
@@ -22,7 +20,7 @@ func ShowSystemBuild(build *types.SystemBuild, output OutputFormat) error {
 	case OutputFormatJSON:
 		DisplayAsJSON(build)
 	default:
-		return errors.New("Invalid output format")
+		return newOutputFormatError(output)
 	}
 	return nil
 }
@@ -38,7 +36,7 @@ func ShowSystemBuilds(builds []types.SystemBuild, output OutputFormat) error {
 	case OutputFormatJSON:
 		DisplayAsJSON(builds)
 	default:
-		return errors.New("Invalid output format")
+		return newOutputFormatError(output)
 	}
 	return nil
 }
