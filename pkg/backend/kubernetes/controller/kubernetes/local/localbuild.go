@@ -95,7 +95,7 @@ func (addrc *Controller) Run(workers int, stopCh <-chan struct{}) {
 	// make sure the work queue is shutdown which will trigger workers to end
 	defer addrc.queue.ShutDown()
 
-	glog.Infof("Starting lcoal-dns controller")
+	glog.Infof("Starting local-dns controller")
 	defer glog.Infof("Shutting down local-dns controller")
 
 	// wait for your secondary caches to fill before starting your work.

@@ -51,7 +51,7 @@ func Run(clusterIDString, kubeconfig, provider, terraformModulePath string) {
 	glog.V(1).Info("Starting controllers")
 	StartControllers(ctx, initializers)
 
-	glog.V(4).Info("Starting informer factory")
+	glog.V(1).Info("Starting informer factory")
 	ctx.LatticeInformerFactory.Start(ctx.Stop)
 
 	select {}

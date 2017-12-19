@@ -62,18 +62,18 @@ func (b *DefaultBootstrapper) seedDNS() ([]interface{}, error) {
 							Image:	b.Options.LocalComponents.LocalDNSServer.Image,
 							Args:	server_args,
 							// TODO :: Ports
-							//Ports: []corev1.ContainerPort{
-							//	{
-							//		ContainerPort: 53,
-							//		Name: "dns",
-							//		Protocol: "UDP",
-							//	},
-							//	{
-							//		ContainerPort: 53,
-							//		Name: "dns-tcp",
-							//		Protocol: "TCP",
-							//	},
-							//},
+							Ports: []corev1.ContainerPort{
+								{
+									ContainerPort: 53,
+									Name: "dns",
+									Protocol: "UDP",
+								},
+								{
+									ContainerPort: 53,
+									Name: "dns-tcp",
+									Protocol: "TCP",
+								},
+							},
 						},
 					},
 					DNSPolicy:          corev1.DNSDefault,
