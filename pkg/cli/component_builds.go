@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"errors"
 	"io"
 	"os"
 
@@ -14,27 +15,33 @@ func getComponentBuildRenderMap(build *types.ComponentBuild) renderMap {
 	}
 }
 
-func ShowComponentBuild(build *types.ComponentBuild, output OutputFormat) {
+func ShowComponentBuild(build *types.ComponentBuild, output OutputFormat) error {
 	switch output {
-	case TABLE_OUTPUT:
+	case OutputFormatTable:
 		rm := getComponentBuildRenderMap(build)
 		showResource(rm)
-	case JSON_OUTPUT:
+	case OutputFormatJSON:
 		DisplayAsJSON(build)
+	default:
+		return errors.New("Invalid output format")
 	}
+	return nil
 }
 
-func ShowComponentBuilds(builds []types.ComponentBuild, output OutputFormat) {
+func ShowComponentBuilds(builds []types.ComponentBuild, output OutputFormat) error {
 	switch output {
-	case TABLE_OUTPUT:
+	case OutputFormatTable:
 		renderMaps := make([]renderMap, len(builds))
 		for i, b := range builds {
 			renderMaps[i] = getComponentBuildRenderMap(&b)
 		}
 		listResources(renderMaps)
-	case JSON_OUTPUT:
+	case OutputFormatJSON:
 		DisplayAsJSON(builds)
+	default:
+		return errors.New("Invalid output format")
 	}
+	return nil
 }
 
 func ShowComponentBuildLog(stream io.Reader) {

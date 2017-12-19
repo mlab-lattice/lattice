@@ -41,8 +41,10 @@ var listCmd = &cobra.Command{
 			log.Panic(err)
 		}
 
-		format := cli.GetFormatFromString(output)
-		cli.ShowSystemBuilds(builds, format)
+		renderErr := cli.ShowSystemBuilds(builds, cli.OutputFormat(output))
+		if renderErr != nil {
+			log.Panic(renderErr)
+		}
 	},
 }
 
@@ -57,8 +59,10 @@ var getCmd = &cobra.Command{
 			log.Panic(err)
 		}
 
-		format := cli.GetFormatFromString(output)
-		cli.ShowSystemBuild(build, format)
+		renderErr := cli.ShowSystemBuild(build, cli.OutputFormat(output))
+		if renderErr != nil {
+			log.Panic(renderErr)
+		}
 	},
 }
 

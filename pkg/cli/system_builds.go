@@ -1,6 +1,8 @@
 package cli
 
 import (
+	"errors"
+
 	"github.com/mlab-lattice/system/pkg/types"
 )
 
@@ -12,25 +14,31 @@ func getSystemBuildRenderMap(build *types.SystemBuild) renderMap {
 	}
 }
 
-func ShowSystemBuild(build *types.SystemBuild, output OutputFormat) {
+func ShowSystemBuild(build *types.SystemBuild, output OutputFormat) error {
 	switch output {
-	case TABLE_OUTPUT:
+	case OutputFormatTable:
 		rm := getSystemBuildRenderMap(build)
 		showResource(rm)
-	case JSON_OUTPUT:
+	case OutputFormatJSON:
 		DisplayAsJSON(build)
+	default:
+		return errors.New("Invalid output format")
 	}
+	return nil
 }
 
-func ShowSystemBuilds(builds []types.SystemBuild, output OutputFormat) {
+func ShowSystemBuilds(builds []types.SystemBuild, output OutputFormat) error {
 	switch output {
-	case TABLE_OUTPUT:
+	case OutputFormatTable:
 		renderMaps := make([]renderMap, len(builds))
 		for i, b := range builds {
 			renderMaps[i] = getSystemBuildRenderMap(&b)
 		}
 		listResources(renderMaps)
-	case JSON_OUTPUT:
+	case OutputFormatJSON:
 		DisplayAsJSON(builds)
+	default:
+		return errors.New("Invalid output format")
 	}
+	return nil
 }
