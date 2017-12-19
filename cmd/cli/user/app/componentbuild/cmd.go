@@ -66,7 +66,7 @@ var getCmd = &cobra.Command{
 		if asJSON {
 			cli.DisplayAsJSON(build)
 		} else {
-			cli.ShowComponentBuild(*build)
+			cli.ShowComponentBuild(build)
 		}
 	},
 }

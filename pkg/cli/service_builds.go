@@ -4,14 +4,14 @@ import (
 	"github.com/mlab-lattice/system/pkg/types"
 )
 
-func getServiceBuildRenderMap(sb types.ServiceBuild) RenderMap {
+func getServiceBuildRenderMap(build *types.ServiceBuild) RenderMap {
 	return RenderMap{
-		"ID":    string(sb.ID),
-		"State": string(sb.State),
+		"ID":    string(build.ID),
+		"State": string(build.State),
 	}
 }
 
-func ShowServiceBuild(build types.ServiceBuild) {
+func ShowServiceBuild(build *types.ServiceBuild) {
 	renderMap := getServiceBuildRenderMap(build)
 	showResource(renderMap)
 }
@@ -19,7 +19,7 @@ func ShowServiceBuild(build types.ServiceBuild) {
 func ShowServiceBuilds(builds []types.ServiceBuild) {
 	renderMaps := make([]RenderMap, len(builds))
 	for i, b := range builds {
-		renderMaps[i] = getServiceBuildRenderMap(b)
+		renderMaps[i] = getServiceBuildRenderMap(&b)
 	}
 	listResources(renderMaps)
 }
