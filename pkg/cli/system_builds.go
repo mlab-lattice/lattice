@@ -12,15 +12,25 @@ func getSystemBuildRenderMap(build *types.SystemBuild) renderMap {
 	}
 }
 
-func ShowSystemBuild(build *types.SystemBuild) {
-	rm := getSystemBuildRenderMap(build)
-	showResource(rm)
+func ShowSystemBuild(build *types.SystemBuild, output OutputFormat) {
+	switch output {
+	case TABLE_OUTPUT:
+		rm := getSystemBuildRenderMap(build)
+		showResource(rm)
+	case JSON_OUTPUT:
+		DisplayAsJSON(build)
+	}
 }
 
-func ShowSystemBuilds(builds []types.SystemBuild) {
-	renderMaps := make([]renderMap, len(builds))
-	for i, b := range builds {
-		renderMaps[i] = getSystemBuildRenderMap(&b)
+func ShowSystemBuilds(builds []types.SystemBuild, output OutputFormat) {
+	switch output {
+	case TABLE_OUTPUT:
+		renderMaps := make([]renderMap, len(builds))
+		for i, b := range builds {
+			renderMaps[i] = getSystemBuildRenderMap(&b)
+		}
+		listResources(renderMaps)
+	case JSON_OUTPUT:
+		DisplayAsJSON(builds)
 	}
-	listResources(renderMaps)
 }

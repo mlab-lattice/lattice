@@ -15,7 +15,7 @@ import (
 
 var (
 	follow bool
-	asJSON bool
+	output string
 
 	namespaceString string
 	url             string
@@ -43,12 +43,8 @@ var listCmd = &cobra.Command{
 			log.Panic(err)
 		}
 
-		if asJSON {
-			cli.DisplayAsJSON(builds)
-		} else {
-			cli.ShowComponentBuilds(builds)
-		}
-
+		format := cli.GetTypeFromString(output)
+		cli.ShowComponentBuilds(builds, format)
 	},
 }
 
@@ -63,11 +59,8 @@ var getCmd = &cobra.Command{
 			log.Panic(err)
 		}
 
-		if asJSON {
-			cli.DisplayAsJSON(build)
-		} else {
-			cli.ShowComponentBuild(build)
-		}
+		format := cli.GetTypeFromString(output)
+		cli.ShowComponentBuild(build, format)
 	},
 }
 
@@ -96,8 +89,8 @@ func init() {
 	Cmd.AddCommand(getCmd)
 	Cmd.AddCommand(logsCmd)
 	logsCmd.Flags().BoolVarP(&follow, "follow", "f", false, "whether or not to follow the logs")
-	getCmd.Flags().BoolVarP(&asJSON, "json", "", false, "whether or not to display output as JSON")
-	listCmd.Flags().BoolVarP(&asJSON, "json", "", false, "whether or not to display output as JSON")
+	getCmd.Flags().StringVarP(&output, "output", "o", "table", "whether or not to display output as JSON")
+	listCmd.Flags().StringVarP(&output, "output", "o", "table", "whether or not to display output as JSON")
 }
 
 func initCmd() {

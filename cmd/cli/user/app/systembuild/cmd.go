@@ -14,7 +14,7 @@ import (
 )
 
 var (
-	asJSON          bool
+	output          string
 	namespaceString string
 	url             string
 	namespace       types.LatticeNamespace
@@ -41,11 +41,8 @@ var listCmd = &cobra.Command{
 			log.Panic(err)
 		}
 
-		if asJSON {
-			cli.DisplayAsJSON(builds)
-		} else {
-			cli.ShowSystemBuilds(builds)
-		}
+		format := cli.GetTypeFromString(output)
+		cli.ShowSystemBuilds(builds, format)
 	},
 }
 
@@ -60,11 +57,8 @@ var getCmd = &cobra.Command{
 			log.Panic(err)
 		}
 
-		if asJSON {
-			cli.DisplayAsJSON(build)
-		} else {
-			cli.ShowSystemBuild(build)
-		}
+		format := cli.GetTypeFromString(output)
+		cli.ShowSystemBuild(build, format)
 	},
 }
 
@@ -73,7 +67,7 @@ func init() {
 
 	Cmd.PersistentFlags().StringVar(&url, "url", "", "URL of the manager-api for the system")
 	Cmd.PersistentFlags().StringVar(&namespaceString, "namespace", string(constants.UserSystemNamespace), "namespace to use")
-	Cmd.PersistentFlags().BoolVarP(&asJSON, "json", "", false, "whether or not to display output as JSON")
+	Cmd.PersistentFlags().StringVarP(&output, "output", "o", "table", "whether or not to display output as JSON")
 
 	Cmd.AddCommand(listCmd)
 	Cmd.AddCommand(getCmd)

@@ -14,17 +14,27 @@ func getComponentBuildRenderMap(build *types.ComponentBuild) renderMap {
 	}
 }
 
-func ShowComponentBuild(build *types.ComponentBuild) {
-	rm := getComponentBuildRenderMap(build)
-	showResource(rm)
+func ShowComponentBuild(build *types.ComponentBuild, output OutputFormat) {
+	switch output {
+	case TABLE_OUTPUT:
+		rm := getComponentBuildRenderMap(build)
+		showResource(rm)
+	case JSON_OUTPUT:
+		DisplayAsJSON(build)
+	}
 }
 
-func ShowComponentBuilds(builds []types.ComponentBuild) {
-	renderMaps := make([]renderMap, len(builds))
-	for i, b := range builds {
-		renderMaps[i] = getComponentBuildRenderMap(&b)
+func ShowComponentBuilds(builds []types.ComponentBuild, output OutputFormat) {
+	switch output {
+	case TABLE_OUTPUT:
+		renderMaps := make([]renderMap, len(builds))
+		for i, b := range builds {
+			renderMaps[i] = getComponentBuildRenderMap(&b)
+		}
+		listResources(renderMaps)
+	case JSON_OUTPUT:
+		DisplayAsJSON(builds)
 	}
-	listResources(renderMaps)
 }
 
 func ShowComponentBuildLog(stream io.Reader) {

@@ -11,15 +11,25 @@ func getServiceBuildRenderMap(build *types.ServiceBuild) renderMap {
 	}
 }
 
-func ShowServiceBuild(build *types.ServiceBuild) {
-	rm := getServiceBuildRenderMap(build)
-	showResource(rm)
+func ShowServiceBuild(build *types.ServiceBuild, output OutputFormat) {
+	switch output {
+	case TABLE_OUTPUT:
+		rm := getServiceBuildRenderMap(build)
+		showResource(rm)
+	case JSON_OUTPUT:
+		DisplayAsJSON(build)
+	}
 }
 
-func ShowServiceBuilds(builds []types.ServiceBuild) {
-	renderMaps := make([]renderMap, len(builds))
-	for i, b := range builds {
-		renderMaps[i] = getServiceBuildRenderMap(&b)
+func ShowServiceBuilds(builds []types.ServiceBuild, output OutputFormat) {
+	switch output {
+	case TABLE_OUTPUT:
+		renderMaps := make([]renderMap, len(builds))
+		for i, b := range builds {
+			renderMaps[i] = getServiceBuildRenderMap(&b)
+		}
+		listResources(renderMaps)
+	case JSON_OUTPUT:
+		DisplayAsJSON(builds)
 	}
-	listResources(renderMaps)
 }
