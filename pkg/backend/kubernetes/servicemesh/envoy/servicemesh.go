@@ -2,10 +2,13 @@ package envoy
 
 import (
 	"fmt"
+	//"reflect"
 	"strconv"
+	"strings"
 
 	crv1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 
+	"github.com/mlab-lattice/system/pkg/backend/kubernetes/constants"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 )
@@ -13,6 +16,9 @@ import (
 const (
 	envoyConfigDirectory           = "/etc/envoy"
 	envoyConfigDirectoryVolumeName = "envoyconfig"
+
+	initContainerNamePrepareEnvoy = constants.DeploymentContainerPrefixServiceMesh + "prepare-envoy"
+	containerNameEnvoy            = constants.DeploymentContainerPrefixServiceMesh + "envoy"
 )
 
 func NewEnvoyServiceMesh(config *crv1.ConfigEnvoy) *DefaultEnvoyServiceMesh {
@@ -49,11 +55,48 @@ func (sm *DefaultEnvoyServiceMesh) TransformServiceDeploymentSpec(service *crv1.
 	spec.Template.Spec.Volumes = volumes
 	return spec
 }
+
+func (sm *DefaultEnvoyServiceMesh) IsDeploymentSpecUpdated(
+	service *crv1.Service,
+	current, desired, untransformed *appsv1.DeploymentSpec,
+) (bool, string, *appsv1.DeploymentSpec) {
+	// Collect all of the envoy init containers
+	desiredEnvoyInitContainers := map[string]corev1.Container{}
+	for _, container := range desired.Template.Spec.InitContainers {
+		parts := strings.Split(container.Name, constants.DeploymentContainerPrefixServiceMesh)
+		if len(parts) != 2 {
+			// not a service-mesh init container
+			continue
+		}
+
+		desiredEnvoyInitContainers[container.Name] = container
+	}
+
+	return true, "", nil
+	// Check to make sure all of the envoy init containers exist, and that there are no extras
+	//currentEnvoyInitContainers := map[string]struct{}{}
+	//for _, container := range current.Template.Spec.InitContainers {
+	//	parts := strings.Split(container.Name, constants.DeploymentContainerPrefixServiceMesh)
+	//	if len(parts) != 2 {
+	//		// not a service-mesh init container
+	//		continue
+	//	}
+	//
+	//	desiredContainer, ok := desiredEnvoyInitContainers[container.Name]
+	//	if !ok {
+	//		// Has a container that it shouldn't have. current is not Updated
+	//		return false, fmt.Sprintf("has extra envoy init container %v", container.Name), nil
+	//	}
+	//
+	//	//if !reflect.DeepEqual(container, desiredContainer) {
+	//	//	// container spec is out of date
+	//	//}
+	//}
+}
+
 func (sm *DefaultEnvoyServiceMesh) envoyContainers(service *crv1.Service) (corev1.Container, corev1.Container) {
 	prepareEnvoy := corev1.Container{
-		// TODO: what if a user makes an init component with this name?
-		// probably want to add a prefix to user components
-		Name:  "lattice-prepare-envoy",
+		Name:  initContainerNamePrepareEnvoy,
 		Image: sm.Config.PrepareImage,
 		Env: []corev1.EnvVar{
 			{
@@ -113,9 +156,7 @@ func (sm *DefaultEnvoyServiceMesh) envoyContainers(service *crv1.Service) (corev
 	}
 
 	envoy := corev1.Container{
-		// TODO: what if a user makes an init component with this name?
-		// probably want to add a prefix to user components
-		Name:            "lattice-envoy",
+		Name:            containerNameEnvoy,
 		Image:           sm.Config.Image,
 		ImagePullPolicy: corev1.PullIfNotPresent,
 		Command:         []string{"/usr/local/bin/envoy"},
