@@ -1,18 +1,20 @@
 package main
 
 import (
+	"fmt"
+	"time"
 
 	"github.com/mlab-lattice/system/cmd/kubernetes/lattice-dns-local/localcontrollers"
 	controller "github.com/mlab-lattice/system/cmd/kubernetes/lattice-controller-manager/app/common"
-	controllermanager "github.com/mlab-lattice/system/cmd/kubernetes/lattice-controller-manager/app"
+	latticeinformers "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/informers/externalversions"
 	"github.com/mlab-lattice/system/pkg/constants"
 	"github.com/mlab-lattice/system/pkg/types"
 
+	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 
 	"github.com/golang/glog"
-	"github.com/mlab-lattice/system/bazel-system/external/go_sdk/src/fmt"
 )
 
 func Run(clusterIDString, kubeconfig, provider, terraformModulePath string) {
@@ -33,8 +35,7 @@ func Run(clusterIDString, kubeconfig, provider, terraformModulePath string) {
 	fmt.Println("PROVIDER:")
 	fmt.Println(provider)
 
-	// This is failing - calling Cloud Controller which is unsupported. although provider still not being set in the panic message.
-	ctx, err := controllermanager.CreateControllerContext(clusterID ,config, nil, terraformModulePath)
+	ctx, err := CreateControllerContext(clusterID ,config, nil, terraformModulePath)
 
 	if err != nil {
 		panic(err)
@@ -58,6 +59,41 @@ func Run(clusterIDString, kubeconfig, provider, terraformModulePath string) {
 	ctx.LatticeInformerFactory.Start(ctx.Stop)
 
 	select {}
+}
+
+func CreateControllerContext(
+	clusterID types.ClusterID,
+	kubeconfig *rest.Config,
+	stop <-chan struct{},
+	terraformModulePath string,
+) (controller.Context, error) {
+
+	kcb := controller.KubeClientBuilder{
+		Kubeconfig: kubeconfig,
+	}
+	lcb := controller.LatticeClientBuilder{
+		Kubeconfig: kubeconfig,
+	}
+
+	versionedKubeClient := kcb.ClientOrDie("shared-kubeinformers")
+	kubeInformers := kubeinformers.NewSharedInformerFactory(versionedKubeClient, time.Duration(12*time.Hour))
+
+	versionedLatticeClient := lcb.ClientOrDie("shared-latticeinformers")
+	latticeInformers := latticeinformers.NewSharedInformerFactory(versionedLatticeClient, time.Duration(12*time.Hour))
+
+	ctx := controller.Context{
+		ClusterID:     clusterID,
+
+		KubeInformerFactory:    kubeInformers,
+		LatticeInformerFactory: latticeInformers,
+		KubeClientBuilder:      kcb,
+		LatticeClientBuilder:   lcb,
+
+		Stop: stop,
+
+		TerraformModulePath: terraformModulePath,
+	}
+	return ctx, nil
 }
 
 func StartControllers(ctx controller.Context, initializers map[string]controller.Initializer) {

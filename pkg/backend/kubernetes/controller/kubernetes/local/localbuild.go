@@ -25,7 +25,7 @@ type Controller struct {
 
 	latticeClient latticeclientset.Interface
 
-	addressLister latticelisters.SystemLister
+	addressLister latticelisters.SystemBuildLister
 	addressListerSynced cache.InformerSynced
 
 	queue workqueue.RateLimitingInterface
@@ -33,12 +33,11 @@ type Controller struct {
 
 func NewController(
 	latticeClient latticeclientset.Interface,
-	addressInformer latticeinformers.SystemInformer,
+	addressInformer latticeinformers.SystemBuildInformer,
 ) *Controller {
-	// Make a controller
-	// TODO :: Rename addrc to addrc or something
 	addrc := &Controller{
 		latticeClient: latticeClient,
+		queue:         workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "system"),
 	}
 
 	addrc.syncAddressUpdate = addrc.rewriteDNS
