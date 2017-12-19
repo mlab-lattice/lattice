@@ -2,7 +2,7 @@ def rules_go_dependencies():
   native.git_repository(
       name = "io_bazel_rules_go",
       remote = "https://github.com/bazelbuild/rules_go.git",
-      commit = "bfb156af43d2eabdabfcd2a9b668b2d6bf708fbb",
+      commit = "737df20c53499fd84b67f04c6ca9ccdee2e77089",
   )
 
 def bazel_gazelle_dependencies():

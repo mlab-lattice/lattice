@@ -47,17 +47,13 @@ func (c *Controller) syncServiceDeployment(service *crv1.Service, nodePool *crv1
 
 func (c *Controller) syncExistingDeployment(service *crv1.Service, nodePool *crv1.NodePool, deployment *appsv1.Deployment) (*appsv1.Deployment, error) {
 	// Need a consistent view of our config while generating the deployment spec
-	var configCopy *crv1.ConfigSpec
-	{
-		c.configLock.RLock()
-		defer c.configLock.RUnlock()
-		configCopy = c.config.DeepCopy()
-	}
+	c.configLock.RLock()
+	defer c.configLock.RUnlock()
 
 	name := deploymentName(service)
 	labels := deploymentLabels(service)
 
-	desiredSpec, err := c.deploymentSpec(service, name, labels, nodePool, &configCopy.Envoy)
+	desiredSpec, err := c.deploymentSpec(service, name, labels, nodePool)
 	if err != nil {
 		return nil, err
 	}
@@ -121,18 +117,14 @@ func (c *Controller) createNewDeployment(service *crv1.Service, nodePool *crv1.N
 }
 
 func (c *Controller) newDeployment(service *crv1.Service, nodePool *crv1.NodePool) (*appsv1.Deployment, error) {
-	var configCopy *crv1.ConfigSpec
-	{
-		// Need a consistent view of our config while generating the deployment spec
-		c.configLock.RLock()
-		defer c.configLock.RUnlock()
-		configCopy = c.config.DeepCopy()
-	}
+	// Need a consistent view of our config while generating the deployment spec
+	c.configLock.RLock()
+	defer c.configLock.RUnlock()
 
 	name := deploymentName(service)
 	labels := deploymentLabels(service)
 
-	spec, err := c.deploymentSpec(service, name, labels, nodePool, &configCopy.Envoy)
+	spec, err := c.deploymentSpec(service, name, labels, nodePool)
 	if err != nil {
 		return nil, err
 	}
@@ -160,7 +152,7 @@ func deploymentLabels(service *crv1.Service) map[string]string {
 	}
 }
 
-func (c *Controller) deploymentSpec(service *crv1.Service, name string, deploymentLabels map[string]string, nodePool *crv1.NodePool, envoyConfig *crv1.ConfigEnvoy) (appsv1.DeploymentSpec, error) {
+func (c *Controller) deploymentSpec(service *crv1.Service, name string, deploymentLabels map[string]string, nodePool *crv1.NodePool) (appsv1.DeploymentSpec, error) {
 	replicas := service.Spec.NumInstances
 
 	// Create a container for each Component in the Service

@@ -14,7 +14,7 @@ type Interface interface {
 	TransformServiceDeploymentSpec(*crv1.Service, *appsv1.DeploymentSpec) *appsv1.DeploymentSpec
 }
 
-func NewCloudProvider(config *crv1.ConfigServiceMesh) (Interface, error) {
+func NewServiceMesh(config *crv1.ConfigServiceMesh) (Interface, error) {
 	if config.Envoy != nil {
 		return envoy.NewEnvoyServiceMesh(config.Envoy), nil
 	}

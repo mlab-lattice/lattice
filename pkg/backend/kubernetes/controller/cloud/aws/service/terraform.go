@@ -146,7 +146,7 @@ func (c *Controller) getServiceTerraformConfig(service *crv1.Service) (interface
 		return nil, err
 	}
 
-	awsConfig := c.config.Provider.AWS
+	awsConfig := c.config.CloudProvider.AWS
 
 	config := tfconfig.Config{
 		Provider: awstf.Provider{
@@ -170,7 +170,7 @@ func (c *Controller) getServiceTerraformConfig(service *crv1.Service) (interface
 }
 
 func (c *Controller) getServiceDedicatedPrivateTerraformModule(service *crv1.Service) (interface{}, error) {
-	awsConfig := c.config.Provider.AWS
+	awsConfig := c.config.CloudProvider.AWS
 
 	systemID, err := kubeutil.SystemID(service.Namespace)
 	if err != nil {
@@ -199,7 +199,7 @@ func (c *Controller) getServiceDedicatedPrivateTerraformModule(service *crv1.Ser
 }
 
 func (c *Controller) getServiceDedicatedPublicHTTPTerraformModule(service *crv1.Service, kubeSvc *corev1.Service) (interface{}, error) {
-	awsConfig := c.config.Provider.AWS
+	awsConfig := c.config.CloudProvider.AWS
 
 	systemName, err := kubeutil.SystemID(service.Namespace)
 	if err != nil {

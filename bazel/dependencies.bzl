@@ -146,7 +146,12 @@ def _docker_dependencies_debian_pkg():
   dpkg_list(
       name = "package_bundle",
       packages = [
-          # iptables and dependencies (from https://packages.debian.org/sid/iptables)
+          # libstdc++6 and dependencies (from https://packages.debian.org/stretch/libstdc%2B%2B6)
+          # needed for admin CLI now for some reason
+          "libstdc++6",
+          "libgcc1",
+
+          # iptables and dependencies (from https://packages.debian.org/stretch/iptables)
           "iptables",
           "libip4tc0",
           "libip6tc0",
