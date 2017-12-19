@@ -10,7 +10,7 @@ import (
 	"github.com/olekukonko/tablewriter"
 )
 
-func showResource(renderMap map[string]string) {
+func showResource(renderMap RenderMap) {
 	table := tablewriter.NewWriter(os.Stdout)
 	table.SetRowLine(true)
 	for k, v := range renderMap {
@@ -19,7 +19,7 @@ func showResource(renderMap map[string]string) {
 	table.Render()
 }
 
-func listResources(renderMaps []map[string]string) {
+func listResources(renderMaps []RenderMap) {
 	if len(renderMaps) > 0 {
 		keys := []string{}
 		for k := range renderMaps[0] {
