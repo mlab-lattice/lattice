@@ -3,12 +3,16 @@ package local
 import (
 	"fmt"
 
+	crv1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
+
 	kubeclientset "k8s.io/client-go/kubernetes"
+	"github.com/mlab-lattice/system/pkg/types"
 )
 
 type Options struct {
-	DryRun          bool
-	LocalComponents LocalComponentOptions
+	DryRun           bool
+	Config           crv1.ConfigSpec
+	LocalComponents  LocalComponentOptions
 }
 
 type LocalComponentOptions struct {
@@ -20,13 +24,24 @@ type LocalDNSOptions struct {
 	Args  []string
 }
 
-func NewBootstrapper(options *Options, kubeClient kubeclientset.Interface) (*DefaultBootstrapper, error) {
+func NewBootstrapper(
+	ClusterID types.ClusterID,
+	options *Options,
+	kubeClient kubeclientset.Interface,
+) (*DefaultBootstrapper, error) {
 	if options == nil {
 		return nil, fmt.Errorf("options required")
 	}
 
+	provider, err := crv1.GetProviderFromConfigSpec(&options.Config)
+	if err != nil {
+		return nil, err
+	}
+
 	b := &DefaultBootstrapper{
 		Options:    options,
+		Provider: 	provider,
+		ClusterID:	ClusterID,
 		KubeClient: kubeClient,
 	}
 
@@ -34,9 +49,10 @@ func NewBootstrapper(options *Options, kubeClient kubeclientset.Interface) (*Def
 }
 
 type DefaultBootstrapper struct {
-	Options *Options
-
-	KubeClient kubeclientset.Interface
+	Options	 	*Options
+	ClusterID	types.ClusterID
+	Provider   	string
+	KubeClient 	kubeclientset.Interface
 }
 
 func (b *DefaultBootstrapper) LocalBootstrap() ([]interface{}, error) {

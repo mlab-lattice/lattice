@@ -19,8 +19,10 @@ func (b *DefaultBootstrapper) seedDNS() ([]interface{}, error) {
 
 	// TODO :: Handle namespace
 	namespace := kubeutil.InternalNamespace("lattice")
-	args := []string{}
+
+	args := []string{"--provider", b.Provider, "--cluster-id", string(b.ClusterID)}
 	args = append(args, b.Options.LocalComponents.LocalDNS.Args...)
+
 	labels := map[string]string{
 		"key" : constants.MasterNodeDNSServer,
 	}

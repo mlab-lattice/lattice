@@ -12,6 +12,7 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 
 	"github.com/golang/glog"
+	"github.com/mlab-lattice/system/bazel-system/external/go_sdk/src/fmt"
 )
 
 func Run(clusterIDString, kubeconfig, provider, terraformModulePath string) {
@@ -29,6 +30,10 @@ func Run(clusterIDString, kubeconfig, provider, terraformModulePath string) {
 
 	clusterID := types.ClusterID(clusterIDString)
 
+	fmt.Println("PROVIDER:")
+	fmt.Println(provider)
+
+	// This is failing - calling Cloud Controller which is unsupported. although provider still not being set in the panic message.
 	ctx, err := controllermanager.CreateControllerContext(clusterID ,config, nil, terraformModulePath)
 
 	if err != nil {
