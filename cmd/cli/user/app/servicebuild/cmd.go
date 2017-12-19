@@ -1,11 +1,10 @@
 package servicebuild
 
 import (
-	"encoding/json"
-	"fmt"
 	"log"
 	"os"
 
+	"github.com/mlab-lattice/system/pkg/cli"
 	"github.com/mlab-lattice/system/pkg/constants"
 	"github.com/mlab-lattice/system/pkg/managerapi/client/user"
 	"github.com/mlab-lattice/system/pkg/managerapi/client/user/rest"
@@ -15,6 +14,7 @@ import (
 )
 
 var (
+	output          string
 	namespaceString string
 	url             string
 	namespace       types.LatticeNamespace
@@ -38,14 +38,12 @@ var listCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		builds, err := namespaceClient.ServiceBuilds()
 		if err != nil {
-			log.Fatal(err)
+			log.Panic(err)
 		}
 
-		buf, err := json.MarshalIndent(builds, "", "  ")
-		if err != nil {
-			log.Fatal(err)
+		if err := cli.ShowServiceBuilds(builds, cli.OutputFormat(output)); err != nil {
+			log.Panic(err)
 		}
-		fmt.Println(string(buf))
 	},
 }
 
@@ -57,14 +55,12 @@ var getCmd = &cobra.Command{
 		id := types.ServiceBuildID(args[0])
 		build, err := namespaceClient.ServiceBuild(id).Get()
 		if err != nil {
-			log.Fatal(err)
+			log.Panic(err)
 		}
 
-		buf, err := json.MarshalIndent(build, "", "  ")
-		if err != nil {
-			log.Fatal(err)
+		if err := cli.ShowServiceBuild(build, cli.OutputFormat(output)); err != nil {
+			log.Panic(err)
 		}
-		fmt.Println(string(buf))
 	},
 }
 
@@ -72,7 +68,8 @@ func init() {
 	cobra.OnInitialize(initCmd)
 
 	Cmd.PersistentFlags().StringVar(&url, "url", "", "URL of the manager-api for the system")
-	Cmd.PersistentFlags().StringVar(&namespaceString, "namespace", string(constants.NamespaceDefault), "namespace to use")
+	Cmd.PersistentFlags().StringVar(&namespaceString, "namespace", string(constants.UserSystemNamespace), "namespace to use")
+	Cmd.PersistentFlags().StringVarP(&output, "output", "o", "table", "whether or not to display output as JSON")
 
 	Cmd.AddCommand(listCmd)
 	Cmd.AddCommand(getCmd)
