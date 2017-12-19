@@ -27,7 +27,6 @@ func ShowComponentBuilds(builds []types.ComponentBuild) {
 	listResources(renderMaps)
 }
 
-func ShowComponentBuildLog(stream io.ReadCloser) {
-	defer stream.Close()
+func ShowComponentBuildLog(stream io.Reader) {
 	io.Copy(os.Stdout, stream)
 }

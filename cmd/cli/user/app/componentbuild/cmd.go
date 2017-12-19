@@ -82,6 +82,7 @@ var logsCmd = &cobra.Command{
 			log.Fatal(err)
 		}
 		cli.ShowComponentBuildLog(logs)
+		logs.Close()
 	},
 }
 
