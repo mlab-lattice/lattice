@@ -487,7 +487,7 @@ func (c *Controller) handleServiceAddressAdd(obj interface{}) {
 	if address.DeletionTimestamp != nil {
 		// On a restart of the controller manager, it's possible for an object to
 		// show up in a state that is already pending deletion.
-		c.handleKubeServiceDelete(address)
+		c.handleServiceAddressDelete(address)
 		return
 	}
 

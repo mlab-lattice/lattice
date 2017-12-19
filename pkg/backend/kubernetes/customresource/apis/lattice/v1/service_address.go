@@ -39,7 +39,7 @@ type ServiceAddressPortEndpointGroupLoadBalanceConfig struct {
 
 type ServiceAddressPort struct {
 	HTTP *ServiceAddressPortHTTPConfig `json:"http,omitempty"`
-	TCP  *ServiceAddressPortTCPConfig  `json:"tcp"`
+	TCP  *ServiceAddressPortTCPConfig  `json:"tcp,omitempty"`
 }
 
 type ServiceAddressPortHTTPConfig struct {
@@ -93,5 +93,5 @@ const (
 type ServiceAddressList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata"`
-	Items           []SystemTeardown `json:"items"`
+	Items           []ServiceAddress `json:"items"`
 }

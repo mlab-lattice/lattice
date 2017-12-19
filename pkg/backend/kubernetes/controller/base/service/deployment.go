@@ -62,6 +62,8 @@ func (c *Controller) syncExistingDeployment(service *crv1.Service, nodePool *crv
 	podTemplatesSemanticallyEqual := util.PodTemplateSpecsSemanticallyEqual(desiredPodTemplate, deployment.Spec.Template)
 	if !podTemplatesSemanticallyEqual {
 		glog.V(4).Infof("Deployment %v for Service %v/%v had out of date pod template, updating", deployment.Name, service.Namespace, service.Name)
+		fmt.Printf("current: %v\n%#v\n", deployment.Spec.Template, deployment.Spec.Template)
+		fmt.Printf("desired: %v\n%#v\n", desiredPodTemplate, desiredPodTemplate)
 		return c.updateDeploymentSpec(deployment, desiredSpec)
 	}
 

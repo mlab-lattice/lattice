@@ -486,7 +486,7 @@ func (in *EndpointList) DeepCopyInto(out *EndpointList) {
 	out.ListMeta = in.ListMeta
 	if in.Items != nil {
 		in, out := &in.Items, &out.Items
-		*out = make([]SystemTeardown, len(*in))
+		*out = make([]Endpoint, len(*in))
 		for i := range *in {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
@@ -599,7 +599,7 @@ func (in *NodePoolList) DeepCopyInto(out *NodePoolList) {
 	out.ListMeta = in.ListMeta
 	if in.Items != nil {
 		in, out := &in.Items, &out.Items
-		*out = make([]SystemTeardown, len(*in))
+		*out = make([]NodePool, len(*in))
 		for i := range *in {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
@@ -762,7 +762,7 @@ func (in *ServiceAddressList) DeepCopyInto(out *ServiceAddressList) {
 	out.ListMeta = in.ListMeta
 	if in.Items != nil {
 		in, out := &in.Items, &out.Items
-		*out = make([]SystemTeardown, len(*in))
+		*out = make([]ServiceAddress, len(*in))
 		for i := range *in {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}

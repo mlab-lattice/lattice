@@ -47,7 +47,11 @@ func (c *Controller) syncExistingServiceAddress(service *crv1.Service, address *
 		return nil, err
 	}
 
-	glog.V(4).Infof("ServiceAddress for Service %v/%v had out of date spec, updating", address.Name, service.Namespace, service.Name)
+	if reflect.DeepEqual(address.Spec, spec) {
+		return address, nil
+	}
+
+	glog.V(4).Infof("ServiceAddress %v for Service %v/%v had out of date spec, updating", address.Name, service.Namespace, service.Name)
 	return c.updateServiceAddressSpec(address, spec)
 }
 
