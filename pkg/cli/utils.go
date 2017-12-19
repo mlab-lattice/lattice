@@ -7,12 +7,10 @@ import (
 	"os"
 	"strings"
 
-	"github.com/mlab-lattice/system/pkg/cli/resources"
 	"github.com/olekukonko/tablewriter"
 )
 
-func showResource(resource resources.EndpointResource) {
-	renderMap := resource.GetRenderMap()
+func showResource(renderMap map[string]string) {
 	table := tablewriter.NewWriter(os.Stdout)
 	table.SetRowLine(true)
 	for k, v := range renderMap {
@@ -21,16 +19,15 @@ func showResource(resource resources.EndpointResource) {
 	table.Render()
 }
 
-func listResources(resources []resources.EndpointResource) {
-	if len(resources) > 0 {
+func listResources(renderMaps []map[string]string) {
+	if len(renderMaps) > 0 {
 		keys := []string{}
-		for k := range resources[0].GetRenderMap() {
+		for k := range renderMaps[0] {
 			keys = append(keys, k)
 		}
 		table := tablewriter.NewWriter(os.Stdout)
 		table.SetHeader(keys)
-		for _, r := range resources {
-			m := r.GetRenderMap()
+		for _, m := range renderMaps {
 			line := make([]string, 0, len(keys))
 			for _, k := range keys {
 				line = append(line, m[k])
