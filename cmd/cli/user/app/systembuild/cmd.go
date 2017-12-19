@@ -41,9 +41,8 @@ var listCmd = &cobra.Command{
 			log.Panic(err)
 		}
 
-		renderErr := cli.ShowSystemBuilds(builds, cli.OutputFormat(output))
-		if renderErr != nil {
-			log.Panic(renderErr)
+		if err := cli.ShowSystemBuilds(builds, cli.OutputFormat(output)); err != nil {
+			log.Panic(err)
 		}
 	},
 }
@@ -59,9 +58,8 @@ var getCmd = &cobra.Command{
 			log.Panic(err)
 		}
 
-		renderErr := cli.ShowSystemBuild(build, cli.OutputFormat(output))
-		if renderErr != nil {
-			log.Panic(renderErr)
+		if err := cli.ShowSystemBuild(build, cli.OutputFormat(output)); err != nil {
+			log.Panic(err)
 		}
 	},
 }
