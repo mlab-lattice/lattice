@@ -1,3 +1,3 @@
 package cli
 
-type RenderMap map[string]string
+type renderMap map[string]string

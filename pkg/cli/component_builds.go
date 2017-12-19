@@ -7,20 +7,20 @@ import (
 	"github.com/mlab-lattice/system/pkg/types"
 )
 
-func getComponentBuildRenderMap(build *types.ComponentBuild) RenderMap {
-	return RenderMap{
+func getComponentBuildRenderMap(build *types.ComponentBuild) renderMap {
+	return renderMap{
 		"ID":    string(build.ID),
 		"State": string(build.State),
 	}
 }
 
 func ShowComponentBuild(build *types.ComponentBuild) {
-	renderMap := getComponentBuildRenderMap(build)
-	showResource(renderMap)
+	rm := getComponentBuildRenderMap(build)
+	showResource(rm)
 }
 
 func ShowComponentBuilds(builds []types.ComponentBuild) {
-	renderMaps := make([]RenderMap, len(builds))
+	renderMaps := make([]renderMap, len(builds))
 	for i, b := range builds {
 		renderMaps[i] = getComponentBuildRenderMap(&b)
 	}
