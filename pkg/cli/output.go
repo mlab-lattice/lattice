@@ -7,7 +7,7 @@ const (
 	TABLE_OUTPUT OutputFormat = iota
 )
 
-func GetTypeFromString(typeString string) OutputFormat {
+func GetFormatFromString(typeString string) OutputFormat {
 	switch typeString {
 	case "json":
 		return JSON_OUTPUT

@@ -43,7 +43,7 @@ var listCmd = &cobra.Command{
 			log.Panic(err)
 		}
 
-		format := cli.GetTypeFromString(output)
+		format := cli.GetFormatFromString(output)
 		cli.ShowComponentBuilds(builds, format)
 	},
 }
@@ -59,7 +59,7 @@ var getCmd = &cobra.Command{
 			log.Panic(err)
 		}
 
-		format := cli.GetTypeFromString(output)
+		format := cli.GetFormatFromString(output)
 		cli.ShowComponentBuild(build, format)
 	},
 }
