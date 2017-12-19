@@ -6,7 +6,10 @@ const (
 	DockerImageEnvoyXDSAPIRestPerNode   = "kubernetes-envoy-xds-api-rest-per-node"
 	DockerImageLatticeControllerManager = "kubernetes-lattice-controller-manager"
 	DockerImageManagerAPIRest           = "kubernetes-manager-api-rest"
-	DockerImageLocalDNS                 = "lattice-local-dns"
+	DockerImageLocalDNSController       = "lattice-local-dns"
+
+	// TODO :: How to organize full name when not a lattice iamge. See lifecycle/provisioner/local/
+	DockerImageLocalDNSServer			= "gcr.io/google_containers/k8s-dns-dnsmasq-nanny-amd64:1.14.5"
 
 	DockerRegistryComponentBuildsDefault = "component-builds"
 

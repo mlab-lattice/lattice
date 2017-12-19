@@ -16,10 +16,16 @@ type Options struct {
 }
 
 type LocalComponentOptions struct {
-	LocalDNS LocalDNSOptions
+	LocalDNSController 	LocalDNSControllerOptions
+	LocalDNSServer		LocalDNSServerOptions
 }
 
-type LocalDNSOptions struct {
+type LocalDNSControllerOptions struct {
+	Image string
+	Args  []string
+}
+
+type LocalDNSServerOptions struct {
 	Image string
 	Args  []string
 }

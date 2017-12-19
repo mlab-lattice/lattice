@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"time"
 
 	"github.com/mlab-lattice/system/cmd/kubernetes/lattice-dns-local/localcontrollers"
@@ -31,9 +30,6 @@ func Run(clusterIDString, kubeconfig, provider, terraformModulePath string) {
 	}
 
 	clusterID := types.ClusterID(clusterIDString)
-
-	fmt.Println("PROVIDER:")
-	fmt.Println(provider)
 
 	ctx, err := CreateControllerContext(clusterID ,config, nil, terraformModulePath)
 

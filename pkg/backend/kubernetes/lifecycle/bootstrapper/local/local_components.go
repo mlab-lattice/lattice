@@ -20,8 +20,11 @@ func (b *DefaultBootstrapper) seedDNS() ([]interface{}, error) {
 	// TODO :: Handle namespace
 	namespace := kubeutil.InternalNamespace("lattice")
 
-	args := []string{"--provider", b.Provider, "--cluster-id", string(b.ClusterID)}
-	args = append(args, b.Options.LocalComponents.LocalDNS.Args...)
+	controller_args := []string{"--provider", b.Provider, "--cluster-id", string(b.ClusterID)}
+	controller_args = append(controller_args, b.Options.LocalComponents.LocalDNSController.Args...)
+
+	server_args := []string{}
+	server_args = append(server_args, b.Options.LocalComponents.LocalDNSServer.Args...)
 
 	labels := map[string]string{
 		"key" : constants.MasterNodeDNSServer,
@@ -50,9 +53,27 @@ func (b *DefaultBootstrapper) seedDNS() ([]interface{}, error) {
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{
 						{
-							Name:  constants.MasterNodeDNSServer,
-							Image: b.Options.LocalComponents.LocalDNS.Image,
-							Args:  args,
+							Name:  constants.MasterNodeDNSSController,
+							Image: b.Options.LocalComponents.LocalDNSController.Image,
+							Args:  controller_args,
+						},
+						{
+							Name:	constants.MasterNodeDNSServer,
+							Image:	b.Options.LocalComponents.LocalDNSServer.Image,
+							Args:	server_args,
+							// TODO :: Ports
+							//Ports: []corev1.ContainerPort{
+							//	{
+							//		ContainerPort: 53,
+							//		Name: "dns",
+							//		Protocol: "UDP",
+							//	},
+							//	{
+							//		ContainerPort: 53,
+							//		Name: "dns-tcp",
+							//		Protocol: "TCP",
+							//	},
+							//},
 						},
 					},
 					DNSPolicy:          corev1.DNSDefault,

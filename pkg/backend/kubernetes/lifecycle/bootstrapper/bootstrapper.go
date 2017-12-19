@@ -96,8 +96,8 @@ func NewLocalBootstrapper(
 	}
 
 	localOptions := &local.Options{
-		DryRun: options.DryRun,
-		Config:           options.Config,
+		DryRun:	         options.DryRun,
+		Config:          options.Config,
 		LocalComponents: options.LocalComponents,
 	}
 	localBootstrapper, err := local.NewBootstrapper(clusterID, localOptions, kubeClient)

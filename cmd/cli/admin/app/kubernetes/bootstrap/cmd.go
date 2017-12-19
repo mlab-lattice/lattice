@@ -34,6 +34,17 @@ var (
 		"--logtostderr",
 	}
 
+	defaultLocalDNSServerArgs = []string {
+		// TODO :: Clean up - split into dnsmasq args and dnsnanny args.
+		"-v=2",
+		"-logtostderr",
+		"-restartDnsmasq=true",
+		"-configDire=/etc/k8s/dns/dnsmasq-nanny",
+		// Arguments after -- are passed straight to dnsmasq.
+		"--",
+		"-k", //Keep in foreground so as to not immediately exit.
+	}
+
 	defaultManagerAPIArgs = []string{}
 
 	clusterIDString string
@@ -64,7 +75,8 @@ var options = &bootstrapper.Options{
 		ManagerAPI:               basebootstrapper.ManagerAPIOptions{},
 	},
 	LocalComponents: localbootstrapper.LocalComponentOptions{
-		LocalDNS: localbootstrapper.LocalDNSOptions{},
+		LocalDNSController: localbootstrapper.LocalDNSControllerOptions{},
+		LocalDNSServer:	    localbootstrapper.LocalDNSServerOptions{},
 	},
 }
 
@@ -203,9 +215,13 @@ func init() {
 	Cmd.MarkFlagRequired("provider")
 	Cmd.Flags().StringArrayVar(&providerVars, "provider-var", nil, "additional variables for the provider")
 
-	Cmd.Flags().StringVar(&options.LocalComponents.LocalDNS.Image, "local-dns-controller-image", "", "docker image to use for the local-dns controller")
+	Cmd.Flags().StringVar(&options.LocalComponents.LocalDNSController.Image, "local-dns-controller-image", "", "docker image to use for the local-dns controller")
 	Cmd.MarkFlagRequired("local-dns-controller-image")
-	Cmd.Flags().StringArrayVar(&options.LocalComponents.LocalDNS.Args, "local-dns-controller-args", defaultLatticeControllerManagerArgs, "extra arguments (besides --provider) to pass to the local-dns-controller")
+	Cmd.Flags().StringArrayVar(&options.LocalComponents.LocalDNSController.Args, "local-dns-controller-args", []string{}, "extra arguments (besides --provider) to pass to the local-dns-controller")
+
+	Cmd.Flags().StringVar(&options.LocalComponents.LocalDNSServer.Image, "local-dns-server-image", "", "docker image to use for the local DNS server")
+	Cmd.MarkFlagRequired("local-dns-server-image")
+	Cmd.Flags().StringArrayVar(&options.LocalComponents.LocalDNSServer.Args, "local-dns-server-args", []string{}, "extra arguments to pass to the local-dns-server")
 
 	Cmd.Flags().StringVar(&terraformBackend, "terraform-backend", "", "backend to use for terraform")
 	Cmd.Flags().StringArrayVar(&terraformBackendVars, "terraform-backend-var", nil, "additional variables for the terraform backend")
