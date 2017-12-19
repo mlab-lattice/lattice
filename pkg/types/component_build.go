@@ -10,10 +10,3 @@ type ComponentBuild struct {
 	LastObservedPhase *ComponentBuildPhase `json:"lastObservedPhase,omitempty"`
 	FailureMessage    *string              `json:"failureMessage,omitempty"`
 }
-
-func (cb ComponentBuild) GetRenderMap() map[string]string {
-	return map[string]string{
-		"ID":    string(cb.ID),
-		"State": string(cb.State),
-	}
-}
