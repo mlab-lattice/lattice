@@ -315,7 +315,7 @@ func (sm *DefaultEnvoyServiceMesh) envoyContainers(service *crv1.Service) (corev
 	return prepareEnvoy, envoy
 }
 
-func (sm *DefaultEnvoyServiceMesh) GetEndpointSpec(*crv1.ServiceAddress) (*crv1.EndpointSpec, error) {
+func (sm *DefaultEnvoyServiceMesh) GetEndpointSpec(address *crv1.ServiceAddress) (*crv1.EndpointSpec, error) {
 	ip, _, err := net.ParseCIDR(sm.Config.RedirectCIDRBlock)
 	if err != nil {
 		return nil, err
@@ -323,7 +323,8 @@ func (sm *DefaultEnvoyServiceMesh) GetEndpointSpec(*crv1.ServiceAddress) (*crv1.
 
 	ipStr := ip.String()
 	spec := &crv1.EndpointSpec{
-		IP: &ipStr,
+		Path: address.Spec.Path,
+		IP:   &ipStr,
 	}
 	return spec, nil
 }

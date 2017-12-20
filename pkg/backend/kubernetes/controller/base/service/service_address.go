@@ -130,6 +130,7 @@ func serviceAddressSpec(service *crv1.Service) (crv1.ServiceAddressSpec, error) 
 	}
 
 	spec := crv1.ServiceAddressSpec{
+		Path:           service.Spec.Path,
 		EndpointGroups: endpointGroups,
 		Ports:          ports,
 	}
