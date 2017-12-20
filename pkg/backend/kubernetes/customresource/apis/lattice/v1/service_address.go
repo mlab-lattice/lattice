@@ -1,6 +1,8 @@
 package v1
 
 import (
+	"github.com/mlab-lattice/system/pkg/definition/tree"
+
 	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -23,6 +25,7 @@ type ServiceAddress struct {
 }
 
 type ServiceAddressSpec struct {
+	Path           tree.NodePath                          `json:"path"`
 	EndpointGroups map[string]ServiceAddressEndpointGroup `json:"endpoints"`
 	Ports          map[int32]ServiceAddressPort           `json:"ports,omitempty"`
 }

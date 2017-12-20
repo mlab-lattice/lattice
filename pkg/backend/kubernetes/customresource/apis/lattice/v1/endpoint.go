@@ -1,6 +1,8 @@
 package v1
 
 import (
+	"github.com/mlab-lattice/system/pkg/definition/tree"
+
 	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -23,8 +25,9 @@ type Endpoint struct {
 }
 
 type EndpointSpec struct {
-	ExternalEndpoint *string `json:"externalEndpoint,omitempty"`
-	IP               *string `json:"ip,omitempty"`
+	Path             tree.NodePath `json:"path"`
+	ExternalEndpoint *string       `json:"externalEndpoint,omitempty"`
+	IP               *string       `json:"ip,omitempty"`
 }
 
 type EndpointStatus struct {
