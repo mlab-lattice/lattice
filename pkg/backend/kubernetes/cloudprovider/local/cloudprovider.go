@@ -24,9 +24,14 @@ func (cp *DefaultLocalCloudProvider) TransformServiceDeploymentSpec(service *crv
 	return spec
 }
 
-func (sm *DefaultLocalCloudProvider) IsDeploymentSpecUpdated(
+func (cp *DefaultLocalCloudProvider) IsDeploymentSpecUpdated(
 	service *crv1.Service,
 	current, desired, untransformed *appsv1.DeploymentSpec,
 ) (bool, string, *appsv1.DeploymentSpec) {
-	return true, "", nil
+	// make a copy of the desired spec, and set the affinity to be the affinity
+	// in untransformed
+	spec := desired.DeepCopy()
+	spec.Template.Spec.Affinity = untransformed.Template.Spec.Affinity
+
+	return true, "", spec
 }

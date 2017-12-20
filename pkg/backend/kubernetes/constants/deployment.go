@@ -1,6 +1,6 @@
 package constants
 
 const (
-	DeploymentContainerPrefixUser        = "lattice-user-"
-	DeploymentContainerPrefixServiceMesh = "lattice-service-mesh-"
+	DeploymentResourcePrefixUser        = "lattice-user-"
+	DeploymentResourcePrefixServiceMesh = "lattice-service-mesh-"
 )

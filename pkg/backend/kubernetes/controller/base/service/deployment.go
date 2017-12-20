@@ -1,7 +1,6 @@
 package service
 
 import (
-	"encoding/json"
 	"fmt"
 	"reflect"
 
@@ -59,52 +58,17 @@ func (c *Controller) syncExistingDeployment(service *crv1.Service, nodePool *crv
 		return nil, err
 	}
 
-	desiredPodTemplate := desiredSpec.Template
-	podTemplatesSemanticallyEqual := util.PodTemplateSpecsSemanticallyEqual(desiredPodTemplate, deployment.Spec.Template)
-	if !podTemplatesSemanticallyEqual {
-		glog.V(4).Infof("Deployment %v for Service %v/%v had out of date pod template, updating", deployment.Name, service.Namespace, service.Name)
+	currentSpec := deployment.Spec
+	untransformedSpec := untransformedDeploymentSpec(service, name, labels, nodePool)
+	defaultedUntransformedSpec := util.SetDeploymentSpecDefaults(untransformedSpec)
+	defaultedDesiredSpec := util.SetDeploymentSpecDefaults(&desiredSpec)
 
-		curData, err := json.MarshalIndent(deployment.Spec.Template, "", "  ")
-		if err != nil {
-			return nil, err
-		}
-
-		desiredData, err := json.MarshalIndent(desiredPodTemplate, "", "  ")
-		if err != nil {
-			return nil, err
-		}
-		fmt.Printf("current: %v\n", string(curData))
-		fmt.Printf("desired: %v\n", string(desiredData))
+	isUpdated, reason := c.isDeploymentSpecUpdated(service, &currentSpec, defaultedDesiredSpec, defaultedUntransformedSpec)
+	if !isUpdated {
+		glog.V(4).Infof("Deployment %v for Service %v/%v not up to date: %v", deployment.Name, service.Namespace, service.Name, reason)
 		return c.updateDeploymentSpec(deployment, desiredSpec)
 	}
 
-	if deployment.Spec.Replicas != desiredSpec.Replicas {
-		glog.V(4).Infof("Deployment %v for Service %v/%v had out of date number of desired replicas, updating", deployment.Name, service.Namespace, service.Name)
-		return c.updateDeploymentSpec(deployment, desiredSpec)
-	}
-
-	if deployment.Spec.Strategy != desiredSpec.Strategy {
-		glog.V(4).Infof("Deployment %v for Service %v/%v had out of date strategy, updating", deployment.Name, service.Namespace, service.Name)
-		return c.updateDeploymentSpec(deployment, desiredSpec)
-	}
-
-	if deployment.Spec.MinReadySeconds != desiredSpec.MinReadySeconds {
-		glog.V(4).Infof("Deployment %v for Service %v/%v had out of date min ready seconds, updating", deployment.Name, service.Namespace, service.Name)
-		return c.updateDeploymentSpec(deployment, desiredSpec)
-	}
-
-	if deployment.Spec.Paused != desiredSpec.Paused {
-		glog.V(4).Infof("Deployment %v for Service %v/%v had out of paused switch, updating", deployment.Name, service.Namespace, service.Name)
-		return c.updateDeploymentSpec(deployment, desiredSpec)
-	}
-
-	if deployment.Spec.ProgressDeadlineSeconds != desiredSpec.ProgressDeadlineSeconds {
-		glog.V(4).Infof("Deployment %v for Service %v/%v had out of date progress deadline seconds, updating", deployment.Name, service.Namespace, service.Name)
-		return c.updateDeploymentSpec(deployment, desiredSpec)
-	}
-
-	// It's assumed we won't update the RevisionHistoryLimit or the Selector.
-	glog.V(4).Infof("Deployment %v for Service %v/%v was up to date", deployment.Name, service.Namespace, service.Name)
 	return deployment, nil
 }
 
@@ -169,9 +133,9 @@ func (c *Controller) deploymentSpec(service *crv1.Service, name string, deployme
 	spec := untransformedDeploymentSpec(service, name, deploymentLabels, nodePool)
 
 	// IMPORTANT: the order of these TransformServiceDeploymentSpec and the order of the IsDeploymentSpecUpdated calls in
-	// isDeploymentSpecsUpdated _must_ be inverses.
+	// isDeploymentSpecUpdated _must_ be inverses.
 	// That is, if we call cloudProvider then serviceMesh here, we _must_ call serviceMesh then cloudProvider
-	// in isDeploymentSpecsUpdated.
+	// in isDeploymentSpecUpdated.
 	spec = c.cloudProvider.TransformServiceDeploymentSpec(service, spec)
 	spec = c.serviceMesh.TransformServiceDeploymentSpec(service, spec)
 
@@ -179,7 +143,6 @@ func (c *Controller) deploymentSpec(service *crv1.Service, name string, deployme
 }
 
 func untransformedDeploymentSpec(service *crv1.Service, name string, deploymentLabels map[string]string, nodePool *crv1.NodePool) *appsv1.DeploymentSpec {
-	// IMPORTANT: if you change anything in here, you _must_ update isDeploymentSpecsUpdated to accommodate it
 	replicas := service.Spec.NumInstances
 
 	// Create a container for each Component in the Service
@@ -209,7 +172,7 @@ func untransformedDeploymentSpec(service *crv1.Service, name string, deploymentL
 		RequiredDuringSchedulingIgnoredDuringExecution: []corev1.PodAffinityTerm{podAffinityTerm},
 	}
 
-	// IMPORTANT: if you change anything in here, you _must_ update isDeploymentSpecsUpdated to accommodate it
+	// IMPORTANT: if you change anything in here, you _must_ update isDeploymentSpecUpdated to accommodate it
 	spec := &appsv1.DeploymentSpec{
 		Replicas: &replicas,
 		Selector: &metav1.LabelSelector{
@@ -263,7 +226,7 @@ func containerFromComponent(component *block.Component, buildArtifacts *crv1.Com
 	}
 
 	return corev1.Container{
-		Name:            kubeconstants.DeploymentContainerPrefixUser + component.Name,
+		Name:            kubeconstants.DeploymentResourcePrefixUser + component.Name,
 		Image:           buildArtifacts.DockerImageFQN,
 		ImagePullPolicy: corev1.PullIfNotPresent,
 		Command:         component.Exec.Command,
@@ -322,19 +285,26 @@ func deploymentLivenessProbe(hc *block.ComponentHealthCheck) *corev1.Probe {
 	}
 }
 
-//func (c *Controller) isDeploymentSpecsUpdated(service *crv1.Service, current, desired, untransformed *appsv1.DeploymentSpec) bool {
-//	// IMPORTANT: the order of these IsDeploymentSpecUpdated and the order of the TransformServiceDeploymentSpec
-//	// calls in deploymentSpec _must_ be inverses.
-//	// That is, if we call serviceMesh then cloudProvider here, we _must_ call cloudProvider then serviceMesh
-//	// in deploymentSpec.
-//	var isUpdated bool
-//	isUpdated, desired = c.serviceMesh.IsDeploymentSpecUpdated(service, current, desired, untransformed)
-//	if !isUpdated {
-//		return false
-//	}
-//
-//	isUpdated, desired = c.cloudProvider.IsDeploymentSpecUpdated(service, current, desired, untransformed)
-//	if !isUpdated {
-//		return false
-//	}
-//}
+func (c *Controller) isDeploymentSpecUpdated(service *crv1.Service, current, desired, untransformed *appsv1.DeploymentSpec) (bool, string) {
+	// IMPORTANT: the order of these IsDeploymentSpecUpdated and the order of the TransformServiceDeploymentSpec
+	// calls in deploymentSpec _must_ be inverses.
+	// That is, if we call serviceMesh then cloudProvider here, we _must_ call cloudProvider then serviceMesh
+	// in deploymentSpec.
+	// This is done so that IsDeploymentSpecUpdated can return what the spec should look like before it transformed it.
+	isUpdated, reason, transformed := c.serviceMesh.IsDeploymentSpecUpdated(service, current, desired, untransformed)
+	if !isUpdated {
+		return false, reason
+	}
+
+	isUpdated, reason, transformed = c.cloudProvider.IsDeploymentSpecUpdated(service, current, transformed, untransformed)
+	if !isUpdated {
+		return false, reason
+	}
+
+	isUpdated = kubeutil.PodTemplateSpecsSemanticallyEqual(&current.Template, &desired.Template)
+	if !isUpdated {
+		return false, "pod template spec is out of date"
+	}
+
+	return true, ""
+}
