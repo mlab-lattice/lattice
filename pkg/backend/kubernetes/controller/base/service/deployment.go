@@ -17,7 +17,10 @@ import (
 	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/apimachinery/pkg/util/intstr"
 
+	"encoding/json"
 	"github.com/golang/glog"
+	"github.com/sergi/go-diff/diffmatchpatch"
+	"sort"
 )
 
 func (c *Controller) syncServiceDeployment(service *crv1.Service, nodePool *crv1.NodePool) (*appsv1.Deployment, error) {
@@ -214,13 +217,23 @@ func containerFromComponent(component *block.Component, buildArtifacts *crv1.Com
 		)
 	}
 
+	// Sort the env var names so the array order is deterministic
+	// so we can more easily check to see if the spec needs
+	// to be updated.
+	var envVarNames []string
+	for name := range component.Exec.Environment {
+		envVarNames = append(envVarNames, name)
+	}
+
+	sort.Strings(envVarNames)
+
 	var envVars []corev1.EnvVar
-	for k, v := range component.Exec.Environment {
+	for _, name := range envVarNames {
 		envVars = append(
 			envVars,
 			corev1.EnvVar{
-				Name:  k,
-				Value: v,
+				Name:  name,
+				Value: component.Exec.Environment[name],
 			},
 		)
 	}
@@ -254,13 +267,23 @@ func deploymentLivenessProbe(hc *block.ComponentHealthCheck) *corev1.Probe {
 	}
 
 	if hc.HTTP != nil {
+		// Sort the header names so the array order is deterministic
+		// so we can more easily check to see if the spec needs
+		// to be updated.
+		var headerNames []string
+		for name := range hc.HTTP.Headers {
+			headerNames = append(headerNames, name)
+		}
+
+		sort.Strings(headerNames)
+
 		var headers []corev1.HTTPHeader
-		for k, v := range hc.HTTP.Headers {
+		for _, name := range headerNames {
 			headers = append(
 				headers,
 				corev1.HTTPHeader{
-					Name:  k,
-					Value: v,
+					Name:  name,
+					Value: hc.HTTP.Headers[name],
 				},
 			)
 		}
