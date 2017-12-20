@@ -37,9 +37,9 @@ type EndpointStatus struct {
 type EndpointState string
 
 const (
-	EndpointStatePending   EndpointState = "pending"
-	EndpointStateSucceeded EndpointState = "created"
-	EndpointStateFailed    EndpointState = "failed"
+	EndpointStatePending EndpointState = "pending"
+	EndpointStateCreated EndpointState = "created"
+	EndpointStateFailed  EndpointState = "failed"
 )
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
