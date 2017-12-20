@@ -18,13 +18,15 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
-	"k8s.io/apimachinery/pkg/labels"
 )
 
 type Controller struct {
 	//Contains the controller specific for updating DNS, Watches Address changes.
 	syncAddressUpdate	func(bKey string) error
 	enqueueAddressUpdate func(sysBuild *crv1.ServiceBuild)
+
+	ips 	[]IP
+	cnames 	[]CName
 
 	latticeClient latticeclientset.Interface
 
@@ -39,8 +41,21 @@ type ServerConfig struct {
 	serverResolvPath string
 }
 
+type CName struct {
+	alias 	  string
+	canonical string
+}
+
+type IP struct {
+	ip string
+}
+
 var (
 	config ServerConfig
+
+	resolvOptions = []string {
+		"ndots:15",
+	}
 )
 
 func NewController(
@@ -214,13 +229,13 @@ func (addrc *Controller) SyncEndpointUpdate(key string) error {
 	}
 
 	// What would the endpoint variation of this be
-	stateInfo, err := addrc.calculateState(endpoint)
+	//stateInfo, err := addrc.calculateState(endpoint)
+    //
+	//if err != nil {
+	//	return err
+	//}
 
-	if err != nil {
-		return err
-	}
-
-	glog.V(5).Infof("ServiceBuild %v state: %v", key, stateInfo.state)
+	//glog.V(5).Infof("ServiceBuild %v state: %v", key, stateInfo.state)
 
 	// For now, no dealings with the switch b state
     //
@@ -241,39 +256,111 @@ func (addrc *Controller) SyncEndpointUpdate(key string) error {
 	switch rand.Int() {
 	case 1:
 		// Create a cname
+		cname := CName{
+			canonical: "my_canonical",
+			alias: "my_alias",
+		}
+
+		addrc.cnames = append(addrc.cnames, cname)
 	case 2:
 		// Create an IP
+		ip := IP{
+			ip: "192.168.9.9",
+		}
+
+		addrc.ips = append(addrc.ips, ip)
 	}
 
 	//Sync functions will include an update which will be a cache safe method to update the state.
 	// TODO :: Implement sync / update
+	addrc.FlushRewriteDNS()
 
 	return nil
 }
 
-func (addrc *Controller) FlushRewriteDNS() error {
+func (addrc *Controller) FlushRewriteDNS() {
 	// Called when it is time to actually rewrite the dns files.
 
 	// Should be two separate go routines.
-
-	// Open dnsmasq.extra.conf and rewrite
-	cname_file, err := os.OpenFile(config.serverConfigPath, os.O_RDWR | os.O_CREATE, 0660)
+	err := addrc.RewriteDnsmasqConfig()
 
 	if err != nil {
 		panic(err)
 	}
 
-	// TODO :: Clear and then write
+	err = addrc.RewriteResolvConf()
+
+	if err != nil {
+		panic(err)
+	}
+
+	// No ping should be necessary given auto update.
+	// However sending a SIGHUP would automatically reload resolv if necessary.
+}
+
+func CreateEmptyFile(filename string) (*os.File, error) {
+
+	_, err := os.Stat(filename)
+
+	if os.IsExist(err) {
+		err := os.Remove(filename)
+
+		if err != nil {
+			panic(err)
+		}
+	}
+
+	return os.OpenFile(filename, os.O_RDWR | os.O_CREATE, 0660)
+}
+
+func (addrc *Controller) RewriteDnsmasqConfig() error {
+	// Open dnsmasq.extra.conf and rewrite
+	cname_file, err := CreateEmptyFile(config.serverConfigPath)
+
+	defer cname_file.Close()
+
+	if err != nil {
+		panic(err)
+	}
+
+	// This is an extra config file, so contains only the options which must be rewritten.
+	// Condition on cname is that it exists in the specified host file.
+	//Each cname entry of the form cname=ALIAS,...(addn alias),TARGET
+
+	for _, v := range addrc.cnames {
+		_, err := cname_file.WriteString("cname=" + v.alias + "," + v.canonical + "\n")
+
+		if err != nil {
+			panic(err)
+		}
+	}
+}
+
+func (addrc *Controller) RewriteResolvConf() error {
 
 	// Open dnsmasq.resolv.conf and rewrite
-	resolv_file, err := os.OpenFile(config.serverResolvPath, os.O_RDWR | os.O_CREATE, 0660)
+	resolv_file, err := CreateEmptyFile(config.serverResolvPath)
+
+	defer resolv_file.Close()
 
 	if (err != nil) {
 		panic(err)
 	}
 
-	// TODO :: Clear and then write
+	// nameserver a
+	// nameserver b
 
-	// No ping should be necessary given auto update.
-	// However sending a SIGHUP would automatically reload resolv if necessary.
+	// search a b c
+
+	// Write any options
+
+	resolv_file.WriteString("options")
+
+	for _, v := range resolvOptions {
+		_, err := resolv_file.WriteString(" " + v)
+
+		if err != nil {
+			panic(err)
+		}
+	}
 }
