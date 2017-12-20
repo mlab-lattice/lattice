@@ -3,6 +3,7 @@ package local
 import (
 	"fmt"
 	"time"
+	"math/rand"
 
 	crv1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	latticeclientset "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/clientset/versioned"
@@ -12,33 +13,49 @@ import (
 	"github.com/golang/glog"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
+
+	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/apimachinery/pkg/labels"
 )
-
-// Directory name probably needs to change
 
 type Controller struct {
 	//Contains the controller specific for updating DNS, Watches Address changes.
 	syncAddressUpdate	func(bKey string) error
-	enqueueAddressUpdate func(sysBuild *crv1.SystemBuild)
+	enqueueAddressUpdate func(sysBuild *crv1.ServiceBuild)
 
 	latticeClient latticeclientset.Interface
 
-	addressLister latticelisters.SystemBuildLister
+	addressLister latticelisters.ServiceBuildLister
 	addressListerSynced cache.InformerSynced
 
 	queue workqueue.RateLimitingInterface
 }
 
+type ServerConfig struct {
+	serverConfigPath string
+	serverResolvPath string
+}
+
+var (
+	config ServerConfig
+)
+
 func NewController(
-	latticeClient latticeclientset.Interface,
-	addressInformer latticeinformers.SystemBuildInformer,
+	serverConfigPath string,
+	serverResolvPath string,
+	latticeClient  	 latticeclientset.Interface,
+	addressInformer  latticeinformers.ServiceBuildInformer,
 ) *Controller {
+
 	addrc := &Controller{
 		latticeClient: latticeClient,
 		queue:         workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "system"),
 	}
+
+	config.serverConfigPath = serverConfigPath
+	config.serverResolvPath = serverResolvPath
 
 	addrc.syncAddressUpdate = addrc.rewriteDNS
 	addrc.enqueueAddressUpdate = addrc.enqueue
@@ -55,7 +72,7 @@ func NewController(
 	return addrc
 }
 
-func (addrc *Controller) enqueue(sysb *crv1.SystemBuild) {
+func (addrc *Controller) enqueue(sysb *crv1.ServiceBuild) {
 	key, err := cache.DeletionHandlingMetaNamespaceKeyFunc(sysb)
 	if err != nil {
 		runtime.HandleError(fmt.Errorf("couldn't get key for object %#v: %v", sysb, err))
@@ -68,7 +85,7 @@ func (addrc *Controller) enqueue(sysb *crv1.SystemBuild) {
 func (addrc *Controller) addAddress(obj interface{}) {
 	// New address resource has arrived
 	glog.V(1).Infof("MyController just got an add")
-	address := obj.(*crv1.SystemBuild)
+	address := obj.(*crv1.ServiceBuild)
 
 	addrc.enqueueAddressUpdate(address)
 }
@@ -76,7 +93,7 @@ func (addrc *Controller) addAddress(obj interface{}) {
 func (addrc *Controller) updateAddress(old, cur interface{}) {
 	// Address object has been modified
 	glog.V(1).Infof("MyController just got an update")
-	address := cur.(*crv1.SystemBuild)
+	address := cur.(*crv1.ServiceBuild)
 
 	addrc.enqueueAddressUpdate(address)
 }
@@ -84,7 +101,7 @@ func (addrc *Controller) updateAddress(old, cur interface{}) {
 func (addrc *Controller) deleteAddress(obj interface{}) {
 	// Address object has been modified
 	glog.V(1).Infof("MyController just got a delete")
-	address := obj.(*crv1.SystemBuild)
+	address := obj.(*crv1.ServiceBuild)
 
 	addrc.enqueueAddressUpdate(address)
 }
@@ -95,6 +112,7 @@ func (addrc *Controller) Run(workers int, stopCh <-chan struct{}) {
 	// make sure the work queue is shutdown which will trigger workers to end
 	defer addrc.queue.ShutDown()
 
+	glog.Infof(" Warning :: every endpoint is actually a service build")
 	glog.Infof("Starting local-dns controller")
 	defer glog.Infof("Shutting down local-dns controller")
 
@@ -175,22 +193,59 @@ func (addrc *Controller) rewriteDNS(key string) error {
 		glog.V(4).Infof("Finished rewrite DNS")
 	}()
 
-	// Work with the cache here.
-	//lister, err := addrc.addressLister.List()
-	//
-	//if err != nil {
-	//	return err
+	namespace, name, err := cache.SplitMetaNamespaceKey(key)
+	if err != nil {
+		return err
+	}
+
+	// Work with the cache here - get everything.
+	// lister, err := addrc.addressLister.List(labels.Everything())
+	// One at a time method is more suitable
+	endpoint, err := addrc.addressLister.ServiceBuilds(namespace).Get(name)
+
+	if errors.IsNotFound(err) {
+		glog.V(2).Infof("Endpoint %v has been deleted", key)
+		return nil
+	}
+
+	if err != nil {
+		return err
+	}
+
+	// What would the endpoint variation of this be
+	stateInfo, err := addrc.calculateState(endpoint)
+
+	if err != nil {
+		return err
+	}
+
+	glog.V(5).Infof("ServiceBuild %v state: %v", key, stateInfo.state)
+
+	// For now, no dealings with the switch b state
+    //
+	//switch stateInfo.state {
+	//case stateHasFailedComponentBuilds:
+	//	return c.syncFailedServiceBuild(build, stateInfo)
+	//case stateHasOnlyRunningOrSucceededComponentBuilds:
+	//	return c.syncRunningServiceBuild(build, stateInfo)
+	//case stateNoFailuresNeedsNewComponentBuilds:
+	//	return c.syncMissingComponentBuildsServiceBuild(build, stateInfo)
+	//case stateAllComponentBuildsSucceeded:
+	//	return c.syncSucceededServiceBuild(build, stateInfo)
+	//default:
+	//	return fmt.Errorf("ServiceBuild %v in unexpected state %v", key, stateInfo.state)
 	//}
-	//
-	//for address := range lister {
-	//	// switch based on type of address.
-	//
-	//	// cname change
-	//		// -- involves restarting the dnsmasq process after a certain amount of time
-	//
-	//	// host change
-	//		// -- involves sending sighup after rewriting hosts file
-	//}
+
+	/// TODO :: Switch based on EndpointSpec. Check cant be both.
+	switch rand.Int() {
+	case 1:
+		// Create a cname
+	case 2:
+		// Create an IP
+	}
+
+	//Sync functions will include an update which will be a cache safe method to update the state.
+	// TODO :: Implement sync / update
 
 	return nil
 }

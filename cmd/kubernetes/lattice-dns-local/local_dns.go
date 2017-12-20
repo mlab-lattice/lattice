@@ -3,7 +3,7 @@ package main
 import (
 	"time"
 
-	"github.com/mlab-lattice/system/cmd/kubernetes/lattice-dns-local/localcontrollers"
+	"github.com/mlab-lattice/system/pkg/backend/kubernetes/controller/kubernetes/local"
 	controller "github.com/mlab-lattice/system/cmd/kubernetes/lattice-controller-manager/app/common"
 	latticeinformers "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/informers/externalversions"
 	"github.com/mlab-lattice/system/pkg/constants"
@@ -16,7 +16,8 @@ import (
 	"github.com/golang/glog"
 )
 
-func Run(clusterIDString, kubeconfig, provider, terraformModulePath string) {
+func Run(clusterIDString, kubeconfig, provider, terraformModulePath string,
+	serverConfigPath string, resolvConfPath string) {
 
 	var config *rest.Config
 	var err error
@@ -37,19 +38,17 @@ func Run(clusterIDString, kubeconfig, provider, terraformModulePath string) {
 		panic(err)
 	}
 
-	initializers := map[string]controller.Initializer{}
-
-	switch provider {
-	case constants.ProviderLocal:
-		for name, initializer := range localcontrollers.GetControllerInitializers() {
-			initializers["local-"+name] = initializer
-		}
-	default:
+	if provider != constants.ProviderLocal {
 		panic("lattice-local-dns is only supported for local provider.")
 	}
 
-	glog.V(1).Info("Starting controllers")
-	StartControllers(ctx, initializers)
+	glog.V(1).Info("Starting dns controller")
+
+	go local.NewController(
+		serverConfigPath, resolvConfPath,
+		ctx.LatticeClientBuilder.ClientOrDie("local-dns-lattice-address"),
+		ctx.LatticeInformerFactory.Lattice().V1().ServiceBuilds(),
+	).Run(4, ctx.Stop)
 
 	glog.V(1).Info("Starting informer factory")
 	ctx.LatticeInformerFactory.Start(ctx.Stop)
@@ -90,11 +89,4 @@ func CreateControllerContext(
 		TerraformModulePath: terraformModulePath,
 	}
 	return ctx, nil
-}
-
-func StartControllers(ctx controller.Context, initializers map[string]controller.Initializer) {
-	for controllerName, initializer := range initializers {
-		glog.V(1).Infof("Starting %q", controllerName)
-		initializer(ctx)
-	}
 }
