@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 	"math/rand"
+	"os"
 
 	crv1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	latticeclientset "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/clientset/versioned"
@@ -57,7 +58,7 @@ func NewController(
 	config.serverConfigPath = serverConfigPath
 	config.serverResolvPath = serverResolvPath
 
-	addrc.syncAddressUpdate = addrc.rewriteDNS
+	addrc.syncAddressUpdate = addrc.SyncEndpointUpdate
 	addrc.enqueueAddressUpdate = addrc.enqueue
 
 	//Add event handlers
@@ -186,7 +187,7 @@ func (addrc *Controller) processNextWorkItem() bool {
 	return true
 }
 
-func (addrc *Controller) rewriteDNS(key string) error {
+func (addrc *Controller) SyncEndpointUpdate(key string) error {
 	// List from the informer given in the controller.
 	glog.V(1).Infof("Called rewrite DNS")
 	defer func() {
@@ -248,4 +249,31 @@ func (addrc *Controller) rewriteDNS(key string) error {
 	// TODO :: Implement sync / update
 
 	return nil
+}
+
+func (addrc *Controller) FlushRewriteDNS() error {
+	// Called when it is time to actually rewrite the dns files.
+
+	// Should be two separate go routines.
+
+	// Open dnsmasq.extra.conf and rewrite
+	cname_file, err := os.OpenFile(config.serverConfigPath, os.O_RDWR | os.O_CREATE, 0660)
+
+	if err != nil {
+		panic(err)
+	}
+
+	// TODO :: Clear and then write
+
+	// Open dnsmasq.resolv.conf and rewrite
+	resolv_file, err := os.OpenFile(config.serverResolvPath, os.O_RDWR | os.O_CREATE, 0660)
+
+	if (err != nil) {
+		panic(err)
+	}
+
+	// TODO :: Clear and then write
+
+	// No ping should be necessary given auto update.
+	// However sending a SIGHUP would automatically reload resolv if necessary.
 }

@@ -37,6 +37,8 @@ var (
 	defaultLocalDNSControllerArgs = []string {
 		"-v", "5",
 		"--logtostderr",
+		"--resolv", "/etc/k8s/dns/dnsmasq-nanny/resolv.conf",
+		"--extraconf", "/etc/k8s/dns/dnsmasq-nanny/dnsmasq.conf",
 	}
 
 	defaultLocalDNSServerArgs = []string {
