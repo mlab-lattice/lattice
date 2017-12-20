@@ -47,7 +47,7 @@ func Run(clusterIDString, kubeconfig, provider, terraformModulePath string,
 	go local.NewController(
 		serverConfigPath, resolvConfPath,
 		ctx.LatticeClientBuilder.ClientOrDie("local-dns-lattice-address"),
-		ctx.LatticeInformerFactory.Lattice().V1().ServiceBuilds(),
+		ctx.LatticeInformerFactory.Lattice().V1().Endpoints(),
 	).Run(4, ctx.Stop)
 
 	glog.V(1).Info("Starting informer factory")
