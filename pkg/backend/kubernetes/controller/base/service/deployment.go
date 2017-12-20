@@ -12,14 +12,13 @@ import (
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kubelabels "k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/apimachinery/pkg/util/intstr"
 
-	"encoding/json"
 	"github.com/golang/glog"
-	"github.com/sergi/go-diff/diffmatchpatch"
 	"sort"
 )
 

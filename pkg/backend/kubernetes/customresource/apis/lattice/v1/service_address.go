@@ -77,7 +77,8 @@ type ServiceAddressPortTCPHealthCheckConfig struct {
 }
 
 type ServiceAddressStatus struct {
-	State ServiceAddressState `json:"state"`
+	State              ServiceAddressState `json:"state"`
+	ObservedGeneration int64               `json:"observedGeneration"`
 }
 
 type ServiceAddressState string

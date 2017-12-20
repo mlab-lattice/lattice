@@ -22,6 +22,8 @@ type Interface interface {
 	// current, this method should return true, along with a copy of the DeploymentSpec that should be identical to the
 	// DeploymentSpec that was passed in to TransformServiceDeploymentSpec.
 	IsDeploymentSpecUpdated(service *crv1.Service, current, desired, untransformed *appsv1.DeploymentSpec) (bool, string, *appsv1.DeploymentSpec)
+
+	GetEndpointSpec(*crv1.ServiceAddress) (*crv1.EndpointSpec, error)
 }
 
 func NewServiceMesh(config *crv1.ConfigServiceMesh) (Interface, error) {
