@@ -3,7 +3,6 @@ package local
 import (
     "fmt"
     "time"
-    "math/rand"
     "os"
     "sync"
 
@@ -205,9 +204,7 @@ func (addrc *Controller) SyncEndpointUpdate(key string) error {
         return err
     }
 
-    // Work with the cache here - get everything.
-    // lister, err := addrc.addressLister.List(labels.Everything())
-    // One at a time method is more suitable
+    //Update our local list with just the new item, not the whole list
     endpoint, err := addrc.addressLister.Endpoints(namespace).Get(name)
 
     if errors.IsNotFound(err) {
@@ -219,32 +216,7 @@ func (addrc *Controller) SyncEndpointUpdate(key string) error {
         return err
     }
 
-    // What would the endpoint variation of this be
-    //stateInfo, err := addrc.calculateState(endpoint)
-    //
-    //if err != nil {
-    //	return err
-    //}
-
-    //glog.V(5).Infof("ServiceBuild %v state: %v", key, stateInfo.state)
-
-    // For now, no dealings with the switch b state
-    //
-    //switch stateInfo.state {
-    //case stateHasFailedComponentBuilds:
-    //	return c.syncFailedServiceBuild(build, stateInfo)
-    //case stateHasOnlyRunningOrSucceededComponentBuilds:
-    //	return c.syncRunningServiceBuild(build, stateInfo)
-    //case stateNoFailuresNeedsNewComponentBuilds:
-    //	return c.syncMissingComponentBuildsServiceBuild(build, stateInfo)
-    //case stateAllComponentBuildsSucceeded:
-    //	return c.syncSucceededServiceBuild(build, stateInfo)
-    //default:
-    //	return fmt.Errorf("ServiceBuild %v in unexpected state %v", key, stateInfo.state)
-    //}
-
-    //Sync functions will include an update which will be a cache safe method to update the state.
-    // TODO :: Implement sync / update
+    glog.V(5).Infof("ServiceBuild %v state: %v", key, endpoint.Status.State)
 
     // If not recently updated, become responsible for flushing
     addrc.lock.RLock()
@@ -261,7 +233,10 @@ func (addrc *Controller) SyncEndpointUpdate(key string) error {
     // Acquire the write lock to try and update the map
     addrc.lock.Lock()
 
-    addrc.cnameList["nodepath"] = *endpoint.Spec.IP
+    endpointPathURL := endpoint.Spec.Path.ToDomain(true)
+
+    // TODO :: handle delete
+    addrc.cnameList[endpointPathURL] = *endpoint.Spec.IP
 
     addrc.FlushRewriteDNS()
 
@@ -306,6 +281,11 @@ func (addrc *Controller) RewriteDnsmasqConfig() error {
     defer func() {
         fmt.Println("Closing config file...")
         cname_file.Close()
+
+        // Finished writing to the cache - can now unset the timer flag
+        addrc.lock.Lock()
+        addrc.hasRecentlyUpdated = false
+        addrc.lock.Unlock()
     }()
 
     if err != nil {
