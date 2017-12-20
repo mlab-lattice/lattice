@@ -1,4 +1,4 @@
-package nodepool
+package endpoint
 
 import (
 	"fmt"
@@ -21,35 +21,35 @@ import (
 
 type Controller struct {
 	syncHandler     func(bKey string) error
-	enqueueNodePool func(cb *crv1.NodePool)
+	enqueueEndpoint func(cb *crv1.Endpoint)
 
 	latticeClient latticeclientset.Interface
 
-	nodePoolLister       latticelisters.NodePoolLister
-	nodePoolListerSynced cache.InformerSynced
+	endpointLister       latticelisters.EndpointLister
+	endpointListerSynced cache.InformerSynced
 
 	queue workqueue.RateLimitingInterface
 }
 
 func NewController(
 	latticeClient latticeclientset.Interface,
-	nodePoolInformer latticeinformers.NodePoolInformer,
+	endpointInformer latticeinformers.EndpointInformer,
 ) *Controller {
 	sc := &Controller{
 		latticeClient: latticeClient,
 		queue:         workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "service"),
 	}
 
-	sc.syncHandler = sc.syncNodePool
-	sc.enqueueNodePool = sc.enqueue
+	sc.syncHandler = sc.syncEndpoint
+	sc.enqueueEndpoint = sc.enqueue
 
-	nodePoolInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc:    sc.handleNodePoolAdd,
-		UpdateFunc: sc.handleNodePoolUpdate,
-		DeleteFunc: sc.handleNodePoolDelete,
+	endpointInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+		AddFunc:    sc.handleEndpointAdd,
+		UpdateFunc: sc.handleEndpointUpdate,
+		DeleteFunc: sc.handleEndpointDelete,
 	})
-	sc.nodePoolLister = nodePoolInformer.Lister()
-	sc.nodePoolListerSynced = nodePoolInformer.Informer().HasSynced
+	sc.endpointLister = endpointInformer.Lister()
+	sc.endpointListerSynced = endpointInformer.Informer().HasSynced
 
 	return sc
 }
@@ -60,11 +60,11 @@ func (c *Controller) Run(workers int, stopCh <-chan struct{}) {
 	// make sure the work queue is shutdown which will trigger workers to end
 	defer c.queue.ShutDown()
 
-	glog.Infof("Starting node pool controller")
-	defer glog.Infof("Shutting down node pool controller")
+	glog.Infof("Starting endpoint controller")
+	defer glog.Infof("Shutting down endpoint controller")
 
 	// wait for your secondary caches to fill before starting your work
-	if !cache.WaitForCacheSync(stopCh, c.nodePoolListerSynced) {
+	if !cache.WaitForCacheSync(stopCh, c.endpointListerSynced) {
 		return
 	}
 
@@ -82,36 +82,36 @@ func (c *Controller) Run(workers int, stopCh <-chan struct{}) {
 	<-stopCh
 }
 
-func (c *Controller) handleNodePoolAdd(obj interface{}) {
-	nodePool := obj.(*crv1.NodePool)
-	glog.V(4).Infof("NodePool %v/%v added", nodePool.Namespace, nodePool.Name)
+func (c *Controller) handleEndpointAdd(obj interface{}) {
+	endpoint := obj.(*crv1.Endpoint)
+	glog.V(4).Infof("Endpoint %v/%v added", endpoint.Namespace, endpoint.Name)
 
-	if nodePool.DeletionTimestamp != nil {
+	if endpoint.DeletionTimestamp != nil {
 		// On a restart of the controller manager, it's possible for an object to
 		// show up in a state that is already pending deletion.
-		c.handleNodePoolDelete(nodePool)
+		c.handleEndpointDelete(endpoint)
 		return
 	}
 
-	c.enqueueNodePool(nodePool)
+	c.enqueueEndpoint(endpoint)
 }
 
-func (c *Controller) handleNodePoolUpdate(old, cur interface{}) {
-	oldNodePool := old.(*crv1.NodePool)
-	curNodePool := cur.(*crv1.NodePool)
-	glog.V(5).Info("Got NodePool %v/%v update", curNodePool.Namespace, curNodePool.Name)
-	if curNodePool.ResourceVersion == oldNodePool.ResourceVersion {
+func (c *Controller) handleEndpointUpdate(old, cur interface{}) {
+	oldEndpoint := old.(*crv1.Endpoint)
+	curEndpoint := cur.(*crv1.Endpoint)
+	glog.V(5).Info("Got Endpoint %v/%v update", curEndpoint.Namespace, curEndpoint.Name)
+	if curEndpoint.ResourceVersion == oldEndpoint.ResourceVersion {
 		// Periodic resync will send update events for all known Services.
 		// Two different versions of the same Service will always have different RVs.
-		glog.V(5).Info("NodePool %v/%v ResourceVersions are the same", curNodePool.Namespace, curNodePool.Name)
+		glog.V(5).Info("Endpoint %v/%v ResourceVersions are the same", curEndpoint.Namespace, curEndpoint.Name)
 		return
 	}
 
-	c.enqueueNodePool(curNodePool)
+	c.enqueueEndpoint(curEndpoint)
 }
 
-func (c *Controller) handleNodePoolDelete(obj interface{}) {
-	nodePool, ok := obj.(*crv1.NodePool)
+func (c *Controller) handleEndpointDelete(obj interface{}) {
+	endpoint, ok := obj.(*crv1.Endpoint)
 
 	// When a delete is dropped, the relist will notice a pod in the store not
 	// in the list, leading to the insertion of a tombstone object which contains
@@ -122,20 +122,20 @@ func (c *Controller) handleNodePoolDelete(obj interface{}) {
 			runtime.HandleError(fmt.Errorf("couldn't get object from tombstone %#v", obj))
 			return
 		}
-		nodePool, ok = tombstone.Obj.(*crv1.NodePool)
+		endpoint, ok = tombstone.Obj.(*crv1.Endpoint)
 		if !ok {
 			runtime.HandleError(fmt.Errorf("tombstone contained object that is not a Service %#v", obj))
 			return
 		}
 	}
 
-	c.enqueueNodePool(nodePool)
+	c.enqueueEndpoint(endpoint)
 }
 
-func (c *Controller) enqueue(nodePool *crv1.NodePool) {
-	key, err := cache.DeletionHandlingMetaNamespaceKeyFunc(nodePool)
+func (c *Controller) enqueue(endpoint *crv1.Endpoint) {
+	key, err := cache.DeletionHandlingMetaNamespaceKeyFunc(endpoint)
 	if err != nil {
-		runtime.HandleError(fmt.Errorf("couldn't get key for object %#v: %v", nodePool, err))
+		runtime.HandleError(fmt.Errorf("couldn't get key for object %#v: %v", endpoint, err))
 		return
 	}
 
@@ -188,14 +188,14 @@ func (c *Controller) processNextWorkItem() bool {
 	return true
 }
 
-// syncNodePool will sync the Service with the given key.
+// syncEndpoint will sync the Service with the given key.
 // This function is not meant to be invoked concurrently with the same key.
-func (c *Controller) syncNodePool(key string) error {
+func (c *Controller) syncEndpoint(key string) error {
 	glog.Flush()
 	startTime := time.Now()
-	glog.V(4).Infof("Started syncing NodePool %q (%v)", key, startTime)
+	glog.V(4).Infof("Started syncing Endpoint %q (%v)", key, startTime)
 	defer func() {
-		glog.V(4).Infof("Finished syncing NodePool %q (%v)", key, time.Now().Sub(startTime))
+		glog.V(4).Infof("Finished syncing Endpoint %q (%v)", key, time.Now().Sub(startTime))
 	}()
 
 	namespace, name, err := cache.SplitMetaNamespaceKey(key)
@@ -203,9 +203,9 @@ func (c *Controller) syncNodePool(key string) error {
 		return err
 	}
 
-	nodePool, err := c.nodePoolLister.NodePools(namespace).Get(name)
+	endpoint, err := c.endpointLister.Endpoints(namespace).Get(name)
 	if errors.IsNotFound(err) {
-		glog.V(2).Infof("NodePool %v has been deleted", key)
+		glog.V(2).Infof("Endpoint %v has been deleted", key)
 		return nil
 	}
 	if err != nil {
@@ -213,9 +213,9 @@ func (c *Controller) syncNodePool(key string) error {
 	}
 
 	// Copy so the shared cache isn't mutated
-	nodePool = nodePool.DeepCopy()
-	nodePool.Status.State = crv1.NodePoolStateStable
+	endpoint = endpoint.DeepCopy()
+	endpoint.Status.State = crv1.EndpointStateSucceeded
 
-	_, err = c.latticeClient.LatticeV1().NodePools(nodePool.Namespace).Update(nodePool)
+	_, err = c.latticeClient.LatticeV1().Endpoints(endpoint.Namespace).Update(endpoint)
 	return err
 }

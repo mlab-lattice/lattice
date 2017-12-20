@@ -13,7 +13,7 @@ import (
 type Interface interface {
 	// TransformServiceDeploymentSpec takes in the DeploymentSpec generated for a Service, and applies an service mesh
 	// related transforms necessary to a copy of the DeploymentSpec, and returns it.
-	TransformServiceDeploymentSpec(*crv1.Service, *appsv1.DeploymentSpec) *appsv1.DeploymentSpec
+	TransformServiceDeploymentSpec(*crv1.Service, *appsv1.DeploymentSpec, []*crv1.Service) *appsv1.DeploymentSpec
 
 	// IsDeploymentSpecUpdated checks to see if any part of the current DeploymentSpec that the service mesh is responsible
 	// for is out of date compared to the desired deployment spec. If the current DeploymentSpec is current, it also returns

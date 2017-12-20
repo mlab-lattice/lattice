@@ -15,12 +15,16 @@ type DefaultLocalCloudProvider struct {
 }
 
 func (cp *DefaultLocalCloudProvider) TransformComponentBuildJobSpec(spec *batchv1.JobSpec) *batchv1.JobSpec {
+	spec = spec.DeepCopy()
+
 	spec.Template.Spec.Affinity = nil
 	return spec
 }
 
 func (cp *DefaultLocalCloudProvider) TransformServiceDeploymentSpec(service *crv1.Service, spec *appsv1.DeploymentSpec) *appsv1.DeploymentSpec {
+	spec = spec.DeepCopy()
 	spec.Template.Spec.Affinity = nil
+
 	return spec
 }
 
