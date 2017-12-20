@@ -4,6 +4,7 @@ go_library(
     name = "go_default_library",
     srcs = [
         "affinity.go",
+        "equality.go",
         "kube_service.go",
         "kubeconfig.go",
         "labels.go",
@@ -20,7 +21,9 @@ go_library(
         "//pkg/definition/tree:go_default_library",
         "//pkg/types:go_default_library",
         "@io_k8s_api//core/v1:go_default_library",
+        "@io_k8s_api//extensions/v1beta1:go_default_library",
         "@io_k8s_api//rbac/v1:go_default_library",
+        "@io_k8s_apimachinery//pkg/api/equality:go_default_library",
         "@io_k8s_apimachinery//pkg/api/errors:go_default_library",
         "@io_k8s_apimachinery//pkg/apis/meta/v1:go_default_library",
         "@io_k8s_client_go//kubernetes:go_default_library",

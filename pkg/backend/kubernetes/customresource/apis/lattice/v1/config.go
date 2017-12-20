@@ -22,24 +22,23 @@ type Config struct {
 }
 
 type ConfigSpec struct {
-	Provider       ConfigProvider       `json:"providerConfig"`
+	CloudProvider  ConfigCloudProvider  `json:"cloudProvider"`
 	ComponentBuild ConfigComponentBuild `json:"componentBuild"`
 	ServiceMesh    ConfigServiceMesh    `json:"serviceMesh"`
-	Envoy          ConfigEnvoy          `json:"envoy"`
 	Terraform      *ConfigTerraform     `json:"terraform,omitempty"`
 }
 
-type ConfigProvider struct {
-	Local *ConfigProviderLocal `json:"local,omitempty"`
-	AWS   *ConfigProviderAWS   `json:"aws,omitempty"`
+type ConfigCloudProvider struct {
+	Local *ConfigCloudProviderLocal `json:"local,omitempty"`
+	AWS   *ConfigCloudProviderAWS   `json:"aws,omitempty"`
 }
 
-type ConfigProviderLocal struct {
+type ConfigCloudProviderLocal struct {
 	// FIXME: this shouldn't be dynamic config
 	IP string `json:"ip"`
 }
 
-type ConfigProviderAWS struct {
+type ConfigCloudProviderAWS struct {
 	// FIXME: this shouldn't be dynamic config
 	Region string `json:"region"`
 	// FIXME: this shouldn't be dynamic config

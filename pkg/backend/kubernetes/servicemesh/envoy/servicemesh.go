@@ -2,17 +2,25 @@ package envoy
 
 import (
 	"fmt"
+	"sort"
 	"strconv"
+	"strings"
 
+	kubeconstants "github.com/mlab-lattice/system/pkg/backend/kubernetes/constants"
 	crv1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
+	kubeutil "github.com/mlab-lattice/system/pkg/backend/kubernetes/util/kubernetes"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	"net"
 )
 
 const (
 	envoyConfigDirectory           = "/etc/envoy"
-	envoyConfigDirectoryVolumeName = "envoyconfig"
+	envoyConfigDirectoryVolumeName = kubeconstants.DeploymentResourcePrefixServiceMesh + "envoyconfig"
+
+	initContainerNamePrepareEnvoy = kubeconstants.DeploymentResourcePrefixServiceMesh + "prepare-envoy"
+	containerNameEnvoy            = kubeconstants.DeploymentResourcePrefixServiceMesh + "envoy"
 )
 
 func NewEnvoyServiceMesh(config *crv1.ConfigEnvoy) *DefaultEnvoyServiceMesh {
@@ -25,7 +33,7 @@ type DefaultEnvoyServiceMesh struct {
 	Config *crv1.ConfigEnvoy
 }
 
-func (sm *DefaultEnvoyServiceMesh) TransformServiceDeploymentSpec(service *crv1.Service, spec *appsv1.DeploymentSpec) *appsv1.DeploymentSpec {
+func (sm *DefaultEnvoyServiceMesh) TransformServiceDeploymentSpec(service *crv1.Service, spec *appsv1.DeploymentSpec, services []*crv1.Service) *appsv1.DeploymentSpec {
 	prepareEnvoyContainer, envoyContainer := sm.envoyContainers(service)
 
 	configVolume := corev1.Volume{
@@ -44,16 +52,185 @@ func (sm *DefaultEnvoyServiceMesh) TransformServiceDeploymentSpec(service *crv1.
 	volumes := []corev1.Volume{configVolume}
 	volumes = append(volumes, spec.Template.Spec.Volumes...)
 
+	// FIXME: remove this when local dns is working
+	var hostnames []string
+	for _, service := range services {
+		hostnames = append(hostnames, service.Spec.Path.ToDomain(true))
+	}
+	sort.Strings(hostnames)
+
+	ip, _, _ := net.ParseCIDR(sm.Config.RedirectCIDRBlock)
+
+	hostAlias := corev1.HostAlias{
+		IP:        ip.String(),
+		Hostnames: hostnames,
+	}
+	spec.Template.Spec.HostAliases = []corev1.HostAlias{hostAlias}
+
 	spec.Template.Spec.InitContainers = initContainers
 	spec.Template.Spec.Containers = containers
 	spec.Template.Spec.Volumes = volumes
 	return spec
 }
+
+func (sm *DefaultEnvoyServiceMesh) IsDeploymentSpecUpdated(
+	service *crv1.Service,
+	current, desired, untransformed *appsv1.DeploymentSpec,
+) (bool, string, *appsv1.DeploymentSpec) {
+	// make sure the init containers are correct
+	updated, reason := checkExpectedContainers(current.Template.Spec.InitContainers, desired.Template.Spec.InitContainers, true)
+	if !updated {
+		return false, reason, nil
+	}
+
+	// make sure the containers are correct
+	updated, reason = checkExpectedContainers(current.Template.Spec.Containers, desired.Template.Spec.Containers, false)
+	if !updated {
+		return false, reason, nil
+	}
+
+	// make sure the volumes are correct
+	updated, reason = checkExpectedVolumes(current.Template.Spec.Volumes, desired.Template.Spec.Volumes)
+	if !updated {
+		return false, reason, nil
+	}
+
+	// get the init containers that are not a part of the serviceMesh
+	var initContainers []corev1.Container
+	for _, container := range current.Template.Spec.InitContainers {
+		if isServiceMeshResource(container.Name) {
+			continue
+		}
+
+		initContainers = append(initContainers, container)
+	}
+
+	// get the containers that are not a part of the serviceMesh
+	var containers []corev1.Container
+	for _, container := range current.Template.Spec.Containers {
+		if isServiceMeshResource(container.Name) {
+			continue
+		}
+
+		containers = append(containers, container)
+	}
+
+	// get the volumes that are not a part of the serviceMesh
+	var volumes []corev1.Volume
+	for _, volume := range current.Template.Spec.Volumes {
+		if isServiceMeshResource(volume.Name) {
+			continue
+		}
+
+		volumes = append(volumes, volume)
+	}
+
+	// make a copy of the desired spec, and set the initContainers, containers, and volumes
+	// to be the slices without the service mesh resources
+	spec := desired.DeepCopy()
+	spec.Template.Spec.InitContainers = initContainers
+	spec.Template.Spec.Containers = containers
+	spec.Template.Spec.Volumes = volumes
+
+	return true, "", spec
+}
+
+func checkExpectedContainers(currentContainers, desiredContainers []corev1.Container, init bool) (bool, string) {
+	// Collect all of the expected containers
+	desiredEnvoyContainers := map[string]corev1.Container{}
+	for _, container := range desiredContainers {
+		if !isServiceMeshResource(container.Name) {
+			// not a service-mesh init container
+			continue
+		}
+
+		desiredEnvoyContainers[container.Name] = container
+	}
+
+	containerType := ""
+	if init {
+		containerType = " init"
+	}
+
+	// Check to make sure all of the envoy containers exist
+	currentEnvoyContainers := map[string]struct{}{}
+	for _, container := range currentContainers {
+		if !isServiceMeshResource(container.Name) {
+			// not a service-mesh init container
+			continue
+		}
+
+		desiredContainer, ok := desiredEnvoyContainers[container.Name]
+		if !ok {
+			return false, fmt.Sprintf("has extra envoy%v container %v", containerType, container.Name)
+		}
+
+		if !kubeutil.ContainersSemanticallyEqual(&container, &desiredContainer) {
+			return false, fmt.Sprintf("has out of date envoy%v container %v", containerType, container.Name)
+		}
+
+		currentEnvoyContainers[container.Name] = struct{}{}
+	}
+
+	// Make sure there aren't extra containers
+	numDesiredContainers := len(desiredEnvoyContainers)
+	numCurrentContainers := len(currentEnvoyContainers)
+	if numDesiredContainers != numCurrentContainers {
+		return false, fmt.Sprintf("expected %v envoy%v containers, had %v", numDesiredContainers, containerType, numCurrentContainers)
+	}
+
+	return true, ""
+}
+
+func checkExpectedVolumes(currentVolumes, desiredVolumes []corev1.Volume) (bool, string) {
+	// Collect all of the expected volumes
+	desiredEnvoyVolumes := map[string]corev1.Volume{}
+	for _, volume := range desiredVolumes {
+		if !isServiceMeshResource(volume.Name) {
+			// not a service-mesh init volume
+			continue
+		}
+
+		desiredEnvoyVolumes[volume.Name] = volume
+	}
+
+	// Check to make sure all of the volumes exist
+	currentEnvoyVolumes := map[string]struct{}{}
+	for _, volume := range currentVolumes {
+		if !isServiceMeshResource(volume.Name) {
+			// not a service-mesh init volume
+			continue
+		}
+
+		desiredVolume, ok := desiredEnvoyVolumes[volume.Name]
+		if !ok {
+			return false, fmt.Sprintf("has extra envoy volume %v", volume.Name)
+		}
+
+		if !kubeutil.VolumesSemanticallyEqual(&volume, &desiredVolume) {
+			return false, fmt.Sprintf("has out of date envoy volume %v", volume.Name)
+		}
+
+		currentEnvoyVolumes[volume.Name] = struct{}{}
+	}
+
+	numDesiredVolumes := len(desiredEnvoyVolumes)
+	numCurrentVolumes := len(currentEnvoyVolumes)
+	if numDesiredVolumes != numCurrentVolumes {
+		return false, fmt.Sprintf("expected %v envoy volumes, had %v", numDesiredVolumes, numCurrentVolumes)
+	}
+
+	return true, ""
+}
+
+func isServiceMeshResource(name string) bool {
+	parts := strings.Split(name, kubeconstants.DeploymentResourcePrefixServiceMesh)
+	return len(parts) >= 2
+}
+
 func (sm *DefaultEnvoyServiceMesh) envoyContainers(service *crv1.Service) (corev1.Container, corev1.Container) {
 	prepareEnvoy := corev1.Container{
-		// TODO: what if a user makes an init component with this name?
-		// probably want to add a prefix to user components
-		Name:  "lattice-prepare-envoy",
+		Name:  initContainerNamePrepareEnvoy,
 		Image: sm.Config.PrepareImage,
 		Env: []corev1.EnvVar{
 			{
@@ -113,9 +290,7 @@ func (sm *DefaultEnvoyServiceMesh) envoyContainers(service *crv1.Service) (corev
 	}
 
 	envoy := corev1.Container{
-		// TODO: what if a user makes an init component with this name?
-		// probably want to add a prefix to user components
-		Name:            "lattice-envoy",
+		Name:            containerNameEnvoy,
 		Image:           sm.Config.Image,
 		ImagePullPolicy: corev1.PullIfNotPresent,
 		Command:         []string{"/usr/local/bin/envoy"},
@@ -138,4 +313,17 @@ func (sm *DefaultEnvoyServiceMesh) envoyContainers(service *crv1.Service) (corev
 	}
 
 	return prepareEnvoy, envoy
+}
+
+func (sm *DefaultEnvoyServiceMesh) GetEndpointSpec(*crv1.ServiceAddress) (*crv1.EndpointSpec, error) {
+	ip, _, err := net.ParseCIDR(sm.Config.RedirectCIDRBlock)
+	if err != nil {
+		return nil, err
+	}
+
+	ipStr := ip.String()
+	spec := &crv1.EndpointSpec{
+		IP: &ipStr,
+	}
+	return spec, nil
 }

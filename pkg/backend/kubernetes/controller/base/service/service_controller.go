@@ -158,7 +158,14 @@ func (c *Controller) Run(workers int, stopCh <-chan struct{}) {
 	defer glog.Infof("Shutting down service controller")
 
 	// wait for your secondary caches to fill before starting your work
-	if !cache.WaitForCacheSync(stopCh, c.serviceListerSynced, c.deploymentListerSynced, c.kubeServiceListerSynced) {
+	if !cache.WaitForCacheSync(
+		stopCh,
+		c.serviceListerSynced,
+		c.nodePoolListerSynced,
+		c.deploymentListerSynced,
+		c.kubeServiceListerSynced,
+		c.serviceAddressListerSynced,
+	) {
 		return
 	}
 
@@ -187,8 +194,9 @@ func (c *Controller) handleConfigAdd(obj interface{}) {
 	defer c.configLock.Unlock()
 	c.config = config.DeepCopy().Spec
 
-	serviceMesh, err := servicemesh.NewCloudProvider(&c.config.ServiceMesh)
+	serviceMesh, err := servicemesh.NewServiceMesh(&c.config.ServiceMesh)
 	if err != nil {
+		glog.Errorf("error creating service mesh: %v", err)
 		// FIXME: what to do here?
 		return
 	}
@@ -210,8 +218,9 @@ func (c *Controller) handleConfigUpdate(old, cur interface{}) {
 	defer c.configLock.Unlock()
 	c.config = curConfig.DeepCopy().Spec
 
-	serviceMesh, err := servicemesh.NewCloudProvider(&c.config.ServiceMesh)
+	serviceMesh, err := servicemesh.NewServiceMesh(&c.config.ServiceMesh)
 	if err != nil {
+		glog.Errorf("error creating service mesh: %v", err)
 		// FIXME: what to do here?
 		return
 	}
@@ -490,7 +499,7 @@ func (c *Controller) handleServiceAddressAdd(obj interface{}) {
 	if address.DeletionTimestamp != nil {
 		// On a restart of the controller manager, it's possible for an object to
 		// show up in a state that is already pending deletion.
-		c.handleKubeServiceDelete(address)
+		c.handleServiceAddressDelete(address)
 		return
 	}
 

@@ -8,6 +8,7 @@ import (
 
 	"github.com/mlab-lattice/system/cmd/kubernetes/lattice-controller-manager/app/basecontrollers"
 	awscontrollers "github.com/mlab-lattice/system/cmd/kubernetes/lattice-controller-manager/app/cloudcontrollers/aws"
+	localcontrollers "github.com/mlab-lattice/system/cmd/kubernetes/lattice-controller-manager/app/cloudcontrollers/local"
 	controller "github.com/mlab-lattice/system/cmd/kubernetes/lattice-controller-manager/app/common"
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/cloudprovider"
 	latticeinformers "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/informers/externalversions"
@@ -145,7 +146,9 @@ func GetControllerInitializers(provider string) map[string]controller.Initialize
 			initializers["cloud-aws-"+name] = initializer
 		}
 	case constants.ProviderLocal:
-		// Local case doesn't need any extra controllers
+		for name, initializer := range localcontrollers.GetControllerInitializers() {
+			initializers["cloud-local-"+name] = initializer
+		}
 	default:
 		panic("unsupported provider " + provider)
 	}

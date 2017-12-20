@@ -15,7 +15,7 @@ GO_REPOSITORIES = {
     },
     "github.com/docker/docker": {
         "name": "com_github_docker_docker",
-        "tag": "v17.03.2-ce",
+        "tag": "v17.05.0-ce",
         "importpath": "github.com/docker/docker",
     },
     "github.com/fatih/color": {
@@ -87,6 +87,13 @@ GO_REPOSITORIES = {
         "tag": "kubernetes-1.9.0",
         "importpath": "k8s.io/client-go",
     },
+    "k8s.io/kubernetes": {
+        "name": "io_k8s_kubernetes",
+        "build_file_generation": "on",
+        "build_file_name": "BUILD.bazel",
+        "tag": "v1.9.0",
+        "importpath": "k8s.io/kubernetes",
+    },
     
     # github.com/aws/aws-sdk-go dependencies
     # commits taken from: https://github.com/aws/aws-sdk-go/blob/v1.12.35/Gopkg.lock
@@ -102,27 +109,27 @@ GO_REPOSITORIES = {
     },
     
     # github.com/docker/docker dependencies
-    # commits taken from https://github.com/docker/docker/blob/v17.03.2-ce/vendor.conf
+    # commits taken from https://github.com/moby/moby/blob/v17.05.0-ce/vendor.conf
     "github.com/docker/distribution": {
         "name": "com_github_docker_distribution",
-        "commit": "28602af35aceda2f8d571bad7ca37a54cf0250bc",
+        "commit": "b38e5838b7b2f2ad48e06ec4b500011976080621",
         "importpath": "github.com/docker/distribution",
     },
     "github.com/docker/go-connections": {
         "name": "com_github_docker_go_connections",
-        "commit": "ecb4cb2dd420ada7df7f2593d6c25441f65f69f2",
+        "commit": "e15c02316c12de00874640cd76311849de2aeed5",
         "importpath": "github.com/docker/go-connections",
     },
     "github.com/docker/go-units": {
         "name": "com_github_docker_go_units",
-        "commit": "8a7beacffa3009a9ac66bad506b18ffdd110cf97",
+        "commit": "9e638d38cf6977a37a8ea0078f3ee75a7cdb2dd1",
         "importpath": "github.com/docker/go-units",
     },
-    # Commit in vendor.conf is 54296cf40ad8143b62dbcaa1d90e520a2136ddfe, but bazel did not like this (said it was not a tree).
-    # Seems to be cherry pick of c7ebda72acad31929e35b4fc6c2739013cf4fadd, so using that instead.
+    # Commit in vendor.conf is 9c2d8d184e5da67c95d601382adf14862e4f2228, but bazel did not like this (said it was not a tree).
+    # Seems to be cherry pick of c44aec9b23f89ca40434fe5f86693870ef3bf9f9, so using that instead.
     "github.com/opencontainers/runc": {
         "name": "com_github_opencontainers_runc",
-        "commit": "c7ebda72acad31929e35b4fc6c2739013cf4fadd",
+        "commit": "c44aec9b23f89ca40434fe5f86693870ef3bf9f9",
         "importpath": "github.com/opencontainers/runc",
     },
     "github.com/pkg/errors": {
@@ -135,6 +142,28 @@ GO_REPOSITORIES = {
         "tag": "v0.11.0",
         "importpath": "github.com/Sirupsen/logrus",
     },
+    "github.com/opencontainers/go-digest": {
+        "name": "com_github_opencontainers_go_digest",
+        "commit": "a6d0ee40d4207ea02364bd3b9e8e77b9159ba1eb",
+        "importpath": "github.com/opencontainers/go-digest",
+    },
+    "github.com/Nvveen/Gotty": {
+        "name": "com_github_Nvveen_Gotty",
+        "commit": "a8b993ba6abdb0e0c12b0125c603323a71c7790c",
+        "importpath": "github.com/Nvveen/Gotty",
+        # looks like github.com/Nvveen/Gotty is what is being included:
+        # https://github.com/moby/moby/blob/147443a42665419d8b3c2047a7d345440bfb63c0/pkg/jsonmessage/jsonmessage.go#L11
+        # but that it is being aliased in vendor.conf:
+        # https://github.com/moby/moby/blob/v17.05.0-ce/vendor.conf#L133
+        "vcs": "git",
+        "remote": "https://github.com/ijc25/Gotty",
+    },
+    "github.com/docker/libtrust": {
+        "name": "com_github_docker_libtrust",
+        "commit": "9cbd2a1374f46905c68a4eb3694a130610adc62a",
+        "importpath": "github.com/docker/libtrust",
+    },
+
 
     # github.com/fatih/color dependencies
     # commits taken from: https://github.com/gin-gonic/gin/blob/v1.2/vendor/vendor.json
@@ -344,6 +373,11 @@ GO_REPOSITORIES = {
         "name": "in_gopkg_yaml_v2",
         "commit": "53feefa2559fb8dfa8d81baad31be332c97d6c77",
         "importpath": "gopkg.in/yaml.v2",
+    },
+    "k8s.io/apiserver": {
+        "name": "io_k8s_apiserver",
+        "tag": "kubernetes-1.9.0",
+        "importpath": "k8s.io/apiserver",
     },
     "k8s.io/kube-openapi": {
         "name": "io_k8s_kube_openapi",

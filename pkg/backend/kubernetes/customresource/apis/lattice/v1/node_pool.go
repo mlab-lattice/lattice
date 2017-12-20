@@ -46,5 +46,5 @@ const (
 type NodePoolList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata"`
-	Items           []SystemTeardown `json:"items"`
+	Items           []NodePool `json:"items"`
 }

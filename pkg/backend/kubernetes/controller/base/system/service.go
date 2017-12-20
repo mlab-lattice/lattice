@@ -106,7 +106,7 @@ func (c *Controller) syncSystemServices(system *crv1.System) (map[tree.NodePath]
 		}
 
 		// Otherwise, get a new spec and update the service
-		spec, err := serviceSpec(&serviceInfo, path)
+		spec, err := serviceSpec(system, &serviceInfo, path)
 		if err != nil {
 			return nil, nil, nil, err
 		}
@@ -161,7 +161,7 @@ func newService(system *crv1.System, serviceInfo *crv1.SystemSpecServiceInfo, pa
 		kubeconstants.LabelKeyServicePathDomain: path.ToDomain(true),
 	}
 
-	spec, err := serviceSpec(serviceInfo, path)
+	spec, err := serviceSpec(system, serviceInfo, path)
 	if err != nil {
 		return nil, err
 	}
@@ -181,7 +181,21 @@ func newService(system *crv1.System, serviceInfo *crv1.SystemSpecServiceInfo, pa
 	return service, nil
 }
 
-func serviceSpec(serviceInfo *crv1.SystemSpecServiceInfo, path tree.NodePath) (crv1.ServiceSpec, error) {
+func serviceSpec(system *crv1.System, serviceInfo *crv1.SystemSpecServiceInfo, path tree.NodePath) (crv1.ServiceSpec, error) {
+	var numInstances int32
+	if serviceInfo.Definition.Resources.NumInstances != nil {
+		numInstances = *(serviceInfo.Definition.Resources.NumInstances)
+	} else if serviceInfo.Definition.Resources.MinInstances != nil {
+		numInstances = *(serviceInfo.Definition.Resources.MinInstances)
+	} else {
+		err := fmt.Errorf(
+			"System %v/%v Service %v invalid Service definition: num_instances or min_instances must be set",
+			system.Namespace,
+			system.Name,
+		)
+		return crv1.ServiceSpec{}, err
+	}
+
 	componentPorts, portSet := servicePorts(serviceInfo)
 	envoyPorts, err := envoyPorts(portSet)
 	if err != nil {
@@ -209,6 +223,8 @@ func serviceSpec(serviceInfo *crv1.SystemSpecServiceInfo, path tree.NodePath) (c
 		Ports:           componentPorts,
 		EnvoyAdminPort:  envoyAdminPort,
 		EnvoyEgressPort: envoyEgressPort,
+
+		NumInstances: numInstances,
 	}
 	return spec, nil
 }

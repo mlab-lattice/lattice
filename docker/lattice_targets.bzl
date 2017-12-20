@@ -49,6 +49,9 @@ def lattice_go_container_image(target, debug=False):
       importpath = "github.com/mlab-lattice/system/" + path,
       library = "//" + path + ":go_default_library",
       visibility = ["//visibility:public"],
+#      goos = "linux",
+#      goarch = "amd64",
+#      pure = "on",
   )
 
   container_push(

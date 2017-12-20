@@ -5,6 +5,7 @@ go_library(
     srcs = [
         "base_controllers.go",
         "component_build.go",
+        "service_address.go",
         "service_build.go",
         "service_controller.go",
         "system.go",
@@ -17,6 +18,7 @@ go_library(
         "//cmd/kubernetes/lattice-controller-manager/app/common:go_default_library",
         "//pkg/backend/kubernetes/controller/base/componentbuild:go_default_library",
         "//pkg/backend/kubernetes/controller/base/service:go_default_library",
+        "//pkg/backend/kubernetes/controller/base/serviceaddress:go_default_library",
         "//pkg/backend/kubernetes/controller/base/servicebuild:go_default_library",
         "//pkg/backend/kubernetes/controller/base/system:go_default_library",
         "//pkg/backend/kubernetes/controller/base/systembuild:go_default_library",

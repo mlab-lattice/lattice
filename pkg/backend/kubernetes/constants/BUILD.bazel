@@ -6,6 +6,7 @@ go_library(
         "affinity.go",
         "annotation.go",
         "config.go",
+        "deployment.go",
         "docker.go",
         "finalizer.go",
         "internal_component.go",

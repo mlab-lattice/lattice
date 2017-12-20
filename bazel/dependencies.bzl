@@ -17,6 +17,7 @@ def go_dependencies():
         "k8s.io/apiextensions-apiserver",
         "k8s.io/apimachinery",
         "k8s.io/client-go",
+        "k8s.io/kubernetes",
     ]
 
     for dep in dependencies:
@@ -47,6 +48,9 @@ def _go_dependencies_com_github_docker_docker():
       "github.com/opencontainers/runc",
       "github.com/pkg/errors",
       "github.com/Sirupsen/logrus",
+      "github.com/opencontainers/go-digest",
+      "github.com/Nvveen/Gotty",
+      "github.com/docker/libtrust",
   ]
 
   for dep in dependencies:
@@ -120,6 +124,7 @@ def _go_dependencies_io_k8s():
        "golang.org/x/sys",
        "gopkg.in/inf.v0",
        "gopkg.in/yaml.v2",
+       "k8s.io/apiserver",
        "k8s.io/kube-openapi",
    ]
 
@@ -146,7 +151,12 @@ def _docker_dependencies_debian_pkg():
   dpkg_list(
       name = "package_bundle",
       packages = [
-          # iptables and dependencies (from https://packages.debian.org/sid/iptables)
+          # libstdc++6 and dependencies (from https://packages.debian.org/stretch/libstdc%2B%2B6)
+          # needed for admin CLI now for some reason
+          "libstdc++6",
+          "libgcc1",
+
+          # iptables and dependencies (from https://packages.debian.org/stretch/iptables)
           "iptables",
           "libip4tc0",
           "libip6tc0",

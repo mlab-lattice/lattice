@@ -12,12 +12,14 @@ import (
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kubelabels "k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/apimachinery/pkg/util/intstr"
 
 	"github.com/golang/glog"
+	"sort"
 )
 
 func (c *Controller) syncServiceDeployment(service *crv1.Service, nodePool *crv1.NodePool) (*appsv1.Deployment, error) {
@@ -47,55 +49,28 @@ func (c *Controller) syncServiceDeployment(service *crv1.Service, nodePool *crv1
 
 func (c *Controller) syncExistingDeployment(service *crv1.Service, nodePool *crv1.NodePool, deployment *appsv1.Deployment) (*appsv1.Deployment, error) {
 	// Need a consistent view of our config while generating the deployment spec
-	var configCopy *crv1.ConfigSpec
-	{
-		c.configLock.RLock()
-		defer c.configLock.RUnlock()
-		configCopy = c.config.DeepCopy()
-	}
+	c.configLock.RLock()
+	defer c.configLock.RUnlock()
 
 	name := deploymentName(service)
 	labels := deploymentLabels(service)
 
-	desiredSpec, err := c.deploymentSpec(service, name, labels, nodePool, &configCopy.Envoy)
+	desiredSpec, err := c.deploymentSpec(service, name, labels, nodePool)
 	if err != nil {
 		return nil, err
 	}
 
-	desiredPodTemplate := desiredSpec.Template
-	podTemplatesSemanticallyEqual := util.PodTemplateSpecsSemanticallyEqual(desiredPodTemplate, deployment.Spec.Template)
-	if !podTemplatesSemanticallyEqual {
-		glog.V(4).Infof("Deployment %v for Service %v/%v had out of date pod template, updating", deployment.Name, service.Namespace, service.Name)
+	currentSpec := deployment.Spec
+	untransformedSpec := untransformedDeploymentSpec(service, name, labels, nodePool)
+	defaultedUntransformedSpec := util.SetDeploymentSpecDefaults(untransformedSpec)
+	defaultedDesiredSpec := util.SetDeploymentSpecDefaults(&desiredSpec)
+
+	isUpdated, reason := c.isDeploymentSpecUpdated(service, &currentSpec, defaultedDesiredSpec, defaultedUntransformedSpec)
+	if !isUpdated {
+		glog.V(4).Infof("Deployment %v for Service %v/%v not up to date: %v", deployment.Name, service.Namespace, service.Name, reason)
 		return c.updateDeploymentSpec(deployment, desiredSpec)
 	}
 
-	if deployment.Spec.Replicas != desiredSpec.Replicas {
-		glog.V(4).Infof("Deployment %v for Service %v/%v had out of date number of desired replicas, updating", deployment.Name, service.Namespace, service.Name)
-		return c.updateDeploymentSpec(deployment, desiredSpec)
-	}
-
-	if deployment.Spec.Strategy != desiredSpec.Strategy {
-		glog.V(4).Infof("Deployment %v for Service %v/%v had out of date strategy, updating", deployment.Name, service.Namespace, service.Name)
-		return c.updateDeploymentSpec(deployment, desiredSpec)
-	}
-
-	if deployment.Spec.MinReadySeconds != desiredSpec.MinReadySeconds {
-		glog.V(4).Infof("Deployment %v for Service %v/%v had out of date min ready seconds, updating", deployment.Name, service.Namespace, service.Name)
-		return c.updateDeploymentSpec(deployment, desiredSpec)
-	}
-
-	if deployment.Spec.Paused != desiredSpec.Paused {
-		glog.V(4).Infof("Deployment %v for Service %v/%v had out of paused switch, updating", deployment.Name, service.Namespace, service.Name)
-		return c.updateDeploymentSpec(deployment, desiredSpec)
-	}
-
-	if deployment.Spec.ProgressDeadlineSeconds != desiredSpec.ProgressDeadlineSeconds {
-		glog.V(4).Infof("Deployment %v for Service %v/%v had out of date progress deadline seconds, updating", deployment.Name, service.Namespace, service.Name)
-		return c.updateDeploymentSpec(deployment, desiredSpec)
-	}
-
-	// It's assumed we won't update the RevisionHistoryLimit or the Selector.
-	glog.V(4).Infof("Deployment %v for Service %v/%v was up to date", deployment.Name, service.Namespace, service.Name)
 	return deployment, nil
 }
 
@@ -121,18 +96,14 @@ func (c *Controller) createNewDeployment(service *crv1.Service, nodePool *crv1.N
 }
 
 func (c *Controller) newDeployment(service *crv1.Service, nodePool *crv1.NodePool) (*appsv1.Deployment, error) {
-	var configCopy *crv1.ConfigSpec
-	{
-		// Need a consistent view of our config while generating the deployment spec
-		c.configLock.RLock()
-		defer c.configLock.RUnlock()
-		configCopy = c.config.DeepCopy()
-	}
+	// Need a consistent view of our config while generating the deployment spec
+	c.configLock.RLock()
+	defer c.configLock.RUnlock()
 
 	name := deploymentName(service)
 	labels := deploymentLabels(service)
 
-	spec, err := c.deploymentSpec(service, name, labels, nodePool, &configCopy.Envoy)
+	spec, err := c.deploymentSpec(service, name, labels, nodePool)
 	if err != nil {
 		return nil, err
 	}
@@ -160,7 +131,26 @@ func deploymentLabels(service *crv1.Service) map[string]string {
 	}
 }
 
-func (c *Controller) deploymentSpec(service *crv1.Service, name string, deploymentLabels map[string]string, nodePool *crv1.NodePool, envoyConfig *crv1.ConfigEnvoy) (appsv1.DeploymentSpec, error) {
+func (c *Controller) deploymentSpec(service *crv1.Service, name string, deploymentLabels map[string]string, nodePool *crv1.NodePool) (appsv1.DeploymentSpec, error) {
+	spec := untransformedDeploymentSpec(service, name, deploymentLabels, nodePool)
+
+	// FIXME: remove this when local dns is working
+	services, err := c.serviceLister.Services(service.Namespace).List(kubelabels.Everything())
+	if err != nil {
+		return appsv1.DeploymentSpec{}, err
+	}
+
+	// IMPORTANT: the order of these TransformServiceDeploymentSpec and the order of the IsDeploymentSpecUpdated calls in
+	// isDeploymentSpecUpdated _must_ be inverses.
+	// That is, if we call cloudProvider then serviceMesh here, we _must_ call serviceMesh then cloudProvider
+	// in isDeploymentSpecUpdated.
+	spec = c.cloudProvider.TransformServiceDeploymentSpec(service, spec)
+	spec = c.serviceMesh.TransformServiceDeploymentSpec(service, spec, services)
+
+	return *spec, nil
+}
+
+func untransformedDeploymentSpec(service *crv1.Service, name string, deploymentLabels map[string]string, nodePool *crv1.NodePool) *appsv1.DeploymentSpec {
 	replicas := service.Spec.NumInstances
 
 	// Create a container for each Component in the Service
@@ -190,6 +180,7 @@ func (c *Controller) deploymentSpec(service *crv1.Service, name string, deployme
 		RequiredDuringSchedulingIgnoredDuringExecution: []corev1.PodAffinityTerm{podAffinityTerm},
 	}
 
+	// IMPORTANT: if you change anything in here, you _must_ update isDeploymentSpecUpdated to accommodate it
 	spec := &appsv1.DeploymentSpec{
 		Replicas: &replicas,
 		Selector: &metav1.LabelSelector{
@@ -215,10 +206,7 @@ func (c *Controller) deploymentSpec(service *crv1.Service, name string, deployme
 		},
 	}
 
-	spec = c.cloudProvider.TransformServiceDeploymentSpec(spec)
-	spec = c.serviceMesh.TransformServiceDeploymentSpec(service, spec)
-
-	return *spec, nil
+	return spec
 }
 
 func containerFromComponent(component *block.Component, buildArtifacts *crv1.ComponentBuildArtifacts) corev1.Container {
@@ -228,24 +216,35 @@ func containerFromComponent(component *block.Component, buildArtifacts *crv1.Com
 			ports,
 			corev1.ContainerPort{
 				Name:          port.Name,
+				Protocol:      corev1.ProtocolTCP,
 				ContainerPort: int32(port.Port),
 			},
 		)
 	}
 
+	// Sort the env var names so the array order is deterministic
+	// so we can more easily check to see if the spec needs
+	// to be updated.
+	var envVarNames []string
+	for name := range component.Exec.Environment {
+		envVarNames = append(envVarNames, name)
+	}
+
+	sort.Strings(envVarNames)
+
 	var envVars []corev1.EnvVar
-	for k, v := range component.Exec.Environment {
+	for _, name := range envVarNames {
 		envVars = append(
 			envVars,
 			corev1.EnvVar{
-				Name:  k,
-				Value: v,
+				Name:  name,
+				Value: component.Exec.Environment[name],
 			},
 		)
 	}
 
 	return corev1.Container{
-		Name:            component.Name,
+		Name:            kubeconstants.DeploymentResourcePrefixUser + component.Name,
 		Image:           buildArtifacts.DockerImageFQN,
 		ImagePullPolicy: corev1.PullIfNotPresent,
 		Command:         component.Exec.Command,
@@ -273,13 +272,23 @@ func deploymentLivenessProbe(hc *block.ComponentHealthCheck) *corev1.Probe {
 	}
 
 	if hc.HTTP != nil {
+		// Sort the header names so the array order is deterministic
+		// so we can more easily check to see if the spec needs
+		// to be updated.
+		var headerNames []string
+		for name := range hc.HTTP.Headers {
+			headerNames = append(headerNames, name)
+		}
+
+		sort.Strings(headerNames)
+
 		var headers []corev1.HTTPHeader
-		for k, v := range hc.HTTP.Headers {
+		for _, name := range headerNames {
 			headers = append(
 				headers,
 				corev1.HTTPHeader{
-					Name:  k,
-					Value: v,
+					Name:  name,
+					Value: hc.HTTP.Headers[name],
 				},
 			)
 		}
@@ -302,4 +311,28 @@ func deploymentLivenessProbe(hc *block.ComponentHealthCheck) *corev1.Probe {
 			},
 		},
 	}
+}
+
+func (c *Controller) isDeploymentSpecUpdated(service *crv1.Service, current, desired, untransformed *appsv1.DeploymentSpec) (bool, string) {
+	// IMPORTANT: the order of these IsDeploymentSpecUpdated and the order of the TransformServiceDeploymentSpec
+	// calls in deploymentSpec _must_ be inverses.
+	// That is, if we call serviceMesh then cloudProvider here, we _must_ call cloudProvider then serviceMesh
+	// in deploymentSpec.
+	// This is done so that IsDeploymentSpecUpdated can return what the spec should look like before it transformed it.
+	isUpdated, reason, transformed := c.serviceMesh.IsDeploymentSpecUpdated(service, current, desired, untransformed)
+	if !isUpdated {
+		return false, reason
+	}
+
+	isUpdated, reason, transformed = c.cloudProvider.IsDeploymentSpecUpdated(service, current, transformed, untransformed)
+	if !isUpdated {
+		return false, reason
+	}
+
+	isUpdated = kubeutil.PodTemplateSpecsSemanticallyEqual(&current.Template, &desired.Template)
+	if !isUpdated {
+		return false, "pod template spec is out of date"
+	}
+
+	return true, ""
 }

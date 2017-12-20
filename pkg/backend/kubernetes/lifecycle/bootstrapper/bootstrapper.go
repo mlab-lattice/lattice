@@ -58,15 +58,15 @@ func NewBootstrapper(clusterID types.ClusterID, options *Options, kubeConfig *re
 		}
 	}
 
-	if options.Config.Provider.Local != nil {
+	if options.Config.CloudProvider.Local != nil {
 		return NewLocalBootstrapper(clusterID, options, kubeConfig, kubeClient, latticeClient)
 	}
 
-	if options.Config.Provider.AWS != nil {
+	if options.Config.CloudProvider.AWS != nil {
 		return NewCloudBootstrapper(clusterID, options, kubeConfig, kubeClient, latticeClient)
 	}
 
-	return nil, fmt.Errorf("must specify Provider in Config")
+	return nil, fmt.Errorf("must specify CloudProvider in Config")
 }
 
 type DefaultLocalBootstrapper struct {
