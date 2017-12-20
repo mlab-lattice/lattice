@@ -8,6 +8,7 @@ go_library(
     deps = [
         "//cmd/kubernetes/lattice-controller-manager/app/basecontrollers:go_default_library",
         "//cmd/kubernetes/lattice-controller-manager/app/cloudcontrollers/aws:go_default_library",
+        "//cmd/kubernetes/lattice-controller-manager/app/cloudcontrollers/local:go_default_library",
         "//cmd/kubernetes/lattice-controller-manager/app/common:go_default_library",
         "//pkg/backend/kubernetes/cloudprovider:go_default_library",
         "//pkg/backend/kubernetes/customresource/generated/informers/externalversions:go_default_library",
