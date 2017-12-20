@@ -37,8 +37,7 @@ var (
 	defaultLocalDNSControllerArgs = []string {
 		"-v", "5",
 		"--logtostderr",
-		"--resolv", "/etc/k8s/dns/dnsmasq-nanny/resolv.conf",
-		"--extraconf", "/etc/k8s/dns/dnsmasq-nanny/dnsmasq.conf",
+		"--extraconf", "/etc/dns-config/dnsmasq.conf",
 	}
 
 	defaultLocalDNSServerArgs = []string {
@@ -46,7 +45,7 @@ var (
 		"-v=2",
 		"-logtostderr",
 		"-restartDnsmasq=true",
-		"-configDir=/etc/k8s/dns/dnsmasq-nanny",
+		"-configDir=/etc/etc/dns-config/",
 		// Arguments after -- are passed straight to dnsmasq.
 		"--",
 		"-k", //Keep in foreground so as to not immediately exit.

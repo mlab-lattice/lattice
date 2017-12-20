@@ -30,7 +30,6 @@ func (b *DefaultBootstrapper) seedDNS() ([]interface{}, error) {
 		"key" : constants.MasterNodeDNSServer,
 	}
 
-	// Create a daemon set for my image
 	localDNSDaemonSet := &appsv1beta2.DaemonSet{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "DaemonSet",
@@ -56,6 +55,12 @@ func (b *DefaultBootstrapper) seedDNS() ([]interface{}, error) {
 							Name:  constants.MasterNodeDNSSController,
 							Image: b.Options.LocalComponents.LocalDNSController.Image,
 							Args:  controller_args,
+							VolumeMounts: []corev1.VolumeMount{
+								{
+									Name:      "dns-config",
+									MountPath: "/etc/dns-config/",
+								},
+							},
 						},
 						{
 							Name:	constants.MasterNodeDNSServer,
@@ -68,10 +73,11 @@ func (b *DefaultBootstrapper) seedDNS() ([]interface{}, error) {
 									Name: "dns",
 									Protocol: "UDP",
 								},
+							},
+							VolumeMounts: []corev1.VolumeMount{
 								{
-									ContainerPort: 53,
-									Name: "dns-tcp",
-									Protocol: "TCP",
+									Name:      "dns-config",
+									MountPath: "/etc/dns-config/",
 								},
 							},
 						},
@@ -84,6 +90,16 @@ func (b *DefaultBootstrapper) seedDNS() ([]interface{}, error) {
 					},
 					Affinity: &corev1.Affinity{
 						NodeAffinity: &constants.NodeAffinityMasterNode,
+					},
+					Volumes: []corev1.Volume{
+						{
+							Name: "dns-config",
+							VolumeSource: corev1.VolumeSource{
+								HostPath: &corev1.HostPathVolumeSource{
+									Path: "/etc/dns-config/",
+								},
+							},
+						},
 					},
 				},
 			},

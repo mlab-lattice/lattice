@@ -3,7 +3,7 @@ package main
 import (
 	"time"
 
-	"github.com/mlab-lattice/system/pkg/backend/kubernetes/controller/kubernetes/local"
+	"github.com/mlab-lattice/system/pkg/backend/kubernetes/cloudprovider/local/local"
 	controller "github.com/mlab-lattice/system/cmd/kubernetes/lattice-controller-manager/app/common"
 	latticeinformers "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/informers/externalversions"
 	"github.com/mlab-lattice/system/pkg/constants"
