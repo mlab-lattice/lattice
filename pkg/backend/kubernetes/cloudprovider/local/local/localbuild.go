@@ -40,7 +40,6 @@ type Controller struct {
 
 type ServerConfig struct {
     serverConfigPath string
-    serverResolvPath string
 }
 
 var (
@@ -50,7 +49,6 @@ var (
 
 func NewController(
     serverConfigPath string,
-    serverResolvPath string,
     latticeClient  	 latticeclientset.Interface,
     addressInformer  latticeinformers.EndpointInformer,
 ) *Controller {
@@ -61,7 +59,6 @@ func NewController(
     }
 
     config.serverConfigPath = serverConfigPath
-    config.serverResolvPath = serverResolvPath
 
     addrc.syncAddressUpdate = addrc.SyncEndpointUpdate
     addrc.enqueueAddressUpdate = addrc.enqueue
@@ -194,9 +191,9 @@ func (addrc *Controller) processNextWorkItem() bool {
 
 func (addrc *Controller) SyncEndpointUpdate(key string) error {
     // List from the informer given in the controller.
-    glog.V(1).Infof("Called rewrite DNS")
+    glog.V(1).Infof("Called endpoint update")
     defer func() {
-        glog.V(4).Infof("Finished rewrite DNS")
+        glog.V(4).Infof("Finished endpoint update")
     }()
 
     namespace, name, err := cache.SplitMetaNamespaceKey(key)
@@ -220,25 +217,38 @@ func (addrc *Controller) SyncEndpointUpdate(key string) error {
 
     // If not recently updated, become responsible for flushing
     addrc.lock.RLock()
+    glog.V(5).Infof("Acquired read lock..")
     if !addrc.hasRecentlyUpdated {
+        addrc.lock.RUnlock()
+
+        glog.V(5).Infof("   has not updated recently")
         addrc.lock.Lock()
+        glog.V(5).Infof("Acquired write lock")
 
         if !addrc.hasRecentlyUpdated {
+            glog.V(5).Infof("   setting timer for 15 seconds")
             // Safe to write to boolean, and become responsible for updating
             addrc.hasRecentlyUpdated = true
             go time.AfterFunc(time.Second * time.Duration(updateWaitBeforeFlushTimer), addrc.FlushRewriteDNS)
         }
+
+        addrc.lock.Unlock()
+    } else {
+        addrc.lock.RUnlock()
     }
 
+    glog.V(5).Infof("acquiring write lock")
     // Acquire the write lock to try and update the map
     addrc.lock.Lock()
 
+    glog.V(5).Infof("updating map")
     endpointPathURL := endpoint.Spec.Path.ToDomain(true)
 
     // TODO :: handle delete
     addrc.cnameList[endpointPathURL] = *endpoint.Spec.IP
 
-    addrc.FlushRewriteDNS()
+    addrc.lock.Unlock()
+    glog.V(5).Infof("update completed, released write lock. exiting...")
 
     return nil
 }
@@ -274,12 +284,12 @@ func CreateEmptyFile(filename string) (*os.File, error) {
 
 func (addrc *Controller) RewriteDnsmasqConfig() error {
 
-    fmt.Println("Rewriting config...")
+    glog.V(5).Infof("Rewriting config...")
     // Open dnsmasq.extra.conf and rewrite
     cname_file, err := CreateEmptyFile(config.serverConfigPath)
 
     defer func() {
-        fmt.Println("Closing config file...")
+        glog.V(5).Infof("Closing config file...")
         cname_file.Close()
 
         // Finished writing to the cache - can now unset the timer flag
@@ -298,6 +308,7 @@ func (addrc *Controller) RewriteDnsmasqConfig() error {
 
     for k, v := range addrc.cnameList {
         _, err := cname_file.WriteString("cname=" + k + "," + v + "\n")
+        glog.V(5).Infof("cname=" + k + "," + v + "\n")
 
         if err != nil {
             return err

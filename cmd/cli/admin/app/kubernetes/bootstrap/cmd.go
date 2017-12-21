@@ -37,7 +37,7 @@ var (
 	defaultLocalDNSControllerArgs = []string {
 		"-v", "5",
 		"--logtostderr",
-		"--extraconf", "/etc/dns-config/dnsmasq.conf",
+		"--server-config-path", "/etc/dns-config/dnsmasq.conf",
 	}
 
 	defaultLocalDNSServerArgs = []string {
@@ -45,7 +45,7 @@ var (
 		"-v=2",
 		"-logtostderr",
 		"-restartDnsmasq=true",
-		"-configDir=/etc/etc/dns-config/",
+		"-configDir=/etc/dns-config/",
 		// Arguments after -- are passed straight to dnsmasq.
 		"--",
 		"-k", //Keep in foreground so as to not immediately exit.

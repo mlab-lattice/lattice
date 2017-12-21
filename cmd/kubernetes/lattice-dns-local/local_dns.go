@@ -45,7 +45,7 @@ func Run(clusterIDString, kubeconfig, provider, terraformModulePath string,
 	glog.V(1).Info("Starting dns controller")
 
 	go local.NewController(
-		serverConfigPath, resolvConfPath,
+		serverConfigPath,
 		ctx.LatticeClientBuilder.ClientOrDie("local-dns-lattice-address"),
 		ctx.LatticeInformerFactory.Lattice().V1().Endpoints(),
 	).Run(4, ctx.Stop)
