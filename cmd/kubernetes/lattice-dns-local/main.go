@@ -24,5 +24,5 @@ func init() {
 }
 
 func main() {
-	Run(clusterIDString, kubeconfig, provider, terraformModulePath, serverConfigPath, resolvConfPath)
+	Run(clusterIDString, kubeconfig, provider, terraformModulePath, serverConfigPath, hostConfigPath)
 }
