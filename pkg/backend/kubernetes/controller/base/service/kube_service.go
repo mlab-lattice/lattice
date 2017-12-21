@@ -53,6 +53,7 @@ func kubeServiceSpec(service *crv1.Service) corev1.ServiceSpec {
 				// Temporarily put this meaningless value here.
 				// Kubernetes claims to support headless services with
 				// no ports but actually does not.
+				// TODO: pending https://github.com/kubernetes/kubernetes/issues/55158
 				Port: 12345,
 			},
 		},
