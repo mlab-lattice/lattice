@@ -2,7 +2,6 @@ package envoy
 
 import (
 	"fmt"
-	"sort"
 	"strconv"
 	"strings"
 
@@ -33,7 +32,7 @@ type DefaultEnvoyServiceMesh struct {
 	Config *crv1.ConfigEnvoy
 }
 
-func (sm *DefaultEnvoyServiceMesh) TransformServiceDeploymentSpec(service *crv1.Service, spec *appsv1.DeploymentSpec, services []*crv1.Service) *appsv1.DeploymentSpec {
+func (sm *DefaultEnvoyServiceMesh) TransformServiceDeploymentSpec(service *crv1.Service, spec *appsv1.DeploymentSpec) *appsv1.DeploymentSpec {
 	prepareEnvoyContainer, envoyContainer := sm.envoyContainers(service)
 
 	configVolume := corev1.Volume{
@@ -51,21 +50,6 @@ func (sm *DefaultEnvoyServiceMesh) TransformServiceDeploymentSpec(service *crv1.
 
 	volumes := []corev1.Volume{configVolume}
 	volumes = append(volumes, spec.Template.Spec.Volumes...)
-
-	// FIXME: remove this when local dns is working
-	var hostnames []string
-	for _, service := range services {
-		hostnames = append(hostnames, service.Spec.Path.ToDomain(true))
-	}
-	sort.Strings(hostnames)
-
-	ip, _, _ := net.ParseCIDR(sm.Config.RedirectCIDRBlock)
-
-	hostAlias := corev1.HostAlias{
-		IP:        ip.String(),
-		Hostnames: hostnames,
-	}
-	spec.Template.Spec.HostAliases = []corev1.HostAlias{hostAlias}
 
 	spec.Template.Spec.InitContainers = initContainers
 	spec.Template.Spec.Containers = containers

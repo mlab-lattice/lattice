@@ -134,18 +134,12 @@ func deploymentLabels(service *crv1.Service) map[string]string {
 func (c *Controller) deploymentSpec(service *crv1.Service, name string, deploymentLabels map[string]string, nodePool *crv1.NodePool) (appsv1.DeploymentSpec, error) {
 	spec := untransformedDeploymentSpec(service, name, deploymentLabels, nodePool)
 
-	// FIXME: remove this when local dns is working
-	services, err := c.serviceLister.Services(service.Namespace).List(kubelabels.Everything())
-	if err != nil {
-		return appsv1.DeploymentSpec{}, err
-	}
-
 	// IMPORTANT: the order of these TransformServiceDeploymentSpec and the order of the IsDeploymentSpecUpdated calls in
 	// isDeploymentSpecUpdated _must_ be inverses.
 	// That is, if we call cloudProvider then serviceMesh here, we _must_ call serviceMesh then cloudProvider
 	// in isDeploymentSpecUpdated.
 	spec = c.cloudProvider.TransformServiceDeploymentSpec(service, spec)
-	spec = c.serviceMesh.TransformServiceDeploymentSpec(service, spec, services)
+	spec = c.serviceMesh.TransformServiceDeploymentSpec(service, spec)
 
 	return *spec, nil
 }
