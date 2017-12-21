@@ -17,12 +17,12 @@ type Response struct {
 }
 
 func (r *RequestHandler) GetResponse(serviceName string) (*Response, error) {
-	path, componentName, port, err := util.GetPartsFromClusterName(serviceName)
+	serviceCluster, path, componentName, port, err := util.GetPartsFromClusterName(serviceName)
 	if err != nil {
 		return nil, err
 	}
 
-	svcs, err := r.Backend.Services()
+	svcs, err := r.Backend.Services(serviceCluster)
 	if err != nil {
 		return nil, err
 	}

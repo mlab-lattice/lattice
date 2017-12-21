@@ -22,7 +22,7 @@ func (r *RequestHandler) GetResponse(routeName, serviceCluster, serviceNode stri
 		return nil, fmt.Errorf("unexpected route name %v", routeName)
 	}
 
-	svcs, err := r.Backend.Services()
+	svcs, err := r.Backend.Services(serviceCluster)
 	if err != nil {
 		return nil, err
 	}
@@ -47,7 +47,7 @@ func (r *RequestHandler) GetResponse(routeName, serviceCluster, serviceNode stri
 					Routes: []types.VirtualHostRoute{
 						{
 							Prefix:  "/",
-							Cluster: util.GetClusterNameForComponentPort(path, componentName, port),
+							Cluster: util.GetClusterNameForComponentPort(serviceCluster, path, componentName, port),
 						},
 					},
 				})

@@ -155,3 +155,36 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 	metav1.AddToGroupVersion(scheme, SchemeGroupVersion)
 	return nil
 }
+
+func GetCustomResourceDefinitions() []*apiextensionsv1beta1.CustomResourceDefinition {
+	var definitions []*apiextensionsv1beta1.CustomResourceDefinition
+	for _, resource := range Resources {
+		name := resource.Plural + "." + GroupName
+
+		definition := &apiextensionsv1beta1.CustomResourceDefinition{
+			// Include TypeMeta so if this is a dry run it will be printed out
+			TypeMeta: metav1.TypeMeta{
+				Kind:       "CustomResourceDefinition",
+				APIVersion: apiextensionsv1beta1.GroupName + "/v1beta1",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name: name,
+			},
+			Spec: apiextensionsv1beta1.CustomResourceDefinitionSpec{
+				Group:   GroupName,
+				Version: SchemeGroupVersion.Version,
+				Scope:   resource.Scope,
+				Names: apiextensionsv1beta1.CustomResourceDefinitionNames{
+					Singular:   resource.Singular,
+					Plural:     resource.Plural,
+					ShortNames: resource.ShortNames,
+					Kind:       resource.Kind,
+					ListKind:   resource.ListKind,
+				},
+			},
+		}
+
+		definitions = append(definitions, definition)
+	}
+	return definitions
+}

@@ -9,9 +9,9 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 )
 
-func (c *Controller) getKubeServiceForService(svc *crv1.Service) (*corev1.Service, bool, error) {
+func (c *Controller) getKubeServiceForService(service *crv1.Service) (*corev1.Service, bool, error) {
 	necessary := false
-	for _, component := range svc.Spec.Definition.Components {
+	for _, component := range service.Spec.Definition.Components {
 		for _, port := range component.Ports {
 			if port.ExternalAccess != nil && port.ExternalAccess.Public {
 				necessary = true
@@ -23,8 +23,8 @@ func (c *Controller) getKubeServiceForService(svc *crv1.Service) (*corev1.Servic
 		return nil, false, nil
 	}
 
-	ksvcName := kubeutil.GetKubeServiceNameForService(svc)
-	ksvc, err := c.kubeServiceLister.Services(svc.Namespace).Get(ksvcName)
+	ksvcName := kubeutil.GetKubeServiceNameForService(service.Name)
+	ksvc, err := c.kubeServiceLister.Services(service.Namespace).Get(ksvcName)
 	if err != nil && !apierrors.IsNotFound(err) {
 		return nil, true, err
 	}

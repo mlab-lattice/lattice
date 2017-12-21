@@ -2,14 +2,15 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library")
 
 go_library(
     name = "go_default_library",
-    srcs = ["cloudprovider.go"],
-    importpath = "github.com/mlab-lattice/system/pkg/backend/kubernetes/cloudprovider/local",
+    srcs = ["bootstrapper.go"],
+    importpath = "github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/bootstrap/bootstrapper",
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/backend/kubernetes/customresource/apis/lattice/v1:go_default_library",
-        "//pkg/backend/kubernetes/lifecycle/bootstrap/bootstrapper:go_default_library",
+        "@com_github_ghodss_yaml//:go_default_library",
         "@io_k8s_api//apps/v1:go_default_library",
-        "@io_k8s_api//batch/v1:go_default_library",
         "@io_k8s_api//core/v1:go_default_library",
+        "@io_k8s_api//rbac/v1:go_default_library",
+        "@io_k8s_apiextensions_apiserver//pkg/apis/apiextensions/v1beta1:go_default_library",
     ],
 )

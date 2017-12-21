@@ -26,7 +26,7 @@ func (b *DefaultBootstrapper) LocalBootstrap() ([]interface{}, error) {
 		b.bootstrapLocalNode,
 	}
 
-	objects := []interface{}{}
+	var objects []interface{}
 	for _, bootstrapFunc := range bootstrapFuncs {
 		additionalObjects, err := bootstrapFunc()
 		if err != nil {

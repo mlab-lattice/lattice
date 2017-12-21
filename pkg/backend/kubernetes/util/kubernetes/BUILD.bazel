@@ -20,6 +20,7 @@ go_library(
         "//pkg/backend/kubernetes/customresource/generated/clientset/versioned:go_default_library",
         "//pkg/definition/tree:go_default_library",
         "//pkg/types:go_default_library",
+        "@com_github_ghodss_yaml//:go_default_library",
         "@io_k8s_api//core/v1:go_default_library",
         "@io_k8s_api//extensions/v1beta1:go_default_library",
         "@io_k8s_api//rbac/v1:go_default_library",

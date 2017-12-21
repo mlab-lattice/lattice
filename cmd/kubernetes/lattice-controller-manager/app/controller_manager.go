@@ -27,7 +27,7 @@ import (
 var (
 	kubeconfig          string
 	clusterIDString     string
-	provider            string
+	cloudProviderName   string
 	terraformModulePath string
 )
 
@@ -55,7 +55,7 @@ var RootCmd = &cobra.Command{
 		}
 
 		glog.V(1).Info("Starting controllers")
-		StartControllers(ctx, GetControllerInitializers(provider))
+		StartControllers(ctx, GetControllerInitializers(cloudProviderName))
 
 		glog.V(4).Info("Starting informer factory kubeinformers")
 		ctx.KubeInformerFactory.Start(ctx.Stop)
@@ -83,8 +83,8 @@ func init() {
 	RootCmd.Flags().StringVar(&kubeconfig, "kubeconfig", "", "path to kubeconfig file")
 	RootCmd.Flags().StringVar(&clusterIDString, "cluster-id", "", "id of the cluster")
 	RootCmd.MarkFlagRequired("cluster-id")
-	RootCmd.Flags().StringVar(&provider, "provider", "", "provider to use")
-	RootCmd.MarkFlagRequired("provider")
+	RootCmd.Flags().StringVar(&cloudProviderName, "cloud-provider", "", "cloud provider that lattice is being run on")
+	RootCmd.MarkFlagRequired("cloud-provider")
 	RootCmd.Flags().StringVar(&terraformModulePath, "terraform-module-path", "/etc/terraform/modules", "path to terraform modules")
 }
 
@@ -99,7 +99,7 @@ func CreateControllerContext(
 	stop <-chan struct{},
 	terraformModulePath string,
 ) (controller.Context, error) {
-	cloudProvider, err := cloudprovider.NewCloudProvider(provider)
+	cloudProvider, err := cloudprovider.NewCloudProvider(cloudProviderName)
 	if err != nil {
 		return controller.Context{}, err
 	}
@@ -150,7 +150,7 @@ func GetControllerInitializers(provider string) map[string]controller.Initialize
 			initializers["cloud-local-"+name] = initializer
 		}
 	default:
-		panic("unsupported provider " + provider)
+		panic("unsupported cloud provider " + provider)
 	}
 
 	return initializers

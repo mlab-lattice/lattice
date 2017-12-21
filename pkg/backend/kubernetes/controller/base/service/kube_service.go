@@ -11,7 +11,7 @@ import (
 )
 
 func (c *Controller) syncServiceKubeService(service *crv1.Service) (*corev1.Service, error) {
-	name := kubeutil.GetKubeServiceNameForService(service)
+	name := kubeutil.GetKubeServiceNameForService(service.Name)
 	kubeService, err := c.kubeServiceLister.Services(service.Namespace).Get(name)
 	if err != nil {
 		if !errors.IsNotFound(err) {
@@ -25,7 +25,7 @@ func (c *Controller) syncServiceKubeService(service *crv1.Service) (*corev1.Serv
 }
 
 func (c *Controller) createNewKubeService(service *crv1.Service) (*corev1.Service, error) {
-	name := kubeutil.GetKubeServiceNameForService(service)
+	name := kubeutil.GetKubeServiceNameForService(service.Name)
 
 	// Create a headless service (https://kubernetes.io/docs/concepts/services-networking/service/#headless-services)
 	// so the endpoints collection will be populated
