@@ -17,7 +17,7 @@ import (
 )
 
 func Run(clusterIDString, kubeconfig, provider, terraformModulePath string,
-	serverConfigPath string, resolvConfPath string) {
+	serverConfigPath string, hostConfigPath string) {
 
 	var config *rest.Config
 	var err error
@@ -46,6 +46,7 @@ func Run(clusterIDString, kubeconfig, provider, terraformModulePath string,
 
 	go local.NewController(
 		serverConfigPath,
+		hostConfigPath,
 		ctx.LatticeClientBuilder.ClientOrDie("local-dns-lattice-address"),
 		ctx.LatticeInformerFactory.Lattice().V1().Endpoints(),
 	).Run(4, ctx.Stop)

@@ -26,6 +26,7 @@ type Controller struct {
     enqueueAddressUpdate func(sysBuild *crv1.Endpoint)
 
     cnameList	map[string]string
+    hostLists   map[string]string
 
     hasRecentlyUpdated 	bool
     lock 				sync.RWMutex
@@ -40,6 +41,7 @@ type Controller struct {
 
 type ServerConfig struct {
     serverConfigPath string
+    hostConfigPath  string
 }
 
 var (
@@ -49,6 +51,7 @@ var (
 
 func NewController(
     serverConfigPath string,
+    hostConfigPath   string,
     latticeClient  	 latticeclientset.Interface,
     addressInformer  latticeinformers.EndpointInformer,
 ) *Controller {
@@ -59,6 +62,7 @@ func NewController(
     }
 
     config.serverConfigPath = serverConfigPath
+    config.hostConfigPath   = hostConfigPath
 
     addrc.syncAddressUpdate = addrc.SyncEndpointUpdate
     addrc.enqueueAddressUpdate = addrc.enqueue
@@ -73,6 +77,7 @@ func NewController(
     addrc.addressListerSynced = addressInformer.Informer().HasSynced
 
     addrc.cnameList = make(map[string]string)
+    addrc.hostLists = make(map[string]string)
 
     return addrc
 }
@@ -117,7 +122,6 @@ func (addrc *Controller) Run(workers int, stopCh <-chan struct{}) {
     // make sure the work queue is shutdown which will trigger workers to end
     defer addrc.queue.ShutDown()
 
-    glog.Infof(" Warning :: every endpoint is actually a service build")
     glog.Infof("Starting local-dns controller")
     defer glog.Infof("Shutting down local-dns controller")
 
@@ -247,7 +251,13 @@ func (addrc *Controller) SyncEndpointUpdate(key string) error {
     endpointPathURL := endpoint.Spec.Path.ToDomain(true)
 
     // TODO :: handle delete
-    addrc.cnameList[endpointPathURL] = *endpoint.Spec.IP
+    if endpoint.Spec.ExternalEndpoint != nil {
+        addrc.cnameList[endpointPathURL] = *endpoint.Spec.ExternalEndpoint
+    }
+
+    if endpoint.Spec.IP != nil {
+        addrc.hostLists[endpointPathURL] = *endpoint.Spec.IP
+    }
 
     addrc.lock.Unlock()
     glog.V(5).Infof("update completed, released write lock. exiting...")
@@ -265,7 +275,6 @@ func (addrc *Controller) FlushRewriteDNS() {
         println(err)
     }
 
-    // No ping should be necessary given auto update.
     // However sending a SIGHUP would automatically reload resolv if necessary.
 }
 
@@ -289,10 +298,12 @@ func (addrc *Controller) RewriteDnsmasqConfig() error {
     glog.V(5).Infof("Rewriting config...")
     // Open dnsmasq.extra.conf and rewrite
     cname_file, err := CreateEmptyFile(config.serverConfigPath)
+    hosts_file, err := CreateEmptyFile(config.hostConfigPath)
 
     defer func() {
         glog.V(5).Infof("Closing config file...")
         cname_file.Close()
+        hosts_file.Close()
 
         // Finished writing to the cache - can now unset the timer flag
         addrc.lock.Lock()
@@ -311,6 +322,15 @@ func (addrc *Controller) RewriteDnsmasqConfig() error {
     for k, v := range addrc.cnameList {
         _, err := cname_file.WriteString("cname=" + k + "," + v + "\n")
         glog.V(5).Infof("cname=" + k + "," + v + "\n")
+
+        if err != nil {
+            return err
+        }
+    }
+
+    for k, v := range addrc.hostLists {
+        _, err := hosts_file.WriteString(v + " " + k + "\n")
+        glog.V(5).Infof(v + " " + k + "\n")
 
         if err != nil {
             return err

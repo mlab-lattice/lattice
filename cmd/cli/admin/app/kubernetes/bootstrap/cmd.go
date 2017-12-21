@@ -38,6 +38,7 @@ var (
 		"-v", "5",
 		"--logtostderr",
 		"--server-config-path", "/etc/dns-config/dnsmasq.conf",
+		"--host-config-path", "/etc/dns-config/hosts",
 	}
 
 	defaultLocalDNSServerArgs = []string {

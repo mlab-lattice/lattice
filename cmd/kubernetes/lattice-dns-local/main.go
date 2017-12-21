@@ -9,7 +9,7 @@ var (
 	clusterIDString		string
 	provider            string
 	terraformModulePath string
-	resolvConfPath		string
+	hostConfigPath		string
 	serverConfigPath	string
 )
 
@@ -18,7 +18,8 @@ func init() {
 	flag.StringVar(&clusterIDString, "cluster-id", "", "id of the cluster")
 	flag.StringVar(&provider, "provider", "", "provider to use")
 	flag.StringVar(&terraformModulePath, "terraform-module-path", "/etc/terraform/modules", "path to terraform modules")
-	flag.StringVar(&serverConfigPath, "server-config-path", "/etc/dnsmasq.conf", "path to the additional dnsmasq server configuration")
+	flag.StringVar(&serverConfigPath, "server-config-path", "/etc/dns-config/dnsmasq.conf", "path to the additional dnsmasq cname file")
+	flag.StringVar(&hostConfigPath, "host-config-path", "/etc/dns-config/hosts", "path to the additional dnsmasq hosts")
 	flag.Parse()
 }
 
