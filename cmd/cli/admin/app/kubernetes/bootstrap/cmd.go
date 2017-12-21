@@ -50,6 +50,9 @@ var (
 		// Arguments after -- are passed straight to dnsmasq.
 		"--",
 		"-k", //Keep in foreground so as to not immediately exit.
+		"-R", //Dont read provided /etc/resolv.conf
+		"--hostsdir=/etc/dns-config/", // Read all the hosts from this directory. File changes read automatically by dnsmasq.
+		"--conf-dir=/etc/dns-config/,*.conf", // Read all *.conf files in the directory as dns config files
 	}
 
 	defaultManagerAPIArgs = []string{}

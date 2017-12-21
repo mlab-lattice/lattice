@@ -7,9 +7,11 @@ import (
 	kubeutil "github.com/mlab-lattice/system/pkg/backend/kubernetes/util/kubernetes"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 
 	appsv1beta2 "k8s.io/api/apps/v1beta2"
 	corev1 "k8s.io/api/core/v1"
+
 )
 
 func (b *DefaultBootstrapper) seedDNS() ([]interface{}, error) {
@@ -111,5 +113,35 @@ func (b *DefaultBootstrapper) seedDNS() ([]interface{}, error) {
 	}
 
 	localDNSDaemonSet, err := b.KubeClient.AppsV1beta2().DaemonSets(namespace).Create(localDNSDaemonSet)
-	return []interface{}{localDNSDaemonSet}, err
+
+	localDNSService := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:		constants.MasterNodeDNSService,
+			Namespace: 	namespace,
+			Labels:		labels,
+		},
+		Spec:corev1.ServiceSpec{
+			Selector:labels,
+			ClusterIP: constants.LocalDNSServerIP,
+			Type:corev1.ServiceTypeClusterIP,
+			Ports: []corev1.ServicePort{
+				{
+					Name:"dns-tcp",
+					Port:53,
+					TargetPort:intstr.FromInt(53),
+					Protocol:corev1.ProtocolTCP,
+				},
+				{
+					Name:"dns-udp",
+					Port:53,
+					TargetPort:intstr.FromInt(53),
+					Protocol:corev1.ProtocolUDP,
+				},
+			},
+		},
+	}
+
+	localDNSService, err = b.KubeClient.CoreV1().Services(namespace).Create(localDNSService)
+
+	return []interface{}{localDNSDaemonSet, localDNSService}, err
 }
