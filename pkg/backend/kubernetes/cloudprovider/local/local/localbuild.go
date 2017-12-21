@@ -72,6 +72,8 @@ func NewController(
     addrc.addressLister = addressInformer.Lister()
     addrc.addressListerSynced = addressInformer.Informer().HasSynced
 
+    addrc.cnameList = make(map[string]string)
+
     return addrc
 }
 
