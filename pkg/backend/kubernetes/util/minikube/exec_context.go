@@ -37,7 +37,7 @@ func NewMinikubeExecContext(logPath string) (*ExecContext, error) {
 
 func (mec *ExecContext) Start(name string) (*executil.Result, string, error) {
 	// FIXME: make Kubernetes version configurable
-	args := []string{startCmd, "-p", name, "--kubernetes-version", "v1.9.0", "--bootstrapper", "kubeadm"}
+	args := []string{startCmd, "-p", name, "--kubernetes-version", "v1.9.0", "--bootstrapper", "kubeadm", "--feature-gates=AllAlpha=true","--extra-config=controller-manager.feature-gates=CustomPodDNS=true"}
 	return mec.ExecWithLogFile("minikube-"+startCmd, args...)
 }
 

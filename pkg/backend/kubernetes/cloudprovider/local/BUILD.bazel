@@ -6,8 +6,11 @@ go_library(
     importpath = "github.com/mlab-lattice/system/pkg/backend/kubernetes/cloudprovider/local",
     visibility = ["//visibility:public"],
     deps = [
+        "//pkg/backend/kubernetes/constants:go_default_library",
         "//pkg/backend/kubernetes/customresource/apis/lattice/v1:go_default_library",
+        "@com_github_golang_glog//:go_default_library",
         "@io_k8s_api//apps/v1:go_default_library",
         "@io_k8s_api//batch/v1:go_default_library",
+        "@io_k8s_api//core/v1:go_default_library",
     ],
 )
