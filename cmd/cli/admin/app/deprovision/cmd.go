@@ -3,7 +3,7 @@ package deprovision
 import (
 	"fmt"
 	"github.com/mlab-lattice/system/pkg/constants"
-	"github.com/mlab-lattice/system/pkg/lifecycle/provisioner"
+	"github.com/mlab-lattice/system/pkg/lifecycle/cluster/provisioner"
 
 	"github.com/spf13/cobra"
 )

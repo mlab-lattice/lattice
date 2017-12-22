@@ -18,8 +18,20 @@ func (c *FakeLatticeV1) Configs(namespace string) v1.ConfigInterface {
 	return &FakeConfigs{c, namespace}
 }
 
+func (c *FakeLatticeV1) Endpoints(namespace string) v1.EndpointInterface {
+	return &FakeEndpoints{c, namespace}
+}
+
+func (c *FakeLatticeV1) NodePools(namespace string) v1.NodePoolInterface {
+	return &FakeNodePools{c, namespace}
+}
+
 func (c *FakeLatticeV1) Services(namespace string) v1.ServiceInterface {
 	return &FakeServices{c, namespace}
+}
+
+func (c *FakeLatticeV1) ServiceAddresses(namespace string) v1.ServiceAddressInterface {
+	return &FakeServiceAddresses{c, namespace}
 }
 
 func (c *FakeLatticeV1) ServiceBuilds(namespace string) v1.ServiceBuildInterface {

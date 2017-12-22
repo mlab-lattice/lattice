@@ -82,6 +82,18 @@ func (c *FakeComponentBuilds) Update(componentBuild *lattice_v1.ComponentBuild) 
 	return obj.(*lattice_v1.ComponentBuild), err
 }
 
+// UpdateStatus was generated because the type contains a Status member.
+// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
+func (c *FakeComponentBuilds) UpdateStatus(componentBuild *lattice_v1.ComponentBuild) (*lattice_v1.ComponentBuild, error) {
+	obj, err := c.Fake.
+		Invokes(testing.NewUpdateSubresourceAction(componentbuildsResource, "status", c.ns, componentBuild), &lattice_v1.ComponentBuild{})
+
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*lattice_v1.ComponentBuild), err
+}
+
 // Delete takes name of the componentBuild and deletes it. Returns an error if one occurs.
 func (c *FakeComponentBuilds) Delete(name string, options *v1.DeleteOptions) error {
 	_, err := c.Fake.

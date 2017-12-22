@@ -3,6 +3,10 @@
 
 ## Go
 
+To start, please read [Effective Go](https://golang.org/doc/effective_go.html) and [CodeReviewComments](https://github.com/golang/go/wiki/CodeReviewComments).
+
+Together they give a pretty good overview of the expected standards and style for writing Go code.
+
 ### Formatting
 
 All Go code should be formatted with `gofmt`. This is enforced by the `pre-commit` hook.

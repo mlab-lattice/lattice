@@ -3,7 +3,7 @@ package componentbuilder
 import (
 	"fmt"
 
-	"github.com/mlab-lattice/system/pkg/constants"
+	"github.com/mlab-lattice/system/pkg/types"
 	"github.com/mlab-lattice/system/pkg/util/git"
 
 	"github.com/fatih/color"
@@ -15,7 +15,7 @@ func (b *Builder) buildGitRepositoryComponent() error {
 	if b.StatusUpdater != nil {
 		// For now ignore status update errors, don't need to fail a build because the status could
 		// not be updated.
-		b.StatusUpdater.UpdateProgress(b.BuildID, constants.ComponentBuildPhasePullingGitRepository)
+		b.StatusUpdater.UpdateProgress(b.BuildID, b.SystemID, types.ComponentBuildPhasePullingGitRepository)
 	}
 
 	gitRepo := b.ComponentBuildBlock.GitRepository

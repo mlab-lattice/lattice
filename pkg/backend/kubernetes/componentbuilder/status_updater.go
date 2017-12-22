@@ -2,21 +2,23 @@ package componentbuilder
 
 import (
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/constants"
-	crv1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	latticeclientset "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/clientset/versioned"
+	kubeutil "github.com/mlab-lattice/system/pkg/backend/kubernetes/util/kubernetes"
 	"github.com/mlab-lattice/system/pkg/types"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"encoding/json"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 )
 
 type KubernetesStatusUpdater struct {
 	LatticeClient latticeclientset.Interface
+	ClusterID     types.ClusterID
 }
 
-func NewKubernetesStatusUpdater(kubeconfig string) (*KubernetesStatusUpdater, error) {
+func NewKubernetesStatusUpdater(clusterID types.ClusterID, kubeconfig string) (*KubernetesStatusUpdater, error) {
 	var config *rest.Config
 	var err error
 	if kubeconfig == "" {
@@ -35,59 +37,70 @@ func NewKubernetesStatusUpdater(kubeconfig string) (*KubernetesStatusUpdater, er
 
 	kb := &KubernetesStatusUpdater{
 		LatticeClient: latticeClient,
+		ClusterID:     clusterID,
 	}
 	return kb, nil
 }
 
-func (ksu *KubernetesStatusUpdater) UpdateProgress(buildID types.ComponentBuildID, phase types.ComponentBuildPhase) error {
+func (ksu *KubernetesStatusUpdater) UpdateProgress(buildID types.ComponentBuildID, systemID types.SystemID, phase types.ComponentBuildPhase) error {
 	// Retry once since we may lose a race against the controller at the beginning updating the Status.State
-	return ksu.updateProgressInternal(buildID, phase, 1)
+	return ksu.updateProgressInternal(buildID, systemID, phase, 1)
 }
 
-func (ksu *KubernetesStatusUpdater) updateProgressInternal(buildID types.ComponentBuildID, phase types.ComponentBuildPhase, numRetries int) error {
-	cb, err := ksu.LatticeClient.LatticeV1().ComponentBuilds(constants.NamespaceLatticeInternal).Get(string(buildID), metav1.GetOptions{})
+func (ksu *KubernetesStatusUpdater) updateProgressInternal(buildID types.ComponentBuildID, systemID types.SystemID, phase types.ComponentBuildPhase, numRetries int) error {
+	namespace := kubeutil.SystemNamespace(ksu.ClusterID, systemID)
+	build, err := ksu.LatticeClient.LatticeV1().ComponentBuilds(namespace).Get(string(buildID), metav1.GetOptions{})
 	if err != nil {
 		if numRetries <= 0 {
 			return err
 		}
-		return ksu.updateProgressInternal(buildID, phase, numRetries-1)
+		return ksu.updateProgressInternal(buildID, systemID, phase, numRetries-1)
 	}
 
-	cb.Status.LastObservedPhase = &phase
-	_, err = ksu.LatticeClient.LatticeV1().ComponentBuilds(cb.Namespace).Update(cb)
+	build.Annotations[constants.AnnotationKeyComponentBuildLastObservedPhase] = string(phase)
+
+	_, err = ksu.LatticeClient.LatticeV1().ComponentBuilds(build.Namespace).Update(build)
 	if err != nil {
 		if numRetries <= 0 {
 			return err
 		}
-		return ksu.updateProgressInternal(buildID, phase, numRetries-1)
+		return ksu.updateProgressInternal(buildID, systemID, phase, numRetries-1)
 	}
 	return nil
 }
 
-func (ksu *KubernetesStatusUpdater) UpdateError(buildID types.ComponentBuildID, internal bool, err error) error {
+func (ksu *KubernetesStatusUpdater) UpdateError(buildID types.ComponentBuildID, systemID types.SystemID, internal bool, err error) error {
 	// Retry once since we may lose a race against the controller at the beginning updating the Status.State
-	return ksu.updateErrorInternal(buildID, internal, err, 1)
+	return ksu.updateErrorInternal(buildID, systemID, internal, err, 1)
 }
 
-func (ksu *KubernetesStatusUpdater) updateErrorInternal(buildID types.ComponentBuildID, internal bool, updateErr error, numRetries int) error {
-	cb, err := ksu.LatticeClient.LatticeV1().ComponentBuilds(constants.NamespaceLatticeInternal).Get(string(buildID), metav1.GetOptions{})
+func (ksu *KubernetesStatusUpdater) updateErrorInternal(buildID types.ComponentBuildID, systemID types.SystemID, internal bool, updateErr error, numRetries int) error {
+	namespace := kubeutil.SystemNamespace(ksu.ClusterID, systemID)
+	build, err := ksu.LatticeClient.LatticeV1().ComponentBuilds(namespace).Get(string(buildID), metav1.GetOptions{})
 	if err != nil {
 		if numRetries <= 0 {
 			return err
 		}
-		return ksu.updateErrorInternal(buildID, internal, updateErr, numRetries-1)
+		return ksu.updateErrorInternal(buildID, systemID, internal, updateErr, numRetries-1)
 	}
 
-	cb.Status.FailureInfo = &crv1.ComponentBuildFailureInfo{
+	failureInfo := types.ComponentBuildFailureInfo{
 		Message:  updateErr.Error(),
 		Internal: internal,
 	}
-	_, err = ksu.LatticeClient.LatticeV1().ComponentBuilds(cb.Namespace).Update(cb)
+	data, err := json.Marshal(failureInfo)
+	if err != nil {
+		return err
+	}
+
+	build.Annotations[constants.AnnotationKeyComponentBuildFailureInfo] = string(data)
+
+	_, err = ksu.LatticeClient.LatticeV1().ComponentBuilds(build.Namespace).Update(build)
 	if err != nil {
 		if numRetries <= 0 {
 			return err
 		}
-		return ksu.updateErrorInternal(buildID, internal, updateErr, numRetries-1)
+		return ksu.updateErrorInternal(buildID, systemID, internal, updateErr, numRetries-1)
 	}
 	return nil
 }

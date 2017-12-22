@@ -82,6 +82,18 @@ func (c *FakeSystemRollouts) Update(systemRollout *lattice_v1.SystemRollout) (re
 	return obj.(*lattice_v1.SystemRollout), err
 }
 
+// UpdateStatus was generated because the type contains a Status member.
+// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
+func (c *FakeSystemRollouts) UpdateStatus(systemRollout *lattice_v1.SystemRollout) (*lattice_v1.SystemRollout, error) {
+	obj, err := c.Fake.
+		Invokes(testing.NewUpdateSubresourceAction(systemrolloutsResource, "status", c.ns, systemRollout), &lattice_v1.SystemRollout{})
+
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*lattice_v1.SystemRollout), err
+}
+
 // Delete takes name of the systemRollout and deletes it. Returns an error if one occurs.
 func (c *FakeSystemRollouts) Delete(name string, options *v1.DeleteOptions) error {
 	_, err := c.Fake.

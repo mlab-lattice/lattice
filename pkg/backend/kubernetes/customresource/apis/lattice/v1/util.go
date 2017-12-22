@@ -13,11 +13,11 @@ func GetProviderFromConfigSpec(config *ConfigSpec) (string, error) {
 
 	providers := []string{}
 
-	if config.Provider.Local != nil {
+	if config.CloudProvider.Local != nil {
 		providers = append(providers, constants.ProviderLocal)
 	}
 
-	if config.Provider.AWS != nil {
+	if config.CloudProvider.AWS != nil {
 		providers = append(providers, constants.ProviderAWS)
 	}
 

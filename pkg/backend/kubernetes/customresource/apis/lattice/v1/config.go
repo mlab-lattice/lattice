@@ -1,8 +1,6 @@
 package v1
 
 import (
-	"github.com/mlab-lattice/system/pkg/types"
-
 	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -24,44 +22,35 @@ type Config struct {
 }
 
 type ConfigSpec struct {
-	// FIXME: this shouldn't be dynamic config
-	KubernetesNamespacePrefix string               `json:"systemID"`
-	Provider                  ConfigProvider       `json:"providerConfig"`
-	ComponentBuild            ConfigComponentBuild `json:"componentBuild"`
-	Envoy                     ConfigEnvoy          `json:"envoy"`
-	// FIXME: this shouldn't be dynamic config
-	// FIXME: create empty System and add definition URL to system.Spec
-	SystemConfigs map[types.LatticeNamespace]ConfigSystem `json:"userSystem"`
-	Terraform     *ConfigTerraform                        `json:"terraform,omitempty"`
+	CloudProvider  ConfigCloudProvider  `json:"cloudProvider"`
+	ComponentBuild ConfigComponentBuild `json:"componentBuild"`
+	ServiceMesh    ConfigServiceMesh    `json:"serviceMesh"`
+	Terraform      *ConfigTerraform     `json:"terraform,omitempty"`
 }
 
-type ConfigProvider struct {
-	Local *ConfigProviderLocal `json:"local,omitempty"`
-	AWS   *ConfigProviderAWS   `json:"aws,omitempty"`
+type ConfigCloudProvider struct {
+	Local *ConfigCloudProviderLocal `json:"local,omitempty"`
+	AWS   *ConfigCloudProviderAWS   `json:"aws,omitempty"`
 }
 
-type ConfigProviderLocal struct {
+type ConfigCloudProviderLocal struct {
 	// FIXME: this shouldn't be dynamic config
 	IP string `json:"ip"`
 }
 
-type ConfigProviderAWS struct {
+type ConfigCloudProviderAWS struct {
 	// FIXME: this shouldn't be dynamic config
 	Region string `json:"region"`
 	// FIXME: this shouldn't be dynamic config
 	AccountID string `json:"accountID"`
 	// FIXME: this shouldn't be dynamic config
 	VPCID string `json:"vpcId"`
-	// FIXME: this shouldn't be dynamic config
+	// FIXME: maybe this shouldn't be dynamic config
 	SubnetIDs []string `json:"subnetIds"`
 	// FIXME: this shouldn't be dynamic config
 	MasterNodeSecurityGroupID string `json:"masterNodeSecurityGroupId"`
 	BaseNodeAMIID             string `json:"baseNodeAmiId"`
 	KeyName                   string `json:"keyName"`
-}
-
-type ConfigSystem struct {
-	DefinitionURL string `json:"url"`
 }
 
 type ConfigComponentBuild struct {
@@ -91,10 +80,15 @@ type ConfigComponentBuildDockerArtifact struct {
 	Push bool `json:"push"`
 }
 
+type ConfigServiceMesh struct {
+	Envoy *ConfigEnvoy `json:"envoy"`
+}
+
 type ConfigEnvoy struct {
 	PrepareImage      string `json:"prepareImage"`
 	Image             string `json:"image"`
 	RedirectCIDRBlock string `json:"redirectCidrBlock"`
+	XDSAPIImage       string `json:"xdsApiImage"`
 	XDSAPIPort        int32  `json:"xdsApiPort"`
 }
 

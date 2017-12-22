@@ -4,7 +4,13 @@ type ComponentBuildExpansion interface{}
 
 type ConfigExpansion interface{}
 
+type EndpointExpansion interface{}
+
+type NodePoolExpansion interface{}
+
 type ServiceExpansion interface{}
+
+type ServiceAddressExpansion interface{}
 
 type ServiceBuildExpansion interface{}
 

@@ -19,6 +19,7 @@ type ServiceBuildsGetter interface {
 type ServiceBuildInterface interface {
 	Create(*v1.ServiceBuild) (*v1.ServiceBuild, error)
 	Update(*v1.ServiceBuild) (*v1.ServiceBuild, error)
+	UpdateStatus(*v1.ServiceBuild) (*v1.ServiceBuild, error)
 	Delete(name string, options *meta_v1.DeleteOptions) error
 	DeleteCollection(options *meta_v1.DeleteOptions, listOptions meta_v1.ListOptions) error
 	Get(name string, options meta_v1.GetOptions) (*v1.ServiceBuild, error)
@@ -96,6 +97,22 @@ func (c *serviceBuilds) Update(serviceBuild *v1.ServiceBuild) (result *v1.Servic
 		Namespace(c.ns).
 		Resource("servicebuilds").
 		Name(serviceBuild.Name).
+		Body(serviceBuild).
+		Do().
+		Into(result)
+	return
+}
+
+// UpdateStatus was generated because the type contains a Status member.
+// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
+
+func (c *serviceBuilds) UpdateStatus(serviceBuild *v1.ServiceBuild) (result *v1.ServiceBuild, err error) {
+	result = &v1.ServiceBuild{}
+	err = c.client.Put().
+		Namespace(c.ns).
+		Resource("servicebuilds").
+		Name(serviceBuild.Name).
+		SubResource("status").
 		Body(serviceBuild).
 		Do().
 		Into(result)

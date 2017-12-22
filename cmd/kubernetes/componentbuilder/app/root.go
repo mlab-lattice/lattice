@@ -19,6 +19,8 @@ import (
 var (
 	workDirectory    string
 	componentBuildID string
+	systemIDString   string
+	clusterIDString  string
 
 	dockerRegistry         string
 	dockerRegistryAuthType string
@@ -52,12 +54,23 @@ var RootCmd = &cobra.Command{
 			dockerOptions.RegistryAuthProvider = &aws.ECRRegistryAuthProvider{}
 		}
 
-		statusUpdater, err := kubecomponentbuilder.NewKubernetesStatusUpdater(kubeconfig)
+		clusterID := types.ClusterID(clusterIDString)
+		systemID := types.SystemID(systemIDString)
+
+		statusUpdater, err := kubecomponentbuilder.NewKubernetesStatusUpdater(clusterID, kubeconfig)
 		if err != nil {
 			log.Fatal("error getting status updater: " + err.Error())
 		}
 
-		builder, err := componentbuilder.NewBuilder(types.ComponentBuildID(componentBuildID), workDirectory, dockerOptions, nil, cb, statusUpdater)
+		builder, err := componentbuilder.NewBuilder(
+			types.ComponentBuildID(componentBuildID),
+			systemID,
+			workDirectory,
+			dockerOptions,
+			nil,
+			cb,
+			statusUpdater,
+		)
 		if err != nil {
 			log.Fatal("error getting builder: " + err.Error())
 		}
@@ -79,12 +92,21 @@ func Execute() {
 
 func init() {
 	RootCmd.Flags().StringVar(&componentBuildID, "component-build-id", "", "ID of the component build")
+	RootCmd.MarkFlagRequired("component-build-id")
+	RootCmd.Flags().StringVar(&clusterIDString, "cluster-id", "", "ID of the lattice cluster")
+	RootCmd.MarkFlagRequired("cluster-id")
+	RootCmd.Flags().StringVar(&systemIDString, "system-id", "", "ID of the system")
+	RootCmd.MarkFlagRequired("system-id")
 	RootCmd.Flags().StringVar(&componentBuildDefinition, "component-build-definition", "", "JSON serialized version of the component build definition block")
+	RootCmd.MarkFlagRequired("component-build-definition")
 
 	RootCmd.Flags().StringVar(&dockerRegistry, "docker-registry", "", "registry to tag the docker image artifact with")
+	RootCmd.MarkFlagRequired("docker-registry")
 	RootCmd.Flags().StringVar(&dockerRegistryAuthType, "docker-registry-auth-type", "", "information about how to auth to the docker registry")
 	RootCmd.Flags().StringVar(&dockerRepository, "docker-repository", "", "repository to tag the docker image artifact with")
+	RootCmd.MarkFlagRequired("docker-repository")
 	RootCmd.Flags().StringVar(&dockerTag, "docker-tag", "", "tag to tag the docker image artifact with")
+	RootCmd.MarkFlagRequired("docker-tag")
 	RootCmd.Flags().BoolVar(&dockerPush, "docker-push", false, "whether or not the image should be pushed to the registry")
 
 	RootCmd.Flags().StringVar(&kubeconfig, "kubeconfig", "", "path to kubeconfig")

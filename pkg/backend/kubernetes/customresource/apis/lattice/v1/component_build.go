@@ -16,7 +16,6 @@ const (
 )
 
 // +genclient
-// +genclient:noStatus
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 type ComponentBuild struct {
@@ -28,34 +27,29 @@ type ComponentBuild struct {
 
 // +k8s:deepcopy-gen=false
 type ComponentBuildSpec struct {
-	BuildDefinitionBlock block.ComponentBuild     `json:"definitionBlock"`
-	Artifacts            *ComponentBuildArtifacts `json:"artifacts,omitempty"`
-}
-
-// +k8s:deepcopy-gen=false
-type ComponentBuildArtifacts struct {
-	DockerImageFqn string `json:"dockerImageFqn"`
+	BuildDefinitionBlock block.ComponentBuild `json:"definitionBlock"`
 }
 
 type ComponentBuildStatus struct {
-	State             ComponentBuildState        `json:"state"`
-	LastObservedPhase *types.ComponentBuildPhase `json:"lastObservedPhase,omitempty"`
-	FailureInfo       *ComponentBuildFailureInfo `json:"failureInfo,omitempty"`
+	State              ComponentBuildState              `json:"state"`
+	ObservedGeneration int64                            `json:"observedGeneration"`
+	Artifacts          *ComponentBuildArtifacts         `json:"artifacts,omitempty"`
+	LastObservedPhase  *types.ComponentBuildPhase       `json:"lastObservedPhase,omitempty"`
+	FailureInfo        *types.ComponentBuildFailureInfo `json:"failureInfo,omitempty"`
 }
 
 type ComponentBuildState string
 
 const (
-	ComponentBuildStatePending   ComponentBuildState = "Pending"
-	ComponentBuildStateQueued    ComponentBuildState = "Queued"
-	ComponentBuildStateRunning   ComponentBuildState = "Running"
-	ComponentBuildStateSucceeded ComponentBuildState = "Succeeded"
-	ComponentBuildStateFailed    ComponentBuildState = "Failed"
+	ComponentBuildStatePending   ComponentBuildState = "pending"
+	ComponentBuildStateQueued    ComponentBuildState = "queued"
+	ComponentBuildStateRunning   ComponentBuildState = "running"
+	ComponentBuildStateSucceeded ComponentBuildState = "succeeded"
+	ComponentBuildStateFailed    ComponentBuildState = "failed"
 )
 
-type ComponentBuildFailureInfo struct {
-	Message  string `json:"message"`
-	Internal bool   `json:"internal"`
+type ComponentBuildArtifacts struct {
+	DockerImageFQN string `json:"dockerImageFqn"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

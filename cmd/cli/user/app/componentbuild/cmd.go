@@ -17,11 +17,11 @@ var (
 	follow bool
 	output string
 
-	namespaceString string
-	url             string
-	namespace       types.LatticeNamespace
-	userClient      user.Client
-	namespaceClient user.NamespaceClient
+	systemIDString string
+	url            string
+	systemID       types.SystemID
+	userClient     user.Client
+	systemClient   user.SystemClient
 )
 
 var Cmd = &cobra.Command{
@@ -38,7 +38,7 @@ var listCmd = &cobra.Command{
 	Short: "list component builds",
 	Args:  cobra.ExactArgs(0),
 	Run: func(cmd *cobra.Command, args []string) {
-		builds, err := namespaceClient.ComponentBuilds()
+		builds, err := systemClient.ComponentBuilds()
 		if err != nil {
 			log.Panic(err)
 		}
@@ -55,7 +55,7 @@ var getCmd = &cobra.Command{
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		id := types.ComponentBuildID(args[0])
-		build, err := namespaceClient.ComponentBuild(id).Get()
+		build, err := systemClient.ComponentBuild(id).Get()
 		if err != nil {
 			log.Panic(err)
 		}
@@ -72,7 +72,7 @@ var logsCmd = &cobra.Command{
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		id := types.ComponentBuildID(args[0])
-		logs, err := namespaceClient.ComponentBuild(id).Logs(follow)
+		logs, err := systemClient.ComponentBuild(id).Logs(follow)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -85,7 +85,7 @@ func init() {
 	cobra.OnInitialize(initCmd)
 
 	Cmd.PersistentFlags().StringVar(&url, "url", "", "URL of the manager-api for the system")
-	Cmd.PersistentFlags().StringVar(&namespaceString, "namespace", string(constants.UserSystemNamespace), "namespace to use")
+	Cmd.PersistentFlags().StringVar(&systemIDString, "system", string(constants.SystemIDDefault), "system to use")
 
 	Cmd.AddCommand(listCmd)
 	Cmd.AddCommand(getCmd)
@@ -96,8 +96,8 @@ func init() {
 }
 
 func initCmd() {
-	namespace = types.LatticeNamespace(namespaceString)
+	systemID = types.SystemID(systemIDString)
 
 	userClient = rest.NewClient(url)
-	namespaceClient = userClient.Namespace(namespace)
+	systemClient = userClient.System(systemID)
 }

@@ -11,7 +11,10 @@ type LatticeV1Interface interface {
 	RESTClient() rest.Interface
 	ComponentBuildsGetter
 	ConfigsGetter
+	EndpointsGetter
+	NodePoolsGetter
 	ServicesGetter
+	ServiceAddressesGetter
 	ServiceBuildsGetter
 	SystemsGetter
 	SystemBuildsGetter
@@ -32,8 +35,20 @@ func (c *LatticeV1Client) Configs(namespace string) ConfigInterface {
 	return newConfigs(c, namespace)
 }
 
+func (c *LatticeV1Client) Endpoints(namespace string) EndpointInterface {
+	return newEndpoints(c, namespace)
+}
+
+func (c *LatticeV1Client) NodePools(namespace string) NodePoolInterface {
+	return newNodePools(c, namespace)
+}
+
 func (c *LatticeV1Client) Services(namespace string) ServiceInterface {
 	return newServices(c, namespace)
+}
+
+func (c *LatticeV1Client) ServiceAddresses(namespace string) ServiceAddressInterface {
+	return newServiceAddresses(c, namespace)
 }
 
 func (c *LatticeV1Client) ServiceBuilds(namespace string) ServiceBuildInterface {

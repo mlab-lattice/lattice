@@ -4,80 +4,106 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/mlab-lattice/system/pkg/backend/kubernetes/cloudprovider"
 	kubeconstants "github.com/mlab-lattice/system/pkg/backend/kubernetes/constants"
 	crv1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
-	"github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/bootstrapper"
-	baseboostrapper "github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/bootstrapper/base"
-	cloudboostrapper "github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/bootstrapper/cloud"
+	latticeclientset "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/clientset/versioned"
+	clusterbootstrap "github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/cluster/bootstrap"
+	clusterbootstrapper "github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/cluster/bootstrap/bootstrapper"
+	baseclusterboostrapper "github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/cluster/bootstrap/bootstrapper/base"
+	systembootstrap "github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/system/bootstrap"
+	systembootstrapper "github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/system/bootstrap/bootstrapper"
+	"github.com/mlab-lattice/system/pkg/backend/kubernetes/networkingprovider"
+	"github.com/mlab-lattice/system/pkg/backend/kubernetes/networkingprovider/flannel"
+	"github.com/mlab-lattice/system/pkg/backend/kubernetes/servicemesh"
 	kubeutil "github.com/mlab-lattice/system/pkg/backend/kubernetes/util/kubernetes"
 	"github.com/mlab-lattice/system/pkg/constants"
+	"github.com/mlab-lattice/system/pkg/types"
 	"github.com/mlab-lattice/system/pkg/util/cli"
 
+	kubeclientset "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 
-	"github.com/ghodss/yaml"
 	"github.com/spf13/cobra"
 )
 
 var (
+	printBool bool
+
 	kubeconfigPath    string
 	kubeconfigContext string
 
 	defaultLatticeControllerManagerArgs = []string{
 		"-v", "5",
-		"-logtostderr",
+		"--logtostderr",
 	}
 
 	defaultManagerAPIArgs = []string{}
 
-	provider     string
-	providerVars []string
+	clusterIDString string
+
+	initialSystemIDString      string
+	initialSystemDefinitionURL string
+
+	cloudProviderName string
+	cloudProviderVars []string
+
+	serviceMeshProvider     string
+	serviceMeshProviderVars []string
 
 	terraformBackend     string
 	terraformBackendVars []string
 
-	networkingProvider     string
+	networkingProviderName string
 	networkingProviderVars []string
 )
 
-var options = &bootstrapper.Options{
+var options = &clusterbootstrap.Options{
 	Config: crv1.ConfigSpec{
 		ComponentBuild: crv1.ConfigComponentBuild{
 			Builder:        crv1.ConfigComponentBuildBuilder{},
 			DockerArtifact: crv1.ConfigComponentBuildDockerArtifact{},
 		},
-		Envoy: crv1.ConfigEnvoy{},
+		ServiceMesh: crv1.ConfigServiceMesh{},
 	},
-	MasterComponents: baseboostrapper.MasterComponentOptions{
-		LatticeControllerManager: baseboostrapper.LatticeControllerManagerOptions{},
-		ManagerAPI:               baseboostrapper.ManagerAPIOptions{},
+	MasterComponents: baseclusterboostrapper.MasterComponentOptions{
+		LatticeControllerManager: baseclusterboostrapper.LatticeControllerManagerOptions{},
+		ManagerAPI:               baseclusterboostrapper.ManagerAPIOptions{},
 	},
 }
 
 var Cmd = &cobra.Command{
 	Use:   "bootstrap",
 	Short: "bootstraps a kubernetes cluster to run Lattice",
-	// FIXME: figure out why it thinks two args are getting passed in
-	Args: cobra.ExactArgs(2),
+	Args:  cobra.ExactArgs(0),
 	Run: func(cmd *cobra.Command, args []string) {
 		if !options.Config.ComponentBuild.DockerArtifact.RepositoryPerImage && options.Config.ComponentBuild.DockerArtifact.Repository == "" {
 			panic("must specify component-build-docker-artifact-repository if not component-build-docker-artifact-repository-per-image")
 		}
 
-		var kubeconfig *rest.Config
+		clusterID := types.ClusterID(clusterIDString)
+		initialSystemID := types.SystemID(initialSystemIDString)
+
+		var kubeConfig *rest.Config
 		if !options.DryRun {
 			var err error
-			kubeconfig, err = kubeutil.NewConfig(kubeconfigPath, "")
+			kubeConfig, err = kubeutil.NewConfig(kubeconfigPath, "")
 			if err != nil {
 				panic(err)
 			}
 		}
 
-		providerConfig, err := parseProviderVars()
+		cloudProviderConfig, err := parseCloudProviderVars()
 		if err != nil {
 			panic(err)
 		}
-		options.Config.Provider = *providerConfig
+		options.Config.CloudProvider = *cloudProviderConfig
+
+		serviceMeshConfig, err := parseServiceMeshVars()
+		if err != nil {
+			panic(err)
+		}
+		options.Config.ServiceMesh = *serviceMeshConfig
 
 		terraformConfig, err := parseTerraformVars()
 		if err != nil {
@@ -85,43 +111,116 @@ var Cmd = &cobra.Command{
 		}
 		options.Config.Terraform = terraformConfig
 
-		networkingOptions, err := parseNetworkingVars()
-		if err != nil {
-			panic(err)
-		}
-		options.Networking = networkingOptions
-
-		b, err := bootstrapper.NewBootstrapper(options, kubeconfig)
+		serviceMesh, err := servicemesh.NewServiceMesh(&options.Config.ServiceMesh)
 		if err != nil {
 			panic(err)
 		}
 
-		objects, err := b.Bootstrap()
+		cloudProvider, err := cloudprovider.NewCloudProvider(cloudProviderName)
 		if err != nil {
 			panic(err)
 		}
 
-		if options.DryRun {
-			for idx, object := range objects {
-				if idx != 0 {
-					fmt.Println("---")
-				}
-				data, err := yaml.Marshal(object)
-				if err != nil {
-					panic(err)
-				}
-				fmt.Printf(string(data))
+		var networkingProvider networkingprovider.Interface
+		if networkingProviderName != "" {
+			networkingProviderOptions, err := parseNetworkingVars()
+			if err != nil {
+				panic(err)
 			}
+
+			networkingProvider, err = networkingprovider.NewNetworkingProvider(networkingProviderOptions)
+			if err != nil {
+				panic(err)
+			}
+		}
+
+		var kubeClient kubeclientset.Interface
+		var latticeClient latticeclientset.Interface
+
+		if !options.DryRun {
+			kubeClient = kubeclientset.NewForConfigOrDie(kubeConfig)
+			latticeClient = latticeclientset.NewForConfigOrDie(kubeConfig)
+		}
+
+		var clusterResources *clusterbootstrapper.ClusterResources
+		if options.DryRun {
+			clusterResources, err = clusterbootstrap.GetBootstrapResources(
+				clusterID,
+				cloudProviderName,
+				options,
+				serviceMesh,
+				networkingProvider,
+				cloudProvider,
+			)
+		} else {
+			clusterResources, err = clusterbootstrap.Bootstrap(
+				clusterID,
+				cloudProviderName,
+				options,
+				serviceMesh,
+				networkingProvider,
+				cloudProvider,
+				kubeConfig,
+				kubeClient,
+				latticeClient,
+			)
+		}
+
+		if err != nil {
+			panic(err)
+		}
+
+		if printBool {
+			resourcesString, err := clusterResources.String()
+			if err != nil {
+				panic(err)
+			}
+
+			fmt.Println(resourcesString)
+		}
+
+		if initialSystemDefinitionURL == "" {
+			return
+		}
+
+		var systemResources *systembootstrapper.SystemResources
+		if options.DryRun {
+			systemResources = systembootstrap.GetBootstrapResources(clusterID, initialSystemID, initialSystemDefinitionURL, serviceMesh, cloudProvider)
+		} else {
+			fmt.Printf("bootstrapping initial system \"%v\"\n", initialSystemIDString)
+			systemResources, err = systembootstrap.Bootstrap(
+				clusterID,
+				initialSystemID,
+				initialSystemDefinitionURL,
+				serviceMesh,
+				cloudProvider,
+				kubeClient,
+				latticeClient,
+			)
+		}
+
+		if err != nil {
+			panic(err)
+		}
+
+		if printBool {
+			resourcesString, err := systemResources.String()
+			if err != nil {
+				panic(err)
+			}
+
+			fmt.Println(resourcesString)
 		}
 	},
 }
 
 func init() {
-	Cmd.Flags().BoolVar(&options.DryRun, "dry-run", false, "if set, will not actually bootstrap the cluster but will instead print out the resources needed to bootstrap the cluster")
+	Cmd.Flags().BoolVar(&options.DryRun, "dry-run", false, "if set, will not actually bootstrap the cluster. useful with --printBool")
+	Cmd.Flags().BoolVar(&printBool, "print", false, "whether or not to printBool the resources created or that will be created")
 	Cmd.Flags().StringVar(&kubeconfigPath, "kubeconfig", "", "path to kubeconfig")
 	Cmd.Flags().StringVar(&kubeconfigContext, "kubeconfig-context", "", "context in the kubeconfig to use")
 
-	Cmd.Flags().StringVar(&options.Config.KubernetesNamespacePrefix, "namespace-prefix", "lattice", "prefix to add to namespaces that lattice will create and own")
+	Cmd.Flags().StringVar(&clusterIDString, "cluster-id", "lattice", "lattice cluster ID")
 
 	Cmd.Flags().StringVar(&options.Config.ComponentBuild.Builder.Image, "component-builder-image", "", "docker image to user for the component-builder")
 	Cmd.MarkFlagRequired("component-builder-image")
@@ -133,62 +232,62 @@ func init() {
 	Cmd.Flags().StringVar(&options.Config.ComponentBuild.DockerArtifact.Repository, "component-build-docker-artifact-repository", "", "repository to tag component build docker artifacts with, required if component-build-docker-artifact-repository-per-image is false")
 	Cmd.Flags().BoolVar(&options.Config.ComponentBuild.DockerArtifact.Push, "component-build-docker-artifact-push", true, "whether or not the component-builder should push the docker artifact (use false for local)")
 
-	Cmd.Flags().StringVar(&options.Config.Envoy.PrepareImage, "envoy-prepare-image", "", "image to use for envoy-prepare")
-	Cmd.MarkFlagRequired("envoy-prepare-image")
-	Cmd.Flags().StringVar(&options.Config.Envoy.Image, "envoy-image", "envoyproxy/envoy-alpine", "image to use for envoy")
-	Cmd.Flags().StringVar(&options.Config.Envoy.RedirectCIDRBlock, "envoy-redirect-cidr-block", "", "CIDR block to use to redirect traffic to envoy")
-	Cmd.MarkFlagRequired("envoy-redirect-cidr-block")
-	Cmd.Flags().Int32Var(&options.Config.Envoy.XDSAPIPort, "envoy-xds-api-port", 8080, "port that the envoy-xds-api should listen on")
-
 	Cmd.Flags().StringVar(&options.MasterComponents.LatticeControllerManager.Image, "lattice-controller-manager-image", "", "docker image to user for the lattice-controller-manager")
 	Cmd.MarkFlagRequired("lattice-controller-manager-image")
-	Cmd.Flags().StringArrayVar(&options.MasterComponents.LatticeControllerManager.Args, "lattice-controller-manager-args", defaultLatticeControllerManagerArgs, "extra arguments (besides --provider) to pass to the lattice-controller-manager")
+	Cmd.Flags().StringArrayVar(&options.MasterComponents.LatticeControllerManager.Args, "lattice-controller-manager-args", defaultLatticeControllerManagerArgs, "extra arguments (besides --cloudProviderName) to pass to the lattice-controller-manager")
 
 	Cmd.Flags().StringVar(&options.MasterComponents.ManagerAPI.Image, "manager-api-image", "", "docker image to user for the lattice-controller-manager")
 	Cmd.MarkFlagRequired("manager-api-image")
 	Cmd.Flags().Int32Var(&options.MasterComponents.ManagerAPI.Port, "manager-api-port", 80, "port that the manager-api should listen on")
 	Cmd.Flags().BoolVar(&options.MasterComponents.ManagerAPI.HostNetwork, "manager-api-host-network", true, "whether or not the manager-api should be on the host network")
-	Cmd.Flags().StringArrayVar(&options.MasterComponents.ManagerAPI.Args, "manager-api-args", defaultManagerAPIArgs, "extra arguments (besides --provider) to pass to the lattice-controller-manager")
+	Cmd.Flags().StringArrayVar(&options.MasterComponents.ManagerAPI.Args, "manager-api-args", defaultManagerAPIArgs, "extra arguments (besides --cloudProviderName) to pass to the lattice-controller-manager")
 
-	Cmd.Flags().StringVar(&provider, "provider", "", "provider that the cluster is being bootstrapped on")
-	Cmd.MarkFlagRequired("provider")
-	Cmd.Flags().StringArrayVar(&providerVars, "provider-var", nil, "additional variables for the provider")
+	Cmd.Flags().StringVar(&initialSystemIDString, "initial-system-name", "default", "name to use for the initial system if --initial-system-definition-url is set")
+	Cmd.Flags().StringVar(&initialSystemDefinitionURL, "initial-system-definition-url", "", "URL to use for the definition of the optional initial system")
+
+	Cmd.Flags().StringVar(&cloudProviderName, "cloud-provider", "", "cloud provider that the cluster is being bootstrapped on")
+	Cmd.MarkFlagRequired("cloud-provider")
+	Cmd.Flags().StringArrayVar(&cloudProviderVars, "cloud-provider-var", nil, "additional variables for the cloud provider")
+
+	Cmd.Flags().StringVar(&serviceMeshProvider, "service-mesh", "", "service mesh provider to use")
+	Cmd.MarkFlagRequired("service-provider")
+	Cmd.Flags().StringArrayVar(&serviceMeshProviderVars, "service-mesh-var", nil, "additional variables for the cloud provider")
 
 	Cmd.Flags().StringVar(&terraformBackend, "terraform-backend", "", "backend to use for terraform")
 	Cmd.Flags().StringArrayVar(&terraformBackendVars, "terraform-backend-var", nil, "additional variables for the terraform backend")
 
-	Cmd.Flags().StringVar(&networkingProvider, "networking-provider", "", "provider to use for networking")
+	Cmd.Flags().StringVar(&networkingProviderName, "networking-provider", "", "provider to use for networking")
 	Cmd.Flags().StringArrayVar(&networkingProviderVars, "networking-provider-var", nil, "additional variables for the networking provider")
 }
 
-func parseProviderVars() (*crv1.ConfigProvider, error) {
-	var config *crv1.ConfigProvider
-	switch provider {
+func parseCloudProviderVars() (*crv1.ConfigCloudProvider, error) {
+	var config *crv1.ConfigCloudProvider
+	switch cloudProviderName {
 	case constants.ProviderLocal:
-		localConfig, err := parseProviderVarsLocal()
+		localConfig, err := parseCloudProviderVarsLocal()
 		if err != nil {
 			return nil, err
 		}
-		config = &crv1.ConfigProvider{
+		config = &crv1.ConfigCloudProvider{
 			Local: localConfig,
 		}
 	case constants.ProviderAWS:
-		awsConfig, err := parseProviderVarsAWS()
+		awsConfig, err := parseProviderCloudVarsAWS()
 		if err != nil {
 			return nil, err
 		}
-		config = &crv1.ConfigProvider{
+		config = &crv1.ConfigCloudProvider{
 			AWS: awsConfig,
 		}
 	default:
-		return nil, fmt.Errorf("unsupported provider: %v", provider)
+		return nil, fmt.Errorf("unsupported cloudProviderName: %v", cloudProviderName)
 	}
 
 	return config, nil
 }
 
-func parseProviderVarsLocal() (*crv1.ConfigProviderLocal, error) {
-	localConfig := &crv1.ConfigProviderLocal{}
+func parseCloudProviderVarsLocal() (*crv1.ConfigCloudProviderLocal, error) {
+	localConfig := &crv1.ConfigCloudProviderLocal{}
 	flags := cli.EmbeddedFlag{
 		Target: &localConfig,
 		Expected: map[string]cli.EmbeddedFlagValue{
@@ -199,15 +298,15 @@ func parseProviderVarsLocal() (*crv1.ConfigProviderLocal, error) {
 		},
 	}
 
-	err := flags.Parse(providerVars)
+	err := flags.Parse(cloudProviderVars)
 	if err != nil {
 		return nil, err
 	}
 	return localConfig, nil
 }
 
-func parseProviderVarsAWS() (*crv1.ConfigProviderAWS, error) {
-	awsConfig := &crv1.ConfigProviderAWS{}
+func parseProviderCloudVarsAWS() (*crv1.ConfigCloudProviderAWS, error) {
+	awsConfig := &crv1.ConfigCloudProviderAWS{}
 	flags := cli.EmbeddedFlag{
 		Target: &awsConfig,
 		Expected: map[string]cli.EmbeddedFlagValue{
@@ -244,11 +343,64 @@ func parseProviderVarsAWS() (*crv1.ConfigProviderAWS, error) {
 		},
 	}
 
-	err := flags.Parse(providerVars)
+	err := flags.Parse(cloudProviderVars)
 	if err != nil {
 		return nil, err
 	}
 	return awsConfig, nil
+}
+
+func parseServiceMeshVars() (*crv1.ConfigServiceMesh, error) {
+	var config *crv1.ConfigServiceMesh
+	switch serviceMeshProvider {
+	case constants.ServiceMeshEnvoy:
+		envoyConfig, err := parseServiceMeshVarsEnvoy()
+		if err != nil {
+			return nil, err
+		}
+		config = &crv1.ConfigServiceMesh{
+			Envoy: envoyConfig,
+		}
+	default:
+		return nil, fmt.Errorf("unsupported service mesh provider: %v", serviceMeshProvider)
+	}
+
+	return config, nil
+}
+
+func parseServiceMeshVarsEnvoy() (*crv1.ConfigEnvoy, error) {
+	envoyConfig := &crv1.ConfigEnvoy{}
+	flags := cli.EmbeddedFlag{
+		Target: &envoyConfig,
+		Expected: map[string]cli.EmbeddedFlagValue{
+			"prepare-image": {
+				Required:     true,
+				EncodingName: "PrepareImage",
+			},
+			"envoy-image": {
+				Default:      "envoyproxy/envoy-alpine",
+				EncodingName: "Image",
+			},
+			"redirect-cidr-block": {
+				Required:     true,
+				EncodingName: "RedirectCIDRBlock",
+			},
+			"xds-api-image": {
+				Required:     true,
+				EncodingName: "XDSAPIImage",
+			},
+			"xds-api-port": {
+				Default:      8080,
+				EncodingName: "XDSAPIPort",
+			},
+		},
+	}
+
+	err := flags.Parse(serviceMeshProviderVars)
+	if err != nil {
+		return nil, err
+	}
+	return envoyConfig, nil
 }
 
 func parseTerraformVars() (*crv1.ConfigTerraform, error) {
@@ -286,48 +438,44 @@ func parseTerraformVarsS3() (*crv1.ConfigTerraformBackendS3, error) {
 		},
 	}
 
-	err := flags.Parse(providerVars)
+	err := flags.Parse(terraformBackendVars)
 	if err != nil {
 		return nil, err
 	}
 	return s3Config, nil
 }
 
-func parseNetworkingVars() (*cloudboostrapper.NetworkingOptions, error) {
-	if networkingProvider == "" {
-		return nil, nil
-	}
-
-	var options *cloudboostrapper.NetworkingOptions
-	switch terraformBackend {
-	case kubeconstants.NetworkingProviderFlannel:
+func parseNetworkingVars() (*networkingprovider.Options, error) {
+	var options *networkingprovider.Options
+	switch networkingProviderName {
+	case networkingprovider.Flannel:
 		flannelOptions, err := parseNetworkingVarsFlannel()
 		if err != nil {
 			return nil, err
 		}
-		options = &cloudboostrapper.NetworkingOptions{
+		options = &networkingprovider.Options{
 			Flannel: flannelOptions,
 		}
 	default:
-		return nil, fmt.Errorf("unsupported networking provider: %v", networkingProvider)
+		return nil, fmt.Errorf("unsupported networking provider: %v", networkingProviderName)
 	}
 
 	return options, nil
 }
 
-func parseNetworkingVarsFlannel() (*cloudboostrapper.FlannelOptions, error) {
-	flannelOptions := &cloudboostrapper.FlannelOptions{}
+func parseNetworkingVarsFlannel() (*flannel.Options, error) {
+	flannelOptions := &flannel.Options{}
 	flags := cli.EmbeddedFlag{
 		Target: &flannelOptions,
 		Expected: map[string]cli.EmbeddedFlagValue{
-			"network-cidr-block": {
+			"cidr-block": {
 				Required:     true,
-				EncodingName: "NetworkCIDRBlock",
+				EncodingName: "CIDRBlock",
 			},
 		},
 	}
 
-	err := flags.Parse(providerVars)
+	err := flags.Parse(networkingProviderVars)
 	if err != nil {
 		return nil, err
 	}

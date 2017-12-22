@@ -9,9 +9,9 @@ go_library(
     importpath = "github.com/mlab-lattice/system/cmd/cli/admin/app/deprovision",
     visibility = ["//visibility:public"],
     deps = [
-        "//pkg/backend/kubernetes/lifecycle/provisioner:go_default_library",
+        "//pkg/backend/kubernetes/lifecycle/cluster/provisioner:go_default_library",
         "//pkg/constants:go_default_library",
-        "//pkg/lifecycle/provisioner:go_default_library",
+        "//pkg/lifecycle/cluster/provisioner:go_default_library",
         "@com_github_spf13_cobra//:go_default_library",
     ],
 )

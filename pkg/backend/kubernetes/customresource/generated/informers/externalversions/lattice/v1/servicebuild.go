@@ -22,19 +22,34 @@ type ServiceBuildInformer interface {
 }
 
 type serviceBuildInformer struct {
-	factory internalinterfaces.SharedInformerFactory
+	factory          internalinterfaces.SharedInformerFactory
+	tweakListOptions internalinterfaces.TweakListOptionsFunc
+	namespace        string
 }
 
 // NewServiceBuildInformer constructs a new informer for ServiceBuild type.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
 func NewServiceBuildInformer(client versioned.Interface, namespace string, resyncPeriod time.Duration, indexers cache.Indexers) cache.SharedIndexInformer {
+	return NewFilteredServiceBuildInformer(client, namespace, resyncPeriod, indexers, nil)
+}
+
+// NewFilteredServiceBuildInformer constructs a new informer for ServiceBuild type.
+// Always prefer using an informer factory to get a shared informer instead of getting an independent
+// one. This reduces memory footprint and number of connections to the server.
+func NewFilteredServiceBuildInformer(client versioned.Interface, namespace string, resyncPeriod time.Duration, indexers cache.Indexers, tweakListOptions internalinterfaces.TweakListOptionsFunc) cache.SharedIndexInformer {
 	return cache.NewSharedIndexInformer(
 		&cache.ListWatch{
 			ListFunc: func(options meta_v1.ListOptions) (runtime.Object, error) {
+				if tweakListOptions != nil {
+					tweakListOptions(&options)
+				}
 				return client.LatticeV1().ServiceBuilds(namespace).List(options)
 			},
 			WatchFunc: func(options meta_v1.ListOptions) (watch.Interface, error) {
+				if tweakListOptions != nil {
+					tweakListOptions(&options)
+				}
 				return client.LatticeV1().ServiceBuilds(namespace).Watch(options)
 			},
 		},
@@ -44,12 +59,12 @@ func NewServiceBuildInformer(client versioned.Interface, namespace string, resyn
 	)
 }
 
-func defaultServiceBuildInformer(client versioned.Interface, resyncPeriod time.Duration) cache.SharedIndexInformer {
-	return NewServiceBuildInformer(client, meta_v1.NamespaceAll, resyncPeriod, cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc})
+func (f *serviceBuildInformer) defaultInformer(client versioned.Interface, resyncPeriod time.Duration) cache.SharedIndexInformer {
+	return NewFilteredServiceBuildInformer(client, f.namespace, resyncPeriod, cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}, f.tweakListOptions)
 }
 
 func (f *serviceBuildInformer) Informer() cache.SharedIndexInformer {
-	return f.factory.InformerFor(&lattice_v1.ServiceBuild{}, defaultServiceBuildInformer)
+	return f.factory.InformerFor(&lattice_v1.ServiceBuild{}, f.defaultInformer)
 }
 
 func (f *serviceBuildInformer) Lister() v1.ServiceBuildLister {
