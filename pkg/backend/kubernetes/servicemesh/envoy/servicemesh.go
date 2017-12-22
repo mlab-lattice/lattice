@@ -9,7 +9,8 @@ import (
 
 	kubeconstants "github.com/mlab-lattice/system/pkg/backend/kubernetes/constants"
 	crv1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
-	"github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/cluster/bootstrap/bootstrapper"
+	clusterbootstrapper "github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/cluster/bootstrap/bootstrapper"
+	systembootstrapper "github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/system/bootstrap/bootstrapper"
 	kubeutil "github.com/mlab-lattice/system/pkg/backend/kubernetes/util/kubernetes"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -25,6 +26,9 @@ const (
 
 	initContainerNamePrepareEnvoy = kubeconstants.DeploymentResourcePrefixServiceMesh + "prepare-envoy"
 	containerNameEnvoy            = kubeconstants.DeploymentResourcePrefixServiceMesh + "envoy"
+
+	envoyXDSAPI         = "envoy-xds-api"
+	labelKeyEnvoyXDSAPI = "envoy.servicemesh.lattice.mlab.com/xds-api"
 )
 
 func NewEnvoyServiceMesh(config *crv1.ConfigEnvoy) *DefaultEnvoyServiceMesh {
@@ -37,14 +41,14 @@ type DefaultEnvoyServiceMesh struct {
 	Config *crv1.ConfigEnvoy
 }
 
-func (sm *DefaultEnvoyServiceMesh) BootstrapResources(resources *bootstrapper.Resources) {
+func (sm *DefaultEnvoyServiceMesh) BootstrapClusterResources(resources *clusterbootstrapper.ClusterResources) {
 	clusterRole := &rbacv1.ClusterRole{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "ClusterRole",
 			APIVersion: rbacv1.GroupName + "/v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name: kubeconstants.InternalComponentEnvoyXDSAPI,
+			Name: envoyXDSAPI,
 		},
 		Rules: []rbacv1.PolicyRule{
 			// Read kube endpoints
@@ -63,6 +67,96 @@ func (sm *DefaultEnvoyServiceMesh) BootstrapResources(resources *bootstrapper.Re
 	}
 
 	resources.ClusterRoles = append(resources.ClusterRoles, clusterRole)
+}
+
+func (sm *DefaultEnvoyServiceMesh) BootstrapSystemResources(resources *systembootstrapper.SystemResources) {
+	namespace := resources.Namespace.Name
+
+	serviceAccount := &corev1.ServiceAccount{
+		// Include TypeMeta so if this is a dry run it will be printed out
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "ServiceAccount",
+			APIVersion: "v1",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      envoyXDSAPI,
+			Namespace: namespace,
+		},
+	}
+
+	roleBinding := &rbacv1.RoleBinding{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      envoyXDSAPI,
+			Namespace: namespace,
+		},
+		Subjects: []rbacv1.Subject{
+			{
+				Kind:      rbacv1.ServiceAccountKind,
+				Name:      serviceAccount.Name,
+				Namespace: serviceAccount.Namespace,
+			},
+		},
+		RoleRef: rbacv1.RoleRef{
+			APIGroup: rbacv1.GroupName,
+			Kind:     "ClusterRole",
+			Name:     envoyXDSAPI,
+		},
+	}
+
+	labels := map[string]string{
+		labelKeyEnvoyXDSAPI: "true",
+	}
+
+	daemonSet := &appsv1.DaemonSet{
+		// Include TypeMeta so if this is a dry run it will be printed out
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "DaemonSet",
+			APIVersion: appsv1.GroupName + "/v1",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      envoyXDSAPI,
+			Namespace: namespace,
+			Labels:    labels,
+		},
+		Spec: appsv1.DaemonSetSpec{
+			Selector: &metav1.LabelSelector{
+				MatchLabels: labels,
+			},
+			Template: corev1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:   envoyXDSAPI,
+					Labels: labels,
+				},
+				Spec: corev1.PodSpec{
+					Containers: []corev1.Container{
+						{
+							Name:  "envoy-xds-api",
+							Image: sm.Config.XDSAPIImage,
+							Ports: []corev1.ContainerPort{
+								{
+									Name:          "http",
+									HostPort:      8080,
+									ContainerPort: 8080,
+								},
+							},
+						},
+					},
+					DNSPolicy:          corev1.DNSDefault,
+					ServiceAccountName: serviceAccount.Name,
+					Tolerations: []corev1.Toleration{
+						kubeconstants.TolerationMasterNode,
+					},
+					Affinity: &corev1.Affinity{
+						NodeAffinity: &kubeconstants.NodeAffinityMasterNode,
+					},
+				},
+			},
+		},
+	}
+
+	resources.ServiceAccounts = append(resources.ServiceAccounts, serviceAccount)
+	resources.RoleBindings = append(resources.RoleBindings, roleBinding)
+	resources.DaemonSets = append(resources.DaemonSets, daemonSet)
 }
 
 func (sm *DefaultEnvoyServiceMesh) TransformServiceDeploymentSpec(

@@ -30,18 +30,17 @@ type Options struct {
 	Networking       *cloud.NetworkingOptions
 }
 
-func Bootstrap(clusterID types.ClusterID, cloudProviderName string, options *Options, kubeConfig *rest.Config) (*bootstrapper.Resources, error) {
-	resources, err := GetBootstrapResources(clusterID, cloudProviderName, options)
-	if err != nil {
-		return nil, err
-	}
-
-	kubeClient, err := kubeclientset.NewForConfig(kubeConfig)
-	if err != nil {
-		return nil, err
-	}
-
-	latticeClient, err := latticeclientset.NewForConfig(kubeConfig)
+func Bootstrap(
+	clusterID types.ClusterID,
+	cloudProviderName string,
+	options *Options,
+	serviceMesh servicemesh.Interface,
+	cloudProvider cloudprovider.Interface,
+	kubeConfig *rest.Config,
+	kubeClient kubeclientset.Interface,
+	latticeClient latticeclientset.Interface,
+) (*bootstrapper.ClusterResources, error) {
+	resources, err := GetBootstrapResources(clusterID, cloudProviderName, options, serviceMesh, cloudProvider)
 	if err != nil {
 		return nil, err
 	}
@@ -201,7 +200,13 @@ func idempotentSeed(resourceDescription string, seedFunc func() error) error {
 	return err
 }
 
-func GetBootstrapResources(clusterID types.ClusterID, cloudProviderName string, options *Options) (*bootstrapper.Resources, error) {
+func GetBootstrapResources(
+	clusterID types.ClusterID,
+	cloudProviderName string,
+	options *Options,
+	serviceMesh servicemesh.Interface,
+	cloudProvider cloudprovider.Interface,
+) (*bootstrapper.ClusterResources, error) {
 	baseOptions := &base.Options{
 		DryRun:           options.DryRun,
 		Config:           options.Config,
@@ -213,19 +218,9 @@ func GetBootstrapResources(clusterID types.ClusterID, cloudProviderName string, 
 		return nil, err
 	}
 
-	cloudProvider, err := cloudprovider.NewCloudProvider(cloudProviderName)
-	if err != nil {
-		return nil, err
-	}
-
-	serviceMesh, err := servicemesh.NewServiceMesh(&options.Config.ServiceMesh)
-	if err != nil {
-		return nil, err
-	}
-
-	resources := &bootstrapper.Resources{}
+	resources := &bootstrapper.ClusterResources{}
 	baseBootstrapper.BootstrapResources(resources)
-	serviceMesh.BootstrapResources(resources)
-	cloudProvider.BootstrapResources(resources)
+	serviceMesh.BootstrapClusterResources(resources)
+	cloudProvider.BootstrapClusterResources(resources)
 	return resources, nil
 }

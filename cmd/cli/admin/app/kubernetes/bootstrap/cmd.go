@@ -4,18 +4,20 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/mlab-lattice/system/pkg/backend/kubernetes/cloudprovider"
 	kubeconstants "github.com/mlab-lattice/system/pkg/backend/kubernetes/constants"
 	crv1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	latticeclientset "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/clientset/versioned"
-	"github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/cluster/bootstrap"
-	"github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/cluster/bootstrap/bootstrapper"
-	baseboostrapper "github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/cluster/bootstrap/bootstrapper/base"
+	clusterbootstrap "github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/cluster/bootstrap"
+	clusterbootstrapper "github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/cluster/bootstrap/bootstrapper"
+	baseclusterboostrapper "github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/cluster/bootstrap/bootstrapper/base"
+	systembootstrap "github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/system/bootstrap"
+	systembootstrapper "github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/system/bootstrap/bootstrapper"
+	"github.com/mlab-lattice/system/pkg/backend/kubernetes/servicemesh"
 	kubeutil "github.com/mlab-lattice/system/pkg/backend/kubernetes/util/kubernetes"
 	"github.com/mlab-lattice/system/pkg/constants"
 	"github.com/mlab-lattice/system/pkg/types"
 	"github.com/mlab-lattice/system/pkg/util/cli"
-
-	"k8s.io/apimachinery/pkg/api/errors"
 
 	kubeclientset "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -54,7 +56,7 @@ var (
 	networkingProviderVars []string
 )
 
-var options = &bootstrap.Options{
+var options = &clusterbootstrap.Options{
 	Config: crv1.ConfigSpec{
 		ComponentBuild: crv1.ConfigComponentBuild{
 			Builder:        crv1.ConfigComponentBuildBuilder{},
@@ -62,9 +64,9 @@ var options = &bootstrap.Options{
 		},
 		ServiceMesh: crv1.ConfigServiceMesh{},
 	},
-	MasterComponents: baseboostrapper.MasterComponentOptions{
-		LatticeControllerManager: baseboostrapper.LatticeControllerManagerOptions{},
-		ManagerAPI:               baseboostrapper.ManagerAPIOptions{},
+	MasterComponents: baseclusterboostrapper.MasterComponentOptions{
+		LatticeControllerManager: baseclusterboostrapper.LatticeControllerManagerOptions{},
+		ManagerAPI:               baseclusterboostrapper.ManagerAPIOptions{},
 	},
 }
 
@@ -80,10 +82,10 @@ var Cmd = &cobra.Command{
 		clusterID := types.ClusterID(clusterIDString)
 		initialSystemID := types.SystemID(initialSystemIDString)
 
-		var kubeconfig *rest.Config
+		var kubeConfig *rest.Config
 		if !options.DryRun {
 			var err error
-			kubeconfig, err = kubeutil.NewConfig(kubeconfigPath, "")
+			kubeConfig, err = kubeutil.NewConfig(kubeconfigPath, "")
 			if err != nil {
 				panic(err)
 			}
@@ -107,17 +109,50 @@ var Cmd = &cobra.Command{
 		}
 		options.Config.Terraform = terraformConfig
 
+		serviceMesh, err := servicemesh.NewServiceMesh(&options.Config.ServiceMesh)
+		if err != nil {
+			panic(err)
+		}
+
+		cloudProvider, err := cloudprovider.NewCloudProvider(cloudProviderName)
+		if err != nil {
+			panic(err)
+		}
+
 		//networkingOptions, err := parseNetworkingVars()
 		//if err != nil {
 		//	panic(err)
 		//}
 		//options.Networking = networkingOptions
 
-		var resources *bootstrapper.Resources
+		var kubeClient kubeclientset.Interface
+		var latticeClient latticeclientset.Interface
+
+		if !options.DryRun {
+			kubeClient = kubeclientset.NewForConfigOrDie(kubeConfig)
+			latticeClient = latticeclientset.NewForConfigOrDie(kubeConfig)
+		}
+
+		var clusterResources *clusterbootstrapper.ClusterResources
 		if options.DryRun {
-			resources, err = bootstrap.GetBootstrapResources(clusterID, cloudProviderName, options)
+			clusterResources, err = clusterbootstrap.GetBootstrapResources(
+				clusterID,
+				cloudProviderName,
+				options,
+				serviceMesh,
+				cloudProvider,
+			)
 		} else {
-			resources, err = bootstrap.Bootstrap(clusterID, cloudProviderName, options, kubeconfig)
+			clusterResources, err = clusterbootstrap.Bootstrap(
+				clusterID,
+				cloudProviderName,
+				options,
+				serviceMesh,
+				cloudProvider,
+				kubeConfig,
+				kubeClient,
+				latticeClient,
+			)
 		}
 
 		if err != nil {
@@ -125,7 +160,7 @@ var Cmd = &cobra.Command{
 		}
 
 		if printBool {
-			resourcesString, err := resources.String()
+			resourcesString, err := clusterResources.String()
 			if err != nil {
 				panic(err)
 			}
@@ -137,29 +172,33 @@ var Cmd = &cobra.Command{
 			return
 		}
 
-		systemResources := kubeutil.NewSystem(clusterID, initialSystemID, initialSystemDefinitionURL)
-
+		var systemResources *systembootstrapper.SystemResources
 		if options.DryRun {
-			systemResourcesString, err := systemResources.String()
+			systemResources = systembootstrap.GetBootstrapResources(clusterID, initialSystemID, initialSystemDefinitionURL, serviceMesh, cloudProvider)
+		} else {
+			fmt.Printf("bootstrapping initial system \"%v\"\n", initialSystemIDString)
+			systemResources, err = systembootstrap.Bootstrap(
+				clusterID,
+				initialSystemID,
+				initialSystemDefinitionURL,
+				serviceMesh,
+				cloudProvider,
+				kubeClient,
+				latticeClient,
+			)
+		}
+
+		if err != nil {
+			panic(err)
+		}
+
+		if printBool {
+			resourcesString, err := systemResources.String()
 			if err != nil {
 				panic(err)
 			}
 
-			fmt.Println(systemResourcesString)
-			return
-		}
-
-		fmt.Printf("Seeding initial system \"%v\"\n", initialSystemIDString)
-		kubeClient := kubeclientset.NewForConfigOrDie(kubeconfig)
-		latticeClient := latticeclientset.NewForConfigOrDie(kubeconfig)
-
-		_, err = kubeutil.CreateNewSystemResources(
-			systemResources,
-			kubeClient,
-			latticeClient,
-		)
-		if err != nil && !errors.IsAlreadyExists(err) {
-			panic(err)
+			fmt.Println(resourcesString)
 		}
 	},
 }

@@ -9,7 +9,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func (b *DefaultBootstrapper) configResources(resources *bootstrapper.Resources) {
+func (b *DefaultBootstrapper) configResources(resources *bootstrapper.ClusterResources) {
 	namespace := kubeutil.InternalNamespace(b.ClusterID)
 
 	config := &crv1.Config{

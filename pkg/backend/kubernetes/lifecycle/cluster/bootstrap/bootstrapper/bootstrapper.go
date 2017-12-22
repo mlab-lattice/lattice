@@ -15,10 +15,10 @@ import (
 )
 
 type Interface interface {
-	BootstrapResources(*Resources)
+	BootstrapClusterResources(*ClusterResources)
 }
 
-type Resources struct {
+type ClusterResources struct {
 	Namespaces      []*corev1.Namespace
 	ServiceAccounts []*corev1.ServiceAccount
 
@@ -33,7 +33,7 @@ type Resources struct {
 	DaemonSets []*appsv1.DaemonSet
 }
 
-func (r *Resources) String() (string, error) {
+func (r *ClusterResources) String() (string, error) {
 	header := "---\n"
 	output := ""
 

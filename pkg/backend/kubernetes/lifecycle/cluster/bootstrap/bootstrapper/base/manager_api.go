@@ -16,7 +16,7 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 )
 
-func (b *DefaultBootstrapper) managerAPIResources(resources *bootstrapper.Resources) {
+func (b *DefaultBootstrapper) managerAPIResources(resources *bootstrapper.ClusterResources) {
 	internalNamespace := kubeutil.InternalNamespace(b.ClusterID)
 
 	// FIXME: prefix this cluster role with the cluster id so multiple clusters can have different
