@@ -38,8 +38,9 @@ type Controller struct {
 	// the owning rollout. It then runs to completion. It is still the owning
 	// rollout. Then SystemRollout B is created. It is accepted because the existing
 	// owning rollout is not running. Now B is the owning rollout)
-	owningLifecycleActionsLock sync.RWMutex
-	owningLifecycleActions     map[string]*lifecycleAction
+	owningLifecycleActionsLock   sync.RWMutex
+	owningLifecycleActions       map[string]*lifecycleAction
+	owningLifecycleActionsSynced chan struct{}
 
 	systemRolloutLister       latticelisters.SystemRolloutLister
 	systemRolloutListerSynced cache.InformerSynced
@@ -73,10 +74,11 @@ func NewController(
 	componentBuildInformer latticeinformers.ComponentBuildInformer,
 ) *Controller {
 	src := &Controller{
-		latticeClient:          latticeClient,
-		owningLifecycleActions: make(map[string]*lifecycleAction),
-		rolloutQueue:           workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "system-rollout"),
-		teardownQueue:          workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "system-teardown"),
+		latticeClient:                latticeClient,
+		owningLifecycleActions:       make(map[string]*lifecycleAction),
+		owningLifecycleActionsSynced: make(chan struct{}),
+		rolloutQueue:                 workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "system-rollout"),
+		teardownQueue:                workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "system-teardown"),
 	}
 
 	src.syncHandler = src.syncSystemRollout
@@ -151,6 +153,7 @@ func (c *Controller) Run(workers int, stopCh <-chan struct{}) {
 	// handleSystemRolloutAdd and handleSystemRolloutUpdate will enqueue all of the existing SystemRollouts already
 	// so it's okay if the other informers don't.
 	if err := c.syncOwningActions(); err != nil {
+		glog.Errorf("error syncing owning actions: %v", err)
 		return
 	}
 
@@ -213,12 +216,15 @@ func (c *Controller) handleSystemTeardownUpdate(old, cur interface{}) {
 }
 
 func (c *Controller) handleSystemAdd(obj interface{}) {
+	<-c.owningLifecycleActionsSynced
+
 	system := obj.(*crv1.System)
 	glog.V(4).Infof("System %s added", system.Name)
 
 	action, exists := c.getOwningAction(system.Namespace)
 	if !exists {
 		// No ongoing action
+		glog.V(4).Infof("System %v/%v has no owning actions, skipping", system.Namespace, system.Name)
 		return
 	}
 
@@ -241,6 +247,8 @@ func (c *Controller) handleSystemAdd(obj interface{}) {
 }
 
 func (c *Controller) handleSystemUpdate(old, cur interface{}) {
+	<-c.owningLifecycleActionsSynced
+
 	glog.V(4).Info("Got System update")
 	oldSystem := old.(*crv1.System)
 	curSystem := cur.(*crv1.System)
@@ -253,6 +261,7 @@ func (c *Controller) handleSystemUpdate(old, cur interface{}) {
 
 	action, exists := c.getOwningAction(curSystem.Namespace)
 	if !exists {
+		glog.V(4).Infof("System %v/%v has no owning actions, skipping", curSystem.Namespace, curSystem.Name)
 		// No ongoing action
 		return
 	}
@@ -276,6 +285,8 @@ func (c *Controller) handleSystemUpdate(old, cur interface{}) {
 }
 
 func (c *Controller) handleSystemBuildAdd(obj interface{}) {
+	<-c.owningLifecycleActionsSynced
+
 	build := obj.(*crv1.SystemBuild)
 	glog.V(4).Infof("SystemBuild %s added", build.Name)
 
@@ -299,6 +310,8 @@ func (c *Controller) handleSystemBuildAdd(obj interface{}) {
 }
 
 func (c *Controller) handleSystemBuildUpdate(old, cur interface{}) {
+	<-c.owningLifecycleActionsSynced
+
 	glog.V(4).Infof("Got SystemBuild update")
 	oldBuild := old.(*crv1.SystemBuild)
 	curBuild := cur.(*crv1.SystemBuild)
@@ -362,7 +375,7 @@ func (c *Controller) syncOwningActions() error {
 			continue
 		}
 
-		_, exists := c.getOwningAction(rollout.Namespace)
+		_, exists := c.owningLifecycleActions[rollout.Namespace]
 		if exists {
 			return fmt.Errorf("System %v has multiple owning actions", rollout.Namespace)
 		}
@@ -382,7 +395,7 @@ func (c *Controller) syncOwningActions() error {
 			continue
 		}
 
-		_, exists := c.getOwningAction(teardown.Namespace)
+		_, exists := c.owningLifecycleActions[teardown.Namespace]
 		if exists {
 			return fmt.Errorf("System %v has multiple owning actions", teardown.Namespace)
 		}

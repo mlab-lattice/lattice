@@ -31,10 +31,12 @@ func (c *Controller) syncServiceStatus(
 	desiredInstances := service.Spec.NumInstances
 	updatedInstances := deployment.Status.UpdatedReplicas
 	totalInstances := deployment.Status.Replicas
+	availableInstances := deployment.Status.AvailableReplicas
 	staleInstances := totalInstances - updatedInstances
 
 	for _, condition := range deployment.Status.Conditions {
-		if condition.Type == appsv1.DeploymentReplicaFailure && condition.Status == corev1.ConditionTrue {
+		notProgressing := condition.Type == appsv1.DeploymentProgressing && condition.Status == corev1.ConditionFalse
+		if notProgressing && condition.Reason == reasonTimedOut {
 			failed = true
 			failureReason = condition.Reason
 			failureMessage = condition.Message
@@ -43,13 +45,36 @@ func (c *Controller) syncServiceStatus(
 	}
 
 	// First get a basic scaling up/down vs stable state
+	// With a little help from: https://github.com/kubernetes/kubernetes/blob/v1.9.0/pkg/kubectl/rollout_status.go#L66-L97
 	var state crv1.ServiceState
-	if updatedInstances > desiredInstances {
+	if updatedInstances < totalInstances {
+		// The updated pods have not yet all been created
 		state = crv1.ServiceStateScalingUp
-	} else if updatedInstances == desiredInstances {
-		state = crv1.ServiceStateStable
-	} else {
+	} else if totalInstances > updatedInstances {
+		// There are extra pods still
 		state = crv1.ServiceStateScalingDown
+	} else if availableInstances < updatedInstances {
+		// The update pods have been created but aren't yet available
+		state = crv1.ServiceStateScalingUp
+	} else {
+		state = crv1.ServiceStateStable
+	}
+
+	// If the Deployment controller hasn't yet seen the update, it's updating
+	if deployment.Generation != deployment.Status.ObservedGeneration {
+		state = crv1.ServiceStateUpdating
+	} else if state == crv1.ServiceStateStable && desiredInstances != totalInstances {
+		// For some reason the Spec is up to date, the deployment is stable, but
+		// the deployment does not have the correct number of instances.
+		err := fmt.Errorf(
+			"Service %v/%v is in state %v but Deployment %v does not have the right amount of instances: expected %v found %v",
+			service.Namespace,
+			service.Name,
+			deployment.Name,
+			desiredInstances,
+			totalInstances,
+		)
+		return nil, err
 	}
 
 	// If we have any stale instances though, we are updating (which can include scaling)

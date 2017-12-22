@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/mlab-lattice/system/cmd/kubernetes/lattice-controller-manager/app/basecontrollers"
-	awscontrollers "github.com/mlab-lattice/system/cmd/kubernetes/lattice-controller-manager/app/cloudcontrollers/aws"
 	localcontrollers "github.com/mlab-lattice/system/cmd/kubernetes/lattice-controller-manager/app/cloudcontrollers/local"
 	controller "github.com/mlab-lattice/system/cmd/kubernetes/lattice-controller-manager/app/common"
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/cloudprovider"
@@ -142,9 +141,8 @@ func GetControllerInitializers(provider string) map[string]controller.Initialize
 
 	switch provider {
 	case constants.ProviderAWS:
-		for name, initializer := range awscontrollers.GetControllerInitializers() {
-			initializers["cloud-aws-"+name] = initializer
-		}
+		// nothing for aws yet
+
 	case constants.ProviderLocal:
 		for name, initializer := range localcontrollers.GetControllerInitializers() {
 			initializers["cloud-local-"+name] = initializer
