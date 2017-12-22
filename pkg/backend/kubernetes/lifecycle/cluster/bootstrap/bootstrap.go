@@ -7,9 +7,10 @@ import (
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource"
 	crv1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	latticeclientset "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/clientset/versioned"
-	"github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/bootstrap/bootstrapper"
-	"github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/bootstrap/bootstrapper/base"
-	"github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/bootstrap/bootstrapper/cloud"
+	"github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/cluster/bootstrap/bootstrapper"
+	"github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/cluster/bootstrap/bootstrapper/base"
+	"github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/cluster/bootstrap/bootstrapper/cloud"
+	"github.com/mlab-lattice/system/pkg/backend/kubernetes/servicemesh"
 	"github.com/mlab-lattice/system/pkg/types"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -217,8 +218,14 @@ func GetBootstrapResources(clusterID types.ClusterID, cloudProviderName string, 
 		return nil, err
 	}
 
+	serviceMesh, err := servicemesh.NewServiceMesh(&options.Config.ServiceMesh)
+	if err != nil {
+		return nil, err
+	}
+
 	resources := &bootstrapper.Resources{}
 	baseBootstrapper.BootstrapResources(resources)
+	serviceMesh.BootstrapResources(resources)
 	cloudProvider.BootstrapResources(resources)
 	return resources, nil
 }
