@@ -10,16 +10,27 @@ import (
 	batchv1 "k8s.io/api/batch/v1"
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/constants"
 	"github.com/golang/glog"
+    "github.com/mlab-lattice/system/pkg/backend/kubernetes/cloudprovider"
+    "github.com/mlab-lattice/system/pkg/types"
 )
 
-func NewLocalCloudProvider() *DefaultLocalCloudProvider {
-	return &DefaultLocalCloudProvider{}
+func NewLocalCloudProvider(clusterID types.ClusterID, providerName string, options cloudprovider.CloudProviderOptions) *DefaultLocalCloudProvider {
+	return &DefaultLocalCloudProvider{
+	    Options:    options,
+        ClusterID:  clusterID,
+        Provider:   providerName,
+    }
 }
 
 type DefaultLocalCloudProvider struct {
+    Options     cloudprovider.CloudProviderOptions
+    ClusterID   types.ClusterID
+    Provider    string
 }
 
 func (cp *DefaultLocalCloudProvider) BootstrapClusterResources(resources *clusterbootstrapper.ClusterResources) {
+    cp.seedDNS(resources)
+
 	for _, daemonSet := range resources.DaemonSets {
 		template := cp.TransformPodTemplateSpec(&daemonSet.Spec.Template)
 		daemonSet.Spec.Template = *template
@@ -51,14 +62,14 @@ func (cp *DefaultLocalCloudProvider) TransformServiceDeploymentSpec(service *crv
 	spec = spec.DeepCopy()
 	spec.Template.Spec.Affinity = nil
 
-	NdotsValue := "15"
+	ndotsValue := "15"
 
 	DNSConfig := corev1.PodDNSConfig{
 	    Nameservers: []string{constants.LocalDNSServerIP},
 	    Options: []corev1.PodDNSConfigOption{
 	        {
                 Name: "ndots",
-                Value: &NdotsValue,
+                Value: &ndotsValue,
             },
         },
     }

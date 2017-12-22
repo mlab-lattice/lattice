@@ -10,8 +10,6 @@ import (
 	latticeclientset "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/clientset/versioned"
 	clusterbootstrap "github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/cluster/bootstrap"
 	clusterbootstrapper "github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/cluster/bootstrap/bootstrapper"
-	baseclusterbootstrapper "github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/cluster/bootstrap/bootstrapper/base"
-    localbootstrapper "github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/cluster/bootstrap/bootstrapper/local"
 	systembootstrap "github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/system/bootstrap"
 	systembootstrapper "github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/system/bootstrap/bootstrapper"
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/networkingprovider"
@@ -88,13 +86,12 @@ var options = &clusterbootstrap.Options{
 		},
 		ServiceMesh: crv1.ConfigServiceMesh{},
 	},
-	MasterComponents: basebootstrapper.MasterComponentOptions{
-		LatticeControllerManager: basebootstrapper.LatticeControllerManagerOptions{},
-		ManagerAPI:               basebootstrapper.ManagerAPIOptions{},
-	},
-	LocalComponents: localbootstrapper.LocalComponentOptions{
-		LocalDNSController: localbootstrapper.LocalDNSControllerOptions{},
-		LocalDNSServer:	    localbootstrapper.LocalDNSServerOptions{},
+}
+
+var cloudProviderOptions = cloudprovider.CloudProviderOptions{
+	LocalComponents: cloudprovider.LocalComponentOptions{
+		LocalDNSController: cloudprovider.LocalDNSControllerOptions{},
+		LocalDNSServer:	    cloudprovider.LocalDNSServerOptions{},
 	},
 }
 
@@ -142,7 +139,7 @@ var Cmd = &cobra.Command{
 			panic(err)
 		}
 
-		cloudProvider, err := cloudprovider.NewCloudProvider(cloudProviderName)
+		cloudProvider, err := cloudprovider.NewCloudProvider(clusterID, cloudProviderName, cloudProviderOptions)
 		if err != nil {
 			panic(err)
 		}
@@ -279,16 +276,16 @@ func init() {
 	Cmd.MarkFlagRequired("service-provider")
 	Cmd.Flags().StringArrayVar(&serviceMeshProviderVars, "service-mesh-var", nil, "additional variables for the cloud provider")
 
-	Cmd.Flags().StringVar(&options.LocalComponents.LocalDNSController.Image, "local-dns-controller-image", "", "docker image to use for the local-dns controller")
+	Cmd.Flags().StringVar(&cloudProviderOptions.LocalComponents.LocalDNSController.Image, "local-dns-controller-image", "", "docker image to use for the local-dns controller")
 	Cmd.MarkFlagRequired("local-dns-controller-image")
-	Cmd.Flags().StringArrayVar(&options.LocalComponents.LocalDNSController.Args, "local-dns-controller-args", defaultLocalDNSControllerArgs, "extra arguments (besides --provider) to pass to the local-dns-controller")
+	Cmd.Flags().StringArrayVar(&cloudProviderOptions.LocalComponents.LocalDNSController.Args, "local-dns-controller-args", defaultLocalDNSControllerArgs, "extra arguments (besides --provider) to pass to the local-dns-controller")
 
-	Cmd.Flags().StringVar(&options.LocalComponents.LocalDNSServer.Image, "local-dns-server-image", "", "docker image to use for the local DNS server")
+	Cmd.Flags().StringVar(&cloudProviderOptions.LocalComponents.LocalDNSServer.Image, "local-dns-server-image", "", "docker image to use for the local DNS server")
 	Cmd.MarkFlagRequired("local-dns-server-image")
 
 	// Format as "dns-nanny-args -- dnsmasq-args"
 	localDNSServerArgs := append(append(defaultLocalDNSNannyArgs, "--"), defaultLocalDNSMasqArgs...)
-	Cmd.Flags().StringArrayVar(&options.LocalComponents.LocalDNSServer.Args, "local-dns-server-args", localDNSServerArgs, "extra arguments to pass to the local-dns-server")
+	Cmd.Flags().StringArrayVar(&cloudProviderOptions.LocalComponents.LocalDNSServer.Args, "local-dns-server-args", localDNSServerArgs, "extra arguments to pass to the local-dns-server")
 
 	Cmd.Flags().StringVar(&terraformBackend, "terraform-backend", "", "backend to use for terraform")
 	Cmd.Flags().StringArrayVar(&terraformBackendVars, "terraform-backend-var", nil, "additional variables for the terraform backend")

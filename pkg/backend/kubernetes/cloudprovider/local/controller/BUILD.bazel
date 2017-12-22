@@ -3,7 +3,7 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library")
 go_library(
     name = "go_default_library",
     srcs = ["dnscontroller.go"],
-    importpath = "github.com/mlab-lattice/system/pkg/backend/kubernetes/cloudprovider/local/local",
+    importpath = "github.com/mlab-lattice/system/pkg/backend/kubernetes/cloudprovider/local/controller",
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/backend/kubernetes/customresource/apis/lattice/v1:go_default_library",

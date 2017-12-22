@@ -3,7 +3,7 @@ package local
 import (
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/constants"
 	kubeutil "github.com/mlab-lattice/system/pkg/backend/kubernetes/util/kubernetes"
-	"github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/cluster/bootstrap/bootstrapper"
+	clusterbootstrapper "github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/cluster/bootstrap/bootstrapper"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -12,16 +12,16 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
-func (b *DefaultBootstrapper) seedDNS(resources *bootstrapper.Resources) {
+func (cp *DefaultLocalCloudProvider) seedDNS(resources *clusterbootstrapper.ClusterResources) {
 
 	// TODO :: Handle namespace
 	namespace := kubeutil.InternalNamespace("lattice")
 
-	controller_args := []string{"--provider", b.Provider, "--cluster-id", string(b.ClusterID)}
-	controller_args = append(controller_args, b.Options.LocalComponents.LocalDNSController.Args...)
+	controller_args := []string{"--provider", cp.Provider, "--cluster-id", string(cp.ClusterID)}
+	controller_args = append(controller_args, cp.Options.LocalComponents.LocalDNSController.Args...)
 
 	server_args := []string{}
-	server_args = append(server_args, b.Options.LocalComponents.LocalDNSServer.Args...)
+	server_args = append(server_args, cp.Options.LocalComponents.LocalDNSServer.Args...)
 
 	labels := map[string]string{
 		"key" : constants.MasterNodeDNSServer,
@@ -50,7 +50,7 @@ func (b *DefaultBootstrapper) seedDNS(resources *bootstrapper.Resources) {
 					Containers: []corev1.Container{
 						{
 							Name:  constants.MasterNodeDNSSController,
-							Image: b.Options.LocalComponents.LocalDNSController.Image,
+							Image: cp.Options.LocalComponents.LocalDNSController.Image,
 							Args:  controller_args,
 							VolumeMounts: []corev1.VolumeMount{
 								{
@@ -60,9 +60,9 @@ func (b *DefaultBootstrapper) seedDNS(resources *bootstrapper.Resources) {
 							},
 						},
 						{
-							Name:	constants.MasterNodeDNSServer,
-							Image:	b.Options.LocalComponents.LocalDNSServer.Image,
-							Args:	server_args,
+							Name:  constants.MasterNodeDNSServer,
+							Image: cp.Options.LocalComponents.LocalDNSServer.Image,
+							Args:  server_args,
 							Ports: []corev1.ContainerPort{
 								{
 									ContainerPort: 53,

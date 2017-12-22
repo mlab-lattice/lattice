@@ -12,12 +12,35 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
+	"github.com/mlab-lattice/system/pkg/types"
+	"github.com/mlab-lattice/system/pkg/backend/kubernetes/cloudprovider"
 )
 
 const (
 	Local = "local"
 	AWS   = "AWS"
 )
+
+type CloudProviderOptions struct {
+	DryRun           bool
+	Config           crv1.ConfigSpec
+	LocalComponents	 LocalComponentOptions
+}
+
+type LocalComponentOptions struct {
+	LocalDNSController 	LocalDNSControllerOptions
+	LocalDNSServer		LocalDNSServerOptions
+}
+
+type LocalDNSControllerOptions struct {
+	Image string
+	Args  []string
+}
+
+type LocalDNSServerOptions struct {
+	Image string
+	Args  []string
+}
 
 type Interface interface {
 	clusterbootstrapper.Interface
@@ -42,10 +65,10 @@ type Interface interface {
 	IsDeploymentSpecUpdated(service *crv1.Service, current, desired, untransformed *appsv1.DeploymentSpec) (bool, string, *appsv1.DeploymentSpec)
 }
 
-func NewCloudProvider(providerName string) (Interface, error) {
+func NewCloudProvider(clusterID types.ClusterID, providerName string, options CloudProviderOptions) (Interface, error) {
 	switch providerName {
 	case Local:
-		return local.NewLocalCloudProvider(), nil
+		return local.NewLocalCloudProvider(clusterID, providerName, options), nil
 	case AWS:
 		return aws.NewAWSCloudProvider(), nil
 	default:
