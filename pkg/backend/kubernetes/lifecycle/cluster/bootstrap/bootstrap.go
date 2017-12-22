@@ -9,7 +9,7 @@ import (
 	latticeclientset "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/clientset/versioned"
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/cluster/bootstrap/bootstrapper"
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/cluster/bootstrap/bootstrapper/base"
-	"github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/cluster/bootstrap/bootstrapper/cloud"
+	"github.com/mlab-lattice/system/pkg/backend/kubernetes/networkingprovider"
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/servicemesh"
 	"github.com/mlab-lattice/system/pkg/types"
 
@@ -27,7 +27,6 @@ type Options struct {
 	DryRun           bool
 	Config           crv1.ConfigSpec
 	MasterComponents base.MasterComponentOptions
-	Networking       *cloud.NetworkingOptions
 }
 
 func Bootstrap(
@@ -35,12 +34,13 @@ func Bootstrap(
 	cloudProviderName string,
 	options *Options,
 	serviceMesh servicemesh.Interface,
+	networkingProvider networkingprovider.Interface,
 	cloudProvider cloudprovider.Interface,
 	kubeConfig *rest.Config,
 	kubeClient kubeclientset.Interface,
 	latticeClient latticeclientset.Interface,
 ) (*bootstrapper.ClusterResources, error) {
-	resources, err := GetBootstrapResources(clusterID, cloudProviderName, options, serviceMesh, cloudProvider)
+	resources, err := GetBootstrapResources(clusterID, cloudProviderName, options, serviceMesh, networkingProvider, cloudProvider)
 	if err != nil {
 		return nil, err
 	}
@@ -166,6 +166,23 @@ func Bootstrap(
 	}
 	resources.Config = config
 
+	// Next, seed config maps
+	fmt.Println("seeding daemon sets")
+	var configMaps []*corev1.ConfigMap
+	for _, configMap := range resources.ConfigMaps {
+		var result *corev1.ConfigMap
+		err = idempotentSeed(fmt.Sprintf("config map %v/%v", configMap.Namespace, configMap.Name), func() error {
+			result, err = kubeClient.CoreV1().ConfigMaps(configMap.Namespace).Create(configMap)
+			return err
+		})
+
+		if err != nil {
+			return nil, err
+		}
+		configMaps = append(configMaps, result)
+	}
+	resources.ConfigMaps = configMaps
+
 	// Finally, seed any DaemonSets
 	fmt.Println("seeding daemon sets")
 	var daemonSets []*appsv1.DaemonSet
@@ -205,6 +222,7 @@ func GetBootstrapResources(
 	cloudProviderName string,
 	options *Options,
 	serviceMesh servicemesh.Interface,
+	networkingProvider networkingprovider.Interface,
 	cloudProvider cloudprovider.Interface,
 ) (*bootstrapper.ClusterResources, error) {
 	baseOptions := &base.Options{
@@ -221,6 +239,11 @@ func GetBootstrapResources(
 	resources := &bootstrapper.ClusterResources{}
 	baseBootstrapper.BootstrapResources(resources)
 	serviceMesh.BootstrapClusterResources(resources)
+
+	if networkingProvider != nil {
+		networkingProvider.BootstrapClusterResources(resources)
+	}
+
 	cloudProvider.BootstrapClusterResources(resources)
 	return resources, nil
 }

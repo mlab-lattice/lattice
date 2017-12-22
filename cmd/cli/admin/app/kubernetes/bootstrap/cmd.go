@@ -13,6 +13,8 @@ import (
 	baseclusterboostrapper "github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/cluster/bootstrap/bootstrapper/base"
 	systembootstrap "github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/system/bootstrap"
 	systembootstrapper "github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/system/bootstrap/bootstrapper"
+	"github.com/mlab-lattice/system/pkg/backend/kubernetes/networkingprovider"
+	"github.com/mlab-lattice/system/pkg/backend/kubernetes/networkingprovider/flannel"
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/servicemesh"
 	kubeutil "github.com/mlab-lattice/system/pkg/backend/kubernetes/util/kubernetes"
 	"github.com/mlab-lattice/system/pkg/constants"
@@ -52,7 +54,7 @@ var (
 	terraformBackend     string
 	terraformBackendVars []string
 
-	networkingProvider     string
+	networkingProviderName string
 	networkingProviderVars []string
 )
 
@@ -119,11 +121,18 @@ var Cmd = &cobra.Command{
 			panic(err)
 		}
 
-		//networkingOptions, err := parseNetworkingVars()
-		//if err != nil {
-		//	panic(err)
-		//}
-		//options.Networking = networkingOptions
+		var networkingProvider networkingprovider.Interface
+		if networkingProviderName != "" {
+			networkingProviderOptions, err := parseNetworkingVars()
+			if err != nil {
+				panic(err)
+			}
+
+			networkingProvider, err = networkingprovider.NewNetworkingProvider(networkingProviderOptions)
+			if err != nil {
+				panic(err)
+			}
+		}
 
 		var kubeClient kubeclientset.Interface
 		var latticeClient latticeclientset.Interface
@@ -140,6 +149,7 @@ var Cmd = &cobra.Command{
 				cloudProviderName,
 				options,
 				serviceMesh,
+				networkingProvider,
 				cloudProvider,
 			)
 		} else {
@@ -148,6 +158,7 @@ var Cmd = &cobra.Command{
 				cloudProviderName,
 				options,
 				serviceMesh,
+				networkingProvider,
 				cloudProvider,
 				kubeConfig,
 				kubeClient,
@@ -245,7 +256,7 @@ func init() {
 	Cmd.Flags().StringVar(&terraformBackend, "terraform-backend", "", "backend to use for terraform")
 	Cmd.Flags().StringArrayVar(&terraformBackendVars, "terraform-backend-var", nil, "additional variables for the terraform backend")
 
-	Cmd.Flags().StringVar(&networkingProvider, "networking-provider", "", "provider to use for networking")
+	Cmd.Flags().StringVar(&networkingProviderName, "networking-provider", "", "provider to use for networking")
 	Cmd.Flags().StringArrayVar(&networkingProviderVars, "networking-provider-var", nil, "additional variables for the networking provider")
 }
 
@@ -434,43 +445,39 @@ func parseTerraformVarsS3() (*crv1.ConfigTerraformBackendS3, error) {
 	return s3Config, nil
 }
 
-//func parseNetworkingVars() (*cloudboostrapper.NetworkingOptions, error) {
-//	if networkingProvider == "" {
-//		return nil, nil
-//	}
-//
-//	var options *cloudboostrapper.NetworkingOptions
-//	switch terraformBackend {
-//	case kubeconstants.NetworkingProviderFlannel:
-//		flannelOptions, err := parseNetworkingVarsFlannel()
-//		if err != nil {
-//			return nil, err
-//		}
-//		options = &cloudboostrapper.NetworkingOptions{
-//			Flannel: flannelOptions,
-//		}
-//	default:
-//		return nil, fmt.Errorf("unsupported networking provider: %v", networkingProvider)
-//	}
-//
-//	return options, nil
-//}
-//
-//func parseNetworkingVarsFlannel() (*cloudboostrapper.FlannelOptions, error) {
-//	flannelOptions := &cloudboostrapper.FlannelOptions{}
-//	flags := cli.EmbeddedFlag{
-//		Target: &flannelOptions,
-//		Expected: map[string]cli.EmbeddedFlagValue{
-//			"network-cidr-block": {
-//				Required:     true,
-//				EncodingName: "NetworkCIDRBlock",
-//			},
-//		},
-//	}
-//
-//	err := flags.Parse(cloudProviderVars)
-//	if err != nil {
-//		return nil, err
-//	}
-//	return flannelOptions, nil
-//}
+func parseNetworkingVars() (*networkingprovider.Options, error) {
+	var options *networkingprovider.Options
+	switch networkingProviderName {
+	case networkingprovider.Flannel:
+		flannelOptions, err := parseNetworkingVarsFlannel()
+		if err != nil {
+			return nil, err
+		}
+		options = &networkingprovider.Options{
+			Flannel: flannelOptions,
+		}
+	default:
+		return nil, fmt.Errorf("unsupported networking provider: %v", networkingProviderName)
+	}
+
+	return options, nil
+}
+
+func parseNetworkingVarsFlannel() (*flannel.Options, error) {
+	flannelOptions := &flannel.Options{}
+	flags := cli.EmbeddedFlag{
+		Target: &flannelOptions,
+		Expected: map[string]cli.EmbeddedFlagValue{
+			"cidr-block": {
+				Required:     true,
+				EncodingName: "CIDRBlock",
+			},
+		},
+	}
+
+	err := flags.Parse(networkingProviderVars)
+	if err != nil {
+		return nil, err
+	}
+	return flannelOptions, nil
+}

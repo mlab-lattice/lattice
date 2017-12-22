@@ -1,45 +1,51 @@
-package cloud
+package flannel
 
 import (
 	"fmt"
 
-	"github.com/mlab-lattice/system/pkg/backend/kubernetes/constants"
-
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	kubeconstants "github.com/mlab-lattice/system/pkg/backend/kubernetes/constants"
+	clusterbootstrapper "github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/cluster/bootstrap/bootstrapper"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"k8s.io/client-go/scale/scheme/appsv1beta2"
 )
 
-func (b *DefaultBootstrapper) bootstrapNetworking() ([]interface{}, error) {
-	if b.Options.Networking == nil {
-		return []interface{}{}, nil
-	}
-
-	if b.Options.Networking.Flannel != nil {
-		return b.bootstrapNetworkingFlannel()
-	}
-	return []interface{}{}, nil
+type Options struct {
+	CIDRBlock string
 }
 
-func (b *DefaultBootstrapper) bootstrapNetworkingFlannel() ([]interface{}, error) {
+func NewFlannelNetworkingProvider(options *Options) *DefaultFlannelNetworkingProvider {
+	return &DefaultFlannelNetworkingProvider{
+		CIDRBlock: options.CIDRBlock,
+	}
+}
+
+type DefaultFlannelNetworkingProvider struct {
+	CIDRBlock string
+}
+
+func (np *DefaultFlannelNetworkingProvider) BootstrapClusterResources(resources *clusterbootstrapper.ClusterResources) {
 	// Translated from: https://github.com/coreos/flannel/blob/317b7d199e3fe937f04ecb39beed025e47316430/Documentation/kube-flannel.yml
-	sa := &corev1.ServiceAccount{
+	serviceAccount := &corev1.ServiceAccount{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "ServiceAccount",
-			APIVersion: rbacv1.GroupName + "/v1",
+			APIVersion: "v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "flannel",
-			Namespace: constants.NamespaceKubeSystem,
+			Namespace: kubeconstants.NamespaceKubeSystem,
 		},
 	}
 
-	cr := &rbacv1.ClusterRole{
+	clusterRole := &rbacv1.ClusterRole{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "ClusterRole",
-			APIVersion: rbacv1.GroupName + "/v1",
+			APIVersion: rbacv1.GroupName + "/metav1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "flannel",
@@ -63,10 +69,10 @@ func (b *DefaultBootstrapper) bootstrapNetworkingFlannel() ([]interface{}, error
 		},
 	}
 
-	crb := &rbacv1.ClusterRoleBinding{
+	clusterRoleBinding := &rbacv1.ClusterRoleBinding{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "ClusterRoleBinding",
-			APIVersion: rbacv1.GroupName + "/v1",
+			APIVersion: rbacv1.GroupName + "/metav1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "flannel",
@@ -74,26 +80,30 @@ func (b *DefaultBootstrapper) bootstrapNetworkingFlannel() ([]interface{}, error
 		Subjects: []rbacv1.Subject{
 			{
 				Kind:      rbacv1.ServiceAccountKind,
-				Name:      sa.Name,
-				Namespace: sa.Namespace,
+				Name:      serviceAccount.Name,
+				Namespace: serviceAccount.Namespace,
 			},
 		},
 		RoleRef: rbacv1.RoleRef{
 			APIGroup: rbacv1.GroupName,
 			Kind:     "ClusterRole",
-			Name:     cr.Name,
+			Name:     clusterRole.Name,
 		},
 	}
 
 	netConf := fmt.Sprintf(`{
 	"Network": "%v",
 	"Backend": {"Type": "vxlan"}
-}`, b.Options.Networking.Flannel.NetworkCIDRBlock)
+}`, np.CIDRBlock)
 
-	cm := &corev1.ConfigMap{
+	configMap := &corev1.ConfigMap{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "ConfigMap",
+			APIVersion: "v1",
+		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "kube-flannel-cfg",
-			Namespace: constants.NamespaceKubeSystem,
+			Namespace: kubeconstants.NamespaceKubeSystem,
 		},
 		Data: map[string]string{
 			"cni-conf.json": `{
@@ -109,14 +119,14 @@ func (b *DefaultBootstrapper) bootstrapNetworkingFlannel() ([]interface{}, error
 	dsLabels := map[string]string{
 		"system.kubernetes.io/flannel": "true",
 	}
-	ds := &appsv1.DaemonSet{
+	daemonSet := &appsv1.DaemonSet{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "DaemonSet",
-			APIVersion: appsv1.GroupName + "/v1",
+			APIVersion: appsv1beta2.GroupName + "/v1beta2",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "kube-flannel-ds",
-			Namespace: constants.NamespaceKubeSystem,
+			Name:      "kube-flannel-daemonSet",
+			Namespace: kubeconstants.NamespaceKubeSystem,
 			Labels:    dsLabels,
 		},
 		Spec: appsv1.DaemonSetSpec{
@@ -125,20 +135,20 @@ func (b *DefaultBootstrapper) bootstrapNetworkingFlannel() ([]interface{}, error
 			},
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:   "kube-flannel-ds",
+					Name:   "kube-flannel-daemonSet",
 					Labels: dsLabels,
 				},
 				Spec: corev1.PodSpec{
 					HostNetwork: true,
 					Tolerations: []corev1.Toleration{
-						constants.TolerateAllTaints,
+						kubeconstants.TolerateAllTaints,
 					},
-					ServiceAccountName: sa.Name,
+					ServiceAccountName: serviceAccount.Name,
 					InitContainers: []corev1.Container{
 						{
 							Name:    "install-cni",
 							Image:   "quay.io/coreos/flannel:v0.9.0-amd64",
-							Command: []string{"cp"},
+							Command: []string{"np"},
 							Args: []string{
 								"-f",
 								"/etc/kube-flannel/cni-conf.json",
@@ -220,7 +230,7 @@ func (b *DefaultBootstrapper) bootstrapNetworkingFlannel() ([]interface{}, error
 							VolumeSource: corev1.VolumeSource{
 								ConfigMap: &corev1.ConfigMapVolumeSource{
 									LocalObjectReference: corev1.LocalObjectReference{
-										Name: cm.Name,
+										Name: configMap.Name,
 									},
 								},
 							},
@@ -231,27 +241,9 @@ func (b *DefaultBootstrapper) bootstrapNetworkingFlannel() ([]interface{}, error
 		},
 	}
 
-	if b.Options.DryRun {
-		return []interface{}{sa, cr, crb, cm, ds}, nil
-	}
-
-	if _, err := b.KubeClient.CoreV1().ServiceAccounts(sa.Namespace).Create(sa); err != nil {
-		return nil, err
-	}
-
-	if _, err := b.KubeClient.RbacV1().ClusterRoles().Create(cr); err != nil {
-		return nil, err
-	}
-
-	if _, err := b.KubeClient.RbacV1().ClusterRoleBindings().Create(crb); err != nil {
-		return nil, err
-	}
-	if _, err := b.KubeClient.CoreV1().ConfigMaps(cm.Namespace).Create(cm); err != nil {
-		return nil, err
-	}
-
-	if _, err := b.KubeClient.AppsV1().DaemonSets(ds.Namespace).Create(ds); err != nil {
-		return nil, err
-	}
-	return []interface{}{sa, cr, crb, cm, ds}, nil
+	resources.ServiceAccounts = append(resources.ServiceAccounts, serviceAccount)
+	resources.ClusterRoles = append(resources.ClusterRoles, clusterRole)
+	resources.ClusterRoleBindings = append(resources.ClusterRoleBindings, clusterRoleBinding)
+	resources.ConfigMaps = append(resources.ConfigMaps, configMap)
+	resources.DaemonSets = append(resources.DaemonSets, daemonSet)
 }

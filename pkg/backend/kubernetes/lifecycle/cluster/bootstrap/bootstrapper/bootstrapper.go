@@ -29,6 +29,7 @@ type ClusterResources struct {
 
 	CustomResourceDefinitions []*apiextensionsv1beta1.CustomResourceDefinition
 	Config                    *crv1.Config
+	ConfigMaps                []*corev1.ConfigMap
 
 	DaemonSets []*appsv1.DaemonSet
 }
@@ -106,6 +107,15 @@ func (r *ClusterResources) String() (string, error) {
 	}
 
 	output += fmt.Sprintf("%v%v", header, string(data))
+
+	for _, configMap := range r.ConfigMaps {
+		data, err := yaml.Marshal(configMap)
+		if err != nil {
+			return "", err
+		}
+
+		output += fmt.Sprintf("%v%v", header, string(data))
+	}
 
 	for _, daemonSet := range r.DaemonSets {
 		data, err := yaml.Marshal(daemonSet)
