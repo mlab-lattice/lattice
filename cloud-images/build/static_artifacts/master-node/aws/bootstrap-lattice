@@ -20,21 +20,30 @@ SYSTEM_DEFINITION_URL=$(echo ${USER_DATA} | jq '.lattice.system_definition_url' 
 /usr/bin/docker run \
     --network host \
     -v /etc/opt/kubernetes/admin/kubeconfig:/etc/bootstrap-lattice/kubeconfig \
-    gcr.io/lattice-dev/kubernetes-bootstrap-lattice:latest \
-    --debug \
-    --kubeconfig-path /etc/bootstrap-lattice/kubeconfig \
+    gcr.io/lattice-dev/kevinrosendahl-debug-lattice-cli-admin:latest \
+    kubernetes bootstrap \
+    --kubeconfig /etc/bootstrap-lattice/kubeconfig \
+    --initial-system-definition-url ${SYSTEM_DEFINITION_URL} \
     --lattice-container-registry gcr.io/lattice-dev \
+    --lattice-controller-manager-image kevinrosendahl-debug-kubernetes-lattice-controller-manager \
+    --manager-api-image kevinrosendahl-debug-kubernetes-manager-api-rest \
+    --component-builder-image kevinrosendahl-debug-kubernetes-component-builder \
     --component-build-registry ${AWS_ACCOUNT_ID}.dkr.ecr.${REGION}.amazonaws.com \
-    --docker-api-version '1.24' \
-    --system-definition-url ${SYSTEM_DEFINITION_URL} \
-    --system-id ${SYSTEM_ID} \
-    --provider AWS \
-    --provider-var account-id=${AWS_ACCOUNT_ID} \
-    --provider-var region=${REGION} \
-    --provider-var vpc-id=${VPC_ID} \
-    --provider-var subnet-ids=${SUBNET_IDS} \
-    --provider-var master-node-security-group-id=${MASTER_NODE_SECURITY_GROUP_ID} \
-    --provider-var base-node-ami-id=${BASE_NODE_AMI_ID} \
-    --provider-var key-name=${KEY_NAME} \
+    --component-build-docker-artifact-repository component-builds \
+    --component-builder-docker-api-version '1.24' \
+    --cloud-provider AWS \
+    --cloud-provider-var account-id=${AWS_ACCOUNT_ID} \
+    --cloud-provider-var region=${REGION} \
+    --cloud-provider-var vpc-id=${VPC_ID} \
+    --cloud-provider-var subnet-ids=${SUBNET_IDS} \
+    --cloud-provider-var master-node-security-group-id=${MASTER_NODE_SECURITY_GROUP_ID} \
+    --cloud-provider-var base-node-ami-id=${BASE_NODE_AMI_ID} \
+    --cloud-provider-var key-name=${KEY_NAME} \
+    --service-mesh envoy \
+    --service-mesh-var prepare-image=kevinrosendahl-debug-envoy-prepare \
+    --service-mesh-var xds-api-image=kevinrosendahl-debug-kubernetes-envoy-xds-api-rest-per-node \
+    --service-mesh-var redirect-cidr-block=172.16.0.0/16 \
+    --networking-provider flannel \
+    --networking-provider-var cidr-block=10.240.0.0/16 \
     --terraform-backend S3 \
     --terraform-backend-var bucket=${STATE_S3_BUCKET}
