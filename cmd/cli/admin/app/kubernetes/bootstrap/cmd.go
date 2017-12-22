@@ -21,7 +21,6 @@ import (
 	kubeclientset "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 
-	"github.com/ghodss/yaml"
 	"github.com/spf13/cobra"
 )
 
@@ -43,18 +42,18 @@ var (
 		"--host-config-path", "/etc/dns-config/hosts",
 	}
 
-	defaultLocalDNSServerArgs = []string {
-		// TODO :: Clean up - split into dnsmasq args and dnsnanny args.
+	defaultLocalDNSNannyArgs = []string {
 		"-v=2",
 		"-logtostderr",
 		"-restartDnsmasq=true",
 		"-configDir=/etc/dns-config/",
-		// Arguments after -- are passed straight to dnsmasq.
-		"--",
-		"-k", //Keep in foreground so as to not immediately exit.
-		"-R", //Dont read provided /etc/resolv.conf
-		"--hostsdir=/etc/dns-config/", // Read all the hosts from this directory. File changes read automatically by dnsmasq.
-		"--conf-dir=/etc/dns-config/,*.conf", // Read all *.conf files in the directory as dns config files
+	}
+
+	defaultLocalDNSMasqArgs = []string {
+		"-k", 									//Keep in foreground so as to not immediately exit.
+		"-R", 									//Dont read provided /etc/resolv.conf
+		"--hostsdir=/etc/dns-config/", 			// Read all the hosts from this directory. File changes read automatically by dnsmasq.
+		"--conf-dir=/etc/dns-config/,*.conf", 	// Read all *.conf files in the directory as dns config files
 	}
 
 	defaultManagerAPIArgs = []string{}
@@ -236,7 +235,10 @@ func init() {
 
 	Cmd.Flags().StringVar(&options.LocalComponents.LocalDNSServer.Image, "local-dns-server-image", "", "docker image to use for the local DNS server")
 	Cmd.MarkFlagRequired("local-dns-server-image")
-	Cmd.Flags().StringArrayVar(&options.LocalComponents.LocalDNSServer.Args, "local-dns-server-args", defaultLocalDNSServerArgs, "extra arguments to pass to the local-dns-server")
+
+	// Format as "dns-nanny-args -- dnsmasq-args"
+	localDNSServerArgs := append(append(defaultLocalDNSNannyArgs, "--"), defaultLocalDNSMasqArgs...)
+	Cmd.Flags().StringArrayVar(&options.LocalComponents.LocalDNSServer.Args, "local-dns-server-args", localDNSServerArgs, "extra arguments to pass to the local-dns-server")
 
 	Cmd.Flags().StringVar(&terraformBackend, "terraform-backend", "", "backend to use for terraform")
 	Cmd.Flags().StringArrayVar(&terraformBackendVars, "terraform-backend-var", nil, "additional variables for the terraform backend")

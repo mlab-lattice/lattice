@@ -1,8 +1,6 @@
 package local
 
 import (
-	"fmt"
-
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/constants"
 	kubeutil "github.com/mlab-lattice/system/pkg/backend/kubernetes/util/kubernetes"
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/cluster/bootstrap/bootstrapper"
@@ -10,15 +8,11 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 
-	appsv1beta2 "k8s.io/api/apps/v1beta2"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-
 )
 
-func (b *DefaultBootstrapper) seedDNS(resources *bootstrapper.Resources) ([]interface{}, error) {
-	if !b.Options.DryRun {
-		fmt.Println("Seeding local DNS server")
-	}
+func (b *DefaultBootstrapper) seedDNS(resources *bootstrapper.Resources) {
 
 	// TODO :: Handle namespace
 	namespace := kubeutil.InternalNamespace("lattice")
@@ -33,17 +27,17 @@ func (b *DefaultBootstrapper) seedDNS(resources *bootstrapper.Resources) ([]inte
 		"key" : constants.MasterNodeDNSServer,
 	}
 
-	localDNSDaemonSet := &appsv1beta2.DaemonSet{
+	localDNSDaemonSet := &appsv1.DaemonSet{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "DaemonSet",
-			APIVersion: appsv1beta2.GroupName + "/v1beta2",
+			APIVersion: appsv1.GroupName + "/v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:		constants.MasterNodeDNSServer,
 			Namespace: 	namespace,
 			Labels:		labels,
 		},
-		Spec: appsv1beta2.DaemonSetSpec{
+		Spec: appsv1.DaemonSetSpec{
 			Selector: &metav1.LabelSelector{
 				MatchLabels: labels,
 			},
@@ -69,7 +63,6 @@ func (b *DefaultBootstrapper) seedDNS(resources *bootstrapper.Resources) ([]inte
 							Name:	constants.MasterNodeDNSServer,
 							Image:	b.Options.LocalComponents.LocalDNSServer.Image,
 							Args:	server_args,
-							// TODO :: Ports
 							Ports: []corev1.ContainerPort{
 								{
 									ContainerPort: 53,
@@ -109,11 +102,7 @@ func (b *DefaultBootstrapper) seedDNS(resources *bootstrapper.Resources) ([]inte
 		},
 	}
 
-	if b.Options.DryRun {
-		return []interface{}{localDNSDaemonSet}, nil
-	}
-
-	localDNSDaemonSet, err := b.KubeClient.AppsV1beta2().DaemonSets(namespace).Create(localDNSDaemonSet)
+	resources.DaemonSets = append(resources.DaemonSets, localDNSDaemonSet)
 
 	localDNSService := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
@@ -142,7 +131,5 @@ func (b *DefaultBootstrapper) seedDNS(resources *bootstrapper.Resources) ([]inte
 		},
 	}
 
-	localDNSService, err = b.KubeClient.CoreV1().Services(namespace).Create(localDNSService)
-
-	return []interface{}{localDNSDaemonSet, localDNSService}, err
+	resources.Services = append(resources.Services, localDNSService)
 }

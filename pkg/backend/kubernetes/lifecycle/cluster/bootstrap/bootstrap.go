@@ -169,7 +169,7 @@ func Bootstrap(clusterID types.ClusterID, cloudProviderName string, options *Opt
 	}
 	resources.Config = config
 
-	// Finally, seed any DaemonSets
+	// Seed any daemon sets.
 	fmt.Println("seeding daemon sets")
 	var daemonSets []*appsv1.DaemonSet
 	for _, daemonSet := range resources.DaemonSets {
@@ -185,6 +185,23 @@ func Bootstrap(clusterID types.ClusterID, cloudProviderName string, options *Opt
 		daemonSets = append(daemonSets, result)
 	}
 	resources.DaemonSets = daemonSets
+
+	//Seed any services.
+	fmt.Println("seeding services")
+	var services []*corev1.Service
+	for _, service := range resources.Services {
+		var result *corev1.Service
+		err = idempotentSeed(fmt.Sprintf("daemon set %v/%v", service.Namespace, service.Name), func() error {
+			result, err = kubeClient.CoreV1().Services(service.Namespace).Create(service)
+			return err
+		})
+
+		if err != nil {
+			return nil, err
+		}
+		services = append(services, result)
+	}
+	resources.Services = services
 
 	return resources, nil
 }

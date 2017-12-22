@@ -66,7 +66,7 @@ func (sm *DefaultEnvoyServiceMesh) BootstrapResources(resources *bootstrapper.Re
 
 func (sm *DefaultEnvoyServiceMesh) TransformServiceDeploymentSpec(
 	service *crv1.Service,
-	spec *appsv1.DeploymentSpec
+	spec *appsv1.DeploymentSpec,
 ) *appsv1.DeploymentSpec {
 	prepareEnvoyContainer, envoyContainer := sm.envoyContainers(service)
 

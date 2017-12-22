@@ -31,6 +31,7 @@ type Resources struct {
 	Config                    *crv1.Config
 
 	DaemonSets []*appsv1.DaemonSet
+	Services   []*corev1.Service
 }
 
 func (r *Resources) String() (string, error) {
