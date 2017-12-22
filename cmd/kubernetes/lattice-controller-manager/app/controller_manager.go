@@ -14,6 +14,7 @@ import (
 	latticeinformers "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/informers/externalversions"
 	"github.com/mlab-lattice/system/pkg/constants"
 	"github.com/mlab-lattice/system/pkg/types"
+	crv1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 
 	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/rest"
@@ -99,7 +100,7 @@ func CreateControllerContext(
 	stop <-chan struct{},
 	terraformModulePath string,
 ) (controller.Context, error) {
-	cloudProvider, err := cloudprovider.NewCloudProvider(cloudProviderName)
+	cloudProvider, err := cloudprovider.NewCloudProvider(clusterID, cloudProviderName, &crv1.ConfigCloudProvider{})
 	if err != nil {
 		return controller.Context{}, err
 	}

@@ -13,7 +13,6 @@ import (
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	"github.com/mlab-lattice/system/pkg/types"
-	"github.com/mlab-lattice/system/pkg/backend/kubernetes/cloudprovider"
 )
 
 const (
@@ -65,10 +64,10 @@ type Interface interface {
 	IsDeploymentSpecUpdated(service *crv1.Service, current, desired, untransformed *appsv1.DeploymentSpec) (bool, string, *appsv1.DeploymentSpec)
 }
 
-func NewCloudProvider(clusterID types.ClusterID, providerName string, options CloudProviderOptions) (Interface, error) {
+func NewCloudProvider(clusterID types.ClusterID, providerName string, config *crv1.ConfigCloudProvider) (Interface, error) {
 	switch providerName {
 	case Local:
-		return local.NewLocalCloudProvider(clusterID, providerName, options), nil
+		return local.NewLocalCloudProvider(clusterID, providerName, config.Local), nil
 	case AWS:
 		return aws.NewAWSCloudProvider(), nil
 	default:

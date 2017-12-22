@@ -3,8 +3,8 @@ package main
 import (
 	"time"
 
-	"github.com/mlab-lattice/system/pkg/backend/kubernetes/cloudprovider/local/controller"
 	controller "github.com/mlab-lattice/system/cmd/kubernetes/lattice-controller-manager/app/common"
+	dnscontroller "github.com/mlab-lattice/system/pkg/backend/kubernetes/cloudprovider/local/controller"
 	latticeinformers "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/informers/externalversions"
 	"github.com/mlab-lattice/system/pkg/constants"
 	"github.com/mlab-lattice/system/pkg/types"
@@ -44,7 +44,7 @@ func Run(clusterIDString, kubeconfig, provider, terraformModulePath string,
 
 	glog.V(1).Info("Starting dns controller")
 
-	go controller.NewController(
+	go dnscontroller.NewController(
 		serverConfigPath,
 		hostConfigPath,
 		ctx.LatticeClientBuilder.ClientOrDie("local-dns-lattice-address"),

@@ -11,6 +11,7 @@ go_library(
         "//cmd/kubernetes/lattice-controller-manager/app/cloudcontrollers/local:go_default_library",
         "//cmd/kubernetes/lattice-controller-manager/app/common:go_default_library",
         "//pkg/backend/kubernetes/cloudprovider:go_default_library",
+        "//pkg/backend/kubernetes/customresource/apis/lattice/v1:go_default_library",
         "//pkg/backend/kubernetes/customresource/generated/informers/externalversions:go_default_library",
         "//pkg/constants:go_default_library",
         "//pkg/types:go_default_library",

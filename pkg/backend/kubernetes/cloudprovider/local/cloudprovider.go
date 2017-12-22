@@ -10,11 +10,10 @@ import (
 	batchv1 "k8s.io/api/batch/v1"
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/constants"
 	"github.com/golang/glog"
-    "github.com/mlab-lattice/system/pkg/backend/kubernetes/cloudprovider"
     "github.com/mlab-lattice/system/pkg/types"
 )
 
-func NewLocalCloudProvider(clusterID types.ClusterID, providerName string, options cloudprovider.CloudProviderOptions) *DefaultLocalCloudProvider {
+func NewLocalCloudProvider(clusterID types.ClusterID, providerName string, options *crv1.ConfigCloudProviderLocal) *DefaultLocalCloudProvider {
 	return &DefaultLocalCloudProvider{
 	    Options:    options,
         ClusterID:  clusterID,
@@ -23,7 +22,7 @@ func NewLocalCloudProvider(clusterID types.ClusterID, providerName string, optio
 }
 
 type DefaultLocalCloudProvider struct {
-    Options     cloudprovider.CloudProviderOptions
+    Options     *crv1.ConfigCloudProviderLocal
     ClusterID   types.ClusterID
     Provider    string
 }

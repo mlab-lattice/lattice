@@ -68,6 +68,9 @@ var (
 	cloudProviderName string
 	cloudProviderVars []string
 
+	dnsControllerArgs []string
+	dnsServerArgs	  []string
+
 	serviceMeshProvider     string
 	serviceMeshProviderVars []string
 
@@ -85,13 +88,6 @@ var options = &clusterbootstrap.Options{
 			DockerArtifact: crv1.ConfigComponentBuildDockerArtifact{},
 		},
 		ServiceMesh: crv1.ConfigServiceMesh{},
-	},
-}
-
-var cloudProviderOptions = cloudprovider.CloudProviderOptions{
-	LocalComponents: cloudprovider.LocalComponentOptions{
-		LocalDNSController: cloudprovider.LocalDNSControllerOptions{},
-		LocalDNSServer:	    cloudprovider.LocalDNSServerOptions{},
 	},
 }
 
@@ -139,7 +135,7 @@ var Cmd = &cobra.Command{
 			panic(err)
 		}
 
-		cloudProvider, err := cloudprovider.NewCloudProvider(clusterID, cloudProviderName, cloudProviderOptions)
+		cloudProvider, err := cloudprovider.NewCloudProvider(clusterID, cloudProviderName, cloudProviderConfig)
 		if err != nil {
 			panic(err)
 		}
@@ -276,16 +272,10 @@ func init() {
 	Cmd.MarkFlagRequired("service-provider")
 	Cmd.Flags().StringArrayVar(&serviceMeshProviderVars, "service-mesh-var", nil, "additional variables for the cloud provider")
 
-	Cmd.Flags().StringVar(&cloudProviderOptions.LocalComponents.LocalDNSController.Image, "local-dns-controller-image", "", "docker image to use for the local-dns controller")
-	Cmd.MarkFlagRequired("local-dns-controller-image")
-	Cmd.Flags().StringArrayVar(&cloudProviderOptions.LocalComponents.LocalDNSController.Args, "local-dns-controller-args", defaultLocalDNSControllerArgs, "extra arguments (besides --provider) to pass to the local-dns-controller")
-
-	Cmd.Flags().StringVar(&cloudProviderOptions.LocalComponents.LocalDNSServer.Image, "local-dns-server-image", "", "docker image to use for the local DNS server")
-	Cmd.MarkFlagRequired("local-dns-server-image")
-
+	Cmd.Flags().StringArrayVar(&dnsControllerArgs, "local-dns-controller-args", defaultLocalDNSControllerArgs, "extra arguments (besides --provider) to pass to the local-dns-controller")
 	// Format as "dns-nanny-args -- dnsmasq-args"
 	localDNSServerArgs := append(append(defaultLocalDNSNannyArgs, "--"), defaultLocalDNSMasqArgs...)
-	Cmd.Flags().StringArrayVar(&cloudProviderOptions.LocalComponents.LocalDNSServer.Args, "local-dns-server-args", localDNSServerArgs, "extra arguments to pass to the local-dns-server")
+	Cmd.Flags().StringArrayVar(&dnsServerArgs, "local-dns-server-args", localDNSServerArgs, "extra arguments to pass to the local-dns-server")
 
 	Cmd.Flags().StringVar(&terraformBackend, "terraform-backend", "", "backend to use for terraform")
 	Cmd.Flags().StringArrayVar(&terraformBackendVars, "terraform-backend-var", nil, "additional variables for the terraform backend")
@@ -302,6 +292,10 @@ func parseCloudProviderVars() (*crv1.ConfigCloudProvider, error) {
 		if err != nil {
 			return nil, err
 		}
+
+		localConfig.DNSControllerArgs = dnsControllerArgs
+		localConfig.DNSServerArgs = dnsServerArgs
+
 		config = &crv1.ConfigCloudProvider{
 			Local: localConfig,
 		}
@@ -328,6 +322,14 @@ func parseCloudProviderVarsLocal() (*crv1.ConfigCloudProviderLocal, error) {
 			"system-ip": {
 				Required:     true,
 				EncodingName: "ip",
+			},
+			"dns-controller-image": {
+				Required:		true,
+				EncodingName: 	"controller-image",
+			},
+			"dns-server-image": {
+				Required:		true,
+				EncodingName: 	"server-image",
 			},
 		},
 	}

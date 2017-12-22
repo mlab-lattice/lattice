@@ -18,10 +18,10 @@ func (cp *DefaultLocalCloudProvider) seedDNS(resources *clusterbootstrapper.Clus
 	namespace := kubeutil.InternalNamespace("lattice")
 
 	controller_args := []string{"--provider", cp.Provider, "--cluster-id", string(cp.ClusterID)}
-	controller_args = append(controller_args, cp.Options.LocalComponents.LocalDNSController.Args...)
+	controller_args = append(controller_args, cp.Options.DNSControllerArgs...)
 
 	server_args := []string{}
-	server_args = append(server_args, cp.Options.LocalComponents.LocalDNSServer.Args...)
+	server_args = append(server_args, cp.Options.DNSServerArgs...)
 
 	labels := map[string]string{
 		"key" : constants.MasterNodeDNSServer,
@@ -50,7 +50,7 @@ func (cp *DefaultLocalCloudProvider) seedDNS(resources *clusterbootstrapper.Clus
 					Containers: []corev1.Container{
 						{
 							Name:  constants.MasterNodeDNSSController,
-							Image: cp.Options.LocalComponents.LocalDNSController.Image,
+							Image: cp.Options.DNSControllerIamge,
 							Args:  controller_args,
 							VolumeMounts: []corev1.VolumeMount{
 								{
@@ -61,7 +61,7 @@ func (cp *DefaultLocalCloudProvider) seedDNS(resources *clusterbootstrapper.Clus
 						},
 						{
 							Name:  constants.MasterNodeDNSServer,
-							Image: cp.Options.LocalComponents.LocalDNSServer.Image,
+							Image: cp.Options.DNSServerImage,
 							Args:  server_args,
 							Ports: []corev1.ContainerPort{
 								{
