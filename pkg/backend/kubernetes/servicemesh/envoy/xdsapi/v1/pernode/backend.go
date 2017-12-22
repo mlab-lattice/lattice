@@ -28,7 +28,7 @@ type KubernetesPerNodeBackend struct {
 	serviceListerSynced cache.InformerSynced
 }
 
-func NewKubernetesPerNodeBackend(kubeconfig string) (*KubernetesPerNodeBackend, error) {
+func NewKubernetesPerNodeBackend(kubeconfig, namespace string) (*KubernetesPerNodeBackend, error) {
 	var config *rest.Config
 	var err error
 	if kubeconfig == "" {
@@ -45,29 +45,30 @@ func NewKubernetesPerNodeBackend(kubeconfig string) (*KubernetesPerNodeBackend, 
 	if err != nil {
 		return nil, err
 	}
-	kubeInformers := kubeinformers.NewSharedInformerFactory(kubeClient, time.Duration(12*time.Hour))
+	//kubeInformers := kubeinformers.NewSharedInformerFactory(kubeClient, time.Duration(12*time.Hour))
+	kubeInformers := kubeinformers.NewFilteredSharedInformerFactory(kubeClient, time.Duration(12*time.Hour), namespace, nil)
 
 	latticeClient, err := latticeclientset.NewForConfig(config)
 	if err != nil {
 		return nil, err
 	}
-	latticeInformers := latticeinformers.NewSharedInformerFactory(latticeClient, time.Duration(12*time.Hour))
+	//latticeInformers := latticeinformers.NewSharedInformerFactory(latticeClient, time.Duration(12*time.Hour))
+	latticeInformers := latticeinformers.NewFilteredSharedInformerFactory(latticeClient, time.Duration(12*time.Hour), namespace, nil)
 
 	// FIXME: should we add a stopCh?
-	kubeInformers.Start(nil)
-	latticeInformers.Start(nil)
+	go kubeInformers.Start(nil)
+	go latticeInformers.Start(nil)
 
 	kubeEndpointInformer := kubeInformers.Core().V1().Endpoints()
-
 	serviceInformer := latticeInformers.Lattice().V1().Services()
 
-	kpnb := &KubernetesPerNodeBackend{
+	b := &KubernetesPerNodeBackend{
 		kubeEndpointLister:       kubeEndpointInformer.Lister(),
 		kubeEndpointListerSynced: kubeEndpointInformer.Informer().HasSynced,
 		serviceLister:            serviceInformer.Lister(),
 		serviceListerSynced:      serviceInformer.Informer().HasSynced,
 	}
-	return kpnb, nil
+	return b, nil
 }
 
 func (b *KubernetesPerNodeBackend) Ready() bool {

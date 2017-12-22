@@ -35,6 +35,11 @@ func getLocalProvisioner() (*kubeprovisioner.LocalProvisioner, error) {
 
 func getAWSProvisioner(name string) (*kubeprovisioner.AWSProvisioner, error) {
 	awsWorkingDir := workingDir + "/aws/" + name
-	awsConfig := backendConfigKubernetes.ProviderConfig.(kubeprovisioner.AWSProvisionerConfig)
+
+	if backendConfigKubernetes.ProviderConfig.AWS == nil {
+		return nil, fmt.Errorf("AWSConfig not set")
+	}
+
+	awsConfig := *backendConfigKubernetes.ProviderConfig.AWS
 	return kubeprovisioner.NewAWSProvisioner(backendConfigKubernetes.LatticeContainerRegistry, backendConfigKubernetes.LatticeContainerRepoPrefix, awsWorkingDir, awsConfig)
 }

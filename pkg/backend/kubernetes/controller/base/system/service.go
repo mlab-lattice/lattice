@@ -192,6 +192,7 @@ func serviceSpec(system *crv1.System, serviceInfo *crv1.SystemSpecServiceInfo, p
 			"System %v/%v Service %v invalid Service definition: num_instances or min_instances must be set",
 			system.Namespace,
 			system.Name,
+			path,
 		)
 		return crv1.ServiceSpec{}, err
 	}

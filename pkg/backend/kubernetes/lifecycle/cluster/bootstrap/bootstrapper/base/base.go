@@ -54,7 +54,7 @@ type DefaultBootstrapper struct {
 	CloudProviderName string
 }
 
-func (b *DefaultBootstrapper) BootstrapResources(resources *bootstrapper.Resources) {
+func (b *DefaultBootstrapper) BootstrapResources(resources *bootstrapper.ClusterResources) {
 	b.namespaceResources(resources)
 	b.crdResources(resources)
 	b.configResources(resources)

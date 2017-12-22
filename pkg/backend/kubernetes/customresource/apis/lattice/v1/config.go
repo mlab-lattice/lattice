@@ -88,6 +88,7 @@ type ConfigEnvoy struct {
 	PrepareImage      string `json:"prepareImage"`
 	Image             string `json:"image"`
 	RedirectCIDRBlock string `json:"redirectCidrBlock"`
+	XDSAPIImage       string `json:"xdsApiImage"`
 	XDSAPIPort        int32  `json:"xdsApiPort"`
 }
 

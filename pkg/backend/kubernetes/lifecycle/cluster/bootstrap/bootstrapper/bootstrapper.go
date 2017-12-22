@@ -15,10 +15,10 @@ import (
 )
 
 type Interface interface {
-	BootstrapResources(*Resources)
+	BootstrapClusterResources(*ClusterResources)
 }
 
-type Resources struct {
+type ClusterResources struct {
 	Namespaces      []*corev1.Namespace
 	ServiceAccounts []*corev1.ServiceAccount
 
@@ -29,12 +29,13 @@ type Resources struct {
 
 	CustomResourceDefinitions []*apiextensionsv1beta1.CustomResourceDefinition
 	Config                    *crv1.Config
+	ConfigMaps                []*corev1.ConfigMap
 
 	DaemonSets []*appsv1.DaemonSet
 	Services   []*corev1.Service
 }
 
-func (r *Resources) String() (string, error) {
+func (r *ClusterResources) String() (string, error) {
 	header := "---\n"
 	output := ""
 
@@ -107,6 +108,15 @@ func (r *Resources) String() (string, error) {
 	}
 
 	output += fmt.Sprintf("%v%v", header, string(data))
+
+	for _, configMap := range r.ConfigMaps {
+		data, err := yaml.Marshal(configMap)
+		if err != nil {
+			return "", err
+		}
+
+		output += fmt.Sprintf("%v%v", header, string(data))
+	}
 
 	for _, daemonSet := range r.DaemonSets {
 		data, err := yaml.Marshal(daemonSet)

@@ -186,7 +186,7 @@ func NewSystem(
 	}
 
 	componentBuilderRB := rbacv1.RoleBinding{
-		// Include TypeMeta so if this is a dry run it will be printed out
+
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "RoleBinding",
 			APIVersion: rbacv1.GroupName + "/v1",

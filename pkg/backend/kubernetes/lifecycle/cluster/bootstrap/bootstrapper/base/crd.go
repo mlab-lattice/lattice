@@ -5,7 +5,7 @@ import (
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/cluster/bootstrap/bootstrapper"
 )
 
-func (b *DefaultBootstrapper) crdResources(resources *bootstrapper.Resources) {
+func (b *DefaultBootstrapper) crdResources(resources *bootstrapper.ClusterResources) {
 	customResourceDefinitions := crv1.GetCustomResourceDefinitions()
 	resources.CustomResourceDefinitions = append(resources.CustomResourceDefinitions, customResourceDefinitions...)
 }

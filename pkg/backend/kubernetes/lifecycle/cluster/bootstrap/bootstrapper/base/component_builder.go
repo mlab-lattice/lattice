@@ -10,7 +10,7 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 )
 
-func (b *DefaultBootstrapper) componentBuilderResources(resources *bootstrapper.Resources) {
+func (b *DefaultBootstrapper) componentBuilderResources(resources *bootstrapper.ClusterResources) {
 	// FIXME: prefix this cluster role with the cluster id so multiple clusters can have different
 	// cluster role definitions
 	clusterRole := &rbacv1.ClusterRole{

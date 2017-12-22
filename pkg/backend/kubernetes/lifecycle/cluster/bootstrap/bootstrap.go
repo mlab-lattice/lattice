@@ -9,8 +9,7 @@ import (
 	latticeclientset "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/clientset/versioned"
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/cluster/bootstrap/bootstrapper"
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/cluster/bootstrap/bootstrapper/base"
-	"github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/cluster/bootstrap/bootstrapper/cloud"
-	"github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/cluster/bootstrap/bootstrapper/local"
+	"github.com/mlab-lattice/system/pkg/backend/kubernetes/networkingprovider"
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/servicemesh"
 	"github.com/mlab-lattice/system/pkg/types"
 
@@ -28,22 +27,20 @@ type Options struct {
 	DryRun           bool
 	Config           crv1.ConfigSpec
 	MasterComponents base.MasterComponentOptions
-	LocalComponents	 local.LocalComponentOptions
-	Networking       *cloud.NetworkingOptions
 }
 
-func Bootstrap(clusterID types.ClusterID, cloudProviderName string, options *Options, kubeConfig *rest.Config) (*bootstrapper.Resources, error) {
-	resources, err := GetBootstrapResources(clusterID, cloudProviderName, options)
-	if err != nil {
-		return nil, err
-	}
-
-	kubeClient, err := kubeclientset.NewForConfig(kubeConfig)
-	if err != nil {
-		return nil, err
-	}
-
-	latticeClient, err := latticeclientset.NewForConfig(kubeConfig)
+func Bootstrap(
+	clusterID types.ClusterID,
+	cloudProviderName string,
+	options *Options,
+	serviceMesh servicemesh.Interface,
+	networkingProvider networkingprovider.Interface,
+	cloudProvider cloudprovider.Interface,
+	kubeConfig *rest.Config,
+	kubeClient kubeclientset.Interface,
+	latticeClient latticeclientset.Interface,
+) (*bootstrapper.ClusterResources, error) {
+	resources, err := GetBootstrapResources(clusterID, cloudProviderName, options, serviceMesh, networkingProvider, cloudProvider)
 	if err != nil {
 		return nil, err
 	}
@@ -169,7 +166,24 @@ func Bootstrap(clusterID types.ClusterID, cloudProviderName string, options *Opt
 	}
 	resources.Config = config
 
-	// Seed any daemon sets.
+	// Next, seed config maps
+	fmt.Println("seeding config maps")
+	var configMaps []*corev1.ConfigMap
+	for _, configMap := range resources.ConfigMaps {
+		var result *corev1.ConfigMap
+		err = idempotentSeed(fmt.Sprintf("config map %v/%v", configMap.Namespace, configMap.Name), func() error {
+			result, err = kubeClient.CoreV1().ConfigMaps(configMap.Namespace).Create(configMap)
+			return err
+		})
+
+		if err != nil {
+			return nil, err
+		}
+		configMaps = append(configMaps, result)
+	}
+	resources.ConfigMaps = configMaps
+
+	// Finally, seed any DaemonSets
 	fmt.Println("seeding daemon sets")
 	var daemonSets []*appsv1.DaemonSet
 	for _, daemonSet := range resources.DaemonSets {
@@ -220,7 +234,14 @@ func idempotentSeed(resourceDescription string, seedFunc func() error) error {
 	return err
 }
 
-func GetBootstrapResources(clusterID types.ClusterID, cloudProviderName string, options *Options) (*bootstrapper.Resources, error) {
+func GetBootstrapResources(
+	clusterID types.ClusterID,
+	cloudProviderName string,
+	options *Options,
+	serviceMesh servicemesh.Interface,
+	networkingProvider networkingprovider.Interface,
+	cloudProvider cloudprovider.Interface,
+) (*bootstrapper.ClusterResources, error) {
 	baseOptions := &base.Options{
 		DryRun:           options.DryRun,
 		Config:           options.Config,
@@ -232,31 +253,14 @@ func GetBootstrapResources(clusterID types.ClusterID, cloudProviderName string, 
 		return nil, err
 	}
 
-	localOptions := &local.Options{
-		DryRun:				options.DryRun,
-		Config:				options.Config,
-		LocalComponents: 	options.LocalComponents,
-	}
-
-	localBootstrapper, err := local.NewBootstrapper(clusterID, localOptions)
-	if err != nil {
-		return nil, err
-	}
-
-	cloudProvider, err := cloudprovider.NewCloudProvider(cloudProviderName)
-	if err != nil {
-		return nil, err
-	}
-
-	serviceMesh, err := servicemesh.NewServiceMesh(&options.Config.ServiceMesh)
-	if err != nil {
-		return nil, err
-	}
-
-	resources := &bootstrapper.Resources{}
+	resources := &bootstrapper.ClusterResources{}
 	baseBootstrapper.BootstrapResources(resources)
-	serviceMesh.BootstrapResources(resources)
-	cloudProvider.BootstrapResources(resources)
-	localBootstrapper.BootstrapResources(resources)
+	serviceMesh.BootstrapClusterResources(resources)
+
+	if networkingProvider != nil {
+		networkingProvider.BootstrapClusterResources(resources)
+	}
+
+	cloudProvider.BootstrapClusterResources(resources)
 	return resources, nil
 }

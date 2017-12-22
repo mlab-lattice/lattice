@@ -45,6 +45,11 @@ GO_REPOSITORIES = {
         "commit": "1be1d2841c773c01bee8289f55f7463b6e2c2539",
         "importpath": "github.com/spf13/cobra",
     },
+    "github.com/olekukonko/tablewriter": {
+        "name": "com_github_olekukonko_tablewriter",
+        "commit": "65fec0d89a572b4367094e2058d3ebe667de3b60",
+        "importpath": "github.com/olekukonko/tablewriter",
+    },
     "golang.org/x/crypto": {
         "name": "org_golang_x_crypto",
         "commit": "81e90905daefcd6fd217b62423c0908922eadb30",
@@ -383,5 +388,12 @@ GO_REPOSITORIES = {
         "name": "io_k8s_kube_openapi",
         "commit": "868f2f29720b192240e18284659231b440f9cda5",
         "importpath": "k8s.io/kube-openapi",
+    },
+
+    # tablewriter dependencies
+    "github.com/mattn/go-runewidth": {
+        "name": "com_github_mattn_go_runewidth",
+        "commit": "97311d9f7767e3d6f422ea06661bc2c7a19e8a5d",
+        "importpath": "github.com/mattn/go-runewidth",
     },
 }

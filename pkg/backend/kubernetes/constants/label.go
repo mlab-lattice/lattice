@@ -1,11 +1,11 @@
 package constants
 
 const (
-	LabelKeyKubernetesNodeRole = "node-role.kubernetes.io"
-	LabelKeyMasterNode         = LabelKeyKubernetesNodeRole + "/lattice-master"
-	LabelKeyBuildNode          = LabelKeyKubernetesNodeRole + "/lattice-build"
-	LabelKeyServiceNode        = LabelKeyKubernetesNodeRole + "/lattice-service"
-	LabelKeyNodeRoleNodePool   = LabelKeyKubernetesNodeRole + "/lattice-node-pool"
+	LabelKeyNodeRoleLattice  = "node-role.lattice.mlab.com"
+	LabelKeyMasterNode       = LabelKeyNodeRoleLattice + "/master"
+	LabelKeyBuildNode        = LabelKeyNodeRoleLattice + "/build"
+	LabelKeyServiceNode      = LabelKeyNodeRoleLattice + "/service"
+	LabelKeyNodeRoleNodePool = LabelKeyNodeRoleLattice + "/node-pool"
 
 	LabelKeyComponentBuildID = "component.build.lattice.mlab.com/id"
 

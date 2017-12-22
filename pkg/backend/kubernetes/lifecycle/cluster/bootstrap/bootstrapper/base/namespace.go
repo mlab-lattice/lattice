@@ -9,7 +9,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
-func (b *DefaultBootstrapper) namespaceResources(resources *bootstrapper.Resources) {
+func (b *DefaultBootstrapper) namespaceResources(resources *bootstrapper.ClusterResources) {
 	namespace := &corev1.Namespace{
 		// Include TypeMeta so if this is a dry run it will be printed out
 		TypeMeta: metav1.TypeMeta{

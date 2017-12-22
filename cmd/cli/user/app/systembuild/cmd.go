@@ -1,11 +1,10 @@
 package systembuild
 
 import (
-	"encoding/json"
-	"fmt"
 	"log"
 	"os"
 
+	"github.com/mlab-lattice/system/pkg/cli"
 	"github.com/mlab-lattice/system/pkg/constants"
 	"github.com/mlab-lattice/system/pkg/managerapi/client/user"
 	"github.com/mlab-lattice/system/pkg/managerapi/client/user/rest"
@@ -15,11 +14,13 @@ import (
 )
 
 var (
-	systemIDString string
-	url            string
-	systemID       types.SystemID
-	userClient     user.Client
-	systemClient   user.SystemClient
+	systemIDString  string
+	systemID        types.SystemID
+	userClient      user.Client
+	systemClient    user.SystemClient
+	output          string
+	namespaceString string
+	url             string
 )
 
 var Cmd = &cobra.Command{
@@ -38,14 +39,12 @@ var listCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		builds, err := systemClient.SystemBuilds()
 		if err != nil {
-			log.Fatal(err)
+			log.Panic(err)
 		}
 
-		buf, err := json.MarshalIndent(builds, "", "  ")
-		if err != nil {
-			log.Fatal(err)
+		if err := cli.ShowSystemBuilds(builds, cli.OutputFormat(output)); err != nil {
+			log.Panic(err)
 		}
-		fmt.Println(string(buf))
 	},
 }
 
@@ -57,14 +56,12 @@ var getCmd = &cobra.Command{
 		id := types.SystemBuildID(args[0])
 		build, err := systemClient.SystemBuild(id).Get()
 		if err != nil {
-			log.Fatal(err)
+			log.Panic(err)
 		}
 
-		buf, err := json.MarshalIndent(build, "", "  ")
-		if err != nil {
-			log.Fatal(err)
+		if err := cli.ShowSystemBuild(build, cli.OutputFormat(output)); err != nil {
+			log.Panic(err)
 		}
-		fmt.Println(string(buf))
 	},
 }
 
@@ -73,6 +70,7 @@ func init() {
 
 	Cmd.PersistentFlags().StringVar(&url, "url", "", "URL of the manager-api for the system")
 	Cmd.PersistentFlags().StringVar(&systemIDString, "system", string(constants.SystemIDDefault), "system to use")
+	Cmd.PersistentFlags().StringVarP(&output, "output", "o", "table", "whether or not to display output as JSON")
 
 	Cmd.AddCommand(listCmd)
 	Cmd.AddCommand(getCmd)
