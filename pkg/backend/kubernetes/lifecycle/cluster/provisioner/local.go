@@ -176,6 +176,7 @@ func (lp *LocalProvisioner) bootstrap(address, url, name string) error {
 								"--component-build-docker-artifact-push=false",
 								"--service-mesh", "envoy",
 								"--service-mesh-var", fmt.Sprintf("prepare-image=%v", lp.getLatticeContainerImage(constants.DockerImageEnvoyPrepare)),
+								"--service-mesh-var", fmt.Sprintf("xds-api-image=%v", lp.getLatticeContainerImage(constants.DockerImageEnvoyXDSAPIRestPerNode)),
 								"--service-mesh-var", "redirect-cidr-block=172.16.0.0/16",
 								"--initial-system-definition-url", url,
 							},

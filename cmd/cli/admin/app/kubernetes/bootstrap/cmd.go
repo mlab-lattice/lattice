@@ -374,6 +374,10 @@ func parseServiceMeshVarsEnvoy() (*crv1.ConfigEnvoy, error) {
 				Required:     true,
 				EncodingName: "RedirectCIDRBlock",
 			},
+			"xds-api-image": {
+				Required:     true,
+				EncodingName: "XDSAPIImage",
+			},
 			"xds-api-port": {
 				Default:      8080,
 				EncodingName: "XDSAPIPort",

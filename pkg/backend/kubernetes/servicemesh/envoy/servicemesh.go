@@ -130,17 +130,22 @@ func (sm *DefaultEnvoyServiceMesh) BootstrapSystemResources(resources *systemboo
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{
 						{
-							Name:  "envoy-xds-api",
+							Name: "envoy-xds-api",
+							Args: []string{
+								"-v", "5",
+								"-logtostderr",
+								"-namespace", namespace,
+							},
 							Image: sm.Config.XDSAPIImage,
 							Ports: []corev1.ContainerPort{
 								{
-									Name:          "http",
 									HostPort:      8080,
 									ContainerPort: 8080,
 								},
 							},
 						},
 					},
+					HostNetwork:        true,
 					DNSPolicy:          corev1.DNSDefault,
 					ServiceAccountName: serviceAccount.Name,
 					Tolerations: []corev1.Toleration{
