@@ -7,10 +7,10 @@ import (
 	kubeconstants "github.com/mlab-lattice/system/pkg/backend/kubernetes/constants"
 	crv1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	latticeclientset "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/clientset/versioned"
-	"github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/bootstrapper"
-	basebootstrapper "github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/bootstrapper/base"
-	cloudbootstrapper "github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/bootstrapper/cloud"
-	localbootstrapper "github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/bootstrapper/local"
+	"github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/cluster/bootstrap"
+	"github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/cluster/bootstrap/bootstrapper"
+	basebootstrapper "github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/cluster/bootstrap/bootstrapper/base"
+	localbootstrapper "github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/cluster/bootstrap/bootstrapper/local"
 	kubeutil "github.com/mlab-lattice/system/pkg/backend/kubernetes/util/kubernetes"
 	"github.com/mlab-lattice/system/pkg/constants"
 	"github.com/mlab-lattice/system/pkg/types"
@@ -26,6 +26,8 @@ import (
 )
 
 var (
+	printBool bool
+
 	kubeconfigPath    string
 	kubeconfigContext string
 
@@ -62,7 +64,7 @@ var (
 	initialSystemIDString      string
 	initialSystemDefinitionURL string
 
-	cloudProvider     string
+	cloudProviderName string
 	cloudProviderVars []string
 
 	serviceMeshProvider     string
@@ -75,7 +77,7 @@ var (
 	networkingProviderVars []string
 )
 
-var options = &bootstrapper.Options{
+var options = &bootstrap.Options{
 	Config: crv1.ConfigSpec{
 		ComponentBuild: crv1.ConfigComponentBuild{
 			Builder:        crv1.ConfigComponentBuildBuilder{},
@@ -132,69 +134,66 @@ var Cmd = &cobra.Command{
 		}
 		options.Config.Terraform = terraformConfig
 
-		networkingOptions, err := parseNetworkingVars()
-		if err != nil {
-			panic(err)
-		}
-		options.Networking = networkingOptions
+		//networkingOptions, err := parseNetworkingVars()
+		//if err != nil {
+		//	panic(err)
+		//}
+		//options.Networking = networkingOptions
 
-		b, err := bootstrapper.NewBootstrapper(clusterID, options, kubeconfig)
-		if err != nil {
-			panic(err)
-		}
-
-		objects, err := b.Bootstrap()
-		if err != nil {
-			panic(err)
-		}
-
+		var resources *bootstrapper.Resources
 		if options.DryRun {
-			if initialSystemDefinitionURL != "" {
-				resources := kubeutil.NewSystem(clusterID, initialSystemID, initialSystemDefinitionURL)
-				objects = append(objects, []interface{}{resources.System, resources.Namespace}...)
+			resources, err = bootstrap.GetBootstrapResources(clusterID, cloudProviderName, options)
+		} else {
+			resources, err = bootstrap.Bootstrap(clusterID, cloudProviderName, options, kubeconfig)
+		}
 
-				for _, sa := range resources.ServiceAccounts {
-					objects = append(objects, interface{}(sa))
-				}
+		if err != nil {
+			panic(err)
+		}
 
-				for _, roleBinding := range resources.RoleBindings {
-					objects = append(objects, interface{}(roleBinding))
-				}
+		if printBool {
+			resourcesString, err := resources.String()
+			if err != nil {
+				panic(err)
 			}
 
-			output := ""
-			for _, object := range objects {
-				output += "---\n"
-				data, err := yaml.Marshal(object)
-				if err != nil {
-					panic(err)
-				}
-				output += string(data)
-			}
-			fmt.Printf(output)
+			fmt.Println(resourcesString)
+		}
+
+		if initialSystemDefinitionURL == "" {
 			return
 		}
 
-		if initialSystemDefinitionURL != "" {
-			fmt.Printf("Seeding initial system \"%v\"\n", initialSystemIDString)
-			kubeClient := kubeclientset.NewForConfigOrDie(kubeconfig)
-			latticeClient := latticeclientset.NewForConfigOrDie(kubeconfig)
-			_, err := kubeutil.CreateNewSystem(
-				clusterID,
-				initialSystemID,
-				initialSystemDefinitionURL,
-				kubeClient,
-				latticeClient,
-			)
-			if err != nil && !errors.IsAlreadyExists(err) {
+		systemResources := kubeutil.NewSystem(clusterID, initialSystemID, initialSystemDefinitionURL)
+
+		if options.DryRun {
+			systemResourcesString, err := systemResources.String()
+			if err != nil {
 				panic(err)
 			}
+
+			fmt.Println(systemResourcesString)
+			return
+		}
+
+		fmt.Printf("Seeding initial system \"%v\"\n", initialSystemIDString)
+		kubeClient := kubeclientset.NewForConfigOrDie(kubeconfig)
+		latticeClient := latticeclientset.NewForConfigOrDie(kubeconfig)
+
+		_, err = kubeutil.CreateNewSystemResources(
+			systemResources,
+			kubeClient,
+			latticeClient,
+		)
+		if err != nil && !errors.IsAlreadyExists(err) {
+			panic(err)
 		}
 	},
 }
 
 func init() {
-	Cmd.Flags().BoolVar(&options.DryRun, "dry-run", false, "if set, will not actually bootstrap the cluster but will instead print out the resources needed to bootstrap the cluster")
+	Cmd.Flags().BoolVar(&options.DryRun, "dry-run", false, "if set, will not actually bootstrap the cluster. useful with --printBool")
+	Cmd.Flags().BoolVar(&printBool, "print", false, "whether or not to printBool the resources created or that will be created")
 	Cmd.Flags().StringVar(&kubeconfigPath, "kubeconfig", "", "path to kubeconfig")
 	Cmd.Flags().StringVar(&kubeconfigContext, "kubeconfig-context", "", "context in the kubeconfig to use")
 
@@ -212,18 +211,18 @@ func init() {
 
 	Cmd.Flags().StringVar(&options.MasterComponents.LatticeControllerManager.Image, "lattice-controller-manager-image", "", "docker image to user for the lattice-controller-manager")
 	Cmd.MarkFlagRequired("lattice-controller-manager-image")
-	Cmd.Flags().StringArrayVar(&options.MasterComponents.LatticeControllerManager.Args, "lattice-controller-manager-args", defaultLatticeControllerManagerArgs, "extra arguments (besides --cloudProvider) to pass to the lattice-controller-manager")
+	Cmd.Flags().StringArrayVar(&options.MasterComponents.LatticeControllerManager.Args, "lattice-controller-manager-args", defaultLatticeControllerManagerArgs, "extra arguments (besides --cloudProviderName) to pass to the lattice-controller-manager")
 
 	Cmd.Flags().StringVar(&options.MasterComponents.ManagerAPI.Image, "manager-api-image", "", "docker image to user for the lattice-controller-manager")
 	Cmd.MarkFlagRequired("manager-api-image")
 	Cmd.Flags().Int32Var(&options.MasterComponents.ManagerAPI.Port, "manager-api-port", 80, "port that the manager-api should listen on")
 	Cmd.Flags().BoolVar(&options.MasterComponents.ManagerAPI.HostNetwork, "manager-api-host-network", true, "whether or not the manager-api should be on the host network")
-	Cmd.Flags().StringArrayVar(&options.MasterComponents.ManagerAPI.Args, "manager-api-args", defaultManagerAPIArgs, "extra arguments (besides --cloudProvider) to pass to the lattice-controller-manager")
+	Cmd.Flags().StringArrayVar(&options.MasterComponents.ManagerAPI.Args, "manager-api-args", defaultManagerAPIArgs, "extra arguments (besides --cloudProviderName) to pass to the lattice-controller-manager")
 
 	Cmd.Flags().StringVar(&initialSystemIDString, "initial-system-name", "default", "name to use for the initial system if --initial-system-definition-url is set")
 	Cmd.Flags().StringVar(&initialSystemDefinitionURL, "initial-system-definition-url", "", "URL to use for the definition of the optional initial system")
 
-	Cmd.Flags().StringVar(&cloudProvider, "cloud-provider", "", "cloud provider that the cluster is being bootstrapped on")
+	Cmd.Flags().StringVar(&cloudProviderName, "cloud-provider", "", "cloud provider that the cluster is being bootstrapped on")
 	Cmd.MarkFlagRequired("cloud-provider")
 	Cmd.Flags().StringArrayVar(&cloudProviderVars, "cloud-provider-var", nil, "additional variables for the cloud provider")
 
@@ -248,7 +247,7 @@ func init() {
 
 func parseCloudProviderVars() (*crv1.ConfigCloudProvider, error) {
 	var config *crv1.ConfigCloudProvider
-	switch cloudProvider {
+	switch cloudProviderName {
 	case constants.ProviderLocal:
 		localConfig, err := parseCloudProviderVarsLocal()
 		if err != nil {
@@ -266,7 +265,7 @@ func parseCloudProviderVars() (*crv1.ConfigCloudProvider, error) {
 			AWS: awsConfig,
 		}
 	default:
-		return nil, fmt.Errorf("unsupported cloudProvider: %v", cloudProvider)
+		return nil, fmt.Errorf("unsupported cloudProviderName: %v", cloudProviderName)
 	}
 
 	return config, nil
@@ -427,43 +426,43 @@ func parseTerraformVarsS3() (*crv1.ConfigTerraformBackendS3, error) {
 	return s3Config, nil
 }
 
-func parseNetworkingVars() (*cloudbootstrapper.NetworkingOptions, error) {
-	if networkingProvider == "" {
-		return nil, nil
-	}
-
-	var options *cloudbootstrapper.NetworkingOptions
-	switch terraformBackend {
-	case kubeconstants.NetworkingProviderFlannel:
-		flannelOptions, err := parseNetworkingVarsFlannel()
-		if err != nil {
-			return nil, err
-		}
-		options = &cloudbootstrapper.NetworkingOptions{
-			Flannel: flannelOptions,
-		}
-	default:
-		return nil, fmt.Errorf("unsupported networking provider: %v", networkingProvider)
-	}
-
-	return options, nil
-}
-
-func parseNetworkingVarsFlannel() (*cloudbootstrapper.FlannelOptions, error) {
-	flannelOptions := &cloudbootstrapper.FlannelOptions{}
-	flags := cli.EmbeddedFlag{
-		Target: &flannelOptions,
-		Expected: map[string]cli.EmbeddedFlagValue{
-			"network-cidr-block": {
-				Required:     true,
-				EncodingName: "NetworkCIDRBlock",
-			},
-		},
-	}
-
-	err := flags.Parse(cloudProviderVars)
-	if err != nil {
-		return nil, err
-	}
-	return flannelOptions, nil
-}
+//func parseNetworkingVars() (*cloudboostrapper.NetworkingOptions, error) {
+//	if networkingProvider == "" {
+//		return nil, nil
+//	}
+//
+//	var options *cloudboostrapper.NetworkingOptions
+//	switch terraformBackend {
+//	case kubeconstants.NetworkingProviderFlannel:
+//		flannelOptions, err := parseNetworkingVarsFlannel()
+//		if err != nil {
+//			return nil, err
+//		}
+//		options = &cloudboostrapper.NetworkingOptions{
+//			Flannel: flannelOptions,
+//		}
+//	default:
+//		return nil, fmt.Errorf("unsupported networking provider: %v", networkingProvider)
+//	}
+//
+//	return options, nil
+//}
+//
+//func parseNetworkingVarsFlannel() (*cloudboostrapper.FlannelOptions, error) {
+//	flannelOptions := &cloudboostrapper.FlannelOptions{}
+//	flags := cli.EmbeddedFlag{
+//		Target: &flannelOptions,
+//		Expected: map[string]cli.EmbeddedFlagValue{
+//			"network-cidr-block": {
+//				Required:     true,
+//				EncodingName: "NetworkCIDRBlock",
+//			},
+//		},
+//	}
+//
+//	err := flags.Parse(cloudProviderVars)
+//	if err != nil {
+//		return nil, err
+//	}
+//	return flannelOptions, nil
+//}

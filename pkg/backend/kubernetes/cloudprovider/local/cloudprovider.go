@@ -2,6 +2,7 @@ package local
 
 import (
 	crv1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
+	"github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/cluster/bootstrap/bootstrapper"
 
 	corev1 "k8s.io/api/core/v1"
 	appsv1 "k8s.io/api/apps/v1"
@@ -15,6 +16,20 @@ func NewLocalCloudProvider() *DefaultLocalCloudProvider {
 }
 
 type DefaultLocalCloudProvider struct {
+}
+
+func (cp *DefaultLocalCloudProvider) BootstrapResources(resources *bootstrapper.Resources) {
+	for _, daemonSet := range resources.DaemonSets {
+		template := cp.TransformPodTemplateSpec(&daemonSet.Spec.Template)
+		daemonSet.Spec.Template = *template
+	}
+}
+
+func (cp *DefaultLocalCloudProvider) TransformPodTemplateSpec(template *corev1.PodTemplateSpec) *corev1.PodTemplateSpec {
+	template = template.DeepCopy()
+	template.Spec.Affinity = nil
+
+	return template
 }
 
 func (cp *DefaultLocalCloudProvider) TransformComponentBuildJobSpec(spec *batchv1.JobSpec) *batchv1.JobSpec {

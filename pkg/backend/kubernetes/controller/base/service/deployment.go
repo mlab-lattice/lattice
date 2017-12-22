@@ -1,8 +1,10 @@
 package service
 
 import (
+	"encoding/json"
 	"fmt"
 	"reflect"
+	"sort"
 
 	kubeconstants "github.com/mlab-lattice/system/pkg/backend/kubernetes/constants"
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/controller/base/service/util"
@@ -19,7 +21,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 
 	"github.com/golang/glog"
-	"sort"
+	"github.com/sergi/go-diff/diffmatchpatch"
 )
 
 func (c *Controller) syncServiceDeployment(service *crv1.Service, nodePool *crv1.NodePool) (*appsv1.Deployment, error) {
@@ -325,6 +327,12 @@ func (c *Controller) isDeploymentSpecUpdated(service *crv1.Service, current, des
 
 	isUpdated = kubeutil.PodTemplateSpecsSemanticallyEqual(&current.Template, &desired.Template)
 	if !isUpdated {
+		// FIXME: remove when confident this is working correctly
+		dmp := diffmatchpatch.New()
+		data1, _ := json.MarshalIndent(current.Template, "", "  ")
+		data2, _ := json.MarshalIndent(desired.Template, "", "  ")
+		diffs := dmp.DiffMain(string(data1), string(data2), true)
+		fmt.Printf("diff: %v\n", dmp.DiffPrettyText(diffs))
 		return false, "pod template spec is out of date"
 	}
 

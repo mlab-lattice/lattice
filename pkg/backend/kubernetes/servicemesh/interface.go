@@ -3,14 +3,16 @@ package servicemesh
 import (
 	"fmt"
 
-	"github.com/mlab-lattice/system/pkg/backend/kubernetes/servicemesh/envoy"
-
 	crv1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
+	"github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/cluster/bootstrap/bootstrapper"
+	"github.com/mlab-lattice/system/pkg/backend/kubernetes/servicemesh/envoy"
 
 	appsv1 "k8s.io/api/apps/v1"
 )
 
 type Interface interface {
+	bootstrapper.Interface
+
 	// TransformServiceDeploymentSpec takes in the DeploymentSpec generated for a Service, and applies an service mesh
 	// related transforms necessary to a copy of the DeploymentSpec, and returns it.
 	TransformServiceDeploymentSpec(*crv1.Service, *appsv1.DeploymentSpec) *appsv1.DeploymentSpec

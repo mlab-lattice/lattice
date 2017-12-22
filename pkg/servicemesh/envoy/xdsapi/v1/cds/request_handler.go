@@ -19,8 +19,7 @@ type Response struct {
 }
 
 func (r *RequestHandler) GetResponse(serviceCluster, serviceNode string) (*Response, error) {
-	clusters := []types.Cluster{}
-	svcs, err := r.Backend.Services()
+	services, err := r.Backend.Services(serviceCluster)
 	if err != nil {
 		return nil, err
 	}
@@ -30,12 +29,13 @@ func (r *RequestHandler) GetResponse(serviceCluster, serviceNode string) (*Respo
 		return nil, err
 	}
 
-	for path, svc := range svcs {
+	var clusters []types.Cluster
+	for path, svc := range services {
 		isLocalService := servicePath == path
 
 		for componentName, component := range svc.Components {
 			for port := range component.Ports {
-				clusterName := util.GetClusterNameForComponentPort(path, componentName, port)
+				clusterName := util.GetClusterNameForComponentPort(serviceCluster, path, componentName, port)
 				clusters = append(clusters, types.Cluster{
 					Name: clusterName,
 					Type: constants.ClusterTypeSDS,
@@ -47,7 +47,7 @@ func (r *RequestHandler) GetResponse(serviceCluster, serviceNode string) (*Respo
 
 				if isLocalService {
 					clusters = append(clusters, types.Cluster{
-						Name: util.GetLocalClusterNameForComponentPort(path, componentName, port),
+						Name: util.GetLocalClusterNameForComponentPort(serviceCluster, path, componentName, port),
 						Type: constants.ClusterTypeStatic,
 						// TODO: figure out a good value for this
 						ConnectTimeoutMs: 250,

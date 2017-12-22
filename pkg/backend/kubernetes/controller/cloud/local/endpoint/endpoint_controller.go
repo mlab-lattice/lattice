@@ -214,7 +214,7 @@ func (c *Controller) syncEndpoint(key string) error {
 
 	// Copy so the shared cache isn't mutated
 	endpoint = endpoint.DeepCopy()
-	endpoint.Status.State = crv1.EndpointStateSucceeded
+	endpoint.Status.State = crv1.EndpointStateCreated
 
 	_, err = c.latticeClient.LatticeV1().Endpoints(endpoint.Namespace).Update(endpoint)
 	return err

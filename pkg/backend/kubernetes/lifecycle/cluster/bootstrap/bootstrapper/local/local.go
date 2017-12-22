@@ -67,7 +67,7 @@ func (b *DefaultBootstrapper) LocalBootstrap() ([]interface{}, error) {
 		b.seedDNS,
 	}
 
-	objects := []interface{}{}
+	var objects []interface{}
 	for _, bootstrapFunc := range bootstrapFuncs {
 		additionalObjects, err := bootstrapFunc()
 		if err != nil {

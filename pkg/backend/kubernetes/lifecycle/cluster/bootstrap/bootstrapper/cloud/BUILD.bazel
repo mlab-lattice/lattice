@@ -6,7 +6,7 @@ go_library(
         "cloud.go",
         "networking.go",
     ],
-    importpath = "github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/bootstrapper/cloud",
+    importpath = "github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/cluster/bootstrap/bootstrapper/cloud",
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/backend/kubernetes/constants:go_default_library",

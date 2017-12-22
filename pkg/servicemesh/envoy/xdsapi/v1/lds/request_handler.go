@@ -24,7 +24,7 @@ func (r *RequestHandler) GetResponse(serviceCluster, serviceNode string) (*Respo
 		return nil, err
 	}
 
-	svcs, err := r.Backend.Services()
+	svcs, err := r.Backend.Services(serviceCluster)
 	if err != nil {
 		return nil, err
 	}
@@ -83,7 +83,7 @@ func (r *RequestHandler) GetResponse(serviceCluster, serviceNode string) (*Respo
 										Routes: []types.VirtualHostRoute{
 											{
 												Prefix:  "/",
-												Cluster: util.GetLocalClusterNameForComponentPort(path, componentName, port),
+												Cluster: util.GetLocalClusterNameForComponentPort(serviceCluster, path, componentName, port),
 											},
 										},
 									},

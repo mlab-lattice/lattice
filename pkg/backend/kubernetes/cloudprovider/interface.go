@@ -5,13 +5,19 @@ import (
 
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/cloudprovider/local"
 	crv1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
+	"github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/cluster/bootstrap/bootstrapper"
 	"github.com/mlab-lattice/system/pkg/constants"
 
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
+	corev1 "k8s.io/api/core/v1"
 )
 
 type Interface interface {
+	bootstrapper.Interface
+
+	TransformPodTemplateSpec(*corev1.PodTemplateSpec) *corev1.PodTemplateSpec
+
 	// TransformComponentBuildJobSpec takes in the JobSpec generated for a ComponentBuild, and applies any cloud provider
 	// related transforms necessary to a copy of the JobSpec, and returns it.
 	TransformComponentBuildJobSpec(*batchv1.JobSpec) *batchv1.JobSpec

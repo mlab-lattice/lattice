@@ -17,6 +17,8 @@ import (
 
 	"k8s.io/apimachinery/pkg/api/errors"
 	kubeclientset "k8s.io/client-go/kubernetes"
+
+	"github.com/ghodss/yaml"
 )
 
 type SystemResources struct {
@@ -24,6 +26,45 @@ type SystemResources struct {
 	Namespace       *corev1.Namespace
 	ServiceAccounts []corev1.ServiceAccount
 	RoleBindings    []rbacv1.RoleBinding
+}
+
+func (r *SystemResources) String() (string, error) {
+	header := "---\n"
+	output := ""
+
+	data, err := yaml.Marshal(r.Namespace)
+	if err != nil {
+		return "", err
+	}
+
+	output += fmt.Sprintf("%v%v", header, string(data))
+
+	for _, serviceAccount := range r.ServiceAccounts {
+		data, err := yaml.Marshal(serviceAccount)
+		if err != nil {
+			return "", err
+		}
+
+		output += fmt.Sprintf("%v%v", header, string(data))
+	}
+
+	for _, roleBinding := range r.RoleBindings {
+		data, err := yaml.Marshal(roleBinding)
+		if err != nil {
+			return "", err
+		}
+
+		output += fmt.Sprintf("%v%v", header, string(data))
+	}
+
+	data, err = yaml.Marshal(r.Namespace)
+	if err != nil {
+		return "", err
+	}
+
+	output += fmt.Sprintf("%v%v", header, string(data))
+
+	return output, nil
 }
 
 func CreateNewSystem(
@@ -34,7 +75,10 @@ func CreateNewSystem(
 	latticeClient latticeclientset.Interface,
 ) (*SystemResources, error) {
 	resources := NewSystem(clusterID, systemID, definitionURL)
+	return CreateNewSystemResources(resources, kubeClient, latticeClient)
+}
 
+func CreateNewSystemResources(resources *SystemResources, kubeClient kubeclientset.Interface, latticeClient latticeclientset.Interface) (*SystemResources, error) {
 	namespace, err := kubeClient.CoreV1().Namespaces().Create(resources.Namespace)
 	if err != nil {
 		if !errors.IsAlreadyExists(err) {
@@ -101,6 +145,11 @@ func NewSystem(
 	definitionURL string,
 ) *SystemResources {
 	system := &crv1.System{
+		// Include TypeMeta so if this is a dry run it will be printed out
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "System",
+			APIVersion: crv1.GroupName + "/v1",
+		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name: string(systemID),
 		},
@@ -114,6 +163,7 @@ func NewSystem(
 	}
 
 	namespace := &corev1.Namespace{
+		// Include TypeMeta so if this is a dry run it will be printed out
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "Namespace",
 			APIVersion: "v1",
@@ -124,6 +174,7 @@ func NewSystem(
 	}
 
 	componentBuilderSA := corev1.ServiceAccount{
+		// Include TypeMeta so if this is a dry run it will be printed out
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "ServiceAccount",
 			APIVersion: rbacv1.GroupName + "/v1",
@@ -135,6 +186,7 @@ func NewSystem(
 	}
 
 	componentBuilderRB := rbacv1.RoleBinding{
+		// Include TypeMeta so if this is a dry run it will be printed out
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "RoleBinding",
 			APIVersion: rbacv1.GroupName + "/v1",

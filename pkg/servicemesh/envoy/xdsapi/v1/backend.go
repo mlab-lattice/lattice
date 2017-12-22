@@ -6,5 +6,5 @@ import (
 
 type Backend interface {
 	Ready() bool
-	Services() (map[tree.NodePath]*Service, error)
+	Services(serviceCluster string) (map[tree.NodePath]*Service, error)
 }

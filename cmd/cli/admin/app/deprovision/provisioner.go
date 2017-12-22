@@ -3,9 +3,9 @@ package deprovision
 import (
 	"fmt"
 
-	kubeprovisioner "github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/provisioner"
+	kubeprovisioner "github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/cluster/provisioner"
 	"github.com/mlab-lattice/system/pkg/constants"
-	"github.com/mlab-lattice/system/pkg/lifecycle/provisioner"
+	"github.com/mlab-lattice/system/pkg/lifecycle/cluster/provisioner"
 )
 
 func getKubernetesProvisioner(provider, systemName string) (provisioner.Interface, error) {
