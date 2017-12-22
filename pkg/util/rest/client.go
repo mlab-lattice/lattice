@@ -28,6 +28,10 @@ func (r *RequestContext) Do() (*http.Response, error) {
 		return nil, err
 	}
 
+	for k, v := range r.Headers {
+		request.Header.Set(k, v)
+	}
+
 	return r.Client.Do(request)
 }
 
@@ -67,32 +71,49 @@ type Client interface {
 
 func NewClient() *DefaultClient {
 	return &DefaultClient{
-		client: http.DefaultClient,
+		defaultHeaders: map[string]string{},
+		client:         http.DefaultClient,
+	}
+}
+
+func NewHeaderedClient(headers map[string]string) *DefaultClient {
+	return &DefaultClient{
+		defaultHeaders: headers,
+		client:         http.DefaultClient,
 	}
 }
 
 type DefaultClient struct {
-	client *http.Client
+	client         *http.Client
+	defaultHeaders map[string]string
 }
 
 func (dc *DefaultClient) Get(url string) *RequestContext {
 	return &RequestContext{
 		Client:      dc.client,
 		Method:      http.MethodGet,
-		Headers:     nil,
+		Headers:     dc.defaultHeaders,
 		RequestBody: nil,
 		URL:         url,
 	}
 }
 
 func (dc *DefaultClient) Post(url, contentType string, body io.Reader) *RequestContext {
+	headers := make(map[string]string)
+	for k, v := range dc.defaultHeaders {
+		headers[k] = v
+	}
+	headers[headerContentType] = contentType
+
 	return &RequestContext{
-		Client: dc.client,
-		Method: http.MethodPost,
-		Headers: map[string]string{
-			headerContentType: contentType,
-		},
+		Client:      dc.client,
+		Method:      http.MethodPost,
+		Headers:     headers,
 		RequestBody: body,
 		URL:         url,
 	}
+}
+
+func (dc *DefaultClient) PostJSON(url string, body io.Reader) *RequestContext {
+	return dc.Post(url, ContentTypeJSON, body)
 }

@@ -67,8 +67,12 @@ var backendConfigKubernetes = struct {
 	DockerAPIVersion           string
 	LatticeContainerRegistry   string
 	LatticeContainerRepoPrefix string
-	ProviderConfig             interface{}
+	ProviderConfig             providerConfig
 }{}
+
+type providerConfig struct {
+	AWS *kubeprovisioner.AWSProvisionerConfig
+}
 
 func parseBackendKubernetesVars(provider string) error {
 	vars := cli.EmbeddedFlag{
@@ -142,7 +146,11 @@ func parseBackendKubernetesVars(provider string) error {
 				if err != nil {
 					return nil, err
 				}
-				return awsConfig, nil
+
+				config := providerConfig{
+					AWS: &awsConfig,
+				}
+				return config, nil
 			},
 		}
 	default:

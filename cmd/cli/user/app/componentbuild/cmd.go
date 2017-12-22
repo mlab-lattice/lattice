@@ -1,12 +1,10 @@
 package componentbuild
 
 import (
-	"encoding/json"
-	"fmt"
-	"io"
 	"log"
 	"os"
 
+	"github.com/mlab-lattice/system/pkg/cli"
 	"github.com/mlab-lattice/system/pkg/constants"
 	"github.com/mlab-lattice/system/pkg/managerapi/client/user"
 	"github.com/mlab-lattice/system/pkg/managerapi/client/user/rest"
@@ -17,6 +15,7 @@ import (
 
 var (
 	follow bool
+	output string
 
 	systemIDString string
 	url            string
@@ -41,14 +40,12 @@ var listCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		builds, err := systemClient.ComponentBuilds()
 		if err != nil {
-			log.Fatal(err)
+			log.Panic(err)
 		}
 
-		buf, err := json.MarshalIndent(builds, "", "  ")
-		if err != nil {
-			log.Fatal(err)
+		if err := cli.ShowComponentBuilds(builds, cli.OutputFormat(output)); err != nil {
+			log.Panic(err)
 		}
-		fmt.Println(string(buf))
 	},
 }
 
@@ -60,14 +57,12 @@ var getCmd = &cobra.Command{
 		id := types.ComponentBuildID(args[0])
 		build, err := systemClient.ComponentBuild(id).Get()
 		if err != nil {
-			log.Fatal(err)
+			log.Panic(err)
 		}
 
-		buf, err := json.MarshalIndent(build, "", "  ")
-		if err != nil {
-			log.Fatal(err)
+		if err := cli.ShowComponentBuild(build, cli.OutputFormat(output)); err != nil {
+			log.Panic(err)
 		}
-		fmt.Println(string(buf))
 	},
 }
 
@@ -81,9 +76,8 @@ var logsCmd = &cobra.Command{
 		if err != nil {
 			log.Fatal(err)
 		}
-		defer logs.Close()
-
-		io.Copy(os.Stdout, logs)
+		cli.ShowComponentBuildLog(logs)
+		logs.Close()
 	},
 }
 
@@ -97,6 +91,8 @@ func init() {
 	Cmd.AddCommand(getCmd)
 	Cmd.AddCommand(logsCmd)
 	logsCmd.Flags().BoolVarP(&follow, "follow", "f", false, "whether or not to follow the logs")
+	getCmd.Flags().StringVarP(&output, "output", "o", "table", "whether or not to display output as JSON")
+	listCmd.Flags().StringVarP(&output, "output", "o", "table", "whether or not to display output as JSON")
 }
 
 func initCmd() {
