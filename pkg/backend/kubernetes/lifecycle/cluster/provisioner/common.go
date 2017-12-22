@@ -39,7 +39,8 @@ func tearDownAndWaitForSuccess(address string) error {
 		Timeout: time.Duration(time.Second * 5),
 	}
 
-	resp, err := client.Post("http://"+address+"/namespaces/lattice-user-system/teardowns", "application/json", nil)
+	// FIXME: this wont work with multiple systems
+	resp, err := client.Post("http://"+address+"/systems/default/teardowns", "application/json", nil)
 	if err != nil {
 		return err
 	}

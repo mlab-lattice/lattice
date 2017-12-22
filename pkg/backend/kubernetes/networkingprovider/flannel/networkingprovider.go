@@ -125,7 +125,7 @@ func (np *DefaultFlannelNetworkingProvider) BootstrapClusterResources(resources 
 			APIVersion: appsv1beta2.GroupName + "/v1beta2",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "kube-flannel-daemonSet",
+			Name:      "kube-flannel-ds",
 			Namespace: kubeconstants.NamespaceKubeSystem,
 			Labels:    dsLabels,
 		},
@@ -135,7 +135,7 @@ func (np *DefaultFlannelNetworkingProvider) BootstrapClusterResources(resources 
 			},
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:   "kube-flannel-daemonSet",
+					Name:   "kube-flannel-ds",
 					Labels: dsLabels,
 				},
 				Spec: corev1.PodSpec{
@@ -148,7 +148,7 @@ func (np *DefaultFlannelNetworkingProvider) BootstrapClusterResources(resources 
 						{
 							Name:    "install-cni",
 							Image:   "quay.io/coreos/flannel:v0.9.0-amd64",
-							Command: []string{"np"},
+							Command: []string{"cp"},
 							Args: []string{
 								"-f",
 								"/etc/kube-flannel/cni-conf.json",

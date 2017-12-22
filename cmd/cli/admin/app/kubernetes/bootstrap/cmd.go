@@ -438,7 +438,7 @@ func parseTerraformVarsS3() (*crv1.ConfigTerraformBackendS3, error) {
 		},
 	}
 
-	err := flags.Parse(cloudProviderVars)
+	err := flags.Parse(terraformBackendVars)
 	if err != nil {
 		return nil, err
 	}

@@ -24,11 +24,10 @@ SYSTEM_DEFINITION_URL=$(echo ${USER_DATA} | jq '.lattice.system_definition_url' 
     kubernetes bootstrap \
     --kubeconfig /etc/bootstrap-lattice/kubeconfig \
     --initial-system-definition-url ${SYSTEM_DEFINITION_URL} \
-    --lattice-container-registry gcr.io/lattice-dev \
-    --lattice-controller-manager-image kevinrosendahl-debug-kubernetes-lattice-controller-manager \
-    --manager-api-image kevinrosendahl-debug-kubernetes-manager-api-rest \
-    --component-builder-image kevinrosendahl-debug-kubernetes-component-builder \
-    --component-build-registry ${AWS_ACCOUNT_ID}.dkr.ecr.${REGION}.amazonaws.com \
+    --lattice-controller-manager-image gcr.io/lattice-dev/kevinrosendahl-debug-kubernetes-lattice-controller-manager \
+    --manager-api-image gcr.io/lattice-dev/kevinrosendahl-debug-kubernetes-manager-api-rest \
+    --component-builder-image gcr.io/lattice-dev/kevinrosendahl-debug-kubernetes-component-builder \
+    --component-build-docker-artifact-registry ${AWS_ACCOUNT_ID}.dkr.ecr.${REGION}.amazonaws.com \
     --component-build-docker-artifact-repository component-builds \
     --component-builder-docker-api-version '1.24' \
     --cloud-provider AWS \
@@ -40,10 +39,10 @@ SYSTEM_DEFINITION_URL=$(echo ${USER_DATA} | jq '.lattice.system_definition_url' 
     --cloud-provider-var base-node-ami-id=${BASE_NODE_AMI_ID} \
     --cloud-provider-var key-name=${KEY_NAME} \
     --service-mesh envoy \
-    --service-mesh-var prepare-image=kevinrosendahl-debug-envoy-prepare \
-    --service-mesh-var xds-api-image=kevinrosendahl-debug-kubernetes-envoy-xds-api-rest-per-node \
+    --service-mesh-var prepare-image=gcr.io/lattice-dev/kevinrosendahl-debug-envoy-prepare \
+    --service-mesh-var xds-api-image=gcr.io/lattice-dev/kevinrosendahl-debug-kubernetes-envoy-xds-api-rest-per-node \
     --service-mesh-var redirect-cidr-block=172.16.0.0/16 \
     --networking-provider flannel \
-    --networking-provider-var cidr-block=10.240.0.0/16 \
+    --networking-provider-var cidr-block=10.200.0.0/16 \
     --terraform-backend S3 \
     --terraform-backend-var bucket=${STATE_S3_BUCKET}

@@ -3,15 +3,20 @@ package cloudprovider
 import (
 	"fmt"
 
+	"github.com/mlab-lattice/system/pkg/backend/kubernetes/cloudprovider/aws"
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/cloudprovider/local"
 	crv1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	clusterbootstrapper "github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/cluster/bootstrap/bootstrapper"
 	systembootstrapper "github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/system/bootstrap/bootstrapper"
-	"github.com/mlab-lattice/system/pkg/constants"
 
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
+)
+
+const (
+	Local = "local"
+	AWS   = "AWS"
 )
 
 type Interface interface {
@@ -39,8 +44,10 @@ type Interface interface {
 
 func NewCloudProvider(providerName string) (Interface, error) {
 	switch providerName {
-	case constants.ProviderLocal:
+	case Local:
 		return local.NewLocalCloudProvider(), nil
+	case AWS:
+		return aws.NewAWSCloudProvider(), nil
 	default:
 		return nil, fmt.Errorf("unsupported cloud provider: %v", providerName)
 	}
