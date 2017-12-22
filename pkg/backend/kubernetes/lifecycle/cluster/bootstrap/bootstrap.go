@@ -10,6 +10,7 @@ import (
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/cluster/bootstrap/bootstrapper"
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/cluster/bootstrap/bootstrapper/base"
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/cluster/bootstrap/bootstrapper/cloud"
+	"github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/cluster/bootstrap/bootstrapper/local"
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/servicemesh"
 	"github.com/mlab-lattice/system/pkg/types"
 
@@ -27,6 +28,7 @@ type Options struct {
 	DryRun           bool
 	Config           crv1.ConfigSpec
 	MasterComponents base.MasterComponentOptions
+	LocalComponents	 local.LocalComponentOptions
 	Networking       *cloud.NetworkingOptions
 }
 
@@ -213,6 +215,17 @@ func GetBootstrapResources(clusterID types.ClusterID, cloudProviderName string, 
 		return nil, err
 	}
 
+	localOptions := &local.Options{
+		DryRun:				options.DryRun,
+		Config:				options.Config,
+		LocalComponents: 	options.LocalComponents,
+	}
+
+	localBootstrapper, err := local.NewBootstrapper(clusterID, localOptions)
+	if err != nil {
+		return nil, err
+	}
+
 	cloudProvider, err := cloudprovider.NewCloudProvider(cloudProviderName)
 	if err != nil {
 		return nil, err
@@ -227,5 +240,6 @@ func GetBootstrapResources(clusterID types.ClusterID, cloudProviderName string, 
 	baseBootstrapper.BootstrapResources(resources)
 	serviceMesh.BootstrapResources(resources)
 	cloudProvider.BootstrapResources(resources)
+	localBootstrapper.BootstrapResources(resources)
 	return resources, nil
 }

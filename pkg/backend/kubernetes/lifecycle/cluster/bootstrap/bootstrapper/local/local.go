@@ -4,8 +4,8 @@ import (
 	"fmt"
 
 	crv1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
+	"github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/cluster/bootstrap/bootstrapper"
 
-	kubeclientset "k8s.io/client-go/kubernetes"
 	"github.com/mlab-lattice/system/pkg/types"
 )
 
@@ -33,7 +33,6 @@ type LocalDNSServerOptions struct {
 func NewBootstrapper(
 	ClusterID types.ClusterID,
 	options *Options,
-	kubeClient kubeclientset.Interface,
 ) (*DefaultBootstrapper, error) {
 	if options == nil {
 		return nil, fmt.Errorf("options required")
@@ -48,7 +47,6 @@ func NewBootstrapper(
 		Options:    options,
 		Provider: 	provider,
 		ClusterID:	ClusterID,
-		KubeClient: kubeClient,
 	}
 
 	return b, nil
@@ -58,22 +56,9 @@ type DefaultBootstrapper struct {
 	Options	 	*Options
 	ClusterID	types.ClusterID
 	Provider   	string
-	KubeClient 	kubeclientset.Interface
 }
 
-func (b *DefaultBootstrapper) LocalBootstrap() ([]interface{}, error) {
-	bootstrapFuncs := []func() ([]interface{}, error){
-		b.bootstrapLocalNode,
-		b.seedDNS,
-	}
-
-	var objects []interface{}
-	for _, bootstrapFunc := range bootstrapFuncs {
-		additionalObjects, err := bootstrapFunc()
-		if err != nil {
-			return nil, err
-		}
-		objects = append(objects, additionalObjects...)
-	}
-	return objects, nil
+func (b *DefaultBootstrapper) BootstrapResources(resources *bootstrapper.Resources) {
+	b.bootstrapLocalNode(resources)
+	b.seedDNS(resources)
 }

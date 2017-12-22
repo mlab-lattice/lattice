@@ -4,11 +4,12 @@ import (
 	"fmt"
 
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/constants"
+	"github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/cluster/bootstrap/bootstrapper"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func (b *DefaultBootstrapper) bootstrapLocalNode() ([]interface{}, error) {
+func (b *DefaultBootstrapper) bootstrapLocalNode(resources *bootstrapper.Resources) ([]interface{}, error) {
 	if b.Options.DryRun {
 		return []interface{}{}, nil
 	}

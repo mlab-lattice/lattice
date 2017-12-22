@@ -5,6 +5,7 @@ import (
 
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/constants"
 	kubeutil "github.com/mlab-lattice/system/pkg/backend/kubernetes/util/kubernetes"
+	"github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/cluster/bootstrap/bootstrapper"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -14,7 +15,7 @@ import (
 
 )
 
-func (b *DefaultBootstrapper) seedDNS() ([]interface{}, error) {
+func (b *DefaultBootstrapper) seedDNS(resources *bootstrapper.Resources) ([]interface{}, error) {
 	if !b.Options.DryRun {
 		fmt.Println("Seeding local DNS server")
 	}
