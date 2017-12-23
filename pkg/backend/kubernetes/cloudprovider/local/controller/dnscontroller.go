@@ -18,6 +18,7 @@ import (
     "k8s.io/apimachinery/pkg/api/errors"
     "k8s.io/apimachinery/pkg/util/runtime"
     "k8s.io/apimachinery/pkg/util/wait"
+    "github.com/mlab-lattice/system/bazel-system/pkg/backend/kubernetes/controller/cloud/local/endpoint"
 )
 
 type Controller struct {
@@ -27,9 +28,11 @@ type Controller struct {
 
     cnameList	map[string]crv1.Endpoint
     hostLists   map[string]crv1.Endpoint
+    recentlyFlushed map[string]crv1.Endpoint
 
     hasRecentlyUpdated 	bool
     lock 				sync.RWMutex
+    flushMapLock        sync.RWMutex
 
     latticeClient latticeclientset.Interface
 
@@ -78,6 +81,7 @@ func NewController(
 
     c.cnameList = make(map[string]crv1.Endpoint)
     c.hostLists = make(map[string]crv1.Endpoint)
+    c.recentlyFlushed = make(map[string]crv1.Endpoint)
 
     return c
 }
@@ -233,7 +237,6 @@ func (c *Controller) SyncEndpointUpdate(key string) error {
         return err
     }
 
-    //Update our local list with just the new item, not the whole list
     endpoint, err := c.addressLister.Endpoints(namespace).Get(name)
 
     if errors.IsNotFound(err) {
@@ -246,6 +249,11 @@ func (c *Controller) SyncEndpointUpdate(key string) error {
     }
 
     glog.V(5).Infof("Endpoint %v state: %v", key, endpoint.Status.State)
+
+    if endpoint.Status.State == crv1.EndpointStateCreated {
+        // Created, nothing to do.
+        return nil
+    }
 
     // If not recently updated, become responsible for flushing
     c.lock.RLock()
@@ -271,6 +279,7 @@ func (c *Controller) SyncEndpointUpdate(key string) error {
 
     glog.V(5).Infof("acquiring write lock")
     // Acquire the write lock to try and update the map
+    // TODO :: Document and make sure no race conditions present with the two locks
     c.lock.Lock()
 
     glog.V(5).Infof("updating map")
@@ -278,10 +287,22 @@ func (c *Controller) SyncEndpointUpdate(key string) error {
 
     endpoint = endpoint.DeepCopy()
 
-    // TODO :: Should this be updated or is pending the default anyway?
-    // endpoint.Status.State = crv1.EndpointStatePending
+    c.flushMapLock.RLock()
 
-    // TODO :: handle delete
+    if _, present := c.recentlyFlushed[endpointPathURL]; present {
+        c.flushMapLock.RUnlock()
+        c.flushMapLock.Lock()
+        delete(c.recentlyFlushed, endpointPathURL)
+        c.flushMapLock.Unlock()
+
+        endpoint.Status.State = crv1.EndpointStateCreated
+        _, err := c.latticeClient.LatticeV1().Endpoints(endpoint.Namespace).Update(endpoint)
+
+        return err
+    }
+
+    c.flushMapLock.RUnlock()
+
     if endpoint.Spec.ExternalEndpoint != nil {
         c.cnameList[endpointPathURL] = *endpoint
     }
@@ -372,20 +393,21 @@ func (c *Controller) RewriteDnsmasqConfig() error {
 
     //Now update state and requeue as successful.
     for _, v := range c.cnameList {
-        v.Status = crv1.EndpointStatus{
-            State:  crv1.EndpointStateCreated,
-        }
+        c.flushMapLock.Lock()
+        key := v.Spec.Path.ToDomain(true)
+        c.recentlyFlushed[key] = v
+        c.flushMapLock.Unlock()
 
-        // FIXME :: Theres no error handling on this batch updated
-        c.latticeClient.LatticeV1().Endpoints(v.Namespace).Update(&v)
+        c.enqueue(&v)
     }
 
     for _, v := range c.cnameList {
-        v.Status = crv1.EndpointStatus{
-            State:  crv1.EndpointStateCreated,
-        }
+        c.flushMapLock.Lock()
+        key := v.Spec.Path.ToDomain(true)
+        c.recentlyFlushed[key] = v
+        c.flushMapLock.Unlock()
 
-        c.latticeClient.LatticeV1().Endpoints(v.Namespace).Update(&v)
+        c.enqueue(&v)
     }
 
     return nil
