@@ -25,8 +25,8 @@ type Controller struct {
     syncEndpointUpdate	func(bKey string) error
     enqueueEndpointUpdate func(sysBuild *crv1.Endpoint)
 
-    cnameList	map[string]string
-    hostLists   map[string]string
+    cnameList	map[string]crv1.Endpoint
+    hostLists   map[string]crv1.Endpoint
 
     hasRecentlyUpdated 	bool
     lock 				sync.RWMutex
@@ -76,8 +76,8 @@ func NewController(
     c.addressLister = addressInformer.Lister()
     c.addressListerSynced = addressInformer.Informer().HasSynced
 
-    c.cnameList = make(map[string]string)
-    c.hostLists = make(map[string]string)
+    c.cnameList = make(map[string]crv1.Endpoint)
+    c.hostLists = make(map[string]crv1.Endpoint)
 
     return c
 }
@@ -197,7 +197,7 @@ func (c *Controller) processNextWorkItem() bool {
     defer c.queue.Done(key)
 
     // do your work on the key.  This method will contains your "do stuff" logic
-    err := c.syncAddressUpdate(key.(string))
+    err := c.syncEndpointUpdate(key.(string))
     if err == nil {
         // if you had no error, tell the queue to stop tracking history for your
         // key. This will reset things like failure counts for per-item rate
@@ -276,13 +276,18 @@ func (c *Controller) SyncEndpointUpdate(key string) error {
     glog.V(5).Infof("updating map")
     endpointPathURL := endpoint.Spec.Path.ToDomain(true)
 
+    endpoint = endpoint.DeepCopy()
+
+    // TODO :: Should this be updated or is pending the default anyway?
+    // endpoint.Status.State = crv1.EndpointStatePending
+
     // TODO :: handle delete
     if endpoint.Spec.ExternalEndpoint != nil {
-        c.cnameList[endpointPathURL] = *endpoint.Spec.ExternalEndpoint
+        c.cnameList[endpointPathURL] = *endpoint
     }
 
     if endpoint.Spec.IP != nil {
-        c.hostLists[endpointPathURL] = *endpoint.Spec.IP
+        c.hostLists[endpointPathURL] = *endpoint
     }
 
     c.lock.Unlock()
@@ -346,8 +351,9 @@ func (c *Controller) RewriteDnsmasqConfig() error {
     // Each cname entry of the form cname=ALIAS,...(addn alias),TARGET
 
     for k, v := range c.cnameList {
-        _, err := cname_file.WriteString("cname=" + k + "," + v + "\n")
-        glog.V(5).Infof("cname=" + k + "," + v + "\n")
+        cname := *v.Spec.ExternalEndpoint
+        _, err := cname_file.WriteString("cname=" + k + "," + cname + "\n")
+        glog.V(5).Infof("cname=" + k + "," + cname + "\n")
 
         if err != nil {
             return err
@@ -355,12 +361,31 @@ func (c *Controller) RewriteDnsmasqConfig() error {
     }
 
     for k, v := range c.hostLists {
-        _, err := hosts_file.WriteString(v + " " + k + "\n")
-        glog.V(5).Infof(v + " " + k + "\n")
+        endpoint := *v.Spec.IP
+        _, err := hosts_file.WriteString(endpoint + " " + k + "\n")
+        glog.V(5).Infof(endpoint + " " + k + "\n")
 
         if err != nil {
             return err
         }
+    }
+
+    //Now update state and requeue as successful.
+    for _, v := range c.cnameList {
+        v.Status = crv1.EndpointStatus{
+            State:  crv1.EndpointStateCreated,
+        }
+
+        // FIXME :: Theres no error handling on this batch updated
+        c.latticeClient.LatticeV1().Endpoints(v.Namespace).Update(&v)
+    }
+
+    for _, v := range c.cnameList {
+        v.Status = crv1.EndpointStatus{
+            State:  crv1.EndpointStateCreated,
+        }
+
+        c.latticeClient.LatticeV1().Endpoints(v.Namespace).Update(&v)
     }
 
     return nil
