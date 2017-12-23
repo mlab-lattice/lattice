@@ -245,7 +245,7 @@ func (c *Controller) SyncEndpointUpdate(key string) error {
         return err
     }
 
-    glog.V(5).Infof("ServiceBuild %v state: %v", key, endpoint.Status.State)
+    glog.V(5).Infof("Endpoint %v state: %v", key, endpoint.Status.State)
 
     // If not recently updated, become responsible for flushing
     c.lock.RLock()
