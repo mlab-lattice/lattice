@@ -14,7 +14,6 @@ import (
 
 func (cp *DefaultLocalCloudProvider) seedDNS(resources *clusterbootstrapper.ClusterResources) {
 
-	// TODO :: Handle namespace
 	namespace := kubeutil.InternalNamespace("lattice")
 
 	controller_args := []string{"--provider", cp.Provider, "--cluster-id", string(cp.ClusterID)}
@@ -55,7 +54,7 @@ func (cp *DefaultLocalCloudProvider) seedDNS(resources *clusterbootstrapper.Clus
 							VolumeMounts: []corev1.VolumeMount{
 								{
 									Name:      "dns-config",
-									MountPath: "/etc/dns-config/",
+									MountPath: constants.DNSSharedConfigDirectory,
 								},
 							},
 						},
@@ -73,13 +72,12 @@ func (cp *DefaultLocalCloudProvider) seedDNS(resources *clusterbootstrapper.Clus
 							VolumeMounts: []corev1.VolumeMount{
 								{
 									Name:      "dns-config",
-									MountPath: "/etc/dns-config/",
+									MountPath: constants.DNSSharedConfigDirectory,
 								},
 							},
 						},
 					},
 					DNSPolicy: corev1.DNSDefault,
-					// TODO :: This is default until I know what SA, if any, to use for the DNS.
 					ServiceAccountName: constants.ServiceAccountLatticeControllerManager,
 					Tolerations: []corev1.Toleration{
 						constants.TolerationMasterNode,
@@ -92,7 +90,7 @@ func (cp *DefaultLocalCloudProvider) seedDNS(resources *clusterbootstrapper.Clus
 							Name: "dns-config",
 							VolumeSource: corev1.VolumeSource{
 								HostPath: &corev1.HostPathVolumeSource{
-									Path: "/etc/dns-config/",
+									Path: constants.DNSSharedConfigDirectory,
 								},
 							},
 						},

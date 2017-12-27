@@ -71,7 +71,7 @@ func NewController(
 
 	addressInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    c.addEndpoint,
-		UpdateFunc: c.updateEdnpoint,
+		UpdateFunc: c.updateEndpoint,
 		DeleteFunc: c.deleteEndpoint,
 	})
 	c.addressLister = addressInformer.Lister()
@@ -108,7 +108,7 @@ func (c *Controller) addEndpoint(obj interface{}) {
 	c.enqueueEndpointUpdate(endpoint)
 }
 
-func (c *Controller) updateEdnpoint(old, cur interface{}) {
+func (c *Controller) updateEndpoint(old, cur interface{}) {
 	oldEndpoint := old.(*crv1.Endpoint)
 	curEndpoint := cur.(*crv1.Endpoint)
 	glog.V(5).Info("Got Endpoint %v/%v update", curEndpoint.Namespace, curEndpoint.Name)
@@ -154,16 +154,11 @@ func (c *Controller) Run(workers int, stopCh <-chan struct{}) {
 	defer glog.Infof("Shutting down local-dns controller")
 
 	// wait for your secondary caches to fill before starting your work.
-	// Do we need this if just using this lister?
 	if !cache.WaitForCacheSync(stopCh, c.addressListerSynced) {
 		return
 	}
 
 	glog.V(4).Info("Caches synced. Waiting for config to be set")
-
-	// wait for config to be set.
-	// Is this necessary for our case
-	// <-addrc.configSetChan
 
 	// start up your worker threads based on threadiness.  Some controllers
 	// have multiple kinds of workers
