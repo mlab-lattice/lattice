@@ -25,16 +25,13 @@ type Controller struct {
 	syncEndpointUpdate    func(bKey string) error
 	enqueueEndpointUpdate func(sysBuild *crv1.Endpoint)
 
-	// R/W of these three variables controller by sharedVarsLock
+	// R/W of these four variables controller by sharedVarsLock
 	cnameList       map[string]crv1.Endpoint
 	hostLists       map[string]crv1.Endpoint
 	hasRecentlyUpdated bool
-
-	// R/W controlled by flushMapLock
 	recentlyFlushed map[string]crv1.Endpoint
 
 	sharedVarsLock sync.RWMutex
-	flushMapLock   sync.RWMutex
 
 	latticeClient latticeclientset.Interface
 
@@ -229,6 +226,7 @@ func (c *Controller) processNextWorkItem() bool {
 func (c *Controller) SyncEndpointUpdate(key string) error {
 	glog.V(1).Infof("Called endpoint update")
 	defer func() {
+		c.sharedVarsLock.Unlock()
 		glog.V(4).Infof("Finished endpoint update")
 	}()
 
@@ -255,51 +253,32 @@ func (c *Controller) SyncEndpointUpdate(key string) error {
 		return nil
 	}
 
-	// If not recently updated, become responsible for flushing
-	c.sharedVarsLock.RLock()
-	isAlreadyFlushing := c.hasRecentlyUpdated
-	c.sharedVarsLock.RUnlock()
+	// Locks sharedVars for the entire duration. This ensures that the hosts and cnames are updated atomically with checking for
+	// cache flushes and prevents missed updates.
+	c.sharedVarsLock.Lock()
 
-	// TODO :: Could miss an update here - initially isAlreadyFlushing == true, then becomes false before
-	// end of function is reached, and hostLists etc not updated. These wont be propogated.
-	// Can just take a lock during the whole function
-
-	if !isAlreadyFlushing {
-		c.sharedVarsLock.Lock()
-
-		if !c.hasRecentlyUpdated {
-			glog.V(5).Infof("has not updated recently, will flush all updates in %v seconds", updateWaitBeforeFlushTimer)
-			// Safe to write to this boolean as we have the write sharedVarsLock.
-			c.hasRecentlyUpdated = true
-			go time.AfterFunc(time.Second*time.Duration(updateWaitBeforeFlushTimer), c.FlushRewriteDNS)
-		}
-
-		c.sharedVarsLock.Unlock()
+	if !c.hasRecentlyUpdated {
+		glog.V(5).Infof("has not updated recently, will flush all updates in %v seconds", updateWaitBeforeFlushTimer)
+		// Safe to write to this boolean as we have the write sharedVarsLock.
+		c.hasRecentlyUpdated = true
+		go time.AfterFunc(time.Second*time.Duration(updateWaitBeforeFlushTimer), c.FlushRewriteDNS)
 	}
-
 
 	glog.V(5).Infof("updating map")
 	endpointPathURL := endpoint.Spec.Path.ToDomain(true)
 
 	endpoint = endpoint.DeepCopy()
 
-
-	c.flushMapLock.RLock()
 	_, present := c.recentlyFlushed[endpointPathURL]
-	c.flushMapLock.RUnlock()
 
 	if present {
-		c.flushMapLock.Lock()
 		delete(c.recentlyFlushed, endpointPathURL)
-		c.flushMapLock.Unlock()
 
 		endpoint.Status.State = crv1.EndpointStateCreated
 		_, err := c.latticeClient.LatticeV1().Endpoints(endpoint.Namespace).Update(endpoint)
 
 		return err
 	}
-
-	c.sharedVarsLock.Lock()
 
 	if endpoint.Spec.ExternalEndpoint != nil {
 		c.cnameList[endpointPathURL] = *endpoint
@@ -308,8 +287,6 @@ func (c *Controller) SyncEndpointUpdate(key string) error {
 	if endpoint.Spec.IP != nil {
 		c.hostLists[endpointPathURL] = *endpoint
 	}
-
-	c.sharedVarsLock.Unlock()
 
 	return nil
 }
@@ -350,7 +327,6 @@ func (c *Controller) RewriteDnsmasqConfig() error {
 		hosts_file.Close()
 
 		// Finished writing to the cache - can now unset the timer flag
-		c.sharedVarsLock.Lock()
 		c.hasRecentlyUpdated = false
 		c.sharedVarsLock.Unlock()
 	}()
@@ -364,10 +340,13 @@ func (c *Controller) RewriteDnsmasqConfig() error {
 	// Each cname entry of the form cname=ALIAS,...(addn alias),TARGET
 	// Full specification here: http://www.thekelleys.org.uk/dnsmasq/docs/dnsmasq-man.html
 
-	// Take a read lock as we are iterating through cnameList and hostList
-	// This is the only time we use nested locks (and this function is never run multiple times at once).
-	// Therefore no possibility of deadlock.
-	c.sharedVarsLock.RLock()
+	// This logic takes a write lock for the entire duration of the update to simplify the logic and to prevent possible missed updates.
+	// A missed update is possible when the files are written, and a read lock is released. Before a write lock is acquired to update
+	// c.hasRecentlyUpdated, SyncEndpointUpdate takes the write lock and sees that c.hasRecentlyUpdated is false, then proceeds
+	// to add an endpoint to the buffer, and releases the lock. Then this function acquires the lock and sets hasRecentlyUpdates to false.
+	// If that was the last SyncEndpointUpdate, those updates will never be written to disk as this function cannot be guaranteed
+	// to run again.
+	c.sharedVarsLock.Lock()
 
 	for k, v := range c.cnameList {
 		cname := *v.Spec.ExternalEndpoint
@@ -391,24 +370,18 @@ func (c *Controller) RewriteDnsmasqConfig() error {
 
 	//Now update state and requeue as successful.
 	for _, v := range c.cnameList {
-		c.flushMapLock.Lock()
 		key := v.Spec.Path.ToDomain(true)
 		c.recentlyFlushed[key] = v
-		c.flushMapLock.Unlock()
 
 		c.enqueue(&v)
 	}
 
 	for _, v := range c.hostLists {
-		c.flushMapLock.Lock()
 		key := v.Spec.Path.ToDomain(true)
 		c.recentlyFlushed[key] = v
-		c.flushMapLock.Unlock()
 
 		c.enqueue(&v)
 	}
-
-	c.sharedVarsLock.RUnlock()
 
 	return nil
 }
