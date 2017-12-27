@@ -5,30 +5,30 @@ import (
 	clusterbootstrapper "github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/cluster/bootstrap/bootstrapper"
 	systembootstrapper "github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/system/bootstrap/bootstrapper"
 
-	corev1 "k8s.io/api/core/v1"
+	"github.com/golang/glog"
+	"github.com/mlab-lattice/system/pkg/backend/kubernetes/constants"
+	"github.com/mlab-lattice/system/pkg/types"
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
-	"github.com/mlab-lattice/system/pkg/backend/kubernetes/constants"
-	"github.com/golang/glog"
-    "github.com/mlab-lattice/system/pkg/types"
+	corev1 "k8s.io/api/core/v1"
 )
 
 func NewLocalCloudProvider(clusterID types.ClusterID, providerName string, options *crv1.ConfigCloudProviderLocal) *DefaultLocalCloudProvider {
 	return &DefaultLocalCloudProvider{
-	    Options:    options,
-        ClusterID:  clusterID,
-        Provider:   providerName,
-    }
+		Options:   options,
+		ClusterID: clusterID,
+		Provider:  providerName,
+	}
 }
 
 type DefaultLocalCloudProvider struct {
-    Options     *crv1.ConfigCloudProviderLocal
-    ClusterID   types.ClusterID
-    Provider    string
+	Options   *crv1.ConfigCloudProviderLocal
+	ClusterID types.ClusterID
+	Provider  string
 }
 
 func (cp *DefaultLocalCloudProvider) BootstrapClusterResources(resources *clusterbootstrapper.ClusterResources) {
-    cp.seedDNS(resources)
+	cp.seedDNS(resources)
 
 	for _, daemonSet := range resources.DaemonSets {
 		template := cp.TransformPodTemplateSpec(&daemonSet.Spec.Template)
@@ -64,21 +64,21 @@ func (cp *DefaultLocalCloudProvider) TransformServiceDeploymentSpec(service *crv
 	ndotsValue := "15"
 
 	DNSConfig := corev1.PodDNSConfig{
-	    Nameservers: []string{constants.LocalDNSServerIP},
-	    Options: []corev1.PodDNSConfigOption{
-	        {
-                Name: "ndots",
-                Value: &ndotsValue,
-            },
-        },
-    }
+		Nameservers: []string{constants.LocalDNSServerIP},
+		Options: []corev1.PodDNSConfigOption{
+			{
+				Name:  "ndots",
+				Value: &ndotsValue,
+			},
+		},
+	}
 
 	if spec.Template.Spec.DNSConfig == nil {
 		spec.Template.Spec.DNSConfig = &DNSConfig
 	} else {
 		found := false
 
-		for k,v := range spec.Template.Spec.DNSConfig.Nameservers {
+		for k, v := range spec.Template.Spec.DNSConfig.Nameservers {
 			if v == constants.LocalDNSServerIP {
 				// Nameserver already present, so no need to update
 				found = true
@@ -97,7 +97,7 @@ func (cp *DefaultLocalCloudProvider) TransformServiceDeploymentSpec(service *crv
 		glog.V(4).Infof("Updated nameservers: %v", spec.Template.Spec.DNSConfig.Nameservers)
 	}
 
-    spec.Template.Spec.DNSPolicy = corev1.DNSNone
+	spec.Template.Spec.DNSPolicy = corev1.DNSNone
 
 	return spec
 }

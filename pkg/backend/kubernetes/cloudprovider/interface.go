@@ -9,10 +9,10 @@ import (
 	clusterbootstrapper "github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/cluster/bootstrap/bootstrapper"
 	systembootstrapper "github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/system/bootstrap/bootstrapper"
 
+	"github.com/mlab-lattice/system/pkg/types"
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
-	"github.com/mlab-lattice/system/pkg/types"
 )
 
 const (
@@ -21,14 +21,14 @@ const (
 )
 
 type CloudProviderOptions struct {
-	DryRun           bool
-	Config           crv1.ConfigSpec
-	LocalComponents	 LocalComponentOptions
+	DryRun          bool
+	Config          crv1.ConfigSpec
+	LocalComponents LocalComponentOptions
 }
 
 type LocalComponentOptions struct {
-	LocalDNSController 	LocalDNSControllerOptions
-	LocalDNSServer		LocalDNSServerOptions
+	LocalDNSController LocalDNSControllerOptions
+	LocalDNSServer     LocalDNSServerOptions
 }
 
 type LocalDNSControllerOptions struct {

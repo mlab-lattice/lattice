@@ -6,7 +6,6 @@ go_library(
     importpath = "github.com/mlab-lattice/system/pkg/backend/kubernetes/cloudprovider/local/controller",
     visibility = ["//visibility:public"],
     deps = [
-        "//bazel-system/pkg/backend/kubernetes/controller/cloud/local/endpoint:go_default_library",
         "//pkg/backend/kubernetes/customresource/apis/lattice/v1:go_default_library",
         "//pkg/backend/kubernetes/customresource/generated/clientset/versioned:go_default_library",
         "//pkg/backend/kubernetes/customresource/generated/informers/externalversions/lattice/v1:go_default_library",

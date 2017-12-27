@@ -37,26 +37,28 @@ var (
 		"--logtostderr",
 	}
 
-	defaultLocalDNSControllerArgs = []string {
+	defaultLocalDNSControllerArgs = []string{
 		"-v", "5",
 		"--logtostderr",
-		"--server-config-path", "/etc/dns-config/dnsmasq.conf",
-		"--host-config-path", "/etc/dns-config/hosts",
+		"--server-config-path", kubeconstants.DNSSharedConfigDirectory + kubeconstants.DNSConfigFile,
+		"--host-config-path", kubeconstants.DNSSharedConfigDirectory + kubeconstants.DNSHostsFile,
 	}
 
-	defaultLocalDNSNannyArgs = []string {
+	defaultLocalDNSNannyArgs = []string{
 		"-v=2",
 		"-logtostderr",
 		"-restartDnsmasq=true",
-		"-configDir=/etc/dns-config/",
+		"-configDir=" +  kubeconstants.DNSSharedConfigDirectory,
 	}
 
-	defaultLocalDNSMasqArgs = []string {
-		"-k", 									//Keep in foreground so as to not immediately exit.
-		"-R", 									//Dont read provided /etc/resolv.conf
-		"--hostsdir=/etc/dns-config/", 			// Read all the hosts from this directory. File changes read automatically by dnsmasq.
-		"--conf-dir=/etc/dns-config/,*.conf", 	// Read all *.conf files in the directory as dns config files
+	defaultLocalDNSMasqArgs = []string{
+		"-k", // Keep in foreground so as to not immediately exit.
+		"-R", // Dont read provided /etc/resolv.conf
+		"--hostsdir=" + kubeconstants.DNSSharedConfigDirectory, // Read all the hosts from this directory. File changes read automatically by dnsmasq.
+		"--conf-dir=" + kubeconstants.DNSSharedConfigDirectory + ",*.conf", // Read all *.conf files in the directory as dns config files
 	}
+
+	defaultLocalDNSServerArgs = append(append(defaultLocalDNSNannyArgs, "--"), defaultLocalDNSMasqArgs...)
 
 	defaultManagerAPIArgs = []string{}
 
@@ -69,7 +71,7 @@ var (
 	cloudProviderVars []string
 
 	dnsControllerArgs []string
-	dnsServerArgs	  []string
+	dnsServerArgs     []string
 
 	serviceMeshProvider     string
 	serviceMeshProviderVars []string
@@ -273,9 +275,7 @@ func init() {
 	Cmd.Flags().StringArrayVar(&serviceMeshProviderVars, "service-mesh-var", nil, "additional variables for the cloud provider")
 
 	Cmd.Flags().StringArrayVar(&dnsControllerArgs, "local-dns-controller-args", defaultLocalDNSControllerArgs, "extra arguments (besides --provider) to pass to the local-dns-controller")
-	// Format as "dns-nanny-args -- dnsmasq-args"
-	localDNSServerArgs := append(append(defaultLocalDNSNannyArgs, "--"), defaultLocalDNSMasqArgs...)
-	Cmd.Flags().StringArrayVar(&dnsServerArgs, "local-dns-server-args", localDNSServerArgs, "extra arguments to pass to the local-dns-server")
+	Cmd.Flags().StringArrayVar(&dnsServerArgs, "local-dns-server-args", defaultLocalDNSServerArgs, "extra arguments to pass to the local-dns-server")
 
 	Cmd.Flags().StringVar(&terraformBackend, "terraform-backend", "", "backend to use for terraform")
 	Cmd.Flags().StringArrayVar(&terraformBackendVars, "terraform-backend-var", nil, "additional variables for the terraform backend")
@@ -324,12 +324,12 @@ func parseCloudProviderVarsLocal() (*crv1.ConfigCloudProviderLocal, error) {
 				EncodingName: "ip",
 			},
 			"dns-controller-image": {
-				Required:		true,
-				EncodingName: 	"controller-image",
+				Required:     true,
+				EncodingName: "controller-image",
 			},
 			"dns-server-image": {
-				Required:		true,
-				EncodingName: 	"server-image",
+				Required:     true,
+				EncodingName: "server-image",
 			},
 		},
 	}

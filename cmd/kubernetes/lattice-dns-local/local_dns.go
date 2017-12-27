@@ -32,7 +32,7 @@ func Run(clusterIDString, kubeconfig, provider, terraformModulePath string,
 
 	clusterID := types.ClusterID(clusterIDString)
 
-	ctx, err := CreateControllerContext(clusterID ,config, nil, terraformModulePath)
+	ctx, err := CreateControllerContext(clusterID, config, nil, terraformModulePath)
 
 	if err != nil {
 		panic(err)
@@ -78,7 +78,7 @@ func CreateControllerContext(
 	latticeInformers := latticeinformers.NewSharedInformerFactory(versionedLatticeClient, time.Duration(12*time.Hour))
 
 	ctx := controller.Context{
-		ClusterID:     clusterID,
+		ClusterID: clusterID,
 
 		KubeInformerFactory:    kubeInformers,
 		LatticeInformerFactory: latticeInformers,

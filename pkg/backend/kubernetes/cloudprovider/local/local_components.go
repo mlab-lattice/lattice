@@ -2,8 +2,8 @@ package local
 
 import (
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/constants"
-	kubeutil "github.com/mlab-lattice/system/pkg/backend/kubernetes/util/kubernetes"
 	clusterbootstrapper "github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/cluster/bootstrap/bootstrapper"
+	kubeutil "github.com/mlab-lattice/system/pkg/backend/kubernetes/util/kubernetes"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -24,7 +24,7 @@ func (cp *DefaultLocalCloudProvider) seedDNS(resources *clusterbootstrapper.Clus
 	server_args = append(server_args, cp.Options.DNSServerArgs...)
 
 	labels := map[string]string{
-		"key" : constants.MasterNodeDNSServer,
+		"key": constants.MasterNodeDNSServer,
 	}
 
 	localDNSDaemonSet := &appsv1.DaemonSet{
@@ -33,9 +33,9 @@ func (cp *DefaultLocalCloudProvider) seedDNS(resources *clusterbootstrapper.Clus
 			APIVersion: appsv1.GroupName + "/v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:		constants.MasterNodeDNSServer,
-			Namespace: 	namespace,
-			Labels:		labels,
+			Name:      constants.MasterNodeDNSServer,
+			Namespace: namespace,
+			Labels:    labels,
 		},
 		Spec: appsv1.DaemonSetSpec{
 			Selector: &metav1.LabelSelector{
@@ -66,8 +66,8 @@ func (cp *DefaultLocalCloudProvider) seedDNS(resources *clusterbootstrapper.Clus
 							Ports: []corev1.ContainerPort{
 								{
 									ContainerPort: 53,
-									Name: "dns",
-									Protocol: "UDP",
+									Name:          "dns",
+									Protocol:      "UDP",
 								},
 							},
 							VolumeMounts: []corev1.VolumeMount{
@@ -78,7 +78,7 @@ func (cp *DefaultLocalCloudProvider) seedDNS(resources *clusterbootstrapper.Clus
 							},
 						},
 					},
-					DNSPolicy:          corev1.DNSDefault,
+					DNSPolicy: corev1.DNSDefault,
 					// TODO :: This is default until I know what SA, if any, to use for the DNS.
 					ServiceAccountName: constants.ServiceAccountLatticeControllerManager,
 					Tolerations: []corev1.Toleration{
@@ -106,26 +106,26 @@ func (cp *DefaultLocalCloudProvider) seedDNS(resources *clusterbootstrapper.Clus
 
 	localDNSService := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:		constants.MasterNodeDNSService,
-			Namespace: 	namespace,
-			Labels:		labels,
+			Name:      constants.MasterNodeDNSService,
+			Namespace: namespace,
+			Labels:    labels,
 		},
-		Spec:corev1.ServiceSpec{
-			Selector:labels,
+		Spec: corev1.ServiceSpec{
+			Selector:  labels,
 			ClusterIP: constants.LocalDNSServerIP,
-			Type:corev1.ServiceTypeClusterIP,
+			Type:      corev1.ServiceTypeClusterIP,
 			Ports: []corev1.ServicePort{
 				{
-					Name:"dns-tcp",
-					Port:53,
-					TargetPort:intstr.FromInt(53),
-					Protocol:corev1.ProtocolTCP,
+					Name:       "dns-tcp",
+					Port:       53,
+					TargetPort: intstr.FromInt(53),
+					Protocol:   corev1.ProtocolTCP,
 				},
 				{
-					Name:"dns-udp",
-					Port:53,
-					TargetPort:intstr.FromInt(53),
-					Protocol:corev1.ProtocolUDP,
+					Name:       "dns-udp",
+					Port:       53,
+					TargetPort: intstr.FromInt(53),
+					Protocol:   corev1.ProtocolUDP,
 				},
 			},
 		},
