@@ -221,7 +221,6 @@ func (c *Controller) processNextWorkItem() bool {
 func (c *Controller) SyncEndpointUpdate(key string) error {
 	glog.V(1).Infof("Called endpoint update")
 	defer func() {
-		c.sharedVarsLock.Unlock()
 		glog.V(4).Infof("Finished endpoint update")
 	}()
 
@@ -272,6 +271,8 @@ func (c *Controller) SyncEndpointUpdate(key string) error {
 		endpoint.Status.State = crv1.EndpointStateCreated
 		_, err := c.latticeClient.LatticeV1().Endpoints(endpoint.Namespace).Update(endpoint)
 
+		c.sharedVarsLock.Unlock()
+
 		return err
 	}
 
@@ -282,6 +283,8 @@ func (c *Controller) SyncEndpointUpdate(key string) error {
 	if endpoint.Spec.IP != nil {
 		c.hostLists[endpointPathURL] = *endpoint
 	}
+
+	c.sharedVarsLock.Unlock()
 
 	return nil
 }
