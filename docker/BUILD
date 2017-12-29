@@ -15,6 +15,15 @@ container_image(
 )
 
 container_image(
+    name = "base-libstdc++6",
+    debs = [
+        # See bazel/dependencies.bzl for more info.
+        packages["libstdc++6"],
+        packages["libgcc1"],
+    ],
+)
+
+container_image(
     name = "base-terraform-bin",
     directory = "/usr/local/bin",
     files = ["@terraform_bin//:bin"],
@@ -34,10 +43,19 @@ container_image(
     ]
 )
 
+container_image(
+    name = "base-libstdc++6-terraform",
+    tars = [
+        ":base-libstdc++6",
+        ":base-terraform",
+    ]
+)
+
 # base container images
 base_images = [
     "iptables",
-    "terraform",
+    "libstdc++6",
+    "libstdc++6-terraform",
 ]
 lattice_base_container_images(base_images)
 
@@ -49,10 +67,10 @@ lattice_base_container_images(base_images)
 # (container-push) push-debug-foo
 go_targets = [
     ("envoy-prepare", "iptables", "cmd/envoy/prepare"),
-    ("kubernetes-bootstrap-lattice", None, "cmd/kubernetes/bootstrap-lattice"),
-    ("kubernetes-component-builder", None, "cmd/kubernetes/componentbuild"),
-    ("kubernetes-envoy-xds-api-rest-per-node", None, "cmd/kubernetes/envoy/xds-api/rest/per-node"),
-    ("kubernetes-lattice-controller-manager", "terraform", "cmd/kubernetes/lattice-controller-manager"),
-    ("kubernetes-manager-api-rest", None, "cmd/kubernetes/manager/api-rest"),
+    ("kubernetes-component-builder", "libstdc++6", "cmd/kubernetes/componentbuilder"),
+    ("kubernetes-envoy-xds-api-rest-per-node", "libstdc++6", "cmd/kubernetes/envoy/xdsapi/v1/rest/per-node"),
+    ("kubernetes-lattice-controller-manager", "libstdc++6-terraform", "cmd/kubernetes/lattice-controller-manager"),
+    ("kubernetes-manager-api-rest", "libstdc++6", "cmd/kubernetes/manager-api/rest"),
+    ("lattice-cli-admin", "libstdc++6", "cmd/cli/admin"),
 ]
 lattice_container_images(go_targets)

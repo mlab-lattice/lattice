@@ -148,15 +148,6 @@ func TestComponent_Validate(t *testing.T) {
 				},
 			},
 			{
-				Description: "Init",
-				DefinitionBlock: &block.Component{
-					Name:  "foo",
-					Init:  true,
-					Build: *MockComponentBuild(),
-					Exec:  *MockExec(),
-				},
-			},
-			{
 				Description: "ExecComponentHealthCheck",
 				DefinitionBlock: &block.Component{
 					Name:        "foo",
@@ -213,11 +204,6 @@ func TestComponent_JSON(t *testing.T) {
 				Description: "MockComponent",
 				Bytes:       MockComponentExpectedJSON(),
 				ValuePtr:    MockComponent(),
-			},
-			{
-				Description: "MockComponentInitTrue",
-				Bytes:       MockComponentInitTrueExpectedJSON(),
-				ValuePtr:    MockComponentInitTrue(),
 			},
 			{
 				Description: "MockComponentWithHTTPPort",

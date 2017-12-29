@@ -1,0 +1,21 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "server.go",
+        "system.go",
+    ],
+    importpath = "github.com/mlab-lattice/system/pkg/managerapi/server/rest",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//pkg/constants:go_default_library",
+        "//pkg/definition:go_default_library",
+        "//pkg/definition/resolver:go_default_library",
+        "//pkg/definition/tree:go_default_library",
+        "//pkg/managerapi/server/user:go_default_library",
+        "//pkg/types:go_default_library",
+        "@com_github_gin_gonic_gin//:go_default_library",
+        "@com_github_golang_glog//:go_default_library",
+    ],
+)

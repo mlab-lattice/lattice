@@ -4,15 +4,11 @@ import (
 	"fmt"
 	"os"
 
-	restclient "github.com/mlab-lattice/system/pkg/manager/api/client/rest"
-	"github.com/mlab-lattice/system/pkg/manager/api/client/rest/admin"
+	"github.com/mlab-lattice/system/cmd/cli/admin/app/deprovision"
+	"github.com/mlab-lattice/system/cmd/cli/admin/app/kubernetes"
+	"github.com/mlab-lattice/system/cmd/cli/admin/app/provision"
 
 	"github.com/spf13/cobra"
-)
-
-var (
-	url         string
-	adminClient *admin.Client
 )
 
 // RootCmd represents the base command when called without any subcommands
@@ -31,11 +27,7 @@ func Execute() {
 }
 
 func init() {
-	cobra.OnInitialize(initCmd)
-	RootCmd.PersistentFlags().StringVar(&url, "url", "", "URL of the manager-api for the system")
-	RootCmd.MarkPersistentFlagRequired("url")
-}
-
-func initCmd() {
-	adminClient = restclient.NewAdminClient(url)
+	RootCmd.AddCommand(deprovision.Cmd)
+	RootCmd.AddCommand(kubernetes.Cmd)
+	RootCmd.AddCommand(provision.Cmd)
 }

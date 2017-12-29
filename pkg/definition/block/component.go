@@ -7,7 +7,6 @@ import (
 
 type Component struct {
 	Name         string                  `json:"name"`
-	Init         bool                    `json:"init"`
 	Ports        []*ComponentPort        `json:"ports,omitempty"`
 	VolumeMounts []*ComponentVolumeMount `json:"volume_mounts,omitempty"`
 	Build        ComponentBuild          `json:"build"`

@@ -9,20 +9,22 @@ ARG user
 RUN useradd --create-home --shell /bin/bash $user
 RUN echo "${user}:password" | chpasswd
 RUN adduser $user sudo
+RUN adduser $user docker
+RUN adduser $user staff
 USER $user
 
 WORKDIR /home/$user
-
-RUN wget https://github.com/bazelbuild/bazel/releases/download/0.7.0/bazel-0.7.0-installer-linux-x86_64.sh
-RUN chmod +x bazel-0.7.0-installer-linux-x86_64.sh
-RUN ./bazel-0.7.0-installer-linux-x86_64.sh --user
-RUN /home/${user}/bin/bazel version
 
 RUN wget https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-sdk-180.0.1-linux-x86_64.tar.gz
 RUN tar xvzf google-cloud-sdk-180.0.1-linux-x86_64.tar.gz
 ENV PATH=$PATH:/home/${user}/google-cloud-sdk/bin
 RUN gcloud components install docker-credential-gcr
 RUN docker-credential-gcr configure-docker
+
+RUN wget https://github.com/bazelbuild/bazel/releases/download/0.8.1/bazel-0.8.1-installer-linux-x86_64.sh
+RUN chmod +x bazel-0.8.1-installer-linux-x86_64.sh
+RUN ./bazel-0.8.1-installer-linux-x86_64.sh --user
+RUN /home/${user}/bin/bazel version
 
 ENV PATH=$PATH:/home/${user}/bin
 WORKDIR /src

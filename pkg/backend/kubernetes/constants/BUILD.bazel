@@ -1,0 +1,25 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "affinity.go",
+        "annotation.go",
+        "config.go",
+        "deployment.go",
+        "docker.go",
+        "finalizer.go",
+        "internal_component.go",
+        "label.go",
+        "master_node.go",
+        "namespace.go",
+        "networking.go",
+        "node_selector.go",
+        "service_account.go",
+        "terraform.go",
+        "toleration.go",
+    ],
+    importpath = "github.com/mlab-lattice/system/pkg/backend/kubernetes/constants",
+    visibility = ["//visibility:public"],
+    deps = ["@io_k8s_api//core/v1:go_default_library"],
+)
