@@ -39,15 +39,12 @@ type Controller struct {
 	addressListerSynced cache.InformerSynced
 
 	queue workqueue.RateLimitingInterface
-}
 
-type ServerConfig struct {
 	serverConfigPath string
-	hostConfigPath   string
+	hostConfigPath string
 }
 
-var (
-	config                     ServerConfig
+var(
 	updateWaitBeforeFlushTimer = 15
 )
 
@@ -63,8 +60,8 @@ func NewController(
 		queue:         workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "system"),
 	}
 
-	config.serverConfigPath = serverConfigPath
-	config.hostConfigPath = hostConfigPath
+	c.serverConfigPath = serverConfigPath
+	c.hostConfigPath = hostConfigPath
 
 	c.syncEndpointUpdate = c.SyncEndpointUpdate
 	c.enqueueEndpointUpdate = c.enqueue
@@ -314,13 +311,13 @@ func CreateEmptyFile(filename string) (*os.File, error) {
 
 func (c *Controller) RewriteDnsmasqConfig() error {
 
-	glog.V(5).Infof("Rewriting config...")
-	// Open dnsmasq.extra.conf and rewrite
-	cname_file, err := CreateEmptyFile(config.serverConfigPath)
-	hosts_file, err := CreateEmptyFile(config.hostConfigPath)
+	glog.V(4).Infof("Rewriting config %v, %v... ", c.hostConfigPath, c.serverConfigPath)
+
+	cname_file, err := CreateEmptyFile(c.serverConfigPath)
+	hosts_file, err := CreateEmptyFile(c.hostConfigPath)
 
 	defer func() {
-		glog.V(5).Infof("Closing config file...")
+		glog.V(4).Infof("Closing config file...")
 		cname_file.Close()
 		hosts_file.Close()
 

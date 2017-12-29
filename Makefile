@@ -23,6 +23,10 @@ clean:
 test: gazelle
 	@bazel test --test_output=errors //...
 
+.PHONY: test-output
+test-output: gazelle
+	@bazel test --test_output=errors --test_env -v  //...
+
 .PHONY: gazelle
 gazelle:
 	@bazel run //:gazelle

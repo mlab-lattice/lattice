@@ -4,6 +4,11 @@ import (
     "reflect"
     "testing"
     "time"
+    "io/ioutil"
+    "flag"
+    "fmt"
+    "hash/fnv"
+    "strconv"
 
     "github.com/davecgh/go-spew/spew"
     "github.com/golang/glog"
@@ -13,20 +18,18 @@ import (
   //  latticeclientset "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/clientset/versioned"
     latticev1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 
-    "k8s.io/api/core/v1"
+    //"k8s.io/api/core/v1"
    // apierrors "k8s.io/apimachinery/pkg/api/errors"
     metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
     "k8s.io/apimachinery/pkg/runtime"
     //"k8s.io/apimachinery/pkg/runtime/schema"
     //"k8s.io/client-go/tools/cache"
-    utilrand "k8s.io/apimachinery/pkg/util/rand"
   //  "k8s.io/client-go/informers"
     ///"k8s.io/client-go/kubernetes/fake"
     core "k8s.io/client-go/testing"
     //api "k8s.io/kubernetes/pkg/apis/core"
     //"k8s.io/kubernetes/pkg/controller"
     "github.com/mlab-lattice/system/pkg/definition/tree"
-    ioutil2 "github.com/mlab-lattice/system/bazel-system/external/go_sdk/src/io/ioutil"
 )
 
 const(
@@ -49,7 +52,7 @@ func HostFileOutput(hosts []hostEntry) string {
      str := ""
 
      for _, v := range hosts {
-         newLine := v.host + " " + v.ip + "/n"
+         newLine := v.host + " " + v.ip + "\n"
          str = str + newLine
      }
 
@@ -69,11 +72,23 @@ func CnameFileOutput(nameservers []cnameEntry) string {
     str := ""
 
     for _, v := range nameservers {
-        newLine := "cname=" + v.original + "," + v.alias + "/n"
+        newLine := "cname=" + v.original + "," + v.alias + "\n"
         str = str + newLine
     }
 
     return str
+}
+
+func EndpointList(endpoint ...latticev1.Endpoint) *latticev1.EndpointList {
+    var el = latticev1.EndpointList{
+
+    }
+
+    for _, endp := range endpoint {
+        el.Items = append(el.Items, endp)
+    }
+
+    return &el
 }
 
 func Endpoint(ip string, endpoint string, path tree.NodePath) *latticev1.Endpoint {
@@ -112,6 +127,10 @@ type reaction struct {
 }
 
 func TestEndpointCreation(t *testing.T) {
+    flag.Set("alsologtostderr", fmt.Sprintf("%t", true))
+    var logLevel string
+    flag.StringVar(&logLevel, "logLevel", "10", "test")
+    flag.Lookup("v").Value.Set(logLevel)
 
     // Reduce DNS flush timer to more appropriate time
     updateWaitBeforeFlushTimer = 2
@@ -127,7 +146,7 @@ func TestEndpointCreation(t *testing.T) {
 
         ExistingEndpoints *latticev1.EndpointList
 
-        AddedEndpoint   *latticev1.Endpoint
+        AddedEndpoints   *latticev1.EndpointList
         UpdatedEndpoint *latticev1.Endpoint
         UpdatedEndpointPrevious * latticev1.Endpoint
         DeletedEndpoint *latticev1.Endpoint
@@ -138,12 +157,13 @@ func TestEndpointCreation(t *testing.T) {
     }{
         "new endpoint created triggers DNS flush": {
             ClientObjects: []runtime.Object{},
-
-            AddedEndpoint: Endpoint("1", "1", MakeNodePathPanic("/nodepath")),
-            ExpectedActions: []core.Action{
-                //core.NewGetAction(schema.GroupVersionResource{Version: "v1", Resource: "serviceaccounts"}, metav1.NamespaceDefault, "default"),
-                //core.NewCreateAction(schema.GroupVersionResource{Version: "v1", Resource: "secrets"}, metav1.NamespaceDefault, createdTokenSecret()),
-                //core.NewUpdateAction(schema.GroupVersionResource{Version: "v1", Resource: "serviceaccounts"}, metav1.NamespaceDefault, serviceAccount(addTokenSecretReference(emptySecretReferences()))),
+            AddedEndpoints: EndpointList(
+                *Endpoint("1", "", MakeNodePathPanic("/nodepath"))),
+            ExpectedHosts: []hostEntry{
+                {
+                    ip: "1",
+                    host: "nodepath",
+                },
             },
         },
         //"new serviceaccount with no secrets encountering create error": {
@@ -197,15 +217,16 @@ func TestEndpointCreation(t *testing.T) {
     }
 
     for k, tc := range testcases {
+
         glog.Infof(k)
 
-        // Re-seed to reset name generation
-        utilrand.Seed(1)
-
         // Write to different files on each iteration
-        pathSuffix := string(k)
-        controllerServerConfigPath := serverConfigPath + pathSuffix
-        controllerHostConfigPath := hostConfigPath + pathSuffix
+        hash := fnv.New32a()
+        hash.Write([]byte(k))
+        pathSuffix := strconv.Itoa(int(hash.Sum32()))
+
+        controllerServerConfigPath := serverConfigPath + "_" + pathSuffix
+        controllerHostConfigPath := hostConfigPath + "_" + pathSuffix
 
         client := fakelattice.NewSimpleClientset(tc.ClientObjects...)
 
@@ -222,13 +243,15 @@ func TestEndpointCreation(t *testing.T) {
 
         if tc.ExistingEndpoints != nil {
             for _, e := range tc.ExistingEndpoints.Items {
-                endpoints.Add(e)
+                endpoints.Add(&e)
             }
         }
 
-        if tc.AddedEndpoint != nil {
-            endpoints.Add(tc.AddedEndpoint)
-            controller.addEndpoint(tc.AddedEndpoint)
+        if tc.AddedEndpoints != nil {
+            for _, v := range tc.AddedEndpoints.Items {
+                endpoints.Add(&v)
+                controller.addEndpoint(&v)
+            }
         }
         if tc.UpdatedEndpoint != nil {
             endpoints.Update(tc.UpdatedEndpoint)
@@ -307,12 +330,14 @@ func TestEndpointCreation(t *testing.T) {
 
             err := controller.RewriteDnsmasqConfig()
 
+            t.Logf("Writing to: %v", controller.hostConfigPath)
+
             if err != nil {
                 t.Errorf("Error rewriting DNSConfig: %v", err)
             }
 
             if tc.ExpectedCnames != nil {
-                cnameFile, err := ioutil2.ReadFile(controllerServerConfigPath)
+                cnameFile, err := ioutil.ReadFile(controller.serverConfigPath)
 
                 if err != nil {
                     t.Errorf("Error reading cname file: %v", err)
@@ -327,7 +352,7 @@ func TestEndpointCreation(t *testing.T) {
             }
 
             if tc.ExpectedHosts != nil {
-                hostFile, err := ioutil2.ReadFile(controllerHostConfigPath)
+                hostFile, err := ioutil.ReadFile(controller.hostConfigPath)
 
                 if err != nil {
                     t.Errorf("Error reading host file: %v", err)
