@@ -448,11 +448,10 @@ func (r *restServer) getSystemDefinitionRoot(systemID string, version string) (t
 		return nil, err
 	}
 
-	return r.resolver.ResolveDefinition(
-		fmt.Sprintf("%v#%v", system.DefinitionURL, version),
-		constants.SystemDefinitionRootPathDefault,
-		&resolver.GitResolveOptions{},
-	)
+	systemDefUri := fmt.Sprintf("%v#%v/%s", system.DefinitionURL, version,
+		constants.SystemDefinitionRootPathDefault)
+
+	return r.resolver.ResolveDefinition(systemDefUri)
 }
 
 func (r *restServer) getSystemVersions(systemID string) ([]string, error) {

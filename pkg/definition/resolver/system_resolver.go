@@ -12,7 +12,6 @@ import (
 
 // SystemResolver resolves system definitions from different sources such as git
 type SystemResolver struct {
-	WorkDirectory string
 	GitResolver   *git.Resolver
 }
 
@@ -37,22 +36,15 @@ func NewSystemResolver(workDirectory string) (*SystemResolver, error) {
 	}
 
 	sr := &SystemResolver{
-		WorkDirectory: workDirectory,
 		GitResolver:   gitResolver,
 	}
 	return sr, nil
 }
 
 // resolves the definition
-func (resolver *SystemResolver) ResolveDefinition(uri string, fileName string, gitResolveOptions *GitResolveOptions) (tree.Node, error) {
-	if gitResolveOptions == nil {
-		gitResolveOptions = &GitResolveOptions{}
-	}
-	ctx := &resolveContext{
-		gitURI:            uri,
-		gitResolveOptions: gitResolveOptions,
-	}
-	return resolver.resolveDefinitionFromGitUri(ctx, fileName)
+func (resolver *SystemResolver) ResolveDefinition(uri string) (tree.Node, error) {
+
+	return resolver.readNodeFromFile(uri)
 }
 
 // lists the versions of the specified definition's uri
@@ -68,26 +60,11 @@ func (resolver *SystemResolver) ListDefinitionVersions(uri string, gitResolveOpt
 
 }
 
-// resolveDefinitionFromGitUri resolves a definition from a git uri
-func (resolver *SystemResolver) resolveDefinitionFromGitUri(ctx *resolveContext, fileName string) (tree.Node, error) {
-	return resolver.readNodeFromFile(ctx, fileName)
-}
-
 // readNodeFromFile reads a definition node from a file
-func (resolver *SystemResolver) readNodeFromFile(ctx *resolveContext, fileName string) (tree.Node, error) {
-
-	gitResolverContext := &git.Context{
-		URI:    ctx.gitURI,
-		SSHKey: ctx.gitResolveOptions.SSHKey,
-	}
-
-	fileResolver := language.GitResolverWrapper{
-		GitResolver:        resolver.GitResolver,
-		GitResolverContext: gitResolverContext,
-	}
+func (resolver *SystemResolver) readNodeFromFile(uri string) (tree.Node, error) {
 
 	engine := language.NewEngine()
-	template, err := engine.ParseTemplate(fileName, make(map[string]interface{}), fileResolver)
+	template, err := engine.ParseTemplate(uri, make(map[string]interface{}))
 
 	if err != nil {
 		return nil, err
