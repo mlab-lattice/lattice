@@ -1,4 +1,4 @@
-package controller
+package dnscontroller
 
 import (
 	"fmt"
@@ -23,7 +23,7 @@ import (
 type Controller struct {
 	//Contains the controller specific for updating DNS, Watches Address changes.
 	syncEndpointUpdate    func(bKey string) error
-	enqueueEndpointUpdate func(sysBuild *crv1.Endpoint)
+	enqueueEndpointUpdate func(endpoint *crv1.Endpoint)
 
 	// R/W of these four variables controller by sharedVarsLock
 	cnameList       map[string]crv1.Endpoint
@@ -55,7 +55,7 @@ func NewController(
 	serverConfigPath string,
 	hostConfigPath string,
 	latticeClient latticeclientset.Interface,
-	addressInformer latticeinformers.EndpointInformer,
+	endpointInformer latticeinformers.EndpointInformer,
 ) *Controller {
 
 	c := &Controller{
@@ -69,13 +69,13 @@ func NewController(
 	c.syncEndpointUpdate = c.SyncEndpointUpdate
 	c.enqueueEndpointUpdate = c.enqueue
 
-	addressInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+	endpointInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    c.addEndpoint,
 		UpdateFunc: c.updateEndpoint,
 		DeleteFunc: c.deleteEndpoint,
 	})
-	c.addressLister = addressInformer.Lister()
-	c.addressListerSynced = addressInformer.Informer().HasSynced
+	c.addressLister = endpointInformer.Lister()
+	c.addressListerSynced = endpointInformer.Informer().HasSynced
 
 	c.cnameList = make(map[string]crv1.Endpoint)
 	c.hostLists = make(map[string]crv1.Endpoint)
