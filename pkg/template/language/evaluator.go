@@ -43,7 +43,7 @@ func (evaluator *IncludeEvaluator) eval(value interface{}, env *Environment) (in
 	//evaluate parameters if present
 
 	var includeVars map[string]interface{}
-	if parameters, hasParams := includeObject["$parameters"]; hasParams {
+	if parameters, hasParams := includeObject["parameters"]; hasParams {
 		var err error
 		includeVars, err = evaluator.evaluateParameters(parameters.(map[string]interface{}), env)
 		if err != nil {

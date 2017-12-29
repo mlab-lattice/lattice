@@ -173,6 +173,7 @@ func (engine *TemplateEngine) evalString(s string, env *Environment) (interface{
 
 func (engine *TemplateEngine) includeFile(filePath string, env *Environment) (map[string]interface{}, error) {
 
+	fmt.Printf("Including file %s\n", filePath)
 	currentFrame, err := env.stack.Peek()
 	if err != nil {
 		return nil, err
