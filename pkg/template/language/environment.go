@@ -5,12 +5,14 @@ import "errors"
 
 // Environment. Template Parsing Environment
 type Environment struct {
-	stack *environmentStack
+	engine *TemplateEngine
+	stack  *environmentStack
 }
 
-func newEnvironment() *Environment {
+func newEnvironment(engine *TemplateEngine) *Environment {
 	env := &Environment{
-		stack: newStack(10),
+		engine: engine,
+		stack:  newStack(10),
 	}
 
 	return env
@@ -23,8 +25,9 @@ type environmentStack struct {
 
 // environment stack frame
 type environmentStackFrame struct {
-	variables    map[string]interface{}
-	fileResolver FileResolver
+	variables      map[string]interface{}
+	fileRepository FileRepository
+	filePath string
 }
 
 var ErrEmptyStack = errors.New("stack.go : stack is empty")

@@ -8,7 +8,6 @@ import (
 
 const OPERATOR_PREFIX = "$"
 
-
 // Template Object. Template Rendering Artifact
 type Template struct {
 	Value map[string]interface{}
@@ -34,20 +33,40 @@ func NewEngine() *TemplateEngine {
 }
 
 // ParseTemplate
-func (engine *TemplateEngine) ParseTemplate(url string, variables map[string]interface{}, fileResolver FileResolver) (*Template, error) {
-	env := newEnvironment()
-	// Push Variables to stack
-	env.stack.Push(&environmentStackFrame{
-		variables:    variables,
-		fileResolver: fileResolver,
-	})
+func (engine *TemplateEngine) ParseTemplate(url string, variables map[string]interface{}) (*Template, error) {
+	env := newEnvironment(engine)
 
-	return engine.doParseTemplate(env, url)
+	return engine.doParseTemplate(url, variables, env)
 }
 
-func (engine *TemplateEngine) doParseTemplate(env *Environment, url string) (*Template, error) {
+func (engine *TemplateEngine) doParseTemplate(url string, variables map[string]interface{}, env *Environment) (*Template, error) {
 
-	rawMap, err := engine.readMapFromFile(env, url)
+	// parse url
+	urlInfo, err := parseTemplateUrl(url)
+
+	if err != nil {
+		return nil, err
+	}
+
+	fileRepository := urlInfo.fileRepository
+
+	// if its not a new file repository then use the current one
+	if fileRepository == nil {
+		currentFrame, err := env.stack.Peek()
+		if err != nil {
+			return nil, err
+		}
+		fileRepository = currentFrame.fileRepository
+	}
+
+	// Push Variables to stack
+	env.stack.Push(&environmentStackFrame{
+		variables:      variables,
+		fileRepository: fileRepository,
+		filePath:       urlInfo.filePath,
+	})
+
+	rawMap, err := engine.includeFile(urlInfo.filePath, env)
 
 	if err != nil {
 		return nil, err
@@ -64,6 +83,9 @@ func (engine *TemplateEngine) doParseTemplate(env *Environment, url string) (*Te
 	if err != nil {
 		return nil, err
 	}
+
+	// Pop
+	env.stack.Pop()
 
 	return template, nil
 }
@@ -97,7 +119,7 @@ func (engine *TemplateEngine) evalMap(mapVal map[string]interface{}, env *Enviro
 
 			if evaluator, isOperator := engine.operatorEvaluators[k]; isOperator {
 
-				evalResult, err := evaluator.EvalOperand(env, engine, v)
+				evalResult, err := evaluator.eval(v, env)
 				if err != nil {
 					return nil, err
 				} else if evalResult == NOOP_VAL { // NOOP case, just skip
@@ -149,26 +171,42 @@ func (engine *TemplateEngine) evalString(s string, env *Environment) (interface{
 	return s, nil
 }
 
-func (engine *TemplateEngine) readMapFromFile(env *Environment, fileName string) (map[string]interface{}, error) {
+func (engine *TemplateEngine) includeFile(filePath string, env *Environment) (map[string]interface{}, error) {
 
-	// get current frame
 	currentFrame, err := env.stack.Peek()
+	if err != nil {
+		return nil, err
+	}
+
+	bytes, err := currentFrame.fileRepository.getFileContents(filePath)
+	if err != nil {
+		return nil, err
+	}
+
+	rawMap, err := engine.unmarshalBytes(bytes, filePath, env)
 
 	if err != nil {
 		return nil, err
 	}
 
-	jsonBytes, err := currentFrame.fileResolver.FileContents(fileName)
+	val, err := engine.Eval(rawMap, env)
+
 	if err != nil {
 		return nil, err
+
 	}
 
-	result := make(map[string]interface{})
+	return val.(map[string]interface{}), nil
+}
+
+func (engine *TemplateEngine) unmarshalBytes(bytes []byte, url string, env *Environment) (map[string]interface{}, error) {
 
 	// unmarshal file contents based on file type. Only .json is supported atm
 
-	if strings.HasSuffix(fileName, ".json") {
-		err = json.Unmarshal(jsonBytes, &result)
+	result := make(map[string]interface{})
+
+	if strings.HasSuffix(url, ".json") {
+		err := json.Unmarshal(bytes, &result)
 
 		if err != nil {
 			return nil, err
@@ -176,7 +214,7 @@ func (engine *TemplateEngine) readMapFromFile(env *Environment, fileName string)
 			return result, nil
 		}
 	} else {
-		return nil, error(fmt.Errorf("Unsupported file %s", fileName))
+		return nil, error(fmt.Errorf("Unsupported file %s", url))
 	}
 
 }

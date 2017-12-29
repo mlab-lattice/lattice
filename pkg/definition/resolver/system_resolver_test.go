@@ -11,12 +11,13 @@ import (
 	git "gopkg.in/src-d/go-git.v4"
 	"gopkg.in/src-d/go-git.v4/plumbing"
 	"gopkg.in/src-d/go-git.v4/plumbing/object"
+
 )
 
 const RESOLVER_TEST_DIR = "/tmp/lattice-core/test/resolver"
 const TEST_REPO_DIR = "/tmp/lattice-core/test/resolver/my-repo"
-const TEST_REPO_GIT_URI_V1 = "/tmp/lattice-core/test/resolver/my-repo#v1"
-const TEST_REPO_GIT_URI_V2 = "/tmp/lattice-core/test/resolver/my-repo#v2"
+const TEST_REPO_GIT_URI_V1 = "/tmp/lattice-core/test/resolver/my-repo/.git#v1"
+const TEST_REPO_GIT_URI_V2 = "/tmp/lattice-core/test/resolver/my-repo/.git#v2"
 const TEST_WORK_DIR = "/tmp/lattice-core/test/resolver/work"
 const SYSTEM_FILE_NAME = "system.json"
 const SERVICE_FILE_NAME = "service.json"

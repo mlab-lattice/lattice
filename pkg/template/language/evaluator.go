@@ -7,7 +7,7 @@ import (
 // OperatorEvaluator
 
 type OperatorEvaluator interface {
-	EvalOperand(env *Environment, engine *TemplateEngine, operand interface{}) (interface{}, error)
+	eval(value interface{}, env *Environment) (interface{}, error)
 }
 
 // Used to indicate if the result of the Evaluator is a NOOP
@@ -15,21 +15,21 @@ type NOOP int
 
 const NOOP_VAL NOOP = 0
 
-// IncludeEvaluator. evaluates
+// IncludeEvaluator. evaluates $include
 type IncludeEvaluator struct {
 }
 
-func (evaluator *IncludeEvaluator) EvalOperand(env *Environment, engine *TemplateEngine, operand interface{}) (interface{}, error) {
+func (evaluator *IncludeEvaluator) eval(value interface{}, env *Environment) (interface{}, error) {
 
 	// construct the include object. We allow the include to be an object or a string.
 	// string will be converted to to {url: val}
 	var includeObject map[string]interface{}
 
-	if _, isMap := operand.(map[string]interface{}); isMap {
-		includeObject = operand.(map[string]interface{})
-	} else if _, isString := operand.(string); isString {
+	if _, isMap := value.(map[string]interface{}); isMap {
+		includeObject = value.(map[string]interface{})
+	} else if _, isString := value.(string); isString {
 		includeObject = map[string]interface{}{
-			"url": operand,
+			"url": value,
 		}
 	} else {
 		return nil, fmt.Errorf("Invalid $include %s", includeObject)
@@ -45,7 +45,7 @@ func (evaluator *IncludeEvaluator) EvalOperand(env *Environment, engine *Templat
 	var includeVars map[string]interface{}
 	if parameters, hasParams := includeObject["$parameters"]; hasParams {
 		var err error
-		includeVars, err = evaluator.evaluateParameters(env, engine, parameters.(map[string]interface{}))
+		includeVars, err = evaluator.evaluateParameters(parameters.(map[string]interface{}), env)
 		if err != nil {
 			return nil, err
 		}
@@ -53,19 +53,7 @@ func (evaluator *IncludeEvaluator) EvalOperand(env *Environment, engine *Templat
 
 	url := includeObject["url"].(string)
 
-	// push the variables into the stack
-
-	currentFrame, err := env.stack.Peek()
-
-	if err != nil {
-		return nil, err
-	}
-
-	env.stack.Push(&environmentStackFrame{
-		variables:    includeVars,
-		fileResolver: currentFrame.fileResolver,
-	})
-	template, err := engine.doParseTemplate(env, url)
+	template, err := env.engine.doParseTemplate(url, includeVars, env)
 	if err != nil {
 		return nil, err
 	}
@@ -73,19 +61,16 @@ func (evaluator *IncludeEvaluator) EvalOperand(env *Environment, engine *Templat
 	if err != nil {
 		return nil, err
 	}
-
-	// Pop
-	env.stack.Pop()
 
 	return template.Value, nil
 
 }
 
-func (evaluator *IncludeEvaluator) evaluateParameters(env *Environment, engine *TemplateEngine, parameters map[string]interface{}) (map[string]interface{}, error) {
+func (evaluator *IncludeEvaluator) evaluateParameters(parameters map[string]interface{}, env *Environment) (map[string]interface{}, error) {
 
 	variables := make(map[string]interface{})
 	for name, rawVal := range parameters {
-		paramVal, err := engine.Eval(rawVal, env)
+		paramVal, err := env.engine.Eval(rawVal, env)
 		if err != nil {
 			return nil, err
 		}
@@ -100,8 +85,8 @@ func (evaluator *IncludeEvaluator) evaluateParameters(env *Environment, engine *
 type VariablesEvaluator struct {
 }
 
-func (evaluator *VariablesEvaluator) EvalOperand(env *Environment, engine *TemplateEngine, operand interface{}) (interface{}, error) {
-	variablesMap := operand.(map[string]interface{})
+func (evaluator *VariablesEvaluator) eval(value interface{}, env *Environment) (interface{}, error) {
+	variablesMap := value.(map[string]interface{})
 
 	// get current stack frame
 	currentFrame, err := env.stack.Peek()
@@ -114,7 +99,7 @@ func (evaluator *VariablesEvaluator) EvalOperand(env *Environment, engine *Templ
 		return nil, err
 	}
 	for name, rawVal := range variablesMap {
-		val, err := engine.Eval(rawVal, env)
+		val, err := env.engine.Eval(rawVal, env)
 		if err != nil {
 			return nil, err
 		}
@@ -126,15 +111,15 @@ func (evaluator *VariablesEvaluator) EvalOperand(env *Environment, engine *Templ
 
 }
 
-// ParametersEvaluator. evaluates
+// ParametersEvaluator. evaluates $parameters
 type ParametersEvaluator struct {
 }
 
-func (evaluator *ParametersEvaluator) EvalOperand(env *Environment, engine *TemplateEngine, operand interface{}) (interface{}, error) {
-	paramMap := operand.(map[string]interface{})
+func (evaluator *ParametersEvaluator) eval(value interface{}, env *Environment) (interface{}, error) {
+	paramMap := value.(map[string]interface{})
 
 	for name, paramDef := range paramMap {
-		err := evaluator.processParam(env, name, paramDef.(map[string]interface{}))
+		err := evaluator.processParam(name, paramDef.(map[string]interface{}), env)
 		if err != nil {
 			return nil, err
 		}
@@ -145,7 +130,7 @@ func (evaluator *ParametersEvaluator) EvalOperand(env *Environment, engine *Temp
 
 }
 
-func (evaluator *ParametersEvaluator) processParam(env *Environment, name string, paramDef map[string]interface{}) error {
+func (evaluator *ParametersEvaluator) processParam(name string, paramDef map[string]interface{}, env *Environment) error {
 	// get current stack frame
 	currentFrame, err := env.stack.Peek()
 
