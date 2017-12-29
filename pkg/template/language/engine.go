@@ -176,6 +176,7 @@ func (engine *TemplateEngine) evalString(s string, env *Environment) (interface{
 	return s, nil
 }
 
+// includeFile includes the file and returns a map of values
 func (engine *TemplateEngine) includeFile(filePath string, env *Environment) (map[string]interface{}, error) {
 
 	fmt.Printf("Including file %s\n", filePath)
@@ -205,13 +206,14 @@ func (engine *TemplateEngine) includeFile(filePath string, env *Environment) (ma
 	return val.(map[string]interface{}), nil
 }
 
-func (engine *TemplateEngine) unmarshalBytes(bytes []byte, url string, env *Environment) (map[string]interface{}, error) {
+// unmarshalBytes unmarshal the bytes specified based on the the file name
+func (engine *TemplateEngine) unmarshalBytes(bytes []byte, filePath string, env *Environment) (map[string]interface{}, error) {
 
 	// unmarshal file contents based on file type. Only .json is supported atm
 
 	result := make(map[string]interface{})
 
-	if strings.HasSuffix(url, ".json") {
+	if strings.HasSuffix(filePath, ".json") {
 		err := json.Unmarshal(bytes, &result)
 
 		if err != nil {
@@ -220,7 +222,7 @@ func (engine *TemplateEngine) unmarshalBytes(bytes []byte, url string, env *Envi
 			return result, nil
 		}
 	} else {
-		return nil, error(fmt.Errorf("Unsupported file %s", url))
+		return nil, error(fmt.Errorf("Unsupported file %s", filePath))
 	}
 
 }

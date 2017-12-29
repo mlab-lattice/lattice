@@ -4,7 +4,7 @@ import (
 	"fmt"
 )
 
-// OperatorEvaluator
+// OperatorEvaluator operator evaluators used by the engine to evaluate special operators
 
 type OperatorEvaluator interface {
 	eval(value interface{}, env *Environment) (interface{}, error)
@@ -66,6 +66,7 @@ func (evaluator *IncludeEvaluator) eval(value interface{}, env *Environment) (in
 
 }
 
+// evaluateParameters evaluates parameters to passed for the $include
 func (evaluator *IncludeEvaluator) evaluateParameters(parameters map[string]interface{}, env *Environment) (map[string]interface{}, error) {
 
 	variables := make(map[string]interface{})
@@ -80,11 +81,11 @@ func (evaluator *IncludeEvaluator) evaluateParameters(parameters map[string]inte
 	return variables, nil
 }
 
-/**********************************************************************************************************************/
-// VariablesEvaluator. evaluates
+// VariablesEvaluator. evaluates $variables
 type VariablesEvaluator struct {
 }
 
+// eval
 func (evaluator *VariablesEvaluator) eval(value interface{}, env *Environment) (interface{}, error) {
 	variablesMap := value.(map[string]interface{})
 
@@ -115,6 +116,7 @@ func (evaluator *VariablesEvaluator) eval(value interface{}, env *Environment) (
 type ParametersEvaluator struct {
 }
 
+// eval
 func (evaluator *ParametersEvaluator) eval(value interface{}, env *Environment) (interface{}, error) {
 	paramMap := value.(map[string]interface{})
 
@@ -130,6 +132,7 @@ func (evaluator *ParametersEvaluator) eval(value interface{}, env *Environment) 
 
 }
 
+// processParam process/validate parameters
 func (evaluator *ParametersEvaluator) processParam(name string, paramDef map[string]interface{}, env *Environment) error {
 	// get current stack frame
 	currentFrame, err := env.stack.Peek()

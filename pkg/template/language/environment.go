@@ -12,6 +12,7 @@ type Environment struct {
 	stack  *environmentStack
 }
 
+// newEnvironment creates a new environment object
 func newEnvironment(engine *TemplateEngine) *Environment {
 	env := &Environment{
 		engine: engine,
@@ -21,6 +22,7 @@ func newEnvironment(engine *TemplateEngine) *Environment {
 	return env
 }
 
+// currentDir returns the current directory of the file being parsed
 func (env *Environment) currentDir() string {
 	if env.stack.length() == 0 {
 		return "."
@@ -42,17 +44,19 @@ type environmentStackFrame struct {
 	filePath       string
 }
 
+// ErrEmptyStack raised when the stack is empty on pop or peek
 var ErrEmptyStack = errors.New("stack.go : stack is empty")
 
 func newStack(number uint) *environmentStack {
 	return &environmentStack{data: make([]*environmentStackFrame, 0, number)}
 }
 
-//return the number of items in stack
+// length return the number of items in stack
 func (s *environmentStack) length() int {
 	return len(s.data)
 }
 
+//Push pushes a frame into stack
 func (s *environmentStack) Push(value *environmentStackFrame) {
 	s.data = append(s.data, value)
 }
