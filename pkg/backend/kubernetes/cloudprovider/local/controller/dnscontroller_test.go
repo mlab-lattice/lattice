@@ -5,6 +5,7 @@ import (
     "reflect"
     "testing"
     "time"
+    "ioutil"
 
     "github.com/davecgh/go-spew/spew"
     "github.com/golang/glog"
@@ -18,7 +19,7 @@ import (
    // apierrors "k8s.io/apimachinery/pkg/api/errors"
     metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
     "k8s.io/apimachinery/pkg/runtime"
-    "k8s.io/apimachinery/pkg/runtime/schema"
+    //"k8s.io/apimachinery/pkg/runtime/schema"
     //"k8s.io/client-go/tools/cache"
     utilrand "k8s.io/apimachinery/pkg/util/rand"
   //  "k8s.io/client-go/informers"
@@ -27,12 +28,13 @@ import (
     //api "k8s.io/kubernetes/pkg/apis/core"
     //"k8s.io/kubernetes/pkg/controller"
     "github.com/mlab-lattice/system/pkg/definition/tree"
+    ioutil2 "github.com/mlab-lattice/system/bazel-system/external/go_sdk/src/io/ioutil"
 )
 
 const(
     // TODO :: A test that ensures writing to these succeeds
-    serverConfigPath = "/tmp/config"
-    hostConfigPath = "/tmp/config"
+    serverConfigPath = "./server_config"
+    hostConfigPath = "./host_config"
 )
 
 //type testGenerator struct {
@@ -49,6 +51,10 @@ const(
 //    return t.Token, t.Err
 //}
 
+//TODO :: Functions to test against file ooutput i.e. the contents of nameservers and hosts.
+// Test case - add namerver, add host, add both, add duplicates, remove hosts
+// The state should be created which should then destroy? idk
+
 // emptySecretReferences is used by a service account without any secrets
 func emptySecretReferences() []v1.ObjectReference {
     return []v1.ObjectReference{}
@@ -64,17 +70,46 @@ func addNamedTokenSecretReference(refs []v1.ObjectReference, name string) []v1.O
     return append(refs, v1.ObjectReference{Name: name})
 }
 
-// serviceAccount returns a service account with the given secret refs
-func serviceAccount(secretRefs []v1.ObjectReference) *v1.ServiceAccount {
-    return &v1.ServiceAccount{
-        ObjectMeta: metav1.ObjectMeta{
-            Name:            "default",
-            UID:             "12345",
-            Namespace:       "default",
-            ResourceVersion: "1",
-        },
-        Secrets: secretRefs,
+type hostEntry struct {
+    host string
+    ip string
+}
+
+// HostFileOutput returns the expected file output that the host file should contain for the given hosts
+func HostFileOutput(hosts []hostEntry) string {
+    /*
+        Expected format:
+            name ip
+            ...
+     */
+     str := ""
+
+     for _, v := range hosts {
+         newLine := v.host + " " + v.ip + "/n"
+         str = str + newLine
+     }
+
+     return str
+}
+
+type cnameEntry struct {
+    original string
+    alias string
+}
+
+func CnameFileOutput(nameservers []cnameEntry) string {
+    /*
+        Expected format:
+            cname=original,alias
+     */
+    str := ""
+
+    for _, v := range nameservers {
+        newLine := "cname=" + v.original + "," + v.alias + "/n"
+        str = str + newLine
     }
+
+    return str
 }
 
 func Endpoint(ip string, endpoint string, path tree.NodePath) *latticev1.Endpoint {
@@ -106,112 +141,6 @@ func MakeNodePathPanic(pathString string) tree.NodePath {
     return np
 }
 
-// updatedServiceAccount returns a service account with the resource version modified
-func updatedServiceAccount(secretRefs []v1.ObjectReference) *v1.ServiceAccount {
-    sa := serviceAccount(secretRefs)
-    sa.ResourceVersion = "2"
-    return sa
-}
-
-// opaqueSecret returns a persisted non-ServiceAccountToken secret named "regular-secret-1"
-func opaqueSecret() *v1.Secret {
-    return &v1.Secret{
-        ObjectMeta: metav1.ObjectMeta{
-            Name:            "regular-secret-1",
-            Namespace:       "default",
-            UID:             "23456",
-            ResourceVersion: "1",
-        },
-        Type: "Opaque",
-        Data: map[string][]byte{
-            "mykey": []byte("mydata"),
-        },
-    }
-}
-
-// createdTokenSecret returns the ServiceAccountToken secret posted when creating a new token secret.
-// Named "default-token-xn8fg", since that is the first generated name after rand.Seed(1)
-func createdTokenSecret(overrideName ...string) *v1.Secret {
-    return namedCreatedTokenSecret("default-token-xn8fg")
-}
-
-// namedTokenSecret returns the ServiceAccountToken secret posted when creating a new token secret with the given name.
-func namedCreatedTokenSecret(name string) *v1.Secret {
-    return &v1.Secret{
-        ObjectMeta: metav1.ObjectMeta{
-            Name:      name,
-            Namespace: "default",
-            Annotations: map[string]string{
-                v1.ServiceAccountNameKey: "default",
-                v1.ServiceAccountUIDKey:  "12345",
-            },
-        },
-        Type: v1.SecretTypeServiceAccountToken,
-        Data: map[string][]byte{
-            "token":     []byte("ABC"),
-            "ca.crt":    []byte("CA Data"),
-            "namespace": []byte("default"),
-        },
-    }
-}
-
-// serviceAccountTokenSecret returns an existing ServiceAccountToken secret named "token-secret-1"
-func serviceAccountTokenSecret() *v1.Secret {
-    return &v1.Secret{
-        ObjectMeta: metav1.ObjectMeta{
-            Name:            "token-secret-1",
-            Namespace:       "default",
-            UID:             "23456",
-            ResourceVersion: "1",
-            Annotations: map[string]string{
-                v1.ServiceAccountNameKey: "default",
-                v1.ServiceAccountUIDKey:  "12345",
-            },
-        },
-        Type: v1.SecretTypeServiceAccountToken,
-        Data: map[string][]byte{
-            "token":     []byte("ABC"),
-            "ca.crt":    []byte("CA Data"),
-            "namespace": []byte("default"),
-        },
-    }
-}
-
-// serviceAccountTokenSecretWithoutTokenData returns an existing ServiceAccountToken secret that lacks token data
-func serviceAccountTokenSecretWithoutTokenData() *v1.Secret {
-    secret := serviceAccountTokenSecret()
-    delete(secret.Data, v1.ServiceAccountTokenKey)
-    return secret
-}
-
-// serviceAccountTokenSecretWithoutCAData returns an existing ServiceAccountToken secret that lacks ca data
-func serviceAccountTokenSecretWithoutCAData() *v1.Secret {
-    secret := serviceAccountTokenSecret()
-    delete(secret.Data, v1.ServiceAccountRootCAKey)
-    return secret
-}
-
-// serviceAccountTokenSecretWithCAData returns an existing ServiceAccountToken secret with the specified ca data
-func serviceAccountTokenSecretWithCAData(data []byte) *v1.Secret {
-    secret := serviceAccountTokenSecret()
-    secret.Data[v1.ServiceAccountRootCAKey] = data
-    return secret
-}
-
-// serviceAccountTokenSecretWithoutNamespaceData returns an existing ServiceAccountToken secret that lacks namespace data
-func serviceAccountTokenSecretWithoutNamespaceData() *v1.Secret {
-    secret := serviceAccountTokenSecret()
-    delete(secret.Data, v1.ServiceAccountNamespaceKey)
-    return secret
-}
-
-// serviceAccountTokenSecretWithNamespaceData returns an existing ServiceAccountToken secret with the specified namespace data
-func serviceAccountTokenSecretWithNamespaceData(data []byte) *v1.Secret {
-    secret := serviceAccountTokenSecret()
-    secret.Data[v1.ServiceAccountNamespaceKey] = data
-    return secret
-}
-
 type reaction struct {
     verb     string
     resource string
@@ -225,6 +154,7 @@ func TestEndpointCreation(t *testing.T) {
         IsAsync    bool
         MaxRetries int
 
+        // Reactor determines how the controller responds to certain verb actions with a resource.
         Reactors []reaction
 
         ExistingEndpoints *latticev1.EndpointList
@@ -234,15 +164,17 @@ func TestEndpointCreation(t *testing.T) {
         DeletedEndpoint *latticev1.Endpoint
 
         ExpectedActions []core.Action
+        ExpectedHosts []hostEntry
+        ExpectedCnames []cnameEntry
     }{
         "new endpoint created triggers DNS flush": {
             ClientObjects: []runtime.Object{},
 
             AddedEndpoint: Endpoint("1", "1", MakeNodePathPanic("/nodepath")),
             ExpectedActions: []core.Action{
-                core.NewGetAction(schema.GroupVersionResource{Version: "v1", Resource: "serviceaccounts"}, metav1.NamespaceDefault, "default"),
-                core.NewCreateAction(schema.GroupVersionResource{Version: "v1", Resource: "secrets"}, metav1.NamespaceDefault, createdTokenSecret()),
-                core.NewUpdateAction(schema.GroupVersionResource{Version: "v1", Resource: "serviceaccounts"}, metav1.NamespaceDefault, serviceAccount(addTokenSecretReference(emptySecretReferences()))),
+                //core.NewGetAction(schema.GroupVersionResource{Version: "v1", Resource: "serviceaccounts"}, metav1.NamespaceDefault, "default"),
+                //core.NewCreateAction(schema.GroupVersionResource{Version: "v1", Resource: "secrets"}, metav1.NamespaceDefault, createdTokenSecret()),
+                //core.NewUpdateAction(schema.GroupVersionResource{Version: "v1", Resource: "serviceaccounts"}, metav1.NamespaceDefault, serviceAccount(addTokenSecretReference(emptySecretReferences()))),
             },
         },
         //"new serviceaccount with no secrets encountering create error": {
@@ -683,6 +615,45 @@ func TestEndpointCreation(t *testing.T) {
             t.Errorf("%s: %d additional expected actions", k, len(tc.ExpectedActions)-len(actions))
             for _, a := range tc.ExpectedActions[len(actions):] {
                 t.Logf("    %+v", a)
+            }
+        }
+
+        if (tc.ExpectedCnames != nil || tc.ExpectedHosts != nil) {
+
+            err := controller.RewriteDnsmasqConfig()
+
+            if (err != nil) {
+                t.Errorf("Error rewriting DNSConfig: %v", err)
+            }
+
+            if tc.ExpectedCnames != nil {
+                cnameFile, err := ioutil2.ReadFile(serverConfigPath)
+
+                if err != nil {
+                    t.Errorf("Error reading cname file: %v", err)
+                }
+
+                cnameStr := string(cnameFile)
+                cnameExpectedStr := CnameFileOutput(tc.ExpectedCnames)
+
+                if cnameStr != cnameExpectedStr {
+                    t.Errorf("%s:\nExpected:\n%s\ngot:\n%s", k, spew.Sdump(cnameExpectedStr), spew.Sdump(cnameStr))
+                }
+            }
+
+            if tc.ExpectedHosts != nil {
+                hostFile, err := ioutil2.ReadFile(hostConfigPath)
+
+                if err != nil {
+                    t.Errorf("Error reading host file: %v", err)
+                }
+
+                hostStr := string(hostFile)
+                hostExpectedStr := HostFileOutput(tc.ExpectedHosts)
+
+                if hostStr != hostExpectedStr {
+                    t.Errorf("%s:\nExpected:\n%s\ngot:\n%s", k, spew.Sdump(hostExpectedStr), spew.Sdump(hostStr))
+                }
             }
         }
     }
