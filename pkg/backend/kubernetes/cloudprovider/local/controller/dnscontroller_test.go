@@ -19,6 +19,7 @@ import (
     metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
     "k8s.io/apimachinery/pkg/runtime"
     "k8s.io/apimachinery/pkg/runtime/schema"
+    //"k8s.io/client-go/tools/cache"
     utilrand "k8s.io/apimachinery/pkg/util/rand"
   //  "k8s.io/client-go/informers"
     ///"k8s.io/client-go/kubernetes/fake"
@@ -625,11 +626,14 @@ func TestEndpointCreation(t *testing.T) {
         waitedForAdditionalActions := false
 
         for {
-            break
-            
             if controller.queue.Len() > 0 {
                 // need to supply key
-                // controller.syncServiceAccount()
+                key, done := controller.queue.Get()
+                if done {
+                    break
+                }
+
+                controller.syncEndpointUpdate(key.(string))
             }
 
             // The queues still have things to work on
