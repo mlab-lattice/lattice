@@ -1,7 +1,10 @@
 // TemplateEngine environment
 package language
 
-import "errors"
+import (
+	"errors"
+	"path"
+)
 
 // Environment. Template Parsing Environment
 type Environment struct {
@@ -18,6 +21,15 @@ func newEnvironment(engine *TemplateEngine) *Environment {
 	return env
 }
 
+func (env *Environment) currentDir() string {
+	if env.stack.length() == 0 {
+		return "."
+	}
+
+	currentFrame, _ := env.stack.Peek()
+	return path.Dir(currentFrame.filePath)
+}
+
 // environment stack
 type environmentStack struct {
 	data []*environmentStackFrame
@@ -27,7 +39,7 @@ type environmentStack struct {
 type environmentStackFrame struct {
 	variables      map[string]interface{}
 	fileRepository FileRepository
-	filePath string
+	filePath       string
 }
 
 var ErrEmptyStack = errors.New("stack.go : stack is empty")

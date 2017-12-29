@@ -3,6 +3,7 @@ package language
 import (
 	"encoding/json"
 	"fmt"
+	"path"
 	"strings"
 )
 
@@ -59,6 +60,10 @@ func (engine *TemplateEngine) doParseTemplate(url string, variables map[string]i
 		fileRepository = currentFrame.fileRepository
 	}
 
+	// construct file path relative to the parent file if specified
+
+	filePath := path.Join(env.currentDir(), urlInfo.filePath)
+
 	// Push Variables to stack
 	env.stack.Push(&environmentStackFrame{
 		variables:      variables,
@@ -66,7 +71,7 @@ func (engine *TemplateEngine) doParseTemplate(url string, variables map[string]i
 		filePath:       urlInfo.filePath,
 	})
 
-	rawMap, err := engine.includeFile(urlInfo.filePath, env)
+	rawMap, err := engine.includeFile(filePath, env)
 
 	if err != nil {
 		return nil, err
