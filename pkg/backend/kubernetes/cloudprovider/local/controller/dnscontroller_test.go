@@ -1,11 +1,9 @@
 package dnscontroller
 
 import (
-   // "errors"
     "reflect"
     "testing"
     "time"
-    "ioutil"
 
     "github.com/davecgh/go-spew/spew"
     "github.com/golang/glog"
@@ -32,43 +30,9 @@ import (
 )
 
 const(
-    // TODO :: A test that ensures writing to these succeeds
     serverConfigPath = "./server_config"
     hostConfigPath = "./host_config"
 )
-
-//type testGenerator struct {
-//    GeneratedServiceAccounts []v1.ServiceAccount
-//    GeneratedSecrets         []v1.Secret
-//    Token                    string
-//    Err                      error
-//}
-//
-//
-//func (t *testGenerator) GenerateToken(serviceAccount v1.ServiceAccount, secret v1.Secret) (string, error) {
-//    t.GeneratedSecrets = append(t.GeneratedSecrets, secret)
-//    t.GeneratedServiceAccounts = append(t.GeneratedServiceAccounts, serviceAccount)
-//    return t.Token, t.Err
-//}
-
-//TODO :: Functions to test against file ooutput i.e. the contents of nameservers and hosts.
-// Test case - add namerver, add host, add both, add duplicates, remove hosts
-// The state should be created which should then destroy? idk
-
-// emptySecretReferences is used by a service account without any secrets
-func emptySecretReferences() []v1.ObjectReference {
-    return []v1.ObjectReference{}
-}
-
-// addTokenSecretReference adds a reference to the ServiceAccountToken that will be created
-func addTokenSecretReference(refs []v1.ObjectReference) []v1.ObjectReference {
-    return addNamedTokenSecretReference(refs, "default-token-xn8fg")
-}
-
-// addNamedTokenSecretReference adds a reference to the named ServiceAccountToken
-func addNamedTokenSecretReference(refs []v1.ObjectReference, name string) []v1.ObjectReference {
-    return append(refs, v1.ObjectReference{Name: name})
-}
 
 type hostEntry struct {
     host string
@@ -148,6 +112,10 @@ type reaction struct {
 }
 
 func TestEndpointCreation(t *testing.T) {
+
+    // Reduce DNS flush timer to more appropriate time
+    updateWaitBeforeFlushTimer = 2
+
     testcases := map[string]struct {
         ClientObjects []runtime.Object
 
@@ -161,6 +129,7 @@ func TestEndpointCreation(t *testing.T) {
 
         AddedEndpoint   *latticev1.Endpoint
         UpdatedEndpoint *latticev1.Endpoint
+        UpdatedEndpointPrevious * latticev1.Endpoint
         DeletedEndpoint *latticev1.Endpoint
 
         ExpectedActions []core.Action
@@ -224,289 +193,7 @@ func TestEndpointCreation(t *testing.T) {
         //            }
         //        },
         //    }},
-        //
-        //    AddedServiceAccount: serviceAccount(emptySecretReferences()),
-        //    ExpectedActions: []core.Action{
-        //        // Attempt
-        //        core.NewGetAction(schema.GroupVersionResource{Version: "v1", Resource: "serviceaccounts"}, metav1.NamespaceDefault, "default"),
-        //        core.NewCreateAction(schema.GroupVersionResource{Version: "v1", Resource: "secrets"}, metav1.NamespaceDefault, createdTokenSecret()),
-        //        // Retry 1
-        //        core.NewGetAction(schema.GroupVersionResource{Version: "v1", Resource: "serviceaccounts"}, metav1.NamespaceDefault, "default"),
-        //        core.NewCreateAction(schema.GroupVersionResource{Version: "v1", Resource: "secrets"}, metav1.NamespaceDefault, namedCreatedTokenSecret("default-token-txhzt")),
-        //        // Retry 2
-        //        core.NewGetAction(schema.GroupVersionResource{Version: "v1", Resource: "serviceaccounts"}, metav1.NamespaceDefault, "default"),
-        //        core.NewCreateAction(schema.GroupVersionResource{Version: "v1", Resource: "secrets"}, metav1.NamespaceDefault, namedCreatedTokenSecret("default-token-vnmz7")),
-        //    },
-        //},
-        //"new serviceaccount with missing secrets": {
-        //    ClientObjects: []runtime.Object{serviceAccount(missingSecretReferences())},
-        //
-        //    AddedServiceAccount: serviceAccount(missingSecretReferences()),
-        //    ExpectedActions: []core.Action{
-        //        core.NewGetAction(schema.GroupVersionResource{Version: "v1", Resource: "serviceaccounts"}, metav1.NamespaceDefault, "default"),
-        //        core.NewCreateAction(schema.GroupVersionResource{Version: "v1", Resource: "secrets"}, metav1.NamespaceDefault, createdTokenSecret()),
-        //        core.NewUpdateAction(schema.GroupVersionResource{Version: "v1", Resource: "serviceaccounts"}, metav1.NamespaceDefault, serviceAccount(addTokenSecretReference(missingSecretReferences()))),
-        //    },
-        //},
-        //"new serviceaccount with missing secrets and a local secret in the cache": {
-        //    ClientObjects: []runtime.Object{serviceAccount(missingSecretReferences())},
-        //
-        //    AddedServiceAccount: serviceAccount(tokenSecretReferences()),
-        //    AddedSecretLocal:    serviceAccountTokenSecret(),
-        //    ExpectedActions:     []core.Action{},
-        //},
-        //"new serviceaccount with non-token secrets": {
-        //    ClientObjects: []runtime.Object{serviceAccount(regularSecretReferences()), opaqueSecret()},
-        //
-        //    AddedServiceAccount: serviceAccount(regularSecretReferences()),
-        //    ExpectedActions: []core.Action{
-        //        core.NewGetAction(schema.GroupVersionResource{Version: "v1", Resource: "serviceaccounts"}, metav1.NamespaceDefault, "default"),
-        //        core.NewCreateAction(schema.GroupVersionResource{Version: "v1", Resource: "secrets"}, metav1.NamespaceDefault, createdTokenSecret()),
-        //        core.NewUpdateAction(schema.GroupVersionResource{Version: "v1", Resource: "serviceaccounts"}, metav1.NamespaceDefault, serviceAccount(addTokenSecretReference(regularSecretReferences()))),
-        //    },
-        //},
-        //"new serviceaccount with token secrets": {
-        //    ClientObjects:   []runtime.Object{serviceAccount(tokenSecretReferences()), serviceAccountTokenSecret()},
-        //    ExistingSecrets: []*v1.Secret{serviceAccountTokenSecret()},
-        //
-        //    AddedServiceAccount: serviceAccount(tokenSecretReferences()),
-        //    ExpectedActions:     []core.Action{},
-        //},
-        //"new serviceaccount with no secrets with resource conflict": {
-        //    ClientObjects: []runtime.Object{updatedServiceAccount(emptySecretReferences()), createdTokenSecret()},
-        //    IsAsync:       true,
-        //    MaxRetries:    1,
-        //
-        //    AddedServiceAccount: serviceAccount(emptySecretReferences()),
-        //    ExpectedActions: []core.Action{
-        //        core.NewGetAction(schema.GroupVersionResource{Version: "v1", Resource: "serviceaccounts"}, metav1.NamespaceDefault, "default"),
-        //        core.NewGetAction(schema.GroupVersionResource{Version: "v1", Resource: "serviceaccounts"}, metav1.NamespaceDefault, "default"),
-        //    },
-        //},
-        //"updated serviceaccount with no secrets": {
-        //    ClientObjects: []runtime.Object{serviceAccount(emptySecretReferences())},
-        //
-        //    UpdatedServiceAccount: serviceAccount(emptySecretReferences()),
-        //    ExpectedActions: []core.Action{
-        //        core.NewGetAction(schema.GroupVersionResource{Version: "v1", Resource: "serviceaccounts"}, metav1.NamespaceDefault, "default"),
-        //        core.NewCreateAction(schema.GroupVersionResource{Version: "v1", Resource: "secrets"}, metav1.NamespaceDefault, createdTokenSecret()),
-        //        core.NewUpdateAction(schema.GroupVersionResource{Version: "v1", Resource: "serviceaccounts"}, metav1.NamespaceDefault, serviceAccount(addTokenSecretReference(emptySecretReferences()))),
-        //    },
-        //},
-        //"updated serviceaccount with missing secrets": {
-        //    ClientObjects: []runtime.Object{serviceAccount(missingSecretReferences())},
-        //
-        //    UpdatedServiceAccount: serviceAccount(missingSecretReferences()),
-        //    ExpectedActions: []core.Action{
-        //        core.NewGetAction(schema.GroupVersionResource{Version: "v1", Resource: "serviceaccounts"}, metav1.NamespaceDefault, "default"),
-        //        core.NewCreateAction(schema.GroupVersionResource{Version: "v1", Resource: "secrets"}, metav1.NamespaceDefault, createdTokenSecret()),
-        //        core.NewUpdateAction(schema.GroupVersionResource{Version: "v1", Resource: "serviceaccounts"}, metav1.NamespaceDefault, serviceAccount(addTokenSecretReference(missingSecretReferences()))),
-        //    },
-        //},
-        //"updated serviceaccount with non-token secrets": {
-        //    ClientObjects: []runtime.Object{serviceAccount(regularSecretReferences()), opaqueSecret()},
-        //
-        //    UpdatedServiceAccount: serviceAccount(regularSecretReferences()),
-        //    ExpectedActions: []core.Action{
-        //        core.NewGetAction(schema.GroupVersionResource{Version: "v1", Resource: "serviceaccounts"}, metav1.NamespaceDefault, "default"),
-        //        core.NewCreateAction(schema.GroupVersionResource{Version: "v1", Resource: "secrets"}, metav1.NamespaceDefault, createdTokenSecret()),
-        //        core.NewUpdateAction(schema.GroupVersionResource{Version: "v1", Resource: "serviceaccounts"}, metav1.NamespaceDefault, serviceAccount(addTokenSecretReference(regularSecretReferences()))),
-        //    },
-        //},
-        //"updated serviceaccount with token secrets": {
-        //    ExistingSecrets: []*v1.Secret{serviceAccountTokenSecret()},
-        //
-        //    UpdatedServiceAccount: serviceAccount(tokenSecretReferences()),
-        //    ExpectedActions:       []core.Action{},
-        //},
-        //"updated serviceaccount with no secrets with resource conflict": {
-        //    ClientObjects: []runtime.Object{updatedServiceAccount(emptySecretReferences())},
-        //    IsAsync:       true,
-        //    MaxRetries:    1,
-        //
-        //    UpdatedServiceAccount: serviceAccount(emptySecretReferences()),
-        //    ExpectedActions: []core.Action{
-        //        core.NewGetAction(schema.GroupVersionResource{Version: "v1", Resource: "serviceaccounts"}, metav1.NamespaceDefault, "default"),
-        //        core.NewGetAction(schema.GroupVersionResource{Version: "v1", Resource: "serviceaccounts"}, metav1.NamespaceDefault, "default"),
-        //    },
-        //},
-        //
-        //"deleted serviceaccount with no secrets": {
-        //    DeletedServiceAccount: serviceAccount(emptySecretReferences()),
-        //    ExpectedActions:       []core.Action{},
-        //},
-        //"deleted serviceaccount with missing secrets": {
-        //    DeletedServiceAccount: serviceAccount(missingSecretReferences()),
-        //    ExpectedActions:       []core.Action{},
-        //},
-        //"deleted serviceaccount with non-token secrets": {
-        //    ClientObjects: []runtime.Object{opaqueSecret()},
-        //
-        //    DeletedServiceAccount: serviceAccount(regularSecretReferences()),
-        //    ExpectedActions:       []core.Action{},
-        //},
-        //"deleted serviceaccount with token secrets": {
-        //    ClientObjects:   []runtime.Object{serviceAccountTokenSecret()},
-        //    ExistingSecrets: []*v1.Secret{serviceAccountTokenSecret()},
-        //
-        //    DeletedServiceAccount: serviceAccount(tokenSecretReferences()),
-        //    ExpectedActions: []core.Action{
-        //        core.NewDeleteAction(schema.GroupVersionResource{Version: "v1", Resource: "secrets"}, metav1.NamespaceDefault, "token-secret-1"),
-        //    },
-        //},
-        //
-        //"added secret without serviceaccount": {
-        //    ClientObjects: []runtime.Object{serviceAccountTokenSecret()},
-        //
-        //    AddedSecret: serviceAccountTokenSecret(),
-        //    ExpectedActions: []core.Action{
-        //        core.NewGetAction(schema.GroupVersionResource{Version: "v1", Resource: "serviceaccounts"}, metav1.NamespaceDefault, "default"),
-        //        core.NewDeleteAction(schema.GroupVersionResource{Version: "v1", Resource: "secrets"}, metav1.NamespaceDefault, "token-secret-1"),
-        //    },
-        //},
-        //"added secret with serviceaccount": {
-        //    ExistingServiceAccount: serviceAccount(tokenSecretReferences()),
-        //
-        //    AddedSecret:     serviceAccountTokenSecret(),
-        //    ExpectedActions: []core.Action{},
-        //},
-        //"added token secret without token data": {
-        //    ClientObjects:          []runtime.Object{serviceAccountTokenSecretWithoutTokenData()},
-        //    ExistingServiceAccount: serviceAccount(tokenSecretReferences()),
-        //
-        //    AddedSecret: serviceAccountTokenSecretWithoutTokenData(),
-        //    ExpectedActions: []core.Action{
-        //        core.NewGetAction(schema.GroupVersionResource{Version: "v1", Resource: "secrets"}, metav1.NamespaceDefault, "token-secret-1"),
-        //        core.NewUpdateAction(schema.GroupVersionResource{Version: "v1", Resource: "secrets"}, metav1.NamespaceDefault, serviceAccountTokenSecret()),
-        //    },
-        //},
-        //"added token secret without ca data": {
-        //    ClientObjects:          []runtime.Object{serviceAccountTokenSecretWithoutCAData()},
-        //    ExistingServiceAccount: serviceAccount(tokenSecretReferences()),
-        //
-        //    AddedSecret: serviceAccountTokenSecretWithoutCAData(),
-        //    ExpectedActions: []core.Action{
-        //        core.NewGetAction(schema.GroupVersionResource{Version: "v1", Resource: "secrets"}, metav1.NamespaceDefault, "token-secret-1"),
-        //        core.NewUpdateAction(schema.GroupVersionResource{Version: "v1", Resource: "secrets"}, metav1.NamespaceDefault, serviceAccountTokenSecret()),
-        //    },
-        //},
-        //"added token secret with mismatched ca data": {
-        //    ClientObjects:          []runtime.Object{serviceAccountTokenSecretWithCAData([]byte("mismatched"))},
-        //    ExistingServiceAccount: serviceAccount(tokenSecretReferences()),
-        //
-        //    AddedSecret: serviceAccountTokenSecretWithCAData([]byte("mismatched")),
-        //    ExpectedActions: []core.Action{
-        //        core.NewGetAction(schema.GroupVersionResource{Version: "v1", Resource: "secrets"}, metav1.NamespaceDefault, "token-secret-1"),
-        //        core.NewUpdateAction(schema.GroupVersionResource{Version: "v1", Resource: "secrets"}, metav1.NamespaceDefault, serviceAccountTokenSecret()),
-        //    },
-        //},
-        //"added token secret without namespace data": {
-        //    ClientObjects:          []runtime.Object{serviceAccountTokenSecretWithoutNamespaceData()},
-        //    ExistingServiceAccount: serviceAccount(tokenSecretReferences()),
-        //
-        //    AddedSecret: serviceAccountTokenSecretWithoutNamespaceData(),
-        //    ExpectedActions: []core.Action{
-        //        core.NewGetAction(schema.GroupVersionResource{Version: "v1", Resource: "secrets"}, metav1.NamespaceDefault, "token-secret-1"),
-        //        core.NewUpdateAction(schema.GroupVersionResource{Version: "v1", Resource: "secrets"}, metav1.NamespaceDefault, serviceAccountTokenSecret()),
-        //    },
-        //},
-        //"added token secret with custom namespace data": {
-        //    ClientObjects:          []runtime.Object{serviceAccountTokenSecretWithNamespaceData([]byte("custom"))},
-        //    ExistingServiceAccount: serviceAccount(tokenSecretReferences()),
-        //
-        //    AddedSecret:     serviceAccountTokenSecretWithNamespaceData([]byte("custom")),
-        //    ExpectedActions: []core.Action{
-        //        // no update is performed... the custom namespace is preserved
-        //    },
-        //},
-        //
-        //"updated secret without serviceaccount": {
-        //    ClientObjects: []runtime.Object{serviceAccountTokenSecret()},
-        //
-        //    UpdatedSecret: serviceAccountTokenSecret(),
-        //    ExpectedActions: []core.Action{
-        //        core.NewGetAction(schema.GroupVersionResource{Version: "v1", Resource: "serviceaccounts"}, metav1.NamespaceDefault, "default"),
-        //        core.NewDeleteAction(schema.GroupVersionResource{Version: "v1", Resource: "secrets"}, metav1.NamespaceDefault, "token-secret-1"),
-        //    },
-        //},
-        //"updated secret with serviceaccount": {
-        //    ExistingServiceAccount: serviceAccount(tokenSecretReferences()),
-        //
-        //    UpdatedSecret:   serviceAccountTokenSecret(),
-        //    ExpectedActions: []core.Action{},
-        //},
-        //"updated token secret without token data": {
-        //    ClientObjects:          []runtime.Object{serviceAccountTokenSecretWithoutTokenData()},
-        //    ExistingServiceAccount: serviceAccount(tokenSecretReferences()),
-        //
-        //    UpdatedSecret: serviceAccountTokenSecretWithoutTokenData(),
-        //    ExpectedActions: []core.Action{
-        //        core.NewGetAction(schema.GroupVersionResource{Version: "v1", Resource: "secrets"}, metav1.NamespaceDefault, "token-secret-1"),
-        //        core.NewUpdateAction(schema.GroupVersionResource{Version: "v1", Resource: "secrets"}, metav1.NamespaceDefault, serviceAccountTokenSecret()),
-        //    },
-        //},
-        //"updated token secret without ca data": {
-        //    ClientObjects:          []runtime.Object{serviceAccountTokenSecretWithoutCAData()},
-        //    ExistingServiceAccount: serviceAccount(tokenSecretReferences()),
-        //
-        //    UpdatedSecret: serviceAccountTokenSecretWithoutCAData(),
-        //    ExpectedActions: []core.Action{
-        //        core.NewGetAction(schema.GroupVersionResource{Version: "v1", Resource: "secrets"}, metav1.NamespaceDefault, "token-secret-1"),
-        //        core.NewUpdateAction(schema.GroupVersionResource{Version: "v1", Resource: "secrets"}, metav1.NamespaceDefault, serviceAccountTokenSecret()),
-        //    },
-        //},
-        //"updated token secret with mismatched ca data": {
-        //    ClientObjects:          []runtime.Object{serviceAccountTokenSecretWithCAData([]byte("mismatched"))},
-        //    ExistingServiceAccount: serviceAccount(tokenSecretReferences()),
-        //
-        //    UpdatedSecret: serviceAccountTokenSecretWithCAData([]byte("mismatched")),
-        //    ExpectedActions: []core.Action{
-        //        core.NewGetAction(schema.GroupVersionResource{Version: "v1", Resource: "secrets"}, metav1.NamespaceDefault, "token-secret-1"),
-        //        core.NewUpdateAction(schema.GroupVersionResource{Version: "v1", Resource: "secrets"}, metav1.NamespaceDefault, serviceAccountTokenSecret()),
-        //    },
-        //},
-        //"updated token secret without namespace data": {
-        //    ClientObjects:          []runtime.Object{serviceAccountTokenSecretWithoutNamespaceData()},
-        //    ExistingServiceAccount: serviceAccount(tokenSecretReferences()),
-        //
-        //    UpdatedSecret: serviceAccountTokenSecretWithoutNamespaceData(),
-        //    ExpectedActions: []core.Action{
-        //        core.NewGetAction(schema.GroupVersionResource{Version: "v1", Resource: "secrets"}, metav1.NamespaceDefault, "token-secret-1"),
-        //        core.NewUpdateAction(schema.GroupVersionResource{Version: "v1", Resource: "secrets"}, metav1.NamespaceDefault, serviceAccountTokenSecret()),
-        //    },
-        //},
-        //"updated token secret with custom namespace data": {
-        //    ClientObjects:          []runtime.Object{serviceAccountTokenSecretWithNamespaceData([]byte("custom"))},
-        //    ExistingServiceAccount: serviceAccount(tokenSecretReferences()),
-        //
-        //    UpdatedSecret:   serviceAccountTokenSecretWithNamespaceData([]byte("custom")),
-        //    ExpectedActions: []core.Action{
-        //        // no update is performed... the custom namespace is preserved
-        //    },
-        //},
-        //
-        //"deleted secret without serviceaccount": {
-        //    DeletedSecret:   serviceAccountTokenSecret(),
-        //    ExpectedActions: []core.Action{},
-        //},
-        //"deleted secret with serviceaccount with reference": {
-        //    ClientObjects:          []runtime.Object{serviceAccount(tokenSecretReferences())},
-        //    ExistingServiceAccount: serviceAccount(tokenSecretReferences()),
-        //
-        //    DeletedSecret: serviceAccountTokenSecret(),
-        //    ExpectedActions: []core.Action{
-        //        core.NewGetAction(schema.GroupVersionResource{Version: "v1", Resource: "serviceaccounts"}, metav1.NamespaceDefault, "default"),
-        //        core.NewUpdateAction(schema.GroupVersionResource{Version: "v1", Resource: "serviceaccounts"}, metav1.NamespaceDefault, serviceAccount(emptySecretReferences())),
-        //    },
-        //},
-        //"deleted secret with serviceaccount without reference": {
-        //    ExistingServiceAccount: serviceAccount(emptySecretReferences()),
-        //
-        //    DeletedSecret: serviceAccountTokenSecret(),
-        //    ExpectedActions: []core.Action{
-        //        core.NewGetAction(schema.GroupVersionResource{Version: "v1", Resource: "serviceaccounts"}, metav1.NamespaceDefault, "default"),
-        //    },
-        //},
+
     }
 
     for k, tc := range testcases {
@@ -515,10 +202,10 @@ func TestEndpointCreation(t *testing.T) {
         // Re-seed to reset name generation
         utilrand.Seed(1)
 
-        //generator := &testGenerator{Token: "ABC"}
-
-        // I thought it was this but we actually generate fake stuff
-        // client, _ := newLatticeFakeClient(nil, tc.ClientObjects)
+        // Write to different files on each iteration
+        pathSuffix := string(k)
+        controllerServerConfigPath := serverConfigPath + pathSuffix
+        controllerHostConfigPath := hostConfigPath + pathSuffix
 
         client := fakelattice.NewSimpleClientset(tc.ClientObjects...)
 
@@ -531,7 +218,7 @@ func TestEndpointCreation(t *testing.T) {
         endpointInformer := informers.Lattice().V1().Endpoints()
         endpoints := informers.Lattice().V1().Endpoints().Informer().GetStore()
 
-        controller := NewController(serverConfigPath, hostConfigPath, client, endpointInformer)
+        controller := NewController(controllerServerConfigPath, controllerHostConfigPath, client, endpointInformer)
 
         if tc.ExistingEndpoints != nil {
             for _, e := range tc.ExistingEndpoints.Items {
@@ -545,8 +232,7 @@ func TestEndpointCreation(t *testing.T) {
         }
         if tc.UpdatedEndpoint != nil {
             endpoints.Update(tc.UpdatedEndpoint)
-            //TODO :: Shouldnt always be nil, logic depends on old
-            controller.updateEndpoint(nil, tc.UpdatedEndpoint)
+            controller.updateEndpoint(tc.UpdatedEndpointPrevious, tc.UpdatedEndpoint)
         }
         if tc.DeletedEndpoint != nil {
             endpoints.Delete(tc.UpdatedEndpoint)
@@ -559,7 +245,6 @@ func TestEndpointCreation(t *testing.T) {
 
         for {
             if controller.queue.Len() > 0 {
-                // need to supply key
                 key, done := controller.queue.Get()
                 if done {
                     break
@@ -618,16 +303,16 @@ func TestEndpointCreation(t *testing.T) {
             }
         }
 
-        if (tc.ExpectedCnames != nil || tc.ExpectedHosts != nil) {
+        if tc.ExpectedCnames != nil || tc.ExpectedHosts != nil {
 
             err := controller.RewriteDnsmasqConfig()
 
-            if (err != nil) {
+            if err != nil {
                 t.Errorf("Error rewriting DNSConfig: %v", err)
             }
 
             if tc.ExpectedCnames != nil {
-                cnameFile, err := ioutil2.ReadFile(serverConfigPath)
+                cnameFile, err := ioutil2.ReadFile(controllerServerConfigPath)
 
                 if err != nil {
                     t.Errorf("Error reading cname file: %v", err)
@@ -642,7 +327,7 @@ func TestEndpointCreation(t *testing.T) {
             }
 
             if tc.ExpectedHosts != nil {
-                hostFile, err := ioutil2.ReadFile(hostConfigPath)
+                hostFile, err := ioutil2.ReadFile(controllerHostConfigPath)
 
                 if err != nil {
                     t.Errorf("Error reading host file: %v", err)

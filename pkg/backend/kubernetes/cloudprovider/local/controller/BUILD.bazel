@@ -33,6 +33,7 @@ go_test(
     embed = [":go_default_library"],
     importpath = "github.com/mlab-lattice/system/pkg/backend/kubernetes/cloudprovider/local/controller",
     deps = [
+        "//bazel-system/external/go_sdk/src/io/ioutil:go_default_library",
         "//pkg/backend/kubernetes/customresource/apis/lattice/v1:go_default_library",
         "//pkg/backend/kubernetes/customresource/generated/clientset/versioned/fake:go_default_library",
         "//pkg/backend/kubernetes/customresource/generated/informers/externalversions:go_default_library",
