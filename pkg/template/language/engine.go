@@ -167,13 +167,8 @@ func (engine *TemplateEngine) evalString(s string, env *Environment) (interface{
 		return nil, err
 	}
 
-	// quick hack to evaluate variable references
-	if strings.HasPrefix(s, "${") {
-		varName := strings.TrimSuffix(strings.TrimPrefix(s, "${"), "}")
-		return currentFrame.variables[varName], nil
-	}
-
-	return s, nil
+	// eval expression
+	return evalStringExpression(s, currentFrame.variables)
 }
 
 // includeFile includes the file and returns a map of values
