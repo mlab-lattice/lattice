@@ -92,9 +92,21 @@ func (r *Resolver) Fetch(ctx *Context) error {
 		return err
 	}
 
-	err = repository.Fetch(&git.FetchOptions{
+	fetchOptions := &git.FetchOptions{
 		RemoteName: remoteNameOrigin,
-	})
+	}
+	// If an SSH key was supplied, try to use it.
+	if ctx.SSHKey != nil {
+		signer, err := ssh.ParsePrivateKey([]byte(ctx.SSHKey))
+		if err != nil {
+			return err
+		}
+
+		auth := &gitssh.PublicKeys{User: gitUserGit, Signer: signer}
+		fetchOptions.Auth = auth
+	}
+
+	err = repository.Fetch(fetchOptions)
 
 	if err != nil && err != git.NoErrAlreadyUpToDate {
 		return err
