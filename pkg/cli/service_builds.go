@@ -4,22 +4,24 @@ import (
 	"github.com/mlab-lattice/system/pkg/types"
 )
 
-func getServiceBuildRenderMap(build *types.ServiceBuild) renderMap {
-	return renderMap{
-		"ID":    string(build.ID),
-		"State": string(build.State),
+var serviceBuildHeaders = []string{"ID", "State"}
+
+func getServiceBuildValues(build *types.ServiceBuild) []string {
+	return []string{
+		string(build.ID),
+		string(build.State),
 	}
 }
 
 func ShowServiceBuild(build *types.ServiceBuild, output OutputFormat) error {
 	switch output {
 	case OutputFormatTable:
-		rm := getServiceBuildRenderMap(build)
-		showResource(rm)
+		values := getServiceBuildValues(build)
+		ShowResource(serviceBuildHeaders, values)
 	case OutputFormatJSON:
 		DisplayAsJSON(build)
 	default:
-		return newOutputFormatError(output)
+		return NewOutputFormatError(output)
 	}
 	return nil
 }
@@ -27,15 +29,15 @@ func ShowServiceBuild(build *types.ServiceBuild, output OutputFormat) error {
 func ShowServiceBuilds(builds []types.ServiceBuild, output OutputFormat) error {
 	switch output {
 	case OutputFormatTable:
-		renderMaps := make([]renderMap, len(builds))
+		values := make([][]string, len(builds))
 		for i, b := range builds {
-			renderMaps[i] = getServiceBuildRenderMap(&b)
+			values[i] = getServiceBuildValues(&b)
 		}
-		listResources(renderMaps)
+		ListResources(serviceBuildHeaders, values)
 	case OutputFormatJSON:
 		DisplayAsJSON(builds)
 	default:
-		return newOutputFormatError(output)
+		return NewOutputFormatError(output)
 	}
 	return nil
 }
