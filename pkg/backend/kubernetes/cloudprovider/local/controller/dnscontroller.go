@@ -15,6 +15,7 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
 
+	// metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -82,12 +83,13 @@ func NewController(
 }
 
 func (c *Controller) enqueue(endp *crv1.Endpoint) {
+	glog.V(5).Infof("ENQUEUING!!!")
 	key, err := cache.DeletionHandlingMetaNamespaceKeyFunc(endp)
+
 	if err != nil {
 		runtime.HandleError(fmt.Errorf("couldn't get key for object %#v: %v", endp, err))
 		return
 	}
-
 	c.queue.Add(key)
 }
 
@@ -98,6 +100,8 @@ func (c *Controller) addEndpoint(obj interface{}) {
 	if endpoint.DeletionTimestamp != nil {
 		// On a restart of the controller manager, it's possible for an object to
 		// show up in a state that is already pending deletion.
+
+		glog.V(5).Infof("Endpoint %v deletion timestamp not null", endpoint.Name)
 		c.deleteEndpoint(endpoint)
 		return
 	}
@@ -133,7 +137,7 @@ func (c *Controller) deleteEndpoint(obj interface{}) {
 		}
 		endpoint, ok = tombstone.Obj.(*crv1.Endpoint)
 		if !ok {
-			runtime.HandleError(fmt.Errorf("tombstone contained object that is not a Service %#v", obj))
+			runtime.HandleError(fmt.Errorf("tombstone contained object that is not an Endpoint %#v", obj))
 			return
 		}
 	}
@@ -222,11 +226,16 @@ func (c *Controller) SyncEndpointUpdate(key string) error {
 	}()
 
 	namespace, name, err := cache.SplitMetaNamespaceKey(key)
+
 	if err != nil {
 		return err
 	}
 
+	// Cache lookup
 	endpoint, err := c.addressLister.Endpoints(namespace).Get(name)
+
+	// Live lookup
+	// endpoint, err = c.latticeClient.LatticeV1().Endpoints(namespace).Get(name, metav1.GetOptions{})
 
 	if errors.IsNotFound(err) {
 		glog.V(2).Infof("Endpoint %v has been deleted", key)
@@ -255,14 +264,16 @@ func (c *Controller) SyncEndpointUpdate(key string) error {
 		go time.AfterFunc(time.Second*time.Duration(updateWaitBeforeFlushTimer), c.FlushRewriteDNS)
 	}
 
-	glog.V(5).Infof("updating map")
 	endpointPathURL := endpoint.Spec.Path.ToDomain(true)
+	glog.V(5).Infof("URL::::%v", endpointPathURL)
 
 	endpoint = endpoint.DeepCopy()
 
 	_, present := c.recentlyFlushed[endpointPathURL]
 
 	if present {
+		glog.V(5).Infof("Endpoint %v already updated. Setting state to created...", key)
+
 		delete(c.recentlyFlushed, endpointPathURL)
 
 		endpoint.Status.State = crv1.EndpointStateCreated
@@ -274,10 +285,12 @@ func (c *Controller) SyncEndpointUpdate(key string) error {
 	}
 
 	if endpoint.Spec.ExternalEndpoint != nil {
+		glog.V(5).Infof("Updating endpoint...")
 		c.cnameList[endpointPathURL] = *endpoint
 	}
 
 	if endpoint.Spec.IP != nil {
+		glog.V(5).Infof("Updating ip...")
 		c.hostLists[endpointPathURL] = *endpoint
 	}
 
@@ -314,10 +327,21 @@ func (c *Controller) RewriteDnsmasqConfig() error {
 	glog.V(4).Infof("Rewriting config %v, %v... ", c.hostConfigPath, c.serverConfigPath)
 
 	cname_file, err := CreateEmptyFile(c.serverConfigPath)
+
+	if err != nil {
+		return err
+	}
+
 	hosts_file, err := CreateEmptyFile(c.hostConfigPath)
+
+	if err != nil {
+		return err
+	}
 
 	defer func() {
 		glog.V(4).Infof("Closing config file...")
+		cname_file.Sync()
+		hosts_file.Sync()
 		cname_file.Close()
 		hosts_file.Close()
 
@@ -325,10 +349,6 @@ func (c *Controller) RewriteDnsmasqConfig() error {
 		c.hasRecentlyUpdated = false
 		c.sharedVarsLock.Unlock()
 	}()
-
-	if err != nil {
-		return err
-	}
 
 	// This is an extra config file, so contains only the options which must be rewritten.
 	// Condition on cname is that it exists in the specified host file, or references another cname.

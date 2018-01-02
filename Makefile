@@ -25,7 +25,7 @@ test: gazelle
 
 .PHONY: test-output
 test-output: gazelle
-	@bazel test --test_output=errors --test_env -v  //...
+	@bazel test --test_output=all --test_env -v  //...
 
 .PHONY: gazelle
 gazelle:

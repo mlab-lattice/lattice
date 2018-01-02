@@ -1,6 +1,7 @@
 package dnscontroller
 
 import (
+    //"errors"
     "reflect"
     "testing"
     "time"
@@ -19,22 +20,22 @@ import (
     latticev1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 
     //"k8s.io/api/core/v1"
-   // apierrors "k8s.io/apimachinery/pkg/api/errors"
+    //apierrors "k8s.io/apimachinery/pkg/api/errors"
     metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
     "k8s.io/apimachinery/pkg/runtime"
-    //"k8s.io/apimachinery/pkg/runtime/schema"
+    "k8s.io/apimachinery/pkg/runtime/schema"
     //"k8s.io/client-go/tools/cache"
   //  "k8s.io/client-go/informers"
     ///"k8s.io/client-go/kubernetes/fake"
     core "k8s.io/client-go/testing"
     //api "k8s.io/kubernetes/pkg/apis/core"
-    //"k8s.io/kubernetes/pkg/controller"
     "github.com/mlab-lattice/system/pkg/definition/tree"
 )
 
 const(
     serverConfigPath = "./server_config"
     hostConfigPath = "./host_config"
+    defaultNamespace = metav1.NamespaceDefault
 )
 
 type hostEntry struct {
@@ -46,13 +47,13 @@ type hostEntry struct {
 func HostFileOutput(hosts []hostEntry) string {
     /*
         Expected format:
-            name ip
+            ip name0 name1 ..
             ...
      */
      str := ""
 
      for _, v := range hosts {
-         newLine := v.host + " " + v.ip + "\n"
+         newLine := v.ip + " " + v.host + "\n"
          str = str + newLine
      }
 
@@ -64,6 +65,7 @@ type cnameEntry struct {
     alias string
 }
 
+// CnameFileOutput returns the expected file output that the server configuration file should contain.
 func CnameFileOutput(nameservers []cnameEntry) string {
     /*
         Expected format:
@@ -79,6 +81,7 @@ func CnameFileOutput(nameservers []cnameEntry) string {
     return str
 }
 
+// EndpointList creates an EndpointList schema from a list of endpoints.
 func EndpointList(endpoint ...latticev1.Endpoint) *latticev1.EndpointList {
     var el = latticev1.EndpointList{
 
@@ -91,16 +94,18 @@ func EndpointList(endpoint ...latticev1.Endpoint) *latticev1.EndpointList {
     return &el
 }
 
+// Endpoint creates an Endpoint schema with the specified parameters.
 func Endpoint(ip string, endpoint string, path tree.NodePath) *latticev1.Endpoint {
-    return  &latticev1.Endpoint{
+    ec :=  &latticev1.Endpoint{
         ObjectMeta: metav1.ObjectMeta{
-            Name:            "default",
+            // Our tests shouldn't be concerned about unique naming - let this be provided for us
+            Name:            path.ToDomain(true),
             UID:             "12345",
-            Namespace:       "default",
+            Namespace:       defaultNamespace,
             ResourceVersion: "1",
         },
         Status: latticev1.EndpointStatus{
-            State: latticev1.EndpointStateCreated,
+            State: latticev1.EndpointStatePending,
         },
         Spec:latticev1.EndpointSpec{
             IP: &ip,
@@ -108,8 +113,36 @@ func Endpoint(ip string, endpoint string, path tree.NodePath) *latticev1.Endpoin
             Path: path,
         },
     }
+
+    // Unset some fields instead of using the empty string
+    if ip == "" {
+        ec.Spec.IP = nil
+    }
+
+    if endpoint == "" {
+        ec.Spec.ExternalEndpoint = nil
+    }
+
+    return ec
 }
 
+func AlterResourceVersion(ep *latticev1.Endpoint, res_ver string) *latticev1.Endpoint {
+    ep.ResourceVersion = res_ver
+
+    return ep
+}
+
+// MarkEndpointCreated alters the state of an Endpoint to 'Created'
+func MarkEndpointCreated(endpoint *latticev1.Endpoint) *latticev1.Endpoint {
+    e := endpoint
+    e.Status = latticev1.EndpointStatus{
+        State:latticev1.EndpointStateCreated,
+    }
+
+    return e
+}
+
+// MakeNdoePathPanic tries to create a NodePath from the url string, and panics is it is unable to.
 func MakeNodePathPanic(pathString string) tree.NodePath {
     np, err := tree.NewNodePath(pathString)
 
@@ -126,6 +159,7 @@ type reaction struct {
     reactor  func(t *testing.T) core.ReactionFunc
 }
 
+// TestEndpointCreation tests the default resource CRUD and output of Endpoint controller operations
 func TestEndpointCreation(t *testing.T) {
     flag.Set("alsologtostderr", fmt.Sprintf("%t", true))
     var logLevel string
@@ -148,22 +182,78 @@ func TestEndpointCreation(t *testing.T) {
 
         AddedEndpoints   *latticev1.EndpointList
         UpdatedEndpoint *latticev1.Endpoint
-        UpdatedEndpointPrevious * latticev1.Endpoint
+        UpdatedEndpointPrevious *latticev1.Endpoint
         DeletedEndpoint *latticev1.Endpoint
 
         ExpectedActions []core.Action
         ExpectedHosts []hostEntry
         ExpectedCnames []cnameEntry
     }{
-        "new endpoint created triggers DNS flush": {
-            ClientObjects: []runtime.Object{},
+        //"new endpoint with ip is written to host file": {
+        //    AddedEndpoints: EndpointList(
+        //        *Endpoint("1", "", MakeNodePathPanic("/nodepath"))),
+        //    ExpectedHosts: []hostEntry{
+        //        {
+        //            ip: "1",
+        //            host: "nodepath",
+        //        },
+        //    },
+        //},
+        //"new endpoint with name is written as cname file": {
+        //    AddedEndpoints: EndpointList(
+        //        *Endpoint("", "my_cname", MakeNodePathPanic("/nodepath"))),
+        //    ExpectedCnames: []cnameEntry{
+        //        {
+        //            alias: "my_cname",
+        //            original: "nodepath",
+        //        },
+        //    },
+        //},
+        //// TODO :: This could probably be moved to a nodepath test but there arent any right now
+        //"endpoints write url correctly": {
+        //    AddedEndpoints: EndpointList(
+        //        *Endpoint("", "my_cname", MakeNodePathPanic("/root/nested/nested_some_more")),
+        //        *Endpoint("1", "", MakeNodePathPanic("/root/nested/nested_again_but_different")),
+        //        ),
+        //    ExpectedCnames: []cnameEntry{
+        //        {
+        //            alias: "my_cname",
+        //            original: "nested_some_more.nested.root",
+        //        },
+        //    },
+        //    ExpectedHosts: []hostEntry{
+        //        {
+        //            ip: "1",
+        //            host: "nested_again_but_different.nested.root",
+        //        },
+        //    },
+        //},
+        //"new endpoint with existing deletion timestamp immediately added as tombstone": {
+        //    AddedEndpoints: EndpointList(
+        //        *Endpoint("", "my_cname", MakeNodePathPanic("/nodepath"))),
+        //},
+        "normal endpoint update changes the underlying endpoint": {
             AddedEndpoints: EndpointList(
-                *Endpoint("1", "", MakeNodePathPanic("/nodepath"))),
-            ExpectedHosts: []hostEntry{
-                {
-                    ip: "1",
-                    host: "nodepath",
-                },
+                *Endpoint("", "my_cname", MakeNodePathPanic("/nodepath")),
+            ),
+            UpdatedEndpointPrevious:
+                Endpoint("", "my_cname", MakeNodePathPanic("/nodepath")),
+            UpdatedEndpoint:
+                AlterResourceVersion(Endpoint("", "my_new_cname", MakeNodePathPanic("/nodepath_ver2")), "2"),
+            ExpectedActions: []core.Action{
+                core.NewUpdateAction(schema.GroupVersionResource{Version: "v1", Resource: "endpoints"}, metav1.NamespaceDefault, Endpoint("", "my_new_cname", MakeNodePathPanic("/nodepath_ver2"))),
+            },
+        },
+        "endpoint update with same resource version does not change": {
+            AddedEndpoints: EndpointList(
+                *Endpoint("", "my_cname", MakeNodePathPanic("/nodepath")),
+            ),
+            UpdatedEndpointPrevious:
+            Endpoint("", "my_cname", MakeNodePathPanic("/nodepath")),
+            UpdatedEndpoint:
+            Endpoint("", "my_new_cname", MakeNodePathPanic("/nodepath_ver2")),
+            ExpectedActions: []core.Action{
+                core.NewUpdateAction(schema.GroupVersionResource{Version: "v1", Resource: "endpoints"}, metav1.NamespaceDefault, Endpoint("", "my_cname", MakeNodePathPanic("/nodepath"))),
             },
         },
         //"new serviceaccount with no secrets encountering create error": {
@@ -234,8 +324,7 @@ func TestEndpointCreation(t *testing.T) {
             client.Fake.PrependReactor(reactor.verb, reactor.resource, reactor.reactor(t))
         }
 
-        // Using controller noresyncfunc creates an include error
-        informers := latticeinformers.NewSharedInformerFactory(client, time.Hour)
+        informers := latticeinformers.NewSharedInformerFactory(client, 0)
         endpointInformer := informers.Lattice().V1().Endpoints()
         endpoints := informers.Lattice().V1().Endpoints().Informer().GetStore()
 
@@ -243,18 +332,30 @@ func TestEndpointCreation(t *testing.T) {
 
         if tc.ExistingEndpoints != nil {
             for _, e := range tc.ExistingEndpoints.Items {
-                endpoints.Add(&e)
+                s := e.DeepCopy()
+                err := endpoints.Add(s)
+
+                if err != nil {
+                    t.Fatal(err)
+                }
             }
         }
 
         if tc.AddedEndpoints != nil {
             for _, v := range tc.AddedEndpoints.Items {
-                endpoints.Add(&v)
-                controller.addEndpoint(&v)
+                s := v.DeepCopy()
+                err := endpoints.Add(s)
+                controller.addEndpoint(s)
+
+                if err != nil {
+                    t.Fatal(err)
+                }
             }
         }
+
         if tc.UpdatedEndpoint != nil {
             endpoints.Update(tc.UpdatedEndpoint)
+             // TODO :: Does there need to be these fn calls
             controller.updateEndpoint(tc.UpdatedEndpointPrevious, tc.UpdatedEndpoint)
         }
         if tc.DeletedEndpoint != nil {
@@ -305,28 +406,7 @@ func TestEndpointCreation(t *testing.T) {
             t.Errorf("%s: unexpected items in endpoint queue: %d", k, controller.queue.Len())
         }
 
-        actions := client.Actions()
-        for i, action := range actions {
-            if len(tc.ExpectedActions) < i+1 {
-                t.Errorf("%s: %d unexpected actions: %+v", k, len(actions)-len(tc.ExpectedActions), actions[i:])
-                break
-            }
-
-            expectedAction := tc.ExpectedActions[i]
-            if !reflect.DeepEqual(expectedAction, action) {
-                t.Errorf("%s:\nExpected:\n%s\ngot:\n%s", k, spew.Sdump(expectedAction), spew.Sdump(action))
-                continue
-            }
-        }
-
-        if len(tc.ExpectedActions) > len(actions) {
-            t.Errorf("%s: %d additional expected actions", k, len(tc.ExpectedActions)-len(actions))
-            for _, a := range tc.ExpectedActions[len(actions):] {
-                t.Logf("    %+v", a)
-            }
-        }
-
-        if tc.ExpectedCnames != nil || tc.ExpectedHosts != nil {
+        if tc.ExpectedCnames != nil || tc.ExpectedHosts != nil || tc.ExpectedActions != nil {
 
             err := controller.RewriteDnsmasqConfig()
 
@@ -365,6 +445,95 @@ func TestEndpointCreation(t *testing.T) {
                     t.Errorf("%s:\nExpected:\n%s\ngot:\n%s", k, spew.Sdump(hostExpectedStr), spew.Sdump(hostStr))
                 }
             }
+        } else {
+            return
+        }
+
+        //// Test actions after flushing the dns file. This is because updates are synchronised to the client after the DNS writes.
+        //if tc.ExpectedActions == nil {
+        //    return
+        //}
+
+        //// TODO :: Could wait until caches are synced here. doesnt work rn
+        //stopCh := make(chan struct{})
+        //
+        //informers.WaitForCacheSync(stopCh)
+        //
+        //synced := controller.addressListerSynced()
+        //
+        //t.Logf("Caches synced... %v", synced)
+
+        t.Logf("After flush, %v items in queue:", controller.queue.Len() )
+        //
+        //for k, v := range controller.recentlyFlushed {
+        //    t.Logf("K: %v, V: %v", k, v)
+        //}
+
+        for {
+            if controller.queue.Len() > 0 {
+                key, done := controller.queue.Get()
+                if done {
+                    break
+                }
+
+                controller.syncEndpointUpdate(key.(string))
+            }
+
+            // The queues still have things to work on
+            if controller.queue.Len() > 0 {
+                continue
+            }
+
+            // If we expect this test to work asynchronously...
+            if tc.IsAsync {
+                // if we're still missing expected actions within our test timeout
+                if len(client.Actions()) < len(tc.ExpectedActions) && time.Now().Before(timeout) {
+                    // wait for the expected actions (without hotlooping)
+                    time.Sleep(time.Millisecond)
+                    continue
+                }
+
+                // if we exactly match our expected actions, wait a bit to make sure no other additional actions show up
+                if len(client.Actions()) == len(tc.ExpectedActions) && !waitedForAdditionalActions {
+                    time.Sleep(time.Second)
+                    waitedForAdditionalActions = true
+                    continue
+                }
+            }
+
+            break
+        }
+
+        t.Logf("EXPECTED ACTIONS: %v", len(tc.ExpectedActions))
+        t.Logf("GOT ACTIONS: %v", len(client.Actions()))
+
+        glog.V(5).Infof("EXPECTED ACTIONS: %v", len(tc.ExpectedActions))
+        glog.V(5).Infof("GOT ACTIONS: %v", len(client.Actions()))
+
+        actions := client.Actions()
+        for i, action := range actions {
+            if len(tc.ExpectedActions) < i+1 {
+                t.Errorf("%s: %d unexpected actions: %+v", k, len(actions)-len(tc.ExpectedActions), actions[i:])
+                break
+            }
+
+            expectedAction := tc.ExpectedActions[i]
+            if !reflect.DeepEqual(expectedAction, action) {
+                t.Errorf("%s:\nExpected:\n%s\ngot:\n%s", k, spew.Sdump(expectedAction), spew.Sdump(action))
+                continue
+            }
+        }
+
+        if len(tc.ExpectedActions) > len(actions) {
+            t.Errorf("%s: %d additional expected actions", k, len(tc.ExpectedActions)-len(actions))
+            for _, a := range tc.ExpectedActions[len(actions):] {
+                t.Logf("    %+v", a)
+            }
         }
     }
+}
+
+// TestLockBehavior tests the locking behavior of the dns endpoint controller
+func TestLockBehavior(t *testing.T) {
+
 }
