@@ -65,7 +65,7 @@ func NewController(
 	c.hostConfigPath = hostConfigPath
 
 	c.syncEndpointUpdate = c.SyncEndpointUpdate
-	c.enqueueEndpointUpdate = c.enqueue
+	c.enqueueEndpointUpdate = c.EnqueueEndpointUpdate
 
 	endpointInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    c.addEndpoint,
@@ -82,15 +82,18 @@ func NewController(
 	return c
 }
 
-func (c *Controller) enqueue(endp *crv1.Endpoint) {
-	glog.V(5).Infof("ENQUEUING!!!")
+func (c *Controller) EnqueueEndpointUpdate(endp *crv1.Endpoint) {
+	glog.V(5).Infof("enqueueing")
 	key, err := cache.DeletionHandlingMetaNamespaceKeyFunc(endp)
 
 	if err != nil {
 		runtime.HandleError(fmt.Errorf("couldn't get key for object %#v: %v", endp, err))
 		return
 	}
+
+	glog.V(5).Infof("q length before %v %v", c.queue.Len(), key)
 	c.queue.Add(key)
+	glog.V(5).Infof("q length after %v %v", c.queue.Len(), key)
 }
 
 func (c *Controller) addEndpoint(obj interface{}) {
@@ -388,14 +391,14 @@ func (c *Controller) RewriteDnsmasqConfig() error {
 		key := v.Spec.Path.ToDomain(true)
 		c.recentlyFlushed[key] = v
 
-		c.enqueue(&v)
+		c.EnqueueEndpointUpdate(&v)
 	}
 
 	for _, v := range c.hostLists {
 		key := v.Spec.Path.ToDomain(true)
 		c.recentlyFlushed[key] = v
 
-		c.enqueue(&v)
+		c.EnqueueEndpointUpdate(&v)
 	}
 
 	return nil

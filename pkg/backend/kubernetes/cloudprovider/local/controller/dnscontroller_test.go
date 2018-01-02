@@ -132,6 +132,12 @@ func AlterResourceVersion(ep *latticev1.Endpoint, res_ver string) *latticev1.End
     return ep
 }
 
+func AlterEndpointState(ep *latticev1.Endpoint, newState latticev1.EndpointState) *latticev1.Endpoint {
+    ep.Status = latticev1.EndpointStatus{ newState }
+
+    return ep
+}
+
 // MarkEndpointCreated alters the state of an Endpoint to 'Created'
 func MarkEndpointCreated(endpoint *latticev1.Endpoint) *latticev1.Endpoint {
     e := endpoint
@@ -159,6 +165,27 @@ type reaction struct {
     reactor  func(t *testing.T) core.ReactionFunc
 }
 
+type test_case struct {
+    ClientObjects []runtime.Object
+
+    IsAsync    bool
+    MaxRetries int
+
+    // Reactor determines how the controller responds to certain verb actions with a resource.
+    Reactors []reaction
+
+    ExistingEndpoints *latticev1.EndpointList
+
+    AddedEndpoints   *latticev1.EndpointList
+    UpdatedEndpoint *latticev1.Endpoint
+    UpdatedEndpointPrevious *latticev1.Endpoint
+    DeletedEndpoint *latticev1.Endpoint
+
+    ExpectedActions []core.Action
+    ExpectedHosts []hostEntry
+    ExpectedCnames []cnameEntry
+}
+
 // TestEndpointCreation tests the default resource CRUD and output of Endpoint controller operations
 func TestEndpointCreation(t *testing.T) {
     flag.Set("alsologtostderr", fmt.Sprintf("%t", true))
@@ -169,69 +196,50 @@ func TestEndpointCreation(t *testing.T) {
     // Reduce DNS flush timer to more appropriate time
     updateWaitBeforeFlushTimer = 2
 
-    testcases := map[string]struct {
-        ClientObjects []runtime.Object
-
-        IsAsync    bool
-        MaxRetries int
-
-        // Reactor determines how the controller responds to certain verb actions with a resource.
-        Reactors []reaction
-
-        ExistingEndpoints *latticev1.EndpointList
-
-        AddedEndpoints   *latticev1.EndpointList
-        UpdatedEndpoint *latticev1.Endpoint
-        UpdatedEndpointPrevious *latticev1.Endpoint
-        DeletedEndpoint *latticev1.Endpoint
-
-        ExpectedActions []core.Action
-        ExpectedHosts []hostEntry
-        ExpectedCnames []cnameEntry
-    }{
-        //"new endpoint with ip is written to host file": {
-        //    AddedEndpoints: EndpointList(
-        //        *Endpoint("1", "", MakeNodePathPanic("/nodepath"))),
-        //    ExpectedHosts: []hostEntry{
-        //        {
-        //            ip: "1",
-        //            host: "nodepath",
-        //        },
-        //    },
-        //},
-        //"new endpoint with name is written as cname file": {
-        //    AddedEndpoints: EndpointList(
-        //        *Endpoint("", "my_cname", MakeNodePathPanic("/nodepath"))),
-        //    ExpectedCnames: []cnameEntry{
-        //        {
-        //            alias: "my_cname",
-        //            original: "nodepath",
-        //        },
-        //    },
-        //},
-        //// TODO :: This could probably be moved to a nodepath test but there arent any right now
-        //"endpoints write url correctly": {
-        //    AddedEndpoints: EndpointList(
-        //        *Endpoint("", "my_cname", MakeNodePathPanic("/root/nested/nested_some_more")),
-        //        *Endpoint("1", "", MakeNodePathPanic("/root/nested/nested_again_but_different")),
-        //        ),
-        //    ExpectedCnames: []cnameEntry{
-        //        {
-        //            alias: "my_cname",
-        //            original: "nested_some_more.nested.root",
-        //        },
-        //    },
-        //    ExpectedHosts: []hostEntry{
-        //        {
-        //            ip: "1",
-        //            host: "nested_again_but_different.nested.root",
-        //        },
-        //    },
-        //},
-        //"new endpoint with existing deletion timestamp immediately added as tombstone": {
-        //    AddedEndpoints: EndpointList(
-        //        *Endpoint("", "my_cname", MakeNodePathPanic("/nodepath"))),
-        //},
+    testcases := map[string]test_case {
+        "new endpoint with ip is written to host file": {
+            AddedEndpoints: EndpointList(
+                *Endpoint("1", "", MakeNodePathPanic("/nodepath"))),
+            ExpectedHosts: []hostEntry{
+                {
+                    ip: "1",
+                    host: "nodepath",
+                },
+            },
+        },
+        "new endpoint with name is written as cname file": {
+            AddedEndpoints: EndpointList(
+                *Endpoint("", "my_cname", MakeNodePathPanic("/nodepath"))),
+            ExpectedCnames: []cnameEntry{
+                {
+                    alias: "my_cname",
+                    original: "nodepath",
+                },
+            },
+        },
+        // TODO :: This could probably be moved to a nodepath test but there arent any right now
+        "endpoints write url correctly": {
+            AddedEndpoints: EndpointList(
+                *Endpoint("", "my_cname", MakeNodePathPanic("/root/nested/nested_some_more")),
+                *Endpoint("1", "", MakeNodePathPanic("/root/nested/nested_again_but_different")),
+                ),
+            ExpectedCnames: []cnameEntry{
+                {
+                    alias: "my_cname",
+                    original: "nested_some_more.nested.root",
+                },
+            },
+            ExpectedHosts: []hostEntry{
+                {
+                    ip: "1",
+                    host: "nested_again_but_different.nested.root",
+                },
+            },
+        },
+        "new endpoint with existing deletion timestamp immediately added as tombstone": {
+            AddedEndpoints: EndpointList(
+                *Endpoint("", "my_cname", MakeNodePathPanic("/nodepath"))),
+        },
         "normal endpoint update changes the underlying endpoint": {
             AddedEndpoints: EndpointList(
                 *Endpoint("", "my_cname", MakeNodePathPanic("/nodepath")),
@@ -241,7 +249,10 @@ func TestEndpointCreation(t *testing.T) {
             UpdatedEndpoint:
                 AlterResourceVersion(Endpoint("", "my_new_cname", MakeNodePathPanic("/nodepath_ver2")), "2"),
             ExpectedActions: []core.Action{
-                core.NewUpdateAction(schema.GroupVersionResource{Version: "v1", Resource: "endpoints"}, metav1.NamespaceDefault, Endpoint("", "my_new_cname", MakeNodePathPanic("/nodepath_ver2"))),
+                core.NewUpdateAction(schema.GroupVersionResource{Version: "v1", Resource: "endpoints"}, metav1.NamespaceDefault,
+                    AlterEndpointState(
+                        AlterResourceVersion(
+                            Endpoint("", "my_new_cname", MakeNodePathPanic("/nodepath_ver2")), "2"), latticev1.EndpointStateCreated)),
             },
         },
         "endpoint update with same resource version does not change": {
@@ -253,6 +264,7 @@ func TestEndpointCreation(t *testing.T) {
             UpdatedEndpoint:
             Endpoint("", "my_new_cname", MakeNodePathPanic("/nodepath_ver2")),
             ExpectedActions: []core.Action{
+                // TODO :: Doesn't reach this state - no actions executed.
                 core.NewUpdateAction(schema.GroupVersionResource{Version: "v1", Resource: "endpoints"}, metav1.NamespaceDefault, Endpoint("", "my_cname", MakeNodePathPanic("/nodepath"))),
             },
         },
@@ -364,43 +376,16 @@ func TestEndpointCreation(t *testing.T) {
         }
 
         // This is the longest we'll wait for async tests
-        timeout := time.Now().Add(30 * time.Second)
-        waitedForAdditionalActions := false
+        //timeout := time.Now().Add(30 * time.Second)
+        //waitedForAdditionalActions := false
 
-        for {
-            if controller.queue.Len() > 0 {
-                key, done := controller.queue.Get()
-                if done {
-                    break
-                }
+        t.Logf("Before flush, %v items in queue:", controller.queue.Len() )
 
-                controller.syncEndpointUpdate(key.(string))
-            }
+        stop := make(chan int)
 
-            // The queues still have things to work on
-            if controller.queue.Len() > 0 {
-                continue
-            }
+        t.Logf("After flush, %v items in queue:", controller.queue.Len())
 
-            // If we expect this test to work asynchronously...
-            if tc.IsAsync {
-                // if we're still missing expected actions within our test timeout
-                if len(client.Actions()) < len(tc.ExpectedActions) && time.Now().Before(timeout) {
-                    // wait for the expected actions (without hotlooping)
-                    time.Sleep(time.Millisecond)
-                    continue
-                }
-
-                // if we exactly match our expected actions, wait a bit to make sure no other additional actions show up
-                if len(client.Actions()) == len(tc.ExpectedActions) && !waitedForAdditionalActions {
-                    time.Sleep(time.Second)
-                    waitedForAdditionalActions = true
-                    continue
-                }
-            }
-
-            break
-        }
+        ProcessControllerQueue(t, tc, client, controller, stop)
 
         if controller.queue.Len() > 0 {
             t.Errorf("%s: unexpected items in endpoint queue: %d", k, controller.queue.Len())
@@ -445,64 +430,17 @@ func TestEndpointCreation(t *testing.T) {
                     t.Errorf("%s:\nExpected:\n%s\ngot:\n%s", k, spew.Sdump(hostExpectedStr), spew.Sdump(hostStr))
                 }
             }
-        } else {
+        }
+
+        // Test actions after flushing the dns file. This is because updates are synchronised to the client after the DNS writes.
+        if tc.ExpectedActions == nil {
             return
         }
 
-        //// Test actions after flushing the dns file. This is because updates are synchronised to the client after the DNS writes.
-        //if tc.ExpectedActions == nil {
-        //    return
-        //}
+        stopCh := make(chan int)
 
-        //// TODO :: Could wait until caches are synced here. doesnt work rn
-        //stopCh := make(chan struct{})
-        //
-        //informers.WaitForCacheSync(stopCh)
-        //
-        //synced := controller.addressListerSynced()
-        //
-        //t.Logf("Caches synced... %v", synced)
+        ProcessControllerQueue(t, tc, client, controller, stopCh)
 
-        t.Logf("After flush, %v items in queue:", controller.queue.Len() )
-        //
-        //for k, v := range controller.recentlyFlushed {
-        //    t.Logf("K: %v, V: %v", k, v)
-        //}
-
-        for {
-            if controller.queue.Len() > 0 {
-                key, done := controller.queue.Get()
-                if done {
-                    break
-                }
-
-                controller.syncEndpointUpdate(key.(string))
-            }
-
-            // The queues still have things to work on
-            if controller.queue.Len() > 0 {
-                continue
-            }
-
-            // If we expect this test to work asynchronously...
-            if tc.IsAsync {
-                // if we're still missing expected actions within our test timeout
-                if len(client.Actions()) < len(tc.ExpectedActions) && time.Now().Before(timeout) {
-                    // wait for the expected actions (without hotlooping)
-                    time.Sleep(time.Millisecond)
-                    continue
-                }
-
-                // if we exactly match our expected actions, wait a bit to make sure no other additional actions show up
-                if len(client.Actions()) == len(tc.ExpectedActions) && !waitedForAdditionalActions {
-                    time.Sleep(time.Second)
-                    waitedForAdditionalActions = true
-                    continue
-                }
-            }
-
-            break
-        }
 
         t.Logf("EXPECTED ACTIONS: %v", len(tc.ExpectedActions))
         t.Logf("GOT ACTIONS: %v", len(client.Actions()))
@@ -530,6 +468,57 @@ func TestEndpointCreation(t *testing.T) {
                 t.Logf("    %+v", a)
             }
         }
+    }
+}
+
+func ProcessControllerQueue( t * testing.T, tc test_case, client *fakelattice.Clientset, controller *Controller, stopChannel chan int) {
+    closeSecond := func() {
+        stopChannel <- 0
+    }
+
+    go time.AfterFunc(time.Second, closeSecond)
+
+    t.Logf("After flush, %v items in queue:", controller.queue.Len())
+
+    for {
+        if controller.queue.Len() > 0 {
+            select {
+            case _ = <-stopChannel:
+                break
+                t.Logf("Exiting controller, readched timeout")
+            default:
+                if !controller.processNextWorkItem() {
+                    break
+                }
+
+                // The queues still have things to work on
+                if controller.queue.Len() > 0 {
+                    continue
+                }
+
+                // If we expect this test to work asynchronously...
+                //if tc.IsAsync {
+                //    // if we're still missing expected actions within our test timeout
+                //    if len(client.Actions()) < len(tc.ExpectedActions) && time.Now().Before(timeout) {
+                //        // wait for the expected actions (without hotlooping)
+                //        time.Sleep(time.Millisecond)
+                //        continue
+                //    }
+                //
+                //    // if we exactly match our expected actions, wait a bit to make sure no other additional actions show up
+                //    if len(client.Actions()) == len(tc.ExpectedActions) && !waitedForAdditionalActions {
+                //        time.Sleep(time.Second)
+                //        waitedForAdditionalActions = true
+                //        continue
+                //    }
+                //}
+
+                break
+            }
+
+        }
+
+        break
     }
 }
 
