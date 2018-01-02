@@ -451,7 +451,7 @@ func (r *restServer) getSystemDefinitionRoot(systemID string, version string) (t
 	systemDefUri := fmt.Sprintf("%v#%v/%s", system.DefinitionURL, version,
 		constants.SystemDefinitionRootPathDefault)
 
-	return r.resolver.ResolveDefinition(systemDefUri)
+	return r.resolver.ResolveDefinition(systemDefUri, &resolver.GitResolveOptions{})
 }
 
 func (r *restServer) getSystemVersions(systemID string) ([]string, error) {
