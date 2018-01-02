@@ -43,7 +43,7 @@ func testV1(t *testing.T) {
 		t.Fatalf("Got error calling NewSystemResolver: %v", err)
 	}
 
-	defNode, err := res.ResolveDefinition(TEST_REPO_GIT_URI_V1)
+	defNode, err := res.ResolveDefinition(TEST_REPO_GIT_URI_V1, nil)
 	if err != nil {
 		t.Fatalf("Error is not nil: %v", err)
 	}
@@ -75,7 +75,7 @@ func testV2(t *testing.T) {
 		t.Fatalf("Got error calling NewSystemResolver: %v", err)
 	}
 
-	defNode, err := res.ResolveDefinition(TEST_REPO_GIT_URI_V2)
+	defNode, err := res.ResolveDefinition(TEST_REPO_GIT_URI_V2, nil)
 	if err != nil {
 		t.Error("Error is not nil: ", err)
 	}

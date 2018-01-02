@@ -12,7 +12,7 @@ import (
 
 // SystemResolver resolves system definitions from different sources such as git
 type SystemResolver struct {
-	GitResolver   *git.Resolver
+	GitResolver *git.Resolver
 }
 
 // GitResolveOptions allows options for resolution
@@ -36,15 +36,23 @@ func NewSystemResolver(workDirectory string) (*SystemResolver, error) {
 	}
 
 	sr := &SystemResolver{
-		GitResolver:   gitResolver,
+		GitResolver: gitResolver,
 	}
 	return sr, nil
 }
 
 // resolves the definition
-func (resolver *SystemResolver) ResolveDefinition(uri string) (tree.Node, error) {
+func (resolver *SystemResolver) ResolveDefinition(uri string, gitResolveOptions *GitResolveOptions) (tree.Node, error) {
 
-	return resolver.readNodeFromFile(uri)
+	if gitResolveOptions == nil {
+		gitResolveOptions = &GitResolveOptions{}
+	}
+	ctx := &resolveContext{
+		gitURI:            uri,
+		gitResolveOptions: gitResolveOptions,
+	}
+
+	return resolver.readNodeFromFile(ctx)
 }
 
 // lists the versions of the specified definition's uri
@@ -61,10 +69,13 @@ func (resolver *SystemResolver) ListDefinitionVersions(uri string, gitResolveOpt
 }
 
 // readNodeFromFile reads a definition node from a file
-func (resolver *SystemResolver) readNodeFromFile(uri string) (tree.Node, error) {
+func (resolver *SystemResolver) readNodeFromFile(ctx *resolveContext) (tree.Node, error) {
 
-	engine := language.NewEngine()
-	template, err := engine.ParseTemplate(uri, make(map[string]interface{}))
+	engine := language.NewEngine(&language.Config{
+		GitSSHKey: ctx.gitResolveOptions.SSHKey,
+	})
+
+	template, err := engine.ParseTemplate(ctx.gitURI, make(map[string]interface{}))
 
 	if err != nil {
 		return nil, err

@@ -17,12 +17,19 @@ type Template struct {
 // TemplateEngine
 type TemplateEngine struct {
 	operatorEvaluators map[string]OperatorEvaluator
+	config *Config
+}
+
+// Config. Configuration Object for template engines
+type Config struct {
+	GitSSHKey []byte
 }
 
 // NewEngine
-func NewEngine() *TemplateEngine {
+func NewEngine(config *Config) *TemplateEngine {
 
 	engine := &TemplateEngine{
+		config: config,
 		operatorEvaluators: map[string]OperatorEvaluator{
 			"$include":    &IncludeEvaluator{},
 			"$variables":  &VariablesEvaluator{},
@@ -43,7 +50,7 @@ func (engine *TemplateEngine) ParseTemplate(url string, variables map[string]int
 func (engine *TemplateEngine) doParseTemplate(url string, variables map[string]interface{}, env *Environment) (*Template, error) {
 
 	// parse url
-	urlInfo, err := parseTemplateUrl(url)
+	urlInfo, err := parseTemplateUrl(url, engine.config)
 
 	if err != nil {
 		return nil, err
