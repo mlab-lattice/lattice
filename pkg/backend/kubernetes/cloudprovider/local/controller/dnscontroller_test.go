@@ -21,6 +21,7 @@ import (
     "k8s.io/apimachinery/pkg/runtime"
     core "k8s.io/client-go/testing"
     "github.com/mlab-lattice/system/pkg/definition/tree"
+    "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 const(
@@ -120,14 +121,25 @@ func Endpoint(key string, ip string, endpoint string, path tree.NodePath) *latti
     return ec
 }
 
+//AlterResourceVersion changes and exisintg endpoints resource string
 func AlterResourceVersion(ep *latticev1.Endpoint, res_ver string) *latticev1.Endpoint {
     ep.ResourceVersion = res_ver
 
     return ep
 }
 
+//AlterEndpointState adjust and existing endpoints state
 func AlterEndpointState(ep *latticev1.Endpoint, newState latticev1.EndpointState) *latticev1.Endpoint {
     ep.Status = latticev1.EndpointStatus{ newState }
+
+    return ep
+}
+
+//AddDeletionTimestamp adds a deletion timestamp to an existing endpoint
+func AddDeletionTimestamp(ep *latticev1.Endpoint) *latticev1.Endpoint {
+    now_time := v1.NewTime(time.Now())
+
+    ep.SetDeletionTimestamp(&now_time)
 
     return ep
 }
@@ -180,7 +192,7 @@ type test_case struct {
     ExpectedCnames []cnameEntry
 }
 
-// TestEndpointCreation tests the default resource CRUD and output of Endpoint controller operations
+// TestEndpointCreation tests the default resource CRUD and output of Endpoint controller operations, including the DNS and cname file contents
 func TestEndpointCreation(t *testing.T) {
     flag.Set("alsologtostderr", fmt.Sprintf("%t", true))
     var logLevel string
@@ -232,7 +244,10 @@ func TestEndpointCreation(t *testing.T) {
         },
         "new endpoint with existing deletion timestamp immediately added as tombstone": {
             AddedEndpoints: EndpointList(
-                *Endpoint("key", "", "my_cname", MakeNodePathPanic("/nodepath"))),
+                *AddDeletionTimestamp(Endpoint("key", "", "my_cname", MakeNodePathPanic("/nodepath")))),
+            ExpectedActions: []core.Action{
+                //Endpoint should be removed from the store, noa actions expected.
+            },
         },
         "normal endpoint update changes the underlying endpoint": {
             AddedEndpoints: EndpointList(
@@ -341,9 +356,6 @@ func TestEndpointCreation(t *testing.T) {
             controller.deleteEndpoint(tc.DeletedEndpoint)
         }
 
-        t.Logf("Before flush, %v items in queue:", controller.queue.Len() )
-        t.Logf("After flush, %v items in queue:", controller.queue.Len())
-
         // Process the updates
         ProcessControllerQueue(t, k, tc, client, controller)
 
@@ -399,6 +411,8 @@ func TestEndpointCreation(t *testing.T) {
         }
 
         ProcessControllerQueue(t, k, tc, client, controller)
+
+        glog.V(5).Infof("Got %v actions, expected %v", len(client.Actions()), len(tc.ExpectedActions))
 
         actions := client.Actions()
         for i, action := range actions {
@@ -461,9 +475,4 @@ func ProcessControllerQueue(t * testing.T, test_name string, tc test_case, clien
 
         break
     }
-}
-
-// TestLockBehavior tests the locking behavior of the dns endpoint controller
-func TestLockBehavior(t *testing.T) {
-
 }

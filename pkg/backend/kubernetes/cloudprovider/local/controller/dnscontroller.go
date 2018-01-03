@@ -129,6 +129,8 @@ func (c *Controller) updateEndpoint(old, cur interface{}) {
 func (c *Controller) deleteEndpoint(obj interface{}) {
 	endpoint, ok := obj.(*crv1.Endpoint)
 
+	glog.V(5).Infof("Got Endpoint %v/%v delete", endpoint.Namespace, endpoint.Name)
+
 	// When a delete is dropped, the relist will notice a pod in the store not
 	// in the list, leading to the insertion of a tombstone object which contains
 	// the deleted key/value.
@@ -240,7 +242,7 @@ func (c *Controller) SyncEndpointUpdate(key string) error {
 	// Live lookup
 	// endpoint, err = c.latticeClient.LatticeV1().Endpoints(namespace).Get(name, metav1.GetOptions{})
 
-	if errors.IsNotFound(err) {
+	if errors.IsNotFound(err) || endpoint.DeletionTimestamp != nil {
 		glog.V(2).Infof("Endpoint %v has been deleted", key)
 		return nil
 	}
