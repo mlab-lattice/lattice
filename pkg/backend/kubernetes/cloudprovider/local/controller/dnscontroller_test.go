@@ -368,8 +368,8 @@ func TestEndpointCreation(t *testing.T) {
         // If the desired logic of the program is to have all updates immediately reflected within the process queue, the logic would need to be changed
         // away from teh Existing / Added / Updated test structure.
         // The current setup of manually calling ProcessControllerQueue at set intervals works for small sized unit tests, so this may be okay.
-        // Process the added endpoints.
 
+        // Processes AddedEndpoints.
         ProcessControllerQueue(t, k, tc, client, controller)
 
         if tc.UpdatedEndpoint != nil {
