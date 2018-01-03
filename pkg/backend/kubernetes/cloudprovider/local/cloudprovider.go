@@ -84,7 +84,7 @@ func (cp *DefaultLocalCloudProvider) TransformServiceDeploymentSpec(service *crv
 				found = true
 
 				if k != 0 {
-					glog.Warningf("Local DNS server found, but not as the first nameserver... ")
+					glog.Warningf("Local DNS server found, but not as the first nameserver. This will not be modified...")
 				}
 			}
 		}

@@ -31,6 +31,9 @@ const(
 
     processQueueTimeout = true
     processTimeoutSeconds = 2
+
+    logToStderr = true
+    loggingLevelDefault = "10"
 )
 
 type hostEntry struct {
@@ -194,13 +197,17 @@ type test_case struct {
 
 // TestEndpointCreation tests the default resource CRUD and output of Endpoint controller operations, including the DNS and cname file contents
 func TestEndpointCreation(t *testing.T) {
-    flag.Set("alsologtostderr", fmt.Sprintf("%t", true))
+
+    if logToStderr {
+        flag.Set("alsologtostderr", fmt.Sprintf("%t", true))
+    }
+
     var logLevel string
-    flag.StringVar(&logLevel, "logLevel", "10", "test")
+    flag.StringVar(&logLevel, "logLevel", loggingLevelDefault, "test")
     flag.Lookup("v").Value.Set(logLevel)
 
     // Reduce DNS flush timer to more appropriate time
-    updateWaitBeforeFlushTimer = 2
+    updateWaitBeforeFlushTimerSeconds = 2
 
     testcases := map[string]test_case {
         "new endpoint with ip is written to host file": {
@@ -262,6 +269,24 @@ func TestEndpointCreation(t *testing.T) {
                     AlterEndpointState(
                         AlterResourceVersion(
                             Endpoint("key","", "my_new_cname", MakeNodePathPanic("/nodepath_ver2")), "2"), latticev1.EndpointStateCreated)),
+            },
+        },
+        "endpoint update can change between cname and IP address type endpoint": {
+            AddedEndpoints: EndpointList(
+                *Endpoint("key","", "first_an_alias", MakeNodePathPanic("/nodepath")),
+            ),
+            UpdatedEndpointPrevious:
+            Endpoint("key","", "first_an_alias", MakeNodePathPanic("/nodepath")),
+            UpdatedEndpoint:
+            AlterResourceVersion(Endpoint("key", "5.5.5.5", "", MakeNodePathPanic("/nodepath")), "2"),
+            ExpectedCnames: []cnameEntry{
+                //Expect empty cname
+            },
+            ExpectedHosts: []hostEntry{
+                {
+                    ip: "5.5.5.5",
+                    host: "nodepath",
+                },
             },
         },
         "changing the underlying endpoint writes only the updated entry": {

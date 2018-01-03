@@ -36,8 +36,8 @@ type Controller struct {
 
 	latticeClient latticeclientset.Interface
 
-	addressLister       latticelisters.EndpointLister
-	addressListerSynced cache.InformerSynced
+	endpointister        latticelisters.EndpointLister
+	endpointListerSynced cache.InformerSynced
 
 	queue workqueue.RateLimitingInterface
 
@@ -46,7 +46,7 @@ type Controller struct {
 }
 
 var(
-	updateWaitBeforeFlushTimer = 15
+	updateWaitBeforeFlushTimerSeconds = 15
 )
 
 func NewController(
@@ -72,8 +72,8 @@ func NewController(
 		UpdateFunc: c.updateEndpoint,
 		DeleteFunc: c.deleteEndpoint,
 	})
-	c.addressLister = endpointInformer.Lister()
-	c.addressListerSynced = endpointInformer.Informer().HasSynced
+	c.endpointister = endpointInformer.Lister()
+	c.endpointListerSynced = endpointInformer.Informer().HasSynced
 
 	c.cnameList = make(map[string]crv1.Endpoint)
 	c.hostLists = make(map[string]crv1.Endpoint)
@@ -91,9 +91,7 @@ func (c *Controller) EnqueueEndpointUpdate(endp *crv1.Endpoint) {
 		return
 	}
 
-	glog.V(5).Infof("q length before %v %v", c.queue.Len(), key)
 	c.queue.Add(key)
-	glog.V(5).Infof("q length after %v %v", c.queue.Len(), key)
 }
 
 func (c *Controller) addEndpoint(obj interface{}) {
@@ -160,7 +158,7 @@ func (c *Controller) Run(workers int, stopCh <-chan struct{}) {
 	defer glog.Infof("Shutting down local-dns controller")
 
 	// wait for your secondary caches to fill before starting your work.
-	if !cache.WaitForCacheSync(stopCh, c.addressListerSynced) {
+	if !cache.WaitForCacheSync(stopCh, c.endpointListerSynced) {
 		return
 	}
 
@@ -237,10 +235,7 @@ func (c *Controller) SyncEndpointUpdate(key string) error {
 	}
 
 	// Cache lookup
-	endpoint, err := c.addressLister.Endpoints(namespace).Get(name)
-
-	// Live lookup
-	// endpoint, err = c.latticeClient.LatticeV1().Endpoints(namespace).Get(name, metav1.GetOptions{})
+	endpoint, err := c.endpointister.Endpoints(namespace).Get(name)
 
 	if errors.IsNotFound(err) || endpoint.DeletionTimestamp != nil {
 		glog.V(2).Infof("Endpoint %v has been deleted", key)
@@ -258,19 +253,18 @@ func (c *Controller) SyncEndpointUpdate(key string) error {
 		return nil
 	}
 
-	// Locks sharedVars for the entire duration. This ensures that the hosts and cnames are updated atomically with checking for
+	// Locks sharedVars for the entire duration. This ensures that the hosts and cnames are updated atomically alongside
 	// cache flushes and prevents missed updates.
 	c.sharedVarsLock.Lock()
 
 	if !c.hasRecentlyUpdated {
-		glog.V(5).Infof("has not updated recently, will flush all updates in %v seconds", updateWaitBeforeFlushTimer)
+		glog.V(5).Infof("has not updated recently, will flush all updates in %v seconds", updateWaitBeforeFlushTimerSeconds)
 		// Safe to write to this boolean as we have the write sharedVarsLock.
 		c.hasRecentlyUpdated = true
-		go time.AfterFunc(time.Second*time.Duration(updateWaitBeforeFlushTimer), c.FlushRewriteDNS)
+		go time.AfterFunc(time.Second*time.Duration(updateWaitBeforeFlushTimerSeconds), c.FlushRewriteDNS)
 	}
 
 	endpointPathURL := endpoint.Spec.Path.ToDomain(true)
-	glog.V(5).Infof("URL::::%v", endpointPathURL)
 
 	endpoint = endpoint.DeepCopy()
 
@@ -289,13 +283,21 @@ func (c *Controller) SyncEndpointUpdate(key string) error {
 		return err
 	}
 
+	if _, found := c.cnameList[key]; found {
+		delete(c.cnameList, key)
+	}
+
+	if _, found := c.hostLists[key]; found {
+		delete(c.hostLists, key)
+	}
+
 	if endpoint.Spec.ExternalEndpoint != nil {
-		glog.V(5).Infof("Updating endpoint...")
+		glog.V(2).Infof("Updating endpoint %v with cname %v...", endpointPathURL, endpoint.Spec.ExternalEndpoint)
 		c.cnameList[key] = *endpoint
 	}
 
 	if endpoint.Spec.IP != nil {
-		glog.V(5).Infof("Updating ip...")
+		glog.V(2).Infof("Updating endpoint %v with IP address %v...", endpointPathURL, endpoint.Spec.IP)
 		c.hostLists[key] = *endpoint
 	}
 
