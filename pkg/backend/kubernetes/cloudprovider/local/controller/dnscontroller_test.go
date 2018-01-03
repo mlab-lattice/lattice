@@ -95,11 +95,11 @@ func EndpointList(endpoint ...latticev1.Endpoint) *latticev1.EndpointList {
 }
 
 // Endpoint creates an Endpoint schema with the specified parameters.
-func Endpoint(ip string, endpoint string, path tree.NodePath) *latticev1.Endpoint {
+func Endpoint(key string, ip string, endpoint string, path tree.NodePath) *latticev1.Endpoint {
     ec :=  &latticev1.Endpoint{
         ObjectMeta: metav1.ObjectMeta{
             // Our tests shouldn't be concerned about unique naming - let this be provided for us
-            Name:            path.ToDomain(true),
+            Name:            key,
             UID:             "12345",
             Namespace:       defaultNamespace,
             ResourceVersion: "1",
@@ -199,7 +199,7 @@ func TestEndpointCreation(t *testing.T) {
     testcases := map[string]test_case {
         "new endpoint with ip is written to host file": {
             AddedEndpoints: EndpointList(
-                *Endpoint("1", "", MakeNodePathPanic("/nodepath"))),
+                *Endpoint("key", "1", "", MakeNodePathPanic("/nodepath"))),
             ExpectedHosts: []hostEntry{
                 {
                     ip: "1",
@@ -209,7 +209,7 @@ func TestEndpointCreation(t *testing.T) {
         },
         "new endpoint with name is written as cname file": {
             AddedEndpoints: EndpointList(
-                *Endpoint("", "my_cname", MakeNodePathPanic("/nodepath"))),
+                *Endpoint("key", "", "my_cname", MakeNodePathPanic("/nodepath"))),
             ExpectedCnames: []cnameEntry{
                 {
                     alias: "my_cname",
@@ -220,8 +220,8 @@ func TestEndpointCreation(t *testing.T) {
         // TODO :: This could probably be moved to a nodepath test but there arent any right now
         "endpoints write url correctly": {
             AddedEndpoints: EndpointList(
-                *Endpoint("", "my_cname", MakeNodePathPanic("/root/nested/nested_some_more")),
-                *Endpoint("1", "", MakeNodePathPanic("/root/nested/nested_again_but_different")),
+                *Endpoint("key", "", "my_cname", MakeNodePathPanic("/root/nested/nested_some_more")),
+                *Endpoint("key2", "1", "", MakeNodePathPanic("/root/nested/nested_again_but_different")),
                 ),
             ExpectedCnames: []cnameEntry{
                 {
@@ -238,23 +238,40 @@ func TestEndpointCreation(t *testing.T) {
         },
         "new endpoint with existing deletion timestamp immediately added as tombstone": {
             AddedEndpoints: EndpointList(
-                *Endpoint("", "my_cname", MakeNodePathPanic("/nodepath"))),
+                *Endpoint("key", "", "my_cname", MakeNodePathPanic("/nodepath"))),
         },
         "normal endpoint update changes the underlying endpoint": {
             // TODO ::
             // Current situation means that an update during flush-hour results in both endpoints being written.
             AddedEndpoints: EndpointList(
-                *Endpoint("", "my_cname", MakeNodePathPanic("/nodepath")),
+                *Endpoint("key","", "my_cname", MakeNodePathPanic("/nodepath")),
             ),
             UpdatedEndpointPrevious:
-                Endpoint("", "my_cname", MakeNodePathPanic("/nodepath")),
+                Endpoint("key","", "my_cname", MakeNodePathPanic("/nodepath")),
             UpdatedEndpoint:
-                AlterResourceVersion(Endpoint("", "my_new_cname", MakeNodePathPanic("/nodepath_ver2")), "2"),
+                AlterResourceVersion(Endpoint("key", "", "my_new_cname", MakeNodePathPanic("/nodepath_ver2")), "2"),
             ExpectedActions: []core.Action{
                 core.NewUpdateAction(latticev1.GroupVersionResource("endpoints"), metav1.NamespaceDefault,
                     AlterEndpointState(
                         AlterResourceVersion(
-                            Endpoint("", "my_new_cname", MakeNodePathPanic("/nodepath_ver2")), "2"), latticev1.EndpointStateCreated)),
+                            Endpoint("key","", "my_new_cname", MakeNodePathPanic("/nodepath_ver2")), "2"), latticev1.EndpointStateCreated)),
+            },
+        },
+        "changing the underlying endpoint writes only the updated entry": {
+            // TODO ::
+            // Check that this is correct - update is not being performed twice but thats what we should have. One on add one on update
+            AddedEndpoints: EndpointList(
+                *Endpoint("key","", "my_cname", MakeNodePathPanic("/nodepath")),
+            ),
+            UpdatedEndpointPrevious:
+            Endpoint("key","", "my_cname", MakeNodePathPanic("/nodepath")),
+            UpdatedEndpoint:
+            AlterResourceVersion(Endpoint("key", "", "my_new_cname", MakeNodePathPanic("/new/nodepath_ver2")), "2"),
+            ExpectedCnames: []cnameEntry{
+                {
+                    alias: "my_new_cname",
+                    original: "nodepath_ver2.new",
+                },
             },
         },
         //"endpoint update with same resource version does not change the created endpoint": {
@@ -321,6 +338,18 @@ func TestEndpointCreation(t *testing.T) {
             }
         }
 
+        stop2 := make(chan int)
+
+        // FIXME :: Processing logic is separated from the storing logic.
+        // any calls i.e. endpoints.Add() might not be processed in syncEndpointUpdate, because the store might be modified before
+        // ProcessControllerQueue is called.
+        // If the desired logic of the program is to have all updates immediately reflected within the process queue, the logic would need to be changed
+        // away from teh Existing / Added / Updated test structure.
+        // The current setup of manually calling ProcessControllerQueue at set intervals works for small sized unit tests, so this may be okay.
+        // Process the added endpoints.
+
+        ProcessControllerQueue(t, tc, client, controller, stop2)
+
         if tc.UpdatedEndpoint != nil {
             endpoints.Update(tc.UpdatedEndpoint)
              // TODO :: Does there need to be these fn calls
@@ -336,6 +365,8 @@ func TestEndpointCreation(t *testing.T) {
         stop := make(chan int)
 
         t.Logf("After flush, %v items in queue:", controller.queue.Len())
+
+        // Process the updates
 
         ProcessControllerQueue(t, tc, client, controller, stop)
 

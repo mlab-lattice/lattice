@@ -272,7 +272,7 @@ func (c *Controller) SyncEndpointUpdate(key string) error {
 
 	endpoint = endpoint.DeepCopy()
 
-	_, present := c.recentlyFlushed[endpointPathURL]
+	_, present := c.recentlyFlushed[key]
 
 	if present {
 		glog.V(5).Infof("Endpoint %v already updated. Setting state to created...", key)
@@ -289,12 +289,12 @@ func (c *Controller) SyncEndpointUpdate(key string) error {
 
 	if endpoint.Spec.ExternalEndpoint != nil {
 		glog.V(5).Infof("Updating endpoint...")
-		c.cnameList[endpointPathURL] = *endpoint
+		c.cnameList[key] = *endpoint
 	}
 
 	if endpoint.Spec.IP != nil {
 		glog.V(5).Infof("Updating ip...")
-		c.hostLists[endpointPathURL] = *endpoint
+		c.hostLists[key] = *endpoint
 	}
 
 	c.sharedVarsLock.Unlock()
@@ -366,20 +366,22 @@ func (c *Controller) RewriteDnsmasqConfig() error {
 	// to run again.
 	c.sharedVarsLock.Lock()
 
-	for k, v := range c.cnameList {
+	for _, v := range c.cnameList {
 		cname := *v.Spec.ExternalEndpoint
-		_, err := cname_file.WriteString("cname=" + k + "," + cname + "\n")
-		glog.V(5).Infof("cname=" + k + "," + cname + "\n")
+		path := v.Spec.Path.ToDomain(true)
+		_, err := cname_file.WriteString("cname=" + path + "," + cname + "\n")
+		glog.V(5).Infof("cname=" + path + "," + cname + "\n")
 
 		if err != nil {
 			return err
 		}
 	}
 
-	for k, v := range c.hostLists {
+	for _, v := range c.hostLists {
 		endpoint := *v.Spec.IP
-		_, err := hosts_file.WriteString(endpoint + " " + k + "\n")
-		glog.V(5).Infof(endpoint + " " + k + "\n")
+		path := v.Spec.Path.ToDomain(true)
+		_, err := hosts_file.WriteString(endpoint + " " + path + "\n")
+		glog.V(5).Infof(endpoint + " " + path + "\n")
 
 		if err != nil {
 			return err
@@ -387,17 +389,13 @@ func (c *Controller) RewriteDnsmasqConfig() error {
 	}
 
 	//Now update state and requeue as successful.
-	for _, v := range c.cnameList {
-		key := v.Spec.Path.ToDomain(true)
-		c.recentlyFlushed[key] = v
-
+	for k, v := range c.cnameList {
+		c.recentlyFlushed[k] = v
 		c.EnqueueEndpointUpdate(&v)
 	}
 
-	for _, v := range c.hostLists {
-		key := v.Spec.Path.ToDomain(true)
-		c.recentlyFlushed[key] = v
-
+	for k, v := range c.hostLists {
+		c.recentlyFlushed[k] = v
 		c.EnqueueEndpointUpdate(&v)
 	}
 
