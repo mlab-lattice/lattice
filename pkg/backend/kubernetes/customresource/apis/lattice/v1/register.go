@@ -143,6 +143,10 @@ func Resource(resource string) schema.GroupResource {
 	return SchemeGroupVersion.WithResource(resource).GroupResource()
 }
 
+func GroupVersionResource(resource string) schema.GroupVersionResource {
+	return SchemeGroupVersion.WithResource(resource)
+}
+
 // addKnownTypes adds the set of types defined in this package to the supplied scheme.
 func addKnownTypes(scheme *runtime.Scheme) error {
 	for _, resource := range Resources {
