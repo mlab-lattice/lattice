@@ -1,7 +1,6 @@
 package dnscontroller
 
 import (
-    //"errors"
     "reflect"
     "testing"
     "time"
@@ -16,19 +15,11 @@ import (
 
     fakelattice "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/clientset/versioned/fake"
     latticeinformers "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/informers/externalversions"
-  //  latticeclientset "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/clientset/versioned"
     latticev1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 
-    //"k8s.io/api/core/v1"
-    //apierrors "k8s.io/apimachinery/pkg/api/errors"
     metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
     "k8s.io/apimachinery/pkg/runtime"
-    //"k8s.io/apimachinery/pkg/runtime/schema"
-    //"k8s.io/client-go/tools/cache"
-  //  "k8s.io/client-go/informers"
-    ///"k8s.io/client-go/kubernetes/fake"
     core "k8s.io/client-go/testing"
-    //api "k8s.io/kubernetes/pkg/apis/core"
     "github.com/mlab-lattice/system/pkg/definition/tree"
 )
 
@@ -36,6 +27,9 @@ const(
     serverConfigPath = "./server_config"
     hostConfigPath = "./host_config"
     defaultNamespace = metav1.NamespaceDefault
+
+    processQueueTimeout = true
+    processTimeoutSeconds = 2
 )
 
 type hostEntry struct {
@@ -50,14 +44,14 @@ func HostFileOutput(hosts []hostEntry) string {
             ip name0 name1 ..
             ...
      */
-     str := ""
+    str := ""
 
-     for _, v := range hosts {
-         newLine := v.ip + " " + v.host + "\n"
-         str = str + newLine
-     }
+    for _, v := range hosts {
+        newLine := v.ip + " " + v.host + "\n"
+        str = str + newLine
+    }
 
-     return str
+    return str
 }
 
 type cnameEntry struct {
@@ -222,7 +216,7 @@ func TestEndpointCreation(t *testing.T) {
             AddedEndpoints: EndpointList(
                 *Endpoint("key", "", "my_cname", MakeNodePathPanic("/root/nested/nested_some_more")),
                 *Endpoint("key2", "1", "", MakeNodePathPanic("/root/nested/nested_again_but_different")),
-                ),
+            ),
             ExpectedCnames: []cnameEntry{
                 {
                     alias: "my_cname",
@@ -241,15 +235,13 @@ func TestEndpointCreation(t *testing.T) {
                 *Endpoint("key", "", "my_cname", MakeNodePathPanic("/nodepath"))),
         },
         "normal endpoint update changes the underlying endpoint": {
-            // TODO ::
-            // Current situation means that an update during flush-hour results in both endpoints being written.
             AddedEndpoints: EndpointList(
                 *Endpoint("key","", "my_cname", MakeNodePathPanic("/nodepath")),
             ),
             UpdatedEndpointPrevious:
-                Endpoint("key","", "my_cname", MakeNodePathPanic("/nodepath")),
+            Endpoint("key","", "my_cname", MakeNodePathPanic("/nodepath")),
             UpdatedEndpoint:
-                AlterResourceVersion(Endpoint("key", "", "my_new_cname", MakeNodePathPanic("/nodepath_ver2")), "2"),
+            AlterResourceVersion(Endpoint("key", "", "my_new_cname", MakeNodePathPanic("/nodepath_ver2")), "2"),
             ExpectedActions: []core.Action{
                 core.NewUpdateAction(latticev1.GroupVersionResource("endpoints"), metav1.NamespaceDefault,
                     AlterEndpointState(
@@ -258,8 +250,6 @@ func TestEndpointCreation(t *testing.T) {
             },
         },
         "changing the underlying endpoint writes only the updated entry": {
-            // TODO ::
-            // Check that this is correct - update is not being performed twice but thats what we should have. One on add one on update
             AddedEndpoints: EndpointList(
                 *Endpoint("key","", "my_cname", MakeNodePathPanic("/nodepath")),
             ),
@@ -274,28 +264,21 @@ func TestEndpointCreation(t *testing.T) {
                 },
             },
         },
-        //"endpoint update with same resource version does not change the created endpoint": {
-        //    AddedEndpoints: EndpointList(
-        //        *Endpoint("", "my_cname", MakeNodePathPanic("/nodepath")),
-        //    ),
-        //    UpdatedEndpointPrevious:
-        //    Endpoint("", "my_cname", MakeNodePathPanic("/nodepath")),
-        //    UpdatedEndpoint:
-        //    Endpoint("", "my_new_cname", MakeNodePathPanic("/nodepath_ver2")),
-        //    ExpectedActions: []core.Action{
-        //        core.NewUpdateAction(latticev1.GroupVersionResource("endpoints"), metav1.NamespaceDefault,
-        //            AlterEndpointState(
-        //                AlterResourceVersion(
-        //                    Endpoint("", "my_cname", MakeNodePathPanic("/nodepath")), "1"), latticev1.EndpointStateCreated)),
-        //    },
-        //},
+        "adding an endpoint in the created state performs no action": {
+            AddedEndpoints: EndpointList(
+                *AlterEndpointState(Endpoint("key","", "my_cname", MakeNodePathPanic("/nodepath")), latticev1.EndpointStateCreated),
+            ),
+            ExpectedActions: []core.Action{
+                // No actions expected
+            },
+        },
     }
 
     for k, tc := range testcases {
 
         glog.Infof(k)
 
-        // Write to different files on each iteration
+        // Write to different files on each iteration by using a hash of the test string
         hash := fnv.New32a()
         hash.Write([]byte(k))
         pathSuffix := strconv.Itoa(int(hash.Sum32()))
@@ -330,6 +313,7 @@ func TestEndpointCreation(t *testing.T) {
             for _, v := range tc.AddedEndpoints.Items {
                 s := v.DeepCopy()
                 err := endpoints.Add(s)
+                // event handlers need to be called manually in the test cases
                 controller.addEndpoint(s)
 
                 if err != nil {
@@ -337,8 +321,6 @@ func TestEndpointCreation(t *testing.T) {
                 }
             }
         }
-
-        stop2 := make(chan int)
 
         // FIXME :: Processing logic is separated from the storing logic.
         // any calls i.e. endpoints.Add() might not be processed in syncEndpointUpdate, because the store might be modified before
@@ -348,11 +330,10 @@ func TestEndpointCreation(t *testing.T) {
         // The current setup of manually calling ProcessControllerQueue at set intervals works for small sized unit tests, so this may be okay.
         // Process the added endpoints.
 
-        ProcessControllerQueue(t, tc, client, controller, stop2)
+        ProcessControllerQueue(t, k, tc, client, controller)
 
         if tc.UpdatedEndpoint != nil {
             endpoints.Update(tc.UpdatedEndpoint)
-             // TODO :: Does there need to be these fn calls
             controller.updateEndpoint(tc.UpdatedEndpointPrevious, tc.UpdatedEndpoint)
         }
         if tc.DeletedEndpoint != nil {
@@ -361,58 +342,54 @@ func TestEndpointCreation(t *testing.T) {
         }
 
         t.Logf("Before flush, %v items in queue:", controller.queue.Len() )
-
-        stop := make(chan int)
-
         t.Logf("After flush, %v items in queue:", controller.queue.Len())
 
         // Process the updates
-
-        ProcessControllerQueue(t, tc, client, controller, stop)
+        ProcessControllerQueue(t, k, tc, client, controller)
 
         if controller.queue.Len() > 0 {
             t.Errorf("%s: unexpected items in endpoint queue: %d", k, controller.queue.Len())
         }
 
-        if tc.ExpectedCnames != nil || tc.ExpectedHosts != nil || tc.ExpectedActions != nil {
+        if tc.ExpectedCnames != nil && tc.ExpectedHosts != nil && tc.ExpectedActions != nil {
+            return
+        }
 
-            err := controller.RewriteDnsmasqConfig()
+        err := controller.RewriteDnsmasqConfig()
 
-            t.Logf("Writing to: %v", controller.hostConfigPath)
+        t.Logf("Writing to: %v", controller.hostConfigPath)
+
+        if err != nil {
+            t.Errorf("Error rewriting DNSConfig: %v", err)
+        }
+
+        if tc.ExpectedCnames != nil {
+            cnameFile, err := ioutil.ReadFile(controller.serverConfigPath)
 
             if err != nil {
-                t.Errorf("Error rewriting DNSConfig: %v", err)
+                t.Errorf("Error reading cname file: %v", err)
             }
 
-            if tc.ExpectedCnames != nil {
-                cnameFile, err := ioutil.ReadFile(controller.serverConfigPath)
+            cnameStr := string(cnameFile)
+            cnameExpectedStr := CnameFileOutput(tc.ExpectedCnames)
 
-                if err != nil {
-                    t.Errorf("Error reading cname file: %v", err)
-                }
+            if cnameStr != cnameExpectedStr {
+                t.Errorf("%s:\nExpected:\n%s\ngot:\n%s", k, spew.Sdump(cnameExpectedStr), spew.Sdump(cnameStr))
+            }
+        }
 
-                cnameStr := string(cnameFile)
-                cnameExpectedStr := CnameFileOutput(tc.ExpectedCnames)
+        if tc.ExpectedHosts != nil {
+            hostFile, err := ioutil.ReadFile(controller.hostConfigPath)
 
-                if cnameStr != cnameExpectedStr {
-                    t.Errorf("%s:\nExpected:\n%s\ngot:\n%s", k, spew.Sdump(cnameExpectedStr), spew.Sdump(cnameStr))
-                    //t.Errorf("DIff:\n%s", pretty.Compare(spew.Sdump(cnameExpectedStr), spew.Sdump(cnameStr)))
-                }
+            if err != nil {
+                t.Errorf("Error reading host file: %v", err)
             }
 
-            if tc.ExpectedHosts != nil {
-                hostFile, err := ioutil.ReadFile(controller.hostConfigPath)
+            hostStr := string(hostFile)
+            hostExpectedStr := HostFileOutput(tc.ExpectedHosts)
 
-                if err != nil {
-                    t.Errorf("Error reading host file: %v", err)
-                }
-
-                hostStr := string(hostFile)
-                hostExpectedStr := HostFileOutput(tc.ExpectedHosts)
-
-                if hostStr != hostExpectedStr {
-                    t.Errorf("%s:\nExpected:\n%s\ngot:\n%s", k, spew.Sdump(hostExpectedStr), spew.Sdump(hostStr))
-                }
+            if hostStr != hostExpectedStr {
+                t.Errorf("%s:\nExpected:\n%s\ngot:\n%s", k, spew.Sdump(hostExpectedStr), spew.Sdump(hostStr))
             }
         }
 
@@ -421,12 +398,7 @@ func TestEndpointCreation(t *testing.T) {
             return
         }
 
-        stopCh := make(chan int)
-
-        ProcessControllerQueue(t, tc, client, controller, stopCh)
-
-        t.Logf("EXPECTED ACTIONS: %v", len(tc.ExpectedActions))
-        t.Logf("GOT ACTIONS: %v", len(client.Actions()))
+        ProcessControllerQueue(t, k, tc, client, controller)
 
         actions := client.Actions()
         for i, action := range actions {
@@ -456,12 +428,19 @@ func TestEndpointCreation(t *testing.T) {
     }
 }
 
-func ProcessControllerQueue( t * testing.T, tc test_case, client *fakelattice.Clientset, controller *Controller, stopChannel chan int) {
-    closeSecond := func() {
-        stopChannel <- 0
-    }
+// ProcessControllerQueue runs an update loop on the queue until either the controller signals that the work is done, or the queue is empty.
+func ProcessControllerQueue(t * testing.T, test_name string, tc test_case, client *fakelattice.Clientset, controller *Controller) {
 
-    go time.AfterFunc(time.Second, closeSecond)
+    stopChannel := make(chan int)
+
+    if (processQueueTimeout) {
+        closeSecond := func() {
+            stopChannel <- 0
+        }
+
+        // Must handle timeout in the main goroutine, so any fail should be handled in the main for loop below.
+        go time.AfterFunc(time.Second * processTimeoutSeconds, closeSecond)
+    }
 
     t.Logf("After flush, %v items in queue:", controller.queue.Len())
 
@@ -469,34 +448,11 @@ func ProcessControllerQueue( t * testing.T, tc test_case, client *fakelattice.Cl
         if controller.queue.Len() > 0 {
             select {
             case _ = <-stopChannel:
-                break
-                t.Logf("Exiting controller, readched timeout")
+                t.Fatalf("%s: reached ProcessControllerQueue timeout", test_name)
             default:
                 if !controller.processNextWorkItem() {
                     break
                 }
-
-                // The queues still have things to work on
-                if controller.queue.Len() > 0 {
-                    continue
-                }
-
-                // If we expect this test to work asynchronously...
-                //if tc.IsAsync {
-                //    // if we're still missing expected actions within our test timeout
-                //    if len(client.Actions()) < len(tc.ExpectedActions) && time.Now().Before(timeout) {
-                //        // wait for the expected actions (without hotlooping)
-                //        time.Sleep(time.Millisecond)
-                //        continue
-                //    }
-                //
-                //    // if we exactly match our expected actions, wait a bit to make sure no other additional actions show up
-                //    if len(client.Actions()) == len(tc.ExpectedActions) && !waitedForAdditionalActions {
-                //        time.Sleep(time.Second)
-                //        waitedForAdditionalActions = true
-                //        continue
-                //    }
-                //}
 
                 continue
             }
