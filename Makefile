@@ -8,12 +8,17 @@ CLOUD_IMAGE_AWS_SYSTEM_STATE_DIR = $(CLOUD_IMAGE_DIR)/.state/aws/$(LATTICE_SYSTE
 OS := $(shell uname)
 USER := $(shell whoami)
 
-CONTAINER_NAME_BUILD = lattice-system-builder
-
 # Basic build/clean/test
 .PHONY: build
 build: gazelle
 	@bazel build //...:all
+
+.PHONY: build-linux
+build-linux: gazelle
+	@bazel build --cpu k8 //...:all
+
+.PHONY: build-all
+build-all: build build-linux
 
 .PHONY: clean
 clean:
@@ -23,7 +28,7 @@ clean:
 test: gazelle
 	@bazel test --test_output=errors //...
 
-.PHONY: test-output
+.PHONY: test-verbose
 test-output: gazelle
 	@bazel test --test_output=all --test_env -v  //...
 
@@ -70,18 +75,17 @@ kubernetes.update-dependencies:
 kubernetes.regenerate-custom-resource-clients:
 	KUBERNETES_VERSION=$(VERSION) $(DIR)/scripts/k8s/codegen/regenerate.sh
 
+
 # docker
 .PHONY: docker.push-image-stable
 docker.push-image-stable:
-	@if [ $(OS) != Linux ]; then echo "Must run docker.push-image on Linux" && exit 1; fi
-	bazel run //docker:push-stable-$(IMAGE)
-	bazel run //docker:push-stable-debug-$(IMAGE)
+	bazel run --cpu k8 //docker:push-stable-$(IMAGE)
+	bazel run --cpu k8 //docker:push-stable-debug-$(IMAGE)
 
 .PHONY: docker.push-image-user
 docker.push-image-user:
-	@if [ $(OS) != Linux ]; then echo "Must run docker.push-image on Linux" && exit 1; fi
-	bazel run //docker:push-user-$(IMAGE)
-	bazel run //docker:push-user-debug-$(IMAGE)
+	bazel run --cpu k8 //docker:push-user-$(IMAGE)
+	bazel run --cpu k8 //docker:push-user-debug-$(IMAGE)
 
 .PHONY: docker.push-all-images-stable
 docker.push-all-images-stable:
@@ -91,7 +95,7 @@ docker.push-all-images-stable:
 	make docker.push-image-stable IMAGE=kubernetes-lattice-controller-manager
 	make docker.push-image-stable IMAGE=kubernetes-manager-api-rest
 	make docker.push-image-stable IMAGE=lattice-local-dns
-	make docker.push-image-user IMAGE=lattice-cli-admin
+	make docker.push-image-stable IMAGE=lattice-cli-admin
 
 .PHONY: docker.push-all-images-user
 docker.push-all-images-user:
@@ -103,48 +107,37 @@ docker.push-all-images-user:
 	make docker.push-image-user IMAGE=lattice-local-dns
 	make docker.push-image-user IMAGE=lattice-cli-admin
 
-# local binaries
+
+# binaries
 .PHONY: update-binaries
 update-binaries: update-binary-cli-admin update-binary-cli-user
 
 .PHONY: update-binary-cli-admin
-update-binary-cli-admin: build
-	@bazel build //cmd/cli/admin
-	cp -f $(DIR)/bazel-bin/cmd/cli/admin/admin $(DIR)/bin/lattice-admin
+update-binary-cli-admin: update-binary-cli-admin-darwin update-binary-cli-admin-linux
 
 .PHONY: update-binary-cli-user
-update-binary-cli-user: build
-	@bazel build //cmd/cli/user
-	cp -f $(DIR)/bazel-bin/cmd/cli/user/user $(DIR)/bin/lattice-system
+update-binary-cli-user: update-binary-cli-user-darwin update-binary-cli-user-linux
 
-# docker build hackery
-.PHONY: docker-hack.enter-build-shell
-docker-hack.enter-build-shell: docker-hack.build-start-build-container
-	docker exec -it -e USER=$(USER) $(CONTAINER_NAME_BUILD) ./docker/bazel-builder/wrap-creds-and-exec.sh /bin/bash
+.PHONY: update-binary-cli-admin-darwin
+update-binary-cli-admin-darwin: gazelle
+	@bazel build --cpu darwin //cmd/cli/admin
+	cp -f $(DIR)/bazel-bin/cmd/cli/admin/darwin_amd64_stripped/admin $(DIR)/bin/lattice-admin-darwin-amd64
 
-.PHONY: docker-hack.push-image-stable
-docker-hack.push-image-stable: docker-hack.build-start-build-container
-	docker exec -e USER=$(USER) $(CONTAINER_NAME_BUILD) ./docker/bazel-builder/wrap-creds-and-exec.sh make docker.push-image-stable IMAGE=$(IMAGE)
+.PHONY: update-binary-cli-admin-linux
+update-binary-cli-admin-linux: gazelle
+	@bazel build --cpu k8 //cmd/cli/admin
+	cp -f $(DIR)/bazel-bin/cmd/cli/admin/linux_amd64_pure_stripped/admin $(DIR)/bin/lattice-admin-linux-amd64
 
-.PHONY: docker-hack.push-image-user
-docker-hack.push-image-user: docker-hack.build-start-build-container
-	docker exec -e USER=$(USER) $(CONTAINER_NAME_BUILD) ./docker/bazel-builder/wrap-creds-and-exec.sh make docker.push-image-user IMAGE=$(IMAGE)
+.PHONY: update-binary-cli-user-darwin
+update-binary-cli-user-darwin: gazelle
+	@bazel build --cpu darwin //cmd/cli/user
+	cp -f $(DIR)/bazel-bin/cmd/cli/user/darwin_amd64_stripped/user $(DIR)/bin/lattice-user-darwin-amd64
 
-.PHONY: docker-hack.push-all-images-stable
-docker-hack.push-all-images-stable: docker-hack.build-start-build-container
-	docker exec -e USER=$(USER) $(CONTAINER_NAME_BUILD) ./docker/bazel-builder/wrap-creds-and-exec.sh make docker.push-all-images-stable IMAGE=$(IMAGE)
+.PHONY: update-binary-cli-user-linux
+update-binary-cli-user-linux: gazelle
+	@bazel build --cpu k8 //cmd/cli/user
+	cp -f $(DIR)/bazel-bin/cmd/cli/user/linux_amd64_pure_stripped/user $(DIR)/bin/lattice-user-linux-amd64
 
-.PHONY: docker-hack.push-all-images-user
-docker-hack.push-all-images-user: docker-hack.build-start-build-container
-	docker exec -e USER=$(USER) $(CONTAINER_NAME_BUILD) ./docker/bazel-builder/wrap-creds-and-exec.sh make docker.push-all-images-user IMAGE=$(IMAGE)
-
-.PHONY: docker-hack.build-bazel-build
-docker-hack.build-bazel-build:
-	docker build --build-arg user=$(USER) $(DIR)/docker -f $(DIR)/docker/bazel-builder/Dockerfile.bazel-build -t lattice-build/bazel-build
-
-.PHONY: docker-hack.build-start-build-container
-docker-hack.build-start-build-container: docker-hack.build-bazel-build
-	USER=$(USER) $(DIR)/docker/bazel-builder/start-build-container.sh
 
 # cloud images
 .PHONY: cloud-images.build
