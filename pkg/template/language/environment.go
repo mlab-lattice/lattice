@@ -8,15 +8,17 @@ import (
 
 // Environment. Template Parsing Environment
 type Environment struct {
-	engine *TemplateEngine
-	stack  *environmentStack
+	engine  *TemplateEngine
+	stack   *environmentStack
+	options *Options
 }
 
 // newEnvironment creates a new environment object
-func newEnvironment(engine *TemplateEngine) *Environment {
+func newEnvironment(engine *TemplateEngine, options *Options) *Environment {
 	env := &Environment{
-		engine: engine,
-		stack:  newStack(10),
+		engine:  engine,
+		stack:   newStack(10),
+		options: options,
 	}
 
 	return env

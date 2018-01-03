@@ -71,11 +71,11 @@ func (resolver *SystemResolver) ListDefinitionVersions(uri string, gitResolveOpt
 // readNodeFromFile reads a definition node from a file
 func (resolver *SystemResolver) readNodeFromFile(ctx *resolveContext) (tree.Node, error) {
 
-	engine := language.NewEngine(&language.Config{
+	engine := language.NewEngine()
+	options := &language.Options{
 		GitSSHKey: ctx.gitResolveOptions.SSHKey,
-	})
-
-	template, err := engine.ParseTemplate(ctx.gitURI, make(map[string]interface{}))
+	}
+	template, err := engine.ParseTemplate(ctx.gitURI, make(map[string]interface{}), options)
 
 	if err != nil {
 		return nil, err
