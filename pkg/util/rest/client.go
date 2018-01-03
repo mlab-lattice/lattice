@@ -67,6 +67,7 @@ func (r *RequestContext) JSON(target interface{}) error {
 type Client interface {
 	Get(url string) *RequestContext
 	Post(url, contentType string, body io.Reader) *RequestContext
+	PostJSON(url string, body io.Reader) *RequestContext
 }
 
 func NewClient() *DefaultClient {
