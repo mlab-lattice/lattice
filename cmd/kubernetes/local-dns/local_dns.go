@@ -32,7 +32,7 @@ func Run(clusterIDString, kubeconfig, provider, terraformModulePath string,
 
 	clusterID := types.ClusterID(clusterIDString)
 
-	ctx, err := CreateControllerContext(clusterID, config, nil, terraformModulePath)
+	ctx, err := CreateControllerContext(clusterID, config, nil, "")
 
 	if err != nil {
 		panic(err)

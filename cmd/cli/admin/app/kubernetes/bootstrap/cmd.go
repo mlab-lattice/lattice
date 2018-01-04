@@ -10,6 +10,7 @@ import (
 	latticeclientset "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/clientset/versioned"
 	clusterbootstrap "github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/cluster/bootstrap"
 	clusterbootstrapper "github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/cluster/bootstrap/bootstrapper"
+	baseclusterboostrapper "github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/cluster/bootstrap/bootstrapper/base"
 	systembootstrap "github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/system/bootstrap"
 	systembootstrapper "github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/system/bootstrap/bootstrapper"
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/networkingprovider"
@@ -91,6 +92,10 @@ var options = &clusterbootstrap.Options{
 		},
 		ServiceMesh: crv1.ConfigServiceMesh{},
 	},
+	MasterComponents: baseclusterboostrapper.MasterComponentOptions{
+	    LatticeControllerManager: baseclusterboostrapper.LatticeControllerManagerOptions{},
+		ManagerAPI:               baseclusterboostrapper.ManagerAPIOptions{},
+   },
 }
 
 var Cmd = &cobra.Command{

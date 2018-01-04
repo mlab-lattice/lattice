@@ -6,7 +6,7 @@ go_library(
         "local_dns.go",
         "main.go",
     ],
-    importpath = "github.com/mlab-lattice/system/cmd/kubernetes/lattice-dns-local",
+    importpath = "github.com/mlab-lattice/system/cmd/kubernetes/local-dns",
     visibility = ["//visibility:public"],
     deps = [
         "//cmd/kubernetes/lattice-controller-manager/app/common:go_default_library",
@@ -26,5 +26,12 @@ go_binary(
     name = "lattice-dns-local",
     embed = [":go_default_library"],
     importpath = "github.com/mlab-lattice/system/cmd/kubernetes/lattice-dns-local",
+    visibility = ["//visibility:public"],
+)
+
+go_binary(
+    name = "local-dns",
+    embed = [":go_default_library"],
+    importpath = "github.com/mlab-lattice/system/cmd/kubernetes/local-dns",
     visibility = ["//visibility:public"],
 )
