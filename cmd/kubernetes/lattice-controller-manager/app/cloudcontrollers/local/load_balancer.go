@@ -9,6 +9,7 @@ func initializeLoadBalancerController(ctx controller.Context) {
 	go loadbalancer.NewController(
 		ctx.KubeClientBuilder.ClientOrDie("load-balancer"),
 		ctx.LatticeClientBuilder.ClientOrDie("load-balancer"),
+		ctx.LatticeInformerFactory.Lattice().V1().Configs(),
 		ctx.LatticeInformerFactory.Lattice().V1().LoadBalancers(),
 		ctx.LatticeInformerFactory.Lattice().V1().Services(),
 		ctx.KubeInformerFactory.Core().V1().Services(),

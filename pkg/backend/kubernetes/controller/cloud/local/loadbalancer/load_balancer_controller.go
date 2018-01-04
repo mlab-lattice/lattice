@@ -2,6 +2,7 @@ package loadbalancer
 
 import (
 	"fmt"
+	"sync"
 	"time"
 
 	crv1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
@@ -34,6 +35,13 @@ type Controller struct {
 	kubeClient    kubeclientset.Interface
 	latticeClient latticeclientset.Interface
 
+	configLister       latticelisters.ConfigLister
+	configListerSynced cache.InformerSynced
+	configSetChan      chan struct{}
+	configSet          bool
+	configLock         sync.RWMutex
+	config             *crv1.ConfigSpec
+
 	loadBalancerLister       latticelisters.LoadBalancerLister
 	loadBalancerListerSynced cache.InformerSynced
 
@@ -49,6 +57,7 @@ type Controller struct {
 func NewController(
 	kubeClient kubeclientset.Interface,
 	latticeClient latticeclientset.Interface,
+	configInformer latticeinformers.ConfigInformer,
 	loadBalancerInformer latticeinformers.LoadBalancerInformer,
 	serviceInformer latticeinformers.ServiceInformer,
 	kubeServiceInformer coreinformers.ServiceInformer,
@@ -56,11 +65,24 @@ func NewController(
 	sc := &Controller{
 		kubeClient:    kubeClient,
 		latticeClient: latticeClient,
+		configSetChan: make(chan struct{}),
 		queue:         workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "service"),
 	}
 
 	sc.syncHandler = sc.syncLoadBalancer
 	sc.enqueueLoadBalancer = sc.enqueue
+
+	configInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+		// It's assumed there is always one and only one config object.
+		AddFunc:    sc.addConfig,
+		UpdateFunc: sc.updateConfig,
+		// TODO: for now it is assumed that ComponentBuilds are not deleted.
+		// in the future we'll probably want to add a GC process for ComponentBuilds.
+		// At that point we should listen here for those deletes.
+		// FIXME: Document CB GC ideas (need to write down last used date, lock properly, etc)
+	})
+	sc.configLister = configInformer.Lister()
+	sc.configListerSynced = configInformer.Informer().HasSynced
 
 	loadBalancerInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    sc.handleLoadBalancerAdd,
@@ -103,7 +125,10 @@ func (c *Controller) Run(workers int, stopCh <-chan struct{}) {
 		return
 	}
 
-	glog.V(4).Info("Caches synced")
+	glog.V(4).Info("Caches synced. Waiting for config to be set")
+
+	// wait for config to be set
+	<-c.configSetChan
 
 	// start up your worker threads based on threadiness.  Some controllers
 	// have multiple kinds of workers
@@ -115,6 +140,30 @@ func (c *Controller) Run(workers int, stopCh <-chan struct{}) {
 
 	// wait until we're told to stop
 	<-stopCh
+}
+
+func (c *Controller) addConfig(obj interface{}) {
+	config := obj.(*crv1.Config)
+	glog.V(4).Infof("Adding Config %s", config.Name)
+
+	c.configLock.Lock()
+	defer c.configLock.Unlock()
+	c.config = &config.DeepCopy().Spec
+
+	if !c.configSet {
+		c.configSet = true
+		close(c.configSetChan)
+	}
+}
+
+func (c *Controller) updateConfig(old, cur interface{}) {
+	oldConfig := old.(*crv1.Config)
+	curConfig := cur.(*crv1.Config)
+	glog.V(4).Infof("Updating Config %s", oldConfig.Name)
+
+	c.configLock.Lock()
+	defer c.configLock.Unlock()
+	c.config = &curConfig.DeepCopy().Spec
 }
 
 func (c *Controller) handleLoadBalancerAdd(obj interface{}) {
@@ -401,9 +450,27 @@ func (c *Controller) syncLoadBalancer(key string) error {
 		return err
 	}
 
+	kubeService, err := c.syncLoadBalancerKubeService(loadBalancer)
+	if err != nil {
+		return err
+	}
+
 	// Copy so the shared cache isn't mutated
 	loadBalancer = loadBalancer.DeepCopy()
 	loadBalancer.Status.State = crv1.LoadBalancerStateCreated
+	ports := map[int32]crv1.LoadBalancerPort{}
+
+	// Need a consistent view of our config while getting the pods
+	c.configLock.RLock()
+	defer c.configLock.RUnlock()
+
+	for _, port := range kubeService.Spec.Ports {
+		ports[port.Port] = crv1.LoadBalancerPort{
+			Address: fmt.Sprintf("%v:%v", c.config.CloudProvider.Local.IP, port.NodePort),
+		}
+	}
+
+	loadBalancer.Status.Ports = ports
 
 	_, err = c.latticeClient.LatticeV1().LoadBalancers(loadBalancer.Namespace).Update(loadBalancer)
 	return err

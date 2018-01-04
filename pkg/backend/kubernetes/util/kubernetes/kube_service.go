@@ -34,11 +34,11 @@ func GetKubeServiceNameForLoadBalancer(name string) string {
 	// "a DNS-1035 label must consist of lower case alphanumeric characters or '-',
 	//  and must start and end with an alphanumeric character (e.g. 'my-name',
 	//  or 'abc-123', regex used for validation is '[a-z]([-a-z0-9]*[a-z0-9])?')"
-	return fmt.Sprintf("%v%v", kubeServiceServicePrefix, name)
+	return fmt.Sprintf("%v%v", kubeServiceLoadBalancerPrefix, name)
 }
 
 func GetLoadBalancerNameForKubeService(kubeService *corev1.Service) (string, error) {
-	parts := strings.Split(kubeService.Name, kubeServiceServicePrefix)
+	parts := strings.Split(kubeService.Name, kubeServiceLoadBalancerPrefix)
 	if len(parts) != 2 {
 		return "", fmt.Errorf("kube service name did not match expected naming convention")
 	}

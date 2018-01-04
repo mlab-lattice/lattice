@@ -27,7 +27,7 @@ func (c *Controller) syncLoadBalancerKubeService(loadBalancer *crv1.LoadBalancer
 }
 
 func (c *Controller) createNewKubeService(loadBalancer *crv1.LoadBalancer) (*corev1.Service, error) {
-	name := kubeutil.GetKubeServiceNameForService(loadBalancer.Name)
+	name := kubeutil.GetKubeServiceNameForLoadBalancer(loadBalancer.Name)
 
 	spec, err := c.kubeServiceSpec(loadBalancer)
 	if err != nil {
@@ -58,7 +58,8 @@ func (c *Controller) kubeServiceSpec(loadBalancer *crv1.LoadBalancer) (corev1.Se
 		for _, componentPort := range componentPorts {
 			if componentPort.Public {
 				ports = append(ports, corev1.ServicePort{
-					Name: fmt.Sprintf("%v.%v", component, componentPort.Name),
+					// FIXME: need a better naming scheme
+					Name: fmt.Sprintf("%v-%v", component, componentPort.Name),
 					Port: componentPort.Port,
 				})
 			}
