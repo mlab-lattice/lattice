@@ -2,7 +2,6 @@ package local
 
 import (
 	crv1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
-	clusterbootstrapper "github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/cluster/bootstrap/bootstrapper"
 	systembootstrapper "github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/system/bootstrap/bootstrapper"
 
 	"github.com/golang/glog"
@@ -17,23 +16,27 @@ func NewLocalCloudProvider(clusterID types.ClusterID, providerName string, optio
 	return &DefaultLocalCloudProvider{
 		Options:   options,
 		ClusterID: clusterID,
-		Provider:  providerName,
 	}
 }
 
 type DefaultLocalCloudProvider struct {
 	Options   *crv1.ConfigCloudProviderLocal
 	ClusterID types.ClusterID
-	Provider  string
 }
 
-func (cp *DefaultLocalCloudProvider) BootstrapClusterResources(resources *clusterbootstrapper.ClusterResources) {
-	cp.seedDNS(resources)
+type Options struct {
+	Controller LocalDNSControllerOptions
+	Dnsmasq     LocalDNSServerOptions
+}
 
-	for _, daemonSet := range resources.DaemonSets {
-		template := cp.TransformPodTemplateSpec(&daemonSet.Spec.Template)
-		daemonSet.Spec.Template = *template
-	}
+type LocalDNSControllerOptions struct {
+	Image string
+	Args  []string
+}
+
+type LocalDNSServerOptions struct {
+	Image string
+	Args  []string
 }
 
 func (cp *DefaultLocalCloudProvider) BootstrapSystemResources(resources *systembootstrapper.SystemResources) {

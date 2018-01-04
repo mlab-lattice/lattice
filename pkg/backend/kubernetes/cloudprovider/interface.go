@@ -21,24 +21,7 @@ const (
 )
 
 type CloudProviderOptions struct {
-	DryRun          bool
-	Config          crv1.ConfigSpec
-	LocalComponents LocalComponentOptions
-}
-
-type LocalComponentOptions struct {
-	LocalDNSController LocalDNSControllerOptions
-	LocalDNSServer     LocalDNSServerOptions
-}
-
-type LocalDNSControllerOptions struct {
-	Image string
-	Args  []string
-}
-
-type LocalDNSServerOptions struct {
-	Image string
-	Args  []string
+	LocalComponents *local.Options
 }
 
 type Interface interface {

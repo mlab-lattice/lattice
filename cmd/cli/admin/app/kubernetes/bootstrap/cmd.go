@@ -41,8 +41,8 @@ var (
 	defaultLocalDNSControllerArgs = []string{
 		"-v", "5",
 		"--logtostderr",
-		"--server-config-path", kubeconstants.DNSSharedConfigDirectory + kubeconstants.DNSConfigFile,
-		"--host-config-path", kubeconstants.DNSSharedConfigDirectory + kubeconstants.DNSHostsFile,
+		"--dnsmasq-config-path", kubeconstants.DNSSharedConfigDirectory + kubeconstants.DNSConfigFile,
+		"--hosts-file-path", kubeconstants.DNSSharedConfigDirectory + kubeconstants.DNSHostsFile,
 	}
 
 	defaultLocalDNSNannyArgs = []string{

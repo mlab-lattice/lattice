@@ -17,14 +17,12 @@ import (
 
 var (
 	kubeconfig          string
-	clusterIDString     string
 	hostsFilePath      string
 	dnsmasqConfigPath    string
 )
 
 func init() {
 	flag.StringVar(&kubeconfig, "kubeconfig", "", "path to kubeconfig file")
-	flag.StringVar(&clusterIDString, "cluster-id", "", "id of the cluster")
 	flag.StringVar(&dnsmasqConfigPath, "dnsmasq-config-path", kubeconstants.DNSSharedConfigDirectory + kubeconstants.DNSConfigFile, "path to the additional dnsmasq configuration file")
 	flag.StringVar(&hostsFilePath, "hosts-file-path", kubeconstants.DNSSharedConfigDirectory + kubeconstants.DNSHostsFile, "path to the additional dnsmasq hosts")
 	flag.Parse()

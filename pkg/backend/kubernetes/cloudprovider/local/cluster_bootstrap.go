@@ -12,11 +12,20 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
-func (cp *DefaultLocalCloudProvider) seedDNS(resources *clusterbootstrapper.ClusterResources) {
+func (cp *DefaultLocalCloudProvider) BootstrapClusterResources(resources *clusterbootstrapper.ClusterResources) {
+	cp.bootstrapDNS(resources)
+
+	for _, daemonSet := range resources.DaemonSets {
+		template := cp.TransformPodTemplateSpec(&daemonSet.Spec.Template)
+		daemonSet.Spec.Template = *template
+	}
+}
+
+func (cp *DefaultLocalCloudProvider) bootstrapDNS(resources *clusterbootstrapper.ClusterResources) {
 
 	namespace := kubeutil.InternalNamespace("lattice")
 
-	controller_args := []string{"--provider", cp.Provider, "--cluster-id", string(cp.ClusterID)}
+	controller_args := []string{}
 	controller_args = append(controller_args, cp.Options.DNSControllerArgs...)
 
 	server_args := []string{}
