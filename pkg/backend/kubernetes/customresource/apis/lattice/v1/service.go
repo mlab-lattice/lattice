@@ -50,6 +50,7 @@ type ComponentPort struct {
 	Port int32  `json:"port"`
 	// EnvoyPort is the port assigned to this service to use for the Envoy ingress listener for
 	// this component port
+	// FIXME: remove this and put it in servicemesh
 	EnvoyPort int32  `json:"envoyPort"`
 	Protocol  string `json:"protocol"`
 	Public    bool   `json:"public"`

@@ -38,7 +38,7 @@ func (c *Controller) createNewKubeService(service *crv1.Service) (*corev1.Servic
 		Spec: spec,
 	}
 
-	// TODO: handle Conflic/AlreadyExists due to slow cache
+	// TODO: handle Conflict/AlreadyExists due to slow cache
 	return c.kubeClient.CoreV1().Services(service.Namespace).Create(kubeService)
 }
 

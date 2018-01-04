@@ -8,6 +8,7 @@ go_library(
         "fake_config.go",
         "fake_endpoint.go",
         "fake_lattice_client.go",
+        "fake_loadbalancer.go",
         "fake_nodepool.go",
         "fake_service.go",
         "fake_serviceaddress.go",

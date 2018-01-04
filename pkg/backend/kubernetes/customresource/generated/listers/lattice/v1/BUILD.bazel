@@ -7,6 +7,7 @@ go_library(
         "config.go",
         "endpoint.go",
         "expansion_generated.go",
+        "loadbalancer.go",
         "nodepool.go",
         "service.go",
         "serviceaddress.go",

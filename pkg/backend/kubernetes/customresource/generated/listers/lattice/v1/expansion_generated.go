@@ -26,6 +26,14 @@ type EndpointListerExpansion interface{}
 // EndpointNamespaceLister.
 type EndpointNamespaceListerExpansion interface{}
 
+// LoadBalancerListerExpansion allows custom methods to be added to
+// LoadBalancerLister.
+type LoadBalancerListerExpansion interface{}
+
+// LoadBalancerNamespaceListerExpansion allows custom methods to be added to
+// LoadBalancerNamespaceLister.
+type LoadBalancerNamespaceListerExpansion interface{}
+
 // NodePoolListerExpansion allows custom methods to be added to
 // NodePoolLister.
 type NodePoolListerExpansion interface{}

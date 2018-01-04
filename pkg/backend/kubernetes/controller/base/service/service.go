@@ -13,7 +13,8 @@ import (
 )
 
 const (
-	reasonTimedOut = "ProgressDeadlineExceeded"
+	reasonTimedOut           = "ProgressDeadlineExceeded"
+	reasonLoadBalancerFailed = "LoadBalancerFailed"
 )
 
 func (c *Controller) syncServiceStatus(
@@ -22,6 +23,8 @@ func (c *Controller) syncServiceStatus(
 	kubeService *corev1.Service,
 	nodePool *crv1.NodePool,
 	serviceAddress *crv1.ServiceAddress,
+	loadBalancer *crv1.LoadBalancer,
+	loadBalancerNeeded bool,
 ) (*crv1.Service, error) {
 	failed := false
 	failureReason := ""
@@ -88,18 +91,44 @@ func (c *Controller) syncServiceStatus(
 		state = crv1.ServiceStateUpdating
 	}
 
+	if loadBalancerNeeded {
+		switch loadBalancer.Status.State {
+		case crv1.LoadBalancerStatePending, crv1.LoadBalancerStateProvisioning:
+			state = crv1.ServiceStateUpdating
+
+		case crv1.LoadBalancerStateFailed:
+			// Only create new failure info if we didn't fail above
+			if !failed {
+				now := metav1.Now()
+				failed = true
+				failureReason = reasonLoadBalancerFailed
+				failureMessage = ""
+				failureTime = &now
+			}
+		}
+	}
+
 	// But if we have a failure, our updating or scaling has failed
 	// A failed status takes priority over an updating status
 	var failureInfo *crv1.ServiceFailureInfo
 	if failed {
 		state = crv1.ServiceStateFailed
-		if failureReason == reasonTimedOut {
+		switch failureReason {
+		case reasonTimedOut:
 			failureInfo = &crv1.ServiceFailureInfo{
 				Internal: false,
 				Message:  "timed out",
 				Time:     *failureTime,
 			}
-		} else {
+
+		case reasonLoadBalancerFailed:
+			failureInfo = &crv1.ServiceFailureInfo{
+				Internal: false,
+				Message:  "load balancer failed",
+				Time:     *failureTime,
+			}
+
+		default:
 			failureInfo = &crv1.ServiceFailureInfo{
 				Internal: true,
 				Message:  fmt.Sprintf("%v: %v", failureReason, failureMessage),
