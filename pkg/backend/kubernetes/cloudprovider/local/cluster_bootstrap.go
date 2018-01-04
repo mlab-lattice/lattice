@@ -23,19 +23,19 @@ func (cp *DefaultLocalCloudProvider) BootstrapClusterResources(resources *cluste
 
 func (cp *DefaultLocalCloudProvider) bootstrapDNS(resources *clusterbootstrapper.ClusterResources) {
 
-	namespace := kubeutil.InternalNamespace("lattice")
+	namespace := kubeutil.InternalNamespace(cp.ClusterID)
 
-	controller_args := []string{}
-	controller_args = append(controller_args, cp.Options.DNSControllerArgs...)
+	controllerArgs := []string{}
+	controllerArgs = append(controllerArgs, cp.Options.DNSServer.DNSControllerArgs...)
 
-	server_args := []string{}
-	server_args = append(server_args, cp.Options.DNSServerArgs...)
+	dnsmasqArgs := []string{}
+	dnsmasqArgs = append(dnsmasqArgs, cp.Options.DNSServer.DNSServerArgs...)
 
 	labels := map[string]string{
 		"key": constants.MasterNodeDNSServer,
 	}
 
-	localDNSDaemonSet := &appsv1.DaemonSet{
+	daemonSet := &appsv1.DaemonSet{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "DaemonSet",
 			APIVersion: appsv1.GroupName + "/v1",
@@ -58,8 +58,8 @@ func (cp *DefaultLocalCloudProvider) bootstrapDNS(resources *clusterbootstrapper
 					Containers: []corev1.Container{
 						{
 							Name:  constants.MasterNodeDNSSController,
-							Image: cp.Options.DNSControllerIamge,
-							Args:  controller_args,
+							Image: cp.Options.DNSServer.DNSControllerIamge,
+							Args:  controllerArgs,
 							VolumeMounts: []corev1.VolumeMount{
 								{
 									Name:      "dns-config",
@@ -69,8 +69,8 @@ func (cp *DefaultLocalCloudProvider) bootstrapDNS(resources *clusterbootstrapper
 						},
 						{
 							Name:  constants.MasterNodeDNSServer,
-							Image: cp.Options.DNSServerImage,
-							Args:  server_args,
+							Image: cp.Options.DNSServer.DNSServerImage,
+							Args:  dnsmasqArgs,
 							Ports: []corev1.ContainerPort{
 								{
 									ContainerPort: 53,
@@ -87,13 +87,7 @@ func (cp *DefaultLocalCloudProvider) bootstrapDNS(resources *clusterbootstrapper
 						},
 					},
 					DNSPolicy: corev1.DNSDefault,
-					ServiceAccountName: constants.ServiceAccountLatticeControllerManager,
-					Tolerations: []corev1.Toleration{
-						constants.TolerationMasterNode,
-					},
-					Affinity: &corev1.Affinity{
-						NodeAffinity: &constants.NodeAffinityMasterNode,
-					},
+					ServiceAccountName: constants.ServiceAccountLocalDNS,
 					Volumes: []corev1.Volume{
 						{
 							Name: "dns-config",
@@ -109,9 +103,9 @@ func (cp *DefaultLocalCloudProvider) bootstrapDNS(resources *clusterbootstrapper
 		},
 	}
 
-	resources.DaemonSets = append(resources.DaemonSets, localDNSDaemonSet)
+	resources.DaemonSets = append(resources.DaemonSets, daemonSet)
 
-	localDNSService := &corev1.Service{
+	service := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      constants.MasterNodeDNSService,
 			Namespace: namespace,
@@ -138,5 +132,5 @@ func (cp *DefaultLocalCloudProvider) bootstrapDNS(resources *clusterbootstrapper
 		},
 	}
 
-	resources.Services = append(resources.Services, localDNSService)
+	resources.Services = append(resources.Services, service)
 }

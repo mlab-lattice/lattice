@@ -205,7 +205,7 @@ func Bootstrap(
 	var services []*corev1.Service
 	for _, service := range resources.Services {
 		var result *corev1.Service
-		err = idempotentSeed(fmt.Sprintf("daemon set %v/%v", service.Namespace, service.Name), func() error {
+		err = idempotentSeed(fmt.Sprintf("service %v/%v", service.Namespace, service.Name), func() error {
 			result, err = kubeClient.CoreV1().Services(service.Namespace).Create(service)
 			return err
 		})

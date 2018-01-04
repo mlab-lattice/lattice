@@ -81,12 +81,12 @@ func (cp *DefaultLocalCloudProvider) TransformServiceDeploymentSpec(service *crv
 	} else {
 		found := false
 
-		for k, v := range spec.Template.Spec.DNSConfig.Nameservers {
-			if v == constants.LocalDNSServerIP {
+		for idx, nameserver := range spec.Template.Spec.DNSConfig.Nameservers {
+			if nameserver == constants.LocalDNSServerIP {
 				// Nameserver already present, so no need to update
 				found = true
 
-				if k != 0 {
+				if idx != 0 {
 					glog.Warningf("Local DNS server found, but not as the first nameserver. This will not be modified...")
 				}
 			}

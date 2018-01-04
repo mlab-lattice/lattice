@@ -36,6 +36,10 @@ type ConfigCloudProvider struct {
 type ConfigCloudProviderLocal struct {
 	// FIXME: this shouldn't be dynamic config
 	IP                 string   `json:"ip"`
+	DNSServer 		   ConfigCloudProviderLocalDNS `json:"localDNS"`
+}
+
+type ConfigCloudProviderLocalDNS struct {
 	DNSControllerIamge string   `json:"controller-image"`
 	DNSServerImage     string   `json:"server-image"`
 	DNSServerArgs      []string `json:"server-args"`

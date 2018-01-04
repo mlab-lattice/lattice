@@ -41,7 +41,7 @@ var (
 	defaultLocalDNSControllerArgs = []string{
 		"-v", "5",
 		"--logtostderr",
-		"--dnsmasq-config-path", kubeconstants.DNSSharedConfigDirectory + kubeconstants.DNSConfigFile,
+		"--dnsmasq-config-path", kubeconstants.DNSSharedConfigDirectory + kubeconstants.DnsmasqConfigFile,
 		"--hosts-file-path", kubeconstants.DNSSharedConfigDirectory + kubeconstants.DNSHostsFile,
 	}
 
@@ -298,8 +298,8 @@ func parseCloudProviderVars() (*crv1.ConfigCloudProvider, error) {
 			return nil, err
 		}
 
-		localConfig.DNSControllerArgs = dnsControllerArgs
-		localConfig.DNSServerArgs = dnsServerArgs
+		localConfig.DNSServer.DNSControllerArgs = dnsControllerArgs
+		localConfig.DNSServer.DNSServerArgs = dnsServerArgs
 
 		config = &crv1.ConfigCloudProvider{
 			Local: localConfig,

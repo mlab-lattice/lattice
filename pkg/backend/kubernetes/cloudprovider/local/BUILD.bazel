@@ -4,7 +4,7 @@ go_library(
     name = "go_default_library",
     srcs = [
         "cloudprovider.go",
-        "local_components.go",
+        "cluster_bootstrap.go",
     ],
     importpath = "github.com/mlab-lattice/system/pkg/backend/kubernetes/cloudprovider/local",
     visibility = ["//visibility:public"],
