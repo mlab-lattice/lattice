@@ -1,9 +1,10 @@
 package provisioner
 
-import (
+import(
 	"fmt"
 	"os/user"
 	"time"
+	"strings"
 
 	kubeconstants "github.com/mlab-lattice/system/pkg/backend/kubernetes/constants"
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/util/minikube"
@@ -32,6 +33,32 @@ type LocalProvisioner struct {
 const (
 	defaultDockerAPIVersion  = "1.24"
 	systemNamePrefixMinikube = "lattice-local-"
+)
+
+var(
+	localDNSControllerArgList = []string{
+		"-v", "5",
+		"--logtostderr",
+		"--dnsmasq-config-path", kubeconstants.DNSSharedConfigDirectory + kubeconstants.DnsmasqConfigFile,
+		"--hosts-file-path", kubeconstants.DNSSharedConfigDirectory + kubeconstants.DNSHostsFile,
+	}
+
+	localDNSNannyArgList = []string{
+		"-v=2",
+		"-logtostderr",
+		"-restartDnsmasq=true",
+		"-configDir=" +  kubeconstants.DNSSharedConfigDirectory,
+	}
+
+	localDNSMasqArgList = []string{
+		"-k", // Keep in foreground so as to not immediately exit.
+		"-R", // Dont read provided /etc/resolv.conf
+		"--hostsdir=" + kubeconstants.DNSSharedConfigDirectory, // Read all the hosts from this directory. File changes read automatically by dnsmasq.
+		"--conf-dir=" + kubeconstants.DNSSharedConfigDirectory + ",*.conf", // Read all *.conf files in the directory as dns config files
+	}
+
+	localDNSServerArgs = "local-dns-server-args=" + strings.Join(append(append(localDNSNannyArgList, "--"), localDNSMasqArgList...), ",")
+	localDNSControllerArgs = "local-dns-controller-args=" + strings.Join(localDNSControllerArgList, ",")
 )
 
 func NewLocalProvisioner(dockerAPIVersion, latticeContainerRegistry, latticeContainerRepoPrefix, logPath string) (*LocalProvisioner, error) {
@@ -173,6 +200,8 @@ func (lp *LocalProvisioner) bootstrap(address, url, name string) error {
 								"--cloud-provider-var", "system-ip=" + address,
 								"--cloud-provider-var", "dns-controller-image=" + lp.getLatticeContainerImage(kubeconstants.DockerImageLocalDNSController),
 								"--cloud-provider-var", "dns-server-image=" + kubeconstants.DockerImageLocalDNSServer,
+								"--cloud-provider-var", "dns-server-args=" + localDNSServerArgs,
+								"--cloud-provider-var", "dns-controller-args=" + localDNSControllerArgs,
 								"--component-builder-image", lp.getLatticeContainerImage(kubeconstants.DockerImageComponentBuilder),
 								"--component-build-docker-artifact-registry", "lattice-local",
 								"--component-build-docker-artifact-repository-per-image=true",

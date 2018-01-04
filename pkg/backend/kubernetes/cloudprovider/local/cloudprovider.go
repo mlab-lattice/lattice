@@ -63,44 +63,27 @@ func (cp *DefaultLocalCloudProvider) TransformComponentBuildJobSpec(spec *batchv
 func (cp *DefaultLocalCloudProvider) TransformServiceDeploymentSpec(service *crv1.Service, spec *appsv1.DeploymentSpec) *appsv1.DeploymentSpec {
 	spec = spec.DeepCopy()
 	spec.Template.Spec.Affinity = nil
+	spec.Template.Spec.DNSConfig.Nameservers = []string{constants.LocalDNSServerIP}
 
-	ndotsValue := "15"
+	found := false
 
-	DNSConfig := corev1.PodDNSConfig{
-		Nameservers: []string{constants.LocalDNSServerIP},
-		Options: []corev1.PodDNSConfigOption{
-			{
-				Name:  "ndots",
-				Value: &ndotsValue,
-			},
-		},
-	}
+	for idx, nameserver := range spec.Template.Spec.DNSConfig.Nameservers {
+		if nameserver == constants.LocalDNSServerIP {
+			// Nameserver already present, so no need to update
+			found = true
 
-	if spec.Template.Spec.DNSConfig == nil {
-		spec.Template.Spec.DNSConfig = &DNSConfig
-	} else {
-		found := false
-
-		for idx, nameserver := range spec.Template.Spec.DNSConfig.Nameservers {
-			if nameserver == constants.LocalDNSServerIP {
-				// Nameserver already present, so no need to update
-				found = true
-
-				if idx != 0 {
-					glog.Warningf("Local DNS server found, but not as the first nameserver. This will not be modified...")
-				}
+			if idx != 0 {
+				glog.Warningf("Local DNS server found, but not as the first nameserver. This will not be modified...")
 			}
 		}
-
-		if !found {
-			// Add the DNS server IP as the first nameserver.
-			spec.Template.Spec.DNSConfig.Nameservers = append([]string{constants.LocalDNSServerIP}, spec.Template.Spec.DNSConfig.Nameservers...)
-		}
-
-		glog.V(4).Infof("Updated nameservers: %v", spec.Template.Spec.DNSConfig.Nameservers)
 	}
 
-	spec.Template.Spec.DNSPolicy = corev1.DNSNone
+	if !found {
+		// Add the DNS server IP as the first nameserver.
+		spec.Template.Spec.DNSConfig.Nameservers = append([]string{constants.LocalDNSServerIP}, spec.Template.Spec.DNSConfig.Nameservers...)
+	}
+
+	glog.V(4).Infof("Updated nameservers: %v", spec.Template.Spec.DNSConfig.Nameservers)
 
 	return spec
 }

@@ -176,6 +176,18 @@ func untransformedDeploymentSpec(service *crv1.Service, name string, deploymentL
 		RequiredDuringSchedulingIgnoredDuringExecution: []corev1.PodAffinityTerm{podAffinityTerm},
 	}
 
+	ndotsValue := "15"
+
+	DNSConfig := corev1.PodDNSConfig{
+		Nameservers: []string{},
+		Options: []corev1.PodDNSConfigOption{
+			{
+				Name:  "ndots",
+				Value: &ndotsValue,
+			},
+		},
+	}
+
 	// IMPORTANT: if you change anything in here, you _must_ update isDeploymentSpecUpdated to accommodate it
 	spec := &appsv1.DeploymentSpec{
 		Replicas: &replicas,
@@ -189,7 +201,8 @@ func untransformedDeploymentSpec(service *crv1.Service, name string, deploymentL
 			},
 			Spec: corev1.PodSpec{
 				Containers: containers,
-				DNSPolicy:  corev1.DNSDefault,
+				DNSPolicy:  corev1.DNSNone,
+				DNSConfig:  &DNSConfig,
 				Affinity: &corev1.Affinity{
 					NodeAffinity:    kubeutil.NodePoolNodeAffinity(nodePool),
 					PodAntiAffinity: podAntiAffinity,

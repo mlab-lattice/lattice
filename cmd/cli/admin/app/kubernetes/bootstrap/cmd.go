@@ -38,29 +38,6 @@ var (
 		"--logtostderr",
 	}
 
-	defaultLocalDNSControllerArgs = []string{
-		"-v", "5",
-		"--logtostderr",
-		"--dnsmasq-config-path", kubeconstants.DNSSharedConfigDirectory + kubeconstants.DnsmasqConfigFile,
-		"--hosts-file-path", kubeconstants.DNSSharedConfigDirectory + kubeconstants.DNSHostsFile,
-	}
-
-	defaultLocalDNSNannyArgs = []string{
-		"-v=2",
-		"-logtostderr",
-		"-restartDnsmasq=true",
-		"-configDir=" +  kubeconstants.DNSSharedConfigDirectory,
-	}
-
-	defaultLocalDNSMasqArgs = []string{
-		"-k", // Keep in foreground so as to not immediately exit.
-		"-R", // Dont read provided /etc/resolv.conf
-		"--hostsdir=" + kubeconstants.DNSSharedConfigDirectory, // Read all the hosts from this directory. File changes read automatically by dnsmasq.
-		"--conf-dir=" + kubeconstants.DNSSharedConfigDirectory + ",*.conf", // Read all *.conf files in the directory as dns config files
-	}
-
-	defaultLocalDNSServerArgs = append(append(defaultLocalDNSNannyArgs, "--"), defaultLocalDNSMasqArgs...)
-
 	defaultManagerAPIArgs = []string{}
 
 	clusterIDString string
@@ -96,6 +73,15 @@ var options = &clusterbootstrap.Options{
 	    LatticeControllerManager: baseclusterboostrapper.LatticeControllerManagerOptions{},
 		ManagerAPI:               baseclusterboostrapper.ManagerAPIOptions{},
    },
+}
+
+// FIXME :: temporary until better solution for nested struct.
+type LocalCloudOptionsFlat struct {
+	IP                 string   `json:"ip"`
+	DNSControllerIamge string   `json:"controller-image"`
+	DNSServerImage     string   `json:"server-image"`
+	DNSServerArgs      []string `json:"server-args"`
+	DNSControllerArgs  []string `json:"controller-args"`
 }
 
 var Cmd = &cobra.Command{
@@ -279,9 +265,6 @@ func init() {
 	Cmd.MarkFlagRequired("service-provider")
 	Cmd.Flags().StringArrayVar(&serviceMeshProviderVars, "service-mesh-var", nil, "additional variables for the cloud provider")
 
-	Cmd.Flags().StringArrayVar(&dnsControllerArgs, "local-dns-controller-args", defaultLocalDNSControllerArgs, "extra arguments (besides --provider) to pass to the local-dns-controller")
-	Cmd.Flags().StringArrayVar(&dnsServerArgs, "local-dns-server-args", defaultLocalDNSServerArgs, "extra arguments to pass to the local-dns-server")
-
 	Cmd.Flags().StringVar(&terraformBackend, "terraform-backend", "", "backend to use for terraform")
 	Cmd.Flags().StringArrayVar(&terraformBackendVars, "terraform-backend-var", nil, "additional variables for the terraform backend")
 
@@ -298,12 +281,10 @@ func parseCloudProviderVars() (*crv1.ConfigCloudProvider, error) {
 			return nil, err
 		}
 
-		localConfig.DNSServer.DNSControllerArgs = dnsControllerArgs
-		localConfig.DNSServer.DNSServerArgs = dnsServerArgs
-
 		config = &crv1.ConfigCloudProvider{
 			Local: localConfig,
 		}
+
 	case constants.ProviderAWS:
 		awsConfig, err := parseProviderCloudVarsAWS()
 		if err != nil {
@@ -321,8 +302,10 @@ func parseCloudProviderVars() (*crv1.ConfigCloudProvider, error) {
 
 func parseCloudProviderVarsLocal() (*crv1.ConfigCloudProviderLocal, error) {
 	localConfig := &crv1.ConfigCloudProviderLocal{}
+	flatStruct := &LocalCloudOptionsFlat{}
+
 	flags := cli.EmbeddedFlag{
-		Target: &localConfig,
+		Target: &flatStruct,
 		Expected: map[string]cli.EmbeddedFlagValue{
 			"system-ip": {
 				Required:     true,
@@ -336,6 +319,20 @@ func parseCloudProviderVarsLocal() (*crv1.ConfigCloudProviderLocal, error) {
 				Required:     true,
 				EncodingName: "server-image",
 			},
+			"dns-server-args": {
+				Required:     true,
+				EncodingName: "server-args",
+				ValueParser: func(value string) (interface{}, error) {
+					return strings.Split(value, ","), nil
+				},
+			},
+			"dns-controller-args": {
+				Required:     true,
+				EncodingName: "controller-args",
+				ValueParser: func(value string) (interface{}, error) {
+					return strings.Split(value, ","), nil
+				},
+			},
 		},
 	}
 
@@ -343,6 +340,13 @@ func parseCloudProviderVarsLocal() (*crv1.ConfigCloudProviderLocal, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	localConfig.IP = flatStruct.IP
+	localConfig.DNSServer.DNSServerImage = flatStruct.DNSServerImage
+	localConfig.DNSServer.DNSControllerIamge = flatStruct.DNSControllerIamge
+	localConfig.DNSServer.DNSServerArgs = flatStruct.DNSServerArgs
+	localConfig.DNSServer.DNSControllerArgs = flatStruct.DNSControllerArgs
+
 	return localConfig, nil
 }
 
