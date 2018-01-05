@@ -8,12 +8,12 @@ import (
 	"time"
 
 	"github.com/mlab-lattice/system/cmd/kubernetes/lattice-controller-manager/app/basecontrollers"
+	awscontrollers "github.com/mlab-lattice/system/cmd/kubernetes/lattice-controller-manager/app/cloudcontrollers/aws"
 	localcontrollers "github.com/mlab-lattice/system/cmd/kubernetes/lattice-controller-manager/app/cloudcontrollers/local"
 	controller "github.com/mlab-lattice/system/cmd/kubernetes/lattice-controller-manager/app/common"
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/cloudprovider"
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/cloudprovider/local"
 	latticeinformers "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/informers/externalversions"
-	"github.com/mlab-lattice/system/pkg/constants"
 	"github.com/mlab-lattice/system/pkg/terraform"
 	"github.com/mlab-lattice/system/pkg/types"
 	"github.com/mlab-lattice/system/pkg/util/cli"
@@ -167,13 +167,16 @@ func GetControllerInitializers(provider string) map[string]controller.Initialize
 	}
 
 	switch provider {
-	case constants.ProviderAWS:
-		// nothing for aws yet
+	case cloudprovider.AWS:
+		for name, initializer := range awscontrollers.GetControllerInitializers() {
+			initializers["cloud-local-"+name] = initializer
+		}
 
-	case constants.ProviderLocal:
+	case cloudprovider.Local:
 		for name, initializer := range localcontrollers.GetControllerInitializers() {
 			initializers["cloud-local-"+name] = initializer
 		}
+
 	default:
 		panic("unsupported cloud provider " + provider)
 	}

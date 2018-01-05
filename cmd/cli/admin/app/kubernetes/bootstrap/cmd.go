@@ -47,6 +47,8 @@ var (
 	initialSystemIDString      string
 	initialSystemDefinitionURL string
 
+	componentBuildRegistryAuthType string
+
 	cloudProviderName string
 	cloudProviderVars []string
 
@@ -81,6 +83,10 @@ var Cmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		if !options.Config.ComponentBuild.DockerArtifact.RepositoryPerImage && options.Config.ComponentBuild.DockerArtifact.Repository == "" {
 			panic("must specify component-build-docker-artifact-repository if not component-build-docker-artifact-repository-per-image")
+		}
+
+		if componentBuildRegistryAuthType != "" {
+			options.Config.ComponentBuild.DockerArtifact.RegistryAuthType = &componentBuildRegistryAuthType
 		}
 
 		emtpy := ""
@@ -234,7 +240,7 @@ func init() {
 
 	Cmd.Flags().StringVar(&options.Config.ComponentBuild.DockerArtifact.Registry, "component-build-docker-artifact-registry", "", "registry to tag component build docker artifacts with")
 	Cmd.MarkFlagRequired("component-build-docker-artifact-registry")
-	Cmd.Flags().StringVar(options.Config.ComponentBuild.DockerArtifact.RegistryAuthType, "component-build-docker-artifact-registry-auth-type", "", "type of auth to use for the component build registry")
+	Cmd.Flags().StringVar(&componentBuildRegistryAuthType, "component-build-docker-artifact-registry-auth-type", "", "type of auth to use for the component build registry")
 	Cmd.Flags().BoolVar(&options.Config.ComponentBuild.DockerArtifact.RepositoryPerImage, "component-build-docker-artifact-repository-per-image", false, "if false, one repository with a new tag for each artifact will be use, if true a new repository for each artifact will be used")
 	Cmd.Flags().StringVar(&options.Config.ComponentBuild.DockerArtifact.Repository, "component-build-docker-artifact-repository", "", "repository to tag component build docker artifacts with, required if component-build-docker-artifact-repository-per-image is false")
 	Cmd.Flags().BoolVar(&options.Config.ComponentBuild.DockerArtifact.Push, "component-build-docker-artifact-push", true, "whether or not the component-builder should push the docker artifact (use false for localcloudprovider)")
@@ -431,6 +437,7 @@ func parseTerraformVars() (baseclusterboostrapper.TerraformOptions, error) {
 		backend = terraform.BackendOptions{
 			S3: s3Config,
 		}
+
 	default:
 		return baseclusterboostrapper.TerraformOptions{}, fmt.Errorf("unsupported terraform backend: %v", terraformBackend)
 	}

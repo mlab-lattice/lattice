@@ -230,6 +230,7 @@ func GetBootstrapResources(
 		DryRun:           options.DryRun,
 		Config:           options.Config,
 		MasterComponents: options.MasterComponents,
+		TerraformOptions: options.Terraform,
 	}
 
 	baseBootstrapper, err := base.NewBootstrapper(clusterID, cloudProviderName, baseOptions)
