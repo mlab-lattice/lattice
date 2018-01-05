@@ -22,7 +22,7 @@ const (
 
 type Options struct {
 	IP  string
-	DNS *LocalDNSControllerOptions
+	DNS *DNSOptions
 }
 
 type CloudProvider interface {
@@ -33,12 +33,12 @@ func NewLocalCloudProvider(clusterID types.ClusterID, options *Options) *Default
 	cp := &DefaultLocalCloudProvider{
 		ClusterID: clusterID,
 		ip:        options.IP,
-		Options:   &crv1.ConfigCloudProviderLocal{},
+		DNS:       &DNSOptions{},
 	}
 
 	if options.DNS != nil {
-		cp.Options.DNSServer = &crv1.ConfigCloudProviderLocalDNS{
-			DNSControllerIamge: options.DNS.DNSControllerImage,
+		cp.DNS = &DNSOptions{
+			DNSControllerImage: options.DNS.DNSControllerImage,
 			DNSControllerArgs:  options.DNS.DNSControllerArgs,
 			DNSServerImage:     options.DNS.DNSServerImage,
 			DNSServerArgs:      options.DNS.DNSServerArgs,
@@ -50,11 +50,11 @@ func NewLocalCloudProvider(clusterID types.ClusterID, options *Options) *Default
 
 type DefaultLocalCloudProvider struct {
 	ClusterID types.ClusterID
-	Options   *crv1.ConfigCloudProviderLocal
 	ip        string
+	DNS       *DNSOptions
 }
 
-type LocalDNSControllerOptions struct {
+type DNSOptions struct {
 	DNSServerImage     string
 	DNSServerArgs      []string
 	DNSControllerImage string

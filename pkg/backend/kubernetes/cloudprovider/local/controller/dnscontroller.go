@@ -358,15 +358,10 @@ func (c *Controller) RewriteDnsmasqConfig() error {
 
 	// This is an extra config file, so contains only the options which must be rewritten.
 	// Condition on cname is that it exists in the specified host file, or references another cname.
-	// Each cname entry of the form cname=ALIAS,...(addn alias),TARGET
+	// Each cname entry of the form cname=ALIAS,...(addn aliases),TARGET
 	// Full specification here: http://www.thekelleys.org.uk/dnsmasq/docs/dnsmasq-man.html
 
 	// This logic takes a write lock for the entire duration of the update to simplify the logic and to prevent possible missed updates.
-	// A missed update is possible when the files are written, and a read lock is released. Before a write lock is acquired to update
-	// c.hasRecentlyUpdated, SyncEndpointUpdate takes the write lock and sees that c.hasRecentlyUpdated is false, then proceeds
-	// to add an endpoint to the buffer, and releases the lock. Then this function acquires the lock and sets hasRecentlyUpdates to false.
-	// If that was the last SyncEndpointUpdate, those updates will never be written to disk as this function cannot be guaranteed
-	// to run again.
 	c.sharedVarsLock.Lock()
 
 	for _, v := range c.cnameList {

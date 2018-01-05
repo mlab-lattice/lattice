@@ -343,7 +343,7 @@ func parseCloudProviderVarsLocal() (*local.Options, error) {
 	}
 
 	options.IP = flatStruct.IP
-	options.DNS = &local.LocalDNSControllerOptions{}
+	options.DNS = &local.DNSOptions{}
 	options.DNS.DNSControllerArgs = flatStruct.DNSControllerArgs
 	options.DNS.DNSServerArgs = flatStruct.DNSServerArgs
 	options.DNS.DNSServerImage = flatStruct.DNSServerImage

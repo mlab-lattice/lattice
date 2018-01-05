@@ -19,10 +19,10 @@ func (cp *DefaultLocalCloudProvider) bootstrapDNS(resources *clusterbootstrapper
 	namespace := kubeutil.InternalNamespace(cp.ClusterID)
 
 	controllerArgs := []string{}
-	controllerArgs = append(controllerArgs, cp.Options.DNSServer.DNSControllerArgs...)
+	controllerArgs = append(controllerArgs, cp.DNS.DNSControllerArgs...)
 
 	dnsmasqArgs := []string{}
-	dnsmasqArgs = append(dnsmasqArgs, cp.Options.DNSServer.DNSServerArgs...)
+	dnsmasqArgs = append(dnsmasqArgs, cp.DNS.DNSServerArgs...)
 
 	labels := map[string]string{
 		"key": kubeconstants.MasterNodeDNSServer,
@@ -51,7 +51,7 @@ func (cp *DefaultLocalCloudProvider) bootstrapDNS(resources *clusterbootstrapper
 					Containers: []corev1.Container{
 						{
 							Name:  kubeconstants.MasterNodeDNSSController,
-							Image: cp.Options.DNSServer.DNSControllerIamge,
+							Image: cp.DNS.DNSControllerImage,
 							Args:  controllerArgs,
 							VolumeMounts: []corev1.VolumeMount{
 								{
@@ -62,7 +62,7 @@ func (cp *DefaultLocalCloudProvider) bootstrapDNS(resources *clusterbootstrapper
 						},
 						{
 							Name:  kubeconstants.MasterNodeDNSServer,
-							Image: cp.Options.DNSServer.DNSServerImage,
+							Image: cp.DNS.DNSServerImage,
 							Args:  dnsmasqArgs,
 							Ports: []corev1.ContainerPort{
 								{
