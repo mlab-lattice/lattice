@@ -323,14 +323,16 @@ func parseCloudProviderVarsLocal() (*crv1.ConfigCloudProviderLocal, error) {
 				Required:     true,
 				EncodingName: "server-args",
 				ValueParser: func(value string) (interface{}, error) {
-					return strings.Split(value, ","), nil
+					var argsWithoutPrefix = strings.Join(strings.Split(value, "=")[1:], "=")
+					return strings.Split(argsWithoutPrefix, ","), nil
 				},
 			},
 			"dns-controller-args": {
 				Required:     true,
 				EncodingName: "controller-args",
 				ValueParser: func(value string) (interface{}, error) {
-					return strings.Split(value, ","), nil
+					var argsWithoutPrefix = strings.Join(strings.Split(value, "=")[1:], "=")
+					return strings.Split(argsWithoutPrefix, ","), nil
 				},
 			},
 		},

@@ -5,7 +5,7 @@ const(
     MasterNodeDNSServer      = "local-dnsmasq-server"
     MasterNodeDNSService     = "local-dns-service"
 
-    DockerImageLocalDNSController       = "lattice-local-dns"
+    DockerImageLocalDNSController = "kubernetes-local-dns"
     DockerImageLocalDNSServer = "gcr.io/google_containers/k8s-dns-dnsmasq-nanny-amd64:1.14.5"
 
     LocalDNSServerIP = "10.96.0.53"
