@@ -7,7 +7,6 @@ import (
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/cloudprovider"
 	awscloudprovider "github.com/mlab-lattice/system/pkg/backend/kubernetes/cloudprovider/aws"
 	localcloudprovider "github.com/mlab-lattice/system/pkg/backend/kubernetes/cloudprovider/local"
-	kubeconstants "github.com/mlab-lattice/system/pkg/backend/kubernetes/constants"
 	crv1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	latticeclientset "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/clientset/versioned"
 	clusterbootstrap "github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/cluster/bootstrap"
@@ -26,6 +25,7 @@ import (
 	kubeclientset "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 
+	"github.com/mlab-lattice/system/pkg/terraform"
 	"github.com/spf13/cobra"
 )
 
@@ -111,11 +111,11 @@ var Cmd = &cobra.Command{
 		}
 		options.Config.ServiceMesh = *serviceMeshConfig
 
-		terraformConfig, err := parseTerraformVars()
+		terraformOptions, err := parseTerraformVars()
 		if err != nil {
 			panic(err)
 		}
-		options.Config.Terraform = terraformConfig
+		options.Terraform = terraformOptions
 
 		serviceMesh, err := servicemesh.NewServiceMesh(&options.Config.ServiceMesh)
 		if err != nil {
@@ -330,6 +330,10 @@ func parseProviderCloudVarsAWS() (*awscloudprovider.Options, error) {
 				Required:     true,
 				EncodingName: "VPCID",
 			},
+			"route53-private-zone-id": {
+				Required:     true,
+				EncodingName: "Route53PrivateZoneID",
+			},
 			"subnet-ids": {
 				Required:     true,
 				EncodingName: "SubnetIDs",
@@ -412,37 +416,39 @@ func parseServiceMeshVarsEnvoy() (*crv1.ConfigEnvoy, error) {
 	return envoyConfig, nil
 }
 
-func parseTerraformVars() (*crv1.ConfigTerraform, error) {
+func parseTerraformVars() (baseclusterboostrapper.TerraformOptions, error) {
 	if terraformBackend == "" {
-		return nil, nil
+		return baseclusterboostrapper.TerraformOptions{}, nil
 	}
 
-	var config *crv1.ConfigTerraform
+	var backend terraform.BackendOptions
 	switch terraformBackend {
-	case kubeconstants.TerraformBackendS3:
+	case terraform.BackendS3:
 		s3Config, err := parseTerraformVarsS3()
 		if err != nil {
-			return nil, err
+			return baseclusterboostrapper.TerraformOptions{}, err
 		}
-		config = &crv1.ConfigTerraform{
-			Backend: &crv1.ConfigTerraformBackend{
-				S3: s3Config,
-			},
+		backend = terraform.BackendOptions{
+			S3: s3Config,
 		}
 	default:
-		return nil, fmt.Errorf("unsupported terraform backend: %v", terraformBackend)
+		return baseclusterboostrapper.TerraformOptions{}, fmt.Errorf("unsupported terraform backend: %v", terraformBackend)
 	}
 
-	return config, nil
+	options := baseclusterboostrapper.TerraformOptions{
+		Backend: backend,
+	}
+	return options, nil
 }
 
-func parseTerraformVarsS3() (*crv1.ConfigTerraformBackendS3, error) {
-	s3Config := &crv1.ConfigTerraformBackendS3{}
+func parseTerraformVarsS3() (*terraform.BackendOptionsS3, error) {
+	s3Config := &terraform.BackendOptionsS3{}
 	flags := cli.EmbeddedFlag{
 		Target: &s3Config,
 		Expected: map[string]cli.EmbeddedFlagValue{
 			"bucket": {
-				Required: true,
+				EncodingName: "Bucket",
+				Required:     true,
 			},
 		},
 	}

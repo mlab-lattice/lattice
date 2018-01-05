@@ -1,0 +1,16 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "aws_controllers.go",
+        "endpoint.go",
+    ],
+    importpath = "github.com/mlab-lattice/system/cmd/kubernetes/lattice-controller-manager/app/cloudcontrollers/aws",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//cmd/kubernetes/lattice-controller-manager/app/common:go_default_library",
+        "//pkg/backend/kubernetes/cloudprovider/aws:go_default_library",
+        "//pkg/backend/kubernetes/controller/cloud/aws/endpoint:go_default_library",
+    ],
+)

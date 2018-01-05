@@ -9,6 +9,7 @@ REGION=$(echo ${AVAILABILITY_ZONE} | sed 's/.$//')
 USER_DATA=$(curl -s http://169.254.169.254/latest/user-data)
 AWS_ACCOUNT_ID=$(echo ${USER_DATA} | jq '.lattice.aws_account_id' | tr -d '"')
 VPC_ID=$(echo ${USER_DATA} | jq '.lattice.vpc_id' | tr -d '"')
+ROUTE53_PRIVATE_ZONE_ID=$(echo ${USER_DATA} | jq '.lattice.route53_private_zone_id' | tr -d '"')
 SUBNET_IDS=$(echo ${USER_DATA} | jq '.lattice.subnet_ids' | tr -d '"')
 MASTER_NODE_SECURITY_GROUP_ID=$(echo ${USER_DATA} | jq '.lattice.master_node_security_group_id' | tr -d '"')
 BASE_NODE_AMI_ID=$(echo ${USER_DATA} | jq '.lattice.base_node_ami_id' | tr -d '"')
@@ -37,6 +38,7 @@ sleep 10
     --cloud-provider-var account-id=${AWS_ACCOUNT_ID} \
     --cloud-provider-var region=${REGION} \
     --cloud-provider-var vpc-id=${VPC_ID} \
+    --cloud-provider-var route53-private-zone-id=${ROUTE53_PRIVATE_ZONE_ID} \
     --cloud-provider-var subnet-ids=${SUBNET_IDS} \
     --cloud-provider-var master-node-security-group-id=${MASTER_NODE_SECURITY_GROUP_ID} \
     --cloud-provider-var base-node-ami-id=${BASE_NODE_AMI_ID} \

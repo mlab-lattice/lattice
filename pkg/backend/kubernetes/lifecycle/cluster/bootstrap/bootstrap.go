@@ -27,6 +27,7 @@ type Options struct {
 	DryRun           bool
 	Config           crv1.ConfigSpec
 	MasterComponents base.MasterComponentOptions
+	Terraform        base.TerraformOptions
 }
 
 func Bootstrap(
