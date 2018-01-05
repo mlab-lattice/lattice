@@ -83,7 +83,6 @@ func NewController(
 }
 
 func (c *Controller) EnqueueEndpointUpdate(endp *crv1.Endpoint) {
-	glog.V(5).Infof("enqueueing")
 	key, err := cache.DeletionHandlingMetaNamespaceKeyFunc(endp)
 
 	if err != nil {
@@ -113,7 +112,7 @@ func (c *Controller) addEndpoint(obj interface{}) {
 func (c *Controller) updateEndpoint(old, cur interface{}) {
 	oldEndpoint := old.(*crv1.Endpoint)
 	curEndpoint := cur.(*crv1.Endpoint)
-	glog.V(5).Info("Got Endpoint %v/%v update", curEndpoint.Namespace, curEndpoint.Name)
+	glog.V(5).Infof("Got Endpoint %v/%v update", curEndpoint.Namespace, curEndpoint.Name)
 	if curEndpoint.ResourceVersion == oldEndpoint.ResourceVersion {
 		// Periodic resync will send update events for all known Services.
 		// Two different versions of the same Service will always have different RVs.
@@ -292,12 +291,12 @@ func (c *Controller) SyncEndpointUpdate(key string) error {
 	}
 
 	if endpoint.Spec.ExternalEndpoint != nil {
-		glog.V(2).Infof("Updating endpoint %v with cname %v...", endpointPathURL, endpoint.Spec.ExternalEndpoint)
+		glog.V(2).Infof("Updating endpoint %v with cname %v...", endpointPathURL, *endpoint.Spec.ExternalEndpoint)
 		c.cnameList[key] = *endpoint
 	}
 
 	if endpoint.Spec.IP != nil {
-		glog.V(2).Infof("Updating endpoint %v with IP address %v...", endpointPathURL, endpoint.Spec.IP)
+		glog.V(2).Infof("Updating endpoint %v with IP address %v...", endpointPathURL, *endpoint.Spec.IP)
 		c.hostLists[key] = *endpoint
 	}
 

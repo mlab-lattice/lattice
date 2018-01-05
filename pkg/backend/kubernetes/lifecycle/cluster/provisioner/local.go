@@ -43,21 +43,22 @@ var(
 		"--hosts-file-path", kubeconstants.DNSSharedConfigDirectory + kubeconstants.DNSHostsFile,
 	}
 
-	localDNSNannyArgList = []string{
+	DNSNannyArgList = []string{
 		"-v=2",
 		"-logtostderr",
 		"-restartDnsmasq=true",
 		"-configDir=" +  kubeconstants.DNSSharedConfigDirectory,
 	}
 
-	localDNSMasqArgList = []string{
+	dnsmasqArgList = []string{
 		"-k", // Keep in foreground so as to not immediately exit.
 		"-R", // Dont read provided /etc/resolv.conf
 		"--hostsdir=" + kubeconstants.DNSSharedConfigDirectory, // Read all the hosts from this directory. File changes read automatically by dnsmasq.
 		"--conf-dir=" + kubeconstants.DNSSharedConfigDirectory + ",*.conf", // Read all *.conf files in the directory as dns config files
 	}
 
-	localDNSServerArgs = "local-dns-server-args=" + strings.Join(append(append(localDNSNannyArgList, "--"), localDNSMasqArgList...), ",")
+	// Use ':' as the separator here, as ',' is included in the --conf-dir argument
+	localDNSServerArgs = "local-dns-server-args=" + strings.Join(append(append(DNSNannyArgList, "--"), dnsmasqArgList...), ":")
 	localDNSControllerArgs = "local-dns-controller-args=" + strings.Join(localDNSControllerArgList, ",")
 )
 
