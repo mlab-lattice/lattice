@@ -34,8 +34,6 @@ type ConfigCloudProvider struct {
 }
 
 type ConfigCloudProviderLocal struct {
-	// FIXME: this shouldn't be dynamic config
-	IP string `json:"ip"`
 }
 
 type ConfigCloudProviderAWS struct {
@@ -68,6 +66,9 @@ type ConfigComponentBuildBuilder struct {
 type ConfigComponentBuildDockerArtifact struct {
 	// Registry used to tag images.
 	Registry string `json:"registry"`
+
+	// If auth is required, specify the auth type
+	RegistryAuthType *string `json:"registryAuthType"`
 
 	// If true, make a new repository for the image.
 	// If false, use Repository as the repository for the image and give it

@@ -8,7 +8,6 @@ import (
 	kubeconstants "github.com/mlab-lattice/system/pkg/backend/kubernetes/constants"
 	crv1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	kubeutil "github.com/mlab-lattice/system/pkg/backend/kubernetes/util/kubernetes"
-	"github.com/mlab-lattice/system/pkg/constants"
 
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -19,9 +18,6 @@ import (
 )
 
 const (
-	workingDirectoryVolumeHostPathPrefixLocal = "/data/component-builder"
-	workingDirectoryVolumeHostPathPrefixCloud = "/var/lib/component-builder"
-
 	jobWorkingDirectory           = "/var/run/builder"
 	jobWorkingDirectoryVolumeName = "workdir"
 
@@ -122,27 +118,7 @@ func (c *Controller) jobSpec(build *crv1.ComponentBuild) (batchv1.JobSpec, strin
 	}
 
 	name := jobName(build)
-
-	provider, err := crv1.GetProviderFromConfigSpec(c.config)
-	if err != nil {
-		return batchv1.JobSpec{}, "", err
-	}
-
-	var volumeHostPathPrefix string
-	switch provider {
-	case constants.ProviderLocal:
-		volumeHostPathPrefix = workingDirectoryVolumeHostPathPrefixLocal
-	case constants.ProviderAWS:
-		volumeHostPathPrefix = workingDirectoryVolumeHostPathPrefixCloud
-	default:
-		return batchv1.JobSpec{}, "", fmt.Errorf("unsupported provider: %s", provider)
-	}
-
-	workingDirectoryVolumeSource := corev1.VolumeSource{
-		HostPath: &corev1.HostPathVolumeSource{
-			Path: volumeHostPathPrefix + "/" + name,
-		},
-	}
+	workingDirectoryVolumeSource := c.cloudProvider.ComponentBuildWorkDirectoryVolumeSource(name)
 
 	var zero int32
 	spec := &batchv1.JobSpec{
@@ -225,18 +201,8 @@ func (c *Controller) getBuildContainer(build *crv1.ComponentBuild) (*corev1.Cont
 		args = append(args, "--docker-push")
 	}
 
-	provider, err := crv1.GetProviderFromConfigSpec(c.config)
-	if err != nil {
-		return nil, "", err
-	}
-
-	switch provider {
-	case constants.ProviderLocal:
-		// nothing to do here
-	case constants.ProviderAWS:
-		args = append(args, "--docker-registry-auth-type", constants.DockerRegistryAuthAWSEC2Role)
-	default:
-		return nil, "", fmt.Errorf("unsupported provider: %s", provider)
+	if c.config.ComponentBuild.DockerArtifact.RegistryAuthType != nil {
+		args = append(args, "--docker-registry-auth-type", *c.config.ComponentBuild.DockerArtifact.RegistryAuthType)
 	}
 
 	buildContainer := &corev1.Container{

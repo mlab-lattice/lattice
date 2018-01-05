@@ -87,9 +87,10 @@ type ServiceAddressStatus struct {
 type ServiceAddressState string
 
 const (
-	ServiceAddressStatePending   ServiceAddressState = "pending"
-	ServiceAddressStateSucceeded ServiceAddressState = "created"
-	ServiceAddressStateFailed    ServiceAddressState = "failed"
+	ServiceAddressStatePending      ServiceAddressState = "pending"
+	ServiceAddressStateProvisioning ServiceAddressState = "provisioning"
+	ServiceAddressStateCreated      ServiceAddressState = "created"
+	ServiceAddressStateFailed       ServiceAddressState = "failed"
 )
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
