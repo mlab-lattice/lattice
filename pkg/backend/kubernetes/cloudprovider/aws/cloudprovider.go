@@ -47,11 +47,10 @@ type DefaultAWSCloudProvider struct {
 }
 
 func (cp *DefaultAWSCloudProvider) BootstrapClusterResources(resources *clusterbootstrapper.ClusterResources) {
-	awsConfig := &crv1.ConfigCloudProviderAWS{
+	resources.Config.Spec.CloudProvider.AWS = &crv1.ConfigCloudProviderAWS{
 		BaseNodeAMIID: cp.baseNodeAMIID,
 		KeyName:       cp.keyName,
 	}
-	resources.Config.Spec.CloudProvider.AWS = awsConfig
 }
 
 func (cp *DefaultAWSCloudProvider) BootstrapSystemResources(resources *systembootstrapper.SystemResources) {
