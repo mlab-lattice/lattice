@@ -3,16 +3,16 @@ package cloudprovider
 import (
 	"fmt"
 
-	"github.com/mlab-lattice/system/pkg/backend/kubernetes/cloudprovider/aws"
+	//"github.com/mlab-lattice/system/pkg/backend/kubernetes/cloudprovider/aws"
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/cloudprovider/local"
 	crv1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	clusterbootstrapper "github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/cluster/bootstrap/bootstrapper"
 	systembootstrapper "github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/system/bootstrap/bootstrapper"
 
-	"github.com/mlab-lattice/system/pkg/types"
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
+    "github.com/mlab-lattice/system/pkg/types"
 )
 
 const (
@@ -20,19 +20,19 @@ const (
 	AWS   = "AWS"
 )
 
-type CloudProviderOptions struct {
-	LocalComponents *local.Options
+type Options struct {
+	Local *local.Options
 }
 
 type Interface interface {
 	clusterbootstrapper.Interface
 	systembootstrapper.Interface
 
-	TransformPodTemplateSpec(*corev1.PodTemplateSpec) *corev1.PodTemplateSpec
-
 	// TransformComponentBuildJobSpec takes in the JobSpec generated for a ComponentBuild, and applies any cloud provider
 	// related transforms necessary to a copy of the JobSpec, and returns it.
 	TransformComponentBuildJobSpec(*batchv1.JobSpec) *batchv1.JobSpec
+
+	ComponentBuildWorkDirectoryVolumeSource(jobName string) corev1.VolumeSource
 
 	// TransformServiceDeploymentSpec takes in the DeploymentSpec generated for a Service, and applies any cloud provider
 	// related transforms necessary to a copy of the DeploymentSpec, and returns it.
@@ -47,13 +47,10 @@ type Interface interface {
 	IsDeploymentSpecUpdated(service *crv1.Service, current, desired, untransformed *appsv1.DeploymentSpec) (bool, string, *appsv1.DeploymentSpec)
 }
 
-func NewCloudProvider(clusterID types.ClusterID, providerName string, config *crv1.ConfigCloudProvider) (Interface, error) {
-	switch providerName {
-	case Local:
-		return local.NewLocalCloudProvider(clusterID, providerName, config.Local), nil
-	case AWS:
-		return aws.NewAWSCloudProvider(), nil
-	default:
-		return nil, fmt.Errorf("unsupported cloud provider: %v", providerName)
+func NewCloudProvider(clusterID types.ClusterID, options *Options) (Interface, error) {
+	if options.Local != nil {
+		return local.NewLocalCloudProvider(clusterID, options.Local), nil
 	}
+
+	return nil, fmt.Errorf("must provide cloud provider options")
 }

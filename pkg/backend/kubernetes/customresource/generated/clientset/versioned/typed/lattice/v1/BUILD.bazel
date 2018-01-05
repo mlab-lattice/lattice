@@ -9,6 +9,7 @@ go_library(
         "endpoint.go",
         "generated_expansion.go",
         "lattice_client.go",
+        "loadbalancer.go",
         "nodepool.go",
         "service.go",
         "serviceaddress.go",

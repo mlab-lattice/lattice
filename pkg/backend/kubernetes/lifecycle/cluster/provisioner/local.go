@@ -1,6 +1,6 @@
 package provisioner
 
-import(
+import (
 	"fmt"
 	"os/user"
 	"time"
@@ -197,7 +197,7 @@ func (lp *LocalProvisioner) bootstrap(address, url, name string) error {
 								"--lattice-controller-manager-image", lp.getLatticeContainerImage(kubeconstants.DockerImageLatticeControllerManager),
 								"--manager-api-image", lp.getLatticeContainerImage(kubeconstants.DockerImageManagerAPIRest),
 								"--cloud-provider", "local",
-								"--cloud-provider-var", "system-ip=" + address,
+								"--cloud-provider-var", "cluster-ip=" + address,
 								"--cloud-provider-var", "dns-controller-image=" + lp.getLatticeContainerImage(kubeconstants.DockerImageLocalDNSController),
 								"--cloud-provider-var", "dns-server-image=" + kubeconstants.DockerImageLocalDNSServer,
 								"--cloud-provider-var", "dns-server-args=" + localDNSServerArgs,

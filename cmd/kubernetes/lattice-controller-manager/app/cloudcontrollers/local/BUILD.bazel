@@ -3,6 +3,7 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library")
 go_library(
     name = "go_default_library",
     srcs = [
+        "load_balancer.go",
         "local_controllers.go",
         "node_pool.go",
     ],
@@ -10,6 +11,8 @@ go_library(
     visibility = ["//visibility:public"],
     deps = [
         "//cmd/kubernetes/lattice-controller-manager/app/common:go_default_library",
+        "//pkg/backend/kubernetes/cloudprovider/local:go_default_library",
+        "//pkg/backend/kubernetes/controller/cloud/local/loadbalancer:go_default_library",
         "//pkg/backend/kubernetes/controller/cloud/local/nodepool:go_default_library",
     ],
 )

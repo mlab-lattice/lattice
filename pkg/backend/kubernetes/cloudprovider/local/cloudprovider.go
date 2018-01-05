@@ -1,68 +1,110 @@
 package local
 
 import (
+	"fmt"
+
+	kubeconstants "github.com/mlab-lattice/system/pkg/backend/kubernetes/constants"
 	crv1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	systembootstrapper "github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/system/bootstrap/bootstrapper"
+    clusterbootstrapper "github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/cluster/bootstrap/bootstrapper"
 
 	"github.com/golang/glog"
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/constants"
-	"github.com/mlab-lattice/system/pkg/types"
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
+	"github.com/mlab-lattice/system/pkg/types"
 )
 
-func NewLocalCloudProvider(clusterID types.ClusterID, providerName string, options *crv1.ConfigCloudProviderLocal) *DefaultLocalCloudProvider {
-	return &DefaultLocalCloudProvider{
-		Options:   options,
+const (
+	workDirectoryVolumeHostPathPrefix = "/data/component-builder"
+)
+
+type Options struct {
+	IP string
+	DNS *LocalDNSControllerOptions
+}
+
+type CloudProvider interface {
+	IP() string
+}
+
+func NewLocalCloudProvider(clusterID types.ClusterID, options *Options) *DefaultLocalCloudProvider {
+	cp := &DefaultLocalCloudProvider{
 		ClusterID: clusterID,
+		ip: options.IP,
+		Options: &crv1.ConfigCloudProviderLocal{
+
+		},
 	}
+
+	if options.DNS != nil {
+        cp.Options.DNSServer = &crv1.ConfigCloudProviderLocalDNS{
+            DNSControllerIamge: options.DNS.DNSControllerImage,
+            DNSControllerArgs:  options.DNS.DNSControllerArgs,
+            DNSServerImage:     options.DNS.DNSServerImage,
+            DNSServerArgs:      options.DNS.DNSServerArgs,
+        }
+    }
+
+	return cp
 }
 
 type DefaultLocalCloudProvider struct {
-	Options   *crv1.ConfigCloudProviderLocal
 	ClusterID types.ClusterID
-}
-
-type Options struct {
-	Controller LocalDNSControllerOptions
-	Dnsmasq     LocalDNSServerOptions
+    Options   *crv1.ConfigCloudProviderLocal
+	ip string
 }
 
 type LocalDNSControllerOptions struct {
-	Image string
-	Args  []string
+    DNSServerImage string
+    DNSServerArgs  []string
+    DNSControllerImage string
+    DNSControllerArgs  []string
 }
 
-type LocalDNSServerOptions struct {
-	Image string
-	Args  []string
-}
+func (cp *DefaultLocalCloudProvider) BootstrapClusterResources(resources *clusterbootstrapper.ClusterResources) {
+	cp.bootstrapDNS(resources)
 
-func (cp *DefaultLocalCloudProvider) BootstrapSystemResources(resources *systembootstrapper.SystemResources) {
 	for _, daemonSet := range resources.DaemonSets {
-		template := cp.TransformPodTemplateSpec(&daemonSet.Spec.Template)
+		template := cp.transformPodTemplateSpec(&daemonSet.Spec.Template)
+
+		if daemonSet.Name == kubeconstants.MasterNodeComponentLatticeControllerManager {
+			template.Spec.Containers[0].Args = append(
+				template.Spec.Containers[0].Args,
+				"--cloud-provider-var", fmt.Sprintf("cluster-ip=%v", cp.ip),
+			)
+		}
+
 		daemonSet.Spec.Template = *template
 	}
 }
 
-func (cp *DefaultLocalCloudProvider) TransformPodTemplateSpec(template *corev1.PodTemplateSpec) *corev1.PodTemplateSpec {
-	template = template.DeepCopy()
-	template.Spec.Affinity = nil
-
-	return template
+func (cp *DefaultLocalCloudProvider) BootstrapSystemResources(resources *systembootstrapper.SystemResources) {
+	for _, daemonSet := range resources.DaemonSets {
+		template := cp.transformPodTemplateSpec(&daemonSet.Spec.Template)
+		daemonSet.Spec.Template = *template
+	}
 }
 
 func (cp *DefaultLocalCloudProvider) TransformComponentBuildJobSpec(spec *batchv1.JobSpec) *batchv1.JobSpec {
 	spec = spec.DeepCopy()
+	spec.Template = *cp.transformPodTemplateSpec(&spec.Template)
 
-	spec.Template.Spec.Affinity = nil
 	return spec
+}
+
+func (cp *DefaultLocalCloudProvider) ComponentBuildWorkDirectoryVolumeSource(jobName string) corev1.VolumeSource {
+	return corev1.VolumeSource{
+		HostPath: &corev1.HostPathVolumeSource{
+			Path: workDirectoryVolumeHostPathPrefix + "/" + jobName,
+		},
+	}
 }
 
 func (cp *DefaultLocalCloudProvider) TransformServiceDeploymentSpec(service *crv1.Service, spec *appsv1.DeploymentSpec) *appsv1.DeploymentSpec {
 	spec = spec.DeepCopy()
-	spec.Template.Spec.Affinity = nil
+    spec.Template = *cp.transformPodTemplateSpec(&spec.Template)
 	spec.Template.Spec.DNSConfig.Nameservers = []string{constants.LocalDNSServerIP}
 
 	found := false
@@ -88,6 +130,13 @@ func (cp *DefaultLocalCloudProvider) TransformServiceDeploymentSpec(service *crv
 	return spec
 }
 
+func (cp *DefaultLocalCloudProvider) transformPodTemplateSpec(template *corev1.PodTemplateSpec) *corev1.PodTemplateSpec {
+	template = template.DeepCopy()
+	template.Spec.Affinity = nil
+
+	return template
+}
+
 func (cp *DefaultLocalCloudProvider) IsDeploymentSpecUpdated(
 	service *crv1.Service,
 	current, desired, untransformed *appsv1.DeploymentSpec,
@@ -98,4 +147,8 @@ func (cp *DefaultLocalCloudProvider) IsDeploymentSpecUpdated(
 	spec.Template.Spec.Affinity = untransformed.Template.Spec.Affinity
 
 	return true, "", spec
+}
+
+func (cp *DefaultLocalCloudProvider) IP() string {
+	return cp.ip
 }

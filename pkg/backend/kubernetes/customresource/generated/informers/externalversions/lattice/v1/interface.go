@@ -14,6 +14,8 @@ type Interface interface {
 	Configs() ConfigInformer
 	// Endpoints returns a EndpointInformer.
 	Endpoints() EndpointInformer
+	// LoadBalancers returns a LoadBalancerInformer.
+	LoadBalancers() LoadBalancerInformer
 	// NodePools returns a NodePoolInformer.
 	NodePools() NodePoolInformer
 	// Services returns a ServiceInformer.
@@ -56,6 +58,11 @@ func (v *version) Configs() ConfigInformer {
 // Endpoints returns a EndpointInformer.
 func (v *version) Endpoints() EndpointInformer {
 	return &endpointInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
+}
+
+// LoadBalancers returns a LoadBalancerInformer.
+func (v *version) LoadBalancers() LoadBalancerInformer {
+	return &loadBalancerInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
 }
 
 // NodePools returns a NodePoolInformer.

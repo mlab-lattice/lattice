@@ -56,6 +56,16 @@ var (
 			ListType:   &EndpointList{},
 		},
 		{
+			Singular:   ResourceSingularLoadBalancer,
+			Plural:     ResourcePluralLoadBalancer,
+			ShortNames: []string{ResourceShortNameLoadBalancer},
+			Scope:      ResourceScopeLoadBalancer,
+			Kind:       "LoadBalancer",
+			ListKind:   "LoadBalancerList",
+			Type:       &LoadBalancer{},
+			ListType:   &LoadBalancerList{},
+		},
+		{
 			Singular:   ResourceSingularNodePool,
 			Plural:     ResourcePluralNodePool,
 			ShortNames: []string{ResourceShortNameNodePool},

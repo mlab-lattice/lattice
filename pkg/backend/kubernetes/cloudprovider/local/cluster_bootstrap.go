@@ -1,6 +1,8 @@
 package local
 
 import (
+	"fmt"
+
 	kubeconstants "github.com/mlab-lattice/system/pkg/backend/kubernetes/constants"
 	crv1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	clusterbootstrapper "github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/cluster/bootstrap/bootstrapper"
@@ -13,15 +15,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 )
-
-func (cp *DefaultLocalCloudProvider) BootstrapClusterResources(resources *clusterbootstrapper.ClusterResources) {
-	cp.bootstrapDNS(resources)
-
-	for _, daemonSet := range resources.DaemonSets {
-		template := cp.TransformPodTemplateSpec(&daemonSet.Spec.Template)
-		daemonSet.Spec.Template = *template
-	}
-}
 
 func (cp *DefaultLocalCloudProvider) bootstrapDNS(resources *clusterbootstrapper.ClusterResources) {
 

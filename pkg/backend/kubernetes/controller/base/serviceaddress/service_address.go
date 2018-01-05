@@ -14,7 +14,7 @@ func (c *Controller) syncServiceAddressStatus(address *crv1.ServiceAddress, endp
 		state = crv1.ServiceAddressStatePending
 
 	case crv1.EndpointStateCreated:
-		state = crv1.ServiceAddressStateSucceeded
+		state = crv1.ServiceAddressStateCreated
 
 	case crv1.EndpointStateFailed:
 		state = crv1.ServiceAddressStateFailed

@@ -10,37 +10,44 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
-func NewAWSCloudProvider() *DefaultLocalCloudProvider {
-	return &DefaultLocalCloudProvider{}
+const (
+	workDirectoryVolumeHostPathPrefix = "/var/lib/component-builder"
+)
+
+func NewAWSCloudProvider() *DefaultAWSCloudProvider {
+	return &DefaultAWSCloudProvider{}
 }
 
-type DefaultLocalCloudProvider struct {
+type DefaultAWSCloudProvider struct {
 }
 
-func (cp *DefaultLocalCloudProvider) BootstrapClusterResources(resources *clusterbootstrapper.ClusterResources) {
+func (cp *DefaultAWSCloudProvider) BootstrapClusterResources(resources *clusterbootstrapper.ClusterResources) {
 	// nothing to do
 }
 
-func (cp *DefaultLocalCloudProvider) BootstrapSystemResources(resources *systembootstrapper.SystemResources) {
+func (cp *DefaultAWSCloudProvider) BootstrapSystemResources(resources *systembootstrapper.SystemResources) {
 	// nothing to do
 }
 
-func (cp *DefaultLocalCloudProvider) TransformPodTemplateSpec(template *corev1.PodTemplateSpec) *corev1.PodTemplateSpec {
-	// nothing to do
-	return template
-}
-
-func (cp *DefaultLocalCloudProvider) TransformComponentBuildJobSpec(spec *batchv1.JobSpec) *batchv1.JobSpec {
-	// nothing to do
-	return spec
-}
-
-func (cp *DefaultLocalCloudProvider) TransformServiceDeploymentSpec(service *crv1.Service, spec *appsv1.DeploymentSpec) *appsv1.DeploymentSpec {
+func (cp *DefaultAWSCloudProvider) TransformComponentBuildJobSpec(spec *batchv1.JobSpec) *batchv1.JobSpec {
 	// nothing to do
 	return spec
 }
 
-func (cp *DefaultLocalCloudProvider) IsDeploymentSpecUpdated(
+func (cp *DefaultAWSCloudProvider) ComponentBuildWorkDirectoryVolumeSource(jobName string) corev1.VolumeSource {
+	return corev1.VolumeSource{
+		HostPath: &corev1.HostPathVolumeSource{
+			Path: workDirectoryVolumeHostPathPrefix + "/" + jobName,
+		},
+	}
+}
+
+func (cp *DefaultAWSCloudProvider) TransformServiceDeploymentSpec(service *crv1.Service, spec *appsv1.DeploymentSpec) *appsv1.DeploymentSpec {
+	// nothing to do
+	return spec
+}
+
+func (cp *DefaultAWSCloudProvider) IsDeploymentSpecUpdated(
 	service *crv1.Service,
 	current, desired, untransformed *appsv1.DeploymentSpec,
 ) (bool, string, *appsv1.DeploymentSpec) {

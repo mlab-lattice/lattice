@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/cloudprovider"
+	"github.com/mlab-lattice/system/pkg/backend/kubernetes/cloudprovider/local"
 	kubeconstants "github.com/mlab-lattice/system/pkg/backend/kubernetes/constants"
 	crv1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	latticeclientset "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/clientset/versioned"
@@ -70,15 +71,15 @@ var options = &clusterbootstrap.Options{
 		ServiceMesh: crv1.ConfigServiceMesh{},
 	},
 	MasterComponents: baseclusterboostrapper.MasterComponentOptions{
-	    LatticeControllerManager: baseclusterboostrapper.LatticeControllerManagerOptions{},
+		LatticeControllerManager: baseclusterboostrapper.LatticeControllerManagerOptions{},
 		ManagerAPI:               baseclusterboostrapper.ManagerAPIOptions{},
-   },
+	},
 }
 
 // FIXME :: temporary until better solution for nested struct.
 type LocalCloudOptionsFlat struct {
 	IP                 string   `json:"ip"`
-	DNSControllerIamge string   `json:"controller-image"`
+	DNSControllerImage string   `json:"controller-image"`
 	DNSServerImage     string   `json:"server-image"`
 	DNSServerArgs      []string `json:"server-args"`
 	DNSControllerArgs  []string `json:"controller-args"`
@@ -105,11 +106,10 @@ var Cmd = &cobra.Command{
 			}
 		}
 
-		cloudProviderConfig, err := parseCloudProviderVars()
+		cloudProviderOptions, err := parseCloudProviderVars()
 		if err != nil {
 			panic(err)
 		}
-		options.Config.CloudProvider = *cloudProviderConfig
 
 		serviceMeshConfig, err := parseServiceMeshVars()
 		if err != nil {
@@ -128,7 +128,7 @@ var Cmd = &cobra.Command{
 			panic(err)
 		}
 
-		cloudProvider, err := cloudprovider.NewCloudProvider(clusterID, cloudProviderName, cloudProviderConfig)
+		cloudProvider, err := cloudprovider.NewCloudProvider(clusterID, cloudProviderOptions)
 		if err != nil {
 			panic(err)
 		}
@@ -272,42 +272,41 @@ func init() {
 	Cmd.Flags().StringArrayVar(&networkingProviderVars, "networking-provider-var", nil, "additional variables for the networking provider")
 }
 
-func parseCloudProviderVars() (*crv1.ConfigCloudProvider, error) {
-	var config *crv1.ConfigCloudProvider
+func parseCloudProviderVars() (*cloudprovider.Options, error) {
+	var options *cloudprovider.Options
 	switch cloudProviderName {
 	case constants.ProviderLocal:
-		localConfig, err := parseCloudProviderVarsLocal()
+		localOptions, err := parseCloudProviderVarsLocal()
 		if err != nil {
 			return nil, err
 		}
-
-		config = &crv1.ConfigCloudProvider{
-			Local: localConfig,
+		options = &cloudprovider.Options{
+			Local: localOptions,
 		}
 
-	case constants.ProviderAWS:
-		awsConfig, err := parseProviderCloudVarsAWS()
-		if err != nil {
-			return nil, err
-		}
-		config = &crv1.ConfigCloudProvider{
-			AWS: awsConfig,
-		}
+	//case constants.ProviderAWS:
+	//	awsConfig, err := parseProviderCloudVarsAWS()
+	//	if err != nil {
+	//		return nil, err
+	//	}
+	//	options = &crv1.ConfigCloudProvider{
+	//		AWS: awsConfig,
+	//	}
 	default:
 		return nil, fmt.Errorf("unsupported cloudProviderName: %v", cloudProviderName)
 	}
 
-	return config, nil
+	return options, nil
 }
 
-func parseCloudProviderVarsLocal() (*crv1.ConfigCloudProviderLocal, error) {
-	localConfig := &crv1.ConfigCloudProviderLocal{}
-	flatStruct := &LocalCloudOptionsFlat{}
+func parseCloudProviderVarsLocal() (*local.Options, error) {
+	options := &local.Options{}
+	flatStruct := LocalCloudOptionsFlat{}
 
 	flags := cli.EmbeddedFlag{
 		Target: &flatStruct,
 		Expected: map[string]cli.EmbeddedFlagValue{
-			"system-ip": {
+			"cluster-ip": {
 				Required:     true,
 				EncodingName: "ip",
 			},
@@ -320,7 +319,7 @@ func parseCloudProviderVarsLocal() (*crv1.ConfigCloudProviderLocal, error) {
 				EncodingName: "server-image",
 			},
 			"dns-server-args": {
-				Required:     true,
+				Required:     false,
 				EncodingName: "server-args",
 				ValueParser: func(value string) (interface{}, error) {
 					var argsWithoutPrefix = strings.Join(strings.Split(value, "=")[1:], "=")
@@ -328,7 +327,7 @@ func parseCloudProviderVarsLocal() (*crv1.ConfigCloudProviderLocal, error) {
 				},
 			},
 			"dns-controller-args": {
-				Required:     true,
+				Required:     false,
 				EncodingName: "controller-args",
 				ValueParser: func(value string) (interface{}, error) {
 					var argsWithoutPrefix = strings.Join(strings.Split(value, "=")[1:], "=")
@@ -343,13 +342,14 @@ func parseCloudProviderVarsLocal() (*crv1.ConfigCloudProviderLocal, error) {
 		return nil, err
 	}
 
-	localConfig.IP = flatStruct.IP
-	localConfig.DNSServer.DNSServerImage = flatStruct.DNSServerImage
-	localConfig.DNSServer.DNSControllerIamge = flatStruct.DNSControllerIamge
-	localConfig.DNSServer.DNSServerArgs = flatStruct.DNSServerArgs
-	localConfig.DNSServer.DNSControllerArgs = flatStruct.DNSControllerArgs
+	options.IP = flatStruct.IP
+	options.DNS = &local.LocalDNSControllerOptions{}
+	options.DNS.DNSControllerArgs = flatStruct.DNSControllerArgs
+	options.DNS.DNSServerArgs = flatStruct.DNSServerArgs
+	options.DNS.DNSServerImage = flatStruct.DNSServerImage
+	options.DNS.DNSControllerImage = flatStruct.DNSControllerImage
 
-	return localConfig, nil
+	return options, nil
 }
 
 func parseProviderCloudVarsAWS() (*crv1.ConfigCloudProviderAWS, error) {
