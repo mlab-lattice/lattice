@@ -98,6 +98,13 @@ func (b *DefaultBootstrapper) controllerManagerResources(resources *bootstrapper
 	args := []string{"--cloud-provider", b.CloudProviderName, "--cluster-id", string(b.ClusterID)}
 	args = append(args, b.Options.MasterComponents.LatticeControllerManager.Args...)
 
+	if b.Options.MasterComponents.LatticeControllerManager.TerraformModulePath != "" {
+		args = append(
+			args,
+			"--terraform-module-path", b.Options.MasterComponents.LatticeControllerManager.TerraformModulePath,
+		)
+	}
+
 	if b.Options.TerraformOptions.Backend.S3 != nil {
 		args = append(
 			args,

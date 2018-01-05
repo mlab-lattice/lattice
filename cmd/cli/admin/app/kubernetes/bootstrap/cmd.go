@@ -247,6 +247,7 @@ func init() {
 
 	Cmd.Flags().StringVar(&options.MasterComponents.LatticeControllerManager.Image, "lattice-controller-manager-image", "", "docker image to user for the lattice-controller-manager")
 	Cmd.MarkFlagRequired("lattice-controller-manager-image")
+	Cmd.Flags().StringVar(&options.MasterComponents.LatticeControllerManager.TerraformModulePath, "lattice-controller-manager-terraform-module-path", "", "optional path to terraform modules")
 	Cmd.Flags().StringArrayVar(&options.MasterComponents.LatticeControllerManager.Args, "lattice-controller-manager-args", defaultLatticeControllerManagerArgs, "extra arguments (besides --cloudProviderName) to pass to the lattice-controller-manager")
 
 	Cmd.Flags().StringVar(&options.MasterComponents.ManagerAPI.Image, "manager-api-image", "", "docker image to user for the lattice-controller-manager")

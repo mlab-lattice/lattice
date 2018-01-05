@@ -28,6 +28,7 @@ sleep 10
     --kubeconfig /etc/bootstrap-lattice/kubeconfig \
     --initial-system-definition-url ${SYSTEM_DEFINITION_URL} \
     --lattice-controller-manager-image gcr.io/lattice-dev/kevinrosendahl-debug-kubernetes-lattice-controller-manager \
+    --lattice-controller-manager-terraform-module-path /etc/terraform/modules \
     --manager-api-image gcr.io/lattice-dev/kevinrosendahl-debug-kubernetes-manager-api-rest \
     --component-builder-image gcr.io/lattice-dev/kevinrosendahl-debug-kubernetes-component-builder \
     --component-build-docker-artifact-registry ${AWS_ACCOUNT_ID}.dkr.ecr.${REGION}.amazonaws.com \

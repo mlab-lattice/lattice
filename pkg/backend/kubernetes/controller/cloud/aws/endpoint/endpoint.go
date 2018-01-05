@@ -31,7 +31,7 @@ func (c *Controller) provisionExternalNameEndpoint(endpoint *crv1.Endpoint) erro
 	}
 
 	externalNameEndpointModule := kubetf.NewExternalNameEndpointModule(
-		c.awsCloudProvider.AccountID(),
+		c.terraformModuleRoot,
 		c.awsCloudProvider.Region(),
 		c.awsCloudProvider.Route53PrivateZoneID(),
 		endpoint.Spec.Path.ToDomain(true),
@@ -49,7 +49,7 @@ func (c *Controller) provisionIPEndpoint(endpoint *crv1.Endpoint) error {
 	}
 
 	ipEndpointModule := kubetf.NewIPEndpointModule(
-		c.awsCloudProvider.AccountID(),
+		c.terraformModuleRoot,
 		c.awsCloudProvider.Region(),
 		c.awsCloudProvider.Route53PrivateZoneID(),
 		endpoint.Spec.Path.ToDomain(true),

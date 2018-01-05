@@ -31,6 +31,7 @@ type Controller struct {
 	latticeClient latticeclientset.Interface
 
 	awsCloudProvider        aws.CloudProvider
+	terraformModuleRoot     string
 	terraformBackendOptions *terraform.BackendOptions
 
 	endpointLister       latticelisters.EndpointLister
@@ -42,6 +43,7 @@ type Controller struct {
 func NewController(
 	clusterID types.ClusterID,
 	awsCloudProvider aws.CloudProvider,
+	terraformModuleRoot string,
 	terraformBackendOptions *terraform.BackendOptions,
 	latticeClient latticeclientset.Interface,
 	endpointInformer latticeinformers.EndpointInformer,
@@ -50,6 +52,7 @@ func NewController(
 		clusterID:               clusterID,
 		latticeClient:           latticeClient,
 		awsCloudProvider:        awsCloudProvider,
+		terraformModuleRoot:     terraformModuleRoot,
 		terraformBackendOptions: terraformBackendOptions,
 		queue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "service"),
 	}

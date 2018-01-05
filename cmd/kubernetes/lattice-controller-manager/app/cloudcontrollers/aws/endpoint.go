@@ -12,6 +12,7 @@ func initializeEndpointController(ctx controller.Context) {
 	go endpoint.NewController(
 		ctx.ClusterID,
 		aws.CloudProvider(awsCloudProvider),
+		ctx.TerraformModulePath,
 		ctx.TerraformBackendOptions,
 		ctx.LatticeClientBuilder.ClientOrDie("lattice-controller-aws-endpoints"),
 		ctx.LatticeInformerFactory.Lattice().V1().Endpoints(),

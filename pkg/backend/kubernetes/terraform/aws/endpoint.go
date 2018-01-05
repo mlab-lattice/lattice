@@ -10,9 +10,9 @@ type ExternalNameEndpoint struct {
 	ExternalName string `json:"external_name"`
 }
 
-func NewExternalNameEndpointModule(accountID, region, zoneID, name, externalName string) *ExternalNameEndpoint {
+func NewExternalNameEndpointModule(moduleRoot, region, zoneID, name, externalName string) *ExternalNameEndpoint {
 	return &ExternalNameEndpoint{
-		Source: modulePathEndpointExternalName,
+		Source: moduleRoot + modulePathEndpointExternalName,
 
 		Region: region,
 
@@ -25,20 +25,18 @@ func NewExternalNameEndpointModule(accountID, region, zoneID, name, externalName
 type IPEndpoint struct {
 	Source string `json:"source"`
 
-	AWSAccountID string `json:"aws_account_id"`
-	Region       string `json:"region"`
+	Region string `json:"region"`
 
 	ZoneID string `json:"zone_id"`
 	Name   string `json:"name"`
 	IP     string `json:"ip"`
 }
 
-func NewIPEndpointModule(accountID, region, zoneID, name, ip string) *IPEndpoint {
+func NewIPEndpointModule(moduleRoot, region, zoneID, name, ip string) *IPEndpoint {
 	return &IPEndpoint{
-		Source: modulePathEndpointExternalName,
+		Source: moduleRoot + modulePathEndpointIP,
 
-		AWSAccountID: accountID,
-		Region:       region,
+		Region: region,
 
 		ZoneID: zoneID,
 		Name:   name,
