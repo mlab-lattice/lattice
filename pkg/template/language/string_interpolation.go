@@ -8,72 +8,72 @@ import (
 
 // Contains functions needed for evaluating string expressions
 
-// used for matching a single variable reference expression. i.e. ${var}
+// used for matching a single parameter reference expression. i.e. ${var}
 var varDefRegex = regexp.MustCompile(`\$\{([a-zA-Z_$][a-zA-Z_$.0-9]*)\}`)
 var singleVarRegex = regexp.MustCompile(`^\$\{([a-zA-Z_$][a-zA-Z_$.0-9]*)\}$`)
 
 // evalStringExpression
-func evalStringExpression(expression string, variables map[string]interface{}) (interface{}, error) {
+func evalStringExpression(expression string, parameters map[string]interface{}) (interface{}, error) {
 
-	if isSingleVariableExpression(expression) {
-		return evalSingleVariableExpression(expression, variables)
+	if isSingleParameterExpression(expression) {
+		return evalSingleParameterExpression(expression, parameters)
 	}
 
 	// otherwise just return the expression as is
-	return replaceAllVariables(expression, variables), nil
+	return replaceAllParameters(expression, parameters), nil
 }
 
-// isSingleVariableExpression
-func isSingleVariableExpression(expression string) bool {
+// isSingleParameterExpression
+func isSingleParameterExpression(expression string) bool {
 	return singleVarRegex.MatchString(expression)
 }
 
-// evalSingleVariableExpression
-func evalSingleVariableExpression(expression string, variables map[string]interface{}) (interface{}, error) {
+// evalSingleParameterExpression
+func evalSingleParameterExpression(expression string, parameters map[string]interface{}) (interface{}, error) {
 	parts := singleVarRegex.FindAllStringSubmatch(expression, -1)
-	variableName := parts[0][1]
-	return variables[variableName], nil
+	parameterName := parts[0][1]
+	return parameters[parameterName], nil
 }
 
-// replaceAllVariables
-func replaceAllVariables(expression string, variables map[string]interface{}) string {
+// replaceAllParameters
+func replaceAllParameters(expression string, parameters map[string]interface{}) string {
 	varDefMatches := varDefRegex.FindAllStringSubmatch(expression, -1)
 	result := expression
 	for _, group := range varDefMatches {
-		variableName := group[1]
-		result = replaceVariable(result, variableName, variables)
+		parameterName := group[1]
+		result = replaceParameter(result, parameterName, parameters)
 
 	}
 
 	return result
 }
 
-// replaceVariable
-func replaceVariable(expression string, variableName string, variables map[string]interface{}) string {
-	varDef := fmt.Sprintf("${%s}", variableName)
-	val := getVariableStringValue(variableName, variables)
+// replaceParameter
+func replaceParameter(expression string, parameterName string, parameters map[string]interface{}) string {
+	varDef := fmt.Sprintf("${%s}", parameterName)
+	val := getParameterStringValue(parameterName, parameters)
 	return strings.Replace(expression, varDef, val, -1)
 }
 
-// getVariableStringValue
-func getVariableStringValue(variableName string, variables map[string]interface{}) string {
+// getParameterStringValue
+func getParameterStringValue(parameterName string, parameters map[string]interface{}) string {
 
-	if val, exists := variables[variableName]; exists {
+	if val, exists := parameters[parameterName]; exists {
 		return fmt.Sprintf("%v", val)
 	}
 
-	if strings.Contains(variableName, ".") {
-		parts := strings.Split(variableName, ".")
+	if strings.Contains(parameterName, ".") {
+		parts := strings.Split(parameterName, ".")
 		firstVar := parts[0]
 		last := strings.Join(parts[1:], ".")
 
-		if newVariables, exists := variables[firstVar]; exists {
-			if newVariablesMap, isVarMap := newVariables.(map[string]interface{}); isVarMap {
-				return getVariableStringValue(last, newVariablesMap)
+		if newParameters, exists := parameters[firstVar]; exists {
+			if newParametersMap, isVarMap := newParameters.(map[string]interface{}); isVarMap {
+				return getParameterStringValue(last, newParametersMap)
 			}
 		}
 	}
 
-	// Unable to determine variable value
+	// Unable to determine parameter value
 	return ""
 }

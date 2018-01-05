@@ -29,12 +29,16 @@ func (gitRepository GitRepository) getFileContents(fileName string) ([]byte, err
 }
 
 // makeGitRepositoryFor constructs a git file repository for the specified url
-func makeGitRepositoryFor(url string, env *Environment) (FileRepository, error) {
+func makeGitRepositoryFor(url string, env *environment) (FileRepository, error) {
 
 	gitResolver, _ := git.NewResolver(WORK_DIR)
+	gitOptions := env.gitOptions
+	if gitOptions == nil {
+		gitOptions = &git.Options{}
+	}
 	gitResolverContext := &git.Context{
-		URI:    url,
-		SSHKey: env.options.GitSSHKey,
+		URI:     url,
+		Options: gitOptions,
 	}
 
 	repository := &GitRepository{
@@ -54,7 +58,7 @@ type templateURLInfo struct {
 }
 
 // parseTemplateUrl parses the url and returns a templateURLInfo
-func parseTemplateUrl(url string, env *Environment) (*templateURLInfo, error) {
+func parseTemplateUrl(url string, env *environment) (*templateURLInfo, error) {
 	// if its a git url then return a templateURLInfo for a git url
 	if isGitTemplateUrl(url) {
 		return parseGitTemplateUrl(url, env)
@@ -65,7 +69,7 @@ func parseTemplateUrl(url string, env *Environment) (*templateURLInfo, error) {
 }
 
 // parseGitTemplateUrl
-func parseGitTemplateUrl(url string, env *Environment) (*templateURLInfo, error) {
+func parseGitTemplateUrl(url string, env *environment) (*templateURLInfo, error) {
 	if !isGitTemplateUrl(url) {
 		return nil, fmt.Errorf("Invalid git url: '%s'", url)
 	}

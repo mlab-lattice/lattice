@@ -12,17 +12,12 @@ import (
 
 // SystemResolver resolves system definitions from different sources such as git
 type SystemResolver struct {
-	GitResolver *git.Resolver
-}
-
-// GitResolveOptions allows options for resolution
-type GitResolveOptions struct {
-	SSHKey []byte
+	gitResolver *git.Resolver
 }
 
 type resolveContext struct {
 	gitURI            string
-	gitResolveOptions *GitResolveOptions
+	gitResolveOptions *git.Options
 }
 
 func NewSystemResolver(workDirectory string) (*SystemResolver, error) {
@@ -36,16 +31,16 @@ func NewSystemResolver(workDirectory string) (*SystemResolver, error) {
 	}
 
 	sr := &SystemResolver{
-		GitResolver: gitResolver,
+		gitResolver: gitResolver,
 	}
 	return sr, nil
 }
 
 // resolves the definition
-func (resolver *SystemResolver) ResolveDefinition(uri string, gitResolveOptions *GitResolveOptions) (tree.Node, error) {
+func (resolver *SystemResolver) ResolveDefinition(uri string, gitResolveOptions *git.Options) (tree.Node, error) {
 
 	if gitResolveOptions == nil {
-		gitResolveOptions = &GitResolveOptions{}
+		gitResolveOptions = &git.Options{}
 	}
 	ctx := &resolveContext{
 		gitURI:            uri,
@@ -56,9 +51,9 @@ func (resolver *SystemResolver) ResolveDefinition(uri string, gitResolveOptions 
 }
 
 // lists the versions of the specified definition's uri
-func (resolver *SystemResolver) ListDefinitionVersions(uri string, gitResolveOptions *GitResolveOptions) ([]string, error) {
+func (resolver *SystemResolver) ListDefinitionVersions(uri string, gitResolveOptions *git.Options) ([]string, error) {
 	if gitResolveOptions == nil {
-		gitResolveOptions = &GitResolveOptions{}
+		gitResolveOptions = &git.Options{}
 	}
 	ctx := &resolveContext{
 		gitURI:            uri,
@@ -73,7 +68,7 @@ func (resolver *SystemResolver) readNodeFromFile(ctx *resolveContext) (tree.Node
 
 	engine := language.NewEngine()
 	options := &language.Options{
-		GitSSHKey: ctx.gitResolveOptions.SSHKey,
+		GitOptions: ctx.gitResolveOptions,
 	}
 	template, err := engine.ParseTemplate(ctx.gitURI, make(map[string]interface{}), options)
 
@@ -98,8 +93,8 @@ func (resolver *SystemResolver) readNodeFromFile(ctx *resolveContext) (tree.Node
 // lists the tags in a repo
 func (resolver *SystemResolver) listRepoVersionTags(ctx *resolveContext) ([]string, error) {
 	gitResolverContext := &git.Context{
-		URI:    ctx.gitURI,
-		SSHKey: ctx.gitResolveOptions.SSHKey,
+		URI:     ctx.gitURI,
+		Options: ctx.gitResolveOptions,
 	}
-	return resolver.GitResolver.GetTagNames(gitResolverContext)
+	return resolver.gitResolver.GetTagNames(gitResolverContext)
 }

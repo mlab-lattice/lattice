@@ -27,9 +27,14 @@ type Resolver struct {
 }
 
 // Context contains information about the current operation being invoked.
-type Context struct {
-	URI    string
+type Options struct {
 	SSHKey []byte
+}
+
+// Context contains information about the current operation being invoked.
+type Context struct {
+	URI     string
+	Options *Options
 }
 
 func NewResolver(workDirectory string) (*Resolver, error) {
@@ -70,8 +75,8 @@ func (r *Resolver) Clone(ctx *Context) (*git.Repository, error) {
 	}
 
 	// If an SSH key was supplied, try to use it.
-	if ctx.SSHKey != nil {
-		signer, err := ssh.ParsePrivateKey([]byte(ctx.SSHKey))
+	if ctx.Options.SSHKey != nil {
+		signer, err := ssh.ParsePrivateKey([]byte(ctx.Options.SSHKey))
 		if err != nil {
 			return nil, err
 		}
@@ -96,8 +101,8 @@ func (r *Resolver) Fetch(ctx *Context) error {
 		RemoteName: remoteNameOrigin,
 	}
 	// If an SSH key was supplied, try to use it.
-	if ctx.SSHKey != nil {
-		signer, err := ssh.ParsePrivateKey([]byte(ctx.SSHKey))
+	if ctx.Options.SSHKey != nil {
+		signer, err := ssh.ParsePrivateKey([]byte(ctx.Options.SSHKey))
 		if err != nil {
 			return err
 		}

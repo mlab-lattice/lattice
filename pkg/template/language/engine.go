@@ -3,25 +3,41 @@ package language
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/mlab-lattice/system/pkg/util/git"
 	"path"
 	"strings"
 )
 
-const OPERATOR_PREFIX = "$"
+const operatorPrefix = "$"
 
-// Template Object. Template Rendering Artifact
-type Template struct {
-	Value map[string]interface{}
-}
+/**
+
+Design:
+
+Main interface: EvalFromURL(url, parameters, git.Options)
+
+* EvalFromURL(url, parameters, options)
+   - create env
+   - includeUrl(url, parameters, env)
+
+* includeUrl(url, env)
+   - parse url
+   - determine repository/file-path
+   - readFileBytes
+   - unmarshal
+   - push stack frame
+   - eval
+   - pop
+
+* $include
+   - eval parameters
+   - includeUrl(url, newParameters, env)
+
+*/
 
 // TemplateEngine
 type TemplateEngine struct {
 	operatorEvaluators map[string]OperatorEvaluator
-}
-
-// Options. Options for template parsing
-type Options struct {
-	GitSSHKey []byte
 }
 
 // NewEngine
@@ -38,14 +54,15 @@ func NewEngine() *TemplateEngine {
 	return engine
 }
 
-// ParseTemplate
-func (engine *TemplateEngine) ParseTemplate(url string, variables map[string]interface{}, options *Options) (*Template, error) {
-	env := newEnvironment(engine, options)
+// EvalFromURL
+func (engine *TemplateEngine) EvalFromURL(url string, parameters map[string]interface{}, gitOptions *git.Options) (interface{}, error) {
+	env := newEnvironment(engine, gitOptions)
 
-	return engine.doParseTemplate(url, variables, env)
+	return engine.includeUrl(url, parameters, env)
 }
 
-func (engine *TemplateEngine) doParseTemplate(url string, variables map[string]interface{}, env *Environment) (*Template, error) {
+// includeUrl
+func (engine *TemplateEngine) includeUrl(url string, parameters map[string]interface{}, env *environment) (interface{}, error) {
 
 	// parse url
 	urlInfo, err := parseTemplateUrl(url, env)
@@ -69,26 +86,20 @@ func (engine *TemplateEngine) doParseTemplate(url string, variables map[string]i
 
 	filePath := path.Join(env.currentDir(), urlInfo.filePath)
 
-	// Push Variables to stack
+	// Push a frame to the stack
 	env.stack.Push(&environmentStackFrame{
-		variables:      variables,
+		parameters:     parameters,
 		fileRepository: fileRepository,
 		filePath:       urlInfo.filePath,
 	})
 
-	rawMap, err := engine.includeFile(filePath, env)
+	rawValue, err := engine.readFileBytes(filePath, env)
 
 	if err != nil {
 		return nil, err
 	}
 
-	val, err := engine.Eval(rawMap, env)
-
-	if err != nil {
-		return nil, err
-	}
-
-	var template = &Template{Value: val.(map[string]interface{})}
+	val, err := engine.eval(rawValue, env)
 
 	if err != nil {
 		return nil, err
@@ -97,11 +108,11 @@ func (engine *TemplateEngine) doParseTemplate(url string, variables map[string]i
 	// Pop
 	env.stack.Pop()
 
-	return template, nil
+	return val, nil
 }
 
-// eval resolves a single json value. i.e. deals with special values such as $include
-func (engine *TemplateEngine) Eval(v interface{}, env *Environment) (interface{}, error) {
+// eval evaluates the zsfgh
+func (engine *TemplateEngine) eval(v interface{}, env *environment) (interface{}, error) {
 
 	// check value type and use proper eval method
 	if valMap, isMap := v.(map[string]interface{}); isMap { // Maps
@@ -120,19 +131,19 @@ func (engine *TemplateEngine) Eval(v interface{}, env *Environment) (interface{}
 }
 
 // evaluates a map of objects
-func (engine *TemplateEngine) evalMap(mapVal map[string]interface{}, env *Environment) (interface{}, error) {
+func (engine *TemplateEngine) evalMap(mapVal map[string]interface{}, env *environment) (interface{}, error) {
 	result := make(map[string]interface{})
 	for k, v := range mapVal {
 		var err error
 		// check if the key is an operator
-		if strings.HasPrefix(k, OPERATOR_PREFIX) {
+		if strings.HasPrefix(k, operatorPrefix) {
 
 			if evaluator, isOperator := engine.operatorEvaluators[k]; isOperator {
 
 				evalResult, err := evaluator.eval(v, env)
 				if err != nil {
 					return nil, err
-				} else if evalResult == NOOP_VAL { // NOOP case, just skip
+				} else if evalResult == void { // NOOP case, just skip
 					continue
 				} else {
 					return evalResult, nil
@@ -141,7 +152,7 @@ func (engine *TemplateEngine) evalMap(mapVal map[string]interface{}, env *Enviro
 			}
 		}
 
-		result[k], err = engine.Eval(v, env)
+		result[k], err = engine.eval(v, env)
 		if err != nil {
 			return nil, err
 		}
@@ -151,11 +162,11 @@ func (engine *TemplateEngine) evalMap(mapVal map[string]interface{}, env *Enviro
 }
 
 // evaluates an array of objects
-func (engine *TemplateEngine) evalArray(arrayVal []interface{}, env *Environment) ([]interface{}, error) {
+func (engine *TemplateEngine) evalArray(arrayVal []interface{}, env *environment) ([]interface{}, error) {
 	result := make([]interface{}, len(arrayVal))
 	for i, v := range arrayVal {
 		var err error
-		result[i], err = engine.Eval(v, env)
+		result[i], err = engine.eval(v, env)
 		if err != nil {
 			return nil, err
 		}
@@ -165,7 +176,7 @@ func (engine *TemplateEngine) evalArray(arrayVal []interface{}, env *Environment
 }
 
 // evalutes a string val
-func (engine *TemplateEngine) evalString(s string, env *Environment) (interface{}, error) {
+func (engine *TemplateEngine) evalString(s string, env *environment) (interface{}, error) {
 	// get current frame
 	currentFrame, err := env.stack.Peek()
 	if err != nil {
@@ -173,11 +184,11 @@ func (engine *TemplateEngine) evalString(s string, env *Environment) (interface{
 	}
 
 	// eval expression
-	return evalStringExpression(s, currentFrame.variables)
+	return evalStringExpression(s, currentFrame.parameters)
 }
 
 // includeFile includes the file and returns a map of values
-func (engine *TemplateEngine) includeFile(filePath string, env *Environment) (map[string]interface{}, error) {
+func (engine *TemplateEngine) readFileBytes(filePath string, env *environment) (map[string]interface{}, error) {
 
 	fmt.Printf("Including file %s\n", filePath)
 	currentFrame, err := env.stack.Peek()
@@ -196,7 +207,7 @@ func (engine *TemplateEngine) includeFile(filePath string, env *Environment) (ma
 		return nil, err
 	}
 
-	val, err := engine.Eval(rawMap, env)
+	val, err := engine.eval(rawMap, env)
 
 	if err != nil {
 		return nil, err
@@ -207,7 +218,7 @@ func (engine *TemplateEngine) includeFile(filePath string, env *Environment) (ma
 }
 
 // unmarshalBytes unmarshal the bytes specified based on the the file name
-func (engine *TemplateEngine) unmarshalBytes(bytes []byte, filePath string, env *Environment) (map[string]interface{}, error) {
+func (engine *TemplateEngine) unmarshalBytes(bytes []byte, filePath string, env *environment) (map[string]interface{}, error) {
 
 	// unmarshal file contents based on file type. Only .json is supported atm
 

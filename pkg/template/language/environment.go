@@ -3,29 +3,30 @@ package language
 
 import (
 	"errors"
+	"github.com/mlab-lattice/system/pkg/util/git"
 	"path"
 )
 
-// Environment. Template Parsing Environment
-type Environment struct {
-	engine  *TemplateEngine
-	stack   *environmentStack
-	options *Options
+// environment. Template Parsing environment
+type environment struct {
+	engine     *TemplateEngine
+	stack      *environmentStack
+	gitOptions *git.Options
 }
 
-// newEnvironment creates a new environment object
-func newEnvironment(engine *TemplateEngine, options *Options) *Environment {
-	env := &Environment{
-		engine:  engine,
-		stack:   newStack(10),
-		options: options,
+// newenvironment creates a new environment object
+func newEnvironment(engine *TemplateEngine, gitOptions *git.Options) *environment {
+	env := &environment{
+		engine:     engine,
+		stack:      newStack(10),
+		gitOptions: gitOptions,
 	}
 
 	return env
 }
 
 // currentDir returns the current directory of the file being parsed
-func (env *Environment) currentDir() string {
+func (env *environment) currentDir() string {
 	if env.stack.length() == 0 {
 		return "."
 	}
@@ -41,7 +42,7 @@ type environmentStack struct {
 
 // environment stack frame
 type environmentStackFrame struct {
-	variables      map[string]interface{}
+	parameters     map[string]interface{}
 	fileRepository FileRepository
 	filePath       string
 }
