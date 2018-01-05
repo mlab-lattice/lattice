@@ -14,15 +14,44 @@ const (
 	workDirectoryVolumeHostPathPrefix = "/var/lib/component-builder"
 )
 
-func NewAWSCloudProvider() *DefaultAWSCloudProvider {
-	return &DefaultAWSCloudProvider{}
+type Options struct {
+	Region                    string
+	AccountID                 string
+	VPCID                     string
+	SubnetIDs                 []string
+	MasterNodeSecurityGroupID string
+	BaseNodeAMIID             string
+	KeyName                   string
+}
+
+func NewAWSCloudProvider(options *Options) *DefaultAWSCloudProvider {
+	return &DefaultAWSCloudProvider{
+		region:                    options.Region,
+		accountID:                 options.AccountID,
+		vpcID:                     options.VPCID,
+		subnetIDs:                 options.SubnetIDs,
+		masterNodeSecurityGroupID: options.MasterNodeSecurityGroupID,
+		baseNodeAMIID:             options.BaseNodeAMIID,
+		keyName:                   options.KeyName,
+	}
 }
 
 type DefaultAWSCloudProvider struct {
+	region                    string
+	accountID                 string
+	vpcID                     string
+	subnetIDs                 []string
+	masterNodeSecurityGroupID string
+	baseNodeAMIID             string
+	keyName                   string
 }
 
 func (cp *DefaultAWSCloudProvider) BootstrapClusterResources(resources *clusterbootstrapper.ClusterResources) {
-	// nothing to do
+	awsConfig := &crv1.ConfigCloudProviderAWS{
+		BaseNodeAMIID: cp.baseNodeAMIID,
+		KeyName:       cp.keyName,
+	}
+	resources.Config.Spec.CloudProvider.AWS = awsConfig
 }
 
 func (cp *DefaultAWSCloudProvider) BootstrapSystemResources(resources *systembootstrapper.SystemResources) {

@@ -37,18 +37,8 @@ type ConfigCloudProviderLocal struct {
 }
 
 type ConfigCloudProviderAWS struct {
-	// FIXME: this shouldn't be dynamic config
-	Region string `json:"region"`
-	// FIXME: this shouldn't be dynamic config
-	AccountID string `json:"accountID"`
-	// FIXME: this shouldn't be dynamic config
-	VPCID string `json:"vpcId"`
-	// FIXME: maybe this shouldn't be dynamic config
-	SubnetIDs []string `json:"subnetIds"`
-	// FIXME: this shouldn't be dynamic config
-	MasterNodeSecurityGroupID string `json:"masterNodeSecurityGroupId"`
-	BaseNodeAMIID             string `json:"baseNodeAmiId"`
-	KeyName                   string `json:"keyName"`
+	BaseNodeAMIID string `json:"baseNodeAmiId"`
+	KeyName       string `json:"keyName"`
 }
 
 type ConfigComponentBuild struct {

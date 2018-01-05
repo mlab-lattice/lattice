@@ -5,7 +5,8 @@ import (
 	"strings"
 
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/cloudprovider"
-	"github.com/mlab-lattice/system/pkg/backend/kubernetes/cloudprovider/local"
+	awscloudprovider "github.com/mlab-lattice/system/pkg/backend/kubernetes/cloudprovider/aws"
+	localcloudprovider "github.com/mlab-lattice/system/pkg/backend/kubernetes/cloudprovider/local"
 	kubeconstants "github.com/mlab-lattice/system/pkg/backend/kubernetes/constants"
 	crv1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	latticeclientset "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/clientset/versioned"
@@ -236,7 +237,7 @@ func init() {
 	Cmd.Flags().StringVar(options.Config.ComponentBuild.DockerArtifact.RegistryAuthType, "component-build-docker-artifact-registry-auth-type", "", "type of auth to use for the component build registry")
 	Cmd.Flags().BoolVar(&options.Config.ComponentBuild.DockerArtifact.RepositoryPerImage, "component-build-docker-artifact-repository-per-image", false, "if false, one repository with a new tag for each artifact will be use, if true a new repository for each artifact will be used")
 	Cmd.Flags().StringVar(&options.Config.ComponentBuild.DockerArtifact.Repository, "component-build-docker-artifact-repository", "", "repository to tag component build docker artifacts with, required if component-build-docker-artifact-repository-per-image is false")
-	Cmd.Flags().BoolVar(&options.Config.ComponentBuild.DockerArtifact.Push, "component-build-docker-artifact-push", true, "whether or not the component-builder should push the docker artifact (use false for local)")
+	Cmd.Flags().BoolVar(&options.Config.ComponentBuild.DockerArtifact.Push, "component-build-docker-artifact-push", true, "whether or not the component-builder should push the docker artifact (use false for localcloudprovider)")
 
 	Cmd.Flags().StringVar(&options.MasterComponents.LatticeControllerManager.Image, "lattice-controller-manager-image", "", "docker image to user for the lattice-controller-manager")
 	Cmd.MarkFlagRequired("lattice-controller-manager-image")
@@ -278,14 +279,15 @@ func parseCloudProviderVars() (*cloudprovider.Options, error) {
 			Local: localOptions,
 		}
 
-	//case constants.ProviderAWS:
-	//	awsConfig, err := parseProviderCloudVarsAWS()
-	//	if err != nil {
-	//		return nil, err
-	//	}
-	//	options = &crv1.ConfigCloudProvider{
-	//		AWS: awsConfig,
-	//	}
+	case constants.ProviderAWS:
+		awsOptions, err := parseProviderCloudVarsAWS()
+		if err != nil {
+			return nil, err
+		}
+		options = &cloudprovider.Options{
+			AWS: awsOptions,
+		}
+
 	default:
 		return nil, fmt.Errorf("unsupported cloudProviderName: %v", cloudProviderName)
 	}
@@ -293,8 +295,8 @@ func parseCloudProviderVars() (*cloudprovider.Options, error) {
 	return options, nil
 }
 
-func parseCloudProviderVarsLocal() (*local.Options, error) {
-	options := &local.Options{}
+func parseCloudProviderVarsLocal() (*localcloudprovider.Options, error) {
+	options := &localcloudprovider.Options{}
 	flags := cli.EmbeddedFlag{
 		Target: &options,
 		Expected: map[string]cli.EmbeddedFlagValue{
@@ -312,40 +314,40 @@ func parseCloudProviderVarsLocal() (*local.Options, error) {
 	return options, nil
 }
 
-func parseProviderCloudVarsAWS() (*crv1.ConfigCloudProviderAWS, error) {
-	awsConfig := &crv1.ConfigCloudProviderAWS{}
+func parseProviderCloudVarsAWS() (*awscloudprovider.Options, error) {
+	awsOptions := &awscloudprovider.Options{}
 	flags := cli.EmbeddedFlag{
-		Target: &awsConfig,
+		Target: &awsOptions,
 		Expected: map[string]cli.EmbeddedFlagValue{
 			"region": {
 				Required: true,
 			},
 			"account-id": {
 				Required:     true,
-				EncodingName: "accountId",
+				EncodingName: "AccountID",
 			},
 			"vpc-id": {
 				Required:     true,
-				EncodingName: "vpcId",
+				EncodingName: "VPCID",
 			},
 			"subnet-ids": {
 				Required:     true,
-				EncodingName: "subnetIds",
+				EncodingName: "SubnetIDs",
 				ValueParser: func(value string) (interface{}, error) {
 					return strings.Split(value, ","), nil
 				},
 			},
 			"master-node-security-group-id": {
 				Required:     true,
-				EncodingName: "masterNodeSecurityGroupId",
+				EncodingName: "MasterNodeSecurityGroupID",
 			},
 			"base-node-ami-id": {
 				Required:     true,
-				EncodingName: "baseNodeAmiId",
+				EncodingName: "BaseNodeAMIID",
 			},
 			"key-name": {
 				Required:     true,
-				EncodingName: "keyName",
+				EncodingName: "KeyName",
 			},
 		},
 	}
@@ -354,7 +356,7 @@ func parseProviderCloudVarsAWS() (*crv1.ConfigCloudProviderAWS, error) {
 	if err != nil {
 		return nil, err
 	}
-	return awsConfig, nil
+	return awsOptions, nil
 }
 
 func parseServiceMeshVars() (*crv1.ConfigServiceMesh, error) {
