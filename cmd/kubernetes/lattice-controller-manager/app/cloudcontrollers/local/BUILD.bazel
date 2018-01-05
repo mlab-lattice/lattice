@@ -12,6 +12,7 @@ go_library(
     visibility = ["//visibility:public"],
     deps = [
         "//cmd/kubernetes/lattice-controller-manager/app/common:go_default_library",
+        "//pkg/backend/kubernetes/cloudprovider/local:go_default_library",
         "//pkg/backend/kubernetes/controller/cloud/local/endpoint:go_default_library",
         "//pkg/backend/kubernetes/controller/cloud/local/loadbalancer:go_default_library",
         "//pkg/backend/kubernetes/controller/cloud/local/nodepool:go_default_library",

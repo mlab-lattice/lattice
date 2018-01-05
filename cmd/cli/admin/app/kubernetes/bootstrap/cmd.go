@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/cloudprovider"
+	"github.com/mlab-lattice/system/pkg/backend/kubernetes/cloudprovider/local"
 	kubeconstants "github.com/mlab-lattice/system/pkg/backend/kubernetes/constants"
 	crv1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	latticeclientset "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/clientset/versioned"
@@ -93,11 +94,10 @@ var Cmd = &cobra.Command{
 			}
 		}
 
-		cloudProviderConfig, err := parseCloudProviderVars()
+		cloudProviderOptions, err := parseCloudProviderVars()
 		if err != nil {
 			panic(err)
 		}
-		options.Config.CloudProvider = *cloudProviderConfig
 
 		serviceMeshConfig, err := parseServiceMeshVars()
 		if err != nil {
@@ -116,7 +116,7 @@ var Cmd = &cobra.Command{
 			panic(err)
 		}
 
-		cloudProvider, err := cloudprovider.NewCloudProvider(cloudProviderName)
+		cloudProvider, err := cloudprovider.NewCloudProvider(cloudProviderOptions)
 		if err != nil {
 			panic(err)
 		}
@@ -260,40 +260,41 @@ func init() {
 	Cmd.Flags().StringArrayVar(&networkingProviderVars, "networking-provider-var", nil, "additional variables for the networking provider")
 }
 
-func parseCloudProviderVars() (*crv1.ConfigCloudProvider, error) {
-	var config *crv1.ConfigCloudProvider
+func parseCloudProviderVars() (*cloudprovider.Options, error) {
+	var options *cloudprovider.Options
 	switch cloudProviderName {
 	case constants.ProviderLocal:
-		localConfig, err := parseCloudProviderVarsLocal()
+		localOptions, err := parseCloudProviderVarsLocal()
 		if err != nil {
 			return nil, err
 		}
-		config = &crv1.ConfigCloudProvider{
-			Local: localConfig,
+		options = &cloudprovider.Options{
+			Local: localOptions,
 		}
-	case constants.ProviderAWS:
-		awsConfig, err := parseProviderCloudVarsAWS()
-		if err != nil {
-			return nil, err
-		}
-		config = &crv1.ConfigCloudProvider{
-			AWS: awsConfig,
-		}
+
+	//case constants.ProviderAWS:
+	//	awsConfig, err := parseProviderCloudVarsAWS()
+	//	if err != nil {
+	//		return nil, err
+	//	}
+	//	options = &crv1.ConfigCloudProvider{
+	//		AWS: awsConfig,
+	//	}
 	default:
 		return nil, fmt.Errorf("unsupported cloudProviderName: %v", cloudProviderName)
 	}
 
-	return config, nil
+	return options, nil
 }
 
-func parseCloudProviderVarsLocal() (*crv1.ConfigCloudProviderLocal, error) {
-	localConfig := &crv1.ConfigCloudProviderLocal{}
+func parseCloudProviderVarsLocal() (*local.Options, error) {
+	options := &local.Options{}
 	flags := cli.EmbeddedFlag{
-		Target: &localConfig,
+		Target: &options,
 		Expected: map[string]cli.EmbeddedFlagValue{
-			"system-ip": {
+			"cluster-ip": {
 				Required:     true,
-				EncodingName: "ip",
+				EncodingName: "IP",
 			},
 		},
 	}
@@ -302,7 +303,7 @@ func parseCloudProviderVarsLocal() (*crv1.ConfigCloudProviderLocal, error) {
 	if err != nil {
 		return nil, err
 	}
-	return localConfig, nil
+	return options, nil
 }
 
 func parseProviderCloudVarsAWS() (*crv1.ConfigCloudProviderAWS, error) {

@@ -10,9 +10,11 @@ import (
 	localcontrollers "github.com/mlab-lattice/system/cmd/kubernetes/lattice-controller-manager/app/cloudcontrollers/local"
 	controller "github.com/mlab-lattice/system/cmd/kubernetes/lattice-controller-manager/app/common"
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/cloudprovider"
+	"github.com/mlab-lattice/system/pkg/backend/kubernetes/cloudprovider/local"
 	latticeinformers "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/informers/externalversions"
 	"github.com/mlab-lattice/system/pkg/constants"
 	"github.com/mlab-lattice/system/pkg/types"
+	"github.com/mlab-lattice/system/pkg/util/cli"
 
 	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/rest"
@@ -24,9 +26,12 @@ import (
 )
 
 var (
-	kubeconfig          string
-	clusterIDString     string
-	cloudProviderName   string
+	kubeconfig      string
+	clusterIDString string
+
+	cloudProviderName string
+	cloudProviderVars []string
+
 	terraformModulePath string
 )
 
@@ -82,8 +87,11 @@ func init() {
 	RootCmd.Flags().StringVar(&kubeconfig, "kubeconfig", "", "path to kubeconfig file")
 	RootCmd.Flags().StringVar(&clusterIDString, "cluster-id", "", "id of the cluster")
 	RootCmd.MarkFlagRequired("cluster-id")
+
 	RootCmd.Flags().StringVar(&cloudProviderName, "cloud-provider", "", "cloud provider that lattice is being run on")
 	RootCmd.MarkFlagRequired("cloud-provider")
+	RootCmd.Flags().StringArrayVar(&cloudProviderVars, "cloud-provider-var", nil, "additional variables for the cloud provider")
+
 	RootCmd.Flags().StringVar(&terraformModulePath, "terraform-module-path", "/etc/terraform/modules", "path to terraform modules")
 }
 
@@ -98,7 +106,12 @@ func CreateControllerContext(
 	stop <-chan struct{},
 	terraformModulePath string,
 ) (controller.Context, error) {
-	cloudProvider, err := cloudprovider.NewCloudProvider(cloudProviderName)
+	cloudProviderOptions, err := parseCloudProviderVars()
+	if err != nil {
+		return controller.Context{}, err
+	}
+
+	cloudProvider, err := cloudprovider.NewCloudProvider(cloudProviderOptions)
 	if err != nil {
 		return controller.Context{}, err
 	}
@@ -159,4 +172,50 @@ func StartControllers(ctx controller.Context, initializers map[string]controller
 		glog.V(1).Infof("Starting %q", controllerName)
 		initializer(ctx)
 	}
+}
+
+func parseCloudProviderVars() (*cloudprovider.Options, error) {
+	var options *cloudprovider.Options
+	switch cloudProviderName {
+	case constants.ProviderLocal:
+		localOptions, err := parseCloudProviderVarsLocal()
+		if err != nil {
+			return nil, err
+		}
+		options = &cloudprovider.Options{
+			Local: localOptions,
+		}
+
+		//case constants.ProviderAWS:
+		//	awsConfig, err := parseProviderCloudVarsAWS()
+		//	if err != nil {
+		//		return nil, err
+		//	}
+		//	options = &crv1.ConfigCloudProvider{
+		//		AWS: awsConfig,
+		//	}
+	default:
+		return nil, fmt.Errorf("unsupported cloudProviderName: %v", cloudProviderName)
+	}
+
+	return options, nil
+}
+
+func parseCloudProviderVarsLocal() (*local.Options, error) {
+	options := &local.Options{}
+	flags := cli.EmbeddedFlag{
+		Target: &options,
+		Expected: map[string]cli.EmbeddedFlagValue{
+			"cluster-ip": {
+				Required:     true,
+				EncodingName: "IP",
+			},
+		},
+	}
+
+	err := flags.Parse(cloudProviderVars)
+	if err != nil {
+		return nil, err
+	}
+	return options, nil
 }
