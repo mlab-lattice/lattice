@@ -79,7 +79,7 @@ func (cp *DefaultLocalCloudProvider) bootstrapDNS(resources *clusterbootstrapper
 							},
 						},
 					},
-					DNSPolicy: corev1.DNSDefault,
+					DNSPolicy:          corev1.DNSDefault,
 					ServiceAccountName: kubeconstants.ServiceAccountLocalDNS,
 					Volumes: []corev1.Volume{
 						{

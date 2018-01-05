@@ -27,10 +27,10 @@ type Controller struct {
 	enqueueEndpointUpdate func(endpoint *crv1.Endpoint)
 
 	// R/W of these four variables controller by sharedVarsLock
-	cnameList       map[string]crv1.Endpoint
-	hostLists       map[string]crv1.Endpoint
+	cnameList          map[string]crv1.Endpoint
+	hostLists          map[string]crv1.Endpoint
 	hasRecentlyUpdated bool
-	recentlyFlushed map[string]crv1.Endpoint
+	recentlyFlushed    map[string]crv1.Endpoint
 
 	sharedVarsLock sync.RWMutex
 
@@ -42,10 +42,10 @@ type Controller struct {
 	queue workqueue.RateLimitingInterface
 
 	serverConfigPath string
-	hostConfigPath string
+	hostConfigPath   string
 }
 
-var(
+var (
 	updateWaitBeforeFlushTimerSeconds = 15
 )
 

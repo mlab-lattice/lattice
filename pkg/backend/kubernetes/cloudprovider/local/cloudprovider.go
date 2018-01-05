@@ -5,15 +5,15 @@ import (
 
 	kubeconstants "github.com/mlab-lattice/system/pkg/backend/kubernetes/constants"
 	crv1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
+	clusterbootstrapper "github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/cluster/bootstrap/bootstrapper"
 	systembootstrapper "github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/system/bootstrap/bootstrapper"
-    clusterbootstrapper "github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/cluster/bootstrap/bootstrapper"
 
 	"github.com/golang/glog"
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/constants"
+	"github.com/mlab-lattice/system/pkg/types"
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
-	"github.com/mlab-lattice/system/pkg/types"
 )
 
 const (
@@ -21,7 +21,7 @@ const (
 )
 
 type Options struct {
-	IP string
+	IP  string
 	DNS *LocalDNSControllerOptions
 }
 
@@ -32,35 +32,33 @@ type CloudProvider interface {
 func NewLocalCloudProvider(clusterID types.ClusterID, options *Options) *DefaultLocalCloudProvider {
 	cp := &DefaultLocalCloudProvider{
 		ClusterID: clusterID,
-		ip: options.IP,
-		Options: &crv1.ConfigCloudProviderLocal{
-
-		},
+		ip:        options.IP,
+		Options:   &crv1.ConfigCloudProviderLocal{},
 	}
 
 	if options.DNS != nil {
-        cp.Options.DNSServer = &crv1.ConfigCloudProviderLocalDNS{
-            DNSControllerIamge: options.DNS.DNSControllerImage,
-            DNSControllerArgs:  options.DNS.DNSControllerArgs,
-            DNSServerImage:     options.DNS.DNSServerImage,
-            DNSServerArgs:      options.DNS.DNSServerArgs,
-        }
-    }
+		cp.Options.DNSServer = &crv1.ConfigCloudProviderLocalDNS{
+			DNSControllerIamge: options.DNS.DNSControllerImage,
+			DNSControllerArgs:  options.DNS.DNSControllerArgs,
+			DNSServerImage:     options.DNS.DNSServerImage,
+			DNSServerArgs:      options.DNS.DNSServerArgs,
+		}
+	}
 
 	return cp
 }
 
 type DefaultLocalCloudProvider struct {
 	ClusterID types.ClusterID
-    Options   *crv1.ConfigCloudProviderLocal
-	ip string
+	Options   *crv1.ConfigCloudProviderLocal
+	ip        string
 }
 
 type LocalDNSControllerOptions struct {
-    DNSServerImage string
-    DNSServerArgs  []string
-    DNSControllerImage string
-    DNSControllerArgs  []string
+	DNSServerImage     string
+	DNSServerArgs      []string
+	DNSControllerImage string
+	DNSControllerArgs  []string
 }
 
 func (cp *DefaultLocalCloudProvider) BootstrapClusterResources(resources *clusterbootstrapper.ClusterResources) {
@@ -104,7 +102,7 @@ func (cp *DefaultLocalCloudProvider) ComponentBuildWorkDirectoryVolumeSource(job
 
 func (cp *DefaultLocalCloudProvider) TransformServiceDeploymentSpec(service *crv1.Service, spec *appsv1.DeploymentSpec) *appsv1.DeploymentSpec {
 	spec = spec.DeepCopy()
-    spec.Template = *cp.transformPodTemplateSpec(&spec.Template)
+	spec.Template = *cp.transformPodTemplateSpec(&spec.Template)
 	spec.Template.Spec.DNSConfig.Nameservers = []string{constants.LocalDNSServerIP}
 
 	found := false
