@@ -9,8 +9,7 @@ REGION=$(echo ${AVAILABILITY_ZONE} | sed 's/.$//')
 
 USER_DATA=$(curl -s http://169.254.169.254/latest/user-data)
 
-LATTICE_ID=$(echo ${USER_DATA} | jq '.lattice.lattice_id' | tr -d '"')
-SYSTEM_ID=$(echo ${USER_DATA} | jq '.lattice.system_id' | tr -d '"')
+CLUSTER_ID=$(echo ${USER_DATA} | jq '.lattice.cluster_id' | tr -d '"')
 NAME=$(echo ${USER_DATA} | jq '.lattice.name' | tr -d '"')
 
 STATE_S3_BUCKET=$(echo ${USER_DATA} | jq '.lattice.state_s3_bucket' | tr -d '"')
@@ -30,8 +29,7 @@ sleep 30
     -backend-config="region=${REGION}"
 
 /opt/terraform/bin/terraform apply -auto-approve \
-    -var "lattice_id=${LATTICE_ID}" \
-    -var "system_id=${SYSTEM_ID}" \
+    -var "cluster_id=${CLUSTER_ID}" \
     -var "region=${REGION}" \
     -var "name=${NAME}" \
     -var "instance_id=${INSTANCE_ID}" \

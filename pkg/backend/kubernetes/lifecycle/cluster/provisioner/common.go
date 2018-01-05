@@ -11,7 +11,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 )
 
-func pollForSystemEnvironmentReadiness(address string) error {
+func pollForClusterReadiness(address string) error {
 	client := &http.Client{
 		Timeout: time.Duration(time.Second * 5),
 	}

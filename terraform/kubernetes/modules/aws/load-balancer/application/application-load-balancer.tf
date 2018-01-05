@@ -3,6 +3,7 @@
 
 variable "region" {}
 
+variable "cluster_id" {}
 variable "system_id" {}
 variable "vpc_id" {}
 variable "autoscaling_group_name" {}
@@ -74,8 +75,8 @@ resource "aws_security_group" "service_lb" {
   vpc_id = "${var.vpc_id}"
 
   tags {
-    KubernetesCluster = "lattice.system.${var.system_id}"
-    Name              = "lattice.system.${var.system_id}.service.${var.service_id}"
+    KubernetesCluster = "lattice.${var.cluster_id}"
+    Name              = "lattice.${var.cluster_id}.system.${var.system_id}.service.${var.service_id}"
   }
 }
 

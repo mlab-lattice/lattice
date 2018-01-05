@@ -30,10 +30,10 @@ type AWSProvisionerConfig struct {
 }
 
 const (
-	systemModulePath = "aws/system"
+	clusterModulePath = "aws/cluster"
 	// FIXME: move to constants
-	systemEnvironmentManagerAPIPort    = 80
-	systemManagerAddressOutputVariable = "system_environment_manager_address"
+	clusterManagerAPIPort               = 80
+	clusterManagerAddressOutputVariable = "cluster_manager_address"
 )
 
 func NewAWSProvisioner(latticeImageDockerRepository, latticeContainerRepoPrefix, workingDir string, config AWSProvisionerConfig) (*AWSProvisioner, error) {
@@ -51,9 +51,9 @@ func NewAWSProvisioner(latticeImageDockerRepository, latticeContainerRepoPrefix,
 	return ap, nil
 }
 
-func (ap *AWSProvisioner) Provision(name, url string) error {
+func (ap *AWSProvisioner) Provision(clusterID, url string) error {
 	// Add system json to working dir
-	sysJSON, err := ap.getSystemTerraformJSON(name, url)
+	sysJSON, err := ap.getClusterTerraformJSON(clusterID, url)
 	if err != nil {
 		return err
 	}
@@ -89,30 +89,30 @@ func (ap *AWSProvisioner) Provision(name, url string) error {
 		return err
 	}
 
-	address, err := ap.Address(name)
+	address, err := ap.Address(clusterID)
 	if err != nil {
 		return err
 	}
 
-	fmt.Println("Waiting for System Environment Manager to be ready...")
-	return pollForSystemEnvironmentReadiness(address)
+	fmt.Println("Waiting for Cluster Environment Manager to be ready...")
+	return pollForClusterReadiness(address)
 }
 
-func (ap *AWSProvisioner) getSystemTerraformJSON(name, url string) ([]byte, error) {
-	sysModule := awsterraform.System{
-		Source: filepath.Join(ap.config.TerraformModulePath, systemModulePath),
+func (ap *AWSProvisioner) getClusterTerraformJSON(clusterID, url string) ([]byte, error) {
+	sysModule := awsterraform.Cluster{
+		Source: filepath.Join(ap.config.TerraformModulePath, clusterModulePath),
 
 		AWSAccountID:      ap.config.AccountID,
 		Region:            ap.config.Region,
 		AvailabilityZones: ap.config.AvailabilityZones,
 		KeyName:           ap.config.KeyName,
 
-		SystemID:            name,
+		ClusterID:           clusterID,
 		SystemDefinitionURL: url,
 
-		MasterNodeInstanceType:          ap.config.MasterNodeInstanceType,
-		MasterNodeAMIID:                 ap.config.MasterNodeAMIID,
-		SystemEnvironmentManagerAPIPort: systemEnvironmentManagerAPIPort,
+		MasterNodeInstanceType: ap.config.MasterNodeInstanceType,
+		MasterNodeAMIID:        ap.config.MasterNodeAMIID,
+		ClusterManagerAPIPort:  clusterManagerAPIPort,
 
 		BaseNodeAMIID: ap.config.BaseNodeAMIID,
 	}
@@ -124,11 +124,11 @@ func (ap *AWSProvisioner) getSystemTerraformJSON(name, url string) ([]byte, erro
 			},
 		},
 		"module": map[string]interface{}{
-			"system": sysModule,
+			"cluster": sysModule,
 		},
 		"output": map[string]interface{}{
-			systemManagerAddressOutputVariable: map[string]interface{}{
-				"value": fmt.Sprintf("${module.system.%v}", systemManagerAddressOutputVariable),
+			clusterManagerAddressOutputVariable: map[string]interface{}{
+				"value": fmt.Sprintf("${module.cluster.%v}", clusterManagerAddressOutputVariable),
 			},
 		},
 	}
@@ -137,7 +137,7 @@ func (ap *AWSProvisioner) getSystemTerraformJSON(name, url string) ([]byte, erro
 }
 
 func (ap *AWSProvisioner) Address(name string) (string, error) {
-	return ap.tec.Output(systemManagerAddressOutputVariable)
+	return ap.tec.Output(clusterManagerAddressOutputVariable)
 }
 
 func (ap *AWSProvisioner) Deprovision(name string) error {

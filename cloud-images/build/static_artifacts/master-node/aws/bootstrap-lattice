@@ -15,7 +15,6 @@ MASTER_NODE_SECURITY_GROUP_ID=$(echo ${USER_DATA} | jq '.lattice.master_node_sec
 BASE_NODE_AMI_ID=$(echo ${USER_DATA} | jq '.lattice.base_node_ami_id' | tr -d '"')
 KEY_NAME=$(echo ${USER_DATA} | jq '.lattice.key_name' | tr -d '"')
 STATE_S3_BUCKET=$(echo ${USER_DATA} | jq '.lattice.state_s3_bucket' | tr -d '"')
-SYSTEM_ID=$(echo ${USER_DATA} | jq '.lattice.system_id' | tr -d '"')
 SYSTEM_DEFINITION_URL=$(echo ${USER_DATA} | jq '.lattice.system_definition_url' | tr -d '"')
 
 sleep 10
