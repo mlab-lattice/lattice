@@ -30,6 +30,7 @@ sleep 10
     --manager-api-image gcr.io/lattice-dev/kevinrosendahl-debug-kubernetes-manager-api-rest \
     --component-builder-image gcr.io/lattice-dev/kevinrosendahl-debug-kubernetes-component-builder \
     --component-build-docker-artifact-registry ${AWS_ACCOUNT_ID}.dkr.ecr.${REGION}.amazonaws.com \
+    --component-build-docker-artifact-registry-auth-type aws-ec2-role \
     --component-build-docker-artifact-repository component-builds \
     --component-builder-docker-api-version '1.24' \
     --cloud-provider AWS \

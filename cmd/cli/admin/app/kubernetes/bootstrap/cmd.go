@@ -82,6 +82,11 @@ var Cmd = &cobra.Command{
 			panic("must specify component-build-docker-artifact-repository if not component-build-docker-artifact-repository-per-image")
 		}
 
+		emtpy := ""
+		if options.Config.ComponentBuild.DockerArtifact.RegistryAuthType == &emtpy {
+			options.Config.ComponentBuild.DockerArtifact.RegistryAuthType = nil
+		}
+
 		clusterID := types.ClusterID(clusterIDString)
 		initialSystemID := types.SystemID(initialSystemIDString)
 
@@ -228,6 +233,7 @@ func init() {
 
 	Cmd.Flags().StringVar(&options.Config.ComponentBuild.DockerArtifact.Registry, "component-build-docker-artifact-registry", "", "registry to tag component build docker artifacts with")
 	Cmd.MarkFlagRequired("component-build-docker-artifact-registry")
+	Cmd.Flags().StringVar(options.Config.ComponentBuild.DockerArtifact.RegistryAuthType, "component-build-docker-artifact-registry-auth-type", "", "type of auth to use for the component build registry")
 	Cmd.Flags().BoolVar(&options.Config.ComponentBuild.DockerArtifact.RepositoryPerImage, "component-build-docker-artifact-repository-per-image", false, "if false, one repository with a new tag for each artifact will be use, if true a new repository for each artifact will be used")
 	Cmd.Flags().StringVar(&options.Config.ComponentBuild.DockerArtifact.Repository, "component-build-docker-artifact-repository", "", "repository to tag component build docker artifacts with, required if component-build-docker-artifact-repository-per-image is false")
 	Cmd.Flags().BoolVar(&options.Config.ComponentBuild.DockerArtifact.Push, "component-build-docker-artifact-push", true, "whether or not the component-builder should push the docker artifact (use false for local)")
