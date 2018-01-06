@@ -34,14 +34,6 @@ type ConfigCloudProvider struct {
 }
 
 type ConfigCloudProviderLocal struct {
-	DNSServer *ConfigCloudProviderLocalDNS `json:"localDNS"`
-}
-
-type ConfigCloudProviderLocalDNS struct {
-	DNSControllerIamge string   `json:"controller-image"`
-	DNSServerImage     string   `json:"server-image"`
-	DNSServerArgs      []string `json:"server-args"`
-	DNSControllerArgs  []string `json:"controller-args"`
 }
 
 type ConfigCloudProviderAWS struct {
