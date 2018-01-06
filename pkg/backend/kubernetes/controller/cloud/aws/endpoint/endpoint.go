@@ -80,7 +80,7 @@ func (c *Controller) endpointConfig(endpointName string, systemID types.SystemID
 			Bucket: c.terraformBackendOptions.S3.Bucket,
 			Key: fmt.Sprintf(
 				"%v/%v/%v",
-				kubetf.GetS3BackendStatePathRoot(c.clusterID, systemID),
+				kubetf.GetS3BackendSystemStatePathRoot(c.clusterID, systemID),
 				"endpoints",
 				endpointName,
 			),

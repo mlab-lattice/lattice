@@ -33,6 +33,10 @@ output "autoscaling_group_name" {
   value = "${aws_autoscaling_group.node_autoscaling_group.name}"
 }
 
+output "autoscaling_group_desired_capacity" {
+  value = "${aws_autoscaling_group.node_autoscaling_group.desired_capacity}"
+}
+
 output "security_group_id" {
   value = "${aws_security_group.node_auto_scaling_group.id}"
 }

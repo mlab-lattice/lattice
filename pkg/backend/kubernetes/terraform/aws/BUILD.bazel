@@ -6,6 +6,7 @@ go_library(
         "cluster.go",
         "endpoint.go",
         "module_paths.go",
+        "node_pool.go",
         "service.go",
         "util.go",
     ],

@@ -4,15 +4,9 @@ const (
 	LabelKeyNodeRoleLattice  = "node-role.lattice.mlab.com"
 	LabelKeyMasterNode       = LabelKeyNodeRoleLattice + "/master"
 	LabelKeyBuildNode        = LabelKeyNodeRoleLattice + "/build"
-	LabelKeyServiceNode      = LabelKeyNodeRoleLattice + "/service"
 	LabelKeyNodeRoleNodePool = LabelKeyNodeRoleLattice + "/node-pool"
 
 	LabelKeyComponentBuildID = "component.build.lattice.mlab.com/id"
-
-	LabelKeyInternalComponent = "component.lattice.mlab.com/internal"
-
-	LabelKeyNodePoolID        = "node-pool.lattice.mlab.com/id"
-	LabelKeyNodePoolNamespace = "node-pool.lattice.mlab.com/namespace"
 
 	LabelKeySystemRolloutVersion = "rollout.system.lattice.mlab.com/version"
 	LabelKeySystemRolloutBuildID = "rollout.system.lattice.mlab.com/build"

@@ -5,4 +5,5 @@ const (
 	modulePathEndpoint             = modulePathRoot + "/endpoint"
 	modulePathEndpointExternalName = modulePathEndpoint + "/external-name"
 	modulePathEndpointIP           = modulePathEndpoint + "/ip"
+	modulePathNodePool             = modulePathRoot + "/node-pool"
 )
