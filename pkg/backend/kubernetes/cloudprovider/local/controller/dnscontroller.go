@@ -22,15 +22,10 @@ import (
 )
 
 type Controller struct {
-	//Contains the controller specific for updating DNS, Watches Address changes.
-	//syncEndpointUpdate    func(bKey string) error
-	//enqueueEndpointUpdate func(endpoint *crv1.Endpoint)
-
 	// R/W of these four variables controller by sharedVarsLock
-	cnames          map[string]crv1.Endpoint
-	hosts           map[string]crv1.Endpoint
-	flushPending    bool
-	recentlyFlushed map[string]crv1.Endpoint
+	cnames       map[string]crv1.Endpoint
+	hosts        map[string]crv1.Endpoint
+	flushPending bool
 
 	sharedVarsLock sync.RWMutex
 
@@ -64,9 +59,6 @@ func NewController(
 	c.serverConfigPath = serverConfigPath
 	c.hostConfigPath = hostConfigPath
 
-	//c.syncEndpointUpdate = c.SyncEndpointUpdate
-	//c.enqueueEndpointUpdate = c.EnqueueEndpointUpdate
-
 	endpointInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    c.addEndpoint,
 		UpdateFunc: c.updateEndpoint,
@@ -77,7 +69,6 @@ func NewController(
 
 	c.cnames = make(map[string]crv1.Endpoint)
 	c.hosts = make(map[string]crv1.Endpoint)
-	c.recentlyFlushed = make(map[string]crv1.Endpoint)
 
 	return c
 }
@@ -264,11 +255,21 @@ func (c *Controller) syncEndpointUpdate(key string) error {
 		go time.AfterFunc(time.Second*time.Duration(updateWaitBeforeFlushTimerSeconds), c.FlushRewriteDNS)
 	}
 
-	if _, ok := c.recentlyFlushed[key]; ok {
+	_, inHosts := c.hosts[key]
+	_, inCname := c.cnames[key]
+
+	if inHosts || inCname {
 		glog.V(5).Infof("Endpoint %v already updated. Setting state to created...", key)
 
 		endpointPathURL := endpoint.Spec.Path.ToDomain(true)
-		delete(c.recentlyFlushed, endpointPathURL)
+
+		if inCname {
+			delete(c.cnames, endpointPathURL)
+		}
+
+		if inHosts {
+			delete(c.hosts, endpointPathURL)
+		}
 
 		endpoint = endpoint.DeepCopy()
 		endpoint.Status.State = crv1.EndpointStateCreated
@@ -285,7 +286,7 @@ func (c *Controller) syncEndpointUpdate(key string) error {
 		return c.syncIPEndpoint(key, endpoint)
 	}
 
-	return fmt.Errorf("Endpoint %v/%v does not have External or IP set", endpoint.Namespace, endpoint.Name)
+	return fmt.Errorf("endpoint %v/%v does not have External or IP set", endpoint.Namespace, endpoint.Name)
 }
 
 func (c *Controller) syncExternalEndpoint(key string, endpoint *crv1.Endpoint) error {
@@ -342,6 +343,10 @@ func (c *Controller) RewriteDnsmasqConfig() error {
 	// This logic takes a write lock for the entire duration of the update to simplify the logic and to prevent possible missed updates.
 	c.sharedVarsLock.Lock()
 	defer c.sharedVarsLock.Unlock()
+	defer func() {
+		// Finished writing to the cache - can now unset the timer flag
+		c.flushPending = false
+	}()
 
 	glog.V(4).Infof("Rewriting config %v, %v... ", c.hostConfigPath, c.serverConfigPath)
 
@@ -360,12 +365,6 @@ func (c *Controller) RewriteDnsmasqConfig() error {
 	if err != nil {
 		return err
 	}
-
-	// TODO :: Handle what to do when returns early with error. Should flushPending be set or not
-	defer func() {
-		// Finished writing to the cache - can now unset the timer flag
-		c.flushPending = false
-	}()
 
 	// This is an extra config file, so contains only the options which must be rewritten.
 	// Condition on cname is that it exists in the specified host file, or references another cname.
@@ -395,13 +394,11 @@ func (c *Controller) RewriteDnsmasqConfig() error {
 	}
 
 	//Now update state and requeue as successful.
-	for k, v := range c.cnames {
-		c.recentlyFlushed[k] = v
+	for _, v := range c.cnames {
 		c.enqueueEndpointUpdate(&v)
 	}
 
-	for k, v := range c.hosts {
-		c.recentlyFlushed[k] = v
+	for _, v := range c.hosts {
 		c.enqueueEndpointUpdate(&v)
 	}
 
