@@ -11,26 +11,26 @@ import (
 	latticeinformers "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/informers/externalversions/lattice/v1"
 	latticelisters "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/listers/lattice/v1"
 
-	"github.com/golang/glog"
-	"k8s.io/client-go/tools/cache"
-	"k8s.io/client-go/util/workqueue"
-
-	// metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
+
+	"k8s.io/client-go/tools/cache"
+	"k8s.io/client-go/util/workqueue"
+
+	"github.com/golang/glog"
 )
 
 type Controller struct {
 	//Contains the controller specific for updating DNS, Watches Address changes.
-	syncEndpointUpdate    func(bKey string) error
-	enqueueEndpointUpdate func(endpoint *crv1.Endpoint)
+	//syncEndpointUpdate    func(bKey string) error
+	//enqueueEndpointUpdate func(endpoint *crv1.Endpoint)
 
 	// R/W of these four variables controller by sharedVarsLock
-	cnameList          map[string]crv1.Endpoint
-	hostLists          map[string]crv1.Endpoint
-	hasRecentlyUpdated bool
-	recentlyFlushed    map[string]crv1.Endpoint
+	cnames          map[string]crv1.Endpoint
+	hosts           map[string]crv1.Endpoint
+	flushPending    bool
+	recentlyFlushed map[string]crv1.Endpoint
 
 	sharedVarsLock sync.RWMutex
 
@@ -64,8 +64,8 @@ func NewController(
 	c.serverConfigPath = serverConfigPath
 	c.hostConfigPath = hostConfigPath
 
-	c.syncEndpointUpdate = c.SyncEndpointUpdate
-	c.enqueueEndpointUpdate = c.EnqueueEndpointUpdate
+	//c.syncEndpointUpdate = c.SyncEndpointUpdate
+	//c.enqueueEndpointUpdate = c.EnqueueEndpointUpdate
 
 	endpointInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    c.addEndpoint,
@@ -75,14 +75,14 @@ func NewController(
 	c.endpointister = endpointInformer.Lister()
 	c.endpointListerSynced = endpointInformer.Informer().HasSynced
 
-	c.cnameList = make(map[string]crv1.Endpoint)
-	c.hostLists = make(map[string]crv1.Endpoint)
+	c.cnames = make(map[string]crv1.Endpoint)
+	c.hosts = make(map[string]crv1.Endpoint)
 	c.recentlyFlushed = make(map[string]crv1.Endpoint)
 
 	return c
 }
 
-func (c *Controller) EnqueueEndpointUpdate(endp *crv1.Endpoint) {
+func (c *Controller) enqueueEndpointUpdate(endp *crv1.Endpoint) {
 	key, err := cache.DeletionHandlingMetaNamespaceKeyFunc(endp)
 
 	if err != nil {
@@ -221,7 +221,7 @@ func (c *Controller) processNextWorkItem() bool {
 	return true
 }
 
-func (c *Controller) SyncEndpointUpdate(key string) error {
+func (c *Controller) syncEndpointUpdate(key string) error {
 	glog.V(1).Infof("Called endpoint update")
 	defer func() {
 		glog.V(4).Infof("Finished endpoint update")
@@ -255,52 +255,61 @@ func (c *Controller) SyncEndpointUpdate(key string) error {
 	// Locks sharedVars for the entire duration. This ensures that the hosts and cnames are updated atomically alongside
 	// cache flushes and prevents missed updates.
 	c.sharedVarsLock.Lock()
+	defer c.sharedVarsLock.Unlock()
 
-	if !c.hasRecentlyUpdated {
+	if !c.flushPending {
 		glog.V(5).Infof("has not updated recently, will flush all updates in %v seconds", updateWaitBeforeFlushTimerSeconds)
 		// Safe to write to this boolean as we have the write sharedVarsLock.
-		c.hasRecentlyUpdated = true
+		c.flushPending = true
 		go time.AfterFunc(time.Second*time.Duration(updateWaitBeforeFlushTimerSeconds), c.FlushRewriteDNS)
 	}
 
-	endpointPathURL := endpoint.Spec.Path.ToDomain(true)
-
-	endpoint = endpoint.DeepCopy()
-
-	_, present := c.recentlyFlushed[key]
-
-	if present {
+	if _, ok := c.recentlyFlushed[key]; ok {
 		glog.V(5).Infof("Endpoint %v already updated. Setting state to created...", key)
 
+		endpointPathURL := endpoint.Spec.Path.ToDomain(true)
 		delete(c.recentlyFlushed, endpointPathURL)
 
+		endpoint = endpoint.DeepCopy()
 		endpoint.Status.State = crv1.EndpointStateCreated
 		_, err := c.latticeClient.LatticeV1().Endpoints(endpoint.Namespace).Update(endpoint)
-
-		c.sharedVarsLock.Unlock()
 
 		return err
 	}
 
-	if _, found := c.cnameList[key]; found {
-		delete(c.cnameList, key)
-	}
-
-	if _, found := c.hostLists[key]; found {
-		delete(c.hostLists, key)
-	}
-
 	if endpoint.Spec.ExternalEndpoint != nil {
-		glog.V(2).Infof("Updating endpoint %v with cname %v...", endpointPathURL, *endpoint.Spec.ExternalEndpoint)
-		c.cnameList[key] = *endpoint
+		return c.syncExternalEndpoint(key, endpoint)
 	}
 
 	if endpoint.Spec.IP != nil {
-		glog.V(2).Infof("Updating endpoint %v with IP address %v...", endpointPathURL, *endpoint.Spec.IP)
-		c.hostLists[key] = *endpoint
+		return c.syncIPEndpoint(key, endpoint)
 	}
 
-	c.sharedVarsLock.Unlock()
+	return fmt.Errorf("Endpoint %v/%v does not have External or IP set", endpoint.Namespace, endpoint.Name)
+}
+
+func (c *Controller) syncExternalEndpoint(key string, endpoint *crv1.Endpoint) error {
+	endpointPathURL := endpoint.Spec.Path.ToDomain(true)
+
+	if _, ok := c.hosts[key]; ok {
+		delete(c.hosts, key)
+	}
+
+	glog.V(2).Infof("Updating endpoint %v with cname %v...", endpointPathURL, *endpoint.Spec.ExternalEndpoint)
+	c.cnames[key] = *endpoint
+
+	return nil
+}
+
+func (c *Controller) syncIPEndpoint(key string, endpoint *crv1.Endpoint) error {
+	endpointPathURL := endpoint.Spec.Path.ToDomain(true)
+
+	if _, ok := c.cnames[key]; ok {
+		delete(c.cnames, key)
+	}
+
+	glog.V(2).Infof("Updating endpoint %v with IP address %v...", endpointPathURL, *endpoint.Spec.IP)
+	c.hosts[key] = *endpoint
 
 	return nil
 }
@@ -309,7 +318,7 @@ func (c *Controller) FlushRewriteDNS() {
 	err := c.RewriteDnsmasqConfig()
 
 	if err != nil {
-		println(err)
+		runtime.HandleError(err)
 	}
 }
 
@@ -321,7 +330,7 @@ func CreateEmptyFile(filename string) (*os.File, error) {
 		err := os.Remove(filename)
 
 		if err != nil {
-			panic(err)
+			runtime.HandleError(err)
 		}
 	}
 
@@ -330,30 +339,32 @@ func CreateEmptyFile(filename string) (*os.File, error) {
 
 func (c *Controller) RewriteDnsmasqConfig() error {
 
+	// This logic takes a write lock for the entire duration of the update to simplify the logic and to prevent possible missed updates.
+	c.sharedVarsLock.Lock()
+	defer c.sharedVarsLock.Unlock()
+
 	glog.V(4).Infof("Rewriting config %v, %v... ", c.hostConfigPath, c.serverConfigPath)
 
-	cname_file, err := CreateEmptyFile(c.serverConfigPath)
+	dnsmasqConfigFile, err := CreateEmptyFile(c.serverConfigPath)
+	defer dnsmasqConfigFile.Sync()
+	defer dnsmasqConfigFile.Close()
 
 	if err != nil {
 		return err
 	}
 
-	hosts_file, err := CreateEmptyFile(c.hostConfigPath)
+	hostsFile, err := CreateEmptyFile(c.hostConfigPath)
+	defer hostsFile.Sync()
+	defer hostsFile.Close()
 
 	if err != nil {
 		return err
 	}
 
+	// TODO :: Handle what to do when returns early with error. Should flushPending be set or not
 	defer func() {
-		glog.V(4).Infof("Closing config file...")
-		cname_file.Sync()
-		hosts_file.Sync()
-		cname_file.Close()
-		hosts_file.Close()
-
 		// Finished writing to the cache - can now unset the timer flag
-		c.hasRecentlyUpdated = false
-		c.sharedVarsLock.Unlock()
+		c.flushPending = false
 	}()
 
 	// This is an extra config file, so contains only the options which must be rewritten.
@@ -361,13 +372,10 @@ func (c *Controller) RewriteDnsmasqConfig() error {
 	// Each cname entry of the form cname=ALIAS,...(addn aliases),TARGET
 	// Full specification here: http://www.thekelleys.org.uk/dnsmasq/docs/dnsmasq-man.html
 
-	// This logic takes a write lock for the entire duration of the update to simplify the logic and to prevent possible missed updates.
-	c.sharedVarsLock.Lock()
-
-	for _, v := range c.cnameList {
+	for _, v := range c.cnames {
 		cname := *v.Spec.ExternalEndpoint
 		path := v.Spec.Path.ToDomain(true)
-		_, err := cname_file.WriteString("cname=" + path + "," + cname + "\n")
+		_, err := dnsmasqConfigFile.WriteString("cname=" + path + "," + cname + "\n")
 		glog.V(5).Infof("cname=" + path + "," + cname + "\n")
 
 		if err != nil {
@@ -375,10 +383,10 @@ func (c *Controller) RewriteDnsmasqConfig() error {
 		}
 	}
 
-	for _, v := range c.hostLists {
+	for _, v := range c.hosts {
 		endpoint := *v.Spec.IP
 		path := v.Spec.Path.ToDomain(true)
-		_, err := hosts_file.WriteString(endpoint + " " + path + "\n")
+		_, err := hostsFile.WriteString(endpoint + " " + path + "\n")
 		glog.V(5).Infof(endpoint + " " + path + "\n")
 
 		if err != nil {
@@ -387,14 +395,14 @@ func (c *Controller) RewriteDnsmasqConfig() error {
 	}
 
 	//Now update state and requeue as successful.
-	for k, v := range c.cnameList {
+	for k, v := range c.cnames {
 		c.recentlyFlushed[k] = v
-		c.EnqueueEndpointUpdate(&v)
+		c.enqueueEndpointUpdate(&v)
 	}
 
-	for k, v := range c.hostLists {
+	for k, v := range c.hosts {
 		c.recentlyFlushed[k] = v
-		c.EnqueueEndpointUpdate(&v)
+		c.enqueueEndpointUpdate(&v)
 	}
 
 	return nil

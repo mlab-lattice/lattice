@@ -25,8 +25,8 @@ import (
 )
 
 const (
-	NdotsValue   = "15"
-	NdotsArgName = "ndots"
+	ndotsValue     = "15"
+	dnsOptionNdots = "ndots"
 )
 
 func (c *Controller) syncServiceDeployment(service *crv1.Service, nodePool *crv1.NodePool) (*appsv1.Deployment, error) {
@@ -181,13 +181,13 @@ func untransformedDeploymentSpec(service *crv1.Service, name string, deploymentL
 		RequiredDuringSchedulingIgnoredDuringExecution: []corev1.PodAffinityTerm{podAffinityTerm},
 	}
 
-	ndotsValue := NdotsValue
+	ndotsValue := ndotsValue
 
 	DNSConfig := corev1.PodDNSConfig{
 		Nameservers: []string{},
 		Options: []corev1.PodDNSConfigOption{
 			{
-				Name:  NdotsArgName,
+				Name:  dnsOptionNdots,
 				Value: &ndotsValue,
 			},
 		},
