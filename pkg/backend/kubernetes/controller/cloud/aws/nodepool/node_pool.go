@@ -3,6 +3,8 @@ package nodepool
 import (
 	"fmt"
 	"reflect"
+	"strconv"
+	"strings"
 
 	awscloudprovider "github.com/mlab-lattice/system/pkg/backend/kubernetes/cloudprovider/aws"
 	crv1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
@@ -10,14 +12,13 @@ import (
 	kubeutil "github.com/mlab-lattice/system/pkg/backend/kubernetes/util/kubernetes"
 	tf "github.com/mlab-lattice/system/pkg/terraform"
 	awstfprovider "github.com/mlab-lattice/system/pkg/terraform/provider/aws"
-	"strconv"
 )
 
 const (
 	terraformOutputAutoscalingGroupID              = "autoscaling_group_id"
 	terraformOutputAutoscalingGroupName            = "autoscaling_group_name"
 	terraformOutputAutoscalingGroupDesiredCapacity = "autoscaling_group_desired_capacity"
-	terraformOutputSecurityGroupID                 = "autoscaling_group_name"
+	terraformOutputSecurityGroupID                 = "security_group_id"
 )
 
 func (c *Controller) syncNodePoolState(nodePool *crv1.NodePool) (*crv1.NodePool, error) {
@@ -39,22 +40,7 @@ func (c *Controller) syncNodePoolState(nodePool *crv1.NodePool) (*crv1.NodePool,
 func (c *Controller) provisionNodePool(nodePool *crv1.NodePool) (*crv1.NodePool, error) {
 	nodePoolID := kubeutil.NodePoolIDLabelValue(nodePool)
 
-	nodePoolModule := kubetf.NewNodePoolModule(
-		c.terraformModuleRoot,
-		c.awsCloudProvider.Region(),
-		string(c.clusterID),
-		c.awsCloudProvider.VPCID(),
-		c.awsCloudProvider.SubnetIDs(),
-		c.awsCloudProvider.MasterNodeSecurityGroupID(),
-		c.awsCloudProvider.BaseNodeAMIID(),
-		c.awsCloudProvider.KeyName(),
-		nodePoolID,
-		nodePool.Spec.NumInstances,
-		nodePool.Spec.InstanceType,
-	)
-
-	config := c.nodePoolConfig(nodePoolID, nodePoolModule)
-
+	config := c.nodePoolConfig(nodePool)
 	err := tf.Apply(workDirectory(nodePoolID), config)
 	if err != nil {
 		return nil, err
@@ -82,11 +68,28 @@ func (c *Controller) provisionNodePool(nodePool *crv1.NodePool) (*crv1.NodePool,
 func (c *Controller) deprovisionNodePool(nodePool *crv1.NodePool) error {
 	nodePoolID := kubeutil.NodePoolIDLabelValue(nodePool)
 
-	config := c.nodePoolConfig(nodePoolID, nil)
+	config := c.nodePoolConfig(nodePool)
 	return tf.Destroy(workDirectory(nodePoolID), config)
 }
 
-func (c *Controller) nodePoolConfig(nodePoolID string, nodePoolModule *kubetf.NodePool) *tf.Config {
+func (c *Controller) nodePoolConfig(nodePool *crv1.NodePool) *tf.Config {
+	nodePoolID := kubeutil.NodePoolIDLabelValue(nodePool)
+
+	nodePoolModule := kubetf.NewNodePoolModule(
+		c.terraformModuleRoot,
+		c.awsCloudProvider.AccountID(),
+		c.awsCloudProvider.Region(),
+		string(c.clusterID),
+		c.awsCloudProvider.VPCID(),
+		strings.Join(c.awsCloudProvider.SubnetIDs(), ","),
+		c.awsCloudProvider.MasterNodeSecurityGroupID(),
+		c.awsCloudProvider.BaseNodeAMIID(),
+		c.awsCloudProvider.KeyName(),
+		nodePoolID,
+		nodePool.Spec.NumInstances,
+		nodePool.Spec.InstanceType,
+	)
+
 	return &tf.Config{
 		Provider: awstfprovider.Provider{
 			Region: c.awsCloudProvider.Region(),
@@ -104,6 +107,20 @@ func (c *Controller) nodePoolConfig(nodePoolID string, nodePoolModule *kubetf.No
 		Modules: map[string]interface{}{
 			"node-pool": nodePoolModule,
 		},
+		Output: map[string]tf.ConfigOutput{
+			terraformOutputAutoscalingGroupID: {
+				Value: fmt.Sprintf("${module.node-pool.%v}", terraformOutputAutoscalingGroupID),
+			},
+			terraformOutputAutoscalingGroupName: {
+				Value: fmt.Sprintf("${module.node-pool.%v}", terraformOutputAutoscalingGroupName),
+			},
+			terraformOutputAutoscalingGroupDesiredCapacity: {
+				Value: fmt.Sprintf("${module.node-pool.%v}", terraformOutputAutoscalingGroupDesiredCapacity),
+			},
+			terraformOutputSecurityGroupID: {
+				Value: fmt.Sprintf("${module.node-pool.%v}", terraformOutputSecurityGroupID),
+			},
+		},
 	}
 }
 
@@ -116,7 +133,6 @@ type nodePoolInfo struct {
 
 func (c *Controller) currentNodePoolInfo(nodePool *crv1.NodePool) (nodePoolInfo, error) {
 	nodePoolID := kubeutil.NodePoolIDLabelValue(nodePool)
-	config := c.nodePoolConfig(nodePoolID, nil)
 	outputVars := []string{
 		terraformOutputAutoscalingGroupID,
 		terraformOutputAutoscalingGroupName,
@@ -124,6 +140,7 @@ func (c *Controller) currentNodePoolInfo(nodePool *crv1.NodePool) (nodePoolInfo,
 		terraformOutputSecurityGroupID,
 	}
 
+	config := c.nodePoolConfig(nodePool)
 	values, err := tf.Output(workDirectory(nodePoolID), config, outputVars)
 	if err != nil {
 		return nodePoolInfo{}, err
@@ -180,5 +197,5 @@ func (c *Controller) nodePoolAnnotations(nodePool *crv1.NodePool) (map[string]st
 }
 
 func workDirectory(nodePoolID string) string {
-	return "/tmp/lattice-controller-manager/controllers/cloud/awscloudprovider/node-pool/terraform/" + nodePoolID
+	return "/tmp/lattice-controller-manager/controllers/cloud/aws/node-pool/terraform/" + nodePoolID
 }

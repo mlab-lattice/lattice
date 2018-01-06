@@ -277,9 +277,9 @@ func (c *Controller) processNextWorkItem() bool {
 func (c *Controller) syncNodePool(key string) error {
 	glog.Flush()
 	startTime := time.Now()
-	glog.V(4).Infof("Started syncing Endpoint %q (%v)", key, startTime)
+	glog.V(4).Infof("Started syncing NodePool %q (%v)", key, startTime)
 	defer func() {
-		glog.V(4).Infof("Finished syncing Endpoint %q (%v)", key, time.Now().Sub(startTime))
+		glog.V(4).Infof("Finished syncing NodePool %q (%v)", key, time.Now().Sub(startTime))
 	}()
 
 	namespace, name, err := cache.SplitMetaNamespaceKey(key)
@@ -289,7 +289,7 @@ func (c *Controller) syncNodePool(key string) error {
 
 	nodePool, err := c.nodePoolLister.NodePools(namespace).Get(name)
 	if errors.IsNotFound(err) {
-		glog.V(2).Infof("Endpoint %v has been deleted", key)
+		glog.V(2).Infof("NodePool %v has been deleted", key)
 		return nil
 	}
 	if err != nil {

@@ -3,14 +3,15 @@ package aws
 type NodePool struct {
 	Source string `json:"source"`
 
-	Region string `json:"region"`
+	AWSAccountID string `json:"aws_account_id"`
+	Region       string `json:"region"`
 
-	ClusterID                 string   `json:"cluster_id"`
-	VPCID                     string   `json:"vpc_id"`
-	SubnetIDs                 []string `json:"subnet_ids"`
-	MasterNodeSecurityGroupID string   `json:"master_node_security_group_id"`
-	BaseNodeAMIID             string   `json:"base_node_ami_id"`
-	KeyName                   string   `json:"key_name"`
+	ClusterID                 string `json:"cluster_id"`
+	VPCID                     string `json:"vpc_id"`
+	SubnetIDs                 string `json:"subnet_ids"`
+	MasterNodeSecurityGroupID string `json:"master_node_security_group_id"`
+	BaseNodeAMIID             string `json:"base_node_ami_id"`
+	KeyName                   string `json:"key_name"`
 
 	Name         string `json:"name"`
 	NumInstances int32  `json:"num_instances"`
@@ -18,8 +19,7 @@ type NodePool struct {
 }
 
 func NewNodePoolModule(
-	moduleRoot, region, clusterID, vpcID string,
-	subnetIDs []string,
+	moduleRoot, awsAccountID, region, clusterID, vpcID, subnetIDs,
 	masterNodeSecurityGroupID, baseNodeAMIID, keyName, name string,
 	numInstances int32,
 	instanceType string,
@@ -27,7 +27,8 @@ func NewNodePoolModule(
 	return &NodePool{
 		Source: moduleRoot + modulePathNodePool,
 
-		Region: region,
+		AWSAccountID: awsAccountID,
+		Region:       region,
 
 		ClusterID:                 clusterID,
 		VPCID:                     vpcID,

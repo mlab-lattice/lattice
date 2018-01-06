@@ -32,7 +32,7 @@ output "autoscaling_group_name" {
   value = "${module.base_node.autoscaling_group_name}"
 }
 
-output "autoscaling_group_desired_capapcity" {
+output "autoscaling_group_desired_capacity" {
   value = "${module.base_node.autoscaling_group_desired_capacity}"
 }
 
@@ -56,7 +56,8 @@ provider "aws" {
 # Role
 
 resource "aws_iam_role" "node_pool_role" {
-  name               = "lattice.${var.cluster_id}.node-pool.${var.name}"
+  // name limited to 64 chars
+  name               = "${var.name}"
   assume_role_policy = "${module.assume_role_from_ec2_service_policy_doucment.json}"
 }
 
