@@ -5,10 +5,10 @@ import (
 	"time"
 
 	controller "github.com/mlab-lattice/system/cmd/kubernetes/lattice-controller-manager/app/common"
+	dnsconstants "github.com/mlab-lattice/system/pkg/backend/kubernetes/cloudprovider/local"
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/cloudprovider/local/controller"
 	latticeinformers "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/informers/externalversions"
 
-	kubeconstants "github.com/mlab-lattice/system/pkg/backend/kubernetes/constants"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 
@@ -23,8 +23,8 @@ var (
 
 func init() {
 	flag.StringVar(&kubeconfig, "kubeconfig", "", "path to kubeconfig file")
-	flag.StringVar(&dnsmasqConfigPath, "dnsmasq-config-path", kubeconstants.DNSSharedConfigDirectory+kubeconstants.DnsmasqConfigFile, "path to the additional dnsmasq configuration file")
-	flag.StringVar(&hostsFilePath, "hosts-file-path", kubeconstants.DNSSharedConfigDirectory+kubeconstants.DNSHostsFile, "path to the additional dnsmasq hosts")
+	flag.StringVar(&dnsmasqConfigPath, "dnsmasq-config-path", dnsconstants.DNSSharedConfigDirectory+dnsconstants.DnsmasqConfigFile, "path to the additional dnsmasq configuration file")
+	flag.StringVar(&hostsFilePath, "hosts-file-path", dnsconstants.DNSSharedConfigDirectory+dnsconstants.DNSHostsFile, "path to the additional dnsmasq hosts")
 	flag.Parse()
 }
 

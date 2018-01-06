@@ -1,20 +1,39 @@
 package local
 
 import (
+	"fmt"
+
 	kubeconstants "github.com/mlab-lattice/system/pkg/backend/kubernetes/constants"
 	crv1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	clusterbootstrapper "github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/cluster/bootstrap/bootstrapper"
 	kubeutil "github.com/mlab-lattice/system/pkg/backend/kubernetes/util/kubernetes"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/intstr"
-
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
-func (cp *DefaultLocalCloudProvider) bootstrapDNS(resources *clusterbootstrapper.ClusterResources) {
+func (cp *DefaultLocalCloudProvider) BootstrapClusterResources(resources *clusterbootstrapper.ClusterResources) {
+	cp.bootstrapClusterDNS(resources)
+
+	for _, daemonSet := range resources.DaemonSets {
+		template := cp.transformPodTemplateSpec(&daemonSet.Spec.Template)
+
+		if daemonSet.Name == kubeconstants.MasterNodeComponentLatticeControllerManager {
+			template.Spec.Containers[0].Args = append(
+				template.Spec.Containers[0].Args,
+				"--cloud-provider-var", fmt.Sprintf("cluster-ip=%v", cp.ip),
+			)
+		}
+
+		daemonSet.Spec.Template = *template
+	}
+}
+
+func (cp *DefaultLocalCloudProvider) bootstrapClusterDNS(resources *clusterbootstrapper.ClusterResources) {
 
 	namespace := kubeutil.InternalNamespace(cp.ClusterID)
 
@@ -25,7 +44,7 @@ func (cp *DefaultLocalCloudProvider) bootstrapDNS(resources *clusterbootstrapper
 	dnsmasqArgs = append(dnsmasqArgs, cp.DNS.DNSServerArgs...)
 
 	labels := map[string]string{
-		"key": kubeconstants.MasterNodeDNSServer,
+		"key": MasterNodeDNSServer,
 	}
 
 	daemonSet := &appsv1.DaemonSet{
@@ -34,7 +53,7 @@ func (cp *DefaultLocalCloudProvider) bootstrapDNS(resources *clusterbootstrapper
 			APIVersion: appsv1.GroupName + "/v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      kubeconstants.MasterNodeDNSServer,
+			Name:      MasterNodeDNSServer,
 			Namespace: namespace,
 			Labels:    labels,
 		},
@@ -44,24 +63,24 @@ func (cp *DefaultLocalCloudProvider) bootstrapDNS(resources *clusterbootstrapper
 			},
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:   kubeconstants.MasterNodeDNSServer,
+					Name:   MasterNodeDNSServer,
 					Labels: labels,
 				},
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{
 						{
-							Name:  kubeconstants.MasterNodeDNSSController,
+							Name:  MasterNodeDNSSController,
 							Image: cp.DNS.DNSControllerImage,
 							Args:  controllerArgs,
 							VolumeMounts: []corev1.VolumeMount{
 								{
 									Name:      "dns-config",
-									MountPath: kubeconstants.DNSSharedConfigDirectory,
+									MountPath: DNSSharedConfigDirectory,
 								},
 							},
 						},
 						{
-							Name:  kubeconstants.MasterNodeDNSServer,
+							Name:  MasterNodeDNSServer,
 							Image: cp.DNS.DNSServerImage,
 							Args:  dnsmasqArgs,
 							Ports: []corev1.ContainerPort{
@@ -74,19 +93,19 @@ func (cp *DefaultLocalCloudProvider) bootstrapDNS(resources *clusterbootstrapper
 							VolumeMounts: []corev1.VolumeMount{
 								{
 									Name:      "dns-config",
-									MountPath: kubeconstants.DNSSharedConfigDirectory,
+									MountPath: DNSSharedConfigDirectory,
 								},
 							},
 						},
 					},
 					DNSPolicy:          corev1.DNSDefault,
-					ServiceAccountName: kubeconstants.ServiceAccountLocalDNS,
+					ServiceAccountName: ServiceAccountLocalDNS,
 					Volumes: []corev1.Volume{
 						{
 							Name: "dns-config",
 							VolumeSource: corev1.VolumeSource{
 								HostPath: &corev1.HostPathVolumeSource{
-									Path: kubeconstants.DNSSharedConfigDirectory,
+									Path: DNSSharedConfigDirectory,
 								},
 							},
 						},
@@ -100,13 +119,13 @@ func (cp *DefaultLocalCloudProvider) bootstrapDNS(resources *clusterbootstrapper
 
 	service := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      kubeconstants.MasterNodeDNSService,
+			Name:      MasterNodeDNSService,
 			Namespace: namespace,
 			Labels:    labels,
 		},
 		Spec: corev1.ServiceSpec{
 			Selector:  labels,
-			ClusterIP: kubeconstants.LocalDNSServerIP,
+			ClusterIP: LocalDNSServerIP,
 			Type:      corev1.ServiceTypeClusterIP,
 			Ports: []corev1.ServicePort{
 				{
@@ -134,19 +153,19 @@ func (cp *DefaultLocalCloudProvider) bootstrapDNS(resources *clusterbootstrapper
 			APIVersion: rbacv1.GroupName + "/v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name: kubeconstants.DockerImageLocalDNSController,
+			Name: MasterNodeDNSService,
 		},
 		Rules: []rbacv1.PolicyRule{
 			// lattice all
 			{
 				APIGroups: []string{crv1.GroupName},
-				Resources: []string{rbacv1.ResourceAll},
+				Resources: []string{"endpoints"},
 				Verbs:     []string{rbacv1.VerbAll},
 			},
 			// kube service all
 			{
 				APIGroups: []string{crv1.GroupName},
-				Resources: []string{"services"},
+				Resources: []string{"endpoints"},
 				Verbs:     []string{rbacv1.VerbAll},
 			},
 		},
@@ -161,7 +180,7 @@ func (cp *DefaultLocalCloudProvider) bootstrapDNS(resources *clusterbootstrapper
 			APIVersion: "v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      kubeconstants.ServiceAccountLocalDNS,
+			Name:      ServiceAccountLocalDNS,
 			Namespace: namespace,
 		},
 	}
@@ -175,7 +194,7 @@ func (cp *DefaultLocalCloudProvider) bootstrapDNS(resources *clusterbootstrapper
 			APIVersion: rbacv1.GroupName + "/v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name: kubeconstants.DockerImageLocalDNSController,
+			Name: MasterNodeDNSService,
 		},
 		Subjects: []rbacv1.Subject{
 			{

@@ -1,23 +1,34 @@
 package local
 
 import (
-	"fmt"
-
-	kubeconstants "github.com/mlab-lattice/system/pkg/backend/kubernetes/constants"
 	crv1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
-	clusterbootstrapper "github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/cluster/bootstrap/bootstrapper"
 	systembootstrapper "github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/system/bootstrap/bootstrapper"
-
-	"github.com/golang/glog"
-	"github.com/mlab-lattice/system/pkg/backend/kubernetes/constants"
 	"github.com/mlab-lattice/system/pkg/types"
+
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
+
+	"github.com/golang/glog"
 )
 
 const (
 	workDirectoryVolumeHostPathPrefix = "/data/component-builder"
+
+	MasterNodeDNSSController = "local-dns-controller"
+	MasterNodeDNSServer      = "local-dnsmasq-server"
+	MasterNodeDNSService     = "local-dns-service"
+
+	ServiceAccountLocalDNS = "local-dns"
+
+	DockerImageLocalDNSController = "kubernetes-local-dns"
+	DockerImageLocalDNSServer     = "gcr.io/google_containers/k8s-dns-dnsmasq-nanny-amd64:1.14.7"
+
+	LocalDNSServerIP = "10.96.0.53"
+
+	DNSSharedConfigDirectory = "/etc/dns-config/"
+	DNSHostsFile             = "hosts"
+	DnsmasqConfigFile        = "dnsmasq.conf"
 )
 
 type Options struct {
@@ -61,23 +72,6 @@ type DNSOptions struct {
 	DNSControllerArgs  []string
 }
 
-func (cp *DefaultLocalCloudProvider) BootstrapClusterResources(resources *clusterbootstrapper.ClusterResources) {
-	cp.bootstrapDNS(resources)
-
-	for _, daemonSet := range resources.DaemonSets {
-		template := cp.transformPodTemplateSpec(&daemonSet.Spec.Template)
-
-		if daemonSet.Name == kubeconstants.MasterNodeComponentLatticeControllerManager {
-			template.Spec.Containers[0].Args = append(
-				template.Spec.Containers[0].Args,
-				"--cloud-provider-var", fmt.Sprintf("cluster-ip=%v", cp.ip),
-			)
-		}
-
-		daemonSet.Spec.Template = *template
-	}
-}
-
 func (cp *DefaultLocalCloudProvider) BootstrapSystemResources(resources *systembootstrapper.SystemResources) {
 	for _, daemonSet := range resources.DaemonSets {
 		template := cp.transformPodTemplateSpec(&daemonSet.Spec.Template)
@@ -103,12 +97,12 @@ func (cp *DefaultLocalCloudProvider) ComponentBuildWorkDirectoryVolumeSource(job
 func (cp *DefaultLocalCloudProvider) TransformServiceDeploymentSpec(service *crv1.Service, spec *appsv1.DeploymentSpec) *appsv1.DeploymentSpec {
 	spec = spec.DeepCopy()
 	spec.Template = *cp.transformPodTemplateSpec(&spec.Template)
-	spec.Template.Spec.DNSConfig.Nameservers = []string{constants.LocalDNSServerIP}
+	spec.Template.Spec.DNSConfig.Nameservers = []string{LocalDNSServerIP}
 
 	found := false
 
 	for idx, nameserver := range spec.Template.Spec.DNSConfig.Nameservers {
-		if nameserver == constants.LocalDNSServerIP {
+		if nameserver == LocalDNSServerIP {
 			// Nameserver already present, so no need to update
 			found = true
 
@@ -120,7 +114,7 @@ func (cp *DefaultLocalCloudProvider) TransformServiceDeploymentSpec(service *crv
 
 	if !found {
 		// Add the DNS server IP as the first nameserver.
-		spec.Template.Spec.DNSConfig.Nameservers = append([]string{constants.LocalDNSServerIP}, spec.Template.Spec.DNSConfig.Nameservers...)
+		spec.Template.Spec.DNSConfig.Nameservers = append([]string{LocalDNSServerIP}, spec.Template.Spec.DNSConfig.Nameservers...)
 	}
 
 	glog.V(4).Infof("Updated nameservers: %v", spec.Template.Spec.DNSConfig.Nameservers)

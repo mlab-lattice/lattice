@@ -11,7 +11,6 @@ go_library(
         "finalizer.go",
         "internal_component.go",
         "label.go",
-        "local.go",
         "master_node.go",
         "namespace.go",
         "networking.go",

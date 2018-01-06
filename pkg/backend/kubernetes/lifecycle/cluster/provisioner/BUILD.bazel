@@ -10,6 +10,7 @@ go_library(
     importpath = "github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/cluster/provisioner",
     visibility = ["//visibility:public"],
     deps = [
+        "//pkg/backend/kubernetes/cloudprovider/local:go_default_library",
         "//pkg/backend/kubernetes/constants:go_default_library",
         "//pkg/backend/kubernetes/terraform/aws:go_default_library",
         "//pkg/backend/kubernetes/util/minikube:go_default_library",

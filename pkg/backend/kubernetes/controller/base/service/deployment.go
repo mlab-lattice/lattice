@@ -24,6 +24,11 @@ import (
 	"github.com/sergi/go-diff/diffmatchpatch"
 )
 
+const (
+	NdotsValue   = "15"
+	NdotsArgName = "ndots"
+)
+
 func (c *Controller) syncServiceDeployment(service *crv1.Service, nodePool *crv1.NodePool) (*appsv1.Deployment, error) {
 	selector := kubelabels.NewSelector()
 	requirement, err := kubelabels.NewRequirement(kubeconstants.LabelKeyServiceID, selection.Equals, []string{service.Name})
@@ -176,13 +181,13 @@ func untransformedDeploymentSpec(service *crv1.Service, name string, deploymentL
 		RequiredDuringSchedulingIgnoredDuringExecution: []corev1.PodAffinityTerm{podAffinityTerm},
 	}
 
-	ndotsValue := "15"
+	ndotsValue := NdotsValue
 
 	DNSConfig := corev1.PodDNSConfig{
 		Nameservers: []string{},
 		Options: []corev1.PodDNSConfigOption{
 			{
-				Name:  "ndots",
+				Name:  NdotsArgName,
 				Value: &ndotsValue,
 			},
 		},

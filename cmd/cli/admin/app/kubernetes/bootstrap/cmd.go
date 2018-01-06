@@ -49,9 +49,6 @@ var (
 	cloudProviderName string
 	cloudProviderVars []string
 
-	dnsControllerArgs []string
-	dnsServerArgs     []string
-
 	serviceMeshProvider     string
 	serviceMeshProviderVars []string
 
@@ -78,11 +75,11 @@ var options = &clusterbootstrap.Options{
 
 // FIXME :: temporary until better solution for nested struct.
 type LocalCloudOptionsFlat struct {
-	IP                 string   `json:"ip"`
-	DNSControllerImage string   `json:"controller-image"`
-	DNSServerImage     string   `json:"server-image"`
-	DNSServerArgs      []string `json:"server-args"`
-	DNSControllerArgs  []string `json:"controller-args"`
+	IP                 string
+	DNSControllerImage string
+	DNSServerImage     string
+	DNSServerArgs      []string
+	DNSControllerArgs  []string
 }
 
 var Cmd = &cobra.Command{
@@ -308,19 +305,19 @@ func parseCloudProviderVarsLocal() (*local.Options, error) {
 		Expected: map[string]cli.EmbeddedFlagValue{
 			"cluster-ip": {
 				Required:     true,
-				EncodingName: "ip",
+				EncodingName: "IP",
 			},
 			"dns-controller-image": {
 				Required:     true,
-				EncodingName: "controller-image",
+				EncodingName: "DNSControllerImage",
 			},
 			"dns-server-image": {
 				Required:     true,
-				EncodingName: "server-image",
+				EncodingName: "DNSServerImage",
 			},
 			"dns-server-args": {
 				Required:     false,
-				EncodingName: "server-args",
+				EncodingName: "DNSServerArgs",
 				ValueParser: func(value string) (interface{}, error) {
 					var argsWithoutPrefix = strings.Join(strings.Split(value, "=")[1:], "=")
 					return strings.Split(argsWithoutPrefix, ":"), nil
@@ -328,7 +325,7 @@ func parseCloudProviderVarsLocal() (*local.Options, error) {
 			},
 			"dns-controller-args": {
 				Required:     false,
-				EncodingName: "controller-args",
+				EncodingName: "DNSControllerArgs",
 				ValueParser: func(value string) (interface{}, error) {
 					var argsWithoutPrefix = strings.Join(strings.Split(value, "=")[1:], "=")
 					return strings.Split(argsWithoutPrefix, ","), nil
