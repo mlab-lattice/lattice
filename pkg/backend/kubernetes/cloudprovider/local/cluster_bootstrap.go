@@ -156,13 +156,7 @@ func (cp *DefaultLocalCloudProvider) bootstrapClusterDNS(resources *clusterboots
 			Name: MasterNodeDNSService,
 		},
 		Rules: []rbacv1.PolicyRule{
-			// lattice all
-			{
-				APIGroups: []string{crv1.GroupName},
-				Resources: []string{"endpoints"},
-				Verbs:     []string{rbacv1.VerbAll},
-			},
-			// kube service all
+			// lattice endpoints
 			{
 				APIGroups: []string{crv1.GroupName},
 				Resources: []string{"endpoints"},
