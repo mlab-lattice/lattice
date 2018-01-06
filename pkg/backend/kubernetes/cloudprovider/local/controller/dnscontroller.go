@@ -226,9 +226,25 @@ func (c *Controller) syncEndpointUpdate(key string) error {
 
 	// Cache lookup
 	endpoint, err := c.endpointister.Endpoints(namespace).Get(name)
+	endpointPathURL := endpoint.Spec.Path.ToDomain(true)
 
 	if errors.IsNotFound(err) || endpoint.DeletionTimestamp != nil {
 		glog.V(2).Infof("Endpoint %v has been deleted", key)
+
+		c.sharedVarsLock.Lock()
+		defer c.sharedVarsLock.Unlock()
+
+		_, inHosts := c.hosts[key]
+		_, inCname := c.cnames[key]
+
+		if inCname {
+			delete(c.cnames, endpointPathURL)
+		}
+
+		if inHosts {
+			delete(c.hosts, endpointPathURL)
+		}
+
 		return nil
 	}
 
@@ -260,8 +276,6 @@ func (c *Controller) syncEndpointUpdate(key string) error {
 
 	if inHosts || inCname {
 		glog.V(5).Infof("Endpoint %v already updated. Setting state to created...", key)
-
-		endpointPathURL := endpoint.Spec.Path.ToDomain(true)
 
 		if inCname {
 			delete(c.cnames, endpointPathURL)
