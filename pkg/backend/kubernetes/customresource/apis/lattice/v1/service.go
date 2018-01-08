@@ -57,11 +57,12 @@ type ComponentPort struct {
 }
 
 type ServiceStatus struct {
-	State              ServiceState        `json:"state"`
-	ObservedGeneration int64               `json:"observedGeneration"`
-	UpdatedInstances   int32               `json:"updatedInstances"`
-	StaleInstances     int32               `json:"staleInstances"`
-	FailureInfo        *ServiceFailureInfo `json:"failureInfo,omitempty"`
+	State              ServiceState             `json:"state"`
+	ObservedGeneration int64                    `json:"observedGeneration"`
+	UpdatedInstances   int32                    `json:"updatedInstances"`
+	StaleInstances     int32                    `json:"staleInstances"`
+	PublicPorts        ServiceStatusPublicPorts `json:"publicPorts"`
+	FailureInfo        *ServiceFailureInfo      `json:"failureInfo,omitempty"`
 }
 
 type ServiceState string
@@ -74,6 +75,12 @@ const (
 	ServiceStateStable      ServiceState = "stable"
 	ServiceStateFailed      ServiceState = "failed"
 )
+
+type ServiceStatusPublicPorts map[int32]ServiceStatusPublicPort
+
+type ServiceStatusPublicPort struct {
+	Address string `json:"address"`
+}
 
 type ServiceFailureInfo struct {
 	Message  string      `json:"message"`

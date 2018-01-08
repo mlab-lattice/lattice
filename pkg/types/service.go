@@ -17,11 +17,17 @@ const (
 )
 
 type Service struct {
-	ID               ServiceID     `json:"id"`
-	Path             tree.NodePath `json:"path"`
-	State            ServiceState  `json:"state"`
-	UpdatedInstances int32         `json:"updatedInstances"`
-	StaleInstances   int32         `json:"staleInstances"`
-	FailureMessage   *string       `json:"failureMessage"`
-	PublicAddress    *string       `json:"address"`
+	ID               ServiceID          `json:"id"`
+	Path             tree.NodePath      `json:"path"`
+	State            ServiceState       `json:"state"`
+	UpdatedInstances int32              `json:"updatedInstances"`
+	StaleInstances   int32              `json:"staleInstances"`
+	PublicPorts      ServicePublicPorts `json:"publicPorts"`
+	FailureMessage   *string            `json:"failureMessage"`
+}
+
+type ServicePublicPorts map[int32]ServicePublicPort
+
+type ServicePublicPort struct {
+	Address string `json:"address"`
 }

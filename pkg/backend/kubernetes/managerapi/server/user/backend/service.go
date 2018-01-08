@@ -14,8 +14,10 @@ import (
 	"k8s.io/apimachinery/pkg/selection"
 )
 
-func (kb *KubernetesBackend) ListServices(id types.SystemID) ([]types.Service, error) {
-	services, err := kb.LatticeClient.LatticeV1().Services(string(id)).List(metav1.ListOptions{})
+func (kb *KubernetesBackend) ListServices(systemID types.SystemID) ([]types.Service, error) {
+	namespace := kubeutil.SystemNamespace(kb.ClusterID, systemID)
+
+	services, err := kb.LatticeClient.LatticeV1().Services(namespace).List(metav1.ListOptions{})
 	if err != nil {
 		return nil, err
 	}
@@ -61,14 +63,23 @@ func (kb *KubernetesBackend) GetService(id types.SystemID, path tree.NodePath) (
 }
 
 func (kb *KubernetesBackend) transformService(serviceName string, path tree.NodePath, serviceStatus *crv1.ServiceStatus) types.Service {
-	return types.Service{
+	service := types.Service{
 		ID:               types.ServiceID(serviceName),
 		Path:             path,
 		State:            getServicedState(serviceStatus.State),
 		UpdatedInstances: serviceStatus.UpdatedInstances,
 		StaleInstances:   serviceStatus.StaleInstances,
-		// FIXME: add GetServicePublicAddress to provider
 	}
+
+	ports := types.ServicePublicPorts{}
+	for port, portInfo := range serviceStatus.PublicPorts {
+		ports[port] = types.ServicePublicPort{
+			Address: portInfo.Address,
+		}
+	}
+
+	service.PublicPorts = ports
+	return service
 }
 
 func getServicedState(state crv1.ServiceState) types.ServiceState {
