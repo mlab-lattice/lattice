@@ -67,6 +67,7 @@ git.install-hooks:
 	cp -f scripts/git/pre-commit.sh .git/hooks/pre-commit
 	cp -f scripts/git/pre-push.sh .git/hooks/pre-push
 
+
 # kubernetes
 .PHONY: kubernetes.update-dependencies
 kubernetes.update-dependencies:
