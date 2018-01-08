@@ -21,3 +21,9 @@ var TolerationBuildNode corev1.Toleration = corev1.Toleration{
 	Value:    "true",
 	Effect:   corev1.TaintEffectNoSchedule,
 }
+
+var TolerationNodePool corev1.Toleration = corev1.Toleration{
+	Key:      LabelKeyNodeRoleNodePool,
+	Operator: corev1.TolerationOpExists,
+	Effect:   corev1.TaintEffectNoSchedule,
+}

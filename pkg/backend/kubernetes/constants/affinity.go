@@ -7,3 +7,7 @@ import (
 var NodeAffinityMasterNode = corev1.NodeAffinity{
 	RequiredDuringSchedulingIgnoredDuringExecution: &NodeSelectorMasterNode,
 }
+
+var NodeAffinityNodePool = corev1.NodeAffinity{
+	RequiredDuringSchedulingIgnoredDuringExecution: &NodeSelectorNodePool,
+}

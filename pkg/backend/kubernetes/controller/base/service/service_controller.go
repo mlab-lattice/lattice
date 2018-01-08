@@ -118,6 +118,7 @@ func NewController(
 	nodePoolInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    sc.handleNodePoolAdd,
 		UpdateFunc: sc.handleNodePoolUpdate,
+		DeleteFunc: sc.handleNodePoolDelete,
 	})
 	sc.nodePoolLister = nodePoolInformer.Lister()
 	sc.nodePoolListerSynced = nodePoolInformer.Informer().HasSynced
@@ -296,6 +297,38 @@ func (c *Controller) handleNodePoolUpdate(old, cur interface{}) {
 	}
 
 	services, err := util.ServicesForNodePool(c.latticeClient, curNodePool)
+	if err != nil {
+		// FIXME(kevinrosendahl): what to do here?
+		return
+	}
+
+	for _, service := range services {
+		c.enqueueService(&service)
+	}
+}
+
+func (c *Controller) handleNodePoolDelete(obj interface{}) {
+	nodePool, ok := obj.(*crv1.NodePool)
+
+	// When a delete is dropped, the relist will notice a pod in the store not
+	// in the list, leading to the insertion of a tombstone object which contains
+	// the deleted key/value.
+	if !ok {
+		tombstone, ok := obj.(cache.DeletedFinalStateUnknown)
+		if !ok {
+			runtime.HandleError(fmt.Errorf("couldn't get object from tombstone %#v", obj))
+			return
+		}
+		nodePool, ok = tombstone.Obj.(*crv1.NodePool)
+		if !ok {
+			runtime.HandleError(fmt.Errorf("tombstone contained object that is not a Deployment %#v", obj))
+			return
+		}
+	}
+
+	glog.V(4).Infof("Adding NodePool %s/%s", nodePool.Namespace, nodePool.Name)
+
+	services, err := util.ServicesForNodePool(c.latticeClient, nodePool)
 	if err != nil {
 		// FIXME(kevinrosendahl): what to do here?
 		return

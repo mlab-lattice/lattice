@@ -543,11 +543,11 @@ func (c *Controller) syncLoadBalancer(key string) error {
 
 	ports := map[int32]crv1.LoadBalancerPort{}
 	for _, port := range kubeService.Spec.Ports {
-		ports[port.Port] = crv1.LoadBalancerPort{
+		ports[serviceMeshPorts[port.Port]] = crv1.LoadBalancerPort{
 			Address: fmt.Sprintf(
 				"%v:%v",
 				loadBalancer.Annotations[aws.AnnotationKeyLoadBalancerDNSName],
-				port.Port,
+				serviceMeshPorts[port.Port],
 			),
 		}
 	}

@@ -175,36 +175,81 @@ func (c *Controller) updateServiceStatus(
 	//return c.latticeClient.LatticeV1().Services(service.Namespace).UpdateStatus(service)
 }
 
+type lookupDelete struct {
+	lookup func() (interface{}, error)
+	delete func() error
+}
+
 func (c *Controller) syncDeletedService(service *crv1.Service) error {
-	lookupFuncs := []func() (interface{}, error){
-		func() (interface{}, error) {
-			return c.nodePoolLister.NodePools(service.Namespace).Get(service.Name)
+	lookupDeletes := []lookupDelete{
+		// node pool
+		{
+			lookup: func() (interface{}, error) {
+				return c.nodePoolLister.NodePools(service.Namespace).Get(service.Name)
+			},
+			delete: func() error {
+				return c.latticeClient.LatticeV1().NodePools(service.Namespace).Delete(service.Name, nil)
+			},
 		},
-		func() (interface{}, error) {
-			return c.deploymentLister.Deployments(service.Namespace).Get(service.Name)
+		// deployment
+		{
+			lookup: func() (interface{}, error) {
+				return c.deploymentLister.Deployments(service.Namespace).Get(service.Name)
+			},
+			delete: func() error {
+				return c.kubeClient.AppsV1().Deployments(service.Namespace).Delete(service.Name, nil)
+			},
 		},
-		func() (interface{}, error) {
-			name := kubeutil.GetKubeServiceNameForService(service.Name)
-			return c.kubeServiceLister.Services(service.Namespace).Get(name)
+		// kube service
+		{
+			lookup: func() (interface{}, error) {
+				name := kubeutil.GetKubeServiceNameForService(service.Name)
+				return c.kubeServiceLister.Services(service.Namespace).Get(name)
+			},
+			delete: func() error {
+				name := kubeutil.GetKubeServiceNameForService(service.Name)
+				return c.kubeClient.CoreV1().Services(service.Namespace).Delete(name, nil)
+			},
 		},
-		func() (interface{}, error) {
-			return c.serviceAddressLister.ServiceAddresses(service.Namespace).Get(service.Name)
+		// service address
+		{
+			lookup: func() (interface{}, error) {
+				return c.serviceAddressLister.ServiceAddresses(service.Namespace).Get(service.Name)
+			},
+			delete: func() error {
+				return c.latticeClient.LatticeV1().ServiceAddresses(service.Namespace).Delete(service.Name, nil)
+			},
 		},
-		func() (interface{}, error) {
-			return c.loadBalancerLister.LoadBalancers(service.Namespace).Get(service.Name)
+		// load balancer
+		{
+			lookup: func() (interface{}, error) {
+				return c.loadBalancerLister.LoadBalancers(service.Namespace).Get(service.Name)
+			},
+			delete: func() error {
+				return c.latticeClient.LatticeV1().LoadBalancers(service.Namespace).Delete(service.Name, nil)
+			},
 		},
 	}
 
-	for _, lookupFunc := range lookupFuncs {
-		exists, err := resoureceExists(lookupFunc)
+	existingResource := false
+	for _, lookupDelete := range lookupDeletes {
+		exists, err := resourceExists(lookupDelete.lookup)
 		if err != nil {
 			return err
 		}
 
 		if exists {
-			// resource still exists, wait until it is deleted
-			return nil
+			existingResource = true
+			if err := lookupDelete.delete(); err != nil {
+				return err
+			}
+
+			continue
 		}
+	}
+
+	if existingResource {
+		return nil
 	}
 
 	// All of the children resources have been cleaned up
@@ -212,7 +257,7 @@ func (c *Controller) syncDeletedService(service *crv1.Service) error {
 	return err
 }
 
-func resoureceExists(lookupFunc func() (interface{}, error)) (bool, error) {
+func resourceExists(lookupFunc func() (interface{}, error)) (bool, error) {
 	_, err := lookupFunc()
 	if err == nil {
 		// resource still exists, wait until it is deleted

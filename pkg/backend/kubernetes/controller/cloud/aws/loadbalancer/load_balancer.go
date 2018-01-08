@@ -24,7 +24,7 @@ const (
 )
 
 func (c *Controller) syncDeletedLoadBalancer(loadBalancer *crv1.LoadBalancer) error {
-	if err := c.deleteKubeService(loadBalancer); err != nil {
+	if err := c.deleteKubeService(loadBalancer); err != nil && !errors.IsNotFound(err) {
 		return err
 	}
 
@@ -50,7 +50,12 @@ func (c *Controller) nodePoolProvisioned(loadBalancer *crv1.LoadBalancer) (bool,
 }
 
 func (c *Controller) provisionLoadBalancer(loadBalancer *crv1.LoadBalancer) (*crv1.LoadBalancer, error) {
-	config, err := c.loadBalancerConfig(loadBalancer)
+	loadBalancerModule, err := c.loadBalancerModule(loadBalancer)
+	if err != nil {
+		return nil, err
+	}
+
+	config, err := c.loadBalancerConfig(loadBalancer, loadBalancerModule)
 	if err != nil {
 		return nil, err
 	}
@@ -80,7 +85,7 @@ func (c *Controller) provisionLoadBalancer(loadBalancer *crv1.LoadBalancer) (*cr
 }
 
 func (c *Controller) deprovisionLoadBalancer(loadBalancer *crv1.LoadBalancer) error {
-	config, err := c.loadBalancerConfig(loadBalancer)
+	config, err := c.loadBalancerConfig(loadBalancer, nil)
 	if err != nil {
 		return err
 	}
@@ -88,40 +93,11 @@ func (c *Controller) deprovisionLoadBalancer(loadBalancer *crv1.LoadBalancer) er
 	return tf.Destroy(workDirectory(loadBalancer), config)
 }
 
-func (c *Controller) loadBalancerConfig(loadBalancer *crv1.LoadBalancer) (*tf.Config, error) {
+func (c *Controller) loadBalancerConfig(loadBalancer *crv1.LoadBalancer, loadBalancerModule *kubetf.ApplicationLoadBalancer) (*tf.Config, error) {
 	systemID, err := kubeutil.SystemID(loadBalancer.Namespace)
 	if err != nil {
 		return nil, err
 	}
-
-	nodePool, err := c.nodePoolLister.NodePools(loadBalancer.Namespace).Get(loadBalancer.Name)
-	if err != nil {
-		return nil, err
-	}
-
-	kubeServiceName := kubeutil.GetKubeServiceNameForLoadBalancer(loadBalancer.Name)
-	kubeService, err := c.kubeServiceLister.Services(loadBalancer.Namespace).Get(kubeServiceName)
-	if err != nil {
-		return nil, err
-	}
-
-	nodePorts := map[int32]int32{}
-	for _, port := range kubeService.Spec.Ports {
-		nodePorts[port.Port] = port.NodePort
-	}
-
-	loadBalancerModule := kubetf.NewApplicationLoadBalancerModule(
-		c.terraformModuleRoot,
-		c.awsCloudProvider.Region(),
-		string(c.clusterID),
-		string(systemID),
-		c.awsCloudProvider.VPCID(),
-		strings.Join(c.awsCloudProvider.SubnetIDs(), ","),
-		loadBalancer.Name,
-		nodePool.Annotations[awscloudprovider.AnnotationKeyNodePoolAutoscalingGroupName],
-		nodePool.Annotations[awscloudprovider.AnnotationKeyNodePoolSecurityGroupID],
-		nodePorts,
-	)
 
 	config := &tf.Config{
 		Provider: awstfprovider.Provider{
@@ -137,16 +113,72 @@ func (c *Controller) loadBalancerConfig(loadBalancer *crv1.LoadBalancer) (*tf.Co
 			),
 			Encrypt: true,
 		},
-		Modules: map[string]interface{}{
+	}
+
+	if loadBalancerModule != nil {
+		config.Modules = map[string]interface{}{
 			"load-balancer": loadBalancerModule,
-		},
-		Output: map[string]tf.ConfigOutput{
+		}
+
+		config.Output = map[string]tf.ConfigOutput{
 			terraformOutputDNSName: {
 				Value: fmt.Sprintf("${module.load-balancer.%v}", terraformOutputDNSName),
 			},
-		},
+		}
 	}
+
 	return config, nil
+}
+
+func (c *Controller) loadBalancerModule(loadBalancer *crv1.LoadBalancer) (*kubetf.ApplicationLoadBalancer, error) {
+	service, err := c.serviceLister.Services(loadBalancer.Namespace).Get(loadBalancer.Name)
+	if err != nil {
+		return nil, err
+	}
+
+	serviceMeshPorts := map[int32]int32{}
+	for _, componentPorts := range service.Spec.Ports {
+		for _, componentPort := range componentPorts {
+			if componentPort.Public {
+				serviceMeshPorts[componentPort.EnvoyPort] = componentPort.Port
+			}
+		}
+	}
+
+	kubeServiceName := kubeutil.GetKubeServiceNameForLoadBalancer(loadBalancer.Name)
+	kubeService, err := c.kubeServiceLister.Services(loadBalancer.Namespace).Get(kubeServiceName)
+	if err != nil {
+		return nil, err
+	}
+
+	nodePorts := map[int32]int32{}
+	for _, port := range kubeService.Spec.Ports {
+		nodePorts[serviceMeshPorts[port.Port]] = port.NodePort
+	}
+
+	systemID, err := kubeutil.SystemID(loadBalancer.Namespace)
+	if err != nil {
+		return nil, err
+	}
+
+	nodePool, err := c.nodePoolLister.NodePools(loadBalancer.Namespace).Get(loadBalancer.Name)
+	if err != nil {
+		return nil, err
+	}
+
+	loadBalancerModule := kubetf.NewApplicationLoadBalancerModule(
+		c.terraformModuleRoot,
+		c.awsCloudProvider.Region(),
+		string(c.clusterID),
+		string(systemID),
+		c.awsCloudProvider.VPCID(),
+		strings.Join(c.awsCloudProvider.SubnetIDs(), ","),
+		loadBalancer.Name,
+		nodePool.Annotations[awscloudprovider.AnnotationKeyNodePoolAutoscalingGroupName],
+		nodePool.Annotations[awscloudprovider.AnnotationKeyNodePoolSecurityGroupID],
+		nodePorts,
+	)
+	return loadBalancerModule, nil
 }
 
 type loadBalancerInfo struct {
@@ -156,7 +188,12 @@ type loadBalancerInfo struct {
 func (c *Controller) currentLoadBalancerInfo(loadBalancer *crv1.LoadBalancer) (loadBalancerInfo, error) {
 	outputVars := []string{terraformOutputDNSName}
 
-	config, err := c.loadBalancerConfig(loadBalancer)
+	loadBalancerModule, err := c.loadBalancerModule(loadBalancer)
+	if err != nil {
+		return loadBalancerInfo{}, err
+	}
+
+	config, err := c.loadBalancerConfig(loadBalancer, loadBalancerModule)
 	if err != nil {
 		return loadBalancerInfo{}, err
 	}

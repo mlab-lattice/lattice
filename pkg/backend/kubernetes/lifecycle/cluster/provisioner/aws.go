@@ -94,7 +94,7 @@ func (ap *AWSProvisioner) Provision(clusterID, url string) error {
 		return err
 	}
 
-	fmt.Println("Waiting for Cluster Environment Manager to be ready...")
+	fmt.Println("Waiting for Cluster Manager to be ready...")
 	return pollForClusterReadiness(address)
 }
 

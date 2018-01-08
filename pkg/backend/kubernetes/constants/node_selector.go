@@ -31,3 +31,16 @@ var NodeSelectorBuildNode = corev1.NodeSelector{
 		},
 	},
 }
+
+var NodeSelectorNodePool = corev1.NodeSelector{
+	NodeSelectorTerms: []corev1.NodeSelectorTerm{
+		{
+			MatchExpressions: []corev1.NodeSelectorRequirement{
+				{
+					Key:      LabelKeyNodeRoleNodePool,
+					Operator: corev1.NodeSelectorOpExists,
+				},
+			},
+		},
+	},
+}
