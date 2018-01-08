@@ -29,6 +29,8 @@ const (
 	DNSSharedConfigDirectory = "/etc/dns-config/"
 	DNSHostsFile             = "hosts"
 	DnsmasqConfigFile        = "dnsmasq.conf"
+
+	LocaldnsFinalizer = "localdns-finalizer"
 )
 
 type Options struct {

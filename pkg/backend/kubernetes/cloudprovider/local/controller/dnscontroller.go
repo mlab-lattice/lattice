@@ -19,6 +19,7 @@ import (
 	"k8s.io/client-go/util/workqueue"
 
 	"github.com/golang/glog"
+	"github.com/mlab-lattice/system/pkg/backend/kubernetes/cloudprovider/local"
 )
 
 type Controller struct {
@@ -217,7 +218,6 @@ func (c *Controller) syncEndpointUpdate(key string) error {
 	defer func() {
 		glog.V(4).Infof("Finished endpoint update")
 	}()
-
 	namespace, name, err := cache.SplitMetaNamespaceKey(key)
 
 	if err != nil {
@@ -228,24 +228,12 @@ func (c *Controller) syncEndpointUpdate(key string) error {
 	endpoint, err := c.endpointister.Endpoints(namespace).Get(name)
 	endpointPathURL := endpoint.Spec.Path.ToDomain(true)
 
-	if errors.IsNotFound(err) || endpoint.DeletionTimestamp != nil {
-		glog.V(2).Infof("Endpoint %v has been deleted", key)
+	if errors.IsNotFound(err) {
+		// Should probably just remove here
+	}
 
-		c.sharedVarsLock.Lock()
-		defer c.sharedVarsLock.Unlock()
-
-		_, inHosts := c.hosts[key]
-		_, inCname := c.cnames[key]
-
-		if inCname {
-			delete(c.cnames, endpointPathURL)
-		}
-
-		if inHosts {
-			delete(c.hosts, endpointPathURL)
-		}
-
-		return nil
+	if endpoint.DeletionTimestamp != nil {
+		return c.syncHandleFinalizer(key, endpoint, endpointPathURL)
 	}
 
 	if err != nil {
@@ -326,6 +314,50 @@ func (c *Controller) syncIPEndpoint(key string, endpoint *crv1.Endpoint) error {
 	glog.V(2).Infof("Updating endpoint %v with IP address %v...", endpointPathURL, *endpoint.Spec.IP)
 	c.hosts[key] = *endpoint
 
+	return nil
+}
+
+// syncHandleFinalizer is called when the controller needs to handle any finalization logic and remove its finalizer.
+func (c *Controller) syncHandleFinalizer(key string, endpoint *crv1.Endpoint, endpointPathURL string) error {
+
+	foundFinalizer := false
+	finalizerIndex := -1
+
+	for idx, finalizer := range endpoint.Finalizers {
+		if finalizer == local.LocaldnsFinalizer {
+			foundFinalizer = true
+			finalizerIndex = idx
+			break
+		}
+	}
+
+	if !foundFinalizer {
+		return fmt.Errorf("could not find expected finalizer %v for endpoint %v", local.LocaldnsFinalizer, endpoint.Name)
+	}
+
+	c.sharedVarsLock.Lock()
+	defer c.sharedVarsLock.Unlock()
+
+	_, inHosts := c.hosts[key]
+	_, inCname := c.cnames[key]
+
+	if inCname {
+		delete(c.cnames, endpointPathURL)
+	}
+
+	if inHosts {
+		delete(c.hosts, endpointPathURL)
+	}
+
+	endpoint = endpoint.DeepCopy()
+	endpoint.Finalizers = append(endpoint.Finalizers[:finalizerIndex], endpoint.Finalizers[finalizerIndex+1:]...)
+	_, err := c.latticeClient.LatticeV1().Endpoints(endpoint.Namespace).Update(endpoint)
+
+	if err != nil {
+		return err
+	}
+
+	// Can stop tracking once its finalizer is dealt with.
 	return nil
 }
 

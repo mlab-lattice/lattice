@@ -6,6 +6,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"github.com/mlab-lattice/system/pkg/backend/kubernetes/constants"
 	"reflect"
 )
 
@@ -73,6 +74,8 @@ func (c *Controller) newEndpoint(address *crv1.ServiceAddress) (*crv1.Endpoint, 
 		ObjectMeta: metav1.ObjectMeta{
 			Name:            address.Name,
 			OwnerReferences: []metav1.OwnerReference{*metav1.NewControllerRef(address, controllerKind)},
+			// TODO :: add in somewhere better
+			Finalizers: []string{"localdns-finalizer"},
 		},
 		Spec: *spec,
 		Status: crv1.EndpointStatus{
