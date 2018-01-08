@@ -2,6 +2,7 @@ package endpoint
 
 import (
 	"fmt"
+	"reflect"
 
 	crv1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	kubetf "github.com/mlab-lattice/system/pkg/backend/kubernetes/terraform/aws"
@@ -15,6 +16,16 @@ import (
 const (
 	finalizerName = "endpoint.aws.cloud-provider.lattice.mlab.com"
 )
+
+func (c *Controller) syncDeletedEndpoint(endpoint *crv1.Endpoint) error {
+	err := c.deprovisionEndpoint(endpoint)
+	if err != nil {
+		return err
+	}
+
+	_, err = c.removeFinalizer(endpoint)
+	return err
+}
 
 func (c *Controller) provisionEndpoint(endpoint *crv1.Endpoint) error {
 	if endpoint.Spec.ExternalName != nil {
@@ -123,6 +134,25 @@ func (c *Controller) externalNameEndpointModule(endpoint *crv1.Endpoint) *kubetf
 		endpoint.Spec.Path.ToDomain(true),
 		*endpoint.Spec.ExternalName,
 	)
+}
+
+func (c *Controller) updateEndpointStatus(
+	endpoint *crv1.Endpoint,
+	status crv1.EndpointStatus,
+) (*crv1.Endpoint, error) {
+	if reflect.DeepEqual(endpoint.Status, status) {
+		return endpoint, nil
+	}
+
+	// Copy the service so the shared cache isn't mutated
+	endpoint = endpoint.DeepCopy()
+	endpoint.Status = status
+
+	return c.latticeClient.LatticeV1().Endpoints(endpoint.Namespace).Update(endpoint)
+
+	// TODO: switch to this when https://github.com/kubernetes/kubernetes/issues/38113 is merged
+	// TODO: also watch https://github.com/kubernetes/kubernetes/pull/55168
+	//return c.latticeClient.LatticeV1().LoadBalancers(loadBalancer.Namespace).UpdateStatus(loadBalancer)
 }
 
 func (c *Controller) addFinalizer(endpoint *crv1.Endpoint) (*crv1.Endpoint, error) {

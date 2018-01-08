@@ -288,12 +288,17 @@ func (c *Controller) syncNodePool(key string) error {
 	}
 
 	nodePool, err := c.nodePoolLister.NodePools(namespace).Get(name)
-	if errors.IsNotFound(err) {
-		glog.V(2).Infof("NodePool %v has been deleted", key)
-		return nil
-	}
 	if err != nil {
+		if errors.IsNotFound(err) {
+			glog.V(2).Infof("NodePool %v has been deleted", key)
+			return nil
+		}
+
 		return err
+	}
+
+	if nodePool.DeletionTimestamp != nil {
+		return c.syncDeletedNodePool(nodePool)
 	}
 
 	nodePool, err = c.addFinalizer(nodePool)

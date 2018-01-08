@@ -25,6 +25,16 @@ const (
 	terraformOutputSecurityGroupID                 = "security_group_id"
 )
 
+func (c *Controller) syncDeletedNodePool(nodePool *crv1.NodePool) error {
+	err := c.deprovisionNodePool(nodePool)
+	if err != nil {
+		return err
+	}
+
+	_, err = c.removeFinalizer(nodePool)
+	return err
+}
+
 func (c *Controller) syncNodePoolState(nodePool *crv1.NodePool) (*crv1.NodePool, error) {
 	info, err := c.currentNodePoolInfo(nodePool)
 
@@ -204,7 +214,7 @@ func (c *Controller) addFinalizer(nodePool *crv1.NodePool) (*crv1.NodePool, erro
 	// Check to see if the finalizer already exists. If so nothing needs to be done.
 	for _, finalizer := range nodePool.Finalizers {
 		if finalizer == finalizerName {
-			glog.V(5).Infof("Endpoint %v has %v finalizer", nodePool.Name, finalizerName)
+			glog.V(5).Infof("NodePool %v has %v finalizer", nodePool.Name, finalizerName)
 			return nodePool, nil
 		}
 	}
@@ -213,7 +223,7 @@ func (c *Controller) addFinalizer(nodePool *crv1.NodePool) (*crv1.NodePool, erro
 	// If this fails due to a race the Endpoint should get requeued by the controller, so
 	// not a big deal.
 	nodePool.Finalizers = append(nodePool.Finalizers, finalizerName)
-	glog.V(5).Infof("Endpoint %v missing %v finalizer, adding it", nodePool.Name, finalizerName)
+	glog.V(5).Infof("NodePool %v missing %v finalizer, adding it", nodePool.Name, finalizerName)
 
 	return c.latticeClient.LatticeV1().NodePools(nodePool.Namespace).Update(nodePool)
 }

@@ -46,6 +46,11 @@ func (c *Controller) createNewKubeService(loadBalancer *crv1.LoadBalancer) (*cor
 	return c.kubeClient.CoreV1().Services(loadBalancer.Namespace).Create(kubeService)
 }
 
+func (c *Controller) deleteKubeService(loadBalancer *crv1.LoadBalancer) error {
+	name := kubeutil.GetKubeServiceNameForLoadBalancer(loadBalancer.Name)
+	return c.kubeClient.CoreV1().Services(loadBalancer.Namespace).Delete(name, nil)
+}
+
 func (c *Controller) kubeServiceSpec(loadBalancer *crv1.LoadBalancer) (corev1.ServiceSpec, error) {
 	service, err := c.serviceLister.Services(loadBalancer.Namespace).Get(loadBalancer.Name)
 	if err != nil {
@@ -60,7 +65,7 @@ func (c *Controller) kubeServiceSpec(loadBalancer *crv1.LoadBalancer) (corev1.Se
 				ports = append(ports, corev1.ServicePort{
 					// FIXME: need a better naming scheme
 					Name: fmt.Sprintf("%v-%v", component, componentPort.Name),
-					Port: componentPort.Port,
+					Port: componentPort.EnvoyPort,
 				})
 			}
 		}

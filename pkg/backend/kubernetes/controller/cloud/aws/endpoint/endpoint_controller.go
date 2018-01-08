@@ -221,12 +221,17 @@ func (c *Controller) syncEndpoint(key string) error {
 	}
 
 	endpoint, err := c.endpointLister.Endpoints(namespace).Get(name)
-	if errors.IsNotFound(err) {
-		glog.V(2).Infof("Endpoint %v has been deleted", key)
-		return nil
-	}
 	if err != nil {
+		if errors.IsNotFound(err) {
+			glog.V(2).Infof("Endpoint %v has been deleted", key)
+			return nil
+		}
+
 		return err
+	}
+
+	if endpoint.DeletionTimestamp != nil {
+		return c.syncDeletedEndpoint(endpoint)
 	}
 
 	endpoint, err = c.addFinalizer(endpoint)
@@ -239,10 +244,10 @@ func (c *Controller) syncEndpoint(key string) error {
 		return err
 	}
 
-	// Copy so the shared cache isn't mutated
-	endpoint = endpoint.DeepCopy()
-	endpoint.Status.State = crv1.EndpointStateCreated
+	status := crv1.EndpointStatus{
+		State: crv1.EndpointStateCreated,
+	}
 
-	_, err = c.latticeClient.LatticeV1().Endpoints(endpoint.Namespace).Update(endpoint)
+	_, err = c.updateEndpointStatus(endpoint, status)
 	return err
 }

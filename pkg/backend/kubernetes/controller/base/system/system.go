@@ -8,7 +8,12 @@ import (
 	"github.com/mlab-lattice/system/pkg/definition/tree"
 )
 
-func (c *Controller) syncSystemStatus(system *crv1.System, services map[tree.NodePath]string, serviceStatuses map[string]crv1.ServiceStatus, deletedServices []string) error {
+func (c *Controller) syncSystemStatus(
+	system *crv1.System,
+	services map[tree.NodePath]string,
+	serviceStatuses map[string]crv1.ServiceStatus,
+	deletedServices []string,
+) error {
 	hasFailedService := false
 	hasUpdatingService := false
 	hasScalingService := false

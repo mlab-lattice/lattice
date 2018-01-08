@@ -767,10 +767,20 @@ func (c *Controller) syncService(key string) error {
 	}
 
 	service, err := c.serviceLister.Services(namespace).Get(name)
-	if errors.IsNotFound(err) {
-		glog.V(2).Infof("Service %v has been deleted", key)
-		return nil
+	if err != nil {
+		if errors.IsNotFound(err) {
+			glog.V(2).Infof("Service %v has been deleted", key)
+			return nil
+		}
+
+		return err
 	}
+
+	if service.DeletionTimestamp != nil {
+		return c.syncDeletedService(service)
+	}
+
+	service, err = c.addFinalizer(service)
 	if err != nil {
 		return err
 	}

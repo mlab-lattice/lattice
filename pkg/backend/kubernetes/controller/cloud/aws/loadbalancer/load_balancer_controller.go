@@ -46,6 +46,9 @@ type Controller struct {
 	loadBalancerLister       latticelisters.LoadBalancerLister
 	loadBalancerListerSynced cache.InformerSynced
 
+	nodePoolLister       latticelisters.NodePoolLister
+	nodePoolListerSynced cache.InformerSynced
+
 	serviceLister       latticelisters.ServiceLister
 	serviceListerSynced cache.InformerSynced
 
@@ -63,6 +66,7 @@ func NewController(
 	kubeClient kubeclientset.Interface,
 	latticeClient latticeclientset.Interface,
 	loadBalancerInformer latticeinformers.LoadBalancerInformer,
+	nodePoolInformer latticeinformers.NodePoolInformer,
 	serviceInformer latticeinformers.ServiceInformer,
 	kubeServiceInformer coreinformers.ServiceInformer,
 ) *Controller {
@@ -86,6 +90,14 @@ func NewController(
 	})
 	sc.loadBalancerLister = loadBalancerInformer.Lister()
 	sc.loadBalancerListerSynced = loadBalancerInformer.Informer().HasSynced
+
+	nodePoolInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+		AddFunc:    sc.handleNodePoolAdd,
+		UpdateFunc: sc.handleNodePoolUpdate,
+		DeleteFunc: sc.handleNodePoolDelete,
+	})
+	sc.nodePoolLister = nodePoolInformer.Lister()
+	sc.nodePoolListerSynced = nodePoolInformer.Informer().HasSynced
 
 	serviceInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    sc.handleServiceAdd,
@@ -252,6 +264,74 @@ func (c *Controller) handleServiceDelete(obj interface{}) {
 	c.enqueueLoadBalancer(loadBalancer)
 }
 
+func (c *Controller) handleNodePoolAdd(obj interface{}) {
+	nodePool := obj.(*crv1.NodePool)
+	glog.V(4).Infof("NodePool %v/%v added", nodePool.Namespace, nodePool.Name)
+
+	if nodePool.DeletionTimestamp != nil {
+		// On a restart of the controller manager, it's possible for an object to
+		// show up in a state that is already pending deletion.
+		c.handleNodePoolDelete(nodePool)
+		return
+	}
+
+	loadBalancer, err := c.loadBalancerLister.LoadBalancers(nodePool.Namespace).Get(nodePool.Name)
+	if err != nil {
+		// FIXME: handle error
+		return
+	}
+
+	c.enqueueLoadBalancer(loadBalancer)
+}
+
+func (c *Controller) handleNodePoolUpdate(old, cur interface{}) {
+	glog.V(5).Info("Got NodePool update")
+	oldNodePool := old.(*crv1.NodePool)
+	curNodePool := cur.(*crv1.NodePool)
+	if curNodePool.ResourceVersion == oldNodePool.ResourceVersion {
+		// Periodic resync will send update events for all known NodePools.
+		// Two different versions of the same NodePool will always have different RVs.
+		glog.V(5).Infof("NodePool %v/%v ResourceVersions are the same", curNodePool.Namespace, curNodePool.Name)
+		return
+	}
+
+	loadBalancer, err := c.loadBalancerLister.LoadBalancers(curNodePool.Namespace).Get(curNodePool.Name)
+	if err != nil {
+		// FIXME: handle error
+		return
+	}
+
+	c.enqueueLoadBalancer(loadBalancer)
+}
+
+func (c *Controller) handleNodePoolDelete(obj interface{}) {
+	nodePool, ok := obj.(*crv1.NodePool)
+
+	// When a delete is dropped, the relist will notice a pod in the store not
+	// in the list, leading to the insertion of a tombstone object which contains
+	// the deleted key/value.
+	if !ok {
+		tombstone, ok := obj.(cache.DeletedFinalStateUnknown)
+		if !ok {
+			runtime.HandleError(fmt.Errorf("couldn't get object from tombstone %#v", obj))
+			return
+		}
+		nodePool, ok = tombstone.Obj.(*crv1.NodePool)
+		if !ok {
+			runtime.HandleError(fmt.Errorf("tombstone contained object that is not a NodePool %#v", obj))
+			return
+		}
+	}
+
+	loadBalancer, err := c.loadBalancerLister.LoadBalancers(nodePool.Namespace).Get(nodePool.Name)
+	if err != nil {
+		// FIXME: handle error
+		return
+	}
+
+	c.enqueueLoadBalancer(loadBalancer)
+}
+
 func (c *Controller) handleKubeServiceAdd(obj interface{}) {
 	kubeService := obj.(*corev1.Service)
 	glog.V(4).Infof("kube Service %v/%v added", kubeService.Namespace, kubeService.Name)
@@ -410,12 +490,17 @@ func (c *Controller) syncLoadBalancer(key string) error {
 	}
 
 	loadBalancer, err := c.loadBalancerLister.LoadBalancers(namespace).Get(name)
-	if errors.IsNotFound(err) {
-		glog.V(2).Infof("LoadBalancer %v has been deleted", key)
-		return nil
-	}
 	if err != nil {
+		if errors.IsNotFound(err) {
+			glog.V(2).Infof("LoadBalancer %v has been deleted", key)
+			return nil
+		}
+
 		return err
+	}
+
+	if loadBalancer.DeletionTimestamp != nil {
+		return c.syncDeletedLoadBalancer(loadBalancer)
 	}
 
 	loadBalancer, err = c.addFinalizer(loadBalancer)
@@ -423,24 +508,55 @@ func (c *Controller) syncLoadBalancer(key string) error {
 		return err
 	}
 
+	nodePoolProvisioned, err := c.nodePoolProvisioned(loadBalancer)
+	if err != nil {
+		return err
+	}
+
+	if !nodePoolProvisioned {
+		return nil
+	}
+
 	kubeService, err := c.syncLoadBalancerKubeService(loadBalancer)
 	if err != nil {
 		return err
 	}
 
-	// Copy so the shared cache isn't mutated
-	loadBalancer = loadBalancer.DeepCopy()
+	loadBalancer, err = c.provisionLoadBalancer(loadBalancer)
+	if err != nil {
+		return err
+	}
+
+	service, err := c.serviceLister.Services(loadBalancer.Namespace).Get(loadBalancer.Name)
+	if err != nil {
+		return err
+	}
+
+	serviceMeshPorts := map[int32]int32{}
+	for _, componentPorts := range service.Spec.Ports {
+		for _, componentPort := range componentPorts {
+			if componentPort.Public {
+				serviceMeshPorts[componentPort.EnvoyPort] = componentPort.Port
+			}
+		}
+	}
 
 	ports := map[int32]crv1.LoadBalancerPort{}
 	for _, port := range kubeService.Spec.Ports {
 		ports[port.Port] = crv1.LoadBalancerPort{
-			Address: fmt.Sprintf("%v:%v", loadBalancer.Annotations[aws.AnnotationKeyLoadBalancerDNSName], port.NodePort),
+			Address: fmt.Sprintf(
+				"%v:%v",
+				loadBalancer.Annotations[aws.AnnotationKeyLoadBalancerDNSName],
+				port.Port,
+			),
 		}
 	}
 
-	loadBalancer.Status.Ports = ports
-	loadBalancer.Status.State = crv1.LoadBalancerStateCreated
+	status := crv1.LoadBalancerStatus{
+		Ports: ports,
+		State: crv1.LoadBalancerStateCreated,
+	}
 
-	_, err = c.latticeClient.LatticeV1().LoadBalancers(loadBalancer.Namespace).Update(loadBalancer)
+	_, err = c.updateLoadBalancerStatus(loadBalancer, status)
 	return err
 }
