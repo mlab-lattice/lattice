@@ -18,14 +18,17 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
 
+	"k8s.io/apimachinery/pkg/labels"
+
+	set "github.com/deckarep/golang-set"
 	"github.com/golang/glog"
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/cloudprovider/local"
 )
 
 type Controller struct {
-	// R/W of these four variables controller by sharedVarsLock
-	cnames       map[string]crv1.Endpoint
-	hosts        map[string]crv1.Endpoint
+	previousEndpoints []*crv1.Endpoint
+	currentEndpoints  []*crv1.Endpoint
+
 	flushPending bool
 
 	sharedVarsLock sync.RWMutex
@@ -60,86 +63,18 @@ func NewController(
 	c.serverConfigPath = serverConfigPath
 	c.hostConfigPath = hostConfigPath
 
-	endpointInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc:    c.addEndpoint,
-		UpdateFunc: c.updateEndpoint,
-		DeleteFunc: c.deleteEndpoint,
-	})
 	c.endpointister = endpointInformer.Lister()
 	c.endpointListerSynced = endpointInformer.Informer().HasSynced
 
-	c.cnames = make(map[string]crv1.Endpoint)
-	c.hosts = make(map[string]crv1.Endpoint)
+	c.cnamesCached = make(map[string]crv1.Endpoint)
+	c.hostsCached = make(map[string]crv1.Endpoint)
+	c.cnamesCurrent = make(map[string]crv1.Endpoint)
+	c.hostsCurrent = make(map[string]crv1.Endpoint)
 
 	return c
 }
 
-func (c *Controller) enqueueEndpointUpdate(endp *crv1.Endpoint) {
-	key, err := cache.DeletionHandlingMetaNamespaceKeyFunc(endp)
-
-	if err != nil {
-		runtime.HandleError(fmt.Errorf("couldn't get key for object %#v: %v", endp, err))
-		return
-	}
-
-	c.queue.Add(key)
-}
-
-func (c *Controller) addEndpoint(obj interface{}) {
-	endpoint := obj.(*crv1.Endpoint)
-	glog.V(4).Infof("Endpoint %v/%v added", endpoint.Namespace, endpoint.Name)
-
-	if endpoint.DeletionTimestamp != nil {
-		// On a restart of the controller manager, it's possible for an object to
-		// show up in a state that is already pending deletion.
-
-		glog.V(5).Infof("Endpoint %v deletion timestamp not null", endpoint.Name)
-		c.deleteEndpoint(endpoint)
-		return
-	}
-
-	c.enqueueEndpointUpdate(endpoint)
-}
-
-func (c *Controller) updateEndpoint(old, cur interface{}) {
-	oldEndpoint := old.(*crv1.Endpoint)
-	curEndpoint := cur.(*crv1.Endpoint)
-	glog.V(5).Infof("Got Endpoint %v/%v update", curEndpoint.Namespace, curEndpoint.Name)
-	if curEndpoint.ResourceVersion == oldEndpoint.ResourceVersion {
-		// Periodic resync will send update events for all known Services.
-		// Two different versions of the same Service will always have different RVs.
-		glog.V(5).Info("Endpoint %v/%v ResourceVersions are the same", curEndpoint.Namespace, curEndpoint.Name)
-		return
-	}
-
-	c.enqueueEndpointUpdate(curEndpoint)
-}
-
-func (c *Controller) deleteEndpoint(obj interface{}) {
-	endpoint, ok := obj.(*crv1.Endpoint)
-
-	glog.V(5).Infof("Got Endpoint %v/%v delete", endpoint.Namespace, endpoint.Name)
-
-	// When a delete is dropped, the relist will notice a pod in the store not
-	// in the list, leading to the insertion of a tombstone object which contains
-	// the deleted key/value.
-	if !ok {
-		tombstone, ok := obj.(cache.DeletedFinalStateUnknown)
-		if !ok {
-			runtime.HandleError(fmt.Errorf("couldn't get object from tombstone %#v", obj))
-			return
-		}
-		endpoint, ok = tombstone.Obj.(*crv1.Endpoint)
-		if !ok {
-			runtime.HandleError(fmt.Errorf("tombstone contained object that is not an Endpoint %#v", obj))
-			return
-		}
-	}
-
-	c.enqueueEndpointUpdate(endpoint)
-}
-
-func (c *Controller) Run(workers int, stopCh <-chan struct{}) {
+func (c *Controller) Run(stopCh <-chan struct{}) {
 	// don't let panics crash the process
 	defer runtime.HandleCrash()
 	// make sure the work queue is shutdown which will trigger workers to end
@@ -155,66 +90,89 @@ func (c *Controller) Run(workers int, stopCh <-chan struct{}) {
 
 	glog.V(4).Info("Caches synced. Waiting for config to be set")
 
-	// start up your worker threads based on threadiness.  Some controllers
-	// have multiple kinds of workers
-	for i := 0; i < workers; i++ {
-		// runWorker will loop until "something bad" happens.  The .Until will
-		// then rekick the worker after one second
-		go wait.Until(c.runWorker, time.Second, stopCh)
-	}
+	go wait.Until(c.calculateCache, time.Second*time.Duration(updateWaitBeforeFlushTimerSeconds), stopCh)
 
 	// wait until we're told to stop
 	<-stopCh
 }
 
-func (c *Controller) runWorker() {
-	// hot loop until we're told to stop.  processNextWorkItem will
-	// automatically wait until there's work available, so we don't worry
-	// about secondary waits
-	for c.processNextWorkItem() {
+// calculateCache runs at regular intervals and compares the current cache to the current set of endpoints. If the current cache is not up to date, it is rewritten
+func (c *Controller) calculateCache() {
+
+	endpoints, err := c.endpointister.List(labels.Everything())
+
+	c.currentEndpoints = endpoints
+
+	if err != nil {
+		runtime.HandleError(err)
+		return
 	}
+
+	if !haveEndpointsChanged(c.currentEndpoints, c.previousEndpoints) {
+		return
+	}
+
+	err = c.RewriteDnsmasqConfig()
+
+	if err != nil {
+		runtime.HandleError(err)
+	}
+
 }
 
-// processNextWorkItem deals with one key off the queue.  It returns false
-// when it's time to quit.
-func (c *Controller) processNextWorkItem() bool {
-	// pull the next work item from queue.  It should be a key we use to lookup
-	// something in a cache
-	key, quit := c.queue.Get()
-	if quit {
-		return false
-	}
-	// you always have to indicate to the queue that you've completed a piece of
-	// work
-	defer c.queue.Done(key)
+// haveEndpointsChanged returns true if the two lists of endpoints are differnt
+func haveEndpointsChanged(endpointListA []*crv1.Endpoint, endpointListB []*crv1.Endpoint) bool {
 
-	// do your work on the key.  This method will contains your "do stuff" logic
-	err := c.syncEndpointUpdate(key.(string))
-	if err == nil {
-		// if you had no error, tell the queue to stop tracking history for your
-		// key. This will reset things like failure counts for per-item rate
-		// limiting
-		c.queue.Forget(key)
-		return true
+	endpointMapA := make(map[string]crv1.Endpoint)
+	endpointMapB := make(map[string]crv1.Endpoint)
+
+	keys := set.NewSet()
+
+	for k, _ := range endpointMapA {
+		keys.Add(k)
 	}
 
-	// there was a failure so be sure to report it.  This method allows for
-	// pluggable error handling which can be used for things like
-	// cluster-monitoring
-	runtime.HandleError(fmt.Errorf("%v failed with : %v", key, err))
+	for k, _ := range endpointMapB {
+		keys.Add(k)
+	}
 
-	// since we failed, we should requeue the item to work on later.  This
-	// method will add a backoff to avoid hotlooping on particular items
-	// (they're probably still not going to work right away) and overall
-	// controller protection (everything I've done is broken, this controller
-	// needs to calm down or it can starve other useful work) cases.
-	c.queue.AddRateLimited(key)
+	itr := keys.Iterator()
+
+	for k := range itr.C {
+		str := k.(string)
+
+		endpointA, ok := endpointMapA[str]
+
+		if !ok {
+			return false
+		}
+
+		endpointB, ok := endpointMapB[str]
+
+		if !ok {
+			return false
+		}
+
+		// Simple equality based on just what the file output depends on.
+		if endpointA.Spec.Path != endpointB.Spec.Path {
+			return false
+		}
+
+		if endpointA.Spec.IP != endpointB.Spec.IP {
+			return false
+		}
+
+		if endpointA.Spec.ExternalName != endpointB.Spec.ExternalName {
+			return false
+		}
+	}
 
 	return true
 }
 
-func (c *Controller) syncEndpointUpdate(key string) error {
-	glog.V(1).Infof("Called endpoint update")
+// updateEndpointValue takes one Endpoint key and updates the current cache to represent the up to date version of this endpoint
+func (c *Controller) updateEndpointValue(key string) error {
+	glog.V(1).Infof("updating endpoint %v", key)
 	defer func() {
 		glog.V(4).Infof("Finished endpoint update")
 	}()
@@ -225,7 +183,7 @@ func (c *Controller) syncEndpointUpdate(key string) error {
 	}
 
 	// Cache lookup
-	endpoint, err := c.endpointister.Endpoints(namespace).Get(name)
+	endpoint, err := c.endpointlister.Endpoints(namespace).Get(name)
 	endpointPathURL := endpoint.Spec.Path.ToDomain(true)
 
 	if errors.IsNotFound(err) {
@@ -417,36 +375,35 @@ func (c *Controller) RewriteDnsmasqConfig() error {
 	// Each cname entry of the form cname=ALIAS,...(addn aliases),TARGET
 	// Full specification here: http://www.thekelleys.org.uk/dnsmasq/docs/dnsmasq-man.html
 
-	for _, v := range c.cnames {
+	for _, v := range c.currentEndpoints {
 		cname := *v.Spec.ExternalName
-		path := v.Spec.Path.ToDomain(true)
-		_, err := dnsmasqConfigFile.WriteString("cname=" + path + "," + cname + "\n")
-		glog.V(5).Infof("cname=" + path + "," + cname + "\n")
-
-		if err != nil {
-			return err
-		}
-	}
-
-	for _, v := range c.hosts {
 		endpoint := *v.Spec.IP
 		path := v.Spec.Path.ToDomain(true)
-		_, err := hostsFile.WriteString(endpoint + " " + path + "\n")
-		glog.V(5).Infof(endpoint + " " + path + "\n")
+
+		if endpoint != "" && cname != "" {
+			return fmt.Errorf("endpoint %v has both a cname and an endpoint", path)
+		}
+
+		if cname != "" {
+			_, err = dnsmasqConfigFile.WriteString("cname=" + path + "," + cname + "\n")
+			glog.V(5).Infof("cname=" + path + "," + cname + "\n")
+		}
+
+		if endpoint != "" {
+			_, err = hostsFile.WriteString(endpoint + " " + path + "\n")
+			glog.V(5).Infof(endpoint + " " + path + "\n")
+		}
 
 		if err != nil {
 			return err
 		}
-	}
-
-	//Now update state and requeue as successful.
-	for _, v := range c.cnames {
-		c.enqueueEndpointUpdate(&v)
-	}
-
-	for _, v := range c.hosts {
-		c.enqueueEndpointUpdate(&v)
 	}
 
 	return nil
+}
+
+// refreshOldCache is called after rewriting the config, and updates the cached view of the in memory cname/host files.
+func (c *Controller) refreshOldCache() {
+	c.previousEndpoints = c.currentEndpoints
+	c.currentEndpoints = nil
 }
