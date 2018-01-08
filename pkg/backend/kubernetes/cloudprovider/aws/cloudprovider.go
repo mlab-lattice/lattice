@@ -17,8 +17,9 @@ import (
 const (
 	workDirectoryVolumeHostPathPrefix = "/var/lib/component-builder"
 
-	AnnotationKeyNodePoolAutoscalingGroupName = "aws.cloud-provider.lattice.mlab.com/node-pool-autoscaling-group-name"
-	AnnotationKeyNodePoolSecurityGroupID      = "aws.cloud-provider.lattice.mlab.com/node-pool-security-group-id"
+	AnnotationKeyLoadBalancerDNSName          = "load-balancer.aws.cloud-provider.lattice.mlab.com/dns-name"
+	AnnotationKeyNodePoolAutoscalingGroupName = "node-pool.aws.cloud-provider.lattice.mlab.com/autoscaling-group-name"
+	AnnotationKeyNodePoolSecurityGroupID      = "node-pool.aws.cloud-provider.lattice.mlab.com/security-group-id"
 )
 
 type Options struct {

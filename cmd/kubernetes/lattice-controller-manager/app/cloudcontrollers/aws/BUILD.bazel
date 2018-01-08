@@ -5,6 +5,7 @@ go_library(
     srcs = [
         "aws_controllers.go",
         "endpoint.go",
+        "load_balancer.go",
         "node_pool.go",
     ],
     importpath = "github.com/mlab-lattice/system/cmd/kubernetes/lattice-controller-manager/app/cloudcontrollers/aws",
@@ -13,6 +14,7 @@ go_library(
         "//cmd/kubernetes/lattice-controller-manager/app/common:go_default_library",
         "//pkg/backend/kubernetes/cloudprovider/aws:go_default_library",
         "//pkg/backend/kubernetes/controller/cloud/aws/endpoint:go_default_library",
+        "//pkg/backend/kubernetes/controller/cloud/aws/loadbalancer:go_default_library",
         "//pkg/backend/kubernetes/controller/cloud/aws/nodepool:go_default_library",
     ],
 )

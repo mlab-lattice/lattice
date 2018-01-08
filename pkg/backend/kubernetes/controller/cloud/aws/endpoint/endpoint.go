@@ -120,5 +120,5 @@ func (c *Controller) externalNameEndpointModule(endpoint *crv1.Endpoint) *kubetf
 }
 
 func workDirectory(endpoint *crv1.Endpoint) string {
-	return "/tmp/lattice-controller-manager/controllers/cloud/aws/endpoint/terraform/" + endpoint.Name
+	return "/tmp/lattice-controller-manager/controllers/cloud/aws/endpoint/terraform/" + endpoint.Namespace + "/" + endpoint.Name
 }

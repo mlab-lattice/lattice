@@ -5,6 +5,7 @@ go_library(
     srcs = [
         "cluster.go",
         "endpoint.go",
+        "load_balancer.go",
         "module_paths.go",
         "node_pool.go",
         "service.go",
