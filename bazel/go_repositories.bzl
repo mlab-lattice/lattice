@@ -396,4 +396,10 @@ GO_REPOSITORIES = {
         "commit": "97311d9f7767e3d6f422ea06661bc2c7a19e8a5d",
         "importpath": "github.com/mattn/go-runewidth",
     },
+
+    "github.com/deckarep/golang-set": {
+        "name": "com_github_deckarep_golang_set",
+        "commit": "1d4478f51bed434f1dadf96dcd9b43aabac66795",
+        "importpath": "github.com/deckarep/golang-set",
+    },
 }

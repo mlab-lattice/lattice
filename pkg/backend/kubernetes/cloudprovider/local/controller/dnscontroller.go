@@ -3,7 +3,6 @@ package dnscontroller
 import (
 	"fmt"
 	"os"
-	"sync"
 	"time"
 
 	crv1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
@@ -11,7 +10,6 @@ import (
 	latticeinformers "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/informers/externalversions/lattice/v1"
 	latticelisters "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/listers/lattice/v1"
 
-	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
 
@@ -22,16 +20,11 @@ import (
 
 	set "github.com/deckarep/golang-set"
 	"github.com/golang/glog"
-	"github.com/mlab-lattice/system/pkg/backend/kubernetes/cloudprovider/local"
 )
 
 type Controller struct {
 	previousEndpoints []*crv1.Endpoint
 	currentEndpoints  []*crv1.Endpoint
-
-	flushPending bool
-
-	sharedVarsLock sync.RWMutex
 
 	latticeClient latticeclientset.Interface
 
@@ -65,11 +58,6 @@ func NewController(
 
 	c.endpointister = endpointInformer.Lister()
 	c.endpointListerSynced = endpointInformer.Informer().HasSynced
-
-	c.cnamesCached = make(map[string]crv1.Endpoint)
-	c.hostsCached = make(map[string]crv1.Endpoint)
-	c.cnamesCurrent = make(map[string]crv1.Endpoint)
-	c.hostsCurrent = make(map[string]crv1.Endpoint)
 
 	return c
 }
@@ -118,6 +106,19 @@ func (c *Controller) calculateCache() {
 		runtime.HandleError(err)
 	}
 
+	for _, endpoint := range c.currentEndpoints {
+		endpoint = endpoint.DeepCopy()
+		endpoint.Status.State = crv1.EndpointStateCreated
+
+		_, err := c.latticeClient.LatticeV1().Endpoints(endpoint.Namespace).Update(endpoint)
+
+		if err != nil {
+			// Log error
+		}
+	}
+
+	c.refreshOldCache()
+
 }
 
 // haveEndpointsChanged returns true if the two lists of endpoints are differnt
@@ -128,11 +129,11 @@ func haveEndpointsChanged(endpointListA []*crv1.Endpoint, endpointListB []*crv1.
 
 	keys := set.NewSet()
 
-	for k, _ := range endpointMapA {
+	for k, _ := range endpointListA {
 		keys.Add(k)
 	}
 
-	for k, _ := range endpointMapB {
+	for k, _ := range endpointListB {
 		keys.Add(k)
 	}
 
@@ -170,163 +171,6 @@ func haveEndpointsChanged(endpointListA []*crv1.Endpoint, endpointListB []*crv1.
 	return true
 }
 
-// updateEndpointValue takes one Endpoint key and updates the current cache to represent the up to date version of this endpoint
-func (c *Controller) updateEndpointValue(key string) error {
-	glog.V(1).Infof("updating endpoint %v", key)
-	defer func() {
-		glog.V(4).Infof("Finished endpoint update")
-	}()
-	namespace, name, err := cache.SplitMetaNamespaceKey(key)
-
-	if err != nil {
-		return err
-	}
-
-	// Cache lookup
-	endpoint, err := c.endpointlister.Endpoints(namespace).Get(name)
-	endpointPathURL := endpoint.Spec.Path.ToDomain(true)
-
-	if errors.IsNotFound(err) {
-		// Should probably just remove here
-	}
-
-	if endpoint.DeletionTimestamp != nil {
-		return c.syncHandleFinalizer(key, endpoint, endpointPathURL)
-	}
-
-	if err != nil {
-		return err
-	}
-
-	glog.V(5).Infof("Endpoint %v state: %v", key, endpoint.Status.State)
-
-	if endpoint.Status.State == crv1.EndpointStateCreated {
-		// Created, nothing to do.
-		return nil
-	}
-
-	// Locks sharedVars for the entire duration. This ensures that the hosts and cnames are updated atomically alongside
-	// cache flushes and prevents missed updates.
-	c.sharedVarsLock.Lock()
-	defer c.sharedVarsLock.Unlock()
-
-	if !c.flushPending {
-		glog.V(5).Infof("has not updated recently, will flush all updates in %v seconds", updateWaitBeforeFlushTimerSeconds)
-		// Safe to write to this boolean as we have the write sharedVarsLock.
-		c.flushPending = true
-		go time.AfterFunc(time.Second*time.Duration(updateWaitBeforeFlushTimerSeconds), c.FlushRewriteDNS)
-	}
-
-	_, inHosts := c.hosts[key]
-	_, inCname := c.cnames[key]
-
-	if inHosts || inCname {
-		glog.V(5).Infof("Endpoint %v already updated. Setting state to created...", key)
-
-		if inCname {
-			delete(c.cnames, endpointPathURL)
-		}
-
-		if inHosts {
-			delete(c.hosts, endpointPathURL)
-		}
-
-		endpoint = endpoint.DeepCopy()
-		endpoint.Status.State = crv1.EndpointStateCreated
-		_, err := c.latticeClient.LatticeV1().Endpoints(endpoint.Namespace).Update(endpoint)
-
-		return err
-	}
-
-	if endpoint.Spec.ExternalName != nil {
-		return c.syncExternalEndpoint(key, endpoint)
-	}
-
-	if endpoint.Spec.IP != nil {
-		return c.syncIPEndpoint(key, endpoint)
-	}
-
-	return fmt.Errorf("endpoint %v/%v does not have External or IP set", endpoint.Namespace, endpoint.Name)
-}
-
-func (c *Controller) syncExternalEndpoint(key string, endpoint *crv1.Endpoint) error {
-	endpointPathURL := endpoint.Spec.Path.ToDomain(true)
-
-	if _, ok := c.hosts[key]; ok {
-		delete(c.hosts, key)
-	}
-
-	glog.V(2).Infof("Updating endpoint %v with cname %v...", endpointPathURL, *endpoint.Spec.ExternalName)
-	c.cnames[key] = *endpoint
-
-	return nil
-}
-
-func (c *Controller) syncIPEndpoint(key string, endpoint *crv1.Endpoint) error {
-	endpointPathURL := endpoint.Spec.Path.ToDomain(true)
-
-	if _, ok := c.cnames[key]; ok {
-		delete(c.cnames, key)
-	}
-
-	glog.V(2).Infof("Updating endpoint %v with IP address %v...", endpointPathURL, *endpoint.Spec.IP)
-	c.hosts[key] = *endpoint
-
-	return nil
-}
-
-// syncHandleFinalizer is called when the controller needs to handle any finalization logic and remove its finalizer.
-func (c *Controller) syncHandleFinalizer(key string, endpoint *crv1.Endpoint, endpointPathURL string) error {
-
-	foundFinalizer := false
-	finalizerIndex := -1
-
-	for idx, finalizer := range endpoint.Finalizers {
-		if finalizer == local.LocaldnsFinalizer {
-			foundFinalizer = true
-			finalizerIndex = idx
-			break
-		}
-	}
-
-	if !foundFinalizer {
-		return fmt.Errorf("could not find expected finalizer %v for endpoint %v", local.LocaldnsFinalizer, endpoint.Name)
-	}
-
-	c.sharedVarsLock.Lock()
-	defer c.sharedVarsLock.Unlock()
-
-	_, inHosts := c.hosts[key]
-	_, inCname := c.cnames[key]
-
-	if inCname {
-		delete(c.cnames, endpointPathURL)
-	}
-
-	if inHosts {
-		delete(c.hosts, endpointPathURL)
-	}
-
-	endpoint = endpoint.DeepCopy()
-	endpoint.Finalizers = append(endpoint.Finalizers[:finalizerIndex], endpoint.Finalizers[finalizerIndex+1:]...)
-	_, err := c.latticeClient.LatticeV1().Endpoints(endpoint.Namespace).Update(endpoint)
-
-	if err != nil {
-		return err
-	}
-
-	// Can stop tracking once its finalizer is dealt with.
-	return nil
-}
-
-func (c *Controller) FlushRewriteDNS() {
-	err := c.RewriteDnsmasqConfig()
-
-	if err != nil {
-		runtime.HandleError(err)
-	}
-}
-
 func CreateEmptyFile(filename string) (*os.File, error) {
 
 	_, err := os.Stat(filename)
@@ -343,14 +187,6 @@ func CreateEmptyFile(filename string) (*os.File, error) {
 }
 
 func (c *Controller) RewriteDnsmasqConfig() error {
-
-	// This logic takes a write lock for the entire duration of the update to simplify the logic and to prevent possible missed updates.
-	c.sharedVarsLock.Lock()
-	defer c.sharedVarsLock.Unlock()
-	defer func() {
-		// Finished writing to the cache - can now unset the timer flag
-		c.flushPending = false
-	}()
 
 	glog.V(4).Infof("Rewriting config %v, %v... ", c.hostConfigPath, c.serverConfigPath)
 

@@ -60,7 +60,7 @@ func main() {
 		hostsFilePath,
 		lcb.ClientOrDie("local-dns-lattice-address"),
 		latticeInformers.Lattice().V1().Endpoints(),
-	).Run(4, stop)
+	).Run(stop)
 
 	glog.V(1).Info("Starting informer factory")
 	latticeInformers.Start(stop)

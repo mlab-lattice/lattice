@@ -12,6 +12,7 @@ def go_dependencies():
         "github.com/sergi/go-diff",
         "github.com/spf13/cobra",
         "github.com/olekukonko/tablewriter",
+        "github.com/deckarep/golang-set",
         "golang.org/x/crypto",
         "gopkg.in/src-d/go-git.v4",
         "k8s.io/api",
