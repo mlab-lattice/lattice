@@ -8,7 +8,12 @@ import (
 	"github.com/mlab-lattice/system/pkg/definition/tree"
 )
 
-func (c *Controller) syncSystemStatus(system *crv1.System, services map[tree.NodePath]string, serviceStatuses map[string]crv1.ServiceStatus, deletedServices []string) error {
+func (c *Controller) syncSystemStatus(
+	system *crv1.System,
+	services map[tree.NodePath]string,
+	serviceStatuses map[string]crv1.ServiceStatus,
+	deletedServices []string,
+) error {
 	hasFailedService := false
 	hasUpdatingService := false
 	hasScalingService := false
@@ -37,12 +42,12 @@ func (c *Controller) syncSystemStatus(system *crv1.System, services map[tree.Nod
 	state := crv1.SystemStateStable
 
 	// A scaling status takes priority over a stable status
-	if hasScalingService || len(deletedServices) != 0 {
+	if hasScalingService {
 		state = crv1.SystemStateScaling
 	}
 
 	// An updating status takes priority over a scaling status
-	if hasUpdatingService {
+	if hasUpdatingService || len(deletedServices) != 0 {
 		state = crv1.SystemStateUpdating
 	}
 

@@ -5,8 +5,8 @@ import (
 	"strings"
 
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/cloudprovider"
-	"github.com/mlab-lattice/system/pkg/backend/kubernetes/cloudprovider/local"
-	kubeconstants "github.com/mlab-lattice/system/pkg/backend/kubernetes/constants"
+	awscloudprovider "github.com/mlab-lattice/system/pkg/backend/kubernetes/cloudprovider/aws"
+	localcloudprovider "github.com/mlab-lattice/system/pkg/backend/kubernetes/cloudprovider/local"
 	crv1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	latticeclientset "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/clientset/versioned"
 	clusterbootstrap "github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/cluster/bootstrap"
@@ -25,6 +25,7 @@ import (
 	kubeclientset "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 
+	"github.com/mlab-lattice/system/pkg/terraform"
 	"github.com/spf13/cobra"
 )
 
@@ -45,6 +46,8 @@ var (
 
 	initialSystemIDString      string
 	initialSystemDefinitionURL string
+
+	componentBuildRegistryAuthType string
 
 	cloudProviderName string
 	cloudProviderVars []string
@@ -91,6 +94,15 @@ var Cmd = &cobra.Command{
 			panic("must specify component-build-docker-artifact-repository if not component-build-docker-artifact-repository-per-image")
 		}
 
+		if componentBuildRegistryAuthType != "" {
+			options.Config.ComponentBuild.DockerArtifact.RegistryAuthType = &componentBuildRegistryAuthType
+		}
+
+		emtpy := ""
+		if options.Config.ComponentBuild.DockerArtifact.RegistryAuthType == &emtpy {
+			options.Config.ComponentBuild.DockerArtifact.RegistryAuthType = nil
+		}
+
 		clusterID := types.ClusterID(clusterIDString)
 		initialSystemID := types.SystemID(initialSystemIDString)
 
@@ -114,11 +126,11 @@ var Cmd = &cobra.Command{
 		}
 		options.Config.ServiceMesh = *serviceMeshConfig
 
-		terraformConfig, err := parseTerraformVars()
+		terraformOptions, err := parseTerraformVars()
 		if err != nil {
 			panic(err)
 		}
-		options.Config.Terraform = terraformConfig
+		options.Terraform = terraformOptions
 
 		serviceMesh, err := servicemesh.NewServiceMesh(&options.Config.ServiceMesh)
 		if err != nil {
@@ -237,12 +249,14 @@ func init() {
 
 	Cmd.Flags().StringVar(&options.Config.ComponentBuild.DockerArtifact.Registry, "component-build-docker-artifact-registry", "", "registry to tag component build docker artifacts with")
 	Cmd.MarkFlagRequired("component-build-docker-artifact-registry")
+	Cmd.Flags().StringVar(&componentBuildRegistryAuthType, "component-build-docker-artifact-registry-auth-type", "", "type of auth to use for the component build registry")
 	Cmd.Flags().BoolVar(&options.Config.ComponentBuild.DockerArtifact.RepositoryPerImage, "component-build-docker-artifact-repository-per-image", false, "if false, one repository with a new tag for each artifact will be use, if true a new repository for each artifact will be used")
 	Cmd.Flags().StringVar(&options.Config.ComponentBuild.DockerArtifact.Repository, "component-build-docker-artifact-repository", "", "repository to tag component build docker artifacts with, required if component-build-docker-artifact-repository-per-image is false")
-	Cmd.Flags().BoolVar(&options.Config.ComponentBuild.DockerArtifact.Push, "component-build-docker-artifact-push", true, "whether or not the component-builder should push the docker artifact (use false for local)")
+	Cmd.Flags().BoolVar(&options.Config.ComponentBuild.DockerArtifact.Push, "component-build-docker-artifact-push", true, "whether or not the component-builder should push the docker artifact (use false for localcloudprovider)")
 
 	Cmd.Flags().StringVar(&options.MasterComponents.LatticeControllerManager.Image, "lattice-controller-manager-image", "", "docker image to user for the lattice-controller-manager")
 	Cmd.MarkFlagRequired("lattice-controller-manager-image")
+	Cmd.Flags().StringVar(&options.MasterComponents.LatticeControllerManager.TerraformModulePath, "lattice-controller-manager-terraform-module-path", "", "optional path to terraform modules")
 	Cmd.Flags().StringArrayVar(&options.MasterComponents.LatticeControllerManager.Args, "lattice-controller-manager-args", defaultLatticeControllerManagerArgs, "extra arguments (besides --cloudProviderName) to pass to the lattice-controller-manager")
 
 	Cmd.Flags().StringVar(&options.MasterComponents.ManagerAPI.Image, "manager-api-image", "", "docker image to user for the lattice-controller-manager")
@@ -281,14 +295,15 @@ func parseCloudProviderVars() (*cloudprovider.Options, error) {
 			Local: localOptions,
 		}
 
-	//case constants.ProviderAWS:
-	//	awsConfig, err := parseProviderCloudVarsAWS()
-	//	if err != nil {
-	//		return nil, err
-	//	}
-	//	options = &crv1.ConfigCloudProvider{
-	//		AWS: awsConfig,
-	//	}
+	case constants.ProviderAWS:
+		awsOptions, err := parseProviderCloudVarsAWS()
+		if err != nil {
+			return nil, err
+		}
+		options = &cloudprovider.Options{
+			AWS: awsOptions,
+		}
+
 	default:
 		return nil, fmt.Errorf("unsupported cloudProviderName: %v", cloudProviderName)
 	}
@@ -296,8 +311,8 @@ func parseCloudProviderVars() (*cloudprovider.Options, error) {
 	return options, nil
 }
 
-func parseCloudProviderVarsLocal() (*local.Options, error) {
-	options := &local.Options{}
+func parseCloudProviderVarsLocal() (*localcloudprovider.Options, error) {
+	options := &localcloudprovider.Options{}
 	flatStruct := LocalCloudOptionsFlat{}
 
 	flags := cli.EmbeddedFlag{
@@ -340,7 +355,7 @@ func parseCloudProviderVarsLocal() (*local.Options, error) {
 	}
 
 	options.IP = flatStruct.IP
-	options.DNS = &local.DNSOptions{}
+	options.DNS = &localcloudprovider.DNSOptions{}
 	options.DNS.DNSControllerArgs = flatStruct.DNSControllerArgs
 	options.DNS.DNSServerArgs = flatStruct.DNSServerArgs
 	options.DNS.DNSServerImage = flatStruct.DNSServerImage
@@ -349,40 +364,44 @@ func parseCloudProviderVarsLocal() (*local.Options, error) {
 	return options, nil
 }
 
-func parseProviderCloudVarsAWS() (*crv1.ConfigCloudProviderAWS, error) {
-	awsConfig := &crv1.ConfigCloudProviderAWS{}
+func parseProviderCloudVarsAWS() (*awscloudprovider.Options, error) {
+	awsOptions := &awscloudprovider.Options{}
 	flags := cli.EmbeddedFlag{
-		Target: &awsConfig,
+		Target: &awsOptions,
 		Expected: map[string]cli.EmbeddedFlagValue{
 			"region": {
 				Required: true,
 			},
 			"account-id": {
 				Required:     true,
-				EncodingName: "accountId",
+				EncodingName: "AccountID",
 			},
 			"vpc-id": {
 				Required:     true,
-				EncodingName: "vpcId",
+				EncodingName: "VPCID",
+			},
+			"route53-private-zone-id": {
+				Required:     true,
+				EncodingName: "Route53PrivateZoneID",
 			},
 			"subnet-ids": {
 				Required:     true,
-				EncodingName: "subnetIds",
+				EncodingName: "SubnetIDs",
 				ValueParser: func(value string) (interface{}, error) {
 					return strings.Split(value, ","), nil
 				},
 			},
 			"master-node-security-group-id": {
 				Required:     true,
-				EncodingName: "masterNodeSecurityGroupId",
+				EncodingName: "MasterNodeSecurityGroupID",
 			},
 			"base-node-ami-id": {
 				Required:     true,
-				EncodingName: "baseNodeAmiId",
+				EncodingName: "BaseNodeAMIID",
 			},
 			"key-name": {
 				Required:     true,
-				EncodingName: "keyName",
+				EncodingName: "KeyName",
 			},
 		},
 	}
@@ -391,7 +410,7 @@ func parseProviderCloudVarsAWS() (*crv1.ConfigCloudProviderAWS, error) {
 	if err != nil {
 		return nil, err
 	}
-	return awsConfig, nil
+	return awsOptions, nil
 }
 
 func parseServiceMeshVars() (*crv1.ConfigServiceMesh, error) {
@@ -447,37 +466,40 @@ func parseServiceMeshVarsEnvoy() (*crv1.ConfigEnvoy, error) {
 	return envoyConfig, nil
 }
 
-func parseTerraformVars() (*crv1.ConfigTerraform, error) {
+func parseTerraformVars() (baseclusterboostrapper.TerraformOptions, error) {
 	if terraformBackend == "" {
-		return nil, nil
+		return baseclusterboostrapper.TerraformOptions{}, nil
 	}
 
-	var config *crv1.ConfigTerraform
+	var backend terraform.BackendOptions
 	switch terraformBackend {
-	case kubeconstants.TerraformBackendS3:
+	case terraform.BackendS3:
 		s3Config, err := parseTerraformVarsS3()
 		if err != nil {
-			return nil, err
+			return baseclusterboostrapper.TerraformOptions{}, err
 		}
-		config = &crv1.ConfigTerraform{
-			Backend: &crv1.ConfigTerraformBackend{
-				S3: s3Config,
-			},
+		backend = terraform.BackendOptions{
+			S3: s3Config,
 		}
+
 	default:
-		return nil, fmt.Errorf("unsupported terraform backend: %v", terraformBackend)
+		return baseclusterboostrapper.TerraformOptions{}, fmt.Errorf("unsupported terraform backend: %v", terraformBackend)
 	}
 
-	return config, nil
+	options := baseclusterboostrapper.TerraformOptions{
+		Backend: backend,
+	}
+	return options, nil
 }
 
-func parseTerraformVarsS3() (*crv1.ConfigTerraformBackendS3, error) {
-	s3Config := &crv1.ConfigTerraformBackendS3{}
+func parseTerraformVarsS3() (*terraform.BackendOptionsS3, error) {
+	s3Config := &terraform.BackendOptionsS3{}
 	flags := cli.EmbeddedFlag{
 		Target: &s3Config,
 		Expected: map[string]cli.EmbeddedFlagValue{
 			"bucket": {
-				Required: true,
+				EncodingName: "Bucket",
+				Required:     true,
 			},
 		},
 	}

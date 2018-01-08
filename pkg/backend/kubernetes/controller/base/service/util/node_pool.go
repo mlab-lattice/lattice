@@ -15,7 +15,7 @@ func ServicesForNodePool(latticeClient latticeclientset.Interface, nodePool *crv
 	// TODO(kevinrosendahl): will have to change query's namespace when supporting cluster-level node pools
 	nodePoolLabelValue := kubeutil.NodePoolIDLabelValue(nodePool)
 	listOptions := metav1.ListOptions{
-		LabelSelector: fmt.Sprintf("%v == %v", kubeconstants.LabelKeyNodePoolID, nodePoolLabelValue),
+		LabelSelector: fmt.Sprintf("%v == %v", kubeconstants.LabelKeyNodeRoleNodePool, nodePoolLabelValue),
 	}
 
 	services, err := latticeClient.LatticeV1().Services(nodePool.Namespace).List(listOptions)

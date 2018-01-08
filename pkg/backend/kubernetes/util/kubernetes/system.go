@@ -217,11 +217,11 @@ func NewSystem(
 	}
 }
 
-func SystemID(namespace string) (types.ClusterID, error) {
+func SystemID(namespace string) (types.SystemID, error) {
 	parts := strings.Split(namespace, "-")
 	if len(parts) < 3 {
 		return "", fmt.Errorf("unexpected system namespace format: %v", namespace)
 	}
 
-	return types.ClusterID(strings.Join(parts[2:], "-")), nil
+	return types.SystemID(strings.Join(parts[2:], "-")), nil
 }

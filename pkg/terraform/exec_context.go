@@ -66,6 +66,21 @@ func (tec *ExecContext) Init() (*executil.Result, string, error) {
 	return tec.ExecWithLogFile("terraform-"+initCmd, args...)
 }
 
+func (tec ExecContext) Outputs(outputVars []string) (map[string]string, error) {
+	outputs := map[string]string{}
+
+	for _, outputVar := range outputVars {
+		result, err := tec.Output(outputVar)
+		if err != nil {
+			return nil, err
+		}
+
+		outputs[outputVar] = result
+	}
+
+	return outputs, nil
+}
+
 func (tec ExecContext) Output(outputVar string) (string, error) {
 	args := []string{outputCmd, outputVar}
 	stdout, _, err := tec.ExecSync(args...)

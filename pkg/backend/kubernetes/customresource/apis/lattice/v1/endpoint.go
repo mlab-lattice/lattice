@@ -25,9 +25,9 @@ type Endpoint struct {
 }
 
 type EndpointSpec struct {
-	Path             tree.NodePath `json:"path"`
-	ExternalEndpoint *string       `json:"externalEndpoint,omitempty"`
-	IP               *string       `json:"ip,omitempty"`
+	Path         tree.NodePath `json:"path"`
+	ExternalName *string       `json:"externalName,omitempty"`
+	IP           *string       `json:"ip,omitempty"`
 }
 
 type EndpointStatus struct {

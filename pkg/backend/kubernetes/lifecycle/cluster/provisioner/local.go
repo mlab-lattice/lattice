@@ -32,8 +32,8 @@ type LocalProvisioner struct {
 }
 
 const (
-	defaultDockerAPIVersion  = "1.24"
-	systemNamePrefixMinikube = "lattice-local-"
+	defaultDockerAPIVersion   = "1.24"
+	clusterNamePrefixMinikube = "lattice-local-"
 )
 
 var (
@@ -82,8 +82,8 @@ func NewLocalProvisioner(dockerAPIVersion, latticeContainerRegistry, latticeCont
 	return lp, nil
 }
 
-func (lp *LocalProvisioner) Provision(name, url string) error {
-	prefixedName := systemNamePrefixMinikube + name
+func (lp *LocalProvisioner) Provision(clusterID, url string) error {
+	prefixedName := clusterNamePrefixMinikube + clusterID
 	result, logFilename, err := lp.mec.Start(prefixedName)
 	if err != nil {
 		return err
@@ -96,22 +96,22 @@ func (lp *LocalProvisioner) Provision(name, url string) error {
 		return err
 	}
 
-	address, err := lp.Address(name)
+	address, err := lp.Address(clusterID)
 	if err != nil {
 		return err
 	}
 
-	err = lp.bootstrap(address, url, name)
+	err = lp.bootstrap(address, url, clusterID)
 	if err != nil {
 		return err
 	}
 
-	fmt.Println("Waiting for System Environment Manager to be ready...")
-	return pollForSystemEnvironmentReadiness(address)
+	fmt.Println("Waiting for Cluster Manager to be ready...")
+	return pollForClusterReadiness(address)
 }
 
-func (lp *LocalProvisioner) Address(name string) (string, error) {
-	return lp.mec.IP(systemNamePrefixMinikube + name)
+func (lp *LocalProvisioner) Address(clusterID string) (string, error) {
+	return lp.mec.IP(clusterNamePrefixMinikube + clusterID)
 }
 
 func (lp *LocalProvisioner) bootstrap(address, url, name string) error {
@@ -257,7 +257,7 @@ func (lp *LocalProvisioner) bootstrap(address, url, name string) error {
 }
 
 func (lp *LocalProvisioner) Deprovision(name string) error {
-	result, logFilename, err := lp.mec.Delete(systemNamePrefixMinikube + name)
+	result, logFilename, err := lp.mec.Delete(clusterNamePrefixMinikube + name)
 	if err != nil {
 		return err
 	}

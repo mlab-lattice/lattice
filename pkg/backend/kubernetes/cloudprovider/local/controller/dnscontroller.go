@@ -280,7 +280,7 @@ func (c *Controller) syncEndpointUpdate(key string) error {
 		return err
 	}
 
-	if endpoint.Spec.ExternalEndpoint != nil {
+	if endpoint.Spec.ExternalName != nil {
 		return c.syncExternalEndpoint(key, endpoint)
 	}
 
@@ -298,7 +298,7 @@ func (c *Controller) syncExternalEndpoint(key string, endpoint *crv1.Endpoint) e
 		delete(c.hosts, key)
 	}
 
-	glog.V(2).Infof("Updating endpoint %v with cname %v...", endpointPathURL, *endpoint.Spec.ExternalEndpoint)
+	glog.V(2).Infof("Updating endpoint %v with cname %v...", endpointPathURL, *endpoint.Spec.ExternalName)
 	c.cnames[key] = *endpoint
 
 	return nil
@@ -418,7 +418,7 @@ func (c *Controller) RewriteDnsmasqConfig() error {
 	// Full specification here: http://www.thekelleys.org.uk/dnsmasq/docs/dnsmasq-man.html
 
 	for _, v := range c.cnames {
-		cname := *v.Spec.ExternalEndpoint
+		cname := *v.Spec.ExternalName
 		path := v.Spec.Path.ToDomain(true)
 		_, err := dnsmasqConfigFile.WriteString("cname=" + path + "," + cname + "\n")
 		glog.V(5).Infof("cname=" + path + "," + cname + "\n")

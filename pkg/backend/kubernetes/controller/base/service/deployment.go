@@ -213,8 +213,7 @@ func untransformedDeploymentSpec(service *crv1.Service, name string, deploymentL
 					PodAntiAffinity: podAntiAffinity,
 				},
 				Tolerations: []corev1.Toleration{
-					kubeutil.NodePoolIDToleration(nodePool),
-					kubeutil.NodePoolNamespaceToleration(nodePool),
+					kubeutil.NodePoolToleration(nodePool),
 				},
 			},
 		},

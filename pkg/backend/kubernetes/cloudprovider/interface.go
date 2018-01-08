@@ -3,6 +3,7 @@ package cloudprovider
 import (
 	"fmt"
 
+	"github.com/mlab-lattice/system/pkg/backend/kubernetes/cloudprovider/aws"
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/cloudprovider/local"
 	crv1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	clusterbootstrapper "github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/cluster/bootstrap/bootstrapper"
@@ -15,11 +16,12 @@ import (
 )
 
 const (
-	Local = "local"
 	AWS   = "AWS"
+	Local = "local"
 )
 
 type Options struct {
+	AWS   *aws.Options
 	Local *local.Options
 }
 
@@ -47,6 +49,10 @@ type Interface interface {
 }
 
 func NewCloudProvider(clusterID types.ClusterID, options *Options) (Interface, error) {
+	if options.AWS != nil {
+		return aws.NewAWSCloudProvider(options.AWS), nil
+	}
+
 	if options.Local != nil {
 		return local.NewLocalCloudProvider(clusterID, options.Local), nil
 	}

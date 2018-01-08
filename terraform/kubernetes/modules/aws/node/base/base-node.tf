@@ -3,7 +3,7 @@
 
 variable "region" {}
 
-variable "system_id" {}
+variable "cluster_id" {}
 variable "vpc_id" {}
 variable "subnet_ids" {}
 
@@ -33,6 +33,10 @@ output "autoscaling_group_name" {
   value = "${aws_autoscaling_group.node_autoscaling_group.name}"
 }
 
+output "autoscaling_group_desired_capacity" {
+  value = "${aws_autoscaling_group.node_autoscaling_group.desired_capacity}"
+}
+
 output "security_group_id" {
   value = "${aws_security_group.node_auto_scaling_group.id}"
 }
@@ -56,7 +60,7 @@ provider "aws" {
 
 # instance profile
 resource "aws_iam_instance_profile" "iam_instance_profile" {
-  name = "lattice.system.${var.system_id}.${var.name}"
+  name = "lattice.${var.cluster_id}.${var.name}"
   role = "${var.iam_instance_profile_role_name}"
 }
 
@@ -65,7 +69,7 @@ resource "aws_iam_instance_profile" "iam_instance_profile" {
 
 # security group
 resource "aws_security_group" "node_auto_scaling_group" {
-  name = "lattice.system.${var.system_id}.${var.name}"
+  name = "lattice.${var.cluster_id}.${var.name}"
 
   vpc_id = "${var.vpc_id}"
 
@@ -74,8 +78,8 @@ resource "aws_security_group" "node_auto_scaling_group" {
   }
 
   tags {
-    KubernetesCluster = "lattice.system.${var.system_id}"
-    Name              = "lattice.system.${var.system_id}.${var.name}"
+    KubernetesCluster = "lattice.${var.cluster_id}"
+    Name              = "lattice.${var.cluster_id}.${var.name}"
   }
 }
 
@@ -115,7 +119,7 @@ resource "aws_security_group_rule" "auto_scalling_group_allow_ingress_flannel_vx
 
 # FIXME: TEMPORARY FOR TESTING
 resource "aws_security_group" "temporary_ssh_group" {
-  name = "lattice-system-${var.system_id}-${var.name} TEMPORARY SSH RULE"
+  name = "lattice-${var.cluster_id}-${var.name} TEMPORARY SSH RULE"
 
   vpc_id = "${var.vpc_id}"
 
@@ -131,8 +135,8 @@ resource "aws_security_group" "temporary_ssh_group" {
   }
 
   tags {
-    KubernetesCluster = "lattice.system.${var.system_id}"
-    Name              = "lattice.system.${var.system_id}.${var.name}-TEMP-SSH"
+    KubernetesCluster = "lattice.${var.cluster_id}"
+    Name              = "lattice.${var.cluster_id}.${var.name}-TEMP-SSH"
   }
 }
 
@@ -189,7 +193,7 @@ EOF
 
 # autoscaling group
 resource "aws_autoscaling_group" "node_autoscaling_group" {
-  name                 = "lattice.system.${var.system_id}.${var.name}-${aws_launch_configuration.aws_launch_configuration.name}"
+  name                 = "lattice.${var.cluster_id}.${var.name}-${aws_launch_configuration.aws_launch_configuration.name}"
   launch_configuration = "${aws_launch_configuration.aws_launch_configuration.name}"
 
   desired_capacity = "${var.num_instances}"
@@ -204,14 +208,14 @@ resource "aws_autoscaling_group" "node_autoscaling_group" {
 
   tag {
     key   = "KubernetesCluster"
-    value = "lattice.system.${var.system_id}"
+    value = "lattice.${var.cluster_id}"
 
     propagate_at_launch = true
   }
 
   tag {
     key   = "Name"
-    value = "lattice.system.${var.system_id}.${var.name}"
+    value = "lattice.${var.cluster_id}.${var.name}"
 
     propagate_at_launch = true
   }
