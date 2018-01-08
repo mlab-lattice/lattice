@@ -7,5 +7,5 @@ import (
 )
 
 func NodePoolIDLabelValue(nodePool *crv1.NodePool) string {
-	return fmt.Sprintf("%v/%v", nodePool.Namespace, nodePool.Name)
+	return fmt.Sprintf("%v.%v", nodePool.Namespace, nodePool.Name)
 }

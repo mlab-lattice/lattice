@@ -3,9 +3,12 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library")
 go_library(
     name = "go_default_library",
     srcs = [
+        "cluster.go",
+        "endpoint.go",
+        "load_balancer.go",
         "module_paths.go",
+        "node_pool.go",
         "service.go",
-        "system.go",
         "util.go",
     ],
     importpath = "github.com/mlab-lattice/system/pkg/backend/kubernetes/terraform/aws",
