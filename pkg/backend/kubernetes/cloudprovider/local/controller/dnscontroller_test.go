@@ -10,18 +10,20 @@ import (
 	"testing"
 	"time"
 
-	"github.com/davecgh/go-spew/spew"
-	"github.com/golang/glog"
-
 	latticev1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	fakelattice "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/clientset/versioned/fake"
 	latticeinformers "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/informers/externalversions"
-
 	"github.com/mlab-lattice/system/pkg/definition/tree"
+
+	"k8s.io/client-go/kubernetes/fake"
+	core "k8s.io/client-go/testing"
+
 	"k8s.io/apimachinery/pkg/apis/meta/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	core "k8s.io/client-go/testing"
+
+	"github.com/davecgh/go-spew/spew"
+	"github.com/golang/glog"
 )
 
 const (
@@ -317,17 +319,18 @@ func TestEndpointCreation(t *testing.T) {
 		controllerServerConfigPath := serverConfigPath + "_" + pathSuffix
 		controllerHostConfigPath := hostConfigPath + "_" + pathSuffix
 
-		client := fakelattice.NewSimpleClientset(tc.ClientObjects...)
+		latticeClient := fakelattice.NewSimpleClientset(tc.ClientObjects...)
+		client := fake.NewSimpleClientset()
 
 		for _, reactor := range tc.Reactors {
-			client.Fake.PrependReactor(reactor.verb, reactor.resource, reactor.reactor(t))
+			latticeClient.Fake.PrependReactor(reactor.verb, reactor.resource, reactor.reactor(t))
 		}
 
-		informers := latticeinformers.NewSharedInformerFactory(client, 0)
+		informers := latticeinformers.NewSharedInformerFactory(latticeClient, 0)
 		endpointInformer := informers.Lattice().V1().Endpoints()
 		endpoints := informers.Lattice().V1().Endpoints().Informer().GetStore()
 
-		controller := NewController(controllerServerConfigPath, controllerHostConfigPath, client, endpointInformer)
+		controller := NewController(controllerServerConfigPath, controllerHostConfigPath, latticeClient, client, endpointInformer)
 
 		if tc.ExistingEndpoints != nil {
 			for _, e := range tc.ExistingEndpoints.Items {
@@ -361,7 +364,8 @@ func TestEndpointCreation(t *testing.T) {
 		// The current setup of manually calling ProcessControllerQueue at set intervals works for small sized unit tests, so this may be okay.
 
 		// Processes AddedEndpoints.
-		ProcessControllerQueue(t, k, tc, client, controller)
+		// ProcessControllerQueue(t, k, tc, latticeClient, controller)
+		controller.calculateCache()
 
 		if tc.UpdatedEndpoint != nil {
 			endpoints.Update(tc.UpdatedEndpoint)
@@ -373,7 +377,7 @@ func TestEndpointCreation(t *testing.T) {
 		}
 
 		// Process the updates
-		ProcessControllerQueue(t, k, tc, client, controller)
+		ProcessControllerQueue(t, k, tc, latticeClient, controller)
 
 		if controller.queue.Len() > 0 {
 			t.Errorf("%s: unexpected items in endpoint queue: %d", k, controller.queue.Len())
@@ -421,16 +425,16 @@ func TestEndpointCreation(t *testing.T) {
 			}
 		}
 
-		// Test actions after flushing the dns file. This is because updates are synchronised to the client after the DNS writes.
+		// Test actions after flushing the dns file. This is because updates are synchronised to the latticeClient after the DNS writes.
 		if tc.ExpectedActions == nil {
 			return
 		}
 
-		ProcessControllerQueue(t, k, tc, client, controller)
+		ProcessControllerQueue(t, k, tc, latticeClient, controller)
 
-		glog.V(5).Infof("Got %v actions, expected %v", len(client.Actions()), len(tc.ExpectedActions))
+		glog.V(5).Infof("Got %v actions, expected %v", len(latticeClient.Actions()), len(tc.ExpectedActions))
 
-		actions := client.Actions()
+		actions := latticeClient.Actions()
 		for i, action := range actions {
 			if len(tc.ExpectedActions) < i+1 {
 				t.Errorf("%s: %d unexpected actions: %+v", k, len(actions)-len(tc.ExpectedActions), actions[i:])

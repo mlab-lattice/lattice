@@ -9,6 +9,7 @@ import (
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/cloudprovider/local/controller"
 	latticeinformers "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/informers/externalversions"
 
+	clientset "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 
@@ -59,6 +60,7 @@ func main() {
 		dnsmasqConfigPath,
 		hostsFilePath,
 		lcb.ClientOrDie("local-dns-lattice-address"),
+		clientset.NewForConfigOrDie(config),
 		latticeInformers.Lattice().V1().Endpoints(),
 	).Run(stop)
 

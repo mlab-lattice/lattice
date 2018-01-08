@@ -10,13 +10,18 @@ import (
 	latticeinformers "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/informers/externalversions/lattice/v1"
 	latticelisters "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/listers/lattice/v1"
 
+	"k8s.io/api/core/v1"
+
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
 
+	clientset "k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/kubernetes/scheme"
+	v1core "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/tools/cache"
+	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
-
-	"k8s.io/apimachinery/pkg/labels"
 
 	set "github.com/deckarep/golang-set"
 	"github.com/golang/glog"
@@ -30,6 +35,8 @@ type Controller struct {
 
 	endpointister        latticelisters.EndpointLister
 	endpointListerSynced cache.InformerSynced
+
+	eventRecorder record.EventRecorder
 
 	queue workqueue.RateLimitingInterface
 
@@ -45,6 +52,7 @@ func NewController(
 	serverConfigPath string,
 	hostConfigPath string,
 	latticeClient latticeclientset.Interface,
+	client clientset.Interface,
 	endpointInformer latticeinformers.EndpointInformer,
 ) *Controller {
 
@@ -52,6 +60,12 @@ func NewController(
 		latticeClient: latticeClient,
 		queue:         workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "system"),
 	}
+
+	eventBroadcaster := record.NewBroadcaster()
+	eventBroadcaster.StartLogging(glog.Infof)
+	eventBroadcaster.StartRecordingToSink(&v1core.EventSinkImpl{Interface: v1core.New(client.CoreV1().RESTClient()).Events("")})
+
+	c.eventRecorder = eventBroadcaster.NewRecorder(scheme.Scheme, v1.EventSource{Component: "deployment-controller"})
 
 	c.serverConfigPath = serverConfigPath
 	c.hostConfigPath = hostConfigPath
@@ -102,6 +116,8 @@ func (c *Controller) calculateCache() {
 
 	err = c.RewriteDnsmasqConfig()
 
+	c.eventRecorder.Event(nil, "Normal", "DnsRewrite", "The DNS Server was rewritten")
+
 	if err != nil {
 		runtime.HandleError(err)
 	}
@@ -113,7 +129,7 @@ func (c *Controller) calculateCache() {
 		_, err := c.latticeClient.LatticeV1().Endpoints(endpoint.Namespace).Update(endpoint)
 
 		if err != nil {
-			// Log error
+			runtime.HandleError(err)
 		}
 	}
 
@@ -135,6 +151,10 @@ func haveEndpointsChanged(endpointListA []*crv1.Endpoint, endpointListB []*crv1.
 
 	for k, _ := range endpointListB {
 		keys.Add(k)
+	}
+
+	if len(endpointListA) == 0 && len(endpointListB) == 0 {
+		return false
 	}
 
 	itr := keys.Iterator()
