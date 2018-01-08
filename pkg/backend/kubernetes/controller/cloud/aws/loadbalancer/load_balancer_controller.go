@@ -418,6 +418,11 @@ func (c *Controller) syncLoadBalancer(key string) error {
 		return err
 	}
 
+	loadBalancer, err = c.addFinalizer(loadBalancer)
+	if err != nil {
+		return err
+	}
+
 	kubeService, err := c.syncLoadBalancerKubeService(loadBalancer)
 	if err != nil {
 		return err

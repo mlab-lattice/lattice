@@ -11,9 +11,13 @@ import (
 	kubeutil "github.com/mlab-lattice/system/pkg/backend/kubernetes/util/kubernetes"
 	tf "github.com/mlab-lattice/system/pkg/terraform"
 	awstfprovider "github.com/mlab-lattice/system/pkg/terraform/provider/aws"
+
+	"github.com/golang/glog"
 )
 
 const (
+	finalizerName = "load-balancer.aws.cloud-provider.lattice.mlab.com"
+
 	terraformOutputDNSName = "dns_name"
 )
 
@@ -173,6 +177,46 @@ func (c *Controller) loadBalancerAnnotations(loadBalancer *crv1.LoadBalancer) (m
 		awscloudprovider.AnnotationKeyLoadBalancerDNSName: info.DNSName,
 	}
 	return annotations, nil
+}
+
+func (c *Controller) addFinalizer(loadBalancer *crv1.LoadBalancer) (*crv1.LoadBalancer, error) {
+	// Check to see if the finalizer already exists. If so nothing needs to be done.
+	for _, finalizer := range loadBalancer.Finalizers {
+		if finalizer == finalizerName {
+			glog.V(5).Infof("Endpoint %v has %v finalizer", loadBalancer.Name, finalizerName)
+			return loadBalancer, nil
+		}
+	}
+
+	// Add the finalizer to the list and update.
+	// If this fails due to a race the Endpoint should get requeued by the controller, so
+	// not a big deal.
+	loadBalancer.Finalizers = append(loadBalancer.Finalizers, finalizerName)
+	glog.V(5).Infof("Endpoint %v missing %v finalizer, adding it", loadBalancer.Name, finalizerName)
+
+	return c.latticeClient.LatticeV1().LoadBalancers(loadBalancer.Namespace).Update(loadBalancer)
+}
+
+func (c *Controller) removeFinalizer(loadBalancer *crv1.LoadBalancer) (*crv1.LoadBalancer, error) {
+	// Build up a list of all the finalizers except the aws service controller finalizer.
+	var finalizers []string
+	found := false
+	for _, finalizer := range loadBalancer.Finalizers {
+		if finalizer == finalizerName {
+			found = true
+			continue
+		}
+		finalizers = append(finalizers, finalizer)
+	}
+
+	// If the finalizer wasn't part of the list, nothing to do.
+	if !found {
+		return loadBalancer, nil
+	}
+
+	// The finalizer was in the list, so we should remove it.
+	loadBalancer.Finalizers = finalizers
+	return c.latticeClient.LatticeV1().LoadBalancers(loadBalancer.Namespace).Update(loadBalancer)
 }
 
 func workDirectory(loadBalancer *crv1.LoadBalancer) string {

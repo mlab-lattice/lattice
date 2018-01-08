@@ -296,6 +296,11 @@ func (c *Controller) syncNodePool(key string) error {
 		return err
 	}
 
+	nodePool, err = c.addFinalizer(nodePool)
+	if err != nil {
+		return nil
+	}
+
 	nodePool, err = c.syncNodePoolState(nodePool)
 	if err != nil {
 		return nil

@@ -12,9 +12,13 @@ import (
 	kubeutil "github.com/mlab-lattice/system/pkg/backend/kubernetes/util/kubernetes"
 	tf "github.com/mlab-lattice/system/pkg/terraform"
 	awstfprovider "github.com/mlab-lattice/system/pkg/terraform/provider/aws"
+
+	"github.com/golang/glog"
 )
 
 const (
+	finalizerName = "node-pool.aws.cloud-provider.lattice.mlab.com"
+
 	terraformOutputAutoscalingGroupID              = "autoscaling_group_id"
 	terraformOutputAutoscalingGroupName            = "autoscaling_group_name"
 	terraformOutputAutoscalingGroupDesiredCapacity = "autoscaling_group_desired_capacity"
@@ -194,6 +198,46 @@ func (c *Controller) nodePoolAnnotations(nodePool *crv1.NodePool) (map[string]st
 		awscloudprovider.AnnotationKeyNodePoolSecurityGroupID:      info.SecurityGroupID,
 	}
 	return annotations, nil
+}
+
+func (c *Controller) addFinalizer(nodePool *crv1.NodePool) (*crv1.NodePool, error) {
+	// Check to see if the finalizer already exists. If so nothing needs to be done.
+	for _, finalizer := range nodePool.Finalizers {
+		if finalizer == finalizerName {
+			glog.V(5).Infof("Endpoint %v has %v finalizer", nodePool.Name, finalizerName)
+			return nodePool, nil
+		}
+	}
+
+	// Add the finalizer to the list and update.
+	// If this fails due to a race the Endpoint should get requeued by the controller, so
+	// not a big deal.
+	nodePool.Finalizers = append(nodePool.Finalizers, finalizerName)
+	glog.V(5).Infof("Endpoint %v missing %v finalizer, adding it", nodePool.Name, finalizerName)
+
+	return c.latticeClient.LatticeV1().NodePools(nodePool.Namespace).Update(nodePool)
+}
+
+func (c *Controller) removeFinalizer(nodePool *crv1.NodePool) (*crv1.NodePool, error) {
+	// Build up a list of all the finalizers except the aws service controller finalizer.
+	var finalizers []string
+	found := false
+	for _, finalizer := range nodePool.Finalizers {
+		if finalizer == finalizerName {
+			found = true
+			continue
+		}
+		finalizers = append(finalizers, finalizer)
+	}
+
+	// If the finalizer wasn't part of the list, nothing to do.
+	if !found {
+		return nodePool, nil
+	}
+
+	// The finalizer was in the list, so we should remove it.
+	nodePool.Finalizers = finalizers
+	return c.latticeClient.LatticeV1().NodePools(nodePool.Namespace).Update(nodePool)
 }
 
 func workDirectory(nodePoolID string) string {

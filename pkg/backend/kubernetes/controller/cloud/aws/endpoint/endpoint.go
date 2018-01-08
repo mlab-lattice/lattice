@@ -8,6 +8,12 @@ import (
 	kubeutil "github.com/mlab-lattice/system/pkg/backend/kubernetes/util/kubernetes"
 	tf "github.com/mlab-lattice/system/pkg/terraform"
 	awstfprovider "github.com/mlab-lattice/system/pkg/terraform/provider/aws"
+
+	"github.com/golang/glog"
+)
+
+const (
+	finalizerName = "endpoint.aws.cloud-provider.lattice.mlab.com"
 )
 
 func (c *Controller) provisionEndpoint(endpoint *crv1.Endpoint) error {
@@ -117,6 +123,46 @@ func (c *Controller) externalNameEndpointModule(endpoint *crv1.Endpoint) *kubetf
 		endpoint.Spec.Path.ToDomain(true),
 		*endpoint.Spec.ExternalName,
 	)
+}
+
+func (c *Controller) addFinalizer(endpoint *crv1.Endpoint) (*crv1.Endpoint, error) {
+	// Check to see if the finalizer already exists. If so nothing needs to be done.
+	for _, finalizer := range endpoint.Finalizers {
+		if finalizer == finalizerName {
+			glog.V(5).Infof("Endpoint %v has %v finalizer", endpoint.Name, finalizerName)
+			return endpoint, nil
+		}
+	}
+
+	// Add the finalizer to the list and update.
+	// If this fails due to a race the Endpoint should get requeued by the controller, so
+	// not a big deal.
+	endpoint.Finalizers = append(endpoint.Finalizers, finalizerName)
+	glog.V(5).Infof("Endpoint %v missing %v finalizer, adding it", endpoint.Name, finalizerName)
+
+	return c.latticeClient.LatticeV1().Endpoints(endpoint.Namespace).Update(endpoint)
+}
+
+func (c *Controller) removeFinalizer(endpoint *crv1.Endpoint) (*crv1.Endpoint, error) {
+	// Build up a list of all the finalizers except the aws service controller finalizer.
+	var finalizers []string
+	found := false
+	for _, finalizer := range endpoint.Finalizers {
+		if finalizer == finalizerName {
+			found = true
+			continue
+		}
+		finalizers = append(finalizers, finalizer)
+	}
+
+	// If the finalizer wasn't part of the list, nothing to do.
+	if !found {
+		return endpoint, nil
+	}
+
+	// The finalizer was in the list, so we should remove it.
+	endpoint.Finalizers = finalizers
+	return c.latticeClient.LatticeV1().Endpoints(endpoint.Namespace).Update(endpoint)
 }
 
 func workDirectory(endpoint *crv1.Endpoint) string {

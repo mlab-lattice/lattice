@@ -229,6 +229,11 @@ func (c *Controller) syncEndpoint(key string) error {
 		return err
 	}
 
+	endpoint, err = c.addFinalizer(endpoint)
+	if err != nil {
+		return err
+	}
+
 	err = c.provisionEndpoint(endpoint)
 	if err != nil {
 		return err
