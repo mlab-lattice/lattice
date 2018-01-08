@@ -61,6 +61,12 @@ install.govet:
 	@go tool vet 2>/dev/null; if [ $$? -eq 3 ]; then go get golang.org/x/tools/cmd/vet; fi
 
 
+# git
+.PHONY: git.install-hooks
+git.install-hooks:
+	cp -f scripts/git/pre-commit.sh .git/hooks/pre-commit
+	cp -f scripts/git/pre-push.sh .git/hooks/pre-push
+
 # kubernetes
 .PHONY: kubernetes.update-dependencies
 kubernetes.update-dependencies:
