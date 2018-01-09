@@ -7,7 +7,7 @@ import (
 // OperatorEvaluator operator evaluators used by the engine to evaluate special operators
 
 type OperatorEvaluator interface {
-	eval(value interface{}, env *environment) (interface{}, error)
+	eval(o interface{}, env *environment) (interface{}, error)
 }
 
 // Used to indicate if the result of the Evaluator is a NOOP
@@ -19,17 +19,16 @@ const void Void = 0
 type IncludeEvaluator struct {
 }
 
-func (evaluator *IncludeEvaluator) eval(value interface{}, env *environment) (interface{}, error) {
+func (evaluator *IncludeEvaluator) eval(o interface{}, env *environment) (interface{}, error) {
 
 	// construct the include object. We allow the include to be an object or a string.
 	// string will be converted to to {url: val}
 	var includeObject map[string]interface{}
-
-	if _, isMap := value.(map[string]interface{}); isMap {
-		includeObject = value.(map[string]interface{})
-	} else if _, isString := value.(string); isString {
+	if _, isMap := o.(map[string]interface{}); isMap {
+		includeObject = o.(map[string]interface{})
+	} else if _, isString := o.(string); isString {
 		includeObject = map[string]interface{}{
-			"url": value,
+			"url": o,
 		}
 	} else {
 		return nil, fmt.Errorf("Invalid $include %s", includeObject)
@@ -43,32 +42,19 @@ func (evaluator *IncludeEvaluator) eval(value interface{}, env *environment) (in
 	//evaluate parameters if present
 
 	var includeParameters map[string]interface{}
-	if parameters, hasParams := includeObject["parameters"]; hasParams {
+	if includeParamsVal, hasParams := includeObject["parameters"]; hasParams {
 		var err error
-		includeParameters, err = evaluator.evaluateParameters(parameters.(map[string]interface{}), env)
+		params, err := env.engine.eval(includeParamsVal, env)
 		if err != nil {
 			return nil, err
 		}
+
+		includeParameters = params.(map[string]interface{})
 	}
 
 	url := includeObject["url"].(string)
 
-	return env.engine.includeUrl(url, includeParameters, env)
-}
-
-// evaluateParameters evaluates parameters to passed for the $include
-func (evaluator *IncludeEvaluator) evaluateParameters(parameters map[string]interface{}, env *environment) (map[string]interface{}, error) {
-
-	variables := make(map[string]interface{})
-	for name, rawVal := range parameters {
-		paramVal, err := env.engine.eval(rawVal, env)
-		if err != nil {
-			return nil, err
-		}
-		variables[name] = paramVal
-	}
-
-	return variables, nil
+	return env.engine.include(url, includeParameters, env)
 }
 
 // VariablesEvaluator. evaluates $variables
@@ -76,26 +62,13 @@ type VariablesEvaluator struct {
 }
 
 // eval
-func (evaluator *VariablesEvaluator) eval(value interface{}, env *environment) (interface{}, error) {
-	variablesMap := value.(map[string]interface{})
-
-	// get current stack frame
-	currentFrame, err := env.stack.Peek()
-
+func (evaluator *VariablesEvaluator) eval(o interface{}, env *environment) (interface{}, error) {
+	variables, err := env.engine.eval(o, env)
 	if err != nil {
 		return nil, err
 	}
 
-	if err != nil {
-		return nil, err
-	}
-	for name, rawVal := range variablesMap {
-		val, err := env.engine.eval(rawVal, env)
-		if err != nil {
-			return nil, err
-		}
-		currentFrame.parameters[name] = val
-	}
+	env.currentFrame().variables = variables.(map[string]interface{})
 
 	// void
 	return void, nil
@@ -107,11 +80,11 @@ type ParametersEvaluator struct {
 }
 
 // eval
-func (evaluator *ParametersEvaluator) eval(value interface{}, env *environment) (interface{}, error) {
-	paramMap := value.(map[string]interface{})
+func (evaluator *ParametersEvaluator) eval(o interface{}, env *environment) (interface{}, error) {
+	paramMap := o.(map[string]interface{})
 
 	for name, paramDef := range paramMap {
-		err := evaluator.processParam(name, paramDef.(map[string]interface{}), env)
+		err := evaluator.processInputParameter(name, paramDef.(map[string]interface{}), env)
 		if err != nil {
 			return nil, err
 		}
@@ -122,25 +95,19 @@ func (evaluator *ParametersEvaluator) eval(value interface{}, env *environment) 
 
 }
 
-// processParam process/validate parameters
-func (evaluator *ParametersEvaluator) processParam(name string, paramDef map[string]interface{}, env *environment) error {
-	// get current stack frame
-	currentFrame, err := env.stack.Peek()
-
-	if err != nil {
-		return err
-	}
+// processInputParameter process/validate template parameters
+func (evaluator *ParametersEvaluator) processInputParameter(name string, paramDef map[string]interface{}, env *environment) error {
+	parameters := env.currentFrame().parameters
 	// validate required
 	if isRequired, requiredIsSet := paramDef["required"]; requiredIsSet && isRequired.(bool) {
-		if _, paramIsSet := currentFrame.parameters[name]; !paramIsSet {
+		if _, paramIsSet := parameters[name]; !paramIsSet {
 			return fmt.Errorf("parameter %s is required", name)
 		}
 	}
-
 	// default param as needed
 	if defaultValue, hasDefault := paramDef["required"]; hasDefault {
-		if _, paramIsSet := currentFrame.parameters[name]; !paramIsSet {
-			currentFrame.parameters[name] = defaultValue
+		if _, paramIsSet := parameters[name]; !paramIsSet {
+			parameters[name] = defaultValue
 		}
 	}
 

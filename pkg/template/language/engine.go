@@ -1,11 +1,9 @@
 package language
 
 import (
-	"encoding/json"
-	"fmt"
-	"github.com/mlab-lattice/system/pkg/util/git"
-	"path"
 	"strings"
+
+	"github.com/mlab-lattice/system/pkg/util/git"
 )
 
 const operatorPrefix = "$"
@@ -14,26 +12,66 @@ const operatorPrefix = "$"
 
 Design:
 
-Main interface: EvalFromURL(url, parameters, git.Options)
 
-* EvalFromURL(url, parameters, options)
+* Eval(o, params, options)
    - create env
-   - includeUrl(url, parameters, env)
+   - eval(o, params, env)
 
-* includeUrl(url, env)
-   - parse url
-   - determine repository/file-path
-   - readFileBytes
-   - unmarshal
-   - push stack frame
-   - eval
-   - pop
+* eval(o, params, env)
+ - string: evalString(o, params, env)
+ - map: evalMap(o, params, env)
+ - template: evalTemplate(o, params, env)
+ - default: return o
 
-* $include
-   - eval parameters
-   - includeUrl(url, newParameters, env)
+
+* env:
+  - stack<stackFrame>
+  - stackFrame:
+     - parameters
+     - variables
+     - baseUrl
+
+* "$include" : {
+    "url": "URL",
+    "parameters": {
+       <name: val>,
+    }
+  }
+
+   - validate parameters/apply default values
+   - engine.include(url, newParameters, env)
+
+* "$variables": {
+     <name: val>,
+   }
+
+  - env.variables[name] = engine.eval(variable)
+
+* "$parameters": {
+     <name: val>,
+   }
+
+
+
+
+TODO:
+ - allow escaping in string interpolations
+ - Ordering in map evaluation.
+    - maybe: $parameters, $variables, remaining
+    - Or order by line numbers in template itself if possible
+
+ - Ordering in $variable evaluation: variable def using a value of a another variable
+    - order of line numbers
+    - OR maybe make variable def a list instead of a map
+
+ - what if a variable and a parameter has the same name? who wins?
+ - Keep line numbers
 
 */
+
+type Options struct {
+	gitOptions *git.Options
+}
 
 // TemplateEngine
 type TemplateEngine struct {
@@ -55,79 +93,56 @@ func NewEngine() *TemplateEngine {
 }
 
 // EvalFromURL
-func (engine *TemplateEngine) EvalFromURL(url string, parameters map[string]interface{}, gitOptions *git.Options) (interface{}, error) {
-	env := newEnvironment(engine, gitOptions)
-
-	return engine.includeUrl(url, parameters, env)
+func (engine *TemplateEngine) EvalFromURL(url string, parameters map[string]interface{}, options *Options) (interface{}, error) {
+	env := newEnvironment(engine, options)
+	return engine.include(url, parameters, env)
 }
 
-// includeUrl
-func (engine *TemplateEngine) includeUrl(url string, parameters map[string]interface{}, env *environment) (interface{}, error) {
+// eval evaluates the
+func (engine *TemplateEngine) eval(o interface{}, env *environment) (interface{}, error) {
 
-	// parse url
-	urlInfo, err := parseTemplateUrl(url, env)
-
-	if err != nil {
-		return nil, err
-	}
-
-	fileRepository := urlInfo.fileRepository
-
-	// if its not a new file repository then use the current one
-	if fileRepository == nil {
-		currentFrame, err := env.stack.Peek()
-		if err != nil {
-			return nil, err
-		}
-		fileRepository = currentFrame.fileRepository
-	}
-
-	// construct file path relative to the parent file if specified
-
-	filePath := path.Join(env.currentDir(), urlInfo.filePath)
-
-	// Push a frame to the stack
-	env.stack.Push(&environmentStackFrame{
-		parameters:     parameters,
-		fileRepository: fileRepository,
-		filePath:       urlInfo.filePath,
-	})
-
-	rawValue, err := engine.readFileBytes(filePath, env)
-
-	if err != nil {
-		return nil, err
-	}
-
-	val, err := engine.eval(rawValue, env)
-
-	if err != nil {
-		return nil, err
-	}
-
-	// Pop
-	env.stack.Pop()
-
-	return val, nil
-}
-
-// eval evaluates the zsfgh
-func (engine *TemplateEngine) eval(v interface{}, env *environment) (interface{}, error) {
-
-	// check value type and use proper eval method
-	if valMap, isMap := v.(map[string]interface{}); isMap { // Maps
+	if valMap, isMap := o.(map[string]interface{}); isMap { // Maps
 		return engine.evalMap(valMap, env)
 
-	} else if valArr, isArray := v.([]interface{}); isArray { // Arrays
+	} else if valArr, isArray := o.([]interface{}); isArray { // Arrays
 		return engine.evalArray(valArr, env)
 
-	} else if stringVal, isString := v.(string); isString { // Strings
+	} else if stringVal, isString := o.(string); isString { // Strings
 		return engine.evalString(stringVal, env)
 
 	} else { // Default, just return the value as is
-		return v, nil
+		return o, nil
 	}
 
+}
+
+func (engine *TemplateEngine) include(url string, parameters map[string]interface{}, env *environment) (interface{}, error) {
+	// resolve url
+	resource, err := resolveUrl(url, env)
+
+	if err != nil {
+		return nil, err
+	}
+
+	variables := make(map[string]interface{})
+
+	// push !
+	env.push(resource.baseUrl, parameters, variables)
+
+	if err != nil {
+		return nil, err
+	}
+
+	val, err := engine.eval(resource.data, env)
+
+	if err != nil {
+		return nil, err
+	}
+
+	// pop
+	env.pop()
+
+	return val, nil
 }
 
 // evaluates a map of objects
@@ -177,63 +192,6 @@ func (engine *TemplateEngine) evalArray(arrayVal []interface{}, env *environment
 
 // evalutes a string val
 func (engine *TemplateEngine) evalString(s string, env *environment) (interface{}, error) {
-	// get current frame
-	currentFrame, err := env.stack.Peek()
-	if err != nil {
-		return nil, err
-	}
-
 	// eval expression
-	return evalStringExpression(s, currentFrame.parameters)
-}
-
-// includeFile includes the file and returns a map of values
-func (engine *TemplateEngine) readFileBytes(filePath string, env *environment) (map[string]interface{}, error) {
-
-	fmt.Printf("Including file %s\n", filePath)
-	currentFrame, err := env.stack.Peek()
-	if err != nil {
-		return nil, err
-	}
-
-	bytes, err := currentFrame.fileRepository.getFileContents(filePath)
-	if err != nil {
-		return nil, err
-	}
-
-	rawMap, err := engine.unmarshalBytes(bytes, filePath, env)
-
-	if err != nil {
-		return nil, err
-	}
-
-	val, err := engine.eval(rawMap, env)
-
-	if err != nil {
-		return nil, err
-
-	}
-
-	return val.(map[string]interface{}), nil
-}
-
-// unmarshalBytes unmarshal the bytes specified based on the the file name
-func (engine *TemplateEngine) unmarshalBytes(bytes []byte, filePath string, env *environment) (map[string]interface{}, error) {
-
-	// unmarshal file contents based on file type. Only .json is supported atm
-
-	result := make(map[string]interface{})
-
-	if strings.HasSuffix(filePath, ".json") {
-		err := json.Unmarshal(bytes, &result)
-
-		if err != nil {
-			return nil, err
-		} else {
-			return result, nil
-		}
-	} else {
-		return nil, error(fmt.Errorf("Unsupported file %s", filePath))
-	}
-
+	return evalStringExpression(s, env.parametersAndVariables())
 }

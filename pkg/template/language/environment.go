@@ -3,36 +3,64 @@ package language
 
 import (
 	"errors"
-	"github.com/mlab-lattice/system/pkg/util/git"
-	"path"
 )
 
 // environment. Template Parsing environment
 type environment struct {
-	engine     *TemplateEngine
-	stack      *environmentStack
-	gitOptions *git.Options
+	options *Options
+	engine  *TemplateEngine
+	stack   *environmentStack
 }
 
 // newenvironment creates a new environment object
-func newEnvironment(engine *TemplateEngine, gitOptions *git.Options) *environment {
+func newEnvironment(engine *TemplateEngine, options *Options) *environment {
 	env := &environment{
-		engine:     engine,
-		stack:      newStack(10),
-		gitOptions: gitOptions,
+		engine:  engine,
+		stack:   newStack(10),
+		options: options,
 	}
 
 	return env
 }
 
 // currentDir returns the current directory of the file being parsed
-func (env *environment) currentDir() string {
-	if env.stack.length() == 0 {
-		return "."
+func (env *environment) parametersAndVariables() map[string]interface{} {
+	result := make(map[string]interface{})
+	for k, v := range env.currentFrame().parameters {
+		result[k] = v
 	}
 
+	for k, v := range env.currentFrame().variables {
+		result[k] = v
+	}
+
+	return result
+}
+
+func (env *environment) push(
+	baseUrl string,
+	parameters map[string]interface{},
+	variables map[string]interface{}) {
+	env.stack.Push(&environmentStackFrame{
+		baseUrl:    baseUrl,
+		parameters: parameters,
+		variables:  variables,
+	})
+}
+
+func (env *environment) pop() error {
+	_, err := env.stack.Pop()
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (env *environment) currentFrame() *environmentStackFrame {
 	currentFrame, _ := env.stack.Peek()
-	return path.Dir(currentFrame.filePath)
+	return currentFrame
+
 }
 
 // environment stack
@@ -42,9 +70,9 @@ type environmentStack struct {
 
 // environment stack frame
 type environmentStackFrame struct {
-	parameters     map[string]interface{}
-	fileRepository FileRepository
-	filePath       string
+	baseUrl    string
+	parameters map[string]interface{}
+	variables  map[string]interface{}
 }
 
 // ErrEmptyStack raised when the stack is empty on pop or peek
