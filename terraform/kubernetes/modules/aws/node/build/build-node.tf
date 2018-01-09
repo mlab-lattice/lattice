@@ -5,7 +5,7 @@
 variable "aws_account_id" {}
 variable "region" {}
 
-variable "system_id" {}
+variable "cluster_id" {}
 variable "vpc_id" {}
 variable "build_subnet_ids" {}
 
@@ -37,7 +37,7 @@ provider "aws" {
 # Role
 
 resource "aws_iam_role" "build_node_role" {
-  name               = "${var.system_id}.build-${var.build_id}"
+  name               = "${var.cluster_id}.build-${var.build_id}"
   assume_role_policy = "${module.assume_role_from_ec2_service_policy_doucment.json}"
 }
 
@@ -130,8 +130,8 @@ data "aws_iam_policy_document" "build_node_role_policy_document" {
 module "base_node" {
   source = "../base"
 
-  system_id = "${var.system_id}"
-  name      = "build-${var.build_id}"
+  cluster_id = "${var.cluster_id}"
+  name       = "build-${var.build_id}"
 
   kubelet_labels = "node-role.kubernetes.io/build=true,node-role.lattice.mlab.com/build=true"
   kubelet_taints = "node-role.lattice.mlab.com/build=true:NoSchedule"

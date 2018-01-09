@@ -5,6 +5,7 @@
 variable "aws_account_id" {}
 variable "region" {}
 
+variable "cluster_id" {}
 variable "system_id" {}
 variable "vpc_id" {}
 variable "subnet_ids" {}
@@ -49,7 +50,7 @@ provider "aws" {
 # Role
 
 resource "aws_iam_role" "service_node_role" {
-  name = "${var.system_id}.service-${var.service_id}"
+  name = "lattice.${var.cluster_id}.system.${var.system_id}.service-${var.service_id}"
 
   //  name               = "${var.lattice_id}.${var.system_id}.service-${var.service_id}"
   assume_role_policy = "${module.assume_role_from_ec2_service_policy_doucment.json}"
@@ -121,8 +122,8 @@ data "aws_iam_policy_document" "service_node_role_policy_document" {
 module "base_node" {
   source = "../base"
 
-  system_id = "${var.system_id}"
-  name      = "service-${var.service_id}"
+  cluster_id = "${var.cluster_id}"
+  name       = "service-${var.service_id}"
 
   kubelet_labels = "node-role.kubernetes.io/service=${var.service_id}"
   kubelet_taints = "node-role.kubernetes.io/service=${var.service_id}:NoSchedule"

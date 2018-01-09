@@ -1,8 +1,11 @@
 package aws
 
 const (
-	modulePathRoot                       = "/aws"
-	modulePathServiceDedicated           = modulePathRoot + "/service/dedicated"
-	ModulePathServiceDedicatedPrivate    = modulePathServiceDedicated + "/private"
-	ModulePathServiceDedicatedPublicHTTP = modulePathServiceDedicated + "/public/http"
+	modulePathRoot                    = "/aws"
+	modulePathEndpoint                = modulePathRoot + "/endpoint"
+	modulePathEndpointExternalName    = modulePathEndpoint + "/external-name"
+	modulePathEndpointIP              = modulePathEndpoint + "/ip"
+	modulePathLoadBalancer            = modulePathRoot + "/load-balancer"
+	modulePathApplicationLoadBalancer = modulePathLoadBalancer + "/application"
+	modulePathNodePool                = modulePathRoot + "/node-pool"
 )

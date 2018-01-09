@@ -22,6 +22,10 @@ func (c *FakeLatticeV1) Endpoints(namespace string) v1.EndpointInterface {
 	return &FakeEndpoints{c, namespace}
 }
 
+func (c *FakeLatticeV1) LoadBalancers(namespace string) v1.LoadBalancerInterface {
+	return &FakeLoadBalancers{c, namespace}
+}
+
 func (c *FakeLatticeV1) NodePools(namespace string) v1.NodePoolInterface {
 	return &FakeNodePools{c, namespace}
 }

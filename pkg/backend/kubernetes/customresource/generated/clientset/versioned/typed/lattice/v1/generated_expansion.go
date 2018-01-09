@@ -6,6 +6,8 @@ type ConfigExpansion interface{}
 
 type EndpointExpansion interface{}
 
+type LoadBalancerExpansion interface{}
+
 type NodePoolExpansion interface{}
 
 type ServiceExpansion interface{}

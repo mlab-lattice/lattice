@@ -149,10 +149,10 @@ func (sm *DefaultEnvoyServiceMesh) BootstrapSystemResources(resources *systemboo
 					DNSPolicy:          corev1.DNSDefault,
 					ServiceAccountName: serviceAccount.Name,
 					Tolerations: []corev1.Toleration{
-						kubeconstants.TolerationMasterNode,
+						kubeconstants.TolerationNodePool,
 					},
 					Affinity: &corev1.Affinity{
-						NodeAffinity: &kubeconstants.NodeAffinityMasterNode,
+						NodeAffinity: &kubeconstants.NodeAffinityNodePool,
 					},
 				},
 			},

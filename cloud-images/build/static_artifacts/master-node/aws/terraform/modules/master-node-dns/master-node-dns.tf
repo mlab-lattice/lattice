@@ -1,7 +1,6 @@
 ###############################################################################
 # Variables
 
-variable "system_id" {}
 variable "region" {}
 variable "name" {}
 variable "route53_private_zone_id" {}

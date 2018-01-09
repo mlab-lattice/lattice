@@ -25,7 +25,6 @@ type ConfigSpec struct {
 	CloudProvider  ConfigCloudProvider  `json:"cloudProvider"`
 	ComponentBuild ConfigComponentBuild `json:"componentBuild"`
 	ServiceMesh    ConfigServiceMesh    `json:"serviceMesh"`
-	Terraform      *ConfigTerraform     `json:"terraform,omitempty"`
 }
 
 type ConfigCloudProvider struct {
@@ -34,23 +33,11 @@ type ConfigCloudProvider struct {
 }
 
 type ConfigCloudProviderLocal struct {
-	// FIXME: this shouldn't be dynamic config
-	IP string `json:"ip"`
 }
 
 type ConfigCloudProviderAWS struct {
-	// FIXME: this shouldn't be dynamic config
-	Region string `json:"region"`
-	// FIXME: this shouldn't be dynamic config
-	AccountID string `json:"accountID"`
-	// FIXME: this shouldn't be dynamic config
-	VPCID string `json:"vpcId"`
-	// FIXME: maybe this shouldn't be dynamic config
-	SubnetIDs []string `json:"subnetIds"`
-	// FIXME: this shouldn't be dynamic config
-	MasterNodeSecurityGroupID string `json:"masterNodeSecurityGroupId"`
-	BaseNodeAMIID             string `json:"baseNodeAmiId"`
-	KeyName                   string `json:"keyName"`
+	BaseNodeAMIID string `json:"baseNodeAmiId"`
+	KeyName       string `json:"keyName"`
 }
 
 type ConfigComponentBuild struct {
@@ -68,6 +55,9 @@ type ConfigComponentBuildBuilder struct {
 type ConfigComponentBuildDockerArtifact struct {
 	// Registry used to tag images.
 	Registry string `json:"registry"`
+
+	// If auth is required, specify the auth type
+	RegistryAuthType *string `json:"registryAuthType"`
 
 	// If true, make a new repository for the image.
 	// If false, use Repository as the repository for the image and give it
@@ -90,18 +80,6 @@ type ConfigEnvoy struct {
 	RedirectCIDRBlock string `json:"redirectCidrBlock"`
 	XDSAPIImage       string `json:"xdsApiImage"`
 	XDSAPIPort        int32  `json:"xdsApiPort"`
-}
-
-type ConfigTerraform struct {
-	Backend *ConfigTerraformBackend
-}
-
-type ConfigTerraformBackend struct {
-	S3 *ConfigTerraformBackendS3 `json:"s3,omitempty"`
-}
-
-type ConfigTerraformBackendS3 struct {
-	Bucket string `json:"bucket"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

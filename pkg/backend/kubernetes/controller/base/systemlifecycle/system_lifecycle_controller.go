@@ -405,6 +405,7 @@ func (c *Controller) syncOwningActions() error {
 		}
 	}
 
+	close(c.owningLifecycleActionsSynced)
 	return nil
 }
 

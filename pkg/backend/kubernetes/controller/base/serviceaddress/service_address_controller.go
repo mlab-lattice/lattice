@@ -23,7 +23,7 @@ import (
 	"github.com/golang/glog"
 )
 
-var controllerKind = crv1.SchemeGroupVersion.WithKind("Service")
+var controllerKind = crv1.SchemeGroupVersion.WithKind("ServiceAddress")
 
 type Controller struct {
 	syncHandler           func(bKey string) error

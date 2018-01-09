@@ -5,6 +5,7 @@ go_library(
     srcs = [
         "deployment.go",
         "kube_service.go",
+        "load_balancer.go",
         "node_pool.go",
         "service.go",
         "service_address.go",

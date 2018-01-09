@@ -15,19 +15,24 @@ import (
 )
 
 const (
-	Local = "local"
 	AWS   = "AWS"
+	Local = "local"
 )
+
+type Options struct {
+	AWS   *aws.Options
+	Local *local.Options
+}
 
 type Interface interface {
 	clusterbootstrapper.Interface
 	systembootstrapper.Interface
 
-	TransformPodTemplateSpec(*corev1.PodTemplateSpec) *corev1.PodTemplateSpec
-
 	// TransformComponentBuildJobSpec takes in the JobSpec generated for a ComponentBuild, and applies any cloud provider
 	// related transforms necessary to a copy of the JobSpec, and returns it.
 	TransformComponentBuildJobSpec(*batchv1.JobSpec) *batchv1.JobSpec
+
+	ComponentBuildWorkDirectoryVolumeSource(jobName string) corev1.VolumeSource
 
 	// TransformServiceDeploymentSpec takes in the DeploymentSpec generated for a Service, and applies any cloud provider
 	// related transforms necessary to a copy of the DeploymentSpec, and returns it.
@@ -42,13 +47,14 @@ type Interface interface {
 	IsDeploymentSpecUpdated(service *crv1.Service, current, desired, untransformed *appsv1.DeploymentSpec) (bool, string, *appsv1.DeploymentSpec)
 }
 
-func NewCloudProvider(providerName string) (Interface, error) {
-	switch providerName {
-	case Local:
-		return local.NewLocalCloudProvider(), nil
-	case AWS:
-		return aws.NewAWSCloudProvider(), nil
-	default:
-		return nil, fmt.Errorf("unsupported cloud provider: %v", providerName)
+func NewCloudProvider(options *Options) (Interface, error) {
+	if options.AWS != nil {
+		return aws.NewAWSCloudProvider(options.AWS), nil
 	}
+
+	if options.Local != nil {
+		return local.NewLocalCloudProvider(options.Local), nil
+	}
+
+	return nil, fmt.Errorf("must provide cloud provider options")
 }

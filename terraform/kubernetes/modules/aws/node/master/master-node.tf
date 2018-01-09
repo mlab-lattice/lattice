@@ -5,8 +5,11 @@
 variable "aws_account_id" {}
 variable "region" {}
 
-variable "system_id" {}
+variable "cluster_id" {}
+
+# TODO: should remove this
 variable "system_definition_url" {}
+
 variable "system_s3_bucket" {}
 variable "vpc_id" {}
 variable "subnet_id" {}
@@ -63,7 +66,7 @@ provider "aws" {
 # Role
 
 resource "aws_iam_role" "master_node_role" {
-  name               = "${var.system_id}.master-${var.name}"
+  name               = "lattice.${var.cluster_id}.master-${var.name}"
   assume_role_policy = "${module.assume_role_from_ec2_service_policy_doucment.json}"
 }
 
@@ -179,8 +182,8 @@ data "aws_iam_policy_document" "master_node_role_policy_document" {
 module "base_node" {
   source = "../base"
 
-  system_id = "${var.system_id}"
-  name      = "master-${var.name}"
+  cluster_id = "${var.cluster_id}"
+  name       = "master-${var.name}"
 
   kubelet_labels = "node-role.kubernetes.io/master=true,node-role.lattice.mlab.com/master=true"
   kubelet_taints = "node-role.lattice.mlab.com/master=true:NoSchedule"
@@ -188,7 +191,7 @@ module "base_node" {
   additional_user_data = <<USER_DATA
 {
   "aws_account_id": "${var.aws_account_id}",
-  "system_id": "${var.system_id}",
+  "cluster_id": "${var.cluster_id}",
   "system_definition_url": "${var.system_definition_url}",
   "name": "${var.name}",
   "base_node_ami_id": "${var.base_node_ami_id}",
@@ -224,7 +227,7 @@ resource "aws_ebs_volume" "master_node_etcd_volume" {
   encrypted         = true
 
   tags {
-    KubernetesCluster = "lattice.system.${var.system_id}"
-    Name              = "lattice.system.${var.system_id}.master-${var.name}-etcd"
+    KubernetesCluster = "lattice.${var.cluster_id}"
+    Name              = "lattice.${var.cluster_id}.master-${var.name}-etcd"
   }
 }

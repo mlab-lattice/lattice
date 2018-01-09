@@ -4,30 +4,40 @@ import (
 	goflag "flag"
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/mlab-lattice/system/cmd/kubernetes/lattice-controller-manager/app/basecontrollers"
+	awscontrollers "github.com/mlab-lattice/system/cmd/kubernetes/lattice-controller-manager/app/cloudcontrollers/aws"
 	localcontrollers "github.com/mlab-lattice/system/cmd/kubernetes/lattice-controller-manager/app/cloudcontrollers/local"
 	controller "github.com/mlab-lattice/system/cmd/kubernetes/lattice-controller-manager/app/common"
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/cloudprovider"
+	"github.com/mlab-lattice/system/pkg/backend/kubernetes/cloudprovider/local"
 	latticeinformers "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/informers/externalversions"
-	"github.com/mlab-lattice/system/pkg/constants"
+	"github.com/mlab-lattice/system/pkg/terraform"
 	"github.com/mlab-lattice/system/pkg/types"
+	"github.com/mlab-lattice/system/pkg/util/cli"
 
 	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 
 	"github.com/golang/glog"
+	"github.com/mlab-lattice/system/pkg/backend/kubernetes/cloudprovider/aws"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 )
 
 var (
-	kubeconfig          string
-	clusterIDString     string
-	cloudProviderName   string
-	terraformModulePath string
+	kubeconfig      string
+	clusterIDString string
+
+	cloudProviderName string
+	cloudProviderVars []string
+
+	terraformModulePath  string
+	terraformBackend     string
+	terraformBackendVars []string
 )
 
 // RootCmd represents the base command when called without any subcommands
@@ -82,9 +92,14 @@ func init() {
 	RootCmd.Flags().StringVar(&kubeconfig, "kubeconfig", "", "path to kubeconfig file")
 	RootCmd.Flags().StringVar(&clusterIDString, "cluster-id", "", "id of the cluster")
 	RootCmd.MarkFlagRequired("cluster-id")
+
 	RootCmd.Flags().StringVar(&cloudProviderName, "cloud-provider", "", "cloud provider that lattice is being run on")
 	RootCmd.MarkFlagRequired("cloud-provider")
+	RootCmd.Flags().StringArrayVar(&cloudProviderVars, "cloud-provider-var", nil, "additional variables for the cloud provider")
+
 	RootCmd.Flags().StringVar(&terraformModulePath, "terraform-module-path", "/etc/terraform/modules", "path to terraform modules")
+	RootCmd.Flags().StringVar(&terraformBackend, "terraform-backend", "", "backend to use for terraform")
+	RootCmd.Flags().StringArrayVar(&terraformBackendVars, "terraform-backend-var", nil, "additional variables for the terraform backend")
 }
 
 func initCmd() {
@@ -98,7 +113,17 @@ func CreateControllerContext(
 	stop <-chan struct{},
 	terraformModulePath string,
 ) (controller.Context, error) {
-	cloudProvider, err := cloudprovider.NewCloudProvider(cloudProviderName)
+	cloudProviderOptions, err := parseCloudProviderVars()
+	if err != nil {
+		return controller.Context{}, err
+	}
+
+	terraformBackendOptions, err := parseTerraformVars()
+	if err != nil {
+		return controller.Context{}, err
+	}
+
+	cloudProvider, err := cloudprovider.NewCloudProvider(cloudProviderOptions)
 	if err != nil {
 		return controller.Context{}, err
 	}
@@ -120,6 +145,8 @@ func CreateControllerContext(
 		ClusterID:     clusterID,
 		CloudProvider: cloudProvider,
 
+		TerraformBackendOptions: terraformBackendOptions,
+
 		KubeInformerFactory:    kubeInformers,
 		LatticeInformerFactory: latticeInformers,
 		KubeClientBuilder:      kcb,
@@ -140,13 +167,16 @@ func GetControllerInitializers(provider string) map[string]controller.Initialize
 	}
 
 	switch provider {
-	case constants.ProviderAWS:
-		// nothing for aws yet
+	case cloudprovider.AWS:
+		for name, initializer := range awscontrollers.GetControllerInitializers() {
+			initializers["cloud-local-"+name] = initializer
+		}
 
-	case constants.ProviderLocal:
+	case cloudprovider.Local:
 		for name, initializer := range localcontrollers.GetControllerInitializers() {
 			initializers["cloud-local-"+name] = initializer
 		}
+
 	default:
 		panic("unsupported cloud provider " + provider)
 	}
@@ -159,4 +189,134 @@ func StartControllers(ctx controller.Context, initializers map[string]controller
 		glog.V(1).Infof("Starting %q", controllerName)
 		initializer(ctx)
 	}
+}
+
+func parseCloudProviderVars() (*cloudprovider.Options, error) {
+	var options *cloudprovider.Options
+	switch cloudProviderName {
+	case cloudprovider.Local:
+		localOptions, err := parseCloudProviderVarsLocal()
+		if err != nil {
+			return nil, err
+		}
+		options = &cloudprovider.Options{
+			Local: localOptions,
+		}
+
+	case cloudprovider.AWS:
+		awsOptions, err := parseCloudProviderVarsAWS()
+		if err != nil {
+			return nil, err
+		}
+		options = &cloudprovider.Options{
+			AWS: awsOptions,
+		}
+
+	default:
+		return nil, fmt.Errorf("unsupported cloudProviderName: %v", cloudProviderName)
+	}
+
+	return options, nil
+}
+
+func parseCloudProviderVarsLocal() (*local.Options, error) {
+	options := &local.Options{}
+	flags := cli.EmbeddedFlag{
+		Target: &options,
+		Expected: map[string]cli.EmbeddedFlagValue{
+			"cluster-ip": {
+				Required:     true,
+				EncodingName: "IP",
+			},
+		},
+	}
+
+	err := flags.Parse(cloudProviderVars)
+	if err != nil {
+		return nil, err
+	}
+	return options, nil
+}
+
+func parseCloudProviderVarsAWS() (*aws.Options, error) {
+	options := &aws.Options{}
+	flags := cli.EmbeddedFlag{
+		Target: &options,
+		Expected: map[string]cli.EmbeddedFlagValue{
+			"region": {
+				Required:     true,
+				EncodingName: "Region",
+			},
+			"account-id": {
+				Required:     true,
+				EncodingName: "AccountID",
+			},
+			"vpc-id": {
+				Required:     true,
+				EncodingName: "VPCID",
+			},
+			"route53-private-zone-id": {
+				Required:     true,
+				EncodingName: "Route53PrivateZoneID",
+			},
+			"subnet-ids": {
+				Required:     true,
+				EncodingName: "SubnetIDs",
+				ValueParser: func(value string) (interface{}, error) {
+					return strings.Split(value, ","), nil
+				},
+			},
+			"master-node-security-group-id": {
+				Required:     true,
+				EncodingName: "MasterNodeSecurityGroupID",
+			},
+		},
+	}
+
+	err := flags.Parse(cloudProviderVars)
+	if err != nil {
+		return nil, err
+	}
+	return options, nil
+}
+
+func parseTerraformVars() (*terraform.BackendOptions, error) {
+	if terraformBackend == "" {
+		return nil, nil
+	}
+
+	var backend *terraform.BackendOptions
+	switch terraformBackend {
+	case terraform.BackendS3:
+		s3Config, err := parseTerraformVarsS3()
+		if err != nil {
+			return nil, err
+		}
+		backend = &terraform.BackendOptions{
+			S3: s3Config,
+		}
+	default:
+		return nil, fmt.Errorf("unsupported terraform backend: %v", terraformBackend)
+	}
+
+	return backend, nil
+}
+
+func parseTerraformVarsS3() (*terraform.BackendOptionsS3, error) {
+	s3Config := &terraform.BackendOptionsS3{}
+	flags := cli.EmbeddedFlag{
+		Target: &s3Config,
+		Expected: map[string]cli.EmbeddedFlagValue{
+			"bucket": {
+				EncodingName: "Bucket",
+				Required:     true,
+			},
+		},
+	}
+
+	err := flags.Parse(terraformBackendVars)
+	if err != nil {
+		return nil, err
+	}
+	return s3Config, nil
 }

@@ -9,6 +9,6 @@ const (
 	OutputFormatTable = "table"
 )
 
-func newOutputFormatError(format OutputFormat) error {
+func NewOutputFormatError(format OutputFormat) error {
 	return fmt.Errorf("invalid output format: %v", format)
 }

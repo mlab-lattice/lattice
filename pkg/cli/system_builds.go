@@ -4,23 +4,25 @@ import (
 	"github.com/mlab-lattice/system/pkg/types"
 )
 
-func getSystemBuildRenderMap(build *types.SystemBuild) renderMap {
-	return renderMap{
-		"ID":      string(build.ID),
-		"State":   string(build.State),
-		"Version": string(build.Version),
+var systemBuildHeaders = []string{"ID", "State", "Version"}
+
+func getSystemBuildValues(build *types.SystemBuild) []string {
+	return []string{
+		string(build.ID),
+		string(build.State),
+		string(build.Version),
 	}
 }
 
 func ShowSystemBuild(build *types.SystemBuild, output OutputFormat) error {
 	switch output {
 	case OutputFormatTable:
-		rm := getSystemBuildRenderMap(build)
-		showResource(rm)
+		values := getSystemBuildValues(build)
+		ShowResource(systemBuildHeaders, values)
 	case OutputFormatJSON:
 		DisplayAsJSON(build)
 	default:
-		return newOutputFormatError(output)
+		return NewOutputFormatError(output)
 	}
 	return nil
 }
@@ -28,15 +30,15 @@ func ShowSystemBuild(build *types.SystemBuild, output OutputFormat) error {
 func ShowSystemBuilds(builds []types.SystemBuild, output OutputFormat) error {
 	switch output {
 	case OutputFormatTable:
-		renderMaps := make([]renderMap, len(builds))
+		values := make([][]string, len(builds))
 		for i, b := range builds {
-			renderMaps[i] = getSystemBuildRenderMap(&b)
+			values[i] = getSystemBuildValues(&b)
 		}
-		listResources(renderMaps)
+		ListResources(componentBuildHeaders, values)
 	case OutputFormatJSON:
 		DisplayAsJSON(builds)
 	default:
-		return newOutputFormatError(output)
+		return NewOutputFormatError(output)
 	}
 	return nil
 }

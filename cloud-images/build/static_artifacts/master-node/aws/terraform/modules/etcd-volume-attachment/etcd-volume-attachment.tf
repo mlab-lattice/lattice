@@ -1,8 +1,7 @@
 ###############################################################################
 # Variables
 
-variable "lattice_id" {}
-variable "system_id" {}
+variable "cluster_id" {}
 variable "region" {}
 variable "name" {}
 variable "instance_id" {}
@@ -16,7 +15,7 @@ data "aws_ebs_volume" "etcd_data_volume" {
 
   filter {
     name   = "tag:Name"
-    values = ["lattice.system.${var.system_id}.master-${var.name}-etcd"]
+    values = ["lattice.${var.cluster_id}.master-${var.name}-etcd"]
   }
 }
 

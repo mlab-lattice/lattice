@@ -5,6 +5,7 @@ import (
 
 	crv1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/cluster/bootstrap/bootstrapper"
+	"github.com/mlab-lattice/system/pkg/terraform"
 	"github.com/mlab-lattice/system/pkg/types"
 )
 
@@ -12,6 +13,7 @@ type Options struct {
 	DryRun           bool
 	Config           crv1.ConfigSpec
 	MasterComponents MasterComponentOptions
+	TerraformOptions TerraformOptions
 }
 
 type MasterComponentOptions struct {
@@ -20,8 +22,9 @@ type MasterComponentOptions struct {
 }
 
 type LatticeControllerManagerOptions struct {
-	Image string
-	Args  []string
+	Image               string
+	Args                []string
+	TerraformModulePath string
 }
 
 type ManagerAPIOptions struct {
@@ -29,6 +32,10 @@ type ManagerAPIOptions struct {
 	Port        int32
 	HostNetwork bool
 	Args        []string
+}
+
+type TerraformOptions struct {
+	Backend terraform.BackendOptions
 }
 
 func NewBootstrapper(
