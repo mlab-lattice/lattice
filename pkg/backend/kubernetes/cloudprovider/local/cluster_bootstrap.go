@@ -37,7 +37,8 @@ func (cp *DefaultLocalCloudProvider) bootstrapClusterDNS(resources *clusterboots
 
 	namespace := kubeutil.InternalNamespace(cp.ClusterID)
 
-	controllerArgs := []string{}
+	clusterIDParam := "clusterID=" + string(cp.ClusterID)
+	controllerArgs := []string{clusterIDParam}
 	controllerArgs = append(controllerArgs, cp.DNS.DNSControllerArgs...)
 
 	dnsmasqArgs := []string{}

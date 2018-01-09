@@ -5,10 +5,8 @@ import (
 	"fmt"
 	"hash/fnv"
 	"io/ioutil"
-	"reflect"
 	"strconv"
 	"testing"
-	"time"
 
 	latticev1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	fakelattice "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/clientset/versioned/fake"
@@ -16,9 +14,7 @@ import (
 	"github.com/mlab-lattice/system/pkg/definition/tree"
 
 	"k8s.io/client-go/kubernetes/fake"
-	core "k8s.io/client-go/testing"
 
-	"k8s.io/apimachinery/pkg/apis/meta/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 
@@ -29,18 +25,21 @@ import (
 const (
 	serverConfigPath = "./server_config"
 	hostConfigPath   = "./host_config"
-	defaultNamespace = metav1.NamespaceDefault
 
-	processQueueTimeout   = true
-	processTimeoutSeconds = 2
+	// End of defaultNamespace should match defaultSystemID
+	defaultNamespace = "namespace-filler-system-id"
+	defaultSystemID  = "system-id"
 
 	logToStderr         = true
 	loggingLevelDefault = "10"
+
+	clusterID = "cluster"
 )
 
 type hostEntry struct {
-	host string
-	ip   string
+	host     string
+	systemID string
+	ip       string
 }
 
 // HostFileOutput returns the expected file output that the host file should contain for the given hosts
@@ -53,7 +52,17 @@ func HostFileOutput(hosts []hostEntry) string {
 	str := ""
 
 	for _, v := range hosts {
-		newLine := v.ip + " " + v.host + "\n"
+
+		systemID := defaultSystemID
+
+		if v.systemID != "" {
+			// Allow overriding system id for certain tests.
+			systemID = v.systemID
+		}
+
+		fullPath := v.host + ".local." + clusterID + "." + systemID + ".local"
+
+		newLine := v.ip + " " + fullPath + "\n"
 		str = str + newLine
 	}
 
@@ -62,6 +71,7 @@ func HostFileOutput(hosts []hostEntry) string {
 
 type cnameEntry struct {
 	original string
+	systemID string
 	alias    string
 }
 
@@ -74,7 +84,17 @@ func CnameFileOutput(nameservers []cnameEntry) string {
 	str := ""
 
 	for _, v := range nameservers {
-		newLine := "cname=" + v.original + "," + v.alias + "\n"
+
+		systemID := defaultSystemID
+
+		if v.systemID != "" {
+			// Allow overriding system id for certain tests.
+			systemID = v.systemID
+		}
+
+		fullPath := v.original + ".local." + clusterID + "." + systemID + ".local"
+
+		newLine := "cname=" + fullPath + "," + v.alias + "\n"
 		str = str + newLine
 	}
 
@@ -124,37 +144,11 @@ func Endpoint(key string, ip string, endpoint string, path tree.NodePath) *latti
 	return ec
 }
 
-//AlterResourceVersion changes and exisintg endpoints resource string
-func AlterResourceVersion(ep *latticev1.Endpoint, res_ver string) *latticev1.Endpoint {
-	ep.ResourceVersion = res_ver
+// AlterNamespace adds a specified namespace to the Endpoints definition
+func AlterNamespace(namespace string, endpoint *latticev1.Endpoint) *latticev1.Endpoint {
+	endpoint.Namespace = "A-B-" + namespace
 
-	return ep
-}
-
-//AlterEndpointState adjust and existing endpoints state
-func AlterEndpointState(ep *latticev1.Endpoint, newState latticev1.EndpointState) *latticev1.Endpoint {
-	ep.Status = latticev1.EndpointStatus{newState}
-
-	return ep
-}
-
-//AddDeletionTimestamp adds a deletion timestamp to an existing endpoint
-func AddDeletionTimestamp(ep *latticev1.Endpoint) *latticev1.Endpoint {
-	now_time := v1.NewTime(time.Now())
-
-	ep.SetDeletionTimestamp(&now_time)
-
-	return ep
-}
-
-// MarkEndpointCreated alters the state of an Endpoint to 'Created'
-func MarkEndpointCreated(endpoint *latticev1.Endpoint) *latticev1.Endpoint {
-	e := endpoint
-	e.Status = latticev1.EndpointStatus{
-		State: latticev1.EndpointStateCreated,
-	}
-
-	return e
+	return endpoint
 }
 
 // MakeNdoePathPanic tries to create a NodePath from the url string, and panics is it is unable to.
@@ -168,34 +162,17 @@ func MakeNodePathPanic(pathString string) tree.NodePath {
 	return np
 }
 
-type reaction struct {
-	verb     string
-	resource string
-	reactor  func(t *testing.T) core.ReactionFunc
-}
-
 type test_case struct {
 	ClientObjects []runtime.Object
 
-	IsAsync    bool
-	MaxRetries int
+	EndpointsBefore *latticev1.EndpointList
+	EndpointsAfter  *latticev1.EndpointList
 
-	// Reactor determines how the controller responds to certain verb actions with a resource.
-	Reactors []reaction
-
-	ExistingEndpoints *latticev1.EndpointList
-
-	AddedEndpoints          *latticev1.EndpointList
-	UpdatedEndpoint         *latticev1.Endpoint
-	UpdatedEndpointPrevious *latticev1.Endpoint
-	DeletedEndpoint         *latticev1.Endpoint
-
-	ExpectedActions []core.Action
-	ExpectedHosts   []hostEntry
-	ExpectedCnames  []cnameEntry
+	ExpectedHosts  []hostEntry
+	ExpectedCnames []cnameEntry
 }
 
-// TestEndpointCreation tests the default resource CRUD and output of Endpoint controller operations, including the DNS and cname file contents
+// TestEndpointCreation tests the DNS and cname file contents of the dnscontroller
 func TestEndpointCreation(t *testing.T) {
 
 	if logToStderr {
@@ -210,8 +187,9 @@ func TestEndpointCreation(t *testing.T) {
 	updateWaitBeforeFlushTimerSeconds = 2
 
 	testcases := map[string]test_case{
+		// TODO :: ADD TEST FOR ALTERING NAMESPACE
 		"new endpoint with ip is written to host file": {
-			AddedEndpoints: EndpointList(
+			EndpointsAfter: EndpointList(
 				*Endpoint("key", "1", "", MakeNodePathPanic("/nodepath"))),
 			ExpectedHosts: []hostEntry{
 				{
@@ -221,7 +199,7 @@ func TestEndpointCreation(t *testing.T) {
 			},
 		},
 		"new endpoint with name is written as cname file": {
-			AddedEndpoints: EndpointList(
+			EndpointsAfter: EndpointList(
 				*Endpoint("key", "", "my_cname", MakeNodePathPanic("/nodepath"))),
 			ExpectedCnames: []cnameEntry{
 				{
@@ -231,7 +209,7 @@ func TestEndpointCreation(t *testing.T) {
 			},
 		},
 		"endpoints write url correctly": {
-			AddedEndpoints: EndpointList(
+			EndpointsAfter: EndpointList(
 				*Endpoint("key", "", "my_cname", MakeNodePathPanic("/root/nested/nested_some_more")),
 				*Endpoint("key2", "1", "", MakeNodePathPanic("/root/nested/nested_again_but_different")),
 			),
@@ -248,62 +226,43 @@ func TestEndpointCreation(t *testing.T) {
 				},
 			},
 		},
-		"new endpoint with existing deletion timestamp immediately added as tombstone": {
-			AddedEndpoints: EndpointList(
-				*AddDeletionTimestamp(Endpoint("key", "", "my_cname", MakeNodePathPanic("/nodepath")))),
-			ExpectedActions: []core.Action{
-			//Endpoint should be removed from the store, noa actions expected.
-			},
-		},
 		"normal endpoint update changes the underlying endpoint": {
-			AddedEndpoints: EndpointList(
+			EndpointsBefore: EndpointList(
 				*Endpoint("key", "", "my_cname", MakeNodePathPanic("/nodepath")),
 			),
-			UpdatedEndpointPrevious: Endpoint("key", "", "my_cname", MakeNodePathPanic("/nodepath")),
-			UpdatedEndpoint:         AlterResourceVersion(Endpoint("key", "", "my_new_cname", MakeNodePathPanic("/nodepath_ver2")), "2"),
-			ExpectedActions: []core.Action{
-				core.NewUpdateAction(latticev1.GroupVersionResource("endpoints"), metav1.NamespaceDefault,
-					AlterEndpointState(
-						AlterResourceVersion(
-							Endpoint("key", "", "my_new_cname", MakeNodePathPanic("/nodepath_ver2")), "2"), latticev1.EndpointStateCreated)),
+			EndpointsAfter: EndpointList(
+				*Endpoint("key", "", "my_cname_2", MakeNodePathPanic("/root/nested/nested_some_more")),
+			),
+			ExpectedCnames: []cnameEntry{
+				{
+					alias:    "my_cname_2",
+					original: "nested_some_more.nested.root",
+				},
 			},
+			ExpectedHosts: []hostEntry{},
 		},
 		"endpoint update can change between cname and IP address type endpoint": {
-			AddedEndpoints: EndpointList(
-				*Endpoint("key", "", "first_an_alias", MakeNodePathPanic("/nodepath")),
+			EndpointsBefore: EndpointList(
+				*Endpoint("key", "", "my_cname", MakeNodePathPanic("/nodepath")),
 			),
-			UpdatedEndpointPrevious: Endpoint("key", "", "first_an_alias", MakeNodePathPanic("/nodepath")),
-			UpdatedEndpoint:         AlterResourceVersion(Endpoint("key", "5.5.5.5", "", MakeNodePathPanic("/nodepath")), "2"),
-			ExpectedCnames:          []cnameEntry{
-			//Expect empty cname
-			},
+			EndpointsAfter: EndpointList(
+				*Endpoint("key", "5.5.5.5", "", MakeNodePathPanic("/root/nested/nested_again_but_different")),
+			),
+			ExpectedCnames: []cnameEntry{},
 			ExpectedHosts: []hostEntry{
 				{
 					ip:   "5.5.5.5",
-					host: "nodepath",
+					host: "nested_again_but_different.nested.root",
 				},
 			},
 		},
-		"changing the underlying endpoint writes only the updated entry": {
-			AddedEndpoints: EndpointList(
+		"rewriting the cache with no endpoints clears it": {
+			EndpointsBefore: EndpointList(
 				*Endpoint("key", "", "my_cname", MakeNodePathPanic("/nodepath")),
 			),
-			UpdatedEndpointPrevious: Endpoint("key", "", "my_cname", MakeNodePathPanic("/nodepath")),
-			UpdatedEndpoint:         AlterResourceVersion(Endpoint("key", "", "my_new_cname", MakeNodePathPanic("/new/nodepath_ver2")), "2"),
-			ExpectedCnames: []cnameEntry{
-				{
-					alias:    "my_new_cname",
-					original: "nodepath_ver2.new",
-				},
-			},
-		},
-		"adding an endpoint in the created state performs no action": {
-			AddedEndpoints: EndpointList(
-				*AlterEndpointState(Endpoint("key", "", "my_cname", MakeNodePathPanic("/nodepath")), latticev1.EndpointStateCreated),
-			),
-			ExpectedActions: []core.Action{
-			// No actions expected
-			},
+			EndpointsAfter: EndpointList(),
+			ExpectedCnames: []cnameEntry{},
+			ExpectedHosts:  []hostEntry{},
 		},
 	}
 
@@ -322,18 +281,14 @@ func TestEndpointCreation(t *testing.T) {
 		latticeClient := fakelattice.NewSimpleClientset(tc.ClientObjects...)
 		client := fake.NewSimpleClientset()
 
-		for _, reactor := range tc.Reactors {
-			latticeClient.Fake.PrependReactor(reactor.verb, reactor.resource, reactor.reactor(t))
-		}
-
 		informers := latticeinformers.NewSharedInformerFactory(latticeClient, 0)
 		endpointInformer := informers.Lattice().V1().Endpoints()
 		endpoints := informers.Lattice().V1().Endpoints().Informer().GetStore()
 
-		controller := NewController(controllerServerConfigPath, controllerHostConfigPath, latticeClient, client, endpointInformer)
+		controller := NewController(controllerServerConfigPath, controllerHostConfigPath, clusterID, latticeClient, client, endpointInformer)
 
-		if tc.ExistingEndpoints != nil {
-			for _, e := range tc.ExistingEndpoints.Items {
+		if tc.EndpointsBefore != nil {
+			for _, e := range tc.EndpointsBefore.Items {
 				s := e.DeepCopy()
 				err := endpoints.Add(s)
 
@@ -343,12 +298,12 @@ func TestEndpointCreation(t *testing.T) {
 			}
 		}
 
-		if tc.AddedEndpoints != nil {
-			for _, v := range tc.AddedEndpoints.Items {
-				s := v.DeepCopy()
-				err := endpoints.Add(s)
-				// event handlers need to be called manually in the test cases
-				//controller.addEndpoint(s)
+		controller.calculateCache()
+
+		if tc.EndpointsBefore != nil {
+			for _, e := range tc.EndpointsBefore.Items {
+				s := e.DeepCopy()
+				err := endpoints.Delete(s)
 
 				if err != nil {
 					t.Fatal(err)
@@ -356,43 +311,26 @@ func TestEndpointCreation(t *testing.T) {
 			}
 		}
 
-		// FIXME :: Processing logic is separated from the storing logic.
-		// any calls i.e. endpoints.Add() might not be processed in syncEndpointUpdate, because the store might be modified before
-		// ProcessControllerQueue is called.
-		// If the desired logic of the program is to have all updates immediately reflected within the process queue, the logic would need to be changed
-		// away from teh Existing / Added / Updated test structure.
-		// The current setup of manually calling ProcessControllerQueue at set intervals works for small sized unit tests, so this may be okay.
+		if tc.EndpointsAfter != nil {
+			for _, v := range tc.EndpointsAfter.Items {
+				s := v.DeepCopy()
+				err := endpoints.Add(s)
 
-		// Processes AddedEndpoints.
-		// ProcessControllerQueue(t, k, tc, latticeClient, controller)
-		controller.calculateCache()
+				if err != nil {
+					t.Fatal(err)
+				}
+			}
 
-		if tc.UpdatedEndpoint != nil {
-			endpoints.Update(tc.UpdatedEndpoint)
-			//controller.updateEndpoint(tc.UpdatedEndpointPrevious, tc.UpdatedEndpoint)
+			t.Logf("Updating cache and writing to: %v", controller.hostConfigPath)
+			controller.calculateCache()
 		}
-		if tc.DeletedEndpoint != nil {
-			endpoints.Delete(tc.UpdatedEndpoint)
-			//controller.deleteEndpoint(tc.DeletedEndpoint)
-		}
-
-		// Process the updates
-		ProcessControllerQueue(t, k, tc, latticeClient, controller)
 
 		if controller.queue.Len() > 0 {
 			t.Errorf("%s: unexpected items in endpoint queue: %d", k, controller.queue.Len())
 		}
 
-		if tc.ExpectedCnames != nil && tc.ExpectedHosts != nil && tc.ExpectedActions != nil {
+		if tc.ExpectedCnames == nil && tc.ExpectedHosts == nil {
 			return
-		}
-
-		err := controller.RewriteDnsmasqConfig()
-
-		t.Logf("Writing to: %v", controller.hostConfigPath)
-
-		if err != nil {
-			t.Errorf("Error rewriting DNSConfig: %v", err)
 		}
 
 		if tc.ExpectedCnames != nil {
@@ -424,75 +362,5 @@ func TestEndpointCreation(t *testing.T) {
 				t.Errorf("%s:\nExpected:\n%s\ngot:\n%s", k, spew.Sdump(hostExpectedStr), spew.Sdump(hostStr))
 			}
 		}
-
-		// Test actions after flushing the dns file. This is because updates are synchronised to the latticeClient after the DNS writes.
-		if tc.ExpectedActions == nil {
-			return
-		}
-
-		ProcessControllerQueue(t, k, tc, latticeClient, controller)
-
-		glog.V(5).Infof("Got %v actions, expected %v", len(latticeClient.Actions()), len(tc.ExpectedActions))
-
-		actions := latticeClient.Actions()
-		for i, action := range actions {
-			if len(tc.ExpectedActions) < i+1 {
-				t.Errorf("%s: %d unexpected actions: %+v", k, len(actions)-len(tc.ExpectedActions), actions[i:])
-				break
-			}
-
-			expectedAction := tc.ExpectedActions[i]
-			if !reflect.DeepEqual(expectedAction, action) {
-				t.Errorf("%s:\nExpected:\n%s\ngot:\n%s", k, spew.Sdump(expectedAction), spew.Sdump(action))
-				continue
-			}
-		}
-
-		if len(tc.ExpectedActions) > len(actions) {
-			t.Errorf("%s: %d additional expected actions", k, len(tc.ExpectedActions)-len(actions))
-			for _, a := range tc.ExpectedActions[len(actions):] {
-				t.Logf("    %+v", a)
-			}
-		} else if len(actions) > len(tc.ExpectedActions) {
-			t.Errorf("%s: %d additional unexpected actions", k, len(actions)-len(tc.ExpectedActions))
-			for _, a := range actions[len(tc.ExpectedActions):] {
-				t.Logf("    %s", spew.Sdump(a))
-			}
-		}
-	}
-}
-
-// ProcessControllerQueue runs an update loop on the queue until either the controller signals that the work is done, or the queue is empty.
-func ProcessControllerQueue(t *testing.T, test_name string, tc test_case, client *fakelattice.Clientset, controller *Controller) {
-
-	stopChannel := make(chan int)
-
-	if processQueueTimeout {
-		closeSecond := func() {
-			stopChannel <- 0
-		}
-
-		// Must handle timeout in the main goroutine, so any fail should be handled in the main for loop below.
-		go time.AfterFunc(time.Second*processTimeoutSeconds, closeSecond)
-	}
-
-	t.Logf("After flush, %v items in queue:", controller.queue.Len())
-
-	for {
-		if controller.queue.Len() > 0 {
-			select {
-			case _ = <-stopChannel:
-				t.Fatalf("%s: reached ProcessControllerQueue timeout", test_name)
-			default:
-				//if !controller.processNextWorkItem() {
-				//	break
-				//}
-
-				continue
-			}
-
-		}
-
-		break
 	}
 }

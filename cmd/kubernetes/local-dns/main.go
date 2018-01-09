@@ -20,10 +20,12 @@ var (
 	kubeconfig        string
 	hostsFilePath     string
 	dnsmasqConfigPath string
+	clusterID         string
 )
 
 func init() {
 	flag.StringVar(&kubeconfig, "kubeconfig", "", "path to kubeconfig file")
+	flag.StringVar(&clusterID, "clusterID", "", "ID of the cluster")
 	flag.StringVar(&dnsmasqConfigPath, "dnsmasq-config-path", dnsconstants.DNSSharedConfigDirectory+dnsconstants.DnsmasqConfigFile, "path to the additional dnsmasq configuration file")
 	flag.StringVar(&hostsFilePath, "hosts-file-path", dnsconstants.DNSSharedConfigDirectory+dnsconstants.DNSHostsFile, "path to the additional dnsmasq hosts")
 	flag.Parse()
@@ -59,6 +61,7 @@ func main() {
 	go dnscontroller.NewController(
 		dnsmasqConfigPath,
 		hostsFilePath,
+		clusterID,
 		lcb.ClientOrDie("local-dns-lattice-address"),
 		clientset.NewForConfigOrDie(config),
 		latticeInformers.Lattice().V1().Endpoints(),

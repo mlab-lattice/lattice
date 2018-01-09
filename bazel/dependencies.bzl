@@ -13,6 +13,7 @@ def go_dependencies():
         "github.com/spf13/cobra",
         "github.com/olekukonko/tablewriter",
         "github.com/deckarep/golang-set",
+        "github.com/golang/groupcache",
         "golang.org/x/crypto",
         "gopkg.in/src-d/go-git.v4",
         "k8s.io/api",
@@ -20,6 +21,7 @@ def go_dependencies():
         "k8s.io/apimachinery",
         "k8s.io/client-go",
         "k8s.io/kubernetes",
+        "k8s.io/kube-openapi",
     ]
 
     for dep in dependencies:

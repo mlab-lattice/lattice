@@ -9,6 +9,7 @@ import (
 	latticeclientset "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/clientset/versioned"
 	latticeinformers "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/informers/externalversions/lattice/v1"
 	latticelisters "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/listers/lattice/v1"
+	util "github.com/mlab-lattice/system/pkg/backend/kubernetes/util/kubernetes"
 
 	"k8s.io/api/core/v1"
 
@@ -42,6 +43,7 @@ type Controller struct {
 
 	serverConfigPath string
 	hostConfigPath   string
+	clusterID        string
 }
 
 var (
@@ -51,6 +53,7 @@ var (
 func NewController(
 	serverConfigPath string,
 	hostConfigPath string,
+	clusterID string,
 	latticeClient latticeclientset.Interface,
 	client clientset.Interface,
 	endpointInformer latticeinformers.EndpointInformer,
@@ -69,6 +72,7 @@ func NewController(
 
 	c.serverConfigPath = serverConfigPath
 	c.hostConfigPath = hostConfigPath
+	c.clusterID = clusterID
 
 	c.endpointister = endpointInformer.Lister()
 	c.endpointListerSynced = endpointInformer.Informer().HasSynced
@@ -116,7 +120,7 @@ func (c *Controller) calculateCache() {
 
 	err = c.RewriteDnsmasqConfig()
 
-	c.eventRecorder.Event(nil, "Normal", "DnsRewrite", "The DNS Server was rewritten")
+	//c.eventRecorder.Event({}, "Normal", "DnsRewrite", "The DNS Server was rewritten")
 
 	if err != nil {
 		runtime.HandleError(err)
@@ -145,12 +149,40 @@ func haveEndpointsChanged(endpointListA []*crv1.Endpoint, endpointListB []*crv1.
 
 	keys := set.NewSet()
 
-	for k, _ := range endpointListA {
-		keys.Add(k)
+	for _, endpoint := range endpointListA {
+		key := endpoint.Name
+		keys.Add(key)
+		endpointMapA[key] = *endpoint
+
+		ip := ""
+		if endpoint.Spec.IP != nil {
+			ip = *endpoint.Spec.IP
+		}
+
+		name := ""
+		if endpoint.Spec.ExternalName != nil {
+			name = *endpoint.Spec.ExternalName
+		}
+
+		glog.V(5).Infof("Endpoint after: %v ip %v external %v", endpoint.Spec.Path.ToDomain(true), ip, name)
 	}
 
-	for k, _ := range endpointListB {
-		keys.Add(k)
+	for _, endpoint := range endpointListB {
+		key := endpoint.Name
+		keys.Add(key)
+		endpointMapB[key] = *endpoint
+
+		ip := ""
+		if endpoint.Spec.IP != nil {
+			ip = *endpoint.Spec.IP
+		}
+
+		name := ""
+		if endpoint.Spec.ExternalName != nil {
+			name = *endpoint.Spec.ExternalName
+		}
+
+		glog.V(5).Infof("Endpoint before: %v ip %v external %v", endpoint.Spec.Path.ToDomain(true), ip, name)
 	}
 
 	if len(endpointListA) == 0 && len(endpointListB) == 0 {
@@ -165,37 +197,38 @@ func haveEndpointsChanged(endpointListA []*crv1.Endpoint, endpointListB []*crv1.
 		endpointA, ok := endpointMapA[str]
 
 		if !ok {
-			return false
+			return true
 		}
 
 		endpointB, ok := endpointMapB[str]
 
 		if !ok {
-			return false
+			return true
 		}
 
 		// Simple equality based on just what the file output depends on.
 		if endpointA.Spec.Path != endpointB.Spec.Path {
-			return false
+			return true
 		}
 
 		if endpointA.Spec.IP != endpointB.Spec.IP {
-			return false
+			return true
 		}
 
 		if endpointA.Spec.ExternalName != endpointB.Spec.ExternalName {
-			return false
+			return true
 		}
 	}
 
-	return true
+	return false
 }
 
+// CreateEmptyFile creates an empty file, removing the previous file if it existed
 func CreateEmptyFile(filename string) (*os.File, error) {
 
 	_, err := os.Stat(filename)
 
-	if os.IsExist(err) {
+	if err == nil {
 		err := os.Remove(filename)
 
 		if err != nil {
@@ -206,6 +239,7 @@ func CreateEmptyFile(filename string) (*os.File, error) {
 	return os.OpenFile(filename, os.O_RDWR|os.O_CREATE, 0660)
 }
 
+// RewriteDnsmasqConfig rewrites the config files for the dns server
 func (c *Controller) RewriteDnsmasqConfig() error {
 
 	glog.V(4).Infof("Rewriting config %v, %v... ", c.hostConfigPath, c.serverConfigPath)
@@ -232,22 +266,29 @@ func (c *Controller) RewriteDnsmasqConfig() error {
 	// Full specification here: http://www.thekelleys.org.uk/dnsmasq/docs/dnsmasq-man.html
 
 	for _, v := range c.currentEndpoints {
-		cname := *v.Spec.ExternalName
-		endpoint := *v.Spec.IP
-		path := v.Spec.Path.ToDomain(true)
+		cname := v.Spec.ExternalName
+		endpoint := v.Spec.IP
+		systemID, err := util.SystemID(v.Namespace)
 
-		if endpoint != "" && cname != "" {
+		if err != nil {
+			runtime.HandleError(err)
+		}
+
+		path := v.Spec.Path.ToDomain(true)
+		path = path + ".local." + c.clusterID + "." + string(systemID) + ".local"
+
+		if endpoint != nil && cname != nil {
 			return fmt.Errorf("endpoint %v has both a cname and an endpoint", path)
 		}
 
-		if cname != "" {
-			_, err = dnsmasqConfigFile.WriteString("cname=" + path + "," + cname + "\n")
-			glog.V(5).Infof("cname=" + path + "," + cname + "\n")
+		if cname != nil {
+			_, err = dnsmasqConfigFile.WriteString("cname=" + path + "," + *cname + "\n")
+			glog.V(5).Infof("cname=" + path + "," + *cname + "\n")
 		}
 
-		if endpoint != "" {
-			_, err = hostsFile.WriteString(endpoint + " " + path + "\n")
-			glog.V(5).Infof(endpoint + " " + path + "\n")
+		if endpoint != nil {
+			_, err = hostsFile.WriteString(*endpoint + " " + path + "\n")
+			glog.V(5).Infof(*endpoint + " " + path + "\n")
 		}
 
 		if err != nil {
