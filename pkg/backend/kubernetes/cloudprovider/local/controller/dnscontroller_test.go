@@ -13,10 +13,10 @@ import (
 	latticeinformers "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/informers/externalversions"
 	"github.com/mlab-lattice/system/pkg/definition/tree"
 
-	"k8s.io/client-go/kubernetes/fake"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+
+	"k8s.io/client-go/kubernetes/fake"
 
 	"github.com/davecgh/go-spew/spew"
 	"github.com/golang/glog"
@@ -146,6 +146,8 @@ func Endpoint(key string, ip string, endpoint string, path tree.NodePath) *latti
 
 // AlterNamespace adds a specified namespace to the Endpoints definition
 func AlterNamespace(namespace string, endpoint *latticev1.Endpoint) *latticev1.Endpoint {
+
+	// First two hyphens in an endpoints namespace do not affect the output. Determined by the trailing string after the 2nd hyphen.
 	endpoint.Namespace = "A-B-" + namespace
 
 	return endpoint
@@ -172,7 +174,7 @@ type test_case struct {
 	ExpectedCnames []cnameEntry
 }
 
-// TestEndpointCreation tests the DNS and cname file contents of the dnscontroller
+// TestEndpointCreation tests the DNS and cname file contents of the dns controller
 func TestEndpointCreation(t *testing.T) {
 
 	if logToStderr {
@@ -182,9 +184,6 @@ func TestEndpointCreation(t *testing.T) {
 	var logLevel string
 	flag.StringVar(&logLevel, "logLevel", loggingLevelDefault, "test")
 	flag.Lookup("v").Value.Set(logLevel)
-
-	// Reduce DNS flush timer to more appropriate time
-	updateWaitBeforeFlushTimerSeconds = 2
 
 	testcases := map[string]test_case{
 		"new endpoint with ip is written to host file": {
@@ -281,19 +280,19 @@ func TestEndpointCreation(t *testing.T) {
 		},
 	}
 
-	for k, tc := range testcases {
+	for testName, testCase := range testcases {
 
-		glog.Infof(k)
+		glog.Infof(testName)
 
 		// Write to different files on each iteration by using a hash of the test string
 		hash := fnv.New32a()
-		hash.Write([]byte(k))
+		hash.Write([]byte(testName))
 		pathSuffix := strconv.Itoa(int(hash.Sum32()))
 
 		controllerServerConfigPath := serverConfigPath + "_" + pathSuffix
 		controllerHostConfigPath := hostConfigPath + "_" + pathSuffix
 
-		latticeClient := fakelattice.NewSimpleClientset(tc.ClientObjects...)
+		latticeClient := fakelattice.NewSimpleClientset(testCase.ClientObjects...)
 		client := fake.NewSimpleClientset()
 
 		informers := latticeinformers.NewSharedInformerFactory(latticeClient, 0)
@@ -302,8 +301,8 @@ func TestEndpointCreation(t *testing.T) {
 
 		controller := NewController(controllerServerConfigPath, controllerHostConfigPath, clusterID, latticeClient, client, endpointInformer)
 
-		if tc.EndpointsBefore != nil {
-			for _, e := range tc.EndpointsBefore.Items {
+		if testCase.EndpointsBefore != nil {
+			for _, e := range testCase.EndpointsBefore.Items {
 				s := e.DeepCopy()
 				err := endpoints.Add(s)
 
@@ -315,8 +314,8 @@ func TestEndpointCreation(t *testing.T) {
 
 		controller.calculateCache()
 
-		if tc.EndpointsBefore != nil {
-			for _, e := range tc.EndpointsBefore.Items {
+		if testCase.EndpointsBefore != nil {
+			for _, e := range testCase.EndpointsBefore.Items {
 				s := e.DeepCopy()
 				err := endpoints.Delete(s)
 
@@ -326,8 +325,8 @@ func TestEndpointCreation(t *testing.T) {
 			}
 		}
 
-		if tc.EndpointsAfter != nil {
-			for _, v := range tc.EndpointsAfter.Items {
+		if testCase.EndpointsAfter != nil {
+			for _, v := range testCase.EndpointsAfter.Items {
 				s := v.DeepCopy()
 				err := endpoints.Add(s)
 
@@ -341,14 +340,10 @@ func TestEndpointCreation(t *testing.T) {
 		}
 
 		if controller.queue.Len() > 0 {
-			t.Errorf("%s: unexpected items in endpoint queue: %d", k, controller.queue.Len())
+			t.Errorf("%s: unexpected items in endpoint queue: %d", testName, controller.queue.Len())
 		}
 
-		if tc.ExpectedCnames == nil && tc.ExpectedHosts == nil {
-			return
-		}
-
-		if tc.ExpectedCnames != nil {
+		if testCase.ExpectedCnames != nil {
 			cnameFile, err := ioutil.ReadFile(controller.serverConfigPath)
 
 			if err != nil {
@@ -356,14 +351,14 @@ func TestEndpointCreation(t *testing.T) {
 			}
 
 			cnameStr := string(cnameFile)
-			cnameExpectedStr := CnameFileOutput(tc.ExpectedCnames)
+			cnameExpectedStr := CnameFileOutput(testCase.ExpectedCnames)
 
 			if cnameStr != cnameExpectedStr {
-				t.Errorf("%s:\nExpected:\n%s\ngot:\n%s", k, spew.Sdump(cnameExpectedStr), spew.Sdump(cnameStr))
+				t.Errorf("%s:\nExpected:\n%s\ngot:\n%s", testName, spew.Sdump(cnameExpectedStr), spew.Sdump(cnameStr))
 			}
 		}
 
-		if tc.ExpectedHosts != nil {
+		if testCase.ExpectedHosts != nil {
 			hostFile, err := ioutil.ReadFile(controller.hostConfigPath)
 
 			if err != nil {
@@ -371,10 +366,10 @@ func TestEndpointCreation(t *testing.T) {
 			}
 
 			hostStr := string(hostFile)
-			hostExpectedStr := HostFileOutput(tc.ExpectedHosts)
+			hostExpectedStr := HostFileOutput(testCase.ExpectedHosts)
 
 			if hostStr != hostExpectedStr {
-				t.Errorf("%s:\nExpected:\n%s\ngot:\n%s", k, spew.Sdump(hostExpectedStr), spew.Sdump(hostStr))
+				t.Errorf("%s:\nExpected:\n%s\ngot:\n%s", testName, spew.Sdump(hostExpectedStr), spew.Sdump(hostStr))
 			}
 		}
 	}

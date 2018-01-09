@@ -50,6 +50,7 @@ var (
 	updateWaitBeforeFlushTimerSeconds = 15
 )
 
+// NewController returns a newly created DNS Controller.
 func NewController(
 	serverConfigPath string,
 	hostConfigPath string,
@@ -80,6 +81,7 @@ func NewController(
 	return c
 }
 
+// Run triggers a goroutine to refresh the cache and rewrite the config at set intervals, until it receives from stopCh
 func (c *Controller) Run(stopCh <-chan struct{}) {
 	// don't let panics crash the process
 	defer runtime.HandleCrash()
@@ -118,15 +120,19 @@ func (c *Controller) calculateCache() {
 		return
 	}
 
+	glog.V(5).Infof("Endpoints have changed, rewriting DNS configuration...")
 	err = c.RewriteDnsmasqConfig()
-
-	//c.eventRecorder.Event({}, "Normal", "DnsRewrite", "The DNS Server was rewritten")
 
 	if err != nil {
 		runtime.HandleError(err)
 	}
 
 	for _, endpoint := range c.currentEndpoints {
+
+		if endpoint.Status.State == crv1.EndpointStateCreated {
+			continue
+		}
+
 		endpoint = endpoint.DeepCopy()
 		endpoint.Status.State = crv1.EndpointStateCreated
 
@@ -147,11 +153,11 @@ func haveEndpointsChanged(endpointListA []*crv1.Endpoint, endpointListB []*crv1.
 	endpointMapA := make(map[string]crv1.Endpoint)
 	endpointMapB := make(map[string]crv1.Endpoint)
 
-	keys := set.NewSet()
+	allEndpoints := set.NewSet()
 
 	for _, endpoint := range endpointListA {
 		key := endpoint.Name
-		keys.Add(key)
+		allEndpoints.Add(key)
 		endpointMapA[key] = *endpoint
 
 		ip := ""
@@ -164,12 +170,12 @@ func haveEndpointsChanged(endpointListA []*crv1.Endpoint, endpointListB []*crv1.
 			name = *endpoint.Spec.ExternalName
 		}
 
-		glog.V(5).Infof("Endpoint after: %v ip %v external %v", endpoint.Spec.Path.ToDomain(true), ip, name)
+		glog.V(1).Infof("Endpoint before: path = %v, ip = %v, external name = %v", endpoint.Spec.Path.ToDomain(true), ip, name)
 	}
 
 	for _, endpoint := range endpointListB {
 		key := endpoint.Name
-		keys.Add(key)
+		allEndpoints.Add(key)
 		endpointMapB[key] = *endpoint
 
 		ip := ""
@@ -182,14 +188,14 @@ func haveEndpointsChanged(endpointListA []*crv1.Endpoint, endpointListB []*crv1.
 			name = *endpoint.Spec.ExternalName
 		}
 
-		glog.V(5).Infof("Endpoint before: %v ip %v external %v", endpoint.Spec.Path.ToDomain(true), ip, name)
+		glog.V(1).Infof("Endpoint before: path = %v, ip = %v, external name = %v", endpoint.Spec.Path.ToDomain(true), ip, name)
 	}
 
 	if len(endpointListA) == 0 && len(endpointListB) == 0 {
 		return false
 	}
 
-	itr := keys.Iterator()
+	itr := allEndpoints.Iterator()
 
 	for k := range itr.C {
 		str := k.(string)
@@ -206,16 +212,12 @@ func haveEndpointsChanged(endpointListA []*crv1.Endpoint, endpointListB []*crv1.
 			return true
 		}
 
-		// Simple equality based on just what the file output depends on.
-		if endpointA.Spec.Path != endpointB.Spec.Path {
-			return true
-		}
-
-		if endpointA.Spec.IP != endpointB.Spec.IP {
-			return true
-		}
-
-		if endpointA.Spec.ExternalName != endpointB.Spec.ExternalName {
+		// Simple equality based on file output or endpoint state.
+		if endpointA.Spec.Path != endpointB.Spec.Path ||
+			endpointA.Spec.IP != endpointB.Spec.IP ||
+			endpointA.Spec.ExternalName != endpointB.Spec.ExternalName ||
+			endpointA.Namespace != endpointB.Namespace ||
+			endpointA.Status != endpointB.Status {
 			return true
 		}
 	}
@@ -294,6 +296,8 @@ func (c *Controller) RewriteDnsmasqConfig() error {
 		if err != nil {
 			return err
 		}
+
+		//c.eventRecorder.Event(v, "Normal", "DnsRewrite", "The endpoint was added.")
 	}
 
 	return nil
