@@ -30,7 +30,7 @@ func resolveUrl(url string, env *environment) (*urlResource, error) {
 func fetchGitFileContents(repoUrl string, fileName string, env *environment) ([]byte, error) {
 
 	gitResolver, _ := git.NewResolver(WORK_DIR)
-	gitOptions := env.options.gitOptions
+	gitOptions := env.options.GitOptions
 	if gitOptions == nil {
 		gitOptions = &git.Options{}
 	}

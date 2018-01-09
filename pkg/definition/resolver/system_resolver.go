@@ -70,13 +70,13 @@ func (resolver *SystemResolver) readNodeFromFile(ctx *resolveContext) (tree.Node
 	options := &language.Options{
 		GitOptions: ctx.gitResolveOptions,
 	}
-	template, err := engine.ParseTemplate(ctx.gitURI, make(map[string]interface{}), options)
+	jsonMap, err := engine.EvalFromURL(ctx.gitURI, make(map[string]interface{}), options)
 
 	if err != nil {
 		return nil, err
 	}
 
-	jsonBytes, err := json.Marshal(template.Value)
+	jsonBytes, err := json.Marshal(jsonMap)
 	if err != nil {
 		return nil, err
 	}
