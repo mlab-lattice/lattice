@@ -14,6 +14,8 @@ import (
 	"k8s.io/api/core/v1"
 
 	"k8s.io/apimachinery/pkg/labels"
+	rtime "k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
 
@@ -285,19 +287,19 @@ func (c *Controller) RewriteDnsmasqConfig() error {
 
 		if cname != nil {
 			_, err = dnsmasqConfigFile.WriteString("cname=" + path + "," + *cname + "\n")
-			glog.V(5).Infof("cname=" + path + "," + *cname + "\n")
+			glog.V(5).Infof("Added: cname=" + path + "," + *cname + "\n")
 		}
 
 		if endpoint != nil {
 			_, err = hostsFile.WriteString(*endpoint + " " + path + "\n")
-			glog.V(5).Infof(*endpoint + " " + path + "\n")
+			glog.V(5).Infof("Added: " + *endpoint + " " + path + "\n")
 		}
 
 		if err != nil {
 			return err
 		}
 
-		//c.eventRecorder.Event(v, "Normal", "DnsRewrite", "The endpoint was added.")
+		// c.eventRecorder.Event(c, "Normal", "DnsRewrite", "The endpoint was added.")
 	}
 
 	return nil
@@ -308,3 +310,11 @@ func (c *Controller) refreshOldCache() {
 	c.previousEndpoints = c.currentEndpoints
 	c.currentEndpoints = nil
 }
+
+//func (c *Controller) GetObjectKind() schema.ObjectKind {
+//	return schema.EmptyObjectKind
+//}
+//
+//func (c *Controller) DeepCopyObject() rtime.Object {
+//	return c
+//}
