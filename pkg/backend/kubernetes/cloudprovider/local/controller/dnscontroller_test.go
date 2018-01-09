@@ -79,7 +79,7 @@ type cnameEntry struct {
 func CnameFileOutput(nameservers []cnameEntry) string {
 	/*
 	   Expected format:
-	       cname=original,alias
+	       cname=alias,target
 	*/
 	str := ""
 
@@ -92,9 +92,9 @@ func CnameFileOutput(nameservers []cnameEntry) string {
 			systemID = v.systemID
 		}
 
-		fullPath := v.original + ".local." + clusterID + "." + systemID + ".local"
+		fullPath := v.alias + ".local." + clusterID + "." + systemID + ".local"
 
-		newLine := "cname=" + fullPath + "," + v.alias + "\n"
+		newLine := "cname=" + fullPath + "," + v.original + "\n"
 		str = str + newLine
 	}
 
@@ -187,7 +187,6 @@ func TestEndpointCreation(t *testing.T) {
 	updateWaitBeforeFlushTimerSeconds = 2
 
 	testcases := map[string]test_case{
-		// TODO :: ADD TEST FOR ALTERING NAMESPACE
 		"new endpoint with ip is written to host file": {
 			EndpointsAfter: EndpointList(
 				*Endpoint("key", "1", "", MakeNodePathPanic("/nodepath"))),
@@ -203,8 +202,8 @@ func TestEndpointCreation(t *testing.T) {
 				*Endpoint("key", "", "my_cname", MakeNodePathPanic("/nodepath"))),
 			ExpectedCnames: []cnameEntry{
 				{
-					alias:    "my_cname",
-					original: "nodepath",
+					original: "my_cname",
+					alias:    "nodepath",
 				},
 			},
 		},
@@ -215,8 +214,8 @@ func TestEndpointCreation(t *testing.T) {
 			),
 			ExpectedCnames: []cnameEntry{
 				{
-					alias:    "my_cname",
-					original: "nested_some_more.nested.root",
+					original: "my_cname",
+					alias:    "nested_some_more.nested.root",
 				},
 			},
 			ExpectedHosts: []hostEntry{
@@ -235,8 +234,8 @@ func TestEndpointCreation(t *testing.T) {
 			),
 			ExpectedCnames: []cnameEntry{
 				{
-					alias:    "my_cname_2",
-					original: "nested_some_more.nested.root",
+					original: "my_cname_2",
+					alias:    "nested_some_more.nested.root",
 				},
 			},
 			ExpectedHosts: []hostEntry{},
@@ -263,6 +262,22 @@ func TestEndpointCreation(t *testing.T) {
 			EndpointsAfter: EndpointList(),
 			ExpectedCnames: []cnameEntry{},
 			ExpectedHosts:  []hostEntry{},
+		},
+		"changing endpoint to a new namespace changes the output": {
+			EndpointsBefore: EndpointList(
+				*Endpoint("key", "", "my_cname", MakeNodePathPanic("/nodepath")),
+			),
+			EndpointsAfter: EndpointList(
+				*AlterNamespace("new-namespace", Endpoint("key", "", "my_cname", MakeNodePathPanic("/nodepath"))),
+			),
+			ExpectedCnames: []cnameEntry{
+				{
+					systemID: "new-namespace",
+					alias:    "nodepath",
+					original: "my_cname",
+				},
+			},
+			ExpectedHosts: []hostEntry{},
 		},
 	}
 
