@@ -15,27 +15,27 @@ import (
 const (
 	workDirectoryVolumeHostPathPrefix = "/data/component-builder"
 
-	MasterNodeDNSSController = "local-dns-controller"
-	MasterNodeDNSServer      = "local-dnsmasq-server"
-	MasterNodeDNSService     = "local-dns-service"
+	DockerImageDNSController = "kubernetes-local-dns-controller"
+	DockerImageDnsmasqServer = "gcr.io/google_containers/k8s-dns-dnsmasq-nanny-amd64:1.14.7"
 
-	ServiceAccountLocalDNS = "local-dns"
+	// This is the default IP for kube-dns
+	localDNSServerIP = "10.96.0.53"
 
-	DockerImageLocalDNSController = "kubernetes-local-dns"
-	DockerImageLocalDNSServer     = "gcr.io/google_containers/k8s-dns-dnsmasq-nanny-amd64:1.14.7"
-
-	LocalDNSServerIP = "10.96.0.53"
-
-	DNSSharedConfigDirectory = "/etc/dns-config/"
-	DNSHostsFile             = "hosts"
-	DnsmasqConfigFile        = "dnsmasq.conf"
-
-	LocaldnsFinalizer = "localdns-finalizer"
+	DNSConfigDirectory = "/etc/dns-config/"
+	DNSHostsFile       = DNSConfigDirectory + "hosts"
+	DnsmasqConfigFile  = DNSConfigDirectory + "dnsmasq.conf"
 )
 
 type Options struct {
 	IP  string
-	DNS *DNSOptions
+	DNS *OptionsDNS
+}
+
+type OptionsDNS struct {
+	ServerImage     string
+	ServerArgs      []string
+	ControllerImage string
+	ControllerArgs  []string
 }
 
 type CloudProvider interface {
@@ -46,16 +46,7 @@ func NewLocalCloudProvider(clusterID types.ClusterID, options *Options) *Default
 	cp := &DefaultLocalCloudProvider{
 		ClusterID: clusterID,
 		ip:        options.IP,
-		DNS:       &DNSOptions{},
-	}
-
-	if options.DNS != nil {
-		cp.DNS = &DNSOptions{
-			DNSControllerImage: options.DNS.DNSControllerImage,
-			DNSControllerArgs:  options.DNS.DNSControllerArgs,
-			DNSServerImage:     options.DNS.DNSServerImage,
-			DNSServerArgs:      options.DNS.DNSServerArgs,
-		}
+		DNS:       options.DNS,
 	}
 
 	return cp
@@ -64,14 +55,7 @@ func NewLocalCloudProvider(clusterID types.ClusterID, options *Options) *Default
 type DefaultLocalCloudProvider struct {
 	ClusterID types.ClusterID
 	ip        string
-	DNS       *DNSOptions
-}
-
-type DNSOptions struct {
-	DNSServerImage     string
-	DNSServerArgs      []string
-	DNSControllerImage string
-	DNSControllerArgs  []string
+	DNS       *OptionsDNS
 }
 
 func (cp *DefaultLocalCloudProvider) BootstrapSystemResources(resources *systembootstrapper.SystemResources) {
@@ -99,24 +83,26 @@ func (cp *DefaultLocalCloudProvider) ComponentBuildWorkDirectoryVolumeSource(job
 func (cp *DefaultLocalCloudProvider) TransformServiceDeploymentSpec(service *crv1.Service, spec *appsv1.DeploymentSpec) *appsv1.DeploymentSpec {
 	spec = spec.DeepCopy()
 	spec.Template = *cp.transformPodTemplateSpec(&spec.Template)
-	spec.Template.Spec.DNSConfig.Nameservers = []string{LocalDNSServerIP}
+	spec.Template.Spec.DNSConfig.Nameservers = []string{localDNSServerIP}
 
 	found := false
 
 	for idx, nameserver := range spec.Template.Spec.DNSConfig.Nameservers {
-		if nameserver == LocalDNSServerIP {
+		if nameserver == localDNSServerIP {
 			// Nameserver already present, so no need to update
 			found = true
 
 			if idx != 0 {
 				glog.Warningf("Local DNS server found, but not as the first nameserver. This will not be modified...")
 			}
+
+			break
 		}
 	}
 
 	if !found {
 		// Add the DNS server IP as the first nameserver.
-		spec.Template.Spec.DNSConfig.Nameservers = append([]string{LocalDNSServerIP}, spec.Template.Spec.DNSConfig.Nameservers...)
+		spec.Template.Spec.DNSConfig.Nameservers = append([]string{localDNSServerIP}, spec.Template.Spec.DNSConfig.Nameservers...)
 	}
 
 	glog.V(4).Infof("Updated nameservers: %v", spec.Template.Spec.DNSConfig.Nameservers)

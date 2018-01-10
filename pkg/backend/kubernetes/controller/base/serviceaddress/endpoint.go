@@ -73,8 +73,6 @@ func (c *Controller) newEndpoint(address *crv1.ServiceAddress) (*crv1.Endpoint, 
 		ObjectMeta: metav1.ObjectMeta{
 			Name:            address.Name,
 			OwnerReferences: []metav1.OwnerReference{*metav1.NewControllerRef(address, controllerKind)},
-			// TODO :: add in somewhere better
-			Finalizers: []string{"localdns-finalizer"},
 		},
 		Spec: *spec,
 		Status: crv1.EndpointStatus{

@@ -2,7 +2,7 @@ package dnscontroller
 
 import (
 	"fmt"
-	"os"
+	"io/ioutil"
 	"time"
 
 	crv1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
@@ -26,7 +26,6 @@ import (
 
 	set "github.com/deckarep/golang-set"
 	"github.com/golang/glog"
-	"io/ioutil"
 )
 
 type Controller struct {
@@ -42,18 +41,18 @@ type Controller struct {
 
 	queue workqueue.RateLimitingInterface
 
-	serverConfigPath string
-	hostConfigPath   string
-	clusterID        string
+	dnsmasqConfigPath string
+	hostFilePath      string
+	clusterID         string
 }
 
 var (
-	updateWaitBeforeFlushTimerSeconds = 15
+	updateWaitBeforeFlushTimerSeconds = 5
 )
 
 // NewController returns a newly created DNS Controller.
 func NewController(
-	serverConfigPath string,
+	dnsmasqConfigPath string,
 	hostConfigPath string,
 	clusterID string,
 	latticeClient latticeclientset.Interface,
@@ -70,14 +69,17 @@ func NewController(
 	eventBroadcaster.StartLogging(glog.Infof)
 	eventBroadcaster.StartRecordingToSink(&v1core.EventSinkImpl{Interface: v1core.New(client.CoreV1().RESTClient()).Events("")})
 
-	c.eventRecorder = eventBroadcaster.NewRecorder(scheme.Scheme, v1.EventSource{Component: "deployment-controller"})
+	c.eventRecorder = eventBroadcaster.NewRecorder(scheme.Scheme, v1.EventSource{Component: "local-dns-controller"})
 
-	c.serverConfigPath = serverConfigPath
-	c.hostConfigPath = hostConfigPath
+	c.dnsmasqConfigPath = dnsmasqConfigPath
+	c.hostFilePath = hostConfigPath
 	c.clusterID = clusterID
 
 	c.endpointister = endpointInformer.Lister()
 	c.endpointListerSynced = endpointInformer.Informer().HasSynced
+
+	c.externalNameEndpoints = set.NewSet()
+	c.ipEndpoints = set.NewSet()
 
 	return c
 }
@@ -89,8 +91,8 @@ func (c *Controller) Run(stopCh <-chan struct{}) {
 	// make sure the work queue is shutdown which will trigger workers to end
 	defer c.queue.ShutDown()
 
-	glog.Infof("Starting local-dns controller")
-	defer glog.Infof("Shutting down local-dns controller")
+	glog.Infof("Starting controller")
+	defer glog.Infof("Shutting down controller")
 
 	// wait for your secondary caches to fill before starting your work.
 	if !cache.WaitForCacheSync(stopCh, c.endpointListerSynced) {
@@ -120,11 +122,11 @@ func (c *Controller) calculateCache() {
 	}
 
 	updateNeeded := false
-	if externalNameEndpointsSet.Difference(c.externalNameEndpoints).Cardinality() > 0 {
+	if externalNameEndpointsSet.SymmetricDifference(c.externalNameEndpoints).Cardinality() > 0 {
 		updateNeeded = true
 	}
 
-	if ipEndpointsSet.Difference(c.ipEndpoints).Cardinality() > 0 {
+	if ipEndpointsSet.SymmetricDifference(c.ipEndpoints).Cardinality() > 0 {
 		updateNeeded = true
 	}
 
@@ -134,29 +136,27 @@ func (c *Controller) calculateCache() {
 
 	glog.V(5).Infof("Endpoints have changed, rewriting DNS configuration...")
 
-	err = c.RewriteDnsmasqConfig(externalNameEndpointsSet, ipEndpointsSet)
+	err = c.RewriteDnsmasqConfig(endpoints)
 	if err != nil {
 		runtime.HandleError(err)
 	}
 
-	for _, endpoint := range c.currentEndpoints {
+	c.externalNameEndpoints = externalNameEndpointsSet
+	c.ipEndpoints = ipEndpointsSet
 
-		if endpoint.Status.State == crv1.EndpointStateCreated {
+	for _, e := range endpoints {
+		if e.Status.State == crv1.EndpointStateCreated {
 			continue
 		}
 
-		endpoint = endpoint.DeepCopy()
+		endpoint := e.DeepCopy()
 		endpoint.Status.State = crv1.EndpointStateCreated
 
 		_, err := c.latticeClient.LatticeV1().Endpoints(endpoint.Namespace).Update(endpoint)
-
 		if err != nil {
 			runtime.HandleError(err)
 		}
 	}
-
-	c.refreshOldCache()
-
 }
 
 // endpointsSets returns true if the two lists of endpoints are differnt
@@ -167,12 +167,14 @@ func (c *Controller) endpointsSets(endpoints []*crv1.Endpoint) (set.Set, set.Set
 	for _, endpoint := range endpoints {
 		key := fmt.Sprintf("%v/%v", endpoint.Namespace, endpoint.Name)
 		if endpoint.Spec.ExternalName != nil {
-			externalNameEndpoints.Add(key)
+			endpointKey := fmt.Sprintf("/%v" + *endpoint.Spec.ExternalName)
+			externalNameEndpoints.Add(key + endpointKey)
 			continue
 		}
 
 		if endpoint.Spec.IP != nil {
-			ipEndpoints.Add(key)
+			ipKey := fmt.Sprintf("/%v" + *endpoint.Spec.IP)
+			ipEndpoints.Add(key + ipKey)
 			continue
 		}
 
@@ -182,58 +184,20 @@ func (c *Controller) endpointsSets(endpoints []*crv1.Endpoint) (set.Set, set.Set
 	return externalNameEndpoints, ipEndpoints, nil
 }
 
-// CreateEmptyFile creates an empty file, removing the previous file if it existed
-func CreateEmptyFile(filename string) (*os.File, error) {
-	_, err := os.Stat(filename)
-
-	// TODO: document this
-	if err == nil {
-		err := os.Remove(filename)
-
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	return os.OpenFile(filename, os.O_RDWR|os.O_CREATE, 0660)
-}
-
 // RewriteDnsmasqConfig rewrites the config files for the dns server
-func (c *Controller) RewriteDnsmasqConfig(externalNameEndpointsSet, ipEndpointsSet set.Set) error {
+func (c *Controller) RewriteDnsmasqConfig(endpoints []*crv1.Endpoint) error {
 
-	glog.V(4).Infof("Rewriting config %e, %e... ", c.hostConfigPath, c.serverConfigPath)
-
-	//// FIXME: use https://golang.org/pkg/io/ioutil/#WriteFile
-	//dnsmasqConfigFile, err := CreateEmptyFile(c.serverConfigPath)
-	//defer dnsmasqConfigFile.Sync()
-	//defer dnsmasqConfigFile.Close()
-
-	//if err != nil {
-	//	return err
-	//}
-
-	// FIXME: use https://golang.org/pkg/io/ioutil/#WriteFile
-	hostsFile, err := CreateEmptyFile(c.hostConfigPath)
-	defer hostsFile.Sync()
-	defer hostsFile.Close()
-
-	if err != nil {
-		return err
-	}
+	glog.V(4).Infof("Rewriting config %v, %v ... ", c.hostFilePath, c.dnsmasqConfigPath)
 
 	// This is an extra config file, so contains only the options which must be rewritten.
 	// Condition on cname is that it exists in the specified host file, or references another cname.
 	// Each cname entry of the form cname=ALIAS,...(addn aliases),TARGET
 	// Full specification here: http://www.thekelleys.org.uk/dnsmasq/docs/dnsmasq-man.html
 
-	// FIXME: we were here
 	dnsmasqConfigFileContents := ""
-	for setInterface := range externalNameEndpointsSet.Iter() {
-		endpoint, ok := setInterface.(*crv1.Endpoint)
-		if !ok {
-			return fmt.Errorf("value in externalNameEndpointsSet was not a *crv1.Endpoint")
-		}
+	hostConfigFileContents := ""
 
+	for _, endpoint := range endpoints {
 		systemID, err := util.SystemID(endpoint.Namespace)
 		if err != nil {
 			return err
@@ -242,59 +206,24 @@ func (c *Controller) RewriteDnsmasqConfig(externalNameEndpointsSet, ipEndpointsS
 		path := endpoint.Spec.Path.ToDomain(true)
 		cname := fmt.Sprintf("%v.local.%v.%v.local", path, c.clusterID, systemID)
 
-		dnsmasqConfigFileContents += fmt.Sprintf("cname=%v\n", cname)
+		if endpoint.Spec.IP != nil {
+			hostConfigFileContents += fmt.Sprintf("%v %v\n", *endpoint.Spec.IP, cname)
+		}
+
+		if endpoint.Spec.ExternalName != nil {
+			dnsmasqConfigFileContents += fmt.Sprintf("cname=%v,%v\n", cname, *endpoint.Spec.ExternalName)
+		}
 	}
 
-	err = ioutil.WriteFile(c.serverConfigPath, []byte(dnsmasqConfigFileContents), 0660)
+	err := ioutil.WriteFile(c.dnsmasqConfigPath, []byte(dnsmasqConfigFileContents), 0660)
 	if err != nil {
 		return err
 	}
 
-	for _, e := range c.currentEndpoints {
-		cname := e.Spec.ExternalName
-		endpoint := e.Spec.IP
-
-		if err != nil {
-			runtime.HandleError(err)
-		}
-
-		path := e.Spec.Path.ToDomain(true)
-		path = path + ".local." + c.clusterID + "." + string(systemID) + ".local"
-
-		if endpoint != nil && cname != nil {
-			return fmt.Errorf("endpoint %e has both a cname and an endpoint", path)
-		}
-
-		if cname != nil {
-			_, err = dnsmasqConfigFile.WriteString("cname=" + path + "," + *cname + "\n")
-			glog.V(5).Infof("Added: cname=" + path + "," + *cname + "\n")
-		}
-
-		if endpoint != nil {
-			_, err = hostsFile.WriteString(*endpoint + " " + path + "\n")
-			glog.V(5).Infof("Added: " + *endpoint + " " + path + "\n")
-		}
-
-		if err != nil {
-			return err
-		}
-
-		// c.eventRecorder.Event(c, "Normal", "DnsRewrite", "The endpoint was added.")
+	err = ioutil.WriteFile(c.hostFilePath, []byte(hostConfigFileContents), 0660)
+	if err != nil {
+		return err
 	}
 
 	return nil
 }
-
-// refreshOldCache is called after rewriting the config, and updates the cached view of the in memory cname/host files.
-func (c *Controller) refreshOldCache() {
-	c.previousEndpoints = c.currentEndpoints
-	c.currentEndpoints = nil
-}
-
-//func (c *Controller) GetObjectKind() schema.ObjectKind {
-//	return schema.EmptyObjectKind
-//}
-//
-//func (c *Controller) DeepCopyObject() rtime.Object {
-//	return c
-//}

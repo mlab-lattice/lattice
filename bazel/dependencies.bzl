@@ -13,7 +13,6 @@ def go_dependencies():
         "github.com/spf13/cobra",
         "github.com/olekukonko/tablewriter",
         "github.com/deckarep/golang-set",
-        "github.com/golang/groupcache",
         "golang.org/x/crypto",
         "gopkg.in/src-d/go-git.v4",
         "k8s.io/api",
@@ -21,7 +20,6 @@ def go_dependencies():
         "k8s.io/apimachinery",
         "k8s.io/client-go",
         "k8s.io/kubernetes",
-        "k8s.io/kube-openapi",
     ]
 
     for dep in dependencies:
@@ -33,6 +31,7 @@ def go_dependencies():
     _go_dependencies_com_github_gin_gonic_gin()
     _go_dependencies_com_github_spf13_cobra()
     _go_dependencies_com_github_olekukonko_tablewriter()
+    _go_dependencies_com_github_deckarep_golang_set()
     _go_dependencies_in_gopkg_src_d_go_git_v4()
     _go_dependencies_io_k8s()
 
@@ -103,6 +102,14 @@ def _go_dependencies_in_gopkg_src_d_go_git_v4():
       "github.com/xanzy/ssh-agent",
       "gopkg.in/src-d/go-billy.v3",
       "gopkg.in/warnings.v0",
+    ]
+
+    for dep in dependencies:
+      go_repository(**GO_REPOSITORIES[dep])
+
+def _go_dependencies_com_github_deckarep_golang_set():
+    dependencies = [
+        "github.com/golang/groupcache",
     ]
 
     for dep in dependencies:

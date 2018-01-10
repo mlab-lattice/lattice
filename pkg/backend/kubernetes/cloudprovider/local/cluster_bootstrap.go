@@ -16,6 +16,15 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
+const (
+	dnsPod        = "local-dns"
+	dnsController = "local-dns-controller"
+	dnsmasqServer = "local-dnsmasq-server"
+	dnsService    = "local-dns-service"
+
+	serviceAccountDNS = "local-dns"
+)
+
 func (cp *DefaultLocalCloudProvider) BootstrapClusterResources(resources *clusterbootstrapper.ClusterResources) {
 	cp.bootstrapClusterDNS(resources)
 
@@ -34,18 +43,17 @@ func (cp *DefaultLocalCloudProvider) BootstrapClusterResources(resources *cluste
 }
 
 func (cp *DefaultLocalCloudProvider) bootstrapClusterDNS(resources *clusterbootstrapper.ClusterResources) {
-
 	namespace := kubeutil.InternalNamespace(cp.ClusterID)
 
-	clusterIDParam := "clusterID=" + string(cp.ClusterID)
+	clusterIDParam := "cluster-id=" + string(cp.ClusterID)
 	controllerArgs := []string{clusterIDParam}
-	controllerArgs = append(controllerArgs, cp.DNS.DNSControllerArgs...)
+	controllerArgs = append(controllerArgs, cp.DNS.ControllerArgs...)
 
 	dnsmasqArgs := []string{}
-	dnsmasqArgs = append(dnsmasqArgs, cp.DNS.DNSServerArgs...)
+	dnsmasqArgs = append(dnsmasqArgs, cp.DNS.ServerArgs...)
 
 	labels := map[string]string{
-		"key": MasterNodeDNSServer,
+		"local.cloud-provider.lattice.mlab.com/dns": dnsmasqServer,
 	}
 
 	daemonSet := &appsv1.DaemonSet{
@@ -54,7 +62,7 @@ func (cp *DefaultLocalCloudProvider) bootstrapClusterDNS(resources *clusterboots
 			APIVersion: appsv1.GroupName + "/v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      MasterNodeDNSServer,
+			Name:      dnsPod,
 			Namespace: namespace,
 			Labels:    labels,
 		},
@@ -64,25 +72,25 @@ func (cp *DefaultLocalCloudProvider) bootstrapClusterDNS(resources *clusterboots
 			},
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:   MasterNodeDNSServer,
+					Name:   dnsPod,
 					Labels: labels,
 				},
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{
 						{
-							Name:  MasterNodeDNSSController,
-							Image: cp.DNS.DNSControllerImage,
+							Name:  dnsController,
+							Image: cp.DNS.ControllerImage,
 							Args:  controllerArgs,
 							VolumeMounts: []corev1.VolumeMount{
 								{
 									Name:      "dns-config",
-									MountPath: DNSSharedConfigDirectory,
+									MountPath: DNSConfigDirectory,
 								},
 							},
 						},
 						{
-							Name:  MasterNodeDNSServer,
-							Image: cp.DNS.DNSServerImage,
+							Name:  dnsmasqServer,
+							Image: cp.DNS.ServerImage,
 							Args:  dnsmasqArgs,
 							Ports: []corev1.ContainerPort{
 								{
@@ -94,19 +102,19 @@ func (cp *DefaultLocalCloudProvider) bootstrapClusterDNS(resources *clusterboots
 							VolumeMounts: []corev1.VolumeMount{
 								{
 									Name:      "dns-config",
-									MountPath: DNSSharedConfigDirectory,
+									MountPath: DNSConfigDirectory,
 								},
 							},
 						},
 					},
 					DNSPolicy:          corev1.DNSDefault,
-					ServiceAccountName: ServiceAccountLocalDNS,
+					ServiceAccountName: serviceAccountDNS,
 					Volumes: []corev1.Volume{
 						{
 							Name: "dns-config",
 							VolumeSource: corev1.VolumeSource{
 								HostPath: &corev1.HostPathVolumeSource{
-									Path: DNSSharedConfigDirectory,
+									Path: DNSConfigDirectory,
 								},
 							},
 						},
@@ -120,13 +128,13 @@ func (cp *DefaultLocalCloudProvider) bootstrapClusterDNS(resources *clusterboots
 
 	service := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      MasterNodeDNSService,
+			Name:      dnsService,
 			Namespace: namespace,
 			Labels:    labels,
 		},
 		Spec: corev1.ServiceSpec{
 			Selector:  labels,
-			ClusterIP: LocalDNSServerIP,
+			ClusterIP: localDNSServerIP,
 			Type:      corev1.ServiceTypeClusterIP,
 			Ports: []corev1.ServicePort{
 				{
@@ -154,7 +162,7 @@ func (cp *DefaultLocalCloudProvider) bootstrapClusterDNS(resources *clusterboots
 			APIVersion: rbacv1.GroupName + "/v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name: MasterNodeDNSService,
+			Name: serviceAccountDNS,
 		},
 		Rules: []rbacv1.PolicyRule{
 			// lattice endpoints
@@ -175,7 +183,7 @@ func (cp *DefaultLocalCloudProvider) bootstrapClusterDNS(resources *clusterboots
 			APIVersion: "v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      ServiceAccountLocalDNS,
+			Name:      serviceAccountDNS,
 			Namespace: namespace,
 		},
 	}
@@ -189,7 +197,7 @@ func (cp *DefaultLocalCloudProvider) bootstrapClusterDNS(resources *clusterboots
 			APIVersion: rbacv1.GroupName + "/v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name: MasterNodeDNSService,
+			Name: serviceAccountDNS,
 		},
 		Subjects: []rbacv1.Subject{
 			{

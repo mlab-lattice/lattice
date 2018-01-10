@@ -40,27 +40,27 @@ var (
 	localDNSControllerArgList = []string{
 		"-v", "5",
 		"--logtostderr",
-		"--dnsmasq-config-path", dnsconstants.DNSSharedConfigDirectory + dnsconstants.DnsmasqConfigFile,
-		"--hosts-file-path", dnsconstants.DNSSharedConfigDirectory + dnsconstants.DNSHostsFile,
+		"--dnsmasq-config-path", dnsconstants.DNSConfigDirectory + dnsconstants.DnsmasqConfigFile,
+		"--hosts-file-path", dnsconstants.DNSConfigDirectory + dnsconstants.DNSHostsFile,
 	}
 
 	dnsNannyArgList = []string{
 		"-v=2",
 		"-logtostderr",
 		"-restartDnsmasq=true",
-		"-configDir=" + dnsconstants.DNSSharedConfigDirectory,
+		"-configDir=" + dnsconstants.DNSConfigDirectory,
 	}
 
 	dnsmasqArgList = []string{
 		"-k", // Keep in foreground so as to not immediately exit.
 		"-R", // Dont read provided /etc/resolv.conf
-		"--hostsdir=" + dnsconstants.DNSSharedConfigDirectory,             // Read all the hosts from this directory. File changes read automatically by dnsmasq.
-		"--conf-dir=" + dnsconstants.DNSSharedConfigDirectory + ",*.conf", // Read all *.conf files in the directory as dns config files
+		"--hostsdir=" + dnsconstants.DNSConfigDirectory,             // Read all the hosts from this directory. File changes read automatically by dnsmasq.
+		"--conf-dir=" + dnsconstants.DNSConfigDirectory + ",*.conf", // Read all *.conf files in the directory as dns config files
 	}
 
 	// Use ':' as the separator here, as ',' is included in the --conf-dir argument
-	localDNSServerArgs     = "local-dns-server-args=" + strings.Join(append(append(dnsNannyArgList, "--"), dnsmasqArgList...), ":")
-	localDNSControllerArgs = "local-dns-controller-args=" + strings.Join(localDNSControllerArgList, ",")
+	dnsNannyArgs      = "local-dns-server-args=" + strings.Join(append(append(dnsNannyArgList, "--"), dnsmasqArgList...), ":")
+	dnsControllerArgs = "local-dns-controller-args=" + strings.Join(localDNSControllerArgList, ",")
 )
 
 func NewLocalProvisioner(dockerAPIVersion, latticeContainerRegistry, latticeContainerRepoPrefix, logPath string) (*LocalProvisioner, error) {
@@ -200,10 +200,10 @@ func (lp *LocalProvisioner) bootstrap(address, url, name string) error {
 								"--manager-api-image", lp.getLatticeContainerImage(kubeconstants.DockerImageManagerAPIRest),
 								"--cloud-provider", "local",
 								"--cloud-provider-var", "cluster-ip=" + address,
-								"--cloud-provider-var", "dns-controller-image=" + lp.getLatticeContainerImage(dnsconstants.DockerImageLocalDNSController),
-								"--cloud-provider-var", "dns-server-image=" + dnsconstants.DockerImageLocalDNSServer,
-								"--cloud-provider-var", "dns-server-args=" + localDNSServerArgs,
-								"--cloud-provider-var", "dns-controller-args=" + localDNSControllerArgs,
+								"--cloud-provider-var", "dns-controller-image=" + lp.getLatticeContainerImage(dnsconstants.DockerImageDNSController),
+								"--cloud-provider-var", "dns-nanny-image=" + dnsconstants.DockerImageDnsmasqServer,
+								"--cloud-provider-var", "dns-nanny-args=" + dnsNannyArgs,
+								"--cloud-provider-var", "dns-controller-args=" + dnsControllerArgs,
 								"--component-builder-image", lp.getLatticeContainerImage(kubeconstants.DockerImageComponentBuilder),
 								"--component-build-docker-artifact-registry", "lattice-local",
 								"--component-build-docker-artifact-repository-per-image=true",

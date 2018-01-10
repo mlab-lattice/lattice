@@ -77,11 +77,11 @@ var options = &clusterbootstrap.Options{
 }
 
 // FIXME :: temporary until better solution for nested struct.
-type LocalCloudOptionsFlat struct {
+type localCloudOptionsFlat struct {
 	IP                 string
 	DNSControllerImage string
-	DNSServerImage     string
-	DNSServerArgs      []string
+	DNSNannyImage      string
+	DNSNannyArgs       []string
 	DNSControllerArgs  []string
 }
 
@@ -313,7 +313,7 @@ func parseCloudProviderVars() (*cloudprovider.Options, error) {
 
 func parseCloudProviderVarsLocal() (*localcloudprovider.Options, error) {
 	options := &localcloudprovider.Options{}
-	flatStruct := LocalCloudOptionsFlat{}
+	flatStruct := localCloudOptionsFlat{}
 
 	flags := cli.EmbeddedFlag{
 		Target: &flatStruct,
@@ -326,13 +326,13 @@ func parseCloudProviderVarsLocal() (*localcloudprovider.Options, error) {
 				Required:     true,
 				EncodingName: "DNSControllerImage",
 			},
-			"dns-server-image": {
+			"dns-nanny-image": {
 				Required:     true,
-				EncodingName: "DNSServerImage",
+				EncodingName: "DNSNannyImage",
 			},
-			"dns-server-args": {
+			"dns-nanny-args": {
 				Required:     false,
-				EncodingName: "DNSServerArgs",
+				EncodingName: "DNSNannyArgs",
 				ValueParser: func(value string) (interface{}, error) {
 					var argsWithoutPrefix = strings.Join(strings.Split(value, "=")[1:], "=")
 					return strings.Split(argsWithoutPrefix, ":"), nil
@@ -355,11 +355,11 @@ func parseCloudProviderVarsLocal() (*localcloudprovider.Options, error) {
 	}
 
 	options.IP = flatStruct.IP
-	options.DNS = &localcloudprovider.DNSOptions{}
-	options.DNS.DNSControllerArgs = flatStruct.DNSControllerArgs
-	options.DNS.DNSServerArgs = flatStruct.DNSServerArgs
-	options.DNS.DNSServerImage = flatStruct.DNSServerImage
-	options.DNS.DNSControllerImage = flatStruct.DNSControllerImage
+	options.DNS = &localcloudprovider.OptionsDNS{}
+	options.DNS.ControllerArgs = flatStruct.DNSControllerArgs
+	options.DNS.ServerArgs = flatStruct.DNSNannyArgs
+	options.DNS.ServerImage = flatStruct.DNSNannyImage
+	options.DNS.ControllerImage = flatStruct.DNSControllerImage
 
 	return options, nil
 }

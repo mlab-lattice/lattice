@@ -3,7 +3,7 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 go_library(
     name = "go_default_library",
     srcs = ["dnscontroller.go"],
-    importpath = "github.com/mlab-lattice/system/pkg/backend/kubernetes/cloudprovider/local/controller",
+    importpath = "github.com/mlab-lattice/system/pkg/backend/kubernetes/cloudprovider/local/dns/controller",
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/backend/kubernetes/customresource/apis/lattice/v1:go_default_library",
@@ -15,8 +15,6 @@ go_library(
         "@com_github_golang_glog//:go_default_library",
         "@io_k8s_api//core/v1:go_default_library",
         "@io_k8s_apimachinery//pkg/labels:go_default_library",
-        "@io_k8s_apimachinery//pkg/runtime:go_default_library",
-        "@io_k8s_apimachinery//pkg/runtime/schema:go_default_library",
         "@io_k8s_apimachinery//pkg/util/runtime:go_default_library",
         "@io_k8s_apimachinery//pkg/util/wait:go_default_library",
         "@io_k8s_client_go//kubernetes:go_default_library",
@@ -32,7 +30,7 @@ go_test(
     name = "go_default_test",
     srcs = ["dnscontroller_test.go"],
     embed = [":go_default_library"],
-    importpath = "github.com/mlab-lattice/system/pkg/backend/kubernetes/cloudprovider/local/controller",
+    importpath = "github.com/mlab-lattice/system/pkg/backend/kubernetes/cloudprovider/local/dns/controller",
     deps = [
         "//pkg/backend/kubernetes/customresource/apis/lattice/v1:go_default_library",
         "//pkg/backend/kubernetes/customresource/generated/clientset/versioned/fake:go_default_library",

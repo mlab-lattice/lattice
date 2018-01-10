@@ -335,7 +335,7 @@ func TestEndpointCreation(t *testing.T) {
 				}
 			}
 
-			t.Logf("Updating cache and writing to: %v", controller.hostConfigPath)
+			t.Logf("Updating cache and writing to: %v", controller.hostFilePath)
 			controller.calculateCache()
 		}
 
@@ -344,7 +344,7 @@ func TestEndpointCreation(t *testing.T) {
 		}
 
 		if testCase.ExpectedCnames != nil {
-			cnameFile, err := ioutil.ReadFile(controller.serverConfigPath)
+			cnameFile, err := ioutil.ReadFile(controller.dnsmasqConfigPath)
 
 			if err != nil {
 				t.Errorf("Error reading cname file: %v", err)
@@ -359,7 +359,7 @@ func TestEndpointCreation(t *testing.T) {
 		}
 
 		if testCase.ExpectedHosts != nil {
-			hostFile, err := ioutil.ReadFile(controller.hostConfigPath)
+			hostFile, err := ioutil.ReadFile(controller.hostFilePath)
 
 			if err != nil {
 				t.Errorf("Error reading host file: %v", err)

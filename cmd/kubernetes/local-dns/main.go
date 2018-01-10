@@ -6,7 +6,7 @@ import (
 
 	controller "github.com/mlab-lattice/system/cmd/kubernetes/lattice-controller-manager/app/common"
 	dnsconstants "github.com/mlab-lattice/system/pkg/backend/kubernetes/cloudprovider/local"
-	"github.com/mlab-lattice/system/pkg/backend/kubernetes/cloudprovider/local/controller"
+	"github.com/mlab-lattice/system/pkg/backend/kubernetes/cloudprovider/local/dns/controller"
 	latticeinformers "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/informers/externalversions"
 
 	clientset "k8s.io/client-go/kubernetes"
@@ -25,9 +25,9 @@ var (
 
 func init() {
 	flag.StringVar(&kubeconfig, "kubeconfig", "", "path to kubeconfig file")
-	flag.StringVar(&clusterID, "clusterID", "", "ID of the cluster")
-	flag.StringVar(&dnsmasqConfigPath, "dnsmasq-config-path", dnsconstants.DNSSharedConfigDirectory+dnsconstants.DnsmasqConfigFile, "path to the additional dnsmasq configuration file")
-	flag.StringVar(&hostsFilePath, "hosts-file-path", dnsconstants.DNSSharedConfigDirectory+dnsconstants.DNSHostsFile, "path to the additional dnsmasq hosts")
+	flag.StringVar(&clusterID, "cluster-id", "", "ID of the cluster")
+	flag.StringVar(&dnsmasqConfigPath, "dnsmasq-config-path", dnsconstants.DnsmasqConfigFile, "path to the additional dnsmasq configuration file")
+	flag.StringVar(&hostsFilePath, "hosts-file-path", dnsconstants.DNSHostsFile, "path to the additional dnsmasq hosts")
 	flag.Parse()
 }
 
@@ -52,17 +52,13 @@ func main() {
 	versionedLatticeClient := lcb.ClientOrDie("shared-latticeinformers")
 	latticeInformers := latticeinformers.NewSharedInformerFactory(versionedLatticeClient, time.Duration(12*time.Hour))
 
-	if err != nil {
-		panic(err)
-	}
-
 	glog.V(1).Info("Starting dns controller")
 
 	go dnscontroller.NewController(
 		dnsmasqConfigPath,
 		hostsFilePath,
 		clusterID,
-		lcb.ClientOrDie("local-dns-lattice-address"),
+		lcb.ClientOrDie("local-dns-lattice-endpoints"),
 		clientset.NewForConfigOrDie(config),
 		latticeInformers.Lattice().V1().Endpoints(),
 	).Run(stop)

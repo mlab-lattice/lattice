@@ -403,6 +403,8 @@ GO_REPOSITORIES = {
         "importpath": "github.com/deckarep/golang-set",
     },
 
+    # github.com/deckarep/golang-set dependencies
+    # took master HEAD
     "github.com/golang/groupcache": {
         "name": "com_github_golang_groupcache",
         "commit": "84a468cf14b4376def5d68c722b139b881c450a4",
