@@ -1,6 +1,7 @@
 package rest
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/mlab-lattice/system/pkg/managerapi/client"
@@ -20,7 +21,7 @@ func NewClient(managerAPIURL string) *Client {
 }
 
 func (c *Client) Status() (bool, error) {
-	resp, err := c.restClient.Get(c.baseURL).Do()
+	resp, err := c.restClient.Get(fmt.Sprintf("%v/status", c.baseURL)).Do()
 	if err != nil {
 		return false, err
 	}
