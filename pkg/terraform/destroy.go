@@ -10,14 +10,16 @@ func Destroy(workDirectory string, config *Config) error {
 		return err
 	}
 
-	configBytes, err := json.Marshal(config)
-	if err != nil {
-		return err
-	}
+	if config != nil {
+		configBytes, err := json.Marshal(config)
+		if err != nil {
+			return err
+		}
 
-	err = tec.AddFile("config.tf", configBytes)
-	if err != nil {
-		return err
+		err = tec.AddFile("config.tf.json", configBytes)
+		if err != nil {
+			return err
+		}
 	}
 
 	result, _, err := tec.Init()

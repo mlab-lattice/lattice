@@ -59,6 +59,8 @@ func NewClusterProvisioner(latticeImageDockerRepository, latticeContainerRepoPre
 		latticeContainerRegistry:   latticeImageDockerRepository,
 		latticeContainerRepoPrefix: latticeContainerRepoPrefix,
 
+		terraformModulePath: options.TerraformModulePath,
+
 		accountID:         options.AccountID,
 		region:            options.Region,
 		availabilityZones: options.AvailabilityZones,
@@ -71,7 +73,8 @@ func NewClusterProvisioner(latticeImageDockerRepository, latticeContainerRepoPre
 }
 
 func (p *DefaultAWSClusterProvisioner) Provision(clusterID, url string) error {
-	clusterConfig := p.clusterConfig(clusterID, url)
+	clusterModule := p.clusterModule(clusterID, url)
+	clusterConfig := p.clusterConfig(clusterModule)
 
 	err := terraform.Apply(p.workDirectory, clusterConfig)
 	if err != nil {
@@ -91,8 +94,30 @@ func (p *DefaultAWSClusterProvisioner) Provision(clusterID, url string) error {
 	})
 }
 
-func (p *DefaultAWSClusterProvisioner) clusterConfig(clusterID, url string) *terraform.Config {
-	clusterModule := awsterraform.Cluster{
+func (p *DefaultAWSClusterProvisioner) clusterConfig(clusterModule *awsterraform.Cluster) *terraform.Config {
+	config := &terraform.Config{
+		Provider: awstfprovider.Provider{
+			Region: p.region,
+		},
+	}
+
+	if clusterModule != nil {
+		config.Modules = map[string]interface{}{
+			"cluster": clusterModule,
+		}
+
+		config.Output = map[string]terraform.ConfigOutput{
+			terraformOutputclusterManagerAddress: {
+				Value: fmt.Sprintf("${module.cluster.%v}", terraformOutputclusterManagerAddress),
+			},
+		}
+	}
+
+	return config
+}
+
+func (p *DefaultAWSClusterProvisioner) clusterModule(clusterID, url string) *awsterraform.Cluster {
+	return &awsterraform.Cluster{
 		Source: filepath.Join(p.terraformModulePath, clusterModulePath),
 
 		AWSAccountID:      p.accountID,
@@ -108,20 +133,6 @@ func (p *DefaultAWSClusterProvisioner) clusterConfig(clusterID, url string) *ter
 		ClusterManagerAPIPort:  clusterManagerAPIPort,
 
 		BaseNodeAMIID: p.baseNodeAMIID,
-	}
-
-	return &terraform.Config{
-		Provider: awstfprovider.Provider{
-			Region: p.region,
-		},
-		Modules: map[string]interface{}{
-			"cluster": clusterModule,
-		},
-		Output: map[string]terraform.ConfigOutput{
-			terraformOutputclusterManagerAddress: {
-				Value: fmt.Sprintf("${module.cluster.%v}", terraformOutputclusterManagerAddress),
-			},
-		},
 	}
 }
 
@@ -171,6 +182,6 @@ func (p *DefaultAWSClusterProvisioner) Deprovision(clusterID string) error {
 		return true, nil
 	})
 
-	clusterConfig := p.clusterConfig(clusterID, "")
-	return terraform.Destroy(p.workDirectory, clusterConfig)
+	//clusterConfig := p.clusterConfig(nil)
+	return terraform.Destroy(p.workDirectory, nil)
 }
