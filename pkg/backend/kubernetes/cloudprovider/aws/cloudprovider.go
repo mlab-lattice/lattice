@@ -48,7 +48,7 @@ type CloudProvider interface {
 	KeyName() string
 }
 
-func NewAWSCloudProvider(options *Options) *DefaultAWSCloudProvider {
+func NewCloudProvider(options *Options) *DefaultAWSCloudProvider {
 	return &DefaultAWSCloudProvider{
 		region:    options.Region,
 		accountID: options.AccountID,

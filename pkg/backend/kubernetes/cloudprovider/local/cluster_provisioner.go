@@ -27,13 +27,16 @@ const (
 	clusterNamePrefixMinikube = "lattice-local-"
 )
 
+type ClusterProvisionerOptions struct {
+}
+
 type DefaultLocalClusterProvisioner struct {
 	latticeContainerRegistry   string
 	latticeContainerRepoPrefix string
 	mec                        *minikube.ExecContext
 }
 
-func NewLocalClusterProvisioner(latticeContainerRegistry, latticeContainerRepoPrefix, workingDir string) (*DefaultLocalClusterProvisioner, error) {
+func NewClusterProvisioner(latticeContainerRegistry, latticeContainerRepoPrefix, workingDir string, options *ClusterProvisionerOptions) (*DefaultLocalClusterProvisioner, error) {
 	mec, err := minikube.NewMinikubeExecContext(fmt.Sprintf("%v/logs", workingDir))
 	if err != nil {
 		return nil, err

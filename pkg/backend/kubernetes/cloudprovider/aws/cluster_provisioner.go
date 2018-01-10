@@ -52,7 +52,7 @@ type DefaultAWSClusterProvisioner struct {
 	baseNodeAMIID          string
 }
 
-func NewAWSProvisioner(latticeImageDockerRepository, latticeContainerRepoPrefix, workingDir string, options *ClusterProvisionerOptions) *DefaultAWSClusterProvisioner {
+func NewClusterProvisioner(latticeImageDockerRepository, latticeContainerRepoPrefix, workingDir string, options *ClusterProvisionerOptions) *DefaultAWSClusterProvisioner {
 	return &DefaultAWSClusterProvisioner{
 		workDirectory: workingDir,
 

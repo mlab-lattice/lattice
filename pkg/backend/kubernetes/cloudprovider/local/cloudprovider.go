@@ -25,7 +25,7 @@ type CloudProvider interface {
 	IP() string
 }
 
-func NewLocalCloudProvider(options *Options) *DefaultLocalCloudProvider {
+func NewCloudProvider(options *Options) *DefaultLocalCloudProvider {
 	return &DefaultLocalCloudProvider{
 		ip: options.IP,
 	}

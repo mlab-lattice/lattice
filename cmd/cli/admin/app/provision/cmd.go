@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	kubeprovisioner "github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/cluster/provisioner"
+	"github.com/mlab-lattice/system/pkg/backend/kubernetes/cloudprovider/aws"
 	"github.com/mlab-lattice/system/pkg/constants"
 	"github.com/mlab-lattice/system/pkg/lifecycle/cluster/provisioner"
 	"github.com/mlab-lattice/system/pkg/util/cli"
@@ -35,7 +35,7 @@ var Cmd = &cobra.Command{
 				panic(fmt.Sprintf("error parsing kubernetes backend vars: %v", err))
 			}
 
-			provisioner, err = getKubernetesProvisioner(provider, name)
+			provisioner, err = getKubernetesProvisioner(provider)
 			if err != nil {
 				panic(err)
 			}
@@ -71,7 +71,7 @@ var backendConfigKubernetes = struct {
 }{}
 
 type providerConfig struct {
-	AWS *kubeprovisioner.AWSProvisionerConfig
+	AWS *aws.ClusterProvisionerOptions
 }
 
 func parseBackendKubernetesVars(provider string) error {
@@ -100,11 +100,11 @@ func parseBackendKubernetesVars(provider string) error {
 			EncodingName: "ProviderConfig",
 			Array:        true,
 			ArrayValueParser: func(values []string) (interface{}, error) {
-				awsConfig := kubeprovisioner.AWSProvisionerConfig{}
+				awsConfig := aws.ClusterProvisionerOptions{}
 				providerVars := cli.EmbeddedFlag{
 					Target: &awsConfig,
 					Expected: map[string]cli.EmbeddedFlagValue{
-						"module-path": {
+						"terraform-module-path": {
 							Required:     true,
 							EncodingName: "TerraformModulePath",
 						},

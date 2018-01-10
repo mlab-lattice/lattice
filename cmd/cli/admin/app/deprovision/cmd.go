@@ -25,7 +25,7 @@ var Cmd = &cobra.Command{
 		switch backend {
 		case constants.BackendTypeKubernetes:
 			var err error
-			provisioner, err = getKubernetesProvisioner(provider, name)
+			provisioner, err = getKubernetesProvisioner(provider)
 			if err != nil {
 				panic(err)
 			}

@@ -49,11 +49,11 @@ type Interface interface {
 
 func NewCloudProvider(options *Options) (Interface, error) {
 	if options.AWS != nil {
-		return aws.NewAWSCloudProvider(options.AWS), nil
+		return aws.NewCloudProvider(options.AWS), nil
 	}
 
 	if options.Local != nil {
-		return local.NewLocalCloudProvider(options.Local), nil
+		return local.NewCloudProvider(options.Local), nil
 	}
 
 	return nil, fmt.Errorf("must provide cloud provider options")

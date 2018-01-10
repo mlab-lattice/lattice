@@ -163,7 +163,7 @@ func (c *Controller) newAWSCloudProvider() aws.CloudProvider {
 		KeyName:       c.config.CloudProvider.AWS.KeyName,
 	}
 
-	return aws.NewAWSCloudProvider(awsOptions)
+	return aws.NewCloudProvider(awsOptions)
 }
 
 func (c *Controller) handleNodePoolAdd(obj interface{}) {
