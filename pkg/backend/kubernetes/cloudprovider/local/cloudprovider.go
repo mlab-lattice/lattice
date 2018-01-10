@@ -32,8 +32,8 @@ type Options struct {
 }
 
 type OptionsDNS struct {
-	ServerImage     string
-	ServerArgs      []string
+	DnsnannyImage   string
+	DnsnannyArgs    []string
 	ControllerImage string
 	ControllerArgs  []string
 }

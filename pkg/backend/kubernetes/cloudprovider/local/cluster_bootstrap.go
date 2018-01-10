@@ -50,7 +50,7 @@ func (cp *DefaultLocalCloudProvider) bootstrapClusterDNS(resources *clusterboots
 	controllerArgs = append(controllerArgs, cp.DNS.ControllerArgs...)
 
 	dnsmasqArgs := []string{}
-	dnsmasqArgs = append(dnsmasqArgs, cp.DNS.ServerArgs...)
+	dnsmasqArgs = append(dnsmasqArgs, cp.DNS.DnsnannyArgs...)
 
 	labels := map[string]string{
 		"local.cloud-provider.lattice.mlab.com/dns": dnsmasqServer,
@@ -90,7 +90,7 @@ func (cp *DefaultLocalCloudProvider) bootstrapClusterDNS(resources *clusterboots
 						},
 						{
 							Name:  dnsmasqServer,
-							Image: cp.DNS.ServerImage,
+							Image: cp.DNS.DnsnannyImage,
 							Args:  dnsmasqArgs,
 							Ports: []corev1.ContainerPort{
 								{
