@@ -5,14 +5,14 @@ import (
 	"errors"
 )
 
-// environment. Template Parsing environment
+// environment. Template evaluation environment
 type environment struct {
 	options *Options
 	engine  *TemplateEngine
 	stack   *environmentStack
 }
 
-// newenvironment creates a new environment object
+// newEnvironment creates a new environment object
 func newEnvironment(engine *TemplateEngine, options *Options) *environment {
 	env := &environment{
 		engine:  engine,
@@ -23,7 +23,7 @@ func newEnvironment(engine *TemplateEngine, options *Options) *environment {
 	return env
 }
 
-// currentDir returns the current directory of the file being parsed
+// parametersAndVariables returns a union of parameters and variables
 func (env *environment) parametersAndVariables() map[string]interface{} {
 	result := make(map[string]interface{})
 	for k, v := range env.currentFrame().parameters {
@@ -37,19 +37,21 @@ func (env *environment) parametersAndVariables() map[string]interface{} {
 	return result
 }
 
+// push pushes current environment to the stack. Should be called in $include
 func (env *environment) push(
 	baseUrl string,
 	parameters map[string]interface{},
 	variables map[string]interface{}) {
-	env.stack.Push(&environmentStackFrame{
+	env.stack.push(&environmentStackFrame{
 		baseUrl:    baseUrl,
 		parameters: parameters,
 		variables:  variables,
 	})
 }
 
+// pop pops environment stack. Called after $include is done
 func (env *environment) pop() error {
-	_, err := env.stack.Pop()
+	_, err := env.stack.pop()
 	if err != nil {
 		return err
 	}
@@ -57,8 +59,9 @@ func (env *environment) pop() error {
 	return nil
 }
 
+// currentFrame returns the current stack frame. nil if stack is empty
 func (env *environment) currentFrame() *environmentStackFrame {
-	currentFrame, _ := env.stack.Peek()
+	currentFrame, _ := env.stack.peek()
 	return currentFrame
 
 }
@@ -88,12 +91,12 @@ func (s *environmentStack) length() int {
 }
 
 //Push pushes a frame into stack
-func (s *environmentStack) Push(value *environmentStackFrame) {
+func (s *environmentStack) push(value *environmentStackFrame) {
 	s.data = append(s.data, value)
 }
 
 //pop the top item out, if stack is empty, will return ErrEmptyStack decleared above
-func (s *environmentStack) Pop() (*environmentStackFrame, error) {
+func (s *environmentStack) pop() (*environmentStackFrame, error) {
 	if s.length() > 0 {
 		rect := s.data[s.length()-1]
 		s.data = s.data[:s.length()-1]
@@ -105,7 +108,7 @@ func (s *environmentStack) Pop() (*environmentStackFrame, error) {
 //peek the top item. Notice, this is like a pointer:
 //tmp, _ := s.Peek(); tmp = 123;
 //s.Pop() should return 123, nil.
-func (s *environmentStack) Peek() (*environmentStackFrame, error) {
+func (s *environmentStack) peek() (*environmentStackFrame, error) {
 	if s.length() > 0 {
 		return s.data[s.length()-1], nil
 	}

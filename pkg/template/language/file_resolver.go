@@ -14,6 +14,7 @@ import (
 // WORK_DIR
 const WORK_DIR = "/tmp/lattice-core/git-file-repository"
 
+// resolveUrl reads the template file by resolving the url into a urlResource w
 func resolveUrl(url string, env *environment) (*urlResource, error) {
 	// if its a git url then return a templateURLInfo for a git url
 	if isGitUrl(url) {
@@ -26,7 +27,7 @@ func resolveUrl(url string, env *environment) (*urlResource, error) {
 	return nil, fmt.Errorf("Unsupported url %s", url)
 }
 
-// makeGitRepositoryFor constructs a git file repository for the specified url
+// fetchGitFileContents fetches the specified git file contents
 func fetchGitFileContents(repoUrl string, fileName string, env *environment) ([]byte, error) {
 
 	gitResolver, _ := git.NewResolver(WORK_DIR)
@@ -43,13 +44,13 @@ func fetchGitFileContents(repoUrl string, fileName string, env *environment) ([]
 
 }
 
-// urlResource represents info needed when parsing a template url
+// urlResource artifact for url resolution
 type urlResource struct {
 	baseUrl string
 	data    map[string]interface{}
 }
 
-// parseGitTemplateUrl
+// resolveGitUrl resolves a git url
 func resolveGitUrl(url string, env *environment) (*urlResource, error) {
 	if !isGitUrl(url) {
 		return nil, fmt.Errorf("Invalid git url: '%s'", url)
@@ -73,6 +74,7 @@ func resolveGitUrl(url string, env *environment) (*urlResource, error) {
 
 }
 
+// newUrlResource creates a new urlResource struct
 func newUrlResource(baseUrl string, resourcePath string, bytes []byte) (*urlResource, error) {
 	data, err := unmarshalBytes(bytes, resourcePath)
 	if err != nil {
@@ -84,8 +86,11 @@ func newUrlResource(baseUrl string, resourcePath string, bytes []byte) (*urlReso
 		data:    data,
 	}, nil
 }
+
+// resolveRelativeUrl resolves a relative url by creating a full url with the existing url base
 func resolveRelativeUrl(url string, env *environment) (*urlResource, error) {
 
+	// construct a full url using the existing baseUrl in env
 	fullUrl := path.Join(env.currentFrame().baseUrl, url)
 
 	return resolveUrl(fullUrl, env)
@@ -94,11 +99,12 @@ func resolveRelativeUrl(url string, env *environment) (*urlResource, error) {
 // regex for matching git file urls
 var gitUrlRegex = regexp.MustCompile(`(?:git|file|ssh|https?|git@[-\w.]+):(//)?(.*.git)(#(([-\d\w._])+)?)?(/(.*))?$`)
 
-// isGitTemplateUrl
+// isGitUrl
 func isGitUrl(url string) bool {
 	return gitUrlRegex.MatchString(url)
 }
 
+// isRelativeUrl
 func isRelativeUrl(url string) bool {
 	return !strings.Contains(url, "://")
 }

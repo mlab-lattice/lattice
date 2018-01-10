@@ -10,7 +10,7 @@ type OperatorEvaluator interface {
 	eval(o interface{}, env *environment) (interface{}, error)
 }
 
-// Used to indicate if the result of the Evaluator is a NOOP
+// Used to indicate if the result of the Evaluator is a Void
 type Void int
 
 const void Void = 0
