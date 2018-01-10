@@ -26,13 +26,13 @@ func newComponentBuildClient(c rest.Client, baseURL string, id types.ComponentBu
 	}
 }
 
-func (cbc *ComponentBuildClient) Get() (*types.ComponentBuild, error) {
+func (c *ComponentBuildClient) Get() (*types.ComponentBuild, error) {
 	build := &types.ComponentBuild{}
-	err := cbc.restClient.Get(cbc.baseURL).JSON(&build)
+	err := c.restClient.Get(c.baseURL).JSON(&build)
 	return build, err
 }
 
-func (cbc *ComponentBuildClient) Logs(follow bool) (io.ReadCloser, error) {
-	log, err := cbc.restClient.Get(cbc.baseURL + fmt.Sprintf("%v?follow=%v", componentBuildLogSubpath, follow)).Body()
+func (c *ComponentBuildClient) Logs(follow bool) (io.ReadCloser, error) {
+	log, err := c.restClient.Get(c.baseURL + fmt.Sprintf("%v?follow=%v", componentBuildLogSubpath, follow)).Body()
 	return log, err
 }

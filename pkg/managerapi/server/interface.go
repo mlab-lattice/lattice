@@ -1,4 +1,4 @@
-package user
+package server
 
 import (
 	"io"
@@ -26,9 +26,8 @@ func (e *UserError) Error() string {
 
 type Backend interface {
 	// System
-	// FIXME: figure out lattice cluster config, then add ListSystems
-	// ListSystems() ([]types.SystemBuild
-	GetSystem(types.SystemID) (*types.System, error)
+	ListSystems() ([]types.System, error)
+	GetSystem(types.SystemID) (s *types.System, exists bool, err error)
 
 	// SystemBuild
 	BuildSystem(id types.SystemID, definitionRoot tree.Node, v types.SystemVersion) (types.SystemBuildID, error)

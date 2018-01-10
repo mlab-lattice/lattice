@@ -21,8 +21,8 @@ func newServiceBuildClient(c rest.Client, baseURL string, id types.ServiceBuildI
 	}
 }
 
-func (sbc *ServiceBuildClient) Get() (*types.ServiceBuild, error) {
+func (c *ServiceBuildClient) Get() (*types.ServiceBuild, error) {
 	build := &types.ServiceBuild{}
-	err := sbc.restClient.Get(sbc.baseURL).JSON(&build)
+	err := c.restClient.Get(c.baseURL).JSON(&build)
 	return build, err
 }

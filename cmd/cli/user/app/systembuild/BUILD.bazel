@@ -8,8 +8,8 @@ go_library(
     deps = [
         "//pkg/cli:go_default_library",
         "//pkg/constants:go_default_library",
-        "//pkg/managerapi/client/user:go_default_library",
-        "//pkg/managerapi/client/user/rest:go_default_library",
+        "//pkg/managerapi/client:go_default_library",
+        "//pkg/managerapi/client/rest:go_default_library",
         "//pkg/types:go_default_library",
         "@com_github_spf13_cobra//:go_default_library",
     ],

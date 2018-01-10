@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/mlab-lattice/system/pkg/backend/kubernetes/managerapi/server/user/backend"
+	"github.com/mlab-lattice/system/pkg/backend/kubernetes/managerapi/server/backend"
 	"github.com/mlab-lattice/system/pkg/managerapi/server/rest"
 	"github.com/mlab-lattice/system/pkg/types"
 

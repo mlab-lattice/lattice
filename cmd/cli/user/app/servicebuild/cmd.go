@@ -6,8 +6,8 @@ import (
 
 	"github.com/mlab-lattice/system/pkg/cli"
 	"github.com/mlab-lattice/system/pkg/constants"
-	"github.com/mlab-lattice/system/pkg/managerapi/client/user"
-	"github.com/mlab-lattice/system/pkg/managerapi/client/user/rest"
+	"github.com/mlab-lattice/system/pkg/managerapi/client"
+	"github.com/mlab-lattice/system/pkg/managerapi/client/rest"
 	"github.com/mlab-lattice/system/pkg/types"
 
 	"github.com/spf13/cobra"
@@ -17,8 +17,8 @@ var (
 	systemIDString string
 	url            string
 	systemID       types.SystemID
-	userClient     user.Client
-	systemClient   user.SystemClient
+	userClient     client.Interface
+	systemClient   client.SystemClient
 	output         string
 )
 

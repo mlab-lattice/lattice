@@ -21,8 +21,8 @@ func newSystemBuildClient(c rest.Client, baseURL string, id types.SystemBuildID)
 	}
 }
 
-func (sbc *SystemBuildClient) Get() (*types.SystemBuild, error) {
+func (c *SystemBuildClient) Get() (*types.SystemBuild, error) {
 	build := &types.SystemBuild{}
-	err := sbc.restClient.Get(sbc.baseURL).JSON(&build)
+	err := c.restClient.Get(c.baseURL).JSON(&build)
 	return build, err
 }

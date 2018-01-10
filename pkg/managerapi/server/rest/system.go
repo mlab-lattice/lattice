@@ -8,13 +8,46 @@ import (
 	"github.com/mlab-lattice/system/pkg/definition"
 	"github.com/mlab-lattice/system/pkg/definition/resolver"
 	"github.com/mlab-lattice/system/pkg/definition/tree"
-	"github.com/mlab-lattice/system/pkg/managerapi/server/user"
+	"github.com/mlab-lattice/system/pkg/managerapi/server"
 	"github.com/mlab-lattice/system/pkg/types"
 
 	"github.com/gin-gonic/gin"
 )
 
 func (r *restServer) mountSystemHandlers() {
+	systems := r.router.Group("/systems")
+	{
+		// list-system-versions
+		systems.GET("", func(c *gin.Context) {
+			systems, err := r.backend.ListSystems()
+
+			if err != nil {
+				handleInternalError(c, err)
+				return
+			}
+
+			c.JSON(http.StatusOK, systems)
+		})
+
+		// get-system-version
+		systems.GET("/:system_id", func(c *gin.Context) {
+			systemID := c.Param("system_id")
+
+			system, exists, err := r.backend.GetSystem(types.SystemID(systemID))
+			if err != nil {
+				handleInternalError(c, err)
+				return
+			}
+
+			if !exists {
+				c.String(http.StatusNotFound, "")
+				return
+			}
+
+			c.JSON(http.StatusOK, system)
+		})
+	}
+
 	r.mountSystemVersionHandlers()
 	r.mountSystemSystemBuildHandlers()
 	r.mountSystemServiceBuildHandlers()
@@ -232,7 +265,7 @@ func (r *restServer) mountSystemComponentBuildHandlers() {
 			log, exists, err := r.backend.GetComponentBuildLogs(types.SystemID(systemID), types.ComponentBuildID(buildID), follow)
 			if exists == false {
 				switch err.(type) {
-				case *user.UserError:
+				case *server.UserError:
 					c.String(http.StatusNotFound, "")
 				default:
 					handleInternalError(c, err)
@@ -443,9 +476,13 @@ func (r *restServer) mountSystemServiceHandlers() {
 }
 
 func (r *restServer) getSystemDefinitionRoot(systemID string, version string) (tree.Node, error) {
-	system, err := r.backend.GetSystem(types.SystemID(systemID))
+	system, exists, err := r.backend.GetSystem(types.SystemID(systemID))
 	if err != nil {
 		return nil, err
+	}
+
+	if !exists {
+		return nil, fmt.Errorf("System %v does not exist", systemID)
 	}
 
 	return r.resolver.ResolveDefinition(
@@ -456,9 +493,13 @@ func (r *restServer) getSystemDefinitionRoot(systemID string, version string) (t
 }
 
 func (r *restServer) getSystemVersions(systemID string) ([]string, error) {
-	system, err := r.backend.GetSystem(types.SystemID(systemID))
+	system, exists, err := r.backend.GetSystem(types.SystemID(systemID))
 	if err != nil {
 		return nil, err
+	}
+
+	if !exists {
+		return nil, fmt.Errorf("System %v does not exist", systemID)
 	}
 
 	return r.resolver.ListDefinitionVersions(system.DefinitionURL, &resolver.GitResolveOptions{})

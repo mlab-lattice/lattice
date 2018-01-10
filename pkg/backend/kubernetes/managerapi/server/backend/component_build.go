@@ -7,7 +7,7 @@ import (
 	kubeconstants "github.com/mlab-lattice/system/pkg/backend/kubernetes/constants"
 	crv1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	kubeutil "github.com/mlab-lattice/system/pkg/backend/kubernetes/util/kubernetes"
-	backend "github.com/mlab-lattice/system/pkg/managerapi/server/user"
+	backend "github.com/mlab-lattice/system/pkg/managerapi/server"
 	"github.com/mlab-lattice/system/pkg/types"
 
 	corev1 "k8s.io/api/core/v1"

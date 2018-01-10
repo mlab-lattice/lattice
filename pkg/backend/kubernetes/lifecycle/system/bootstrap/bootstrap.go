@@ -132,6 +132,9 @@ func GetBootstrapResources(
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name: kubeutil.SystemNamespace(clusterID, systemID),
+			Labels: map[string]string{
+				kubeconstants.LabelKeyLatticeClusterID: string(clusterID),
+			},
 		},
 	}
 
@@ -148,7 +151,6 @@ func GetBootstrapResources(
 	}
 
 	componentBuilderRB := &rbacv1.RoleBinding{
-
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "RoleBinding",
 			APIVersion: rbacv1.GroupName + "/v1",
@@ -180,6 +182,9 @@ func GetBootstrapResources(
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      string(systemID),
 			Namespace: namespace.Name,
+			Labels: map[string]string{
+				kubeconstants.LabelKeyLatticeClusterID: string(clusterID),
+			},
 		},
 		Spec: crv1.SystemSpec{
 			DefinitionURL: definitionURL,
