@@ -136,17 +136,13 @@ func (c *Controller) loadBalancerModule(loadBalancer *crv1.LoadBalancer) (*kubet
 		return nil, err
 	}
 
-	serviceMeshPorts := map[int32]int32{}
-	for _, componentPorts := range service.Spec.Ports {
-		for _, componentPort := range componentPorts {
-			if componentPort.Public {
-				serviceMeshPorts[componentPort.EnvoyPort] = componentPort.Port
-			}
-		}
-	}
-
 	kubeServiceName := kubeutil.GetKubeServiceNameForLoadBalancer(loadBalancer.Name)
 	kubeService, err := c.kubeServiceLister.Services(loadBalancer.Namespace).Get(kubeServiceName)
+	if err != nil {
+		return nil, err
+	}
+
+	serviceMeshPorts, err := c.serviceMesh.ServiceMeshPorts(service)
 	if err != nil {
 		return nil, err
 	}

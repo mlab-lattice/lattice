@@ -3,9 +3,12 @@ package pernode
 import (
 	"time"
 
+	crv1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	latticeclientset "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/clientset/versioned"
 	latticeinformers "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/informers/externalversions"
 	latticelisters "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/listers/lattice/v1"
+	"github.com/mlab-lattice/system/pkg/backend/kubernetes/servicemesh"
+	"github.com/mlab-lattice/system/pkg/backend/kubernetes/servicemesh/envoy"
 	"github.com/mlab-lattice/system/pkg/definition/tree"
 	xdsapi "github.com/mlab-lattice/system/pkg/servicemesh/envoy/xdsapi/v1"
 
@@ -21,6 +24,8 @@ import (
 )
 
 type KubernetesPerNodeBackend struct {
+	serviceMesh envoy.ServiceMesh
+
 	kubeEndpointLister       corelisters.EndpointsLister
 	kubeEndpointListerSynced cache.InformerSynced
 
@@ -62,7 +67,16 @@ func NewKubernetesPerNodeBackend(kubeconfig, namespace string) (*KubernetesPerNo
 	kubeEndpointInformer := kubeInformers.Core().V1().Endpoints()
 	serviceInformer := latticeInformers.Lattice().V1().Services()
 
+	envoyConfig := &crv1.ConfigServiceMesh{
+		Envoy: &crv1.ConfigEnvoy{},
+	}
+	serviceMesh, err := servicemesh.NewServiceMesh(envoyConfig)
+	if err != nil {
+		return nil, err
+	}
+
 	b := &KubernetesPerNodeBackend{
+		serviceMesh:              serviceMesh.(envoy.ServiceMesh),
 		kubeEndpointLister:       kubeEndpointInformer.Lister(),
 		kubeEndpointListerSynced: kubeEndpointInformer.Informer().HasSynced,
 		serviceLister:            serviceInformer.Lister(),
@@ -98,8 +112,13 @@ func (b *KubernetesPerNodeBackend) Services(serviceCluster string) (map[tree.Nod
 			return nil, err
 		}
 
+		egressPort, err := b.serviceMesh.EgressPort(service)
+		if err != nil {
+			return nil, err
+		}
+
 		bsvc := &xdsapi.Service{
-			EgressPort:  service.Spec.EnvoyEgressPort,
+			EgressPort:  egressPort,
 			Components:  map[string]xdsapi.Component{},
 			IPAddresses: []string{},
 		}
@@ -121,7 +140,12 @@ func (b *KubernetesPerNodeBackend) Services(serviceCluster string) (map[tree.Nod
 			}
 
 			for _, port := range ports {
-				bc.Ports[port.Port] = port.EnvoyPort
+				envoyPort, err := b.serviceMesh.ServicePort(service, port.Port)
+				if err != nil {
+					return nil, err
+				}
+
+				bc.Ports[port.Port] = envoyPort
 			}
 
 			bsvc.Components[component] = bc

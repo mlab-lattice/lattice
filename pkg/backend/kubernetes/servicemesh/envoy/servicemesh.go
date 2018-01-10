@@ -1,6 +1,7 @@
 package envoy
 
 import (
+	"encoding/json"
 	"fmt"
 	"net"
 	"sort"
@@ -9,18 +10,17 @@ import (
 
 	kubeconstants "github.com/mlab-lattice/system/pkg/backend/kubernetes/constants"
 	crv1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
-	clusterbootstrapper "github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/cluster/bootstrap/bootstrapper"
-	systembootstrapper "github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/system/bootstrap/bootstrapper"
 	kubeutil "github.com/mlab-lattice/system/pkg/backend/kubernetes/util/kubernetes"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	rbacv1 "k8s.io/api/rbac/v1"
-
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 const (
+	annotationKeyAdminPort        = "envoy.servicemesh.lattice.mlab.com/admin-port"
+	annotationKeyServiceMeshPorts = "envoy.servicemesh.lattice.mlab.com/service-mesh-ports"
+	annotationKeyEgressPort       = "envoy.servicemesh.lattice.mlab.com/egress-port"
+
 	envoyConfigDirectory           = "/etc/envoy"
 	envoyConfigDirectoryVolumeName = kubeconstants.DeploymentResourcePrefixServiceMesh + "envoyconfig"
 
@@ -30,6 +30,14 @@ const (
 	envoyXDSAPI         = "envoy-xds-api"
 	labelKeyEnvoyXDSAPI = "envoy.servicemesh.lattice.mlab.com/xds-api"
 )
+
+type ServiceMesh interface {
+	EgressPort(*crv1.Service) (int32, error)
+	ServiceMeshPort(*crv1.Service, int32) (int32, error)
+	ServiceMeshPorts(*crv1.Service) (map[int32]int32, error)
+	ServicePort(*crv1.Service, int32) (int32, error)
+	ServicePorts(*crv1.Service) (map[int32]int32, error)
+}
 
 func NewEnvoyServiceMesh(config *crv1.ConfigEnvoy) *DefaultEnvoyServiceMesh {
 	return &DefaultEnvoyServiceMesh{
@@ -41,135 +49,102 @@ type DefaultEnvoyServiceMesh struct {
 	Config *crv1.ConfigEnvoy
 }
 
-func (sm *DefaultEnvoyServiceMesh) BootstrapClusterResources(resources *clusterbootstrapper.ClusterResources) {
-	clusterRole := &rbacv1.ClusterRole{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "ClusterRole",
-			APIVersion: rbacv1.GroupName + "/v1",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name: envoyXDSAPI,
-		},
-		Rules: []rbacv1.PolicyRule{
-			// Read kube endpoints
-			{
-				APIGroups: []string{corev1.GroupName},
-				Resources: []string{"endpoints"},
-				Verbs:     []string{"get", "watch", "list"},
-			},
-			// Read lattice services
-			{
-				APIGroups: []string{crv1.GroupName},
-				Resources: []string{crv1.ResourcePluralService},
-				Verbs:     []string{"get", "watch", "list"},
-			},
-		},
+func (sm *DefaultEnvoyServiceMesh) ServiceAnnotations(service *crv1.Service) (map[string]string, error) {
+	envoyPorts, err := envoyPorts(service)
+	if err != nil {
+		return nil, err
 	}
 
-	resources.ClusterRoles = append(resources.ClusterRoles, clusterRole)
+	componentPorts, remainingEnvoyPorts, err := assignEnvoyPorts(service, envoyPorts)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(remainingEnvoyPorts) != 2 {
+		return nil, fmt.Errorf("expected 2 remaining envoy ports, got %v", len(remainingEnvoyPorts))
+	}
+
+	adminPort := remainingEnvoyPorts[0]
+	egressPort := remainingEnvoyPorts[1]
+
+	componentPortsJSON, err := json.Marshal(componentPorts)
+	if err != nil {
+		return nil, err
+	}
+
+	annotations := map[string]string{
+		annotationKeyAdminPort:        strconv.Itoa(int(adminPort)),
+		annotationKeyServiceMeshPorts: string(componentPortsJSON),
+		annotationKeyEgressPort:       strconv.Itoa(int(egressPort)),
+	}
+
+	return annotations, nil
 }
 
-func (sm *DefaultEnvoyServiceMesh) BootstrapSystemResources(resources *systembootstrapper.SystemResources) {
-	namespace := resources.Namespace.Name
-
-	serviceAccount := &corev1.ServiceAccount{
-		// Include TypeMeta so if this is a dry run it will be printed out
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "ServiceAccount",
-			APIVersion: "v1",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      envoyXDSAPI,
-			Namespace: namespace,
-		},
+func envoyPorts(service *crv1.Service) ([]int32, error) {
+	portSet := map[int32]struct{}{}
+	for _, componentPorts := range service.Spec.Ports {
+		for _, port := range componentPorts {
+			portSet[int32(port.Port)] = struct{}{}
+		}
 	}
 
-	roleBinding := &rbacv1.RoleBinding{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      envoyXDSAPI,
-			Namespace: namespace,
-		},
-		Subjects: []rbacv1.Subject{
-			{
-				Kind:      rbacv1.ServiceAccountKind,
-				Name:      serviceAccount.Name,
-				Namespace: serviceAccount.Namespace,
-			},
-		},
-		RoleRef: rbacv1.RoleRef{
-			APIGroup: rbacv1.GroupName,
-			Kind:     "ClusterRole",
-			Name:     envoyXDSAPI,
-		},
+	var envoyPortIdx int32 = 10000
+	var envoyPorts []int32
+
+	// Need to find len(portSet) + 2 unique ports to use for envoy
+	// (one for egress, one for admin, and one per component port for ingress)
+	for i := 0; i <= len(portSet)+1; i++ {
+
+		// Loop up to len(portSet) + 1 times to find an unused port
+		// we can use for envoy.
+		for j := 0; j <= len(portSet); j++ {
+
+			// If the current envoyPortIdx is not being used by a component,
+			// we'll use it for envoy. Otherwise, on to the next one.
+			currPortIdx := envoyPortIdx
+			envoyPortIdx++
+
+			if _, ok := portSet[currPortIdx]; !ok {
+				envoyPorts = append(envoyPorts, currPortIdx)
+				break
+			}
+		}
 	}
 
-	labels := map[string]string{
-		labelKeyEnvoyXDSAPI: "true",
+	if len(envoyPorts) != len(portSet)+2 {
+		return nil, fmt.Errorf("expected %v envoy ports but got %v", len(portSet)+1, len(envoyPorts))
 	}
 
-	daemonSet := &appsv1.DaemonSet{
-		// Include TypeMeta so if this is a dry run it will be printed out
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "DaemonSet",
-			APIVersion: appsv1.GroupName + "/v1",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      envoyXDSAPI,
-			Namespace: namespace,
-			Labels:    labels,
-		},
-		Spec: appsv1.DaemonSetSpec{
-			Selector: &metav1.LabelSelector{
-				MatchLabels: labels,
-			},
-			Template: corev1.PodTemplateSpec{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:   envoyXDSAPI,
-					Labels: labels,
-				},
-				Spec: corev1.PodSpec{
-					Containers: []corev1.Container{
-						{
-							Name: "envoy-xds-api",
-							Args: []string{
-								"-v", "5",
-								"-logtostderr",
-								"-namespace", namespace,
-							},
-							Image: sm.Config.XDSAPIImage,
-							Ports: []corev1.ContainerPort{
-								{
-									HostPort:      8080,
-									ContainerPort: 8080,
-								},
-							},
-						},
-					},
-					HostNetwork:        true,
-					DNSPolicy:          corev1.DNSDefault,
-					ServiceAccountName: serviceAccount.Name,
-					Tolerations: []corev1.Toleration{
-						kubeconstants.TolerationNodePool,
-					},
-					Affinity: &corev1.Affinity{
-						NodeAffinity: &kubeconstants.NodeAffinityNodePool,
-					},
-				},
-			},
-		},
+	return envoyPorts, nil
+}
+
+func assignEnvoyPorts(service *crv1.Service, envoyPorts []int32) (map[int32]int32, []int32, error) {
+	// Assign an envoy port to each component port, and pop the used envoy port off the slice each time.
+	componentPorts := map[int32]int32{}
+	for _, ports := range service.Spec.Ports {
+		for _, port := range ports {
+			if len(envoyPorts) == 0 {
+				return nil, nil, fmt.Errorf("ran out of ports when assigning envoyPorts")
+			}
+
+			componentPorts[port.Port] = envoyPorts[0]
+			envoyPorts = envoyPorts[1:]
+		}
 	}
 
-	resources.ServiceAccounts = append(resources.ServiceAccounts, serviceAccount)
-	resources.RoleBindings = append(resources.RoleBindings, roleBinding)
-	resources.DaemonSets = append(resources.DaemonSets, daemonSet)
+	return componentPorts, envoyPorts, nil
 }
 
 func (sm *DefaultEnvoyServiceMesh) TransformServiceDeploymentSpec(
 	service *crv1.Service,
 	spec *appsv1.DeploymentSpec,
 	services []*crv1.Service,
-) *appsv1.DeploymentSpec {
-	prepareEnvoyContainer, envoyContainer := sm.envoyContainers(service)
+) (*appsv1.DeploymentSpec, error) {
+	prepareEnvoyContainer, envoyContainer, err := sm.envoyContainers(service)
+	if err != nil {
+		return nil, err
+	}
 
 	configVolume := corev1.Volume{
 		Name: envoyConfigDirectoryVolumeName,
@@ -200,12 +175,101 @@ func (sm *DefaultEnvoyServiceMesh) TransformServiceDeploymentSpec(
 		IP:        ip.String(),
 		Hostnames: hostnames,
 	}
-	spec.Template.Spec.HostAliases = []corev1.HostAlias{hostAlias}
 
+	spec = spec.DeepCopy()
+
+	spec.Template.Spec.HostAliases = []corev1.HostAlias{hostAlias}
 	spec.Template.Spec.InitContainers = initContainers
 	spec.Template.Spec.Containers = containers
 	spec.Template.Spec.Volumes = volumes
-	return spec
+	return spec, nil
+}
+
+func (sm *DefaultEnvoyServiceMesh) ServicePort(service *crv1.Service, port int32) (int32, error) {
+	servicePorts, err := sm.ServicePorts(service)
+	if err != nil {
+		return 0, err
+	}
+
+	servicePort, ok := servicePorts[port]
+	if !ok {
+		err := fmt.Errorf(
+			"Service %v/%v does not have expected port %v",
+			service.Namespace,
+			service.Name,
+			port,
+		)
+		return 0, err
+	}
+
+	return servicePort, nil
+}
+
+func (sm *DefaultEnvoyServiceMesh) ServicePorts(service *crv1.Service) (map[int32]int32, error) {
+	serviceMeshPortsJSON, ok := service.Annotations[annotationKeyServiceMeshPorts]
+	if !ok {
+		err := fmt.Errorf(
+			"Service %v/%v does not have expected annotation %v",
+			service.Namespace,
+			service.Name,
+			annotationKeyAdminPort,
+		)
+		return nil, err
+	}
+
+	serviceMeshPorts := map[int32]int32{}
+	err := json.Unmarshal([]byte(serviceMeshPortsJSON), serviceMeshPorts)
+	if err != nil {
+		return nil, err
+	}
+
+	servicePorts := map[int32]int32{}
+	for servicePort, serviceMeshPort := range serviceMeshPorts {
+		servicePorts[serviceMeshPort] = servicePort
+	}
+
+	return servicePorts, nil
+}
+
+func (sm *DefaultEnvoyServiceMesh) ServiceMeshPort(service *crv1.Service, port int32) (int32, error) {
+	serviceMeshPorts, err := sm.ServicePorts(service)
+	if err != nil {
+		return 0, err
+	}
+
+	serviceMeshPort, ok := serviceMeshPorts[port]
+	if !ok {
+		err := fmt.Errorf(
+			"Service %v/%v does not have expected port %v",
+			service.Namespace,
+			service.Name,
+			port,
+		)
+		return 0, err
+	}
+
+	return serviceMeshPort, nil
+}
+
+func (sm *DefaultEnvoyServiceMesh) ServiceMeshPorts(service *crv1.Service) (map[int32]int32, error) {
+	serviceMeshPortsJSON, ok := service.Annotations[annotationKeyServiceMeshPorts]
+	if !ok {
+		err := fmt.Errorf(
+			"Service %v/%v does not have expected annotation %v",
+			service.Namespace,
+			service.Name,
+			annotationKeyAdminPort,
+		)
+		return nil, err
+	}
+
+	serviceMeshPorts := map[int32]int32{}
+	err := json.Unmarshal([]byte(serviceMeshPortsJSON), serviceMeshPorts)
+	if err != nil {
+		return nil, err
+	}
+
+	return serviceMeshPorts, nil
 }
 
 func (sm *DefaultEnvoyServiceMesh) IsDeploymentSpecUpdated(
@@ -363,14 +427,30 @@ func isServiceMeshResource(name string) bool {
 	return len(parts) >= 2
 }
 
-func (sm *DefaultEnvoyServiceMesh) envoyContainers(service *crv1.Service) (corev1.Container, corev1.Container) {
+func (sm *DefaultEnvoyServiceMesh) envoyContainers(service *crv1.Service) (corev1.Container, corev1.Container, error) {
+	adminPort, ok := service.Annotations[annotationKeyAdminPort]
+	if !ok {
+		err := fmt.Errorf(
+			"Service %v/%v does not have expected annotation %v",
+			service.Namespace,
+			service.Name,
+			annotationKeyAdminPort,
+		)
+		return corev1.Container{}, corev1.Container{}, err
+	}
+
+	egressPort, err := sm.EgressPort(service)
+	if err != nil {
+		return corev1.Container{}, corev1.Container{}, err
+	}
+
 	prepareEnvoy := corev1.Container{
 		Name:  initContainerNamePrepareEnvoy,
 		Image: sm.Config.PrepareImage,
 		Env: []corev1.EnvVar{
 			{
 				Name:  "EGRESS_PORT",
-				Value: strconv.Itoa(int(service.Spec.EnvoyEgressPort)),
+				Value: strconv.Itoa(int(egressPort)),
 			},
 			{
 				Name:  "REDIRECT_EGRESS_CIDR_BLOCK",
@@ -382,7 +462,7 @@ func (sm *DefaultEnvoyServiceMesh) envoyContainers(service *crv1.Service) (corev
 			},
 			{
 				Name:  "ADMIN_PORT",
-				Value: strconv.Itoa(int(service.Spec.EnvoyAdminPort)),
+				Value: adminPort,
 			},
 			{
 				Name: "XDS_API_HOST",
@@ -412,13 +492,29 @@ func (sm *DefaultEnvoyServiceMesh) envoyContainers(service *crv1.Service) (corev
 	}
 
 	var envoyPorts []corev1.ContainerPort
+	cPorts, err := sm.ServiceMeshPorts(service)
+	if err != nil {
+		return corev1.Container{}, corev1.Container{}, err
+	}
+
 	for component, ports := range service.Spec.Ports {
 		for _, port := range ports {
+			envoyPort, ok := cPorts[port.Port]
+			if !ok {
+				err := fmt.Errorf(
+					"Service %v/%v does not have expected port %v",
+					service.Namespace,
+					service.Name,
+					port,
+				)
+				return corev1.Container{}, corev1.Container{}, err
+			}
+
 			envoyPorts = append(
 				envoyPorts,
 				corev1.ContainerPort{
 					Name:          component + "-" + port.Name,
-					ContainerPort: port.EnvoyPort,
+					ContainerPort: envoyPort,
 				},
 			)
 		}
@@ -447,7 +543,7 @@ func (sm *DefaultEnvoyServiceMesh) envoyContainers(service *crv1.Service) (corev
 		},
 	}
 
-	return prepareEnvoy, envoy
+	return prepareEnvoy, envoy, nil
 }
 
 func (sm *DefaultEnvoyServiceMesh) GetEndpointSpec(address *crv1.ServiceAddress) (*crv1.EndpointSpec, error) {
@@ -462,4 +558,24 @@ func (sm *DefaultEnvoyServiceMesh) GetEndpointSpec(address *crv1.ServiceAddress)
 		IP:   &ipStr,
 	}
 	return spec, nil
+}
+
+func (sm *DefaultEnvoyServiceMesh) EgressPort(service *crv1.Service) (int32, error) {
+	egressPortStr, ok := service.Annotations[annotationKeyEgressPort]
+	if !ok {
+		err := fmt.Errorf(
+			"Service %v/%v does not have expected annotation %v",
+			service.Namespace,
+			service.Name,
+			annotationKeyEgressPort,
+		)
+		return 0, err
+	}
+
+	egressPort, err := strconv.ParseInt(egressPortStr, 10, 32)
+	if err != nil {
+		return 0, err
+	}
+
+	return int32(egressPort), nil
 }

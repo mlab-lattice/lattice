@@ -36,24 +36,15 @@ type ServiceSpec struct {
 	// Ports maps Component names to a list of information about its ports
 	Ports map[string][]ComponentPort `json:"ports"`
 
-	// EnvoyAdminPort is the port assigned to this service to use for the Envoy admin interface
-	EnvoyAdminPort int32 `json:"envoyAdminPort"`
-	// EnvoyEgressPort is the port assigned to this service to use for the Envoy egress listener
-	EnvoyEgressPort int32 `json:"envoyEgressPort"`
-
 	NumInstances int32 `json:"numInstances"`
 }
 
 // +k8s:deepcopy-gen=false
 type ComponentPort struct {
-	Name string `json:"name"`
-	Port int32  `json:"port"`
-	// EnvoyPort is the port assigned to this service to use for the Envoy ingress listener for
-	// this component port
-	// FIXME: remove this and put it in servicemesh
-	EnvoyPort int32  `json:"envoyPort"`
-	Protocol  string `json:"protocol"`
-	Public    bool   `json:"public"`
+	Name     string `json:"name"`
+	Port     int32  `json:"port"`
+	Protocol string `json:"protocol"`
+	Public   bool   `json:"public"`
 }
 
 type ServiceStatus struct {
