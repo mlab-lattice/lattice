@@ -23,8 +23,8 @@ import (
 )
 
 const (
-	serverConfigPath = "./server_config"
-	hostConfigPath   = "./host_config"
+	dnsmasqConfigPathPrefix = "./server_config"
+	hostConfigPathPrefix    = "./host_config"
 
 	// End of defaultNamespace should match defaultSystemID
 	defaultNamespace = "namespace-filler-system-id"
@@ -42,17 +42,21 @@ type hostEntry struct {
 	ip       string
 }
 
-// HostFileOutput returns the expected file output that the host file should contain for the given hosts
-func HostFileOutput(hosts []hostEntry) string {
+type cnameEntry struct {
+	original string
+	systemID string
+	alias    string
+}
+
+// hostFileOutput returns the expected file output that the host file should contain for the given hosts
+func hostFileOutput(hosts []hostEntry) string {
 	/*
 	   Expected format:
 	       ip name0 name1 ..
 	       ...
 	*/
 	str := ""
-
 	for _, v := range hosts {
-
 		systemID := defaultSystemID
 
 		if v.systemID != "" {
@@ -61,30 +65,20 @@ func HostFileOutput(hosts []hostEntry) string {
 		}
 
 		fullPath := v.host + ".local." + clusterID + "." + systemID + ".local"
-
 		newLine := v.ip + " " + fullPath + "\n"
 		str = str + newLine
 	}
-
 	return str
 }
 
-type cnameEntry struct {
-	original string
-	systemID string
-	alias    string
-}
-
-// CnameFileOutput returns the expected file output that the server configuration file should contain.
-func CnameFileOutput(nameservers []cnameEntry) string {
+// dnsmasqConfigFileOutput returns the expected file output that the server configuration file should contain.
+func dnsmasqConfigFileOutput(nameservers []cnameEntry) string {
 	/*
 	   Expected format:
 	       cname=alias,target
 	*/
 	str := ""
-
 	for _, v := range nameservers {
-
 		systemID := defaultSystemID
 
 		if v.systemID != "" {
@@ -93,16 +87,14 @@ func CnameFileOutput(nameservers []cnameEntry) string {
 		}
 
 		fullPath := v.alias + ".local." + clusterID + "." + systemID + ".local"
-
 		newLine := "cname=" + fullPath + "," + v.original + "\n"
 		str = str + newLine
 	}
-
 	return str
 }
 
-// EndpointList creates an EndpointList schema from a list of endpoints.
-func EndpointList(endpoint ...latticev1.Endpoint) *latticev1.EndpointList {
+// endpointList creates an endpointList schema from a list of endpoints.
+func endpointList(endpoint ...latticev1.Endpoint) *latticev1.EndpointList {
 	var el = latticev1.EndpointList{}
 
 	for _, endp := range endpoint {
@@ -112,8 +104,8 @@ func EndpointList(endpoint ...latticev1.Endpoint) *latticev1.EndpointList {
 	return &el
 }
 
-// Endpoint creates an Endpoint schema with the specified parameters.
-func Endpoint(key string, ip string, endpoint string, path tree.NodePath) *latticev1.Endpoint {
+// endpoint creates an endpoint schema with the specified parameters.
+func endpoint(key string, ip string, endpoint string, path tree.NodePath) *latticev1.Endpoint {
 	ec := &latticev1.Endpoint{
 		ObjectMeta: metav1.ObjectMeta{
 			// Our tests shouldn't be concerned about unique naming - let this be provided for us
@@ -144,17 +136,16 @@ func Endpoint(key string, ip string, endpoint string, path tree.NodePath) *latti
 	return ec
 }
 
-// AlterNamespace adds a specified namespace to the Endpoints definition
-func AlterNamespace(namespace string, endpoint *latticev1.Endpoint) *latticev1.Endpoint {
-
+// alterNamespace adds a specified namespace to the Endpoints definition
+func alterNamespace(namespace string, endpoint *latticev1.Endpoint) *latticev1.Endpoint {
 	// First two hyphens in an endpoints namespace do not affect the output. Determined by the trailing string after the 2nd hyphen.
 	endpoint.Namespace = "A-B-" + namespace
 
 	return endpoint
 }
 
-// MakeNdoePathPanic tries to create a NodePath from the url string, and panics is it is unable to.
-func MakeNodePathPanic(pathString string) tree.NodePath {
+// makeNdoePathPanic tries to create a NodePath from the url string, and panics is it is unable to.
+func makeNodePathPanic(pathString string) tree.NodePath {
 	np, err := tree.NewNodePath(pathString)
 
 	if err != nil {
@@ -176,7 +167,6 @@ type test_case struct {
 
 // TestEndpointCreation tests the DNS and cname file contents of the dns controller
 func TestEndpointCreation(t *testing.T) {
-
 	if logToStderr {
 		flag.Set("alsologtostderr", fmt.Sprintf("%t", true))
 	}
@@ -187,8 +177,8 @@ func TestEndpointCreation(t *testing.T) {
 
 	testcases := map[string]test_case{
 		"new endpoint with ip is written to host file": {
-			EndpointsAfter: EndpointList(
-				*Endpoint("key", "1", "", MakeNodePathPanic("/nodepath"))),
+			EndpointsAfter: endpointList(
+				*endpoint("key", "1", "", makeNodePathPanic("/nodepath"))),
 			ExpectedHosts: []hostEntry{
 				{
 					ip:   "1",
@@ -197,8 +187,8 @@ func TestEndpointCreation(t *testing.T) {
 			},
 		},
 		"new endpoint with name is written as cname file": {
-			EndpointsAfter: EndpointList(
-				*Endpoint("key", "", "my_cname", MakeNodePathPanic("/nodepath"))),
+			EndpointsAfter: endpointList(
+				*endpoint("key", "", "my_cname", makeNodePathPanic("/nodepath"))),
 			ExpectedCnames: []cnameEntry{
 				{
 					original: "my_cname",
@@ -207,9 +197,9 @@ func TestEndpointCreation(t *testing.T) {
 			},
 		},
 		"endpoints write url correctly": {
-			EndpointsAfter: EndpointList(
-				*Endpoint("key", "", "my_cname", MakeNodePathPanic("/root/nested/nested_some_more")),
-				*Endpoint("key2", "1", "", MakeNodePathPanic("/root/nested/nested_again_but_different")),
+			EndpointsAfter: endpointList(
+				*endpoint("key", "", "my_cname", makeNodePathPanic("/root/nested/nested_some_more")),
+				*endpoint("key2", "1", "", makeNodePathPanic("/root/nested/nested_again_but_different")),
 			),
 			ExpectedCnames: []cnameEntry{
 				{
@@ -225,11 +215,11 @@ func TestEndpointCreation(t *testing.T) {
 			},
 		},
 		"normal endpoint update changes the underlying endpoint": {
-			EndpointsBefore: EndpointList(
-				*Endpoint("key", "", "my_cname", MakeNodePathPanic("/nodepath")),
+			EndpointsBefore: endpointList(
+				*endpoint("key", "", "my_cname", makeNodePathPanic("/nodepath")),
 			),
-			EndpointsAfter: EndpointList(
-				*Endpoint("key", "", "my_cname_2", MakeNodePathPanic("/root/nested/nested_some_more")),
+			EndpointsAfter: endpointList(
+				*endpoint("key", "", "my_cname_2", makeNodePathPanic("/root/nested/nested_some_more")),
 			),
 			ExpectedCnames: []cnameEntry{
 				{
@@ -240,11 +230,11 @@ func TestEndpointCreation(t *testing.T) {
 			ExpectedHosts: []hostEntry{},
 		},
 		"endpoint update can change between cname and IP address type endpoint": {
-			EndpointsBefore: EndpointList(
-				*Endpoint("key", "", "my_cname", MakeNodePathPanic("/nodepath")),
+			EndpointsBefore: endpointList(
+				*endpoint("key", "", "my_cname", makeNodePathPanic("/nodepath")),
 			),
-			EndpointsAfter: EndpointList(
-				*Endpoint("key", "5.5.5.5", "", MakeNodePathPanic("/root/nested/nested_again_but_different")),
+			EndpointsAfter: endpointList(
+				*endpoint("key", "5.5.5.5", "", makeNodePathPanic("/root/nested/nested_again_but_different")),
 			),
 			ExpectedCnames: []cnameEntry{},
 			ExpectedHosts: []hostEntry{
@@ -255,19 +245,19 @@ func TestEndpointCreation(t *testing.T) {
 			},
 		},
 		"rewriting the cache with no endpoints clears it": {
-			EndpointsBefore: EndpointList(
-				*Endpoint("key", "", "my_cname", MakeNodePathPanic("/nodepath")),
+			EndpointsBefore: endpointList(
+				*endpoint("key", "", "my_cname", makeNodePathPanic("/nodepath")),
 			),
-			EndpointsAfter: EndpointList(),
+			EndpointsAfter: endpointList(),
 			ExpectedCnames: []cnameEntry{},
 			ExpectedHosts:  []hostEntry{},
 		},
 		"changing endpoint to a new namespace changes the output": {
-			EndpointsBefore: EndpointList(
-				*Endpoint("key", "", "my_cname", MakeNodePathPanic("/nodepath")),
+			EndpointsBefore: endpointList(
+				*endpoint("key", "", "my_cname", makeNodePathPanic("/nodepath")),
 			),
-			EndpointsAfter: EndpointList(
-				*AlterNamespace("new-namespace", Endpoint("key", "", "my_cname", MakeNodePathPanic("/nodepath"))),
+			EndpointsAfter: endpointList(
+				*alterNamespace("new-namespace", endpoint("key", "", "my_cname", makeNodePathPanic("/nodepath"))),
 			),
 			ExpectedCnames: []cnameEntry{
 				{
@@ -281,7 +271,6 @@ func TestEndpointCreation(t *testing.T) {
 	}
 
 	for testName, testCase := range testcases {
-
 		glog.Infof(testName)
 
 		// Write to different files on each iteration by using a hash of the test string
@@ -289,8 +278,8 @@ func TestEndpointCreation(t *testing.T) {
 		hash.Write([]byte(testName))
 		pathSuffix := strconv.Itoa(int(hash.Sum32()))
 
-		controllerServerConfigPath := serverConfigPath + "_" + pathSuffix
-		controllerHostConfigPath := hostConfigPath + "_" + pathSuffix
+		dnsmasqConfigPath := dnsmasqConfigPathPrefix + "_" + pathSuffix
+		hostsFilePath := hostConfigPathPrefix + "_" + pathSuffix
 
 		latticeClient := fakelattice.NewSimpleClientset(testCase.ClientObjects...)
 		client := fake.NewSimpleClientset()
@@ -299,7 +288,7 @@ func TestEndpointCreation(t *testing.T) {
 		endpointInformer := informers.Lattice().V1().Endpoints()
 		endpoints := informers.Lattice().V1().Endpoints().Informer().GetStore()
 
-		controller := NewController(controllerServerConfigPath, controllerHostConfigPath, clusterID, latticeClient, client, endpointInformer)
+		controller := NewController(dnsmasqConfigPath, hostsFilePath, clusterID, latticeClient, client, endpointInformer)
 
 		if testCase.EndpointsBefore != nil {
 			for _, e := range testCase.EndpointsBefore.Items {
@@ -312,7 +301,7 @@ func TestEndpointCreation(t *testing.T) {
 			}
 		}
 
-		controller.calculateCache()
+		controller.updateConfigs()
 
 		if testCase.EndpointsBefore != nil {
 			for _, e := range testCase.EndpointsBefore.Items {
@@ -336,7 +325,7 @@ func TestEndpointCreation(t *testing.T) {
 			}
 
 			t.Logf("Updating cache and writing to: %v", controller.hostFilePath)
-			controller.calculateCache()
+			controller.updateConfigs()
 		}
 
 		if controller.queue.Len() > 0 {
@@ -344,29 +333,27 @@ func TestEndpointCreation(t *testing.T) {
 		}
 
 		if testCase.ExpectedCnames != nil {
-			cnameFile, err := ioutil.ReadFile(controller.dnsmasqConfigPath)
-
+			dnsmasqConfig, err := ioutil.ReadFile(controller.dnsmasqConfigPath)
 			if err != nil {
 				t.Errorf("Error reading cname file: %v", err)
 			}
 
-			cnameStr := string(cnameFile)
-			cnameExpectedStr := CnameFileOutput(testCase.ExpectedCnames)
+			dnsmasqConfigStr := string(dnsmasqConfig)
+			expectedDnsmasqConfigStr := dnsmasqConfigFileOutput(testCase.ExpectedCnames)
 
-			if cnameStr != cnameExpectedStr {
-				t.Errorf("%s:\nExpected:\n%s\ngot:\n%s", testName, spew.Sdump(cnameExpectedStr), spew.Sdump(cnameStr))
+			if dnsmasqConfigStr != expectedDnsmasqConfigStr {
+				t.Errorf("%s:\nExpected:\n%s\ngot:\n%s", testName, spew.Sdump(expectedDnsmasqConfigStr), spew.Sdump(dnsmasqConfigStr))
 			}
 		}
 
 		if testCase.ExpectedHosts != nil {
 			hostFile, err := ioutil.ReadFile(controller.hostFilePath)
-
 			if err != nil {
 				t.Errorf("Error reading host file: %v", err)
 			}
 
 			hostStr := string(hostFile)
-			hostExpectedStr := HostFileOutput(testCase.ExpectedHosts)
+			hostExpectedStr := hostFileOutput(testCase.ExpectedHosts)
 
 			if hostStr != hostExpectedStr {
 				t.Errorf("%s:\nExpected:\n%s\ngot:\n%s", testName, spew.Sdump(hostExpectedStr), spew.Sdump(hostStr))

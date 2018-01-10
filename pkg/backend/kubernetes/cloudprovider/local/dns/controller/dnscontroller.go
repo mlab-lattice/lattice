@@ -101,14 +101,14 @@ func (c *Controller) Run(stopCh <-chan struct{}) {
 
 	glog.V(4).Info("Caches synced. Waiting for config to be set")
 
-	go wait.Until(c.calculateCache, time.Second*time.Duration(updateWaitBeforeFlushTimerSeconds), stopCh)
+	go wait.Until(c.updateConfigs, time.Second*time.Duration(updateWaitBeforeFlushTimerSeconds), stopCh)
 
 	// wait until we're told to stop
 	<-stopCh
 }
 
-// calculateCache runs at regular intervals and compares the current cache to the current set of endpoints. If the current cache is not up to date, it is rewritten
-func (c *Controller) calculateCache() {
+// updateConfigs runs at regular intervals and compares the endpoints the configuration was written with against the current list of endpoints. If there is any difference, the configuration is rewritten.
+func (c *Controller) updateConfigs() {
 	endpoints, err := c.endpointister.List(labels.Everything())
 	if err != nil {
 		runtime.HandleError(err)
@@ -178,7 +178,7 @@ func (c *Controller) endpointsSets(endpoints []*crv1.Endpoint) (set.Set, set.Set
 			continue
 		}
 
-		return nil, nil, fmt.Errorf("Endpoint %v had neither ExternalName nor IP set", key)
+		return nil, nil, fmt.Errorf("endpoint %v had neither ExternalName nor IP set", key)
 	}
 
 	return externalNameEndpoints, ipEndpoints, nil
