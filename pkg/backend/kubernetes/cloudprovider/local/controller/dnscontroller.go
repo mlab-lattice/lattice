@@ -14,8 +14,6 @@ import (
 	"k8s.io/api/core/v1"
 
 	"k8s.io/apimachinery/pkg/labels"
-	rtime "k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
 
@@ -28,11 +26,12 @@ import (
 
 	set "github.com/deckarep/golang-set"
 	"github.com/golang/glog"
+	"io/ioutil"
 )
 
 type Controller struct {
-	previousEndpoints []*crv1.Endpoint
-	currentEndpoints  []*crv1.Endpoint
+	externalNameEndpoints set.Set
+	ipEndpoints           set.Set
 
 	latticeClient latticeclientset.Interface
 
@@ -108,23 +107,34 @@ func (c *Controller) Run(stopCh <-chan struct{}) {
 
 // calculateCache runs at regular intervals and compares the current cache to the current set of endpoints. If the current cache is not up to date, it is rewritten
 func (c *Controller) calculateCache() {
-
 	endpoints, err := c.endpointister.List(labels.Everything())
-
-	c.currentEndpoints = endpoints
-
 	if err != nil {
 		runtime.HandleError(err)
 		return
 	}
 
-	if !haveEndpointsChanged(c.currentEndpoints, c.previousEndpoints) {
+	externalNameEndpointsSet, ipEndpointsSet, err := c.endpointsSets(endpoints)
+	if err != nil {
+		runtime.HandleError(err)
+		return
+	}
+
+	updateNeeded := false
+	if externalNameEndpointsSet.Difference(c.externalNameEndpoints).Cardinality() > 0 {
+		updateNeeded = true
+	}
+
+	if ipEndpointsSet.Difference(c.ipEndpoints).Cardinality() > 0 {
+		updateNeeded = true
+	}
+
+	if !updateNeeded {
 		return
 	}
 
 	glog.V(5).Infof("Endpoints have changed, rewriting DNS configuration...")
-	err = c.RewriteDnsmasqConfig()
 
+	err = c.RewriteDnsmasqConfig(externalNameEndpointsSet, ipEndpointsSet)
 	if err != nil {
 		runtime.HandleError(err)
 	}
@@ -149,94 +159,39 @@ func (c *Controller) calculateCache() {
 
 }
 
-// haveEndpointsChanged returns true if the two lists of endpoints are differnt
-func haveEndpointsChanged(endpointListA []*crv1.Endpoint, endpointListB []*crv1.Endpoint) bool {
+// endpointsSets returns true if the two lists of endpoints are differnt
+func (c *Controller) endpointsSets(endpoints []*crv1.Endpoint) (set.Set, set.Set, error) {
+	externalNameEndpoints := set.NewSet()
+	ipEndpoints := set.NewSet()
 
-	endpointMapA := make(map[string]crv1.Endpoint)
-	endpointMapB := make(map[string]crv1.Endpoint)
-
-	allEndpoints := set.NewSet()
-
-	for _, endpoint := range endpointListA {
-		key := endpoint.Name
-		allEndpoints.Add(key)
-		endpointMapA[key] = *endpoint
-
-		ip := ""
-		if endpoint.Spec.IP != nil {
-			ip = *endpoint.Spec.IP
-		}
-
-		name := ""
+	for _, endpoint := range endpoints {
+		key := fmt.Sprintf("%v/%v", endpoint.Namespace, endpoint.Name)
 		if endpoint.Spec.ExternalName != nil {
-			name = *endpoint.Spec.ExternalName
+			externalNameEndpoints.Add(key)
+			continue
 		}
 
-		glog.V(1).Infof("Endpoint before: path = %v, ip = %v, external name = %v", endpoint.Spec.Path.ToDomain(true), ip, name)
-	}
-
-	for _, endpoint := range endpointListB {
-		key := endpoint.Name
-		allEndpoints.Add(key)
-		endpointMapB[key] = *endpoint
-
-		ip := ""
 		if endpoint.Spec.IP != nil {
-			ip = *endpoint.Spec.IP
+			ipEndpoints.Add(key)
+			continue
 		}
 
-		name := ""
-		if endpoint.Spec.ExternalName != nil {
-			name = *endpoint.Spec.ExternalName
-		}
-
-		glog.V(1).Infof("Endpoint before: path = %v, ip = %v, external name = %v", endpoint.Spec.Path.ToDomain(true), ip, name)
+		return nil, nil, fmt.Errorf("Endpoint %v had neither ExternalName nor IP set", key)
 	}
 
-	if len(endpointListA) == 0 && len(endpointListB) == 0 {
-		return false
-	}
-
-	itr := allEndpoints.Iterator()
-
-	for k := range itr.C {
-		str := k.(string)
-
-		endpointA, ok := endpointMapA[str]
-
-		if !ok {
-			return true
-		}
-
-		endpointB, ok := endpointMapB[str]
-
-		if !ok {
-			return true
-		}
-
-		// Simple equality based on file output or endpoint state.
-		if endpointA.Spec.Path != endpointB.Spec.Path ||
-			endpointA.Spec.IP != endpointB.Spec.IP ||
-			endpointA.Spec.ExternalName != endpointB.Spec.ExternalName ||
-			endpointA.Namespace != endpointB.Namespace ||
-			endpointA.Status != endpointB.Status {
-			return true
-		}
-	}
-
-	return false
+	return externalNameEndpoints, ipEndpoints, nil
 }
 
 // CreateEmptyFile creates an empty file, removing the previous file if it existed
 func CreateEmptyFile(filename string) (*os.File, error) {
-
 	_, err := os.Stat(filename)
 
+	// TODO: document this
 	if err == nil {
 		err := os.Remove(filename)
 
 		if err != nil {
-			runtime.HandleError(err)
+			return nil, err
 		}
 	}
 
@@ -244,18 +199,20 @@ func CreateEmptyFile(filename string) (*os.File, error) {
 }
 
 // RewriteDnsmasqConfig rewrites the config files for the dns server
-func (c *Controller) RewriteDnsmasqConfig() error {
+func (c *Controller) RewriteDnsmasqConfig(externalNameEndpointsSet, ipEndpointsSet set.Set) error {
 
-	glog.V(4).Infof("Rewriting config %v, %v... ", c.hostConfigPath, c.serverConfigPath)
+	glog.V(4).Infof("Rewriting config %e, %e... ", c.hostConfigPath, c.serverConfigPath)
 
-	dnsmasqConfigFile, err := CreateEmptyFile(c.serverConfigPath)
-	defer dnsmasqConfigFile.Sync()
-	defer dnsmasqConfigFile.Close()
+	//// FIXME: use https://golang.org/pkg/io/ioutil/#WriteFile
+	//dnsmasqConfigFile, err := CreateEmptyFile(c.serverConfigPath)
+	//defer dnsmasqConfigFile.Sync()
+	//defer dnsmasqConfigFile.Close()
 
-	if err != nil {
-		return err
-	}
+	//if err != nil {
+	//	return err
+	//}
 
+	// FIXME: use https://golang.org/pkg/io/ioutil/#WriteFile
 	hostsFile, err := CreateEmptyFile(c.hostConfigPath)
 	defer hostsFile.Sync()
 	defer hostsFile.Close()
@@ -269,20 +226,43 @@ func (c *Controller) RewriteDnsmasqConfig() error {
 	// Each cname entry of the form cname=ALIAS,...(addn aliases),TARGET
 	// Full specification here: http://www.thekelleys.org.uk/dnsmasq/docs/dnsmasq-man.html
 
-	for _, v := range c.currentEndpoints {
-		cname := v.Spec.ExternalName
-		endpoint := v.Spec.IP
-		systemID, err := util.SystemID(v.Namespace)
+	// FIXME: we were here
+	dnsmasqConfigFileContents := ""
+	for setInterface := range externalNameEndpointsSet.Iter() {
+		endpoint, ok := setInterface.(*crv1.Endpoint)
+		if !ok {
+			return fmt.Errorf("value in externalNameEndpointsSet was not a *crv1.Endpoint")
+		}
+
+		systemID, err := util.SystemID(endpoint.Namespace)
+		if err != nil {
+			return err
+		}
+
+		path := endpoint.Spec.Path.ToDomain(true)
+		cname := fmt.Sprintf("%v.local.%v.%v.local", path, c.clusterID, systemID)
+
+		dnsmasqConfigFileContents += fmt.Sprintf("cname=%v\n", cname)
+	}
+
+	err = ioutil.WriteFile(c.serverConfigPath, []byte(dnsmasqConfigFileContents), 0660)
+	if err != nil {
+		return err
+	}
+
+	for _, e := range c.currentEndpoints {
+		cname := e.Spec.ExternalName
+		endpoint := e.Spec.IP
 
 		if err != nil {
 			runtime.HandleError(err)
 		}
 
-		path := v.Spec.Path.ToDomain(true)
+		path := e.Spec.Path.ToDomain(true)
 		path = path + ".local." + c.clusterID + "." + string(systemID) + ".local"
 
 		if endpoint != nil && cname != nil {
-			return fmt.Errorf("endpoint %v has both a cname and an endpoint", path)
+			return fmt.Errorf("endpoint %e has both a cname and an endpoint", path)
 		}
 
 		if cname != nil {
