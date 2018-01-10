@@ -138,7 +138,7 @@ func (c *Controller) serviceAddressSpec(service *crv1.Service) (crv1.ServiceAddr
 }
 
 func (c *Controller) serviceAddressHTTPPort(service *crv1.Service, componentPort crv1.ComponentPort) (*crv1.ServiceAddressPortHTTPConfig, error) {
-	serviceMeshPort, err := c.serviceMesh.ServicePort(service, componentPort.Port)
+	serviceMeshPort, err := c.serviceMesh.ServiceMeshPort(service, componentPort.Port)
 	if err != nil {
 		return nil, err
 	}

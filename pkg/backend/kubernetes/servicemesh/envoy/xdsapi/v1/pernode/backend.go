@@ -140,7 +140,7 @@ func (b *KubernetesPerNodeBackend) Services(serviceCluster string) (map[tree.Nod
 			}
 
 			for _, port := range ports {
-				envoyPort, err := b.serviceMesh.ServicePort(service, port.Port)
+				envoyPort, err := b.serviceMesh.ServiceMeshPort(service, port.Port)
 				if err != nil {
 					return nil, err
 				}

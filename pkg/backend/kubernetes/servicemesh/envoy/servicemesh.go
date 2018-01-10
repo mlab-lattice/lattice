@@ -206,19 +206,7 @@ func (sm *DefaultEnvoyServiceMesh) ServicePort(service *crv1.Service, port int32
 }
 
 func (sm *DefaultEnvoyServiceMesh) ServicePorts(service *crv1.Service) (map[int32]int32, error) {
-	serviceMeshPortsJSON, ok := service.Annotations[annotationKeyServiceMeshPorts]
-	if !ok {
-		err := fmt.Errorf(
-			"Service %v/%v does not have expected annotation %v",
-			service.Namespace,
-			service.Name,
-			annotationKeyAdminPort,
-		)
-		return nil, err
-	}
-
-	serviceMeshPorts := map[int32]int32{}
-	err := json.Unmarshal([]byte(serviceMeshPortsJSON), serviceMeshPorts)
+	serviceMeshPorts, err := sm.ServiceMeshPorts(service)
 	if err != nil {
 		return nil, err
 	}
@@ -232,7 +220,7 @@ func (sm *DefaultEnvoyServiceMesh) ServicePorts(service *crv1.Service) (map[int3
 }
 
 func (sm *DefaultEnvoyServiceMesh) ServiceMeshPort(service *crv1.Service, port int32) (int32, error) {
-	serviceMeshPorts, err := sm.ServicePorts(service)
+	serviceMeshPorts, err := sm.ServiceMeshPorts(service)
 	if err != nil {
 		return 0, err
 	}
@@ -258,13 +246,13 @@ func (sm *DefaultEnvoyServiceMesh) ServiceMeshPorts(service *crv1.Service) (map[
 			"Service %v/%v does not have expected annotation %v",
 			service.Namespace,
 			service.Name,
-			annotationKeyAdminPort,
+			serviceMeshPortsJSON,
 		)
 		return nil, err
 	}
 
 	serviceMeshPorts := map[int32]int32{}
-	err := json.Unmarshal([]byte(serviceMeshPortsJSON), serviceMeshPorts)
+	err := json.Unmarshal([]byte(serviceMeshPortsJSON), &serviceMeshPorts)
 	if err != nil {
 		return nil, err
 	}
@@ -492,14 +480,14 @@ func (sm *DefaultEnvoyServiceMesh) envoyContainers(service *crv1.Service) (corev
 	}
 
 	var envoyPorts []corev1.ContainerPort
-	cPorts, err := sm.ServiceMeshPorts(service)
+	serviceMeshPorts, err := sm.ServiceMeshPorts(service)
 	if err != nil {
 		return corev1.Container{}, corev1.Container{}, err
 	}
 
 	for component, ports := range service.Spec.Ports {
 		for _, port := range ports {
-			envoyPort, ok := cPorts[port.Port]
+			envoyPort, ok := serviceMeshPorts[port.Port]
 			if !ok {
 				err := fmt.Errorf(
 					"Service %v/%v does not have expected port %v",
