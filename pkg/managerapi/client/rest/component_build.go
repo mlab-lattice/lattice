@@ -9,30 +9,36 @@ import (
 )
 
 const (
+	componentBuildSubpath    = "/component-builds"
 	componentBuildLogSubpath = "/logs"
 )
 
 type ComponentBuildClient struct {
 	restClient rest.Client
 	baseURL    string
-	id         types.ComponentBuildID
 }
 
-func newComponentBuildClient(c rest.Client, baseURL string, id types.ComponentBuildID) *ComponentBuildClient {
+func newComponentBuildClient(c rest.Client, baseURL string) *ComponentBuildClient {
 	return &ComponentBuildClient{
 		restClient: c,
-		baseURL:    fmt.Sprintf("%v%v/%v", baseURL, componentBuildSubpath, id),
-		id:         id,
+		baseURL:    fmt.Sprintf("%v%v", baseURL, componentBuildSubpath),
 	}
 }
 
-func (c *ComponentBuildClient) Get() (*types.ComponentBuild, error) {
+func (c *ComponentBuildClient) List() ([]types.ComponentBuild, error) {
+	var builds []types.ComponentBuild
+	err := c.restClient.Get(c.baseURL).JSON(&builds)
+	return builds, err
+}
+
+func (c *ComponentBuildClient) Get(id types.ComponentBuildID) (*types.ComponentBuild, error) {
 	build := &types.ComponentBuild{}
-	err := c.restClient.Get(c.baseURL).JSON(&build)
+	err := c.restClient.Get(fmt.Sprintf("%v/%v", c.baseURL, id)).JSON(&build)
 	return build, err
 }
 
-func (c *ComponentBuildClient) Logs(follow bool) (io.ReadCloser, error) {
-	log, err := c.restClient.Get(c.baseURL + fmt.Sprintf("%v?follow=%v", componentBuildLogSubpath, follow)).Body()
+func (c *ComponentBuildClient) Logs(id types.ComponentBuildID, follow bool) (io.ReadCloser, error) {
+	url := fmt.Sprintf("%v/%v/%v?follow=%v", c.baseURL, id, componentBuildLogSubpath, follow)
+	log, err := c.restClient.Get(url).Body()
 	return log, err
 }

@@ -1,13 +1,10 @@
 package rest
 
 import (
-	"github.com/mlab-lattice/system/pkg/managerapi/client"
-	"github.com/mlab-lattice/system/pkg/types"
-	"github.com/mlab-lattice/system/pkg/util/rest"
-)
+	"net/http"
 
-const (
-	systemSubpath = "/systems"
+	"github.com/mlab-lattice/system/pkg/managerapi/client"
+	"github.com/mlab-lattice/system/pkg/util/rest"
 )
 
 type Client struct {
@@ -22,12 +19,15 @@ func NewClient(managerAPIURL string) *Client {
 	}
 }
 
-func (c *Client) Systems() ([]types.System, error) {
-	var systems []types.System
-	err := c.restClient.Get(c.baseURL + systemSubpath).JSON(&systems)
-	return systems, err
+func (c *Client) Status() (bool, error) {
+	resp, err := c.restClient.Get(c.baseURL).Do()
+	if err != nil {
+		return false, err
+	}
+
+	return resp.StatusCode == http.StatusOK, nil
 }
 
-func (c *Client) System(systemID types.SystemID) client.SystemClient {
-	return newSystemClient(c.restClient, c.baseURL, systemID)
+func (c *Client) Systems() client.SystemClient {
+	return newSystemClient(c.restClient, c.baseURL)
 }

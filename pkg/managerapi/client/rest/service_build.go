@@ -7,22 +7,30 @@ import (
 	"github.com/mlab-lattice/system/pkg/util/rest"
 )
 
+const (
+	serviceBuildSubpath = "/service-builds"
+)
+
 type ServiceBuildClient struct {
 	restClient rest.Client
 	baseURL    string
-	id         types.ServiceBuildID
 }
 
-func newServiceBuildClient(c rest.Client, baseURL string, id types.ServiceBuildID) *ServiceBuildClient {
+func newServiceBuildClient(c rest.Client, baseURL string) *ServiceBuildClient {
 	return &ServiceBuildClient{
 		restClient: c,
-		baseURL:    fmt.Sprintf("%v%v/%v", baseURL, serviceBuildSubpath, id),
-		id:         id,
+		baseURL:    fmt.Sprintf("%v%v", baseURL, serviceBuildSubpath),
 	}
 }
 
-func (c *ServiceBuildClient) Get() (*types.ServiceBuild, error) {
+func (c *ServiceBuildClient) List() ([]types.ServiceBuild, error) {
+	var builds []types.ServiceBuild
+	err := c.restClient.Get(c.baseURL).JSON(&builds)
+	return builds, err
+}
+
+func (c *ServiceBuildClient) Get(id types.ServiceBuildID) (*types.ServiceBuild, error) {
 	build := &types.ServiceBuild{}
-	err := c.restClient.Get(c.baseURL).JSON(&build)
+	err := c.restClient.Get(fmt.Sprintf("%v/%v", c.baseURL, id)).JSON(&build)
 	return build, err
 }

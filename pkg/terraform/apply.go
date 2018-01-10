@@ -15,7 +15,7 @@ func Apply(workDirectory string, config *Config) error {
 		return err
 	}
 
-	err = tec.AddFile("config.tf", configBytes)
+	err = tec.AddFile("config.tf.json", configBytes)
 	if err != nil {
 		return err
 	}

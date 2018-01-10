@@ -36,7 +36,7 @@ var listCmd = &cobra.Command{
 	Short: "list service builds",
 	Args:  cobra.ExactArgs(0),
 	Run: func(cmd *cobra.Command, args []string) {
-		builds, err := systemClient.ServiceBuilds()
+		builds, err := systemClient.ServiceBuilds(systemID).List()
 		if err != nil {
 			log.Panic(err)
 		}
@@ -53,7 +53,7 @@ var getCmd = &cobra.Command{
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		id := types.ServiceBuildID(args[0])
-		build, err := systemClient.ServiceBuild(id).Get()
+		build, err := systemClient.ServiceBuilds(systemID).Get(id)
 		if err != nil {
 			log.Panic(err)
 		}
@@ -79,5 +79,5 @@ func initCmd() {
 	systemID = types.SystemID(systemIDString)
 
 	userClient = rest.NewClient(url)
-	systemClient = userClient.System(systemID)
+	systemClient = userClient.Systems()
 }

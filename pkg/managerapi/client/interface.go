@@ -7,38 +7,53 @@ import (
 )
 
 type Interface interface {
-	Systems() ([]types.System, error)
+	Status() (bool, error)
 
-	System(types.SystemID) SystemClient
+	Systems() SystemClient
 }
 
 type SystemClient interface {
-	Get() (*types.System, error)
+	List() ([]types.System, error)
+	Get(types.SystemID) (*types.System, error)
 
-	SystemBuilds() ([]types.SystemBuild, error)
-	ServiceBuilds() ([]types.ServiceBuild, error)
-	ComponentBuilds() ([]types.ComponentBuild, error)
-	Services() ([]types.Service, error)
-
-	SystemBuild(id types.SystemBuildID) SystemBuildClient
-	ServiceBuild(id types.ServiceBuildID) ServiceBuildClient
-	ComponentBuild(id types.ComponentBuildID) ComponentBuildClient
-	Service(id types.ServiceID) ServiceClient
+	SystemBuilds(types.SystemID) SystemBuildClient
+	ServiceBuilds(types.SystemID) ServiceBuildClient
+	ComponentBuilds(types.SystemID) ComponentBuildClient
+	Rollouts(types.SystemID) RolloutClient
+	Teardowns(types.SystemID) TeardownClient
+	Services(types.SystemID) ServiceClient
 }
 
 type SystemBuildClient interface {
-	Get() (*types.SystemBuild, error)
+	List() ([]types.SystemBuild, error)
+	Get(types.SystemBuildID) (*types.SystemBuild, error)
 }
 
 type ServiceBuildClient interface {
-	Get() (*types.ServiceBuild, error)
+	List() ([]types.ServiceBuild, error)
+	Get(types.ServiceBuildID) (*types.ServiceBuild, error)
 }
 
 type ComponentBuildClient interface {
-	Get() (*types.ComponentBuild, error)
-	Logs(follow bool) (io.ReadCloser, error)
+	List() ([]types.ComponentBuild, error)
+	Get(types.ComponentBuildID) (*types.ComponentBuild, error)
+	Logs(id types.ComponentBuildID, follow bool) (io.ReadCloser, error)
+}
+
+type RolloutClient interface {
+	List() ([]types.SystemRollout, error)
+	Get(types.SystemRolloutID) (*types.SystemRollout, error)
+	CreateFromBuild(types.SystemBuildID) (types.SystemRolloutID, error)
+	CreateFromVersion(string) (types.SystemRolloutID, error)
+}
+
+type TeardownClient interface {
+	List() ([]types.SystemTeardown, error)
+	Get(types.SystemTeardownID) (*types.SystemTeardown, error)
+	Create() (types.SystemTeardownID, error)
 }
 
 type ServiceClient interface {
-	Get() (*types.Service, error)
+	List() ([]types.Service, error)
+	Get(types.ServiceID) (*types.Service, error)
 }

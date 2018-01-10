@@ -5,10 +5,12 @@ go_library(
     srcs = [
         "client.go",
         "component_build.go",
+        "rollout.go",
         "service.go",
         "service_build.go",
         "system.go",
         "system_build.go",
+        "teardown.go",
     ],
     importpath = "github.com/mlab-lattice/system/pkg/managerapi/client/rest",
     visibility = ["//visibility:public"],

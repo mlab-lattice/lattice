@@ -38,7 +38,7 @@ var listCmd = &cobra.Command{
 	Short: "list component builds",
 	Args:  cobra.ExactArgs(0),
 	Run: func(cmd *cobra.Command, args []string) {
-		builds, err := systemClient.ComponentBuilds()
+		builds, err := systemClient.ComponentBuilds(systemID).List()
 		if err != nil {
 			log.Panic(err)
 		}
@@ -55,7 +55,7 @@ var getCmd = &cobra.Command{
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		id := types.ComponentBuildID(args[0])
-		build, err := systemClient.ComponentBuild(id).Get()
+		build, err := systemClient.ComponentBuilds(systemID).Get(id)
 		if err != nil {
 			log.Panic(err)
 		}
@@ -72,7 +72,7 @@ var logsCmd = &cobra.Command{
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		id := types.ComponentBuildID(args[0])
-		logs, err := systemClient.ComponentBuild(id).Logs(follow)
+		logs, err := systemClient.ComponentBuilds(systemID).Logs(id, follow)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -99,5 +99,5 @@ func initCmd() {
 	systemID = types.SystemID(systemIDString)
 
 	userClient = rest.NewClient(url)
-	systemClient = userClient.System(systemID)
+	systemClient = userClient.Systems()
 }
