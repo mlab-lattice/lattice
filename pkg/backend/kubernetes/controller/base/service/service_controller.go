@@ -175,6 +175,7 @@ func (c *Controller) Run(workers int, stopCh <-chan struct{}) {
 		c.deploymentListerSynced,
 		c.kubeServiceListerSynced,
 		c.serviceAddressListerSynced,
+		c.loadBalancerListerSynced,
 	) {
 		return
 	}

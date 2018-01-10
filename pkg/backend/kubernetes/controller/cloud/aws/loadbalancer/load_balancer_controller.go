@@ -150,7 +150,14 @@ func (c *Controller) Run(workers int, stopCh <-chan struct{}) {
 	defer glog.Infof("Shutting down endpoint controller")
 
 	// wait for your secondary caches to fill before starting your work
-	if !cache.WaitForCacheSync(stopCh, c.loadBalancerListerSynced) {
+	if !cache.WaitForCacheSync(
+		stopCh,
+		c.configListerSynced,
+		c.loadBalancerListerSynced,
+		c.nodePoolListerSynced,
+		c.serviceListerSynced,
+		c.kubeServiceListerSynced,
+	) {
 		return
 	}
 
