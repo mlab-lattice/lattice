@@ -7,6 +7,12 @@ import (
 type SystemBootstrapperOptions struct {
 }
 
-func NewSystemBootstrapper(options *SystemBootstrapperOptions) *noop.DefaultBootstrapper {
-	return noop.NewBootstrapper()
+func NewSystemBootstrapper(options *SystemBootstrapperOptions) *DefaultAWSSystemBootstrapper {
+	return &DefaultAWSSystemBootstrapper{
+		DefaultBootstrapper: noop.NewBootstrapper(),
+	}
+}
+
+type DefaultAWSSystemBootstrapper struct {
+	*noop.DefaultBootstrapper
 }
