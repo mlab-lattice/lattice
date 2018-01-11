@@ -3,14 +3,14 @@ load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
 go_library(
     name = "go_default_library",
     srcs = ["main.go"],
-    importpath = "github.com/mlab-lattice/system/cmd/cli/user",
+    importpath = "github.com/mlab-lattice/system/cmd/latticectl",
     visibility = ["//visibility:public"],
-    deps = ["//cmd/cli/user/app:go_default_library"],
+    deps = ["//cmd/latticectl/app:go_default_library"],
 )
 
 go_binary(
-    name = "user",
+    name = "latticectl",
     embed = [":go_default_library"],
-    importpath = "github.com/mlab-lattice/system/cmd/cli/user",
+    importpath = "github.com/mlab-lattice/system/cmd/latticectl",
     visibility = ["//visibility:public"],
 )

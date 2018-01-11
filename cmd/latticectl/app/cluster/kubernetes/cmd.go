@@ -3,7 +3,7 @@ package kubernetes
 import (
 	"os"
 
-	"github.com/mlab-lattice/system/cmd/cli/admin/app/kubernetes/bootstrap"
+	"github.com/mlab-lattice/system/cmd/latticectl/app/cluster/kubernetes/bootstrap"
 
 	"github.com/spf13/cobra"
 )
