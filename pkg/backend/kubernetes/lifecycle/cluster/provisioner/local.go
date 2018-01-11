@@ -38,7 +38,7 @@ const (
 
 var (
 	localDNSControllerArgList = []string{
-		"-v=5",
+		"-v", "5",
 		"--logtostderr",
 		"--dnsmasq-config-path", dnsconstants.DNSConfigDirectory + dnsconstants.DnsmasqConfigFile,
 		"--hosts-file-path", dnsconstants.DNSConfigDirectory + dnsconstants.DNSHostsFile,
