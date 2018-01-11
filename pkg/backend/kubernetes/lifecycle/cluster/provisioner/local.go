@@ -40,8 +40,8 @@ var (
 	localDNSControllerArgList = []string{
 		"-v", "5",
 		"--logtostderr",
-		"--dnsmasq-config-path", dnsconstants.DNSConfigDirectory + dnsconstants.DnsmasqConfigFile,
-		"--hosts-file-path", dnsconstants.DNSConfigDirectory + dnsconstants.DNSHostsFile,
+		"--dnsmasq-config-path", dnsconstants.DnsmasqConfigFile,
+		"--hosts-file-path", dnsconstants.DNSHostsFile,
 	}
 
 	dnsNannyArgList = []string{
