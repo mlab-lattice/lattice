@@ -31,6 +31,13 @@ const (
 	labelKeyEnvoyXDSAPI = "envoy.servicemesh.lattice.mlab.com/xds-api"
 )
 
+type Options struct {
+	PrepareImage      string
+	Image             string
+	RedirectCIDRBlock string
+	XDSAPIPort        int32
+}
+
 type ServiceMesh interface {
 	EgressPort(*crv1.Service) (int32, error)
 	ServiceMeshPort(*crv1.Service, int32) (int32, error)
@@ -39,14 +46,20 @@ type ServiceMesh interface {
 	ServicePorts(*crv1.Service) (map[int32]int32, error)
 }
 
-func NewEnvoyServiceMesh(config *crv1.ConfigEnvoy) *DefaultEnvoyServiceMesh {
+func NewEnvoyServiceMesh(options *Options) *DefaultEnvoyServiceMesh {
 	return &DefaultEnvoyServiceMesh{
-		Config: config,
+		prepareImage:      options.PrepareImage,
+		image:             options.Image,
+		redirectCIDRBlock: options.RedirectCIDRBlock,
+		xdsAPIPort:        options.XDSAPIPort,
 	}
 }
 
 type DefaultEnvoyServiceMesh struct {
-	Config *crv1.ConfigEnvoy
+	prepareImage      string
+	image             string
+	redirectCIDRBlock string
+	xdsAPIPort        int32
 }
 
 func (sm *DefaultEnvoyServiceMesh) ServiceAnnotations(service *crv1.Service) (map[string]string, error) {
@@ -169,7 +182,7 @@ func (sm *DefaultEnvoyServiceMesh) TransformServiceDeploymentSpec(
 	}
 	sort.Strings(hostnames)
 
-	ip, _, _ := net.ParseCIDR(sm.Config.RedirectCIDRBlock)
+	ip, _, _ := net.ParseCIDR(sm.redirectCIDRBlock)
 
 	hostAlias := corev1.HostAlias{
 		IP:        ip.String(),
@@ -434,7 +447,7 @@ func (sm *DefaultEnvoyServiceMesh) envoyContainers(service *crv1.Service) (corev
 
 	prepareEnvoy := corev1.Container{
 		Name:  initContainerNamePrepareEnvoy,
-		Image: sm.Config.PrepareImage,
+		Image: sm.prepareImage,
 		Env: []corev1.EnvVar{
 			{
 				Name:  "EGRESS_PORT",
@@ -442,7 +455,7 @@ func (sm *DefaultEnvoyServiceMesh) envoyContainers(service *crv1.Service) (corev
 			},
 			{
 				Name:  "REDIRECT_EGRESS_CIDR_BLOCK",
-				Value: sm.Config.RedirectCIDRBlock,
+				Value: sm.redirectCIDRBlock,
 			},
 			{
 				Name:  "CONFIG_DIR",
@@ -462,7 +475,7 @@ func (sm *DefaultEnvoyServiceMesh) envoyContainers(service *crv1.Service) (corev
 			},
 			{
 				Name:  "XDS_API_PORT",
-				Value: fmt.Sprintf("%v", sm.Config.XDSAPIPort),
+				Value: fmt.Sprintf("%v", sm.xdsAPIPort),
 			},
 		},
 		VolumeMounts: []corev1.VolumeMount{
@@ -510,7 +523,7 @@ func (sm *DefaultEnvoyServiceMesh) envoyContainers(service *crv1.Service) (corev
 
 	envoy := corev1.Container{
 		Name:            containerNameEnvoy,
-		Image:           sm.Config.Image,
+		Image:           sm.image,
 		ImagePullPolicy: corev1.PullIfNotPresent,
 		Command:         []string{"/usr/local/bin/envoy"},
 		Args: []string{
@@ -535,7 +548,7 @@ func (sm *DefaultEnvoyServiceMesh) envoyContainers(service *crv1.Service) (corev
 }
 
 func (sm *DefaultEnvoyServiceMesh) GetEndpointSpec(address *crv1.ServiceAddress) (*crv1.EndpointSpec, error) {
-	ip, _, err := net.ParseCIDR(sm.Config.RedirectCIDRBlock)
+	ip, _, err := net.ParseCIDR(sm.redirectCIDRBlock)
 	if err != nil {
 		return nil, err
 	}

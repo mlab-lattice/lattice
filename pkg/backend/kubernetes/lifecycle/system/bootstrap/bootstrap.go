@@ -3,12 +3,10 @@ package bootstrap
 import (
 	"fmt"
 
-	"github.com/mlab-lattice/system/pkg/backend/kubernetes/cloudprovider"
 	kubeconstants "github.com/mlab-lattice/system/pkg/backend/kubernetes/constants"
 	crv1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	latticeclientset "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/clientset/versioned"
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/system/bootstrap/bootstrapper"
-	"github.com/mlab-lattice/system/pkg/backend/kubernetes/servicemesh"
 	kubeutil "github.com/mlab-lattice/system/pkg/backend/kubernetes/util/kubernetes"
 	"github.com/mlab-lattice/system/pkg/definition/tree"
 	"github.com/mlab-lattice/system/pkg/types"
@@ -27,12 +25,11 @@ func Bootstrap(
 	clusterID types.ClusterID,
 	systemID types.SystemID,
 	definitionURL string,
-	serviceMesh servicemesh.Interface,
-	cloudProvider cloudprovider.Interface,
+	bootstrappers []bootstrapper.Interface,
 	kubeClient kubeclientset.Interface,
 	latticeClient latticeclientset.Interface,
 ) (*bootstrapper.SystemResources, error) {
-	resources := GetBootstrapResources(clusterID, systemID, definitionURL, serviceMesh, cloudProvider)
+	resources := GetBootstrapResources(clusterID, systemID, definitionURL, bootstrappers)
 
 	fmt.Println("seeding namespaces")
 	namespace, err := kubeClient.CoreV1().Namespaces().Create(resources.Namespace)
@@ -121,9 +118,9 @@ func GetBootstrapResources(
 	clusterID types.ClusterID,
 	systemID types.SystemID,
 	definitionURL string,
-	serviceMesh servicemesh.Interface,
-	cloudProvider cloudprovider.Interface,
+	bootstrappers []bootstrapper.Interface,
 ) *bootstrapper.SystemResources {
+	// FIXME: move this into base system bootstrapper
 	namespace := &corev1.Namespace{
 		// Include TypeMeta so if this is a dry run it will be printed out
 		TypeMeta: metav1.TypeMeta{
@@ -202,8 +199,9 @@ func GetBootstrapResources(
 		RoleBindings:    []*rbacv1.RoleBinding{componentBuilderRB},
 	}
 
-	serviceMesh.BootstrapSystemResources(resources)
-	cloudProvider.BootstrapSystemResources(resources)
+	for _, b := range bootstrappers {
+		b.BootstrapSystemResources(resources)
+	}
 
 	return resources
 }

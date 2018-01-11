@@ -6,28 +6,13 @@ import (
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/cloudprovider/aws"
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/cloudprovider/local"
 	crv1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
-	clusterbootstrapper "github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/cluster/bootstrap/bootstrapper"
-	systembootstrapper "github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/system/bootstrap/bootstrapper"
 
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 )
 
-const (
-	AWS   = "AWS"
-	Local = "local"
-)
-
-type Options struct {
-	AWS   *aws.Options
-	Local *local.Options
-}
-
 type Interface interface {
-	clusterbootstrapper.Interface
-	systembootstrapper.Interface
-
 	// TransformComponentBuildJobSpec takes in the JobSpec generated for a ComponentBuild, and applies any cloud provider
 	// related transforms necessary to a copy of the JobSpec, and returns it.
 	TransformComponentBuildJobSpec(*batchv1.JobSpec) *batchv1.JobSpec
@@ -45,6 +30,11 @@ type Interface interface {
 	// current, this method should return true, along with a copy of the DeploymentSpec that should be identical to the
 	// DeploymentSpec that was passed in to TransformServiceDeploymentSpec.
 	IsDeploymentSpecUpdated(service *crv1.Service, current, desired, untransformed *appsv1.DeploymentSpec) (bool, string, *appsv1.DeploymentSpec)
+}
+
+type Options struct {
+	AWS   *aws.Options
+	Local *local.Options
 }
 
 func NewCloudProvider(options *Options) (Interface, error) {

@@ -1,13 +1,7 @@
 package aws
 
 import (
-	"fmt"
-	"strings"
-
-	kubeconstants "github.com/mlab-lattice/system/pkg/backend/kubernetes/constants"
 	crv1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
-	clusterbootstrapper "github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/cluster/bootstrap/bootstrapper"
-	systembootstrapper "github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/system/bootstrap/bootstrapper"
 
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
@@ -74,33 +68,6 @@ type DefaultAWSCloudProvider struct {
 
 	baseNodeAMIID string
 	keyName       string
-}
-
-func (cp *DefaultAWSCloudProvider) BootstrapClusterResources(resources *clusterbootstrapper.ClusterResources) {
-	resources.Config.Spec.CloudProvider.AWS = &crv1.ConfigCloudProviderAWS{
-		BaseNodeAMIID: cp.baseNodeAMIID,
-		KeyName:       cp.keyName,
-	}
-
-	for _, daemonSet := range resources.DaemonSets {
-		if daemonSet.Name != kubeconstants.MasterNodeComponentLatticeControllerManager {
-			continue
-		}
-
-		daemonSet.Spec.Template.Spec.Containers[0].Args = append(
-			daemonSet.Spec.Template.Spec.Containers[0].Args,
-			"--cloud-provider-var", fmt.Sprintf("region=%v", cp.region),
-			"--cloud-provider-var", fmt.Sprintf("account-id=%v", cp.accountID),
-			"--cloud-provider-var", fmt.Sprintf("vpc-id=%v", cp.vpcID),
-			"--cloud-provider-var", fmt.Sprintf("route53-private-zone-id=%v", cp.route53PrivateZoneID),
-			"--cloud-provider-var", fmt.Sprintf("subnet-ids=%v", strings.Join(cp.subnetIDs, ",")),
-			"--cloud-provider-var", fmt.Sprintf("master-node-security-group-id=%v", cp.masterNodeSecurityGroupID),
-		)
-	}
-}
-
-func (cp *DefaultAWSCloudProvider) BootstrapSystemResources(resources *systembootstrapper.SystemResources) {
-	// nothing to do
 }
 
 func (cp *DefaultAWSCloudProvider) TransformComponentBuildJobSpec(spec *batchv1.JobSpec) *batchv1.JobSpec {

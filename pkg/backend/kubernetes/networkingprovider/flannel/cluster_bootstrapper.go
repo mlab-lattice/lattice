@@ -15,21 +15,21 @@ import (
 	"k8s.io/client-go/scale/scheme/appsv1beta2"
 )
 
-type Options struct {
+type ClusterBootstrapperOptions struct {
 	CIDRBlock string
 }
 
-func NewFlannelNetworkingProvider(options *Options) *DefaultFlannelNetworkingProvider {
-	return &DefaultFlannelNetworkingProvider{
-		CIDRBlock: options.CIDRBlock,
+func NewClusterBootstrapper(options *ClusterBootstrapperOptions) *DefaultFlannelClusterBootstrapper {
+	return &DefaultFlannelClusterBootstrapper{
+		cidrBlock: options.CIDRBlock,
 	}
 }
 
-type DefaultFlannelNetworkingProvider struct {
-	CIDRBlock string
+type DefaultFlannelClusterBootstrapper struct {
+	cidrBlock string
 }
 
-func (np *DefaultFlannelNetworkingProvider) BootstrapClusterResources(resources *clusterbootstrapper.ClusterResources) {
+func (np *DefaultFlannelClusterBootstrapper) BootstrapClusterResources(resources *clusterbootstrapper.ClusterResources) {
 	// Translated from: https://github.com/coreos/flannel/blob/317b7d199e3fe937f04ecb39beed025e47316430/Documentation/kube-flannel.yml
 	serviceAccount := &corev1.ServiceAccount{
 		TypeMeta: metav1.TypeMeta{
@@ -94,7 +94,7 @@ func (np *DefaultFlannelNetworkingProvider) BootstrapClusterResources(resources 
 	netConf := fmt.Sprintf(`{
 	"Network": "%v",
 	"Backend": {"Type": "vxlan"}
-}`, np.CIDRBlock)
+}`, np.cidrBlock)
 
 	configMap := &corev1.ConfigMap{
 		TypeMeta: metav1.TypeMeta{

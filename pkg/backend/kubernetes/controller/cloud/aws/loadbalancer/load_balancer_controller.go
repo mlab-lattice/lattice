@@ -186,7 +186,7 @@ func (c *Controller) handleConfigAdd(obj interface{}) {
 	defer c.configLock.Unlock()
 	c.config = config.DeepCopy().Spec
 
-	serviceMesh, err := servicemesh.NewServiceMesh(&c.config.ServiceMesh)
+	serviceMesh, err := c.newServiceMesh()
 	if err != nil {
 		glog.Errorf("error creating service mesh: %v", err)
 		// FIXME: what to do here?
@@ -210,7 +210,7 @@ func (c *Controller) handleConfigUpdate(old, cur interface{}) {
 	defer c.configLock.Unlock()
 	c.config = curConfig.DeepCopy().Spec
 
-	serviceMesh, err := servicemesh.NewServiceMesh(&c.config.ServiceMesh)
+	serviceMesh, err := c.newServiceMesh()
 	if err != nil {
 		glog.Errorf("error creating service mesh: %v", err)
 		// FIXME: what to do here?
@@ -218,6 +218,20 @@ func (c *Controller) handleConfigUpdate(old, cur interface{}) {
 	}
 
 	c.serviceMesh = serviceMesh
+}
+
+func (c *Controller) newServiceMesh() (servicemesh.Interface, error) {
+	serviceMeshOptions, err := servicemesh.OptionsFromConfig(&c.config.ServiceMesh)
+	if err != nil {
+		return nil, err
+	}
+
+	serviceMesh, err := servicemesh.NewServiceMesh(serviceMeshOptions)
+	if err != nil {
+		return nil, err
+	}
+
+	return serviceMesh, nil
 }
 
 func (c *Controller) handleLoadBalancerAdd(obj interface{}) {

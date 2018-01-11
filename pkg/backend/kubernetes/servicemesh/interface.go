@@ -4,17 +4,12 @@ import (
 	"fmt"
 
 	crv1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
-	clusterbootstrapper "github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/cluster/bootstrap/bootstrapper"
-	systembootstrapper "github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/system/bootstrap/bootstrapper"
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/servicemesh/envoy"
 
 	appsv1 "k8s.io/api/apps/v1"
 )
 
 type Interface interface {
-	clusterbootstrapper.Interface
-	systembootstrapper.Interface
-
 	ServiceAnnotations(*crv1.Service) (map[string]string, error)
 
 	// TransformServiceDeploymentSpec takes in the DeploymentSpec generated for a Service, and applies an service mesh
@@ -46,10 +41,31 @@ type Interface interface {
 	GetEndpointSpec(*crv1.ServiceAddress) (*crv1.EndpointSpec, error)
 }
 
-func NewServiceMesh(config *crv1.ConfigServiceMesh) (Interface, error) {
+type Options struct {
+	Envoy *envoy.Options
+}
+
+func OptionsFromConfig(config *crv1.ConfigServiceMesh) (*Options, error) {
 	if config.Envoy != nil {
-		return envoy.NewEnvoyServiceMesh(config.Envoy), nil
+		options := &Options{
+			Envoy: &envoy.Options{
+				PrepareImage:      config.Envoy.PrepareImage,
+				Image:             config.Envoy.Image,
+				RedirectCIDRBlock: config.Envoy.RedirectCIDRBlock,
+				XDSAPIPort:        config.Envoy.XDSAPIPort,
+			},
+		}
+
+		return options, nil
 	}
 
-	return nil, fmt.Errorf("no service mesh configuration set")
+	return nil, fmt.Errorf("must provide service mesh config")
+}
+
+func NewServiceMesh(options *Options) (Interface, error) {
+	if options.Envoy != nil {
+		return envoy.NewEnvoyServiceMesh(options.Envoy), nil
+	}
+
+	return nil, fmt.Errorf("must provide service mesh options")
 }

@@ -25,6 +25,7 @@ import (
 	kubeclientset "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 
+	"github.com/mlab-lattice/system/pkg/backend/kubernetes/servicemesh/envoy"
 	"github.com/mlab-lattice/system/pkg/terraform"
 	"github.com/spf13/cobra"
 )
@@ -68,7 +69,6 @@ var options = &clusterbootstrap.Options{
 			Builder:        crv1.ConfigComponentBuildBuilder{},
 			DockerArtifact: crv1.ConfigComponentBuildDockerArtifact{},
 		},
-		ServiceMesh: crv1.ConfigServiceMesh{},
 	},
 	MasterComponents: baseclusterboostrapper.MasterComponentOptions{
 		LatticeControllerManager: baseclusterboostrapper.LatticeControllerManagerOptions{},
@@ -106,16 +106,15 @@ var Cmd = &cobra.Command{
 			}
 		}
 
-		cloudProviderOptions, err := parseCloudProviderVars()
+		cloudProviderClusterOptions, cloudProviderSystemOptions, err := parseCloudProviderVars()
 		if err != nil {
 			panic(err)
 		}
 
-		serviceMeshConfig, err := parseServiceMeshVars()
+		serviceMeshClusterOptions, serviceMeshSystemOptions, err := parseServiceMeshVars()
 		if err != nil {
 			panic(err)
 		}
-		options.Config.ServiceMesh = *serviceMeshConfig
 
 		terraformOptions, err := parseTerraformVars()
 		if err != nil {
@@ -123,27 +122,35 @@ var Cmd = &cobra.Command{
 		}
 		options.Terraform = terraformOptions
 
-		serviceMesh, err := servicemesh.NewServiceMesh(&options.Config.ServiceMesh)
+		cloudProviderClusterBootstrapper, err := cloudprovider.NewClusterBootstrapper(cloudProviderClusterOptions)
 		if err != nil {
 			panic(err)
 		}
 
-		cloudProvider, err := cloudprovider.NewCloudProvider(cloudProviderOptions)
+		serviceMeshClusterBootstrapper, err := servicemesh.NewClusterBootstrapper(serviceMeshClusterOptions)
 		if err != nil {
 			panic(err)
 		}
 
-		var networkingProvider networkingprovider.Interface
+		clusterBootstrappers := []clusterbootstrapper.Interface{
+			cloudProviderClusterBootstrapper,
+			serviceMeshClusterBootstrapper,
+		}
+
+		var networkingProviderSystemOptions *networkingprovider.SystemBootstrapperOptions
 		if networkingProviderName != "" {
-			networkingProviderOptions, err := parseNetworkingVars()
+			var networkingProviderClusterOptions *networkingprovider.ClusterBootstrapperOptions
+			networkingProviderClusterOptions, networkingProviderSystemOptions, err = parseNetworkingVars()
 			if err != nil {
 				panic(err)
 			}
 
-			networkingProvider, err = networkingprovider.NewNetworkingProvider(networkingProviderOptions)
+			networkingProviderClusterBootstrapper, err := networkingprovider.NewClusterBootstrapper(networkingProviderClusterOptions)
 			if err != nil {
 				panic(err)
 			}
+
+			clusterBootstrappers = append(clusterBootstrappers, networkingProviderClusterBootstrapper)
 		}
 
 		var kubeClient kubeclientset.Interface
@@ -160,18 +167,14 @@ var Cmd = &cobra.Command{
 				clusterID,
 				cloudProviderName,
 				options,
-				serviceMesh,
-				networkingProvider,
-				cloudProvider,
+				clusterBootstrappers,
 			)
 		} else {
 			clusterResources, err = clusterbootstrap.Bootstrap(
 				clusterID,
 				cloudProviderName,
 				options,
-				serviceMesh,
-				networkingProvider,
-				cloudProvider,
+				clusterBootstrappers,
 				kubeConfig,
 				kubeClient,
 				latticeClient,
@@ -195,17 +198,40 @@ var Cmd = &cobra.Command{
 			return
 		}
 
+		cloudProviderSystemBootstrapper, err := cloudprovider.NewSystemBootstrapper(cloudProviderSystemOptions)
+		if err != nil {
+			panic(err)
+		}
+
+		serviceMeshSystemBootstrapper, err := servicemesh.NewSystemBootstrapper(serviceMeshSystemOptions)
+		if err != nil {
+			panic(err)
+		}
+
+		systemBootstrappers := []systembootstrapper.Interface{
+			cloudProviderSystemBootstrapper,
+			serviceMeshSystemBootstrapper,
+		}
+
+		if networkingProviderName != "" {
+			networkingProviderSystemBootstrapper, err := networkingprovider.NewSystemBootstrapper(networkingProviderSystemOptions)
+			if err != nil {
+				panic(err)
+			}
+
+			systemBootstrappers = append(systemBootstrappers, networkingProviderSystemBootstrapper)
+		}
+
 		var systemResources *systembootstrapper.SystemResources
 		if options.DryRun {
-			systemResources = systembootstrap.GetBootstrapResources(clusterID, initialSystemID, initialSystemDefinitionURL, serviceMesh, cloudProvider)
+			systemResources = systembootstrap.GetBootstrapResources(clusterID, initialSystemID, initialSystemDefinitionURL, systemBootstrappers)
 		} else {
 			fmt.Printf("bootstrapping initial system \"%v\"\n", initialSystemIDString)
 			systemResources, err = systembootstrap.Bootstrap(
 				clusterID,
 				initialSystemID,
 				initialSystemDefinitionURL,
-				serviceMesh,
-				cloudProvider,
+				systemBootstrappers,
 				kubeClient,
 				latticeClient,
 			)
@@ -274,36 +300,48 @@ func init() {
 	Cmd.Flags().StringArrayVar(&networkingProviderVars, "networking-provider-var", nil, "additional variables for the networking provider")
 }
 
-func parseCloudProviderVars() (*cloudprovider.Options, error) {
-	var options *cloudprovider.Options
+func parseCloudProviderVars() (*cloudprovider.ClusterBootstrapperOptions, *cloudprovider.SystemBootstrapperOptions, error) {
+	var clusterOptions *cloudprovider.ClusterBootstrapperOptions
+	var systemOptions *cloudprovider.SystemBootstrapperOptions
+
 	switch cloudProviderName {
 	case constants.ProviderLocal:
-		localOptions, err := parseCloudProviderVarsLocal()
+		clusterBootstrapperOptions, err := parseCloudProviderVarsLocal()
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
-		options = &cloudprovider.Options{
-			Local: localOptions,
+
+		clusterOptions = &cloudprovider.ClusterBootstrapperOptions{
+			Local: clusterBootstrapperOptions,
+		}
+
+		systemOptions = &cloudprovider.SystemBootstrapperOptions{
+			Local: &localcloudprovider.SystemBootstrapperOptions{},
 		}
 
 	case constants.ProviderAWS:
-		awsOptions, err := parseProviderCloudVarsAWS()
+		clusterBootstrapperOptions, err := parseProviderCloudVarsAWS()
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
-		options = &cloudprovider.Options{
-			AWS: awsOptions,
+
+		clusterOptions = &cloudprovider.ClusterBootstrapperOptions{
+			AWS: clusterBootstrapperOptions,
+		}
+
+		systemOptions = &cloudprovider.SystemBootstrapperOptions{
+			AWS: &awscloudprovider.SystemBootstrapperOptions{},
 		}
 
 	default:
-		return nil, fmt.Errorf("unsupported cloudProviderName: %v", cloudProviderName)
+		return nil, nil, fmt.Errorf("unsupported cloudProviderName: %v", cloudProviderName)
 	}
 
-	return options, nil
+	return clusterOptions, systemOptions, nil
 }
 
-func parseCloudProviderVarsLocal() (*localcloudprovider.Options, error) {
-	options := &localcloudprovider.Options{}
+func parseCloudProviderVarsLocal() (*localcloudprovider.ClusterBootstrapperOptions, error) {
+	options := &localcloudprovider.ClusterBootstrapperOptions{}
 	flags := cli.EmbeddedFlag{
 		Target: &options,
 		Expected: map[string]cli.EmbeddedFlagValue{
@@ -321,10 +359,10 @@ func parseCloudProviderVarsLocal() (*localcloudprovider.Options, error) {
 	return options, nil
 }
 
-func parseProviderCloudVarsAWS() (*awscloudprovider.Options, error) {
-	awsOptions := &awscloudprovider.Options{}
+func parseProviderCloudVarsAWS() (*awscloudprovider.ClusterBootstrapperOptions, error) {
+	options := &awscloudprovider.ClusterBootstrapperOptions{}
 	flags := cli.EmbeddedFlag{
-		Target: &awsOptions,
+		Target: &options,
 		Expected: map[string]cli.EmbeddedFlagValue{
 			"region": {
 				Required: true,
@@ -367,29 +405,39 @@ func parseProviderCloudVarsAWS() (*awscloudprovider.Options, error) {
 	if err != nil {
 		return nil, err
 	}
-	return awsOptions, nil
+	return options, nil
 }
 
-func parseServiceMeshVars() (*crv1.ConfigServiceMesh, error) {
-	var config *crv1.ConfigServiceMesh
+func parseServiceMeshVars() (*servicemesh.ClusterBootstrapperOptions, *servicemesh.SystemBootstrapperOptions, error) {
+	var clusterOptions *servicemesh.ClusterBootstrapperOptions
+	var systemOptions *servicemesh.SystemBootstrapperOptions
+
 	switch serviceMeshProvider {
 	case constants.ServiceMeshEnvoy:
-		envoyConfig, err := parseServiceMeshVarsEnvoy()
+		clusterBootstrapperOptions, err := parseServiceMeshVarsEnvoy()
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
-		config = &crv1.ConfigServiceMesh{
-			Envoy: envoyConfig,
+
+		clusterOptions = &servicemesh.ClusterBootstrapperOptions{
+			Envoy: clusterBootstrapperOptions,
 		}
+
+		systemOptions = &servicemesh.SystemBootstrapperOptions{
+			Envoy: &envoy.SystemBootstrapperOptions{
+				XDSAPIImage: clusterBootstrapperOptions.XDSAPIImage,
+			},
+		}
+
 	default:
-		return nil, fmt.Errorf("unsupported service mesh provider: %v", serviceMeshProvider)
+		return nil, nil, fmt.Errorf("unsupported service mesh provider: %v", serviceMeshProvider)
 	}
 
-	return config, nil
+	return clusterOptions, systemOptions, nil
 }
 
-func parseServiceMeshVarsEnvoy() (*crv1.ConfigEnvoy, error) {
-	envoyConfig := &crv1.ConfigEnvoy{}
+func parseServiceMeshVarsEnvoy() (*envoy.ClusterBootstrapperOptions, error) {
+	envoyConfig := &envoy.ClusterBootstrapperOptions{}
 	flags := cli.EmbeddedFlag{
 		Target: &envoyConfig,
 		Expected: map[string]cli.EmbeddedFlagValue{
@@ -468,26 +516,34 @@ func parseTerraformVarsS3() (*terraform.BackendOptionsS3, error) {
 	return s3Config, nil
 }
 
-func parseNetworkingVars() (*networkingprovider.Options, error) {
-	var options *networkingprovider.Options
+func parseNetworkingVars() (*networkingprovider.ClusterBootstrapperOptions, *networkingprovider.SystemBootstrapperOptions, error) {
+	var clusterOptions *networkingprovider.ClusterBootstrapperOptions
+	var systemOptions *networkingprovider.SystemBootstrapperOptions
+
 	switch networkingProviderName {
 	case networkingprovider.Flannel:
 		flannelOptions, err := parseNetworkingVarsFlannel()
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
-		options = &networkingprovider.Options{
+
+		clusterOptions = &networkingprovider.ClusterBootstrapperOptions{
 			Flannel: flannelOptions,
 		}
+
+		systemOptions = &networkingprovider.SystemBootstrapperOptions{
+			Flannel: &flannel.SystemBootstrapperOptions{},
+		}
+
 	default:
-		return nil, fmt.Errorf("unsupported networking provider: %v", networkingProviderName)
+		return nil, nil, fmt.Errorf("unsupported networking provider: %v", networkingProviderName)
 	}
 
-	return options, nil
+	return clusterOptions, systemOptions, nil
 }
 
-func parseNetworkingVarsFlannel() (*flannel.Options, error) {
-	flannelOptions := &flannel.Options{}
+func parseNetworkingVarsFlannel() (*flannel.ClusterBootstrapperOptions, error) {
+	flannelOptions := &flannel.ClusterBootstrapperOptions{}
 	flags := cli.EmbeddedFlag{
 		Target: &flannelOptions,
 		Expected: map[string]cli.EmbeddedFlagValue{

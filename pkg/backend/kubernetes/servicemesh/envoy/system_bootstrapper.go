@@ -11,7 +11,21 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func (sm *DefaultEnvoyServiceMesh) BootstrapSystemResources(resources *systembootstrapper.SystemResources) {
+type SystemBootstrapperOptions struct {
+	XDSAPIImage string
+}
+
+func NewSystemBootstrapper(options *SystemBootstrapperOptions) *DefaultEnvoySystemBootstrapper {
+	return &DefaultEnvoySystemBootstrapper{
+		xdsAPIImage: options.XDSAPIImage,
+	}
+}
+
+type DefaultEnvoySystemBootstrapper struct {
+	xdsAPIImage string
+}
+
+func (b *DefaultEnvoySystemBootstrapper) BootstrapSystemResources(resources *systembootstrapper.SystemResources) {
 	namespace := resources.Namespace.Name
 
 	serviceAccount := &corev1.ServiceAccount{
@@ -78,7 +92,7 @@ func (sm *DefaultEnvoyServiceMesh) BootstrapSystemResources(resources *systemboo
 								"-logtostderr",
 								"-namespace", namespace,
 							},
-							Image: sm.Config.XDSAPIImage,
+							Image: b.xdsAPIImage,
 							Ports: []corev1.ContainerPort{
 								{
 									HostPort:      8080,

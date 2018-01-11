@@ -19,6 +19,7 @@ go_library(
         "//pkg/backend/kubernetes/networkingprovider:go_default_library",
         "//pkg/backend/kubernetes/networkingprovider/flannel:go_default_library",
         "//pkg/backend/kubernetes/servicemesh:go_default_library",
+        "//pkg/backend/kubernetes/servicemesh/envoy:go_default_library",
         "//pkg/backend/kubernetes/util/kubernetes:go_default_library",
         "//pkg/constants:go_default_library",
         "//pkg/terraform:go_default_library",
