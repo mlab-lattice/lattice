@@ -19,6 +19,7 @@ import (
 	kubelabels "k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/apimachinery/pkg/util/runtime"
 
 	"github.com/golang/glog"
 	"github.com/sergi/go-diff/diffmatchpatch"
@@ -187,6 +188,26 @@ func untransformedDeploymentSpec(service *crv1.Service, name string, deploymentL
 
 	ndotsValue := ndotsValue
 
+	searchStrings := []string{}
+	systemID, err := kubeutil.SystemID(service.Namespace)
+	if err != nil {
+		runtime.HandleError(err)
+	}
+
+	baseSearchPath := fmt.Sprintf("%v.%v.local", systemID, service.ClusterName)
+	searchStrings = append(searchStrings, baseSearchPath)
+
+	if !service.Spec.Path.IsRoot() {
+		parentEndpoint, err := service.Spec.Path.Parent()
+		if err != nil {
+			runtime.HandleError(err)
+		}
+
+		parentString := parentEndpoint.ToDomain(true)
+
+		searchStrings = append(searchStrings, fmt.Sprintf("%v.%v"), parentString, baseSearchPath)
+	}
+
 	DNSConfig := corev1.PodDNSConfig{
 		Nameservers: []string{},
 		Options: []corev1.PodDNSConfigOption{
@@ -195,6 +216,7 @@ func untransformedDeploymentSpec(service *crv1.Service, name string, deploymentL
 				Value: &ndotsValue,
 			},
 		},
+		Searches: searchStrings,
 	}
 
 	// IMPORTANT: if you change anything in here, you _must_ update isDeploymentSpecUpdated to accommodate it
