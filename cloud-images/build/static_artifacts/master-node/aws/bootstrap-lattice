@@ -22,8 +22,8 @@ sleep 10
 /usr/bin/docker run \
     --network host \
     -v /etc/opt/kubernetes/admin/kubeconfig:/etc/bootstrap-lattice/kubeconfig \
-    gcr.io/lattice-dev/kevinrosendahl-debug-lattice-cli-admin:latest \
-    kubernetes bootstrap \
+    gcr.io/lattice-dev/kevinrosendahl-debug-latticectl:latest \
+    cluster kubernetes bootstrap \
     --kubeconfig /etc/bootstrap-lattice/kubeconfig \
     --initial-system-definition-url ${SYSTEM_DEFINITION_URL} \
     --lattice-controller-manager-image gcr.io/lattice-dev/kevinrosendahl-debug-kubernetes-lattice-controller-manager \

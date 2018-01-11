@@ -13,7 +13,7 @@ import (
 func ShowResource(headers []string, values []string) {
 	table := tablewriter.NewWriter(os.Stdout)
 	table.SetRowLine(true)
-	table.SetHeader(headers)
+	table.SetAlignment(tablewriter.ALIGN_CENTER)
 	for i, h := range headers {
 		table.Append([]string{strings.ToUpper(h), values[i]})
 	}
@@ -23,6 +23,8 @@ func ShowResource(headers []string, values []string) {
 func ListResources(headers []string, values [][]string) {
 	table := tablewriter.NewWriter(os.Stdout)
 	table.SetHeader(headers)
+	table.SetRowLine(true)
+	table.SetAlignment(tablewriter.ALIGN_CENTER)
 	for _, line := range values {
 		table.Append(line)
 	}

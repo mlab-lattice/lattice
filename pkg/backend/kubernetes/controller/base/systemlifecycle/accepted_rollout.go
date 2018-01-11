@@ -38,13 +38,12 @@ func (c *Controller) syncAcceptedRollout(rollout *crv1.SystemRollout) error {
 			return err
 		}
 
-		// Generate a fresh new System Spec
-		spec, err := c.systemSpec(rollout, build)
+		services, err := c.systemServices(rollout, build)
 		if err != nil {
 			return err
 		}
 
-		_, err = c.updateSystemSpec(system, spec)
+		_, err = c.updateSystem(system, services)
 		if err != nil {
 			return err
 		}

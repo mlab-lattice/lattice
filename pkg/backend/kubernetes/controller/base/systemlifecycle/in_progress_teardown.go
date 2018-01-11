@@ -19,11 +19,9 @@ func (c *Controller) syncInProgressTeardown(teardown *crv1.SystemTeardown) error
 	// we must update the teardown.Status.State first. If we were then to try to update system.Spec in syncPendingTeardown
 	// and it failed, it would never get rerun since syncInProgressTeardown would always be called from there on out.
 	// So instead we set the system.Spec in here to make sure it gets run even after failures.
-	spec := crv1.SystemSpec{
-		Services: map[tree.NodePath]crv1.SystemSpecServiceInfo{},
-	}
+	services := map[tree.NodePath]crv1.SystemSpecServiceInfo{}
 
-	system, err = c.updateSystemSpec(system, spec)
+	system, err = c.updateSystem(system, services)
 	if err != nil {
 		return err
 	}

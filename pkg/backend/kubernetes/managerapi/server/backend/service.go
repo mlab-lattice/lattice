@@ -77,8 +77,20 @@ func (kb *KubernetesBackend) transformService(serviceName string, path tree.Node
 			Address: portInfo.Address,
 		}
 	}
-
 	service.PublicPorts = ports
+
+	var failureMessage *string
+	if serviceStatus.FailureInfo != nil {
+		internalError := "internal error"
+		failureMessage = &internalError
+
+		if !serviceStatus.FailureInfo.Internal {
+			errorMessage := fmt.Sprintf("%v: %v", serviceStatus.FailureInfo.Time, serviceStatus.FailureInfo.Message)
+			failureMessage = &errorMessage
+		}
+	}
+	service.FailureMessage = failureMessage
+
 	return service
 }
 
