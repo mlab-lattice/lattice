@@ -2,7 +2,13 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library")
 
 go_library(
     name = "go_default_library",
-    srcs = ["interface.go"],
+    srcs = [
+        "cluster_bootstrapper.go",
+        "cluster_provisioner.go",
+        "constants.go",
+        "interface.go",
+        "system_bootstrapper.go",
+    ],
     importpath = "github.com/mlab-lattice/system/pkg/backend/kubernetes/cloudprovider",
     visibility = ["//visibility:public"],
     deps = [
@@ -11,6 +17,7 @@ go_library(
         "//pkg/backend/kubernetes/customresource/apis/lattice/v1:go_default_library",
         "//pkg/backend/kubernetes/lifecycle/cluster/bootstrap/bootstrapper:go_default_library",
         "//pkg/backend/kubernetes/lifecycle/system/bootstrap/bootstrapper:go_default_library",
+        "//pkg/lifecycle/cluster/provisioner:go_default_library",
         "//pkg/types:go_default_library",
         "@io_k8s_api//apps/v1:go_default_library",
         "@io_k8s_api//batch/v1:go_default_library",

@@ -15,7 +15,7 @@ func Output(workDirectory string, config *Config, outputVars []string) (map[stri
 		return nil, err
 	}
 
-	err = tec.AddFile("config.tf", configBytes)
+	err = tec.AddFile("config.tf.json", configBytes)
 	if err != nil {
 		return nil, err
 	}

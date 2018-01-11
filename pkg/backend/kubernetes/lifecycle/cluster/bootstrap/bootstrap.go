@@ -3,14 +3,11 @@ package bootstrap
 import (
 	"fmt"
 
-	"github.com/mlab-lattice/system/pkg/backend/kubernetes/cloudprovider"
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource"
 	crv1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	latticeclientset "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/clientset/versioned"
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/cluster/bootstrap/bootstrapper"
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/cluster/bootstrap/bootstrapper/base"
-	"github.com/mlab-lattice/system/pkg/backend/kubernetes/networkingprovider"
-	"github.com/mlab-lattice/system/pkg/backend/kubernetes/servicemesh"
 	"github.com/mlab-lattice/system/pkg/types"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -34,14 +31,12 @@ func Bootstrap(
 	clusterID types.ClusterID,
 	cloudProviderName string,
 	options *Options,
-	serviceMesh servicemesh.Interface,
-	networkingProvider networkingprovider.Interface,
-	cloudProvider cloudprovider.Interface,
+	bootstrappers []bootstrapper.Interface,
 	kubeConfig *rest.Config,
 	kubeClient kubeclientset.Interface,
 	latticeClient latticeclientset.Interface,
 ) (*bootstrapper.ClusterResources, error) {
-	resources, err := GetBootstrapResources(clusterID, cloudProviderName, options, serviceMesh, networkingProvider, cloudProvider)
+	resources, err := GetBootstrapResources(clusterID, cloudProviderName, options, bootstrappers)
 	if err != nil {
 		return nil, err
 	}
@@ -239,9 +234,7 @@ func GetBootstrapResources(
 	clusterID types.ClusterID,
 	cloudProviderName string,
 	options *Options,
-	serviceMesh servicemesh.Interface,
-	networkingProvider networkingprovider.Interface,
-	cloudProvider cloudprovider.Interface,
+	bootstrappers []bootstrapper.Interface,
 ) (*bootstrapper.ClusterResources, error) {
 	baseOptions := &base.Options{
 		DryRun:           options.DryRun,
@@ -256,13 +249,11 @@ func GetBootstrapResources(
 	}
 
 	resources := &bootstrapper.ClusterResources{}
-	baseBootstrapper.BootstrapResources(resources)
-	serviceMesh.BootstrapClusterResources(resources)
+	baseBootstrapper.BootstrapClusterResources(resources)
 
-	if networkingProvider != nil {
-		networkingProvider.BootstrapClusterResources(resources)
+	for _, b := range bootstrappers {
+		b.BootstrapClusterResources(resources)
 	}
 
-	cloudProvider.BootstrapClusterResources(resources)
 	return resources, nil
 }

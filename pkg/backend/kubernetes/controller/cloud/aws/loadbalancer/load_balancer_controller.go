@@ -2,6 +2,7 @@ package loadbalancer
 
 import (
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/cloudprovider/aws"
@@ -9,6 +10,7 @@ import (
 	latticeclientset "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/clientset/versioned"
 	latticeinformers "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/informers/externalversions/lattice/v1"
 	latticelisters "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/listers/lattice/v1"
+	"github.com/mlab-lattice/system/pkg/backend/kubernetes/servicemesh"
 	kubeutil "github.com/mlab-lattice/system/pkg/backend/kubernetes/util/kubernetes"
 	"github.com/mlab-lattice/system/pkg/terraform"
 	"github.com/mlab-lattice/system/pkg/types"
@@ -36,12 +38,21 @@ type Controller struct {
 
 	clusterID types.ClusterID
 
+	awsCloudProvider aws.CloudProvider
+	serviceMesh      servicemesh.Interface
+
+	terraformModuleRoot     string
+	terraformBackendOptions *terraform.BackendOptions
+
 	kubeClient    kubeclientset.Interface
 	latticeClient latticeclientset.Interface
 
-	awsCloudProvider        aws.CloudProvider
-	terraformModuleRoot     string
-	terraformBackendOptions *terraform.BackendOptions
+	configLister       latticelisters.ConfigLister
+	configListerSynced cache.InformerSynced
+	configSetChan      chan struct{}
+	configSet          bool
+	configLock         sync.RWMutex
+	config             crv1.ConfigSpec
 
 	loadBalancerLister       latticelisters.LoadBalancerLister
 	loadBalancerListerSynced cache.InformerSynced
@@ -65,6 +76,7 @@ func NewController(
 	terraformBackendOptions *terraform.BackendOptions,
 	kubeClient kubeclientset.Interface,
 	latticeClient latticeclientset.Interface,
+	configInformer latticeinformers.ConfigInformer,
 	loadBalancerInformer latticeinformers.LoadBalancerInformer,
 	nodePoolInformer latticeinformers.NodePoolInformer,
 	serviceInformer latticeinformers.ServiceInformer,
@@ -77,11 +89,21 @@ func NewController(
 		awsCloudProvider:        awsCloudProvider,
 		terraformModuleRoot:     terraformModuleRoot,
 		terraformBackendOptions: terraformBackendOptions,
-		queue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "service"),
+		configSetChan:           make(chan struct{}),
+		queue:                   workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "service"),
 	}
 
 	sc.syncHandler = sc.syncLoadBalancer
 	sc.enqueueLoadBalancer = sc.enqueue
+
+	configInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+		// It's assumed there is always one and only one config object.
+		AddFunc:    sc.handleConfigAdd,
+		UpdateFunc: sc.handleConfigUpdate,
+		// TODO(kevinrosendahl): for now it is assumed that ComponentBuilds are not deleted.
+	})
+	sc.configLister = configInformer.Lister()
+	sc.configListerSynced = configInformer.Informer().HasSynced
 
 	loadBalancerInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    sc.handleLoadBalancerAdd,
@@ -128,11 +150,21 @@ func (c *Controller) Run(workers int, stopCh <-chan struct{}) {
 	defer glog.Infof("Shutting down endpoint controller")
 
 	// wait for your secondary caches to fill before starting your work
-	if !cache.WaitForCacheSync(stopCh, c.loadBalancerListerSynced) {
+	if !cache.WaitForCacheSync(
+		stopCh,
+		c.configListerSynced,
+		c.loadBalancerListerSynced,
+		c.nodePoolListerSynced,
+		c.serviceListerSynced,
+		c.kubeServiceListerSynced,
+	) {
 		return
 	}
 
-	glog.V(4).Info("Caches synced")
+	glog.V(4).Info("Caches synced. Waiting for config to be set")
+
+	// wait for config to be set
+	<-c.configSetChan
 
 	// start up your worker threads based on threadiness.  Some controllers
 	// have multiple kinds of workers
@@ -144,6 +176,62 @@ func (c *Controller) Run(workers int, stopCh <-chan struct{}) {
 
 	// wait until we're told to stop
 	<-stopCh
+}
+
+func (c *Controller) handleConfigAdd(obj interface{}) {
+	config := obj.(*crv1.Config)
+	glog.V(4).Infof("Adding Config %s", config.Name)
+
+	c.configLock.Lock()
+	defer c.configLock.Unlock()
+	c.config = config.DeepCopy().Spec
+
+	serviceMesh, err := c.newServiceMesh()
+	if err != nil {
+		glog.Errorf("error creating service mesh: %v", err)
+		// FIXME: what to do here?
+		return
+	}
+
+	c.serviceMesh = serviceMesh
+
+	if !c.configSet {
+		c.configSet = true
+		close(c.configSetChan)
+	}
+}
+
+func (c *Controller) handleConfigUpdate(old, cur interface{}) {
+	oldConfig := old.(*crv1.Config)
+	curConfig := cur.(*crv1.Config)
+	glog.V(4).Infof("Updating Config %s", oldConfig.Name)
+
+	c.configLock.Lock()
+	defer c.configLock.Unlock()
+	c.config = curConfig.DeepCopy().Spec
+
+	serviceMesh, err := c.newServiceMesh()
+	if err != nil {
+		glog.Errorf("error creating service mesh: %v", err)
+		// FIXME: what to do here?
+		return
+	}
+
+	c.serviceMesh = serviceMesh
+}
+
+func (c *Controller) newServiceMesh() (servicemesh.Interface, error) {
+	serviceMeshOptions, err := servicemesh.OptionsFromConfig(&c.config.ServiceMesh)
+	if err != nil {
+		return nil, err
+	}
+
+	serviceMesh, err := servicemesh.NewServiceMesh(serviceMeshOptions)
+	if err != nil {
+		return nil, err
+	}
+
+	return serviceMesh, nil
 }
 
 func (c *Controller) handleLoadBalancerAdd(obj interface{}) {
@@ -532,22 +620,18 @@ func (c *Controller) syncLoadBalancer(key string) error {
 		return err
 	}
 
-	serviceMeshPorts := map[int32]int32{}
-	for _, componentPorts := range service.Spec.Ports {
-		for _, componentPort := range componentPorts {
-			if componentPort.Public {
-				serviceMeshPorts[componentPort.EnvoyPort] = componentPort.Port
-			}
-		}
+	servicePorts, err := c.serviceMesh.ServicePorts(service)
+	if err != nil {
+		return err
 	}
 
 	ports := map[int32]crv1.LoadBalancerPort{}
 	for _, port := range kubeService.Spec.Ports {
-		ports[serviceMeshPorts[port.Port]] = crv1.LoadBalancerPort{
+		ports[servicePorts[port.Port]] = crv1.LoadBalancerPort{
 			Address: fmt.Sprintf(
 				"%v:%v",
 				loadBalancer.Annotations[aws.AnnotationKeyLoadBalancerDNSName],
-				serviceMeshPorts[port.Port],
+				servicePorts[port.Port],
 			),
 		}
 	}

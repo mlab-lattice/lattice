@@ -97,10 +97,18 @@ func (c *Controller) syncServiceStatus(
 		state = crv1.ServiceStateUpdating
 	}
 
+	publicPorts := crv1.ServiceStatusPublicPorts{}
 	if loadBalancerNeeded {
 		switch loadBalancer.Status.State {
 		case crv1.LoadBalancerStatePending, crv1.LoadBalancerStateProvisioning:
 			state = crv1.ServiceStateUpdating
+
+		case crv1.LoadBalancerStateCreated:
+			for port, portInfo := range loadBalancer.Status.Ports {
+				publicPorts[port] = crv1.ServiceStatusPublicPort{
+					Address: portInfo.Address,
+				}
+			}
 
 		case crv1.LoadBalancerStateFailed:
 			// Only create new failure info if we didn't fail above
@@ -111,6 +119,15 @@ func (c *Controller) syncServiceStatus(
 				failureMessage = ""
 				failureTime = &now
 			}
+
+		default:
+			err := fmt.Errorf(
+				"LoadBalancer %v/%v has unexpected state %v",
+				loadBalancer.Namespace,
+				loadBalancer.Name,
+				loadBalancer.Status.State,
+			)
+			return nil, err
 		}
 	}
 
@@ -143,13 +160,14 @@ func (c *Controller) syncServiceStatus(
 		}
 	}
 
-	return c.updateServiceStatus(service, state, updatedInstances, staleInstances, failureInfo)
+	return c.updateServiceStatus(service, state, updatedInstances, staleInstances, publicPorts, failureInfo)
 }
 
 func (c *Controller) updateServiceStatus(
 	service *crv1.Service,
 	state crv1.ServiceState,
 	updatedInstances, staleInstances int32,
+	publicPorts crv1.ServiceStatusPublicPorts,
 	failureInfo *crv1.ServiceFailureInfo,
 ) (*crv1.Service, error) {
 	status := crv1.ServiceStatus{
@@ -157,6 +175,7 @@ func (c *Controller) updateServiceStatus(
 		ObservedGeneration: service.Generation,
 		UpdatedInstances:   updatedInstances,
 		StaleInstances:     staleInstances,
+		PublicPorts:        publicPorts,
 		FailureInfo:        failureInfo,
 	}
 

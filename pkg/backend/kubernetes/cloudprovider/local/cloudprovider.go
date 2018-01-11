@@ -67,7 +67,7 @@ func (cp *DefaultLocalCloudProvider) BootstrapSystemResources(resources *systemb
 
 func (cp *DefaultLocalCloudProvider) TransformComponentBuildJobSpec(spec *batchv1.JobSpec) *batchv1.JobSpec {
 	spec = spec.DeepCopy()
-	spec.Template = *cp.transformPodTemplateSpec(&spec.Template)
+	spec.Template = *transformPodTemplateSpec(&spec.Template)
 
 	return spec
 }
@@ -82,7 +82,7 @@ func (cp *DefaultLocalCloudProvider) ComponentBuildWorkDirectoryVolumeSource(job
 
 func (cp *DefaultLocalCloudProvider) TransformServiceDeploymentSpec(service *crv1.Service, spec *appsv1.DeploymentSpec) *appsv1.DeploymentSpec {
 	spec = spec.DeepCopy()
-	spec.Template = *cp.transformPodTemplateSpec(&spec.Template)
+	spec.Template = *transformPodTemplateSpec(&spec.Template)
 	spec.Template.Spec.DNSConfig.Nameservers = []string{localDNSServerIP}
 
 	found := false
@@ -110,13 +110,6 @@ func (cp *DefaultLocalCloudProvider) TransformServiceDeploymentSpec(service *crv
 	return spec
 }
 
-func (cp *DefaultLocalCloudProvider) transformPodTemplateSpec(template *corev1.PodTemplateSpec) *corev1.PodTemplateSpec {
-	template = template.DeepCopy()
-	template.Spec.Affinity = nil
-
-	return template
-}
-
 func (cp *DefaultLocalCloudProvider) IsDeploymentSpecUpdated(
 	service *crv1.Service,
 	current, desired, untransformed *appsv1.DeploymentSpec,
@@ -131,4 +124,11 @@ func (cp *DefaultLocalCloudProvider) IsDeploymentSpecUpdated(
 
 func (cp *DefaultLocalCloudProvider) IP() string {
 	return cp.ip
+}
+
+func transformPodTemplateSpec(template *corev1.PodTemplateSpec) *corev1.PodTemplateSpec {
+	template = template.DeepCopy()
+	template.Spec.Affinity = nil
+
+	return template
 }

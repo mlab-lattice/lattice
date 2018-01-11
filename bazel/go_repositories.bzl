@@ -390,7 +390,8 @@ GO_REPOSITORIES = {
         "importpath": "k8s.io/kube-openapi",
     },
 
-    # tablewriter dependencies
+    # github.com/olekukonko/tablewriter dependencies
+    # no dependency versions listed, taken from master HEAD
     "github.com/mattn/go-runewidth": {
         "name": "com_github_mattn_go_runewidth",
         "commit": "97311d9f7767e3d6f422ea06661bc2c7a19e8a5d",

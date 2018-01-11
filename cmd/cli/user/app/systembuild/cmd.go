@@ -6,21 +6,20 @@ import (
 
 	"github.com/mlab-lattice/system/pkg/cli"
 	"github.com/mlab-lattice/system/pkg/constants"
-	"github.com/mlab-lattice/system/pkg/managerapi/client/user"
-	"github.com/mlab-lattice/system/pkg/managerapi/client/user/rest"
+	"github.com/mlab-lattice/system/pkg/managerapi/client"
+	"github.com/mlab-lattice/system/pkg/managerapi/client/rest"
 	"github.com/mlab-lattice/system/pkg/types"
 
 	"github.com/spf13/cobra"
 )
 
 var (
-	systemIDString  string
-	systemID        types.SystemID
-	userClient      user.Client
-	systemClient    user.SystemClient
-	output          string
-	namespaceString string
-	url             string
+	systemIDString string
+	systemID       types.SystemID
+	userClient     client.Interface
+	systemClient   client.SystemClient
+	output         string
+	url            string
 )
 
 var Cmd = &cobra.Command{
@@ -37,7 +36,7 @@ var listCmd = &cobra.Command{
 	Short: "list system builds",
 	Args:  cobra.ExactArgs(0),
 	Run: func(cmd *cobra.Command, args []string) {
-		builds, err := systemClient.SystemBuilds()
+		builds, err := systemClient.SystemBuilds(systemID).List()
 		if err != nil {
 			log.Panic(err)
 		}
@@ -54,7 +53,7 @@ var getCmd = &cobra.Command{
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		id := types.SystemBuildID(args[0])
-		build, err := systemClient.SystemBuild(id).Get()
+		build, err := systemClient.SystemBuilds(systemID).Get(id)
 		if err != nil {
 			log.Panic(err)
 		}
@@ -80,5 +79,5 @@ func initCmd() {
 	systemID = types.SystemID(systemIDString)
 
 	userClient = rest.NewClient(url)
-	systemClient = userClient.System(systemID)
+	systemClient = userClient.Systems()
 }

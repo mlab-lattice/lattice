@@ -2,11 +2,16 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library")
 
 go_library(
     name = "go_default_library",
-    srcs = ["interface.go"],
+    srcs = [
+        "cluster_bootstrapper.go",
+        "constants.go",
+        "system_bootstrapper.go",
+    ],
     importpath = "github.com/mlab-lattice/system/pkg/backend/kubernetes/networkingprovider",
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/backend/kubernetes/lifecycle/cluster/bootstrap/bootstrapper:go_default_library",
+        "//pkg/backend/kubernetes/lifecycle/system/bootstrap/bootstrapper:go_default_library",
         "//pkg/backend/kubernetes/networkingprovider/flannel:go_default_library",
     ],
 )

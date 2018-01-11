@@ -145,8 +145,15 @@ func (c *Controller) deploymentSpec(service *crv1.Service, name string, deployme
 	// isDeploymentSpecUpdated _must_ be inverses.
 	// That is, if we call cloudProvider then serviceMesh here, we _must_ call serviceMesh then cloudProvider
 	// in isDeploymentSpecUpdated.
+
+
+	// TODO :: If not using services
+	// spec = c.serviceMesh.TransformServiceDeploymentSpec(service, spec)
+	spec, err = c.serviceMesh.TransformServiceDeploymentSpec(service, spec, services)
+	if err != nil {
+		return appsv1.DeploymentSpec{}, err
+	}
 	spec = c.cloudProvider.TransformServiceDeploymentSpec(service, spec)
-	spec = c.serviceMesh.TransformServiceDeploymentSpec(service, spec)
 
 	return *spec, nil
 }
@@ -332,12 +339,12 @@ func (c *Controller) isDeploymentSpecUpdated(service *crv1.Service, current, des
 	// That is, if we call serviceMesh then cloudProvider here, we _must_ call cloudProvider then serviceMesh
 	// in deploymentSpec.
 	// This is done so that IsDeploymentSpecUpdated can return what the spec should look like before it transformed it.
-	isUpdated, reason, transformed := c.serviceMesh.IsDeploymentSpecUpdated(service, current, desired, untransformed)
+	isUpdated, reason, transformed := c.cloudProvider.IsDeploymentSpecUpdated(service, current, desired, untransformed)
 	if !isUpdated {
 		return false, reason
 	}
 
-	isUpdated, reason, transformed = c.cloudProvider.IsDeploymentSpecUpdated(service, current, transformed, untransformed)
+	isUpdated, reason, transformed = c.serviceMesh.IsDeploymentSpecUpdated(service, current, transformed, untransformed)
 	if !isUpdated {
 		return false, reason
 	}

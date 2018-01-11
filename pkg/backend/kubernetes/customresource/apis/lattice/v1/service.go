@@ -36,32 +36,24 @@ type ServiceSpec struct {
 	// Ports maps Component names to a list of information about its ports
 	Ports map[string][]ComponentPort `json:"ports"`
 
-	// EnvoyAdminPort is the port assigned to this service to use for the Envoy admin interface
-	EnvoyAdminPort int32 `json:"envoyAdminPort"`
-	// EnvoyEgressPort is the port assigned to this service to use for the Envoy egress listener
-	EnvoyEgressPort int32 `json:"envoyEgressPort"`
-
 	NumInstances int32 `json:"numInstances"`
 }
 
 // +k8s:deepcopy-gen=false
 type ComponentPort struct {
-	Name string `json:"name"`
-	Port int32  `json:"port"`
-	// EnvoyPort is the port assigned to this service to use for the Envoy ingress listener for
-	// this component port
-	// FIXME: remove this and put it in servicemesh
-	EnvoyPort int32  `json:"envoyPort"`
-	Protocol  string `json:"protocol"`
-	Public    bool   `json:"public"`
+	Name     string `json:"name"`
+	Port     int32  `json:"port"`
+	Protocol string `json:"protocol"`
+	Public   bool   `json:"public"`
 }
 
 type ServiceStatus struct {
-	State              ServiceState        `json:"state"`
-	ObservedGeneration int64               `json:"observedGeneration"`
-	UpdatedInstances   int32               `json:"updatedInstances"`
-	StaleInstances     int32               `json:"staleInstances"`
-	FailureInfo        *ServiceFailureInfo `json:"failureInfo,omitempty"`
+	State              ServiceState             `json:"state"`
+	ObservedGeneration int64                    `json:"observedGeneration"`
+	UpdatedInstances   int32                    `json:"updatedInstances"`
+	StaleInstances     int32                    `json:"staleInstances"`
+	PublicPorts        ServiceStatusPublicPorts `json:"publicPorts"`
+	FailureInfo        *ServiceFailureInfo      `json:"failureInfo,omitempty"`
 }
 
 type ServiceState string
@@ -74,6 +66,12 @@ const (
 	ServiceStateStable      ServiceState = "stable"
 	ServiceStateFailed      ServiceState = "failed"
 )
+
+type ServiceStatusPublicPorts map[int32]ServiceStatusPublicPort
+
+type ServiceStatusPublicPort struct {
+	Address string `json:"address"`
+}
 
 type ServiceFailureInfo struct {
 	Message  string      `json:"message"`

@@ -29,19 +29,11 @@ def go_dependencies():
     _go_dependencies_com_github_docker_docker()
     _go_dependencies_com_github_fatih_color()
     _go_dependencies_com_github_gin_gonic_gin()
-    _go_dependencies_com_github_spf13_cobra()
     _go_dependencies_com_github_olekukonko_tablewriter()
     _go_dependencies_com_github_deckarep_golang_set()
+    _go_dependencies_com_github_spf13_cobra()
     _go_dependencies_in_gopkg_src_d_go_git_v4()
     _go_dependencies_io_k8s()
-
-def _go_dependencies_com_github_olekukonko_tablewriter():
-  dependencies = [
-      "github.com/mattn/go-runewidth",
-  ]
-
-  for dep in dependencies:
-    go_repository(**GO_REPOSITORIES[dep])
 
 def _go_dependencies_com_github_aws_aws_sdk_go():
   dependencies = [
@@ -81,6 +73,14 @@ def _go_dependencies_com_github_gin_gonic_gin():
       "github.com/gin-contrib/sse",
       "github.com/mattn/go-isatty",
       "gopkg.in/go-playground/validator.v8",
+  ]
+
+  for dep in dependencies:
+    go_repository(**GO_REPOSITORIES[dep])
+
+def _go_dependencies_com_github_olekukonko_tablewriter():
+  dependencies = [
+      "github.com/mattn/go-runewidth",
   ]
 
   for dep in dependencies:
