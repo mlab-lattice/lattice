@@ -12,7 +12,7 @@ import (
 )
 
 // WORK_DIR
-const WORK_DIR = "/tmp/lattice-core/git-file-repository"
+const gitWorkDirectory = "/tmp/lattice-core/git-file-repository"
 
 // resolveUrl reads the template file by resolving the url into a urlResource w
 func resolveUrl(url string, env *environment) (*urlResource, error) {
@@ -30,7 +30,7 @@ func resolveUrl(url string, env *environment) (*urlResource, error) {
 // fetchGitFileContents fetches the specified git file contents
 func fetchGitFileContents(repoUrl string, fileName string, env *environment) ([]byte, error) {
 
-	gitResolver, _ := git.NewResolver(WORK_DIR)
+	gitResolver, _ := git.NewResolver(gitWorkDirectory)
 	gitOptions := env.options.GitOptions
 	if gitOptions == nil {
 		gitOptions = &git.Options{}
