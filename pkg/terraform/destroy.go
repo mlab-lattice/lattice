@@ -4,38 +4,38 @@ import (
 	"encoding/json"
 )
 
-func Destroy(workDirectory string, config *Config) error {
+func Destroy(workDirectory string, config *Config) (string, error) {
 	tec, err := NewTerrafromExecContext(workDirectory, nil)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	if config != nil {
 		configBytes, err := json.Marshal(config)
 		if err != nil {
-			return err
+			return "", err
 		}
 
 		err = tec.AddFile("config.tf.json", configBytes)
 		if err != nil {
-			return err
+			return "", err
 		}
 	}
 
-	result, _, err := tec.Init()
+	result, logfile, err := tec.Init()
 	if err != nil {
-		return err
+		return logfile, err
 	}
 
 	err = result.Wait()
 	if err != nil {
-		return err
+		return logfile, err
 	}
 
-	result, _, err = tec.Destroy(nil)
+	result, logfile, err = tec.Destroy(nil)
 	if err != nil {
-		return err
+		return logfile, err
 	}
 
-	return result.Wait()
+	return logfile, result.Wait()
 }

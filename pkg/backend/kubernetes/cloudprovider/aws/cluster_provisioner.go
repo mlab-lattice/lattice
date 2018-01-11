@@ -73,11 +73,15 @@ func NewClusterProvisioner(latticeImageDockerRepository, latticeContainerRepoPre
 }
 
 func (p *DefaultAWSClusterProvisioner) Provision(clusterID, url string) error {
+	fmt.Println("Provisioning cluster...")
 	clusterModule := p.clusterModule(clusterID, url)
 	clusterConfig := p.clusterConfig(clusterModule)
 
-	err := terraform.Apply(p.workDirectory, clusterConfig)
+	logfile, err := terraform.Apply(p.workDirectory, clusterConfig)
 	if err != nil {
+		if logfile != "" {
+			fmt.Printf("error provisioning. logfile: %v", logfile)
+		}
 		return err
 	}
 
@@ -146,6 +150,8 @@ func (p *DefaultAWSClusterProvisioner) Address(name string) (string, error) {
 }
 
 func (p *DefaultAWSClusterProvisioner) Deprovision(clusterID string) error {
+	fmt.Println("Deprovisioning cluster...")
+
 	address, err := p.Address(clusterID)
 	if err != nil {
 		return err
@@ -182,6 +188,9 @@ func (p *DefaultAWSClusterProvisioner) Deprovision(clusterID string) error {
 		return true, nil
 	})
 
-	//clusterConfig := p.clusterConfig(nil)
-	return terraform.Destroy(p.workDirectory, nil)
+	logfile, err := terraform.Destroy(p.workDirectory, nil)
+	if err != nil && logfile != "" {
+		fmt.Printf("error destroying. logfile: %v", logfile)
+	}
+	return err
 }

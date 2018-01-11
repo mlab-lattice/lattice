@@ -60,7 +60,7 @@ func (c *Controller) provisionLoadBalancer(loadBalancer *crv1.LoadBalancer) (*cr
 		return nil, err
 	}
 
-	err = tf.Apply(workDirectory(loadBalancer), config)
+	_, err = tf.Apply(workDirectory(loadBalancer), config)
 	if err != nil {
 		return nil, err
 	}
@@ -90,7 +90,8 @@ func (c *Controller) deprovisionLoadBalancer(loadBalancer *crv1.LoadBalancer) er
 		return err
 	}
 
-	return tf.Destroy(workDirectory(loadBalancer), config)
+	_, err = tf.Destroy(workDirectory(loadBalancer), config)
+	return err
 }
 
 func (c *Controller) loadBalancerConfig(loadBalancer *crv1.LoadBalancer, loadBalancerModule *kubetf.ApplicationLoadBalancer) (*tf.Config, error) {

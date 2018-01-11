@@ -19,12 +19,13 @@ type SystemBuildClient struct {
 func newSystemBuildClient(c rest.Client, baseURL string) *SystemBuildClient {
 	return &SystemBuildClient{
 		restClient: c,
-		baseURL:    fmt.Sprintf("%v%v/%v", baseURL, systemBuildSubpath),
+		baseURL:    fmt.Sprintf("%v%v", baseURL, systemBuildSubpath),
 	}
 }
 
 func (c *SystemBuildClient) List() ([]types.SystemBuild, error) {
 	var builds []types.SystemBuild
+	fmt.Println(c.baseURL)
 	err := c.restClient.Get(c.baseURL).JSON(&builds)
 	return builds, err
 }

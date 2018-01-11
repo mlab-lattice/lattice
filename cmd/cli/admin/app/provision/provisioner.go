@@ -18,18 +18,17 @@ func getKubernetesProvisioner(providerName string) (provisioner.Interface, error
 	}
 
 	return cloudprovider.NewClusterProvisioner(
-		provisionerOptions.latticeContainerRegistry,
-		provisionerOptions.latticeContainerRepoPrefix,
+		provisionerOptions.LatticeContainerRegistry,
+		provisionerOptions.LatticeContainerRepoPrefix,
 		workingDir,
-		&provisionerOptions.provisionerOptions,
+		&provisionerOptions.ProvisionerOptions,
 	)
 }
 
 type backendConfigKubernetes struct {
-	latticeContainerRegistry   string
-	latticeContainerRepoPrefix string
-	provisionerOptions         cloudprovider.ClusterProvisionerOptions
-	awsProvisionerOptions      aws.ClusterProvisionerOptions
+	LatticeContainerRegistry   string
+	LatticeContainerRepoPrefix string
+	ProvisionerOptions         cloudprovider.ClusterProvisionerOptions
 }
 
 func parseBackendKubernetesVars(providerName string) (*backendConfigKubernetes, error) {
@@ -40,25 +39,24 @@ func parseBackendKubernetesVars(providerName string) (*backendConfigKubernetes, 
 		Expected: map[string]cli.EmbeddedFlagValue{
 			"lattice-container-registry": {
 				Required:     true,
-				EncodingName: "latticeContainerRegistry",
+				EncodingName: "LatticeContainerRegistry",
 			},
 			"lattice-container-repo-prefix": {
-				EncodingName: "latticeContainerRepoPrefix",
+				EncodingName: "LatticeContainerRepoPrefix",
 			},
 		},
 	}
 
 	switch providerName {
 	case cloudprovider.Local:
-		config.provisionerOptions = cloudprovider.ClusterProvisionerOptions{
+		config.ProvisionerOptions = cloudprovider.ClusterProvisionerOptions{
 			Local: &local.ClusterProvisionerOptions{},
 		}
 
 	case cloudprovider.AWS:
 		vars.Expected["provider-var"] = cli.EmbeddedFlagValue{
-			Required:     true,
-			EncodingName: "awsProvisionerOptions",
-			Array:        true,
+			Required: true,
+			Array:    true,
 			ArrayValueParser: func(values []string) (interface{}, error) {
 				awsProvisionerOptions := aws.ClusterProvisionerOptions{}
 				providerVars := cli.EmbeddedFlag{
@@ -107,7 +105,7 @@ func parseBackendKubernetesVars(providerName string) (*backendConfigKubernetes, 
 					return nil, err
 				}
 
-				config.provisionerOptions = cloudprovider.ClusterProvisionerOptions{
+				config.ProvisionerOptions = cloudprovider.ClusterProvisionerOptions{
 					AWS: &awsProvisionerOptions,
 				}
 				return awsProvisionerOptions, nil
