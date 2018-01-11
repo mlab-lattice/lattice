@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net"
-	"sort"
 	"strconv"
 	"strings"
 
@@ -174,7 +173,7 @@ func (sm *DefaultEnvoyServiceMesh) TransformServiceDeploymentSpec(
 	volumes := []corev1.Volume{configVolume}
 	volumes = append(volumes, spec.Template.Spec.Volumes...)
 
-    spec = spec.DeepCopy()
+	spec = spec.DeepCopy()
 
 	spec.Template.Spec.InitContainers = initContainers
 	spec.Template.Spec.Containers = containers

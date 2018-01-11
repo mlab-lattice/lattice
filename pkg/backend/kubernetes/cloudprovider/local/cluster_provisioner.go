@@ -6,7 +6,6 @@ import (
 	"strings"
 	"time"
 
-	dnsconstants "github.com/mlab-lattice/system/pkg/backend/kubernetes/cloudprovider/local"
 	kubeconstants "github.com/mlab-lattice/system/pkg/backend/kubernetes/constants"
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/util/minikube"
 	"github.com/mlab-lattice/system/pkg/constants"
@@ -29,31 +28,30 @@ const (
 	clusterNamePrefixMinikube = "lattice-local-"
 )
 
-// TODO : : CHECK THIS IS GOOD
 var (
-    localDNSControllerArgList = []string{
-        "-v", "5",
-        "--logtostderr",
-        "--dnsmasq-config-path", dnsconstants.DnsmasqConfigFile,
-        "--hosts-file-path", dnsconstants.DNSHostsFile,
-    }
+	localDNSControllerArgList = []string{
+		"-v", "5",
+		"--logtostderr",
+		"--dnsmasq-config-path", DnsmasqConfigFile,
+		"--hosts-file-path", DNSHostsFile,
+	}
 
-    dnsNannyArgList = []string{
-        "-v=2",
-        "-logtostderr",
-        "-restartDnsmasq=true",
-        "-configDir=" + dnsconstants.DNSConfigDirectory,
-    }
+	dnsNannyArgList = []string{
+		"-v=2",
+		"-logtostderr",
+		"-restartDnsmasq=true",
+		"-configDir=" + DNSConfigDirectory,
+	}
 
-    dnsmasqArgList = []string{
-        "-k", // Keep in foreground so as to not immediately exit.
-        "--hostsdir=" + dnsconstants.DNSConfigDirectory,             // Read all the hosts from this directory. File changes read automatically by dnsmasq.
-        "--conf-dir=" + dnsconstants.DNSConfigDirectory + ",*.conf", // Read all *.conf files in the directory as dns config files
-    }
+	dnsmasqArgList = []string{
+		"-k", // Keep in foreground so as to not immediately exit.
+		"--hostsdir=" + DNSConfigDirectory,             // Read all the hosts from this directory. File changes read automatically by dnsmasq.
+		"--conf-dir=" + DNSConfigDirectory + ",*.conf", // Read all *.conf files in the directory as dns config files
+	}
 
-    // Use ':' as the separator here, as ',' is included in the --conf-dir argument
-    dnsNannyArgs      = "local-dns-server-args=" + strings.Join(append(append(dnsNannyArgList, "--"), dnsmasqArgList...), ":")
-    dnsControllerArgs = "local-dns-controller-args=" + strings.Join(localDNSControllerArgList, ",")
+	// Use ':' as the separator here, as ',' is included in the --conf-dir argument
+	dnsNannyArgs      = "local-dns-server-args=" + strings.Join(append(append(dnsNannyArgList, "--"), dnsmasqArgList...), ":")
+	dnsControllerArgs = "local-dns-controller-args=" + strings.Join(localDNSControllerArgList, ",")
 )
 
 type ClusterProvisionerOptions struct {
@@ -201,8 +199,8 @@ func (p *DefaultLocalClusterProvisioner) bootstrap(address, url, name string) er
 								"--manager-api-image", p.getLatticeContainerImage(kubeconstants.DockerImageManagerAPIRest),
 								"--cloud-provider", "local",
 								"--cloud-provider-var", "cluster-ip=" + address,
-								"--cloud-provider-var", "dns-controller-image=" + p.getLatticeContainerImage(dnsconstants.DockerImageDNSController),
-								"--cloud-provider-var", "dns-nanny-image=" + dnsconstants.DockerImageDnsmasqServer,
+								"--cloud-provider-var", "dns-controller-image=" + p.getLatticeContainerImage(DockerImageDNSController),
+								"--cloud-provider-var", "dns-nanny-image=" + DockerImageDnsmasqServer,
 								"--cloud-provider-var", "dns-nanny-args=" + dnsNannyArgs,
 								"--cloud-provider-var", "dns-controller-args=" + dnsControllerArgs,
 								"--component-builder-image", p.getLatticeContainerImage(kubeconstants.DockerImageComponentBuilder),

@@ -3,7 +3,6 @@ package local
 import (
 	crv1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	systembootstrapper "github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/system/bootstrap/bootstrapper"
-	"github.com/mlab-lattice/system/pkg/types"
 
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
@@ -27,40 +26,28 @@ const (
 )
 
 type Options struct {
-	IP  string
-	DNS *OptionsDNS
-}
-
-type OptionsDNS struct {
-	DnsnannyImage   string
-	DnsnannyArgs    []string
-	ControllerImage string
-	ControllerArgs  []string
+	IP string
 }
 
 type CloudProvider interface {
 	IP() string
 }
 
-func NewLocalCloudProvider(clusterID types.ClusterID, options *Options) *DefaultLocalCloudProvider {
+func NewCloudProvider(options *Options) *DefaultLocalCloudProvider {
 	cp := &DefaultLocalCloudProvider{
-		ClusterID: clusterID,
-		ip:        options.IP,
-		DNS:       options.DNS,
+		ip: options.IP,
 	}
 
 	return cp
 }
 
 type DefaultLocalCloudProvider struct {
-	ClusterID types.ClusterID
-	ip        string
-	DNS       *OptionsDNS
+	ip string
 }
 
 func (cp *DefaultLocalCloudProvider) BootstrapSystemResources(resources *systembootstrapper.SystemResources) {
 	for _, daemonSet := range resources.DaemonSets {
-		template := cp.transformPodTemplateSpec(&daemonSet.Spec.Template)
+		template := transformPodTemplateSpec(&daemonSet.Spec.Template)
 		daemonSet.Spec.Template = *template
 	}
 }

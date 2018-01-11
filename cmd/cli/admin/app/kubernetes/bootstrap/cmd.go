@@ -131,7 +131,7 @@ var Cmd = &cobra.Command{
 		}
 		options.Terraform = terraformOptions
 
-		cloudProviderClusterBootstrapper, err := cloudprovider.NewClusterBootstrapper(cloudProviderClusterOptions)
+		cloudProviderClusterBootstrapper, err := cloudprovider.NewClusterBootstrapper(clusterID, cloudProviderClusterOptions)
 		if err != nil {
 			panic(err)
 		}

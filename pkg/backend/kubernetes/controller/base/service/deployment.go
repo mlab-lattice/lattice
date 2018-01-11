@@ -146,10 +146,7 @@ func (c *Controller) deploymentSpec(service *crv1.Service, name string, deployme
 	// That is, if we call cloudProvider then serviceMesh here, we _must_ call serviceMesh then cloudProvider
 	// in isDeploymentSpecUpdated.
 
-
-	// TODO :: If not using services
-	// spec = c.serviceMesh.TransformServiceDeploymentSpec(service, spec)
-	spec, err = c.serviceMesh.TransformServiceDeploymentSpec(service, spec, services)
+	spec, err := c.serviceMesh.TransformServiceDeploymentSpec(service, spec)
 	if err != nil {
 		return appsv1.DeploymentSpec{}, err
 	}

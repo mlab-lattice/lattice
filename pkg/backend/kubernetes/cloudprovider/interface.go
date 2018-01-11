@@ -6,7 +6,6 @@ import (
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/cloudprovider/aws"
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/cloudprovider/local"
 	crv1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
-    "github.com/mlab-lattice/system/pkg/types"
 
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
@@ -38,13 +37,13 @@ type Options struct {
 	Local *local.Options
 }
 
-func NewCloudProvider(clusterID types.ClusterID, options *Options) (Interface, error) {
+func NewCloudProvider(options *Options) (Interface, error) {
 	if options.AWS != nil {
 		return aws.NewCloudProvider(options.AWS), nil
 	}
 
 	if options.Local != nil {
-		return local.NewCloudProvider(clusterID, options.Local), nil
+		return local.NewCloudProvider(options.Local), nil
 	}
 
 	return nil, fmt.Errorf("must provide cloud provider options")

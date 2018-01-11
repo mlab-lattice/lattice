@@ -123,7 +123,7 @@ func CreateControllerContext(
 		return controller.Context{}, err
 	}
 
-	cloudProvider, err := cloudprovider.NewCloudProvider(clusterID, cloudProviderOptions)
+	cloudProvider, err := cloudprovider.NewCloudProvider(cloudProviderOptions)
 	if err != nil {
 		return controller.Context{}, err
 	}
