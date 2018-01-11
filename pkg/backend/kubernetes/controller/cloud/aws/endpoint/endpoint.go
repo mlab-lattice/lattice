@@ -45,7 +45,8 @@ func (c *Controller) provisionExternalNameEndpoint(endpoint *crv1.Endpoint) erro
 		return err
 	}
 
-	return tf.Apply(workDirectory(endpoint), config)
+	_, err = tf.Apply(workDirectory(endpoint), config)
+	return err
 }
 
 func (c *Controller) provisionIPEndpoint(endpoint *crv1.Endpoint) error {
@@ -54,7 +55,8 @@ func (c *Controller) provisionIPEndpoint(endpoint *crv1.Endpoint) error {
 		return err
 	}
 
-	return tf.Apply(workDirectory(endpoint), config)
+	_, err = tf.Apply(workDirectory(endpoint), config)
+	return err
 }
 
 func (c *Controller) deprovisionEndpoint(endpoint *crv1.Endpoint) error {
@@ -75,7 +77,8 @@ func (c *Controller) deprovisionExternalNameEndpoint(endpoint *crv1.Endpoint) er
 		return err
 	}
 
-	return tf.Destroy(workDirectory(endpoint), config)
+	_, err = tf.Destroy(workDirectory(endpoint), config)
+	return err
 }
 
 func (c *Controller) deprovisionIPEndpoint(endpoint *crv1.Endpoint) error {
@@ -84,7 +87,8 @@ func (c *Controller) deprovisionIPEndpoint(endpoint *crv1.Endpoint) error {
 		return err
 	}
 
-	return tf.Destroy(workDirectory(endpoint), config)
+	_, err = tf.Destroy(workDirectory(endpoint), config)
+	return err
 }
 
 func (c *Controller) endpointConfig(endpoint *crv1.Endpoint, endpointModule interface{}) (*tf.Config, error) {

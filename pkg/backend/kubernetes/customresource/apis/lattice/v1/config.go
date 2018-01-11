@@ -71,10 +71,10 @@ type ConfigComponentBuildDockerArtifact struct {
 }
 
 type ConfigServiceMesh struct {
-	Envoy *ConfigEnvoy `json:"envoy"`
+	Envoy *ConfigServiceMeshEnvoy `json:"envoy"`
 }
 
-type ConfigEnvoy struct {
+type ConfigServiceMeshEnvoy struct {
 	PrepareImage      string `json:"prepareImage"`
 	Image             string `json:"image"`
 	RedirectCIDRBlock string `json:"redirectCidrBlock"`

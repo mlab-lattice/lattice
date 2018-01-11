@@ -57,15 +57,19 @@ func (c *Controller) kubeServiceSpec(loadBalancer *crv1.LoadBalancer) (corev1.Se
 		return corev1.ServiceSpec{}, err
 	}
 
-	var ports []corev1.ServicePort
+	serviceMeshPorts, err := c.serviceMesh.ServiceMeshPorts(service)
+	if err != nil {
+		return corev1.ServiceSpec{}, err
+	}
 
+	var ports []corev1.ServicePort
 	for component, componentPorts := range service.Spec.Ports {
 		for _, componentPort := range componentPorts {
 			if componentPort.Public {
 				ports = append(ports, corev1.ServicePort{
 					// FIXME: need a better naming scheme
 					Name: fmt.Sprintf("%v-%v", component, componentPort.Name),
-					Port: componentPort.EnvoyPort,
+					Port: serviceMeshPorts[componentPort.Port],
 				})
 			}
 		}

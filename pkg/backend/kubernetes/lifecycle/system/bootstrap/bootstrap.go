@@ -3,14 +3,9 @@ package bootstrap
 import (
 	"fmt"
 
-	"github.com/mlab-lattice/system/pkg/backend/kubernetes/cloudprovider"
-	kubeconstants "github.com/mlab-lattice/system/pkg/backend/kubernetes/constants"
-	crv1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	latticeclientset "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/clientset/versioned"
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/system/bootstrap/bootstrapper"
-	"github.com/mlab-lattice/system/pkg/backend/kubernetes/servicemesh"
-	kubeutil "github.com/mlab-lattice/system/pkg/backend/kubernetes/util/kubernetes"
-	"github.com/mlab-lattice/system/pkg/definition/tree"
+	basebootstrapper "github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/system/bootstrap/bootstrapper/base"
 	"github.com/mlab-lattice/system/pkg/types"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -27,12 +22,11 @@ func Bootstrap(
 	clusterID types.ClusterID,
 	systemID types.SystemID,
 	definitionURL string,
-	serviceMesh servicemesh.Interface,
-	cloudProvider cloudprovider.Interface,
+	bootstrappers []bootstrapper.Interface,
 	kubeClient kubeclientset.Interface,
 	latticeClient latticeclientset.Interface,
 ) (*bootstrapper.SystemResources, error) {
-	resources := GetBootstrapResources(clusterID, systemID, definitionURL, serviceMesh, cloudProvider)
+	resources := GetBootstrapResources(clusterID, systemID, definitionURL, bootstrappers)
 
 	fmt.Println("seeding namespaces")
 	namespace, err := kubeClient.CoreV1().Namespaces().Create(resources.Namespace)
@@ -121,84 +115,22 @@ func GetBootstrapResources(
 	clusterID types.ClusterID,
 	systemID types.SystemID,
 	definitionURL string,
-	serviceMesh servicemesh.Interface,
-	cloudProvider cloudprovider.Interface,
+	bootstrappers []bootstrapper.Interface,
 ) *bootstrapper.SystemResources {
-	namespace := &corev1.Namespace{
-		// Include TypeMeta so if this is a dry run it will be printed out
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "Namespace",
-			APIVersion: "v1",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name: kubeutil.SystemNamespace(clusterID, systemID),
-		},
+	baseOptions := &basebootstrapper.Options{
+		ClusterID:     clusterID,
+		SystemID:      systemID,
+		DefinitionURL: definitionURL,
 	}
 
-	componentBuilderSA := &corev1.ServiceAccount{
-		// Include TypeMeta so if this is a dry run it will be printed out
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "ServiceAccount",
-			APIVersion: rbacv1.GroupName + "/v1",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      kubeconstants.ServiceAccountComponentBuilder,
-			Namespace: namespace.Name,
-		},
+	baseBootstrapper := basebootstrapper.NewBootstrapper(baseOptions)
+
+	resources := &bootstrapper.SystemResources{}
+	baseBootstrapper.BootstrapSystemResources(resources)
+
+	for _, b := range bootstrappers {
+		b.BootstrapSystemResources(resources)
 	}
-
-	componentBuilderRB := &rbacv1.RoleBinding{
-
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "RoleBinding",
-			APIVersion: rbacv1.GroupName + "/v1",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      kubeconstants.InternalComponentComponentBuilder,
-			Namespace: componentBuilderSA.Namespace,
-		},
-		Subjects: []rbacv1.Subject{
-			{
-				Kind:      rbacv1.ServiceAccountKind,
-				Name:      componentBuilderSA.Name,
-				Namespace: componentBuilderSA.Namespace,
-			},
-		},
-		RoleRef: rbacv1.RoleRef{
-			APIGroup: rbacv1.GroupName,
-			Kind:     "ClusterRole",
-			Name:     kubeconstants.InternalComponentComponentBuilder,
-		},
-	}
-
-	system := &crv1.System{
-		// Include TypeMeta so if this is a dry run it will be printed out
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "System",
-			APIVersion: crv1.GroupName + "/v1",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      string(systemID),
-			Namespace: namespace.Name,
-		},
-		Spec: crv1.SystemSpec{
-			DefinitionURL: definitionURL,
-			Services:      map[tree.NodePath]crv1.SystemSpecServiceInfo{},
-		},
-		Status: crv1.SystemStatus{
-			State: crv1.SystemStateStable,
-		},
-	}
-
-	resources := &bootstrapper.SystemResources{
-		System:          system,
-		Namespace:       namespace,
-		ServiceAccounts: []*corev1.ServiceAccount{componentBuilderSA},
-		RoleBindings:    []*rbacv1.RoleBinding{componentBuilderRB},
-	}
-
-	serviceMesh.BootstrapSystemResources(resources)
-	cloudProvider.BootstrapSystemResources(resources)
 
 	return resources
 }

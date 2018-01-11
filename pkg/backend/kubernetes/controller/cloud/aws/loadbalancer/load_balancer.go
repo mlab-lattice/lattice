@@ -60,7 +60,7 @@ func (c *Controller) provisionLoadBalancer(loadBalancer *crv1.LoadBalancer) (*cr
 		return nil, err
 	}
 
-	err = tf.Apply(workDirectory(loadBalancer), config)
+	_, err = tf.Apply(workDirectory(loadBalancer), config)
 	if err != nil {
 		return nil, err
 	}
@@ -90,7 +90,8 @@ func (c *Controller) deprovisionLoadBalancer(loadBalancer *crv1.LoadBalancer) er
 		return err
 	}
 
-	return tf.Destroy(workDirectory(loadBalancer), config)
+	_, err = tf.Destroy(workDirectory(loadBalancer), config)
+	return err
 }
 
 func (c *Controller) loadBalancerConfig(loadBalancer *crv1.LoadBalancer, loadBalancerModule *kubetf.ApplicationLoadBalancer) (*tf.Config, error) {
@@ -136,24 +137,20 @@ func (c *Controller) loadBalancerModule(loadBalancer *crv1.LoadBalancer) (*kubet
 		return nil, err
 	}
 
-	serviceMeshPorts := map[int32]int32{}
-	for _, componentPorts := range service.Spec.Ports {
-		for _, componentPort := range componentPorts {
-			if componentPort.Public {
-				serviceMeshPorts[componentPort.EnvoyPort] = componentPort.Port
-			}
-		}
-	}
-
 	kubeServiceName := kubeutil.GetKubeServiceNameForLoadBalancer(loadBalancer.Name)
 	kubeService, err := c.kubeServiceLister.Services(loadBalancer.Namespace).Get(kubeServiceName)
 	if err != nil {
 		return nil, err
 	}
 
+	servicePorts, err := c.serviceMesh.ServicePorts(service)
+	if err != nil {
+		return nil, err
+	}
+
 	nodePorts := map[int32]int32{}
 	for _, port := range kubeService.Spec.Ports {
-		nodePorts[serviceMeshPorts[port.Port]] = port.NodePort
+		nodePorts[servicePorts[port.Port]] = port.NodePort
 	}
 
 	systemID, err := kubeutil.SystemID(loadBalancer.Namespace)

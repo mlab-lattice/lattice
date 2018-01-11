@@ -42,7 +42,7 @@ func (c *Controller) syncServiceServiceAddress(service *crv1.Service) (*crv1.Ser
 }
 
 func (c *Controller) syncExistingServiceAddress(service *crv1.Service, address *crv1.ServiceAddress) (*crv1.ServiceAddress, error) {
-	spec, err := serviceAddressSpec(service)
+	spec, err := c.serviceAddressSpec(service)
 	if err != nil {
 		return nil, err
 	}
@@ -68,7 +68,7 @@ func (c *Controller) updateServiceAddressSpec(address *crv1.ServiceAddress, spec
 }
 
 func (c *Controller) createNewServiceAddress(service *crv1.Service) (*crv1.ServiceAddress, error) {
-	serviceAddress, err := newServiceAddress(service)
+	serviceAddress, err := c.newServiceAddress(service)
 	if err != nil {
 		return nil, err
 	}
@@ -76,8 +76,8 @@ func (c *Controller) createNewServiceAddress(service *crv1.Service) (*crv1.Servi
 	return c.latticeClient.LatticeV1().ServiceAddresses(service.Namespace).Create(serviceAddress)
 }
 
-func newServiceAddress(service *crv1.Service) (*crv1.ServiceAddress, error) {
-	spec, err := serviceAddressSpec(service)
+func (c *Controller) newServiceAddress(service *crv1.Service) (*crv1.ServiceAddress, error) {
+	spec, err := c.serviceAddressSpec(service)
 	if err != nil {
 		return nil, err
 	}
@@ -95,7 +95,7 @@ func newServiceAddress(service *crv1.Service) (*crv1.ServiceAddress, error) {
 	return serviceAddress, nil
 }
 
-func serviceAddressSpec(service *crv1.Service) (crv1.ServiceAddressSpec, error) {
+func (c *Controller) serviceAddressSpec(service *crv1.Service) (crv1.ServiceAddressSpec, error) {
 	endpointGroups := map[string]crv1.ServiceAddressEndpointGroup{
 		"service": {
 			Service: &service.Name,
@@ -107,7 +107,7 @@ func serviceAddressSpec(service *crv1.Service) (crv1.ServiceAddressSpec, error) 
 		for _, componentPort := range componentPorts {
 			switch componentPort.Protocol {
 			case block.ProtocolHTTP:
-				httpPortConfig, err := serviceAddressHTTPPort(componentPort)
+				httpPortConfig, err := c.serviceAddressHTTPPort(service, componentPort)
 				if err != nil {
 					return crv1.ServiceAddressSpec{}, err
 				}
@@ -137,9 +137,14 @@ func serviceAddressSpec(service *crv1.Service) (crv1.ServiceAddressSpec, error) 
 	return spec, nil
 }
 
-func serviceAddressHTTPPort(componentPort crv1.ComponentPort) (*crv1.ServiceAddressPortHTTPConfig, error) {
+func (c *Controller) serviceAddressHTTPPort(service *crv1.Service, componentPort crv1.ComponentPort) (*crv1.ServiceAddressPortHTTPConfig, error) {
+	serviceMeshPort, err := c.serviceMesh.ServiceMeshPort(service, componentPort.Port)
+	if err != nil {
+		return nil, err
+	}
+
 	target := crv1.ServiceAddressPortHTTPTargetConfig{
-		Port:          componentPort.EnvoyPort,
+		Port:          serviceMeshPort,
 		EndpointGroup: "service",
 		Weight:        100,
 	}

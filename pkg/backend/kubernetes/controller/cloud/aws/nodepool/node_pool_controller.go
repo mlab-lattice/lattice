@@ -100,7 +100,7 @@ func (c *Controller) Run(workers int, stopCh <-chan struct{}) {
 	defer glog.Infof("Shutting down endpoint controller")
 
 	// wait for your secondary caches to fill before starting your work
-	if !cache.WaitForCacheSync(stopCh, c.nodePoolListerSynced) {
+	if !cache.WaitForCacheSync(stopCh, c.configListerSynced, c.nodePoolListerSynced) {
 		return
 	}
 
@@ -163,7 +163,7 @@ func (c *Controller) newAWSCloudProvider() aws.CloudProvider {
 		KeyName:       c.config.CloudProvider.AWS.KeyName,
 	}
 
-	return aws.NewAWSCloudProvider(awsOptions)
+	return aws.NewCloudProvider(awsOptions)
 }
 
 func (c *Controller) handleNodePoolAdd(obj interface{}) {

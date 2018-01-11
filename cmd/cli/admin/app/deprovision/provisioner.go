@@ -3,37 +3,34 @@ package deprovision
 import (
 	"fmt"
 
-	kubeprovisioner "github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/cluster/provisioner"
+	"github.com/mlab-lattice/system/pkg/backend/kubernetes/cloudprovider"
+	"github.com/mlab-lattice/system/pkg/backend/kubernetes/cloudprovider/aws"
+	"github.com/mlab-lattice/system/pkg/backend/kubernetes/cloudprovider/local"
 	"github.com/mlab-lattice/system/pkg/constants"
 	"github.com/mlab-lattice/system/pkg/lifecycle/cluster/provisioner"
 )
 
-func getKubernetesProvisioner(provider, systemName string) (provisioner.Interface, error) {
-	switch provider {
+func getKubernetesProvisioner(providerName string) (provisioner.Interface, error) {
+	var options *cloudprovider.ClusterProvisionerOptions
+	switch providerName {
 	case constants.ProviderLocal:
-		lp, err := getLocalProvisioner()
-		if err != nil {
-			return nil, err
+		options = &cloudprovider.ClusterProvisionerOptions{
+			Local: &local.ClusterProvisionerOptions{},
 		}
-		return provisioner.Interface(lp), nil
 
 	case constants.ProviderAWS:
-		ap, err := getAWSProvisioner(systemName)
-		if err != nil {
-			return nil, err
+		options = &cloudprovider.ClusterProvisionerOptions{
+			AWS: &aws.ClusterProvisionerOptions{},
 		}
-		return provisioner.Interface(ap), nil
 
 	default:
-		panic(fmt.Sprintf("unsupported provider: %v", provider))
+		panic(fmt.Sprintf("unsupported provider: %v", providerName))
 	}
-}
 
-func getLocalProvisioner() (*kubeprovisioner.LocalProvisioner, error) {
-	return kubeprovisioner.NewLocalProvisioner("", "", "", workingDir+"logs")
-}
-
-func getAWSProvisioner(name string) (*kubeprovisioner.AWSProvisioner, error) {
-	awsWorkingDir := workingDir + "/aws/" + name
-	return kubeprovisioner.NewAWSProvisioner("", "", awsWorkingDir, kubeprovisioner.AWSProvisionerConfig{})
+	return cloudprovider.NewClusterProvisioner(
+		"",
+		"",
+		workingDir,
+		options,
+	)
 }
