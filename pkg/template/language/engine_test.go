@@ -150,7 +150,13 @@ const systemJSON = `
     "description": "This is my system"
   },
   "subsystems": [
-    {"$include": "service.json"},
+    { "$include": {
+         "url": "service.json",
+         "parameters": {
+           "init": false
+         }
+       }
+    },
     {
       "$": {
         "name": "my-service",
@@ -200,7 +206,7 @@ const serviceJSON = `
 
   "$parameters": {
       "init": {
-         "required": false,
+         "required": true,
          "default": false
       }
   },
