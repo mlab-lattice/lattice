@@ -8,7 +8,9 @@ import (
 	"testing"
 	"time"
 
-	git "gopkg.in/src-d/go-git.v4"
+	"github.com/mlab-lattice/system/pkg/util/git"
+
+	gogit "gopkg.in/src-d/go-git.v4"
 	"gopkg.in/src-d/go-git.v4/plumbing"
 	"gopkg.in/src-d/go-git.v4/plumbing/object"
 )
@@ -93,7 +95,7 @@ func testListVersions(t *testing.T) {
 		t.Fatalf("Got error calling NewSystemResolver: %v", err)
 	}
 
-	versions, err := res.ListDefinitionVersions(TEST_REPO_GIT_URI_V2, &GitResolveOptions{})
+	versions, err := res.ListDefinitionVersions(TEST_REPO_GIT_URI_V2, &git.Options{})
 	if err != nil {
 		t.Fatal("Error is not nil: ", err)
 	}
@@ -114,7 +116,7 @@ func setupTest() {
 	// ensure work directory
 	os.Mkdir(TEST_REPO_DIR, 0700)
 
-	git.PlainInit(TEST_REPO_DIR, false)
+	gogit.PlainInit(TEST_REPO_DIR, false)
 
 	commitTestFiles(SYSTEM_JSON, SERVICE_JSON, "v1")
 	commitTestFiles(SYSTEM_JSON_V2, SERVICE_JSON, "v2")
@@ -129,7 +131,7 @@ func commitTestFiles(systemJson string, serviceJson string, tag string) {
 	serviceFileContents := []byte(serviceJson)
 	ioutil.WriteFile(path.Join(TEST_REPO_DIR, SERVICE_FILE_NAME), serviceFileContents, 0644)
 
-	repo, _ := git.PlainOpen(TEST_REPO_DIR)
+	repo, _ := gogit.PlainOpen(TEST_REPO_DIR)
 
 	workTree, _ := repo.Worktree()
 
@@ -138,7 +140,7 @@ func commitTestFiles(systemJson string, serviceJson string, tag string) {
 	workTree.Add(SERVICE_FILE_NAME)
 
 	// commit
-	hash, _ := workTree.Commit("test", &git.CommitOptions{
+	hash, _ := workTree.Commit("test", &gogit.CommitOptions{
 		Author: &object.Signature{
 			Name:  "Test",
 			Email: "test@mlab-lattice.com",
