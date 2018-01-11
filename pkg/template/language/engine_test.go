@@ -4,10 +4,8 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"testing"
-
-	"encoding/json"
 	"path"
+	"testing"
 	"time"
 
 	gogit "gopkg.in/src-d/go-git.v4"
@@ -22,16 +20,17 @@ const systemFileUrl = "file:///tmp/lattice-core/test/template-engine/my-repo/.gi
 const serviceFileUrl = "file:///tmp/lattice-core/test/template-engine/my-repo/.git/service.json"
 const testGitWorkDir = "/tmp/lattice-core/test/test-git-file-repository"
 
-func TestMain(m *testing.M) {
-	fmt.Println("Running resolvers tests...")
+func TestEngine(t *testing.T) {
+
+	fmt.Println("Running template engine tests...")
 	setupEngineTest()
-	retCode := m.Run()
+	t.Run("TestEngine", doTestEngine)
+
 	teardownEngineTest()
-	os.Exit(retCode)
 }
 
 func setupEngineTest() {
-	fmt.Println("Setting up resolver test")
+	fmt.Println("Setting up test")
 	// ensure work directory
 	os.Mkdir(testRepoDir, 0700)
 
@@ -42,14 +41,14 @@ func setupEngineTest() {
 }
 
 func teardownEngineTest() {
-	fmt.Println("Tearing down engine test")
+	fmt.Println("Tearing down template engine test")
 	// remove the test repo
 	os.RemoveAll(testRepoDir)
 	// remove the work directory TODO replace with testGitWorkDir when we allow passing work directory in git options
 	os.RemoveAll(gitWorkDirectory)
 }
 
-func TestEngine(t *testing.T) {
+func doTestEngine(t *testing.T) {
 
 	fmt.Println("Starting TemplateEngine test....")
 	engine := NewEngine()
@@ -70,7 +69,7 @@ func TestEngine(t *testing.T) {
 	}
 
 	fmt.Println("Evaluation Result: ")
-	PrettyPrint(result)
+	prettyPrint(result)
 
 	fmt.Println("Validating Eval result...")
 
@@ -130,11 +129,6 @@ func commitTestFiles(systemJson string, serviceJson string, tag string) {
 	t := plumbing.NewHashReference(n, hash)
 	repo.Storer.SetReference(t)
 
-}
-
-func PrettyPrint(v interface{}) {
-	b, _ := json.MarshalIndent(v, "", "  ")
-	fmt.Println(string(b))
 }
 
 const systemJSON = `
