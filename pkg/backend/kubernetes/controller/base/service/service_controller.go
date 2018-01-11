@@ -32,6 +32,7 @@ import (
 	"k8s.io/client-go/util/workqueue"
 
 	"github.com/golang/glog"
+	"github.com/mlab-lattice/system/pkg/types"
 )
 
 var controllerKind = crv1.SchemeGroupVersion.WithKind("Service")
@@ -45,6 +46,8 @@ type Controller struct {
 
 	kubeClient    kubeclientset.Interface
 	latticeClient latticeclientset.Interface
+
+	clusterID types.ClusterID
 
 	configLister       latticelisters.ConfigLister
 	configListerSynced cache.InformerSynced
@@ -76,6 +79,7 @@ type Controller struct {
 
 func NewController(
 	cloudProvider cloudprovider.Interface,
+	clusterID types.ClusterID,
 	kubeClient kubeclientset.Interface,
 	latticeClient latticeclientset.Interface,
 	configInformer latticeinformers.ConfigInformer,
@@ -91,6 +95,7 @@ func NewController(
 
 		kubeClient:    kubeClient,
 		latticeClient: latticeClient,
+		clusterID:     clusterID,
 		configSetChan: make(chan struct{}),
 		queue:         workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "service"),
 	}

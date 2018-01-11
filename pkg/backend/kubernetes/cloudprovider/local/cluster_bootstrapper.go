@@ -40,8 +40,9 @@ type OptionsDNS struct {
 
 func NewClusterBootstrapper(ClusterID types.ClusterID, options *ClusterBootstrapperOptions) *DefaultLocalClusterBootstrapper {
 	return &DefaultLocalClusterBootstrapper{
-		ip:  options.IP,
-		DNS: options.DNS,
+		ClusterID: ClusterID,
+		ip:        options.IP,
+		DNS:       options.DNS,
 	}
 }
 

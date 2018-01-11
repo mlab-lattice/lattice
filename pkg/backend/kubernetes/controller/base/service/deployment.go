@@ -22,6 +22,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/runtime"
 
 	"github.com/golang/glog"
+	"github.com/mlab-lattice/system/pkg/types"
 	"github.com/sergi/go-diff/diffmatchpatch"
 )
 
@@ -69,7 +70,7 @@ func (c *Controller) syncExistingDeployment(service *crv1.Service, nodePool *crv
 	}
 
 	currentSpec := deployment.Spec
-	untransformedSpec := untransformedDeploymentSpec(service, name, labels, nodePool)
+	untransformedSpec := untransformedDeploymentSpec(service, name, c.clusterID, labels, nodePool)
 	defaultedUntransformedSpec := util.SetDeploymentSpecDefaults(untransformedSpec)
 	defaultedDesiredSpec := util.SetDeploymentSpecDefaults(&desiredSpec)
 
@@ -140,7 +141,7 @@ func deploymentLabels(service *crv1.Service) map[string]string {
 }
 
 func (c *Controller) deploymentSpec(service *crv1.Service, name string, deploymentLabels map[string]string, nodePool *crv1.NodePool) (appsv1.DeploymentSpec, error) {
-	spec := untransformedDeploymentSpec(service, name, deploymentLabels, nodePool)
+	spec := untransformedDeploymentSpec(service, name, c.clusterID, deploymentLabels, nodePool)
 
 	// IMPORTANT: the order of these TransformServiceDeploymentSpec and the order of the IsDeploymentSpecUpdated calls in
 	// isDeploymentSpecUpdated _must_ be inverses.
@@ -156,7 +157,7 @@ func (c *Controller) deploymentSpec(service *crv1.Service, name string, deployme
 	return *spec, nil
 }
 
-func untransformedDeploymentSpec(service *crv1.Service, name string, deploymentLabels map[string]string, nodePool *crv1.NodePool) *appsv1.DeploymentSpec {
+func untransformedDeploymentSpec(service *crv1.Service, name string, clusterID types.ClusterID, deploymentLabels map[string]string, nodePool *crv1.NodePool) *appsv1.DeploymentSpec {
 	replicas := service.Spec.NumInstances
 
 	// Create a container for each Component in the Service
@@ -194,7 +195,7 @@ func untransformedDeploymentSpec(service *crv1.Service, name string, deploymentL
 		runtime.HandleError(err)
 	}
 
-	baseSearchPath := fmt.Sprintf("%v.%v.local", systemID, service.ClusterName)
+	baseSearchPath := fmt.Sprintf("%v.%v.local", systemID, clusterID)
 	searchStrings = append(searchStrings, baseSearchPath)
 
 	if !service.Spec.Path.IsRoot() {
@@ -205,7 +206,7 @@ func untransformedDeploymentSpec(service *crv1.Service, name string, deploymentL
 
 		parentString := parentEndpoint.ToDomain(true)
 
-		searchStrings = append(searchStrings, fmt.Sprintf("%v.%v"), parentString, baseSearchPath)
+		searchStrings = append(searchStrings, fmt.Sprintf("%v.%v", parentString, baseSearchPath))
 	}
 
 	DNSConfig := corev1.PodDNSConfig{
