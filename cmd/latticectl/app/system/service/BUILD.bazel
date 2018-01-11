@@ -8,6 +8,7 @@ go_library(
     deps = [
         "//pkg/cli:go_default_library",
         "//pkg/constants:go_default_library",
+        "//pkg/definition/tree:go_default_library",
         "//pkg/managerapi/client:go_default_library",
         "//pkg/managerapi/client/rest:go_default_library",
         "//pkg/types:go_default_library",

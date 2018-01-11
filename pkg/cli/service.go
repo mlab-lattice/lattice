@@ -9,7 +9,6 @@ import (
 )
 
 var serviceHeaders = []string{
-	"ID",
 	"Path",
 	"State",
 	"Updated Instances",
@@ -20,7 +19,6 @@ var serviceHeaders = []string{
 
 func getServiceValues(service *types.Service) []string {
 	values := []string{
-		string(service.ID),
 		string(service.Path),
 		string(service.State),
 		strconv.Itoa(int(service.UpdatedInstances)),
