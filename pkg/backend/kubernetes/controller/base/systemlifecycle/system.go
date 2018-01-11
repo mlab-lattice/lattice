@@ -13,6 +13,13 @@ import (
 	kubelabels "k8s.io/apimachinery/pkg/labels"
 )
 
+func (c *Controller) updateSystem(system *crv1.System, services map[tree.NodePath]crv1.SystemSpecServiceInfo) (*crv1.System, error) {
+	spec := system.Spec.DeepCopy()
+	spec.Services = services
+
+	return c.updateSystemSpec(system, *spec)
+}
+
 func (c *Controller) updateSystemSpec(system *crv1.System, spec crv1.SystemSpec) (*crv1.System, error) {
 	if reflect.DeepEqual(system.Spec, spec) {
 		return system, nil
@@ -70,11 +77,11 @@ func (c *Controller) systemSpec(rollout *crv1.SystemRollout, build *crv1.SystemB
 		return crv1.SystemSpec{}, err
 	}
 
-	sysSpec := crv1.SystemSpec{
+	spec := crv1.SystemSpec{
 		Services: services,
 	}
 
-	return sysSpec, nil
+	return spec, nil
 }
 
 func (c *Controller) systemServices(rollout *crv1.SystemRollout, build *crv1.SystemBuild) (map[tree.NodePath]crv1.SystemSpecServiceInfo, error) {

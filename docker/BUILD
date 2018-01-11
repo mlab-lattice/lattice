@@ -71,6 +71,6 @@ go_targets = [
     ("kubernetes-envoy-xds-api-rest-per-node", "libstdc++6", "cmd/kubernetes/envoy/xdsapi/v1/rest/per-node"),
     ("kubernetes-lattice-controller-manager", "libstdc++6-terraform", "cmd/kubernetes/lattice-controller-manager"),
     ("kubernetes-manager-api-rest", "libstdc++6", "cmd/kubernetes/manager-api/rest"),
-    ("lattice-cli-admin", "libstdc++6", "cmd/cli/admin"),
+    ("latticectl", "libstdc++6", "cmd/latticectl"),
 ]
 lattice_container_images(go_targets)
