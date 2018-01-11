@@ -156,6 +156,10 @@ func (engine *TemplateEngine) include(url string, parameters map[string]interfac
 		return nil, err
 	}
 
+	// init parameters if not set
+	if parameters == nil {
+		parameters = make(map[string]interface{})
+	}
 	// init variables
 	variables := make(map[string]interface{})
 
