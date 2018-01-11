@@ -38,7 +38,7 @@ const (
 
 var (
 	localDNSControllerArgList = []string{
-		"-v", "5",
+		"-v=5",
 		"--logtostderr",
 		"--dnsmasq-config-path", dnsconstants.DNSConfigDirectory + dnsconstants.DnsmasqConfigFile,
 		"--hosts-file-path", dnsconstants.DNSConfigDirectory + dnsconstants.DNSHostsFile,
@@ -53,7 +53,6 @@ var (
 
 	dnsmasqArgList = []string{
 		"-k", // Keep in foreground so as to not immediately exit.
-		"-R", // Dont read provided /etc/resolv.conf
 		"--hostsdir=" + dnsconstants.DNSConfigDirectory,             // Read all the hosts from this directory. File changes read automatically by dnsmasq.
 		"--conf-dir=" + dnsconstants.DNSConfigDirectory + ",*.conf", // Read all *.conf files in the directory as dns config files
 	}

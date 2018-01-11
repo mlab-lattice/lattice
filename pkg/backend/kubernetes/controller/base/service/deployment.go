@@ -206,7 +206,7 @@ func untransformedDeploymentSpec(service *crv1.Service, name string, deploymentL
 			},
 			Spec: corev1.PodSpec{
 				Containers: containers,
-				DNSPolicy:  corev1.DNSNone,
+				DNSPolicy:  corev1.DNSDefault,
 				DNSConfig:  &DNSConfig,
 				Affinity: &corev1.Affinity{
 					NodeAffinity:    kubeutil.NodePoolNodeAffinity(nodePool),

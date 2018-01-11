@@ -91,7 +91,7 @@ func (c *Controller) Run(stopCh <-chan struct{}) {
 	// make sure the work queue is shutdown which will trigger workers to end
 	defer c.queue.ShutDown()
 
-	glog.Infof("Starting controller")
+	glog.Infof("Running controller")
 	defer glog.Infof("Shutting down controller")
 
 	// wait for your secondary caches to fill before starting your work.
@@ -186,14 +186,10 @@ func (c *Controller) endpointsSets(endpoints []*crv1.Endpoint) (set.Set, set.Set
 
 // RewriteDnsmasqConfig rewrites the config files for the dns server
 func (c *Controller) RewriteDnsmasqConfig(endpoints []*crv1.Endpoint) error {
-
-	glog.V(4).Infof("Rewriting config %v, %v ... ", c.hostFilePath, c.dnsmasqConfigPath)
-
 	// This is an extra config file, so contains only the options which must be rewritten.
 	// Condition on cname is that it exists in the specified host file, or references another cname.
 	// Each cname entry of the form cname=ALIAS,...(addn aliases),TARGET
 	// Full specification here: http://www.thekelleys.org.uk/dnsmasq/docs/dnsmasq-man.html
-
 	dnsmasqConfigFileContents := ""
 	hostConfigFileContents := ""
 
