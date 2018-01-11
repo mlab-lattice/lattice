@@ -105,7 +105,7 @@ func (evaluator *ParametersEvaluator) processInputParameter(name string, paramDe
 		}
 	}
 	// default param as needed
-	if defaultValue, hasDefault := paramDef["required"]; hasDefault {
+	if defaultValue, hasDefault := paramDef["default"]; hasDefault {
 		if _, paramIsSet := parameters[name]; !paramIsSet {
 			parameters[name] = defaultValue
 		}
