@@ -65,7 +65,7 @@ func TestBasicEval(t *testing.T) {
 
 func TestParametersEval(t *testing.T) {
 
-	fmt.Println("Testing eval parameters")
+	fmt.Println("Testing eval with parameters")
 	engine := NewEngine()
 
 	m := map[string]interface{}{
@@ -99,6 +99,44 @@ func TestParametersEval(t *testing.T) {
 		if len(resultMap) != 2 {
 			fmt.Println(resultMap)
 			t.Fatal("Expected map size to be 1")
+		}
+
+		// test default values
+		if resultMap["myFoo"] != 1 {
+			t.Fatal("Expected result[myFoo] to be 2")
+		}
+
+	} else {
+		t.Fatal("Expected result to be of type map")
+	}
+
+}
+
+func TestVariablesEval(t *testing.T) {
+
+	fmt.Println("Testing eval with variables")
+	engine := NewEngine()
+
+	m := map[string]interface{}{
+		"$variables": map[string]interface{}{
+			"name": "test",
+			"foo":  1,
+		},
+		"myName": "${name}",
+		"myFoo":  "${foo}",
+	}
+	_, err := engine.Eval(m, nil, nil)
+
+	result, err := engine.Eval(m, nil, nil)
+
+	if err != nil {
+		t.Fatalf("Got error: %v", err)
+	}
+
+	if resultMap, isMap := result.(map[string]interface{}); isMap {
+		if len(resultMap) != 2 {
+			fmt.Println(resultMap)
+			t.Fatal("Expected map size to be 2")
 		}
 
 		// test default values
