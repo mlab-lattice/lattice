@@ -206,7 +206,7 @@ func untransformedDeploymentSpec(service *crv1.Service, name string, clusterID t
 
 		parentString := parentEndpoint.ToDomain(true)
 
-		searchStrings = append(searchStrings, fmt.Sprintf("%v.%v", parentString, baseSearchPath))
+		searchStrings = append(searchStrings, fmt.Sprintf("%v.local.%v", parentString, baseSearchPath))
 	}
 
 	DNSConfig := corev1.PodDNSConfig{
