@@ -1,13 +1,8 @@
 package language
 
 import (
-	"sort"
-	"strings"
-
 	"github.com/mlab-lattice/system/pkg/util/git"
 )
-
-const operatorPrefix = "$"
 
 /**
 
@@ -85,6 +80,7 @@ type Options struct {
 // TemplateEngine
 type TemplateEngine struct {
 	operatorEvaluators map[string]OperatorEvaluator
+	operatorEvalOrder  []string
 }
 
 // NewEngine
@@ -92,9 +88,14 @@ func NewEngine() *TemplateEngine {
 
 	engine := &TemplateEngine{
 		operatorEvaluators: map[string]OperatorEvaluator{
-			"$include":    &IncludeEvaluator{},
-			"$variables":  &VariablesEvaluator{},
 			"$parameters": &ParametersEvaluator{},
+			"$variables":  &VariablesEvaluator{},
+			"$include":    &IncludeEvaluator{},
+		},
+		operatorEvalOrder: []string{
+			"$parameters",
+			"$variables",
+			"$include",
 		},
 	}
 
@@ -110,6 +111,22 @@ func (engine *TemplateEngine) EvalFromURL(url string, parameters map[string]inte
 	}
 
 	return result.(map[string]interface{}), nil
+}
+
+func (engine *TemplateEngine) Eval(o interface{}, parameters map[string]interface{},
+	options *Options) (interface{}, error) {
+
+	// create env and push parameters to the stack
+	env := newEnvironment(engine, options)
+	env.push("", parameters, make(map[string]interface{}))
+
+	// call eval with env
+	result, err := engine.eval(o, env)
+
+	// pop
+	env.pop()
+
+	return result, err
 }
 
 // eval evaluates the specified object
@@ -164,28 +181,37 @@ func (engine *TemplateEngine) include(url string, parameters map[string]interfac
 
 // evalMap evaluates a map of objects
 func (engine *TemplateEngine) evalMap(m map[string]interface{}, env *environment) (interface{}, error) {
+
+	// init result
 	result := make(map[string]interface{})
-	keys := sortedMapKeys(m)
-	for _, k := range keys {
-		var err error
-		// check if the key is an operator
-		if strings.HasPrefix(k, operatorPrefix) {
+	// first, evaluate operators based on their priorities
 
-			if evaluator, isOperator := engine.operatorEvaluators[k]; isOperator {
+	for _, operator := range engine.operatorEvalOrder {
+		if operand, operatorExists := m[operator]; operatorExists {
+			evaluator := engine.operatorEvaluators[operator]
+			evalResult, err := evaluator.eval(operand, env)
 
-				evalResult, err := evaluator.eval(m[k], env)
-				if err != nil {
-					return nil, err
-				} else if evalResult == void { // NOOP case, just skip
-					continue
-				} else {
-					return evalResult, nil
-				}
-
+			if err != nil {
+				return nil, err
+			} else if evalResult == void { // NOOP case, just skip
+				continue
+			} else {
+				return evalResult, nil
 			}
 		}
 
-		result[k], err = engine.eval(m[k], env)
+	}
+	// eval the rest of the map
+	for k, v := range m {
+
+		// skip operators since we have evaluated them already
+		if _, isOperator := engine.operatorEvaluators[k]; isOperator {
+			continue
+		}
+
+		var err error
+
+		result[k], err = engine.eval(v, env)
 		if err != nil {
 			return nil, err
 		}
@@ -208,19 +234,8 @@ func (engine *TemplateEngine) evalArray(arr []interface{}, env *environment) ([]
 	return result, nil
 }
 
-// evalutes a string val
+// evaluates a string
 func (engine *TemplateEngine) evalString(s string, env *environment) (interface{}, error) {
 	// eval expression
 	return evalStringExpression(s, env.parametersAndVariables())
-}
-
-// sortedMapKeys helper function for sorting map keys
-func sortedMapKeys(m map[string]interface{}) []string {
-	var keys []string
-	for k := range m {
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
-
-	return keys
 }
