@@ -143,14 +143,14 @@ func (c *Controller) loadBalancerModule(loadBalancer *crv1.LoadBalancer) (*kubet
 		return nil, err
 	}
 
-	serviceMeshPorts, err := c.serviceMesh.ServiceMeshPorts(service)
+	servicePorts, err := c.serviceMesh.ServicePorts(service)
 	if err != nil {
 		return nil, err
 	}
 
 	nodePorts := map[int32]int32{}
 	for _, port := range kubeService.Spec.Ports {
-		nodePorts[serviceMeshPorts[port.Port]] = port.NodePort
+		nodePorts[servicePorts[port.Port]] = port.NodePort
 	}
 
 	systemID, err := kubeutil.SystemID(loadBalancer.Namespace)

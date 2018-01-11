@@ -620,18 +620,18 @@ func (c *Controller) syncLoadBalancer(key string) error {
 		return err
 	}
 
-	serviceMeshPorts, err := c.serviceMesh.ServiceMeshPorts(service)
+	servicePorts, err := c.serviceMesh.ServicePorts(service)
 	if err != nil {
 		return err
 	}
 
 	ports := map[int32]crv1.LoadBalancerPort{}
 	for _, port := range kubeService.Spec.Ports {
-		ports[serviceMeshPorts[port.Port]] = crv1.LoadBalancerPort{
+		ports[servicePorts[port.Port]] = crv1.LoadBalancerPort{
 			Address: fmt.Sprintf(
 				"%v:%v",
 				loadBalancer.Annotations[aws.AnnotationKeyLoadBalancerDNSName],
-				serviceMeshPorts[port.Port],
+				servicePorts[port.Port],
 			),
 		}
 	}

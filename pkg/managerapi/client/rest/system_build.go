@@ -25,7 +25,6 @@ func newSystemBuildClient(c rest.Client, baseURL string) *SystemBuildClient {
 
 func (c *SystemBuildClient) List() ([]types.SystemBuild, error) {
 	var builds []types.SystemBuild
-	fmt.Println(c.baseURL)
 	err := c.restClient.Get(c.baseURL).JSON(&builds)
 	return builds, err
 }
