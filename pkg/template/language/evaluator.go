@@ -63,6 +63,12 @@ type VariablesEvaluator struct {
 
 // eval
 func (evaluator *VariablesEvaluator) eval(o interface{}, env *environment) (interface{}, error) {
+
+	// validate that variables is a map
+	if _, isMap := o.(map[string]interface{}); !isMap {
+		return nil, fmt.Errorf("bad '$variables' value '%v'. Must be a map", o)
+	}
+
 	variables, err := env.engine.eval(o, env)
 	if err != nil {
 		return nil, err
@@ -81,7 +87,12 @@ type ParametersEvaluator struct {
 
 // eval
 func (evaluator *ParametersEvaluator) eval(o interface{}, env *environment) (interface{}, error) {
-	paramMap := o.(map[string]interface{})
+	paramMap, isMap := o.(map[string]interface{})
+
+	// validate that parameters are passed as a map
+	if !isMap {
+		return nil, fmt.Errorf("bad '$parameters' value '%v'. Must be a map", o)
+	}
 
 	for name, paramDef := range paramMap {
 		err := evaluator.processInputParameter(name, paramDef.(map[string]interface{}), env)
@@ -99,10 +110,15 @@ func (evaluator *ParametersEvaluator) eval(o interface{}, env *environment) (int
 func (evaluator *ParametersEvaluator) processInputParameter(name string, paramDef map[string]interface{}, env *environment) error {
 	parameters := env.currentFrame().parameters
 	// validate required
-	if isRequired, requiredIsSet := paramDef["required"]; requiredIsSet && isRequired.(bool) {
-		if _, paramIsSet := parameters[name]; !paramIsSet {
-			return fmt.Errorf("parameter %s is required", name)
+	if isRequiredVal, requiredIsSet := paramDef["required"]; requiredIsSet {
+		if isRequired, requiredIsBool := isRequiredVal.(bool); requiredIsBool {
+			if _, paramIsSet := parameters[name]; isRequired && !paramIsSet {
+				return fmt.Errorf("parameter %s is required", name)
+			}
+		} else {
+			return fmt.Errorf("bad 'required' value '%v'. Must be a boolean", isRequiredVal)
 		}
+
 	}
 	// default param as needed
 	if defaultValue, hasDefault := paramDef["default"]; hasDefault {

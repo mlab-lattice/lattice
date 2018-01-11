@@ -2,6 +2,7 @@ package language
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 )
 
@@ -85,6 +86,8 @@ func TestParametersEval(t *testing.T) {
 
 	if err == nil || fmt.Sprintf("%v", err) != "parameter name is required" {
 		t.Fatal("Expected error 'parameter name is required'")
+	} else {
+		fmt.Printf("Got expected error: %v\n", err)
 	}
 
 	result, err := engine.Eval(m, map[string]interface{}{
@@ -147,5 +150,41 @@ func TestVariablesEval(t *testing.T) {
 	} else {
 		t.Fatal("Expected result to be of type map")
 	}
+
+}
+
+func TestBadParametersEval(t *testing.T) {
+	fmt.Println("Testing eval with bad parameters")
+	engine := NewEngine()
+
+	m := map[string]interface{}{
+		"$parameters": 1,
+	}
+
+	_, err := engine.Eval(m, nil, nil)
+
+	if err == nil || strings.Contains(fmt.Sprintf("%v", err), "bad $parameters") {
+		t.Fatalf("Got error: %v", err)
+	}
+
+	fmt.Printf("Got expected error: %v\n", err)
+
+}
+
+func TestBadVariablesEval(t *testing.T) {
+	fmt.Println("Testing eval with bad variables")
+	engine := NewEngine()
+
+	m := map[string]interface{}{
+		"$variables": 1,
+	}
+
+	_, err := engine.Eval(m, nil, nil)
+
+	if err == nil || strings.Contains(fmt.Sprintf("%v", err), "bad $variables") {
+		t.Fatalf("Got error: %v", err)
+	}
+
+	fmt.Printf("Got expected error: %v\n", err)
 
 }
