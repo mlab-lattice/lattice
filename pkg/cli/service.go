@@ -31,6 +31,10 @@ func getServiceValues(service *types.Service) []string {
 	}
 
 	ports = strings.TrimSpace(ports)
+	if ports == "" {
+		ports = "n/a"
+	}
+
 	values = append(values, ports)
 
 	failureMessage := "n/a"

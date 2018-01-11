@@ -22,8 +22,8 @@ func getSystemValues(system *types.System) []string {
 	}
 
 	services := ""
-	for path, service := range system.Services {
-		services += fmt.Sprintf("%v: %v\n", path, service.ID)
+	for path := range system.Services {
+		services += fmt.Sprintf("%v\n", path)
 	}
 
 	services = strings.TrimSpace(services)
