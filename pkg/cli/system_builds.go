@@ -34,7 +34,7 @@ func ShowSystemBuilds(builds []types.SystemBuild, output OutputFormat) error {
 		for i, b := range builds {
 			values[i] = getSystemBuildValues(&b)
 		}
-		ListResources(componentBuildHeaders, values)
+		ListResources(systemBuildHeaders, values)
 	case OutputFormatJSON:
 		DisplayAsJSON(builds)
 	default:

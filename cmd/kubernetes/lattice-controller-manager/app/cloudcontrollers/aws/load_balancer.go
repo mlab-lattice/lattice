@@ -16,6 +16,7 @@ func initializeLoadBalancerController(ctx controller.Context) {
 		ctx.TerraformBackendOptions,
 		ctx.KubeClientBuilder.ClientOrDie("lattice-controller-aws-load-balancer"),
 		ctx.LatticeClientBuilder.ClientOrDie("lattice-controller-aws-load-balancer"),
+		ctx.LatticeInformerFactory.Lattice().V1().Configs(),
 		ctx.LatticeInformerFactory.Lattice().V1().LoadBalancers(),
 		ctx.LatticeInformerFactory.Lattice().V1().NodePools(),
 		ctx.LatticeInformerFactory.Lattice().V1().Services(),

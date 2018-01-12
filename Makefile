@@ -97,7 +97,7 @@ docker.push-all-images-stable:
 	make docker.push-image-stable IMAGE=kubernetes-envoy-xds-api-rest-per-node
 	make docker.push-image-stable IMAGE=kubernetes-lattice-controller-manager
 	make docker.push-image-stable IMAGE=kubernetes-manager-api-rest
-	make docker.push-image-stable IMAGE=lattice-cli-admin
+	make docker.push-image-stable IMAGE=latticectl
 
 .PHONY: docker.push-all-images-user
 docker.push-all-images-user:
@@ -106,38 +106,22 @@ docker.push-all-images-user:
 	make docker.push-image-user IMAGE=kubernetes-envoy-xds-api-rest-per-node
 	make docker.push-image-user IMAGE=kubernetes-lattice-controller-manager
 	make docker.push-image-user IMAGE=kubernetes-manager-api-rest
-	make docker.push-image-user IMAGE=lattice-cli-admin
+	make docker.push-image-user IMAGE=latticectl
 
 
 # binaries
-.PHONY: update-binaries
-update-binaries: update-binary-cli-admin update-binary-cli-user
+.PHONY: binary.update-latticectl
+binary.update-latticectl: binary.update-latticectl-darwin-amd64 binary.update-latticectl-linux-amd64
 
-.PHONY: update-binary-cli-admin
-update-binary-cli-admin: update-binary-cli-admin-darwin update-binary-cli-admin-linux
+.PHONY: binary.update-latticectl-darwin-amd64
+binary.update-latticectl-darwin-amd64: gazelle
+	@bazel build --cpu darwin //cmd/latticectl
+	cp -f $(DIR)/bazel-bin/cmd/latticectl/darwin_amd64_stripped/latticectl $(DIR)/bin/latticectl-darwin-amd64
 
-.PHONY: update-binary-cli-user
-update-binary-cli-user: update-binary-cli-user-darwin update-binary-cli-user-linux
-
-.PHONY: update-binary-cli-admin-darwin
-update-binary-cli-admin-darwin: gazelle
-	@bazel build --cpu darwin //cmd/cli/admin
-	cp -f $(DIR)/bazel-bin/cmd/cli/admin/darwin_amd64_stripped/admin $(DIR)/bin/lattice-admin-darwin-amd64
-
-.PHONY: update-binary-cli-admin-linux
-update-binary-cli-admin-linux: gazelle
-	@bazel build --cpu k8 //cmd/cli/admin
-	cp -f $(DIR)/bazel-bin/cmd/cli/admin/linux_amd64_pure_stripped/admin $(DIR)/bin/lattice-admin-linux-amd64
-
-.PHONY: update-binary-cli-user-darwin
-update-binary-cli-user-darwin: gazelle
-	@bazel build --cpu darwin //cmd/cli/user
-	cp -f $(DIR)/bazel-bin/cmd/cli/user/darwin_amd64_stripped/user $(DIR)/bin/lattice-user-darwin-amd64
-
-.PHONY: update-binary-cli-user-linux
-update-binary-cli-user-linux: gazelle
-	@bazel build --cpu k8 //cmd/cli/user
-	cp -f $(DIR)/bazel-bin/cmd/cli/user/linux_amd64_pure_stripped/user $(DIR)/bin/lattice-user-linux-amd64
+.PHONY: binary.update-latticectl-linux-amd64
+binary.update-latticectl-linux-amd64: gazelle
+	@bazel build --cpu k8 //cmd/latticectl
+	cp -f $(DIR)/bazel-bin/cmd/latticectl/linux_amd64_pure_stripped/latticectl $(DIR)/bin/latticectl-linux-amd64
 
 
 # cloud images

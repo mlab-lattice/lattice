@@ -55,7 +55,7 @@ func (c *Controller) provisionNodePool(nodePool *crv1.NodePool) (*crv1.NodePool,
 	nodePoolID := kubeutil.NodePoolIDLabelValue(nodePool)
 
 	config := c.nodePoolConfig(nodePool)
-	err := tf.Apply(workDirectory(nodePoolID), config)
+	_, err := tf.Apply(workDirectory(nodePoolID), config)
 	if err != nil {
 		return nil, err
 	}
@@ -83,7 +83,8 @@ func (c *Controller) deprovisionNodePool(nodePool *crv1.NodePool) error {
 	nodePoolID := kubeutil.NodePoolIDLabelValue(nodePool)
 
 	config := c.nodePoolConfig(nodePool)
-	return tf.Destroy(workDirectory(nodePoolID), config)
+	_, err := tf.Destroy(workDirectory(nodePoolID), config)
+	return err
 }
 
 func (c *Controller) nodePoolConfig(nodePool *crv1.NodePool) *tf.Config {

@@ -6,7 +6,6 @@ import (
 
 	kubeconstants "github.com/mlab-lattice/system/pkg/backend/kubernetes/constants"
 	crv1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
-	"github.com/mlab-lattice/system/pkg/definition/block"
 	"github.com/mlab-lattice/system/pkg/definition/tree"
 
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -111,7 +110,7 @@ func (c *Controller) syncSystemServices(system *crv1.System) (map[tree.NodePath]
 			return nil, nil, nil, err
 		}
 
-		service, err = c.updateServiceSpec(service, spec)
+		service, err = c.updateService(service, spec)
 		if err != nil {
 			return nil, nil, nil, err
 		}
@@ -148,15 +147,15 @@ func (c *Controller) syncSystemServices(system *crv1.System) (map[tree.NodePath]
 }
 
 func (c *Controller) createNewService(system *crv1.System, serviceInfo *crv1.SystemSpecServiceInfo, path tree.NodePath) (*crv1.Service, error) {
-	svc, err := newService(system, serviceInfo, path)
+	service, err := c.newService(system, serviceInfo, path)
 	if err != nil {
 		return nil, err
 	}
 
-	return c.latticeClient.LatticeV1().Services(svc.Namespace).Create(svc)
+	return c.latticeClient.LatticeV1().Services(service.Namespace).Create(service)
 }
 
-func newService(system *crv1.System, serviceInfo *crv1.SystemSpecServiceInfo, path tree.NodePath) (*crv1.Service, error) {
+func (c *Controller) newService(system *crv1.System, serviceInfo *crv1.SystemSpecServiceInfo, path tree.NodePath) (*crv1.Service, error) {
 	labels := map[string]string{
 		kubeconstants.LabelKeyServicePathDomain: path.ToDomain(true),
 	}
@@ -178,6 +177,14 @@ func newService(system *crv1.System, serviceInfo *crv1.SystemSpecServiceInfo, pa
 			State: crv1.ServiceStatePending,
 		},
 	}
+
+	annotations, err := c.serviceMesh.ServiceAnnotations(service)
+	if err != nil {
+		return nil, err
+	}
+
+	service.Annotations = annotations
+
 	return service, nil
 }
 
@@ -197,42 +204,7 @@ func serviceSpec(system *crv1.System, serviceInfo *crv1.SystemSpecServiceInfo, p
 		return crv1.ServiceSpec{}, err
 	}
 
-	componentPorts, portSet := servicePorts(serviceInfo)
-	envoyPorts, err := envoyPorts(portSet)
-	if err != nil {
-		return crv1.ServiceSpec{}, err
-	}
-
-	componentPorts, remainingEnvoyPorts, err := assignEnvoyPorts(serviceInfo.Definition.Components, componentPorts, envoyPorts)
-	if err != nil {
-		return crv1.ServiceSpec{}, err
-	}
-
-	if len(remainingEnvoyPorts) != 2 {
-		return crv1.ServiceSpec{}, fmt.Errorf("expected 2 remaining envoy ports, got %v", len(remainingEnvoyPorts))
-	}
-
-	envoyAdminPort := remainingEnvoyPorts[0]
-	envoyEgressPort := remainingEnvoyPorts[1]
-
-	spec := crv1.ServiceSpec{
-		Path:       path,
-		Definition: serviceInfo.Definition,
-
-		ComponentBuildArtifacts: serviceInfo.ComponentBuildArtifacts,
-
-		Ports:           componentPorts,
-		EnvoyAdminPort:  envoyAdminPort,
-		EnvoyEgressPort: envoyEgressPort,
-
-		NumInstances: numInstances,
-	}
-	return spec, nil
-}
-
-func servicePorts(serviceInfo *crv1.SystemSpecServiceInfo) (map[string][]crv1.ComponentPort, map[int32]struct{}) {
 	componentPorts := map[string][]crv1.ComponentPort{}
-	portSet := map[int32]struct{}{}
 
 	for _, component := range serviceInfo.Definition.Components {
 		var ports []crv1.ComponentPort
@@ -249,68 +221,22 @@ func servicePorts(serviceInfo *crv1.SystemSpecServiceInfo) (map[string][]crv1.Co
 			}
 
 			ports = append(ports, componentPort)
-			portSet[int32(port.Port)] = struct{}{}
 		}
 
 		componentPorts[component.Name] = ports
 	}
 
-	return componentPorts, portSet
+	spec := crv1.ServiceSpec{
+		Path:                    path,
+		Definition:              serviceInfo.Definition,
+		ComponentBuildArtifacts: serviceInfo.ComponentBuildArtifacts,
+		Ports:        componentPorts,
+		NumInstances: numInstances,
+	}
+	return spec, nil
 }
 
-func envoyPorts(portSet map[int32]struct{}) ([]int32, error) {
-	var envoyPortIdx int32 = 10000
-	var envoyPorts []int32
-
-	// Need to find len(portSet) + 2 unique ports to use for envoy
-	// (one for egress, one for admin, and one per component port for ingress)
-	for i := 0; i <= len(portSet)+1; i++ {
-
-		// Loop up to len(portSet) + 1 times to find an unused port
-		// we can use for envoy.
-		for j := 0; j <= len(portSet); j++ {
-
-			// If the current envoyPortIdx is not being used by a component,
-			// we'll use it for envoy. Otherwise, on to the next one.
-			currPortIdx := envoyPortIdx
-			envoyPortIdx++
-
-			if _, ok := portSet[currPortIdx]; !ok {
-				envoyPorts = append(envoyPorts, currPortIdx)
-				break
-			}
-		}
-	}
-
-	if len(envoyPorts) != len(portSet)+2 {
-		return nil, fmt.Errorf("expected %v envoy ports but got %v", len(portSet)+1, len(envoyPorts))
-	}
-
-	return envoyPorts, nil
-}
-
-func assignEnvoyPorts(components []*block.Component, componentPorts map[string][]crv1.ComponentPort, envoyPorts []int32) (map[string][]crv1.ComponentPort, []int32, error) {
-	// Assign an envoy port to each component port, and pop the used envoy port off the slice each time.
-	for _, component := range components {
-		var ports []crv1.ComponentPort
-
-		for _, componentPort := range componentPorts[component.Name] {
-			if len(envoyPorts) == 0 {
-				return nil, nil, fmt.Errorf("ran out of ports when assigning envoyPorts")
-			}
-
-			componentPort.EnvoyPort = envoyPorts[0]
-			ports = append(ports, componentPort)
-			envoyPorts = envoyPorts[1:]
-		}
-
-		componentPorts[component.Name] = ports
-	}
-
-	return componentPorts, envoyPorts, nil
-}
-
-func (c *Controller) updateServiceSpec(service *crv1.Service, spec crv1.ServiceSpec) (*crv1.Service, error) {
+func (c *Controller) updateService(service *crv1.Service, spec crv1.ServiceSpec) (*crv1.Service, error) {
 	if reflect.DeepEqual(service.Spec, spec) {
 		return service, nil
 	}

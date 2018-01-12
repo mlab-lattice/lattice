@@ -3,12 +3,14 @@ package system
 import (
 	"fmt"
 	"reflect"
+	"sync"
 	"time"
 
 	crv1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	latticeclientset "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/clientset/versioned"
 	latticeinformers "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/informers/externalversions/lattice/v1"
 	latticelisters "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/listers/lattice/v1"
+	"github.com/mlab-lattice/system/pkg/backend/kubernetes/servicemesh"
 
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -27,7 +29,16 @@ type Controller struct {
 	syncHandler   func(sysKey string) error
 	enqueueSystem func(sysBuild *crv1.System)
 
+	serviceMesh servicemesh.Interface
+
 	latticeClient latticeclientset.Interface
+
+	configLister       latticelisters.ConfigLister
+	configListerSynced cache.InformerSynced
+	configSetChan      chan struct{}
+	configSet          bool
+	configLock         sync.RWMutex
+	config             crv1.ConfigSpec
 
 	systemLister       latticelisters.SystemLister
 	systemListerSynced cache.InformerSynced
@@ -40,16 +51,27 @@ type Controller struct {
 
 func NewController(
 	latticeClient latticeclientset.Interface,
+	configInformer latticeinformers.ConfigInformer,
 	systemInformer latticeinformers.SystemInformer,
 	serviceInformer latticeinformers.ServiceInformer,
 ) *Controller {
 	sc := &Controller{
 		latticeClient: latticeClient,
+		configSetChan: make(chan struct{}),
 		queue:         workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "system"),
 	}
 
 	sc.enqueueSystem = sc.enqueue
 	sc.syncHandler = sc.syncSystem
+
+	configInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+		// It's assumed there is always one and only one config object.
+		AddFunc:    sc.handleConfigAdd,
+		UpdateFunc: sc.handleConfigUpdate,
+		// TODO(kevinrosendahl): for now it is assumed that ComponentBuilds are not deleted.
+	})
+	sc.configLister = configInformer.Lister()
+	sc.configListerSynced = configInformer.Informer().HasSynced
 
 	systemInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    sc.handleSystemAdd,
@@ -79,11 +101,14 @@ func (c *Controller) Run(workers int, stopCh <-chan struct{}) {
 	defer glog.Infof("Shutting down system controller")
 
 	// wait for your secondary caches to fill before starting your work
-	if !cache.WaitForCacheSync(stopCh, c.systemListerSynced, c.serviceListerSynced) {
+	if !cache.WaitForCacheSync(stopCh, c.configListerSynced, c.systemListerSynced, c.serviceListerSynced) {
 		return
 	}
 
-	glog.V(4).Info("Caches synced.")
+	glog.V(4).Info("Caches synced. Waiting for config to be set")
+
+	// wait for config to be set
+	<-c.configSetChan
 
 	// start up your worker threads based on threadiness.  Some controllers
 	// have multiple kinds of workers
@@ -95,6 +120,62 @@ func (c *Controller) Run(workers int, stopCh <-chan struct{}) {
 
 	// wait until we're told to stop
 	<-stopCh
+}
+
+func (c *Controller) handleConfigAdd(obj interface{}) {
+	config := obj.(*crv1.Config)
+	glog.V(4).Infof("Adding Config %s", config.Name)
+
+	c.configLock.Lock()
+	defer c.configLock.Unlock()
+	c.config = config.DeepCopy().Spec
+
+	serviceMesh, err := c.newServiceMesh()
+	if err != nil {
+		glog.Errorf("error creating service mesh: %v", err)
+		// FIXME: what to do here?
+		return
+	}
+
+	c.serviceMesh = serviceMesh
+
+	if !c.configSet {
+		c.configSet = true
+		close(c.configSetChan)
+	}
+}
+
+func (c *Controller) handleConfigUpdate(old, cur interface{}) {
+	oldConfig := old.(*crv1.Config)
+	curConfig := cur.(*crv1.Config)
+	glog.V(4).Infof("Updating Config %s", oldConfig.Name)
+
+	c.configLock.Lock()
+	defer c.configLock.Unlock()
+	c.config = curConfig.DeepCopy().Spec
+
+	serviceMesh, err := c.newServiceMesh()
+	if err != nil {
+		glog.Errorf("error creating service mesh: %v", err)
+		// FIXME: what to do here?
+		return
+	}
+
+	c.serviceMesh = serviceMesh
+}
+
+func (c *Controller) newServiceMesh() (servicemesh.Interface, error) {
+	serviceMeshOptions, err := servicemesh.OptionsFromConfig(&c.config.ServiceMesh)
+	if err != nil {
+		return nil, err
+	}
+
+	serviceMesh, err := servicemesh.NewServiceMesh(serviceMeshOptions)
+	if err != nil {
+		return nil, err
+	}
+
+	return serviceMesh, nil
 }
 
 func (c *Controller) handleSystemAdd(obj interface{}) {
