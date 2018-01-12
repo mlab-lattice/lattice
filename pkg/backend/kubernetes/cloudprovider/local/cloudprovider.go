@@ -70,7 +70,6 @@ func (cp *DefaultLocalCloudProvider) ComponentBuildWorkDirectoryVolumeSource(job
 func (cp *DefaultLocalCloudProvider) TransformServiceDeploymentSpec(service *crv1.Service, spec *appsv1.DeploymentSpec) *appsv1.DeploymentSpec {
 	spec = spec.DeepCopy()
 	spec.Template = *transformPodTemplateSpec(&spec.Template)
-	spec.Template.Spec.DNSConfig.Nameservers = []string{localDNSServerIP}
 
 	found := false
 

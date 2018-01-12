@@ -233,8 +233,12 @@ func untransformedDeploymentSpec(service *crv1.Service, name string, clusterID t
 			},
 			Spec: corev1.PodSpec{
 				Containers: containers,
-				DNSPolicy:  corev1.DNSDefault,
-				DNSConfig:  &DNSConfig,
+				// This uses DNSNone and supplies the local dnsmasq server as the only nameserver. This is because it
+				// is the only way to have names in the node to have priority, whilst still inheriting the clusters
+				// dns config. It's hacky, but it's how DNSClusterFirst works aswell:
+				// https://github.com/kubernetes/kubernetes/blob/v1.9.0/pkg/kubelet/network/dns/dns.go#L340-L360
+				DNSPolicy: corev1.DNSNone,
+				DNSConfig: &DNSConfig,
 				Affinity: &corev1.Affinity{
 					NodeAffinity:    kubeutil.NodePoolNodeAffinity(nodePool),
 					PodAntiAffinity: podAntiAffinity,
