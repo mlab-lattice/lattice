@@ -92,16 +92,16 @@ func newNodePool(service *crv1.Service) (*crv1.NodePool, error) {
 }
 
 func nodePoolSpec(service *crv1.Service) (crv1.NodePoolSpec, error) {
-	if service.Spec.Definition.Resources.InstanceType == nil {
+	if service.Spec.Definition.Resources().InstanceType == nil {
 		return crv1.NodePoolSpec{}, fmt.Errorf("cannot create NodePool for Service with no resources.instance_type")
 	}
-	instanceType := *service.Spec.Definition.Resources.InstanceType
+	instanceType := *service.Spec.Definition.Resources().InstanceType
 
 	var numInstances int32
-	if service.Spec.Definition.Resources.NumInstances != nil {
-		numInstances = *service.Spec.Definition.Resources.NumInstances
-	} else if service.Spec.Definition.Resources.MinInstances != nil {
-		numInstances = *service.Spec.Definition.Resources.MinInstances
+	if service.Spec.Definition.Resources().NumInstances != nil {
+		numInstances = *service.Spec.Definition.Resources().NumInstances
+	} else if service.Spec.Definition.Resources().MinInstances != nil {
+		numInstances = *service.Spec.Definition.Resources().MinInstances
 	} else {
 		return crv1.NodePoolSpec{}, fmt.Errorf("cannot create NodePool for Service with neither resources.num_instances nor resources.min_instances")
 	}

@@ -11,14 +11,10 @@ type SystemNode struct {
 	parent         Node
 	path           NodePath
 	subsystemNodes map[NodePath]Node
-	definition     *definition.System
+	definition     definition.System
 }
 
-func NewSystemNode(definition *definition.System, parent Node) (*SystemNode, error) {
-	if err := definition.Validate(nil); err != nil {
-		return nil, err
-	}
-
+func NewSystemNode(definition definition.System, parent Node) (*SystemNode, error) {
 	s := &SystemNode{
 		parent:         parent,
 		path:           getPath(parent, definition),
@@ -26,8 +22,8 @@ func NewSystemNode(definition *definition.System, parent Node) (*SystemNode, err
 		subsystemNodes: map[NodePath]Node{},
 	}
 
-	for _, sd := range definition.Subsystems {
-		child, err := NewNode(sd, Node(s))
+	for _, subsystem := range definition.Subsystems() {
+		child, err := NewNode(subsystem, Node(s))
 		if err != nil {
 			return nil, err
 		}
@@ -49,16 +45,20 @@ func (s *SystemNode) MarshalJSON() ([]byte, error) {
 	return json.Marshal(s.definition)
 }
 
+func (s *SystemNode) Type() string {
+	return s.definition.Type()
+}
+
+func (s *SystemNode) Name() string {
+	return s.definition.Name()
+}
+
 func (s *SystemNode) Parent() Node {
 	return s.parent
 }
 
 func (s *SystemNode) Path() NodePath {
 	return NodePath(s.path)
-}
-
-func (s *SystemNode) Name() string {
-	return s.definition.Meta.Name
 }
 
 func (s *SystemNode) Definition() definition.Interface {

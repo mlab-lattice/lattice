@@ -53,7 +53,7 @@ type system struct {
 }
 
 func (s *system) Type() string {
-	return TypeService
+	return TypeSystem
 }
 
 func (s *system) Name() string {

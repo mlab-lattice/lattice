@@ -9,14 +9,10 @@ import (
 type ServiceNode struct {
 	parent     Node
 	path       NodePath
-	definition *definition.Service
+	definition definition.Service
 }
 
-func NewServiceNode(definition *definition.Service, parent Node) (*ServiceNode, error) {
-	if err := definition.Validate(nil); err != nil {
-		return nil, err
-	}
-
+func NewServiceNode(definition definition.Service, parent Node) (*ServiceNode, error) {
 	s := &ServiceNode{
 		parent:     parent,
 		path:       getPath(parent, definition),
@@ -30,16 +26,20 @@ func (s *ServiceNode) MarshalJSON() ([]byte, error) {
 	return json.Marshal(s.definition)
 }
 
+func (s *ServiceNode) Type() string {
+	return s.definition.Type()
+}
+
+func (s *ServiceNode) Name() string {
+	return s.definition.Name()
+}
+
 func (s *ServiceNode) Parent() Node {
 	return s.parent
 }
 
 func (s *ServiceNode) Path() NodePath {
 	return NodePath(s.path)
-}
-
-func (s *ServiceNode) Name() string {
-	return s.definition.Meta.Name
 }
 
 func (s *ServiceNode) Definition() definition.Interface {

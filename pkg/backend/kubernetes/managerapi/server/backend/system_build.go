@@ -41,7 +41,7 @@ func systemBuild(id types.SystemID, definitionRoot tree.Node, v types.SystemVers
 	services := map[tree.NodePath]crv1.SystemBuildSpecServiceInfo{}
 	for path, svcNode := range definitionRoot.Services() {
 		services[path] = crv1.SystemBuildSpecServiceInfo{
-			Definition: *(svcNode.Definition().(*definition.Service)),
+			Definition: svcNode.Definition().(definition.Service),
 		}
 	}
 

@@ -42,7 +42,8 @@ type systemBuildSpecRaw struct {
 
 func (sbs *SystemBuildSpec) MarshalJSON() ([]byte, error) {
 	jsonMap := map[string]interface{}{
-		"definition": sbs.DefinitionRoot.Definition(),
+		// FIXME: this almost certainly won't work
+		"definition": sbs.DefinitionRoot,
 		"services":   sbs.Services,
 	}
 	return json.Marshal(jsonMap)
