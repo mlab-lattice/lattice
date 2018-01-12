@@ -6,8 +6,12 @@ import (
 	"testing"
 )
 
+// TestBasicEval
 func TestBasicEval(t *testing.T) {
 
+	// basic eval tests
+
+	// testing int eval
 	fmt.Println("Testing eval int")
 	engine := NewEngine()
 
@@ -21,6 +25,8 @@ func TestBasicEval(t *testing.T) {
 		t.Fatal("Expected result to be 1")
 	}
 
+	// testing string eval
+
 	fmt.Println("Testing eval string")
 
 	result, err = engine.Eval("abc", nil, nil)
@@ -32,6 +38,8 @@ func TestBasicEval(t *testing.T) {
 	if result != "abc" {
 		t.Fatal("Expected result to be 'abc'")
 	}
+
+	// test bool eval
 
 	fmt.Println("Testing eval bool")
 
@@ -45,6 +53,7 @@ func TestBasicEval(t *testing.T) {
 		t.Fatal("Expected result to be true")
 	}
 
+	// testing map eval
 	fmt.Println("Testing eval map")
 
 	result, err = engine.Eval(map[string]interface{}{"x": 1}, nil, nil)
@@ -64,6 +73,7 @@ func TestBasicEval(t *testing.T) {
 
 }
 
+// TestParametersEval
 func TestParametersEval(t *testing.T) {
 
 	fmt.Println("Testing eval with parameters")
@@ -115,6 +125,7 @@ func TestParametersEval(t *testing.T) {
 
 }
 
+// TestVariablesEval
 func TestVariablesEval(t *testing.T) {
 
 	fmt.Println("Testing eval with variables")
@@ -153,6 +164,7 @@ func TestVariablesEval(t *testing.T) {
 
 }
 
+// TestBadParametersEval
 func TestBadParametersEval(t *testing.T) {
 	fmt.Println("Testing eval with bad parameters")
 	engine := NewEngine()
@@ -171,6 +183,7 @@ func TestBadParametersEval(t *testing.T) {
 
 }
 
+// TestBadVariablesEval
 func TestBadVariablesEval(t *testing.T) {
 	fmt.Println("Testing eval with bad variables")
 	engine := NewEngine()

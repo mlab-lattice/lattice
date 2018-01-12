@@ -1,67 +1,25 @@
-package language
-
-import (
-	"github.com/mlab-lattice/system/pkg/util/git"
-)
-
 /**
+Package language provides json template language.
 
-Design:
+Main features:
+ - Read/Eval json templates from git repositories
+ - Single objection evaluation
+ - Including other relative/external templates
+ - Passing parameters
+ - Variable declaration
+ - String interpolation
 
+Features to be added:
+ - if statements
 
-* Eval(o, params, options)
-   - create env
-   - eval(o, params, env)
-
-* eval(o, params, env)
- - string: evalString(o, params, env)
- - map: evalMap(o, params, env)
- - template: evalTemplate(o, params, env)
- - default: return o
-
-
-* env:
-  - stack<stackFrame>
-  - stackFrame:
-     - parameters
-     - variables
-     - baseUrl
-
-* "$include" : {
-    "url": "URL",
-    "parameters": {
-       <name: val>,
-    }
-  }
-
-   - validate parameters/apply default values
-   - engine.include(url, newParameters, env)
-
-* "$variables": {
-     <name: val>,
-   }
-
-  - env.variables[name] = engine.eval(variable)
-
-* "$parameters": {
-     "<name>": {
-       "required": <bool>,
-       "default": <object>
-     }
-   }
+Interface:
+ - EvalFromURL(url, parameters, options)
+ - Eval(interface{}, parameters, options)
 
 
 TODO:
- * Ordering in map evaluation.
-    - Order
-    - maybe: $parameters, $variables, remaining
-    - Or order by line numbers in template itself if possible
 
- * Ordering in $variable evaluation: variable def using a value of a another variable
-    - order of line numbers
-    - OR maybe make variable def a list instead of a map
 
- * what if a variable and a parameter has the same name? who wins?
  * Keep line numbers, maybe build a syntax tree where we have the preserve the property path and line number
 
  * Git urls: Which form do we want to allow?
@@ -72,18 +30,25 @@ TODO:
 * Allow escaping in string interpolations
 
 */
+package language
 
+import (
+	"github.com/mlab-lattice/system/pkg/util/git"
+)
+
+// Options evaluation options
 type Options struct {
-	GitOptions *git.Options
+	GitOptions *git.Options // git options to be passed for git resolver
 }
 
-// TemplateEngine
+// TemplateEngine the main class to be used for parsing/evaluating templates
 type TemplateEngine struct {
-	operatorEvaluators map[string]OperatorEvaluator
-	operatorEvalOrder  []string
+	operatorEvaluators map[string]OperatorEvaluator // internal operator evaluator registry
+	operatorEvalOrder  []string                     // orders of operator evaluation within a template.
+	// All keys operatorEvaluators are required to be here in the desired order.
 }
 
-// NewEngine
+// NewEngine constructs new engine object
 func NewEngine() *TemplateEngine {
 
 	engine := &TemplateEngine{
@@ -102,7 +67,7 @@ func NewEngine() *TemplateEngine {
 	return engine
 }
 
-// EvalFromURL
+// EvalFromURL evaluates the template from the specified url with the specified parameters and options
 func (engine *TemplateEngine) EvalFromURL(url string, parameters map[string]interface{}, options *Options) (map[string]interface{}, error) {
 	env := newEnvironment(engine, options)
 	result, err := engine.include(url, parameters, env)
@@ -113,6 +78,7 @@ func (engine *TemplateEngine) EvalFromURL(url string, parameters map[string]inte
 	return result.(map[string]interface{}), nil
 }
 
+// Eval evaluates a single object
 func (engine *TemplateEngine) Eval(o interface{}, parameters map[string]interface{},
 	options *Options) (interface{}, error) {
 
