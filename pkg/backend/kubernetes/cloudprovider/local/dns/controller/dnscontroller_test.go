@@ -64,7 +64,7 @@ func hostFileOutput(hosts []hostEntry) string {
 			systemID = v.systemID
 		}
 
-		fullPath := v.host + ".local." + clusterID + "." + systemID + ".local"
+		fullPath := v.host + ".local." + systemID + "." + clusterID + ".local"
 		newLine := v.ip + " " + fullPath + "\n"
 		str = str + newLine
 	}
@@ -86,7 +86,7 @@ func dnsmasqConfigFileOutput(nameservers []cnameEntry) string {
 			systemID = v.systemID
 		}
 
-		fullPath := v.alias + ".local." + clusterID + "." + systemID + ".local"
+		fullPath := v.alias + ".local." + systemID + "." + clusterID + ".local"
 		newLine := "cname=" + fullPath + "," + v.original + "\n"
 		str = str + newLine
 	}

@@ -200,7 +200,7 @@ func (c *Controller) RewriteDnsmasqConfig(endpoints []*crv1.Endpoint) error {
 		}
 
 		path := endpoint.Spec.Path.ToDomain(true)
-		cname := fmt.Sprintf("%v.local.%v.%v.local", path, c.clusterID, systemID)
+		cname := fmt.Sprintf("%v.local.%v.%v.local", path, systemID, c.clusterID)
 
 		if endpoint.Spec.IP != nil {
 			hostConfigFileContents += fmt.Sprintf("%v %v\n", *endpoint.Spec.IP, cname)
