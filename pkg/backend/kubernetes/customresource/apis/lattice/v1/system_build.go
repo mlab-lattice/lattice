@@ -54,7 +54,7 @@ func (sbs *SystemBuildSpec) UnmarshalJSON(data []byte) error {
 		return err
 	}
 
-	def, err := definition.UnmarshalJSON(raw.Definition)
+	def, err := definition.NewFromJSON(raw.Definition)
 	if err != nil {
 		return err
 	}

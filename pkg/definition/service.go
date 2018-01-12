@@ -1,61 +1,73 @@
 package definition
 
 import (
-	"errors"
+	"encoding/json"
 	"fmt"
 
 	"github.com/mlab-lattice/system/pkg/definition/block"
 )
 
-const ServiceType = "service"
+type Service interface {
+	Interface
+	Volumes() []*block.Volume
+	Components() []*block.Component
+	Resources() block.Resources
+}
 
-type Service struct {
-	Meta       block.Metadata     `json:"$"`
-	Volumes    []*block.Volume    `json:"volumes,omitempty"`
+type ServiceValidator interface {
+	Validate(Service) error
+}
+
+func NewServiceFromJSON(data []byte) (Service, error) {
+	var decoded serviceDecoder
+	if err := json.Unmarshal(data, &decoded); err != nil {
+		return nil, err
+	}
+
+	if decoded.Type != TypeService {
+		return nil, fmt.Errorf("service type must be %v", TypeService)
+	}
+
+	s := &service{
+		name:       decoded.Name,
+		volumes:    decoded.Volumes,
+		components: decoded.Components,
+		resources:  decoded.Resources,
+	}
+	return s, nil
+}
+
+type serviceDecoder struct {
+	Type       string             `json:"type"`
+	Name       string             `json:"name"`
+	Volumes    []*block.Volume    `json:"volumes"`
 	Components []*block.Component `json:"components"`
 	Resources  block.Resources    `json:"resources"`
 }
 
-// Metadata implements Interface
-func (s *Service) Metadata() *block.Metadata {
-	return &s.Meta
+type service struct {
+	name       string
+	volumes    []*block.Volume
+	components []*block.Component
+	resources  block.Resources
 }
 
-// Validate implements block.Interface
-func (s *Service) Validate(interface{}) error {
-	if s == nil {
-		return errors.New("cannot have nil Service definition")
-	}
+func (s *service) Type() string {
+	return TypeService
+}
 
-	if err := s.Meta.Validate(nil); err != nil {
-		return fmt.Errorf("metadata definition error: %v", err)
-	}
+func (s *service) Name() string {
+	return s.name
+}
 
-	if s.Meta.Type != ServiceType {
-		return fmt.Errorf("expected type %v but got %v", ServiceType, s.Meta.Type)
-	}
+func (s *service) Volumes() []*block.Volume {
+	return s.volumes
+}
 
-	volumes := map[string]*block.Volume{}
-	for _, volume := range s.Volumes {
-		if err := volume.Validate(nil); err != nil {
-			return fmt.Errorf("volume %v definition error: %v", volume.Name, err)
-		}
-		volumes[volume.Name] = volume
-	}
+func (s *service) Components() []*block.Component {
+	return s.components
+}
 
-	if len(s.Components) == 0 {
-		return errors.New("must specify at least one component")
-	}
-
-	for componentName, component := range s.Components {
-		if err := component.Validate(volumes); err != nil {
-			return fmt.Errorf("component %v definition error: %v", componentName, err)
-		}
-	}
-
-	if err := s.Resources.Validate(nil); err != nil {
-		return fmt.Errorf("resources definition error: %v", err)
-	}
-
-	return nil
+func (s *service) Resources() block.Resources {
+	return s.resources
 }

@@ -1,69 +1,65 @@
 package definition
 
 import (
-	"errors"
+	"encoding/json"
 	"fmt"
-
-	"github.com/mlab-lattice/system/pkg/definition/block"
 )
 
-const SystemType = "system"
-
-type System struct {
-	Meta       block.Metadata `json:"$"`
-	Subsystems []Interface    `json:"subsystems"`
+type System interface {
+	Interface
+	Subsystems() []Interface
 }
 
-// UnmarshalJSON implements json.Unmarshaler
-func (s *System) UnmarshalJSON(data []byte) error {
-	definition, err := UnmarshalJSON(data)
-	if err != nil {
-		return err
-	}
-
-	if sysDefinition, ok := definition.(*System); ok {
-		s.Meta = sysDefinition.Meta
-		s.Subsystems = sysDefinition.Subsystems
-	}
-	return nil
+type SystemValidator interface {
+	Validate(System) error
 }
 
-// Metadata implements Interface
-func (s *System) Metadata() *block.Metadata {
-	return &s.Meta
-}
-
-// Validate implement block.Interface
-func (s *System) Validate(interface{}) error {
-	if s == nil {
-		return errors.New("cannot have nil System definition")
+func NewSystemFromJSON(data []byte) (System, error) {
+	var decoded systemDecoder
+	if err := json.Unmarshal(data, &decoded); err != nil {
+		return nil, err
 	}
 
-	if err := s.Meta.Validate(nil); err != nil {
-		return fmt.Errorf("metadata definition error: %v", err)
+	if decoded.Type != TypeSystem {
+		return nil, fmt.Errorf("system type must be %v", TypeSystem)
 	}
 
-	if s.Meta.Type != SystemType {
-		return fmt.Errorf("expected type %v but got %v", SystemType, s.Meta.Type)
-	}
-
-	if len(s.Subsystems) == 0 {
-		return errors.New("must have at least one subsystem")
-	}
-
-	subsystemNames := map[string]bool{}
-	for _, subsystem := range s.Subsystems {
-		subsystemName := subsystem.Metadata().Name
-		if _, exists := subsystemNames[subsystemName]; exists {
-			return fmt.Errorf("multiple subsystems with the name %v", subsystemName)
+	var subsystems []Interface
+	for _, subsystemJSON := range decoded.Subsystems {
+		subsystem, err := NewFromJSON(subsystemJSON)
+		if err != nil {
+			return nil, err
 		}
-		subsystemNames[subsystemName] = true
 
-		subsystemDefinitionBlock := subsystem.(block.Interface)
-		if err := subsystemDefinitionBlock.Validate(nil); err != nil {
-			return fmt.Errorf("subsystem %v definition error: %v", subsystemName, err)
-		}
+		subsystems = append(subsystems, subsystem)
 	}
 
-	return nil
+	s := &system{
+		name:       decoded.Name,
+		subsystems: subsystems,
+	}
+	return s, nil
+}
+
+type systemDecoder struct {
+	Type       string            `json:"type"`
+	Name       string            `json:"name"`
+	Subsystems []json.RawMessage `json:"subsystems"`
+}
+
+type system struct {
+	name       string
+	subsystems []Interface
+}
+
+func (s *system) Type() string {
+	return TypeService
+}
+
+func (s *system) Name() string {
+	return s.name
+}
+
+func (s *system) Subsystems() []Interface {
+	return s.subsystems
 }

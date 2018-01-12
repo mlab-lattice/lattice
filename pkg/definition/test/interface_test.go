@@ -33,7 +33,7 @@ func TestInterface_NewServiceFromJSON(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		def, err := definition.UnmarshalJSON(test.JSON)
+		def, err := definition.NewFromJSON(test.JSON)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -68,7 +68,7 @@ func TestInterface_NewSystemFromJSON(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		def, err := definition.UnmarshalJSON(test.JSON)
+		def, err := definition.NewFromJSON(test.JSON)
 		if err != nil {
 			t.Fatal(err)
 		}

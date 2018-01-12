@@ -1,4 +1,4 @@
-package test
+package mock
 
 import (
 	"encoding/json"
@@ -6,6 +6,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/mlab-lattice/system/pkg/definition/block"
 	testutil "github.com/mlab-lattice/system/pkg/util/test"
 )
 

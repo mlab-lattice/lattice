@@ -6,7 +6,7 @@ go_library(
         "service.go",
         "system.go",
     ],
-    importpath = "github.com/mlab-lattice/system/pkg/definition/test",
+    importpath = "github.com/mlab-lattice/system/pkg/definition/mock",
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/definition:go_default_library",
@@ -19,16 +19,4 @@ go_library(
 go_test(
     name = "go_default_test",
     size = "small",
-    srcs = [
-        "interface_test.go",
-        "service_test.go",
-        "system_test.go",
-    ],
-    embed = [":go_default_library"],
-    importpath = "github.com/mlab-lattice/system/pkg/definition/test",
-    deps = [
-        "//pkg/definition:go_default_library",
-        "//pkg/definition/block/test:go_default_library",
-        "//pkg/util/test:go_default_library",
-    ],
 )
