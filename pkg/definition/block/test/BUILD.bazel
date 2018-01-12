@@ -9,7 +9,6 @@ go_library(
         "exec.go",
         "git.go",
         "health_check.go",
-        "metadata.go",
         "port.go",
         "resources.go",
         "util.go",
@@ -18,7 +17,6 @@ go_library(
     importpath = "github.com/mlab-lattice/system/pkg/definition/block/test",
     visibility = ["//visibility:public"],
     deps = [
-        "//pkg/definition:go_default_library",
         "//pkg/definition/block:go_default_library",
         "//pkg/util/json:go_default_library",
         "//pkg/util/test:go_default_library",
@@ -35,7 +33,6 @@ go_test(
         "exec_test.go",
         "git_test.go",
         "health_check_test.go",
-        "metadata_test.go",
         "port_test.go",
         "resources_test.go",
         "volume_test.go",

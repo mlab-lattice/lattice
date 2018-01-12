@@ -1,6 +1,8 @@
 package v1
 
 import (
+	"encoding/json"
+
 	"github.com/mlab-lattice/system/pkg/definition"
 	"github.com/mlab-lattice/system/pkg/definition/tree"
 
@@ -25,6 +27,8 @@ type Service struct {
 	Status            ServiceStatus `json:"status,omitempty"`
 }
 
+// N.B.: important: if you update the ServiceSpec you must also update
+// the serviceSpecEncoder and ServiceSpec's UnmarshalJSON
 // +k8s:deepcopy-gen=false
 type ServiceSpec struct {
 	Path       tree.NodePath      `json:"path"`
@@ -45,6 +49,35 @@ type ComponentPort struct {
 	Port     int32  `json:"port"`
 	Protocol string `json:"protocol"`
 	Public   bool   `json:"public"`
+}
+
+type serviceSpecEncoder struct {
+	Path                    tree.NodePath                      `json:"path"`
+	Definition              json.RawMessage                    `json:"definition"`
+	ComponentBuildArtifacts map[string]ComponentBuildArtifacts `json:"componentBuildArtifacts"`
+	Ports                   map[string][]ComponentPort         `json:"ports"`
+	NumInstances            int32                              `json:"numInstances"`
+}
+
+func (s *ServiceSpec) UnmarshalJSON(data []byte) error {
+	var decoded serviceSpecEncoder
+	if err := json.Unmarshal(data, &decoded); err != nil {
+		return err
+	}
+
+	service, err := definition.NewServiceFromJSON(decoded.Definition)
+	if err != nil {
+		return err
+	}
+
+	*s = ServiceSpec{
+		Path:                    decoded.Path,
+		Definition:              service,
+		ComponentBuildArtifacts: decoded.ComponentBuildArtifacts,
+		Ports:        decoded.Ports,
+		NumInstances: decoded.NumInstances,
+	}
+	return nil
 }
 
 type ServiceStatus struct {

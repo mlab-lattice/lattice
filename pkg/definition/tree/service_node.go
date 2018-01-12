@@ -9,14 +9,10 @@ import (
 type ServiceNode struct {
 	parent     Node
 	path       NodePath
-	definition *definition.Service
+	definition definition.Service
 }
 
-func NewServiceNode(definition *definition.Service, parent Node) (*ServiceNode, error) {
-	if err := definition.Validate(nil); err != nil {
-		return nil, err
-	}
-
+func NewServiceNode(definition definition.Service, parent Node) (*ServiceNode, error) {
 	s := &ServiceNode{
 		parent:     parent,
 		path:       getPath(parent, definition),
@@ -25,7 +21,18 @@ func NewServiceNode(definition *definition.Service, parent Node) (*ServiceNode, 
 	return s, nil
 }
 
-// MarshalJSON implements the encoding/json.Marshaller interface.
+func (s *ServiceNode) Type() string {
+	return s.definition.Type()
+}
+
+func (s *ServiceNode) Name() string {
+	return s.definition.Name()
+}
+
+func (s *ServiceNode) Description() string {
+	return s.definition.Description()
+}
+
 func (s *ServiceNode) MarshalJSON() ([]byte, error) {
 	return json.Marshal(s.definition)
 }
@@ -36,10 +43,6 @@ func (s *ServiceNode) Parent() Node {
 
 func (s *ServiceNode) Path() NodePath {
 	return NodePath(s.path)
-}
-
-func (s *ServiceNode) Name() string {
-	return s.definition.Meta.Name
 }
 
 func (s *ServiceNode) Definition() definition.Interface {

@@ -11,12 +11,12 @@ import (
 	"github.com/satori/go.uuid"
 )
 
-func (c *Controller) createNewServiceBuild(build *crv1.SystemBuild, servicePath tree.NodePath, serviceDefinition *definition.Service) (*crv1.ServiceBuild, error) {
+func (c *Controller) createNewServiceBuild(build *crv1.SystemBuild, servicePath tree.NodePath, serviceDefinition definition.Service) (*crv1.ServiceBuild, error) {
 	serviceBuild := serviceBuild(build, servicePath, serviceDefinition)
 	return c.latticeClient.LatticeV1().ServiceBuilds(build.Namespace).Create(serviceBuild)
 }
 
-func serviceBuild(build *crv1.SystemBuild, servicePath tree.NodePath, serviceDefinition *definition.Service) *crv1.ServiceBuild {
+func serviceBuild(build *crv1.SystemBuild, servicePath tree.NodePath, serviceDefinition definition.Service) *crv1.ServiceBuild {
 	labels := map[string]string{
 		constants.LabelKeySystemBuildID:     build.Name,
 		constants.LabelKeyServicePathDomain: servicePath.ToDomain(true),
@@ -37,9 +37,9 @@ func serviceBuild(build *crv1.SystemBuild, servicePath tree.NodePath, serviceDef
 	}
 }
 
-func serviceBuildSpec(serviceDefinition *definition.Service) crv1.ServiceBuildSpec {
+func serviceBuildSpec(serviceDefinition definition.Service) crv1.ServiceBuildSpec {
 	components := map[string]crv1.ServiceBuildSpecComponentBuildInfo{}
-	for _, component := range serviceDefinition.Components {
+	for _, component := range serviceDefinition.Components() {
 		components[component.Name] = crv1.ServiceBuildSpecComponentBuildInfo{
 			DefinitionBlock: component.Build,
 		}
