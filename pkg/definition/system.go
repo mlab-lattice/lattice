@@ -15,7 +15,7 @@ type SystemValidator interface {
 }
 
 func NewSystemFromJSON(data []byte) (System, error) {
-	var decoded systemDecoder
+	var decoded systemEncoder
 	if err := json.Unmarshal(data, &decoded); err != nil {
 		return nil, err
 	}
@@ -35,21 +35,24 @@ func NewSystemFromJSON(data []byte) (System, error) {
 	}
 
 	s := &system{
-		name:       decoded.Name,
-		subsystems: subsystems,
+		name:        decoded.Name,
+		description: decoded.Description,
+		subsystems:  subsystems,
 	}
 	return s, nil
 }
 
-type systemDecoder struct {
-	Type       string            `json:"type"`
-	Name       string            `json:"name"`
-	Subsystems []json.RawMessage `json:"subsystems"`
+type systemEncoder struct {
+	Type        string            `json:"type"`
+	Name        string            `json:"name"`
+	Description string            `json:"description"`
+	Subsystems  []json.RawMessage `json:"subsystems"`
 }
 
 type system struct {
-	name       string
-	subsystems []Interface
+	name        string
+	description string
+	subsystems  []Interface
 }
 
 func (s *system) Type() string {
@@ -60,6 +63,31 @@ func (s *system) Name() string {
 	return s.name
 }
 
+func (s *system) Description() string {
+	return s.description
+}
+
 func (s *system) Subsystems() []Interface {
 	return s.subsystems
+}
+
+func (s *system) MarshalJSON() ([]byte, error) {
+	var subsystems []json.RawMessage
+	for _, subsystem := range s.subsystems {
+		subsystemJSON, err := json.Marshal(subsystem)
+		if err != nil {
+			return nil, err
+		}
+
+		subsystems = append(subsystems, subsystemJSON)
+	}
+
+	encoder := systemEncoder{
+		Type:        TypeSystem,
+		Name:        s.name,
+		Description: s.description,
+		Subsystems:  subsystems,
+	}
+
+	return json.Marshal(&encoder)
 }

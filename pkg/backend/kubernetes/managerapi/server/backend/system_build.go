@@ -64,8 +64,10 @@ func systemBuild(id types.SystemID, definitionRoot tree.Node, v types.SystemVers
 
 func (kb *KubernetesBackend) ListSystemBuilds(id types.SystemID) ([]types.SystemBuild, error) {
 	namespace := kubeutil.SystemNamespace(kb.ClusterID, id)
+	fmt.Println("listing system builds")
 	buildList, err := kb.LatticeClient.LatticeV1().SystemBuilds(namespace).List(metav1.ListOptions{})
 	if err != nil {
+		fmt.Printf("got error: %v", err)
 		return nil, err
 	}
 

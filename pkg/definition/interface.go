@@ -13,6 +13,8 @@ const (
 type Interface interface {
 	Type() string
 	Name() string
+	Description() string
+	json.Marshaler
 }
 
 type Validator interface {

@@ -133,7 +133,6 @@ var Cmd = &cobra.Command{
 		}
 
 		clusterBootstrappers := []clusterbootstrapper.Interface{
-			cloudProviderClusterBootstrapper,
 			serviceMeshClusterBootstrapper,
 		}
 
@@ -152,6 +151,9 @@ var Cmd = &cobra.Command{
 
 			clusterBootstrappers = append(clusterBootstrappers, networkingProviderClusterBootstrapper)
 		}
+
+		// cloud bootstrapper has to come last
+		clusterBootstrappers = append(clusterBootstrappers, cloudProviderClusterBootstrapper)
 
 		var kubeClient kubeclientset.Interface
 		var latticeClient latticeclientset.Interface
@@ -209,7 +211,6 @@ var Cmd = &cobra.Command{
 		}
 
 		systemBootstrappers := []systembootstrapper.Interface{
-			cloudProviderSystemBootstrapper,
 			serviceMeshSystemBootstrapper,
 		}
 
@@ -221,6 +222,8 @@ var Cmd = &cobra.Command{
 
 			systemBootstrappers = append(systemBootstrappers, networkingProviderSystemBootstrapper)
 		}
+
+		systemBootstrappers = append(systemBootstrappers, cloudProviderSystemBootstrapper)
 
 		var systemResources *systembootstrapper.SystemResources
 		if options.DryRun {

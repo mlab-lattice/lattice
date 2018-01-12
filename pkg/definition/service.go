@@ -19,13 +19,13 @@ type ServiceValidator interface {
 }
 
 func NewServiceFromJSON(data []byte) (Service, error) {
-	var decoded serviceDecoder
+	var decoded serviceEncoder
 	if err := json.Unmarshal(data, &decoded); err != nil {
 		return nil, err
 	}
 
 	if decoded.Type != TypeService {
-		return nil, fmt.Errorf("service type must be %v", TypeService)
+		return nil, fmt.Errorf("service type must be %v, got %v", TypeService, decoded.Type)
 	}
 
 	s := &service{
@@ -37,19 +37,21 @@ func NewServiceFromJSON(data []byte) (Service, error) {
 	return s, nil
 }
 
-type serviceDecoder struct {
-	Type       string             `json:"type"`
-	Name       string             `json:"name"`
-	Volumes    []*block.Volume    `json:"volumes"`
-	Components []*block.Component `json:"components"`
-	Resources  block.Resources    `json:"resources"`
+type serviceEncoder struct {
+	Type        string             `json:"type"`
+	Name        string             `json:"name"`
+	Description string             `json:"description"`
+	Volumes     []*block.Volume    `json:"volumes"`
+	Components  []*block.Component `json:"components"`
+	Resources   block.Resources    `json:"resources"`
 }
 
 type service struct {
-	name       string
-	volumes    []*block.Volume
-	components []*block.Component
-	resources  block.Resources
+	name        string
+	description string
+	volumes     []*block.Volume
+	components  []*block.Component
+	resources   block.Resources
 }
 
 func (s *service) Type() string {
@@ -58,6 +60,10 @@ func (s *service) Type() string {
 
 func (s *service) Name() string {
 	return s.name
+}
+
+func (s *service) Description() string {
+	return s.description
 }
 
 func (s *service) Volumes() []*block.Volume {
@@ -70,4 +76,17 @@ func (s *service) Components() []*block.Component {
 
 func (s *service) Resources() block.Resources {
 	return s.resources
+}
+
+func (s *service) MarshalJSON() ([]byte, error) {
+	encoder := serviceEncoder{
+		Type:        TypeService,
+		Name:        s.name,
+		Description: s.description,
+		Volumes:     s.volumes,
+		Components:  s.components,
+		Resources:   s.resources,
+	}
+
+	return json.Marshal(&encoder)
 }

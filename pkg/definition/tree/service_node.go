@@ -21,17 +21,20 @@ func NewServiceNode(definition definition.Service, parent Node) (*ServiceNode, e
 	return s, nil
 }
 
-// MarshalJSON implements the encoding/json.Marshaller interface.
-func (s *ServiceNode) MarshalJSON() ([]byte, error) {
-	return json.Marshal(s.definition)
-}
-
 func (s *ServiceNode) Type() string {
 	return s.definition.Type()
 }
 
 func (s *ServiceNode) Name() string {
 	return s.definition.Name()
+}
+
+func (s *ServiceNode) Description() string {
+	return s.definition.Description()
+}
+
+func (s *ServiceNode) MarshalJSON() ([]byte, error) {
+	return json.Marshal(s.definition)
 }
 
 func (s *ServiceNode) Parent() Node {

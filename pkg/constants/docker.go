@@ -5,7 +5,7 @@ const (
 
 	DockerImageEnvoyPrepare           = "envoy-prepare"
 	DockerImageEnvoyXDSAPIRestPerNode = "kubernetes-envoy-xds-api-rest-per-node"
-	DockerImageLatticeCLIAdmin        = "lattice-cli-admin"
+	DockerImageLatticectl             = "latticectl"
 
 	DockerRegistryAuthAWSEC2Role = "aws-ec2-role"
 )
