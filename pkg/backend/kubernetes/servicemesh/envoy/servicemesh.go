@@ -178,7 +178,9 @@ func (sm *DefaultEnvoyServiceMesh) TransformServiceDeploymentSpec(
 	// FIXME: remove this when local dns is working
 	var hostnames []string
 	for _, service := range services {
-		hostnames = append(hostnames, service.Spec.Path.ToDomain(true))
+		domain := service.Spec.Path.ToDomain(true)
+		hostname := fmt.Sprintf("%v.local", domain)
+		hostnames = append(hostnames, hostname)
 	}
 	sort.Strings(hostnames)
 
