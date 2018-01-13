@@ -6,13 +6,12 @@ import (
 
 	"github.com/mlab-lattice/system/pkg/constants"
 	"github.com/mlab-lattice/system/pkg/definition"
-	"github.com/mlab-lattice/system/pkg/definition/resolver"
 	"github.com/mlab-lattice/system/pkg/definition/tree"
 	"github.com/mlab-lattice/system/pkg/managerapi/server"
 	"github.com/mlab-lattice/system/pkg/types"
+	"github.com/mlab-lattice/system/pkg/util/git"
 
 	"github.com/gin-gonic/gin"
-	"github.com/mlab-lattice/system/pkg/util/git"
 )
 
 func (r *restServer) mountSystemHandlers() {

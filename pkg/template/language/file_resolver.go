@@ -17,10 +17,10 @@ const gitWorkDirectory = "/tmp/lattice-core/git-file-repository"
 // resolveUrl reads the template file by resolving the url into a urlResource w
 func resolveUrl(url string, env *environment) (*urlResource, error) {
 	// if its a git url then return a templateURLInfo for a git url
-	if isGitUrl(url) {
-		return resolveGitUrl(url, env)
-	} else if isRelativeUrl(url) {
-		return resolveRelativeUrl(url, env)
+	if isGitURL(url) {
+		return resolveGitURL(url, env)
+	} else if isRelativeURL(url) {
+		return resolveRelativeURL(url, env)
 
 	}
 
@@ -50,9 +50,9 @@ type urlResource struct {
 	data    map[string]interface{}
 }
 
-// resolveGitUrl resolves a git url
-func resolveGitUrl(url string, env *environment) (*urlResource, error) {
-	if !isGitUrl(url) {
+// resolveGitURL resolves a git url
+func resolveGitURL(url string, env *environment) (*urlResource, error) {
+	if !isGitURL(url) {
 		return nil, fmt.Errorf("Invalid git url: '%s'", url)
 	}
 
@@ -87,8 +87,8 @@ func newUrlResource(baseUrl string, resourcePath string, bytes []byte) (*urlReso
 	}, nil
 }
 
-// resolveRelativeUrl resolves a relative url by creating a full url with the existing url base
-func resolveRelativeUrl(url string, env *environment) (*urlResource, error) {
+// resolveRelativeURL resolves a relative url by creating a full url with the existing url base
+func resolveRelativeURL(url string, env *environment) (*urlResource, error) {
 
 	// construct a full url using the existing baseUrl in env
 	fullUrl := path.Join(env.currentFrame().baseUrl, url)
@@ -99,13 +99,13 @@ func resolveRelativeUrl(url string, env *environment) (*urlResource, error) {
 // regex for matching git file urls
 var gitUrlRegex = regexp.MustCompile(`(?:git|file|ssh|https?|git@[-\w.]+):(//)?(.*.git)(#(([-\d\w._])+)?)?(/(.*))?$`)
 
-// isGitUrl
-func isGitUrl(url string) bool {
+// isGitURL
+func isGitURL(url string) bool {
 	return gitUrlRegex.MatchString(url)
 }
 
-// isRelativeUrl
-func isRelativeUrl(url string) bool {
+// isRelativeURL
+func isRelativeURL(url string) bool {
 	return !strings.Contains(url, "://")
 }
 
