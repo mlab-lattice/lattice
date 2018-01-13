@@ -132,21 +132,11 @@ func (engine *TemplateEngine) include(url string, parameters map[string]interfac
 	// push !
 	env.push(resource.baseUrl, parameters, variables)
 
-	if err != nil {
-		return nil, err
-	}
+	// defer a pop to ensure that the stack is popped  before
+	defer env.pop()
 
 	// evaluate data of the template
-	val, err := engine.eval(resource.data, env)
-
-	if err != nil {
-		return nil, err
-	}
-
-	// pop
-	env.pop()
-
-	return val, nil
+	return engine.eval(resource.data, env)
 }
 
 // evalMap evaluates a map of objects
