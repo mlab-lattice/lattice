@@ -13,20 +13,23 @@ import (
 	"gopkg.in/src-d/go-git.v4/plumbing/object"
 )
 
-const testRepoDir = "/tmp/lattice-core/test/template-engine/my-repo"
-const systemFileName = "system.json"
-const serviceFileName = "service.json"
-const systemFileUrl = "file:///tmp/lattice-core/test/template-engine/my-repo/.git/system.json"
-const serviceFileUrl = "file:///tmp/lattice-core/test/template-engine/my-repo/.git/service.json"
-const testGitWorkDir = "/tmp/lattice-core/test/test-git-file-repository"
+const (
+	testRepoDir     = "/tmp/lattice-core/test/template-engine/my-repo"
+	systemFileName  = "system.json"
+	serviceFileName = "service.json"
+	systemFileUrl   = "file:///tmp/lattice-core/test/template-engine/my-repo/.git/system.json"
+	serviceFileUrl  = "file:///tmp/lattice-core/test/template-engine/my-repo/.git/service.json"
+	testGitWorkDir  = "/tmp/lattice-core/test/test-git-file-repository"
+)
 
 func TestEngine(t *testing.T) {
 
 	fmt.Println("Running template engine tests...")
+	// setup
 	setupEngineTest()
+	// defer teardown
+	defer teardownEngineTest()
 	t.Run("TestEngine", doTestEngine)
-
-	teardownEngineTest()
 }
 
 func setupEngineTest() {
