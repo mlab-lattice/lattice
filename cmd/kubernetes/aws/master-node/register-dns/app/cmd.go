@@ -33,23 +33,13 @@ var Cmd = &cobra.Command{
 	Use:   "register-dns",
 	Short: "Registers dns for a master node",
 	Run: func(cmd *cobra.Command, args []string) {
-		err := wait.ExponentialBackoff(
-			wait.Backoff{
-				Duration: 5 * time.Second,
-				Factor:   2,
-				Jitter:   0.5,
-				Steps:    5,
-			},
-			apply,
-		)
-
-		if err != nil {
+		if err := apply(); err != nil {
 			panic(err)
 		}
 	},
 }
 
-func apply() (bool, error) {
+func apply() error {
 	config := &tf.Config{
 		Provider: awstf.Provider{
 			Region: region,
@@ -77,10 +67,9 @@ func apply() (bool, error) {
 	logfile, err := tf.Apply(workDirectory, config)
 	if err != nil {
 		fmt.Printf("error applying, logfile: %v\n", logfile)
-		return false, nil
 	}
 
-	return true, nil
+	return err
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.

@@ -3,13 +3,10 @@ package app
 import (
 	"fmt"
 	"os"
-	"time"
 
 	kubetf "github.com/mlab-lattice/system/pkg/backend/kubernetes/terraform/aws"
 	tf "github.com/mlab-lattice/system/pkg/terraform"
 	awstf "github.com/mlab-lattice/system/pkg/terraform/provider/aws"
-
-	"k8s.io/apimachinery/pkg/util/wait"
 
 	"github.com/spf13/cobra"
 )
@@ -33,23 +30,13 @@ var Cmd = &cobra.Command{
 	Use:   "attach-etcd-volume",
 	Short: "Attaches an etcd volume to a master node",
 	Run: func(cmd *cobra.Command, args []string) {
-		err := wait.ExponentialBackoff(
-			wait.Backoff{
-				Duration: 5 * time.Second,
-				Factor:   2,
-				Jitter:   0.5,
-				Steps:    5,
-			},
-			apply,
-		)
-
-		if err != nil {
+		if err := apply(); err != nil {
 			panic(err)
 		}
 	},
 }
 
-func apply() (bool, error) {
+func apply() error {
 	config := &tf.Config{
 		Provider: awstf.Provider{
 			Region: region,
@@ -78,10 +65,9 @@ func apply() (bool, error) {
 	logfile, err := tf.Apply(workDirectory, config)
 	if err != nil {
 		fmt.Printf("error applying, logfile: %v\n", logfile)
-		return false, nil
 	}
 
-	return true, nil
+	return err
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.

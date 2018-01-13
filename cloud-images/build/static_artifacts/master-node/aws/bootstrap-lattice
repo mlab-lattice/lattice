@@ -17,9 +17,10 @@ KEY_NAME=$(echo ${USER_DATA} | jq '.lattice.key_name' | tr -d '"')
 STATE_S3_BUCKET=$(echo ${USER_DATA} | jq '.lattice.state_s3_bucket' | tr -d '"')
 SYSTEM_DEFINITION_URL=$(echo ${USER_DATA} | jq '.lattice.system_definition_url' | tr -d '"')
 
-sleep 10
-
-/usr/bin/docker run \
+n=0
+until [ $n -ge 5 ]
+do
+  /usr/bin/docker run \
     --network host \
     -v /etc/opt/kubernetes/admin/kubeconfig:/etc/bootstrap-lattice/kubeconfig \
     gcr.io/lattice-dev/kevinrosendahl-debug-latticectl:latest \
@@ -50,4 +51,10 @@ sleep 10
     --networking-provider flannel \
     --networking-provider-var cidr-block=10.200.0.0/16 \
     --terraform-backend S3 \
-    --terraform-backend-var bucket=${STATE_S3_BUCKET}
+    --terraform-backend-var bucket=${STATE_S3_BUCKET} \
+     && exit 0  # exit on success
+  n=$[$n+1]
+  sleep 15
+done
+
+exit 1
