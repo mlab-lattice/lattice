@@ -49,6 +49,7 @@ func (evaluator *IncludeEvaluator) eval(o interface{}, env *environment) (interf
 
 	url := includeObject["url"].(string)
 
+	// return the included object
 	return env.engine.include(url, includeParameters, env)
 }
 
@@ -69,9 +70,11 @@ func (evaluator *VariablesEvaluator) eval(o interface{}, env *environment) (inte
 		return nil, err
 	}
 
+	// set current variables in env to result
 	env.currentFrame().variables = variables.(map[string]interface{})
 
-	// void
+	// return nil as the evaluation result to indicate to the engine to continue evaluation without assigning any
+	// result back to the current key being evaluated
 	return nil, nil
 
 }
@@ -96,7 +99,8 @@ func (evaluator *ParametersEvaluator) eval(o interface{}, env *environment) (int
 		}
 	}
 
-	// void
+	// return nil as the evaluation result to indicate to the engine to continue evaluation without assigning any
+	// result back to the current key being evaluated
 	return nil, nil
 
 }

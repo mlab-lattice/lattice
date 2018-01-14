@@ -33,6 +33,7 @@ TODO:
 package language
 
 import (
+	"fmt"
 	"github.com/mlab-lattice/system/pkg/util/git"
 )
 
@@ -151,15 +152,27 @@ func (engine *TemplateEngine) evalMap(m map[string]interface{}, env *environment
 			evaluator := engine.operatorEvaluators[operator]
 			evalResult, err := evaluator.eval(operand, env)
 
-			if err != nil {
+			if err != nil { // return error
 				return nil, err
-			} else if evalResult != nil {
-				resultMap := evalResult.(map[string]interface{})
-				// stuff map with the val result
-				for k, v := range resultMap {
-					result[k] = v
-				}
 			}
+			// if the result is nil, this indicates that the evaluator has processed the operator and that the engine
+			// should continue
+			if evalResult == nil {
+				continue
+			}
+
+			// evaluator has return a value, we expect this value to be a map and we just merge it with the existing
+			// result
+			resultMap, isMap := evalResult.(map[string]interface{})
+
+			if !isMap {
+				return nil, fmt.Errorf("Bad return value for evaluator %v. Result is not a map", operator)
+			}
+			// stuff map with the val result
+			for k, v := range resultMap {
+				result[k] = v
+			}
+
 		}
 
 	}
