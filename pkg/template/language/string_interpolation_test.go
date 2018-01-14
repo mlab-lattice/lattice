@@ -16,11 +16,7 @@ func TestVariables(t *testing.T) {
 		},
 	}
 
-	result, err := evalStringExpression("x = ${x}", variables)
-
-	if err != nil {
-		t.Fatalf("Got error: %v", err)
-	}
+	result := evalStringExpression("x = ${x}", variables)
 
 	if result != "x = 1" {
 		t.Fatalf("Invalid result: %v", result)
@@ -28,11 +24,7 @@ func TestVariables(t *testing.T) {
 
 	fmt.Println(result)
 
-	result, err = evalStringExpression("${x} ${y}", variables)
-
-	if err != nil {
-		t.Fatalf("Got error: %v", err)
-	}
+	result = evalStringExpression("${x} ${y}", variables)
 
 	if result != "1 2" {
 		t.Fatalf("Invalid result: %v", result)
@@ -40,11 +32,7 @@ func TestVariables(t *testing.T) {
 
 	fmt.Println(result)
 
-	result, err = evalStringExpression("z.foo = ${z.foo}", variables)
-
-	if err != nil {
-		t.Fatalf("Got error: %v", err)
-	}
+	result = evalStringExpression("z.foo = ${z.foo}", variables)
 
 	if result != "z.foo = 3" {
 		t.Fatalf("Invalid result: %v", result)

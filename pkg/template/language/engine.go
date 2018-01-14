@@ -153,10 +153,12 @@ func (engine *TemplateEngine) evalMap(m map[string]interface{}, env *environment
 
 			if err != nil {
 				return nil, err
-			} else if evalResult == void { // NOOP case, just skip
-				continue
-			} else {
-				return evalResult, nil
+			} else if evalResult != nil {
+				resultMap := evalResult.(map[string]interface{})
+				// stuff map with the val result
+				for k, v := range resultMap {
+					result[k] = v
+				}
 			}
 		}
 
@@ -197,5 +199,5 @@ func (engine *TemplateEngine) evalArray(arr []interface{}, env *environment) ([]
 // evaluates a string
 func (engine *TemplateEngine) evalString(s string, env *environment) (interface{}, error) {
 	// eval expression
-	return evalStringExpression(s, env.parametersAndVariables())
+	return evalStringExpression(s, env.parametersAndVariables()), nil
 }

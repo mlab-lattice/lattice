@@ -10,11 +10,6 @@ type OperatorEvaluator interface {
 	eval(o interface{}, env *environment) (interface{}, error)
 }
 
-// Used to indicate if the result of the Evaluator is a Void
-type Void int
-
-const void Void = 0
-
 // IncludeEvaluator. evaluates $include
 type IncludeEvaluator struct {
 }
@@ -77,7 +72,7 @@ func (evaluator *VariablesEvaluator) eval(o interface{}, env *environment) (inte
 	env.currentFrame().variables = variables.(map[string]interface{})
 
 	// void
-	return void, nil
+	return nil, nil
 
 }
 
@@ -102,7 +97,7 @@ func (evaluator *ParametersEvaluator) eval(o interface{}, env *environment) (int
 	}
 
 	// void
-	return void, nil
+	return nil, nil
 
 }
 
