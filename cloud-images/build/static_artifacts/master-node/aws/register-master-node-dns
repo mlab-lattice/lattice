@@ -15,20 +15,25 @@ ROUTE53_PRIVATE_ZONE_ID=$(echo ${USER_DATA} | jq '.lattice.route53_private_zone_
 STATE_S3_BUCKET=$(echo ${USER_DATA} | jq '.lattice.state_s3_bucket' | tr -d '"')
 STATE_S3_KEY_PREFIX=$(echo ${USER_DATA} | jq '.lattice.state_s3_key_prefix' | tr -d '"')
 
+mkdir -p /tmp/terraform-state/master-node-dns
+cp /opt/terraform/modules/master-node-dns/* \
+   /tmp/terraform-state/master-node-dns
+
+cd /tmp/terraform-state/master-node-dns
+
 n=0
 until [ $n -ge 5 ]
 do
-  /usr/bin/docker run \
-    --network host \
-    gcr.io/lattice-dev/kevinrosendahl-debug-kubernetes-aws-master-node-register-dns \
-    --work-directory /tmp/terraform-state/master-node-dns \
-    --s3-bucket ${STATE_S3_BUCKET} \
-    --s3-key-prefix ${STATE_S3_KEY_PREFIX} \
-    --module-source-path /opt/terraform/modules/master-node-dns/* \
-    --region ${REGION} \
-    --name ${NAME} \
-    --route53-zone-id ${ROUTE53_PRIVATE_ZONE_ID} \
-    --instance-private-ip ${INSTANCE_PRIVATE_IP} \
+    /opt/terraform/bin/terraform init -force-copy \
+        -backend-config="bucket=${STATE_S3_BUCKET}" \
+        -backend-config="key=${STATE_S3_KEY_PREFIX}/master-node-dns/terraform.tfstate" \
+        -backend-config="region=${REGION}" \
+    && \
+    /opt/terraform/bin/terraform apply -auto-approve \
+        -var "region=${REGION}" \
+        -var "name=${NAME}" \
+        -var "route53_private_zone_id=${ROUTE53_PRIVATE_ZONE_ID}" \
+        -var "instance_private_ip=${INSTANCE_PRIVATE_IP}" \
      && exit 0  # exit on success
   n=$[$n+1]
   sleep 15

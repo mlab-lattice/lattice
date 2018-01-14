@@ -3,13 +3,10 @@ package app
 import (
 	"fmt"
 	"os"
-	"time"
 
 	kubetf "github.com/mlab-lattice/system/pkg/backend/kubernetes/terraform/aws"
 	tf "github.com/mlab-lattice/system/pkg/terraform"
 	awstf "github.com/mlab-lattice/system/pkg/terraform/provider/aws"
-
-	"k8s.io/apimachinery/pkg/util/wait"
 
 	"github.com/spf13/cobra"
 )
