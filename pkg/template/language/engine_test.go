@@ -14,12 +14,12 @@ import (
 )
 
 const (
-	testRepoDir     = "/tmp/lattice-core/test/template-engine/my-repo"
-	systemFileName  = "system.json"
-	serviceFileName = "service.json"
-	systemFileUrl   = "file:///tmp/lattice-core/test/template-engine/my-repo/.git/system.json"
-	serviceFileUrl  = "file:///tmp/lattice-core/test/template-engine/my-repo/.git/service.json"
-	testGitWorkDir  = "/tmp/lattice-core/test/test-git-file-repository"
+	testRepoDir    = "/tmp/lattice-core/test/template-engine/my-repo"
+	t1File         = "t1.json"
+	t2File         = "t2.json"
+	t1FileUrl      = "file:///tmp/lattice-core/test/template-engine/my-repo/.git/t1.json"
+	t2FileUrl      = "file:///tmp/lattice-core/test/template-engine/my-repo/.git/t2.json"
+	testGitWorkDir = "/tmp/lattice-core/test/test-git-file-repository"
 )
 
 func TestEngine(t *testing.T) {
@@ -39,7 +39,7 @@ func setupEngineTest() {
 
 	gogit.PlainInit(testRepoDir, false)
 
-	commitTestFiles(systemJSON, serviceJSON, "v1")
+	commitTestFiles()
 
 }
 
@@ -56,12 +56,12 @@ func doTestEngine(t *testing.T) {
 	fmt.Println("Starting TemplateEngine test....")
 	engine := NewEngine()
 
-	fmt.Printf("calling EvalFromURL('%s')\n", systemFileUrl)
+	fmt.Printf("calling EvalFromURL('%s')\n", t1FileUrl)
 
 	parameters := map[string]interface{}{
-		"systemName": "mySystem",
+		"name": "joe",
 	}
-	result, err := engine.EvalFromURL(systemFileUrl, parameters, &Options{})
+	result, err := engine.EvalFromURL(t1FileUrl, parameters, &Options{})
 
 	if err != nil {
 		t.Fatalf("Got error: %v", err)
@@ -76,47 +76,110 @@ func doTestEngine(t *testing.T) {
 
 	fmt.Println("Validating Eval result...")
 
-	fmt.Println("Validating subsystems...")
-	if result["subsystems"] == nil {
-		t.Fatal("subsystems is nil")
+	if result["name"] != "joe" {
+		t.Fatal("wrong name")
 	}
 
-	fmt.Println("Validating subsystems is of type array...")
-	if _, isArray := result["subsystems"].([]interface{}); !isArray {
-		t.Fatal("subsystems is not an array!")
+	if result["hi"] != "Hi joe" {
+		t.Fatal("wrong hi value")
 	}
 
-	fmt.Println("Validating subsystems length...")
+	if int(result["x"].(float64)) != 1 {
+		t.Fatal("wrong x val")
+	}
 
-	if len(result["subsystems"].([]interface{})) != 2 {
-		t.Fatal("wrong length for subsystems")
+	if result["y"] != 2.1 {
+		t.Fatal("wrong y val")
+	}
+
+	fmt.Println("Validating array...")
+	if result["array"] == nil {
+		t.Fatal("array is nil")
+	}
+
+	fmt.Println("Validating array is of type array...")
+	if _, isArray := result["array"].([]interface{}); !isArray {
+		t.Fatal("array is not an array!")
+	}
+
+	fmt.Println("Validating array length...")
+
+	if len(result["array"].([]interface{})) != 3 {
+		t.Fatal("wrong array length")
 	}
 
 	// ensure that some parameters are required
-	fmt.Println("ensure that systemName parameter is required...")
-	_, err = engine.EvalFromURL(systemFileUrl, nil, &Options{})
+	fmt.Println("ensure that name parameter is required...")
+	_, err = engine.EvalFromURL(t1FileUrl, nil, &Options{})
 
-	if err == nil || fmt.Sprintf("%v", err) != "parameter systemName is required" {
-		t.Fatalf("Required parameter 'systemName' has not been validated")
+	if err == nil || fmt.Sprintf("%v", err) != "parameter name is required" {
+		t.Fatalf("Required parameter 'name' has not been validated")
+	}
+
+	fmt.Println("Validating include...")
+	if result["address"] == nil {
+		t.Fatal("address is nil")
+	}
+
+	fmt.Println("Validating address is of type map...")
+	if _, isMap := result["address"].(map[string]interface{}); !isMap {
+		t.Fatal("address is not a map!")
+	}
+
+	fmt.Println("Validating address length...")
+
+	address := result["address"].(map[string]interface{})
+
+	if len(address) != 2 {
+		t.Fatal("wrong length of address object")
+	}
+
+	// validate parameter passing to $include
+	fmt.Println("validate parameter passing to $include")
+	if address["city"] != "San Francisco" {
+		t.Fatal("invalid city")
+	}
+
+	// validate default parameters
+	fmt.Println("validate default parameters")
+	if address["state"] != "CA" {
+		t.Fatal("invalid state")
+	}
+
+	// validate $include to parent
+	fmt.Println("validate include to parent")
+
+	if result["city"] != "San Francisco" {
+		t.Fatal("invalid city")
+	}
+
+	if result["state"] != "CA" {
+		t.Fatal("invalid state")
+	}
+
+	// ensure that some parameters are required
+	fmt.Println("ensure that name parameter is required...")
+	_, err = engine.EvalFromURL(t1FileUrl, nil, &Options{})
+
+	if err == nil || fmt.Sprintf("%v", err) != "parameter name is required" {
+		t.Fatalf("Required parameter 'name' has not been validated")
 	}
 
 }
 
-func commitTestFiles(systemJson string, serviceJson string, tag string) {
+func commitTestFiles() {
 
-	systemFileContents := []byte(systemJson)
-	ioutil.WriteFile(path.Join(testRepoDir, systemFileName), systemFileContents, 0644)
+	ioutil.WriteFile(path.Join(testRepoDir, t1File), []byte(t1JSON), 0644)
 
-	serviceFileContents := []byte(serviceJson)
-	ioutil.WriteFile(path.Join(testRepoDir, serviceFileName), serviceFileContents, 0644)
+	ioutil.WriteFile(path.Join(testRepoDir, t2File), []byte(t2JSON), 0644)
 
 	repo, _ := gogit.PlainOpen(testRepoDir)
 
 	workTree, _ := repo.Worktree()
 
-	workTree.Add(systemFileName)
+	workTree.Add(t1File)
 
-	workTree.Add(serviceFileName)
+	workTree.Add(t2File)
 
 	// commit
 	hash, _ := workTree.Commit("test", &gogit.CommitOptions{
@@ -128,113 +191,74 @@ func commitTestFiles(systemJson string, serviceJson string, tag string) {
 	})
 
 	// create the tag
-	n := plumbing.ReferenceName("refs/tags/" + tag)
+	n := plumbing.ReferenceName("refs/tags/testv1")
 	t := plumbing.NewHashReference(n, hash)
 	repo.Storer.SetReference(t)
 
 }
 
-const systemJSON = `
+const t1JSON = `
 {
   "$parameters": {
-     "systemName": {
+     "name": {
         "required": true
      }
   },
-  "$": {
-    "name": "${systemName}",
-    "type": "system",
-    "description": "This is my system"
+
+  "$variables": {
+     "count": 1,
+     "object": {
+        "x": 1,
+        "y": 2.1
+     }
   },
-  "subsystems": [
-    { "$include": {
-         "url": "service.json",
-         "parameters": {
-           "init": false
-         }
-       }
-    },
-    {
-      "$": {
-        "name": "my-service",
-        "type": "service",
-        "description": "This is my service"
-      },
-      "components": [
-        {
-          "name": "service",
-          "init": false,
-          "build": {
-            "docker_image": {
-              "registry": "registry.company.com",
-              "repository": "foobar",
-              "tag": "v1.0.0"
-            }
-          },
-          "exec": {
-            "command": [
-              "./start",
-              "--my-app"
-            ],
-            "environment": {
-              "biz": "baz",
-              "foo": "bar"
-            }
-          }
-        }
-      ],
-      "resources": {
-        "min_instances": 1,
-        "max_instances": 1,
-        "instance_type": "mock.instance.type"
+
+  "name": "${name}",
+  "hi": "Hi ${name}",
+
+  "x": "${object.x}",
+  "y": "${object.y}",
+
+  "array": [
+    "item1",
+    "item2",
+    "item3"
+  ],
+
+  "address": {
+    "$include": {
+      "url": "t2.json",
+      "parameters": {
+        "city": "San Francisco"
       }
     }
-  ]
+  },
+
+  "$include": {
+    "url": "t2.json",
+    "parameters": {
+	  "city": "San Francisco"
+    }
+},
+
+  "int": 1,
+  "bool": true
+
 }
 `
 
-const serviceJSON = `
+const t2JSON = `
 {
-  "$": {
-    "name": "my-service-2",
-    "type": "service",
-    "description": "This is my service 2"
-  },
-
   "$parameters": {
-      "init": {
-         "required": true,
-         "default": false
-      }
-  },
+	 "city": {
+		"required": true
+	 },
+	 "state": {
+		"default": "CA"
+	 }
+   },
 
-  "components": [
-    {
-      "name": "service",
-      "init": "${init}",
-      "build": {
-        "docker_image": {
-          "registry": "registry.company.com",
-          "repository": "foobar",
-          "tag": "v1.0.0"
-        }
-      },
-      "exec": {
-        "command": [
-          "./start",
-          "--my-app"
-        ],
-        "environment": {
-          "biz": "baz",
-          "foo": "bar"
-        }
-      }
-    }
-  ],
-  "resources": {
-    "min_instances": 1,
-    "max_instances": 1,
-    "instance_type": "mock.instance.type"
-  }
+   "city": "${city}",
+   "state": "${state}"
 }
 `
