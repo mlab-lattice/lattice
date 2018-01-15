@@ -5,7 +5,6 @@ go_library(
     srcs = [
         "component_builds.go",
         "output.go",
-        "render_map.go",
         "rollouts.go",
         "service.go",
         "service_builds.go",
