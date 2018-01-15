@@ -66,6 +66,7 @@ func (r *RequestContext) JSON(target interface{}) error {
 
 type Client interface {
 	Get(url string) *RequestContext
+	Delete(url string) *RequestContext
 	Post(url, contentType string, body io.Reader) *RequestContext
 }
 
