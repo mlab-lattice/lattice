@@ -11,7 +11,7 @@ import (
 	latticelisters "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/listers/lattice/v1"
 	util "github.com/mlab-lattice/system/pkg/backend/kubernetes/util/kubernetes"
 
-	"k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/runtime"
@@ -69,7 +69,7 @@ func NewController(
 	eventBroadcaster.StartLogging(glog.Infof)
 	eventBroadcaster.StartRecordingToSink(&v1core.EventSinkImpl{Interface: v1core.New(client.CoreV1().RESTClient()).Events("")})
 
-	c.eventRecorder = eventBroadcaster.NewRecorder(scheme.Scheme, v1.EventSource{Component: "local-dns-controller"})
+	c.eventRecorder = eventBroadcaster.NewRecorder(scheme.Scheme, corev1.EventSource{Component: "local-dns-controller"})
 
 	c.dnsmasqConfigPath = dnsmasqConfigPath
 	c.hostFilePath = hostConfigPath
@@ -107,7 +107,8 @@ func (c *Controller) Run(stopCh <-chan struct{}) {
 	<-stopCh
 }
 
-// updateConfigs runs at regular intervals and compares the endpoints the configuration was written with against the current list of endpoints. If there is any difference, the configuration is rewritten.
+// updateConfigs runs at regular intervals and compares the endpoints the configuration was written with against
+// the current list of endpoints. If there is any difference, the configuration is rewritten.
 func (c *Controller) updateConfigs() {
 	endpoints, err := c.endpointister.List(labels.Everything())
 	if err != nil {
@@ -131,6 +132,15 @@ func (c *Controller) updateConfigs() {
 	}
 
 	if !updateNeeded {
+		for _, e := range endpoints {
+			if e.Status.State != crv1.EndpointStateCreated {
+				endpoint := e.DeepCopy()
+				endpoint.Status.State = crv1.EndpointStateCreated
+
+				c.latticeClient.LatticeV1().Endpoints(endpoint.Namespace).Update(endpoint)
+			}
+		}
+
 		return
 	}
 
@@ -139,6 +149,7 @@ func (c *Controller) updateConfigs() {
 	err = c.RewriteDnsmasqConfig(endpoints)
 	if err != nil {
 		runtime.HandleError(err)
+		return
 	}
 
 	c.externalNameEndpoints = externalNameEndpointsSet
@@ -155,11 +166,13 @@ func (c *Controller) updateConfigs() {
 		_, err := c.latticeClient.LatticeV1().Endpoints(endpoint.Namespace).Update(endpoint)
 		if err != nil {
 			runtime.HandleError(err)
+			return
 		}
 	}
 }
 
-// endpointsSets returns true if the two lists of endpoints are differnt
+// endpointsSets returns two sets of endpoints - the first for endpoints specified by an external name,
+// and the second for endpoints specified by an ip.
 func (c *Controller) endpointsSets(endpoints []*crv1.Endpoint) (set.Set, set.Set, error) {
 	externalNameEndpoints := set.NewSet()
 	ipEndpoints := set.NewSet()

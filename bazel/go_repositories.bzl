@@ -13,6 +13,11 @@ GO_REPOSITORIES = {
        "commit": "17b936e6ccb6f6e424f7d89c614164e796df1661",
        "importpath": "github.com/coreos/go-iptables",
     },
+    "github.com/deckarep/golang-set": {
+        "name": "com_github_deckarep_golang_set",
+        "commit": "1d4478f51bed434f1dadf96dcd9b43aabac66795",
+        "importpath": "github.com/deckarep/golang-set",
+    },
     "github.com/docker/docker": {
         "name": "com_github_docker_docker",
         "tag": "v17.05.0-ce",
@@ -396,12 +401,6 @@ GO_REPOSITORIES = {
         "name": "com_github_mattn_go_runewidth",
         "commit": "97311d9f7767e3d6f422ea06661bc2c7a19e8a5d",
         "importpath": "github.com/mattn/go-runewidth",
-    },
-
-    "github.com/deckarep/golang-set": {
-        "name": "com_github_deckarep_golang_set",
-        "commit": "1d4478f51bed434f1dadf96dcd9b43aabac66795",
-        "importpath": "github.com/deckarep/golang-set",
     },
 
     # github.com/deckarep/golang-set dependencies

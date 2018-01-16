@@ -2,7 +2,6 @@ package local
 
 import (
 	crv1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
-	systembootstrapper "github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/system/bootstrap/bootstrapper"
 
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
@@ -15,12 +14,12 @@ const (
 	workDirectoryVolumeHostPathPrefix = "/data/component-builder"
 
 	DockerImageDNSController = "kubernetes-local-dns-controller"
-	DockerImageDnsmasqServer = "gcr.io/google_containers/k8s-dns-dnsmasq-nanny-amd64:1.14.7"
+	DockerImageDnsmasqNanny  = "gcr.io/google_containers/k8s-dns-dnsmasq-nanny-amd64:1.14.7"
 
 	// This is the default IP for kube-dns
 	localDNSServerIP = "10.96.0.53"
 
-	DNSConfigDirectory = "/etc/dns-config/"
+	DNSConfigDirectory = "/etc/lattice/local/dns"
 	DNSHostsFile       = DNSConfigDirectory + "hosts"
 	DnsmasqConfigFile  = DNSConfigDirectory + "dnsmasq.conf"
 )
@@ -45,13 +44,6 @@ type DefaultLocalCloudProvider struct {
 	ip string
 }
 
-func (cp *DefaultLocalCloudProvider) BootstrapSystemResources(resources *systembootstrapper.SystemResources) {
-	for _, daemonSet := range resources.DaemonSets {
-		template := transformPodTemplateSpec(&daemonSet.Spec.Template)
-		daemonSet.Spec.Template = *template
-	}
-}
-
 func (cp *DefaultLocalCloudProvider) TransformComponentBuildJobSpec(spec *batchv1.JobSpec) *batchv1.JobSpec {
 	spec = spec.DeepCopy()
 	spec.Template = *transformPodTemplateSpec(&spec.Template)
@@ -72,6 +64,12 @@ func (cp *DefaultLocalCloudProvider) TransformServiceDeploymentSpec(service *crv
 	spec.Template = *transformPodTemplateSpec(&spec.Template)
 
 	found := false
+
+	// This uses DNSNone and supplies the local dnsmasq server as the only nameserver. This is because it
+	// is the only way to have names in the node to have priority, whilst still inheriting the clusters
+	// dns config. It's hacky, but it's how DNSClusterFirst works aswell:
+	// https://github.com/kubernetes/kubernetes/blob/v1.9.0/pkg/kubelet/network/dns/dns.go#L340-L360
+	spec.Template.Spec.DNSPolicy = corev1.DNSNone
 
 	for idx, nameserver := range spec.Template.Spec.DNSConfig.Nameservers {
 		if nameserver == localDNSServerIP {

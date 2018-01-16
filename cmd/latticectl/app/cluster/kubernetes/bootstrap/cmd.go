@@ -80,8 +80,8 @@ var options = &clusterbootstrap.Options{
 type localCloudOptionsFlat struct {
 	IP                 string
 	DNSControllerImage string
-	DNSNannyImage      string
-	DNSNannyArgs       []string
+	DnsmasqNannyImage  string
+	DnsmasqNannyArgs   []string
 	DNSControllerArgs  []string
 }
 
@@ -364,11 +364,11 @@ func parseCloudProviderVarsLocal() (*localcloudprovider.ClusterBootstrapperOptio
 				Required:     true,
 				EncodingName: "DNSControllerImage",
 			},
-			"dns-nanny-image": {
+			"dnsmasq-nanny-image": {
 				Required:     true,
 				EncodingName: "DNSNannyImage",
 			},
-			"dns-nanny-args": {
+			"dnsmasq-nanny-args": {
 				Required:     false,
 				EncodingName: "DNSNannyArgs",
 				ValueParser: func(value string) (interface{}, error) {
@@ -395,8 +395,8 @@ func parseCloudProviderVarsLocal() (*localcloudprovider.ClusterBootstrapperOptio
 	options.IP = flatStruct.IP
 	options.DNS = &localcloudprovider.OptionsDNS{}
 	options.DNS.ControllerArgs = flatStruct.DNSControllerArgs
-	options.DNS.DnsnannyArgs = flatStruct.DNSNannyArgs
-	options.DNS.DnsnannyImage = flatStruct.DNSNannyImage
+	options.DNS.DnsmasqNannyArgs = flatStruct.DnsmasqNannyArgs
+	options.DNS.DnsmasqNannyImage = flatStruct.DnsmasqNannyImage
 	options.DNS.ControllerImage = flatStruct.DNSControllerImage
 
 	return options, nil

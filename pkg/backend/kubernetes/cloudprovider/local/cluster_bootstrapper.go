@@ -20,7 +20,7 @@ import (
 const (
 	dnsPod        = "local-dns"
 	dnsController = "local-dns-controller"
-	dnsmasqServer = "local-dnsmasq-server"
+	dnsmasqNanny  = "local-dnsmasq-nanny"
 	dnsService    = "local-dns-service"
 
 	serviceAccountDNS = "local-dns"
@@ -32,15 +32,15 @@ type ClusterBootstrapperOptions struct {
 }
 
 type OptionsDNS struct {
-	DnsnannyImage   string
-	DnsnannyArgs    []string
-	ControllerImage string
-	ControllerArgs  []string
+	DnsmasqNannyImage string
+	DnsmasqNannyArgs  []string
+	ControllerImage   string
+	ControllerArgs    []string
 }
 
-func NewClusterBootstrapper(ClusterID types.ClusterID, options *ClusterBootstrapperOptions) *DefaultLocalClusterBootstrapper {
+func NewClusterBootstrapper(clusterID types.ClusterID, options *ClusterBootstrapperOptions) *DefaultLocalClusterBootstrapper {
 	return &DefaultLocalClusterBootstrapper{
-		ClusterID: ClusterID,
+		ClusterID: clusterID,
 		ip:        options.IP,
 		DNS:       options.DNS,
 	}
@@ -72,16 +72,14 @@ func (cp *DefaultLocalClusterBootstrapper) BootstrapClusterResources(resources *
 func (cp *DefaultLocalClusterBootstrapper) bootstrapClusterDNS(resources *clusterbootstrapper.ClusterResources) {
 	namespace := kubeutil.InternalNamespace(cp.ClusterID)
 
-	clusterIDParamName := "--cluster-id"
-	clusterIDParamValue := string(cp.ClusterID)
-	controllerArgs := []string{clusterIDParamName, clusterIDParamValue}
+	controllerArgs := []string{"--cluster-id", string(cp.ClusterID)}
 	controllerArgs = append(controllerArgs, cp.DNS.ControllerArgs...)
 
-	dnsmasqArgs := []string{}
-	dnsmasqArgs = append(dnsmasqArgs, cp.DNS.DnsnannyArgs...)
+	dnsmasqNannyArgs := []string{}
+	dnsmasqNannyArgs = append(dnsmasqNannyArgs, cp.DNS.DnsmasqNannyArgs...)
 
 	labels := map[string]string{
-		"local.cloud-provider.lattice.mlab.com/dns": dnsmasqServer,
+		"local.cloud-provider.lattice.mlab.com/dns": dnsmasqNanny,
 	}
 
 	daemonSet := &appsv1.DaemonSet{
@@ -117,9 +115,9 @@ func (cp *DefaultLocalClusterBootstrapper) bootstrapClusterDNS(resources *cluste
 							},
 						},
 						{
-							Name:  dnsmasqServer,
-							Image: cp.DNS.DnsnannyImage,
-							Args:  dnsmasqArgs,
+							Name:  dnsmasqNanny,
+							Image: cp.DNS.DnsmasqNannyImage,
+							Args:  dnsmasqNannyArgs,
 							Ports: []corev1.ContainerPort{
 								{
 									ContainerPort: 53,

@@ -48,10 +48,6 @@ var (
 		"--hostsdir=" + DNSConfigDirectory,             // Read all the hosts from this directory. File changes read automatically by dnsmasq.
 		"--conf-dir=" + DNSConfigDirectory + ",*.conf", // Read all *.conf files in the directory as dns config files
 	}
-
-	// Use ':' as the separator here, as ',' is included in the --conf-dir argument
-	dnsNannyArgs      = "local-dns-server-args=" + strings.Join(append(append(dnsNannyArgList, "--"), dnsmasqArgList...), ":")
-	dnsControllerArgs = "local-dns-controller-args=" + strings.Join(localDNSControllerArgList, ",")
 )
 
 type ClusterProvisionerOptions struct {
@@ -175,6 +171,11 @@ func (p *DefaultLocalClusterProvisioner) bootstrap(address, url, name string) er
 		return err
 	}
 
+	dnsNannyArgList := append(append(dnsNannyArgList, "--"), dnsmasqArgList...)
+	// Use ':' as the separator here, as ',' is included in the --conf-dir argument
+	dnsNannyArgs := "local-dns-server-args=" + strings.Join(dnsNannyArgList, ":")
+	dnsControllerArgs := "local-dns-controller-args=" + strings.Join(localDNSControllerArgList, ",")
+
 	jobName := "bootstrap-lattice"
 	var backoffLimit int32 = 2
 	job := batchv1.Job{
@@ -200,7 +201,7 @@ func (p *DefaultLocalClusterProvisioner) bootstrap(address, url, name string) er
 								"--cloud-provider", "local",
 								"--cloud-provider-var", "cluster-ip=" + address,
 								"--cloud-provider-var", "dns-controller-image=" + p.getLatticeContainerImage(DockerImageDNSController),
-								"--cloud-provider-var", "dns-nanny-image=" + DockerImageDnsmasqServer,
+								"--cloud-provider-var", "dns-nanny-image=" + DockerImageDnsmasqNanny,
 								"--cloud-provider-var", "dns-nanny-args=" + dnsNannyArgs,
 								"--cloud-provider-var", "dns-controller-args=" + dnsControllerArgs,
 								"--component-builder-image", p.getLatticeContainerImage(kubeconstants.DockerImageComponentBuilder),

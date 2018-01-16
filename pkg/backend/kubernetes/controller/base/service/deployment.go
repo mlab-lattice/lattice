@@ -19,10 +19,8 @@ import (
 	kubelabels "k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"k8s.io/apimachinery/pkg/util/runtime"
 
 	"github.com/golang/glog"
-	"github.com/mlab-lattice/system/pkg/types"
 	"github.com/sergi/go-diff/diffmatchpatch"
 )
 
@@ -70,7 +68,11 @@ func (c *Controller) syncExistingDeployment(service *crv1.Service, nodePool *crv
 	}
 
 	currentSpec := deployment.Spec
-	untransformedSpec := untransformedDeploymentSpec(service, name, c.clusterID, labels, nodePool)
+	untransformedSpec, err := c.untransformedDeploymentSpec(service, name, labels, nodePool)
+	if err != nil {
+		return nil, err
+	}
+
 	defaultedUntransformedSpec := util.SetDeploymentSpecDefaults(untransformedSpec)
 	defaultedDesiredSpec := util.SetDeploymentSpecDefaults(&desiredSpec)
 
@@ -141,14 +143,17 @@ func deploymentLabels(service *crv1.Service) map[string]string {
 }
 
 func (c *Controller) deploymentSpec(service *crv1.Service, name string, deploymentLabels map[string]string, nodePool *crv1.NodePool) (appsv1.DeploymentSpec, error) {
-	spec := untransformedDeploymentSpec(service, name, c.clusterID, deploymentLabels, nodePool)
+	spec, err := c.untransformedDeploymentSpec(service, name, deploymentLabels, nodePool)
+	if err != nil {
+		return appsv1.DeploymentSpec{}, err
+	}
 
 	// IMPORTANT: the order of these TransformServiceDeploymentSpec and the order of the IsDeploymentSpecUpdated calls in
 	// isDeploymentSpecUpdated _must_ be inverses.
 	// That is, if we call cloudProvider then serviceMesh here, we _must_ call serviceMesh then cloudProvider
 	// in isDeploymentSpecUpdated.
 
-	spec, err := c.serviceMesh.TransformServiceDeploymentSpec(service, spec)
+	spec, err = c.serviceMesh.TransformServiceDeploymentSpec(service, spec)
 	if err != nil {
 		return appsv1.DeploymentSpec{}, err
 	}
@@ -157,7 +162,7 @@ func (c *Controller) deploymentSpec(service *crv1.Service, name string, deployme
 	return *spec, nil
 }
 
-func untransformedDeploymentSpec(service *crv1.Service, name string, clusterID types.ClusterID, deploymentLabels map[string]string, nodePool *crv1.NodePool) *appsv1.DeploymentSpec {
+func (c *Controller) untransformedDeploymentSpec(service *crv1.Service, name string, deploymentLabels map[string]string, nodePool *crv1.NodePool) (*appsv1.DeploymentSpec, error) {
 	replicas := service.Spec.NumInstances
 
 	// Create a container for each Component in the Service
@@ -189,24 +194,23 @@ func untransformedDeploymentSpec(service *crv1.Service, name string, clusterID t
 
 	ndotsValue := ndotsValue
 
-	searchStrings := []string{}
 	systemID, err := kubeutil.SystemID(service.Namespace)
 	if err != nil {
-		runtime.HandleError(err)
+		return nil, err
 	}
 
-	baseSearchPath := fmt.Sprintf("%v.%v.local", systemID, clusterID)
-	searchStrings = append(searchStrings, baseSearchPath)
+	baseSearchPath := fmt.Sprintf("%v.%v.local", systemID, c.clusterID)
+	dnsSearches := []string{baseSearchPath}
 
 	if !service.Spec.Path.IsRoot() {
-		parentEndpoint, err := service.Spec.Path.Parent()
+		parentNode, err := service.Spec.Path.Parent()
 		if err != nil {
-			runtime.HandleError(err)
+			return nil, err
 		}
 
-		parentString := parentEndpoint.ToDomain(true)
+		parentDomain := parentNode.ToDomain(true)
 
-		searchStrings = append(searchStrings, fmt.Sprintf("%v.local.%v", parentString, baseSearchPath))
+		dnsSearches = append(dnsSearches, fmt.Sprintf("%v.local.%v", parentDomain, baseSearchPath))
 	}
 
 	DNSConfig := corev1.PodDNSConfig{
@@ -217,7 +221,7 @@ func untransformedDeploymentSpec(service *crv1.Service, name string, clusterID t
 				Value: &ndotsValue,
 			},
 		},
-		Searches: searchStrings,
+		Searches: dnsSearches,
 	}
 
 	// IMPORTANT: if you change anything in here, you _must_ update isDeploymentSpecUpdated to accommodate it
@@ -233,12 +237,8 @@ func untransformedDeploymentSpec(service *crv1.Service, name string, clusterID t
 			},
 			Spec: corev1.PodSpec{
 				Containers: containers,
-				// This uses DNSNone and supplies the local dnsmasq server as the only nameserver. This is because it
-				// is the only way to have names in the node to have priority, whilst still inheriting the clusters
-				// dns config. It's hacky, but it's how DNSClusterFirst works aswell:
-				// https://github.com/kubernetes/kubernetes/blob/v1.9.0/pkg/kubelet/network/dns/dns.go#L340-L360
-				DNSPolicy: corev1.DNSNone,
-				DNSConfig: &DNSConfig,
+				DNSPolicy:  corev1.DNSDefault,
+				DNSConfig:  &DNSConfig,
 				Affinity: &corev1.Affinity{
 					NodeAffinity:    kubeutil.NodePoolNodeAffinity(nodePool),
 					PodAntiAffinity: podAntiAffinity,
@@ -250,7 +250,7 @@ func untransformedDeploymentSpec(service *crv1.Service, name string, clusterID t
 		},
 	}
 
-	return spec
+	return spec, nil
 }
 
 func containerFromComponent(component *block.Component, buildArtifacts *crv1.ComponentBuildArtifacts) corev1.Container {
