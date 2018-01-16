@@ -16,8 +16,8 @@ import (
 )
 
 const TEST_REPO_DIR = "/tmp/lattice-core/test/resolver/my-repo"
-const TEST_REPO_GIT_URI_V1 = "file:///tmp/lattice-core/test/resolver/my-repo/.git#v1/system.json"
-const TEST_REPO_GIT_URI_V2 = "file:///tmp/lattice-core/test/resolver/my-repo/.git#v2/system.json"
+const TEST_REPO_GIT_URI_V1 = "file:///tmp/lattice-core/test/resolver/my-repo/.git#v1"
+const TEST_REPO_GIT_URI_V2 = "file:///tmp/lattice-core/test/resolver/my-repo/.git#v2"
 const TEST_WORK_DIR = "/tmp/lattice-core/test/resolver/work"
 const SYSTEM_FILE_NAME = "system.json"
 const SERVICE_FILE_NAME = "service.json"
@@ -45,7 +45,7 @@ func testV1(t *testing.T) {
 		t.Fatalf("Got error calling NewSystemResolver: %v", err)
 	}
 
-	defNode, err := res.ResolveDefinition(TEST_REPO_GIT_URI_V1, nil)
+	defNode, err := res.ResolveDefinition(path.Join(TEST_REPO_GIT_URI_V1, "system.json"), nil)
 	if err != nil {
 		t.Fatalf("Error is not nil: %v", err)
 	}
@@ -77,7 +77,7 @@ func testV2(t *testing.T) {
 		t.Fatalf("Got error calling NewSystemResolver: %v", err)
 	}
 
-	defNode, err := res.ResolveDefinition(TEST_REPO_GIT_URI_V2, nil)
+	defNode, err := res.ResolveDefinition(path.Join(TEST_REPO_GIT_URI_V2, "system.json"), nil)
 	if err != nil {
 		t.Error("Error is not nil: ", err)
 	}
@@ -157,6 +157,9 @@ func commitTestFiles(systemJson string, serviceJson string, tag string) {
 
 func teardownTest() {
 	fmt.Println("Tearing down resolver test")
+	os.RemoveAll(TEST_REPO_DIR)
+	os.RemoveAll(TEST_WORK_DIR)
+
 }
 
 const SYSTEM_JSON = `

@@ -39,7 +39,22 @@ import (
 
 // Options evaluation options
 type Options struct {
-	GitOptions *git.Options // git options to be passed for git resolver
+	WorkDirectory string       // work directory passed for git resolver
+	GitOptions    *git.Options // git options to be passed for git resolver
+}
+
+func CreateOptions(workDirectory string, gitOptions *git.Options) (*Options, error) {
+
+	if workDirectory == "" {
+		return nil, fmt.Errorf("must supply workDirectory")
+	}
+
+	options := &Options{
+		WorkDirectory: workDirectory,
+		GitOptions:    gitOptions,
+	}
+
+	return options, nil
 }
 
 // TemplateEngine the main class to be used for parsing/evaluating templates

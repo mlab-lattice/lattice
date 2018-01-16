@@ -11,9 +11,6 @@ import (
 	"github.com/mlab-lattice/system/pkg/util/git"
 )
 
-// WORK_DIR
-const gitWorkDirectory = "/tmp/lattice-core/git-file-repository"
-
 // resolveUrl reads the template file by resolving the url into a urlResource w
 func resolveUrl(url string, env *environment) (*urlResource, error) {
 	// if its a git url then return a templateURLInfo for a git url
@@ -30,7 +27,7 @@ func resolveUrl(url string, env *environment) (*urlResource, error) {
 // fetchGitFileContents fetches the specified git file contents
 func fetchGitFileContents(repoUrl string, fileName string, env *environment) ([]byte, error) {
 
-	gitResolver, _ := git.NewResolver(gitWorkDirectory)
+	gitResolver, _ := git.NewResolver(env.options.WorkDirectory)
 	gitOptions := env.options.GitOptions
 	if gitOptions == nil {
 		gitOptions = &git.Options{}
@@ -62,10 +59,16 @@ func resolveGitURL(url string, env *environment) (*urlResource, error) {
 	resourcePath := parts[0][7]
 
 	baseUrl := path.Dir(url)
+	cloneURI := repoUri
+	if strings.HasSuffix(cloneURI, "/.git") {
+		cloneURI = path.Dir(cloneURI)
+	}
+	// append ref
+	if ref != "" {
+		cloneURI = cloneURI + "#" + ref
+	}
 
-	cloneUri := repoUri + "#" + ref
-
-	bytes, err := fetchGitFileContents(cloneUri, resourcePath, env)
+	bytes, err := fetchGitFileContents(cloneURI, resourcePath, env)
 	if err != nil {
 		return nil, err
 	}

@@ -5,8 +5,8 @@ import (
 	"fmt"
 
 	"github.com/mlab-lattice/system/pkg/definition"
+	"github.com/mlab-lattice/system/pkg/definition/template/language"
 	"github.com/mlab-lattice/system/pkg/definition/tree"
-	"github.com/mlab-lattice/system/pkg/template/language"
 	"github.com/mlab-lattice/system/pkg/util/git"
 )
 
@@ -67,9 +67,12 @@ func (resolver *SystemResolver) ListDefinitionVersions(uri string, gitResolveOpt
 func (resolver *SystemResolver) readNodeFromFile(ctx *resolveContext) (tree.Node, error) {
 
 	engine := language.NewEngine()
-	options := &language.Options{
-		GitOptions: ctx.gitResolveOptions,
+	options, err := language.CreateOptions(resolver.gitResolver.WorkDirectory, ctx.gitResolveOptions)
+
+	if err != nil {
+		return nil, err
 	}
+
 	jsonMap, err := engine.EvalFromURL(ctx.gitURI, make(map[string]interface{}), options)
 
 	if err != nil {
