@@ -14,12 +14,11 @@ import (
 )
 
 const (
-	testRepoDir    = "/tmp/lattice-core/test/template-engine/my-repo"
-	t1File         = "t1.json"
-	t2File         = "t2.json"
-	t1FileUrl      = "file:///tmp/lattice-core/test/template-engine/my-repo/.git/t1.json"
-	t2FileUrl      = "file:///tmp/lattice-core/test/template-engine/my-repo/.git/t2.json"
-	testGitWorkDir = "/tmp/lattice-core/test/test-git-file-repository"
+	testRepoDir = "/tmp/lattice-core/test/template-engine/my-repo"
+	testWorkDir = "/tmp/lattice-core/test/resolver/my-repo"
+	t1File      = "t1.json"
+	t2File      = "t2.json"
+	t1FileUrl   = "file:///tmp/lattice-core/test/template-engine/my-repo/.git/t1.json"
 )
 
 func TestEngine(t *testing.T) {
@@ -47,21 +46,27 @@ func teardownEngineTest() {
 	fmt.Println("Tearing down template engine test")
 	// remove the test repo
 	os.RemoveAll(testRepoDir)
-	// remove the work directory TODO replace with testGitWorkDir when we allow passing work directory in git options
-	os.RemoveAll(gitWorkDirectory)
+	// remove work dir
+	os.RemoveAll(testWorkDir)
 }
 
 func doTestEngine(t *testing.T) {
 
 	fmt.Println("Starting TemplateEngine test....")
 	engine := NewEngine()
+	options, err := CreateOptions(testWorkDir, nil)
+
+	if err != nil {
+		t.Fatalf("Got error: %v", err)
+	}
 
 	fmt.Printf("calling EvalFromURL('%s')\n", t1FileUrl)
 
 	parameters := map[string]interface{}{
 		"name": "joe",
 	}
-	result, err := engine.EvalFromURL(t1FileUrl, parameters, &Options{})
+
+	result, err := engine.EvalFromURL(t1FileUrl, parameters, options)
 
 	if err != nil {
 		t.Fatalf("Got error: %v", err)
@@ -110,7 +115,7 @@ func doTestEngine(t *testing.T) {
 
 	// ensure that some parameters are required
 	fmt.Println("ensure that name parameter is required...")
-	_, err = engine.EvalFromURL(t1FileUrl, nil, &Options{})
+	_, err = engine.EvalFromURL(t1FileUrl, nil, options)
 
 	if err == nil || fmt.Sprintf("%v", err) != "parameter name is required" {
 		t.Fatalf("Required parameter 'name' has not been validated")
@@ -159,7 +164,7 @@ func doTestEngine(t *testing.T) {
 
 	// ensure that some parameters are required
 	fmt.Println("ensure that name parameter is required...")
-	_, err = engine.EvalFromURL(t1FileUrl, nil, &Options{})
+	_, err = engine.EvalFromURL(t1FileUrl, nil, options)
 
 	if err == nil || fmt.Sprintf("%v", err) != "parameter name is required" {
 		t.Fatalf("Required parameter 'name' has not been validated")

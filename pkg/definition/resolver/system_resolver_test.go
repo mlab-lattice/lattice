@@ -15,12 +15,14 @@ import (
 	"gopkg.in/src-d/go-git.v4/plumbing/object"
 )
 
-const TEST_REPO_DIR = "/tmp/lattice-core/test/resolver/my-repo"
-const TEST_REPO_GIT_URI_V1 = "file:///tmp/lattice-core/test/resolver/my-repo/.git#v1"
-const TEST_REPO_GIT_URI_V2 = "file:///tmp/lattice-core/test/resolver/my-repo/.git#v2"
-const TEST_WORK_DIR = "/tmp/lattice-core/test/resolver/work"
-const SYSTEM_FILE_NAME = "system.json"
-const SERVICE_FILE_NAME = "service.json"
+const (
+	testRepoDir     = "/tmp/lattice-core/test/resolver/my-repo"
+	testRepoURI1    = "file:///tmp/lattice-core/test/resolver/my-repo/.git#v1"
+	testRepoURI2    = "file:///tmp/lattice-core/test/resolver/my-repo/.git#v2"
+	testWorkDir     = "/tmp/lattice-core/test/resolver/work"
+	systemFileName  = "system.json"
+	serviceFileName = "service.json"
+)
 
 func TestMain(m *testing.M) {
 	fmt.Println("Running resolvers tests...")
@@ -40,12 +42,12 @@ func TestValidateSystemResolver(t *testing.T) {
 func testV1(t *testing.T) {
 	fmt.Println("--------------- Testing ResolveDefinition V1")
 
-	res, err := NewSystemResolver(TEST_WORK_DIR)
+	res, err := NewSystemResolver(testWorkDir)
 	if err != nil {
 		t.Fatalf("Got error calling NewSystemResolver: %v", err)
 	}
 
-	defNode, err := res.ResolveDefinition(path.Join(TEST_REPO_GIT_URI_V1, "system.json"), nil)
+	defNode, err := res.ResolveDefinition(path.Join(testRepoURI1, "system.json"), nil)
 	if err != nil {
 		t.Fatalf("Error is not nil: %v", err)
 	}
@@ -72,12 +74,12 @@ func testV2(t *testing.T) {
 
 	fmt.Println("--------------- Testing ResolveDefinition V2")
 
-	res, err := NewSystemResolver(TEST_WORK_DIR)
+	res, err := NewSystemResolver(testWorkDir)
 	if err != nil {
 		t.Fatalf("Got error calling NewSystemResolver: %v", err)
 	}
 
-	defNode, err := res.ResolveDefinition(path.Join(TEST_REPO_GIT_URI_V2, "system.json"), nil)
+	defNode, err := res.ResolveDefinition(path.Join(testRepoURI2, "system.json"), nil)
 	if err != nil {
 		t.Error("Error is not nil: ", err)
 	}
@@ -90,12 +92,12 @@ func testV2(t *testing.T) {
 func testListVersions(t *testing.T) {
 	fmt.Println("--------------- Testing ListDefinitionVersions")
 
-	res, err := NewSystemResolver(TEST_WORK_DIR)
+	res, err := NewSystemResolver(testWorkDir)
 	if err != nil {
 		t.Fatalf("Got error calling NewSystemResolver: %v", err)
 	}
 
-	versions, err := res.ListDefinitionVersions(TEST_REPO_GIT_URI_V2, &git.Options{})
+	versions, err := res.ListDefinitionVersions(testRepoURI2, &git.Options{})
 	if err != nil {
 		t.Fatal("Error is not nil: ", err)
 	}
@@ -114,30 +116,30 @@ func setupTest() {
 
 	fmt.Println("Setting up resolver test")
 	// ensure work directory
-	os.Mkdir(TEST_REPO_DIR, 0700)
+	os.Mkdir(testRepoDir, 0700)
 
-	gogit.PlainInit(TEST_REPO_DIR, false)
+	gogit.PlainInit(testRepoDir, false)
 
-	commitTestFiles(SYSTEM_JSON, SERVICE_JSON, "v1")
-	commitTestFiles(SYSTEM_JSON_V2, SERVICE_JSON, "v2")
+	commitTestFiles(SYSTEM_JSON, serviceJSON, "v1")
+	commitTestFiles(systemJSON2, serviceJSON, "v2")
 
 }
 
 func commitTestFiles(systemJson string, serviceJson string, tag string) {
 
 	systemFileContents := []byte(systemJson)
-	ioutil.WriteFile(path.Join(TEST_REPO_DIR, SYSTEM_FILE_NAME), systemFileContents, 0644)
+	ioutil.WriteFile(path.Join(testRepoDir, systemFileName), systemFileContents, 0644)
 
 	serviceFileContents := []byte(serviceJson)
-	ioutil.WriteFile(path.Join(TEST_REPO_DIR, SERVICE_FILE_NAME), serviceFileContents, 0644)
+	ioutil.WriteFile(path.Join(testRepoDir, serviceFileName), serviceFileContents, 0644)
 
-	repo, _ := gogit.PlainOpen(TEST_REPO_DIR)
+	repo, _ := gogit.PlainOpen(testRepoDir)
 
 	workTree, _ := repo.Worktree()
 
-	workTree.Add(SYSTEM_FILE_NAME)
+	workTree.Add(systemFileName)
 
-	workTree.Add(SERVICE_FILE_NAME)
+	workTree.Add(serviceFileName)
 
 	// commit
 	hash, _ := workTree.Commit("test", &gogit.CommitOptions{
@@ -157,8 +159,8 @@ func commitTestFiles(systemJson string, serviceJson string, tag string) {
 
 func teardownTest() {
 	fmt.Println("Tearing down resolver test")
-	os.RemoveAll(TEST_REPO_DIR)
-	os.RemoveAll(TEST_WORK_DIR)
+	os.RemoveAll(testRepoDir)
+	os.RemoveAll(testWorkDir)
 
 }
 
@@ -203,7 +205,7 @@ const SYSTEM_JSON = `
 }
 `
 
-const SERVICE_JSON = `
+const serviceJSON = `
 {
   "name": "my-service-2",
   "type": "service",
@@ -237,7 +239,7 @@ const SERVICE_JSON = `
 }
 `
 
-const SYSTEM_JSON_V2 = `
+const systemJSON2 = `
 {
   "name": "my-system-v2",
   "type": "system",
