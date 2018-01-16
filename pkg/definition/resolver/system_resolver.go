@@ -81,7 +81,7 @@ func (resolver *SystemResolver) readNodeFromFile(ctx *resolveContext) (tree.Node
 		return nil, err
 	}
 
-	defInterface, err := definition.UnmarshalJSON(jsonBytes)
+	defInterface, err := definition.NewFromJSON(jsonBytes)
 
 	if err != nil {
 		return nil, err

@@ -24,8 +24,4 @@ go_test(
     ],
     embed = [":go_default_library"],
     importpath = "github.com/mlab-lattice/system/pkg/definition/tree",
-    deps = [
-        "//pkg/definition/test:go_default_library",
-        "//pkg/util/test:go_default_library",
-    ],
 )

@@ -90,8 +90,9 @@ func (r *restServer) mountSystemVersionHandlers() {
 			}
 
 			c.JSON(http.StatusOK, systemVersionResponse{
-				ID:         version,
-				Definition: definitionRoot.Definition(),
+				ID: version,
+				// FIXME: this probalby won't work
+				Definition: definitionRoot,
 			})
 		})
 	}

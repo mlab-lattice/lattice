@@ -190,10 +190,10 @@ func (c *Controller) newService(system *crv1.System, serviceInfo *crv1.SystemSpe
 
 func serviceSpec(system *crv1.System, serviceInfo *crv1.SystemSpecServiceInfo, path tree.NodePath) (crv1.ServiceSpec, error) {
 	var numInstances int32
-	if serviceInfo.Definition.Resources.NumInstances != nil {
-		numInstances = *(serviceInfo.Definition.Resources.NumInstances)
-	} else if serviceInfo.Definition.Resources.MinInstances != nil {
-		numInstances = *(serviceInfo.Definition.Resources.MinInstances)
+	if serviceInfo.Definition.Resources().NumInstances != nil {
+		numInstances = *(serviceInfo.Definition.Resources().NumInstances)
+	} else if serviceInfo.Definition.Resources().MinInstances != nil {
+		numInstances = *(serviceInfo.Definition.Resources().MinInstances)
 	} else {
 		err := fmt.Errorf(
 			"System %v/%v Service %v invalid Service definition: num_instances or min_instances must be set",
@@ -206,7 +206,7 @@ func serviceSpec(system *crv1.System, serviceInfo *crv1.SystemSpecServiceInfo, p
 
 	componentPorts := map[string][]crv1.ComponentPort{}
 
-	for _, component := range serviceInfo.Definition.Components {
+	for _, component := range serviceInfo.Definition.Components() {
 		var ports []crv1.ComponentPort
 		for _, port := range component.Ports {
 			componentPort := crv1.ComponentPort{

@@ -161,23 +161,16 @@ func teardownTest() {
 
 const SYSTEM_JSON = `
 {
-  "$": {
-    "name": "my-system-v1",
-    "type": "system",
-    "description": "This is my system v1"
-  },
+  "name": "my-system-v1",
+  "type": "system",
   "subsystems": [
     {"$include": "service.json"},
     {
-      "$": {
-        "name": "my-service",
-        "type": "service",
-        "description": "This is my service"
-      },
+      "name": "my-service",
+      "type": "service",
       "components": [
         {
           "name": "service",
-          "init": false,
           "build": {
             "docker_image": {
               "registry": "registry.company.com",
@@ -209,15 +202,11 @@ const SYSTEM_JSON = `
 
 const SERVICE_JSON = `
 {
-  "$": {
-    "name": "my-service-2",
-    "type": "service",
-    "description": "This is my service 2"
-  },
+  "name": "my-service-2",
+  "type": "service",
   "components": [
     {
       "name": "service",
-      "init": false,
       "build": {
         "docker_image": {
           "registry": "registry.company.com",
@@ -247,23 +236,16 @@ const SERVICE_JSON = `
 
 const SYSTEM_JSON_V2 = `
 {
-  "$": {
-    "name": "my-system-v2",
-    "type": "system",
-    "description": "This is my system v2"
-  },
+  "name": "my-system-v2",
+  "type": "system",
   "subsystems": [
     {"$include": "service.json"},
     {
-      "$": {
-        "name": "my-service",
-        "type": "service",
-        "description": "This is my service"
-      },
+	  "name": "my-service",
+      "type": "service",
       "components": [
         {
           "name": "service",
-          "init": false,
           "build": {
             "docker_image": {
               "registry": "registry.company.com",

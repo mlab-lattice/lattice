@@ -10,7 +10,6 @@ go_library(
         "docker.go",
         "git.go",
         "interface.go",
-        "metadata.go",
         "port.go",
         "resources.go",
         "volume.go",

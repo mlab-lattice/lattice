@@ -1,16 +1,17 @@
 package tree
 
-import (
-	"testing"
+//import (
+//	"testing"
+//
+//	definitiontest "github.com/mlab-lattice/system/pkg/definition/test"
+//)
 
-	definitiontest "github.com/mlab-lattice/system/pkg/definition/test"
-)
-
-func TestNodePath(t *testing.T) {
-	sd := definitiontest.MockSystem()
-
-	_, err := NewSystemNode(sd, nil)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-}
+//
+//func TestNodePath(t *testing.T) {
+//	sd := definitiontest.MockSystem()
+//
+//	_, err := NewSystemNode(sd, nil)
+//	if err != nil {
+//		t.Fatalf("unexpected error: %v", err)
+//	}
+//}

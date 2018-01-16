@@ -83,7 +83,7 @@ func (c *Controller) syncMissingServiceBuildsSystemBuild(build *crv1.SystemBuild
 		serviceInfo := build.Spec.Services[service]
 
 		// Otherwise we'll have to create a new Service.
-		serviceBuild, err := c.createNewServiceBuild(build, service, &serviceInfo.Definition)
+		serviceBuild, err := c.createNewServiceBuild(build, service, serviceInfo.Definition)
 		if err != nil {
 			return err
 		}

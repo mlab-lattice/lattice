@@ -2,92 +2,61 @@ package definition
 
 import (
 	"encoding/json"
-	"errors"
-
-	"github.com/mlab-lattice/system/pkg/definition/block"
+	"fmt"
 )
 
-// IMPORTANT: it is assumed that all system/definition.Interface implementers
-// also implement system/definition/block.Interface.
+const (
+	TypeSystem  = "system"
+	TypeService = "service"
+)
 
 type Interface interface {
-	Metadata() *block.Metadata
+	Type() string
+	Name() string
+	Description() string
+	json.Marshaler
 }
 
-// Have to jump through some hoops to properly unmarshal json into
-// a definition.Interface. All definition json unmarshaling must go
-// through NewFromJSON.
+type Validator interface {
+	Validate(Interface) error
+}
 
-func UnmarshalJSON(bytes []byte) (Interface, error) {
-	var decoded decoder
-	if err := json.Unmarshal(bytes, &decoded); err != nil {
+func NewFromJSON(data []byte) (Interface, error) {
+	var decoded typeDecoder
+	if err := json.Unmarshal(data, &decoded); err != nil {
 		return nil, err
 	}
 
-	if err := decoded.definition.(block.Interface).Validate(nil); err != nil {
-		return nil, err
+	if decoded.Type == "" {
+		return nil, fmt.Errorf("definition must have a type")
 	}
 
-	return decoded.definition, nil
-}
-
-type decoder struct {
-	definition Interface
-}
-
-type metadataDecoder struct {
-	Metadata block.Metadata `json:"$"`
-}
-
-type subsystemsDecoder struct {
-	Subsystems []interface{} `json:"subsystems"`
-}
-
-func (u *decoder) UnmarshalJSON(data []byte) error {
-	var dm metadataDecoder
-	if err := json.Unmarshal(data, &dm); err != nil {
-		return err
-	}
-
-	switch dm.Metadata.Type {
-	case SystemType:
-		system := System{
-			Meta: dm.Metadata,
+	var definition Interface
+	switch decoded.Type {
+	case TypeSystem:
+		system, err := NewSystemFromJSON(data)
+		if err != nil {
+			return nil, err
 		}
 
-		var ds subsystemsDecoder
-		if err := json.Unmarshal(data, &ds); err != nil {
-			return err
+		definition = system.(Interface)
+
+	case TypeService:
+		service, err := NewServiceFromJSON(data)
+		if err != nil {
+			return nil, err
 		}
 
-		subsystems := []Interface{}
-		for _, subsystem := range ds.Subsystems {
-			subsystemBytes, err := json.Marshal(subsystem)
-			if err != nil {
-				return err
-			}
+		definition = service.(Interface)
 
-			var unpacked decoder
-			if err := json.Unmarshal(subsystemBytes, &unpacked); err != nil {
-				return nil
-			}
-
-			subsystems = append(subsystems, unpacked.definition)
-		}
-
-		system.Subsystems = subsystems
-		u.definition = Interface(&system)
-	case ServiceType:
-		var service Service
-		if err := json.Unmarshal(data, &service); err != nil {
-			return err
-		}
-
-		u.definition = Interface(&service)
 	default:
-		// TODO: maybe process template files here?
-		return errors.New("unrecognized type " + dm.Metadata.Type)
+		return nil, fmt.Errorf("unsupported definition type: %v", decoded.Type)
 	}
 
-	return nil
+	return definition, nil
+}
+
+type typeDecoder struct {
+	Type      string `json:"type"`
+	Remainder json.RawMessage
 }
