@@ -15,6 +15,7 @@ go_library(
         "//pkg/definition/tree:go_default_library",
         "//pkg/managerapi/server:go_default_library",
         "//pkg/types:go_default_library",
+        "//pkg/util/git:go_default_library",
         "@com_github_gin_gonic_gin//:go_default_library",
         "@com_github_golang_glog//:go_default_library",
     ],
