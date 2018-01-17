@@ -15,14 +15,11 @@ tar -xvf etcd-v3.1.4-linux-amd64.tar.gz
 sudo mkdir -p /opt/etcd/bin
 sudo mv etcd-v3.1.4-linux-amd64/etcd* /opt/etcd/bin/
 
-echo "Installing terraform"
-wget https://releases.hashicorp.com/terraform/0.10.8/terraform_0.10.8_linux_amd64.zip
-unzip terraform_0.10.8_linux_amd64.zip
-sudo mkdir -p /opt/terraform/bin
-sudo mv terraform /opt/terraform/bin
-
 echo "Pulling control plane docker images"
 docker pull gcr.io/google_containers/hyperkube:v1.9.0
+
+echo "Pulling latticectl"
+docker pull gcr.io/lattice-dev/kevinrosendahl-debug-latticectl:latest
 
 # Clean up after ourselves
 cd ~

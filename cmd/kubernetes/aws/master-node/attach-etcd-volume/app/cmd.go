@@ -81,9 +81,9 @@ func Execute() {
 
 func init() {
 	Cmd.Flags().StringVar(&workDirectory, "work-directory", "", "")
-	Cmd.Flags().StringVar(&terraformS3Bucket, "s3-bucket", "", "")
-	Cmd.Flags().StringVar(&terraformS3KeyPrefix, "s3-key-prefix", "", "")
-	Cmd.Flags().StringVar(&terraformModuleSourcePath, "module-source-path", "", "")
+	Cmd.Flags().StringVar(&terraformS3Bucket, "terraform-state-s3-bucket", "", "")
+	Cmd.Flags().StringVar(&terraformS3KeyPrefix, "terraform-state-s3-key-prefix", "", "")
+	Cmd.Flags().StringVar(&terraformModuleSourcePath, "terraform-module-source-path", "", "")
 	Cmd.Flags().StringVar(&region, "region", "", "")
 	Cmd.Flags().StringVar(&clusterID, "cluster-id", "", "")
 	Cmd.Flags().StringVar(&name, "name", "", "")

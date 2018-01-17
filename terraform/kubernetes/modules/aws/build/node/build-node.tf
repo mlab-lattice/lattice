@@ -6,32 +6,19 @@ variable "aws_account_id" {}
 variable "region" {}
 
 variable "cluster_id" {}
-variable "system_id" {}
 variable "vpc_id" {}
-variable "subnet_ids" {}
-variable "base_node_ami_id" {}
-variable "key_name" {}
+variable "build_subnet_ids" {}
 
-variable "service_id" {}
+variable "build_id" {}
 variable "num_instances" {}
 variable "instance_type" {}
+variable "base_node_ami_id" {}
+variable "key_name" {}
 
 variable "master_node_security_group_id" {}
 
 variable "kubelet_port" {
   default = 10250
-}
-
-###############################################################################
-# Output
-#
-
-output "autoscaling_group_name" {
-  value = "${module.base_node.autoscaling_group_name}"
-}
-
-output "security_group_id" {
-  value = "${module.base_node.security_group_id}"
 }
 
 ###############################################################################
@@ -49,10 +36,8 @@ provider "aws" {
 ###############################################################################
 # Role
 
-resource "aws_iam_role" "service_node_role" {
-  name = "lattice.${var.cluster_id}.system.${var.system_id}.service-${var.service_id}"
-
-  //  name               = "${var.lattice_id}.${var.system_id}.service-${var.service_id}"
+resource "aws_iam_role" "build_node_role" {
+  name               = "${var.cluster_id}.build-${var.build_id}"
   assume_role_policy = "${module.assume_role_from_ec2_service_policy_doucment.json}"
 }
 
@@ -63,12 +48,12 @@ module "assume_role_from_ec2_service_policy_doucment" {
 ###############################################################################
 # Policy
 
-resource "aws_iam_role_policy" "service_node_role_policy" {
-  role   = "${aws_iam_role.service_node_role.id}"
-  policy = "${data.aws_iam_policy_document.service_node_role_policy_document.json}"
+resource "aws_iam_role_policy" "build_node_role_policy" {
+  role   = "${aws_iam_role.build_node_role.id}"
+  policy = "${data.aws_iam_policy_document.build_node_role_policy_document.json}"
 }
 
-data "aws_iam_policy_document" "service_node_role_policy_document" {
+data "aws_iam_policy_document" "build_node_role_policy_document" {
   # Allow ec2 read-only
   statement {
     effect = "Allow"
@@ -95,7 +80,7 @@ data "aws_iam_policy_document" "service_node_role_policy_document" {
     ]
   }
 
-  # Allow pull from system repos
+  # Allow pull from global ecr build repository
   statement {
     effect = "Allow"
 
@@ -113,6 +98,29 @@ data "aws_iam_policy_document" "service_node_role_policy_document" {
       "arn:aws:ecr:${var.region}:${var.aws_account_id}:repository/component-builds",
     ]
   }
+
+  # Allow push to system ecr repos
+  statement {
+    effect = "Allow"
+
+    actions = [
+      "ecr:GetAuthorizationToken",
+      "ecr:BatchCheckLayerAvailability",
+      "ecr:GetDownloadUrlForLayer",
+      "ecr:GetRepositoryPolicy",
+      "ecr:DescribeRepositories",
+      "ecr:ListImages",
+      "ecr:BatchGetImage",
+      "ecr:PutImage",
+      "ecr:InitiateLayerUpload",
+      "ecr:UploadLayerPart",
+      "ecr:CompleteLayerUpload",
+    ]
+
+    resources = [
+      "arn:aws:ecr:${var.region}:${var.aws_account_id}:repository/component-builds",
+    ]
+  }
 }
 
 ###############################################################################
@@ -120,23 +128,23 @@ data "aws_iam_policy_document" "service_node_role_policy_document" {
 #
 
 module "base_node" {
-  source = "../base"
+  source = "../../node/base"
 
   cluster_id = "${var.cluster_id}"
-  name       = "service-${var.service_id}"
+  name       = "build-${var.build_id}"
 
-  kubelet_labels = "node-role.kubernetes.io/service=${var.service_id}"
-  kubelet_taints = "node-role.kubernetes.io/service=${var.service_id}:NoSchedule"
+  kubelet_labels = "node-role.kubernetes.io/build=true,node-role.lattice.mlab.com/build=true"
+  kubelet_taints = "node-role.lattice.mlab.com/build=true:NoSchedule"
 
   region        = "${var.region}"
   vpc_id        = "${var.vpc_id}"
-  subnet_ids    = "${var.subnet_ids}"
+  subnet_ids    = "${var.build_subnet_ids}"
   num_instances = "${var.num_instances}"
   instance_type = "${var.instance_type}"
   ami_id        = "${var.base_node_ami_id}"
   key_name      = "${var.key_name}"
 
-  iam_instance_profile_role_name = "${aws_iam_role.service_node_role.name}"
+  iam_instance_profile_role_name = "${aws_iam_role.build_node_role.name}"
 }
 
 ###############################################################################

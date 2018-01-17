@@ -8,7 +8,7 @@ const (
 	modulePathLoadBalancer                   = modulePathRoot + "/load-balancer"
 	modulePathApplicationLoadBalancer        = modulePathLoadBalancer + "/application"
 	modulePathNodePool                       = modulePathRoot + "/node-pool"
-	modulePathMasterNode                     = modulePathRoot + "/master-node"
+	modulePathMasterNode                     = modulePathRoot + "/master"
 	modulePathMasterNodeEtcdVolumeAttachment = modulePathMasterNode + "/etcd-volume-attachment"
 	modulePathMasterNodeDNS                  = modulePathMasterNode + "/dns"
 )
