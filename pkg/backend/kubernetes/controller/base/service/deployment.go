@@ -213,7 +213,7 @@ func (c *Controller) untransformedDeploymentSpec(service *crv1.Service, name str
 		dnsSearches = append(dnsSearches, fmt.Sprintf("%v.local.%v", parentDomain, baseSearchPath))
 	}
 
-	DNSConfig := corev1.PodDNSConfig{
+	dnsConfig := corev1.PodDNSConfig{
 		Nameservers: []string{},
 		Options: []corev1.PodDNSConfigOption{
 			{
@@ -238,7 +238,7 @@ func (c *Controller) untransformedDeploymentSpec(service *crv1.Service, name str
 			Spec: corev1.PodSpec{
 				Containers: containers,
 				DNSPolicy:  corev1.DNSDefault,
-				DNSConfig:  &DNSConfig,
+				DNSConfig:  &dnsConfig,
 				Affinity: &corev1.Affinity{
 					NodeAffinity:    kubeutil.NodePoolNodeAffinity(nodePool),
 					PodAntiAffinity: podAntiAffinity,

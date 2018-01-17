@@ -2,7 +2,7 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "go_default_library",
-    srcs = ["dnscontroller.go"],
+    srcs = ["dns_controller.go"],
     importpath = "github.com/mlab-lattice/system/pkg/backend/kubernetes/cloudprovider/local/dns/controller",
     visibility = ["//visibility:public"],
     deps = [
@@ -13,12 +13,10 @@ go_library(
         "//pkg/backend/kubernetes/util/kubernetes:go_default_library",
         "@com_github_deckarep_golang_set//:go_default_library",
         "@com_github_golang_glog//:go_default_library",
-        "@io_k8s_api//core/v1:go_default_library",
         "@io_k8s_apimachinery//pkg/labels:go_default_library",
         "@io_k8s_apimachinery//pkg/util/runtime:go_default_library",
         "@io_k8s_apimachinery//pkg/util/wait:go_default_library",
         "@io_k8s_client_go//kubernetes:go_default_library",
-        "@io_k8s_client_go//kubernetes/scheme:go_default_library",
         "@io_k8s_client_go//kubernetes/typed/core/v1:go_default_library",
         "@io_k8s_client_go//tools/cache:go_default_library",
         "@io_k8s_client_go//tools/record:go_default_library",
@@ -28,18 +26,21 @@ go_library(
 
 go_test(
     name = "go_default_test",
-    srcs = ["dnscontroller_test.go"],
+    srcs = ["dns_controller_test.go"],
     embed = [":go_default_library"],
     importpath = "github.com/mlab-lattice/system/pkg/backend/kubernetes/cloudprovider/local/dns/controller",
     deps = [
         "//pkg/backend/kubernetes/customresource/apis/lattice/v1:go_default_library",
         "//pkg/backend/kubernetes/customresource/generated/clientset/versioned/fake:go_default_library",
         "//pkg/backend/kubernetes/customresource/generated/informers/externalversions:go_default_library",
+        "//pkg/backend/kubernetes/util/kubernetes:go_default_library",
         "//pkg/definition/tree:go_default_library",
+        "//pkg/types:go_default_library",
         "@com_github_davecgh_go_spew//spew:go_default_library",
         "@com_github_golang_glog//:go_default_library",
         "@io_k8s_apimachinery//pkg/apis/meta/v1:go_default_library",
         "@io_k8s_apimachinery//pkg/runtime:go_default_library",
+        "@io_k8s_apimachinery//pkg/util/runtime:go_default_library",
         "@io_k8s_client_go//kubernetes/fake:go_default_library",
     ],
 )

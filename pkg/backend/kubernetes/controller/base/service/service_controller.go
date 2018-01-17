@@ -14,6 +14,7 @@ import (
 	latticelisters "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/listers/lattice/v1"
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/servicemesh"
 	kubeutil "github.com/mlab-lattice/system/pkg/backend/kubernetes/util/kubernetes"
+	"github.com/mlab-lattice/system/pkg/types"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -32,7 +33,6 @@ import (
 	"k8s.io/client-go/util/workqueue"
 
 	"github.com/golang/glog"
-	"github.com/mlab-lattice/system/pkg/types"
 )
 
 var controllerKind = crv1.SchemeGroupVersion.WithKind("Service")

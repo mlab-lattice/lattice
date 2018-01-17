@@ -4,7 +4,7 @@ import (
 	"flag"
 	"time"
 
-	controller "github.com/mlab-lattice/system/cmd/kubernetes/lattice-controller-manager/app/common"
+	"github.com/mlab-lattice/system/cmd/kubernetes/lattice-controller-manager/app/common"
 	dnsconstants "github.com/mlab-lattice/system/pkg/backend/kubernetes/cloudprovider/local"
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/cloudprovider/local/dns/controller"
 	latticeinformers "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/informers/externalversions"
@@ -45,7 +45,7 @@ func main() {
 
 	stop := make(chan struct{})
 
-	lcb := controller.LatticeClientBuilder{
+	lcb := common.LatticeClientBuilder{
 		Kubeconfig: config,
 	}
 
@@ -54,7 +54,7 @@ func main() {
 
 	glog.V(1).Info("Starting dns controller")
 
-	go dnscontroller.NewController(
+	go controller.NewController(
 		dnsmasqConfigPath,
 		hostsFilePath,
 		clusterID,

@@ -1,20 +1,24 @@
-package dnscontroller
+package controller
 
 import (
 	"flag"
 	"fmt"
 	"hash/fnv"
 	"io/ioutil"
+	"os"
 	"strconv"
 	"testing"
 
 	latticev1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	fakelattice "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/clientset/versioned/fake"
 	latticeinformers "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/informers/externalversions"
+	kubeutil "github.com/mlab-lattice/system/pkg/backend/kubernetes/util/kubernetes"
 	"github.com/mlab-lattice/system/pkg/definition/tree"
+	"github.com/mlab-lattice/system/pkg/types"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	error_runtime "k8s.io/apimachinery/pkg/util/runtime"
 
 	"k8s.io/client-go/kubernetes/fake"
 
@@ -137,10 +141,8 @@ func endpoint(key string, ip string, endpoint string, path tree.NodePath) *latti
 }
 
 // alterNamespace adds a specified namespace to the Endpoints definition
-func alterNamespace(namespace string, endpoint *latticev1.Endpoint) *latticev1.Endpoint {
-	// First two hyphens in an endpoints namespace do not affect the output. Determined by the trailing string after the 2nd hyphen.
-	endpoint.Namespace = "A-B-" + namespace
-
+func alterNamespace(systemID string, endpoint *latticev1.Endpoint) *latticev1.Endpoint {
+	endpoint.Namespace = kubeutil.SystemNamespace(clusterID, types.SystemID(systemID))
 	return endpoint
 }
 
@@ -155,7 +157,7 @@ func makeNodePathPanic(pathString string) tree.NodePath {
 	return np
 }
 
-type test_case struct {
+type testCase struct {
 	ClientObjects []runtime.Object
 
 	EndpointsBefore *latticev1.EndpointList
@@ -175,7 +177,7 @@ func TestEndpointCreation(t *testing.T) {
 	flag.StringVar(&logLevel, "logLevel", loggingLevelDefault, "test")
 	flag.Lookup("v").Value.Set(logLevel)
 
-	testcases := map[string]test_case{
+	testcases := map[string]testCase{
 		"new endpoint with ip is written to host file": {
 			EndpointsAfter: endpointList(
 				*endpoint("key", "1", "", makeNodePathPanic("/nodepath"))),
@@ -333,9 +335,10 @@ func TestEndpointCreation(t *testing.T) {
 		}
 
 		if testCase.ExpectedCnames != nil {
-			dnsmasqConfig, err := ioutil.ReadFile(controller.dnsmasqConfigPath)
+			dnsmasqConfig, err := ioutil.ReadFile(dnsmasqConfigPath)
 			if err != nil {
 				t.Errorf("Error reading cname file: %v", err)
+				break
 			}
 
 			dnsmasqConfigStr := string(dnsmasqConfig)
@@ -344,12 +347,18 @@ func TestEndpointCreation(t *testing.T) {
 			if dnsmasqConfigStr != expectedDnsmasqConfigStr {
 				t.Errorf("%s:\nExpected:\n%s\ngot:\n%s", testName, spew.Sdump(expectedDnsmasqConfigStr), spew.Sdump(dnsmasqConfigStr))
 			}
+
+			err = os.Remove(dnsmasqConfigPath)
+			if err != nil {
+				error_runtime.HandleError(err)
+			}
 		}
 
 		if testCase.ExpectedHosts != nil {
-			hostFile, err := ioutil.ReadFile(controller.hostFilePath)
+			hostFile, err := ioutil.ReadFile(hostsFilePath)
 			if err != nil {
 				t.Errorf("Error reading host file: %v", err)
+				break
 			}
 
 			hostStr := string(hostFile)
@@ -357,6 +366,11 @@ func TestEndpointCreation(t *testing.T) {
 
 			if hostStr != hostExpectedStr {
 				t.Errorf("%s:\nExpected:\n%s\ngot:\n%s", testName, spew.Sdump(hostExpectedStr), spew.Sdump(hostStr))
+			}
+
+			err = os.Remove(hostsFilePath)
+			if err != nil {
+				error_runtime.HandleError(err)
 			}
 		}
 	}

@@ -1,4 +1,4 @@
-package dnscontroller
+package controller
 
 import (
 	"fmt"
@@ -11,14 +11,11 @@ import (
 	latticelisters "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/listers/lattice/v1"
 	util "github.com/mlab-lattice/system/pkg/backend/kubernetes/util/kubernetes"
 
-	corev1 "k8s.io/api/core/v1"
-
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
 
 	clientset "k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/kubernetes/scheme"
 	v1core "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
@@ -36,8 +33,6 @@ type Controller struct {
 
 	endpointister        latticelisters.EndpointLister
 	endpointListerSynced cache.InformerSynced
-
-	eventRecorder record.EventRecorder
 
 	queue workqueue.RateLimitingInterface
 
@@ -69,8 +64,6 @@ func NewController(
 	eventBroadcaster.StartLogging(glog.Infof)
 	eventBroadcaster.StartRecordingToSink(&v1core.EventSinkImpl{Interface: v1core.New(client.CoreV1().RESTClient()).Events("")})
 
-	c.eventRecorder = eventBroadcaster.NewRecorder(scheme.Scheme, corev1.EventSource{Component: "local-dns-controller"})
-
 	c.dnsmasqConfigPath = dnsmasqConfigPath
 	c.hostFilePath = hostConfigPath
 	c.clusterID = clusterID
@@ -99,7 +92,7 @@ func (c *Controller) Run(stopCh <-chan struct{}) {
 		return
 	}
 
-	glog.V(4).Info("Caches synced. Waiting for config to be set")
+	glog.V(4).Info("Caches synced.")
 
 	go wait.Until(c.updateConfigs, time.Second*time.Duration(updateWaitBeforeFlushTimerSeconds), stopCh)
 
@@ -132,12 +125,17 @@ func (c *Controller) updateConfigs() {
 	}
 
 	if !updateNeeded {
+		// In the case the previous update failed and some endpoints have not been updated to the created state
+		// attempt to update them again here.
 		for _, e := range endpoints {
 			if e.Status.State != crv1.EndpointStateCreated {
 				endpoint := e.DeepCopy()
 				endpoint.Status.State = crv1.EndpointStateCreated
 
-				c.latticeClient.LatticeV1().Endpoints(endpoint.Namespace).Update(endpoint)
+				_, err = c.latticeClient.LatticeV1().Endpoints(endpoint.Namespace).Update(endpoint)
+				if err != nil {
+					runtime.HandleError(err)
+				}
 			}
 		}
 
@@ -146,7 +144,7 @@ func (c *Controller) updateConfigs() {
 
 	glog.V(5).Infof("Endpoints have changed, rewriting DNS configuration...")
 
-	err = c.RewriteDnsmasqConfig(endpoints)
+	err = c.rewriteDnsmasqConfig(endpoints)
 	if err != nil {
 		runtime.HandleError(err)
 		return
@@ -166,7 +164,6 @@ func (c *Controller) updateConfigs() {
 		_, err := c.latticeClient.LatticeV1().Endpoints(endpoint.Namespace).Update(endpoint)
 		if err != nil {
 			runtime.HandleError(err)
-			return
 		}
 	}
 }
@@ -197,8 +194,8 @@ func (c *Controller) endpointsSets(endpoints []*crv1.Endpoint) (set.Set, set.Set
 	return externalNameEndpoints, ipEndpoints, nil
 }
 
-// RewriteDnsmasqConfig rewrites the config files for the dns server
-func (c *Controller) RewriteDnsmasqConfig(endpoints []*crv1.Endpoint) error {
+// rewriteDnsmasqConfig rewrites the config files for the dns server
+func (c *Controller) rewriteDnsmasqConfig(endpoints []*crv1.Endpoint) error {
 	// This is an extra config file, so contains only the options which must be rewritten.
 	// Condition on cname is that it exists in the specified host file, or references another cname.
 	// Each cname entry of the form cname=ALIAS,...(addn aliases),TARGET

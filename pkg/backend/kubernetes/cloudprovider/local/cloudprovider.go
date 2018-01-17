@@ -33,11 +33,9 @@ type CloudProvider interface {
 }
 
 func NewCloudProvider(options *Options) *DefaultLocalCloudProvider {
-	cp := &DefaultLocalCloudProvider{
+	return &DefaultLocalCloudProvider{
 		ip: options.IP,
 	}
-
-	return cp
 }
 
 type DefaultLocalCloudProvider struct {
