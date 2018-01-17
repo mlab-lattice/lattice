@@ -7,6 +7,3 @@ do
   /opt/kubernetes/bin/kubectl cluster-info
   EXIT_CODE=${?}
 done
-
-# wait some more just to be safe
-sleep 10

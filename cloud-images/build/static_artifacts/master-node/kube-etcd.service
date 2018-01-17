@@ -1,5 +1,5 @@
 [Unit]
-Description=etcd
+Description=kube-etcd
 Documentation=https://github.com/coreos
 
 # Wait for data dir to be mounted and the network to be up before starting etcd.
@@ -26,6 +26,3 @@ Environment="ETCD_INITIAL_CLUSTER_STATE=new"
 ExecStart=/opt/etcd/bin/etcd
 Restart=on-failure
 RestartSec=5
-
-[Install]
-WantedBy=multi-user.target

@@ -7,3 +7,4 @@ Requires=format-var-opt-etcd.service
 What=/dev/xvdf
 Where=/var/opt/etcd
 Type=ext4
+TimeoutSec=5m

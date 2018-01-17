@@ -8,6 +8,3 @@ After=network-online.target
 [Service]
 Type=oneshot
 ExecStart=/opt/lattice/bin/master-register-master-node-dns
-
-[Install]
-WantedBy=multi-user.target
