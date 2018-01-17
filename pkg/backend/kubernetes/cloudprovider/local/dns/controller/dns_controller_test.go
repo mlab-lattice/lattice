@@ -30,9 +30,7 @@ const (
 	dnsmasqConfigPathPrefix = "./server_config"
 	hostConfigPathPrefix    = "./host_config"
 
-	// End of defaultNamespace should match defaultSystemID
-	defaultNamespace = "namespace-filler-system-id"
-	defaultSystemID  = "system-id"
+	defaultSystemID = "system-id"
 
 	logToStderr         = true
 	loggingLevelDefault = "10"
@@ -97,25 +95,14 @@ func dnsmasqConfigFileOutput(nameservers []cnameEntry) string {
 	return str
 }
 
-// endpointList creates an endpointList schema from a list of endpoints.
-func endpointList(endpoint ...latticev1.Endpoint) *latticev1.EndpointList {
-	var el = latticev1.EndpointList{}
-
-	for _, endp := range endpoint {
-		el.Items = append(el.Items, endp)
-	}
-
-	return &el
-}
-
 // endpoint creates an endpoint schema with the specified parameters.
-func endpoint(key string, ip string, endpoint string, path tree.NodePath) *latticev1.Endpoint {
-	ec := &latticev1.Endpoint{
+func endpoint(key, ip, endpoint, systemID string, path tree.NodePath) latticev1.Endpoint {
+	ec := latticev1.Endpoint{
 		ObjectMeta: metav1.ObjectMeta{
 			// Our tests shouldn't be concerned about unique naming - let this be provided for us
 			Name:            key,
 			UID:             "12345",
-			Namespace:       defaultNamespace,
+			Namespace:       kubeutil.SystemNamespace(clusterID, types.SystemID(systemID)),
 			ResourceVersion: "1",
 		},
 		Status: latticev1.EndpointStatus{
@@ -140,12 +127,6 @@ func endpoint(key string, ip string, endpoint string, path tree.NodePath) *latti
 	return ec
 }
 
-// alterNamespace adds a specified namespace to the Endpoints definition
-func alterNamespace(systemID string, endpoint *latticev1.Endpoint) *latticev1.Endpoint {
-	endpoint.Namespace = kubeutil.SystemNamespace(clusterID, types.SystemID(systemID))
-	return endpoint
-}
-
 // makeNdoePathPanic tries to create a NodePath from the url string, and panics is it is unable to.
 func makeNodePathPanic(pathString string) tree.NodePath {
 	np, err := tree.NewNodePath(pathString)
@@ -160,8 +141,8 @@ func makeNodePathPanic(pathString string) tree.NodePath {
 type testCase struct {
 	ClientObjects []runtime.Object
 
-	EndpointsBefore *latticev1.EndpointList
-	EndpointsAfter  *latticev1.EndpointList
+	EndpointsBefore []latticev1.Endpoint
+	EndpointsAfter  []latticev1.Endpoint
 
 	ExpectedHosts  []hostEntry
 	ExpectedCnames []cnameEntry
@@ -179,8 +160,9 @@ func TestEndpointCreation(t *testing.T) {
 
 	testcases := map[string]testCase{
 		"new endpoint with ip is written to host file": {
-			EndpointsAfter: endpointList(
-				*endpoint("key", "1", "", makeNodePathPanic("/nodepath"))),
+			EndpointsAfter: []latticev1.Endpoint{
+				endpoint("key", "1", "", defaultSystemID, makeNodePathPanic("/nodepath")),
+			},
 			ExpectedHosts: []hostEntry{
 				{
 					ip:   "1",
@@ -189,8 +171,9 @@ func TestEndpointCreation(t *testing.T) {
 			},
 		},
 		"new endpoint with name is written as cname file": {
-			EndpointsAfter: endpointList(
-				*endpoint("key", "", "my_cname", makeNodePathPanic("/nodepath"))),
+			EndpointsAfter: []latticev1.Endpoint{
+				endpoint("key", "", "my_cname", defaultSystemID, makeNodePathPanic("/nodepath")),
+			},
 			ExpectedCnames: []cnameEntry{
 				{
 					original: "my_cname",
@@ -199,10 +182,10 @@ func TestEndpointCreation(t *testing.T) {
 			},
 		},
 		"endpoints write url correctly": {
-			EndpointsAfter: endpointList(
-				*endpoint("key", "", "my_cname", makeNodePathPanic("/root/nested/nested_some_more")),
-				*endpoint("key2", "1", "", makeNodePathPanic("/root/nested/nested_again_but_different")),
-			),
+			EndpointsAfter: []latticev1.Endpoint{
+				endpoint("key", "", "my_cname", defaultSystemID, makeNodePathPanic("/root/nested/nested_some_more")),
+				endpoint("key2", "1", "", defaultSystemID, makeNodePathPanic("/root/nested/nested_again_but_different")),
+			},
 			ExpectedCnames: []cnameEntry{
 				{
 					original: "my_cname",
@@ -217,12 +200,12 @@ func TestEndpointCreation(t *testing.T) {
 			},
 		},
 		"normal endpoint update changes the underlying endpoint": {
-			EndpointsBefore: endpointList(
-				*endpoint("key", "", "my_cname", makeNodePathPanic("/nodepath")),
-			),
-			EndpointsAfter: endpointList(
-				*endpoint("key", "", "my_cname_2", makeNodePathPanic("/root/nested/nested_some_more")),
-			),
+			EndpointsBefore: []latticev1.Endpoint{
+				endpoint("key", "", "my_cname", defaultSystemID, makeNodePathPanic("/nodepath")),
+			},
+			EndpointsAfter: []latticev1.Endpoint{
+				endpoint("key", "", "my_cname_2", defaultSystemID, makeNodePathPanic("/root/nested/nested_some_more")),
+			},
 			ExpectedCnames: []cnameEntry{
 				{
 					original: "my_cname_2",
@@ -232,12 +215,12 @@ func TestEndpointCreation(t *testing.T) {
 			ExpectedHosts: []hostEntry{},
 		},
 		"endpoint update can change between cname and IP address type endpoint": {
-			EndpointsBefore: endpointList(
-				*endpoint("key", "", "my_cname", makeNodePathPanic("/nodepath")),
-			),
-			EndpointsAfter: endpointList(
-				*endpoint("key", "5.5.5.5", "", makeNodePathPanic("/root/nested/nested_again_but_different")),
-			),
+			EndpointsBefore: []latticev1.Endpoint{
+				endpoint("key", "", "my_cname", defaultSystemID, makeNodePathPanic("/nodepath")),
+			},
+			EndpointsAfter: []latticev1.Endpoint{
+				endpoint("key", "5.5.5.5", "", defaultSystemID, makeNodePathPanic("/root/nested/nested_again_but_different")),
+			},
 			ExpectedCnames: []cnameEntry{},
 			ExpectedHosts: []hostEntry{
 				{
@@ -247,20 +230,20 @@ func TestEndpointCreation(t *testing.T) {
 			},
 		},
 		"rewriting the cache with no endpoints clears it": {
-			EndpointsBefore: endpointList(
-				*endpoint("key", "", "my_cname", makeNodePathPanic("/nodepath")),
-			),
-			EndpointsAfter: endpointList(),
+			EndpointsBefore: []latticev1.Endpoint{
+				endpoint("key", "", "my_cname", defaultSystemID, makeNodePathPanic("/nodepath")),
+			},
+			EndpointsAfter: []latticev1.Endpoint{},
 			ExpectedCnames: []cnameEntry{},
 			ExpectedHosts:  []hostEntry{},
 		},
 		"changing endpoint to a new namespace changes the output": {
-			EndpointsBefore: endpointList(
-				*endpoint("key", "", "my_cname", makeNodePathPanic("/nodepath")),
-			),
-			EndpointsAfter: endpointList(
-				*alterNamespace("new-namespace", endpoint("key", "", "my_cname", makeNodePathPanic("/nodepath"))),
-			),
+			EndpointsBefore: []latticev1.Endpoint{
+				endpoint("key", "", "my_cname", defaultSystemID, makeNodePathPanic("/nodepath")),
+			},
+			EndpointsAfter: []latticev1.Endpoint{
+				endpoint("key", "", "my_cname", "new-namespace", makeNodePathPanic("/nodepath")),
+			},
 			ExpectedCnames: []cnameEntry{
 				{
 					systemID: "new-namespace",
@@ -292,32 +275,28 @@ func TestEndpointCreation(t *testing.T) {
 
 		controller := NewController(dnsmasqConfigPath, hostsFilePath, clusterID, latticeClient, client, endpointInformer)
 
-		if testCase.EndpointsBefore != nil {
-			for _, e := range testCase.EndpointsBefore.Items {
-				s := e.DeepCopy()
-				err := endpoints.Add(s)
+		for _, e := range testCase.EndpointsBefore {
+			s := e.DeepCopy()
+			err := endpoints.Add(s)
 
-				if err != nil {
-					t.Fatal(err)
-				}
+			if err != nil {
+				t.Fatal(err)
 			}
 		}
 
 		controller.updateConfigs()
 
-		if testCase.EndpointsBefore != nil {
-			for _, e := range testCase.EndpointsBefore.Items {
-				s := e.DeepCopy()
-				err := endpoints.Delete(s)
+		for _, e := range testCase.EndpointsBefore {
+			s := e.DeepCopy()
+			err := endpoints.Delete(s)
 
-				if err != nil {
-					t.Fatal(err)
-				}
+			if err != nil {
+				t.Fatal(err)
 			}
 		}
 
 		if testCase.EndpointsAfter != nil {
-			for _, v := range testCase.EndpointsAfter.Items {
+			for _, v := range testCase.EndpointsAfter {
 				s := v.DeepCopy()
 				err := endpoints.Add(s)
 
@@ -326,7 +305,7 @@ func TestEndpointCreation(t *testing.T) {
 				}
 			}
 
-			t.Logf("Updating cache and writing to: %v", controller.hostFilePath)
+			t.Logf("Updating cache and writing to: %v", hostsFilePath)
 			controller.updateConfigs()
 		}
 

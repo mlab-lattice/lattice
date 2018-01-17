@@ -192,8 +192,6 @@ func (c *Controller) untransformedDeploymentSpec(service *crv1.Service, name str
 		RequiredDuringSchedulingIgnoredDuringExecution: []corev1.PodAffinityTerm{podAffinityTerm},
 	}
 
-	ndotsValue := ndotsValue
-
 	systemID, err := kubeutil.SystemID(service.Namespace)
 	if err != nil {
 		return nil, err
@@ -213,6 +211,8 @@ func (c *Controller) untransformedDeploymentSpec(service *crv1.Service, name str
 		dnsSearches = append(dnsSearches, fmt.Sprintf("%v.local.%v", parentDomain, baseSearchPath))
 	}
 
+	// as a constant cant be dereferenced, create a local copy
+	ndotsValue := ndotsValue
 	dnsConfig := corev1.PodDNSConfig{
 		Nameservers: []string{},
 		Options: []corev1.PodDNSConfigOption{
