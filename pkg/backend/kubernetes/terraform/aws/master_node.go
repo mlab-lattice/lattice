@@ -12,7 +12,7 @@ type MasterNodeEtcdVolumeAttachment struct {
 }
 
 func NewMasterNodeEtcdVolumeAttachment(
-	sourcePath,
+	moduleRoot,
 	region,
 	clusterID,
 	name,
@@ -20,7 +20,7 @@ func NewMasterNodeEtcdVolumeAttachment(
 	deviceName string,
 ) *MasterNodeEtcdVolumeAttachment {
 	return &MasterNodeEtcdVolumeAttachment{
-		Source: sourcePath,
+		Source: moduleRoot + modulePathMasterNodeEtcdVolumeAttachment,
 
 		Region: region,
 
@@ -42,14 +42,14 @@ type MasterNodeDNS struct {
 }
 
 func NewMasterNodeDNS(
-	sourcePath,
+	moduleRoot,
 	region,
 	name,
 	route53PrivateZoneID,
 	instancePrivateIP string,
 ) *MasterNodeDNS {
 	return &MasterNodeDNS{
-		Source: sourcePath,
+		Source: moduleRoot + modulePathMasterNodeDNS,
 
 		Region: region,
 
