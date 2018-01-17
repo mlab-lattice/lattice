@@ -20,7 +20,7 @@ func getKubernetesProvisioner(providerName string) (provisioner.Interface, error
 	return cloudprovider.NewClusterProvisioner(
 		provisionerOptions.LatticeContainerRegistry,
 		provisionerOptions.LatticeContainerRepoPrefix,
-		workingDir,
+		workDir,
 		&provisionerOptions.ProvisionerOptions,
 	)
 }
