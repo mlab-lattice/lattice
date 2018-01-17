@@ -42,6 +42,11 @@ sudo mv /tmp/kubernetes/artifacts/master-node/attach-dev-xvdf.service \
         /etc/systemd/system
 sudo systemctl daemon-reload
 
+echo "Overriding default dev-xvdf.device options"
+sudo mkdir -p /etc/systemd/system/dev-xvdf.device.d
+sudo mv /tmp/kubernetes/artifacts/master-node/dev-xvdf-override.conf \
+        /etc/systemd/system/dev-xvdf.device.d/override.conf
+
 echo "Enabling etcd"
 sudo mv /tmp/kubernetes/artifacts/master-node/kube-etcd.service \
         /etc/systemd/system/kube-etcd.service
