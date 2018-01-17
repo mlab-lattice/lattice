@@ -14,6 +14,21 @@ func TestVariables(t *testing.T) {
 		"z": map[string]interface{}{
 			"foo": 3,
 		},
+		"b00l": true,
+	}
+
+	// basic var ref tests
+
+	x := evalStringExpression("${x}", variables)
+
+	if _, isInt := x.(int); !(isInt && x == 1) {
+		t.Fatal("Expected x to be an integer = 1")
+	}
+
+	b00l := evalStringExpression("${b00l}", variables)
+
+	if _, isBool := b00l.(bool); !(isBool && b00l == true) {
+		t.Fatal("Expected b00l to be a boolean and is true")
 	}
 
 	result := evalStringExpression("x = ${x}", variables)
