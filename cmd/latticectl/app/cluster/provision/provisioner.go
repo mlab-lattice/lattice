@@ -63,7 +63,7 @@ func parseBackendKubernetesVars(providerName string) (*backendConfigKubernetes, 
 					Target: &awsProvisionerOptions,
 					Expected: map[string]cli.EmbeddedFlagValue{
 						"terraform-module-path": {
-							Required:     true,
+							Default:      "/etc/terraform/modules",
 							EncodingName: "TerraformModulePath",
 						},
 						"account-id": {
