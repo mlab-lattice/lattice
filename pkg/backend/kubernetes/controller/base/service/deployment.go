@@ -167,7 +167,7 @@ func (c *Controller) untransformedDeploymentSpec(service *crv1.Service, name str
 
 	// Create a container for each Component in the Service
 	var containers []corev1.Container
-	for _, component := range service.Spec.Definition.Components {
+	for _, component := range service.Spec.Definition.Components() {
 		buildArtifacts := service.Spec.ComponentBuildArtifacts[component.Name]
 		container := containerFromComponent(component, &buildArtifacts)
 		containers = append(containers, container)

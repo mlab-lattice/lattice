@@ -1,0 +1,16 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = ["main.go"],
+    importpath = "github.com/mlab-lattice/system/cmd/kubernetes/aws/master-node/attach-etcd-volume",
+    visibility = ["//visibility:public"],
+    deps = ["//cmd/kubernetes/aws/master-node/attach-etcd-volume/app:go_default_library"],
+)
+
+go_binary(
+    name = "attach-etcd-volume",
+    embed = [":go_default_library"],
+    importpath = "github.com/mlab-lattice/system/cmd/kubernetes/aws/master-node/attach-etcd-volume",
+    visibility = ["//visibility:public"],
+)

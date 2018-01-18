@@ -1,6 +1,8 @@
 package v1
 
 import (
+	"encoding/json"
+
 	"github.com/mlab-lattice/system/pkg/definition"
 	"github.com/mlab-lattice/system/pkg/definition/tree"
 
@@ -25,6 +27,8 @@ type System struct {
 	Status            SystemStatus `json:"status,omitempty"`
 }
 
+// N.B.: important: if you update the SystemSpec or SystemSpecServiceInfo you must also update
+// the systemSpecEncoder and SystemSpec's UnmarshalJSON
 // +k8s:deepcopy-gen=false
 type SystemSpec struct {
 	DefinitionURL string                                  `json:"definitionUrl"`
@@ -37,6 +41,29 @@ type SystemSpecServiceInfo struct {
 
 	// ComponentBuildArtifacts maps Component names to the artifacts created by their build
 	ComponentBuildArtifacts map[string]ComponentBuildArtifacts `json:"componentBuildArtifacts"`
+}
+
+type systemSpecServiceInfoEncoder struct {
+	Definition              json.RawMessage                    `json:"definition"`
+	ComponentBuildArtifacts map[string]ComponentBuildArtifacts `json:"componentBuildArtifacts"`
+}
+
+func (i *SystemSpecServiceInfo) UnmarshalJSON(data []byte) error {
+	var decoded systemSpecServiceInfoEncoder
+	if err := json.Unmarshal(data, &decoded); err != nil {
+		return err
+	}
+
+	service, err := definition.NewServiceFromJSON(decoded.Definition)
+	if err != nil {
+		return err
+	}
+
+	*i = SystemSpecServiceInfo{
+		Definition:              service,
+		ComponentBuildArtifacts: decoded.ComponentBuildArtifacts,
+	}
+	return nil
 }
 
 // +k8s:deepcopy-gen=false

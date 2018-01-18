@@ -30,7 +30,7 @@ func getKubernetesProvisioner(providerName string) (provisioner.Interface, error
 	return cloudprovider.NewClusterProvisioner(
 		"",
 		"",
-		workingDir,
+		workDir,
 		options,
 	)
 }

@@ -176,7 +176,7 @@ resource "aws_route53_zone" "private_zone" {
 # https://github.com/hashicorp/terraform/issues/953
 # master node
 module "master_node" {
-  source = "../node/master"
+  source = "../master/node"
 
   aws_account_id = "${var.aws_account_id}"
   region         = "${var.region}"
@@ -286,7 +286,7 @@ resource "aws_autoscaling_attachment" "master" {
 #
 
 module "build_node" {
-  source = "../node/build"
+  source = "../build/node"
 
   aws_account_id = "${var.aws_account_id}"
   region         = "${var.region}"

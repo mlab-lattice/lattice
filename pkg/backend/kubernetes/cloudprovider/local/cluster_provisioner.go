@@ -192,9 +192,9 @@ func (p *DefaultLocalClusterProvisioner) bootstrap(address, url, name string) er
 					Containers: []corev1.Container{
 						{
 							Name:  "bootstrap-lattice",
-							Image: p.getLatticeContainerImage(constants.DockerImageLatticeCLIAdmin),
+							Image: p.getLatticeContainerImage(constants.DockerImageLatticectl),
 							Args: []string{
-								"kubernetes", "bootstrap",
+								"cluster", "kubernetes", "bootstrap",
 								"--initial-system-definition-url", url,
 								"--lattice-controller-manager-image", p.getLatticeContainerImage(kubeconstants.DockerImageLatticeControllerManager),
 								"--manager-api-image", p.getLatticeContainerImage(kubeconstants.DockerImageManagerAPIRest),

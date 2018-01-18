@@ -15,22 +15,28 @@ NAME=$(echo ${USER_DATA} | jq '.lattice.name' | tr -d '"')
 STATE_S3_BUCKET=$(echo ${USER_DATA} | jq '.lattice.state_s3_bucket' | tr -d '"')
 STATE_S3_KEY_PREFIX=$(echo ${USER_DATA} | jq '.lattice.state_s3_key_prefix' | tr -d '"')
 
-mkdir -p /tmp/terraform-state/etcd-volume-attachment
-cp /opt/terraform/modules/etcd-volume-attachment/* \
-   /tmp/terraform-state/etcd-volume-attachment
+ATTACH_ETCD_VOLUME_IMAGE=gcr.io/lattice-dev/kevinrosendahl-debug-kubernetes-aws-master-node-attach-etcd-volume:latest
 
-cd /tmp/terraform-state/etcd-volume-attachment
+n=0
+until [ $n -ge 5 ]
+do
+    /usr/bin/docker pull ${ATTACH_ETCD_VOLUME_IMAGE} \
+    && \
+    /usr/bin/docker run \
+        --network host \
+        ${ATTACH_ETCD_VOLUME_IMAGE} \
+        --work-directory /tmp/terraform-state/etcd-volume-attachment \
+        --terraform-state-s3-bucket ${STATE_S3_BUCKET} \
+        --terraform-state-s3-key-prefix ${STATE_S3_KEY_PREFIX} \
+        --terraform-module-source-path /etc/terraform/modules \
+        --region ${REGION} \
+        --cluster-id ${CLUSTER_ID} \
+        --name ${NAME} \
+        --instance-id ${INSTANCE_ID} \
+        --device-name ${1} \
+     && exit 0  # exit on success
+  n=$[$n+1]
+  sleep 15
+done
 
-sleep 30
-
-/opt/terraform/bin/terraform init -force-copy \
-    -backend-config="bucket=${STATE_S3_BUCKET}" \
-    -backend-config="key=${STATE_S3_KEY_PREFIX}/etcd-volume/terraform.tfstate" \
-    -backend-config="region=${REGION}"
-
-/opt/terraform/bin/terraform apply -auto-approve \
-    -var "cluster_id=${CLUSTER_ID}" \
-    -var "region=${REGION}" \
-    -var "name=${NAME}" \
-    -var "instance_id=${INSTANCE_ID}" \
-    -var "device_name=${1}"
+exit 1

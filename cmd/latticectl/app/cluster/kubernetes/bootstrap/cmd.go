@@ -142,7 +142,6 @@ var Cmd = &cobra.Command{
 		}
 
 		clusterBootstrappers := []clusterbootstrapper.Interface{
-			cloudProviderClusterBootstrapper,
 			serviceMeshClusterBootstrapper,
 		}
 
@@ -161,6 +160,9 @@ var Cmd = &cobra.Command{
 
 			clusterBootstrappers = append(clusterBootstrappers, networkingProviderClusterBootstrapper)
 		}
+
+		// cloud bootstrapper has to come last
+		clusterBootstrappers = append(clusterBootstrappers, cloudProviderClusterBootstrapper)
 
 		var kubeClient kubeclientset.Interface
 		var latticeClient latticeclientset.Interface
@@ -218,7 +220,6 @@ var Cmd = &cobra.Command{
 		}
 
 		systemBootstrappers := []systembootstrapper.Interface{
-			cloudProviderSystemBootstrapper,
 			serviceMeshSystemBootstrapper,
 		}
 
@@ -230,6 +231,8 @@ var Cmd = &cobra.Command{
 
 			systemBootstrappers = append(systemBootstrappers, networkingProviderSystemBootstrapper)
 		}
+
+		systemBootstrappers = append(systemBootstrappers, cloudProviderSystemBootstrapper)
 
 		var systemResources *systembootstrapper.SystemResources
 		if options.DryRun {
@@ -366,11 +369,11 @@ func parseCloudProviderVarsLocal() (*localcloudprovider.ClusterBootstrapperOptio
 			},
 			"dnsmasq-nanny-image": {
 				Required:     true,
-				EncodingName: "DNSNannyImage",
+				EncodingName: "DnsmasqNannyImage",
 			},
 			"dnsmasq-nanny-args": {
 				Required:     false,
-				EncodingName: "DNSNannyArgs",
+				EncodingName: "DnsmasqNannyArgs",
 				ValueParser: func(value string) (interface{}, error) {
 					var argsWithoutPrefix = strings.Join(strings.Split(value, "=")[1:], "=")
 					return strings.Split(argsWithoutPrefix, ":"), nil

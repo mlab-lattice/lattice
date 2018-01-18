@@ -134,7 +134,7 @@ func (c *Controller) systemServices(rollout *crv1.SystemRollout, build *crv1.Sys
 		}
 
 		services[path] = crv1.SystemSpecServiceInfo{
-			Definition:              *(service.Definition().(*definition.Service)),
+			Definition:              service.Definition().(definition.Service),
 			ComponentBuildArtifacts: componentBuildArtifacts,
 		}
 	}

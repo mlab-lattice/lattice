@@ -27,34 +27,35 @@ type SystemBuild struct {
 	Status            SystemBuildStatus `json:"status,omitempty"`
 }
 
+// N.B.: important: if you update the SystemBuildSpec or SystemBuildSpecServiceInfo you must also update
+// the systemBuildSpecEncoder and SystemBuildSpec's UnmarshalJSON
 // +k8s:deepcopy-gen=false
 type SystemBuildSpec struct {
-	DefinitionRoot tree.Node                                    `json:"definition"`
+	DefinitionRoot tree.Node                                    `json:"definitionRoot"`
 	Services       map[tree.NodePath]SystemBuildSpecServiceInfo `json:"services"`
 }
 
-// Some JSON (un)marshalling trickiness needed to deal with the fact that we have an interface
-// type in our SystemBuildSpec (DefinitionRoot)
-type systemBuildSpecRaw struct {
-	Services   map[tree.NodePath]SystemBuildSpecServiceInfo `json:"services"`
-	Definition json.RawMessage
+// +k8s:deepcopy-gen=false
+type SystemBuildSpecServiceInfo struct {
+	Definition definition.Service `json:"definition"`
 }
 
-func (sbs *SystemBuildSpec) MarshalJSON() ([]byte, error) {
-	jsonMap := map[string]interface{}{
-		"definition": sbs.DefinitionRoot.Definition(),
-		"services":   sbs.Services,
-	}
-	return json.Marshal(jsonMap)
+type systemBuildSpecEncoder struct {
+	Services       map[tree.NodePath]systemBuildSpecServiceInfoEncoder `json:"services"`
+	DefinitionRoot json.RawMessage                                     `json:"definitionRoot"`
+}
+
+type systemBuildSpecServiceInfoEncoder struct {
+	Definition json.RawMessage `json:"definition"`
 }
 
 func (sbs *SystemBuildSpec) UnmarshalJSON(data []byte) error {
-	var raw systemBuildSpecRaw
-	if err := json.Unmarshal(data, &raw); err != nil {
+	var decoded systemBuildSpecEncoder
+	if err := json.Unmarshal(data, &decoded); err != nil {
 		return err
 	}
 
-	def, err := definition.UnmarshalJSON(raw.Definition)
+	def, err := definition.NewFromJSON(decoded.DefinitionRoot)
 	if err != nil {
 		return err
 	}
@@ -64,16 +65,23 @@ func (sbs *SystemBuildSpec) UnmarshalJSON(data []byte) error {
 		return err
 	}
 
+	services := map[tree.NodePath]SystemBuildSpecServiceInfo{}
+	for path, serviceInfo := range decoded.Services {
+		service, err := definition.NewServiceFromJSON(serviceInfo.Definition)
+		if err != nil {
+			return err
+		}
+
+		services[path] = SystemBuildSpecServiceInfo{
+			Definition: service,
+		}
+	}
+
 	*sbs = SystemBuildSpec{
 		DefinitionRoot: rootNode,
-		Services:       raw.Services,
+		Services:       services,
 	}
 	return nil
-}
-
-// +k8s:deepcopy-gen=false
-type SystemBuildSpecServiceInfo struct {
-	Definition definition.Service `json:"definition"`
 }
 
 type SystemBuildStatus struct {

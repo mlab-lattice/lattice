@@ -22,23 +22,23 @@ func (r *RequestHandler) GetResponse(routeName, serviceCluster, serviceNode stri
 		return nil, fmt.Errorf("unexpected route name %v", routeName)
 	}
 
-	svcs, err := r.Backend.Services(serviceCluster)
+	services, err := r.Backend.Services(serviceCluster)
 	if err != nil {
 		return nil, err
 	}
 
-	virtualHosts := []types.VirtualHost{}
-	for path, svc := range svcs {
-		for componentName, component := range svc.Components {
+	var virtualHosts []types.VirtualHost
+	for path, service := range services {
+		for componentName, component := range service.Components {
 			for port := range component.Ports {
-				pathDomain := path.ToDomain(true)
-				domains := []string{fmt.Sprintf("%v:%v", pathDomain, port)}
+				domain := fmt.Sprintf("%v.local", path.ToDomain(true))
+				domains := []string{fmt.Sprintf("%v:%v", domain, port)}
 
 				// Should be able to access an HTTP component on port 80 via either:
 				//   - http://path.to.service:80
 				//   - http://path.to.service
 				if port == constants.PortHTTPDefault {
-					domains = append(domains, pathDomain)
+					domains = append(domains, domain)
 				}
 
 				virtualHosts = append(virtualHosts, types.VirtualHost{

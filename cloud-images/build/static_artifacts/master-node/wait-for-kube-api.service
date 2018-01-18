@@ -6,6 +6,3 @@ After=kubelet.service
 [Service]
 Type=oneshot
 ExecStart=/opt/lattice/bin/master-wait-for-kube-api
-
-[Install]
-WantedBy=multi-user.target

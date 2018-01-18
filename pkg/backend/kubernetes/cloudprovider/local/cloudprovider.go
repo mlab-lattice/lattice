@@ -19,7 +19,7 @@ const (
 	// This is the default IP for kube-dns
 	localDNSServerIP = "10.96.0.53"
 
-	DNSConfigDirectory = "/etc/lattice/local/dns"
+	DNSConfigDirectory = "/etc/lattice/local/dns/"
 	DNSHostsFile       = DNSConfigDirectory + "hosts"
 	DnsmasqConfigFile  = DNSConfigDirectory + "dnsmasq.conf"
 )

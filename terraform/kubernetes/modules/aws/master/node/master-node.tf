@@ -180,7 +180,7 @@ data "aws_iam_policy_document" "master_node_role_policy_document" {
 #
 
 module "base_node" {
-  source = "../base"
+  source = "../../node/base"
 
   cluster_id = "${var.cluster_id}"
   name       = "master-${var.name}"

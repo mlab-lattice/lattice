@@ -66,6 +66,7 @@ func (r *RequestContext) JSON(target interface{}) error {
 
 type Client interface {
 	Get(url string) *RequestContext
+	Delete(url string) *RequestContext
 	Post(url, contentType string, body io.Reader) *RequestContext
 	PostJSON(url string, body io.Reader) *RequestContext
 }
@@ -117,4 +118,14 @@ func (dc *DefaultClient) Post(url, contentType string, body io.Reader) *RequestC
 
 func (dc *DefaultClient) PostJSON(url string, body io.Reader) *RequestContext {
 	return dc.Post(url, ContentTypeJSON, body)
+}
+
+func (dc *DefaultClient) Delete(url string) *RequestContext {
+	return &RequestContext{
+		Client:      dc.client,
+		Method:      http.MethodDelete,
+		Headers:     dc.defaultHeaders,
+		RequestBody: nil,
+		URL:         url,
+	}
 }
