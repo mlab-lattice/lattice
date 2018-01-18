@@ -15,7 +15,7 @@ import (
 
 const (
 	testRepoDir = "/tmp/lattice-core/test/template-engine/my-repo"
-	testWorkDir = "/tmp/lattice-core/test/resolver/my-repo"
+	testWorkDir = "/tmp/lattice-core/test/engine"
 	t1File      = "t1.json"
 	t2File      = "t2.json"
 	t1FileUrl   = "file:///tmp/lattice-core/test/template-engine/my-repo/.git/t1.json"
