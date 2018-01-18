@@ -37,7 +37,6 @@ def lattice_container_images(go_targets):
 def lattice_go_container_image(target, debug=False):
   (name, base_image, path) = target
 
-  prod_name = name
   debug_name = debug_prefix + name
 
   prod_base_image = base_image if base_image else go_base_images[False]

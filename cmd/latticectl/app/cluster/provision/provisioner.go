@@ -20,7 +20,7 @@ func getKubernetesProvisioner(providerName string) (provisioner.Interface, error
 	return cloudprovider.NewClusterProvisioner(
 		provisionerOptions.LatticeContainerRegistry,
 		provisionerOptions.LatticeContainerRepoPrefix,
-		workingDir,
+		workDir,
 		&provisionerOptions.ProvisionerOptions,
 	)
 }
@@ -63,7 +63,7 @@ func parseBackendKubernetesVars(providerName string) (*backendConfigKubernetes, 
 					Target: &awsProvisionerOptions,
 					Expected: map[string]cli.EmbeddedFlagValue{
 						"terraform-module-path": {
-							Required:     true,
+							Default:      "/etc/terraform/modules",
 							EncodingName: "TerraformModulePath",
 						},
 						"account-id": {

@@ -38,7 +38,7 @@ func (c *ComponentBuildClient) Get(id types.ComponentBuildID) (*types.ComponentB
 }
 
 func (c *ComponentBuildClient) Logs(id types.ComponentBuildID, follow bool) (io.ReadCloser, error) {
-	url := fmt.Sprintf("%v/%v/%v?follow=%v", c.baseURL, id, componentBuildLogSubpath, follow)
+	url := fmt.Sprintf("%v/%v%v?follow=%v", c.baseURL, id, componentBuildLogSubpath, follow)
 	log, err := c.restClient.Get(url).Body()
 	return log, err
 }

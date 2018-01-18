@@ -137,7 +137,7 @@ func (c *Controller) deploymentSpec(service *crv1.Service, name string, deployme
 	spec := untransformedDeploymentSpec(service, name, deploymentLabels, nodePool)
 
 	// FIXME: remove this when local dns is working
-	services, err := c.serviceLister.Services(service.Namespace).List(kubelabels.Everything())
+	services, err := c.latticeClient.LatticeV1().Services(service.Namespace).List(metav1.ListOptions{})
 	if err != nil {
 		return appsv1.DeploymentSpec{}, err
 	}
@@ -146,7 +146,7 @@ func (c *Controller) deploymentSpec(service *crv1.Service, name string, deployme
 	// isDeploymentSpecUpdated _must_ be inverses.
 	// That is, if we call cloudProvider then serviceMesh here, we _must_ call serviceMesh then cloudProvider
 	// in isDeploymentSpecUpdated.
-	spec, err = c.serviceMesh.TransformServiceDeploymentSpec(service, spec, services)
+	spec, err = c.serviceMesh.TransformServiceDeploymentSpec(service, spec, services.Items)
 	if err != nil {
 		return appsv1.DeploymentSpec{}, err
 	}

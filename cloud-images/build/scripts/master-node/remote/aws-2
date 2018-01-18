@@ -1,11 +1,6 @@
 #!/usr/bin/env bash
 set -e
 
-echo "Installing terraform modules"
-sudo mkdir -p /opt/terraform/modules
-sudo mv /tmp/kubernetes/artifacts/master-node/aws/terraform/modules/* \
-        /opt/terraform/modules/
-
 echo "Installing attach-etcd-volume script"
 sudo mv /tmp/kubernetes/artifacts/master-node/aws/attach-etcd-volume \
         /opt/lattice/bin/master-attach-etcd-volume
