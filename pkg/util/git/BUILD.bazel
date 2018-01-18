@@ -4,6 +4,7 @@ go_library(
     name = "go_default_library",
     srcs = [
         "component_build.go",
+        "errors.go",
         "resolver.go",
     ],
     importpath = "github.com/mlab-lattice/system/pkg/util/git",

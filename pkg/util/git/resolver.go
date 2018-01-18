@@ -65,7 +65,8 @@ func (r *Resolver) Clone(ctx *Context) (*git.Repository, error) {
 	}
 
 	if repoExists {
-		return git.PlainOpen(repoDir)
+		repo, err := git.PlainOpen(repoDir)
+		return repo, err
 	}
 
 	// Otherwise try to clone the repository.
@@ -86,7 +87,8 @@ func (r *Resolver) Clone(ctx *Context) (*git.Repository, error) {
 	}
 
 	// Do a plain clone of the repo
-	return git.PlainClone(repoDir, false, &cloneOptions)
+	repo, err := git.PlainClone(repoDir, false, &cloneOptions)
+	return repo, newCloneError(err)
 }
 
 // Fetch will clone a repository if necessary, then attempt to fetch
@@ -104,7 +106,7 @@ func (r *Resolver) Fetch(ctx *Context) error {
 	if ctx.Options.SSHKey != nil {
 		signer, err := ssh.ParsePrivateKey([]byte(ctx.Options.SSHKey))
 		if err != nil {
-			return err
+			return newFetchError(err)
 		}
 
 		auth := &gitssh.PublicKeys{User: gitUserGit, Signer: signer}
@@ -114,7 +116,7 @@ func (r *Resolver) Fetch(ctx *Context) error {
 	err = repository.Fetch(fetchOptions)
 
 	if err != nil && err != git.NoErrAlreadyUpToDate {
-		return err
+		return newFetchError(err)
 	}
 	return nil
 }
