@@ -8,7 +8,7 @@ CLOUD_IMAGE_AWS_SYSTEM_STATE_DIR = $(CLOUD_IMAGE_DIR)/.state/aws/$(LATTICE_SYSTE
 OS := $(shell uname)
 USER := $(shell whoami)
 
-# Basic build/clean/test
+# build/clean
 .PHONY: build
 build: gazelle
 	@bazel build //...:all
@@ -24,6 +24,8 @@ build-all: build build-linux
 clean:
 	@bazel clean
 
+
+# testing
 .PHONY: test
 test: gazelle
 	@bazel test --test_output=errors //...
@@ -32,6 +34,8 @@ test: gazelle
 test.no-cache: gazelle
 	@bazel test --cache_test_results=no --test_output=errors //...
 
+
+# formatting/linting/build file generation
 .PHONY: gazelle
 gazelle:
 	@bazel run //:gazelle
@@ -52,13 +56,15 @@ lint: install.golint
 lint-no-export-comments: install.golint
 	@golint ./... | grep -v " or be unexported"
 
-.PHONY: install.golint
-install.golint:
-	@which golint > /dev/null; if [ $$? -ne 0 ]; then go get github.com/golang/lint/golint; fi
-
 .PHONY: vet
 vet: install.govet
 	@go tool vet .
+
+
+# tool installation
+.PHONY: install.golint
+install.golint:
+	@which golint > /dev/null; if [ $$? -ne 0 ]; then go get github.com/golang/lint/golint; fi
 
 .PHONY: install.govet
 install.govet:
