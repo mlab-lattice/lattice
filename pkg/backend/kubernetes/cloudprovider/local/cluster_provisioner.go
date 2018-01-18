@@ -224,7 +224,7 @@ func (p *DefaultLocalClusterProvisioner) bootstrap(address, url, name string) er
 	return kubeClientset.CoreV1().ServiceAccounts(kubeconstants.NamespaceDefault).Delete(bootstrapSA.Name, nil)
 }
 
-func (p *DefaultLocalClusterProvisioner) Deprovision(name string) error {
+func (p *DefaultLocalClusterProvisioner) Deprovision(name string, force bool) error {
 	result, logFilename, err := p.mec.Delete(clusterNamePrefixMinikube + name)
 	if err != nil {
 		return err
