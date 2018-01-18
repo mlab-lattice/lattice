@@ -152,7 +152,6 @@ func (c *Controller) deploymentSpec(service *crv1.Service, name string, deployme
 	// isDeploymentSpecUpdated _must_ be inverses.
 	// That is, if we call cloudProvider then serviceMesh here, we _must_ call serviceMesh then cloudProvider
 	// in isDeploymentSpecUpdated.
-
 	spec, err = c.serviceMesh.TransformServiceDeploymentSpec(service, spec)
 	if err != nil {
 		return appsv1.DeploymentSpec{}, err

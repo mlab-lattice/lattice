@@ -1,6 +1,7 @@
 package rollout
 
 import (
+	"fmt"
 	"log"
 	"os"
 
@@ -21,6 +22,9 @@ var (
 	systemID       types.SystemID
 	userClient     client.Interface
 	systemClient   client.SystemClient
+
+	rolloutBuildID string
+	rolloutVersion string
 )
 
 var Cmd = &cobra.Command{
@@ -65,6 +69,33 @@ var getCmd = &cobra.Command{
 	},
 }
 
+var createCmd = &cobra.Command{
+	Use:   "create",
+	Short: "create rollout",
+	Args:  cobra.ExactArgs(0),
+	Run: func(cmd *cobra.Command, args []string) {
+		if rolloutBuildID == "" && rolloutVersion == "" {
+			fmt.Println("must supply either build ID or version")
+			os.Exit(1)
+		}
+
+		var rolloutID types.SystemRolloutID
+		var err error
+		if rolloutBuildID != "" {
+			rolloutID, err = systemClient.Rollouts(systemID).CreateFromBuild(types.SystemBuildID(rolloutBuildID))
+		} else {
+			rolloutID, err = systemClient.Rollouts(systemID).CreateFromVersion(rolloutVersion)
+		}
+
+		if err != nil {
+			fmt.Printf("Received error creating rollout: %v\n", err)
+			os.Exit(1)
+		}
+
+		fmt.Printf("Sucessfully created rollout %v\n", rolloutID)
+	},
+}
+
 func init() {
 	cobra.OnInitialize(initCmd)
 
@@ -72,9 +103,12 @@ func init() {
 	Cmd.PersistentFlags().StringVar(&systemIDString, "system", string(constants.SystemIDDefault), "system to use")
 
 	Cmd.AddCommand(listCmd)
+	listCmd.Flags().StringVarP(&output, "output", "o", "table", "whether or not to display output as JSON")
 	Cmd.AddCommand(getCmd)
 	getCmd.Flags().StringVarP(&output, "output", "o", "table", "whether or not to display output as JSON")
-	listCmd.Flags().StringVarP(&output, "output", "o", "table", "whether or not to display output as JSON")
+	Cmd.AddCommand(createCmd)
+	createCmd.Flags().StringVar(&rolloutBuildID, "build-id", "", "build ID to use for the rollout")
+	createCmd.Flags().StringVar(&rolloutVersion, "version", "", "version to use for the rollout")
 }
 
 func initCmd() {

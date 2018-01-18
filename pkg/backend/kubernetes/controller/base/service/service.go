@@ -79,6 +79,7 @@ func (c *Controller) syncServiceStatus(
 			"Service %v/%v is in state %v but Deployment %v does not have the right amount of instances: expected %v found %v",
 			service.Namespace,
 			service.Name,
+			state,
 			deployment.Name,
 			desiredInstances,
 			totalInstances,
