@@ -54,21 +54,22 @@ func resolveGitURL(url string, env *environment) (*urlResource, error) {
 	}
 
 	parts := gitUrlRegex.FindAllStringSubmatch(url, -1)
-	repoUri := parts[0][2]
-	ref := parts[0][4]
-	resourcePath := parts[0][7]
 
-	baseUrl := path.Dir(url)
-	cloneURI := repoUri
-	if strings.HasSuffix(cloneURI, "/.git") {
-		cloneURI = path.Dir(cloneURI)
-	}
+	protocol := parts[0][1]
+	repoPath := parts[0][3]
+	ref := parts[0][5]
+	resourcePath := parts[0][8]
+
+	// reconstruct the url minus file path
+	baseUrl := fmt.Sprintf("%v://%v", protocol, repoPath)
+
 	// append ref
+
 	if ref != "" {
-		cloneURI = cloneURI + "#" + ref
+		baseUrl = baseUrl + "#" + ref
 	}
 
-	bytes, err := fetchGitFileContents(cloneURI, resourcePath, env)
+	bytes, err := fetchGitFileContents(baseUrl, resourcePath, env)
 	if err != nil {
 		return nil, err
 	}
@@ -100,7 +101,7 @@ func resolveRelativeURL(url string, env *environment) (*urlResource, error) {
 }
 
 // regex for matching git file urls
-var gitUrlRegex = regexp.MustCompile(`(?:git|file|ssh|https?|git@[-\w.]+):(//)?(.*.git)(#(([-\d\w._])+)?)?(/(.*))?$`)
+var gitUrlRegex = regexp.MustCompile(`((?:git|file|ssh|https?|git@[-\w.]+)):(//)?(.*.git)(#(([-\d\w._])+)?)?(/(.*))?$`)
 
 // isGitURL
 func isGitURL(url string) bool {
