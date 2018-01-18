@@ -212,7 +212,7 @@ func (r *Resolver) FileContents(ctx *Context, fileName string) ([]byte, error) {
 
 func (r *Resolver) GetRepositoryPath(ctx *Context) string {
 	uriInfo := parseGitURI(ctx.URI)
-	return path.Join(r.WorkDirectory, uriInfo.CloneURI)
+	return path.Join(r.WorkDirectory, stripProtocol(uriInfo.CloneURI))
 }
 
 // GetTagNames will clone and fetch, and if successful will return the repository's tags.
@@ -276,4 +276,15 @@ func pathExists(path string) (bool, error) {
 		return false, nil
 	}
 	return true, err
+}
+
+// stripProtocol strips out the protocol:// from uri
+func stripProtocol(uri string) string {
+	protocolParts := strings.Split(uri, "://")
+
+	if len(protocolParts) > 1 {
+		return protocolParts[1]
+	} else {
+		return uri
+	}
 }
