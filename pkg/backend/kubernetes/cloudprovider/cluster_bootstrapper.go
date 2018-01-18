@@ -14,13 +14,13 @@ type ClusterBootstrapperOptions struct {
 	Local *local.ClusterBootstrapperOptions
 }
 
-func NewClusterBootstrapper(ClusterID types.ClusterID, options *ClusterBootstrapperOptions) (clusterbootstrapper.Interface, error) {
+func NewClusterBootstrapper(clusterID types.ClusterID, options *ClusterBootstrapperOptions) (clusterbootstrapper.Interface, error) {
 	if options.AWS != nil {
 		return aws.NewClusterBootstrapper(options.AWS), nil
 	}
 
 	if options.Local != nil {
-		return local.NewClusterBootstrapper(ClusterID, options.Local), nil
+		return local.NewClusterBootstrapper(clusterID, options.Local), nil
 	}
 
 	return nil, fmt.Errorf("must provide cloud provider options")
