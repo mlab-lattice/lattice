@@ -85,6 +85,12 @@ func NewEngine() *TemplateEngine {
 
 // EvalFromURL evaluates the template from the specified url with the specified parameters and options
 func (engine *TemplateEngine) EvalFromURL(url string, parameters map[string]interface{}, options *Options) (map[string]interface{}, error) {
+
+	// make parameters if not set
+	if parameters == nil {
+		parameters = make(map[string]interface{})
+	}
+
 	env := newEnvironment(engine, options)
 	result, err := engine.include(url, parameters, env)
 	if err != nil {
@@ -97,6 +103,11 @@ func (engine *TemplateEngine) EvalFromURL(url string, parameters map[string]inte
 // Eval evaluates a single object
 func (engine *TemplateEngine) Eval(o interface{}, parameters map[string]interface{},
 	options *Options) (interface{}, error) {
+
+	// make parameters if not set
+	if parameters == nil {
+		parameters = make(map[string]interface{})
+	}
 
 	// create env and push parameters to the stack
 	env := newEnvironment(engine, options)
@@ -138,10 +149,6 @@ func (engine *TemplateEngine) include(url string, parameters map[string]interfac
 		return nil, err
 	}
 
-	// init parameters if not set
-	if parameters == nil {
-		parameters = make(map[string]interface{})
-	}
 	// init variables
 	variables := make(map[string]interface{})
 
