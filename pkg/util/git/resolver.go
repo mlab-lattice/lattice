@@ -252,6 +252,12 @@ type uriInfo struct {
 func parseGitURI(gitURI string) uriInfo {
 	partByRef := strings.Split(gitURI, "#")
 	cloneURI := partByRef[0]
+
+	// strip /.git from local repositories references
+	if strings.HasSuffix(cloneURI, "/.git") {
+		cloneURI = strings.Replace(cloneURI, "/.git", "", -1)
+	}
+
 	repoNameParts := strings.Split(cloneURI, "/")
 	repoName := strings.Replace(repoNameParts[len(repoNameParts)-1], ".git", "", 1)
 
