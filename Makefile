@@ -71,12 +71,12 @@ git.install-hooks:
 # kubernetes
 .PHONY: kubernetes.update-dependencies
 kubernetes.update-dependencies:
-	LATTICE_ROOT=$(DIR) KUBERNETES_VERSION=$(VERSION) $(DIR)/scripts/k8s/dependencies/update-kubernetes-version.sh
+	LATTICE_ROOT=$(DIR) KUBERNETES_VERSION=$(VERSION) $(DIR)/scripts/kubernetes/dependencies/update-kubernetes-version.sh
 	make kubernetes.regenerate-custom-resource-clients VERSION=$(VERSION)
 
 .PHONY: kubernetes.regenerate-custom-resource-clients
 kubernetes.regenerate-custom-resource-clients:
-	KUBERNETES_VERSION=$(VERSION) $(DIR)/scripts/k8s/codegen/regenerate.sh
+	KUBERNETES_VERSION=$(VERSION) $(DIR)/scripts/kubernetes/codegen/regenerate.sh
 
 
 # docker
