@@ -28,6 +28,10 @@ clean:
 test: gazelle
 	@bazel test --test_output=errors //...
 
+.PHONY: test.no-cache
+test.no-cache: gazelle
+	@bazel test --cache_test_results=no --test_output=errors //...
+
 .PHONY: gazelle
 gazelle:
 	@bazel run //:gazelle
