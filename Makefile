@@ -9,6 +9,10 @@ OS := $(shell uname)
 USER := $(shell whoami)
 
 # build/clean
+.PHONY: gazelle
+gazelle:
+	@bazel run //:gazelle
+
 .PHONY: build
 build: gazelle
 	@bazel build //...:all
@@ -18,7 +22,8 @@ build-linux: gazelle
 	@bazel build --cpu k8 //...:all
 
 .PHONY: build-all
-build-all: build build-linux
+build-all: build       \
+           build-linux
 
 .PHONY: clean
 clean:
@@ -35,13 +40,12 @@ test.no-cache: gazelle
 	@bazel test --cache_test_results=no --test_output=errors //...
 
 
-# formatting/linting/build file generation
-.PHONY: gazelle
-gazelle:
-	@bazel run //:gazelle
-
+# formatting/linting
 .PHONY: check
-check: gazelle format vet lint-no-export-comments
+check: gazelle                 \
+       format                  \
+       vet                     \
+       lint-no-export-comments
 
 .PHONY: format
 format:
@@ -50,11 +54,11 @@ format:
 
 .PHONY: lint
 lint: install.golint
-	@golint ./...
+	@golint ./... | grep -v "customresource/generated" | grep -v "zz_generated."
 
 .PHONY: lint-no-export-comments
 lint-no-export-comments: install.golint
-	@golint ./... | grep -v " or be unexported"
+	@make lint | grep -v " or be unexported" | grep -v "comment on exported "
 
 .PHONY: vet
 vet: install.govet
@@ -90,42 +94,53 @@ kubernetes.regenerate-custom-resource-clients:
 
 
 # docker
-.PHONY: docker.push-image-stable
-docker.push-image-stable:
+.PHONY: docker.push-stable
+docker.push-stable: gazelle
 	bazel run --cpu k8 //docker:push-stable-$(IMAGE)
 	bazel run --cpu k8 //docker:push-stable-debug-$(IMAGE)
 
-.PHONY: docker.push-image-user
-docker.push-image-user:
+.PHONY: docker.push-user
+docker.push-user: gazelle
 	bazel run --cpu k8 //docker:push-user-$(IMAGE)
 	bazel run --cpu k8 //docker:push-user-debug-$(IMAGE)
 
-.PHONY: docker.push-all-images-stable
-docker.push-all-images-stable:
-	make docker.push-image-stable IMAGE=envoy-prepare
-	make docker.push-image-stable IMAGE=kubernetes-aws-master-node-attach-etcd-volume
-	make docker.push-image-stable IMAGE=kubernetes-aws-master-node-register-dns
-	make docker.push-image-stable IMAGE=kubernetes-component-builder
-	make docker.push-image-stable IMAGE=kubernetes-envoy-xds-api-rest-per-node
-	make docker.push-image-stable IMAGE=kubernetes-lattice-controller-manager
-	make docker.push-image-stable IMAGE=kubernetes-manager-api-rest
-	make docker.push-image-stable IMAGE=latticectl
+DOCKER_IMAGES := envoy-prepare                                 \
+                 kubernetes-aws-master-node-attach-etcd-volume \
+                 kubernetes-aws-master-node-register-dns       \
+                 kubernetes-component-builder                  \
+                 kubernetes-envoy-xds-api-rest-per-node        \
+                 kubernetes-lattice-controller-manager         \
+                 kubernetes-manager-api-rest                   \
+                 latticectl
 
-.PHONY: docker.push-all-images-user
-docker.push-all-images-user:
-	make docker.push-image-user IMAGE=envoy-prepare
-	make docker.push-image-user IMAGE=kubernetes-aws-master-node-attach-etcd-volume
-	make docker.push-image-user IMAGE=kubernetes-aws-master-node-register-dns
-	make docker.push-image-user IMAGE=kubernetes-component-builder
-	make docker.push-image-user IMAGE=kubernetes-envoy-xds-api-rest-per-node
-	make docker.push-image-user IMAGE=kubernetes-lattice-controller-manager
-	make docker.push-image-user IMAGE=kubernetes-manager-api-rest
-	make docker.push-image-user IMAGE=latticectl
+STABLE_CONTAINER_PUSHES := $(addprefix docker.push-stable-,$(DOCKER_IMAGES))
+USER_CONTAINER_PUSHES := $(addprefix docker.push-user-,$(DOCKER_IMAGES))
+
+.PHONY: $(STABLE_CONTAINER_PUSHES)
+$(STABLE_CONTAINER_PUSHES):
+	@$(MAKE) docker.push-stable IMAGE=$(patsubst docker.push-stable-%,%,$@)
+
+.PHONY: $(USER_CONTAINER_PUSHES)
+$(USER_CONTAINER_PUSHES):
+	@$(MAKE) docker.push-user IMAGE=$(patsubst docker.push-user-%,%,$@)
+
+.PHONY: docker.push-all-stable
+docker.push-all-stable:
+	@for image in $(DOCKER_IMAGES); do       \
+        $(MAKE) docker.push-stable-$$image ; \
+    done
+
+.PHONY: docker.push-all-user
+docker.push-all-user:
+	@for image in $(DOCKER_IMAGES); do     \
+        $(MAKE) docker.push-user-$$image ; \
+    done
 
 
 # binaries
 .PHONY: binary.update-latticectl
-binary.update-latticectl: binary.update-latticectl-darwin-amd64 binary.update-latticectl-linux-amd64
+binary.update-latticectl: binary.update-latticectl-darwin-amd64 \
+                          binary.update-latticectl-linux-amd64
 
 .PHONY: binary.update-latticectl-darwin-amd64
 binary.update-latticectl-darwin-amd64: gazelle
@@ -140,7 +155,8 @@ binary.update-latticectl-linux-amd64: gazelle
 
 # cloud images
 .PHONY: cloud-images.build
-cloud-images.build: cloud-images.build-base-node-image cloud-images.build-master-node-image
+cloud-images.build: cloud-images.build-base-node-image   \
+                    cloud-images.build-master-node-image
 
 .PHONY: cloud-images.build-base-node-image
 cloud-images.build-base-node-image:
