@@ -61,14 +61,13 @@ func (cp *DefaultLocalCloudProvider) TransformServiceDeploymentSpec(service *crv
 	spec = spec.DeepCopy()
 	spec.Template = *transformPodTemplateSpec(&spec.Template)
 
-	found := false
-
 	// This uses DNSNone and supplies the local dnsmasq server as the only nameserver. This is because it
 	// is the only way to have names in the node to have priority, whilst still inheriting the clusters
 	// dns config. It's hacky, but it's how DNSClusterFirst works aswell:
 	// https://github.com/kubernetes/kubernetes/blob/v1.9.0/pkg/kubelet/network/dns/dns.go#L340-L360
 	spec.Template.Spec.DNSPolicy = corev1.DNSNone
 
+	found := false
 	for idx, nameserver := range spec.Template.Spec.DNSConfig.Nameservers {
 		if nameserver == localDNSServerIP {
 			// Nameserver already present, so no need to update
