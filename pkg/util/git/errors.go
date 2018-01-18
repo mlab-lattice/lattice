@@ -13,7 +13,7 @@ func (e *CloneError) Error() string {
 	return fmt.Sprintf("error cloning repository: %v", e.err)
 }
 
-func newCloneError(err error) *CloneError {
+func newCloneError(err error) error {
 	if err == nil {
 		return nil
 	}
@@ -32,7 +32,7 @@ func (e *FetchError) Error() string {
 	return fmt.Sprintf("error fetching: %v", e.err)
 }
 
-func newFetchError(err error) *FetchError {
+func newFetchError(err error) error {
 	if err == nil {
 		return nil
 	}
