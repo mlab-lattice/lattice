@@ -82,17 +82,6 @@ git.install-hooks:
 	cp -f scripts/git/pre-push.sh .git/hooks/pre-push
 
 
-# kubernetes
-.PHONY: kubernetes.update-dependencies
-kubernetes.update-dependencies:
-	LATTICE_ROOT=$(DIR) KUBERNETES_VERSION=$(VERSION) $(DIR)/scripts/kubernetes/dependencies/update-kubernetes-version.sh
-	make kubernetes.regenerate-custom-resource-clients VERSION=$(VERSION)
-
-.PHONY: kubernetes.regenerate-custom-resource-clients
-kubernetes.regenerate-custom-resource-clients:
-	KUBERNETES_VERSION=$(VERSION) $(DIR)/scripts/kubernetes/codegen/regenerate.sh
-
-
 # docker
 .PHONY: docker.push-stable
 docker.push-stable: gazelle
@@ -127,14 +116,14 @@ $(USER_CONTAINER_PUSHES):
 .PHONY: docker.push-all-stable
 docker.push-all-stable:
 	@for image in $(DOCKER_IMAGES); do       \
-        $(MAKE) docker.push-stable-$$image ; \
-    done
+		$(MAKE) docker.push-stable-$$image ; \
+	done
 
 .PHONY: docker.push-all-user
 docker.push-all-user:
 	@for image in $(DOCKER_IMAGES); do     \
-        $(MAKE) docker.push-user-$$image ; \
-    done
+		$(MAKE) docker.push-user-$$image ; \
+	done
 
 
 # binaries
@@ -151,6 +140,17 @@ binary.update-latticectl-darwin-amd64: gazelle
 binary.update-latticectl-linux-amd64: gazelle
 	@bazel build --cpu k8 //cmd/latticectl
 	cp -f $(DIR)/bazel-bin/cmd/latticectl/linux_amd64_pure_stripped/latticectl $(DIR)/bin/latticectl-linux-amd64
+
+
+# kubernetes
+.PHONY: kubernetes.update-dependencies
+kubernetes.update-dependencies:
+	LATTICE_ROOT=$(DIR) KUBERNETES_VERSION=$(VERSION) $(DIR)/scripts/kubernetes/dependencies/update-kubernetes-version.sh
+	$(MAKE) kubernetes.regenerate-custom-resource-clients VERSION=$(VERSION)
+
+.PHONY: kubernetes.regenerate-custom-resource-clients
+kubernetes.regenerate-custom-resource-clients:
+	KUBERNETES_VERSION=$(VERSION) $(DIR)/scripts/kubernetes/codegen/regenerate.sh
 
 
 # cloud images
