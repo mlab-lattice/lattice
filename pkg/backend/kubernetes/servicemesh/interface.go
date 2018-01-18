@@ -14,7 +14,7 @@ type Interface interface {
 
 	// TransformServiceDeploymentSpec takes in the DeploymentSpec generated for a Service, and applies an service mesh
 	// related transforms necessary to a copy of the DeploymentSpec, and returns it.
-	TransformServiceDeploymentSpec(*crv1.Service, *appsv1.DeploymentSpec, []*crv1.Service) (*appsv1.DeploymentSpec, error)
+	TransformServiceDeploymentSpec(*crv1.Service, *appsv1.DeploymentSpec, []crv1.Service) (*appsv1.DeploymentSpec, error)
 
 	// ServiceMeshPort returns the port the service mesh is listening on for a given component port.
 	ServiceMeshPort(*crv1.Service, int32) (int32, error)

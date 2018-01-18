@@ -4,12 +4,13 @@ import (
 	"github.com/mlab-lattice/system/pkg/types"
 )
 
-var rolloutHeaders = []string{"ID", "State"}
+var rolloutHeaders = []string{"ID", "State", "Build ID"}
 
 func getRolloutValues(rollout *types.SystemRollout) []string {
 	return []string{
 		string(rollout.ID),
 		string(rollout.State),
+		string(rollout.BuildID),
 	}
 }
 

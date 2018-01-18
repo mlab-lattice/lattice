@@ -152,7 +152,7 @@ func assignEnvoyPorts(service *crv1.Service, envoyPorts []int32) (map[int32]int3
 func (sm *DefaultEnvoyServiceMesh) TransformServiceDeploymentSpec(
 	service *crv1.Service,
 	spec *appsv1.DeploymentSpec,
-	services []*crv1.Service,
+	services []crv1.Service,
 ) (*appsv1.DeploymentSpec, error) {
 	prepareEnvoyContainer, envoyContainer, err := sm.envoyContainers(service)
 	if err != nil {
