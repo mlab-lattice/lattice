@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net"
-	"sort"
 	"strconv"
 	"strings"
 
@@ -152,7 +151,6 @@ func assignEnvoyPorts(service *crv1.Service, envoyPorts []int32) (map[int32]int3
 func (sm *DefaultEnvoyServiceMesh) TransformServiceDeploymentSpec(
 	service *crv1.Service,
 	spec *appsv1.DeploymentSpec,
-	services []crv1.Service,
 ) (*appsv1.DeploymentSpec, error) {
 	prepareEnvoyContainer, envoyContainer, err := sm.envoyContainers(service)
 	if err != nil {
@@ -175,25 +173,8 @@ func (sm *DefaultEnvoyServiceMesh) TransformServiceDeploymentSpec(
 	volumes := []corev1.Volume{configVolume}
 	volumes = append(volumes, spec.Template.Spec.Volumes...)
 
-	// FIXME: remove this when local dns is working
-	var hostnames []string
-	for _, service := range services {
-		domain := service.Spec.Path.ToDomain(true)
-		hostname := fmt.Sprintf("%v.local", domain)
-		hostnames = append(hostnames, hostname)
-	}
-	sort.Strings(hostnames)
-
-	ip, _, _ := net.ParseCIDR(sm.redirectCIDRBlock)
-
-	hostAlias := corev1.HostAlias{
-		IP:        ip.String(),
-		Hostnames: hostnames,
-	}
-
 	spec = spec.DeepCopy()
 
-	spec.Template.Spec.HostAliases = []corev1.HostAlias{hostAlias}
 	spec.Template.Spec.InitContainers = initContainers
 	spec.Template.Spec.Containers = containers
 	spec.Template.Spec.Volumes = volumes

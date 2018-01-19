@@ -6,10 +6,22 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
+
+	"github.com/golang/glog"
 )
 
 const (
 	workDirectoryVolumeHostPathPrefix = "/data/component-builder"
+
+	DockerImageDNSController = "kubernetes-local-dns-controller"
+	DockerImageDnsmasqNanny  = "gcr.io/google_containers/k8s-dns-dnsmasq-nanny-amd64:1.14.7"
+
+	// This is the default IP for kube-dns
+	localDNSServerIP = "10.96.0.53"
+
+	DNSConfigDirectory = "/etc/lattice/local/dns/"
+	DNSHostsFile       = DNSConfigDirectory + "hosts"
+	DnsmasqConfigFile  = DNSConfigDirectory + "dnsmasq.conf"
 )
 
 type Options struct {
@@ -48,6 +60,33 @@ func (cp *DefaultLocalCloudProvider) ComponentBuildWorkDirectoryVolumeSource(job
 func (cp *DefaultLocalCloudProvider) TransformServiceDeploymentSpec(service *crv1.Service, spec *appsv1.DeploymentSpec) *appsv1.DeploymentSpec {
 	spec = spec.DeepCopy()
 	spec.Template = *transformPodTemplateSpec(&spec.Template)
+
+	// This uses DNSNone and supplies the local dnsmasq server as the only nameserver. This is because it
+	// is the only way to have names in the node to have priority, whilst still inheriting the clusters
+	// dns config. It's hacky, but it's how DNSClusterFirst works aswell:
+	// https://github.com/kubernetes/kubernetes/blob/v1.9.0/pkg/kubelet/network/dns/dns.go#L340-L360
+	spec.Template.Spec.DNSPolicy = corev1.DNSNone
+
+	found := false
+	for idx, nameserver := range spec.Template.Spec.DNSConfig.Nameservers {
+		if nameserver == localDNSServerIP {
+			// Nameserver already present, so no need to update
+			found = true
+
+			if idx != 0 {
+				glog.Warningf("Local DNS server found, but not as the first nameserver. This will not be modified...")
+			}
+
+			break
+		}
+	}
+
+	if !found {
+		// Add the DNS server IP as the first nameserver.
+		spec.Template.Spec.DNSConfig.Nameservers = append([]string{localDNSServerIP}, spec.Template.Spec.DNSConfig.Nameservers...)
+	}
+
+	glog.V(4).Infof("Updated nameservers: %v", spec.Template.Spec.DNSConfig.Nameservers)
 
 	return spec
 }

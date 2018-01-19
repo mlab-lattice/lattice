@@ -19,7 +19,7 @@ echo "Pulling control plane docker images"
 docker pull gcr.io/google_containers/hyperkube:v1.9.0
 
 echo "Pulling latticectl"
-docker pull gcr.io/lattice-dev/kevinrosendahl-debug-latticectl:latest
+docker pull gcr.io/lattice-dev/stable-debug-latticectl:latest
 
 # Clean up after ourselves
 cd ~

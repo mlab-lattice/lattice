@@ -31,6 +31,12 @@ func (b *DefaultBootstrapper) managerAPIResources(resources *bootstrapper.Cluste
 			Name: kubeconstants.MasterNodeComponentManagerAPI,
 		},
 		Rules: []rbacv1.PolicyRule{
+			// lattice system read and create
+			{
+				APIGroups: []string{crv1.GroupName},
+				Resources: []string{crv1.ResourcePluralSystem},
+				Verbs:     readAndCreateVerbs,
+			},
 			// lattice config read
 			{
 				APIGroups: []string{crv1.GroupName},
@@ -180,7 +186,7 @@ func (b *DefaultBootstrapper) managerAPIResources(resources *bootstrapper.Cluste
 					},
 					HostNetwork:        b.Options.MasterComponents.ManagerAPI.HostNetwork,
 					DNSPolicy:          corev1.DNSDefault,
-					ServiceAccountName: kubeconstants.ServiceAccountLatticeControllerManager,
+					ServiceAccountName: kubeconstants.ServiceAccountManagementAPI,
 					Tolerations: []corev1.Toleration{
 						kubeconstants.TolerationMasterNode,
 					},

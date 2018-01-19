@@ -82,6 +82,7 @@ go_targets = [
     ("kubernetes-component-builder", "libstdc++6", "cmd/kubernetes/componentbuilder"),
     ("kubernetes-envoy-xds-api-rest-per-node", "libstdc++6", "cmd/kubernetes/envoy/xdsapi/v1/rest/per-node"),
     ("kubernetes-lattice-controller-manager", "libstdc++6-terraform", "cmd/kubernetes/lattice-controller-manager"),
+    ("kubernetes-local-dns-controller", "libstdc++6", "cmd/kubernetes/local/dns/controller"),
     ("kubernetes-manager-api-rest", "libstdc++6", "cmd/kubernetes/manager-api/rest"),
     ("latticectl", "libstdc++6-terraform", "cmd/latticectl"),
 ]

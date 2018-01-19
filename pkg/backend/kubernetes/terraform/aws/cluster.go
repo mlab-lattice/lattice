@@ -8,8 +8,9 @@ type Cluster struct {
 
 	AvailabilityZones []string `json:"availability_zones"`
 
-	ClusterID           string `json:"cluster_id"`
-	SystemDefinitionURL string `json:"system_definition_url"`
+	ClusterID                    string `json:"cluster_id"`
+	ControlPlaneContainerChannel string `json:"control_plane_container_channel"`
+	SystemDefinitionURL          string `json:"system_definition_url"`
 
 	BaseNodeAMIID          string `json:"base_node_ami_id"`
 	MasterNodeAMIID        string `json:"master_node_ami_id"`

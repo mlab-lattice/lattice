@@ -30,7 +30,7 @@ type DefaultFlannelClusterBootstrapper struct {
 }
 
 func (np *DefaultFlannelClusterBootstrapper) BootstrapClusterResources(resources *clusterbootstrapper.ClusterResources) {
-	// Translated from: https://github.com/coreos/flannel/blob/317b7d199e3fe937f04ecb39beed025e47316430/Documentation/kube-flannel.yml
+	// Translated from: https://github.com/coreos/flannel/blob/77c8e1297f846d800dc16e9cc110a0d64d16d104/Documentation/kube-flannel.yml
 	serviceAccount := &corev1.ServiceAccount{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "ServiceAccount",
@@ -107,9 +107,22 @@ func (np *DefaultFlannelClusterBootstrapper) BootstrapClusterResources(resources
 		},
 		Data: map[string]string{
 			"cni-conf.json": `{
-	"name": "cbr0",
-	"type": "flannel",
-	"delegate": {"isDefaultGateway": true}
+  "name": "cbr0",
+  "plugins": [
+	{
+	  "type": "flannel",
+	  "delegate": {
+		"hairpinMode": true,
+		"isDefaultGateway": true
+	  }
+	},
+	{
+	  "type": "portmap",
+	  "capabilities": {
+		"portMappings": true
+	  }
+	}
+  ]
 }`,
 			"net-conf.json": netConf,
 		},
@@ -147,12 +160,12 @@ func (np *DefaultFlannelClusterBootstrapper) BootstrapClusterResources(resources
 					InitContainers: []corev1.Container{
 						{
 							Name:    "install-cni",
-							Image:   "quay.io/coreos/flannel:v0.9.0-amd64",
+							Image:   "quay.io/coreos/flannel:v0.9.1-amd64",
 							Command: []string{"cp"},
 							Args: []string{
 								"-f",
 								"/etc/kube-flannel/cni-conf.json",
-								"/etc/cni/net.d/10-flannel.conf",
+								"/etc/cni/net.d/10-flannel.conflist",
 							},
 							VolumeMounts: []corev1.VolumeMount{
 								{
@@ -169,9 +182,11 @@ func (np *DefaultFlannelClusterBootstrapper) BootstrapClusterResources(resources
 					Containers: []corev1.Container{
 						{
 							Name:  "kube-flannel",
-							Image: "quay.io/coreos/flannel:v0.9.0-amd64",
+							Image: "quay.io/coreos/flannel:v0.9.1-amd64",
 							Command: []string{
 								"/opt/bin/flanneld",
+							},
+							Args: []string{
 								"--ip-masq",
 								"--kube-subnet-mgr",
 							},

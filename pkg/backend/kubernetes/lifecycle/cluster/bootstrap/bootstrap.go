@@ -163,7 +163,7 @@ func Bootstrap(
 	resources.Config = config
 
 	// Next, seed config maps
-	fmt.Println("seeding daemon sets")
+	fmt.Println("seeding config maps")
 	var configMaps []*corev1.ConfigMap
 	for _, configMap := range resources.ConfigMaps {
 		var result *corev1.ConfigMap
@@ -195,6 +195,23 @@ func Bootstrap(
 		daemonSets = append(daemonSets, result)
 	}
 	resources.DaemonSets = daemonSets
+
+	//Seed any services.
+	fmt.Println("seeding services")
+	var services []*corev1.Service
+	for _, service := range resources.Services {
+		var result *corev1.Service
+		err = idempotentSeed(fmt.Sprintf("service %v/%v", service.Namespace, service.Name), func() error {
+			result, err = kubeClient.CoreV1().Services(service.Namespace).Create(service)
+			return err
+		})
+
+		if err != nil {
+			return nil, err
+		}
+		services = append(services, result)
+	}
+	resources.Services = services
 
 	return resources, nil
 }

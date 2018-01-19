@@ -14,10 +14,10 @@ set -e
 echo "Creating kubernetes cert"
 cat > kubernetes-csr.json <<EOF
 {
-  "CN": "kube-masters.system.internal",
+  "CN": "kube-masters.lattice.local",
   "hosts": [
     "10.32.0.1",
-    "kube-masters.system.internal"
+    "kube-masters.lattice.local"
   ],
   "key": {
     "algo": "rsa",

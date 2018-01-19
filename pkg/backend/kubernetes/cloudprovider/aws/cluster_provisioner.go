@@ -129,8 +129,9 @@ func (p *DefaultAWSClusterProvisioner) clusterModule(clusterID, url string) *aws
 		AvailabilityZones: p.availabilityZones,
 		KeyName:           p.keyName,
 
-		ClusterID:           clusterID,
-		SystemDefinitionURL: url,
+		ClusterID:                    clusterID,
+		ControlPlaneContainerChannel: fmt.Sprintf("%v/%v", p.latticeContainerRegistry, p.latticeContainerRepoPrefix),
+		SystemDefinitionURL:          url,
 
 		MasterNodeInstanceType: p.masterNodeInstanceType,
 		MasterNodeAMIID:        p.masterNodeAMIID,
@@ -149,9 +150,23 @@ func (p *DefaultAWSClusterProvisioner) Address(name string) (string, error) {
 	return tec.Output(terraformOutputclusterManagerAddress)
 }
 
-func (p *DefaultAWSClusterProvisioner) Deprovision(clusterID string) error {
+func (p *DefaultAWSClusterProvisioner) Deprovision(clusterID string, force bool) error {
 	fmt.Println("Deprovisioning cluster...")
 
+	if !force {
+		if err := p.tearDownSystems(clusterID); err != nil {
+			return err
+		}
+	}
+
+	logfile, err := terraform.Destroy(p.workDirectory, nil)
+	if err != nil && logfile != "" {
+		fmt.Printf("error destroying. logfile: %v", logfile)
+	}
+	return err
+}
+
+func (p *DefaultAWSClusterProvisioner) tearDownSystems(clusterID string) error {
 	address, err := p.Address(clusterID)
 	if err != nil {
 		return err
@@ -188,9 +203,5 @@ func (p *DefaultAWSClusterProvisioner) Deprovision(clusterID string) error {
 		return true, nil
 	})
 
-	logfile, err := terraform.Destroy(p.workDirectory, nil)
-	if err != nil && logfile != "" {
-		fmt.Printf("error destroying. logfile: %v", logfile)
-	}
 	return err
 }
