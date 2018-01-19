@@ -11,6 +11,8 @@ go_library(
         "//pkg/backend/kubernetes/customresource/generated/informers/externalversions/lattice/v1:go_default_library",
         "//pkg/backend/kubernetes/customresource/generated/listers/lattice/v1:go_default_library",
         "//pkg/backend/kubernetes/util/kubernetes:go_default_library",
+        "//pkg/types:go_default_library",
+        "//pkg/util/endpoint:go_default_library",
         "@com_github_deckarep_golang_set//:go_default_library",
         "@com_github_golang_glog//:go_default_library",
         "@io_k8s_apimachinery//pkg/labels:go_default_library",

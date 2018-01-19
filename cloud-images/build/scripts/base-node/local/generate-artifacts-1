@@ -57,7 +57,7 @@ echo "Creating kubeconfig"
 kubectl config set-cluster lattice \
     --certificate-authority=ca.pem \
     --embed-certs=true \
-    --server=https://kube-masters.system.internal:6443 \
+    --server=https://kube-masters.lattice.local:6443 \
     --kubeconfig=kubeconfig
 
 kubectl config set-credentials admin \

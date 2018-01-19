@@ -8,7 +8,10 @@ variable "availability_zones" {
   type = "list"
 }
 
+// FIXME: this should probably be "cluster_name"
 variable "cluster_id" {}
+
+variable "control_plane_container_channel" {}
 variable "system_definition_url" {}
 
 variable "base_node_ami_id" {}
@@ -158,7 +161,7 @@ resource "aws_route_table_association" "route_table_association" {
 
 # private zone
 resource "aws_route53_zone" "private_zone" {
-  name          = "system.internal"
+  name          = "lattice.local"
   vpc_id        = "${aws_vpc.vpc.id}"
   force_destroy = true
 
@@ -181,14 +184,15 @@ module "master_node" {
   aws_account_id = "${var.aws_account_id}"
   region         = "${var.region}"
 
-  cluster_id              = "${var.cluster_id}"
-  system_definition_url   = "${var.system_definition_url}"
-  system_s3_bucket        = "${aws_s3_bucket.system_bucket.id}"
-  vpc_id                  = "${aws_vpc.vpc.id}"
-  subnet_id               = "${element(aws_subnet.subnet.*.id, 0)}"
-  subnet_ids              = "${join(",", aws_subnet.subnet.*.id)}"
-  base_node_ami_id        = "${var.base_node_ami_id}"
-  route53_private_zone_id = "${aws_route53_zone.private_zone.id}"
+  cluster_id                      = "${var.cluster_id}"
+  system_definition_url           = "${var.system_definition_url}"
+  control_plane_container_channel = "${var.control_plane_container_channel}"
+  system_s3_bucket                = "${aws_s3_bucket.system_bucket.id}"
+  vpc_id                          = "${aws_vpc.vpc.id}"
+  subnet_id                       = "${element(aws_subnet.subnet.*.id, 0)}"
+  subnet_ids                      = "${join(",", aws_subnet.subnet.*.id)}"
+  base_node_ami_id                = "${var.base_node_ami_id}"
+  route53_private_zone_id         = "${aws_route53_zone.private_zone.id}"
 
   name          = "0"
   instance_type = "${var.master_node_instance_type}"

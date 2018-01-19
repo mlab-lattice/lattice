@@ -9,6 +9,7 @@ ExecStart=/opt/kubernetes/bin/kubelet \
   --container-runtime=docker \
   --serialize-image-pulls=false \
   --register-node=true \
+  --feature-gates=CustomPodDNS=true \
   --kubeconfig=/etc/opt/kubernetes/kubelet/kubeconfig \
   --network-plugin=cni \
   --node-labels=${KUBELET_LABELS} \

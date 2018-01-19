@@ -9,7 +9,9 @@ import (
 	latticeclientset "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/clientset/versioned"
 	latticeinformers "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/informers/externalversions/lattice/v1"
 	latticelisters "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/listers/lattice/v1"
-	util "github.com/mlab-lattice/system/pkg/backend/kubernetes/util/kubernetes"
+	kubeutil "github.com/mlab-lattice/system/pkg/backend/kubernetes/util/kubernetes"
+	"github.com/mlab-lattice/system/pkg/types"
+	endpointutil "github.com/mlab-lattice/system/pkg/util/endpoint"
 
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/runtime"
@@ -38,7 +40,7 @@ type Controller struct {
 
 	dnsmasqConfigPath string
 	hostFilePath      string
-	clusterID         string
+	clusterID         types.ClusterID
 }
 
 var (
@@ -49,7 +51,7 @@ var (
 func NewController(
 	dnsmasqConfigPath string,
 	hostConfigPath string,
-	clusterID string,
+	clusterID types.ClusterID,
 	latticeClient latticeclientset.Interface,
 	client clientset.Interface,
 	endpointInformer latticeinformers.EndpointInformer,
@@ -204,13 +206,13 @@ func (c *Controller) rewriteDnsmasqConfig(endpoints []*crv1.Endpoint) error {
 	hostConfigFileContents := ""
 
 	for _, endpoint := range endpoints {
-		systemID, err := util.SystemID(endpoint.Namespace)
+		systemID, err := kubeutil.SystemID(endpoint.Namespace)
 		if err != nil {
 			return err
 		}
 
-		path := endpoint.Spec.Path.ToDomain(true)
-		cname := fmt.Sprintf("%v.local.%v.%v.local", path, systemID, c.clusterID)
+		domain := endpoint.Spec.Path.ToDomain(true)
+		cname := endpointutil.DNSName(domain, systemID, c.clusterID)
 
 		if endpoint.Spec.IP != nil {
 			hostConfigFileContents += fmt.Sprintf("%v %v\n", *endpoint.Spec.IP, cname)

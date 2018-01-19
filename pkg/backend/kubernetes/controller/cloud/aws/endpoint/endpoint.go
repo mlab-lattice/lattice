@@ -9,6 +9,7 @@ import (
 	kubeutil "github.com/mlab-lattice/system/pkg/backend/kubernetes/util/kubernetes"
 	tf "github.com/mlab-lattice/system/pkg/terraform"
 	awstfprovider "github.com/mlab-lattice/system/pkg/terraform/provider/aws"
+	endpointutil "github.com/mlab-lattice/system/pkg/util/endpoint"
 
 	"github.com/golang/glog"
 )
@@ -40,7 +41,12 @@ func (c *Controller) provisionEndpoint(endpoint *crv1.Endpoint) error {
 }
 
 func (c *Controller) provisionExternalNameEndpoint(endpoint *crv1.Endpoint) error {
-	config, err := c.endpointConfig(endpoint, c.externalNameEndpointModule(endpoint))
+	module, err := c.externalNameEndpointModule(endpoint)
+	if err != nil {
+		return err
+	}
+
+	config, err := c.endpointConfig(endpoint, module)
 	if err != nil {
 		return err
 	}
@@ -50,7 +56,12 @@ func (c *Controller) provisionExternalNameEndpoint(endpoint *crv1.Endpoint) erro
 }
 
 func (c *Controller) provisionIPEndpoint(endpoint *crv1.Endpoint) error {
-	config, err := c.endpointConfig(endpoint, c.ipEndpointModule(endpoint))
+	module, err := c.ipEndpointModule(endpoint)
+	if err != nil {
+		return err
+	}
+
+	config, err := c.endpointConfig(endpoint, module)
 	if err != nil {
 		return err
 	}
@@ -72,7 +83,12 @@ func (c *Controller) deprovisionEndpoint(endpoint *crv1.Endpoint) error {
 }
 
 func (c *Controller) deprovisionExternalNameEndpoint(endpoint *crv1.Endpoint) error {
-	config, err := c.endpointConfig(endpoint, c.externalNameEndpointModule(endpoint))
+	module, err := c.externalNameEndpointModule(endpoint)
+	if err != nil {
+		return err
+	}
+
+	config, err := c.endpointConfig(endpoint, module)
 	if err != nil {
 		return err
 	}
@@ -82,7 +98,12 @@ func (c *Controller) deprovisionExternalNameEndpoint(endpoint *crv1.Endpoint) er
 }
 
 func (c *Controller) deprovisionIPEndpoint(endpoint *crv1.Endpoint) error {
-	config, err := c.endpointConfig(endpoint, c.ipEndpointModule(endpoint))
+	module, err := c.ipEndpointModule(endpoint)
+	if err != nil {
+		return err
+	}
+
+	config, err := c.endpointConfig(endpoint, module)
 	if err != nil {
 		return err
 	}
@@ -120,24 +141,46 @@ func (c *Controller) endpointConfig(endpoint *crv1.Endpoint, endpointModule inte
 	return config, nil
 }
 
-func (c *Controller) ipEndpointModule(endpoint *crv1.Endpoint) *kubetf.IPEndpoint {
-	return kubetf.NewIPEndpointModule(
+func (c *Controller) ipEndpointModule(endpoint *crv1.Endpoint) (*kubetf.IPEndpoint, error) {
+	name, err := c.endpointDNSName(endpoint)
+	if err != nil {
+		return nil, err
+	}
+
+	module := kubetf.NewIPEndpointModule(
 		c.terraformModuleRoot,
 		c.awsCloudProvider.Region(),
 		c.awsCloudProvider.Route53PrivateZoneID(),
-		endpoint.Spec.Path.ToDomain(true),
+		name,
 		*endpoint.Spec.IP,
 	)
+	return module, nil
 }
 
-func (c *Controller) externalNameEndpointModule(endpoint *crv1.Endpoint) *kubetf.ExternalNameEndpoint {
-	return kubetf.NewExternalNameEndpointModule(
+func (c *Controller) externalNameEndpointModule(endpoint *crv1.Endpoint) (*kubetf.ExternalNameEndpoint, error) {
+	name, err := c.endpointDNSName(endpoint)
+	if err != nil {
+		return nil, err
+	}
+
+	module := kubetf.NewExternalNameEndpointModule(
 		c.terraformModuleRoot,
 		c.awsCloudProvider.Region(),
 		c.awsCloudProvider.Route53PrivateZoneID(),
-		endpoint.Spec.Path.ToDomain(true),
+		name,
 		*endpoint.Spec.ExternalName,
 	)
+	return module, nil
+}
+
+func (c *Controller) endpointDNSName(endpoint *crv1.Endpoint) (string, error) {
+	systemID, err := kubeutil.SystemID(endpoint.Namespace)
+	if err != nil {
+		return "", err
+	}
+
+	name := endpointutil.DNSName(endpoint.Spec.Path.ToDomain(true), systemID, c.clusterID)
+	return name, nil
 }
 
 func (c *Controller) updateEndpointStatus(

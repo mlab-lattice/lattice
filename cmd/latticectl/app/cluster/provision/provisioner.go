@@ -38,10 +38,11 @@ func parseBackendKubernetesVars(providerName string) (*backendConfigKubernetes, 
 		Target: &config,
 		Expected: map[string]cli.EmbeddedFlagValue{
 			"lattice-container-registry": {
-				Required:     true,
+				Default:      "gcr.io/lattice-dev",
 				EncodingName: "LatticeContainerRegistry",
 			},
 			"lattice-container-repo-prefix": {
+				Default:      "stable-debug-",
 				EncodingName: "LatticeContainerRepoPrefix",
 			},
 		},
