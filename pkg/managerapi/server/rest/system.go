@@ -6,10 +6,10 @@ import (
 
 	"github.com/mlab-lattice/system/pkg/constants"
 	"github.com/mlab-lattice/system/pkg/definition"
-	"github.com/mlab-lattice/system/pkg/definition/resolver"
 	"github.com/mlab-lattice/system/pkg/definition/tree"
 	"github.com/mlab-lattice/system/pkg/managerapi/server"
 	"github.com/mlab-lattice/system/pkg/types"
+	"github.com/mlab-lattice/system/pkg/util/git"
 
 	"github.com/gin-gonic/gin"
 )
@@ -491,11 +491,10 @@ func (r *restServer) getSystemDefinitionRoot(systemID string, version string) (t
 		return nil, fmt.Errorf("System %v does not exist", systemID)
 	}
 
-	return r.resolver.ResolveDefinition(
-		fmt.Sprintf("%v#%v", system.DefinitionURL, version),
-		constants.SystemDefinitionRootPathDefault,
-		&resolver.GitResolveOptions{},
-	)
+	systemDefUri := fmt.Sprintf("%v#%v/%s", system.DefinitionURL, version,
+		constants.SystemDefinitionRootPathDefault)
+
+	return r.resolver.ResolveDefinition(systemDefUri, &git.Options{})
 }
 
 func (r *restServer) getSystemVersions(systemID string) ([]string, error) {
@@ -508,5 +507,5 @@ func (r *restServer) getSystemVersions(systemID string) ([]string, error) {
 		return nil, fmt.Errorf("System %v does not exist", systemID)
 	}
 
-	return r.resolver.ListDefinitionVersions(system.DefinitionURL, &resolver.GitResolveOptions{})
+	return r.resolver.ListDefinitionVersions(system.DefinitionURL, &git.Options{})
 }

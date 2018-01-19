@@ -27,9 +27,14 @@ type Resolver struct {
 }
 
 // Context contains information about the current operation being invoked.
-type Context struct {
-	URI    string
+type Options struct {
 	SSHKey []byte
+}
+
+// Context contains information about the current operation being invoked.
+type Context struct {
+	URI     string
+	Options *Options
 }
 
 func NewResolver(workDirectory string) (*Resolver, error) {
@@ -60,7 +65,8 @@ func (r *Resolver) Clone(ctx *Context) (*git.Repository, error) {
 	}
 
 	if repoExists {
-		return git.PlainOpen(repoDir)
+		repo, err := git.PlainOpen(repoDir)
+		return repo, err
 	}
 
 	// Otherwise try to clone the repository.
@@ -70,8 +76,8 @@ func (r *Resolver) Clone(ctx *Context) (*git.Repository, error) {
 	}
 
 	// If an SSH key was supplied, try to use it.
-	if ctx.SSHKey != nil {
-		signer, err := ssh.ParsePrivateKey([]byte(ctx.SSHKey))
+	if ctx.Options.SSHKey != nil {
+		signer, err := ssh.ParsePrivateKey([]byte(ctx.Options.SSHKey))
 		if err != nil {
 			return nil, err
 		}
@@ -81,7 +87,8 @@ func (r *Resolver) Clone(ctx *Context) (*git.Repository, error) {
 	}
 
 	// Do a plain clone of the repo
-	return git.PlainClone(repoDir, false, &cloneOptions)
+	repo, err := git.PlainClone(repoDir, false, &cloneOptions)
+	return repo, newCloneError(err)
 }
 
 // Fetch will clone a repository if necessary, then attempt to fetch
@@ -92,12 +99,24 @@ func (r *Resolver) Fetch(ctx *Context) error {
 		return err
 	}
 
-	err = repository.Fetch(&git.FetchOptions{
+	fetchOptions := &git.FetchOptions{
 		RemoteName: remoteNameOrigin,
-	})
+	}
+	// If an SSH key was supplied, try to use it.
+	if ctx.Options.SSHKey != nil {
+		signer, err := ssh.ParsePrivateKey([]byte(ctx.Options.SSHKey))
+		if err != nil {
+			return newFetchError(err)
+		}
+
+		auth := &gitssh.PublicKeys{User: gitUserGit, Signer: signer}
+		fetchOptions.Auth = auth
+	}
+
+	err = repository.Fetch(fetchOptions)
 
 	if err != nil && err != git.NoErrAlreadyUpToDate {
-		return err
+		return newFetchError(err)
 	}
 	return nil
 }
@@ -193,7 +212,7 @@ func (r *Resolver) FileContents(ctx *Context, fileName string) ([]byte, error) {
 
 func (r *Resolver) GetRepositoryPath(ctx *Context) string {
 	uriInfo := parseGitURI(ctx.URI)
-	return path.Join(r.WorkDirectory, uriInfo.CloneURI)
+	return path.Join(r.WorkDirectory, stripProtocol(uriInfo.CloneURI))
 }
 
 // GetTagNames will clone and fetch, and if successful will return the repository's tags.
@@ -233,6 +252,12 @@ type uriInfo struct {
 func parseGitURI(gitURI string) uriInfo {
 	partByRef := strings.Split(gitURI, "#")
 	cloneURI := partByRef[0]
+
+	// strip /.git from local repositories references
+	if strings.HasSuffix(cloneURI, "/.git") {
+		cloneURI = strings.Replace(cloneURI, "/.git", "", -1)
+	}
+
 	repoNameParts := strings.Split(cloneURI, "/")
 	repoName := strings.Replace(repoNameParts[len(repoNameParts)-1], ".git", "", 1)
 
@@ -257,4 +282,15 @@ func pathExists(path string) (bool, error) {
 		return false, nil
 	}
 	return true, err
+}
+
+// stripProtocol strips out the protocol:// from uri
+func stripProtocol(uri string) string {
+	protocolParts := strings.Split(uri, "://")
+
+	if len(protocolParts) > 1 {
+		return protocolParts[1]
+	} else {
+		return uri
+	}
 }

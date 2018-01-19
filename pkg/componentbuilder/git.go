@@ -51,7 +51,7 @@ func (b *Builder) checkOutGitRepository(uri string) error {
 
 func (b *Builder) getGitResolverContext(uri string) *git.Context {
 	return &git.Context{
-		SSHKey: b.GitResolverOptions.SSHKey,
-		URI:    uri,
+		Options: &git.Options{SSHKey: b.GitResolverOptions.SSHKey},
+		URI:     uri,
 	}
 }

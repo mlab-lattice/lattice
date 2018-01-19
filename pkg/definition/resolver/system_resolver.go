@@ -5,24 +5,19 @@ import (
 	"fmt"
 
 	"github.com/mlab-lattice/system/pkg/definition"
+	"github.com/mlab-lattice/system/pkg/definition/template/language"
 	"github.com/mlab-lattice/system/pkg/definition/tree"
 	"github.com/mlab-lattice/system/pkg/util/git"
 )
 
 // SystemResolver resolves system definitions from different sources such as git
 type SystemResolver struct {
-	WorkDirectory string
-	GitResolver   *git.Resolver
-}
-
-// GitResolveOptions allows options for resolution
-type GitResolveOptions struct {
-	SSHKey []byte
+	gitResolver *git.Resolver
 }
 
 type resolveContext struct {
 	gitURI            string
-	gitResolveOptions *GitResolveOptions
+	gitResolveOptions *git.Options
 }
 
 func NewSystemResolver(workDirectory string) (*SystemResolver, error) {
@@ -36,28 +31,29 @@ func NewSystemResolver(workDirectory string) (*SystemResolver, error) {
 	}
 
 	sr := &SystemResolver{
-		WorkDirectory: workDirectory,
-		GitResolver:   gitResolver,
+		gitResolver: gitResolver,
 	}
 	return sr, nil
 }
 
 // resolves the definition
-func (resolver *SystemResolver) ResolveDefinition(uri string, fileName string, gitResolveOptions *GitResolveOptions) (tree.Node, error) {
+func (resolver *SystemResolver) ResolveDefinition(uri string, gitResolveOptions *git.Options) (tree.Node, error) {
+
 	if gitResolveOptions == nil {
-		gitResolveOptions = &GitResolveOptions{}
+		gitResolveOptions = &git.Options{}
 	}
 	ctx := &resolveContext{
 		gitURI:            uri,
 		gitResolveOptions: gitResolveOptions,
 	}
-	return resolver.resolveDefinitionFromGitUri(ctx, fileName)
+
+	return resolver.readNodeFromFile(ctx)
 }
 
 // lists the versions of the specified definition's uri
-func (resolver *SystemResolver) ListDefinitionVersions(uri string, gitResolveOptions *GitResolveOptions) ([]string, error) {
+func (resolver *SystemResolver) ListDefinitionVersions(uri string, gitResolveOptions *git.Options) ([]string, error) {
 	if gitResolveOptions == nil {
-		gitResolveOptions = &GitResolveOptions{}
+		gitResolveOptions = &git.Options{}
 	}
 	ctx := &resolveContext{
 		gitURI:            uri,
@@ -67,14 +63,17 @@ func (resolver *SystemResolver) ListDefinitionVersions(uri string, gitResolveOpt
 
 }
 
-// resolveDefinitionFromGitUri resolves a definition from a git uri
-func (resolver *SystemResolver) resolveDefinitionFromGitUri(ctx *resolveContext, fileName string) (tree.Node, error) {
-	return resolver.readNodeFromFile(ctx, fileName)
-}
-
 // readNodeFromFile reads a definition node from a file
-func (resolver *SystemResolver) readNodeFromFile(ctx *resolveContext, fileName string) (tree.Node, error) {
-	jsonMap, err := resolver.readConsolidatedJsonMapFromFile(ctx, fileName)
+func (resolver *SystemResolver) readNodeFromFile(ctx *resolveContext) (tree.Node, error) {
+
+	engine := language.NewEngine()
+	options, err := language.CreateOptions(resolver.gitResolver.WorkDirectory, ctx.gitResolveOptions)
+
+	if err != nil {
+		return nil, err
+	}
+
+	jsonMap, err := engine.EvalFromURL(ctx.gitURI, make(map[string]interface{}), options)
 
 	if err != nil {
 		return nil, err
@@ -94,75 +93,11 @@ func (resolver *SystemResolver) readNodeFromFile(ctx *resolveContext, fileName s
 	return tree.NewNode(defInterface, nil)
 }
 
-// reads/consolidates json map form a file.
-func (resolver *SystemResolver) readConsolidatedJsonMapFromFile(ctx *resolveContext, fileName string) (map[string]interface{}, error) {
-	gitResolverContext := &git.Context{
-		URI:    ctx.gitURI,
-		SSHKey: ctx.gitResolveOptions.SSHKey,
-	}
-	jsonBytes, err := resolver.GitResolver.FileContents(gitResolverContext, fileName)
-	if err != nil {
-		return nil, err
-	}
-	result := make(map[string]interface{})
-	err = json.Unmarshal(jsonBytes, &result)
-
-	if err != nil {
-		return nil, err
-	}
-
-	// resolve json and bytes
-	resolver.resolveJsonMap(result, ctx)
-
-	return result, nil
-}
-
-// resolveJsonMap resolves a whole json map
-func (resolver *SystemResolver) resolveJsonMap(jsonMap map[string]interface{}, ctx *resolveContext) error {
-	for k, v := range jsonMap {
-		var err error
-		jsonMap[k], err = resolver.resolveJsonValue(k, v, ctx)
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-// resolveJsonValue resolves a single json value. i.e. deals with special values such as $include
-func (resolver *SystemResolver) resolveJsonValue(k string, v interface{}, ctx *resolveContext) (interface{}, error) {
-	if valMap, valueIsMap := v.(map[string]interface{}); valueIsMap {
-		if includeVal, isInclude := valMap["$include"]; isInclude {
-			includeFilePath, ok := includeVal.(string)
-			if ok {
-				return resolver.readConsolidatedJsonMapFromFile(ctx, includeFilePath)
-			} else {
-				panic("Invalid $include")
-			}
-		} else {
-			resolver.resolveJsonMap(valMap, ctx)
-			return valMap, nil
-		}
-	} else if valArr, valueIsArray := v.([]interface{}); valueIsArray {
-		for i, item := range valArr {
-			var err error
-			valArr[i], err = resolver.resolveJsonValue(k, item, ctx)
-			if err != nil {
-				return nil, err
-			}
-		}
-		return valArr, nil
-	}
-
-	return v, nil
-}
-
 // lists the tags in a repo
 func (resolver *SystemResolver) listRepoVersionTags(ctx *resolveContext) ([]string, error) {
 	gitResolverContext := &git.Context{
-		URI:    ctx.gitURI,
-		SSHKey: ctx.gitResolveOptions.SSHKey,
+		URI:     ctx.gitURI,
+		Options: ctx.gitResolveOptions,
 	}
-	return resolver.GitResolver.GetTagNames(gitResolverContext)
+	return resolver.gitResolver.GetTagNames(gitResolverContext)
 }
