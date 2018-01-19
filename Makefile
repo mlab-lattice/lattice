@@ -22,7 +22,7 @@ build-linux: gazelle
 	@bazel build --cpu k8 //...:all
 
 .PHONY: build-all
-build-all: build       \
+build-all: build \
            build-linux
 
 .PHONY: clean
@@ -46,9 +46,9 @@ test.verbose: gazelle
 
 # formatting/linting
 .PHONY: check
-check: gazelle                 \
-       format                  \
-       vet                     \
+check: gazelle \
+       format  \
+       vet     \
        lint-no-export-comments
 
 .PHONY: format
@@ -120,13 +120,13 @@ $(USER_CONTAINER_PUSHES):
 
 .PHONY: docker.push-all-stable
 docker.push-all-stable:
-	@for image in $(DOCKER_IMAGES); do       \
+	@for image in $(DOCKER_IMAGES); do \
 		$(MAKE) docker.push-stable-$$image ; \
 	done
 
 .PHONY: docker.push-all-user
 docker.push-all-user:
-	@for image in $(DOCKER_IMAGES); do     \
+	@for image in $(DOCKER_IMAGES); do \
 		$(MAKE) docker.push-user-$$image ; \
 	done
 
@@ -160,7 +160,7 @@ kubernetes.regenerate-custom-resource-clients:
 
 # cloud images
 .PHONY: cloud-images.build
-cloud-images.build: cloud-images.build-base-node-image   \
+cloud-images.build: cloud-images.build-base-node-image \
                     cloud-images.build-master-node-image
 
 .PHONY: cloud-images.build-base-node-image
