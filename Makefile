@@ -87,12 +87,12 @@ git.install-hooks:
 
 
 # docker
-.PHONY: docker.push-stable
+.PHONY: docker.push-image-stable
 docker.push-stable: gazelle
 	bazel run --cpu k8 //docker:push-stable-$(IMAGE)
 	bazel run --cpu k8 //docker:push-stable-debug-$(IMAGE)
 
-.PHONY: docker.push-user
+.PHONY: docker.push-image-user
 docker.push-user: gazelle
 	bazel run --cpu k8 //docker:push-user-$(IMAGE)
 	bazel run --cpu k8 //docker:push-user-debug-$(IMAGE)
@@ -112,22 +112,22 @@ USER_CONTAINER_PUSHES := $(addprefix docker.push-user-,$(DOCKER_IMAGES))
 
 .PHONY: $(STABLE_CONTAINER_PUSHES)
 $(STABLE_CONTAINER_PUSHES):
-	@$(MAKE) docker.push-stable IMAGE=$(patsubst docker.push-stable-%,%,$@)
+	@$(MAKE) docker.push-image-stable IMAGE=$(patsubst docker.push-stable-%,%,$@)
 
 .PHONY: $(USER_CONTAINER_PUSHES)
 $(USER_CONTAINER_PUSHES):
-	@$(MAKE) docker.push-user IMAGE=$(patsubst docker.push-user-%,%,$@)
+	@$(MAKE) docker.push-image-user IMAGE=$(patsubst docker.push-user-%,%,$@)
 
 .PHONY: docker.push-all-stable
 docker.push-all-stable:
 	@for image in $(DOCKER_IMAGES); do \
-		$(MAKE) docker.push-stable-$$image ; \
+		$(MAKE) docker.push-image-stable-$$image ; \
 	done
 
 .PHONY: docker.push-all-user
 docker.push-all-user:
 	@for image in $(DOCKER_IMAGES); do \
-		$(MAKE) docker.push-user-$$image ; \
+		$(MAKE) docker.push-image-user-$$image ; \
 	done
 
 
