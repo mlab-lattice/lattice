@@ -22,7 +22,9 @@ const (
 )
 
 type ClusterProvisionerOptions struct {
-	TerraformModulePath string
+	TerraformModulePath      string
+	TerraformBackendS3Bucket string
+	TerraformBackendS3Key    string
 
 	AccountID         string
 	Region            string
@@ -40,7 +42,9 @@ type DefaultAWSClusterProvisioner struct {
 	latticeContainerRegistry   string
 	latticeContainerRepoPrefix string
 
-	terraformModulePath string
+	terraformModulePath      string
+	terraformBackendS3Bucket string
+	terraformBackendS3Key    string
 
 	accountID         string
 	region            string
@@ -59,7 +63,9 @@ func NewClusterProvisioner(latticeImageDockerRepository, latticeContainerRepoPre
 		latticeContainerRegistry:   latticeImageDockerRepository,
 		latticeContainerRepoPrefix: latticeContainerRepoPrefix,
 
-		terraformModulePath: options.TerraformModulePath,
+		terraformModulePath:      options.TerraformModulePath,
+		terraformBackendS3Bucket: options.TerraformBackendS3Bucket,
+		terraformBackendS3Key:    options.TerraformBackendS3Key,
 
 		accountID:         options.AccountID,
 		region:            options.Region,
@@ -102,6 +108,12 @@ func (p *DefaultAWSClusterProvisioner) clusterConfig(clusterModule *awsterraform
 	config := &terraform.Config{
 		Provider: awstfprovider.Provider{
 			Region: p.region,
+		},
+		Backend: terraform.S3BackendConfig{
+			Region:  p.region,
+			Bucket:  p.terraformBackendS3Bucket,
+			Key:     p.terraformBackendS3Key,
+			Encrypt: true,
 		},
 	}
 
