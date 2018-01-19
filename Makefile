@@ -39,6 +39,10 @@ test: gazelle
 test.no-cache: gazelle
 	@bazel test --cache_test_results=no --test_output=errors //...
 
+.PHONY: test.verbose
+test.verbose: gazelle
+	@bazel test --test_output=all --test_env -v
+
 
 # formatting/linting
 .PHONY: check
@@ -99,6 +103,7 @@ DOCKER_IMAGES := envoy-prepare                                 \
                  kubernetes-component-builder                  \
                  kubernetes-envoy-xds-api-rest-per-node        \
                  kubernetes-lattice-controller-manager         \
+                 kubernetes-local-dns-controller               \
                  kubernetes-manager-api-rest                   \
                  latticectl
 

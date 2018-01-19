@@ -6,6 +6,7 @@ import (
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/cloudprovider/aws"
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/cloudprovider/local"
 	clusterbootstrapper "github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/cluster/bootstrap/bootstrapper"
+	"github.com/mlab-lattice/system/pkg/types"
 )
 
 type ClusterBootstrapperOptions struct {
@@ -13,13 +14,13 @@ type ClusterBootstrapperOptions struct {
 	Local *local.ClusterBootstrapperOptions
 }
 
-func NewClusterBootstrapper(options *ClusterBootstrapperOptions) (clusterbootstrapper.Interface, error) {
+func NewClusterBootstrapper(clusterID types.ClusterID, options *ClusterBootstrapperOptions) (clusterbootstrapper.Interface, error) {
 	if options.AWS != nil {
 		return aws.NewClusterBootstrapper(options.AWS), nil
 	}
 
 	if options.Local != nil {
-		return local.NewClusterBootstrapper(options.Local), nil
+		return local.NewClusterBootstrapper(clusterID, options.Local), nil
 	}
 
 	return nil, fmt.Errorf("must provide cloud provider options")

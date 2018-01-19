@@ -7,6 +7,8 @@ variable "region" {}
 
 variable "cluster_id" {}
 
+variable "control_plane_container_channel" {}
+
 # TODO: should remove this
 variable "system_definition_url" {}
 
@@ -193,7 +195,8 @@ module "base_node" {
   "aws_account_id": "${var.aws_account_id}",
   "cluster_id": "${var.cluster_id}",
   "system_definition_url": "${var.system_definition_url}",
-  "name": "${var.name}",
+  "control_plane_container_channel": "${var.control_plane_container_channel}",
+  "master_name": "${var.name}",
   "base_node_ami_id": "${var.base_node_ami_id}",
   "subnet_ids": "${var.subnet_ids}",
   "key_name": "${var.key_name}",

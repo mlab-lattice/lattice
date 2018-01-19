@@ -14,6 +14,7 @@ import (
 	latticelisters "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/listers/lattice/v1"
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/servicemesh"
 	kubeutil "github.com/mlab-lattice/system/pkg/backend/kubernetes/util/kubernetes"
+	"github.com/mlab-lattice/system/pkg/types"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -46,6 +47,8 @@ type Controller struct {
 	kubeClient    kubeclientset.Interface
 	latticeClient latticeclientset.Interface
 
+	clusterID types.ClusterID
+
 	configLister       latticelisters.ConfigLister
 	configListerSynced cache.InformerSynced
 	configSetChan      chan struct{}
@@ -76,6 +79,7 @@ type Controller struct {
 
 func NewController(
 	cloudProvider cloudprovider.Interface,
+	clusterID types.ClusterID,
 	kubeClient kubeclientset.Interface,
 	latticeClient latticeclientset.Interface,
 	configInformer latticeinformers.ConfigInformer,
@@ -91,6 +95,7 @@ func NewController(
 
 		kubeClient:    kubeClient,
 		latticeClient: latticeClient,
+		clusterID:     clusterID,
 		configSetChan: make(chan struct{}),
 		queue:         workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "service"),
 	}

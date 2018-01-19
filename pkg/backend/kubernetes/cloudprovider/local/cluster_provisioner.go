@@ -3,6 +3,7 @@ package local
 import (
 	"fmt"
 	"os/user"
+	"strings"
 	"time"
 
 	kubeconstants "github.com/mlab-lattice/system/pkg/backend/kubernetes/constants"
@@ -25,6 +26,28 @@ import (
 
 const (
 	clusterNamePrefixMinikube = "lattice-local-"
+)
+
+var (
+	localDNSControllerArgList = []string{
+		"-v", "5",
+		"--logtostderr",
+		"--dnsmasq-config-path", DnsmasqConfigFile,
+		"--hosts-file-path", DNSHostsFile,
+	}
+
+	dnsNannyArgList = []string{
+		"-v=2",
+		"-logtostderr",
+		"-restartDnsmasq=true",
+		"-configDir=" + DNSConfigDirectory,
+	}
+
+	dnsmasqArgList = []string{
+		"-k", // Keep in foreground so as to not immediately exit.
+		"--hostsdir=" + DNSConfigDirectory,             // Read all the hosts from this directory. File changes read automatically by dnsmasq.
+		"--conf-dir=" + DNSConfigDirectory + ",*.conf", // Read all *.conf files in the directory as dns config files
+	}
 )
 
 type ClusterProvisionerOptions struct {
@@ -148,6 +171,11 @@ func (p *DefaultLocalClusterProvisioner) bootstrap(address, url, name string) er
 		return err
 	}
 
+	dnsNannyArgList := append(append(dnsNannyArgList, "--"), dnsmasqArgList...)
+	// Use ':' as the separator here, as ',' is included in the --conf-dir argument
+	dnsNannyArgs := "local-dns-server-args=" + strings.Join(dnsNannyArgList, ":")
+	dnsControllerArgs := "local-dns-controller-args=" + strings.Join(localDNSControllerArgList, ",")
+
 	jobName := "bootstrap-lattice"
 	var backoffLimit int32 = 2
 	job := batchv1.Job{
@@ -172,6 +200,10 @@ func (p *DefaultLocalClusterProvisioner) bootstrap(address, url, name string) er
 								"--manager-api-image", p.getLatticeContainerImage(kubeconstants.DockerImageManagerAPIRest),
 								"--cloud-provider", "local",
 								"--cloud-provider-var", "cluster-ip=" + address,
+								"--cloud-provider-var", "dns-controller-image=" + p.getLatticeContainerImage(DockerImageDNSController),
+								"--cloud-provider-var", "dns-controller-args=" + dnsControllerArgs,
+								"--cloud-provider-var", "dnsmasq-nanny-image=" + DockerImageDnsmasqNanny,
+								"--cloud-provider-var", "dnsmasq-nanny-args=" + dnsNannyArgs,
 								"--component-builder-image", p.getLatticeContainerImage(kubeconstants.DockerImageComponentBuilder),
 								"--component-build-docker-artifact-registry", "lattice-local",
 								"--component-build-docker-artifact-repository-per-image=true",

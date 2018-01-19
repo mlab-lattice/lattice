@@ -5,13 +5,14 @@ def go_dependencies():
     dependencies = [
         "github.com/aws/aws-sdk-go",
         "github.com/coreos/go-iptables",
+        "github.com/deckarep/golang-set",
         "github.com/docker/docker",
         "github.com/fatih/color",
         "github.com/gin-gonic/gin",
+        "github.com/olekukonko/tablewriter",
         "github.com/satori/go.uuid",
         "github.com/sergi/go-diff",
         "github.com/spf13/cobra",
-        "github.com/olekukonko/tablewriter",
         "golang.org/x/crypto",
         "gopkg.in/src-d/go-git.v4",
         "k8s.io/api",
@@ -25,6 +26,7 @@ def go_dependencies():
       go_repository(**GO_REPOSITORIES[dep])
 
     _go_dependencies_com_github_aws_aws_sdk_go()
+    _go_dependencies_com_github_deckarep_golang_set()
     _go_dependencies_com_github_docker_docker()
     _go_dependencies_com_github_fatih_color()
     _go_dependencies_com_github_gin_gonic_gin()
@@ -41,6 +43,14 @@ def _go_dependencies_com_github_aws_aws_sdk_go():
 
   for dep in dependencies:
     go_repository(**GO_REPOSITORIES[dep])
+
+def _go_dependencies_com_github_deckarep_golang_set():
+    dependencies = [
+        "github.com/golang/groupcache",
+    ]
+
+    for dep in dependencies:
+      go_repository(**GO_REPOSITORIES[dep])
 
 def _go_dependencies_com_github_docker_docker():
   dependencies = [

@@ -76,6 +76,15 @@ var options = &clusterbootstrap.Options{
 	},
 }
 
+// FIXME :: temporary until better solution for nested struct.
+type localCloudOptionsFlat struct {
+	IP                 string
+	DNSControllerImage string
+	DnsmasqNannyImage  string
+	DnsmasqNannyArgs   []string
+	DNSControllerArgs  []string
+}
+
 var Cmd = &cobra.Command{
 	Use:   "bootstrap",
 	Short: "bootstraps a kubernetes cluster to run Lattice",
@@ -122,7 +131,7 @@ var Cmd = &cobra.Command{
 		}
 		options.Terraform = terraformOptions
 
-		cloudProviderClusterBootstrapper, err := cloudprovider.NewClusterBootstrapper(cloudProviderClusterOptions)
+		cloudProviderClusterBootstrapper, err := cloudprovider.NewClusterBootstrapper(clusterID, cloudProviderClusterOptions)
 		if err != nil {
 			panic(err)
 		}
@@ -345,12 +354,38 @@ func parseCloudProviderVars() (*cloudprovider.ClusterBootstrapperOptions, *cloud
 
 func parseCloudProviderVarsLocal() (*localcloudprovider.ClusterBootstrapperOptions, error) {
 	options := &localcloudprovider.ClusterBootstrapperOptions{}
+	flatStruct := localCloudOptionsFlat{}
+
 	flags := cli.EmbeddedFlag{
-		Target: &options,
+		Target: &flatStruct,
 		Expected: map[string]cli.EmbeddedFlagValue{
 			"cluster-ip": {
 				Required:     true,
 				EncodingName: "IP",
+			},
+			"dns-controller-image": {
+				Required:     true,
+				EncodingName: "DNSControllerImage",
+			},
+			"dnsmasq-nanny-image": {
+				Required:     true,
+				EncodingName: "DnsmasqNannyImage",
+			},
+			"dnsmasq-nanny-args": {
+				Required:     false,
+				EncodingName: "DnsmasqNannyArgs",
+				ValueParser: func(value string) (interface{}, error) {
+					var argsWithoutPrefix = strings.Join(strings.Split(value, "=")[1:], "=")
+					return strings.Split(argsWithoutPrefix, ":"), nil
+				},
+			},
+			"dns-controller-args": {
+				Required:     false,
+				EncodingName: "DNSControllerArgs",
+				ValueParser: func(value string) (interface{}, error) {
+					var argsWithoutPrefix = strings.Join(strings.Split(value, "=")[1:], "=")
+					return strings.Split(argsWithoutPrefix, ","), nil
+				},
 			},
 		},
 	}
@@ -359,6 +394,14 @@ func parseCloudProviderVarsLocal() (*localcloudprovider.ClusterBootstrapperOptio
 	if err != nil {
 		return nil, err
 	}
+
+	options.IP = flatStruct.IP
+	options.DNS = &localcloudprovider.OptionsDNS{}
+	options.DNS.ControllerArgs = flatStruct.DNSControllerArgs
+	options.DNS.DnsmasqNannyArgs = flatStruct.DnsmasqNannyArgs
+	options.DNS.DnsmasqNannyImage = flatStruct.DnsmasqNannyImage
+	options.DNS.ControllerImage = flatStruct.DNSControllerImage
+
 	return options, nil
 }
 

@@ -12,6 +12,7 @@ import (
 	localcontrollers "github.com/mlab-lattice/system/cmd/kubernetes/lattice-controller-manager/app/cloudcontrollers/local"
 	controller "github.com/mlab-lattice/system/cmd/kubernetes/lattice-controller-manager/app/common"
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/cloudprovider"
+	"github.com/mlab-lattice/system/pkg/backend/kubernetes/cloudprovider/aws"
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/cloudprovider/local"
 	latticeinformers "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/informers/externalversions"
 	"github.com/mlab-lattice/system/pkg/terraform"
@@ -23,7 +24,6 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 
 	"github.com/golang/glog"
-	"github.com/mlab-lattice/system/pkg/backend/kubernetes/cloudprovider/aws"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 )

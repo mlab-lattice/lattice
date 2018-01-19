@@ -129,8 +129,9 @@ func (p *DefaultAWSClusterProvisioner) clusterModule(clusterID, url string) *aws
 		AvailabilityZones: p.availabilityZones,
 		KeyName:           p.keyName,
 
-		ClusterID:           clusterID,
-		SystemDefinitionURL: url,
+		ClusterID:                    clusterID,
+		ControlPlaneContainerChannel: fmt.Sprintf("%v/%v", p.latticeContainerRegistry, p.latticeContainerRepoPrefix),
+		SystemDefinitionURL:          url,
 
 		MasterNodeInstanceType: p.masterNodeInstanceType,
 		MasterNodeAMIID:        p.masterNodeAMIID,

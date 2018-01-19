@@ -24,6 +24,11 @@ import (
 	"github.com/sergi/go-diff/diffmatchpatch"
 )
 
+const (
+	ndotsValue     = "15"
+	dnsOptionNdots = "ndots"
+)
+
 func (c *Controller) syncServiceDeployment(service *crv1.Service, nodePool *crv1.NodePool) (*appsv1.Deployment, error) {
 	selector := kubelabels.NewSelector()
 	requirement, err := kubelabels.NewRequirement(kubeconstants.LabelKeyServiceID, selection.Equals, []string{service.Name})
@@ -63,7 +68,11 @@ func (c *Controller) syncExistingDeployment(service *crv1.Service, nodePool *crv
 	}
 
 	currentSpec := deployment.Spec
-	untransformedSpec := untransformedDeploymentSpec(service, name, labels, nodePool)
+	untransformedSpec, err := c.untransformedDeploymentSpec(service, name, labels, nodePool)
+	if err != nil {
+		return nil, err
+	}
+
 	defaultedUntransformedSpec := util.SetDeploymentSpecDefaults(untransformedSpec)
 	defaultedDesiredSpec := util.SetDeploymentSpecDefaults(&desiredSpec)
 
@@ -134,10 +143,7 @@ func deploymentLabels(service *crv1.Service) map[string]string {
 }
 
 func (c *Controller) deploymentSpec(service *crv1.Service, name string, deploymentLabels map[string]string, nodePool *crv1.NodePool) (appsv1.DeploymentSpec, error) {
-	spec := untransformedDeploymentSpec(service, name, deploymentLabels, nodePool)
-
-	// FIXME: remove this when local dns is working
-	services, err := c.latticeClient.LatticeV1().Services(service.Namespace).List(metav1.ListOptions{})
+	spec, err := c.untransformedDeploymentSpec(service, name, deploymentLabels, nodePool)
 	if err != nil {
 		return appsv1.DeploymentSpec{}, err
 	}
@@ -146,7 +152,7 @@ func (c *Controller) deploymentSpec(service *crv1.Service, name string, deployme
 	// isDeploymentSpecUpdated _must_ be inverses.
 	// That is, if we call cloudProvider then serviceMesh here, we _must_ call serviceMesh then cloudProvider
 	// in isDeploymentSpecUpdated.
-	spec, err = c.serviceMesh.TransformServiceDeploymentSpec(service, spec, services.Items)
+	spec, err = c.serviceMesh.TransformServiceDeploymentSpec(service, spec)
 	if err != nil {
 		return appsv1.DeploymentSpec{}, err
 	}
@@ -155,7 +161,7 @@ func (c *Controller) deploymentSpec(service *crv1.Service, name string, deployme
 	return *spec, nil
 }
 
-func untransformedDeploymentSpec(service *crv1.Service, name string, deploymentLabels map[string]string, nodePool *crv1.NodePool) *appsv1.DeploymentSpec {
+func (c *Controller) untransformedDeploymentSpec(service *crv1.Service, name string, deploymentLabels map[string]string, nodePool *crv1.NodePool) (*appsv1.DeploymentSpec, error) {
 	replicas := service.Spec.NumInstances
 
 	// Create a container for each Component in the Service
@@ -185,6 +191,38 @@ func untransformedDeploymentSpec(service *crv1.Service, name string, deploymentL
 		RequiredDuringSchedulingIgnoredDuringExecution: []corev1.PodAffinityTerm{podAffinityTerm},
 	}
 
+	systemID, err := kubeutil.SystemID(service.Namespace)
+	if err != nil {
+		return nil, err
+	}
+
+	baseSearchPath := fmt.Sprintf("%v.%v.local", systemID, c.clusterID)
+	dnsSearches := []string{baseSearchPath}
+
+	if !service.Spec.Path.IsRoot() {
+		parentNode, err := service.Spec.Path.Parent()
+		if err != nil {
+			return nil, err
+		}
+
+		parentDomain := parentNode.ToDomain(true)
+
+		dnsSearches = append(dnsSearches, fmt.Sprintf("%v.local.%v", parentDomain, baseSearchPath))
+	}
+
+	// as a constant cant be dereferenced, create a local copy
+	ndotsValue := ndotsValue
+	dnsConfig := corev1.PodDNSConfig{
+		Nameservers: []string{},
+		Options: []corev1.PodDNSConfigOption{
+			{
+				Name:  dnsOptionNdots,
+				Value: &ndotsValue,
+			},
+		},
+		Searches: dnsSearches,
+	}
+
 	// IMPORTANT: if you change anything in here, you _must_ update isDeploymentSpecUpdated to accommodate it
 	spec := &appsv1.DeploymentSpec{
 		Replicas: &replicas,
@@ -199,6 +237,7 @@ func untransformedDeploymentSpec(service *crv1.Service, name string, deploymentL
 			Spec: corev1.PodSpec{
 				Containers: containers,
 				DNSPolicy:  corev1.DNSDefault,
+				DNSConfig:  &dnsConfig,
 				Affinity: &corev1.Affinity{
 					NodeAffinity:    kubeutil.NodePoolNodeAffinity(nodePool),
 					PodAntiAffinity: podAntiAffinity,
@@ -210,7 +249,7 @@ func untransformedDeploymentSpec(service *crv1.Service, name string, deploymentL
 		},
 	}
 
-	return spec
+	return spec, nil
 }
 
 func containerFromComponent(component *block.Component, buildArtifacts *crv1.ComponentBuildArtifacts) corev1.Container {

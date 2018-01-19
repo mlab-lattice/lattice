@@ -6,7 +6,6 @@ import (
 
 func GetControllerInitializers() map[string]controller.Initializer {
 	return map[string]controller.Initializer{
-		"endpoints":     initializeEndpointController,
 		"load-balancer": initializeLoadBalancerController,
 		"node-pool":     initializeNodePoolController,
 	}

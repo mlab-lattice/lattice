@@ -264,6 +264,11 @@ func (r *restServer) mountSystemComponentBuildHandlers() {
 			}
 
 			log, exists, err := r.backend.GetComponentBuildLogs(types.SystemID(systemID), types.ComponentBuildID(buildID), follow)
+			if err != nil {
+				handleInternalError(c, err)
+				return
+			}
+
 			if exists == false {
 				switch err.(type) {
 				case *server.UserError:
