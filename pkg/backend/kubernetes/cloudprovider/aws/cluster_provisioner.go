@@ -188,7 +188,7 @@ func (p *DefaultAWSClusterProvisioner) tearDownSystems(clusterID string) error {
 		teardowns[system.ID] = teardownID
 	}
 
-	err = wait.Poll(1*time.Second, 300*time.Second, func() (bool, error) {
+	err = wait.Poll(10*time.Second, 600*time.Second, func() (bool, error) {
 		for systemID, teardownID := range teardowns {
 			teardown, err := clusterClient.Systems().Teardowns(systemID).Get(teardownID)
 			if err != nil {
