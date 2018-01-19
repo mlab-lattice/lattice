@@ -67,6 +67,14 @@ func parseBackendKubernetesVars(providerName string) (*backendConfigKubernetes, 
 							Default:      "/etc/terraform/modules",
 							EncodingName: "TerraformModulePath",
 						},
+						"terraform-backend-s3-bucket": {
+							Required:     true,
+							EncodingName: "TerraformBackendS3Bucket",
+						},
+						"terraform-backend-s3-key": {
+							Required:     true,
+							EncodingName: "TerraformBackendS3Key",
+						},
 						"account-id": {
 							Required:     true,
 							EncodingName: "AccountID",
