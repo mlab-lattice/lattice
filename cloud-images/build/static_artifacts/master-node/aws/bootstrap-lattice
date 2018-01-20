@@ -17,20 +17,22 @@ KEY_NAME=$(echo ${USER_DATA} | jq '.lattice.key_name' | tr -d '"')
 STATE_S3_BUCKET=$(echo ${USER_DATA} | jq '.lattice.state_s3_bucket' | tr -d '"')
 SYSTEM_DEFINITION_URL=$(echo ${USER_DATA} | jq '.lattice.system_definition_url' | tr -d '"')
 
+CONTROL_PLANE_CONTAINER_CHANNEL=$(echo ${USER_DATA} | jq '.lattice.control_plane_container_channel' | tr -d '"')
+
 n=0
 until [ $n -ge 5 ]
 do
   /usr/bin/docker run \
     --network host \
     -v /etc/opt/kubernetes/admin/kubeconfig:/etc/bootstrap-lattice/kubeconfig \
-    gcr.io/lattice-dev/kevinrosendahl-debug-latticectl:latest \
+    ${CONTROL_PLANE_CONTAINER_CHANNEL}latticectl:latest \
     cluster kubernetes bootstrap \
     --kubeconfig /etc/bootstrap-lattice/kubeconfig \
     --initial-system-definition-url ${SYSTEM_DEFINITION_URL} \
-    --lattice-controller-manager-image gcr.io/lattice-dev/kevinrosendahl-debug-kubernetes-lattice-controller-manager \
+    --lattice-controller-manager-image ${CONTROL_PLANE_CONTAINER_CHANNEL}kubernetes-lattice-controller-manager \
     --lattice-controller-manager-terraform-module-path /etc/terraform/modules \
-    --manager-api-image gcr.io/lattice-dev/kevinrosendahl-debug-kubernetes-manager-api-rest \
-    --component-builder-image gcr.io/lattice-dev/kevinrosendahl-debug-kubernetes-component-builder \
+    --manager-api-image ${CONTROL_PLANE_CONTAINER_CHANNEL}kubernetes-manager-api-rest \
+    --component-builder-image ${CONTROL_PLANE_CONTAINER_CHANNEL}kubernetes-component-builder \
     --component-build-docker-artifact-registry ${AWS_ACCOUNT_ID}.dkr.ecr.${REGION}.amazonaws.com \
     --component-build-docker-artifact-registry-auth-type aws-ec2-role \
     --component-build-docker-artifact-repository component-builds \
@@ -45,8 +47,8 @@ do
     --cloud-provider-var base-node-ami-id=${BASE_NODE_AMI_ID} \
     --cloud-provider-var key-name=${KEY_NAME} \
     --service-mesh envoy \
-    --service-mesh-var prepare-image=gcr.io/lattice-dev/kevinrosendahl-debug-envoy-prepare \
-    --service-mesh-var xds-api-image=gcr.io/lattice-dev/kevinrosendahl-debug-kubernetes-envoy-xds-api-rest-per-node \
+    --service-mesh-var prepare-image=${CONTROL_PLANE_CONTAINER_CHANNEL}envoy-prepare \
+    --service-mesh-var xds-api-image=${CONTROL_PLANE_CONTAINER_CHANNEL}kubernetes-envoy-xds-api-rest-per-node \
     --service-mesh-var redirect-cidr-block=172.16.0.0/16 \
     --networking-provider flannel \
     --networking-provider-var cidr-block=10.200.0.0/16 \

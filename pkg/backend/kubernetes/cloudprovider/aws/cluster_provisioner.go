@@ -22,7 +22,9 @@ const (
 )
 
 type ClusterProvisionerOptions struct {
-	TerraformModulePath string
+	TerraformModulePath      string
+	TerraformBackendS3Bucket string
+	TerraformBackendS3Key    string
 
 	AccountID         string
 	Region            string
@@ -40,7 +42,9 @@ type DefaultAWSClusterProvisioner struct {
 	latticeContainerRegistry   string
 	latticeContainerRepoPrefix string
 
-	terraformModulePath string
+	terraformModulePath      string
+	terraformBackendS3Bucket string
+	terraformBackendS3Key    string
 
 	accountID         string
 	region            string
@@ -59,7 +63,9 @@ func NewClusterProvisioner(latticeImageDockerRepository, latticeContainerRepoPre
 		latticeContainerRegistry:   latticeImageDockerRepository,
 		latticeContainerRepoPrefix: latticeContainerRepoPrefix,
 
-		terraformModulePath: options.TerraformModulePath,
+		terraformModulePath:      options.TerraformModulePath,
+		terraformBackendS3Bucket: options.TerraformBackendS3Bucket,
+		terraformBackendS3Key:    options.TerraformBackendS3Key,
 
 		accountID:         options.AccountID,
 		region:            options.Region,
@@ -103,6 +109,12 @@ func (p *DefaultAWSClusterProvisioner) clusterConfig(clusterModule *awsterraform
 		Provider: awstfprovider.Provider{
 			Region: p.region,
 		},
+		Backend: terraform.S3BackendConfig{
+			Region:  p.region,
+			Bucket:  p.terraformBackendS3Bucket,
+			Key:     p.terraformBackendS3Key,
+			Encrypt: true,
+		},
 	}
 
 	if clusterModule != nil {
@@ -129,8 +141,9 @@ func (p *DefaultAWSClusterProvisioner) clusterModule(clusterID, url string) *aws
 		AvailabilityZones: p.availabilityZones,
 		KeyName:           p.keyName,
 
-		ClusterID:           clusterID,
-		SystemDefinitionURL: url,
+		ClusterID:                    clusterID,
+		ControlPlaneContainerChannel: fmt.Sprintf("%v/%v", p.latticeContainerRegistry, p.latticeContainerRepoPrefix),
+		SystemDefinitionURL:          url,
 
 		MasterNodeInstanceType: p.masterNodeInstanceType,
 		MasterNodeAMIID:        p.masterNodeAMIID,
@@ -149,9 +162,23 @@ func (p *DefaultAWSClusterProvisioner) Address(name string) (string, error) {
 	return tec.Output(terraformOutputclusterManagerAddress)
 }
 
-func (p *DefaultAWSClusterProvisioner) Deprovision(clusterID string) error {
+func (p *DefaultAWSClusterProvisioner) Deprovision(clusterID string, force bool) error {
 	fmt.Println("Deprovisioning cluster...")
 
+	if !force {
+		if err := p.tearDownSystems(clusterID); err != nil {
+			return err
+		}
+	}
+
+	logfile, err := terraform.Destroy(p.workDirectory, nil)
+	if err != nil && logfile != "" {
+		fmt.Printf("error destroying. logfile: %v", logfile)
+	}
+	return err
+}
+
+func (p *DefaultAWSClusterProvisioner) tearDownSystems(clusterID string) error {
 	address, err := p.Address(clusterID)
 	if err != nil {
 		return err
@@ -173,7 +200,7 @@ func (p *DefaultAWSClusterProvisioner) Deprovision(clusterID string) error {
 		teardowns[system.ID] = teardownID
 	}
 
-	err = wait.Poll(1*time.Second, 300*time.Second, func() (bool, error) {
+	err = wait.Poll(10*time.Second, 600*time.Second, func() (bool, error) {
 		for systemID, teardownID := range teardowns {
 			teardown, err := clusterClient.Systems().Teardowns(systemID).Get(teardownID)
 			if err != nil {
@@ -188,9 +215,5 @@ func (p *DefaultAWSClusterProvisioner) Deprovision(clusterID string) error {
 		return true, nil
 	})
 
-	logfile, err := terraform.Destroy(p.workDirectory, nil)
-	if err != nil && logfile != "" {
-		fmt.Printf("error destroying. logfile: %v", logfile)
-	}
 	return err
 }

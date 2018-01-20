@@ -52,6 +52,10 @@ func (kb *KubernetesBackend) GetComponentBuildLogs(id types.SystemID, bid types.
 	}
 
 	pod, err := kb.getPodForComponentBuild(build)
+	if err != nil {
+		return nil, false, err
+	}
+
 	if pod == nil {
 		switch build.Status.State {
 		case crv1.ComponentBuildStatePending, crv1.ComponentBuildStateQueued:

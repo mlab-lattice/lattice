@@ -22,7 +22,7 @@ build-linux: gazelle
 	@bazel build --cpu k8 //...:all
 
 .PHONY: build-all
-build-all: build       \
+build-all: build \
            build-linux
 
 .PHONY: clean
@@ -39,12 +39,16 @@ test: gazelle
 test.no-cache: gazelle
 	@bazel test --cache_test_results=no --test_output=errors //...
 
+.PHONY: test.verbose
+test.verbose: gazelle
+	@bazel test --test_output=all --test_env -v
+
 
 # formatting/linting
 .PHONY: check
-check: gazelle                 \
-       format                  \
-       vet                     \
+check: gazelle \
+       format  \
+       vet     \
        lint-no-export-comments
 
 .PHONY: format
@@ -58,7 +62,7 @@ lint: install.golint
 
 .PHONY: lint-no-export-comments
 lint-no-export-comments: install.golint
-	@make lint | grep -v " or be unexported" | grep -v "comment on exported "
+	@$(MAKE) lint | grep -v " or be unexported" | grep -v "comment on exported "
 
 .PHONY: vet
 vet: install.govet
@@ -83,13 +87,13 @@ git.install-hooks:
 
 
 # docker
-.PHONY: docker.push-stable
-docker.push-stable: gazelle
+.PHONY: docker.push-image-stable
+docker.push-image-stable: gazelle
 	bazel run --cpu k8 //docker:push-stable-$(IMAGE)
 	bazel run --cpu k8 //docker:push-stable-debug-$(IMAGE)
 
-.PHONY: docker.push-user
-docker.push-user: gazelle
+.PHONY: docker.push-image-user
+docker.push-image-user: gazelle
 	bazel run --cpu k8 //docker:push-user-$(IMAGE)
 	bazel run --cpu k8 //docker:push-user-debug-$(IMAGE)
 
@@ -99,30 +103,31 @@ DOCKER_IMAGES := envoy-prepare                                 \
                  kubernetes-component-builder                  \
                  kubernetes-envoy-xds-api-rest-per-node        \
                  kubernetes-lattice-controller-manager         \
+                 kubernetes-local-dns-controller               \
                  kubernetes-manager-api-rest                   \
                  latticectl
 
-STABLE_CONTAINER_PUSHES := $(addprefix docker.push-stable-,$(DOCKER_IMAGES))
-USER_CONTAINER_PUSHES := $(addprefix docker.push-user-,$(DOCKER_IMAGES))
+STABLE_CONTAINER_PUSHES := $(addprefix docker.push-image-stable-,$(DOCKER_IMAGES))
+USER_CONTAINER_PUSHES := $(addprefix docker.push-image-user-,$(DOCKER_IMAGES))
 
 .PHONY: $(STABLE_CONTAINER_PUSHES)
 $(STABLE_CONTAINER_PUSHES):
-	@$(MAKE) docker.push-stable IMAGE=$(patsubst docker.push-stable-%,%,$@)
+	@$(MAKE) docker.push-image-stable IMAGE=$(patsubst docker.push-image-stable-%,%,$@)
 
 .PHONY: $(USER_CONTAINER_PUSHES)
 $(USER_CONTAINER_PUSHES):
-	@$(MAKE) docker.push-user IMAGE=$(patsubst docker.push-user-%,%,$@)
+	@$(MAKE) docker.push-image-user IMAGE=$(patsubst docker.push-image-user-%,%,$@)
 
 .PHONY: docker.push-all-stable
 docker.push-all-stable:
-	@for image in $(DOCKER_IMAGES); do       \
-		$(MAKE) docker.push-stable-$$image ; \
+	@for image in $(DOCKER_IMAGES); do \
+		$(MAKE) docker.push-image-stable-$$image ; \
 	done
 
 .PHONY: docker.push-all-user
 docker.push-all-user:
-	@for image in $(DOCKER_IMAGES); do     \
-		$(MAKE) docker.push-user-$$image ; \
+	@for image in $(DOCKER_IMAGES); do \
+		$(MAKE) docker.push-image-user-$$image ; \
 	done
 
 
@@ -155,7 +160,7 @@ kubernetes.regenerate-custom-resource-clients:
 
 # cloud images
 .PHONY: cloud-images.build
-cloud-images.build: cloud-images.build-base-node-image   \
+cloud-images.build: cloud-images.build-base-node-image \
                     cloud-images.build-master-node-image
 
 .PHONY: cloud-images.build-base-node-image

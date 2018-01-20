@@ -5,9 +5,9 @@ mkdir -p ~/tmp
 cd ~/tmp
 
 echo "Installing kubernetes binaries"
-wget https://storage.googleapis.com/kubernetes-release/release/v1.8.0/bin/linux/amd64/kubectl
-wget https://storage.googleapis.com/kubernetes-release/release/v1.8.0/bin/linux/amd64/kube-proxy
-wget https://storage.googleapis.com/kubernetes-release/release/v1.8.0/bin/linux/amd64/kubelet
+wget https://storage.googleapis.com/kubernetes-release/release/v1.9.0/bin/linux/amd64/kubectl
+wget https://storage.googleapis.com/kubernetes-release/release/v1.9.0/bin/linux/amd64/kube-proxy
+wget https://storage.googleapis.com/kubernetes-release/release/v1.9.0/bin/linux/amd64/kubelet
 
 chmod +x kubectl kube-proxy kubelet
 
@@ -18,9 +18,9 @@ sudo mkdir -p /opt/bin
 sudo ln /opt/kubernetes/bin/kubectl /opt/bin/kubectl
 
 echo "Installing OCI binaries"
-sudo mkdir -p /opt/cni
-wget https://storage.googleapis.com/kubernetes-release/network-plugins/cni-amd64-0799f5732f2a11b329d9e3d51b9c8f2e3759f2ff.tar.gz
-sudo tar -xvf cni-amd64-0799f5732f2a11b329d9e3d51b9c8f2e3759f2ff.tar.gz -C /opt/cni
+sudo mkdir -p /opt/cni/bin
+wget https://github.com/containernetworking/plugins/releases/download/v0.6.0/cni-plugins-amd64-v0.6.0.tgz
+sudo tar -xvf cni-plugins-amd64-v0.6.0.tgz -C /opt/cni/bin
 
 # Clean up after ourselves
 cd ~

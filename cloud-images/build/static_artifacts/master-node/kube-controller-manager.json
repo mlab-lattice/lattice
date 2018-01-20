@@ -16,6 +16,7 @@
           "--allocate-node-cidrs=true",
           "--cluster-cidr=10.200.0.0/16",
           "--cluster-name=lattice",
+          "--feature-gates=CustomPodDNS=true",
           "--kubeconfig=/etc/kube-controller-manager/kubeconfig",
           "--leader-elect=true",
           "--service-account-private-key-file=/etc/kube-controller-manager/kubernetes-key.pem",

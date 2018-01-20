@@ -18,6 +18,7 @@
           "--anonymous-auth=false",
           "--cloud-provider=aws",
           "--etcd-servers=http://localhost:2379",
+          "--feature-gates=CustomPodDNS=true",
           "--tls-cert-file=/etc/kube-apiserver/kubernetes.pem",
           "--tls-private-key-file=/etc/kube-apiserver/kubernetes-key.pem",
           "--service-cluster-ip-range=10.32.0.0/24",

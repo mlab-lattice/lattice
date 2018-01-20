@@ -38,10 +38,11 @@ func parseBackendKubernetesVars(providerName string) (*backendConfigKubernetes, 
 		Target: &config,
 		Expected: map[string]cli.EmbeddedFlagValue{
 			"lattice-container-registry": {
-				Required:     true,
+				Default:      "gcr.io/lattice-dev",
 				EncodingName: "LatticeContainerRegistry",
 			},
 			"lattice-container-repo-prefix": {
+				Default:      "stable-debug-",
 				EncodingName: "LatticeContainerRepoPrefix",
 			},
 		},
@@ -65,6 +66,14 @@ func parseBackendKubernetesVars(providerName string) (*backendConfigKubernetes, 
 						"terraform-module-path": {
 							Default:      "/etc/terraform/modules",
 							EncodingName: "TerraformModulePath",
+						},
+						"terraform-backend-s3-bucket": {
+							Required:     true,
+							EncodingName: "TerraformBackendS3Bucket",
+						},
+						"terraform-backend-s3-key": {
+							Required:     true,
+							EncodingName: "TerraformBackendS3Key",
 						},
 						"account-id": {
 							Required:     true,

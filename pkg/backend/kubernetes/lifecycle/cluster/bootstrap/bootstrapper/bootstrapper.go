@@ -32,6 +32,7 @@ type ClusterResources struct {
 	ConfigMaps                []*corev1.ConfigMap
 
 	DaemonSets []*appsv1.DaemonSet
+	Services   []*corev1.Service
 }
 
 func (r *ClusterResources) String() (string, error) {
