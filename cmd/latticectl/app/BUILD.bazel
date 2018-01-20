@@ -7,6 +7,7 @@ go_library(
     visibility = ["//visibility:public"],
     deps = [
         "//cmd/latticectl/app/cluster:go_default_library",
+        "//cmd/latticectl/app/definition:go_default_library",
         "//cmd/latticectl/app/system:go_default_library",
         "@com_github_spf13_cobra//:go_default_library",
     ],

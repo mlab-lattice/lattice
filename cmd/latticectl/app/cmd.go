@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/mlab-lattice/system/cmd/latticectl/app/cluster"
+	"github.com/mlab-lattice/system/cmd/latticectl/app/definition"
 	"github.com/mlab-lattice/system/cmd/latticectl/app/system"
 
 	"github.com/spf13/cobra"
@@ -27,5 +28,6 @@ func Execute() {
 
 func init() {
 	Cmd.AddCommand(cluster.Cmd)
+	Cmd.AddCommand(definition.Cmd)
 	Cmd.AddCommand(system.Cmd)
 }
