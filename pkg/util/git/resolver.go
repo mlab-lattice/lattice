@@ -154,11 +154,19 @@ func (r *Resolver) GetCommit(ctx *Context) (*gitplumbingobject.Commit, error) {
 		return repository.CommitObject(ref.Hash())
 	}
 
-	// Next check if it's a tag
+	// Next check if it's a tag.
+	// TODO resolve this mystry. It works but the ref hash could be a commit or could be the hash of the tag
+	// And it differs from remote/local tests
 	refName = gitplumbing.ReferenceName(fmt.Sprintf("refs/tags/%s", uriInfo.Ref))
 	ref, _ = repository.Reference(refName, false)
 	if ref != nil {
+		tag, _ := repository.TagObject(ref.Hash())
+		if tag != nil {
+			return tag.Commit()
+		}
+
 		return repository.CommitObject(ref.Hash())
+
 	}
 
 	// Finally, if it's not a branch or a tag, just take it as a hash
