@@ -73,39 +73,45 @@ func NewClusterProvisioner(latticeContainerRegistry, latticeContainerRepoPrefix,
 	return provisioner, nil
 }
 
-func (p *DefaultLocalClusterProvisioner) Provision(clusterID, url string) error {
+func (p *DefaultLocalClusterProvisioner) Provision(clusterID, url string) (string, error) {
 	prefixedName := clusterNamePrefixMinikube + clusterID
 	result, logFilename, err := p.mec.Start(prefixedName)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	fmt.Printf("Running minikube start (pid: %v, log file: %v)\n", result.Pid, filepath.Join(*p.mec.LogPath, logFilename))
 
 	err = result.Wait()
 	if err != nil {
-		return err
+		return "", err
 	}
 
-	address, err := p.Address(clusterID)
+	address, err := p.address(clusterID)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	err = p.bootstrap(address, url, clusterID)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	fmt.Println("Waiting for Cluster Manager to be ready...")
 	clusterClient := rest.NewClient(fmt.Sprintf("http://%v", address))
-	return wait.Poll(1*time.Second, 300*time.Second, func() (bool, error) {
+	err = wait.Poll(1*time.Second, 300*time.Second, func() (bool, error) {
 		ok, _ := clusterClient.Status()
 		return ok, nil
 	})
+
+	if err != nil {
+		return "", err
+	}
+
+	return address, nil
 }
 
-func (p *DefaultLocalClusterProvisioner) Address(clusterID string) (string, error) {
+func (p *DefaultLocalClusterProvisioner) address(clusterID string) (string, error) {
 	return p.mec.IP(clusterNamePrefixMinikube + clusterID)
 }
 
