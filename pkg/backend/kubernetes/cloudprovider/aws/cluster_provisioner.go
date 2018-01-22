@@ -71,6 +71,8 @@ func NewClusterProvisioner(latticeImageDockerRepository, latticeContainerRepoPre
 		terraformBackendS3Bucket: options.TerraformBackendS3Bucket,
 		terraformBackendS3Key:    options.TerraformBackendS3Key,
 
+		clusterManagerURL: options.ClusterManagerURL,
+
 		accountID:         options.AccountID,
 		region:            options.Region,
 		availabilityZones: options.AvailabilityZones,
