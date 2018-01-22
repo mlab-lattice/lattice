@@ -98,7 +98,7 @@ func (p *DefaultLocalClusterProvisioner) Provision(clusterID, url string) (strin
 	}
 
 	fmt.Println("Waiting for Cluster Manager to be ready...")
-	clusterClient := rest.NewClient(fmt.Sprintf("http://%v", address))
+	clusterClient := rest.NewClient(address)
 	err = wait.Poll(1*time.Second, 300*time.Second, func() (bool, error) {
 		ok, _ := clusterClient.Status()
 		return ok, nil
@@ -112,7 +112,12 @@ func (p *DefaultLocalClusterProvisioner) Provision(clusterID, url string) (strin
 }
 
 func (p *DefaultLocalClusterProvisioner) address(clusterID string) (string, error) {
-	return p.mec.IP(clusterNamePrefixMinikube + clusterID)
+	address, err := p.mec.IP(clusterNamePrefixMinikube + clusterID)
+	if err != nil {
+		return "", err
+	}
+
+	return fmt.Sprintf("http://%v", address), nil
 }
 
 func (p *DefaultLocalClusterProvisioner) bootstrap(address, url, name string) error {

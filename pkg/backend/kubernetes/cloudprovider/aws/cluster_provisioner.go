@@ -103,7 +103,7 @@ func (p *DefaultAWSClusterProvisioner) Provision(clusterID, url string) (string,
 	}
 
 	fmt.Println("Waiting for Cluster Manager to be ready...")
-	clusterClient := rest.NewClient(fmt.Sprintf("http://%v", address))
+	clusterClient := rest.NewClient(address)
 	err = wait.Poll(1*time.Second, 300*time.Second, func() (bool, error) {
 		ok, _ := clusterClient.Status()
 		return ok, nil
@@ -171,7 +171,12 @@ func (p *DefaultAWSClusterProvisioner) address(name string) (string, error) {
 		return "", err
 	}
 
-	return tec.Output(terraformOutputclusterManagerAddress)
+	address, err := tec.Output(terraformOutputclusterManagerAddress)
+	if err != nil {
+		return "", err
+	}
+
+	return fmt.Sprintf("http://%v", address), nil
 }
 
 func (p *DefaultAWSClusterProvisioner) Deprovision(clusterID string, force bool) error {
