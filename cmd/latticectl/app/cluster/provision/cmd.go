@@ -36,17 +36,12 @@ var Cmd = &cobra.Command{
 			panic(fmt.Sprintf("unsupported backend %v", backend))
 		}
 
-		err := provisioner.Provision(name, url)
+		clusterAddress, err := provisioner.Provision(name, url)
 		if err != nil {
 			panic(err)
 		}
 
-		addr, err := provisioner.Address(name)
-		if err != nil {
-			panic(err)
-		}
-
-		fmt.Printf("Cluster Manager address:\n%v\n", addr)
+		fmt.Printf("Cluster Manager address:\n%v\n", clusterAddress)
 	},
 }
 
