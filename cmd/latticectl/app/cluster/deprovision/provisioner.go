@@ -5,6 +5,7 @@ import (
 
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/cloudprovider"
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/cloudprovider/aws"
+	"github.com/mlab-lattice/system/pkg/backend/kubernetes/cloudprovider/local"
 	"github.com/mlab-lattice/system/pkg/lifecycle/cluster/provisioner"
 	"github.com/mlab-lattice/system/pkg/util/cli"
 )
@@ -28,7 +29,7 @@ func parseBackendKubernetesVars(providerName string) (*cloudprovider.ClusterProv
 
 	switch providerName {
 	case cloudprovider.Local:
-		// nothing special needed
+		options.Local = &local.ClusterProvisionerOptions{}
 
 	case cloudprovider.AWS:
 		vars := cli.EmbeddedFlag{
