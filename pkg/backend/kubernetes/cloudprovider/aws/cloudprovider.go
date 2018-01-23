@@ -1,7 +1,7 @@
 package aws
 
 import (
-	crv1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
+	latticev1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
@@ -83,13 +83,16 @@ func (cp *DefaultAWSCloudProvider) ComponentBuildWorkDirectoryVolumeSource(jobNa
 	}
 }
 
-func (cp *DefaultAWSCloudProvider) TransformServiceDeploymentSpec(service *crv1.Service, spec *appsv1.DeploymentSpec) *appsv1.DeploymentSpec {
+func (cp *DefaultAWSCloudProvider) TransformServiceDeploymentSpec(
+	service *latticev1.Service,
+	spec *appsv1.DeploymentSpec,
+) *appsv1.DeploymentSpec {
 	// nothing to do
 	return spec
 }
 
 func (cp *DefaultAWSCloudProvider) IsDeploymentSpecUpdated(
-	service *crv1.Service,
+	service *latticev1.Service,
 	current, desired, untransformed *appsv1.DeploymentSpec,
 ) (bool, string, *appsv1.DeploymentSpec) {
 	// nothing to do

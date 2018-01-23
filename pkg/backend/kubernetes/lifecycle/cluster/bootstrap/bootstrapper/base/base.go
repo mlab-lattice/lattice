@@ -3,7 +3,7 @@ package base
 import (
 	"fmt"
 
-	crv1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
+	latticev1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/cluster/bootstrap/bootstrapper"
 	"github.com/mlab-lattice/system/pkg/terraform"
 	"github.com/mlab-lattice/system/pkg/types"
@@ -11,7 +11,7 @@ import (
 
 type Options struct {
 	DryRun           bool
-	Config           crv1.ConfigSpec
+	Config           latticev1.ConfigSpec
 	MasterComponents MasterComponentOptions
 	TerraformOptions TerraformOptions
 }

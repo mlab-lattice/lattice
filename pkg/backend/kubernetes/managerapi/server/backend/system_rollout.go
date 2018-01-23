@@ -2,7 +2,7 @@ package backend
 
 import (
 	kubeconstants "github.com/mlab-lattice/system/pkg/backend/kubernetes/constants"
-	crv1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
+	latticev1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	kubeutil "github.com/mlab-lattice/system/pkg/backend/kubernetes/util/kubernetes"
 	"github.com/mlab-lattice/system/pkg/definition/tree"
 	"github.com/mlab-lattice/system/pkg/types"
@@ -13,27 +13,34 @@ import (
 	"github.com/satori/go.uuid"
 )
 
-func (kb *KubernetesBackend) RollOutSystem(id types.SystemID, definitionRoot tree.Node, v types.SystemVersion) (types.SystemRolloutID, error) {
-	bid, err := kb.BuildSystem(id, definitionRoot, v)
+func (kb *KubernetesBackend) RollOutSystem(
+	systemID types.SystemID,
+	definitionRoot tree.Node,
+	version types.SystemVersion,
+) (types.SystemRolloutID, error) {
+	bid, err := kb.BuildSystem(systemID, definitionRoot, version)
 	if err != nil {
 		return "", err
 	}
 
-	return kb.RollOutSystemBuild(id, bid)
+	return kb.RollOutSystemBuild(systemID, bid)
 }
 
-func (kb *KubernetesBackend) RollOutSystemBuild(id types.SystemID, bid types.SystemBuildID) (types.SystemRolloutID, error) {
-	sysBuild, err := kb.getSystemBuildFromID(id, bid)
+func (kb *KubernetesBackend) RollOutSystemBuild(
+	systemID types.SystemID,
+	buildID types.SystemBuildID,
+) (types.SystemRolloutID, error) {
+	sysBuild, err := kb.getSystemBuildFromID(systemID, buildID)
 	if err != nil {
 		return "", err
 	}
 
-	sysRollout, err := getNewSystemRollout(id, sysBuild)
+	sysRollout, err := getNewSystemRollout(systemID, sysBuild)
 	if err != nil {
 		return "", err
 	}
 
-	namespace := kubeutil.SystemNamespace(kb.ClusterID, id)
+	namespace := kubeutil.SystemNamespace(kb.ClusterID, systemID)
 	result, err := kb.LatticeClient.LatticeV1().SystemRollouts(namespace).Create(sysRollout)
 	if err != nil {
 		return "", err
@@ -41,37 +48,43 @@ func (kb *KubernetesBackend) RollOutSystemBuild(id types.SystemID, bid types.Sys
 	return types.SystemRolloutID(result.Name), err
 }
 
-func (kb *KubernetesBackend) getSystemBuildFromID(id types.SystemID, bid types.SystemBuildID) (*crv1.SystemBuild, error) {
-	namespace := kubeutil.SystemNamespace(kb.ClusterID, id)
-	return kb.LatticeClient.LatticeV1().SystemBuilds(namespace).Get(string(bid), metav1.GetOptions{})
+func (kb *KubernetesBackend) getSystemBuildFromID(
+	systemID types.SystemID,
+	buildID types.SystemBuildID,
+) (*latticev1.SystemBuild, error) {
+	namespace := kubeutil.SystemNamespace(kb.ClusterID, systemID)
+	return kb.LatticeClient.LatticeV1().SystemBuilds(namespace).Get(string(buildID), metav1.GetOptions{})
 }
 
-func getNewSystemRollout(latticeNamespace types.SystemID, sysBuild *crv1.SystemBuild) (*crv1.SystemRollout, error) {
+func getNewSystemRollout(latticeNamespace types.SystemID, build *latticev1.SystemBuild) (*latticev1.SystemRollout, error) {
 	labels := map[string]string{
 		kubeconstants.LatticeNamespaceLabel:        string(latticeNamespace),
-		kubeconstants.LabelKeySystemRolloutVersion: sysBuild.Labels[kubeconstants.LabelKeySystemBuildVersion],
-		kubeconstants.LabelKeySystemRolloutBuildID: sysBuild.Name,
+		kubeconstants.LabelKeySystemRolloutVersion: build.Labels[kubeconstants.LabelKeySystemBuildVersion],
+		kubeconstants.LabelKeySystemRolloutBuildID: build.Name,
 	}
 
-	sysRollout := &crv1.SystemRollout{
+	sysRollout := &latticev1.SystemRollout{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:   uuid.NewV4().String(),
 			Labels: labels,
 		},
-		Spec: crv1.SystemRolloutSpec{
-			BuildName: sysBuild.Name,
+		Spec: latticev1.SystemRolloutSpec{
+			BuildName: build.Name,
 		},
-		Status: crv1.SystemRolloutStatus{
-			State: crv1.SystemRolloutStatePending,
+		Status: latticev1.SystemRolloutStatus{
+			State: latticev1.SystemRolloutStatePending,
 		},
 	}
 
 	return sysRollout, nil
 }
 
-func (kb *KubernetesBackend) GetSystemRollout(id types.SystemID, rid types.SystemRolloutID) (*types.SystemRollout, bool, error) {
-	namespace := kubeutil.SystemNamespace(kb.ClusterID, id)
-	result, err := kb.LatticeClient.LatticeV1().SystemRollouts(namespace).Get(string(rid), metav1.GetOptions{})
+func (kb *KubernetesBackend) GetSystemRollout(
+	systemID types.SystemID,
+	rolloutID types.SystemRolloutID,
+) (*types.SystemRollout, bool, error) {
+	namespace := kubeutil.SystemNamespace(kb.ClusterID, systemID)
+	result, err := kb.LatticeClient.LatticeV1().SystemRollouts(namespace).Get(string(rolloutID), metav1.GetOptions{})
 	if err != nil {
 		if errors.IsNotFound(err) {
 			return nil, false, nil
@@ -80,7 +93,7 @@ func (kb *KubernetesBackend) GetSystemRollout(id types.SystemID, rid types.Syste
 	}
 
 	sb := &types.SystemRollout{
-		ID:      rid,
+		ID:      rolloutID,
 		BuildID: types.SystemBuildID(result.Spec.BuildName),
 		State:   getSystemRolloutState(result.Status.State),
 	}
@@ -88,8 +101,8 @@ func (kb *KubernetesBackend) GetSystemRollout(id types.SystemID, rid types.Syste
 	return sb, true, nil
 }
 
-func (kb *KubernetesBackend) ListSystemRollouts(id types.SystemID) ([]types.SystemRollout, error) {
-	namespace := kubeutil.SystemNamespace(kb.ClusterID, id)
+func (kb *KubernetesBackend) ListSystemRollouts(systemID types.SystemID) ([]types.SystemRollout, error) {
+	namespace := kubeutil.SystemNamespace(kb.ClusterID, systemID)
 	result, err := kb.LatticeClient.LatticeV1().SystemRollouts(namespace).List(metav1.ListOptions{})
 	if err != nil {
 		return nil, err
@@ -107,17 +120,17 @@ func (kb *KubernetesBackend) ListSystemRollouts(id types.SystemID) ([]types.Syst
 	return rollouts, nil
 }
 
-func getSystemRolloutState(state crv1.SystemRolloutState) types.SystemRolloutState {
+func getSystemRolloutState(state latticev1.SystemRolloutState) types.SystemRolloutState {
 	switch state {
-	case crv1.SystemRolloutStatePending:
+	case latticev1.SystemRolloutStatePending:
 		return types.SystemRolloutStatePending
-	case crv1.SystemRolloutStateAccepted:
+	case latticev1.SystemRolloutStateAccepted:
 		return types.SystemRolloutStateAccepted
-	case crv1.SystemRolloutStateInProgress:
+	case latticev1.SystemRolloutStateInProgress:
 		return types.SystemRolloutStateInProgress
-	case crv1.SystemRolloutStateSucceeded:
+	case latticev1.SystemRolloutStateSucceeded:
 		return types.SystemRolloutStateSucceeded
-	case crv1.SystemRolloutStateFailed:
+	case latticev1.SystemRolloutStateFailed:
 		return types.SystemRolloutStateFailed
 	default:
 		panic("unreachable")

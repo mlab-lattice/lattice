@@ -14,7 +14,10 @@ import (
 	"k8s.io/client-go/rest"
 )
 
-func CreateCustomResourceDefinitions(definitions []*apiextensionsv1beta1.CustomResourceDefinition, kubeConfig *rest.Config) ([]*apiextensionsv1beta1.CustomResourceDefinition, error) {
+func CreateCustomResourceDefinitions(
+	definitions []*apiextensionsv1beta1.CustomResourceDefinition,
+	kubeConfig *rest.Config,
+) ([]*apiextensionsv1beta1.CustomResourceDefinition, error) {
 	client, err := apiextensionsclient.NewForConfig(kubeConfig)
 	if err != nil {
 		return nil, err

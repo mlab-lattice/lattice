@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"reflect"
 
-	crv1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
+	latticev1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	kubeutil "github.com/mlab-lattice/system/pkg/backend/kubernetes/util/kubernetes"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -24,14 +24,14 @@ const (
 )
 
 func (c *Controller) syncServiceStatus(
-	service *crv1.Service,
+	service *latticev1.Service,
 	deployment *appsv1.Deployment,
 	kubeService *corev1.Service,
-	nodePool *crv1.NodePool,
-	serviceAddress *crv1.ServiceAddress,
-	loadBalancer *crv1.LoadBalancer,
+	nodePool *latticev1.NodePool,
+	serviceAddress *latticev1.ServiceAddress,
+	loadBalancer *latticev1.LoadBalancer,
 	loadBalancerNeeded bool,
-) (*crv1.Service, error) {
+) (*latticev1.Service, error) {
 	failed := false
 	failureReason := ""
 	failureMessage := ""
@@ -55,24 +55,24 @@ func (c *Controller) syncServiceStatus(
 
 	// First get a basic scaling up/down vs stable state
 	// With a little help from: https://github.com/kubernetes/kubernetes/blob/v1.9.0/pkg/kubectl/rollout_status.go#L66-L97
-	var state crv1.ServiceState
+	var state latticev1.ServiceState
 	if updatedInstances < totalInstances {
 		// The updated pods have not yet all been created
-		state = crv1.ServiceStateScalingUp
+		state = latticev1.ServiceStateScalingUp
 	} else if totalInstances > updatedInstances {
 		// There are extra pods still
-		state = crv1.ServiceStateScalingDown
+		state = latticev1.ServiceStateScalingDown
 	} else if availableInstances < updatedInstances {
 		// The update pods have been created but aren't yet available
-		state = crv1.ServiceStateScalingUp
+		state = latticev1.ServiceStateScalingUp
 	} else {
-		state = crv1.ServiceStateStable
+		state = latticev1.ServiceStateStable
 	}
 
 	// If the Deployment controller hasn't yet seen the update, it's updating
 	if deployment.Generation != deployment.Status.ObservedGeneration {
-		state = crv1.ServiceStateUpdating
-	} else if state == crv1.ServiceStateStable && desiredInstances != totalInstances {
+		state = latticev1.ServiceStateUpdating
+	} else if state == latticev1.ServiceStateStable && desiredInstances != totalInstances {
 		// For some reason the Spec is up to date, the deployment is stable, but
 		// the deployment does not have the correct number of instances.
 		err := fmt.Errorf(
@@ -90,28 +90,28 @@ func (c *Controller) syncServiceStatus(
 	// If we have any stale instances though, we are updating (which can include scaling)
 	// An updating status takes priority over a scaling/stable state
 	if staleInstances != 0 {
-		state = crv1.ServiceStateUpdating
+		state = latticev1.ServiceStateUpdating
 	}
 
 	// The cloud controller is responsible for creating the Kubernetes Service.
 	if kubeService == nil {
-		state = crv1.ServiceStateUpdating
+		state = latticev1.ServiceStateUpdating
 	}
 
-	publicPorts := crv1.ServiceStatusPublicPorts{}
+	publicPorts := latticev1.ServiceStatusPublicPorts{}
 	if loadBalancerNeeded {
 		switch loadBalancer.Status.State {
-		case crv1.LoadBalancerStatePending, crv1.LoadBalancerStateProvisioning:
-			state = crv1.ServiceStateUpdating
+		case latticev1.LoadBalancerStatePending, latticev1.LoadBalancerStateProvisioning:
+			state = latticev1.ServiceStateUpdating
 
-		case crv1.LoadBalancerStateCreated:
+		case latticev1.LoadBalancerStateCreated:
 			for port, portInfo := range loadBalancer.Status.Ports {
-				publicPorts[port] = crv1.ServiceStatusPublicPort{
+				publicPorts[port] = latticev1.ServiceStatusPublicPort{
 					Address: portInfo.Address,
 				}
 			}
 
-		case crv1.LoadBalancerStateFailed:
+		case latticev1.LoadBalancerStateFailed:
 			// Only create new failure info if we didn't fail above
 			if !failed {
 				now := metav1.Now()
@@ -134,26 +134,26 @@ func (c *Controller) syncServiceStatus(
 
 	// But if we have a failure, our updating or scaling has failed
 	// A failed status takes priority over an updating status
-	var failureInfo *crv1.ServiceFailureInfo
+	var failureInfo *latticev1.ServiceFailureInfo
 	if failed {
-		state = crv1.ServiceStateFailed
+		state = latticev1.ServiceStateFailed
 		switch failureReason {
 		case reasonTimedOut:
-			failureInfo = &crv1.ServiceFailureInfo{
+			failureInfo = &latticev1.ServiceFailureInfo{
 				Internal: false,
 				Message:  "timed out",
 				Time:     *failureTime,
 			}
 
 		case reasonLoadBalancerFailed:
-			failureInfo = &crv1.ServiceFailureInfo{
+			failureInfo = &latticev1.ServiceFailureInfo{
 				Internal: false,
 				Message:  "load balancer failed",
 				Time:     *failureTime,
 			}
 
 		default:
-			failureInfo = &crv1.ServiceFailureInfo{
+			failureInfo = &latticev1.ServiceFailureInfo{
 				Internal: true,
 				Message:  fmt.Sprintf("%v: %v", failureReason, failureMessage),
 				Time:     *failureTime,
@@ -165,13 +165,13 @@ func (c *Controller) syncServiceStatus(
 }
 
 func (c *Controller) updateServiceStatus(
-	service *crv1.Service,
-	state crv1.ServiceState,
+	service *latticev1.Service,
+	state latticev1.ServiceState,
 	updatedInstances, staleInstances int32,
-	publicPorts crv1.ServiceStatusPublicPorts,
-	failureInfo *crv1.ServiceFailureInfo,
-) (*crv1.Service, error) {
-	status := crv1.ServiceStatus{
+	publicPorts latticev1.ServiceStatusPublicPorts,
+	failureInfo *latticev1.ServiceFailureInfo,
+) (*latticev1.Service, error) {
+	status := latticev1.ServiceStatus{
 		State:              state,
 		ObservedGeneration: service.Generation,
 		UpdatedInstances:   updatedInstances,
@@ -200,7 +200,7 @@ type lookupDelete struct {
 	delete func() error
 }
 
-func (c *Controller) syncDeletedService(service *crv1.Service) error {
+func (c *Controller) syncDeletedService(service *latticev1.Service) error {
 	lookupDeletes := []lookupDelete{
 		// node pool
 		{
@@ -291,7 +291,7 @@ func resourceExists(lookupFunc func() (interface{}, error)) (bool, error) {
 	return false, nil
 }
 
-func (c *Controller) addFinalizer(service *crv1.Service) (*crv1.Service, error) {
+func (c *Controller) addFinalizer(service *latticev1.Service) (*latticev1.Service, error) {
 	// Check to see if the finalizer already exists. If so nothing needs to be done.
 	for _, finalizer := range service.Finalizers {
 		if finalizer == finalizerName {
@@ -309,7 +309,7 @@ func (c *Controller) addFinalizer(service *crv1.Service) (*crv1.Service, error) 
 	return c.latticeClient.LatticeV1().Services(service.Namespace).Update(service)
 }
 
-func (c *Controller) removeFinalizer(service *crv1.Service) (*crv1.Service, error) {
+func (c *Controller) removeFinalizer(service *latticev1.Service) (*latticev1.Service, error) {
 	// Build up a list of all the finalizers except the aws service controller finalizer.
 	var finalizers []string
 	found := false

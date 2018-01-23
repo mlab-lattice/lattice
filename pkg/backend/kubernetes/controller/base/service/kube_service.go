@@ -1,7 +1,7 @@
 package service
 
 import (
-	crv1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
+	latticev1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	kubeutil "github.com/mlab-lattice/system/pkg/backend/kubernetes/util/kubernetes"
 
 	corev1 "k8s.io/api/core/v1"
@@ -10,7 +10,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func (c *Controller) syncServiceKubeService(service *crv1.Service) (*corev1.Service, error) {
+func (c *Controller) syncServiceKubeService(service *latticev1.Service) (*corev1.Service, error) {
 	name := kubeutil.GetKubeServiceNameForService(service.Name)
 	kubeService, err := c.kubeServiceLister.Services(service.Namespace).Get(name)
 	if err != nil {
@@ -24,7 +24,7 @@ func (c *Controller) syncServiceKubeService(service *crv1.Service) (*corev1.Serv
 	return kubeService, nil
 }
 
-func (c *Controller) createNewKubeService(service *crv1.Service) (*corev1.Service, error) {
+func (c *Controller) createNewKubeService(service *latticev1.Service) (*corev1.Service, error) {
 	name := kubeutil.GetKubeServiceNameForService(service.Name)
 
 	// Create a headless service (https://kubernetes.io/docs/concepts/services-networking/service/#headless-services)
@@ -42,7 +42,7 @@ func (c *Controller) createNewKubeService(service *crv1.Service) (*corev1.Servic
 	return c.kubeClient.CoreV1().Services(service.Namespace).Create(kubeService)
 }
 
-func kubeServiceSpec(service *crv1.Service) corev1.ServiceSpec {
+func kubeServiceSpec(service *latticev1.Service) corev1.ServiceSpec {
 	labels := deploymentLabels(service)
 	return corev1.ServiceSpec{
 		Selector:  labels,

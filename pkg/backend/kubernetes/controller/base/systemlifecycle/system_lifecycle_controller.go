@@ -5,7 +5,7 @@ import (
 	"sync"
 	"time"
 
-	crv1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
+	latticev1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	latticeclientset "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/clientset/versioned"
 	latticeinformers "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/informers/externalversions/lattice/v1"
 	latticelisters "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/listers/lattice/v1"
@@ -22,8 +22,8 @@ import (
 )
 
 type lifecycleAction struct {
-	rollout  *crv1.SystemRollout
-	teardown *crv1.SystemTeardown
+	rollout  *latticev1.SystemRollout
+	teardown *latticev1.SystemTeardown
 }
 
 type Controller struct {
@@ -176,14 +176,14 @@ func (c *Controller) Run(workers int, stopCh <-chan struct{}) {
 }
 
 func (c *Controller) handleSystemRolloutAdd(obj interface{}) {
-	rollout := obj.(*crv1.SystemRollout)
+	rollout := obj.(*latticev1.SystemRollout)
 	glog.V(4).Infof("Adding SystemRollout %v/%v", rollout.Namespace, rollout.Name)
 	c.enqueueSystemRollout(rollout)
 }
 
 func (c *Controller) handleSystemRolloutUpdate(old, cur interface{}) {
-	oldRollout := old.(*crv1.SystemRollout)
-	curRollout := cur.(*crv1.SystemRollout)
+	oldRollout := old.(*latticev1.SystemRollout)
+	curRollout := cur.(*latticev1.SystemRollout)
 	if oldRollout.ResourceVersion == curRollout.ResourceVersion {
 		// Periodic resync will send update events for all known SystemRollout.
 		// Two different versions of the same job will always have different RVs.
@@ -196,14 +196,14 @@ func (c *Controller) handleSystemRolloutUpdate(old, cur interface{}) {
 }
 
 func (c *Controller) handleSystemTeardownAdd(obj interface{}) {
-	syst := obj.(*crv1.SystemTeardown)
+	syst := obj.(*latticev1.SystemTeardown)
 	glog.V(4).Infof("Adding SystemTeardown %s", syst.Name)
 	c.enqueueSystemTeardown(syst)
 }
 
 func (c *Controller) handleSystemTeardownUpdate(old, cur interface{}) {
-	oldTeardown := old.(*crv1.SystemTeardown)
-	curTeardown := cur.(*crv1.SystemTeardown)
+	oldTeardown := old.(*latticev1.SystemTeardown)
+	curTeardown := cur.(*latticev1.SystemTeardown)
 	if oldTeardown.ResourceVersion == curTeardown.ResourceVersion {
 		// Periodic resync will send update events for all known SystemRollout.
 		// Two different versions of the same job will always have different RVs.
@@ -218,7 +218,7 @@ func (c *Controller) handleSystemTeardownUpdate(old, cur interface{}) {
 func (c *Controller) handleSystemAdd(obj interface{}) {
 	<-c.owningLifecycleActionsSynced
 
-	system := obj.(*crv1.System)
+	system := obj.(*latticev1.System)
 	glog.V(4).Infof("System %s added", system.Name)
 
 	action, exists := c.getOwningAction(system.Namespace)
@@ -250,8 +250,8 @@ func (c *Controller) handleSystemUpdate(old, cur interface{}) {
 	<-c.owningLifecycleActionsSynced
 
 	glog.V(4).Info("Got System update")
-	oldSystem := old.(*crv1.System)
-	curSystem := cur.(*crv1.System)
+	oldSystem := old.(*latticev1.System)
+	curSystem := cur.(*latticev1.System)
 	if oldSystem.ResourceVersion == curSystem.ResourceVersion {
 		// Periodic resync will send update events for all known ServiceBuilds.
 		// Two different versions of the same job will always have different RVs.
@@ -287,7 +287,7 @@ func (c *Controller) handleSystemUpdate(old, cur interface{}) {
 func (c *Controller) handleSystemBuildAdd(obj interface{}) {
 	<-c.owningLifecycleActionsSynced
 
-	build := obj.(*crv1.SystemBuild)
+	build := obj.(*latticev1.SystemBuild)
 	glog.V(4).Infof("SystemBuild %s added", build.Name)
 
 	action, exists := c.getOwningAction(build.Namespace)
@@ -313,8 +313,8 @@ func (c *Controller) handleSystemBuildUpdate(old, cur interface{}) {
 	<-c.owningLifecycleActionsSynced
 
 	glog.V(4).Infof("Got SystemBuild update")
-	oldBuild := old.(*crv1.SystemBuild)
-	curBuild := cur.(*crv1.SystemBuild)
+	oldBuild := old.(*latticev1.SystemBuild)
+	curBuild := cur.(*latticev1.SystemBuild)
 	if oldBuild.ResourceVersion == curBuild.ResourceVersion {
 		// Periodic resync will send update events for all known ServiceBuilds.
 		// Two different versions of the same job will always have different RVs.
@@ -341,7 +341,7 @@ func (c *Controller) handleSystemBuildUpdate(old, cur interface{}) {
 	// only need to update rollouts on builds finishing
 }
 
-func (c *Controller) enqueueSystemRollout(sysRollout *crv1.SystemRollout) {
+func (c *Controller) enqueueSystemRollout(sysRollout *latticev1.SystemRollout) {
 	key, err := cache.DeletionHandlingMetaNamespaceKeyFunc(sysRollout)
 	if err != nil {
 		runtime.HandleError(fmt.Errorf("couldn't get key for object %#v: %v", sysRollout, err))
@@ -351,7 +351,7 @@ func (c *Controller) enqueueSystemRollout(sysRollout *crv1.SystemRollout) {
 	c.rolloutQueue.Add(key)
 }
 
-func (c *Controller) enqueueSystemTeardown(syst *crv1.SystemTeardown) {
+func (c *Controller) enqueueSystemTeardown(syst *latticev1.SystemTeardown) {
 	key, err := cache.DeletionHandlingMetaNamespaceKeyFunc(syst)
 	if err != nil {
 		runtime.HandleError(fmt.Errorf("couldn't get key for object %#v: %v", syst, err))
@@ -371,7 +371,7 @@ func (c *Controller) syncOwningActions() error {
 	}
 
 	for _, rollout := range rollouts {
-		if rollout.Status.State != crv1.SystemRolloutStateInProgress {
+		if rollout.Status.State != latticev1.SystemRolloutStateInProgress {
 			continue
 		}
 
@@ -391,7 +391,7 @@ func (c *Controller) syncOwningActions() error {
 	}
 
 	for _, teardown := range teardowns {
-		if teardown.Status.State != crv1.SystemTeardownStateInProgress {
+		if teardown.Status.State != latticev1.SystemTeardownStateInProgress {
 			continue
 		}
 
@@ -490,17 +490,17 @@ func (c *Controller) syncSystemRollout(key string) error {
 	glog.V(5).Infof("SystemRollout %v state: %v", key, rollout.Status.State)
 
 	switch rollout.Status.State {
-	case crv1.SystemRolloutStateSucceeded, crv1.SystemRolloutStateFailed:
+	case latticev1.SystemRolloutStateSucceeded, latticev1.SystemRolloutStateFailed:
 		glog.V(4).Infof("SystemRollout %s already completed", key)
 		return nil
 
-	case crv1.SystemRolloutStateInProgress:
+	case latticev1.SystemRolloutStateInProgress:
 		return c.syncInProgressRollout(rollout)
 
-	case crv1.SystemRolloutStateAccepted:
+	case latticev1.SystemRolloutStateAccepted:
 		return c.syncAcceptedRollout(rollout)
 
-	case crv1.SystemRolloutStatePending:
+	case latticev1.SystemRolloutStatePending:
 		return c.syncPendingRollout(rollout)
 
 	default:
@@ -533,14 +533,14 @@ func (c *Controller) syncSystemTeardown(key string) error {
 	}
 
 	switch teardown.Status.State {
-	case crv1.SystemTeardownStateSucceeded, crv1.SystemTeardownStateFailed:
+	case latticev1.SystemTeardownStateSucceeded, latticev1.SystemTeardownStateFailed:
 		glog.V(4).Infof("SystemTeardown %s already completed", key)
 		return nil
 
-	case crv1.SystemTeardownStateInProgress:
+	case latticev1.SystemTeardownStateInProgress:
 		return c.syncInProgressTeardown(teardown)
 
-	case crv1.SystemTeardownStatePending:
+	case latticev1.SystemTeardownStatePending:
 		return c.syncPendingTeardown(teardown)
 
 	default:

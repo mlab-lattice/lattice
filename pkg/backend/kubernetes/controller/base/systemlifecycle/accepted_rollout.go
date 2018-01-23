@@ -3,10 +3,10 @@ package systemlifecycle
 import (
 	"fmt"
 
-	crv1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
+	latticev1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 )
 
-func (c *Controller) syncAcceptedRollout(rollout *crv1.SystemRollout) error {
+func (c *Controller) syncAcceptedRollout(rollout *latticev1.SystemRollout) error {
 	build, err := c.systemBuildLister.SystemBuilds(rollout.Namespace).Get(rollout.Spec.BuildName)
 	if err != nil {
 		return err
@@ -21,18 +21,18 @@ func (c *Controller) syncAcceptedRollout(rollout *crv1.SystemRollout) error {
 	}
 
 	switch build.Status.State {
-	case crv1.SystemBuildStatePending, crv1.SystemBuildStateRunning:
+	case latticev1.SystemBuildStatePending, latticev1.SystemBuildStateRunning:
 		return nil
 
-	case crv1.SystemBuildStateFailed:
-		_, err := c.updateRolloutStatus(rollout, crv1.SystemRolloutStateFailed, fmt.Sprintf("SystemBuild %v failed", build.Name))
+	case latticev1.SystemBuildStateFailed:
+		_, err := c.updateRolloutStatus(rollout, latticev1.SystemRolloutStateFailed, fmt.Sprintf("SystemBuild %v failed", build.Name))
 		if err != nil {
 			return err
 		}
 
 		return c.relinquishRolloutOwningActionClaim(rollout)
 
-	case crv1.SystemBuildStateSucceeded:
+	case latticev1.SystemBuildStateSucceeded:
 		system, err := c.getSystem(rollout.Namespace)
 		if err != nil {
 			return err
@@ -48,7 +48,7 @@ func (c *Controller) syncAcceptedRollout(rollout *crv1.SystemRollout) error {
 			return err
 		}
 
-		_, err = c.updateRolloutStatus(rollout, crv1.SystemRolloutStateInProgress, "")
+		_, err = c.updateRolloutStatus(rollout, latticev1.SystemRolloutStateInProgress, "")
 		return err
 
 	default:

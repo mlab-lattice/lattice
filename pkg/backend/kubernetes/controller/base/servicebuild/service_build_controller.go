@@ -5,7 +5,7 @@ import (
 	"sync"
 	"time"
 
-	crv1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
+	latticev1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	latticeclientset "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/clientset/versioned"
 	latticeinformers "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/informers/externalversions/lattice/v1"
 	latticelisters "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/listers/lattice/v1"
@@ -23,7 +23,7 @@ import (
 
 type Controller struct {
 	syncHandler func(svcBuildKey string) error
-	enqueue     func(svcBuild *crv1.ServiceBuild)
+	enqueue     func(svcBuild *latticev1.ServiceBuild)
 
 	latticeClient latticeclientset.Interface
 
@@ -113,14 +113,14 @@ func (c *Controller) Run(workers int, stopCh <-chan struct{}) {
 }
 
 func (c *Controller) addServiceBuild(obj interface{}) {
-	build := obj.(*crv1.ServiceBuild)
+	build := obj.(*latticev1.ServiceBuild)
 	glog.V(4).Infof("Adding ServiceBuild %s", build.Name)
 	c.enqueueServiceBuild(build)
 }
 
 func (c *Controller) updateServiceBuild(old, cur interface{}) {
-	oldBuild := old.(*crv1.ServiceBuild)
-	curBuild := cur.(*crv1.ServiceBuild)
+	oldBuild := old.(*latticev1.ServiceBuild)
+	curBuild := cur.(*latticev1.ServiceBuild)
 	glog.V(4).Infof("Updating ServiceBuild %s", oldBuild.Name)
 	c.enqueueServiceBuild(curBuild)
 }
@@ -128,7 +128,7 @@ func (c *Controller) updateServiceBuild(old, cur interface{}) {
 // addComponentBuild enqueues any ServiceBuilds which may be interested in it when
 // a ComponentBuild is added.
 func (c *Controller) addComponentBuild(obj interface{}) {
-	componentBuild := obj.(*crv1.ComponentBuild)
+	componentBuild := obj.(*latticev1.ComponentBuild)
 
 	if componentBuild.DeletionTimestamp != nil {
 		// On a restart of the controller manager, it's possible for an object to
@@ -151,8 +151,8 @@ func (c *Controller) addComponentBuild(obj interface{}) {
 // a ComponentBuild is updated.
 func (c *Controller) updateComponentBuild(old, cur interface{}) {
 	glog.V(5).Info("Got ComponentBuild update")
-	oldComponentBuild := old.(*crv1.ComponentBuild)
-	curComponentBuild := cur.(*crv1.ComponentBuild)
+	oldComponentBuild := old.(*latticev1.ComponentBuild)
+	curComponentBuild := cur.(*latticev1.ComponentBuild)
 	if curComponentBuild.ResourceVersion == oldComponentBuild.ResourceVersion {
 		// Periodic resync will send update events for all known ComponentBuilds.
 		// Two different versions of the same job will always have different RVs.
@@ -169,14 +169,14 @@ func (c *Controller) updateComponentBuild(old, cur interface{}) {
 	}
 }
 
-func (c *Controller) getServiceBuildsForComponentBuild(componentBuild *crv1.ComponentBuild) ([]*crv1.ServiceBuild, error) {
+func (c *Controller) getServiceBuildsForComponentBuild(componentBuild *latticev1.ComponentBuild) ([]*latticev1.ServiceBuild, error) {
 	// TODO: this could eventually get expensive
 	builds, err := c.serviceBuildLister.List(labels.Everything())
 	if err != nil {
 		return nil, err
 	}
 
-	var matchingBuilds []*crv1.ServiceBuild
+	var matchingBuilds []*latticev1.ServiceBuild
 	for _, build := range builds {
 		// Check to see if the ServiceBuild is waiting on this ComponentBuild
 		if _, ok := build.Status.ComponentBuildStatuses[componentBuild.Name]; ok {
@@ -187,7 +187,7 @@ func (c *Controller) getServiceBuildsForComponentBuild(componentBuild *crv1.Comp
 	return matchingBuilds, nil
 }
 
-func (c *Controller) enqueueServiceBuild(build *crv1.ServiceBuild) {
+func (c *Controller) enqueueServiceBuild(build *latticev1.ServiceBuild) {
 	key, err := cache.DeletionHandlingMetaNamespaceKeyFunc(build)
 	if err != nil {
 		runtime.HandleError(fmt.Errorf("couldn't get key for object %#v: %v", build, err))

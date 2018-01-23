@@ -6,7 +6,7 @@ import (
 	"sync"
 	"time"
 
-	crv1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
+	latticev1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	latticeclientset "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/clientset/versioned"
 	latticeinformers "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/informers/externalversions/lattice/v1"
 	latticelisters "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/listers/lattice/v1"
@@ -23,11 +23,11 @@ import (
 	"github.com/golang/glog"
 )
 
-var controllerKind = crv1.SchemeGroupVersion.WithKind("System")
+var controllerKind = latticev1.SchemeGroupVersion.WithKind("System")
 
 type Controller struct {
 	syncHandler   func(sysKey string) error
-	enqueueSystem func(sysBuild *crv1.System)
+	enqueueSystem func(sysBuild *latticev1.System)
 
 	serviceMesh servicemesh.Interface
 
@@ -38,7 +38,7 @@ type Controller struct {
 	configSetChan      chan struct{}
 	configSet          bool
 	configLock         sync.RWMutex
-	config             crv1.ConfigSpec
+	config             latticev1.ConfigSpec
 
 	systemLister       latticelisters.SystemLister
 	systemListerSynced cache.InformerSynced
@@ -123,7 +123,7 @@ func (c *Controller) Run(workers int, stopCh <-chan struct{}) {
 }
 
 func (c *Controller) handleConfigAdd(obj interface{}) {
-	config := obj.(*crv1.Config)
+	config := obj.(*latticev1.Config)
 	glog.V(4).Infof("Adding Config %s", config.Name)
 
 	c.configLock.Lock()
@@ -146,8 +146,8 @@ func (c *Controller) handleConfigAdd(obj interface{}) {
 }
 
 func (c *Controller) handleConfigUpdate(old, cur interface{}) {
-	oldConfig := old.(*crv1.Config)
-	curConfig := cur.(*crv1.Config)
+	oldConfig := old.(*latticev1.Config)
+	curConfig := cur.(*latticev1.Config)
 	glog.V(4).Infof("Updating Config %s", oldConfig.Name)
 
 	c.configLock.Lock()
@@ -179,21 +179,21 @@ func (c *Controller) newServiceMesh() (servicemesh.Interface, error) {
 }
 
 func (c *Controller) handleSystemAdd(obj interface{}) {
-	system := obj.(*crv1.System)
+	system := obj.(*latticev1.System)
 	glog.V(4).Infof("Adding System %s", system.Name)
 	c.enqueueSystem(system)
 }
 
 func (c *Controller) handleSystemUpdate(old, cur interface{}) {
-	oldSystem := old.(*crv1.System)
-	curSystem := cur.(*crv1.System)
+	oldSystem := old.(*latticev1.System)
+	curSystem := cur.(*latticev1.System)
 	glog.V(4).Infof("Updating System %s", oldSystem.Name)
 	c.enqueueSystem(curSystem)
 }
 
 // handleServiceAdd enqueues the System that manages a Service when the Service is created.
 func (c *Controller) handleServiceAdd(obj interface{}) {
-	service := obj.(*crv1.Service)
+	service := obj.(*latticev1.Service)
 
 	if service.DeletionTimestamp != nil {
 		// We assume for now that ServiceBuilds do not get deleted.
@@ -223,8 +223,8 @@ func (c *Controller) handleServiceAdd(obj interface{}) {
 // handleServiceAdd enqueues the System that manages a Service when the Service is update.
 func (c *Controller) handleServiceUpdate(old, cur interface{}) {
 	glog.V(5).Info("Got Service update")
-	oldService := old.(*crv1.Service)
-	curService := cur.(*crv1.Service)
+	oldService := old.(*latticev1.Service)
+	curService := cur.(*latticev1.Service)
 	if curService.ResourceVersion == oldService.ResourceVersion {
 		// Periodic resync will send update events for all known ServiceBuilds.
 		// Two different versions of the same job will always have different RVs.
@@ -259,14 +259,14 @@ func (c *Controller) handleServiceUpdate(old, cur interface{}) {
 }
 
 func (c *Controller) handleServiceDelete(obj interface{}) {
-	service, ok := obj.(*crv1.Service)
+	service, ok := obj.(*latticev1.Service)
 	if !ok {
 		tombstone, ok := obj.(cache.DeletedFinalStateUnknown)
 		if !ok {
 			runtime.HandleError(fmt.Errorf("couldn't get object from tombstone %#v", obj))
 			return
 		}
-		service, ok = tombstone.Obj.(*crv1.Service)
+		service, ok = tombstone.Obj.(*latticev1.Service)
 		if !ok {
 			runtime.HandleError(fmt.Errorf("tombstone contained object that is not a Service %#v", obj))
 			return
@@ -295,7 +295,7 @@ func (c *Controller) handleServiceDelete(obj interface{}) {
 // resolveControllerRef returns the controller referenced by a ControllerRef,
 // or nil if the ControllerRef could not be resolved to a matching controller
 // of the correct Kind.
-func (c *Controller) resolveControllerRef(namespace string, controllerRef *metav1.OwnerReference) *crv1.System {
+func (c *Controller) resolveControllerRef(namespace string, controllerRef *metav1.OwnerReference) *latticev1.System {
 	// We can't look up by Name, so look up by Name and then verify Name.
 	// Don't even try to look up by Name if it's the wrong Kind.
 	if controllerRef.Kind != controllerKind.Kind {
@@ -320,7 +320,7 @@ func (c *Controller) resolveControllerRef(namespace string, controllerRef *metav
 	return system
 }
 
-func (c *Controller) enqueue(sys *crv1.System) {
+func (c *Controller) enqueue(sys *latticev1.System) {
 	key, err := cache.DeletionHandlingMetaNamespaceKeyFunc(sys)
 	if err != nil {
 		runtime.HandleError(fmt.Errorf("Couldn't get key for object %#v: %v", sys, err))

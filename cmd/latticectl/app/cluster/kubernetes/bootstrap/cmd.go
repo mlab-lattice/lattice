@@ -7,7 +7,7 @@ import (
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/cloudprovider"
 	awscloudprovider "github.com/mlab-lattice/system/pkg/backend/kubernetes/cloudprovider/aws"
 	localcloudprovider "github.com/mlab-lattice/system/pkg/backend/kubernetes/cloudprovider/local"
-	crv1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
+	latticev1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	latticeclientset "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/clientset/versioned"
 	clusterbootstrap "github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/cluster/bootstrap"
 	clusterbootstrapper "github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/cluster/bootstrap/bootstrapper"
@@ -64,10 +64,10 @@ var (
 )
 
 var options = &clusterbootstrap.Options{
-	Config: crv1.ConfigSpec{
-		ComponentBuild: crv1.ConfigComponentBuild{
-			Builder:        crv1.ConfigComponentBuildBuilder{},
-			DockerArtifact: crv1.ConfigComponentBuildDockerArtifact{},
+	Config: latticev1.ConfigSpec{
+		ComponentBuild: latticev1.ConfigComponentBuild{
+			Builder:        latticev1.ConfigComponentBuildBuilder{},
+			DockerArtifact: latticev1.ConfigComponentBuildDockerArtifact{},
 		},
 	},
 	MasterComponents: baseclusterboostrapper.MasterComponentOptions{

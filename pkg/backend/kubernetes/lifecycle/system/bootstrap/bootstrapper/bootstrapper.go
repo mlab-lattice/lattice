@@ -3,7 +3,7 @@ package bootstrapper
 import (
 	"fmt"
 
-	crv1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
+	latticev1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -17,7 +17,7 @@ type Interface interface {
 }
 
 type SystemResources struct {
-	System          *crv1.System
+	System          *latticev1.System
 	Namespace       *corev1.Namespace
 	ServiceAccounts []*corev1.ServiceAccount
 	RoleBindings    []*rbacv1.RoleBinding
