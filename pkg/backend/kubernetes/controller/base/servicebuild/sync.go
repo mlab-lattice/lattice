@@ -8,12 +8,12 @@ import (
 	"reflect"
 	"sort"
 
-	crv1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
+	latticev1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 
 	"github.com/golang/glog"
 )
 
-func (c *Controller) syncFailedServiceBuild(build *crv1.ServiceBuild, stateInfo stateInfo) error {
+func (c *Controller) syncFailedServiceBuild(build *latticev1.ServiceBuild, stateInfo stateInfo) error {
 	// Sort the ComponentBuild names so the Status.Message is the same for the same failed ComponentBuilds
 	var failedComponents []string
 	for component := range stateInfo.failedComponentBuilds {
@@ -32,7 +32,7 @@ func (c *Controller) syncFailedServiceBuild(build *crv1.ServiceBuild, stateInfo 
 
 	_, err := c.updateServiceBuildStatus(
 		build,
-		crv1.ServiceBuildStateFailed,
+		latticev1.ServiceBuildStateFailed,
 		message,
 		build.Status.ComponentBuilds,
 		stateInfo.componentBuildStatuses,
@@ -40,7 +40,7 @@ func (c *Controller) syncFailedServiceBuild(build *crv1.ServiceBuild, stateInfo 
 	return err
 }
 
-func (c *Controller) syncRunningServiceBuild(build *crv1.ServiceBuild, stateInfo stateInfo) error {
+func (c *Controller) syncRunningServiceBuild(build *latticev1.ServiceBuild, stateInfo stateInfo) error {
 	// Sort the ComponentBuild names so the Status.Message is the same for the same active ComponentBuilds
 	var activeComponents []string
 	for component := range stateInfo.activeComponentBuilds {
@@ -59,7 +59,7 @@ func (c *Controller) syncRunningServiceBuild(build *crv1.ServiceBuild, stateInfo
 
 	_, err := c.updateServiceBuildStatus(
 		build,
-		crv1.ServiceBuildStateRunning,
+		latticev1.ServiceBuildStateRunning,
 		message,
 		build.Status.ComponentBuilds,
 		stateInfo.componentBuildStatuses,
@@ -67,7 +67,7 @@ func (c *Controller) syncRunningServiceBuild(build *crv1.ServiceBuild, stateInfo
 	return err
 }
 
-func (c *Controller) syncMissingComponentBuildsServiceBuild(build *crv1.ServiceBuild, stateInfo stateInfo) error {
+func (c *Controller) syncMissingComponentBuildsServiceBuild(build *latticev1.ServiceBuild, stateInfo stateInfo) error {
 	componentBuilds := stateInfo.componentBuilds
 	if componentBuilds == nil {
 		componentBuilds = map[string]string{}
@@ -75,7 +75,7 @@ func (c *Controller) syncMissingComponentBuildsServiceBuild(build *crv1.ServiceB
 
 	componentBuildStatuses := stateInfo.componentBuildStatuses
 	if componentBuildStatuses == nil {
-		componentBuildStatuses = map[string]crv1.ComponentBuildStatus{}
+		componentBuildStatuses = map[string]latticev1.ComponentBuildStatus{}
 	}
 
 	for _, component := range stateInfo.needsNewComponentBuilds {
@@ -102,7 +102,7 @@ func (c *Controller) syncMissingComponentBuildsServiceBuild(build *crv1.ServiceB
 		}
 
 		// Found an existing ComponentBuild.
-		if componentBuild != nil && componentBuild.Status.State != crv1.ComponentBuildStateFailed {
+		if componentBuild != nil && componentBuild.Status.State != latticev1.ComponentBuildStateFailed {
 			glog.V(4).Infof("Found ComponentBuild %v for %v of %v/%v", componentBuild.Name, component, build.Namespace, build.Name)
 			componentBuilds[component] = componentBuild.Name
 			componentBuildStatuses[componentBuild.Name] = componentBuild.Status
@@ -124,14 +124,20 @@ func (c *Controller) syncMissingComponentBuildsServiceBuild(build *crv1.ServiceB
 			return err
 		}
 
-		glog.V(4).Infof("Created ComponentBuild %v for %v/%v component %v", componentBuild.Name, build.Namespace, build.Name, component)
+		glog.V(4).Infof(
+			"Created ComponentBuild %v for %v/%v component %v",
+			componentBuild.Name,
+			build.Namespace,
+			build.Name,
+			component,
+		)
 		componentBuilds[component] = componentBuild.Name
 		componentBuildStatuses[componentBuild.Name] = componentBuild.Status
 	}
 
 	_, err := c.updateServiceBuildStatus(
 		build,
-		crv1.ServiceBuildStateRunning,
+		latticev1.ServiceBuildStateRunning,
 		"",
 		componentBuilds,
 		componentBuildStatuses,
@@ -152,10 +158,10 @@ func (c *Controller) syncMissingComponentBuildsServiceBuild(build *crv1.ServiceB
 	return nil
 }
 
-func (c *Controller) syncSucceededServiceBuild(build *crv1.ServiceBuild, stateInfo stateInfo) error {
+func (c *Controller) syncSucceededServiceBuild(build *latticev1.ServiceBuild, stateInfo stateInfo) error {
 	_, err := c.updateServiceBuildStatus(
 		build,
-		crv1.ServiceBuildStateSucceeded,
+		latticev1.ServiceBuildStateSucceeded,
 		"",
 		build.Status.ComponentBuilds,
 		stateInfo.componentBuildStatuses,
@@ -164,13 +170,13 @@ func (c *Controller) syncSucceededServiceBuild(build *crv1.ServiceBuild, stateIn
 }
 
 func (c *Controller) updateServiceBuildStatus(
-	build *crv1.ServiceBuild,
-	state crv1.ServiceBuildState,
+	build *latticev1.ServiceBuild,
+	state latticev1.ServiceBuildState,
 	message string,
 	componentBuilds map[string]string,
-	componentBuildStatuses map[string]crv1.ComponentBuildStatus,
-) (*crv1.ServiceBuild, error) {
-	status := crv1.ServiceBuildStatus{
+	componentBuildStatuses map[string]latticev1.ComponentBuildStatus,
+) (*latticev1.ServiceBuild, error) {
+	status := latticev1.ServiceBuildStatus{
 		State:                  state,
 		ObservedGeneration:     build.Generation,
 		Message:                message,

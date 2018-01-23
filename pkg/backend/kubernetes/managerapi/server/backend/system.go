@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	kubeconstants "github.com/mlab-lattice/system/pkg/backend/kubernetes/constants"
-	crv1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
+	latticev1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	kubeutil "github.com/mlab-lattice/system/pkg/backend/kubernetes/util/kubernetes"
 	"github.com/mlab-lattice/system/pkg/definition/tree"
 	"github.com/mlab-lattice/system/pkg/types"
@@ -52,9 +52,9 @@ func (kb *KubernetesBackend) ListSystems() ([]types.System, error) {
 	return externalSystems, nil
 }
 
-func (kb *KubernetesBackend) GetSystem(id types.SystemID) (*types.System, bool, error) {
-	namespace := kubeutil.SystemNamespace(kb.ClusterID, id)
-	system, err := kb.LatticeClient.LatticeV1().Systems(namespace).Get(string(id), metav1.GetOptions{})
+func (kb *KubernetesBackend) GetSystem(systemID types.SystemID) (*types.System, bool, error) {
+	namespace := kubeutil.SystemNamespace(kb.ClusterID, systemID)
+	system, err := kb.LatticeClient.LatticeV1().Systems(namespace).Get(string(systemID), metav1.GetOptions{})
 	if err != nil {
 		if errors.IsNotFound(err) {
 			return nil, false, nil
@@ -67,7 +67,7 @@ func (kb *KubernetesBackend) GetSystem(id types.SystemID) (*types.System, bool, 
 	return externalSystem, true, err
 }
 
-func (kb *KubernetesBackend) transformSystem(system *crv1.System) (*types.System, error) {
+func (kb *KubernetesBackend) transformSystem(system *latticev1.System) (*types.System, error) {
 	name, err := kubeutil.SystemID(system.Namespace)
 	if err != nil {
 		return nil, err
@@ -100,15 +100,15 @@ func (kb *KubernetesBackend) transformSystem(system *crv1.System) (*types.System
 	return externalSystem, nil
 }
 
-func getSystemState(state crv1.SystemState) types.SystemState {
+func getSystemState(state latticev1.SystemState) types.SystemState {
 	switch state {
-	case crv1.SystemStateScaling:
+	case latticev1.SystemStateScaling:
 		return types.SystemStateScaling
-	case crv1.SystemStateUpdating:
+	case latticev1.SystemStateUpdating:
 		return types.SystemStateUpdating
-	case crv1.SystemStateStable:
+	case latticev1.SystemStateStable:
 		return types.SystemStateStable
-	case crv1.SystemStateFailed:
+	case latticev1.SystemStateFailed:
 		return types.SystemStateFailed
 	default:
 		panic("unreachable")

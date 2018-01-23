@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/cloudprovider/aws"
-	crv1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
+	latticev1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	latticeclientset "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/clientset/versioned"
 	latticeinformers "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/informers/externalversions/lattice/v1"
 	latticelisters "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/listers/lattice/v1"
@@ -25,7 +25,7 @@ import (
 
 type Controller struct {
 	syncHandler     func(bKey string) error
-	enqueueNodePool func(cb *crv1.NodePool)
+	enqueueNodePool func(cb *latticev1.NodePool)
 
 	clusterID types.ClusterID
 
@@ -40,7 +40,7 @@ type Controller struct {
 	configSetChan      chan struct{}
 	configSet          bool
 	configLock         sync.RWMutex
-	config             crv1.ConfigSpec
+	config             latticev1.ConfigSpec
 
 	nodePoolLister       latticelisters.NodePoolLister
 	nodePoolListerSynced cache.InformerSynced
@@ -122,7 +122,7 @@ func (c *Controller) Run(workers int, stopCh <-chan struct{}) {
 }
 
 func (c *Controller) handleConfigAdd(obj interface{}) {
-	config := obj.(*crv1.Config)
+	config := obj.(*latticev1.Config)
 	glog.V(4).Infof("Adding Config %s", config.Name)
 
 	c.configLock.Lock()
@@ -138,8 +138,8 @@ func (c *Controller) handleConfigAdd(obj interface{}) {
 }
 
 func (c *Controller) handleConfigUpdate(old, cur interface{}) {
-	oldConfig := old.(*crv1.Config)
-	curConfig := cur.(*crv1.Config)
+	oldConfig := old.(*latticev1.Config)
+	curConfig := cur.(*latticev1.Config)
 	glog.V(4).Infof("Updating Config %s", oldConfig.Name)
 
 	c.configLock.Lock()
@@ -167,7 +167,7 @@ func (c *Controller) newAWSCloudProvider() aws.CloudProvider {
 }
 
 func (c *Controller) handleNodePoolAdd(obj interface{}) {
-	nodePool := obj.(*crv1.NodePool)
+	nodePool := obj.(*latticev1.NodePool)
 	glog.V(4).Infof("NodePool %v/%v added", nodePool.Namespace, nodePool.Name)
 
 	if nodePool.DeletionTimestamp != nil {
@@ -181,8 +181,8 @@ func (c *Controller) handleNodePoolAdd(obj interface{}) {
 }
 
 func (c *Controller) handleNodePoolUpdate(old, cur interface{}) {
-	oldNodePool := old.(*crv1.NodePool)
-	curNodePool := cur.(*crv1.NodePool)
+	oldNodePool := old.(*latticev1.NodePool)
+	curNodePool := cur.(*latticev1.NodePool)
 	glog.V(5).Info("Got NodePool %v/%v update", curNodePool.Namespace, curNodePool.Name)
 	if curNodePool.ResourceVersion == oldNodePool.ResourceVersion {
 		// Periodic resync will send update events for all known Services.
@@ -195,7 +195,7 @@ func (c *Controller) handleNodePoolUpdate(old, cur interface{}) {
 }
 
 func (c *Controller) handleNodePoolDelete(obj interface{}) {
-	nodePool, ok := obj.(*crv1.NodePool)
+	nodePool, ok := obj.(*latticev1.NodePool)
 
 	// When a delete is dropped, the relist will notice a pod in the store not
 	// in the list, leading to the insertion of a tombstone object which contains
@@ -206,7 +206,7 @@ func (c *Controller) handleNodePoolDelete(obj interface{}) {
 			runtime.HandleError(fmt.Errorf("couldn't get object from tombstone %#v", obj))
 			return
 		}
-		nodePool, ok = tombstone.Obj.(*crv1.NodePool)
+		nodePool, ok = tombstone.Obj.(*latticev1.NodePool)
 		if !ok {
 			runtime.HandleError(fmt.Errorf("tombstone contained object that is not a Service %#v", obj))
 			return
@@ -216,7 +216,7 @@ func (c *Controller) handleNodePoolDelete(obj interface{}) {
 	c.enqueueNodePool(nodePool)
 }
 
-func (c *Controller) enqueue(nodePool *crv1.NodePool) {
+func (c *Controller) enqueue(nodePool *latticev1.NodePool) {
 	key, err := cache.DeletionHandlingMetaNamespaceKeyFunc(nodePool)
 	if err != nil {
 		runtime.HandleError(fmt.Errorf("couldn't get key for object %#v: %v", nodePool, err))

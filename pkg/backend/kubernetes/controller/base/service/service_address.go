@@ -3,7 +3,7 @@ package service
 import (
 	"reflect"
 
-	crv1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
+	latticev1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	"github.com/mlab-lattice/system/pkg/definition/block"
 
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -12,7 +12,7 @@ import (
 	"github.com/golang/glog"
 )
 
-func (c *Controller) syncServiceServiceAddress(service *crv1.Service) (*crv1.ServiceAddress, error) {
+func (c *Controller) syncServiceServiceAddress(service *latticev1.Service) (*latticev1.ServiceAddress, error) {
 	serviceAddress, err := c.serviceAddressLister.ServiceAddresses(service.Namespace).Get(service.Name)
 	if err != nil {
 		if errors.IsNotFound(err) {
@@ -41,7 +41,10 @@ func (c *Controller) syncServiceServiceAddress(service *crv1.Service) (*crv1.Ser
 	return serviceAddress, nil
 }
 
-func (c *Controller) syncExistingServiceAddress(service *crv1.Service, address *crv1.ServiceAddress) (*crv1.ServiceAddress, error) {
+func (c *Controller) syncExistingServiceAddress(
+	service *latticev1.Service,
+	address *latticev1.ServiceAddress,
+) (*latticev1.ServiceAddress, error) {
 	spec, err := c.serviceAddressSpec(service)
 	if err != nil {
 		return nil, err
@@ -55,7 +58,10 @@ func (c *Controller) syncExistingServiceAddress(service *crv1.Service, address *
 	return c.updateServiceAddressSpec(address, spec)
 }
 
-func (c *Controller) updateServiceAddressSpec(address *crv1.ServiceAddress, spec crv1.ServiceAddressSpec) (*crv1.ServiceAddress, error) {
+func (c *Controller) updateServiceAddressSpec(
+	address *latticev1.ServiceAddress,
+	spec latticev1.ServiceAddressSpec,
+) (*latticev1.ServiceAddress, error) {
 	if reflect.DeepEqual(address.Spec, spec) {
 		return address, nil
 	}
@@ -67,7 +73,7 @@ func (c *Controller) updateServiceAddressSpec(address *crv1.ServiceAddress, spec
 	return c.latticeClient.LatticeV1().ServiceAddresses(address.Namespace).Update(address)
 }
 
-func (c *Controller) createNewServiceAddress(service *crv1.Service) (*crv1.ServiceAddress, error) {
+func (c *Controller) createNewServiceAddress(service *latticev1.Service) (*latticev1.ServiceAddress, error) {
 	serviceAddress, err := c.newServiceAddress(service)
 	if err != nil {
 		return nil, err
@@ -76,60 +82,60 @@ func (c *Controller) createNewServiceAddress(service *crv1.Service) (*crv1.Servi
 	return c.latticeClient.LatticeV1().ServiceAddresses(service.Namespace).Create(serviceAddress)
 }
 
-func (c *Controller) newServiceAddress(service *crv1.Service) (*crv1.ServiceAddress, error) {
+func (c *Controller) newServiceAddress(service *latticev1.Service) (*latticev1.ServiceAddress, error) {
 	spec, err := c.serviceAddressSpec(service)
 	if err != nil {
 		return nil, err
 	}
 
-	serviceAddress := &crv1.ServiceAddress{
+	serviceAddress := &latticev1.ServiceAddress{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: service.Name,
 		},
 		Spec: spec,
-		Status: crv1.ServiceAddressStatus{
-			State: crv1.ServiceAddressStatePending,
+		Status: latticev1.ServiceAddressStatus{
+			State: latticev1.ServiceAddressStatePending,
 		},
 	}
 
 	return serviceAddress, nil
 }
 
-func (c *Controller) serviceAddressSpec(service *crv1.Service) (crv1.ServiceAddressSpec, error) {
-	endpointGroups := map[string]crv1.ServiceAddressEndpointGroup{
+func (c *Controller) serviceAddressSpec(service *latticev1.Service) (latticev1.ServiceAddressSpec, error) {
+	endpointGroups := map[string]latticev1.ServiceAddressEndpointGroup{
 		"service": {
 			Service: &service.Name,
 		},
 	}
 
-	ports := map[int32]crv1.ServiceAddressPort{}
+	ports := map[int32]latticev1.ServiceAddressPort{}
 	for _, componentPorts := range service.Spec.Ports {
 		for _, componentPort := range componentPorts {
 			switch componentPort.Protocol {
 			case block.ProtocolHTTP:
 				httpPortConfig, err := c.serviceAddressHTTPPort(service, componentPort)
 				if err != nil {
-					return crv1.ServiceAddressSpec{}, err
+					return latticev1.ServiceAddressSpec{}, err
 				}
 
-				ports[componentPort.Port] = crv1.ServiceAddressPort{
+				ports[componentPort.Port] = latticev1.ServiceAddressPort{
 					HTTP: httpPortConfig,
 				}
 
 			case block.ProtocolTCP:
 				tcpPortConfig, err := serviceAddressTCPPort(componentPort)
 				if err != nil {
-					return crv1.ServiceAddressSpec{}, err
+					return latticev1.ServiceAddressSpec{}, err
 				}
 
-				ports[componentPort.Port] = crv1.ServiceAddressPort{
+				ports[componentPort.Port] = latticev1.ServiceAddressPort{
 					TCP: tcpPortConfig,
 				}
 			}
 		}
 	}
 
-	spec := crv1.ServiceAddressSpec{
+	spec := latticev1.ServiceAddressSpec{
 		Path:           service.Spec.Path,
 		EndpointGroups: endpointGroups,
 		Ports:          ports,
@@ -137,13 +143,16 @@ func (c *Controller) serviceAddressSpec(service *crv1.Service) (crv1.ServiceAddr
 	return spec, nil
 }
 
-func (c *Controller) serviceAddressHTTPPort(service *crv1.Service, componentPort crv1.ComponentPort) (*crv1.ServiceAddressPortHTTPConfig, error) {
+func (c *Controller) serviceAddressHTTPPort(
+	service *latticev1.Service,
+	componentPort latticev1.ComponentPort,
+) (*latticev1.ServiceAddressPortHTTPConfig, error) {
 	serviceMeshPort, err := c.serviceMesh.ServiceMeshPort(service, componentPort.Port)
 	if err != nil {
 		return nil, err
 	}
 
-	target := crv1.ServiceAddressPortHTTPTargetConfig{
+	target := latticev1.ServiceAddressPortHTTPTargetConfig{
 		Port:          serviceMeshPort,
 		EndpointGroup: "service",
 		Weight:        100,
@@ -151,14 +160,14 @@ func (c *Controller) serviceAddressHTTPPort(service *crv1.Service, componentPort
 
 	// FIXME(kevinrosendahl): add health check
 
-	config := &crv1.ServiceAddressPortHTTPConfig{
-		Targets: []crv1.ServiceAddressPortHTTPTargetConfig{target},
+	config := &latticev1.ServiceAddressPortHTTPConfig{
+		Targets: []latticev1.ServiceAddressPortHTTPTargetConfig{target},
 	}
 	return config, nil
 }
 
-func serviceAddressTCPPort(componentPort crv1.ComponentPort) (*crv1.ServiceAddressPortTCPConfig, error) {
-	config := &crv1.ServiceAddressPortTCPConfig{
+func serviceAddressTCPPort(componentPort latticev1.ComponentPort) (*latticev1.ServiceAddressPortTCPConfig, error) {
+	config := &latticev1.ServiceAddressPortTCPConfig{
 		EndpointGroup: "service",
 	}
 

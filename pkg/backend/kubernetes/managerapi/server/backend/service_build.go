@@ -3,7 +3,7 @@ package backend
 import (
 	"fmt"
 
-	crv1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
+	latticev1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	kubeutil "github.com/mlab-lattice/system/pkg/backend/kubernetes/util/kubernetes"
 	"github.com/mlab-lattice/system/pkg/types"
 
@@ -11,8 +11,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func (kb *KubernetesBackend) ListServiceBuilds(id types.SystemID) ([]types.ServiceBuild, error) {
-	namespace := kubeutil.SystemNamespace(kb.ClusterID, id)
+func (kb *KubernetesBackend) ListServiceBuilds(systemID types.SystemID) ([]types.ServiceBuild, error) {
+	namespace := kubeutil.SystemNamespace(kb.ClusterID, systemID)
 	buildList, err := kb.LatticeClient.LatticeV1().ServiceBuilds(namespace).List(metav1.ListOptions{})
 	if err != nil {
 		return nil, err
@@ -31,8 +31,11 @@ func (kb *KubernetesBackend) ListServiceBuilds(id types.SystemID) ([]types.Servi
 	return builds, nil
 }
 
-func (kb *KubernetesBackend) GetServiceBuild(id types.SystemID, bid types.ServiceBuildID) (*types.ServiceBuild, bool, error) {
-	build, exists, err := kb.getInternalServiceBuild(id, bid)
+func (kb *KubernetesBackend) GetServiceBuild(
+	systemID types.SystemID,
+	buildID types.ServiceBuildID,
+) (*types.ServiceBuild, bool, error) {
+	build, exists, err := kb.getInternalServiceBuild(systemID, buildID)
 	if err != nil || !exists {
 		return nil, exists, err
 	}
@@ -45,9 +48,11 @@ func (kb *KubernetesBackend) GetServiceBuild(id types.SystemID, bid types.Servic
 	return &externalServiceBuild, true, nil
 }
 
-func (kb *KubernetesBackend) getInternalServiceBuild(id types.SystemID, bid types.ServiceBuildID) (*crv1.ServiceBuild, bool, error) {
-	namespace := kubeutil.SystemNamespace(kb.ClusterID, id)
-	result, err := kb.LatticeClient.LatticeV1().ServiceBuilds(namespace).Get(string(bid), metav1.GetOptions{})
+func (kb *KubernetesBackend) getInternalServiceBuild(
+	systemID types.SystemID, buildID types.ServiceBuildID,
+) (*latticev1.ServiceBuild, bool, error) {
+	namespace := kubeutil.SystemNamespace(kb.ClusterID, systemID)
+	result, err := kb.LatticeClient.LatticeV1().ServiceBuilds(namespace).Get(string(buildID), metav1.GetOptions{})
 	if err != nil {
 		if errors.IsNotFound(err) {
 			return nil, false, nil
@@ -58,7 +63,7 @@ func (kb *KubernetesBackend) getInternalServiceBuild(id types.SystemID, bid type
 	return result, true, nil
 }
 
-func transformServiceBuild(namespace, name string, status *crv1.ServiceBuildStatus) (types.ServiceBuild, error) {
+func transformServiceBuild(namespace, name string, status *latticev1.ServiceBuildStatus) (types.ServiceBuild, error) {
 	externalBuild := types.ServiceBuild{
 		ID:         types.ServiceBuildID(name),
 		State:      getServiceBuildState(status.State),
@@ -85,15 +90,15 @@ func transformServiceBuild(namespace, name string, status *crv1.ServiceBuildStat
 	return externalBuild, nil
 }
 
-func getServiceBuildState(state crv1.ServiceBuildState) types.ServiceBuildState {
+func getServiceBuildState(state latticev1.ServiceBuildState) types.ServiceBuildState {
 	switch state {
-	case crv1.ServiceBuildStatePending:
+	case latticev1.ServiceBuildStatePending:
 		return types.ServiceBuildStatePending
-	case crv1.ServiceBuildStateRunning:
+	case latticev1.ServiceBuildStateRunning:
 		return types.ServiceBuildStateRunning
-	case crv1.ServiceBuildStateSucceeded:
+	case latticev1.ServiceBuildStateSucceeded:
 		return types.ServiceBuildStateSucceeded
-	case crv1.ServiceBuildStateFailed:
+	case latticev1.ServiceBuildStateFailed:
 		return types.ServiceBuildStateFailed
 	default:
 		panic("unreachable")

@@ -1,7 +1,7 @@
 package componentbuild
 
 import (
-	crv1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
+	latticev1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 
 	batchv1 "k8s.io/api/batch/v1"
 )
@@ -20,7 +20,7 @@ type stateInfo struct {
 	job   *batchv1.Job
 }
 
-func (c *Controller) calculateState(build *crv1.ComponentBuild) (*stateInfo, error) {
+func (c *Controller) calculateState(build *latticev1.ComponentBuild) (*stateInfo, error) {
 	job, err := c.getJobForBuild(build)
 	if err != nil {
 		return nil, err

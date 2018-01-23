@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"reflect"
 
-	crv1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
+	latticev1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	kubetf "github.com/mlab-lattice/system/pkg/backend/kubernetes/terraform/aws"
 	kubeutil "github.com/mlab-lattice/system/pkg/backend/kubernetes/util/kubernetes"
 	tf "github.com/mlab-lattice/system/pkg/terraform"
@@ -18,7 +18,7 @@ const (
 	finalizerName = "endpoint.aws.cloud-provider.lattice.mlab.com"
 )
 
-func (c *Controller) syncDeletedEndpoint(endpoint *crv1.Endpoint) error {
+func (c *Controller) syncDeletedEndpoint(endpoint *latticev1.Endpoint) error {
 	err := c.deprovisionEndpoint(endpoint)
 	if err != nil {
 		return err
@@ -28,7 +28,7 @@ func (c *Controller) syncDeletedEndpoint(endpoint *crv1.Endpoint) error {
 	return err
 }
 
-func (c *Controller) provisionEndpoint(endpoint *crv1.Endpoint) error {
+func (c *Controller) provisionEndpoint(endpoint *latticev1.Endpoint) error {
 	if endpoint.Spec.ExternalName != nil {
 		return c.provisionExternalNameEndpoint(endpoint)
 	}
@@ -40,7 +40,7 @@ func (c *Controller) provisionEndpoint(endpoint *crv1.Endpoint) error {
 	return fmt.Errorf("endpoint must have either ExternalName or IP")
 }
 
-func (c *Controller) provisionExternalNameEndpoint(endpoint *crv1.Endpoint) error {
+func (c *Controller) provisionExternalNameEndpoint(endpoint *latticev1.Endpoint) error {
 	module, err := c.externalNameEndpointModule(endpoint)
 	if err != nil {
 		return err
@@ -55,7 +55,7 @@ func (c *Controller) provisionExternalNameEndpoint(endpoint *crv1.Endpoint) erro
 	return err
 }
 
-func (c *Controller) provisionIPEndpoint(endpoint *crv1.Endpoint) error {
+func (c *Controller) provisionIPEndpoint(endpoint *latticev1.Endpoint) error {
 	module, err := c.ipEndpointModule(endpoint)
 	if err != nil {
 		return err
@@ -70,7 +70,7 @@ func (c *Controller) provisionIPEndpoint(endpoint *crv1.Endpoint) error {
 	return err
 }
 
-func (c *Controller) deprovisionEndpoint(endpoint *crv1.Endpoint) error {
+func (c *Controller) deprovisionEndpoint(endpoint *latticev1.Endpoint) error {
 	if endpoint.Spec.ExternalName != nil {
 		return c.deprovisionExternalNameEndpoint(endpoint)
 	}
@@ -82,7 +82,7 @@ func (c *Controller) deprovisionEndpoint(endpoint *crv1.Endpoint) error {
 	return fmt.Errorf("endpoint must have either ExternalName or IP")
 }
 
-func (c *Controller) deprovisionExternalNameEndpoint(endpoint *crv1.Endpoint) error {
+func (c *Controller) deprovisionExternalNameEndpoint(endpoint *latticev1.Endpoint) error {
 	module, err := c.externalNameEndpointModule(endpoint)
 	if err != nil {
 		return err
@@ -97,7 +97,7 @@ func (c *Controller) deprovisionExternalNameEndpoint(endpoint *crv1.Endpoint) er
 	return err
 }
 
-func (c *Controller) deprovisionIPEndpoint(endpoint *crv1.Endpoint) error {
+func (c *Controller) deprovisionIPEndpoint(endpoint *latticev1.Endpoint) error {
 	module, err := c.ipEndpointModule(endpoint)
 	if err != nil {
 		return err
@@ -112,7 +112,7 @@ func (c *Controller) deprovisionIPEndpoint(endpoint *crv1.Endpoint) error {
 	return err
 }
 
-func (c *Controller) endpointConfig(endpoint *crv1.Endpoint, endpointModule interface{}) (*tf.Config, error) {
+func (c *Controller) endpointConfig(endpoint *latticev1.Endpoint, endpointModule interface{}) (*tf.Config, error) {
 	systemID, err := kubeutil.SystemID(endpoint.Namespace)
 	if err != nil {
 		return nil, err
@@ -141,7 +141,7 @@ func (c *Controller) endpointConfig(endpoint *crv1.Endpoint, endpointModule inte
 	return config, nil
 }
 
-func (c *Controller) ipEndpointModule(endpoint *crv1.Endpoint) (*kubetf.IPEndpoint, error) {
+func (c *Controller) ipEndpointModule(endpoint *latticev1.Endpoint) (*kubetf.IPEndpoint, error) {
 	name, err := c.endpointDNSName(endpoint)
 	if err != nil {
 		return nil, err
@@ -157,7 +157,7 @@ func (c *Controller) ipEndpointModule(endpoint *crv1.Endpoint) (*kubetf.IPEndpoi
 	return module, nil
 }
 
-func (c *Controller) externalNameEndpointModule(endpoint *crv1.Endpoint) (*kubetf.ExternalNameEndpoint, error) {
+func (c *Controller) externalNameEndpointModule(endpoint *latticev1.Endpoint) (*kubetf.ExternalNameEndpoint, error) {
 	name, err := c.endpointDNSName(endpoint)
 	if err != nil {
 		return nil, err
@@ -173,7 +173,7 @@ func (c *Controller) externalNameEndpointModule(endpoint *crv1.Endpoint) (*kubet
 	return module, nil
 }
 
-func (c *Controller) endpointDNSName(endpoint *crv1.Endpoint) (string, error) {
+func (c *Controller) endpointDNSName(endpoint *latticev1.Endpoint) (string, error) {
 	systemID, err := kubeutil.SystemID(endpoint.Namespace)
 	if err != nil {
 		return "", err
@@ -184,9 +184,9 @@ func (c *Controller) endpointDNSName(endpoint *crv1.Endpoint) (string, error) {
 }
 
 func (c *Controller) updateEndpointStatus(
-	endpoint *crv1.Endpoint,
-	status crv1.EndpointStatus,
-) (*crv1.Endpoint, error) {
+	endpoint *latticev1.Endpoint,
+	status latticev1.EndpointStatus,
+) (*latticev1.Endpoint, error) {
 	if reflect.DeepEqual(endpoint.Status, status) {
 		return endpoint, nil
 	}
@@ -202,7 +202,7 @@ func (c *Controller) updateEndpointStatus(
 	//return c.latticeClient.LatticeV1().LoadBalancers(loadBalancer.Namespace).UpdateStatus(loadBalancer)
 }
 
-func (c *Controller) addFinalizer(endpoint *crv1.Endpoint) (*crv1.Endpoint, error) {
+func (c *Controller) addFinalizer(endpoint *latticev1.Endpoint) (*latticev1.Endpoint, error) {
 	// Check to see if the finalizer already exists. If so nothing needs to be done.
 	for _, finalizer := range endpoint.Finalizers {
 		if finalizer == finalizerName {
@@ -220,7 +220,7 @@ func (c *Controller) addFinalizer(endpoint *crv1.Endpoint) (*crv1.Endpoint, erro
 	return c.latticeClient.LatticeV1().Endpoints(endpoint.Namespace).Update(endpoint)
 }
 
-func (c *Controller) removeFinalizer(endpoint *crv1.Endpoint) (*crv1.Endpoint, error) {
+func (c *Controller) removeFinalizer(endpoint *latticev1.Endpoint) (*latticev1.Endpoint, error) {
 	// Build up a list of all the finalizers except the aws service controller finalizer.
 	var finalizers []string
 	found := false
@@ -242,6 +242,10 @@ func (c *Controller) removeFinalizer(endpoint *crv1.Endpoint) (*crv1.Endpoint, e
 	return c.latticeClient.LatticeV1().Endpoints(endpoint.Namespace).Update(endpoint)
 }
 
-func workDirectory(endpoint *crv1.Endpoint) string {
-	return "/tmp/lattice-controller-manager/controllers/cloud/aws/endpoint/terraform/" + endpoint.Namespace + "/" + endpoint.Name
+func workDirectory(endpoint *latticev1.Endpoint) string {
+	return fmt.Sprintf(
+		"/tmp/lattice-controller-manager/controllers/cloud/aws/endpoint/terraform/%v/%v",
+		endpoint.Namespace,
+		endpoint.Name,
+	)
 }

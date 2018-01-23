@@ -3,10 +3,10 @@ package systemlifecycle
 import (
 	"fmt"
 
-	crv1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
+	latticev1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 )
 
-func (c *Controller) syncInProgressRollout(rollout *crv1.SystemRollout) error {
+func (c *Controller) syncInProgressRollout(rollout *latticev1.SystemRollout) error {
 	system, err := c.getSystem(rollout.Namespace)
 	if err != nil {
 		return err
@@ -19,17 +19,17 @@ func (c *Controller) syncInProgressRollout(rollout *crv1.SystemRollout) error {
 		return nil
 	}
 
-	var state crv1.SystemRolloutState
+	var state latticev1.SystemRolloutState
 	switch system.Status.State {
-	case crv1.SystemStateUpdating, crv1.SystemStateScaling:
+	case latticev1.SystemStateUpdating, latticev1.SystemStateScaling:
 		// Still in progress, nothing more to do
 		return nil
 
-	case crv1.SystemStateStable:
-		state = crv1.SystemRolloutStateSucceeded
+	case latticev1.SystemStateStable:
+		state = latticev1.SystemRolloutStateSucceeded
 
-	case crv1.SystemStateFailed:
-		state = crv1.SystemRolloutStateFailed
+	case latticev1.SystemStateFailed:
+		state = latticev1.SystemRolloutStateFailed
 
 	default:
 		return fmt.Errorf("System %v/%v in unexpected state %v", system.Namespace, system.Name, system.Status.State)
@@ -41,7 +41,7 @@ func (c *Controller) syncInProgressRollout(rollout *crv1.SystemRollout) error {
 		return err
 	}
 
-	if rollout.Status.State == crv1.SystemRolloutStateSucceeded || rollout.Status.State == crv1.SystemRolloutStateFailed {
+	if rollout.Status.State == latticev1.SystemRolloutStateSucceeded || rollout.Status.State == latticev1.SystemRolloutStateFailed {
 		return c.relinquishRolloutOwningActionClaim(rollout)
 	}
 

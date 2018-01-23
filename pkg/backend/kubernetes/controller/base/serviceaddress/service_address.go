@@ -4,20 +4,23 @@ import (
 	"fmt"
 	"reflect"
 
-	crv1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
+	latticev1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 )
 
-func (c *Controller) syncServiceAddressStatus(address *crv1.ServiceAddress, endpoint *crv1.Endpoint) (*crv1.ServiceAddress, error) {
-	var state crv1.ServiceAddressState
+func (c *Controller) syncServiceAddressStatus(
+	address *latticev1.ServiceAddress,
+	endpoint *latticev1.Endpoint,
+) (*latticev1.ServiceAddress, error) {
+	var state latticev1.ServiceAddressState
 	switch endpoint.Status.State {
-	case crv1.EndpointStatePending:
-		state = crv1.ServiceAddressStatePending
+	case latticev1.EndpointStatePending:
+		state = latticev1.ServiceAddressStatePending
 
-	case crv1.EndpointStateCreated:
-		state = crv1.ServiceAddressStateCreated
+	case latticev1.EndpointStateCreated:
+		state = latticev1.ServiceAddressStateCreated
 
-	case crv1.EndpointStateFailed:
-		state = crv1.ServiceAddressStateFailed
+	case latticev1.EndpointStateFailed:
+		state = latticev1.ServiceAddressStateFailed
 
 	default:
 		return nil, fmt.Errorf("Endpoint %v/%v in unexpected state %v", endpoint.Namespace, endpoint.Name, endpoint.Status.State)
@@ -26,8 +29,11 @@ func (c *Controller) syncServiceAddressStatus(address *crv1.ServiceAddress, endp
 	return c.updateServiceStatus(address, state)
 }
 
-func (c *Controller) updateServiceStatus(address *crv1.ServiceAddress, state crv1.ServiceAddressState) (*crv1.ServiceAddress, error) {
-	status := crv1.ServiceAddressStatus{
+func (c *Controller) updateServiceStatus(
+	address *latticev1.ServiceAddress,
+	state latticev1.ServiceAddressState,
+) (*latticev1.ServiceAddress, error) {
+	status := latticev1.ServiceAddressStatus{
 		State:              state,
 		ObservedGeneration: address.Generation,
 	}

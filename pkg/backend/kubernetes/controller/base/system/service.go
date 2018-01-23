@@ -5,7 +5,7 @@ import (
 	"reflect"
 
 	kubeconstants "github.com/mlab-lattice/system/pkg/backend/kubernetes/constants"
-	crv1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
+	latticev1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	"github.com/mlab-lattice/system/pkg/definition/tree"
 
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -17,16 +17,18 @@ import (
 	"k8s.io/apimachinery/pkg/selection"
 )
 
-func (c *Controller) syncSystemServices(system *crv1.System) (map[tree.NodePath]string, map[string]crv1.ServiceStatus, []string, error) {
+func (c *Controller) syncSystemServices(
+	system *latticev1.System,
+) (map[tree.NodePath]string, map[string]latticev1.ServiceStatus, []string, error) {
 	// Maps Service path to Service.Name of the Service
 	services := map[tree.NodePath]string{}
 
 	// Maps Service.Name to Service.Status
-	serviceStatuses := map[string]crv1.ServiceStatus{}
+	serviceStatuses := map[string]latticev1.ServiceStatus{}
 
 	// Loop through the Services defined in the System's Spec, and create/update any that need it
 	for path, serviceInfo := range system.Spec.Services {
-		var service *crv1.Service
+		var service *latticev1.Service
 
 		serviceName, ok := system.Status.Services[path]
 		if !ok {
@@ -46,7 +48,13 @@ func (c *Controller) syncSystemServices(system *crv1.System) (map[tree.NodePath]
 			}
 
 			if len(services) > 1 {
-				return nil, nil, nil, fmt.Errorf("multiple Services in the %v namespace are labeled with %v = %v", system.Namespace, kubeconstants.LabelKeyServicePathDomain, pathDomain)
+				err := fmt.Errorf(
+					"multiple Services in the %v namespace are labeled with %v = %v",
+					system.Namespace,
+					kubeconstants.LabelKeyServicePathDomain,
+					pathDomain,
+				)
+				return nil, nil, nil, err
 			}
 
 			if len(services) == 1 {
@@ -63,7 +71,13 @@ func (c *Controller) syncSystemServices(system *crv1.System) (map[tree.NodePath]
 				}
 
 				if len(services.Items) > 1 {
-					return nil, nil, nil, fmt.Errorf("multiple Services in the %v namespace are labeled with %v = %v", system.Namespace, kubeconstants.LabelKeyServicePathDomain, pathDomain)
+					err := fmt.Errorf(
+						"multiple Services in the %v namespace are labeled with %v = %v",
+						system.Namespace,
+						kubeconstants.LabelKeyServicePathDomain,
+						pathDomain,
+					)
+					return nil, nil, nil, err
 				}
 
 				if len(services.Items) == 1 {
@@ -131,7 +145,11 @@ func (c *Controller) syncSystemServices(system *crv1.System) (map[tree.NodePath]
 	var deletedServices []string
 	for _, service := range allServices {
 		if _, ok := serviceStatuses[service.Name]; !ok {
-			glog.V(4).Infof("Found Service %q in Namespace %q that is no longer in the System Spec", service.Name, service.Namespace)
+			glog.V(4).Infof(
+				"Found Service %q in Namespace %q that is no longer in the System Spec",
+				service.Name,
+				service.Namespace,
+			)
 			deletedServices = append(deletedServices, service.Name)
 
 			if service.DeletionTimestamp == nil {
@@ -146,7 +164,11 @@ func (c *Controller) syncSystemServices(system *crv1.System) (map[tree.NodePath]
 	return services, serviceStatuses, deletedServices, nil
 }
 
-func (c *Controller) createNewService(system *crv1.System, serviceInfo *crv1.SystemSpecServiceInfo, path tree.NodePath) (*crv1.Service, error) {
+func (c *Controller) createNewService(
+	system *latticev1.System,
+	serviceInfo *latticev1.SystemSpecServiceInfo,
+	path tree.NodePath,
+) (*latticev1.Service, error) {
 	service, err := c.newService(system, serviceInfo, path)
 	if err != nil {
 		return nil, err
@@ -155,7 +177,11 @@ func (c *Controller) createNewService(system *crv1.System, serviceInfo *crv1.Sys
 	return c.latticeClient.LatticeV1().Services(service.Namespace).Create(service)
 }
 
-func (c *Controller) newService(system *crv1.System, serviceInfo *crv1.SystemSpecServiceInfo, path tree.NodePath) (*crv1.Service, error) {
+func (c *Controller) newService(
+	system *latticev1.System,
+	serviceInfo *latticev1.SystemSpecServiceInfo,
+	path tree.NodePath,
+) (*latticev1.Service, error) {
 	labels := map[string]string{
 		kubeconstants.LabelKeyServicePathDomain: path.ToDomain(true),
 	}
@@ -165,7 +191,7 @@ func (c *Controller) newService(system *crv1.System, serviceInfo *crv1.SystemSpe
 		return nil, err
 	}
 
-	service := &crv1.Service{
+	service := &latticev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:            uuid.NewV4().String(),
 			Namespace:       system.Namespace,
@@ -173,8 +199,8 @@ func (c *Controller) newService(system *crv1.System, serviceInfo *crv1.SystemSpe
 			Labels:          labels,
 		},
 		Spec: spec,
-		Status: crv1.ServiceStatus{
-			State: crv1.ServiceStatePending,
+		Status: latticev1.ServiceStatus{
+			State: latticev1.ServiceStatePending,
 		},
 	}
 
@@ -188,7 +214,11 @@ func (c *Controller) newService(system *crv1.System, serviceInfo *crv1.SystemSpe
 	return service, nil
 }
 
-func serviceSpec(system *crv1.System, serviceInfo *crv1.SystemSpecServiceInfo, path tree.NodePath) (crv1.ServiceSpec, error) {
+func serviceSpec(
+	system *latticev1.System,
+	serviceInfo *latticev1.SystemSpecServiceInfo,
+	path tree.NodePath,
+) (latticev1.ServiceSpec, error) {
 	var numInstances int32
 	if serviceInfo.Definition.Resources().NumInstances != nil {
 		numInstances = *(serviceInfo.Definition.Resources().NumInstances)
@@ -201,15 +231,15 @@ func serviceSpec(system *crv1.System, serviceInfo *crv1.SystemSpecServiceInfo, p
 			system.Name,
 			path,
 		)
-		return crv1.ServiceSpec{}, err
+		return latticev1.ServiceSpec{}, err
 	}
 
-	componentPorts := map[string][]crv1.ComponentPort{}
+	componentPorts := map[string][]latticev1.ComponentPort{}
 
 	for _, component := range serviceInfo.Definition.Components() {
-		var ports []crv1.ComponentPort
+		var ports []latticev1.ComponentPort
 		for _, port := range component.Ports {
-			componentPort := crv1.ComponentPort{
+			componentPort := latticev1.ComponentPort{
 				Name:     port.Name,
 				Port:     int32(port.Port),
 				Protocol: port.Protocol,
@@ -226,7 +256,7 @@ func serviceSpec(system *crv1.System, serviceInfo *crv1.SystemSpecServiceInfo, p
 		componentPorts[component.Name] = ports
 	}
 
-	spec := crv1.ServiceSpec{
+	spec := latticev1.ServiceSpec{
 		Path:                    path,
 		Definition:              serviceInfo.Definition,
 		ComponentBuildArtifacts: serviceInfo.ComponentBuildArtifacts,
@@ -236,7 +266,7 @@ func serviceSpec(system *crv1.System, serviceInfo *crv1.SystemSpecServiceInfo, p
 	return spec, nil
 }
 
-func (c *Controller) updateService(service *crv1.Service, spec crv1.ServiceSpec) (*crv1.Service, error) {
+func (c *Controller) updateService(service *latticev1.Service, spec latticev1.ServiceSpec) (*latticev1.Service, error) {
 	if reflect.DeepEqual(service.Spec, spec) {
 		return service, nil
 	}

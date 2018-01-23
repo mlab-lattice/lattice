@@ -3,7 +3,7 @@ package systemlifecycle
 import (
 	"fmt"
 
-	crv1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
+	latticev1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 )
 
 func (a *lifecycleAction) String() string {
@@ -48,7 +48,7 @@ func (c *Controller) getOwningAction(namespace string) (*lifecycleAction, bool) 
 	return owningAction, ok
 }
 
-func (c *Controller) attemptToClaimRolloutOwningAction(rollout *crv1.SystemRollout) *lifecycleAction {
+func (c *Controller) attemptToClaimRolloutOwningAction(rollout *latticev1.SystemRollout) *lifecycleAction {
 	action := &lifecycleAction{
 		rollout: rollout,
 	}
@@ -56,7 +56,7 @@ func (c *Controller) attemptToClaimRolloutOwningAction(rollout *crv1.SystemRollo
 	return c.attemptToClaimOwningAction(rollout.Namespace, action)
 }
 
-func (c *Controller) attemptToClaimTeardownOwningAction(teardown *crv1.SystemTeardown) *lifecycleAction {
+func (c *Controller) attemptToClaimTeardownOwningAction(teardown *latticev1.SystemTeardown) *lifecycleAction {
 	action := &lifecycleAction{
 		teardown: teardown,
 	}
@@ -78,7 +78,7 @@ func (c *Controller) attemptToClaimOwningAction(namespace string, action *lifecy
 	return nil
 }
 
-func (c *Controller) relinquishRolloutOwningActionClaim(rollout *crv1.SystemRollout) error {
+func (c *Controller) relinquishRolloutOwningActionClaim(rollout *latticev1.SystemRollout) error {
 	action := &lifecycleAction{
 		rollout: rollout,
 	}
@@ -86,7 +86,7 @@ func (c *Controller) relinquishRolloutOwningActionClaim(rollout *crv1.SystemRoll
 	return c.relinquishOwningActionClaim(rollout.Namespace, action)
 }
 
-func (c *Controller) relinquishTeardownOwningActionClaim(teardown *crv1.SystemTeardown) error {
+func (c *Controller) relinquishTeardownOwningActionClaim(teardown *latticev1.SystemTeardown) error {
 	action := &lifecycleAction{
 		teardown: teardown,
 	}

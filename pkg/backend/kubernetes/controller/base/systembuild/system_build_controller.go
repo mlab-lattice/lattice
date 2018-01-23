@@ -5,7 +5,7 @@ import (
 	"reflect"
 	"time"
 
-	crv1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
+	latticev1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	latticeclientset "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/clientset/versioned"
 	latticeinformers "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/informers/externalversions/lattice/v1"
 	latticelisters "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/listers/lattice/v1"
@@ -21,11 +21,11 @@ import (
 	"github.com/golang/glog"
 )
 
-var controllerKind = crv1.SchemeGroupVersion.WithKind("SystemBuild")
+var controllerKind = latticev1.SchemeGroupVersion.WithKind("SystemBuild")
 
 type Controller struct {
 	syncHandler        func(bKey string) error
-	enqueueSystemBuild func(sysBuild *crv1.SystemBuild)
+	enqueueSystemBuild func(sysBuild *latticev1.SystemBuild)
 
 	latticeClient latticeclientset.Interface
 
@@ -106,21 +106,21 @@ func (c *Controller) Run(workers int, stopCh <-chan struct{}) {
 }
 
 func (c *Controller) addSystemBuild(obj interface{}) {
-	build := obj.(*crv1.SystemBuild)
+	build := obj.(*latticev1.SystemBuild)
 	glog.V(4).Infof("Adding SystemBuild %s", build.Name)
 	c.enqueueSystemBuild(build)
 }
 
 func (c *Controller) updateSystemBuild(old, cur interface{}) {
-	oldBuild := old.(*crv1.SystemBuild)
-	curBuild := cur.(*crv1.SystemBuild)
+	oldBuild := old.(*latticev1.SystemBuild)
+	curBuild := cur.(*latticev1.SystemBuild)
 	glog.V(4).Infof("Updating SystemBuild %s", oldBuild.Name)
 	c.enqueueSystemBuild(curBuild)
 }
 
 // addServiceBuild enqueues the System that manages a Service when the Service is created.
 func (c *Controller) addServiceBuild(obj interface{}) {
-	serviceBuild := obj.(*crv1.ServiceBuild)
+	serviceBuild := obj.(*latticev1.ServiceBuild)
 
 	if serviceBuild.DeletionTimestamp != nil {
 		// We assume for now that ServiceBuilds do not get deleted.
@@ -151,8 +151,8 @@ func (c *Controller) addServiceBuild(obj interface{}) {
 // Service is updated and enqueues them.
 func (c *Controller) updateServiceBuild(old, cur interface{}) {
 	glog.V(5).Info("Got ServiceBuild update")
-	oldServiceBuild := old.(*crv1.ServiceBuild)
-	curServiceBuild := cur.(*crv1.ServiceBuild)
+	oldServiceBuild := old.(*latticev1.ServiceBuild)
+	curServiceBuild := cur.(*latticev1.ServiceBuild)
 	if curServiceBuild.ResourceVersion == oldServiceBuild.ResourceVersion {
 		// Periodic resync will send update events for all known ServiceBuilds.
 		// Two different versions of the same job will always have different RVs.
@@ -189,7 +189,7 @@ func (c *Controller) updateServiceBuild(old, cur interface{}) {
 // resolveControllerRef returns the controller referenced by a ControllerRef,
 // or nil if the ControllerRef could not be resolved to a matching controller
 // of the correct Kind.
-func (c *Controller) resolveControllerRef(namespace string, controllerRef *metav1.OwnerReference) *crv1.SystemBuild {
+func (c *Controller) resolveControllerRef(namespace string, controllerRef *metav1.OwnerReference) *latticev1.SystemBuild {
 	// We can't look up by Name, so look up by Name and then verify Name.
 	// Don't even try to look up by Name if it's the wrong Kind.
 	if controllerRef.Kind != controllerKind.Kind {
@@ -214,7 +214,7 @@ func (c *Controller) resolveControllerRef(namespace string, controllerRef *metav
 	return build
 }
 
-func (c *Controller) enqueue(sysb *crv1.SystemBuild) {
+func (c *Controller) enqueue(sysb *latticev1.SystemBuild) {
 	key, err := cache.DeletionHandlingMetaNamespaceKeyFunc(sysb)
 	if err != nil {
 		runtime.HandleError(fmt.Errorf("couldn't get key for object %#v: %v", sysb, err))

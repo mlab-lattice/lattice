@@ -4,11 +4,11 @@ import (
 	"reflect"
 	"sort"
 
-	crv1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
+	latticev1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	"github.com/mlab-lattice/system/pkg/definition/tree"
 )
 
-func (c *Controller) syncFailedSystemBuild(build *crv1.SystemBuild, stateInfo stateInfo) error {
+func (c *Controller) syncFailedSystemBuild(build *latticev1.SystemBuild, stateInfo stateInfo) error {
 	// Sort the ServiceBuild paths so the Status.Message is the same for the same failed ServiceBuilds
 	var failedServices []tree.NodePath
 	for service := range stateInfo.failedServiceBuilds {
@@ -29,7 +29,7 @@ func (c *Controller) syncFailedSystemBuild(build *crv1.SystemBuild, stateInfo st
 
 	_, err := c.updateSystemBuildStatus(
 		build,
-		crv1.SystemBuildStateFailed,
+		latticev1.SystemBuildStateFailed,
 		message,
 		stateInfo.serviceBuilds,
 		stateInfo.serviceBuildStatuses,
@@ -37,7 +37,7 @@ func (c *Controller) syncFailedSystemBuild(build *crv1.SystemBuild, stateInfo st
 	return err
 }
 
-func (c *Controller) syncRunningSystemBuild(build *crv1.SystemBuild, stateInfo stateInfo) error {
+func (c *Controller) syncRunningSystemBuild(build *latticev1.SystemBuild, stateInfo stateInfo) error {
 	// Sort the ServiceBuild paths so the Status.Message is the same for the same failed ServiceBuilds
 	var activeServices []tree.NodePath
 	for service := range stateInfo.activeServiceBuilds {
@@ -58,7 +58,7 @@ func (c *Controller) syncRunningSystemBuild(build *crv1.SystemBuild, stateInfo s
 
 	_, err := c.updateSystemBuildStatus(
 		build,
-		crv1.SystemBuildStateRunning,
+		latticev1.SystemBuildStateRunning,
 		message,
 		stateInfo.serviceBuilds,
 		stateInfo.serviceBuildStatuses,
@@ -66,7 +66,7 @@ func (c *Controller) syncRunningSystemBuild(build *crv1.SystemBuild, stateInfo s
 	return err
 }
 
-func (c *Controller) syncMissingServiceBuildsSystemBuild(build *crv1.SystemBuild, stateInfo stateInfo) error {
+func (c *Controller) syncMissingServiceBuildsSystemBuild(build *latticev1.SystemBuild, stateInfo stateInfo) error {
 	// Copy so the shared cache isn't mutated
 	status := build.Status.DeepCopy()
 	serviceBuilds := status.ServiceBuilds
@@ -76,7 +76,7 @@ func (c *Controller) syncMissingServiceBuildsSystemBuild(build *crv1.SystemBuild
 
 	serviceBuildStatuses := status.ServiceBuildStatuses
 	if serviceBuildStatuses == nil {
-		serviceBuildStatuses = map[string]crv1.ServiceBuildStatus{}
+		serviceBuildStatuses = map[string]latticev1.ServiceBuildStatus{}
 	}
 
 	for _, service := range stateInfo.needsNewServiceBuilds {
@@ -94,7 +94,7 @@ func (c *Controller) syncMissingServiceBuildsSystemBuild(build *crv1.SystemBuild
 
 	_, err := c.updateSystemBuildStatus(
 		build,
-		crv1.SystemBuildStateRunning,
+		latticev1.SystemBuildStateRunning,
 		"",
 		serviceBuilds,
 		serviceBuildStatuses,
@@ -102,10 +102,10 @@ func (c *Controller) syncMissingServiceBuildsSystemBuild(build *crv1.SystemBuild
 	return err
 }
 
-func (c *Controller) syncSucceededSystemBuild(build *crv1.SystemBuild, stateInfo stateInfo) error {
+func (c *Controller) syncSucceededSystemBuild(build *latticev1.SystemBuild, stateInfo stateInfo) error {
 	_, err := c.updateSystemBuildStatus(
 		build,
-		crv1.SystemBuildStateSucceeded,
+		latticev1.SystemBuildStateSucceeded,
 		"",
 		stateInfo.serviceBuilds,
 		stateInfo.serviceBuildStatuses,
@@ -113,18 +113,18 @@ func (c *Controller) syncSucceededSystemBuild(build *crv1.SystemBuild, stateInfo
 	return err
 }
 
-func (c *Controller) putSystemBuildUpdate(sysb *crv1.SystemBuild) (*crv1.SystemBuild, error) {
+func (c *Controller) putSystemBuildUpdate(sysb *latticev1.SystemBuild) (*latticev1.SystemBuild, error) {
 	return c.latticeClient.LatticeV1().SystemBuilds(sysb.Namespace).Update(sysb)
 }
 
 func (c *Controller) updateSystemBuildStatus(
-	build *crv1.SystemBuild,
-	state crv1.SystemBuildState,
+	build *latticev1.SystemBuild,
+	state latticev1.SystemBuildState,
 	message string,
 	serviceBuilds map[tree.NodePath]string,
-	serviceBuildStatuses map[string]crv1.ServiceBuildStatus,
-) (*crv1.SystemBuild, error) {
-	status := crv1.SystemBuildStatus{
+	serviceBuildStatuses map[string]latticev1.ServiceBuildStatus,
+) (*latticev1.SystemBuild, error) {
+	status := latticev1.SystemBuildStatus{
 		State:                state,
 		ObservedGeneration:   build.Generation,
 		Message:              message,

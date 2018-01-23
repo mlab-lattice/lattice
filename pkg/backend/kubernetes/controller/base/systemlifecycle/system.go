@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"reflect"
 
-	crv1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
+	latticev1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	"github.com/mlab-lattice/system/pkg/definition"
 	"github.com/mlab-lattice/system/pkg/definition/tree"
 
@@ -13,14 +13,17 @@ import (
 	kubelabels "k8s.io/apimachinery/pkg/labels"
 )
 
-func (c *Controller) updateSystem(system *crv1.System, services map[tree.NodePath]crv1.SystemSpecServiceInfo) (*crv1.System, error) {
+func (c *Controller) updateSystem(
+	system *latticev1.System,
+	services map[tree.NodePath]latticev1.SystemSpecServiceInfo,
+) (*latticev1.System, error) {
 	spec := system.Spec.DeepCopy()
 	spec.Services = services
 
 	return c.updateSystemSpec(system, *spec)
 }
 
-func (c *Controller) updateSystemSpec(system *crv1.System, spec crv1.SystemSpec) (*crv1.System, error) {
+func (c *Controller) updateSystemSpec(system *latticev1.System, spec latticev1.SystemSpec) (*latticev1.System, error) {
 	if reflect.DeepEqual(system.Spec, spec) {
 		return system, nil
 	}
@@ -35,13 +38,13 @@ func (c *Controller) updateSystemSpec(system *crv1.System, spec crv1.SystemSpec)
 	return c.latticeClient.LatticeV1().Systems(system.Namespace).Update(system)
 }
 
-func isSystemStatusCurrent(system *crv1.System) bool {
+func isSystemStatusCurrent(system *latticev1.System) bool {
 	return system.Status.UpdateProcessed
 	// FIXME: go back to this when ObservedGeneration is supported for CRD
 	//return system.Status.ObservedGeneration == system.Generation
 }
 
-func (c *Controller) getSystem(namespace string) (*crv1.System, error) {
+func (c *Controller) getSystem(namespace string) (*latticev1.System, error) {
 	systems, err := c.systemLister.Systems(namespace).List(kubelabels.Everything())
 	if err != nil {
 		return nil, err
@@ -71,30 +74,41 @@ func (c *Controller) getSystem(namespace string) (*crv1.System, error) {
 	return nil, fmt.Errorf("expected one System in namespace %v but found %v", namespace, len(systemList.Items))
 }
 
-func (c *Controller) systemSpec(rollout *crv1.SystemRollout, build *crv1.SystemBuild) (crv1.SystemSpec, error) {
+func (c *Controller) systemSpec(rollout *latticev1.SystemRollout, build *latticev1.SystemBuild) (latticev1.SystemSpec, error) {
 	services, err := c.systemServices(rollout, build)
 	if err != nil {
-		return crv1.SystemSpec{}, err
+		return latticev1.SystemSpec{}, err
 	}
 
-	spec := crv1.SystemSpec{
+	spec := latticev1.SystemSpec{
 		Services: services,
 	}
 
 	return spec, nil
 }
 
-func (c *Controller) systemServices(rollout *crv1.SystemRollout, build *crv1.SystemBuild) (map[tree.NodePath]crv1.SystemSpecServiceInfo, error) {
-	if build.Status.State != crv1.SystemBuildStateSucceeded {
-		return nil, fmt.Errorf("cannot get system services for build %v/%v, must be in state %v but is in %v", build.Namespace, build.Name, crv1.SystemBuildStateSucceeded, build.Status.State)
+func (c *Controller) systemServices(
+	rollout *latticev1.SystemRollout,
+	build *latticev1.SystemBuild,
+) (map[tree.NodePath]latticev1.SystemSpecServiceInfo, error) {
+	if build.Status.State != latticev1.SystemBuildStateSucceeded {
+		err := fmt.Errorf(
+			"cannot get system services for build %v/%v, must be in state %v but is in %v",
+			build.Namespace,
+			build.Name,
+			latticev1.SystemBuildStateSucceeded,
+			build.Status.State,
+		)
+		return nil, err
 	}
 
-	services := map[tree.NodePath]crv1.SystemSpecServiceInfo{}
+	services := map[tree.NodePath]latticev1.SystemSpecServiceInfo{}
 	for path, service := range build.Spec.DefinitionRoot.Services() {
 		serviceBuildName, ok := build.Status.ServiceBuilds[path]
 		if !ok {
 			// FIXME: send warn event
-			return nil, fmt.Errorf("SystemBuild %v/%v does not have expected Service %v", build.Namespace, build.Name, path)
+			err := fmt.Errorf("SystemBuild %v/%v does not have expected Service %v", build.Namespace, build.Name, path)
+			return nil, err
 		}
 
 		serviceBuild, err := c.serviceBuildLister.ServiceBuilds(build.Namespace).Get(serviceBuildName)
@@ -112,28 +126,41 @@ func (c *Controller) systemServices(rollout *crv1.SystemRollout, build *crv1.Sys
 			return nil, err
 		}
 
-		// Create crv1.ComponentBuildArtifacts for each Component in the Service
-		componentBuildArtifacts := map[string]crv1.ComponentBuildArtifacts{}
+		// Create latticev1.ComponentBuildArtifacts for each Component in the Service
+		componentBuildArtifacts := map[string]latticev1.ComponentBuildArtifacts{}
 		for component := range serviceBuild.Spec.Components {
 			componentBuildName, ok := serviceBuild.Status.ComponentBuilds[component]
 			if !ok {
-				return nil, fmt.Errorf("ServiceBuild %v/%v component %v does not have a ComponentBuild", serviceBuild.Namespace, serviceBuild.Name, component)
+				err := fmt.Errorf(
+					"ServiceBuild %v/%v component %v does not have a ComponentBuild",
+					serviceBuild.Namespace,
+					serviceBuild.Name,
+					component,
+				)
+				return nil, err
 			}
 
 			componentBuildStatus, ok := serviceBuild.Status.ComponentBuildStatuses[componentBuildName]
 			if !ok {
-				return nil, fmt.Errorf("ServiceBuild %v/%v ComponentBuild %v does not have a ComponentBuildStatus", serviceBuild.Namespace, serviceBuild.Name, componentBuildName)
+				err := fmt.Errorf(
+					"ServiceBuild %v/%v ComponentBuild %v does not have a ComponentBuildStatus",
+					serviceBuild.Namespace,
+					serviceBuild.Name,
+					componentBuildName,
+				)
+				return nil, err
 			}
 
 			if componentBuildStatus.Artifacts == nil {
 				// FIXME: send warn event
-				return nil, fmt.Errorf("ComponentBuild %v/%v Status does not have Artifacts", build.Namespace, componentBuildName)
+				err := fmt.Errorf("ComponentBuild %v/%v Status does not have Artifacts", build.Namespace, componentBuildName)
+				return nil, err
 			}
 
 			componentBuildArtifacts[component] = *componentBuildStatus.Artifacts
 		}
 
-		services[path] = crv1.SystemSpecServiceInfo{
+		services[path] = latticev1.SystemSpecServiceInfo{
 			Definition:              service.Definition().(definition.Service),
 			ComponentBuildArtifacts: componentBuildArtifacts,
 		}

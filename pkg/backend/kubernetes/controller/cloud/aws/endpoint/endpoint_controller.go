@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/cloudprovider/aws"
-	crv1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
+	latticev1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	latticeclientset "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/clientset/versioned"
 	latticeinformers "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/informers/externalversions/lattice/v1"
 	latticelisters "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/listers/lattice/v1"
@@ -24,7 +24,7 @@ import (
 
 type Controller struct {
 	syncHandler     func(bKey string) error
-	enqueueEndpoint func(cb *crv1.Endpoint)
+	enqueueEndpoint func(cb *latticev1.Endpoint)
 
 	clusterID types.ClusterID
 
@@ -100,7 +100,7 @@ func (c *Controller) Run(workers int, stopCh <-chan struct{}) {
 }
 
 func (c *Controller) handleEndpointAdd(obj interface{}) {
-	endpoint := obj.(*crv1.Endpoint)
+	endpoint := obj.(*latticev1.Endpoint)
 	glog.V(4).Infof("Endpoint %v/%v added", endpoint.Namespace, endpoint.Name)
 
 	if endpoint.DeletionTimestamp != nil {
@@ -114,8 +114,8 @@ func (c *Controller) handleEndpointAdd(obj interface{}) {
 }
 
 func (c *Controller) handleEndpointUpdate(old, cur interface{}) {
-	oldEndpoint := old.(*crv1.Endpoint)
-	curEndpoint := cur.(*crv1.Endpoint)
+	oldEndpoint := old.(*latticev1.Endpoint)
+	curEndpoint := cur.(*latticev1.Endpoint)
 	glog.V(5).Info("Got Endpoint %v/%v update", curEndpoint.Namespace, curEndpoint.Name)
 	if curEndpoint.ResourceVersion == oldEndpoint.ResourceVersion {
 		// Periodic resync will send update events for all known Services.
@@ -128,7 +128,7 @@ func (c *Controller) handleEndpointUpdate(old, cur interface{}) {
 }
 
 func (c *Controller) handleEndpointDelete(obj interface{}) {
-	endpoint, ok := obj.(*crv1.Endpoint)
+	endpoint, ok := obj.(*latticev1.Endpoint)
 
 	// When a delete is dropped, the relist will notice a pod in the store not
 	// in the list, leading to the insertion of a tombstone object which contains
@@ -139,7 +139,7 @@ func (c *Controller) handleEndpointDelete(obj interface{}) {
 			runtime.HandleError(fmt.Errorf("couldn't get object from tombstone %#v", obj))
 			return
 		}
-		endpoint, ok = tombstone.Obj.(*crv1.Endpoint)
+		endpoint, ok = tombstone.Obj.(*latticev1.Endpoint)
 		if !ok {
 			runtime.HandleError(fmt.Errorf("tombstone contained object that is not a Service %#v", obj))
 			return
@@ -149,7 +149,7 @@ func (c *Controller) handleEndpointDelete(obj interface{}) {
 	c.enqueueEndpoint(endpoint)
 }
 
-func (c *Controller) enqueue(endpoint *crv1.Endpoint) {
+func (c *Controller) enqueue(endpoint *latticev1.Endpoint) {
 	key, err := cache.DeletionHandlingMetaNamespaceKeyFunc(endpoint)
 	if err != nil {
 		runtime.HandleError(fmt.Errorf("couldn't get key for object %#v: %v", endpoint, err))
@@ -244,8 +244,8 @@ func (c *Controller) syncEndpoint(key string) error {
 		return err
 	}
 
-	status := crv1.EndpointStatus{
-		State: crv1.EndpointStateCreated,
+	status := latticev1.EndpointStatus{
+		State: latticev1.EndpointStateCreated,
 	}
 
 	_, err = c.updateEndpointStatus(endpoint, status)

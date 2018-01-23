@@ -1,7 +1,7 @@
 package serviceaddress
 
 import (
-	crv1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
+	latticev1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -9,7 +9,7 @@ import (
 	"reflect"
 )
 
-func (c *Controller) syncEndpoint(address *crv1.ServiceAddress) (*crv1.Endpoint, error) {
+func (c *Controller) syncEndpoint(address *latticev1.ServiceAddress) (*latticev1.Endpoint, error) {
 	endpoint, err := c.endpointLister.Endpoints(address.Namespace).Get(address.Name)
 	if err != nil {
 		if errors.IsNotFound(err) {
@@ -27,7 +27,10 @@ func (c *Controller) syncEndpoint(address *crv1.ServiceAddress) (*crv1.Endpoint,
 	return endpoint, nil
 }
 
-func (c *Controller) syncExistingEndpoint(address *crv1.ServiceAddress, endpoint *crv1.Endpoint) (*crv1.Endpoint, error) {
+func (c *Controller) syncExistingEndpoint(
+	address *latticev1.ServiceAddress,
+	endpoint *latticev1.Endpoint,
+) (*latticev1.Endpoint, error) {
 	spec, err := c.serviceMesh.GetEndpointSpec(address)
 	if err != nil {
 		return nil, err
@@ -36,7 +39,10 @@ func (c *Controller) syncExistingEndpoint(address *crv1.ServiceAddress, endpoint
 	return c.updateEndpointSpec(endpoint, *spec)
 }
 
-func (c *Controller) updateEndpointSpec(endpoint *crv1.Endpoint, desiredSpec crv1.EndpointSpec) (*crv1.Endpoint, error) {
+func (c *Controller) updateEndpointSpec(
+	endpoint *latticev1.Endpoint,
+	desiredSpec latticev1.EndpointSpec,
+) (*latticev1.Endpoint, error) {
 	if reflect.DeepEqual(endpoint.Spec, desiredSpec) {
 		return endpoint, nil
 	}
@@ -48,7 +54,7 @@ func (c *Controller) updateEndpointSpec(endpoint *crv1.Endpoint, desiredSpec crv
 	return c.latticeClient.LatticeV1().Endpoints(endpoint.Namespace).Update(endpoint)
 }
 
-func (c *Controller) createNewEndpoint(address *crv1.ServiceAddress) (*crv1.Endpoint, error) {
+func (c *Controller) createNewEndpoint(address *latticev1.ServiceAddress) (*latticev1.Endpoint, error) {
 	endpoint, err := c.newEndpoint(address)
 	if err != nil {
 		return nil, err
@@ -63,20 +69,20 @@ func (c *Controller) createNewEndpoint(address *crv1.ServiceAddress) (*crv1.Endp
 	return endpoint, nil
 }
 
-func (c *Controller) newEndpoint(address *crv1.ServiceAddress) (*crv1.Endpoint, error) {
+func (c *Controller) newEndpoint(address *latticev1.ServiceAddress) (*latticev1.Endpoint, error) {
 	spec, err := c.serviceMesh.GetEndpointSpec(address)
 	if err != nil {
 		return nil, err
 	}
 
-	endpoint := &crv1.Endpoint{
+	endpoint := &latticev1.Endpoint{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:            address.Name,
 			OwnerReferences: []metav1.OwnerReference{*metav1.NewControllerRef(address, controllerKind)},
 		},
 		Spec: *spec,
-		Status: crv1.EndpointStatus{
-			State: crv1.EndpointStatePending,
+		Status: latticev1.EndpointStatus{
+			State: latticev1.EndpointStatePending,
 		},
 	}
 

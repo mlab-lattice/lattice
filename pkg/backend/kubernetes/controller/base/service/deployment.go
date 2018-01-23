@@ -8,7 +8,7 @@ import (
 
 	kubeconstants "github.com/mlab-lattice/system/pkg/backend/kubernetes/constants"
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/controller/base/service/util"
-	crv1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
+	latticev1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	kubeutil "github.com/mlab-lattice/system/pkg/backend/kubernetes/util/kubernetes"
 	"github.com/mlab-lattice/system/pkg/definition/block"
 
@@ -29,7 +29,7 @@ const (
 	dnsOptionNdots = "ndots"
 )
 
-func (c *Controller) syncServiceDeployment(service *crv1.Service, nodePool *crv1.NodePool) (*appsv1.Deployment, error) {
+func (c *Controller) syncServiceDeployment(service *latticev1.Service, nodePool *latticev1.NodePool) (*appsv1.Deployment, error) {
 	selector := kubelabels.NewSelector()
 	requirement, err := kubelabels.NewRequirement(kubeconstants.LabelKeyServiceID, selection.Equals, []string{service.Name})
 	if err != nil {
@@ -54,7 +54,11 @@ func (c *Controller) syncServiceDeployment(service *crv1.Service, nodePool *crv1
 	return c.syncExistingDeployment(service, nodePool, deployments[0])
 }
 
-func (c *Controller) syncExistingDeployment(service *crv1.Service, nodePool *crv1.NodePool, deployment *appsv1.Deployment) (*appsv1.Deployment, error) {
+func (c *Controller) syncExistingDeployment(
+	service *latticev1.Service,
+	nodePool *latticev1.NodePool,
+	deployment *appsv1.Deployment,
+) (*appsv1.Deployment, error) {
 	// Need a consistent view of our config while generating the deployment spec
 	c.configLock.RLock()
 	defer c.configLock.RUnlock()
@@ -78,7 +82,13 @@ func (c *Controller) syncExistingDeployment(service *crv1.Service, nodePool *crv
 
 	isUpdated, reason := c.isDeploymentSpecUpdated(service, &currentSpec, defaultedDesiredSpec, defaultedUntransformedSpec)
 	if !isUpdated {
-		glog.V(4).Infof("Deployment %v for Service %v/%v not up to date: %v", deployment.Name, service.Namespace, service.Name, reason)
+		glog.V(4).Infof(
+			"Deployment %v for Service %v/%v not up to date: %v",
+			deployment.Name,
+			service.Namespace,
+			service.Name,
+			reason,
+		)
 		return c.updateDeploymentSpec(deployment, desiredSpec)
 	}
 
@@ -97,7 +107,7 @@ func (c *Controller) updateDeploymentSpec(deployment *appsv1.Deployment, spec ap
 	return c.kubeClient.AppsV1().Deployments(deployment.Namespace).Update(deployment)
 }
 
-func (c *Controller) createNewDeployment(service *crv1.Service, nodePool *crv1.NodePool) (*appsv1.Deployment, error) {
+func (c *Controller) createNewDeployment(service *latticev1.Service, nodePool *latticev1.NodePool) (*appsv1.Deployment, error) {
 	deployment, err := c.newDeployment(service, nodePool)
 	if err != nil {
 		return nil, err
@@ -106,7 +116,7 @@ func (c *Controller) createNewDeployment(service *crv1.Service, nodePool *crv1.N
 	return c.kubeClient.AppsV1().Deployments(service.Namespace).Create(deployment)
 }
 
-func (c *Controller) newDeployment(service *crv1.Service, nodePool *crv1.NodePool) (*appsv1.Deployment, error) {
+func (c *Controller) newDeployment(service *latticev1.Service, nodePool *latticev1.NodePool) (*appsv1.Deployment, error) {
 	// Need a consistent view of our config while generating the deployment spec
 	c.configLock.RLock()
 	defer c.configLock.RUnlock()
@@ -131,18 +141,23 @@ func (c *Controller) newDeployment(service *crv1.Service, nodePool *crv1.NodePoo
 	return d, nil
 }
 
-func deploymentName(service *crv1.Service) string {
+func deploymentName(service *latticev1.Service) string {
 	// TODO(kevinrosendahl): May change this to UUID when a Service can have multiple Deployments (e.g. Blue/Green & Canary)
 	return fmt.Sprintf("lattice-service-%s", service.Name)
 }
 
-func deploymentLabels(service *crv1.Service) map[string]string {
+func deploymentLabels(service *latticev1.Service) map[string]string {
 	return map[string]string{
 		kubeconstants.LabelKeyServiceID: service.Name,
 	}
 }
 
-func (c *Controller) deploymentSpec(service *crv1.Service, name string, deploymentLabels map[string]string, nodePool *crv1.NodePool) (appsv1.DeploymentSpec, error) {
+func (c *Controller) deploymentSpec(
+	service *latticev1.Service,
+	name string,
+	deploymentLabels map[string]string,
+	nodePool *latticev1.NodePool,
+) (appsv1.DeploymentSpec, error) {
 	spec, err := c.untransformedDeploymentSpec(service, name, deploymentLabels, nodePool)
 	if err != nil {
 		return appsv1.DeploymentSpec{}, err
@@ -161,7 +176,12 @@ func (c *Controller) deploymentSpec(service *crv1.Service, name string, deployme
 	return *spec, nil
 }
 
-func (c *Controller) untransformedDeploymentSpec(service *crv1.Service, name string, deploymentLabels map[string]string, nodePool *crv1.NodePool) (*appsv1.DeploymentSpec, error) {
+func (c *Controller) untransformedDeploymentSpec(
+	service *latticev1.Service,
+	name string,
+	deploymentLabels map[string]string,
+	nodePool *latticev1.NodePool,
+) (*appsv1.DeploymentSpec, error) {
 	replicas := service.Spec.NumInstances
 
 	// Create a container for each Component in the Service
@@ -252,7 +272,7 @@ func (c *Controller) untransformedDeploymentSpec(service *crv1.Service, name str
 	return spec, nil
 }
 
-func containerFromComponent(component *block.Component, buildArtifacts *crv1.ComponentBuildArtifacts) corev1.Container {
+func containerFromComponent(component *block.Component, buildArtifacts *latticev1.ComponentBuildArtifacts) corev1.Container {
 	var ports []corev1.ContainerPort
 	for _, port := range component.Ports {
 		ports = append(
@@ -356,7 +376,10 @@ func deploymentLivenessProbe(hc *block.ComponentHealthCheck) *corev1.Probe {
 	}
 }
 
-func (c *Controller) isDeploymentSpecUpdated(service *crv1.Service, current, desired, untransformed *appsv1.DeploymentSpec) (bool, string) {
+func (c *Controller) isDeploymentSpecUpdated(
+	service *latticev1.Service,
+	current, desired, untransformed *appsv1.DeploymentSpec,
+) (bool, string) {
 	// IMPORTANT: the order of these IsDeploymentSpecUpdated and the order of the TransformServiceDeploymentSpec
 	// calls in deploymentSpec _must_ be inverses.
 	// That is, if we call serviceMesh then cloudProvider here, we _must_ call cloudProvider then serviceMesh

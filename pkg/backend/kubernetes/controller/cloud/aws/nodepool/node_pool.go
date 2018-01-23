@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	awscloudprovider "github.com/mlab-lattice/system/pkg/backend/kubernetes/cloudprovider/aws"
-	crv1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
+	latticev1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	kubetf "github.com/mlab-lattice/system/pkg/backend/kubernetes/terraform/aws"
 	kubeutil "github.com/mlab-lattice/system/pkg/backend/kubernetes/util/kubernetes"
 	tf "github.com/mlab-lattice/system/pkg/terraform"
@@ -25,7 +25,7 @@ const (
 	terraformOutputSecurityGroupID                 = "security_group_id"
 )
 
-func (c *Controller) syncDeletedNodePool(nodePool *crv1.NodePool) error {
+func (c *Controller) syncDeletedNodePool(nodePool *latticev1.NodePool) error {
 	err := c.deprovisionNodePool(nodePool)
 	if err != nil {
 		return err
@@ -35,23 +35,23 @@ func (c *Controller) syncDeletedNodePool(nodePool *crv1.NodePool) error {
 	return err
 }
 
-func (c *Controller) syncNodePoolState(nodePool *crv1.NodePool) (*crv1.NodePool, error) {
+func (c *Controller) syncNodePoolState(nodePool *latticev1.NodePool) (*latticev1.NodePool, error) {
 	info, err := c.currentNodePoolInfo(nodePool)
 
 	if err != nil || info.NumInstances < nodePool.Spec.NumInstances {
 		// For now, assume an error retrieving output values means that the node pool hasn't been provisioned
 		// TODO: look into adding different exit codes to `terraform output`
-		return c.updateNodePoolStatus(nodePool, crv1.NodePoolStateScalingUp)
+		return c.updateNodePoolStatus(nodePool, latticev1.NodePoolStateScalingUp)
 	}
 
 	if info.NumInstances > nodePool.Spec.NumInstances {
-		return c.updateNodePoolStatus(nodePool, crv1.NodePoolStateScalingDown)
+		return c.updateNodePoolStatus(nodePool, latticev1.NodePoolStateScalingDown)
 	}
 
-	return c.updateNodePoolStatus(nodePool, crv1.NodePoolStateStable)
+	return c.updateNodePoolStatus(nodePool, latticev1.NodePoolStateStable)
 }
 
-func (c *Controller) provisionNodePool(nodePool *crv1.NodePool) (*crv1.NodePool, error) {
+func (c *Controller) provisionNodePool(nodePool *latticev1.NodePool) (*latticev1.NodePool, error) {
 	nodePoolID := kubeutil.NodePoolIDLabelValue(nodePool)
 
 	config := c.nodePoolConfig(nodePool)
@@ -79,7 +79,7 @@ func (c *Controller) provisionNodePool(nodePool *crv1.NodePool) (*crv1.NodePool,
 	return c.syncNodePoolState(nodePool)
 }
 
-func (c *Controller) deprovisionNodePool(nodePool *crv1.NodePool) error {
+func (c *Controller) deprovisionNodePool(nodePool *latticev1.NodePool) error {
 	nodePoolID := kubeutil.NodePoolIDLabelValue(nodePool)
 
 	config := c.nodePoolConfig(nodePool)
@@ -87,7 +87,7 @@ func (c *Controller) deprovisionNodePool(nodePool *crv1.NodePool) error {
 	return err
 }
 
-func (c *Controller) nodePoolConfig(nodePool *crv1.NodePool) *tf.Config {
+func (c *Controller) nodePoolConfig(nodePool *latticev1.NodePool) *tf.Config {
 	nodePoolID := kubeutil.NodePoolIDLabelValue(nodePool)
 
 	nodePoolModule := kubetf.NewNodePoolModule(
@@ -146,7 +146,7 @@ type nodePoolInfo struct {
 	SecurityGroupID      string
 }
 
-func (c *Controller) currentNodePoolInfo(nodePool *crv1.NodePool) (nodePoolInfo, error) {
+func (c *Controller) currentNodePoolInfo(nodePool *latticev1.NodePool) (nodePoolInfo, error) {
 	nodePoolID := kubeutil.NodePoolIDLabelValue(nodePool)
 	outputVars := []string{
 		terraformOutputAutoscalingGroupID,
@@ -176,10 +176,10 @@ func (c *Controller) currentNodePoolInfo(nodePool *crv1.NodePool) (nodePoolInfo,
 }
 
 func (c *Controller) updateNodePoolStatus(
-	nodePool *crv1.NodePool,
-	state crv1.NodePoolState,
-) (*crv1.NodePool, error) {
-	status := crv1.NodePoolStatus{
+	nodePool *latticev1.NodePool,
+	state latticev1.NodePoolState,
+) (*latticev1.NodePool, error) {
+	status := latticev1.NodePoolStatus{
 		State: state,
 	}
 
@@ -198,7 +198,7 @@ func (c *Controller) updateNodePoolStatus(
 	//return c.latticeClient.LatticeV1().NodePools(nodePool.Namespace).UpdateStatus(nodePool)
 }
 
-func (c *Controller) nodePoolAnnotations(nodePool *crv1.NodePool) (map[string]string, error) {
+func (c *Controller) nodePoolAnnotations(nodePool *latticev1.NodePool) (map[string]string, error) {
 	info, err := c.currentNodePoolInfo(nodePool)
 	if err != nil {
 		return nil, err
@@ -211,7 +211,7 @@ func (c *Controller) nodePoolAnnotations(nodePool *crv1.NodePool) (map[string]st
 	return annotations, nil
 }
 
-func (c *Controller) addFinalizer(nodePool *crv1.NodePool) (*crv1.NodePool, error) {
+func (c *Controller) addFinalizer(nodePool *latticev1.NodePool) (*latticev1.NodePool, error) {
 	// Check to see if the finalizer already exists. If so nothing needs to be done.
 	for _, finalizer := range nodePool.Finalizers {
 		if finalizer == finalizerName {
@@ -229,7 +229,7 @@ func (c *Controller) addFinalizer(nodePool *crv1.NodePool) (*crv1.NodePool, erro
 	return c.latticeClient.LatticeV1().NodePools(nodePool.Namespace).Update(nodePool)
 }
 
-func (c *Controller) removeFinalizer(nodePool *crv1.NodePool) (*crv1.NodePool, error) {
+func (c *Controller) removeFinalizer(nodePool *latticev1.NodePool) (*latticev1.NodePool, error) {
 	// Build up a list of all the finalizers except the aws service controller finalizer.
 	var finalizers []string
 	found := false

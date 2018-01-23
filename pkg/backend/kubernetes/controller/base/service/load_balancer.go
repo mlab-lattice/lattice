@@ -1,13 +1,13 @@
 package service
 
 import (
-	crv1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
+	latticev1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func (c *Controller) syncLoadBalancer(service *crv1.Service) (*crv1.LoadBalancer, bool, error) {
+func (c *Controller) syncLoadBalancer(service *latticev1.Service) (*latticev1.LoadBalancer, bool, error) {
 	lbNeeded := needsLoadBalancer(service)
 
 	loadBalancer, err := c.loadBalancerLister.LoadBalancers(service.Namespace).Get(service.Name)
@@ -27,7 +27,7 @@ func (c *Controller) syncLoadBalancer(service *crv1.Service) (*crv1.LoadBalancer
 	return loadBalancer, lbNeeded, nil
 }
 
-func needsLoadBalancer(service *crv1.Service) bool {
+func needsLoadBalancer(service *latticev1.Service) bool {
 	for _, ports := range service.Spec.Ports {
 		for _, port := range ports {
 			if port.Public {
@@ -39,7 +39,7 @@ func needsLoadBalancer(service *crv1.Service) bool {
 	return false
 }
 
-func (c *Controller) createNewLoadBalancer(service *crv1.Service) (*crv1.LoadBalancer, error) {
+func (c *Controller) createNewLoadBalancer(service *latticev1.Service) (*latticev1.LoadBalancer, error) {
 	loadBalancer := newLoadBalancer(service)
 
 	loadBalancer, err := c.latticeClient.LatticeV1().LoadBalancers(service.Namespace).Create(loadBalancer)
@@ -51,15 +51,15 @@ func (c *Controller) createNewLoadBalancer(service *crv1.Service) (*crv1.LoadBal
 	return loadBalancer, nil
 }
 
-func newLoadBalancer(service *crv1.Service) *crv1.LoadBalancer {
-	return &crv1.LoadBalancer{
+func newLoadBalancer(service *latticev1.Service) *latticev1.LoadBalancer {
+	return &latticev1.LoadBalancer{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:            service.Name,
 			OwnerReferences: []metav1.OwnerReference{*metav1.NewControllerRef(service, controllerKind)},
 		},
-		Spec: crv1.LoadBalancerSpec{},
-		Status: crv1.LoadBalancerStatus{
-			State: crv1.LoadBalancerStatePending,
+		Spec: latticev1.LoadBalancerSpec{},
+		Status: latticev1.LoadBalancerStatus{
+			State: latticev1.LoadBalancerStatePending,
 		},
 	}
 }

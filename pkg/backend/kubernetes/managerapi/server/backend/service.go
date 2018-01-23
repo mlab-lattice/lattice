@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	kubeconstants "github.com/mlab-lattice/system/pkg/backend/kubernetes/constants"
-	crv1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
+	latticev1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	kubeutil "github.com/mlab-lattice/system/pkg/backend/kubernetes/util/kubernetes"
 	"github.com/mlab-lattice/system/pkg/definition/tree"
 	"github.com/mlab-lattice/system/pkg/types"
@@ -33,7 +33,11 @@ func (kb *KubernetesBackend) ListServices(systemID types.SystemID) ([]types.Serv
 
 func (kb *KubernetesBackend) GetService(id types.SystemID, path tree.NodePath) (*types.Service, error) {
 	selector := kubelabels.NewSelector()
-	requirement, err := kubelabels.NewRequirement(kubeconstants.LabelKeyServicePathDomain, selection.Equals, []string{path.ToDomain(true)})
+	requirement, err := kubelabels.NewRequirement(
+		kubeconstants.LabelKeyServicePathDomain,
+		selection.Equals,
+		[]string{path.ToDomain(true)},
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -62,7 +66,11 @@ func (kb *KubernetesBackend) GetService(id types.SystemID, path tree.NodePath) (
 	return &externalService, nil
 }
 
-func (kb *KubernetesBackend) transformService(serviceName string, path tree.NodePath, serviceStatus *crv1.ServiceStatus) types.Service {
+func (kb *KubernetesBackend) transformService(
+	serviceName string,
+	path tree.NodePath,
+	serviceStatus *latticev1.ServiceStatus,
+) types.Service {
 	service := types.Service{
 		ID:               types.ServiceID(serviceName),
 		Path:             path,
@@ -94,19 +102,19 @@ func (kb *KubernetesBackend) transformService(serviceName string, path tree.Node
 	return service
 }
 
-func getServicedState(state crv1.ServiceState) types.ServiceState {
+func getServicedState(state latticev1.ServiceState) types.ServiceState {
 	switch state {
-	case crv1.ServiceStatePending:
+	case latticev1.ServiceStatePending:
 		return types.ServiceStatePending
-	case crv1.ServiceStateScalingDown:
+	case latticev1.ServiceStateScalingDown:
 		return types.ServiceStateScalingDown
-	case crv1.ServiceStateScalingUp:
+	case latticev1.ServiceStateScalingUp:
 		return types.ServiceStateScalingUp
-	case crv1.ServiceStateUpdating:
+	case latticev1.ServiceStateUpdating:
 		return types.ServiceStateUpdating
-	case crv1.ServiceStateStable:
+	case latticev1.ServiceStateStable:
 		return types.ServiceStateStable
-	case crv1.ServiceStateFailed:
+	case latticev1.ServiceStateFailed:
 		return types.ServiceStateFailed
 	default:
 		panic("unreachable")

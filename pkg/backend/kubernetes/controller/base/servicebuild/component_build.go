@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/constants"
-	crv1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
+	latticev1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -13,7 +13,7 @@ import (
 	"github.com/satori/go.uuid"
 )
 
-func getComponentBuildDefinitionHashFromLabel(componentBuild *crv1.ComponentBuild) *string {
+func getComponentBuildDefinitionHashFromLabel(componentBuild *latticev1.ComponentBuild) *string {
 	cBuildHashLabel, ok := componentBuild.Annotations[constants.AnnotationKeyComponentBuildDefinitionHash]
 	if !ok {
 		return nil
@@ -21,7 +21,7 @@ func getComponentBuildDefinitionHashFromLabel(componentBuild *crv1.ComponentBuil
 	return &cBuildHashLabel
 }
 
-func (c *Controller) findComponentBuildForDefinitionHash(namespace, definitionHash string) (*crv1.ComponentBuild, error) {
+func (c *Controller) findComponentBuildForDefinitionHash(namespace, definitionHash string) (*latticev1.ComponentBuild, error) {
 	// Check recent build cache
 	cb, err := c.findComponentBuildInRecentBuildCache(namespace, definitionHash)
 	if err != nil {
@@ -38,7 +38,7 @@ func (c *Controller) findComponentBuildForDefinitionHash(namespace, definitionHa
 	return c.findComponentBuildInStore(namespace, definitionHash)
 }
 
-func (c *Controller) findComponentBuildInRecentBuildCache(namespace, definitionHash string) (*crv1.ComponentBuild, error) {
+func (c *Controller) findComponentBuildInRecentBuildCache(namespace, definitionHash string) (*latticev1.ComponentBuild, error) {
 	c.recentComponentBuildsLock.RLock()
 	defer c.recentComponentBuildsLock.RUnlock()
 
@@ -74,7 +74,7 @@ func (c *Controller) findComponentBuildInRecentBuildCache(namespace, definitionH
 	return componentBuild, nil
 }
 
-func (c *Controller) findComponentBuildInStore(namespace, definitionHash string) (*crv1.ComponentBuild, error) {
+func (c *Controller) findComponentBuildInStore(namespace, definitionHash string) (*latticev1.ComponentBuild, error) {
 	// TODO: similar scalability concerns to getServiceBuildsForComponentBuild
 	cbs, err := c.componentBuildLister.List(labels.Everything())
 	if err != nil {
@@ -87,7 +87,7 @@ func (c *Controller) findComponentBuildInStore(namespace, definitionHash string)
 			continue
 		}
 
-		if *cbHashLabel == definitionHash && cb.Status.State != crv1.ComponentBuildStateFailed {
+		if *cbHashLabel == definitionHash && cb.Status.State != latticev1.ComponentBuildStateFailed {
 			return cb, nil
 		}
 	}
@@ -97,10 +97,10 @@ func (c *Controller) findComponentBuildInStore(namespace, definitionHash string)
 
 func (c *Controller) createNewComponentBuild(
 	namespace string,
-	componentBuildInfo crv1.ServiceBuildSpecComponentBuildInfo,
+	componentBuildInfo latticev1.ServiceBuildSpecComponentBuildInfo,
 	definitionHash string,
 	previousCbName *string,
-) (*crv1.ComponentBuild, error) {
+) (*latticev1.ComponentBuild, error) {
 	c.recentComponentBuildsLock.Lock()
 	defer c.recentComponentBuildsLock.Unlock()
 
@@ -146,21 +146,21 @@ func (c *Controller) createNewComponentBuild(
 	return componentBuild, nil
 }
 
-func newComponentBuild(cbInfo crv1.ServiceBuildSpecComponentBuildInfo, definitionHash string) *crv1.ComponentBuild {
+func newComponentBuild(cbInfo latticev1.ServiceBuildSpecComponentBuildInfo, definitionHash string) *latticev1.ComponentBuild {
 	cbAnnotations := map[string]string{
 		constants.AnnotationKeyComponentBuildDefinitionHash: definitionHash,
 	}
 
-	return &crv1.ComponentBuild{
+	return &latticev1.ComponentBuild{
 		ObjectMeta: metav1.ObjectMeta{
 			Annotations: cbAnnotations,
 			Name:        uuid.NewV4().String(),
 		},
-		Spec: crv1.ComponentBuildSpec{
+		Spec: latticev1.ComponentBuildSpec{
 			BuildDefinitionBlock: cbInfo.DefinitionBlock,
 		},
-		Status: crv1.ComponentBuildStatus{
-			State: crv1.ComponentBuildStatePending,
+		Status: latticev1.ComponentBuildStatus{
+			State: latticev1.ComponentBuildStatePending,
 		},
 	}
 }

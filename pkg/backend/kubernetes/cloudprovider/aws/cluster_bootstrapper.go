@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	kubeconstants "github.com/mlab-lattice/system/pkg/backend/kubernetes/constants"
-	crv1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
+	latticev1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	clusterbootstrapper "github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/cluster/bootstrap/bootstrapper"
 )
 
@@ -51,7 +51,7 @@ type DefaultAWSClusterBootstrapper struct {
 }
 
 func (cp *DefaultAWSClusterBootstrapper) BootstrapClusterResources(resources *clusterbootstrapper.ClusterResources) {
-	resources.Config.Spec.CloudProvider.AWS = &crv1.ConfigCloudProviderAWS{
+	resources.Config.Spec.CloudProvider.AWS = &latticev1.ConfigCloudProviderAWS{
 		BaseNodeAMIID: cp.baseNodeAMIID,
 		KeyName:       cp.keyName,
 	}
