@@ -20,6 +20,10 @@ def go_dependencies():
         "k8s.io/apimachinery",
         "k8s.io/client-go",
         "k8s.io/kubernetes",
+
+        # testing dependencies
+        "github.com/onsi/ginkgo",
+        "github.com/onsi/gomega",
     ]
 
     for dep in dependencies:

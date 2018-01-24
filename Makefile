@@ -33,16 +33,25 @@ clean:
 # testing
 .PHONY: test
 test: gazelle
-	@bazel test --test_output=errors //...
+	@bazel test --test_output=errors //pkg/...
 
 .PHONY: test.no-cache
 test.no-cache: gazelle
-	@bazel test --cache_test_results=no --test_output=errors //...
+	@bazel test --cache_test_results=no --test_output=errors //pkg/...
 
 .PHONY: test.verbose
 test.verbose: gazelle
-	@bazel test --test_output=all --test_env -v
+	@bazel test --test_output=all --test_env -v //pkg/...
 
+
+# e2e testing
+.PHONY: e2e-test
+e2e-test: gazelle
+	@bazel test --cache_test_results=no --test_output=errors //test/e2e/...
+
+.PHONY: e2e-test.verbose
+e2e-test.verbose: gazelle
+	@bazel test --cache_test_results=no --test_output=all --test_env -v //test/e2e/...
 
 # formatting/linting
 .PHONY: check

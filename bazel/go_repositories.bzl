@@ -104,6 +104,17 @@ GO_REPOSITORIES = {
         "tag": "v1.9.0",
         "importpath": "k8s.io/kubernetes",
     },
+    # testing dependencies
+    "github.com/onsi/ginkgo": {
+        "name": "com_github_onsi_ginkgo",
+        "tag": "v1.4.0",
+        "importpath": "github.com/onsi/ginkgo",
+    },
+    "github.com/onsi/gomega": {
+        "name": "com_github_onsi_gomega",
+        "tag": "v1.3.0",
+        "importpath": "github.com/onsi/gomega",
+    },
     
     # github.com/aws/aws-sdk-go dependencies
     # commits taken from: https://github.com/aws/aws-sdk-go/blob/v1.12.35/Gopkg.lock
