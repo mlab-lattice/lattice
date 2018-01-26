@@ -46,12 +46,21 @@ test.verbose: gazelle
 
 # e2e testing
 .PHONY: e2e-test
-e2e-test: gazelle
-	@bazel test --cache_test_results=no --test_output=errors //test/e2e/...
+e2e-test: e2e-test.build
+	@$(DIR)/bazel-bin/test/e2e/darwin_amd64_stripped/go_default_test -cluster-url $(CLUSTER_URL)
 
-.PHONY: e2e-test.verbose
-e2e-test.verbose: gazelle
-	@bazel test --cache_test_results=no --test_output=all --test_env -v //test/e2e/...
+.PHONY: e2e-test.provider
+e2e-test.provider: e2e-test.build
+	@$(DIR)/bazel-bin/test/e2e/darwin_amd64_stripped/go_default_test -cloud-provider $(PROVIDER)
+
+.PHONY: e2e-test.local
+e2e-test.local: e2e-test.build
+	@$(MAKE) e2e-test.provider PROVIDER=local
+
+.PHONY: e2e-test.build
+e2e-test.build: gazelle
+	@bazel build //test/e2e/...
+
 
 # formatting/linting
 .PHONY: check

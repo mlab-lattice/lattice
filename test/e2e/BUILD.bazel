@@ -1,10 +1,24 @@
-load("@io_bazel_rules_go//go:def.bzl", "go_test")
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 
 go_test(
     name = "go_default_test",
     srcs = ["e2e_test.go"],
+    embed = [":go_default_library"],
     importpath = "github.com/mlab-lattice/system/test/e2e",
+    tags = ["local"],
+)
+
+go_library(
+    name = "go_default_library",
+    srcs = ["e2e.go"],
+    importpath = "github.com/mlab-lattice/system/test/e2e",
+    visibility = ["//visibility:public"],
     deps = [
+        "//pkg/backend/kubernetes/cloudprovider:go_default_library",
+        "//pkg/backend/kubernetes/cloudprovider/local:go_default_library",
+        "//pkg/lifecycle/cluster/provisioner:go_default_library",
+        "//test/e2e/context:go_default_library",
+        "//test/e2e/system:go_default_library",
         "@com_github_onsi_ginkgo//:go_default_library",
         "@com_github_onsi_gomega//:go_default_library",
     ],
