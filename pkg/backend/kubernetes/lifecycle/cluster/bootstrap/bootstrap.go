@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource"
-	crv1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
+	latticev1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	latticeclientset "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/clientset/versioned"
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/cluster/bootstrap/bootstrapper"
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/cluster/bootstrap/bootstrapper/base"
@@ -22,7 +22,7 @@ import (
 
 type Options struct {
 	DryRun           bool
-	Config           crv1.ConfigSpec
+	Config           latticev1.ConfigSpec
 	MasterComponents base.MasterComponentOptions
 	Terraform        base.TerraformOptions
 }

@@ -2,7 +2,7 @@ package base
 
 import (
 	kubeconstants "github.com/mlab-lattice/system/pkg/backend/kubernetes/constants"
-	crv1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
+	latticev1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/system/bootstrap/bootstrapper"
 	kubeutil "github.com/mlab-lattice/system/pkg/backend/kubernetes/util/kubernetes"
 	"github.com/mlab-lattice/system/pkg/definition/tree"
@@ -84,11 +84,11 @@ func (b *DefaultBootstrapper) BootstrapSystemResources(resources *bootstrapper.S
 		},
 	}
 
-	system := &crv1.System{
+	system := &latticev1.System{
 		// Include TypeMeta so if this is a dry run it will be printed out
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "System",
-			APIVersion: crv1.GroupName + "/v1",
+			APIVersion: latticev1.GroupName + "/v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      string(b.systemID),
@@ -97,12 +97,12 @@ func (b *DefaultBootstrapper) BootstrapSystemResources(resources *bootstrapper.S
 				kubeconstants.LabelKeyLatticeClusterID: string(b.clusterID),
 			},
 		},
-		Spec: crv1.SystemSpec{
+		Spec: latticev1.SystemSpec{
 			DefinitionURL: b.definitionURL,
-			Services:      map[tree.NodePath]crv1.SystemSpecServiceInfo{},
+			Services:      map[tree.NodePath]latticev1.SystemSpecServiceInfo{},
 		},
-		Status: crv1.SystemStatus{
-			State: crv1.SystemStateStable,
+		Status: latticev1.SystemStatus{
+			State: latticev1.SystemStateStable,
 		},
 	}
 

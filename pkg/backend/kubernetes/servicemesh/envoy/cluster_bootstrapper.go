@@ -1,7 +1,7 @@
 package envoy
 
 import (
-	crv1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
+	latticev1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	clusterbootstrapper "github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/cluster/bootstrap/bootstrapper"
 
 	corev1 "k8s.io/api/core/v1"
@@ -54,15 +54,15 @@ func (b *DefaultEnvoyClusterBootstrapper) BootstrapClusterResources(resources *c
 			},
 			// Read lattice services
 			{
-				APIGroups: []string{crv1.GroupName},
-				Resources: []string{crv1.ResourcePluralService},
+				APIGroups: []string{latticev1.GroupName},
+				Resources: []string{latticev1.ResourcePluralService},
 				Verbs:     []string{"get", "watch", "list"},
 			},
 		},
 	}
 
-	resources.Config.Spec.ServiceMesh = crv1.ConfigServiceMesh{
-		Envoy: &crv1.ConfigServiceMeshEnvoy{
+	resources.Config.Spec.ServiceMesh = latticev1.ConfigServiceMesh{
+		Envoy: &latticev1.ConfigServiceMeshEnvoy{
 			PrepareImage:      b.prepareImage,
 			Image:             b.image,
 			RedirectCIDRBlock: b.redirectCIDRBlock,

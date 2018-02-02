@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	kubeconstants "github.com/mlab-lattice/system/pkg/backend/kubernetes/constants"
-	crv1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
+	latticev1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	clusterbootstrapper "github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/cluster/bootstrap/bootstrapper"
 	kubeutil "github.com/mlab-lattice/system/pkg/backend/kubernetes/util/kubernetes"
 	"github.com/mlab-lattice/system/pkg/types"
@@ -193,7 +193,7 @@ func (cp *DefaultLocalClusterBootstrapper) bootstrapClusterDNS(resources *cluste
 		Rules: []rbacv1.PolicyRule{
 			// lattice endpoints
 			{
-				APIGroups: []string{crv1.GroupName},
+				APIGroups: []string{latticev1.GroupName},
 				Resources: []string{"endpoints"},
 				Verbs:     []string{rbacv1.VerbAll},
 			},

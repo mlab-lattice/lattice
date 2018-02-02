@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/cloudprovider/aws"
-	crv1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
+	latticev1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	latticeclientset "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/clientset/versioned"
 	latticeinformers "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/informers/externalversions/lattice/v1"
 	latticelisters "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/listers/lattice/v1"
@@ -30,11 +30,11 @@ import (
 	"github.com/golang/glog"
 )
 
-var controllerKind = crv1.SchemeGroupVersion.WithKind("LoadBalancer")
+var controllerKind = latticev1.SchemeGroupVersion.WithKind("LoadBalancer")
 
 type Controller struct {
 	syncHandler         func(bKey string) error
-	enqueueLoadBalancer func(cb *crv1.LoadBalancer)
+	enqueueLoadBalancer func(cb *latticev1.LoadBalancer)
 
 	clusterID types.ClusterID
 
@@ -52,7 +52,7 @@ type Controller struct {
 	configSetChan      chan struct{}
 	configSet          bool
 	configLock         sync.RWMutex
-	config             crv1.ConfigSpec
+	config             latticev1.ConfigSpec
 
 	loadBalancerLister       latticelisters.LoadBalancerLister
 	loadBalancerListerSynced cache.InformerSynced
@@ -179,7 +179,7 @@ func (c *Controller) Run(workers int, stopCh <-chan struct{}) {
 }
 
 func (c *Controller) handleConfigAdd(obj interface{}) {
-	config := obj.(*crv1.Config)
+	config := obj.(*latticev1.Config)
 	glog.V(4).Infof("Adding Config %s", config.Name)
 
 	c.configLock.Lock()
@@ -202,8 +202,8 @@ func (c *Controller) handleConfigAdd(obj interface{}) {
 }
 
 func (c *Controller) handleConfigUpdate(old, cur interface{}) {
-	oldConfig := old.(*crv1.Config)
-	curConfig := cur.(*crv1.Config)
+	oldConfig := old.(*latticev1.Config)
+	curConfig := cur.(*latticev1.Config)
 	glog.V(4).Infof("Updating Config %s", oldConfig.Name)
 
 	c.configLock.Lock()
@@ -235,7 +235,7 @@ func (c *Controller) newServiceMesh() (servicemesh.Interface, error) {
 }
 
 func (c *Controller) handleLoadBalancerAdd(obj interface{}) {
-	loadBalancer := obj.(*crv1.LoadBalancer)
+	loadBalancer := obj.(*latticev1.LoadBalancer)
 	glog.V(4).Infof("LoadBalancer %v/%v added", loadBalancer.Namespace, loadBalancer.Name)
 
 	if loadBalancer.DeletionTimestamp != nil {
@@ -249,8 +249,8 @@ func (c *Controller) handleLoadBalancerAdd(obj interface{}) {
 }
 
 func (c *Controller) handleLoadBalancerUpdate(old, cur interface{}) {
-	oldLoadBalancer := old.(*crv1.LoadBalancer)
-	curLoadBalancer := cur.(*crv1.LoadBalancer)
+	oldLoadBalancer := old.(*latticev1.LoadBalancer)
+	curLoadBalancer := cur.(*latticev1.LoadBalancer)
 	glog.V(5).Info("Got LoadBalancer %v/%v update", curLoadBalancer.Namespace, curLoadBalancer.Name)
 	if curLoadBalancer.ResourceVersion == oldLoadBalancer.ResourceVersion {
 		// Periodic resync will send update events for all known Services.
@@ -263,7 +263,7 @@ func (c *Controller) handleLoadBalancerUpdate(old, cur interface{}) {
 }
 
 func (c *Controller) handleLoadBalancerDelete(obj interface{}) {
-	loadBalancer, ok := obj.(*crv1.LoadBalancer)
+	loadBalancer, ok := obj.(*latticev1.LoadBalancer)
 
 	// When a delete is dropped, the relist will notice a pod in the store not
 	// in the list, leading to the insertion of a tombstone object which contains
@@ -274,7 +274,7 @@ func (c *Controller) handleLoadBalancerDelete(obj interface{}) {
 			runtime.HandleError(fmt.Errorf("couldn't get object from tombstone %#v", obj))
 			return
 		}
-		loadBalancer, ok = tombstone.Obj.(*crv1.LoadBalancer)
+		loadBalancer, ok = tombstone.Obj.(*latticev1.LoadBalancer)
 		if !ok {
 			runtime.HandleError(fmt.Errorf("tombstone contained object that is not a Service %#v", obj))
 			return
@@ -285,7 +285,7 @@ func (c *Controller) handleLoadBalancerDelete(obj interface{}) {
 }
 
 func (c *Controller) handleServiceAdd(obj interface{}) {
-	service := obj.(*crv1.Service)
+	service := obj.(*latticev1.Service)
 	glog.V(4).Infof("Service %v/%v added", service.Namespace, service.Name)
 
 	if service.DeletionTimestamp != nil {
@@ -306,8 +306,8 @@ func (c *Controller) handleServiceAdd(obj interface{}) {
 
 func (c *Controller) handleServiceUpdate(old, cur interface{}) {
 	glog.V(5).Info("Got Service update")
-	oldService := old.(*crv1.Service)
-	curService := cur.(*crv1.Service)
+	oldService := old.(*latticev1.Service)
+	curService := cur.(*latticev1.Service)
 	if curService.ResourceVersion == oldService.ResourceVersion {
 		// Periodic resync will send update events for all known Services.
 		// Two different versions of the same Service will always have different RVs.
@@ -325,7 +325,7 @@ func (c *Controller) handleServiceUpdate(old, cur interface{}) {
 }
 
 func (c *Controller) handleServiceDelete(obj interface{}) {
-	service, ok := obj.(*crv1.Service)
+	service, ok := obj.(*latticev1.Service)
 
 	// When a delete is dropped, the relist will notice a pod in the store not
 	// in the list, leading to the insertion of a tombstone object which contains
@@ -336,7 +336,7 @@ func (c *Controller) handleServiceDelete(obj interface{}) {
 			runtime.HandleError(fmt.Errorf("couldn't get object from tombstone %#v", obj))
 			return
 		}
-		service, ok = tombstone.Obj.(*crv1.Service)
+		service, ok = tombstone.Obj.(*latticev1.Service)
 		if !ok {
 			runtime.HandleError(fmt.Errorf("tombstone contained object that is not a Service %#v", obj))
 			return
@@ -353,7 +353,7 @@ func (c *Controller) handleServiceDelete(obj interface{}) {
 }
 
 func (c *Controller) handleNodePoolAdd(obj interface{}) {
-	nodePool := obj.(*crv1.NodePool)
+	nodePool := obj.(*latticev1.NodePool)
 	glog.V(4).Infof("NodePool %v/%v added", nodePool.Namespace, nodePool.Name)
 
 	if nodePool.DeletionTimestamp != nil {
@@ -374,8 +374,8 @@ func (c *Controller) handleNodePoolAdd(obj interface{}) {
 
 func (c *Controller) handleNodePoolUpdate(old, cur interface{}) {
 	glog.V(5).Info("Got NodePool update")
-	oldNodePool := old.(*crv1.NodePool)
-	curNodePool := cur.(*crv1.NodePool)
+	oldNodePool := old.(*latticev1.NodePool)
+	curNodePool := cur.(*latticev1.NodePool)
 	if curNodePool.ResourceVersion == oldNodePool.ResourceVersion {
 		// Periodic resync will send update events for all known NodePools.
 		// Two different versions of the same NodePool will always have different RVs.
@@ -393,7 +393,7 @@ func (c *Controller) handleNodePoolUpdate(old, cur interface{}) {
 }
 
 func (c *Controller) handleNodePoolDelete(obj interface{}) {
-	nodePool, ok := obj.(*crv1.NodePool)
+	nodePool, ok := obj.(*latticev1.NodePool)
 
 	// When a delete is dropped, the relist will notice a pod in the store not
 	// in the list, leading to the insertion of a tombstone object which contains
@@ -404,7 +404,7 @@ func (c *Controller) handleNodePoolDelete(obj interface{}) {
 			runtime.HandleError(fmt.Errorf("couldn't get object from tombstone %#v", obj))
 			return
 		}
-		nodePool, ok = tombstone.Obj.(*crv1.NodePool)
+		nodePool, ok = tombstone.Obj.(*latticev1.NodePool)
 		if !ok {
 			runtime.HandleError(fmt.Errorf("tombstone contained object that is not a NodePool %#v", obj))
 			return
@@ -506,7 +506,7 @@ func (c *Controller) handleKubeServiceDelete(obj interface{}) {
 	c.enqueueLoadBalancer(loadBalancer)
 }
 
-func (c *Controller) enqueue(loadBalancer *crv1.LoadBalancer) {
+func (c *Controller) enqueue(loadBalancer *latticev1.LoadBalancer) {
 	key, err := cache.DeletionHandlingMetaNamespaceKeyFunc(loadBalancer)
 	if err != nil {
 		runtime.HandleError(fmt.Errorf("couldn't get key for object %#v: %v", loadBalancer, err))
@@ -625,9 +625,9 @@ func (c *Controller) syncLoadBalancer(key string) error {
 		return err
 	}
 
-	ports := map[int32]crv1.LoadBalancerPort{}
+	ports := map[int32]latticev1.LoadBalancerPort{}
 	for _, port := range kubeService.Spec.Ports {
-		ports[servicePorts[port.Port]] = crv1.LoadBalancerPort{
+		ports[servicePorts[port.Port]] = latticev1.LoadBalancerPort{
 			Address: fmt.Sprintf(
 				"%v:%v",
 				loadBalancer.Annotations[aws.AnnotationKeyLoadBalancerDNSName],
@@ -636,9 +636,9 @@ func (c *Controller) syncLoadBalancer(key string) error {
 		}
 	}
 
-	status := crv1.LoadBalancerStatus{
+	status := latticev1.LoadBalancerStatus{
 		Ports: ports,
-		State: crv1.LoadBalancerStateCreated,
+		State: latticev1.LoadBalancerStateCreated,
 	}
 
 	_, err = c.updateLoadBalancerStatus(loadBalancer, status)

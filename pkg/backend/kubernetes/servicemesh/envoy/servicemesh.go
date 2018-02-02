@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	kubeconstants "github.com/mlab-lattice/system/pkg/backend/kubernetes/constants"
-	crv1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
+	latticev1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	kubeutil "github.com/mlab-lattice/system/pkg/backend/kubernetes/util/kubernetes"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -38,11 +38,11 @@ type Options struct {
 }
 
 type ServiceMesh interface {
-	EgressPort(*crv1.Service) (int32, error)
-	ServiceMeshPort(*crv1.Service, int32) (int32, error)
-	ServiceMeshPorts(*crv1.Service) (map[int32]int32, error)
-	ServicePort(*crv1.Service, int32) (int32, error)
-	ServicePorts(*crv1.Service) (map[int32]int32, error)
+	EgressPort(*latticev1.Service) (int32, error)
+	ServiceMeshPort(*latticev1.Service, int32) (int32, error)
+	ServiceMeshPorts(*latticev1.Service) (map[int32]int32, error)
+	ServicePort(*latticev1.Service, int32) (int32, error)
+	ServicePorts(*latticev1.Service) (map[int32]int32, error)
 }
 
 func NewEnvoyServiceMesh(options *Options) *DefaultEnvoyServiceMesh {
@@ -61,7 +61,7 @@ type DefaultEnvoyServiceMesh struct {
 	xdsAPIPort        int32
 }
 
-func (sm *DefaultEnvoyServiceMesh) ServiceAnnotations(service *crv1.Service) (map[string]string, error) {
+func (sm *DefaultEnvoyServiceMesh) ServiceAnnotations(service *latticev1.Service) (map[string]string, error) {
 	envoyPorts, err := envoyPorts(service)
 	if err != nil {
 		return nil, err
@@ -93,7 +93,7 @@ func (sm *DefaultEnvoyServiceMesh) ServiceAnnotations(service *crv1.Service) (ma
 	return annotations, nil
 }
 
-func envoyPorts(service *crv1.Service) ([]int32, error) {
+func envoyPorts(service *latticev1.Service) ([]int32, error) {
 	portSet := map[int32]struct{}{}
 	for _, componentPorts := range service.Spec.Ports {
 		for _, port := range componentPorts {
@@ -131,7 +131,7 @@ func envoyPorts(service *crv1.Service) ([]int32, error) {
 	return envoyPorts, nil
 }
 
-func assignEnvoyPorts(service *crv1.Service, envoyPorts []int32) (map[int32]int32, []int32, error) {
+func assignEnvoyPorts(service *latticev1.Service, envoyPorts []int32) (map[int32]int32, []int32, error) {
 	// Assign an envoy port to each component port, and pop the used envoy port off the slice each time.
 	componentPorts := map[int32]int32{}
 	for _, ports := range service.Spec.Ports {
@@ -149,7 +149,7 @@ func assignEnvoyPorts(service *crv1.Service, envoyPorts []int32) (map[int32]int3
 }
 
 func (sm *DefaultEnvoyServiceMesh) TransformServiceDeploymentSpec(
-	service *crv1.Service,
+	service *latticev1.Service,
 	spec *appsv1.DeploymentSpec,
 ) (*appsv1.DeploymentSpec, error) {
 	prepareEnvoyContainer, envoyContainer, err := sm.envoyContainers(service)
@@ -181,7 +181,7 @@ func (sm *DefaultEnvoyServiceMesh) TransformServiceDeploymentSpec(
 	return spec, nil
 }
 
-func (sm *DefaultEnvoyServiceMesh) ServicePort(service *crv1.Service, port int32) (int32, error) {
+func (sm *DefaultEnvoyServiceMesh) ServicePort(service *latticev1.Service, port int32) (int32, error) {
 	servicePorts, err := sm.ServicePorts(service)
 	if err != nil {
 		return 0, err
@@ -201,7 +201,7 @@ func (sm *DefaultEnvoyServiceMesh) ServicePort(service *crv1.Service, port int32
 	return servicePort, nil
 }
 
-func (sm *DefaultEnvoyServiceMesh) ServicePorts(service *crv1.Service) (map[int32]int32, error) {
+func (sm *DefaultEnvoyServiceMesh) ServicePorts(service *latticev1.Service) (map[int32]int32, error) {
 	serviceMeshPorts, err := sm.ServiceMeshPorts(service)
 	if err != nil {
 		return nil, err
@@ -215,7 +215,7 @@ func (sm *DefaultEnvoyServiceMesh) ServicePorts(service *crv1.Service) (map[int3
 	return servicePorts, nil
 }
 
-func (sm *DefaultEnvoyServiceMesh) ServiceMeshPort(service *crv1.Service, port int32) (int32, error) {
+func (sm *DefaultEnvoyServiceMesh) ServiceMeshPort(service *latticev1.Service, port int32) (int32, error) {
 	serviceMeshPorts, err := sm.ServiceMeshPorts(service)
 	if err != nil {
 		return 0, err
@@ -235,7 +235,7 @@ func (sm *DefaultEnvoyServiceMesh) ServiceMeshPort(service *crv1.Service, port i
 	return serviceMeshPort, nil
 }
 
-func (sm *DefaultEnvoyServiceMesh) ServiceMeshPorts(service *crv1.Service) (map[int32]int32, error) {
+func (sm *DefaultEnvoyServiceMesh) ServiceMeshPorts(service *latticev1.Service) (map[int32]int32, error) {
 	serviceMeshPortsJSON, ok := service.Annotations[annotationKeyServiceMeshPorts]
 	if !ok {
 		err := fmt.Errorf(
@@ -257,7 +257,7 @@ func (sm *DefaultEnvoyServiceMesh) ServiceMeshPorts(service *crv1.Service) (map[
 }
 
 func (sm *DefaultEnvoyServiceMesh) IsDeploymentSpecUpdated(
-	service *crv1.Service,
+	service *latticev1.Service,
 	current, desired, untransformed *appsv1.DeploymentSpec,
 ) (bool, string, *appsv1.DeploymentSpec) {
 	// make sure the init containers are correct
@@ -411,7 +411,7 @@ func isServiceMeshResource(name string) bool {
 	return len(parts) >= 2
 }
 
-func (sm *DefaultEnvoyServiceMesh) envoyContainers(service *crv1.Service) (corev1.Container, corev1.Container, error) {
+func (sm *DefaultEnvoyServiceMesh) envoyContainers(service *latticev1.Service) (corev1.Container, corev1.Container, error) {
 	adminPort, ok := service.Annotations[annotationKeyAdminPort]
 	if !ok {
 		err := fmt.Errorf(
@@ -530,21 +530,21 @@ func (sm *DefaultEnvoyServiceMesh) envoyContainers(service *crv1.Service) (corev
 	return prepareEnvoy, envoy, nil
 }
 
-func (sm *DefaultEnvoyServiceMesh) GetEndpointSpec(address *crv1.ServiceAddress) (*crv1.EndpointSpec, error) {
+func (sm *DefaultEnvoyServiceMesh) GetEndpointSpec(address *latticev1.ServiceAddress) (*latticev1.EndpointSpec, error) {
 	ip, _, err := net.ParseCIDR(sm.redirectCIDRBlock)
 	if err != nil {
 		return nil, err
 	}
 
 	ipStr := ip.String()
-	spec := &crv1.EndpointSpec{
+	spec := &latticev1.EndpointSpec{
 		Path: address.Spec.Path,
 		IP:   &ipStr,
 	}
 	return spec, nil
 }
 
-func (sm *DefaultEnvoyServiceMesh) EgressPort(service *crv1.Service) (int32, error) {
+func (sm *DefaultEnvoyServiceMesh) EgressPort(service *latticev1.Service) (int32, error) {
 	egressPortStr, ok := service.Annotations[annotationKeyEgressPort]
 	if !ok {
 		err := fmt.Errorf(

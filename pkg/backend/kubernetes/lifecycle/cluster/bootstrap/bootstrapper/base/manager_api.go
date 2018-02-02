@@ -4,7 +4,7 @@ import (
 	"strconv"
 
 	kubeconstants "github.com/mlab-lattice/system/pkg/backend/kubernetes/constants"
-	crv1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
+	latticev1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/cluster/bootstrap/bootstrapper"
 	kubeutil "github.com/mlab-lattice/system/pkg/backend/kubernetes/util/kubernetes"
 
@@ -33,38 +33,38 @@ func (b *DefaultBootstrapper) managerAPIResources(resources *bootstrapper.Cluste
 		Rules: []rbacv1.PolicyRule{
 			// lattice system read and create
 			{
-				APIGroups: []string{crv1.GroupName},
-				Resources: []string{crv1.ResourcePluralSystem},
+				APIGroups: []string{latticev1.GroupName},
+				Resources: []string{latticev1.ResourcePluralSystem},
 				Verbs:     readAndCreateVerbs,
 			},
 			// lattice config read
 			{
-				APIGroups: []string{crv1.GroupName},
-				Resources: []string{crv1.ResourcePluralConfig},
+				APIGroups: []string{latticev1.GroupName},
+				Resources: []string{latticev1.ResourcePluralConfig},
 				Verbs:     readVerbs,
 			},
 			// lattice system build read and create
 			{
-				APIGroups: []string{crv1.GroupName},
-				Resources: []string{crv1.ResourcePluralSystemBuild},
+				APIGroups: []string{latticev1.GroupName},
+				Resources: []string{latticev1.ResourcePluralSystemBuild},
 				Verbs:     readAndCreateVerbs,
 			},
 			// lattice service build read
 			{
-				APIGroups: []string{crv1.GroupName},
-				Resources: []string{crv1.ResourcePluralServiceBuild},
+				APIGroups: []string{latticev1.GroupName},
+				Resources: []string{latticev1.ResourcePluralServiceBuild},
 				Verbs:     readVerbs,
 			},
 			// lattice component build read
 			{
-				APIGroups: []string{crv1.GroupName},
-				Resources: []string{crv1.ResourcePluralComponentBuild},
+				APIGroups: []string{latticev1.GroupName},
+				Resources: []string{latticev1.ResourcePluralComponentBuild},
 				Verbs:     readVerbs,
 			},
 			// lattice rollout build and create
 			{
-				APIGroups: []string{crv1.GroupName},
-				Resources: []string{crv1.ResourcePluralSystemRollout},
+				APIGroups: []string{latticev1.GroupName},
+				Resources: []string{latticev1.ResourcePluralSystemRollout},
 				Verbs:     readAndCreateVerbs,
 			},
 			// kube pod read and delete
@@ -87,8 +87,8 @@ func (b *DefaultBootstrapper) managerAPIResources(resources *bootstrapper.Cluste
 			},
 			// lattice service read
 			{
-				APIGroups: []string{crv1.GroupName},
-				Resources: []string{crv1.ResourcePluralService},
+				APIGroups: []string{latticev1.GroupName},
+				Resources: []string{latticev1.ResourcePluralService},
 				Verbs:     readVerbs,
 			},
 			// kube service read

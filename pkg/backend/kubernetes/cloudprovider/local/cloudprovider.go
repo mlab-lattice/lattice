@@ -1,7 +1,7 @@
 package local
 
 import (
-	crv1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
+	latticev1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
@@ -57,7 +57,10 @@ func (cp *DefaultLocalCloudProvider) ComponentBuildWorkDirectoryVolumeSource(job
 	}
 }
 
-func (cp *DefaultLocalCloudProvider) TransformServiceDeploymentSpec(service *crv1.Service, spec *appsv1.DeploymentSpec) *appsv1.DeploymentSpec {
+func (cp *DefaultLocalCloudProvider) TransformServiceDeploymentSpec(
+	service *latticev1.Service,
+	spec *appsv1.DeploymentSpec,
+) *appsv1.DeploymentSpec {
 	spec = spec.DeepCopy()
 	spec.Template = *transformPodTemplateSpec(&spec.Template)
 
@@ -92,7 +95,7 @@ func (cp *DefaultLocalCloudProvider) TransformServiceDeploymentSpec(service *crv
 }
 
 func (cp *DefaultLocalCloudProvider) IsDeploymentSpecUpdated(
-	service *crv1.Service,
+	service *latticev1.Service,
 	current, desired, untransformed *appsv1.DeploymentSpec,
 ) (bool, string, *appsv1.DeploymentSpec) {
 	// make a copy of the desired spec, and set the affinity to be the affinity

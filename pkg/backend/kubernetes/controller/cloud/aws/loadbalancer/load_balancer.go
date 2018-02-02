@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	awscloudprovider "github.com/mlab-lattice/system/pkg/backend/kubernetes/cloudprovider/aws"
-	crv1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
+	latticev1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	kubetf "github.com/mlab-lattice/system/pkg/backend/kubernetes/terraform/aws"
 	kubeutil "github.com/mlab-lattice/system/pkg/backend/kubernetes/util/kubernetes"
 	tf "github.com/mlab-lattice/system/pkg/terraform"
@@ -23,7 +23,7 @@ const (
 	terraformOutputDNSName = "dns_name"
 )
 
-func (c *Controller) syncDeletedLoadBalancer(loadBalancer *crv1.LoadBalancer) error {
+func (c *Controller) syncDeletedLoadBalancer(loadBalancer *latticev1.LoadBalancer) error {
 	if err := c.deleteKubeService(loadBalancer); err != nil && !errors.IsNotFound(err) {
 		return err
 	}
@@ -36,7 +36,7 @@ func (c *Controller) syncDeletedLoadBalancer(loadBalancer *crv1.LoadBalancer) er
 	return err
 }
 
-func (c *Controller) nodePoolProvisioned(loadBalancer *crv1.LoadBalancer) (bool, error) {
+func (c *Controller) nodePoolProvisioned(loadBalancer *latticev1.LoadBalancer) (bool, error) {
 	nodePool, err := c.nodePoolLister.NodePools(loadBalancer.Namespace).Get(loadBalancer.Name)
 	if err != nil {
 		if errors.IsNotFound(err) {
@@ -46,10 +46,10 @@ func (c *Controller) nodePoolProvisioned(loadBalancer *crv1.LoadBalancer) (bool,
 		return false, err
 	}
 
-	return nodePool.Status.State == crv1.NodePoolStateStable, nil
+	return nodePool.Status.State == latticev1.NodePoolStateStable, nil
 }
 
-func (c *Controller) provisionLoadBalancer(loadBalancer *crv1.LoadBalancer) (*crv1.LoadBalancer, error) {
+func (c *Controller) provisionLoadBalancer(loadBalancer *latticev1.LoadBalancer) (*latticev1.LoadBalancer, error) {
 	loadBalancerModule, err := c.loadBalancerModule(loadBalancer)
 	if err != nil {
 		return nil, err
@@ -84,7 +84,7 @@ func (c *Controller) provisionLoadBalancer(loadBalancer *crv1.LoadBalancer) (*cr
 	return loadBalancer, nil
 }
 
-func (c *Controller) deprovisionLoadBalancer(loadBalancer *crv1.LoadBalancer) error {
+func (c *Controller) deprovisionLoadBalancer(loadBalancer *latticev1.LoadBalancer) error {
 	config, err := c.loadBalancerConfig(loadBalancer, nil)
 	if err != nil {
 		return err
@@ -94,7 +94,10 @@ func (c *Controller) deprovisionLoadBalancer(loadBalancer *crv1.LoadBalancer) er
 	return err
 }
 
-func (c *Controller) loadBalancerConfig(loadBalancer *crv1.LoadBalancer, loadBalancerModule *kubetf.ApplicationLoadBalancer) (*tf.Config, error) {
+func (c *Controller) loadBalancerConfig(
+	loadBalancer *latticev1.LoadBalancer,
+	loadBalancerModule *kubetf.ApplicationLoadBalancer,
+) (*tf.Config, error) {
 	systemID, err := kubeutil.SystemID(loadBalancer.Namespace)
 	if err != nil {
 		return nil, err
@@ -131,7 +134,7 @@ func (c *Controller) loadBalancerConfig(loadBalancer *crv1.LoadBalancer, loadBal
 	return config, nil
 }
 
-func (c *Controller) loadBalancerModule(loadBalancer *crv1.LoadBalancer) (*kubetf.ApplicationLoadBalancer, error) {
+func (c *Controller) loadBalancerModule(loadBalancer *latticev1.LoadBalancer) (*kubetf.ApplicationLoadBalancer, error) {
 	service, err := c.serviceLister.Services(loadBalancer.Namespace).Get(loadBalancer.Name)
 	if err != nil {
 		return nil, err
@@ -182,7 +185,7 @@ type loadBalancerInfo struct {
 	DNSName string
 }
 
-func (c *Controller) currentLoadBalancerInfo(loadBalancer *crv1.LoadBalancer) (loadBalancerInfo, error) {
+func (c *Controller) currentLoadBalancerInfo(loadBalancer *latticev1.LoadBalancer) (loadBalancerInfo, error) {
 	outputVars := []string{terraformOutputDNSName}
 
 	loadBalancerModule, err := c.loadBalancerModule(loadBalancer)
@@ -207,9 +210,9 @@ func (c *Controller) currentLoadBalancerInfo(loadBalancer *crv1.LoadBalancer) (l
 }
 
 func (c *Controller) updateLoadBalancerStatus(
-	loadBalancer *crv1.LoadBalancer,
-	status crv1.LoadBalancerStatus,
-) (*crv1.LoadBalancer, error) {
+	loadBalancer *latticev1.LoadBalancer,
+	status latticev1.LoadBalancerStatus,
+) (*latticev1.LoadBalancer, error) {
 	if reflect.DeepEqual(loadBalancer.Status, status) {
 		return loadBalancer, nil
 	}
@@ -225,7 +228,7 @@ func (c *Controller) updateLoadBalancerStatus(
 	//return c.latticeClient.LatticeV1().LoadBalancers(loadBalancer.Namespace).UpdateStatus(loadBalancer)
 }
 
-func (c *Controller) loadBalancerAnnotations(loadBalancer *crv1.LoadBalancer) (map[string]string, error) {
+func (c *Controller) loadBalancerAnnotations(loadBalancer *latticev1.LoadBalancer) (map[string]string, error) {
 	info, err := c.currentLoadBalancerInfo(loadBalancer)
 	if err != nil {
 		return nil, err
@@ -237,7 +240,7 @@ func (c *Controller) loadBalancerAnnotations(loadBalancer *crv1.LoadBalancer) (m
 	return annotations, nil
 }
 
-func (c *Controller) addFinalizer(loadBalancer *crv1.LoadBalancer) (*crv1.LoadBalancer, error) {
+func (c *Controller) addFinalizer(loadBalancer *latticev1.LoadBalancer) (*latticev1.LoadBalancer, error) {
 	// Check to see if the finalizer already exists. If so nothing needs to be done.
 	for _, finalizer := range loadBalancer.Finalizers {
 		if finalizer == finalizerName {
@@ -255,7 +258,7 @@ func (c *Controller) addFinalizer(loadBalancer *crv1.LoadBalancer) (*crv1.LoadBa
 	return c.latticeClient.LatticeV1().LoadBalancers(loadBalancer.Namespace).Update(loadBalancer)
 }
 
-func (c *Controller) removeFinalizer(loadBalancer *crv1.LoadBalancer) (*crv1.LoadBalancer, error) {
+func (c *Controller) removeFinalizer(loadBalancer *latticev1.LoadBalancer) (*latticev1.LoadBalancer, error) {
 	// Build up a list of all the finalizers except the aws service controller finalizer.
 	var finalizers []string
 	found := false
@@ -277,6 +280,10 @@ func (c *Controller) removeFinalizer(loadBalancer *crv1.LoadBalancer) (*crv1.Loa
 	return c.latticeClient.LatticeV1().LoadBalancers(loadBalancer.Namespace).Update(loadBalancer)
 }
 
-func workDirectory(loadBalancer *crv1.LoadBalancer) string {
-	return "/tmp/lattice-controller-manager/controllers/cloud/aws/load-balancer/terraform/" + loadBalancer.Namespace + "/" + loadBalancer.Name
+func workDirectory(loadBalancer *latticev1.LoadBalancer) string {
+	return fmt.Sprintf(
+		"/tmp/lattice-controller-manager/controllers/cloud/aws/load-balancer/terraform/%v/%v",
+		loadBalancer.Namespace,
+		loadBalancer.Name,
+	)
 }

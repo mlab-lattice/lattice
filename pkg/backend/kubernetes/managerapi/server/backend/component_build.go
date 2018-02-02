@@ -5,7 +5,7 @@ import (
 	"io"
 
 	kubeconstants "github.com/mlab-lattice/system/pkg/backend/kubernetes/constants"
-	crv1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
+	latticev1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	kubeutil "github.com/mlab-lattice/system/pkg/backend/kubernetes/util/kubernetes"
 	backend "github.com/mlab-lattice/system/pkg/managerapi/server"
 	"github.com/mlab-lattice/system/pkg/types"
@@ -16,8 +16,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func (kb *KubernetesBackend) ListComponentBuilds(id types.SystemID) ([]types.ComponentBuild, error) {
-	namespace := kubeutil.SystemNamespace(kb.ClusterID, id)
+func (kb *KubernetesBackend) ListComponentBuilds(systemID types.SystemID) ([]types.ComponentBuild, error) {
+	namespace := kubeutil.SystemNamespace(kb.ClusterID, systemID)
 	buildList, err := kb.LatticeClient.LatticeV1().ComponentBuilds(namespace).List(metav1.ListOptions{})
 	if err != nil {
 		return nil, err
@@ -31,8 +31,11 @@ func (kb *KubernetesBackend) ListComponentBuilds(id types.SystemID) ([]types.Com
 	return builds, nil
 }
 
-func (kb *KubernetesBackend) GetComponentBuild(id types.SystemID, bid types.ComponentBuildID) (*types.ComponentBuild, bool, error) {
-	build, exists, err := kb.getInternalComponentBuild(id, bid)
+func (kb *KubernetesBackend) GetComponentBuild(
+	systemID types.SystemID,
+	buildID types.ComponentBuildID,
+) (*types.ComponentBuild, bool, error) {
+	build, exists, err := kb.getInternalComponentBuild(systemID, buildID)
 	if err != nil || !exists {
 		return nil, exists, err
 	}
@@ -41,14 +44,18 @@ func (kb *KubernetesBackend) GetComponentBuild(id types.SystemID, bid types.Comp
 	return &externalBuild, true, nil
 }
 
-func (kb *KubernetesBackend) GetComponentBuildLogs(id types.SystemID, bid types.ComponentBuildID, follow bool) (io.ReadCloser, bool, error) {
-	build, exists, err := kb.getInternalComponentBuild(id, bid)
+func (kb *KubernetesBackend) GetComponentBuildLogs(
+	systemID types.SystemID,
+	buildID types.ComponentBuildID,
+	follow bool,
+) (io.ReadCloser, bool, error) {
+	build, exists, err := kb.getInternalComponentBuild(systemID, buildID)
 	if err != nil {
 		return nil, false, err
 	}
 
 	if !exists {
-		return nil, false, backend.NewUserError("ComponentBuild " + string(bid) + " does not exist")
+		return nil, false, backend.NewUserError("ComponentBuild " + string(buildID) + " does not exist")
 	}
 
 	pod, err := kb.getPodForComponentBuild(build)
@@ -58,12 +65,12 @@ func (kb *KubernetesBackend) GetComponentBuildLogs(id types.SystemID, bid types.
 
 	if pod == nil {
 		switch build.Status.State {
-		case crv1.ComponentBuildStatePending, crv1.ComponentBuildStateQueued:
-			return nil, false, backend.NewUserError("ComponentBuild " + string(bid) + " not yet running")
-		case crv1.ComponentBuildStateRunning:
-			return nil, false, fmt.Errorf("build for ComopnentBuild %v does not exist", bid)
-		case crv1.ComponentBuildStateSucceeded, crv1.ComponentBuildStateFailed:
-			return nil, false, backend.NewUserError("ComponentBuild " + string(bid) + " logs no longer available")
+		case latticev1.ComponentBuildStatePending, latticev1.ComponentBuildStateQueued:
+			return nil, false, backend.NewUserError("ComponentBuild " + string(buildID) + " not yet running")
+		case latticev1.ComponentBuildStateRunning:
+			return nil, false, fmt.Errorf("build for ComopnentBuild %v does not exist", buildID)
+		case latticev1.ComponentBuildStateSucceeded, latticev1.ComponentBuildStateFailed:
+			return nil, false, backend.NewUserError("ComponentBuild " + string(buildID) + " logs no longer available")
 		default:
 			panic("unreachable")
 		}
@@ -78,9 +85,12 @@ func (kb *KubernetesBackend) GetComponentBuildLogs(id types.SystemID, bid types.
 	return readCloser, true, err
 }
 
-func (kb *KubernetesBackend) getInternalComponentBuild(id types.SystemID, bid types.ComponentBuildID) (*crv1.ComponentBuild, bool, error) {
-	namespace := kubeutil.SystemNamespace(kb.ClusterID, id)
-	result, err := kb.LatticeClient.LatticeV1().ComponentBuilds(namespace).Get(string(bid), metav1.GetOptions{})
+func (kb *KubernetesBackend) getInternalComponentBuild(
+	systemID types.SystemID,
+	buildID types.ComponentBuildID,
+) (*latticev1.ComponentBuild, bool, error) {
+	namespace := kubeutil.SystemNamespace(kb.ClusterID, systemID)
+	result, err := kb.LatticeClient.LatticeV1().ComponentBuilds(namespace).Get(string(buildID), metav1.GetOptions{})
 	if err != nil {
 		if errors.IsNotFound(err) {
 			return nil, false, nil
@@ -91,7 +101,7 @@ func (kb *KubernetesBackend) getInternalComponentBuild(id types.SystemID, bid ty
 	return result, true, nil
 }
 
-func transformComponentBuild(name string, status crv1.ComponentBuildStatus) types.ComponentBuild {
+func transformComponentBuild(name string, status latticev1.ComponentBuildStatus) types.ComponentBuild {
 	var failureMessage *string
 	if status.FailureInfo != nil {
 		message := getComponentBuildFailureMessage(*status.FailureInfo)
@@ -108,17 +118,17 @@ func transformComponentBuild(name string, status crv1.ComponentBuildStatus) type
 	return externalBuild
 }
 
-func getComponentBuildState(state crv1.ComponentBuildState) types.ComponentBuildState {
+func getComponentBuildState(state latticev1.ComponentBuildState) types.ComponentBuildState {
 	switch state {
-	case crv1.ComponentBuildStatePending:
+	case latticev1.ComponentBuildStatePending:
 		return types.ComponentBuildStatePending
-	case crv1.ComponentBuildStateQueued:
+	case latticev1.ComponentBuildStateQueued:
 		return types.ComponentBuildStateQueued
-	case crv1.ComponentBuildStateRunning:
+	case latticev1.ComponentBuildStateRunning:
 		return types.ComponentBuildStateRunning
-	case crv1.ComponentBuildStateSucceeded:
+	case latticev1.ComponentBuildStateSucceeded:
 		return types.ComponentBuildStateSucceeded
-	case crv1.ComponentBuildStateFailed:
+	case latticev1.ComponentBuildStateFailed:
 		return types.ComponentBuildStateFailed
 	default:
 		panic("unreachable")
@@ -132,11 +142,11 @@ func getComponentBuildFailureMessage(failureInfo types.ComponentBuildFailureInfo
 	return failureInfo.Message
 }
 
-func (kb *KubernetesBackend) getPodForComponentBuild(cb *crv1.ComponentBuild) (*corev1.Pod, error) {
+func (kb *KubernetesBackend) getPodForComponentBuild(build *latticev1.ComponentBuild) (*corev1.Pod, error) {
 	listOptions := metav1.ListOptions{
-		LabelSelector: fmt.Sprintf("%v=%v", kubeconstants.LabelKeyComponentBuildID, cb.Name),
+		LabelSelector: fmt.Sprintf("%v=%v", kubeconstants.LabelKeyComponentBuildID, build.Name),
 	}
-	podsList, err := kb.KubeClient.CoreV1().Pods(cb.Namespace).List(listOptions)
+	podsList, err := kb.KubeClient.CoreV1().Pods(build.Namespace).List(listOptions)
 	if err != nil {
 		return nil, err
 	}
@@ -148,7 +158,7 @@ func (kb *KubernetesBackend) getPodForComponentBuild(cb *crv1.ComponentBuild) (*
 	}
 
 	if len(pods) > 1 {
-		return nil, fmt.Errorf("ComponentBuild %v has multiple Pods", cb.Name)
+		return nil, fmt.Errorf("ComponentBuild %v has multiple Pods", build.Name)
 	}
 
 	return &pods[0], nil

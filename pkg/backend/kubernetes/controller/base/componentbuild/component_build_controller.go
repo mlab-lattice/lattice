@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/cloudprovider"
-	crv1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
+	latticev1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	latticeclientset "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/clientset/versioned"
 	latticeinformers "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/informers/externalversions/lattice/v1"
 	latticelisters "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/listers/lattice/v1"
@@ -29,11 +29,11 @@ import (
 	"github.com/golang/glog"
 )
 
-var controllerKind = crv1.SchemeGroupVersion.WithKind("ComponentBuild")
+var controllerKind = latticev1.SchemeGroupVersion.WithKind("ComponentBuild")
 
 type Controller struct {
 	syncHandler func(bKey string) error
-	enqueue     func(cb *crv1.ComponentBuild)
+	enqueue     func(cb *latticev1.ComponentBuild)
 
 	clusterID     types.ClusterID
 	cloudProvider cloudprovider.Interface
@@ -46,7 +46,7 @@ type Controller struct {
 	configSetChan      chan struct{}
 	configSet          bool
 	configLock         sync.RWMutex
-	config             *crv1.ConfigSpec
+	config             *latticev1.ConfigSpec
 
 	componentBuildLister       latticelisters.ComponentBuildLister
 	componentBuildListerSynced cache.InformerSynced
@@ -143,7 +143,7 @@ func (c *Controller) Run(workers int, stopCh <-chan struct{}) {
 }
 
 func (c *Controller) addConfig(obj interface{}) {
-	config := obj.(*crv1.Config)
+	config := obj.(*latticev1.Config)
 	glog.V(4).Infof("Adding Config %s", config.Name)
 
 	c.configLock.Lock()
@@ -157,8 +157,8 @@ func (c *Controller) addConfig(obj interface{}) {
 }
 
 func (c *Controller) updateConfig(old, cur interface{}) {
-	oldConfig := old.(*crv1.Config)
-	curConfig := cur.(*crv1.Config)
+	oldConfig := old.(*latticev1.Config)
+	curConfig := cur.(*latticev1.Config)
 	glog.V(4).Infof("Updating Config %s", oldConfig.Name)
 
 	c.configLock.Lock()
@@ -167,14 +167,14 @@ func (c *Controller) updateConfig(old, cur interface{}) {
 }
 
 func (c *Controller) addComponentBuild(obj interface{}) {
-	cb := obj.(*crv1.ComponentBuild)
+	cb := obj.(*latticev1.ComponentBuild)
 	glog.V(4).Infof("Adding ComponentBuild %s", cb.Name)
 	c.enqueueComponentBuild(cb)
 }
 
 func (c *Controller) updateComponentBuild(old, cur interface{}) {
-	oldCb := old.(*crv1.ComponentBuild)
-	curCb := cur.(*crv1.ComponentBuild)
+	oldCb := old.(*latticev1.ComponentBuild)
+	curCb := cur.(*latticev1.ComponentBuild)
 	glog.V(4).Infof("Updating ComponentBuild %s", oldCb.Name)
 	c.enqueueComponentBuild(curCb)
 }
@@ -293,10 +293,10 @@ func (c *Controller) deleteJob(obj interface{}) {
 	c.enqueueComponentBuild(build)
 }
 
-func (c *Controller) enqueueComponentBuild(cBuild *crv1.ComponentBuild) {
-	key, err := cache.DeletionHandlingMetaNamespaceKeyFunc(cBuild)
+func (c *Controller) enqueueComponentBuild(build *latticev1.ComponentBuild) {
+	key, err := cache.DeletionHandlingMetaNamespaceKeyFunc(build)
 	if err != nil {
-		runtime.HandleError(fmt.Errorf("Couldn't get key for object %#v: %v", cBuild, err))
+		runtime.HandleError(fmt.Errorf("Couldn't get key for object %#v: %v", build, err))
 		return
 	}
 
@@ -306,7 +306,7 @@ func (c *Controller) enqueueComponentBuild(cBuild *crv1.ComponentBuild) {
 // resolveControllerRef returns the controller referenced by a ControllerRef,
 // or nil if the ControllerRef could not be resolved to a matching controller
 // of the correct Kind.
-func (c *Controller) resolveControllerRef(namespace string, controllerRef *metav1.OwnerReference) *crv1.ComponentBuild {
+func (c *Controller) resolveControllerRef(namespace string, controllerRef *metav1.OwnerReference) *latticev1.ComponentBuild {
 	// We can't look up by Name, so look up by Name and then verify Name.
 	// Don't even try to look up by Name if it's the wrong Kind.
 	if controllerRef.Kind != controllerKind.Kind {

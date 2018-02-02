@@ -2,7 +2,7 @@ package base
 
 import (
 	kubeconstants "github.com/mlab-lattice/system/pkg/backend/kubernetes/constants"
-	crv1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
+	latticev1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/cluster/bootstrap/bootstrapper"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -25,8 +25,8 @@ func (b *DefaultBootstrapper) componentBuilderResources(resources *bootstrapper.
 		Rules: []rbacv1.PolicyRule{
 			// Read and update lattice component builds
 			{
-				APIGroups: []string{crv1.GroupName},
-				Resources: []string{crv1.ResourcePluralComponentBuild},
+				APIGroups: []string{latticev1.GroupName},
+				Resources: []string{latticev1.ResourcePluralComponentBuild},
 				Verbs:     readAndUpdateVerbs,
 			},
 		},

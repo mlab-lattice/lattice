@@ -3,7 +3,7 @@ package servicebuild
 import (
 	"fmt"
 
-	crv1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
+	latticev1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -21,26 +21,26 @@ const (
 type stateInfo struct {
 	state state
 
-	successfulComponentBuilds map[string]*crv1.ComponentBuild
-	activeComponentBuilds     map[string]*crv1.ComponentBuild
-	failedComponentBuilds     map[string]*crv1.ComponentBuild
+	successfulComponentBuilds map[string]*latticev1.ComponentBuild
+	activeComponentBuilds     map[string]*latticev1.ComponentBuild
+	failedComponentBuilds     map[string]*latticev1.ComponentBuild
 	needsNewComponentBuilds   []string
 
 	// Maps a component's name to the Name of the ComponentBuild that's responsible for it
 	componentBuilds map[string]string
 
 	// Maps a ComponentBuild.Name to its ComponentBuild.Status
-	componentBuildStatuses map[string]crv1.ComponentBuildStatus
+	componentBuildStatuses map[string]latticev1.ComponentBuildStatus
 }
 
-func (c *Controller) calculateState(build *crv1.ServiceBuild) (stateInfo, error) {
-	successfulComponentBuilds := map[string]*crv1.ComponentBuild{}
-	activeComponentBuilds := map[string]*crv1.ComponentBuild{}
-	failedComponentBuilds := map[string]*crv1.ComponentBuild{}
+func (c *Controller) calculateState(build *latticev1.ServiceBuild) (stateInfo, error) {
+	successfulComponentBuilds := map[string]*latticev1.ComponentBuild{}
+	activeComponentBuilds := map[string]*latticev1.ComponentBuild{}
+	failedComponentBuilds := map[string]*latticev1.ComponentBuild{}
 	var needsNewComponentBuilds []string
 
 	componentBuilds := map[string]string{}
-	componentBuildStatuses := map[string]crv1.ComponentBuildStatus{}
+	componentBuildStatuses := map[string]latticev1.ComponentBuildStatus{}
 
 	for component := range build.Spec.Components {
 		componentBuildName, ok := build.Status.ComponentBuilds[component]
@@ -77,11 +77,11 @@ func (c *Controller) calculateState(build *crv1.ServiceBuild) (stateInfo, error)
 		componentBuildStatuses[componentBuild.Name] = componentBuild.Status
 
 		switch componentBuild.Status.State {
-		case crv1.ComponentBuildStatePending, crv1.ComponentBuildStateQueued, crv1.ComponentBuildStateRunning:
+		case latticev1.ComponentBuildStatePending, latticev1.ComponentBuildStateQueued, latticev1.ComponentBuildStateRunning:
 			activeComponentBuilds[component] = componentBuild
-		case crv1.ComponentBuildStateFailed:
+		case latticev1.ComponentBuildStateFailed:
 			failedComponentBuilds[component] = componentBuild
-		case crv1.ComponentBuildStateSucceeded:
+		case latticev1.ComponentBuildStateSucceeded:
 			successfulComponentBuilds[component] = componentBuild
 		default:
 			// FIXME: send warn event

@@ -5,7 +5,7 @@ import (
 	"io/ioutil"
 	"time"
 
-	crv1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
+	latticev1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	latticeclientset "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/clientset/versioned"
 	latticeinformers "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/informers/externalversions/lattice/v1"
 	latticelisters "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/listers/lattice/v1"
@@ -130,9 +130,9 @@ func (c *Controller) updateConfigs() {
 		// In the case the previous update failed and some endpoints have not been updated to the created state
 		// attempt to update them again here.
 		for _, e := range endpoints {
-			if e.Status.State != crv1.EndpointStateCreated {
+			if e.Status.State != latticev1.EndpointStateCreated {
 				endpoint := e.DeepCopy()
-				endpoint.Status.State = crv1.EndpointStateCreated
+				endpoint.Status.State = latticev1.EndpointStateCreated
 
 				_, err = c.latticeClient.LatticeV1().Endpoints(endpoint.Namespace).Update(endpoint)
 				if err != nil {
@@ -156,12 +156,12 @@ func (c *Controller) updateConfigs() {
 	c.ipEndpoints = ipEndpointsSet
 
 	for _, e := range endpoints {
-		if e.Status.State == crv1.EndpointStateCreated {
+		if e.Status.State == latticev1.EndpointStateCreated {
 			continue
 		}
 
 		endpoint := e.DeepCopy()
-		endpoint.Status.State = crv1.EndpointStateCreated
+		endpoint.Status.State = latticev1.EndpointStateCreated
 
 		_, err := c.latticeClient.LatticeV1().Endpoints(endpoint.Namespace).Update(endpoint)
 		if err != nil {
@@ -172,7 +172,7 @@ func (c *Controller) updateConfigs() {
 
 // endpointsSets returns two sets of endpoints - the first for endpoints specified by an external name,
 // and the second for endpoints specified by an ip.
-func (c *Controller) endpointsSets(endpoints []*crv1.Endpoint) (set.Set, set.Set, error) {
+func (c *Controller) endpointsSets(endpoints []*latticev1.Endpoint) (set.Set, set.Set, error) {
 	externalNameEndpoints := set.NewSet()
 	ipEndpoints := set.NewSet()
 
@@ -197,7 +197,7 @@ func (c *Controller) endpointsSets(endpoints []*crv1.Endpoint) (set.Set, set.Set
 }
 
 // rewriteDnsmasqConfig rewrites the config files for the dns server
-func (c *Controller) rewriteDnsmasqConfig(endpoints []*crv1.Endpoint) error {
+func (c *Controller) rewriteDnsmasqConfig(endpoints []*latticev1.Endpoint) error {
 	// This is an extra config file, so contains only the options which must be rewritten.
 	// Condition on cname is that it exists in the specified host file, or references another cname.
 	// Each cname entry of the form cname=ALIAS,...(addn aliases),TARGET

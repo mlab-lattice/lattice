@@ -6,7 +6,7 @@ import (
 	"sync"
 	"time"
 
-	crv1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
+	latticev1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	latticeclientset "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/clientset/versioned"
 	latticeinformers "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/informers/externalversions/lattice/v1"
 	latticelisters "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/listers/lattice/v1"
@@ -23,11 +23,11 @@ import (
 	"github.com/golang/glog"
 )
 
-var controllerKind = crv1.SchemeGroupVersion.WithKind("ServiceAddress")
+var controllerKind = latticev1.SchemeGroupVersion.WithKind("ServiceAddress")
 
 type Controller struct {
 	syncHandler           func(bKey string) error
-	enqueueServiceAddress func(cb *crv1.ServiceAddress)
+	enqueueServiceAddress func(cb *latticev1.ServiceAddress)
 
 	serviceMesh servicemesh.Interface
 
@@ -38,7 +38,7 @@ type Controller struct {
 	configSetChan      chan struct{}
 	configSet          bool
 	configLock         sync.RWMutex
-	config             crv1.ConfigSpec
+	config             latticev1.ConfigSpec
 
 	serviceAddressLister       latticelisters.ServiceAddressLister
 	serviceAddressListerSynced cache.InformerSynced
@@ -125,7 +125,7 @@ func (c *Controller) Run(workers int, stopCh <-chan struct{}) {
 }
 
 func (c *Controller) handleConfigAdd(obj interface{}) {
-	config := obj.(*crv1.Config)
+	config := obj.(*latticev1.Config)
 	glog.V(4).Infof("Adding Config %s", config.Name)
 
 	c.configLock.Lock()
@@ -148,8 +148,8 @@ func (c *Controller) handleConfigAdd(obj interface{}) {
 }
 
 func (c *Controller) handleConfigUpdate(old, cur interface{}) {
-	oldConfig := old.(*crv1.Config)
-	curConfig := cur.(*crv1.Config)
+	oldConfig := old.(*latticev1.Config)
+	curConfig := cur.(*latticev1.Config)
 	glog.V(4).Infof("Updating Config %s", oldConfig.Name)
 
 	c.configLock.Lock()
@@ -181,7 +181,7 @@ func (c *Controller) newServiceMesh() (servicemesh.Interface, error) {
 }
 
 func (c *Controller) handleServiceAddressAdd(obj interface{}) {
-	address := obj.(*crv1.ServiceAddress)
+	address := obj.(*latticev1.ServiceAddress)
 	glog.V(4).Infof("ServiceAddress %v/%v added", address.Namespace, address.Name)
 
 	if address.DeletionTimestamp != nil {
@@ -195,8 +195,8 @@ func (c *Controller) handleServiceAddressAdd(obj interface{}) {
 }
 
 func (c *Controller) handleServiceAddressUpdate(old, cur interface{}) {
-	oldAddress := old.(*crv1.ServiceAddress)
-	curAddress := cur.(*crv1.ServiceAddress)
+	oldAddress := old.(*latticev1.ServiceAddress)
+	curAddress := cur.(*latticev1.ServiceAddress)
 	glog.V(5).Info("Got ServiceAddress %v/%v update", curAddress.Namespace, curAddress.Name)
 	if curAddress.ResourceVersion == oldAddress.ResourceVersion {
 		// Periodic resync will send update events for all known Services.
@@ -209,7 +209,7 @@ func (c *Controller) handleServiceAddressUpdate(old, cur interface{}) {
 }
 
 func (c *Controller) handleServiceAddressDelete(obj interface{}) {
-	address, ok := obj.(*crv1.ServiceAddress)
+	address, ok := obj.(*latticev1.ServiceAddress)
 
 	// When a delete is dropped, the relist will notice a pod in the store not
 	// in the list, leading to the insertion of a tombstone object which contains
@@ -220,7 +220,7 @@ func (c *Controller) handleServiceAddressDelete(obj interface{}) {
 			runtime.HandleError(fmt.Errorf("couldn't get object from tombstone %#v", obj))
 			return
 		}
-		address, ok = tombstone.Obj.(*crv1.ServiceAddress)
+		address, ok = tombstone.Obj.(*latticev1.ServiceAddress)
 		if !ok {
 			runtime.HandleError(fmt.Errorf("tombstone contained object that is not a Service %#v", obj))
 			return
@@ -231,7 +231,7 @@ func (c *Controller) handleServiceAddressDelete(obj interface{}) {
 }
 
 func (c *Controller) handleEndpointAdd(obj interface{}) {
-	endpoint := obj.(*crv1.Endpoint)
+	endpoint := obj.(*latticev1.Endpoint)
 
 	if endpoint.DeletionTimestamp != nil {
 		c.handleEndpointDelete(endpoint)
@@ -259,8 +259,8 @@ func (c *Controller) handleEndpointAdd(obj interface{}) {
 
 func (c *Controller) handleEndpointUpdate(old, cur interface{}) {
 	glog.V(5).Info("Got Deployment update")
-	oldEndpoint := old.(*crv1.Endpoint)
-	curEndpoint := cur.(*crv1.Endpoint)
+	oldEndpoint := old.(*latticev1.Endpoint)
+	curEndpoint := cur.(*latticev1.Endpoint)
 	if curEndpoint.ResourceVersion == oldEndpoint.ResourceVersion {
 		// Periodic resync will send update events for all known Deployments.
 		// Two different versions of the same Deployment will always have different RVs.
@@ -297,7 +297,7 @@ func (c *Controller) handleEndpointUpdate(old, cur interface{}) {
 }
 
 func (c *Controller) handleEndpointDelete(obj interface{}) {
-	endpoint, ok := obj.(*crv1.Endpoint)
+	endpoint, ok := obj.(*latticev1.Endpoint)
 
 	// When a delete is dropped, the relist will notice a pod in the store not
 	// in the list, leading to the insertion of a tombstone object which contains
@@ -308,7 +308,7 @@ func (c *Controller) handleEndpointDelete(obj interface{}) {
 			runtime.HandleError(fmt.Errorf("couldn't get object from tombstone %#v", obj))
 			return
 		}
-		endpoint, ok = tombstone.Obj.(*crv1.Endpoint)
+		endpoint, ok = tombstone.Obj.(*latticev1.Endpoint)
 		if !ok {
 			runtime.HandleError(fmt.Errorf("tombstone contained object that is not a Deployment %#v", obj))
 			return
@@ -332,7 +332,7 @@ func (c *Controller) handleEndpointDelete(obj interface{}) {
 	c.enqueueServiceAddress(address)
 }
 
-func (c *Controller) enqueue(svc *crv1.ServiceAddress) {
+func (c *Controller) enqueue(svc *latticev1.ServiceAddress) {
 	key, err := cache.DeletionHandlingMetaNamespaceKeyFunc(svc)
 	if err != nil {
 		runtime.HandleError(fmt.Errorf("couldn't get key for object %#v: %v", svc, err))
@@ -345,7 +345,7 @@ func (c *Controller) enqueue(svc *crv1.ServiceAddress) {
 // resolveControllerRef returns the controller referenced by a ControllerRef,
 // or nil if the ControllerRef could not be resolved to a matching controller
 // of the correct Kind.
-func (c *Controller) resolveControllerRef(namespace string, controllerRef *metav1.OwnerReference) *crv1.ServiceAddress {
+func (c *Controller) resolveControllerRef(namespace string, controllerRef *metav1.OwnerReference) *latticev1.ServiceAddress {
 	// We can't look up by Name, so look up by Name and then verify Name.
 	// Don't even try to look up by Name if it's the wrong Kind.
 	if controllerRef.Kind != controllerKind.Kind {

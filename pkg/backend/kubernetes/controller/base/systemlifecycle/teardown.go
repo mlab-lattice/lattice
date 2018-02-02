@@ -3,11 +3,15 @@ package systemlifecycle
 import (
 	"reflect"
 
-	crv1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
+	latticev1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 )
 
-func (c *Controller) updateTeardownStatus(teardown *crv1.SystemTeardown, state crv1.SystemTeardownState, message string) (*crv1.SystemTeardown, error) {
-	status := crv1.SystemTeardownStatus{
+func (c *Controller) updateTeardownStatus(
+	teardown *latticev1.SystemTeardown,
+	state latticev1.SystemTeardownState,
+	message string,
+) (*latticev1.SystemTeardown, error) {
+	status := latticev1.SystemTeardownStatus{
 		State:              state,
 		ObservedGeneration: teardown.Generation,
 		Message:            message,

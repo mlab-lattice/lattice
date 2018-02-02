@@ -3,11 +3,15 @@ package systemlifecycle
 import (
 	"reflect"
 
-	crv1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
+	latticev1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 )
 
-func (c *Controller) updateRolloutStatus(rollout *crv1.SystemRollout, state crv1.SystemRolloutState, message string) (*crv1.SystemRollout, error) {
-	status := crv1.SystemRolloutStatus{
+func (c *Controller) updateRolloutStatus(
+	rollout *latticev1.SystemRollout,
+	state latticev1.SystemRolloutState,
+	message string,
+) (*latticev1.SystemRollout, error) {
+	status := latticev1.SystemRolloutStatus{
 		State:              state,
 		ObservedGeneration: rollout.Generation,
 		Message:            message,

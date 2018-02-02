@@ -4,14 +4,14 @@ import (
 	"fmt"
 	"reflect"
 
-	crv1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
+	latticev1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	"github.com/mlab-lattice/system/pkg/definition/tree"
 )
 
 func (c *Controller) syncSystemStatus(
-	system *crv1.System,
+	system *latticev1.System,
 	services map[tree.NodePath]string,
-	serviceStatuses map[string]crv1.ServiceStatus,
+	serviceStatuses map[string]latticev1.ServiceStatus,
 	deletedServices []string,
 ) error {
 	hasFailedService := false
@@ -19,49 +19,54 @@ func (c *Controller) syncSystemStatus(
 	hasScalingService := false
 
 	for serviceName, status := range serviceStatuses {
-		if status.State == crv1.ServiceStateFailed {
+		if status.State == latticev1.ServiceStateFailed {
 			hasFailedService = true
 			continue
 		}
 
-		if status.State == crv1.ServiceStateUpdating || status.State == crv1.ServiceStatePending {
+		if status.State == latticev1.ServiceStateUpdating || status.State == latticev1.ServiceStatePending {
 			hasUpdatingService = true
 			continue
 		}
 
-		if status.State == crv1.ServiceStateScalingDown || status.State == crv1.ServiceStateScalingUp {
+		if status.State == latticev1.ServiceStateScalingDown || status.State == latticev1.ServiceStateScalingUp {
 			hasScalingService = true
 			continue
 		}
 
-		if status.State != crv1.ServiceStateStable {
+		if status.State != latticev1.ServiceStateStable {
 			return fmt.Errorf("Service %v/%v had unexpected state: %v", system.Namespace, serviceName, status.State)
 		}
 	}
 
-	state := crv1.SystemStateStable
+	state := latticev1.SystemStateStable
 
 	// A scaling status takes priority over a stable status
 	if hasScalingService {
-		state = crv1.SystemStateScaling
+		state = latticev1.SystemStateScaling
 	}
 
 	// An updating status takes priority over a scaling status
 	if hasUpdatingService || len(deletedServices) != 0 {
-		state = crv1.SystemStateUpdating
+		state = latticev1.SystemStateUpdating
 	}
 
 	// A failed status takes priority over an updating status
 	if hasFailedService {
-		state = crv1.SystemStateFailed
+		state = latticev1.SystemStateFailed
 	}
 
 	_, err := c.updateSystemStatus(system, state, services, serviceStatuses)
 	return err
 }
 
-func (c *Controller) updateSystemStatus(system *crv1.System, state crv1.SystemState, services map[tree.NodePath]string, serviceStatuses map[string]crv1.ServiceStatus) (*crv1.System, error) {
-	status := crv1.SystemStatus{
+func (c *Controller) updateSystemStatus(
+	system *latticev1.System,
+	state latticev1.SystemState,
+	services map[tree.NodePath]string,
+	serviceStatuses map[string]latticev1.ServiceStatus,
+) (*latticev1.System, error) {
+	status := latticev1.SystemStatus{
 		State:              state,
 		ObservedGeneration: system.Generation,
 		// FIXME: remove this when ObservedGeneration is supported for CRD

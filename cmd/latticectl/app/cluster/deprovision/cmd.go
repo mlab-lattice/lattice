@@ -9,9 +9,10 @@ import (
 )
 
 var (
-	workDir string
-	force   bool
-	backend string
+	workDir     string
+	force       bool
+	backend     string
+	backendVars []string
 )
 
 var Cmd = &cobra.Command{
@@ -45,4 +46,5 @@ func init() {
 	Cmd.Flags().StringVar(&workDir, "work-directory", "/tmp/lattice/cluster", "path where subcommands will use as their working directory")
 	Cmd.Flags().BoolVar(&force, "force", false, "if set, attempt to deprovision the cluster without tearing down systems")
 	Cmd.Flags().StringVar(&backend, "backend", constants.BackendTypeKubernetes, "lattice backend to use")
+	Cmd.Flags().StringArrayVar(&backendVars, "backend-var", nil, "additional variables to pass in to the backend")
 }

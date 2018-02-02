@@ -26,6 +26,8 @@ type ClusterProvisionerOptions struct {
 	TerraformBackendS3Bucket string
 	TerraformBackendS3Key    string
 
+	ClusterManagerURL string
+
 	AccountID         string
 	Region            string
 	AvailabilityZones []string
@@ -45,6 +47,8 @@ type DefaultAWSClusterProvisioner struct {
 	terraformModulePath      string
 	terraformBackendS3Bucket string
 	terraformBackendS3Key    string
+
+	clusterManagerURL string
 
 	accountID         string
 	region            string
@@ -67,6 +71,8 @@ func NewClusterProvisioner(latticeImageDockerRepository, latticeContainerRepoPre
 		terraformBackendS3Bucket: options.TerraformBackendS3Bucket,
 		terraformBackendS3Key:    options.TerraformBackendS3Key,
 
+		clusterManagerURL: options.ClusterManagerURL,
+
 		accountID:         options.AccountID,
 		region:            options.Region,
 		availabilityZones: options.AvailabilityZones,
@@ -78,7 +84,7 @@ func NewClusterProvisioner(latticeImageDockerRepository, latticeContainerRepoPre
 	}
 }
 
-func (p *DefaultAWSClusterProvisioner) Provision(clusterID, url string) error {
+func (p *DefaultAWSClusterProvisioner) Provision(clusterID, url string) (string, error) {
 	fmt.Println("Provisioning cluster...")
 	clusterModule := p.clusterModule(clusterID, url)
 	clusterConfig := p.clusterConfig(clusterModule)
@@ -88,20 +94,26 @@ func (p *DefaultAWSClusterProvisioner) Provision(clusterID, url string) error {
 		if logfile != "" {
 			fmt.Printf("error provisioning. logfile: %v", logfile)
 		}
-		return err
+		return "", err
 	}
 
-	address, err := p.Address(clusterID)
+	address, err := p.address(clusterID)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	fmt.Println("Waiting for Cluster Manager to be ready...")
-	clusterClient := rest.NewClient(fmt.Sprintf("http://%v", address))
-	return wait.Poll(1*time.Second, 300*time.Second, func() (bool, error) {
+	clusterClient := rest.NewClient(address)
+	err = wait.Poll(1*time.Second, 300*time.Second, func() (bool, error) {
 		ok, _ := clusterClient.Status()
 		return ok, nil
 	})
+
+	if err != nil {
+		return "", err
+	}
+
+	return address, nil
 }
 
 func (p *DefaultAWSClusterProvisioner) clusterConfig(clusterModule *awsterraform.Cluster) *terraform.Config {
@@ -153,13 +165,18 @@ func (p *DefaultAWSClusterProvisioner) clusterModule(clusterID, url string) *aws
 	}
 }
 
-func (p *DefaultAWSClusterProvisioner) Address(name string) (string, error) {
+func (p *DefaultAWSClusterProvisioner) address(name string) (string, error) {
 	tec, err := terraform.NewTerrafromExecContext(p.workDirectory, nil)
 	if err != nil {
 		return "", err
 	}
 
-	return tec.Output(terraformOutputclusterManagerAddress)
+	address, err := tec.Output(terraformOutputclusterManagerAddress)
+	if err != nil {
+		return "", err
+	}
+
+	return fmt.Sprintf("http://%v", address), nil
 }
 
 func (p *DefaultAWSClusterProvisioner) Deprovision(clusterID string, force bool) error {
@@ -179,12 +196,11 @@ func (p *DefaultAWSClusterProvisioner) Deprovision(clusterID string, force bool)
 }
 
 func (p *DefaultAWSClusterProvisioner) tearDownSystems(clusterID string) error {
-	address, err := p.Address(clusterID)
-	if err != nil {
-		return err
+	if p.clusterManagerURL == "" {
+		return fmt.Errorf("cluster manager URL required to tear down systems")
 	}
 
-	clusterClient := rest.NewClient(fmt.Sprintf("http://%v", address))
+	clusterClient := rest.NewClient(p.clusterManagerURL)
 	systems, err := clusterClient.Systems().List()
 	if err != nil {
 		return err
@@ -205,6 +221,10 @@ func (p *DefaultAWSClusterProvisioner) tearDownSystems(clusterID string) error {
 			teardown, err := clusterClient.Systems().Teardowns(systemID).Get(teardownID)
 			if err != nil {
 				return false, err
+			}
+
+			if teardown.State == types.SystemTeardownStateFailed {
+				return false, fmt.Errorf("teardown %v (system %v) failed", teardownID, systemID)
 			}
 
 			if teardown.State != types.SystemTeardownStateSucceeded {

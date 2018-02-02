@@ -3,7 +3,7 @@ package service
 import (
 	"fmt"
 
-	crv1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
+	latticev1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -11,7 +11,7 @@ import (
 	"github.com/golang/glog"
 )
 
-func (c *Controller) syncServiceNodePool(service *crv1.Service) (*crv1.NodePool, error) {
+func (c *Controller) syncServiceNodePool(service *latticev1.Service) (*latticev1.NodePool, error) {
 	// TODO(kevinrosendahl): add support for shared node pools
 	nodePool, err := c.nodePoolLister.NodePools(service.Namespace).Get(service.Name)
 	if err != nil {
@@ -30,7 +30,7 @@ func (c *Controller) syncServiceNodePool(service *crv1.Service) (*crv1.NodePool,
 	return nodePool, nil
 }
 
-func (c *Controller) syncExistingNodePool(service *crv1.Service, nodePool *crv1.NodePool) (*crv1.NodePool, error) {
+func (c *Controller) syncExistingNodePool(service *latticev1.Service, nodePool *latticev1.NodePool) (*latticev1.NodePool, error) {
 	// TODO(kevinrosendahl): only change NodePool spec for dedicated node pools
 	spec, err := nodePoolSpec(service)
 	if err != nil {
@@ -50,7 +50,7 @@ func (c *Controller) syncExistingNodePool(service *crv1.Service, nodePool *crv1.
 	return nodePool, nil
 }
 
-func (c *Controller) updateNodePoolSpec(nodePool *crv1.NodePool, desiredSpec crv1.NodePoolSpec) (*crv1.NodePool, error) {
+func (c *Controller) updateNodePoolSpec(nodePool *latticev1.NodePool, desiredSpec latticev1.NodePoolSpec) (*latticev1.NodePool, error) {
 	// Copy so the shared cache isn't mutated
 	nodePool = nodePool.DeepCopy()
 	nodePool.Spec = desiredSpec
@@ -58,7 +58,7 @@ func (c *Controller) updateNodePoolSpec(nodePool *crv1.NodePool, desiredSpec crv
 	return c.latticeClient.LatticeV1().NodePools(nodePool.Namespace).Update(nodePool)
 }
 
-func (c *Controller) createNewNodePool(service *crv1.Service) (*crv1.NodePool, error) {
+func (c *Controller) createNewNodePool(service *latticev1.Service) (*latticev1.NodePool, error) {
 	nodePool, err := newNodePool(service)
 	if err != nil {
 		return nil, err
@@ -72,28 +72,28 @@ func (c *Controller) createNewNodePool(service *crv1.Service) (*crv1.NodePool, e
 	return nodePool, nil
 }
 
-func newNodePool(service *crv1.Service) (*crv1.NodePool, error) {
+func newNodePool(service *latticev1.Service) (*latticev1.NodePool, error) {
 	spec, err := nodePoolSpec(service)
 	if err != nil {
 		return nil, err
 	}
 
-	nodePool := &crv1.NodePool{
+	nodePool := &latticev1.NodePool{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: service.Name,
 		},
 		Spec: spec,
-		Status: crv1.NodePoolStatus{
-			State: crv1.NodePoolStatePending,
+		Status: latticev1.NodePoolStatus{
+			State: latticev1.NodePoolStatePending,
 		},
 	}
 
 	return nodePool, nil
 }
 
-func nodePoolSpec(service *crv1.Service) (crv1.NodePoolSpec, error) {
+func nodePoolSpec(service *latticev1.Service) (latticev1.NodePoolSpec, error) {
 	if service.Spec.Definition.Resources().InstanceType == nil {
-		return crv1.NodePoolSpec{}, fmt.Errorf("cannot create NodePool for Service with no resources.instance_type")
+		return latticev1.NodePoolSpec{}, fmt.Errorf("cannot create NodePool for Service with no resources.instance_type")
 	}
 	instanceType := *service.Spec.Definition.Resources().InstanceType
 
@@ -103,10 +103,10 @@ func nodePoolSpec(service *crv1.Service) (crv1.NodePoolSpec, error) {
 	} else if service.Spec.Definition.Resources().MinInstances != nil {
 		numInstances = *service.Spec.Definition.Resources().MinInstances
 	} else {
-		return crv1.NodePoolSpec{}, fmt.Errorf("cannot create NodePool for Service with neither resources.num_instances nor resources.min_instances")
+		return latticev1.NodePoolSpec{}, fmt.Errorf("cannot create NodePool for Service with neither resources.num_instances nor resources.min_instances")
 	}
 
-	spec := crv1.NodePoolSpec{
+	spec := latticev1.NodePoolSpec{
 		NumInstances: numInstances,
 		InstanceType: instanceType,
 	}

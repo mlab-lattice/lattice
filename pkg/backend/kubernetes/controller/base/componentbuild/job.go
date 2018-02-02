@@ -6,7 +6,7 @@ import (
 	"time"
 
 	kubeconstants "github.com/mlab-lattice/system/pkg/backend/kubernetes/constants"
-	crv1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
+	latticev1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	kubeutil "github.com/mlab-lattice/system/pkg/backend/kubernetes/util/kubernetes"
 
 	batchv1 "k8s.io/api/batch/v1"
@@ -29,7 +29,7 @@ const (
 )
 
 // getJobForBuild uses ControllerRefManager to retrieve the Job for a ComponentBuild
-func (c *Controller) getJobForBuild(build *crv1.ComponentBuild) (*batchv1.Job, error) {
+func (c *Controller) getJobForBuild(build *latticev1.ComponentBuild) (*batchv1.Job, error) {
 	selector := labels.NewSelector()
 	requirement, err := labels.NewRequirement(kubeconstants.LabelKeyComponentBuildID, selection.Equals, []string{build.Name})
 	if err != nil {
@@ -70,7 +70,7 @@ func (c *Controller) getJobForBuild(build *crv1.ComponentBuild) (*batchv1.Job, e
 	return &jobItems.Items[0], nil
 }
 
-func (c *Controller) createNewJob(build *crv1.ComponentBuild) (*batchv1.Job, error) {
+func (c *Controller) createNewJob(build *latticev1.ComponentBuild) (*batchv1.Job, error) {
 	job, err := c.newJob(build)
 	if err != nil {
 		return nil, err
@@ -79,7 +79,7 @@ func (c *Controller) createNewJob(build *crv1.ComponentBuild) (*batchv1.Job, err
 	return c.kubeClient.BatchV1().Jobs(build.Namespace).Create(job)
 }
 
-func (c *Controller) newJob(build *crv1.ComponentBuild) (*batchv1.Job, error) {
+func (c *Controller) newJob(build *latticev1.ComponentBuild) (*batchv1.Job, error) {
 	// Need a consistent view of our config while generating the Job
 	c.configLock.RLock()
 	defer c.configLock.RUnlock()
@@ -107,11 +107,11 @@ func (c *Controller) newJob(build *crv1.ComponentBuild) (*batchv1.Job, error) {
 	return job, nil
 }
 
-func jobName(build *crv1.ComponentBuild) string {
+func jobName(build *latticev1.ComponentBuild) string {
 	return fmt.Sprintf("lattice-build-%s", build.Name)
 }
 
-func (c *Controller) jobSpec(build *crv1.ComponentBuild) (batchv1.JobSpec, string, error) {
+func (c *Controller) jobSpec(build *latticev1.ComponentBuild) (batchv1.JobSpec, string, error) {
 	buildContainer, dockerImageFQN, err := c.getBuildContainer(build)
 	if err != nil {
 		return batchv1.JobSpec{}, "", err
@@ -168,7 +168,7 @@ func (c *Controller) jobSpec(build *crv1.ComponentBuild) (batchv1.JobSpec, strin
 	return *spec, dockerImageFQN, nil
 }
 
-func (c *Controller) getBuildContainer(build *crv1.ComponentBuild) (*corev1.Container, string, error) {
+func (c *Controller) getBuildContainer(build *latticev1.ComponentBuild) (*corev1.Container, string, error) {
 	buildJSON, err := json.Marshal(&build.Spec.BuildDefinitionBlock)
 	if err != nil {
 		return nil, "", err
