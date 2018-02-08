@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
+	"strings"
 	"testing"
 	"time"
 
@@ -76,40 +77,42 @@ func doTestEngine(t *testing.T) {
 		t.Fatal("Eval result is nil")
 	}
 
+	resultMap := result.ValueAsMap()
+
 	fmt.Println("Evaluation Result: ")
-	prettyPrint(result)
+	prettyPrint(resultMap)
 
 	fmt.Println("Validating Eval result...")
 
-	if result["name"] != "joe" {
+	if resultMap["name"] != "joe" {
 		t.Fatal("wrong name")
 	}
 
-	if result["hi"] != "Hi joe" {
+	if resultMap["hi"] != "Hi joe" {
 		t.Fatal("wrong hi value")
 	}
 
-	if int(result["x"].(float64)) != 1 {
+	if int(resultMap["x"].(float64)) != 1 {
 		t.Fatal("wrong x val")
 	}
 
-	if result["y"] != 2.1 {
+	if resultMap["y"] != 2.1 {
 		t.Fatal("wrong y val")
 	}
 
 	fmt.Println("Validating array...")
-	if result["array"] == nil {
+	if resultMap["array"] == nil {
 		t.Fatal("array is nil")
 	}
 
 	fmt.Println("Validating array is of type array...")
-	if _, isArray := result["array"].([]interface{}); !isArray {
+	if _, isArray := resultMap["array"].([]interface{}); !isArray {
 		t.Fatal("array is not an array!")
 	}
 
 	fmt.Println("Validating array length...")
 
-	if len(result["array"].([]interface{})) != 3 {
+	if len(resultMap["array"].([]interface{})) != 3 {
 		t.Fatal("wrong array length")
 	}
 
@@ -117,23 +120,23 @@ func doTestEngine(t *testing.T) {
 	fmt.Println("ensure that name parameter is required...")
 	_, err = engine.EvalFromURL(t1FileUrl, nil, options)
 
-	if err == nil || fmt.Sprintf("%v", err) != "parameter name is required" {
+	if err == nil || !strings.Contains(fmt.Sprintf("%v", err), "parameter name is required") {
 		t.Fatalf("Required parameter 'name' has not been validated")
 	}
 
 	fmt.Println("Validating include...")
-	if result["address"] == nil {
+	if resultMap["address"] == nil {
 		t.Fatal("address is nil")
 	}
 
 	fmt.Println("Validating address is of type map...")
-	if _, isMap := result["address"].(map[string]interface{}); !isMap {
+	if _, isMap := resultMap["address"].(map[string]interface{}); !isMap {
 		t.Fatal("address is not a map!")
 	}
 
 	fmt.Println("Validating address length...")
 
-	address := result["address"].(map[string]interface{})
+	address := resultMap["address"].(map[string]interface{})
 
 	if len(address) != 2 {
 		t.Fatal("wrong length of address object")
@@ -154,20 +157,59 @@ func doTestEngine(t *testing.T) {
 	// validate $include to parent
 	fmt.Println("validate include to parent")
 
-	if result["city"] != "San Francisco" {
+	if resultMap["city"] != "San Francisco" {
 		t.Fatal("invalid city")
 	}
 
-	if result["state"] != "CA" {
+	if resultMap["state"] != "CA" {
 		t.Fatal("invalid state")
 	}
 
 	// ensure that some parameters are required
 	fmt.Println("ensure that name parameter is required...")
 	_, err = engine.EvalFromURL(t1FileUrl, nil, options)
-
-	if err == nil || fmt.Sprintf("%v", err) != "parameter name is required" {
+	if err == nil || !strings.Contains(fmt.Sprintf("%v", err), "parameter name is required") {
 		t.Fatalf("Required parameter 'name' has not been validated")
+	}
+
+	fmt.Println("Testing metadata")
+
+	metadata1 := result.GetPropertyMetadata("address")
+
+	if metadata1 == nil {
+		t.Fatalf("No metadata found for property address")
+	}
+
+	fmt.Println("Validating metadata template url")
+
+	if metadata1.TemplateURL() != "file:///tmp/lattice-core/test/template-engine/my-repo/.git/t1.json" {
+		t.Fatalf("invalid template file for address. Found '%s'", metadata1.TemplateURL())
+	}
+
+	fmt.Println("Validating metadata line number")
+
+	if metadata1.LineNumber() != 29 {
+		t.Fatalf("invalid line number for address.city. Expected 29 but found %v", metadata1.LineNumber())
+	}
+
+	fmt.Println("Testing metadata within includes")
+	// ensure that
+	metadata2 := result.GetPropertyMetadata("address.city")
+
+	if metadata2 == nil {
+		t.Fatalf("No metadata found for property address.city")
+	}
+
+	fmt.Println("Validating metadata template url")
+
+	if metadata2.TemplateURL() != "file:///tmp/lattice-core/test/template-engine/my-repo/.git/t2.json" {
+		t.Fatalf("invalid template file for address.city. Found '%s'", metadata2.TemplateURL())
+	}
+
+	fmt.Println("Validating metadata line number")
+
+	if metadata2.LineNumber() != 12 {
+		t.Fatalf("invalid line number for address.city. Expected 12 but found %v", metadata2.LineNumber())
 	}
 
 }

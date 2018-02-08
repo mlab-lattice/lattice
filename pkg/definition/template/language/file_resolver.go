@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"path"
 	"regexp"
 	"strings"
 
@@ -43,8 +42,11 @@ func fetchGitFileContents(repoUrl string, fileName string, env *environment) ([]
 
 // urlResource artifact for url resolution
 type urlResource struct {
-	baseUrl string
-	data    map[string]interface{}
+	url      string
+	baseUrl  string
+	fileName string
+	bytes    []byte
+	data     map[string]interface{}
 }
 
 // resolveGitURL resolves a git url
@@ -58,7 +60,7 @@ func resolveGitURL(url string, env *environment) (*urlResource, error) {
 	protocol := parts[0][1]
 	repoPath := parts[0][3]
 	ref := parts[0][5]
-	resourcePath := parts[0][8]
+	fileName := parts[0][8]
 
 	// reconstruct the url minus file path
 	baseUrl := fmt.Sprintf("%v://%v", protocol, repoPath)
@@ -69,24 +71,26 @@ func resolveGitURL(url string, env *environment) (*urlResource, error) {
 		baseUrl = baseUrl + "#" + ref
 	}
 
-	bytes, err := fetchGitFileContents(baseUrl, resourcePath, env)
+	bytes, err := fetchGitFileContents(baseUrl, fileName, env)
 	if err != nil {
 		return nil, err
 	}
 
-	return newUrlResource(baseUrl, resourcePath, bytes)
+	return newUrlResource(url, baseUrl, fileName, bytes)
 
 }
 
 // newUrlResource creates a new urlResource struct
-func newUrlResource(baseUrl string, resourcePath string, bytes []byte) (*urlResource, error) {
-	data, err := unmarshalBytes(bytes, resourcePath)
+func newUrlResource(url, baseUrl string, fileName string, bytes []byte) (*urlResource, error) {
+	data, err := unmarshalBytes(bytes, fileName)
 	if err != nil {
 		return nil, err
 	}
 
 	return &urlResource{
+		url:     url,
 		baseUrl: baseUrl,
+		bytes:   bytes,
 		data:    data,
 	}, nil
 }
@@ -95,7 +99,7 @@ func newUrlResource(baseUrl string, resourcePath string, bytes []byte) (*urlReso
 func resolveRelativeURL(url string, env *environment) (*urlResource, error) {
 
 	// construct a full url using the existing baseUrl in env
-	fullUrl := path.Join(env.currentFrame().baseUrl, url)
+	fullUrl := fmt.Sprintf("%v/%v", env.currentFrame().resource.baseUrl, url)
 
 	return resolveUrl(fullUrl, env)
 }

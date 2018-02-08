@@ -59,32 +59,50 @@ func CreateOptions(workDirectory string, gitOptions *git.Options) (*Options, err
 
 // TemplateEngine the main class to be used for parsing/evaluating templates
 type TemplateEngine struct {
-	operatorEvaluators map[string]OperatorEvaluator // internal operator evaluator registry
-	operatorEvalOrder  []string                     // orders of operator evaluation within a template.
-	// All keys operatorEvaluators are required to be here in the desired order.
+	operatorConfigs []*operatorConfig // array of operator configs. Order of elements here is used as the
+	// evaluation order of operators within a map
+	operatorMap map[string]*operatorConfig // internal operator evaluator registry.
+
 }
 
 // NewEngine constructs new engine object
 func NewEngine() *TemplateEngine {
 
+	operatorConfigs := []*operatorConfig{
+		{
+			key:                   "$parameters",
+			evaluator:             &ParametersEvaluator{},
+			appendToPropertyStack: true,
+		},
+		{
+			key:                   "$variables",
+			evaluator:             &VariablesEvaluator{},
+			appendToPropertyStack: true,
+		},
+		{
+			key:                   "$include",
+			evaluator:             &IncludeEvaluator{},
+			appendToPropertyStack: false,
+		},
+	}
+
+	// construct the operator map based on configs
+	operatorMap := make(map[string]*operatorConfig)
+	for _, opConf := range operatorConfigs {
+		operatorMap[opConf.key] = opConf
+	}
+
+	// create the engine
 	engine := &TemplateEngine{
-		operatorEvaluators: map[string]OperatorEvaluator{
-			"$parameters": &ParametersEvaluator{},
-			"$variables":  &VariablesEvaluator{},
-			"$include":    &IncludeEvaluator{},
-		},
-		operatorEvalOrder: []string{
-			"$parameters",
-			"$variables",
-			"$include",
-		},
+		operatorConfigs: operatorConfigs,
+		operatorMap:     operatorMap,
 	}
 
 	return engine
 }
 
 // EvalFromURL evaluates the template from the specified url with the specified parameters and options
-func (engine *TemplateEngine) EvalFromURL(url string, parameters map[string]interface{}, options *Options) (map[string]interface{}, error) {
+func (engine *TemplateEngine) EvalFromURL(url string, parameters map[string]interface{}, options *Options) (*Result, error) {
 
 	// make parameters if not set
 	if parameters == nil {
@@ -92,17 +110,17 @@ func (engine *TemplateEngine) EvalFromURL(url string, parameters map[string]inte
 	}
 
 	env := newEnvironment(engine, options)
-	result, err := engine.include(url, parameters, env)
+	val, err := engine.include(url, parameters, env)
 	if err != nil {
 		return nil, err
 	}
 
-	return result.(map[string]interface{}), nil
+	return newResult(val, env), nil
 }
 
 // Eval evaluates a single object
 func (engine *TemplateEngine) Eval(o interface{}, parameters map[string]interface{},
-	options *Options) (interface{}, error) {
+	options *Options) (*Result, error) {
 
 	// make parameters if not set
 	if parameters == nil {
@@ -111,15 +129,18 @@ func (engine *TemplateEngine) Eval(o interface{}, parameters map[string]interfac
 
 	// create env and push parameters to the stack
 	env := newEnvironment(engine, options)
-	env.push("", parameters, make(map[string]interface{}))
+	env.push(nil, parameters, make(map[string]interface{}))
+	// defer pop
+	defer env.pop()
 
 	// call eval with env
-	result, err := engine.eval(o, env)
+	val, err := engine.eval(o, env)
 
-	// pop
-	env.pop()
+	if err != nil {
+		return nil, err
+	}
 
-	return result, err
+	return newResult(val, env), err
 }
 
 // eval evaluates the specified object
@@ -153,7 +174,7 @@ func (engine *TemplateEngine) include(url string, parameters map[string]interfac
 	variables := make(map[string]interface{})
 
 	// push !
-	env.push(resource.baseUrl, parameters, variables)
+	env.push(resource, parameters, variables)
 
 	// defer a pop to ensure that the stack is popped  before
 	defer env.pop()
@@ -169,13 +190,24 @@ func (engine *TemplateEngine) evalMap(m map[string]interface{}, env *environment
 	result := make(map[string]interface{})
 	// first, evaluate operators based on their priorities
 
-	for _, operator := range engine.operatorEvalOrder {
-		if operand, operatorExists := m[operator]; operatorExists {
-			evaluator := engine.operatorEvaluators[operator]
-			evalResult, err := evaluator.eval(operand, env)
+	for _, operator := range engine.operatorConfigs {
+		if operand, operatorExists := m[operator.key]; operatorExists {
+
+			// push the the current operator to the property stack
+			currentPropertyPath := env.getCurrentPropertyPath()
+			if operator.appendToPropertyStack {
+				currentPropertyPath = env.pushProperty(operator.key)
+			}
+
+			evalResult, err := operator.evaluator.eval(operand, env)
+
+			// pop property if we pushed it
+			if operator.appendToPropertyStack {
+				env.popProperty()
+			}
 
 			if err != nil { // return error
-				return nil, err
+				return nil, wrapWithPropertyEvalError(err, currentPropertyPath, env)
 			}
 			// if the result is nil, this indicates that the evaluator has processed the operator and that the engine
 			// should continue
@@ -188,7 +220,9 @@ func (engine *TemplateEngine) evalMap(m map[string]interface{}, env *environment
 			resultMap, isMap := evalResult.(map[string]interface{})
 
 			if !isMap {
-				return nil, fmt.Errorf("Bad return value for evaluator %v. Result is not a map", operator)
+				badOperatorResultError := fmt.Errorf("Bad return value for evaluator %v. "+
+					"Result is not a map", operator)
+				return nil, wrapWithPropertyEvalError(badOperatorResultError, currentPropertyPath, env)
 			}
 			// stuff map with the val result
 			for k, v := range resultMap {
@@ -202,15 +236,21 @@ func (engine *TemplateEngine) evalMap(m map[string]interface{}, env *environment
 	for k, v := range m {
 
 		// skip operators since we have evaluated them already
-		if _, isOperator := engine.operatorEvaluators[k]; isOperator {
+		if _, isOperator := engine.operatorMap[k]; isOperator {
 			continue
 		}
+
+		// regular property. Push to the property stack
+		currentPropertyPath := env.pushProperty(k)
 
 		var err error
 
 		result[k], err = engine.eval(v, env)
+
+		// pop property
+		env.popProperty()
 		if err != nil {
-			return nil, err
+			return nil, wrapWithPropertyEvalError(err, currentPropertyPath, env)
 		}
 	}
 
@@ -221,10 +261,13 @@ func (engine *TemplateEngine) evalMap(m map[string]interface{}, env *environment
 func (engine *TemplateEngine) evalArray(arr []interface{}, env *environment) ([]interface{}, error) {
 	result := make([]interface{}, len(arr))
 	for i, v := range arr {
+		arrayProperty := fmt.Sprintf("%v[%v]", env.getCurrentPropertyPath(), i)
+		currentPropertyPath := env.pushProperty(arrayProperty)
 		var err error
 		result[i], err = engine.eval(v, env)
+		env.popProperty()
 		if err != nil {
-			return nil, err
+			return nil, wrapWithPropertyEvalError(err, currentPropertyPath, env)
 		}
 	}
 

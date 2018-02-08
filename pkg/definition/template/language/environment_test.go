@@ -12,7 +12,11 @@ func TestEnv(t *testing.T) {
 		t.Fatalf("Current frame is not nill")
 	}
 
-	env.push("https://foo.bar/test.git/", map[string]interface{}{"x": 1}, map[string]interface{}{"y": 2})
+	resource, _ := newUrlResource("https://foo.bar/test.git/test.json",
+		"https://foo.bar/test.git/",
+		"test.json",
+		make([]byte, 10))
+	env.push(resource, map[string]interface{}{"x": 1}, map[string]interface{}{"y": 2})
 
 	if env.currentFrame() == nil {
 		t.Fatalf("Current frame is nill")

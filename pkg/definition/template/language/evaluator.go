@@ -10,6 +10,12 @@ type OperatorEvaluator interface {
 	eval(o interface{}, env *environment) (interface{}, error)
 }
 
+type operatorConfig struct {
+	key                   string
+	evaluator             OperatorEvaluator
+	appendToPropertyStack bool
+}
+
 // IncludeEvaluator. evaluates $include
 type IncludeEvaluator struct {
 }
