@@ -31,11 +31,19 @@ func (pm *PropertyMetadata) RelativePropertyPath() string {
 
 // TemplateURL template url of the template holding this property
 func (pm *PropertyMetadata) TemplateURL() string {
+	if pm.resource == nil {
+		return ""
+	}
+
 	return pm.resource.url
 }
 
 // LineNumber line number of the property
 func (pm *PropertyMetadata) LineNumber() int {
+	if pm.resource == nil {
+		return 0
+	}
+
 	return getPropertyPathLineNumber(pm.resource, pm.relativePropertyPath)
 }
 

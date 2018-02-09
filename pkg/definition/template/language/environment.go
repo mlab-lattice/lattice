@@ -119,7 +119,7 @@ func (env *environment) computeRelativePropertyPathFor(metadata *PropertyMetadat
 		parentMeta := env.getPropertyMetaData(parentPropertyPath)
 
 		// if the parent is in a different resource then
-		if parentMeta.resource != metadata.resource {
+		if parentMeta.resource == nil || parentMeta.resource != metadata.resource {
 			break
 		}
 		relativePropertyPath = fmt.Sprintf("%v.%v", parentMeta.PropertyName(), relativePropertyPath)

@@ -17,8 +17,11 @@ func (e *PropertyEvalError) Error() string {
 
 	msgBuf.WriteString(fmt.Sprintf("Evaluation error for '%v': %v.", e.PropertyMetaData.PropertyName(), e.err))
 
-	msgBuf.WriteString(fmt.Sprintf(" File: '%v'", e.PropertyMetaData.TemplateURL()))
-	msgBuf.WriteString(fmt.Sprintf(" at line %v", e.PropertyMetaData.LineNumber()))
+	// include file if it its in a resource
+	if e.PropertyMetaData.TemplateURL() != "" {
+		msgBuf.WriteString(fmt.Sprintf(" File: '%v'", e.PropertyMetaData.TemplateURL()))
+		msgBuf.WriteString(fmt.Sprintf(" at line %v", e.PropertyMetaData.LineNumber()))
+	}
 
 	return msgBuf.String()
 
