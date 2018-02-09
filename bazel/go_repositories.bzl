@@ -55,6 +55,11 @@ GO_REPOSITORIES = {
         "commit": "65fec0d89a572b4367094e2058d3ebe667de3b60",
         "importpath": "github.com/olekukonko/tablewriter",
     },
+    "github.com/tidwall/gjson": {
+        "name": "com_github_tidwall_gjson",
+        "tag": "v1.0.6",
+        "importpath": "github.com/tidwall/gjson",
+    },
     "golang.org/x/crypto": {
         "name": "org_golang_x_crypto",
         "commit": "81e90905daefcd6fd217b62423c0908922eadb30",
@@ -207,6 +212,13 @@ GO_REPOSITORIES = {
         "name": "com_github_spf13_pflag",
         "commit": "4c012f6dcd9546820e378d0bdda4d8fc772cdfea",
         "importpath": "github.com/spf13/pflag",
+    },
+
+    # github.com/tidwall/gjson dependencies
+    "github.com/tidwall/match": {
+        "name": "com_github_tidwall_match",
+        "commit": "1731857f09b1f38450e2c12409748407822dc6be",
+        "importpath": "github.com/tidwall/match",
     },
 
     # gopkg.in/src-d/go-git.v4 dependencies
