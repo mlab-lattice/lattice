@@ -185,9 +185,30 @@ func (engine *TemplateEngine) include(url string, parameters map[string]interfac
 
 // evalMap evaluates a map of objects
 func (engine *TemplateEngine) evalMap(m map[string]interface{}, env *environment) (interface{}, error) {
-
 	// init result
 	result := make(map[string]interface{})
+
+	// eval operators in map
+	err := engine.evalOperatorsInMap(result, m, env)
+
+	if err != nil {
+		return nil, err
+	}
+
+	// eval properties
+	err = engine.evalPropertiesInMap(result, m, env)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
+}
+
+// evalOperatorsInMap helper method for evalMap
+func (engine *TemplateEngine) evalOperatorsInMap(result map[string]interface{}, m map[string]interface{},
+	env *environment) error {
+
 	// first, evaluate operators based on their priorities
 
 	for _, operator := range engine.operatorConfigs {
@@ -207,7 +228,7 @@ func (engine *TemplateEngine) evalMap(m map[string]interface{}, env *environment
 			}
 
 			if err != nil { // return error
-				return nil, wrapWithPropertyEvalError(err, currentPropertyPath, env)
+				return wrapWithPropertyEvalError(err, currentPropertyPath, env)
 			}
 			// if the result is nil, this indicates that the evaluator has processed the operator and that the engine
 			// should continue
@@ -222,16 +243,21 @@ func (engine *TemplateEngine) evalMap(m map[string]interface{}, env *environment
 			if !isMap {
 				badOperatorResultError := fmt.Errorf("Bad return value for evaluator %v. "+
 					"Result is not a map", operator)
-				return nil, wrapWithPropertyEvalError(badOperatorResultError, currentPropertyPath, env)
+				return wrapWithPropertyEvalError(badOperatorResultError, currentPropertyPath, env)
 			}
 			// stuff map with the val result
 			for k, v := range resultMap {
 				result[k] = v
 			}
-
 		}
-
 	}
+
+	return nil
+}
+
+// evalPropertiesInMap helper method for evalMap
+func (engine *TemplateEngine) evalPropertiesInMap(result map[string]interface{}, m map[string]interface{},
+	env *environment) error {
 	// eval the rest of the map
 	for k, v := range m {
 
@@ -245,16 +271,17 @@ func (engine *TemplateEngine) evalMap(m map[string]interface{}, env *environment
 
 		var err error
 
+		// eval
 		result[k], err = engine.eval(v, env)
 
 		// pop property
 		env.popProperty()
 		if err != nil {
-			return nil, wrapWithPropertyEvalError(err, currentPropertyPath, env)
+			return wrapWithPropertyEvalError(err, currentPropertyPath, env)
 		}
 	}
 
-	return result, nil
+	return nil
 }
 
 // evalArray evaluates an array of objects

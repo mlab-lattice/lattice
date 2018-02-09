@@ -111,7 +111,8 @@ func (env *environment) fillPropertyMetadata(propertyPath string) {
 	metadata.relativePropertyPath = env.computeRelativePropertyPathFor(metadata)
 }
 
-// computeRelativePropertyPathFor
+// computeRelativePropertyPathFor determines the relative path of the property, i.e. relative to the resource
+// that contains that property
 func (env *environment) computeRelativePropertyPathFor(metadata *PropertyMetadata) string {
 	parentPropertyPath := getParentPropertyPath(metadata.propertyPath)
 	relativePropertyPath := metadata.PropertyName()
