@@ -219,7 +219,7 @@ func doTestEngine(t *testing.T) {
 	}
 
 	if arrMetadata.LineNumber() != 24 {
-		t.Fatalf("invalid line number for array.0. Expected 12 but found %v", arrMetadata.LineNumber())
+		t.Fatalf("invalid line number for array.0. Expected 24 but found %v", arrMetadata.LineNumber())
 	}
 
 }
