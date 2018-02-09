@@ -94,8 +94,8 @@ func TestParametersEval(t *testing.T) {
 	}
 	_, err := engine.Eval(m, nil, nil)
 
-	if err == nil || fmt.Sprintf("%v", err) != "parameter name is required" {
-		t.Fatal("Expected error 'parameter name is required'")
+	if err == nil || !strings.Contains(fmt.Sprintf("%v", err), "parameter name is required") {
+		t.Fatalf("Expected  'parameter name is required' in err message. Got: '%v'", err)
 	} else {
 		fmt.Printf("Got expected error: %v\n", err)
 	}
