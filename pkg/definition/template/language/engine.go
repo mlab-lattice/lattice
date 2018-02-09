@@ -261,8 +261,9 @@ func (engine *TemplateEngine) evalMap(m map[string]interface{}, env *environment
 func (engine *TemplateEngine) evalArray(arr []interface{}, env *environment) ([]interface{}, error) {
 	result := make([]interface{}, len(arr))
 	for i, v := range arr {
-		arrayProperty := fmt.Sprintf("%v[%v]", env.getCurrentPropertyPath(), i)
-		currentPropertyPath := env.pushProperty(arrayProperty)
+		// construct a property for the array element as array.index e.g. "items.0"
+		arrayElementProperty := fmt.Sprintf("%v", i)
+		currentPropertyPath := env.pushProperty(arrayElementProperty)
 		var err error
 		result[i], err = engine.eval(v, env)
 		env.popProperty()

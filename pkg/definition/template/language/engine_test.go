@@ -193,7 +193,6 @@ func doTestEngine(t *testing.T) {
 	}
 
 	fmt.Println("Testing metadata within includes")
-	// ensure that
 	metadata2 := result.GetPropertyMetadata("address.city")
 
 	if metadata2 == nil {
@@ -210,6 +209,17 @@ func doTestEngine(t *testing.T) {
 
 	if metadata2.LineNumber() != 12 {
 		t.Fatalf("invalid line number for address.city. Expected 12 but found %v", metadata2.LineNumber())
+	}
+
+	fmt.Println("Testing metadata for array elements")
+	arrMetadata := result.GetPropertyMetadata("array.0")
+
+	if arrMetadata == nil {
+		t.Fatalf("No metadata found for property array.0")
+	}
+
+	if arrMetadata.LineNumber() != 24 {
+		t.Fatalf("invalid line number for array.0. Expected 12 but found %v", arrMetadata.LineNumber())
 	}
 
 }
