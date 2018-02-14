@@ -6,7 +6,11 @@ go_library(
     importpath = "github.com/mlab-lattice/system/cmd/kubernetes/manager-api/rest/app",
     visibility = ["//visibility:public"],
     deps = [
+        "//pkg/backend/kubernetes/cloudprovider:go_default_library",
+        "//pkg/backend/kubernetes/lifecycle/system/bootstrap/bootstrapper:go_default_library",
         "//pkg/backend/kubernetes/managerapi/server/backend:go_default_library",
+        "//pkg/backend/kubernetes/networkingprovider:go_default_library",
+        "//pkg/backend/kubernetes/servicemesh:go_default_library",
         "//pkg/managerapi/server/rest:go_default_library",
         "//pkg/types:go_default_library",
         "@com_github_spf13_cobra//:go_default_library",

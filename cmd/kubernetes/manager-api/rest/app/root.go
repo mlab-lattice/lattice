@@ -9,6 +9,10 @@ import (
 	"github.com/mlab-lattice/system/pkg/managerapi/server/rest"
 	"github.com/mlab-lattice/system/pkg/types"
 
+	"github.com/mlab-lattice/system/pkg/backend/kubernetes/cloudprovider"
+	"github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/system/bootstrap/bootstrapper"
+	"github.com/mlab-lattice/system/pkg/backend/kubernetes/networkingprovider"
+	"github.com/mlab-lattice/system/pkg/backend/kubernetes/servicemesh"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 )
@@ -18,6 +22,15 @@ var (
 	clusterIDString  string
 	port             int
 	workingDirectory string
+
+	cloudProviderName string
+	cloudProviderVars []string
+
+	serviceMeshProvider     string
+	serviceMeshProviderVars []string
+
+	networkingProviderName string
+	networkingProviderVars []string
 )
 
 // RootCmd represents the base command when called without any subcommands
@@ -26,7 +39,32 @@ var RootCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		clusterID := types.ClusterID(clusterIDString)
 
-		kubernetesBackend, err := backend.NewKubernetesBackend(clusterID, kubeconfig)
+		cloudSystemBootstrapper, err := cloudprovider.SystemBootstrapperFromFlags(cloudProviderName, cloudProviderVars)
+		if err != nil {
+			panic(err)
+		}
+
+		serviceMeshSystemBootstrapper, err := servicemesh.SystemBootstrapperFromFlags(serviceMeshProvider, serviceMeshProviderVars)
+		if err != nil {
+			panic(err)
+		}
+
+		networkingProviderSystemBoostrapper, err := networkingprovider.SystemBootstrapperFromFlags(networkingProviderName, networkingProviderVars)
+		if err != nil {
+			panic(err)
+		}
+
+		systemBoostrappers := []bootstrapper.Interface{
+			serviceMeshSystemBootstrapper,
+			networkingProviderSystemBoostrapper,
+			cloudSystemBootstrapper,
+		}
+
+		kubernetesBackend, err := backend.NewKubernetesBackend(
+			clusterID,
+			kubeconfig,
+			systemBoostrappers,
+		)
 		if err != nil {
 			panic(err)
 		}
@@ -56,6 +94,17 @@ func init() {
 	RootCmd.Flags().StringVar(&clusterIDString, "cluster-id", "", "id of the lattice cluster")
 	RootCmd.Flags().StringVar(&workingDirectory, "workingDirectory", "/tmp/lattice-manager-api", "working directory to use")
 	RootCmd.Flags().IntVar(&port, "port", 8080, "port to bind to")
+
+	RootCmd.Flags().StringVar(&cloudProviderName, "cloud-provider", "", "cloud provider that the cluster is being bootstrapped on")
+	RootCmd.MarkFlagRequired("cloud-provider")
+	RootCmd.Flags().StringArrayVar(&cloudProviderVars, "cloud-provider-var", nil, "additional variables for the cloud provider")
+
+	RootCmd.Flags().StringVar(&serviceMeshProvider, "service-mesh", "", "service mesh provider to use")
+	RootCmd.MarkFlagRequired("service-provider")
+	RootCmd.Flags().StringArrayVar(&serviceMeshProviderVars, "service-mesh-var", nil, "additional variables for the cloud provider")
+
+	RootCmd.Flags().StringVar(&networkingProviderName, "networking-provider", "", "provider to use for networking")
+	RootCmd.Flags().StringArrayVar(&networkingProviderVars, "networking-provider-var", nil, "additional variables for the networking provider")
 }
 
 func initCmd() {

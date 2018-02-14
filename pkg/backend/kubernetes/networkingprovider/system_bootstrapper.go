@@ -18,3 +18,36 @@ func NewSystemBootstrapper(options *SystemBootstrapperOptions) (systembootstrapp
 
 	return nil, fmt.Errorf("must provide networking provider options")
 }
+
+func SystemBootstrapperFromFlags(networkingProvider string, networkingProviderVars []string) (systembootstrapper.Interface, error) {
+	options, err := ParseSystemBootstrapperFlags(networkingProvider, networkingProviderVars)
+	if err != nil {
+		return nil, err
+	}
+
+	return NewSystemBootstrapper(options)
+}
+
+func ParseSystemBootstrapperFlags(serviceMesh string, serviceMeshVars []string) (*SystemBootstrapperOptions, error) {
+	var options *SystemBootstrapperOptions
+
+	switch serviceMesh {
+	case Flannel:
+		envoyOptions, err := flannel.ParseSystemBootstrapperFlags(serviceMeshVars)
+		if err != nil {
+			return nil, err
+		}
+
+		options = &SystemBootstrapperOptions{
+			Flannel: envoyOptions,
+		}
+
+	case "":
+		return nil, nil
+
+	default:
+		return nil, fmt.Errorf("unsupported networking provider: %v", serviceMesh)
+	}
+
+	return options, nil
+}

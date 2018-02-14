@@ -38,6 +38,5 @@ go_test(
         "volume_test.go",
     ],
     embed = [":go_default_library"],
-    importpath = "github.com/mlab-lattice/system/pkg/definition/block/test",
     deps = ["//pkg/definition/block:go_default_library"],
 )

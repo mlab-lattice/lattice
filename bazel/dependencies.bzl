@@ -67,6 +67,7 @@ def _go_dependencies_com_github_docker_docker():
       "github.com/opencontainers/go-digest",
       "github.com/Nvveen/Gotty",
       "github.com/docker/libtrust",
+      "golang.org/x/net",
   ]
 
   for dep in dependencies:

@@ -28,6 +28,7 @@ type Backend interface {
 	// System
 	ListSystems() ([]types.System, error)
 	GetSystem(types.SystemID) (s *types.System, exists bool, err error)
+	CreateSystem(id types.SystemID, definitionURL string) (*types.System, error)
 
 	// SystemBuild
 	BuildSystem(id types.SystemID, definitionRoot tree.Node, v types.SystemVersion) (types.SystemBuildID, error)

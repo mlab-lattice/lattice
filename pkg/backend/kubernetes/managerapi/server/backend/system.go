@@ -11,6 +11,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 
+	"github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/system/bootstrap"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -23,7 +24,7 @@ func (kb *KubernetesBackend) ListSystems() ([]types.System, error) {
 	requirement, err := labels.NewRequirement(
 		kubeconstants.LabelKeyLatticeClusterID,
 		selection.Equals,
-		[]string{string(kb.ClusterID)},
+		[]string{string(kb.clusterID)},
 	)
 	if err != nil {
 		return nil, err
@@ -34,7 +35,7 @@ func (kb *KubernetesBackend) ListSystems() ([]types.System, error) {
 		LabelSelector: selector.String(),
 	}
 
-	systems, err := kb.LatticeClient.LatticeV1().Systems(corev1.NamespaceAll).List(listOptions)
+	systems, err := kb.latticeClient.LatticeV1().Systems(corev1.NamespaceAll).List(listOptions)
 	if err != nil {
 		return nil, err
 	}
@@ -53,8 +54,8 @@ func (kb *KubernetesBackend) ListSystems() ([]types.System, error) {
 }
 
 func (kb *KubernetesBackend) GetSystem(systemID types.SystemID) (*types.System, bool, error) {
-	namespace := kubeutil.SystemNamespace(kb.ClusterID, systemID)
-	system, err := kb.LatticeClient.LatticeV1().Systems(namespace).Get(string(systemID), metav1.GetOptions{})
+	namespace := kubeutil.SystemNamespace(kb.clusterID, systemID)
+	system, err := kb.latticeClient.LatticeV1().Systems(namespace).Get(string(systemID), metav1.GetOptions{})
 	if err != nil {
 		if errors.IsNotFound(err) {
 			return nil, false, nil
@@ -65,6 +66,23 @@ func (kb *KubernetesBackend) GetSystem(systemID types.SystemID) (*types.System, 
 
 	externalSystem, err := kb.transformSystem(system)
 	return externalSystem, true, err
+}
+
+func (kb *KubernetesBackend) CreateSystem(id types.SystemID, definitionURL string) (*types.System, error) {
+	resources, err := bootstrap.Bootstrap(
+		kb.clusterID,
+		id,
+		definitionURL,
+		kb.systemBootstrappers,
+		kb.kubeClient,
+		kb.latticeClient,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	system := resources.System
+	return kb.transformSystem(system)
 }
 
 func (kb *KubernetesBackend) transformSystem(system *latticev1.System) (*types.System, error) {

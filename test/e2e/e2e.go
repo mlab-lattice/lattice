@@ -36,8 +36,7 @@ var _ = ginkgo.SynchronizedBeforeSuite(func() []byte {
 		p := getProvisioner()
 
 		var err error
-		definitionURL := "https://github.com/mlab-lattice/testing__system.git"
-		clusterURL, err = p.Provision("e2e-test", &definitionURL)
+		clusterURL, err = p.Provision("e2e-test", nil)
 		if err != nil {
 			panic(err)
 		}

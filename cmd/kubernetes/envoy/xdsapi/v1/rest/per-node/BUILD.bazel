@@ -14,6 +14,5 @@ go_library(
 go_binary(
     name = "per-node",
     embed = [":go_default_library"],
-    importpath = "github.com/mlab-lattice/system/cmd/kubernetes/envoy/xdsapi/v1/rest/per-node",
     visibility = ["//visibility:public"],
 )

@@ -45,8 +45,7 @@ def lattice_go_container_image(target, debug=False):
   go_image(
       name = name,
       base = prod_base_image,
-      importpath = "github.com/mlab-lattice/system/" + path,
-      library = "//" + path + ":go_default_library",
+      embed = ["//" + path + ":go_default_library"],
       visibility = ["//visibility:public"],
 #      goos = "linux",
 #      goarch = "amd64",
@@ -73,8 +72,7 @@ def lattice_go_container_image(target, debug=False):
   go_image(
       name = debug_name,
       base = debug_base_image,
-      importpath = "github.com/mlab-lattice/system/" + path,
-      library = "//" + path + ":go_default_library",
+      embed = ["//" + path + ":go_default_library"],
       visibility = ["//visibility:public"],
   )
 

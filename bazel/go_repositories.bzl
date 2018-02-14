@@ -20,7 +20,8 @@ GO_REPOSITORIES = {
     },
     "github.com/docker/docker": {
         "name": "com_github_docker_docker",
-        "tag": "v17.05.0-ce",
+        # corresponds to docker v18.02.0-ce
+        "commit": "6e7715d65ba892a47d355e16bf9ad87fb537a2d0",
         "importpath": "github.com/docker/docker",
     },
     "github.com/fatih/color": {
@@ -69,7 +70,7 @@ GO_REPOSITORIES = {
         "name": "io_k8s_api",
         # https://github.com/bazelbuild/rules_go/issues/964
         "build_file_proto_mode": "disable",
-        "tag": "kubernetes-1.9.0",
+        "tag": "kubernetes-1.9.3",
         "importpath": "k8s.io/api",
     },
     "k8s.io/apimachinery": {
@@ -79,7 +80,7 @@ GO_REPOSITORIES = {
         "build_file_name": "BUILD.bazel",
         # https://github.com/bazelbuild/rules_go/issues/964
         "build_file_proto_mode": "disable",
-        "tag": "kubernetes-1.9.0",
+        "tag": "kubernetes-1.9.3",
         "importpath": "k8s.io/apimachinery",
     },
     "k8s.io/apiextensions-apiserver": {
@@ -89,19 +90,19 @@ GO_REPOSITORIES = {
         "build_file_name": "BUILD.bazel",
         # https://github.com/bazelbuild/rules_go/issues/964
         "build_file_proto_mode": "disable",
-        "tag": "kubernetes-1.9.0",
+        "tag": "kubernetes-1.9.3",
         "importpath": "k8s.io/apiextensions-apiserver",
     },
     "k8s.io/client-go": {
         "name": "io_k8s_client_go",
-        "tag": "kubernetes-1.9.0",
+        "tag": "kubernetes-1.9.3",
         "importpath": "k8s.io/client-go",
     },
     "k8s.io/kubernetes": {
         "name": "io_k8s_kubernetes",
         "build_file_generation": "on",
         "build_file_name": "BUILD.bazel",
-        "tag": "v1.9.0",
+        "tag": "v1.9.3",
         "importpath": "k8s.io/kubernetes",
     },
     # testing dependencies
@@ -130,15 +131,21 @@ GO_REPOSITORIES = {
     },
     
     # github.com/docker/docker dependencies
-    # commits taken from https://github.com/moby/moby/blob/v17.05.0-ce/vendor.conf
+    # Getting the right commits is a little tricky. First go to https://github.com/docker/docker-ce and find
+    # the corresponding release. Then go to components/engine and look at the most recent commit.
+    # At the bottom of the commit message it should say what commit is was cherry picked from.
+    # Go to github.com/moby/moby and go to that commit and check vendor.conf
+    # Taken from https://github.com/docker/docker-ce/tree/v18.02.0-ce/components/engine
+    #   -> https://github.com/docker/docker-ce/commit/ba58fe58e79ce9ae81b11a19ef072e734ae71046
+    #   -> https://github.com/moby/moby/blob/6e7715d65ba892a47d355e16bf9ad87fb537a2d0/vendor.conf
     "github.com/docker/distribution": {
         "name": "com_github_docker_distribution",
-        "commit": "b38e5838b7b2f2ad48e06ec4b500011976080621",
+        "commit": "edc3ab29cdff8694dd6feb85cfeb4b5f1b38ed9c",
         "importpath": "github.com/docker/distribution",
     },
     "github.com/docker/go-connections": {
         "name": "com_github_docker_go_connections",
-        "commit": "e15c02316c12de00874640cd76311849de2aeed5",
+        "commit": "3ede32e2033de7505e6500d6c868c2b9ed9f169d",
         "importpath": "github.com/docker/go-connections",
     },
     "github.com/docker/go-units": {
@@ -146,11 +153,9 @@ GO_REPOSITORIES = {
         "commit": "9e638d38cf6977a37a8ea0078f3ee75a7cdb2dd1",
         "importpath": "github.com/docker/go-units",
     },
-    # Commit in vendor.conf is 9c2d8d184e5da67c95d601382adf14862e4f2228, but bazel did not like this (said it was not a tree).
-    # Seems to be cherry pick of c44aec9b23f89ca40434fe5f86693870ef3bf9f9, so using that instead.
     "github.com/opencontainers/runc": {
         "name": "com_github_opencontainers_runc",
-        "commit": "c44aec9b23f89ca40434fe5f86693870ef3bf9f9",
+        "commit": "9f9c96235cc97674e935002fc3d78361b696a69e",
         "importpath": "github.com/opencontainers/runc",
     },
     "github.com/pkg/errors": {
@@ -160,7 +165,7 @@ GO_REPOSITORIES = {
     },
     "github.com/Sirupsen/logrus": {
         "name": "com_github_Sirupsen_logrus",
-        "tag": "v0.11.0",
+        "tag": "v1.0.3",
         "importpath": "github.com/Sirupsen/logrus",
     },
     "github.com/opencontainers/go-digest": {
@@ -173,9 +178,9 @@ GO_REPOSITORIES = {
         "commit": "a8b993ba6abdb0e0c12b0125c603323a71c7790c",
         "importpath": "github.com/Nvveen/Gotty",
         # looks like github.com/Nvveen/Gotty is what is being included:
-        # https://github.com/moby/moby/blob/147443a42665419d8b3c2047a7d345440bfb63c0/pkg/jsonmessage/jsonmessage.go#L11
+        # https://github.com/moby/moby/blob/6e7715d65ba892a47d355e16bf9ad87fb537a2d0/pkg/jsonmessage/jsonmessage.go#L11
         # but that it is being aliased in vendor.conf:
-        # https://github.com/moby/moby/blob/v17.05.0-ce/vendor.conf#L133
+        # https://github.com/moby/moby/blob/6e7715d65ba892a47d355e16bf9ad87fb537a2d0/vendor.conf#L142
         "vcs": "git",
         "remote": "https://github.com/ijc25/Gotty",
     },
@@ -183,6 +188,12 @@ GO_REPOSITORIES = {
         "name": "com_github_docker_libtrust",
         "commit": "9cbd2a1374f46905c68a4eb3694a130610adc62a",
         "importpath": "github.com/docker/libtrust",
+    },
+    # also required by k8s.io
+    "golang.org/x/net": {
+        "name": "org_golang_x_net",
+        "commit": "7dcfb8076726a3fdd9353b6b8a1f1b6be6811bd6",
+        "importpath": "golang.org/x/net",
     },
 
 
@@ -254,15 +265,15 @@ GO_REPOSITORIES = {
     },
     
     # k8s.io dependencies
-    # commits from https://github.com/kubernetes/kubernetes/blob/cce11c6a185279d037023e02ac5249e14daa22bf/Godeps/Godeps.json
-    # aka v1.8.5
+    # commits from https://github.com/kubernetes/kubernetes/blob/d2835416544f298c919e2ead3be3d0864b52323b/Godeps/Godeps.json
+    # aka v1.9.3
     "github.com/PuerkitoBio/purell": {
-        "name": "com_github_PuerkitoBio_purell",
+        "name": "com_github_puerkitobio_purell",
         "commit": "8a290539e2e8629dbc4e6bad948158f790ec31f4",
         "importpath": "github.com/PuerkitoBio/purell",
     },
     "github.com/PuerkitoBio/urlesc": {
-        "name": "com_github_PuerkitoBio_urlesc",
+        "name": "com_github_puerkitobio_urlesc",
         "commit": "5bd2802263f21d8788851d5305584c82a5c75d7e",
         "importpath": "github.com/PuerkitoBio/urlesc",
     },
@@ -298,12 +309,12 @@ GO_REPOSITORIES = {
     },
     "github.com/go-openapi/spec": {
         "name": "com_github_go_openapi_spec",
-        "commit": "6aced65f8501fe1217321abf0749d354824ba2ff",
+        "commit": "7abd5745472fff5eb3685386d5fb8bf38683154d",
         "importpath": "github.com/go-openapi/spec",
     },
     "github.com/go-openapi/swag": {
         "name": "com_github_go_openapi_swag",
-        "commit": "1d0bd113de87027671077d3c71eb3ac5d7dbba72",
+        "commit": "f3f9494671f93fcff853e3c6e9e948b3eb71e590",
         "importpath": "github.com/go-openapi/swag",
     },
     "github.com/gogo/protobuf": {
@@ -360,7 +371,7 @@ GO_REPOSITORIES = {
     },
     "github.com/mailru/easyjson": {
         "name": "com_github_mailru_easyjson",
-        "commit": "d5b7844b561a7bc640052f1b935f7b800330d7e0",
+        "commit": "2f5df55504ebc322e4d52d34df6a1f5b503bf26d",
         "importpath": "github.com/mailru/easyjson",
     },
     "github.com/pborman/uuid": {
@@ -381,7 +392,7 @@ GO_REPOSITORIES = {
     },
     "golang.org/x/sys": {
         "name": "org_golang_x_sys",
-        "commit": "7ddbeae9ae08c6a06a59597f0c9edbc5ff2444ce",
+        "commit": "95c6576299259db960f6c5b9b69ea52422860fce",
         "importpath": "golang.org/x/sys",
     },
     "gopkg.in/inf.v0": {
@@ -397,12 +408,12 @@ GO_REPOSITORIES = {
     },
     "k8s.io/apiserver": {
         "name": "io_k8s_apiserver",
-        "tag": "kubernetes-1.9.0",
+        "tag": "kubernetes-1.9.3",
         "importpath": "k8s.io/apiserver",
     },
     "k8s.io/kube-openapi": {
         "name": "io_k8s_kube_openapi",
-        "commit": "a07b7bbb58e7fdc5144f8d7046331d29fc9ad3b3",
+        "commit": "39a7bf85c140f972372c2a0d1ee40adbf0c8bfe1",
         "importpath": "k8s.io/kube-openapi",
     },
 

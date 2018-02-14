@@ -129,6 +129,10 @@ func GetBootstrapResources(
 	baseBootstrapper.BootstrapSystemResources(resources)
 
 	for _, b := range bootstrappers {
+		if b == nil {
+			continue
+		}
+
 		b.BootstrapSystemResources(resources)
 	}
 

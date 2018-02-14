@@ -18,7 +18,6 @@ go_test(
     size = "small",
     srcs = ["system_resolver_test.go"],
     embed = [":go_default_library"],
-    importpath = "github.com/mlab-lattice/system/pkg/definition/resolver",
     deps = [
         "//pkg/util/git:go_default_library",
         "@in_gopkg_src_d_go_git_v4//:go_default_library",

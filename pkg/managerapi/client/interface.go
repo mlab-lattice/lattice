@@ -15,6 +15,7 @@ type Interface interface {
 type SystemClient interface {
 	List() ([]types.System, error)
 	Get(types.SystemID) (*types.System, error)
+	Create(id types.SystemID, definitionURL string) (*types.System, error)
 
 	SystemBuilds(types.SystemID) SystemBuildClient
 	ServiceBuilds(types.SystemID) ServiceBuildClient

@@ -23,5 +23,4 @@ go_test(
         "system_node_test.go",
     ],
     embed = [":go_default_library"],
-    importpath = "github.com/mlab-lattice/system/pkg/definition/tree",
 )

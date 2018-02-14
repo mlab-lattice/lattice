@@ -14,10 +14,15 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+type createSystemRequest struct {
+	ID            types.SystemID `json:"id"`
+	DefinitionURL string         `json:"definitionUrl"`
+}
+
 func (r *restServer) mountSystemHandlers() {
 	systems := r.router.Group("/systems")
 	{
-		// list-system-versions
+		// list-systems
 		systems.GET("", func(c *gin.Context) {
 			systems, err := r.backend.ListSystems()
 
@@ -29,7 +34,7 @@ func (r *restServer) mountSystemHandlers() {
 			c.JSON(http.StatusOK, systems)
 		})
 
-		// get-system-version
+		// get-system
 		systems.GET("/:system_id", func(c *gin.Context) {
 			systemID := c.Param("system_id")
 
@@ -41,6 +46,28 @@ func (r *restServer) mountSystemHandlers() {
 
 			if !exists {
 				c.String(http.StatusNotFound, "")
+				return
+			}
+
+			c.JSON(http.StatusOK, system)
+		})
+
+		// create-system
+		systems.POST("", func(c *gin.Context) {
+			var req createSystemRequest
+			if err := c.BindJSON(&req); err != nil {
+				handleInternalError(c, err)
+				return
+			}
+
+			system, err := r.backend.CreateSystem(req.ID, req.DefinitionURL)
+			if err != nil {
+				handleInternalError(c, err)
+				return
+			}
+
+			if err != nil {
+				handleInternalError(c, err)
 				return
 			}
 

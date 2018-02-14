@@ -8,10 +8,18 @@ import (
 )
 
 var _ = Describe("system", func() {
-	It("should be able to list systems, but the list should be empty", func() {
+	//It("should be able to list systems, but the list should be empty", func() {
+	//	systems, err := context.TestContext.ClusterAPIClient.Systems().List()
+	//	Expect(err).NotTo(HaveOccurred())
+	//
+	//	Expect(len(systems)).To(Equal(0))
+	//})
+
+	It("should be able to list systems, and there should be the default system", func() {
 		systems, err := context.TestContext.ClusterAPIClient.Systems().List()
 		Expect(err).NotTo(HaveOccurred())
 
-		Expect(len(systems)).To(Equal(0))
+		Expect(len(systems)).To(Equal(1))
 	})
+
 })
