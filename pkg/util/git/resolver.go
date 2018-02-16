@@ -155,16 +155,16 @@ func (r *Resolver) GetCommit(ctx *Context) (*gitplumbingobject.Commit, error) {
 	}
 
 	// Next check if it's a tag.
-	// TODO resolve this mystry. It works but the ref hash could be a commit or could be the hash of the tag
-	// And it differs from remote/local tests
 	refName = gitplumbing.ReferenceName(fmt.Sprintf("refs/tags/%s", uriInfo.Ref))
 	ref, _ = repository.Reference(refName, false)
 	if ref != nil {
+		// check if its an annotated tag
 		tag, _ := repository.TagObject(ref.Hash())
 		if tag != nil {
 			return tag.Commit()
 		}
 
+		// otherwise, check if its a light-weight tag
 		return repository.CommitObject(ref.Hash())
 
 	}
@@ -223,7 +223,7 @@ func (r *Resolver) GetRepositoryPath(ctx *Context) string {
 	return path.Join(r.WorkDirectory, stripProtocol(uriInfo.CloneURI))
 }
 
-// GetTagNames will clone and fetch, and if successful will return the repository's tags.
+// GetTagNames will clone and fetch, and if successful will return the repository's tags (annotated + light-weight).
 func (r *Resolver) GetTagNames(ctx *Context) ([]string, error) {
 	err := r.Fetch(ctx)
 	if err != nil {
@@ -235,6 +235,7 @@ func (r *Resolver) GetTagNames(ctx *Context) ([]string, error) {
 		return nil, err
 	}
 
+	// list all tags! (annotated + light-weight)
 	tagRefs, err := repository.Tags()
 	if err != nil {
 		return nil, err
@@ -298,7 +299,7 @@ func stripProtocol(uri string) string {
 
 	if len(protocolParts) > 1 {
 		return protocolParts[1]
-	} else {
-		return uri
 	}
+
+	return uri
 }

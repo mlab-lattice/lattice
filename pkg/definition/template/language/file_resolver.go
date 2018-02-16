@@ -4,15 +4,14 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"path"
 	"regexp"
 	"strings"
 
 	"github.com/mlab-lattice/system/pkg/util/git"
 )
 
-// resolveUrl reads the template file by resolving the url into a urlResource w
-func resolveUrl(url string, env *environment) (*urlResource, error) {
+// resolveURL reads the template file by resolving the url into a urlResource w
+func resolveURL(url string, env *environment) (*urlResource, error) {
 	// if its a git url then return a templateURLInfo for a git url
 	if isGitURL(url) {
 		return resolveGitURL(url, env)
@@ -25,7 +24,7 @@ func resolveUrl(url string, env *environment) (*urlResource, error) {
 }
 
 // fetchGitFileContents fetches the specified git file contents
-func fetchGitFileContents(repoUrl string, fileName string, env *environment) ([]byte, error) {
+func fetchGitFileContents(repoURL string, fileName string, env *environment) ([]byte, error) {
 
 	gitResolver, _ := git.NewResolver(env.options.WorkDirectory)
 	gitOptions := env.options.GitOptions
@@ -33,7 +32,7 @@ func fetchGitFileContents(repoUrl string, fileName string, env *environment) ([]
 		gitOptions = &git.Options{}
 	}
 	ctx := &git.Context{
-		URI:     repoUrl,
+		URI:     repoURL,
 		Options: gitOptions,
 	}
 
@@ -43,8 +42,11 @@ func fetchGitFileContents(repoUrl string, fileName string, env *environment) ([]
 
 // urlResource artifact for url resolution
 type urlResource struct {
-	baseUrl string
-	data    map[string]interface{}
+	url      string
+	baseURL  string
+	fileName string
+	bytes    []byte
+	data     map[string]interface{}
 }
 
 // resolveGitURL resolves a git url
@@ -53,40 +55,42 @@ func resolveGitURL(url string, env *environment) (*urlResource, error) {
 		return nil, fmt.Errorf("Invalid git url: '%s'", url)
 	}
 
-	parts := gitUrlRegex.FindAllStringSubmatch(url, -1)
+	parts := gitURLRegex.FindAllStringSubmatch(url, -1)
 
 	protocol := parts[0][1]
 	repoPath := parts[0][3]
 	ref := parts[0][5]
-	resourcePath := parts[0][8]
+	fileName := parts[0][8]
 
 	// reconstruct the url minus file path
-	baseUrl := fmt.Sprintf("%v://%v", protocol, repoPath)
+	baseURL := fmt.Sprintf("%v://%v", protocol, repoPath)
 
 	// append ref
 
 	if ref != "" {
-		baseUrl = baseUrl + "#" + ref
+		baseURL = baseURL + "#" + ref
 	}
 
-	bytes, err := fetchGitFileContents(baseUrl, resourcePath, env)
+	bytes, err := fetchGitFileContents(baseURL, fileName, env)
 	if err != nil {
 		return nil, err
 	}
 
-	return newUrlResource(baseUrl, resourcePath, bytes)
+	return newURLResource(url, baseURL, fileName, bytes)
 
 }
 
-// newUrlResource creates a new urlResource struct
-func newUrlResource(baseUrl string, resourcePath string, bytes []byte) (*urlResource, error) {
-	data, err := unmarshalBytes(bytes, resourcePath)
+// newURLResource creates a new urlResource struct
+func newURLResource(url, baseURL string, fileName string, bytes []byte) (*urlResource, error) {
+	data, err := unmarshalBytes(bytes, fileName)
 	if err != nil {
 		return nil, err
 	}
 
 	return &urlResource{
-		baseUrl: baseUrl,
+		url:     url,
+		baseURL: baseURL,
+		bytes:   bytes,
 		data:    data,
 	}, nil
 }
@@ -94,18 +98,18 @@ func newUrlResource(baseUrl string, resourcePath string, bytes []byte) (*urlReso
 // resolveRelativeURL resolves a relative url by creating a full url with the existing url base
 func resolveRelativeURL(url string, env *environment) (*urlResource, error) {
 
-	// construct a full url using the existing baseUrl in env
-	fullUrl := path.Join(env.currentFrame().baseUrl, url)
+	// construct a full url using the existing baseURL in env
+	fullURL := fmt.Sprintf("%v/%v", env.currentFrame().resource.baseURL, url)
 
-	return resolveUrl(fullUrl, env)
+	return resolveURL(fullURL, env)
 }
 
 // regex for matching git file urls
-var gitUrlRegex = regexp.MustCompile(`((?:git|file|ssh|https?|git@[-\w.]+)):(//)?(.*.git)(#(([-\d\w._])+)?)?(/(.*))?$`)
+var gitURLRegex = regexp.MustCompile(`((?:git|file|ssh|https?|git@[-\w.]+)):(//)?(.*.git)(#(([-\d\w._])+)?)?(/(.*))?$`)
 
 // isGitURL
 func isGitURL(url string) bool {
-	return gitUrlRegex.MatchString(url)
+	return gitURLRegex.MatchString(url)
 }
 
 // isRelativeURL
@@ -125,11 +129,11 @@ func unmarshalBytes(bytes []byte, fileName string) (map[string]interface{}, erro
 
 		if err != nil {
 			return nil, err
-		} else {
-			return result, nil
 		}
-	} else {
-		return nil, error(fmt.Errorf("Unsupported file %s", fileName))
+
+		return result, nil
 	}
+
+	return nil, error(fmt.Errorf("Unsupported file %s", fileName))
 
 }

@@ -62,10 +62,9 @@ func getParameterStringValue(parameterName string, parameters map[string]interfa
 
 	if val != nil {
 		return fmt.Sprintf("%v", val)
-	} else {
-		return ""
 	}
 
+	return ""
 }
 
 // getParameterValue

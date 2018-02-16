@@ -73,13 +73,13 @@ func (resolver *SystemResolver) readNodeFromFile(ctx *resolveContext) (tree.Node
 		return nil, err
 	}
 
-	jsonMap, err := engine.EvalFromURL(ctx.gitURI, make(map[string]interface{}), options)
+	result, err := engine.EvalFromURL(ctx.gitURI, make(map[string]interface{}), options)
 
 	if err != nil {
 		return nil, err
 	}
 
-	jsonBytes, err := json.Marshal(jsonMap)
+	jsonBytes, err := json.Marshal(result.ValueAsMap())
 	if err != nil {
 		return nil, err
 	}
