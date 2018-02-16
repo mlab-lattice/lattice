@@ -120,17 +120,17 @@ func setupTest() {
 
 	gogit.PlainInit(testRepoDir, false)
 
-	commitTestFiles(SYSTEM_JSON, serviceJSON, "v1")
+	commitTestFiles(sampleSystemJSON, serviceJSON, "v1")
 	commitTestFiles(systemJSON2, serviceJSON, "v2")
 
 }
 
-func commitTestFiles(systemJson string, serviceJson string, tag string) {
+func commitTestFiles(systemJSON string, serviceJSON string, tag string) {
 
-	systemFileContents := []byte(systemJson)
+	systemFileContents := []byte(systemJSON)
 	ioutil.WriteFile(path.Join(testRepoDir, systemFileName), systemFileContents, 0644)
 
-	serviceFileContents := []byte(serviceJson)
+	serviceFileContents := []byte(serviceJSON)
 	ioutil.WriteFile(path.Join(testRepoDir, serviceFileName), serviceFileContents, 0644)
 
 	repo, _ := gogit.PlainOpen(testRepoDir)
@@ -164,7 +164,7 @@ func teardownTest() {
 
 }
 
-const SYSTEM_JSON = `
+const sampleSystemJSON = `
 {
   "name": "my-system-v1",
   "type": "system",

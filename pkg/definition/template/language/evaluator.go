@@ -10,6 +10,12 @@ type OperatorEvaluator interface {
 	eval(o interface{}, env *environment) (interface{}, error)
 }
 
+type operatorConfig struct {
+	key                   string
+	evaluator             OperatorEvaluator
+	appendToPropertyStack bool
+}
+
 // IncludeEvaluator. evaluates $include
 type IncludeEvaluator struct {
 }
@@ -30,7 +36,7 @@ func (evaluator *IncludeEvaluator) eval(o interface{}, env *environment) (interf
 	}
 
 	// validate include object
-	if _, hasUrl := includeObject["url"]; !hasUrl {
+	if _, hasURL := includeObject["url"]; !hasURL {
 		return nil, fmt.Errorf("$include has no url %s", includeObject)
 	}
 

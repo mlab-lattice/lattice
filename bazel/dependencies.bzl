@@ -13,6 +13,7 @@ def go_dependencies():
         "github.com/satori/go.uuid",
         "github.com/sergi/go-diff",
         "github.com/spf13/cobra",
+        "github.com/tidwall/gjson",
         "golang.org/x/crypto",
         "gopkg.in/src-d/go-git.v4",
         "k8s.io/api",
@@ -36,6 +37,7 @@ def go_dependencies():
     _go_dependencies_com_github_gin_gonic_gin()
     _go_dependencies_com_github_olekukonko_tablewriter()
     _go_dependencies_com_github_spf13_cobra()
+    _go_dependencies_com_github_tidwall_gjson()
     _go_dependencies_in_gopkg_src_d_go_git_v4()
     _go_dependencies_io_k8s()
 
@@ -102,6 +104,14 @@ def _go_dependencies_com_github_olekukonko_tablewriter():
 def _go_dependencies_com_github_spf13_cobra():
   dependencies = [
       "github.com/spf13/pflag",
+  ]
+
+  for dep in dependencies:
+    go_repository(**GO_REPOSITORIES[dep])
+
+def _go_dependencies_com_github_tidwall_gjson():
+  dependencies = [
+      "github.com/tidwall/match",
   ]
 
   for dep in dependencies:

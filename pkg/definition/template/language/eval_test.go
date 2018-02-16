@@ -21,7 +21,7 @@ func TestBasicEval(t *testing.T) {
 		t.Fatalf("Got error: %v", err)
 	}
 
-	if result != 1 {
+	if result.Value() != 1 {
 		t.Fatal("Expected result to be 1")
 	}
 
@@ -35,7 +35,7 @@ func TestBasicEval(t *testing.T) {
 		t.Fatalf("Got error: %v", err)
 	}
 
-	if result != "abc" {
+	if result.Value() != "abc" {
 		t.Fatal("Expected result to be 'abc'")
 	}
 
@@ -49,7 +49,7 @@ func TestBasicEval(t *testing.T) {
 		t.Fatalf("Got error: %v", err)
 	}
 
-	if result != true {
+	if result.Value() != true {
 		t.Fatal("Expected result to be true")
 	}
 
@@ -62,7 +62,7 @@ func TestBasicEval(t *testing.T) {
 		t.Fatalf("Got error: %v", err)
 	}
 
-	if resultMap, isMap := result.(map[string]interface{}); isMap {
+	if resultMap, isMap := result.Value().(map[string]interface{}); isMap {
 		if resultMap["x"] != 1 {
 			t.Fatal("Expected result[x] to be 1")
 		}
@@ -94,8 +94,8 @@ func TestParametersEval(t *testing.T) {
 	}
 	_, err := engine.Eval(m, nil, nil)
 
-	if err == nil || fmt.Sprintf("%v", err) != "parameter name is required" {
-		t.Fatal("Expected error 'parameter name is required'")
+	if err == nil || !strings.Contains(fmt.Sprintf("%v", err), "parameter name is required") {
+		t.Fatalf("Expected  'parameter name is required' in err message. Got: '%v'", err)
 	} else {
 		fmt.Printf("Got expected error: %v\n", err)
 	}
@@ -108,7 +108,7 @@ func TestParametersEval(t *testing.T) {
 		t.Fatalf("Got error: %v", err)
 	}
 
-	if resultMap, isMap := result.(map[string]interface{}); isMap {
+	if resultMap, isMap := result.Value().(map[string]interface{}); isMap {
 		if len(resultMap) != 2 {
 			fmt.Println(resultMap)
 			t.Fatal("Expected map size to be 1")
@@ -147,7 +147,7 @@ func TestVariablesEval(t *testing.T) {
 		t.Fatalf("Got error: %v", err)
 	}
 
-	if resultMap, isMap := result.(map[string]interface{}); isMap {
+	if resultMap, isMap := result.Value().(map[string]interface{}); isMap {
 		if len(resultMap) != 2 {
 			fmt.Println(resultMap)
 			t.Fatal("Expected map size to be 2")

@@ -5,14 +5,20 @@ go_library(
     srcs = [
         "engine.go",
         "environment.go",
+        "errors.go",
         "evaluator.go",
         "file_resolver.go",
+        "properties.go",
+        "result.go",
         "string_interpolation.go",
         "util.go",
     ],
     importpath = "github.com/mlab-lattice/system/pkg/definition/template/language",
     visibility = ["//visibility:public"],
-    deps = ["//pkg/util/git:go_default_library"],
+    deps = [
+        "//pkg/util/git:go_default_library",
+        "@com_github_tidwall_gjson//:go_default_library",
+    ],
 )
 
 go_test(
