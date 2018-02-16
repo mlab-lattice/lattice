@@ -12,7 +12,7 @@ func TestEnv(t *testing.T) {
 		t.Fatalf("Current frame is not nill")
 	}
 
-	resource, _ := newUrlResource("https://foo.bar/test.git/test.json",
+	resource, _ := newURLResource("https://foo.bar/test.git/test.json",
 		"https://foo.bar/test.git/",
 		"test.json",
 		make([]byte, 10))

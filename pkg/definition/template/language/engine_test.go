@@ -19,7 +19,7 @@ const (
 	testWorkDir = "/tmp/lattice-core/test/engine"
 	t1File      = "t1.json"
 	t2File      = "t2.json"
-	t1FileUrl   = "file:///tmp/lattice-core/test/template-engine/my-repo/.git/t1.json"
+	t1FileURL   = "file:///tmp/lattice-core/test/template-engine/my-repo/.git/t1.json"
 )
 
 func TestEngine(t *testing.T) {
@@ -61,13 +61,13 @@ func doTestEngine(t *testing.T) {
 		t.Fatalf("Got error: %v", err)
 	}
 
-	fmt.Printf("calling EvalFromURL('%s')\n", t1FileUrl)
+	fmt.Printf("calling EvalFromURL('%s')\n", t1FileURL)
 
 	parameters := map[string]interface{}{
 		"name": "joe",
 	}
 
-	result, err := engine.EvalFromURL(t1FileUrl, parameters, options)
+	result, err := engine.EvalFromURL(t1FileURL, parameters, options)
 
 	if err != nil {
 		t.Fatalf("Got error: %v", err)
@@ -118,7 +118,7 @@ func doTestEngine(t *testing.T) {
 
 	// ensure that some parameters are required
 	fmt.Println("ensure that name parameter is required...")
-	_, err = engine.EvalFromURL(t1FileUrl, nil, options)
+	_, err = engine.EvalFromURL(t1FileURL, nil, options)
 
 	if err == nil || !strings.Contains(fmt.Sprintf("%v", err), "parameter name is required") {
 		t.Fatalf("Required parameter 'name' has not been validated")
@@ -167,7 +167,7 @@ func doTestEngine(t *testing.T) {
 
 	// ensure that some parameters are required
 	fmt.Println("ensure that name parameter is required...")
-	_, err = engine.EvalFromURL(t1FileUrl, nil, options)
+	_, err = engine.EvalFromURL(t1FileURL, nil, options)
 	if err == nil || !strings.Contains(fmt.Sprintf("%v", err), "parameter name is required") {
 		t.Fatalf("Required parameter 'name' has not been validated")
 	}

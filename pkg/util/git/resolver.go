@@ -299,7 +299,7 @@ func stripProtocol(uri string) string {
 
 	if len(protocolParts) > 1 {
 		return protocolParts[1]
-	} else {
-		return uri
 	}
+
+	return uri
 }

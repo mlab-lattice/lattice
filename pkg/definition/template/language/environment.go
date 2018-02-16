@@ -1,4 +1,3 @@
-// TemplateEngine environment
 package language
 
 import (
@@ -94,7 +93,7 @@ func (env *environment) popProperty() error {
 
 // fillPropertyMetadata
 func (env *environment) fillPropertyMetadata(propertyPath string) {
-	var currentResource *urlResource = nil
+	var currentResource *urlResource
 
 	if env.currentFrame() != nil {
 		currentResource = env.currentFrame().resource

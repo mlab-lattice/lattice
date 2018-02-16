@@ -1,6 +1,7 @@
-/**
-Package language provides json template language.
+// Package language provides json template language.
+package language
 
+/*
 Main features:
  - Read/Eval json templates from git repositories
  - Single objection evaluation
@@ -30,7 +31,6 @@ TODO:
 * Allow escaping in string interpolations
 
 */
-package language
 
 import (
 	"fmt"
@@ -155,16 +155,15 @@ func (engine *TemplateEngine) eval(o interface{}, env *environment) (interface{}
 	} else if stringVal, isString := o.(string); isString { // Strings
 		return engine.evalString(stringVal, env)
 
-	} else { // Default, just return the value as is
-		return o, nil
 	}
-
+	// Default, just return the value as is
+	return o, nil
 }
 
 // include includes and evaluates the template file specified in the url
 func (engine *TemplateEngine) include(url string, parameters map[string]interface{}, env *environment) (interface{}, error) {
 	// resolve url
-	resource, err := resolveUrl(url, env)
+	resource, err := resolveURL(url, env)
 
 	if err != nil {
 		return nil, err
