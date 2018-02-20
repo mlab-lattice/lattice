@@ -1,8 +1,8 @@
 def rules_go_dependencies():
-  native.http_archive(
+  native.git_repository(
      name = "io_bazel_rules_go",
-     url = "https://github.com/bazelbuild/rules_go/releases/download/0.9.0/rules_go-0.9.0.tar.gz",
-     sha256 = "4d8d6244320dd751590f9100cf39fd7a4b75cd901e1f3ffdfd6f048328883695",
+     remote = "https://github.com/bazelbuild/rules_go.git",
+     commit = "ff7e3364d9383cf14155f8c2efc87218d07eb03b",
   )
 
 def bazel_gazelle_dependencies():
@@ -16,7 +16,7 @@ def rules_docker_dependencies():
   native.git_repository(
       name = "io_bazel_rules_docker",
       remote = "https://github.com/bazelbuild/rules_docker.git",
-      commit = "3caf72f166f8b6b0e529442477a74871ad4d35e9",
+      commit = "c7f9eaa63bc3a31acab5e399c72b4e5228ab5ad7",
   )
 
 def rules_package_manager_dependencies():

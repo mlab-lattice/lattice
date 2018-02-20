@@ -17,13 +17,17 @@ gazelle:
 build: gazelle
 	@bazel build //...:all
 
-.PHONY: build-linux
-build-linux: gazelle
+.PHONY: build.darwin
+build.darwin: gazelle
+	@bazel build --cpu darwin //...:all
+
+.PHONY: build.linux
+build.linux: gazelle
 	@bazel build --cpu k8 //...:all
 
 .PHONY: build-all
-build-all: build \
-           build-linux
+build.all: build.darwin \
+           build.linux
 
 .PHONY: clean
 clean:
