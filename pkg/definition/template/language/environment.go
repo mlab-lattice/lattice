@@ -129,6 +129,32 @@ func (env *environment) computeRelativePropertyPathFor(metadata *PropertyMetadat
 	return relativePropertyPath
 }
 
+// relativePathToAbsolute
+func (env *environment) relativePathToAbsolute(relativePath string) string {
+	currentFrame := env.currentFrame()
+
+	if currentFrame == nil || currentFrame.resource == nil {
+		return relativePath
+	}
+
+	rootPath := env.getCurrentPropertyPath()
+
+	for rootPath != "" {
+		propertyMeta := env.getPropertyMetaData(rootPath)
+
+		// climb up until we reach the root property path for the current template
+		if propertyMeta == nil || propertyMeta.resource == nil || propertyMeta.resource != currentFrame.resource {
+			break
+		}
+		rootPath = getParentPropertyPath(rootPath)
+	}
+
+	if rootPath != "" {
+		return fmt.Sprintf("%v.%v", rootPath, relativePath)
+	}
+	return relativePath
+}
+
 // getPropertyMetaData
 func (env *environment) getPropertyMetaData(propertyPath string) *PropertyMetadata {
 

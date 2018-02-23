@@ -80,6 +80,11 @@ func NewEngine() *TemplateEngine {
 			appendToPropertyStack: true,
 		},
 		{
+			key:                   "$reference",
+			evaluator:             &ReferenceEvaluator{},
+			appendToPropertyStack: true,
+		},
+		{
 			key:                   "$include",
 			evaluator:             &IncludeEvaluator{},
 			appendToPropertyStack: false,
@@ -240,8 +245,8 @@ func (engine *TemplateEngine) evalOperatorsInMap(result map[string]interface{}, 
 			resultMap, isMap := evalResult.(map[string]interface{})
 
 			if !isMap {
-				badOperatorResultError := fmt.Errorf("Bad return value for evaluator %v. "+
-					"Result is not a map", operator)
+				badOperatorResultError := fmt.Errorf("Bad return value for evaluator %v. " +
+					"Result is not a map[string]interface{}.", operator)
 				return wrapWithPropertyEvalError(badOperatorResultError, currentPropertyPath, env)
 			}
 			// stuff map with the val result

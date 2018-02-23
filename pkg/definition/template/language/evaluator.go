@@ -135,3 +135,87 @@ func (evaluator *ParametersEvaluator) processInputParameter(name string, paramDe
 	return nil
 
 }
+
+
+// ReferenceEvaluator. evaluates $reference operator which provides support for Capability based reference object.
+// It works as follows: creates a reference object and updates the reference table for that template. i.e.
+/***** x.json
+{
+  "a": 1,
+  "b": {
+    "$reference": "a"
+   }
+}
+
+RESULT
+
+{
+  "a": 1,
+  "b": { "reference": "a"},
+  "references": [{
+      "target": "a",
+      "recipient": "b"
+    }
+  ]
+}
+
+
+Another example
+ ==== x.json
+{
+  "a": 1,
+  "b": {
+    "$include": {
+       "url": "y.json",
+       "parameters": {
+          "foo": {"$reference": "a"}
+       }
+     }
+   }
+}
+
+==== y.json
+{
+  "$parameters": {
+    "foo" {
+       "required": true
+     }
+  },
+
+  "bar": "${foo}"
+}
+
+
+RESULT:
+
+{
+  "a": 1,
+  "b": {
+    "bar": {"reference": "a"}
+  },
+  "references": [{
+      "target": "a",
+      "recipient": "b.bar"
+    }
+  ]
+}
+*/
+
+type ReferenceEvaluator struct {
+}
+
+// eval
+func (evaluator *ReferenceEvaluator) eval(o interface{}, env *environment) (interface{}, error) {
+
+	// the passed argument is treated as a relative path within the current template
+	referencePath := o.(string)
+
+	// determine reference absolute path
+	referenceAbsPath := env.relativePathToAbsolute(referencePath)
+	referenceObject := map[string]interface{}{
+		"reference": referenceAbsPath,
+	}
+
+	return referenceObject, nil
+
+}
