@@ -47,10 +47,6 @@ def lattice_go_container_image(target, debug=False):
       base = prod_base_image,
       embed = ["//" + path + ":go_default_library"],
       visibility = ["//visibility:public"],
-      pure = "on",
-#      goos = "linux",
-#      goarch = "amd64",
-#      pure = "on",
   )
 
   container_push(
@@ -75,7 +71,6 @@ def lattice_go_container_image(target, debug=False):
       base = debug_base_image,
       embed = ["//" + path + ":go_default_library"],
       visibility = ["//visibility:public"],
-      pure = "on",
   )
 
 

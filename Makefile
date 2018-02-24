@@ -9,13 +9,13 @@ OS := $(shell uname)
 USER := $(shell whoami)
 
 # build/clean
-.PHONY: gazelle
-gazelle:
-	@bazel run //:gazelle
-
 .PHONY: build
 build: gazelle
 	@bazel build //...:all
+
+.PHONY: build.all
+build.all: build.darwin \
+           build.linux
 
 .PHONY: build.darwin
 build.darwin: gazelle
@@ -25,9 +25,9 @@ build.darwin: gazelle
 build.linux: gazelle
 	@bazel build --cpu k8 //...:all
 
-.PHONY: build-all
-build.all: build.darwin \
-           build.linux
+.PHONY: gazelle
+gazelle:
+	@bazel run //:gazelle
 
 .PHONY: clean
 clean:

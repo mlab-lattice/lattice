@@ -149,6 +149,10 @@ func (p *DefaultLocalClusterProvisioner) bootstrap(address string, initialSystem
 		},
 	}
 
+	fmt.Printf("%v\n", kubeClientset)
+	fmt.Printf("%v\n", kubeconstants.NamespaceDefault)
+	fmt.Printf("%v\n", bootstrapSA)
+
 	_, err = kubeClientset.
 		CoreV1().
 		ServiceAccounts(kubeconstants.NamespaceDefault).
