@@ -209,9 +209,20 @@ GO_DEPENDENCIES = {
             "importpath": "github.com/docker/libtrust",
         },
         # also required by k8s.io
+        # golang.org/x/net is a bit of a tricky one.
+        # - docker's vendor.conf specifies commit 7dcfb8076726a3fdd9353b6b8a1f1b6be6811bd6 which is from May 24, 2017
+        # - k8s.io wants commit 1c05540f6879653db88113bc4a2b70aec4bd491f which is from August 3, 2017.
+        # - commit b3756b4b77d7b13260a0a2ec658753cf48922eac from July 15, 2017 type aliases golang.org/x/net/context
+        #   to the standard libary's context.Context. this makes the build fail with errors like:
+        #   github.com/mlab-lattice/system/pkg/componentbuilder.(*Builder).buildDockerImage: relocation target type.golang.org/x/net/context.Context not defined
+        # - there's a fix for a null pointer dereference that was biting us that is fixed in commit
+        #   3470a06c1357df533e251f14d3a181f67396fe35 which is from May 26, 2017.
+        # - so we took the parent commit of the commit that added the type alias, so we can get the null pointer
+        #   dereference fix, but not have the type alias
+        # TODO: need to figure out the type alias issue (or see if docker updates their dependency)
         "golang.org/x/net": {
             "name": "org_golang_x_net",
-            "commit": "7dcfb8076726a3fdd9353b6b8a1f1b6be6811bd6",
+            "commit": "f01ecb60fe3835d80d9a0b7b2bf24b228c89260e",
             "importpath": "golang.org/x/net",
         },
     },
