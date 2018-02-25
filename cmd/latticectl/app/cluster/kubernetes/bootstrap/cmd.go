@@ -16,6 +16,7 @@ import (
 	systembootstrapper "github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/system/bootstrap/bootstrapper"
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/networkingprovider"
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/networkingprovider/flannel"
+	"github.com/mlab-lattice/system/pkg/backend/kubernetes/networkingprovider/none"
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/servicemesh"
 	kubeutil "github.com/mlab-lattice/system/pkg/backend/kubernetes/util/kubernetes"
 	"github.com/mlab-lattice/system/pkg/constants"
@@ -581,6 +582,20 @@ func parseNetworkingVars() (*networkingprovider.ClusterBootstrapperOptions, *net
 			Flannel: &flannel.SystemBootstrapperOptions{},
 		}
 
+	case networkingprovider.None:
+		noneOptions, err := parseNetworkingVarsNone()
+		if err != nil {
+			return nil, nil, err
+		}
+
+		clusterOptions = &networkingprovider.ClusterBootstrapperOptions{
+			None: noneOptions,
+		}
+
+		systemOptions = &networkingprovider.SystemBootstrapperOptions{
+			None: &none.SystemBootstrapperOptions{},
+		}
+
 	default:
 		return nil, nil, fmt.Errorf("unsupported networking provider: %v", networkingProviderName)
 	}
@@ -605,4 +620,9 @@ func parseNetworkingVarsFlannel() (*flannel.ClusterBootstrapperOptions, error) {
 		return nil, err
 	}
 	return flannelOptions, nil
+}
+
+func parseNetworkingVarsNone() (*none.ClusterBootstrapperOptions, error) {
+	noneOptions := &none.ClusterBootstrapperOptions{}
+	return noneOptions, nil
 }

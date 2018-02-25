@@ -1,6 +1,9 @@
 package envoy
 
 import (
+	"fmt"
+
+	kubeconstants "github.com/mlab-lattice/system/pkg/backend/kubernetes/constants"
 	latticev1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	clusterbootstrapper "github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/cluster/bootstrap/bootstrapper"
 
@@ -37,6 +40,17 @@ type DefaultEnvoyClusterBootstrapper struct {
 }
 
 func (b *DefaultEnvoyClusterBootstrapper) BootstrapClusterResources(resources *clusterbootstrapper.ClusterResources) {
+	for _, daemonSet := range resources.DaemonSets {
+		if daemonSet.Name == kubeconstants.MasterNodeComponentManagerAPI {
+
+			daemonSet.Spec.Template.Spec.Containers[0].Args = append(
+				daemonSet.Spec.Template.Spec.Containers[0].Args,
+				"--service-mesh", Envoy,
+				"--service-mesh-var", fmt.Sprintf("xds-api-image=%v", b.xdsAPIImage),
+			)
+		}
+	}
+
 	clusterRole := &rbacv1.ClusterRole{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "ClusterRole",

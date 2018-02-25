@@ -5,15 +5,21 @@ import (
 
 	systembootstrapper "github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/system/bootstrap/bootstrapper"
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/networkingprovider/flannel"
+	"github.com/mlab-lattice/system/pkg/backend/kubernetes/networkingprovider/none"
 )
 
 type SystemBootstrapperOptions struct {
 	Flannel *flannel.SystemBootstrapperOptions
+	None    *none.SystemBootstrapperOptions
 }
 
 func NewSystemBootstrapper(options *SystemBootstrapperOptions) (systembootstrapper.Interface, error) {
 	if options.Flannel != nil {
 		return flannel.NewSystemBootstrapper(options.Flannel), nil
+	}
+
+	if options.None != nil {
+		return none.NewSystemBootstrapper(options.None), nil
 	}
 
 	return nil, fmt.Errorf("must provide networking provider options")
@@ -33,17 +39,24 @@ func ParseSystemBootstrapperFlags(serviceMesh string, serviceMeshVars []string) 
 
 	switch serviceMesh {
 	case Flannel:
-		envoyOptions, err := flannel.ParseSystemBootstrapperFlags(serviceMeshVars)
+		flannelOptions, err := flannel.ParseSystemBootstrapperFlags(serviceMeshVars)
 		if err != nil {
 			return nil, err
 		}
 
 		options = &SystemBootstrapperOptions{
-			Flannel: envoyOptions,
+			Flannel: flannelOptions,
 		}
 
-	case "":
-		return nil, nil
+	case None:
+		noneOptions, err := none.ParseSystemBootstrapperFlags(serviceMeshVars)
+		if err != nil {
+			return nil, err
+		}
+
+		options = &SystemBootstrapperOptions{
+			None: noneOptions,
+		}
 
 	default:
 		return nil, fmt.Errorf("unsupported networking provider: %v", serviceMesh)

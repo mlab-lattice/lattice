@@ -518,10 +518,10 @@ func (r *restServer) getSystemDefinitionRoot(systemID string, version string) (t
 		return nil, fmt.Errorf("System %v does not exist", systemID)
 	}
 
-	systemDefUri := fmt.Sprintf("%v#%v/%s", system.DefinitionURL, version,
+	systemDefURI := fmt.Sprintf("%v#%v/%s", system.DefinitionURL, version,
 		constants.SystemDefinitionRootPathDefault)
 
-	return r.resolver.ResolveDefinition(systemDefUri, &git.Options{})
+	return r.resolver.ResolveDefinition(systemDefURI, &git.Options{})
 }
 
 func (r *restServer) getSystemVersions(systemID string) ([]string, error) {

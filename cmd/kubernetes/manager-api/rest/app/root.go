@@ -100,7 +100,7 @@ func init() {
 	RootCmd.Flags().StringArrayVar(&cloudProviderVars, "cloud-provider-var", nil, "additional variables for the cloud provider")
 
 	RootCmd.Flags().StringVar(&serviceMeshProvider, "service-mesh", "", "service mesh provider to use")
-	RootCmd.MarkFlagRequired("service-provider")
+	RootCmd.MarkFlagRequired("service-mesh")
 	RootCmd.Flags().StringArrayVar(&serviceMeshProviderVars, "service-mesh-var", nil, "additional variables for the cloud provider")
 
 	RootCmd.Flags().StringVar(&networkingProviderName, "networking-provider", "", "provider to use for networking")

@@ -30,6 +30,16 @@ type DefaultFlannelClusterBootstrapper struct {
 }
 
 func (np *DefaultFlannelClusterBootstrapper) BootstrapClusterResources(resources *clusterbootstrapper.ClusterResources) {
+	for _, daemonSet := range resources.DaemonSets {
+		if daemonSet.Name == kubeconstants.MasterNodeComponentManagerAPI {
+
+			daemonSet.Spec.Template.Spec.Containers[0].Args = append(
+				daemonSet.Spec.Template.Spec.Containers[0].Args,
+				"--networking-provider", Flannel,
+			)
+		}
+	}
+
 	// Translated from: https://github.com/coreos/flannel/blob/77c8e1297f846d800dc16e9cc110a0d64d16d104/Documentation/kube-flannel.yml
 	serviceAccount := &corev1.ServiceAccount{
 		TypeMeta: metav1.TypeMeta{

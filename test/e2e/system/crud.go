@@ -19,7 +19,7 @@ var _ = Describe("system", func() {
 		systems, err := context.TestContext.ClusterAPIClient.Systems().List()
 		Expect(err).NotTo(HaveOccurred())
 
-		Expect(len(systems)).To(Equal(1))
+		Expect(len(systems)).To(Equal(0))
 	})
 
 })

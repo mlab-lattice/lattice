@@ -4,6 +4,7 @@ go_library(
     name = "go_default_library",
     srcs = [
         "cluster_bootstrapper.go",
+        "constants.go",
         "servicemesh.go",
         "system_bootstrapper.go",
     ],

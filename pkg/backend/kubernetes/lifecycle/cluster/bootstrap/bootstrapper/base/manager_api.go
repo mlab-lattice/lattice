@@ -143,7 +143,11 @@ func (b *DefaultBootstrapper) managerAPIResources(resources *bootstrapper.Cluste
 		},
 	}
 
-	args := []string{"--port", strconv.Itoa(int(b.Options.MasterComponents.ManagerAPI.Port)), "--cluster-id", string(b.ClusterID)}
+	args := []string{
+		"--port", strconv.Itoa(int(b.Options.MasterComponents.ManagerAPI.Port)),
+		"--cluster-id", string(b.ClusterID),
+		"--cloud-provider", b.CloudProviderName,
+	}
 	args = append(args, b.Options.MasterComponents.ManagerAPI.Args...)
 	labels := map[string]string{
 		kubeconstants.MasterNodeLabelComponent: kubeconstants.MasterNodeComponentManagerAPI,

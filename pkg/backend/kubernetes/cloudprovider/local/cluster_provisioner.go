@@ -7,6 +7,8 @@ import (
 	"time"
 
 	kubeconstants "github.com/mlab-lattice/system/pkg/backend/kubernetes/constants"
+	"github.com/mlab-lattice/system/pkg/backend/kubernetes/networkingprovider"
+	"github.com/mlab-lattice/system/pkg/backend/kubernetes/servicemesh"
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/util/minikube"
 	"github.com/mlab-lattice/system/pkg/constants"
 	"github.com/mlab-lattice/system/pkg/managerapi/client/rest"
@@ -229,10 +231,11 @@ func (p *DefaultLocalClusterProvisioner) bootstrap(address string, initialSystem
 									"--component-build-docker-artifact-registry", "lattice-local",
 									"--component-build-docker-artifact-repository-per-image=true",
 									"--component-build-docker-artifact-push=false",
-									"--service-mesh", "envoy",
+									"--service-mesh", servicemesh.Envoy,
 									"--service-mesh-var", fmt.Sprintf("prepare-image=%v", p.getLatticeContainerImage(constants.DockerImageEnvoyPrepare)),
 									"--service-mesh-var", fmt.Sprintf("xds-api-image=%v", p.getLatticeContainerImage(constants.DockerImageEnvoyXDSAPIRestPerNode)),
 									"--service-mesh-var", "redirect-cidr-block=172.16.0.0/16",
+									"--networking-provider", networkingprovider.None,
 								}...,
 							),
 						},
