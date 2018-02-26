@@ -18,6 +18,24 @@ import (
 	"k8s.io/apimachinery/pkg/selection"
 )
 
+func (kb *KubernetesBackend) CreateSystem(id types.SystemID, definitionURL string) (*types.System, error) {
+	// FIXME: what happens if a bootstrap fails half way through?
+	resources, err := bootstrap.Bootstrap(
+		kb.clusterID,
+		id,
+		definitionURL,
+		kb.systemBootstrappers,
+		kb.kubeClient,
+		kb.latticeClient,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	system := resources.System
+	return kb.transformSystem(system)
+}
+
 func (kb *KubernetesBackend) ListSystems() ([]types.System, error) {
 	selector := labels.NewSelector()
 
@@ -68,21 +86,27 @@ func (kb *KubernetesBackend) GetSystem(systemID types.SystemID) (*types.System, 
 	return externalSystem, true, err
 }
 
-func (kb *KubernetesBackend) CreateSystem(id types.SystemID, definitionURL string) (*types.System, error) {
-	resources, err := bootstrap.Bootstrap(
-		kb.clusterID,
-		id,
-		definitionURL,
-		kb.systemBootstrappers,
-		kb.kubeClient,
-		kb.latticeClient,
-	)
+func (kb *KubernetesBackend) DeleteSystem(systemID types.SystemID) error {
+	namespace := kubeutil.SystemNamespace(kb.clusterID, systemID)
+	system, err := kb.latticeClient.LatticeV1().Systems(namespace).Get(string(systemID), metav1.GetOptions{})
 	if err != nil {
-		return nil, err
+		if errors.IsNotFound(err) {
+			return nil
+		}
+
+		return err
 	}
 
-	system := resources.System
-	return kb.transformSystem(system)
+	if len(system.Spec.Services) != 0 {
+		return fmt.Errorf("%v contains services", systemID)
+	}
+
+	if system.Status.State != latticev1.SystemStateStable || !system.Status.UpdateProcessed {
+		return fmt.Errorf("%v is not torn down", systemID)
+	}
+
+	// FIXME: should also delete other system resources (SAs, rbac, etc)
+	return kb.latticeClient.LatticeV1().Systems(namespace).Delete(string(systemID), nil)
 }
 
 func (kb *KubernetesBackend) transformSystem(system *latticev1.System) (*types.System, error) {

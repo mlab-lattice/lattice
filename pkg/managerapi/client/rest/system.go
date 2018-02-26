@@ -26,18 +26,6 @@ func newSystemClient(c rest.Client, baseURL string) client.SystemClient {
 	}
 }
 
-func (c *SystemClient) List() ([]types.System, error) {
-	var systems []types.System
-	err := c.restClient.Get(c.baseURL).JSON(&systems)
-	return systems, err
-}
-
-func (c *SystemClient) Get(id types.SystemID) (*types.System, error) {
-	system := &types.System{}
-	err := c.restClient.Get(fmt.Sprintf("%v/%v", c.baseURL, id)).JSON(&system)
-	return system, err
-}
-
 type createSystemRequest struct {
 	ID            types.SystemID `json:"id"`
 	DefinitionURL string         `json:"definitionUrl"`
@@ -61,6 +49,23 @@ func (c *SystemClient) Create(id types.SystemID, definitionURL string) (*types.S
 	}
 
 	return system, nil
+}
+
+func (c *SystemClient) List() ([]types.System, error) {
+	var systems []types.System
+	err := c.restClient.Get(c.baseURL).JSON(&systems)
+	return systems, err
+}
+
+func (c *SystemClient) Get(id types.SystemID) (*types.System, error) {
+	system := &types.System{}
+	err := c.restClient.Get(fmt.Sprintf("%v/%v", c.baseURL, id)).JSON(&system)
+	return system, err
+}
+
+func (c *SystemClient) Delete(id types.SystemID) error {
+	_, err := c.restClient.Delete(fmt.Sprintf("%v/%v", c.baseURL, id)).Body()
+	return err
 }
 
 func (c *SystemClient) SystemBuilds(id types.SystemID) client.SystemBuildClient {

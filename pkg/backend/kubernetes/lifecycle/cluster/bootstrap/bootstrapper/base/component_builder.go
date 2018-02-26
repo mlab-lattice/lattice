@@ -22,15 +22,17 @@ func (b *DefaultBootstrapper) componentBuilderResources(resources *bootstrapper.
 		ObjectMeta: metav1.ObjectMeta{
 			Name: kubeconstants.InternalComponentComponentBuilder,
 		},
-		Rules: []rbacv1.PolicyRule{
-			// Read and update lattice component builds
-			{
-				APIGroups: []string{latticev1.GroupName},
-				Resources: []string{latticev1.ResourcePluralComponentBuild},
-				Verbs:     readAndUpdateVerbs,
-			},
-		},
+		Rules: componentBuilderRBACPolicyRules,
 	}
 
 	resources.ClusterRoles = append(resources.ClusterRoles, clusterRole)
+}
+
+var componentBuilderRBACPolicyRules = []rbacv1.PolicyRule{
+	// Read and update lattice component builds
+	{
+		APIGroups: []string{latticev1.GroupName},
+		Resources: []string{latticev1.ResourcePluralComponentBuild},
+		Verbs:     readAndUpdateVerbs,
+	},
 }
