@@ -6,6 +6,8 @@ import (
 	"github.com/mlab-lattice/system/pkg/types"
 	"github.com/mlab-lattice/system/test/e2e/context"
 
+	"k8s.io/apimachinery/pkg/util/wait"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -65,10 +67,25 @@ var _ = Describe("system", func() {
 		Expect(err).NotTo(HaveOccurred())
 	})
 
-	It("should be able to list systems, but the list should be empty", func() {
-		systems, err := context.TestContext.ClusterAPIClient.Systems().List()
-		Expect(err).NotTo(HaveOccurred())
+	It("should be able to list systems, and the deleted system should either be in the deleting state or no longer be in the list", func() {
+		err := wait.PollImmediate(time.Second, 15*time.Second, func() (bool, error) {
+			systems, err := context.TestContext.ClusterAPIClient.Systems().List()
+			if err != nil {
+				return false, err
+			}
 
-		Expect(len(systems)).To(Equal(0))
+			if len(systems) == 0 {
+				return true, nil
+			}
+
+			Expect(len(systems)).To(Equal(1))
+			system := systems[0]
+			Expect(system.ID).To(Equal(systemID))
+			Expect(system.DefinitionURL).To(Equal(""))
+			Expect(len(system.Services)).To(Equal(0))
+			Expect(system.State).To(Equal(types.SystemStateDeleting))
+			return false, nil
+		})
+		Expect(err).NotTo(HaveOccurred())
 	})
 })

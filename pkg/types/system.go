@@ -13,6 +13,7 @@ const (
 	SystemStateUpdating SystemState = "updating"
 	SystemStateStable   SystemState = "stable"
 	SystemStateFailed   SystemState = "failed"
+	SystemStateDeleting SystemState = "deleting"
 )
 
 type System struct {

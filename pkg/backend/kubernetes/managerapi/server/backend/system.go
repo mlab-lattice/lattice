@@ -19,6 +19,15 @@ import (
 )
 
 func (kb *KubernetesBackend) CreateSystem(id types.SystemID, definitionURL string) (*types.System, error) {
+	namespaceName := kubeutil.SystemNamespace(kb.clusterID, id)
+	_, err := kb.kubeClient.CoreV1().Namespaces().Get(namespaceName, metav1.GetOptions{})
+	if err == nil {
+		return nil, fmt.Errorf("system %v already exists", id)
+	}
+	if !errors.IsNotFound(err) {
+		return nil, err
+	}
+
 	// FIXME: what happens if a bootstrap fails half way through?
 	resources, err := bootstrap.Bootstrap(
 		kb.clusterID,
@@ -60,6 +69,15 @@ func (kb *KubernetesBackend) ListSystems() ([]types.System, error) {
 
 	var externalSystems []types.System
 	for _, system := range systems.Items {
+		namespace, err := kb.kubeClient.CoreV1().Namespaces().Get(system.Namespace, metav1.GetOptions{})
+		if err != nil {
+			return nil, err
+		}
+		if namespaceTerminating(namespace) {
+			externalSystems = append(externalSystems, deletingSystem(types.SystemID(system.Name)))
+			continue
+		}
+
 		externalSystem, err := kb.transformSystem(&system)
 		if err != nil {
 			return nil, err
@@ -72,8 +90,17 @@ func (kb *KubernetesBackend) ListSystems() ([]types.System, error) {
 }
 
 func (kb *KubernetesBackend) GetSystem(systemID types.SystemID) (*types.System, bool, error) {
-	namespace := kubeutil.SystemNamespace(kb.clusterID, systemID)
-	system, err := kb.latticeClient.LatticeV1().Systems(namespace).Get(string(systemID), metav1.GetOptions{})
+	namespaceName := kubeutil.SystemNamespace(kb.clusterID, systemID)
+	namespace, err := kb.kubeClient.CoreV1().Namespaces().Get(namespaceName, metav1.GetOptions{})
+	if err != nil {
+		return nil, false, err
+	}
+	if namespaceTerminating(namespace) {
+		system := deletingSystem(systemID)
+		return &system, true, nil
+	}
+
+	system, err := kb.latticeClient.LatticeV1().Systems(namespaceName).Get(string(systemID), metav1.GetOptions{})
 	if err != nil {
 		if errors.IsNotFound(err) {
 			return nil, false, nil
@@ -105,8 +132,7 @@ func (kb *KubernetesBackend) DeleteSystem(systemID types.SystemID) error {
 		return fmt.Errorf("%v is not torn down", systemID)
 	}
 
-	// FIXME: should also delete other system resources (SAs, rbac, etc)
-	return kb.latticeClient.LatticeV1().Systems(namespace).Delete(string(systemID), nil)
+	return kb.kubeClient.CoreV1().Namespaces().Delete(namespace, nil)
 }
 
 func (kb *KubernetesBackend) transformSystem(system *latticev1.System) (*types.System, error) {
@@ -154,5 +180,16 @@ func getSystemState(state latticev1.SystemState) types.SystemState {
 		return types.SystemStateFailed
 	default:
 		panic("unreachable")
+	}
+}
+
+func namespaceTerminating(namespace *corev1.Namespace) bool {
+	return namespace.Status.Phase == corev1.NamespaceTerminating
+}
+
+func deletingSystem(systemID types.SystemID) types.System {
+	return types.System{
+		ID:    systemID,
+		State: types.SystemStateDeleting,
 	}
 }
