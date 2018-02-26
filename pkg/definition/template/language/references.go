@@ -25,12 +25,12 @@ func newReferenceEntry(target string, recipient string) map[string]interface{} {
 		"recipient": recipient,
 	}
 }
-func findReferencesInTemplate(template *TemplateResource, value interface{}, env *environment) ([]interface{}, error) {
+func findReferencesInTemplate(template *Template, value interface{}, env *environment) ([]interface{}, error) {
 
 	return findReferences(template, value, env.getCurrentPropertyPath(), env)
 }
 
-func findReferences(template *TemplateResource, value interface{}, propertyPath string, env *environment) ([]interface{}, error) {
+func findReferences(template *Template, value interface{}, propertyPath string, env *environment) ([]interface{}, error) {
 
 	if isReferenceObject(value) && isReferenceDefinedInTemplate(value, template, env) {
 
@@ -57,7 +57,7 @@ func findReferences(template *TemplateResource, value interface{}, propertyPath 
 	return make([]interface{}, 0), nil
 }
 
-func findReferencesInMap(template *TemplateResource, m map[string]interface{}, propertyPath string, env *environment) ([]interface{}, error) {
+func findReferencesInMap(template *Template, m map[string]interface{}, propertyPath string, env *environment) ([]interface{}, error) {
 
 	references := make([]interface{}, 0)
 	for k, v := range m {
@@ -79,7 +79,7 @@ func findReferencesInMap(template *TemplateResource, m map[string]interface{}, p
 	return references, nil
 }
 
-func findReferencesInArray(template *TemplateResource, arr []interface{}, propertyPath string, env *environment) ([]interface{}, error) {
+func findReferencesInArray(template *Template, arr []interface{}, propertyPath string, env *environment) ([]interface{}, error) {
 	references := make([]interface{}, 0)
 	for i, item := range arr {
 		itemPropPath := fmt.Sprintf("%v.%v", propertyPath, i)
@@ -96,11 +96,11 @@ func findReferencesInArray(template *TemplateResource, arr []interface{}, proper
 	return references, nil
 }
 
-func validateReference(template *TemplateResource, o interface{}, propertyPath string, env *environment) error {
+func validateReference(template *Template, o interface{}, propertyPath string, env *environment) error {
 	return nil
 }
 
-func isReferenceDefinedInTemplate(reference interface{}, template *TemplateResource, env *environment) bool {
+func isReferenceDefinedInTemplate(reference interface{}, template *Template, env *environment) bool {
 	target := getReferenceObjectTarget(reference)
 	meta := env.getPropertyMetaData(target)
 	return meta != nil && meta.template != nil && meta.template == template

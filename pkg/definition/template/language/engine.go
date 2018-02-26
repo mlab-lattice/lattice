@@ -335,7 +335,7 @@ func (engine *TemplateEngine) evalString(s string, env *environment) (interface{
 }
 
 // processIncludeResult
-func (engine *TemplateEngine) processIncludeResult(result map[string]interface{}, template *TemplateResource, env *environment) error {
+func (engine *TemplateEngine) processIncludeResult(result map[string]interface{}, template *Template, env *environment) error {
 	references, err := findReferencesInTemplate(template, result, env)
 
 	if err != nil {

@@ -10,8 +10,8 @@ import (
 	"github.com/mlab-lattice/system/pkg/util/git"
 )
 
-// readTemplateFromURL reads the template file by resolving the url into a TemplateResource w
-func readTemplateFromURL(url string, env *environment) (*TemplateResource, error) {
+// readTemplateFromURL reads the template file by resolving the url into a Template w
+func readTemplateFromURL(url string, env *environment) (*Template, error) {
 	// if its a git url then return a templateURLInfo for a git url
 	if isGitURL(url) {
 		return readTemplateFromGitURL(url, env)
@@ -37,8 +37,8 @@ func fetchGitFileContents(repoURL string, fileName string, env *environment) ([]
 
 }
 
-// TemplateResource artifact for url resolution
-type TemplateResource struct {
+// Template artifact for url resolution
+type Template struct {
 	url      string
 	baseURL  string
 	fileName string
@@ -47,7 +47,7 @@ type TemplateResource struct {
 }
 
 // readTemplateFromGitURL resolves a git url
-func readTemplateFromGitURL(url string, env *environment) (*TemplateResource, error) {
+func readTemplateFromGitURL(url string, env *environment) (*Template, error) {
 	if !isGitURL(url) {
 		return nil, fmt.Errorf("invalid git url: '%s'", url)
 	}
@@ -73,18 +73,18 @@ func readTemplateFromGitURL(url string, env *environment) (*TemplateResource, er
 		return nil, err
 	}
 
-	return newTemplateResource(url, baseURL, fileName, bytes)
+	return newTemplate(url, baseURL, fileName, bytes)
 
 }
 
-// newTemplateResource creates a new TemplateResource struct
-func newTemplateResource(url, baseURL string, fileName string, bytes []byte) (*TemplateResource, error) {
+// newTemplate creates a new Template struct
+func newTemplate(url, baseURL string, fileName string, bytes []byte) (*Template, error) {
 	data, err := unmarshalBytes(bytes, fileName)
 	if err != nil {
 		return nil, err
 	}
 
-	return &TemplateResource{
+	return &Template{
 		url:     url,
 		baseURL: baseURL,
 		bytes:   bytes,

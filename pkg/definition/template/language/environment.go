@@ -45,7 +45,7 @@ func (env *environment) parametersAndVariables() map[string]interface{} {
 
 // push pushes current environment to the stack. Should be called in $include
 func (env *environment) push(
-	template *TemplateResource,
+	template *Template,
 	parameters map[string]interface{},
 	variables map[string]interface{}) {
 	env.stack.push(&environmentStackFrame{
@@ -93,7 +93,7 @@ func (env *environment) popProperty() error {
 
 // fillPropertyMetadata
 func (env *environment) fillPropertyMetadata(propertyPath string) {
-	var currentTemplate *TemplateResource
+	var currentTemplate *Template
 
 	if env.currentFrame() != nil {
 		currentTemplate = env.currentFrame().template
@@ -177,7 +177,7 @@ type environmentStack struct {
 
 // environment stack frame
 type environmentStackFrame struct {
-	template   *TemplateResource
+	template   *Template
 	parameters map[string]interface{}
 	variables  map[string]interface{}
 }
