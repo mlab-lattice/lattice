@@ -29,7 +29,7 @@ func findReferences(url string, o interface{}, propertyPath string, env *environ
 
 	propertyMeta := env.getPropertyMetaData(propertyPath)
 
-	if isReferenceObject(o) && propertyMeta != nil && propertyMeta.resource != nil && propertyMeta.resource.url == url {
+	if isReferenceObject(o) && propertyMeta != nil && propertyMeta.template != nil && propertyMeta.template.url == url {
 
 		err := validateReference(url, o, propertyPath, env)
 

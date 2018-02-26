@@ -8,9 +8,9 @@ import (
 
 // PropertyMetadata holds information about a certain property
 type PropertyMetadata struct {
-	propertyPath         string       // the absolute property path
-	relativePropertyPath string       // property path relative to the template containing this property
-	resource             *urlResource // resource that holds the property being evaluated
+	propertyPath         string            // the absolute property path
+	relativePropertyPath string            // property path relative to the template containing this property
+	template             *TemplateResource // template that holds the property being evaluated
 }
 
 // PropertyName returns the base property name
@@ -31,24 +31,24 @@ func (pm *PropertyMetadata) RelativePropertyPath() string {
 
 // TemplateURL template url of the template holding this property
 func (pm *PropertyMetadata) TemplateURL() string {
-	if pm.resource == nil {
+	if pm.template == nil {
 		return ""
 	}
 
-	return pm.resource.url
+	return pm.template.url
 }
 
 // LineNumber line number of the property
 func (pm *PropertyMetadata) LineNumber() int {
-	if pm.resource == nil {
+	if pm.template == nil {
 		return 0
 	}
 
-	return getPropertyPathLineNumber(pm.resource, pm.relativePropertyPath)
+	return getPropertyPathLineNumber(pm.template, pm.relativePropertyPath)
 }
 
 // getPropertyPathLineNumber utility method for getting a line number of the property
-func getPropertyPathLineNumber(resource *urlResource, relativePropertyPath string) int {
+func getPropertyPathLineNumber(resource *TemplateResource, relativePropertyPath string) int {
 
 	value := gjson.Get(string(resource.bytes), relativePropertyPath)
 	return getResultLine(resource.bytes, value)

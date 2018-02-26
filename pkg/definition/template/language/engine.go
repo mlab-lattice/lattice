@@ -168,8 +168,13 @@ func (engine *TemplateEngine) eval(o interface{}, env *environment) (interface{}
 
 // include includes and evaluates the template file specified in the url
 func (engine *TemplateEngine) include(url string, parameters map[string]interface{}, env *environment) (interface{}, error) {
-	// resolve url
-	resource, err := resolveURL(url, env)
+	// if the url is a relative url then concat it with the base url of the parent template
+
+	if isRelativeURL(url) {
+		url = fmt.Sprintf("%v/%v", env.currentFrame().template.baseURL, url)
+	}
+
+	template, err := readTemplateFromURL(url, env)
 
 	if err != nil {
 		return nil, err
@@ -179,13 +184,13 @@ func (engine *TemplateEngine) include(url string, parameters map[string]interfac
 	variables := make(map[string]interface{})
 
 	// push !
-	env.push(resource, parameters, variables)
+	env.push(template, parameters, variables)
 
 	// defer a pop to ensure that the stack is popped  before
 	defer env.pop()
 
 	// evaluate data of the template
-	result, err := engine.eval(resource.data, env)
+	result, err := engine.eval(template.data, env)
 
 	if err != nil {
 		return nil, err
@@ -197,7 +202,7 @@ func (engine *TemplateEngine) include(url string, parameters map[string]interfac
 		return nil, fmt.Errorf("include for template '%s' did not return a map", url)
 	}
 	// process include result before returning
-	err = engine.processIncludeResult(m, resource.url, parameters, env)
+	err = engine.processIncludeResult(m, url, parameters, env)
 	if err != nil {
 		return nil, err
 	}

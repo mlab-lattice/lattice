@@ -45,11 +45,11 @@ func (env *environment) parametersAndVariables() map[string]interface{} {
 
 // push pushes current environment to the stack. Should be called in $include
 func (env *environment) push(
-	resource *urlResource,
+	template *TemplateResource,
 	parameters map[string]interface{},
 	variables map[string]interface{}) {
 	env.stack.push(&environmentStackFrame{
-		resource:   resource,
+		template:   template,
 		parameters: parameters,
 		variables:  variables,
 	})
@@ -93,15 +93,15 @@ func (env *environment) popProperty() error {
 
 // fillPropertyMetadata
 func (env *environment) fillPropertyMetadata(propertyPath string) {
-	var currentResource *urlResource
+	var currentTemplate *TemplateResource
 
 	if env.currentFrame() != nil {
-		currentResource = env.currentFrame().resource
+		currentTemplate = env.currentFrame().template
 	}
 
 	metadata := &PropertyMetadata{
 		propertyPath: propertyPath,
-		resource:     currentResource,
+		template:     currentTemplate,
 	}
 
 	env.propertyMetadataMap[propertyPath] = metadata
@@ -110,7 +110,7 @@ func (env *environment) fillPropertyMetadata(propertyPath string) {
 	metadata.relativePropertyPath = env.computeRelativePropertyPathFor(metadata)
 }
 
-// computeRelativePropertyPathFor determines the relative path of the property, i.e. relative to the resource
+// computeRelativePropertyPathFor determines the relative path of the property, i.e. relative to the template
 // that contains that property
 func (env *environment) computeRelativePropertyPathFor(metadata *PropertyMetadata) string {
 	parentPropertyPath := getParentPropertyPath(metadata.propertyPath)
@@ -118,8 +118,8 @@ func (env *environment) computeRelativePropertyPathFor(metadata *PropertyMetadat
 	for parentPropertyPath != "" {
 		parentMeta := env.getPropertyMetaData(parentPropertyPath)
 
-		// if the parent is in a different resource then
-		if parentMeta.resource == nil || parentMeta.resource != metadata.resource {
+		// if the parent is in a different template then
+		if parentMeta.template == nil || parentMeta.template != metadata.template {
 			break
 		}
 		relativePropertyPath = fmt.Sprintf("%v.%v", parentMeta.PropertyName(), relativePropertyPath)
@@ -133,7 +133,7 @@ func (env *environment) computeRelativePropertyPathFor(metadata *PropertyMetadat
 func (env *environment) relativePathToAbsolute(relativePath string) string {
 	currentFrame := env.currentFrame()
 
-	if currentFrame == nil || currentFrame.resource == nil {
+	if currentFrame == nil || currentFrame.template == nil {
 		return relativePath
 	}
 
@@ -143,7 +143,7 @@ func (env *environment) relativePathToAbsolute(relativePath string) string {
 		propertyMeta := env.getPropertyMetaData(rootPath)
 
 		// climb up until we reach the root property path for the current template
-		if propertyMeta == nil || propertyMeta.resource == nil || propertyMeta.resource != currentFrame.resource {
+		if propertyMeta == nil || propertyMeta.template == nil || propertyMeta.template != currentFrame.template {
 			break
 		}
 		rootPath = getParentPropertyPath(rootPath)
@@ -177,7 +177,7 @@ type environmentStack struct {
 
 // environment stack frame
 type environmentStackFrame struct {
-	resource   *urlResource
+	template   *TemplateResource
 	parameters map[string]interface{}
 	variables  map[string]interface{}
 }
