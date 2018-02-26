@@ -202,7 +202,7 @@ func (engine *TemplateEngine) include(url string, parameters map[string]interfac
 		return nil, fmt.Errorf("include for template '%s' did not return a map", url)
 	}
 	// process include result before returning
-	err = engine.processIncludeResult(m, url, parameters, env)
+	err = engine.processIncludeResult(m, template, env)
 	if err != nil {
 		return nil, err
 	}
@@ -335,8 +335,8 @@ func (engine *TemplateEngine) evalString(s string, env *environment) (interface{
 }
 
 // processIncludeResult
-func (engine *TemplateEngine) processIncludeResult(result map[string]interface{}, url string, parameters map[string]interface{}, env *environment) error {
-	references, err := findReferences(url, result, env.getCurrentPropertyPath(), env)
+func (engine *TemplateEngine) processIncludeResult(result map[string]interface{}, template *TemplateResource, env *environment) error {
+	references, err := findReferencesInTemplate(template, result, env)
 
 	if err != nil {
 		return err

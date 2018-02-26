@@ -25,28 +25,31 @@ func newReferenceEntry(target string, recipient string) map[string]interface{} {
 		"recipient": recipient,
 	}
 }
-func findReferences(url string, o interface{}, propertyPath string, env *environment) ([]interface{}, error) {
+func findReferencesInTemplate(template *TemplateResource, value interface{}, env *environment) ([]interface{}, error) {
 
-	propertyMeta := env.getPropertyMetaData(propertyPath)
+	return findReferences(template, value, env.getCurrentPropertyPath(), env)
+}
 
-	if isReferenceObject(o) && propertyMeta != nil && propertyMeta.template != nil && propertyMeta.template.url == url {
+func findReferences(template *TemplateResource, value interface{}, propertyPath string, env *environment) ([]interface{}, error) {
 
-		err := validateReference(url, o, propertyPath, env)
+	if isReferenceObject(value) && isReferenceDefinedInTemplate(value, template, env) {
+
+		err := validateReference(template, value, propertyPath, env)
 
 		if err != nil {
 			return nil, err
 		}
-		target := getReferenceObjectTarget(o)
+		target := getReferenceObjectTarget(value)
 		return []interface{}{
 			newReferenceEntry(target, propertyPath),
 		}, nil
 	}
 
-	if valMap, isMap := o.(map[string]interface{}); isMap { // Maps
-		return findReferencesInMap(url, valMap, propertyPath, env)
+	if valMap, isMap := value.(map[string]interface{}); isMap { // Maps
+		return findReferencesInMap(template, valMap, propertyPath, env)
 
-	} else if valArr, isArray := o.([]interface{}); isArray { // Arrays
-		return findReferencesInArray(url, valArr, propertyPath, env)
+	} else if valArr, isArray := value.([]interface{}); isArray { // Arrays
+		return findReferencesInArray(template, valArr, propertyPath, env)
 
 	}
 
@@ -54,7 +57,7 @@ func findReferences(url string, o interface{}, propertyPath string, env *environ
 	return make([]interface{}, 0), nil
 }
 
-func findReferencesInMap(url string, m map[string]interface{}, propertyPath string, env *environment) ([]interface{}, error) {
+func findReferencesInMap(template *TemplateResource, m map[string]interface{}, propertyPath string, env *environment) ([]interface{}, error) {
 
 	references := make([]interface{}, 0)
 	for k, v := range m {
@@ -65,7 +68,7 @@ func findReferencesInMap(url string, m map[string]interface{}, propertyPath stri
 			currentPropertyPath = k
 		}
 
-		childRefs, err := findReferences(url, v, currentPropertyPath, env)
+		childRefs, err := findReferences(template, v, currentPropertyPath, env)
 		if err != nil {
 			return nil, err
 		}
@@ -76,11 +79,11 @@ func findReferencesInMap(url string, m map[string]interface{}, propertyPath stri
 	return references, nil
 }
 
-func findReferencesInArray(url string, arr []interface{}, propertyPath string, env *environment) ([]interface{}, error) {
+func findReferencesInArray(template *TemplateResource, arr []interface{}, propertyPath string, env *environment) ([]interface{}, error) {
 	references := make([]interface{}, 0)
 	for i, item := range arr {
 		itemPropPath := fmt.Sprintf("%v.%v", propertyPath, i)
-		childRefs, err := findReferences(url, item, itemPropPath, env)
+		childRefs, err := findReferences(template, item, itemPropPath, env)
 
 		if err != nil {
 			return nil, err
@@ -93,6 +96,12 @@ func findReferencesInArray(url string, arr []interface{}, propertyPath string, e
 	return references, nil
 }
 
-func validateReference(url string, o interface{}, propertyPath string, env *environment) error {
+func validateReference(template *TemplateResource, o interface{}, propertyPath string, env *environment) error {
 	return nil
+}
+
+func isReferenceDefinedInTemplate(reference interface{}, template *TemplateResource, env *environment) bool {
+	target := getReferenceObjectTarget(reference)
+	meta := env.getPropertyMetaData(target)
+	return meta != nil && meta.template != nil && meta.template == template
 }
