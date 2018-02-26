@@ -136,7 +136,6 @@ func (evaluator *ParametersEvaluator) processInputParameter(name string, paramDe
 
 }
 
-
 // ReferenceEvaluator. evaluates $reference operator which provides support for Capability based reference object.
 // It works as follows: creates a reference object and updates the reference table for that template. i.e.
 /***** x.json

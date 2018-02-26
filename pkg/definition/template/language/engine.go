@@ -34,6 +34,7 @@ TODO:
 
 import (
 	"fmt"
+
 	"github.com/mlab-lattice/system/pkg/util/git"
 )
 
@@ -184,7 +185,24 @@ func (engine *TemplateEngine) include(url string, parameters map[string]interfac
 	defer env.pop()
 
 	// evaluate data of the template
-	return engine.eval(resource.data, env)
+	result, err := engine.eval(resource.data, env)
+
+	if err != nil {
+		return nil, err
+	}
+
+	m, isMap := result.(map[string]interface{})
+
+	if !isMap {
+		return nil, fmt.Errorf("include for template '%s' did not return a map", url)
+	}
+	// process include result before returning
+	err = engine.processIncludeResult(m, resource.url, parameters, env)
+	if err != nil {
+		return nil, err
+	}
+	return result, nil
+
 }
 
 // evalMap evaluates a map of objects
@@ -245,8 +263,7 @@ func (engine *TemplateEngine) evalOperatorsInMap(result map[string]interface{}, 
 			resultMap, isMap := evalResult.(map[string]interface{})
 
 			if !isMap {
-				badOperatorResultError := fmt.Errorf("Bad return value for evaluator %v. " +
-					"Result is not a map[string]interface{}.", operator)
+				badOperatorResultError := fmt.Errorf("bad return value for evaluator %v", operator)
 				return wrapWithPropertyEvalError(badOperatorResultError, currentPropertyPath, env)
 			}
 			// stuff map with the val result
@@ -310,4 +327,19 @@ func (engine *TemplateEngine) evalArray(arr []interface{}, env *environment) ([]
 func (engine *TemplateEngine) evalString(s string, env *environment) (interface{}, error) {
 	// eval expression
 	return evalStringExpression(s, env.parametersAndVariables()), nil
+}
+
+// processIncludeResult
+func (engine *TemplateEngine) processIncludeResult(result map[string]interface{}, url string, parameters map[string]interface{}, env *environment) error {
+	references, err := findReferences(url, result, env.getCurrentPropertyPath(), env)
+
+	if err != nil {
+		return err
+	}
+
+	if len(references) > 0 {
+		result["references"] = references
+	}
+
+	return nil
 }

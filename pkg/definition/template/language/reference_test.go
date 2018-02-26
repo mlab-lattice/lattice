@@ -24,7 +24,7 @@ func simpleReferenceTest(t *testing.T) {
 
 	result, err := engine.Eval(map[string]interface{}{
 		"a": 1,
-		"b": map[string]interface{} {
+		"b": map[string]interface{}{
 			"$reference": "a",
 		},
 	}, nil, nil)
@@ -33,9 +33,8 @@ func simpleReferenceTest(t *testing.T) {
 		t.Fatalf("Got error: %v", err)
 	}
 
-
 	if resultMap, isMap := result.Value().(map[string]interface{}); isMap {
-		if ref ,refIsMap := resultMap["b"].(map[string]interface{}); !refIsMap || ref["reference"] != "a" {
+		if ref, refIsMap := resultMap["b"].(map[string]interface{}); !refIsMap || ref["reference"] != "a" {
 			t.Fatal("Expected result[b][reference] to be 'a'")
 		}
 
@@ -56,8 +55,6 @@ func templateReferenceTest(t *testing.T) {
 
 	fmt.Printf("calling EvalFromURL('%s')\n", t1FileURL)
 
-
-
 	result, err := engine.EvalFromURL(t1FileURL, nil, options)
 
 	if err != nil {
@@ -68,16 +65,18 @@ func templateReferenceTest(t *testing.T) {
 
 }
 
-
 func setupReferenceTest() {
 	fmt.Println("Setting up reference test")
 	initTestRepo()
 
 	commitTestFile("t1.json",
-`
+		`
 {
   "a": {
     "x": 1
+  },
+  "i": {
+           "$reference": "a.x"
   },
   "b": {
     "$include": {
@@ -116,7 +115,6 @@ func setupReferenceTest() {
 }
 `)
 
-
 	commitTestFile("t3.json",
 		`
 {
@@ -140,6 +138,3 @@ func teardownReferenceTest() {
 	fmt.Println("Tearing down template engine test")
 	deleteTestRepo()
 }
-
-
-
