@@ -6,16 +6,9 @@ go_library(
         "arg.go",
         "command.go",
         "flag.go",
-        "lattice_command.go",
         "simple_flag.go",
-        "system_command.go",
     ],
     importpath = "github.com/mlab-lattice/system/pkg/cli/command",
     visibility = ["//visibility:public"],
-    deps = [
-        "//pkg/managerapi/client:go_default_library",
-        "//pkg/managerapi/client/rest:go_default_library",
-        "//pkg/types:go_default_library",
-        "@com_github_spf13_cobra//:go_default_library",
-    ],
+    deps = ["@com_github_spf13_cobra//:go_default_library"],
 )

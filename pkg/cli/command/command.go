@@ -200,9 +200,10 @@ func (c *BaseCommand) initColon() error {
 func getSubcommands(path string, subcommands []Command) []Command {
 	var ret []Command
 	for _, subcommand := range subcommands {
-		subcommand.cobraCommand().Use = fmt.Sprintf("%v%v", path, subcommand.name())
+		name := fmt.Sprintf("%v%v", path, subcommand.name())
+		subcommand.cobraCommand().Use = name
 		ret = append(ret, subcommand)
-		for _, subsubcommand := range getSubcommands(fmt.Sprintf("%v:", subcommand.name()), subcommand.subcommands()) {
+		for _, subsubcommand := range getSubcommands(fmt.Sprintf("%v:", name), subcommand.subcommands()) {
 			ret = append(ret, subsubcommand)
 		}
 

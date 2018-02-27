@@ -1,6 +1,7 @@
-package command
+package latticectl
 
 import (
+	"github.com/mlab-lattice/system/pkg/cli/command"
 	"github.com/mlab-lattice/system/pkg/managerapi/client"
 	"github.com/mlab-lattice/system/pkg/managerapi/client/rest"
 )
@@ -8,12 +9,12 @@ import (
 type LatticeCommand struct {
 	Name        string
 	Short       string
-	Args        Args
-	Flags       Flags
+	Args        command.Args
+	Flags       command.Flags
 	PreRun      func()
 	Run         func(args []string, ctx LatticeCommandContext)
-	Subcommands []Command
-	*BaseCommand
+	Subcommands []command.Command
+	*command.BaseCommand
 }
 
 type LatticeCommandContext interface {
@@ -40,14 +41,14 @@ func (c *latticeCommandContext) Lattice() client.Interface {
 
 func (c *LatticeCommand) Init() error {
 	var latticeURL string
-	latticeURLFlag := &StringFlag{
+	latticeURLFlag := &command.StringFlag{
 		Name:     "lattice-url",
 		Required: true,
 		Target:   &latticeURL,
 	}
 	flags := append(c.Flags, latticeURLFlag)
 
-	c.BaseCommand = &BaseCommand{
+	c.BaseCommand = &command.BaseCommand{
 		Name:   c.Name,
 		Short:  c.Short,
 		Args:   c.Args,

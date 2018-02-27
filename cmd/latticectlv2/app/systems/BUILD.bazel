@@ -8,10 +8,11 @@ go_library(
         "delete.go",
         "get.go",
     ],
-    importpath = "github.com/mlab-lattice/system/cmd/latticectlv2/app/system",
+    importpath = "github.com/mlab-lattice/system/cmd/latticectlv2/app/systems",
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/cli/command:go_default_library",
+        "//pkg/cli/latticectl:go_default_library",
         "//pkg/types:go_default_library",
     ],
 )

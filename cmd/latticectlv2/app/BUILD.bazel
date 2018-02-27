@@ -6,7 +6,7 @@ go_library(
     importpath = "github.com/mlab-lattice/system/cmd/latticectlv2/app",
     visibility = ["//visibility:public"],
     deps = [
-        "//cmd/latticectlv2/app/system:go_default_library",
+        "//cmd/latticectlv2/app/systems:go_default_library",
         "//pkg/cli/command:go_default_library",
     ],
 )

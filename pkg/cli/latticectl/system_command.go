@@ -1,6 +1,7 @@
-package command
+package latticectl
 
 import (
+	"github.com/mlab-lattice/system/pkg/cli/command"
 	"github.com/mlab-lattice/system/pkg/managerapi/client"
 	"github.com/mlab-lattice/system/pkg/types"
 )
@@ -8,11 +9,11 @@ import (
 type SystemCommand struct {
 	Name        string
 	Short       string
-	Args        Args
-	Flags       Flags
+	Args        command.Args
+	Flags       command.Flags
 	PreRun      func()
 	Run         func(args []string, ctx SystemCommandContext)
-	Subcommands []Command
+	Subcommands []command.Command
 	*LatticeCommand
 }
 
@@ -38,7 +39,7 @@ func (c *systemCommandContext) Systems() client.SystemClient {
 
 func (c *SystemCommand) Init() error {
 	var systemID string
-	systemNameFlag := &StringFlag{
+	systemNameFlag := &command.StringFlag{
 		Name:     "system",
 		Required: true,
 		Target:   &systemID,
