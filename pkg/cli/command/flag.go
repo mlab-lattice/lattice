@@ -12,3 +12,5 @@ type Flag interface {
 	validate() error
 	addToCmd(cmd *cobra.Command)
 }
+
+type Flags []Flag
