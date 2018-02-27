@@ -5,9 +5,9 @@ import (
 	"github.com/mlab-lattice/system/pkg/cli/command"
 )
 
-var Cmd = command.BasicCommand{
+var Cmd = command.BaseCommand{
 	Name:  "latticectl",
-	Short: "BasicCommand line utility for interacting with lattice clusters and systems",
+	Short: "command line utility for interacting with lattice clusters and systems",
 	Subcommands: []command.Command{
 		system.Cmd,
 	},

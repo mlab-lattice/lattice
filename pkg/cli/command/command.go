@@ -11,12 +11,15 @@ var OnInitialize = cobra.OnInitialize
 
 type Command interface {
 	Execute()
+	ExecuteColon()
 	Init() error
 	name() string
+	run() func(args []string)
+	subcommands() []Command
 	cobraCommand() *cobra.Command
 }
 
-type BasicCommand struct {
+type BaseCommand struct {
 	Name        string
 	Short       string
 	Args        Args
@@ -27,7 +30,7 @@ type BasicCommand struct {
 	cobraCmd    *cobra.Command
 }
 
-func (c *BasicCommand) Execute() {
+func (c *BaseCommand) Execute() {
 	if err := c.validate(); err != nil {
 		c.exit(err)
 	}
@@ -39,7 +42,7 @@ func (c *BasicCommand) Execute() {
 	c.exit(c.cobraCmd.Execute())
 }
 
-func (c *BasicCommand) validate() error {
+func (c *BaseCommand) validate() error {
 	if c.Name == "" {
 		return fmt.Errorf("name must be set")
 	}
@@ -47,7 +50,7 @@ func (c *BasicCommand) validate() error {
 	return nil
 }
 
-func (c *BasicCommand) Init() error {
+func (c *BaseCommand) Init() error {
 	c.cobraCmd = &cobra.Command{
 		Use:   c.Name,
 		Short: c.Short,
@@ -75,7 +78,11 @@ func (c *BasicCommand) Init() error {
 	return nil
 }
 
-func (c *BasicCommand) addArgs() error {
+func (c *BaseCommand) run() func([]string) {
+	return c.Run
+}
+
+func (c *BaseCommand) addArgs() error {
 	if err := c.Args.validate(); err != nil {
 		return err
 	}
@@ -89,7 +96,7 @@ func (c *BasicCommand) addArgs() error {
 	return nil
 }
 
-func (c *BasicCommand) addFlags() error {
+func (c *BaseCommand) addFlags() error {
 	names := make(map[string]struct{})
 	for _, flag := range c.Flags {
 		if err := flag.validate(); err != nil {
@@ -107,7 +114,7 @@ func (c *BasicCommand) addFlags() error {
 	return nil
 }
 
-func (c *BasicCommand) addSubcommands() error {
+func (c *BaseCommand) addSubcommands() error {
 	names := make(map[string]struct{})
 	for _, subcommand := range c.Subcommands {
 		if err := subcommand.Init(); err != nil {
@@ -129,84 +136,82 @@ func (c *BasicCommand) addSubcommands() error {
 	return nil
 }
 
-func (c *BasicCommand) name() string {
+func (c *BaseCommand) name() string {
 	return c.Name
 }
 
-func (c *BasicCommand) cobraCommand() *cobra.Command {
+func (c *BaseCommand) subcommands() []Command {
+	return c.Subcommands
+}
+
+func (c *BaseCommand) cobraCommand() *cobra.Command {
 	return c.cobraCmd
 }
 
-//func (c *BasicCommand) ExecuteColon() {
-//	if err := c.validate(); err != nil {
-//		c.exit(err)
-//	}
-//
-//	cmd, err := c.initColon()
-//	if err != nil {
-//		c.exit(err)
-//	}
-//
-//	c.exit(cmd.Execute())
-//}
-//
-//func (c *BasicCommand) initColon() (*cobra.Command, error) {
-//	root := &cobra.Command{
-//		Use:   c.Name,
-//		Short: c.Short,
-//		Run: func(cmd *cobra.Command, args []string) {
-//			if c.Run == nil {
-//				cmd.Help()
-//				os.Exit(1)
-//			}
-//
-//			c.Run(args)
-//		},
-//	}
-//
-//	for _, subcommand := range c.getSubcommands("") {
-//		// why does this need to be an immediately invoked function?
-//		// answer here: https://www.ardanlabs.com/blog/2014/06/pitfalls-with-closures-in-go.html
-//		// (n.b. subcommand.Name will be copied here since it's a string, but since
-//		//  subcommand.Run is a pointer, we need to do this trickery)
-//		cmd := func(run func([]string)) *cobra.Command {
-//			return &cobra.Command{
-//				Use: subcommand.Name,
-//				Run: func(cmd *cobra.Command, args []string) {
-//					run(args)
-//				},
-//			}
-//		}(subcommand.Run)
-//
-//		if err := subcommand.addArgs(); err != nil {
-//			return nil, fmt.Errorf("error adding args: %v", err)
-//		}
-//
-//		if err := subcommand.addFlags(); err != nil {
-//			return nil, fmt.Errorf("error adding flags: %v", err)
-//		}
-//
-//		root.AddCommand(cmd)
-//	}
-//
-//	return root, nil
-//}
-//
-//func (c *BasicCommand) getSubcommands(path string) []*BasicCommand {
-//	var subcommands []*BasicCommand
-//	for _, subcommand := range c.Subcommands {
-//		subcommand.name() = fmt.Sprintf("%v%v", path, subcommand.name())
-//		subcommands = append(subcommands, subcommand)
-//		for _, subsubcommand := range subcommand.getSubcommands(fmt.Sprintf("%v:", subcommand.Name)) {
-//			subcommands = append(subcommands, subsubcommand)
-//		}
-//
-//	}
-//
-//	return subcommands
-//}
+func (c *BaseCommand) ExecuteColon() {
+	if err := c.validate(); err != nil {
+		c.exit(err)
+	}
 
-func (c *BasicCommand) exit(err error) {
+	if err := c.initColon(); err != nil {
+		c.exit(err)
+	}
+
+	c.exit(c.cobraCmd.Execute())
+}
+
+func (c *BaseCommand) initColon() error {
+	c.cobraCmd = &cobra.Command{
+		Use:   c.Name,
+		Short: c.Short,
+		Run: func(cmd *cobra.Command, args []string) {
+			if c.Run == nil {
+				cmd.Help()
+				os.Exit(1)
+			}
+
+			c.Run(args)
+		},
+	}
+
+	for _, subcommand := range c.Subcommands {
+		if err := subcommand.Init(); err != nil {
+			return err
+		}
+	}
+
+	for _, subcommand := range getSubcommands("", c.Subcommands) {
+		// why does this need to be an immediately invoked function?
+		// answer here: https://www.ardanlabs.com/blog/2014/06/pitfalls-with-closures-in-go.html
+		// (n.b. subcommand.Name will be copied here since it's a string, but since
+		//  subcommand.Run is a pointer, we need to do this trickery)
+		subcommand.cobraCommand().Run = func(run func([]string)) func(*cobra.Command, []string) {
+			return func(cmd *cobra.Command, args []string) {
+				run(args)
+			}
+		}(subcommand.run())
+
+		c.cobraCmd.AddCommand(subcommand.cobraCommand())
+	}
+
+	return nil
+}
+
+func getSubcommands(path string, subcommands []Command) []Command {
+	var ret []Command
+	for _, subcommand := range subcommands {
+		subcommand.cobraCommand().Use = fmt.Sprintf("%v%v", path, subcommand.name())
+		ret = append(ret, subcommand)
+		for _, subsubcommand := range getSubcommands(fmt.Sprintf("%v:", subcommand.name()), subcommand.subcommands()) {
+			ret = append(ret, subsubcommand)
+		}
+
+	}
+
+	return ret
+}
+
+func (c *BaseCommand) exit(err error) {
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)

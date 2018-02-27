@@ -13,7 +13,7 @@ type LatticeCommand struct {
 	PreRun      func()
 	Run         func(args []string, ctx LatticeCommandContext)
 	Subcommands []Command
-	*BasicCommand
+	*BaseCommand
 }
 
 type LatticeCommandContext interface {
@@ -47,7 +47,7 @@ func (c *LatticeCommand) Init() error {
 	}
 	flags := append(c.Flags, latticeURLFlag)
 
-	c.BasicCommand = &BasicCommand{
+	c.BaseCommand = &BaseCommand{
 		Name:   c.Name,
 		Short:  c.Short,
 		Args:   c.Args,
@@ -62,5 +62,5 @@ func (c *LatticeCommand) Init() error {
 		Subcommands: c.Subcommands,
 	}
 
-	return c.BasicCommand.Init()
+	return c.BaseCommand.Init()
 }
