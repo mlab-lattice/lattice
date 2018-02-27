@@ -1,6 +1,8 @@
 package language
 
-import "github.com/mlab-lattice/system/bazel-system/external/go_sdk/src/fmt"
+import (
+	"fmt"
+)
 
 func isReferenceObject(val interface{}) bool {
 	if val == nil {
@@ -32,16 +34,19 @@ func findReferencesInTemplate(template *Template, value interface{}, env *enviro
 
 func findReferences(template *Template, value interface{}, propertyPath string, env *environment) ([]interface{}, error) {
 
-	if isReferenceObject(value) && isReferenceDefinedInTemplate(value, template, env) {
+	if isReferenceObject(value) && isReferenceTargetInTemplate(value, template, env) {
 
-		err := validateReference(template, value, propertyPath, env)
+		target := getReferenceObjectTarget(value)
+		recipient := propertyPath
+
+		err := validateReference(target, recipient, template, env)
 
 		if err != nil {
 			return nil, err
 		}
-		target := getReferenceObjectTarget(value)
+
 		return []interface{}{
-			newReferenceEntry(target, propertyPath),
+			newReferenceEntry(target, recipient),
 		}, nil
 	}
 
@@ -96,11 +101,19 @@ func findReferencesInArray(template *Template, arr []interface{}, propertyPath s
 	return references, nil
 }
 
-func validateReference(template *Template, o interface{}, propertyPath string, env *environment) error {
+func validateReference(target string, recipient string, template *Template, env *environment) error {
+	recipientMeta := env.getPropertyMetaData(recipient)
+	if recipientMeta.template == template {
+		// references in the same template are ok. nothing to do here
+		return nil
+	}
+
+	// TODO validate
 	return nil
+
 }
 
-func isReferenceDefinedInTemplate(reference interface{}, template *Template, env *environment) bool {
+func isReferenceTargetInTemplate(reference interface{}, template *Template, env *environment) bool {
 	target := getReferenceObjectTarget(reference)
 	meta := env.getPropertyMetaData(target)
 	return meta != nil && meta.template != nil && meta.template == template
