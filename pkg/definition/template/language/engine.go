@@ -343,7 +343,7 @@ func (engine *TemplateEngine) processIncludeResult(result map[string]interface{}
 	}
 
 	if len(references) > 0 {
-		result["references"] = references
+		result[templateReferencesKey] = references
 	}
 
 	return nil
