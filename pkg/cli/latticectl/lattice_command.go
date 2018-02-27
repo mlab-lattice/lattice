@@ -7,44 +7,48 @@ import (
 )
 
 type LatticeCommand struct {
-	Name        string
-	Short       string
-	Args        command.Args
-	Flags       command.Flags
-	PreRun      func()
-	Run         func(args []string, ctx LatticeCommandContext)
-	Subcommands []command.Command
+	Name           string
+	Short          string
+	Args           command.Args
+	Flags          command.Flags
+	PreRun         func()
+	Run            func(args []string, ctx LatticeCommandContext)
+	ContextCreator func(lattice string) LatticeCommandContext
+	Subcommands    []command.Command
 	*command.BaseCommand
 }
 
 type LatticeCommandContext interface {
-	URL() string
-	Lattice() client.Interface
+	Lattice() string
+	Client() client.Interface
 }
 
 type latticeCommandContext struct {
-	url           string
+	lattice       string
 	latticeClient client.Interface
 }
 
-func (c *latticeCommandContext) URL() string {
-	return c.url
+func (c *latticeCommandContext) Lattice() string {
+	return c.lattice
 }
 
-func (c *latticeCommandContext) Lattice() client.Interface {
-	if c.latticeClient == nil {
-		c.latticeClient = rest.NewClient(c.url)
-	}
-
+func (c *latticeCommandContext) Client() client.Interface {
 	return c.latticeClient
 }
 
+func DefaultLatticeContextCreator(lattice string) LatticeCommandContext {
+	return &latticeCommandContext{
+		lattice:       lattice,
+		latticeClient: rest.NewClient(lattice),
+	}
+}
+
 func (c *LatticeCommand) Init() error {
-	var latticeURL string
+	var lattice string
 	latticeURLFlag := &command.StringFlag{
-		Name:     "lattice-url",
+		Name:     "lattice",
 		Required: true,
-		Target:   &latticeURL,
+		Target:   &lattice,
 	}
 	flags := append(c.Flags, latticeURLFlag)
 
@@ -55,9 +59,7 @@ func (c *LatticeCommand) Init() error {
 		Flags:  flags,
 		PreRun: c.PreRun,
 		Run: func(args []string) {
-			ctx := &latticeCommandContext{
-				url: latticeURL,
-			}
+			ctx := c.ContextCreator(lattice)
 			c.Run(args, ctx)
 		},
 		Subcommands: c.Subcommands,

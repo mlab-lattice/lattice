@@ -3,12 +3,12 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library")
 go_library(
     name = "go_default_library",
     srcs = [
-        "cmd.go",
+        "command.go",
         "create.go",
         "delete.go",
         "get.go",
     ],
-    importpath = "github.com/mlab-lattice/system/cmd/latticectlv2/app/systems",
+    importpath = "github.com/mlab-lattice/system/pkg/cli/latticectl/commands/systems",
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/cli/command:go_default_library",

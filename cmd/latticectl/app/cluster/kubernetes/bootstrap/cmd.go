@@ -88,7 +88,7 @@ type localCloudOptionsFlat struct {
 
 var Cmd = &cobra.Command{
 	Use:   "bootstrap",
-	Short: "bootstraps a kubernetes cluster to run Lattice",
+	Short: "bootstraps a kubernetes cluster to run Client",
 	Args:  cobra.ExactArgs(0),
 	Run: func(cmd *cobra.Command, args []string) {
 		if !options.Config.ComponentBuild.DockerArtifact.RepositoryPerImage && options.Config.ComponentBuild.DockerArtifact.Repository == "" {

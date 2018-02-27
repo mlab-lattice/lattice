@@ -27,7 +27,7 @@ func (c *Clientset) LatticeV1() latticev1.LatticeV1Interface {
 	return c.latticeV1
 }
 
-// Deprecated: Lattice retrieves the default version of LatticeClient.
+// Deprecated: Client retrieves the default version of LatticeClient.
 // Please explicitly pick a version.
 func (c *Clientset) Lattice() latticev1.LatticeV1Interface {
 	return c.latticeV1
