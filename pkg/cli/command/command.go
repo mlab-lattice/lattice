@@ -8,15 +8,20 @@ import (
 )
 
 type Command struct {
+	Name        string
 	Args        Args
-	Flags       map[string]Flag
+	Flags       []Flag
 	Run         func(args []string)
-	Subcommands map[string]Command
+	Subcommands []Command
 	path        []string
 }
 
 func (c *Command) Execute() {
-	cmd, err := c.init("")
+	if err := c.validate(); err != nil {
+		c.exit(err)
+	}
+
+	cmd, err := c.init()
 	if err != nil {
 		c.exit(err)
 	}
@@ -24,24 +29,32 @@ func (c *Command) Execute() {
 	c.exit(cmd.Execute())
 }
 
-func (c *Command) init(name string) (*cobra.Command, error) {
+func (c *Command) validate() error {
+	if c.Name == "" {
+		return fmt.Errorf("name must be set")
+	}
+
+	return nil
+}
+
+func (c *Command) init() (*cobra.Command, error) {
 	cmd := &cobra.Command{
-		Use: name,
+		Use: c.Name,
 		Run: func(cmd *cobra.Command, args []string) {
 			c.Run(args)
 		},
 	}
 
 	if err := c.addArgs(cmd); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error adding args: %v", err)
 	}
 
 	if err := c.addFlags(cmd); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error adding flags: %v", err)
 	}
 
 	if err := c.addSubcommands(cmd); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error initializing subcommands: %v", err)
 	}
 
 	return cmd, nil
@@ -62,24 +75,41 @@ func (c *Command) addArgs(cmd *cobra.Command) error {
 }
 
 func (c *Command) addFlags(cmd *cobra.Command) error {
-	for name, f := range c.Flags {
-		if err := f.validate(); err != nil {
-			return fmt.Errorf("error validating flag %v: %v", name, err)
+	names := make(map[string]struct{})
+	for _, flag := range c.Flags {
+		if err := flag.validate(); err != nil {
+			return fmt.Errorf("error validating flag %v: %v", flag.name(), err)
 		}
-		f.addToCmd(cmd, name)
+
+		if _, ok := names[flag.name()]; ok {
+			return fmt.Errorf("multiple flags with the name %v", flag.name())
+		}
+
+		flag.addToCmd(cmd)
+		names[flag.name()] = struct{}{}
 	}
 
 	return nil
 }
 
 func (c *Command) addSubcommands(cmd *cobra.Command) error {
-	for name, subcommand := range c.Subcommands {
-		subCmd, err := subcommand.init(name)
+	names := make(map[string]struct{})
+	for _, subcommand := range c.Subcommands {
+		if err := subcommand.validate(); err != nil {
+			return err
+		}
+
+		if _, ok := names[subcommand.Name]; ok {
+			return fmt.Errorf("multiple subcommands with the name %v", c.Name)
+		}
+
+		subCmd, err := subcommand.init()
 		if err != nil {
-			return fmt.Errorf("error initializing subcommand %v: %v", name, err)
+			return fmt.Errorf("error initializing subcommand %v: %v", c.Name, err)
 		}
 
 		cmd.AddCommand(subCmd)
+		names[subcommand.Name] = struct{}{}
 	}
 
 	return nil

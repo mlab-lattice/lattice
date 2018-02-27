@@ -5,9 +5,10 @@ import (
 )
 
 type Flag interface {
+	name() string
 	required() bool
 	short() string
 	usage() string
 	validate() error
-	addToCmd(cmd *cobra.Command, name string)
+	addToCmd(cmd *cobra.Command)
 }

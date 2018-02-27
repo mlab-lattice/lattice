@@ -7,11 +7,16 @@ import (
 )
 
 type StringFlag struct {
+	Name     string
 	Required bool
 	Default  string
 	Short    string
 	Usage    string
 	Target   *string
+}
+
+func (f *StringFlag) name() string {
+	return f.Name
 }
 
 func (f *StringFlag) required() bool {
@@ -27,6 +32,10 @@ func (f *StringFlag) usage() string {
 }
 
 func (f *StringFlag) validate() error {
+	if f.Name == "" {
+		return fmt.Errorf("name cannot be nil")
+	}
+
 	if f.Target == nil {
 		return fmt.Errorf("target cannot be nil")
 	}
@@ -34,20 +43,25 @@ func (f *StringFlag) validate() error {
 	return nil
 }
 
-func (f *StringFlag) addToCmd(cmd *cobra.Command, name string) {
-	cmd.Flags().StringVarP(f.Target, name, f.Short, f.Default, f.Usage)
+func (f *StringFlag) addToCmd(cmd *cobra.Command) {
+	cmd.Flags().StringVarP(f.Target, f.Name, f.Short, f.Default, f.Usage)
 
 	if f.Required {
-		cmd.MarkFlagRequired(name)
+		cmd.MarkFlagRequired(f.Name)
 	}
 }
 
 type IntFlag struct {
+	Name     string
 	Required bool
 	Default  int
 	Short    string
 	Usage    string
 	Target   *int
+}
+
+func (f *IntFlag) name() string {
+	return f.Name
 }
 
 func (f *IntFlag) required() bool {
@@ -63,6 +77,10 @@ func (f *IntFlag) usage() string {
 }
 
 func (f *IntFlag) validate() error {
+	if f.Name == "" {
+		return fmt.Errorf("name cannot be nil")
+	}
+
 	if f.Target == nil {
 		return fmt.Errorf("target cannot be nil")
 	}
@@ -70,10 +88,10 @@ func (f *IntFlag) validate() error {
 	return nil
 }
 
-func (f *IntFlag) addToCmd(cmd *cobra.Command, name string) {
-	cmd.Flags().IntVarP(f.Target, name, f.Short, f.Default, f.Usage)
+func (f *IntFlag) addToCmd(cmd *cobra.Command) {
+	cmd.Flags().IntVarP(f.Target, f.Name, f.Short, f.Default, f.Usage)
 
 	if f.Required {
-		cmd.MarkFlagRequired(name)
+		cmd.MarkFlagRequired(f.Name)
 	}
 }
