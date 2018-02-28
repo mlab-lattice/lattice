@@ -34,7 +34,7 @@ func simpleReferenceTest(t *testing.T) {
 	}
 
 	if resultMap, isMap := result.Value().(map[string]interface{}); isMap {
-		if ref, refIsMap := resultMap["b"].(map[string]interface{}); !refIsMap || ref["reference"] != "a" {
+		if ref, isRef := resultMap["b"].(Reference); !isRef || ref["__reference"] != "a" {
 			t.Fatal("Expected result[b][reference] to be 'a'")
 		}
 
@@ -76,7 +76,7 @@ func setupReferenceTest() {
     "x": 1
   },
   "i": {
-           "$reference": "a.x"
+    "$reference": "a.x"
   },
   "b": {
     "$include": {
@@ -128,7 +128,10 @@ func setupReferenceTest() {
   },
 
   "foo": "${foo}",
-  "baz": "${baz}"
+  "baz": "${baz}",
+  "car": {
+    "__reference": "a.x"
+  }
 }
 `)
 

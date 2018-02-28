@@ -211,9 +211,7 @@ func (evaluator *ReferenceEvaluator) eval(o interface{}, env *environment) (inte
 
 	// determine reference absolute path
 	referenceAbsPath := env.relativePathToAbsolute(referencePath)
-	referenceObject := map[string]interface{}{
-		"__reference": referenceAbsPath,
-	}
+	referenceObject := newReferenceObject(referenceAbsPath)
 
 	return referenceObject, nil
 

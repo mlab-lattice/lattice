@@ -9,23 +9,16 @@ const (
 	templateReferencesKey = "__references"
 )
 
-// isReferenceObject
-func isReferenceObject(val interface{}) bool {
-	if val == nil {
-		return false
-	}
+type Reference map[string]interface{}
 
-	if mapVal, isMap := val.(map[string]interface{}); isMap {
-		return len(mapVal) == 1 && mapVal[referenceKey] != nil
-	}
-
-	return false
+func (r Reference) getTarget() string {
+	return r[referenceKey].(string)
 }
 
-// getReferenceObjectTarget
-func getReferenceObjectTarget(val interface{}) string {
-	mapVal := val.(map[string]interface{})
-	return mapVal[referenceKey].(string)
+func newReferenceObject(reference string) Reference {
+	return Reference{
+		referenceKey: reference,
+	}
 }
 
 // newReferenceEntry
@@ -45,19 +38,11 @@ func findReferencesInTemplate(template *Template, value interface{}, env *enviro
 // findReferences
 func findReferences(template *Template, value interface{}, propertyPath string, env *environment) ([]interface{}, error) {
 
-	if isReferenceObject(value) && isReferenceTargetInTemplate(value, template, env) {
-
-		target := getReferenceObjectTarget(value)
+	if reference, isReference := value.(Reference); isReference && isReferenceTargetInTemplate(reference, template, env) {
 		recipient := propertyPath
 
-		err := validateReference(target, recipient, template, env)
-
-		if err != nil {
-			return nil, err
-		}
-
 		return []interface{}{
-			newReferenceEntry(target, recipient),
+			newReferenceEntry(reference.getTarget(), recipient),
 		}, nil
 	}
 
@@ -114,22 +99,8 @@ func findReferencesInArray(template *Template, arr []interface{}, propertyPath s
 	return references, nil
 }
 
-// validateReference
-func validateReference(target string, recipient string, template *Template, env *environment) error {
-	recipientMeta := env.getPropertyMetaData(recipient)
-	if recipientMeta.template == template {
-		// references in the same template are ok. nothing to do here
-		return nil
-	}
-
-	// TODO validate
-	return nil
-
-}
-
 // isReferenceTargetInTemplate
-func isReferenceTargetInTemplate(reference interface{}, template *Template, env *environment) bool {
-	target := getReferenceObjectTarget(reference)
-	meta := env.getPropertyMetaData(target)
+func isReferenceTargetInTemplate(reference Reference, template *Template, env *environment) bool {
+	meta := env.getPropertyMetaData(reference.getTarget())
 	return meta != nil && meta.template != nil && meta.template == template
 }

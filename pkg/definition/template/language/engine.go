@@ -212,15 +212,21 @@ func (engine *TemplateEngine) include(url string, parameters map[string]interfac
 
 // evalMap evaluates a map of objects
 func (engine *TemplateEngine) evalMap(m map[string]interface{}, env *environment) (interface{}, error) {
-	// init result
-	result := make(map[string]interface{})
 
 	// eval operators in map
-	err := engine.evalOperatorsInMap(result, m, env)
+	operatorsResult, err := engine.evalOperatorsInMap(m, env)
 
 	if err != nil {
 		return nil, err
 	}
+
+	// if the operator eval returned something then we consider this to be the eval result for the map
+	if operatorsResult != nil {
+		return operatorsResult, nil
+	}
+
+	// init result
+	result := make(map[string]interface{})
 
 	// eval properties
 	err = engine.evalPropertiesInMap(result, m, env)
@@ -233,8 +239,7 @@ func (engine *TemplateEngine) evalMap(m map[string]interface{}, env *environment
 }
 
 // evalOperatorsInMap helper method for evalMap
-func (engine *TemplateEngine) evalOperatorsInMap(result map[string]interface{}, m map[string]interface{},
-	env *environment) error {
+func (engine *TemplateEngine) evalOperatorsInMap(m map[string]interface{}, env *environment) (interface{}, error) {
 
 	// first, evaluate operators based on their priorities
 
@@ -255,7 +260,7 @@ func (engine *TemplateEngine) evalOperatorsInMap(result map[string]interface{}, 
 			}
 
 			if err != nil { // return error
-				return wrapWithPropertyEvalError(err, currentPropertyPath, env)
+				return nil, wrapWithPropertyEvalError(err, currentPropertyPath, env)
 			}
 			// if the result is nil, this indicates that the evaluator has processed the operator and that the engine
 			// should continue
@@ -265,20 +270,12 @@ func (engine *TemplateEngine) evalOperatorsInMap(result map[string]interface{}, 
 
 			// evaluator has return a value, we expect this value to be a map and we just merge it with the existing
 			// result
-			resultMap, isMap := evalResult.(map[string]interface{})
 
-			if !isMap {
-				badOperatorResultError := fmt.Errorf("bad return value for evaluator %v", operator)
-				return wrapWithPropertyEvalError(badOperatorResultError, currentPropertyPath, env)
-			}
-			// stuff map with the val result
-			for k, v := range resultMap {
-				result[k] = v
-			}
+			return evalResult, nil
 		}
 	}
 
-	return nil
+	return nil, nil
 }
 
 // evalPropertiesInMap helper method for evalMap

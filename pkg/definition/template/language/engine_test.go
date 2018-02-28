@@ -8,8 +8,8 @@ import (
 )
 
 const (
-	t1File      = "t1.json"
-	t2File      = "t2.json"
+	t1File = "t1.json"
+	t2File = "t2.json"
 )
 
 func TestEngine(t *testing.T) {
@@ -141,17 +141,6 @@ func doTestEngine(t *testing.T) {
 		t.Fatal("invalid state")
 	}
 
-	// validate $include to parent
-	fmt.Println("validate include to parent")
-
-	if resultMap["city"] != "San Francisco" {
-		t.Fatal("invalid city")
-	}
-
-	if resultMap["state"] != "CA" {
-		t.Fatal("invalid state")
-	}
-
 	// ensure that some parameters are required
 	fmt.Println("ensure that name parameter is required...")
 	_, err = engine.EvalFromURL(t1FileURL, nil, options)
@@ -247,13 +236,6 @@ const t1JSON = `
       }
     }
   },
-
-  "$include": {
-    "url": "t2.json",
-    "parameters": {
-	  "city": "San Francisco"
-    }
-},
 
   "int": 1,
   "bool": true
