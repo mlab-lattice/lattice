@@ -4,33 +4,28 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/mlab-lattice/system/pkg/cli/command"
 	"github.com/mlab-lattice/system/pkg/cli/latticectl"
 )
 
 type Command struct {
-	PreRun         func()
-	ContextCreator func(lattice string) latticectl.LatticeCommandContext
-	Subcommands    []command.Command
-	*latticectl.LatticeCommand
+	PreRun      func()
+	Client      latticectl.LatticeClientGenerator
+	Subcommands []latticectl.LatticeCommand
+	*latticectl.BaseLatticeCommand
 }
 
 func (c *Command) Init() error {
-	if c.ContextCreator == nil {
-		c.ContextCreator = latticectl.DefaultLatticeContextCreator
-	}
-
-	c.LatticeCommand = &latticectl.LatticeCommand{
+	c.BaseLatticeCommand = &latticectl.BaseLatticeCommand{
 		Name:   "systems",
 		PreRun: c.PreRun,
 		Run: func(args []string, ctx latticectl.LatticeCommandContext) {
 			c.run(ctx)
 		},
-		ContextCreator: c.ContextCreator,
-		Subcommands:    c.Subcommands,
+		Client:      c.Client,
+		Subcommands: c.Subcommands,
 	}
 
-	return c.LatticeCommand.Init()
+	return c.BaseLatticeCommand.Init()
 }
 
 func (c *Command) run(ctx latticectl.LatticeCommandContext) {

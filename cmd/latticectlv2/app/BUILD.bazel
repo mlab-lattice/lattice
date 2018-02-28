@@ -7,6 +7,8 @@ go_library(
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/cli/command:go_default_library",
+        "//pkg/cli/latticectl:go_default_library",
         "//pkg/cli/latticectl/commands/systems:go_default_library",
+        "//pkg/cli/latticectl/commands/systems/deploys:go_default_library",
     ],
 )

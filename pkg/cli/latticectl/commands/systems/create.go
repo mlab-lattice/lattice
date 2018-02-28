@@ -10,19 +10,14 @@ import (
 )
 
 type CreateCommand struct {
-	PreRun         func()
-	ContextCreator func(lattice string) latticectl.LatticeCommandContext
-	*latticectl.LatticeCommand
+	PreRun func()
+	*latticectl.BaseLatticeCommand
 }
 
 func (c *CreateCommand) Init() error {
-	if c.ContextCreator == nil {
-		c.ContextCreator = latticectl.DefaultLatticeContextCreator
-	}
-
 	var definitionURL string
 	var systemName string
-	c.LatticeCommand = &latticectl.LatticeCommand{
+	c.BaseLatticeCommand = &latticectl.BaseLatticeCommand{
 		Name: "create",
 		Flags: []command.Flag{
 			&command.StringFlag{
@@ -39,10 +34,9 @@ func (c *CreateCommand) Init() error {
 		Run: func(args []string, ctx latticectl.LatticeCommandContext) {
 			c.run(ctx, types.SystemID(systemName), definitionURL)
 		},
-		ContextCreator: c.ContextCreator,
 	}
 
-	return c.LatticeCommand.Init()
+	return c.BaseLatticeCommand.Init()
 }
 
 func (c *CreateCommand) run(ctx latticectl.LatticeCommandContext, name types.SystemID, definitionURL string) {

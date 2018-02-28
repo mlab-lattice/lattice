@@ -9,16 +9,11 @@ import (
 )
 
 type DeleteCommand struct {
-	PreRun         func()
-	ContextCreator func(ctx latticectl.LatticeCommandContext, systemID types.SystemID) latticectl.SystemCommandContext
+	PreRun func()
 	*latticectl.SystemCommand
 }
 
 func (c *DeleteCommand) Init() error {
-	if c.ContextCreator == nil {
-		c.ContextCreator = latticectl.DefaultSystemContextCreator
-	}
-
 	var definitionURL string
 	var systemName string
 	c.SystemCommand = &latticectl.SystemCommand{
@@ -26,7 +21,6 @@ func (c *DeleteCommand) Init() error {
 		Run: func(args []string, ctx latticectl.SystemCommandContext) {
 			c.run(ctx, types.SystemID(systemName), definitionURL)
 		},
-		ContextCreator: c.ContextCreator,
 	}
 
 	return c.SystemCommand.Init()

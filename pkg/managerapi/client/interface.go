@@ -27,6 +27,7 @@ type SystemClient interface {
 }
 
 type SystemBuildClient interface {
+	Create(version string) (types.SystemBuildID, error)
 	List() ([]types.SystemBuild, error)
 	Get(types.SystemBuildID) (*types.SystemBuild, error)
 }
@@ -43,16 +44,16 @@ type ComponentBuildClient interface {
 }
 
 type RolloutClient interface {
-	List() ([]types.SystemRollout, error)
-	Get(types.SystemRolloutID) (*types.SystemRollout, error)
 	CreateFromBuild(types.SystemBuildID) (types.SystemRolloutID, error)
 	CreateFromVersion(string) (types.SystemRolloutID, error)
+	List() ([]types.SystemRollout, error)
+	Get(types.SystemRolloutID) (*types.SystemRollout, error)
 }
 
 type TeardownClient interface {
+	Create() (types.SystemTeardownID, error)
 	List() ([]types.SystemTeardown, error)
 	Get(types.SystemTeardownID) (*types.SystemTeardown, error)
-	Create() (types.SystemTeardownID, error)
 }
 
 type ServiceClient interface {

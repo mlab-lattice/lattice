@@ -6,15 +6,14 @@ import (
 )
 
 type SystemCommand struct {
-	Name           string
-	Short          string
-	Args           command.Args
-	Flags          command.Flags
-	PreRun         func()
-	Run            func(args []string, ctx SystemCommandContext)
-	ContextCreator func(ctx LatticeCommandContext, systemID types.SystemID) SystemCommandContext
-	Subcommands    []command.Command
-	*LatticeCommand
+	Name        string
+	Short       string
+	Args        command.Args
+	Flags       command.Flags
+	PreRun      func()
+	Run         func(args []string, ctx SystemCommandContext)
+	Subcommands []LatticeCommand
+	*BaseLatticeCommand
 }
 
 type SystemCommandContext interface {
@@ -31,13 +30,6 @@ func (c *systemCommandContext) SystemID() types.SystemID {
 	return c.systemID
 }
 
-func DefaultSystemContextCreator(ctx LatticeCommandContext, systemID types.SystemID) SystemCommandContext {
-	return &systemCommandContext{
-		LatticeCommandContext: ctx,
-		systemID:              systemID,
-	}
-}
-
 func (c *SystemCommand) Init() error {
 	var systemID string
 	systemNameFlag := &command.StringFlag{
@@ -47,18 +39,21 @@ func (c *SystemCommand) Init() error {
 	}
 	flags := append(c.Flags, systemNameFlag)
 
-	c.LatticeCommand = &LatticeCommand{
+	c.BaseLatticeCommand = &BaseLatticeCommand{
 		Name:   c.Name,
 		Short:  c.Short,
 		Args:   c.Args,
 		Flags:  flags,
 		PreRun: c.PreRun,
 		Run: func(args []string, lctx LatticeCommandContext) {
-			ctx := c.ContextCreator(lctx, types.SystemID(systemID))
+			ctx := &systemCommandContext{
+				LatticeCommandContext: lctx,
+				systemID:              types.SystemID(systemID),
+			}
 			c.Run(args, ctx)
 		},
 		Subcommands: c.Subcommands,
 	}
 
-	return c.LatticeCommand.Init()
+	return c.BaseLatticeCommand.Init()
 }

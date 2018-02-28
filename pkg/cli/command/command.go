@@ -10,10 +10,11 @@ import (
 var OnInitialize = cobra.OnInitialize
 
 type Command interface {
-	Execute()
-	ExecuteColon()
 	Init() error
-	base() *BaseCommand
+	name() string
+	run() func(args []string)
+	subcommands() []Command
+	cobra() *cobra.Command
 }
 
 type BaseCommand struct {
@@ -37,14 +38,6 @@ func (c *BaseCommand) Execute() {
 	}
 
 	c.exit(c.cobraCmd.Execute())
-}
-
-func (c *BaseCommand) validate() error {
-	if c.Name == "" {
-		return fmt.Errorf("name must be set")
-	}
-
-	return nil
 }
 
 func (c *BaseCommand) Init() error {
@@ -75,8 +68,28 @@ func (c *BaseCommand) Init() error {
 	return nil
 }
 
-func (c *BaseCommand) base() *BaseCommand {
-	return c
+func (c *BaseCommand) name() string {
+	return c.Name
+}
+
+func (c *BaseCommand) run() func([]string) {
+	return c.Run
+}
+
+func (c *BaseCommand) subcommands() []Command {
+	return c.Subcommands
+}
+
+func (c *BaseCommand) cobra() *cobra.Command {
+	return c.cobraCmd
+}
+
+func (c *BaseCommand) validate() error {
+	if c.Name == "" {
+		return fmt.Errorf("name must be set")
+	}
+
+	return nil
 }
 
 func (c *BaseCommand) addArgs() error {
@@ -118,7 +131,7 @@ func (c *BaseCommand) addSubcommands() error {
 			return err
 		}
 
-		if _, ok := names[subcommand.base().Name]; ok {
+		if _, ok := names[subcommand.name()]; ok {
 			return fmt.Errorf("multiple subcommands with the name %v", c.Name)
 		}
 
@@ -126,8 +139,8 @@ func (c *BaseCommand) addSubcommands() error {
 			return fmt.Errorf("error initializing subcommand %v: %v", c.Name, err)
 		}
 
-		c.cobraCmd.AddCommand(subcommand.base().cobraCmd)
-		names[subcommand.base().Name] = struct{}{}
+		c.cobraCmd.AddCommand(subcommand.cobra())
+		names[subcommand.name()] = struct{}{}
 	}
 
 	return nil
@@ -170,13 +183,13 @@ func (c *BaseCommand) initColon() error {
 		// answer here: https://www.ardanlabs.com/blog/2014/06/pitfalls-with-closures-in-go.html
 		// (n.b. subcommand.Name will be copied here since it's a string, but since
 		//  subcommand.Run is a pointer, we need to do this trickery)
-		subcommand.base().cobraCmd.Run = func(run func([]string)) func(*cobra.Command, []string) {
+		subcommand.cobra().Run = func(run func([]string)) func(*cobra.Command, []string) {
 			return func(cmd *cobra.Command, args []string) {
 				run(args)
 			}
-		}(subcommand.base().Run)
+		}(subcommand.run())
 
-		c.cobraCmd.AddCommand(subcommand.base().cobraCmd)
+		c.cobraCmd.AddCommand(subcommand.cobra())
 	}
 
 	return nil
@@ -185,10 +198,10 @@ func (c *BaseCommand) initColon() error {
 func getSubcommands(path string, subcommands []Command) []Command {
 	var ret []Command
 	for _, subcommand := range subcommands {
-		name := fmt.Sprintf("%v%v", path, subcommand.base().Name)
-		subcommand.base().cobraCmd.Use = name
+		name := fmt.Sprintf("%v%v", path, subcommand.name())
+		subcommand.cobra().Use = name
 		ret = append(ret, subcommand)
-		for _, subsubcommand := range getSubcommands(fmt.Sprintf("%v:", name), subcommand.base().Subcommands) {
+		for _, subsubcommand := range getSubcommands(fmt.Sprintf("%v:", name), subcommand.subcommands()) {
 			ret = append(ret, subsubcommand)
 		}
 
