@@ -10,6 +10,7 @@ import (
 type Command struct {
 	PreRun      func()
 	Client      latticectl.LatticeClientGenerator
+	Context     latticectl.ContextManager
 	Subcommands []latticectl.LatticeCommand
 	*latticectl.BaseLatticeCommand
 }
@@ -22,6 +23,7 @@ func (c *Command) Init() error {
 			c.run(ctx)
 		},
 		Client:      c.Client,
+		Context:     c.Context,
 		Subcommands: c.Subcommands,
 	}
 

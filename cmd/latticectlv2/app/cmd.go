@@ -12,7 +12,8 @@ var Cmd = command.BaseCommand{
 	Short: "command line utility for interacting with lattice clusters and systems",
 	Subcommands: []command.Command{
 		&systems.Command{
-			Client: latticectl.DefaultLatticeClient,
+			Client:  latticectl.DefaultLatticeClient,
+			Context: &latticectl.DefaultFileContext{},
 			Subcommands: []latticectl.LatticeCommand{
 				&systems.CreateCommand{},
 				&systems.GetCommand{},
