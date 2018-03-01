@@ -128,7 +128,7 @@ func setupReferenceTest() {
   },
 
   "foo": "${foo}",
-  "baz": "${baz}",
+  "baz": ["${baz}"],
   "car": {
     "__reference": "a.x"
   }

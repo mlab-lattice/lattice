@@ -11,9 +11,8 @@ type OperatorEvaluator interface {
 }
 
 type operatorConfig struct {
-	key                   string
-	evaluator             OperatorEvaluator
-	appendToPropertyStack bool
+	key       string
+	evaluator OperatorEvaluator
 }
 
 // IncludeEvaluator. evaluates $include
@@ -45,7 +44,9 @@ func (evaluator *IncludeEvaluator) eval(o interface{}, env *environment) (interf
 	var includeParameters map[string]interface{}
 	if includeParamsVal, hasParams := includeObject["parameters"]; hasParams {
 		var err error
+		env.pushProperty("parameters")
 		params, err := env.engine.eval(includeParamsVal, env)
+		env.popProperty()
 		if err != nil {
 			return nil, err
 		}
@@ -55,6 +56,10 @@ func (evaluator *IncludeEvaluator) eval(o interface{}, env *environment) (interf
 
 	url := includeObject["url"].(string)
 
+	// pop the current property which is the operator property so that it will be part of the parent one
+	operatorProperty, _ := env.popProperty()
+	// put the property back on the stack
+	defer env.pushProperty(operatorProperty)
 	// return the included object
 	return env.engine.include(url, includeParameters, env)
 }

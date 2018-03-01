@@ -14,6 +14,9 @@ type environment struct {
 
 	propertyMetadataMap map[string]*PropertyMetadata // mapping of property paths and metadata
 	propertyStack       *environmentStack
+
+	// track reference recipients. Map of reference to array of recipients
+	referenceRecipients map[string][]string
 }
 
 // newEnvironment creates a new environment object
@@ -24,6 +27,7 @@ func newEnvironment(engine *TemplateEngine, options *Options) *environment {
 		options:             options,
 		propertyMetadataMap: make(map[string]*PropertyMetadata),
 		propertyStack:       newStack(10),
+		referenceRecipients: make(map[string][]string),
 	}
 
 	return env
@@ -86,9 +90,9 @@ func (env *environment) pushProperty(property string) string {
 }
 
 // popProperty
-func (env *environment) popProperty() error {
-	_, err := env.propertyStack.pop()
-	return err
+func (env *environment) popProperty() (string, error) {
+	prop, err := env.propertyStack.pop()
+	return prop.(string), err
 }
 
 // fillPropertyMetadata
@@ -168,6 +172,41 @@ func (env *environment) getCurrentPropertyPath() string {
 		propertyPath[i] = property.(string)
 	}
 	return strings.Join(propertyPath, ".")
+}
+
+// captureReferenceRecipient
+func (env *environment) captureReferenceRecipient(reference Reference) {
+	recipient := env.getCurrentPropertyPath()
+
+	// if we are part of an operator eval like $variables or $parameters or parameters of an $include then bail
+	if env.propertyPathHasOperator(recipient) {
+		return
+	}
+
+	allRecipients := env.referenceRecipients[reference.getTarget()]
+	if allRecipients == nil {
+		allRecipients = []string{recipient}
+	} else {
+		// append recipient to array
+		allRecipients = append(allRecipients, recipient)
+	}
+
+	env.referenceRecipients[reference.getTarget()] = allRecipients
+
+}
+
+// propertyPathHasOperator
+func (env *environment) propertyPathHasOperator(propertyPath string) bool {
+	parts := strings.Split(propertyPath, ".")
+	// ensure that this is a valid recipient
+	for _, part := range parts {
+		for operatorKey, _ := range env.engine.operatorMap {
+			if part == operatorKey {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 // environment stack

@@ -71,24 +71,20 @@ func NewEngine() *TemplateEngine {
 
 	operatorConfigs := []*operatorConfig{
 		{
-			key:                   "$parameters",
-			evaluator:             &ParametersEvaluator{},
-			appendToPropertyStack: true,
+			key:       "$parameters",
+			evaluator: &ParametersEvaluator{},
 		},
 		{
-			key:                   "$variables",
-			evaluator:             &VariablesEvaluator{},
-			appendToPropertyStack: true,
+			key:       "$variables",
+			evaluator: &VariablesEvaluator{},
 		},
 		{
-			key:                   "$reference",
-			evaluator:             &ReferenceEvaluator{},
-			appendToPropertyStack: true,
+			key:       "$reference",
+			evaluator: &ReferenceEvaluator{},
 		},
 		{
-			key:                   "$include",
-			evaluator:             &IncludeEvaluator{},
-			appendToPropertyStack: false,
+			key:       "$include",
+			evaluator: &IncludeEvaluator{},
 		},
 	}
 
@@ -152,18 +148,30 @@ func (engine *TemplateEngine) Eval(o interface{}, parameters map[string]interfac
 // eval evaluates the specified object
 func (engine *TemplateEngine) eval(o interface{}, env *environment) (interface{}, error) {
 
+	var result interface{}
+	var err error
 	if valMap, isMap := o.(map[string]interface{}); isMap { // Maps
-		return engine.evalMap(valMap, env)
+		result, err = engine.evalMap(valMap, env)
 
 	} else if valArr, isArray := o.([]interface{}); isArray { // Arrays
-		return engine.evalArray(valArr, env)
+		result, err = engine.evalArray(valArr, env)
 
 	} else if stringVal, isString := o.(string); isString { // Strings
-		return engine.evalString(stringVal, env)
+		result, err = engine.evalString(stringVal, env)
 
+	} else {
+		// Default, just return the value as is
+		result = o
 	}
-	// Default, just return the value as is
-	return o, nil
+
+	if err != nil {
+		return nil, err
+	}
+
+	// process references in result
+	engine.processReferencesInEvalResult(result, env)
+
+	return result, nil
 }
 
 // include includes and evaluates the template file specified in the url
@@ -248,16 +256,13 @@ func (engine *TemplateEngine) evalOperatorsInMap(m map[string]interface{}, env *
 
 			// push the the current operator to the property stack
 			currentPropertyPath := env.getCurrentPropertyPath()
-			if operator.appendToPropertyStack {
-				currentPropertyPath = env.pushProperty(operator.key)
-			}
+
+			currentPropertyPath = env.pushProperty(operator.key)
 
 			evalResult, err := operator.evaluator.eval(operand, env)
 
-			// pop property if we pushed it
-			if operator.appendToPropertyStack {
-				env.popProperty()
-			}
+			// pop property
+			env.popProperty()
 
 			if err != nil { // return error
 				return nil, wrapWithPropertyEvalError(err, currentPropertyPath, env)
@@ -328,16 +333,24 @@ func (engine *TemplateEngine) evalArray(arr []interface{}, env *environment) ([]
 // evaluates a string
 func (engine *TemplateEngine) evalString(s string, env *environment) (interface{}, error) {
 	// eval expression
-	return evalStringExpression(s, env.parametersAndVariables()), nil
+	result := evalStringExpression(s, env.parametersAndVariables())
+
+	// string evaluation results have a special handling
+
+	// return result with no errors (not yet)
+	return result, nil
+}
+
+// processStringEvalResult
+func (engine *TemplateEngine) processReferencesInEvalResult(result interface{}, env *environment) {
+	if reference, isRef := result.(Reference); isRef {
+		env.captureReferenceRecipient(reference)
+	}
 }
 
 // processIncludeResult
 func (engine *TemplateEngine) processIncludeResult(result map[string]interface{}, template *Template, env *environment) error {
-	references, err := findReferencesInTemplate(template, result, env)
-
-	if err != nil {
-		return err
-	}
+	references := findReferencesInTemplate(template, env)
 
 	if len(references) > 0 {
 		result[templateReferencesKey] = references
