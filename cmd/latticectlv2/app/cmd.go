@@ -3,29 +3,40 @@ package app
 import (
 	"github.com/mlab-lattice/system/pkg/cli/command"
 	"github.com/mlab-lattice/system/pkg/cli/latticectl"
+	"github.com/mlab-lattice/system/pkg/cli/latticectl/commands/context"
 	"github.com/mlab-lattice/system/pkg/cli/latticectl/commands/systems"
 	"github.com/mlab-lattice/system/pkg/cli/latticectl/commands/systems/deploys"
 )
 
-var Cmd = command.BaseCommand{
-	Name:  "latticectl",
-	Short: "command line utility for interacting with lattice clusters and systems",
-	Subcommands: []command.Command{
+var cmd = &latticectl.BaseCommand{
+	Name:    "latticectl",
+	Short:   "command line utility for interacting with lattice clusters and systems",
+	Client:  latticectl.DefaultLatticeClient,
+	Context: &latticectl.DefaultFileContext{},
+	Subcommands: []command.Command2{
+		&context.Command{
+			Subcommands: []command.Command2{
+				&context.GetCommand{},
+			},
+		},
 		&systems.Command{
-			Client:  latticectl.DefaultLatticeClient,
-			Context: &latticectl.DefaultFileContext{},
-			Subcommands: []latticectl.LatticeCommand{
+			Subcommands: []command.Command2{
 				&systems.CreateCommand{},
 				&systems.GetCommand{},
 				&systems.DeleteCommand{},
 				&systems.BuildCommand{},
 				&systems.DeployCommand{},
 				&deploys.Command{
-					Subcommands: []latticectl.LatticeCommand{
+					Subcommands: []command.Command2{
 						&deploys.GetCommand{},
 					},
 				},
 			},
 		},
 	},
+}
+
+func Execute() {
+	//command.Execute(cmd)
+	command.ExecuteColon(cmd)
 }

@@ -12,8 +12,7 @@ type SystemCommand struct {
 	Flags       command.Flags
 	PreRun      func()
 	Run         func(args []string, ctx SystemCommandContext)
-	Subcommands []LatticeCommand
-	*BaseLatticeCommand
+	Subcommands []command.Command2
 }
 
 type SystemCommandContext interface {
@@ -30,7 +29,7 @@ func (c *systemCommandContext) SystemID() types.SystemID {
 	return c.systemID
 }
 
-func (c *SystemCommand) Init() error {
+func (c *SystemCommand) BaseCommand() (*command.BaseCommand2, error) {
 	var systemID string
 	systemNameFlag := &command.StringFlag{
 		Name:     "system",
@@ -39,7 +38,7 @@ func (c *SystemCommand) Init() error {
 	}
 	flags := append(c.Flags, systemNameFlag)
 
-	c.BaseLatticeCommand = &BaseLatticeCommand{
+	cmd := &LatticeCommand{
 		Name:   c.Name,
 		Short:  c.Short,
 		Args:   c.Args,
@@ -55,5 +54,58 @@ func (c *SystemCommand) Init() error {
 		Subcommands: c.Subcommands,
 	}
 
-	return c.BaseLatticeCommand.Init()
+	return cmd.BaseCommand()
 }
+
+//type SystemCommand struct {
+//	Name        string
+//	Short       string
+//	Args        command.Args
+//	Flags       command.Flags
+//	PreRun      func()
+//	Run         func(args []string, ctx SystemCommandContext)
+//	Subcommands []Command
+//	*LatticeCommand
+//}
+//
+//type SystemCommandContext interface {
+//	LatticeCommandContext
+//	SystemID() types.SystemID
+//}
+//
+//type systemCommandContext struct {
+//	LatticeCommandContext
+//	systemID types.SystemID
+//}
+//
+//func (c *systemCommandContext) SystemID() types.SystemID {
+//	return c.systemID
+//}
+//
+//func (c *SystemCommand) Init() error {
+//	var systemID string
+//	systemNameFlag := &command.StringFlag{
+//		Name:     "system",
+//		Required: true,
+//		Target:   &systemID,
+//	}
+//	flags := append(c.Flags, systemNameFlag)
+//
+//	c.LatticeCommand = &LatticeCommand{
+//		Name:   c.Name,
+//		Short:  c.Short,
+//		Args:   c.Args,
+//		Flags:  flags,
+//		PreRun: c.PreRun,
+//		Run: func(args []string, lctx LatticeCommandContext) {
+//			ctx := &systemCommandContext{
+//				LatticeCommandContext: lctx,
+//				systemID:              types.SystemID(systemID),
+//			}
+//			c.Run(args, ctx)
+//		},
+//		Subcommands: c.Subcommands,
+//	}
+//
+//	return c.LatticeCommand.Init()
+//}

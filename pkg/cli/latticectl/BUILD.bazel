@@ -4,6 +4,7 @@ go_library(
     name = "go_default_library",
     srcs = [
         "build_command.go",
+        "command.go",
         "context.go",
         "deploy_command.go",
         "lattice_command.go",

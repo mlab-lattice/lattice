@@ -6,18 +6,14 @@ import (
 
 	"github.com/mlab-lattice/system/pkg/cli/command"
 	"github.com/mlab-lattice/system/pkg/cli/latticectl"
-	"github.com/mlab-lattice/system/pkg/types"
 )
 
 type BuildCommand struct {
-	PreRun         func()
-	ContextCreator func(ctx latticectl.LatticeCommandContext, systemID types.SystemID) latticectl.SystemCommandContext
-	*latticectl.SystemCommand
 }
 
-func (c *BuildCommand) Init() error {
+func (c *BuildCommand) BaseCommand() (*command.BaseCommand2, error) {
 	var version string
-	c.SystemCommand = &latticectl.SystemCommand{
+	cmd := &latticectl.SystemCommand{
 		Name: "build",
 		Flags: []command.Flag{
 			&command.StringFlag{
@@ -31,7 +27,7 @@ func (c *BuildCommand) Init() error {
 		},
 	}
 
-	return c.SystemCommand.Init()
+	return cmd.BaseCommand()
 }
 
 func (c *BuildCommand) run(ctx latticectl.SystemCommandContext, version string) {

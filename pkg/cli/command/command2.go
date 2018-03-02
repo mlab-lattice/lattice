@@ -5,30 +5,70 @@ import (
 	"os"
 
 	"github.com/spf13/cobra"
+	"log"
 )
 
-var OnInitialize = cobra.OnInitialize
-
-type Command interface {
-	Init() error
-	name() string
-	run() func(args []string)
-	subcommands() []Command
-	cobra() *cobra.Command
+type Command2 interface {
+	BaseCommand() (*BaseCommand2, error)
 }
 
-type BaseCommand struct {
+func Execute(c Command2) {
+	cmd, err := c.BaseCommand()
+	if err != nil {
+		log.Panic(err)
+	}
+	cmd.Execute()
+}
+
+func ExecuteColon(c Command2) {
+	cmd, err := c.BaseCommand()
+	if err != nil {
+		log.Panic(err)
+	}
+	cmd.ExecuteColon()
+}
+
+type BaseCommand2 struct {
 	Name        string
 	Short       string
 	Args        Args
 	Flags       Flags
 	PreRun      func()
 	Run         func(args []string)
-	Subcommands []Command
+	Subcommands []Command2
 	cobraCmd    *cobra.Command
+	subcommands map[Command2]*BaseCommand2
 }
 
-func (c *BaseCommand) Execute() {
+func (c *BaseCommand2) BaseCommand() (*BaseCommand2, error) {
+	return c, nil
+}
+
+func (c *BaseCommand2) mergeSubcommands(cmds map[Command2]*BaseCommand2) {
+	for cmd, bc := range cmds {
+		if _, ok := c.subcommands[cmd]; ok {
+			continue
+		}
+
+		c.subcommands[cmd] = bc
+	}
+}
+
+func (c *BaseCommand2) getSubcommand(cmd Command2) (*BaseCommand2, error) {
+	if bc, ok := c.subcommands[cmd]; ok {
+		return bc, nil
+	}
+
+	bc, err := cmd.BaseCommand()
+	if err != nil {
+		return nil, err
+	}
+
+	c.subcommands[cmd] = bc
+	return bc, nil
+}
+
+func (c *BaseCommand2) Execute() {
 	if err := c.validate(); err != nil {
 		c.exit(err)
 	}
@@ -40,7 +80,7 @@ func (c *BaseCommand) Execute() {
 	c.exit(c.cobraCmd.Execute())
 }
 
-func (c *BaseCommand) Init() error {
+func (c *BaseCommand2) Init() error {
 	c.cobraCmd = &cobra.Command{
 		Use:   c.Name,
 		Short: c.Short,
@@ -68,23 +108,7 @@ func (c *BaseCommand) Init() error {
 	return nil
 }
 
-func (c *BaseCommand) name() string {
-	return c.Name
-}
-
-func (c *BaseCommand) run() func([]string) {
-	return c.Run
-}
-
-func (c *BaseCommand) subcommands() []Command {
-	return c.Subcommands
-}
-
-func (c *BaseCommand) cobra() *cobra.Command {
-	return c.cobraCmd
-}
-
-func (c *BaseCommand) validate() error {
+func (c *BaseCommand2) validate() error {
 	if c.Name == "" {
 		return fmt.Errorf("name must be set")
 	}
@@ -92,7 +116,7 @@ func (c *BaseCommand) validate() error {
 	return nil
 }
 
-func (c *BaseCommand) addArgs() error {
+func (c *BaseCommand2) addArgs() error {
 	if err := c.Args.validate(); err != nil {
 		return err
 	}
@@ -106,7 +130,7 @@ func (c *BaseCommand) addArgs() error {
 	return nil
 }
 
-func (c *BaseCommand) addFlags() error {
+func (c *BaseCommand2) addFlags() error {
 	names := make(map[string]struct{})
 	for _, flag := range c.Flags {
 		if err := flag.validate(); err != nil {
@@ -124,29 +148,34 @@ func (c *BaseCommand) addFlags() error {
 	return nil
 }
 
-func (c *BaseCommand) addSubcommands() error {
+func (c *BaseCommand2) addSubcommands() error {
 	names := make(map[string]struct{})
 	for _, subcommand := range c.Subcommands {
-		if err := subcommand.Init(); err != nil {
+		//cmd, err := subcommand.BaseCommand()
+		cmd, err := c.getSubcommand(subcommand)
+		if err != nil {
 			return err
 		}
 
-		if _, ok := names[subcommand.name()]; ok {
+		if _, ok := names[cmd.Name]; ok {
 			return fmt.Errorf("multiple subcommands with the name %v", c.Name)
 		}
 
-		if err := subcommand.Init(); err != nil {
+		cmd.subcommands = c.subcommands
+		if err := cmd.Init(); err != nil {
 			return fmt.Errorf("error initializing subcommand %v: %v", c.Name, err)
 		}
+		c.mergeSubcommands(cmd.subcommands)
 
-		c.cobraCmd.AddCommand(subcommand.cobra())
-		names[subcommand.name()] = struct{}{}
+		c.cobraCmd.AddCommand(cmd.cobraCmd)
+		names[cmd.Name] = struct{}{}
 	}
 
 	return nil
 }
 
-func (c *BaseCommand) ExecuteColon() {
+func (c *BaseCommand2) ExecuteColon() {
+	c.subcommands = make(map[Command2]*BaseCommand2)
 	if err := c.Init(); err != nil {
 		c.exit(err)
 	}
@@ -158,7 +187,7 @@ func (c *BaseCommand) ExecuteColon() {
 	c.exit(c.cobraCmd.Execute())
 }
 
-func (c *BaseCommand) initColon() error {
+func (c *BaseCommand2) initColon() error {
 	c.cobraCmd = &cobra.Command{
 		Use:   c.Name,
 		Short: c.Short,
@@ -173,17 +202,34 @@ func (c *BaseCommand) initColon() error {
 	}
 
 	for _, subcommand := range c.Subcommands {
-		if err := subcommand.Init(); err != nil {
+		//cmd, err := subcommand.BaseCommand()
+		cmd, err := c.getSubcommand(subcommand)
+		if err != nil {
+			return err
+		}
+
+		if err := cmd.Init(); err != nil {
 			return err
 		}
 	}
 
-	for _, subcommand := range getSubcommands("", c.Subcommands) {
+	subcommands, err := c.getSubcommands2("", c.Subcommands)
+	if err != nil {
+		return err
+	}
+
+	for _, subcommand := range subcommands {
+		//cmd, err := subcommand.BaseCommand()
+		cmd, err := c.getSubcommand(subcommand)
+		if err != nil {
+			return err
+		}
+
 		// why does this need to be an immediately invoked function?
 		// answer here: https://www.ardanlabs.com/blog/2014/06/pitfalls-with-closures-in-go.html
 		// (n.b. subcommand.Name will be copied here since it's a string, but since
 		//  subcommand.Run is a pointer, we need to do this trickery)
-		subcommand.cobra().Run = func(run func([]string)) func(*cobra.Command, []string) {
+		cmd.cobraCmd.Run = func(run func([]string)) func(*cobra.Command, []string) {
 			return func(cmd *cobra.Command, args []string) {
 				if run == nil {
 					cmd.Help()
@@ -192,30 +238,42 @@ func (c *BaseCommand) initColon() error {
 
 				run(args)
 			}
-		}(subcommand.run())
+		}(cmd.Run)
 
-		c.cobraCmd.AddCommand(subcommand.cobra())
+		c.cobraCmd.AddCommand(cmd.cobraCmd)
 	}
 
 	return nil
 }
 
-func getSubcommands(path string, subcommands []Command) []Command {
-	var ret []Command
+func (c *BaseCommand2) getSubcommands2(path string, subcommands []Command2) ([]Command2, error) {
+	var ret []Command2
 	for _, subcommand := range subcommands {
-		name := fmt.Sprintf("%v%v", path, subcommand.name())
-		subcommand.cobra().Use = name
+		//cmd, err := subcommand.BaseCommand()
+		cmd, err := c.getSubcommand(subcommand)
+		if err != nil {
+			return nil, err
+		}
+
+		name := fmt.Sprintf("%v%v", path, cmd.Name)
+		cmd.cobraCmd.Use = name
 		ret = append(ret, subcommand)
-		for _, subsubcommand := range getSubcommands(fmt.Sprintf("%v:", name), subcommand.subcommands()) {
+
+		subsubcommands, err := c.getSubcommands2(fmt.Sprintf("%v:", name), cmd.Subcommands)
+		if err != nil {
+			return nil, err
+		}
+
+		for _, subsubcommand := range subsubcommands {
 			ret = append(ret, subsubcommand)
 		}
 
 	}
 
-	return ret
+	return ret, nil
 }
 
-func (c *BaseCommand) exit(err error) {
+func (c *BaseCommand2) exit(err error) {
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)

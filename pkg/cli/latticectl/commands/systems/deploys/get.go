@@ -4,24 +4,22 @@ import (
 	"fmt"
 	"log"
 
+	"github.com/mlab-lattice/system/pkg/cli/command"
 	"github.com/mlab-lattice/system/pkg/cli/latticectl"
 )
 
 type GetCommand struct {
-	PreRun func()
-	*latticectl.DeployCommand
 }
 
-func (c *GetCommand) Init() error {
-	c.DeployCommand = &latticectl.DeployCommand{
-		Name:   "get",
-		PreRun: c.PreRun,
+func (c *GetCommand) BaseCommand() (*command.BaseCommand2, error) {
+	cmd := &latticectl.DeployCommand{
+		Name: "get",
 		Run: func(args []string, ctx latticectl.DeployCommandContext) {
 			c.run(ctx)
 		},
 	}
 
-	return c.DeployCommand.Init()
+	return cmd.BaseCommand()
 }
 
 func (c *GetCommand) run(ctx latticectl.DeployCommandContext) {

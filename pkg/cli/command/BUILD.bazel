@@ -5,6 +5,7 @@ go_library(
     srcs = [
         "arg.go",
         "command.go",
+        "command2.go",
         "flag.go",
         "simple_flag.go",
     ],

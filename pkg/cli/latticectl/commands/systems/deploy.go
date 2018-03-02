@@ -10,14 +10,12 @@ import (
 )
 
 type DeployCommand struct {
-	PreRun func()
-	*latticectl.SystemCommand
 }
 
-func (c *DeployCommand) Init() error {
+func (c *DeployCommand) BaseCommand() (*command.BaseCommand2, error) {
 	var buildID string
 	var version string
-	c.SystemCommand = &latticectl.SystemCommand{
+	cmd := &latticectl.SystemCommand{
 		Name: "deploy",
 		Flags: []command.Flag{
 			&command.StringFlag{
@@ -36,7 +34,7 @@ func (c *DeployCommand) Init() error {
 		},
 	}
 
-	return c.SystemCommand.Init()
+	return cmd.BaseCommand()
 }
 
 func (c *DeployCommand) run(

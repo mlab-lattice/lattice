@@ -5,6 +5,5 @@ import (
 )
 
 func main() {
-	//app.Cmd.Execute()
-	app.Cmd.ExecuteColon()
+	app.Execute()
 }

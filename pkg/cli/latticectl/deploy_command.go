@@ -12,8 +12,7 @@ type DeployCommand struct {
 	Flags       command.Flags
 	PreRun      func()
 	Run         func(args []string, ctx DeployCommandContext)
-	Subcommands []LatticeCommand
-	*SystemCommand
+	Subcommands []command.Command2
 }
 
 func (c *DeployCommand) deployBase() *DeployCommand {
@@ -34,7 +33,7 @@ func (c *deployCommandContext) DeployID() types.SystemRolloutID {
 	return c.deployID
 }
 
-func (c *DeployCommand) Init() error {
+func (c *DeployCommand) BaseCommand() (*command.BaseCommand2, error) {
 	var deployID string
 	deployIDFlag := &command.StringFlag{
 		Name:     "deploy",
@@ -43,7 +42,7 @@ func (c *DeployCommand) Init() error {
 	}
 	flags := append(c.Flags, deployIDFlag)
 
-	c.SystemCommand = &SystemCommand{
+	cmd := &SystemCommand{
 		Name:   c.Name,
 		Short:  c.Short,
 		Args:   c.Args,
@@ -59,5 +58,62 @@ func (c *DeployCommand) Init() error {
 		Subcommands: c.Subcommands,
 	}
 
-	return c.SystemCommand.Init()
+	return cmd.BaseCommand()
 }
+
+//type DeployCommand struct {
+//	Name        string
+//	Short       string
+//	Args        command.Args
+//	Flags       command.Flags
+//	PreRun      func()
+//	Run         func(args []string, ctx DeployCommandContext)
+//	Subcommands []Command
+//	*SystemCommand
+//}
+//
+//func (c *DeployCommand) deployBase() *DeployCommand {
+//	return c
+//}
+//
+//type DeployCommandContext interface {
+//	SystemCommandContext
+//	DeployID() types.SystemRolloutID
+//}
+//
+//type deployCommandContext struct {
+//	SystemCommandContext
+//	deployID types.SystemRolloutID
+//}
+//
+//func (c *deployCommandContext) DeployID() types.SystemRolloutID {
+//	return c.deployID
+//}
+//
+//func (c *DeployCommand) Init() error {
+//	var deployID string
+//	deployIDFlag := &command.StringFlag{
+//		Name:     "deploy",
+//		Required: true,
+//		Target:   &deployID,
+//	}
+//	flags := append(c.Flags, deployIDFlag)
+//
+//	c.SystemCommand = &SystemCommand{
+//		Name:   c.Name,
+//		Short:  c.Short,
+//		Args:   c.Args,
+//		Flags:  flags,
+//		PreRun: c.PreRun,
+//		Run: func(args []string, sctx SystemCommandContext) {
+//			ctx := &deployCommandContext{
+//				SystemCommandContext: sctx,
+//				deployID:             types.SystemRolloutID(deployID),
+//			}
+//			c.Run(args, ctx)
+//		},
+//		Subcommands: c.Subcommands,
+//	}
+//
+//	return c.SystemCommand.Init()
+//}
