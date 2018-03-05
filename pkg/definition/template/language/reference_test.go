@@ -3,6 +3,8 @@ package language
 import (
 	"fmt"
 	"testing"
+
+	"reflect"
 )
 
 // TestReference
@@ -61,10 +63,57 @@ func templateReferenceTest(t *testing.T) {
 		t.Fatalf("Got error: %v", err)
 	}
 
+	fmt.Println("Evaluation result")
 	prettyPrint(result.Value())
 
-}
+	// validate result
 
+	resultMap := result.ValueAsMap()
+
+	ref1 := resultMap["__references"]
+	if ref1 == nil {
+		t.Fatalf("No __references populated in results")
+	}
+
+	if _, isArray := ref1.([]interface{}); !isArray {
+		t.Fatalf("__references should be an array")
+	}
+
+	references := ref1.([]interface{})
+	if len(references) != 3 {
+		t.Fatalf("invalid length for __references")
+	}
+
+	expected := []interface{}{
+		map[string]interface{}{
+			"recipient": "i",
+			"target":    "a.x",
+		},
+		map[string]interface{}{
+			"recipient": "b.c.foo",
+			"target":    "a.x",
+		},
+		map[string]interface{}{
+			"recipient": "b.bar",
+			"target":    "a.x",
+		},
+	}
+
+	matches := 0
+	for _, ref := range references {
+		for _, exp := range expected {
+			if reflect.DeepEqual(ref, exp) {
+				matches++
+			}
+		}
+
+	}
+
+	if matches != 3 {
+		t.Fatalf("invalid __references. Found %v, Expected %v", references, expected)
+	}
+
+}
 func setupReferenceTest() {
 	fmt.Println("Setting up reference test")
 	initTestRepo()

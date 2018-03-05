@@ -200,7 +200,7 @@ func (env *environment) propertyPathHasOperator(propertyPath string) bool {
 	parts := strings.Split(propertyPath, ".")
 	// ensure that this is a valid recipient
 	for _, part := range parts {
-		for operatorKey, _ := range env.engine.operatorMap {
+		for operatorKey := range env.engine.operatorMap {
 			if part == operatorKey {
 				return true
 			}
