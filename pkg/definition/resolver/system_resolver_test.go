@@ -47,7 +47,7 @@ func testV1(t *testing.T) {
 		t.Fatalf("Got error calling NewSystemResolver: %v", err)
 	}
 
-	defNode, err := res.ResolveDefinition(path.Join(testRepoURI1, "system.json"), nil)
+	defNode, err := res.ResolveDefinition(fmt.Sprintf("%v/%v", testRepoURI1, "system.json"), nil)
 	if err != nil {
 		t.Fatalf("Error is not nil: %v", err)
 	}
@@ -79,7 +79,7 @@ func testV2(t *testing.T) {
 		t.Fatalf("Got error calling NewSystemResolver: %v", err)
 	}
 
-	defNode, err := res.ResolveDefinition(path.Join(testRepoURI2, "system.json"), nil)
+	defNode, err := res.ResolveDefinition(fmt.Sprintf("%v/%v", testRepoURI2, "system.json"), nil)
 	if err != nil {
 		t.Error("Error is not nil: ", err)
 	}
