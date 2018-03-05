@@ -1,12 +1,12 @@
 package language
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path"
 	"time"
 
-	"github.com/mlab-lattice/system/bazel-system/external/go_sdk/src/fmt"
 	gogit "gopkg.in/src-d/go-git.v4"
 	"gopkg.in/src-d/go-git.v4/plumbing/object"
 )
@@ -15,9 +15,8 @@ const (
 	testRepoDir = "/tmp/lattice-core/test/template-engine/my-repo"
 	testWorkDir = "/tmp/lattice-core/test/engine"
 
-	baseFileURL   = "file:///tmp/lattice-core/test/template-engine/my-repo/.git"
+	baseFileURL = "file:///tmp/lattice-core/test/template-engine/my-repo/.git"
 )
-
 
 func initTestRepo() {
 	// ensure work directory
@@ -41,7 +40,6 @@ func commitTestFile(fileName string, jsonStr string) {
 	workTree, _ := repo.Worktree()
 
 	workTree.Add(fileName)
-
 
 	// commit
 	workTree.Commit("test", &gogit.CommitOptions{
