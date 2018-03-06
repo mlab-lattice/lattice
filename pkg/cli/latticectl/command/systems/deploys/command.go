@@ -5,6 +5,7 @@ import (
 	"log"
 
 	"github.com/mlab-lattice/system/pkg/cli/latticectl"
+	lctlcommand "github.com/mlab-lattice/system/pkg/cli/latticectl/command"
 	"github.com/mlab-lattice/system/pkg/managerapi/client"
 )
 
@@ -13,9 +14,9 @@ type Command struct {
 }
 
 func (c *Command) Base() (*latticectl.BaseCommand, error) {
-	cmd := &latticectl.SystemCommand{
+	cmd := &lctlcommand.SystemCommand{
 		Name: "deploys",
-		Run: func(ctx latticectl.SystemCommandContext, args []string) {
+		Run: func(ctx lctlcommand.SystemCommandContext, args []string) {
 			ListDeploys(ctx.Client().Systems().Rollouts(ctx.SystemID()))
 		},
 		Subcommands: c.Subcommands,

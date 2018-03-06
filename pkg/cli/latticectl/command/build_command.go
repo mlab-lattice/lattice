@@ -1,7 +1,8 @@
-package latticectl
+package command
 
 import (
 	"github.com/mlab-lattice/system/pkg/cli/command"
+	"github.com/mlab-lattice/system/pkg/cli/latticectl"
 	"github.com/mlab-lattice/system/pkg/types"
 )
 
@@ -11,7 +12,7 @@ type BuildCommand struct {
 	Args        command.Args
 	Flags       command.Flags
 	Run         func(ctx BuildCommandContext, args []string)
-	Subcommands []Command
+	Subcommands []latticectl.Command
 }
 
 type BuildCommandContext interface {
@@ -28,7 +29,7 @@ func (c *buildCommandContext) BuildID() types.SystemBuildID {
 	return c.buildID
 }
 
-func (c *BuildCommand) Base() (*BaseCommand, error) {
+func (c *BuildCommand) Base() (*latticectl.BaseCommand, error) {
 	var buildID string
 	buildIDFlag := &command.StringFlag{
 		Name:     "build",

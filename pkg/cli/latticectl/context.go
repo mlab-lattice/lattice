@@ -4,11 +4,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"os"
 	"os/user"
 
 	"github.com/mlab-lattice/system/pkg/cli/latticectl/config"
 	"github.com/mlab-lattice/system/pkg/types"
-	"os"
 )
 
 type Context interface {

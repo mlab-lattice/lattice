@@ -8,6 +8,7 @@ import (
 	"github.com/mlab-lattice/system/pkg/cli/color"
 	"github.com/mlab-lattice/system/pkg/cli/command"
 	"github.com/mlab-lattice/system/pkg/cli/latticectl"
+	lctlcommand "github.com/mlab-lattice/system/pkg/cli/latticectl/command"
 	"github.com/mlab-lattice/system/pkg/cli/printer"
 	"github.com/mlab-lattice/system/pkg/managerapi/client"
 	"github.com/mlab-lattice/system/pkg/types"
@@ -24,14 +25,14 @@ var ListSystemSupportedFormats = []printer.Format{
 }
 
 func (c *Command) Base() (*latticectl.BaseCommand, error) {
-	output := &latticectl.OutputFlag{
+	output := &lctlcommand.OutputFlag{
 		SupportedFormats: ListSystemSupportedFormats,
 	}
 
-	cmd := &latticectl.LatticeCommand{
+	cmd := &lctlcommand.LatticeCommand{
 		Name:  "systems",
 		Flags: command.Flags{output.Flag()},
-		Run: func(ctx latticectl.LatticeCommandContext, args []string) {
+		Run: func(ctx lctlcommand.LatticeCommandContext, args []string) {
 			format, err := output.Value()
 			if err != nil {
 				log.Fatal(err)

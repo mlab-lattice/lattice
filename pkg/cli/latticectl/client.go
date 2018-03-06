@@ -4,4 +4,4 @@ import (
 	"github.com/mlab-lattice/system/pkg/managerapi/client"
 )
 
-type LatticeClientGenerator func(lattice string) client.Interface
+type ClientFactory func(lattice string) client.Interface

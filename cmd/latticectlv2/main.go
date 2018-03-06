@@ -2,10 +2,10 @@ package main
 
 import (
 	"github.com/mlab-lattice/system/pkg/cli/latticectl"
-	"github.com/mlab-lattice/system/pkg/cli/latticectl/commands/context"
-	"github.com/mlab-lattice/system/pkg/cli/latticectl/commands/local"
-	"github.com/mlab-lattice/system/pkg/cli/latticectl/commands/systems"
-	"github.com/mlab-lattice/system/pkg/cli/latticectl/commands/systems/deploys"
+	"github.com/mlab-lattice/system/pkg/cli/latticectl/command/context"
+	"github.com/mlab-lattice/system/pkg/cli/latticectl/command/local"
+	"github.com/mlab-lattice/system/pkg/cli/latticectl/command/systems"
+	"github.com/mlab-lattice/system/pkg/cli/latticectl/command/systems/deploys"
 )
 
 func main() {

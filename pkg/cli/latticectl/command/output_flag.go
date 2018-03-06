@@ -1,4 +1,4 @@
-package latticectl
+package command
 
 import (
 	"fmt"

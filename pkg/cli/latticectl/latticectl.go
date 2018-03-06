@@ -14,7 +14,7 @@ func DefaultLatticeClient(lattice string) client.Interface {
 
 type Latticectl struct {
 	Root    Command
-	Client  LatticeClientGenerator
+	Client  ClientFactory
 	Context ContextManager
 }
 

@@ -5,6 +5,7 @@ import (
 	"log"
 
 	"github.com/mlab-lattice/system/pkg/cli/latticectl"
+	lctlcommand "github.com/mlab-lattice/system/pkg/cli/latticectl/command"
 	"github.com/mlab-lattice/system/pkg/managerapi/client"
 	"github.com/mlab-lattice/system/pkg/types"
 )
@@ -13,9 +14,9 @@ type GetCommand struct {
 }
 
 func (c *GetCommand) Base() (*latticectl.BaseCommand, error) {
-	cmd := &latticectl.SystemCommand{
+	cmd := &lctlcommand.SystemCommand{
 		Name: "get",
-		Run: func(ctx latticectl.SystemCommandContext, args []string) {
+		Run: func(ctx lctlcommand.SystemCommandContext, args []string) {
 			GetSystem(ctx.Client().Systems(), ctx.SystemID())
 		},
 	}
