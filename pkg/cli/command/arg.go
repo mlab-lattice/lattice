@@ -40,13 +40,15 @@ func (a Args) names() []string {
 	return names
 }
 
-func (a Args) min() int {
+func (a Args) num() (int, int) {
 	min := 0
+	max := 0
 	for _, arg := range a {
 		if arg.Required {
 			min++
 		}
+		max++
 	}
 
-	return min
+	return min, max
 }

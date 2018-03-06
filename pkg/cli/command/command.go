@@ -63,7 +63,11 @@ func (c *Command) addArgs() error {
 		c.cobraCmd.Use += fmt.Sprintf(" [%v]", arg.Name)
 	}
 
-	c.cobraCmd.Args = cobra.MinimumNArgs(c.Args.min())
+	min, max := c.Args.num()
+	c.cobraCmd.Args = cobra.RangeArgs(min, max)
+	if min == max {
+		c.cobraCmd.Args = cobra.ExactArgs(min)
+	}
 
 	return nil
 }
