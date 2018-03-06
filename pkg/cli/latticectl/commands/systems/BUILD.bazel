@@ -15,6 +15,7 @@ go_library(
     deps = [
         "//pkg/cli/command:go_default_library",
         "//pkg/cli/latticectl:go_default_library",
+        "//pkg/managerapi/client:go_default_library",
         "//pkg/types:go_default_library",
     ],
 )

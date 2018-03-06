@@ -6,13 +6,14 @@ import (
 
 	"github.com/mlab-lattice/system/pkg/cli/command"
 	"github.com/mlab-lattice/system/pkg/cli/latticectl"
+	"github.com/mlab-lattice/system/pkg/managerapi/client"
 	"github.com/mlab-lattice/system/pkg/types"
 )
 
 type DeployCommand struct {
 }
 
-func (c *DeployCommand) BaseCommand() (*command.BaseCommand2, error) {
+func (c *DeployCommand) Base() (*latticectl.BaseCommand, error) {
 	var buildID string
 	var version string
 	cmd := &latticectl.SystemCommand{
@@ -29,16 +30,17 @@ func (c *DeployCommand) BaseCommand() (*command.BaseCommand2, error) {
 				Target:   &version,
 			},
 		},
-		Run: func(args []string, ctx latticectl.SystemCommandContext) {
-			c.run(ctx, types.SystemBuildID(buildID), version)
+		Run: func(ctx latticectl.SystemCommandContext, args []string) {
+			systemID := ctx.SystemID()
+			DeploySystem(ctx.Client().Systems().Rollouts(systemID), types.SystemBuildID(buildID), version)
 		},
 	}
 
-	return cmd.BaseCommand()
+	return cmd.Base()
 }
 
-func (c *DeployCommand) run(
-	ctx latticectl.SystemCommandContext,
+func DeploySystem(
+	client client.RolloutClient,
 	buildID types.SystemBuildID,
 	version string,
 ) {
@@ -46,17 +48,15 @@ func (c *DeployCommand) run(
 		log.Panic("must provide either build or version")
 	}
 
-	systemID := ctx.SystemID()
-
 	var deployID types.SystemRolloutID
 	var err error
 	if buildID != "" {
 		if version != "" {
 			log.Panic("can only provide either build or version")
-			deployID, err = ctx.Client().Systems().Rollouts(systemID).CreateFromBuild(buildID)
+			deployID, err = client.CreateFromBuild(buildID)
 		}
 	} else {
-		deployID, err = ctx.Client().Systems().Rollouts(systemID).CreateFromVersion(version)
+		deployID, err = client.CreateFromVersion(version)
 	}
 
 	if err != nil {

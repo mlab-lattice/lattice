@@ -6,12 +6,13 @@ import (
 
 	"github.com/mlab-lattice/system/pkg/cli/command"
 	"github.com/mlab-lattice/system/pkg/cli/latticectl"
+	"github.com/mlab-lattice/system/pkg/managerapi/client"
 )
 
 type BuildCommand struct {
 }
 
-func (c *BuildCommand) BaseCommand() (*command.BaseCommand2, error) {
+func (c *BuildCommand) Base() (*latticectl.BaseCommand, error) {
 	var version string
 	cmd := &latticectl.SystemCommand{
 		Name: "build",
@@ -22,16 +23,16 @@ func (c *BuildCommand) BaseCommand() (*command.BaseCommand2, error) {
 				Target:   &version,
 			},
 		},
-		Run: func(args []string, ctx latticectl.SystemCommandContext) {
-			c.run(ctx, version)
+		Run: func(ctx latticectl.SystemCommandContext, args []string) {
+			BuildSystem(ctx.Client().Systems().SystemBuilds(ctx.SystemID()), version)
 		},
 	}
 
-	return cmd.BaseCommand()
+	return cmd.Base()
 }
 
-func (c *BuildCommand) run(ctx latticectl.SystemCommandContext, version string) {
-	buildID, err := ctx.Client().Systems().SystemBuilds(ctx.SystemID()).Create(version)
+func BuildSystem(client client.SystemBuildClient, version string) {
+	buildID, err := client.Create(version)
 	if err != nil {
 		log.Panic(err)
 	}

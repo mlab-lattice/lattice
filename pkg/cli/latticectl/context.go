@@ -31,7 +31,7 @@ func (c *DefaultContext) System() types.SystemID {
 
 type ContextManager interface {
 	Get() (Context, error)
-	Set(Context) error
+	Set(lattice string, system types.SystemID) error
 }
 
 type ConfigFileContext struct {
@@ -97,7 +97,7 @@ func (c *ConfigFileContext) Get() (Context, error) {
 	return ctx, nil
 }
 
-func (c *ConfigFileContext) Set(ctx Context) error {
+func (c *ConfigFileContext) Set(lattice string, system types.SystemID) error {
 	// Want to read the freshest version of the config before overwritting it.
 	// TODO: race condition here against setting other things in the config file
 	cfg, err := c.readConfig()
@@ -105,8 +105,8 @@ func (c *ConfigFileContext) Set(ctx Context) error {
 		return err
 	}
 
-	cfg.Context.Lattice = ctx.Lattice()
-	cfg.Context.System = ctx.System()
+	cfg.Context.Lattice = lattice
+	cfg.Context.System = system
 	return c.writeConfig(cfg)
 }
 
@@ -137,10 +137,10 @@ func (c *DefaultFileContext) Get() (Context, error) {
 	return c.ctx.Get()
 }
 
-func (c *DefaultFileContext) Set(ctx Context) error {
+func (c *DefaultFileContext) Set(lattice string, system types.SystemID) error {
 	if err := c.setPath(); err != nil {
 		return err
 	}
 
-	return c.ctx.Set(ctx)
+	return c.ctx.Set(lattice, system)
 }

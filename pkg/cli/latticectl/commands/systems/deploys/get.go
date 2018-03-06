@@ -4,26 +4,27 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/mlab-lattice/system/pkg/cli/command"
 	"github.com/mlab-lattice/system/pkg/cli/latticectl"
+	"github.com/mlab-lattice/system/pkg/managerapi/client"
+	"github.com/mlab-lattice/system/pkg/types"
 )
 
 type GetCommand struct {
 }
 
-func (c *GetCommand) BaseCommand() (*command.BaseCommand2, error) {
+func (c *GetCommand) Base() (*latticectl.BaseCommand, error) {
 	cmd := &latticectl.DeployCommand{
 		Name: "get",
-		Run: func(args []string, ctx latticectl.DeployCommandContext) {
-			c.run(ctx)
+		Run: func(ctx latticectl.DeployCommandContext, args []string) {
+			GetDeploy(ctx.Client().Systems().Rollouts(ctx.SystemID()), ctx.DeployID())
 		},
 	}
 
-	return cmd.BaseCommand()
+	return cmd.Base()
 }
 
-func (c *GetCommand) run(ctx latticectl.DeployCommandContext) {
-	deploy, err := ctx.Client().Systems().Rollouts(ctx.SystemID()).Get(ctx.DeployID())
+func GetDeploy(client client.RolloutClient, deployID types.SystemRolloutID) {
+	deploy, err := client.Get(deployID)
 	if err != nil {
 		log.Panic(err)
 	}

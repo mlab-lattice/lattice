@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/mlab-lattice/system/pkg/cli/command"
 	"github.com/mlab-lattice/system/pkg/cli/latticectl"
 	"github.com/mlab-lattice/system/pkg/types"
 )
@@ -12,18 +11,18 @@ import (
 type GetCommand struct {
 }
 
-func (c *GetCommand) BaseCommand() (*command.BaseCommand2, error) {
+func (c *GetCommand) Base() (*latticectl.BaseCommand, error) {
 	cmd := &latticectl.BaseCommand{
 		Name: "get",
-		Run: func(args []string, ctxm latticectl.ContextManager, client latticectl.LatticeClientGenerator) {
-			c.run(ctxm)
+		Run: func(lctl *latticectl.Latticectl, args []string) {
+			GetContext(lctl.Context)
 		},
 	}
 
-	return cmd.BaseCommand()
+	return cmd.Base()
 }
 
-func (c *GetCommand) run(ctxm latticectl.ContextManager) {
+func GetContext(ctxm latticectl.ContextManager) {
 	var lattice string
 	var system types.SystemID
 

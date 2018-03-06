@@ -4,28 +4,28 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/mlab-lattice/system/pkg/cli/command"
 	"github.com/mlab-lattice/system/pkg/cli/latticectl"
+	"github.com/mlab-lattice/system/pkg/managerapi/client"
 )
 
 type Command struct {
-	Subcommands []command.Command2
+	Subcommands []latticectl.Command
 }
 
-func (c *Command) BaseCommand() (*command.BaseCommand2, error) {
+func (c *Command) Base() (*latticectl.BaseCommand, error) {
 	cmd := &latticectl.SystemCommand{
 		Name: "deploys",
-		Run: func(args []string, ctx latticectl.SystemCommandContext) {
-			c.run(ctx)
+		Run: func(ctx latticectl.SystemCommandContext, args []string) {
+			ListDeploys(ctx.Client().Systems().Rollouts(ctx.SystemID()))
 		},
 		Subcommands: c.Subcommands,
 	}
 
-	return cmd.BaseCommand()
+	return cmd.Base()
 }
 
-func (c *Command) run(ctx latticectl.SystemCommandContext) {
-	deploys, err := ctx.Client().Systems().Rollouts(ctx.SystemID()).List()
+func ListDeploys(client client.RolloutClient) {
+	deploys, err := client.List()
 	if err != nil {
 		log.Panic(err)
 	}

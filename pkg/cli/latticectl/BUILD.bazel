@@ -4,10 +4,12 @@ go_library(
     name = "go_default_library",
     srcs = [
         "build_command.go",
+        "client_generator.go",
         "command.go",
         "context.go",
         "deploy_command.go",
         "lattice_command.go",
+        "latticectl.go",
         "system_command.go",
     ],
     importpath = "github.com/mlab-lattice/system/pkg/cli/latticectl",

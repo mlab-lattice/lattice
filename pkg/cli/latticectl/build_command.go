@@ -10,10 +10,8 @@ type BuildCommand struct {
 	Short       string
 	Args        command.Args
 	Flags       command.Flags
-	PreRun      func()
-	Run         func(args []string, ctx BuildCommandContext)
-	Subcommands []command.Command2
-	*command.BaseCommand2
+	Run         func(ctx BuildCommandContext, args []string)
+	Subcommands []Command
 }
 
 type BuildCommandContext interface {
@@ -30,7 +28,7 @@ func (c *buildCommandContext) BuildID() types.SystemBuildID {
 	return c.buildID
 }
 
-func (c *BuildCommand) BaseCommand() (*command.BaseCommand2, error) {
+func (c *BuildCommand) Base() (*BaseCommand, error) {
 	var buildID string
 	buildIDFlag := &command.StringFlag{
 		Name:     "build",
@@ -40,73 +38,19 @@ func (c *BuildCommand) BaseCommand() (*command.BaseCommand2, error) {
 	flags := append(c.Flags, buildIDFlag)
 
 	cmd := &SystemCommand{
-		Name:   c.Name,
-		Short:  c.Short,
-		Args:   c.Args,
-		Flags:  flags,
-		PreRun: c.PreRun,
-		Run: func(args []string, sctx SystemCommandContext) {
+		Name:  c.Name,
+		Short: c.Short,
+		Args:  c.Args,
+		Flags: flags,
+		Run: func(sctx SystemCommandContext, args []string) {
 			ctx := &buildCommandContext{
 				SystemCommandContext: sctx,
 				buildID:              types.SystemBuildID(buildID),
 			}
-			c.Run(args, ctx)
+			c.Run(ctx, args)
 		},
 		Subcommands: c.Subcommands,
 	}
 
-	return cmd.BaseCommand()
+	return cmd.Base()
 }
-
-//type BuildCommand struct {
-//	Name        string
-//	Short       string
-//	Args        command.Args
-//	Flags       command.Flags
-//	PreRun      func()
-//	Run         func(args []string, ctx BuildCommandContext)
-//	Subcommands []Command
-//	*SystemCommand
-//}
-//
-//type BuildCommandContext interface {
-//	SystemCommandContext
-//	BuildID() types.SystemBuildID
-//}
-//
-//type buildCommandContext struct {
-//	SystemCommandContext
-//	buildID types.SystemBuildID
-//}
-//
-//func (c *buildCommandContext) BuildID() types.SystemBuildID {
-//	return c.buildID
-//}
-//
-//func (c *BuildCommand) Init() error {
-//	var buildID string
-//	buildIDFlag := &command.StringFlag{
-//		Name:     "build",
-//		Required: true,
-//		Target:   &buildID,
-//	}
-//	flags := append(c.Flags, buildIDFlag)
-//
-//	c.SystemCommand = &SystemCommand{
-//		Name:   c.Name,
-//		Short:  c.Short,
-//		Args:   c.Args,
-//		Flags:  flags,
-//		PreRun: c.PreRun,
-//		Run: func(args []string, sctx SystemCommandContext) {
-//			ctx := &buildCommandContext{
-//				SystemCommandContext: sctx,
-//				buildID:              types.SystemBuildID(buildID),
-//			}
-//			c.Run(args, ctx)
-//		},
-//		Subcommands: c.Subcommands,
-//	}
-//
-//	return c.SystemCommand.Init()
-//}
