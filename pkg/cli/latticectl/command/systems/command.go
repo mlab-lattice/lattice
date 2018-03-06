@@ -13,6 +13,7 @@ import (
 	"github.com/mlab-lattice/system/pkg/cli/printer"
 	"github.com/mlab-lattice/system/pkg/managerapi/client"
 	"github.com/mlab-lattice/system/pkg/types"
+
 	"k8s.io/apimachinery/pkg/util/wait"
 )
 
