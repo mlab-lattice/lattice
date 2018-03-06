@@ -43,12 +43,12 @@ type LatticeCommand struct {
 
 func (c *LatticeCommand) Base() (*latticectl.BaseCommand, error) {
 	var lattice string
-	latticeURLFlag := &command.StringFlag{
+	latticeFlag := &command.StringFlag{
 		Name:     "lattice",
 		Required: false,
 		Target:   &lattice,
 	}
-	flags := append(c.Flags, latticeURLFlag)
+	flags := append(c.Flags, latticeFlag)
 
 	cmd := &latticectl.BaseCommand{
 		Name:  c.Name,

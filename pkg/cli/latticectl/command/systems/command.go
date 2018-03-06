@@ -14,19 +14,19 @@ import (
 	"github.com/mlab-lattice/system/pkg/types"
 )
 
-type Command struct {
-	Subcommands []latticectl.Command
-}
-
-var ListSystemSupportedFormats = []printer.Format{
+var ListSystemsSupportedFormats = []printer.Format{
 	printer.FormatDefault,
 	printer.FormatJSON,
 	printer.FormatTable,
 }
 
+type Command struct {
+	Subcommands []latticectl.Command
+}
+
 func (c *Command) Base() (*latticectl.BaseCommand, error) {
 	output := &lctlcommand.OutputFlag{
-		SupportedFormats: ListSystemSupportedFormats,
+		SupportedFormats: ListSystemsSupportedFormats,
 	}
 
 	cmd := &lctlcommand.LatticeCommand{
@@ -55,6 +55,7 @@ func ListSystems(client client.SystemClient, format printer.Format, writer io.Wr
 	switch format {
 	case printer.FormatDefault, printer.FormatTable:
 		headers := []string{"Name", "Definition", "Status"}
+
 		var rows [][]string
 		for _, system := range systems {
 			var stateColor color.Color
