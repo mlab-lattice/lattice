@@ -3,6 +3,7 @@ package latticectl
 import (
 	"log"
 
+	"github.com/mlab-lattice/system/pkg/cli/command"
 	"github.com/mlab-lattice/system/pkg/managerapi/client"
 	"github.com/mlab-lattice/system/pkg/managerapi/client/rest"
 )
@@ -17,13 +18,17 @@ type Latticectl struct {
 	Context ContextManager
 }
 
-func (l *Latticectl) Execute() {
+func (l *Latticectl) Init() (*command.Command, error) {
 	base, err := l.Root.Base()
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 
-	cmd, err := base.Command(l)
+	return base.Command(l)
+}
+
+func (l *Latticectl) Execute() {
+	cmd, err := l.Init()
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -32,12 +37,7 @@ func (l *Latticectl) Execute() {
 }
 
 func (l *Latticectl) ExecuteColon() {
-	base, err := l.Root.Base()
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	cmd, err := base.Command(l)
+	cmd, err := l.Init()
 	if err != nil {
 		log.Fatal(err)
 	}
