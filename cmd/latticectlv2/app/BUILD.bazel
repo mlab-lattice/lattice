@@ -8,6 +8,7 @@ go_library(
     deps = [
         "//pkg/cli/latticectl:go_default_library",
         "//pkg/cli/latticectl/commands/context:go_default_library",
+        "//pkg/cli/latticectl/commands/local:go_default_library",
         "//pkg/cli/latticectl/commands/systems:go_default_library",
         "//pkg/cli/latticectl/commands/systems/deploys:go_default_library",
     ],

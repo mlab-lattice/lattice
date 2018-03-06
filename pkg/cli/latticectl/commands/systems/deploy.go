@@ -21,12 +21,12 @@ func (c *DeployCommand) Base() (*latticectl.BaseCommand, error) {
 		Flags: []command.Flag{
 			&command.StringFlag{
 				Name:     "build",
-				Required: true,
+				Required: false,
 				Target:   &buildID,
 			},
 			&command.StringFlag{
 				Name:     "version",
-				Required: true,
+				Required: false,
 				Target:   &version,
 			},
 		},

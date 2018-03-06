@@ -46,22 +46,23 @@ func (c *SystemCommand) Base() (*BaseCommand, error) {
 		Flags: flags,
 		Run: func(lctx LatticeCommandContext, args []string) {
 			// Try to retrieve the lattice from the context if there is one
-			if system == "" && lctx.Latticectl().Context != nil {
+			systemID := types.SystemID(system)
+			if systemID == "" && lctx.Latticectl().Context != nil {
 				ctx, err := lctx.Latticectl().Context.Get()
 				if err != nil {
 					log.Fatal(err)
 				}
 
-				system = ctx.Lattice()
+				systemID = ctx.System()
 			}
 
-			if system == "" {
+			if systemID == "" {
 				log.Fatal("required flag system must be set")
 			}
 
 			ctx := &systemCommandContext{
 				LatticeCommandContext: lctx,
-				systemID:              types.SystemID(system),
+				systemID:              systemID,
 			}
 			c.Run(ctx, args)
 		},

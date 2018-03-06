@@ -3,6 +3,7 @@ package app
 import (
 	"github.com/mlab-lattice/system/pkg/cli/latticectl"
 	"github.com/mlab-lattice/system/pkg/cli/latticectl/commands/context"
+	"github.com/mlab-lattice/system/pkg/cli/latticectl/commands/local"
 	"github.com/mlab-lattice/system/pkg/cli/latticectl/commands/systems"
 	"github.com/mlab-lattice/system/pkg/cli/latticectl/commands/systems/deploys"
 )
@@ -18,6 +19,12 @@ var lctl = latticectl.Latticectl{
 				Subcommands: []latticectl.Command{
 					&context.GetCommand{},
 					&context.SetCommand{},
+				},
+			},
+			&local.Command{
+				Subcommands: []latticectl.Command{
+					&local.DownCommand{},
+					&local.UpCommand{},
 				},
 			},
 			&systems.Command{

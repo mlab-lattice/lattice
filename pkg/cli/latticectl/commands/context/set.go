@@ -41,6 +41,18 @@ func SetContext(ctxm latticectl.ContextManager, lattice string, system types.Sys
 		log.Fatal("cannot set context: no context manager set")
 	}
 
+	if lattice == "" && system != "" {
+		ctx, err := ctxm.Get()
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		lattice = ctx.Lattice()
+		if lattice == "" {
+			log.Fatal("cannot set --system without --lattice")
+		}
+	}
+
 	if err := ctxm.Set(lattice, system); err != nil {
 		log.Fatal(err)
 	}
