@@ -7,6 +7,12 @@ GO_DEPENDENCIES = {
             "tag": "v1.12.35",
             "importpath": "github.com/aws/aws-sdk-go",
         },
+        # master HEAD as of 3/6/18
+        "github.com/buger/goterm": {
+            "name": "com_github_buger_goterm",
+            "commit": "2f70ee476a85f692e8d4265963c615d8a57652da",
+            "importpath": "github.com/buger/goterm",
+        },
         "github.com/coreos/go-iptables": {
            "name": "com_github_coreos_go_iptables",
            # repo has a file named "build" so have to force gazelle to generate a BUILD.bazel file

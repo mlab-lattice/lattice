@@ -6,11 +6,20 @@ import (
 )
 
 type JSON struct {
-	Value interface{}
+	Value  interface{}
+	Indent int
 }
 
 func (j *JSON) Print(writer io.Writer) error {
-	data, err := json.MarshalIndent(j.Value, "", "  ")
+	var data []byte
+	var err error
+
+	if j.Indent == 0 {
+		data, err = json.Marshal(j.Value)
+	} else {
+		data, err = json.MarshalIndent(j.Value, "", "  ")
+	}
+
 	if err != nil {
 		return err
 	}

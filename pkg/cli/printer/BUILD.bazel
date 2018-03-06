@@ -7,8 +7,12 @@ go_library(
         "interface.go",
         "json.go",
         "table.go",
+        "watcher.go",
     ],
     importpath = "github.com/mlab-lattice/system/pkg/cli/printer",
     visibility = ["//visibility:public"],
-    deps = ["@com_github_olekukonko_tablewriter//:go_default_library"],
+    deps = [
+        "@com_github_buger_goterm//:go_default_library",
+        "@com_github_olekukonko_tablewriter//:go_default_library",
+    ],
 )
