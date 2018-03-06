@@ -16,17 +16,22 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 )
 
+// ListSystemsSupportedFormats is the list of printer.Formats supported
+// by the ListSystems function.
 var ListSystemsSupportedFormats = []printer.Format{
 	printer.FormatDefault,
 	printer.FormatJSON,
 	printer.FormatTable,
 }
 
-type Command struct {
+// ListSystemsCommand is a type that implements the latticectl.Command interface
+// for listing the Systems in a Lattice.
+type ListSystemsCommand struct {
 	Subcommands []latticectl.Command
 }
 
-func (c *Command) Base() (*latticectl.BaseCommand, error) {
+// Base implements the latticectl.Command interface.
+func (c *ListSystemsCommand) Base() (*latticectl.BaseCommand, error) {
 	output := &lctlcommand.OutputFlag{
 		SupportedFormats: ListSystemsSupportedFormats,
 	}
@@ -64,6 +69,7 @@ func (c *Command) Base() (*latticectl.BaseCommand, error) {
 	return cmd.Base()
 }
 
+// ListSystems writes the current Systems to the supplied io.Writer in the given printer.Format.
 func ListSystems(client client.SystemClient, format printer.Format, writer io.Writer) {
 	systems, err := client.List()
 	if err != nil {
@@ -74,6 +80,9 @@ func ListSystems(client client.SystemClient, format printer.Format, writer io.Wr
 	p.Print(writer)
 }
 
+// WatchSystems polls the API for the current Systems, and writes out the Systems to the
+// the supplied io.Writer in the given printer.Format, unless the printer.Format is
+// printer.FormatTable, in which case it always writes to the terminal.
 func WatchSystems(client client.SystemClient, format printer.Format, writer io.Writer) {
 	// Poll the API for the systems and send it to the channel
 	printerChan := make(chan printer.Interface)

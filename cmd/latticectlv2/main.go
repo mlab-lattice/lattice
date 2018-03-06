@@ -28,7 +28,7 @@ func main() {
 						&local.UpCommand{},
 					},
 				},
-				&systems.Command{
+				&systems.ListSystemsCommand{
 					Subcommands: []latticectl.Command{
 						&systems.CreateCommand{},
 						&systems.GetCommand{},

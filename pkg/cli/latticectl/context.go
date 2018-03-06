@@ -52,7 +52,7 @@ func (c *ConfigFileContext) readConfig() (*config.Config, error) {
 
 	cfg := config.Config{}
 	if err := json.Unmarshal(data, &cfg); err != nil {
-		fmt.Errorf("unable to unmarshal config file: %v", err)
+		return nil, fmt.Errorf("unable to unmarshal config file: %v", err)
 	}
 
 	return &cfg, nil
