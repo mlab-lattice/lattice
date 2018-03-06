@@ -10,6 +10,7 @@ go_library(
         "//pkg/cli/latticectl/command/context:go_default_library",
         "//pkg/cli/latticectl/command/local:go_default_library",
         "//pkg/cli/latticectl/command/systems:go_default_library",
+        "//pkg/cli/latticectl/command/systems/builds:go_default_library",
         "//pkg/cli/latticectl/command/systems/deploys:go_default_library",
     ],
 )
