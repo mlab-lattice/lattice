@@ -37,7 +37,7 @@ func simpleReferenceTest(t *testing.T) {
 
 	if resultMap, isMap := result.Value().(map[string]interface{}); isMap {
 		if ref, isRef := resultMap["b"].(Reference); !isRef || ref["__reference"] != "a" {
-			t.Fatal("Expected result[b][reference] to be 'a'")
+			t.Fatal("Expected result[b][__reference] to be 'a'")
 		}
 
 	} else {

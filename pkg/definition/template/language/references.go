@@ -3,6 +3,7 @@ package language
 const (
 	referenceKey          = "__reference"
 	templateReferencesKey = "__references"
+	templateSecretsKey    = "secrets"
 )
 
 type Reference map[string]interface{}

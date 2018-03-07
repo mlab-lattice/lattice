@@ -221,3 +221,21 @@ func (evaluator *ReferenceEvaluator) eval(o interface{}, env *environment) (inte
 	return referenceObject, nil
 
 }
+
+// SecretEvaluator. evaluates $secret which is a wrapper around $reference
+
+type SecretEvaluator struct {
+}
+
+// eval
+func (evaluator *SecretEvaluator) eval(o interface{}, env *environment) (interface{}, error) {
+
+	// the passed argument is treated as a path within the current template
+	secretRelativePath := fmt.Sprintf("%v.%v", templateSecretsKey, o)
+	// determine reference absolute path
+	referenceAbsPath := env.relativePathToAbsolute(secretRelativePath)
+	referenceObject := newReferenceObject(referenceAbsPath)
+
+	return referenceObject, nil
+
+}

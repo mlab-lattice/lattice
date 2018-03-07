@@ -83,6 +83,10 @@ func NewEngine() *TemplateEngine {
 			evaluator: &ReferenceEvaluator{},
 		},
 		{
+			key:       "$secret",
+			evaluator: &SecretEvaluator{},
+		},
+		{
 			key:       "$include",
 			evaluator: &IncludeEvaluator{},
 		},
