@@ -187,6 +187,6 @@ func setupReferenceTest() {
 }
 
 func teardownReferenceTest() {
-	fmt.Println("Tearing down template engine test")
+	fmt.Println("Tearing down reference test")
 	deleteTestRepo()
 }

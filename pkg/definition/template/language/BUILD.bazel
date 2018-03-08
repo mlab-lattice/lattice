@@ -32,6 +32,7 @@ go_test(
         "environment_test.go",
         "eval_test.go",
         "reference_test.go",
+        "secrets_test.go",
         "string_interpolation_test.go",
     ],
     embed = [":go_default_library"],

@@ -214,11 +214,7 @@ func (evaluator *ReferenceEvaluator) eval(o interface{}, env *environment) (inte
 	// the passed argument is treated as a relative path within the current template
 	referencePath := o.(string)
 
-	// determine reference absolute path
-	referenceAbsPath := env.relativePathToAbsolute(referencePath)
-	referenceObject := newReferenceObject(referenceAbsPath)
-
-	return referenceObject, nil
+	return newReferenceFromRelativeProperty(referencePath, env), nil
 
 }
 
@@ -232,10 +228,7 @@ func (evaluator *SecretEvaluator) eval(o interface{}, env *environment) (interfa
 
 	// the passed argument is treated as a path within the current template
 	secretRelativePath := fmt.Sprintf("%v.%v", templateSecretsKey, o)
-	// determine reference absolute path
-	referenceAbsPath := env.relativePathToAbsolute(secretRelativePath)
-	referenceObject := newReferenceObject(referenceAbsPath)
 
-	return referenceObject, nil
+	return newReferenceFromRelativeProperty(secretRelativePath, env), nil
 
 }

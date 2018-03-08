@@ -45,3 +45,13 @@ func isReferenceTargetInTemplate(target string, template *Template, env *environ
 	meta := env.getPropertyMetaData(target)
 	return meta != nil && meta.template != nil && meta.template == template
 }
+
+// newReferenceFromRelativeProperty
+func newReferenceFromRelativeProperty(relativeProperty string, env *environment) Reference {
+
+	referenceAbsPath := env.relativePathToAbsolute(relativeProperty)
+	referenceObject := newReferenceObject(referenceAbsPath)
+
+	return referenceObject
+
+}
