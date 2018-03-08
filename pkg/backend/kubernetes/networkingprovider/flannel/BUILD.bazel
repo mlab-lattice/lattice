@@ -4,6 +4,7 @@ go_library(
     name = "go_default_library",
     srcs = [
         "cluster_bootstrapper.go",
+        "constants.go",
         "system_bootstrapper.go",
     ],
     importpath = "github.com/mlab-lattice/system/pkg/backend/kubernetes/networkingprovider/flannel",

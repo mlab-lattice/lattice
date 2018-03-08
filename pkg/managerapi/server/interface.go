@@ -26,8 +26,10 @@ func (e *UserError) Error() string {
 
 type Backend interface {
 	// System
+	CreateSystem(id types.SystemID, definitionURL string) (*types.System, error)
 	ListSystems() ([]types.System, error)
 	GetSystem(types.SystemID) (s *types.System, exists bool, err error)
+	DeleteSystem(types.SystemID) error
 
 	// SystemBuild
 	BuildSystem(id types.SystemID, definitionRoot tree.Node, v types.SystemVersion) (types.SystemBuildID, error)

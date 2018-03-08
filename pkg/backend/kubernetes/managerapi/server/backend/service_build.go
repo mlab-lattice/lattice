@@ -12,8 +12,8 @@ import (
 )
 
 func (kb *KubernetesBackend) ListServiceBuilds(systemID types.SystemID) ([]types.ServiceBuild, error) {
-	namespace := kubeutil.SystemNamespace(kb.ClusterID, systemID)
-	buildList, err := kb.LatticeClient.LatticeV1().ServiceBuilds(namespace).List(metav1.ListOptions{})
+	namespace := kubeutil.SystemNamespace(kb.clusterID, systemID)
+	buildList, err := kb.latticeClient.LatticeV1().ServiceBuilds(namespace).List(metav1.ListOptions{})
 	if err != nil {
 		return nil, err
 	}
@@ -51,8 +51,8 @@ func (kb *KubernetesBackend) GetServiceBuild(
 func (kb *KubernetesBackend) getInternalServiceBuild(
 	systemID types.SystemID, buildID types.ServiceBuildID,
 ) (*latticev1.ServiceBuild, bool, error) {
-	namespace := kubeutil.SystemNamespace(kb.ClusterID, systemID)
-	result, err := kb.LatticeClient.LatticeV1().ServiceBuilds(namespace).Get(string(buildID), metav1.GetOptions{})
+	namespace := kubeutil.SystemNamespace(kb.clusterID, systemID)
+	result, err := kb.latticeClient.LatticeV1().ServiceBuilds(namespace).Get(string(buildID), metav1.GetOptions{})
 	if err != nil {
 		if errors.IsNotFound(err) {
 			return nil, false, nil

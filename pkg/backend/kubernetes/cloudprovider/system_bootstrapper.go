@@ -24,3 +24,33 @@ func NewSystemBootstrapper(options *SystemBootstrapperOptions) (systembootstrapp
 
 	return nil, fmt.Errorf("must provide cloud provider options")
 }
+
+func SystemBootstrapperFromFlags(cloudProvider string, cloudProviderVars []string) (systembootstrapper.Interface, error) {
+	options, err := ParseSystemBootstrapperFlags(cloudProvider, cloudProviderVars)
+	if err != nil {
+		return nil, err
+	}
+
+	return NewSystemBootstrapper(options)
+}
+
+func ParseSystemBootstrapperFlags(cloudProvider string, cloudProviderVars []string) (*SystemBootstrapperOptions, error) {
+	var options *SystemBootstrapperOptions
+
+	switch cloudProvider {
+	case Local:
+		options = &SystemBootstrapperOptions{
+			Local: local.ParseSystemBootstrapperFlags(cloudProviderVars),
+		}
+
+	case AWS:
+		options = &SystemBootstrapperOptions{
+			AWS: aws.ParseSystemBootstrapperFlags(cloudProviderVars),
+		}
+
+	default:
+		return nil, fmt.Errorf("unsupported cloud provider: %v", cloudProvider)
+	}
+
+	return options, nil
+}

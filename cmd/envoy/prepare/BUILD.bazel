@@ -11,6 +11,5 @@ go_library(
 go_binary(
     name = "prepare",
     embed = [":go_default_library"],
-    importpath = "github.com/mlab-lattice/system/cmd/envoy/prepare",
     visibility = ["//visibility:public"],
 )

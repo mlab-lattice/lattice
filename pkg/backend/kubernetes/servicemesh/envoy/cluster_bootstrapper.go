@@ -1,6 +1,9 @@
 package envoy
 
 import (
+	"fmt"
+
+	kubeconstants "github.com/mlab-lattice/system/pkg/backend/kubernetes/constants"
 	latticev1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	clusterbootstrapper "github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/cluster/bootstrap/bootstrapper"
 
@@ -37,6 +40,28 @@ type DefaultEnvoyClusterBootstrapper struct {
 }
 
 func (b *DefaultEnvoyClusterBootstrapper) BootstrapClusterResources(resources *clusterbootstrapper.ClusterResources) {
+	for _, daemonSet := range resources.DaemonSets {
+		if daemonSet.Name == kubeconstants.MasterNodeComponentManagerAPI {
+			daemonSet.Spec.Template.Spec.Containers[0].Args = append(
+				daemonSet.Spec.Template.Spec.Containers[0].Args,
+				"--service-mesh", Envoy,
+				"--service-mesh-var", fmt.Sprintf("xds-api-image=%v", b.xdsAPIImage),
+			)
+		}
+	}
+
+	// also need to have the manager API create envoy SAs for the
+	// namespace, so need to give the manager API these privaleges
+	// so kube doesn't deny creating the SA due to privilege escalation
+	for _, clusterRole := range resources.ClusterRoles {
+		if clusterRole.Name == kubeconstants.MasterNodeComponentManagerAPI {
+			clusterRole.Rules = append(
+				clusterRole.Rules,
+				envoyRBACPolicyRules...,
+			)
+		}
+	}
+
 	clusterRole := &rbacv1.ClusterRole{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "ClusterRole",
@@ -45,20 +70,7 @@ func (b *DefaultEnvoyClusterBootstrapper) BootstrapClusterResources(resources *c
 		ObjectMeta: metav1.ObjectMeta{
 			Name: envoyXDSAPI,
 		},
-		Rules: []rbacv1.PolicyRule{
-			// Read kube endpoints
-			{
-				APIGroups: []string{corev1.GroupName},
-				Resources: []string{"endpoints"},
-				Verbs:     []string{"get", "watch", "list"},
-			},
-			// Read lattice services
-			{
-				APIGroups: []string{latticev1.GroupName},
-				Resources: []string{latticev1.ResourcePluralService},
-				Verbs:     []string{"get", "watch", "list"},
-			},
-		},
+		Rules: envoyRBACPolicyRules,
 	}
 
 	resources.Config.Spec.ServiceMesh = latticev1.ConfigServiceMesh{
@@ -72,4 +84,19 @@ func (b *DefaultEnvoyClusterBootstrapper) BootstrapClusterResources(resources *c
 	}
 
 	resources.ClusterRoles = append(resources.ClusterRoles, clusterRole)
+}
+
+var envoyRBACPolicyRules = []rbacv1.PolicyRule{
+	// Read kube endpoints
+	{
+		APIGroups: []string{corev1.GroupName},
+		Resources: []string{"endpoints"},
+		Verbs:     []string{"get", "watch", "list"},
+	},
+	// Read lattice services
+	{
+		APIGroups: []string{latticev1.GroupName},
+		Resources: []string{latticev1.ResourcePluralService},
+		Verbs:     []string{"get", "watch", "list"},
+	},
 }

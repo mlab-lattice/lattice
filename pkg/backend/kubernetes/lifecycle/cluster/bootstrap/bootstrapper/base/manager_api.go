@@ -35,7 +35,7 @@ func (b *DefaultBootstrapper) managerAPIResources(resources *bootstrapper.Cluste
 			{
 				APIGroups: []string{latticev1.GroupName},
 				Resources: []string{latticev1.ResourcePluralSystem},
-				Verbs:     readAndCreateVerbs,
+				Verbs:     readCreateAndDeleteVerbs,
 			},
 			// lattice config read
 			{
@@ -67,6 +67,39 @@ func (b *DefaultBootstrapper) managerAPIResources(resources *bootstrapper.Cluste
 				Resources: []string{latticev1.ResourcePluralSystemRollout},
 				Verbs:     readAndCreateVerbs,
 			},
+			// lattice service read
+			{
+				APIGroups: []string{latticev1.GroupName},
+				Resources: []string{latticev1.ResourcePluralService},
+				Verbs:     readVerbs,
+			},
+
+			// system bootstrapping permissions
+			// kube namespace read, update, and delete
+			{
+				APIGroups: []string{corev1.GroupName},
+				Resources: []string{"namespaces"},
+				Verbs:     readCreateAndDeleteVerbs,
+			},
+			// kube service-account read, update, and delete
+			{
+				APIGroups: []string{corev1.GroupName},
+				Resources: []string{"serviceaccounts"},
+				Verbs:     readCreateAndDeleteVerbs,
+			},
+			// kube role-binding read, update, and delete
+			{
+				APIGroups: []string{rbacv1.GroupName},
+				Resources: []string{"rolebindings"},
+				Verbs:     readCreateAndDeleteVerbs,
+			},
+			// kube daemonsets read, update, and delete
+			{
+				APIGroups: []string{appsv1.GroupName},
+				Resources: []string{"daemonsets"},
+				Verbs:     readCreateAndDeleteVerbs,
+			},
+
 			// kube pod read and delete
 			{
 				APIGroups: []string{corev1.GroupName},
@@ -85,12 +118,6 @@ func (b *DefaultBootstrapper) managerAPIResources(resources *bootstrapper.Cluste
 				Resources: []string{"jobs"},
 				Verbs:     readVerbs,
 			},
-			// lattice service read
-			{
-				APIGroups: []string{latticev1.GroupName},
-				Resources: []string{latticev1.ResourcePluralService},
-				Verbs:     readVerbs,
-			},
 			// kube service read
 			{
 				APIGroups: []string{corev1.GroupName},
@@ -105,6 +132,14 @@ func (b *DefaultBootstrapper) managerAPIResources(resources *bootstrapper.Cluste
 			},
 		},
 	}
+	// also need to create component builder SAs for the
+	// namespace, so need to have the component builder
+	// rules so kube doesn't deny creating the component
+	// builder SAs due to privilege escalation
+	clusterRole.Rules = append(
+		clusterRole.Rules,
+		componentBuilderRBACPolicyRules...,
+	)
 
 	serviceAccount := &corev1.ServiceAccount{
 		// Include TypeMeta so if this is a dry run it will be printed out
@@ -143,7 +178,11 @@ func (b *DefaultBootstrapper) managerAPIResources(resources *bootstrapper.Cluste
 		},
 	}
 
-	args := []string{"--port", strconv.Itoa(int(b.Options.MasterComponents.ManagerAPI.Port)), "--cluster-id", string(b.ClusterID)}
+	args := []string{
+		"--port", strconv.Itoa(int(b.Options.MasterComponents.ManagerAPI.Port)),
+		"--cluster-id", string(b.ClusterID),
+		"--cloud-provider", b.CloudProviderName,
+	}
 	args = append(args, b.Options.MasterComponents.ManagerAPI.Args...)
 	labels := map[string]string{
 		kubeconstants.MasterNodeLabelComponent: kubeconstants.MasterNodeComponentManagerAPI,

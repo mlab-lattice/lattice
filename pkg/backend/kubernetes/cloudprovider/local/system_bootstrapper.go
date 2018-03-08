@@ -20,3 +20,7 @@ func (cp *DefaultLocalSystemBootstrapper) BootstrapSystemResources(resources *sy
 		daemonSet.Spec.Template = *template
 	}
 }
+
+func ParseSystemBootstrapperFlags(vars []string) *SystemBootstrapperOptions {
+	return &SystemBootstrapperOptions{}
+}

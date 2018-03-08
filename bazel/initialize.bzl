@@ -7,7 +7,7 @@ load("@bazel_gazelle//:deps.bzl", "gazelle_dependencies")
 def initialize_bazel_gazelle():
   gazelle_dependencies()
 
-load("@io_bazel_rules_docker//go:image.bzl", _go_image_repos = "repositories")
+load("@io_bazel_rules_docker//go:image.bzl", _go_image_repos="repositories")
 def initialize_rules_docker():
   _go_image_repos()
 

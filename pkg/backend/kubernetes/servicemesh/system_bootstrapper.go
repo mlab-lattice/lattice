@@ -18,3 +18,33 @@ func NewSystemBootstrapper(options *SystemBootstrapperOptions) (systembootstrapp
 
 	return nil, fmt.Errorf("must provide service mesh options")
 }
+
+func SystemBootstrapperFromFlags(serviceMesh string, serviceMeshVars []string) (systembootstrapper.Interface, error) {
+	options, err := ParseSystemBootstrapperFlags(serviceMesh, serviceMeshVars)
+	if err != nil {
+		return nil, err
+	}
+
+	return NewSystemBootstrapper(options)
+}
+
+func ParseSystemBootstrapperFlags(serviceMesh string, serviceMeshVars []string) (*SystemBootstrapperOptions, error) {
+	var options *SystemBootstrapperOptions
+
+	switch serviceMesh {
+	case Envoy:
+		envoyOptions, err := envoy.ParseSystemBootstrapperFlags(serviceMeshVars)
+		if err != nil {
+			return nil, err
+		}
+
+		options = &SystemBootstrapperOptions{
+			Envoy: envoyOptions,
+		}
+
+	default:
+		return nil, fmt.Errorf("unsupported service mesh: %v", serviceMesh)
+	}
+
+	return options, nil
+}

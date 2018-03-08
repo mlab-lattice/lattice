@@ -16,3 +16,7 @@ func NewSystemBootstrapper(options *SystemBootstrapperOptions) *DefaultAWSSystem
 type DefaultAWSSystemBootstrapper struct {
 	*noop.DefaultBootstrapper
 }
+
+func ParseSystemBootstrapperFlags(vars []string) *SystemBootstrapperOptions {
+	return &SystemBootstrapperOptions{}
+}

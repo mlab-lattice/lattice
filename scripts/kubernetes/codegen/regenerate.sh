@@ -13,4 +13,4 @@ git checkout kubernetes-${KUBERNETES_VERSION}
                      github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated \
                      github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis \
                      lattice:v1 \
-                     --go-header-file ~/go/src/github.com/mlab-lattice/system/scripts/k8s/codegen/go-header.txt
+                     --go-header-file ~/go/src/github.com/mlab-lattice/system/scripts/kubernetes/codegen/go-header.txt

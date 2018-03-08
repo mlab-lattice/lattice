@@ -1,6 +1,8 @@
 package rest
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
 
 	"github.com/mlab-lattice/system/pkg/managerapi/client"
@@ -24,6 +26,31 @@ func newSystemClient(c rest.Client, baseURL string) client.SystemClient {
 	}
 }
 
+type createSystemRequest struct {
+	ID            types.SystemID `json:"id"`
+	DefinitionURL string         `json:"definitionUrl"`
+}
+
+func (c *SystemClient) Create(id types.SystemID, definitionURL string) (*types.System, error) {
+	request := createSystemRequest{
+		ID:            id,
+		DefinitionURL: definitionURL,
+	}
+
+	requestJSON, err := json.Marshal(request)
+	if err != nil {
+		return nil, err
+	}
+
+	system := &types.System{}
+	err = c.restClient.PostJSON(c.baseURL, bytes.NewReader(requestJSON)).JSON(&system)
+	if err != nil {
+		return nil, err
+	}
+
+	return system, nil
+}
+
 func (c *SystemClient) List() ([]types.System, error) {
 	var systems []types.System
 	err := c.restClient.Get(c.baseURL).JSON(&systems)
@@ -34,6 +61,11 @@ func (c *SystemClient) Get(id types.SystemID) (*types.System, error) {
 	system := &types.System{}
 	err := c.restClient.Get(fmt.Sprintf("%v/%v", c.baseURL, id)).JSON(&system)
 	return system, err
+}
+
+func (c *SystemClient) Delete(id types.SystemID) error {
+	_, err := c.restClient.Delete(fmt.Sprintf("%v/%v", c.baseURL, id)).Body()
+	return err
 }
 
 func (c *SystemClient) SystemBuilds(id types.SystemID) client.SystemBuildClient {

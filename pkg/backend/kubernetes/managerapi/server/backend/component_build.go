@@ -17,8 +17,8 @@ import (
 )
 
 func (kb *KubernetesBackend) ListComponentBuilds(systemID types.SystemID) ([]types.ComponentBuild, error) {
-	namespace := kubeutil.SystemNamespace(kb.ClusterID, systemID)
-	buildList, err := kb.LatticeClient.LatticeV1().ComponentBuilds(namespace).List(metav1.ListOptions{})
+	namespace := kubeutil.SystemNamespace(kb.clusterID, systemID)
+	buildList, err := kb.latticeClient.LatticeV1().ComponentBuilds(namespace).List(metav1.ListOptions{})
 	if err != nil {
 		return nil, err
 	}
@@ -76,7 +76,7 @@ func (kb *KubernetesBackend) GetComponentBuildLogs(
 		}
 	}
 
-	req := kb.KubeClient.CoreV1().
+	req := kb.kubeClient.CoreV1().
 		Pods(pod.Namespace).
 		GetLogs(pod.Name, &corev1.PodLogOptions{Follow: follow})
 
@@ -89,8 +89,8 @@ func (kb *KubernetesBackend) getInternalComponentBuild(
 	systemID types.SystemID,
 	buildID types.ComponentBuildID,
 ) (*latticev1.ComponentBuild, bool, error) {
-	namespace := kubeutil.SystemNamespace(kb.ClusterID, systemID)
-	result, err := kb.LatticeClient.LatticeV1().ComponentBuilds(namespace).Get(string(buildID), metav1.GetOptions{})
+	namespace := kubeutil.SystemNamespace(kb.clusterID, systemID)
+	result, err := kb.latticeClient.LatticeV1().ComponentBuilds(namespace).Get(string(buildID), metav1.GetOptions{})
 	if err != nil {
 		if errors.IsNotFound(err) {
 			return nil, false, nil
@@ -146,7 +146,7 @@ func (kb *KubernetesBackend) getPodForComponentBuild(build *latticev1.ComponentB
 	listOptions := metav1.ListOptions{
 		LabelSelector: fmt.Sprintf("%v=%v", kubeconstants.LabelKeyComponentBuildID, build.Name),
 	}
-	podsList, err := kb.KubeClient.CoreV1().Pods(build.Namespace).List(listOptions)
+	podsList, err := kb.kubeClient.CoreV1().Pods(build.Namespace).List(listOptions)
 	if err != nil {
 		return nil, err
 	}

@@ -1,14 +1,13 @@
 package componentbuilder
 
 import (
+	"context"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
-
-	"golang.org/x/net/context"
 
 	"github.com/mlab-lattice/system/pkg/definition/block"
 	"github.com/mlab-lattice/system/pkg/types"

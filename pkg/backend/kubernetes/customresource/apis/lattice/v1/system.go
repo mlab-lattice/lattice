@@ -72,7 +72,7 @@ type SystemStatus struct {
 	ObservedGeneration int64       `json:"observedGeneration"`
 
 	// FIXME: remove this when ObservedGeneration is supported for CRD
-	UpdateProcessed bool `json:"updated"`
+	UpdateProcessed bool `json:"updateProcessed"`
 
 	// Maps a Service path to its Service.Name
 	Services map[tree.NodePath]string `json:"services"`

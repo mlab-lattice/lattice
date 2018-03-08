@@ -14,10 +14,37 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+type createSystemRequest struct {
+	ID            types.SystemID `json:"id"`
+	DefinitionURL string         `json:"definitionUrl"`
+}
+
 func (r *restServer) mountSystemHandlers() {
 	systems := r.router.Group("/systems")
 	{
-		// list-system-versions
+		// create-system
+		systems.POST("", func(c *gin.Context) {
+			var req createSystemRequest
+			if err := c.BindJSON(&req); err != nil {
+				handleInternalError(c, err)
+				return
+			}
+
+			system, err := r.backend.CreateSystem(req.ID, req.DefinitionURL)
+			if err != nil {
+				handleInternalError(c, err)
+				return
+			}
+
+			if err != nil {
+				handleInternalError(c, err)
+				return
+			}
+
+			c.JSON(http.StatusOK, system)
+		})
+
+		// list-systems
 		systems.GET("", func(c *gin.Context) {
 			systems, err := r.backend.ListSystems()
 
@@ -29,7 +56,7 @@ func (r *restServer) mountSystemHandlers() {
 			c.JSON(http.StatusOK, systems)
 		})
 
-		// get-system-version
+		// get-system
 		systems.GET("/:system_id", func(c *gin.Context) {
 			systemID := c.Param("system_id")
 
@@ -45,6 +72,19 @@ func (r *restServer) mountSystemHandlers() {
 			}
 
 			c.JSON(http.StatusOK, system)
+		})
+
+		// delete-system
+		systems.DELETE("/:system_id", func(c *gin.Context) {
+			systemID := c.Param("system_id")
+
+			err := r.backend.DeleteSystem(types.SystemID(systemID))
+			if err != nil {
+				handleInternalError(c, err)
+				return
+			}
+
+			c.Status(http.StatusOK)
 		})
 	}
 
@@ -491,10 +531,10 @@ func (r *restServer) getSystemDefinitionRoot(systemID string, version string) (t
 		return nil, fmt.Errorf("System %v does not exist", systemID)
 	}
 
-	systemDefUri := fmt.Sprintf("%v#%v/%s", system.DefinitionURL, version,
+	systemDefURI := fmt.Sprintf("%v#%v/%s", system.DefinitionURL, version,
 		constants.SystemDefinitionRootPathDefault)
 
-	return r.resolver.ResolveDefinition(systemDefUri, &git.Options{})
+	return r.resolver.ResolveDefinition(systemDefURI, &git.Options{})
 }
 
 func (r *restServer) getSystemVersions(systemID string) ([]string, error) {

@@ -84,9 +84,9 @@ func NewClusterProvisioner(latticeImageDockerRepository, latticeContainerRepoPre
 	}
 }
 
-func (p *DefaultAWSClusterProvisioner) Provision(clusterID, url string) (string, error) {
+func (p *DefaultAWSClusterProvisioner) Provision(clusterID string, initialSystemDefinitionURL *string) (string, error) {
 	fmt.Println("Provisioning cluster...")
-	clusterModule := p.clusterModule(clusterID, url)
+	clusterModule := p.clusterModule(clusterID, initialSystemDefinitionURL)
 	clusterConfig := p.clusterConfig(clusterModule)
 
 	logfile, err := terraform.Apply(p.workDirectory, clusterConfig)
@@ -144,7 +144,12 @@ func (p *DefaultAWSClusterProvisioner) clusterConfig(clusterModule *awsterraform
 	return config
 }
 
-func (p *DefaultAWSClusterProvisioner) clusterModule(clusterID, url string) *awsterraform.Cluster {
+func (p *DefaultAWSClusterProvisioner) clusterModule(clusterID string, initialSystemDefinitionURL *string) *awsterraform.Cluster {
+	url := ""
+	if initialSystemDefinitionURL != nil {
+		url = *initialSystemDefinitionURL
+	}
+
 	return &awsterraform.Cluster{
 		Source: filepath.Join(p.terraformModulePath, clusterModulePath),
 
