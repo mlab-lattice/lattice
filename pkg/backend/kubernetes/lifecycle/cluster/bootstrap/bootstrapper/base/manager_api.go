@@ -130,6 +130,12 @@ func (b *DefaultBootstrapper) managerAPIResources(resources *bootstrapper.Cluste
 				Resources: []string{"nodes"},
 				Verbs:     readVerbs,
 			},
+			// kube secret
+			{
+				APIGroups: []string{corev1.GroupName},
+				Resources: []string{"secrets"},
+				Verbs:     readCreateUpdateAndDeleteVerbs,
+			},
 		},
 	}
 	// also need to create component builder SAs for the

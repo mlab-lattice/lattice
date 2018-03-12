@@ -6,11 +6,17 @@ import (
 )
 
 func MockExec() *block.ComponentExec {
+	baz := "baz"
+	bar := "bar"
 	return &block.ComponentExec{
 		Command: []string{"./start", "--my-app"},
-		Environment: map[string]string{
-			"biz": "baz",
-			"foo": "bar",
+		Environment: block.Environment{
+			"biz": block.EnvironmentVariable{
+				Value: &baz,
+			},
+			"foo": block.EnvironmentVariable{
+				Value: &bar,
+			},
 		},
 	}
 }

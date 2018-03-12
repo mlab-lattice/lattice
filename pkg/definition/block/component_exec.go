@@ -6,8 +6,8 @@ import (
 )
 
 type ComponentExec struct {
-	Command     []string          `json:"command"`
-	Environment map[string]string `json:"environment,omitempty"`
+	Command     []string    `json:"command"`
+	Environment Environment `json:"environment,omitempty"`
 }
 
 type Environment map[string]EnvironmentVariable
@@ -34,6 +34,14 @@ func (ev *EnvironmentVariable) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+func (ev EnvironmentVariable) MarshalJSON() ([]byte, error) {
+	eve := &environmentVariableEncoder{
+		Value:  ev.Value,
+		Secret: ev.Secret,
+	}
+	return json.Marshal(eve)
+}
+
 type environmentVariableEncoder struct {
 	Value  *string
 	Secret *Secret
@@ -50,6 +58,14 @@ func (eve *environmentVariableEncoder) UnmarshalJSON(data []byte) error {
 	}
 
 	return err
+}
+
+func (eve *environmentVariableEncoder) MarshalJSON() ([]byte, error) {
+	if eve.Value != nil {
+		return json.Marshal(*eve.Value)
+	}
+
+	return json.Marshal(eve.Secret)
 }
 
 // Validate implements Interface
