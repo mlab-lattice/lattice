@@ -188,7 +188,7 @@ func (c *Controller) untransformedDeploymentSpec(
 	var containers []corev1.Container
 	for _, component := range service.Spec.Definition.Components() {
 		buildArtifacts := service.Spec.ComponentBuildArtifacts[component.Name]
-		container := containerFromComponent(component, &buildArtifacts)
+		container := containerFromComponent(service, component, &buildArtifacts)
 		containers = append(containers, container)
 	}
 
@@ -272,7 +272,7 @@ func (c *Controller) untransformedDeploymentSpec(
 	return spec, nil
 }
 
-func containerFromComponent(component *block.Component, buildArtifacts *latticev1.ComponentBuildArtifacts) corev1.Container {
+func containerFromComponent(service *latticev1.Service, component *block.Component, buildArtifacts *latticev1.ComponentBuildArtifacts) corev1.Container {
 	var ports []corev1.ContainerPort
 	for _, port := range component.Ports {
 		ports = append(
@@ -297,13 +297,46 @@ func containerFromComponent(component *block.Component, buildArtifacts *latticev
 
 	var envVars []corev1.EnvVar
 	for _, name := range envVarNames {
-		envVars = append(
-			envVars,
-			corev1.EnvVar{
-				Name:  name,
-				Value: component.Exec.Environment[name],
-			},
-		)
+		envVar := component.Exec.Environment[name]
+		if name == "MONGODB_URI" {
+			fmt.Printf("MONGODB_URI: %#v\n", envVar)
+		}
+		if envVar.Value != nil {
+			envVars = append(
+				envVars,
+				corev1.EnvVar{
+					Name:  name,
+					Value: *envVar.Value,
+				},
+			)
+		} else if envVar.Secret != nil {
+			if envVar.Secret.Name != nil {
+				envVars = append(
+					envVars,
+					corev1.EnvVar{
+						Name: name,
+						ValueFrom: &corev1.EnvVarSource{
+							SecretKeyRef: &corev1.SecretKeySelector{
+								LocalObjectReference: corev1.LocalObjectReference{
+									Name: service.Spec.Path.ToDomain(true),
+								},
+								Key: *envVar.Secret.Name,
+							},
+						},
+					},
+				)
+			} else {
+				glog.Warning(
+					"Component %v for Service %v/%v has environment variable %v which neither has a value or a secret",
+					component.Name,
+					service.Namespace,
+					service.Name,
+					name,
+				)
+			}
+
+			// FIXME: add reference
+		}
 	}
 
 	return corev1.Container{

@@ -91,3 +91,7 @@ func (c *SystemClient) Teardowns(id types.SystemID) client.TeardownClient {
 func (c *SystemClient) Services(id types.SystemID) client.ServiceClient {
 	return newServiceClient(c.restClient, fmt.Sprintf("%v/%v", c.baseURL, id))
 }
+
+func (c *SystemClient) Secrets(id types.SystemID) client.SystemSecretClient {
+	return newSystemSecretClient(c.restClient, fmt.Sprintf("%v/%v", c.baseURL, id))
+}

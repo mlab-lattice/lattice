@@ -24,18 +24,18 @@ container_image(
 )
 
 container_image(
+    name = "base-openssh-client",
+    debs = [
+        # See WORKSPACE for more info.
+        packages["openssh-client"],
+        packages["zlib1g"],
+    ],
+)
+
+container_image(
     name = "base-terraform-bin",
     directory = "/usr/local/bin",
     files = ["@terraform_bin//:bin"],
-)
-
-
-container_image(
-    name = "base-libstdc++6-terraform-bin",
-    tars = [
-        ":base-libstdc++6",
-        ":base-terraform-bin",
-    ]
 )
 
 container_image(
@@ -53,6 +53,14 @@ container_image(
 )
 
 container_image(
+    name = "base-libstdc++6-openssh-client",
+    tars = [
+        ":base-libstdc++6",
+        ":base-openssh-client",
+    ]
+)
+
+container_image(
     name = "base-libstdc++6-terraform",
     tars = [
         ":base-libstdc++6",
@@ -64,8 +72,8 @@ container_image(
 base_images = [
     "iptables",
     "libstdc++6",
+    "libstdc++6-openssh-client",
     "libstdc++6-terraform",
-    "libstdc++6-terraform-bin",
 ]
 lattice_base_container_images(base_images)
 
@@ -79,7 +87,7 @@ go_targets = [
     ("envoy-prepare", "iptables", "cmd/envoy/prepare"),
     ("kubernetes-aws-master-node-attach-etcd-volume", "libstdc++6-terraform", "cmd/kubernetes/aws/master-node/attach-etcd-volume"),
     ("kubernetes-aws-master-node-register-dns", "libstdc++6-terraform", "cmd/kubernetes/aws/master-node/register-dns"),
-    ("kubernetes-component-builder", "libstdc++6", "cmd/kubernetes/componentbuilder"),
+    ("kubernetes-component-builder", "libstdc++6-openssh-client", "cmd/kubernetes/componentbuilder"),
     ("kubernetes-envoy-xds-api-rest-per-node", "libstdc++6", "cmd/kubernetes/envoy/xdsapi/v1/rest/per-node"),
     ("kubernetes-lattice-controller-manager", "libstdc++6-terraform", "cmd/kubernetes/lattice-controller-manager"),
     ("kubernetes-local-dns-controller", "libstdc++6", "cmd/kubernetes/local/dns/controller"),

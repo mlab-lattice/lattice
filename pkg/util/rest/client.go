@@ -67,6 +67,8 @@ func (r *RequestContext) JSON(target interface{}) error {
 type Client interface {
 	Get(url string) *RequestContext
 	Delete(url string) *RequestContext
+	Patch(url, contentType string, body io.Reader) *RequestContext
+	PatchJSON(url string, body io.Reader) *RequestContext
 	Post(url, contentType string, body io.Reader) *RequestContext
 	PostJSON(url string, body io.Reader) *RequestContext
 }
@@ -98,6 +100,26 @@ func (dc *DefaultClient) Get(url string) *RequestContext {
 		RequestBody: nil,
 		URL:         url,
 	}
+}
+
+func (dc *DefaultClient) Patch(url, contentType string, body io.Reader) *RequestContext {
+	headers := make(map[string]string)
+	for k, v := range dc.defaultHeaders {
+		headers[k] = v
+	}
+	headers[headerContentType] = contentType
+
+	return &RequestContext{
+		Client:      dc.client,
+		Method:      http.MethodPatch,
+		Headers:     headers,
+		RequestBody: body,
+		URL:         url,
+	}
+}
+
+func (dc *DefaultClient) PatchJSON(url string, body io.Reader) *RequestContext {
+	return dc.Patch(url, ContentTypeJSON, body)
 }
 
 func (dc *DefaultClient) Post(url, contentType string, body io.Reader) *RequestContext {
