@@ -298,6 +298,9 @@ func containerFromComponent(service *latticev1.Service, component *block.Compone
 	var envVars []corev1.EnvVar
 	for _, name := range envVarNames {
 		envVar := component.Exec.Environment[name]
+		if name == "MONGODB_URI" {
+			fmt.Printf("MONGODB_URI: %#v\n", envVar)
+		}
 		if envVar.Value != nil {
 			envVars = append(
 				envVars,
@@ -321,6 +324,14 @@ func containerFromComponent(service *latticev1.Service, component *block.Compone
 							},
 						},
 					},
+				)
+			} else {
+				glog.Warning(
+					"Component %v for Service %v/%v has environment variable %v which neither has a value or a secret",
+					component.Name,
+					service.Namespace,
+					service.Name,
+					name,
 				)
 			}
 

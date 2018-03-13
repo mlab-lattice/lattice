@@ -54,6 +54,11 @@ func TestExec_JSON(t *testing.T) {
 				Bytes:       MockExecExpectedJSON(),
 				ValuePtr:    MockExec(),
 			},
+			{
+				Description: "MockExecSecret",
+				Bytes:       MockExecSecretExpectedJSON(),
+				ValuePtr:    MockExecSecret(),
+			},
 		},
 	)
 }

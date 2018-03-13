@@ -20,7 +20,7 @@ func TestSecret_JSON(t *testing.T) {
 	fmt.Printf("unmarshalled: %v\n", string(data))
 	JSON(
 		t,
-		reflect.TypeOf(block.Secret{}),
+		reflect.TypeOf(block.SecretValue{}),
 		[]JSONTest{
 			{
 				Description: "MockSecret",

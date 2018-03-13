@@ -28,11 +28,11 @@ func (kb *KubernetesBackend) ListSecrets(systemID types.SystemID) ([]types.Secre
 			continue
 		}
 
-		for name, value := range secret.StringData {
+		for name, value := range secret.Data {
 			externalSecrets = append(externalSecrets, types.Secret{
 				Path:  path,
 				Name:  name,
-				Value: value,
+				Value: string(value),
 			})
 		}
 	}
@@ -50,7 +50,7 @@ func (kb *KubernetesBackend) GetSecret(id types.SystemID, path tree.NodePath, na
 		return nil, false, err
 	}
 
-	value, ok := secret.StringData[name]
+	value, ok := secret.Data[name]
 	if !ok {
 		return nil, false, nil
 	}
@@ -58,7 +58,7 @@ func (kb *KubernetesBackend) GetSecret(id types.SystemID, path tree.NodePath, na
 	externalSecret := &types.Secret{
 		Path:  path,
 		Name:  name,
-		Value: value,
+		Value: string(value),
 	}
 	return externalSecret, true, nil
 }
@@ -73,7 +73,9 @@ func (kb *KubernetesBackend) SetSecret(id types.SystemID, path tree.NodePath, na
 		return err
 	}
 
-	secret.StringData[name] = value
+	secret.StringData = map[string]string{
+		name: value,
+	}
 	_, err = kb.kubeClient.CoreV1().Secrets(namespace).Update(secret)
 	return err
 }
@@ -102,8 +104,8 @@ func (kb *KubernetesBackend) UnsetSecret(id types.SystemID, path tree.NodePath, 
 		return err
 	}
 
-	delete(secret.StringData, name)
-	if len(secret.StringData) == 0 {
+	delete(secret.Data, name)
+	if len(secret.Data) == 0 {
 		return kb.kubeClient.CoreV1().Secrets(namespace).Delete(secret.Name, nil)
 	}
 

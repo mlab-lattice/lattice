@@ -11,10 +11,10 @@ func Exec() *block.ComponentExec {
 	return &block.ComponentExec{
 		Command: []string{"./start", "--my-app"},
 		Environment: block.Environment{
-			"biz": block.EnvironmentVariable{
+			"biz": &block.EnvironmentVariable{
 				Value: &baz,
 			},
-			"foo": block.EnvironmentVariable{
+			"foo": &block.EnvironmentVariable{
 				Value: &bar,
 			},
 		},

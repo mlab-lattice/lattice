@@ -6,6 +6,7 @@ import (
 	"github.com/mlab-lattice/system/pkg/cli/latticectl/command/local"
 	"github.com/mlab-lattice/system/pkg/cli/latticectl/command/systems"
 	"github.com/mlab-lattice/system/pkg/cli/latticectl/command/systems/deploys"
+	"github.com/mlab-lattice/system/pkg/cli/latticectl/command/systems/secrets"
 )
 
 func main() {
@@ -35,9 +36,16 @@ func main() {
 						&systems.DeleteCommand{},
 						&systems.BuildCommand{},
 						&systems.DeployCommand{},
+						&systems.TeardownCommand{},
 						&deploys.Command{
 							Subcommands: []latticectl.Command{
 								&deploys.GetCommand{},
+							},
+						},
+						&secrets.Command{
+							Subcommands: []latticectl.Command{
+								&secrets.GetCommand{},
+								&secrets.SetCommand{},
 							},
 						},
 					},

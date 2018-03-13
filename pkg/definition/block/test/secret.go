@@ -5,15 +5,15 @@ import (
 	jsonutil "github.com/mlab-lattice/system/pkg/util/json"
 )
 
-func MockSecret() *block.Secret {
+func MockSecret() *block.SecretValue {
 	secretName := "my-secret"
-	return &block.Secret{
+	return &block.SecretValue{
 		Name: &secretName,
 	}
 }
 
-func MockSecretReference() *block.Secret {
-	return &block.Secret{
+func MockSecretReference() *block.SecretValue {
+	return &block.SecretValue{
 		Reference: MockReference(),
 	}
 }
