@@ -1,4 +1,4 @@
-package deploys
+package services
 
 import (
 	"fmt"
@@ -13,9 +13,9 @@ import (
 	"github.com/mlab-lattice/system/pkg/managerapi/client"
 )
 
-// ListDeploysSupportedFormats is the list of printer.Formats supported
+// ListServicesSupportedFormats is the list of printer.Formats supported
 // by the ListDeploys function.
-var ListDeploysSupportedFormats = []printer.Format{
+var ListServicesSupportedFormats = []printer.Format{
 	printer.FormatDefault,
 	printer.FormatJSON,
 	printer.FormatTable,
@@ -27,7 +27,7 @@ type Command struct {
 
 func (c *Command) Base() (*latticectl.BaseCommand, error) {
 	output := &lctlcommand.OutputFlag{
-		SupportedFormats: ListDeploysSupportedFormats,
+		SupportedFormats: ListServicesSupportedFormats,
 	}
 	var watch bool
 
@@ -48,7 +48,11 @@ func (c *Command) Base() (*latticectl.BaseCommand, error) {
 				log.Fatal(err)
 			}
 
-			ListDeploys(ctx.Client().Systems().Rollouts(ctx.SystemID()), format, os.Stdout)
+			if watch {
+				WatchServices(ctx.Client().Systems().Services(ctx.SystemID()), format, os.Stdout)
+			} else {
+				ListServices(ctx.Client().Systems().Services(ctx.SystemID()), format, os.Stdout)
+			}
 		},
 		Subcommands: c.Subcommands,
 	}
@@ -56,7 +60,7 @@ func (c *Command) Base() (*latticectl.BaseCommand, error) {
 	return cmd.Base()
 }
 
-func ListDeploys(client client.RolloutClient, format printer.Format, writer io.Writer) {
+func ListServices(client client.ServiceClient, format printer.Format, writer io.Writer) {
 	deploys, err := client.List()
 	if err != nil {
 		log.Panic(err)
@@ -65,7 +69,7 @@ func ListDeploys(client client.RolloutClient, format printer.Format, writer io.W
 	fmt.Printf("%v\n", deploys)
 }
 
-func WatchDeploys(client client.RolloutClient, format printer.Format, writer io.Writer) {
+func WatchServices(client client.ServiceClient, format printer.Format, writer io.Writer) {
 	//// Poll the API for the builds and send it to the channel
 	//printerChan := make(chan printer.Interface)
 	//go wait.PollImmediateInfinite(
