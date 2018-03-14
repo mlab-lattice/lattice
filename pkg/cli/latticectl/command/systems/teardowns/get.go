@@ -1,12 +1,15 @@
 package teardowns
 
 import (
+	"fmt"
+	"io"
 	"log"
 	"os"
 
 	"github.com/mlab-lattice/system/pkg/cli/command"
 	"github.com/mlab-lattice/system/pkg/cli/latticectl"
 	lctlcommand "github.com/mlab-lattice/system/pkg/cli/latticectl/command"
+	"github.com/mlab-lattice/system/pkg/cli/printer"
 	"github.com/mlab-lattice/system/pkg/managerapi/client"
 	"github.com/mlab-lattice/system/pkg/types"
 )
@@ -39,22 +42,32 @@ func (c *GetCommand) Base() (*latticectl.BaseCommand, error) {
 
 			c := ctx.Client().Systems().Teardowns(ctx.SystemID())
 
-			getFunc := func(client client.TeardownClient) ([]types.SystemTeardown, error) {
-				teardown, err := client.Get(ctx.TeardownID())
-				if err != nil {
-					return nil, err
-				}
-				return []types.SystemTeardown{*teardown}, nil
-			}
-
 			if watch {
-				WatchTeardowns(getFunc, c, format, os.Stdout)
+				WatchTeardown(c, ctx.TeardownID(), format, os.Stdout)
 				return
 			}
 
-			ListTeardowns(getFunc, c, format, os.Stdout)
+			GetTeardown(c, ctx.TeardownID(), format, os.Stdout)
 		},
 	}
 
 	return cmd.Base()
+}
+
+func GetTeardown(client client.TeardownClient, teardownID types.SystemTeardownID, format printer.Format, writer io.Writer) {
+	teardown, err := client.Get(teardownID)
+	if err != nil {
+		log.Panic(err)
+	}
+
+	fmt.Printf("%v\n", teardown)
+}
+
+func WatchTeardown(client client.TeardownClient, teardownID types.SystemTeardownID, format printer.Format, writer io.Writer) {
+	teardown, err := client.Get(teardownID)
+	if err != nil {
+		log.Panic(err)
+	}
+
+	fmt.Printf("%v\n", teardown)
 }

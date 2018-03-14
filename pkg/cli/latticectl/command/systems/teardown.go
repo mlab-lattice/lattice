@@ -9,7 +9,6 @@ import (
 	lctlcommand "github.com/mlab-lattice/system/pkg/cli/latticectl/command"
 	"github.com/mlab-lattice/system/pkg/cli/latticectl/command/systems/teardowns"
 	"github.com/mlab-lattice/system/pkg/managerapi/client"
-	"github.com/mlab-lattice/system/pkg/types"
 )
 
 type TeardownCommand struct {

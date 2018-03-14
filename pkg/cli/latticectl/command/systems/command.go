@@ -31,16 +31,6 @@ type ListSystemsCommand struct {
 	Subcommands []latticectl.Command
 }
 
-type getSystemsFunc func(client.SystemClient) ([]types.System, error)
-
-func GetAllSystems(client client.SystemClient) ([]types.System, error) {
-	systems, err := client.List()
-	if err != nil {
-		return nil, err
-	}
-	return systems, nil
-}
-
 // Base implements the latticectl.Command interface.
 func (c *ListSystemsCommand) Base() (*latticectl.BaseCommand, error) {
 	output := &lctlcommand.OutputFlag{
@@ -68,11 +58,11 @@ func (c *ListSystemsCommand) Base() (*latticectl.BaseCommand, error) {
 			c := ctx.Client().Systems()
 
 			if watch {
-				WatchSystems(GetAllSystems, c, format, os.Stdout)
+				WatchSystems(c, format, os.Stdout)
 				return
 			}
 
-			ListSystems(GetAllSystems, c, format, os.Stdout)
+			ListSystems(c, format, os.Stdout)
 		},
 		Subcommands: c.Subcommands,
 	}
@@ -81,8 +71,8 @@ func (c *ListSystemsCommand) Base() (*latticectl.BaseCommand, error) {
 }
 
 // ListSystems writes the current Systems to the supplied io.Writer in the given printer.Format.
-func ListSystems(get getSystemsFunc, client client.SystemClient, format printer.Format, writer io.Writer) {
-	systems, err := get(client)
+func ListSystems(client client.SystemClient, format printer.Format, writer io.Writer) {
+	systems, err := client.List()
 	if err != nil {
 		log.Panic(err)
 	}
@@ -94,13 +84,13 @@ func ListSystems(get getSystemsFunc, client client.SystemClient, format printer.
 // WatchSystems polls the API for the current Systems, and writes out the Systems to the
 // the supplied io.Writer in the given printer.Format, unless the printer.Format is
 // printer.FormatTable, in which case it always writes to the terminal.
-func WatchSystems(get getSystemsFunc, client client.SystemClient, format printer.Format, writer io.Writer) {
+func WatchSystems(client client.SystemClient, format printer.Format, writer io.Writer) {
 	// Poll the API for the systems and send it to the channel
 	printerChan := make(chan printer.Interface)
 	go wait.PollImmediateInfinite(
 		5*time.Second,
 		func() (bool, error) {
-			systems, err := get(client)
+			systems, err := client.List()
 			if err != nil {
 				return false, err
 			}

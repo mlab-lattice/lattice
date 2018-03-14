@@ -2,11 +2,14 @@ package services
 
 import (
 	"fmt"
+	"io"
 	"log"
+	"os"
 
 	"github.com/mlab-lattice/system/pkg/cli/command"
 	"github.com/mlab-lattice/system/pkg/cli/latticectl"
 	lctlcommand "github.com/mlab-lattice/system/pkg/cli/latticectl/command"
+	"github.com/mlab-lattice/system/pkg/cli/printer"
 	"github.com/mlab-lattice/system/pkg/managerapi/client"
 	"github.com/mlab-lattice/system/pkg/types"
 )
@@ -32,25 +35,38 @@ func (c *StatusCommand) Base() (*latticectl.BaseCommand, error) {
 			},
 		},
 		Run: func(ctx lctlcommand.ServiceCommandContext, args []string) {
-			//format, err := output.Value()
-			//if err != nil {
-			//	log.Fatal(err)
-			//}
+			format, err := output.Value()
+			if err != nil {
+				log.Fatal(err)
+			}
 
 			c := ctx.Client().Systems().Services(ctx.SystemID())
 
-			GetService(c, ctx.ServiceID())
+			if watch {
+				WatchService(c, ctx.ServiceID(), format, os.Stdout)
+			}
+
+			GetService(c, ctx.ServiceID(), format, os.Stdout)
 		},
 	}
 
 	return cmd.Base()
 }
 
-func GetService(client client.ServiceClient, service types.ServiceID) {
-	deploy, err := client.Get(service)
+func GetService(client client.ServiceClient, serviceID types.ServiceID, format printer.Format, writer io.Writer) {
+	service, err := client.Get(serviceID)
 	if err != nil {
 		log.Panic(err)
 	}
 
-	fmt.Printf("%v\n", deploy)
+	fmt.Printf("%v\n", service)
+}
+
+func WatchService(client client.ServiceClient, serviceID types.ServiceID, format printer.Format, writer io.Writer) {
+	service, err := client.Get(serviceID)
+	if err != nil {
+		log.Panic(err)
+	}
+
+	fmt.Printf("%v\n", service)
 }

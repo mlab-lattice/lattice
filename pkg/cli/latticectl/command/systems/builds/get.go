@@ -1,12 +1,15 @@
 package builds
 
 import (
+	"fmt"
+	"io"
 	"log"
 	"os"
 
 	"github.com/mlab-lattice/system/pkg/cli/command"
 	"github.com/mlab-lattice/system/pkg/cli/latticectl"
 	lctlcommand "github.com/mlab-lattice/system/pkg/cli/latticectl/command"
+	"github.com/mlab-lattice/system/pkg/cli/printer"
 	"github.com/mlab-lattice/system/pkg/managerapi/client"
 	"github.com/mlab-lattice/system/pkg/types"
 )
@@ -39,22 +42,31 @@ func (c *GetCommand) Base() (*latticectl.BaseCommand, error) {
 
 			c := ctx.Client().Systems().SystemBuilds(ctx.SystemID())
 
-			getFunc := func(client client.SystemBuildClient) ([]types.SystemBuild, error) {
-				build, err := client.Get(ctx.BuildID())
-				if err != nil {
-					return nil, err
-				}
-				return []types.SystemBuild{*build}, nil
-			}
-
 			if watch {
-				WatchBuilds(getFunc, c, format, os.Stdout)
-				return
+				WatchBuild(c, ctx.BuildID(), format, os.Stdout)
 			}
 
-			ListBuilds(getFunc, c, format, os.Stdout)
+			GetBuild(c, ctx.BuildID(), format, os.Stdout)
 		},
 	}
 
 	return cmd.Base()
+}
+
+func GetBuild(client client.SystemBuildClient, buildID types.SystemBuildID, format printer.Format, writer io.Writer) {
+	build, err := client.Get(buildID)
+	if err != nil {
+		log.Panic(err)
+	}
+
+	fmt.Printf("%v\n", build)
+}
+
+func WatchBuild(client client.SystemBuildClient, buildID types.SystemBuildID, format printer.Format, writer io.Writer) {
+	build, err := client.Get(buildID)
+	if err != nil {
+		log.Panic(err)
+	}
+
+	fmt.Printf("%v\n", build)
 }

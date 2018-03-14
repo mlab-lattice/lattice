@@ -24,6 +24,17 @@ func (c *AddressCommand) Base() (*latticectl.BaseCommand, error) {
 	return cmd.Base()
 }
 
+func GetServiceAddresses(client client.ServiceClient) {
+	services, err := client.List()
+	if err != nil {
+		log.Panic(err)
+	}
+
+	for _, service := range services {
+		GetServiceAddress(client, service.ID)
+	}
+}
+
 func GetServiceAddress(client client.ServiceClient, serviceID types.ServiceID) {
 	service, err := client.Get(serviceID)
 	if err != nil {

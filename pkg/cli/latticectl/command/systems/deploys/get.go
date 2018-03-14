@@ -1,12 +1,15 @@
 package deploys
 
 import (
+	"fmt"
+	"io"
 	"log"
 	"os"
 
 	"github.com/mlab-lattice/system/pkg/cli/command"
 	"github.com/mlab-lattice/system/pkg/cli/latticectl"
 	lctlcommand "github.com/mlab-lattice/system/pkg/cli/latticectl/command"
+	"github.com/mlab-lattice/system/pkg/cli/printer"
 	"github.com/mlab-lattice/system/pkg/managerapi/client"
 	"github.com/mlab-lattice/system/pkg/types"
 )
@@ -21,7 +24,7 @@ func (c *GetCommand) Base() (*latticectl.BaseCommand, error) {
 	var watch bool
 
 	cmd := &lctlcommand.DeployCommand{
-		Name: "get",
+		Name: "status",
 		Flags: command.Flags{
 			output.Flag(),
 			&command.BoolFlag{
@@ -39,22 +42,31 @@ func (c *GetCommand) Base() (*latticectl.BaseCommand, error) {
 
 			c := ctx.Client().Systems().Rollouts(ctx.SystemID())
 
-			getFunc := func(client client.RolloutClient) ([]types.SystemRollout, error) {
-				rollout, err := client.Get(ctx.DeployID())
-				if err != nil {
-					return nil, err
-				}
-				return []types.SystemRollout{*rollout}, nil
-			}
-
 			if watch {
-				WatchDeploys(getFunc, c, format, os.Stdout)
-				return
+				WatchDeploy(c, ctx.DeployID(), format, os.Stdout)
 			}
 
-			ListDeploys(getFunc, c, format, os.Stdout)
+			GetDeploy(c, ctx.DeployID(), format, os.Stdout)
 		},
 	}
 
 	return cmd.Base()
+}
+
+func GetDeploy(client client.RolloutClient, deployID types.SystemRolloutID, format printer.Format, writer io.Writer) {
+	deploy, err := client.Get(deployID)
+	if err != nil {
+		log.Panic(err)
+	}
+
+	fmt.Printf("%v\n", deploy)
+}
+
+func WatchDeploy(client client.RolloutClient, deployID types.SystemRolloutID, format printer.Format, writer io.Writer) {
+	deploy, err := client.Get(deployID)
+	if err != nil {
+		log.Panic(err)
+	}
+
+	fmt.Printf("%v\n", deploy)
 }

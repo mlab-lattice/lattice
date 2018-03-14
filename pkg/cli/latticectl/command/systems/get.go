@@ -1,12 +1,15 @@
 package systems
 
 import (
+	"fmt"
+	"io"
 	"log"
 	"os"
 
 	"github.com/mlab-lattice/system/pkg/cli/command"
 	"github.com/mlab-lattice/system/pkg/cli/latticectl"
 	lctlcommand "github.com/mlab-lattice/system/pkg/cli/latticectl/command"
+	"github.com/mlab-lattice/system/pkg/cli/printer"
 	"github.com/mlab-lattice/system/pkg/managerapi/client"
 	"github.com/mlab-lattice/system/pkg/types"
 )
@@ -39,22 +42,32 @@ func (c *GetCommand) Base() (*latticectl.BaseCommand, error) {
 
 			c := ctx.Client().Systems()
 
-			getFunc := func(client client.SystemClient) ([]types.System, error) {
-				system, err := client.Get(ctx.SystemID())
-				if err != nil {
-					return nil, err
-				}
-				return []types.System{*system}, nil
-			}
-
 			if watch {
-				WatchSystems(getFunc, c, format, os.Stdout)
+				WatchSystem(c, ctx.SystemID(), format, os.Stdout)
 				return
 			}
 
-			ListSystems(getFunc, c, format, os.Stdout)
+			GetSystem(c, ctx.SystemID(), format, os.Stdout)
 		},
 	}
 
 	return cmd.Base()
+}
+
+func WatchSystem(client client.SystemClient, systemID types.SystemID, format printer.Format, writer io.Writer) {
+	system, err := client.Get(systemID)
+	if err != nil {
+		log.Panic(err)
+	}
+
+	fmt.Printf("%v\n", system)
+}
+
+func GetSystem(client client.SystemClient, systemID types.SystemID, format printer.Format, writer io.Writer) {
+	system, err := client.Get(systemID)
+	if err != nil {
+		log.Panic(err)
+	}
+
+	fmt.Printf("%v\n", system)
 }

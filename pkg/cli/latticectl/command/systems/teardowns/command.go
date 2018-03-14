@@ -31,16 +31,6 @@ type Command struct {
 	Subcommands []latticectl.Command
 }
 
-type getTeardownsFunc func(client.TeardownClient) ([]types.SystemTeardown, error)
-
-func GetAllTeardowns(client client.TeardownClient) ([]types.SystemTeardown, error) {
-	teardowns, err := client.List()
-	if err != nil {
-		return nil, err
-	}
-	return teardowns, nil
-}
-
 // Base implements the latticectl.Command interface.
 func (c *Command) Base() (*latticectl.BaseCommand, error) {
 	output := &lctlcommand.OutputFlag{
@@ -68,11 +58,11 @@ func (c *Command) Base() (*latticectl.BaseCommand, error) {
 			c := ctx.Client().Systems().Teardowns(ctx.SystemID())
 
 			if watch {
-				WatchTeardowns(GetAllTeardowns, c, format, os.Stdout)
+				WatchTeardowns(c, format, os.Stdout)
 				return
 			}
 
-			ListTeardowns(GetAllTeardowns, c, format, os.Stdout)
+			ListTeardowns(c, format, os.Stdout)
 		},
 		Subcommands: c.Subcommands,
 	}
@@ -81,8 +71,8 @@ func (c *Command) Base() (*latticectl.BaseCommand, error) {
 }
 
 // ListTeardowns writes the current Teardowns to the supplied io.Writer in the given printer.Format.
-func ListTeardowns(get getTeardownsFunc, client client.TeardownClient, format printer.Format, writer io.Writer) {
-	teardowns, err := get(client)
+func ListTeardowns(client client.TeardownClient, format printer.Format, writer io.Writer) {
+	teardowns, err := client.List()
 	if err != nil {
 		log.Panic(err)
 	}
@@ -94,13 +84,13 @@ func ListTeardowns(get getTeardownsFunc, client client.TeardownClient, format pr
 // WatchTeardowns polls the API for the current Teardowns, and writes out the Teardowns to the
 // the supplied io.Writer in the given printer.Format, unless the printer.Format is
 // printer.FormatTable, in which case it always writes to the terminal.
-func WatchTeardowns(get getTeardownsFunc, client client.TeardownClient, format printer.Format, writer io.Writer) {
+func WatchTeardowns(client client.TeardownClient, format printer.Format, writer io.Writer) {
 	// Poll the API for the teardowns and send it to the channel
 	printerChan := make(chan printer.Interface)
 	go wait.PollImmediateInfinite(
 		5*time.Second,
 		func() (bool, error) {
-			teardowns, err := get(client)
+			teardowns, err := client.List()
 			if err != nil {
 				return false, err
 			}
