@@ -1,4 +1,4 @@
-package deploys
+package teardowns
 
 import (
 	"log"
@@ -16,12 +16,12 @@ type GetCommand struct {
 
 func (c *GetCommand) Base() (*latticectl.BaseCommand, error) {
 	output := &lctlcommand.OutputFlag{
-		SupportedFormats: ListDeploysSupportedFormats,
+		SupportedFormats: ListTeardownsSupportedFormats,
 	}
 	var watch bool
 
-	cmd := &lctlcommand.DeployCommand{
-		Name: "get",
+	cmd := &lctlcommand.TeardownCommand{
+		Name: "status",
 		Flags: command.Flags{
 			output.Flag(),
 			&command.BoolFlag{
@@ -31,28 +31,28 @@ func (c *GetCommand) Base() (*latticectl.BaseCommand, error) {
 				Target:  &watch,
 			},
 		},
-		Run: func(ctx lctlcommand.DeployCommandContext, args []string) {
+		Run: func(ctx lctlcommand.TeardownCommandContext, args []string) {
 			format, err := output.Value()
 			if err != nil {
 				log.Fatal(err)
 			}
 
-			c := ctx.Client().Systems().Rollouts(ctx.SystemID())
+			c := ctx.Client().Systems().Teardowns(ctx.SystemID())
 
-			getFunc := func(client client.RolloutClient) ([]types.SystemRollout, error) {
-				rollout, err := client.Get(ctx.DeployID())
+			getFunc := func(client client.TeardownClient) ([]types.SystemTeardown, error) {
+				teardown, err := client.Get(ctx.TeardownID())
 				if err != nil {
 					return nil, err
 				}
-				return []types.SystemRollout{*rollout}, nil
+				return []types.SystemTeardown{*teardown}, nil
 			}
 
 			if watch {
-				WatchDeploys(getFunc, c, format, os.Stdout)
+				WatchTeardowns(getFunc, c, format, os.Stdout)
 				return
 			}
 
-			ListDeploys(getFunc, c, format, os.Stdout)
+			ListTeardowns(getFunc, c, format, os.Stdout)
 		},
 	}
 

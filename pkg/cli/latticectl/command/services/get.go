@@ -4,20 +4,42 @@ import (
 	"fmt"
 	"log"
 
+	"github.com/mlab-lattice/system/pkg/cli/command"
 	"github.com/mlab-lattice/system/pkg/cli/latticectl"
 	lctlcommand "github.com/mlab-lattice/system/pkg/cli/latticectl/command"
 	"github.com/mlab-lattice/system/pkg/managerapi/client"
 	"github.com/mlab-lattice/system/pkg/types"
 )
 
-type GetCommand struct {
+type StatusCommand struct {
 }
 
-func (c *GetCommand) Base() (*latticectl.BaseCommand, error) {
-	cmd := &lctlcommand.DeployCommand{
-		Name: "get",
-		Run: func(ctx lctlcommand.DeployCommandContext, args []string) {
-			GetService(ctx.Client().Systems().Services(ctx.SystemID()), types.ServiceID(0))
+func (c *StatusCommand) Base() (*latticectl.BaseCommand, error) {
+	output := &lctlcommand.OutputFlag{
+		SupportedFormats: ListServicesSupportedFormats,
+	}
+	var watch bool
+
+	cmd := &lctlcommand.ServiceCommand{
+		Name: "status",
+		Flags: command.Flags{
+			output.Flag(),
+			&command.BoolFlag{
+				Name:    "watch",
+				Short:   "w",
+				Default: false,
+				Target:  &watch,
+			},
+		},
+		Run: func(ctx lctlcommand.ServiceCommandContext, args []string) {
+			//format, err := output.Value()
+			//if err != nil {
+			//	log.Fatal(err)
+			//}
+
+			c := ctx.Client().Systems().Services(ctx.SystemID())
+
+			GetService(c, ctx.ServiceID())
 		},
 	}
 

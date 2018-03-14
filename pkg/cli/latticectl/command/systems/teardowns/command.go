@@ -1,4 +1,4 @@
-package deploys
+package teardowns
 
 import (
 	"io"
@@ -17,36 +17,39 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 )
 
-// ListDeploysSupportedFormats is the list of printer.Formats supported
-// by the ListDeploys function.
-var ListDeploysSupportedFormats = []printer.Format{
+// ListTeardownsSupportedFormats is the list of printer.Formats supported
+// by the ListTeardowns function.
+var ListTeardownsSupportedFormats = []printer.Format{
 	printer.FormatDefault,
 	printer.FormatJSON,
 	printer.FormatTable,
 }
 
+// ListTeardownsCommand is a type that implements the latticectl.Command interface
+// for listing the Teardowns in a System.
 type Command struct {
 	Subcommands []latticectl.Command
 }
 
-type getDeploysFunc func(rolloutClient client.RolloutClient) ([]types.SystemRollout, error)
+type getTeardownsFunc func(client.TeardownClient) ([]types.SystemTeardown, error)
 
-func GetAllDeploys(client client.RolloutClient) ([]types.SystemRollout, error) {
-	rollouts, err := client.List()
+func GetAllTeardowns(client client.TeardownClient) ([]types.SystemTeardown, error) {
+	teardowns, err := client.List()
 	if err != nil {
 		return nil, err
 	}
-	return rollouts, nil
+	return teardowns, nil
 }
 
+// Base implements the latticectl.Command interface.
 func (c *Command) Base() (*latticectl.BaseCommand, error) {
 	output := &lctlcommand.OutputFlag{
-		SupportedFormats: ListDeploysSupportedFormats,
+		SupportedFormats: ListTeardownsSupportedFormats,
 	}
 	var watch bool
 
 	cmd := &lctlcommand.SystemCommand{
-		Name: "deploys",
+		Name: "teardowns",
 		Flags: command.Flags{
 			output.Flag(),
 			&command.BoolFlag{
@@ -62,13 +65,14 @@ func (c *Command) Base() (*latticectl.BaseCommand, error) {
 				log.Fatal(err)
 			}
 
-			c := ctx.Client().Systems().Rollouts(ctx.SystemID())
+			c := ctx.Client().Systems().Teardowns(ctx.SystemID())
 
 			if watch {
-				WatchDeploys(GetAllDeploys, c, format, os.Stdout)
+				WatchTeardowns(GetAllTeardowns, c, format, os.Stdout)
+				return
 			}
 
-			ListDeploys(GetAllDeploys, c, format, os.Stdout)
+			ListTeardowns(GetAllTeardowns, c, format, os.Stdout)
 		},
 		Subcommands: c.Subcommands,
 	}
@@ -76,28 +80,32 @@ func (c *Command) Base() (*latticectl.BaseCommand, error) {
 	return cmd.Base()
 }
 
-func ListDeploys(get getDeploysFunc, client client.RolloutClient, format printer.Format, writer io.Writer) {
-	deploys, err := get(client)
+// ListTeardowns writes the current Teardowns to the supplied io.Writer in the given printer.Format.
+func ListTeardowns(get getTeardownsFunc, client client.TeardownClient, format printer.Format, writer io.Writer) {
+	teardowns, err := get(client)
 	if err != nil {
 		log.Panic(err)
 	}
 
-	p := deploysPrinter(deploys, format)
+	p := teardownsPrinter(teardowns, format)
 	p.Print(writer)
 }
 
-func WatchDeploys(get getDeploysFunc, client client.RolloutClient, format printer.Format, writer io.Writer) {
-	// Poll the API for the builds and send it to the channel
+// WatchTeardowns polls the API for the current Teardowns, and writes out the Teardowns to the
+// the supplied io.Writer in the given printer.Format, unless the printer.Format is
+// printer.FormatTable, in which case it always writes to the terminal.
+func WatchTeardowns(get getTeardownsFunc, client client.TeardownClient, format printer.Format, writer io.Writer) {
+	// Poll the API for the teardowns and send it to the channel
 	printerChan := make(chan printer.Interface)
 	go wait.PollImmediateInfinite(
 		5*time.Second,
 		func() (bool, error) {
-			deploys, err := get(client)
+			teardowns, err := get(client)
 			if err != nil {
 				return false, err
 			}
 
-			p := deploysPrinter(deploys, format)
+			p := teardownsPrinter(teardowns, format)
 			printerChan <- p
 			return false, nil
 		},
@@ -117,28 +125,27 @@ func WatchDeploys(get getDeploysFunc, client client.RolloutClient, format printe
 	w.Watch(printerChan, writer)
 }
 
-func deploysPrinter(deploys []types.SystemRollout, format printer.Format) printer.Interface {
+func teardownsPrinter(teardowns []types.SystemTeardown, format printer.Format) printer.Interface {
 	var p printer.Interface
 	switch format {
 	case printer.FormatDefault, printer.FormatTable:
-		headers := []string{"ID", "BuildID", "State"}
+		headers := []string{"ID", "State"}
 
 		var rows [][]string
-		for _, deploy := range deploys {
+		for _, teardown := range teardowns {
 			var stateColor color.Color
-			switch deploy.State {
-			case types.SystemRolloutStateSucceeded:
+			switch teardown.State {
+			case types.SystemTeardownStateSucceeded:
 				stateColor = color.Success
-			case types.SystemRolloutStateFailed:
+			case types.SystemTeardownStateFailed:
 				stateColor = color.Failure
 			default:
 				stateColor = color.Warning
 			}
 
 			rows = append(rows, []string{
-				string(deploy.ID),
-				string(deploy.BuildID),
-				stateColor(string(deploy.State)),
+				string(teardown.ID),
+				stateColor(string(teardown.State)),
 			})
 		}
 
@@ -149,7 +156,7 @@ func deploysPrinter(deploys []types.SystemRollout, format printer.Format) printe
 
 	case printer.FormatJSON:
 		p = &printer.JSON{
-			Value: deploys,
+			Value: teardowns,
 		}
 	}
 

@@ -6,6 +6,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/mlab-lattice/system/pkg/cli/color"
 	"github.com/mlab-lattice/system/pkg/cli/command"
 	"github.com/mlab-lattice/system/pkg/cli/latticectl"
 	lctlcommand "github.com/mlab-lattice/system/pkg/cli/latticectl/command"
@@ -28,6 +29,16 @@ var ListBuildsSupportedFormats = []printer.Format{
 // for listing the Builds in a System.
 type ListBuildsCommand struct {
 	Subcommands []latticectl.Command
+}
+
+type getBuildsFunc func(client.SystemBuildClient) ([]types.SystemBuild, error)
+
+func GetAllBuilds(client client.SystemBuildClient) ([]types.SystemBuild, error) {
+	builds, err := client.List()
+	if err != nil {
+		return nil, err
+	}
+	return builds, nil
 }
 
 // Base implements the latticectl.Command interface.
@@ -57,11 +68,11 @@ func (c *ListBuildsCommand) Base() (*latticectl.BaseCommand, error) {
 			c := ctx.Client().Systems().SystemBuilds(ctx.SystemID())
 
 			if watch {
-				WatchBuilds(c, format, os.Stdout)
+				WatchBuilds(GetAllBuilds, c, format, os.Stdout)
 				return
 			}
 
-			ListBuilds(c, format, os.Stdout)
+			ListBuilds(GetAllBuilds, c, format, os.Stdout)
 		},
 		Subcommands: c.Subcommands,
 	}
@@ -70,8 +81,8 @@ func (c *ListBuildsCommand) Base() (*latticectl.BaseCommand, error) {
 }
 
 // ListBuilds writes the current Builds to the supplied io.Writer in the given printer.Format.
-func ListBuilds(client client.SystemBuildClient, format printer.Format, writer io.Writer) {
-	builds, err := client.List()
+func ListBuilds(get getBuildsFunc, client client.SystemBuildClient, format printer.Format, writer io.Writer) {
+	builds, err := get(client)
 	if err != nil {
 		log.Panic(err)
 	}
@@ -83,13 +94,13 @@ func ListBuilds(client client.SystemBuildClient, format printer.Format, writer i
 // WatchBuilds polls the API for the current Builds, and writes out the Builds to the
 // the supplied io.Writer in the given printer.Format, unless the printer.Format is
 // printer.FormatTable, in which case it always writes to the terminal.
-func WatchBuilds(client client.SystemBuildClient, format printer.Format, writer io.Writer) {
+func WatchBuilds(get getBuildsFunc, client client.SystemBuildClient, format printer.Format, writer io.Writer) {
 	// Poll the API for the builds and send it to the channel
 	printerChan := make(chan printer.Interface)
 	go wait.PollImmediateInfinite(
 		5*time.Second,
 		func() (bool, error) {
-			builds, err := client.List()
+			builds, err := get(client)
 			if err != nil {
 				return false, err
 			}
@@ -118,27 +129,31 @@ func buildsPrinter(builds []types.SystemBuild, format printer.Format) printer.In
 	var p printer.Interface
 	switch format {
 	case printer.FormatDefault, printer.FormatTable:
-		// FIXME :: implement printing
-		headers := []string{"Name", "Definition", "Status"}
+		headers := []string{"ID", "Version", "ServiceBuildIDs", "State"}
 
 		var rows [][]string
-		//for _, build := range builds {
-		//	var stateColor color.Color
-		//	switch build.State {
-		//	case types.SystemStateStable:
-		//		stateColor = color.Success
-		//	case types.SystemStateFailed:
-		//		stateColor = color.Failure
-		//	default:
-		//		stateColor = color.Warning
-		//	}
-		//
-		//	rows = append(rows, []string{
-		//		string(system.ID),
-		//		system.DefinitionURL,
-		//		stateColor(string(system.State)),
-		//	})
-		//}
+		for _, build := range builds {
+			var stateColor color.Color
+			switch build.State {
+			case types.SystemBuildStateSucceeded:
+				stateColor = color.Success
+			case types.SystemBuildStateRunning:
+				stateColor = color.Success
+			case types.SystemBuildStateFailed:
+				stateColor = color.Failure
+			case types.SystemBuildStatePending:
+				stateColor = color.Success
+			default:
+				stateColor = color.Warning
+			}
+
+			rows = append(rows, []string{
+				string(build.ID),
+				string(build.Version),
+				" ",
+				stateColor(string(build.State)),
+			})
+		}
 
 		p = &printer.Table{
 			Headers: headers,

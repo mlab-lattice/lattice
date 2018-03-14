@@ -1,9 +1,10 @@
 package builds
 
 import (
-	"fmt"
 	"log"
+	"os"
 
+	"github.com/mlab-lattice/system/pkg/cli/command"
 	"github.com/mlab-lattice/system/pkg/cli/latticectl"
 	lctlcommand "github.com/mlab-lattice/system/pkg/cli/latticectl/command"
 	"github.com/mlab-lattice/system/pkg/managerapi/client"
@@ -14,21 +15,46 @@ type GetCommand struct {
 }
 
 func (c *GetCommand) Base() (*latticectl.BaseCommand, error) {
+	output := &lctlcommand.OutputFlag{
+		SupportedFormats: ListBuildsSupportedFormats,
+	}
+	var watch bool
+
 	cmd := &lctlcommand.BuildCommand{
-		Name: "get",
+		Name: "status",
+		Flags: command.Flags{
+			output.Flag(),
+			&command.BoolFlag{
+				Name:    "watch",
+				Short:   "w",
+				Default: false,
+				Target:  &watch,
+			},
+		},
 		Run: func(ctx lctlcommand.BuildCommandContext, args []string) {
-			GetDeploy(ctx.Client().Systems().SystemBuilds(ctx.SystemID()), ctx.BuildID())
+			format, err := output.Value()
+			if err != nil {
+				log.Fatal(err)
+			}
+
+			c := ctx.Client().Systems().SystemBuilds(ctx.SystemID())
+
+			getFunc := func(client client.SystemBuildClient) ([]types.SystemBuild, error) {
+				build, err := client.Get(ctx.BuildID())
+				if err != nil {
+					return nil, err
+				}
+				return []types.SystemBuild{*build}, nil
+			}
+
+			if watch {
+				WatchBuilds(getFunc, c, format, os.Stdout)
+				return
+			}
+
+			ListBuilds(getFunc, c, format, os.Stdout)
 		},
 	}
 
 	return cmd.Base()
-}
-
-func GetDeploy(client client.SystemBuildClient, buildID types.SystemBuildID) {
-	deploy, err := client.Get(buildID)
-	if err != nil {
-		log.Panic(err)
-	}
-
-	fmt.Printf("%v\n", deploy)
 }
