@@ -9,21 +9,25 @@ OS := $(shell uname)
 USER := $(shell whoami)
 
 # build/clean
-.PHONY: gazelle
-gazelle:
-	@bazel run //:gazelle
-
 .PHONY: build
 build: gazelle
 	@bazel build //...:all
 
-.PHONY: build-linux
-build-linux: gazelle
+.PHONY: build.all
+build.all: build.darwin \
+           build.linux
+
+.PHONY: build.darwin
+build.darwin: gazelle
+	@bazel build --cpu darwin //...:all
+
+.PHONY: build.linux
+build.linux: gazelle
 	@bazel build --cpu k8 //...:all
 
-.PHONY: build-all
-build-all: build \
-           build-linux
+.PHONY: gazelle
+gazelle:
+	@bazel run //:gazelle
 
 .PHONY: clean
 clean:
@@ -33,15 +37,33 @@ clean:
 # testing
 .PHONY: test
 test: gazelle
-	@bazel test --test_output=errors //...
+	@bazel test --test_output=errors //pkg/...
 
 .PHONY: test.no-cache
 test.no-cache: gazelle
-	@bazel test --cache_test_results=no --test_output=errors //...
+	@bazel test --cache_test_results=no --test_output=errors //pkg/...
 
 .PHONY: test.verbose
 test.verbose: gazelle
-	@bazel test --test_output=all --test_env -v
+	@bazel test --test_output=all --test_env -v //pkg/...
+
+
+# e2e testing
+.PHONY: e2e-test
+e2e-test: e2e-test.build
+	@$(DIR)/bazel-bin/test/e2e/darwin_amd64_stripped/go_default_test -cluster-url $(CLUSTER_URL)
+
+.PHONY: e2e-test.provider
+e2e-test.provider: e2e-test.build
+	@$(DIR)/bazel-bin/test/e2e/darwin_amd64_stripped/go_default_test -cloud-provider $(PROVIDER)
+
+.PHONY: e2e-test.local
+e2e-test.local: e2e-test.build
+	@$(MAKE) e2e-test.provider PROVIDER=local
+
+.PHONY: e2e-test.build
+e2e-test.build: gazelle
+	@bazel build //test/e2e/...
 
 
 # formatting/linting

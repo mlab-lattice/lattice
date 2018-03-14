@@ -11,6 +11,5 @@ go_library(
 go_binary(
     name = "lattice-controller-manager",
     embed = [":go_default_library"],
-    importpath = "github.com/mlab-lattice/system/cmd/kubernetes/lattice-controller-manager",
     visibility = ["//visibility:public"],
 )

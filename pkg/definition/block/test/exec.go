@@ -6,11 +6,17 @@ import (
 )
 
 func MockExec() *block.ComponentExec {
+	baz := "baz"
+	bar := "bar"
 	return &block.ComponentExec{
 		Command: []string{"./start", "--my-app"},
-		Environment: map[string]string{
-			"biz": "baz",
-			"foo": "bar",
+		Environment: block.Environment{
+			"biz": &block.EnvironmentVariable{
+				Value: &baz,
+			},
+			"foo": &block.EnvironmentVariable{
+				Value: &bar,
+			},
 		},
 	}
 }
@@ -49,4 +55,38 @@ func GenerateExecExpectedJSON(
 			OmitEmpty: true,
 		},
 	})
+}
+
+func MockExecSecret() *block.ComponentExec {
+	baz := "baz"
+	return &block.ComponentExec{
+		Command: []string{"./start", "--my-app"},
+		Environment: block.Environment{
+			"biz": &block.EnvironmentVariable{
+				Value: &baz,
+			},
+			"foo": &block.EnvironmentVariable{
+				Secret: MockSecret(),
+			},
+		},
+	}
+}
+
+func MockExecSecretExpectedJSON() []byte {
+	return GenerateExecExpectedJSON(
+		jsonutil.GenerateArrayBytes([][]byte{
+			[]byte(`"./start"`),
+			[]byte(`"--my-app"`),
+		}),
+		jsonutil.GenerateObjectBytes([]jsonutil.FieldBytes{
+			{
+				Name:  "biz",
+				Bytes: []byte(`"baz"`),
+			},
+			{
+				Name:  "foo",
+				Bytes: MockSecretExpectedJSON(),
+			},
+		}),
+	)
 }

@@ -1,165 +1,8 @@
 load("@io_bazel_rules_go//go:def.bzl", "go_repository")
-load(":bazel/go_repositories.bzl", "GO_REPOSITORIES")
+load(":bazel/go_dependencies.bzl", _go_dependencies="dependencies")
 
 def go_dependencies():
-    dependencies = [
-        "github.com/aws/aws-sdk-go",
-        "github.com/coreos/go-iptables",
-        "github.com/deckarep/golang-set",
-        "github.com/docker/docker",
-        "github.com/fatih/color",
-        "github.com/gin-gonic/gin",
-        "github.com/olekukonko/tablewriter",
-        "github.com/satori/go.uuid",
-        "github.com/sergi/go-diff",
-        "github.com/spf13/cobra",
-        "github.com/tidwall/gjson",
-        "golang.org/x/crypto",
-        "gopkg.in/src-d/go-git.v4",
-        "k8s.io/api",
-        "k8s.io/apiextensions-apiserver",
-        "k8s.io/apimachinery",
-        "k8s.io/client-go",
-        "k8s.io/kubernetes",
-    ]
-
-    for dep in dependencies:
-      go_repository(**GO_REPOSITORIES[dep])
-
-    _go_dependencies_com_github_aws_aws_sdk_go()
-    _go_dependencies_com_github_deckarep_golang_set()
-    _go_dependencies_com_github_docker_docker()
-    _go_dependencies_com_github_fatih_color()
-    _go_dependencies_com_github_gin_gonic_gin()
-    _go_dependencies_com_github_olekukonko_tablewriter()
-    _go_dependencies_com_github_spf13_cobra()
-    _go_dependencies_com_github_tidwall_gjson()
-    _go_dependencies_in_gopkg_src_d_go_git_v4()
-    _go_dependencies_io_k8s()
-
-def _go_dependencies_com_github_aws_aws_sdk_go():
-  dependencies = [
-      "github.com/go-ini/ini",
-      "github.com/jmespath/go-jmespath",
-  ]
-
-  for dep in dependencies:
-    go_repository(**GO_REPOSITORIES[dep])
-
-def _go_dependencies_com_github_deckarep_golang_set():
-    dependencies = [
-        "github.com/golang/groupcache",
-    ]
-
-    for dep in dependencies:
-      go_repository(**GO_REPOSITORIES[dep])
-
-def _go_dependencies_com_github_docker_docker():
-  dependencies = [
-      "github.com/docker/distribution",
-      "github.com/docker/go-connections",
-      "github.com/docker/go-units",
-      "github.com/opencontainers/runc",
-      "github.com/pkg/errors",
-      "github.com/Sirupsen/logrus",
-      "github.com/opencontainers/go-digest",
-      "github.com/Nvveen/Gotty",
-      "github.com/docker/libtrust",
-  ]
-
-  for dep in dependencies:
-    go_repository(**GO_REPOSITORIES[dep])
-
-def _go_dependencies_com_github_fatih_color():
-  dependencies = [
-      "github.com/mattn/go-colorable"
-  ]
-
-  for dep in dependencies:
-    go_repository(**GO_REPOSITORIES[dep])
-
-def _go_dependencies_com_github_gin_gonic_gin():
-  dependencies = [
-      "github.com/gin-contrib/sse",
-      "github.com/mattn/go-isatty",
-      "gopkg.in/go-playground/validator.v8",
-  ]
-
-  for dep in dependencies:
-    go_repository(**GO_REPOSITORIES[dep])
-
-def _go_dependencies_com_github_olekukonko_tablewriter():
-  dependencies = [
-      "github.com/mattn/go-runewidth",
-  ]
-
-  for dep in dependencies:
-    go_repository(**GO_REPOSITORIES[dep])
-
-def _go_dependencies_com_github_spf13_cobra():
-  dependencies = [
-      "github.com/spf13/pflag",
-  ]
-
-  for dep in dependencies:
-    go_repository(**GO_REPOSITORIES[dep])
-
-def _go_dependencies_com_github_tidwall_gjson():
-  dependencies = [
-      "github.com/tidwall/match",
-  ]
-
-  for dep in dependencies:
-    go_repository(**GO_REPOSITORIES[dep])
-
-def _go_dependencies_in_gopkg_src_d_go_git_v4():
-    dependencies = [
-      "github.com/jbenet/go-context",
-      "github.com/mitchellh/go-homedir",
-      "github.com/src-d/gcfg",
-      "github.com/xanzy/ssh-agent",
-      "gopkg.in/src-d/go-billy.v3",
-      "gopkg.in/warnings.v0",
-    ]
-
-    for dep in dependencies:
-      go_repository(**GO_REPOSITORIES[dep])
-
-def _go_dependencies_io_k8s():
-  dependencies = [
-       "github.com/PuerkitoBio/purell",
-       "github.com/PuerkitoBio/urlesc",
-       "github.com/davecgh/go-spew",
-       "github.com/emicklei/go-restful",
-       "github.com/emicklei/go-restful-swagger12",
-       "github.com/ghodss/yaml",
-       "github.com/go-openapi/jsonpointer",
-       "github.com/go-openapi/jsonreference",
-       "github.com/go-openapi/spec",
-       "github.com/go-openapi/swag",
-       "github.com/gogo/protobuf",
-       "github.com/google/btree",
-       "github.com/google/gofuzz",
-       "github.com/googleapis/gnostic",
-       "github.com/gregjones/httpcache",
-       "github.com/hashicorp/golang-lru",
-       "github.com/howeyc/gopass",
-       "github.com/imdario/mergo",
-       "github.com/json-iterator/go",
-       "github.com/juju/ratelimit",
-       "github.com/mailru/easyjson",
-       "github.com/pborman/uuid",
-       "github.com/peterbourgon/diskv",
-       "github.com/ugorji/go",
-       "golang.org/x/sys",
-       "gopkg.in/inf.v0",
-       "gopkg.in/yaml.v2",
-       "k8s.io/apiserver",
-       "k8s.io/kube-openapi",
-   ]
-
-  for dep in dependencies:
-    go_repository(**GO_REPOSITORIES[dep])
+  _go_dependencies()
 
 load("@distroless//package_manager:package_manager.bzl", "dpkg_src", "dpkg_list")
 
@@ -191,6 +34,10 @@ def _docker_dependencies_debian_pkg():
           "libip4tc0",
           "libip6tc0",
           "libxtables12",
+
+          # openssh-client and dependencies (from https://packages.debian.org/stretch/openssh-client)
+          "openssh-client",
+          "zlib1g",
       ],
       sources = [
           "@debian_stretch//file:Packages.json",

@@ -13,16 +13,17 @@ var (
 	workDir     string
 	backend     string
 	backendVars []string
+
+	initialSystemDefinitionURL string
 )
 
 var Cmd = &cobra.Command{
-	Use:   "provision [PROVIDER] [NAME] [URL]",
+	Use:   "provision [PROVIDER] [NAME]",
 	Short: "Provision a system",
-	Args:  cobra.ExactArgs(3),
+	Args:  cobra.ExactArgs(2),
 	Run: func(cmd *cobra.Command, args []string) {
 		provider := args[0]
 		name := args[1]
-		url := args[2]
 
 		var provisioner provisioner.Interface
 		switch backend {
@@ -36,7 +37,12 @@ var Cmd = &cobra.Command{
 			panic(fmt.Sprintf("unsupported backend %v", backend))
 		}
 
-		clusterAddress, err := provisioner.Provision(name, url)
+		var definitionURL *string
+		if initialSystemDefinitionURL != "" {
+			definitionURL = &initialSystemDefinitionURL
+		}
+
+		clusterAddress, err := provisioner.Provision(name, definitionURL)
 		if err != nil {
 			panic(err)
 		}
@@ -47,6 +53,7 @@ var Cmd = &cobra.Command{
 
 func init() {
 	Cmd.Flags().StringVar(&workDir, "work-directory", "/tmp/lattice/cluster", "path where subcommands will use as their working directory")
+	Cmd.Flags().StringVar(&initialSystemDefinitionURL, "initial-system-definition-url", "", "URL of initial system to create")
 	Cmd.Flags().StringVar(&backend, "backend", constants.BackendTypeKubernetes, "lattice backend to use")
 	Cmd.Flags().StringArrayVar(&backendVars, "backend-var", nil, "additional variables to pass in to the backend")
 }

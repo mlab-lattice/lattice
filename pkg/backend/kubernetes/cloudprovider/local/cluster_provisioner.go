@@ -7,6 +7,8 @@ import (
 	"time"
 
 	kubeconstants "github.com/mlab-lattice/system/pkg/backend/kubernetes/constants"
+	"github.com/mlab-lattice/system/pkg/backend/kubernetes/networkingprovider"
+	"github.com/mlab-lattice/system/pkg/backend/kubernetes/servicemesh"
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/util/minikube"
 	"github.com/mlab-lattice/system/pkg/constants"
 	"github.com/mlab-lattice/system/pkg/managerapi/client/rest"
@@ -73,7 +75,7 @@ func NewClusterProvisioner(latticeContainerRegistry, latticeContainerRepoPrefix,
 	return provisioner, nil
 }
 
-func (p *DefaultLocalClusterProvisioner) Provision(clusterID, url string) (string, error) {
+func (p *DefaultLocalClusterProvisioner) Provision(clusterID string, initialSystemDefinitionURL *string) (string, error) {
 	prefixedName := clusterNamePrefixMinikube + clusterID
 	result, logFilename, err := p.mec.Start(prefixedName)
 	if err != nil {
@@ -92,7 +94,7 @@ func (p *DefaultLocalClusterProvisioner) Provision(clusterID, url string) (strin
 		return "", err
 	}
 
-	err = p.bootstrap(address, url, clusterID)
+	err = p.bootstrap(address, initialSystemDefinitionURL, clusterID)
 	if err != nil {
 		return "", err
 	}
@@ -120,7 +122,7 @@ func (p *DefaultLocalClusterProvisioner) address(clusterID string) (string, erro
 	return fmt.Sprintf("http://%v", address), nil
 }
 
-func (p *DefaultLocalClusterProvisioner) bootstrap(address, url, name string) error {
+func (p *DefaultLocalClusterProvisioner) bootstrap(address string, initialSystemDefinitionURL *string, name string) error {
 	fmt.Println("Bootstrapping")
 	usr, err := user.Current()
 	if err != nil {
@@ -189,6 +191,15 @@ func (p *DefaultLocalClusterProvisioner) bootstrap(address, url, name string) er
 
 	jobName := "bootstrap-lattice"
 	var backoffLimit int32 = 2
+	var bootstrapArgs []string
+
+	if initialSystemDefinitionURL != nil {
+		bootstrapArgs = append(
+			bootstrapArgs,
+			"--initial-system-definition-url", *initialSystemDefinitionURL,
+		)
+	}
+
 	job := batchv1.Job{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: jobName,
@@ -204,26 +215,29 @@ func (p *DefaultLocalClusterProvisioner) bootstrap(address, url, name string) er
 						{
 							Name:  "bootstrap-lattice",
 							Image: p.getLatticeContainerImage(constants.DockerImageLatticectl),
-							Args: []string{
-								"cluster", "kubernetes", "bootstrap",
-								"--initial-system-definition-url", url,
-								"--lattice-controller-manager-image", p.getLatticeContainerImage(kubeconstants.DockerImageLatticeControllerManager),
-								"--manager-api-image", p.getLatticeContainerImage(kubeconstants.DockerImageManagerAPIRest),
-								"--cloud-provider", "local",
-								"--cloud-provider-var", "cluster-ip=" + address,
-								"--cloud-provider-var", "dns-controller-image=" + p.getLatticeContainerImage(DockerImageDNSController),
-								"--cloud-provider-var", "dns-controller-args=" + dnsControllerArgs,
-								"--cloud-provider-var", "dnsmasq-nanny-image=" + DockerImageDnsmasqNanny,
-								"--cloud-provider-var", "dnsmasq-nanny-args=" + dnsNannyArgs,
-								"--component-builder-image", p.getLatticeContainerImage(kubeconstants.DockerImageComponentBuilder),
-								"--component-build-docker-artifact-registry", "lattice-local",
-								"--component-build-docker-artifact-repository-per-image=true",
-								"--component-build-docker-artifact-push=false",
-								"--service-mesh", "envoy",
-								"--service-mesh-var", fmt.Sprintf("prepare-image=%v", p.getLatticeContainerImage(constants.DockerImageEnvoyPrepare)),
-								"--service-mesh-var", fmt.Sprintf("xds-api-image=%v", p.getLatticeContainerImage(constants.DockerImageEnvoyXDSAPIRestPerNode)),
-								"--service-mesh-var", "redirect-cidr-block=172.16.0.0/16",
-							},
+							Args: append(
+								bootstrapArgs,
+								[]string{
+									"cluster", "kubernetes", "bootstrap",
+									"--lattice-controller-manager-image", p.getLatticeContainerImage(kubeconstants.DockerImageLatticeControllerManager),
+									"--manager-api-image", p.getLatticeContainerImage(kubeconstants.DockerImageManagerAPIRest),
+									"--cloud-provider", "local",
+									"--cloud-provider-var", "cluster-ip=" + address,
+									"--cloud-provider-var", "dns-controller-image=" + p.getLatticeContainerImage(DockerImageDNSController),
+									"--cloud-provider-var", "dns-controller-args=" + dnsControllerArgs,
+									"--cloud-provider-var", "dnsmasq-nanny-image=" + DockerImageDnsmasqNanny,
+									"--cloud-provider-var", "dnsmasq-nanny-args=" + dnsNannyArgs,
+									"--component-builder-image", p.getLatticeContainerImage(kubeconstants.DockerImageComponentBuilder),
+									"--component-build-docker-artifact-registry", "lattice-local",
+									"--component-build-docker-artifact-repository-per-image=true",
+									"--component-build-docker-artifact-push=false",
+									"--service-mesh", servicemesh.Envoy,
+									"--service-mesh-var", fmt.Sprintf("prepare-image=%v", p.getLatticeContainerImage(constants.DockerImageEnvoyPrepare)),
+									"--service-mesh-var", fmt.Sprintf("xds-api-image=%v", p.getLatticeContainerImage(constants.DockerImageEnvoyXDSAPIRestPerNode)),
+									"--service-mesh-var", "redirect-cidr-block=172.16.0.0/16",
+									"--networking-provider", networkingprovider.None,
+								}...,
+							),
 						},
 					},
 					RestartPolicy:      corev1.RestartPolicyNever,

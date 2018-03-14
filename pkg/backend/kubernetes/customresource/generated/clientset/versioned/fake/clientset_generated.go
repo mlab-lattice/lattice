@@ -49,7 +49,7 @@ func (c *Clientset) LatticeV1() latticev1.LatticeV1Interface {
 	return &fakelatticev1.FakeLatticeV1{Fake: &c.Fake}
 }
 
-// Lattice retrieves the LatticeV1Client
+// Client retrieves the LatticeV1Client
 func (c *Clientset) Lattice() latticev1.LatticeV1Interface {
 	return &fakelatticev1.FakeLatticeV1{Fake: &c.Fake}
 }

@@ -26,8 +26,10 @@ func (e *UserError) Error() string {
 
 type Backend interface {
 	// System
+	CreateSystem(id types.SystemID, definitionURL string) (*types.System, error)
 	ListSystems() ([]types.System, error)
 	GetSystem(types.SystemID) (s *types.System, exists bool, err error)
+	DeleteSystem(types.SystemID) error
 
 	// SystemBuild
 	BuildSystem(id types.SystemID, definitionRoot tree.Node, v types.SystemVersion) (types.SystemBuildID, error)
@@ -57,4 +59,10 @@ type Backend interface {
 	// Service
 	ListServices(types.SystemID) ([]types.Service, error)
 	GetService(types.SystemID, tree.NodePath) (*types.Service, error)
+
+	// Secret
+	ListSecrets(types.SystemID) ([]types.Secret, error)
+	GetSecret(system types.SystemID, path tree.NodePath, name string) (s *types.Secret, exists bool, err error)
+	SetSecret(system types.SystemID, path tree.NodePath, name, value string) error
+	UnsetSecret(system types.SystemID, path tree.NodePath, name string) error
 }

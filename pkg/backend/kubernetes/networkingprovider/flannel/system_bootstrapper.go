@@ -7,12 +7,16 @@ import (
 type SystemBootstrapperOptions struct {
 }
 
-func NewSystemBootstrapper(options *SystemBootstrapperOptions) *DefaultFlannelSystemBootstrapper {
-	return &DefaultFlannelSystemBootstrapper{
+func NewSystemBootstrapper(options *SystemBootstrapperOptions) *DefaultSystemBootstrapper {
+	return &DefaultSystemBootstrapper{
 		DefaultBootstrapper: noop.NewBootstrapper(),
 	}
 }
 
-type DefaultFlannelSystemBootstrapper struct {
+type DefaultSystemBootstrapper struct {
 	*noop.DefaultBootstrapper
+}
+
+func ParseSystemBootstrapperFlags(vars []string) (*SystemBootstrapperOptions, error) {
+	return &SystemBootstrapperOptions{}, nil
 }

@@ -15,9 +15,9 @@ import (
 )
 
 func (kb *KubernetesBackend) ListServices(systemID types.SystemID) ([]types.Service, error) {
-	namespace := kubeutil.SystemNamespace(kb.ClusterID, systemID)
+	namespace := kubeutil.SystemNamespace(kb.clusterID, systemID)
 
-	services, err := kb.LatticeClient.LatticeV1().Services(namespace).List(metav1.ListOptions{})
+	services, err := kb.latticeClient.LatticeV1().Services(namespace).List(metav1.ListOptions{})
 	if err != nil {
 		return nil, err
 	}
@@ -47,8 +47,8 @@ func (kb *KubernetesBackend) GetService(id types.SystemID, path tree.NodePath) (
 		LabelSelector: selector.String(),
 	}
 
-	namespace := kubeutil.SystemNamespace(kb.ClusterID, id)
-	services, err := kb.LatticeClient.LatticeV1().Services(namespace).List(listOptions)
+	namespace := kubeutil.SystemNamespace(kb.clusterID, id)
+	services, err := kb.latticeClient.LatticeV1().Services(namespace).List(listOptions)
 	if err != nil {
 		return nil, err
 	}

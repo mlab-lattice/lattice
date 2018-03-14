@@ -21,6 +21,5 @@ go_library(
 go_binary(
     name = "controller",
     embed = [":go_default_library"],
-    importpath = "github.com/mlab-lattice/system/cmd/kubernetes/local/dns/controller",
     visibility = ["//visibility:public"],
 )

@@ -37,17 +37,23 @@ func NewMinikubeExecContext(logPath string) (*ExecContext, error) {
 
 func (mec *ExecContext) Start(name string) (*executil.Result, string, error) {
 	// FIXME: make Kubernetes version configurable
-	args := []string{startCmd, "-p", name, "--kubernetes-version", "v1.9.0", "--bootstrapper", "kubeadm", "--feature-gates=CustomPodDNS=true"}
+	// FIXME: add back profile name when supported: https://github.com/kubernetes/minikube/issues/2574
+	args := []string{startCmd, "--kubernetes-version", "v1.9.3", "--bootstrapper", "kubeadm", "--feature-gates=CustomPodDNS=true"}
+	//args := []string{startCmd, "-p", name, "--kubernetes-version", "v1.9.3", "--bootstrapper", "kubeadm", "--feature-gates=CustomPodDNS=true"}
 	return mec.ExecWithLogFile("minikube-"+startCmd, args...)
 }
 
 func (mec *ExecContext) Delete(name string) (*executil.Result, string, error) {
-	args := []string{deleteCmd, "-p", name}
+	// FIXME: add back profile name when supported: https://github.com/kubernetes/minikube/issues/2574
+	args := []string{deleteCmd}
+	//args := []string{deleteCmd, "-p", name}
 	return mec.ExecWithLogFile("minikube-"+deleteCmd, args...)
 }
 
 func (mec *ExecContext) IP(name string) (string, error) {
-	args := []string{ipCmd, "-p", name}
+	// FIXME: add back profile name when supported: https://github.com/kubernetes/minikube/issues/2574
+	args := []string{ipCmd}
+	//args := []string{ipCmd, "-p", name}
 	stdout, _, err := mec.ExecSync(args...)
 	if err != nil {
 		return "", nil

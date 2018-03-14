@@ -9,15 +9,7 @@ go_library(
 )
 
 go_binary(
-    name = "componentbuild",
-    embed = [":go_default_library"],
-    importpath = "github.com/mlab-lattice/system/cmd/kubernetes/componentbuild",
-    visibility = ["//visibility:public"],
-)
-
-go_binary(
     name = "componentbuilder",
     embed = [":go_default_library"],
-    importpath = "github.com/mlab-lattice/system/cmd/kubernetes/componentbuilder",
     visibility = ["//visibility:public"],
 )

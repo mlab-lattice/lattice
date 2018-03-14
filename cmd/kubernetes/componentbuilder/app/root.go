@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"os/exec"
 
 	kubecomponentbuilder "github.com/mlab-lattice/system/pkg/backend/kubernetes/componentbuilder"
 	"github.com/mlab-lattice/system/pkg/componentbuilder"
@@ -14,6 +15,13 @@ import (
 	"github.com/mlab-lattice/system/pkg/util/aws"
 
 	"github.com/spf13/cobra"
+	"io/ioutil"
+	"strings"
+)
+
+const (
+	sshAuthSockEnvVarName   = "SSH_AUTH_SOCK"
+	gitRepoSSHKeyEnvVarName = "GIT_REPO_SSH_KEY"
 )
 
 var (
@@ -62,12 +70,22 @@ var RootCmd = &cobra.Command{
 			log.Fatal("error getting status updater: " + err.Error())
 		}
 
+		gitRepoSSHKey := os.Getenv(gitRepoSSHKeyEnvVarName)
+		var gitResolverOptions *componentbuilder.GitResolverOptions
+		if gitRepoSSHKey != "" {
+			gitResolverOptions = &componentbuilder.GitResolverOptions{
+				SSHKey: []byte(gitRepoSSHKey),
+			}
+		}
+
+		setupSSH()
+
 		builder, err := componentbuilder.NewBuilder(
 			types.ComponentBuildID(componentBuildID),
 			systemID,
 			workDirectory,
 			dockerOptions,
-			nil,
+			gitResolverOptions,
 			cb,
 			statusUpdater,
 		)
@@ -79,6 +97,35 @@ var RootCmd = &cobra.Command{
 			os.Exit(1)
 		}
 	},
+}
+
+func setupSSH() {
+	// Get the SSH_AUTH_SOCK.
+	// This probably isn't the best way of going about it.
+	// First tried "eval ssh-agent > /dev/null && echo $SSH_AUTH_SOCK"
+	// but since the subcommand isn't executed in a shell, this obviously didn't work.
+	out, err := exec.Command("/usr/bin/ssh-agent", "-c").Output()
+	if err != nil {
+		log.Fatal("error setting up ssh-agent: " + err.Error())
+	}
+
+	// This expects the output to look like:
+	// setenv SSH_AUTH_SOCK <file>;
+	// ...
+	lines := strings.Split(string(out), "\n")
+	sshAuthSockSplit := strings.Split(lines[0], " ")
+	sshAuthSock := strings.Split(sshAuthSockSplit[2], ";")[0]
+	os.Setenv(sshAuthSockEnvVarName, sshAuthSock)
+
+	out, err = exec.Command("/usr/bin/ssh-keyscan", "github.com").Output()
+	if err != nil {
+		log.Fatal("error setting up ssh-agent: " + err.Error())
+	}
+
+	err = ioutil.WriteFile("/etc/ssh/ssh_known_hosts", out, 0666)
+	if err != nil {
+		log.Fatal("error writing /etc/ssh/ssh_known_hosts: " + err.Error())
+	}
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.

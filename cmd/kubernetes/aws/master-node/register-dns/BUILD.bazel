@@ -11,6 +11,5 @@ go_library(
 go_binary(
     name = "register-dns",
     embed = [":go_default_library"],
-    importpath = "github.com/mlab-lattice/system/cmd/kubernetes/aws/master-node/register-dns",
     visibility = ["//visibility:public"],
 )

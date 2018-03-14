@@ -40,8 +40,8 @@ func (kb *KubernetesBackend) RollOutSystemBuild(
 		return "", err
 	}
 
-	namespace := kubeutil.SystemNamespace(kb.ClusterID, systemID)
-	result, err := kb.LatticeClient.LatticeV1().SystemRollouts(namespace).Create(sysRollout)
+	namespace := kubeutil.SystemNamespace(kb.clusterID, systemID)
+	result, err := kb.latticeClient.LatticeV1().SystemRollouts(namespace).Create(sysRollout)
 	if err != nil {
 		return "", err
 	}
@@ -52,8 +52,8 @@ func (kb *KubernetesBackend) getSystemBuildFromID(
 	systemID types.SystemID,
 	buildID types.SystemBuildID,
 ) (*latticev1.SystemBuild, error) {
-	namespace := kubeutil.SystemNamespace(kb.ClusterID, systemID)
-	return kb.LatticeClient.LatticeV1().SystemBuilds(namespace).Get(string(buildID), metav1.GetOptions{})
+	namespace := kubeutil.SystemNamespace(kb.clusterID, systemID)
+	return kb.latticeClient.LatticeV1().SystemBuilds(namespace).Get(string(buildID), metav1.GetOptions{})
 }
 
 func getNewSystemRollout(latticeNamespace types.SystemID, build *latticev1.SystemBuild) (*latticev1.SystemRollout, error) {
@@ -83,8 +83,8 @@ func (kb *KubernetesBackend) GetSystemRollout(
 	systemID types.SystemID,
 	rolloutID types.SystemRolloutID,
 ) (*types.SystemRollout, bool, error) {
-	namespace := kubeutil.SystemNamespace(kb.ClusterID, systemID)
-	result, err := kb.LatticeClient.LatticeV1().SystemRollouts(namespace).Get(string(rolloutID), metav1.GetOptions{})
+	namespace := kubeutil.SystemNamespace(kb.clusterID, systemID)
+	result, err := kb.latticeClient.LatticeV1().SystemRollouts(namespace).Get(string(rolloutID), metav1.GetOptions{})
 	if err != nil {
 		if errors.IsNotFound(err) {
 			return nil, false, nil
@@ -102,8 +102,8 @@ func (kb *KubernetesBackend) GetSystemRollout(
 }
 
 func (kb *KubernetesBackend) ListSystemRollouts(systemID types.SystemID) ([]types.SystemRollout, error) {
-	namespace := kubeutil.SystemNamespace(kb.ClusterID, systemID)
-	result, err := kb.LatticeClient.LatticeV1().SystemRollouts(namespace).List(metav1.ListOptions{})
+	namespace := kubeutil.SystemNamespace(kb.clusterID, systemID)
+	result, err := kb.latticeClient.LatticeV1().SystemRollouts(namespace).List(metav1.ListOptions{})
 	if err != nil {
 		return nil, err
 	}

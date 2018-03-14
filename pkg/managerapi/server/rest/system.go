@@ -3,6 +3,7 @@ package rest
 import (
 	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/mlab-lattice/system/pkg/constants"
 	"github.com/mlab-lattice/system/pkg/definition"
@@ -14,10 +15,37 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+type createSystemRequest struct {
+	ID            types.SystemID `json:"id"`
+	DefinitionURL string         `json:"definitionUrl"`
+}
+
 func (r *restServer) mountSystemHandlers() {
 	systems := r.router.Group("/systems")
 	{
-		// list-system-versions
+		// create-system
+		systems.POST("", func(c *gin.Context) {
+			var req createSystemRequest
+			if err := c.BindJSON(&req); err != nil {
+				handleInternalError(c, err)
+				return
+			}
+
+			system, err := r.backend.CreateSystem(req.ID, req.DefinitionURL)
+			if err != nil {
+				handleInternalError(c, err)
+				return
+			}
+
+			if err != nil {
+				handleInternalError(c, err)
+				return
+			}
+
+			c.JSON(http.StatusOK, system)
+		})
+
+		// list-systems
 		systems.GET("", func(c *gin.Context) {
 			systems, err := r.backend.ListSystems()
 
@@ -29,7 +57,7 @@ func (r *restServer) mountSystemHandlers() {
 			c.JSON(http.StatusOK, systems)
 		})
 
-		// get-system-version
+		// get-system
 		systems.GET("/:system_id", func(c *gin.Context) {
 			systemID := c.Param("system_id")
 
@@ -46,6 +74,19 @@ func (r *restServer) mountSystemHandlers() {
 
 			c.JSON(http.StatusOK, system)
 		})
+
+		// delete-system
+		systems.DELETE("/:system_id", func(c *gin.Context) {
+			systemID := c.Param("system_id")
+
+			err := r.backend.DeleteSystem(types.SystemID(systemID))
+			if err != nil {
+				handleInternalError(c, err)
+				return
+			}
+
+			c.Status(http.StatusOK)
+		})
 	}
 
 	r.mountSystemVersionHandlers()
@@ -55,6 +96,7 @@ func (r *restServer) mountSystemHandlers() {
 	r.mountSystemRolloutHandlers()
 	r.mountSystemTeardownHandlers()
 	r.mountSystemServiceHandlers()
+	r.mountSystemSecretHandlers()
 }
 
 type systemVersionResponse struct {
@@ -481,6 +523,123 @@ func (r *restServer) mountSystemServiceHandlers() {
 	}
 }
 
+type setSecretRequest struct {
+	Value string `json:"value"`
+}
+
+func (r *restServer) mountSystemSecretHandlers() {
+	secrets := r.router.Group("/systems/:system_id/secrets")
+	{
+		// list-secrets
+		secrets.GET("", func(c *gin.Context) {
+			systemID := c.Param("system_id")
+
+			services, err := r.backend.ListSecrets(types.SystemID(systemID))
+			if err != nil {
+				handleInternalError(c, err)
+				return
+			}
+
+			c.JSON(http.StatusOK, services)
+		})
+
+		// get-secret
+		secrets.GET("/:secret_path", func(c *gin.Context) {
+			systemID := c.Param("system_id")
+			secretPath := c.Param("secret_path")
+
+			splitPath := strings.Split(secretPath, ":")
+			if len(splitPath) != 2 {
+				c.Status(http.StatusBadRequest)
+				return
+			}
+
+			path, err := tree.NodePathFromDomain(splitPath[0])
+			if err != nil {
+				handleInternalError(c, err)
+				return
+			}
+
+			name := splitPath[1]
+
+			secret, exists, err := r.backend.GetSecret(types.SystemID(systemID), path, name)
+			if err != nil {
+				handleInternalError(c, err)
+				return
+			}
+
+			if !exists {
+				c.String(http.StatusNotFound, "")
+				return
+			}
+
+			c.JSON(http.StatusOK, secret)
+		})
+
+		// set-secret
+		secrets.PATCH("/:secret_path", func(c *gin.Context) {
+			var req setSecretRequest
+			if err := c.BindJSON(&req); err != nil {
+				handleInternalError(c, err)
+				return
+			}
+
+			systemID := c.Param("system_id")
+			secretPath := c.Param("secret_path")
+
+			splitPath := strings.Split(secretPath, ":")
+			if len(splitPath) != 2 {
+				c.Status(http.StatusBadRequest)
+				return
+			}
+
+			path, err := tree.NodePathFromDomain(splitPath[0])
+			if err != nil {
+				handleInternalError(c, err)
+				return
+			}
+
+			name := splitPath[1]
+
+			err = r.backend.SetSecret(types.SystemID(systemID), path, name, req.Value)
+			if err != nil {
+				handleInternalError(c, err)
+				return
+			}
+
+			c.Status(http.StatusOK)
+		})
+
+		// unset-secret
+		secrets.DELETE("/:secret_path", func(c *gin.Context) {
+			systemID := c.Param("system_id")
+			secretPath := c.Param("secret_path")
+
+			splitPath := strings.Split(secretPath, ":")
+			if len(splitPath) != 2 {
+				c.Status(http.StatusBadRequest)
+				return
+			}
+
+			path, err := tree.NodePathFromDomain(splitPath[0])
+			if err != nil {
+				handleInternalError(c, err)
+				return
+			}
+
+			name := splitPath[1]
+
+			err = r.backend.UnsetSecret(types.SystemID(systemID), path, name)
+			if err != nil {
+				handleInternalError(c, err)
+				return
+			}
+
+			c.Status(http.StatusOK)
+		})
+	}
+}
+
 func (r *restServer) getSystemDefinitionRoot(systemID string, version string) (tree.Node, error) {
 	system, exists, err := r.backend.GetSystem(types.SystemID(systemID))
 	if err != nil {
@@ -491,10 +650,10 @@ func (r *restServer) getSystemDefinitionRoot(systemID string, version string) (t
 		return nil, fmt.Errorf("System %v does not exist", systemID)
 	}
 
-	systemDefUri := fmt.Sprintf("%v#%v/%s", system.DefinitionURL, version,
+	systemDefURI := fmt.Sprintf("%v#%v/%s", system.DefinitionURL, version,
 		constants.SystemDefinitionRootPathDefault)
 
-	return r.resolver.ResolveDefinition(systemDefUri, &git.Options{})
+	return r.resolver.ResolveDefinition(systemDefURI, &git.Options{})
 }
 
 func (r *restServer) getSystemVersions(systemID string) ([]string, error) {

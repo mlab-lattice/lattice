@@ -3,9 +3,10 @@ package block
 import "errors"
 
 type GitRepository struct {
-	URL    string  `json:"url"`
-	Tag    *string `json:"tag,omitempty"`
-	Commit *string `json:"commit,omitempty"`
+	URL    string       `json:"url"`
+	Tag    *string      `json:"tag,omitempty"`
+	Commit *string      `json:"commit,omitempty"`
+	SSHKey *SecretValue `json:"ssh_key,omitempty"`
 }
 
 // Validate implements Interface

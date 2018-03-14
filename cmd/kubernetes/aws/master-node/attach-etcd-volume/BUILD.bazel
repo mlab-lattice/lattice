@@ -11,6 +11,5 @@ go_library(
 go_binary(
     name = "attach-etcd-volume",
     embed = [":go_default_library"],
-    importpath = "github.com/mlab-lattice/system/cmd/kubernetes/aws/master-node/attach-etcd-volume",
     visibility = ["//visibility:public"],
 )
