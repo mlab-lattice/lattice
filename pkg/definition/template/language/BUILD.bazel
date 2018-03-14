@@ -36,5 +36,4 @@ go_test(
         "string_interpolation_test.go",
     ],
     embed = [":go_default_library"],
-    importpath = "github.com/mlab-lattice/system/pkg/definition/template/language",
 )
