@@ -5,6 +5,7 @@ go_library(
     srcs = [
         "cluster.go",
         "component_build.go",
+        "secret.go",
         "service.go",
         "service_build.go",
         "system.go",

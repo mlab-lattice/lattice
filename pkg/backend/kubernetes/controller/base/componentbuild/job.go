@@ -3,6 +3,7 @@ package componentbuild
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
 	kubeconstants "github.com/mlab-lattice/system/pkg/backend/kubernetes/constants"
@@ -225,6 +226,29 @@ func (c *Controller) getBuildContainer(build *latticev1.ComponentBuild) (*corev1
 				MountPath: jobDockerSocketPath,
 			},
 		},
+	}
+
+	if build.Spec.BuildDefinitionBlock.GitRepository != nil && build.Spec.BuildDefinitionBlock.GitRepository.SSHKey != nil {
+		// FIXME: add support for references
+		secretParts := strings.Split(*build.Spec.BuildDefinitionBlock.GitRepository.SSHKey.Name, ":")
+		if len(secretParts) != 2 {
+			return nil, "", fmt.Errorf("invalid secret format for ssh_key")
+		}
+
+		secretPath := secretParts[0]
+		secretName := secretParts[1]
+
+		buildContainer.Env = append(buildContainer.Env, corev1.EnvVar{
+			Name: "GIT_REPO_SSH_KEY",
+			ValueFrom: &corev1.EnvVarSource{
+				SecretKeyRef: &corev1.SecretKeySelector{
+					LocalObjectReference: corev1.LocalObjectReference{
+						Name: secretPath,
+					},
+					Key: secretName,
+				},
+			},
+		})
 	}
 
 	dockerImageFQN := fmt.Sprintf(

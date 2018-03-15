@@ -21,7 +21,6 @@ go_test(
     ],
     embed = [":go_default_library"],
     deps = [
-        "//pkg/definition/block:go_default_library",
         "//pkg/definition/block/mock:go_default_library",
         "//pkg/util/json:go_default_library",
     ],

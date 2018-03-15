@@ -67,7 +67,7 @@ func (kb *KubernetesBackend) ListSystems() ([]types.System, error) {
 		return nil, err
 	}
 
-	var externalSystems []types.System
+	externalSystems := make([]types.System, 0, len(systems.Items))
 	for _, system := range systems.Items {
 		namespace, err := kb.kubeClient.CoreV1().Namespaces().Get(system.Namespace, metav1.GetOptions{})
 		if err != nil {

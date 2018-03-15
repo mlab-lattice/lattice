@@ -3,6 +3,7 @@ package rest
 import (
 	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/mlab-lattice/system/pkg/constants"
 	"github.com/mlab-lattice/system/pkg/definition"
@@ -95,6 +96,7 @@ func (r *restServer) mountSystemHandlers() {
 	r.mountSystemRolloutHandlers()
 	r.mountSystemTeardownHandlers()
 	r.mountSystemServiceHandlers()
+	r.mountSystemSecretHandlers()
 }
 
 type systemVersionResponse struct {
@@ -517,6 +519,123 @@ func (r *restServer) mountSystemServiceHandlers() {
 			}
 
 			c.JSON(http.StatusOK, service)
+		})
+	}
+}
+
+type setSecretRequest struct {
+	Value string `json:"value"`
+}
+
+func (r *restServer) mountSystemSecretHandlers() {
+	secrets := r.router.Group("/systems/:system_id/secrets")
+	{
+		// list-secrets
+		secrets.GET("", func(c *gin.Context) {
+			systemID := c.Param("system_id")
+
+			services, err := r.backend.ListSecrets(types.SystemID(systemID))
+			if err != nil {
+				handleInternalError(c, err)
+				return
+			}
+
+			c.JSON(http.StatusOK, services)
+		})
+
+		// get-secret
+		secrets.GET("/:secret_path", func(c *gin.Context) {
+			systemID := c.Param("system_id")
+			secretPath := c.Param("secret_path")
+
+			splitPath := strings.Split(secretPath, ":")
+			if len(splitPath) != 2 {
+				c.Status(http.StatusBadRequest)
+				return
+			}
+
+			path, err := tree.NodePathFromDomain(splitPath[0])
+			if err != nil {
+				handleInternalError(c, err)
+				return
+			}
+
+			name := splitPath[1]
+
+			secret, exists, err := r.backend.GetSecret(types.SystemID(systemID), path, name)
+			if err != nil {
+				handleInternalError(c, err)
+				return
+			}
+
+			if !exists {
+				c.String(http.StatusNotFound, "")
+				return
+			}
+
+			c.JSON(http.StatusOK, secret)
+		})
+
+		// set-secret
+		secrets.PATCH("/:secret_path", func(c *gin.Context) {
+			var req setSecretRequest
+			if err := c.BindJSON(&req); err != nil {
+				handleInternalError(c, err)
+				return
+			}
+
+			systemID := c.Param("system_id")
+			secretPath := c.Param("secret_path")
+
+			splitPath := strings.Split(secretPath, ":")
+			if len(splitPath) != 2 {
+				c.Status(http.StatusBadRequest)
+				return
+			}
+
+			path, err := tree.NodePathFromDomain(splitPath[0])
+			if err != nil {
+				handleInternalError(c, err)
+				return
+			}
+
+			name := splitPath[1]
+
+			err = r.backend.SetSecret(types.SystemID(systemID), path, name, req.Value)
+			if err != nil {
+				handleInternalError(c, err)
+				return
+			}
+
+			c.Status(http.StatusOK)
+		})
+
+		// unset-secret
+		secrets.DELETE("/:secret_path", func(c *gin.Context) {
+			systemID := c.Param("system_id")
+			secretPath := c.Param("secret_path")
+
+			splitPath := strings.Split(secretPath, ":")
+			if len(splitPath) != 2 {
+				c.Status(http.StatusBadRequest)
+				return
+			}
+
+			path, err := tree.NodePathFromDomain(splitPath[0])
+			if err != nil {
+				handleInternalError(c, err)
+				return
+			}
+
+			name := splitPath[1]
+
+			err = r.backend.UnsetSecret(types.SystemID(systemID), path, name)
+			if err != nil {
+				handleInternalError(c, err)
+				return
+			}
+
+			c.Status(http.StatusOK)
 		})
 	}
 }

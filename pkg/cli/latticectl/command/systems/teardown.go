@@ -40,14 +40,12 @@ func (c *TeardownCommand) Base() (*latticectl.BaseCommand, error) {
 	return cmd.Base()
 }
 
-func TeardownSystem(
-	client client.TeardownClient,
-) {
+func TeardownSystem(client client.TeardownClient) {
 	// TODO :: Add watch of this. Same with deploy / build - link to behavior of teardowns/get.go etc
-	teardown, err := client.Create()
+	teardownID, err := client.Create()
 	if err != nil {
 		log.Panic(err)
 	}
 
-	fmt.Printf("%v\n", teardown)
+	fmt.Printf("%v\n", teardownID)
 }
