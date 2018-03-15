@@ -12,6 +12,7 @@ type Service interface {
 	Volumes() []*block.Volume
 	Components() []*block.Component
 	Resources() block.Resources
+	Secrets() map[string]block.Secret
 }
 
 type ServiceValidator interface {
@@ -33,17 +34,19 @@ func NewServiceFromJSON(data []byte) (Service, error) {
 		volumes:    decoded.Volumes,
 		components: decoded.Components,
 		resources:  decoded.Resources,
+		secrets:    decoded.Secrets,
 	}
 	return s, nil
 }
 
 type serviceEncoder struct {
-	Type        string             `json:"type"`
-	Name        string             `json:"name"`
-	Description string             `json:"description"`
-	Volumes     []*block.Volume    `json:"volumes"`
-	Components  []*block.Component `json:"components"`
-	Resources   block.Resources    `json:"resources"`
+	Type        string                  `json:"type"`
+	Name        string                  `json:"name"`
+	Description string                  `json:"description"`
+	Volumes     []*block.Volume         `json:"volumes"`
+	Components  []*block.Component      `json:"components"`
+	Resources   block.Resources         `json:"resources"`
+	Secrets     map[string]block.Secret `json:"secrets"`
 }
 
 type service struct {
@@ -52,6 +55,7 @@ type service struct {
 	volumes     []*block.Volume
 	components  []*block.Component
 	resources   block.Resources
+	secrets     map[string]block.Secret
 }
 
 func (s *service) Type() string {
@@ -78,6 +82,10 @@ func (s *service) Resources() block.Resources {
 	return s.resources
 }
 
+func (s *service) Secrets() map[string]block.Secret {
+	return s.secrets
+}
+
 func (s *service) MarshalJSON() ([]byte, error) {
 	encoder := serviceEncoder{
 		Type:        TypeService,
@@ -86,6 +94,7 @@ func (s *service) MarshalJSON() ([]byte, error) {
 		Volumes:     s.volumes,
 		Components:  s.components,
 		Resources:   s.resources,
+		Secrets:     s.secrets,
 	}
 
 	return json.Marshal(&encoder)

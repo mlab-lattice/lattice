@@ -3,6 +3,7 @@ package client
 import (
 	"io"
 
+	"github.com/mlab-lattice/system/pkg/definition/tree"
 	"github.com/mlab-lattice/system/pkg/types"
 )
 
@@ -24,6 +25,7 @@ type SystemClient interface {
 	Rollouts(types.SystemID) RolloutClient
 	Teardowns(types.SystemID) TeardownClient
 	Services(types.SystemID) ServiceClient
+	Secrets(types.SystemID) SystemSecretClient
 }
 
 type SystemBuildClient interface {
@@ -59,4 +61,11 @@ type TeardownClient interface {
 type ServiceClient interface {
 	List() ([]types.Service, error)
 	Get(types.ServiceID) (*types.Service, error)
+}
+
+type SystemSecretClient interface {
+	List() ([]types.Secret, error)
+	Get(path tree.NodePath, name string) (*types.Secret, error)
+	Set(path tree.NodePath, name, value string) error
+	Unset(path tree.NodePath, name string) error
 }

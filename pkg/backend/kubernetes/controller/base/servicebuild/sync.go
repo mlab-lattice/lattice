@@ -8,6 +8,7 @@ import (
 	"reflect"
 	"sort"
 
+	"github.com/mlab-lattice/system/pkg/backend/kubernetes/constants"
 	latticev1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 
 	"github.com/golang/glog"
@@ -80,6 +81,13 @@ func (c *Controller) syncMissingComponentBuildsServiceBuild(build *latticev1.Ser
 
 	for _, component := range stateInfo.needsNewComponentBuilds {
 		componentInfo := build.Spec.Components[component]
+		definitionBlock := componentInfo.DefinitionBlock
+
+		// FIXME: support references
+		if definitionBlock.GitRepository != nil && definitionBlock.GitRepository.SSHKey != nil {
+			secretName := fmt.Sprintf("%v:%v", build.Labels[constants.LabelKeyServicePathDomain], *definitionBlock.GitRepository.SSHKey.Name)
+			definitionBlock.GitRepository.SSHKey.Name = &secretName
+		}
 
 		// TODO: is json marshalling of a struct deterministic in order? If not could potentially get
 		//		 different SHAs for the same definition. This is OK in the correctness sense, since we'll

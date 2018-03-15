@@ -5,6 +5,7 @@ go_library(
     srcs = [
         "component_build.go",
         "kubernetes_backend.go",
+        "secret.go",
         "service.go",
         "service_build.go",
         "system.go",

@@ -8,6 +8,7 @@ import (
 	"github.com/mlab-lattice/system/pkg/cli/latticectl/command/systems"
 	"github.com/mlab-lattice/system/pkg/cli/latticectl/command/systems/builds"
 	"github.com/mlab-lattice/system/pkg/cli/latticectl/command/systems/deploys"
+	"github.com/mlab-lattice/system/pkg/cli/latticectl/command/systems/secrets"
 	"github.com/mlab-lattice/system/pkg/cli/latticectl/command/systems/teardowns"
 )
 
@@ -58,6 +59,13 @@ func main() {
 						&teardowns.Command{
 							Subcommands: []latticectl.Command{
 								&teardowns.GetCommand{},
+							},
+						},
+						// Secret commands
+						&secrets.Command{
+							Subcommands: []latticectl.Command{
+								&secrets.GetCommand{},
+								&secrets.SetCommand{},
 							},
 						},
 					},
