@@ -10,6 +10,7 @@ go_library(
         "docker.go",
         "git.go",
         "interface.go",
+        "node_pool.go",
         "port.go",
         "reference.go",
         "resources.go",
