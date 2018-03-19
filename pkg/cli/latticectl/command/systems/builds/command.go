@@ -135,7 +135,7 @@ func buildsPrinter(builds []types.SystemBuild, format printer.Format) printer.In
 
 			rows = append(rows, []string{
 				string(build.ID),
-				build.Version,
+				string(build.Version),
 				stateColor(string(build.State)),
 			})
 		}
