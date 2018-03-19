@@ -1,4 +1,4 @@
-package system
+package crud
 
 import (
 	"time"
@@ -61,7 +61,7 @@ var _ = Describe("system", func() {
 	})
 
 	// Wait to ensure controller sees the system and updates the status
-	time.Sleep(1 * time.Second)
+	time.Sleep(3 * time.Second)
 	It("should be able to delete the newly created system by ID", func() {
 		err := context.TestContext.ClusterAPIClient.Systems().Delete(types.SystemID(systemID))
 		Expect(err).NotTo(HaveOccurred())

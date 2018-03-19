@@ -79,7 +79,7 @@ func (kb *KubernetesBackend) ListSystemBuilds(systemID types.SystemID) ([]types.
 		return nil, err
 	}
 
-	var builds []types.SystemBuild
+	builds := make([]types.SystemBuild, 0, len(buildList.Items))
 	for _, build := range buildList.Items {
 		externalBuild, err := transformSystemBuild(&build)
 		if err != nil {

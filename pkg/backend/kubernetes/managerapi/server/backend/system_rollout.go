@@ -108,7 +108,7 @@ func (kb *KubernetesBackend) ListSystemRollouts(systemID types.SystemID) ([]type
 		return nil, err
 	}
 
-	rollouts := []types.SystemRollout{}
+	rollouts := make([]types.SystemRollout, 0, len(result.Items))
 	for _, r := range result.Items {
 		rollouts = append(rollouts, types.SystemRollout{
 			ID:      types.SystemRolloutID(r.Name),
