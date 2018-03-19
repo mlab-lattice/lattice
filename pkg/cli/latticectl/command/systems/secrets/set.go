@@ -41,16 +41,21 @@ func (c *SetCommand) Base() (*latticectl.BaseCommand, error) {
 			path := tree.NodePath(splitName[0])
 			name = splitName[1]
 
-			SetSecret(ctx.Client().Systems().Secrets(ctx.SystemID()), path, name, value)
+			err := SetSecret(ctx.Client().Systems().Secrets(ctx.SystemID()), path, name, value)
+			if err != nil {
+				log.Fatal(err)
+			}
 		},
 	}
 
 	return cmd.Base()
 }
 
-func SetSecret(client client.SystemSecretClient, path tree.NodePath, name, value string) {
+func SetSecret(client client.SystemSecretClient, path tree.NodePath, name, value string) error {
 	err := client.Set(path, name, value)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
+
+	return nil
 }

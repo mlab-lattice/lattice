@@ -62,7 +62,10 @@ func (c *ListBuildsCommand) Base() (*latticectl.BaseCommand, error) {
 				return
 			}
 
-			ListBuilds(c, format, os.Stdout)
+			err = ListBuilds(c, format, os.Stdout)
+			if err != nil {
+				log.Fatal(err)
+			}
 		},
 		Subcommands: c.Subcommands,
 	}
@@ -71,14 +74,15 @@ func (c *ListBuildsCommand) Base() (*latticectl.BaseCommand, error) {
 }
 
 // ListBuilds writes the current Builds to the supplied io.Writer in the given printer.Format.
-func ListBuilds(client client.SystemBuildClient, format printer.Format, writer io.Writer) {
+func ListBuilds(client client.SystemBuildClient, format printer.Format, writer io.Writer) error {
 	builds, err := client.List()
 	if err != nil {
-		log.Panic(err)
+		return err
 	}
 
 	p := buildsPrinter(builds, format)
 	p.Print(writer)
+	return nil
 }
 
 // WatchBuilds polls the API for the current Builds, and writes out the Builds to the

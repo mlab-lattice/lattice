@@ -27,7 +27,7 @@ func (c *DeleteCommand) Base() (*latticectl.BaseCommand, error) {
 func DeleteSystem(client client.SystemClient, name types.SystemID) {
 	err := client.Delete(name)
 	if err != nil {
-		log.Panic(err)
+		log.Fatal(err)
 	}
 
 	fmt.Printf("Deleted: %v\n", name)

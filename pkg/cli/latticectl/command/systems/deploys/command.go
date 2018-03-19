@@ -48,7 +48,14 @@ func (c *Command) Base() (*latticectl.BaseCommand, error) {
 				log.Fatal(err)
 			}
 
-			ListDeploys(ctx.Client().Systems().Rollouts(ctx.SystemID()), format, os.Stdout)
+			if watch {
+				WatchDeploys(ctx.Client().Systems().Rollouts(ctx.SystemID()), format, os.Stdout)
+			}
+
+			err = ListDeploys(ctx.Client().Systems().Rollouts(ctx.SystemID()), format, os.Stdout)
+			if err != nil {
+				log.Fatal(err)
+			}
 		},
 		Subcommands: c.Subcommands,
 	}
@@ -56,13 +63,14 @@ func (c *Command) Base() (*latticectl.BaseCommand, error) {
 	return cmd.Base()
 }
 
-func ListDeploys(client client.RolloutClient, format printer.Format, writer io.Writer) {
+func ListDeploys(client client.RolloutClient, format printer.Format, writer io.Writer) error {
 	deploys, err := client.List()
 	if err != nil {
-		log.Panic(err)
+		return err
 	}
 
 	fmt.Printf("%v\n", deploys)
+	return nil
 }
 
 func WatchDeploys(client client.RolloutClient, format printer.Format, writer io.Writer) {

@@ -46,20 +46,24 @@ func (c *GetCommand) Base() (*latticectl.BaseCommand, error) {
 				WatchDeploy(c, ctx.DeployID(), format, os.Stdout)
 			}
 
-			GetDeploy(c, ctx.DeployID(), format, os.Stdout)
+			err = GetDeploy(c, ctx.DeployID(), format, os.Stdout)
+			if err != nil {
+				log.Fatal(err)
+			}
 		},
 	}
 
 	return cmd.Base()
 }
 
-func GetDeploy(client client.RolloutClient, deployID types.SystemRolloutID, format printer.Format, writer io.Writer) {
+func GetDeploy(client client.RolloutClient, deployID types.SystemRolloutID, format printer.Format, writer io.Writer) error {
 	deploy, err := client.Get(deployID)
 	if err != nil {
-		log.Panic(err)
+		return err
 	}
 
 	fmt.Printf("%v\n", deploy)
+	return nil
 }
 
 func WatchDeploy(client client.RolloutClient, deployID types.SystemRolloutID, format printer.Format, writer io.Writer) {

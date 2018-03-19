@@ -33,14 +33,17 @@ func (c *TeardownCommand) Base() (*latticectl.BaseCommand, error) {
 		},
 		Run: func(ctx lctlcommand.SystemCommandContext, args []string) {
 			systemID := ctx.SystemID()
-			TeardownSystem(ctx.Client().Systems().Teardowns(systemID))
+			err := TeardownSystem(ctx.Client().Systems().Teardowns(systemID))
+			if err != nil {
+				log.Fatal(err)
+			}
 		},
 	}
 
 	return cmd.Base()
 }
 
-func TeardownSystem(client client.TeardownClient) {
+func TeardownSystem(client client.TeardownClient) error {
 	// TODO :: Add watch of this. Same with deploy / build - link to behavior of teardowns/get.go etc
 	teardownID, err := client.Create()
 	if err != nil {
@@ -48,4 +51,5 @@ func TeardownSystem(client client.TeardownClient) {
 	}
 
 	fmt.Printf("%v\n", teardownID)
+	return nil
 }

@@ -62,7 +62,10 @@ func (c *Command) Base() (*latticectl.BaseCommand, error) {
 				return
 			}
 
-			ListTeardowns(c, format, os.Stdout)
+			err = ListTeardowns(c, format, os.Stdout)
+			if err != nil {
+				log.Fatal(err)
+			}
 		},
 		Subcommands: c.Subcommands,
 	}
@@ -71,14 +74,15 @@ func (c *Command) Base() (*latticectl.BaseCommand, error) {
 }
 
 // ListTeardowns writes the current Teardowns to the supplied io.Writer in the given printer.Format.
-func ListTeardowns(client client.TeardownClient, format printer.Format, writer io.Writer) {
+func ListTeardowns(client client.TeardownClient, format printer.Format, writer io.Writer) error {
 	teardowns, err := client.List()
 	if err != nil {
-		log.Panic(err)
+		return err
 	}
 
 	p := teardownsPrinter(teardowns, format)
 	p.Print(writer)
+	return nil
 }
 
 // WatchTeardowns polls the API for the current Teardowns, and writes out the Teardowns to the

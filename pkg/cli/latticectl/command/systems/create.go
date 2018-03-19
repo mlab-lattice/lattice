@@ -42,7 +42,7 @@ func (c *CreateCommand) Base() (*latticectl.BaseCommand, error) {
 func CreateSystem(client client.SystemClient, name types.SystemID, definitionURL string) {
 	system, err := client.Create(name, definitionURL)
 	if err != nil {
-		log.Panic(err)
+		log.Fatal(err)
 	}
 
 	fmt.Printf("%v\n", system)

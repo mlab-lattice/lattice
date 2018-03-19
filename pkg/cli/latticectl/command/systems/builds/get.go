@@ -46,20 +46,24 @@ func (c *GetCommand) Base() (*latticectl.BaseCommand, error) {
 				WatchBuild(c, ctx.BuildID(), format, os.Stdout)
 			}
 
-			GetBuild(c, ctx.BuildID(), format, os.Stdout)
+			err = GetBuild(c, ctx.BuildID(), format, os.Stdout)
+			if err != nil {
+				log.Fatal(err)
+			}
 		},
 	}
 
 	return cmd.Base()
 }
 
-func GetBuild(client client.SystemBuildClient, buildID types.SystemBuildID, format printer.Format, writer io.Writer) {
+func GetBuild(client client.SystemBuildClient, buildID types.SystemBuildID, format printer.Format, writer io.Writer) error {
 	build, err := client.Get(buildID)
 	if err != nil {
-		log.Panic(err)
+		return err
 	}
 
 	fmt.Printf("%v\n", build)
+	return nil
 }
 
 func WatchBuild(client client.SystemBuildClient, buildID types.SystemBuildID, format printer.Format, writer io.Writer) {
