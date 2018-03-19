@@ -6,6 +6,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/mlab-lattice/system/pkg/cli/color"
 	"github.com/mlab-lattice/system/pkg/cli/command"
 	"github.com/mlab-lattice/system/pkg/cli/latticectl"
 	lctlcommand "github.com/mlab-lattice/system/pkg/cli/latticectl/command"
@@ -118,27 +119,26 @@ func buildsPrinter(builds []types.SystemBuild, format printer.Format) printer.In
 	var p printer.Interface
 	switch format {
 	case printer.FormatDefault, printer.FormatTable:
-		// FIXME :: implement printing
-		headers := []string{"Name", "Definition", "Status"}
+		headers := []string{"ID", "Version", "State"}
 
 		var rows [][]string
-		//for _, build := range builds {
-		//	var stateColor color.Color
-		//	switch build.State {
-		//	case types.SystemStateStable:
-		//		stateColor = color.Success
-		//	case types.SystemStateFailed:
-		//		stateColor = color.Failure
-		//	default:
-		//		stateColor = color.Warning
-		//	}
-		//
-		//	rows = append(rows, []string{
-		//		string(system.ID),
-		//		system.DefinitionURL,
-		//		stateColor(string(system.State)),
-		//	})
-		//}
+		for _, build := range builds {
+			var stateColor color.Color
+			switch build.State {
+			case types.SystemBuildStateSucceeded:
+				stateColor = color.Success
+			case types.SystemBuildStateFailed:
+				stateColor = color.Failure
+			default:
+				stateColor = color.Warning
+			}
+
+			rows = append(rows, []string{
+				string(build.ID),
+				build.Version,
+				stateColor(string(build.State)),
+			})
+		}
 
 		p = &printer.Table{
 			Headers: headers,
