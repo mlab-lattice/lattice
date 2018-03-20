@@ -17,18 +17,22 @@ func (c *DeleteCommand) Base() (*latticectl.BaseCommand, error) {
 	cmd := &lctlcommand.SystemCommand{
 		Name: "delete",
 		Run: func(ctx lctlcommand.SystemCommandContext, args []string) {
-			DeleteSystem(ctx.Client().Systems(), ctx.SystemID())
+			err := DeleteSystem(ctx.Client().Systems(), ctx.SystemID())
+			if err != nil {
+				log.Fatal(err)
+			}
 		},
 	}
 
 	return cmd.Base()
 }
 
-func DeleteSystem(client client.SystemClient, name types.SystemID) {
+func DeleteSystem(client client.SystemClient, name types.SystemID) error {
 	err := client.Delete(name)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	fmt.Printf("Deleted: %v\n", name)
+	return nil
 }
