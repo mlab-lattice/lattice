@@ -29,17 +29,17 @@ func (c *TeardownClient) List() ([]types.SystemTeardown, error) {
 	return teardowns, err
 }
 
-func (c *TeardownClient) Get(id types.SystemTeardownID) (*types.SystemTeardown, error) {
+func (c *TeardownClient) Get(id types.TeardownID) (*types.SystemTeardown, error) {
 	teardown := &types.SystemTeardown{}
 	err := c.restClient.Get(fmt.Sprintf("%v/%v", c.baseURL, id)).JSON(&teardown)
 	return teardown, err
 }
 
 type teardownResponse struct {
-	TeardownID types.SystemTeardownID `json:"teardownId"`
+	TeardownID types.TeardownID `json:"teardownId"`
 }
 
-func (c *TeardownClient) Create() (types.SystemTeardownID, error) {
+func (c *TeardownClient) Create() (types.TeardownID, error) {
 	teardownResponse := &teardownResponse{}
 	err := c.restClient.PostJSON(c.baseURL, nil).JSON(&teardownResponse)
 	if err != nil {

@@ -12,7 +12,7 @@ import (
 	"github.com/satori/go.uuid"
 )
 
-func (kb *KubernetesBackend) TearDownSystem(systemID types.SystemID) (types.SystemTeardownID, error) {
+func (kb *KubernetesBackend) TearDownSystem(systemID types.SystemID) (types.TeardownID, error) {
 	systemTeardown, err := getSystemTeardown(systemID)
 	if err != nil {
 		return "", err
@@ -24,7 +24,7 @@ func (kb *KubernetesBackend) TearDownSystem(systemID types.SystemID) (types.Syst
 		return "", err
 	}
 
-	return types.SystemTeardownID(result.Name), err
+	return types.TeardownID(result.Name), err
 }
 
 func getSystemTeardown(id types.SystemID) (*latticev1.SystemTeardown, error) {
@@ -48,7 +48,7 @@ func getSystemTeardown(id types.SystemID) (*latticev1.SystemTeardown, error) {
 
 func (kb *KubernetesBackend) GetSystemTeardown(
 	systemID types.SystemID,
-	teardownID types.SystemTeardownID,
+	teardownID types.TeardownID,
 ) (*types.SystemTeardown, bool, error) {
 	namespace := kubeutil.SystemNamespace(kb.clusterID, systemID)
 	result, err := kb.latticeClient.LatticeV1().SystemTeardowns(namespace).Get(string(teardownID), metav1.GetOptions{})
@@ -77,7 +77,7 @@ func (kb *KubernetesBackend) ListSystemTeardowns(systemID types.SystemID) ([]typ
 	var teardowns []types.SystemTeardown
 	for _, b := range result.Items {
 		teardowns = append(teardowns, types.SystemTeardown{
-			ID:    types.SystemTeardownID(b.Name),
+			ID:    types.TeardownID(b.Name),
 			State: getSystemTeardownState(b.Status.State),
 		})
 	}
@@ -85,16 +85,16 @@ func (kb *KubernetesBackend) ListSystemTeardowns(systemID types.SystemID) ([]typ
 	return teardowns, nil
 }
 
-func getSystemTeardownState(state latticev1.SystemTeardownState) types.SystemTeardownState {
+func getSystemTeardownState(state latticev1.SystemTeardownState) types.TeardownState {
 	switch state {
 	case latticev1.SystemTeardownStatePending:
-		return types.SystemTeardownStatePending
+		return types.TeardownStatePending
 	case latticev1.SystemTeardownStateInProgress:
-		return types.SystemTeardownStateInProgress
+		return types.TeardownStateInProgress
 	case latticev1.SystemTeardownStateSucceeded:
-		return types.SystemTeardownStateSucceeded
+		return types.TeardownStateSucceeded
 	case latticev1.SystemTeardownStateFailed:
-		return types.SystemTeardownStateFailed
+		return types.TeardownStateFailed
 	default:
 		panic("unreachable")
 	}

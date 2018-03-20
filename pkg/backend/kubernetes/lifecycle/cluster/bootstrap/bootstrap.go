@@ -28,7 +28,7 @@ type Options struct {
 }
 
 func Bootstrap(
-	clusterID types.ClusterID,
+	clusterID types.LatticeID,
 	cloudProviderName string,
 	options *Options,
 	bootstrappers []bootstrapper.Interface,
@@ -231,7 +231,7 @@ func idempotentSeed(resourceDescription string, seedFunc func() error) error {
 }
 
 func GetBootstrapResources(
-	clusterID types.ClusterID,
+	clusterID types.LatticeID,
 	cloudProviderName string,
 	options *Options,
 	bootstrappers []bootstrapper.Interface,

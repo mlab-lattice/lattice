@@ -30,10 +30,10 @@ type buildSystemRequest struct {
 }
 
 type buildSystemResponse struct {
-	BuildID types.SystemBuildID `json:"buildId"`
+	BuildID types.BuildID `json:"buildId"`
 }
 
-func (c *SystemBuildClient) Create(version string) (types.SystemBuildID, error) {
+func (c *SystemBuildClient) Create(version string) (types.BuildID, error) {
 	request := &buildSystemRequest{
 		Version: version,
 	}
@@ -57,7 +57,7 @@ func (c *SystemBuildClient) List() ([]types.SystemBuild, error) {
 	return builds, err
 }
 
-func (c *SystemBuildClient) Get(id types.SystemBuildID) (*types.SystemBuild, error) {
+func (c *SystemBuildClient) Get(id types.BuildID) (*types.SystemBuild, error) {
 	build := &types.SystemBuild{}
 	err := c.restClient.Get(fmt.Sprintf("%v/%v", c.baseURL, id)).JSON(&build)
 	return build, err

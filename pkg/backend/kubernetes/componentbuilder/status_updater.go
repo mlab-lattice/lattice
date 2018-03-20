@@ -15,10 +15,10 @@ import (
 
 type KubernetesStatusUpdater struct {
 	LatticeClient latticeclientset.Interface
-	ClusterID     types.ClusterID
+	ClusterID     types.LatticeID
 }
 
-func NewKubernetesStatusUpdater(clusterID types.ClusterID, kubeconfig string) (*KubernetesStatusUpdater, error) {
+func NewKubernetesStatusUpdater(clusterID types.LatticeID, kubeconfig string) (*KubernetesStatusUpdater, error) {
 	var config *rest.Config
 	var err error
 	if kubeconfig == "" {

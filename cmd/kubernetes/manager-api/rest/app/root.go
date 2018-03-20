@@ -37,7 +37,7 @@ var (
 var RootCmd = &cobra.Command{
 	Use: "manager-api",
 	Run: func(cmd *cobra.Command, args []string) {
-		clusterID := types.ClusterID(clusterIDString)
+		clusterID := types.LatticeID(clusterIDString)
 
 		cloudSystemBootstrapper, err := cloudprovider.SystemBootstrapperFromFlags(cloudProviderName, cloudProviderVars)
 		if err != nil {

@@ -130,7 +130,7 @@ var (
 			Plural:     ResourcePluralSystemRollout,
 			ShortNames: []string{ResourceShortNameSystemRollout},
 			Scope:      ResourceScopeSystemRollout,
-			Kind:       "SystemRollout",
+			Kind:       "Deploy",
 			ListKind:   "SystemRolloutList",
 			Type:       &SystemRollout{},
 			ListType:   &SystemRolloutList{},

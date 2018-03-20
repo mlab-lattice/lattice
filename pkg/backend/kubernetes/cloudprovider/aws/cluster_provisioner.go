@@ -211,7 +211,7 @@ func (p *DefaultAWSClusterProvisioner) tearDownSystems(clusterID string) error {
 		return err
 	}
 
-	teardowns := map[types.SystemID]types.SystemTeardownID{}
+	teardowns := map[types.SystemID]types.TeardownID{}
 	for _, system := range systems {
 		teardownID, err := clusterClient.Systems().Teardowns(system.ID).Create()
 		if err != nil {
@@ -228,11 +228,11 @@ func (p *DefaultAWSClusterProvisioner) tearDownSystems(clusterID string) error {
 				return false, err
 			}
 
-			if teardown.State == types.SystemTeardownStateFailed {
+			if teardown.State == types.TeardownStateFailed {
 				return false, fmt.Errorf("teardown %v (system %v) failed", teardownID, systemID)
 			}
 
-			if teardown.State != types.SystemTeardownStateSucceeded {
+			if teardown.State != types.TeardownStateSucceeded {
 				return false, nil
 			}
 		}

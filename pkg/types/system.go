@@ -17,8 +17,8 @@ const (
 )
 
 type System struct {
-	ID            SystemID `json:"id"`
-	State         SystemState
+	ID            SystemID                  `json:"id"`
+	State         SystemState               `json:"state"`
 	DefinitionURL string                    `json:"definitionUrl"`
 	Services      map[tree.NodePath]Service `json:"services"`
 }

@@ -54,7 +54,7 @@ func main() {
 	go controller.NewController(
 		dnsmasqConfigPath,
 		hostsFilePath,
-		types.ClusterID(clusterIDStr),
+		types.LatticeID(clusterIDStr),
 		versionedLatticeClient,
 		clientset.NewForConfigOrDie(config),
 		latticeInformers.Lattice().V1().Endpoints(),

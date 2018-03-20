@@ -14,7 +14,7 @@ type ClusterBootstrapperOptions struct {
 	Local *local.ClusterBootstrapperOptions
 }
 
-func NewClusterBootstrapper(clusterID types.ClusterID, options *ClusterBootstrapperOptions) (clusterbootstrapper.Interface, error) {
+func NewClusterBootstrapper(clusterID types.LatticeID, options *ClusterBootstrapperOptions) (clusterbootstrapper.Interface, error) {
 	if options.AWS != nil {
 		return aws.NewClusterBootstrapper(options.AWS), nil
 	}

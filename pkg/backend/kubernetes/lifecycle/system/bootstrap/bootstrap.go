@@ -19,7 +19,7 @@ import (
 )
 
 func Bootstrap(
-	clusterID types.ClusterID,
+	clusterID types.LatticeID,
 	systemID types.SystemID,
 	definitionURL string,
 	bootstrappers []bootstrapper.Interface,
@@ -112,7 +112,7 @@ func Bootstrap(
 }
 
 func GetBootstrapResources(
-	clusterID types.ClusterID,
+	clusterID types.LatticeID,
 	systemID types.SystemID,
 	definitionURL string,
 	bootstrappers []bootstrapper.Interface,

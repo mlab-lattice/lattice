@@ -40,7 +40,7 @@ type Controller struct {
 
 	dnsmasqConfigPath string
 	hostFilePath      string
-	clusterID         types.ClusterID
+	clusterID         types.LatticeID
 }
 
 var (
@@ -51,7 +51,7 @@ var (
 func NewController(
 	dnsmasqConfigPath string,
 	hostConfigPath string,
-	clusterID types.ClusterID,
+	clusterID types.LatticeID,
 	latticeClient latticeclientset.Interface,
 	client clientset.Interface,
 	endpointInformer latticeinformers.EndpointInformer,

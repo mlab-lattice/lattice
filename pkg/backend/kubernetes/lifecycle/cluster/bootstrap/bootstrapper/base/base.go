@@ -39,7 +39,7 @@ type TerraformOptions struct {
 }
 
 func NewBootstrapper(
-	clusterID types.ClusterID,
+	clusterID types.LatticeID,
 	cloudProviderName string,
 	options *Options,
 ) (*DefaultBootstrapper, error) {
@@ -57,7 +57,7 @@ func NewBootstrapper(
 
 type DefaultBootstrapper struct {
 	Options           *Options
-	ClusterID         types.ClusterID
+	ClusterID         types.LatticeID
 	CloudProviderName string
 }
 

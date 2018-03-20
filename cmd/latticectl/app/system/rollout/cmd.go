@@ -57,7 +57,7 @@ var getCmd = &cobra.Command{
 	Short: "get rollout",
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		id := types.SystemRolloutID(args[0])
+		id := types.DeployID(args[0])
 		build, err := systemClient.Rollouts(systemID).Get(id)
 		if err != nil {
 			log.Panic(err)
@@ -79,10 +79,10 @@ var createCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		var rolloutID types.SystemRolloutID
+		var rolloutID types.DeployID
 		var err error
 		if rolloutBuildID != "" {
-			rolloutID, err = systemClient.Rollouts(systemID).CreateFromBuild(types.SystemBuildID(rolloutBuildID))
+			rolloutID, err = systemClient.Rollouts(systemID).CreateFromBuild(types.BuildID(rolloutBuildID))
 		} else {
 			rolloutID, err = systemClient.Rollouts(systemID).CreateFromVersion(rolloutVersion)
 		}

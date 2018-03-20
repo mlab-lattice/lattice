@@ -6,7 +6,7 @@ import (
 
 var rolloutHeaders = []string{"ID", "State", "Build ID"}
 
-func getRolloutValues(rollout *types.SystemRollout) []string {
+func getRolloutValues(rollout *types.Deploy) []string {
 	return []string{
 		string(rollout.ID),
 		string(rollout.State),
@@ -14,7 +14,7 @@ func getRolloutValues(rollout *types.SystemRollout) []string {
 	}
 }
 
-func ShowRollout(rollout *types.SystemRollout, output OutputFormat) error {
+func ShowRollout(rollout *types.Deploy, output OutputFormat) error {
 	switch output {
 	case OutputFormatTable:
 		values := getRolloutValues(rollout)
@@ -27,7 +27,7 @@ func ShowRollout(rollout *types.SystemRollout, output OutputFormat) error {
 	return nil
 }
 
-func ShowRollouts(rollouts []types.SystemRollout, output OutputFormat) error {
+func ShowRollouts(rollouts []types.Deploy, output OutputFormat) error {
 	switch output {
 	case OutputFormatTable:
 		values := make([][]string, len(rollouts))

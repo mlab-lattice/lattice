@@ -25,42 +25,42 @@ func newRolloutClient(c rest.Client, baseURL string) *RolloutClient {
 	}
 }
 
-func (c *RolloutClient) List() ([]types.SystemRollout, error) {
-	var rollouts []types.SystemRollout
+func (c *RolloutClient) List() ([]types.Deploy, error) {
+	var rollouts []types.Deploy
 	err := c.restClient.Get(c.baseURL).JSON(&rollouts)
 	return rollouts, err
 }
 
-func (c *RolloutClient) Get(id types.SystemRolloutID) (*types.SystemRollout, error) {
-	Rollout := &types.SystemRollout{}
+func (c *RolloutClient) Get(id types.DeployID) (*types.Deploy, error) {
+	Rollout := &types.Deploy{}
 	err := c.restClient.Get(fmt.Sprintf("%v/%v", c.baseURL, id)).JSON(&Rollout)
 	return Rollout, err
 }
 
 type rollOutSystemRequest struct {
-	Version *string              `json:"version,omitempty"`
-	BuildID *types.SystemBuildID `json:"buildId,omitempty"`
+	Version *string        `json:"version,omitempty"`
+	BuildID *types.BuildID `json:"buildId,omitempty"`
 }
 
 type rolloutResponse struct {
-	RolloutID types.SystemRolloutID `json:"rolloutId"`
+	RolloutID types.DeployID `json:"rolloutId"`
 }
 
-func (c *RolloutClient) CreateFromBuild(id types.SystemBuildID) (types.SystemRolloutID, error) {
+func (c *RolloutClient) CreateFromBuild(id types.BuildID) (types.DeployID, error) {
 	request := rollOutSystemRequest{
 		BuildID: &id,
 	}
 	return c.create(request)
 }
 
-func (c *RolloutClient) CreateFromVersion(version string) (types.SystemRolloutID, error) {
+func (c *RolloutClient) CreateFromVersion(version string) (types.DeployID, error) {
 	request := rollOutSystemRequest{
 		Version: &version,
 	}
 	return c.create(request)
 }
 
-func (c *RolloutClient) create(request rollOutSystemRequest) (types.SystemRolloutID, error) {
+func (c *RolloutClient) create(request rollOutSystemRequest) (types.DeployID, error) {
 	requestJSON, err := json.Marshal(request)
 	if err != nil {
 		return "", err

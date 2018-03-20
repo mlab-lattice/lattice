@@ -34,7 +34,7 @@ func (cb LatticeClientBuilder) ClientOrDie(name string) latticeclientset.Interfa
 }
 
 type Context struct {
-	ClusterID     types.ClusterID
+	ClusterID     types.LatticeID
 	CloudProvider cloudprovider.Interface
 
 	TerraformBackendOptions *terraform.BackendOptions

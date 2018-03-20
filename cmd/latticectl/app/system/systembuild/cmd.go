@@ -52,7 +52,7 @@ var getCmd = &cobra.Command{
 	Short: "get system build",
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		id := types.SystemBuildID(args[0])
+		id := types.BuildID(args[0])
 		build, err := systemClient.SystemBuilds(systemID).Get(id)
 		if err != nil {
 			log.Panic(err)

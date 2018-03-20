@@ -55,7 +55,7 @@ var RootCmd = &cobra.Command{
 			panic(err)
 		}
 
-		clusterID := types.ClusterID(clusterIDString)
+		clusterID := types.LatticeID(clusterIDString)
 
 		// TODO: setting stop as nil for now, won't actually need it until leader-election is used
 		ctx, err := CreateControllerContext(clusterID, config, nil, terraformModulePath)
@@ -108,7 +108,7 @@ func initCmd() {
 }
 
 func CreateControllerContext(
-	clusterID types.ClusterID,
+	clusterID types.LatticeID,
 	kubeconfig *rest.Config,
 	stop <-chan struct{},
 	terraformModulePath string,

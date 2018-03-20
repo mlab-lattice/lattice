@@ -17,15 +17,15 @@ type DeployCommand struct {
 
 type DeployCommandContext interface {
 	SystemCommandContext
-	DeployID() types.SystemRolloutID
+	DeployID() types.DeployID
 }
 
 type deployCommandContext struct {
 	SystemCommandContext
-	deployID types.SystemRolloutID
+	deployID types.DeployID
 }
 
-func (c *deployCommandContext) DeployID() types.SystemRolloutID {
+func (c *deployCommandContext) DeployID() types.DeployID {
 	return c.deployID
 }
 
@@ -46,7 +46,7 @@ func (c *DeployCommand) Base() (*latticectl.BaseCommand, error) {
 		Run: func(sctx SystemCommandContext, args []string) {
 			ctx := &deployCommandContext{
 				SystemCommandContext: sctx,
-				deployID:             types.SystemRolloutID(deployID),
+				deployID:             types.DeployID(deployID),
 			}
 			c.Run(ctx, args)
 		},

@@ -47,7 +47,7 @@ type Controller struct {
 	kubeClient    kubeclientset.Interface
 	latticeClient latticeclientset.Interface
 
-	clusterID types.ClusterID
+	clusterID types.LatticeID
 
 	configLister       latticelisters.ConfigLister
 	configListerSynced cache.InformerSynced
@@ -79,7 +79,7 @@ type Controller struct {
 
 func NewController(
 	cloudProvider cloudprovider.Interface,
-	clusterID types.ClusterID,
+	clusterID types.LatticeID,
 	kubeClient kubeclientset.Interface,
 	latticeClient latticeclientset.Interface,
 	configInformer latticeinformers.ConfigInformer,

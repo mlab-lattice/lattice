@@ -62,7 +62,7 @@ var RootCmd = &cobra.Command{
 			dockerOptions.RegistryAuthProvider = &aws.ECRRegistryAuthProvider{}
 		}
 
-		clusterID := types.ClusterID(clusterIDString)
+		clusterID := types.LatticeID(clusterIDString)
 		systemID := types.SystemID(systemIDString)
 
 		statusUpdater, err := kubecomponentbuilder.NewKubernetesStatusUpdater(clusterID, kubeconfig)

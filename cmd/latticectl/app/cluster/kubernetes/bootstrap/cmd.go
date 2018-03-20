@@ -104,7 +104,7 @@ var Cmd = &cobra.Command{
 			options.Config.ComponentBuild.DockerArtifact.RegistryAuthType = nil
 		}
 
-		clusterID := types.ClusterID(clusterIDString)
+		clusterID := types.LatticeID(clusterIDString)
 		initialSystemID := types.SystemID(initialSystemIDString)
 
 		var kubeConfig *rest.Config

@@ -15,7 +15,7 @@ import (
 )
 
 type Options struct {
-	ClusterID     types.ClusterID
+	ClusterID     types.LatticeID
 	SystemID      types.SystemID
 	DefinitionURL string
 }
@@ -29,7 +29,7 @@ func NewBootstrapper(options *Options) *DefaultBootstrapper {
 }
 
 type DefaultBootstrapper struct {
-	clusterID     types.ClusterID
+	clusterID     types.LatticeID
 	systemID      types.SystemID
 	definitionURL string
 }

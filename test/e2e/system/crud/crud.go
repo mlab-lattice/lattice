@@ -21,7 +21,7 @@ var _ = Describe("system", func() {
 		Expect(len(systems)).To(Equal(0))
 	})
 
-	systemID := types.SystemID("e2e-system-1")
+	systemID := types.SystemID("e2e-system-crud-1")
 	systemURL := "https://github.com/mlab-lattice/testing__system.git"
 	It("should be able to create a system", func() {
 		system, err := context.TestContext.ClusterAPIClient.Systems().Create(systemID, systemURL)

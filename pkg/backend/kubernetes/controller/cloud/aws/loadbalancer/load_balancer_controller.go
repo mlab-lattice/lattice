@@ -36,7 +36,7 @@ type Controller struct {
 	syncHandler         func(bKey string) error
 	enqueueLoadBalancer func(cb *latticev1.LoadBalancer)
 
-	clusterID types.ClusterID
+	clusterID types.LatticeID
 
 	awsCloudProvider aws.CloudProvider
 	serviceMesh      servicemesh.Interface
@@ -70,7 +70,7 @@ type Controller struct {
 }
 
 func NewController(
-	clusterID types.ClusterID,
+	clusterID types.LatticeID,
 	awsCloudProvider aws.CloudProvider,
 	terraformModuleRoot string,
 	terraformBackendOptions *terraform.BackendOptions,

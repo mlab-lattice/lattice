@@ -27,7 +27,7 @@ type Controller struct {
 	syncHandler     func(bKey string) error
 	enqueueNodePool func(cb *latticev1.NodePool)
 
-	clusterID types.ClusterID
+	clusterID types.LatticeID
 
 	latticeClient latticeclientset.Interface
 
@@ -49,7 +49,7 @@ type Controller struct {
 }
 
 func NewController(
-	clusterID types.ClusterID,
+	clusterID types.LatticeID,
 	awsCloudProvider aws.CloudProvider,
 	terraformModuleRoot string,
 	terraformBackendOptions *terraform.BackendOptions,

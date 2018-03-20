@@ -24,7 +24,7 @@ func (c *GetCommand) Base() (*latticectl.BaseCommand, error) {
 	return cmd.Base()
 }
 
-func GetDeploy(client client.RolloutClient, deployID types.SystemRolloutID) {
+func GetDeploy(client client.RolloutClient, deployID types.DeployID) {
 	deploy, err := client.Get(deployID)
 	if err != nil {
 		log.Panic(err)

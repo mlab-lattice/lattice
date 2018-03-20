@@ -21,7 +21,7 @@ func (kb *KubernetesBackend) BuildSystem(
 	systemID types.SystemID,
 	definitionRoot tree.Node,
 	version types.SystemVersion,
-) (types.SystemBuildID, error) {
+) (types.BuildID, error) {
 	systemBuild, err := systemBuild(systemID, definitionRoot, version)
 	if err != nil {
 		return "", err
@@ -33,7 +33,7 @@ func (kb *KubernetesBackend) BuildSystem(
 		return "", err
 	}
 
-	return types.SystemBuildID(result.Name), err
+	return types.BuildID(result.Name), err
 }
 
 func systemBuild(
@@ -94,7 +94,7 @@ func (kb *KubernetesBackend) ListSystemBuilds(systemID types.SystemID) ([]types.
 
 func (kb *KubernetesBackend) GetSystemBuild(
 	systemID types.SystemID,
-	buildID types.SystemBuildID,
+	buildID types.BuildID,
 ) (*types.SystemBuild, bool, error) {
 	build, exists, err := kb.getInternalSystemBuild(systemID, buildID)
 	if err != nil || !exists {
@@ -111,7 +111,7 @@ func (kb *KubernetesBackend) GetSystemBuild(
 
 func (kb *KubernetesBackend) getInternalSystemBuild(
 	systemID types.SystemID,
-	buildID types.SystemBuildID,
+	buildID types.BuildID,
 ) (*latticev1.SystemBuild, bool, error) {
 	namespace := kubeutil.SystemNamespace(kb.clusterID, systemID)
 	result, err := kb.latticeClient.LatticeV1().SystemBuilds(namespace).Get(string(buildID), metav1.GetOptions{})
@@ -132,7 +132,7 @@ func (kb *KubernetesBackend) getInternalSystemBuild(
 
 func transformSystemBuild(build *latticev1.SystemBuild) (types.SystemBuild, error) {
 	externalBuild := types.SystemBuild{
-		ID:       types.SystemBuildID(build.Name),
+		ID:       types.BuildID(build.Name),
 		State:    getSystemBuildState(build.Status.State),
 		Version:  types.SystemVersion(build.Labels[kubeconstants.LabelKeySystemVersion]),
 		Services: map[tree.NodePath]types.ServiceBuild{},
@@ -161,16 +161,16 @@ func transformSystemBuild(build *latticev1.SystemBuild) (types.SystemBuild, erro
 	return externalBuild, nil
 }
 
-func getSystemBuildState(state latticev1.SystemBuildState) types.SystemBuildState {
+func getSystemBuildState(state latticev1.SystemBuildState) types.BuildState {
 	switch state {
 	case latticev1.SystemBuildStatePending:
-		return types.SystemBuildStatePending
+		return types.BuildStatePending
 	case latticev1.SystemBuildStateRunning:
-		return types.SystemBuildStateRunning
+		return types.BuildStateRunning
 	case latticev1.SystemBuildStateSucceeded:
-		return types.SystemBuildStateSucceeded
+		return types.BuildStateSucceeded
 	case latticev1.SystemBuildStateFailed:
-		return types.SystemBuildStateFailed
+		return types.BuildStateFailed
 	default:
 		panic("unreachable")
 	}

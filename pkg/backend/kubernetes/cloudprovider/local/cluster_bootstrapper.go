@@ -38,7 +38,7 @@ type OptionsDNS struct {
 	ControllerArgs    []string
 }
 
-func NewClusterBootstrapper(clusterID types.ClusterID, options *ClusterBootstrapperOptions) *DefaultLocalClusterBootstrapper {
+func NewClusterBootstrapper(clusterID types.LatticeID, options *ClusterBootstrapperOptions) *DefaultLocalClusterBootstrapper {
 	return &DefaultLocalClusterBootstrapper{
 		ClusterID: clusterID,
 		ip:        options.IP,
@@ -47,7 +47,7 @@ func NewClusterBootstrapper(clusterID types.ClusterID, options *ClusterBootstrap
 }
 
 type DefaultLocalClusterBootstrapper struct {
-	ClusterID types.ClusterID
+	ClusterID types.LatticeID
 	ip        string
 	DNS       *OptionsDNS
 }

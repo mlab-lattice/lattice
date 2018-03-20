@@ -145,7 +145,7 @@ type buildSystemRequest struct {
 }
 
 type buildSystemResponse struct {
-	BuildID types.SystemBuildID `json:"buildId"`
+	BuildID types.BuildID `json:"buildId"`
 }
 
 func (r *restServer) mountSystemSystemBuildHandlers() {
@@ -201,7 +201,7 @@ func (r *restServer) mountSystemSystemBuildHandlers() {
 			systemID := c.Param("system_id")
 			buildID := c.Param("build_id")
 
-			b, exists, err := r.backend.GetSystemBuild(types.SystemID(systemID), types.SystemBuildID(buildID))
+			b, exists, err := r.backend.GetSystemBuild(types.SystemID(systemID), types.BuildID(buildID))
 			if err != nil {
 				handleInternalError(c, err)
 				return
@@ -327,12 +327,12 @@ func (r *restServer) mountSystemComponentBuildHandlers() {
 }
 
 type rollOutSystemRequest struct {
-	Version *string              `json:"version,omitempty"`
-	BuildID *types.SystemBuildID `json:"buildId,omitempty"`
+	Version *string        `json:"version,omitempty"`
+	BuildID *types.BuildID `json:"buildId,omitempty"`
 }
 
 type rollOutSystemResponse struct {
-	RolloutID types.SystemRolloutID `json:"rolloutId"`
+	RolloutID types.DeployID `json:"rolloutId"`
 }
 
 func (r *restServer) mountSystemRolloutHandlers() {
@@ -358,7 +358,7 @@ func (r *restServer) mountSystemRolloutHandlers() {
 				return
 			}
 
-			var rolloutID types.SystemRolloutID
+			var rolloutID types.DeployID
 			var err error
 			if req.Version != nil {
 				root, err := r.getSystemDefinitionRoot(systemID, *req.Version)
@@ -375,7 +375,7 @@ func (r *restServer) mountSystemRolloutHandlers() {
 			} else {
 				rolloutID, err = r.backend.RollOutSystemBuild(
 					types.SystemID(systemID),
-					types.SystemBuildID(*req.BuildID),
+					types.BuildID(*req.BuildID),
 				)
 			}
 
@@ -407,7 +407,7 @@ func (r *restServer) mountSystemRolloutHandlers() {
 			systemID := c.Param("system_id")
 			rolloutID := c.Param("rollout_id")
 
-			rollout, exists, err := r.backend.GetSystemRollout(types.SystemID(systemID), types.SystemRolloutID(rolloutID))
+			rollout, exists, err := r.backend.GetSystemRollout(types.SystemID(systemID), types.DeployID(rolloutID))
 			if err != nil {
 				handleInternalError(c, err)
 				return
@@ -424,7 +424,7 @@ func (r *restServer) mountSystemRolloutHandlers() {
 }
 
 type tearDownSystemResponse struct {
-	TeardownID types.SystemTeardownID `json:"teardownId"`
+	TeardownID types.TeardownID `json:"teardownId"`
 }
 
 func (r *restServer) mountSystemTeardownHandlers() {
@@ -464,7 +464,7 @@ func (r *restServer) mountSystemTeardownHandlers() {
 			systemID := c.Param("system_id")
 			teardownID := c.Param("teardown_id")
 
-			teardown, exists, err := r.backend.GetSystemTeardown(types.SystemID(systemID), types.SystemTeardownID(teardownID))
+			teardown, exists, err := r.backend.GetSystemTeardown(types.SystemID(systemID), types.TeardownID(teardownID))
 			if err != nil {
 				handleInternalError(c, err)
 				return

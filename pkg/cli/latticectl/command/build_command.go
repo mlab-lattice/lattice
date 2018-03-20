@@ -17,15 +17,15 @@ type BuildCommand struct {
 
 type BuildCommandContext interface {
 	SystemCommandContext
-	BuildID() types.SystemBuildID
+	BuildID() types.BuildID
 }
 
 type buildCommandContext struct {
 	SystemCommandContext
-	buildID types.SystemBuildID
+	buildID types.BuildID
 }
 
-func (c *buildCommandContext) BuildID() types.SystemBuildID {
+func (c *buildCommandContext) BuildID() types.BuildID {
 	return c.buildID
 }
 
@@ -46,7 +46,7 @@ func (c *BuildCommand) Base() (*latticectl.BaseCommand, error) {
 		Run: func(sctx SystemCommandContext, args []string) {
 			ctx := &buildCommandContext{
 				SystemCommandContext: sctx,
-				buildID:              types.SystemBuildID(buildID),
+				buildID:              types.BuildID(buildID),
 			}
 			c.Run(ctx, args)
 		},

@@ -32,9 +32,9 @@ type Backend interface {
 	DeleteSystem(types.SystemID) error
 
 	// SystemBuild
-	BuildSystem(id types.SystemID, definitionRoot tree.Node, v types.SystemVersion) (types.SystemBuildID, error)
+	BuildSystem(id types.SystemID, definitionRoot tree.Node, v types.SystemVersion) (types.BuildID, error)
 	ListSystemBuilds(types.SystemID) ([]types.SystemBuild, error)
-	GetSystemBuild(types.SystemID, types.SystemBuildID) (b *types.SystemBuild, exists bool, err error)
+	GetSystemBuild(types.SystemID, types.BuildID) (b *types.SystemBuild, exists bool, err error)
 
 	// ServiceBuild
 	ListServiceBuilds(types.SystemID) ([]types.ServiceBuild, error)
@@ -45,16 +45,16 @@ type Backend interface {
 	GetComponentBuild(types.SystemID, types.ComponentBuildID) (b *types.ComponentBuild, exists bool, err error)
 	GetComponentBuildLogs(id types.SystemID, bid types.ComponentBuildID, follow bool) (rc io.ReadCloser, exists bool, err error)
 
-	// SystemRollout
-	RollOutSystemBuild(types.SystemID, types.SystemBuildID) (types.SystemRolloutID, error)
-	RollOutSystem(id types.SystemID, definitionRoot tree.Node, v types.SystemVersion) (types.SystemRolloutID, error)
-	ListSystemRollouts(types.SystemID) ([]types.SystemRollout, error)
-	GetSystemRollout(types.SystemID, types.SystemRolloutID) (r *types.SystemRollout, exists bool, err error)
+	// Deploy
+	RollOutSystemBuild(types.SystemID, types.BuildID) (types.DeployID, error)
+	RollOutSystem(id types.SystemID, definitionRoot tree.Node, v types.SystemVersion) (types.DeployID, error)
+	ListSystemRollouts(types.SystemID) ([]types.Deploy, error)
+	GetSystemRollout(types.SystemID, types.DeployID) (r *types.Deploy, exists bool, err error)
 
 	// SystemTeardown
-	TearDownSystem(types.SystemID) (types.SystemTeardownID, error)
+	TearDownSystem(types.SystemID) (types.TeardownID, error)
 	ListSystemTeardowns(types.SystemID) ([]types.SystemTeardown, error)
-	GetSystemTeardown(types.SystemID, types.SystemTeardownID) (t *types.SystemTeardown, exists bool, err error)
+	GetSystemTeardown(types.SystemID, types.TeardownID) (t *types.SystemTeardown, exists bool, err error)
 
 	// Service
 	ListServices(types.SystemID) ([]types.Service, error)
