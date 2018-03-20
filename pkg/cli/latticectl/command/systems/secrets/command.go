@@ -25,7 +25,7 @@ func (c *Command) Base() (*latticectl.BaseCommand, error) {
 	return cmd.Base()
 }
 
-func ListSecrets(client client.SystemSecretClient) {
+func ListSecrets(client client.SecretClient) {
 	secrets, err := client.List()
 	if err != nil {
 		log.Panic(err)

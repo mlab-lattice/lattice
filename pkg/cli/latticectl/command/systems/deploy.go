@@ -33,7 +33,7 @@ func (c *DeployCommand) Base() (*latticectl.BaseCommand, error) {
 		},
 		Run: func(ctx lctlcommand.SystemCommandContext, args []string) {
 			systemID := ctx.SystemID()
-			DeploySystem(ctx.Client().Systems().Rollouts(systemID), types.BuildID(buildID), version)
+			DeploySystem(ctx.Client().Systems().Deploys(systemID), types.BuildID(buildID), version)
 		},
 	}
 
@@ -41,7 +41,7 @@ func (c *DeployCommand) Base() (*latticectl.BaseCommand, error) {
 }
 
 func DeploySystem(
-	client client.RolloutClient,
+	client client.DeployClient,
 	buildID types.BuildID,
 	version string,
 ) {

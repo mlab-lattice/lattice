@@ -61,7 +61,8 @@ var _ = Describe("system", func() {
 	})
 
 	// Wait to ensure controller sees the system and updates the status
-	time.Sleep(3 * time.Second)
+	// FIXME: remove this
+	time.Sleep(6 * time.Second)
 	It("should be able to delete the newly created system by ID", func() {
 		err := context.TestContext.ClusterAPIClient.Systems().Delete(types.SystemID(systemID))
 		Expect(err).NotTo(HaveOccurred())

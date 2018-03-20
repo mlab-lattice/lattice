@@ -8,7 +8,7 @@ import (
 
 func (a *lifecycleAction) String() string {
 	if a.rollout != nil {
-		return fmt.Sprintf("SystemRollout %v", a.rollout.Name)
+		return fmt.Sprintf("Deploy %v", a.rollout.Name)
 	}
 
 	if a.teardown != nil {
@@ -48,7 +48,7 @@ func (c *Controller) getOwningAction(namespace string) (*lifecycleAction, bool) 
 	return owningAction, ok
 }
 
-func (c *Controller) attemptToClaimRolloutOwningAction(rollout *latticev1.SystemRollout) *lifecycleAction {
+func (c *Controller) attemptToClaimDeployOwningAction(rollout *latticev1.Deploy) *lifecycleAction {
 	action := &lifecycleAction{
 		rollout: rollout,
 	}
@@ -56,7 +56,7 @@ func (c *Controller) attemptToClaimRolloutOwningAction(rollout *latticev1.System
 	return c.attemptToClaimOwningAction(rollout.Namespace, action)
 }
 
-func (c *Controller) attemptToClaimTeardownOwningAction(teardown *latticev1.SystemTeardown) *lifecycleAction {
+func (c *Controller) attemptToClaimTeardownOwningAction(teardown *latticev1.Teardown) *lifecycleAction {
 	action := &lifecycleAction{
 		teardown: teardown,
 	}
@@ -78,7 +78,7 @@ func (c *Controller) attemptToClaimOwningAction(namespace string, action *lifecy
 	return nil
 }
 
-func (c *Controller) relinquishRolloutOwningActionClaim(rollout *latticev1.SystemRollout) error {
+func (c *Controller) relinquishDeployOwningActionClaim(rollout *latticev1.Deploy) error {
 	action := &lifecycleAction{
 		rollout: rollout,
 	}
@@ -86,7 +86,7 @@ func (c *Controller) relinquishRolloutOwningActionClaim(rollout *latticev1.Syste
 	return c.relinquishOwningActionClaim(rollout.Namespace, action)
 }
 
-func (c *Controller) relinquishTeardownOwningActionClaim(teardown *latticev1.SystemTeardown) error {
+func (c *Controller) relinquishTeardownOwningActionClaim(teardown *latticev1.Teardown) error {
 	action := &lifecycleAction{
 		teardown: teardown,
 	}

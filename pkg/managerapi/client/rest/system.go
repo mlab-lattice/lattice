@@ -68,20 +68,12 @@ func (c *SystemClient) Delete(id types.SystemID) error {
 	return err
 }
 
-func (c *SystemClient) SystemBuilds(id types.SystemID) client.SystemBuildClient {
+func (c *SystemClient) Builds(id types.SystemID) client.BuildClient {
 	return newSystemBuildClient(c.restClient, fmt.Sprintf("%v/%v", c.baseURL, id))
 }
 
-func (c *SystemClient) ServiceBuilds(id types.SystemID) client.ServiceBuildClient {
-	return newServiceBuildClient(c.restClient, fmt.Sprintf("%v/%v", c.baseURL, id))
-}
-
-func (c *SystemClient) ComponentBuilds(id types.SystemID) client.ComponentBuildClient {
-	return newComponentBuildClient(c.restClient, fmt.Sprintf("%v/%v", c.baseURL, id))
-}
-
-func (c *SystemClient) Rollouts(id types.SystemID) client.RolloutClient {
-	return newRolloutClient(c.restClient, fmt.Sprintf("%v/%v", c.baseURL, id))
+func (c *SystemClient) Deploys(id types.SystemID) client.DeployClient {
+	return newDeployClient(c.restClient, fmt.Sprintf("%v/%v", c.baseURL, id))
 }
 
 func (c *SystemClient) Teardowns(id types.SystemID) client.TeardownClient {
@@ -92,6 +84,6 @@ func (c *SystemClient) Services(id types.SystemID) client.ServiceClient {
 	return newServiceClient(c.restClient, fmt.Sprintf("%v/%v", c.baseURL, id))
 }
 
-func (c *SystemClient) Secrets(id types.SystemID) client.SystemSecretClient {
+func (c *SystemClient) Secrets(id types.SystemID) client.SecretClient {
 	return newSystemSecretClient(c.restClient, fmt.Sprintf("%v/%v", c.baseURL, id))
 }

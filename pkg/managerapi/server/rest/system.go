@@ -8,7 +8,6 @@ import (
 	"github.com/mlab-lattice/system/pkg/constants"
 	"github.com/mlab-lattice/system/pkg/definition"
 	"github.com/mlab-lattice/system/pkg/definition/tree"
-	"github.com/mlab-lattice/system/pkg/managerapi/server"
 	"github.com/mlab-lattice/system/pkg/types"
 	"github.com/mlab-lattice/system/pkg/util/git"
 
@@ -91,9 +90,7 @@ func (r *restServer) mountSystemHandlers() {
 
 	r.mountSystemVersionHandlers()
 	r.mountSystemSystemBuildHandlers()
-	r.mountSystemServiceBuildHandlers()
-	r.mountSystemComponentBuildHandlers()
-	r.mountSystemRolloutHandlers()
+	r.mountSystemDeployHandlers()
 	r.mountSystemTeardownHandlers()
 	r.mountSystemServiceHandlers()
 	r.mountSystemSecretHandlers()
@@ -149,7 +146,7 @@ type buildSystemResponse struct {
 }
 
 func (r *restServer) mountSystemSystemBuildHandlers() {
-	systemBuilds := r.router.Group("/systems/:system_id/system-builds")
+	systemBuilds := r.router.Group("/systems/:system_id/builds")
 	{
 		// build-system
 		systemBuilds.POST("", func(c *gin.Context) {
@@ -167,7 +164,7 @@ func (r *restServer) mountSystemSystemBuildHandlers() {
 				return
 			}
 
-			bid, err := r.backend.BuildSystem(
+			bid, err := r.backend.Build(
 				types.SystemID(systemID),
 				root,
 				types.SystemVersion(req.Version),
@@ -187,7 +184,7 @@ func (r *restServer) mountSystemSystemBuildHandlers() {
 		systemBuilds.GET("", func(c *gin.Context) {
 			systemID := c.Param("system_id")
 
-			bs, err := r.backend.ListSystemBuilds(types.SystemID(systemID))
+			bs, err := r.backend.ListBuilds(types.SystemID(systemID))
 			if err != nil {
 				handleInternalError(c, err)
 				return
@@ -201,7 +198,7 @@ func (r *restServer) mountSystemSystemBuildHandlers() {
 			systemID := c.Param("system_id")
 			buildID := c.Param("build_id")
 
-			b, exists, err := r.backend.GetSystemBuild(types.SystemID(systemID), types.BuildID(buildID))
+			b, exists, err := r.backend.GetBuild(types.SystemID(systemID), types.BuildID(buildID))
 			if err != nil {
 				handleInternalError(c, err)
 				return
@@ -217,132 +214,23 @@ func (r *restServer) mountSystemSystemBuildHandlers() {
 	}
 }
 
-func (r *restServer) mountSystemServiceBuildHandlers() {
-	serviceBuilds := r.router.Group("/systems/:system_id/service-builds")
-	{
-		// list-service-builds
-		serviceBuilds.GET("", func(c *gin.Context) {
-			systemID := c.Param("system_id")
-
-			builds, err := r.backend.ListServiceBuilds(types.SystemID(systemID))
-			if err != nil {
-				handleInternalError(c, err)
-				return
-			}
-
-			c.JSON(http.StatusOK, builds)
-		})
-
-		// get-service-build
-		serviceBuilds.GET("/:build_id", func(c *gin.Context) {
-			systemID := c.Param("system_id")
-			buildID := c.Param("build_id")
-
-			build, exists, err := r.backend.GetServiceBuild(types.SystemID(systemID), types.ServiceBuildID(buildID))
-			if err != nil {
-				handleInternalError(c, err)
-				return
-			}
-
-			if !exists {
-				c.String(http.StatusNotFound, "")
-				return
-			}
-
-			c.JSON(http.StatusOK, build)
-		})
-	}
-}
-
-func (r *restServer) mountSystemComponentBuildHandlers() {
-	componentBuilds := r.router.Group("/systems/:system_id/component-builds")
-	{
-		// list-component-builds
-		componentBuilds.GET("", func(c *gin.Context) {
-			systemID := c.Param("system_id")
-
-			builds, err := r.backend.ListComponentBuilds(types.SystemID(systemID))
-			if err != nil {
-				handleInternalError(c, err)
-				return
-			}
-
-			c.JSON(http.StatusOK, builds)
-		})
-
-		// get-system-build
-		componentBuilds.GET("/:build_id", func(c *gin.Context) {
-			systemID := c.Param("system_id")
-			buildID := c.Param("build_id")
-
-			build, exists, err := r.backend.GetComponentBuild(types.SystemID(systemID), types.ComponentBuildID(buildID))
-			if err != nil {
-				handleInternalError(c, err)
-				return
-			}
-
-			if !exists {
-				c.String(http.StatusNotFound, "")
-				return
-			}
-
-			c.JSON(http.StatusOK, build)
-		})
-
-		// get-system-build-logs
-		componentBuilds.GET("/:build_id/logs", func(c *gin.Context) {
-			systemID := c.Param("system_id")
-			buildID := c.Param("build_id")
-			followQuery := c.DefaultQuery("follow", "false")
-
-			var follow bool
-			switch followQuery {
-			case "false":
-				follow = false
-			case "true":
-				follow = true
-			default:
-				c.String(http.StatusBadRequest, "invalid value for follow query")
-			}
-
-			log, exists, err := r.backend.GetComponentBuildLogs(types.SystemID(systemID), types.ComponentBuildID(buildID), follow)
-			if err != nil {
-				handleInternalError(c, err)
-				return
-			}
-
-			if exists == false {
-				switch err.(type) {
-				case *server.UserError:
-					c.String(http.StatusNotFound, "")
-				default:
-					handleInternalError(c, err)
-				}
-				return
-			}
-
-			logEndpoint(c, log, follow)
-		})
-	}
-}
-
-type rollOutSystemRequest struct {
+type deployRequest struct {
 	Version *string        `json:"version,omitempty"`
 	BuildID *types.BuildID `json:"buildId,omitempty"`
 }
 
-type rollOutSystemResponse struct {
-	RolloutID types.DeployID `json:"rolloutId"`
+type deployResponse struct {
+	DeployID types.DeployID `json:"deployId"`
 }
 
-func (r *restServer) mountSystemRolloutHandlers() {
-	rollouts := r.router.Group("/systems/:system_id/rollouts")
+func (r *restServer) mountSystemDeployHandlers() {
+	deploys := r.router.Group("/systems/:system_id/deploys")
 	{
 		// roll-out-system
-		rollouts.POST("", func(c *gin.Context) {
+		deploys.POST("", func(c *gin.Context) {
 			systemID := c.Param("system_id")
 
-			var req rollOutSystemRequest
+			var req deployRequest
 			if err := c.BindJSON(&req); err != nil {
 				handleInternalError(c, err)
 				return
@@ -358,7 +246,7 @@ func (r *restServer) mountSystemRolloutHandlers() {
 				return
 			}
 
-			var rolloutID types.DeployID
+			var deployID types.DeployID
 			var err error
 			if req.Version != nil {
 				root, err := r.getSystemDefinitionRoot(systemID, *req.Version)
@@ -367,13 +255,13 @@ func (r *restServer) mountSystemRolloutHandlers() {
 					return
 				}
 
-				rolloutID, err = r.backend.RollOutSystem(
+				deployID, err = r.backend.DeployVersion(
 					types.SystemID(systemID),
 					root,
 					types.SystemVersion(*req.Version),
 				)
 			} else {
-				rolloutID, err = r.backend.RollOutSystemBuild(
+				deployID, err = r.backend.DeployBuild(
 					types.SystemID(systemID),
 					types.BuildID(*req.BuildID),
 				)
@@ -384,16 +272,16 @@ func (r *restServer) mountSystemRolloutHandlers() {
 				return
 			}
 
-			c.JSON(http.StatusCreated, rollOutSystemResponse{
-				RolloutID: rolloutID,
+			c.JSON(http.StatusCreated, deployResponse{
+				DeployID: deployID,
 			})
 		})
 
-		// list-rollouts
-		rollouts.GET("", func(c *gin.Context) {
+		// list-deploys
+		deploys.GET("", func(c *gin.Context) {
 			systemID := c.Param("system_id")
 
-			rollouts, err := r.backend.ListSystemRollouts(types.SystemID(systemID))
+			rollouts, err := r.backend.ListDeploys(types.SystemID(systemID))
 			if err != nil {
 				handleInternalError(c, err)
 				return
@@ -403,11 +291,11 @@ func (r *restServer) mountSystemRolloutHandlers() {
 		})
 
 		// get-rollout
-		rollouts.GET("/:rollout_id", func(c *gin.Context) {
+		deploys.GET("/:deploy_id", func(c *gin.Context) {
 			systemID := c.Param("system_id")
-			rolloutID := c.Param("rollout_id")
+			deployID := c.Param("deploy_id")
 
-			rollout, exists, err := r.backend.GetSystemRollout(types.SystemID(systemID), types.DeployID(rolloutID))
+			rollout, exists, err := r.backend.GetDeploy(types.SystemID(systemID), types.DeployID(deployID))
 			if err != nil {
 				handleInternalError(c, err)
 				return
@@ -434,7 +322,7 @@ func (r *restServer) mountSystemTeardownHandlers() {
 		teardowns.POST("", func(c *gin.Context) {
 			systemID := c.Param("system_id")
 
-			teardownID, err := r.backend.TearDownSystem(types.SystemID(systemID))
+			teardownID, err := r.backend.TearDown(types.SystemID(systemID))
 
 			if err != nil {
 				handleInternalError(c, err)
@@ -450,7 +338,7 @@ func (r *restServer) mountSystemTeardownHandlers() {
 		teardowns.GET("", func(c *gin.Context) {
 			systemID := c.Param("system_id")
 
-			teardowns, err := r.backend.ListSystemTeardowns(types.SystemID(systemID))
+			teardowns, err := r.backend.ListTeardowns(types.SystemID(systemID))
 			if err != nil {
 				handleInternalError(c, err)
 				return
@@ -464,7 +352,7 @@ func (r *restServer) mountSystemTeardownHandlers() {
 			systemID := c.Param("system_id")
 			teardownID := c.Param("teardown_id")
 
-			teardown, exists, err := r.backend.GetSystemTeardown(types.SystemID(systemID), types.TeardownID(teardownID))
+			teardown, exists, err := r.backend.GetTeardown(types.SystemID(systemID), types.TeardownID(teardownID))
 			if err != nil {
 				handleInternalError(c, err)
 				return

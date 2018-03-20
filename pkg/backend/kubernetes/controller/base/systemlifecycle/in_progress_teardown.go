@@ -7,13 +7,13 @@ import (
 	"github.com/mlab-lattice/system/pkg/definition/tree"
 )
 
-func (c *Controller) syncInProgressTeardown(teardown *latticev1.SystemTeardown) error {
+func (c *Controller) syncInProgressTeardown(teardown *latticev1.Teardown) error {
 	system, err := c.getSystem(teardown.Namespace)
 	if err != nil {
 		return err
 	}
 
-	// This needs to happen in here because we don't have an "Accepted" intermediate state like SystemRollout does.
+	// This needs to happen in here because we don't have an "Accepted" intermediate state like Deploy does.
 	// We can't atomically update both teardown.Status.State and change system.Spec, and we need to move teardown into
 	// "in progress" so on controller restart the controller can figure out that it is the owning object. Therefore,
 	// we must update the teardown.Status.State first. If we were then to try to update system.Spec in syncPendingTeardown
@@ -33,17 +33,17 @@ func (c *Controller) syncInProgressTeardown(teardown *latticev1.SystemTeardown) 
 		return nil
 	}
 
-	var state latticev1.SystemTeardownState
+	var state latticev1.TeardownState
 	switch system.Status.State {
 	case latticev1.SystemStateUpdating, latticev1.SystemStateScaling:
 		// Still in progress, nothing more to do
 		return nil
 
 	case latticev1.SystemStateStable:
-		state = latticev1.SystemTeardownStateSucceeded
+		state = latticev1.TeardownStateSucceeded
 
 	case latticev1.SystemStateFailed:
-		state = latticev1.SystemTeardownStateFailed
+		state = latticev1.TeardownStateFailed
 
 	default:
 		return fmt.Errorf("System %v/%v in unexpected state %v", system.Namespace, system.Name, system.Status.State)
@@ -55,7 +55,7 @@ func (c *Controller) syncInProgressTeardown(teardown *latticev1.SystemTeardown) 
 		return err
 	}
 
-	if teardown.Status.State == latticev1.SystemTeardownStateSucceeded || teardown.Status.State == latticev1.SystemTeardownStateFailed {
+	if teardown.Status.State == latticev1.TeardownStateSucceeded || teardown.Status.State == latticev1.TeardownStateFailed {
 		return c.relinquishTeardownOwningActionClaim(teardown)
 	}
 	return nil

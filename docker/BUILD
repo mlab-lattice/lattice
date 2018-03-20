@@ -92,6 +92,5 @@ go_targets = [
     ("kubernetes-lattice-controller-manager", "libstdc++6-terraform", "cmd/kubernetes/lattice-controller-manager"),
     ("kubernetes-local-dns-controller", "libstdc++6", "cmd/kubernetes/local/dns/controller"),
     ("kubernetes-manager-api-rest", "libstdc++6", "cmd/kubernetes/manager-api/rest"),
-    ("latticectl", "libstdc++6-terraform", "cmd/latticectl"),
 ]
 lattice_container_images(go_targets)

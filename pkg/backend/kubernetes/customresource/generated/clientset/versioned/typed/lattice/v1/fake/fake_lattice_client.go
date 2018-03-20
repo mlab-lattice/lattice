@@ -10,12 +10,20 @@ type FakeLatticeV1 struct {
 	*testing.Fake
 }
 
+func (c *FakeLatticeV1) Builds(namespace string) v1.BuildInterface {
+	return &FakeBuilds{c, namespace}
+}
+
 func (c *FakeLatticeV1) ComponentBuilds(namespace string) v1.ComponentBuildInterface {
 	return &FakeComponentBuilds{c, namespace}
 }
 
 func (c *FakeLatticeV1) Configs(namespace string) v1.ConfigInterface {
 	return &FakeConfigs{c, namespace}
+}
+
+func (c *FakeLatticeV1) Deploies(namespace string) v1.DeployInterface {
+	return &FakeDeploies{c, namespace}
 }
 
 func (c *FakeLatticeV1) Endpoints(namespace string) v1.EndpointInterface {
@@ -46,16 +54,8 @@ func (c *FakeLatticeV1) Systems(namespace string) v1.SystemInterface {
 	return &FakeSystems{c, namespace}
 }
 
-func (c *FakeLatticeV1) SystemBuilds(namespace string) v1.SystemBuildInterface {
-	return &FakeSystemBuilds{c, namespace}
-}
-
-func (c *FakeLatticeV1) SystemRollouts(namespace string) v1.SystemRolloutInterface {
-	return &FakeSystemRollouts{c, namespace}
-}
-
-func (c *FakeLatticeV1) SystemTeardowns(namespace string) v1.SystemTeardownInterface {
-	return &FakeSystemTeardowns{c, namespace}
+func (c *FakeLatticeV1) Teardowns(namespace string) v1.TeardownInterface {
+	return &FakeTeardowns{c, namespace}
 }
 
 // RESTClient returns a RESTClient that is used to communicate

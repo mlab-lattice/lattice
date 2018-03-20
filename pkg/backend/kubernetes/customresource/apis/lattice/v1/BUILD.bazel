@@ -3,9 +3,11 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library")
 go_library(
     name = "go_default_library",
     srcs = [
+        "build.go",
         "component_build.go",
         "config.go",
         "deepcopy.go",
+        "deploy.go",
         "doc.go",
         "endpoint.go",
         "load_balancer.go",
@@ -15,9 +17,7 @@ go_library(
         "service_address.go",
         "service_build.go",
         "system.go",
-        "system_build.go",
-        "system_rollout.go",
-        "system_teardown.go",
+        "teardown.go",
         "util.go",
         "zz_generated.deepcopy.go",
     ],

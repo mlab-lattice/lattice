@@ -17,7 +17,7 @@ func (c *Command) Base() (*latticectl.BaseCommand, error) {
 	cmd := &lctlcommand.SystemCommand{
 		Name: "deploys",
 		Run: func(ctx lctlcommand.SystemCommandContext, args []string) {
-			ListDeploys(ctx.Client().Systems().Rollouts(ctx.SystemID()))
+			ListDeploys(ctx.Client().Systems().Deploys(ctx.SystemID()))
 		},
 		Subcommands: c.Subcommands,
 	}
@@ -25,7 +25,7 @@ func (c *Command) Base() (*latticectl.BaseCommand, error) {
 	return cmd.Base()
 }
 
-func ListDeploys(client client.RolloutClient) {
+func ListDeploys(client client.DeployClient) {
 	deploys, err := client.List()
 	if err != nil {
 		log.Panic(err)

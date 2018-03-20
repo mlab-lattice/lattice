@@ -3,8 +3,10 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library")
 go_library(
     name = "go_default_library",
     srcs = [
+        "build.go",
         "componentbuild.go",
         "config.go",
+        "deploy.go",
         "endpoint.go",
         "interface.go",
         "loadbalancer.go",
@@ -13,9 +15,7 @@ go_library(
         "serviceaddress.go",
         "servicebuild.go",
         "system.go",
-        "systembuild.go",
-        "systemrollout.go",
-        "systemteardown.go",
+        "teardown.go",
     ],
     importpath = "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/informers/externalversions/lattice/v1",
     visibility = ["//visibility:public"],

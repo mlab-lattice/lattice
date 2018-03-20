@@ -2,6 +2,14 @@
 
 package v1
 
+// BuildListerExpansion allows custom methods to be added to
+// BuildLister.
+type BuildListerExpansion interface{}
+
+// BuildNamespaceListerExpansion allows custom methods to be added to
+// BuildNamespaceLister.
+type BuildNamespaceListerExpansion interface{}
+
 // ComponentBuildListerExpansion allows custom methods to be added to
 // ComponentBuildLister.
 type ComponentBuildListerExpansion interface{}
@@ -17,6 +25,14 @@ type ConfigListerExpansion interface{}
 // ConfigNamespaceListerExpansion allows custom methods to be added to
 // ConfigNamespaceLister.
 type ConfigNamespaceListerExpansion interface{}
+
+// DeployListerExpansion allows custom methods to be added to
+// DeployLister.
+type DeployListerExpansion interface{}
+
+// DeployNamespaceListerExpansion allows custom methods to be added to
+// DeployNamespaceLister.
+type DeployNamespaceListerExpansion interface{}
 
 // EndpointListerExpansion allows custom methods to be added to
 // EndpointLister.
@@ -74,26 +90,10 @@ type SystemListerExpansion interface{}
 // SystemNamespaceLister.
 type SystemNamespaceListerExpansion interface{}
 
-// SystemBuildListerExpansion allows custom methods to be added to
-// SystemBuildLister.
-type SystemBuildListerExpansion interface{}
+// TeardownListerExpansion allows custom methods to be added to
+// TeardownLister.
+type TeardownListerExpansion interface{}
 
-// SystemBuildNamespaceListerExpansion allows custom methods to be added to
-// SystemBuildNamespaceLister.
-type SystemBuildNamespaceListerExpansion interface{}
-
-// SystemRolloutListerExpansion allows custom methods to be added to
-// SystemRolloutLister.
-type SystemRolloutListerExpansion interface{}
-
-// SystemRolloutNamespaceListerExpansion allows custom methods to be added to
-// SystemRolloutNamespaceLister.
-type SystemRolloutNamespaceListerExpansion interface{}
-
-// SystemTeardownListerExpansion allows custom methods to be added to
-// SystemTeardownLister.
-type SystemTeardownListerExpansion interface{}
-
-// SystemTeardownNamespaceListerExpansion allows custom methods to be added to
-// SystemTeardownNamespaceLister.
-type SystemTeardownNamespaceListerExpansion interface{}
+// TeardownNamespaceListerExpansion allows custom methods to be added to
+// TeardownNamespaceLister.
+type TeardownNamespaceListerExpansion interface{}

@@ -3,13 +3,13 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library")
 go_library(
     name = "go_default_library",
     srcs = [
-        "accepted_rollout.go",
-        "in_progress_rollout.go",
+        "accepted_deploy.go",
+        "deploy.go",
+        "in_progress_deploy.go",
         "in_progress_teardown.go",
         "lifecycle_action.go",
-        "pending_rollout.go",
+        "pending_deploy.go",
         "pending_teardown.go",
-        "rollout.go",
         "system.go",
         "system_build.go",
         "system_lifecycle_controller.go",

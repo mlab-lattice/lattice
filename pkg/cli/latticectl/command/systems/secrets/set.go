@@ -48,7 +48,7 @@ func (c *SetCommand) Base() (*latticectl.BaseCommand, error) {
 	return cmd.Base()
 }
 
-func SetSecret(client client.SystemSecretClient, path tree.NodePath, name, value string) {
+func SetSecret(client client.SecretClient, path tree.NodePath, name, value string) {
 	err := client.Set(path, name, value)
 	if err != nil {
 		log.Fatal(err)

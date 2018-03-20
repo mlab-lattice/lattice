@@ -1,8 +1,6 @@
 package server
 
 import (
-	"io"
-
 	"github.com/mlab-lattice/system/pkg/definition/tree"
 	"github.com/mlab-lattice/system/pkg/types"
 )
@@ -31,30 +29,21 @@ type Backend interface {
 	GetSystem(types.SystemID) (s *types.System, exists bool, err error)
 	DeleteSystem(types.SystemID) error
 
-	// SystemBuild
-	BuildSystem(id types.SystemID, definitionRoot tree.Node, v types.SystemVersion) (types.BuildID, error)
-	ListSystemBuilds(types.SystemID) ([]types.SystemBuild, error)
-	GetSystemBuild(types.SystemID, types.BuildID) (b *types.SystemBuild, exists bool, err error)
-
-	// ServiceBuild
-	ListServiceBuilds(types.SystemID) ([]types.ServiceBuild, error)
-	GetServiceBuild(types.SystemID, types.ServiceBuildID) (b *types.ServiceBuild, exists bool, err error)
-
-	// ComponentBuild
-	ListComponentBuilds(types.SystemID) ([]types.ComponentBuild, error)
-	GetComponentBuild(types.SystemID, types.ComponentBuildID) (b *types.ComponentBuild, exists bool, err error)
-	GetComponentBuildLogs(id types.SystemID, bid types.ComponentBuildID, follow bool) (rc io.ReadCloser, exists bool, err error)
+	// Build
+	Build(id types.SystemID, definitionRoot tree.Node, v types.SystemVersion) (types.BuildID, error)
+	ListBuilds(types.SystemID) ([]types.Build, error)
+	GetBuild(types.SystemID, types.BuildID) (b *types.Build, exists bool, err error)
 
 	// Deploy
-	RollOutSystemBuild(types.SystemID, types.BuildID) (types.DeployID, error)
-	RollOutSystem(id types.SystemID, definitionRoot tree.Node, v types.SystemVersion) (types.DeployID, error)
-	ListSystemRollouts(types.SystemID) ([]types.Deploy, error)
-	GetSystemRollout(types.SystemID, types.DeployID) (r *types.Deploy, exists bool, err error)
+	DeployBuild(types.SystemID, types.BuildID) (types.DeployID, error)
+	DeployVersion(id types.SystemID, definitionRoot tree.Node, v types.SystemVersion) (types.DeployID, error)
+	ListDeploys(types.SystemID) ([]types.Deploy, error)
+	GetDeploy(types.SystemID, types.DeployID) (r *types.Deploy, exists bool, err error)
 
-	// SystemTeardown
-	TearDownSystem(types.SystemID) (types.TeardownID, error)
-	ListSystemTeardowns(types.SystemID) ([]types.SystemTeardown, error)
-	GetSystemTeardown(types.SystemID, types.TeardownID) (t *types.SystemTeardown, exists bool, err error)
+	// Teardown
+	TearDown(types.SystemID) (types.TeardownID, error)
+	ListTeardowns(types.SystemID) ([]types.SystemTeardown, error)
+	GetTeardown(types.SystemID, types.TeardownID) (t *types.SystemTeardown, exists bool, err error)
 
 	// Service
 	ListServices(types.SystemID) ([]types.Service, error)

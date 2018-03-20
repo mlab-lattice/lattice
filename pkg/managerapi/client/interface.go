@@ -1,8 +1,6 @@
 package client
 
 import (
-	"io"
-
 	"github.com/mlab-lattice/system/pkg/definition/tree"
 	"github.com/mlab-lattice/system/pkg/types"
 )
@@ -19,33 +17,20 @@ type SystemClient interface {
 	Get(types.SystemID) (*types.System, error)
 	Delete(types.SystemID) error
 
-	SystemBuilds(types.SystemID) SystemBuildClient
-	ServiceBuilds(types.SystemID) ServiceBuildClient
-	ComponentBuilds(types.SystemID) ComponentBuildClient
-	Rollouts(types.SystemID) RolloutClient
+	Builds(types.SystemID) BuildClient
+	Deploys(types.SystemID) DeployClient
 	Teardowns(types.SystemID) TeardownClient
 	Services(types.SystemID) ServiceClient
-	Secrets(types.SystemID) SystemSecretClient
+	Secrets(types.SystemID) SecretClient
 }
 
-type SystemBuildClient interface {
+type BuildClient interface {
 	Create(version string) (types.BuildID, error)
-	List() ([]types.SystemBuild, error)
-	Get(types.BuildID) (*types.SystemBuild, error)
+	List() ([]types.Build, error)
+	Get(types.BuildID) (*types.Build, error)
 }
 
-type ServiceBuildClient interface {
-	List() ([]types.ServiceBuild, error)
-	Get(types.ServiceBuildID) (*types.ServiceBuild, error)
-}
-
-type ComponentBuildClient interface {
-	List() ([]types.ComponentBuild, error)
-	Get(types.ComponentBuildID) (*types.ComponentBuild, error)
-	Logs(id types.ComponentBuildID, follow bool) (io.ReadCloser, error)
-}
-
-type RolloutClient interface {
+type DeployClient interface {
 	CreateFromBuild(types.BuildID) (types.DeployID, error)
 	CreateFromVersion(string) (types.DeployID, error)
 	List() ([]types.Deploy, error)
@@ -63,7 +48,7 @@ type ServiceClient interface {
 	Get(types.ServiceID) (*types.Service, error)
 }
 
-type SystemSecretClient interface {
+type SecretClient interface {
 	List() ([]types.Secret, error)
 	Get(path tree.NodePath, name string) (*types.Secret, error)
 	Set(path tree.NodePath, name, value string) error

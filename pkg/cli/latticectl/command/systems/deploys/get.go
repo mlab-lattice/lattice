@@ -17,14 +17,14 @@ func (c *GetCommand) Base() (*latticectl.BaseCommand, error) {
 	cmd := &lctlcommand.DeployCommand{
 		Name: "get",
 		Run: func(ctx lctlcommand.DeployCommandContext, args []string) {
-			GetDeploy(ctx.Client().Systems().Rollouts(ctx.SystemID()), ctx.DeployID())
+			GetDeploy(ctx.Client().Systems().Deploys(ctx.SystemID()), ctx.DeployID())
 		},
 	}
 
 	return cmd.Base()
 }
 
-func GetDeploy(client client.RolloutClient, deployID types.DeployID) {
+func GetDeploy(client client.DeployClient, deployID types.DeployID) {
 	deploy, err := client.Get(deployID)
 	if err != nil {
 		log.Panic(err)

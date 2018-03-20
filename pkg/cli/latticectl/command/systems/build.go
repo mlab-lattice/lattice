@@ -25,14 +25,14 @@ func (c *BuildCommand) Base() (*latticectl.BaseCommand, error) {
 			},
 		},
 		Run: func(ctx lctlcommand.SystemCommandContext, args []string) {
-			BuildSystem(ctx.Client().Systems().SystemBuilds(ctx.SystemID()), version)
+			BuildSystem(ctx.Client().Systems().Builds(ctx.SystemID()), version)
 		},
 	}
 
 	return cmd.Base()
 }
 
-func BuildSystem(client client.SystemBuildClient, version string) {
+func BuildSystem(client client.BuildClient, version string) {
 	buildID, err := client.Create(version)
 	if err != nil {
 		log.Panic(err)

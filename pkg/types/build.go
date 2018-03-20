@@ -15,13 +15,13 @@ const (
 	BuildStateFailed    BuildState = "failed"
 )
 
-type SystemBuild struct {
+type Build struct {
 	ID    BuildID    `json:"id"`
 	State BuildState `json:"state"`
 
 	Version SystemVersion `json:"version"`
 	// Services maps service paths (e.g. /foo/bar/buzz) to the
-	// ServiceBuild for that service in the SystemBuild.
+	// ServiceBuild for that service in the Build.
 	Services map[tree.NodePath]ServiceBuild `json:"serviceBuilds"`
 }
 

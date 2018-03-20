@@ -74,7 +74,7 @@ func (c *Controller) getSystem(namespace string) (*latticev1.System, error) {
 	return nil, fmt.Errorf("expected one System in namespace %v but found %v", namespace, len(systemList.Items))
 }
 
-func (c *Controller) systemSpec(rollout *latticev1.SystemRollout, build *latticev1.SystemBuild) (latticev1.SystemSpec, error) {
+func (c *Controller) systemSpec(rollout *latticev1.Deploy, build *latticev1.Build) (latticev1.SystemSpec, error) {
 	services, err := c.systemServices(rollout, build)
 	if err != nil {
 		return latticev1.SystemSpec{}, err
@@ -88,15 +88,15 @@ func (c *Controller) systemSpec(rollout *latticev1.SystemRollout, build *lattice
 }
 
 func (c *Controller) systemServices(
-	rollout *latticev1.SystemRollout,
-	build *latticev1.SystemBuild,
+	rollout *latticev1.Deploy,
+	build *latticev1.Build,
 ) (map[tree.NodePath]latticev1.SystemSpecServiceInfo, error) {
-	if build.Status.State != latticev1.SystemBuildStateSucceeded {
+	if build.Status.State != latticev1.BuildStateSucceeded {
 		err := fmt.Errorf(
 			"cannot get system services for build %v/%v, must be in state %v but is in %v",
 			build.Namespace,
 			build.Name,
-			latticev1.SystemBuildStateSucceeded,
+			latticev1.BuildStateSucceeded,
 			build.Status.State,
 		)
 		return nil, err
@@ -107,7 +107,7 @@ func (c *Controller) systemServices(
 		serviceBuildName, ok := build.Status.ServiceBuilds[path]
 		if !ok {
 			// FIXME: send warn event
-			err := fmt.Errorf("SystemBuild %v/%v does not have expected Service %v", build.Namespace, build.Name, path)
+			err := fmt.Errorf("Build %v/%v does not have expected Service %v", build.Namespace, build.Name, path)
 			return nil, err
 		}
 
@@ -115,7 +115,7 @@ func (c *Controller) systemServices(
 		if err != nil {
 			if errors.IsNotFound(err) {
 				err = fmt.Errorf(
-					"SystemBuild %v/%v has ServiceBuild %v for Service %v but it does not exist",
+					"Build %v/%v has ServiceBuild %v for Service %v but it does not exist",
 					build.Namespace,
 					build.Name,
 					serviceBuildName,

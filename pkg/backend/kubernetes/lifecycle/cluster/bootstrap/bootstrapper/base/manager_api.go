@@ -46,7 +46,7 @@ func (b *DefaultBootstrapper) managerAPIResources(resources *bootstrapper.Cluste
 			// lattice system build read and create
 			{
 				APIGroups: []string{latticev1.GroupName},
-				Resources: []string{latticev1.ResourcePluralSystemBuild},
+				Resources: []string{latticev1.ResourcePluralBuild},
 				Verbs:     readAndCreateVerbs,
 			},
 			// lattice service build read
@@ -64,7 +64,7 @@ func (b *DefaultBootstrapper) managerAPIResources(resources *bootstrapper.Cluste
 			// lattice rollout build and create
 			{
 				APIGroups: []string{latticev1.GroupName},
-				Resources: []string{latticev1.ResourcePluralSystemRollout},
+				Resources: []string{latticev1.ResourcePluralDeploy},
 				Verbs:     readAndCreateVerbs,
 			},
 			// lattice service read
