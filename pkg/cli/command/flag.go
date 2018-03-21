@@ -5,12 +5,12 @@ import (
 )
 
 type Flag interface {
-	name() string
-	required() bool
-	short() string
-	usage() string
-	validate() error
-	addToCmd(cmd *cobra.Command)
+	GetName() string
+	IsRequired() bool
+	GetShort() string
+	GetUsage() string
+	Validate() error
+	AddToCmd(cmd *cobra.Command)
 }
 
 type Flags []Flag
