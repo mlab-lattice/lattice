@@ -41,7 +41,7 @@ type DefaultEnvoyClusterBootstrapper struct {
 
 func (b *DefaultEnvoyClusterBootstrapper) BootstrapClusterResources(resources *clusterbootstrapper.ClusterResources) {
 	for _, daemonSet := range resources.DaemonSets {
-		if daemonSet.Name == kubeconstants.MasterNodeComponentManagerAPI {
+		if daemonSet.Name == kubeconstants.MasterNodeComponentLatticeControllerManager {
 			daemonSet.Spec.Template.Spec.Containers[0].Args = append(
 				daemonSet.Spec.Template.Spec.Containers[0].Args,
 				"--service-mesh", Envoy,
@@ -50,11 +50,11 @@ func (b *DefaultEnvoyClusterBootstrapper) BootstrapClusterResources(resources *c
 		}
 	}
 
-	// also need to have the manager API create envoy SAs for the
-	// namespace, so need to give the manager API these privaleges
+	// also need to have the controller manager create envoy SAs for the
+	// namespace, so need to give the manager API these privileges
 	// so kube doesn't deny creating the SA due to privilege escalation
 	for _, clusterRole := range resources.ClusterRoles {
-		if clusterRole.Name == kubeconstants.MasterNodeComponentManagerAPI {
+		if clusterRole.Name == kubeconstants.MasterNodeComponentLatticeControllerManager {
 			clusterRole.Rules = append(
 				clusterRole.Rules,
 				envoyRBACPolicyRules...,

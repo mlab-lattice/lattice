@@ -42,7 +42,7 @@ func (c *Controller) syncInProgressTeardown(teardown *latticev1.Teardown) error 
 	case latticev1.SystemStateStable:
 		state = latticev1.TeardownStateSucceeded
 
-	case latticev1.SystemStateFailed:
+	case latticev1.SystemStateDegraded:
 		state = latticev1.TeardownStateFailed
 
 	default:

@@ -13,7 +13,7 @@ import (
 )
 
 func (kb *KubernetesBackend) ListSecrets(systemID types.SystemID) ([]types.Secret, error) {
-	namespace := kubeutil.SystemNamespace(kb.clusterID, systemID)
+	namespace := kubeutil.SystemNamespace(kb.latticeID, systemID)
 
 	secrets, err := kb.kubeClient.CoreV1().Secrets(namespace).List(metav1.ListOptions{})
 	if err != nil {
@@ -41,7 +41,7 @@ func (kb *KubernetesBackend) ListSecrets(systemID types.SystemID) ([]types.Secre
 }
 
 func (kb *KubernetesBackend) GetSecret(id types.SystemID, path tree.NodePath, name string) (*types.Secret, bool, error) {
-	namespace := kubeutil.SystemNamespace(kb.clusterID, id)
+	namespace := kubeutil.SystemNamespace(kb.latticeID, id)
 	secret, err := kb.kubeClient.CoreV1().Secrets(namespace).Get(path.ToDomain(true), metav1.GetOptions{})
 	if err != nil {
 		if errors.IsNotFound(err) {
@@ -64,7 +64,7 @@ func (kb *KubernetesBackend) GetSecret(id types.SystemID, path tree.NodePath, na
 }
 
 func (kb *KubernetesBackend) SetSecret(id types.SystemID, path tree.NodePath, name, value string) error {
-	namespace := kubeutil.SystemNamespace(kb.clusterID, id)
+	namespace := kubeutil.SystemNamespace(kb.latticeID, id)
 	secret, err := kb.kubeClient.CoreV1().Secrets(namespace).Get(path.ToDomain(true), metav1.GetOptions{})
 	if err != nil {
 		if errors.IsNotFound(err) {
@@ -81,7 +81,7 @@ func (kb *KubernetesBackend) SetSecret(id types.SystemID, path tree.NodePath, na
 }
 
 func (kb *KubernetesBackend) createSecret(id types.SystemID, path tree.NodePath, name, value string) error {
-	namespace := kubeutil.SystemNamespace(kb.clusterID, id)
+	namespace := kubeutil.SystemNamespace(kb.latticeID, id)
 	secret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: path.ToDomain(true),
@@ -95,7 +95,7 @@ func (kb *KubernetesBackend) createSecret(id types.SystemID, path tree.NodePath,
 }
 
 func (kb *KubernetesBackend) UnsetSecret(id types.SystemID, path tree.NodePath, name string) error {
-	namespace := kubeutil.SystemNamespace(kb.clusterID, id)
+	namespace := kubeutil.SystemNamespace(kb.latticeID, id)
 	secret, err := kb.kubeClient.CoreV1().Secrets(namespace).Get(path.ToDomain(true), metav1.GetOptions{})
 	if err != nil {
 		if errors.IsNotFound(err) {

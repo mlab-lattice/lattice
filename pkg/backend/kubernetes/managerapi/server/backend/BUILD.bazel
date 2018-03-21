@@ -19,7 +19,6 @@ go_library(
         "//pkg/backend/kubernetes/constants:go_default_library",
         "//pkg/backend/kubernetes/customresource/apis/lattice/v1:go_default_library",
         "//pkg/backend/kubernetes/customresource/generated/clientset/versioned:go_default_library",
-        "//pkg/backend/kubernetes/lifecycle/system/bootstrap:go_default_library",
         "//pkg/backend/kubernetes/lifecycle/system/bootstrap/bootstrapper:go_default_library",
         "//pkg/backend/kubernetes/util/kubernetes:go_default_library",
         "//pkg/definition:go_default_library",

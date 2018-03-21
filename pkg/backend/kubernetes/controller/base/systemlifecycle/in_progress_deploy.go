@@ -28,7 +28,7 @@ func (c *Controller) syncInProgressDeploy(deploy *latticev1.Deploy) error {
 	case latticev1.SystemStateStable:
 		state = latticev1.DeployStateSucceeded
 
-	case latticev1.SystemStateFailed:
+	case latticev1.SystemStateDegraded:
 		state = latticev1.DeployStateFailed
 
 	default:

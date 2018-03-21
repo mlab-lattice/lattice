@@ -10,7 +10,7 @@ func initializeNodePoolController(ctx controller.Context) {
 	awsCloudProvider := ctx.CloudProvider.(*aws.DefaultAWSCloudProvider)
 
 	go nodepool.NewController(
-		ctx.ClusterID,
+		ctx.LatticeID,
 		aws.CloudProvider(awsCloudProvider),
 		ctx.TerraformModulePath,
 		ctx.TerraformBackendOptions,

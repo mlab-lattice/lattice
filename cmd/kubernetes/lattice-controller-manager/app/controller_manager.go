@@ -15,6 +15,9 @@ import (
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/cloudprovider/aws"
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/cloudprovider/local"
 	latticeinformers "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/informers/externalversions"
+	"github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/system/bootstrap/bootstrapper"
+	"github.com/mlab-lattice/system/pkg/backend/kubernetes/networkingprovider"
+	"github.com/mlab-lattice/system/pkg/backend/kubernetes/servicemesh"
 	"github.com/mlab-lattice/system/pkg/terraform"
 	"github.com/mlab-lattice/system/pkg/types"
 	"github.com/mlab-lattice/system/pkg/util/cli"
@@ -34,6 +37,12 @@ var (
 
 	cloudProviderName string
 	cloudProviderVars []string
+
+	serviceMeshProvider     string
+	serviceMeshProviderVars []string
+
+	networkingProviderName string
+	networkingProviderVars []string
 
 	terraformModulePath  string
 	terraformBackend     string
@@ -57,8 +66,29 @@ var RootCmd = &cobra.Command{
 
 		clusterID := types.LatticeID(clusterIDString)
 
+		cloudSystemBootstrapper, err := cloudprovider.SystemBootstrapperFromFlags(cloudProviderName, cloudProviderVars)
+		if err != nil {
+			panic(err)
+		}
+
+		serviceMeshSystemBootstrapper, err := servicemesh.SystemBootstrapperFromFlags(serviceMeshProvider, serviceMeshProviderVars)
+		if err != nil {
+			panic(err)
+		}
+
+		networkingProviderSystemBoostrapper, err := networkingprovider.SystemBootstrapperFromFlags(networkingProviderName, networkingProviderVars)
+		if err != nil {
+			panic(err)
+		}
+
+		systemBoostrappers := []bootstrapper.Interface{
+			serviceMeshSystemBootstrapper,
+			networkingProviderSystemBoostrapper,
+			cloudSystemBootstrapper,
+		}
+
 		// TODO: setting stop as nil for now, won't actually need it until leader-election is used
-		ctx, err := CreateControllerContext(clusterID, config, nil, terraformModulePath)
+		ctx, err := CreateControllerContext(clusterID, systemBoostrappers, config, nil, terraformModulePath)
 		if err != nil {
 			panic(err)
 		}
@@ -97,6 +127,13 @@ func init() {
 	RootCmd.MarkFlagRequired("cloud-provider")
 	RootCmd.Flags().StringArrayVar(&cloudProviderVars, "cloud-provider-var", nil, "additional variables for the cloud provider")
 
+	RootCmd.Flags().StringVar(&serviceMeshProvider, "service-mesh", "", "service mesh provider to use")
+	RootCmd.MarkFlagRequired("service-mesh")
+	RootCmd.Flags().StringArrayVar(&serviceMeshProviderVars, "service-mesh-var", nil, "additional variables for the cloud provider")
+
+	RootCmd.Flags().StringVar(&networkingProviderName, "networking-provider", "", "provider to use for networking")
+	RootCmd.Flags().StringArrayVar(&networkingProviderVars, "networking-provider-var", nil, "additional variables for the networking provider")
+
 	RootCmd.Flags().StringVar(&terraformModulePath, "terraform-module-path", "/etc/terraform/modules", "path to terraform modules")
 	RootCmd.Flags().StringVar(&terraformBackend, "terraform-backend", "", "backend to use for terraform")
 	RootCmd.Flags().StringArrayVar(&terraformBackendVars, "terraform-backend-var", nil, "additional variables for the terraform backend")
@@ -109,6 +146,7 @@ func initCmd() {
 
 func CreateControllerContext(
 	clusterID types.LatticeID,
+	systemBootstrappers []bootstrapper.Interface,
 	kubeconfig *rest.Config,
 	stop <-chan struct{},
 	terraformModulePath string,
@@ -142,8 +180,10 @@ func CreateControllerContext(
 	latticeInformers := latticeinformers.NewSharedInformerFactory(versionedLatticeClient, time.Duration(12*time.Hour))
 
 	ctx := controller.Context{
-		ClusterID:     clusterID,
+		LatticeID:     clusterID,
 		CloudProvider: cloudProvider,
+
+		SystemBootstrappers: systemBootstrappers,
 
 		TerraformBackendOptions: terraformBackendOptions,
 

@@ -27,7 +27,7 @@ func (kb *KubernetesBackend) Build(
 		return "", err
 	}
 
-	namespace := kubeutil.SystemNamespace(kb.clusterID, systemID)
+	namespace := kubeutil.SystemNamespace(kb.latticeID, systemID)
 	result, err := kb.latticeClient.LatticeV1().Builds(namespace).Create(systemBuild)
 	if err != nil {
 		return "", err
@@ -71,7 +71,7 @@ func systemBuild(
 }
 
 func (kb *KubernetesBackend) ListBuilds(systemID types.SystemID) ([]types.Build, error) {
-	namespace := kubeutil.SystemNamespace(kb.clusterID, systemID)
+	namespace := kubeutil.SystemNamespace(kb.latticeID, systemID)
 	fmt.Println("listing system builds")
 	buildList, err := kb.latticeClient.LatticeV1().Builds(namespace).List(metav1.ListOptions{})
 	if err != nil {
@@ -113,7 +113,7 @@ func (kb *KubernetesBackend) getInternalSystemBuild(
 	systemID types.SystemID,
 	buildID types.BuildID,
 ) (*latticev1.Build, bool, error) {
-	namespace := kubeutil.SystemNamespace(kb.clusterID, systemID)
+	namespace := kubeutil.SystemNamespace(kb.latticeID, systemID)
 	result, err := kb.latticeClient.LatticeV1().Builds(namespace).Get(string(buildID), metav1.GetOptions{})
 	if err != nil {
 		if errors.IsNotFound(err) {

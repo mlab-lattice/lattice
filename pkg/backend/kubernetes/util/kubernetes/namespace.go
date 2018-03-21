@@ -7,14 +7,14 @@ import (
 	"github.com/mlab-lattice/system/pkg/types"
 )
 
-func ClusterNamespace(clusterID types.LatticeID, namespace string) string {
-	return fmt.Sprintf("%v-%v", clusterID, namespace)
+func LatticeNamespace(latticeID types.LatticeID, namespace string) string {
+	return fmt.Sprintf("%v-%v", latticeID, namespace)
 }
 
-func InternalNamespace(clusterID types.LatticeID) string {
-	return ClusterNamespace(clusterID, kubeconstants.NamespaceLatticeInternal)
+func InternalNamespace(latticeID types.LatticeID) string {
+	return LatticeNamespace(latticeID, kubeconstants.NamespaceLatticeInternal)
 }
 
-func SystemNamespace(clusterID types.LatticeID, systemID types.SystemID) string {
-	return ClusterNamespace(clusterID, fmt.Sprintf("%v%v", kubeconstants.NamespacePrefixLatticeSystem, systemID))
+func SystemNamespace(latticeID types.LatticeID, systemID types.SystemID) string {
+	return LatticeNamespace(latticeID, fmt.Sprintf("%v%v", kubeconstants.NamespacePrefixLatticeSystem, systemID))
 }

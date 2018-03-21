@@ -27,7 +27,7 @@ func (kb *KubernetesBackend) DeployBuild(
 		return "", err
 	}
 
-	namespace := kubeutil.SystemNamespace(kb.clusterID, systemID)
+	namespace := kubeutil.SystemNamespace(kb.latticeID, systemID)
 	result, err := kb.latticeClient.LatticeV1().Deploies(namespace).Create(deploy)
 	if err != nil {
 		return "", err
@@ -52,7 +52,7 @@ func (kb *KubernetesBackend) getBuildFromID(
 	systemID types.SystemID,
 	buildID types.BuildID,
 ) (*latticev1.Build, error) {
-	namespace := kubeutil.SystemNamespace(kb.clusterID, systemID)
+	namespace := kubeutil.SystemNamespace(kb.latticeID, systemID)
 	return kb.latticeClient.LatticeV1().Builds(namespace).Get(string(buildID), metav1.GetOptions{})
 }
 
@@ -80,7 +80,7 @@ func getNewDeploy(latticeNamespace types.SystemID, build *latticev1.Build) (*lat
 }
 
 func (kb *KubernetesBackend) ListDeploys(systemID types.SystemID) ([]types.Deploy, error) {
-	namespace := kubeutil.SystemNamespace(kb.clusterID, systemID)
+	namespace := kubeutil.SystemNamespace(kb.latticeID, systemID)
 	result, err := kb.latticeClient.LatticeV1().Deploies(namespace).List(metav1.ListOptions{})
 	if err != nil {
 		return nil, err
@@ -102,7 +102,7 @@ func (kb *KubernetesBackend) GetDeploy(
 	systemID types.SystemID,
 	rolloutID types.DeployID,
 ) (*types.Deploy, bool, error) {
-	namespace := kubeutil.SystemNamespace(kb.clusterID, systemID)
+	namespace := kubeutil.SystemNamespace(kb.latticeID, systemID)
 	result, err := kb.latticeClient.LatticeV1().Deploies(namespace).Get(string(rolloutID), metav1.GetOptions{})
 	if err != nil {
 		if errors.IsNotFound(err) {

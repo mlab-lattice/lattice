@@ -11,7 +11,7 @@ import (
 )
 
 type KubernetesBackend struct {
-	clusterID     types.LatticeID
+	latticeID     types.LatticeID
 	kubeClient    kubeclientset.Interface
 	latticeClient latticeclientset.Interface
 
@@ -19,9 +19,8 @@ type KubernetesBackend struct {
 }
 
 func NewKubernetesBackend(
-	clusterID types.LatticeID,
+	latticeID types.LatticeID,
 	kubeconfig string,
-	systemBootstrappers []systembootstrapper.Interface,
 ) (*KubernetesBackend, error) {
 	var config *rest.Config
 	var err error
@@ -45,11 +44,9 @@ func NewKubernetesBackend(
 	}
 
 	kb := &KubernetesBackend{
-		clusterID:     clusterID,
+		latticeID:     latticeID,
 		kubeClient:    kubeClient,
 		latticeClient: latticeClient,
-
-		systemBootstrappers: systemBootstrappers,
 	}
 	return kb, nil
 }

@@ -9,11 +9,14 @@ type SystemState string
 type SystemVersion string
 
 const (
-	SystemStateScaling  SystemState = "scaling"
-	SystemStateUpdating SystemState = "updating"
-	SystemStateStable   SystemState = "stable"
+	SystemStatePending  SystemState = "pending"
 	SystemStateFailed   SystemState = "failed"
 	SystemStateDeleting SystemState = "deleting"
+
+	SystemStateStable   SystemState = "stable"
+	SystemStateDegraded SystemState = "degraded"
+	SystemStateScaling  SystemState = "scaling"
+	SystemStateUpdating SystemState = "updating"
 )
 
 type System struct {

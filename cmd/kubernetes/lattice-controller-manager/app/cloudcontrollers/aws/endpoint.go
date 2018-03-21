@@ -10,7 +10,7 @@ func initializeEndpointController(ctx controller.Context) {
 	awsCloudProvider := ctx.CloudProvider.(*aws.DefaultAWSCloudProvider)
 
 	go endpoint.NewController(
-		ctx.ClusterID,
+		ctx.LatticeID,
 		aws.CloudProvider(awsCloudProvider),
 		ctx.TerraformModulePath,
 		ctx.TerraformBackendOptions,

@@ -4,6 +4,7 @@ import (
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/cloudprovider"
 	latticeclientset "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/clientset/versioned"
 	latticeinformers "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/informers/externalversions"
+	"github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/system/bootstrap/bootstrapper"
 	"github.com/mlab-lattice/system/pkg/terraform"
 	"github.com/mlab-lattice/system/pkg/types"
 
@@ -34,8 +35,10 @@ func (cb LatticeClientBuilder) ClientOrDie(name string) latticeclientset.Interfa
 }
 
 type Context struct {
-	ClusterID     types.LatticeID
+	LatticeID     types.LatticeID
 	CloudProvider cloudprovider.Interface
+
+	SystemBootstrappers []bootstrapper.Interface
 
 	TerraformBackendOptions *terraform.BackendOptions
 

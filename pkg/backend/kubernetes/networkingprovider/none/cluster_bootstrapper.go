@@ -17,8 +17,7 @@ type DefaultClusterBootstrapper struct {
 
 func (np *DefaultClusterBootstrapper) BootstrapClusterResources(resources *clusterbootstrapper.ClusterResources) {
 	for _, daemonSet := range resources.DaemonSets {
-		if daemonSet.Name == kubeconstants.MasterNodeComponentManagerAPI {
-
+		if daemonSet.Name == kubeconstants.MasterNodeComponentLatticeControllerManager {
 			daemonSet.Spec.Template.Spec.Containers[0].Args = append(
 				daemonSet.Spec.Template.Spec.Containers[0].Args,
 				"--networking-provider", None,

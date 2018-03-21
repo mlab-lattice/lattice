@@ -10,13 +10,21 @@ import (
 	latticeclientset "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/clientset/versioned"
 	latticeinformers "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/informers/externalversions/lattice/v1"
 	latticelisters "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/listers/lattice/v1"
+	"github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/system/bootstrap/bootstrapper"
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/servicemesh"
+	kubeutil "github.com/mlab-lattice/system/pkg/backend/kubernetes/util/kubernetes"
+	"github.com/mlab-lattice/system/pkg/types"
+
+	corev1 "k8s.io/api/core/v1"
 
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
 
+	coreinformers "k8s.io/client-go/informers/core/v1"
+	kubeclientset "k8s.io/client-go/kubernetes"
+	corelisters "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
 
@@ -29,8 +37,12 @@ type Controller struct {
 	syncHandler   func(sysKey string) error
 	enqueueSystem func(sysBuild *latticev1.System)
 
-	serviceMesh servicemesh.Interface
+	latticeID types.LatticeID
 
+	serviceMesh         servicemesh.Interface
+	systemBootstrappers []bootstrapper.Interface
+
+	kubeClient    kubeclientset.Interface
 	latticeClient latticeclientset.Interface
 
 	configLister       latticelisters.ConfigLister
@@ -46,19 +58,29 @@ type Controller struct {
 	serviceLister       latticelisters.ServiceLister
 	serviceListerSynced cache.InformerSynced
 
+	namespaceLister       corelisters.NamespaceLister
+	namespaceListerSynced cache.InformerSynced
+
 	queue workqueue.RateLimitingInterface
 }
 
 func NewController(
+	latticeID types.LatticeID,
+	systemBootstrappers []bootstrapper.Interface,
+	kubeClient kubeclientset.Interface,
 	latticeClient latticeclientset.Interface,
 	configInformer latticeinformers.ConfigInformer,
 	systemInformer latticeinformers.SystemInformer,
 	serviceInformer latticeinformers.ServiceInformer,
+	namespaceInformer coreinformers.NamespaceInformer,
 ) *Controller {
 	sc := &Controller{
-		latticeClient: latticeClient,
-		configSetChan: make(chan struct{}),
-		queue:         workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "system"),
+		latticeID:           latticeID,
+		systemBootstrappers: systemBootstrappers,
+		kubeClient:          kubeClient,
+		latticeClient:       latticeClient,
+		configSetChan:       make(chan struct{}),
+		queue:               workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "system"),
 	}
 
 	sc.enqueueSystem = sc.enqueue
@@ -88,6 +110,14 @@ func NewController(
 	sc.serviceLister = serviceInformer.Lister()
 	sc.serviceListerSynced = serviceInformer.Informer().HasSynced
 
+	namespaceInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+		AddFunc:    sc.handleNamespaceAdd,
+		UpdateFunc: sc.handleNamespaceUpdate,
+		DeleteFunc: sc.handleNamespaceDelete,
+	})
+	sc.namespaceLister = namespaceInformer.Lister()
+	sc.namespaceListerSynced = namespaceInformer.Informer().HasSynced
+
 	return sc
 }
 
@@ -101,7 +131,7 @@ func (c *Controller) Run(workers int, stopCh <-chan struct{}) {
 	defer glog.Infof("Shutting down system controller")
 
 	// wait for your secondary caches to fill before starting your work
-	if !cache.WaitForCacheSync(stopCh, c.configListerSynced, c.systemListerSynced, c.serviceListerSynced) {
+	if !cache.WaitForCacheSync(stopCh, c.configListerSynced, c.systemListerSynced, c.serviceListerSynced, c.namespaceListerSynced) {
 		return
 	}
 
@@ -292,6 +322,52 @@ func (c *Controller) handleServiceDelete(obj interface{}) {
 	// FIXME: send error event
 }
 
+// handleNamespaceAdd enqueues the System that manages a Service when the Service is created.
+func (c *Controller) handleNamespaceAdd(obj interface{}) {
+	ns := obj.(*corev1.Namespace)
+
+	if ns.DeletionTimestamp != nil {
+		c.handleNamespaceDelete(obj)
+		return
+	}
+
+	system := c.resolveNamespaceSystem(ns.Name)
+	if system != nil {
+		c.enqueueSystem(system)
+	}
+}
+
+// handleServiceAdd enqueues the System that manages a Service when the Service is update.
+func (c *Controller) handleNamespaceUpdate(old, cur interface{}) {
+	glog.V(5).Info("Got Namespace update")
+	c.handleNamespaceAdd(cur)
+}
+
+func (c *Controller) handleNamespaceDelete(obj interface{}) {
+	ns := obj.(*corev1.Namespace)
+	system := c.resolveNamespaceSystem(ns.Name)
+	if system != nil {
+		c.enqueueSystem(system)
+	}
+}
+
+func (c *Controller) resolveNamespaceSystem(namespace string) *latticev1.System {
+	systemID, err := kubeutil.SystemID(namespace)
+	if err != nil {
+		// namespace did not conform to the system namespace convention,
+		// so it is not a system namespace and thus we don't care about it
+		return nil
+	}
+
+	system, err := c.systemLister.Systems(kubeutil.InternalNamespace(c.latticeID)).Get(string(systemID))
+	if err != nil {
+		// FIXME: probably want to send a warning if this wasn't a does not exist
+		return nil
+	}
+
+	return system
+}
+
 // resolveControllerRef returns the controller referenced by a ControllerRef,
 // or nil if the ControllerRef could not be resolved to a matching controller
 // of the correct Kind.
@@ -321,6 +397,10 @@ func (c *Controller) resolveControllerRef(namespace string, controllerRef *metav
 }
 
 func (c *Controller) enqueue(sys *latticev1.System) {
+	if sys.Namespace != kubeutil.InternalNamespace(c.latticeID) {
+		glog.V(4).Infof("System %v/%v is not a part of this lattice, ignoring", sys.Namespace, sys.Name)
+	}
+
 	key, err := cache.DeletionHandlingMetaNamespaceKeyFunc(sys)
 	if err != nil {
 		runtime.HandleError(fmt.Errorf("Couldn't get key for object %#v: %v", sys, err))
@@ -400,10 +480,13 @@ func (c *Controller) syncSystem(key string) error {
 		return err
 	}
 
-	services, serviceStatuses, deletedServices, err := c.syncSystemServices(system)
-	if err != nil {
-		return err
+	if system.DeletionTimestamp != nil {
+		return c.syncDeletingSystem(system)
 	}
 
-	return c.syncSystemStatus(system, services, serviceStatuses, deletedServices)
+	if system.Status.State == latticev1.SystemStatePending {
+		return c.syncPendingSystem(system)
+	}
+
+	return c.syncLiveSystem(system)
 }

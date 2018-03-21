@@ -55,8 +55,41 @@ func (b *DefaultBootstrapper) controllerManagerResources(resources *bootstrapper
 				Resources: []string{"jobs"},
 				Verbs:     []string{rbacv1.VerbAll},
 			},
+
+			// system bootstrapping permissions
+			// kube namespace read, update, and delete
+			{
+				APIGroups: []string{corev1.GroupName},
+				Resources: []string{"namespaces"},
+				Verbs:     readCreateAndDeleteVerbs,
+			},
+			// kube service-account read, update, and delete
+			{
+				APIGroups: []string{corev1.GroupName},
+				Resources: []string{"serviceaccounts"},
+				Verbs:     readCreateAndDeleteVerbs,
+			},
+			// kube role-binding read, update, and delete
+			{
+				APIGroups: []string{rbacv1.GroupName},
+				Resources: []string{"rolebindings"},
+				Verbs:     readCreateAndDeleteVerbs,
+			},
+			// kube daemonsets read, update, and delete
+			{
+				APIGroups: []string{appsv1.GroupName},
+				Resources: []string{"daemonsets"},
+				Verbs:     readCreateAndDeleteVerbs,
+			},
 		},
 	}
+	// also need to create component builder SAs for the system namespace when bootstrapping a system,
+	// so need to have the component builder rules so kube doesn't deny creating the component
+	// builder SAs due to privilege escalation
+	clusterRole.Rules = append(
+		clusterRole.Rules,
+		componentBuilderRBACPolicyRules...,
+	)
 
 	serviceAccount := &corev1.ServiceAccount{
 		// Include TypeMeta so if this is a dry run it will be printed out

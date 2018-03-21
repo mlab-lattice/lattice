@@ -84,10 +84,15 @@ type SystemStatus struct {
 type SystemState string
 
 const (
+	// lifecycle states
+	SystemStatePending SystemState = "pending"
+	SystemStateFailed  SystemState = "failed"
+
+	// transient states once the system has been created
+	SystemStateStable   SystemState = "stable"
+	SystemStateDegraded SystemState = "degraded"
 	SystemStateScaling  SystemState = "scaling"
 	SystemStateUpdating SystemState = "updating"
-	SystemStateStable   SystemState = "stable"
-	SystemStateFailed   SystemState = "failed"
 )
 
 type SystemStatusServiceInfo struct {

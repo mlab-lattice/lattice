@@ -18,7 +18,7 @@ func (kb *KubernetesBackend) TearDown(systemID types.SystemID) (types.TeardownID
 		return "", err
 	}
 
-	namespace := kubeutil.SystemNamespace(kb.clusterID, systemID)
+	namespace := kubeutil.SystemNamespace(kb.latticeID, systemID)
 	result, err := kb.latticeClient.LatticeV1().Teardowns(namespace).Create(systemTeardown)
 	if err != nil {
 		return "", err
@@ -47,7 +47,7 @@ func getSystemTeardown(id types.SystemID) (*latticev1.Teardown, error) {
 }
 
 func (kb *KubernetesBackend) ListTeardowns(systemID types.SystemID) ([]types.SystemTeardown, error) {
-	namespace := kubeutil.SystemNamespace(kb.clusterID, systemID)
+	namespace := kubeutil.SystemNamespace(kb.latticeID, systemID)
 	result, err := kb.latticeClient.LatticeV1().Teardowns(namespace).List(metav1.ListOptions{})
 	if err != nil {
 		return nil, err
@@ -68,7 +68,7 @@ func (kb *KubernetesBackend) GetTeardown(
 	systemID types.SystemID,
 	teardownID types.TeardownID,
 ) (*types.SystemTeardown, bool, error) {
-	namespace := kubeutil.SystemNamespace(kb.clusterID, systemID)
+	namespace := kubeutil.SystemNamespace(kb.latticeID, systemID)
 	result, err := kb.latticeClient.LatticeV1().Teardowns(namespace).Get(string(teardownID), metav1.GetOptions{})
 	if err != nil {
 		if errors.IsNotFound(err) {
