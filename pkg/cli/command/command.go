@@ -55,7 +55,8 @@ func (c *Command) Init() error {
 		for name, parser := range c.getFlagParsers() {
 			err := parser()
 			if err != nil {
-				fmt.Printf("error parsing flag %v: %v", name, err)
+				fmt.Printf("error parsing flag %v: %v\n", name, err)
+				os.Exit(1)
 			}
 		}
 

@@ -7,6 +7,9 @@ import (
 	"github.com/spf13/pflag"
 )
 
+// EmbeddedFlag is a Flag that allows you to parse multiple values from the same flag.
+// For example, if c is an embedded flag with two string flags, bar and buzz,
+// you could say --c "bar=hello,buzz=world".
 type EmbeddedFlag struct {
 	Name      string
 	Required  bool
@@ -56,10 +59,10 @@ func (f *EmbeddedFlag) GetTarget() interface{} {
 }
 
 func (f *EmbeddedFlag) Parse() func() error {
-	return f.parseEmbeddedFlag
+	return f.parse
 }
 
-func (f *EmbeddedFlag) parseEmbeddedFlag() error {
+func (f *EmbeddedFlag) parse() error {
 	flags := &pflag.FlagSet{}
 	for _, flag := range f.Flags {
 		flag.AddToFlagSet(flags)
@@ -80,7 +83,7 @@ func (f *EmbeddedFlag) parseEmbeddedFlag() error {
 
 	err := flags.Parse(dashedValues)
 	if err != nil {
-		return nil
+		return err
 	}
 
 	for _, flag := range f.Flags {
@@ -97,6 +100,91 @@ func (f *EmbeddedFlag) parseEmbeddedFlag() error {
 }
 
 func (f *EmbeddedFlag) AddToFlagSet(flags *pflag.FlagSet) {
+	flags.StringVarP(&f.target, f.Name, f.Short, "", f.Usage)
+
+	if f.Required {
+		markFlagRequired(f.Name, flags)
+	}
+}
+
+type DelayedEmbeddedFlag struct {
+	Name        string
+	Required    bool
+	Short       string
+	Usage       string
+	Flags       map[string]Flags
+	Delimiter   string
+	FlagChooser func() (string, error)
+	target      string
+}
+
+func (f *DelayedEmbeddedFlag) GetName() string {
+	return f.Name
+}
+
+func (f *DelayedEmbeddedFlag) IsRequired() bool {
+	return f.Required
+}
+
+func (f *DelayedEmbeddedFlag) GetShort() string {
+	return f.Short
+}
+
+func (f *DelayedEmbeddedFlag) GetUsage() string {
+	return f.Usage
+}
+
+func (f *DelayedEmbeddedFlag) Validate() error {
+	if f.Name == "" {
+		return fmt.Errorf("name cannot be nil")
+	}
+
+	if f.FlagChooser == nil {
+		return fmt.Errorf("FlagChooser cannot be nil")
+	}
+
+	return nil
+}
+
+func (f *DelayedEmbeddedFlag) GetTarget() interface{} {
+	return nil
+}
+
+func (f *DelayedEmbeddedFlag) Parse() func() error {
+	return f.parse
+}
+
+func (f *DelayedEmbeddedFlag) parse() error {
+	choice, err := f.FlagChooser()
+	if err != nil {
+		return err
+	}
+
+	flags, ok := f.Flags[choice]
+	if !ok {
+		return fmt.Errorf("invalid flag choice %v", choice)
+	}
+
+	fmt.Printf("got choice %v\n", choice)
+
+	embedded := &EmbeddedFlag{
+		Name:      f.Name,
+		Required:  f.Required,
+		Short:     f.Short,
+		Usage:     f.Usage,
+		Flags:     flags,
+		Delimiter: f.Delimiter,
+		target:    f.target,
+	}
+
+	if err := embedded.Validate(); err != nil {
+		return err
+	}
+
+	return embedded.parse()
+}
+
+func (f *DelayedEmbeddedFlag) AddToFlagSet(flags *pflag.FlagSet) {
 	flags.StringVarP(&f.target, f.Name, f.Short, "", f.Usage)
 
 	if f.Required {
