@@ -33,13 +33,7 @@ func (r *restServer) mountSystemHandlers() {
 
 			system, err := r.backend.CreateSystem(req.ID, req.DefinitionURL)
 			if err != nil {
-				handleInternalError(c, err)
-				return
-			}
-
-			if err != nil {
-				handleInternalError(c, err)
-				return
+				handleCreateSystemError(c, err)
 			}
 
 			c.JSON(http.StatusOK, system)
@@ -97,6 +91,14 @@ func (r *restServer) mountSystemHandlers() {
 	r.mountSystemTeardownHandlers()
 	r.mountSystemServiceHandlers()
 	r.mountSystemSecretHandlers()
+}
+
+func handleCreateSystemError(c *gin.Context, err error) {
+	if strings.Contains(err.Error(), "already exists") {
+		c.Status(http.StatusConflict)
+	}
+
+	handleInternalError(c, err)
 }
 
 type systemVersionResponse struct {
