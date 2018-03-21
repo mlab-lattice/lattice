@@ -2,6 +2,7 @@ package command
 
 import (
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 )
 
 type Flag interface {
@@ -10,7 +11,13 @@ type Flag interface {
 	GetShort() string
 	GetUsage() string
 	Validate() error
-	AddToCmd(cmd *cobra.Command)
+	GetTarget() interface{}
+	Parse() func() error
+	AddToFlagSet(fs *pflag.FlagSet)
 }
 
 type Flags []Flag
+
+func markFlagRequired(name string, flags *pflag.FlagSet) {
+	cobra.MarkFlagRequired(flags, name)
+}

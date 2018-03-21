@@ -51,6 +51,19 @@ func (c *Command) Init() error {
 		return fmt.Errorf("error initializing subcommands: %v", err)
 	}
 
+	c.cobraCmd.PreRun = func(cmd *cobra.Command, args []string) {
+		for name, parser := range c.getFlagParsers() {
+			err := parser()
+			if err != nil {
+				fmt.Printf("error parsing flag %v: %v", name, err)
+			}
+		}
+
+		if c.PreRun != nil {
+			c.PreRun()
+		}
+	}
+
 	return nil
 }
 
@@ -83,11 +96,23 @@ func (c *Command) addFlags() error {
 			return fmt.Errorf("multiple flags with the name %v", flag.GetName())
 		}
 
-		flag.AddToCmd(c.cobraCmd)
+		flag.AddToFlagSet(c.cobraCmd.Flags())
 		names[flag.GetName()] = struct{}{}
 	}
 
 	return nil
+}
+
+func (c *Command) getFlagParsers() map[string]func() error {
+	parsers := make(map[string]func() error)
+	for _, flag := range c.Flags {
+		parser := flag.Parse()
+		if parser != nil {
+			parsers[flag.GetName()] = parser
+		}
+	}
+
+	return parsers
 }
 
 func (c *Command) addSubcommands() error {

@@ -4,11 +4,17 @@ go_library(
     name = "go_default_library",
     srcs = [
         "arg.go",
+        "bool_flag.go",
         "command.go",
+        "embedded_flag.go",
         "flag.go",
-        "simple_flag.go",
+        "int_flag.go",
+        "string_flag.go",
     ],
     importpath = "github.com/mlab-lattice/system/pkg/cli/command",
     visibility = ["//visibility:public"],
-    deps = ["@com_github_spf13_cobra//:go_default_library"],
+    deps = [
+        "@com_github_spf13_cobra//:go_default_library",
+        "@com_github_spf13_pflag//:go_default_library",
+    ],
 )
