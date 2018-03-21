@@ -2,7 +2,6 @@ package command
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/spf13/pflag"
 )
@@ -17,7 +16,7 @@ type EmbeddedFlag struct {
 	Usage     string
 	Flags     Flags
 	Delimiter string
-	target    string
+	target    []string
 }
 
 func (f *EmbeddedFlag) GetName() string {
@@ -68,16 +67,8 @@ func (f *EmbeddedFlag) parse() error {
 		flag.AddToFlagSet(flags)
 	}
 
-	// default the delimiter to ,
-	delimiter := ","
-	if f.Delimiter != "" {
-		delimiter = f.Delimiter
-	}
-
-	values := strings.Split(f.target, delimiter)
-
 	var dashedValues []string
-	for _, value := range values {
+	for _, value := range f.target {
 		dashedValues = append(dashedValues, fmt.Sprintf("--%v", value))
 	}
 
@@ -87,6 +78,10 @@ func (f *EmbeddedFlag) parse() error {
 	}
 
 	for _, flag := range f.Flags {
+		if flag.IsRequired() && !flags.Changed(flag.GetName()) {
+			return fmt.Errorf("missing requrired flag: %v", flag.GetName())
+		}
+
 		parser := flag.Parse()
 		if parser != nil {
 			err := parser()
@@ -100,7 +95,7 @@ func (f *EmbeddedFlag) parse() error {
 }
 
 func (f *EmbeddedFlag) AddToFlagSet(flags *pflag.FlagSet) {
-	flags.StringVarP(&f.target, f.Name, f.Short, "", f.Usage)
+	flags.StringArrayVar(&f.target, f.Name, nil, f.Usage)
 
 	if f.Required {
 		markFlagRequired(f.Name, flags)
@@ -115,7 +110,7 @@ type DelayedEmbeddedFlag struct {
 	Flags       map[string]Flags
 	Delimiter   string
 	FlagChooser func() (string, error)
-	target      string
+	target      []string
 }
 
 func (f *DelayedEmbeddedFlag) GetName() string {
@@ -165,8 +160,6 @@ func (f *DelayedEmbeddedFlag) parse() error {
 		return fmt.Errorf("invalid flag choice %v", choice)
 	}
 
-	fmt.Printf("got choice %v\n", choice)
-
 	embedded := &EmbeddedFlag{
 		Name:      f.Name,
 		Required:  f.Required,
@@ -185,7 +178,7 @@ func (f *DelayedEmbeddedFlag) parse() error {
 }
 
 func (f *DelayedEmbeddedFlag) AddToFlagSet(flags *pflag.FlagSet) {
-	flags.StringVarP(&f.target, f.Name, f.Short, "", f.Usage)
+	flags.StringArrayVar(&f.target, f.Name, nil, f.Usage)
 
 	if f.Required {
 		markFlagRequired(f.Name, flags)

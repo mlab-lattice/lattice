@@ -7,7 +7,6 @@ import (
 	"time"
 
 	kubeconstants "github.com/mlab-lattice/system/pkg/backend/kubernetes/constants"
-	"github.com/mlab-lattice/system/pkg/backend/kubernetes/networkingprovider"
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/servicemesh"
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/util/minikube"
 	"github.com/mlab-lattice/system/pkg/constants"
@@ -218,24 +217,23 @@ func (p *DefaultLocalClusterProvisioner) bootstrap(address string, initialSystem
 							Args: append(
 								bootstrapArgs,
 								[]string{
-									"cluster", "kubernetes", "bootstrap",
-									"--lattice-controller-manager-image", p.getLatticeContainerImage(kubeconstants.DockerImageLatticeControllerManager),
-									"--manager-api-image", p.getLatticeContainerImage(kubeconstants.DockerImageManagerAPIRest),
+									"bootstrap:kubernetes",
+									"--controller-manager-var", fmt.Sprintf("image=%v", p.getLatticeContainerImage(kubeconstants.DockerImageLatticeControllerManager)),
+									"--api-var", fmt.Sprintf("image=%v", p.getLatticeContainerImage(kubeconstants.DockerImageManagerAPIRest)),
+									"--component-builder-var", fmt.Sprintf("image=%v", p.getLatticeContainerImage(kubeconstants.DockerImageComponentBuilder)),
+									"--component-build-docker-artifact-var", "registry=lattice-local",
+									"--component-build-docker-artifact-var", "repository-per-image=true",
+									"--component-build-docker-artifact-var", "push=false",
 									"--cloud-provider", "local",
-									"--cloud-provider-var", "cluster-ip=" + address,
-									"--cloud-provider-var", "dns-controller-image=" + p.getLatticeContainerImage(DockerImageDNSController),
-									"--cloud-provider-var", "dns-controller-args=" + dnsControllerArgs,
-									"--cloud-provider-var", "dnsmasq-nanny-image=" + DockerImageDnsmasqNanny,
-									"--cloud-provider-var", "dnsmasq-nanny-args=" + dnsNannyArgs,
-									"--component-builder-image", p.getLatticeContainerImage(kubeconstants.DockerImageComponentBuilder),
-									"--component-build-docker-artifact-registry", "lattice-local",
-									"--component-build-docker-artifact-repository-per-image=true",
-									"--component-build-docker-artifact-push=false",
+									"--cloud-provider-var", "ip=" + address,
+									"--cloud-provider-var", fmt.Sprintf("dns-var=controller-image=%v", p.getLatticeContainerImage(DockerImageDNSController)),
+									"--cloud-provider-var", fmt.Sprintf("dns-var=controller-args=%v", dnsControllerArgs),
+									"--cloud-provider-var", fmt.Sprintf("dns-var=dnsmasq-nanny-image=%v", DockerImageDnsmasqNanny),
+									"--cloud-provider-var", fmt.Sprintf("dns-var=dnsmasq-nanny-args=%v", dnsNannyArgs),
 									"--service-mesh", servicemesh.Envoy,
 									"--service-mesh-var", fmt.Sprintf("prepare-image=%v", p.getLatticeContainerImage(constants.DockerImageEnvoyPrepare)),
 									"--service-mesh-var", fmt.Sprintf("xds-api-image=%v", p.getLatticeContainerImage(constants.DockerImageEnvoyXDSAPIRestPerNode)),
 									"--service-mesh-var", "redirect-cidr-block=172.16.0.0/16",
-									"--networking-provider", networkingprovider.None,
 								}...,
 							),
 						},

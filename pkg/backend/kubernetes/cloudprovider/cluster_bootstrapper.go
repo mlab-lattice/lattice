@@ -30,13 +30,10 @@ func NewClusterBootstrapper(clusterID types.LatticeID, options *ClusterBootstrap
 func ClusterBoostrapperFlag(cloudProvider *string) (command.Flag, *ClusterBootstrapperOptions) {
 	awsFlags, awsOptions := aws.ClusterBootstrapperFlags()
 	localFlags, localOptions := local.ClusterBootstrapperFlags()
-	options := &ClusterBootstrapperOptions{
-		AWS:   awsOptions,
-		Local: localOptions,
-	}
+	options := &ClusterBootstrapperOptions{}
 
 	flag := &command.DelayedEmbeddedFlag{
-		Name:     "cloud-provider-cluster-bootstrapper-var",
+		Name:     "cloud-provider-var",
 		Required: true,
 		Usage:    "configuration for the cloud provider cluster bootstrapper",
 		Flags: map[string]command.Flags{
@@ -49,11 +46,15 @@ func ClusterBoostrapperFlag(cloudProvider *string) (command.Flag, *ClusterBootst
 			}
 
 			switch *cloudProvider {
-			case Local, AWS:
-				return *cloudProvider, nil
+			case Local:
+				options.Local = localOptions
+			case AWS:
+				options.AWS = awsOptions
 			default:
 				return "", fmt.Errorf("unsupported cloud provider %v", *cloudProvider)
 			}
+
+			return *cloudProvider, nil
 		},
 	}
 

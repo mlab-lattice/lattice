@@ -58,3 +58,56 @@ func (f *StringFlag) AddToFlagSet(flags *pflag.FlagSet) {
 		markFlagRequired(f.Name, flags)
 	}
 }
+
+type StringSliceFlag struct {
+	Name     string
+	Required bool
+	Default  string
+	Short    string
+	Usage    string
+	Target   *[]string
+}
+
+func (f *StringSliceFlag) GetName() string {
+	return f.Name
+}
+
+func (f *StringSliceFlag) IsRequired() bool {
+	return f.Required
+}
+
+func (f *StringSliceFlag) GetShort() string {
+	return f.Short
+}
+
+func (f *StringSliceFlag) GetUsage() string {
+	return f.Usage
+}
+
+func (f *StringSliceFlag) Validate() error {
+	if f.Name == "" {
+		return fmt.Errorf("name cannot be nil")
+	}
+
+	if f.Target == nil {
+		return fmt.Errorf("target cannot be nil")
+	}
+
+	return nil
+}
+
+func (f *StringSliceFlag) GetTarget() interface{} {
+	return f.Target
+}
+
+func (f *StringSliceFlag) Parse() func() error {
+	return nil
+}
+
+func (f *StringSliceFlag) AddToFlagSet(flags *pflag.FlagSet) {
+	flags.StringSliceVarP(f.Target, f.Name, f.Short, nil, f.Usage)
+
+	if f.Required {
+		markFlagRequired(f.Name, flags)
+	}
+}

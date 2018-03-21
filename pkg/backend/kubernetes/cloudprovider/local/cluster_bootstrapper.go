@@ -66,13 +66,19 @@ func ClusterBootstrapperFlags() (command.Flags, *ClusterBootstrapperOptions) {
 					Required: true,
 					Target:   &options.DNS.DnsmasqNannyImage,
 				},
-				// FIXME: add dnsmasq-nanny-args
+				&command.StringSliceFlag{
+					Name:   "dnsmasq-nanny-args",
+					Target: &options.DNS.DnsmasqNannyArgs,
+				},
 				&command.StringFlag{
 					Name:     "controller-image",
 					Required: true,
 					Target:   &options.DNS.ControllerImage,
 				},
-				// FIXME: add controller-args
+				&command.StringSliceFlag{
+					Name:   "controller-args",
+					Target: &options.DNS.DnsmasqNannyArgs,
+				},
 			},
 		},
 	}

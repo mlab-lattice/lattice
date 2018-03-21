@@ -62,7 +62,11 @@ func ClusterBootstrapperFlags() (command.Flags, *ClusterBootstrapperOptions) {
 			Required: true,
 			Target:   &options.Route53PrivateZoneID,
 		},
-		// FIXME: add subnet-ids
+		&command.StringSliceFlag{
+			Name:     "subnet-ids",
+			Required: true,
+			Target:   &options.SubnetIDs,
+		},
 		&command.StringFlag{
 			Name:     "master-node-security-group-id",
 			Required: true,

@@ -16,7 +16,6 @@ import (
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/cloudprovider/local"
 	latticeinformers "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/informers/externalversions"
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/system/bootstrap/bootstrapper"
-	"github.com/mlab-lattice/system/pkg/backend/kubernetes/networkingprovider"
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/servicemesh"
 	"github.com/mlab-lattice/system/pkg/terraform"
 	"github.com/mlab-lattice/system/pkg/types"
@@ -76,14 +75,8 @@ var RootCmd = &cobra.Command{
 			panic(err)
 		}
 
-		networkingProviderSystemBoostrapper, err := networkingprovider.SystemBootstrapperFromFlags(networkingProviderName, networkingProviderVars)
-		if err != nil {
-			panic(err)
-		}
-
 		systemBoostrappers := []bootstrapper.Interface{
 			serviceMeshSystemBootstrapper,
-			networkingProviderSystemBoostrapper,
 			cloudSystemBootstrapper,
 		}
 

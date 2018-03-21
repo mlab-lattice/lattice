@@ -126,7 +126,8 @@ DOCKER_IMAGES := envoy-prepare                                 \
                  kubernetes-envoy-xds-api-rest-per-node        \
                  kubernetes-lattice-controller-manager         \
                  kubernetes-local-dns-controller               \
-                 kubernetes-manager-api-rest
+                 kubernetes-manager-api-rest                   \
+                 latticectl
 
 STABLE_CONTAINER_PUSHES := $(addprefix docker.push-image-stable-,$(DOCKER_IMAGES))
 USER_CONTAINER_PUSHES := $(addprefix docker.push-image-user-,$(DOCKER_IMAGES))

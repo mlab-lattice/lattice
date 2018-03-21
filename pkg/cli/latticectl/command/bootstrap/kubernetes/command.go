@@ -5,21 +5,14 @@ import (
 	"os"
 
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/cloudprovider"
-	//awscloudprovider "github.com/mlab-lattice/system/pkg/backend/kubernetes/cloudprovider/aws"
-	//localcloudprovider "github.com/mlab-lattice/system/pkg/backend/kubernetes/cloudprovider/local"
 	latticev1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	latticeclientset "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/clientset/versioned"
 	clusterbootstrap "github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/cluster/bootstrap"
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/cluster/bootstrap/bootstrapper"
 	clusterbootstrapper "github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/cluster/bootstrap/bootstrapper"
 	baseclusterboostrapper "github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/cluster/bootstrap/bootstrapper/base"
-	//systembootstrap "github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/system/bootstrap"
-	//systembootstrapper "github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/system/bootstrap/bootstrapper"
-	//"github.com/mlab-lattice/system/pkg/backend/kubernetes/networkingprovider"
-	//"github.com/mlab-lattice/system/pkg/backend/kubernetes/networkingprovider/flannel"
-	//"github.com/mlab-lattice/system/pkg/backend/kubernetes/networkingprovider/none"
-	//"github.com/mlab-lattice/system/pkg/backend/kubernetes/servicemesh"
-	//kubeutil "github.com/mlab-lattice/system/pkg/backend/kubernetes/util/kubernetes"
+	"github.com/mlab-lattice/system/pkg/backend/kubernetes/servicemesh"
+	kubeutil "github.com/mlab-lattice/system/pkg/backend/kubernetes/util/kubernetes"
 	"github.com/mlab-lattice/system/pkg/cli/command"
 	"github.com/mlab-lattice/system/pkg/cli/latticectl"
 	"github.com/mlab-lattice/system/pkg/types"
@@ -54,6 +47,9 @@ func (c *Command) Base() (*latticectl.BaseCommand, error) {
 	var cloudProvider string
 	cloudBootstrapFlag, cloudBootstrapOptions := cloudprovider.ClusterBoostrapperFlag(&cloudProvider)
 
+	var serviceMesh string
+	serviceMeshBootstrapFlag, serviceMeshBootstrapOptions := servicemesh.ClusterBoostrapperFlag(&serviceMesh)
+
 	var dryRun bool
 	var print bool
 
@@ -63,15 +59,14 @@ func (c *Command) Base() (*latticectl.BaseCommand, error) {
 			&command.StringFlag{
 				Name:    "lattice-id",
 				Default: "lattice",
-				Target:  &cloudProvider,
+				Target:  &latticeID,
 				Usage:   "ID of the Lattice to bootstrap",
 			},
 
 			&command.StringFlag{
-				Name:     "kubeconfig",
-				Required: true,
-				Target:   &kubeConfigPath,
-				Usage:    "path to kubeconfig",
+				Name:   "kubeconfig",
+				Target: &kubeConfigPath,
+				Usage:  "path to kubeconfig",
 			},
 
 			&command.EmbeddedFlag{
@@ -145,7 +140,11 @@ func (c *Command) Base() (*latticectl.BaseCommand, error) {
 						Target: &options.MasterComponents.LatticeControllerManager.TerraformModulePath,
 						Usage:  "path to terraform modules",
 					},
-					// FIXME: add args
+					&command.StringSliceFlag{
+						Name:   "args",
+						Target: &options.MasterComponents.LatticeControllerManager.Args,
+						Usage:  "extra arguments to pass to the controller manager",
+					},
 				},
 			},
 
@@ -173,11 +172,14 @@ func (c *Command) Base() (*latticectl.BaseCommand, error) {
 						Default: false,
 						Usage:   "whether or not to run the api on the host network",
 					},
-					// FIXME: add args
+					&command.StringSliceFlag{
+						Name:   "args",
+						Target: &options.MasterComponents.ManagerAPI.Args,
+						Usage:  "extra arguments to pass to the api",
+					},
 				},
 			},
 
-			// cloud provider flags
 			&command.StringFlag{
 				Name:     "cloud-provider",
 				Required: true,
@@ -185,6 +187,14 @@ func (c *Command) Base() (*latticectl.BaseCommand, error) {
 				Usage:    "cloud provider that the kubernetes cluster is running on",
 			},
 			cloudBootstrapFlag,
+
+			&command.StringFlag{
+				Name:     "service-mesh",
+				Required: true,
+				Target:   &serviceMesh,
+				Usage:    "service mesh to bootstrap the lattice with",
+			},
+			serviceMeshBootstrapFlag,
 
 			&command.BoolFlag{
 				Name:    "dry-run",
@@ -202,18 +212,33 @@ func (c *Command) Base() (*latticectl.BaseCommand, error) {
 		Run: func(latticectl *latticectl.Latticectl, args []string) {
 			latticeID := types.LatticeID(latticeID)
 
+			var kubeConfig *rest.Config
+			if !dryRun {
+				var err error
+				kubeConfig, err = kubeutil.NewConfig(kubeConfigPath, "")
+				if err != nil {
+					fmt.Printf("error getting kube config: %v", kubeConfig)
+				}
+			}
+
 			cloudBootstrapper, err := cloudprovider.NewClusterBootstrapper(latticeID, cloudBootstrapOptions)
 			if err != nil {
 				fmt.Printf("error getting cloud bootstrapper: %v", err)
 			}
 
-			bootstrappers := []bootstrapper.Interface{}
+			serviceMeshBootstrapper, err := servicemesh.NewClusterBootstrapper(serviceMeshBootstrapOptions)
+			if err != nil {
+				fmt.Printf("error getting service mesh bootstrapper: %v", err)
+			}
 
-			// cloud bootstrapper has to come last so the local bootstrapper can strip taints off of
-			// pod specs
-			bootstrappers = append(bootstrappers, cloudBootstrapper)
+			bootstrappers := []bootstrapper.Interface{
+				serviceMeshBootstrapper,
+				// cloud bootstrapper has to come last so the local bootstrapper can strip taints off of
+				// pod specs
+				cloudBootstrapper,
+			}
 
-			err = BootstrapKubernetesLattice(types.LatticeID(latticeID), nil, cloudProvider, nil, nil, dryRun, print)
+			err = BootstrapKubernetesLattice(types.LatticeID(latticeID), kubeConfig, cloudProvider, bootstrappers, options, dryRun, print)
 			if err != nil {
 				fmt.Printf("error bootstrapping lattice: %v\n", err)
 				os.Exit(1)
@@ -246,8 +271,16 @@ func BootstrapKubernetesLattice(
 			bootstrappers,
 		)
 	} else {
-		kubeClient = kubeclientset.NewForConfigOrDie(kubeConfig)
-		latticeClient = latticeclientset.NewForConfigOrDie(kubeConfig)
+		kubeClient, err = kubeclientset.NewForConfig(kubeConfig)
+		if err != nil {
+			return err
+		}
+
+		latticeClient, err = latticeclientset.NewForConfig(kubeConfig)
+		if err != nil {
+			return err
+		}
+
 		resources, err = clusterbootstrap.Bootstrap(
 			latticeID,
 			cloudProvider,

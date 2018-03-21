@@ -6,6 +6,7 @@ import (
 	kubeconstants "github.com/mlab-lattice/system/pkg/backend/kubernetes/constants"
 	latticev1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	clusterbootstrapper "github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/cluster/bootstrap/bootstrapper"
+	"github.com/mlab-lattice/system/pkg/cli/command"
 
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -29,6 +30,38 @@ func NewClusterBootstrapper(options *ClusterBootstrapperOptions) *DefaultEnvoyCl
 		xdsAPIImage:       options.XDSAPIImage,
 		xdsAPIPort:        options.XDSAPIPort,
 	}
+}
+
+func ClusterBootstrapperFlags() (command.Flags, *ClusterBootstrapperOptions) {
+	options := &ClusterBootstrapperOptions{}
+	flags := command.Flags{
+		&command.StringFlag{
+			Name:     "prepare-image",
+			Required: true,
+			Target:   &options.PrepareImage,
+		},
+		&command.StringFlag{
+			Name:    "image",
+			Default: "envoyproxy/envoy-alpine",
+			Target:  &options.Image,
+		},
+		&command.StringFlag{
+			Name:     "redirect-cidr-block",
+			Required: true,
+			Target:   &options.RedirectCIDRBlock,
+		},
+		&command.StringFlag{
+			Name:     "xds-api-image",
+			Required: true,
+			Target:   &options.XDSAPIImage,
+		},
+		&command.Int32Flag{
+			Name:    "xds-api-port",
+			Default: 8080,
+			Target:  &options.XDSAPIPort,
+		},
+	}
+	return flags, options
 }
 
 type DefaultEnvoyClusterBootstrapper struct {
