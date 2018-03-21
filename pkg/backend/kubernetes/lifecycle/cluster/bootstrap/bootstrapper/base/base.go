@@ -10,7 +10,6 @@ import (
 )
 
 type Options struct {
-	DryRun           bool
 	Config           latticev1.ConfigSpec
 	MasterComponents MasterComponentOptions
 	TerraformOptions TerraformOptions

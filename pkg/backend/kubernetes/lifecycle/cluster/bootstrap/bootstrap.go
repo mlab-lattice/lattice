@@ -21,14 +21,13 @@ import (
 )
 
 type Options struct {
-	DryRun           bool
 	Config           latticev1.ConfigSpec
 	MasterComponents base.MasterComponentOptions
 	Terraform        base.TerraformOptions
 }
 
 func Bootstrap(
-	clusterID types.LatticeID,
+	latticeID types.LatticeID,
 	cloudProviderName string,
 	options *Options,
 	bootstrappers []bootstrapper.Interface,
@@ -36,7 +35,7 @@ func Bootstrap(
 	kubeClient kubeclientset.Interface,
 	latticeClient latticeclientset.Interface,
 ) (*bootstrapper.ClusterResources, error) {
-	resources, err := GetBootstrapResources(clusterID, cloudProviderName, options, bootstrappers)
+	resources, err := GetBootstrapResources(latticeID, cloudProviderName, options, bootstrappers)
 	if err != nil {
 		return nil, err
 	}
@@ -237,7 +236,6 @@ func GetBootstrapResources(
 	bootstrappers []bootstrapper.Interface,
 ) (*bootstrapper.ClusterResources, error) {
 	baseOptions := &base.Options{
-		DryRun:           options.DryRun,
 		Config:           options.Config,
 		MasterComponents: options.MasterComponents,
 		TerraformOptions: options.Terraform,

@@ -8,6 +8,7 @@ go_library(
         "command.go",
         "embedded_flag.go",
         "flag.go",
+        "int32_flag.go",
         "int_flag.go",
         "string_flag.go",
     ],

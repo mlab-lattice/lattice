@@ -7,6 +7,7 @@ import (
 	kubeconstants "github.com/mlab-lattice/system/pkg/backend/kubernetes/constants"
 	latticev1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	clusterbootstrapper "github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/cluster/bootstrap/bootstrapper"
+	"github.com/mlab-lattice/system/pkg/cli/command"
 )
 
 type ClusterBootstrapperOptions struct {
@@ -35,6 +36,50 @@ func NewClusterBootstrapper(options *ClusterBootstrapperOptions) *DefaultAWSClus
 		baseNodeAMIID: options.BaseNodeAMIID,
 		keyName:       options.KeyName,
 	}
+}
+
+func ClusterBootstrapperFlags() (command.Flags, *ClusterBootstrapperOptions) {
+	options := &ClusterBootstrapperOptions{}
+	flags := command.Flags{
+		&command.StringFlag{
+			Name:     "region",
+			Required: true,
+			Target:   &options.Region,
+		},
+		&command.StringFlag{
+			Name:     "account-id",
+			Required: true,
+			Target:   &options.AccountID,
+		},
+		&command.StringFlag{
+			Name:     "vpc-id",
+			Required: true,
+			Target:   &options.VPCID,
+		},
+
+		&command.StringFlag{
+			Name:     "route-53-private-zone-id",
+			Required: true,
+			Target:   &options.Route53PrivateZoneID,
+		},
+		// FIXME: add subnet-ids
+		&command.StringFlag{
+			Name:     "master-node-security-group-id",
+			Required: true,
+			Target:   &options.MasterNodeSecurityGroupID,
+		},
+		&command.StringFlag{
+			Name:     "base-node-ami-id",
+			Required: true,
+			Target:   &options.BaseNodeAMIID,
+		},
+		&command.StringFlag{
+			Name:     "key-name",
+			Required: true,
+			Target:   &options.KeyName,
+		},
+	}
+	return flags, options
 }
 
 type DefaultAWSClusterBootstrapper struct {

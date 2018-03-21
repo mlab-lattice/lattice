@@ -2,6 +2,8 @@ package main
 
 import (
 	"github.com/mlab-lattice/system/pkg/cli/latticectl"
+	"github.com/mlab-lattice/system/pkg/cli/latticectl/command/bootstrap"
+	"github.com/mlab-lattice/system/pkg/cli/latticectl/command/bootstrap/kubernetes"
 	"github.com/mlab-lattice/system/pkg/cli/latticectl/command/context"
 	"github.com/mlab-lattice/system/pkg/cli/latticectl/command/local"
 	"github.com/mlab-lattice/system/pkg/cli/latticectl/command/systems"
@@ -21,6 +23,11 @@ func main() {
 					Subcommands: []latticectl.Command{
 						&context.GetCommand{},
 						&context.SetCommand{},
+					},
+				},
+				&bootstrap.Command{
+					Subcommands: []latticectl.Command{
+						&kubernetes.Command{},
 					},
 				},
 				&local.Command{

@@ -16,6 +16,7 @@ go_library(
         "//pkg/backend/kubernetes/lifecycle/cluster/bootstrap/bootstrapper:go_default_library",
         "//pkg/backend/kubernetes/lifecycle/system/bootstrap/bootstrapper/noop:go_default_library",
         "//pkg/backend/kubernetes/terraform/aws:go_default_library",
+        "//pkg/cli/command:go_default_library",
         "//pkg/managerapi/client/rest:go_default_library",
         "//pkg/terraform:go_default_library",
         "//pkg/terraform/provider/aws:go_default_library",

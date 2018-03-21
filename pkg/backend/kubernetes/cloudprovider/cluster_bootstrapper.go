@@ -6,6 +6,7 @@ import (
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/cloudprovider/aws"
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/cloudprovider/local"
 	clusterbootstrapper "github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/cluster/bootstrap/bootstrapper"
+	"github.com/mlab-lattice/system/pkg/cli/command"
 	"github.com/mlab-lattice/system/pkg/types"
 )
 
@@ -24,4 +25,37 @@ func NewClusterBootstrapper(clusterID types.LatticeID, options *ClusterBootstrap
 	}
 
 	return nil, fmt.Errorf("must provide cloud provider options")
+}
+
+func ClusterBoostrapperFlag(cloudProvider *string) (command.Flag, *ClusterBootstrapperOptions) {
+	awsFlags, awsOptions := aws.ClusterBootstrapperFlags()
+	localFlags, localOptions := local.ClusterBootstrapperFlags()
+	options := &ClusterBootstrapperOptions{
+		AWS:   awsOptions,
+		Local: localOptions,
+	}
+
+	flag := &command.DelayedEmbeddedFlag{
+		Name:     "cloud-provider-cluster-bootstrapper-var",
+		Required: true,
+		Usage:    "configuration for the cloud provider cluster bootstrapper",
+		Flags: map[string]command.Flags{
+			AWS:   awsFlags,
+			Local: localFlags,
+		},
+		FlagChooser: func() (string, error) {
+			if cloudProvider == nil {
+				return "", fmt.Errorf("cloud provider cannot be nil")
+			}
+
+			switch *cloudProvider {
+			case Local, AWS:
+				return *cloudProvider, nil
+			default:
+				return "", fmt.Errorf("unsupported cloud provider %v", *cloudProvider)
+			}
+		},
+	}
+
+	return flag, options
 }

@@ -7,6 +7,7 @@ import (
 	latticev1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	clusterbootstrapper "github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/cluster/bootstrap/bootstrapper"
 	kubeutil "github.com/mlab-lattice/system/pkg/backend/kubernetes/util/kubernetes"
+	"github.com/mlab-lattice/system/pkg/cli/command"
 	"github.com/mlab-lattice/system/pkg/types"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -44,6 +45,38 @@ func NewClusterBootstrapper(clusterID types.LatticeID, options *ClusterBootstrap
 		ip:        options.IP,
 		DNS:       options.DNS,
 	}
+}
+
+func ClusterBootstrapperFlags() (command.Flags, *ClusterBootstrapperOptions) {
+	options := &ClusterBootstrapperOptions{
+		DNS: &OptionsDNS{},
+	}
+	flags := command.Flags{
+		&command.StringFlag{
+			Name:     "ip",
+			Required: true,
+			Target:   &options.IP,
+		},
+		&command.EmbeddedFlag{
+			Name:     "dns-var",
+			Required: true,
+			Flags: command.Flags{
+				&command.StringFlag{
+					Name:     "dnsmasq-nanny-image",
+					Required: true,
+					Target:   &options.DNS.DnsmasqNannyImage,
+				},
+				// FIXME: add dnsmasq-nanny-args
+				&command.StringFlag{
+					Name:     "controller-image",
+					Required: true,
+					Target:   &options.DNS.ControllerImage,
+				},
+				// FIXME: add controller-args
+			},
+		},
+	}
+	return flags, options
 }
 
 type DefaultLocalClusterBootstrapper struct {
