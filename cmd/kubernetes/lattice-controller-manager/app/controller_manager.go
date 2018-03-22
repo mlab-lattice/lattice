@@ -17,9 +17,9 @@ import (
 	latticeinformers "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/informers/externalversions"
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/system/bootstrap/bootstrapper"
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/servicemesh"
-	"github.com/mlab-lattice/system/pkg/terraform"
 	"github.com/mlab-lattice/system/pkg/types"
 	"github.com/mlab-lattice/system/pkg/util/cli"
+	"github.com/mlab-lattice/system/pkg/util/terraform"
 
 	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/rest"

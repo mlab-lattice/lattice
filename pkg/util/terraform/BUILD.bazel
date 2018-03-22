@@ -10,7 +10,7 @@ go_library(
         "exec_context.go",
         "output.go",
     ],
-    importpath = "github.com/mlab-lattice/system/pkg/terraform",
+    importpath = "github.com/mlab-lattice/system/pkg/util/terraform",
     visibility = ["//visibility:public"],
     deps = ["//pkg/util/exec:go_default_library"],
 )

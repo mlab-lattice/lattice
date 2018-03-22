@@ -7,9 +7,9 @@ import (
 
 	"github.com/mlab-lattice/system/pkg/apiserver/client/rest"
 	awsterraform "github.com/mlab-lattice/system/pkg/backend/kubernetes/terraform/aws"
-	"github.com/mlab-lattice/system/pkg/terraform"
-	awstfprovider "github.com/mlab-lattice/system/pkg/terraform/provider/aws"
 	"github.com/mlab-lattice/system/pkg/types"
+	"github.com/mlab-lattice/system/pkg/util/terraform"
+	awstfprovider "github.com/mlab-lattice/system/pkg/util/terraform/provider/aws"
 
 	"k8s.io/apimachinery/pkg/util/wait"
 )

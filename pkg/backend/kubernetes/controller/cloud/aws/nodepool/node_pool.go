@@ -10,8 +10,8 @@ import (
 	latticev1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	kubetf "github.com/mlab-lattice/system/pkg/backend/kubernetes/terraform/aws"
 	kubeutil "github.com/mlab-lattice/system/pkg/backend/kubernetes/util/kubernetes"
-	tf "github.com/mlab-lattice/system/pkg/terraform"
-	awstfprovider "github.com/mlab-lattice/system/pkg/terraform/provider/aws"
+	tf "github.com/mlab-lattice/system/pkg/util/terraform"
+	awstfprovider "github.com/mlab-lattice/system/pkg/util/terraform/provider/aws"
 
 	"github.com/golang/glog"
 )

@@ -5,8 +5,8 @@ import (
 	"os"
 
 	kubetf "github.com/mlab-lattice/system/pkg/backend/kubernetes/terraform/aws"
-	tf "github.com/mlab-lattice/system/pkg/terraform"
-	awstf "github.com/mlab-lattice/system/pkg/terraform/provider/aws"
+	tf "github.com/mlab-lattice/system/pkg/util/terraform"
+	awstf "github.com/mlab-lattice/system/pkg/util/terraform/provider/aws"
 
 	"github.com/spf13/cobra"
 )
