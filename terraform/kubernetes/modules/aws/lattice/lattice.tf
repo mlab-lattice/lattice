@@ -22,7 +22,7 @@ variable "kube_apiserver_port" {
   default = 6443
 }
 
-variable "cluster_manager_api_port" {
+variable "api_server_port" {
   default = 80
 }
 
@@ -41,7 +41,7 @@ output "route53_private_zone_id" {
   value = "${aws_route53_zone.private_zone.id}"
 }
 
-output "cluster_manager_address" {
+output "api_server_address" {
   value = "${aws_alb.master.dns_name}"
 }
 
@@ -227,8 +227,8 @@ resource "aws_security_group_rule" "master_node_allow_ingress_from_alb_to_system
   security_group_id = "${module.master_node.security_group_id}"
 
   type                     = "ingress"
-  from_port                = "${var.cluster_manager_api_port}"
-  to_port                  = "${var.cluster_manager_api_port}"
+  from_port                = "${var.api_server_port}"
+  to_port                  = "${var.api_server_port}"
   protocol                 = "tcp"
   source_security_group_id = "${aws_security_group.master_alb.id}"
 }
@@ -237,8 +237,8 @@ resource "aws_security_group_rule" "alb_allow_egress_to_master_node_system_envir
   security_group_id = "${aws_security_group.master_alb.id}"
 
   type                     = "egress"
-  from_port                = "${var.cluster_manager_api_port}"
-  to_port                  = "${var.cluster_manager_api_port}"
+  from_port                = "${var.api_server_port}"
+  to_port                  = "${var.api_server_port}"
   protocol                 = "tcp"
   source_security_group_id = "${module.master_node.security_group_id}"
 }
@@ -247,8 +247,8 @@ resource "aws_security_group_rule" "alb_allow_ingress" {
   security_group_id = "${aws_security_group.master_alb.id}"
 
   type        = "ingress"
-  from_port   = "${var.cluster_manager_api_port}"
-  to_port     = "${var.cluster_manager_api_port}"
+  from_port   = "${var.api_server_port}"
+  to_port     = "${var.api_server_port}"
   protocol    = "tcp"
   cidr_blocks = ["0.0.0.0/0"]
 }
@@ -264,14 +264,14 @@ resource "aws_alb" "master" {
 
 resource "aws_alb_target_group" "master" {
   name     = "lattice-${var.lattice_id}-master"
-  port     = "${var.cluster_manager_api_port}"
+  port     = "${var.api_server_port}"
   protocol = "HTTP"
   vpc_id   = "${aws_vpc.vpc.id}"
 }
 
 resource "aws_alb_listener" "master" {
   load_balancer_arn = "${aws_alb.master.arn}"
-  port              = "${var.cluster_manager_api_port}"
+  port              = "${var.api_server_port}"
 
   "default_action" {
     target_group_arn = "${aws_alb_target_group.master.arn}"

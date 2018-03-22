@@ -120,13 +120,13 @@ docker.push-image-user: gazelle
 	bazel run --cpu k8 //docker:push-user-debug-$(IMAGE)
 
 DOCKER_IMAGES := envoy-prepare                                 \
+                 kubernetes-api-server-rest                    \
                  kubernetes-aws-master-node-attach-etcd-volume \
                  kubernetes-aws-master-node-register-dns       \
                  kubernetes-component-builder                  \
                  kubernetes-envoy-xds-api-rest-per-node        \
                  kubernetes-lattice-controller-manager         \
                  kubernetes-local-dns-controller               \
-                 kubernetes-manager-api-rest                   \
                  latticectl
 
 STABLE_CONTAINER_PUSHES := $(addprefix docker.push-image-stable-,$(DOCKER_IMAGES))

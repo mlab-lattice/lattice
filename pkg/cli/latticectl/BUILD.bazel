@@ -11,10 +11,10 @@ go_library(
     importpath = "github.com/mlab-lattice/system/pkg/cli/latticectl",
     visibility = ["//visibility:public"],
     deps = [
+        "//pkg/apiserver/client:go_default_library",
+        "//pkg/apiserver/client/rest:go_default_library",
         "//pkg/cli/command:go_default_library",
         "//pkg/cli/latticectl/config:go_default_library",
-        "//pkg/managerapi/client:go_default_library",
-        "//pkg/managerapi/client/rest:go_default_library",
         "//pkg/types:go_default_library",
     ],
 )

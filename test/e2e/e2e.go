@@ -6,7 +6,7 @@ import (
 
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/cloudprovider"
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/cloudprovider/local"
-	"github.com/mlab-lattice/system/pkg/lifecycle/cluster/provisioner"
+	"github.com/mlab-lattice/system/pkg/lifecycle/lattice/provisioner"
 	"github.com/mlab-lattice/system/test/e2e/context"
 
 	// test sources
@@ -66,11 +66,11 @@ var _ = ginkgo.SynchronizedAfterSuite(func() {
 func getProvisioner() provisioner.Interface {
 	switch provider {
 	case cloudprovider.Local:
-		p, err := local.NewClusterProvisioner(
+		p, err := local.NewLatticeProvisioner(
 			controlPlaneContainerRegistry,
 			controlPlaneContainerChannel,
 			"/tmp/lattice/test/e2e/local",
-			&local.ClusterProvisionerOptions{},
+			&local.LatticeProvisionerOptions{},
 		)
 		if err != nil {
 			panic(err)

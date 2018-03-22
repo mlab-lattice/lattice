@@ -38,7 +38,7 @@ func (c *Command) Base() (*latticectl.BaseCommand, error) {
 		},
 		MasterComponents: baseboostrapper.MasterComponentOptions{
 			LatticeControllerManager: baseboostrapper.LatticeControllerManagerOptions{},
-			ManagerAPI:               baseboostrapper.ManagerAPIOptions{},
+			APIServer:                baseboostrapper.APIServerOptions{},
 		},
 	}
 	var componentBuildRegistryAuthType string
@@ -155,25 +155,25 @@ func (c *Command) Base() (*latticectl.BaseCommand, error) {
 					&command.StringFlag{
 						Name:     "image",
 						Required: true,
-						Target:   &options.MasterComponents.ManagerAPI.Image,
+						Target:   &options.MasterComponents.APIServer.Image,
 						Usage:    "docker image to user for the api",
 					},
 					&command.Int32Flag{
 						Name:    "port",
 						Default: 80,
-						Target:  &options.MasterComponents.ManagerAPI.Port,
+						Target:  &options.MasterComponents.APIServer.Port,
 						Usage:   "port the api should listen on",
 					},
 					&command.BoolFlag{
 						Name:   "host-network",
-						Target: &options.MasterComponents.ManagerAPI.HostNetwork,
+						Target: &options.MasterComponents.APIServer.HostNetwork,
 						// TODO: this used to be true
 						Default: false,
 						Usage:   "whether or not to run the api on the host network",
 					},
 					&command.StringSliceFlag{
 						Name:   "args",
-						Target: &options.MasterComponents.ManagerAPI.Args,
+						Target: &options.MasterComponents.APIServer.Args,
 						Usage:  "extra arguments to pass to the api",
 					},
 				},

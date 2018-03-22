@@ -1,8 +1,8 @@
 package context
 
 import (
-	"github.com/mlab-lattice/system/pkg/managerapi/client"
-	"github.com/mlab-lattice/system/pkg/managerapi/client/rest"
+	"github.com/mlab-lattice/system/pkg/apiserver/client"
+	"github.com/mlab-lattice/system/pkg/apiserver/client/rest"
 )
 
 type TestContextType struct {

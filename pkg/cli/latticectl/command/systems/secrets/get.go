@@ -5,11 +5,11 @@ import (
 	"log"
 	"strings"
 
+	"github.com/mlab-lattice/system/pkg/apiserver/client"
 	"github.com/mlab-lattice/system/pkg/cli/command"
 	"github.com/mlab-lattice/system/pkg/cli/latticectl"
 	lctlcommand "github.com/mlab-lattice/system/pkg/cli/latticectl/command"
 	"github.com/mlab-lattice/system/pkg/definition/tree"
-	"github.com/mlab-lattice/system/pkg/managerapi/client"
 )
 
 type GetCommand struct {

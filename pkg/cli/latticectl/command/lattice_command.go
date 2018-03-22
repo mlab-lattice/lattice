@@ -3,9 +3,9 @@ package command
 import (
 	"log"
 
+	"github.com/mlab-lattice/system/pkg/apiserver/client"
 	"github.com/mlab-lattice/system/pkg/cli/command"
 	"github.com/mlab-lattice/system/pkg/cli/latticectl"
-	"github.com/mlab-lattice/system/pkg/managerapi/client"
 )
 
 type LatticeCommandContext interface {

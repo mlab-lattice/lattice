@@ -6,12 +6,12 @@ import (
 	"os"
 	"time"
 
+	"github.com/mlab-lattice/system/pkg/apiserver/client"
 	"github.com/mlab-lattice/system/pkg/cli/color"
 	"github.com/mlab-lattice/system/pkg/cli/command"
 	"github.com/mlab-lattice/system/pkg/cli/latticectl"
 	lctlcommand "github.com/mlab-lattice/system/pkg/cli/latticectl/command"
 	"github.com/mlab-lattice/system/pkg/cli/printer"
-	"github.com/mlab-lattice/system/pkg/managerapi/client"
 	"github.com/mlab-lattice/system/pkg/types"
 
 	"k8s.io/apimachinery/pkg/util/wait"

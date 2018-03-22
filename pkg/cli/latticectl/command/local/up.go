@@ -56,7 +56,7 @@ func (c *UpCommand) Base() (*latticectl.BaseCommand, error) {
 }
 
 func Up(name, initialSystemDefinition, registry, channel, workDirectory string) {
-	provisioner, err := local.NewClusterProvisioner(registry, channel, workDirectory, nil)
+	provisioner, err := local.NewLatticeProvisioner(registry, channel, workDirectory, nil)
 	if err != nil {
 		log.Fatal(err)
 	}

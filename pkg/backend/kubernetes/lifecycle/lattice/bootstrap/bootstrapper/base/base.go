@@ -17,7 +17,7 @@ type Options struct {
 
 type MasterComponentOptions struct {
 	LatticeControllerManager LatticeControllerManagerOptions
-	ManagerAPI               ManagerAPIOptions
+	APIServer                APIServerOptions
 }
 
 type LatticeControllerManagerOptions struct {
@@ -26,7 +26,7 @@ type LatticeControllerManagerOptions struct {
 	TerraformModulePath string
 }
 
-type ManagerAPIOptions struct {
+type APIServerOptions struct {
 	Image       string
 	Port        int32
 	HostNetwork bool
@@ -66,5 +66,5 @@ func (b *DefaultBootstrapper) BootstrapClusterResources(resources *bootstrapper.
 	b.configResources(resources)
 	b.componentBuilderResources(resources)
 	b.controllerManagerResources(resources)
-	b.managerAPIResources(resources)
+	b.aPIServerResources(resources)
 }

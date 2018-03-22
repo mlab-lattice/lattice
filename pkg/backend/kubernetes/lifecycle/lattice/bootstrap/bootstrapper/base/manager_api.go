@@ -16,7 +16,7 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 )
 
-func (b *DefaultBootstrapper) managerAPIResources(resources *bootstrapper.Resources) {
+func (b *DefaultBootstrapper) aPIServerResources(resources *bootstrapper.Resources) {
 	internalNamespace := kubeutil.InternalNamespace(b.LatticeID)
 
 	// FIXME: prefix this cluster role with the cluster id so multiple clusters can have different
@@ -28,7 +28,7 @@ func (b *DefaultBootstrapper) managerAPIResources(resources *bootstrapper.Resour
 			APIVersion: rbacv1.GroupName + "/v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name: kubeconstants.MasterNodeComponentManagerAPI,
+			Name: kubeconstants.MasterNodeComponentAPIServer,
 		},
 		Rules: []rbacv1.PolicyRule{
 			// lattice system read and create
@@ -120,7 +120,7 @@ func (b *DefaultBootstrapper) managerAPIResources(resources *bootstrapper.Resour
 			APIVersion: "v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      kubeconstants.ServiceAccountManagementAPI,
+			Name:      kubeconstants.ServiceAccountAPIServer,
 			Namespace: internalNamespace,
 		},
 	}
@@ -134,7 +134,7 @@ func (b *DefaultBootstrapper) managerAPIResources(resources *bootstrapper.Resour
 			APIVersion: rbacv1.GroupName + "/v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name: kubeconstants.MasterNodeComponentManagerAPI,
+			Name: kubeconstants.MasterNodeComponentAPIServer,
 		},
 		Subjects: []rbacv1.Subject{
 			{
@@ -151,12 +151,12 @@ func (b *DefaultBootstrapper) managerAPIResources(resources *bootstrapper.Resour
 	}
 
 	args := []string{
-		"--port", strconv.Itoa(int(b.Options.MasterComponents.ManagerAPI.Port)),
+		"--port", strconv.Itoa(int(b.Options.MasterComponents.APIServer.Port)),
 		"--lattice-id", string(b.LatticeID),
 	}
-	args = append(args, b.Options.MasterComponents.ManagerAPI.Args...)
+	args = append(args, b.Options.MasterComponents.APIServer.Args...)
 	labels := map[string]string{
-		kubeconstants.MasterNodeLabelComponent: kubeconstants.MasterNodeComponentManagerAPI,
+		kubeconstants.MasterNodeLabelComponent: kubeconstants.MasterNodeComponentAPIServer,
 	}
 
 	daemonSet := &appsv1.DaemonSet{
@@ -166,7 +166,7 @@ func (b *DefaultBootstrapper) managerAPIResources(resources *bootstrapper.Resour
 			APIVersion: appsv1.GroupName + "/v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      kubeconstants.MasterNodeComponentManagerAPI,
+			Name:      kubeconstants.MasterNodeComponentAPIServer,
 			Namespace: internalNamespace,
 			Labels:    labels,
 		},
@@ -176,27 +176,27 @@ func (b *DefaultBootstrapper) managerAPIResources(resources *bootstrapper.Resour
 			},
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:   kubeconstants.MasterNodeComponentManagerAPI,
+					Name:   kubeconstants.MasterNodeComponentAPIServer,
 					Labels: labels,
 				},
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{
 						{
-							Name:  kubeconstants.MasterNodeComponentManagerAPI,
-							Image: b.Options.MasterComponents.ManagerAPI.Image,
+							Name:  kubeconstants.MasterNodeComponentAPIServer,
+							Image: b.Options.MasterComponents.APIServer.Image,
 							Args:  args,
 							Ports: []corev1.ContainerPort{
 								{
 									Name:          "http",
-									HostPort:      b.Options.MasterComponents.ManagerAPI.Port,
-									ContainerPort: b.Options.MasterComponents.ManagerAPI.Port,
+									HostPort:      b.Options.MasterComponents.APIServer.Port,
+									ContainerPort: b.Options.MasterComponents.APIServer.Port,
 								},
 							},
 						},
 					},
-					HostNetwork:        b.Options.MasterComponents.ManagerAPI.HostNetwork,
+					HostNetwork:        b.Options.MasterComponents.APIServer.HostNetwork,
 					DNSPolicy:          corev1.DNSDefault,
-					ServiceAccountName: kubeconstants.ServiceAccountManagementAPI,
+					ServiceAccountName: kubeconstants.ServiceAccountAPIServer,
 					Tolerations: []corev1.Toleration{
 						kubeconstants.TolerationMasterNode,
 					},
