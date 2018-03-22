@@ -17,9 +17,9 @@ import (
 )
 
 func (b *DefaultBootstrapper) controllerManagerResources(resources *bootstrapper.Resources) {
-	internalNamespace := kubeutil.InternalNamespace(b.LatticeID)
+	internalNamespace := kubeutil.InternalNamespace(b.ClusterID)
 
-	// FIXME: prefix this cluster role with the lattice id so multiple lattices can have different
+	// FIXME: prefix this cluster role with the cluster id so multiple clusters can have different
 	// cluster role definitions
 	clusterRole := &rbacv1.ClusterRole{
 		// Include TypeMeta so if this is a dry run it will be printed out
@@ -28,7 +28,7 @@ func (b *DefaultBootstrapper) controllerManagerResources(resources *bootstrapper
 			APIVersion: rbacv1.GroupName + "/v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name: kubeconstants.MasterNodeComponentLatticeControllerManager,
+			Name: kubeconstants.ControlPlaneServiceLatticeControllerManager,
 		},
 		Rules: []rbacv1.PolicyRule{
 			// lattice all
@@ -112,7 +112,7 @@ func (b *DefaultBootstrapper) controllerManagerResources(resources *bootstrapper
 			APIVersion: rbacv1.GroupName + "/v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name: kubeconstants.MasterNodeComponentLatticeControllerManager,
+			Name: kubeconstants.ControlPlaneServiceLatticeControllerManager,
 		},
 		Subjects: []rbacv1.Subject{
 			{
@@ -128,7 +128,7 @@ func (b *DefaultBootstrapper) controllerManagerResources(resources *bootstrapper
 		},
 	}
 
-	args := []string{"--cloud-provider", b.CloudProviderName, "--lattice-id", string(b.LatticeID)}
+	args := []string{"--cloud-provider", b.CloudProviderName, "--cluster-id", string(b.ClusterID)}
 	args = append(args, b.Options.MasterComponents.LatticeControllerManager.Args...)
 
 	if b.Options.MasterComponents.LatticeControllerManager.TerraformModulePath != "" {
@@ -147,7 +147,7 @@ func (b *DefaultBootstrapper) controllerManagerResources(resources *bootstrapper
 	}
 
 	labels := map[string]string{
-		kubeconstants.MasterNodeLabelComponent: kubeconstants.MasterNodeComponentLatticeControllerManager,
+		kubeconstants.MasterNodeLabelComponent: kubeconstants.ControlPlaneServiceLatticeControllerManager,
 	}
 
 	daemonSet := &appsv1.DaemonSet{
@@ -157,7 +157,7 @@ func (b *DefaultBootstrapper) controllerManagerResources(resources *bootstrapper
 			APIVersion: appsv1.GroupName + "/v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      kubeconstants.MasterNodeComponentLatticeControllerManager,
+			Name:      kubeconstants.ControlPlaneServiceLatticeControllerManager,
 			Namespace: internalNamespace,
 			Labels:    labels,
 		},
@@ -167,13 +167,13 @@ func (b *DefaultBootstrapper) controllerManagerResources(resources *bootstrapper
 			},
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:   kubeconstants.MasterNodeComponentLatticeControllerManager,
+					Name:   kubeconstants.ControlPlaneServiceLatticeControllerManager,
 					Labels: labels,
 				},
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{
 						{
-							Name:  kubeconstants.MasterNodeComponentLatticeControllerManager,
+							Name:  kubeconstants.ControlPlaneServiceLatticeControllerManager,
 							Image: b.Options.MasterComponents.LatticeControllerManager.Image,
 							Args:  args,
 						},

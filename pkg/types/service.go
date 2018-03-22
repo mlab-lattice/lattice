@@ -4,8 +4,10 @@ import (
 	"github.com/mlab-lattice/system/pkg/definition/tree"
 )
 
-type ServiceID string
-type ServiceState string
+type (
+	ServiceID    string
+	ServiceState string
+)
 
 const (
 	ServiceStatePending     ServiceState = "pending"
@@ -26,8 +28,9 @@ type Service struct {
 	FailureMessage   *string            `json:"failureMessage"`
 }
 
-type ServicePublicPorts map[int32]ServicePublicPort
-
-type ServicePublicPort struct {
-	Address string `json:"address"`
-}
+type (
+	ServicePublicPorts map[int32]ServicePublicPort
+	ServicePublicPort  struct {
+		Address string `json:"address"`
+	}
+)

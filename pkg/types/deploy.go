@@ -1,12 +1,14 @@
 package types
 
-type DeployID string
-type DeployState string
+type (
+	DeployID    string
+	DeployState string
+)
 
 const (
 	DeployStatePending    DeployState = "pending"
 	DeployStateAccepted   DeployState = "accepted"
-	DeployStateInProgress DeployState = "in-progress"
+	DeployStateInProgress DeployState = "in progress"
 	DeployStateSucceeded  DeployState = "succeeded"
 	DeployStateFailed     DeployState = "failed"
 )

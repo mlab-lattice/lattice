@@ -28,7 +28,7 @@ func (b *DefaultBootstrapper) aPIServerResources(resources *bootstrapper.Resourc
 			APIVersion: rbacv1.GroupName + "/v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name: kubeconstants.MasterNodeComponentAPIServer,
+			Name: kubeconstants.ControlPlaneServiceAPIServer,
 		},
 		Rules: []rbacv1.PolicyRule{
 			// lattice system read and create
@@ -134,7 +134,7 @@ func (b *DefaultBootstrapper) aPIServerResources(resources *bootstrapper.Resourc
 			APIVersion: rbacv1.GroupName + "/v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name: kubeconstants.MasterNodeComponentAPIServer,
+			Name: kubeconstants.ControlPlaneServiceAPIServer,
 		},
 		Subjects: []rbacv1.Subject{
 			{
@@ -156,7 +156,7 @@ func (b *DefaultBootstrapper) aPIServerResources(resources *bootstrapper.Resourc
 	}
 	args = append(args, b.Options.MasterComponents.APIServer.Args...)
 	labels := map[string]string{
-		kubeconstants.MasterNodeLabelComponent: kubeconstants.MasterNodeComponentAPIServer,
+		kubeconstants.LabelKeyControlPlaneService: kubeconstants.ControlPlaneServiceAPIServer,
 	}
 
 	daemonSet := &appsv1.DaemonSet{
@@ -166,7 +166,7 @@ func (b *DefaultBootstrapper) aPIServerResources(resources *bootstrapper.Resourc
 			APIVersion: appsv1.GroupName + "/v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      kubeconstants.MasterNodeComponentAPIServer,
+			Name:      kubeconstants.ControlPlaneServiceAPIServer,
 			Namespace: internalNamespace,
 			Labels:    labels,
 		},
@@ -176,13 +176,13 @@ func (b *DefaultBootstrapper) aPIServerResources(resources *bootstrapper.Resourc
 			},
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:   kubeconstants.MasterNodeComponentAPIServer,
+					Name:   kubeconstants.ControlPlaneServiceAPIServer,
 					Labels: labels,
 				},
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{
 						{
-							Name:  kubeconstants.MasterNodeComponentAPIServer,
+							Name:  kubeconstants.ControlPlaneServiceAPIServer,
 							Image: b.Options.MasterComponents.APIServer.Image,
 							Args:  args,
 							Ports: []corev1.ContainerPort{

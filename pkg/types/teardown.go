@@ -1,7 +1,9 @@
 package types
 
-type TeardownID string
-type TeardownState string
+type (
+	TeardownID    string
+	TeardownState string
+)
 
 const (
 	TeardownStatePending    TeardownState = "pending"

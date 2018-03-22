@@ -106,7 +106,7 @@ func (cp *DefaultAWSLatticeBootstrapper) BootstrapLatticeResources(resources *bo
 	}
 
 	for _, daemonSet := range resources.DaemonSets {
-		if daemonSet.Name != kubeconstants.MasterNodeComponentLatticeControllerManager {
+		if daemonSet.Name != kubeconstants.ControlPlaneServiceLatticeControllerManager {
 			continue
 		}
 

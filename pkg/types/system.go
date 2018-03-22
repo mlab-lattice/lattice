@@ -4,9 +4,11 @@ import (
 	"github.com/mlab-lattice/system/pkg/definition/tree"
 )
 
-type SystemID string
-type SystemState string
-type SystemVersion string
+type (
+	SystemID      string
+	SystemState   string
+	SystemVersion string
+)
 
 const (
 	SystemStatePending  SystemState = "pending"

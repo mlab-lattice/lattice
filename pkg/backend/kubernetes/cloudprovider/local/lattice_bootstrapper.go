@@ -100,7 +100,7 @@ func (cp *DefaultLocalLatticeBootstrapper) BootstrapLatticeResources(resources *
 	for _, daemonSet := range resources.DaemonSets {
 		template := transformPodTemplateSpec(&daemonSet.Spec.Template)
 
-		if daemonSet.Name == kubeconstants.MasterNodeComponentLatticeControllerManager {
+		if daemonSet.Name == kubeconstants.ControlPlaneServiceLatticeControllerManager {
 			template.Spec.Containers[0].Args = append(
 				template.Spec.Containers[0].Args,
 				"--cloud-provider-var", fmt.Sprintf("ip=%v", cp.ip),

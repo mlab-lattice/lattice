@@ -20,7 +20,7 @@ func (b *DefaultBootstrapper) componentBuilderResources(resources *bootstrapper.
 			APIVersion: rbacv1.GroupName + "/v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name: kubeconstants.InternalComponentComponentBuilder,
+			Name: kubeconstants.ControlPlaneServiceComponentBuilder,
 		},
 		Rules: componentBuilderRBACPolicyRules,
 	}

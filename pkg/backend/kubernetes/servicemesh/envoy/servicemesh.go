@@ -7,7 +7,6 @@ import (
 	"strconv"
 	"strings"
 
-	kubeconstants "github.com/mlab-lattice/system/pkg/backend/kubernetes/constants"
 	latticev1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	kubeutil "github.com/mlab-lattice/system/pkg/backend/kubernetes/util/kubernetes"
 
@@ -20,11 +19,13 @@ const (
 	annotationKeyServiceMeshPorts = "envoy.servicemesh.lattice.mlab.com/service-mesh-ports"
 	annotationKeyEgressPort       = "envoy.servicemesh.lattice.mlab.com/egress-port"
 
-	envoyConfigDirectory           = "/etc/envoy"
-	envoyConfigDirectoryVolumeName = kubeconstants.DeploymentResourcePrefixServiceMesh + "envoyconfig"
+	deploymentResourcePrefix = "lattice-service-mesh-envoy-"
 
-	initContainerNamePrepareEnvoy = kubeconstants.DeploymentResourcePrefixServiceMesh + "prepare-envoy"
-	containerNameEnvoy            = kubeconstants.DeploymentResourcePrefixServiceMesh + "envoy"
+	envoyConfigDirectory           = "/etc/envoy"
+	envoyConfigDirectoryVolumeName = deploymentResourcePrefix + "envoyconfig"
+
+	initContainerNamePrepareEnvoy = deploymentResourcePrefix + "prepare-envoy"
+	containerNameEnvoy            = deploymentResourcePrefix + "envoy"
 
 	envoyXDSAPI         = "envoy-xds-api"
 	labelKeyEnvoyXDSAPI = "envoy.servicemesh.lattice.mlab.com/xds-api"
@@ -407,7 +408,7 @@ func checkExpectedVolumes(currentVolumes, desiredVolumes []corev1.Volume) (bool,
 }
 
 func isServiceMeshResource(name string) bool {
-	parts := strings.Split(name, kubeconstants.DeploymentResourcePrefixServiceMesh)
+	parts := strings.Split(name, deploymentResourcePrefix)
 	return len(parts) >= 2
 }
 

@@ -67,7 +67,7 @@ func (b *DefaultBootstrapper) BootstrapSystemResources(resources *bootstrapper.S
 			APIVersion: rbacv1.GroupName + "/v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      kubeconstants.InternalComponentComponentBuilder,
+			Name:      kubeconstants.ControlPlaneServiceComponentBuilder,
 			Namespace: componentBuilderSA.Namespace,
 		},
 		Subjects: []rbacv1.Subject{
@@ -80,7 +80,7 @@ func (b *DefaultBootstrapper) BootstrapSystemResources(resources *bootstrapper.S
 		RoleRef: rbacv1.RoleRef{
 			APIGroup: rbacv1.GroupName,
 			Kind:     "ClusterRole",
-			Name:     kubeconstants.InternalComponentComponentBuilder,
+			Name:     kubeconstants.ControlPlaneServiceComponentBuilder,
 		},
 	}
 

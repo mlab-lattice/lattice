@@ -5,8 +5,10 @@ import (
 	"github.com/mlab-lattice/system/pkg/definition/tree"
 )
 
-type BuildID string
-type BuildState string
+type (
+	BuildID    string
+	BuildState string
+)
 
 const (
 	BuildStatePending   BuildState = "pending"
@@ -25,8 +27,10 @@ type Build struct {
 	Services map[tree.NodePath]ServiceBuild `json:"serviceBuilds"`
 }
 
-type ServiceBuildID string
-type ServiceBuildState string
+type (
+	ServiceBuildID    string
+	ServiceBuildState string
+)
 
 const (
 	ServiceBuildStatePending   ServiceBuildState = "pending"
@@ -43,9 +47,11 @@ type ServiceBuild struct {
 	Components map[string]ComponentBuild `json:"componentBuilds"`
 }
 
-type ComponentBuildID string
-type ComponentBuildState string
-type ComponentBuildPhase string
+type (
+	ComponentBuildID    string
+	ComponentBuildState string
+	ComponentBuildPhase string
+)
 
 const (
 	ComponentBuildPhasePullingGitRepository ComponentBuildPhase = "pulling git repository"

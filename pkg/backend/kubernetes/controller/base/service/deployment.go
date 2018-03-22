@@ -25,8 +25,9 @@ import (
 )
 
 const (
-	ndotsValue     = "15"
-	dnsOptionNdots = "ndots"
+	userResourcePrefix = "lattice-user-"
+	ndotsValue         = "15"
+	dnsOptionNdots     = "ndots"
 )
 
 func (c *Controller) syncServiceDeployment(service *latticev1.Service, nodePool *latticev1.NodePool) (*appsv1.Deployment, error) {
@@ -340,7 +341,7 @@ func containerFromComponent(service *latticev1.Service, component *block.Compone
 	}
 
 	return corev1.Container{
-		Name:            kubeconstants.DeploymentResourcePrefixUser + component.Name,
+		Name:            userResourcePrefix + component.Name,
 		Image:           buildArtifacts.DockerImageFQN,
 		ImagePullPolicy: corev1.PullIfNotPresent,
 		Command:         component.Exec.Command,

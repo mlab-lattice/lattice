@@ -3,6 +3,9 @@ package constants
 const (
 	LabelKeyLatticeID = "lattice.mlab.com/id"
 
+	LabelKeyControlPlane        = "control-plane.lattice.mlab.com"
+	LabelKeyControlPlaneService = LabelKeyControlPlane + "/service"
+
 	LabelKeyNodeRoleLattice  = "node-role.lattice.mlab.com"
 	LabelKeyMasterNode       = LabelKeyNodeRoleLattice + "/master"
 	LabelKeyBuildNode        = LabelKeyNodeRoleLattice + "/build"
