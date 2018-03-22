@@ -42,7 +42,7 @@ func (kb *KubernetesBackend) ListSystems() ([]types.System, error) {
 		return nil, err
 	}
 
-	externalSystems := make([]types.System, 0, len(systems.Items))
+	externalSystems := make([]types.System, 0)
 	for _, system := range systems.Items {
 		externalSystem, err := kb.transformSystem(&system)
 		if err != nil {
@@ -74,11 +74,6 @@ func (kb *KubernetesBackend) DeleteSystem(systemID types.SystemID) error {
 }
 
 func (kb *KubernetesBackend) transformSystem(system *latticev1.System) (*types.System, error) {
-	name, err := kubeutil.SystemID(system.Namespace)
-	if err != nil {
-		return nil, err
-	}
-
 	var state types.SystemState
 	if system.DeletionTimestamp != nil {
 		state = types.SystemStateDeleting
@@ -87,7 +82,7 @@ func (kb *KubernetesBackend) transformSystem(system *latticev1.System) (*types.S
 	}
 
 	externalSystem := &types.System{
-		ID:            types.SystemID(name),
+		ID:            types.SystemID(system.Name),
 		State:         state,
 		DefinitionURL: system.Spec.DefinitionURL,
 	}

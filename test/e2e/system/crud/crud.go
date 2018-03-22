@@ -32,7 +32,7 @@ var _ = Describe("system", func() {
 		Expect(system.ID).To(Equal(systemID))
 		Expect(system.DefinitionURL).To(Equal(systemURL))
 		Expect(len(system.Services)).To(Equal(0))
-		Expect(system.State).To(Equal(types.SystemStateStable))
+		Expect(system.State).To(Equal(types.SystemStatePending))
 	})
 
 	It("should be able to list systems, and there should only be the newly created system", func() {
@@ -45,7 +45,7 @@ var _ = Describe("system", func() {
 		Expect(system.ID).To(Equal(systemID))
 		Expect(system.DefinitionURL).To(Equal(systemURL))
 		Expect(len(system.Services)).To(Equal(0))
-		Expect(system.State).To(Equal(types.SystemStateStable))
+		Expect(system.State).To(SatisfyAny(Equal(types.SystemStatePending), Equal(types.SystemStateStable)))
 	})
 
 	It("should be able to get the newly created system by ID", func() {
@@ -57,19 +57,26 @@ var _ = Describe("system", func() {
 		Expect(system.ID).To(Equal(systemID))
 		Expect(system.DefinitionURL).To(Equal(systemURL))
 		Expect(len(system.Services)).To(Equal(0))
-		Expect(system.State).To(Equal(types.SystemStateStable))
+		Expect(system.State).To(SatisfyAny(Equal(types.SystemStatePending), Equal(types.SystemStateStable)))
 	})
 
-	// Wait to ensure controller sees the system and updates the status
-	// FIXME: remove this
-	time.Sleep(6 * time.Second)
+	It("should see the system become stable", func() {
+		Eventually(func() types.SystemState {
+			system, err := context.TestContext.ClusterAPIClient.Systems().Get(systemID)
+			if err != nil {
+				return types.SystemStateFailed
+			}
+			return system.State
+		}, 10*time.Second).Should(Equal(types.SystemStateStable))
+	})
+
 	It("should be able to delete the newly created system by ID", func() {
 		err := context.TestContext.ClusterAPIClient.Systems().Delete(types.SystemID(systemID))
 		Expect(err).NotTo(HaveOccurred())
 	})
 
 	It("should be able to list systems, and the deleted system should either be in the deleting state or no longer be in the list", func() {
-		err := wait.PollImmediate(time.Second, 15*time.Second, func() (bool, error) {
+		err := wait.PollImmediate(time.Second, 45*time.Second, func() (bool, error) {
 			systems, err := context.TestContext.ClusterAPIClient.Systems().List()
 			if err != nil {
 				return false, err
@@ -82,7 +89,7 @@ var _ = Describe("system", func() {
 			Expect(len(systems)).To(Equal(1))
 			system := systems[0]
 			Expect(system.ID).To(Equal(systemID))
-			Expect(system.DefinitionURL).To(Equal(""))
+			Expect(system.DefinitionURL).To(Equal(systemURL))
 			Expect(len(system.Services)).To(Equal(0))
 			Expect(system.State).To(Equal(types.SystemStateDeleting))
 			return false, nil
