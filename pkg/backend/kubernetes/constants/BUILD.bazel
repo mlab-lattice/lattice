@@ -7,7 +7,6 @@ go_library(
         "annotation.go",
         "config.go",
         "control_plane.go",
-        "docker.go",
         "finalizer.go",
         "label.go",
         "namespace.go",

@@ -207,9 +207,9 @@ func (p *DefaultLocalLatticeProvisioner) bootstrap(address string, initialSystem
 								bootstrapArgs,
 								[]string{
 									"bootstrap:kubernetes",
-									"--controller-manager-var", fmt.Sprintf("image=%v", p.getLatticeContainerImage(kubeconstants.DockerImageLatticeControllerManager)),
-									"--api-var", fmt.Sprintf("image=%v", p.getLatticeContainerImage(kubeconstants.DockerImageAPIServerRest)),
-									"--component-builder-var", fmt.Sprintf("image=%v", p.getLatticeContainerImage(kubeconstants.DockerImageComponentBuilder)),
+									"--controller-manager-var", fmt.Sprintf("image=%v", p.getLatticeContainerImage("kubernetes-lattice-controller-manager")),
+									"--api-var", fmt.Sprintf("image=%v", p.getLatticeContainerImage("kubernetes-api-server-rest")),
+									"--component-builder-var", fmt.Sprintf("image=%v", p.getLatticeContainerImage("kubernetes-component-builder")),
 									"--component-build-docker-artifact-var", "registry=lattice-local",
 									"--component-build-docker-artifact-var", "repository-per-image=true",
 									"--component-build-docker-artifact-var", "push=false",

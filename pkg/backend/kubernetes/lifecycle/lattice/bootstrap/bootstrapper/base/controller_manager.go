@@ -17,7 +17,7 @@ import (
 )
 
 func (b *DefaultBootstrapper) controllerManagerResources(resources *bootstrapper.Resources) {
-	internalNamespace := kubeutil.InternalNamespace(b.ClusterID)
+	internalNamespace := kubeutil.InternalNamespace(b.LatticeID)
 
 	// FIXME: prefix this cluster role with the cluster id so multiple clusters can have different
 	// cluster role definitions
@@ -128,7 +128,7 @@ func (b *DefaultBootstrapper) controllerManagerResources(resources *bootstrapper
 		},
 	}
 
-	args := []string{"--cloud-provider", b.CloudProviderName, "--cluster-id", string(b.ClusterID)}
+	args := []string{"--cloud-provider", b.CloudProviderName, "--lattice-id", string(b.LatticeID)}
 	args = append(args, b.Options.MasterComponents.LatticeControllerManager.Args...)
 
 	if b.Options.MasterComponents.LatticeControllerManager.TerraformModulePath != "" {
@@ -147,7 +147,7 @@ func (b *DefaultBootstrapper) controllerManagerResources(resources *bootstrapper
 	}
 
 	labels := map[string]string{
-		kubeconstants.MasterNodeLabelComponent: kubeconstants.ControlPlaneServiceLatticeControllerManager,
+		kubeconstants.LabelKeyControlPlaneService: kubeconstants.ControlPlaneServiceLatticeControllerManager,
 	}
 
 	daemonSet := &appsv1.DaemonSet{
