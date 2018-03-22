@@ -3,7 +3,6 @@ package local
 import (
 	"fmt"
 	"os/user"
-	"strings"
 	"time"
 
 	kubeconstants "github.com/mlab-lattice/system/pkg/backend/kubernetes/constants"
@@ -30,20 +29,22 @@ const (
 )
 
 var (
-	localDNSControllerArgList = []string{
+	dnsControllerArgList = []string{
 		"-v", "5",
 		"--logtostderr",
 		"--dnsmasq-config-path", DnsmasqConfigFile,
 		"--hosts-file-path", DNSHostsFile,
 	}
 
-	dnsNannyArgList = []string{
+	// arguments for the dnsmasq nanny itself
+	dnsmasqNannyArgList = []string{
 		"-v=2",
 		"-logtostderr",
 		"-restartDnsmasq=true",
 		"-configDir=" + DNSConfigDirectory,
 	}
 
+	// arguments passed through dnsmasq-nanny to dnsmasq
 	dnsmasqArgList = []string{
 		"-k", // Keep in foreground so as to not immediately exit.
 		"--hostsdir=" + DNSConfigDirectory,             // Read all the hosts from this directory. File changes read automatically by dnsmasq.
@@ -183,21 +184,9 @@ func (p *DefaultLocalClusterProvisioner) bootstrap(address string, initialSystem
 		return err
 	}
 
-	dnsNannyArgList := append(append(dnsNannyArgList, "--"), dnsmasqArgList...)
-	// Use ':' as the separator here, as ',' is included in the --conf-dir argument
-	dnsNannyArgs := "local-dns-server-args=" + strings.Join(dnsNannyArgList, ":")
-	dnsControllerArgs := "local-dns-controller-args=" + strings.Join(localDNSControllerArgList, ",")
-
 	jobName := "bootstrap-lattice"
 	var backoffLimit int32 = 2
 	var bootstrapArgs []string
-
-	if initialSystemDefinitionURL != nil {
-		bootstrapArgs = append(
-			bootstrapArgs,
-			"--initial-system-definition-url", *initialSystemDefinitionURL,
-		)
-	}
 
 	job := batchv1.Job{
 		ObjectMeta: metav1.ObjectMeta{
@@ -224,16 +213,14 @@ func (p *DefaultLocalClusterProvisioner) bootstrap(address string, initialSystem
 									"--component-build-docker-artifact-var", "registry=lattice-local",
 									"--component-build-docker-artifact-var", "repository-per-image=true",
 									"--component-build-docker-artifact-var", "push=false",
-									"--cloud-provider", "local",
-									"--cloud-provider-var", "ip=" + address,
-									"--cloud-provider-var", fmt.Sprintf("dns-var=controller-image=%v", p.getLatticeContainerImage(DockerImageDNSController)),
-									"--cloud-provider-var", fmt.Sprintf("dns-var=controller-args=%v", dnsControllerArgs),
-									"--cloud-provider-var", fmt.Sprintf("dns-var=dnsmasq-nanny-image=%v", DockerImageDnsmasqNanny),
-									"--cloud-provider-var", fmt.Sprintf("dns-var=dnsmasq-nanny-args=%v", dnsNannyArgs),
 									"--service-mesh", servicemesh.Envoy,
 									"--service-mesh-var", fmt.Sprintf("prepare-image=%v", p.getLatticeContainerImage(constants.DockerImageEnvoyPrepare)),
 									"--service-mesh-var", fmt.Sprintf("xds-api-image=%v", p.getLatticeContainerImage(constants.DockerImageEnvoyXDSAPIRestPerNode)),
 									"--service-mesh-var", "redirect-cidr-block=172.16.0.0/16",
+									"--cloud-provider", "local",
+									"--cloud-provider-var", "ip=" + address,
+									"--cloud-provider-var", fmt.Sprintf("dns-var=controller-image=%v", p.getLatticeContainerImage(DockerImageDNSController)),
+									"--cloud-provider-var", fmt.Sprintf("dns-var=dnsmasq-nanny-image=%v", DockerImageDnsmasqNanny),
 								}...,
 							),
 						},
@@ -244,6 +231,38 @@ func (p *DefaultLocalClusterProvisioner) bootstrap(address string, initialSystem
 				},
 			},
 		},
+	}
+
+	// add dns controller args
+	for _, arg := range dnsControllerArgList {
+		job.Spec.Template.Spec.Containers[0].Args = append(
+			job.Spec.Template.Spec.Containers[0].Args,
+			"--cloud-provider-var",
+			fmt.Sprintf("dns-var=controller-args=%v", arg),
+		)
+	}
+
+	// add dnsmasq nanny args
+	for _, arg := range dnsmasqNannyArgList {
+		job.Spec.Template.Spec.Containers[0].Args = append(
+			job.Spec.Template.Spec.Containers[0].Args,
+			"--cloud-provider-var",
+			fmt.Sprintf("dns-var=dnsmasq-nanny-args=%v", arg),
+		)
+	}
+
+	// dnsmasq nanny expects its args, then a --, then the args to pass through to dnsmasq
+	job.Spec.Template.Spec.Containers[0].Args = append(
+		job.Spec.Template.Spec.Containers[0].Args,
+		"--cloud-provider-var",
+		"dns-var=dnsmasq-nanny-args=--",
+	)
+	for _, arg := range dnsmasqArgList {
+		job.Spec.Template.Spec.Containers[0].Args = append(
+			job.Spec.Template.Spec.Containers[0].Args,
+			"--cloud-provider-var",
+			fmt.Sprintf("dns-var=dnsmasq-nanny-args=%v", arg),
+		)
 	}
 
 	fmt.Println("Creating bootstrap job")

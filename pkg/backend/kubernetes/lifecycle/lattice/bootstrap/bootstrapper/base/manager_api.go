@@ -152,7 +152,7 @@ func (b *DefaultBootstrapper) managerAPIResources(resources *bootstrapper.Resour
 
 	args := []string{
 		"--port", strconv.Itoa(int(b.Options.MasterComponents.ManagerAPI.Port)),
-		"--cluster-id", string(b.LatticeID),
+		"--lattice-id", string(b.LatticeID),
 	}
 	args = append(args, b.Options.MasterComponents.ManagerAPI.Args...)
 	labels := map[string]string{

@@ -66,7 +66,10 @@ func LatticeBootstrapperFlags() (command.Flags, *LatticeBootstrapperOptions) {
 					Required: true,
 					Target:   &options.DNS.DnsmasqNannyImage,
 				},
-				&command.StringSliceFlag{
+				// the args for dnsmasq nanny contain commas, so use a
+				// StringArrayFlag so these don't try to be parsed as separate
+				// args
+				&command.StringArrayFlag{
 					Name:   "dnsmasq-nanny-args",
 					Target: &options.DNS.DnsmasqNannyArgs,
 				},
