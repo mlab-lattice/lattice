@@ -9,7 +9,6 @@ import (
 
 	kubecomponentbuilder "github.com/mlab-lattice/system/pkg/backend/kubernetes/componentbuilder"
 	"github.com/mlab-lattice/system/pkg/componentbuilder"
-	"github.com/mlab-lattice/system/pkg/constants"
 	"github.com/mlab-lattice/system/pkg/definition/block"
 	"github.com/mlab-lattice/system/pkg/types"
 	"github.com/mlab-lattice/system/pkg/util/aws"
@@ -58,7 +57,7 @@ var RootCmd = &cobra.Command{
 			Push:       dockerPush,
 		}
 
-		if dockerRegistryAuthType == constants.DockerRegistryAuthAWSEC2Role {
+		if dockerRegistryAuthType == aws.EC2RoleDockerRegistryAuth {
 			dockerOptions.RegistryAuthProvider = &aws.ECRRegistryAuthProvider{}
 		}
 

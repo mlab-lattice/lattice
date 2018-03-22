@@ -5,7 +5,6 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/mlab-lattice/system/pkg/constants"
 	"github.com/mlab-lattice/system/pkg/definition"
 	"github.com/mlab-lattice/system/pkg/definition/tree"
 	"github.com/mlab-lattice/system/pkg/types"
@@ -538,8 +537,12 @@ func (r *restServer) getSystemDefinitionRoot(systemID string, version string) (t
 		return nil, fmt.Errorf("System %v does not exist", systemID)
 	}
 
-	systemDefURI := fmt.Sprintf("%v#%v/%s", system.DefinitionURL, version,
-		constants.SystemDefinitionRootPathDefault)
+	systemDefURI := fmt.Sprintf(
+		"%v#%v/%s",
+		system.DefinitionURL,
+		version,
+		definition.SystemDefinitionRootPathDefault,
+	)
 
 	return r.resolver.ResolveDefinition(systemDefURI, &git.Options{})
 }

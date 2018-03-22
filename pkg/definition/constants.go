@@ -1,4 +1,4 @@
-package constants
+package definition
 
 const (
 	SystemDefinitionRootPathDefault = "system.json"

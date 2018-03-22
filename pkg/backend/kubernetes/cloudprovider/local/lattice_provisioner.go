@@ -9,7 +9,6 @@ import (
 	kubeconstants "github.com/mlab-lattice/system/pkg/backend/kubernetes/constants"
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/servicemesh"
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/util/minikube"
-	"github.com/mlab-lattice/system/pkg/constants"
 
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -202,7 +201,7 @@ func (p *DefaultLocalLatticeProvisioner) bootstrap(address string, initialSystem
 					Containers: []corev1.Container{
 						{
 							Name:  "bootstrap-lattice",
-							Image: p.getLatticeContainerImage(constants.DockerImageLatticectl),
+							Image: p.getLatticeContainerImage("latticectl"),
 							Args: append(
 								bootstrapArgs,
 								[]string{
@@ -214,8 +213,8 @@ func (p *DefaultLocalLatticeProvisioner) bootstrap(address string, initialSystem
 									"--component-build-docker-artifact-var", "repository-per-image=true",
 									"--component-build-docker-artifact-var", "push=false",
 									"--service-mesh", servicemesh.Envoy,
-									"--service-mesh-var", fmt.Sprintf("prepare-image=%v", p.getLatticeContainerImage(constants.DockerImageEnvoyPrepare)),
-									"--service-mesh-var", fmt.Sprintf("xds-api-image=%v", p.getLatticeContainerImage(constants.DockerImageEnvoyXDSAPIRestPerNode)),
+									"--service-mesh-var", fmt.Sprintf("prepare-image=%v", p.getLatticeContainerImage("envoy-prepare")),
+									"--service-mesh-var", fmt.Sprintf("xds-api-image=%v", p.getLatticeContainerImage("kubernetes-envoy-xds-api-rest-per-node")),
 									"--service-mesh-var", "redirect-cidr-block=172.16.0.0/16",
 									"--cloud-provider", "local",
 									"--cloud-provider-var", "ip=" + address,
