@@ -16,7 +16,6 @@ type UnsetCommand struct {
 
 func (c *UnsetCommand) Base() (*latticectl.BaseCommand, error) {
 	var name string
-	var value string
 
 	cmd := &lctlcommand.SystemCommand{
 		Name: "unset",
@@ -36,7 +35,7 @@ func (c *UnsetCommand) Base() (*latticectl.BaseCommand, error) {
 			path := tree.NodePath(splitName[0])
 			name = splitName[1]
 
-			err := UnsetSecret(ctx.Client().Systems().Secrets(ctx.SystemID()), path, name, value)
+			err := UnsetSecret(ctx.Client().Systems().Secrets(ctx.SystemID()), path, name)
 			if err != nil {
 				log.Fatal(err)
 			}
@@ -46,8 +45,8 @@ func (c *UnsetCommand) Base() (*latticectl.BaseCommand, error) {
 	return cmd.Base()
 }
 
-func UnsetSecret(client client.SystemSecretClient, path tree.NodePath, name, value string) error {
-	err := client.Unset(path, name, value)
+func UnsetSecret(client client.SystemSecretClient, path tree.NodePath, name string) error {
+	err := client.Unset(path, name)
 	if err != nil {
 		return err
 	}
