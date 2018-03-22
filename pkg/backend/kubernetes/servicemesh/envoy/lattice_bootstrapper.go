@@ -5,7 +5,7 @@ import (
 
 	kubeconstants "github.com/mlab-lattice/system/pkg/backend/kubernetes/constants"
 	latticev1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
-	clusterbootstrapper "github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/cluster/bootstrap/bootstrapper"
+	"github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/lattice/bootstrap/bootstrapper"
 	"github.com/mlab-lattice/system/pkg/cli/command"
 
 	corev1 "k8s.io/api/core/v1"
@@ -14,7 +14,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-type ClusterBootstrapperOptions struct {
+type LatticeBootstrapperOptions struct {
 	PrepareImage      string
 	Image             string
 	RedirectCIDRBlock string
@@ -22,8 +22,8 @@ type ClusterBootstrapperOptions struct {
 	XDSAPIPort        int32
 }
 
-func NewClusterBootstrapper(options *ClusterBootstrapperOptions) *DefaultEnvoyClusterBootstrapper {
-	return &DefaultEnvoyClusterBootstrapper{
+func NewLatticeBootstrapper(options *LatticeBootstrapperOptions) *DefaultEnvoylatticeBootstrapper {
+	return &DefaultEnvoylatticeBootstrapper{
 		prepareImage:      options.PrepareImage,
 		image:             options.Image,
 		redirectCIDRBlock: options.RedirectCIDRBlock,
@@ -32,8 +32,8 @@ func NewClusterBootstrapper(options *ClusterBootstrapperOptions) *DefaultEnvoyCl
 	}
 }
 
-func ClusterBootstrapperFlags() (command.Flags, *ClusterBootstrapperOptions) {
-	options := &ClusterBootstrapperOptions{}
+func LatticeBootstrapperFlags() (command.Flags, *LatticeBootstrapperOptions) {
+	options := &LatticeBootstrapperOptions{}
 	flags := command.Flags{
 		&command.StringFlag{
 			Name:     "prepare-image",
@@ -64,7 +64,7 @@ func ClusterBootstrapperFlags() (command.Flags, *ClusterBootstrapperOptions) {
 	return flags, options
 }
 
-type DefaultEnvoyClusterBootstrapper struct {
+type DefaultEnvoylatticeBootstrapper struct {
 	prepareImage      string
 	image             string
 	redirectCIDRBlock string
@@ -72,7 +72,7 @@ type DefaultEnvoyClusterBootstrapper struct {
 	xdsAPIPort        int32
 }
 
-func (b *DefaultEnvoyClusterBootstrapper) BootstrapClusterResources(resources *clusterbootstrapper.ClusterResources) {
+func (b *DefaultEnvoylatticeBootstrapper) BootstrapLatticeResources(resources *bootstrapper.Resources) {
 	for _, daemonSet := range resources.DaemonSets {
 		if daemonSet.Name == kubeconstants.MasterNodeComponentLatticeControllerManager {
 			daemonSet.Spec.Template.Spec.Containers[0].Args = append(

@@ -1,7 +1,7 @@
 package constants
 
 const (
-	LabelKeyLatticeClusterID = "cluster.lattice.mlab.com/id"
+	LabelKeyLatticeID = "lattice.mlab.com/id"
 
 	LabelKeyNodeRoleLattice  = "node-role.lattice.mlab.com"
 	LabelKeyMasterNode       = LabelKeyNodeRoleLattice + "/master"

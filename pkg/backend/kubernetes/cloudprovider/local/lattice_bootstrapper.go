@@ -5,7 +5,7 @@ import (
 
 	kubeconstants "github.com/mlab-lattice/system/pkg/backend/kubernetes/constants"
 	latticev1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
-	clusterbootstrapper "github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/cluster/bootstrap/bootstrapper"
+	"github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/lattice/bootstrap/bootstrapper"
 	kubeutil "github.com/mlab-lattice/system/pkg/backend/kubernetes/util/kubernetes"
 	"github.com/mlab-lattice/system/pkg/cli/command"
 	"github.com/mlab-lattice/system/pkg/types"
@@ -27,7 +27,7 @@ const (
 	serviceAccountDNS = "local-dns"
 )
 
-type ClusterBootstrapperOptions struct {
+type LatticeBootstrapperOptions struct {
 	IP  string
 	DNS *OptionsDNS
 }
@@ -39,16 +39,16 @@ type OptionsDNS struct {
 	ControllerArgs    []string
 }
 
-func NewClusterBootstrapper(clusterID types.LatticeID, options *ClusterBootstrapperOptions) *DefaultLocalClusterBootstrapper {
-	return &DefaultLocalClusterBootstrapper{
-		ClusterID: clusterID,
+func NewLatticeBootstrapper(latticeID types.LatticeID, options *LatticeBootstrapperOptions) *DefaultLocalLatticeBootstrapper {
+	return &DefaultLocalLatticeBootstrapper{
+		LatticeID: latticeID,
 		ip:        options.IP,
 		DNS:       options.DNS,
 	}
 }
 
-func ClusterBootstrapperFlags() (command.Flags, *ClusterBootstrapperOptions) {
-	options := &ClusterBootstrapperOptions{
+func LatticeBootstrapperFlags() (command.Flags, *LatticeBootstrapperOptions) {
+	options := &LatticeBootstrapperOptions{
 		DNS: &OptionsDNS{},
 	}
 	flags := command.Flags{
@@ -85,14 +85,14 @@ func ClusterBootstrapperFlags() (command.Flags, *ClusterBootstrapperOptions) {
 	return flags, options
 }
 
-type DefaultLocalClusterBootstrapper struct {
-	ClusterID types.LatticeID
+type DefaultLocalLatticeBootstrapper struct {
+	LatticeID types.LatticeID
 	ip        string
 	DNS       *OptionsDNS
 }
 
-func (cp *DefaultLocalClusterBootstrapper) BootstrapClusterResources(resources *clusterbootstrapper.ClusterResources) {
-	cp.bootstrapClusterDNS(resources)
+func (cp *DefaultLocalLatticeBootstrapper) BootstrapLatticeResources(resources *bootstrapper.Resources) {
+	cp.bootstrapLatticeDNS(resources)
 
 	for _, daemonSet := range resources.DaemonSets {
 		template := transformPodTemplateSpec(&daemonSet.Spec.Template)
@@ -100,7 +100,7 @@ func (cp *DefaultLocalClusterBootstrapper) BootstrapClusterResources(resources *
 		if daemonSet.Name == kubeconstants.MasterNodeComponentLatticeControllerManager {
 			template.Spec.Containers[0].Args = append(
 				template.Spec.Containers[0].Args,
-				"--cloud-provider-var", fmt.Sprintf("cluster-ip=%v", cp.ip),
+				"--cloud-provider-var", fmt.Sprintf("ip=%v", cp.ip),
 			)
 		}
 
@@ -108,10 +108,10 @@ func (cp *DefaultLocalClusterBootstrapper) BootstrapClusterResources(resources *
 	}
 }
 
-func (cp *DefaultLocalClusterBootstrapper) bootstrapClusterDNS(resources *clusterbootstrapper.ClusterResources) {
-	namespace := kubeutil.InternalNamespace(cp.ClusterID)
+func (cp *DefaultLocalLatticeBootstrapper) bootstrapLatticeDNS(resources *bootstrapper.Resources) {
+	namespace := kubeutil.InternalNamespace(cp.LatticeID)
 
-	controllerArgs := []string{"--cluster-id", string(cp.ClusterID)}
+	controllerArgs := []string{"--lattice-id", string(cp.LatticeID)}
 	controllerArgs = append(controllerArgs, cp.DNS.ControllerArgs...)
 
 	dnsmasqNannyArgs := []string{}

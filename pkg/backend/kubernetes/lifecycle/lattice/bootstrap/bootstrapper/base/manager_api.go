@@ -5,7 +5,7 @@ import (
 
 	kubeconstants "github.com/mlab-lattice/system/pkg/backend/kubernetes/constants"
 	latticev1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
-	"github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/cluster/bootstrap/bootstrapper"
+	"github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/lattice/bootstrap/bootstrapper"
 	kubeutil "github.com/mlab-lattice/system/pkg/backend/kubernetes/util/kubernetes"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -16,8 +16,8 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 )
 
-func (b *DefaultBootstrapper) managerAPIResources(resources *bootstrapper.ClusterResources) {
-	internalNamespace := kubeutil.InternalNamespace(b.ClusterID)
+func (b *DefaultBootstrapper) managerAPIResources(resources *bootstrapper.Resources) {
+	internalNamespace := kubeutil.InternalNamespace(b.LatticeID)
 
 	// FIXME: prefix this cluster role with the cluster id so multiple clusters can have different
 	// cluster role definitions
@@ -152,7 +152,7 @@ func (b *DefaultBootstrapper) managerAPIResources(resources *bootstrapper.Cluste
 
 	args := []string{
 		"--port", strconv.Itoa(int(b.Options.MasterComponents.ManagerAPI.Port)),
-		"--cluster-id", string(b.ClusterID),
+		"--cluster-id", string(b.LatticeID),
 	}
 	args = append(args, b.Options.MasterComponents.ManagerAPI.Args...)
 	labels := map[string]string{

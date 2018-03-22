@@ -19,7 +19,7 @@ var (
 	terraformModuleSourcePath string
 
 	region     string
-	clusterID  string
+	latticeID  string
 	name       string
 	instanceID string
 	deviceName string
@@ -54,7 +54,7 @@ func apply() error {
 			"etcd-volume-attachment": kubetf.NewMasterNodeEtcdVolumeAttachment(
 				terraformModuleSourcePath,
 				region,
-				clusterID,
+				latticeID,
 				name,
 				instanceID,
 				deviceName,
@@ -85,7 +85,7 @@ func init() {
 	Cmd.Flags().StringVar(&terraformS3KeyPrefix, "terraform-state-s3-key-prefix", "", "")
 	Cmd.Flags().StringVar(&terraformModuleSourcePath, "terraform-module-source-path", "", "")
 	Cmd.Flags().StringVar(&region, "region", "", "")
-	Cmd.Flags().StringVar(&clusterID, "cluster-id", "", "")
+	Cmd.Flags().StringVar(&latticeID, "lattice-id", "", "")
 	Cmd.Flags().StringVar(&name, "name", "", "")
 	Cmd.Flags().StringVar(&instanceID, "instance-id", "", "")
 	Cmd.Flags().StringVar(&deviceName, "device-name", "", "")

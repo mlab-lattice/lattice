@@ -40,7 +40,7 @@ type Controller struct {
 
 	dnsmasqConfigPath string
 	hostFilePath      string
-	clusterID         types.LatticeID
+	latticeID         types.LatticeID
 }
 
 var (
@@ -51,7 +51,7 @@ var (
 func NewController(
 	dnsmasqConfigPath string,
 	hostConfigPath string,
-	clusterID types.LatticeID,
+	latticeID types.LatticeID,
 	latticeClient latticeclientset.Interface,
 	client clientset.Interface,
 	endpointInformer latticeinformers.EndpointInformer,
@@ -68,7 +68,7 @@ func NewController(
 
 	c.dnsmasqConfigPath = dnsmasqConfigPath
 	c.hostFilePath = hostConfigPath
-	c.clusterID = clusterID
+	c.latticeID = latticeID
 
 	c.endpointister = endpointInformer.Lister()
 	c.endpointListerSynced = endpointInformer.Informer().HasSynced
@@ -212,7 +212,7 @@ func (c *Controller) rewriteDnsmasqConfig(endpoints []*latticev1.Endpoint) error
 		}
 
 		domain := endpoint.Spec.Path.ToDomain(true)
-		cname := endpointutil.DNSName(domain, systemID, c.clusterID)
+		cname := endpointutil.DNSName(domain, systemID, c.latticeID)
 
 		if endpoint.Spec.IP != nil {
 			hostConfigFileContents += fmt.Sprintf("%v %v\n", *endpoint.Spec.IP, cname)

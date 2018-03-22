@@ -6,11 +6,11 @@ import (
 
 	kubeconstants "github.com/mlab-lattice/system/pkg/backend/kubernetes/constants"
 	latticev1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
-	clusterbootstrapper "github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/cluster/bootstrap/bootstrapper"
+	"github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/lattice/bootstrap/bootstrapper"
 	"github.com/mlab-lattice/system/pkg/cli/command"
 )
 
-type ClusterBootstrapperOptions struct {
+type LatticeBootstrapperOptions struct {
 	Region    string
 	AccountID string
 	VPCID     string
@@ -23,8 +23,8 @@ type ClusterBootstrapperOptions struct {
 	KeyName       string
 }
 
-func NewClusterBootstrapper(options *ClusterBootstrapperOptions) *DefaultAWSClusterBootstrapper {
-	return &DefaultAWSClusterBootstrapper{
+func NewLatticeBootstrapper(options *LatticeBootstrapperOptions) *DefaultAWSLatticeBootstrapper {
+	return &DefaultAWSLatticeBootstrapper{
 		region:    options.Region,
 		accountID: options.AccountID,
 		vpcID:     options.VPCID,
@@ -38,8 +38,8 @@ func NewClusterBootstrapper(options *ClusterBootstrapperOptions) *DefaultAWSClus
 	}
 }
 
-func ClusterBootstrapperFlags() (command.Flags, *ClusterBootstrapperOptions) {
-	options := &ClusterBootstrapperOptions{}
+func LatticeBootstrapperFlags() (command.Flags, *LatticeBootstrapperOptions) {
+	options := &LatticeBootstrapperOptions{}
 	flags := command.Flags{
 		&command.StringFlag{
 			Name:     "region",
@@ -86,7 +86,7 @@ func ClusterBootstrapperFlags() (command.Flags, *ClusterBootstrapperOptions) {
 	return flags, options
 }
 
-type DefaultAWSClusterBootstrapper struct {
+type DefaultAWSLatticeBootstrapper struct {
 	region    string
 	accountID string
 	vpcID     string
@@ -99,7 +99,7 @@ type DefaultAWSClusterBootstrapper struct {
 	keyName       string
 }
 
-func (cp *DefaultAWSClusterBootstrapper) BootstrapClusterResources(resources *clusterbootstrapper.ClusterResources) {
+func (cp *DefaultAWSLatticeBootstrapper) BootstrapLatticeResources(resources *bootstrapper.Resources) {
 	resources.Config.Spec.CloudProvider.AWS = &latticev1.ConfigCloudProviderAWS{
 		BaseNodeAMIID: cp.baseNodeAMIID,
 		KeyName:       cp.keyName,

@@ -3,25 +3,25 @@ package servicemesh
 import (
 	"fmt"
 
-	clusterbootstrapper "github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/cluster/bootstrap/bootstrapper"
+	clusterbootstrapper "github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/lattice/bootstrap/bootstrapper"
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/servicemesh/envoy"
 	"github.com/mlab-lattice/system/pkg/cli/command"
 )
 
 type ClusterBootstrapperOptions struct {
-	Envoy *envoy.ClusterBootstrapperOptions
+	Envoy *envoy.LatticeBootstrapperOptions
 }
 
-func NewClusterBootstrapper(options *ClusterBootstrapperOptions) (clusterbootstrapper.Interface, error) {
+func NewLatticeBootstrapper(options *ClusterBootstrapperOptions) (clusterbootstrapper.Interface, error) {
 	if options.Envoy != nil {
-		return envoy.NewClusterBootstrapper(options.Envoy), nil
+		return envoy.NewLatticeBootstrapper(options.Envoy), nil
 	}
 
 	return nil, fmt.Errorf("must provide service mesh options")
 }
 
-func ClusterBoostrapperFlag(serviceMesh *string) (command.Flag, *ClusterBootstrapperOptions) {
-	envoyFlags, envoyOptions := envoy.ClusterBootstrapperFlags()
+func LatticeBoostrapperFlag(serviceMesh *string) (command.Flag, *ClusterBootstrapperOptions) {
+	envoyFlags, envoyOptions := envoy.LatticeBootstrapperFlags()
 	options := &ClusterBootstrapperOptions{}
 
 	flag := &command.DelayedEmbeddedFlag{

@@ -5,7 +5,7 @@
 variable "aws_account_id" {}
 variable "region" {}
 
-variable "cluster_id" {}
+variable "lattice_id" {}
 
 variable "control_plane_container_channel" {}
 
@@ -68,7 +68,7 @@ provider "aws" {
 # Role
 
 resource "aws_iam_role" "master_node_role" {
-  name               = "lattice.${var.cluster_id}.master-${var.name}"
+  name               = "lattice.${var.lattice_id}.master-${var.name}"
   assume_role_policy = "${module.assume_role_from_ec2_service_policy_doucment.json}"
 }
 
@@ -184,7 +184,7 @@ data "aws_iam_policy_document" "master_node_role_policy_document" {
 module "base_node" {
   source = "../../node/base"
 
-  cluster_id = "${var.cluster_id}"
+  lattice_id = "${var.lattice_id}"
   name       = "master-${var.name}"
 
   kubelet_labels = "node-role.kubernetes.io/master=true,node-role.lattice.mlab.com/master=true"
@@ -193,7 +193,7 @@ module "base_node" {
   additional_user_data = <<USER_DATA
 {
   "aws_account_id": "${var.aws_account_id}",
-  "cluster_id": "${var.cluster_id}",
+  "lattice_id": "${var.lattice_id}",
   "system_definition_url": "${var.system_definition_url}",
   "control_plane_container_channel": "${var.control_plane_container_channel}",
   "master_name": "${var.name}",
@@ -230,7 +230,7 @@ resource "aws_ebs_volume" "master_node_etcd_volume" {
   encrypted         = true
 
   tags {
-    KubernetesCluster = "lattice.${var.cluster_id}"
-    Name              = "lattice.${var.cluster_id}.master-${var.name}-etcd"
+    KubernetesCluster = "lattice.${var.lattice_id}"
+    Name              = "lattice.${var.lattice_id}.master-${var.name}-etcd"
   }
 }

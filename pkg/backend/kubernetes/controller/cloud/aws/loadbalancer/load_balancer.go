@@ -112,7 +112,7 @@ func (c *Controller) loadBalancerConfig(
 			Bucket: c.terraformBackendOptions.S3.Bucket,
 			Key: fmt.Sprintf(
 				"%v/%v",
-				kubetf.GetS3BackendSystemStatePathRoot(c.clusterID, systemID),
+				kubetf.GetS3BackendSystemStatePathRoot(c.latticeID, systemID),
 				loadBalancer.Name,
 			),
 			Encrypt: true,
@@ -169,7 +169,7 @@ func (c *Controller) loadBalancerModule(loadBalancer *latticev1.LoadBalancer) (*
 	loadBalancerModule := kubetf.NewApplicationLoadBalancerModule(
 		c.terraformModuleRoot,
 		c.awsCloudProvider.Region(),
-		string(c.clusterID),
+		string(c.latticeID),
 		string(systemID),
 		c.awsCloudProvider.VPCID(),
 		strings.Join(c.awsCloudProvider.SubnetIDs(), ","),

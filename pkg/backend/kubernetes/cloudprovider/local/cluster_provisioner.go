@@ -74,8 +74,8 @@ func NewClusterProvisioner(latticeContainerRegistry, latticeContainerRepoPrefix,
 	return provisioner, nil
 }
 
-func (p *DefaultLocalClusterProvisioner) Provision(clusterID string, initialSystemDefinitionURL *string) (string, error) {
-	prefixedName := clusterNamePrefixMinikube + clusterID
+func (p *DefaultLocalClusterProvisioner) Provision(latticeID string, initialSystemDefinitionURL *string) (string, error) {
+	prefixedName := clusterNamePrefixMinikube + latticeID
 	result, logFilename, err := p.mec.Start(prefixedName)
 	if err != nil {
 		return "", err
@@ -88,12 +88,12 @@ func (p *DefaultLocalClusterProvisioner) Provision(clusterID string, initialSyst
 		return "", err
 	}
 
-	address, err := p.address(clusterID)
+	address, err := p.address(latticeID)
 	if err != nil {
 		return "", err
 	}
 
-	err = p.bootstrap(address, initialSystemDefinitionURL, clusterID)
+	err = p.bootstrap(address, initialSystemDefinitionURL, latticeID)
 	if err != nil {
 		return "", err
 	}
@@ -112,8 +112,8 @@ func (p *DefaultLocalClusterProvisioner) Provision(clusterID string, initialSyst
 	return address, nil
 }
 
-func (p *DefaultLocalClusterProvisioner) address(clusterID string) (string, error) {
-	address, err := p.mec.IP(clusterNamePrefixMinikube + clusterID)
+func (p *DefaultLocalClusterProvisioner) address(latticeID string) (string, error) {
+	address, err := p.mec.IP(clusterNamePrefixMinikube + latticeID)
 	if err != nil {
 		return "", err
 	}

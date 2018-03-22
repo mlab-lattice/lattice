@@ -28,7 +28,7 @@ var (
 	workDirectory    string
 	componentBuildID string
 	systemIDString   string
-	clusterIDString  string
+	latticeID        string
 
 	dockerRegistry         string
 	dockerRegistryAuthType string
@@ -62,10 +62,10 @@ var RootCmd = &cobra.Command{
 			dockerOptions.RegistryAuthProvider = &aws.ECRRegistryAuthProvider{}
 		}
 
-		clusterID := types.LatticeID(clusterIDString)
+		latticeID := types.LatticeID(latticeID)
 		systemID := types.SystemID(systemIDString)
 
-		statusUpdater, err := kubecomponentbuilder.NewKubernetesStatusUpdater(clusterID, kubeconfig)
+		statusUpdater, err := kubecomponentbuilder.NewKubernetesStatusUpdater(latticeID, kubeconfig)
 		if err != nil {
 			log.Fatal("error getting status updater: " + err.Error())
 		}
@@ -140,8 +140,8 @@ func Execute() {
 func init() {
 	RootCmd.Flags().StringVar(&componentBuildID, "component-build-id", "", "ID of the component build")
 	RootCmd.MarkFlagRequired("component-build-id")
-	RootCmd.Flags().StringVar(&clusterIDString, "cluster-id", "", "ID of the lattice cluster")
-	RootCmd.MarkFlagRequired("cluster-id")
+	RootCmd.Flags().StringVar(&latticeID, "lattice-id", "", "ID of the lattice")
+	RootCmd.MarkFlagRequired("lattice-id")
 	RootCmd.Flags().StringVar(&systemIDString, "system-id", "", "ID of the system")
 	RootCmd.MarkFlagRequired("system-id")
 	RootCmd.Flags().StringVar(&componentBuildDefinition, "component-build-definition", "", "JSON serialized version of the component build definition block")

@@ -31,8 +31,8 @@ import (
 )
 
 var (
-	kubeconfig      string
-	clusterIDString string
+	kubeconfig string
+	latticeID  string
 
 	cloudProviderName string
 	cloudProviderVars []string
@@ -63,7 +63,7 @@ var RootCmd = &cobra.Command{
 			panic(err)
 		}
 
-		clusterID := types.LatticeID(clusterIDString)
+		latticeID := types.LatticeID(latticeID)
 
 		cloudSystemBootstrapper, err := cloudprovider.SystemBootstrapperFromFlags(cloudProviderName, cloudProviderVars)
 		if err != nil {
@@ -81,7 +81,7 @@ var RootCmd = &cobra.Command{
 		}
 
 		// TODO: setting stop as nil for now, won't actually need it until leader-election is used
-		ctx, err := CreateControllerContext(clusterID, systemBoostrappers, config, nil, terraformModulePath)
+		ctx, err := CreateControllerContext(latticeID, systemBoostrappers, config, nil, terraformModulePath)
 		if err != nil {
 			panic(err)
 		}
@@ -113,8 +113,8 @@ func init() {
 	pflag.CommandLine.AddGoFlagSet(goflag.CommandLine)
 
 	RootCmd.Flags().StringVar(&kubeconfig, "kubeconfig", "", "path to kubeconfig file")
-	RootCmd.Flags().StringVar(&clusterIDString, "cluster-id", "", "id of the cluster")
-	RootCmd.MarkFlagRequired("cluster-id")
+	RootCmd.Flags().StringVar(&latticeID, "lattice-id", "", "id of the lattice")
+	RootCmd.MarkFlagRequired("lattice-id")
 
 	RootCmd.Flags().StringVar(&cloudProviderName, "cloud-provider", "", "cloud provider that lattice is being run on")
 	RootCmd.MarkFlagRequired("cloud-provider")
@@ -138,7 +138,7 @@ func initCmd() {
 }
 
 func CreateControllerContext(
-	clusterID types.LatticeID,
+	latticeID types.LatticeID,
 	systemBootstrappers []bootstrapper.Interface,
 	kubeconfig *rest.Config,
 	stop <-chan struct{},
@@ -173,7 +173,7 @@ func CreateControllerContext(
 	latticeInformers := latticeinformers.NewSharedInformerFactory(versionedLatticeClient, time.Duration(12*time.Hour))
 
 	ctx := controller.Context{
-		LatticeID:     clusterID,
+		LatticeID:     latticeID,
 		CloudProvider: cloudProvider,
 
 		SystemBootstrappers: systemBootstrappers,
@@ -257,7 +257,7 @@ func parseCloudProviderVarsLocal() (*local.Options, error) {
 	flags := cli.EmbeddedFlag{
 		Target: &options,
 		Expected: map[string]cli.EmbeddedFlagValue{
-			"cluster-ip": {
+			"ip": {
 				Required:     true,
 				EncodingName: "IP",
 			},

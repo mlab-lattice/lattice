@@ -5,7 +5,7 @@ type MasterNodeEtcdVolumeAttachment struct {
 
 	Region string `json:"region"`
 
-	ClusterID  string `json:"cluster_id"`
+	LatticeID  string `json:"lattice_id"`
 	Name       string `json:"name"`
 	InstanceID string `json:"instance_id"`
 	DeviceName string `json:"device_name"`
@@ -14,7 +14,7 @@ type MasterNodeEtcdVolumeAttachment struct {
 func NewMasterNodeEtcdVolumeAttachment(
 	moduleRoot,
 	region,
-	clusterID,
+	latticeID,
 	name,
 	instanceID,
 	deviceName string,
@@ -24,7 +24,7 @@ func NewMasterNodeEtcdVolumeAttachment(
 
 		Region: region,
 
-		ClusterID:  clusterID,
+		LatticeID:  latticeID,
 		Name:       name,
 		InstanceID: instanceID,
 		DeviceName: deviceName,

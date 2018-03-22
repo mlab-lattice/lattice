@@ -15,21 +15,21 @@ import (
 )
 
 type Options struct {
-	ClusterID     types.LatticeID
+	LatticeID     types.LatticeID
 	SystemID      types.SystemID
 	DefinitionURL string
 }
 
 func NewBootstrapper(options *Options) *DefaultBootstrapper {
 	return &DefaultBootstrapper{
-		clusterID:     options.ClusterID,
+		latticeID:     options.LatticeID,
 		systemID:      options.SystemID,
 		definitionURL: options.DefinitionURL,
 	}
 }
 
 type DefaultBootstrapper struct {
-	clusterID     types.LatticeID
+	latticeID     types.LatticeID
 	systemID      types.SystemID
 	definitionURL string
 }
@@ -42,9 +42,9 @@ func (b *DefaultBootstrapper) BootstrapSystemResources(resources *bootstrapper.S
 			APIVersion: "v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name: kubeutil.SystemNamespace(b.clusterID, b.systemID),
+			Name: kubeutil.SystemNamespace(b.latticeID, b.systemID),
 			Labels: map[string]string{
-				kubeconstants.LabelKeyLatticeClusterID: string(b.clusterID),
+				kubeconstants.LabelKeyLatticeID: string(b.latticeID),
 			},
 		},
 	}
@@ -94,7 +94,7 @@ func (b *DefaultBootstrapper) BootstrapSystemResources(resources *bootstrapper.S
 			Name:      string(b.systemID),
 			Namespace: namespace.Name,
 			Labels: map[string]string{
-				kubeconstants.LabelKeyLatticeClusterID: string(b.clusterID),
+				kubeconstants.LabelKeyLatticeID: string(b.latticeID),
 			},
 		},
 		Spec: latticev1.SystemSpec{

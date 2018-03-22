@@ -7,10 +7,9 @@ import (
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/cloudprovider"
 	latticev1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	latticeclientset "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/clientset/versioned"
-	clusterbootstrap "github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/cluster/bootstrap"
-	"github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/cluster/bootstrap/bootstrapper"
-	clusterbootstrapper "github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/cluster/bootstrap/bootstrapper"
-	baseclusterboostrapper "github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/cluster/bootstrap/bootstrapper/base"
+	"github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/lattice/bootstrap"
+	"github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/lattice/bootstrap/bootstrapper"
+	baseboostrapper "github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/lattice/bootstrap/bootstrapper/base"
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/servicemesh"
 	kubeutil "github.com/mlab-lattice/system/pkg/backend/kubernetes/util/kubernetes"
 	"github.com/mlab-lattice/system/pkg/cli/command"
@@ -30,25 +29,25 @@ func (c *Command) Base() (*latticectl.BaseCommand, error) {
 	var latticeID string
 	var kubeConfigPath string
 
-	options := &clusterbootstrap.Options{
+	options := &bootstrap.Options{
 		Config: latticev1.ConfigSpec{
 			ComponentBuild: latticev1.ConfigComponentBuild{
 				Builder:        latticev1.ConfigComponentBuildBuilder{},
 				DockerArtifact: latticev1.ConfigComponentBuildDockerArtifact{},
 			},
 		},
-		MasterComponents: baseclusterboostrapper.MasterComponentOptions{
-			LatticeControllerManager: baseclusterboostrapper.LatticeControllerManagerOptions{},
-			ManagerAPI:               baseclusterboostrapper.ManagerAPIOptions{},
+		MasterComponents: baseboostrapper.MasterComponentOptions{
+			LatticeControllerManager: baseboostrapper.LatticeControllerManagerOptions{},
+			ManagerAPI:               baseboostrapper.ManagerAPIOptions{},
 		},
 	}
 	var componentBuildRegistryAuthType string
 
 	var cloudProvider string
-	cloudBootstrapFlag, cloudBootstrapOptions := cloudprovider.ClusterBoostrapperFlag(&cloudProvider)
+	cloudBootstrapFlag, cloudBootstrapOptions := cloudprovider.LatticeBoostrapperFlag(&cloudProvider)
 
 	var serviceMesh string
-	serviceMeshBootstrapFlag, serviceMeshBootstrapOptions := servicemesh.ClusterBoostrapperFlag(&serviceMesh)
+	serviceMeshBootstrapFlag, serviceMeshBootstrapOptions := servicemesh.LatticeBoostrapperFlag(&serviceMesh)
 
 	var dryRun bool
 	var print bool
@@ -221,12 +220,12 @@ func (c *Command) Base() (*latticectl.BaseCommand, error) {
 				}
 			}
 
-			cloudBootstrapper, err := cloudprovider.NewClusterBootstrapper(latticeID, cloudBootstrapOptions)
+			cloudBootstrapper, err := cloudprovider.NewLatticeBootstrapper(latticeID, cloudBootstrapOptions)
 			if err != nil {
 				fmt.Printf("error getting cloud bootstrapper: %v", err)
 			}
 
-			serviceMeshBootstrapper, err := servicemesh.NewClusterBootstrapper(serviceMeshBootstrapOptions)
+			serviceMeshBootstrapper, err := servicemesh.NewLatticeBootstrapper(serviceMeshBootstrapOptions)
 			if err != nil {
 				fmt.Printf("error getting service mesh bootstrapper: %v", err)
 			}
@@ -254,17 +253,17 @@ func BootstrapKubernetesLattice(
 	kubeConfig *rest.Config,
 	cloudProvider string,
 	bootstrappers []bootstrapper.Interface,
-	options *clusterbootstrap.Options,
+	options *bootstrap.Options,
 	dryRun bool,
 	print bool,
 ) error {
 	var kubeClient kubeclientset.Interface
 	var latticeClient latticeclientset.Interface
 
-	var resources *clusterbootstrapper.ClusterResources
+	var resources *bootstrapper.Resources
 	var err error
 	if dryRun {
-		resources, err = clusterbootstrap.GetBootstrapResources(
+		resources, err = bootstrap.GetBootstrapResources(
 			latticeID,
 			cloudProvider,
 			options,
@@ -281,7 +280,7 @@ func BootstrapKubernetesLattice(
 			return err
 		}
 
-		resources, err = clusterbootstrap.Bootstrap(
+		resources, err = bootstrap.Bootstrap(
 			latticeID,
 			cloudProvider,
 			options,

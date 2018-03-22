@@ -35,7 +35,7 @@ type Controller struct {
 	syncHandler func(bKey string) error
 	enqueue     func(cb *latticev1.ComponentBuild)
 
-	clusterID     types.LatticeID
+	latticeID     types.LatticeID
 	cloudProvider cloudprovider.Interface
 
 	kubeClient    kubeclientset.Interface
@@ -58,7 +58,7 @@ type Controller struct {
 }
 
 func NewController(
-	clusterID types.LatticeID,
+	latticeID types.LatticeID,
 	cloudProvider cloudprovider.Interface,
 	kubeClient kubeclientset.Interface,
 	latticeClient latticeclientset.Interface,
@@ -67,7 +67,7 @@ func NewController(
 	jobInformer batchinformers.JobInformer,
 ) *Controller {
 	cbc := &Controller{
-		clusterID:     clusterID,
+		latticeID:     latticeID,
 		cloudProvider: cloudProvider,
 		kubeClient:    kubeClient,
 		latticeClient: latticeClient,

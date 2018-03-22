@@ -3,7 +3,7 @@
 
 variable "region" {}
 
-variable "cluster_id" {}
+variable "lattice_id" {}
 variable "system_id" {}
 variable "vpc_id" {}
 variable "subnet_ids" {}
@@ -83,8 +83,8 @@ resource "aws_security_group" "load_balancer_lb" {
   vpc_id = "${var.vpc_id}"
 
   tags {
-    KubernetesCluster = "lattice.${var.cluster_id}"
-    Name              = "lattice.${var.cluster_id}.system.${var.system_id}.${var.name}"
+    KubernetesCluster = "lattice.${var.lattice_id}"
+    Name              = "lattice.${var.lattice_id}.system.${var.system_id}.${var.name}"
   }
 }
 

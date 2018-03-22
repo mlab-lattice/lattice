@@ -6,7 +6,7 @@ type NodePool struct {
 	AWSAccountID string `json:"aws_account_id"`
 	Region       string `json:"region"`
 
-	ClusterID                 string `json:"cluster_id"`
+	LatticeID                 string `json:"lattice_id"`
 	VPCID                     string `json:"vpc_id"`
 	SubnetIDs                 string `json:"subnet_ids"`
 	MasterNodeSecurityGroupID string `json:"master_node_security_group_id"`
@@ -19,7 +19,7 @@ type NodePool struct {
 }
 
 func NewNodePoolModule(
-	moduleRoot, awsAccountID, region, clusterID, vpcID, subnetIDs,
+	moduleRoot, awsAccountID, region, latticeID, vpcID, subnetIDs,
 	masterNodeSecurityGroupID, baseNodeAMIID, keyName, name string,
 	numInstances int32,
 	instanceType string,
@@ -30,7 +30,7 @@ func NewNodePoolModule(
 		AWSAccountID: awsAccountID,
 		Region:       region,
 
-		ClusterID:                 clusterID,
+		LatticeID:                 latticeID,
 		VPCID:                     vpcID,
 		SubnetIDs:                 subnetIDs,
 		MasterNodeSecurityGroupID: masterNodeSecurityGroupID,

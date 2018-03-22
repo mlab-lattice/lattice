@@ -189,7 +189,7 @@ func (c *Controller) getBuildContainer(build *latticev1.ComponentBuild) (*corev1
 
 	args := []string{
 		"--component-build-id", build.Name,
-		"--cluster-id", string(c.clusterID),
+		"--lattice-id", string(c.latticeID),
 		"--system-id", string(systemID),
 		"--component-build-definition", string(buildJSON),
 		"--docker-registry", c.config.ComponentBuild.DockerArtifact.Registry,

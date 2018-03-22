@@ -5,37 +5,37 @@ import (
 
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/cloudprovider/aws"
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/cloudprovider/local"
-	clusterbootstrapper "github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/cluster/bootstrap/bootstrapper"
+	clusterbootstrapper "github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/lattice/bootstrap/bootstrapper"
 	"github.com/mlab-lattice/system/pkg/cli/command"
 	"github.com/mlab-lattice/system/pkg/types"
 )
 
 type ClusterBootstrapperOptions struct {
-	AWS   *aws.ClusterBootstrapperOptions
-	Local *local.ClusterBootstrapperOptions
+	AWS   *aws.LatticeBootstrapperOptions
+	Local *local.LatticeBootstrapperOptions
 }
 
-func NewClusterBootstrapper(clusterID types.LatticeID, options *ClusterBootstrapperOptions) (clusterbootstrapper.Interface, error) {
+func NewLatticeBootstrapper(latticeID types.LatticeID, options *ClusterBootstrapperOptions) (clusterbootstrapper.Interface, error) {
 	if options.AWS != nil {
-		return aws.NewClusterBootstrapper(options.AWS), nil
+		return aws.NewLatticeBootstrapper(options.AWS), nil
 	}
 
 	if options.Local != nil {
-		return local.NewClusterBootstrapper(clusterID, options.Local), nil
+		return local.NewLatticeBootstrapper(latticeID, options.Local), nil
 	}
 
 	return nil, fmt.Errorf("must provide cloud provider options")
 }
 
-func ClusterBoostrapperFlag(cloudProvider *string) (command.Flag, *ClusterBootstrapperOptions) {
-	awsFlags, awsOptions := aws.ClusterBootstrapperFlags()
-	localFlags, localOptions := local.ClusterBootstrapperFlags()
+func LatticeBoostrapperFlag(cloudProvider *string) (command.Flag, *ClusterBootstrapperOptions) {
+	awsFlags, awsOptions := aws.LatticeBootstrapperFlags()
+	localFlags, localOptions := local.LatticeBootstrapperFlags()
 	options := &ClusterBootstrapperOptions{}
 
 	flag := &command.DelayedEmbeddedFlag{
 		Name:     "cloud-provider-var",
 		Required: true,
-		Usage:    "configuration for the cloud provider cluster bootstrapper",
+		Usage:    "configuration for the cloud provider lattice bootstrapper",
 		Flags: map[string]command.Flags{
 			AWS:   awsFlags,
 			Local: localFlags,

@@ -4,8 +4,8 @@ go_library(
     name = "go_default_library",
     srcs = [
         "cloudprovider.go",
-        "cluster_bootstrapper.go",
         "cluster_provisioner.go",
+        "lattice_bootstrapper.go",
         "system_bootstrapper.go",
     ],
     importpath = "github.com/mlab-lattice/system/pkg/backend/kubernetes/cloudprovider/aws",
@@ -13,7 +13,7 @@ go_library(
     deps = [
         "//pkg/backend/kubernetes/constants:go_default_library",
         "//pkg/backend/kubernetes/customresource/apis/lattice/v1:go_default_library",
-        "//pkg/backend/kubernetes/lifecycle/cluster/bootstrap/bootstrapper:go_default_library",
+        "//pkg/backend/kubernetes/lifecycle/lattice/bootstrap/bootstrapper:go_default_library",
         "//pkg/backend/kubernetes/lifecycle/system/bootstrap/bootstrapper/noop:go_default_library",
         "//pkg/backend/kubernetes/terraform/aws:go_default_library",
         "//pkg/cli/command:go_default_library",

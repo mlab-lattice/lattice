@@ -15,10 +15,10 @@ import (
 
 type KubernetesStatusUpdater struct {
 	LatticeClient latticeclientset.Interface
-	ClusterID     types.LatticeID
+	LatticeID     types.LatticeID
 }
 
-func NewKubernetesStatusUpdater(clusterID types.LatticeID, kubeconfig string) (*KubernetesStatusUpdater, error) {
+func NewKubernetesStatusUpdater(latticeID types.LatticeID, kubeconfig string) (*KubernetesStatusUpdater, error) {
 	var config *rest.Config
 	var err error
 	if kubeconfig == "" {
@@ -37,7 +37,7 @@ func NewKubernetesStatusUpdater(clusterID types.LatticeID, kubeconfig string) (*
 
 	kb := &KubernetesStatusUpdater{
 		LatticeClient: latticeClient,
-		ClusterID:     clusterID,
+		LatticeID:     latticeID,
 	}
 	return kb, nil
 }
@@ -48,7 +48,7 @@ func (ksu *KubernetesStatusUpdater) UpdateProgress(buildID types.ComponentBuildI
 }
 
 func (ksu *KubernetesStatusUpdater) updateProgressInternal(buildID types.ComponentBuildID, systemID types.SystemID, phase types.ComponentBuildPhase, numRetries int) error {
-	namespace := kubeutil.SystemNamespace(ksu.ClusterID, systemID)
+	namespace := kubeutil.SystemNamespace(ksu.LatticeID, systemID)
 	build, err := ksu.LatticeClient.LatticeV1().ComponentBuilds(namespace).Get(string(buildID), metav1.GetOptions{})
 	if err != nil {
 		if numRetries <= 0 {
@@ -75,7 +75,7 @@ func (ksu *KubernetesStatusUpdater) UpdateError(buildID types.ComponentBuildID, 
 }
 
 func (ksu *KubernetesStatusUpdater) updateErrorInternal(buildID types.ComponentBuildID, systemID types.SystemID, internal bool, updateErr error, numRetries int) error {
-	namespace := kubeutil.SystemNamespace(ksu.ClusterID, systemID)
+	namespace := kubeutil.SystemNamespace(ksu.LatticeID, systemID)
 	build, err := ksu.LatticeClient.LatticeV1().ComponentBuilds(namespace).Get(string(buildID), metav1.GetOptions{})
 	if err != nil {
 		if numRetries <= 0 {

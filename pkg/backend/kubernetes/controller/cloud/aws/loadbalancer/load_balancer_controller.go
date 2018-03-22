@@ -36,7 +36,7 @@ type Controller struct {
 	syncHandler         func(bKey string) error
 	enqueueLoadBalancer func(cb *latticev1.LoadBalancer)
 
-	clusterID types.LatticeID
+	latticeID types.LatticeID
 
 	awsCloudProvider aws.CloudProvider
 	serviceMesh      servicemesh.Interface
@@ -70,7 +70,7 @@ type Controller struct {
 }
 
 func NewController(
-	clusterID types.LatticeID,
+	latticeID types.LatticeID,
 	awsCloudProvider aws.CloudProvider,
 	terraformModuleRoot string,
 	terraformBackendOptions *terraform.BackendOptions,
@@ -83,7 +83,7 @@ func NewController(
 	kubeServiceInformer coreinformers.ServiceInformer,
 ) *Controller {
 	sc := &Controller{
-		clusterID:               clusterID,
+		latticeID:               latticeID,
 		kubeClient:              kubeClient,
 		latticeClient:           latticeClient,
 		awsCloudProvider:        awsCloudProvider,

@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	latticev1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
-	"github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/cluster/bootstrap/bootstrapper"
+	"github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/lattice/bootstrap/bootstrapper"
 	"github.com/mlab-lattice/system/pkg/terraform"
 	"github.com/mlab-lattice/system/pkg/types"
 )
@@ -38,7 +38,7 @@ type TerraformOptions struct {
 }
 
 func NewBootstrapper(
-	clusterID types.LatticeID,
+	latticeID types.LatticeID,
 	cloudProviderName string,
 	options *Options,
 ) (*DefaultBootstrapper, error) {
@@ -48,7 +48,7 @@ func NewBootstrapper(
 
 	b := &DefaultBootstrapper{
 		Options:           options,
-		ClusterID:         clusterID,
+		LatticeID:         latticeID,
 		CloudProviderName: cloudProviderName,
 	}
 	return b, nil
@@ -56,11 +56,11 @@ func NewBootstrapper(
 
 type DefaultBootstrapper struct {
 	Options           *Options
-	ClusterID         types.LatticeID
+	LatticeID         types.LatticeID
 	CloudProviderName string
 }
 
-func (b *DefaultBootstrapper) BootstrapClusterResources(resources *bootstrapper.ClusterResources) {
+func (b *DefaultBootstrapper) BootstrapClusterResources(resources *bootstrapper.Resources) {
 	b.namespaceResources(resources)
 	b.crdResources(resources)
 	b.configResources(resources)

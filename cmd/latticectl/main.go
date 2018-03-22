@@ -17,7 +17,7 @@ func main() {
 		Context: &latticectl.DefaultFileContext{},
 		Root: &latticectl.BaseCommand{
 			Name:  "latticectl",
-			Short: "command line utility for interacting with lattice clusters and systems",
+			Short: "command line utility for interacting with lattices and systems",
 			Subcommands: []latticectl.Command{
 				&context.Command{
 					Subcommands: []latticectl.Command{

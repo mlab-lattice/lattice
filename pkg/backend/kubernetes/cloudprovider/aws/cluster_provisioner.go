@@ -84,9 +84,9 @@ func NewClusterProvisioner(latticeImageDockerRepository, latticeContainerRepoPre
 	}
 }
 
-func (p *DefaultAWSClusterProvisioner) Provision(clusterID string, initialSystemDefinitionURL *string) (string, error) {
+func (p *DefaultAWSClusterProvisioner) Provision(latticeID string, initialSystemDefinitionURL *string) (string, error) {
 	fmt.Println("Provisioning cluster...")
-	clusterModule := p.clusterModule(clusterID, initialSystemDefinitionURL)
+	clusterModule := p.clusterModule(latticeID, initialSystemDefinitionURL)
 	clusterConfig := p.clusterConfig(clusterModule)
 
 	logfile, err := terraform.Apply(p.workDirectory, clusterConfig)
@@ -97,7 +97,7 @@ func (p *DefaultAWSClusterProvisioner) Provision(clusterID string, initialSystem
 		return "", err
 	}
 
-	address, err := p.address(clusterID)
+	address, err := p.address(latticeID)
 	if err != nil {
 		return "", err
 	}
@@ -144,7 +144,7 @@ func (p *DefaultAWSClusterProvisioner) clusterConfig(clusterModule *awsterraform
 	return config
 }
 
-func (p *DefaultAWSClusterProvisioner) clusterModule(clusterID string, initialSystemDefinitionURL *string) *awsterraform.Cluster {
+func (p *DefaultAWSClusterProvisioner) clusterModule(latticeID string, initialSystemDefinitionURL *string) *awsterraform.Cluster {
 	url := ""
 	if initialSystemDefinitionURL != nil {
 		url = *initialSystemDefinitionURL
@@ -158,7 +158,7 @@ func (p *DefaultAWSClusterProvisioner) clusterModule(clusterID string, initialSy
 		AvailabilityZones: p.availabilityZones,
 		KeyName:           p.keyName,
 
-		ClusterID:                    clusterID,
+		LatticeID:                    latticeID,
 		ControlPlaneContainerChannel: fmt.Sprintf("%v/%v", p.latticeContainerRegistry, p.latticeContainerRepoPrefix),
 		SystemDefinitionURL:          url,
 
@@ -184,11 +184,11 @@ func (p *DefaultAWSClusterProvisioner) address(name string) (string, error) {
 	return fmt.Sprintf("http://%v", address), nil
 }
 
-func (p *DefaultAWSClusterProvisioner) Deprovision(clusterID string, force bool) error {
+func (p *DefaultAWSClusterProvisioner) Deprovision(latticeID string, force bool) error {
 	fmt.Println("Deprovisioning cluster...")
 
 	if !force {
-		if err := p.tearDownSystems(clusterID); err != nil {
+		if err := p.tearDownSystems(latticeID); err != nil {
 			return err
 		}
 	}
@@ -200,7 +200,7 @@ func (p *DefaultAWSClusterProvisioner) Deprovision(clusterID string, force bool)
 	return err
 }
 
-func (p *DefaultAWSClusterProvisioner) tearDownSystems(clusterID string) error {
+func (p *DefaultAWSClusterProvisioner) tearDownSystems(latticeID string) error {
 	if p.clusterManagerURL == "" {
 		return fmt.Errorf("cluster manager URL required to tear down systems")
 	}

@@ -8,8 +8,7 @@ variable "availability_zones" {
   type = "list"
 }
 
-// FIXME: this should probably be "cluster_name"
-variable "cluster_id" {}
+variable "lattice_id" {}
 
 variable "control_plane_container_channel" {}
 variable "system_definition_url" {}
@@ -60,7 +59,7 @@ provider "aws" {
 # FIXME: probably want to seperate out the system's bucket so it can be
 #        cold-storaged after deleting the rest of the resources
 resource "aws_s3_bucket" "system_bucket" {
-  bucket = "lattice.${var.cluster_id}"
+  bucket = "lattice.${var.lattice_id}"
   acl    = "private"
 
   versioning {
@@ -76,7 +75,7 @@ resource "aws_s3_bucket" "system_bucket" {
 #
 
 resource "aws_ecr_repository" "component-builds" {
-  name = "${var.cluster_id}.component-builds"
+  name = "${var.lattice_id}.component-builds"
 }
 
 ###############################################################################
@@ -92,8 +91,8 @@ resource "aws_vpc" "vpc" {
   enable_dns_hostnames = true
 
   tags {
-    KubernetesCluster = "lattice.${var.cluster_id}"
-    Name              = "lattice.${var.cluster_id}"
+    KubernetesCluster = "lattice.${var.lattice_id}"
+    Name              = "lattice.${var.lattice_id}"
   }
 }
 
@@ -104,8 +103,8 @@ resource "aws_internet_gateway" "igw" {
   vpc_id = "${aws_vpc.vpc.id}"
 
   tags {
-    KubernetesCluster = "lattice.${var.cluster_id}"
-    Name              = "lattice.${var.cluster_id}"
+    KubernetesCluster = "lattice.${var.lattice_id}"
+    Name              = "lattice.${var.lattice_id}"
   }
 }
 
@@ -117,8 +116,8 @@ resource "aws_route_table" "route_table" {
   vpc_id = "${aws_vpc.vpc.id}"
 
   tags {
-    KubernetesCluster = "lattice.${var.cluster_id}"
-    Name              = "lattice.${var.cluster_id}"
+    KubernetesCluster = "lattice.${var.lattice_id}"
+    Name              = "lattice.${var.lattice_id}"
   }
 }
 
@@ -140,8 +139,8 @@ resource "aws_subnet" "subnet" {
   cidr_block        = "${cidrsubnet(aws_vpc.vpc.cidr_block, 2, count.index)}"
 
   tags {
-    KubernetesCluster = "lattice.${var.cluster_id}"
-    Name              = "lattice.${var.cluster_id}"
+    KubernetesCluster = "lattice.${var.lattice_id}"
+    Name              = "lattice.${var.lattice_id}"
   }
 }
 
@@ -166,8 +165,8 @@ resource "aws_route53_zone" "private_zone" {
   force_destroy = true
 
   tags {
-    KubernetesCluster = "lattice.${var.cluster_id}"
-    Name              = "lattice.${var.cluster_id}"
+    KubernetesCluster = "lattice.${var.lattice_id}"
+    Name              = "lattice.${var.lattice_id}"
   }
 }
 
@@ -184,7 +183,7 @@ module "master_node" {
   aws_account_id = "${var.aws_account_id}"
   region         = "${var.region}"
 
-  cluster_id                      = "${var.cluster_id}"
+  lattice_id                      = "${var.lattice_id}"
   system_definition_url           = "${var.system_definition_url}"
   control_plane_container_channel = "${var.control_plane_container_channel}"
   system_s3_bucket                = "${aws_s3_bucket.system_bucket.id}"
@@ -204,13 +203,13 @@ module "master_node" {
 # Security group
 
 resource "aws_security_group" "master_alb" {
-  name = "lattice.${var.cluster_id}.master-alb"
+  name = "lattice.${var.lattice_id}.master-alb"
 
   vpc_id = "${aws_vpc.vpc.id}"
 
   tags {
-    KubernetesCluster = "lattice.${var.cluster_id}"
-    Name              = "lattice.${var.cluster_id}.master-alb"
+    KubernetesCluster = "lattice.${var.lattice_id}"
+    Name              = "lattice.${var.lattice_id}.master-alb"
   }
 }
 
@@ -258,13 +257,13 @@ resource "aws_security_group_rule" "alb_allow_ingress" {
 # ALB
 
 resource "aws_alb" "master" {
-  name            = "lattice-${var.cluster_id}-master"
+  name            = "lattice-${var.lattice_id}-master"
   security_groups = ["${aws_security_group.master_alb.id}"]
   subnets         = ["${aws_subnet.subnet.*.id}"]
 }
 
 resource "aws_alb_target_group" "master" {
-  name     = "lattice-${var.cluster_id}-master"
+  name     = "lattice-${var.lattice_id}-master"
   port     = "${var.cluster_manager_api_port}"
   protocol = "HTTP"
   vpc_id   = "${aws_vpc.vpc.id}"
@@ -295,7 +294,7 @@ module "build_node" {
   aws_account_id = "${var.aws_account_id}"
   region         = "${var.region}"
 
-  cluster_id       = "${var.cluster_id}"
+  lattice_id       = "${var.lattice_id}"
   vpc_id           = "${aws_vpc.vpc.id}"
   build_subnet_ids = "${join(",", aws_subnet.subnet.*.id)}"
 

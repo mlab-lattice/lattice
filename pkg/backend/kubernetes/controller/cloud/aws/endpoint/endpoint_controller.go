@@ -26,7 +26,7 @@ type Controller struct {
 	syncHandler     func(bKey string) error
 	enqueueEndpoint func(cb *latticev1.Endpoint)
 
-	clusterID types.LatticeID
+	latticeID types.LatticeID
 
 	latticeClient latticeclientset.Interface
 
@@ -41,7 +41,7 @@ type Controller struct {
 }
 
 func NewController(
-	clusterID types.LatticeID,
+	latticeID types.LatticeID,
 	awsCloudProvider aws.CloudProvider,
 	terraformModuleRoot string,
 	terraformBackendOptions *terraform.BackendOptions,
@@ -49,7 +49,7 @@ func NewController(
 	endpointInformer latticeinformers.EndpointInformer,
 ) *Controller {
 	sc := &Controller{
-		clusterID:               clusterID,
+		latticeID:               latticeID,
 		latticeClient:           latticeClient,
 		awsCloudProvider:        awsCloudProvider,
 		terraformModuleRoot:     terraformModuleRoot,

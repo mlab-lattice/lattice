@@ -18,7 +18,7 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	error_runtime "k8s.io/apimachinery/pkg/util/runtime"
+	runtimeutil "k8s.io/apimachinery/pkg/util/runtime"
 
 	"k8s.io/client-go/kubernetes/fake"
 
@@ -35,7 +35,7 @@ const (
 	logToStderr         = true
 	loggingLevelDefault = "10"
 
-	clusterID = "cluster"
+	latticeID = "lattice"
 )
 
 type hostEntry struct {
@@ -66,7 +66,7 @@ func hostFileOutput(hosts []hostEntry) string {
 			systemID = v.systemID
 		}
 
-		fullPath := v.host + ".local." + systemID + "." + clusterID + ".local"
+		fullPath := v.host + ".local." + systemID + "." + latticeID + ".local"
 		newLine := v.ip + " " + fullPath + "\n"
 		str = str + newLine
 	}
@@ -88,7 +88,7 @@ func dnsmasqConfigFileOutput(nameservers []cnameEntry) string {
 			systemID = v.systemID
 		}
 
-		fullPath := v.alias + ".local." + systemID + "." + clusterID + ".local"
+		fullPath := v.alias + ".local." + systemID + "." + latticeID + ".local"
 		newLine := "cname=" + fullPath + "," + v.original + "\n"
 		str = str + newLine
 	}
@@ -102,7 +102,7 @@ func endpoint(key, ip, endpoint, systemID string, path tree.NodePath) latticev1.
 			// Our tests shouldn't be concerned about unique naming - let this be provided for us
 			Name:            key,
 			UID:             "12345",
-			Namespace:       kubeutil.SystemNamespace(clusterID, types.SystemID(systemID)),
+			Namespace:       kubeutil.SystemNamespace(latticeID, types.SystemID(systemID)),
 			ResourceVersion: "1",
 		},
 		Status: latticev1.EndpointStatus{
@@ -273,7 +273,7 @@ func TestEndpointCreation(t *testing.T) {
 		endpointInformer := informers.Lattice().V1().Endpoints()
 		endpoints := informers.Lattice().V1().Endpoints().Informer().GetStore()
 
-		controller := NewController(dnsmasqConfigPath, hostsFilePath, clusterID, latticeClient, client, endpointInformer)
+		controller := NewController(dnsmasqConfigPath, hostsFilePath, latticeID, latticeClient, client, endpointInformer)
 
 		for _, e := range testCase.EndpointsBefore {
 			s := e.DeepCopy()
@@ -329,7 +329,7 @@ func TestEndpointCreation(t *testing.T) {
 
 			err = os.Remove(dnsmasqConfigPath)
 			if err != nil {
-				error_runtime.HandleError(err)
+				runtimeutil.HandleError(err)
 			}
 		}
 
@@ -349,7 +349,7 @@ func TestEndpointCreation(t *testing.T) {
 
 			err = os.Remove(hostsFilePath)
 			if err != nil {
-				error_runtime.HandleError(err)
+				runtimeutil.HandleError(err)
 			}
 		}
 	}

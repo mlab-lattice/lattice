@@ -21,12 +21,12 @@ var (
 	kubeconfig        string
 	hostsFilePath     string
 	dnsmasqConfigPath string
-	clusterIDStr      string
+	latticeID         string
 )
 
 func init() {
 	flag.StringVar(&kubeconfig, "kubeconfig", "", "path to kubeconfig file")
-	flag.StringVar(&clusterIDStr, "cluster-id", "", "ID of the cluster")
+	flag.StringVar(&latticeID, "lattice-id", "", "ID of the lattice")
 	flag.StringVar(&dnsmasqConfigPath, "dnsmasq-config-path", local.DnsmasqConfigFile, "path to the additional dnsmasq configuration file")
 	flag.StringVar(&hostsFilePath, "hosts-file-path", local.DNSHostsFile, "path to the additional dnsmasq hosts")
 	flag.Parse()
@@ -54,7 +54,7 @@ func main() {
 	go controller.NewController(
 		dnsmasqConfigPath,
 		hostsFilePath,
-		types.LatticeID(clusterIDStr),
+		types.LatticeID(latticeID),
 		versionedLatticeClient,
 		clientset.NewForConfigOrDie(config),
 		latticeInformers.Lattice().V1().Endpoints(),

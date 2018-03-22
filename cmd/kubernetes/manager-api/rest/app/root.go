@@ -15,7 +15,7 @@ import (
 
 var (
 	kubeconfig       string
-	clusterIDString  string
+	latticeID        string
 	port             int
 	workingDirectory string
 )
@@ -24,10 +24,10 @@ var (
 var RootCmd = &cobra.Command{
 	Use: "manager-api",
 	Run: func(cmd *cobra.Command, args []string) {
-		clusterID := types.LatticeID(clusterIDString)
+		latticeID := types.LatticeID(latticeID)
 
 		kubernetesBackend, err := backend.NewKubernetesBackend(
-			clusterID,
+			latticeID,
 			kubeconfig,
 		)
 		if err != nil {
@@ -56,7 +56,7 @@ func init() {
 	pflag.CommandLine.AddGoFlagSet(goflag.CommandLine)
 
 	RootCmd.Flags().StringVar(&kubeconfig, "kubeconfig", "", "path to kubeconfig file")
-	RootCmd.Flags().StringVar(&clusterIDString, "cluster-id", "", "id of the lattice cluster")
+	RootCmd.Flags().StringVar(&latticeID, "lattice-id", "", "id of the lattice")
 	RootCmd.Flags().StringVar(&workingDirectory, "workingDirectory", "/tmp/lattice-manager-api", "working directory to use")
 	RootCmd.Flags().IntVar(&port, "port", 8080, "port to bind to")
 }

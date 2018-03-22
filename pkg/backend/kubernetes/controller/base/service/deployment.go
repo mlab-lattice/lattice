@@ -216,7 +216,7 @@ func (c *Controller) untransformedDeploymentSpec(
 		return nil, err
 	}
 
-	baseSearchPath := fmt.Sprintf("%v.%v.local", systemID, c.clusterID)
+	baseSearchPath := fmt.Sprintf("%v.%v.local", systemID, c.latticeID)
 	dnsSearches := []string{baseSearchPath}
 
 	if !service.Spec.Path.IsRoot() {

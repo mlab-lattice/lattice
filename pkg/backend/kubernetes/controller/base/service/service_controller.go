@@ -47,7 +47,7 @@ type Controller struct {
 	kubeClient    kubeclientset.Interface
 	latticeClient latticeclientset.Interface
 
-	clusterID types.LatticeID
+	latticeID types.LatticeID
 
 	configLister       latticelisters.ConfigLister
 	configListerSynced cache.InformerSynced
@@ -79,7 +79,7 @@ type Controller struct {
 
 func NewController(
 	cloudProvider cloudprovider.Interface,
-	clusterID types.LatticeID,
+	latticeID types.LatticeID,
 	kubeClient kubeclientset.Interface,
 	latticeClient latticeclientset.Interface,
 	configInformer latticeinformers.ConfigInformer,
@@ -95,7 +95,7 @@ func NewController(
 
 		kubeClient:    kubeClient,
 		latticeClient: latticeClient,
-		clusterID:     clusterID,
+		latticeID:     latticeID,
 		configSetChan: make(chan struct{}),
 		queue:         workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "service"),
 	}

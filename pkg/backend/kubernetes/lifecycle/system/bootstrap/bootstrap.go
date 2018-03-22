@@ -19,14 +19,14 @@ import (
 )
 
 func Bootstrap(
-	clusterID types.LatticeID,
+	latticeID types.LatticeID,
 	systemID types.SystemID,
 	definitionURL string,
 	bootstrappers []bootstrapper.Interface,
 	kubeClient kubeclientset.Interface,
 	latticeClient latticeclientset.Interface,
 ) (*bootstrapper.SystemResources, error) {
-	resources := GetBootstrapResources(clusterID, systemID, definitionURL, bootstrappers)
+	resources := GetBootstrapResources(latticeID, systemID, definitionURL, bootstrappers)
 
 	fmt.Println("seeding namespaces")
 	namespace, err := kubeClient.CoreV1().Namespaces().Create(resources.Namespace)
@@ -112,13 +112,13 @@ func Bootstrap(
 }
 
 func GetBootstrapResources(
-	clusterID types.LatticeID,
+	latticeID types.LatticeID,
 	systemID types.SystemID,
 	definitionURL string,
 	bootstrappers []bootstrapper.Interface,
 ) *bootstrapper.SystemResources {
 	baseOptions := &basebootstrapper.Options{
-		ClusterID:     clusterID,
+		LatticeID:     latticeID,
 		SystemID:      systemID,
 		DefinitionURL: definitionURL,
 	}

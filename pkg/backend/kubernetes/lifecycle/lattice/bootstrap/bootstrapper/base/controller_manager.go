@@ -3,7 +3,7 @@ package base
 import (
 	kubeconstants "github.com/mlab-lattice/system/pkg/backend/kubernetes/constants"
 	latticev1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
-	"github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/cluster/bootstrap/bootstrapper"
+	"github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/lattice/bootstrap/bootstrapper"
 	kubeutil "github.com/mlab-lattice/system/pkg/backend/kubernetes/util/kubernetes"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -16,10 +16,10 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 )
 
-func (b *DefaultBootstrapper) controllerManagerResources(resources *bootstrapper.ClusterResources) {
-	internalNamespace := kubeutil.InternalNamespace(b.ClusterID)
+func (b *DefaultBootstrapper) controllerManagerResources(resources *bootstrapper.Resources) {
+	internalNamespace := kubeutil.InternalNamespace(b.LatticeID)
 
-	// FIXME: prefix this cluster role with the cluster id so multiple clusters can have different
+	// FIXME: prefix this cluster role with the lattice id so multiple lattices can have different
 	// cluster role definitions
 	clusterRole := &rbacv1.ClusterRole{
 		// Include TypeMeta so if this is a dry run it will be printed out
@@ -128,7 +128,7 @@ func (b *DefaultBootstrapper) controllerManagerResources(resources *bootstrapper
 		},
 	}
 
-	args := []string{"--cloud-provider", b.CloudProviderName, "--cluster-id", string(b.ClusterID)}
+	args := []string{"--cloud-provider", b.CloudProviderName, "--lattice-id", string(b.LatticeID)}
 	args = append(args, b.Options.MasterComponents.LatticeControllerManager.Args...)
 
 	if b.Options.MasterComponents.LatticeControllerManager.TerraformModulePath != "" {

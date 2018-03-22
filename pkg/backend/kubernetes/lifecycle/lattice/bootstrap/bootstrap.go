@@ -6,8 +6,8 @@ import (
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource"
 	latticev1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	latticeclientset "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/clientset/versioned"
-	"github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/cluster/bootstrap/bootstrapper"
-	"github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/cluster/bootstrap/bootstrapper/base"
+	"github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/lattice/bootstrap/bootstrapper"
+	"github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/lattice/bootstrap/bootstrapper/base"
 	"github.com/mlab-lattice/system/pkg/types"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -34,7 +34,7 @@ func Bootstrap(
 	kubeConfig *rest.Config,
 	kubeClient kubeclientset.Interface,
 	latticeClient latticeclientset.Interface,
-) (*bootstrapper.ClusterResources, error) {
+) (*bootstrapper.Resources, error) {
 	resources, err := GetBootstrapResources(latticeID, cloudProviderName, options, bootstrappers)
 	if err != nil {
 		return nil, err
@@ -230,27 +230,27 @@ func idempotentSeed(resourceDescription string, seedFunc func() error) error {
 }
 
 func GetBootstrapResources(
-	clusterID types.LatticeID,
+	latticeID types.LatticeID,
 	cloudProviderName string,
 	options *Options,
 	bootstrappers []bootstrapper.Interface,
-) (*bootstrapper.ClusterResources, error) {
+) (*bootstrapper.Resources, error) {
 	baseOptions := &base.Options{
 		Config:           options.Config,
 		MasterComponents: options.MasterComponents,
 		TerraformOptions: options.Terraform,
 	}
 
-	baseBootstrapper, err := base.NewBootstrapper(clusterID, cloudProviderName, baseOptions)
+	baseBootstrapper, err := base.NewBootstrapper(latticeID, cloudProviderName, baseOptions)
 	if err != nil {
 		return nil, err
 	}
 
-	resources := &bootstrapper.ClusterResources{}
+	resources := &bootstrapper.Resources{}
 	baseBootstrapper.BootstrapClusterResources(resources)
 
 	for _, b := range bootstrappers {
-		b.BootstrapClusterResources(resources)
+		b.BootstrapLatticeResources(resources)
 	}
 
 	return resources, nil

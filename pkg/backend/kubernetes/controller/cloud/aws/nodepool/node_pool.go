@@ -94,7 +94,7 @@ func (c *Controller) nodePoolConfig(nodePool *latticev1.NodePool) *tf.Config {
 		c.terraformModuleRoot,
 		c.awsCloudProvider.AccountID(),
 		c.awsCloudProvider.Region(),
-		string(c.clusterID),
+		string(c.latticeID),
 		c.awsCloudProvider.VPCID(),
 		strings.Join(c.awsCloudProvider.SubnetIDs(), ","),
 		c.awsCloudProvider.MasterNodeSecurityGroupID(),
@@ -114,7 +114,7 @@ func (c *Controller) nodePoolConfig(nodePool *latticev1.NodePool) *tf.Config {
 			Bucket: c.terraformBackendOptions.S3.Bucket,
 			Key: fmt.Sprintf(
 				"%v/%v",
-				kubetf.GetS3BackendNodePoolPathRoot(c.clusterID, nodePoolID),
+				kubetf.GetS3BackendNodePoolPathRoot(c.latticeID, nodePoolID),
 				nodePoolID,
 			),
 			Encrypt: true,

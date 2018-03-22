@@ -5,7 +5,7 @@ type ApplicationLoadBalancer struct {
 
 	Region string `json:"region"`
 
-	ClusterID string `json:"cluster_id"`
+	LatticeID string `json:"lattice_id"`
 	SystemID  string `json:"system_id"`
 	VPCID     string `json:"vpc_id"`
 	SubnetIDs string `json:"subnet_ids"`
@@ -18,7 +18,7 @@ type ApplicationLoadBalancer struct {
 }
 
 func NewApplicationLoadBalancerModule(
-	moduleRoot, region, clusterID, systemID, vpcID, subnetIDs,
+	moduleRoot, region, latticeID, systemID, vpcID, subnetIDs,
 	name, autoscalingGroupName, nodePoolSecurityGroupID string,
 	ports map[int32]int32,
 ) *ApplicationLoadBalancer {
@@ -27,7 +27,7 @@ func NewApplicationLoadBalancerModule(
 
 		Region: region,
 
-		ClusterID: clusterID,
+		LatticeID: latticeID,
 		SystemID:  systemID,
 		VPCID:     vpcID,
 		SubnetIDs: subnetIDs,
