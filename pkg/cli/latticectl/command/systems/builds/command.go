@@ -6,6 +6,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/mlab-lattice/system/pkg/cli/color"
 	"github.com/mlab-lattice/system/pkg/cli/command"
 	"github.com/mlab-lattice/system/pkg/cli/latticectl"
 	lctlcommand "github.com/mlab-lattice/system/pkg/cli/latticectl/command"
@@ -61,7 +62,10 @@ func (c *ListBuildsCommand) Base() (*latticectl.BaseCommand, error) {
 				return
 			}
 
-			ListBuilds(c, format, os.Stdout)
+			err = ListBuilds(c, format, os.Stdout)
+			if err != nil {
+				log.Fatal(err)
+			}
 		},
 		Subcommands: c.Subcommands,
 	}
@@ -70,14 +74,15 @@ func (c *ListBuildsCommand) Base() (*latticectl.BaseCommand, error) {
 }
 
 // ListBuilds writes the current Builds to the supplied io.Writer in the given printer.Format.
-func ListBuilds(client client.SystemBuildClient, format printer.Format, writer io.Writer) {
+func ListBuilds(client client.SystemBuildClient, format printer.Format, writer io.Writer) error {
 	builds, err := client.List()
 	if err != nil {
-		log.Panic(err)
+		return err
 	}
 
 	p := buildsPrinter(builds, format)
 	p.Print(writer)
+	return nil
 }
 
 // WatchBuilds polls the API for the current Builds, and writes out the Builds to the
@@ -118,27 +123,26 @@ func buildsPrinter(builds []types.SystemBuild, format printer.Format) printer.In
 	var p printer.Interface
 	switch format {
 	case printer.FormatDefault, printer.FormatTable:
-		// FIXME :: implement printing
-		headers := []string{"Name", "Definition", "Status"}
+		headers := []string{"ID", "Version", "State"}
 
 		var rows [][]string
-		//for _, build := range builds {
-		//	var stateColor color.Color
-		//	switch build.State {
-		//	case types.SystemStateStable:
-		//		stateColor = color.Success
-		//	case types.SystemStateFailed:
-		//		stateColor = color.Failure
-		//	default:
-		//		stateColor = color.Warning
-		//	}
-		//
-		//	rows = append(rows, []string{
-		//		string(system.ID),
-		//		system.DefinitionURL,
-		//		stateColor(string(system.State)),
-		//	})
-		//}
+		for _, build := range builds {
+			var stateColor color.Color
+			switch build.State {
+			case types.SystemBuildStateSucceeded:
+				stateColor = color.Success
+			case types.SystemBuildStateFailed:
+				stateColor = color.Failure
+			default:
+				stateColor = color.Warning
+			}
+
+			rows = append(rows, []string{
+				string(build.ID),
+				string(build.Version),
+				stateColor(string(build.State)),
+			})
+		}
 
 		p = &printer.Table{
 			Headers: headers,

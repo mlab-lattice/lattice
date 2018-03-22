@@ -32,18 +32,22 @@ func (c *CreateCommand) Base() (*latticectl.BaseCommand, error) {
 			},
 		},
 		Run: func(ctx lctlcommand.LatticeCommandContext, args []string) {
-			CreateSystem(ctx.Client().Systems(), types.SystemID(systemName), definitionURL)
+			err := CreateSystem(ctx.Client().Systems(), types.SystemID(systemName), definitionURL)
+			if err != nil {
+				log.Fatal(err)
+			}
 		},
 	}
 
 	return cmd.Base()
 }
 
-func CreateSystem(client client.SystemClient, name types.SystemID, definitionURL string) {
+func CreateSystem(client client.SystemClient, name types.SystemID, definitionURL string) error {
 	system, err := client.Create(name, definitionURL)
 	if err != nil {
-		log.Panic(err)
+		return err
 	}
 
 	fmt.Printf("%v\n", system)
+	return nil
 }

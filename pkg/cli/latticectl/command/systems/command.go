@@ -62,7 +62,10 @@ func (c *ListSystemsCommand) Base() (*latticectl.BaseCommand, error) {
 				return
 			}
 
-			ListSystems(c, format, os.Stdout)
+			err = ListSystems(c, format, os.Stdout)
+			if err != nil {
+				log.Fatal(err)
+			}
 		},
 		Subcommands: c.Subcommands,
 	}
@@ -71,14 +74,16 @@ func (c *ListSystemsCommand) Base() (*latticectl.BaseCommand, error) {
 }
 
 // ListSystems writes the current Systems to the supplied io.Writer in the given printer.Format.
-func ListSystems(client client.SystemClient, format printer.Format, writer io.Writer) {
+func ListSystems(client client.SystemClient, format printer.Format, writer io.Writer) error {
 	systems, err := client.List()
 	if err != nil {
-		log.Panic(err)
+		return err
 	}
 
 	p := systemsPrinter(systems, format)
 	p.Print(writer)
+
+	return nil
 }
 
 // WatchSystems polls the API for the current Systems, and writes out the Systems to the

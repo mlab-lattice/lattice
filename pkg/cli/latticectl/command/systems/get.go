@@ -63,11 +63,12 @@ func WatchSystem(client client.SystemClient, systemID types.SystemID, format pri
 	fmt.Printf("%v\n", system)
 }
 
-func GetSystem(client client.SystemClient, systemID types.SystemID, format printer.Format, writer io.Writer) {
+func GetSystem(client client.SystemClient, systemID types.SystemID, format printer.Format, writer io.Writer) error {
 	system, err := client.Get(systemID)
 	if err != nil {
-		log.Panic(err)
+		return err
 	}
 
 	fmt.Printf("%v\n", system)
+	return nil
 }

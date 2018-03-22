@@ -56,7 +56,10 @@ func (c *ListServicesCommand) Base() (*latticectl.BaseCommand, error) {
 			if watch {
 				WatchServices(ctx.Client().Systems().Services(ctx.SystemID()), format, os.Stdout)
 			} else {
-				ListServices(ctx.Client().Systems().Services(ctx.SystemID()), format, os.Stdout)
+				err := ListServices(ctx.Client().Systems().Services(ctx.SystemID()), format, os.Stdout)
+				if err != nil {
+					log.Fatal(err)
+				}
 			}
 		},
 		Subcommands: c.Subcommands,
@@ -65,13 +68,14 @@ func (c *ListServicesCommand) Base() (*latticectl.BaseCommand, error) {
 	return cmd.Base()
 }
 
-func ListServices(client client.ServiceClient, format printer.Format, writer io.Writer) {
+func ListServices(client client.ServiceClient, format printer.Format, writer io.Writer) error {
 	deploys, err := client.List()
 	if err != nil {
-		log.Panic(err)
+		return err
 	}
 
 	fmt.Printf("%v\n", deploys)
+	return nil
 }
 
 func WatchServices(client client.ServiceClient, format printer.Format, writer io.Writer) {

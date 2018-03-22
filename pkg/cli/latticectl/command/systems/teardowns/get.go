@@ -47,20 +47,24 @@ func (c *GetCommand) Base() (*latticectl.BaseCommand, error) {
 				return
 			}
 
-			GetTeardown(c, ctx.TeardownID(), format, os.Stdout)
+			err = GetTeardown(c, ctx.TeardownID(), format, os.Stdout)
+			if err != nil {
+				log.Fatal(err)
+			}
 		},
 	}
 
 	return cmd.Base()
 }
 
-func GetTeardown(client client.TeardownClient, teardownID types.SystemTeardownID, format printer.Format, writer io.Writer) {
+func GetTeardown(client client.TeardownClient, teardownID types.SystemTeardownID, format printer.Format, writer io.Writer) error {
 	teardown, err := client.Get(teardownID)
 	if err != nil {
-		log.Panic(err)
+		return err
 	}
 
 	fmt.Printf("%v\n", teardown)
+	return nil
 }
 
 func WatchTeardown(client client.TeardownClient, teardownID types.SystemTeardownID, format printer.Format, writer io.Writer) {
