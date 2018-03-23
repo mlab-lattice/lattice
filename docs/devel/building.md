@@ -4,7 +4,7 @@
 
 Lattice uses Bazel heavily. As such, it's recommended that you familiarize yourself with bazel via its [docs](https://docs.bazel.build), at the very least [Concepts and Terminology](https://docs.bazel.build/versions/master/build-ref.html#concepts-and-terminology).
 
-Lattice currently requires Bazel version 0.11.0.
+Lattice currently requires Bazel version 0.11.0, as well as `xz`. Both can be installed through `brew` for OS X (`brew install bazel` and `brew install xz` respectively).
 
 To get you started though, we'll give a brief overview of Bazel and the capabilities being used by Lattice.
 
