@@ -75,16 +75,16 @@ func (c *Command) addArgs() error {
 func (c *Command) addFlags() error {
 	names := make(map[string]struct{})
 	for _, flag := range c.Flags {
-		if err := flag.validate(); err != nil {
-			return fmt.Errorf("error validating flag %v: %v", flag.name(), err)
+		if err := flag.Validate(); err != nil {
+			return fmt.Errorf("error validating flag %v: %v", flag.GetName(), err)
 		}
 
-		if _, ok := names[flag.name()]; ok {
-			return fmt.Errorf("multiple flags with the name %v", flag.name())
+		if _, ok := names[flag.GetName()]; ok {
+			return fmt.Errorf("multiple flags with the name %v", flag.GetName())
 		}
 
-		flag.addToCmd(c.cobraCmd)
-		names[flag.name()] = struct{}{}
+		flag.AddToCmd(c.cobraCmd)
+		names[flag.GetName()] = struct{}{}
 	}
 
 	return nil

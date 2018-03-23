@@ -15,23 +15,23 @@ type StringFlag struct {
 	Target   *string
 }
 
-func (f *StringFlag) name() string {
+func (f *StringFlag) GetName() string {
 	return f.Name
 }
 
-func (f *StringFlag) required() bool {
+func (f *StringFlag) IsRequired() bool {
 	return f.Required
 }
 
-func (f *StringFlag) short() string {
+func (f *StringFlag) GetShort() string {
 	return f.Short
 }
 
-func (f *StringFlag) usage() string {
+func (f *StringFlag) GetUsage() string {
 	return f.Usage
 }
 
-func (f *StringFlag) validate() error {
+func (f *StringFlag) Validate() error {
 	if f.Name == "" {
 		return fmt.Errorf("name cannot be nil")
 	}
@@ -43,7 +43,7 @@ func (f *StringFlag) validate() error {
 	return nil
 }
 
-func (f *StringFlag) addToCmd(cmd *cobra.Command) {
+func (f *StringFlag) AddToCmd(cmd *cobra.Command) {
 	cmd.Flags().StringVarP(f.Target, f.Name, f.Short, f.Default, f.Usage)
 
 	if f.Required {
@@ -60,23 +60,23 @@ type IntFlag struct {
 	Target   *int
 }
 
-func (f *IntFlag) name() string {
+func (f *IntFlag) GetName() string {
 	return f.Name
 }
 
-func (f *IntFlag) required() bool {
+func (f *IntFlag) IsRequired() bool {
 	return f.Required
 }
 
-func (f *IntFlag) short() string {
+func (f *IntFlag) GetShort() string {
 	return f.Short
 }
 
-func (f *IntFlag) usage() string {
+func (f *IntFlag) GetUsage() string {
 	return f.Usage
 }
 
-func (f *IntFlag) validate() error {
+func (f *IntFlag) Validate() error {
 	if f.Name == "" {
 		return fmt.Errorf("name cannot be nil")
 	}
@@ -88,7 +88,7 @@ func (f *IntFlag) validate() error {
 	return nil
 }
 
-func (f *IntFlag) addToCmd(cmd *cobra.Command) {
+func (f *IntFlag) AddToCmd(cmd *cobra.Command) {
 	cmd.Flags().IntVarP(f.Target, f.Name, f.Short, f.Default, f.Usage)
 
 	if f.Required {
@@ -105,23 +105,23 @@ type BoolFlag struct {
 	Target   *bool
 }
 
-func (f *BoolFlag) name() string {
+func (f *BoolFlag) GetName() string {
 	return f.Name
 }
 
-func (f *BoolFlag) required() bool {
+func (f *BoolFlag) IsRequired() bool {
 	return f.Required
 }
 
-func (f *BoolFlag) short() string {
+func (f *BoolFlag) GetShort() string {
 	return f.Short
 }
 
-func (f *BoolFlag) usage() string {
+func (f *BoolFlag) GetUsage() string {
 	return f.Usage
 }
 
-func (f *BoolFlag) validate() error {
+func (f *BoolFlag) Validate() error {
 	if f.Name == "" {
 		return fmt.Errorf("name cannot be nil")
 	}
@@ -133,7 +133,7 @@ func (f *BoolFlag) validate() error {
 	return nil
 }
 
-func (f *BoolFlag) addToCmd(cmd *cobra.Command) {
+func (f *BoolFlag) AddToCmd(cmd *cobra.Command) {
 	cmd.Flags().BoolVarP(f.Target, f.Name, f.Short, f.Default, f.Usage)
 
 	if f.Required {

@@ -16,6 +16,7 @@ BASE_NODE_AMI_ID=$(echo ${USER_DATA} | jq '.lattice.base_node_ami_id' | tr -d '"
 KEY_NAME=$(echo ${USER_DATA} | jq '.lattice.key_name' | tr -d '"')
 STATE_S3_BUCKET=$(echo ${USER_DATA} | jq '.lattice.state_s3_bucket' | tr -d '"')
 
+INITIAL_SYSTEM_URL=$(echo ${USER_DATA} | jq '.lattice.system_definition_url' | tr -d '"')
 CONTROL_PLANE_CONTAINER_CHANNEL=$(echo ${USER_DATA} | jq '.lattice.control_plane_container_channel' | tr -d '"')
 
 n=0
@@ -26,6 +27,7 @@ do
     -v /etc/opt/kubernetes/admin/kubeconfig:/etc/bootstrap-lattice/kubeconfig \
     ${CONTROL_PLANE_CONTAINER_CHANNEL}latticectl:latest \
     cluster kubernetes bootstrap \
+    --initial-system-definition-url ${INITIAL_SYSTEM_URL} \
     --kubeconfig /etc/bootstrap-lattice/kubeconfig \
     --lattice-controller-manager-image ${CONTROL_PLANE_CONTAINER_CHANNEL}kubernetes-lattice-controller-manager \
     --lattice-controller-manager-terraform-module-path /etc/terraform/modules \

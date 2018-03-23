@@ -5,8 +5,9 @@ import (
 )
 
 type Arg struct {
-	Name     string
-	Required bool
+	Name        string
+	Required    bool
+	Description string
 }
 
 type Args []Arg
