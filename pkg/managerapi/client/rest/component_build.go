@@ -27,18 +27,18 @@ func newComponentBuildClient(c rest.Client, baseURL string) *ComponentBuildClien
 
 func (c *ComponentBuildClient) List() ([]types.ComponentBuild, error) {
 	var builds []types.ComponentBuild
-	err := c.restClient.Get(c.baseURL).JSON(&builds)
+	_, err := c.restClient.Get(c.baseURL).JSON(&builds)
 	return builds, err
 }
 
 func (c *ComponentBuildClient) Get(id types.ComponentBuildID) (*types.ComponentBuild, error) {
 	build := &types.ComponentBuild{}
-	err := c.restClient.Get(fmt.Sprintf("%v/%v", c.baseURL, id)).JSON(&build)
+	_, err := c.restClient.Get(fmt.Sprintf("%v/%v", c.baseURL, id)).JSON(&build)
 	return build, err
 }
 
 func (c *ComponentBuildClient) Logs(id types.ComponentBuildID, follow bool) (io.ReadCloser, error) {
 	url := fmt.Sprintf("%v/%v%v?follow=%v", c.baseURL, id, componentBuildLogSubpath, follow)
-	log, err := c.restClient.Get(url).Body()
+	log, _, err := c.restClient.Get(url).Body()
 	return log, err
 }

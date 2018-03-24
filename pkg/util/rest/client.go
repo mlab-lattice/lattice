@@ -2,7 +2,6 @@ package rest
 
 import (
 	"encoding/json"
-	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -35,33 +34,38 @@ func (r *RequestContext) Do() (*http.Response, error) {
 	return r.Client.Do(request)
 }
 
-func (r *RequestContext) Body() (io.ReadCloser, error) {
+func (r *RequestContext) Body() (io.ReadCloser, int, error) {
 	response, err := r.Do()
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 
-	// FIXME: make this configurable
-	if response.StatusCode < 200 || response.StatusCode >= 400 {
-		return nil, fmt.Errorf("unexpected status: %v", response.StatusCode)
-	}
-
-	return response.Body, nil
+	return response.Body, response.StatusCode, nil
 }
 
-func (r *RequestContext) JSON(target interface{}) error {
-	body, err := r.Body()
+func (r *RequestContext) Status() (int, error) {
+	body, statusCode, err := r.Body()
 	if err != nil {
-		return err
+		return 0, err
+	}
+
+	body.Close()
+	return statusCode, nil
+}
+
+func (r *RequestContext) JSON(target interface{}) (int, error) {
+	body, statusCode, err := r.Body()
+	if err != nil {
+		return 0, err
 	}
 	defer body.Close()
 
 	bodyBytes, err := ioutil.ReadAll(body)
 	if err != nil {
-		return err
+		return statusCode, err
 	}
 
-	return json.Unmarshal(bodyBytes, target)
+	return statusCode, json.Unmarshal(bodyBytes, target)
 }
 
 type Client interface {
