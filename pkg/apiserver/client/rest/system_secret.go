@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"github.com/mlab-lattice/system/pkg/apiserver/client"
+	"github.com/mlab-lattice/system/pkg/apiserver/server/rest/system"
 	"github.com/mlab-lattice/system/pkg/definition/tree"
 	"github.com/mlab-lattice/system/pkg/types"
 	"github.com/mlab-lattice/system/pkg/util/rest"
@@ -73,14 +74,10 @@ func (c *SystemSecretClient) Get(path tree.NodePath, name string) (*types.Secret
 	return nil, fmt.Errorf("unexpected status code %v", statusCode)
 }
 
-type setSystemSecretRequest struct {
-	Value string `json:"value"`
-}
-
 func (c *SystemSecretClient) Set(path tree.NodePath, name, value string) error {
 	secretPath := fmt.Sprintf("%v:%v", path.ToDomain(true), name)
 
-	request := &setSystemSecretRequest{
+	request := &system.SetSecretRequest{
 		Value: value,
 	}
 	requestJSON, err := json.Marshal(request)

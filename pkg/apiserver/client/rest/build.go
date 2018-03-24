@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"github.com/mlab-lattice/system/pkg/apiserver/client"
+	"github.com/mlab-lattice/system/pkg/apiserver/server/rest/system"
 	"github.com/mlab-lattice/system/pkg/types"
 	"github.com/mlab-lattice/system/pkg/util/rest"
 )
@@ -29,16 +30,8 @@ func newBuildClient(c rest.Client, baseURL string, systemID types.SystemID) *Bui
 	}
 }
 
-type buildSystemRequest struct {
-	Version string `json:"version,omitempty"`
-}
-
-type buildSystemResponse struct {
-	BuildID types.BuildID `json:"buildId"`
-}
-
 func (c *BuildClient) Create(version string) (types.BuildID, error) {
-	request := &buildSystemRequest{
+	request := &system.BuildRequest{
 		Version: version,
 	}
 	requestJSON, err := json.Marshal(request)
@@ -46,14 +39,14 @@ func (c *BuildClient) Create(version string) (types.BuildID, error) {
 		return "", err
 	}
 
-	buildResponse := &buildSystemResponse{}
-	statusCode, err := c.restClient.PostJSON(c.baseURL, bytes.NewReader(requestJSON)).JSON(&buildSystemResponse{})
+	response := &system.BuildResponse{}
+	statusCode, err := c.restClient.PostJSON(c.baseURL, bytes.NewReader(requestJSON)).JSON(&response)
 	if err != nil {
 		return "", err
 	}
 
 	if statusCode == http.StatusCreated {
-		return buildResponse.BuildID, nil
+		return response.ID, nil
 	}
 
 	if statusCode == http.StatusBadRequest {

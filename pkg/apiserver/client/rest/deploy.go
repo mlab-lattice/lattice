@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"github.com/mlab-lattice/system/pkg/apiserver/client"
+	"github.com/mlab-lattice/system/pkg/apiserver/server/rest/system"
 	"github.com/mlab-lattice/system/pkg/types"
 	"github.com/mlab-lattice/system/pkg/util/rest"
 )
@@ -69,17 +70,8 @@ func (c *DeployClient) Get(id types.DeployID) (*types.Deploy, error) {
 	return nil, fmt.Errorf("unexpected status code %v", statusCode)
 }
 
-type deployRequest struct {
-	Version *string        `json:"version,omitempty"`
-	BuildID *types.BuildID `json:"buildId,omitempty"`
-}
-
-type deployResponse struct {
-	DeployID types.DeployID `json:"deployId"`
-}
-
 func (c *DeployClient) CreateFromBuild(id types.BuildID) (types.DeployID, error) {
-	request := deployRequest{
+	request := system.DeployRequest{
 		BuildID: &id,
 	}
 
@@ -88,14 +80,14 @@ func (c *DeployClient) CreateFromBuild(id types.BuildID) (types.DeployID, error)
 		return "", err
 	}
 
-	response := &deployResponse{}
+	response := &system.DeployResponse{}
 	statusCode, err := c.restClient.PostJSON(c.baseURL, bytes.NewReader(requestJSON)).JSON(&response)
 	if err != nil {
 		return "", err
 	}
 
 	if statusCode == http.StatusCreated {
-		return response.DeployID, nil
+		return response.ID, nil
 	}
 
 	if statusCode == http.StatusBadRequest {
@@ -108,7 +100,7 @@ func (c *DeployClient) CreateFromBuild(id types.BuildID) (types.DeployID, error)
 }
 
 func (c *DeployClient) CreateFromVersion(version string) (types.DeployID, error) {
-	request := deployRequest{
+	request := system.DeployRequest{
 		Version: &version,
 	}
 
@@ -117,14 +109,14 @@ func (c *DeployClient) CreateFromVersion(version string) (types.DeployID, error)
 		return "", err
 	}
 
-	response := &deployResponse{}
+	response := &system.DeployResponse{}
 	statusCode, err := c.restClient.PostJSON(c.baseURL, bytes.NewReader(requestJSON)).JSON(&response)
 	if err != nil {
 		return "", err
 	}
 
 	if statusCode == http.StatusCreated {
-		return response.DeployID, nil
+		return response.ID, nil
 	}
 
 	if statusCode == http.StatusBadRequest {

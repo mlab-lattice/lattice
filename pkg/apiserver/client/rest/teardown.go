@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/mlab-lattice/system/pkg/apiserver/client"
+	"github.com/mlab-lattice/system/pkg/apiserver/server/rest/system"
 	"github.com/mlab-lattice/system/pkg/types"
 	"github.com/mlab-lattice/system/pkg/util/rest"
 )
@@ -67,19 +68,15 @@ func (c *TeardownClient) Get(id types.TeardownID) (*types.SystemTeardown, error)
 	return nil, fmt.Errorf("unexpected status code %v", statusCode)
 }
 
-type teardownResponse struct {
-	TeardownID types.TeardownID `json:"teardownId"`
-}
-
 func (c *TeardownClient) Create() (types.TeardownID, error) {
-	teardownResponse := &teardownResponse{}
+	teardownResponse := &system.TearDownResponse{}
 	statusCode, err := c.restClient.PostJSON(c.baseURL, nil).JSON(&teardownResponse)
 	if err != nil {
 		return "", err
 	}
 
 	if statusCode == http.StatusCreated {
-		return teardownResponse.TeardownID, nil
+		return teardownResponse.ID, nil
 	}
 
 	if statusCode == http.StatusBadRequest {

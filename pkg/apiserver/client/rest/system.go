@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"github.com/mlab-lattice/system/pkg/apiserver/client"
+	"github.com/mlab-lattice/system/pkg/apiserver/server/rest/system"
 	"github.com/mlab-lattice/system/pkg/types"
 	"github.com/mlab-lattice/system/pkg/util/rest"
 )
@@ -27,13 +28,8 @@ func newSystemClient(c rest.Client, baseURL string) client.SystemClient {
 	}
 }
 
-type createSystemRequest struct {
-	ID            types.SystemID `json:"id"`
-	DefinitionURL string         `json:"definitionUrl"`
-}
-
 func (c *SystemClient) Create(id types.SystemID, definitionURL string) (*types.System, error) {
-	request := createSystemRequest{
+	request := system.CreateRequest{
 		ID:            id,
 		DefinitionURL: definitionURL,
 	}
@@ -43,14 +39,14 @@ func (c *SystemClient) Create(id types.SystemID, definitionURL string) (*types.S
 		return nil, err
 	}
 
-	system := &types.System{}
-	statusCode, err := c.restClient.PostJSON(c.baseURL, bytes.NewReader(requestJSON)).JSON(&system)
+	sys := &types.System{}
+	statusCode, err := c.restClient.PostJSON(c.baseURL, bytes.NewReader(requestJSON)).JSON(&sys)
 	if err != nil {
 		return nil, err
 	}
 
 	if statusCode == http.StatusCreated {
-		return system, nil
+		return sys, nil
 	}
 
 	if statusCode == http.StatusBadRequest {
@@ -75,14 +71,14 @@ func (c *SystemClient) List() ([]types.System, error) {
 }
 
 func (c *SystemClient) Get(id types.SystemID) (*types.System, error) {
-	system := &types.System{}
-	statusCode, err := c.restClient.Get(fmt.Sprintf("%v/%v", c.baseURL, id)).JSON(&system)
+	sys := &types.System{}
+	statusCode, err := c.restClient.Get(fmt.Sprintf("%v/%v", c.baseURL, id)).JSON(&sys)
 	if err != nil {
 		return nil, err
 	}
 
 	if statusCode == http.StatusOK {
-		return system, nil
+		return sys, nil
 	}
 
 	if statusCode == http.StatusNotFound {
