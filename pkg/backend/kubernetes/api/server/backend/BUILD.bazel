@@ -13,7 +13,7 @@ go_library(
         "system.go",
         "teardown.go",
     ],
-    importpath = "github.com/mlab-lattice/system/pkg/backend/kubernetes/apiserver/server/backend",
+    importpath = "github.com/mlab-lattice/system/pkg/backend/kubernetes/api/server/backend",
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/api/v1:go_default_library",

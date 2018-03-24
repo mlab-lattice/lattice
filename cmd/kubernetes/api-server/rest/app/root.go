@@ -7,7 +7,7 @@ import (
 
 	"github.com/mlab-lattice/system/pkg/api/server/rest"
 	"github.com/mlab-lattice/system/pkg/api/v1"
-	"github.com/mlab-lattice/system/pkg/backend/kubernetes/apiserver/server/backend"
+	"github.com/mlab-lattice/system/pkg/backend/kubernetes/api/server/backend"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
