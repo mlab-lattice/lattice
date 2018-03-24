@@ -5,6 +5,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/mlab-lattice/system/pkg/api/v1"
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/cloudprovider/aws"
 	latticev1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	latticeclientset "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/clientset/versioned"
@@ -12,7 +13,6 @@ import (
 	latticelisters "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/listers/lattice/v1"
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/servicemesh"
 	kubeutil "github.com/mlab-lattice/system/pkg/backend/kubernetes/util/kubernetes"
-	"github.com/mlab-lattice/system/pkg/types"
 	"github.com/mlab-lattice/system/pkg/util/terraform"
 
 	corev1 "k8s.io/api/core/v1"
@@ -36,7 +36,7 @@ type Controller struct {
 	syncHandler         func(bKey string) error
 	enqueueLoadBalancer func(cb *latticev1.LoadBalancer)
 
-	latticeID types.LatticeID
+	latticeID v1.LatticeID
 
 	awsCloudProvider aws.CloudProvider
 	serviceMesh      servicemesh.Interface
@@ -70,7 +70,7 @@ type Controller struct {
 }
 
 func NewController(
-	latticeID types.LatticeID,
+	latticeID v1.LatticeID,
 	awsCloudProvider aws.CloudProvider,
 	terraformModuleRoot string,
 	terraformBackendOptions *terraform.BackendOptions,

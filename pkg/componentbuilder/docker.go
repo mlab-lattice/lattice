@@ -9,8 +9,8 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/mlab-lattice/system/pkg/api/v1"
 	"github.com/mlab-lattice/system/pkg/definition/block"
-	"github.com/mlab-lattice/system/pkg/types"
 	"github.com/mlab-lattice/system/pkg/util/tar"
 
 	dockertypes "github.com/docker/docker/api/types"
@@ -24,7 +24,7 @@ func (b *Builder) buildDockerImage(sourceDirectory string) error {
 	if b.StatusUpdater != nil {
 		// For now ignore status update errors, don't need to fail a build because the status could
 		// not be updated.
-		b.StatusUpdater.UpdateProgress(b.BuildID, b.SystemID, types.ComponentBuildPhaseBuildingDockerImage)
+		b.StatusUpdater.UpdateProgress(b.BuildID, b.SystemID, v1.ComponentBuildPhaseBuildingDockerImage)
 	}
 
 	// Get Dockerfile contents and write them to the directory
@@ -139,7 +139,7 @@ func (b *Builder) pushDockerImage() error {
 	if b.StatusUpdater != nil {
 		// For now ignore status update errors, don't need to fail a build because the status could
 		// not be updated.
-		b.StatusUpdater.UpdateProgress(b.BuildID, b.SystemID, types.ComponentBuildPhasePushingDockerImage)
+		b.StatusUpdater.UpdateProgress(b.BuildID, b.SystemID, v1.ComponentBuildPhasePushingDockerImage)
 	}
 
 	// Assumes the image has already been built and tagged.

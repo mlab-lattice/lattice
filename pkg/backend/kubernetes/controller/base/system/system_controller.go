@@ -6,6 +6,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/mlab-lattice/system/pkg/api/v1"
 	latticev1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	latticeclientset "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/clientset/versioned"
 	latticeinformers "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/informers/externalversions/lattice/v1"
@@ -13,7 +14,6 @@ import (
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/system/bootstrap/bootstrapper"
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/servicemesh"
 	kubeutil "github.com/mlab-lattice/system/pkg/backend/kubernetes/util/kubernetes"
-	"github.com/mlab-lattice/system/pkg/types"
 
 	corev1 "k8s.io/api/core/v1"
 
@@ -37,7 +37,7 @@ type Controller struct {
 	syncHandler   func(sysKey string) error
 	enqueueSystem func(sysBuild *latticev1.System)
 
-	latticeID types.LatticeID
+	latticeID v1.LatticeID
 
 	serviceMesh         servicemesh.Interface
 	systemBootstrappers []bootstrapper.Interface
@@ -65,7 +65,7 @@ type Controller struct {
 }
 
 func NewController(
-	latticeID types.LatticeID,
+	latticeID v1.LatticeID,
 	systemBootstrappers []bootstrapper.Interface,
 	kubeClient kubeclientset.Interface,
 	latticeClient latticeclientset.Interface,

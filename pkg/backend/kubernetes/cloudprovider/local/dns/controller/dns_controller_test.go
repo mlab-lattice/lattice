@@ -9,12 +9,12 @@ import (
 	"strconv"
 	"testing"
 
+	"github.com/mlab-lattice/system/pkg/api/v1"
 	latticev1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	fakelattice "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/clientset/versioned/fake"
 	latticeinformers "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/informers/externalversions"
 	kubeutil "github.com/mlab-lattice/system/pkg/backend/kubernetes/util/kubernetes"
 	"github.com/mlab-lattice/system/pkg/definition/tree"
-	"github.com/mlab-lattice/system/pkg/types"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -102,7 +102,7 @@ func endpoint(key, ip, endpoint, systemID string, path tree.NodePath) latticev1.
 			// Our tests shouldn't be concerned about unique naming - let this be provided for us
 			Name:            key,
 			UID:             "12345",
-			Namespace:       kubeutil.SystemNamespace(latticeID, types.SystemID(systemID)),
+			Namespace:       kubeutil.SystemNamespace(latticeID, v1.SystemID(systemID)),
 			ResourceVersion: "1",
 		},
 		Status: latticev1.EndpointStatus{

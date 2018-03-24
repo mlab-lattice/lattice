@@ -4,12 +4,12 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/mlab-lattice/system/pkg/api/v1"
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/cloudprovider/aws"
 	latticev1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	latticeclientset "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/clientset/versioned"
 	latticeinformers "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/informers/externalversions/lattice/v1"
 	latticelisters "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/listers/lattice/v1"
-	"github.com/mlab-lattice/system/pkg/types"
 	"github.com/mlab-lattice/system/pkg/util/terraform"
 
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -26,7 +26,7 @@ type Controller struct {
 	syncHandler     func(bKey string) error
 	enqueueEndpoint func(cb *latticev1.Endpoint)
 
-	latticeID types.LatticeID
+	latticeID v1.LatticeID
 
 	latticeClient latticeclientset.Interface
 
@@ -41,7 +41,7 @@ type Controller struct {
 }
 
 func NewController(
-	latticeID types.LatticeID,
+	latticeID v1.LatticeID,
 	awsCloudProvider aws.CloudProvider,
 	terraformModuleRoot string,
 	terraformBackendOptions *terraform.BackendOptions,

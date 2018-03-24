@@ -3,18 +3,18 @@ package backend
 import (
 	"fmt"
 
+	"github.com/mlab-lattice/system/pkg/api/v1"
 	kubeconstants "github.com/mlab-lattice/system/pkg/backend/kubernetes/constants"
 	latticev1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	kubeutil "github.com/mlab-lattice/system/pkg/backend/kubernetes/util/kubernetes"
 	"github.com/mlab-lattice/system/pkg/definition/tree"
-	"github.com/mlab-lattice/system/pkg/types"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kubelabels "k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
 )
 
-func (kb *KubernetesBackend) ListServices(systemID types.SystemID) ([]types.Service, error) {
+func (kb *KubernetesBackend) ListServices(systemID v1.SystemID) ([]v1.Service, error) {
 	namespace := kubeutil.SystemNamespace(kb.latticeID, systemID)
 
 	services, err := kb.latticeClient.LatticeV1().Services(namespace).List(metav1.ListOptions{})
@@ -22,7 +22,7 @@ func (kb *KubernetesBackend) ListServices(systemID types.SystemID) ([]types.Serv
 		return nil, err
 	}
 
-	var externalServices []types.Service
+	var externalServices []v1.Service
 	for _, service := range services.Items {
 		externalService := kb.transformService(service.Name, service.Spec.Path, &service.Status)
 		externalServices = append(externalServices, externalService)
@@ -31,7 +31,7 @@ func (kb *KubernetesBackend) ListServices(systemID types.SystemID) ([]types.Serv
 	return externalServices, nil
 }
 
-func (kb *KubernetesBackend) GetService(id types.SystemID, path tree.NodePath) (*types.Service, error) {
+func (kb *KubernetesBackend) GetService(id v1.SystemID, path tree.NodePath) (*v1.Service, error) {
 	selector := kubelabels.NewSelector()
 	requirement, err := kubelabels.NewRequirement(
 		kubeconstants.LabelKeyServicePathDomain,
@@ -70,18 +70,18 @@ func (kb *KubernetesBackend) transformService(
 	serviceName string,
 	path tree.NodePath,
 	serviceStatus *latticev1.ServiceStatus,
-) types.Service {
-	service := types.Service{
-		ID:               types.ServiceID(serviceName),
+) v1.Service {
+	service := v1.Service{
+		ID:               v1.ServiceID(serviceName),
 		Path:             path,
 		State:            getServicedState(serviceStatus.State),
 		UpdatedInstances: serviceStatus.UpdatedInstances,
 		StaleInstances:   serviceStatus.StaleInstances,
 	}
 
-	ports := types.ServicePublicPorts{}
+	ports := v1.ServicePublicPorts{}
 	for port, portInfo := range serviceStatus.PublicPorts {
-		ports[port] = types.ServicePublicPort{
+		ports[port] = v1.ServicePublicPort{
 			Address: portInfo.Address,
 		}
 	}
@@ -102,20 +102,20 @@ func (kb *KubernetesBackend) transformService(
 	return service
 }
 
-func getServicedState(state latticev1.ServiceState) types.ServiceState {
+func getServicedState(state latticev1.ServiceState) v1.ServiceState {
 	switch state {
 	case latticev1.ServiceStatePending:
-		return types.ServiceStatePending
+		return v1.ServiceStatePending
 	case latticev1.ServiceStateScalingDown:
-		return types.ServiceStateScalingDown
+		return v1.ServiceStateScalingDown
 	case latticev1.ServiceStateScalingUp:
-		return types.ServiceStateScalingUp
+		return v1.ServiceStateScalingUp
 	case latticev1.ServiceStateUpdating:
-		return types.ServiceStateUpdating
+		return v1.ServiceStateUpdating
 	case latticev1.ServiceStateStable:
-		return types.ServiceStateStable
+		return v1.ServiceStateStable
 	case latticev1.ServiceStateFailed:
-		return types.ServiceStateFailed
+		return v1.ServiceStateFailed
 	default:
 		panic("unreachable")
 	}

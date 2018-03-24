@@ -3,8 +3,8 @@ package componentbuilder
 import (
 	"os"
 
+	"github.com/mlab-lattice/system/pkg/api/v1"
 	"github.com/mlab-lattice/system/pkg/definition/block"
-	"github.com/mlab-lattice/system/pkg/types"
 	"github.com/mlab-lattice/system/pkg/util/docker"
 	"github.com/mlab-lattice/system/pkg/util/git"
 
@@ -13,8 +13,8 @@ import (
 )
 
 type Builder struct {
-	BuildID             types.ComponentBuildID
-	SystemID            types.SystemID
+	BuildID             v1.ComponentBuildID
+	SystemID            v1.SystemID
 	WorkingDir          string
 	ComponentBuildBlock *block.ComponentBuild
 	DockerOptions       *DockerOptions
@@ -66,12 +66,12 @@ func (e *ErrorInternal) Error() string {
 
 type Failure struct {
 	Error error
-	Phase types.ComponentBuildPhase
+	Phase v1.ComponentBuildPhase
 }
 
 func NewBuilder(
-	buildID types.ComponentBuildID,
-	systemID types.SystemID,
+	buildID v1.ComponentBuildID,
+	systemID v1.SystemID,
 	workDirectory string,
 	dockerOptions *DockerOptions,
 	gitResolverOptions *GitResolverOptions,

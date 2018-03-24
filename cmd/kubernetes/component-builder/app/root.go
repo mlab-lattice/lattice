@@ -7,10 +7,10 @@ import (
 	"os"
 	"os/exec"
 
+	"github.com/mlab-lattice/system/pkg/api/v1"
 	kubecomponentbuilder "github.com/mlab-lattice/system/pkg/backend/kubernetes/componentbuilder"
 	"github.com/mlab-lattice/system/pkg/componentbuilder"
 	"github.com/mlab-lattice/system/pkg/definition/block"
-	"github.com/mlab-lattice/system/pkg/types"
 	"github.com/mlab-lattice/system/pkg/util/aws"
 
 	"github.com/spf13/cobra"
@@ -61,8 +61,8 @@ var RootCmd = &cobra.Command{
 			dockerOptions.RegistryAuthProvider = &aws.ECRRegistryAuthProvider{}
 		}
 
-		latticeID := types.LatticeID(latticeID)
-		systemID := types.SystemID(systemIDString)
+		latticeID := v1.LatticeID(latticeID)
+		systemID := v1.SystemID(systemIDString)
 
 		statusUpdater, err := kubecomponentbuilder.NewKubernetesStatusUpdater(latticeID, kubeconfig)
 		if err != nil {
@@ -80,7 +80,7 @@ var RootCmd = &cobra.Command{
 		setupSSH()
 
 		builder, err := componentbuilder.NewBuilder(
-			types.ComponentBuildID(componentBuildID),
+			v1.ComponentBuildID(componentBuildID),
 			systemID,
 			workDirectory,
 			dockerOptions,

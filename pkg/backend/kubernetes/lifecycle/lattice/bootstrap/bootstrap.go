@@ -3,12 +3,12 @@ package bootstrap
 import (
 	"fmt"
 
+	"github.com/mlab-lattice/system/pkg/api/v1"
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource"
 	latticev1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	latticeclientset "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/clientset/versioned"
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/lattice/bootstrap/bootstrapper"
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/lattice/bootstrap/bootstrapper/base"
-	"github.com/mlab-lattice/system/pkg/types"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -27,7 +27,7 @@ type Options struct {
 }
 
 func Bootstrap(
-	latticeID types.LatticeID,
+	latticeID v1.LatticeID,
 	cloudProviderName string,
 	options *Options,
 	bootstrappers []bootstrapper.Interface,
@@ -230,7 +230,7 @@ func idempotentSeed(resourceDescription string, seedFunc func() error) error {
 }
 
 func GetBootstrapResources(
-	latticeID types.LatticeID,
+	latticeID v1.LatticeID,
 	cloudProviderName string,
 	options *Options,
 	bootstrappers []bootstrapper.Interface,

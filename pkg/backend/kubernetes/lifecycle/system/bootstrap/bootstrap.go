@@ -3,10 +3,10 @@ package bootstrap
 import (
 	"fmt"
 
+	"github.com/mlab-lattice/system/pkg/api/v1"
 	latticeclientset "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/clientset/versioned"
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/system/bootstrap/bootstrapper"
 	basebootstrapper "github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/system/bootstrap/bootstrapper/base"
-	"github.com/mlab-lattice/system/pkg/types"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -19,8 +19,8 @@ import (
 )
 
 func Bootstrap(
-	latticeID types.LatticeID,
-	systemID types.SystemID,
+	latticeID v1.LatticeID,
+	systemID v1.SystemID,
 	definitionURL string,
 	bootstrappers []bootstrapper.Interface,
 	kubeClient kubeclientset.Interface,
@@ -112,8 +112,8 @@ func Bootstrap(
 }
 
 func GetBootstrapResources(
-	latticeID types.LatticeID,
-	systemID types.SystemID,
+	latticeID v1.LatticeID,
+	systemID v1.SystemID,
 	definitionURL string,
 	bootstrappers []bootstrapper.Interface,
 ) *bootstrapper.SystemResources {

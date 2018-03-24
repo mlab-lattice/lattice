@@ -7,7 +7,7 @@ import (
 	kubeconstants "github.com/mlab-lattice/system/pkg/backend/kubernetes/constants"
 	latticev1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/lattice/bootstrap/bootstrapper"
-	"github.com/mlab-lattice/system/pkg/cli/command"
+	"github.com/mlab-lattice/system/pkg/cli"
 )
 
 type LatticeBootstrapperOptions struct {
@@ -38,46 +38,46 @@ func NewLatticeBootstrapper(options *LatticeBootstrapperOptions) *DefaultAWSLatt
 	}
 }
 
-func LatticeBootstrapperFlags() (command.Flags, *LatticeBootstrapperOptions) {
+func LatticeBootstrapperFlags() (cli.Flags, *LatticeBootstrapperOptions) {
 	options := &LatticeBootstrapperOptions{}
-	flags := command.Flags{
-		&command.StringFlag{
+	flags := cli.Flags{
+		&cli.StringFlag{
 			Name:     "region",
 			Required: true,
 			Target:   &options.Region,
 		},
-		&command.StringFlag{
+		&cli.StringFlag{
 			Name:     "account-id",
 			Required: true,
 			Target:   &options.AccountID,
 		},
-		&command.StringFlag{
+		&cli.StringFlag{
 			Name:     "vpc-id",
 			Required: true,
 			Target:   &options.VPCID,
 		},
 
-		&command.StringFlag{
+		&cli.StringFlag{
 			Name:     "route-53-private-zone-id",
 			Required: true,
 			Target:   &options.Route53PrivateZoneID,
 		},
-		&command.StringSliceFlag{
+		&cli.StringSliceFlag{
 			Name:     "subnet-ids",
 			Required: true,
 			Target:   &options.SubnetIDs,
 		},
-		&command.StringFlag{
+		&cli.StringFlag{
 			Name:     "master-node-security-group-id",
 			Required: true,
 			Target:   &options.MasterNodeSecurityGroupID,
 		},
-		&command.StringFlag{
+		&cli.StringFlag{
 			Name:     "base-node-ami-id",
 			Required: true,
 			Target:   &options.BaseNodeAMIID,
 		},
-		&command.StringFlag{
+		&cli.StringFlag{
 			Name:     "key-name",
 			Required: true,
 			Target:   &options.KeyName,

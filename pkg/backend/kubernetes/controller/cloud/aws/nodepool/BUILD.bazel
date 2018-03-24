@@ -9,6 +9,7 @@ go_library(
     importpath = "github.com/mlab-lattice/system/pkg/backend/kubernetes/controller/cloud/aws/nodepool",
     visibility = ["//visibility:public"],
     deps = [
+        "//pkg/api/v1:go_default_library",
         "//pkg/backend/kubernetes/cloudprovider/aws:go_default_library",
         "//pkg/backend/kubernetes/customresource/apis/lattice/v1:go_default_library",
         "//pkg/backend/kubernetes/customresource/generated/clientset/versioned:go_default_library",
@@ -16,7 +17,6 @@ go_library(
         "//pkg/backend/kubernetes/customresource/generated/listers/lattice/v1:go_default_library",
         "//pkg/backend/kubernetes/terraform/aws:go_default_library",
         "//pkg/backend/kubernetes/util/kubernetes:go_default_library",
-        "//pkg/types:go_default_library",
         "//pkg/util/terraform:go_default_library",
         "//pkg/util/terraform/provider/aws:go_default_library",
         "@com_github_golang_glog//:go_default_library",

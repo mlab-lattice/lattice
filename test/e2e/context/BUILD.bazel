@@ -6,7 +6,7 @@ go_library(
     importpath = "github.com/mlab-lattice/system/test/e2e/context",
     visibility = ["//visibility:public"],
     deps = [
-        "//pkg/apiserver/client:go_default_library",
-        "//pkg/apiserver/client/rest:go_default_library",
+        "//pkg/api/client/rest:go_default_library",
+        "//pkg/api/client/v1:go_default_library",
     ],
 )

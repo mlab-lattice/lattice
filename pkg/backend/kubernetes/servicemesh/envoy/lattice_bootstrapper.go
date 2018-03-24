@@ -6,7 +6,7 @@ import (
 	kubeconstants "github.com/mlab-lattice/system/pkg/backend/kubernetes/constants"
 	latticev1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/lattice/bootstrap/bootstrapper"
-	"github.com/mlab-lattice/system/pkg/cli/command"
+	"github.com/mlab-lattice/system/pkg/cli"
 
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -32,30 +32,30 @@ func NewLatticeBootstrapper(options *LatticeBootstrapperOptions) *DefaultEnvoyla
 	}
 }
 
-func LatticeBootstrapperFlags() (command.Flags, *LatticeBootstrapperOptions) {
+func LatticeBootstrapperFlags() (cli.Flags, *LatticeBootstrapperOptions) {
 	options := &LatticeBootstrapperOptions{}
-	flags := command.Flags{
-		&command.StringFlag{
+	flags := cli.Flags{
+		&cli.StringFlag{
 			Name:     "prepare-image",
 			Required: true,
 			Target:   &options.PrepareImage,
 		},
-		&command.StringFlag{
+		&cli.StringFlag{
 			Name:    "image",
 			Default: "envoyproxy/envoy-alpine",
 			Target:  &options.Image,
 		},
-		&command.StringFlag{
+		&cli.StringFlag{
 			Name:     "redirect-cidr-block",
 			Required: true,
 			Target:   &options.RedirectCIDRBlock,
 		},
-		&command.StringFlag{
+		&cli.StringFlag{
 			Name:     "xds-api-image",
 			Required: true,
 			Target:   &options.XDSAPIImage,
 		},
-		&command.Int32Flag{
+		&cli.Int32Flag{
 			Name:    "xds-api-port",
 			Default: 8080,
 			Target:  &options.XDSAPIPort,

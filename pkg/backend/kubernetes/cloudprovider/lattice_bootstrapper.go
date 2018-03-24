@@ -3,11 +3,11 @@ package cloudprovider
 import (
 	"fmt"
 
+	"github.com/mlab-lattice/system/pkg/api/v1"
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/cloudprovider/aws"
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/cloudprovider/local"
 	clusterbootstrapper "github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/lattice/bootstrap/bootstrapper"
-	"github.com/mlab-lattice/system/pkg/cli/command"
-	"github.com/mlab-lattice/system/pkg/types"
+	"github.com/mlab-lattice/system/pkg/cli"
 )
 
 type ClusterBootstrapperOptions struct {
@@ -15,7 +15,7 @@ type ClusterBootstrapperOptions struct {
 	Local *local.LatticeBootstrapperOptions
 }
 
-func NewLatticeBootstrapper(latticeID types.LatticeID, options *ClusterBootstrapperOptions) (clusterbootstrapper.Interface, error) {
+func NewLatticeBootstrapper(latticeID v1.LatticeID, options *ClusterBootstrapperOptions) (clusterbootstrapper.Interface, error) {
 	if options.AWS != nil {
 		return aws.NewLatticeBootstrapper(options.AWS), nil
 	}
@@ -27,16 +27,16 @@ func NewLatticeBootstrapper(latticeID types.LatticeID, options *ClusterBootstrap
 	return nil, fmt.Errorf("must provide cloud provider options")
 }
 
-func LatticeBoostrapperFlag(cloudProvider *string) (command.Flag, *ClusterBootstrapperOptions) {
+func LatticeBoostrapperFlag(cloudProvider *string) (cli.Flag, *ClusterBootstrapperOptions) {
 	awsFlags, awsOptions := aws.LatticeBootstrapperFlags()
 	localFlags, localOptions := local.LatticeBootstrapperFlags()
 	options := &ClusterBootstrapperOptions{}
 
-	flag := &command.DelayedEmbeddedFlag{
+	flag := &cli.DelayedEmbeddedFlag{
 		Name:     "cloud-provider-var",
 		Required: true,
 		Usage:    "configuration for the cloud provider lattice bootstrapper",
-		Flags: map[string]command.Flags{
+		Flags: map[string]cli.Flags{
 			AWS:   awsFlags,
 			Local: localFlags,
 		},

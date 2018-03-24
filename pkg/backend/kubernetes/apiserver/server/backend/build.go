@@ -4,12 +4,12 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/mlab-lattice/system/pkg/api/v1"
 	kubeconstants "github.com/mlab-lattice/system/pkg/backend/kubernetes/constants"
 	latticev1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	kubeutil "github.com/mlab-lattice/system/pkg/backend/kubernetes/util/kubernetes"
 	"github.com/mlab-lattice/system/pkg/definition"
 	"github.com/mlab-lattice/system/pkg/definition/tree"
-	"github.com/mlab-lattice/system/pkg/types"
 
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -18,10 +18,10 @@ import (
 )
 
 func (kb *KubernetesBackend) Build(
-	systemID types.SystemID,
+	systemID v1.SystemID,
 	definitionRoot tree.Node,
-	version types.SystemVersion,
-) (types.BuildID, error) {
+	version v1.SystemVersion,
+) (v1.BuildID, error) {
 	systemBuild, err := systemBuild(systemID, definitionRoot, version)
 	if err != nil {
 		return "", err
@@ -33,13 +33,13 @@ func (kb *KubernetesBackend) Build(
 		return "", err
 	}
 
-	return types.BuildID(result.Name), err
+	return v1.BuildID(result.Name), err
 }
 
 func systemBuild(
-	systemID types.SystemID,
+	systemID v1.SystemID,
 	definitionRoot tree.Node,
-	version types.SystemVersion,
+	version v1.SystemVersion,
 ) (*latticev1.Build, error) {
 	labels := map[string]string{
 		kubeconstants.LatticeNamespaceLabel: string(systemID),
@@ -70,7 +70,7 @@ func systemBuild(
 	return sysB, nil
 }
 
-func (kb *KubernetesBackend) ListBuilds(systemID types.SystemID) ([]types.Build, error) {
+func (kb *KubernetesBackend) ListBuilds(systemID v1.SystemID) ([]v1.Build, error) {
 	namespace := kubeutil.SystemNamespace(kb.latticeID, systemID)
 	fmt.Println("listing system builds")
 	buildList, err := kb.latticeClient.LatticeV1().Builds(namespace).List(metav1.ListOptions{})
@@ -79,7 +79,7 @@ func (kb *KubernetesBackend) ListBuilds(systemID types.SystemID) ([]types.Build,
 		return nil, err
 	}
 
-	builds := make([]types.Build, 0, len(buildList.Items))
+	builds := make([]v1.Build, 0, len(buildList.Items))
 	for _, build := range buildList.Items {
 		externalBuild, err := transformSystemBuild(&build)
 		if err != nil {
@@ -93,9 +93,9 @@ func (kb *KubernetesBackend) ListBuilds(systemID types.SystemID) ([]types.Build,
 }
 
 func (kb *KubernetesBackend) GetBuild(
-	systemID types.SystemID,
-	buildID types.BuildID,
-) (*types.Build, bool, error) {
+	systemID v1.SystemID,
+	buildID v1.BuildID,
+) (*v1.Build, bool, error) {
 	build, exists, err := kb.getInternalSystemBuild(systemID, buildID)
 	if err != nil || !exists {
 		return nil, exists, err
@@ -110,8 +110,8 @@ func (kb *KubernetesBackend) GetBuild(
 }
 
 func (kb *KubernetesBackend) getInternalSystemBuild(
-	systemID types.SystemID,
-	buildID types.BuildID,
+	systemID v1.SystemID,
+	buildID v1.BuildID,
 ) (*latticev1.Build, bool, error) {
 	namespace := kubeutil.SystemNamespace(kb.latticeID, systemID)
 	result, err := kb.latticeClient.LatticeV1().Builds(namespace).Get(string(buildID), metav1.GetOptions{})
@@ -130,12 +130,12 @@ func (kb *KubernetesBackend) getInternalSystemBuild(
 	return result, true, nil
 }
 
-func transformSystemBuild(build *latticev1.Build) (types.Build, error) {
-	externalBuild := types.Build{
-		ID:       types.BuildID(build.Name),
+func transformSystemBuild(build *latticev1.Build) (v1.Build, error) {
+	externalBuild := v1.Build{
+		ID:       v1.BuildID(build.Name),
 		State:    getSystemBuildState(build.Status.State),
-		Version:  types.SystemVersion(build.Labels[kubeconstants.LabelKeySystemVersion]),
-		Services: map[tree.NodePath]types.ServiceBuild{},
+		Version:  v1.SystemVersion(build.Labels[kubeconstants.LabelKeySystemVersion]),
+		Services: map[tree.NodePath]v1.ServiceBuild{},
 	}
 
 	for service, serviceBuildName := range build.Status.ServiceBuilds {
@@ -147,12 +147,12 @@ func transformSystemBuild(build *latticev1.Build) (types.Build, error) {
 				build.Name,
 				serviceBuildName,
 			)
-			return types.Build{}, err
+			return v1.Build{}, err
 		}
 
 		externalServiceBuild, err := transformServiceBuild(build.Namespace, serviceBuildName, &serviceBuildStatus)
 		if err != nil {
-			return types.Build{}, err
+			return v1.Build{}, err
 		}
 
 		externalBuild.Services[service] = externalServiceBuild
@@ -161,16 +161,16 @@ func transformSystemBuild(build *latticev1.Build) (types.Build, error) {
 	return externalBuild, nil
 }
 
-func getSystemBuildState(state latticev1.BuildState) types.BuildState {
+func getSystemBuildState(state latticev1.BuildState) v1.BuildState {
 	switch state {
 	case latticev1.BuildStatePending:
-		return types.BuildStatePending
+		return v1.BuildStatePending
 	case latticev1.BuildStateRunning:
-		return types.BuildStateRunning
+		return v1.BuildStateRunning
 	case latticev1.BuildStateSucceeded:
-		return types.BuildStateSucceeded
+		return v1.BuildStateSucceeded
 	case latticev1.BuildStateFailed:
-		return types.BuildStateFailed
+		return v1.BuildStateFailed
 	default:
 		panic("unreachable")
 	}

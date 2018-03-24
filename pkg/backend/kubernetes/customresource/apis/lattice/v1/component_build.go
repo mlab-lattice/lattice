@@ -1,8 +1,8 @@
 package v1
 
 import (
+	"github.com/mlab-lattice/system/pkg/api/v1"
 	"github.com/mlab-lattice/system/pkg/definition/block"
-	"github.com/mlab-lattice/system/pkg/types"
 
 	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -31,11 +31,11 @@ type ComponentBuildSpec struct {
 }
 
 type ComponentBuildStatus struct {
-	State              ComponentBuildState              `json:"state"`
-	ObservedGeneration int64                            `json:"observedGeneration"`
-	Artifacts          *ComponentBuildArtifacts         `json:"artifacts,omitempty"`
-	LastObservedPhase  *types.ComponentBuildPhase       `json:"lastObservedPhase,omitempty"`
-	FailureInfo        *types.ComponentBuildFailureInfo `json:"failureInfo,omitempty"`
+	State              ComponentBuildState           `json:"state"`
+	ObservedGeneration int64                         `json:"observedGeneration"`
+	Artifacts          *ComponentBuildArtifacts      `json:"artifacts,omitempty"`
+	LastObservedPhase  *v1.ComponentBuildPhase       `json:"lastObservedPhase,omitempty"`
+	FailureInfo        *v1.ComponentBuildFailureInfo `json:"failureInfo,omitempty"`
 }
 
 type ComponentBuildState string

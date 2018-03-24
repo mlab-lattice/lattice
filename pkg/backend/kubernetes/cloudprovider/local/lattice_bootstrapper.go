@@ -3,12 +3,12 @@ package local
 import (
 	"fmt"
 
+	"github.com/mlab-lattice/system/pkg/api/v1"
 	kubeconstants "github.com/mlab-lattice/system/pkg/backend/kubernetes/constants"
 	latticev1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/lattice/bootstrap/bootstrapper"
 	kubeutil "github.com/mlab-lattice/system/pkg/backend/kubernetes/util/kubernetes"
-	"github.com/mlab-lattice/system/pkg/cli/command"
-	"github.com/mlab-lattice/system/pkg/types"
+	"github.com/mlab-lattice/system/pkg/cli"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -39,7 +39,7 @@ type OptionsDNS struct {
 	ControllerArgs    []string
 }
 
-func NewLatticeBootstrapper(latticeID types.LatticeID, options *LatticeBootstrapperOptions) *DefaultLocalLatticeBootstrapper {
+func NewLatticeBootstrapper(latticeID v1.LatticeID, options *LatticeBootstrapperOptions) *DefaultLocalLatticeBootstrapper {
 	return &DefaultLocalLatticeBootstrapper{
 		LatticeID: latticeID,
 		ip:        options.IP,
@@ -47,21 +47,21 @@ func NewLatticeBootstrapper(latticeID types.LatticeID, options *LatticeBootstrap
 	}
 }
 
-func LatticeBootstrapperFlags() (command.Flags, *LatticeBootstrapperOptions) {
+func LatticeBootstrapperFlags() (cli.Flags, *LatticeBootstrapperOptions) {
 	options := &LatticeBootstrapperOptions{
 		DNS: &OptionsDNS{},
 	}
-	flags := command.Flags{
-		&command.StringFlag{
+	flags := cli.Flags{
+		&cli.StringFlag{
 			Name:     "ip",
 			Required: true,
 			Target:   &options.IP,
 		},
-		&command.EmbeddedFlag{
+		&cli.EmbeddedFlag{
 			Name:     "dns-var",
 			Required: true,
-			Flags: command.Flags{
-				&command.StringFlag{
+			Flags: cli.Flags{
+				&cli.StringFlag{
 					Name:     "dnsmasq-nanny-image",
 					Required: true,
 					Target:   &options.DNS.DnsmasqNannyImage,
@@ -69,16 +69,16 @@ func LatticeBootstrapperFlags() (command.Flags, *LatticeBootstrapperOptions) {
 				// the args for dnsmasq nanny contain commas, so use a
 				// StringArrayFlag so these don't try to be parsed as separate
 				// args
-				&command.StringArrayFlag{
+				&cli.StringArrayFlag{
 					Name:   "dnsmasq-nanny-args",
 					Target: &options.DNS.DnsmasqNannyArgs,
 				},
-				&command.StringFlag{
+				&cli.StringFlag{
 					Name:     "controller-image",
 					Required: true,
 					Target:   &options.DNS.ControllerImage,
 				},
-				&command.StringSliceFlag{
+				&cli.StringSliceFlag{
 					Name:   "controller-args",
 					Target: &options.DNS.DnsmasqNannyArgs,
 				},
@@ -89,7 +89,7 @@ func LatticeBootstrapperFlags() (command.Flags, *LatticeBootstrapperOptions) {
 }
 
 type DefaultLocalLatticeBootstrapper struct {
-	LatticeID types.LatticeID
+	LatticeID v1.LatticeID
 	ip        string
 	DNS       *OptionsDNS
 }

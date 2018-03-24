@@ -6,10 +6,10 @@ go_library(
     importpath = "github.com/mlab-lattice/system/cmd/kubernetes/component-builder/app",
     visibility = ["//visibility:public"],
     deps = [
+        "//pkg/api/v1:go_default_library",
         "//pkg/backend/kubernetes/componentbuilder:go_default_library",
         "//pkg/componentbuilder:go_default_library",
         "//pkg/definition/block:go_default_library",
-        "//pkg/types:go_default_library",
         "//pkg/util/aws:go_default_library",
         "@com_github_spf13_cobra//:go_default_library",
     ],

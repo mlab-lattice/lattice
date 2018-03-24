@@ -5,8 +5,8 @@
 package v1
 
 import (
+	api_v1 "github.com/mlab-lattice/system/pkg/api/v1"
 	tree "github.com/mlab-lattice/system/pkg/definition/tree"
-	types "github.com/mlab-lattice/system/pkg/types"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 )
 
@@ -244,7 +244,7 @@ func (in *ComponentBuildStatus) DeepCopyInto(out *ComponentBuildStatus) {
 		if *in == nil {
 			*out = nil
 		} else {
-			*out = new(types.ComponentBuildPhase)
+			*out = new(api_v1.ComponentBuildPhase)
 			**out = **in
 		}
 	}
@@ -253,7 +253,7 @@ func (in *ComponentBuildStatus) DeepCopyInto(out *ComponentBuildStatus) {
 		if *in == nil {
 			*out = nil
 		} else {
-			*out = new(types.ComponentBuildFailureInfo)
+			*out = new(api_v1.ComponentBuildFailureInfo)
 			**out = **in
 		}
 	}

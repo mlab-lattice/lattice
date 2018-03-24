@@ -11,8 +11,8 @@ go_library(
     importpath = "github.com/mlab-lattice/system/pkg/componentbuilder",
     visibility = ["//visibility:public"],
     deps = [
+        "//pkg/api/v1:go_default_library",
         "//pkg/definition/block:go_default_library",
-        "//pkg/types:go_default_library",
         "//pkg/util/docker:go_default_library",
         "//pkg/util/git:go_default_library",
         "//pkg/util/tar:go_default_library",

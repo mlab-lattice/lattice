@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/mlab-lattice/system/pkg/apiserver/server/rest"
+	"github.com/mlab-lattice/system/pkg/api/server/rest"
+	"github.com/mlab-lattice/system/pkg/api/v1"
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/apiserver/server/backend"
-	"github.com/mlab-lattice/system/pkg/types"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
@@ -24,7 +24,7 @@ var (
 var RootCmd = &cobra.Command{
 	Use: "api-server",
 	Run: func(cmd *cobra.Command, args []string) {
-		latticeID := types.LatticeID(latticeID)
+		latticeID := v1.LatticeID(latticeID)
 
 		kubernetesBackend, err := backend.NewKubernetesBackend(
 			latticeID,

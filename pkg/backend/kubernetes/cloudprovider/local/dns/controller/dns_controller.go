@@ -5,12 +5,12 @@ import (
 	"io/ioutil"
 	"time"
 
+	"github.com/mlab-lattice/system/pkg/api/v1"
 	latticev1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	latticeclientset "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/clientset/versioned"
 	latticeinformers "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/informers/externalversions/lattice/v1"
 	latticelisters "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/listers/lattice/v1"
 	kubeutil "github.com/mlab-lattice/system/pkg/backend/kubernetes/util/kubernetes"
-	"github.com/mlab-lattice/system/pkg/types"
 	endpointutil "github.com/mlab-lattice/system/pkg/util/endpoint"
 
 	"k8s.io/apimachinery/pkg/labels"
@@ -40,7 +40,7 @@ type Controller struct {
 
 	dnsmasqConfigPath string
 	hostFilePath      string
-	latticeID         types.LatticeID
+	latticeID         v1.LatticeID
 }
 
 var (
@@ -51,7 +51,7 @@ var (
 func NewController(
 	dnsmasqConfigPath string,
 	hostConfigPath string,
-	latticeID types.LatticeID,
+	latticeID v1.LatticeID,
 	latticeClient latticeclientset.Interface,
 	client clientset.Interface,
 	endpointInformer latticeinformers.EndpointInformer,

@@ -5,9 +5,9 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/mlab-lattice/system/pkg/apiserver/client/rest"
+	"github.com/mlab-lattice/system/pkg/api/client/rest"
+	"github.com/mlab-lattice/system/pkg/api/v1"
 	awsterraform "github.com/mlab-lattice/system/pkg/backend/kubernetes/terraform/aws"
-	"github.com/mlab-lattice/system/pkg/types"
 	"github.com/mlab-lattice/system/pkg/util/terraform"
 	awstfprovider "github.com/mlab-lattice/system/pkg/util/terraform/provider/aws"
 
@@ -211,7 +211,7 @@ func (p *DefaultAWSLatticeProvisioner) tearDownSystems(latticeID string) error {
 		return err
 	}
 
-	teardowns := map[types.SystemID]types.TeardownID{}
+	teardowns := map[v1.SystemID]v1.TeardownID{}
 	for _, system := range systems {
 		teardownID, err := latticeClient.Systems().Teardowns(system.ID).Create()
 		if err != nil {
@@ -228,11 +228,11 @@ func (p *DefaultAWSLatticeProvisioner) tearDownSystems(latticeID string) error {
 				return false, err
 			}
 
-			if teardown.State == types.TeardownStateFailed {
+			if teardown.State == v1.TeardownStateFailed {
 				return false, fmt.Errorf("teardown %v (system %v) failed", teardownID, systemID)
 			}
 
-			if teardown.State != types.TeardownStateSucceeded {
+			if teardown.State != v1.TeardownStateSucceeded {
 				return false, nil
 			}
 		}

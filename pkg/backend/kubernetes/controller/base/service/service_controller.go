@@ -6,6 +6,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/mlab-lattice/system/pkg/api/v1"
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/cloudprovider"
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/controller/base/service/util"
 	latticev1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
@@ -14,7 +15,6 @@ import (
 	latticelisters "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/listers/lattice/v1"
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/servicemesh"
 	kubeutil "github.com/mlab-lattice/system/pkg/backend/kubernetes/util/kubernetes"
-	"github.com/mlab-lattice/system/pkg/types"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -47,7 +47,7 @@ type Controller struct {
 	kubeClient    kubeclientset.Interface
 	latticeClient latticeclientset.Interface
 
-	latticeID types.LatticeID
+	latticeID v1.LatticeID
 
 	configLister       latticelisters.ConfigLister
 	configListerSynced cache.InformerSynced
@@ -79,7 +79,7 @@ type Controller struct {
 
 func NewController(
 	cloudProvider cloudprovider.Interface,
-	latticeID types.LatticeID,
+	latticeID v1.LatticeID,
 	kubeClient kubeclientset.Interface,
 	latticeClient latticeclientset.Interface,
 	configInformer latticeinformers.ConfigInformer,

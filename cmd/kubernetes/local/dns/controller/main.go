@@ -4,6 +4,7 @@ import (
 	"flag"
 	"time"
 
+	"github.com/mlab-lattice/system/pkg/api/v1"
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/cloudprovider/local"
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/cloudprovider/local/dns/controller"
 	latticeclientset "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/clientset/versioned"
@@ -14,7 +15,6 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 
 	"github.com/golang/glog"
-	"github.com/mlab-lattice/system/pkg/types"
 )
 
 var (
@@ -54,7 +54,7 @@ func main() {
 	go controller.NewController(
 		dnsmasqConfigPath,
 		hostsFilePath,
-		types.LatticeID(latticeID),
+		v1.LatticeID(latticeID),
 		versionedLatticeClient,
 		clientset.NewForConfigOrDie(config),
 		latticeInformers.Lattice().V1().Endpoints(),

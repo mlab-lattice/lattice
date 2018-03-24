@@ -1,10 +1,10 @@
 package backend
 
 import (
+	"github.com/mlab-lattice/system/pkg/api/v1"
 	kubeconstants "github.com/mlab-lattice/system/pkg/backend/kubernetes/constants"
 	latticev1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	kubeutil "github.com/mlab-lattice/system/pkg/backend/kubernetes/util/kubernetes"
-	"github.com/mlab-lattice/system/pkg/types"
 
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -12,7 +12,7 @@ import (
 	"github.com/satori/go.uuid"
 )
 
-func (kb *KubernetesBackend) TearDown(systemID types.SystemID) (types.TeardownID, error) {
+func (kb *KubernetesBackend) TearDown(systemID v1.SystemID) (v1.TeardownID, error) {
 	systemTeardown, err := getSystemTeardown(systemID)
 	if err != nil {
 		return "", err
@@ -24,10 +24,10 @@ func (kb *KubernetesBackend) TearDown(systemID types.SystemID) (types.TeardownID
 		return "", err
 	}
 
-	return types.TeardownID(result.Name), err
+	return v1.TeardownID(result.Name), err
 }
 
-func getSystemTeardown(id types.SystemID) (*latticev1.Teardown, error) {
+func getSystemTeardown(id v1.SystemID) (*latticev1.Teardown, error) {
 	labels := map[string]string{
 		kubeconstants.LatticeNamespaceLabel: string(id),
 	}
@@ -46,17 +46,17 @@ func getSystemTeardown(id types.SystemID) (*latticev1.Teardown, error) {
 	return sysT, nil
 }
 
-func (kb *KubernetesBackend) ListTeardowns(systemID types.SystemID) ([]types.SystemTeardown, error) {
+func (kb *KubernetesBackend) ListTeardowns(systemID v1.SystemID) ([]v1.SystemTeardown, error) {
 	namespace := kubeutil.SystemNamespace(kb.latticeID, systemID)
 	result, err := kb.latticeClient.LatticeV1().Teardowns(namespace).List(metav1.ListOptions{})
 	if err != nil {
 		return nil, err
 	}
 
-	var teardowns []types.SystemTeardown
+	var teardowns []v1.SystemTeardown
 	for _, b := range result.Items {
-		teardowns = append(teardowns, types.SystemTeardown{
-			ID:    types.TeardownID(b.Name),
+		teardowns = append(teardowns, v1.SystemTeardown{
+			ID:    v1.TeardownID(b.Name),
 			State: getSystemTeardownState(b.Status.State),
 		})
 	}
@@ -65,9 +65,9 @@ func (kb *KubernetesBackend) ListTeardowns(systemID types.SystemID) ([]types.Sys
 }
 
 func (kb *KubernetesBackend) GetTeardown(
-	systemID types.SystemID,
-	teardownID types.TeardownID,
-) (*types.SystemTeardown, bool, error) {
+	systemID v1.SystemID,
+	teardownID v1.TeardownID,
+) (*v1.SystemTeardown, bool, error) {
 	namespace := kubeutil.SystemNamespace(kb.latticeID, systemID)
 	result, err := kb.latticeClient.LatticeV1().Teardowns(namespace).Get(string(teardownID), metav1.GetOptions{})
 	if err != nil {
@@ -77,7 +77,7 @@ func (kb *KubernetesBackend) GetTeardown(
 		return nil, false, err
 	}
 
-	sb := &types.SystemTeardown{
+	sb := &v1.SystemTeardown{
 		ID:    teardownID,
 		State: getSystemTeardownState(result.Status.State),
 	}
@@ -85,16 +85,16 @@ func (kb *KubernetesBackend) GetTeardown(
 	return sb, true, nil
 }
 
-func getSystemTeardownState(state latticev1.TeardownState) types.TeardownState {
+func getSystemTeardownState(state latticev1.TeardownState) v1.TeardownState {
 	switch state {
 	case latticev1.TeardownStatePending:
-		return types.TeardownStatePending
+		return v1.TeardownStatePending
 	case latticev1.TeardownStateInProgress:
-		return types.TeardownStateInProgress
+		return v1.TeardownStateInProgress
 	case latticev1.TeardownStateSucceeded:
-		return types.TeardownStateSucceeded
+		return v1.TeardownStateSucceeded
 	case latticev1.TeardownStateFailed:
-		return types.TeardownStateFailed
+		return v1.TeardownStateFailed
 	default:
 		panic("unreachable")
 	}

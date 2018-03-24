@@ -5,7 +5,7 @@ import (
 
 	clusterbootstrapper "github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/lattice/bootstrap/bootstrapper"
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/servicemesh/envoy"
-	"github.com/mlab-lattice/system/pkg/cli/command"
+	"github.com/mlab-lattice/system/pkg/cli"
 )
 
 type ClusterBootstrapperOptions struct {
@@ -20,15 +20,15 @@ func NewLatticeBootstrapper(options *ClusterBootstrapperOptions) (clusterbootstr
 	return nil, fmt.Errorf("must provide service mesh options")
 }
 
-func LatticeBoostrapperFlag(serviceMesh *string) (command.Flag, *ClusterBootstrapperOptions) {
+func LatticeBoostrapperFlag(serviceMesh *string) (cli.Flag, *ClusterBootstrapperOptions) {
 	envoyFlags, envoyOptions := envoy.LatticeBootstrapperFlags()
 	options := &ClusterBootstrapperOptions{}
 
-	flag := &command.DelayedEmbeddedFlag{
+	flag := &cli.DelayedEmbeddedFlag{
 		Name:     "service-mesh-var",
 		Required: true,
 		Usage:    "configuration for the service mesh cluster bootstrapper",
-		Flags: map[string]command.Flags{
+		Flags: map[string]cli.Flags{
 			Envoy: envoyFlags,
 		},
 		FlagChooser: func() (string, error) {

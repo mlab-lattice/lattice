@@ -6,7 +6,7 @@ import (
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/cloudprovider/aws"
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/cloudprovider/local"
 	systembootstrapper "github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/system/bootstrap/bootstrapper"
-	"github.com/mlab-lattice/system/pkg/cli/command"
+	"github.com/mlab-lattice/system/pkg/cli"
 )
 
 type SystemBootstrapperOptions struct {
@@ -26,7 +26,7 @@ func NewSystemBootstrapper(options *SystemBootstrapperOptions) (systembootstrapp
 	return nil, fmt.Errorf("must provide cloud provider options")
 }
 
-func SystemBoostrapperFlag(cloudProvider *string) (command.Flag, *SystemBootstrapperOptions) {
+func SystemBoostrapperFlag(cloudProvider *string) (cli.Flag, *SystemBootstrapperOptions) {
 	awsFlags, awsOptions := aws.SystemBootstrapperFlags()
 	localFlags, localOptions := local.SystemBootstrapperFlags()
 	options := &SystemBootstrapperOptions{
@@ -34,10 +34,10 @@ func SystemBoostrapperFlag(cloudProvider *string) (command.Flag, *SystemBootstra
 		Local: localOptions,
 	}
 
-	flag := &command.DelayedEmbeddedFlag{
+	flag := &cli.DelayedEmbeddedFlag{
 		Name:     "cloud-provider-system-bootstrapper-var",
 		Required: true,
-		Flags: map[string]command.Flags{
+		Flags: map[string]cli.Flags{
 			AWS:   awsFlags,
 			Local: localFlags,
 		},

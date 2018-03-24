@@ -1,12 +1,12 @@
 package base
 
 import (
+	"github.com/mlab-lattice/system/pkg/api/v1"
 	kubeconstants "github.com/mlab-lattice/system/pkg/backend/kubernetes/constants"
 	latticev1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/system/bootstrap/bootstrapper"
 	kubeutil "github.com/mlab-lattice/system/pkg/backend/kubernetes/util/kubernetes"
 	"github.com/mlab-lattice/system/pkg/definition/tree"
-	"github.com/mlab-lattice/system/pkg/types"
 
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -15,8 +15,8 @@ import (
 )
 
 type Options struct {
-	LatticeID     types.LatticeID
-	SystemID      types.SystemID
+	LatticeID     v1.LatticeID
+	SystemID      v1.SystemID
 	DefinitionURL string
 }
 
@@ -29,8 +29,8 @@ func NewBootstrapper(options *Options) *DefaultBootstrapper {
 }
 
 type DefaultBootstrapper struct {
-	latticeID     types.LatticeID
-	systemID      types.SystemID
+	latticeID     v1.LatticeID
+	systemID      v1.SystemID
 	definitionURL string
 }
 

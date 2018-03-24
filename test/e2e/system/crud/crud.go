@@ -3,7 +3,7 @@ package crud
 import (
 	"time"
 
-	"github.com/mlab-lattice/system/pkg/types"
+	"github.com/mlab-lattice/system/pkg/api/v1"
 	"github.com/mlab-lattice/system/test/e2e/context"
 
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -21,7 +21,7 @@ var _ = Describe("system", func() {
 		Expect(len(systems)).To(Equal(0))
 	})
 
-	systemID := types.SystemID("e2e-system-crud-1")
+	systemID := v1.SystemID("e2e-system-crud-1")
 	systemURL := "https://github.com/mlab-lattice/testing__system.git"
 	It("should be able to create a system", func() {
 		system, err := context.TestContext.ClusterAPIClient.Systems().Create(systemID, systemURL)
@@ -32,7 +32,7 @@ var _ = Describe("system", func() {
 		Expect(system.ID).To(Equal(systemID))
 		Expect(system.DefinitionURL).To(Equal(systemURL))
 		Expect(len(system.Services)).To(Equal(0))
-		Expect(system.State).To(Equal(types.SystemStatePending))
+		Expect(system.State).To(Equal(v1.SystemStatePending))
 	})
 
 	It("should be able to list systems, and there should only be the newly created system", func() {
@@ -45,7 +45,7 @@ var _ = Describe("system", func() {
 		Expect(system.ID).To(Equal(systemID))
 		Expect(system.DefinitionURL).To(Equal(systemURL))
 		Expect(len(system.Services)).To(Equal(0))
-		Expect(system.State).To(SatisfyAny(Equal(types.SystemStatePending), Equal(types.SystemStateStable)))
+		Expect(system.State).To(SatisfyAny(Equal(v1.SystemStatePending), Equal(v1.SystemStateStable)))
 	})
 
 	It("should be able to get the newly created system by ID", func() {
@@ -57,21 +57,21 @@ var _ = Describe("system", func() {
 		Expect(system.ID).To(Equal(systemID))
 		Expect(system.DefinitionURL).To(Equal(systemURL))
 		Expect(len(system.Services)).To(Equal(0))
-		Expect(system.State).To(SatisfyAny(Equal(types.SystemStatePending), Equal(types.SystemStateStable)))
+		Expect(system.State).To(SatisfyAny(Equal(v1.SystemStatePending), Equal(v1.SystemStateStable)))
 	})
 
 	It("should see the system become stable", func() {
-		Eventually(func() types.SystemState {
+		Eventually(func() v1.SystemState {
 			system, err := context.TestContext.ClusterAPIClient.Systems().Get(systemID)
 			if err != nil {
-				return types.SystemStateFailed
+				return v1.SystemStateFailed
 			}
 			return system.State
-		}, 10*time.Second).Should(Equal(types.SystemStateStable))
+		}, 10*time.Second).Should(Equal(v1.SystemStateStable))
 	})
 
 	It("should be able to delete the newly created system by ID", func() {
-		err := context.TestContext.ClusterAPIClient.Systems().Delete(types.SystemID(systemID))
+		err := context.TestContext.ClusterAPIClient.Systems().Delete(v1.SystemID(systemID))
 		Expect(err).NotTo(HaveOccurred())
 	})
 
@@ -91,7 +91,7 @@ var _ = Describe("system", func() {
 			Expect(system.ID).To(Equal(systemID))
 			Expect(system.DefinitionURL).To(Equal(systemURL))
 			Expect(len(system.Services)).To(Equal(0))
-			Expect(system.State).To(Equal(types.SystemStateDeleting))
+			Expect(system.State).To(Equal(v1.SystemStateDeleting))
 			return false, nil
 		})
 		Expect(err).NotTo(HaveOccurred())

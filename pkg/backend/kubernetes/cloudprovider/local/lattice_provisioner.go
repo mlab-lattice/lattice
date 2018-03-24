@@ -5,7 +5,7 @@ import (
 	"os/user"
 	"time"
 
-	"github.com/mlab-lattice/system/pkg/apiserver/client/rest"
+	"github.com/mlab-lattice/system/pkg/api/client/rest"
 	kubeconstants "github.com/mlab-lattice/system/pkg/backend/kubernetes/constants"
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/servicemesh"
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/util/minikube"

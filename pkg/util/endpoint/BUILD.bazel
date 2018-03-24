@@ -5,5 +5,5 @@ go_library(
     srcs = ["dns.go"],
     importpath = "github.com/mlab-lattice/system/pkg/util/endpoint",
     visibility = ["//visibility:public"],
-    deps = ["//pkg/types:go_default_library"],
+    deps = ["//pkg/api/v1:go_default_library"],
 )

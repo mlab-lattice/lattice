@@ -11,13 +11,13 @@ import (
 	awscontrollers "github.com/mlab-lattice/system/cmd/kubernetes/lattice-controller-manager/app/cloudcontrollers/aws"
 	localcontrollers "github.com/mlab-lattice/system/cmd/kubernetes/lattice-controller-manager/app/cloudcontrollers/local"
 	controller "github.com/mlab-lattice/system/cmd/kubernetes/lattice-controller-manager/app/common"
+	"github.com/mlab-lattice/system/pkg/api/v1"
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/cloudprovider"
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/cloudprovider/aws"
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/cloudprovider/local"
 	latticeinformers "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/informers/externalversions"
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/system/bootstrap/bootstrapper"
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/servicemesh"
-	"github.com/mlab-lattice/system/pkg/types"
 	"github.com/mlab-lattice/system/pkg/util/cli"
 	"github.com/mlab-lattice/system/pkg/util/terraform"
 
@@ -63,7 +63,7 @@ var RootCmd = &cobra.Command{
 			panic(err)
 		}
 
-		latticeID := types.LatticeID(latticeID)
+		latticeID := v1.LatticeID(latticeID)
 
 		cloudSystemBootstrapper, err := cloudprovider.SystemBootstrapperFromFlags(cloudProviderName, cloudProviderVars)
 		if err != nil {
@@ -138,7 +138,7 @@ func initCmd() {
 }
 
 func CreateControllerContext(
-	latticeID types.LatticeID,
+	latticeID v1.LatticeID,
 	systemBootstrappers []bootstrapper.Interface,
 	kubeconfig *rest.Config,
 	stop <-chan struct{},

@@ -3,15 +3,15 @@ package backend
 import (
 	latticeclientset "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/clientset/versioned"
 
+	"github.com/mlab-lattice/system/pkg/api/v1"
 	systembootstrapper "github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/system/bootstrap/bootstrapper"
-	"github.com/mlab-lattice/system/pkg/types"
 	kubeclientset "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 )
 
 type KubernetesBackend struct {
-	latticeID     types.LatticeID
+	latticeID     v1.LatticeID
 	kubeClient    kubeclientset.Interface
 	latticeClient latticeclientset.Interface
 
@@ -19,7 +19,7 @@ type KubernetesBackend struct {
 }
 
 func NewKubernetesBackend(
-	latticeID types.LatticeID,
+	latticeID v1.LatticeID,
 	kubeconfig string,
 ) (*KubernetesBackend, error) {
 	var config *rest.Config

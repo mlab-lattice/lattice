@@ -3,22 +3,22 @@ package backend
 import (
 	"fmt"
 
+	"github.com/mlab-lattice/system/pkg/api/v1"
 	latticev1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	kubeutil "github.com/mlab-lattice/system/pkg/backend/kubernetes/util/kubernetes"
-	"github.com/mlab-lattice/system/pkg/types"
 
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func (kb *KubernetesBackend) ListServiceBuilds(systemID types.SystemID) ([]types.ServiceBuild, error) {
+func (kb *KubernetesBackend) ListServiceBuilds(systemID v1.SystemID) ([]v1.ServiceBuild, error) {
 	namespace := kubeutil.SystemNamespace(kb.latticeID, systemID)
 	buildList, err := kb.latticeClient.LatticeV1().ServiceBuilds(namespace).List(metav1.ListOptions{})
 	if err != nil {
 		return nil, err
 	}
 
-	var builds []types.ServiceBuild
+	var builds []v1.ServiceBuild
 	for _, build := range buildList.Items {
 		externalServiceBuild, err := transformServiceBuild(build.Namespace, build.Name, &build.Status)
 		if err != nil {
@@ -32,9 +32,9 @@ func (kb *KubernetesBackend) ListServiceBuilds(systemID types.SystemID) ([]types
 }
 
 func (kb *KubernetesBackend) GetServiceBuild(
-	systemID types.SystemID,
-	buildID types.ServiceBuildID,
-) (*types.ServiceBuild, bool, error) {
+	systemID v1.SystemID,
+	buildID v1.ServiceBuildID,
+) (*v1.ServiceBuild, bool, error) {
 	build, exists, err := kb.getInternalServiceBuild(systemID, buildID)
 	if err != nil || !exists {
 		return nil, exists, err
@@ -49,7 +49,7 @@ func (kb *KubernetesBackend) GetServiceBuild(
 }
 
 func (kb *KubernetesBackend) getInternalServiceBuild(
-	systemID types.SystemID, buildID types.ServiceBuildID,
+	systemID v1.SystemID, buildID v1.ServiceBuildID,
 ) (*latticev1.ServiceBuild, bool, error) {
 	namespace := kubeutil.SystemNamespace(kb.latticeID, systemID)
 	result, err := kb.latticeClient.LatticeV1().ServiceBuilds(namespace).Get(string(buildID), metav1.GetOptions{})
@@ -63,11 +63,11 @@ func (kb *KubernetesBackend) getInternalServiceBuild(
 	return result, true, nil
 }
 
-func transformServiceBuild(namespace, name string, status *latticev1.ServiceBuildStatus) (types.ServiceBuild, error) {
-	externalBuild := types.ServiceBuild{
-		ID:         types.ServiceBuildID(name),
+func transformServiceBuild(namespace, name string, status *latticev1.ServiceBuildStatus) (v1.ServiceBuild, error) {
+	externalBuild := v1.ServiceBuild{
+		ID:         v1.ServiceBuildID(name),
 		State:      getServiceBuildState(status.State),
-		Components: map[string]types.ComponentBuild{},
+		Components: map[string]v1.ComponentBuild{},
 	}
 
 	for component, componentBuildName := range status.ComponentBuilds {
@@ -80,7 +80,7 @@ func transformServiceBuild(namespace, name string, status *latticev1.ServiceBuil
 				componentBuildName,
 				component,
 			)
-			return types.ServiceBuild{}, err
+			return v1.ServiceBuild{}, err
 		}
 
 		externalComponentBuild := transformComponentBuild(componentBuildName, componentBuildStatus)
@@ -90,16 +90,16 @@ func transformServiceBuild(namespace, name string, status *latticev1.ServiceBuil
 	return externalBuild, nil
 }
 
-func getServiceBuildState(state latticev1.ServiceBuildState) types.ServiceBuildState {
+func getServiceBuildState(state latticev1.ServiceBuildState) v1.ServiceBuildState {
 	switch state {
 	case latticev1.ServiceBuildStatePending:
-		return types.ServiceBuildStatePending
+		return v1.ServiceBuildStatePending
 	case latticev1.ServiceBuildStateRunning:
-		return types.ServiceBuildStateRunning
+		return v1.ServiceBuildStateRunning
 	case latticev1.ServiceBuildStateSucceeded:
-		return types.ServiceBuildStateSucceeded
+		return v1.ServiceBuildStateSucceeded
 	case latticev1.ServiceBuildStateFailed:
-		return types.ServiceBuildStateFailed
+		return v1.ServiceBuildStateFailed
 	default:
 		panic("unreachable")
 	}

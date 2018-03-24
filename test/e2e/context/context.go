@@ -1,13 +1,13 @@
 package context
 
 import (
-	"github.com/mlab-lattice/system/pkg/apiserver/client"
-	"github.com/mlab-lattice/system/pkg/apiserver/client/rest"
+	"github.com/mlab-lattice/system/pkg/api/client/rest"
+	clientv1 "github.com/mlab-lattice/system/pkg/api/client/v1"
 )
 
 type TestContextType struct {
 	ClusterURL       string
-	ClusterAPIClient client.Interface
+	ClusterAPIClient clientv1.Interface
 }
 
 var TestContext TestContextType

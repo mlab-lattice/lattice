@@ -3,9 +3,9 @@ package base
 import (
 	"fmt"
 
+	"github.com/mlab-lattice/system/pkg/api/v1"
 	latticev1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/lattice/bootstrap/bootstrapper"
-	"github.com/mlab-lattice/system/pkg/types"
 	"github.com/mlab-lattice/system/pkg/util/terraform"
 )
 
@@ -38,7 +38,7 @@ type TerraformOptions struct {
 }
 
 func NewBootstrapper(
-	latticeID types.LatticeID,
+	latticeID v1.LatticeID,
 	cloudProviderName string,
 	options *Options,
 ) (*DefaultBootstrapper, error) {
@@ -56,7 +56,7 @@ func NewBootstrapper(
 
 type DefaultBootstrapper struct {
 	Options           *Options
-	LatticeID         types.LatticeID
+	LatticeID         v1.LatticeID
 	CloudProviderName string
 }
 

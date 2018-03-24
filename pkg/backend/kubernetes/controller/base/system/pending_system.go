@@ -1,15 +1,15 @@
 package system
 
 import (
+	"github.com/mlab-lattice/system/pkg/api/v1"
 	latticev1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/system/bootstrap"
-	"github.com/mlab-lattice/system/pkg/types"
 )
 
 func (c *Controller) syncPendingSystem(system *latticev1.System) error {
 	_, err := bootstrap.Bootstrap(
 		c.latticeID,
-		types.SystemID(system.Name),
+		v1.SystemID(system.Name),
 		system.Spec.DefinitionURL,
 		c.systemBootstrappers,
 		c.kubeClient,

@@ -2,7 +2,7 @@ package aws
 
 import (
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/system/bootstrap/bootstrapper/noop"
-	"github.com/mlab-lattice/system/pkg/cli/command"
+	"github.com/mlab-lattice/system/pkg/cli"
 )
 
 type SystemBootstrapperOptions struct {
@@ -18,7 +18,7 @@ type DefaultAWSSystemBootstrapper struct {
 	*noop.DefaultBootstrapper
 }
 
-func SystemBootstrapperFlags() (command.Flags, *SystemBootstrapperOptions) {
+func SystemBootstrapperFlags() (cli.Flags, *SystemBootstrapperOptions) {
 	return nil, &SystemBootstrapperOptions{}
 }
 
