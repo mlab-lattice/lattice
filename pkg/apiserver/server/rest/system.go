@@ -40,7 +40,7 @@ func (r *restServer) mountSystemHandlers() {
 				return
 			}
 
-			c.JSON(http.StatusOK, system)
+			c.JSON(http.StatusCreated, system)
 		})
 
 		// list-systems

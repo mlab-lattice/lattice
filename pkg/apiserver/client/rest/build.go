@@ -4,7 +4,9 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"net/http"
 
+	"github.com/mlab-lattice/system/pkg/apiserver/client"
 	"github.com/mlab-lattice/system/pkg/types"
 	"github.com/mlab-lattice/system/pkg/util/rest"
 )
@@ -13,15 +15,17 @@ const (
 	systemBuildSubpath = "/builds"
 )
 
-type SystemBuildClient struct {
+type BuildClient struct {
 	restClient rest.Client
 	baseURL    string
+	systemID   types.SystemID
 }
 
-func newSystemBuildClient(c rest.Client, baseURL string) *SystemBuildClient {
-	return &SystemBuildClient{
+func newBuildClient(c rest.Client, baseURL string, systemID types.SystemID) *BuildClient {
+	return &BuildClient{
 		restClient: c,
 		baseURL:    fmt.Sprintf("%v%v", baseURL, systemBuildSubpath),
+		systemID:   systemID,
 	}
 }
 
@@ -33,7 +37,7 @@ type buildSystemResponse struct {
 	BuildID types.BuildID `json:"buildId"`
 }
 
-func (c *SystemBuildClient) Create(version string) (types.BuildID, error) {
+func (c *BuildClient) Create(version string) (types.BuildID, error) {
 	request := &buildSystemRequest{
 		Version: version,
 	}
@@ -43,22 +47,61 @@ func (c *SystemBuildClient) Create(version string) (types.BuildID, error) {
 	}
 
 	buildResponse := &buildSystemResponse{}
-	err = c.restClient.PostJSON(c.baseURL, bytes.NewReader(requestJSON)).JSON(&buildSystemResponse{})
+	statusCode, err := c.restClient.PostJSON(c.baseURL, bytes.NewReader(requestJSON)).JSON(&buildSystemResponse{})
 	if err != nil {
 		return "", err
 	}
 
-	return buildResponse.BuildID, nil
+	if statusCode == http.StatusCreated {
+		return buildResponse.BuildID, nil
+	}
+
+	if statusCode == http.StatusBadRequest {
+		return "", &client.InvalidSystemVersionError{
+			Version: version,
+		}
+	}
+
+	return "", fmt.Errorf("unexpected status code %v", statusCode)
 }
 
-func (c *SystemBuildClient) List() ([]types.Build, error) {
+func (c *BuildClient) List() ([]types.Build, error) {
 	var builds []types.Build
-	err := c.restClient.Get(c.baseURL).JSON(&builds)
-	return builds, err
+	statusCode, err := c.restClient.Get(c.baseURL).JSON(&builds)
+	if err != nil {
+		return nil, err
+	}
+
+	if statusCode == http.StatusOK {
+		return builds, err
+	}
+
+	if statusCode == http.StatusNotFound {
+		return nil, &client.InvalidSystemIDError{
+			ID: c.systemID,
+		}
+	}
+
+	return nil, fmt.Errorf("unexpected status code %v", statusCode)
 }
 
-func (c *SystemBuildClient) Get(id types.BuildID) (*types.Build, error) {
+func (c *BuildClient) Get(id types.BuildID) (*types.Build, error) {
 	build := &types.Build{}
-	err := c.restClient.Get(fmt.Sprintf("%v/%v", c.baseURL, id)).JSON(&build)
-	return build, err
+	statusCode, err := c.restClient.Get(fmt.Sprintf("%v/%v", c.baseURL, id)).JSON(&build)
+	if err != nil {
+		return nil, err
+	}
+
+	if statusCode == http.StatusOK {
+		return build, nil
+	}
+
+	if statusCode == http.StatusNotFound {
+		// FIXME: need to be able to differentiate between invalid build ID and system ID
+		return nil, &client.InvalidBuildIDError{
+			ID: id,
+		}
+	}
+
+	return nil, fmt.Errorf("unexpected status code %v", statusCode)
 }
