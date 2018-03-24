@@ -1,10 +1,12 @@
 package rest
 
 import (
-	"fmt"
-
 	"bytes"
 	"encoding/json"
+	"fmt"
+	"net/http"
+
+	"github.com/mlab-lattice/system/pkg/managerapi/client"
 	"github.com/mlab-lattice/system/pkg/types"
 	"github.com/mlab-lattice/system/pkg/util/rest"
 )
@@ -16,25 +18,55 @@ const (
 type RolloutClient struct {
 	restClient rest.Client
 	baseURL    string
+	systemID   types.SystemID
 }
 
-func newRolloutClient(c rest.Client, baseURL string) *RolloutClient {
+func newRolloutClient(c rest.Client, baseURL string, systemID types.SystemID) *RolloutClient {
 	return &RolloutClient{
 		restClient: c,
 		baseURL:    fmt.Sprintf("%v%v", baseURL, rolloutSubpath),
+		systemID:   systemID,
 	}
 }
 
 func (c *RolloutClient) List() ([]types.SystemRollout, error) {
 	var rollouts []types.SystemRollout
-	err := c.restClient.Get(c.baseURL).JSON(&rollouts)
-	return rollouts, err
+	statusCode, err := c.restClient.Get(c.baseURL).JSON(&rollouts)
+	if err != nil {
+		return nil, err
+	}
+
+	if statusCode == http.StatusOK {
+		return rollouts, nil
+	}
+
+	if statusCode == http.StatusNotFound {
+		return nil, &client.InvalidSystemIDError{
+			ID: c.systemID,
+		}
+	}
+
+	return nil, fmt.Errorf("unexpected status code %v", statusCode)
 }
 
 func (c *RolloutClient) Get(id types.SystemRolloutID) (*types.SystemRollout, error) {
-	Rollout := &types.SystemRollout{}
-	err := c.restClient.Get(fmt.Sprintf("%v/%v", c.baseURL, id)).JSON(&Rollout)
-	return Rollout, err
+	rollout := &types.SystemRollout{}
+	statusCode, err := c.restClient.Get(fmt.Sprintf("%v/%v", c.baseURL, id)).JSON(&rollout)
+	if err != nil {
+		return nil, err
+	}
+
+	if statusCode == http.StatusOK {
+		return rollout, nil
+	}
+
+	if statusCode == http.StatusNotFound {
+		return nil, &client.InvalidRolloutIDError{
+			ID: id,
+		}
+	}
+
+	return nil, fmt.Errorf("unexpected status code %v", statusCode)
 }
 
 type rollOutSystemRequest struct {
@@ -50,27 +82,56 @@ func (c *RolloutClient) CreateFromBuild(id types.SystemBuildID) (types.SystemRol
 	request := rollOutSystemRequest{
 		BuildID: &id,
 	}
-	return c.create(request)
-}
 
-func (c *RolloutClient) CreateFromVersion(version string) (types.SystemRolloutID, error) {
-	request := rollOutSystemRequest{
-		Version: &version,
-	}
-	return c.create(request)
-}
-
-func (c *RolloutClient) create(request rollOutSystemRequest) (types.SystemRolloutID, error) {
 	requestJSON, err := json.Marshal(request)
 	if err != nil {
 		return "", err
 	}
 
 	rolloutResponse := &rolloutResponse{}
-	err = c.restClient.PostJSON(c.baseURL, bytes.NewReader(requestJSON)).JSON(&rolloutResponse)
+	statusCode, err := c.restClient.PostJSON(c.baseURL, bytes.NewReader(requestJSON)).JSON(&rolloutResponse)
 	if err != nil {
 		return "", err
 	}
 
-	return rolloutResponse.RolloutID, nil
+	if statusCode == http.StatusCreated {
+		return rolloutResponse.RolloutID, nil
+	}
+
+	if statusCode == http.StatusBadRequest {
+		return "", &client.InvalidBuildIDError{
+			ID: id,
+		}
+	}
+
+	return "", fmt.Errorf("unexpected status code %v", statusCode)
+}
+
+func (c *RolloutClient) CreateFromVersion(version string) (types.SystemRolloutID, error) {
+	request := rollOutSystemRequest{
+		Version: &version,
+	}
+
+	requestJSON, err := json.Marshal(request)
+	if err != nil {
+		return "", err
+	}
+
+	rolloutResponse := &rolloutResponse{}
+	statusCode, err := c.restClient.PostJSON(c.baseURL, bytes.NewReader(requestJSON)).JSON(&rolloutResponse)
+	if err != nil {
+		return "", err
+	}
+
+	if statusCode == http.StatusCreated {
+		return rolloutResponse.RolloutID, nil
+	}
+
+	if statusCode == http.StatusBadRequest {
+		return "", &client.InvalidSystemVersionError{
+			Version: version,
+		}
+	}
+
+	return "", fmt.Errorf("unexpected status code %v", statusCode)
 }
