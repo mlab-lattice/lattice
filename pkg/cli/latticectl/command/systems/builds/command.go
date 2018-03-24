@@ -15,6 +15,7 @@ import (
 	"github.com/mlab-lattice/system/pkg/types"
 
 	"k8s.io/apimachinery/pkg/util/wait"
+	tw "github.com/tfogo/tablewriter"
 )
 
 // ListBuildsSupportedFormats is the list of printer.Formats supported
@@ -124,6 +125,18 @@ func buildsPrinter(builds []types.SystemBuild, format printer.Format) printer.In
 	switch format {
 	case printer.FormatDefault, printer.FormatTable:
 		headers := []string{"ID", "Version", "State"}
+		
+		headerColors := []tw.Colors{
+			{tw.Bold},
+			{tw.Bold},
+			{tw.Bold},
+		}
+		
+		columnColors := []tw.Colors{
+			{tw.FgHiMagentaColor},
+			{},
+			{},
+		}
 
 		var rows [][]string
 		for _, build := range builds {
@@ -143,10 +156,12 @@ func buildsPrinter(builds []types.SystemBuild, format printer.Format) printer.In
 				stateColor(string(build.State)),
 			})
 		}
-
+		
 		p = &printer.Table{
-			Headers: headers,
-			Rows:    rows,
+			Headers: 			headers,
+			Rows:    			rows,
+			HeaderColors: headerColors,
+			ColumnColors: columnColors,
 		}
 
 	case printer.FormatJSON:

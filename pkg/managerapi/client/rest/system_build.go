@@ -43,7 +43,7 @@ func (c *SystemBuildClient) Create(version string) (types.SystemBuildID, error) 
 	}
 
 	buildResponse := &buildSystemResponse{}
-	err = c.restClient.PostJSON(c.baseURL, bytes.NewReader(requestJSON)).JSON(&buildSystemResponse{})
+	err = c.restClient.PostJSON(c.baseURL, bytes.NewReader(requestJSON)).JSON(&buildResponse)
 	if err != nil {
 		return "", err
 	}
