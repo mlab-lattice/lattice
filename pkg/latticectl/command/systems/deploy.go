@@ -6,9 +6,9 @@ import (
 
 	clientv1 "github.com/mlab-lattice/system/pkg/api/client/v1"
 	"github.com/mlab-lattice/system/pkg/api/v1"
-	"github.com/mlab-lattice/system/pkg/cli"
 	"github.com/mlab-lattice/system/pkg/latticectl"
 	"github.com/mlab-lattice/system/pkg/latticectl/command"
+	"github.com/mlab-lattice/system/pkg/util/cli"
 )
 
 type DeployCommand struct {

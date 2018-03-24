@@ -7,7 +7,7 @@ import (
 	kubeconstants "github.com/mlab-lattice/system/pkg/backend/kubernetes/constants"
 	latticev1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/lattice/bootstrap/bootstrapper"
-	"github.com/mlab-lattice/system/pkg/cli"
+	"github.com/mlab-lattice/system/pkg/util/cli"
 )
 
 type LatticeBootstrapperOptions struct {

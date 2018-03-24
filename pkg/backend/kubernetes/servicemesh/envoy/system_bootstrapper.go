@@ -3,7 +3,7 @@ package envoy
 import (
 	kubeconstants "github.com/mlab-lattice/system/pkg/backend/kubernetes/constants"
 	systembootstrapper "github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/system/bootstrap/bootstrapper"
-	"github.com/mlab-lattice/system/pkg/util/cli"
+	"github.com/mlab-lattice/system/pkg/util/oldcli"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -123,9 +123,9 @@ func (b *DefaultEnvoySystemBootstrapper) BootstrapSystemResources(resources *sys
 
 func ParseSystemBootstrapperFlags(vars []string) (*SystemBootstrapperOptions, error) {
 	options := &SystemBootstrapperOptions{}
-	flags := cli.EmbeddedFlag{
+	flags := oldcli.EmbeddedFlag{
 		Target: &options,
-		Expected: map[string]cli.EmbeddedFlagValue{
+		Expected: map[string]oldcli.EmbeddedFlagValue{
 			"xds-api-image": {
 				Required:     true,
 				EncodingName: "XDSAPIImage",

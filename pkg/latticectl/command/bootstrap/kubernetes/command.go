@@ -13,8 +13,8 @@ import (
 	baseboostrapper "github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/lattice/bootstrap/bootstrapper/base"
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/servicemesh"
 	kubeutil "github.com/mlab-lattice/system/pkg/backend/kubernetes/util/kubernetes"
-	"github.com/mlab-lattice/system/pkg/cli"
 	"github.com/mlab-lattice/system/pkg/latticectl"
+	"github.com/mlab-lattice/system/pkg/util/cli"
 
 	kubeclientset "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"

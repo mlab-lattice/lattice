@@ -18,7 +18,7 @@ import (
 	latticeinformers "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/informers/externalversions"
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/system/bootstrap/bootstrapper"
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/servicemesh"
-	"github.com/mlab-lattice/system/pkg/util/cli"
+	"github.com/mlab-lattice/system/pkg/util/oldcli"
 	"github.com/mlab-lattice/system/pkg/util/terraform"
 
 	kubeinformers "k8s.io/client-go/informers"
@@ -254,9 +254,9 @@ func parseCloudProviderVars() (*cloudprovider.Options, error) {
 
 func parseCloudProviderVarsLocal() (*local.Options, error) {
 	options := &local.Options{}
-	flags := cli.EmbeddedFlag{
+	flags := oldcli.EmbeddedFlag{
 		Target: &options,
-		Expected: map[string]cli.EmbeddedFlagValue{
+		Expected: map[string]oldcli.EmbeddedFlagValue{
 			"ip": {
 				Required:     true,
 				EncodingName: "IP",
@@ -273,9 +273,9 @@ func parseCloudProviderVarsLocal() (*local.Options, error) {
 
 func parseCloudProviderVarsAWS() (*aws.Options, error) {
 	options := &aws.Options{}
-	flags := cli.EmbeddedFlag{
+	flags := oldcli.EmbeddedFlag{
 		Target: &options,
-		Expected: map[string]cli.EmbeddedFlagValue{
+		Expected: map[string]oldcli.EmbeddedFlagValue{
 			"region": {
 				Required:     true,
 				EncodingName: "Region",
@@ -337,9 +337,9 @@ func parseTerraformVars() (*terraform.BackendOptions, error) {
 
 func parseTerraformVarsS3() (*terraform.BackendOptionsS3, error) {
 	s3Config := &terraform.BackendOptionsS3{}
-	flags := cli.EmbeddedFlag{
+	flags := oldcli.EmbeddedFlag{
 		Target: &s3Config,
-		Expected: map[string]cli.EmbeddedFlagValue{
+		Expected: map[string]oldcli.EmbeddedFlagValue{
 			"bucket": {
 				EncodingName: "Bucket",
 				Required:     true,

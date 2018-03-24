@@ -7,7 +7,7 @@ import (
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/cloudprovider/aws"
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/cloudprovider/local"
 	clusterbootstrapper "github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/lattice/bootstrap/bootstrapper"
-	"github.com/mlab-lattice/system/pkg/cli"
+	"github.com/mlab-lattice/system/pkg/util/cli"
 )
 
 type ClusterBootstrapperOptions struct {

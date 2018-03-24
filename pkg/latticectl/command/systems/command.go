@@ -8,11 +8,11 @@ import (
 
 	clientv1 "github.com/mlab-lattice/system/pkg/api/client/v1"
 	"github.com/mlab-lattice/system/pkg/api/v1"
-	"github.com/mlab-lattice/system/pkg/cli"
-	"github.com/mlab-lattice/system/pkg/cli/color"
-	"github.com/mlab-lattice/system/pkg/cli/printer"
 	"github.com/mlab-lattice/system/pkg/latticectl"
 	"github.com/mlab-lattice/system/pkg/latticectl/command"
+	"github.com/mlab-lattice/system/pkg/util/cli"
+	"github.com/mlab-lattice/system/pkg/util/cli/color"
+	"github.com/mlab-lattice/system/pkg/util/cli/printer"
 
 	"k8s.io/apimachinery/pkg/util/wait"
 )
