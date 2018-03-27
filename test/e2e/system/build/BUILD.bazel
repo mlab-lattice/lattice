@@ -5,4 +5,11 @@ go_library(
     srcs = ["build.go"],
     importpath = "github.com/mlab-lattice/system/test/e2e/system/build",
     visibility = ["//visibility:public"],
+    deps = [
+        "//pkg/api/v1:go_default_library",
+        "//test/e2e/context:go_default_library",
+        "@com_github_onsi_ginkgo//:go_default_library",
+        "@com_github_onsi_gomega//:go_default_library",
+        "@io_k8s_apimachinery//pkg/util/wait:go_default_library",
+    ],
 )

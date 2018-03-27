@@ -25,7 +25,7 @@ type SystemClient interface {
 }
 
 type BuildClient interface {
-	Create(version string) (*v1.Build, error)
+	Create(version v1.SystemVersion) (*v1.Build, error)
 	List() ([]v1.Build, error)
 	Get(v1.BuildID) (*v1.Build, error)
 }

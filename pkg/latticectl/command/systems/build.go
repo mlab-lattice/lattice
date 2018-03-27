@@ -5,6 +5,7 @@ import (
 	"log"
 
 	clientv1 "github.com/mlab-lattice/system/pkg/api/client/v1"
+	"github.com/mlab-lattice/system/pkg/api/v1"
 	"github.com/mlab-lattice/system/pkg/latticectl"
 	"github.com/mlab-lattice/system/pkg/latticectl/command"
 	"github.com/mlab-lattice/system/pkg/util/cli"
@@ -25,14 +26,14 @@ func (c *BuildCommand) Base() (*latticectl.BaseCommand, error) {
 			},
 		},
 		Run: func(ctx command.SystemCommandContext, args []string) {
-			BuildSystem(ctx.Client().Systems().Builds(ctx.SystemID()), version)
+			BuildSystem(ctx.Client().Systems().Builds(ctx.SystemID()), v1.SystemVersion(version))
 		},
 	}
 
 	return cmd.Base()
 }
 
-func BuildSystem(client clientv1.BuildClient, version string) {
+func BuildSystem(client clientv1.BuildClient, version v1.SystemVersion) {
 	buildID, err := client.Create(version)
 	if err != nil {
 		log.Panic(err)

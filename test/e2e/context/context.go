@@ -6,13 +6,13 @@ import (
 )
 
 type TestContextType struct {
-	ClusterURL       string
-	ClusterAPIClient clientv1.Interface
+	LatticeURL       string
+	LatticeAPIClient clientv1.Interface
 }
 
 var TestContext TestContextType
 
 func SetClusterURL(clusterURL string) {
-	TestContext.ClusterURL = clusterURL
-	TestContext.ClusterAPIClient = rest.NewClient(clusterURL)
+	TestContext.LatticeURL = clusterURL
+	TestContext.LatticeAPIClient = rest.NewClient(clusterURL)
 }

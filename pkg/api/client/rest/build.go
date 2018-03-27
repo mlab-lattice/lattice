@@ -27,9 +27,9 @@ func newBuildClient(c rest.Client, baseURL string) *BuildClient {
 	}
 }
 
-func (c *BuildClient) Create(version string) (*v1.Build, error) {
+func (c *BuildClient) Create(version v1.SystemVersion) (*v1.Build, error) {
 	request := &v1rest.BuildRequest{
-		Version: version,
+		Version: string(version),
 	}
 	requestJSON, err := json.Marshal(request)
 	if err != nil {
