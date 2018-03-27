@@ -22,4 +22,6 @@ const (
 	LabelKeySystemBuildID      = "system.build.lattice.mlab.com/id"
 	LabelKeySystemBuildVersion = "system.build.lattice.mlab.com/version"
 	LabelKeySystemVersion      = "system.lattice.mlab.com/version"
+
+	LabelKeySecret = "secret.lattice.mlab.com"
 )

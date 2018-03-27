@@ -49,20 +49,20 @@ func DeploySystem(
 		log.Panic("must provide either build or version")
 	}
 
-	var deployID v1.DeployID
+	var deploy *v1.Deploy
 	var err error
 	if buildID != "" {
 		if version != "" {
 			log.Panic("can only provide either build or version")
-			deployID, err = client.CreateFromBuild(buildID)
+			deploy, err = client.CreateFromBuild(buildID)
 		}
 	} else {
-		deployID, err = client.CreateFromVersion(version)
+		deploy, err = client.CreateFromVersion(version)
 	}
 
 	if err != nil {
 		log.Panic(err)
 	}
 
-	fmt.Printf("%v\n", deployID)
+	fmt.Printf("%v\n", deploy.ID)
 }

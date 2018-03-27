@@ -2,7 +2,6 @@ package backend
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/mlab-lattice/system/pkg/api/v1"
 	kubeconstants "github.com/mlab-lattice/system/pkg/backend/kubernetes/constants"
@@ -17,32 +16,33 @@ import (
 	"github.com/satori/go.uuid"
 )
 
-func (kb *KubernetesBackend) Build(
-	systemID v1.SystemID,
-	definitionRoot tree.Node,
-	version v1.SystemVersion,
-) (v1.BuildID, error) {
-	systemBuild, err := systemBuild(systemID, definitionRoot, version)
+func (kb *KubernetesBackend) Build(systemID v1.SystemID, definitionRoot tree.Node, version v1.SystemVersion) (*v1.Build, error) {
+	// ensure the system exists
+	if err := kb.ensureSystemCreated(systemID); err != nil {
+		return nil, err
+	}
+
+	build, err := newBuild(definitionRoot, version)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	namespace := kubeutil.SystemNamespace(kb.latticeID, systemID)
-	result, err := kb.latticeClient.LatticeV1().Builds(namespace).Create(systemBuild)
+	build, err = kb.latticeClient.LatticeV1().Builds(namespace).Create(build)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
-	return v1.BuildID(result.Name), err
+	externalBuild, err := transformBuild(build)
+	if err != nil {
+		return nil, err
+	}
+
+	return &externalBuild, nil
 }
 
-func systemBuild(
-	systemID v1.SystemID,
-	definitionRoot tree.Node,
-	version v1.SystemVersion,
-) (*latticev1.Build, error) {
+func newBuild(definitionRoot tree.Node, version v1.SystemVersion) (*latticev1.Build, error) {
 	labels := map[string]string{
-		kubeconstants.LatticeNamespaceLabel: string(systemID),
 		kubeconstants.LabelKeySystemVersion: string(version),
 	}
 
@@ -53,7 +53,7 @@ func systemBuild(
 		}
 	}
 
-	sysB := &latticev1.Build{
+	build := &latticev1.Build{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:   uuid.NewV4().String(),
 			Labels: labels,
@@ -67,73 +67,68 @@ func systemBuild(
 		},
 	}
 
-	return sysB, nil
+	return build, nil
 }
 
 func (kb *KubernetesBackend) ListBuilds(systemID v1.SystemID) ([]v1.Build, error) {
-	namespace := kubeutil.SystemNamespace(kb.latticeID, systemID)
-	fmt.Println("listing system builds")
-	buildList, err := kb.latticeClient.LatticeV1().Builds(namespace).List(metav1.ListOptions{})
-	if err != nil {
-		fmt.Printf("got error: %v", err)
+	if err := kb.ensureSystemCreated(systemID); err != nil {
 		return nil, err
 	}
 
-	builds := make([]v1.Build, 0, len(buildList.Items))
-	for _, build := range buildList.Items {
-		externalBuild, err := transformSystemBuild(&build)
+	namespace := kubeutil.SystemNamespace(kb.latticeID, systemID)
+	builds, err := kb.latticeClient.LatticeV1().Builds(namespace).List(metav1.ListOptions{})
+	if err != nil {
+		return nil, err
+	}
+
+	// need to actually allocate the slice here so we return a slice instead of nil
+	// if builds.Items is empty
+	externalBuilds := make([]v1.Build, 0)
+	for _, build := range builds.Items {
+		externalBuild, err := transformBuild(&build)
 		if err != nil {
 			return nil, err
 		}
 
-		builds = append(builds, externalBuild)
+		externalBuilds = append(externalBuilds, externalBuild)
 	}
 
-	return builds, nil
+	return externalBuilds, nil
 }
 
-func (kb *KubernetesBackend) GetBuild(
-	systemID v1.SystemID,
-	buildID v1.BuildID,
-) (*v1.Build, bool, error) {
-	build, exists, err := kb.getInternalSystemBuild(systemID, buildID)
-	if err != nil || !exists {
-		return nil, exists, err
+func (kb *KubernetesBackend) GetBuild(systemID v1.SystemID, buildID v1.BuildID) (*v1.Build, error) {
+	// Ensure the system exists
+	if err := kb.ensureSystemCreated(systemID); err != nil {
+		return nil, err
 	}
 
-	externalBuild, err := transformSystemBuild(build)
-	if err != nil {
-		return nil, true, err
-	}
-
-	return &externalBuild, true, nil
-}
-
-func (kb *KubernetesBackend) getInternalSystemBuild(
-	systemID v1.SystemID,
-	buildID v1.BuildID,
-) (*latticev1.Build, bool, error) {
 	namespace := kubeutil.SystemNamespace(kb.latticeID, systemID)
-	result, err := kb.latticeClient.LatticeV1().Builds(namespace).Get(string(buildID), metav1.GetOptions{})
+	build, err := kb.latticeClient.LatticeV1().Builds(namespace).Get(string(buildID), metav1.GetOptions{})
 	if err != nil {
 		if errors.IsNotFound(err) {
-			return nil, false, nil
+			return nil, v1.NewInvalidBuildIDError(buildID)
 		}
-		return nil, false, err
+
+		return nil, err
 	}
 
-	// TODO: add this to the query
-	if strings.Compare(result.Labels[kubeconstants.LatticeNamespaceLabel], string(systemID)) != 0 {
-		return nil, false, nil
+	externalBuild, err := transformBuild(build)
+	if err != nil {
+		return nil, err
 	}
 
-	return result, true, nil
+	return &externalBuild, nil
 }
 
-func transformSystemBuild(build *latticev1.Build) (v1.Build, error) {
+func transformBuild(build *latticev1.Build) (v1.Build, error) {
+	state, err := getBuildState(build.Status.State)
+	if err != nil {
+		return v1.Build{}, err
+	}
+
 	externalBuild := v1.Build{
 		ID:       v1.BuildID(build.Name),
-		State:    getSystemBuildState(build.Status.State),
+		State:    state,
 		Version:  v1.SystemVersion(build.Labels[kubeconstants.LabelKeySystemVersion]),
 		Services: map[tree.NodePath]v1.ServiceBuild{},
 	}
@@ -161,17 +156,114 @@ func transformSystemBuild(build *latticev1.Build) (v1.Build, error) {
 	return externalBuild, nil
 }
 
-func getSystemBuildState(state latticev1.BuildState) v1.BuildState {
+func getBuildState(state latticev1.BuildState) (v1.BuildState, error) {
 	switch state {
 	case latticev1.BuildStatePending:
-		return v1.BuildStatePending
+		return v1.BuildStatePending, nil
 	case latticev1.BuildStateRunning:
-		return v1.BuildStateRunning
+		return v1.BuildStateRunning, nil
 	case latticev1.BuildStateSucceeded:
-		return v1.BuildStateSucceeded
+		return v1.BuildStateSucceeded, nil
 	case latticev1.BuildStateFailed:
-		return v1.BuildStateFailed
+		return v1.BuildStateFailed, nil
 	default:
-		panic("unreachable")
+		return "", fmt.Errorf("invalid build state: %v", state)
 	}
+}
+
+func transformServiceBuild(namespace, name string, status *latticev1.ServiceBuildStatus) (v1.ServiceBuild, error) {
+	state, err := getServiceBuildState(status.State)
+	if err != nil {
+		return v1.ServiceBuild{}, err
+	}
+
+	externalBuild := v1.ServiceBuild{
+		ID:         v1.ServiceBuildID(name),
+		State:      state,
+		Components: map[string]v1.ComponentBuild{},
+	}
+
+	for component, componentBuildName := range status.ComponentBuilds {
+		componentBuildStatus, ok := status.ComponentBuildStatuses[componentBuildName]
+		if !ok {
+			err := fmt.Errorf(
+				"ServiceBuild %v/%v has ComponentBuild %v for component %v but does not have its status",
+				namespace,
+				name,
+				componentBuildName,
+				component,
+			)
+			return v1.ServiceBuild{}, err
+		}
+
+		externalComponentBuild, err := transformComponentBuild(componentBuildName, componentBuildStatus)
+		if err != nil {
+			return v1.ServiceBuild{}, err
+		}
+
+		externalBuild.Components[component] = externalComponentBuild
+	}
+
+	return externalBuild, nil
+}
+
+func getServiceBuildState(state latticev1.ServiceBuildState) (v1.ServiceBuildState, error) {
+	switch state {
+	case latticev1.ServiceBuildStatePending:
+		return v1.ServiceBuildStatePending, nil
+	case latticev1.ServiceBuildStateRunning:
+		return v1.ServiceBuildStateRunning, nil
+	case latticev1.ServiceBuildStateSucceeded:
+		return v1.ServiceBuildStateSucceeded, nil
+	case latticev1.ServiceBuildStateFailed:
+		return v1.ServiceBuildStateFailed, nil
+	default:
+		return "", fmt.Errorf("invalid service build state: %v", state)
+	}
+}
+
+func transformComponentBuild(name string, status latticev1.ComponentBuildStatus) (v1.ComponentBuild, error) {
+	state, err := getComponentBuildState(status.State)
+	if err != nil {
+		return v1.ComponentBuild{}, err
+	}
+
+	var failureMessage *string
+	if status.FailureInfo != nil {
+		message := getComponentBuildFailureMessage(*status.FailureInfo)
+		failureMessage = &message
+	}
+
+	externalBuild := v1.ComponentBuild{
+		ID:                v1.ComponentBuildID(name),
+		State:             state,
+		LastObservedPhase: status.LastObservedPhase,
+		FailureMessage:    failureMessage,
+	}
+
+	return externalBuild, nil
+}
+
+func getComponentBuildState(state latticev1.ComponentBuildState) (v1.ComponentBuildState, error) {
+	switch state {
+	case latticev1.ComponentBuildStatePending:
+		return v1.ComponentBuildStatePending, nil
+	case latticev1.ComponentBuildStateQueued:
+		return v1.ComponentBuildStateQueued, nil
+	case latticev1.ComponentBuildStateRunning:
+		return v1.ComponentBuildStateRunning, nil
+	case latticev1.ComponentBuildStateSucceeded:
+		return v1.ComponentBuildStateSucceeded, nil
+	case latticev1.ComponentBuildStateFailed:
+		return v1.ComponentBuildStateFailed, nil
+	default:
+		return "", fmt.Errorf("invalid component state: %v", state)
+	}
+}
+
+func getComponentBuildFailureMessage(failureInfo v1.ComponentBuildFailureInfo) string {
+	if failureInfo.Internal {
+		return "failed due to an internal error"
+	}
+	return failureInfo.Message
 }

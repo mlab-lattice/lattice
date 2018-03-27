@@ -10,129 +10,138 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"fmt"
 	"github.com/satori/go.uuid"
 )
 
-func (kb *KubernetesBackend) DeployBuild(
-	systemID v1.SystemID,
-	buildID v1.BuildID,
-) (v1.DeployID, error) {
-	build, err := kb.getBuildFromID(systemID, buildID)
+func (kb *KubernetesBackend) DeployBuild(systemID v1.SystemID, buildID v1.BuildID) (*v1.Deploy, error) {
+	// this ensures the system is created as well
+	build, err := kb.GetBuild(systemID, buildID)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
-	deploy, err := getNewDeploy(systemID, build)
-	if err != nil {
-		return "", err
-	}
-
+	deploy := newDeploy(build)
 	namespace := kubeutil.SystemNamespace(kb.latticeID, systemID)
-	result, err := kb.latticeClient.LatticeV1().Deploies(namespace).Create(deploy)
+	deploy, err = kb.latticeClient.LatticeV1().Deploies(namespace).Create(deploy)
 	if err != nil {
-		return "", err
-	}
-	return v1.DeployID(result.Name), err
-}
-
-func (kb *KubernetesBackend) DeployVersion(
-	systemID v1.SystemID,
-	definitionRoot tree.Node,
-	version v1.SystemVersion,
-) (v1.DeployID, error) {
-	bid, err := kb.Build(systemID, definitionRoot, version)
-	if err != nil {
-		return "", err
+		return nil, err
 	}
 
-	return kb.DeployBuild(systemID, bid)
+	externalDeploy, err := transformDeploy(deploy)
+	if err != nil {
+		return nil, err
+	}
+
+	return &externalDeploy, nil
 }
 
-func (kb *KubernetesBackend) getBuildFromID(
-	systemID v1.SystemID,
-	buildID v1.BuildID,
-) (*latticev1.Build, error) {
-	namespace := kubeutil.SystemNamespace(kb.latticeID, systemID)
-	return kb.latticeClient.LatticeV1().Builds(namespace).Get(string(buildID), metav1.GetOptions{})
+func (kb *KubernetesBackend) DeployVersion(systemID v1.SystemID, definitionRoot tree.Node, version v1.SystemVersion) (*v1.Deploy, error) {
+	// this ensures the system is created as well
+	build, err := kb.Build(systemID, definitionRoot, version)
+	if err != nil {
+		return nil, err
+	}
+
+	return kb.DeployBuild(systemID, build.ID)
 }
 
-func getNewDeploy(latticeNamespace v1.SystemID, build *latticev1.Build) (*latticev1.Deploy, error) {
+func newDeploy(build *v1.Build) *latticev1.Deploy {
 	labels := map[string]string{
-		kubeconstants.LatticeNamespaceLabel:        string(latticeNamespace),
-		kubeconstants.LabelKeySystemRolloutVersion: build.Labels[kubeconstants.LabelKeySystemBuildVersion],
-		kubeconstants.LabelKeySystemRolloutBuildID: build.Name,
+		kubeconstants.LabelKeySystemRolloutVersion: string(build.Version),
+		kubeconstants.LabelKeySystemRolloutBuildID: string(build.ID),
 	}
 
-	sysRollout := &latticev1.Deploy{
+	return &latticev1.Deploy{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:   uuid.NewV4().String(),
 			Labels: labels,
 		},
 		Spec: latticev1.DeploySpec{
-			BuildName: build.Name,
+			BuildName: string(build.ID),
 		},
 		Status: latticev1.DeployStatus{
 			State: latticev1.DeployStatePending,
 		},
 	}
-
-	return sysRollout, nil
 }
 
 func (kb *KubernetesBackend) ListDeploys(systemID v1.SystemID) ([]v1.Deploy, error) {
+	if err := kb.ensureSystemCreated(systemID); err != nil {
+		return nil, err
+	}
+
 	namespace := kubeutil.SystemNamespace(kb.latticeID, systemID)
-	result, err := kb.latticeClient.LatticeV1().Deploies(namespace).List(metav1.ListOptions{})
+	deploys, err := kb.latticeClient.LatticeV1().Deploies(namespace).List(metav1.ListOptions{})
 	if err != nil {
 		return nil, err
 	}
 
-	rollouts := make([]v1.Deploy, 0, len(result.Items))
-	for _, r := range result.Items {
-		rollouts = append(rollouts, v1.Deploy{
-			ID:      v1.DeployID(r.Name),
-			BuildID: v1.BuildID(r.Spec.BuildName),
-			State:   getSystemRolloutState(r.Status.State),
-		})
+	// need to actually allocate the slice here so we return a slice instead of nil
+	// if deploys.Items is empty
+	externalDeploys := make([]v1.Deploy, 0)
+	for _, deploy := range deploys.Items {
+		externalDeploy, err := transformDeploy(&deploy)
+		if err != nil {
+			return nil, err
+		}
+
+		externalDeploys = append(externalDeploys, externalDeploy)
 	}
 
-	return rollouts, nil
+	return externalDeploys, nil
 }
 
-func (kb *KubernetesBackend) GetDeploy(
-	systemID v1.SystemID,
-	rolloutID v1.DeployID,
-) (*v1.Deploy, bool, error) {
+func (kb *KubernetesBackend) GetDeploy(systemID v1.SystemID, deployID v1.DeployID) (*v1.Deploy, error) {
+	if err := kb.ensureSystemCreated(systemID); err != nil {
+		return nil, err
+	}
+
 	namespace := kubeutil.SystemNamespace(kb.latticeID, systemID)
-	result, err := kb.latticeClient.LatticeV1().Deploies(namespace).Get(string(rolloutID), metav1.GetOptions{})
+	deploy, err := kb.latticeClient.LatticeV1().Deploies(namespace).Get(string(deployID), metav1.GetOptions{})
 	if err != nil {
 		if errors.IsNotFound(err) {
-			return nil, false, nil
+			return nil, v1.NewInvalidDeployIDError(deployID)
 		}
-		return nil, false, err
+
+		return nil, err
 	}
 
-	sb := &v1.Deploy{
-		ID:      rolloutID,
-		BuildID: v1.BuildID(result.Spec.BuildName),
-		State:   getSystemRolloutState(result.Status.State),
+	externalDeploy, err := transformDeploy(deploy)
+	if err != nil {
+		return nil, err
 	}
 
-	return sb, true, nil
+	return &externalDeploy, nil
 }
 
-func getSystemRolloutState(state latticev1.DeployState) v1.DeployState {
+func transformDeploy(deploy *latticev1.Deploy) (v1.Deploy, error) {
+	state, err := getDeployState(deploy.Status.State)
+	if err != nil {
+		return v1.Deploy{}, err
+	}
+
+	externalDeploy := v1.Deploy{
+		ID:      v1.DeployID(deploy.Name),
+		BuildID: v1.BuildID(deploy.Spec.BuildName),
+		State:   state,
+	}
+	return externalDeploy, nil
+}
+
+func getDeployState(state latticev1.DeployState) (v1.DeployState, error) {
 	switch state {
 	case latticev1.DeployStatePending:
-		return v1.DeployStatePending
+		return v1.DeployStatePending, nil
 	case latticev1.DeployStateAccepted:
-		return v1.DeployStateAccepted
+		return v1.DeployStateAccepted, nil
 	case latticev1.DeployStateInProgress:
-		return v1.DeployStateInProgress
+		return v1.DeployStateInProgress, nil
 	case latticev1.DeployStateSucceeded:
-		return v1.DeployStateSucceeded
+		return v1.DeployStateSucceeded, nil
 	case latticev1.DeployStateFailed:
-		return v1.DeployStateFailed
+		return v1.DeployStateFailed, nil
 	default:
-		panic("unreachable")
+		return "", fmt.Errorf("invalid deploy state: %v", state)
 	}
 }

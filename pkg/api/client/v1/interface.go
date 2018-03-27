@@ -25,22 +25,22 @@ type SystemClient interface {
 }
 
 type BuildClient interface {
-	Create(version string) (v1.BuildID, error)
+	Create(version string) (*v1.Build, error)
 	List() ([]v1.Build, error)
 	Get(v1.BuildID) (*v1.Build, error)
 }
 
 type DeployClient interface {
-	CreateFromBuild(v1.BuildID) (v1.DeployID, error)
-	CreateFromVersion(string) (v1.DeployID, error)
+	CreateFromBuild(v1.BuildID) (*v1.Deploy, error)
+	CreateFromVersion(string) (*v1.Deploy, error)
 	List() ([]v1.Deploy, error)
 	Get(v1.DeployID) (*v1.Deploy, error)
 }
 
 type TeardownClient interface {
-	Create() (v1.TeardownID, error)
-	List() ([]v1.SystemTeardown, error)
-	Get(v1.TeardownID) (*v1.SystemTeardown, error)
+	Create() (*v1.Teardown, error)
+	List() ([]v1.Teardown, error)
+	Get(v1.TeardownID) (*v1.Teardown, error)
 }
 
 type ServiceClient interface {

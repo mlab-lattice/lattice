@@ -6,6 +6,7 @@ go_library(
         "build.go",
         "client.go",
         "deploy.go",
+        "errors.go",
         "service.go",
         "system.go",
         "system_secret.go",
@@ -15,7 +16,7 @@ go_library(
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/api/client/v1:go_default_library",
-        "//pkg/api/server/rest/v1/system:go_default_library",
+        "//pkg/api/server/rest/v1:go_default_library",
         "//pkg/api/v1:go_default_library",
         "//pkg/definition/tree:go_default_library",
         "//pkg/util/rest:go_default_library",

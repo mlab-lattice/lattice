@@ -5,6 +5,7 @@ go_library(
     srcs = [
         "build.go",
         "deploy.go",
+        "errors.go",
         "lattice.go",
         "secret.go",
         "service.go",

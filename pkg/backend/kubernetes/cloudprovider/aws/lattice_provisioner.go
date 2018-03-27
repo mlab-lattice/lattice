@@ -213,12 +213,12 @@ func (p *DefaultAWSLatticeProvisioner) tearDownSystems(latticeID string) error {
 
 	teardowns := map[v1.SystemID]v1.TeardownID{}
 	for _, system := range systems {
-		teardownID, err := latticeClient.Systems().Teardowns(system.ID).Create()
+		teardown, err := latticeClient.Systems().Teardowns(system.ID).Create()
 		if err != nil {
 			return err
 		}
 
-		teardowns[system.ID] = teardownID
+		teardowns[system.ID] = teardown.ID
 	}
 
 	err = wait.Poll(10*time.Second, 600*time.Second, func() (bool, error) {

@@ -37,6 +37,7 @@ func NodePathFromDomain(d string) (NodePath, error) {
 	return NewNodePath(p)
 }
 
+// FIXME: remove lowercase option
 func (np NodePath) ToDomain(lowercase bool) string {
 	// FIXME: this will panic if it's an invalid path
 	s := strings.Split(string(np), "/")[1:]

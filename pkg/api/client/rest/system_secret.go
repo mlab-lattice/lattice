@@ -6,8 +6,7 @@ import (
 	"fmt"
 	"net/http"
 
-	clientv1 "github.com/mlab-lattice/system/pkg/api/client/v1"
-	"github.com/mlab-lattice/system/pkg/api/server/rest/v1/system"
+	restv1 "github.com/mlab-lattice/system/pkg/api/server/rest/v1"
 	"github.com/mlab-lattice/system/pkg/api/v1"
 	"github.com/mlab-lattice/system/pkg/definition/tree"
 	"github.com/mlab-lattice/system/pkg/util/rest"
@@ -20,64 +19,52 @@ const (
 type SystemSecretClient struct {
 	restClient rest.Client
 	baseURL    string
-	systemID   v1.SystemID
 }
 
-func newSystemSecretClient(c rest.Client, baseURL string, systemID v1.SystemID) *SystemSecretClient {
+func newSystemSecretClient(c rest.Client, baseURL string) *SystemSecretClient {
 	return &SystemSecretClient{
 		restClient: c,
 		baseURL:    fmt.Sprintf("%v%v", baseURL, secretSubpath),
-		systemID:   systemID,
 	}
 }
 
 func (c *SystemSecretClient) List() ([]v1.Secret, error) {
-	var secrets []v1.Secret
-	statusCode, err := c.restClient.Get(c.baseURL).JSON(&secrets)
+	body, statusCode, err := c.restClient.Get(c.baseURL).Body()
 	if err != nil {
 		return nil, err
 	}
+	defer body.Close()
 
 	if statusCode == http.StatusOK {
+		var secrets []v1.Secret
+		err = rest.UnmarshalBodyJSON(body, &secrets)
 		return secrets, err
 	}
 
-	if statusCode == http.StatusNotFound {
-		return nil, &clientv1.InvalidSystemIDError{
-			ID: c.systemID,
-		}
-	}
-
-	return nil, fmt.Errorf("unexpected status code %v", statusCode)
+	return nil, HandleErrorStatusCode(statusCode, body)
 }
 
 func (c *SystemSecretClient) Get(path tree.NodePath, name string) (*v1.Secret, error) {
 	secretPath := fmt.Sprintf("%v:%v", path.ToDomain(true), name)
-	secret := &v1.Secret{}
-	statusCode, err := c.restClient.Get(fmt.Sprintf("%v/%v", c.baseURL, secretPath)).JSON(&secret)
+	body, statusCode, err := c.restClient.Get(fmt.Sprintf("%v/%v", c.baseURL, secretPath)).Body()
 	if err != nil {
 		return nil, err
 	}
+	defer body.Close()
 
 	if statusCode == http.StatusOK {
-		return secret, nil
+		secret := &v1.Secret{}
+		err = rest.UnmarshalBodyJSON(body, &secret)
+		return secret, err
 	}
 
-	if statusCode == http.StatusNotFound {
-		// FIXME: need to be able to differentiate between invalid build ID and system ID
-		return nil, &clientv1.InvalidSecretError{
-			Path: path,
-			Name: name,
-		}
-	}
-
-	return nil, fmt.Errorf("unexpected status code %v", statusCode)
+	return nil, HandleErrorStatusCode(statusCode, body)
 }
 
 func (c *SystemSecretClient) Set(path tree.NodePath, name, value string) error {
 	secretPath := fmt.Sprintf("%v:%v", path.ToDomain(true), name)
 
-	request := &system.SetSecretRequest{
+	request := &restv1.SetSecretRequest{
 		Value: value,
 	}
 	requestJSON, err := json.Marshal(request)
@@ -85,43 +72,31 @@ func (c *SystemSecretClient) Set(path tree.NodePath, name, value string) error {
 		return err
 	}
 
-	statusCode, err := c.restClient.PatchJSON(fmt.Sprintf("%v/%v", c.baseURL, secretPath), bytes.NewReader(requestJSON)).Status()
+	body, statusCode, err := c.restClient.PatchJSON(fmt.Sprintf("%v/%v", c.baseURL, secretPath), bytes.NewReader(requestJSON)).Body()
 	if err != nil {
 		return err
 	}
+	defer body.Close()
 
 	if statusCode == http.StatusOK {
 		return nil
 	}
 
-	if statusCode == http.StatusBadRequest {
-		return &clientv1.InvalidSecretError{
-			Path: path,
-			Name: name,
-		}
-	}
-
-	return fmt.Errorf("unexpected status code %v", statusCode)
+	return HandleErrorStatusCode(statusCode, body)
 }
 
 func (c *SystemSecretClient) Unset(path tree.NodePath, name string) error {
 	secretPath := fmt.Sprintf("%v:%v", path.ToDomain(true), name)
 
-	statusCode, err := c.restClient.Delete(fmt.Sprintf("%v/%v", c.baseURL, secretPath)).Status()
+	body, statusCode, err := c.restClient.Delete(fmt.Sprintf("%v/%v", c.baseURL, secretPath)).Body()
 	if err != nil {
 		return err
 	}
+	defer body.Close()
 
 	if statusCode == http.StatusOK {
 		return nil
 	}
 
-	if statusCode == http.StatusBadRequest {
-		return &clientv1.InvalidSecretError{
-			Path: path,
-			Name: name,
-		}
-	}
-
-	return fmt.Errorf("unexpected status code %v", statusCode)
+	return HandleErrorStatusCode(statusCode, body)
 }

@@ -55,22 +55,30 @@ func (kb *KubernetesBackend) ListSystems() ([]v1.System, error) {
 	return externalSystems, nil
 }
 
-func (kb *KubernetesBackend) GetSystem(systemID v1.SystemID) (*v1.System, bool, error) {
+func (kb *KubernetesBackend) GetSystem(systemID v1.SystemID) (*v1.System, error) {
 	system, err := kb.latticeClient.LatticeV1().Systems(kubeutil.InternalNamespace(kb.latticeID)).Get(string(systemID), metav1.GetOptions{})
 	if err != nil {
 		if errors.IsNotFound(err) {
-			return nil, false, nil
+			return nil, v1.NewInvalidSystemIDError(systemID)
 		}
 
-		return nil, false, err
+		return nil, err
 	}
 
-	externalSystem, err := kb.transformSystem(system)
-	return externalSystem, true, err
+	return kb.transformSystem(system)
 }
 
 func (kb *KubernetesBackend) DeleteSystem(systemID v1.SystemID) error {
-	return kb.latticeClient.LatticeV1().Systems(kubeutil.InternalNamespace(kb.latticeID)).Delete(string(systemID), nil)
+	err := kb.latticeClient.LatticeV1().Systems(kubeutil.InternalNamespace(kb.latticeID)).Delete(string(systemID), nil)
+	if err == nil {
+		return nil
+	}
+
+	if errors.IsConflict(err) {
+		return v1.NewConflictError("")
+	}
+
+	return err
 }
 
 func (kb *KubernetesBackend) transformSystem(system *latticev1.System) (*v1.System, error) {
@@ -78,7 +86,11 @@ func (kb *KubernetesBackend) transformSystem(system *latticev1.System) (*v1.Syst
 	if system.DeletionTimestamp != nil {
 		state = v1.SystemStateDeleting
 	} else {
-		state = getSystemState(system.Status.State)
+		var err error
+		state, err = getSystemState(system.Status.State)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	externalSystem := &v1.System{
@@ -100,7 +112,11 @@ func (kb *KubernetesBackend) transformSystem(system *latticev1.System) (*v1.Syst
 			return nil, err
 		}
 
-		externalService := kb.transformService(serviceName, path, &serviceStatus)
+		externalService, err := kb.transformService(v1.ServiceID(serviceName), path, &serviceStatus)
+		if err != nil {
+			return nil, err
+		}
+
 		externalServices[path] = externalService
 	}
 
@@ -108,22 +124,38 @@ func (kb *KubernetesBackend) transformSystem(system *latticev1.System) (*v1.Syst
 	return externalSystem, nil
 }
 
-func getSystemState(state latticev1.SystemState) v1.SystemState {
+func getSystemState(state latticev1.SystemState) (v1.SystemState, error) {
 	switch state {
 	case latticev1.SystemStatePending:
-		return v1.SystemStatePending
+		return v1.SystemStatePending, nil
 	case latticev1.SystemStateFailed:
-		return v1.SystemStateFailed
+		return v1.SystemStateFailed, nil
 
 	case latticev1.SystemStateStable:
-		return v1.SystemStateStable
+		return v1.SystemStateStable, nil
 	case latticev1.SystemStateDegraded:
-		return v1.SystemStateDegraded
+		return v1.SystemStateDegraded, nil
 	case latticev1.SystemStateScaling:
-		return v1.SystemStateScaling
+		return v1.SystemStateScaling, nil
 	case latticev1.SystemStateUpdating:
-		return v1.SystemStateUpdating
+		return v1.SystemStateUpdating, nil
 	default:
-		panic("unreachable")
+		return "", fmt.Errorf("invalid system state: %v", state)
+	}
+}
+
+func (kb *KubernetesBackend) ensureSystemCreated(systemID v1.SystemID) error {
+	system, err := kb.GetSystem(systemID)
+	if err != nil {
+		return err
+	}
+
+	switch system.State {
+	case v1.SystemStatePending, v1.SystemStateFailed, v1.SystemStateDeleting:
+		return v1.NewSystemNotCreatedError(systemID, system.State)
+	case v1.SystemStateStable, v1.SystemStateDegraded, v1.SystemStateScaling, v1.SystemStateUpdating:
+		return nil
+	default:
+		return fmt.Errorf("invalid system state: %v", system.State)
 	}
 }

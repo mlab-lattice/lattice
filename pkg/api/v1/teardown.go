@@ -12,7 +12,7 @@ const (
 	TeardownStateFailed     TeardownState = "failed"
 )
 
-type SystemTeardown struct {
+type Teardown struct {
 	ID    TeardownID    `json:"id"`
 	State TeardownState `json:"state"`
 }

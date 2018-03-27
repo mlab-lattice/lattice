@@ -15,6 +15,11 @@ import (
 )
 
 func (kb *KubernetesBackend) ListServices(systemID v1.SystemID) ([]v1.Service, error) {
+	// ensure the system exists
+	if err := kb.ensureSystemCreated(systemID); err != nil {
+		return nil, err
+	}
+
 	namespace := kubeutil.SystemNamespace(kb.latticeID, systemID)
 
 	services, err := kb.latticeClient.LatticeV1().Services(namespace).List(metav1.ListOptions{})
@@ -24,14 +29,23 @@ func (kb *KubernetesBackend) ListServices(systemID v1.SystemID) ([]v1.Service, e
 
 	var externalServices []v1.Service
 	for _, service := range services.Items {
-		externalService := kb.transformService(service.Name, service.Spec.Path, &service.Status)
+		externalService, err := kb.transformService(v1.ServiceID(service.Name), service.Spec.Path, &service.Status)
+		if err != nil {
+			return nil, err
+		}
+
 		externalServices = append(externalServices, externalService)
 	}
 
 	return externalServices, nil
 }
 
-func (kb *KubernetesBackend) GetService(id v1.SystemID, path tree.NodePath) (*v1.Service, error) {
+func (kb *KubernetesBackend) GetService(systemID v1.SystemID, path tree.NodePath) (*v1.Service, error) {
+	// ensure the system exists
+	if err := kb.ensureSystemCreated(systemID); err != nil {
+		return nil, err
+	}
+
 	selector := kubelabels.NewSelector()
 	requirement, err := kubelabels.NewRequirement(
 		kubeconstants.LabelKeyServicePathDomain,
@@ -47,14 +61,14 @@ func (kb *KubernetesBackend) GetService(id v1.SystemID, path tree.NodePath) (*v1
 		LabelSelector: selector.String(),
 	}
 
-	namespace := kubeutil.SystemNamespace(kb.latticeID, id)
+	namespace := kubeutil.SystemNamespace(kb.latticeID, systemID)
 	services, err := kb.latticeClient.LatticeV1().Services(namespace).List(listOptions)
 	if err != nil {
 		return nil, err
 	}
 
 	if len(services.Items) > 1 {
-		return nil, fmt.Errorf("found multiple Services for System %v %v", id, path)
+		return nil, fmt.Errorf("found multiple Services for System %v %v", systemID, path)
 	}
 
 	if len(services.Items) == 0 {
@@ -62,25 +76,30 @@ func (kb *KubernetesBackend) GetService(id v1.SystemID, path tree.NodePath) (*v1
 	}
 
 	service := services.Items[0]
-	externalService := kb.transformService(service.Name, service.Spec.Path, &service.Status)
+	externalService, err := kb.transformService(v1.ServiceID(service.Name), service.Spec.Path, &service.Status)
+	if err != nil {
+		return nil, err
+	}
+
 	return &externalService, nil
 }
 
-func (kb *KubernetesBackend) transformService(
-	serviceName string,
-	path tree.NodePath,
-	serviceStatus *latticev1.ServiceStatus,
-) v1.Service {
+func (kb *KubernetesBackend) transformService(id v1.ServiceID, path tree.NodePath, status *latticev1.ServiceStatus) (v1.Service, error) {
+	state, err := getServiceState(status.State)
+	if err != nil {
+		return v1.Service{}, err
+	}
+
 	service := v1.Service{
-		ID:               v1.ServiceID(serviceName),
+		ID:               id,
 		Path:             path,
-		State:            getServicedState(serviceStatus.State),
-		UpdatedInstances: serviceStatus.UpdatedInstances,
-		StaleInstances:   serviceStatus.StaleInstances,
+		State:            state,
+		UpdatedInstances: status.UpdatedInstances,
+		StaleInstances:   status.StaleInstances,
 	}
 
 	ports := v1.ServicePublicPorts{}
-	for port, portInfo := range serviceStatus.PublicPorts {
+	for port, portInfo := range status.PublicPorts {
 		ports[port] = v1.ServicePublicPort{
 			Address: portInfo.Address,
 		}
@@ -88,35 +107,35 @@ func (kb *KubernetesBackend) transformService(
 	service.PublicPorts = ports
 
 	var failureMessage *string
-	if serviceStatus.FailureInfo != nil {
+	if status.FailureInfo != nil {
 		internalError := "internal error"
 		failureMessage = &internalError
 
-		if !serviceStatus.FailureInfo.Internal {
-			errorMessage := fmt.Sprintf("%v: %v", serviceStatus.FailureInfo.Time, serviceStatus.FailureInfo.Message)
+		if !status.FailureInfo.Internal {
+			errorMessage := fmt.Sprintf("%v: %v", status.FailureInfo.Time, status.FailureInfo.Message)
 			failureMessage = &errorMessage
 		}
 	}
 	service.FailureMessage = failureMessage
 
-	return service
+	return service, nil
 }
 
-func getServicedState(state latticev1.ServiceState) v1.ServiceState {
+func getServiceState(state latticev1.ServiceState) (v1.ServiceState, error) {
 	switch state {
 	case latticev1.ServiceStatePending:
-		return v1.ServiceStatePending
+		return v1.ServiceStatePending, nil
 	case latticev1.ServiceStateScalingDown:
-		return v1.ServiceStateScalingDown
+		return v1.ServiceStateScalingDown, nil
 	case latticev1.ServiceStateScalingUp:
-		return v1.ServiceStateScalingUp
+		return v1.ServiceStateScalingUp, nil
 	case latticev1.ServiceStateUpdating:
-		return v1.ServiceStateUpdating
+		return v1.ServiceStateUpdating, nil
 	case latticev1.ServiceStateStable:
-		return v1.ServiceStateStable
+		return v1.ServiceStateStable, nil
 	case latticev1.ServiceStateFailed:
-		return v1.ServiceStateFailed
+		return v1.ServiceStateFailed, nil
 	default:
-		panic("unreachable")
+		return "", fmt.Errorf("invalid service state: %v", state)
 	}
 }

@@ -18,6 +18,7 @@ const (
 	ServiceStateFailed      ServiceState = "failed"
 )
 
+// FIXME: should we expose Service ID, or just Path?
 type Service struct {
 	ID               ServiceID          `json:"id"`
 	Path             tree.NodePath      `json:"path"`

@@ -7,7 +7,7 @@ import (
 	"net/http"
 
 	clientv1 "github.com/mlab-lattice/system/pkg/api/client/v1"
-	"github.com/mlab-lattice/system/pkg/api/server/rest/v1/system"
+	restv1 "github.com/mlab-lattice/system/pkg/api/server/rest/v1"
 	"github.com/mlab-lattice/system/pkg/api/v1"
 	"github.com/mlab-lattice/system/pkg/util/rest"
 )
@@ -29,7 +29,7 @@ func newSystemClient(c rest.Client, baseURL string) clientv1.SystemClient {
 }
 
 func (c *SystemClient) Create(id v1.SystemID, definitionURL string) (*v1.System, error) {
-	request := system.CreateRequest{
+	request := restv1.CreateSystemRequest{
 		ID:            id,
 		DefinitionURL: definitionURL,
 	}
@@ -39,86 +39,83 @@ func (c *SystemClient) Create(id v1.SystemID, definitionURL string) (*v1.System,
 		return nil, err
 	}
 
-	sys := &v1.System{}
-	statusCode, err := c.restClient.PostJSON(c.baseURL, bytes.NewReader(requestJSON)).JSON(&sys)
+	body, statusCode, err := c.restClient.PostJSON(c.baseURL, bytes.NewReader(requestJSON)).Body()
 	if err != nil {
 		return nil, err
 	}
+	defer body.Close()
 
 	if statusCode == http.StatusCreated {
-		return sys, nil
+		system := &v1.System{}
+		err = rest.UnmarshalBodyJSON(body, &system)
+		return system, err
 	}
 
-	if statusCode == http.StatusBadRequest {
-		return nil, &clientv1.InvalidSystemOptionsError{}
-	}
-
-	return nil, fmt.Errorf("unexpected status code %v", statusCode)
+	return nil, HandleErrorStatusCode(statusCode, body)
 }
 
 func (c *SystemClient) List() ([]v1.System, error) {
-	var systems []v1.System
-	statusCode, err := c.restClient.Get(c.baseURL).JSON(&systems)
+	body, statusCode, err := c.restClient.Get(c.baseURL).Body()
 	if err != nil {
 		return nil, err
 	}
+	defer body.Close()
 
 	if statusCode == http.StatusOK {
-		return systems, nil
+		var systems []v1.System
+		err = rest.UnmarshalBodyJSON(body, &systems)
+		return systems, err
 	}
 
-	return nil, fmt.Errorf("unexpected status code %v", statusCode)
+	return nil, HandleErrorStatusCode(statusCode, body)
 }
 
 func (c *SystemClient) Get(id v1.SystemID) (*v1.System, error) {
-	sys := &v1.System{}
-	statusCode, err := c.restClient.Get(fmt.Sprintf("%v/%v", c.baseURL, id)).JSON(&sys)
+	body, statusCode, err := c.restClient.Get(fmt.Sprintf("%v/%v", c.baseURL, id)).Body()
 	if err != nil {
 		return nil, err
 	}
+	defer body.Close()
 
 	if statusCode == http.StatusOK {
-		return sys, nil
+		system := &v1.System{}
+		err = rest.UnmarshalBodyJSON(body, system)
+		return system, err
 	}
 
-	if statusCode == http.StatusNotFound {
-		return nil, &clientv1.InvalidSystemIDError{
-			ID: id,
-		}
-	}
-
-	return nil, fmt.Errorf("unexpected status code %v", statusCode)
+	return nil, HandleErrorStatusCode(statusCode, body)
 }
 
 func (c *SystemClient) Delete(id v1.SystemID) error {
-	_, statusCode, err := c.restClient.Delete(fmt.Sprintf("%v/%v", c.baseURL, id)).Body()
+	body, statusCode, err := c.restClient.Delete(fmt.Sprintf("%v/%v", c.baseURL, id)).Body()
 	if err != nil {
 		return err
 	}
+	defer body.Close()
 
 	if statusCode == http.StatusOK {
 		return nil
 	}
 
-	return fmt.Errorf("unexpected status code %v", statusCode)
+	return HandleErrorStatusCode(statusCode, body)
 }
 
 func (c *SystemClient) Builds(id v1.SystemID) clientv1.BuildClient {
-	return newBuildClient(c.restClient, fmt.Sprintf("%v/%v", c.baseURL, id), id)
+	return newBuildClient(c.restClient, fmt.Sprintf("%v/%v", c.baseURL, id))
 }
 
 func (c *SystemClient) Deploys(id v1.SystemID) clientv1.DeployClient {
-	return newDeployClient(c.restClient, fmt.Sprintf("%v/%v", c.baseURL, id), id)
+	return newDeployClient(c.restClient, fmt.Sprintf("%v/%v", c.baseURL, id))
 }
 
 func (c *SystemClient) Teardowns(id v1.SystemID) clientv1.TeardownClient {
-	return newTeardownClient(c.restClient, fmt.Sprintf("%v/%v", c.baseURL, id), id)
+	return newTeardownClient(c.restClient, fmt.Sprintf("%v/%v", c.baseURL, id))
 }
 
 func (c *SystemClient) Services(id v1.SystemID) clientv1.ServiceClient {
-	return newServiceClient(c.restClient, fmt.Sprintf("%v/%v", c.baseURL, id), id)
+	return newServiceClient(c.restClient, fmt.Sprintf("%v/%v", c.baseURL, id))
 }
 
 func (c *SystemClient) Secrets(id v1.SystemID) clientv1.SecretClient {
-	return newSystemSecretClient(c.restClient, fmt.Sprintf("%v/%v", c.baseURL, id), id)
+	return newSystemSecretClient(c.restClient, fmt.Sprintf("%v/%v", c.baseURL, id))
 }

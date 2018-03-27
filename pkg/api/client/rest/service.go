@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"net/http"
 
-	clientv1 "github.com/mlab-lattice/system/pkg/api/client/v1"
 	"github.com/mlab-lattice/system/pkg/api/v1"
 	"github.com/mlab-lattice/system/pkg/util/rest"
 )
@@ -16,50 +15,43 @@ const (
 type ServiceClient struct {
 	restClient rest.Client
 	baseURL    string
-	systemID   v1.SystemID
 }
 
-func newServiceClient(c rest.Client, baseURL string, systemID v1.SystemID) *ServiceClient {
+func newServiceClient(c rest.Client, baseURL string) *ServiceClient {
 	return &ServiceClient{
 		restClient: c,
 		baseURL:    fmt.Sprintf("%v%v", baseURL, serviceSubpath),
-		systemID:   systemID,
 	}
 }
 
 func (c *ServiceClient) List() ([]v1.Service, error) {
-	var services []v1.Service
-	statusCode, err := c.restClient.Get(c.baseURL).JSON(&services)
+	body, statusCode, err := c.restClient.Get(c.baseURL).Body()
 	if err != nil {
 		return nil, err
 	}
+	defer body.Close()
 
-	if statusCode == http.StatusNotFound {
-		return nil, &clientv1.InvalidSystemIDError{
-			ID: c.systemID,
-		}
+	if statusCode == http.StatusOK {
+		var services []v1.Service
+		err = rest.UnmarshalBodyJSON(body, &services)
+		return services, err
 	}
 
-	return nil, fmt.Errorf("unexpected status code %v", statusCode)
+	return nil, HandleErrorStatusCode(statusCode, body)
 }
 
 func (c *ServiceClient) Get(id v1.ServiceID) (*v1.Service, error) {
-	build := &v1.Service{}
-	statusCode, err := c.restClient.Get(fmt.Sprintf("%v/%v", c.baseURL, id)).JSON(&build)
+	body, statusCode, err := c.restClient.Get(fmt.Sprintf("%v/%v", c.baseURL, id)).Body()
 	if err != nil {
 		return nil, err
 	}
+	defer body.Close()
 
 	if statusCode == http.StatusOK {
-		return build, nil
+		service := &v1.Service{}
+		err = rest.UnmarshalBodyJSON(body, &service)
+		return service, err
 	}
 
-	if statusCode == http.StatusNotFound {
-		// FIXME: need to differentiate between invalid service id and system id
-		return nil, &clientv1.InvalidServiceIDError{
-			ID: id,
-		}
-	}
-
-	return nil, fmt.Errorf("unexpected status code %v", statusCode)
+	return nil, HandleErrorStatusCode(statusCode, body)
 }

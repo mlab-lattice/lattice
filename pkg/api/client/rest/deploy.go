@@ -6,8 +6,7 @@ import (
 	"fmt"
 	"net/http"
 
-	clientv1 "github.com/mlab-lattice/system/pkg/api/client/v1"
-	"github.com/mlab-lattice/system/pkg/api/server/rest/v1/system"
+	v1rest "github.com/mlab-lattice/system/pkg/api/server/rest/v1"
 	"github.com/mlab-lattice/system/pkg/api/v1"
 	"github.com/mlab-lattice/system/pkg/util/rest"
 )
@@ -19,111 +18,93 @@ const (
 type DeployClient struct {
 	restClient rest.Client
 	baseURL    string
-	systemID   v1.SystemID
 }
 
-func newDeployClient(c rest.Client, baseURL string, systemID v1.SystemID) *DeployClient {
+func newDeployClient(c rest.Client, baseURL string) *DeployClient {
 	return &DeployClient{
 		restClient: c,
 		baseURL:    fmt.Sprintf("%v%v", baseURL, deploySubpath),
-		systemID:   systemID,
 	}
 }
 
-func (c *DeployClient) List() ([]v1.Deploy, error) {
-	var rollouts []v1.Deploy
-	statusCode, err := c.restClient.Get(c.baseURL).JSON(&rollouts)
-	if err != nil {
-		return nil, err
-	}
-
-	if statusCode == http.StatusOK {
-		return rollouts, nil
-	}
-
-	if statusCode == http.StatusNotFound {
-		return nil, &clientv1.InvalidSystemIDError{
-			ID: c.systemID,
-		}
-	}
-
-	return nil, fmt.Errorf("unexpected status code %v", statusCode)
-}
-
-func (c *DeployClient) Get(id v1.DeployID) (*v1.Deploy, error) {
-	rollout := &v1.Deploy{}
-	statusCode, err := c.restClient.Get(fmt.Sprintf("%v/%v", c.baseURL, id)).JSON(&rollout)
-	if err != nil {
-		return nil, err
-	}
-
-	if statusCode == http.StatusOK {
-		return rollout, nil
-	}
-
-	if statusCode == http.StatusNotFound {
-		return nil, &clientv1.InvalidDeployIDError{
-			ID: id,
-		}
-	}
-
-	return nil, fmt.Errorf("unexpected status code %v", statusCode)
-}
-
-func (c *DeployClient) CreateFromBuild(id v1.BuildID) (v1.DeployID, error) {
-	request := system.DeployRequest{
+func (c *DeployClient) CreateFromBuild(id v1.BuildID) (*v1.Deploy, error) {
+	request := v1rest.DeployRequest{
 		BuildID: &id,
 	}
 
 	requestJSON, err := json.Marshal(request)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
-	response := &system.DeployResponse{}
-	statusCode, err := c.restClient.PostJSON(c.baseURL, bytes.NewReader(requestJSON)).JSON(&response)
+	body, statusCode, err := c.restClient.PostJSON(c.baseURL, bytes.NewReader(requestJSON)).Body()
 	if err != nil {
-		return "", err
+		return nil, err
 	}
+	defer body.Close()
 
 	if statusCode == http.StatusCreated {
-		return response.ID, nil
+		deploy := &v1.Deploy{}
+		err = rest.UnmarshalBodyJSON(body, &deploy)
+		return deploy, nil
 	}
 
-	if statusCode == http.StatusBadRequest {
-		return "", &clientv1.InvalidBuildIDError{
-			ID: id,
-		}
-	}
-
-	return "", fmt.Errorf("unexpected status code %v", statusCode)
+	return nil, HandleErrorStatusCode(statusCode, body)
 }
 
-func (c *DeployClient) CreateFromVersion(version string) (v1.DeployID, error) {
-	request := system.DeployRequest{
+func (c *DeployClient) CreateFromVersion(version string) (*v1.Deploy, error) {
+	request := v1rest.DeployRequest{
 		Version: &version,
 	}
 
 	requestJSON, err := json.Marshal(request)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
-	response := &system.DeployResponse{}
-	statusCode, err := c.restClient.PostJSON(c.baseURL, bytes.NewReader(requestJSON)).JSON(&response)
+	body, statusCode, err := c.restClient.PostJSON(c.baseURL, bytes.NewReader(requestJSON)).Body()
 	if err != nil {
-		return "", err
+		return nil, err
 	}
+	defer body.Close()
 
 	if statusCode == http.StatusCreated {
-		return response.ID, nil
+		deploy := &v1.Deploy{}
+		err = rest.UnmarshalBodyJSON(body, &deploy)
+		return deploy, nil
 	}
 
-	if statusCode == http.StatusBadRequest {
-		return "", &clientv1.InvalidSystemVersionError{
-			Version: version,
-		}
+	return nil, HandleErrorStatusCode(statusCode, body)
+}
+
+func (c *DeployClient) List() ([]v1.Deploy, error) {
+	body, statusCode, err := c.restClient.Get(c.baseURL).Body()
+	if err != nil {
+		return nil, err
+	}
+	defer body.Close()
+
+	if statusCode == http.StatusOK {
+		var deploys []v1.Deploy
+		err = rest.UnmarshalBodyJSON(body, &deploys)
+		return deploys, err
 	}
 
-	return "", fmt.Errorf("unexpected status code %v", statusCode)
+	return nil, HandleErrorStatusCode(statusCode, body)
+}
+
+func (c *DeployClient) Get(id v1.DeployID) (*v1.Deploy, error) {
+	body, statusCode, err := c.restClient.Get(fmt.Sprintf("%v/%v", c.baseURL, id)).Body()
+	if err != nil {
+		return nil, err
+	}
+	defer body.Close()
+
+	if statusCode == http.StatusOK {
+		deploy := &v1.Deploy{}
+		err = rest.UnmarshalBodyJSON(body, &deploy)
+		return deploy, nil
+	}
+
+	return nil, HandleErrorStatusCode(statusCode, body)
 }

@@ -68,6 +68,15 @@ func (r *RequestContext) JSON(target interface{}) (int, error) {
 	return statusCode, json.Unmarshal(bodyBytes, target)
 }
 
+func UnmarshalBodyJSON(body io.Reader, target interface{}) error {
+	bodyBytes, err := ioutil.ReadAll(body)
+	if err != nil {
+		return err
+	}
+
+	return json.Unmarshal(bodyBytes, target)
+}
+
 type Client interface {
 	Get(url string) *RequestContext
 	Delete(url string) *RequestContext
