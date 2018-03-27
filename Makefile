@@ -19,11 +19,11 @@ build.all: build.darwin \
 
 .PHONY: build.darwin
 build.darwin: gazelle
-	@bazel build --cpu darwin //...:all
+	@bazel build --platforms=@io_bazel_rules_go//go/toolchain:darwin_amd64 //...:all
 
 .PHONY: build.linux
 build.linux: gazelle
-	@bazel build --cpu k8 //...:all
+	@bazel build --platforms=@io_bazel_rules_go//go/toolchain:linux_amd64 //...:all
 
 .PHONY: gazelle
 gazelle:
@@ -111,13 +111,13 @@ git.install-hooks:
 # docker
 .PHONY: docker.push-image-stable
 docker.push-image-stable: gazelle
-	bazel run --cpu k8 //docker:push-stable-$(IMAGE)
-	bazel run --cpu k8 //docker:push-stable-debug-$(IMAGE)
+	bazel run --platforms=@io_bazel_rules_go//go/toolchain:linux_amd64 //docker:push-stable-$(IMAGE)
+	bazel run --platforms=@io_bazel_rules_go//go/toolchain:linux_amd64 //docker:push-stable-debug-$(IMAGE)
 
 .PHONY: docker.push-image-user
 docker.push-image-user: gazelle
-	bazel run --cpu k8 //docker:push-user-$(IMAGE)
-	bazel run --cpu k8 //docker:push-user-debug-$(IMAGE)
+	bazel --platforms=@io_bazel_rules_go//go/toolchain:linux_amd64 //docker:push-user-$(IMAGE)
+	bazel --platforms=@io_bazel_rules_go//go/toolchain:linux_amd64 //docker:push-user-debug-$(IMAGE)
 
 DOCKER_IMAGES := envoy-prepare                                 \
                  kubernetes-aws-master-node-attach-etcd-volume \

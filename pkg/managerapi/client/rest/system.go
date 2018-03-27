@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"net/http"
 
 	"github.com/mlab-lattice/system/pkg/managerapi/client"
 	"github.com/mlab-lattice/system/pkg/types"
@@ -43,33 +44,71 @@ func (c *SystemClient) Create(id types.SystemID, definitionURL string) (*types.S
 	}
 
 	system := &types.System{}
-	err = c.restClient.PostJSON(c.baseURL, bytes.NewReader(requestJSON)).JSON(&system)
+	statusCode, err := c.restClient.PostJSON(c.baseURL, bytes.NewReader(requestJSON)).JSON(&system)
 	if err != nil {
 		return nil, err
 	}
 
-	return system, nil
+	if statusCode == http.StatusCreated {
+		return system, nil
+	}
+
+	if statusCode == http.StatusBadRequest {
+		return nil, &client.InvalidSystemOptionsError{}
+	}
+
+	return nil, fmt.Errorf("unexpected status code %v", statusCode)
 }
 
 func (c *SystemClient) List() ([]types.System, error) {
 	var systems []types.System
-	err := c.restClient.Get(c.baseURL).JSON(&systems)
-	return systems, err
+	statusCode, err := c.restClient.Get(c.baseURL).JSON(&systems)
+	if err != nil {
+		return nil, err
+	}
+
+	if statusCode == http.StatusOK {
+		return systems, nil
+	}
+
+	return nil, fmt.Errorf("unexpected status code %v", statusCode)
 }
 
 func (c *SystemClient) Get(id types.SystemID) (*types.System, error) {
 	system := &types.System{}
-	err := c.restClient.Get(fmt.Sprintf("%v/%v", c.baseURL, id)).JSON(&system)
-	return system, err
+	statusCode, err := c.restClient.Get(fmt.Sprintf("%v/%v", c.baseURL, id)).JSON(&system)
+	if err != nil {
+		return nil, err
+	}
+
+	if statusCode == http.StatusOK {
+		return system, nil
+	}
+
+	if statusCode == http.StatusNotFound {
+		return nil, &client.InvalidSystemIDError{
+			ID: id,
+		}
+	}
+
+	return nil, fmt.Errorf("unexpected status code %v", statusCode)
 }
 
 func (c *SystemClient) Delete(id types.SystemID) error {
-	_, err := c.restClient.Delete(fmt.Sprintf("%v/%v", c.baseURL, id)).Body()
-	return err
+	_, statusCode, err := c.restClient.Delete(fmt.Sprintf("%v/%v", c.baseURL, id)).Body()
+	if err != nil {
+		return err
+	}
+
+	if statusCode == http.StatusOK {
+		return nil
+	}
+
+	return fmt.Errorf("unexpected status code %v", statusCode)
 }
 
 func (c *SystemClient) SystemBuilds(id types.SystemID) client.SystemBuildClient {
-	return newSystemBuildClient(c.restClient, fmt.Sprintf("%v/%v", c.baseURL, id))
+	return newSystemBuildClient(c.restClient, fmt.Sprintf("%v/%v", c.baseURL, id), id)
 }
 
 func (c *SystemClient) ServiceBuilds(id types.SystemID) client.ServiceBuildClient {
@@ -81,17 +120,17 @@ func (c *SystemClient) ComponentBuilds(id types.SystemID) client.ComponentBuildC
 }
 
 func (c *SystemClient) Rollouts(id types.SystemID) client.RolloutClient {
-	return newRolloutClient(c.restClient, fmt.Sprintf("%v/%v", c.baseURL, id))
+	return newRolloutClient(c.restClient, fmt.Sprintf("%v/%v", c.baseURL, id), id)
 }
 
 func (c *SystemClient) Teardowns(id types.SystemID) client.TeardownClient {
-	return newTeardownClient(c.restClient, fmt.Sprintf("%v/%v", c.baseURL, id))
+	return newTeardownClient(c.restClient, fmt.Sprintf("%v/%v", c.baseURL, id), id)
 }
 
 func (c *SystemClient) Services(id types.SystemID) client.ServiceClient {
-	return newServiceClient(c.restClient, fmt.Sprintf("%v/%v", c.baseURL, id))
+	return newServiceClient(c.restClient, fmt.Sprintf("%v/%v", c.baseURL, id), id)
 }
 
 func (c *SystemClient) Secrets(id types.SystemID) client.SystemSecretClient {
-	return newSystemSecretClient(c.restClient, fmt.Sprintf("%v/%v", c.baseURL, id))
+	return newSystemSecretClient(c.restClient, fmt.Sprintf("%v/%v", c.baseURL, id), id)
 }
