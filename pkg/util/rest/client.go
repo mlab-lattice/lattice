@@ -43,7 +43,7 @@ func (r *RequestContext) Body() (io.ReadCloser, error) {
 
 	// FIXME: make this configurable
 	if response.StatusCode < 200 || response.StatusCode >= 400 {
-		return nil, fmt.Errorf("unexpected status: %v", response.StatusCode)
+		return response.Body, fmt.Errorf("unexpected status: %v", response.StatusCode)
 	}
 
 	return response.Body, nil

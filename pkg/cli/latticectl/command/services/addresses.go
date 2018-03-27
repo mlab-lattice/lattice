@@ -34,7 +34,6 @@ func GetServiceAddresses(client client.ServiceClient) error {
 	}
 
 	for _, service := range services {
-		// TODO :: id here may actually be path
 		servicePath := service.Path.ToDomain(true)
 
 		err = GetServiceAddress(client, types.ServiceID(servicePath))
