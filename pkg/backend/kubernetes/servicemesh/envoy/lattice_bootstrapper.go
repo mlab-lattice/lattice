@@ -3,11 +3,14 @@ package envoy
 import (
 	"fmt"
 
+	"github.com/mlab-lattice/system/pkg/api/v1"
 	kubeconstants "github.com/mlab-lattice/system/pkg/backend/kubernetes/constants"
 	latticev1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/lattice/bootstrap/bootstrapper"
+	kubeutil "github.com/mlab-lattice/system/pkg/backend/kubernetes/util/kubernetes"
 	"github.com/mlab-lattice/system/pkg/util/cli"
 
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 
@@ -22,8 +25,10 @@ type LatticeBootstrapperOptions struct {
 	XDSAPIPort        int32
 }
 
-func NewLatticeBootstrapper(options *LatticeBootstrapperOptions) *DefaultEnvoylatticeBootstrapper {
+func NewLatticeBootstrapper(latticeID v1.LatticeID, options *LatticeBootstrapperOptions) *DefaultEnvoylatticeBootstrapper {
 	return &DefaultEnvoylatticeBootstrapper{
+		latticeID: latticeID,
+
 		prepareImage:      options.PrepareImage,
 		image:             options.Image,
 		redirectCIDRBlock: options.RedirectCIDRBlock,
@@ -65,6 +70,8 @@ func LatticeBootstrapperFlags() (cli.Flags, *LatticeBootstrapperOptions) {
 }
 
 type DefaultEnvoylatticeBootstrapper struct {
+	latticeID v1.LatticeID
+
 	prepareImage      string
 	image             string
 	redirectCIDRBlock string
@@ -73,38 +80,125 @@ type DefaultEnvoylatticeBootstrapper struct {
 }
 
 func (b *DefaultEnvoylatticeBootstrapper) BootstrapLatticeResources(resources *bootstrapper.Resources) {
+	internalNamespace := kubeutil.InternalNamespace(b.latticeID)
+	xdsAPIName := fmt.Sprintf("service-mesh-envoy-%v", xdsAPI)
+
 	for _, daemonSet := range resources.DaemonSets {
 		if daemonSet.Name == kubeconstants.ControlPlaneServiceLatticeControllerManager {
 			daemonSet.Spec.Template.Spec.Containers[0].Args = append(
 				daemonSet.Spec.Template.Spec.Containers[0].Args,
 				"--service-mesh", Envoy,
-				"--service-mesh-var", fmt.Sprintf("xds-api-image=%v", b.xdsAPIImage),
 			)
 		}
 	}
 
-	// also need to have the controller manager create envoy SAs for the
-	// namespace, so need to give the manager API these privileges
-	// so kube doesn't deny creating the SA due to privilege escalation
-	for _, clusterRole := range resources.ClusterRoles {
-		if clusterRole.Name == kubeconstants.ControlPlaneServiceLatticeControllerManager {
-			clusterRole.Rules = append(
-				clusterRole.Rules,
-				envoyRBACPolicyRules...,
-			)
-		}
-	}
-
-	clusterRole := &rbacv1.ClusterRole{
+	role := &rbacv1.Role{
+		// Include TypeMeta so if this is a dry run it will be printed out
 		TypeMeta: metav1.TypeMeta{
-			Kind:       "ClusterRole",
-			APIVersion: rbacv1.GroupName + "/v1",
+			Kind:       "Role",
+			APIVersion: rbacv1.SchemeGroupVersion.String(),
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name: envoyXDSAPI,
+			Name:      xdsAPIName,
+			Namespace: internalNamespace,
 		},
 		Rules: envoyRBACPolicyRules,
 	}
+	resources.Roles = append(resources.Roles, role)
+
+	serviceAccount := &corev1.ServiceAccount{
+		// Include TypeMeta so if this is a dry run it will be printed out
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "ServiceAccount",
+			APIVersion: corev1.SchemeGroupVersion.String(),
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      xdsAPIName,
+			Namespace: internalNamespace,
+		},
+	}
+	resources.ServiceAccounts = append(resources.ServiceAccounts, serviceAccount)
+
+	roleBinding := &rbacv1.RoleBinding{
+		// Include TypeMeta so if this is a dry run it will be printed out
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "RoleBinding",
+			APIVersion: rbacv1.SchemeGroupVersion.String(),
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      xdsAPIName,
+			Namespace: internalNamespace,
+		},
+		Subjects: []rbacv1.Subject{
+			{
+				Kind:      rbacv1.ServiceAccountKind,
+				Name:      serviceAccount.Name,
+				Namespace: serviceAccount.Namespace,
+			},
+		},
+		RoleRef: rbacv1.RoleRef{
+			APIGroup: rbacv1.GroupName,
+			Kind:     "Role",
+			Name:     role.Name,
+		},
+	}
+	resources.RoleBindings = append(resources.RoleBindings, roleBinding)
+
+	labels := map[string]string{
+		labelKeyEnvoyXDSAPI: "true",
+	}
+
+	daemonSet := &appsv1.DaemonSet{
+		// Include TypeMeta so if this is a dry run it will be printed out
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "DaemonSet",
+			APIVersion: appsv1.SchemeGroupVersion.String(),
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      xdsAPIName,
+			Namespace: internalNamespace,
+			Labels:    labels,
+		},
+		Spec: appsv1.DaemonSetSpec{
+			Selector: &metav1.LabelSelector{
+				MatchLabels: labels,
+			},
+			Template: corev1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:   xdsAPIName,
+					Labels: labels,
+				},
+				Spec: corev1.PodSpec{
+					Containers: []corev1.Container{
+						{
+							Name: "envoy-xds-api",
+							Args: []string{
+								"-v", "5",
+								"-logtostderr",
+							},
+							Image: b.xdsAPIImage,
+							Ports: []corev1.ContainerPort{
+								{
+									HostPort:      8080,
+									ContainerPort: 8080,
+								},
+							},
+						},
+					},
+					HostNetwork:        true,
+					DNSPolicy:          corev1.DNSDefault,
+					ServiceAccountName: serviceAccount.Name,
+					Tolerations: []corev1.Toleration{
+						kubeconstants.TolerationNodePool,
+					},
+					Affinity: &corev1.Affinity{
+						NodeAffinity: &kubeconstants.NodeAffinityNodePool,
+					},
+				},
+			},
+		},
+	}
+	resources.DaemonSets = append(resources.DaemonSets, daemonSet)
 
 	resources.Config.Spec.ServiceMesh = latticev1.ConfigServiceMesh{
 		Envoy: &latticev1.ConfigServiceMeshEnvoy{
@@ -115,8 +209,6 @@ func (b *DefaultEnvoylatticeBootstrapper) BootstrapLatticeResources(resources *b
 			XDSAPIPort:        b.xdsAPIPort,
 		},
 	}
-
-	resources.ClusterRoles = append(resources.ClusterRoles, clusterRole)
 }
 
 var envoyRBACPolicyRules = []rbacv1.PolicyRule{

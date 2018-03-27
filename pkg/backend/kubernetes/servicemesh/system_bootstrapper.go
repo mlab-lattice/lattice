@@ -33,10 +33,7 @@ func ParseSystemBootstrapperFlags(serviceMesh string, serviceMeshVars []string) 
 
 	switch serviceMesh {
 	case Envoy:
-		envoyOptions, err := envoy.ParseSystemBootstrapperFlags(serviceMeshVars)
-		if err != nil {
-			return nil, err
-		}
+		envoyOptions := envoy.ParseSystemBootstrapperFlags(serviceMeshVars)
 
 		options = &SystemBootstrapperOptions{
 			Envoy: envoyOptions,

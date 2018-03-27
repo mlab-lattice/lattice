@@ -84,9 +84,9 @@ func NewLatticeProvisioner(latticeImageDockerRepository, latticeContainerRepoPre
 	}
 }
 
-func (p *DefaultAWSLatticeProvisioner) Provision(latticeID string, initialSystemDefinitionURL *string) (string, error) {
+func (p *DefaultAWSLatticeProvisioner) Provision(latticeID string) (string, error) {
 	fmt.Println("Provisioning lattice...")
-	latticeModule := p.latticeModule(latticeID, initialSystemDefinitionURL)
+	latticeModule := p.latticeModule(latticeID)
 	latticeConfig := p.latticeConfig(latticeModule)
 
 	logfile, err := terraform.Apply(p.workDirectory, latticeConfig)
@@ -144,12 +144,7 @@ func (p *DefaultAWSLatticeProvisioner) latticeConfig(latticeModule *awsterraform
 	return config
 }
 
-func (p *DefaultAWSLatticeProvisioner) latticeModule(latticeID string, initialSystemDefinitionURL *string) *awsterraform.Lattice {
-	url := ""
-	if initialSystemDefinitionURL != nil {
-		url = *initialSystemDefinitionURL
-	}
-
+func (p *DefaultAWSLatticeProvisioner) latticeModule(latticeID string) *awsterraform.Lattice {
 	return &awsterraform.Lattice{
 		Source: filepath.Join(p.terraformModulePath, latticeModulePath),
 
@@ -160,7 +155,8 @@ func (p *DefaultAWSLatticeProvisioner) latticeModule(latticeID string, initialSy
 
 		LatticeID:                    latticeID,
 		ControlPlaneContainerChannel: fmt.Sprintf("%v/%v", p.latticeContainerRegistry, p.latticeContainerRepoPrefix),
-		SystemDefinitionURL:          url,
+		// FIXME: remove this
+		SystemDefinitionURL: "",
 
 		MasterNodeInstanceType: p.masterNodeInstanceType,
 		MasterNodeAMIID:        p.masterNodeAMIID,

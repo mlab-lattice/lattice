@@ -14,7 +14,6 @@ type UpCommand struct {
 
 func (c *UpCommand) Base() (*latticectl.BaseCommand, error) {
 	var name string
-	var initialSystemDefinition string
 	var registry string
 	var channel string
 	var workDirectory string
@@ -26,10 +25,6 @@ func (c *UpCommand) Base() (*latticectl.BaseCommand, error) {
 				Name:    "name",
 				Default: "default",
 				Target:  &name,
-			},
-			&cli.StringFlag{
-				Name:   "initial-system-defintion",
-				Target: &initialSystemDefinition,
 			},
 			&cli.StringFlag{
 				Name:    "container-registry",
@@ -48,25 +43,20 @@ func (c *UpCommand) Base() (*latticectl.BaseCommand, error) {
 			},
 		},
 		Run: func(lctl *latticectl.Latticectl, args []string) {
-			Up(name, initialSystemDefinition, registry, channel, workDirectory)
+			Up(name, registry, channel, workDirectory)
 		},
 	}
 
 	return cmd.Base()
 }
 
-func Up(name, initialSystemDefinition, registry, channel, workDirectory string) {
+func Up(name, registry, channel, workDirectory string) {
 	provisioner, err := local.NewLatticeProvisioner(registry, channel, workDirectory, nil)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	var definition *string
-	if initialSystemDefinition != "" {
-		definition = &initialSystemDefinition
-	}
-
-	address, err := provisioner.Provision(name, definition)
+	address, err := provisioner.Provision(name)
 	if err != nil {
 		log.Fatal(err)
 	}

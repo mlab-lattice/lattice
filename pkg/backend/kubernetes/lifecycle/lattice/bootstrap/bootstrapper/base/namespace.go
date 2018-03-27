@@ -14,12 +14,11 @@ func (b *DefaultBootstrapper) namespaceResources(resources *bootstrapper.Resourc
 		// Include TypeMeta so if this is a dry run it will be printed out
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "Namespace",
-			APIVersion: "v1",
+			APIVersion: corev1.SchemeGroupVersion.String(),
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name: kubeutil.InternalNamespace(b.LatticeID),
 		},
 	}
-
 	resources.Namespaces = append(resources.Namespaces, namespace)
 }

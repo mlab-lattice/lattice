@@ -36,7 +36,7 @@ var _ = ginkgo.SynchronizedBeforeSuite(func() []byte {
 		p := getProvisioner()
 
 		var err error
-		clusterURL, err = p.Provision("e2e-test", nil)
+		clusterURL, err = p.Provision("e2e-test")
 		if err != nil {
 			panic(err)
 		}

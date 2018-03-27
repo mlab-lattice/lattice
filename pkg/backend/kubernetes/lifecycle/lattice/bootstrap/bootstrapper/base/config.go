@@ -16,7 +16,7 @@ func (b *DefaultBootstrapper) configResources(resources *bootstrapper.Resources)
 		// Include TypeMeta so if this is a dry run it will be printed out
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "Config",
-			APIVersion: latticev1.GroupName + "/v1",
+			APIVersion: latticev1.SchemeGroupVersion.String(),
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      kubeconstants.ConfigGlobal,

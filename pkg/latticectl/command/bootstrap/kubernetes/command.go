@@ -165,9 +165,8 @@ func (c *Command) Base() (*latticectl.BaseCommand, error) {
 						Usage:   "port the api should listen on",
 					},
 					&cli.BoolFlag{
-						Name:   "host-network",
-						Target: &options.MasterComponents.APIServer.HostNetwork,
-						// TODO: this used to be true
+						Name:    "host-network",
+						Target:  &options.MasterComponents.APIServer.HostNetwork,
 						Default: false,
 						Usage:   "whether or not to run the api on the host network",
 					},
@@ -225,7 +224,7 @@ func (c *Command) Base() (*latticectl.BaseCommand, error) {
 				fmt.Printf("error getting cloud bootstrapper: %v", err)
 			}
 
-			serviceMeshBootstrapper, err := servicemesh.NewLatticeBootstrapper(serviceMeshBootstrapOptions)
+			serviceMeshBootstrapper, err := servicemesh.NewLatticeBootstrapper(latticeID, serviceMeshBootstrapOptions)
 			if err != nil {
 				fmt.Printf("error getting service mesh bootstrapper: %v", err)
 			}

@@ -39,7 +39,7 @@ func (b *DefaultBootstrapper) BootstrapSystemResources(resources *bootstrapper.S
 		// Include TypeMeta so if this is a dry run it will be printed out
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "Namespace",
-			APIVersion: "v1",
+			APIVersion: corev1.SchemeGroupVersion.String(),
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name: kubeutil.SystemNamespace(b.latticeID, b.systemID),
@@ -48,23 +48,26 @@ func (b *DefaultBootstrapper) BootstrapSystemResources(resources *bootstrapper.S
 			},
 		},
 	}
+	resources.Namespace = namespace
 
 	componentBuilderSA := &corev1.ServiceAccount{
 		// Include TypeMeta so if this is a dry run it will be printed out
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "ServiceAccount",
-			APIVersion: rbacv1.GroupName + "/v1",
+			APIVersion: rbacv1.SchemeGroupVersion.String(),
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      kubeconstants.ServiceAccountComponentBuilder,
 			Namespace: namespace.Name,
 		},
 	}
+	resources.ServiceAccounts = append(resources.ServiceAccounts, componentBuilderSA)
 
+	componentBuilderCRName := kubeutil.ComponentBuilderClusterRoleName(b.latticeID)
 	componentBuilderRB := &rbacv1.RoleBinding{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "RoleBinding",
-			APIVersion: rbacv1.GroupName + "/v1",
+			APIVersion: rbacv1.SchemeGroupVersion.String(),
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      kubeconstants.ControlPlaneServiceComponentBuilder,
@@ -80,9 +83,10 @@ func (b *DefaultBootstrapper) BootstrapSystemResources(resources *bootstrapper.S
 		RoleRef: rbacv1.RoleRef{
 			APIGroup: rbacv1.GroupName,
 			Kind:     "ClusterRole",
-			Name:     kubeconstants.ControlPlaneServiceComponentBuilder,
+			Name:     componentBuilderCRName,
 		},
 	}
+	resources.RoleBindings = append(resources.RoleBindings, componentBuilderRB)
 
 	system := &latticev1.System{
 		// Include TypeMeta so if this is a dry run it will be printed out
@@ -105,9 +109,5 @@ func (b *DefaultBootstrapper) BootstrapSystemResources(resources *bootstrapper.S
 			State: latticev1.SystemStateStable,
 		},
 	}
-
 	resources.System = system
-	resources.Namespace = namespace
-	resources.ServiceAccounts = append(resources.ServiceAccounts, componentBuilderSA)
-	resources.RoleBindings = append(resources.RoleBindings, componentBuilderRB)
 }

@@ -1,6 +1,7 @@
 package base
 
 import (
+	"fmt"
 	"strconv"
 
 	kubeconstants "github.com/mlab-lattice/system/pkg/backend/kubernetes/constants"
@@ -18,17 +19,16 @@ import (
 
 func (b *DefaultBootstrapper) aPIServerResources(resources *bootstrapper.Resources) {
 	internalNamespace := kubeutil.InternalNamespace(b.LatticeID)
+	name := fmt.Sprintf("%v-%v", b.LatticeID, kubeconstants.ControlPlaneServiceAPIServer)
 
-	// FIXME: prefix this cluster role with the cluster id so multiple clusters can have different
-	// cluster role definitions
 	clusterRole := &rbacv1.ClusterRole{
 		// Include TypeMeta so if this is a dry run it will be printed out
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "ClusterRole",
-			APIVersion: rbacv1.GroupName + "/v1",
+			APIVersion: rbacv1.SchemeGroupVersion.String(),
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name: kubeconstants.ControlPlaneServiceAPIServer,
+			Name: name,
 		},
 		Rules: []rbacv1.PolicyRule{
 			// lattice system read and create
@@ -112,21 +112,21 @@ func (b *DefaultBootstrapper) aPIServerResources(resources *bootstrapper.Resourc
 			},
 		},
 	}
+	resources.ClusterRoles = append(resources.ClusterRoles, clusterRole)
 
 	serviceAccount := &corev1.ServiceAccount{
 		// Include TypeMeta so if this is a dry run it will be printed out
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "ServiceAccount",
-			APIVersion: "v1",
+			APIVersion: corev1.SchemeGroupVersion.String(),
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      kubeconstants.ServiceAccountAPIServer,
 			Namespace: internalNamespace,
 		},
 	}
+	resources.ServiceAccounts = append(resources.ServiceAccounts, serviceAccount)
 
-	// FIXME: prefix this cluster role binding with the cluster id so multiple clusters can have different
-	// cluster role definitions
 	clusterRoleBinding := &rbacv1.ClusterRoleBinding{
 		// Include TypeMeta so if this is a dry run it will be printed out
 		TypeMeta: metav1.TypeMeta{
@@ -134,7 +134,7 @@ func (b *DefaultBootstrapper) aPIServerResources(resources *bootstrapper.Resourc
 			APIVersion: rbacv1.GroupName + "/v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name: kubeconstants.ControlPlaneServiceAPIServer,
+			Name: name,
 		},
 		Subjects: []rbacv1.Subject{
 			{
@@ -149,6 +149,7 @@ func (b *DefaultBootstrapper) aPIServerResources(resources *bootstrapper.Resourc
 			Name:     clusterRole.Name,
 		},
 	}
+	resources.ClusterRoleBindings = append(resources.ClusterRoleBindings, clusterRoleBinding)
 
 	args := []string{
 		"--port", strconv.Itoa(int(b.Options.MasterComponents.APIServer.Port)),
@@ -163,7 +164,7 @@ func (b *DefaultBootstrapper) aPIServerResources(resources *bootstrapper.Resourc
 		// Include TypeMeta so if this is a dry run it will be printed out
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "DaemonSet",
-			APIVersion: appsv1.GroupName + "/v1",
+			APIVersion: appsv1.SchemeGroupVersion.String(),
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      kubeconstants.ControlPlaneServiceAPIServer,
@@ -207,9 +208,5 @@ func (b *DefaultBootstrapper) aPIServerResources(resources *bootstrapper.Resourc
 			},
 		},
 	}
-
-	resources.ClusterRoles = append(resources.ClusterRoles, clusterRole)
-	resources.ServiceAccounts = append(resources.ServiceAccounts, serviceAccount)
-	resources.ClusterRoleBindings = append(resources.ClusterRoleBindings, clusterRoleBinding)
 	resources.DaemonSets = append(resources.DaemonSets, daemonSet)
 }

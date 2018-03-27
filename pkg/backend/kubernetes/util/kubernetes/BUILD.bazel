@@ -4,6 +4,7 @@ go_library(
     name = "go_default_library",
     srcs = [
         "affinity.go",
+        "cluster_role.go",
         "equality.go",
         "kube_service.go",
         "kubeconfig.go",

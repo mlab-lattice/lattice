@@ -74,7 +74,7 @@ func NewLatticeProvisioner(latticeContainerRegistry, latticeContainerRepoPrefix,
 	return provisioner, nil
 }
 
-func (p *DefaultLocalLatticeProvisioner) Provision(latticeID string, initialSystemDefinitionURL *string) (string, error) {
+func (p *DefaultLocalLatticeProvisioner) Provision(latticeID string) (string, error) {
 	prefixedName := clusterNamePrefixMinikube + latticeID
 	result, logFilename, err := p.mec.Start(prefixedName)
 	if err != nil {
@@ -93,7 +93,7 @@ func (p *DefaultLocalLatticeProvisioner) Provision(latticeID string, initialSyst
 		return "", err
 	}
 
-	err = p.bootstrap(address, initialSystemDefinitionURL, latticeID)
+	err = p.bootstrap(address, latticeID)
 	if err != nil {
 		return "", err
 	}
@@ -121,7 +121,7 @@ func (p *DefaultLocalLatticeProvisioner) address(latticeID string) (string, erro
 	return fmt.Sprintf("http://%v", address), nil
 }
 
-func (p *DefaultLocalLatticeProvisioner) bootstrap(address string, initialSystemDefinitionURL *string, name string) error {
+func (p *DefaultLocalLatticeProvisioner) bootstrap(address string, name string) error {
 	fmt.Println("Bootstrapping")
 	usr, err := user.Current()
 	if err != nil {
@@ -207,6 +207,8 @@ func (p *DefaultLocalLatticeProvisioner) bootstrap(address string, initialSystem
 								[]string{
 									"bootstrap:kubernetes",
 									"--controller-manager-var", fmt.Sprintf("image=%v", p.getLatticeContainerImage("kubernetes-lattice-controller-manager")),
+									"--controller-manager-var", "args=-v=5",
+									"--controller-manager-var", "args=--alsologtostderr",
 									"--api-var", fmt.Sprintf("image=%v", p.getLatticeContainerImage("kubernetes-api-server-rest")),
 									"--component-builder-var", fmt.Sprintf("image=%v", p.getLatticeContainerImage("kubernetes-component-builder")),
 									"--component-build-docker-artifact-var", "registry=lattice-local",

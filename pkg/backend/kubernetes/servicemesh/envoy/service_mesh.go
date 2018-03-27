@@ -27,7 +27,7 @@ const (
 	initContainerNamePrepareEnvoy = deploymentResourcePrefix + "prepare-envoy"
 	containerNameEnvoy            = deploymentResourcePrefix + "envoy"
 
-	envoyXDSAPI         = "envoy-xds-api"
+	xdsAPI              = "xds-api"
 	labelKeyEnvoyXDSAPI = "envoy.servicemesh.lattice.mlab.com/xds-api"
 )
 
