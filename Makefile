@@ -116,8 +116,8 @@ docker.push-image-stable: gazelle
 
 .PHONY: docker.push-image-user
 docker.push-image-user: gazelle
-	bazel --platforms=@io_bazel_rules_go//go/toolchain:linux_amd64 //docker:push-user-$(IMAGE)
-	bazel --platforms=@io_bazel_rules_go//go/toolchain:linux_amd64 //docker:push-user-debug-$(IMAGE)
+	bazel run --platforms=@io_bazel_rules_go//go/toolchain:linux_amd64 //docker:push-user-$(IMAGE)
+	bazel run --platforms=@io_bazel_rules_go//go/toolchain:linux_amd64 //docker:push-user-debug-$(IMAGE)
 
 DOCKER_IMAGES := envoy-prepare                                 \
                  kubernetes-aws-master-node-attach-etcd-volume \

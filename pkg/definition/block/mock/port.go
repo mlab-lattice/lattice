@@ -62,55 +62,6 @@ func PublicHTTPPortExpectedJSON() []byte {
 	)
 }
 
-func TCPPort() *block.ComponentPort {
-	return PrivateTCPPort()
-}
-
-func TCPPortExpectedJSON() []byte {
-	return PrivateTCPPortExpectedJSON()
-}
-
-func PrivateTCPPort() *block.ComponentPort {
-	return &block.ComponentPort{
-		Name:     "tcp",
-		Port:     80,
-		Protocol: block.ProtocolTCP,
-	}
-}
-
-func PrivateTCPPortExpectedJSON() []byte {
-	tcpProtocolBytes := []byte(`"`)
-	tcpProtocolBytes = append(tcpProtocolBytes, []byte(block.ProtocolTCP)...)
-	tcpProtocolBytes = append(tcpProtocolBytes, []byte(`"`)...)
-	return GeneratePortExpectedJSON(
-		[]byte(`"tcp"`),
-		[]byte(`80`),
-		tcpProtocolBytes,
-		nil,
-	)
-}
-
-func PublicTCPPort() *block.ComponentPort {
-	return &block.ComponentPort{
-		Name:           "tcp",
-		Port:           80,
-		Protocol:       block.ProtocolTCP,
-		ExternalAccess: PublicExternalAccess(),
-	}
-}
-
-func PublicTCPPortExpectedJSON() []byte {
-	tcpProtocolBytes := []byte(`"`)
-	tcpProtocolBytes = append(tcpProtocolBytes, []byte(block.ProtocolTCP)...)
-	tcpProtocolBytes = append(tcpProtocolBytes, []byte(`"`)...)
-	return GeneratePortExpectedJSON(
-		[]byte(`"tcp"`),
-		[]byte(`80`),
-		tcpProtocolBytes,
-		PublicExternalAccessExpectedJSON(),
-	)
-}
-
 func GeneratePortExpectedJSON(name, port, protocol, externalAccess []byte) []byte {
 	return jsonutil.GenerateObjectBytes([]jsonutil.FieldBytes{
 		{

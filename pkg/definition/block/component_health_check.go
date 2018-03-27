@@ -7,7 +7,6 @@ import (
 
 type ComponentHealthCheck struct {
 	HTTP *HTTPComponentHealthCheck `json:"http,omitempty"`
-	TCP  *TCPComponentHealthCheck  `json:"tcp,omitempty"`
 	Exec *ExecComponentHealthCheck `json:"exec,omitempty"`
 }
 
@@ -15,23 +14,17 @@ type ComponentHealthCheck struct {
 func (hc *ComponentHealthCheck) Validate(information interface{}) error {
 	ports := information.(map[string]*ComponentPort)
 
-	if (hc.HTTP != nil && hc.TCP != nil) || (hc.HTTP != nil && hc.Exec != nil) || (hc.TCP != nil && hc.Exec != nil) {
+	if hc.HTTP != nil && hc.Exec != nil {
 		return fmt.Errorf("only one health_check type may be specified")
 	}
 
-	if hc.HTTP == nil && hc.TCP == nil && hc.Exec == nil {
+	if hc.HTTP == nil && hc.Exec == nil {
 		return fmt.Errorf("one health_check type must be specified")
 	}
 
 	if hc.HTTP != nil {
 		if err := hc.HTTP.Validate(ports); err != nil {
 			return fmt.Errorf("http health_check definition error: %v", err)
-		}
-	}
-
-	if hc.TCP != nil {
-		if err := hc.TCP.Validate(ports); err != nil {
-			return fmt.Errorf("tcp health_check definition error: %v", err)
 		}
 	}
 
@@ -65,27 +58,6 @@ func (hhc *HTTPComponentHealthCheck) Validate(information interface{}) error {
 
 	if !strings.HasPrefix(hhc.Path, "/") {
 		return fmt.Errorf("path must begin with '/'")
-	}
-
-	return nil
-}
-
-type TCPComponentHealthCheck struct {
-	Port string `json:"port"`
-}
-
-// Validate implements Interface
-func (thc *TCPComponentHealthCheck) Validate(information interface{}) error {
-	ports := information.(map[string]*ComponentPort)
-
-	port, exists := ports[thc.Port]
-	if !exists {
-		return fmt.Errorf("invalid port: %v", thc.Port)
-	}
-
-	// TODO: should we allow TCPComponentHealthCheck on an HTTP port?
-	if port.Protocol != ProtocolTCP {
-		return fmt.Errorf("port %s is does not have protocol %v", thc.Port, ProtocolTCP)
 	}
 
 	return nil
