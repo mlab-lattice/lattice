@@ -17,7 +17,7 @@ func HandleErrorStatusCode(statusCode int, body io.Reader) error {
 		if err := rest.UnmarshalBodyJSON(body, errorDecoder); err != nil {
 			return err
 		}
-		return handlev1Error(errorDecoder)
+		return handleV1Error(errorDecoder)
 
 	default:
 		return handleUnexpectedErrorStatusCode(statusCode)
@@ -28,7 +28,7 @@ func handleUnexpectedErrorStatusCode(statusCode int) error {
 	return fmt.Errorf("unexpected status code %v", statusCode)
 }
 
-func handlev1Error(errorDecoder *v1ErrorDecoder) v1.Error {
+func handleV1Error(errorDecoder *v1ErrorDecoder) v1.Error {
 	var v1Error v1.Error = v1.NewUnknownError()
 
 	var err error
