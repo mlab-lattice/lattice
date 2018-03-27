@@ -1,6 +1,7 @@
 package service
 
 import (
+	"fmt"
 	"reflect"
 
 	latticev1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
@@ -122,15 +123,8 @@ func (c *Controller) serviceAddressSpec(service *latticev1.Service) (latticev1.S
 					HTTP: httpPortConfig,
 				}
 
-			case block.ProtocolTCP:
-				tcpPortConfig, err := serviceAddressTCPPort(componentPort)
-				if err != nil {
-					return latticev1.ServiceAddressSpec{}, err
-				}
-
-				ports[componentPort.Port] = latticev1.ServiceAddressPort{
-					TCP: tcpPortConfig,
-				}
+			default:
+				return latticev1.ServiceAddressSpec{}, fmt.Errorf("unsupported protocol %v", componentPort.Protocol)
 			}
 		}
 	}

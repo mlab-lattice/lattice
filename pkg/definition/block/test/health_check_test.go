@@ -9,7 +9,6 @@ import (
 
 func TestHealthCheck_Validate(t *testing.T) {
 	httpHealthCheck := MockHTTPHealthCheck()
-	tcpHealthCheck := MockTCPHealthCheck()
 
 	Validate(
 		t,
@@ -35,38 +34,6 @@ func TestHealthCheck_Validate(t *testing.T) {
 					HTTP: httpHealthCheck,
 				},
 			},
-			{
-				Description: "HTTPComponentHealthCheck with invalid ComponentPort Protocol",
-				DefinitionBlock: &block.ComponentHealthCheck{
-					HTTP: httpHealthCheck,
-				},
-				Information: map[string]*block.ComponentPort{
-					httpHealthCheck.Port: MockTCPPort(),
-				},
-			},
-
-			// TCPComponentHealthCheck
-			{
-				Description: "empty TCPComponentHealthCheck",
-				DefinitionBlock: &block.ComponentHealthCheck{
-					TCP: &block.TCPComponentHealthCheck{},
-				},
-			},
-			{
-				Description: "TCPComponentHealthCheck with invalid ComponentPort",
-				DefinitionBlock: &block.ComponentHealthCheck{
-					TCP: tcpHealthCheck,
-				},
-			},
-			{
-				Description: "TCPComponentHealthCheck with invalid ComponentPort Protocol",
-				DefinitionBlock: &block.ComponentHealthCheck{
-					TCP: tcpHealthCheck,
-				},
-				Information: map[string]*block.ComponentPort{
-					tcpHealthCheck.Port: MockHTTPPort(),
-				},
-			},
 
 			// ExecComponentHealthCheck
 			{
@@ -81,19 +48,7 @@ func TestHealthCheck_Validate(t *testing.T) {
 				Description: "HTTPComponentHealthCheck, TCPComponentHealthCheck, and ExecComponentHealthCheck",
 				DefinitionBlock: &block.ComponentHealthCheck{
 					HTTP: httpHealthCheck,
-					TCP:  tcpHealthCheck,
 					Exec: MockExecHealthCheck(),
-				},
-			},
-			{
-				Description: "HTTPComponentHealthCheck and TCPComponentHealthCheck",
-				DefinitionBlock: &block.ComponentHealthCheck{
-					HTTP: httpHealthCheck,
-					TCP:  tcpHealthCheck,
-				},
-				Information: map[string]*block.ComponentPort{
-					httpHealthCheck.Port: MockHTTPPort(),
-					tcpHealthCheck.Port:  MockTCPPort(),
 				},
 			},
 			{
@@ -104,16 +59,6 @@ func TestHealthCheck_Validate(t *testing.T) {
 				},
 				Information: map[string]*block.ComponentPort{
 					httpHealthCheck.Port: MockHTTPPort(),
-				},
-			},
-			{
-				Description: "TCPComponentHealthCheck and ExecComponentHealthCheck",
-				DefinitionBlock: &block.ComponentHealthCheck{
-					TCP:  tcpHealthCheck,
-					Exec: MockExecHealthCheck(),
-				},
-				Information: map[string]*block.ComponentPort{
-					tcpHealthCheck.Port: MockTCPPort(),
 				},
 			},
 		},
@@ -127,15 +72,6 @@ func TestHealthCheck_Validate(t *testing.T) {
 				},
 				Information: map[string]*block.ComponentPort{
 					httpHealthCheck.Port: MockHTTPPort(),
-				},
-			},
-			{
-				Description: "TCPComponentHealthCheck",
-				DefinitionBlock: &block.ComponentHealthCheck{
-					TCP: tcpHealthCheck,
-				},
-				Information: map[string]*block.ComponentPort{
-					tcpHealthCheck.Port: MockTCPPort(),
 				},
 			},
 			{
@@ -157,11 +93,6 @@ func TestHealthCheck_JSON(t *testing.T) {
 				Description: "MockHealthCheckHTTP",
 				Bytes:       MockHealthCheckHTTPExpectedJSON(),
 				ValuePtr:    MockHealthCheckHTTP(),
-			},
-			{
-				Description: "MockHealthCheckTCP",
-				Bytes:       MockHealthCheckTCPExpectedJSON(),
-				ValuePtr:    MockHealthCheckTCP(),
 			},
 			{
 				Description: "MockHealthCheckExec",
@@ -200,16 +131,6 @@ func TestHTTPHealthCheck_Validate(t *testing.T) {
 				},
 				Information: map[string]*block.ComponentPort{
 					"http": MockHTTPPort(),
-				},
-			},
-			{
-				Description: "invalid ComponentPort Protocol",
-				DefinitionBlock: &block.HTTPComponentHealthCheck{
-					Port: "http",
-					Path: "/status",
-				},
-				Information: map[string]*block.ComponentPort{
-					"http": MockTCPPort(),
 				},
 			},
 		},
@@ -258,63 +179,6 @@ func TestHTTPHealthCheck_JSON(t *testing.T) {
 				Description: "MockHTTPHealthCheckWithHeaders",
 				Bytes:       MockHTTPHealthCheckWithHeadersExpectedJSON(),
 				ValuePtr:    MockHTTPHealthCheckWithHeaders(),
-			},
-		},
-	)
-}
-
-func TestTCPHealthCheck_Validate(t *testing.T) {
-	Validate(
-		t,
-		map[string]*block.ComponentPort{},
-
-		// Invalid TCPHealthChecks
-		[]ValidateTest{
-			{
-				Description:     "empty",
-				DefinitionBlock: &block.TCPComponentHealthCheck{},
-			},
-			{
-				Description: "invalid ComponentPort",
-				DefinitionBlock: &block.TCPComponentHealthCheck{
-					Port: "tcp",
-				},
-			},
-			{
-				Description: "invalid ComponentPort Protocol",
-				DefinitionBlock: &block.TCPComponentHealthCheck{
-					Port: "tcp",
-				},
-				Information: map[string]*block.ComponentPort{
-					"tcp": MockHTTPPort(),
-				},
-			},
-		},
-
-		// Valid TCPHealthChecks
-		[]ValidateTest{
-			{
-				Description: "Valid ComponentPort",
-				DefinitionBlock: &block.TCPComponentHealthCheck{
-					Port: "tcp",
-				},
-				Information: map[string]*block.ComponentPort{
-					"tcp": MockTCPPort(),
-				},
-			},
-		},
-	)
-}
-
-func TestTCPHealthCheck_JSON(t *testing.T) {
-	JSON(
-		t,
-		reflect.TypeOf(block.TCPComponentHealthCheck{}),
-		[]JSONTest{
-			{
-				Description: "MockTCPHealthCheck",
-				Bytes:       MockTCPHealthCheckExpectedJSON(),
-				ValuePtr:    MockTCPHealthCheck(),
 			},
 		},
 	)

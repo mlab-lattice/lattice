@@ -628,8 +628,9 @@ func (c *Controller) syncLoadBalancer(key string) error {
 	ports := map[int32]latticev1.LoadBalancerPort{}
 	for _, port := range kubeService.Spec.Ports {
 		ports[servicePorts[port.Port]] = latticev1.LoadBalancerPort{
+			// FIXME: don't hardcode the protocol in
 			Address: fmt.Sprintf(
-				"%v:%v",
+				"http://%v:%v",
 				loadBalancer.Annotations[aws.AnnotationKeyLoadBalancerDNSName],
 				servicePorts[port.Port],
 			),
