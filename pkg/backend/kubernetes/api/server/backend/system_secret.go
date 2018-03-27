@@ -24,7 +24,7 @@ func (kb *KubernetesBackend) ListSystemSecrets(systemID v1.SystemID) ([]v1.Secre
 		return nil, err
 	}
 
-	var externalSecrets []v1.Secret
+	externalSecrets := make([]v1.Secret, 0)
 	for _, secret := range secrets.Items {
 		// There are secrets in the namespace that are not secrets set for lattice.
 		// Don't expose those in ListSystemSecrets

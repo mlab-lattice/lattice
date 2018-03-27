@@ -6,21 +6,20 @@ import (
 	"github.com/mlab-lattice/system/pkg/definition/tree"
 )
 
-type ErrorCode int32
+type ErrorCode string
 
 const (
-	// not using iota here to be more explicit
-	ErrorCodeUnknown              ErrorCode = 0
-	ErrorCodeInvalidSystemOptions ErrorCode = 1
-	ErrorCodeSystemAlreadyExists  ErrorCode = 2
-	ErrorCodeInvalidSystemID      ErrorCode = 3
-	ErrorCodeInvalidSystemVersion ErrorCode = 4
-	ErrorCodeInvalidBuildID       ErrorCode = 5
-	ErrorCodeInvalidDeployID      ErrorCode = 6
-	ErrorCodeInvalidTeardownID    ErrorCode = 7
-	ErrorCodeInvalidServiceID     ErrorCode = 8
-	ErrorCodeInvalidSystemSecret  ErrorCode = 9
-	ErrorCodeConflict             ErrorCode = 10
+	ErrorCodeUnknown              ErrorCode = "UNKNOWN"
+	ErrorCodeInvalidSystemOptions ErrorCode = "INVALID_SYSTEM_OPTIONS"
+	ErrorCodeSystemAlreadyExists  ErrorCode = "SYSTEM_ALREADY_EXISTS"
+	ErrorCodeInvalidSystemID      ErrorCode = "INVALID_SYSTEM_ID"
+	ErrorCodeInvalidSystemVersion ErrorCode = "INVALID_SYSTEM_VERSION"
+	ErrorCodeInvalidBuildID       ErrorCode = "INVALID_BUILD_ID"
+	ErrorCodeInvalidDeployID      ErrorCode = "INVALID_DEPLOY_ID"
+	ErrorCodeInvalidTeardownID    ErrorCode = "INVALID_TEARDOWN_ID"
+	ErrorCodeInvalidServiceID     ErrorCode = "INVALID_SERVICE_ID"
+	ErrorCodeInvalidSystemSecret  ErrorCode = "INVALID_SYSTEM_SECRET"
+	ErrorCodeConflict             ErrorCode = "CONFLICT"
 )
 
 type Error interface {
