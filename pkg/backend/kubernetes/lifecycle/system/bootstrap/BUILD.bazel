@@ -7,7 +7,6 @@ go_library(
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/api/v1:go_default_library",
-        "//pkg/backend/kubernetes/customresource/generated/clientset/versioned:go_default_library",
         "//pkg/backend/kubernetes/lifecycle/system/bootstrap/bootstrapper:go_default_library",
         "//pkg/backend/kubernetes/lifecycle/system/bootstrap/bootstrapper/base:go_default_library",
         "@io_k8s_api//apps/v1:go_default_library",

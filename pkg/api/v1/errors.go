@@ -53,6 +53,12 @@ func (e *InvalidSystemOptionsError) Code() ErrorCode {
 	return ErrorCodeInvalidSystemOptions
 }
 
+func NewSystemAlreadyExistsError(id SystemID) *SystemAlreadyExistsError {
+	return &SystemAlreadyExistsError{
+		ID: id,
+	}
+}
+
 type SystemAlreadyExistsError struct {
 	ID SystemID `json:"id"`
 }

@@ -31,7 +31,7 @@ type KubernetesPerNodeBackend struct {
 	serviceListerSynced cache.InformerSynced
 }
 
-func NewKubernetesPerNodeBackend(kubeconfig, namespace string) (*KubernetesPerNodeBackend, error) {
+func NewKubernetesPerNodeBackend(kubeconfig string) (*KubernetesPerNodeBackend, error) {
 	var config *rest.Config
 	var err error
 	if kubeconfig == "" {
@@ -48,15 +48,13 @@ func NewKubernetesPerNodeBackend(kubeconfig, namespace string) (*KubernetesPerNo
 	if err != nil {
 		return nil, err
 	}
-	//kubeInformers := kubeinformers.NewSharedInformerFactory(kubeClient, time.Duration(12*time.Hour))
-	kubeInformers := kubeinformers.NewFilteredSharedInformerFactory(kubeClient, time.Duration(12*time.Hour), namespace, nil)
+	kubeInformers := kubeinformers.NewSharedInformerFactory(kubeClient, time.Duration(12*time.Hour))
 
 	latticeClient, err := latticeclientset.NewForConfig(config)
 	if err != nil {
 		return nil, err
 	}
-	//latticeInformers := latticeinformers.NewSharedInformerFactory(latticeClient, time.Duration(12*time.Hour))
-	latticeInformers := latticeinformers.NewFilteredSharedInformerFactory(latticeClient, time.Duration(12*time.Hour), namespace, nil)
+	latticeInformers := latticeinformers.NewSharedInformerFactory(latticeClient, time.Duration(12*time.Hour))
 
 	// FIXME: should we add a stopCh?
 	go kubeInformers.Start(nil)

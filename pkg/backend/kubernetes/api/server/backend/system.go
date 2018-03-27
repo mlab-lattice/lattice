@@ -29,6 +29,10 @@ func (kb *KubernetesBackend) CreateSystem(id v1.SystemID, definitionURL string) 
 
 	system, err := kb.latticeClient.LatticeV1().Systems(kubeutil.InternalNamespace(kb.latticeID)).Create(system)
 	if err != nil {
+		if errors.IsAlreadyExists(err) {
+			return nil, v1.NewSystemAlreadyExistsError(id)
+		}
+
 		return nil, err
 	}
 

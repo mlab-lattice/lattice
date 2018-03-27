@@ -13,7 +13,6 @@ func (c *Controller) syncPendingSystem(system *latticev1.System) error {
 		system.Spec.DefinitionURL,
 		c.systemBootstrappers,
 		c.kubeClient,
-		c.latticeClient,
 	)
 	if err != nil {
 		return err

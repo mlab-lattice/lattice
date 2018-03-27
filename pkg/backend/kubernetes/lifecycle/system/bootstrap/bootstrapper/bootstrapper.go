@@ -3,8 +3,6 @@ package bootstrapper
 import (
 	"fmt"
 
-	latticev1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
-
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -17,7 +15,6 @@ type Interface interface {
 }
 
 type SystemResources struct {
-	System          *latticev1.System
 	Namespace       *corev1.Namespace
 	ServiceAccounts []*corev1.ServiceAccount
 	RoleBindings    []*rbacv1.RoleBinding
@@ -61,13 +58,6 @@ func (r *SystemResources) String() (string, error) {
 
 		output += fmt.Sprintf("%v%v", header, string(data))
 	}
-
-	data, err = yaml.Marshal(r.System)
-	if err != nil {
-		return "", err
-	}
-
-	output += fmt.Sprintf("%v%v", header, string(data))
 
 	return output, nil
 }

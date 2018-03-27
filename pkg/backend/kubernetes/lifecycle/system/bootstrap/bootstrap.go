@@ -2,7 +2,6 @@ package bootstrap
 
 import (
 	"github.com/mlab-lattice/system/pkg/api/v1"
-	latticeclientset "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/clientset/versioned"
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/system/bootstrap/bootstrapper"
 	basebootstrapper "github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/system/bootstrap/bootstrapper/base"
 
@@ -22,7 +21,6 @@ func Bootstrap(
 	definitionURL string,
 	bootstrappers []bootstrapper.Interface,
 	kubeClient kubeclientset.Interface,
-	latticeClient latticeclientset.Interface,
 ) (*bootstrapper.SystemResources, error) {
 	resources := GetBootstrapResources(latticeID, systemID, definitionURL, bootstrappers)
 
@@ -89,13 +87,7 @@ func Bootstrap(
 		daemonSets = append(daemonSets, daemonSet)
 	}
 
-	system, err := latticeClient.LatticeV1().Systems(namespace.Name).Create(resources.System)
-	if err != nil {
-		return nil, err
-	}
-
 	resources = &bootstrapper.SystemResources{
-		System:          system,
 		Namespace:       namespace,
 		ServiceAccounts: serviceAccounts,
 		RoleBindings:    roleBindings,

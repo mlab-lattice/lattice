@@ -5,12 +5,11 @@ import (
 	"reflect"
 
 	latticev1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
+	kubeutil "github.com/mlab-lattice/system/pkg/backend/kubernetes/util/kubernetes"
 	"github.com/mlab-lattice/system/pkg/definition"
 	"github.com/mlab-lattice/system/pkg/definition/tree"
 
 	"k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	kubelabels "k8s.io/apimachinery/pkg/labels"
 )
 
 func (c *Controller) updateSystem(
@@ -45,33 +44,13 @@ func isSystemStatusCurrent(system *latticev1.System) bool {
 }
 
 func (c *Controller) getSystem(namespace string) (*latticev1.System, error) {
-	systems, err := c.systemLister.Systems(namespace).List(kubelabels.Everything())
+	systemID, err := kubeutil.SystemID(namespace)
 	if err != nil {
 		return nil, err
 	}
 
-	if len(systems) > 1 {
-		return nil, fmt.Errorf("expected one System in namespace %v but found %v", namespace, len(systems))
-	}
-
-	if len(systems) == 1 {
-		return systems[0], nil
-	}
-
-	systemList, err := c.latticeClient.LatticeV1().Systems(namespace).List(metav1.ListOptions{})
-	if err != nil {
-		return nil, err
-	}
-
-	if len(systemList.Items) > 1 {
-		return nil, fmt.Errorf("expected one System in namespace %v but found %v", namespace, len(systemList.Items))
-	}
-
-	if len(systemList.Items) == 1 {
-		return &systemList.Items[0], nil
-	}
-
-	return nil, fmt.Errorf("expected one System in namespace %v but found %v", namespace, len(systemList.Items))
+	internalNamespace := kubeutil.InternalNamespace(c.latticeID)
+	return c.systemLister.Systems(internalNamespace).Get(string(systemID))
 }
 
 func (c *Controller) systemSpec(rollout *latticev1.Deploy, build *latticev1.Build) (latticev1.SystemSpec, error) {

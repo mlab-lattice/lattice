@@ -92,19 +92,19 @@ func (b *DefaultEnvoylatticeBootstrapper) BootstrapLatticeResources(resources *b
 		}
 	}
 
-	role := &rbacv1.Role{
+	xdsAPIclusterRoleName := fmt.Sprintf("%v-%v", b.latticeID, xdsAPIName)
+	clusterRole := &rbacv1.ClusterRole{
 		// Include TypeMeta so if this is a dry run it will be printed out
 		TypeMeta: metav1.TypeMeta{
-			Kind:       "Role",
+			Kind:       "ClusterRole",
 			APIVersion: rbacv1.SchemeGroupVersion.String(),
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      xdsAPIName,
-			Namespace: internalNamespace,
+			Name: xdsAPIclusterRoleName,
 		},
 		Rules: envoyRBACPolicyRules,
 	}
-	resources.Roles = append(resources.Roles, role)
+	resources.ClusterRoles = append(resources.ClusterRoles, clusterRole)
 
 	serviceAccount := &corev1.ServiceAccount{
 		// Include TypeMeta so if this is a dry run it will be printed out
@@ -119,10 +119,10 @@ func (b *DefaultEnvoylatticeBootstrapper) BootstrapLatticeResources(resources *b
 	}
 	resources.ServiceAccounts = append(resources.ServiceAccounts, serviceAccount)
 
-	roleBinding := &rbacv1.RoleBinding{
+	clusterRoleBinding := &rbacv1.ClusterRoleBinding{
 		// Include TypeMeta so if this is a dry run it will be printed out
 		TypeMeta: metav1.TypeMeta{
-			Kind:       "RoleBinding",
+			Kind:       "ClusterRoleBinding",
 			APIVersion: rbacv1.SchemeGroupVersion.String(),
 		},
 		ObjectMeta: metav1.ObjectMeta{
@@ -138,11 +138,11 @@ func (b *DefaultEnvoylatticeBootstrapper) BootstrapLatticeResources(resources *b
 		},
 		RoleRef: rbacv1.RoleRef{
 			APIGroup: rbacv1.GroupName,
-			Kind:     "Role",
-			Name:     role.Name,
+			Kind:     "ClusterRole",
+			Name:     clusterRole.Name,
 		},
 	}
-	resources.RoleBindings = append(resources.RoleBindings, roleBinding)
+	resources.ClusterRoleBindings = append(resources.ClusterRoleBindings, clusterRoleBinding)
 
 	labels := map[string]string{
 		labelKeyEnvoyXDSAPI: "true",

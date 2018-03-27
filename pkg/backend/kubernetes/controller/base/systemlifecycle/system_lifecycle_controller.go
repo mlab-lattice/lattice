@@ -5,6 +5,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/mlab-lattice/system/pkg/api/v1"
 	latticev1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	latticeclientset "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/clientset/versioned"
 	latticeinformers "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/informers/externalversions/lattice/v1"
@@ -28,6 +29,8 @@ type lifecycleAction struct {
 
 type Controller struct {
 	syncHandler func(sysRolloutKey string) error
+
+	latticeID v1.LatticeID
 
 	latticeClient latticeclientset.Interface
 
@@ -65,6 +68,7 @@ type Controller struct {
 }
 
 func NewController(
+	latticeID v1.LatticeID,
 	latticeClient latticeclientset.Interface,
 	deployInformer latticeinformers.DeployInformer,
 	teardownInformer latticeinformers.TeardownInformer,
@@ -74,6 +78,7 @@ func NewController(
 	componentBuildInformer latticeinformers.ComponentBuildInformer,
 ) *Controller {
 	src := &Controller{
+		latticeID:                    latticeID,
 		latticeClient:                latticeClient,
 		owningLifecycleActions:       make(map[string]*lifecycleAction),
 		owningLifecycleActionsSynced: make(chan struct{}),

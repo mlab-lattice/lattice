@@ -380,10 +380,9 @@ func (c *Controller) resolveControllerRef(namespace string, controllerRef *metav
 		return nil
 	}
 
-	system, err := c.systemLister.Systems(namespace).Get(controllerRef.Name)
+	internalNamespace := kubeutil.InternalNamespace(c.latticeID)
+	system, err := c.systemLister.Systems(internalNamespace).Get(controllerRef.Name)
 	if err != nil {
-		// This shouldn't happen.
-		// FIXME: send error event
 		return nil
 	}
 

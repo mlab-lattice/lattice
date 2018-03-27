@@ -3,10 +3,8 @@ package base
 import (
 	"github.com/mlab-lattice/system/pkg/api/v1"
 	kubeconstants "github.com/mlab-lattice/system/pkg/backend/kubernetes/constants"
-	latticev1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/system/bootstrap/bootstrapper"
 	kubeutil "github.com/mlab-lattice/system/pkg/backend/kubernetes/util/kubernetes"
-	"github.com/mlab-lattice/system/pkg/definition/tree"
 
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -87,27 +85,4 @@ func (b *DefaultBootstrapper) BootstrapSystemResources(resources *bootstrapper.S
 		},
 	}
 	resources.RoleBindings = append(resources.RoleBindings, componentBuilderRB)
-
-	system := &latticev1.System{
-		// Include TypeMeta so if this is a dry run it will be printed out
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "System",
-			APIVersion: latticev1.GroupName + "/v1",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      string(b.systemID),
-			Namespace: namespace.Name,
-			Labels: map[string]string{
-				kubeconstants.LabelKeyLatticeID: string(b.latticeID),
-			},
-		},
-		Spec: latticev1.SystemSpec{
-			DefinitionURL: b.definitionURL,
-			Services:      map[tree.NodePath]latticev1.SystemSpecServiceInfo{},
-		},
-		Status: latticev1.SystemStatus{
-			State: latticev1.SystemStateStable,
-		},
-	}
-	resources.System = system
 }
