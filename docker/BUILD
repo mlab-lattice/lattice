@@ -49,7 +49,7 @@ container_image(
     tars = [
         ":base-terraform-bin",
         ":base-terraform-modules-kubernetes",
-    ]
+    ],
 )
 
 container_image(
@@ -57,7 +57,7 @@ container_image(
     tars = [
         ":base-libstdc++6",
         ":base-openssh-client",
-    ]
+    ],
 )
 
 container_image(
@@ -65,7 +65,7 @@ container_image(
     tars = [
         ":base-libstdc++6",
         ":base-terraform",
-    ]
+    ],
 )
 
 # base container images
@@ -75,6 +75,7 @@ base_images = [
     "libstdc++6-openssh-client",
     "libstdc++6-terraform",
 ]
+
 lattice_base_container_images(base_images)
 
 # lattice container images
@@ -94,4 +95,5 @@ go_targets = [
     ("kubernetes-local-dns-controller", "libstdc++6", "cmd/kubernetes/local/dns/controller"),
     ("latticectl", "libstdc++6-terraform", "cmd/latticectl"),
 ]
+
 lattice_container_images(go_targets)
