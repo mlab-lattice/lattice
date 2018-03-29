@@ -17,6 +17,7 @@ type SystemClient interface {
 	Get(v1.SystemID) (*v1.System, error)
 	Delete(v1.SystemID) error
 
+	Versions(v1.SystemID) ([]v1.SystemVersion, error)
 	Builds(v1.SystemID) BuildClient
 	Deploys(v1.SystemID) DeployClient
 	Teardowns(v1.SystemID) TeardownClient

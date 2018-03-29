@@ -11,6 +11,7 @@ go_library(
     deps = [
         "//pkg/api/server/v1:go_default_library",
         "//pkg/api/v1:go_default_library",
+        "//pkg/api/v1/rest:go_default_library",
         "//pkg/definition:go_default_library",
         "//pkg/definition/resolver:go_default_library",
         "//pkg/definition/tree:go_default_library",

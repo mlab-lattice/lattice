@@ -7,8 +7,8 @@ import (
 	"net/http"
 
 	clientv1 "github.com/mlab-lattice/system/pkg/api/client/v1"
-	restv1 "github.com/mlab-lattice/system/pkg/api/server/rest/v1"
 	"github.com/mlab-lattice/system/pkg/api/v1"
+	v1rest "github.com/mlab-lattice/system/pkg/api/v1/rest"
 	"github.com/mlab-lattice/system/pkg/util/rest"
 )
 
@@ -21,7 +21,7 @@ type SystemClient struct {
 	baseURL    string
 }
 
-func newSystemClient(c rest.Client, baseURL string) clientv1.SystemClient {
+func newSystemClient(c rest.Client, baseURL string) *SystemClient {
 	return &SystemClient{
 		restClient: c,
 		baseURL:    fmt.Sprintf("%v%v", baseURL, systemSubpath),
@@ -29,7 +29,7 @@ func newSystemClient(c rest.Client, baseURL string) clientv1.SystemClient {
 }
 
 func (c *SystemClient) Create(id v1.SystemID, definitionURL string) (*v1.System, error) {
-	request := restv1.CreateSystemRequest{
+	request := v1rest.CreateSystemRequest{
 		ID:            id,
 		DefinitionURL: definitionURL,
 	}
@@ -98,6 +98,22 @@ func (c *SystemClient) Delete(id v1.SystemID) error {
 	}
 
 	return HandleErrorStatusCode(statusCode, body)
+}
+
+func (c *SystemClient) Versions(id v1.SystemID) ([]v1.SystemVersion, error) {
+	body, statusCode, err := c.restClient.Delete(fmt.Sprintf("%v/%v/versions", c.baseURL, id)).Body()
+	if err != nil {
+		return nil, err
+	}
+	defer body.Close()
+
+	if statusCode == http.StatusOK {
+		var versions []v1.SystemVersion
+		err = rest.UnmarshalBodyJSON(body, versions)
+		return versions, err
+	}
+
+	return nil, HandleErrorStatusCode(statusCode, body)
 }
 
 func (c *SystemClient) Builds(id v1.SystemID) clientv1.BuildClient {

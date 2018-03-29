@@ -7,6 +7,7 @@ import (
 
 	serverv1 "github.com/mlab-lattice/system/pkg/api/server/v1"
 	"github.com/mlab-lattice/system/pkg/api/v1"
+	v1rest "github.com/mlab-lattice/system/pkg/api/v1/rest"
 	"github.com/mlab-lattice/system/pkg/definition"
 	"github.com/mlab-lattice/system/pkg/definition/resolver"
 	"github.com/mlab-lattice/system/pkg/definition/tree"
@@ -15,17 +16,12 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-type CreateSystemRequest struct {
-	ID            v1.SystemID `json:"id"`
-	DefinitionURL string      `json:"definitionUrl"`
-}
-
 func MountHandlers(router *gin.Engine, backend serverv1.Interface, sysResolver *resolver.SystemResolver) {
 	systems := router.Group("/systems")
 	{
 		// create-system
 		systems.POST("", func(c *gin.Context) {
-			var req CreateSystemRequest
+			var req v1rest.CreateSystemRequest
 			if err := c.BindJSON(&req); err != nil {
 				handleBadRequestBody(c)
 				return
@@ -86,11 +82,6 @@ func MountHandlers(router *gin.Engine, backend serverv1.Interface, sysResolver *
 	mountSecretHandlers(router, backend)
 }
 
-type VersionResponse struct {
-	ID         v1.SystemVersion     `json:"id"`
-	Definition definition.Interface `json:"definition"`
-}
-
 func mountVersionHandlers(router *gin.Engine, backend serverv1.Interface, sysResolver *resolver.SystemResolver) {
 	versions := router.Group("/systems/:system_id/versions")
 	{
@@ -98,40 +89,20 @@ func mountVersionHandlers(router *gin.Engine, backend serverv1.Interface, sysRes
 		versions.GET("", func(c *gin.Context) {
 			systemID := c.Param("system_id")
 
-			versions, err := getSystemVersions(backend, sysResolver, systemID)
+			versionStrings, err := getSystemVersions(backend, sysResolver, systemID)
 			if err != nil {
 				handleError(c, err)
 				return
+			}
+
+			versions := make([]v1.SystemVersion, 0)
+			for _, version := range versionStrings {
+				versions = append(versions, v1.SystemVersion(version))
 			}
 
 			c.JSON(http.StatusOK, versions)
 		})
-
-		// get-system-version
-		versions.GET("/:version_id", func(c *gin.Context) {
-			systemID := c.Param("system_id")
-			version := v1.SystemVersion(c.Param("version_id"))
-
-			definitionRoot, err := getSystemDefinitionRoot(backend, sysResolver, systemID, version)
-			if err != nil {
-				handleError(c, err)
-				return
-			}
-
-			c.JSON(http.StatusOK, VersionResponse{
-				ID:         version,
-				Definition: definitionRoot,
-			})
-		})
 	}
-}
-
-type BuildRequest struct {
-	Version v1.SystemVersion `json:"version"`
-}
-
-type BuildResponse struct {
-	ID v1.BuildID `json:"id"`
 }
 
 func mountBuildHandlers(router *gin.Engine, backend serverv1.Interface, sysResolver *resolver.SystemResolver) {
@@ -141,7 +112,7 @@ func mountBuildHandlers(router *gin.Engine, backend serverv1.Interface, sysResol
 		systemBuilds.POST("", func(c *gin.Context) {
 			systemID := c.Param("system_id")
 
-			var req BuildRequest
+			var req v1rest.BuildRequest
 			if err := c.BindJSON(&req); err != nil {
 				handleBadRequestBody(c)
 				return
@@ -196,11 +167,6 @@ func mountBuildHandlers(router *gin.Engine, backend serverv1.Interface, sysResol
 	}
 }
 
-type DeployRequest struct {
-	Version *v1.SystemVersion `json:"version,omitempty"`
-	BuildID *v1.BuildID       `json:"buildId,omitempty"`
-}
-
 func mountDeployHandlers(router *gin.Engine, backend serverv1.Interface, sysResolver *resolver.SystemResolver) {
 	deploys := router.Group("/systems/:system_id/deploys")
 	{
@@ -208,7 +174,7 @@ func mountDeployHandlers(router *gin.Engine, backend serverv1.Interface, sysReso
 		deploys.POST("", func(c *gin.Context) {
 			systemID := c.Param("system_id")
 
-			var req DeployRequest
+			var req v1rest.DeployRequest
 			if err := c.BindJSON(&req); err != nil {
 				handleBadRequestBody(c)
 				return
@@ -280,10 +246,6 @@ func mountDeployHandlers(router *gin.Engine, backend serverv1.Interface, sysReso
 			c.JSON(http.StatusOK, deploy)
 		})
 	}
-}
-
-type TearDownResponse struct {
-	ID v1.TeardownID `json:"id"`
 }
 
 func mountTeardownHandlers(router *gin.Engine, backend serverv1.Interface) {
@@ -369,10 +331,6 @@ func mountServiceHandlers(router *gin.Engine, backend serverv1.Interface) {
 	}
 }
 
-type SetSecretRequest struct {
-	Value string `json:"value"`
-}
-
 func mountSecretHandlers(router *gin.Engine, backend serverv1.Interface) {
 	secrets := router.Group("/systems/:system_id/secrets")
 	{
@@ -419,7 +377,7 @@ func mountSecretHandlers(router *gin.Engine, backend serverv1.Interface) {
 
 		// set-secret
 		secrets.PATCH("/:secret_path", func(c *gin.Context) {
-			var req SetSecretRequest
+			var req v1rest.SetSecretRequest
 			if err := c.BindJSON(&req); err != nil {
 				handleError(c, err)
 				return

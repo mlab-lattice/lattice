@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"net/http"
 
-	restv1 "github.com/mlab-lattice/system/pkg/api/server/rest/v1"
 	"github.com/mlab-lattice/system/pkg/api/v1"
+	v1rest "github.com/mlab-lattice/system/pkg/api/v1/rest"
 	"github.com/mlab-lattice/system/pkg/definition/tree"
 	"github.com/mlab-lattice/system/pkg/util/rest"
 )
@@ -64,7 +64,7 @@ func (c *SystemSecretClient) Get(path tree.NodePath, name string) (*v1.Secret, e
 func (c *SystemSecretClient) Set(path tree.NodePath, name, value string) error {
 	secretPath := fmt.Sprintf("%v:%v", path.ToDomain(true), name)
 
-	request := &restv1.SetSecretRequest{
+	request := &v1rest.SetSecretRequest{
 		Value: value,
 	}
 	requestJSON, err := json.Marshal(request)

@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"net/http"
 
-	v1rest "github.com/mlab-lattice/system/pkg/api/server/rest/v1"
 	"github.com/mlab-lattice/system/pkg/api/v1"
+	v1rest "github.com/mlab-lattice/system/pkg/api/v1/rest"
 	"github.com/mlab-lattice/system/pkg/util/rest"
 )
 
@@ -46,7 +46,7 @@ func (c *DeployClient) CreateFromBuild(id v1.BuildID) (*v1.Deploy, error) {
 	if statusCode == http.StatusCreated {
 		deploy := &v1.Deploy{}
 		err = rest.UnmarshalBodyJSON(body, &deploy)
-		return deploy, nil
+		return deploy, err
 	}
 
 	return nil, HandleErrorStatusCode(statusCode, body)
@@ -71,7 +71,7 @@ func (c *DeployClient) CreateFromVersion(version v1.SystemVersion) (*v1.Deploy, 
 	if statusCode == http.StatusCreated {
 		deploy := &v1.Deploy{}
 		err = rest.UnmarshalBodyJSON(body, &deploy)
-		return deploy, nil
+		return deploy, err
 	}
 
 	return nil, HandleErrorStatusCode(statusCode, body)
@@ -103,7 +103,7 @@ func (c *DeployClient) Get(id v1.DeployID) (*v1.Deploy, error) {
 	if statusCode == http.StatusOK {
 		deploy := &v1.Deploy{}
 		err = rest.UnmarshalBodyJSON(body, &deploy)
-		return deploy, nil
+		return deploy, err
 	}
 
 	return nil, HandleErrorStatusCode(statusCode, body)

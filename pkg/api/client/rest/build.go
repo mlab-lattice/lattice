@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"net/http"
 
-	v1rest "github.com/mlab-lattice/system/pkg/api/server/rest/v1"
 	"github.com/mlab-lattice/system/pkg/api/v1"
+	v1rest "github.com/mlab-lattice/system/pkg/api/v1/rest"
 	"github.com/mlab-lattice/system/pkg/util/rest"
 )
 
