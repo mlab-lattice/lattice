@@ -105,7 +105,7 @@ func (p *DefaultAWSLatticeProvisioner) Provision(latticeID string) (string, erro
 	fmt.Println("Waiting for API server to be ready...")
 	latticeClient := rest.NewClient(address)
 	err = wait.Poll(1*time.Second, 300*time.Second, func() (bool, error) {
-		ok, _ := latticeClient.Status()
+		ok, _ := latticeClient.Health()
 		return ok, nil
 	})
 
@@ -201,7 +201,7 @@ func (p *DefaultAWSLatticeProvisioner) tearDownSystems(latticeID string) error {
 		return fmt.Errorf("API server URL required to tear down systems")
 	}
 
-	latticeClient := rest.NewClient(p.apiServerURL)
+	latticeClient := rest.NewClient(p.apiServerURL).V1()
 	systems, err := latticeClient.Systems().List()
 	if err != nil {
 		return err

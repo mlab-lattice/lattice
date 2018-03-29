@@ -13,7 +13,7 @@ import (
 
 var _ = Describe("system", func() {
 	It("should be able to list systems, but the list should be empty", func() {
-		system.List(context.TestContext.LatticeAPIClient.Systems(), nil)
+		system.List(context.TestContext.LatticeAPIClient.V1().Systems(), nil)
 	})
 
 	systemName := v1.SystemID("e2e-system-crud-1")
@@ -21,7 +21,7 @@ var _ = Describe("system", func() {
 
 	var systemID v1.SystemID
 	It("should be able to create a system", func() {
-		systemID = system.Create(context.TestContext.LatticeAPIClient.Systems(), systemName, systemURL)
+		systemID = system.Create(context.TestContext.LatticeAPIClient.V1().Systems(), systemName, systemURL)
 	})
 
 	ifSystemCreated := If("system creation succeeded", func() bool { return systemID != "" })
@@ -31,7 +31,7 @@ var _ = Describe("system", func() {
 		ifSystemCreated,
 		func() {
 			system.List(
-				context.TestContext.LatticeAPIClient.Systems(),
+				context.TestContext.LatticeAPIClient.V1().Systems(),
 				[]v1.SystemID{systemID},
 			)
 		},
@@ -42,7 +42,7 @@ var _ = Describe("system", func() {
 		ifSystemCreated,
 		func() {
 			system.Get(
-				context.TestContext.LatticeAPIClient.Systems(),
+				context.TestContext.LatticeAPIClient.V1().Systems(),
 				systemID,
 			)
 		},
@@ -52,7 +52,7 @@ var _ = Describe("system", func() {
 		"should see the system become stable",
 		ifSystemCreated,
 		func() {
-			system.WaitUntilStable(context.TestContext.LatticeAPIClient.Systems(), systemID, 1*time.Second, 10*time.Second)
+			system.WaitUntilStable(context.TestContext.LatticeAPIClient.V1().Systems(), systemID, 1*time.Second, 10*time.Second)
 		},
 	)
 
@@ -60,7 +60,7 @@ var _ = Describe("system", func() {
 		"should be able to delete the newly created system by ID",
 		ifSystemCreated,
 		func() {
-			system.DeleteSuccessfully(context.TestContext.LatticeAPIClient.Systems(), systemID, 1*time.Second, 45*time.Second)
+			system.DeleteSuccessfully(context.TestContext.LatticeAPIClient.V1().Systems(), systemID, 1*time.Second, 45*time.Second)
 		},
 	)
 })

@@ -6,8 +6,6 @@ import (
 )
 
 type Interface interface {
-	Status() (bool, error)
-
 	Systems() SystemClient
 }
 

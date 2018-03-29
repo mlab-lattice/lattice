@@ -5,6 +5,7 @@ go_library(
     srcs = [
         "errors.go",
         "handlers.go",
+        "systems.go",
     ],
     importpath = "github.com/mlab-lattice/system/pkg/api/server/rest/v1",
     visibility = ["//visibility:public"],

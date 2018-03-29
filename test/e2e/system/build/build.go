@@ -18,7 +18,7 @@ var _ = Describe("build", func() {
 
 	var systemID v1.SystemID
 	It("should be able to create a system", func() {
-		systemID = system.CreateSuccessfully(context.TestContext.LatticeAPIClient.Systems(), systemName, systemURL)
+		systemID = system.CreateSuccessfully(context.TestContext.LatticeAPIClient.V1().Systems(), systemName, systemURL)
 	})
 
 	ifSystemCreated := If("system creation succeeded", func() bool { return systemID != "" })
@@ -27,7 +27,7 @@ var _ = Describe("build", func() {
 		"should be able to list builds, but the list should be empty",
 		ifSystemCreated,
 		func() {
-			build.List(context.TestContext.LatticeAPIClient.Systems().Builds(systemID), nil)
+			build.List(context.TestContext.LatticeAPIClient.V1().Systems().Builds(systemID), nil)
 		},
 	)
 
@@ -37,7 +37,7 @@ var _ = Describe("build", func() {
 		"should be able to create a build",
 		ifSystemCreated,
 		func() {
-			buildID1 = build.Create(context.TestContext.LatticeAPIClient.Systems().Builds(systemID), version)
+			buildID1 = build.Create(context.TestContext.LatticeAPIClient.V1().Systems().Builds(systemID), version)
 		},
 	)
 
@@ -46,7 +46,7 @@ var _ = Describe("build", func() {
 		"should be able to create a build",
 		ifBuildCreated,
 		func() {
-			build.Get(context.TestContext.LatticeAPIClient.Systems().Builds(systemID), buildID1)
+			build.Get(context.TestContext.LatticeAPIClient.V1().Systems().Builds(systemID), buildID1)
 		},
 	)
 
@@ -54,7 +54,7 @@ var _ = Describe("build", func() {
 		"should be able to list builds, and the list should only contain the created build",
 		ifBuildCreated,
 		func() {
-			build.List(context.TestContext.LatticeAPIClient.Systems().Builds(systemID), []v1.BuildID{buildID1})
+			build.List(context.TestContext.LatticeAPIClient.V1().Systems().Builds(systemID), []v1.BuildID{buildID1})
 		},
 	)
 
@@ -62,7 +62,7 @@ var _ = Describe("build", func() {
 		"should see the build succeed",
 		ifBuildCreated,
 		func() {
-			build.WaitUntilSucceeded(context.TestContext.LatticeAPIClient.Systems().Builds(systemID), buildID1, 15*time.Second, 5*time.Minute)
+			build.WaitUntilSucceeded(context.TestContext.LatticeAPIClient.V1().Systems().Builds(systemID), buildID1, 15*time.Second, 5*time.Minute)
 		},
 	)
 
@@ -72,7 +72,7 @@ var _ = Describe("build", func() {
 		ifBuildCreated,
 		func() {
 			buildID2 = build.BuildSuccessfully(
-				context.TestContext.LatticeAPIClient.Systems().Builds(systemID),
+				context.TestContext.LatticeAPIClient.V1().Systems().Builds(systemID),
 				version,
 				1*time.Second,
 				10*time.Second,
@@ -84,7 +84,7 @@ var _ = Describe("build", func() {
 		"should be able to list builds, and the list should contain both builds",
 		If("both builds succeeded", func() bool { return systemID != "" && buildID1 != "" && buildID2 != "" }),
 		func() {
-			build.List(context.TestContext.LatticeAPIClient.Systems().Builds(systemID), []v1.BuildID{buildID1, buildID2})
+			build.List(context.TestContext.LatticeAPIClient.V1().Systems().Builds(systemID), []v1.BuildID{buildID1, buildID2})
 
 		},
 	)
@@ -93,7 +93,7 @@ var _ = Describe("build", func() {
 		"should be able to delete the system",
 		ifSystemCreated,
 		func() {
-			system.DeleteSuccessfully(context.TestContext.LatticeAPIClient.Systems(), systemID, 1*time.Second, 10*time.Second)
+			system.DeleteSuccessfully(context.TestContext.LatticeAPIClient.V1().Systems(), systemID, 1*time.Second, 10*time.Second)
 		},
 	)
 })

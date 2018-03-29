@@ -4,12 +4,12 @@ import (
 	"log"
 
 	"github.com/mlab-lattice/system/pkg/api/client/rest"
-	clientv1 "github.com/mlab-lattice/system/pkg/api/client/v1"
+	v1client "github.com/mlab-lattice/system/pkg/api/client/v1"
 	"github.com/mlab-lattice/system/pkg/util/cli"
 )
 
-func DefaultLatticeClient(lattice string) clientv1.Interface {
-	return rest.NewClient(lattice)
+func DefaultLatticeClient(lattice string) v1client.Interface {
+	return rest.NewClient(lattice).V1()
 }
 
 type Latticectl struct {

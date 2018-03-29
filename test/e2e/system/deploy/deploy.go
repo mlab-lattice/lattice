@@ -21,7 +21,7 @@ var _ = Describe("build", func() {
 
 	var systemID v1.SystemID
 	It("should be able to create a system", func() {
-		systemID = system.CreateSuccessfully(context.TestContext.LatticeAPIClient.Systems(), systemName, systemURL)
+		systemID = system.CreateSuccessfully(context.TestContext.LatticeAPIClient.V1().Systems(), systemName, systemURL)
 	})
 
 	ifSystemCreated := If("system creation succeeded", func() bool { return systemID != "" })
@@ -30,7 +30,7 @@ var _ = Describe("build", func() {
 		"should be able to list deploys, but the list should be empty",
 		ifSystemCreated,
 		func() {
-			deploy.List(context.TestContext.LatticeAPIClient.Systems().Deploys(systemID), nil)
+			deploy.List(context.TestContext.LatticeAPIClient.V1().Systems().Deploys(systemID), nil)
 		},
 	)
 
@@ -40,7 +40,7 @@ var _ = Describe("build", func() {
 		"should be able to create a build",
 		ifSystemCreated,
 		func() {
-			buildID = build.BuildSuccessfully(context.TestContext.LatticeAPIClient.Systems().Builds(systemID), version, 15*time.Second, 5*time.Minute)
+			buildID = build.BuildSuccessfully(context.TestContext.LatticeAPIClient.V1().Systems().Builds(systemID), version, 15*time.Second, 5*time.Minute)
 		},
 	)
 
@@ -50,7 +50,7 @@ var _ = Describe("build", func() {
 		"should be able to deploy a build",
 		ifBuildSucceeded,
 		func() {
-			deployID = deploy.CreateFromBuild(context.TestContext.LatticeAPIClient.Systems().Deploys(systemID), buildID)
+			deployID = deploy.CreateFromBuild(context.TestContext.LatticeAPIClient.V1().Systems().Deploys(systemID), buildID)
 		},
 	)
 
@@ -59,7 +59,7 @@ var _ = Describe("build", func() {
 		"should be able to list deploys, and the list should only contain the created build",
 		ifDeployCreated,
 		func() {
-			deploy.List(context.TestContext.LatticeAPIClient.Systems().Deploys(systemID), []v1.DeployID{deployID})
+			deploy.List(context.TestContext.LatticeAPIClient.V1().Systems().Deploys(systemID), []v1.DeployID{deployID})
 		},
 	)
 
@@ -67,7 +67,7 @@ var _ = Describe("build", func() {
 		"should see the deploy succeed",
 		ifDeployCreated,
 		func() {
-			deploy.WaitUntilSucceeded(context.TestContext.LatticeAPIClient.Systems().Deploys(systemID), deployID, 5*time.Second, 1*time.Minute)
+			deploy.WaitUntilSucceeded(context.TestContext.LatticeAPIClient.V1().Systems().Deploys(systemID), deployID, 5*time.Second, 1*time.Minute)
 		},
 	)
 
@@ -77,7 +77,7 @@ var _ = Describe("build", func() {
 		func() {
 			fmt.Println("about to delete system...")
 			time.Sleep(2 * time.Minute)
-			system.DeleteSuccessfully(context.TestContext.LatticeAPIClient.Systems(), systemID, 1*time.Second, 2*time.Minute)
+			system.DeleteSuccessfully(context.TestContext.LatticeAPIClient.V1().Systems(), systemID, 1*time.Second, 2*time.Minute)
 		},
 	)
 })
