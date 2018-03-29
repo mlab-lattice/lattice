@@ -7,7 +7,11 @@ import (
 )
 
 func (c *Controller) syncPendingTeardown(teardown *latticev1.Teardown) error {
-	currentOwningAction := c.attemptToClaimTeardownOwningAction(teardown)
+	currentOwningAction, err := c.attemptToClaimTeardownOwningAction(teardown)
+	if err != nil {
+		return err
+	}
+
 	if currentOwningAction != nil {
 		_, err := c.updateTeardownStatus(
 			teardown,
@@ -17,6 +21,6 @@ func (c *Controller) syncPendingTeardown(teardown *latticev1.Teardown) error {
 		return err
 	}
 
-	_, err := c.updateTeardownStatus(teardown, latticev1.TeardownStateInProgress, "")
+	_, err = c.updateTeardownStatus(teardown, latticev1.TeardownStateInProgress, "")
 	return err
 }

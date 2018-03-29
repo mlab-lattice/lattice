@@ -8,6 +8,7 @@ import (
 func initializeSystemRolloutController(ctx controller.Context) {
 	go systemlifecycle.NewController(
 		ctx.LatticeID,
+		ctx.KubeClientBuilder.ClientOrDie("lattice-controller-lattice-system-lifecycle"),
 		ctx.LatticeClientBuilder.ClientOrDie("lattice-controller-lattice-system-lifecycle"),
 		ctx.LatticeInformerFactory.Lattice().V1().Deploies(),
 		ctx.LatticeInformerFactory.Lattice().V1().Teardowns(),

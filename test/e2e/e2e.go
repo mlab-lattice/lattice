@@ -28,7 +28,7 @@ var (
 
 func RunE2ETest(t *testing.T) {
 	gomega.RegisterFailHandler(ginkgo.Fail)
-	ginkgo.RunSpecs(t, "Client e2e Suite")
+	ginkgo.RunSpecs(t, "Lattice e2e Suite")
 }
 
 var _ = ginkgo.SynchronizedBeforeSuite(func() []byte {

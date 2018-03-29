@@ -10,12 +10,16 @@ import (
 	latticeclientset "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/clientset/versioned"
 	latticeinformers "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/informers/externalversions/lattice/v1"
 	latticelisters "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/listers/lattice/v1"
+	kubeutil "github.com/mlab-lattice/system/pkg/backend/kubernetes/util/kubernetes"
 
 	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
 
+	kubeclientset "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
 
@@ -32,6 +36,7 @@ type Controller struct {
 
 	latticeID v1.LatticeID
 
+	kubeClient    kubeclientset.Interface
 	latticeClient latticeclientset.Interface
 
 	// Each LatticeNamespace may only have one rollout going on at a time.
@@ -41,8 +46,9 @@ type Controller struct {
 	// the owning rollout. It then runs to completion. It is still the owning
 	// rollout. Then Deploy B is created. It is accepted because the existing
 	// owning rollout is not running. Now B is the owning rollout)
+	// FIXME: rethink this. is there a simpler solution?
 	owningLifecycleActionsLock   sync.RWMutex
-	owningLifecycleActions       map[string]*lifecycleAction
+	owningLifecycleActions       map[types.UID]*lifecycleAction
 	owningLifecycleActionsSynced chan struct{}
 
 	deployLister       latticelisters.DeployLister
@@ -69,6 +75,7 @@ type Controller struct {
 
 func NewController(
 	latticeID v1.LatticeID,
+	kubeClient kubeclientset.Interface,
 	latticeClient latticeclientset.Interface,
 	deployInformer latticeinformers.DeployInformer,
 	teardownInformer latticeinformers.TeardownInformer,
@@ -79,8 +86,9 @@ func NewController(
 ) *Controller {
 	src := &Controller{
 		latticeID:                    latticeID,
+		kubeClient:                   kubeClient,
 		latticeClient:                latticeClient,
-		owningLifecycleActions:       make(map[string]*lifecycleAction),
+		owningLifecycleActions:       make(map[types.UID]*lifecycleAction),
 		owningLifecycleActionsSynced: make(chan struct{}),
 		rolloutQueue:                 workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "system-rollout"),
 		teardownQueue:                workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "system-teardown"),
@@ -226,7 +234,8 @@ func (c *Controller) handleSystemAdd(obj interface{}) {
 	system := obj.(*latticev1.System)
 	glog.V(4).Infof("System %s added", system.Name)
 
-	action, exists := c.getOwningAction(system.Namespace)
+	systemNamespace := kubeutil.SystemNamespace(c.latticeID, v1.SystemID(system.Name))
+	action, exists := c.getOwningAction(systemNamespace)
 	if !exists {
 		// No ongoing action
 		glog.V(4).Infof("System %v/%v has no owning actions, skipping", system.Namespace, system.Name)
@@ -264,7 +273,8 @@ func (c *Controller) handleSystemUpdate(old, cur interface{}) {
 		return
 	}
 
-	action, exists := c.getOwningAction(curSystem.Namespace)
+	systemNamespace := kubeutil.SystemNamespace(c.latticeID, v1.SystemID(curSystem.Name))
+	action, exists := c.getOwningAction(systemNamespace)
 	if !exists {
 		glog.V(4).Infof("System %v/%v has no owning actions, skipping", curSystem.Namespace, curSystem.Name)
 		// No ongoing action
@@ -380,12 +390,17 @@ func (c *Controller) syncOwningActions() error {
 			continue
 		}
 
-		_, exists := c.owningLifecycleActions[rollout.Namespace]
+		namespace, err := c.kubeClient.CoreV1().Namespaces().Get(rollout.Namespace, metav1.GetOptions{})
+		if err != nil {
+			return err
+		}
+
+		_, exists := c.owningLifecycleActions[namespace.UID]
 		if exists {
 			return fmt.Errorf("System %v has multiple owning actions", rollout.Namespace)
 		}
 
-		c.owningLifecycleActions[rollout.Namespace] = &lifecycleAction{
+		c.owningLifecycleActions[namespace.UID] = &lifecycleAction{
 			rollout: rollout,
 		}
 	}
@@ -400,12 +415,17 @@ func (c *Controller) syncOwningActions() error {
 			continue
 		}
 
-		_, exists := c.owningLifecycleActions[teardown.Namespace]
+		namespace, err := c.kubeClient.CoreV1().Namespaces().Get(teardown.Namespace, metav1.GetOptions{})
+		if err != nil {
+			return err
+		}
+
+		_, exists := c.owningLifecycleActions[namespace.UID]
 		if exists {
 			return fmt.Errorf("System %v has multiple owning actions", teardown.Namespace)
 		}
 
-		c.owningLifecycleActions[teardown.Namespace] = &lifecycleAction{
+		c.owningLifecycleActions[namespace.UID] = &lifecycleAction{
 			teardown: teardown,
 		}
 	}
