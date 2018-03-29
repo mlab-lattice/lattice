@@ -7,7 +7,6 @@ import (
 	"github.com/mlab-lattice/system/test/e2e/context"
 	. "github.com/mlab-lattice/system/test/util/ginkgo"
 	"github.com/mlab-lattice/system/test/util/lattice/v1/system"
-	"github.com/mlab-lattice/system/test/util/lattice/v1/system/expected"
 
 	. "github.com/onsi/ginkgo"
 )
@@ -19,34 +18,23 @@ var _ = Describe("system", func() {
 
 	systemName := v1.SystemID("e2e-system-crud-1")
 	systemURL := "https://github.com/mlab-lattice/testing__system.git"
-	expectedSystem := &expected.System{
-		ValidStates: []v1.SystemState{
-			v1.SystemStatePending,
-			v1.SystemStateStable,
-		},
-		DesiredState:    v1.SystemStateStable,
-		DefinitionURL:   systemURL,
-		ValidServices:   nil,
-		DesiredServices: nil,
-	}
 
 	var systemID v1.SystemID
 	It("should be able to create a system", func() {
 		systemID = system.Create(context.TestContext.LatticeAPIClient.Systems(), systemName, systemURL)
-		expectedSystem.ID = systemID
 	})
 
-	createSucceeded := If("system creation succeeded", func() bool { return systemID != "" })
+	systemCreated := If("system creation succeeded", func() bool { return systemID != "" })
 
 	ConditionallyIt(
 		"should be able to list systems, and there should only be the newly created system",
 		func() {
 			system.List(
 				context.TestContext.LatticeAPIClient.Systems(),
-				[]expected.System{*expectedSystem},
+				[]v1.SystemID{systemID},
 			)
 		},
-		createSucceeded,
+		systemCreated,
 	)
 
 	ConditionallyIt(
@@ -55,10 +43,9 @@ var _ = Describe("system", func() {
 			system.Get(
 				context.TestContext.LatticeAPIClient.Systems(),
 				systemID,
-				expectedSystem,
 			)
 		},
-		createSucceeded,
+		systemCreated,
 	)
 
 	ConditionallyIt(
@@ -66,14 +53,14 @@ var _ = Describe("system", func() {
 		func() {
 			system.WaitUntilStable(context.TestContext.LatticeAPIClient.Systems(), systemID, 1*time.Second, 10*time.Second)
 		},
-		createSucceeded,
+		systemCreated,
 	)
 
 	ConditionallyIt(
 		"should be able to delete the newly created system by ID",
 		func() {
-			system.DeleteSuccesfully(context.TestContext.LatticeAPIClient.Systems(), systemID, 1*time.Second, 45*time.Second)
+			system.DeleteSuccessfully(context.TestContext.LatticeAPIClient.Systems(), systemID, 1*time.Second, 45*time.Second)
 		},
-		createSucceeded,
+		systemCreated,
 	)
 })

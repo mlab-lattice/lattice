@@ -10,7 +10,6 @@ go_library(
         "//test/e2e/context:go_default_library",
         "//test/util/ginkgo:go_default_library",
         "//test/util/lattice/v1/system:go_default_library",
-        "//test/util/lattice/v1/system/expected:go_default_library",
         "@com_github_onsi_ginkgo//:go_default_library",
     ],
 )
