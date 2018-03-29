@@ -27,12 +27,12 @@ var ListTeardownsSupportedFormats = []printer.Format{
 
 // ListTeardownsCommand is a type that implements the latticectl.Command interface
 // for listing the Teardowns in a System.
-type Command struct {
+type ListTeardownsCommand struct {
 	Subcommands []latticectl.Command
 }
 
 // Base implements the latticectl.Command interface.
-func (c *Command) Base() (*latticectl.BaseCommand, error) {
+func (c *ListTeardownsCommand) Base() (*latticectl.BaseCommand, error) {
 	output := &lctlcommand.OutputFlag{
 		SupportedFormats: ListTeardownsSupportedFormats,
 	}

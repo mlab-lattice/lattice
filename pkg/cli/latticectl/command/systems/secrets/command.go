@@ -9,11 +9,11 @@ import (
 	"github.com/mlab-lattice/system/pkg/managerapi/client"
 )
 
-type Command struct {
+type ListSecretsCommand struct {
 	Subcommands []latticectl.Command
 }
 
-func (c *Command) Base() (*latticectl.BaseCommand, error) {
+func (c *ListSecretsCommand) Base() (*latticectl.BaseCommand, error) {
 	cmd := &lctlcommand.SystemCommand{
 		Name: "secrets",
 		Run: func(ctx lctlcommand.SystemCommandContext, args []string) {

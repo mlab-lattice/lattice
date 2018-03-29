@@ -15,7 +15,7 @@ type AddressCommand struct {
 
 func (c *AddressCommand) Base() (*latticectl.BaseCommand, error) {
 	cmd := &lctlcommand.ServiceCommand{
-		Name: "address",
+		Name: "addresses",
 		Run: func(ctx lctlcommand.ServiceCommandContext, args []string) {
 			err := GetServiceAddress(ctx.Client().Systems().Services(ctx.SystemID()), ctx.ServiceID())
 			if err != nil {

@@ -8,7 +8,7 @@ go_library(
         "create.go",
         "delete.go",
         "deploy.go",
-        "get.go",
+        "status.go",
         "teardown.go",
     ],
     importpath = "github.com/mlab-lattice/system/pkg/cli/latticectl/command/systems",

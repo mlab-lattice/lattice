@@ -14,10 +14,10 @@ import (
 	"github.com/mlab-lattice/system/pkg/types"
 )
 
-type GetCommand struct {
+type StatusCommand struct {
 }
 
-func (c *GetCommand) Base() (*latticectl.BaseCommand, error) {
+func (c *StatusCommand) Base() (*latticectl.BaseCommand, error) {
 	output := &lctlcommand.OutputFlag{
 		SupportedFormats: ListSystemsSupportedFormats,
 	}

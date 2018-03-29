@@ -25,11 +25,11 @@ var ListDeploysSupportedFormats = []printer.Format{
 	printer.FormatTable,
 }
 
-type Command struct {
+type ListDeploysCommand struct {
 	Subcommands []latticectl.Command
 }
 
-func (c *Command) Base() (*latticectl.BaseCommand, error) {
+func (c *ListDeploysCommand) Base() (*latticectl.BaseCommand, error) {
 	output := &lctlcommand.OutputFlag{
 		SupportedFormats: ListDeploysSupportedFormats,
 	}

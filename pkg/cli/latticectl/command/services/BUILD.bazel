@@ -5,7 +5,7 @@ go_library(
     srcs = [
         "addresses.go",
         "command.go",
-        "get.go",
+        "status.go",
     ],
     importpath = "github.com/mlab-lattice/system/pkg/cli/latticectl/command/services",
     visibility = ["//visibility:public"],
