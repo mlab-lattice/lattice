@@ -68,8 +68,8 @@ func handleV1Error(errorDecoder *v1ErrorDecoder) v1.Error {
 		err = json.Unmarshal(errorDecoder.Error, &target)
 		v1Error = target
 
-	case v1.ErrorCodeInvalidServiceID:
-		target := &v1.InvalidServiceIDError{}
+	case v1.ErrorCodeInvalidServicePath:
+		target := &v1.InvalidServicePathError{}
 		err = json.Unmarshal(errorDecoder.Error, &target)
 		v1Error = target
 

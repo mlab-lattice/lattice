@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	urlutil "net/url"
 
 	"github.com/mlab-lattice/system/pkg/api/v1"
 	v1rest "github.com/mlab-lattice/system/pkg/api/v1/rest"
@@ -12,24 +13,23 @@ import (
 	"github.com/mlab-lattice/system/pkg/util/rest"
 )
 
-const (
-	secretSubpath = "/secrets"
-)
-
 type SystemSecretClient struct {
-	restClient rest.Client
-	baseURL    string
+	restClient   rest.Client
+	apiServerURL string
+	systemID     v1.SystemID
 }
 
-func newSystemSecretClient(c rest.Client, baseURL string) *SystemSecretClient {
+func newSystemSecretClient(c rest.Client, apiServerURL string, systemID v1.SystemID) *SystemSecretClient {
 	return &SystemSecretClient{
-		restClient: c,
-		baseURL:    fmt.Sprintf("%v%v", baseURL, secretSubpath),
+		restClient:   c,
+		apiServerURL: apiServerURL,
+		systemID:     systemID,
 	}
 }
 
 func (c *SystemSecretClient) List() ([]v1.Secret, error) {
-	body, statusCode, err := c.restClient.Get(c.baseURL).Body()
+	url := fmt.Sprintf("%v%v", c.apiServerURL, fmt.Sprintf(v1rest.SystemSecretsPathFormat, c.systemID))
+	body, statusCode, err := c.restClient.Get(url).Body()
 	if err != nil {
 		return nil, err
 	}
@@ -45,8 +45,9 @@ func (c *SystemSecretClient) List() ([]v1.Secret, error) {
 }
 
 func (c *SystemSecretClient) Get(path tree.NodePath, name string) (*v1.Secret, error) {
-	secretPath := fmt.Sprintf("%v:%v", path.ToDomain(true), name)
-	body, statusCode, err := c.restClient.Get(fmt.Sprintf("%v/%v", c.baseURL, secretPath)).Body()
+	escapedPath := fmt.Sprintf("%v:%v", urlutil.PathEscape(string(path)), name)
+	url := fmt.Sprintf("%v%v", c.apiServerURL, fmt.Sprintf(v1rest.SystemSecretPathFormat, c.systemID, escapedPath))
+	body, statusCode, err := c.restClient.Get(url).Body()
 	if err != nil {
 		return nil, err
 	}
@@ -62,8 +63,6 @@ func (c *SystemSecretClient) Get(path tree.NodePath, name string) (*v1.Secret, e
 }
 
 func (c *SystemSecretClient) Set(path tree.NodePath, name, value string) error {
-	secretPath := fmt.Sprintf("%v:%v", path.ToDomain(true), name)
-
 	request := &v1rest.SetSecretRequest{
 		Value: value,
 	}
@@ -72,7 +71,9 @@ func (c *SystemSecretClient) Set(path tree.NodePath, name, value string) error {
 		return err
 	}
 
-	body, statusCode, err := c.restClient.PatchJSON(fmt.Sprintf("%v/%v", c.baseURL, secretPath), bytes.NewReader(requestJSON)).Body()
+	escapedPath := fmt.Sprintf("%v:%v", urlutil.PathEscape(string(path)), name)
+	url := fmt.Sprintf("%v%v", c.apiServerURL, fmt.Sprintf(v1rest.SystemSecretPathFormat, c.systemID, escapedPath))
+	body, statusCode, err := c.restClient.PatchJSON(url, bytes.NewReader(requestJSON)).Body()
 	if err != nil {
 		return err
 	}
@@ -86,9 +87,9 @@ func (c *SystemSecretClient) Set(path tree.NodePath, name, value string) error {
 }
 
 func (c *SystemSecretClient) Unset(path tree.NodePath, name string) error {
-	secretPath := fmt.Sprintf("%v:%v", path.ToDomain(true), name)
-
-	body, statusCode, err := c.restClient.Delete(fmt.Sprintf("%v/%v", c.baseURL, secretPath)).Body()
+	escapedPath := fmt.Sprintf("%v:%v", urlutil.PathEscape(string(path)), name)
+	url := fmt.Sprintf("%v%v", c.apiServerURL, fmt.Sprintf(v1rest.SystemSecretPathFormat, c.systemID, escapedPath))
+	body, statusCode, err := c.restClient.Delete(url).Body()
 	if err != nil {
 		return err
 	}

@@ -31,7 +31,7 @@ func handleError(c *gin.Context, err error) {
 		statusCode = http.StatusConflict
 	case v1.ErrorCodeInvalidSystemID, v1.ErrorCodeInvalidBuildID,
 		v1.ErrorCodeInvalidDeployID, v1.ErrorCodeInvalidTeardownID,
-		v1.ErrorCodeInvalidServiceID, v1.ErrorCodeInvalidSystemSecret:
+		v1.ErrorCodeInvalidServicePath, v1.ErrorCodeInvalidSystemSecret:
 		statusCode = http.StatusNotFound
 	}
 

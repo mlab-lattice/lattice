@@ -5,27 +5,27 @@ import (
 	"net/http"
 
 	"github.com/mlab-lattice/system/pkg/api/v1"
+	v1rest "github.com/mlab-lattice/system/pkg/api/v1/rest"
 	"github.com/mlab-lattice/system/pkg/util/rest"
 )
 
-const (
-	teardownSubpath = "/teardowns"
-)
-
 type TeardownClient struct {
-	restClient rest.Client
-	baseURL    string
+	restClient   rest.Client
+	apiServerURL string
+	systemID     v1.SystemID
 }
 
-func newTeardownClient(c rest.Client, baseURL string) *TeardownClient {
+func newTeardownClient(c rest.Client, apiServerURL string, systemID v1.SystemID) *TeardownClient {
 	return &TeardownClient{
-		restClient: c,
-		baseURL:    fmt.Sprintf("%v%v", baseURL, teardownSubpath),
+		restClient:   c,
+		apiServerURL: apiServerURL,
+		systemID:     systemID,
 	}
 }
 
 func (c *TeardownClient) Create() (*v1.Teardown, error) {
-	body, statusCode, err := c.restClient.PostJSON(c.baseURL, nil).Body()
+	url := fmt.Sprintf("%v%v", c.apiServerURL, fmt.Sprintf(v1rest.TeardownsPathFormat, c.systemID))
+	body, statusCode, err := c.restClient.PostJSON(url, nil).Body()
 	if err != nil {
 		return nil, err
 	}
@@ -41,7 +41,8 @@ func (c *TeardownClient) Create() (*v1.Teardown, error) {
 }
 
 func (c *TeardownClient) List() ([]v1.Teardown, error) {
-	body, statusCode, err := c.restClient.Get(c.baseURL).Body()
+	url := fmt.Sprintf("%v%v", c.apiServerURL, fmt.Sprintf(v1rest.TeardownsPathFormat, c.systemID))
+	body, statusCode, err := c.restClient.Get(url).Body()
 	if err != nil {
 		return nil, err
 	}
@@ -57,7 +58,8 @@ func (c *TeardownClient) List() ([]v1.Teardown, error) {
 }
 
 func (c *TeardownClient) Get(id v1.TeardownID) (*v1.Teardown, error) {
-	body, statusCode, err := c.restClient.Get(fmt.Sprintf("%v/%v", c.baseURL, id)).Body()
+	url := fmt.Sprintf("%v%v", c.apiServerURL, fmt.Sprintf(v1rest.TeardownPathFormat, c.systemID, id))
+	body, statusCode, err := c.restClient.Get(url).Body()
 	if err != nil {
 		return nil, err
 	}

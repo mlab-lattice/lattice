@@ -12,10 +12,10 @@ const (
 	DeploysPathFormat = SystemPathFormat + "/deploys"
 	DeployPathFormat  = DeploysPathFormat + "/%v"
 
-	SecretsPathFormat = SystemPathFormat + "/secrets"
-	SecretPathFormat  = SecretsPathFormat + "/%v"
+	SystemSecretsPathFormat = SystemPathFormat + "/secrets"
+	SystemSecretPathFormat  = SystemSecretsPathFormat + "/%v"
 
-	ServicesPathFormat = SystemPathFormat + "/servicesS"
+	ServicesPathFormat = SystemPathFormat + "/services"
 	ServicePathFormat  = ServicesPathFormat + "/%v"
 
 	TeardownsPathFormat = SystemPathFormat + "/teardowns"

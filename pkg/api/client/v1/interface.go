@@ -44,7 +44,7 @@ type TeardownClient interface {
 
 type ServiceClient interface {
 	List() ([]v1.Service, error)
-	Get(v1.ServiceID) (*v1.Service, error)
+	Get(tree.NodePath) (*v1.Service, error)
 }
 
 type SecretClient interface {

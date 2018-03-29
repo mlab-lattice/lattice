@@ -11,19 +11,17 @@ import (
 	"github.com/mlab-lattice/system/pkg/util/rest"
 )
 
-const (
-	deploySubpath = "/deploys"
-)
-
 type DeployClient struct {
-	restClient rest.Client
-	baseURL    string
+	restClient   rest.Client
+	apiServerURL string
+	systemID     v1.SystemID
 }
 
-func newDeployClient(c rest.Client, baseURL string) *DeployClient {
+func newDeployClient(c rest.Client, apiServerURL string, systemID v1.SystemID) *DeployClient {
 	return &DeployClient{
-		restClient: c,
-		baseURL:    fmt.Sprintf("%v%v", baseURL, deploySubpath),
+		restClient:   c,
+		apiServerURL: apiServerURL,
+		systemID:     systemID,
 	}
 }
 
@@ -37,7 +35,8 @@ func (c *DeployClient) CreateFromBuild(id v1.BuildID) (*v1.Deploy, error) {
 		return nil, err
 	}
 
-	body, statusCode, err := c.restClient.PostJSON(c.baseURL, bytes.NewReader(requestJSON)).Body()
+	url := fmt.Sprintf("%v%v", c.apiServerURL, fmt.Sprintf(v1rest.DeploysPathFormat, c.systemID))
+	body, statusCode, err := c.restClient.PostJSON(url, bytes.NewReader(requestJSON)).Body()
 	if err != nil {
 		return nil, err
 	}
@@ -62,7 +61,8 @@ func (c *DeployClient) CreateFromVersion(version v1.SystemVersion) (*v1.Deploy, 
 		return nil, err
 	}
 
-	body, statusCode, err := c.restClient.PostJSON(c.baseURL, bytes.NewReader(requestJSON)).Body()
+	url := fmt.Sprintf("%v%v", c.apiServerURL, fmt.Sprintf(v1rest.DeploysPathFormat, c.systemID))
+	body, statusCode, err := c.restClient.PostJSON(url, bytes.NewReader(requestJSON)).Body()
 	if err != nil {
 		return nil, err
 	}
@@ -78,7 +78,8 @@ func (c *DeployClient) CreateFromVersion(version v1.SystemVersion) (*v1.Deploy, 
 }
 
 func (c *DeployClient) List() ([]v1.Deploy, error) {
-	body, statusCode, err := c.restClient.Get(c.baseURL).Body()
+	url := fmt.Sprintf("%v%v", c.apiServerURL, fmt.Sprintf(v1rest.DeploysPathFormat, c.systemID))
+	body, statusCode, err := c.restClient.Get(url).Body()
 	if err != nil {
 		return nil, err
 	}
@@ -94,7 +95,8 @@ func (c *DeployClient) List() ([]v1.Deploy, error) {
 }
 
 func (c *DeployClient) Get(id v1.DeployID) (*v1.Deploy, error) {
-	body, statusCode, err := c.restClient.Get(fmt.Sprintf("%v/%v", c.baseURL, id)).Body()
+	url := fmt.Sprintf("%v%v", c.apiServerURL, fmt.Sprintf(v1rest.DeployPathFormat, c.systemID, id))
+	body, statusCode, err := c.restClient.Get(url).Body()
 	if err != nil {
 		return nil, err
 	}

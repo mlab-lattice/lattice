@@ -3,29 +3,31 @@ package v1
 import (
 	"fmt"
 	"net/http"
+	urlutil "net/url"
 
 	"github.com/mlab-lattice/system/pkg/api/v1"
+	v1rest "github.com/mlab-lattice/system/pkg/api/v1/rest"
+	"github.com/mlab-lattice/system/pkg/definition/tree"
 	"github.com/mlab-lattice/system/pkg/util/rest"
 )
 
-const (
-	serviceSubpath = "/services"
-)
-
 type ServiceClient struct {
-	restClient rest.Client
-	baseURL    string
+	restClient   rest.Client
+	apiServerURL string
+	systemID     v1.SystemID
 }
 
-func newServiceClient(c rest.Client, baseURL string) *ServiceClient {
+func newServiceClient(c rest.Client, apiServerURL string, systemID v1.SystemID) *ServiceClient {
 	return &ServiceClient{
-		restClient: c,
-		baseURL:    fmt.Sprintf("%v%v", baseURL, serviceSubpath),
+		restClient:   c,
+		apiServerURL: apiServerURL,
+		systemID:     systemID,
 	}
 }
 
 func (c *ServiceClient) List() ([]v1.Service, error) {
-	body, statusCode, err := c.restClient.Get(c.baseURL).Body()
+	url := fmt.Sprintf("%v%v", c.apiServerURL, fmt.Sprintf(v1rest.ServicesPathFormat, c.systemID))
+	body, statusCode, err := c.restClient.Get(url).Body()
 	if err != nil {
 		return nil, err
 	}
@@ -40,8 +42,10 @@ func (c *ServiceClient) List() ([]v1.Service, error) {
 	return nil, HandleErrorStatusCode(statusCode, body)
 }
 
-func (c *ServiceClient) Get(id v1.ServiceID) (*v1.Service, error) {
-	body, statusCode, err := c.restClient.Get(fmt.Sprintf("%v/%v", c.baseURL, id)).Body()
+func (c *ServiceClient) Get(path tree.NodePath) (*v1.Service, error) {
+	escapedPath := urlutil.PathEscape(string(path))
+	url := fmt.Sprintf("%v%v", c.apiServerURL, fmt.Sprintf(v1rest.ServicePathFormat, c.systemID, escapedPath))
+	body, statusCode, err := c.restClient.Get(url).Body()
 	if err != nil {
 		return nil, err
 	}

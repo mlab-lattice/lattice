@@ -116,7 +116,7 @@ func (kb *KubernetesBackend) transformSystem(system *latticev1.System) (*v1.Syst
 			return nil, err
 		}
 
-		externalService, err := kb.transformService(v1.ServiceID(serviceName), path, &serviceStatus)
+		externalService, err := kb.transformService(path, &serviceStatus)
 		if err != nil {
 			return nil, err
 		}

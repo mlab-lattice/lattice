@@ -11,19 +11,17 @@ import (
 	"github.com/mlab-lattice/system/pkg/util/rest"
 )
 
-const (
-	systemBuildSubpath = "/builds"
-)
-
 type BuildClient struct {
-	restClient rest.Client
-	baseURL    string
+	restClient   rest.Client
+	apiServerURL string
+	systemID     v1.SystemID
 }
 
-func newBuildClient(c rest.Client, baseURL string) *BuildClient {
+func newBuildClient(c rest.Client, apiServerURL string, systemID v1.SystemID) *BuildClient {
 	return &BuildClient{
-		restClient: c,
-		baseURL:    fmt.Sprintf("%v%v", baseURL, systemBuildSubpath),
+		restClient:   c,
+		apiServerURL: apiServerURL,
+		systemID:     systemID,
 	}
 }
 
@@ -36,7 +34,8 @@ func (c *BuildClient) Create(version v1.SystemVersion) (*v1.Build, error) {
 		return nil, err
 	}
 
-	body, statusCode, err := c.restClient.PostJSON(c.baseURL, bytes.NewReader(requestJSON)).Body()
+	url := fmt.Sprintf("%v%v", c.apiServerURL, fmt.Sprintf(v1rest.BuildsPathFormat, c.systemID))
+	body, statusCode, err := c.restClient.PostJSON(url, bytes.NewReader(requestJSON)).Body()
 	if err != nil {
 		return nil, err
 	}
@@ -52,7 +51,8 @@ func (c *BuildClient) Create(version v1.SystemVersion) (*v1.Build, error) {
 }
 
 func (c *BuildClient) List() ([]v1.Build, error) {
-	body, statusCode, err := c.restClient.Get(c.baseURL).Body()
+	url := fmt.Sprintf("%v%v", c.apiServerURL, fmt.Sprintf(v1rest.BuildsPathFormat, c.systemID))
+	body, statusCode, err := c.restClient.Get(url).Body()
 	if err != nil {
 		return nil, err
 	}
@@ -68,7 +68,8 @@ func (c *BuildClient) List() ([]v1.Build, error) {
 }
 
 func (c *BuildClient) Get(id v1.BuildID) (*v1.Build, error) {
-	body, statusCode, err := c.restClient.Get(fmt.Sprintf("%v/%v", c.baseURL, id)).Body()
+	url := fmt.Sprintf("%v%v", c.apiServerURL, fmt.Sprintf(v1rest.BuildPathFormat, c.systemID, id))
+	body, statusCode, err := c.restClient.Get(url).Body()
 	if err != nil {
 		return nil, err
 	}

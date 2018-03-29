@@ -17,14 +17,14 @@ const (
 )
 
 type SystemClient struct {
-	restClient rest.Client
-	baseURL    string
+	restClient   rest.Client
+	apiServerURL string
 }
 
-func newSystemClient(c rest.Client, baseURL string) *SystemClient {
+func newSystemClient(c rest.Client, apiServerURL string) *SystemClient {
 	return &SystemClient{
-		restClient: c,
-		baseURL:    fmt.Sprintf("%v%v", baseURL, systemSubpath),
+		restClient:   c,
+		apiServerURL: apiServerURL,
 	}
 }
 
@@ -39,7 +39,7 @@ func (c *SystemClient) Create(id v1.SystemID, definitionURL string) (*v1.System,
 		return nil, err
 	}
 
-	body, statusCode, err := c.restClient.PostJSON(c.baseURL, bytes.NewReader(requestJSON)).Body()
+	body, statusCode, err := c.restClient.PostJSON(fmt.Sprintf("%v%v", c.apiServerURL, v1rest.SystemsPath), bytes.NewReader(requestJSON)).Body()
 	if err != nil {
 		return nil, err
 	}
@@ -55,7 +55,8 @@ func (c *SystemClient) Create(id v1.SystemID, definitionURL string) (*v1.System,
 }
 
 func (c *SystemClient) List() ([]v1.System, error) {
-	body, statusCode, err := c.restClient.Get(c.baseURL).Body()
+	url := fmt.Sprintf("%v%v", c.apiServerURL, v1rest.SystemsPath)
+	body, statusCode, err := c.restClient.Get(url).Body()
 	if err != nil {
 		return nil, err
 	}
@@ -71,7 +72,8 @@ func (c *SystemClient) List() ([]v1.System, error) {
 }
 
 func (c *SystemClient) Get(id v1.SystemID) (*v1.System, error) {
-	body, statusCode, err := c.restClient.Get(fmt.Sprintf("%v/%v", c.baseURL, id)).Body()
+	url := fmt.Sprintf("%v%v", c.apiServerURL, fmt.Sprintf(v1rest.SystemPathFormat, id))
+	body, statusCode, err := c.restClient.Get(url).Body()
 	if err != nil {
 		return nil, err
 	}
@@ -87,7 +89,8 @@ func (c *SystemClient) Get(id v1.SystemID) (*v1.System, error) {
 }
 
 func (c *SystemClient) Delete(id v1.SystemID) error {
-	body, statusCode, err := c.restClient.Delete(fmt.Sprintf("%v/%v", c.baseURL, id)).Body()
+	url := fmt.Sprintf("%v%v", c.apiServerURL, fmt.Sprintf(v1rest.SystemPathFormat, id))
+	body, statusCode, err := c.restClient.Delete(url).Body()
 	if err != nil {
 		return err
 	}
@@ -101,7 +104,8 @@ func (c *SystemClient) Delete(id v1.SystemID) error {
 }
 
 func (c *SystemClient) Versions(id v1.SystemID) ([]v1.SystemVersion, error) {
-	body, statusCode, err := c.restClient.Delete(fmt.Sprintf("%v/%v/versions", c.baseURL, id)).Body()
+	url := fmt.Sprintf("%v%v", c.apiServerURL, fmt.Sprintf(v1rest.VersionsPathFormat, id))
+	body, statusCode, err := c.restClient.Get(url).Body()
 	if err != nil {
 		return nil, err
 	}
@@ -117,21 +121,21 @@ func (c *SystemClient) Versions(id v1.SystemID) ([]v1.SystemVersion, error) {
 }
 
 func (c *SystemClient) Builds(id v1.SystemID) clientv1.BuildClient {
-	return newBuildClient(c.restClient, fmt.Sprintf("%v/%v", c.baseURL, id))
+	return newBuildClient(c.restClient, c.apiServerURL, id)
 }
 
 func (c *SystemClient) Deploys(id v1.SystemID) clientv1.DeployClient {
-	return newDeployClient(c.restClient, fmt.Sprintf("%v/%v", c.baseURL, id))
-}
-
-func (c *SystemClient) Teardowns(id v1.SystemID) clientv1.TeardownClient {
-	return newTeardownClient(c.restClient, fmt.Sprintf("%v/%v", c.baseURL, id))
+	return newDeployClient(c.restClient, c.apiServerURL, id)
 }
 
 func (c *SystemClient) Services(id v1.SystemID) clientv1.ServiceClient {
-	return newServiceClient(c.restClient, fmt.Sprintf("%v/%v", c.baseURL, id))
+	return newServiceClient(c.restClient, c.apiServerURL, id)
 }
 
 func (c *SystemClient) Secrets(id v1.SystemID) clientv1.SecretClient {
-	return newSystemSecretClient(c.restClient, fmt.Sprintf("%v/%v", c.baseURL, id))
+	return newSystemSecretClient(c.restClient, c.apiServerURL, id)
+}
+
+func (c *SystemClient) Teardowns(id v1.SystemID) clientv1.TeardownClient {
+	return newTeardownClient(c.restClient, c.apiServerURL, id)
 }

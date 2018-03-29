@@ -5,7 +5,6 @@ import (
 )
 
 type (
-	ServiceID    string
 	ServiceState string
 )
 

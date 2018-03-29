@@ -3,9 +3,10 @@ package v1
 import (
 	"fmt"
 	"net/http"
+	"net/url"
 	"strings"
 
-	serverv1 "github.com/mlab-lattice/system/pkg/api/server/v1"
+	v1server "github.com/mlab-lattice/system/pkg/api/server/v1"
 	"github.com/mlab-lattice/system/pkg/api/v1"
 	v1rest "github.com/mlab-lattice/system/pkg/api/v1/rest"
 	"github.com/mlab-lattice/system/pkg/definition"
@@ -16,7 +17,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func mountSystemHandlers(router *gin.Engine, backend serverv1.Interface, sysResolver *resolver.SystemResolver) {
+func mountSystemHandlers(router *gin.Engine, backend v1server.Interface, sysResolver *resolver.SystemResolver) {
 	// create-system
 	router.POST(v1rest.SystemsPath, func(c *gin.Context) {
 		var req v1rest.CreateSystemRequest
@@ -78,15 +79,15 @@ func mountSystemHandlers(router *gin.Engine, backend serverv1.Interface, sysReso
 	mountVersionHandlers(router, backend, sysResolver)
 	mountBuildHandlers(router, backend, sysResolver)
 	mountDeployHandlers(router, backend, sysResolver)
-	mountTeardownHandlers(router, backend)
 	mountServiceHandlers(router, backend)
 	mountSecretHandlers(router, backend)
+	mountTeardownHandlers(router, backend)
 }
 
-func mountBuildHandlers(router *gin.Engine, backend serverv1.Interface, sysResolver *resolver.SystemResolver) {
+func mountBuildHandlers(router *gin.Engine, backend v1server.Interface, sysResolver *resolver.SystemResolver) {
 	systemIdentifier := "system_id"
 	systemIdentifierPathComponent := fmt.Sprintf(":%v", systemIdentifier)
-	buildsPath := fmt.Sprintf(v1rest.BuildsPathFormat, fmt.Sprintf(":%v", systemIdentifierPathComponent))
+	buildsPath := fmt.Sprintf(v1rest.BuildsPathFormat, systemIdentifierPathComponent)
 
 	// build-system
 	router.POST(buildsPath, func(c *gin.Context) {
@@ -105,9 +106,9 @@ func mountBuildHandlers(router *gin.Engine, backend serverv1.Interface, sysResol
 		}
 
 		build, err := backend.Build(
-			v1.SystemID(systemID),
+			systemID,
 			root,
-			v1.SystemVersion(req.Version),
+			req.Version,
 		)
 
 		if err != nil {
@@ -150,7 +151,7 @@ func mountBuildHandlers(router *gin.Engine, backend serverv1.Interface, sysResol
 	})
 }
 
-func mountDeployHandlers(router *gin.Engine, backend serverv1.Interface, sysResolver *resolver.SystemResolver) {
+func mountDeployHandlers(router *gin.Engine, backend v1server.Interface, sysResolver *resolver.SystemResolver) {
 	systemIdentifier := "system_id"
 	systemIdentifierPathComponent := fmt.Sprintf(":%v", systemIdentifier)
 	deploysPath := fmt.Sprintf(v1rest.DeploysPathFormat, systemIdentifierPathComponent)
@@ -236,7 +237,7 @@ func mountDeployHandlers(router *gin.Engine, backend serverv1.Interface, sysReso
 	})
 }
 
-func mountServiceHandlers(router *gin.Engine, backend serverv1.Interface) {
+func mountServiceHandlers(router *gin.Engine, backend v1server.Interface) {
 	systemIdentifier := "system_id"
 	systemIdentifierPathComponent := fmt.Sprintf(":%v", systemIdentifier)
 	servicesPath := fmt.Sprintf(v1rest.ServicesPathFormat, systemIdentifierPathComponent)
@@ -254,18 +255,26 @@ func mountServiceHandlers(router *gin.Engine, backend serverv1.Interface) {
 		c.JSON(http.StatusOK, services)
 	})
 
-	serviceIdentifier := "service_domain"
+	serviceIdentifier := "service_path"
 	serviceIdentifierPathComponent := fmt.Sprintf(":%v", serviceIdentifier)
 	servicePath := fmt.Sprintf(v1rest.ServicePathFormat, systemIdentifierPathComponent, serviceIdentifierPathComponent)
 
 	// get-service
 	router.GET(servicePath, func(c *gin.Context) {
 		systemID := v1.SystemID(c.Param(systemIdentifier))
-		serviceDomain := c.Param(serviceIdentifier)
+		escapedServicePath := c.Param(serviceIdentifier)
 
-		servicePath, err := tree.NodePathFromDomain(serviceDomain)
+		servicePathString, err := url.PathUnescape(escapedServicePath)
 		if err != nil {
-			handleError(c, err)
+			// FIXME: send invalid service error
+			c.Status(http.StatusBadRequest)
+			return
+		}
+
+		servicePath, err := tree.NewNodePath(servicePathString)
+		if err != nil {
+			// FIXME: send invalid service error
+			c.Status(http.StatusBadRequest)
 			return
 		}
 
@@ -279,42 +288,51 @@ func mountServiceHandlers(router *gin.Engine, backend serverv1.Interface) {
 	})
 }
 
-func mountSecretHandlers(router *gin.Engine, backend serverv1.Interface) {
+func mountSecretHandlers(router *gin.Engine, backend v1server.Interface) {
 	systemIdentifier := "system_id"
 	systemIdentifierPathComponent := fmt.Sprintf(":%v", systemIdentifier)
-	secretsPath := fmt.Sprintf(v1rest.ServicesPathFormat, systemIdentifierPathComponent)
+	secretsPath := fmt.Sprintf(v1rest.SystemSecretsPathFormat, systemIdentifierPathComponent)
 
 	// list-secrets
 	router.GET(secretsPath, func(c *gin.Context) {
 		systemID := v1.SystemID(c.Param(systemIdentifier))
 
-		services, err := backend.ListSystemSecrets(systemID)
+		secrets, err := backend.ListSystemSecrets(systemID)
 		if err != nil {
 			handleError(c, err)
 			return
 		}
 
-		c.JSON(http.StatusOK, services)
+		c.JSON(http.StatusOK, secrets)
 	})
 
-	secretIdentifier := "secret_domain"
+	secretIdentifier := "secret_path"
 	secretIdentifierPathComponent := fmt.Sprintf(":%v", secretIdentifier)
-	secretPath := fmt.Sprintf(v1rest.SecretPathFormat, systemIdentifierPathComponent, secretIdentifierPathComponent)
+	secretPath := fmt.Sprintf(v1rest.SystemSecretPathFormat, systemIdentifierPathComponent, secretIdentifierPathComponent)
 
 	// get-secret
 	router.GET(secretPath, func(c *gin.Context) {
 		systemID := v1.SystemID(c.Param(systemIdentifier))
-		secretPath := c.Param(secretIdentifier)
+		escapedSecretPath := c.Param(secretIdentifier)
 
-		splitPath := strings.Split(secretPath, ":")
-		if len(splitPath) != 2 {
+		secretPathString, err := url.PathUnescape(escapedSecretPath)
+		if err != nil {
+			// FIXME: send invalid secret error
 			c.Status(http.StatusBadRequest)
 			return
 		}
 
-		path, err := tree.NodePathFromDomain(splitPath[0])
+		splitPath := strings.Split(secretPathString, ":")
+		if len(splitPath) != 2 {
+			// FIXME: send invalid secret error
+			c.Status(http.StatusBadRequest)
+			return
+		}
+
+		path, err := tree.NewNodePath(splitPath[0])
 		if err != nil {
-			handleError(c, err)
+			// FIXME: send invalid secret error
+			c.Status(http.StatusBadRequest)
 			return
 		}
 
@@ -322,7 +340,8 @@ func mountSecretHandlers(router *gin.Engine, backend serverv1.Interface) {
 
 		secret, err := backend.GetSystemSecret(systemID, path, name)
 		if err != nil {
-			handleError(c, err)
+			// FIXME: send invalid secret error
+			c.Status(http.StatusBadRequest)
 			return
 		}
 
@@ -331,31 +350,39 @@ func mountSecretHandlers(router *gin.Engine, backend serverv1.Interface) {
 
 	// set-secret
 	router.PATCH(secretPath, func(c *gin.Context) {
-		systemID := v1.SystemID(c.Param(systemIdentifier))
-		secretPath := c.Param(secretIdentifier)
-
 		var req v1rest.SetSecretRequest
 		if err := c.BindJSON(&req); err != nil {
-			handleError(c, err)
+			handleBadRequestBody(c)
 			return
 		}
 
-		splitPath := strings.Split(secretPath, ":")
-		if len(splitPath) != 2 {
-			// FIXME: return invalid secret error
+		systemID := v1.SystemID(c.Param(systemIdentifier))
+		escapedSecretPath := c.Param(secretIdentifier)
+
+		secretPathString, err := url.PathUnescape(escapedSecretPath)
+		if err != nil {
+			// FIXME: send invalid secret error
 			c.Status(http.StatusBadRequest)
 			return
 		}
 
-		path, err := tree.NodePathFromDomain(splitPath[0])
+		splitPath := strings.Split(secretPathString, ":")
+		if len(splitPath) != 2 {
+			// FIXME: send invalid secret error
+			c.Status(http.StatusBadRequest)
+			return
+		}
+
+		path, err := tree.NewNodePath(splitPath[0])
 		if err != nil {
-			handleError(c, err)
+			// FIXME: send invalid secret error
+			c.Status(http.StatusBadRequest)
 			return
 		}
 
 		name := splitPath[1]
 
-		err = backend.SetSystemSecret(v1.SystemID(systemID), path, name, req.Value)
+		err = backend.SetSystemSecret(systemID, path, name, req.Value)
 		if err != nil {
 			handleError(c, err)
 			return
@@ -367,23 +394,32 @@ func mountSecretHandlers(router *gin.Engine, backend serverv1.Interface) {
 	// unset-secret
 	router.DELETE(secretPath, func(c *gin.Context) {
 		systemID := v1.SystemID(c.Param(systemIdentifier))
-		secretPath := c.Param(secretIdentifier)
+		escapedSecretPath := c.Param(secretIdentifier)
 
-		splitPath := strings.Split(secretPath, ":")
-		if len(splitPath) != 2 {
+		secretPathString, err := url.PathUnescape(escapedSecretPath)
+		if err != nil {
+			// FIXME: send invalid secret error
 			c.Status(http.StatusBadRequest)
 			return
 		}
 
-		path, err := tree.NodePathFromDomain(splitPath[0])
+		splitPath := strings.Split(secretPathString, ":")
+		if len(splitPath) != 2 {
+			// FIXME: send invalid secret error
+			c.Status(http.StatusBadRequest)
+			return
+		}
+
+		path, err := tree.NewNodePath(splitPath[0])
 		if err != nil {
-			handleError(c, err)
+			// FIXME: send invalid secret error
+			c.Status(http.StatusBadRequest)
 			return
 		}
 
 		name := splitPath[1]
 
-		err = backend.UnsetSystemSecret(v1.SystemID(systemID), path, name)
+		err = backend.UnsetSystemSecret(systemID, path, name)
 		if err != nil {
 			handleError(c, err)
 			return
@@ -393,7 +429,7 @@ func mountSecretHandlers(router *gin.Engine, backend serverv1.Interface) {
 	})
 }
 
-func mountTeardownHandlers(router *gin.Engine, backend serverv1.Interface) {
+func mountTeardownHandlers(router *gin.Engine, backend v1server.Interface) {
 	systemIdentifier := "system_id"
 	systemIdentifierPathComponent := fmt.Sprintf(":%v", systemIdentifier)
 	teardownsPath := fmt.Sprintf(v1rest.TeardownsPathFormat, systemIdentifierPathComponent)
@@ -443,7 +479,7 @@ func mountTeardownHandlers(router *gin.Engine, backend serverv1.Interface) {
 	})
 }
 
-func mountVersionHandlers(router *gin.Engine, backend serverv1.Interface, sysResolver *resolver.SystemResolver) {
+func mountVersionHandlers(router *gin.Engine, backend v1server.Interface, sysResolver *resolver.SystemResolver) {
 	systemIDIdentifier := ":system_id"
 	versionsPath := fmt.Sprintf(v1rest.VersionsPathFormat, systemIDIdentifier)
 
@@ -466,7 +502,7 @@ func mountVersionHandlers(router *gin.Engine, backend serverv1.Interface, sysRes
 	})
 }
 
-func getSystemDefinitionRoot(backend serverv1.Interface, sysResolver *resolver.SystemResolver, systemID v1.SystemID, version v1.SystemVersion) (tree.Node, error) {
+func getSystemDefinitionRoot(backend v1server.Interface, sysResolver *resolver.SystemResolver, systemID v1.SystemID, version v1.SystemVersion) (tree.Node, error) {
 	system, err := backend.GetSystem(systemID)
 	if err != nil {
 		return nil, err
@@ -482,7 +518,7 @@ func getSystemDefinitionRoot(backend serverv1.Interface, sysResolver *resolver.S
 	return sysResolver.ResolveDefinition(systemDefURI, &git.Options{})
 }
 
-func getSystemVersions(backend serverv1.Interface, sysResolver *resolver.SystemResolver, systemID v1.SystemID) ([]string, error) {
+func getSystemVersions(backend v1server.Interface, sysResolver *resolver.SystemResolver, systemID v1.SystemID) ([]string, error) {
 	system, err := backend.GetSystem(systemID)
 	if err != nil {
 		return nil, err

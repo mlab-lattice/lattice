@@ -35,10 +35,9 @@ func RunNewRestServer(backend v1.Interface, port int32, workingDirectory string)
 
 func (r *restServer) mountHandlers() {
 	// Status
-	r.router.GET("/status", func(c *gin.Context) {
+	r.router.GET("/health", func(c *gin.Context) {
 		c.String(http.StatusOK, "")
 	})
 
-	// TODO: should this be mounted under /v1?
 	restv1.MountHandlers(r.router, r.backend, r.resolver)
 }
