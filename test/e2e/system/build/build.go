@@ -43,7 +43,7 @@ var _ = Describe("build", func() {
 		Expect(len(systemBuilds)).To(Equal(0))
 	})
 
-	version := v1.SystemVersion("v3.0.0")
+	version := v1.SystemVersion("1.0.0")
 	var build1ID v1.BuildID
 	It("should be able to create a build", func() {
 		build, err := context.TestContext.LatticeAPIClient.Systems().Builds(systemID).Create(version)

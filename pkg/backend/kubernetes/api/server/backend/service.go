@@ -91,7 +91,6 @@ func (kb *KubernetesBackend) transformService(id v1.ServiceID, path tree.NodePat
 	}
 
 	service := v1.Service{
-		ID:               id,
 		Path:             path,
 		State:            state,
 		UpdatedInstances: status.UpdatedInstances,
