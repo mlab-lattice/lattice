@@ -134,6 +134,10 @@ func (c *Command) addSubcommands() error {
 	return nil
 }
 
+func (c *Command) Help() {
+	c.cobraCmd.Help()
+}
+
 func (c *Command) ExecuteColon() {
 	if err := c.Init(); err != nil {
 		c.exit(err)
