@@ -87,7 +87,7 @@ func MountHandlers(router *gin.Engine, backend serverv1.Interface, sysResolver *
 }
 
 type VersionResponse struct {
-	ID         string               `json:"id"`
+	ID         v1.SystemVersion     `json:"id"`
 	Definition definition.Interface `json:"definition"`
 }
 
@@ -110,7 +110,7 @@ func mountVersionHandlers(router *gin.Engine, backend serverv1.Interface, sysRes
 		// get-system-version
 		versions.GET("/:version_id", func(c *gin.Context) {
 			systemID := c.Param("system_id")
-			version := c.Param("version_id")
+			version := v1.SystemVersion(c.Param("version_id"))
 
 			definitionRoot, err := getSystemDefinitionRoot(backend, sysResolver, systemID, version)
 			if err != nil {
@@ -127,7 +127,7 @@ func mountVersionHandlers(router *gin.Engine, backend serverv1.Interface, sysRes
 }
 
 type BuildRequest struct {
-	Version string `json:"version"`
+	Version v1.SystemVersion `json:"version"`
 }
 
 type BuildResponse struct {
@@ -197,8 +197,8 @@ func mountBuildHandlers(router *gin.Engine, backend serverv1.Interface, sysResol
 }
 
 type DeployRequest struct {
-	Version *string     `json:"version,omitempty"`
-	BuildID *v1.BuildID `json:"buildId,omitempty"`
+	Version *v1.SystemVersion `json:"version,omitempty"`
+	BuildID *v1.BuildID       `json:"buildId,omitempty"`
 }
 
 func mountDeployHandlers(router *gin.Engine, backend serverv1.Interface, sysResolver *resolver.SystemResolver) {
@@ -481,7 +481,7 @@ func mountSecretHandlers(router *gin.Engine, backend serverv1.Interface) {
 	}
 }
 
-func getSystemDefinitionRoot(backend serverv1.Interface, sysResolver *resolver.SystemResolver, systemID string, version string) (tree.Node, error) {
+func getSystemDefinitionRoot(backend serverv1.Interface, sysResolver *resolver.SystemResolver, systemID string, version v1.SystemVersion) (tree.Node, error) {
 	system, err := backend.GetSystem(v1.SystemID(systemID))
 	if err != nil {
 		return nil, err

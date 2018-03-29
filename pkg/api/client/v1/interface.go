@@ -32,7 +32,7 @@ type BuildClient interface {
 
 type DeployClient interface {
 	CreateFromBuild(v1.BuildID) (*v1.Deploy, error)
-	CreateFromVersion(string) (*v1.Deploy, error)
+	CreateFromVersion(v1.SystemVersion) (*v1.Deploy, error)
 	List() ([]v1.Deploy, error)
 	Get(v1.DeployID) (*v1.Deploy, error)
 }

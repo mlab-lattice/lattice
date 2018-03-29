@@ -1,0 +1,17 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = ["deploy.go"],
+    importpath = "github.com/mlab-lattice/system/test/e2e/system/deploy",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//pkg/api/v1:go_default_library",
+        "//test/e2e/context:go_default_library",
+        "//test/util/ginkgo:go_default_library",
+        "//test/util/lattice/v1/system:go_default_library",
+        "//test/util/lattice/v1/system/build:go_default_library",
+        "//test/util/lattice/v1/system/deploy:go_default_library",
+        "@com_github_onsi_ginkgo//:go_default_library",
+    ],
+)

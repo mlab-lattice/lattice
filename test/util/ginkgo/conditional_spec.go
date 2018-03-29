@@ -63,8 +63,8 @@ import (
 //  You cannot do the following:
 func ConditionallyIt(
 	description string,
-	body func(),
 	condition ConditionFunc,
+	body func(),
 	timeout ...float64,
 ) {
 	conditionCheck, conditionDescription := condition()

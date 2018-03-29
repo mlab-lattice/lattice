@@ -33,7 +33,7 @@ func (c *DeployCommand) Base() (*latticectl.BaseCommand, error) {
 		},
 		Run: func(ctx command.SystemCommandContext, args []string) {
 			systemID := ctx.SystemID()
-			DeploySystem(ctx.Client().Systems().Deploys(systemID), v1.BuildID(buildID), version)
+			DeploySystem(ctx.Client().Systems().Deploys(systemID), v1.BuildID(buildID), v1.SystemVersion(version))
 		},
 	}
 
@@ -43,7 +43,7 @@ func (c *DeployCommand) Base() (*latticectl.BaseCommand, error) {
 func DeploySystem(
 	client clientv1.DeployClient,
 	buildID v1.BuildID,
-	version string,
+	version v1.SystemVersion,
 ) {
 	if buildID == "" && version == "" {
 		log.Panic("must provide either build or version")

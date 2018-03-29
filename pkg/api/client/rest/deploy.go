@@ -52,7 +52,7 @@ func (c *DeployClient) CreateFromBuild(id v1.BuildID) (*v1.Deploy, error) {
 	return nil, HandleErrorStatusCode(statusCode, body)
 }
 
-func (c *DeployClient) CreateFromVersion(version string) (*v1.Deploy, error) {
+func (c *DeployClient) CreateFromVersion(version v1.SystemVersion) (*v1.Deploy, error) {
 	request := v1rest.DeployRequest{
 		Version: &version,
 	}

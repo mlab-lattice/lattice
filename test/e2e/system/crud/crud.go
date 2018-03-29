@@ -24,43 +24,43 @@ var _ = Describe("system", func() {
 		systemID = system.Create(context.TestContext.LatticeAPIClient.Systems(), systemName, systemURL)
 	})
 
-	systemCreated := If("system creation succeeded", func() bool { return systemID != "" })
+	ifSystemCreated := If("system creation succeeded", func() bool { return systemID != "" })
 
 	ConditionallyIt(
 		"should be able to list systems, and there should only be the newly created system",
+		ifSystemCreated,
 		func() {
 			system.List(
 				context.TestContext.LatticeAPIClient.Systems(),
 				[]v1.SystemID{systemID},
 			)
 		},
-		systemCreated,
 	)
 
 	ConditionallyIt(
 		"should be able to get the newly created system by ID",
+		ifSystemCreated,
 		func() {
 			system.Get(
 				context.TestContext.LatticeAPIClient.Systems(),
 				systemID,
 			)
 		},
-		systemCreated,
 	)
 
 	ConditionallyIt(
 		"should see the system become stable",
+		ifSystemCreated,
 		func() {
 			system.WaitUntilStable(context.TestContext.LatticeAPIClient.Systems(), systemID, 1*time.Second, 10*time.Second)
 		},
-		systemCreated,
 	)
 
 	ConditionallyIt(
 		"should be able to delete the newly created system by ID",
+		ifSystemCreated,
 		func() {
 			system.DeleteSuccessfully(context.TestContext.LatticeAPIClient.Systems(), systemID, 1*time.Second, 45*time.Second)
 		},
-		systemCreated,
 	)
 })
