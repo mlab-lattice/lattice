@@ -26,7 +26,7 @@ func (kb *KubernetesBackend) ListServices(systemID v1.SystemID) ([]v1.Service, e
 
 	var externalServices []v1.Service
 	for _, service := range services.Items {
-		servicePath, err := tree.NewNodePath(service.Name)
+		servicePath, err := tree.NodePathFromDomain(service.Name)
 		if err != nil {
 			return nil, err
 		}
@@ -54,7 +54,7 @@ func (kb *KubernetesBackend) GetService(systemID v1.SystemID, path tree.NodePath
 		return nil, err
 	}
 
-	servicePath, err := tree.NewNodePath(service.Name)
+	servicePath, err := tree.NodePathFromDomain(service.Name)
 	if err != nil {
 		return nil, err
 	}

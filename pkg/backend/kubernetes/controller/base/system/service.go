@@ -83,7 +83,7 @@ func (c *Controller) syncSystemServices(system *latticev1.System) (map[tree.Node
 
 	var deletedServices []tree.NodePath
 	for _, service := range allServices {
-		servicePath, err := tree.NewNodePath(service.Name)
+		servicePath, err := tree.NodePathFromDomain(service.Name)
 		if err != nil {
 			return nil, nil, err
 		}

@@ -506,7 +506,7 @@ func (sm *DefaultEnvoyServiceMesh) envoyContainers(service *latticev1.Service) (
 		}
 	}
 
-	servicePath, err := tree.NewNodePath(service.Name)
+	servicePath, err := tree.NodePathFromDomain(service.Name)
 	if err != nil {
 		return corev1.Container{}, corev1.Container{}, err
 	}

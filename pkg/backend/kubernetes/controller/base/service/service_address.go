@@ -103,7 +103,7 @@ func (c *Controller) newServiceAddress(service *latticev1.Service) (*latticev1.S
 }
 
 func (c *Controller) serviceAddressSpec(service *latticev1.Service) (latticev1.ServiceAddressSpec, error) {
-	path, err := tree.NewNodePath(service.Name)
+	path, err := tree.NodePathFromDomain(service.Name)
 	if err != nil {
 		return latticev1.ServiceAddressSpec{}, err
 	}

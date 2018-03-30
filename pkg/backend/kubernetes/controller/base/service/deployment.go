@@ -184,7 +184,7 @@ func (c *Controller) untransformedDeploymentSpec(
 	deploymentLabels map[string]string,
 	nodePool *latticev1.NodePool,
 ) (*appsv1.DeploymentSpec, error) {
-	path, err := tree.NewNodePath(service.Name)
+	path, err := tree.NodePathFromDomain(service.Name)
 	if err != nil {
 		return nil, err
 	}
@@ -284,7 +284,7 @@ func (c *Controller) untransformedDeploymentSpec(
 }
 
 func containerFromComponent(service *latticev1.Service, component *block.Component, buildArtifacts *latticev1.ComponentBuildArtifacts) (corev1.Container, error) {
-	path, err := tree.NewNodePath(service.Name)
+	path, err := tree.NodePathFromDomain(service.Name)
 	if err != nil {
 		return corev1.Container{}, err
 	}
