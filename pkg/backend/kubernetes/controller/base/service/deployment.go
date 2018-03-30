@@ -21,6 +21,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 
 	"github.com/golang/glog"
+	"github.com/mlab-lattice/system/pkg/definition/tree"
 	"github.com/sergi/go-diff/diffmatchpatch"
 )
 
@@ -183,13 +184,22 @@ func (c *Controller) untransformedDeploymentSpec(
 	deploymentLabels map[string]string,
 	nodePool *latticev1.NodePool,
 ) (*appsv1.DeploymentSpec, error) {
+	path, err := tree.NewNodePath(service.Name)
+	if err != nil {
+		return nil, err
+	}
+
 	replicas := service.Spec.NumInstances
 
 	// Create a container for each Component in the Service
 	var containers []corev1.Container
 	for _, component := range service.Spec.Definition.Components() {
 		buildArtifacts := service.Spec.ComponentBuildArtifacts[component.Name]
-		container := containerFromComponent(service, component, &buildArtifacts)
+		container, err := containerFromComponent(service, component, &buildArtifacts)
+		if err != nil {
+			return nil, err
+		}
+
 		containers = append(containers, container)
 	}
 
@@ -220,14 +230,14 @@ func (c *Controller) untransformedDeploymentSpec(
 	baseSearchPath := fmt.Sprintf("%v.%v.local", systemID, c.latticeID)
 	dnsSearches := []string{baseSearchPath}
 
-	if !service.Spec.Path.IsRoot() {
-		parentNode, err := service.Spec.Path.Parent()
+	// If the service is not the root node, we need to append its parent as a search in resolv.conf
+	if !path.IsRoot() {
+		parentNode, err := path.Parent()
 		if err != nil {
 			return nil, err
 		}
 
-		parentDomain := parentNode.ToDomain(true)
-
+		parentDomain := parentNode.ToDomain()
 		dnsSearches = append(dnsSearches, fmt.Sprintf("%v.local.%v", parentDomain, baseSearchPath))
 	}
 
@@ -273,7 +283,12 @@ func (c *Controller) untransformedDeploymentSpec(
 	return spec, nil
 }
 
-func containerFromComponent(service *latticev1.Service, component *block.Component, buildArtifacts *latticev1.ComponentBuildArtifacts) corev1.Container {
+func containerFromComponent(service *latticev1.Service, component *block.Component, buildArtifacts *latticev1.ComponentBuildArtifacts) (corev1.Container, error) {
+	path, err := tree.NewNodePath(service.Name)
+	if err != nil {
+		return corev1.Container{}, err
+	}
+
 	var ports []corev1.ContainerPort
 	for _, port := range component.Ports {
 		ports = append(
@@ -319,7 +334,7 @@ func containerFromComponent(service *latticev1.Service, component *block.Compone
 						ValueFrom: &corev1.EnvVarSource{
 							SecretKeyRef: &corev1.SecretKeySelector{
 								LocalObjectReference: corev1.LocalObjectReference{
-									Name: service.Spec.Path.ToDomain(true),
+									Name: path.ToDomain(),
 								},
 								Key: *envVar.Secret.Name,
 							},
@@ -340,7 +355,7 @@ func containerFromComponent(service *latticev1.Service, component *block.Compone
 		}
 	}
 
-	return corev1.Container{
+	container := corev1.Container{
 		Name:            userResourcePrefix + component.Name,
 		Image:           buildArtifacts.DockerImageFQN,
 		ImagePullPolicy: corev1.PullIfNotPresent,
@@ -351,6 +366,7 @@ func containerFromComponent(service *latticev1.Service, component *block.Compone
 		// TODO(kevinrosendahl): add VolumeMounts
 		LivenessProbe: deploymentLivenessProbe(component.HealthCheck),
 	}
+	return container, nil
 }
 
 func deploymentLivenessProbe(hc *block.ComponentHealthCheck) *corev1.Probe {

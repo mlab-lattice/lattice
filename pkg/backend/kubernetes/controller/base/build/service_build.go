@@ -27,7 +27,7 @@ func serviceBuild(
 ) *latticev1.ServiceBuild {
 	labels := map[string]string{
 		constants.LabelKeySystemBuildID:     build.Name,
-		constants.LabelKeyServicePathDomain: servicePath.ToDomain(true),
+		constants.LabelKeyServicePathDomain: servicePath.ToDomain(),
 	}
 
 	spec := serviceBuildSpec(serviceDefinition)

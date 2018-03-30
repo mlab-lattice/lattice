@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"reflect"
 
-	"github.com/mlab-lattice/system/pkg/api/v1"
-	kubeconstants "github.com/mlab-lattice/system/pkg/backend/kubernetes/constants"
 	latticev1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	kubeutil "github.com/mlab-lattice/system/pkg/backend/kubernetes/util/kubernetes"
 	"github.com/mlab-lattice/system/pkg/definition/tree"
@@ -15,126 +13,63 @@ import (
 	kubelabels "k8s.io/apimachinery/pkg/labels"
 
 	"github.com/golang/glog"
-	"github.com/satori/go.uuid"
-	"k8s.io/apimachinery/pkg/selection"
 )
 
-func (c *Controller) syncSystemServices(
-	system *latticev1.System,
-) (map[tree.NodePath]string, map[string]latticev1.ServiceStatus, []string, error) {
-	// Maps Service path to Service.Name of the Service
-	services := map[tree.NodePath]string{}
+func (c *Controller) syncSystemServices(system *latticev1.System) (map[tree.NodePath]latticev1.ServiceStatus, []tree.NodePath, error) {
+	services := make(map[tree.NodePath]latticev1.ServiceStatus)
+	systemNamespace := kubeutil.SystemNamespace(c.latticeID, system.V1ID())
 
-	// Maps Service.Name to Service.Status
-	serviceStatuses := map[string]latticev1.ServiceStatus{}
-
-	systemNamespace := kubeutil.SystemNamespace(c.latticeID, v1.SystemID(system.Name))
-
-	// Loop through the Services defined in the System's Spec, and create/update any that need it
+	// Loop through the services defined in the system's Spec, and create/update any that need it
 	for path, serviceInfo := range system.Spec.Services {
 		var service *latticev1.Service
+		pathDomain := path.ToDomain()
 
-		serviceName, ok := system.Status.Services[path]
-		if !ok {
-			pathDomain := path.ToDomain(true)
-			// We don't have the name of the Service in our Status, but it may still have been created already.
-			// First, look in the cache for a Service with the proper label.
-			selector := kubelabels.NewSelector()
-			requirement, err := kubelabels.NewRequirement(kubeconstants.LabelKeyServicePathDomain, selection.Equals, []string{pathDomain})
-			if err != nil {
-				return nil, nil, nil, err
+		// First, look in the cache to see if the Service already exists
+		var err error
+		service, err = c.serviceLister.Services(systemNamespace).Get(pathDomain)
+		if err != nil {
+			if !errors.IsNotFound(err) {
+				return nil, nil, err
 			}
 
-			selector = selector.Add(*requirement)
-			services, err := c.serviceLister.Services(systemNamespace).List(selector)
-			if err != nil {
-				return nil, nil, nil, err
+			// If the service didn't exist in our cache, try to create it
+			service, err = c.createNewService(system, &serviceInfo, path)
+			if err == nil {
+				// If we created the service, no need to do any more work on it.
+				services[path] = service.Status
+				continue
 			}
 
-			if len(services) > 1 {
-				err := fmt.Errorf(
-					"multiple Services in the %v namespace are labeled with %v = %v",
-					systemNamespace,
-					kubeconstants.LabelKeyServicePathDomain,
-					pathDomain,
-				)
-				return nil, nil, nil, err
+			// There was some unexpected error creating the service.
+			if !errors.IsAlreadyExists(err) {
+				return nil, nil, err
 			}
 
-			if len(services) == 1 {
-				service = services[0]
-			}
-
-			if len(services) == 0 {
-				// The cache did not have a Service matching the label.
-				// However, it would be a constraint violation to have multiple Services for the same path,
-				// so we'll have to do a quorum read from the API to make sure that the Service does not exist.
-				services, err := c.latticeClient.LatticeV1().Services(systemNamespace).List(metav1.ListOptions{LabelSelector: selector.String()})
-				if err != nil {
-					return nil, nil, nil, err
-				}
-
-				if len(services.Items) > 1 {
-					err := fmt.Errorf(
-						"multiple Services in the %v namespace are labeled with %v = %v",
-						systemNamespace,
-						kubeconstants.LabelKeyServicePathDomain,
-						pathDomain,
-					)
-					return nil, nil, nil, err
-				}
-
-				if len(services.Items) == 1 {
-					service = &services.Items[0]
-				}
-
-				if len(services.Items) == 0 {
-					// We are now sure that the Service does not exist, so now we can create it.
-					service, err = c.createNewService(system, &serviceInfo, path)
-				}
-			}
-		}
-
-		if service == nil {
-			var err error
-			service, err = c.serviceLister.Services(systemNamespace).Get(serviceName)
+			// The service didn't exist in our cache, but it does exist in the server.
+			// Retrieve it with a quorum read.
+			service, err = c.latticeClient.LatticeV1().Services(systemNamespace).Get(pathDomain, metav1.GetOptions{})
 			if err != nil {
 				if !errors.IsNotFound(err) {
-					return nil, nil, nil, err
+					return nil, nil, err
 				}
 
-				// the Service wasn't in our cache, so check with the API
-				service, err = c.latticeClient.LatticeV1().Services(systemNamespace).Get(serviceName, metav1.GetOptions{})
-				if err != nil {
-					if errors.IsNotFound(err) {
-						// FIXME: send warn event
-						// TODO: should we just create a new Service here?
-						return nil, nil, nil, fmt.Errorf(
-							"Service %v in namespace %v has Name %v but Service does not exist",
-							path,
-							systemNamespace,
-							serviceName,
-						)
-					}
-
-					return nil, nil, nil, err
-				}
+				return nil, nil, fmt.Errorf("could not create service %v (%v) because it already existed, but it does not exist", pathDomain, system.Name)
 			}
 		}
 
-		// Otherwise, get a new spec and update the service
+		// We found an existing service. Calculate what its Spec should look like,
+		// and update the service if its current Spec is different.
 		spec, err := c.serviceSpec(system, &serviceInfo, path)
 		if err != nil {
-			return nil, nil, nil, err
+			return nil, nil, err
 		}
 
 		service, err = c.updateService(service, spec)
 		if err != nil {
-			return nil, nil, nil, err
+			return nil, nil, err
 		}
 
-		services[path] = service.Name
-		serviceStatuses[service.Name] = service.Status
+		services[path] = service.Status
 	}
 
 	// Loop through all of the Services that exist in the System's namespace, and delete any
@@ -143,29 +78,34 @@ func (c *Controller) syncSystemServices(
 	// need to figure out what the rollout/automatic roll-back strategy is
 	allServices, err := c.serviceLister.Services(systemNamespace).List(kubelabels.Everything())
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, err
 	}
 
-	var deletedServices []string
+	var deletedServices []tree.NodePath
 	for _, service := range allServices {
-		if _, ok := serviceStatuses[service.Name]; !ok {
+		servicePath, err := tree.NewNodePath(service.Name)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		if _, ok := services[servicePath]; !ok {
 			glog.V(4).Infof(
-				"Found Service %q in Namespace %q that is no longer in the System Spec",
+				"Found service %v (%v) that is no longer in the system Spec",
 				service.Name,
-				service.Namespace,
+				system.Name,
 			)
-			deletedServices = append(deletedServices, service.Name)
+			deletedServices = append(deletedServices, servicePath)
 
 			if service.DeletionTimestamp == nil {
 				err := c.latticeClient.LatticeV1().Services(service.Namespace).Delete(service.Name, &metav1.DeleteOptions{})
 				if err != nil {
-					return nil, nil, nil, err
+					return nil, nil, err
 				}
 			}
 		}
 	}
 
-	return services, serviceStatuses, deletedServices, nil
+	return services, deletedServices, nil
 }
 
 func (c *Controller) createNewService(
@@ -186,23 +126,19 @@ func (c *Controller) newService(
 	serviceInfo *latticev1.SystemSpecServiceInfo,
 	path tree.NodePath,
 ) (*latticev1.Service, error) {
-	labels := map[string]string{
-		kubeconstants.LabelKeyServicePathDomain: path.ToDomain(true),
-	}
-
 	spec, err := c.serviceSpec(system, serviceInfo, path)
 	if err != nil {
 		return nil, err
 	}
 
-	systemNamespace := kubeutil.SystemNamespace(c.latticeID, v1.SystemID(system.Name))
+	systemNamespace := kubeutil.SystemNamespace(c.latticeID, system.V1ID())
+	pathDomain := path.ToDomain()
 
 	service := &latticev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:            uuid.NewV4().String(),
+			Name:            pathDomain,
 			Namespace:       systemNamespace,
 			OwnerReferences: []metav1.OwnerReference{*metav1.NewControllerRef(system, controllerKind)},
-			Labels:          labels,
 		},
 		Spec: spec,
 		Status: latticev1.ServiceStatus{
@@ -231,12 +167,10 @@ func (c *Controller) serviceSpec(
 	} else if serviceInfo.Definition.Resources().MinInstances != nil {
 		numInstances = *(serviceInfo.Definition.Resources().MinInstances)
 	} else {
-		systemNamespace := kubeutil.SystemNamespace(c.latticeID, v1.SystemID(system.Name))
 		err := fmt.Errorf(
-			"System %v/%v Service %v invalid Service definition: num_instances or min_instances must be set",
-			systemNamespace,
+			"service %v (%v) invalid definition: num_instances or min_instances must be set",
+			path.ToDomain(),
 			system.Name,
-			path,
 		)
 		return latticev1.ServiceSpec{}, err
 	}
@@ -264,7 +198,6 @@ func (c *Controller) serviceSpec(
 	}
 
 	spec := latticev1.ServiceSpec{
-		Path:                    path,
 		Definition:              serviceInfo.Definition,
 		ComponentBuildArtifacts: serviceInfo.ComponentBuildArtifacts,
 		Ports:        componentPorts,

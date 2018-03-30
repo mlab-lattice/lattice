@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 
 	"github.com/mlab-lattice/system/pkg/definition"
-	"github.com/mlab-lattice/system/pkg/definition/tree"
 
 	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -31,7 +30,6 @@ type Service struct {
 // the serviceSpecEncoder and ServiceSpec's UnmarshalJSON
 // +k8s:deepcopy-gen=false
 type ServiceSpec struct {
-	Path       tree.NodePath      `json:"path"`
 	Definition definition.Service `json:"definition"`
 
 	// ComponentBuildArtifacts maps Component names to the artifacts created by their build
@@ -52,7 +50,6 @@ type ComponentPort struct {
 }
 
 type serviceSpecEncoder struct {
-	Path                    tree.NodePath                      `json:"path"`
 	Definition              json.RawMessage                    `json:"definition"`
 	ComponentBuildArtifacts map[string]ComponentBuildArtifacts `json:"componentBuildArtifacts"`
 	Ports                   map[string][]ComponentPort         `json:"ports"`
@@ -71,7 +68,6 @@ func (s *ServiceSpec) UnmarshalJSON(data []byte) error {
 	}
 
 	*s = ServiceSpec{
-		Path:                    decoded.Path,
 		Definition:              service,
 		ComponentBuildArtifacts: decoded.ComponentBuildArtifacts,
 		Ports:        decoded.Ports,

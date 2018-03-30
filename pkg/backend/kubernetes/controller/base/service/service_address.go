@@ -5,6 +5,7 @@ import (
 
 	latticev1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	"github.com/mlab-lattice/system/pkg/definition/block"
+	"github.com/mlab-lattice/system/pkg/definition/tree"
 
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -102,6 +103,11 @@ func (c *Controller) newServiceAddress(service *latticev1.Service) (*latticev1.S
 }
 
 func (c *Controller) serviceAddressSpec(service *latticev1.Service) (latticev1.ServiceAddressSpec, error) {
+	path, err := tree.NewNodePath(service.Name)
+	if err != nil {
+		return latticev1.ServiceAddressSpec{}, err
+	}
+
 	endpointGroups := map[string]latticev1.ServiceAddressEndpointGroup{
 		"service": {
 			Service: &service.Name,
@@ -136,7 +142,7 @@ func (c *Controller) serviceAddressSpec(service *latticev1.Service) (latticev1.S
 	}
 
 	spec := latticev1.ServiceAddressSpec{
-		Path:           service.Spec.Path,
+		Path:           path,
 		EndpointGroups: endpointGroups,
 		Ports:          ports,
 	}

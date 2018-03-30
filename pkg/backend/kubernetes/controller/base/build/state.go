@@ -66,7 +66,7 @@ func (c *Controller) calculateState(build *latticev1.Build) (stateInfo, error) {
 			requirement, err = kubelabels.NewRequirement(
 				constants.LabelKeyServicePathDomain,
 				selection.Equals,
-				[]string{servicePath.ToDomain(true)},
+				[]string{servicePath.ToDomain()},
 			)
 			if err != nil {
 				return stateInfo{}, err

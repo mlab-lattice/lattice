@@ -4,14 +4,11 @@ import (
 	"fmt"
 
 	"github.com/mlab-lattice/system/pkg/api/v1"
-	kubeconstants "github.com/mlab-lattice/system/pkg/backend/kubernetes/constants"
 	latticev1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	kubeutil "github.com/mlab-lattice/system/pkg/backend/kubernetes/util/kubernetes"
 	"github.com/mlab-lattice/system/pkg/definition/tree"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	kubelabels "k8s.io/apimachinery/pkg/labels"
-	"k8s.io/apimachinery/pkg/selection"
 )
 
 func (kb *KubernetesBackend) ListServices(systemID v1.SystemID) ([]v1.Service, error) {
@@ -29,7 +26,12 @@ func (kb *KubernetesBackend) ListServices(systemID v1.SystemID) ([]v1.Service, e
 
 	var externalServices []v1.Service
 	for _, service := range services.Items {
-		externalService, err := kb.transformService(service.Spec.Path, &service.Status)
+		servicePath, err := tree.NewNodePath(service.Name)
+		if err != nil {
+			return nil, err
+		}
+
+		externalService, err := kb.transformService(servicePath, &service.Status)
 		if err != nil {
 			return nil, err
 		}
@@ -46,37 +48,17 @@ func (kb *KubernetesBackend) GetService(systemID v1.SystemID, path tree.NodePath
 		return nil, err
 	}
 
-	selector := kubelabels.NewSelector()
-	requirement, err := kubelabels.NewRequirement(
-		kubeconstants.LabelKeyServicePathDomain,
-		selection.Equals,
-		[]string{path.ToDomain(true)},
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	selector = selector.Add(*requirement)
-	listOptions := metav1.ListOptions{
-		LabelSelector: selector.String(),
-	}
-
 	namespace := kubeutil.SystemNamespace(kb.latticeID, systemID)
-	services, err := kb.latticeClient.LatticeV1().Services(namespace).List(listOptions)
+	service, err := kb.latticeClient.LatticeV1().Services(namespace).Get(path.ToDomain(), metav1.GetOptions{})
 	if err != nil {
 		return nil, err
 	}
 
-	if len(services.Items) > 1 {
-		return nil, fmt.Errorf("found multiple Services for System %v %v", systemID, path)
+	servicePath, err := tree.NewNodePath(service.Name)
+	if err != nil {
+		return nil, err
 	}
-
-	if len(services.Items) == 0 {
-		return nil, nil
-	}
-
-	service := services.Items[0]
-	externalService, err := kb.transformService(service.Spec.Path, &service.Status)
+	externalService, err := kb.transformService(servicePath, &service.Status)
 	if err != nil {
 		return nil, err
 	}

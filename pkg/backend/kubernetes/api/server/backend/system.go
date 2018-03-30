@@ -104,19 +104,8 @@ func (kb *KubernetesBackend) transformSystem(system *latticev1.System) (*v1.Syst
 	}
 
 	externalServices := map[tree.NodePath]v1.Service{}
-	for path, serviceName := range system.Status.Services {
-		serviceStatus, ok := system.Status.ServiceStatuses[serviceName]
-		if !ok {
-			err := fmt.Errorf(
-				"System %v has Service %v for %v but does not have its status",
-				system.Namespace,
-				serviceName,
-				path,
-			)
-			return nil, err
-		}
-
-		externalService, err := kb.transformService(path, &serviceStatus)
+	for path, status := range system.Status.Services {
+		externalService, err := kb.transformService(path, &status)
 		if err != nil {
 			return nil, err
 		}

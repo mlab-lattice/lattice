@@ -11,15 +11,14 @@ import (
 
 func (c *Controller) syncSystemStatus(
 	system *latticev1.System,
-	services map[tree.NodePath]string,
-	serviceStatuses map[string]latticev1.ServiceStatus,
-	deletedServices []string,
+	services map[tree.NodePath]latticev1.ServiceStatus,
+	deletedServices []tree.NodePath,
 ) error {
 	hasFailedService := false
 	hasUpdatingService := false
 	hasScalingService := false
 
-	for serviceName, status := range serviceStatuses {
+	for path, status := range services {
 		if status.State == latticev1.ServiceStateFailed {
 			hasFailedService = true
 			continue
@@ -36,7 +35,7 @@ func (c *Controller) syncSystemStatus(
 		}
 
 		if status.State != latticev1.ServiceStateStable {
-			return fmt.Errorf("Service %v/%v had unexpected state: %v", system.Namespace, serviceName, status.State)
+			return fmt.Errorf("service %v (%v) had unexpected state: %v", path.ToDomain(), system.Name, status.State)
 		}
 	}
 
@@ -57,15 +56,14 @@ func (c *Controller) syncSystemStatus(
 		state = latticev1.SystemStateDegraded
 	}
 
-	_, err := c.updateSystemStatus(system, state, services, serviceStatuses)
+	_, err := c.updateSystemStatus(system, state, services)
 	return err
 }
 
 func (c *Controller) updateSystemStatus(
 	system *latticev1.System,
 	state latticev1.SystemState,
-	services map[tree.NodePath]string,
-	serviceStatuses map[string]latticev1.ServiceStatus,
+	services map[tree.NodePath]latticev1.ServiceStatus,
 ) (*latticev1.System, error) {
 	status := latticev1.SystemStatus{
 		State:              state,
@@ -73,7 +71,6 @@ func (c *Controller) updateSystemStatus(
 		// FIXME: remove this when ObservedGeneration is supported for CRD
 		UpdateProcessed: true,
 		Services:        services,
-		ServiceStatuses: serviceStatuses,
 	}
 
 	if reflect.DeepEqual(system.Status, status) {

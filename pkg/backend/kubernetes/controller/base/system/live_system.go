@@ -5,10 +5,10 @@ import (
 )
 
 func (c *Controller) syncLiveSystem(system *latticev1.System) error {
-	services, serviceStatuses, deletedServices, err := c.syncSystemServices(system)
+	services, deletedServices, err := c.syncSystemServices(system)
 	if err != nil {
 		return err
 	}
 
-	return c.syncSystemStatus(system, services, serviceStatuses, deletedServices)
+	return c.syncSystemStatus(system, services, deletedServices)
 }

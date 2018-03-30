@@ -56,7 +56,7 @@ func (kb *KubernetesBackend) GetSystemSecret(systemID v1.SystemID, path tree.Nod
 	}
 
 	namespace := kubeutil.SystemNamespace(kb.latticeID, systemID)
-	secret, err := kb.kubeClient.CoreV1().Secrets(namespace).Get(path.ToDomain(true), metav1.GetOptions{})
+	secret, err := kb.kubeClient.CoreV1().Secrets(namespace).Get(path.ToDomain(), metav1.GetOptions{})
 	if err != nil {
 		if errors.IsNotFound(err) {
 			return nil, v1.NewInvalidSystemSecretError(path, name)
@@ -85,7 +85,7 @@ func (kb *KubernetesBackend) SetSystemSecret(systemID v1.SystemID, path tree.Nod
 	}
 
 	namespace := kubeutil.SystemNamespace(kb.latticeID, systemID)
-	secret, err := kb.kubeClient.CoreV1().Secrets(namespace).Get(path.ToDomain(true), metav1.GetOptions{})
+	secret, err := kb.kubeClient.CoreV1().Secrets(namespace).Get(path.ToDomain(), metav1.GetOptions{})
 	if err != nil {
 		if errors.IsNotFound(err) {
 			return kb.createSecret(systemID, path, name, value)
@@ -115,7 +115,7 @@ func (kb *KubernetesBackend) createSecret(id v1.SystemID, path tree.NodePath, na
 	namespace := kubeutil.SystemNamespace(kb.latticeID, id)
 	secret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: path.ToDomain(true),
+			Name: path.ToDomain(),
 		},
 		StringData: map[string]string{
 			name: value,
@@ -133,7 +133,7 @@ func (kb *KubernetesBackend) UnsetSystemSecret(systemID v1.SystemID, path tree.N
 	}
 
 	namespace := kubeutil.SystemNamespace(kb.latticeID, systemID)
-	secret, err := kb.kubeClient.CoreV1().Secrets(namespace).Get(path.ToDomain(true), metav1.GetOptions{})
+	secret, err := kb.kubeClient.CoreV1().Secrets(namespace).Get(path.ToDomain(), metav1.GetOptions{})
 	if err != nil {
 		// If we can't find the secret, then it is unset
 		if errors.IsNotFound(err) {

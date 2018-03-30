@@ -93,6 +93,11 @@ func (b *KubernetesPerNodeBackend) Services(serviceCluster string) (map[tree.Nod
 	}
 
 	for _, service := range services {
+		path, err := tree.NewNodePath(service.Name)
+		if err != nil {
+			return nil, err
+		}
+
 		kubeServiceName := kubernetes.GetKubeServiceNameForService(service.Name)
 
 		endpoint, err := b.kubeEndpointLister.Endpoints(service.Namespace).Get(kubeServiceName)
@@ -105,7 +110,7 @@ func (b *KubernetesPerNodeBackend) Services(serviceCluster string) (map[tree.Nod
 			return nil, err
 		}
 
-		bsvc := &xdsapi.Service{
+		xdsService := &xdsapi.Service{
 			EgressPort:  egressPort,
 			Components:  map[string]xdsapi.Component{},
 			IPAddresses: []string{},
@@ -117,7 +122,7 @@ func (b *KubernetesPerNodeBackend) Services(serviceCluster string) (map[tree.Nod
 				// FIXME: check if this is necessary (i.e. does Endpoint ever repeat IPAddresses)
 				if _, ok := addressSet[address.IP]; !ok {
 					addressSet[address.IP] = true
-					bsvc.IPAddresses = append(bsvc.IPAddresses, address.IP)
+					xdsService.IPAddresses = append(xdsService.IPAddresses, address.IP)
 				}
 			}
 		}
@@ -136,10 +141,10 @@ func (b *KubernetesPerNodeBackend) Services(serviceCluster string) (map[tree.Nod
 				bc.Ports[port.Port] = envoyPort
 			}
 
-			bsvc.Components[component] = bc
+			xdsService.Components[component] = bc
 		}
 
-		result[service.Spec.Path] = bsvc
+		result[path] = xdsService
 	}
 
 	return result, nil

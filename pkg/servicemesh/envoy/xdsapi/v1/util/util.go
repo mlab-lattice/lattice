@@ -13,7 +13,7 @@ func GetLocalClusterNameForComponentPort(serviceCluster string, svcPath tree.Nod
 }
 
 func GetClusterNameForComponentPort(serviceCluster string, svcPath tree.NodePath, componentName string, port int32) string {
-	return fmt.Sprintf("%v:%v:%v:%v", serviceCluster, svcPath.ToDomain(false), componentName, port)
+	return fmt.Sprintf("%v:%v:%v:%v", serviceCluster, svcPath.ToDomain(), componentName, port)
 }
 
 func GetPartsFromClusterName(clusterName string) (string, tree.NodePath, string, int32, error) {

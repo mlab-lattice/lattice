@@ -10,6 +10,7 @@ import (
 	latticev1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	kubeutil "github.com/mlab-lattice/system/pkg/backend/kubernetes/util/kubernetes"
 
+	"github.com/mlab-lattice/system/pkg/definition/tree"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 )
@@ -505,6 +506,11 @@ func (sm *DefaultEnvoyServiceMesh) envoyContainers(service *latticev1.Service) (
 		}
 	}
 
+	servicePath, err := tree.NewNodePath(service.Name)
+	if err != nil {
+		return corev1.Container{}, corev1.Container{}, err
+	}
+
 	envoy := corev1.Container{
 		Name:            containerNameEnvoy,
 		Image:           sm.image,
@@ -516,7 +522,7 @@ func (sm *DefaultEnvoyServiceMesh) envoyContainers(service *latticev1.Service) (
 			"--service-cluster",
 			service.Namespace,
 			"--service-node",
-			service.Spec.Path.ToDomain(false),
+			servicePath.ToDomain(),
 		},
 		Ports: envoyPorts,
 		VolumeMounts: []corev1.VolumeMount{

@@ -3,6 +3,7 @@ package v1
 import (
 	"encoding/json"
 
+	"github.com/mlab-lattice/system/pkg/api/v1"
 	"github.com/mlab-lattice/system/pkg/definition"
 	"github.com/mlab-lattice/system/pkg/definition/tree"
 
@@ -25,6 +26,10 @@ type System struct {
 	metav1.ObjectMeta `json:"metadata"`
 	Spec              SystemSpec   `json:"spec"`
 	Status            SystemStatus `json:"status,omitempty"`
+}
+
+func (s *System) V1ID() v1.SystemID {
+	return v1.SystemID(s.Name)
 }
 
 // N.B.: important: if you update the SystemSpec or SystemSpecServiceInfo you must also update
@@ -74,11 +79,8 @@ type SystemStatus struct {
 	// FIXME: remove this when ObservedGeneration is supported for CRD
 	UpdateProcessed bool `json:"updateProcessed"`
 
-	// Maps a Service path to its Service.Name
-	Services map[tree.NodePath]string `json:"services"`
-
-	// Maps a Service.Name to its Service.Status
-	ServiceStatuses map[string]ServiceStatus `json:"serviceStatuses"`
+	// Maps a Service path to its Service.Status
+	Services map[tree.NodePath]ServiceStatus `json:"services"`
 }
 
 type SystemState string
@@ -94,11 +96,6 @@ const (
 	SystemStateScaling  SystemState = "scaling"
 	SystemStateUpdating SystemState = "updating"
 )
-
-type SystemStatusServiceInfo struct {
-	Name   string        `json:"name"`
-	Status ServiceStatus `json:"status"`
-}
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 

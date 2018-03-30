@@ -1,16 +1,15 @@
 package system
 
 import (
-	"github.com/mlab-lattice/system/pkg/api/v1"
 	latticev1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
-	"github.com/mlab-lattice/system/pkg/backend/kubernetes/util/kubernetes"
+	kubeutil "github.com/mlab-lattice/system/pkg/backend/kubernetes/util/kubernetes"
 
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func (c *Controller) syncDeletingSystem(system *latticev1.System) error {
-	systemNamespace := kubernetes.SystemNamespace(c.latticeID, v1.SystemID(system.Name))
+	systemNamespace := kubeutil.SystemNamespace(c.latticeID, system.V1ID())
 	ns, err := c.kubeClient.CoreV1().Namespaces().Get(systemNamespace, metav1.GetOptions{})
 	if err != nil {
 		// If the namespace has been fully terminated, the system can be deleted as well,
