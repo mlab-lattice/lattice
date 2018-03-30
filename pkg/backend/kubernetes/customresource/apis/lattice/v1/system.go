@@ -42,7 +42,6 @@ type SystemSpec struct {
 
 // +k8s:deepcopy-gen=false
 type SystemSpecServiceInfo struct {
-	Name       *string            `json:"name"`
 	Definition definition.Service `json:"definition"`
 
 	// ComponentBuildArtifacts maps Component names to the artifacts created by their build
@@ -81,7 +80,12 @@ type SystemStatus struct {
 	UpdateProcessed bool `json:"updateProcessed"`
 
 	// Maps a Service path to its Service.Status
-	Services map[tree.NodePath]ServiceStatus `json:"services"`
+	Services map[tree.NodePath]SystemStatusService `json:"services"`
+}
+
+type SystemStatusService struct {
+	Name string `json:"name"`
+	ServiceStatus
 }
 
 type SystemState string

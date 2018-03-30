@@ -19,8 +19,15 @@ import (
 	"github.com/satori/go.uuid"
 )
 
-func (c *Controller) syncSystemServices(system *latticev1.System) (map[tree.NodePath]latticev1.ServiceStatus, []string, error) {
-	services := make(map[tree.NodePath]latticev1.ServiceStatus)
+func (c *Controller) syncSystemServices(system *latticev1.System) (map[tree.NodePath]latticev1.SystemStatusService, []string, error) {
+	// N.B.: as it currently is, this controller does not allow for a "move" i.e.
+	// renaming a service (changing its path). When it comes time to implement that,
+	// a possible approach would be to add an annotation indicating what moves need to be made,
+	// then remove that annotation when updating the status. Will need to think through the idempotency.
+	// Also when renaming a service it should probably also be done via an annotation, so other components
+	// can continue to just look at the label as the confirmed path of the service, as opposed to trying
+	// to figure out if a rename is in flight.
+	services := make(map[tree.NodePath]latticev1.SystemStatusService)
 	systemNamespace := kubeutil.SystemNamespace(c.latticeID, system.V1ID())
 	serviceNames := set.NewSet()
 
@@ -28,40 +35,48 @@ func (c *Controller) syncSystemServices(system *latticev1.System) (map[tree.Node
 	for path, serviceInfo := range system.Spec.Services {
 		var service *latticev1.Service
 
-		if serviceInfo.Name == nil {
-			// If serviceInfo.Name hasn't been set, then either we haven't created the service yet,
-			// or we were unable to update the system after creating the service
+		serviceStatus, ok := system.Status.Services[path]
+		if !ok {
+			// If a status for this service path hasn't been set, then either we haven't created the service yet,
+			// or we were unable to update the system's Status after creating the service
 
 			// First check our cache to see if the service exists.
 			var err error
 			service, err = c.getServiceFromCache(systemNamespace, path)
 			if err != nil {
-				if errors.IsNotFound(err) {
-					// The service wasn't in the cache, so do a quorum read to see if it was created.
-					// N.B.: could first loop through and check to see if we need to do a quorum read
-					// on any of the services, then just do one list.
-					service, err = kubeutil.GetServiceForPath(c.latticeClient.LatticeV1(), systemNamespace, path)
-					if err != nil {
-						if errors.IsNotFound(err) {
-							// The service actually doesn't exist yet. Create it.
-							service, err = c.createNewService(uuid.NewV4().String(), system, &serviceInfo, path)
-							if err != nil {
-								return nil, nil, err
-							}
+				if !errors.IsNotFound(err) {
+					return nil, nil, err
+				}
 
-							// Successfully created the service. Nothing more to do.
-							services[path] = service.Status
-							serviceNames.Add(service.Name)
-							continue
-						}
+				// The service wasn't in the cache, so do a quorum read to see if it was created.
+				// N.B.: could first loop through and check to see if we need to do a quorum read
+				// on any of the services, then just do one list.
+				service, err = kubeutil.GetServiceForPath(c.latticeClient.LatticeV1(), systemNamespace, path)
+				if err != nil {
+					if !errors.IsNotFound(err) {
+						return nil, nil, err
 					}
+
+					// The service actually doesn't exist yet. Create it with a new UUID as the name.
+					service, err = c.createNewService(uuid.NewV4().String(), system, &serviceInfo, path)
+					if err != nil {
+						return nil, nil, err
+					}
+
+					// Successfully created the service. No need to check if it needs to be updated.
+					services[path] = latticev1.SystemStatusService{
+						Name:          service.Name,
+						ServiceStatus: service.Status,
+					}
+					serviceNames.Add(service.Name)
+					continue
 				}
 			}
 			// We were able to find an existing service for this path. We'll check below if it
 			// needs to be updated.
 		} else {
 			// There is supposedly already a service for this path.
-			serviceName := *serviceInfo.Name
+			serviceName := serviceStatus.Name
 			serviceNames.Add(serviceName)
 			var err error
 
@@ -82,7 +97,10 @@ func (c *Controller) syncSystemServices(system *latticev1.System) (map[tree.Node
 					service, err = c.createNewService(serviceName, system, &serviceInfo, path)
 					if err == nil {
 						// If we created the service, no need to do any more work on it.
-						services[path] = service.Status
+						services[path] = latticev1.SystemStatusService{
+							Name:          service.Name,
+							ServiceStatus: service.Status,
+						}
 						continue
 					}
 
@@ -114,7 +132,10 @@ func (c *Controller) syncSystemServices(system *latticev1.System) (map[tree.Node
 			return nil, nil, err
 		}
 
-		services[path] = service.Status
+		services[path] = latticev1.SystemStatusService{
+			Name:          service.Name,
+			ServiceStatus: service.Status,
+		}
 	}
 
 	// Loop through all of the Services that exist in the System's namespace, and delete any
@@ -255,7 +276,11 @@ func (c *Controller) updateService(service *latticev1.Service, spec latticev1.Se
 	// Copy so the cache isn't mutated
 	service = service.DeepCopy()
 	service.Spec = spec
-	service.Labels[constants.LabelKeyServicePath] = string(path)
+
+	if service.Labels == nil {
+		service.Labels = make(map[string]string)
+	}
+	service.Labels[constants.LabelKeyServicePath] = path.ToDomain()
 
 	return c.latticeClient.LatticeV1().Services(service.Namespace).Update(service)
 }
@@ -275,7 +300,7 @@ func (c *Controller) serviceNeedsUpdate(service *latticev1.Service, spec lattice
 
 func (c *Controller) getServiceFromCache(namespace string, path tree.NodePath) (*latticev1.Service, error) {
 	selector := labels.NewSelector()
-	requirement, err := labels.NewRequirement(constants.LabelKeyServicePath, selection.Equals, []string{path.String()})
+	requirement, err := labels.NewRequirement(constants.LabelKeyServicePath, selection.Equals, []string{path.ToDomain()})
 	if err != nil {
 		return nil, err
 	}

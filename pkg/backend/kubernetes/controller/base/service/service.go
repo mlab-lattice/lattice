@@ -295,7 +295,7 @@ func (c *Controller) addFinalizer(service *latticev1.Service) (*latticev1.Servic
 	// Check to see if the finalizer already exists. If so nothing needs to be done.
 	for _, finalizer := range service.Finalizers {
 		if finalizer == finalizerName {
-			glog.V(5).Infof("Endpoint %v has %v finalizer", service.Name, finalizerName)
+			glog.V(5).Infof("service %v has %v finalizer", service.Name, finalizerName)
 			return service, nil
 		}
 	}
@@ -304,7 +304,7 @@ func (c *Controller) addFinalizer(service *latticev1.Service) (*latticev1.Servic
 	// If this fails due to a race the Endpoint should get requeued by the controller, so
 	// not a big deal.
 	service.Finalizers = append(service.Finalizers, finalizerName)
-	glog.V(5).Infof("Endpoint %v missing %v finalizer, adding it", service.Name, finalizerName)
+	glog.V(5).Infof("service %v missing %v finalizer, adding it", service.Name, finalizerName)
 
 	return c.latticeClient.LatticeV1().Services(service.Namespace).Update(service)
 }

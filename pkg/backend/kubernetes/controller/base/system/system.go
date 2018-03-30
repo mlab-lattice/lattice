@@ -11,7 +11,7 @@ import (
 
 func (c *Controller) syncSystemStatus(
 	system *latticev1.System,
-	services map[tree.NodePath]latticev1.ServiceStatus,
+	services map[tree.NodePath]latticev1.SystemStatusService,
 	deletedServices []string,
 ) error {
 	hasFailedService := false
@@ -63,7 +63,7 @@ func (c *Controller) syncSystemStatus(
 func (c *Controller) updateSystemStatus(
 	system *latticev1.System,
 	state latticev1.SystemState,
-	services map[tree.NodePath]latticev1.ServiceStatus,
+	services map[tree.NodePath]latticev1.SystemStatusService,
 ) (*latticev1.System, error) {
 	status := latticev1.SystemStatus{
 		State:              state,

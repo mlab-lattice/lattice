@@ -16,7 +16,7 @@ import (
 
 func GetServiceForPath(client latticev1client.ServicesGetter, namespace string, path tree.NodePath) (*latticev1.Service, error) {
 	selector := labels.NewSelector()
-	requirement, err := labels.NewRequirement(constants.LabelKeyServicePath, selection.Equals, []string{path.String()})
+	requirement, err := labels.NewRequirement(constants.LabelKeyServicePath, selection.Equals, []string{path.ToDomain()})
 	if err != nil {
 		return nil, err
 	}

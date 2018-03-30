@@ -93,13 +93,13 @@ func (b *KubernetesPerNodeBackend) Services(serviceCluster string) (map[tree.Nod
 	}
 
 	for _, service := range services {
-		path, err := tree.NodePathFromDomain(service.Name)
-		if err != nil {
-			return nil, err
+		path, ok := service.PathLabel()
+		if !ok {
+			// FIXME: this shouldn't happen. send an error somewhere?
+			continue
 		}
 
 		kubeServiceName := kubernetes.GetKubeServiceNameForService(service.Name)
-
 		endpoint, err := b.kubeEndpointLister.Endpoints(service.Namespace).Get(kubeServiceName)
 		if err != nil {
 			return nil, err
