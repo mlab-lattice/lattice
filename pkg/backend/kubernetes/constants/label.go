@@ -16,8 +16,8 @@ const (
 	LabelKeySystemRolloutVersion = "rollout.system.lattice.mlab.com/version"
 	LabelKeySystemRolloutBuildID = "rollout.system.lattice.mlab.com/build"
 
-	LabelKeyServiceID         = "service.lattice.mlab.com/id"
-	LabelKeyServicePathDomain = "service.lattice.mlab.com/path-domain"
+	LabelKeyServiceID   = "service.lattice.mlab.com/id"
+	LabelKeyServicePath = "service.lattice.mlab.com/path"
 
 	LabelKeySystemBuildID      = "system.build.lattice.mlab.com/id"
 	LabelKeySystemBuildVersion = "system.build.lattice.mlab.com/version"

@@ -85,7 +85,7 @@ func (c *Controller) syncMissingComponentBuildsServiceBuild(build *latticev1.Ser
 
 		// FIXME: support references
 		if definitionBlock.GitRepository != nil && definitionBlock.GitRepository.SSHKey != nil {
-			secretName := fmt.Sprintf("%v:%v", build.Labels[constants.LabelKeyServicePathDomain], *definitionBlock.GitRepository.SSHKey.Name)
+			secretName := fmt.Sprintf("%v:%v", build.Labels[constants.LabelKeyServicePath], *definitionBlock.GitRepository.SSHKey.Name)
 			definitionBlock.GitRepository.SSHKey.Name = &secretName
 		}
 

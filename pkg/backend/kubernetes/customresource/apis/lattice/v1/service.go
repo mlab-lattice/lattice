@@ -4,7 +4,9 @@ import (
 	"encoding/json"
 
 	"github.com/mlab-lattice/system/pkg/definition"
+	"github.com/mlab-lattice/system/pkg/definition/tree"
 
+	"github.com/mlab-lattice/system/pkg/backend/kubernetes/constants"
 	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -24,6 +26,15 @@ type Service struct {
 	metav1.ObjectMeta `json:"metadata"`
 	Spec              ServiceSpec   `json:"spec"`
 	Status            ServiceStatus `json:"status,omitempty"`
+}
+
+func (s *Service) PathLabel() (tree.NodePath, bool) {
+	path, ok := s.Labels[constants.LabelKeyServicePath]
+	if !ok {
+		return "", false
+	}
+
+	return tree.NodePath(path), true
 }
 
 // N.B.: important: if you update the ServiceSpec you must also update

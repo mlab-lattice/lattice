@@ -42,6 +42,7 @@ type SystemSpec struct {
 
 // +k8s:deepcopy-gen=false
 type SystemSpecServiceInfo struct {
+	Name       *string            `json:"name"`
 	Definition definition.Service `json:"definition"`
 
 	// ComponentBuildArtifacts maps Component names to the artifacts created by their build

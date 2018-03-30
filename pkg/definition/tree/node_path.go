@@ -73,3 +73,7 @@ func (np NodePath) Parent() (NodePath, error) {
 func (np NodePath) IsRoot() bool {
 	return np.Depth() == 1
 }
+
+func (np NodePath) String() string {
+	return string(np)
+}

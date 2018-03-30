@@ -24,6 +24,7 @@ go_library(
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/api/v1:go_default_library",
+        "//pkg/backend/kubernetes/constants:go_default_library",
         "//pkg/definition:go_default_library",
         "//pkg/definition/block:go_default_library",
         "//pkg/definition/tree:go_default_library",

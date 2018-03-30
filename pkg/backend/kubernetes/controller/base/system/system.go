@@ -12,7 +12,7 @@ import (
 func (c *Controller) syncSystemStatus(
 	system *latticev1.System,
 	services map[tree.NodePath]latticev1.ServiceStatus,
-	deletedServices []tree.NodePath,
+	deletedServices []string,
 ) error {
 	hasFailedService := false
 	hasUpdatingService := false
