@@ -68,7 +68,7 @@ func GetBuild(client client.SystemBuildClient, buildID types.SystemBuildID, form
 		return err
 	}
 
-	p := buildPrinter(build, format)
+	p := BuildPrinter(build, format)
 	p.Print(writer)
 	return nil
 }
@@ -97,7 +97,7 @@ func WatchBuild(client client.SystemBuildClient, buildID types.SystemBuildID, fo
 				return false, err
 			}
 
-			p := buildPrinter(build, format)
+			p := BuildPrinter(build, format)
 			printerChan <- p
 			return false, nil
 		},
@@ -128,7 +128,7 @@ func WatchBuild(client client.SystemBuildClient, buildID types.SystemBuildID, fo
 	
 }
 
-func buildPrinter(build *types.SystemBuild, format printer.Format) printer.Interface {
+func BuildPrinter(build *types.SystemBuild, format printer.Format) printer.Interface {
 	var p printer.Interface
 	switch format {
 	case printer.FormatDefault, printer.FormatTable:

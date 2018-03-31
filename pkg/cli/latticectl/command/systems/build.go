@@ -7,6 +7,10 @@ import (
 	"os"
 	"time"
 	"sort"
+	"bytes"
+	"strings"
+
+	"github.com/buger/goterm"
 
 	"github.com/mlab-lattice/system/pkg/cli/color"
 	"github.com/mlab-lattice/system/pkg/cli/command"
@@ -23,6 +27,8 @@ import (
 
 type BuildCommand struct {
 }
+
+type TableStateMonitor func(*types.SystemBuild, types.SystemBuildID, *spinner.Spinner, string, io.Writer) bool
 
 func (c *BuildCommand) Base() (*latticectl.BaseCommand, error) {
 	output := &lctlcommand.OutputFlag{
@@ -49,7 +55,6 @@ func (c *BuildCommand) Base() (*latticectl.BaseCommand, error) {
 		},
 		Run: func(ctx lctlcommand.SystemCommandContext, args []string) {
 			format, err := output.Value()
-			
 			if err != nil {
 				log.Fatal(err)
 			}
@@ -66,17 +71,23 @@ func (c *BuildCommand) Base() (*latticectl.BaseCommand, error) {
 	return cmd.Base()
 }
 
-func BuildSystem(client client.SystemBuildClient, version string, format printer.Format, writer io.Writer, watch bool) error {
+func BuildSystem(
+	client client.SystemBuildClient,
+	version string,
+	format printer.Format,
+	writer io.Writer,
+	watch bool,
+	) error {
 	buildID, err := client.Create(version)
 	if err != nil {
 		return err
 	}
 	
 	if watch {
-		if format != printer.FormatJSON {
+		if format == printer.FormatDefault || format == printer.FormatTable {
 			fmt.Fprintf(writer, "\nBuild ID: %s\n", color.ID(string(buildID)))
 		}
-		WatchBuild(client, buildID, format, os.Stdout, version)
+		WatchBuild(client, buildID, format, os.Stdout, version, tableStateMonitor)
 	} else {
 		fmt.Fprintf(writer, "Building version %s, Build ID: %s\n\n", version, color.ID(string(buildID)))
 		fmt.Fprintf(writer, "To view the status of the build, run:\n\n    latticectl system:builds:status --build %s [--watch]\n", color.ID(string(buildID)))
@@ -84,13 +95,20 @@ func BuildSystem(client client.SystemBuildClient, version string, format printer
 	return nil
 }
 
-func WatchBuild(client client.SystemBuildClient, buildID types.SystemBuildID, format printer.Format, writer io.Writer, version string) {
+func WatchBuild(
+	client client.SystemBuildClient,
+	buildID types.SystemBuildID,
+	format printer.Format,
+	writer io.Writer,
+	version string,
+	tableStateMonitor TableStateMonitor,
+	) {
+	builds := make(chan *types.SystemBuild)
 	
-	printerChan := make(chan printer.Interface)
-	printerRenderedChan := make(chan bool)
-	buildChan := make(chan *types.SystemBuild)
+	lastHeight := 0
+	var b bytes.Buffer
+	s := spinner.New(spinner.CharSets[14], 100*time.Millisecond)
 	
-	// Poll the API for the builds and send it to the channel
 	go wait.PollImmediateInfinite(
 		5*time.Second,
 		func() (bool, error) {
@@ -99,93 +117,115 @@ func WatchBuild(client client.SystemBuildClient, buildID types.SystemBuildID, fo
 				return false, err
 			}
 
-			p := buildPrinter(build, format)
-			printerChan <- p
-			// NOTE: Blocks here until printerRenderedChan is read
-			// then buildChan is available to be written to
-			buildChan <- build
+			builds <- build
 			return false, nil
 		},
 	)
 	
-	// If displaying a table, use the overwritting terminal watcher, if JSON
-	// use the scrolling watcher
-	var w printer.Watcher2
-	switch format {
-	case printer.FormatDefault, printer.FormatTable:
-		w = &printer.OverwrittingTerminalWatcher2{}
+	var done bool
+
+	for build := range builds {
 		
-	case printer.FormatJSON:
-		w = &printer.ScrollingWatcher2{}
-	}
-
-	go w.Watch(printerChan, writer, printerRenderedChan)
-	
-	
-	// Print accompanying text under the table
-	if format == printer.FormatTable || format == printer.FormatDefault {
-		printAccompanyingText(writer, printerRenderedChan, buildChan, version, buildID)
-	} else {
-		stateWatcher(writer, buildChan, printerRenderedChan)
-	}
-}
-
-func stateWatcher(writer io.Writer, buildChan chan *types.SystemBuild, printerRenderedChan chan bool) {
-	var sentBuild *types.SystemBuild
-	
-	for {
-		<-printerRenderedChan
-		sentBuild = <-buildChan
-		switch sentBuild.State {
-		case types.SystemBuildStateSucceeded, types.SystemBuildStateFailed:
-			return
-		}
-	}
-}
-
-func printAccompanyingText(writer io.Writer, printerRenderedChan chan bool, buildChan chan *types.SystemBuild, version string, buildID types.SystemBuildID) {
-	var sentBuild *types.SystemBuild
-	var s *spinner.Spinner
-
-	for i := 0; true; i++ {
-		<-printerRenderedChan
-		sentBuild = <-buildChan
+		lastHeight = printOutput(b, lastHeight, build, format)
 		
-		if i == 0 {
-			s = spinner.New(spinner.CharSets[14], 100*time.Millisecond)
-			s.Start()
+		if format == printer.FormatTable || format == printer.FormatDefault {
+			done = tableStateMonitor(build, buildID, s, version, writer)
+			if done {
+				return
+			}
+		} else {
+			done = jsonStateMonitor(build)
+			if done {
+				return
+			}
 		}
 		
-		switch sentBuild.State {
-		case types.SystemBuildStatePending:
-			s.Suffix = fmt.Sprintf(" Build pending for version: %s...", color.ID(version))
-		case types.SystemBuildStateRunning:
-			s.Suffix = fmt.Sprintf(" Building version: %s...", color.ID(version))
-		case types.SystemBuildStateSucceeded:
-			s.Stop()
-			
-			printBuildSuccess(writer, version, buildID)
-			return
-		case types.SystemBuildStateFailed:
-			s.Stop()
-			
-			var componentErrors [][]string
-			
-			for serviceName, service := range sentBuild.Services {
-				for componentName, component := range service.Components {
-					if component.State == types.ComponentBuildStateFailed {
-						componentErrors = append(componentErrors, []string{
-							fmt.Sprintf("%s:%s", serviceName, componentName),
-							string(*component.FailureMessage),
-						})
-					}
+		
+	}
+	
+}
+
+func tableStateMonitor(build *types.SystemBuild, buildID types.SystemBuildID, s *spinner.Spinner, version string, writer io.Writer) bool {
+	switch build.State {
+	case types.SystemBuildStatePending:
+		s.Start()
+		s.Suffix = fmt.Sprintf(" Build pending for version: %s...", color.ID(version))
+		return false
+	case types.SystemBuildStateRunning:
+		s.Start()
+		s.Suffix = fmt.Sprintf(" Building version: %s...", color.ID(version))
+		return false
+	case types.SystemBuildStateSucceeded:
+		s.Stop()
+		
+		printBuildSuccess(writer, version, buildID)
+		
+		return true
+	case types.SystemBuildStateFailed:
+		s.Stop()
+		
+		var componentErrors [][]string
+		
+		for serviceName, service := range build.Services {
+			for componentName, component := range service.Components {
+				if component.State == types.ComponentBuildStateFailed {
+					componentErrors = append(componentErrors, []string{
+						fmt.Sprintf("%s:%s", serviceName, componentName),
+						string(*component.FailureMessage),
+					})
 				}
 			}
-			
-			printBuildFailure(writer, version, componentErrors)
-			return
+		}
+		
+		printBuildFailure(writer, version, componentErrors)
+		
+		return true
+	default:
+		return false
+	}
+}
+
+func jsonStateMonitor(build *types.SystemBuild) bool {
+	switch build.State {
+	case types.SystemBuildStatePending:
+		return false
+	case types.SystemBuildStateRunning:
+		return false
+	case types.SystemBuildStateSucceeded:
+		return true
+	case types.SystemBuildStateFailed:
+		return true
+	default:
+		return false
+	}
+}
+
+func printOutput(
+	b bytes.Buffer,
+	lastHeight int,
+	build *types.SystemBuild,
+	format printer.Format,
+	) int {
+	printer := BuildPrinter(build, format)
+
+	// Read the new printer's output
+	printer.Print(&b)
+	output := b.String()
+
+	// Remove the new printer's output from the buffer
+	b.Truncate(0)
+
+	for i := 0; i <= lastHeight; i++ {
+		if i != 0 {
+			goterm.MoveCursorUp(1)
+			goterm.ResetLine("")
 		}
 	}
+
+	goterm.Print(output)
+	goterm.Flush()
+
+	return len(strings.Split(output, "\n"))
 }
 
 func printBuildSuccess(writer io.Writer, version string, buildID types.SystemBuildID) {
@@ -204,7 +244,8 @@ func printBuildFailure(writer io.Writer, version string, componentErrors [][]str
 	}
 }
 
-func buildPrinter(build *types.SystemBuild, format printer.Format) printer.Interface {
+
+func BuildPrinter(build *types.SystemBuild, format printer.Format) printer.Interface {
 	var p printer.Interface
 	switch format {
 	case printer.FormatDefault, printer.FormatTable:
@@ -227,7 +268,6 @@ func buildPrinter(build *types.SystemBuild, format printer.Format) printer.Inter
 			tw.ALIGN_CENTER,
 			tw.ALIGN_LEFT,
 		}
-		fmt.Fprintln(os.Stderr, "buildPrinter BUILD: ", build, "\n\n-------\n\n")
 
 		var rows [][]string
 		// fmt.Fprintln(os.Stdout, build)

@@ -1,7 +1,7 @@
 package services
 
 import (
-	"fmt"
+	//"fmt"
 	"io"
 	"log"
 	"os"
@@ -16,6 +16,8 @@ import (
 	"github.com/mlab-lattice/system/pkg/types"
 
 	"k8s.io/apimachinery/pkg/util/wait"
+	
+	tw "github.com/tfogo/tablewriter"
 )
 
 // ListServicesSupportedFormats is the list of printer.Formats supported
@@ -73,8 +75,10 @@ func ListServices(client client.ServiceClient, format printer.Format, writer io.
 	if err != nil {
 		return err
 	}
-
-	fmt.Printf("%v\n", deploys)
+	
+	printer := servicesPrinter(deploys, format)
+	printer.Print(writer)
+	//fmt.Printf("%v\n", deploys)
 	return nil
 }
 
@@ -113,7 +117,31 @@ func servicesPrinter(services []types.Service, format printer.Format) printer.In
 	var p printer.Interface
 	switch format {
 	case printer.FormatDefault, printer.FormatTable:
-		headers := []string{"ID", "Path", "State"}
+		headers := []string{"ID", "Path", "State", "Instances", "Info"}
+		
+		headerColors := []tw.Colors{
+			{tw.Bold},
+			{tw.Bold},
+			{tw.Bold},
+			{tw.Bold},
+			{tw.Bold},
+		}
+		
+		columnColors := []tw.Colors{
+			{tw.FgHiCyanColor},
+			{tw.FgHiCyanColor},
+			{},
+			{},
+			{},
+		}
+		
+		columnAlignment := []int{
+			tw.ALIGN_CENTER,
+			tw.ALIGN_CENTER,
+			tw.ALIGN_CENTER,
+			tw.ALIGN_RIGHT,
+			tw.ALIGN_LEFT,
+		}
 
 		var rows [][]string
 		for _, service := range services {
@@ -126,17 +154,29 @@ func servicesPrinter(services []types.Service, format printer.Format) printer.In
 			default:
 				stateColor = color.Warning
 			}
+			
+			var info string
+			if service.FailureMessage == nil {
+				info = ""
+			} else {
+				info = *service.FailureMessage
+			}
 
 			rows = append(rows, []string{
 				string(service.ID),
 				string(service.Path),
 				stateColor(string(service.State)),
+				string(service.UpdatedInstances),
+				string(info),
 			})
 		}
 
 		p = &printer.Table{
-			Headers: headers,
-			Rows:    rows,
+			Headers: 					headers,
+			Rows:    					rows,
+			HeaderColors: 		headerColors,
+			ColumnColors: 		columnColors,
+			ColumnAlignment: 	columnAlignment,
 		}
 
 	case printer.FormatJSON:

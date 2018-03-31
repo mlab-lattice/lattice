@@ -5,13 +5,19 @@ import (
 	"io"
 	"log"
 	"os"
+	"time"
 
+	"github.com/mlab-lattice/system/pkg/cli/color"
 	"github.com/mlab-lattice/system/pkg/cli/command"
 	"github.com/mlab-lattice/system/pkg/cli/latticectl"
 	lctlcommand "github.com/mlab-lattice/system/pkg/cli/latticectl/command"
 	"github.com/mlab-lattice/system/pkg/cli/printer"
 	"github.com/mlab-lattice/system/pkg/managerapi/client"
 	"github.com/mlab-lattice/system/pkg/types"
+
+	"k8s.io/apimachinery/pkg/util/wait"
+
+	tw "github.com/tfogo/tablewriter"
 )
 
 type StatusCommand struct {
@@ -62,15 +68,108 @@ func GetService(client client.ServiceClient, serviceID types.ServiceID, format p
 		return err
 	}
 
-	fmt.Printf("%v\n", service)
+	printer := servicePrinter(service, format)
+	printer.Print(writer)
 	return nil
 }
 
 func WatchService(client client.ServiceClient, serviceID types.ServiceID, format printer.Format, writer io.Writer) {
-	service, err := client.Get(serviceID)
-	if err != nil {
-		log.Panic(err)
+	// Poll the API for the builds and send it to the channel
+	printerChan := make(chan printer.Interface)
+	go wait.PollImmediateInfinite(
+		5*time.Second,
+		func() (bool, error) {
+			service, err := client.Get(serviceID)
+			if err != nil {
+				return false, err
+			}
+
+			p := servicePrinter(service, format)
+			printerChan <- p
+			return false, nil
+		},
+	)
+
+	// If displaying a table, use the overwriting terminal watcher, if JSON
+	// use the scrolling watcher
+	var w printer.Watcher
+	switch format {
+	case printer.FormatDefault, printer.FormatTable:
+		w = &printer.OverwrittingTerminalWatcher{}
+
+	case printer.FormatJSON:
+		w = &printer.ScrollingWatcher{}
 	}
 
-	fmt.Printf("%v\n", service)
+	w.Watch(printerChan, writer)
+}
+
+func servicePrinter(service *types.Service, format printer.Format) printer.Interface {
+	var p printer.Interface
+	switch format {
+	case printer.FormatDefault, printer.FormatTable:
+		headers := []string{"Path", "State", "Instances", "Info"}
+
+		headerColors := []tw.Colors{
+			{tw.Bold},
+			{tw.Bold},
+			{tw.Bold},
+			{tw.Bold},
+		}
+
+		columnColors := []tw.Colors{
+			{tw.FgHiCyanColor},
+			{},
+			{},
+			{},
+		}
+
+		columnAlignment := []int{
+			tw.ALIGN_CENTER,
+			tw.ALIGN_CENTER,
+			tw.ALIGN_RIGHT,
+			tw.ALIGN_LEFT,
+		}
+
+		var rows [][]string
+
+		var stateColor color.Color
+		switch service.State {
+		case types.ServiceStateFailed:
+			stateColor = color.Failure
+		case types.ServiceStateStable:
+			stateColor = color.Success
+		default:
+			stateColor = color.Warning
+		}
+
+		var info string
+		if service.FailureMessage == nil {
+			info = ""
+		} else {
+			info = *service.FailureMessage
+		}
+
+		rows = append(rows, []string{
+			string(service.Path),
+			stateColor(string(service.State)),
+			fmt.Sprintf("%v", service.UpdatedInstances),
+			string(info),
+		})
+
+		p = &printer.Table{
+			Headers:         headers,
+			Rows:            rows,
+			HeaderColors:    headerColors,
+			ColumnColors:    columnColors,
+			ColumnAlignment: columnAlignment,
+		}
+
+	case printer.FormatJSON:
+		p = &printer.JSON{
+			Value: service,
+		}
+	}
+
+	return p
 }

@@ -1,16 +1,21 @@
 package deploys
 
 import (
-	"fmt"
 	"io"
 	"log"
 	"os"
+	"time"
 
+	"github.com/mlab-lattice/system/pkg/cli/color"
 	"github.com/mlab-lattice/system/pkg/cli/command"
 	"github.com/mlab-lattice/system/pkg/cli/latticectl"
 	lctlcommand "github.com/mlab-lattice/system/pkg/cli/latticectl/command"
 	"github.com/mlab-lattice/system/pkg/cli/printer"
 	"github.com/mlab-lattice/system/pkg/managerapi/client"
+	"github.com/mlab-lattice/system/pkg/types"
+
+	"k8s.io/apimachinery/pkg/util/wait"
+	tw "github.com/tfogo/tablewriter"
 )
 
 // ListDeploysSupportedFormats is the list of printer.Formats supported
@@ -69,37 +74,91 @@ func ListDeploys(client client.RolloutClient, format printer.Format, writer io.W
 		return err
 	}
 
-	fmt.Printf("%v\n", deploys)
+	p := deploysPrinter(deploys, format)
+	p.Print(writer)
 	return nil
 }
 
 func WatchDeploys(client client.RolloutClient, format printer.Format, writer io.Writer) {
-	//// Poll the API for the builds and send it to the channel
-	//printerChan := make(chan printer.Interface)
-	//go wait.PollImmediateInfinite(
-	//	5*time.Second,
-	//	func() (bool, error) {
-	//		builds, err := client.List()
-	//		if err != nil {
-	//			return false, err
-	//		}
-	//
-	//		p := buildsPrinter(builds, format)
-	//		printerChan <- p
-	//		return false, nil
-	//	},
-	//)
-	//
-	//// If displaying a table, use the overwritting terminal watcher, if JSON
-	//// use the scrolling watcher
-	//var w printer.Watcher
-	//switch format {
-	//case printer.FormatDefault, printer.FormatTable:
-	//	w = &printer.OverwrittingTerminalWatcher{}
-	//
-	//case printer.FormatJSON:
-	//	w = &printer.ScrollingWatcher{}
-	//}
-	//
-	//w.Watch(printerChan, writer)
+	// Poll the API for the builds and send it to the channel
+	printerChan := make(chan printer.Interface)
+	go wait.PollImmediateInfinite(
+		5*time.Second,
+		func() (bool, error) {
+			deploys, err := client.List()
+			if err != nil {
+				return false, err
+			}
+	
+			p := deploysPrinter(deploys, format)
+			printerChan <- p
+			return false, nil
+		},
+	)
+	
+	// If displaying a table, use the overwritting terminal watcher, if JSON
+	// use the scrolling watcher
+	var w printer.Watcher
+	switch format {
+	case printer.FormatDefault, printer.FormatTable:
+		w = &printer.OverwrittingTerminalWatcher{}
+	
+	case printer.FormatJSON:
+		w = &printer.ScrollingWatcher{}
+	}
+	
+	w.Watch(printerChan, writer)
+}
+
+func deploysPrinter(deploys []types.SystemRollout, format printer.Format) printer.Interface {
+	var p printer.Interface
+	switch format {
+	case printer.FormatDefault, printer.FormatTable:
+		headers := []string{"ID", "Build ID", "State"}
+		
+		headerColors := []tw.Colors{
+			{tw.Bold},
+			{tw.Bold},
+			{tw.Bold},
+		}
+		
+		columnColors := []tw.Colors{
+			{tw.FgHiCyanColor},
+			{tw.FgHiCyanColor},
+			{},
+		}
+
+		var rows [][]string
+		for _, deploy := range deploys {
+			var stateColor color.Color
+			switch deploy.State {
+			case types.SystemRolloutStateSucceeded:
+				stateColor = color.Success
+			case types.SystemRolloutStateFailed:
+				stateColor = color.Failure
+			default:
+				stateColor = color.Warning
+			}
+
+			rows = append(rows, []string{
+				string(deploy.ID),
+				string(deploy.BuildID),
+				stateColor(string(deploy.State)),
+			})
+		}
+		
+		p = &printer.Table{
+			Headers: 			headers,
+			Rows:    			rows,
+			HeaderColors: headerColors,
+			ColumnColors: columnColors,
+		}
+
+	case printer.FormatJSON:
+		p = &printer.JSON{
+			Value: deploys,
+		}
+	}
+
+	return p
 }

@@ -4,8 +4,6 @@ import (
 	"bytes"
 	"io"
 	"strings"
-	"os"
-	"fmt"
 
 	"github.com/buger/goterm"
 )
@@ -64,9 +62,10 @@ func (w *OverwrittingTerminalWatcher) Watch(printers chan Interface, writer io.W
 		
 		for i := 0; i <= lastHeight; i++ {
 			if i != 0 {
-				goterm.MoveCursorUp(1)
+				
 				goterm.ResetLine("")
 			}
+			goterm.MoveCursorUp(1)
 		}
 
 		goterm.Print(output)
@@ -107,9 +106,7 @@ func (w *OverwrittingTerminalWatcher2) Watch(printers chan Interface, writer io.
 		//goterm.MoveCursorDown(1)
 		goterm.Flush()
 		
-		fmt.Fprintln(os.Stderr, "\nBEFORE printerRenderedChan\n")
 		printerRenderedChan <- true
-		fmt.Fprintln(os.Stderr, "\nAFTER printerRenderedChan\n")
 		
 		// if firstPrint {
 		// 	printCompleteChan <- "first"
