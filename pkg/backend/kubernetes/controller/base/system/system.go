@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"reflect"
 
-	kubeconstants "github.com/mlab-lattice/system/pkg/backend/kubernetes/constants"
+	"github.com/mlab-lattice/system/pkg/backend/kubernetes/constants"
 	latticev1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	"github.com/mlab-lattice/system/pkg/definition/tree"
 )
@@ -93,7 +93,7 @@ func (c *Controller) removeFinalizer(system *latticev1.System) (*latticev1.Syste
 	var finalizers []string
 	found := false
 	for _, finalizer := range system.Finalizers {
-		if finalizer == kubeconstants.KubeFinalizerSystemController {
+		if finalizer == constants.KubeFinalizerSystemController {
 			found = true
 			continue
 		}

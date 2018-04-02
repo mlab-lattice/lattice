@@ -6,7 +6,6 @@ import (
 
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/constants"
 	latticev1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
-	kubeutil "github.com/mlab-lattice/system/pkg/backend/kubernetes/util/kubernetes"
 	"github.com/mlab-lattice/system/pkg/definition/tree"
 
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -28,7 +27,7 @@ func (c *Controller) syncSystemServices(system *latticev1.System) (map[tree.Node
 	// can continue to just look at the label as the confirmed path of the service, as opposed to trying
 	// to figure out if a rename is in flight.
 	services := make(map[tree.NodePath]latticev1.SystemStatusService)
-	systemNamespace := kubeutil.SystemNamespace(c.latticeID, system.V1ID())
+	systemNamespace := system.ResourceNamespace(c.latticeID)
 	serviceNames := set.NewSet()
 
 	// Loop through the services defined in the system's Spec, and create/update any that need it
@@ -51,7 +50,7 @@ func (c *Controller) syncSystemServices(system *latticev1.System) (map[tree.Node
 				// The service wasn't in the cache, so do a quorum read to see if it was created.
 				// N.B.: could first loop through and check to see if we need to do a quorum read
 				// on any of the services, then just do one list.
-				service, err = kubeutil.GetServiceForPath(c.latticeClient.LatticeV1(), systemNamespace, path)
+				service, err = c.getServiceFromAPI(systemNamespace, path)
 				if err != nil {
 					if !errors.IsNotFound(err) {
 						return nil, nil, err
@@ -113,7 +112,7 @@ func (c *Controller) syncSystemServices(system *latticev1.System) (map[tree.Node
 						"could not create service %v (%v, system %v) because it already existed, but it does not exist",
 						serviceName,
 						path,
-						system.Name,
+						system.V1ID(),
 					)
 					return nil, nil, err
 				}
@@ -151,9 +150,8 @@ func (c *Controller) syncSystemServices(system *latticev1.System) (map[tree.Node
 	for _, service := range allServices {
 		if !serviceNames.Contains(service.Name) {
 			glog.V(4).Infof(
-				"Found service %v (%v) that is no longer in the system Spec",
-				service.Name,
-				system.Name,
+				"Found %v that is no longer in the system Spec",
+				service.Description(),
 			)
 			deletedServices = append(deletedServices, service.Name)
 
@@ -175,7 +173,7 @@ func (c *Controller) createNewService(
 	serviceInfo *latticev1.SystemSpecServiceInfo,
 	path tree.NodePath,
 ) (*latticev1.Service, error) {
-	service, err := c.newService(system, serviceInfo, path)
+	service, err := c.newService(name, system, serviceInfo, path)
 	if err != nil {
 		return nil, err
 	}
@@ -184,6 +182,7 @@ func (c *Controller) createNewService(
 }
 
 func (c *Controller) newService(
+	name string,
 	system *latticev1.System,
 	serviceInfo *latticev1.SystemSpecServiceInfo,
 	path tree.NodePath,
@@ -193,12 +192,11 @@ func (c *Controller) newService(
 		return nil, err
 	}
 
-	systemNamespace := kubeutil.SystemNamespace(c.latticeID, system.V1ID())
-	pathDomain := path.ToDomain()
+	systemNamespace := system.ResourceNamespace(c.latticeID)
 
 	service := &latticev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:            pathDomain,
+			Name:            name,
 			Namespace:       systemNamespace,
 			OwnerReferences: []metav1.OwnerReference{*metav1.NewControllerRef(system, controllerKind)},
 		},
@@ -232,7 +230,7 @@ func (c *Controller) serviceSpec(
 		err := fmt.Errorf(
 			"service %v (%v) invalid definition: num_instances or min_instances must be set",
 			path.ToDomain(),
-			system.Name,
+			system.V1ID(),
 		)
 		return latticev1.ServiceSpec{}, err
 	}
@@ -320,4 +318,28 @@ func (c *Controller) getServiceFromCache(namespace string, path tree.NodePath) (
 	}
 
 	return services[0], nil
+}
+
+func (c *Controller) getServiceFromAPI(namespace string, path tree.NodePath) (*latticev1.Service, error) {
+	selector := labels.NewSelector()
+	requirement, err := labels.NewRequirement(constants.LabelKeyServicePath, selection.Equals, []string{path.ToDomain()})
+	if err != nil {
+		return nil, err
+	}
+	selector = selector.Add(*requirement)
+
+	services, err := c.latticeClient.LatticeV1().Services(namespace).List(metav1.ListOptions{LabelSelector: selector.String()})
+	if err != nil {
+		return nil, err
+	}
+
+	if len(services.Items) == 0 {
+		return nil, errors.NewNotFound(latticev1.Resource(latticev1.ResourceSingularService), path.ToDomain())
+	}
+
+	if len(services.Items) > 1 {
+		return nil, fmt.Errorf("found multiple services with path %v", path.String())
+	}
+
+	return &services.Items[0], nil
 }

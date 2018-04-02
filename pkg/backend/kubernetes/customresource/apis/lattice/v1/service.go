@@ -3,9 +3,12 @@ package v1
 import (
 	"encoding/json"
 
+	"github.com/mlab-lattice/system/pkg/api/v1"
+	kubeutil "github.com/mlab-lattice/system/pkg/backend/kubernetes/util/kubernetes"
 	"github.com/mlab-lattice/system/pkg/definition"
 	"github.com/mlab-lattice/system/pkg/definition/tree"
 
+	"fmt"
 	"github.com/mlab-lattice/system/pkg/backend/kubernetes/constants"
 	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -26,6 +29,20 @@ type Service struct {
 	metav1.ObjectMeta `json:"metadata"`
 	Spec              ServiceSpec   `json:"spec"`
 	Status            ServiceStatus `json:"status,omitempty"`
+}
+
+func (s *Service) Description() string {
+	systemID, err := kubeutil.SystemID(s.Namespace)
+	if err != nil {
+		systemID = v1.SystemID(fmt.Sprintf("UNKNOWN (namespace: %v)", systemID))
+	}
+
+	path, ok := s.PathLabel()
+	if ok {
+		return fmt.Sprintf("service %v (%v in system %v)", s.Name, path, systemID)
+	}
+
+	return fmt.Sprintf("service %v (no path, system %v)", s.Name, systemID)
 }
 
 func (s *Service) PathLabel() (tree.NodePath, bool) {

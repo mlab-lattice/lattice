@@ -9,7 +9,6 @@ import (
 	awscloudprovider "github.com/mlab-lattice/system/pkg/backend/kubernetes/cloudprovider/aws"
 	latticev1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	kubetf "github.com/mlab-lattice/system/pkg/backend/kubernetes/terraform/aws"
-	kubeutil "github.com/mlab-lattice/system/pkg/backend/kubernetes/util/kubernetes"
 	tf "github.com/mlab-lattice/system/pkg/util/terraform"
 	awstfprovider "github.com/mlab-lattice/system/pkg/util/terraform/provider/aws"
 
@@ -52,10 +51,8 @@ func (c *Controller) syncNodePoolState(nodePool *latticev1.NodePool) (*latticev1
 }
 
 func (c *Controller) provisionNodePool(nodePool *latticev1.NodePool) (*latticev1.NodePool, error) {
-	nodePoolID := kubeutil.NodePoolIDLabelValue(nodePool)
-
 	config := c.nodePoolConfig(nodePool)
-	_, err := tf.Apply(workDirectory(nodePoolID), config)
+	_, err := tf.Apply(workDirectory(nodePool.IDLabelValue()), config)
 	if err != nil {
 		return nil, err
 	}
@@ -80,15 +77,13 @@ func (c *Controller) provisionNodePool(nodePool *latticev1.NodePool) (*latticev1
 }
 
 func (c *Controller) deprovisionNodePool(nodePool *latticev1.NodePool) error {
-	nodePoolID := kubeutil.NodePoolIDLabelValue(nodePool)
-
 	config := c.nodePoolConfig(nodePool)
-	_, err := tf.Destroy(workDirectory(nodePoolID), config)
+	_, err := tf.Destroy(workDirectory(nodePool.IDLabelValue()), config)
 	return err
 }
 
 func (c *Controller) nodePoolConfig(nodePool *latticev1.NodePool) *tf.Config {
-	nodePoolID := kubeutil.NodePoolIDLabelValue(nodePool)
+	nodePoolID := nodePool.IDLabelValue()
 
 	nodePoolModule := kubetf.NewNodePoolModule(
 		c.terraformModuleRoot,
@@ -147,7 +142,6 @@ type nodePoolInfo struct {
 }
 
 func (c *Controller) currentNodePoolInfo(nodePool *latticev1.NodePool) (nodePoolInfo, error) {
-	nodePoolID := kubeutil.NodePoolIDLabelValue(nodePool)
 	outputVars := []string{
 		terraformOutputAutoscalingGroupID,
 		terraformOutputAutoscalingGroupName,
@@ -156,7 +150,7 @@ func (c *Controller) currentNodePoolInfo(nodePool *latticev1.NodePool) (nodePool
 	}
 
 	config := c.nodePoolConfig(nodePool)
-	values, err := tf.Output(workDirectory(nodePoolID), config, outputVars)
+	values, err := tf.Output(workDirectory(nodePool.IDLabelValue()), config, outputVars)
 	if err != nil {
 		return nodePoolInfo{}, err
 	}

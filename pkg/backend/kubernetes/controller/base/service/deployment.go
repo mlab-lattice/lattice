@@ -241,7 +241,7 @@ func (c *Controller) untransformedDeploymentSpec(
 		dnsSearches = append(dnsSearches, fmt.Sprintf("%v.local.%v", parentDomain, baseSearchPath))
 	}
 
-	// as a constant cant be dereferenced, create a local copy
+	// as a constant cant be referenced, create a local copy
 	ndotsValue := ndotsValue
 	dnsConfig := corev1.PodDNSConfig{
 		Nameservers: []string{},
@@ -270,11 +270,11 @@ func (c *Controller) untransformedDeploymentSpec(
 				DNSPolicy:  corev1.DNSDefault,
 				DNSConfig:  &dnsConfig,
 				Affinity: &corev1.Affinity{
-					NodeAffinity:    kubeutil.NodePoolNodeAffinity(nodePool),
+					NodeAffinity:    nodePool.Affinity(),
 					PodAntiAffinity: podAntiAffinity,
 				},
 				Tolerations: []corev1.Toleration{
-					kubeutil.NodePoolToleration(nodePool),
+					nodePool.Toleration(),
 				},
 			},
 		},

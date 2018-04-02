@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 
 	"github.com/mlab-lattice/system/pkg/api/v1"
+	kubeutil "github.com/mlab-lattice/system/pkg/backend/kubernetes/util/kubernetes"
 	"github.com/mlab-lattice/system/pkg/definition"
 	"github.com/mlab-lattice/system/pkg/definition/tree"
 
@@ -30,6 +31,10 @@ type System struct {
 
 func (s *System) V1ID() v1.SystemID {
 	return v1.SystemID(s.Name)
+}
+
+func (s *System) ResourceNamespace(latticeID v1.LatticeID) string {
+	return kubeutil.SystemNamespace(latticeID, s.V1ID())
 }
 
 // N.B.: important: if you update the SystemSpec or SystemSpecServiceInfo you must also update

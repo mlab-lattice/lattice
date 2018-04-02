@@ -25,9 +25,11 @@ go_library(
     deps = [
         "//pkg/api/v1:go_default_library",
         "//pkg/backend/kubernetes/constants:go_default_library",
+        "//pkg/backend/kubernetes/util/kubernetes:go_default_library",
         "//pkg/definition:go_default_library",
         "//pkg/definition/block:go_default_library",
         "//pkg/definition/tree:go_default_library",
+        "@io_k8s_api//core/v1:go_default_library",
         "@io_k8s_apiextensions_apiserver//pkg/apis/apiextensions/v1beta1:go_default_library",
         "@io_k8s_apimachinery//pkg/apis/meta/v1:go_default_library",
         "@io_k8s_apimachinery//pkg/runtime:go_default_library",
