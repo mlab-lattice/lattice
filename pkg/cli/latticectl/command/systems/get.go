@@ -176,11 +176,12 @@ func printSystemFailure(writer io.Writer, systemID types.SystemID, serviceErrors
 	}
 }
 
+// Currently just prints systems. In the future, could print more details (e.g. jobs, node pools)
 func SystemPrinter(system *types.System, format printer.Format) printer.Interface {
 	var p printer.Interface
 	switch format {
 	case printer.FormatDefault, printer.FormatTable:
-		headers := []string{"Service", "State", "Info", "Updated", "Stale", "Addresses"}
+		headers := []string{"Service", "State", "Updated", "Stale", "Addresses", "Info"}
 
 		headerColors := []tw.Colors{
 			{tw.Bold},
@@ -201,11 +202,11 @@ func SystemPrinter(system *types.System, format printer.Format) printer.Interfac
 		}
 
 		columnAlignment := []int{
-			tw.ALIGN_CENTER,
-			tw.ALIGN_CENTER,
+			tw.ALIGN_LEFT,
 			tw.ALIGN_LEFT,
 			tw.ALIGN_RIGHT,
 			tw.ALIGN_RIGHT,
+			tw.ALIGN_LEFT,
 			tw.ALIGN_LEFT,
 		}
 
@@ -242,10 +243,10 @@ func SystemPrinter(system *types.System, format printer.Format) printer.Interfac
 			rows = append(rows, []string{
 				string(serviceName),
 				stateColor(string(service.State)),
-				string(infoMessage),
 				fmt.Sprintf("%d", service.UpdatedInstances),
 				fmt.Sprintf("%d", service.StaleInstances),
 				strings.Join(addresses, ","),
+				string(infoMessage),
 			})
 
 			sort.Slice(rows, func(i, j int) bool { return rows[i][0] < rows[j][0] })

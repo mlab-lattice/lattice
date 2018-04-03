@@ -1,10 +1,12 @@
 package services
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"log"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/mlab-lattice/system/pkg/cli/color"
@@ -17,6 +19,7 @@ import (
 
 	"k8s.io/apimachinery/pkg/util/wait"
 
+	"github.com/briandowns/spinner"
 	tw "github.com/tfogo/tablewriter"
 )
 
@@ -74,8 +77,12 @@ func GetService(client client.ServiceClient, serviceID types.ServiceID, format p
 }
 
 func WatchService(client client.ServiceClient, serviceID types.ServiceID, format printer.Format, writer io.Writer) {
-	// Poll the API for the builds and send it to the channel
-	printerChan := make(chan printer.Interface)
+	services := make(chan *types.Service)
+
+	lastHeight := 0
+	var b bytes.Buffer
+	s := spinner.New(spinner.CharSets[14], 100*time.Millisecond)
+
 	go wait.PollImmediateInfinite(
 		5*time.Second,
 		func() (bool, error) {
@@ -84,33 +91,53 @@ func WatchService(client client.ServiceClient, serviceID types.ServiceID, format
 				return false, err
 			}
 
-			p := servicePrinter(service, format)
-			printerChan <- p
+			services <- service
 			return false, nil
 		},
 	)
 
-	// If displaying a table, use the overwriting terminal watcher, if JSON
-	// use the scrolling watcher
-	var w printer.Watcher
-	switch format {
-	case printer.FormatDefault, printer.FormatTable:
-		w = &printer.OverwrittingTerminalWatcher{}
+	for service := range services {
+		p := servicePrinter(service, format)
+		lastHeight = p.Overwrite(b, lastHeight)
 
-	case printer.FormatJSON:
-		w = &printer.ScrollingWatcher{}
+		if format == printer.FormatDefault || format == printer.FormatTable {
+			printServiceState(writer, s, service)
+		}
 	}
+}
 
-	w.Watch(printerChan, writer)
+func printServiceState(writer io.Writer, s *spinner.Spinner, service *types.Service) {
+	switch service.State {
+	case types.ServiceStatePending:
+		s.Start()
+		s.Suffix = fmt.Sprintf(" Service %s is pending...", color.ID(string(service.Path)))
+	case types.ServiceStateScalingDown:
+		s.Start()
+		s.Suffix = fmt.Sprintf(" Service %s is scaling down...", color.ID(string(service.Path)))
+	case types.ServiceStateScalingUp:
+		s.Start()
+		s.Suffix = fmt.Sprintf(" Service %s is scaling up...", color.ID(string(service.Path)))
+	case types.ServiceStateUpdating:
+		s.Start()
+		s.Suffix = fmt.Sprintf(" Service %s is updating...", color.ID(string(service.Path)))
+	case types.ServiceStateStable:
+		s.Stop()
+		fmt.Fprint(writer, color.BoldHiSuccess("Service %s is stable.", string(service.Path)))
+	case types.ServiceStateFailed:
+		s.Stop()
+		fmt.Fprint(writer, color.BoldHiFailure("Service %s has failed. Error: %s", string(service.Path), service.FailureMessage))
+	}
 }
 
 func servicePrinter(service *types.Service, format printer.Format) printer.Interface {
 	var p printer.Interface
 	switch format {
 	case printer.FormatDefault, printer.FormatTable:
-		headers := []string{"Path", "State", "Instances", "Info"}
+		headers := []string{"Service", "State", "Updated", "Stale", "Addresses", "Info"}
 
 		headerColors := []tw.Colors{
+			{tw.Bold},
+			{tw.Bold},
 			{tw.Bold},
 			{tw.Bold},
 			{tw.Bold},
@@ -122,12 +149,16 @@ func servicePrinter(service *types.Service, format printer.Format) printer.Inter
 			{},
 			{},
 			{},
+			{},
+			{},
 		}
 
 		columnAlignment := []int{
-			tw.ALIGN_CENTER,
-			tw.ALIGN_CENTER,
+			tw.ALIGN_LEFT,
+			tw.ALIGN_LEFT,
 			tw.ALIGN_RIGHT,
+			tw.ALIGN_RIGHT,
+			tw.ALIGN_LEFT,
 			tw.ALIGN_LEFT,
 		}
 
@@ -150,10 +181,17 @@ func servicePrinter(service *types.Service, format printer.Format) printer.Inter
 			info = *service.FailureMessage
 		}
 
+		var addresses []string
+		for port, address := range service.PublicPorts {
+			addresses = append(addresses, fmt.Sprintf("%v: %v", port, address.Address))
+		}
+
 		rows = append(rows, []string{
 			string(service.Path),
 			stateColor(string(service.State)),
-			fmt.Sprintf("%v", service.UpdatedInstances),
+			fmt.Sprintf("%d", service.UpdatedInstances),
+			fmt.Sprintf("%d", service.StaleInstances),
+			strings.Join(addresses, ","),
 			string(info),
 		})
 

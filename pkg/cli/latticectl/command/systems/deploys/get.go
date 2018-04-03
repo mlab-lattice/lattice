@@ -1,10 +1,11 @@
 package deploys
 
 import (
-	"fmt"
+	"bytes"
 	"io"
 	"log"
 	"os"
+	"time"
 
 	"github.com/mlab-lattice/system/pkg/cli/command"
 	"github.com/mlab-lattice/system/pkg/cli/latticectl"
@@ -12,6 +13,8 @@ import (
 	"github.com/mlab-lattice/system/pkg/cli/printer"
 	"github.com/mlab-lattice/system/pkg/managerapi/client"
 	"github.com/mlab-lattice/system/pkg/types"
+
+	"k8s.io/apimachinery/pkg/util/wait"
 )
 
 type GetCommand struct {
@@ -62,15 +65,32 @@ func GetDeploy(client client.RolloutClient, deployID types.SystemRolloutID, form
 		return err
 	}
 
-	fmt.Printf("%v\n", deploy)
+	p := deploysPrinter([]types.SystemRollout{*deploy}, format)
+	p.Print(writer)
 	return nil
 }
 
 func WatchDeploy(client client.RolloutClient, deployID types.SystemRolloutID, format printer.Format, writer io.Writer) {
-	deploy, err := client.Get(deployID)
-	if err != nil {
-		log.Panic(err)
-	}
+	deploys := make(chan *types.SystemRollout)
 
-	fmt.Printf("%v\n", deploy)
+	lastHeight := 0
+	var b bytes.Buffer
+
+	go wait.PollImmediateInfinite(
+		5*time.Second,
+		func() (bool, error) {
+			deploy, err := client.Get(deployID)
+			if err != nil {
+				return false, err
+			}
+
+			deploys <- deploy
+			return false, nil
+		},
+	)
+
+	for deploy := range deploys {
+		p := deploysPrinter([]types.SystemRollout{*deploy}, format)
+		lastHeight = p.Overwrite(b, lastHeight)
+	}
 }

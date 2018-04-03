@@ -36,6 +36,6 @@ func DeleteSystem(client client.SystemClient, name types.SystemID, writer io.Wri
 		return err
 	}
 
-	fmt.Fprintf(writer, "\nSystem %s deleted.\n", color.ID(string(name)))
+	fmt.Fprintf(writer, "System %s deleted.\n", color.ID(string(name)))
 	return nil
 }

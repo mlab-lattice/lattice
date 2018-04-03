@@ -1,6 +1,7 @@
 package deploys
 
 import (
+	"bytes"
 	"io"
 	"log"
 	"os"
@@ -80,34 +81,28 @@ func ListDeploys(client client.RolloutClient, format printer.Format, writer io.W
 }
 
 func WatchDeploys(client client.RolloutClient, format printer.Format, writer io.Writer) {
-	// Poll the API for the builds and send it to the channel
-	printerChan := make(chan printer.Interface)
+	deployLists := make(chan []types.SystemRollout)
+
+	lastHeight := 0
+	var b bytes.Buffer
+
 	go wait.PollImmediateInfinite(
 		5*time.Second,
 		func() (bool, error) {
-			deploys, err := client.List()
+			deployList, err := client.List()
 			if err != nil {
 				return false, err
 			}
 
-			p := deploysPrinter(deploys, format)
-			printerChan <- p
+			deployLists <- deployList
 			return false, nil
 		},
 	)
 
-	// If displaying a table, use the overwritting terminal watcher, if JSON
-	// use the scrolling watcher
-	var w printer.Watcher
-	switch format {
-	case printer.FormatDefault, printer.FormatTable:
-		w = &printer.OverwrittingTerminalWatcher{}
-
-	case printer.FormatJSON:
-		w = &printer.ScrollingWatcher{}
+	for deployList := range deployLists {
+		p := deploysPrinter(deployList, format)
+		lastHeight = p.Overwrite(b, lastHeight)
 	}
-
-	w.Watch(printerChan, writer)
 }
 
 func deploysPrinter(deploys []types.SystemRollout, format printer.Format) printer.Interface {
@@ -126,6 +121,12 @@ func deploysPrinter(deploys []types.SystemRollout, format printer.Format) printe
 			{tw.FgHiCyanColor},
 			{tw.FgHiCyanColor},
 			{},
+		}
+
+		columnAlignment := []int{
+			tw.ALIGN_LEFT,
+			tw.ALIGN_LEFT,
+			tw.ALIGN_LEFT,
 		}
 
 		var rows [][]string
@@ -148,10 +149,11 @@ func deploysPrinter(deploys []types.SystemRollout, format printer.Format) printe
 		}
 
 		p = &printer.Table{
-			Headers:      headers,
-			Rows:         rows,
-			HeaderColors: headerColors,
-			ColumnColors: columnColors,
+			Headers:         headers,
+			Rows:            rows,
+			HeaderColors:    headerColors,
+			ColumnColors:    columnColors,
+			ColumnAlignment: columnAlignment,
 		}
 
 	case printer.FormatJSON:
