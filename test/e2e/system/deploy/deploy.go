@@ -12,6 +12,7 @@ import (
 
 	"fmt"
 	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 )
 
 var _ = Describe("build", func() {
@@ -68,6 +69,16 @@ var _ = Describe("build", func() {
 		ifDeployCreated,
 		func() {
 			deploy.WaitUntilSucceeded(context.TestContext.LatticeAPIClient.V1().Systems().Deploys(systemID), deployID, 5*time.Second, 1*time.Minute)
+		},
+	)
+
+	ConditionallyIt(
+		"should see system updated to reflect the deployed version",
+		ifDeployCreated,
+		func() {
+			sys := system.Get(context.TestContext.LatticeAPIClient.V1().Systems(), systemID)
+			Expect(sys.State).To(Equal(v1.SystemStateStable))
+			Expect(len(sys.Services)).To(Equal(1))
 		},
 	)
 

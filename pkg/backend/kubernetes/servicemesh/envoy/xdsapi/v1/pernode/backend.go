@@ -93,8 +93,8 @@ func (b *KubernetesPerNodeBackend) Services(serviceCluster string) (map[tree.Nod
 	}
 
 	for _, service := range services {
-		path, ok := service.PathLabel()
-		if !ok {
+		path, err := service.PathLabel()
+		if err != nil {
 			// FIXME: this shouldn't happen. send an error somewhere?
 			continue
 		}

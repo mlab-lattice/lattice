@@ -37,21 +37,21 @@ func (s *Service) Description() string {
 		systemID = v1.SystemID(fmt.Sprintf("UNKNOWN (namespace: %v)", systemID))
 	}
 
-	path, ok := s.PathLabel()
-	if ok {
+	path, err := s.PathLabel()
+	if err == nil {
 		return fmt.Sprintf("service %v (%v in system %v)", s.Name, path, systemID)
 	}
 
 	return fmt.Sprintf("service %v (no path, system %v)", s.Name, systemID)
 }
 
-func (s *Service) PathLabel() (tree.NodePath, bool) {
+func (s *Service) PathLabel() (tree.NodePath, error) {
 	path, ok := s.Labels[constants.LabelKeyServicePath]
 	if !ok {
-		return "", false
+		return "", fmt.Errorf("service did not contain service path label")
 	}
 
-	return tree.NodePath(path), true
+	return tree.NodePathFromDomain(path)
 }
 
 // N.B.: important: if you update the ServiceSpec you must also update

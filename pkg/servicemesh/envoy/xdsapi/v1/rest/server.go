@@ -49,6 +49,7 @@ func (r *restServer) mountHandlers() {
 
 		response, err := r.cds.GetResponse(serviceCluster, serviceNode)
 		if err != nil {
+			fmt.Println(err)
 			c.String(http.StatusInternalServerError, err.Error())
 			return
 		}
@@ -63,6 +64,7 @@ func (r *restServer) mountHandlers() {
 
 		response, err := r.lds.GetResponse(serviceCluster, serviceNode)
 		if err != nil {
+			fmt.Println(err)
 			c.String(http.StatusInternalServerError, err.Error())
 			return
 		}
@@ -78,6 +80,7 @@ func (r *restServer) mountHandlers() {
 
 		response, err := r.rds.GetResponse(routeName, serviceCluster, serviceNode)
 		if err != nil {
+			fmt.Println(err)
 			c.String(http.StatusInternalServerError, err.Error())
 			return
 		}
@@ -91,6 +94,7 @@ func (r *restServer) mountHandlers() {
 
 		response, err := r.sds.GetResponse(serviceName)
 		if err != nil {
+			fmt.Println(err)
 			c.String(http.StatusInternalServerError, err.Error())
 			return
 		}

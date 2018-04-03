@@ -21,7 +21,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 
 	"github.com/golang/glog"
-	"github.com/mlab-lattice/system/pkg/definition/tree"
 	"github.com/sergi/go-diff/diffmatchpatch"
 )
 
@@ -184,8 +183,10 @@ func (c *Controller) untransformedDeploymentSpec(
 	deploymentLabels map[string]string,
 	nodePool *latticev1.NodePool,
 ) (*appsv1.DeploymentSpec, error) {
-	path, err := tree.NodePathFromDomain(service.Name)
+	path, err := service.PathLabel()
 	if err != nil {
+		// FIXME: in general, if the path label is misformed or missing, the controllers will barf on the whole system.
+		// should probably ignore the service and send an error
 		return nil, err
 	}
 
@@ -284,7 +285,7 @@ func (c *Controller) untransformedDeploymentSpec(
 }
 
 func containerFromComponent(service *latticev1.Service, component *block.Component, buildArtifacts *latticev1.ComponentBuildArtifacts) (corev1.Container, error) {
-	path, err := tree.NodePathFromDomain(service.Name)
+	path, err := service.PathLabel()
 	if err != nil {
 		return corev1.Container{}, err
 	}
@@ -314,9 +315,6 @@ func containerFromComponent(service *latticev1.Service, component *block.Compone
 	var envVars []corev1.EnvVar
 	for _, name := range envVarNames {
 		envVar := component.Exec.Environment[name]
-		if name == "MONGODB_URI" {
-			fmt.Printf("MONGODB_URI: %#v\n", envVar)
-		}
 		if envVar.Value != nil {
 			envVars = append(
 				envVars,

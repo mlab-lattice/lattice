@@ -10,6 +10,7 @@ import (
 type Client interface {
 	Status() (bool, error)
 	Version() (string, error)
+	CheckStatusAndVersion(string) error
 }
 
 func NewClient(url string) *DefaultClient {
@@ -58,4 +59,25 @@ func (c *DefaultClient) Version() (string, error) {
 	}
 
 	return response.Version, nil
+}
+
+func (c *DefaultClient) CheckStatusAndVersion(expectedVersion string) error {
+	ok, err := c.Status()
+	if err != nil {
+		return fmt.Errorf("error getting status: %v", err)
+	}
+	if !ok {
+		return fmt.Errorf("status was not okay")
+	}
+
+	version, err := c.Version()
+	if err != nil {
+		return fmt.Errorf("error getting version: %v", err)
+	}
+
+	if version != expectedVersion {
+		return fmt.Errorf("expected version to be %v but got %v", expectedVersion, version)
+	}
+
+	return nil
 }

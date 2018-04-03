@@ -288,8 +288,8 @@ func (c *Controller) serviceNeedsUpdate(service *latticev1.Service, spec lattice
 		return true
 	}
 
-	currentPath, ok := service.PathLabel()
-	if !ok {
+	currentPath, err := service.PathLabel()
+	if err != nil {
 		return true
 	}
 
