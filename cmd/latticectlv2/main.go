@@ -39,8 +39,10 @@ var Latticectl = latticectl.Latticectl{
 					&systems.CreateCommand{},
 					&systems.StatusCommand{},
 					&systems.DeleteCommand{},
-					&systems.BuildCommand{},
+					// Version commands
+					&systems.ListVersionsCommand{},
 					// Build commands
+					&systems.BuildCommand{},
 					&builds.ListBuildsCommand{
 						Subcommands: []latticectl.Command{
 							&builds.StatusCommand{},
