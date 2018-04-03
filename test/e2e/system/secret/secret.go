@@ -80,7 +80,7 @@ var _ = Describe("secret", func() {
 
 	ConditionallyIt(
 		"should be able to list secrets, but the list should be empty",
-		ifSystemCreated,
+		ifSecretSet,
 		func() {
 			secret.List(context.TestContext.LatticeAPIClient.V1().Systems().Secrets(systemID), nil)
 		},
