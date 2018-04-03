@@ -9,6 +9,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/selection"
 )
 
 func (kb *KubernetesBackend) ListSystemSecrets(systemID v1.SystemID) ([]v1.Secret, error) {
@@ -19,19 +21,22 @@ func (kb *KubernetesBackend) ListSystemSecrets(systemID v1.SystemID) ([]v1.Secre
 
 	namespace := kubeutil.SystemNamespace(kb.latticeID, systemID)
 
-	secrets, err := kb.kubeClient.CoreV1().Secrets(namespace).List(metav1.ListOptions{})
+	// There are secrets in the namespace that are not secrets set for lattice.
+	// Don't expose those in ListSystemSecrets
+	selector := labels.NewSelector()
+	requirement, err := labels.NewRequirement(constants.LabelKeySecret, selection.Exists, nil)
+	if err != nil {
+		return nil, err
+	}
+	selector = selector.Add(*requirement)
+
+	secrets, err := kb.kubeClient.CoreV1().Secrets(namespace).List(metav1.ListOptions{LabelSelector: selector.String()})
 	if err != nil {
 		return nil, err
 	}
 
 	externalSecrets := make([]v1.Secret, 0)
 	for _, secret := range secrets.Items {
-		// There are secrets in the namespace that are not secrets set for lattice.
-		// Don't expose those in ListSystemSecrets
-		if _, ok := secret.Labels[constants.LabelKeySecret]; !ok {
-			continue
-		}
-
 		path, err := tree.NodePathFromDomain(secret.Name)
 		if err != nil {
 			return nil, err
@@ -116,6 +121,9 @@ func (kb *KubernetesBackend) createSecret(id v1.SystemID, path tree.NodePath, na
 	secret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: path.ToDomain(),
+			Labels: map[string]string{
+				constants.LabelKeySecret: "true",
+			},
 		},
 		StringData: map[string]string{
 			name: value,

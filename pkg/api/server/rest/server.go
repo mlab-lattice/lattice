@@ -23,8 +23,12 @@ func RunNewRestServer(backend v1.Interface, port int32, workingDirectory string)
 		panic(err)
 	}
 
+	router := gin.Default()
+	// Some of our paths use URL encoded paths, so don't have
+	// gin decode those
+	router.UseRawPath = true
 	s := restServer{
-		router:   gin.Default(),
+		router:   router,
 		backend:  backend,
 		resolver: res,
 	}
