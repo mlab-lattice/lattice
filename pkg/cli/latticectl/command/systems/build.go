@@ -25,10 +25,9 @@ import (
 	"github.com/briandowns/spinner"
 )
 
-type BuildCommand struct {
-}
+type BuildCommand struct {}
 
-type TableStateMonitor func(*types.SystemBuild, types.SystemBuildID, *spinner.Spinner, string, io.Writer) bool
+type PrintBuildState func(io.Writer, *spinner.Spinner, *types.SystemBuild, string)
 
 func (c *BuildCommand) Base() (*latticectl.BaseCommand, error) {
 	output := &lctlcommand.OutputFlag{
@@ -87,7 +86,7 @@ func BuildSystem(
 		if format == printer.FormatDefault || format == printer.FormatTable {
 			fmt.Fprintf(writer, "\nBuild ID: %s\n", color.ID(string(buildID)))
 		}
-		WatchBuild(client, buildID, format, os.Stdout, version, tableStateMonitor)
+		WatchBuild(client, buildID, format, os.Stdout, version, printBuildState)
 	} else {
 		fmt.Fprintf(writer, "Building version %s, Build ID: %s\n\n", version, color.ID(string(buildID)))
 		fmt.Fprintf(writer, "To view the status of the build, run:\n\n    latticectl system:builds:status --build %s [--watch]\n", color.ID(string(buildID)))
@@ -101,7 +100,7 @@ func WatchBuild(
 	format printer.Format,
 	writer io.Writer,
 	version string,
-	tableStateMonitor TableStateMonitor,
+	printBuildState PrintBuildState,
 	) {
 	builds := make(chan *types.SystemBuild)
 	
@@ -122,45 +121,30 @@ func WatchBuild(
 		},
 	)
 	
-	var done bool
-
 	for build := range builds {
-		
 		lastHeight = printOutput(b, lastHeight, build, format)
 		
-		if format == printer.FormatTable || format == printer.FormatDefault {
-			done = tableStateMonitor(build, buildID, s, version, writer)
-			if done {
-				return
-			}
-		} else {
-			done = jsonStateMonitor(build)
-			if done {
-				return
-			}
+		if format == printer.FormatDefault || format == printer.FormatTable {
+			printBuildState(writer, s, build, version)
 		}
 		
-		
+		if buildCompleted(build) {
+			return
+		}
 	}
-	
 }
 
-func tableStateMonitor(build *types.SystemBuild, buildID types.SystemBuildID, s *spinner.Spinner, version string, writer io.Writer) bool {
+func printBuildState(writer io.Writer, s *spinner.Spinner, build *types.SystemBuild, version string)  {
 	switch build.State {
 	case types.SystemBuildStatePending:
 		s.Start()
 		s.Suffix = fmt.Sprintf(" Build pending for version: %s...", color.ID(version))
-		return false
 	case types.SystemBuildStateRunning:
 		s.Start()
 		s.Suffix = fmt.Sprintf(" Building version: %s...", color.ID(version))
-		return false
 	case types.SystemBuildStateSucceeded:
 		s.Stop()
-		
-		printBuildSuccess(writer, version, buildID)
-		
-		return true
+		printBuildSuccess(writer, version, build.ID)
 	case types.SystemBuildStateFailed:
 		s.Stop()
 		
@@ -178,22 +162,12 @@ func tableStateMonitor(build *types.SystemBuild, buildID types.SystemBuildID, s 
 		}
 		
 		printBuildFailure(writer, version, componentErrors)
-		
-		return true
-	default:
-		return false
 	}
 }
 
-func jsonStateMonitor(build *types.SystemBuild) bool {
+func buildCompleted(build *types.SystemBuild) bool {
 	switch build.State {
-	case types.SystemBuildStatePending:
-		return false
-	case types.SystemBuildStateRunning:
-		return false
-	case types.SystemBuildStateSucceeded:
-		return true
-	case types.SystemBuildStateFailed:
+	case types.SystemBuildStateSucceeded, types.SystemBuildStateFailed:
 		return true
 	default:
 		return false
@@ -243,7 +217,6 @@ func printBuildFailure(writer io.Writer, version string, componentErrors [][]str
 		fmt.Fprintf(writer, color.Failure("Error building component %s, Error message:\n\n    %s\n"), componentError[0], componentError[1])
 	}
 }
-
 
 func BuildPrinter(build *types.SystemBuild, format printer.Format) printer.Interface {
 	var p printer.Interface

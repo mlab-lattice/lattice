@@ -8,7 +8,7 @@ import (
 	// "time"
 	// "sort"
 
-	// "github.com/mlab-lattice/system/pkg/cli/color"
+	"github.com/mlab-lattice/system/pkg/cli/color"
 	"github.com/mlab-lattice/system/pkg/cli/command"
 	"github.com/mlab-lattice/system/pkg/cli/latticectl"
 	lctlcommand "github.com/mlab-lattice/system/pkg/cli/latticectl/command"
@@ -19,7 +19,7 @@ import (
 	//"github.com/mlab-lattice/system/pkg/cli/latticectl/command/systems"
 	
 	// tw "github.com/tfogo/tablewriter"
-	// "github.com/briandowns/spinner"
+	"github.com/briandowns/spinner"
 )
 
 type DeployCommand struct {
@@ -109,7 +109,7 @@ func DeploySystem(
 		return err
 	}
 	
- 	//WatchBuild(client.SystemBuilds(systemID), deploy.BuildID, "table", writer, version)
+ 	WatchBuild(client.SystemBuilds(systemID), deploy.BuildID, "table", writer, version, printBuildStateDuringDeploy)
 	WatchSystem(client, systemID, format, os.Stdout)
 	
 	//p.Print(writer)
@@ -118,6 +118,38 @@ func DeploySystem(
 	return nil
 }
 
+
+func printBuildStateDuringDeploy(writer io.Writer, s *spinner.Spinner, build *types.SystemBuild, version string) {
+	switch build.State {
+	case types.SystemBuildStatePending:
+		s.Start()
+		s.Suffix = fmt.Sprintf(" Build pending for version: %s...", color.ID(version))
+	case types.SystemBuildStateRunning:
+		s.Start()
+		s.Suffix = fmt.Sprintf(" Building version: %s...", color.ID(version))
+	case types.SystemBuildStateSucceeded:
+		s.Stop()
+		
+		fmt.Fprint(writer, color.BoldHiSuccess("✓ %s built successfully! Now deploying...\n", version))
+	case types.SystemBuildStateFailed:
+		s.Stop()
+		
+		var componentErrors [][]string
+		
+		for serviceName, service := range build.Services {
+			for componentName, component := range service.Components {
+				if component.State == types.ComponentBuildStateFailed {
+					componentErrors = append(componentErrors, []string{
+						fmt.Sprintf("%s:%s", serviceName, componentName),
+						string(*component.FailureMessage),
+					})
+				}
+			}
+		}
+		
+		printBuildFailure(writer, version, componentErrors)
+	}
+}
 
 /*
 func WatchDeploy(client client.SystemBuildClient, buildID types.SystemBuildID, format printer.Format, writer io.Writer, version string) {
