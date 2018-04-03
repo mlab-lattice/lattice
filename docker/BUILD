@@ -1,5 +1,5 @@
 load("@io_bazel_rules_docker//container:container.bzl", "container_image")
-load(":lattice_targets.bzl", "lattice_base_container_images", "lattice_container_images")
+load("//bazel/docker:image.bzl", "lattice_base_container_images", "lattice_container_images")
 load("@package_bundle//file:packages.bzl", "packages")
 
 # base container image layers
