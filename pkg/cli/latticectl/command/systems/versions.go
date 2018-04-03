@@ -8,8 +8,17 @@ import (
 	"github.com/mlab-lattice/system/pkg/cli/latticectl"
 	lctlcommand "github.com/mlab-lattice/system/pkg/cli/latticectl/command"
 	"github.com/mlab-lattice/system/pkg/cli/latticectl/command/systems/teardowns"
+	"github.com/mlab-lattice/system/pkg/cli/printer"
 	"github.com/mlab-lattice/system/pkg/managerapi/client"
 )
+
+// ListVersionsSupportedFormats is the list of printer.Formats supported
+// by the ListTeardowns function.
+var ListVersionsSupportedFormats = []printer.Format{
+	printer.FormatDefault,
+	printer.FormatJSON,
+	printer.FormatTable,
+}
 
 type ListVersionsCommand struct {
 }
@@ -18,18 +27,11 @@ func (c *ListVersionsCommand) Base() (*latticectl.BaseCommand, error) {
 	output := &lctlcommand.OutputFlag{
 		SupportedFormats: teardowns.ListTeardownsSupportedFormats,
 	}
-	var watch bool
 
 	cmd := &lctlcommand.SystemCommand{
-		Name: "teardown",
+		Name: "versions",
 		Flags: []command.Flag{
 			output.Flag(),
-			&command.BoolFlag{
-				Name:    "watch",
-				Short:   "w",
-				Default: false,
-				Target:  &watch,
-			},
 		},
 		Run: func(ctx lctlcommand.SystemCommandContext, args []string) {
 			// FIXME :: get versions instead.
