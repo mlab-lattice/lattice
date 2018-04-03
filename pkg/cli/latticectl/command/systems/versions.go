@@ -7,7 +7,6 @@ import (
 	"github.com/mlab-lattice/system/pkg/cli/command"
 	"github.com/mlab-lattice/system/pkg/cli/latticectl"
 	lctlcommand "github.com/mlab-lattice/system/pkg/cli/latticectl/command"
-	"github.com/mlab-lattice/system/pkg/cli/latticectl/command/systems/teardowns"
 	"github.com/mlab-lattice/system/pkg/cli/printer"
 	"github.com/mlab-lattice/system/pkg/managerapi/client"
 )
@@ -25,7 +24,7 @@ type ListVersionsCommand struct {
 
 func (c *ListVersionsCommand) Base() (*latticectl.BaseCommand, error) {
 	output := &lctlcommand.OutputFlag{
-		SupportedFormats: teardowns.ListTeardownsSupportedFormats,
+		SupportedFormats: ListVersionsSupportedFormats,
 	}
 
 	cmd := &lctlcommand.SystemCommand{

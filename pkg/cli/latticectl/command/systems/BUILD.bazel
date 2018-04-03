@@ -10,6 +10,7 @@ go_library(
         "deploy.go",
         "status.go",
         "teardown.go",
+        "versions.go",
     ],
     importpath = "github.com/mlab-lattice/system/pkg/cli/latticectl/command/systems",
     visibility = ["//visibility:public"],
