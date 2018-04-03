@@ -500,7 +500,7 @@ GO_DEPENDENCIES = {
     },
 }
 
-def dependencies():
+def go_dependencies():
   for go_dependencies in GO_DEPENDENCIES.values():
     for dependency in go_dependencies.values():
       go_repository(**dependency)

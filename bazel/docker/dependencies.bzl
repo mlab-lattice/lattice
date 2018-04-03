@@ -1,9 +1,3 @@
-load("@io_bazel_rules_go//go:def.bzl", "go_repository")
-load(":bazel/go_dependencies.bzl", _go_dependencies="dependencies")
-
-def go_dependencies():
-  _go_dependencies()
-
 load("@distroless//package_manager:package_manager.bzl", "dpkg_src", "dpkg_list")
 
 def docker_dependencies():
