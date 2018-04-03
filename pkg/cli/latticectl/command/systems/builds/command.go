@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"time"
+	"bytes"
 
 	"github.com/mlab-lattice/system/pkg/cli/color"
 	"github.com/mlab-lattice/system/pkg/cli/command"
@@ -91,33 +92,30 @@ func ListBuilds(client client.SystemBuildClient, format printer.Format, writer i
 // printer.FormatTable, in which case it always writes to the terminal.
 func WatchBuilds(client client.SystemBuildClient, format printer.Format, writer io.Writer) {
 	// Poll the API for the builds and send it to the channel
-	printerChan := make(chan printer.Interface)
+	buildLists := make(chan []types.SystemBuild)
+	lastHeight := 0
+	var b bytes.Buffer
+	
 	go wait.PollImmediateInfinite(
 		5*time.Second,
 		func() (bool, error) {
-			builds, err := client.List()
+			buildList, err := client.List()
 			if err != nil {
 				return false, err
 			}
-
-			p := buildsPrinter(builds, format)
-			printerChan <- p
+			
+			buildLists <- buildList
 			return false, nil
 		},
 	)
 
-	// If displaying a table, use the overwritting terminal watcher, if JSON
-	// use the scrolling watcher
-	var w printer.Watcher
-	switch format {
-	case printer.FormatDefault, printer.FormatTable:
-		w = &printer.OverwrittingTerminalWatcher{}
-
-	case printer.FormatJSON:
-		w = &printer.ScrollingWatcher{}
+	for buildList := range buildLists {
+		p := buildsPrinter(buildList, format)
+		lastHeight = p.Overwrite(b, lastHeight)
+		
+		// Note: Watching builds is never exitable.
+		// There is no fail state for an entire list of builds.
 	}
-
-	w.Watch(printerChan, writer)
 }
 
 func buildsPrinter(builds []types.SystemBuild, format printer.Format) printer.Interface {
@@ -133,9 +131,15 @@ func buildsPrinter(builds []types.SystemBuild, format printer.Format) printer.In
 		}
 		
 		columnColors := []tw.Colors{
-			{tw.FgHiMagentaColor},
+			{tw.FgHiCyanColor},
 			{},
 			{},
+		}
+		
+		columnAlignment := []int{
+			tw.ALIGN_LEFT,
+			tw.ALIGN_LEFT,
+			tw.ALIGN_LEFT,
 		}
 
 		var rows [][]string
@@ -162,6 +166,7 @@ func buildsPrinter(builds []types.SystemBuild, format printer.Format) printer.In
 			Rows:    			rows,
 			HeaderColors: headerColors,
 			ColumnColors: columnColors,
+			ColumnAlignment: 	columnAlignment,
 		}
 
 	case printer.FormatJSON:

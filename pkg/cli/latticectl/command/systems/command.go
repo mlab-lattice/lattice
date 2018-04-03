@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"time"
+	"bytes"
 
 	"github.com/mlab-lattice/system/pkg/cli/color"
 	"github.com/mlab-lattice/system/pkg/cli/command"
@@ -92,33 +93,30 @@ func ListSystems(client client.SystemClient, format printer.Format, writer io.Wr
 // printer.FormatTable, in which case it always writes to the terminal.
 func WatchSystems(client client.SystemClient, format printer.Format, writer io.Writer) {
 	// Poll the API for the systems and send it to the channel
-	printerChan := make(chan printer.Interface)
+	systemLists := make(chan []types.System)
+	lastHeight := 0
+	var b bytes.Buffer
+	
 	go wait.PollImmediateInfinite(
 		5*time.Second,
 		func() (bool, error) {
-			systems, err := client.List()
+			systemList, err := client.List()
 			if err != nil {
 				return false, err
 			}
 
-			p := systemsPrinter(systems, format)
-			printerChan <- p
+			systemLists <- systemList
 			return false, nil
 		},
 	)
 
-	// If displaying a table, use the overwritting terminal watcher, if JSON
-	// use the scrolling watcher
-	var w printer.Watcher
-	switch format {
-	case printer.FormatDefault, printer.FormatTable:
-		w = &printer.OverwrittingTerminalWatcher{}
-
-	case printer.FormatJSON:
-		w = &printer.ScrollingWatcher{}
+	for systemList := range systemLists {
+		p := systemsPrinter(systemList, format)
+		lastHeight = p.Overwrite(b, lastHeight)
+		
+		// Note: Watching systems is never exitable.
+		// There is no fail state for an entire lattice of systems.
 	}
-
-	w.Watch(printerChan, writer)
 }
 
 func systemsPrinter(systems []types.System, format printer.Format) printer.Interface {
@@ -134,9 +132,15 @@ func systemsPrinter(systems []types.System, format printer.Format) printer.Inter
 		}
 		
 		columnColors := []tw.Colors{
-			{tw.FgHiMagentaColor},
+			{tw.FgHiCyanColor},
 			{},
 			{},
+		}
+		
+		columnAlignment := []int{
+			tw.ALIGN_LEFT,
+			tw.ALIGN_LEFT,
+			tw.ALIGN_LEFT,
 		}
 
 		var rows [][]string
@@ -163,6 +167,7 @@ func systemsPrinter(systems []types.System, format printer.Format) printer.Inter
 			Rows:    rows,
 			HeaderColors: headerColors,
 			ColumnColors: columnColors,
+			ColumnAlignment: 	columnAlignment,
 		}
 
 	case printer.FormatJSON:

@@ -3,6 +3,9 @@ package printer
 import (
 	"encoding/json"
 	"io"
+	"bytes"
+	"os"
+	"fmt"
 )
 
 type JSON struct {
@@ -26,4 +29,12 @@ func (j *JSON) Print(writer io.Writer) error {
 
 	_, err = writer.Write(data)
 	return err
+}
+
+// TODO: Refactor this part of the interface, it's currently ugly
+// Not overwriting, we just print json objects on new lines
+func (j *JSON) Overwrite(b bytes.Buffer, lastHeight int) int {
+	j.Print(os.Stdout)
+	fmt.Print("\n")
+	return 1 // Not used in JSON
 }

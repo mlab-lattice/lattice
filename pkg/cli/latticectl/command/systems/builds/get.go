@@ -7,7 +7,10 @@ import (
 	"os"
 	"time"
 	"sort"
+	"bytes"
+	"errors"
 
+	"github.com/mlab-lattice/system/pkg/cli/color"
 	"github.com/mlab-lattice/system/pkg/cli/command"
 	"github.com/mlab-lattice/system/pkg/cli/latticectl"
 	lctlcommand "github.com/mlab-lattice/system/pkg/cli/latticectl/command"
@@ -22,6 +25,8 @@ import (
 
 type GetCommand struct {
 }
+
+type PrintBuildState func(io.Writer, *spinner.Spinner, *types.SystemBuild)
 
 func (c *GetCommand) Base() (*latticectl.BaseCommand, error) {
 	output := &lctlcommand.OutputFlag{
@@ -49,7 +54,10 @@ func (c *GetCommand) Base() (*latticectl.BaseCommand, error) {
 			c := ctx.Client().Systems().SystemBuilds(ctx.SystemID())
 
 			if watch {
-				WatchBuild(c, ctx.BuildID(), format, os.Stdout)
+				err = WatchBuild(c, ctx.BuildID(), format, os.Stdout, PrintBuildStateDuringWatchBuild)
+				if err != nil {
+					os.Exit(1)
+				}
 			}
 
 			err = GetBuild(c, ctx.BuildID(), format, os.Stdout)
@@ -85,10 +93,21 @@ func GetBuild(client client.SystemBuildClient, buildID types.SystemBuildID, form
 // WatchBuilds polls the API for the current Builds, and writes out the Builds to the
 // the supplied io.Writer in the given printer.Format, unless the printer.Format is
 // printer.FormatTable, in which case it always writes to the terminal.
-func WatchBuild(client client.SystemBuildClient, buildID types.SystemBuildID, format printer.Format, writer io.Writer) {
-	// Poll the API for the builds and send it to the channel
-	printerChan := make(chan printer.Interface)
-	spinnerChan := make(chan bool)
+func WatchBuild(
+	client client.SystemBuildClient,
+	buildID types.SystemBuildID,
+	format printer.Format,
+	writer io.Writer,
+	PrintBuildStateDuringWatchBuild PrintBuildState,
+	) error {
+	builds := make(chan *types.SystemBuild)
+	
+	lastHeight := 0
+	var returnError error
+	var exit bool
+	var b bytes.Buffer
+	s := spinner.New(spinner.CharSets[14], 100*time.Millisecond)
+	
 	go wait.PollImmediateInfinite(
 		5*time.Second,
 		func() (bool, error) {
@@ -97,35 +116,84 @@ func WatchBuild(client client.SystemBuildClient, buildID types.SystemBuildID, fo
 				return false, err
 			}
 
-			p := BuildPrinter(build, format)
-			printerChan <- p
+			builds <- build
 			return false, nil
 		},
 	)
-
-	// If displaying a table, use the overwritting terminal watcher, if JSON
-	// use the scrolling watcher
-	var w printer.Watcher2
-	switch format {
-	case printer.FormatDefault, printer.FormatTable:
-		w = &printer.OverwrittingTerminalWatcher2{}
-
-	// case printer.FormatJSON:
-	// 	w = &printer.ScrollingWatcher{}
+	
+	for build := range builds {
+		p := BuildPrinter(build, format)
+		lastHeight = p.Overwrite(b, lastHeight)
+		
+		if format == printer.FormatDefault || format == printer.FormatTable {
+			PrintBuildStateDuringWatchBuild(writer, s, build)
+		}
+		
+		exit, returnError = buildCompleted(build)
+		if exit {
+			return returnError
+		}
 	}
 	
-	s := spinner.New(spinner.CharSets[14], 100*time.Millisecond)
-	s.Suffix = " Building..."
+	return nil
+}
 
-	go w.Watch(printerChan, writer, spinnerChan)
-	
-	if <-spinnerChan {
+func PrintBuildStateDuringWatchBuild(writer io.Writer, s *spinner.Spinner, build *types.SystemBuild)  {
+	switch build.State {
+	case types.SystemBuildStatePending:
 		s.Start()
+		s.Suffix = fmt.Sprintf(" Build pending for version: %s...", color.ID(string(build.Version)))
+	case types.SystemBuildStateRunning:
+		s.Start()
+		s.Suffix = fmt.Sprintf(" Building version: %s...", color.ID(string(build.Version)))
+	case types.SystemBuildStateSucceeded:
+		s.Stop()
+		printBuildSuccess(writer, string(build.Version), build.ID)
+	case types.SystemBuildStateFailed:
+		s.Stop()
+		
+		var componentErrors [][]string
+		
+		for serviceName, service := range build.Services {
+			for componentName, component := range service.Components {
+				if component.State == types.ComponentBuildStateFailed {
+					componentErrors = append(componentErrors, []string{
+						fmt.Sprintf("%s:%s", serviceName, componentName),
+						string(*component.FailureMessage),
+					})
+				}
+			}
+		}
+		
+		PrintBuildFailure(writer, string(build.Version), componentErrors)
 	}
-	
-	// Fix up
-	<-spinnerChan
-	
+}
+
+func buildCompleted(build *types.SystemBuild) (bool, error) {
+	switch build.State {
+	case types.SystemBuildStateSucceeded:
+		return true, nil
+	case types.SystemBuildStateFailed:
+		return true, errors.New("System Build Failed")
+	default:
+		return false, nil
+	}
+}
+
+func printBuildSuccess(writer io.Writer, version string, buildID types.SystemBuildID) {
+	fmt.Fprint(writer, color.BoldHiSuccess("✓ "))
+	fmt.Fprint(writer, color.BoldHiSuccess(version))
+	fmt.Fprint(writer, color.BoldHiSuccess(" built successfully! You can now deploy this build using:\n"))
+	fmt.Fprintf(writer, color.Success("\n    lattice systems:deploy %s\n"), buildID)
+}
+
+func PrintBuildFailure(writer io.Writer, version string, componentErrors [][]string) {
+	fmt.Fprint(writer, color.BoldHiFailure("✘ Error building version "))
+	fmt.Fprint(writer, color.BoldHiFailure(version))
+	fmt.Fprint(writer, color.BoldHiFailure(":\n\n"))
+	for _, componentError := range componentErrors {
+		fmt.Fprintf(writer, color.Failure("Error building component %s, Error message:\n\n    %s\n"), componentError[0], componentError[1])
+	}
 }
 
 func BuildPrinter(build *types.SystemBuild, format printer.Format) printer.Interface {
@@ -141,32 +209,49 @@ func BuildPrinter(build *types.SystemBuild, format printer.Format) printer.Inter
 		}
 		
 		columnColors := []tw.Colors{
-			{tw.FgHiMagentaColor},
+			{tw.FgHiCyanColor},
 			{},
 			{},
 		}
 		
 		columnAlignment := []int{
-			tw.ALIGN_CENTER,
-			tw.ALIGN_CENTER,
+			tw.ALIGN_LEFT,
+			tw.ALIGN_LEFT,
 			tw.ALIGN_LEFT,
 		}
 
 		var rows [][]string
+		// fmt.Fprintln(os.Stdout, build)
 		for serviceName, service := range build.Services {
+			// fmt.Fprintln(os.Stdout, service)
 			for componentName, component := range service.Components {
-				
+				// fmt.Fprintln(os.Stdout, component)
+				//fmt.Fprint(os.Stdout, "COMPONENT STATE", component.State, "    ")
 				var infoMessage string
 				
 				if component.FailureMessage == nil {
-					infoMessage = string(*component.LastObservedPhase)
+					if component.LastObservedPhase != nil {
+						infoMessage = string(*component.LastObservedPhase)
+					} else {
+						infoMessage = ""
+					}
 				} else {
 					infoMessage = string(*component.FailureMessage)
 				}
 				
+				var stateColor color.Color
+				switch component.State {
+				case types.ComponentBuildStateSucceeded:
+					stateColor = color.Success
+				case types.ComponentBuildStateFailed:
+					stateColor = color.Failure
+				default:
+					stateColor = color.Warning
+				}
+				
 				rows = append(rows, []string{
 					fmt.Sprintf("%s:%s", serviceName, componentName),
-					string(component.State),
+					stateColor(string(component.State)),
 					string(infoMessage),
 				})
 				

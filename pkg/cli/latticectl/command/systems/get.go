@@ -8,6 +8,8 @@ import (
 	"time"
 	"sort"
 	"strings"
+	"bytes"
+	"errors"
 
 	"github.com/mlab-lattice/system/pkg/cli/color"
 	"github.com/mlab-lattice/system/pkg/cli/command"
@@ -19,11 +21,13 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	
 	tw "github.com/tfogo/tablewriter"
-	//"github.com/briandowns/spinner"
+	"github.com/briandowns/spinner"
 )
 
 type GetCommand struct {
 }
+
+type PrintSystemState func(io.Writer, *spinner.Spinner, *types.System)
 
 func (c *GetCommand) Base() (*latticectl.BaseCommand, error) {
 	output := &lctlcommand.OutputFlag{
@@ -51,25 +55,21 @@ func (c *GetCommand) Base() (*latticectl.BaseCommand, error) {
 			c := ctx.Client().Systems()
 
 			if watch {
-				WatchSystem(c, ctx.SystemID(), format, os.Stdout)
-				return
+				err = WatchSystem(c, ctx.SystemID(), format, os.Stdout, printSystemState, false)
+				if err != nil {
+					os.Exit(1)
+				}
 			}
 
-			GetSystem(c, ctx.SystemID(), format, os.Stdout)
+			err = GetSystem(c, ctx.SystemID(), format, os.Stdout)
+			if err != nil {
+				os.Exit(1)
+			}
 		},
 	}
 
 	return cmd.Base()
 }
-
-// func WatchSystem(client client.SystemClient, systemID types.SystemID, format printer.Format, writer io.Writer) {
-// 	system, err := client.Get(systemID)
-// 	if err != nil {
-// 		log.Panic(err)
-// 	}
-//
-// 	fmt.Printf("%v\n", system)
-// }
 
 func GetSystem(client client.SystemClient, systemID types.SystemID, format printer.Format, writer io.Writer) error {
 	system, err := client.Get(systemID)
@@ -77,18 +77,19 @@ func GetSystem(client client.SystemClient, systemID types.SystemID, format print
 		return err
 	}
 
-	fmt.Printf("%v\n", system)
+	p := SystemPrinter(system, format)
+	p.Print(writer)
 	return nil
 }
 
-func WatchSystem(client client.SystemClient, systemID types.SystemID, format printer.Format, writer io.Writer) {
-	// TODO: Currently the goroutines are synched up using channels.
-	// We might be able to make the code cleaner with little/no performance impact
-	// if we make the functions synchronous.
+func WatchSystem(client client.SystemClient, systemID types.SystemID, format printer.Format, writer io.Writer, printSystemState PrintSystemState, exitable bool) error {
+	systems:= make(chan *types.System)
 	
-	printerChan := make(chan printer.Interface)
-	printerRenderedChan := make(chan bool)
-	systemChan := make(chan *types.System)
+	lastHeight := 0
+	var returnError error
+	var exit bool
+	var b bytes.Buffer
+	s := spinner.New(spinner.CharSets[14], 100*time.Millisecond)
 	
 	// Poll the API for the builds and send it to the channel
 	go wait.PollImmediateInfinite(
@@ -99,91 +100,81 @@ func WatchSystem(client client.SystemClient, systemID types.SystemID, format pri
 				return false, err
 			}
 
-			p := SystemPrinter(system, format)
-			printerChan <- p
-			// NOTE: Blocks here until printerRenderedChan is read
-			// then systemChan is available to be written to
-			systemChan <- system
+			systems <- system
 			return false, nil
 		},
 	)
 	
-	// If displaying a table, use the overwritting terminal watcher, if JSON
-	// use the scrolling watcher
-	var w printer.Watcher2
-	switch format {
-	case printer.FormatDefault, printer.FormatTable:
-		w = &printer.OverwrittingTerminalWatcher2{}
-	case printer.FormatJSON:
-		w = &printer.ScrollingWatcher2{}
+	for system := range systems {
+		p := SystemPrinter(system, format)
+		lastHeight = p.Overwrite(b, lastHeight)
+		
+		if format == printer.FormatDefault || format == printer.FormatTable {
+			printSystemState(writer, s, system)
+		}
+		
+		exit, returnError = systemInExitableState(system)
+		
+		if exitable && exit {
+			return returnError
+		}
 	}
-
-	w.Watch(printerChan, writer, printerRenderedChan)
 	
-	// Await termincating condition, also print accompanying text under the table
-	// if format == printer.FormatDefault || format == printer.FormatTable {
-	// 	printAccompanyingText2(writer, printerRenderedChan, systemChan)
-	// } else {
-	// 	stateWatcher2(writer, systemChan, printerRenderedChan)
-	// }
+	return nil
 }
 
-// func stateWatcher2(writer io.Writer, systemChan chan *types.System, printerRenderedChan chan bool) {
-// 	var sentSystem *types.System
-//
-// 	for {
-// 		<-printerRenderedChan
-// 		sentSystem = <-systemChan
-// 		switch sentSystem.State {
-// 		case types.SystemStateStable, types.SystemStateFailed:
-// 			return
-// 		}
-// 	}
-// }
+func systemInExitableState(system *types.System) (bool, error) {
+	switch system.State {
+	case types.SystemStateStable:
+		return true, nil
+	case types.SystemStateFailed:
+		return true, errors.New("System Failed")
+	default:
+		return false, nil
+	}
+}
 
-// func printAccompanyingText2(writer io.Writer, printerRenderedChan chan bool, systemChan chan *types.System) {
-// 	var sentSystem *types.System
-// 	var s *spinner.Spinner
-//
-// 	for i := 0; true; i++ {
-// 		<-printerRenderedChan
-// 		sentSystem = <-systemChan
-//
-// 		if i == 0 {
-// 			s = spinner.New(spinner.CharSets[14], 100*time.Millisecond)
-// 			s.Start()
-// 		}
-//
-// 		switch sentSystem.State {
-// 		case types.SystemStateUpdating, types.SystemStateScaling, types.SystemStateDeleting:
-// 			s.Suffix = fmt.Sprintf(" Build pending for version: ...")
-// 		case types.SystemStateStable:
-// 			s.Stop()
-//
-// 			//printBuildSuccess(writer, version, buildID)
-// 			return
-// 		case types.SystemStateFailed:
-// 			s.Stop()
-// 			/*
-// 			var componentErrors [][]string
-//
-// 			for serviceName, service := range sentSystem.Services {
-// 				for componentName, component := range service.Components {
-// 					if component.State == types.ComponentBuildStateFailed {
-// 						componentErrors = append(componentErrors, []string{
-// 							fmt.Sprintf("%s:%s", serviceName, componentName),
-// 							string(*component.FailureMessage),
-// 						})
-// 					}
-// 				}
-// 			}
-// 			*/
-//
-// 			//printBuildFailure(writer, version, componentErrors)
-// 			return
-// 		}
-// 	}
-// }
+func printSystemState(writer io.Writer, s *spinner.Spinner, system *types.System) {
+	switch system.State {
+	case types.SystemStateScaling:
+		s.Start()
+		s.Suffix = fmt.Sprintf(" System %s is scaling...", color.ID(string(system.ID)))
+	case types.SystemStateUpdating:
+		s.Start()
+		s.Suffix = fmt.Sprintf(" System %s is updating...", color.ID(string(system.ID)))
+	case types.SystemStateDeleting:
+		s.Start()
+		s.Suffix = fmt.Sprintf(" System %s is terminating...", color.ID(string(system.ID)))
+	case types.SystemStateStable:
+		s.Stop()
+		fmt.Fprint(writer, color.BoldHiSuccess("System %s is stable.", string(system.ID)))
+	case types.SystemStateFailed:
+		s.Stop()
+		fmt.Fprint(writer, color.BoldHiFailure("System %s has failed.", string(system.ID)))
+		
+		var serviceErrors [][]string
+		
+		for serviceName, service := range system.Services {
+			if service.State == types.ServiceStateFailed {
+				serviceErrors = append(serviceErrors, []string{
+					fmt.Sprintf("%s", serviceName),
+					string(*service.FailureMessage),
+				})
+			}
+		}
+		
+		printSystemFailure(writer, system.ID, serviceErrors)
+	}
+}
+
+func printSystemFailure(writer io.Writer, systemID types.SystemID, serviceErrors [][]string) {
+	fmt.Fprint(writer, color.BoldHiFailure("✘ Error encountered in system "))
+	fmt.Fprint(writer, color.BoldHiFailure(string(systemID)))
+	fmt.Fprint(writer, color.BoldHiFailure(":\n\n"))
+	for _, serviceError := range serviceErrors {
+		fmt.Fprintf(writer, color.Failure("Error in service %s, Error message:\n\n    %s\n"), serviceError[0], serviceError[1])
+	}
+}
 
 func SystemPrinter(system *types.System, format printer.Format) printer.Interface {
 	var p printer.Interface
@@ -245,15 +236,15 @@ func SystemPrinter(system *types.System, format printer.Format) printer.Interfac
 			
 			var addresses []string
 			for port, address := range service.PublicPorts {
-				addresses = append(addresses, fmt.Sprintf("%v: %v", port, address))
+				addresses = append(addresses, fmt.Sprintf("%v: %v", port, address.Address))
 			}
 			
 			rows = append(rows, []string{
 				string(serviceName),
 				stateColor(string(service.State)),
 				string(infoMessage),
-				string(service.UpdatedInstances),
-				string(service.StaleInstances),
+				fmt.Sprintf("%d", service.UpdatedInstances),
+				fmt.Sprintf("%d", service.StaleInstances),
 				strings.Join(addresses, ","),
 			})
 			
