@@ -24,7 +24,7 @@ type Service struct {
 	UpdatedInstances int32              `json:"updatedInstances"`
 	StaleInstances   int32              `json:"staleInstances"`
 	PublicPorts      ServicePublicPorts `json:"publicPorts"`
-	FailureMessage   *string            `json:"failureMessage"`
+	FailureMessage   *string            `json:"failureMessage,omitempty"`
 }
 
 type (

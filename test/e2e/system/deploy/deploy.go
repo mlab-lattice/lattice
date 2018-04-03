@@ -11,8 +11,8 @@ import (
 	"github.com/mlab-lattice/system/test/util/lattice/v1/system/deploy"
 
 	"fmt"
+	"github.com/mlab-lattice/system/test/util/testingsystem"
 	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
 )
 
 var _ = Describe("build", func() {
@@ -72,13 +72,14 @@ var _ = Describe("build", func() {
 		},
 	)
 
+	successfulDeploy := false
 	ConditionallyIt(
-		"should see system updated to reflect the deployed version",
+		"should be able to validate the system was correctly deployed",
 		ifDeployCreated,
 		func() {
-			sys := system.Get(context.TestContext.LatticeAPIClient.V1().Systems(), systemID)
-			Expect(sys.State).To(Equal(v1.SystemStateStable))
-			Expect(len(sys.Services)).To(Equal(1))
+			v1 := testingsystem.NewV1(context.TestContext.LatticeAPIClient.V1(), systemID)
+			v1.ValidateStable()
+			successfulDeploy = true
 		},
 	)
 
@@ -86,8 +87,10 @@ var _ = Describe("build", func() {
 		"should be able to delete the system",
 		ifSystemCreated,
 		func() {
-			fmt.Println("about to delete system...")
-			time.Sleep(2 * time.Minute)
+			if !successfulDeploy {
+				fmt.Println("about to delete system...")
+				time.Sleep(2 * time.Minute)
+			}
 			system.DeleteSuccessfully(context.TestContext.LatticeAPIClient.V1().Systems(), systemID, 1*time.Second, 2*time.Minute)
 		},
 	)
