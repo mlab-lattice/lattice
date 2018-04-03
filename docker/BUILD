@@ -12,6 +12,7 @@ container_image(
         packages["libip6tc0"],
         packages["libxtables12"],
     ],
+    visibility = ["//visibility:public"],
 )
 
 container_image(
@@ -21,6 +22,7 @@ container_image(
         packages["libstdc++6"],
         packages["libgcc1"],
     ],
+    visibility = ["//visibility:public"],
 )
 
 container_image(
@@ -30,18 +32,21 @@ container_image(
         packages["openssh-client"],
         packages["zlib1g"],
     ],
+    visibility = ["//visibility:public"],
 )
 
 container_image(
     name = "base-terraform-bin",
     directory = "/usr/local/bin",
     files = ["@terraform_bin//:bin"],
+    visibility = ["//visibility:public"],
 )
 
 container_image(
     name = "base-terraform-modules-kubernetes",
     directory = "/etc/terraform",
     tars = ["//terraform/kubernetes:modules-tar"],
+    visibility = ["//visibility:public"],
 )
 
 container_image(
@@ -50,6 +55,7 @@ container_image(
         ":base-terraform-bin",
         ":base-terraform-modules-kubernetes",
     ],
+    visibility = ["//visibility:public"],
 )
 
 container_image(
@@ -58,6 +64,7 @@ container_image(
         ":base-libstdc++6",
         ":base-openssh-client",
     ],
+    visibility = ["//visibility:public"],
 )
 
 container_image(
@@ -66,6 +73,7 @@ container_image(
         ":base-libstdc++6",
         ":base-terraform",
     ],
+    visibility = ["//visibility:public"],
 )
 
 # base container images
