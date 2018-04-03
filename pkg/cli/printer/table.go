@@ -1,42 +1,41 @@
 package printer
 
 import (
-	"io"
-	"fmt"
 	"bytes"
+	"fmt"
+	"io"
 	"strings"
 	//"time"
 	//"sync"
 
-	"github.com/tfogo/tablewriter"
-  "github.com/fatih/color"
 	"github.com/buger/goterm"
+	"github.com/fatih/color"
+	"github.com/tfogo/tablewriter"
 )
 
 type Table struct {
-	Headers 				[]string
-	Rows    				[][]string
-	HeaderColors 		[]tablewriter.Colors
-	ColumnColors		[]tablewriter.Colors
+	Headers         []string
+	Rows            [][]string
+	HeaderColors    []tablewriter.Colors
+	ColumnColors    []tablewriter.Colors
 	ColumnAlignment []int
 }
 
 func (t *Table) Print(writer io.Writer) error {
-	
+
 	FgHiBlack := color.New(color.FgHiBlack).SprintFunc()
-	
-  table := tablewriter.NewWriter(writer)
-	
+
+	table := tablewriter.NewWriter(writer)
+
 	table.SetRowLine(false)
 	table.SetAlignment(tablewriter.ALIGN_CENTER)
-	
 
 	table.SetHeader(t.Headers)
 	table.SetAutoFormatHeaders(false)
-  table.SetBorder(false)
-  table.SetCenterSeparator(FgHiBlack("|"))
-  table.SetColumnSeparator(FgHiBlack("|"))
-  table.SetRowSeparator(FgHiBlack("-"))
+	table.SetBorder(false)
+	table.SetCenterSeparator(FgHiBlack("|"))
+	table.SetColumnSeparator(FgHiBlack("|"))
+	table.SetRowSeparator(FgHiBlack("-"))
 	table.SetAutoWrapText(false)
 	table.SetReflowDuringAutoWrap(false)
 
@@ -45,7 +44,7 @@ func (t *Table) Print(writer io.Writer) error {
 	table.SetColumnAlignment(t.ColumnAlignment)
 
 	table.AppendBulk(t.Rows)
-	
+
 	fmt.Fprintln(writer, "")
 	table.Render()
 	return nil

@@ -10,11 +10,11 @@ import (
 	"github.com/mlab-lattice/system/pkg/cli/command"
 	"github.com/mlab-lattice/system/pkg/cli/latticectl"
 	lctlcommand "github.com/mlab-lattice/system/pkg/cli/latticectl/command"
+	"github.com/mlab-lattice/system/pkg/cli/latticectl/command/systems/builds"
 	"github.com/mlab-lattice/system/pkg/cli/printer"
 	"github.com/mlab-lattice/system/pkg/managerapi/client"
 	"github.com/mlab-lattice/system/pkg/types"
-	"github.com/mlab-lattice/system/pkg/cli/latticectl/command/systems/builds"
-	
+
 	"github.com/briandowns/spinner"
 )
 
@@ -54,7 +54,7 @@ func (c *DeployCommand) Base() (*latticectl.BaseCommand, error) {
 			if err != nil {
 				log.Fatal(err)
 			}
-			
+
 			err = DeploySystem(ctx.Client().Systems(), ctx.SystemID(), types.SystemBuildID(buildID), version, os.Stdout, format)
 			if err != nil {
 				//log.Fatal(err)
@@ -92,7 +92,7 @@ func DeploySystem(
 	if err != nil {
 		return err
 	}
-	
+
 	//TODO: Could reduce the number of requests necessary by
 	// changing the behaviour of the client to return the
 	// whole deploy on creation.
@@ -100,12 +100,12 @@ func DeploySystem(
 	if err != nil {
 		return err
 	}
-	
- 	err = builds.WatchBuild(client.SystemBuilds(systemID), deploy.BuildID, format, writer, printBuildStateDuringDeploy)
+
+	err = builds.WatchBuild(client.SystemBuilds(systemID), deploy.BuildID, format, writer, printBuildStateDuringDeploy)
 	if err != nil {
 		return err
 	}
-	
+
 	err = WatchSystem(client, systemID, format, os.Stdout, printSystemStateDuringDeploy, true)
 	if err != nil {
 		return err
@@ -113,7 +113,6 @@ func DeploySystem(
 
 	return nil
 }
-
 
 func printBuildStateDuringDeploy(writer io.Writer, s *spinner.Spinner, build *types.SystemBuild) {
 	switch build.State {
@@ -125,13 +124,13 @@ func printBuildStateDuringDeploy(writer io.Writer, s *spinner.Spinner, build *ty
 		s.Suffix = fmt.Sprintf(" Building version: %s...", color.ID(string(build.Version)))
 	case types.SystemBuildStateSucceeded:
 		s.Stop()
-		
+
 		fmt.Fprint(writer, color.BoldHiSuccess("✓ %s built successfully! Now deploying...\n", string(build.Version)))
 	case types.SystemBuildStateFailed:
 		s.Stop()
-		
+
 		var componentErrors [][]string
-		
+
 		for serviceName, service := range build.Services {
 			for componentName, component := range service.Components {
 				if component.State == types.ComponentBuildStateFailed {
@@ -142,7 +141,7 @@ func printBuildStateDuringDeploy(writer io.Writer, s *spinner.Spinner, build *ty
 				}
 			}
 		}
-		
+
 		builds.PrintBuildFailure(writer, string(build.Version), componentErrors)
 	}
 }
@@ -164,9 +163,9 @@ func printSystemStateDuringDeploy(writer io.Writer, s *spinner.Spinner, system *
 	case types.SystemStateFailed:
 		s.Stop()
 		fmt.Fprint(writer, color.BoldHiFailure("✘ Rollout for system %s has failed.\n", string(system.ID)))
-		
+
 		var serviceErrors [][]string
-		
+
 		for serviceName, service := range system.Services {
 			if service.State == types.ServiceStateFailed {
 				serviceErrors = append(serviceErrors, []string{
@@ -175,7 +174,7 @@ func printSystemStateDuringDeploy(writer io.Writer, s *spinner.Spinner, system *
 				})
 			}
 		}
-		
+
 		printSystemFailure(writer, system.ID, serviceErrors)
 	}
 }

@@ -10,9 +10,9 @@ import (
 	"github.com/mlab-lattice/system/pkg/cli/command"
 	"github.com/mlab-lattice/system/pkg/cli/latticectl"
 	lctlcommand "github.com/mlab-lattice/system/pkg/cli/latticectl/command"
+	"github.com/mlab-lattice/system/pkg/cli/latticectl/command/systems/builds"
 	"github.com/mlab-lattice/system/pkg/cli/printer"
 	"github.com/mlab-lattice/system/pkg/managerapi/client"
-	"github.com/mlab-lattice/system/pkg/cli/latticectl/command/systems/builds"
 )
 
 type BuildCommand struct {
@@ -26,7 +26,7 @@ func (c *BuildCommand) Base() (*latticectl.BaseCommand, error) {
 	}
 	var watch bool
 	var version string
-	
+
 	cmd := &lctlcommand.SystemCommand{
 		Name: "build",
 		Flags: []command.Flag{
@@ -48,9 +48,9 @@ func (c *BuildCommand) Base() (*latticectl.BaseCommand, error) {
 			if err != nil {
 				log.Fatal(err)
 			}
-			
+
 			c := ctx.Client().Systems().SystemBuilds(ctx.SystemID())
-			
+
 			err = BuildSystem(c, version, format, os.Stdout, watch)
 			if err != nil {
 				//log.Fatal(err)
@@ -68,12 +68,12 @@ func BuildSystem(
 	format printer.Format,
 	writer io.Writer,
 	watch bool,
-	) error {
+) error {
 	buildID, err := client.Create(version)
 	if err != nil {
 		return err
 	}
-	
+
 	if watch {
 		if format == printer.FormatDefault || format == printer.FormatTable {
 			fmt.Fprintf(writer, "\nBuild ID: %s\n", color.ID(string(buildID)))

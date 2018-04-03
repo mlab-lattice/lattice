@@ -16,7 +16,7 @@ import (
 	"github.com/mlab-lattice/system/pkg/types"
 
 	"k8s.io/apimachinery/pkg/util/wait"
-	
+
 	tw "github.com/tfogo/tablewriter"
 )
 
@@ -75,7 +75,7 @@ func ListServices(client client.ServiceClient, format printer.Format, writer io.
 	if err != nil {
 		return err
 	}
-	
+
 	printer := servicesPrinter(deploys, format)
 	printer.Print(writer)
 	//fmt.Printf("%v\n", deploys)
@@ -118,7 +118,7 @@ func servicesPrinter(services []types.Service, format printer.Format) printer.In
 	switch format {
 	case printer.FormatDefault, printer.FormatTable:
 		headers := []string{"ID", "Path", "State", "Instances", "Info"}
-		
+
 		headerColors := []tw.Colors{
 			{tw.Bold},
 			{tw.Bold},
@@ -126,7 +126,7 @@ func servicesPrinter(services []types.Service, format printer.Format) printer.In
 			{tw.Bold},
 			{tw.Bold},
 		}
-		
+
 		columnColors := []tw.Colors{
 			{tw.FgHiCyanColor},
 			{tw.FgHiCyanColor},
@@ -134,7 +134,7 @@ func servicesPrinter(services []types.Service, format printer.Format) printer.In
 			{},
 			{},
 		}
-		
+
 		columnAlignment := []int{
 			tw.ALIGN_CENTER,
 			tw.ALIGN_CENTER,
@@ -154,7 +154,7 @@ func servicesPrinter(services []types.Service, format printer.Format) printer.In
 			default:
 				stateColor = color.Warning
 			}
-			
+
 			var info string
 			if service.FailureMessage == nil {
 				info = ""
@@ -172,11 +172,11 @@ func servicesPrinter(services []types.Service, format printer.Format) printer.In
 		}
 
 		p = &printer.Table{
-			Headers: 					headers,
-			Rows:    					rows,
-			HeaderColors: 		headerColors,
-			ColumnColors: 		columnColors,
-			ColumnAlignment: 	columnAlignment,
+			Headers:         headers,
+			Rows:            rows,
+			HeaderColors:    headerColors,
+			ColumnColors:    columnColors,
+			ColumnAlignment: columnAlignment,
 		}
 
 	case printer.FormatJSON:

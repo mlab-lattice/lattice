@@ -1,11 +1,11 @@
 package printer
 
 import (
-	"encoding/json"
-	"io"
 	"bytes"
-	"os"
+	"encoding/json"
 	"fmt"
+	"io"
+	"os"
 )
 
 type JSON struct {

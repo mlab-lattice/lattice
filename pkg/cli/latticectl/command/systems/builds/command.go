@@ -1,11 +1,11 @@
 package builds
 
 import (
+	"bytes"
 	"io"
 	"log"
 	"os"
 	"time"
-	"bytes"
 
 	"github.com/mlab-lattice/system/pkg/cli/color"
 	"github.com/mlab-lattice/system/pkg/cli/command"
@@ -15,8 +15,8 @@ import (
 	"github.com/mlab-lattice/system/pkg/managerapi/client"
 	"github.com/mlab-lattice/system/pkg/types"
 
-	"k8s.io/apimachinery/pkg/util/wait"
 	tw "github.com/tfogo/tablewriter"
+	"k8s.io/apimachinery/pkg/util/wait"
 )
 
 // ListBuildsSupportedFormats is the list of printer.Formats supported
@@ -95,7 +95,7 @@ func WatchBuilds(client client.SystemBuildClient, format printer.Format, writer 
 	buildLists := make(chan []types.SystemBuild)
 	lastHeight := 0
 	var b bytes.Buffer
-	
+
 	go wait.PollImmediateInfinite(
 		5*time.Second,
 		func() (bool, error) {
@@ -103,7 +103,7 @@ func WatchBuilds(client client.SystemBuildClient, format printer.Format, writer 
 			if err != nil {
 				return false, err
 			}
-			
+
 			buildLists <- buildList
 			return false, nil
 		},
@@ -112,7 +112,7 @@ func WatchBuilds(client client.SystemBuildClient, format printer.Format, writer 
 	for buildList := range buildLists {
 		p := buildsPrinter(buildList, format)
 		lastHeight = p.Overwrite(b, lastHeight)
-		
+
 		// Note: Watching builds is never exitable.
 		// There is no fail state for an entire list of builds.
 	}
@@ -123,19 +123,19 @@ func buildsPrinter(builds []types.SystemBuild, format printer.Format) printer.In
 	switch format {
 	case printer.FormatDefault, printer.FormatTable:
 		headers := []string{"ID", "Version", "State"}
-		
+
 		headerColors := []tw.Colors{
 			{tw.Bold},
 			{tw.Bold},
 			{tw.Bold},
 		}
-		
+
 		columnColors := []tw.Colors{
 			{tw.FgHiCyanColor},
 			{},
 			{},
 		}
-		
+
 		columnAlignment := []int{
 			tw.ALIGN_LEFT,
 			tw.ALIGN_LEFT,
@@ -160,13 +160,13 @@ func buildsPrinter(builds []types.SystemBuild, format printer.Format) printer.In
 				stateColor(string(build.State)),
 			})
 		}
-		
+
 		p = &printer.Table{
-			Headers: 			headers,
-			Rows:    			rows,
-			HeaderColors: headerColors,
-			ColumnColors: columnColors,
-			ColumnAlignment: 	columnAlignment,
+			Headers:         headers,
+			Rows:            rows,
+			HeaderColors:    headerColors,
+			ColumnColors:    columnColors,
+			ColumnAlignment: columnAlignment,
 		}
 
 	case printer.FormatJSON:

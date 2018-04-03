@@ -1,11 +1,11 @@
 package systems
 
 import (
+	"bytes"
 	"io"
 	"log"
 	"os"
 	"time"
-	"bytes"
 
 	"github.com/mlab-lattice/system/pkg/cli/color"
 	"github.com/mlab-lattice/system/pkg/cli/command"
@@ -15,8 +15,8 @@ import (
 	"github.com/mlab-lattice/system/pkg/managerapi/client"
 	"github.com/mlab-lattice/system/pkg/types"
 
-	"k8s.io/apimachinery/pkg/util/wait"
 	tw "github.com/tfogo/tablewriter"
+	"k8s.io/apimachinery/pkg/util/wait"
 )
 
 // ListSystemsSupportedFormats is the list of printer.Formats supported
@@ -96,7 +96,7 @@ func WatchSystems(client client.SystemClient, format printer.Format, writer io.W
 	systemLists := make(chan []types.System)
 	lastHeight := 0
 	var b bytes.Buffer
-	
+
 	go wait.PollImmediateInfinite(
 		5*time.Second,
 		func() (bool, error) {
@@ -113,7 +113,7 @@ func WatchSystems(client client.SystemClient, format printer.Format, writer io.W
 	for systemList := range systemLists {
 		p := systemsPrinter(systemList, format)
 		lastHeight = p.Overwrite(b, lastHeight)
-		
+
 		// Note: Watching systems is never exitable.
 		// There is no fail state for an entire lattice of systems.
 	}
@@ -124,19 +124,19 @@ func systemsPrinter(systems []types.System, format printer.Format) printer.Inter
 	switch format {
 	case printer.FormatDefault, printer.FormatTable:
 		headers := []string{"Name", "Definition", "Status"}
-		
+
 		headerColors := []tw.Colors{
 			{tw.Bold},
 			{tw.Bold},
 			{tw.Bold},
 		}
-		
+
 		columnColors := []tw.Colors{
 			{tw.FgHiCyanColor},
 			{},
 			{},
 		}
-		
+
 		columnAlignment := []int{
 			tw.ALIGN_LEFT,
 			tw.ALIGN_LEFT,
@@ -163,11 +163,11 @@ func systemsPrinter(systems []types.System, format printer.Format) printer.Inter
 		}
 
 		p = &printer.Table{
-			Headers: headers,
-			Rows:    rows,
-			HeaderColors: headerColors,
-			ColumnColors: columnColors,
-			ColumnAlignment: 	columnAlignment,
+			Headers:         headers,
+			Rows:            rows,
+			HeaderColors:    headerColors,
+			ColumnColors:    columnColors,
+			ColumnAlignment: columnAlignment,
 		}
 
 	case printer.FormatJSON:

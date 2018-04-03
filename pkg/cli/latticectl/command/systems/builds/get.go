@@ -1,14 +1,14 @@
 package builds
 
 import (
+	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"log"
 	"os"
-	"time"
 	"sort"
-	"bytes"
-	"errors"
+	"time"
 
 	"github.com/mlab-lattice/system/pkg/cli/color"
 	"github.com/mlab-lattice/system/pkg/cli/command"
@@ -18,9 +18,9 @@ import (
 	"github.com/mlab-lattice/system/pkg/managerapi/client"
 	"github.com/mlab-lattice/system/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
-	
-	tw "github.com/tfogo/tablewriter"
+
 	"github.com/briandowns/spinner"
+	tw "github.com/tfogo/tablewriter"
 )
 
 type GetCommand struct {
@@ -99,15 +99,15 @@ func WatchBuild(
 	format printer.Format,
 	writer io.Writer,
 	PrintBuildStateDuringWatchBuild PrintBuildState,
-	) error {
+) error {
 	builds := make(chan *types.SystemBuild)
-	
+
 	lastHeight := 0
 	var returnError error
 	var exit bool
 	var b bytes.Buffer
 	s := spinner.New(spinner.CharSets[14], 100*time.Millisecond)
-	
+
 	go wait.PollImmediateInfinite(
 		5*time.Second,
 		func() (bool, error) {
@@ -120,25 +120,25 @@ func WatchBuild(
 			return false, nil
 		},
 	)
-	
+
 	for build := range builds {
 		p := BuildPrinter(build, format)
 		lastHeight = p.Overwrite(b, lastHeight)
-		
+
 		if format == printer.FormatDefault || format == printer.FormatTable {
 			PrintBuildStateDuringWatchBuild(writer, s, build)
 		}
-		
+
 		exit, returnError = buildCompleted(build)
 		if exit {
 			return returnError
 		}
 	}
-	
+
 	return nil
 }
 
-func PrintBuildStateDuringWatchBuild(writer io.Writer, s *spinner.Spinner, build *types.SystemBuild)  {
+func PrintBuildStateDuringWatchBuild(writer io.Writer, s *spinner.Spinner, build *types.SystemBuild) {
 	switch build.State {
 	case types.SystemBuildStatePending:
 		s.Start()
@@ -151,9 +151,9 @@ func PrintBuildStateDuringWatchBuild(writer io.Writer, s *spinner.Spinner, build
 		printBuildSuccess(writer, string(build.Version), build.ID)
 	case types.SystemBuildStateFailed:
 		s.Stop()
-		
+
 		var componentErrors [][]string
-		
+
 		for serviceName, service := range build.Services {
 			for componentName, component := range service.Components {
 				if component.State == types.ComponentBuildStateFailed {
@@ -164,7 +164,7 @@ func PrintBuildStateDuringWatchBuild(writer io.Writer, s *spinner.Spinner, build
 				}
 			}
 		}
-		
+
 		PrintBuildFailure(writer, string(build.Version), componentErrors)
 	}
 }
@@ -201,19 +201,19 @@ func BuildPrinter(build *types.SystemBuild, format printer.Format) printer.Inter
 	switch format {
 	case printer.FormatDefault, printer.FormatTable:
 		headers := []string{"Component", "State", "Info"}
-		
+
 		headerColors := []tw.Colors{
 			{tw.Bold},
 			{tw.Bold},
 			{tw.Bold},
 		}
-		
+
 		columnColors := []tw.Colors{
 			{tw.FgHiCyanColor},
 			{},
 			{},
 		}
-		
+
 		columnAlignment := []int{
 			tw.ALIGN_LEFT,
 			tw.ALIGN_LEFT,
@@ -228,7 +228,7 @@ func BuildPrinter(build *types.SystemBuild, format printer.Format) printer.Inter
 				// fmt.Fprintln(os.Stdout, component)
 				//fmt.Fprint(os.Stdout, "COMPONENT STATE", component.State, "    ")
 				var infoMessage string
-				
+
 				if component.FailureMessage == nil {
 					if component.LastObservedPhase != nil {
 						infoMessage = string(*component.LastObservedPhase)
@@ -238,7 +238,7 @@ func BuildPrinter(build *types.SystemBuild, format printer.Format) printer.Inter
 				} else {
 					infoMessage = string(*component.FailureMessage)
 				}
-				
+
 				var stateColor color.Color
 				switch component.State {
 				case types.ComponentBuildStateSucceeded:
@@ -248,23 +248,23 @@ func BuildPrinter(build *types.SystemBuild, format printer.Format) printer.Inter
 				default:
 					stateColor = color.Warning
 				}
-				
+
 				rows = append(rows, []string{
 					fmt.Sprintf("%s:%s", serviceName, componentName),
 					stateColor(string(component.State)),
 					string(infoMessage),
 				})
-				
+
 				sort.Slice(rows, func(i, j int) bool { return rows[i][0] < rows[j][0] })
 			}
 		}
-		
+
 		p = &printer.Table{
-			Headers: 					headers,
-			Rows:    					rows,
-			HeaderColors: 		headerColors,
-			ColumnColors: 		columnColors,
-			ColumnAlignment: 	columnAlignment,
+			Headers:         headers,
+			Rows:            rows,
+			HeaderColors:    headerColors,
+			ColumnColors:    columnColors,
+			ColumnAlignment: columnAlignment,
 		}
 
 	case printer.FormatJSON:

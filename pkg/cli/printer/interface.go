@@ -1,8 +1,8 @@
 package printer
 
 import (
-	"io"
 	"bytes"
+	"io"
 )
 
 type Interface interface {

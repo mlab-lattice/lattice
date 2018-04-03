@@ -1,15 +1,15 @@
 package systems
 
 import (
+	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"log"
 	"os"
-	"time"
 	"sort"
 	"strings"
-	"bytes"
-	"errors"
+	"time"
 
 	"github.com/mlab-lattice/system/pkg/cli/color"
 	"github.com/mlab-lattice/system/pkg/cli/command"
@@ -19,9 +19,9 @@ import (
 	"github.com/mlab-lattice/system/pkg/managerapi/client"
 	"github.com/mlab-lattice/system/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
-	
-	tw "github.com/tfogo/tablewriter"
+
 	"github.com/briandowns/spinner"
+	tw "github.com/tfogo/tablewriter"
 )
 
 type GetCommand struct {
@@ -83,14 +83,14 @@ func GetSystem(client client.SystemClient, systemID types.SystemID, format print
 }
 
 func WatchSystem(client client.SystemClient, systemID types.SystemID, format printer.Format, writer io.Writer, printSystemState PrintSystemState, exitable bool) error {
-	systems:= make(chan *types.System)
-	
+	systems := make(chan *types.System)
+
 	lastHeight := 0
 	var returnError error
 	var exit bool
 	var b bytes.Buffer
 	s := spinner.New(spinner.CharSets[14], 100*time.Millisecond)
-	
+
 	// Poll the API for the builds and send it to the channel
 	go wait.PollImmediateInfinite(
 		5*time.Second,
@@ -104,22 +104,22 @@ func WatchSystem(client client.SystemClient, systemID types.SystemID, format pri
 			return false, nil
 		},
 	)
-	
+
 	for system := range systems {
 		p := SystemPrinter(system, format)
 		lastHeight = p.Overwrite(b, lastHeight)
-		
+
 		if format == printer.FormatDefault || format == printer.FormatTable {
 			printSystemState(writer, s, system)
 		}
-		
+
 		exit, returnError = systemInExitableState(system)
-		
+
 		if exitable && exit {
 			return returnError
 		}
 	}
-	
+
 	return nil
 }
 
@@ -151,9 +151,9 @@ func printSystemState(writer io.Writer, s *spinner.Spinner, system *types.System
 	case types.SystemStateFailed:
 		s.Stop()
 		fmt.Fprint(writer, color.BoldHiFailure("System %s has failed.", string(system.ID)))
-		
+
 		var serviceErrors [][]string
-		
+
 		for serviceName, service := range system.Services {
 			if service.State == types.ServiceStateFailed {
 				serviceErrors = append(serviceErrors, []string{
@@ -162,7 +162,7 @@ func printSystemState(writer io.Writer, s *spinner.Spinner, system *types.System
 				})
 			}
 		}
-		
+
 		printSystemFailure(writer, system.ID, serviceErrors)
 	}
 }
@@ -181,7 +181,7 @@ func SystemPrinter(system *types.System, format printer.Format) printer.Interfac
 	switch format {
 	case printer.FormatDefault, printer.FormatTable:
 		headers := []string{"Service", "State", "Info", "Updated", "Stale", "Addresses"}
-		
+
 		headerColors := []tw.Colors{
 			{tw.Bold},
 			{tw.Bold},
@@ -190,7 +190,7 @@ func SystemPrinter(system *types.System, format printer.Format) printer.Interfac
 			{tw.Bold},
 			{tw.Bold},
 		}
-		
+
 		columnColors := []tw.Colors{
 			{tw.FgHiCyanColor},
 			{},
@@ -199,7 +199,7 @@ func SystemPrinter(system *types.System, format printer.Format) printer.Interfac
 			{},
 			{},
 		}
-		
+
 		columnAlignment := []int{
 			tw.ALIGN_CENTER,
 			tw.ALIGN_CENTER,
@@ -213,17 +213,17 @@ func SystemPrinter(system *types.System, format printer.Format) printer.Interfac
 		// fmt.Fprintln(os.Stdout, system)
 		for serviceName, service := range system.Services {
 			// fmt.Fprintln(os.Stdout, service)
-			
+
 			// fmt.Fprintln(os.Stdout, component)
 			// fmt.Fprint(os.Stdout, "COMPONENT STATE", component.State, "    ")
 			var infoMessage string
-			
+
 			if service.FailureMessage == nil {
 				infoMessage = ""
 			} else {
 				infoMessage = string(*service.FailureMessage)
 			}
-			
+
 			var stateColor color.Color
 			switch service.State {
 			case types.ServiceStateStable:
@@ -233,12 +233,12 @@ func SystemPrinter(system *types.System, format printer.Format) printer.Interfac
 			default:
 				stateColor = color.Warning
 			}
-			
+
 			var addresses []string
 			for port, address := range service.PublicPorts {
 				addresses = append(addresses, fmt.Sprintf("%v: %v", port, address.Address))
 			}
-			
+
 			rows = append(rows, []string{
 				string(serviceName),
 				stateColor(string(service.State)),
@@ -247,16 +247,16 @@ func SystemPrinter(system *types.System, format printer.Format) printer.Interfac
 				fmt.Sprintf("%d", service.StaleInstances),
 				strings.Join(addresses, ","),
 			})
-			
+
 			sort.Slice(rows, func(i, j int) bool { return rows[i][0] < rows[j][0] })
 		}
-		
+
 		p = &printer.Table{
-			Headers: 					headers,
-			Rows:    					rows,
-			HeaderColors: 		headerColors,
-			ColumnColors: 		columnColors,
-			ColumnAlignment: 	columnAlignment,
+			Headers:         headers,
+			Rows:            rows,
+			HeaderColors:    headerColors,
+			ColumnColors:    columnColors,
+			ColumnAlignment: columnAlignment,
 		}
 
 	case printer.FormatJSON:

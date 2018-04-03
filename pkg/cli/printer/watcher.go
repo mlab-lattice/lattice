@@ -59,10 +59,10 @@ func (w *OverwrittingTerminalWatcher) Watch(printers chan Interface, writer io.W
 		b.Truncate(0)
 
 		// Clear the previous render's
-		
+
 		for i := 0; i <= lastHeight; i++ {
 			if i != 0 {
-				
+
 				goterm.ResetLine("")
 			}
 			goterm.MoveCursorUp(1)
@@ -94,7 +94,7 @@ func (w *OverwrittingTerminalWatcher2) Watch(printers chan Interface, writer io.
 
 		// Clear the previous render's
 		//goterm.MoveCursorUp(1)
-		
+
 		for i := 0; i <= lastHeight; i++ {
 			if i != 0 {
 				goterm.MoveCursorUp(1)
@@ -105,15 +105,15 @@ func (w *OverwrittingTerminalWatcher2) Watch(printers chan Interface, writer io.
 		goterm.Print(output)
 		//goterm.MoveCursorDown(1)
 		goterm.Flush()
-		
+
 		printerRenderedChan <- true
-		
+
 		// if firstPrint {
 		// 	printCompleteChan <- "first"
 		// } else {
 		// 	printCompleteChan <- "subsequent"
 		// }
-		
+
 		// firstPrint = false
 		lastHeight = len(strings.Split(output, "\n"))
 	}

@@ -14,8 +14,8 @@ import (
 	"github.com/mlab-lattice/system/pkg/managerapi/client"
 	"github.com/mlab-lattice/system/pkg/types"
 
-	"k8s.io/apimachinery/pkg/util/wait"
 	tw "github.com/tfogo/tablewriter"
+	"k8s.io/apimachinery/pkg/util/wait"
 )
 
 // ListDeploysSupportedFormats is the list of printer.Formats supported
@@ -89,24 +89,24 @@ func WatchDeploys(client client.RolloutClient, format printer.Format, writer io.
 			if err != nil {
 				return false, err
 			}
-	
+
 			p := deploysPrinter(deploys, format)
 			printerChan <- p
 			return false, nil
 		},
 	)
-	
+
 	// If displaying a table, use the overwritting terminal watcher, if JSON
 	// use the scrolling watcher
 	var w printer.Watcher
 	switch format {
 	case printer.FormatDefault, printer.FormatTable:
 		w = &printer.OverwrittingTerminalWatcher{}
-	
+
 	case printer.FormatJSON:
 		w = &printer.ScrollingWatcher{}
 	}
-	
+
 	w.Watch(printerChan, writer)
 }
 
@@ -115,13 +115,13 @@ func deploysPrinter(deploys []types.SystemRollout, format printer.Format) printe
 	switch format {
 	case printer.FormatDefault, printer.FormatTable:
 		headers := []string{"ID", "Build ID", "State"}
-		
+
 		headerColors := []tw.Colors{
 			{tw.Bold},
 			{tw.Bold},
 			{tw.Bold},
 		}
-		
+
 		columnColors := []tw.Colors{
 			{tw.FgHiCyanColor},
 			{tw.FgHiCyanColor},
@@ -146,10 +146,10 @@ func deploysPrinter(deploys []types.SystemRollout, format printer.Format) printe
 				stateColor(string(deploy.State)),
 			})
 		}
-		
+
 		p = &printer.Table{
-			Headers: 			headers,
-			Rows:    			rows,
+			Headers:      headers,
+			Rows:         rows,
 			HeaderColors: headerColors,
 			ColumnColors: columnColors,
 		}

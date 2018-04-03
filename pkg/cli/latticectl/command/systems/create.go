@@ -12,7 +12,6 @@ import (
 	lctlcommand "github.com/mlab-lattice/system/pkg/cli/latticectl/command"
 	"github.com/mlab-lattice/system/pkg/managerapi/client"
 	"github.com/mlab-lattice/system/pkg/types"
-	
 )
 
 type CreateCommand struct {
@@ -36,7 +35,7 @@ func (c *CreateCommand) Base() (*latticectl.BaseCommand, error) {
 			},
 		},
 		Run: func(ctx lctlcommand.LatticeCommandContext, args []string) {
-			
+
 			err := CreateSystem(ctx.Client().Systems(), types.SystemID(systemName), definitionURL, os.Stdout)
 			if err != nil {
 				log.Fatal(err)
