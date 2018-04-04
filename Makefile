@@ -178,26 +178,3 @@ kubernetes.update-dependencies:
 .PHONY: kubernetes.regenerate-custom-resource-clients
 kubernetes.regenerate-custom-resource-clients:
 	KUBERNETES_VERSION=$(VERSION) $(DIR)/scripts/kubernetes/codegen/regenerate.sh
-
-
-# cloud images
-.PHONY: cloud-images.build
-cloud-images.build: cloud-images.build-base-node-image \
-                    cloud-images.build-master-node-image
-
-.PHONY: cloud-images.build-base-node-image
-cloud-images.build-base-node-image:
-	$(CLOUD_IMAGE_BUILD_DIR)/build-base-node-image
-
-.PHONY: cloud-images.build-master-node-image
-cloud-images.build-master-node-image:
-	$(CLOUD_IMAGE_BUILD_DIR)/build-master-node-image
-
-.PHONY: cloud-images.clean
-cloud-images.clean:
-	rm -rf $(CLOUD_IMAGE_BUILD_STATE_DIR)/artifacts
-
-.PHONY: cloud-images.clean-master-node-image
-cloud-images.clean-master-node-image:
-	rm -rf $(CLOUD_IMAGE_BUILD_STATE_DIR)/artifacts/master-node
-	rm -f $(CLOUD_IMAGE_BUILD_STATE_DIR)/artifacts/master-node-ami-id
