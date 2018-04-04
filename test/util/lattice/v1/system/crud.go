@@ -18,7 +18,7 @@ func Create(client v1client.SystemClient, id v1.SystemID, definitionURL string) 
 
 	Expect(system).To(Not(BeNil()), "returned system is nil")
 	Expect(system.DefinitionURL).To(Equal(definitionURL), fmt.Sprintf("returned system %v has unexpected definition url %v (expected %v)", system.ID, system.DefinitionURL, definitionURL))
-	Expect(system.State).To(Equal(v1.SystemStatePending), fmt.Sprintf("returned system %v has unexpected state %v (expected %v)"), system.ID, system.State, v1.SystemStatePending)
+	Expect(system.State).To(Equal(v1.SystemStatePending), fmt.Sprintf("returned system %v has unexpected state %v (expected %v)", system.ID, system.State, v1.SystemStatePending))
 
 	return system.ID
 }
