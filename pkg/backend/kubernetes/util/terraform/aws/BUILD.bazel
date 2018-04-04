@@ -6,7 +6,6 @@ go_library(
         "endpoint.go",
         "lattice.go",
         "load_balancer.go",
-        "master_node.go",
         "module_paths.go",
         "node_pool.go",
         "service.go",

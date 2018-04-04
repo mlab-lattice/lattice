@@ -94,14 +94,12 @@ lattice_base_container_images(base_images)
 # (container-push) push-debug-foo
 go_targets = [
     ("kubernetes-api-server-rest", "libstdc++6", "cmd/kubernetes/api-server/rest"),
-    ("kubernetes-aws-master-node-attach-etcd-volume", "libstdc++6-terraform", "cmd/kubernetes/aws/master-node/attach-etcd-volume"),
-    ("kubernetes-aws-master-node-register-dns", "libstdc++6-terraform", "cmd/kubernetes/aws/master-node/register-dns"),
     ("kubernetes-component-builder", "libstdc++6-openssh-client", "cmd/kubernetes/component-builder"),
     ("kubernetes-envoy-prepare", "iptables", "cmd/kubernetes/envoy/prepare"),
     ("kubernetes-envoy-xds-api-rest-per-node", "libstdc++6", "cmd/kubernetes/envoy/xdsapi/v1/rest/per-node"),
     ("kubernetes-lattice-controller-manager", "libstdc++6-terraform", "cmd/kubernetes/lattice-controller-manager"),
     ("kubernetes-local-dns-controller", "libstdc++6", "cmd/kubernetes/local/dns/controller"),
-    ("latticectl", "libstdc++6-terraform", "cmd/latticectl"),
+    ("latticectl", "libstdc++6", "cmd/latticectl"),
 ]
 
 lattice_container_images(go_targets)

@@ -122,8 +122,6 @@ docker.push-image-user: gazelle
 	bazel run --platforms=@io_bazel_rules_go//go/toolchain:linux_amd64 //docker:push-user-debug-$(IMAGE)
 
 DOCKER_IMAGES := kubernetes-api-server-rest                    \
-                 kubernetes-aws-master-node-attach-etcd-volume \
-                 kubernetes-aws-master-node-register-dns       \
                  kubernetes-component-builder                  \
                  kubernetes-envoy-prepare                      \
                  kubernetes-envoy-xds-api-rest-per-node        \
