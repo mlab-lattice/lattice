@@ -19,9 +19,8 @@ const (
 	LabelKeyServiceID   = "service.lattice.mlab.com/id"
 	LabelKeyServicePath = "service.lattice.mlab.com/path"
 
-	LabelKeySystemBuildID      = "system.build.lattice.mlab.com/id"
-	LabelKeySystemBuildVersion = "system.build.lattice.mlab.com/version"
-	LabelKeySystemVersion      = "system.lattice.mlab.com/version"
+	LabelKeySystemBuildID = "system.build.lattice.mlab.com/id"
+	LabelKeySystemVersion = "system.lattice.mlab.com/version"
 
 	LabelKeySecret = "secret.lattice.mlab.com"
 )

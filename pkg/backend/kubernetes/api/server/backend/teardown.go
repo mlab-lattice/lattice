@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
-	kubeconstants "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/constants"
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	kubeutil "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/kubernetes"
 
@@ -20,7 +19,7 @@ func (kb *KubernetesBackend) TearDown(systemID v1.SystemID) (*v1.Teardown, error
 		return nil, err
 	}
 
-	teardown := newTeardown(systemID)
+	teardown := newTeardown()
 
 	namespace := kubeutil.SystemNamespace(kb.latticeID, systemID)
 	teardown, err := kb.latticeClient.LatticeV1().Teardowns(namespace).Create(teardown)
@@ -36,15 +35,10 @@ func (kb *KubernetesBackend) TearDown(systemID v1.SystemID) (*v1.Teardown, error
 	return &externalTeardown, nil
 }
 
-func newTeardown(id v1.SystemID) *latticev1.Teardown {
-	labels := map[string]string{
-		kubeconstants.LatticeNamespaceLabel: string(id),
-	}
-
+func newTeardown() *latticev1.Teardown {
 	return &latticev1.Teardown{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:   uuid.NewV4().String(),
-			Labels: labels,
+			Name: uuid.NewV4().String(),
 		},
 		Spec: latticev1.TeardownSpec{},
 		Status: latticev1.TeardownStatus{
