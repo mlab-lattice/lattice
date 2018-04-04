@@ -55,6 +55,7 @@ type (
 
 const (
 	ComponentBuildPhasePullingGitRepository ComponentBuildPhase = "pulling git repository"
+	ComponentBuildPhasePullingDockerImage   ComponentBuildPhase = "pulling docker image"
 	ComponentBuildPhaseBuildingDockerImage  ComponentBuildPhase = "building docker image"
 	ComponentBuildPhasePushingDockerImage   ComponentBuildPhase = "pushing docker image"
 
