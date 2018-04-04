@@ -16,6 +16,8 @@ go_library(
         "//pkg/cli/printer:go_default_library",
         "//pkg/managerapi/client:go_default_library",
         "//pkg/types:go_default_library",
+        "@com_github_briandowns_spinner//:go_default_library",
+        "@com_github_tfogo_tablewriter//:go_default_library",
         "@io_k8s_apimachinery//pkg/util/wait:go_default_library",
     ],
 )

@@ -1,6 +1,7 @@
 package deploys
 
 import (
+	"bytes"
 	"io"
 	"log"
 	"os"
@@ -14,6 +15,7 @@ import (
 	"github.com/mlab-lattice/system/pkg/managerapi/client"
 	"github.com/mlab-lattice/system/pkg/types"
 
+	tw "github.com/tfogo/tablewriter"
 	"k8s.io/apimachinery/pkg/util/wait"
 )
 
@@ -73,52 +75,64 @@ func ListDeploys(client client.RolloutClient, format printer.Format, writer io.W
 		return err
 	}
 
-	p := deployPrinter(deploys, format)
+	p := deploysPrinter(deploys, format)
 	p.Print(writer)
 	return nil
 }
 
 func WatchDeploys(client client.RolloutClient, format printer.Format, writer io.Writer) {
-	// Poll the API for the builds and send it to the channel
-	printerChan := make(chan printer.Interface)
+	deployLists := make(chan []types.SystemRollout)
+
+	lastHeight := 0
+	var b bytes.Buffer
+
 	go wait.PollImmediateInfinite(
 		5*time.Second,
 		func() (bool, error) {
-			builds, err := client.List()
+			deployList, err := client.List()
 			if err != nil {
 				return false, err
 			}
 
-			p := deployPrinter(builds, format)
-			printerChan <- p
+			deployLists <- deployList
 			return false, nil
 		},
 	)
 
-	// If displaying a table, use the overwritting terminal watcher, if JSON
-	// use the scrolling watcher
-	var w printer.Watcher
-	switch format {
-	case printer.FormatDefault, printer.FormatTable:
-		w = &printer.OverwrittingTerminalWatcher{}
-
-	case printer.FormatJSON:
-		w = &printer.ScrollingWatcher{}
+	for deployList := range deployLists {
+		p := deploysPrinter(deployList, format)
+		lastHeight = p.Overwrite(b, lastHeight)
 	}
-
-	w.Watch(printerChan, writer)
 }
 
-func deployPrinter(teardowns []types.SystemRollout, format printer.Format) printer.Interface {
+func deploysPrinter(deploys []types.SystemRollout, format printer.Format) printer.Interface {
 	var p printer.Interface
 	switch format {
 	case printer.FormatDefault, printer.FormatTable:
-		headers := []string{"ID", "BuildID", "State"}
+		headers := []string{"ID", "Build ID", "State"}
+
+		headerColors := []tw.Colors{
+			{tw.Bold},
+			{tw.Bold},
+			{tw.Bold},
+		}
+
+		columnColors := []tw.Colors{
+			{tw.FgHiCyanColor},
+			{tw.FgHiCyanColor},
+			{},
+		}
+
+		columnAlignment := []int{
+			tw.ALIGN_LEFT,
+			tw.ALIGN_LEFT,
+			tw.ALIGN_LEFT,
+		}
 
 		var rows [][]string
-		for _, teardown := range teardowns {
+		for _, deploy := range deploys {
 			var stateColor color.Color
-			switch teardown.State {
+			switch deploy.State {
 			case types.SystemRolloutStateSucceeded:
 				stateColor = color.Success
 			case types.SystemRolloutStateFailed:
@@ -128,20 +142,23 @@ func deployPrinter(teardowns []types.SystemRollout, format printer.Format) print
 			}
 
 			rows = append(rows, []string{
-				string(teardown.ID),
-				string(teardown.BuildID),
-				stateColor(string(teardown.State)),
+				string(deploy.ID),
+				string(deploy.BuildID),
+				stateColor(string(deploy.State)),
 			})
 		}
 
 		p = &printer.Table{
-			Headers: headers,
-			Rows:    rows,
+			Headers:         headers,
+			Rows:            rows,
+			HeaderColors:    headerColors,
+			ColumnColors:    columnColors,
+			ColumnAlignment: columnAlignment,
 		}
 
 	case printer.FormatJSON:
 		p = &printer.JSON{
-			Value: teardowns,
+			Value: deploys,
 		}
 	}
 

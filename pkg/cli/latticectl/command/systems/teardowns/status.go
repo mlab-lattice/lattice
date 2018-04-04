@@ -1,10 +1,11 @@
 package teardowns
 
 import (
-	"fmt"
+	"bytes"
 	"io"
 	"log"
 	"os"
+	"time"
 
 	"github.com/mlab-lattice/system/pkg/cli/command"
 	"github.com/mlab-lattice/system/pkg/cli/latticectl"
@@ -12,6 +13,8 @@ import (
 	"github.com/mlab-lattice/system/pkg/cli/printer"
 	"github.com/mlab-lattice/system/pkg/managerapi/client"
 	"github.com/mlab-lattice/system/pkg/types"
+
+	"k8s.io/apimachinery/pkg/util/wait"
 )
 
 // GetTeardownsSupportedFormats is the list of printer.Formats supported
@@ -71,15 +74,32 @@ func GetTeardown(client client.TeardownClient, teardownID types.SystemTeardownID
 		return err
 	}
 
-	fmt.Printf("%v\n", teardown)
+	p := teardownsPrinter([]types.SystemTeardown{*teardown}, format)
+	p.Print(writer)
 	return nil
 }
 
 func WatchTeardown(client client.TeardownClient, teardownID types.SystemTeardownID, format printer.Format, writer io.Writer) {
-	teardown, err := client.Get(teardownID)
-	if err != nil {
-		log.Panic(err)
-	}
+	teardowns := make(chan *types.SystemTeardown)
 
-	fmt.Printf("%v\n", teardown)
+	lastHeight := 0
+	var b bytes.Buffer
+
+	go wait.PollImmediateInfinite(
+		5*time.Second,
+		func() (bool, error) {
+			teardown, err := client.Get(teardownID)
+			if err != nil {
+				return false, err
+			}
+
+			teardowns <- teardown
+			return false, nil
+		},
+	)
+
+	for teardown := range teardowns {
+		p := teardownsPrinter([]types.SystemTeardown{*teardown}, format)
+		lastHeight = p.Overwrite(b, lastHeight)
+	}
 }
