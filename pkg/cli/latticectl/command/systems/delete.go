@@ -6,8 +6,8 @@ import (
 	"log"
 	"os"
 
-	"github.com/mlab-lattice/system/pkg/cli/command"
 	"github.com/mlab-lattice/system/pkg/cli/color"
+	"github.com/mlab-lattice/system/pkg/cli/command"
 	"github.com/mlab-lattice/system/pkg/cli/latticectl"
 	lctlcommand "github.com/mlab-lattice/system/pkg/cli/latticectl/command"
 	"github.com/mlab-lattice/system/pkg/managerapi/client"
