@@ -6,7 +6,7 @@ go_library(
     importpath = "github.com/mlab-lattice/lattice/cmd/kubernetes/aws/master-node/attach-etcd-volume/app",
     visibility = ["//visibility:public"],
     deps = [
-        "//pkg/backend/kubernetes/terraform/aws:go_default_library",
+        "//pkg/backend/kubernetes/util/terraform/aws:go_default_library",
         "//pkg/util/terraform:go_default_library",
         "//pkg/util/terraform/provider/aws:go_default_library",
         "@com_github_spf13_cobra//:go_default_library",

@@ -7,8 +7,8 @@ import (
 
 	awscloudprovider "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/cloudprovider/aws"
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
-	kubetf "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/terraform/aws"
 	kubeutil "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/kubernetes"
+	kubetf "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/terraform/aws"
 	tf "github.com/mlab-lattice/lattice/pkg/util/terraform"
 	awstfprovider "github.com/mlab-lattice/lattice/pkg/util/terraform/provider/aws"
 

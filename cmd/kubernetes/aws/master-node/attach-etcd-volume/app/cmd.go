@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	kubetf "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/terraform/aws"
+	kubetf "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/terraform/aws"
 	tf "github.com/mlab-lattice/lattice/pkg/util/terraform"
 	awstf "github.com/mlab-lattice/lattice/pkg/util/terraform/provider/aws"
 

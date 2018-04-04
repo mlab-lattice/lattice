@@ -12,7 +12,7 @@ go_library(
         "service.go",
         "util.go",
     ],
-    importpath = "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/terraform/aws",
+    importpath = "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/terraform/aws",
     visibility = ["//visibility:public"],
     deps = ["//pkg/api/v1:go_default_library"],
 )
