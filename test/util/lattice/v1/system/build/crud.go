@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"time"
 
-	v1client "github.com/mlab-lattice/system/pkg/api/client/v1"
-	"github.com/mlab-lattice/system/pkg/api/v1"
+	v1client "github.com/mlab-lattice/lattice/pkg/api/client/v1"
+	"github.com/mlab-lattice/lattice/pkg/api/v1"
 
 	. "github.com/onsi/gomega"
 

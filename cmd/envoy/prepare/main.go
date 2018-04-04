@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/mlab-lattice/system/cmd/envoy/prepare/app"
+	"github.com/mlab-lattice/lattice/cmd/envoy/prepare/app"
 )
 
 func main() {

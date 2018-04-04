@@ -5,7 +5,8 @@ import (
 	"testing"
 
 	// test sources
-	_ "github.com/mlab-lattice/system/test/e2e/system"
+	"github.com/mlab-lattice/lattice/test/e2e/context"
+	_ "github.com/mlab-lattice/lattice/test/e2e/system"
 
 	"github.com/onsi/ginkgo"
 	"github.com/onsi/gomega"
@@ -25,6 +26,13 @@ func RunE2ETest(t *testing.T) {
 	gomega.RegisterFailHandler(ginkgo.Fail)
 	ginkgo.RunSpecs(t, "Lattice e2e Suite")
 }
+
+var _ = ginkgo.SynchronizedBeforeSuite(func() []byte {
+	context.SetClusterURL(clusterURL)
+	provisioned = true
+
+	return nil
+}, func([]byte) {})
 
 func init() {
 	flag.StringVar(&clusterURL, "cluster-url", "", "cluster url")

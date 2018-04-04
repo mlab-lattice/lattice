@@ -7,7 +7,7 @@ go_library(
         "get.go",
         "set.go",
     ],
-    importpath = "github.com/mlab-lattice/system/pkg/latticectl/command/context",
+    importpath = "github.com/mlab-lattice/lattice/pkg/latticectl/command/context",
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/api/v1:go_default_library",

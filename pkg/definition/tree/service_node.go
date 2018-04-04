@@ -3,7 +3,7 @@ package tree
 import (
 	"encoding/json"
 
-	"github.com/mlab-lattice/system/pkg/definition"
+	"github.com/mlab-lattice/lattice/pkg/definition"
 )
 
 type ServiceNode struct {

@@ -1,8 +1,8 @@
 package basecontrollers
 
 import (
-	controller "github.com/mlab-lattice/system/cmd/kubernetes/lattice-controller-manager/app/common"
-	"github.com/mlab-lattice/system/pkg/backend/kubernetes/controller/base/build"
+	controller "github.com/mlab-lattice/lattice/cmd/kubernetes/lattice-controller-manager/app/common"
+	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/controller/base/build"
 )
 
 func initializeSystemBuildController(ctx controller.Context) {

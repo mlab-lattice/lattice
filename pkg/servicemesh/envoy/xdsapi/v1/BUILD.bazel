@@ -6,7 +6,7 @@ go_library(
         "backend.go",
         "types.go",
     ],
-    importpath = "github.com/mlab-lattice/system/pkg/servicemesh/envoy/xdsapi/v1",
+    importpath = "github.com/mlab-lattice/lattice/pkg/servicemesh/envoy/xdsapi/v1",
     visibility = ["//visibility:public"],
     deps = ["//pkg/definition/tree:go_default_library"],
 )

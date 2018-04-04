@@ -9,6 +9,6 @@ go_library(
         "routes.go",
         "xds.go",
     ],
-    importpath = "github.com/mlab-lattice/system/pkg/servicemesh/envoy/xdsapi/v1/constants",
+    importpath = "github.com/mlab-lattice/lattice/pkg/servicemesh/envoy/xdsapi/v1/constants",
     visibility = ["//visibility:public"],
 )

@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"log"
 
-	clientv1 "github.com/mlab-lattice/system/pkg/api/client/v1"
-	"github.com/mlab-lattice/system/pkg/latticectl"
-	"github.com/mlab-lattice/system/pkg/latticectl/command"
+	clientv1 "github.com/mlab-lattice/lattice/pkg/api/client/v1"
+	"github.com/mlab-lattice/lattice/pkg/latticectl"
+	"github.com/mlab-lattice/lattice/pkg/latticectl/command"
 )
 
 type Command struct {

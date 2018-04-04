@@ -3,13 +3,13 @@ package v1
 import (
 	"encoding/json"
 
-	"github.com/mlab-lattice/system/pkg/api/v1"
-	kubeutil "github.com/mlab-lattice/system/pkg/backend/kubernetes/util/kubernetes"
-	"github.com/mlab-lattice/system/pkg/definition"
-	"github.com/mlab-lattice/system/pkg/definition/tree"
+	"github.com/mlab-lattice/lattice/pkg/api/v1"
+	kubeutil "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/kubernetes"
+	"github.com/mlab-lattice/lattice/pkg/definition"
+	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 
 	"fmt"
-	"github.com/mlab-lattice/system/pkg/backend/kubernetes/constants"
+	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/constants"
 	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )

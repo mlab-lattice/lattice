@@ -12,7 +12,7 @@ go_library(
         "namespace.go",
         "rbac.go",
     ],
-    importpath = "github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/lattice/bootstrap/bootstrapper/base",
+    importpath = "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/lifecycle/lattice/bootstrap/bootstrapper/base",
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/api/v1:go_default_library",

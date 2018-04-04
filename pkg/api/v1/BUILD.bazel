@@ -12,7 +12,7 @@ go_library(
         "system.go",
         "teardown.go",
     ],
-    importpath = "github.com/mlab-lattice/system/pkg/api/v1",
+    importpath = "github.com/mlab-lattice/lattice/pkg/api/v1",
     visibility = ["//visibility:public"],
     deps = ["//pkg/definition/tree:go_default_library"],
 )

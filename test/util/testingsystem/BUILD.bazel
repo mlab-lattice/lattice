@@ -6,7 +6,7 @@ go_library(
         "v1.go",
         "version.go",
     ],
-    importpath = "github.com/mlab-lattice/system/test/util/testingsystem",
+    importpath = "github.com/mlab-lattice/lattice/test/util/testingsystem",
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/api/client/v1:go_default_library",

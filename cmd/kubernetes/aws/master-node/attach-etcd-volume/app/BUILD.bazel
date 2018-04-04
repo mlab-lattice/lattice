@@ -3,7 +3,7 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library")
 go_library(
     name = "go_default_library",
     srcs = ["cmd.go"],
-    importpath = "github.com/mlab-lattice/system/cmd/kubernetes/aws/master-node/attach-etcd-volume/app",
+    importpath = "github.com/mlab-lattice/lattice/cmd/kubernetes/aws/master-node/attach-etcd-volume/app",
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/backend/kubernetes/terraform/aws:go_default_library",

@@ -1,13 +1,13 @@
 package build
 
 import (
-	"github.com/mlab-lattice/system/pkg/backend/kubernetes/constants"
-	latticev1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
-	"github.com/mlab-lattice/system/pkg/definition"
+	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/constants"
+	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
+	"github.com/mlab-lattice/lattice/pkg/definition"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/mlab-lattice/system/pkg/definition/tree"
+	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 	"github.com/satori/go.uuid"
 )
 

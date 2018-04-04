@@ -3,11 +3,11 @@ package cloudprovider
 import (
 	"fmt"
 
-	"github.com/mlab-lattice/system/pkg/api/v1"
-	"github.com/mlab-lattice/system/pkg/backend/kubernetes/cloudprovider/aws"
-	"github.com/mlab-lattice/system/pkg/backend/kubernetes/cloudprovider/local"
-	clusterbootstrapper "github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/lattice/bootstrap/bootstrapper"
-	"github.com/mlab-lattice/system/pkg/util/cli"
+	"github.com/mlab-lattice/lattice/pkg/api/v1"
+	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/cloudprovider/aws"
+	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/cloudprovider/local"
+	clusterbootstrapper "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/lifecycle/lattice/bootstrap/bootstrapper"
+	"github.com/mlab-lattice/lattice/pkg/util/cli"
 )
 
 type ClusterBootstrapperOptions struct {

@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/mlab-lattice/system/pkg/definition/block"
+	"github.com/mlab-lattice/lattice/pkg/definition/block"
 )
 
 func TestPort_Validate(t *testing.T) {

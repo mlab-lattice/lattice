@@ -1,7 +1,7 @@
 package latticectl
 
 import (
-	"github.com/mlab-lattice/system/pkg/util/cli"
+	"github.com/mlab-lattice/lattice/pkg/util/cli"
 )
 
 type Command interface {

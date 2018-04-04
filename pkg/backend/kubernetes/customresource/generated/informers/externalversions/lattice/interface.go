@@ -3,8 +3,8 @@
 package lattice
 
 import (
-	internalinterfaces "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/informers/externalversions/internalinterfaces"
-	v1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/informers/externalversions/lattice/v1"
+	internalinterfaces "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/generated/informers/externalversions/internalinterfaces"
+	v1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/generated/informers/externalversions/lattice/v1"
 )
 
 // Interface provides access to each of this group's versions.

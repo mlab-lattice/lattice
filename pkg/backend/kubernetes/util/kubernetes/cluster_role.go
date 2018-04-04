@@ -3,8 +3,8 @@ package kubernetes
 import (
 	"fmt"
 
-	"github.com/mlab-lattice/system/pkg/api/v1"
-	"github.com/mlab-lattice/system/pkg/backend/kubernetes/constants"
+	"github.com/mlab-lattice/lattice/pkg/api/v1"
+	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/constants"
 )
 
 func ComponentBuilderClusterRoleName(latticeID v1.LatticeID) string {

@@ -1,7 +1,7 @@
 package bootstrap
 
 import (
-	"github.com/mlab-lattice/system/pkg/latticectl"
+	"github.com/mlab-lattice/lattice/pkg/latticectl"
 )
 
 type Command struct {

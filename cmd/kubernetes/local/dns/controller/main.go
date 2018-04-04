@@ -4,11 +4,11 @@ import (
 	"flag"
 	"time"
 
-	"github.com/mlab-lattice/system/pkg/api/v1"
-	"github.com/mlab-lattice/system/pkg/backend/kubernetes/cloudprovider/local"
-	"github.com/mlab-lattice/system/pkg/backend/kubernetes/cloudprovider/local/dns/controller"
-	latticeclientset "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/clientset/versioned"
-	latticeinformers "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/informers/externalversions"
+	"github.com/mlab-lattice/lattice/pkg/api/v1"
+	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/cloudprovider/local"
+	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/cloudprovider/local/dns/controller"
+	latticeclientset "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/generated/clientset/versioned"
+	latticeinformers "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/generated/informers/externalversions"
 
 	clientset "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"

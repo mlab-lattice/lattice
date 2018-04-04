@@ -1,9 +1,9 @@
 package aws
 
 import (
-	controller "github.com/mlab-lattice/system/cmd/kubernetes/lattice-controller-manager/app/common"
-	"github.com/mlab-lattice/system/pkg/backend/kubernetes/cloudprovider/aws"
-	"github.com/mlab-lattice/system/pkg/backend/kubernetes/controller/cloud/aws/nodepool"
+	controller "github.com/mlab-lattice/lattice/cmd/kubernetes/lattice-controller-manager/app/common"
+	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/cloudprovider/aws"
+	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/controller/cloud/aws/nodepool"
 )
 
 func initializeNodePoolController(ctx controller.Context) {

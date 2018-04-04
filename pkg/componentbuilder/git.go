@@ -3,8 +3,8 @@ package componentbuilder
 import (
 	"fmt"
 
-	"github.com/mlab-lattice/system/pkg/api/v1"
-	"github.com/mlab-lattice/system/pkg/util/git"
+	"github.com/mlab-lattice/lattice/pkg/api/v1"
+	"github.com/mlab-lattice/lattice/pkg/util/git"
 
 	"github.com/fatih/color"
 )

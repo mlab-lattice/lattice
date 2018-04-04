@@ -3,19 +3,19 @@ package deploy
 import (
 	"time"
 
-	"github.com/mlab-lattice/system/pkg/api/v1"
-	"github.com/mlab-lattice/system/test/e2e/context"
-	. "github.com/mlab-lattice/system/test/util/ginkgo"
-	"github.com/mlab-lattice/system/test/util/lattice/v1/system"
-	"github.com/mlab-lattice/system/test/util/lattice/v1/system/build"
-	"github.com/mlab-lattice/system/test/util/lattice/v1/system/deploy"
+	"github.com/mlab-lattice/lattice/pkg/api/v1"
+	"github.com/mlab-lattice/lattice/test/e2e/context"
+	. "github.com/mlab-lattice/lattice/test/util/ginkgo"
+	"github.com/mlab-lattice/lattice/test/util/lattice/v1/system"
+	"github.com/mlab-lattice/lattice/test/util/lattice/v1/system/build"
+	"github.com/mlab-lattice/lattice/test/util/lattice/v1/system/deploy"
 
 	"fmt"
-	"github.com/mlab-lattice/system/test/util/testingsystem"
+	"github.com/mlab-lattice/lattice/test/util/testingsystem"
 	. "github.com/onsi/ginkgo"
 )
 
-var _ = Describe("build", func() {
+var _ = Describe("deploy", func() {
 	//systemName := v1.SystemID("e2e-system-deploy-1")
 	systemName := v1.SystemID("deploy-1")
 	systemURL := "https://github.com/mlab-lattice/testing__system.git"

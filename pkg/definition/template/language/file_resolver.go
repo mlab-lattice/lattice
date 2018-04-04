@@ -7,7 +7,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/mlab-lattice/system/pkg/util/git"
+	"github.com/mlab-lattice/lattice/pkg/util/git"
 )
 
 // resolveURL reads the template file by resolving the url into a urlResource w

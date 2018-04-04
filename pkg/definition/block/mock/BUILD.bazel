@@ -14,7 +14,7 @@ go_library(
         "util.go",
         "volume.go",
     ],
-    importpath = "github.com/mlab-lattice/system/pkg/definition/block/mock",
+    importpath = "github.com/mlab-lattice/lattice/pkg/definition/block/mock",
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/definition/block:go_default_library",

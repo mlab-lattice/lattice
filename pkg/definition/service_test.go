@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"testing"
 
-	//"github.com/mlab-lattice/system/pkg/definition/block"
-	"github.com/mlab-lattice/system/pkg/definition/block/mock"
-	jsonutil "github.com/mlab-lattice/system/pkg/util/json"
+	//"github.com/mlab-lattice/lattice/pkg/definition/block"
+	"github.com/mlab-lattice/lattice/pkg/definition/block/mock"
+	jsonutil "github.com/mlab-lattice/lattice/pkg/util/json"
 	"reflect"
 )
 

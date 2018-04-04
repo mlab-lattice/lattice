@@ -3,7 +3,7 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library")
 go_library(
     name = "go_default_library",
     srcs = ["conditional_spec.go"],
-    importpath = "github.com/mlab-lattice/system/test/util/ginkgo",
+    importpath = "github.com/mlab-lattice/lattice/test/util/ginkgo",
     visibility = ["//visibility:public"],
     deps = ["@com_github_onsi_ginkgo//:go_default_library"],
 )

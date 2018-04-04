@@ -1,7 +1,7 @@
 package servicemesh
 
 import (
-	"github.com/mlab-lattice/system/pkg/backend/kubernetes/servicemesh/envoy"
+	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/servicemesh/envoy"
 )
 
 const (

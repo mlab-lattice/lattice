@@ -6,7 +6,7 @@ go_library(
         "command.go",
         "get.go",
     ],
-    importpath = "github.com/mlab-lattice/system/pkg/latticectl/command/systems/deploys",
+    importpath = "github.com/mlab-lattice/lattice/pkg/latticectl/command/systems/deploys",
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/api/client/v1:go_default_library",

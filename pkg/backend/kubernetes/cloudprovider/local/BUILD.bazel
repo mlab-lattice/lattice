@@ -8,7 +8,7 @@ go_library(
         "lattice_provisioner.go",
         "system_bootstrapper.go",
     ],
-    importpath = "github.com/mlab-lattice/system/pkg/backend/kubernetes/cloudprovider/local",
+    importpath = "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/cloudprovider/local",
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/api/client/rest:go_default_library",

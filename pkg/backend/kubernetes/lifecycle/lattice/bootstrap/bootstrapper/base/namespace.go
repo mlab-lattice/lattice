@@ -1,8 +1,8 @@
 package base
 
 import (
-	"github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/lattice/bootstrap/bootstrapper"
-	kubeutil "github.com/mlab-lattice/system/pkg/backend/kubernetes/util/kubernetes"
+	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/lifecycle/lattice/bootstrap/bootstrapper"
+	kubeutil "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/kubernetes"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 

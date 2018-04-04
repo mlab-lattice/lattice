@@ -6,8 +6,8 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/mlab-lattice/system/pkg/api/v1"
-	"github.com/mlab-lattice/system/pkg/util/rest"
+	"github.com/mlab-lattice/lattice/pkg/api/v1"
+	"github.com/mlab-lattice/lattice/pkg/util/rest"
 )
 
 func HandleErrorStatusCode(statusCode int, body io.Reader) error {

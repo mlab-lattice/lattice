@@ -18,6 +18,6 @@ go_library(
         "secret_value.go",
         "volume.go",
     ],
-    importpath = "github.com/mlab-lattice/system/pkg/definition/block",
+    importpath = "github.com/mlab-lattice/lattice/pkg/definition/block",
     visibility = ["//visibility:public"],
 )

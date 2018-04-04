@@ -3,7 +3,7 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library")
 go_library(
     name = "go_default_library",
     srcs = ["backend.go"],
-    importpath = "github.com/mlab-lattice/system/pkg/backend/kubernetes/servicemesh/envoy/xdsapi/v1/pernode",
+    importpath = "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/servicemesh/envoy/xdsapi/v1/pernode",
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/backend/kubernetes/customresource/generated/clientset/versioned:go_default_library",

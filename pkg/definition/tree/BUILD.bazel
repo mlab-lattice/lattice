@@ -8,7 +8,7 @@ go_library(
         "service_node.go",
         "system_node.go",
     ],
-    importpath = "github.com/mlab-lattice/system/pkg/definition/tree",
+    importpath = "github.com/mlab-lattice/lattice/pkg/definition/tree",
     visibility = ["//visibility:public"],
     deps = ["//pkg/definition:go_default_library"],
 )

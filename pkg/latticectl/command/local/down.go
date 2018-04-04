@@ -3,9 +3,9 @@ package local
 import (
 	"log"
 
-	"github.com/mlab-lattice/system/pkg/backend/kubernetes/cloudprovider/local"
-	"github.com/mlab-lattice/system/pkg/latticectl"
-	"github.com/mlab-lattice/system/pkg/util/cli"
+	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/cloudprovider/local"
+	"github.com/mlab-lattice/lattice/pkg/latticectl"
+	"github.com/mlab-lattice/lattice/pkg/util/cli"
 )
 
 type DownCommand struct {

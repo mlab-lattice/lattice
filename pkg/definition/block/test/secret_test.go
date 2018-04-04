@@ -6,7 +6,7 @@ import (
 
 	"encoding/json"
 	"fmt"
-	"github.com/mlab-lattice/system/pkg/definition/block"
+	"github.com/mlab-lattice/lattice/pkg/definition/block"
 )
 
 func TestSecret_JSON(t *testing.T) {

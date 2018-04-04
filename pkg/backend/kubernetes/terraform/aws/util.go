@@ -3,7 +3,7 @@ package aws
 import (
 	"fmt"
 
-	"github.com/mlab-lattice/system/pkg/api/v1"
+	"github.com/mlab-lattice/lattice/pkg/api/v1"
 )
 
 func GetS3BackendSystemStatePathRoot(latticeID v1.LatticeID, systemID v1.SystemID) string {

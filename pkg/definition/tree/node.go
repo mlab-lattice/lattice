@@ -3,7 +3,7 @@ package tree
 import (
 	"fmt"
 
-	"github.com/mlab-lattice/system/pkg/definition"
+	"github.com/mlab-lattice/lattice/pkg/definition"
 )
 
 // The Node interface represents a Node in the tree of a System definition.

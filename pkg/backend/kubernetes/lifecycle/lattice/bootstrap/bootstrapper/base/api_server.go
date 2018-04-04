@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"strconv"
 
-	kubeconstants "github.com/mlab-lattice/system/pkg/backend/kubernetes/constants"
-	latticev1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
-	"github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/lattice/bootstrap/bootstrapper"
-	kubeutil "github.com/mlab-lattice/system/pkg/backend/kubernetes/util/kubernetes"
+	kubeconstants "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/constants"
+	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
+	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/lifecycle/lattice/bootstrap/bootstrapper"
+	kubeutil "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/kubernetes"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 

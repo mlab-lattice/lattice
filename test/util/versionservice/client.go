@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/mlab-lattice/system/pkg/util/rest"
+	"github.com/mlab-lattice/lattice/pkg/util/rest"
 )
 
 type Client interface {

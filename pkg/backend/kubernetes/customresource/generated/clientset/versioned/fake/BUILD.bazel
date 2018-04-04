@@ -7,7 +7,7 @@ go_library(
         "doc.go",
         "register.go",
     ],
-    importpath = "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/clientset/versioned/fake",
+    importpath = "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/generated/clientset/versioned/fake",
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/backend/kubernetes/customresource/apis/lattice/v1:go_default_library",

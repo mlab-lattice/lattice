@@ -11,7 +11,7 @@ go_library(
         "get.go",
         "teardown.go",
     ],
-    importpath = "github.com/mlab-lattice/system/pkg/latticectl/command/systems",
+    importpath = "github.com/mlab-lattice/lattice/pkg/latticectl/command/systems",
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/api/client/v1:go_default_library",

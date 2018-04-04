@@ -7,7 +7,7 @@ go_library(
         "load_balancer.go",
         "load_balancer_controller.go",
     ],
-    importpath = "github.com/mlab-lattice/system/pkg/backend/kubernetes/controller/cloud/aws/loadbalancer",
+    importpath = "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/controller/cloud/aws/loadbalancer",
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/api/v1:go_default_library",

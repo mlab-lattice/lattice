@@ -8,7 +8,7 @@ go_library(
         "service_mesh.go",
         "system_bootstrapper.go",
     ],
-    importpath = "github.com/mlab-lattice/system/pkg/backend/kubernetes/servicemesh/envoy",
+    importpath = "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/servicemesh/envoy",
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/api/v1:go_default_library",

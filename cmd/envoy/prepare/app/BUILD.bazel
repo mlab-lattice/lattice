@@ -3,7 +3,7 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library")
 go_library(
     name = "go_default_library",
     srcs = ["root.go"],
-    importpath = "github.com/mlab-lattice/system/cmd/envoy/prepare/app",
+    importpath = "github.com/mlab-lattice/lattice/cmd/envoy/prepare/app",
     visibility = ["//visibility:public"],
     deps = [
         "@com_github_coreos_go_iptables//iptables:go_default_library",

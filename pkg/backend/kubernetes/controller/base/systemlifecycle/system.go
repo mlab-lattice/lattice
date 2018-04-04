@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"reflect"
 
-	latticev1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
-	kubeutil "github.com/mlab-lattice/system/pkg/backend/kubernetes/util/kubernetes"
-	"github.com/mlab-lattice/system/pkg/definition"
-	"github.com/mlab-lattice/system/pkg/definition/tree"
+	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
+	kubeutil "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/kubernetes"
+	"github.com/mlab-lattice/lattice/pkg/definition"
+	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 
 	"k8s.io/apimachinery/pkg/api/errors"
 )

@@ -2,8 +2,8 @@ package command
 
 import (
 	"fmt"
-	"github.com/mlab-lattice/system/pkg/util/cli"
-	"github.com/mlab-lattice/system/pkg/util/cli/printer"
+	"github.com/mlab-lattice/lattice/pkg/util/cli"
+	"github.com/mlab-lattice/lattice/pkg/util/cli/printer"
 )
 
 type OutputFlag struct {

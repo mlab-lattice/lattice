@@ -1,14 +1,14 @@
 package main
 
 import (
-	"github.com/mlab-lattice/system/pkg/latticectl"
-	"github.com/mlab-lattice/system/pkg/latticectl/command/bootstrap"
-	"github.com/mlab-lattice/system/pkg/latticectl/command/bootstrap/kubernetes"
-	"github.com/mlab-lattice/system/pkg/latticectl/command/context"
-	"github.com/mlab-lattice/system/pkg/latticectl/command/local"
-	"github.com/mlab-lattice/system/pkg/latticectl/command/systems"
-	"github.com/mlab-lattice/system/pkg/latticectl/command/systems/deploys"
-	"github.com/mlab-lattice/system/pkg/latticectl/command/systems/secrets"
+	"github.com/mlab-lattice/lattice/pkg/latticectl"
+	"github.com/mlab-lattice/lattice/pkg/latticectl/command/bootstrap"
+	"github.com/mlab-lattice/lattice/pkg/latticectl/command/bootstrap/kubernetes"
+	"github.com/mlab-lattice/lattice/pkg/latticectl/command/context"
+	"github.com/mlab-lattice/lattice/pkg/latticectl/command/local"
+	"github.com/mlab-lattice/lattice/pkg/latticectl/command/systems"
+	"github.com/mlab-lattice/lattice/pkg/latticectl/command/systems/deploys"
+	"github.com/mlab-lattice/lattice/pkg/latticectl/command/systems/secrets"
 )
 
 func main() {

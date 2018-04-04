@@ -3,7 +3,7 @@
 package internalinterfaces
 
 import (
-	versioned "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/clientset/versioned"
+	versioned "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/generated/clientset/versioned"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	cache "k8s.io/client-go/tools/cache"

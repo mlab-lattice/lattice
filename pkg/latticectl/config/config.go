@@ -1,7 +1,7 @@
 package config
 
 import (
-	"github.com/mlab-lattice/system/pkg/api/v1"
+	"github.com/mlab-lattice/lattice/pkg/api/v1"
 )
 
 type Config struct {

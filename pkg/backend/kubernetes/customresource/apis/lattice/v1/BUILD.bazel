@@ -20,7 +20,7 @@ go_library(
         "teardown.go",
         "zz_generated.deepcopy.go",
     ],
-    importpath = "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1",
+    importpath = "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1",
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/api/v1:go_default_library",

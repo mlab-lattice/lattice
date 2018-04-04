@@ -3,7 +3,7 @@ package v1
 import (
 	"net/http"
 
-	"github.com/mlab-lattice/system/pkg/api/v1"
+	"github.com/mlab-lattice/lattice/pkg/api/v1"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang/glog"

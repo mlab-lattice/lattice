@@ -1,8 +1,8 @@
 package mock
 
 import (
-	"github.com/mlab-lattice/system/pkg/definition/block"
-	jsonutil "github.com/mlab-lattice/system/pkg/util/json"
+	"github.com/mlab-lattice/lattice/pkg/definition/block"
+	jsonutil "github.com/mlab-lattice/lattice/pkg/util/json"
 )
 
 func Volume() *block.Volume {

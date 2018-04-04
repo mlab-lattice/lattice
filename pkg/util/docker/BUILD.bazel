@@ -6,6 +6,6 @@ go_library(
         "environment_variables.go",
         "registry.go",
     ],
-    importpath = "github.com/mlab-lattice/system/pkg/util/docker",
+    importpath = "github.com/mlab-lattice/lattice/pkg/util/docker",
     visibility = ["//visibility:public"],
 )

@@ -3,12 +3,12 @@ package envoy
 import (
 	"fmt"
 
-	"github.com/mlab-lattice/system/pkg/api/v1"
-	kubeconstants "github.com/mlab-lattice/system/pkg/backend/kubernetes/constants"
-	latticev1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
-	"github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/lattice/bootstrap/bootstrapper"
-	kubeutil "github.com/mlab-lattice/system/pkg/backend/kubernetes/util/kubernetes"
-	"github.com/mlab-lattice/system/pkg/util/cli"
+	"github.com/mlab-lattice/lattice/pkg/api/v1"
+	kubeconstants "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/constants"
+	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
+	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/lifecycle/lattice/bootstrap/bootstrapper"
+	kubeutil "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/kubernetes"
+	"github.com/mlab-lattice/lattice/pkg/util/cli"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"

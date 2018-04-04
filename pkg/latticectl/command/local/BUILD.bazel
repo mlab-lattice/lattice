@@ -7,7 +7,7 @@ go_library(
         "down.go",
         "up.go",
     ],
-    importpath = "github.com/mlab-lattice/system/pkg/latticectl/command/local",
+    importpath = "github.com/mlab-lattice/lattice/pkg/latticectl/command/local",
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/backend/kubernetes/cloudprovider/local:go_default_library",

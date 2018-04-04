@@ -3,16 +3,16 @@ package pernode
 import (
 	"time"
 
-	latticeclientset "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/clientset/versioned"
-	latticeinformers "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/informers/externalversions"
-	latticelisters "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/listers/lattice/v1"
-	"github.com/mlab-lattice/system/pkg/backend/kubernetes/servicemesh/envoy"
-	"github.com/mlab-lattice/system/pkg/definition/tree"
-	xdsapi "github.com/mlab-lattice/system/pkg/servicemesh/envoy/xdsapi/v1"
+	latticeclientset "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/generated/clientset/versioned"
+	latticeinformers "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/generated/informers/externalversions"
+	latticelisters "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/generated/listers/lattice/v1"
+	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/servicemesh/envoy"
+	"github.com/mlab-lattice/lattice/pkg/definition/tree"
+	xdsapi "github.com/mlab-lattice/lattice/pkg/servicemesh/envoy/xdsapi/v1"
 
 	"k8s.io/apimachinery/pkg/labels"
 
-	"github.com/mlab-lattice/system/pkg/backend/kubernetes/util/kubernetes"
+	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/kubernetes"
 	kubeinformers "k8s.io/client-go/informers"
 	kubeclientset "k8s.io/client-go/kubernetes"
 	corelisters "k8s.io/client-go/listers/core/v1"

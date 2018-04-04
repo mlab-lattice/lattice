@@ -7,7 +7,7 @@ go_library(
         "lattice_bootstrapper.go",
         "system_bootstrapper.go",
     ],
-    importpath = "github.com/mlab-lattice/system/pkg/backend/kubernetes/cloudprovider/aws",
+    importpath = "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/cloudprovider/aws",
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/backend/kubernetes/constants:go_default_library",

@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/mlab-lattice/system/pkg/api/v1"
-	v1rest "github.com/mlab-lattice/system/pkg/api/v1/rest"
-	"github.com/mlab-lattice/system/pkg/util/rest"
+	"github.com/mlab-lattice/lattice/pkg/api/v1"
+	v1rest "github.com/mlab-lattice/lattice/pkg/api/v1/rest"
+	"github.com/mlab-lattice/lattice/pkg/util/rest"
 )
 
 type TeardownClient struct {

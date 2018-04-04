@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/mlab-lattice/system/pkg/definition/tree"
+	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 )
 
 func GetLocalClusterNameForComponentPort(serviceCluster string, svcPath tree.NodePath, componentName string, port int32) string {

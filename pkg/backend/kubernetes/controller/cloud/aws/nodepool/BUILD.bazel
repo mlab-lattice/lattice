@@ -6,7 +6,7 @@ go_library(
         "node_pool.go",
         "node_pool_controller.go",
     ],
-    importpath = "github.com/mlab-lattice/system/pkg/backend/kubernetes/controller/cloud/aws/nodepool",
+    importpath = "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/controller/cloud/aws/nodepool",
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/api/v1:go_default_library",

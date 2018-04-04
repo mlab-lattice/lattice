@@ -7,8 +7,8 @@ import (
 	"os"
 	"os/user"
 
-	"github.com/mlab-lattice/system/pkg/api/v1"
-	"github.com/mlab-lattice/system/pkg/latticectl/config"
+	"github.com/mlab-lattice/lattice/pkg/api/v1"
+	"github.com/mlab-lattice/lattice/pkg/latticectl/config"
 )
 
 type Context interface {

@@ -1,15 +1,15 @@
 package base
 
 import (
-	kubeconstants "github.com/mlab-lattice/system/pkg/backend/kubernetes/constants"
-	latticev1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
-	"github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/lattice/bootstrap/bootstrapper"
-	kubeutil "github.com/mlab-lattice/system/pkg/backend/kubernetes/util/kubernetes"
+	kubeconstants "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/constants"
+	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
+	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/lifecycle/lattice/bootstrap/bootstrapper"
+	kubeutil "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/kubernetes"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"fmt"
-	"github.com/mlab-lattice/system/pkg/util/terraform"
+	"github.com/mlab-lattice/lattice/pkg/util/terraform"
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"

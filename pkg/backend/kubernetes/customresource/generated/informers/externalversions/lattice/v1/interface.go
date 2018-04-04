@@ -3,7 +3,7 @@
 package v1
 
 import (
-	internalinterfaces "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/informers/externalversions/internalinterfaces"
+	internalinterfaces "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/generated/informers/externalversions/internalinterfaces"
 )
 
 // Interface provides access to all the informers in this group version.

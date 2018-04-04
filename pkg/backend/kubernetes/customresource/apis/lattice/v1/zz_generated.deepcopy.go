@@ -5,8 +5,8 @@
 package v1
 
 import (
-	api_v1 "github.com/mlab-lattice/system/pkg/api/v1"
-	tree "github.com/mlab-lattice/system/pkg/definition/tree"
+	api_v1 "github.com/mlab-lattice/lattice/pkg/api/v1"
+	tree "github.com/mlab-lattice/lattice/pkg/definition/tree"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 )
 

@@ -4,10 +4,10 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/mlab-lattice/system/pkg/definition"
-	"github.com/mlab-lattice/system/pkg/definition/template/language"
-	"github.com/mlab-lattice/system/pkg/definition/tree"
-	"github.com/mlab-lattice/system/pkg/util/git"
+	"github.com/mlab-lattice/lattice/pkg/definition"
+	"github.com/mlab-lattice/lattice/pkg/definition/template/language"
+	"github.com/mlab-lattice/lattice/pkg/definition/tree"
+	"github.com/mlab-lattice/lattice/pkg/util/git"
 )
 
 // SystemResolver resolves system definitions from different sources such as git

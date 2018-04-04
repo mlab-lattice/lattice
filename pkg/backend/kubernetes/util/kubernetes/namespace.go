@@ -3,8 +3,8 @@ package kubernetes
 import (
 	"fmt"
 
-	"github.com/mlab-lattice/system/pkg/api/v1"
-	kubeconstants "github.com/mlab-lattice/system/pkg/backend/kubernetes/constants"
+	"github.com/mlab-lattice/lattice/pkg/api/v1"
+	kubeconstants "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/constants"
 )
 
 func LatticeNamespace(latticeID v1.LatticeID, namespace string) string {

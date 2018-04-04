@@ -9,9 +9,9 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/mlab-lattice/system/pkg/api/v1"
-	"github.com/mlab-lattice/system/pkg/definition/block"
-	"github.com/mlab-lattice/system/pkg/util/tar"
+	"github.com/mlab-lattice/lattice/pkg/api/v1"
+	"github.com/mlab-lattice/lattice/pkg/definition/block"
+	"github.com/mlab-lattice/lattice/pkg/util/tar"
 
 	dockertypes "github.com/docker/docker/api/types"
 	"github.com/docker/docker/pkg/jsonmessage"

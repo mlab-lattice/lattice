@@ -6,7 +6,7 @@ go_library(
         "paths.go",
         "requests.go",
     ],
-    importpath = "github.com/mlab-lattice/system/pkg/api/v1/rest",
+    importpath = "github.com/mlab-lattice/lattice/pkg/api/v1/rest",
     visibility = ["//visibility:public"],
     deps = ["//pkg/api/v1:go_default_library"],
 )

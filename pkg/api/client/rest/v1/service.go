@@ -5,10 +5,10 @@ import (
 	"net/http"
 	urlutil "net/url"
 
-	"github.com/mlab-lattice/system/pkg/api/v1"
-	v1rest "github.com/mlab-lattice/system/pkg/api/v1/rest"
-	"github.com/mlab-lattice/system/pkg/definition/tree"
-	"github.com/mlab-lattice/system/pkg/util/rest"
+	"github.com/mlab-lattice/lattice/pkg/api/v1"
+	v1rest "github.com/mlab-lattice/lattice/pkg/api/v1/rest"
+	"github.com/mlab-lattice/lattice/pkg/definition/tree"
+	"github.com/mlab-lattice/lattice/pkg/util/rest"
 )
 
 type ServiceClient struct {

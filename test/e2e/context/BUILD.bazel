@@ -3,7 +3,7 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library")
 go_library(
     name = "go_default_library",
     srcs = ["context.go"],
-    importpath = "github.com/mlab-lattice/system/test/e2e/context",
+    importpath = "github.com/mlab-lattice/lattice/test/e2e/context",
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/api/client:go_default_library",

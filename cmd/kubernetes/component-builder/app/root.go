@@ -7,11 +7,11 @@ import (
 	"os"
 	"os/exec"
 
-	"github.com/mlab-lattice/system/pkg/api/v1"
-	kubecomponentbuilder "github.com/mlab-lattice/system/pkg/backend/kubernetes/componentbuilder"
-	"github.com/mlab-lattice/system/pkg/componentbuilder"
-	"github.com/mlab-lattice/system/pkg/definition/block"
-	"github.com/mlab-lattice/system/pkg/util/aws"
+	"github.com/mlab-lattice/lattice/pkg/api/v1"
+	kubecomponentbuilder "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/componentbuilder"
+	"github.com/mlab-lattice/lattice/pkg/componentbuilder"
+	"github.com/mlab-lattice/lattice/pkg/definition/block"
+	"github.com/mlab-lattice/lattice/pkg/util/aws"
 
 	"github.com/spf13/cobra"
 	"io/ioutil"

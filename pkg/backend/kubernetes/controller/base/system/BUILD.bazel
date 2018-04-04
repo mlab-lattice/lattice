@@ -10,7 +10,7 @@ go_library(
         "system.go",
         "system_controller.go",
     ],
-    importpath = "github.com/mlab-lattice/system/pkg/backend/kubernetes/controller/base/system",
+    importpath = "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/controller/base/system",
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/api/v1:go_default_library",

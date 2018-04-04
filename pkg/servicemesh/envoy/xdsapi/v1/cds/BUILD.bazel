@@ -3,7 +3,7 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library")
 go_library(
     name = "go_default_library",
     srcs = ["request_handler.go"],
-    importpath = "github.com/mlab-lattice/system/pkg/servicemesh/envoy/xdsapi/v1/cds",
+    importpath = "github.com/mlab-lattice/lattice/pkg/servicemesh/envoy/xdsapi/v1/cds",
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/definition/tree:go_default_library",

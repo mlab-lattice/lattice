@@ -3,7 +3,7 @@ package v1
 import (
 	"fmt"
 
-	"github.com/mlab-lattice/system/pkg/definition/tree"
+	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 )
 
 type ErrorCode string

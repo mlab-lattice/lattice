@@ -5,10 +5,10 @@ import (
 	"os/user"
 	"time"
 
-	"github.com/mlab-lattice/system/pkg/api/client/rest"
-	kubeconstants "github.com/mlab-lattice/system/pkg/backend/kubernetes/constants"
-	"github.com/mlab-lattice/system/pkg/backend/kubernetes/servicemesh"
-	"github.com/mlab-lattice/system/pkg/backend/kubernetes/util/minikube"
+	"github.com/mlab-lattice/lattice/pkg/api/client/rest"
+	kubeconstants "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/constants"
+	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/servicemesh"
+	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/minikube"
 
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"

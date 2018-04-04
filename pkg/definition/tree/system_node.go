@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/mlab-lattice/system/pkg/definition"
+	"github.com/mlab-lattice/lattice/pkg/definition"
 )
 
 type SystemNode struct {

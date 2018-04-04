@@ -1,7 +1,7 @@
 package client
 
 import (
-	"github.com/mlab-lattice/system/pkg/api/client/v1"
+	"github.com/mlab-lattice/lattice/pkg/api/client/v1"
 )
 
 type Interface interface {

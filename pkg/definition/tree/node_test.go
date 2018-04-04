@@ -3,7 +3,7 @@ package tree
 //import (
 //	"testing"
 //
-//	definitiontest "github.com/mlab-lattice/system/pkg/definition/test"
+//	definitiontest "github.com/mlab-lattice/lattice/pkg/definition/test"
 //)
 
 //

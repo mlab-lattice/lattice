@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"net/http"
 
-	restv1 "github.com/mlab-lattice/system/pkg/api/server/rest/v1"
-	"github.com/mlab-lattice/system/pkg/api/server/v1"
-	"github.com/mlab-lattice/system/pkg/definition/resolver"
+	restv1 "github.com/mlab-lattice/lattice/pkg/api/server/rest/v1"
+	"github.com/mlab-lattice/lattice/pkg/api/server/v1"
+	"github.com/mlab-lattice/lattice/pkg/definition/resolver"
 
 	"github.com/gin-gonic/gin"
 )

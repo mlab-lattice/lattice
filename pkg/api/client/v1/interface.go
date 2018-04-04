@@ -1,8 +1,8 @@
 package v1
 
 import (
-	"github.com/mlab-lattice/system/pkg/api/v1"
-	"github.com/mlab-lattice/system/pkg/definition/tree"
+	"github.com/mlab-lattice/lattice/pkg/api/v1"
+	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 )
 
 type Interface interface {

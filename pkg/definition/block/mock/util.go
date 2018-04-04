@@ -6,8 +6,8 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/mlab-lattice/system/pkg/definition/block"
-	testutil "github.com/mlab-lattice/system/pkg/util/test"
+	"github.com/mlab-lattice/lattice/pkg/definition/block"
+	testutil "github.com/mlab-lattice/lattice/pkg/util/test"
 )
 
 type ValidateTest struct {

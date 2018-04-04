@@ -2,7 +2,7 @@ package v1
 
 import (
 	// TODO: feels a little weird to have to import this here. should type definitions under pkg/system be moved into pkg/types?
-	"github.com/mlab-lattice/system/pkg/definition/tree"
+	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 )
 
 type (

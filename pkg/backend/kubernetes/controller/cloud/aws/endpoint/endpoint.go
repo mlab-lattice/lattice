@@ -4,12 +4,12 @@ import (
 	"fmt"
 	"reflect"
 
-	latticev1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
-	kubetf "github.com/mlab-lattice/system/pkg/backend/kubernetes/terraform/aws"
-	kubeutil "github.com/mlab-lattice/system/pkg/backend/kubernetes/util/kubernetes"
-	endpointutil "github.com/mlab-lattice/system/pkg/util/endpoint"
-	tf "github.com/mlab-lattice/system/pkg/util/terraform"
-	awstfprovider "github.com/mlab-lattice/system/pkg/util/terraform/provider/aws"
+	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
+	kubetf "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/terraform/aws"
+	kubeutil "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/kubernetes"
+	endpointutil "github.com/mlab-lattice/lattice/pkg/util/endpoint"
+	tf "github.com/mlab-lattice/lattice/pkg/util/terraform"
+	awstfprovider "github.com/mlab-lattice/lattice/pkg/util/terraform/provider/aws"
 
 	"github.com/golang/glog"
 )

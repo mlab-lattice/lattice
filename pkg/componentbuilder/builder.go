@@ -3,10 +3,10 @@ package componentbuilder
 import (
 	"os"
 
-	"github.com/mlab-lattice/system/pkg/api/v1"
-	"github.com/mlab-lattice/system/pkg/definition/block"
-	"github.com/mlab-lattice/system/pkg/util/docker"
-	"github.com/mlab-lattice/system/pkg/util/git"
+	"github.com/mlab-lattice/lattice/pkg/api/v1"
+	"github.com/mlab-lattice/lattice/pkg/definition/block"
+	"github.com/mlab-lattice/lattice/pkg/util/docker"
+	"github.com/mlab-lattice/lattice/pkg/util/git"
 
 	dockerclient "github.com/docker/docker/client"
 	"github.com/fatih/color"

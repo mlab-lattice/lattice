@@ -6,11 +6,11 @@ import (
 	"strconv"
 	"strings"
 
-	awscloudprovider "github.com/mlab-lattice/system/pkg/backend/kubernetes/cloudprovider/aws"
-	latticev1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
-	kubetf "github.com/mlab-lattice/system/pkg/backend/kubernetes/terraform/aws"
-	tf "github.com/mlab-lattice/system/pkg/util/terraform"
-	awstfprovider "github.com/mlab-lattice/system/pkg/util/terraform/provider/aws"
+	awscloudprovider "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/cloudprovider/aws"
+	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
+	kubetf "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/terraform/aws"
+	tf "github.com/mlab-lattice/lattice/pkg/util/terraform"
+	awstfprovider "github.com/mlab-lattice/lattice/pkg/util/terraform/provider/aws"
 
 	"github.com/golang/glog"
 )

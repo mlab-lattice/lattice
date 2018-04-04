@@ -14,7 +14,7 @@ go_library(
         "service_account.go",
         "toleration.go",
     ],
-    importpath = "github.com/mlab-lattice/system/pkg/backend/kubernetes/constants",
+    importpath = "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/constants",
     visibility = ["//visibility:public"],
     deps = ["@io_k8s_api//core/v1:go_default_library"],
 )

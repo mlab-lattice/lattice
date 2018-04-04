@@ -3,8 +3,8 @@ package systemlifecycle
 import (
 	"fmt"
 
-	latticev1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
-	"github.com/mlab-lattice/system/pkg/definition/tree"
+	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
+	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 )
 
 func (c *Controller) syncInProgressTeardown(teardown *latticev1.Teardown) error {

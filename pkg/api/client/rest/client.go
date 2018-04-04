@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"net/http"
 
-	v1restclient "github.com/mlab-lattice/system/pkg/api/client/rest/v1"
-	v1client "github.com/mlab-lattice/system/pkg/api/client/v1"
-	"github.com/mlab-lattice/system/pkg/util/rest"
+	v1restclient "github.com/mlab-lattice/lattice/pkg/api/client/rest/v1"
+	v1client "github.com/mlab-lattice/lattice/pkg/api/client/v1"
+	"github.com/mlab-lattice/lattice/pkg/util/rest"
 )
 
 type Client struct {

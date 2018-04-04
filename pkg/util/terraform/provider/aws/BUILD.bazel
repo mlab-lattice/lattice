@@ -6,6 +6,6 @@ go_library(
         "backend.go",
         "provider.go",
     ],
-    importpath = "github.com/mlab-lattice/system/pkg/util/terraform/provider/aws",
+    importpath = "github.com/mlab-lattice/lattice/pkg/util/terraform/provider/aws",
     visibility = ["//visibility:public"],
 )

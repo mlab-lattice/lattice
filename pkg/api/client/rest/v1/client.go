@@ -1,8 +1,8 @@
 package v1
 
 import (
-	v1client "github.com/mlab-lattice/system/pkg/api/client/v1"
-	"github.com/mlab-lattice/system/pkg/util/rest"
+	v1client "github.com/mlab-lattice/lattice/pkg/api/client/v1"
+	"github.com/mlab-lattice/lattice/pkg/util/rest"
 )
 
 type Client struct {

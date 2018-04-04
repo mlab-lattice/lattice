@@ -1,10 +1,10 @@
 package base
 
 import (
-	"github.com/mlab-lattice/system/pkg/api/v1"
-	kubeconstants "github.com/mlab-lattice/system/pkg/backend/kubernetes/constants"
-	"github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/system/bootstrap/bootstrapper"
-	kubeutil "github.com/mlab-lattice/system/pkg/backend/kubernetes/util/kubernetes"
+	"github.com/mlab-lattice/lattice/pkg/api/v1"
+	kubeconstants "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/constants"
+	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/lifecycle/system/bootstrap/bootstrapper"
+	kubeutil "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/kubernetes"
 
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"

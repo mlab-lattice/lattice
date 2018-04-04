@@ -3,10 +3,10 @@ package crud
 import (
 	"time"
 
-	"github.com/mlab-lattice/system/pkg/api/v1"
-	"github.com/mlab-lattice/system/test/e2e/context"
-	. "github.com/mlab-lattice/system/test/util/ginkgo"
-	"github.com/mlab-lattice/system/test/util/lattice/v1/system"
+	"github.com/mlab-lattice/lattice/pkg/api/v1"
+	"github.com/mlab-lattice/lattice/test/e2e/context"
+	. "github.com/mlab-lattice/lattice/test/util/ginkgo"
+	"github.com/mlab-lattice/lattice/test/util/lattice/v1/system"
 
 	. "github.com/onsi/ginkgo"
 )

@@ -3,9 +3,9 @@ package latticectl
 import (
 	"log"
 
-	"github.com/mlab-lattice/system/pkg/api/client/rest"
-	v1client "github.com/mlab-lattice/system/pkg/api/client/v1"
-	"github.com/mlab-lattice/system/pkg/util/cli"
+	"github.com/mlab-lattice/lattice/pkg/api/client/rest"
+	v1client "github.com/mlab-lattice/lattice/pkg/api/client/v1"
+	"github.com/mlab-lattice/lattice/pkg/util/cli"
 )
 
 func DefaultLatticeClient(lattice string) v1client.Interface {
