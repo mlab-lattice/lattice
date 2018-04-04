@@ -39,6 +39,11 @@ provider "aws" {
 resource "aws_alb" "load_balancer" {
   security_groups = ["${aws_security_group.load_balancer_lb.id}"]
   subnets         = ["${split(",", var.subnet_ids)}"]
+
+  tags {
+    KubernetesCluster = "lattice.${var.lattice_id}"
+    Name              = "lattice.${var.lattice_id}.system.${var.system_id}.load-balancer.${var.name}"
+  }
 }
 
 # For each port in ports, create a new aws_alb_target_group that targets the
@@ -53,6 +58,11 @@ resource "aws_alb_target_group" "load_balancer" {
   protocol = "HTTP"
 
   # FIXME: add health checks
+
+  tags {
+    KubernetesCluster = "lattice.${var.lattice_id}"
+    Name              = "lattice.${var.lattice_id}.system.${var.system_id}.load-balancer.${var.name}"
+  }
 }
 
 # For each port in ports, create a new aws_alb_listener that exposes the
@@ -84,7 +94,7 @@ resource "aws_security_group" "load_balancer_lb" {
 
   tags {
     KubernetesCluster = "lattice.${var.lattice_id}"
-    Name              = "lattice.${var.lattice_id}.system.${var.system_id}.${var.name}"
+    Name              = "lattice.${var.lattice_id}.system.${var.system_id}.load-balancer.${var.name}"
   }
 }
 

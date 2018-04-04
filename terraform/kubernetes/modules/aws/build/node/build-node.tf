@@ -37,8 +37,8 @@ provider "aws" {
 # Role
 
 resource "aws_iam_role" "build_node_role" {
-  name               = "${var.lattice_id}.build-${var.build_id}"
   assume_role_policy = "${module.assume_role_from_ec2_service_policy_doucment.json}"
+  description        = "build node role for lattice ${var.lattice_id} build ${var.build_id}"
 }
 
 module "assume_role_from_ec2_service_policy_doucment" {

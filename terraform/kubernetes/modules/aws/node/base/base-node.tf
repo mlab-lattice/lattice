@@ -60,7 +60,6 @@ provider "aws" {
 
 # instance profile
 resource "aws_iam_instance_profile" "iam_instance_profile" {
-  name = "lattice.${var.lattice_id}.${var.name}"
   role = "${var.iam_instance_profile_role_name}"
 }
 
@@ -69,8 +68,6 @@ resource "aws_iam_instance_profile" "iam_instance_profile" {
 
 # security group
 resource "aws_security_group" "node_auto_scaling_group" {
-  name = "lattice.${var.lattice_id}.${var.name}"
-
   vpc_id = "${var.vpc_id}"
 
   lifecycle {
@@ -79,7 +76,7 @@ resource "aws_security_group" "node_auto_scaling_group" {
 
   tags {
     KubernetesCluster = "lattice.${var.lattice_id}"
-    Name              = "lattice.${var.lattice_id}.${var.name}"
+    Name              = "lattice.${var.lattice_id}.node.${var.name}"
   }
 }
 
@@ -119,8 +116,6 @@ resource "aws_security_group_rule" "auto_scalling_group_allow_ingress_flannel_vx
 
 # FIXME: TEMPORARY FOR TESTING
 resource "aws_security_group" "temporary_ssh_group" {
-  name = "lattice-${var.lattice_id}-${var.name} TEMPORARY SSH RULE"
-
   vpc_id = "${var.vpc_id}"
 
   ingress {
@@ -136,7 +131,7 @@ resource "aws_security_group" "temporary_ssh_group" {
 
   tags {
     KubernetesCluster = "lattice.${var.lattice_id}"
-    Name              = "lattice.${var.lattice_id}.${var.name}-TEMP-SSH"
+    Name              = "lattice.${var.lattice_id}.node.${var.name}-TEMP-SSH"
   }
 }
 
@@ -181,7 +176,6 @@ EOF
 
 # autoscaling group
 resource "aws_autoscaling_group" "node_autoscaling_group" {
-  name                 = "lattice.${var.lattice_id}.${var.name}-${aws_launch_configuration.aws_launch_configuration.name}"
   launch_configuration = "${aws_launch_configuration.aws_launch_configuration.name}"
 
   desired_capacity = "${var.num_instances}"
@@ -203,7 +197,7 @@ resource "aws_autoscaling_group" "node_autoscaling_group" {
 
   tag {
     key   = "Name"
-    value = "lattice.${var.lattice_id}.${var.name}"
+    value = "lattice.${var.lattice_id}.node.${var.name}"
 
     propagate_at_launch = true
   }
