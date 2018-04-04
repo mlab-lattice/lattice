@@ -129,6 +129,10 @@ func (b *Builder) Build() error {
 		return b.handleError(b.buildGitRepositoryComponent())
 	}
 
+	if b.ComponentBuildBlock.DockerImage != nil {
+		return b.handleError(b.buildDockerImageComponent())
+	}
+
 	return newErrorUser("unsupported component build type")
 }
 

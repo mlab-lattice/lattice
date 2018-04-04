@@ -26,6 +26,7 @@ func (kb *KubernetesBackend) ListServices(systemID v1.SystemID) ([]v1.Service, e
 
 	var externalServices []v1.Service
 	for _, service := range services.Items {
+		// FIXME: should use service.PathLabel()
 		servicePath, err := tree.NodePathFromDomain(service.Name)
 		if err != nil {
 			return nil, err
