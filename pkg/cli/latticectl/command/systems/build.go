@@ -18,8 +18,6 @@ import (
 type BuildCommand struct {
 }
 
-//type PrintBuildState func(io.Writer, *spinner.Spinner, *types.SystemBuild, string)
-
 func (c *BuildCommand) Base() (*latticectl.BaseCommand, error) {
 	output := &lctlcommand.OutputFlag{
 		SupportedFormats: ListSystemsSupportedFormats,

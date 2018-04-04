@@ -1,11 +1,10 @@
 package systems
 
 import (
-	"bytes"
+	"fmt"
 	"io"
 	"log"
 	"os"
-	"time"
 
 	"github.com/mlab-lattice/system/pkg/cli/color"
 	"github.com/mlab-lattice/system/pkg/cli/command"
@@ -16,9 +15,7 @@ import (
 	"github.com/mlab-lattice/system/pkg/managerapi/client"
 	"github.com/mlab-lattice/system/pkg/types"
 
-	"k8s.io/apimachinery/pkg/util/wait"
-
-	tw "github.com/tfogo/tablewriter"
+	"github.com/briandowns/spinner"
 )
 
 type TeardownCommand struct {
@@ -49,7 +46,7 @@ func (c *TeardownCommand) Base() (*latticectl.BaseCommand, error) {
 
 			systemID := ctx.SystemID()
 
-			err = TeardownSystem(ctx.Client().Systems().Teardowns(systemID), format, os.Stdout, watch)
+			err = TeardownSystem(ctx.Client().Systems(), systemID, format, os.Stdout, watch)
 			if err != nil {
 				log.Fatal(err)
 			}
@@ -59,105 +56,60 @@ func (c *TeardownCommand) Base() (*latticectl.BaseCommand, error) {
 	return cmd.Base()
 }
 
-func TeardownSystem(client client.TeardownClient, format printer.Format, writer io.Writer, watch bool) error {
+func TeardownSystem(client client.SystemClient, systemID types.SystemID, format printer.Format, writer io.Writer, watch bool) error {
 	// TODO :: Add watch of this. Same with deploy / build - link to behavior of teardowns/get.go etc
-	teardownID, err := client.Create()
+	teardownID, err := client.Teardowns(systemID).Create()
 	if err != nil {
 		log.Panic(err)
 	}
 
 	if watch {
-		WatchTeardown(client, teardownID, format, writer)
-	} else {
-		teardown, err := client.Get(teardownID)
-		if err != nil {
-			return err
+		if format == printer.FormatDefault || format == printer.FormatTable {
+			fmt.Fprintf(writer, "\nTearing down system %s. Teardown ID: %s\n\n", color.ID(string(systemID)), color.ID(string(teardownID)))
 		}
-
-		p := teardownPrinter([]types.SystemTeardown{*teardown}, format)
-		p.Print(writer)
+		err = WatchSystem(client, systemID, format, writer, printSystemStateDuringTeardown, true)
+		if err != nil {
+			log.Panic(err)
+		}
+	} else {
+		fmt.Fprintf(writer, "\nTearing down system %s. Teardown ID: %s\n\n", color.ID(string(systemID)), color.ID(string(teardownID)))
+		fmt.Fprint(writer, "To watch teardown, run:\n\n")
+		fmt.Fprintf(writer, "    lattice system:teardowns:status -w --teardown %s\n", string(teardownID))
 	}
 
 	return nil
 }
 
-func WatchTeardown(client client.TeardownClient, teardownID types.SystemTeardownID, format printer.Format, writer io.Writer) {
-	teardowns := make(chan *types.SystemTeardown)
+//TODO: Need to get the flavour text the correct context for tearing down
+func printSystemStateDuringTeardown(writer io.Writer, s *spinner.Spinner, system *types.System) {
+	switch system.State {
+	case types.SystemStateScaling:
+		s.Start()
+		s.Suffix = fmt.Sprintf(" System %s is scaling...", color.ID(string(system.ID)))
+	case types.SystemStateUpdating:
+		s.Start()
+		s.Suffix = fmt.Sprintf(" System %s is updating...", color.ID(string(system.ID)))
+	case types.SystemStateDeleting:
+		s.Start()
+		s.Suffix = fmt.Sprintf(" System %s is terminating...", color.ID(string(system.ID)))
+	case types.SystemStateStable:
+		s.Stop()
+		fmt.Fprint(writer, color.BoldHiSuccess("System %s is stable.", string(system.ID)))
+	case types.SystemStateFailed:
+		s.Stop()
+		fmt.Fprint(writer, color.BoldHiFailure("System %s has failed.", string(system.ID)))
 
-	lastHeight := 0
-	var b bytes.Buffer
+		var serviceErrors [][]string
 
-	go wait.PollImmediateInfinite(
-		5*time.Second,
-		func() (bool, error) {
-			teardown, err := client.Get(teardownID)
-			if err != nil {
-				return false, err
+		for serviceName, service := range system.Services {
+			if service.State == types.ServiceStateFailed {
+				serviceErrors = append(serviceErrors, []string{
+					fmt.Sprintf("%s", serviceName),
+					string(*service.FailureMessage),
+				})
 			}
+		}
 
-			teardowns <- teardown
-			return false, nil
-		},
-	)
-
-	for teardown := range teardowns {
-		p := teardownPrinter([]types.SystemTeardown{*teardown}, format)
-		lastHeight = p.Overwrite(b, lastHeight)
+		printSystemFailure(writer, system.ID, serviceErrors)
 	}
-}
-
-func teardownPrinter(teardowns []types.SystemTeardown, format printer.Format) printer.Interface {
-	var p printer.Interface
-	switch format {
-	case printer.FormatDefault, printer.FormatTable:
-		headers := []string{"ID", "State"}
-
-		headerColors := []tw.Colors{
-			{tw.Bold},
-			{tw.Bold},
-		}
-
-		columnColors := []tw.Colors{
-			{tw.FgHiCyanColor},
-			{},
-		}
-
-		columnAlignment := []int{
-			tw.ALIGN_LEFT,
-			tw.ALIGN_LEFT,
-		}
-
-		var rows [][]string
-		for _, teardown := range teardowns {
-			var stateColor color.Color
-			switch teardown.State {
-			case types.SystemTeardownStateFailed:
-				stateColor = color.Failure
-			case types.SystemTeardownStateSucceeded:
-				stateColor = color.Success
-			default:
-				stateColor = color.Warning
-			}
-
-			rows = append(rows, []string{
-				string(teardown.ID),
-				stateColor(string(teardown.State)),
-			})
-		}
-
-		p = &printer.Table{
-			Headers:         headers,
-			Rows:            rows,
-			HeaderColors:    headerColors,
-			ColumnColors:    columnColors,
-			ColumnAlignment: columnAlignment,
-		}
-
-	case printer.FormatJSON:
-		p = &printer.JSON{
-			Value: teardowns,
-		}
-	}
-
-	return p
 }

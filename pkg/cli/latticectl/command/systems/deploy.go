@@ -55,7 +55,7 @@ func (c *DeployCommand) Base() (*latticectl.BaseCommand, error) {
 				log.Fatal(err)
 			}
 
-			err = DeploySystem(ctx.Client().Systems(), ctx.SystemID(), types.SystemBuildID(buildID), version, os.Stdout, format)
+			err = DeploySystem(ctx.Client().Systems(), ctx.SystemID(), types.SystemBuildID(buildID), version, os.Stdout, format, watch)
 			if err != nil {
 				//log.Fatal(err)
 				os.Exit(1)
@@ -73,6 +73,7 @@ func DeploySystem(
 	version string,
 	writer io.Writer,
 	format printer.Format,
+	watch bool,
 ) error {
 	if buildID == "" && version == "" {
 		return fmt.Errorf("must provide either build or version")
@@ -80,12 +81,16 @@ func DeploySystem(
 
 	var deployID types.SystemRolloutID
 	var err error
+	var definition string
+
 	if buildID != "" {
 		if version != "" {
 			log.Panic("can only provide either build or version")
-			deployID, err = client.Rollouts(systemID).CreateFromBuild(buildID)
 		}
+		definition = fmt.Sprintf("build %s", color.ID(string(buildID)))
+		deployID, err = client.Rollouts(systemID).CreateFromBuild(buildID)
 	} else {
+		definition = fmt.Sprintf("version %s", color.ID(version))
 		deployID, err = client.Rollouts(systemID).CreateFromVersion(version)
 	}
 
@@ -93,22 +98,28 @@ func DeploySystem(
 		return err
 	}
 
-	//TODO: Could reduce the number of requests necessary by
-	// changing the behaviour of the client to return the
-	// whole deploy on creation.
-	deploy, err := client.Rollouts(systemID).Get(deployID)
-	if err != nil {
-		return err
-	}
+	if watch {
+		//TODO: Could reduce the number of requests necessary by
+		// changing the behaviour of the client to return the
+		// whole deploy on creation.
+		deploy, err := client.Rollouts(systemID).Get(deployID)
+		if err != nil {
+			return err
+		}
 
-	err = builds.WatchBuild(client.SystemBuilds(systemID), deploy.BuildID, format, writer, printBuildStateDuringDeploy)
-	if err != nil {
-		return err
-	}
+		err = builds.WatchBuild(client.SystemBuilds(systemID), deploy.BuildID, format, writer, printBuildStateDuringDeploy)
+		if err != nil {
+			return err
+		}
 
-	err = WatchSystem(client, systemID, format, os.Stdout, printSystemStateDuringDeploy, true)
-	if err != nil {
-		return err
+		err = WatchSystem(client, systemID, format, os.Stdout, printSystemStateDuringDeploy, true)
+		if err != nil {
+			return err
+		}
+	} else {
+		fmt.Fprintf(writer, "\nDeploying %s for system %s. Deploy ID: %s\n\n", definition, color.ID(string(systemID)), color.ID(string(deployID)))
+		fmt.Fprint(writer, "To watch deploy, run:\n\n")
+		fmt.Fprintf(writer, "    lattice system:deploys:status -w --deploy %s\n", string(deployID))
 	}
 
 	return nil
