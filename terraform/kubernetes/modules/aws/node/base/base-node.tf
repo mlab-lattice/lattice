@@ -151,6 +151,7 @@ resource "aws_launch_configuration" "aws_launch_configuration" {
 
   iam_instance_profile = "${aws_iam_instance_profile.iam_instance_profile.name}"
 
+  # FIXME: decouple this from Container Linux
   user_data = <<EOF
 {
   "ignition": {

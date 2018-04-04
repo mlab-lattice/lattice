@@ -1,9 +1,0 @@
-#!/usr/bin/env bash
-set -e
-
-echo "Pulling AWS master-node bootstrap docker images"
-docker pull gcr.io/lattice-dev/kevinrosendahl-debug-kubernetes-aws-master-node-attach-etcd-volume:latest
-docker pull gcr.io/lattice-dev/kevinrosendahl-debug-kubernetes-aws-master-node-register-dns:latest
-
-echo "Making temporary directory for AWS master-node artifacts"
-mkdir -p /tmp/kubernetes/artifacts/master-node/aws
