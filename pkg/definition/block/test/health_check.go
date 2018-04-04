@@ -19,20 +19,6 @@ func MockHealthCheckHTTPExpectedJSON() []byte {
 	)
 }
 
-func MockHealthCheckTCP() *block.ComponentHealthCheck {
-	return &block.ComponentHealthCheck{
-		TCP: MockTCPHealthCheck(),
-	}
-}
-
-func MockHealthCheckTCPExpectedJSON() []byte {
-	return GenerateHealthCheckExpectedJSON(
-		nil,
-		MockTCPHealthCheckExpectedJSON(),
-		nil,
-	)
-}
-
 func MockHealthCheckExec() *block.ComponentHealthCheck {
 	return &block.ComponentHealthCheck{
 		Exec: MockExecHealthCheck(),
@@ -132,21 +118,6 @@ func GenerateHTTPHealthCheckExpectedJSON(path, port, headers []byte) []byte {
 			Name:      "headers",
 			Bytes:     headers,
 			OmitEmpty: true,
-		},
-	})
-}
-
-func MockTCPHealthCheck() *block.TCPComponentHealthCheck {
-	return &block.TCPComponentHealthCheck{
-		Port: "tcp",
-	}
-}
-
-func MockTCPHealthCheckExpectedJSON() []byte {
-	return jsonutil.GenerateObjectBytes([]jsonutil.FieldBytes{
-		{
-			Name:  "port",
-			Bytes: []byte(`"tcp"`),
 		},
 	})
 }

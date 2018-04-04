@@ -18,12 +18,6 @@ go_library(
 )
 
 go_binary(
-    name = "latticectlv2",
-    embed = [":go_default_library"],
-    visibility = ["//visibility:public"],
-)
-
-go_binary(
     name = "latticectl",
     embed = [":go_default_library"],
     visibility = ["//visibility:public"],

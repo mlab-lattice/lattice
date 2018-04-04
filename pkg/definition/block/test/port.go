@@ -62,55 +62,6 @@ func MockPublicHTTPPortExpectedJSON() []byte {
 	)
 }
 
-func MockTCPPort() *block.ComponentPort {
-	return MockPrivateTCPPort()
-}
-
-func MockTCPPortExpectedJSON() []byte {
-	return MockPrivateTCPPortExpectedJSON()
-}
-
-func MockPrivateTCPPort() *block.ComponentPort {
-	return &block.ComponentPort{
-		Name:     "tcp",
-		Port:     80,
-		Protocol: block.ProtocolTCP,
-	}
-}
-
-func MockPrivateTCPPortExpectedJSON() []byte {
-	tcpProtocolBytes := []byte(`"`)
-	tcpProtocolBytes = append(tcpProtocolBytes, []byte(block.ProtocolTCP)...)
-	tcpProtocolBytes = append(tcpProtocolBytes, []byte(`"`)...)
-	return GeneratePortExpectedJSON(
-		[]byte(`"tcp"`),
-		[]byte(`80`),
-		tcpProtocolBytes,
-		nil,
-	)
-}
-
-func MockPublicTCPPort() *block.ComponentPort {
-	return &block.ComponentPort{
-		Name:           "tcp",
-		Port:           80,
-		Protocol:       block.ProtocolTCP,
-		ExternalAccess: MockPublicExternalAccess(),
-	}
-}
-
-func MockPublicTCPPortExpectedJSON() []byte {
-	tcpProtocolBytes := []byte(`"`)
-	tcpProtocolBytes = append(tcpProtocolBytes, []byte(block.ProtocolTCP)...)
-	tcpProtocolBytes = append(tcpProtocolBytes, []byte(`"`)...)
-	return GeneratePortExpectedJSON(
-		[]byte(`"tcp"`),
-		[]byte(`80`),
-		tcpProtocolBytes,
-		MockPublicExternalAccessExpectedJSON(),
-	)
-}
-
 func GeneratePortExpectedJSON(name, port, protocol, externalAccess []byte) []byte {
 	return jsonutil.GenerateObjectBytes([]jsonutil.FieldBytes{
 		{

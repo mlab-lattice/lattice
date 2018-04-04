@@ -415,13 +415,8 @@ func deploymentLivenessProbe(hc *block.ComponentHealthCheck) *corev1.Probe {
 		}
 	}
 
-	return &corev1.Probe{
-		Handler: corev1.Handler{
-			TCPSocket: &corev1.TCPSocketAction{
-				Port: intstr.FromString(hc.TCP.Port),
-			},
-		},
-	}
+	// FIXME: should return error here probably
+	return nil
 }
 
 func (c *Controller) isDeploymentSpecUpdated(

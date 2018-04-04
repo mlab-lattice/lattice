@@ -17,11 +17,9 @@ const (
 	MaxPortNumber = 65535
 
 	ProtocolHTTP = "HTTP"
-	ProtocolTCP  = "TCP"
 )
 
 var ValidPortProtocols = map[string]bool{
-	ProtocolTCP:  true,
 	ProtocolHTTP: true,
 }
 
