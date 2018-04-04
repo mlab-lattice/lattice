@@ -3,8 +3,8 @@ package main
 import (
 	"flag"
 
-	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/servicemesh/envoy/xdsapi/v1/pernode"
-	"github.com/mlab-lattice/lattice/pkg/servicemesh/envoy/xdsapi/v1/rest"
+	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/servicemesh/envoy/xdsapi/v1/backend/pernode"
+	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/servicemesh/envoy/xdsapi/v1/rest"
 )
 
 var (

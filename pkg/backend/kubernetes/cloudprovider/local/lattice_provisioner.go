@@ -215,7 +215,7 @@ func (p *DefaultLocalLatticeProvisioner) bootstrap(address string, name string) 
 									"--component-build-docker-artifact-var", "repository-per-image=true",
 									"--component-build-docker-artifact-var", "push=false",
 									"--service-mesh", servicemesh.Envoy,
-									"--service-mesh-var", fmt.Sprintf("prepare-image=%v", p.getLatticeContainerImage("envoy-prepare")),
+									"--service-mesh-var", fmt.Sprintf("prepare-image=%v", p.getLatticeContainerImage("kubernetes-envoy-prepare")),
 									"--service-mesh-var", fmt.Sprintf("xds-api-image=%v", p.getLatticeContainerImage("kubernetes-envoy-xds-api-rest-per-node")),
 									"--service-mesh-var", "redirect-cidr-block=172.16.0.0/16",
 									"--cloud-provider", "local",

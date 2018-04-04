@@ -111,19 +111,21 @@ git.install-hooks:
 # docker
 .PHONY: docker.push-image-stable
 docker.push-image-stable: gazelle
-	bazel run --platforms=@io_bazel_rules_go//go/toolchain:linux_amd64 //docker:push-stable-$(IMAGE)
+	# not using non-debug images right now, so disabling to speed up pushing
+	#bazel run --platforms=@io_bazel_rules_go//go/toolchain:linux_amd64 //docker:push-stable-$(IMAGE)
 	bazel run --platforms=@io_bazel_rules_go//go/toolchain:linux_amd64 //docker:push-stable-debug-$(IMAGE)
 
 .PHONY: docker.push-image-user
 docker.push-image-user: gazelle
-	bazel run --platforms=@io_bazel_rules_go//go/toolchain:linux_amd64 //docker:push-user-$(IMAGE)
+	# not using non-debug images right now, so disabling to speed up pushing
+	#bazel run --platforms=@io_bazel_rules_go//go/toolchain:linux_amd64 //docker:push-user-$(IMAGE)
 	bazel run --platforms=@io_bazel_rules_go//go/toolchain:linux_amd64 //docker:push-user-debug-$(IMAGE)
 
-DOCKER_IMAGES := envoy-prepare                                 \
-                 kubernetes-api-server-rest                    \
+DOCKER_IMAGES := kubernetes-api-server-rest                    \
                  kubernetes-aws-master-node-attach-etcd-volume \
                  kubernetes-aws-master-node-register-dns       \
                  kubernetes-component-builder                  \
+                 kubernetes-envoy-prepare                      \
                  kubernetes-envoy-xds-api-rest-per-node        \
                  kubernetes-lattice-controller-manager         \
                  kubernetes-local-dns-controller               \
