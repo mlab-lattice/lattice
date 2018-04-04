@@ -125,7 +125,7 @@ data "aws_iam_policy_document" "node_pool_role_policy_document" {
 #
 
 module "base_node" {
-  source = "../node/base"
+  source = "../node/base/cloud-init"
 
   lattice_id = "${var.lattice_id}"
   name       = "node-pool-${var.name}"

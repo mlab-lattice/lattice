@@ -1,7 +1,7 @@
 load("@io_bazel_rules_go//go:def.bzl", "go_repository")
 
 GO_DEPENDENCIES = {
-    "github.com/mlab-lattice/system": {
+    "github.com/mlab-lattice/lattice": {
         "github.com/aws/aws-sdk-go": {
             "name": "com_github_aws_aws_sdk_go",
             "tag": "v1.12.35",

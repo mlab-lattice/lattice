@@ -14,7 +14,7 @@ variable "ami_id" {}
 variable "key_name" {}
 variable "iam_instance_profile_role_name" {}
 
-variable "additional_user_data" {
+variable "etc_lattice_config_content" {
   type    = "string"
   default = "{}"
 }
@@ -151,31 +151,18 @@ resource "aws_launch_configuration" "aws_launch_configuration" {
 
   iam_instance_profile = "${aws_iam_instance_profile.iam_instance_profile.name}"
 
-  # FIXME: decouple this from Container Linux
   user_data = <<EOF
-{
-  "ignition": {
-    "version": "2.0.0",
-    "config": {}
-  },
-  "storage": {},
-  "systemd": {
-    "units": [
-      {
-        "name": "kubelet.service",
-        "dropins": [
-          {
-            "name": "10-override.conf",
-            "contents": "[Service]\nEnvironment=\"KUBELET_LABELS=${var.kubelet_labels}\"\nEnvironment=\"KUBELET_TAINTS=${var.kubelet_taints}\""
-          }
-        ]
-      }
-    ]
-  },
-  "networkd": {},
-  "passwd": {},
-  "lattice": ${var.additional_user_data}
-}
+write_files:
+-   path: /etc/systemd/system/kubelet.service.d/10-override.conf
+    owner: root:root
+    permissions: '0644'
+    content: |
+        "[Service]\nEnvironment=\"KUBELET_LABELS=${var.kubelet_labels}\"\nEnvironment=\"KUBELET_TAINTS=${var.kubelet_taints}\""
+-   path: /etc/lattice/config.json
+    owner: root:root
+    permissions: '0644'
+    content: |
+        ${var.etc_lattice_config_content}
 EOF
 
   # TODO: remove temporary_ssh_group when done testing
