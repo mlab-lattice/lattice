@@ -56,7 +56,6 @@ func (c *TeardownCommand) Base() (*latticectl.BaseCommand, error) {
 }
 
 func TeardownSystem(client v1client.SystemClient, systemID v1.SystemID, format printer.Format, writer io.Writer, watch bool) error {
-	// TODO :: Add watch of this. Same with deploy / build - link to behavior of teardowns/get.go etc
 	teardown, err := client.Teardowns(systemID).Create()
 	if err != nil {
 		log.Panic(err)
