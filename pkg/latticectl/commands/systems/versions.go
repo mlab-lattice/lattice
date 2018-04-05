@@ -10,30 +10,15 @@ import (
 	"github.com/mlab-lattice/lattice/pkg/util/cli/printer"
 )
 
-// ListVersionsSupportedFormats is the list of printer.Formats supported
-// by the ListTeardowns function.
-var ListVersionsSupportedFormats = []printer.Format{
-	printer.FormatDefault,
-	printer.FormatJSON,
-	printer.FormatTable,
-}
-
 type ListVersionsCommand struct {
 }
 
 func (c *ListVersionsCommand) Base() (*latticectl.BaseCommand, error) {
-	output := &latticectl.OutputFlag{
-		SupportedFormats: ListVersionsSupportedFormats,
-	}
-
 	cmd := &latticectl.SystemCommand{
-		Name: "versions",
-		Flags: []cli.Flag{
-			output.Flag(),
-		},
+		Name:  "versions",
+		Flags: []cli.Flag{},
 		Run: func(ctx latticectl.SystemCommandContext, args []string) {
-			// FIXME :: get versions instead.
-			err := ListVersions(ctx.Client().Systems())
+			err := ListVersions(ctx.Client().Systems(), ctx.SystemID())
 			if err != nil {
 				log.Fatal(err)
 			}
@@ -43,16 +28,14 @@ func (c *ListVersionsCommand) Base() (*latticectl.BaseCommand, error) {
 	return cmd.Base()
 }
 
-func ListVersions(client v1client.SystemClient) error {
-	// FIXME :: simple change once new api is available.
-	versions, err := client.List()
+func ListVersions(client v1client.SystemClient, id v1.SystemID) error {
+	versions, err := client.Versions(id)
 	if err != nil {
 		log.Panic(err)
 	}
 
 	for _, version := range versions {
-		// FIXME :: will just be the string.
-		fmt.Printf("%v\n", version.DefinitionURL)
+		fmt.Printf("%v\n", version)
 	}
 	return nil
 }
