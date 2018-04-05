@@ -2,16 +2,16 @@ package main
 
 import (
 	"github.com/mlab-lattice/lattice/pkg/latticectl"
-	"github.com/mlab-lattice/lattice/pkg/latticectl/command/bootstrap"
-	"github.com/mlab-lattice/lattice/pkg/latticectl/command/bootstrap/kubernetes"
-	"github.com/mlab-lattice/lattice/pkg/latticectl/command/context"
-	"github.com/mlab-lattice/lattice/pkg/latticectl/command/local"
-	"github.com/mlab-lattice/lattice/pkg/latticectl/command/services"
-	"github.com/mlab-lattice/lattice/pkg/latticectl/command/systems"
-	"github.com/mlab-lattice/lattice/pkg/latticectl/command/systems/builds"
-	"github.com/mlab-lattice/lattice/pkg/latticectl/command/systems/deploys"
-	"github.com/mlab-lattice/lattice/pkg/latticectl/command/systems/secrets"
-	"github.com/mlab-lattice/lattice/pkg/latticectl/command/systems/teardowns"
+	"github.com/mlab-lattice/lattice/pkg/latticectl/commands/bootstrap"
+	"github.com/mlab-lattice/lattice/pkg/latticectl/commands/bootstrap/kubernetes"
+	"github.com/mlab-lattice/lattice/pkg/latticectl/commands/context"
+	"github.com/mlab-lattice/lattice/pkg/latticectl/commands/local"
+	"github.com/mlab-lattice/lattice/pkg/latticectl/commands/services"
+	"github.com/mlab-lattice/lattice/pkg/latticectl/commands/systems"
+	"github.com/mlab-lattice/lattice/pkg/latticectl/commands/systems/builds"
+	"github.com/mlab-lattice/lattice/pkg/latticectl/commands/systems/deploys"
+	"github.com/mlab-lattice/lattice/pkg/latticectl/commands/systems/secrets"
+	"github.com/mlab-lattice/lattice/pkg/latticectl/commands/systems/teardowns"
 )
 
 var Latticectl = latticectl.Latticectl{
