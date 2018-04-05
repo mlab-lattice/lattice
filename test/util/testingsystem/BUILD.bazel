@@ -4,6 +4,7 @@ go_library(
     name = "go_default_library",
     srcs = [
         "v1.go",
+        "v2.go",
         "version.go",
     ],
     importpath = "github.com/mlab-lattice/lattice/test/util/testingsystem",
