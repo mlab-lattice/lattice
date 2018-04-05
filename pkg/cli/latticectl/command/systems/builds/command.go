@@ -1,4 +1,4 @@
-package systems
+package builds
 
 import (
 	"bytes"
@@ -19,29 +19,29 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 )
 
-// ListSystemsSupportedFormats is the list of printer.Formats supported
-// by the ListSystems function.
-var ListSystemsSupportedFormats = []printer.Format{
+// ListBuildsSupportedFormats is the list of printer.Formats supported
+// by the ListBuilds function.
+var ListBuildsSupportedFormats = []printer.Format{
 	printer.FormatDefault,
 	printer.FormatJSON,
 	printer.FormatTable,
 }
 
-// ListSystemsCommand is a type that implements the latticectl.Command interface
-// for listing the Systems in a Lattice.
-type ListSystemsCommand struct {
+// ListBuildsCommand is a type that implements the latticectl.Command interface
+// for listing the Builds in a System.
+type ListBuildsCommand struct {
 	Subcommands []latticectl.Command
 }
 
 // Base implements the latticectl.Command interface.
-func (c *ListSystemsCommand) Base() (*latticectl.BaseCommand, error) {
+func (c *ListBuildsCommand) Base() (*latticectl.BaseCommand, error) {
 	output := &lctlcommand.OutputFlag{
-		SupportedFormats: ListSystemsSupportedFormats,
+		SupportedFormats: ListBuildsSupportedFormats,
 	}
 	var watch bool
 
-	cmd := &lctlcommand.LatticeCommand{
-		Name: "systems",
+	cmd := &lctlcommand.SystemCommand{
+		Name: "builds",
 		Flags: command.Flags{
 			output.Flag(),
 			&command.BoolFlag{
@@ -51,20 +51,20 @@ func (c *ListSystemsCommand) Base() (*latticectl.BaseCommand, error) {
 				Target:  &watch,
 			},
 		},
-		Run: func(ctx lctlcommand.LatticeCommandContext, args []string) {
+		Run: func(ctx lctlcommand.SystemCommandContext, args []string) {
 			format, err := output.Value()
 			if err != nil {
 				log.Fatal(err)
 			}
 
-			c := ctx.Client().Systems()
+			c := ctx.Client().Systems().SystemBuilds(ctx.SystemID())
 
 			if watch {
-				WatchSystems(c, format, os.Stdout)
+				WatchBuilds(c, format, os.Stdout)
 				return
 			}
 
-			err = ListSystems(c, format, os.Stdout)
+			err = ListBuilds(c, format, os.Stdout)
 			if err != nil {
 				log.Fatal(err)
 			}
@@ -75,55 +75,54 @@ func (c *ListSystemsCommand) Base() (*latticectl.BaseCommand, error) {
 	return cmd.Base()
 }
 
-// ListSystems writes the current Systems to the supplied io.Writer in the given printer.Format.
-func ListSystems(client client.SystemClient, format printer.Format, writer io.Writer) error {
-	systems, err := client.List()
+// ListBuilds writes the current Builds to the supplied io.Writer in the given printer.Format.
+func ListBuilds(client client.SystemBuildClient, format printer.Format, writer io.Writer) error {
+	builds, err := client.List()
 	if err != nil {
 		return err
 	}
 
-	p := systemsPrinter(systems, format)
+	p := buildsPrinter(builds, format)
 	p.Print(writer)
-
 	return nil
 }
 
-// WatchSystems polls the API for the current Systems, and writes out the Systems to the
+// WatchBuilds polls the API for the current Builds, and writes out the Builds to the
 // the supplied io.Writer in the given printer.Format, unless the printer.Format is
 // printer.FormatTable, in which case it always writes to the terminal.
-func WatchSystems(client client.SystemClient, format printer.Format, writer io.Writer) {
-	// Poll the API for the systems and send it to the channel
-	systemLists := make(chan []types.System)
+func WatchBuilds(client client.SystemBuildClient, format printer.Format, writer io.Writer) {
+	// Poll the API for the builds and send it to the channel
+	buildLists := make(chan []types.SystemBuild)
 	lastHeight := 0
 	var b bytes.Buffer
 
 	go wait.PollImmediateInfinite(
 		5*time.Second,
 		func() (bool, error) {
-			systemList, err := client.List()
+			buildList, err := client.List()
 			if err != nil {
 				return false, err
 			}
 
-			systemLists <- systemList
+			buildLists <- buildList
 			return false, nil
 		},
 	)
 
-	for systemList := range systemLists {
-		p := systemsPrinter(systemList, format)
+	for buildList := range buildLists {
+		p := buildsPrinter(buildList, format)
 		lastHeight = p.Overwrite(b, lastHeight)
 
-		// Note: Watching systems is never exitable.
-		// There is no fail state for an entire lattice of systems.
+		// Note: Watching builds is never exitable.
+		// There is no fail state for an entire list of builds.
 	}
 }
 
-func systemsPrinter(systems []types.System, format printer.Format) printer.Interface {
+func buildsPrinter(builds []types.SystemBuild, format printer.Format) printer.Interface {
 	var p printer.Interface
 	switch format {
 	case printer.FormatDefault, printer.FormatTable:
-		headers := []string{"Name", "Definition", "Status"}
+		headers := []string{"ID", "Version", "State"}
 
 		headerColors := []tw.Colors{
 			{tw.Bold},
@@ -144,21 +143,21 @@ func systemsPrinter(systems []types.System, format printer.Format) printer.Inter
 		}
 
 		var rows [][]string
-		for _, system := range systems {
+		for _, build := range builds {
 			var stateColor color.Color
-			switch system.State {
-			case types.SystemStateStable:
+			switch build.State {
+			case types.SystemBuildStateSucceeded:
 				stateColor = color.Success
-			case types.SystemStateFailed:
+			case types.SystemBuildStateFailed:
 				stateColor = color.Failure
 			default:
 				stateColor = color.Warning
 			}
 
 			rows = append(rows, []string{
-				string(system.ID),
-				system.DefinitionURL,
-				stateColor(string(system.State)),
+				string(build.ID),
+				string(build.Version),
+				stateColor(string(build.State)),
 			})
 		}
 
@@ -172,7 +171,7 @@ func systemsPrinter(systems []types.System, format printer.Format) printer.Inter
 
 	case printer.FormatJSON:
 		p = &printer.JSON{
-			Value: systems,
+			Value: builds,
 		}
 	}
 
