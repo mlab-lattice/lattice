@@ -1,10 +1,12 @@
-package deploys
+package services
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"log"
 	"os"
+	"strings"
 	"time"
 
 	v1client "github.com/mlab-lattice/lattice/pkg/api/client/v1"
@@ -14,30 +16,31 @@ import (
 	"github.com/mlab-lattice/lattice/pkg/util/cli/color"
 	"github.com/mlab-lattice/lattice/pkg/util/cli/printer"
 
-	tw "github.com/tfogo/tablewriter"
 	"k8s.io/apimachinery/pkg/util/wait"
+
+	tw "github.com/tfogo/tablewriter"
 )
 
-// ListDeploysSupportedFormats is the list of printer.Formats supported
+// ListServicesSupportedFormats is the list of printer.Formats supported
 // by the ListDeploys function.
-var ListDeploysSupportedFormats = []printer.Format{
+var ListServicesSupportedFormats = []printer.Format{
 	printer.FormatDefault,
 	printer.FormatJSON,
 	printer.FormatTable,
 }
 
-type ListDeploysCommand struct {
+type ListServicesCommand struct {
 	Subcommands []latticectl.Command
 }
 
-func (c *ListDeploysCommand) Base() (*latticectl.BaseCommand, error) {
+func (c *ListServicesCommand) Base() (*latticectl.BaseCommand, error) {
 	output := &latticectl.OutputFlag{
-		SupportedFormats: ListDeploysSupportedFormats,
+		SupportedFormats: ListServicesSupportedFormats,
 	}
 	var watch bool
 
 	cmd := &latticectl.SystemCommand{
-		Name: "deploys",
+		Name: "services",
 		Flags: cli.Flags{
 			output.Flag(),
 			&cli.BoolFlag{
@@ -54,12 +57,12 @@ func (c *ListDeploysCommand) Base() (*latticectl.BaseCommand, error) {
 			}
 
 			if watch {
-				WatchDeploys(ctx.Client().Systems().Deploys(ctx.SystemID()), format, os.Stdout)
-			}
-
-			err = ListDeploys(ctx.Client().Systems().Deploys(ctx.SystemID()), format, os.Stdout)
-			if err != nil {
-				log.Fatal(err)
+				WatchServices(ctx.Client().Systems().Services(ctx.SystemID()), format, os.Stdout)
+			} else {
+				err := ListServices(ctx.Client().Systems().Services(ctx.SystemID()), format, os.Stdout)
+				if err != nil {
+					log.Fatal(err)
+				}
 			}
 		},
 		Subcommands: c.Subcommands,
@@ -68,19 +71,20 @@ func (c *ListDeploysCommand) Base() (*latticectl.BaseCommand, error) {
 	return cmd.Base()
 }
 
-func ListDeploys(client v1client.DeployClient, format printer.Format, writer io.Writer) error {
+func ListServices(client v1client.ServiceClient, format printer.Format, writer io.Writer) error {
 	deploys, err := client.List()
 	if err != nil {
 		return err
 	}
 
-	p := deploysPrinter(deploys, format)
-	p.Print(writer)
+	printer := servicesPrinter(deploys, format)
+	printer.Print(writer)
+	//fmt.Printf("%v\n", deploys)
 	return nil
 }
 
-func WatchDeploys(client v1client.DeployClient, format printer.Format, writer io.Writer) {
-	deployLists := make(chan []v1.Deploy)
+func WatchServices(client v1client.ServiceClient, format printer.Format, writer io.Writer) {
+	serviceLists := make(chan []v1.Service)
 
 	lastHeight := 0
 	var b bytes.Buffer
@@ -88,29 +92,32 @@ func WatchDeploys(client v1client.DeployClient, format printer.Format, writer io
 	go wait.PollImmediateInfinite(
 		5*time.Second,
 		func() (bool, error) {
-			deployList, err := client.List()
+			serviceList, err := client.List()
 			if err != nil {
 				return false, err
 			}
 
-			deployLists <- deployList
+			serviceLists <- serviceList
 			return false, nil
 		},
 	)
 
-	for deployList := range deployLists {
-		p := deploysPrinter(deployList, format)
+	for serviceList := range serviceLists {
+		p := servicesPrinter(serviceList, format)
 		lastHeight = p.Overwrite(b, lastHeight)
 	}
 }
 
-func deploysPrinter(deploys []v1.Deploy, format printer.Format) printer.Interface {
+func servicesPrinter(services []v1.Service, format printer.Format) printer.Interface {
 	var p printer.Interface
 	switch format {
 	case printer.FormatDefault, printer.FormatTable:
-		headers := []string{"ID", "Build ID", "State"}
+		headers := []string{"Service", "State", "Updated", "Stale", "Addresses", "Info"}
 
 		headerColors := []tw.Colors{
+			{tw.Bold},
+			{tw.Bold},
+			{tw.Bold},
 			{tw.Bold},
 			{tw.Bold},
 			{tw.Bold},
@@ -118,32 +125,53 @@ func deploysPrinter(deploys []v1.Deploy, format printer.Format) printer.Interfac
 
 		columnColors := []tw.Colors{
 			{tw.FgHiCyanColor},
-			{tw.FgHiCyanColor},
+			{},
+			{},
+			{},
+			{},
 			{},
 		}
 
 		columnAlignment := []int{
 			tw.ALIGN_LEFT,
 			tw.ALIGN_LEFT,
+			tw.ALIGN_RIGHT,
+			tw.ALIGN_RIGHT,
+			tw.ALIGN_LEFT,
 			tw.ALIGN_LEFT,
 		}
 
 		var rows [][]string
-		for _, deploy := range deploys {
+		for _, service := range services {
 			var stateColor color.Color
-			switch deploy.State {
-			case v1.DeployStateSucceeded:
-				stateColor = color.Success
-			case v1.DeployStateFailed:
+			switch service.State {
+			case v1.ServiceStateFailed:
 				stateColor = color.Failure
+			case v1.ServiceStateStable:
+				stateColor = color.Success
 			default:
 				stateColor = color.Warning
 			}
 
+			var info string
+			if service.FailureMessage == nil {
+				info = ""
+			} else {
+				info = *service.FailureMessage
+			}
+
+			var addresses []string
+			for port, address := range service.PublicPorts {
+				addresses = append(addresses, fmt.Sprintf("%v: %v", port, address.Address))
+			}
+
 			rows = append(rows, []string{
-				string(deploy.ID),
-				string(deploy.BuildID),
-				stateColor(string(deploy.State)),
+				string(service.Path),
+				stateColor(string(service.State)),
+				fmt.Sprintf("%d", service.UpdatedInstances),
+				fmt.Sprintf("%d", service.StaleInstances),
+				strings.Join(addresses, ","),
+				string(info),
 			})
 		}
 
@@ -157,7 +185,7 @@ func deploysPrinter(deploys []v1.Deploy, format printer.Format) printer.Interfac
 
 	case printer.FormatJSON:
 		p = &printer.JSON{
-			Value: deploys,
+			Value: services,
 		}
 	}
 

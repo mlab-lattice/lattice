@@ -4,20 +4,22 @@ import (
 	"fmt"
 	"log"
 
-	clientv1 "github.com/mlab-lattice/lattice/pkg/api/client/v1"
+	v1client "github.com/mlab-lattice/lattice/pkg/api/client/v1"
 	"github.com/mlab-lattice/lattice/pkg/latticectl"
-	"github.com/mlab-lattice/lattice/pkg/latticectl/command"
 )
 
-type Command struct {
+type ListSecretsCommand struct {
 	Subcommands []latticectl.Command
 }
 
-func (c *Command) Base() (*latticectl.BaseCommand, error) {
-	cmd := &command.SystemCommand{
+func (c *ListSecretsCommand) Base() (*latticectl.BaseCommand, error) {
+	cmd := &latticectl.SystemCommand{
 		Name: "secrets",
-		Run: func(ctx command.SystemCommandContext, args []string) {
-			ListSecrets(ctx.Client().Systems().Secrets(ctx.SystemID()))
+		Run: func(ctx latticectl.SystemCommandContext, args []string) {
+			err := ListSecrets(ctx.Client().Systems().Secrets(ctx.SystemID()))
+			if err != nil {
+				log.Fatal(err)
+			}
 		},
 		Subcommands: c.Subcommands,
 	}
@@ -25,11 +27,12 @@ func (c *Command) Base() (*latticectl.BaseCommand, error) {
 	return cmd.Base()
 }
 
-func ListSecrets(client clientv1.SecretClient) {
+func ListSecrets(client v1client.SecretClient) error {
 	secrets, err := client.List()
 	if err != nil {
-		log.Panic(err)
+		return err
 	}
 
 	fmt.Printf("%v\n", secrets)
+	return nil
 }

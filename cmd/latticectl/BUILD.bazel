@@ -11,9 +11,12 @@ go_library(
         "//pkg/latticectl/command/bootstrap/kubernetes:go_default_library",
         "//pkg/latticectl/command/context:go_default_library",
         "//pkg/latticectl/command/local:go_default_library",
+        "//pkg/latticectl/command/services:go_default_library",
         "//pkg/latticectl/command/systems:go_default_library",
+        "//pkg/latticectl/command/systems/builds:go_default_library",
         "//pkg/latticectl/command/systems/deploys:go_default_library",
         "//pkg/latticectl/command/systems/secrets:go_default_library",
+        "//pkg/latticectl/command/systems/teardowns:go_default_library",
     ],
 )
 

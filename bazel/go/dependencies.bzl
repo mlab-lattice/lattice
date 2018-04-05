@@ -7,6 +7,11 @@ GO_DEPENDENCIES = {
             "tag": "v1.12.35",
             "importpath": "github.com/aws/aws-sdk-go",
         },
+        "github.com/briandowns/spinner": {
+            "name": "com_github_briandowns_spinner",
+            "commit": "b3ed21e9d3b2af92b077f7d21edd80599b8fb97f",
+            "importpath": "github.com/briandowns/spinner",
+        },
         # master HEAD as of 3/6/18
         "github.com/buger/goterm": {
             "name": "com_github_buger_goterm",
@@ -59,10 +64,10 @@ GO_DEPENDENCIES = {
             "commit": "1be1d2841c773c01bee8289f55f7463b6e2c2539",
             "importpath": "github.com/spf13/cobra",
         },
-        "github.com/olekukonko/tablewriter": {
-            "name": "com_github_olekukonko_tablewriter",
-            "commit": "65fec0d89a572b4367094e2058d3ebe667de3b60",
-            "importpath": "github.com/olekukonko/tablewriter",
+        "github.com/tfogo/tablewriter": {
+            "name": "com_github_tfogo_tablewriter",
+            "commit": "4776fb554dc2ca114fbce4738142a47de1ea0929",
+            "importpath": "github.com/tfogo/tablewriter",
         },
         "github.com/tidwall/gjson": {
             "name": "com_github_tidwall_gjson",

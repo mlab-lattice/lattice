@@ -1,10 +1,9 @@
-package command
+package latticectl
 
 import (
 	"log"
 
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
-	"github.com/mlab-lattice/lattice/pkg/latticectl"
 	"github.com/mlab-lattice/lattice/pkg/util/cli"
 )
 
@@ -14,7 +13,7 @@ type SystemCommand struct {
 	Args        cli.Args
 	Flags       cli.Flags
 	Run         func(ctx SystemCommandContext, args []string)
-	Subcommands []latticectl.Command
+	Subcommands []Command
 }
 
 type SystemCommandContext interface {
@@ -31,7 +30,7 @@ func (c *systemCommandContext) SystemID() v1.SystemID {
 	return c.systemID
 }
 
-func (c *SystemCommand) Base() (*latticectl.BaseCommand, error) {
+func (c *SystemCommand) Base() (*BaseCommand, error) {
 	var system string
 	systemNameFlag := &cli.StringFlag{
 		Name:     "system",

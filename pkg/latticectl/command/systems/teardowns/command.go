@@ -1,4 +1,4 @@
-package systems
+package teardowns
 
 import (
 	"bytes"
@@ -7,41 +7,40 @@ import (
 	"os"
 	"time"
 
-	clientv1 "github.com/mlab-lattice/lattice/pkg/api/client/v1"
+	v1cient "github.com/mlab-lattice/lattice/pkg/api/client/v1"
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	"github.com/mlab-lattice/lattice/pkg/latticectl"
 	"github.com/mlab-lattice/lattice/pkg/util/cli"
 	"github.com/mlab-lattice/lattice/pkg/util/cli/color"
 	"github.com/mlab-lattice/lattice/pkg/util/cli/printer"
 
-	"k8s.io/apimachinery/pkg/util/wait"
-
 	tw "github.com/tfogo/tablewriter"
+	"k8s.io/apimachinery/pkg/util/wait"
 )
 
-// ListSystemsSupportedFormats is the list of printer.Formats supported
-// by the ListSystems function.
-var ListSystemsSupportedFormats = []printer.Format{
+// ListTeardownsSupportedFormats is the list of printer.Formats supported
+// by the ListTeardowns function.
+var ListTeardownsSupportedFormats = []printer.Format{
 	printer.FormatDefault,
 	printer.FormatJSON,
 	printer.FormatTable,
 }
 
-// ListSystemsCommand is a type that implements the latticectl.Command interface
-// for listing the Systems in a Lattice.
-type ListSystemsCommand struct {
+// ListTeardownsCommand is a type that implements the latticectl.Command interface
+// for listing the Teardowns in a System.
+type ListTeardownsCommand struct {
 	Subcommands []latticectl.Command
 }
 
 // Base implements the latticectl.Command interface.
-func (c *ListSystemsCommand) Base() (*latticectl.BaseCommand, error) {
+func (c *ListTeardownsCommand) Base() (*latticectl.BaseCommand, error) {
 	output := &latticectl.OutputFlag{
-		SupportedFormats: ListSystemsSupportedFormats,
+		SupportedFormats: ListTeardownsSupportedFormats,
 	}
 	var watch bool
 
-	cmd := &latticectl.LatticeCommand{
-		Name: "systems",
+	cmd := &latticectl.SystemCommand{
+		Name: "teardowns",
 		Flags: cli.Flags{
 			output.Flag(),
 			&cli.BoolFlag{
@@ -51,20 +50,20 @@ func (c *ListSystemsCommand) Base() (*latticectl.BaseCommand, error) {
 				Target:  &watch,
 			},
 		},
-		Run: func(ctx latticectl.LatticeCommandContext, args []string) {
+		Run: func(ctx latticectl.SystemCommandContext, args []string) {
 			format, err := output.Value()
 			if err != nil {
 				log.Fatal(err)
 			}
 
-			c := ctx.Client().Systems()
+			c := ctx.Client().Systems().Teardowns(ctx.SystemID())
 
 			if watch {
-				WatchSystems(c, format, os.Stdout)
+				WatchTeardowns(c, format, os.Stdout)
 				return
 			}
 
-			err = ListSystems(c, format, os.Stdout)
+			err = ListTeardowns(c, format, os.Stdout)
 			if err != nil {
 				log.Fatal(err)
 			}
@@ -75,58 +74,54 @@ func (c *ListSystemsCommand) Base() (*latticectl.BaseCommand, error) {
 	return cmd.Base()
 }
 
-// ListSystems writes the current Systems to the supplied io.Writer in the given printer.Format.
-func ListSystems(client clientv1.SystemClient, format printer.Format, writer io.Writer) error {
-	systems, err := client.List()
+// ListTeardowns writes the current Teardowns to the supplied io.Writer in the given printer.Format.
+func ListTeardowns(client v1cient.TeardownClient, format printer.Format, writer io.Writer) error {
+	teardowns, err := client.List()
 	if err != nil {
 		return err
 	}
 
-	p := systemsPrinter(systems, format)
+	p := teardownsPrinter(teardowns, format)
 	p.Print(writer)
-
 	return nil
 }
 
-// WatchSystems polls the API for the current Systems, and writes out the Systems to the
+// WatchTeardowns polls the API for the current Teardowns, and writes out the Teardowns to the
 // the supplied io.Writer in the given printer.Format, unless the printer.Format is
 // printer.FormatTable, in which case it always writes to the terminal.
-func WatchSystems(client clientv1.SystemClient, format printer.Format, writer io.Writer) {
-	// Poll the API for the systems and send it to the channel
-	systemLists := make(chan []v1.System)
+func WatchTeardowns(client v1cient.TeardownClient, format printer.Format, writer io.Writer) {
+	// Poll the API for the teardowns and send it to the channel
+	teardownLists := make(chan []v1.Teardown)
+
 	lastHeight := 0
 	var b bytes.Buffer
 
 	go wait.PollImmediateInfinite(
 		5*time.Second,
 		func() (bool, error) {
-			systemList, err := client.List()
+			teardownList, err := client.List()
 			if err != nil {
 				return false, err
 			}
 
-			systemLists <- systemList
+			teardownLists <- teardownList
 			return false, nil
 		},
 	)
 
-	for systemList := range systemLists {
-		p := systemsPrinter(systemList, format)
+	for teardownList := range teardownLists {
+		p := teardownsPrinter(teardownList, format)
 		lastHeight = p.Overwrite(b, lastHeight)
-
-		// Note: Watching systems is never exitable.
-		// There is no fail state for an entire lattice of systems.
 	}
 }
 
-func systemsPrinter(systems []v1.System, format printer.Format) printer.Interface {
+func teardownsPrinter(teardowns []v1.Teardown, format printer.Format) printer.Interface {
 	var p printer.Interface
 	switch format {
 	case printer.FormatDefault, printer.FormatTable:
-		headers := []string{"Name", "Definition", "Status"}
+		headers := []string{"ID", "State"}
 
 		headerColors := []tw.Colors{
-			{tw.Bold},
 			{tw.Bold},
 			{tw.Bold},
 		}
@@ -134,31 +129,28 @@ func systemsPrinter(systems []v1.System, format printer.Format) printer.Interfac
 		columnColors := []tw.Colors{
 			{tw.FgHiCyanColor},
 			{},
-			{},
 		}
 
 		columnAlignment := []int{
 			tw.ALIGN_LEFT,
 			tw.ALIGN_LEFT,
-			tw.ALIGN_LEFT,
 		}
 
 		var rows [][]string
-		for _, system := range systems {
+		for _, teardown := range teardowns {
 			var stateColor color.Color
-			switch system.State {
-			case v1.SystemStateStable:
+			switch teardown.State {
+			case v1.TeardownStateSucceeded:
 				stateColor = color.Success
-			case v1.SystemStateFailed:
+			case v1.TeardownStateFailed:
 				stateColor = color.Failure
 			default:
 				stateColor = color.Warning
 			}
 
 			rows = append(rows, []string{
-				string(system.ID),
-				system.DefinitionURL,
-				stateColor(string(system.State)),
+				string(teardown.ID),
+				stateColor(string(teardown.State)),
 			})
 		}
 
@@ -172,7 +164,7 @@ func systemsPrinter(systems []v1.System, format printer.Format) printer.Interfac
 
 	case printer.FormatJSON:
 		p = &printer.JSON{
-			Value: systems,
+			Value: teardowns,
 		}
 	}
 

@@ -1,23 +1,22 @@
-package command
+package latticectl
 
 import (
 	"log"
 
 	clientv1 "github.com/mlab-lattice/lattice/pkg/api/client/v1"
-	"github.com/mlab-lattice/lattice/pkg/latticectl"
 	"github.com/mlab-lattice/lattice/pkg/util/cli"
 )
 
 type LatticeCommandContext interface {
 	Lattice() string
 	Client() clientv1.Interface
-	Latticectl() *latticectl.Latticectl
+	Latticectl() *Latticectl
 }
 
 type latticeCommandContext struct {
 	lattice       string
 	latticeClient clientv1.Interface
-	latticectl    *latticectl.Latticectl
+	latticectl    *Latticectl
 }
 
 func (c *latticeCommandContext) Lattice() string {
@@ -28,7 +27,7 @@ func (c *latticeCommandContext) Client() clientv1.Interface {
 	return c.latticeClient
 }
 
-func (c *latticeCommandContext) Latticectl() *latticectl.Latticectl {
+func (c *latticeCommandContext) Latticectl() *Latticectl {
 	return c.latticectl
 }
 
@@ -38,10 +37,10 @@ type LatticeCommand struct {
 	Args        cli.Args
 	Flags       cli.Flags
 	Run         func(ctx LatticeCommandContext, args []string)
-	Subcommands []latticectl.Command
+	Subcommands []Command
 }
 
-func (c *LatticeCommand) Base() (*latticectl.BaseCommand, error) {
+func (c *LatticeCommand) Base() (*BaseCommand, error) {
 	var lattice string
 	latticeFlag := &cli.StringFlag{
 		Name:     "lattice",
@@ -50,12 +49,12 @@ func (c *LatticeCommand) Base() (*latticectl.BaseCommand, error) {
 	}
 	flags := append(c.Flags, latticeFlag)
 
-	cmd := &latticectl.BaseCommand{
+	cmd := &BaseCommand{
 		Name:  c.Name,
 		Short: c.Short,
 		Args:  c.Args,
 		Flags: flags,
-		Run: func(latticectl *latticectl.Latticectl, args []string) {
+		Run: func(latticectl *Latticectl, args []string) {
 			// Try to retrieve the lattice from the context if there is one
 			if lattice == "" && latticectl.Context != nil {
 				ctx, err := latticectl.Context.Get()

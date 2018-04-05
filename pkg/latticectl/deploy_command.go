@@ -1,8 +1,7 @@
-package command
+package latticectl
 
 import (
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
-	"github.com/mlab-lattice/lattice/pkg/latticectl"
 	"github.com/mlab-lattice/lattice/pkg/util/cli"
 )
 
@@ -12,7 +11,7 @@ type DeployCommand struct {
 	Args        cli.Args
 	Flags       cli.Flags
 	Run         func(ctx DeployCommandContext, args []string)
-	Subcommands []latticectl.Command
+	Subcommands []Command
 }
 
 type DeployCommandContext interface {
@@ -29,7 +28,7 @@ func (c *deployCommandContext) DeployID() v1.DeployID {
 	return c.deployID
 }
 
-func (c *DeployCommand) Base() (*latticectl.BaseCommand, error) {
+func (c *DeployCommand) Base() (*BaseCommand, error) {
 	var deployID string
 	deployIDFlag := &cli.StringFlag{
 		Name:     "deploy",

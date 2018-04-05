@@ -4,10 +4,9 @@ import (
 	"log"
 	"strings"
 
-	clientv1 "github.com/mlab-lattice/lattice/pkg/api/client/v1"
+	v1client "github.com/mlab-lattice/lattice/pkg/api/client/v1"
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 	"github.com/mlab-lattice/lattice/pkg/latticectl"
-	"github.com/mlab-lattice/lattice/pkg/latticectl/command"
 	"github.com/mlab-lattice/lattice/pkg/util/cli"
 )
 
@@ -18,7 +17,7 @@ func (c *SetCommand) Base() (*latticectl.BaseCommand, error) {
 	var name string
 	var value string
 
-	cmd := &command.SystemCommand{
+	cmd := &latticectl.SystemCommand{
 		Name: "set",
 		Flags: cli.Flags{
 			&cli.StringFlag{
@@ -32,7 +31,7 @@ func (c *SetCommand) Base() (*latticectl.BaseCommand, error) {
 				Target:   &value,
 			},
 		},
-		Run: func(ctx command.SystemCommandContext, args []string) {
+		Run: func(ctx latticectl.SystemCommandContext, args []string) {
 			splitName := strings.Split(name, ":")
 			if len(splitName) != 2 {
 				log.Fatal("invalid secret name format")
@@ -41,16 +40,21 @@ func (c *SetCommand) Base() (*latticectl.BaseCommand, error) {
 			path := tree.NodePath(splitName[0])
 			name = splitName[1]
 
-			SetSecret(ctx.Client().Systems().Secrets(ctx.SystemID()), path, name, value)
+			err := SetSecret(ctx.Client().Systems().Secrets(ctx.SystemID()), path, name, value)
+			if err != nil {
+				log.Fatal(err)
+			}
 		},
 	}
 
 	return cmd.Base()
 }
 
-func SetSecret(client clientv1.SecretClient, path tree.NodePath, name, value string) {
+func SetSecret(client v1client.SecretClient, path tree.NodePath, name, value string) error {
 	err := client.Set(path, name, value)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
+
+	return nil
 }

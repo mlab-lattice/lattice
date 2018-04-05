@@ -2,13 +2,15 @@ package systems
 
 import (
 	"fmt"
+	"io"
 	"log"
+	"os"
 
-	clientv1 "github.com/mlab-lattice/lattice/pkg/api/client/v1"
+	v1client "github.com/mlab-lattice/lattice/pkg/api/client/v1"
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	"github.com/mlab-lattice/lattice/pkg/latticectl"
-	"github.com/mlab-lattice/lattice/pkg/latticectl/command"
 	"github.com/mlab-lattice/lattice/pkg/util/cli"
+	"github.com/mlab-lattice/lattice/pkg/util/cli/color"
 )
 
 type CreateCommand struct {
@@ -17,7 +19,7 @@ type CreateCommand struct {
 func (c *CreateCommand) Base() (*latticectl.BaseCommand, error) {
 	var definitionURL string
 	var systemName string
-	cmd := &command.LatticeCommand{
+	cmd := &latticectl.LatticeCommand{
 		Name: "create",
 		Flags: []cli.Flag{
 			&cli.StringFlag{
@@ -31,19 +33,25 @@ func (c *CreateCommand) Base() (*latticectl.BaseCommand, error) {
 				Target:   &systemName,
 			},
 		},
-		Run: func(ctx command.LatticeCommandContext, args []string) {
-			CreateSystem(ctx.Client().Systems(), v1.SystemID(systemName), definitionURL)
+		Run: func(ctx latticectl.LatticeCommandContext, args []string) {
+
+			err := CreateSystem(ctx.Client().Systems(), v1.SystemID(systemName), definitionURL, os.Stdout)
+			if err != nil {
+				log.Fatal(err)
+			}
 		},
 	}
 
 	return cmd.Base()
 }
 
-func CreateSystem(client clientv1.SystemClient, name v1.SystemID, definitionURL string) {
+func CreateSystem(client v1client.SystemClient, name v1.SystemID, definitionURL string, writer io.Writer) error {
 	system, err := client.Create(name, definitionURL)
 	if err != nil {
-		log.Panic(err)
+		return err
 	}
 
-	fmt.Printf("%v\n", system)
+	fmt.Fprintf(writer, "System %s created. To rollout a version of this system run:\n\n", color.ID(string(system.ID)))
+	fmt.Fprintf(writer, "    lattice systems:deploy --system %s --version <tag>\n", system.ID)
+	return nil
 }

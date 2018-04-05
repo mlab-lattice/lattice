@@ -2,33 +2,49 @@ package systems
 
 import (
 	"fmt"
+	"io"
 	"log"
+	"os"
 
-	clientv1 "github.com/mlab-lattice/lattice/pkg/api/client/v1"
+	v1client "github.com/mlab-lattice/lattice/pkg/api/client/v1"
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	"github.com/mlab-lattice/lattice/pkg/latticectl"
-	"github.com/mlab-lattice/lattice/pkg/latticectl/command"
+	"github.com/mlab-lattice/lattice/pkg/util/cli"
+	"github.com/mlab-lattice/lattice/pkg/util/cli/color"
 )
 
 type DeleteCommand struct {
 }
 
 func (c *DeleteCommand) Base() (*latticectl.BaseCommand, error) {
-	cmd := &command.SystemCommand{
+	var system string
+
+	cmd := &latticectl.LatticeCommand{
 		Name: "delete",
-		Run: func(ctx command.SystemCommandContext, args []string) {
-			DeleteSystem(ctx.Client().Systems(), ctx.SystemID())
+		Flags: cli.Flags{
+			&cli.StringFlag{
+				Name:     "system",
+				Required: true,
+				Target:   &system,
+			},
+		},
+		Run: func(ctx latticectl.LatticeCommandContext, args []string) {
+			err := DeleteSystem(ctx.Client().Systems(), v1.SystemID(system), os.Stdout)
+			if err != nil {
+				log.Fatal(err)
+			}
 		},
 	}
 
 	return cmd.Base()
 }
 
-func DeleteSystem(client clientv1.SystemClient, name v1.SystemID) {
-	system, err := client.Get(name)
+func DeleteSystem(client v1client.SystemClient, name v1.SystemID, writer io.Writer) error {
+	err := client.Delete(name)
 	if err != nil {
-		log.Panic(err)
+		return err
 	}
 
-	fmt.Printf("%v\n", system)
+	fmt.Fprintf(writer, "System %s deleted.\n", color.ID(string(name)))
+	return nil
 }

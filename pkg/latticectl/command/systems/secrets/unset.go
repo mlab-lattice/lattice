@@ -1,7 +1,6 @@
 package secrets
 
 import (
-	"fmt"
 	"log"
 	"strings"
 
@@ -11,14 +10,14 @@ import (
 	"github.com/mlab-lattice/lattice/pkg/util/cli"
 )
 
-type GetCommand struct {
+type UnsetCommand struct {
 }
 
-func (c *GetCommand) Base() (*latticectl.BaseCommand, error) {
+func (c *UnsetCommand) Base() (*latticectl.BaseCommand, error) {
 	var name string
 
 	cmd := &latticectl.SystemCommand{
-		Name: "get",
+		Name: "unset",
 		Flags: cli.Flags{
 			&cli.StringFlag{
 				Name:     "name",
@@ -35,7 +34,7 @@ func (c *GetCommand) Base() (*latticectl.BaseCommand, error) {
 			path := tree.NodePath(splitName[0])
 			name = splitName[1]
 
-			err := GetSecret(ctx.Client().Systems().Secrets(ctx.SystemID()), path, name)
+			err := UnsetSecret(ctx.Client().Systems().Secrets(ctx.SystemID()), path, name)
 			if err != nil {
 				log.Fatal(err)
 			}
@@ -45,12 +44,11 @@ func (c *GetCommand) Base() (*latticectl.BaseCommand, error) {
 	return cmd.Base()
 }
 
-func GetSecret(client v1client.SecretClient, path tree.NodePath, name string) error {
-	secret, err := client.Get(path, name)
+func UnsetSecret(client v1client.SecretClient, path tree.NodePath, name string) error {
+	err := client.Unset(path, name)
 	if err != nil {
 		return err
 	}
 
-	fmt.Printf("%v\n", secret)
 	return nil
 }
