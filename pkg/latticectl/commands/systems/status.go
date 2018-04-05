@@ -55,7 +55,7 @@ func (c *StatusCommand) Base() (*latticectl.BaseCommand, error) {
 			c := ctx.Client().Systems()
 
 			if watch {
-				err = WatchSystem(c, ctx.SystemID(), format, os.Stdout, printSystemState, false)
+				err = WatchSystem(c, ctx.SystemID(), format, os.Stdout, PrintSystemStateDuringStatus, false)
 				if err != nil {
 					os.Exit(1)
 				}
@@ -82,7 +82,7 @@ func GetSystem(client v1client.SystemClient, systemID v1.SystemID, format printe
 	return nil
 }
 
-func WatchSystem(client v1client.SystemClient, systemID v1.SystemID, format printer.Format, writer io.Writer, printSystemState PrintSystemState, exitable bool) error {
+func WatchSystem(client v1client.SystemClient, systemID v1.SystemID, format printer.Format, writer io.Writer, PrintSystemStateDuringStatus PrintSystemState, exitable bool) error {
 	systems := make(chan *v1.System)
 
 	lastHeight := 0
@@ -110,7 +110,7 @@ func WatchSystem(client v1client.SystemClient, systemID v1.SystemID, format prin
 		lastHeight = p.Overwrite(b, lastHeight)
 
 		if format == printer.FormatDefault || format == printer.FormatTable {
-			printSystemState(writer, s, system)
+			PrintSystemStateDuringStatus(writer, s, system)
 		}
 
 		exit, returnError = systemInExitableState(system)
@@ -134,7 +134,7 @@ func systemInExitableState(system *v1.System) (bool, error) {
 	}
 }
 
-func printSystemState(writer io.Writer, s *spinner.Spinner, system *v1.System) {
+func PrintSystemStateDuringStatus(writer io.Writer, s *spinner.Spinner, system *v1.System) {
 	switch system.State {
 	case v1.SystemStateScaling:
 		s.Start()
