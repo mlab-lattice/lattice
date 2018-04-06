@@ -1,0 +1,21 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = ["latticectl.go"],
+    importpath = "github.com/mlab-lattice/lattice/cmd/latticectl/definition",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//pkg/latticectl:go_default_library",
+        "//pkg/latticectl/commands/bootstrap:go_default_library",
+        "//pkg/latticectl/commands/bootstrap/kubernetes:go_default_library",
+        "//pkg/latticectl/commands/context:go_default_library",
+        "//pkg/latticectl/commands/local:go_default_library",
+        "//pkg/latticectl/commands/services:go_default_library",
+        "//pkg/latticectl/commands/systems:go_default_library",
+        "//pkg/latticectl/commands/systems/builds:go_default_library",
+        "//pkg/latticectl/commands/systems/deploys:go_default_library",
+        "//pkg/latticectl/commands/systems/secrets:go_default_library",
+        "//pkg/latticectl/commands/systems/teardowns:go_default_library",
+    ],
+)
