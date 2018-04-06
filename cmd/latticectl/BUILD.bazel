@@ -5,19 +5,7 @@ go_library(
     srcs = ["main.go"],
     importpath = "github.com/mlab-lattice/lattice/cmd/latticectl",
     visibility = ["//visibility:public"],
-    deps = [
-        "//pkg/latticectl:go_default_library",
-        "//pkg/latticectl/commands/bootstrap:go_default_library",
-        "//pkg/latticectl/commands/bootstrap/kubernetes:go_default_library",
-        "//pkg/latticectl/commands/context:go_default_library",
-        "//pkg/latticectl/commands/local:go_default_library",
-        "//pkg/latticectl/commands/services:go_default_library",
-        "//pkg/latticectl/commands/systems:go_default_library",
-        "//pkg/latticectl/commands/systems/builds:go_default_library",
-        "//pkg/latticectl/commands/systems/deploys:go_default_library",
-        "//pkg/latticectl/commands/systems/secrets:go_default_library",
-        "//pkg/latticectl/commands/systems/teardowns:go_default_library",
-    ],
+    deps = ["//cmd/latticectl/definition:go_default_library"],
 )
 
 go_binary(
