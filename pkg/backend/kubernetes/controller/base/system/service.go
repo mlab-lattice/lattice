@@ -202,7 +202,8 @@ func (c *Controller) newService(
 		},
 		Spec: spec,
 		Status: latticev1.ServiceStatus{
-			State: latticev1.ServiceStatePending,
+			State:           latticev1.ServiceStatePending,
+			UpdateProcessed: false,
 		},
 	}
 
@@ -280,6 +281,9 @@ func (c *Controller) updateService(service *latticev1.Service, spec latticev1.Se
 	}
 	service.Labels[constants.LabelKeyServicePath] = path.ToDomain()
 
+	// FIXME: remove this when updated to kube 1.10.0
+	service.Status.UpdateProcessed = false
+
 	return c.latticeClient.LatticeV1().Services(service.Namespace).Update(service)
 }
 
@@ -293,7 +297,7 @@ func (c *Controller) serviceNeedsUpdate(service *latticev1.Service, spec lattice
 		return true
 	}
 
-	return currentPath == path
+	return currentPath != path
 }
 
 func (c *Controller) getServiceFromCache(namespace string, path tree.NodePath) (*latticev1.Service, error) {

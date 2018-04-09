@@ -353,6 +353,7 @@ func containerFromComponent(service *latticev1.Service, component *block.Compone
 		}
 	}
 
+	probe := deploymentProbe(component.HealthCheck)
 	container := corev1.Container{
 		Name:            userResourcePrefix + component.Name,
 		Image:           buildArtifacts.DockerImageFQN,
@@ -362,12 +363,13 @@ func containerFromComponent(service *latticev1.Service, component *block.Compone
 		Env:             envVars,
 		// TODO(kevinrosendahl): maybe add Resources
 		// TODO(kevinrosendahl): add VolumeMounts
-		LivenessProbe: deploymentLivenessProbe(component.HealthCheck),
+		LivenessProbe:  probe,
+		ReadinessProbe: probe,
 	}
 	return container, nil
 }
 
-func deploymentLivenessProbe(hc *block.ComponentHealthCheck) *corev1.Probe {
+func deploymentProbe(hc *block.ComponentHealthCheck) *corev1.Probe {
 	if hc == nil {
 		return nil
 	}

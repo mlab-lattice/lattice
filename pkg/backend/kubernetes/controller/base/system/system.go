@@ -19,6 +19,12 @@ func (c *Controller) syncSystemStatus(
 	hasScalingService := false
 
 	for path, status := range services {
+		// FIXME: move this to ObservedGeneration < Generation once updated to 1.10.0
+		if !status.UpdateProcessed {
+			hasUpdatingService = true
+			continue
+		}
+
 		if status.State == latticev1.ServiceStateFailed {
 			hasFailedService = true
 			continue
@@ -29,7 +35,7 @@ func (c *Controller) syncSystemStatus(
 			continue
 		}
 
-		if status.State == latticev1.ServiceStateScalingDown || status.State == latticev1.ServiceStateScalingUp {
+		if status.State == latticev1.ServiceStateScaling {
 			hasScalingService = true
 			continue
 		}

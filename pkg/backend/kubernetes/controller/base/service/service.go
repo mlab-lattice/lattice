@@ -58,14 +58,19 @@ func (c *Controller) syncServiceStatus(
 	var state latticev1.ServiceState
 	if updatedInstances < totalInstances {
 		// The updated pods have not yet all been created
-		state = latticev1.ServiceStateScalingUp
+		state = latticev1.ServiceStateScaling
 	} else if totalInstances > updatedInstances {
 		// There are extra pods still
-		state = latticev1.ServiceStateScalingDown
+		state = latticev1.ServiceStateScaling
 	} else if availableInstances < updatedInstances {
-		// The update pods have been created but aren't yet available
-		state = latticev1.ServiceStateScalingUp
+		// there's only updated instances but there aren't enough available instances yet
+		state = latticev1.ServiceStateScaling
+	} else if updatedInstances < desiredInstances {
+		// there only exists updatedInstances, and they're all available,
+		// but there isn't enough of them yet
+		state = latticev1.ServiceStateScaling
 	} else {
+		// there are enough available updated instances, and no other instances
 		state = latticev1.ServiceStateStable
 	}
 
@@ -173,6 +178,7 @@ func (c *Controller) updateServiceStatus(
 	status := latticev1.ServiceStatus{
 		State:              state,
 		ObservedGeneration: service.Generation,
+		UpdateProcessed:    true,
 		UpdatedInstances:   updatedInstances,
 		StaleInstances:     staleInstances,
 		PublicPorts:        publicPorts,

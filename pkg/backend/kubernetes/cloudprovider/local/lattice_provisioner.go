@@ -311,5 +311,5 @@ func (p *DefaultLocalLatticeProvisioner) Deprovision(name string, force bool) er
 }
 
 func (p *DefaultLocalLatticeProvisioner) getLatticeContainerImage(image string) string {
-	return p.latticeContainerRegistry + "/" + p.latticeContainerRepoPrefix + image
+	return fmt.Sprintf("%v/%v-%v", p.latticeContainerRegistry, p.latticeContainerRepoPrefix, image)
 }
