@@ -5,7 +5,7 @@
 variable "aws_account_id" {}
 variable "region" {}
 
-variable "cluster_id" {}
+variable "lattice_id" {}
 variable "vpc_id" {}
 variable "subnet_ids" {}
 variable "master_node_security_group_id" {}
@@ -125,9 +125,9 @@ data "aws_iam_policy_document" "node_pool_role_policy_document" {
 #
 
 module "base_node" {
-  source = "../node/base"
+  source = "../node/base/cloud-init"
 
-  cluster_id = "${var.cluster_id}"
+  lattice_id = "${var.lattice_id}"
   name       = "node-pool-${var.name}"
 
   kubelet_labels = "node-role.lattice.mlab.com/node-pool=${var.name}"

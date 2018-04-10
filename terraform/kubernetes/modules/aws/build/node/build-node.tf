@@ -5,7 +5,7 @@
 variable "aws_account_id" {}
 variable "region" {}
 
-variable "cluster_id" {}
+variable "lattice_id" {}
 variable "vpc_id" {}
 variable "build_subnet_ids" {}
 
@@ -37,8 +37,8 @@ provider "aws" {
 # Role
 
 resource "aws_iam_role" "build_node_role" {
-  name               = "${var.cluster_id}.build-${var.build_id}"
   assume_role_policy = "${module.assume_role_from_ec2_service_policy_doucment.json}"
+  description        = "build node role for lattice ${var.lattice_id} build ${var.build_id}"
 }
 
 module "assume_role_from_ec2_service_policy_doucment" {
@@ -130,7 +130,7 @@ data "aws_iam_policy_document" "build_node_role_policy_document" {
 module "base_node" {
   source = "../../node/base"
 
-  cluster_id = "${var.cluster_id}"
+  lattice_id = "${var.lattice_id}"
   name       = "build-${var.build_id}"
 
   kubelet_labels = "node-role.kubernetes.io/build=true,node-role.lattice.mlab.com/build=true"

@@ -3,8 +3,8 @@ package main
 import (
 	"flag"
 
-	"github.com/mlab-lattice/system/pkg/backend/kubernetes/servicemesh/envoy/xdsapi/v1/pernode"
-	"github.com/mlab-lattice/system/pkg/servicemesh/envoy/xdsapi/v1/rest"
+	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/servicemesh/envoy/xdsapi/v1/backend/pernode"
+	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/servicemesh/envoy/xdsapi/v1/rest"
 )
 
 var (
@@ -14,12 +14,11 @@ var (
 
 func init() {
 	flag.StringVar(&kubeconfig, "kubeconfig", "", "path to kubeconfig file")
-	flag.StringVar(&namespace, "namespace", "", "namespace the api manages")
 	flag.Parse()
 }
 
 func main() {
-	backend, err := pernode.NewKubernetesPerNodeBackend(kubeconfig, namespace)
+	backend, err := pernode.NewKubernetesPerNodeBackend(kubeconfig)
 	if err != nil {
 		panic(err)
 	}

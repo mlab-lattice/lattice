@@ -3,15 +3,19 @@
 package v1
 
 import (
-	internalinterfaces "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/informers/externalversions/internalinterfaces"
+	internalinterfaces "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/generated/informers/externalversions/internalinterfaces"
 )
 
 // Interface provides access to all the informers in this group version.
 type Interface interface {
+	// Builds returns a BuildInformer.
+	Builds() BuildInformer
 	// ComponentBuilds returns a ComponentBuildInformer.
 	ComponentBuilds() ComponentBuildInformer
 	// Configs returns a ConfigInformer.
 	Configs() ConfigInformer
+	// Deploies returns a DeployInformer.
+	Deploies() DeployInformer
 	// Endpoints returns a EndpointInformer.
 	Endpoints() EndpointInformer
 	// LoadBalancers returns a LoadBalancerInformer.
@@ -26,12 +30,8 @@ type Interface interface {
 	ServiceBuilds() ServiceBuildInformer
 	// Systems returns a SystemInformer.
 	Systems() SystemInformer
-	// SystemBuilds returns a SystemBuildInformer.
-	SystemBuilds() SystemBuildInformer
-	// SystemRollouts returns a SystemRolloutInformer.
-	SystemRollouts() SystemRolloutInformer
-	// SystemTeardowns returns a SystemTeardownInformer.
-	SystemTeardowns() SystemTeardownInformer
+	// Teardowns returns a TeardownInformer.
+	Teardowns() TeardownInformer
 }
 
 type version struct {
@@ -45,6 +45,11 @@ func New(f internalinterfaces.SharedInformerFactory, namespace string, tweakList
 	return &version{factory: f, namespace: namespace, tweakListOptions: tweakListOptions}
 }
 
+// Builds returns a BuildInformer.
+func (v *version) Builds() BuildInformer {
+	return &buildInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
+}
+
 // ComponentBuilds returns a ComponentBuildInformer.
 func (v *version) ComponentBuilds() ComponentBuildInformer {
 	return &componentBuildInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
@@ -53,6 +58,11 @@ func (v *version) ComponentBuilds() ComponentBuildInformer {
 // Configs returns a ConfigInformer.
 func (v *version) Configs() ConfigInformer {
 	return &configInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
+}
+
+// Deploies returns a DeployInformer.
+func (v *version) Deploies() DeployInformer {
+	return &deployInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
 }
 
 // Endpoints returns a EndpointInformer.
@@ -90,17 +100,7 @@ func (v *version) Systems() SystemInformer {
 	return &systemInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
 }
 
-// SystemBuilds returns a SystemBuildInformer.
-func (v *version) SystemBuilds() SystemBuildInformer {
-	return &systemBuildInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
-}
-
-// SystemRollouts returns a SystemRolloutInformer.
-func (v *version) SystemRollouts() SystemRolloutInformer {
-	return &systemRolloutInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
-}
-
-// SystemTeardowns returns a SystemTeardownInformer.
-func (v *version) SystemTeardowns() SystemTeardownInformer {
-	return &systemTeardownInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
+// Teardowns returns a TeardownInformer.
+func (v *version) Teardowns() TeardownInformer {
+	return &teardownInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
 }

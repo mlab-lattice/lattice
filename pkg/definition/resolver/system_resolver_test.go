@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/mlab-lattice/system/pkg/util/git"
+	"github.com/mlab-lattice/lattice/pkg/util/git"
 
 	gogit "gopkg.in/src-d/go-git.v4"
 	"gopkg.in/src-d/go-git.v4/plumbing"

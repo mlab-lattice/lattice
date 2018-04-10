@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/mlab-lattice/system/pkg/definition/block"
+	"github.com/mlab-lattice/lattice/pkg/definition/block"
 )
 
 func TestPort_Validate(t *testing.T) {
@@ -76,14 +76,6 @@ func TestPort_Validate(t *testing.T) {
 				},
 			},
 			{
-				Description: "Protocol TCP, ExternalAccess nil",
-				DefinitionBlock: &block.ComponentPort{
-					Name:     "foo",
-					Port:     1234,
-					Protocol: block.ProtocolTCP,
-				},
-			},
-			{
 				Description: "ComponentPort, Protocol HTTP, public ExternalAccess",
 				DefinitionBlock: &block.ComponentPort{
 					Name:           "foo",
@@ -110,16 +102,6 @@ func TestPort_JSON(t *testing.T) {
 				Description: "MockPublicHTTPPort",
 				Bytes:       MockPublicHTTPPortExpectedJSON(),
 				ValuePtr:    MockPublicHTTPPort(),
-			},
-			{
-				Description: "MockPrivateTCPPort",
-				Bytes:       MockPrivateTCPPortExpectedJSON(),
-				ValuePtr:    MockPrivateTCPPort(),
-			},
-			{
-				Description: "MockPublicTCPPort",
-				Bytes:       MockPublicTCPPortExpectedJSON(),
-				ValuePtr:    MockPublicTCPPort(),
 			},
 		},
 	)

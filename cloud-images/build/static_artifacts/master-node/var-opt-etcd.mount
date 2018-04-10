@@ -1,9 +1,0 @@
-[Unit]
-# Don't mount the fs until it's been formatted.
-After=format-var-opt-etcd.service
-Requires=format-var-opt-etcd.service
-
-[Mount]
-What=/dev/xvdf
-Where=/var/opt/etcd
-Type=ext4

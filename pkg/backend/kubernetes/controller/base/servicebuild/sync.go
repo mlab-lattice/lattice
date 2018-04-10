@@ -8,8 +8,8 @@ import (
 	"reflect"
 	"sort"
 
-	"github.com/mlab-lattice/system/pkg/backend/kubernetes/constants"
-	latticev1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
+	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/constants"
+	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 
 	"github.com/golang/glog"
 )
@@ -85,7 +85,7 @@ func (c *Controller) syncMissingComponentBuildsServiceBuild(build *latticev1.Ser
 
 		// FIXME: support references
 		if definitionBlock.GitRepository != nil && definitionBlock.GitRepository.SSHKey != nil {
-			secretName := fmt.Sprintf("%v:%v", build.Labels[constants.LabelKeyServicePathDomain], *definitionBlock.GitRepository.SSHKey.Name)
+			secretName := fmt.Sprintf("%v:%v", build.Labels[constants.LabelKeyServicePath], *definitionBlock.GitRepository.SSHKey.Name)
 			definitionBlock.GitRepository.SSHKey.Name = &secretName
 		}
 

@@ -4,7 +4,7 @@
 
 Lattice uses Bazel heavily. As such, it's recommended that you familiarize yourself with bazel via its [docs](https://docs.bazel.build), at the very least [Concepts and Terminology](https://docs.bazel.build/versions/master/build-ref.html#concepts-and-terminology).
 
-Lattice currently requires Bazel version 0.11.0.
+Lattice currently requires Bazel version 0.11.0, as well as `xz`. Both can be installed through `brew` for OS X (`brew install bazel` and `brew install xz` respectively).
 
 To get you started though, we'll give a brief overview of Bazel and the capabilities being used by Lattice.
 
@@ -516,70 +516,15 @@ INFO: Running command line: bazel-bin/cmd/darwin_amd64_stripped/cmd
 
 #### Macros
 
-At the time of writing this, the transitive closure of Lattice's external Go dependencies includes over 60 different repositories. As one could imagine, the `WORKSPACE` file became very bloated and hard to visually parse.
+There are a number of macros in the [bazel](../../bazel) directory that make organizing bazel targets easier.
 
-To combat this, custom macro rules were written which when called generate the `go_repository` rules. These rules can be found in the [bazel](../../bazel) directory.
-
-So instead of calling `go_repository` 60 times, we can include the custom macro that generates those rules, and simply call it:
-
-```
-load(":bazel/dependencies.bzl", "go_dependencies")
-go_dependencies()
-```
-
-### Docker
-
-Bazel also has rules building and pushing Docker images in the [rules_docker repository](https://github.com/bazelbuild/rules_docker).
-
-We won't go into as much depth here. By now you should be able to read the documentation available at that repo and get a general idea of what the rules provided are.
-
-Notably, we generate a `container_push` rule in `docker/BUILD` in lattice for each docker image we can build. For example, one docker image we want to build is for `kubernetes-bootstrap-lattice`.
-
-Via the custom rule generator defined in `docker/lattice_targets.bzl`, we generate a `container_push` rule for `kubernetes-bootstrap-lattice` whose `label` is `//docker:push-kubernetes-bootstrap-lattice`.
-
-When you run `bazel run //docker:push-kubernetes-bootstrap-lattice`, it will build `//cmd/kubernetes/bootstrap-lattice`, put it in a docker image, and push it to `gcr.io/lattice-dev/kubernetes-bootstrap-lattice`.
-
-#### IMPORTANT NOTE
-
-Bazel `rules_go`'s support for cross compilation is not yet mature enough to support cross compiling the `go_binary` to Linux to put into the `container_image`. As such `//docker:push-*` should only be run from a Linux box (or container).
-
-See the [docker-hack section](#docker-hack) below for more information about overcoming this.
+Take a look at the [WORKSPACE](../../WORKSPACE) file or the [docker BUILD file](../../docker/BUILD) for examples of using them.
 
 ## Make
 
-Lattice has a Makefile that contains a few convenience targets.
+Lattice has a [Makefile](../../Makefile) that contains some nice targets for common operations.
 
-- `make build`
-  - Runs gazelle and builds all bazel targets, including docker images (but will not tag, export, or push them) (`bazel build //...`)
-- `make clean`
-  - Clears the Bazel artifact cache (`bazel clean`)
-- `make test`
-  - Runs all tests (`bazel test //...`)
-- `make gazelle`
-  - Runs gazelle (`bazel run //:gazelle`)
-- `make docker-push-image IMAGE=<target-name>`
-  - Pushes the target production and debug versions of the target to `gcr.io/lattice-dev` (`bazel run //docker:push-$IMAGE && bazel run //docker:push-debug-$IMAGE`)
-  - Will fail if not being run on Linux
-- `make docker-push-all-images`
-  - Pushes all docker images to `gcr.io/lattice-dev`
-  - Will fail if not being run on Linux
-
-### docker-hack
-
-As stated above, as of now the cross compile story is not good enough to run `//docker:*` on a OSX box.
-
-This is solved by running a docker container which has Bazel installed and mounting the lattice repo into the container, and running Bazel commands from inside.
-
-There are three options to use this:
-
-- `make docker-hack-enter-build-shell`
-  - Drops you into a shell insider the build container. From there you can correctly build/run the `//docker:*` targets.
-- `make docker-hack-push-image IMAGE=<target-name>`
-  - Enters the build container and runs `make docker-push-image IMAGE=<target-name>`
-- `make docker-hack-push-all-images`
-  - Enters the build container and runs `make docker-push-all-images`
-
-### Best practices and enforcement
+## Best practices and enforcement
 
 In general, you should always default to simply running `make build`. This will run `gazelle` to make sure you have up-to-date `BUILD` files as well as ensure that everything can compile.
 

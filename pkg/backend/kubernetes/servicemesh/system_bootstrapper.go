@@ -3,8 +3,8 @@ package servicemesh
 import (
 	"fmt"
 
-	systembootstrapper "github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/system/bootstrap/bootstrapper"
-	"github.com/mlab-lattice/system/pkg/backend/kubernetes/servicemesh/envoy"
+	systembootstrapper "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/lifecycle/system/bootstrap/bootstrapper"
+	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/servicemesh/envoy"
 )
 
 type SystemBootstrapperOptions struct {
@@ -33,10 +33,7 @@ func ParseSystemBootstrapperFlags(serviceMesh string, serviceMeshVars []string) 
 
 	switch serviceMesh {
 	case Envoy:
-		envoyOptions, err := envoy.ParseSystemBootstrapperFlags(serviceMeshVars)
-		if err != nil {
-			return nil, err
-		}
+		envoyOptions := envoy.ParseSystemBootstrapperFlags(serviceMeshVars)
 
 		options = &SystemBootstrapperOptions{
 			Envoy: envoyOptions,

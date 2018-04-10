@@ -72,7 +72,7 @@ docker-credential-gcr configure-docker
 To build and push all images to your user channel, run
 
 ```
-make docker.push-all-images-user
+make docker.push-all-user
 ```
 
 To build and push only a specific image to your user channel, run

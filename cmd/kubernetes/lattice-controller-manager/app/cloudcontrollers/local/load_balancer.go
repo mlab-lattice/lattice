@@ -1,9 +1,9 @@
 package aws
 
 import (
-	controller "github.com/mlab-lattice/system/cmd/kubernetes/lattice-controller-manager/app/common"
-	"github.com/mlab-lattice/system/pkg/backend/kubernetes/cloudprovider/local"
-	"github.com/mlab-lattice/system/pkg/backend/kubernetes/controller/cloud/local/loadbalancer"
+	controller "github.com/mlab-lattice/lattice/cmd/kubernetes/lattice-controller-manager/app/common"
+	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/cloudprovider/local"
+	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/controller/cloud/local/loadbalancer"
 )
 
 func initializeLoadBalancerController(ctx controller.Context) {

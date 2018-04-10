@@ -6,7 +6,7 @@ go_library(
         "factory.go",
         "generic.go",
     ],
-    importpath = "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/informers/externalversions",
+    importpath = "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/generated/informers/externalversions",
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/backend/kubernetes/customresource/apis/lattice/v1:go_default_library",

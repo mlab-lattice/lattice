@@ -1,0 +1,9 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = ["noop.go"],
+    importpath = "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/lifecycle/lattice/bootstrap/bootstrapper/noop",
+    visibility = ["//visibility:public"],
+    deps = ["//pkg/backend/kubernetes/lifecycle/lattice/bootstrap/bootstrapper:go_default_library"],
+)

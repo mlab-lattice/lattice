@@ -7,17 +7,19 @@ import (
 	"strings"
 	"time"
 
-	"github.com/mlab-lattice/system/cmd/kubernetes/lattice-controller-manager/app/basecontrollers"
-	awscontrollers "github.com/mlab-lattice/system/cmd/kubernetes/lattice-controller-manager/app/cloudcontrollers/aws"
-	localcontrollers "github.com/mlab-lattice/system/cmd/kubernetes/lattice-controller-manager/app/cloudcontrollers/local"
-	controller "github.com/mlab-lattice/system/cmd/kubernetes/lattice-controller-manager/app/common"
-	"github.com/mlab-lattice/system/pkg/backend/kubernetes/cloudprovider"
-	"github.com/mlab-lattice/system/pkg/backend/kubernetes/cloudprovider/aws"
-	"github.com/mlab-lattice/system/pkg/backend/kubernetes/cloudprovider/local"
-	latticeinformers "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/informers/externalversions"
-	"github.com/mlab-lattice/system/pkg/terraform"
-	"github.com/mlab-lattice/system/pkg/types"
-	"github.com/mlab-lattice/system/pkg/util/cli"
+	"github.com/mlab-lattice/lattice/cmd/kubernetes/lattice-controller-manager/app/basecontrollers"
+	awscontrollers "github.com/mlab-lattice/lattice/cmd/kubernetes/lattice-controller-manager/app/cloudcontrollers/aws"
+	localcontrollers "github.com/mlab-lattice/lattice/cmd/kubernetes/lattice-controller-manager/app/cloudcontrollers/local"
+	controller "github.com/mlab-lattice/lattice/cmd/kubernetes/lattice-controller-manager/app/common"
+	"github.com/mlab-lattice/lattice/pkg/api/v1"
+	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/cloudprovider"
+	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/cloudprovider/aws"
+	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/cloudprovider/local"
+	latticeinformers "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/generated/informers/externalversions"
+	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/lifecycle/system/bootstrap/bootstrapper"
+	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/servicemesh"
+	"github.com/mlab-lattice/lattice/pkg/util/oldcli"
+	"github.com/mlab-lattice/lattice/pkg/util/terraform"
 
 	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/rest"
@@ -29,11 +31,17 @@ import (
 )
 
 var (
-	kubeconfig      string
-	clusterIDString string
+	kubeconfig string
+	latticeID  string
 
 	cloudProviderName string
 	cloudProviderVars []string
+
+	serviceMeshProvider     string
+	serviceMeshProviderVars []string
+
+	networkingProviderName string
+	networkingProviderVars []string
 
 	terraformModulePath  string
 	terraformBackend     string
@@ -55,10 +63,25 @@ var RootCmd = &cobra.Command{
 			panic(err)
 		}
 
-		clusterID := types.ClusterID(clusterIDString)
+		latticeID := v1.LatticeID(latticeID)
+
+		cloudSystemBootstrapper, err := cloudprovider.SystemBootstrapperFromFlags(cloudProviderName, cloudProviderVars)
+		if err != nil {
+			panic(err)
+		}
+
+		serviceMeshSystemBootstrapper, err := servicemesh.SystemBootstrapperFromFlags(serviceMeshProvider, serviceMeshProviderVars)
+		if err != nil {
+			panic(err)
+		}
+
+		systemBoostrappers := []bootstrapper.Interface{
+			serviceMeshSystemBootstrapper,
+			cloudSystemBootstrapper,
+		}
 
 		// TODO: setting stop as nil for now, won't actually need it until leader-election is used
-		ctx, err := CreateControllerContext(clusterID, config, nil, terraformModulePath)
+		ctx, err := CreateControllerContext(latticeID, systemBoostrappers, config, nil, terraformModulePath)
 		if err != nil {
 			panic(err)
 		}
@@ -90,12 +113,19 @@ func init() {
 	pflag.CommandLine.AddGoFlagSet(goflag.CommandLine)
 
 	RootCmd.Flags().StringVar(&kubeconfig, "kubeconfig", "", "path to kubeconfig file")
-	RootCmd.Flags().StringVar(&clusterIDString, "cluster-id", "", "id of the cluster")
-	RootCmd.MarkFlagRequired("cluster-id")
+	RootCmd.Flags().StringVar(&latticeID, "lattice-id", "", "id of the lattice")
+	RootCmd.MarkFlagRequired("lattice-id")
 
 	RootCmd.Flags().StringVar(&cloudProviderName, "cloud-provider", "", "cloud provider that lattice is being run on")
 	RootCmd.MarkFlagRequired("cloud-provider")
 	RootCmd.Flags().StringArrayVar(&cloudProviderVars, "cloud-provider-var", nil, "additional variables for the cloud provider")
+
+	RootCmd.Flags().StringVar(&serviceMeshProvider, "service-mesh", "", "service mesh provider to use")
+	RootCmd.MarkFlagRequired("service-mesh")
+	RootCmd.Flags().StringArrayVar(&serviceMeshProviderVars, "service-mesh-var", nil, "additional variables for the cloud provider")
+
+	RootCmd.Flags().StringVar(&networkingProviderName, "networking-provider", "", "provider to use for networking")
+	RootCmd.Flags().StringArrayVar(&networkingProviderVars, "networking-provider-var", nil, "additional variables for the networking provider")
 
 	RootCmd.Flags().StringVar(&terraformModulePath, "terraform-module-path", "/etc/terraform/modules", "path to terraform modules")
 	RootCmd.Flags().StringVar(&terraformBackend, "terraform-backend", "", "backend to use for terraform")
@@ -108,7 +138,8 @@ func initCmd() {
 }
 
 func CreateControllerContext(
-	clusterID types.ClusterID,
+	latticeID v1.LatticeID,
+	systemBootstrappers []bootstrapper.Interface,
 	kubeconfig *rest.Config,
 	stop <-chan struct{},
 	terraformModulePath string,
@@ -142,8 +173,10 @@ func CreateControllerContext(
 	latticeInformers := latticeinformers.NewSharedInformerFactory(versionedLatticeClient, time.Duration(12*time.Hour))
 
 	ctx := controller.Context{
-		ClusterID:     clusterID,
+		LatticeID:     latticeID,
 		CloudProvider: cloudProvider,
+
+		SystemBootstrappers: systemBootstrappers,
 
 		TerraformBackendOptions: terraformBackendOptions,
 
@@ -221,10 +254,10 @@ func parseCloudProviderVars() (*cloudprovider.Options, error) {
 
 func parseCloudProviderVarsLocal() (*local.Options, error) {
 	options := &local.Options{}
-	flags := cli.EmbeddedFlag{
+	flags := oldcli.EmbeddedFlag{
 		Target: &options,
-		Expected: map[string]cli.EmbeddedFlagValue{
-			"cluster-ip": {
+		Expected: map[string]oldcli.EmbeddedFlagValue{
+			"ip": {
 				Required:     true,
 				EncodingName: "IP",
 			},
@@ -240,9 +273,9 @@ func parseCloudProviderVarsLocal() (*local.Options, error) {
 
 func parseCloudProviderVarsAWS() (*aws.Options, error) {
 	options := &aws.Options{}
-	flags := cli.EmbeddedFlag{
+	flags := oldcli.EmbeddedFlag{
 		Target: &options,
-		Expected: map[string]cli.EmbeddedFlagValue{
+		Expected: map[string]oldcli.EmbeddedFlagValue{
 			"region": {
 				Required:     true,
 				EncodingName: "Region",
@@ -304,9 +337,9 @@ func parseTerraformVars() (*terraform.BackendOptions, error) {
 
 func parseTerraformVarsS3() (*terraform.BackendOptionsS3, error) {
 	s3Config := &terraform.BackendOptionsS3{}
-	flags := cli.EmbeddedFlag{
+	flags := oldcli.EmbeddedFlag{
 		Target: &s3Config,
-		Expected: map[string]cli.EmbeddedFlagValue{
+		Expected: map[string]oldcli.EmbeddedFlagValue{
 			"bucket": {
 				EncodingName: "Bucket",
 				Required:     true,

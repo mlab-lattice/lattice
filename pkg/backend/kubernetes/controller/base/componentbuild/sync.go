@@ -4,9 +4,9 @@ import (
 	"encoding/json"
 	"reflect"
 
-	kubeconstants "github.com/mlab-lattice/system/pkg/backend/kubernetes/constants"
-	latticev1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
-	"github.com/mlab-lattice/system/pkg/types"
+	"github.com/mlab-lattice/lattice/pkg/api/v1"
+	kubeconstants "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/constants"
+	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 
 	batchv1 "k8s.io/api/batch/v1"
 
@@ -66,15 +66,15 @@ func (c *Controller) updateComponentBuildStatus(
 	state latticev1.ComponentBuildState,
 	artifacts *latticev1.ComponentBuildArtifacts,
 ) (*latticev1.ComponentBuild, error) {
-	var phasePtr *types.ComponentBuildPhase
+	var phasePtr *v1.ComponentBuildPhase
 	if phase, ok := build.Annotations[kubeconstants.AnnotationKeyComponentBuildLastObservedPhase]; ok {
-		phase := types.ComponentBuildPhase(phase)
+		phase := v1.ComponentBuildPhase(phase)
 		phasePtr = &phase
 	}
 
-	var failureInfoPtr *types.ComponentBuildFailureInfo
+	var failureInfoPtr *v1.ComponentBuildFailureInfo
 	if failureInfoData, ok := build.Annotations[kubeconstants.AnnotationKeyComponentBuildFailureInfo]; ok {
-		failureInfo := types.ComponentBuildFailureInfo{}
+		failureInfo := v1.ComponentBuildFailureInfo{}
 		err := json.Unmarshal([]byte(failureInfoData), &failureInfo)
 		if err != nil {
 			return nil, err

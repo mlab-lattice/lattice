@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"reflect"
 
-	latticev1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
-	kubeutil "github.com/mlab-lattice/system/pkg/backend/kubernetes/util/kubernetes"
+	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
+	kubeutil "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/kubernetes"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -70,15 +70,14 @@ func (c *Controller) syncServiceStatus(
 	}
 
 	// If the Deployment controller hasn't yet seen the update, it's updating
-	if deployment.Generation != deployment.Status.ObservedGeneration {
+	if deployment.Generation > deployment.Status.ObservedGeneration {
 		state = latticev1.ServiceStateUpdating
 	} else if state == latticev1.ServiceStateStable && desiredInstances != totalInstances {
 		// For some reason the Spec is up to date, the deployment is stable, but
 		// the deployment does not have the correct number of instances.
 		err := fmt.Errorf(
-			"Service %v/%v is in state %v but Deployment %v does not have the right amount of instances: expected %v found %v",
-			service.Namespace,
-			service.Name,
+			"%v is in state %v but deployment %v does not have the right amount of instances: expected %v found %v",
+			service.Description(),
 			state,
 			deployment.Name,
 			desiredInstances,
@@ -203,6 +202,9 @@ type lookupDelete struct {
 func (c *Controller) syncDeletedService(service *latticev1.Service) error {
 	lookupDeletes := []lookupDelete{
 		// node pool
+		// FIXME: need to change this to support system etc level node pools
+		// FIXME: should potentially wait until deployment is cleaned up before deleting node pool
+		//        to allow for graceful termination
 		{
 			lookup: func() (interface{}, error) {
 				return c.nodePoolLister.NodePools(service.Namespace).Get(service.Name)
@@ -212,6 +214,7 @@ func (c *Controller) syncDeletedService(service *latticev1.Service) error {
 			},
 		},
 		// deployment
+		// FIXME: is any of this even working? we don't name the deployment this
 		{
 			lookup: func() (interface{}, error) {
 				return c.deploymentLister.Deployments(service.Namespace).Get(service.Name)
@@ -295,7 +298,7 @@ func (c *Controller) addFinalizer(service *latticev1.Service) (*latticev1.Servic
 	// Check to see if the finalizer already exists. If so nothing needs to be done.
 	for _, finalizer := range service.Finalizers {
 		if finalizer == finalizerName {
-			glog.V(5).Infof("Endpoint %v has %v finalizer", service.Name, finalizerName)
+			glog.V(5).Infof("service %v has %v finalizer", service.Name, finalizerName)
 			return service, nil
 		}
 	}
@@ -304,15 +307,15 @@ func (c *Controller) addFinalizer(service *latticev1.Service) (*latticev1.Servic
 	// If this fails due to a race the Endpoint should get requeued by the controller, so
 	// not a big deal.
 	service.Finalizers = append(service.Finalizers, finalizerName)
-	glog.V(5).Infof("Endpoint %v missing %v finalizer, adding it", service.Name, finalizerName)
+	glog.V(5).Infof("service %v missing %v finalizer, adding it", service.Name, finalizerName)
 
 	return c.latticeClient.LatticeV1().Services(service.Namespace).Update(service)
 }
 
 func (c *Controller) removeFinalizer(service *latticev1.Service) (*latticev1.Service, error) {
 	// Build up a list of all the finalizers except the aws service controller finalizer.
-	var finalizers []string
 	found := false
+	var finalizers []string
 	for _, finalizer := range service.Finalizers {
 		if finalizer == finalizerName {
 			found = true

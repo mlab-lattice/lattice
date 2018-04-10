@@ -5,13 +5,13 @@ import (
 	"io/ioutil"
 	"time"
 
-	latticev1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
-	latticeclientset "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/clientset/versioned"
-	latticeinformers "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/informers/externalversions/lattice/v1"
-	latticelisters "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/listers/lattice/v1"
-	kubeutil "github.com/mlab-lattice/system/pkg/backend/kubernetes/util/kubernetes"
-	"github.com/mlab-lattice/system/pkg/types"
-	endpointutil "github.com/mlab-lattice/system/pkg/util/endpoint"
+	"github.com/mlab-lattice/lattice/pkg/api/v1"
+	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
+	latticeclientset "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/generated/clientset/versioned"
+	latticeinformers "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/generated/informers/externalversions/lattice/v1"
+	latticelisters "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/generated/listers/lattice/v1"
+	kubeutil "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/kubernetes"
+	endpointutil "github.com/mlab-lattice/lattice/pkg/util/endpoint"
 
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/runtime"
@@ -40,7 +40,7 @@ type Controller struct {
 
 	dnsmasqConfigPath string
 	hostFilePath      string
-	clusterID         types.ClusterID
+	latticeID         v1.LatticeID
 }
 
 var (
@@ -51,7 +51,7 @@ var (
 func NewController(
 	dnsmasqConfigPath string,
 	hostConfigPath string,
-	clusterID types.ClusterID,
+	latticeID v1.LatticeID,
 	latticeClient latticeclientset.Interface,
 	client clientset.Interface,
 	endpointInformer latticeinformers.EndpointInformer,
@@ -68,7 +68,7 @@ func NewController(
 
 	c.dnsmasqConfigPath = dnsmasqConfigPath
 	c.hostFilePath = hostConfigPath
-	c.clusterID = clusterID
+	c.latticeID = latticeID
 
 	c.endpointister = endpointInformer.Lister()
 	c.endpointListerSynced = endpointInformer.Informer().HasSynced
@@ -211,8 +211,8 @@ func (c *Controller) rewriteDnsmasqConfig(endpoints []*latticev1.Endpoint) error
 			return err
 		}
 
-		domain := endpoint.Spec.Path.ToDomain(true)
-		cname := endpointutil.DNSName(domain, systemID, c.clusterID)
+		domain := endpoint.Spec.Path.ToDomain()
+		cname := endpointutil.DNSName(domain, systemID, c.latticeID)
 
 		if endpoint.Spec.IP != nil {
 			hostConfigFileContents += fmt.Sprintf("%v %v\n", *endpoint.Spec.IP, cname)

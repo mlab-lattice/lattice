@@ -4,13 +4,12 @@ import (
 	"fmt"
 	"reflect"
 
-	latticev1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
-	"github.com/mlab-lattice/system/pkg/definition"
-	"github.com/mlab-lattice/system/pkg/definition/tree"
+	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
+	kubeutil "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/kubernetes"
+	"github.com/mlab-lattice/lattice/pkg/definition"
+	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 
 	"k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	kubelabels "k8s.io/apimachinery/pkg/labels"
 )
 
 func (c *Controller) updateSystem(
@@ -45,36 +44,16 @@ func isSystemStatusCurrent(system *latticev1.System) bool {
 }
 
 func (c *Controller) getSystem(namespace string) (*latticev1.System, error) {
-	systems, err := c.systemLister.Systems(namespace).List(kubelabels.Everything())
+	systemID, err := kubeutil.SystemID(namespace)
 	if err != nil {
 		return nil, err
 	}
 
-	if len(systems) > 1 {
-		return nil, fmt.Errorf("expected one System in namespace %v but found %v", namespace, len(systems))
-	}
-
-	if len(systems) == 1 {
-		return systems[0], nil
-	}
-
-	systemList, err := c.latticeClient.LatticeV1().Systems(namespace).List(metav1.ListOptions{})
-	if err != nil {
-		return nil, err
-	}
-
-	if len(systemList.Items) > 1 {
-		return nil, fmt.Errorf("expected one System in namespace %v but found %v", namespace, len(systemList.Items))
-	}
-
-	if len(systemList.Items) == 1 {
-		return &systemList.Items[0], nil
-	}
-
-	return nil, fmt.Errorf("expected one System in namespace %v but found %v", namespace, len(systemList.Items))
+	internalNamespace := kubeutil.InternalNamespace(c.latticeID)
+	return c.systemLister.Systems(internalNamespace).Get(string(systemID))
 }
 
-func (c *Controller) systemSpec(rollout *latticev1.SystemRollout, build *latticev1.SystemBuild) (latticev1.SystemSpec, error) {
+func (c *Controller) systemSpec(rollout *latticev1.Deploy, build *latticev1.Build) (latticev1.SystemSpec, error) {
 	services, err := c.systemServices(rollout, build)
 	if err != nil {
 		return latticev1.SystemSpec{}, err
@@ -88,15 +67,15 @@ func (c *Controller) systemSpec(rollout *latticev1.SystemRollout, build *lattice
 }
 
 func (c *Controller) systemServices(
-	rollout *latticev1.SystemRollout,
-	build *latticev1.SystemBuild,
+	rollout *latticev1.Deploy,
+	build *latticev1.Build,
 ) (map[tree.NodePath]latticev1.SystemSpecServiceInfo, error) {
-	if build.Status.State != latticev1.SystemBuildStateSucceeded {
+	if build.Status.State != latticev1.BuildStateSucceeded {
 		err := fmt.Errorf(
 			"cannot get system services for build %v/%v, must be in state %v but is in %v",
 			build.Namespace,
 			build.Name,
-			latticev1.SystemBuildStateSucceeded,
+			latticev1.BuildStateSucceeded,
 			build.Status.State,
 		)
 		return nil, err
@@ -107,7 +86,7 @@ func (c *Controller) systemServices(
 		serviceBuildName, ok := build.Status.ServiceBuilds[path]
 		if !ok {
 			// FIXME: send warn event
-			err := fmt.Errorf("SystemBuild %v/%v does not have expected Service %v", build.Namespace, build.Name, path)
+			err := fmt.Errorf("Build %v/%v does not have expected Service %v", build.Namespace, build.Name, path)
 			return nil, err
 		}
 
@@ -115,7 +94,7 @@ func (c *Controller) systemServices(
 		if err != nil {
 			if errors.IsNotFound(err) {
 				err = fmt.Errorf(
-					"SystemBuild %v/%v has ServiceBuild %v for Service %v but it does not exist",
+					"Build %v/%v has ServiceBuild %v for Service %v but it does not exist",
 					build.Namespace,
 					build.Name,
 					serviceBuildName,

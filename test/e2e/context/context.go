@@ -1,18 +1,18 @@
 package context
 
 import (
-	"github.com/mlab-lattice/system/pkg/managerapi/client"
-	"github.com/mlab-lattice/system/pkg/managerapi/client/rest"
+	"github.com/mlab-lattice/lattice/pkg/api/client"
+	"github.com/mlab-lattice/lattice/pkg/api/client/rest"
 )
 
 type TestContextType struct {
-	ClusterURL       string
-	ClusterAPIClient client.Interface
+	LatticeURL       string
+	LatticeAPIClient client.Interface
 }
 
 var TestContext TestContextType
 
 func SetClusterURL(clusterURL string) {
-	TestContext.ClusterURL = clusterURL
-	TestContext.ClusterAPIClient = rest.NewClient(clusterURL)
+	TestContext.LatticeURL = clusterURL
+	TestContext.LatticeAPIClient = rest.NewClient(clusterURL)
 }

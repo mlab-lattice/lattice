@@ -6,12 +6,11 @@ import (
 	"strconv"
 	"strings"
 
-	awscloudprovider "github.com/mlab-lattice/system/pkg/backend/kubernetes/cloudprovider/aws"
-	latticev1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
-	kubetf "github.com/mlab-lattice/system/pkg/backend/kubernetes/terraform/aws"
-	kubeutil "github.com/mlab-lattice/system/pkg/backend/kubernetes/util/kubernetes"
-	tf "github.com/mlab-lattice/system/pkg/terraform"
-	awstfprovider "github.com/mlab-lattice/system/pkg/terraform/provider/aws"
+	awscloudprovider "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/cloudprovider/aws"
+	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
+	kubetf "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/terraform/aws"
+	tf "github.com/mlab-lattice/lattice/pkg/util/terraform"
+	awstfprovider "github.com/mlab-lattice/lattice/pkg/util/terraform/provider/aws"
 
 	"github.com/golang/glog"
 )
@@ -52,10 +51,8 @@ func (c *Controller) syncNodePoolState(nodePool *latticev1.NodePool) (*latticev1
 }
 
 func (c *Controller) provisionNodePool(nodePool *latticev1.NodePool) (*latticev1.NodePool, error) {
-	nodePoolID := kubeutil.NodePoolIDLabelValue(nodePool)
-
 	config := c.nodePoolConfig(nodePool)
-	_, err := tf.Apply(workDirectory(nodePoolID), config)
+	_, err := tf.Apply(workDirectory(nodePool.IDLabelValue()), config)
 	if err != nil {
 		return nil, err
 	}
@@ -80,21 +77,19 @@ func (c *Controller) provisionNodePool(nodePool *latticev1.NodePool) (*latticev1
 }
 
 func (c *Controller) deprovisionNodePool(nodePool *latticev1.NodePool) error {
-	nodePoolID := kubeutil.NodePoolIDLabelValue(nodePool)
-
 	config := c.nodePoolConfig(nodePool)
-	_, err := tf.Destroy(workDirectory(nodePoolID), config)
+	_, err := tf.Destroy(workDirectory(nodePool.IDLabelValue()), config)
 	return err
 }
 
 func (c *Controller) nodePoolConfig(nodePool *latticev1.NodePool) *tf.Config {
-	nodePoolID := kubeutil.NodePoolIDLabelValue(nodePool)
+	nodePoolID := nodePool.IDLabelValue()
 
 	nodePoolModule := kubetf.NewNodePoolModule(
 		c.terraformModuleRoot,
 		c.awsCloudProvider.AccountID(),
 		c.awsCloudProvider.Region(),
-		string(c.clusterID),
+		string(c.latticeID),
 		c.awsCloudProvider.VPCID(),
 		strings.Join(c.awsCloudProvider.SubnetIDs(), ","),
 		c.awsCloudProvider.MasterNodeSecurityGroupID(),
@@ -114,7 +109,7 @@ func (c *Controller) nodePoolConfig(nodePool *latticev1.NodePool) *tf.Config {
 			Bucket: c.terraformBackendOptions.S3.Bucket,
 			Key: fmt.Sprintf(
 				"%v/%v",
-				kubetf.GetS3BackendNodePoolPathRoot(c.clusterID, nodePoolID),
+				kubetf.GetS3BackendNodePoolPathRoot(c.latticeID, nodePoolID),
 				nodePoolID,
 			),
 			Encrypt: true,
@@ -147,7 +142,6 @@ type nodePoolInfo struct {
 }
 
 func (c *Controller) currentNodePoolInfo(nodePool *latticev1.NodePool) (nodePoolInfo, error) {
-	nodePoolID := kubeutil.NodePoolIDLabelValue(nodePool)
 	outputVars := []string{
 		terraformOutputAutoscalingGroupID,
 		terraformOutputAutoscalingGroupName,
@@ -156,7 +150,7 @@ func (c *Controller) currentNodePoolInfo(nodePool *latticev1.NodePool) (nodePool
 	}
 
 	config := c.nodePoolConfig(nodePool)
-	values, err := tf.Output(workDirectory(nodePoolID), config, outputVars)
+	values, err := tf.Output(workDirectory(nodePool.IDLabelValue()), config, outputVars)
 	if err != nil {
 		return nodePoolInfo{}, err
 	}

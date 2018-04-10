@@ -37,7 +37,7 @@ func NodePathFromDomain(d string) (NodePath, error) {
 	return NewNodePath(p)
 }
 
-func (np NodePath) ToDomain(lowercase bool) string {
+func (np NodePath) ToDomain() string {
 	// FIXME: this will panic if it's an invalid path
 	s := strings.Split(string(np), "/")[1:]
 
@@ -49,11 +49,7 @@ func (np NodePath) ToDomain(lowercase bool) string {
 			domain += "."
 		}
 
-		if lowercase {
-			subpath = strings.ToLower(subpath)
-		}
-
-		domain += subpath
+		domain += strings.ToLower(subpath)
 		first = false
 	}
 
@@ -76,4 +72,8 @@ func (np NodePath) Parent() (NodePath, error) {
 
 func (np NodePath) IsRoot() bool {
 	return np.Depth() == 1
+}
+
+func (np NodePath) String() string {
+	return string(np)
 }

@@ -4,7 +4,7 @@ package externalversions
 
 import (
 	"fmt"
-	v1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
+	v1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
 	cache "k8s.io/client-go/tools/cache"
 )
@@ -36,10 +36,14 @@ func (f *genericInformer) Lister() cache.GenericLister {
 func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource) (GenericInformer, error) {
 	switch resource {
 	// Group=lattice.mlab.com, Version=v1
+	case v1.SchemeGroupVersion.WithResource("builds"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Lattice().V1().Builds().Informer()}, nil
 	case v1.SchemeGroupVersion.WithResource("componentbuilds"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Lattice().V1().ComponentBuilds().Informer()}, nil
 	case v1.SchemeGroupVersion.WithResource("configs"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Lattice().V1().Configs().Informer()}, nil
+	case v1.SchemeGroupVersion.WithResource("deploies"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Lattice().V1().Deploies().Informer()}, nil
 	case v1.SchemeGroupVersion.WithResource("endpoints"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Lattice().V1().Endpoints().Informer()}, nil
 	case v1.SchemeGroupVersion.WithResource("loadbalancers"):
@@ -54,12 +58,8 @@ func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Lattice().V1().ServiceBuilds().Informer()}, nil
 	case v1.SchemeGroupVersion.WithResource("systems"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Lattice().V1().Systems().Informer()}, nil
-	case v1.SchemeGroupVersion.WithResource("systembuilds"):
-		return &genericInformer{resource: resource.GroupResource(), informer: f.Lattice().V1().SystemBuilds().Informer()}, nil
-	case v1.SchemeGroupVersion.WithResource("systemrollouts"):
-		return &genericInformer{resource: resource.GroupResource(), informer: f.Lattice().V1().SystemRollouts().Informer()}, nil
-	case v1.SchemeGroupVersion.WithResource("systemteardowns"):
-		return &genericInformer{resource: resource.GroupResource(), informer: f.Lattice().V1().SystemTeardowns().Informer()}, nil
+	case v1.SchemeGroupVersion.WithResource("teardowns"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Lattice().V1().Teardowns().Informer()}, nil
 
 	}
 

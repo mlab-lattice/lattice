@@ -3,7 +3,7 @@
 
 variable "region" {}
 
-variable "cluster_id" {}
+variable "lattice_id" {}
 variable "vpc_id" {}
 variable "subnet_ids" {}
 
@@ -14,7 +14,7 @@ variable "ami_id" {}
 variable "key_name" {}
 variable "iam_instance_profile_role_name" {}
 
-variable "additional_user_data" {
+variable "etc_lattice_config_content" {
   type    = "string"
   default = "{}"
 }
@@ -60,7 +60,6 @@ provider "aws" {
 
 # instance profile
 resource "aws_iam_instance_profile" "iam_instance_profile" {
-  name = "lattice.${var.cluster_id}.${var.name}"
   role = "${var.iam_instance_profile_role_name}"
 }
 
@@ -69,8 +68,6 @@ resource "aws_iam_instance_profile" "iam_instance_profile" {
 
 # security group
 resource "aws_security_group" "node_auto_scaling_group" {
-  name = "lattice.${var.cluster_id}.${var.name}"
-
   vpc_id = "${var.vpc_id}"
 
   lifecycle {
@@ -78,8 +75,8 @@ resource "aws_security_group" "node_auto_scaling_group" {
   }
 
   tags {
-    KubernetesCluster = "lattice.${var.cluster_id}"
-    Name              = "lattice.${var.cluster_id}.${var.name}"
+    KubernetesCluster = "lattice.${var.lattice_id}"
+    Name              = "lattice.${var.lattice_id}.node.${var.name}"
   }
 }
 
@@ -119,8 +116,6 @@ resource "aws_security_group_rule" "auto_scalling_group_allow_ingress_flannel_vx
 
 # FIXME: TEMPORARY FOR TESTING
 resource "aws_security_group" "temporary_ssh_group" {
-  name = "lattice-${var.cluster_id}-${var.name} TEMPORARY SSH RULE"
-
   vpc_id = "${var.vpc_id}"
 
   ingress {
@@ -135,8 +130,8 @@ resource "aws_security_group" "temporary_ssh_group" {
   }
 
   tags {
-    KubernetesCluster = "lattice.${var.cluster_id}"
-    Name              = "lattice.${var.cluster_id}.${var.name}-TEMP-SSH"
+    KubernetesCluster = "lattice.${var.lattice_id}"
+    Name              = "lattice.${var.lattice_id}.node.${var.name}-TEMP-SSH"
   }
 }
 
@@ -152,29 +147,17 @@ resource "aws_launch_configuration" "aws_launch_configuration" {
   iam_instance_profile = "${aws_iam_instance_profile.iam_instance_profile.name}"
 
   user_data = <<EOF
-{
-  "ignition": {
-    "version": "2.0.0",
-    "config": {}
-  },
-  "storage": {},
-  "systemd": {
-    "units": [
-      {
-        "name": "kubelet.service",
-        "dropins": [
-          {
-            "name": "10-override.conf",
-            "contents": "[Service]\nEnvironment=\"KUBELET_LABELS=${var.kubelet_labels}\"\nEnvironment=\"KUBELET_TAINTS=${var.kubelet_taints}\""
-          }
-        ]
-      }
-    ]
-  },
-  "networkd": {},
-  "passwd": {},
-  "lattice": ${var.additional_user_data}
-}
+write_files:
+-   path: /etc/systemd/system/kubelet.service.d/10-override.conf
+    owner: root:root
+    permissions: '0644'
+    content: |
+        "[Service]\nEnvironment=\"KUBELET_LABELS=${var.kubelet_labels}\"\nEnvironment=\"KUBELET_TAINTS=${var.kubelet_taints}\""
+-   path: /etc/lattice/config.json
+    owner: root:root
+    permissions: '0644'
+    content: |
+        ${var.etc_lattice_config_content}
 EOF
 
   # TODO: remove temporary_ssh_group when done testing
@@ -193,7 +176,6 @@ EOF
 
 # autoscaling group
 resource "aws_autoscaling_group" "node_autoscaling_group" {
-  name                 = "lattice.${var.cluster_id}.${var.name}-${aws_launch_configuration.aws_launch_configuration.name}"
   launch_configuration = "${aws_launch_configuration.aws_launch_configuration.name}"
 
   desired_capacity = "${var.num_instances}"
@@ -208,14 +190,14 @@ resource "aws_autoscaling_group" "node_autoscaling_group" {
 
   tag {
     key   = "KubernetesCluster"
-    value = "lattice.${var.cluster_id}"
+    value = "lattice.${var.lattice_id}"
 
     propagate_at_launch = true
   }
 
   tag {
     key   = "Name"
-    value = "lattice.${var.cluster_id}.${var.name}"
+    value = "lattice.${var.lattice_id}.node.${var.name}"
 
     propagate_at_launch = true
   }

@@ -1,14 +1,14 @@
 package basecontrollers
 
 import (
-	controller "github.com/mlab-lattice/system/cmd/kubernetes/lattice-controller-manager/app/common"
-	"github.com/mlab-lattice/system/pkg/backend/kubernetes/controller/base/service"
+	controller "github.com/mlab-lattice/lattice/cmd/kubernetes/lattice-controller-manager/app/common"
+	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/controller/base/service"
 )
 
 func initializeServiceController(ctx controller.Context) {
 	go service.NewController(
 		ctx.CloudProvider,
-		ctx.ClusterID,
+		ctx.LatticeID,
 		ctx.KubeClientBuilder.ClientOrDie("kubernetes-service-controller"),
 		ctx.LatticeClientBuilder.ClientOrDie("kubernetes-service-controller"),
 		ctx.LatticeInformerFactory.Lattice().V1().Configs(),

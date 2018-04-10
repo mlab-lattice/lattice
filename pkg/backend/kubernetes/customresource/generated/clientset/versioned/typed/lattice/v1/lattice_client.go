@@ -1,16 +1,18 @@
 package v1
 
 import (
-	v1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
-	"github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/clientset/versioned/scheme"
+	v1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
+	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/generated/clientset/versioned/scheme"
 	serializer "k8s.io/apimachinery/pkg/runtime/serializer"
 	rest "k8s.io/client-go/rest"
 )
 
 type LatticeV1Interface interface {
 	RESTClient() rest.Interface
+	BuildsGetter
 	ComponentBuildsGetter
 	ConfigsGetter
+	DeploiesGetter
 	EndpointsGetter
 	LoadBalancersGetter
 	NodePoolsGetter
@@ -18,14 +20,16 @@ type LatticeV1Interface interface {
 	ServiceAddressesGetter
 	ServiceBuildsGetter
 	SystemsGetter
-	SystemBuildsGetter
-	SystemRolloutsGetter
-	SystemTeardownsGetter
+	TeardownsGetter
 }
 
 // LatticeV1Client is used to interact with features provided by the lattice.mlab.com group.
 type LatticeV1Client struct {
 	restClient rest.Interface
+}
+
+func (c *LatticeV1Client) Builds(namespace string) BuildInterface {
+	return newBuilds(c, namespace)
 }
 
 func (c *LatticeV1Client) ComponentBuilds(namespace string) ComponentBuildInterface {
@@ -34,6 +38,10 @@ func (c *LatticeV1Client) ComponentBuilds(namespace string) ComponentBuildInterf
 
 func (c *LatticeV1Client) Configs(namespace string) ConfigInterface {
 	return newConfigs(c, namespace)
+}
+
+func (c *LatticeV1Client) Deploies(namespace string) DeployInterface {
+	return newDeploies(c, namespace)
 }
 
 func (c *LatticeV1Client) Endpoints(namespace string) EndpointInterface {
@@ -64,16 +72,8 @@ func (c *LatticeV1Client) Systems(namespace string) SystemInterface {
 	return newSystems(c, namespace)
 }
 
-func (c *LatticeV1Client) SystemBuilds(namespace string) SystemBuildInterface {
-	return newSystemBuilds(c, namespace)
-}
-
-func (c *LatticeV1Client) SystemRollouts(namespace string) SystemRolloutInterface {
-	return newSystemRollouts(c, namespace)
-}
-
-func (c *LatticeV1Client) SystemTeardowns(namespace string) SystemTeardownInterface {
-	return newSystemTeardowns(c, namespace)
+func (c *LatticeV1Client) Teardowns(namespace string) TeardownInterface {
+	return newTeardowns(c, namespace)
 }
 
 // NewForConfig creates a new LatticeV1Client for the given config.

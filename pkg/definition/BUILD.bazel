@@ -3,11 +3,12 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 go_library(
     name = "go_default_library",
     srcs = [
+        "constants.go",
         "interface.go",
         "service.go",
         "system.go",
     ],
-    importpath = "github.com/mlab-lattice/system/pkg/definition",
+    importpath = "github.com/mlab-lattice/lattice/pkg/definition",
     visibility = ["//visibility:public"],
     deps = ["//pkg/definition/block:go_default_library"],
 )

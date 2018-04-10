@@ -29,6 +29,30 @@ You can run the linter by running `make lint`.
 
 You can run the linter without warnings about exported values not being commented by running `make lint-no-export-comments`.
 
+### Imports
+
+Packages should be imported in the following order:
+
+```go
+import (
+	// standard library
+	"fmt"
+	
+	// lattice dependencies
+	"github.com/mlab-lattice/lattice/pkg/util/cli"
+	
+	// k8s.io dependencies, broken up by repository in alphabetical order
+	corev1 "k8s.io/api/core/v1"
+	
+	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	
+	// other dependencies in alphabetical order
+	"github.com/fatih/color"
+	"github.com/golang/glog"
+)
+```
+
 ## Terraform
 
 ### Formatting

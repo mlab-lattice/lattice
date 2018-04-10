@@ -2,13 +2,12 @@ package servicebuild
 
 import (
 	"fmt"
-	"sync"
 	"time"
 
-	latticev1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
-	latticeclientset "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/clientset/versioned"
-	latticeinformers "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/informers/externalversions/lattice/v1"
-	latticelisters "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/listers/lattice/v1"
+	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
+	latticeclientset "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/generated/clientset/versioned"
+	latticeinformers "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/generated/informers/externalversions/lattice/v1"
+	latticelisters "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/generated/listers/lattice/v1"
 
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
@@ -33,15 +32,6 @@ type Controller struct {
 	componentBuildLister       latticelisters.ComponentBuildLister
 	componentBuildListerSynced cache.InformerSynced
 
-	// recentComponentBuilds holds a map of namespaces which map to a map of definition
-	// hashes which map to the name of a ComponentBuild that was recently created
-	// in the namespace. recentComponentBuilds should always hold the Name of the most
-	// recently created ComponentBuild for a given definition hash.
-	// See createComponentBuilds for more information.
-	// FIXME: add some GC on this map so it doesn't grow forever (maybe remove in addComponentBuild)
-	recentComponentBuildsLock sync.RWMutex
-	recentComponentBuilds     map[string]map[string]string
-
 	queue workqueue.RateLimitingInterface
 }
 
@@ -51,9 +41,8 @@ func NewController(
 	componentBuildInformer latticeinformers.ComponentBuildInformer,
 ) *Controller {
 	sbc := &Controller{
-		latticeClient:         latticeClient,
-		recentComponentBuilds: make(map[string]map[string]string),
-		queue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "service-build"),
+		latticeClient: latticeClient,
+		queue:         workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "service-build"),
 	}
 
 	sbc.syncHandler = sbc.syncServiceBuild

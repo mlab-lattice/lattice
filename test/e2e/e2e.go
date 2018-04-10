@@ -4,13 +4,9 @@ import (
 	"flag"
 	"testing"
 
-	"github.com/mlab-lattice/system/pkg/backend/kubernetes/cloudprovider"
-	"github.com/mlab-lattice/system/pkg/backend/kubernetes/cloudprovider/local"
-	"github.com/mlab-lattice/system/pkg/lifecycle/cluster/provisioner"
-	"github.com/mlab-lattice/system/test/e2e/context"
-
 	// test sources
-	_ "github.com/mlab-lattice/system/test/e2e/system"
+	"github.com/mlab-lattice/lattice/test/e2e/context"
+	_ "github.com/mlab-lattice/lattice/test/e2e/system"
 
 	"github.com/onsi/ginkgo"
 	"github.com/onsi/gomega"
@@ -28,60 +24,15 @@ var (
 
 func RunE2ETest(t *testing.T) {
 	gomega.RegisterFailHandler(ginkgo.Fail)
-	ginkgo.RunSpecs(t, "Client e2e Suite")
+	ginkgo.RunSpecs(t, "Lattice e2e Suite")
 }
 
 var _ = ginkgo.SynchronizedBeforeSuite(func() []byte {
-	if clusterURL == "" {
-		p := getProvisioner()
-
-		var err error
-		clusterURL, err = p.Provision("e2e-test", nil)
-		if err != nil {
-			panic(err)
-		}
-
-	}
-
 	context.SetClusterURL(clusterURL)
 	provisioned = true
 
 	return nil
-}, func([]byte) {
-})
-
-var _ = ginkgo.SynchronizedAfterSuite(func() {
-	if provider != "" {
-		p := getProvisioner()
-
-		err := p.Deprovision("e2e-test", !provisioned)
-		if err != nil {
-			panic(err)
-		}
-	}
-}, func() {
-
-})
-
-func getProvisioner() provisioner.Interface {
-	switch provider {
-	case cloudprovider.Local:
-		p, err := local.NewClusterProvisioner(
-			controlPlaneContainerRegistry,
-			controlPlaneContainerChannel,
-			"/tmp/lattice/test/e2e/local",
-			&local.ClusterProvisionerOptions{},
-		)
-		if err != nil {
-			panic(err)
-		}
-
-		return p
-
-	default:
-		panic("unsupported provider " + provider)
-	}
-}
+}, func([]byte) {})
 
 func init() {
 	flag.StringVar(&clusterURL, "cluster-url", "", "cluster url")

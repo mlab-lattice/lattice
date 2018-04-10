@@ -4,12 +4,12 @@ import (
 	"fmt"
 	"reflect"
 
-	latticev1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
-	kubetf "github.com/mlab-lattice/system/pkg/backend/kubernetes/terraform/aws"
-	kubeutil "github.com/mlab-lattice/system/pkg/backend/kubernetes/util/kubernetes"
-	tf "github.com/mlab-lattice/system/pkg/terraform"
-	awstfprovider "github.com/mlab-lattice/system/pkg/terraform/provider/aws"
-	endpointutil "github.com/mlab-lattice/system/pkg/util/endpoint"
+	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
+	kubeutil "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/kubernetes"
+	kubetf "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/terraform/aws"
+	endpointutil "github.com/mlab-lattice/lattice/pkg/util/endpoint"
+	tf "github.com/mlab-lattice/lattice/pkg/util/terraform"
+	awstfprovider "github.com/mlab-lattice/lattice/pkg/util/terraform/provider/aws"
 
 	"github.com/golang/glog"
 )
@@ -127,7 +127,7 @@ func (c *Controller) endpointConfig(endpoint *latticev1.Endpoint, endpointModule
 			Bucket: c.terraformBackendOptions.S3.Bucket,
 			Key: fmt.Sprintf(
 				"%v/%v/%v",
-				kubetf.GetS3BackendSystemStatePathRoot(c.clusterID, systemID),
+				kubetf.GetS3BackendSystemStatePathRoot(c.latticeID, systemID),
 				"endpoints",
 				endpoint.Name,
 			),
@@ -179,7 +179,7 @@ func (c *Controller) endpointDNSName(endpoint *latticev1.Endpoint) (string, erro
 		return "", err
 	}
 
-	name := endpointutil.DNSName(endpoint.Spec.Path.ToDomain(true), systemID, c.clusterID)
+	name := endpointutil.DNSName(endpoint.Spec.Path.ToDomain(), systemID, c.latticeID)
 	return name, nil
 }
 

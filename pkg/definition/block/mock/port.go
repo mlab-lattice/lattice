@@ -1,8 +1,8 @@
 package mock
 
 import (
-	"github.com/mlab-lattice/system/pkg/definition/block"
-	jsonutil "github.com/mlab-lattice/system/pkg/util/json"
+	"github.com/mlab-lattice/lattice/pkg/definition/block"
+	jsonutil "github.com/mlab-lattice/lattice/pkg/util/json"
 )
 
 func Port() *block.ComponentPort {
@@ -58,55 +58,6 @@ func PublicHTTPPortExpectedJSON() []byte {
 		[]byte(`"http"`),
 		[]byte(`80`),
 		httpProtocolBytes,
-		PublicExternalAccessExpectedJSON(),
-	)
-}
-
-func TCPPort() *block.ComponentPort {
-	return PrivateTCPPort()
-}
-
-func TCPPortExpectedJSON() []byte {
-	return PrivateTCPPortExpectedJSON()
-}
-
-func PrivateTCPPort() *block.ComponentPort {
-	return &block.ComponentPort{
-		Name:     "tcp",
-		Port:     80,
-		Protocol: block.ProtocolTCP,
-	}
-}
-
-func PrivateTCPPortExpectedJSON() []byte {
-	tcpProtocolBytes := []byte(`"`)
-	tcpProtocolBytes = append(tcpProtocolBytes, []byte(block.ProtocolTCP)...)
-	tcpProtocolBytes = append(tcpProtocolBytes, []byte(`"`)...)
-	return GeneratePortExpectedJSON(
-		[]byte(`"tcp"`),
-		[]byte(`80`),
-		tcpProtocolBytes,
-		nil,
-	)
-}
-
-func PublicTCPPort() *block.ComponentPort {
-	return &block.ComponentPort{
-		Name:           "tcp",
-		Port:           80,
-		Protocol:       block.ProtocolTCP,
-		ExternalAccess: PublicExternalAccess(),
-	}
-}
-
-func PublicTCPPortExpectedJSON() []byte {
-	tcpProtocolBytes := []byte(`"`)
-	tcpProtocolBytes = append(tcpProtocolBytes, []byte(block.ProtocolTCP)...)
-	tcpProtocolBytes = append(tcpProtocolBytes, []byte(`"`)...)
-	return GeneratePortExpectedJSON(
-		[]byte(`"tcp"`),
-		[]byte(`80`),
-		tcpProtocolBytes,
 		PublicExternalAccessExpectedJSON(),
 	)
 }

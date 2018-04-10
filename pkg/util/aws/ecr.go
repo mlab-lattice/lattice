@@ -10,6 +10,10 @@ import (
 	"github.com/aws/aws-sdk-go/service/ecr"
 )
 
+const (
+	EC2RoleDockerRegistryAuth = "aws-ec2-role"
+)
+
 type ECRRegistryAuthProvider struct{}
 
 func (erap *ECRRegistryAuthProvider) GetLoginCredentials(registryURI string) (string, string, error) {

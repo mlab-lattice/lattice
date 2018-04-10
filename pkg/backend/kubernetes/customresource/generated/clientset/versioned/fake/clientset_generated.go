@@ -1,9 +1,9 @@
 package fake
 
 import (
-	clientset "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/clientset/versioned"
-	latticev1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/clientset/versioned/typed/lattice/v1"
-	fakelatticev1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/clientset/versioned/typed/lattice/v1/fake"
+	clientset "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/generated/clientset/versioned"
+	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/generated/clientset/versioned/typed/lattice/v1"
+	fakelatticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/generated/clientset/versioned/typed/lattice/v1/fake"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/discovery"
@@ -49,7 +49,7 @@ func (c *Clientset) LatticeV1() latticev1.LatticeV1Interface {
 	return &fakelatticev1.FakeLatticeV1{Fake: &c.Fake}
 }
 
-// Client retrieves the LatticeV1Client
+// Lattice retrieves the LatticeV1Client
 func (c *Clientset) Lattice() latticev1.LatticeV1Interface {
 	return &fakelatticev1.FakeLatticeV1{Fake: &c.Fake}
 }

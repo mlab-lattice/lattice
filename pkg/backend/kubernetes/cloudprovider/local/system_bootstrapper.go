@@ -1,7 +1,8 @@
 package local
 
 import (
-	systembootstrapper "github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/system/bootstrap/bootstrapper"
+	systembootstrapper "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/lifecycle/system/bootstrap/bootstrapper"
+	"github.com/mlab-lattice/lattice/pkg/util/cli"
 )
 
 type SystemBootstrapperOptions struct {
@@ -23,4 +24,8 @@ func (cp *DefaultLocalSystemBootstrapper) BootstrapSystemResources(resources *sy
 
 func ParseSystemBootstrapperFlags(vars []string) *SystemBootstrapperOptions {
 	return &SystemBootstrapperOptions{}
+}
+
+func SystemBootstrapperFlags() (cli.Flags, *SystemBootstrapperOptions) {
+	return nil, &SystemBootstrapperOptions{}
 }

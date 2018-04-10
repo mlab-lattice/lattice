@@ -34,8 +34,7 @@ TODO:
 
 import (
 	"fmt"
-
-	"github.com/mlab-lattice/system/pkg/util/git"
+	"github.com/mlab-lattice/lattice/pkg/util/git"
 )
 
 // Options evaluation options

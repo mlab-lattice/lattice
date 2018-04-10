@@ -1,7 +1,10 @@
 package constants
 
 const (
-	LabelKeyLatticeClusterID = "cluster.lattice.mlab.com/id"
+	LabelKeyLatticeID = "lattice.mlab.com/id"
+
+	LabelKeyControlPlane        = "control-plane.lattice.mlab.com"
+	LabelKeyControlPlaneService = LabelKeyControlPlane + "/service"
 
 	LabelKeyNodeRoleLattice  = "node-role.lattice.mlab.com"
 	LabelKeyMasterNode       = LabelKeyNodeRoleLattice + "/master"
@@ -13,10 +16,11 @@ const (
 	LabelKeySystemRolloutVersion = "rollout.system.lattice.mlab.com/version"
 	LabelKeySystemRolloutBuildID = "rollout.system.lattice.mlab.com/build"
 
-	LabelKeyServiceID         = "service.lattice.mlab.com/id"
-	LabelKeyServicePathDomain = "service.lattice.mlab.com/path-domain"
+	LabelKeyServiceID   = "service.lattice.mlab.com/id"
+	LabelKeyServicePath = "service.lattice.mlab.com/path"
 
-	LabelKeySystemBuildID      = "system.build.lattice.mlab.com/id"
-	LabelKeySystemBuildVersion = "system.build.lattice.mlab.com/version"
-	LabelKeySystemVersion      = "system.lattice.mlab.com/version"
+	LabelKeySystemBuildID = "system.build.lattice.mlab.com/id"
+	LabelKeySystemVersion = "system.lattice.mlab.com/version"
+
+	LabelKeySecret = "secret.lattice.mlab.com"
 )

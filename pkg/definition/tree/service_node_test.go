@@ -3,8 +3,8 @@ package tree
 //import (
 //	"testing"
 //
-//	definitiontest "github.com/mlab-lattice/system/pkg/definition/test"
-//	testutil "github.com/mlab-lattice/system/pkg/util/test"
+//	definitiontest "github.com/mlab-lattice/lattice/pkg/definition/test"
+//	testutil "github.com/mlab-lattice/lattice/pkg/util/test"
 //)
 
 //func TestServiceNode(t *testing.T) {

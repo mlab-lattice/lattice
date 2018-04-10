@@ -3,18 +3,18 @@ package componentbuilder
 import (
 	"os"
 
-	"github.com/mlab-lattice/system/pkg/definition/block"
-	"github.com/mlab-lattice/system/pkg/types"
-	"github.com/mlab-lattice/system/pkg/util/docker"
-	"github.com/mlab-lattice/system/pkg/util/git"
+	"github.com/mlab-lattice/lattice/pkg/api/v1"
+	"github.com/mlab-lattice/lattice/pkg/definition/block"
+	"github.com/mlab-lattice/lattice/pkg/util/docker"
+	"github.com/mlab-lattice/lattice/pkg/util/git"
 
 	dockerclient "github.com/docker/docker/client"
 	"github.com/fatih/color"
 )
 
 type Builder struct {
-	BuildID             types.ComponentBuildID
-	SystemID            types.SystemID
+	BuildID             v1.ComponentBuildID
+	SystemID            v1.SystemID
 	WorkingDir          string
 	ComponentBuildBlock *block.ComponentBuild
 	DockerOptions       *DockerOptions
@@ -66,12 +66,12 @@ func (e *ErrorInternal) Error() string {
 
 type Failure struct {
 	Error error
-	Phase types.ComponentBuildPhase
+	Phase v1.ComponentBuildPhase
 }
 
 func NewBuilder(
-	buildID types.ComponentBuildID,
-	systemID types.SystemID,
+	buildID v1.ComponentBuildID,
+	systemID v1.SystemID,
 	workDirectory string,
 	dockerOptions *DockerOptions,
 	gitResolverOptions *GitResolverOptions,
@@ -127,6 +127,10 @@ func (b *Builder) Build() error {
 
 	if b.ComponentBuildBlock.GitRepository != nil {
 		return b.handleError(b.buildGitRepositoryComponent())
+	}
+
+	if b.ComponentBuildBlock.DockerImage != nil {
+		return b.handleError(b.buildDockerImageComponent())
 	}
 
 	return newErrorUser("unsupported component build type")

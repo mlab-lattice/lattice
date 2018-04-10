@@ -6,12 +6,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/mlab-lattice/system/pkg/backend/kubernetes/cloudprovider"
-	latticev1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
-	latticeclientset "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/clientset/versioned"
-	latticeinformers "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/informers/externalversions/lattice/v1"
-	latticelisters "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/listers/lattice/v1"
-	"github.com/mlab-lattice/system/pkg/types"
+	"github.com/mlab-lattice/lattice/pkg/api/v1"
+	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/cloudprovider"
+	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
+	latticeclientset "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/generated/clientset/versioned"
+	latticeinformers "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/generated/informers/externalversions/lattice/v1"
+	latticelisters "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/generated/listers/lattice/v1"
 
 	batchv1 "k8s.io/api/batch/v1"
 
@@ -35,7 +35,7 @@ type Controller struct {
 	syncHandler func(bKey string) error
 	enqueue     func(cb *latticev1.ComponentBuild)
 
-	clusterID     types.ClusterID
+	latticeID     v1.LatticeID
 	cloudProvider cloudprovider.Interface
 
 	kubeClient    kubeclientset.Interface
@@ -58,7 +58,7 @@ type Controller struct {
 }
 
 func NewController(
-	clusterID types.ClusterID,
+	latticeID v1.LatticeID,
 	cloudProvider cloudprovider.Interface,
 	kubeClient kubeclientset.Interface,
 	latticeClient latticeclientset.Interface,
@@ -67,7 +67,7 @@ func NewController(
 	jobInformer batchinformers.JobInformer,
 ) *Controller {
 	cbc := &Controller{
-		clusterID:     clusterID,
+		latticeID:     latticeID,
 		cloudProvider: cloudProvider,
 		kubeClient:    kubeClient,
 		latticeClient: latticeClient,

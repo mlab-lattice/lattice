@@ -3,12 +3,15 @@ package systemlifecycle
 import (
 	"fmt"
 
-	latticev1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
+	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
+
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func (a *lifecycleAction) String() string {
 	if a.rollout != nil {
-		return fmt.Sprintf("SystemRollout %v", a.rollout.Name)
+		return fmt.Sprintf("Deploy %v", a.rollout.Name)
 	}
 
 	if a.teardown != nil {
@@ -44,61 +47,83 @@ func (c *Controller) getOwningAction(namespace string) (*lifecycleAction, bool) 
 	c.owningLifecycleActionsLock.RLock()
 	defer c.owningLifecycleActionsLock.RUnlock()
 
-	owningAction, ok := c.owningLifecycleActions[namespace]
+	ns, err := c.kubeClient.CoreV1().Namespaces().Get(namespace, metav1.GetOptions{})
+	// FIXME: think about this, probably wrong
+	if err != nil {
+		return nil, false
+	}
+
+	owningAction, ok := c.owningLifecycleActions[ns.UID]
 	return owningAction, ok
 }
 
-func (c *Controller) attemptToClaimRolloutOwningAction(rollout *latticev1.SystemRollout) *lifecycleAction {
+func (c *Controller) attemptToClaimDeployOwningAction(rollout *latticev1.Deploy) (*lifecycleAction, error) {
 	action := &lifecycleAction{
 		rollout: rollout,
 	}
 
-	return c.attemptToClaimOwningAction(rollout.Namespace, action)
+	namespace, err := c.kubeClient.CoreV1().Namespaces().Get(rollout.Namespace, metav1.GetOptions{})
+	if err != nil {
+		return nil, err
+	}
+	return c.attemptToClaimOwningAction(namespace, action), nil
 }
 
-func (c *Controller) attemptToClaimTeardownOwningAction(teardown *latticev1.SystemTeardown) *lifecycleAction {
+func (c *Controller) attemptToClaimTeardownOwningAction(teardown *latticev1.Teardown) (*lifecycleAction, error) {
 	action := &lifecycleAction{
 		teardown: teardown,
 	}
 
-	return c.attemptToClaimOwningAction(teardown.Namespace, action)
+	namespace, err := c.kubeClient.CoreV1().Namespaces().Get(teardown.Namespace, metav1.GetOptions{})
+	if err != nil {
+		return nil, err
+	}
+	return c.attemptToClaimOwningAction(namespace, action), nil
 }
 
-func (c *Controller) attemptToClaimOwningAction(namespace string, action *lifecycleAction) *lifecycleAction {
+func (c *Controller) attemptToClaimOwningAction(namespace *corev1.Namespace, action *lifecycleAction) *lifecycleAction {
 	c.owningLifecycleActionsLock.Lock()
 	defer c.owningLifecycleActionsLock.Unlock()
 
 	// TODO: should we check to see if the owning action is the same action?
-	owningAction, ok := c.owningLifecycleActions[namespace]
+	owningAction, ok := c.owningLifecycleActions[namespace.UID]
 	if ok {
 		return owningAction
 	}
 
-	c.owningLifecycleActions[namespace] = action
+	c.owningLifecycleActions[namespace.UID] = action
 	return nil
 }
 
-func (c *Controller) relinquishRolloutOwningActionClaim(rollout *latticev1.SystemRollout) error {
+func (c *Controller) relinquishDeployOwningActionClaim(rollout *latticev1.Deploy) error {
 	action := &lifecycleAction{
 		rollout: rollout,
 	}
 
-	return c.relinquishOwningActionClaim(rollout.Namespace, action)
+	namespace, err := c.kubeClient.CoreV1().Namespaces().Get(rollout.Namespace, metav1.GetOptions{})
+	if err != nil {
+		return err
+	}
+	return c.relinquishOwningActionClaim(namespace, action)
 }
 
-func (c *Controller) relinquishTeardownOwningActionClaim(teardown *latticev1.SystemTeardown) error {
+func (c *Controller) relinquishTeardownOwningActionClaim(teardown *latticev1.Teardown) error {
 	action := &lifecycleAction{
 		teardown: teardown,
 	}
 
-	return c.relinquishOwningActionClaim(teardown.Namespace, action)
+	namespace, err := c.kubeClient.CoreV1().Namespaces().Get(teardown.Namespace, metav1.GetOptions{})
+	if err != nil {
+		return err
+	}
+	return c.relinquishOwningActionClaim(namespace, action)
 }
 
-func (c *Controller) relinquishOwningActionClaim(namespace string, action *lifecycleAction) error {
+func (c *Controller) relinquishOwningActionClaim(namespace *corev1.Namespace, action *lifecycleAction) error {
 	c.owningLifecycleActionsLock.Lock()
 	defer c.owningLifecycleActionsLock.Unlock()
 
-	owningAction, ok := c.owningLifecycleActions[namespace]
+	owningAction, ok := c.owningLifecycleActions[namespace.UID]
 	if !ok {
 		return fmt.Errorf("expected %v to be owning action for %v namespace but there is no owning action", namespace, action.String())
 	}
@@ -111,6 +136,6 @@ func (c *Controller) relinquishOwningActionClaim(namespace string, action *lifec
 		return fmt.Errorf("expected %v to be owning action %v namespace but %v is the owning action", namespace, action.String(), owningAction.String())
 	}
 
-	delete(c.owningLifecycleActions, namespace)
+	delete(c.owningLifecycleActions, namespace.UID)
 	return nil
 }

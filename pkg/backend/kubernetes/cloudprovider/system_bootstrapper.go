@@ -3,9 +3,10 @@ package cloudprovider
 import (
 	"fmt"
 
-	"github.com/mlab-lattice/system/pkg/backend/kubernetes/cloudprovider/aws"
-	"github.com/mlab-lattice/system/pkg/backend/kubernetes/cloudprovider/local"
-	systembootstrapper "github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/system/bootstrap/bootstrapper"
+	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/cloudprovider/aws"
+	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/cloudprovider/local"
+	systembootstrapper "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/lifecycle/system/bootstrap/bootstrapper"
+	"github.com/mlab-lattice/lattice/pkg/util/cli"
 )
 
 type SystemBootstrapperOptions struct {
@@ -23,6 +24,38 @@ func NewSystemBootstrapper(options *SystemBootstrapperOptions) (systembootstrapp
 	}
 
 	return nil, fmt.Errorf("must provide cloud provider options")
+}
+
+func SystemBoostrapperFlag(cloudProvider *string) (cli.Flag, *SystemBootstrapperOptions) {
+	awsFlags, awsOptions := aws.SystemBootstrapperFlags()
+	localFlags, localOptions := local.SystemBootstrapperFlags()
+	options := &SystemBootstrapperOptions{
+		AWS:   awsOptions,
+		Local: localOptions,
+	}
+
+	flag := &cli.DelayedEmbeddedFlag{
+		Name:     "cloud-provider-system-bootstrapper-var",
+		Required: true,
+		Flags: map[string]cli.Flags{
+			AWS:   awsFlags,
+			Local: localFlags,
+		},
+		FlagChooser: func() (string, error) {
+			if cloudProvider == nil {
+				return "", fmt.Errorf("cloud provider cannot be nil")
+			}
+
+			switch *cloudProvider {
+			case Local, AWS:
+				return *cloudProvider, nil
+			default:
+				return "", fmt.Errorf("unsupported cloud provider %v", *cloudProvider)
+			}
+		},
+	}
+
+	return flag, options
 }
 
 func SystemBootstrapperFromFlags(cloudProvider string, cloudProviderVars []string) (systembootstrapper.Interface, error) {

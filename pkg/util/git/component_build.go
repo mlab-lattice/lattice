@@ -3,7 +3,7 @@ package git
 import (
 	"fmt"
 
-	"github.com/mlab-lattice/system/pkg/definition/block"
+	"github.com/mlab-lattice/lattice/pkg/definition/block"
 )
 
 func GetGitURIFromComponentBuild(gitRepo *block.GitRepository) (string, error) {

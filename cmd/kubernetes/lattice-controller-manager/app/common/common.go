@@ -1,11 +1,12 @@
 package common
 
 import (
-	"github.com/mlab-lattice/system/pkg/backend/kubernetes/cloudprovider"
-	latticeclientset "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/clientset/versioned"
-	latticeinformers "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/informers/externalversions"
-	"github.com/mlab-lattice/system/pkg/terraform"
-	"github.com/mlab-lattice/system/pkg/types"
+	"github.com/mlab-lattice/lattice/pkg/api/v1"
+	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/cloudprovider"
+	latticeclientset "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/generated/clientset/versioned"
+	latticeinformers "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/generated/informers/externalversions"
+	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/lifecycle/system/bootstrap/bootstrapper"
+	"github.com/mlab-lattice/lattice/pkg/util/terraform"
 
 	kubeinformers "k8s.io/client-go/informers"
 	kubeclientset "k8s.io/client-go/kubernetes"
@@ -34,8 +35,10 @@ func (cb LatticeClientBuilder) ClientOrDie(name string) latticeclientset.Interfa
 }
 
 type Context struct {
-	ClusterID     types.ClusterID
+	LatticeID     v1.LatticeID
 	CloudProvider cloudprovider.Interface
+
+	SystemBootstrappers []bootstrapper.Interface
 
 	TerraformBackendOptions *terraform.BackendOptions
 

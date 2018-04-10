@@ -5,12 +5,12 @@ import (
 	"reflect"
 	"strings"
 
-	awscloudprovider "github.com/mlab-lattice/system/pkg/backend/kubernetes/cloudprovider/aws"
-	latticev1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
-	kubetf "github.com/mlab-lattice/system/pkg/backend/kubernetes/terraform/aws"
-	kubeutil "github.com/mlab-lattice/system/pkg/backend/kubernetes/util/kubernetes"
-	tf "github.com/mlab-lattice/system/pkg/terraform"
-	awstfprovider "github.com/mlab-lattice/system/pkg/terraform/provider/aws"
+	awscloudprovider "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/cloudprovider/aws"
+	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
+	kubeutil "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/kubernetes"
+	kubetf "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/terraform/aws"
+	tf "github.com/mlab-lattice/lattice/pkg/util/terraform"
+	awstfprovider "github.com/mlab-lattice/lattice/pkg/util/terraform/provider/aws"
 
 	"k8s.io/apimachinery/pkg/api/errors"
 
@@ -112,7 +112,7 @@ func (c *Controller) loadBalancerConfig(
 			Bucket: c.terraformBackendOptions.S3.Bucket,
 			Key: fmt.Sprintf(
 				"%v/%v",
-				kubetf.GetS3BackendSystemStatePathRoot(c.clusterID, systemID),
+				kubetf.GetS3BackendSystemStatePathRoot(c.latticeID, systemID),
 				loadBalancer.Name,
 			),
 			Encrypt: true,
@@ -169,7 +169,7 @@ func (c *Controller) loadBalancerModule(loadBalancer *latticev1.LoadBalancer) (*
 	loadBalancerModule := kubetf.NewApplicationLoadBalancerModule(
 		c.terraformModuleRoot,
 		c.awsCloudProvider.Region(),
-		string(c.clusterID),
+		string(c.latticeID),
 		string(systemID),
 		c.awsCloudProvider.VPCID(),
 		strings.Join(c.awsCloudProvider.SubnetIDs(), ","),

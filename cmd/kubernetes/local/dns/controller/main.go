@@ -4,29 +4,29 @@ import (
 	"flag"
 	"time"
 
-	"github.com/mlab-lattice/system/pkg/backend/kubernetes/cloudprovider/local"
-	"github.com/mlab-lattice/system/pkg/backend/kubernetes/cloudprovider/local/dns/controller"
-	latticeclientset "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/clientset/versioned"
-	latticeinformers "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/informers/externalversions"
+	"github.com/mlab-lattice/lattice/pkg/api/v1"
+	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/cloudprovider/local"
+	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/cloudprovider/local/dns/controller"
+	latticeclientset "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/generated/clientset/versioned"
+	latticeinformers "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/generated/informers/externalversions"
 
 	clientset "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 
 	"github.com/golang/glog"
-	"github.com/mlab-lattice/system/pkg/types"
 )
 
 var (
 	kubeconfig        string
 	hostsFilePath     string
 	dnsmasqConfigPath string
-	clusterIDStr      string
+	latticeID         string
 )
 
 func init() {
 	flag.StringVar(&kubeconfig, "kubeconfig", "", "path to kubeconfig file")
-	flag.StringVar(&clusterIDStr, "cluster-id", "", "ID of the cluster")
+	flag.StringVar(&latticeID, "lattice-id", "", "ID of the lattice")
 	flag.StringVar(&dnsmasqConfigPath, "dnsmasq-config-path", local.DnsmasqConfigFile, "path to the additional dnsmasq configuration file")
 	flag.StringVar(&hostsFilePath, "hosts-file-path", local.DNSHostsFile, "path to the additional dnsmasq hosts")
 	flag.Parse()
@@ -54,7 +54,7 @@ func main() {
 	go controller.NewController(
 		dnsmasqConfigPath,
 		hostsFilePath,
-		types.ClusterID(clusterIDStr),
+		v1.LatticeID(latticeID),
 		versionedLatticeClient,
 		clientset.NewForConfigOrDie(config),
 		latticeInformers.Lattice().V1().Endpoints(),

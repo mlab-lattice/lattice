@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/mlab-lattice/system/pkg/definition/block"
+	"github.com/mlab-lattice/lattice/pkg/definition/block"
 )
 
 func TestComponent_Validate(t *testing.T) {
@@ -64,61 +64,6 @@ func TestComponent_Validate(t *testing.T) {
 					},
 				},
 			},
-			{
-				Description: "HTTPComponentHealthCheck with wrong Protocol",
-				DefinitionBlock: &block.Component{
-					Name:        "foo",
-					Build:       *MockComponentBuild(),
-					Exec:        *MockExec(),
-					HealthCheck: MockHealthCheckHTTP(),
-					Ports: []*block.ComponentPort{
-						{
-							Name:     "http",
-							Protocol: block.ProtocolTCP,
-						},
-					},
-				},
-			},
-
-			// TCPComponentHealthCheck
-			{
-				Description: "TCPComponentHealthCheck with no Ports",
-				DefinitionBlock: &block.Component{
-					Name:        "foo",
-					Build:       *MockComponentBuild(),
-					Exec:        *MockExec(),
-					HealthCheck: MockHealthCheckTCP(),
-				},
-			},
-			{
-				Description: "TCPComponentHealthCheck with invalid ComponentPort",
-				DefinitionBlock: &block.Component{Name: "foo",
-					Build:       *MockComponentBuild(),
-					Exec:        *MockExec(),
-					HealthCheck: MockHealthCheckTCP(),
-					Ports: []*block.ComponentPort{
-						{
-							Name:     "foo",
-							Protocol: block.ProtocolTCP,
-						},
-					},
-				},
-			},
-			{
-				Description: "TCPComponentHealthCheck with wrong Protocol",
-				DefinitionBlock: &block.Component{
-					Name:        "foo",
-					Build:       *MockComponentBuild(),
-					Exec:        *MockExec(),
-					HealthCheck: MockHealthCheckTCP(),
-					Ports: []*block.ComponentPort{
-						{
-							Name:     "tcp",
-							Protocol: block.ProtocolHTTP,
-						},
-					},
-				},
-			},
 
 			// ComponentVolumeMount
 			{
@@ -164,16 +109,6 @@ func TestComponent_Validate(t *testing.T) {
 					Exec:        *MockExec(),
 					HealthCheck: MockHealthCheckHTTP(),
 					Ports:       []*block.ComponentPort{MockHTTPPort()},
-				},
-			},
-			{
-				Description: "TCPComponentHealthCheck",
-				DefinitionBlock: &block.Component{
-					Name:        "foo",
-					Build:       *MockComponentBuild(),
-					Exec:        *MockExec(),
-					HealthCheck: MockHealthCheckTCP(),
-					Ports:       []*block.ComponentPort{MockTCPPort()},
 				},
 			},
 			{

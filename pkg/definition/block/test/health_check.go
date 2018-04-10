@@ -1,8 +1,8 @@
 package test
 
 import (
-	"github.com/mlab-lattice/system/pkg/definition/block"
-	jsonutil "github.com/mlab-lattice/system/pkg/util/json"
+	"github.com/mlab-lattice/lattice/pkg/definition/block"
+	jsonutil "github.com/mlab-lattice/lattice/pkg/util/json"
 )
 
 func MockHealthCheckHTTP() *block.ComponentHealthCheck {
@@ -15,20 +15,6 @@ func MockHealthCheckHTTPExpectedJSON() []byte {
 	return GenerateHealthCheckExpectedJSON(
 		MockHTTPHealthCheckExpectedJSON(),
 		nil,
-		nil,
-	)
-}
-
-func MockHealthCheckTCP() *block.ComponentHealthCheck {
-	return &block.ComponentHealthCheck{
-		TCP: MockTCPHealthCheck(),
-	}
-}
-
-func MockHealthCheckTCPExpectedJSON() []byte {
-	return GenerateHealthCheckExpectedJSON(
-		nil,
-		MockTCPHealthCheckExpectedJSON(),
 		nil,
 	)
 }
@@ -132,21 +118,6 @@ func GenerateHTTPHealthCheckExpectedJSON(path, port, headers []byte) []byte {
 			Name:      "headers",
 			Bytes:     headers,
 			OmitEmpty: true,
-		},
-	})
-}
-
-func MockTCPHealthCheck() *block.TCPComponentHealthCheck {
-	return &block.TCPComponentHealthCheck{
-		Port: "tcp",
-	}
-}
-
-func MockTCPHealthCheckExpectedJSON() []byte {
-	return jsonutil.GenerateObjectBytes([]jsonutil.FieldBytes{
-		{
-			Name:  "port",
-			Bytes: []byte(`"tcp"`),
 		},
 	})
 }

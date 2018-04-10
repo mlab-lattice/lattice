@@ -6,9 +6,10 @@ import (
 	"strings"
 	"time"
 
-	kubeconstants "github.com/mlab-lattice/system/pkg/backend/kubernetes/constants"
-	latticev1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
-	kubeutil "github.com/mlab-lattice/system/pkg/backend/kubernetes/util/kubernetes"
+	kubeconstants "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/constants"
+	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
+	kubeutil "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/kubernetes"
+	"github.com/mlab-lattice/lattice/pkg/util/docker"
 
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -189,7 +190,7 @@ func (c *Controller) getBuildContainer(build *latticev1.ComponentBuild) (*corev1
 
 	args := []string{
 		"--component-build-id", build.Name,
-		"--cluster-id", string(c.clusterID),
+		"--lattice-id", string(c.latticeID),
 		"--system-id", string(systemID),
 		"--component-build-definition", string(buildJSON),
 		"--docker-registry", c.config.ComponentBuild.DockerArtifact.Registry,
@@ -212,7 +213,7 @@ func (c *Controller) getBuildContainer(build *latticev1.ComponentBuild) (*corev1
 		Args:  args,
 		Env: []corev1.EnvVar{
 			{
-				Name:  kubeconstants.EnvVarNameDockerAPIVersion,
+				Name:  docker.APIVersionEnvironmentVariable,
 				Value: c.config.ComponentBuild.Builder.DockerAPIVersion,
 			},
 		},

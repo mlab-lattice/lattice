@@ -3,9 +3,13 @@ package v1
 import (
 	"encoding/json"
 
-	"github.com/mlab-lattice/system/pkg/definition"
-	"github.com/mlab-lattice/system/pkg/definition/tree"
+	"github.com/mlab-lattice/lattice/pkg/api/v1"
+	kubeutil "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/kubernetes"
+	"github.com/mlab-lattice/lattice/pkg/definition"
+	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 
+	"fmt"
+	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/constants"
 	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -27,11 +31,33 @@ type Service struct {
 	Status            ServiceStatus `json:"status,omitempty"`
 }
 
+func (s *Service) Description() string {
+	systemID, err := kubeutil.SystemID(s.Namespace)
+	if err != nil {
+		systemID = v1.SystemID(fmt.Sprintf("UNKNOWN (namespace: %v)", systemID))
+	}
+
+	path, err := s.PathLabel()
+	if err == nil {
+		return fmt.Sprintf("service %v (%v in system %v)", s.Name, path, systemID)
+	}
+
+	return fmt.Sprintf("service %v (no path, system %v)", s.Name, systemID)
+}
+
+func (s *Service) PathLabel() (tree.NodePath, error) {
+	path, ok := s.Labels[constants.LabelKeyServicePath]
+	if !ok {
+		return "", fmt.Errorf("service did not contain service path label")
+	}
+
+	return tree.NodePathFromDomain(path)
+}
+
 // N.B.: important: if you update the ServiceSpec you must also update
 // the serviceSpecEncoder and ServiceSpec's UnmarshalJSON
 // +k8s:deepcopy-gen=false
 type ServiceSpec struct {
-	Path       tree.NodePath      `json:"path"`
 	Definition definition.Service `json:"definition"`
 
 	// ComponentBuildArtifacts maps Component names to the artifacts created by their build
@@ -52,7 +78,6 @@ type ComponentPort struct {
 }
 
 type serviceSpecEncoder struct {
-	Path                    tree.NodePath                      `json:"path"`
 	Definition              json.RawMessage                    `json:"definition"`
 	ComponentBuildArtifacts map[string]ComponentBuildArtifacts `json:"componentBuildArtifacts"`
 	Ports                   map[string][]ComponentPort         `json:"ports"`
@@ -71,7 +96,6 @@ func (s *ServiceSpec) UnmarshalJSON(data []byte) error {
 	}
 
 	*s = ServiceSpec{
-		Path:                    decoded.Path,
 		Definition:              service,
 		ComponentBuildArtifacts: decoded.ComponentBuildArtifacts,
 		Ports:        decoded.Ports,

@@ -1,7 +1,7 @@
 package noop
 
 import (
-	"github.com/mlab-lattice/system/pkg/backend/kubernetes/lifecycle/system/bootstrap/bootstrapper"
+	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/lifecycle/system/bootstrap/bootstrapper"
 )
 
 func NewBootstrapper() *DefaultBootstrapper {

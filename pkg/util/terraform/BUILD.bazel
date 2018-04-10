@@ -1,0 +1,16 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "apply.go",
+        "backend.go",
+        "config.go",
+        "destroy.go",
+        "exec_context.go",
+        "output.go",
+    ],
+    importpath = "github.com/mlab-lattice/lattice/pkg/util/terraform",
+    visibility = ["//visibility:public"],
+    deps = ["//pkg/util/exec:go_default_library"],
+)

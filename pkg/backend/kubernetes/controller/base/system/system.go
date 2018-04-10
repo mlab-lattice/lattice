@@ -4,21 +4,21 @@ import (
 	"fmt"
 	"reflect"
 
-	latticev1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
-	"github.com/mlab-lattice/system/pkg/definition/tree"
+	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/constants"
+	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
+	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 )
 
 func (c *Controller) syncSystemStatus(
 	system *latticev1.System,
-	services map[tree.NodePath]string,
-	serviceStatuses map[string]latticev1.ServiceStatus,
+	services map[tree.NodePath]latticev1.SystemStatusService,
 	deletedServices []string,
 ) error {
 	hasFailedService := false
 	hasUpdatingService := false
 	hasScalingService := false
 
-	for serviceName, status := range serviceStatuses {
+	for path, status := range services {
 		if status.State == latticev1.ServiceStateFailed {
 			hasFailedService = true
 			continue
@@ -35,7 +35,7 @@ func (c *Controller) syncSystemStatus(
 		}
 
 		if status.State != latticev1.ServiceStateStable {
-			return fmt.Errorf("Service %v/%v had unexpected state: %v", system.Namespace, serviceName, status.State)
+			return fmt.Errorf("service %v (%v) had unexpected state: %v", path.ToDomain(), system.Name, status.State)
 		}
 	}
 
@@ -53,18 +53,17 @@ func (c *Controller) syncSystemStatus(
 
 	// A failed status takes priority over an updating status
 	if hasFailedService {
-		state = latticev1.SystemStateFailed
+		state = latticev1.SystemStateDegraded
 	}
 
-	_, err := c.updateSystemStatus(system, state, services, serviceStatuses)
+	_, err := c.updateSystemStatus(system, state, services)
 	return err
 }
 
 func (c *Controller) updateSystemStatus(
 	system *latticev1.System,
 	state latticev1.SystemState,
-	services map[tree.NodePath]string,
-	serviceStatuses map[string]latticev1.ServiceStatus,
+	services map[tree.NodePath]latticev1.SystemStatusService,
 ) (*latticev1.System, error) {
 	status := latticev1.SystemStatus{
 		State:              state,
@@ -72,7 +71,6 @@ func (c *Controller) updateSystemStatus(
 		// FIXME: remove this when ObservedGeneration is supported for CRD
 		UpdateProcessed: true,
 		Services:        services,
-		ServiceStatuses: serviceStatuses,
 	}
 
 	if reflect.DeepEqual(system.Status, status) {
@@ -88,4 +86,28 @@ func (c *Controller) updateSystemStatus(
 	// TODO: switch to this when https://github.com/kubernetes/kubernetes/issues/38113 is merged
 	// TODO: also watch https://github.com/kubernetes/kubernetes/pull/55168
 	//return c.latticeClient.LatticeV1().Systems(system.Namespace).UpdateStatus(system)
+}
+
+func (c *Controller) removeFinalizer(system *latticev1.System) (*latticev1.System, error) {
+	// Build up a list of all the finalizers except the aws service controller finalizer.
+	var finalizers []string
+	found := false
+	for _, finalizer := range system.Finalizers {
+		if finalizer == constants.KubeFinalizerSystemController {
+			found = true
+			continue
+		}
+		finalizers = append(finalizers, finalizer)
+	}
+
+	// If the finalizer wasn't part of the list, nothing to do.
+	if !found {
+		return system, nil
+	}
+
+	// The finalizer was in the list, so we should remove it.
+	system = system.DeepCopy()
+	system.Finalizers = finalizers
+
+	return c.latticeClient.LatticeV1().Systems(system.Namespace).Update(system)
 }

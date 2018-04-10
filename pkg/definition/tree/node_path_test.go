@@ -49,14 +49,8 @@ func TestNodePath_ToDomain(t *testing.T) {
 		t.Errorf("Expected no error for valid path but got %v", err)
 	}
 
-	domain := p.ToDomain(true)
+	domain := p.ToDomain()
 	expectedDomain := "buzz.bar.foo"
-	if domain != expectedDomain {
-		t.Errorf("Expected domain %v but got %v", expectedDomain, domain)
-	}
-
-	domain = p.ToDomain(false)
-	expectedDomain = "BUZZ.Bar.foo"
 	if domain != expectedDomain {
 		t.Errorf("Expected domain %v but got %v", expectedDomain, domain)
 	}

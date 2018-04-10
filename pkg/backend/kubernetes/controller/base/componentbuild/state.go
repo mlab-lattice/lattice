@@ -1,7 +1,7 @@
 package componentbuild
 
 import (
-	latticev1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
+	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 
 	batchv1 "k8s.io/api/batch/v1"
 )

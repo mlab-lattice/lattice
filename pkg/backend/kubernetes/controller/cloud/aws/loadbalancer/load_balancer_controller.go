@@ -5,15 +5,15 @@ import (
 	"sync"
 	"time"
 
-	"github.com/mlab-lattice/system/pkg/backend/kubernetes/cloudprovider/aws"
-	latticev1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
-	latticeclientset "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/clientset/versioned"
-	latticeinformers "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/informers/externalversions/lattice/v1"
-	latticelisters "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated/listers/lattice/v1"
-	"github.com/mlab-lattice/system/pkg/backend/kubernetes/servicemesh"
-	kubeutil "github.com/mlab-lattice/system/pkg/backend/kubernetes/util/kubernetes"
-	"github.com/mlab-lattice/system/pkg/terraform"
-	"github.com/mlab-lattice/system/pkg/types"
+	"github.com/mlab-lattice/lattice/pkg/api/v1"
+	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/cloudprovider/aws"
+	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
+	latticeclientset "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/generated/clientset/versioned"
+	latticeinformers "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/generated/informers/externalversions/lattice/v1"
+	latticelisters "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/generated/listers/lattice/v1"
+	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/servicemesh"
+	kubeutil "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/kubernetes"
+	"github.com/mlab-lattice/lattice/pkg/util/terraform"
 
 	corev1 "k8s.io/api/core/v1"
 
@@ -36,7 +36,7 @@ type Controller struct {
 	syncHandler         func(bKey string) error
 	enqueueLoadBalancer func(cb *latticev1.LoadBalancer)
 
-	clusterID types.ClusterID
+	latticeID v1.LatticeID
 
 	awsCloudProvider aws.CloudProvider
 	serviceMesh      servicemesh.Interface
@@ -70,7 +70,7 @@ type Controller struct {
 }
 
 func NewController(
-	clusterID types.ClusterID,
+	latticeID v1.LatticeID,
 	awsCloudProvider aws.CloudProvider,
 	terraformModuleRoot string,
 	terraformBackendOptions *terraform.BackendOptions,
@@ -83,7 +83,7 @@ func NewController(
 	kubeServiceInformer coreinformers.ServiceInformer,
 ) *Controller {
 	sc := &Controller{
-		clusterID:               clusterID,
+		latticeID:               latticeID,
 		kubeClient:              kubeClient,
 		latticeClient:           latticeClient,
 		awsCloudProvider:        awsCloudProvider,
@@ -628,8 +628,9 @@ func (c *Controller) syncLoadBalancer(key string) error {
 	ports := map[int32]latticev1.LoadBalancerPort{}
 	for _, port := range kubeService.Spec.Ports {
 		ports[servicePorts[port.Port]] = latticev1.LoadBalancerPort{
+			// FIXME: don't hardcode the protocol in
 			Address: fmt.Sprintf(
-				"%v:%v",
+				"http://%v:%v",
 				loadBalancer.Annotations[aws.AnnotationKeyLoadBalancerDNSName],
 				servicePorts[port.Port],
 			),

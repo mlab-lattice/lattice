@@ -3,8 +3,10 @@ package v1
 import (
 	"encoding/json"
 
-	"github.com/mlab-lattice/system/pkg/definition"
-	"github.com/mlab-lattice/system/pkg/definition/tree"
+	"github.com/mlab-lattice/lattice/pkg/api/v1"
+	kubeutil "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/kubernetes"
+	"github.com/mlab-lattice/lattice/pkg/definition"
+	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 
 	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -25,6 +27,14 @@ type System struct {
 	metav1.ObjectMeta `json:"metadata"`
 	Spec              SystemSpec   `json:"spec"`
 	Status            SystemStatus `json:"status,omitempty"`
+}
+
+func (s *System) V1ID() v1.SystemID {
+	return v1.SystemID(s.Name)
+}
+
+func (s *System) ResourceNamespace(latticeID v1.LatticeID) string {
+	return kubeutil.SystemNamespace(latticeID, s.V1ID())
 }
 
 // N.B.: important: if you update the SystemSpec or SystemSpecServiceInfo you must also update
@@ -74,26 +84,28 @@ type SystemStatus struct {
 	// FIXME: remove this when ObservedGeneration is supported for CRD
 	UpdateProcessed bool `json:"updateProcessed"`
 
-	// Maps a Service path to its Service.Name
-	Services map[tree.NodePath]string `json:"services"`
+	// Maps a Service path to its Service.Status
+	Services map[tree.NodePath]SystemStatusService `json:"services"`
+}
 
-	// Maps a Service.Name to its Service.Status
-	ServiceStatuses map[string]ServiceStatus `json:"serviceStatuses"`
+type SystemStatusService struct {
+	Name string `json:"name"`
+	ServiceStatus
 }
 
 type SystemState string
 
 const (
+	// lifecycle states
+	SystemStatePending SystemState = "pending"
+	SystemStateFailed  SystemState = "failed"
+
+	// transient states once the system has been created
+	SystemStateStable   SystemState = "stable"
+	SystemStateDegraded SystemState = "degraded"
 	SystemStateScaling  SystemState = "scaling"
 	SystemStateUpdating SystemState = "updating"
-	SystemStateStable   SystemState = "stable"
-	SystemStateFailed   SystemState = "failed"
 )
-
-type SystemStatusServiceInfo struct {
-	Name   string        `json:"name"`
-	Status ServiceStatus `json:"status"`
-}
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 

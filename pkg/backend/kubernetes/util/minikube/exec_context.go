@@ -4,7 +4,7 @@ import (
 	"os/exec"
 	"strings"
 
-	executil "github.com/mlab-lattice/system/pkg/util/exec"
+	executil "github.com/mlab-lattice/lattice/pkg/util/exec"
 )
 
 const (

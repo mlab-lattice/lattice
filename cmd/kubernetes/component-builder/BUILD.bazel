@@ -1,0 +1,21 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = ["main.go"],
+    importpath = "github.com/mlab-lattice/lattice/cmd/kubernetes/component-builder",
+    visibility = ["//visibility:public"],
+    deps = ["//cmd/kubernetes/component-builder/app:go_default_library"],
+)
+
+go_binary(
+    name = "componentbuilder",
+    embed = [":go_default_library"],
+    visibility = ["//visibility:public"],
+)
+
+go_binary(
+    name = "component-builder",
+    embed = [":go_default_library"],
+    visibility = ["//visibility:public"],
+)

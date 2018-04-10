@@ -19,11 +19,11 @@ build.all: build.darwin \
 
 .PHONY: build.darwin
 build.darwin: gazelle
-	@bazel build --cpu darwin //...:all
+	@bazel build --platforms=@io_bazel_rules_go//go/toolchain:darwin_amd64 //...:all
 
 .PHONY: build.linux
 build.linux: gazelle
-	@bazel build --cpu k8 //...:all
+	@bazel build --platforms=@io_bazel_rules_go//go/toolchain:linux_amd64 //...:all
 
 .PHONY: gazelle
 gazelle:
@@ -111,22 +111,22 @@ git.install-hooks:
 # docker
 .PHONY: docker.push-image-stable
 docker.push-image-stable: gazelle
-	bazel run --cpu k8 //docker:push-stable-$(IMAGE)
-	bazel run --cpu k8 //docker:push-stable-debug-$(IMAGE)
+	# not using non-debug images right now, so disabling to speed up pushing
+	#bazel run --platforms=@io_bazel_rules_go//go/toolchain:linux_amd64 //docker:push-stable-$(IMAGE)
+	bazel run --platforms=@io_bazel_rules_go//go/toolchain:linux_amd64 //docker:push-stable-debug-$(IMAGE)
 
 .PHONY: docker.push-image-user
 docker.push-image-user: gazelle
-	bazel run --cpu k8 //docker:push-user-$(IMAGE)
-	bazel run --cpu k8 //docker:push-user-debug-$(IMAGE)
+	# not using non-debug images right now, so disabling to speed up pushing
+	#bazel run --platforms=@io_bazel_rules_go//go/toolchain:linux_amd64 //docker:push-user-$(IMAGE)
+	bazel run --platforms=@io_bazel_rules_go//go/toolchain:linux_amd64 //docker:push-user-debug-$(IMAGE)
 
-DOCKER_IMAGES := envoy-prepare                                 \
-                 kubernetes-aws-master-node-attach-etcd-volume \
-                 kubernetes-aws-master-node-register-dns       \
+DOCKER_IMAGES := kubernetes-api-server-rest                    \
                  kubernetes-component-builder                  \
+                 kubernetes-envoy-prepare                      \
                  kubernetes-envoy-xds-api-rest-per-node        \
                  kubernetes-lattice-controller-manager         \
                  kubernetes-local-dns-controller               \
-                 kubernetes-manager-api-rest                   \
                  latticectl
 
 STABLE_CONTAINER_PUSHES := $(addprefix docker.push-image-stable-,$(DOCKER_IMAGES))
@@ -178,26 +178,3 @@ kubernetes.update-dependencies:
 .PHONY: kubernetes.regenerate-custom-resource-clients
 kubernetes.regenerate-custom-resource-clients:
 	KUBERNETES_VERSION=$(VERSION) $(DIR)/scripts/kubernetes/codegen/regenerate.sh
-
-
-# cloud images
-.PHONY: cloud-images.build
-cloud-images.build: cloud-images.build-base-node-image \
-                    cloud-images.build-master-node-image
-
-.PHONY: cloud-images.build-base-node-image
-cloud-images.build-base-node-image:
-	$(CLOUD_IMAGE_BUILD_DIR)/build-base-node-image
-
-.PHONY: cloud-images.build-master-node-image
-cloud-images.build-master-node-image:
-	$(CLOUD_IMAGE_BUILD_DIR)/build-master-node-image
-
-.PHONY: cloud-images.clean
-cloud-images.clean:
-	rm -rf $(CLOUD_IMAGE_BUILD_STATE_DIR)/artifacts
-
-.PHONY: cloud-images.clean-master-node-image
-cloud-images.clean-master-node-image:
-	rm -rf $(CLOUD_IMAGE_BUILD_STATE_DIR)/artifacts/master-node
-	rm -f $(CLOUD_IMAGE_BUILD_STATE_DIR)/artifacts/master-node-ami-id

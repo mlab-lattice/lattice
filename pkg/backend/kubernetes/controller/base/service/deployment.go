@@ -6,11 +6,11 @@ import (
 	"reflect"
 	"sort"
 
-	kubeconstants "github.com/mlab-lattice/system/pkg/backend/kubernetes/constants"
-	"github.com/mlab-lattice/system/pkg/backend/kubernetes/controller/base/service/util"
-	latticev1 "github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis/lattice/v1"
-	kubeutil "github.com/mlab-lattice/system/pkg/backend/kubernetes/util/kubernetes"
-	"github.com/mlab-lattice/system/pkg/definition/block"
+	kubeconstants "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/constants"
+	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/controller/base/service/util"
+	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
+	kubeutil "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/kubernetes"
+	"github.com/mlab-lattice/lattice/pkg/definition/block"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -25,8 +25,9 @@ import (
 )
 
 const (
-	ndotsValue     = "15"
-	dnsOptionNdots = "ndots"
+	userResourcePrefix = "lattice-user-"
+	ndotsValue         = "15"
+	dnsOptionNdots     = "ndots"
 )
 
 func (c *Controller) syncServiceDeployment(service *latticev1.Service, nodePool *latticev1.NodePool) (*appsv1.Deployment, error) {
@@ -182,13 +183,24 @@ func (c *Controller) untransformedDeploymentSpec(
 	deploymentLabels map[string]string,
 	nodePool *latticev1.NodePool,
 ) (*appsv1.DeploymentSpec, error) {
+	path, err := service.PathLabel()
+	if err != nil {
+		// FIXME: in general, if the path label is misformed or missing, the controllers will barf on the whole system.
+		// should probably ignore the service and send an error
+		return nil, err
+	}
+
 	replicas := service.Spec.NumInstances
 
 	// Create a container for each Component in the Service
 	var containers []corev1.Container
 	for _, component := range service.Spec.Definition.Components() {
 		buildArtifacts := service.Spec.ComponentBuildArtifacts[component.Name]
-		container := containerFromComponent(service, component, &buildArtifacts)
+		container, err := containerFromComponent(service, component, &buildArtifacts)
+		if err != nil {
+			return nil, err
+		}
+
 		containers = append(containers, container)
 	}
 
@@ -216,21 +228,21 @@ func (c *Controller) untransformedDeploymentSpec(
 		return nil, err
 	}
 
-	baseSearchPath := fmt.Sprintf("%v.%v.local", systemID, c.clusterID)
+	baseSearchPath := fmt.Sprintf("%v.%v.local", systemID, c.latticeID)
 	dnsSearches := []string{baseSearchPath}
 
-	if !service.Spec.Path.IsRoot() {
-		parentNode, err := service.Spec.Path.Parent()
+	// If the service is not the root node, we need to append its parent as a search in resolv.conf
+	if !path.IsRoot() {
+		parentNode, err := path.Parent()
 		if err != nil {
 			return nil, err
 		}
 
-		parentDomain := parentNode.ToDomain(true)
-
+		parentDomain := parentNode.ToDomain()
 		dnsSearches = append(dnsSearches, fmt.Sprintf("%v.local.%v", parentDomain, baseSearchPath))
 	}
 
-	// as a constant cant be dereferenced, create a local copy
+	// as a constant cant be referenced, create a local copy
 	ndotsValue := ndotsValue
 	dnsConfig := corev1.PodDNSConfig{
 		Nameservers: []string{},
@@ -259,11 +271,11 @@ func (c *Controller) untransformedDeploymentSpec(
 				DNSPolicy:  corev1.DNSDefault,
 				DNSConfig:  &dnsConfig,
 				Affinity: &corev1.Affinity{
-					NodeAffinity:    kubeutil.NodePoolNodeAffinity(nodePool),
+					NodeAffinity:    nodePool.Affinity(),
 					PodAntiAffinity: podAntiAffinity,
 				},
 				Tolerations: []corev1.Toleration{
-					kubeutil.NodePoolToleration(nodePool),
+					nodePool.Toleration(),
 				},
 			},
 		},
@@ -272,7 +284,12 @@ func (c *Controller) untransformedDeploymentSpec(
 	return spec, nil
 }
 
-func containerFromComponent(service *latticev1.Service, component *block.Component, buildArtifacts *latticev1.ComponentBuildArtifacts) corev1.Container {
+func containerFromComponent(service *latticev1.Service, component *block.Component, buildArtifacts *latticev1.ComponentBuildArtifacts) (corev1.Container, error) {
+	path, err := service.PathLabel()
+	if err != nil {
+		return corev1.Container{}, err
+	}
+
 	var ports []corev1.ContainerPort
 	for _, port := range component.Ports {
 		ports = append(
@@ -298,9 +315,6 @@ func containerFromComponent(service *latticev1.Service, component *block.Compone
 	var envVars []corev1.EnvVar
 	for _, name := range envVarNames {
 		envVar := component.Exec.Environment[name]
-		if name == "MONGODB_URI" {
-			fmt.Printf("MONGODB_URI: %#v\n", envVar)
-		}
 		if envVar.Value != nil {
 			envVars = append(
 				envVars,
@@ -318,7 +332,7 @@ func containerFromComponent(service *latticev1.Service, component *block.Compone
 						ValueFrom: &corev1.EnvVarSource{
 							SecretKeyRef: &corev1.SecretKeySelector{
 								LocalObjectReference: corev1.LocalObjectReference{
-									Name: service.Spec.Path.ToDomain(true),
+									Name: path.ToDomain(),
 								},
 								Key: *envVar.Secret.Name,
 							},
@@ -339,8 +353,8 @@ func containerFromComponent(service *latticev1.Service, component *block.Compone
 		}
 	}
 
-	return corev1.Container{
-		Name:            kubeconstants.DeploymentResourcePrefixUser + component.Name,
+	container := corev1.Container{
+		Name:            userResourcePrefix + component.Name,
 		Image:           buildArtifacts.DockerImageFQN,
 		ImagePullPolicy: corev1.PullIfNotPresent,
 		Command:         component.Exec.Command,
@@ -350,6 +364,7 @@ func containerFromComponent(service *latticev1.Service, component *block.Compone
 		// TODO(kevinrosendahl): add VolumeMounts
 		LivenessProbe: deploymentLivenessProbe(component.HealthCheck),
 	}
+	return container, nil
 }
 
 func deploymentLivenessProbe(hc *block.ComponentHealthCheck) *corev1.Probe {
@@ -400,13 +415,8 @@ func deploymentLivenessProbe(hc *block.ComponentHealthCheck) *corev1.Probe {
 		}
 	}
 
-	return &corev1.Probe{
-		Handler: corev1.Handler{
-			TCPSocket: &corev1.TCPSocketAction{
-				Port: intstr.FromString(hc.TCP.Port),
-			},
-		},
-	}
+	// FIXME: should return error here probably
+	return nil
 }
 
 func (c *Controller) isDeploymentSpecUpdated(

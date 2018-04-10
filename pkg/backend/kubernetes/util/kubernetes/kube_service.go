@@ -8,8 +8,8 @@ import (
 )
 
 const (
-	kubeServiceLoadBalancerPrefix = "lattice-load-balancer-"
-	kubeServiceServicePrefix      = "lattice-service-"
+	kubeServiceLoadBalancerPrefix = "load-balancer-"
+	kubeServiceServicePrefix      = "service-"
 )
 
 func GetKubeServiceNameForService(name string) string {

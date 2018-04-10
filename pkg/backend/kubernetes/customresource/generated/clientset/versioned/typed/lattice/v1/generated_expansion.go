@@ -1,8 +1,12 @@
 package v1
 
+type BuildExpansion interface{}
+
 type ComponentBuildExpansion interface{}
 
 type ConfigExpansion interface{}
+
+type DeployExpansion interface{}
 
 type EndpointExpansion interface{}
 
@@ -18,8 +22,4 @@ type ServiceBuildExpansion interface{}
 
 type SystemExpansion interface{}
 
-type SystemBuildExpansion interface{}
-
-type SystemRolloutExpansion interface{}
-
-type SystemTeardownExpansion interface{}
+type TeardownExpansion interface{}
