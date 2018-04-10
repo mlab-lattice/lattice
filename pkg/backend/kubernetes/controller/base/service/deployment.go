@@ -258,6 +258,8 @@ func (c *Controller) untransformedDeploymentSpec(
 	// IMPORTANT: if you change anything in here, you _must_ update isDeploymentSpecUpdated to accommodate it
 	spec := &appsv1.DeploymentSpec{
 		Replicas: &replicas,
+		// FIXME: this is here because envoy currently takes 15 seconds to cycle through XDS API calls
+		MinReadySeconds: 15,
 		Selector: &metav1.LabelSelector{
 			MatchLabels: deploymentLabels,
 		},
@@ -425,6 +427,11 @@ func (c *Controller) isDeploymentSpecUpdated(
 	service *latticev1.Service,
 	current, desired, untransformed *appsv1.DeploymentSpec,
 ) (bool, string) {
+	// FIXME: currently Replicas is the only thing we're changing, may want to add other fields to compare as well
+	if current.Replicas != desired.Replicas {
+		return false, "num replicas is out of date"
+	}
+
 	// IMPORTANT: the order of these IsDeploymentSpecUpdated and the order of the TransformServiceDeploymentSpec
 	// calls in deploymentSpec _must_ be inverses.
 	// That is, if we call serviceMesh then cloudProvider here, we _must_ call cloudProvider then serviceMesh

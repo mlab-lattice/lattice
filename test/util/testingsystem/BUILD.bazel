@@ -5,6 +5,7 @@ go_library(
     srcs = [
         "v1.go",
         "v2.go",
+        "v3.go",
         "version.go",
     ],
     importpath = "github.com/mlab-lattice/lattice/test/util/testingsystem",
@@ -14,6 +15,7 @@ go_library(
         "//pkg/api/v1:go_default_library",
         "//pkg/definition/tree:go_default_library",
         "//test/util/lattice/v1/system:go_default_library",
+        "//test/util/versionaggregatorservice:go_default_library",
         "//test/util/versionservice:go_default_library",
         "@com_github_onsi_gomega//:go_default_library",
         "@io_k8s_apimachinery//pkg/util/wait:go_default_library",

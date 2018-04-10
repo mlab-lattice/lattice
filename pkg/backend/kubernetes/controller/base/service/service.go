@@ -77,18 +77,6 @@ func (c *Controller) syncServiceStatus(
 	// If the Deployment controller hasn't yet seen the update, it's updating
 	if deployment.Generation > deployment.Status.ObservedGeneration {
 		state = latticev1.ServiceStateUpdating
-	} else if state == latticev1.ServiceStateStable && desiredInstances != totalInstances {
-		// For some reason the Spec is up to date, the deployment is stable, but
-		// the deployment does not have the correct number of instances.
-		err := fmt.Errorf(
-			"%v is in state %v but deployment %v does not have the right amount of instances: expected %v found %v",
-			service.Description(),
-			state,
-			deployment.Name,
-			desiredInstances,
-			totalInstances,
-		)
-		return nil, err
 	}
 
 	// If we have any stale instances though, we are updating (which can include scaling)

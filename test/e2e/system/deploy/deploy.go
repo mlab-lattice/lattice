@@ -71,19 +71,20 @@ var _ = Describe("deploy", func() {
 		},
 	)
 
-	successfulDeploy := false
+	successfulV1Deploy := false
 	ConditionallyIt(
 		"should be able to validate the system was correctly deployed",
 		ifDeployCreated,
 		func() {
 			v1 := testingsystem.NewV1(context.TestContext.LatticeAPIClient.V1(), systemID)
 			v1.ValidateStable()
-			successfulDeploy = true
+			successfulV1Deploy = true
 		},
 	)
 
 	v2point0point0 := v1.SystemVersion("2.0.0")
-	ifV1Deployed := If("v1 deployed succesfully", func() bool { return successfulDeploy })
+	ifV1Deployed := If("v1 deployed successfully", func() bool { return successfulV1Deploy })
+	successfulV2Deploy := false
 	ConditionallyIt(
 		"should be able to deploy version 2.0.0",
 		ifV1Deployed,
@@ -92,6 +93,20 @@ var _ = Describe("deploy", func() {
 			deploy.WaitUntilSucceeded(context.TestContext.LatticeAPIClient.V1().Systems().Deploys(systemID), deployID, 15*time.Second, 3*time.Minute)
 			v2 := testingsystem.NewV2(context.TestContext.LatticeAPIClient.V1(), systemID)
 			v2.ValidateStable()
+			successfulV2Deploy = true
+		},
+	)
+
+	v3point0point0 := v1.SystemVersion("3.0.0")
+	ifV2Deployed := If("v2 deployed successfully", func() bool { return successfulV2Deploy })
+	ConditionallyIt(
+		"should be able to deploy version 3.0.0",
+		ifV2Deployed,
+		func() {
+			deployID := deploy.CreateFromVersion(context.TestContext.LatticeAPIClient.V1().Systems().Deploys(systemID), v3point0point0)
+			deploy.WaitUntilSucceeded(context.TestContext.LatticeAPIClient.V1().Systems().Deploys(systemID), deployID, 15*time.Second, 3*time.Minute)
+			v3 := testingsystem.NewV3(context.TestContext.LatticeAPIClient.V1(), systemID)
+			v3.ValidateStable()
 		},
 	)
 
