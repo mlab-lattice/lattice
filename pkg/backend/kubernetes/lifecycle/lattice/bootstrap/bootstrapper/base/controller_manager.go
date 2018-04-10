@@ -54,6 +54,12 @@ func (b *DefaultBootstrapper) controllerManagerResources(resources *bootstrapper
 				Resources: []string{"jobs"},
 				Verbs:     []string{rbacv1.VerbAll},
 			},
+			// kube pod read
+			{
+				APIGroups: []string{corev1.GroupName},
+				Resources: []string{"pods"},
+				Verbs:     readVerbs,
+			},
 
 			// system bootstrapping permissions
 			// kube namespace read, update, and delete

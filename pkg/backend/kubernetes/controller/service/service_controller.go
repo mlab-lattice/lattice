@@ -33,6 +33,7 @@ import (
 	"k8s.io/client-go/util/workqueue"
 
 	"github.com/golang/glog"
+	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/constants"
 )
 
 var controllerKind = latticev1.SchemeGroupVersion.WithKind("Service")
@@ -65,6 +66,9 @@ type Controller struct {
 	deploymentLister       appslisters.DeploymentLister
 	deploymentListerSynced cache.InformerSynced
 
+	podLister       corelisters.PodLister
+	podListerSynced cache.InformerSynced
+
 	kubeServiceLister       corelisters.ServiceLister
 	kubeServiceListerSynced cache.InformerSynced
 
@@ -86,6 +90,7 @@ func NewController(
 	serviceInformer latticeinformers.ServiceInformer,
 	nodePoolInformer latticeinformers.NodePoolInformer,
 	deploymentInformer appinformers.DeploymentInformer,
+	podInformer coreinformers.PodInformer,
 	kubeServiceInformer coreinformers.ServiceInformer,
 	serviceAddressInformer latticeinformers.ServiceAddressInformer,
 	loadBalancerInformer latticeinformers.LoadBalancerInformer,
@@ -136,6 +141,16 @@ func NewController(
 	sc.deploymentLister = deploymentInformer.Lister()
 	sc.deploymentListerSynced = deploymentInformer.Informer().HasSynced
 
+	podInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+		// We need to get updated when pods are deleted so we can reassess
+		// services that were waiting on gracefully terminated pods.
+		// See the comment towards the end of syncServiceStatus in service.go
+		// for more information.
+		DeleteFunc: sc.handlePodDelete,
+	})
+	sc.podLister = podInformer.Lister()
+	sc.podListerSynced = podInformer.Informer().HasSynced
+
 	kubeServiceInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    sc.handleKubeServiceAdd,
 		UpdateFunc: sc.handleKubeServiceUpdate,
@@ -178,6 +193,7 @@ func (c *Controller) Run(workers int, stopCh <-chan struct{}) {
 		c.serviceListerSynced,
 		c.nodePoolListerSynced,
 		c.deploymentListerSynced,
+		c.podListerSynced,
 		c.kubeServiceListerSynced,
 		c.serviceAddressListerSynced,
 		c.loadBalancerListerSynced,
@@ -466,6 +482,49 @@ func (c *Controller) handleDeploymentDelete(obj interface{}) {
 
 	glog.V(4).Infof("Deployment %s deleted.", d.Name)
 	c.enqueueService(svc)
+}
+
+// handlePodDelete enqueues the Service that manages a Pod when
+// the Pod is deleted.
+func (c *Controller) handlePodDelete(obj interface{}) {
+	pod, ok := obj.(*corev1.Pod)
+
+	// When a delete is dropped, the relist will notice a pod in the store not
+	// in the list, leading to the insertion of a tombstone object which contains
+	// the deleted key/value.
+	if !ok {
+		tombstone, ok := obj.(cache.DeletedFinalStateUnknown)
+		if !ok {
+			runtime.HandleError(fmt.Errorf("couldn't get object from tombstone %#v", obj))
+			return
+		}
+		pod, ok = tombstone.Obj.(*corev1.Pod)
+		if !ok {
+			runtime.HandleError(fmt.Errorf("tombstone contained object that is not a Deployment %#v", obj))
+			return
+		}
+	}
+
+	serviceID, ok := pod.Labels[constants.LabelKeyServiceID]
+	if !ok {
+		// not a service pod
+		return
+	}
+
+	service, err := c.serviceLister.Services(pod.Namespace).Get(serviceID)
+	if err != nil {
+		if errors.IsNotFound(err) {
+			// service doesn't exist anymore, so it doesn't care about this
+			// pod's deletion
+			return
+		}
+
+		runtime.HandleError(fmt.Errorf("error retrieving Service %v/%v", pod.Namespace, serviceID))
+		return
+	}
+
+	glog.V(4).Infof("Pod %s/%s deleted.", pod.Namespace, pod.Name)
+	c.enqueueService(service)
 }
 
 func (c *Controller) handleKubeServiceAdd(obj interface{}) {

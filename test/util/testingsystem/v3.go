@@ -50,7 +50,7 @@ func (v *V3) ValidateStable() {
 	Expect(ok).To(BeTrue())
 
 	// FIXME: remove this when terminating pod situation has been dealt with (see v2.go)
-	time.Sleep(30 * time.Second)
+	//time.Sleep(30 * time.Second)
 
 	err := v.poll(port.Address, time.Second, 30*time.Second)
 	Expect(err).To(Not(HaveOccurred()))

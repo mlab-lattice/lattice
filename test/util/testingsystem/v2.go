@@ -79,7 +79,7 @@ func (v *V2) ValidateStable() {
 	//
 	// For now we'll just wait TerminationGracePeriodSeconds so that the old pod will have been cleaned up and a new
 	// connection will be made.
-	time.Sleep(30 * time.Second)
+	//time.Sleep(30 * time.Second)
 
 	err := v.poll(port.Address, time.Second, 30*time.Second)
 	Expect(err).To(Not(HaveOccurred()))

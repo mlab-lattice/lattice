@@ -14,6 +14,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/golang/glog"
+	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/constants"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/selection"
 )
 
 const (
@@ -149,6 +152,49 @@ func (c *Controller) syncServiceStatus(
 				Internal: true,
 				Message:  fmt.Sprintf("%v: %v", failureReason, failureMessage),
 				Time:     *failureTime,
+			}
+		}
+	}
+
+	if state == latticev1.ServiceStateStable {
+		// If we still think that the deployment is stable, check to see if there are any pods
+		// for this service that are terminating.
+		//
+		// Via https://kubernetes.io/docs/concepts/workloads/pods/pod#termination-of-pods,
+		// when a pod is Terminating:
+		// Pod is removed from endpoints list for service, and are no longer considered part of the set of
+		// running pods for replication controllers. Pods that shutdown slowly can continue to serve traffic
+		// as load balancers (like the service proxy) remove them from their rotations.
+		//
+		// That is, when the pod is in Terminating, it has been delivered a SIGTERM but is possibly still running.
+		// If, for example, a client has an open connection to the pod, that client can still make requests
+		// to the pod. However, at the same time the deployment will not report that this Terminating pod exists.
+		// If we were to take the deployment at its word, we could end up saying that this service is stably
+		// rolled out to the version specified, even though an old version still exists and could have open
+		// connections to it.
+		//
+		// So if we think that the service is stable, check to see if any pods exist that match are labeled with
+		// the service's ID, but have a non-null deletionTimestamp (i.e. they are terminating).
+		//
+		// TODO: investigate if/how it's possible for pods to get stuck in Terminating, and investigate what
+		//       automated processes we can put in place to clean up stuck pods so that deploys don't get stalled
+		//       forever
+		selector := labels.NewSelector()
+		requirement, err := labels.NewRequirement(constants.LabelKeyServiceID, selection.Equals, []string{service.Name})
+		if err != nil {
+			return nil, err
+		}
+		selector = selector.Add(*requirement)
+
+		pods, err := c.podLister.Pods(service.Namespace).List(selector)
+		if err != nil {
+			return nil, err
+		}
+
+		for _, pod := range pods {
+			if pod.DeletionTimestamp != nil {
+				state = latticev1.ServiceStateScaling
+				staleInstances += 1
 			}
 		}
 	}

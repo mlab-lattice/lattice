@@ -15,6 +15,7 @@ func initializeServiceController(ctx controller.Context) {
 		ctx.LatticeInformerFactory.Lattice().V1().Services(),
 		ctx.LatticeInformerFactory.Lattice().V1().NodePools(),
 		ctx.KubeInformerFactory.Apps().V1().Deployments(),
+		ctx.KubeInformerFactory.Core().V1().Pods(),
 		ctx.KubeInformerFactory.Core().V1().Services(),
 		ctx.LatticeInformerFactory.Lattice().V1().ServiceAddresses(),
 		ctx.LatticeInformerFactory.Lattice().V1().LoadBalancers(),
