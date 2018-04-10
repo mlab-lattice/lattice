@@ -8,7 +8,6 @@ import (
 	"os/user"
 
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
-	"github.com/mlab-lattice/lattice/pkg/latticectl/config"
 )
 
 type Context interface {
@@ -36,11 +35,11 @@ type ContextManager interface {
 
 type ConfigFileContext struct {
 	Path      string
-	config    *config.Config
+	config    *Config
 	configSet bool
 }
 
-func (c *ConfigFileContext) readConfig() (*config.Config, error) {
+func (c *ConfigFileContext) readConfig() (*Config, error) {
 	data, err := ioutil.ReadFile(c.Path)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -50,7 +49,7 @@ func (c *ConfigFileContext) readConfig() (*config.Config, error) {
 		return nil, fmt.Errorf("unable to read config file: %v", err)
 	}
 
-	cfg := config.Config{}
+	cfg := Config{}
 	if err := json.Unmarshal(data, &cfg); err != nil {
 		return nil, fmt.Errorf("unable to unmarshal config file: %v", err)
 	}
@@ -58,7 +57,7 @@ func (c *ConfigFileContext) readConfig() (*config.Config, error) {
 	return &cfg, nil
 }
 
-func (c *ConfigFileContext) writeConfig(cfg *config.Config) error {
+func (c *ConfigFileContext) writeConfig(cfg *Config) error {
 	data, err := json.MarshalIndent(&cfg, "", "  ")
 	if err != nil {
 		return fmt.Errorf("unable to marshal config: %v", err)
