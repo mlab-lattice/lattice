@@ -161,8 +161,7 @@ binary.update-latticectl: binary.update-latticectl-darwin-amd64 \
 .PHONY: binary.update-latticectl-darwin-amd64
 binary.update-latticectl-darwin-amd64: gazelle
 	@bazel build --cpu darwin //cmd/latticectl
-	cp -f $(DIR)/bazel-bin/cmd/latticectl/darwin_amd64_stripped/latticectl $(DIR)/bin/latticectl-darwin-amd64 \
-	&& cp -f $(DIR)/bazel-bin/cmd/generate-latticectl-docs/darwin_amd64_stripped/generate-latticectl-docs $(DIR)/bin/docgen
+	cp -f $(DIR)/bazel-bin/cmd/latticectl/darwin_amd64_stripped/latticectl $(DIR)/bin/latticectl-darwin-amd64
 
 .PHONY: binary.update-latticectl-linux-amd64
 binary.update-latticectl-linux-amd64: gazelle
