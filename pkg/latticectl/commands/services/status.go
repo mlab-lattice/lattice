@@ -111,12 +111,9 @@ func printServiceState(writer io.Writer, s *spinner.Spinner, service *v1.Service
 	case v1.ServiceStatePending:
 		s.Start()
 		s.Suffix = fmt.Sprintf(" Service %s is pending...", color.ID(string(service.Path)))
-	case v1.ServiceStateScalingDown:
+	case v1.ServiceStateScaling:
 		s.Start()
-		s.Suffix = fmt.Sprintf(" Service %s is scaling down...", color.ID(string(service.Path)))
-	case v1.ServiceStateScalingUp:
-		s.Start()
-		s.Suffix = fmt.Sprintf(" Service %s is scaling up...", color.ID(string(service.Path)))
+		s.Suffix = fmt.Sprintf(" Service %s is scaling...", color.ID(string(service.Path)))
 	case v1.ServiceStateUpdating:
 		s.Start()
 		s.Suffix = fmt.Sprintf(" Service %s is updating...", color.ID(string(service.Path)))
