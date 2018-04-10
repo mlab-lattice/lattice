@@ -18,18 +18,21 @@ import (
 const (
 	V3ServiceBCVersion         = "1.0.0"
 	V3ServiceAPath             = tree.NodePath("/test/a")
+	V3ServiceCBPath            = tree.NodePath("/test/b/c")
 	V3ServiceAPublicPort int32 = 8080
 )
 
 type V3 struct {
-	systemID v1.SystemID
-	v1client v1client.Interface
+	systemID              v1.SystemID
+	v1client              v1client.Interface
+	numServiceCBInstances int32
 }
 
-func NewV3(client v1client.Interface, systemID v1.SystemID) *V3 {
+func NewV3(client v1client.Interface, systemID v1.SystemID, numServiceCBInstances int32) *V3 {
 	return &V3{
-		systemID: systemID,
-		v1client: client,
+		systemID:              systemID,
+		v1client:              client,
+		numServiceCBInstances: numServiceCBInstances,
 	}
 }
 
@@ -39,18 +42,22 @@ func (v *V3) ValidateStable() {
 	Expect(sys.State).To(Equal(v1.SystemStateStable))
 
 	Expect(len(sys.Services)).To(Equal(2))
-	service, ok := sys.Services[V3ServiceAPath]
+	serviceCB, ok := sys.Services[V3ServiceCBPath]
+	Expect(ok).To(BeTrue())
+	Expect(serviceCB.State).To(Equal(v1.ServiceStateStable))
+	Expect(serviceCB.StaleInstances).To(Equal(int32(0)))
+	Expect(serviceCB.UpdatedInstances).To(Equal(v.numServiceCBInstances))
+	Expect(len(serviceCB.PublicPorts)).To(Equal(0))
+
+	serviceA, ok := sys.Services[V3ServiceAPath]
 	Expect(ok).To(BeTrue())
 
-	Expect(service.State).To(Equal(v1.ServiceStateStable))
-	Expect(service.StaleInstances).To(Equal(int32(0)))
-	Expect(service.UpdatedInstances).To(Equal(int32(1)))
-	Expect(len(service.PublicPorts)).To(Equal(1))
-	port, ok := service.PublicPorts[V3ServiceAPublicPort]
+	Expect(serviceA.State).To(Equal(v1.ServiceStateStable))
+	Expect(serviceA.StaleInstances).To(Equal(int32(0)))
+	Expect(serviceA.UpdatedInstances).To(Equal(int32(1)))
+	Expect(len(serviceA.PublicPorts)).To(Equal(1))
+	port, ok := serviceA.PublicPorts[V3ServiceAPublicPort]
 	Expect(ok).To(BeTrue())
-
-	// FIXME: remove this when terminating pod situation has been dealt with (see v2.go)
-	//time.Sleep(30 * time.Second)
 
 	err := v.poll(port.Address, time.Second, 30*time.Second)
 	Expect(err).To(Not(HaveOccurred()))
