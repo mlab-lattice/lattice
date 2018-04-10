@@ -8,7 +8,7 @@ import (
 
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/cloudprovider"
-	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/controller/base/service/util"
+	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/controller/service/util"
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	latticeclientset "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/generated/clientset/versioned"
 	latticeinformers "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/generated/informers/externalversions/lattice/v1"

@@ -7,7 +7,7 @@ import (
 	"sort"
 
 	kubeconstants "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/constants"
-	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/controller/base/service/util"
+	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/controller/service/util"
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	kubeutil "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/kubernetes"
 	"github.com/mlab-lattice/lattice/pkg/definition/block"
