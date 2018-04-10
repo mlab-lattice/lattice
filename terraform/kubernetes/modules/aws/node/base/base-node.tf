@@ -148,6 +148,7 @@ resource "aws_launch_configuration" "aws_launch_configuration" {
 
   user_data = <<EOF
 write_files:
+#cloud-config
 -   path: /etc/systemd/system/kubelet.service.d/10-override.conf
     owner: root:root
     permissions: '0644'
