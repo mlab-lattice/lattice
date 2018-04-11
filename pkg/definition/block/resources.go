@@ -3,6 +3,7 @@ package block
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 )
 
 type Resources struct {
@@ -29,6 +30,38 @@ func (np *ResourcesNodePool) MarshalJSON() ([]byte, error) {
 	}
 
 	return json.Marshal(nil)
+}
+
+func (np *ResourcesNodePool) UnmarshalJSON(data []byte) error {
+	if string(data) == "null" {
+		return nil
+	}
+
+	var nodePoolName string
+	err := json.Unmarshal(data, &nodePoolName)
+	if err == nil {
+		np.NodePoolName = &nodePoolName
+		return nil
+	}
+
+	// Ensure the Unmarshalling failed due to the data not being a string
+	if _, ok := err.(*json.UnmarshalTypeError); !ok {
+		return err
+	}
+
+	var nodePool *NodePool
+	err = json.Unmarshal(data, &nodePool)
+	if err == nil {
+		np.NodePool = nodePool
+		return nil
+	}
+
+	// Ensure the Unmarshalling failed due to the data not being a string
+	if _, ok := err.(*json.UnmarshalTypeError); !ok {
+		return err
+	}
+
+	return fmt.Errorf("invalid node_pool json")
 }
 
 // Validate implements Interface
