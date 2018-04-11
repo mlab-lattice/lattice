@@ -111,7 +111,11 @@ DOCKER_IMAGES := kubernetes-api-server-rest             \
                  latticectl
 
 .PHONY: docker.push-image
-docker.push-image: gazelle
+docker.push-image: gazelle \
+                   docker.push-image-no-gazelle
+
+.PHONY: docker.push-image-no-gazelle
+docker.push-image-no-gazelle:
 	# currently only pushing debug images
 	bazel run \
 		--platforms=@io_bazel_rules_go//go/toolchain:linux_amd64 \
@@ -119,15 +123,19 @@ docker.push-image: gazelle
 		//docker:push-debug-$(IMAGE)
 
 CONTAINER_PUSHES := $(addprefix docker.push-image-,$(DOCKER_IMAGES))
-
 .PHONY: $(CONTAINER_PUSHES)
 $(CONTAINER_PUSHES):
 	@$(MAKE) docker.push-image IMAGE=$(patsubst docker.push-image-%,%,$@)
 
+CONTAINER_PUSHES_NO_GAZELLE := $(addprefix docker.push-image-no-gazelle-,$(DOCKER_IMAGES))
+.PHONY: $(CONTAINER_PUSHES_NO_GAZELLE)
+$(CONTAINER_PUSHES_NO_GAZELLE):
+	@$(MAKE) docker.push-image-no-gazelle IMAGE=$(patsubst docker.push-image-no-gazelle-%,%,$@)
+
 .PHONY: docker.push-all
-docker.push-all:
+docker.push-all: gazelle
 	@for image in $(DOCKER_IMAGES); do \
-		$(MAKE) docker.push-image-$$image || exit 1; \
+		$(MAKE) docker.push-image-no-gazelle-$$image || exit 1; \
 	done
 
 .PHONY: docker.save-image
