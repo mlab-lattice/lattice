@@ -153,7 +153,9 @@ write_files:
     owner: root:root
     permissions: '0644'
     content: |
-        "[Service]\nEnvironment=\"KUBELET_LABELS=${var.kubelet_labels}\"\nEnvironment=\"KUBELET_TAINTS=${var.kubelet_taints}\""
+        [Service]
+        Environment="KUBELET_LABELS=${var.kubelet_labels}"
+        Environment="KUBELET_TAINTS=${var.kubelet_taints}"
 -   path: /etc/lattice/config.json
     owner: root:root
     permissions: '0644'
