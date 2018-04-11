@@ -147,8 +147,8 @@ resource "aws_launch_configuration" "aws_launch_configuration" {
   iam_instance_profile = "${aws_iam_instance_profile.iam_instance_profile.name}"
 
   user_data = <<EOF
-write_files:
 #cloud-config
+write_files:
 -   path: /etc/systemd/system/kubelet.service.d/10-override.conf
     owner: root:root
     permissions: '0644'
