@@ -158,7 +158,7 @@ write_files:
     owner: root:root
     permissions: '0644'
     content: |
-        ${var.etc_lattice_config_content}
+${var.etc_lattice_config_content}
 EOF
 
   # TODO: remove temporary_ssh_group when done testing
