@@ -6,7 +6,7 @@ load("@package_bundle//file:packages.bzl", "packages")
 container_image(
     name = "base-iptables",
     debs = [
-        # See WORKSPACE for more info.
+        # See bazel/docker/dependencies.bzl for more info.
         packages["iptables"],
         packages["libip4tc0"],
         packages["libip6tc0"],
@@ -16,19 +16,9 @@ container_image(
 )
 
 container_image(
-    name = "base-libstdc++6",
-    debs = [
-        # See bazel/dependencies.bzl for more info.
-        packages["libstdc++6"],
-        packages["libgcc1"],
-    ],
-    visibility = ["//visibility:public"],
-)
-
-container_image(
     name = "base-openssh-client",
     debs = [
-        # See WORKSPACE for more info.
+        # See bazel/docker/dependencies.bzl for more info.
         packages["openssh-client"],
         packages["zlib1g"],
     ],
@@ -58,30 +48,11 @@ container_image(
     visibility = ["//visibility:public"],
 )
 
-container_image(
-    name = "base-libstdc++6-openssh-client",
-    tars = [
-        ":base-libstdc++6",
-        ":base-openssh-client",
-    ],
-    visibility = ["//visibility:public"],
-)
-
-container_image(
-    name = "base-libstdc++6-terraform",
-    tars = [
-        ":base-libstdc++6",
-        ":base-terraform",
-    ],
-    visibility = ["//visibility:public"],
-)
-
 # base container images
 base_images = [
     "iptables",
-    "libstdc++6",
-    "libstdc++6-openssh-client",
-    "libstdc++6-terraform",
+    "openssh-client",
+    "terraform",
 ]
 
 lattice_base_container_images(base_images)
@@ -93,13 +64,13 @@ lattice_base_container_images(base_images)
 # (container-push) push-foo
 # (container-push) push-debug-foo
 go_targets = [
-    ("kubernetes-api-server-rest", "libstdc++6", "cmd/kubernetes/api-server/rest"),
-    ("kubernetes-component-builder", "libstdc++6-openssh-client", "cmd/kubernetes/component-builder"),
+    ("kubernetes-api-server-rest", None, "cmd/kubernetes/api-server/rest"),
+    ("kubernetes-component-builder", "openssh-client", "cmd/kubernetes/component-builder"),
     ("kubernetes-envoy-prepare", "iptables", "cmd/kubernetes/envoy/prepare"),
-    ("kubernetes-envoy-xds-api-rest-per-node", "libstdc++6", "cmd/kubernetes/envoy/xdsapi/v1/rest/per-node"),
-    ("kubernetes-lattice-controller-manager", "libstdc++6-terraform", "cmd/kubernetes/lattice-controller-manager"),
-    ("kubernetes-local-dns-controller", "libstdc++6", "cmd/kubernetes/local/dns/controller"),
-    ("latticectl", "libstdc++6", "cmd/latticectl"),
+    ("kubernetes-envoy-xds-api-rest-per-node", None, "cmd/kubernetes/envoy/xdsapi/v1/rest/per-node"),
+    ("kubernetes-lattice-controller-manager", "terraform", "cmd/kubernetes/lattice-controller-manager"),
+    ("kubernetes-local-dns-controller", None, "cmd/kubernetes/local/dns/controller"),
+    ("latticectl", None, "cmd/latticectl"),
 ]
 
 lattice_container_images(go_targets)

@@ -1,12 +1,5 @@
 # https://stackoverflow.com/questions/18136918/how-to-get-current-relative-directory-of-your-makefile
 DIR := $(patsubst %/,%,$(dir $(abspath $(lastword $(MAKEFILE_LIST)))))
-CLOUD_IMAGE_DIR = $(DIR)/cloud-images
-CLOUD_IMAGE_BUILD_DIR = $(CLOUD_IMAGE_DIR)/build
-CLOUD_IMAGE_BUILD_STATE_DIR = $(CLOUD_IMAGE_DIR)/.state/build
-CLOUD_IMAGE_AWS_SYSTEM_STATE_DIR = $(CLOUD_IMAGE_DIR)/.state/aws/$(LATTICE_SYSTEM_ID)
-
-OS := $(shell uname)
-USER := $(shell whoami)
 
 # build/clean
 .PHONY: build
@@ -109,65 +102,46 @@ git.install-hooks:
 
 
 # docker
-.PHONY: docker.push-image-stable
-docker.push-image-stable: gazelle
-	# not using non-debug images right now, so disabling to speed up pushing
-	#bazel run --platforms=@io_bazel_rules_go//go/toolchain:linux_amd64 //docker:push-stable-$(IMAGE)
-	bazel run --platforms=@io_bazel_rules_go//go/toolchain:linux_amd64 //docker:push-stable-debug-$(IMAGE)
-
-.PHONY: docker.push-image-user
-docker.push-image-user: gazelle
-	# not using non-debug images right now, so disabling to speed up pushing
-	#bazel run --platforms=@io_bazel_rules_go//go/toolchain:linux_amd64 //docker:push-user-$(IMAGE)
-	bazel run --platforms=@io_bazel_rules_go//go/toolchain:linux_amd64 //docker:push-user-debug-$(IMAGE)
-
-DOCKER_IMAGES := kubernetes-api-server-rest                    \
-                 kubernetes-component-builder                  \
-                 kubernetes-envoy-prepare                      \
-                 kubernetes-envoy-xds-api-rest-per-node        \
-                 kubernetes-lattice-controller-manager         \
-                 kubernetes-local-dns-controller               \
+DOCKER_IMAGES := kubernetes-api-server-rest             \
+                 kubernetes-component-builder           \
+                 kubernetes-envoy-prepare               \
+                 kubernetes-envoy-xds-api-rest-per-node \
+                 kubernetes-lattice-controller-manager  \
+                 kubernetes-local-dns-controller        \
                  latticectl
 
-STABLE_CONTAINER_PUSHES := $(addprefix docker.push-image-stable-,$(DOCKER_IMAGES))
-USER_CONTAINER_PUSHES := $(addprefix docker.push-image-user-,$(DOCKER_IMAGES))
+.PHONY: docker.push-image
+docker.push-image: gazelle
+	# currently only pushing debug images
+	bazel run \
+		--platforms=@io_bazel_rules_go//go/toolchain:linux_amd64 \
+		--workspace_status_command $(DIR)/scripts/bazel/docker-workspace-status.sh \
+		//docker:push-debug-$(IMAGE)
 
-.PHONY: $(STABLE_CONTAINER_PUSHES)
-$(STABLE_CONTAINER_PUSHES):
-	@$(MAKE) docker.push-image-stable IMAGE=$(patsubst docker.push-image-stable-%,%,$@)
+CONTAINER_PUSHES := $(addprefix docker.push-image-,$(DOCKER_IMAGES))
 
-.PHONY: $(USER_CONTAINER_PUSHES)
-$(USER_CONTAINER_PUSHES):
-	@$(MAKE) docker.push-image-user IMAGE=$(patsubst docker.push-image-user-%,%,$@)
+.PHONY: $(CONTAINER_PUSHES)
+$(CONTAINER_PUSHES):
+	@$(MAKE) docker.push-image IMAGE=$(patsubst docker.push-image-%,%,$@)
 
-.PHONY: docker.push-all-stable
-docker.push-all-stable:
+.PHONY: docker.push-all
+docker.push-all:
 	@for image in $(DOCKER_IMAGES); do \
-		$(MAKE) docker.push-image-stable-$$image ; \
+		$(MAKE) docker.push-image-$$image || exit 1; \
 	done
 
-.PHONY: docker.push-all-user
-docker.push-all-user:
-	@for image in $(DOCKER_IMAGES); do \
-		$(MAKE) docker.push-image-user-$$image ; \
-	done
+.PHONY: docker.save-image
+docker.save-image: gazelle
+	bazel run \
+		--platforms=@io_bazel_rules_go//go/toolchain:linux_amd64 \
+		//docker:debug-$(IMAGE) \
+		-- --norun
 
+CONTAINER_SAVES := $(addprefix docker.save-image-,$(DOCKER_IMAGES))
 
-# binaries
-.PHONY: binary.update-latticectl
-binary.update-latticectl: binary.update-latticectl-darwin-amd64 \
-                          binary.update-latticectl-linux-amd64
-
-.PHONY: binary.update-latticectl-darwin-amd64
-binary.update-latticectl-darwin-amd64: gazelle
-	@bazel build --cpu darwin //cmd/latticectl
-	cp -f $(DIR)/bazel-bin/cmd/latticectl/darwin_amd64_stripped/latticectl $(DIR)/bin/latticectl-darwin-amd64
-
-.PHONY: binary.update-latticectl-linux-amd64
-binary.update-latticectl-linux-amd64: gazelle
-	@bazel build --cpu k8 //cmd/latticectl
-	cp -f $(DIR)/bazel-bin/cmd/latticectl/linux_amd64_pure_stripped/latticectl $(DIR)/bin/latticectl-linux-amd64
-
+.PHONY: $(CONTAINER_SAVES)
+$(CONTAINER_SAVES):
+	@$(MAKE) docker.save-image IMAGE=$(patsubst docker.save-image-%,%,$@)
 
 # kubernetes
 .PHONY: kubernetes.update-dependencies
