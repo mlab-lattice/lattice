@@ -1,17 +1,34 @@
 package block
 
 import (
+	"encoding/json"
 	"errors"
 )
 
 type Resources struct {
-	// TODO: add resource pool
 	// TODO: add scaling
-	MinInstances *int32    `json:"min_instances,omitempty"`
-	MaxInstances *int32    `json:"max_instances,omitempty"`
-	NumInstances *int32    `json:"num_instances,omitempty"`
-	InstanceType *string   `json:"instance_type,omitempty"`
-	NodePool     *NodePool `json:"node_pool,omitempty"`
+	MinInstances *int32             `json:"min_instances,omitempty"`
+	MaxInstances *int32             `json:"max_instances,omitempty"`
+	NumInstances *int32             `json:"num_instances,omitempty"`
+	InstanceType *string            `json:"instance_type,omitempty"`
+	NodePool     *ResourcesNodePool `json:"node_pool,omitempty"`
+}
+
+type ResourcesNodePool struct {
+	NodePool     *NodePool
+	NodePoolName *string
+}
+
+func (np *ResourcesNodePool) MarshalJSON() ([]byte, error) {
+	if np.NodePool != nil {
+		return json.Marshal(np.NodePool)
+	}
+
+	if np.NodePoolName != nil {
+		return json.Marshal(*np.NodePoolName)
+	}
+
+	return json.Marshal(nil)
 }
 
 // Validate implements Interface
