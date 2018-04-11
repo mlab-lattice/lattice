@@ -1,10 +1,13 @@
 # https://stackoverflow.com/questions/18136918/how-to-get-current-relative-directory-of-your-makefile
 DIR := $(patsubst %/,%,$(dir $(abspath $(lastword $(MAKEFILE_LIST)))))
 
-# build/clean
+# build
 .PHONY: build
 build: gazelle
-	@bazel build //...:all
+	@bazel build \
+		//pkg/...:all \
+		//cmd/...:all \
+		//test/...:all
 
 .PHONY: build.all
 build.all: build.darwin \
@@ -12,11 +15,19 @@ build.all: build.darwin \
 
 .PHONY: build.darwin
 build.darwin: gazelle
-	@bazel build --platforms=@io_bazel_rules_go//go/toolchain:darwin_amd64 //...:all
+	@bazel build \
+		--platforms=@io_bazel_rules_go//go/toolchain:darwin_amd64 \
+		//pkg/...:all \
+		//cmd/...:all \
+		//test/...:all
 
 .PHONY: build.linux
 build.linux: gazelle
-	@bazel build --platforms=@io_bazel_rules_go//go/toolchain:linux_amd64 //...:all
+	@bazel build \
+		--platforms=@io_bazel_rules_go//go/toolchain:linux_amd64 \
+		//pkg/...:all \
+		//cmd/...:all \
+		//test/...:all
 
 .PHONY: gazelle
 gazelle:
