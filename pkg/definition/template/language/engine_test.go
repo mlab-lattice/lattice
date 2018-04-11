@@ -2,24 +2,14 @@ package language
 
 import (
 	"fmt"
-	"io/ioutil"
-	"os"
-	"path"
+
 	"strings"
 	"testing"
-	"time"
-
-	gogit "gopkg.in/src-d/go-git.v4"
-	"gopkg.in/src-d/go-git.v4/plumbing"
-	"gopkg.in/src-d/go-git.v4/plumbing/object"
 )
 
 const (
-	testRepoDir = "/tmp/lattice-core/test/template-engine/my-repo"
-	testWorkDir = "/tmp/lattice-core/test/engine"
-	t1File      = "t1.json"
-	t2File      = "t2.json"
-	t1FileURL   = "file:///tmp/lattice-core/test/template-engine/my-repo/.git/t1.json"
+	t1File = "t1.json"
+	t2File = "t2.json"
 )
 
 func TestEngine(t *testing.T) {
@@ -34,21 +24,16 @@ func TestEngine(t *testing.T) {
 
 func setupEngineTest() {
 	fmt.Println("Setting up test")
-	// ensure work directory
-	os.Mkdir(testRepoDir, 0700)
+	initTestRepo()
 
-	gogit.PlainInit(testRepoDir, false)
-
-	commitTestFiles()
+	commitTestFile(t1File, t1JSON)
+	commitTestFile(t2File, t2JSON)
 
 }
 
 func teardownEngineTest() {
 	fmt.Println("Tearing down template engine test")
-	// remove the test repo
-	os.RemoveAll(testRepoDir)
-	// remove work dir
-	os.RemoveAll(testWorkDir)
+	deleteTestRepo()
 }
 
 func doTestEngine(t *testing.T) {
@@ -60,6 +45,8 @@ func doTestEngine(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Got error: %v", err)
 	}
+
+	t1FileURL := getTestFileURL(t1File)
 
 	fmt.Printf("calling EvalFromURL('%s')\n", t1FileURL)
 
@@ -154,17 +141,6 @@ func doTestEngine(t *testing.T) {
 		t.Fatal("invalid state")
 	}
 
-	// validate $include to parent
-	fmt.Println("validate include to parent")
-
-	if resultMap["city"] != "San Francisco" {
-		t.Fatal("invalid city")
-	}
-
-	if resultMap["state"] != "CA" {
-		t.Fatal("invalid state")
-	}
-
 	// ensure that some parameters are required
 	fmt.Println("ensure that name parameter is required...")
 	_, err = engine.EvalFromURL(t1FileURL, nil, options)
@@ -224,36 +200,6 @@ func doTestEngine(t *testing.T) {
 
 }
 
-func commitTestFiles() {
-
-	ioutil.WriteFile(path.Join(testRepoDir, t1File), []byte(t1JSON), 0644)
-
-	ioutil.WriteFile(path.Join(testRepoDir, t2File), []byte(t2JSON), 0644)
-
-	repo, _ := gogit.PlainOpen(testRepoDir)
-
-	workTree, _ := repo.Worktree()
-
-	workTree.Add(t1File)
-
-	workTree.Add(t2File)
-
-	// commit
-	hash, _ := workTree.Commit("test", &gogit.CommitOptions{
-		Author: &object.Signature{
-			Name:  "Test",
-			Email: "test@mlab-lattice.com",
-			When:  time.Now(),
-		},
-	})
-
-	// create the tag
-	n := plumbing.ReferenceName("refs/tags/testv1")
-	t := plumbing.NewHashReference(n, hash)
-	repo.Storer.SetReference(t)
-
-}
-
 const t1JSON = `
 {
   "$parameters": {
@@ -290,13 +236,6 @@ const t1JSON = `
       }
     }
   },
-
-  "$include": {
-    "url": "t2.json",
-    "parameters": {
-	  "city": "San Francisco"
-    }
-},
 
   "int": 1,
   "bool": true

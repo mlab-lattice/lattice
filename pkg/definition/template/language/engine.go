@@ -34,6 +34,7 @@ TODO:
 
 import (
 	"fmt"
+
 	"github.com/mlab-lattice/lattice/pkg/util/git"
 )
 
@@ -70,19 +71,24 @@ func NewEngine() *TemplateEngine {
 
 	operatorConfigs := []*operatorConfig{
 		{
-			key:                   "$parameters",
-			evaluator:             &ParametersEvaluator{},
-			appendToPropertyStack: true,
+			key:       "$parameters",
+			evaluator: &ParametersEvaluator{},
 		},
 		{
-			key:                   "$variables",
-			evaluator:             &VariablesEvaluator{},
-			appendToPropertyStack: true,
+			key:       "$variables",
+			evaluator: &VariablesEvaluator{},
 		},
 		{
-			key:                   "$include",
-			evaluator:             &IncludeEvaluator{},
-			appendToPropertyStack: false,
+			key:       "$reference",
+			evaluator: &ReferenceEvaluator{},
+		},
+		{
+			key:       "$secret",
+			evaluator: &SecretEvaluator{},
+		},
+		{
+			key:       "$include",
+			evaluator: &IncludeEvaluator{},
 		},
 	}
 
@@ -146,24 +152,41 @@ func (engine *TemplateEngine) Eval(o interface{}, parameters map[string]interfac
 // eval evaluates the specified object
 func (engine *TemplateEngine) eval(o interface{}, env *environment) (interface{}, error) {
 
+	var result interface{}
+	var err error
 	if valMap, isMap := o.(map[string]interface{}); isMap { // Maps
-		return engine.evalMap(valMap, env)
+		result, err = engine.evalMap(valMap, env)
 
 	} else if valArr, isArray := o.([]interface{}); isArray { // Arrays
-		return engine.evalArray(valArr, env)
+		result, err = engine.evalArray(valArr, env)
 
 	} else if stringVal, isString := o.(string); isString { // Strings
-		return engine.evalString(stringVal, env)
+		result, err = engine.evalString(stringVal, env)
 
+	} else {
+		// Default, just return the value as is
+		result = o
 	}
-	// Default, just return the value as is
-	return o, nil
+
+	if err != nil {
+		return nil, err
+	}
+
+	// process references in result
+	engine.processReferencesInEvalResult(result, env)
+
+	return result, nil
 }
 
 // include includes and evaluates the template file specified in the url
 func (engine *TemplateEngine) include(url string, parameters map[string]interface{}, env *environment) (interface{}, error) {
-	// resolve url
-	resource, err := resolveURL(url, env)
+	// if the url is a relative url then concat it with the base url of the parent template
+
+	if isRelativeURL(url) {
+		url = fmt.Sprintf("%v/%v", env.currentFrame().template.baseURL, url)
+	}
+
+	template, err := readTemplateFromURL(url, env)
 
 	if err != nil {
 		return nil, err
@@ -173,26 +196,49 @@ func (engine *TemplateEngine) include(url string, parameters map[string]interfac
 	variables := make(map[string]interface{})
 
 	// push !
-	env.push(resource, parameters, variables)
+	env.push(template, parameters, variables)
 
 	// defer a pop to ensure that the stack is popped  before
 	defer env.pop()
 
 	// evaluate data of the template
-	return engine.eval(resource.data, env)
-}
-
-// evalMap evaluates a map of objects
-func (engine *TemplateEngine) evalMap(m map[string]interface{}, env *environment) (interface{}, error) {
-	// init result
-	result := make(map[string]interface{})
-
-	// eval operators in map
-	err := engine.evalOperatorsInMap(result, m, env)
+	result, err := engine.eval(template.data, env)
 
 	if err != nil {
 		return nil, err
 	}
+
+	m, isMap := result.(map[string]interface{})
+
+	if !isMap {
+		return nil, fmt.Errorf("include for template '%s' did not return a map", url)
+	}
+	// process include result before returning
+	err = engine.processIncludeResult(m, template, env)
+	if err != nil {
+		return nil, err
+	}
+	return result, nil
+
+}
+
+// evalMap evaluates a map of objects
+func (engine *TemplateEngine) evalMap(m map[string]interface{}, env *environment) (interface{}, error) {
+
+	// eval operators in map
+	operatorsResult, err := engine.evalOperatorsInMap(m, env)
+
+	if err != nil {
+		return nil, err
+	}
+
+	// if the operator eval returned something then we consider this to be the eval result for the map
+	if operatorsResult != nil {
+		return operatorsResult, nil
+	}
+
+	// init result
+	result := make(map[string]interface{})
 
 	// eval properties
 	err = engine.evalPropertiesInMap(result, m, env)
@@ -205,8 +251,7 @@ func (engine *TemplateEngine) evalMap(m map[string]interface{}, env *environment
 }
 
 // evalOperatorsInMap helper method for evalMap
-func (engine *TemplateEngine) evalOperatorsInMap(result map[string]interface{}, m map[string]interface{},
-	env *environment) error {
+func (engine *TemplateEngine) evalOperatorsInMap(m map[string]interface{}, env *environment) (interface{}, error) {
 
 	// first, evaluate operators based on their priorities
 
@@ -215,19 +260,16 @@ func (engine *TemplateEngine) evalOperatorsInMap(result map[string]interface{}, 
 
 			// push the the current operator to the property stack
 			currentPropertyPath := env.getCurrentPropertyPath()
-			if operator.appendToPropertyStack {
-				currentPropertyPath = env.pushProperty(operator.key)
-			}
+
+			currentPropertyPath = env.pushProperty(operator.key)
 
 			evalResult, err := operator.evaluator.eval(operand, env)
 
-			// pop property if we pushed it
-			if operator.appendToPropertyStack {
-				env.popProperty()
-			}
+			// pop property
+			env.popProperty()
 
 			if err != nil { // return error
-				return wrapWithPropertyEvalError(err, currentPropertyPath, env)
+				return nil, wrapWithPropertyEvalError(err, currentPropertyPath, env)
 			}
 			// if the result is nil, this indicates that the evaluator has processed the operator and that the engine
 			// should continue
@@ -237,21 +279,12 @@ func (engine *TemplateEngine) evalOperatorsInMap(result map[string]interface{}, 
 
 			// evaluator has return a value, we expect this value to be a map and we just merge it with the existing
 			// result
-			resultMap, isMap := evalResult.(map[string]interface{})
 
-			if !isMap {
-				badOperatorResultError := fmt.Errorf("Bad return value for evaluator %v. "+
-					"Result is not a map", operator)
-				return wrapWithPropertyEvalError(badOperatorResultError, currentPropertyPath, env)
-			}
-			// stuff map with the val result
-			for k, v := range resultMap {
-				result[k] = v
-			}
+			return evalResult, nil
 		}
 	}
 
-	return nil
+	return nil, nil
 }
 
 // evalPropertiesInMap helper method for evalMap
@@ -304,5 +337,28 @@ func (engine *TemplateEngine) evalArray(arr []interface{}, env *environment) ([]
 // evaluates a string
 func (engine *TemplateEngine) evalString(s string, env *environment) (interface{}, error) {
 	// eval expression
-	return evalStringExpression(s, env.parametersAndVariables()), nil
+	result := evalStringExpression(s, env.parametersAndVariables())
+
+	// string evaluation results have a special handling
+
+	// return result with no errors (not yet)
+	return result, nil
+}
+
+// processStringEvalResult
+func (engine *TemplateEngine) processReferencesInEvalResult(result interface{}, env *environment) {
+	if reference, isRef := result.(Reference); isRef {
+		env.captureReferenceRecipient(reference)
+	}
+}
+
+// processIncludeResult
+func (engine *TemplateEngine) processIncludeResult(result map[string]interface{}, template *Template, env *environment) error {
+	references := findReferencesInTemplate(template, env)
+
+	if len(references) > 0 {
+		result[templateReferencesKey] = references
+	}
+
+	return nil
 }
