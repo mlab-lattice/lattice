@@ -1,8 +1,24 @@
 load("@bazel_tools//tools/build_defs/pkg:pkg.bzl", "pkg_tar")
 
-# TODO: figure out why you need to do a bazel clean for this target to be updated
+# Need to use a filegroup here so that bazel can keep track of the
+# all of the files and which have changed.
+# Was originally using
+#  srcs = [":modules"]
+# in pkg_tar, but bazel would not pick up that a file had changed
+# so you would have to run bazel clean to rebuild targets that
+# include the modules.
+# more info: https://docs.bazel.build/versions/master/be/general.html#filegroup
+filegroup(
+    name = "modules-filegroup",
+    srcs = glob(["modules/**/*.tf"]),
+)
+
 pkg_tar(
     name = "modules-tar",
-    srcs = [":modules"],
+    srcs = [":modules-filegroup"],
     visibility = ["//visibility:public"],
+
+    # Without this, all of the .tf files are flattened into a single directory
+    # more info: https://github.com/bazelbuild/bazel/issues/2176
+    strip_prefix = ".",
 )
