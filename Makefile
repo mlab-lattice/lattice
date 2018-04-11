@@ -128,7 +128,7 @@ docker.push-image: gazelle \
 .PHONY: docker.push-image-no-gazelle
 docker.push-image-no-gazelle:
 	# currently only pushing debug images
-	bazel run \
+	@bazel run \
 		--platforms=@io_bazel_rules_go//go/toolchain:linux_amd64 \
 		--workspace_status_command $(DIR)/scripts/bazel/docker-workspace-status.sh \
 		//docker:push-debug-$(IMAGE)
@@ -151,7 +151,7 @@ docker.push-all: gazelle
 
 .PHONY: docker.save-image
 docker.save-image: gazelle
-	bazel run \
+	@bazel run \
 		--platforms=@io_bazel_rules_go//go/toolchain:linux_amd64 \
 		//docker:debug-$(IMAGE) \
 		-- --norun
