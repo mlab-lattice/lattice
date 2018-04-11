@@ -31,5 +31,5 @@ func main() {
 		log.Fatalf("FATAL: Error while initialising laasctl")
 	}
 
-	docgen.GenerateCtlDoc(cmd, *outputDocsDirPtr)
+	docgen.GenerateCliDocs(cmd, *outputDocsDirPtr)
 }

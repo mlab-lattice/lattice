@@ -13,16 +13,14 @@ import (
 
 var InputDocsDir string
 
-/**
-Generates laasctl docs
-*/
-func GenerateCtlDoc(cmd *cli.Command, outputDir string) {
-	// open file
+
+func GenerateCliDocs(cmd *cli.Command, outputDir string) {
+	// opens docs output file
 	fo, err := os.Create(outputDir + "/doc.md")
 	if err != nil {
 		panic(err)
 	}
-	// close fo on exit and check for its returned error
+	// closes docs output file on exit
 	defer func() {
 		if err := fo.Close(); err != nil {
 			panic(err)
@@ -31,14 +29,13 @@ func GenerateCtlDoc(cmd *cli.Command, outputDir string) {
 
 	writer := bufio.NewWriter(fo)
 
-	printIntro(cmd, writer)
+	writeDoc(cmd, writer)
 	writer.Flush()
 }
 
-/**
-Prints headings and intro
-*/
-func printIntro(bcPtr *cli.Command, writer *bufio.Writer) {
+
+// writeDoc writes command tree to file
+func writeDoc(bcPtr *cli.Command, writer *bufio.Writer) {
 	bc := *bcPtr
 
 	// header
@@ -47,7 +44,9 @@ func printIntro(bcPtr *cli.Command, writer *bufio.Writer) {
 	writer.WriteString(bc.Short + "\n")
 	writer.WriteString("## Commands \n")
 
-	// mapping between command name (e.g. `lattices status` and the command)
+	// mapping between command name (e.g. `laasctl systems builds`) and the command.
+	// the output to file can therefore be sorted by command name (ascending),
+	// while still using depth-first tree traversal
 	commandMapping := make(map[string]*cli.Command)
 
 	// reads the tree and appends commands into the commandMapping
@@ -56,23 +55,19 @@ func printIntro(bcPtr *cli.Command, writer *bufio.Writer) {
 		recurse(tempCmd, &cmds, writer, &commandMapping)
 	}
 
-	// sorts map keys ASC
+	// uses sorted map keys to iterate over the map in alphabetical
 	keys := make([]string, 0)
 	for k := range commandMapping {
 		keys = append(keys, k)
 	}
-
 	sort.Strings(keys)
-
-	// uses sort map keys to iterate over the map
 	for _, key := range keys {
 		printCommand(&key, commandMapping[key], writer)
 	}
 }
 
-/**
-Recursively works through the command tree
-*/
+
+// recurse recursively works through the command tree
 func recurse(cmdPtr *cli.Command, allCommandsPtr *[]cli.Command, writer *bufio.Writer, commandMappingPtr *map[string]*cli.Command) {
 
 	allCommands := *allCommandsPtr
@@ -83,20 +78,20 @@ func recurse(cmdPtr *cli.Command, allCommandsPtr *[]cli.Command, writer *bufio.W
 		return
 	}
 
-	mostCommands := allCommands[1:] // all commands but the first one (`lattice`)
+	// all commands but the first one (e.g. `latticectl`)
+	mostCommands := allCommands[1:]
 
-	// get full command except (lattice) as a string
+	// retrieves the above as a string
 	var prevCommands string
-
 	for _, tempCmd := range mostCommands {
 		prevCommands += tempCmd.Name + " "
 	}
-
 	prevCommands += cmd.Name
 
-	// add new element to the map
+	// adds current command to the command mapping
 	commandMapping[prevCommands] = cmdPtr
 
+	// forms full command slice (including current command)
 	allCommands = append(allCommands, cmd)
 
 	for _, tempCmd := range cmd.Subcommands {
@@ -104,28 +99,26 @@ func recurse(cmdPtr *cli.Command, allCommandsPtr *[]cli.Command, writer *bufio.W
 	}
 }
 
-/**
-Prints the command docs
-*/
-func printCommand(prevCmdName *string, cmdPtr *cli.Command, writer *bufio.Writer) {
+
+// printCommand prints the command docs
+func printCommand(cmdName *string, cmdPtr *cli.Command, writer *bufio.Writer) {
 	cmd := *cmdPtr
 
 	// header command name (add extra #s here if want hierarchy)
-	writer.WriteString("### ")
-	writer.WriteString(*prevCmdName + "  \n")
+	writer.WriteString("### " + *cmdName + "  \n")
 
 	// description
 	if cmd.Short != "" {
 		writer.WriteString("*" + cmd.Short + "*  \n\n")
 	}
 
-	// markdown import
-	markdownContent := getMarkdownFileContent(prevCmdName)
+	// includes any extra markdown command description
+	markdownContent := getMarkdownFileContent(cmdName)
 	if markdownContent != "" {
 		writer.WriteString(markdownContent)
 	}
 
-	// write args
+	// write args sorting them first by required/not required and then alphabetically
 	if len(cmd.Args) > 0 {
 		sort.Slice(cmd.Args, func(i, j int) bool {
 			result := cmd.Args[i].Required
@@ -137,7 +130,7 @@ func printCommand(prevCmdName *string, cmdPtr *cli.Command, writer *bufio.Writer
 		writeArgs(writer, &cmd.Args)
 	}
 
-	// write flags
+	// write flags sorting them first by required/not required and then alphabetically
 	if len(cmd.Flags) > 0 {
 		sort.Slice(cmd.Flags, func(i, j int) bool {
 			result := cmd.Flags[i].IsRequired()
@@ -150,9 +143,8 @@ func printCommand(prevCmdName *string, cmdPtr *cli.Command, writer *bufio.Writer
 	}
 }
 
-/**
-Writes args to a markdown table
-*/
+
+// writeArgs writes args section to a markdown table
 func writeArgs(writer *bufio.Writer, cmdArgs *cli.Args) {
 	writer.WriteString("**Args**:  \n\n")
 
@@ -170,9 +162,8 @@ func writeArgs(writer *bufio.Writer, cmdArgs *cli.Args) {
 	writer.WriteString("\n\n")
 }
 
-/**
-Writes flags to a markdown table
-*/
+
+// writeFlags writes flags section to a markdown table
 func writeFlags(writer *bufio.Writer, cmdFlags *cli.Flags) {
 	writer.WriteString("**Flags**:  \n\n")
 
@@ -190,9 +181,8 @@ func writeFlags(writer *bufio.Writer, cmdFlags *cli.Flags) {
 	writer.WriteString("\n\n")
 }
 
-/**
-Generates a string for the flag table row
-*/
+
+// getFlagTableRow generates flag table row
 func getFlagTableRow(flagPtr *cli.Flag) string {
 	currentFlag := *flagPtr
 	var isBoolFlag bool
@@ -230,50 +220,44 @@ func getFlagTableRow(flagPtr *cli.Flag) string {
 	return flagRow
 }
 
-/**
-Generates a string for the arg table row
-*/
+
+// getArgTableRow generates arg table row
 func getArgTableRow(argPtr *cli.Arg) string {
 	currentArg := *argPtr
 
-	// name
 	argRow := "| `" + currentArg.Name + "` "
 
-	// is required
 	if currentArg.Required {
 		argRow += "**(required)** "
 	}
 
 	argRow += "| "
 
-	// mock description until the description field in the struct is available
 	argRow += currentArg.Description + " | \n"
 
 	return argRow
 }
 
-/**
-Returns external Markdown file content
-*/
-func getMarkdownFileContent(previousCommmands *string) string {
+
+// getMarkdownFileContent reads external Markdown file content
+func getMarkdownFileContent(cmdName *string) string {
 
 	// root path
-	markDownPath := InputDocsDir + "/docs/cli"
+	markdownPath := InputDocsDir + "/docs/cli"
 
-	// splits string by whitespace
-	words := strings.Fields(*previousCommmands)
-
+	// appends the remainder of the file path
+	words := strings.Fields(*cmdName)
 	for _, subCmd := range words {
-		markDownPath += "/" + subCmd
+		markdownPath += "/" + subCmd
 	}
 
-	// end of path
-	markDownPath += "/description.md"
+	// appends file name
+	markdownPath += "/description.md"
 
-	buffer, err := ioutil.ReadFile(markDownPath)
+	buffer, err := ioutil.ReadFile(markdownPath)
 
 	if err == nil {
-		log.Printf("Markdown file found: %s", markDownPath)
+		log.Printf("Markdown file found: %s", markdownPath)
 		return string(buffer) + "\n"
 	}
 
