@@ -39,7 +39,7 @@ func (mec *ExecContext) Start(name string) (*executil.Result, string, error) {
 	// FIXME: make Kubernetes version configurable
 	// FIXME: add back profile name when supported: https://github.com/kubernetes/minikube/issues/2574
 	//args := []string{startCmd, "-p", name, "--kubernetes-version", "v1.9.3", "--bootstrapper", "kubeadm", "--feature-gates=CustomPodDNS=true"}
-	args := []string{startCmd, "--kubernetes-version", "v1.9.3", "--bootstrapper", "kubeadm", "--feature-gates=CustomPodDNS=true", "--memory", "4096"}
+	args := []string{startCmd, "--kubernetes-version", "v1.10.0", "--bootstrapper", "kubeadm", "--memory", "4096"}
 	return mec.ExecWithLogFile("minikube-"+startCmd, args...)
 }
 

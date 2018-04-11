@@ -12,7 +12,24 @@ import (
 )
 
 func (c *Controller) syncServiceNodePool(service *latticev1.Service) (*latticev1.NodePool, error) {
-	// TODO(kevinrosendahl): add support for shared node pools
+	resourcesBlock := service.Spec.Definition.Resources()
+
+	if resourcesBlock.NodePool == nil {
+		return c.syncPerInstanceDedicatedNodePool(service)
+	}
+
+	if resourcesBlock.NodePool.NodePoolName != nil {
+		return c.syncSharedNodePool(service.Namespace, *resourcesBlock.NodePool.NodePoolName)
+	}
+
+	if resourcesBlock.NodePool.NodePool != nil {
+		return c.syncDedicatedNodePool(service)
+	}
+
+	return nil, fmt.Errorf("invalid node pool configuration")
+}
+
+func (c *Controller) syncPerInstanceDedicatedNodePool(service *latticev1.Service) (*latticev1.NodePool, error) {
 	nodePool, err := c.nodePoolLister.NodePools(service.Namespace).Get(service.Name)
 	if err != nil {
 		if errors.IsNotFound(err) {
@@ -30,8 +47,39 @@ func (c *Controller) syncServiceNodePool(service *latticev1.Service) (*latticev1
 	return nodePool, nil
 }
 
+func (c *Controller) syncDedicatedNodePool(service *latticev1.Service) (*latticev1.NodePool, error) {
+	nodePool, err := c.nodePoolLister.NodePools(service.Namespace).Get(service.Name)
+	if err != nil {
+		if errors.IsNotFound(err) {
+			return c.createNewNodePool(service)
+		}
+
+		return nil, err
+	}
+
+	nodePool, err = c.syncExistingNodePool(service, nodePool)
+	if err != nil {
+		return nil, err
+	}
+
+	return nodePool, nil
+}
+
+func (c *Controller) syncSharedNodePool(namespace, name string) (*latticev1.NodePool, error) {
+	nodePool, err := c.nodePoolLister.NodePools(namespace).Get(name)
+	if err == nil {
+		return nodePool, nil
+	}
+
+	// If we can't find the node pool, simply return nil
+	if errors.IsNotFound(err) {
+		return nil, nil
+	}
+
+	return nil, err
+}
+
 func (c *Controller) syncExistingNodePool(service *latticev1.Service, nodePool *latticev1.NodePool) (*latticev1.NodePool, error) {
-	// TODO(kevinrosendahl): only change NodePool spec for dedicated node pools
 	spec, err := nodePoolSpec(service)
 	if err != nil {
 		return nil, err

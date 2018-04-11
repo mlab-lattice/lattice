@@ -16,9 +16,9 @@ filegroup(
 pkg_tar(
     name = "modules-tar",
     srcs = [":modules-filegroup"],
-    visibility = ["//visibility:public"],
 
     # Without this, all of the .tf files are flattened into a single directory
     # more info: https://github.com/bazelbuild/bazel/issues/2176
     strip_prefix = ".",
+    visibility = ["//visibility:public"],
 )

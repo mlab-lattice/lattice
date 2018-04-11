@@ -211,6 +211,7 @@ func (p *DefaultLocalLatticeProvisioner) bootstrap(address string, name string) 
 									"--controller-manager-var", "args=--alsologtostderr",
 									"--api-var", fmt.Sprintf("image=%v", p.getLatticeContainerImage("kubernetes-api-server-rest")),
 									"--component-builder-var", fmt.Sprintf("image=%v", p.getLatticeContainerImage("kubernetes-component-builder")),
+									"--component-builder-var", "docker-api-version=1.35",
 									"--component-build-docker-artifact-var", "registry=lattice-local",
 									"--component-build-docker-artifact-var", "repository-per-image=true",
 									"--component-build-docker-artifact-var", "push=false",

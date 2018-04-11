@@ -99,6 +99,7 @@ var _ = Describe("deploy", func() {
 
 	v3point0point0 := v1.SystemVersion("3.0.0")
 	ifV2Deployed := If("v2 deployed successfully", func() bool { return successfulV2Deploy })
+	successfulV3point0point0Deploy := false
 	ConditionallyIt(
 		"should be able to deploy version 3.0.0",
 		ifV2Deployed,
@@ -107,25 +108,29 @@ var _ = Describe("deploy", func() {
 			deploy.WaitUntilSucceeded(context.TestContext.LatticeAPIClient.V1().Systems().Deploys(systemID), deployID, 15*time.Second, 3*time.Minute)
 			v3 := testingsystem.NewV3(context.TestContext.LatticeAPIClient.V1(), systemID, 1)
 			v3.ValidateStable()
+			successfulV3point0point0Deploy = true
 		},
 	)
 
 	v3point0point1 := v1.SystemVersion("3.0.1")
-	ifV3Deployed := If("v2 deployed successfully", func() bool { return successfulV2Deploy })
+	ifV3point0point0Deployed := If("v2 deployed successfully", func() bool { return successfulV3point0point0Deploy })
+	successfulV3point0point1Deploy := false
 	ConditionallyIt(
 		"should be able to deploy version 3.0.1",
-		ifV3Deployed,
+		ifV3point0point0Deployed,
 		func() {
 			deployID := deploy.CreateFromVersion(context.TestContext.LatticeAPIClient.V1().Systems().Deploys(systemID), v3point0point1)
 			deploy.WaitUntilSucceeded(context.TestContext.LatticeAPIClient.V1().Systems().Deploys(systemID), deployID, 15*time.Second, 3*time.Minute)
 			v3 := testingsystem.NewV3(context.TestContext.LatticeAPIClient.V1(), systemID, 2)
 			v3.ValidateStable()
+			successfulV3point0point1Deploy = true
 		},
 	)
 
+	ifV3point0point1Deployed := If("v3.0.1 deployed successfully", func() bool { return successfulV3point0point1Deploy })
 	ConditionallyIt(
 		"should be able to delete the system",
-		ifSystemCreated,
+		ifV3point0point1Deployed,
 		func() {
 			system.DeleteSuccessfully(context.TestContext.LatticeAPIClient.V1().Systems(), systemID, 1*time.Second, 2*time.Minute)
 		},
