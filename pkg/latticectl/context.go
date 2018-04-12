@@ -43,7 +43,7 @@ func (c *ConfigFileContext) readConfig() (*Config, error) {
 	data, err := ioutil.ReadFile(c.Path)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return nil, nil
+			return nil, fmt.Errorf("Config file does not exist: %v", err)
 		}
 
 		return nil, fmt.Errorf("unable to read config file: %v", err)
