@@ -25,8 +25,8 @@ type Options struct {
 	SubnetIDs                 []string
 	MasterNodeSecurityGroupID string
 
-	BaseNodeAMIID string
-	KeyName       string
+	WorkerNodeAMIID string
+	KeyName         string
 }
 
 type CloudProvider interface {
@@ -38,7 +38,7 @@ type CloudProvider interface {
 	SubnetIDs() []string
 	MasterNodeSecurityGroupID() string
 
-	BaseNodeAMIID() string
+	WorkerNodeAMIID() string
 	KeyName() string
 }
 
@@ -52,8 +52,8 @@ func NewCloudProvider(options *Options) *DefaultAWSCloudProvider {
 		subnetIDs:                 options.SubnetIDs,
 		masterNodeSecurityGroupID: options.MasterNodeSecurityGroupID,
 
-		baseNodeAMIID: options.BaseNodeAMIID,
-		keyName:       options.KeyName,
+		workerNodeAMIID: options.WorkerNodeAMIID,
+		keyName:         options.KeyName,
 	}
 }
 
@@ -66,8 +66,8 @@ type DefaultAWSCloudProvider struct {
 	subnetIDs                 []string
 	masterNodeSecurityGroupID string
 
-	baseNodeAMIID string
-	keyName       string
+	workerNodeAMIID string
+	keyName         string
 }
 
 func (cp *DefaultAWSCloudProvider) TransformComponentBuildJobSpec(spec *batchv1.JobSpec) *batchv1.JobSpec {
@@ -123,8 +123,8 @@ func (cp *DefaultAWSCloudProvider) MasterNodeSecurityGroupID() string {
 	return cp.masterNodeSecurityGroupID
 }
 
-func (cp *DefaultAWSCloudProvider) BaseNodeAMIID() string {
-	return cp.baseNodeAMIID
+func (cp *DefaultAWSCloudProvider) WorkerNodeAMIID() string {
+	return cp.workerNodeAMIID
 }
 
 func (cp *DefaultAWSCloudProvider) KeyName() string {

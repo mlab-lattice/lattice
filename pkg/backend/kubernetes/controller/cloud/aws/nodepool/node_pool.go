@@ -93,7 +93,7 @@ func (c *Controller) nodePoolConfig(nodePool *latticev1.NodePool) *tf.Config {
 		c.awsCloudProvider.VPCID(),
 		strings.Join(c.awsCloudProvider.SubnetIDs(), ","),
 		c.awsCloudProvider.MasterNodeSecurityGroupID(),
-		c.awsCloudProvider.BaseNodeAMIID(),
+		c.awsCloudProvider.WorkerNodeAMIID(),
 		c.awsCloudProvider.KeyName(),
 		nodePoolID,
 		nodePool.Spec.NumInstances,

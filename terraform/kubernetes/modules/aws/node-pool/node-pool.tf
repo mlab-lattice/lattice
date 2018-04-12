@@ -9,7 +9,7 @@ variable "lattice_id" {}
 variable "vpc_id" {}
 variable "subnet_ids" {}
 variable "master_node_security_group_id" {}
-variable "base_node_ami_id" {}
+variable "worker_node_ami_id" {}
 variable "key_name" {}
 
 variable "name" {}
@@ -25,19 +25,19 @@ variable "kubelet_port" {
 #
 
 output "autoscaling_group_id" {
-  value = "${module.base_node.autoscaling_group_id}"
+  value = "${module.worker_node.autoscaling_group_id}"
 }
 
 output "autoscaling_group_name" {
-  value = "${module.base_node.autoscaling_group_name}"
+  value = "${module.worker_node.autoscaling_group_name}"
 }
 
 output "autoscaling_group_desired_capacity" {
-  value = "${module.base_node.autoscaling_group_desired_capacity}"
+  value = "${module.worker_node.autoscaling_group_desired_capacity}"
 }
 
 output "security_group_id" {
-  value = "${module.base_node.security_group_id}"
+  value = "${module.worker_node.security_group_id}"
 }
 
 ###############################################################################
@@ -121,11 +121,11 @@ data "aws_iam_policy_document" "node_pool_role_policy_document" {
 }
 
 ###############################################################################
-# base node
+# worker node
 #
 
-module "base_node" {
-  source = "../node/base/cloud-init"
+module "worker_node" {
+  source = "../node/base"
 
   lattice_id = "${var.lattice_id}"
   name       = "node-pool-${var.name}"
@@ -138,7 +138,7 @@ module "base_node" {
   subnet_ids    = "${var.subnet_ids}"
   num_instances = "${var.num_instances}"
   instance_type = "${var.instance_type}"
-  ami_id        = "${var.base_node_ami_id}"
+  ami_id        = "${var.worker_node_ami_id}"
   key_name      = "${var.key_name}"
 
   iam_instance_profile_role_name = "${aws_iam_role.node_pool_role.name}"
@@ -148,7 +148,7 @@ module "base_node" {
 # Security Group
 
 resource "aws_security_group_rule" "allow_kubelet_from_master" {
-  security_group_id = "${module.base_node.security_group_id}"
+  security_group_id = "${module.worker_node.security_group_id}"
 
   protocol                 = "tcp"
   from_port                = "${var.kubelet_port}"

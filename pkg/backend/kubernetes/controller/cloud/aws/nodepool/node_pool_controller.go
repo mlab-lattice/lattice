@@ -159,8 +159,8 @@ func (c *Controller) newAWSCloudProvider() aws.CloudProvider {
 		SubnetIDs:                 c.awsCloudProvider.SubnetIDs(),
 		MasterNodeSecurityGroupID: c.awsCloudProvider.MasterNodeSecurityGroupID(),
 
-		BaseNodeAMIID: c.config.CloudProvider.AWS.BaseNodeAMIID,
-		KeyName:       c.config.CloudProvider.AWS.KeyName,
+		WorkerNodeAMIID: c.config.CloudProvider.AWS.WorkerNodeAMIID,
+		KeyName:         c.config.CloudProvider.AWS.KeyName,
 	}
 
 	return aws.NewCloudProvider(awsOptions)
