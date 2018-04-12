@@ -7,7 +7,6 @@ import (
 	"io"
 	"io/ioutil"
 	"log"
-	"reflect"
 	"sort"
 	"strings"
 
@@ -34,10 +33,10 @@ func GenerateMarkdown(cmd *cli.Command) (io.Reader, error) {
 // writeDoc writes command tree to file
 func writeDoc(bc *cli.Command, writer io.Writer) error {
 	// header
-	fmt.Fprint(writer, markdown.GetH1(bc.Name))
-	fmt.Fprint(writer, markdown.GetH2("Introduction"))
+	markdown.WriteH1(writer, bc.Name)
+	markdown.WriteH2(writer, "Introduction")
 	fmt.Fprint(writer, bc.Short+"\n")
-	fmt.Fprint(writer, markdown.GetH2("Commands"))
+	markdown.WriteH2(writer, "Commands")
 
 	// mapping between command name (e.g. `laasctl systems builds`) and the command.
 	// the output to file can therefore be sorted by command name (ascending),
@@ -94,21 +93,23 @@ func recurse(cmd *cli.Command, ancestorCommands []cli.Command, writer io.Writer,
 // fullCmdName includes all command ancestor except the root command (e.g. 'latticectl')
 func printCommand(fullCmdName string, cmd *cli.Command, writer io.Writer) error {
 	// header command name (add extra #s here if want hierarchy)
-	fmt.Fprint(writer, markdown.GetH3(fullCmdName))
+	markdown.WriteH3(writer, fullCmdName)
 
 	// description
 	if cmd.Short != "" {
-		fmt.Fprint(writer, "*"+cmd.Short+"*  \n\n")
+		markdown.WriteEmphasisedText(writer, cmd.Short)
+		fmt.Fprint(writer, "\n\n")
 	}
 
 	// includes any extra markdown command description
-	markdownContent, err := getMarkdownFileContent(fullCmdName)
+	mdFileContent, err := getMarkdownFileContent(fullCmdName)
 	if err != nil {
 		return err
 	}
 
-	if markdownContent != "" {
-		fmt.Fprint(writer, markdownContent)
+	if mdFileContent != "" {
+		fmt.Fprint(writer, mdFileContent)
+		fmt.Fprint(writer, "\n")
 	}
 
 	// validates that required args are defined first
@@ -133,16 +134,15 @@ func printCommand(fullCmdName string, cmd *cli.Command, writer io.Writer) error 
 
 // writeArgs writes args section to a markdown table
 func writeArgs(writer io.Writer, cmdArgs cli.Args) {
-	fmt.Fprint(writer, "**Args**:  \n\n")
+	markdown.WriteArgFlagHeader(writer, "Args")
+	fmt.Fprint(writer, "\n\n")
 
 	// table header
-	fmt.Fprint(writer, "| Name | Description | \n")
-	fmt.Fprint(writer, "| --- | --- | \n")
+	markdown.WriteFlagArgTableHeader(writer)
 
-	// table contents
+	// table rows
 	for _, tempArg := range cmdArgs {
-		argRow := getArgTableRow(tempArg)
-		fmt.Fprint(writer, argRow)
+		markdown.WriteArgTableRow(writer, tempArg)
 	}
 
 	// new line separator
@@ -151,75 +151,19 @@ func writeArgs(writer io.Writer, cmdArgs cli.Args) {
 
 // writeFlags writes flags section to a markdown table
 func writeFlags(writer io.Writer, cmdFlags cli.Flags) {
-	fmt.Fprint(writer, "**Flags**:  \n\n")
+	markdown.WriteArgFlagHeader(writer, "Flags")
+	fmt.Fprint(writer, "\n\n")
 
 	// table header
-	fmt.Fprint(writer, "| Name | Description | \n")
-	fmt.Fprint(writer, "| --- | --- | \n")
+	markdown.WriteFlagArgTableHeader(writer)
 
-	// table contents
+	// table rows
 	for _, tempFlag := range cmdFlags {
-		flagRow := getFlagTableRow(tempFlag)
-		fmt.Fprint(writer, flagRow)
+		markdown.WriteFlagTableRow(writer, tempFlag)
 	}
 
 	// new line separator
 	fmt.Fprint(writer, "\n\n")
-}
-
-// getFlagTableRow generates flag table row
-func getFlagTableRow(flagPtr cli.Flag) string {
-	currentFlag := flagPtr
-	var isBoolFlag bool
-
-	if reflect.TypeOf(currentFlag).String() == "*command.BoolFlag" {
-		isBoolFlag = true
-	}
-
-	flagRow := "| `"
-
-	flagRow += "--" + currentFlag.GetName()
-
-	if !isBoolFlag {
-		flagRow += " " + strings.ToUpper(currentFlag.GetName())
-	}
-
-	if currentFlag.GetShort() != "" {
-		flagRow += "`, `-" + currentFlag.GetShort()
-
-		if !isBoolFlag {
-			flagRow += " " + strings.ToUpper(currentFlag.GetName())
-		}
-	}
-
-	flagRow += "` "
-
-	if currentFlag.IsRequired() {
-		flagRow += "**(required)** "
-	}
-
-	flagRow += "| "
-
-	flagRow += currentFlag.GetUsage() + " | \n"
-
-	return flagRow
-}
-
-// getArgTableRow generates arg table row
-func getArgTableRow(argPtr cli.Arg) string {
-	currentArg := argPtr
-
-	argRow := "| `" + currentArg.Name + "` "
-
-	if currentArg.Required {
-		argRow += "**(required)** "
-	}
-
-	argRow += "| "
-
-	argRow += currentArg.Description + " | \n"
-
-	return argRow
 }
 
 // getMarkdownFileContent reads external Markdown file content
@@ -241,7 +185,7 @@ func getMarkdownFileContent(cmdName string) (string, error) {
 
 	if err == nil {
 		log.Printf("Markdown file found: %s", markdownPath)
-		return string(buffer) + "\n", nil
+		return string(buffer), nil
 	} else if strings.Contains(err.Error(), "no such file or directory") {
 		return "", nil
 	}

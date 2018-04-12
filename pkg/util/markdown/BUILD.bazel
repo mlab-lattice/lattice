@@ -5,4 +5,5 @@ go_library(
     srcs = ["markdown.go"],
     importpath = "github.com/mlab-lattice/lattice/pkg/util/markdown",
     visibility = ["//visibility:public"],
+    deps = ["//pkg/util/cli:go_default_library"],
 )

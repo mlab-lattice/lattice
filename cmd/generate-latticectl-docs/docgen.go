@@ -52,4 +52,5 @@ func main() {
 	// writes markdown to the file
 	markdownBytes, err := ioutil.ReadAll(reader)
 	fo.Write(markdownBytes)
+	fo.Close()
 }
