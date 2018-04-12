@@ -50,7 +50,7 @@ func (c *TeardownClient) List() ([]v1.Teardown, error) {
 
 	if statusCode == http.StatusOK {
 		var teardowns []v1.Teardown
-		err = rest.UnmarshalBodyJSON(body, teardowns)
+		err = rest.UnmarshalBodyJSON(body, &teardowns)
 		return teardowns, err
 	}
 
