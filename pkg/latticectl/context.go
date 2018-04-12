@@ -68,7 +68,7 @@ func (c *ConfigFileContext) writeConfig(cfg *Config) error {
 		return fmt.Errorf("unable to make directory: %v", err)
 	}
 
-	if err := ioutil.WriteFile(c.Path, data, 0666); err != nil {
+	if err := ioutil.WriteFile(c.Path, data, 0644); err != nil {
 		return fmt.Errorf("unable to write config file: %v", err)
 	}
 
