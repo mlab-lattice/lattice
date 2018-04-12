@@ -58,7 +58,7 @@ func LatticeBootstrapperFlags() (cli.Flags, *LatticeBootstrapperOptions) {
 		},
 
 		&cli.StringFlag{
-			Name:     "route-53-private-zone-id",
+			Name:     "route53-private-zone-id",
 			Required: true,
 			Target:   &options.Route53PrivateZoneID,
 		},

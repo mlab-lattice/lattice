@@ -6,12 +6,8 @@ go_base_images = {
     True: "@go_debug_image_base//image",
 }
 
-build_user_stamp_prefix = "{BUILD_USER}-"
 debug_prefix = "debug-"
 push_prefix = "push-"
-registry = "gcr.io/lattice-dev"
-stable_prefix = "stable-"
-user_prefix = "user-"
 
 def lattice_base_container_images(base_images):
   for image in base_images:
@@ -49,20 +45,20 @@ def lattice_go_container_image(target, debug=False):
       visibility = ["//visibility:public"],
   )
 
-  container_push(
-      name = push_prefix + stable_prefix + name,
-      format = "Docker",
-      image = ":" + name,
-      registry = registry,
-      repository = stable_prefix + name,
-  )
+#  container_push(
+#      name = push_prefix + stable_prefix + name,
+#      format = "Docker",
+#      image = ":" + name,
+#      registry = registry,
+#      repository = stable_prefix + name,
+#  )
 
   container_push(
-      name = push_prefix + user_prefix + name,
+      name = push_prefix + name,
       format = "Docker",
       image = ":" + name,
-      registry = registry,
-      repository = build_user_stamp_prefix + name,
+      registry = "{REGISTRY}",
+      repository = "{CHANNEL}-" + name,
       stamp = True,
   )
 
@@ -74,20 +70,20 @@ def lattice_go_container_image(target, debug=False):
   )
 
 
-  container_push(
-      name = push_prefix + stable_prefix + debug_name,
-      format = "Docker",
-      image = ":" + debug_name,
-      registry = registry,
-      repository = stable_prefix + debug_name,
-  )
+#  container_push(
+#      name = push_prefix + stable_prefix + debug_name,
+#      format = "Docker",
+#      image = ":" + debug_name,
+#      registry = registry,
+#      repository = stable_prefix + debug_name,
+#  )
 
 
   container_push(
-      name = push_prefix + user_prefix + debug_name,
+      name = push_prefix + debug_name,
       format = "Docker",
       image = ":" + debug_name,
-      registry = registry,
-      repository = build_user_stamp_prefix + debug_name,
+      registry = "{REGISTRY}",
+      repository = "{CHANNEL}-" + debug_name,
       stamp = True,
   )

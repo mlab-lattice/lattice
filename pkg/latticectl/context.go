@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"os"
 	"os/user"
+	"path"
 
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 )
@@ -63,7 +64,11 @@ func (c *ConfigFileContext) writeConfig(cfg *Config) error {
 		return fmt.Errorf("unable to marshal config: %v", err)
 	}
 
-	if err := ioutil.WriteFile(c.Path, data, 0666); err != nil {
+	if err := os.MkdirAll(path.Dir(c.Path), 0755); err != nil {
+		return fmt.Errorf("unable to make directory: %v", err)
+	}
+
+	if err := ioutil.WriteFile(c.Path, data, 0644); err != nil {
 		return fmt.Errorf("unable to write config file: %v", err)
 	}
 
@@ -98,14 +103,26 @@ func (c *ConfigFileContext) Get() (Context, error) {
 
 func (c *ConfigFileContext) Set(lattice string, system v1.SystemID) error {
 	// Want to read the freshest version of the config before overwritting it.
-	// TODO: race condition here against setting other things in the config file
+	// N.B.: race condition here against setting other things in the config file
 	cfg, err := c.readConfig()
 	if err != nil {
 		return err
 	}
 
+	if cfg == nil {
+		cfg = &Config{}
+	}
+
+	if cfg.Context == nil {
+		cfg.Context = &ConfigContext{}
+	}
+
 	cfg.Context.Lattice = lattice
 	cfg.Context.System = system
+
+	c.config = cfg
+	c.configSet = true
+
 	return c.writeConfig(cfg)
 }
 

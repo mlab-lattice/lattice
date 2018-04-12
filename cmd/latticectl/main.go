@@ -2,9 +2,9 @@ package main
 
 import (
 	"github.com/mlab-lattice/lattice/pkg/latticectl"
-	"github.com/mlab-lattice/lattice/pkg/latticectl/commands/bootstrap"
-	"github.com/mlab-lattice/lattice/pkg/latticectl/commands/bootstrap/kubernetes"
 	"github.com/mlab-lattice/lattice/pkg/latticectl/commands/context"
+	"github.com/mlab-lattice/lattice/pkg/latticectl/commands/kubernetes"
+	"github.com/mlab-lattice/lattice/pkg/latticectl/commands/kubernetes/bootstrap"
 	"github.com/mlab-lattice/lattice/pkg/latticectl/commands/local"
 	"github.com/mlab-lattice/lattice/pkg/latticectl/commands/services"
 	"github.com/mlab-lattice/lattice/pkg/latticectl/commands/systems"
@@ -21,17 +21,16 @@ var Latticectl = latticectl.Latticectl{
 		Name:  "latticectl",
 		Short: "command line utility for interacting with lattices and systems",
 		Subcommands: []latticectl.Command{
-			// Bootstrap commands
-			&bootstrap.Command{
-				Subcommands: []latticectl.Command{
-					&kubernetes.Command{},
-				},
-			},
 			// Context commands
 			&context.Command{
 				Subcommands: []latticectl.Command{
-					&context.GetCommand{},
 					&context.SetCommand{},
+				},
+			},
+			// Kubernetes commands
+			&kubernetes.Command{
+				Subcommands: []latticectl.Command{
+					&bootstrap.Command{},
 				},
 			},
 			// Local commands

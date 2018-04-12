@@ -32,19 +32,19 @@ func LatticeBoostrapperFlag(serviceMesh *string) (cli.Flag, *ClusterBootstrapper
 		Flags: map[string]cli.Flags{
 			Envoy: envoyFlags,
 		},
-		FlagChooser: func() (string, error) {
+		FlagChooser: func() (*string, error) {
 			if serviceMesh == nil {
-				return "", fmt.Errorf("serviceMesh cannot be nil")
+				return nil, fmt.Errorf("serviceMesh cannot be nil")
 			}
 
 			switch *serviceMesh {
 			case Envoy:
 				options.Envoy = envoyOptions
 			default:
-				return "", fmt.Errorf("unsupported service mesh %v", *serviceMesh)
+				return nil, fmt.Errorf("unsupported service mesh %v", *serviceMesh)
 			}
 
-			return *serviceMesh, nil
+			return serviceMesh, nil
 		},
 	}
 

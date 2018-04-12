@@ -194,7 +194,7 @@ func (c *Controller) syncServiceStatus(
 		for _, pod := range pods {
 			if pod.DeletionTimestamp != nil {
 				state = latticev1.ServiceStateScaling
-				staleInstances += 1
+				staleInstances++
 			}
 		}
 	}

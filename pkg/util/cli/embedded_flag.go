@@ -10,13 +10,12 @@ import (
 // For example, if c is an embedded flag with two string flags, bar and buzz,
 // you could say --c "bar=hello,buzz=world".
 type EmbeddedFlag struct {
-	Name      string
-	Required  bool
-	Short     string
-	Usage     string
-	Flags     Flags
-	Delimiter string
-	target    []string
+	Name     string
+	Required bool
+	Short    string
+	Usage    string
+	Flags    Flags
+	target   []string
 }
 
 func (f *EmbeddedFlag) GetName() string {
@@ -109,7 +108,7 @@ type DelayedEmbeddedFlag struct {
 	Usage       string
 	Flags       map[string]Flags
 	Delimiter   string
-	FlagChooser func() (string, error)
+	FlagChooser func() (*string, error)
 	target      []string
 }
 
@@ -155,19 +154,27 @@ func (f *DelayedEmbeddedFlag) parse() error {
 		return err
 	}
 
-	flags, ok := f.Flags[choice]
+	if choice == nil {
+		if f.Required {
+			// TODO: pretty obtuse error for a user to receive
+			return fmt.Errorf("flag is required, but no choice was made")
+		}
+		return nil
+	}
+
+	flags, ok := f.Flags[*choice]
 	if !ok {
+		// TODO: pretty obtuse error for a user to receive
 		return fmt.Errorf("invalid flag choice %v", choice)
 	}
 
 	embedded := &EmbeddedFlag{
-		Name:      f.Name,
-		Required:  f.Required,
-		Short:     f.Short,
-		Usage:     f.Usage,
-		Flags:     flags,
-		Delimiter: f.Delimiter,
-		target:    f.target,
+		Name:     f.Name,
+		Required: f.Required,
+		Short:    f.Short,
+		Usage:    f.Usage,
+		Flags:    flags,
+		target:   f.target,
 	}
 
 	if err := embedded.Validate(); err != nil {
