@@ -32,9 +32,7 @@ func GenerateMarkdown(cmd *cli.Command) (io.Reader, error) {
 }
 
 // writeDoc writes command tree to file
-func writeDoc(bcPtr *cli.Command, writer io.Writer) error {
-	bc := *bcPtr
-
+func writeDoc(bc *cli.Command, writer io.Writer) error {
 	// header
 	fmt.Fprint(writer, markdown.GetH1(bc.Name))
 	fmt.Fprint(writer, markdown.GetH2("Introduction"))
@@ -49,7 +47,7 @@ func writeDoc(bcPtr *cli.Command, writer io.Writer) error {
 	// reads the tree and appends commands into the commandMapping
 	for _, childCmd := range bc.Subcommands {
 		var cmds []cli.Command
-		recurse(childCmd, &cmds, writer, &commandMapping)
+		recurse(childCmd, cmds, writer, commandMapping)
 	}
 
 	// uses sorted map keys to iterate over the map in alphabetical
@@ -59,7 +57,7 @@ func writeDoc(bcPtr *cli.Command, writer io.Writer) error {
 	}
 	sort.Strings(keys)
 	for _, key := range keys {
-		err := printCommand(&key, commandMapping[key], writer)
+		err := printCommand(key, commandMapping[key], writer)
 		if err != nil {
 			return err
 		}
@@ -70,12 +68,7 @@ func writeDoc(bcPtr *cli.Command, writer io.Writer) error {
 
 // recurse recursively works through the command tree
 // ancestorCommands are commands that precede the current cmd in the hierarchy
-func recurse(cmdPtr *cli.Command, ancestorCommandsPtr *[]cli.Command, writer io.Writer, commandMappingPtr *map[string]*cli.Command) {
-
-	ancestorCommands := *ancestorCommandsPtr
-	cmd := *cmdPtr
-	commandMapping := *commandMappingPtr
-
+func recurse(cmd *cli.Command, ancestorCommands []cli.Command, writer io.Writer, commandMapping map[string]*cli.Command) {
 	if cmd.Name == "" {
 		return
 	}
@@ -87,23 +80,21 @@ func recurse(cmdPtr *cli.Command, ancestorCommandsPtr *[]cli.Command, writer io.
 	}
 	ancestorCmdsStr += cmd.Name
 
-	commandMapping[ancestorCmdsStr] = cmdPtr
+	commandMapping[ancestorCmdsStr] = cmd
 
 	// adds this command to the list of ancestor commands to be passed to its children when recursing
-	ancestorCommands = append(ancestorCommands, cmd)
+	ancestorCommands = append(ancestorCommands, *cmd)
 
 	for _, tempCmd := range cmd.Subcommands {
-		recurse(tempCmd, &ancestorCommands, writer, commandMappingPtr)
+		recurse(tempCmd, ancestorCommands, writer, commandMapping)
 	}
 }
 
 // printCommand prints the command docs
 // fullCmdName includes all command ancestor except the root command (e.g. 'latticectl')
-func printCommand(fullCmdName *string, cmdPtr *cli.Command, writer io.Writer) error {
-	cmd := *cmdPtr
-
+func printCommand(fullCmdName string, cmd *cli.Command, writer io.Writer) error {
 	// header command name (add extra #s here if want hierarchy)
-	fmt.Fprint(writer, markdown.GetH3(*fullCmdName))
+	fmt.Fprint(writer, markdown.GetH3(fullCmdName))
 
 	// description
 	if cmd.Short != "" {
@@ -122,7 +113,7 @@ func printCommand(fullCmdName *string, cmdPtr *cli.Command, writer io.Writer) er
 
 	// validates that required args are defined first
 	if len(cmd.Args) > 0 {
-		writeArgs(writer, &cmd.Args)
+		writeArgs(writer, cmd.Args)
 	}
 
 	// write flags sorting them first by required/not required and then alphabetically
@@ -134,14 +125,14 @@ func printCommand(fullCmdName *string, cmdPtr *cli.Command, writer io.Writer) er
 			}
 			return result
 		})
-		writeFlags(writer, &cmd.Flags)
+		writeFlags(writer, cmd.Flags)
 	}
 
 	return nil
 }
 
 // writeArgs writes args section to a markdown table
-func writeArgs(writer io.Writer, cmdArgs *cli.Args) {
+func writeArgs(writer io.Writer, cmdArgs cli.Args) {
 	fmt.Fprint(writer, "**Args**:  \n\n")
 
 	// table header
@@ -149,8 +140,8 @@ func writeArgs(writer io.Writer, cmdArgs *cli.Args) {
 	fmt.Fprint(writer, "| --- | --- | \n")
 
 	// table contents
-	for _, tempArg := range *cmdArgs {
-		argRow := getArgTableRow(&tempArg)
+	for _, tempArg := range cmdArgs {
+		argRow := getArgTableRow(tempArg)
 		fmt.Fprint(writer, argRow)
 	}
 
@@ -159,7 +150,7 @@ func writeArgs(writer io.Writer, cmdArgs *cli.Args) {
 }
 
 // writeFlags writes flags section to a markdown table
-func writeFlags(writer io.Writer, cmdFlags *cli.Flags) {
+func writeFlags(writer io.Writer, cmdFlags cli.Flags) {
 	fmt.Fprint(writer, "**Flags**:  \n\n")
 
 	// table header
@@ -167,8 +158,8 @@ func writeFlags(writer io.Writer, cmdFlags *cli.Flags) {
 	fmt.Fprint(writer, "| --- | --- | \n")
 
 	// table contents
-	for _, tempFlag := range *cmdFlags {
-		flagRow := getFlagTableRow(&tempFlag)
+	for _, tempFlag := range cmdFlags {
+		flagRow := getFlagTableRow(tempFlag)
 		fmt.Fprint(writer, flagRow)
 	}
 
@@ -177,8 +168,8 @@ func writeFlags(writer io.Writer, cmdFlags *cli.Flags) {
 }
 
 // getFlagTableRow generates flag table row
-func getFlagTableRow(flagPtr *cli.Flag) string {
-	currentFlag := *flagPtr
+func getFlagTableRow(flagPtr cli.Flag) string {
+	currentFlag := flagPtr
 	var isBoolFlag bool
 
 	if reflect.TypeOf(currentFlag).String() == "*command.BoolFlag" {
@@ -215,8 +206,8 @@ func getFlagTableRow(flagPtr *cli.Flag) string {
 }
 
 // getArgTableRow generates arg table row
-func getArgTableRow(argPtr *cli.Arg) string {
-	currentArg := *argPtr
+func getArgTableRow(argPtr cli.Arg) string {
+	currentArg := argPtr
 
 	argRow := "| `" + currentArg.Name + "` "
 
@@ -232,13 +223,13 @@ func getArgTableRow(argPtr *cli.Arg) string {
 }
 
 // getMarkdownFileContent reads external Markdown file content
-func getMarkdownFileContent(cmdName *string) (string, error) {
+func getMarkdownFileContent(cmdName string) (string, error) {
 
 	// root path
 	markdownPath := InputDocsDir
 
 	// appends the remainder of the file path
-	words := strings.Fields(*cmdName)
+	words := strings.Fields(cmdName)
 	for _, subCmd := range words {
 		markdownPath += "/" + subCmd
 	}
