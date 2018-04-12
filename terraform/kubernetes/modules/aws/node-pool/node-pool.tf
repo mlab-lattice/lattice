@@ -25,19 +25,19 @@ variable "kubelet_port" {
 #
 
 output "autoscaling_group_id" {
-  value = "${module.worker_node.autoscaling_group_id}"
+  value = "${module.node.autoscaling_group_id}"
 }
 
 output "autoscaling_group_name" {
-  value = "${module.worker_node.autoscaling_group_name}"
+  value = "${module.node.autoscaling_group_name}"
 }
 
 output "autoscaling_group_desired_capacity" {
-  value = "${module.worker_node.autoscaling_group_desired_capacity}"
+  value = "${module.node.autoscaling_group_desired_capacity}"
 }
 
 output "security_group_id" {
-  value = "${module.worker_node.security_group_id}"
+  value = "${module.node.security_group_id}"
 }
 
 ###############################################################################
@@ -124,7 +124,7 @@ data "aws_iam_policy_document" "node_pool_role_policy_document" {
 # worker node
 #
 
-module "worker_node" {
+module "node" {
   source = "../node/base"
 
   lattice_id = "${var.lattice_id}"
@@ -148,7 +148,7 @@ module "worker_node" {
 # Security Group
 
 resource "aws_security_group_rule" "allow_kubelet_from_master" {
-  security_group_id = "${module.worker_node.security_group_id}"
+  security_group_id = "${module.node.security_group_id}"
 
   protocol                 = "tcp"
   from_port                = "${var.kubelet_port}"

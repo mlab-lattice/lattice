@@ -124,11 +124,11 @@ data "aws_iam_policy_document" "build_node_role_policy_document" {
 }
 
 ###############################################################################
-# worker node
+# node
 #
 
-module "worker_node" {
-  source = "../../node/base"
+module "node" {
+  source = "../base"
 
   lattice_id = "${var.lattice_id}"
   name       = "build-${var.build_id}"
@@ -151,7 +151,7 @@ module "worker_node" {
 # Security Group
 
 resource "aws_security_group_rule" "allow_kubelet_from_master" {
-  security_group_id = "${module.worker_node.security_group_id}"
+  security_group_id = "${module.node.security_group_id}"
 
   protocol                 = "tcp"
   from_port                = "${var.kubelet_port}"
