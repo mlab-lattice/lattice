@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"os"
 	"os/user"
+	"path"
 
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 )
@@ -63,7 +64,11 @@ func (c *ConfigFileContext) writeConfig(cfg *Config) error {
 		return fmt.Errorf("unable to marshal config: %v", err)
 	}
 
-	if err := ioutil.WriteFile(c.Path, data, 0666); err != nil {
+	if err := os.MkdirAll(path.Dir(c.Path), 0755); err != nil {
+		return fmt.Errorf("unable to make directory: %v", err)
+	}
+
+	if err := ioutil.WriteFile(c.Path, data, 0644); err != nil {
 		return fmt.Errorf("unable to write config file: %v", err)
 	}
 
