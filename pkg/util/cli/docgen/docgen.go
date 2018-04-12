@@ -2,55 +2,44 @@ package docgen
 
 import (
 	"bufio"
-	"github.com/mlab-lattice/lattice/pkg/util/cli"
+	"bytes"
+	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
-	"os"
 	"reflect"
 	"sort"
 	"strings"
+
+	"github.com/mlab-lattice/lattice/pkg/util/cli"
+	"github.com/mlab-lattice/lattice/pkg/util/markdown"
 )
 
 var InputDocsDir string
 
-
-func GenerateMarkdown(cmd *cli.Command, outputDir string) error{
-	// opens docs output file
-	fo, err := os.Create(outputDir + "/doc.md")
-	if err != nil {
-		return err
-	}
-
-	// closes docs output file on exit
-	defer func() error {
-		if err := fo.Close(); err != nil {
-			return err
-		}
-		return nil
-	}()
-
-	writer := bufio.NewWriter(fo)
+func GenerateMarkdown(cmd *cli.Command) (io.Reader, error) {
+	var buffer bytes.Buffer
+	writer := bufio.NewWriter(&buffer)
 
 	writeErr := writeDoc(cmd, writer)
 	if writeErr != nil {
-		return writeErr
+		return nil, writeErr
 	}
 
 	writer.Flush()
 
-	return nil
+	return bytes.NewReader(buffer.Bytes()), nil
 }
 
-
 // writeDoc writes command tree to file
-func writeDoc(bcPtr *cli.Command, writer *bufio.Writer) error {
+func writeDoc(bcPtr *cli.Command, writer io.Writer) error {
 	bc := *bcPtr
 
 	// header
-	writer.WriteString("# " + bc.Name + "\n")
-	writer.WriteString("## Introduction \n")
-	writer.WriteString(bc.Short + "\n")
-	writer.WriteString("## Commands \n")
+	fmt.Fprint(writer, markdown.GetH1(bc.Name))
+	fmt.Fprint(writer, markdown.GetH2("Introduction"))
+	fmt.Fprint(writer, bc.Short+"\n")
+	fmt.Fprint(writer, markdown.GetH2("Commands"))
 
 	// mapping between command name (e.g. `laasctl systems builds`) and the command.
 	// the output to file can therefore be sorted by command name (ascending),
@@ -79,10 +68,9 @@ func writeDoc(bcPtr *cli.Command, writer *bufio.Writer) error {
 	return nil
 }
 
-
 // recurse recursively works through the command tree
 // ancestorCommands are commands that precede the current cmd in the hierarchy
-func recurse(cmdPtr *cli.Command, ancestorCommandsPtr *[]cli.Command, writer *bufio.Writer, commandMappingPtr *map[string]*cli.Command) {
+func recurse(cmdPtr *cli.Command, ancestorCommandsPtr *[]cli.Command, writer io.Writer, commandMappingPtr *map[string]*cli.Command) {
 
 	ancestorCommands := *ancestorCommandsPtr
 	cmd := *cmdPtr
@@ -109,18 +97,17 @@ func recurse(cmdPtr *cli.Command, ancestorCommandsPtr *[]cli.Command, writer *bu
 	}
 }
 
-
 // printCommand prints the command docs
 // fullCmdName includes all command ancestor except the root command (e.g. 'latticectl')
-func printCommand(fullCmdName *string, cmdPtr *cli.Command, writer *bufio.Writer) error {
+func printCommand(fullCmdName *string, cmdPtr *cli.Command, writer io.Writer) error {
 	cmd := *cmdPtr
 
 	// header command name (add extra #s here if want hierarchy)
-	writer.WriteString("### " + *fullCmdName + "  \n")
+	fmt.Fprint(writer, markdown.GetH3(*fullCmdName))
 
 	// description
 	if cmd.Short != "" {
-		writer.WriteString("*" + cmd.Short + "*  \n\n")
+		fmt.Fprint(writer, "*"+cmd.Short+"*  \n\n")
 	}
 
 	// includes any extra markdown command description
@@ -130,14 +117,13 @@ func printCommand(fullCmdName *string, cmdPtr *cli.Command, writer *bufio.Writer
 	}
 
 	if markdownContent != "" {
-		writer.WriteString(markdownContent)
+		fmt.Fprint(writer, markdownContent)
 	}
 
 	// validates that required args are defined first
 	if len(cmd.Args) > 0 {
 		writeArgs(writer, &cmd.Args)
 	}
-
 
 	// write flags sorting them first by required/not required and then alphabetically
 	if len(cmd.Flags) > 0 {
@@ -154,44 +140,41 @@ func printCommand(fullCmdName *string, cmdPtr *cli.Command, writer *bufio.Writer
 	return nil
 }
 
-
 // writeArgs writes args section to a markdown table
-func writeArgs(writer *bufio.Writer, cmdArgs *cli.Args) {
-	writer.WriteString("**Args**:  \n\n")
+func writeArgs(writer io.Writer, cmdArgs *cli.Args) {
+	fmt.Fprint(writer, "**Args**:  \n\n")
 
 	// table header
-	writer.WriteString("| Name | Description | \n")
-	writer.WriteString("| --- | --- | \n")
+	fmt.Fprint(writer, "| Name | Description | \n")
+	fmt.Fprint(writer, "| --- | --- | \n")
 
 	// table contents
 	for _, tempArg := range *cmdArgs {
 		argRow := getArgTableRow(&tempArg)
-		writer.WriteString(argRow)
+		fmt.Fprint(writer, argRow)
 	}
 
 	// new line separator
-	writer.WriteString("\n\n")
+	fmt.Fprint(writer, "\n\n")
 }
 
-
 // writeFlags writes flags section to a markdown table
-func writeFlags(writer *bufio.Writer, cmdFlags *cli.Flags) {
-	writer.WriteString("**Flags**:  \n\n")
+func writeFlags(writer io.Writer, cmdFlags *cli.Flags) {
+	fmt.Fprint(writer, "**Flags**:  \n\n")
 
 	// table header
-	writer.WriteString("| Name | Description | \n")
-	writer.WriteString("| --- | --- | \n")
+	fmt.Fprint(writer, "| Name | Description | \n")
+	fmt.Fprint(writer, "| --- | --- | \n")
 
 	// table contents
 	for _, tempFlag := range *cmdFlags {
 		flagRow := getFlagTableRow(&tempFlag)
-		writer.WriteString(flagRow)
+		fmt.Fprint(writer, flagRow)
 	}
 
 	// new line separator
-	writer.WriteString("\n\n")
+	fmt.Fprint(writer, "\n\n")
 }
-
 
 // getFlagTableRow generates flag table row
 func getFlagTableRow(flagPtr *cli.Flag) string {
@@ -231,7 +214,6 @@ func getFlagTableRow(flagPtr *cli.Flag) string {
 	return flagRow
 }
 
-
 // getArgTableRow generates arg table row
 func getArgTableRow(argPtr *cli.Arg) string {
 	currentArg := *argPtr
@@ -248,7 +230,6 @@ func getArgTableRow(argPtr *cli.Arg) string {
 
 	return argRow
 }
-
 
 // getMarkdownFileContent reads external Markdown file content
 func getMarkdownFileContent(cmdName *string) (string, error) {
