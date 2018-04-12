@@ -31,7 +31,7 @@ func WriteArgFlagHeader(w io.Writer, text string) {
 }
 
 func WriteEmphasisedText(w io.Writer, text string) {
-	fmt.Fprint(w, "*%s*", text)
+	fmt.Fprintf(w, "*%s*", text)
 }
 
 // WriteFlagTableRow writes flag table row
