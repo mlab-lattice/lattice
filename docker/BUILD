@@ -1,5 +1,5 @@
 load("@io_bazel_rules_docker//container:container.bzl", "container_image")
-load("//bazel/docker:image.bzl", "lattice_base_container_images", "lattice_container_images")
+load("//bazel/docker:image.bzl", "lattice_base_go_container_image", "lattice_go_container_image")
 load("@package_bundle//file:packages.bzl", "packages")
 
 # base container image layers
@@ -48,29 +48,61 @@ container_image(
     visibility = ["//visibility:public"],
 )
 
-# base container images
-base_images = [
-    "iptables",
-    "openssh-client",
-    "terraform",
-]
+# base container go images
+lattice_base_go_container_image(
+    name = "iptables",
+    base_layer_target = ":base-iptables",
+)
 
-lattice_base_container_images(base_images)
+lattice_base_go_container_image(
+    name = "openssh-client",
+    base_layer_target = ":base-openssh-client",
+)
 
-# lattice container images
-# this will yield the following rules:
-# (container-image) foo
-# (container-image) debug-foo
-# (container-push) push-foo
-# (container-push) push-debug-foo
-go_targets = [
-    ("kubernetes-api-server-rest", None, "cmd/kubernetes/api-server/rest"),
-    ("kubernetes-component-builder", "openssh-client", "cmd/kubernetes/component-builder"),
-    ("kubernetes-envoy-prepare", "iptables", "cmd/kubernetes/envoy/prepare"),
-    ("kubernetes-envoy-xds-api-rest-per-node", None, "cmd/kubernetes/envoy/xdsapi/v1/rest/per-node"),
-    ("kubernetes-lattice-controller-manager", "terraform", "cmd/kubernetes/lattice-controller-manager"),
-    ("kubernetes-local-dns-controller", None, "cmd/kubernetes/local/dns/controller"),
-    ("latticectl", None, "cmd/latticectl"),
-]
+lattice_base_go_container_image(
+    name = "terraform",
+    base_layer_target = ":base-terraform",
+)
 
-lattice_container_images(go_targets)
+# lattice go container images
+lattice_go_container_image(
+    name = "kubernetes-api-server-rest",
+    base_image = None,
+    path = "cmd/kubernetes/api-server/rest",
+)
+
+lattice_go_container_image(
+    name = "kubernetes-component-builder",
+    base_image = "openssh-client",
+    path = "cmd/kubernetes/component-builder",
+)
+
+lattice_go_container_image(
+    name = "kubernetes-envoy-prepare",
+    base_image = "iptables",
+    path = "cmd/kubernetes/envoy/prepare",
+)
+
+lattice_go_container_image(
+    name = "kubernetes-envoy-xds-api-rest-per-node",
+    base_image = None,
+    path = "cmd/kubernetes/envoy/xdsapi/v1/rest/per-node",
+)
+
+lattice_go_container_image(
+    name = "kubernetes-lattice-controller-manager",
+    base_image = "terraform",
+    path = "cmd/kubernetes/lattice-controller-manager",
+)
+
+lattice_go_container_image(
+    name = "kubernetes-local-dns-controller",
+    base_image = None,
+    path = "cmd/kubernetes/local/dns/controller",
+)
+
+lattice_go_container_image(
+    name = "latticectl",
+    base_image = None,
+    path = "cmd/latticectl",
+)
