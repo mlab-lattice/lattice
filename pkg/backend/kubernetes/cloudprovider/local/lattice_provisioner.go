@@ -205,7 +205,7 @@ func (p *DefaultLocalLatticeProvisioner) bootstrap(address string, name string) 
 							Args: append(
 								bootstrapArgs,
 								[]string{
-									"bootstrap:kubernetes",
+									"kubernetes:bootstrap",
 									"--controller-manager-var", fmt.Sprintf("image=%v", p.getLatticeContainerImage("kubernetes-lattice-controller-manager")),
 									"--controller-manager-var", "args=-v=5",
 									"--controller-manager-var", "args=--alsologtostderr",
