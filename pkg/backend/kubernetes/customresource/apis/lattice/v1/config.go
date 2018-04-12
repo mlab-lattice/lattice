@@ -36,8 +36,8 @@ type ConfigCloudProviderLocal struct {
 }
 
 type ConfigCloudProviderAWS struct {
-	BaseNodeAMIID string `json:"baseNodeAmiId"`
-	KeyName       string `json:"keyName"`
+	WorkerNodeAMIID string `json:"workerNodeAmiId"`
+	KeyName         string `json:"keyName"`
 }
 
 type ConfigComponentBuild struct {

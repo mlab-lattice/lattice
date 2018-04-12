@@ -19,8 +19,8 @@ type LatticeBootstrapperOptions struct {
 	SubnetIDs                 []string
 	MasterNodeSecurityGroupID string
 
-	BaseNodeAMIID string
-	KeyName       string
+	WorkerNodeAMIID string
+	KeyName         string
 }
 
 func NewLatticeBootstrapper(options *LatticeBootstrapperOptions) *DefaultAWSLatticeBootstrapper {
@@ -33,8 +33,8 @@ func NewLatticeBootstrapper(options *LatticeBootstrapperOptions) *DefaultAWSLatt
 		subnetIDs:                 options.SubnetIDs,
 		masterNodeSecurityGroupID: options.MasterNodeSecurityGroupID,
 
-		baseNodeAMIID: options.BaseNodeAMIID,
-		keyName:       options.KeyName,
+		workerNodeAMIID: options.WorkerNodeAMIID,
+		keyName:         options.KeyName,
 	}
 }
 
@@ -73,9 +73,9 @@ func LatticeBootstrapperFlags() (cli.Flags, *LatticeBootstrapperOptions) {
 			Target:   &options.MasterNodeSecurityGroupID,
 		},
 		&cli.StringFlag{
-			Name:     "base-node-ami-id",
+			Name:     "worker-node-ami-id",
 			Required: true,
-			Target:   &options.BaseNodeAMIID,
+			Target:   &options.WorkerNodeAMIID,
 		},
 		&cli.StringFlag{
 			Name:     "key-name",
@@ -95,14 +95,14 @@ type DefaultAWSLatticeBootstrapper struct {
 	subnetIDs                 []string
 	masterNodeSecurityGroupID string
 
-	baseNodeAMIID string
-	keyName       string
+	workerNodeAMIID string
+	keyName         string
 }
 
 func (cp *DefaultAWSLatticeBootstrapper) BootstrapLatticeResources(resources *bootstrapper.Resources) {
 	resources.Config.Spec.CloudProvider.AWS = &latticev1.ConfigCloudProviderAWS{
-		BaseNodeAMIID: cp.baseNodeAMIID,
-		KeyName:       cp.keyName,
+		WorkerNodeAMIID: cp.workerNodeAMIID,
+		KeyName:         cp.keyName,
 	}
 
 	for _, daemonSet := range resources.DaemonSets {

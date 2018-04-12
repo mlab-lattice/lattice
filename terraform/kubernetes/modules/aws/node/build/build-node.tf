@@ -12,7 +12,7 @@ variable "build_subnet_ids" {}
 variable "build_id" {}
 variable "num_instances" {}
 variable "instance_type" {}
-variable "base_node_ami_id" {}
+variable "worker_node_ami_id" {}
 variable "key_name" {}
 
 variable "master_node_security_group_id" {}
@@ -124,11 +124,11 @@ data "aws_iam_policy_document" "build_node_role_policy_document" {
 }
 
 ###############################################################################
-# base node
+# node
 #
 
-module "base_node" {
-  source = "../../node/base"
+module "node" {
+  source = "../base"
 
   lattice_id = "${var.lattice_id}"
   name       = "build-${var.build_id}"
@@ -141,7 +141,7 @@ module "base_node" {
   subnet_ids    = "${var.build_subnet_ids}"
   num_instances = "${var.num_instances}"
   instance_type = "${var.instance_type}"
-  ami_id        = "${var.base_node_ami_id}"
+  ami_id        = "${var.worker_node_ami_id}"
   key_name      = "${var.key_name}"
 
   iam_instance_profile_role_name = "${aws_iam_role.build_node_role.name}"
@@ -151,7 +151,7 @@ module "base_node" {
 # Security Group
 
 resource "aws_security_group_rule" "allow_kubelet_from_master" {
-  security_group_id = "${module.base_node.security_group_id}"
+  security_group_id = "${module.node.security_group_id}"
 
   protocol                 = "tcp"
   from_port                = "${var.kubelet_port}"
