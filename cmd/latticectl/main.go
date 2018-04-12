@@ -24,7 +24,6 @@ var Latticectl = latticectl.Latticectl{
 			// Context commands
 			&context.Command{
 				Subcommands: []latticectl.Command{
-					&context.GetCommand{},
 					&context.SetCommand{},
 				},
 			},

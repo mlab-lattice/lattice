@@ -43,7 +43,7 @@ func (c *ConfigFileContext) readConfig() (*Config, error) {
 	data, err := ioutil.ReadFile(c.Path)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return nil, fmt.Errorf("Config file does not exist: %v", err)
+			return nil, nil
 		}
 
 		return nil, fmt.Errorf("unable to read config file: %v", err)
@@ -98,14 +98,26 @@ func (c *ConfigFileContext) Get() (Context, error) {
 
 func (c *ConfigFileContext) Set(lattice string, system v1.SystemID) error {
 	// Want to read the freshest version of the config before overwritting it.
-	// TODO: race condition here against setting other things in the config file
+	// N.B.: race condition here against setting other things in the config file
 	cfg, err := c.readConfig()
 	if err != nil {
 		return err
 	}
 
+	if cfg == nil {
+		cfg = &Config{}
+	}
+
+	if cfg.Context == nil {
+		cfg.Context = &ConfigContext{}
+	}
+
 	cfg.Context.Lattice = lattice
 	cfg.Context.System = system
+
+	c.config = cfg
+	c.configSet = true
+
 	return c.writeConfig(cfg)
 }
 
