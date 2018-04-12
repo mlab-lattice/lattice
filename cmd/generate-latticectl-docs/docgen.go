@@ -51,6 +51,14 @@ func main() {
 
 	// writes markdown to the file
 	markdownBytes, err := ioutil.ReadAll(reader)
-	fo.Write(markdownBytes)
+	if err != nil {
+		log.Fatalf("FATAL: Error while reading from markdown buffer: %s", err)
+	}
+
+	_, writeError := fo.Write(markdownBytes)
+	if writeError != nil {
+		log.Fatalf("FATAL: Error while writing markdown buffer to file: %s", err)
+	}
+
 	fo.Close()
 }
