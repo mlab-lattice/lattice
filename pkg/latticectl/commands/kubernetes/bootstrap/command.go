@@ -22,7 +22,6 @@ import (
 )
 
 type Command struct {
-	Subcommands []latticectl.Command
 }
 
 // Base implements the latticectl.Command interface.
@@ -70,6 +69,61 @@ func (c *Command) Base() (*latticectl.BaseCommand, error) {
 				Name:   "kubeconfig",
 				Target: &kubeConfigPath,
 				Usage:  "path to kubeconfig",
+			},
+
+			&cli.EmbeddedFlag{
+				Name:     "api-var",
+				Required: true,
+				Usage:    "configuration for the api",
+				Flags: cli.Flags{
+					&cli.StringFlag{
+						Name:     "image",
+						Required: true,
+						Target:   &options.MasterComponents.APIServer.Image,
+						Usage:    "docker image to user for the api",
+					},
+					&cli.Int32Flag{
+						Name:    "port",
+						Default: 80,
+						Target:  &options.MasterComponents.APIServer.Port,
+						Usage:   "port the api should listen on",
+					},
+					&cli.BoolFlag{
+						Name:    "host-network",
+						Target:  &options.MasterComponents.APIServer.HostNetwork,
+						Default: false,
+						Usage:   "whether or not to run the api on the host network",
+					},
+					&cli.StringSliceFlag{
+						Name:   "args",
+						Target: &options.MasterComponents.APIServer.Args,
+						Usage:  "extra arguments to pass to the api",
+					},
+				},
+			},
+
+			&cli.EmbeddedFlag{
+				Name:     "controller-manager-var",
+				Required: true,
+				Usage:    "configuration for the controller manager",
+				Flags: cli.Flags{
+					&cli.StringFlag{
+						Name:     "image",
+						Required: true,
+						Target:   &options.MasterComponents.LatticeControllerManager.Image,
+						Usage:    "docker image to user for the controller-manager",
+					},
+					&cli.StringFlag{
+						Name:   "terraform-module-path",
+						Target: &options.MasterComponents.LatticeControllerManager.TerraformModulePath,
+						Usage:  "path to terraform modules",
+					},
+					&cli.StringSliceFlag{
+						Name:   "args",
+						Target: &options.MasterComponents.LatticeControllerManager.Args,
+						Usage:  "extra arguments to pass to the controller manager",
+					},
+				},
 			},
 
 			&cli.EmbeddedFlag{
@@ -123,61 +177,6 @@ func (c *Command) Base() (*latticectl.BaseCommand, error) {
 						Target:  &options.Config.ComponentBuild.DockerArtifact.Push,
 						Default: true,
 						Usage:   "whether or not the component-builder should push the docker artifact (use false for local)",
-					},
-				},
-			},
-
-			&cli.EmbeddedFlag{
-				Name:     "controller-manager-var",
-				Required: true,
-				Usage:    "configuration for the controller manager",
-				Flags: cli.Flags{
-					&cli.StringFlag{
-						Name:     "image",
-						Required: true,
-						Target:   &options.MasterComponents.LatticeControllerManager.Image,
-						Usage:    "docker image to user for the controller-manager",
-					},
-					&cli.StringFlag{
-						Name:   "terraform-module-path",
-						Target: &options.MasterComponents.LatticeControllerManager.TerraformModulePath,
-						Usage:  "path to terraform modules",
-					},
-					&cli.StringSliceFlag{
-						Name:   "args",
-						Target: &options.MasterComponents.LatticeControllerManager.Args,
-						Usage:  "extra arguments to pass to the controller manager",
-					},
-				},
-			},
-
-			&cli.EmbeddedFlag{
-				Name:     "api-var",
-				Required: true,
-				Usage:    "configuration for the api",
-				Flags: cli.Flags{
-					&cli.StringFlag{
-						Name:     "image",
-						Required: true,
-						Target:   &options.MasterComponents.APIServer.Image,
-						Usage:    "docker image to user for the api",
-					},
-					&cli.Int32Flag{
-						Name:    "port",
-						Default: 80,
-						Target:  &options.MasterComponents.APIServer.Port,
-						Usage:   "port the api should listen on",
-					},
-					&cli.BoolFlag{
-						Name:    "host-network",
-						Target:  &options.MasterComponents.APIServer.HostNetwork,
-						Default: false,
-						Usage:   "whether or not to run the api on the host network",
-					},
-					&cli.StringSliceFlag{
-						Name:   "args",
-						Target: &options.MasterComponents.APIServer.Args,
-						Usage:  "extra arguments to pass to the api",
 					},
 				},
 			},
