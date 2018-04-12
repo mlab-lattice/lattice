@@ -4,16 +4,14 @@ import (
 	"flag"
 	"github.com/mlab-lattice/lattice/pkg/util/cli/docgen"
 	"log"
-	"os"
-	"github.com/mlab-lattice/lattice/cmd/latticectl/definition"
+	"github.com/mlab-lattice/lattice/cmd/latticectl/app"
 )
 
 
 func main() {
 	// reading flags from command line
-	projectDir := os.Getenv("GOPATH") + "/src/github.com/mlab-lattice/lattice"
-	inputDocsDirPtr := flag.String("input-docs", projectDir, "Extra markdown docs input directory")
-	outputDocsDirPtr := flag.String("output-docs", projectDir, "Markdown docs output directory")
+	inputDocsDirPtr := flag.String("input-docs", "./docs/cli", "Extra markdown docs input directory")
+	outputDocsDirPtr := flag.String("output-docs", ".", "Markdown docs output directory")
 
 	flag.Parse()
 
@@ -24,12 +22,12 @@ func main() {
 	log.Printf("Input docs dir: '%s' \n", inputDocsDir)
 	log.Printf("Output docs dir: '%s' \n", outputDocsDir)
 
-	latticectl := definition.GenerateLatticeCtl()
+	latticectl := app.Latticectl
 	cmd, er := latticectl.Init()
 
 	if er != nil {
 		log.Fatalf("FATAL: Error while initialising laasctl")
 	}
 
-	docgen.GenerateCliDocs(cmd, *outputDocsDirPtr)
+	docgen.GenerateMarkdown(cmd, *outputDocsDirPtr)
 }

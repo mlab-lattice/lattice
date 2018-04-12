@@ -1,8 +1,8 @@
 package main
 
-import "github.com/mlab-lattice/lattice/cmd/latticectl/definition"
+import "github.com/mlab-lattice/lattice/cmd/latticectl/app"
 
 func main() {
-	latticectl := definition.GenerateLatticeCtl()
+	latticectl := app.Latticectl
 	latticectl.ExecuteColon()
 }
