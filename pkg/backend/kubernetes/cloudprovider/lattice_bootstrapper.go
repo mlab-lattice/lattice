@@ -40,9 +40,9 @@ func LatticeBoostrapperFlag(cloudProvider *string) (cli.Flag, *ClusterBootstrapp
 			AWS:   awsFlags,
 			Local: localFlags,
 		},
-		FlagChooser: func() (string, error) {
+		FlagChooser: func() (*string, error) {
 			if cloudProvider == nil {
-				return "", fmt.Errorf("cloud provider cannot be nil")
+				return nil, fmt.Errorf("cloud provider cannot be nil")
 			}
 
 			switch *cloudProvider {
@@ -51,10 +51,10 @@ func LatticeBoostrapperFlag(cloudProvider *string) (cli.Flag, *ClusterBootstrapp
 			case AWS:
 				options.AWS = awsOptions
 			default:
-				return "", fmt.Errorf("unsupported cloud provider %v", *cloudProvider)
+				return nil, fmt.Errorf("unsupported cloud provider %v", *cloudProvider)
 			}
 
-			return *cloudProvider, nil
+			return cloudProvider, nil
 		},
 	}
 

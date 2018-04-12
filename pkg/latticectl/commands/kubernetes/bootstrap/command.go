@@ -1,4 +1,4 @@
-package kubernetes
+package bootstrap
 
 import (
 	"fmt"
@@ -16,6 +16,7 @@ import (
 	"github.com/mlab-lattice/lattice/pkg/latticectl"
 	"github.com/mlab-lattice/lattice/pkg/util/cli"
 
+	"github.com/mlab-lattice/lattice/pkg/util/terraform"
 	kubeclientset "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 )
@@ -49,11 +50,14 @@ func (c *Command) Base() (*latticectl.BaseCommand, error) {
 	var serviceMesh string
 	serviceMeshBootstrapFlag, serviceMeshBootstrapOptions := servicemesh.LatticeBoostrapperFlag(&serviceMesh)
 
+	var terraformBackend string
+	terraformBackendFlag, terraformBackendOptions := terraform.BackendFlags(&terraformBackend)
+
 	var dryRun bool
 	var print bool
 
 	cmd := &latticectl.BaseCommand{
-		Name: "kubernetes",
+		Name: "bootstrap",
 		Flags: cli.Flags{
 			&cli.StringFlag{
 				Name:    "lattice-id",
@@ -194,6 +198,14 @@ func (c *Command) Base() (*latticectl.BaseCommand, error) {
 			},
 			serviceMeshBootstrapFlag,
 
+			&cli.StringFlag{
+				Name:     "terraform-backend",
+				Required: false,
+				Target:   &terraformBackend,
+				Usage:    "backend for terraform to use ",
+			},
+			terraformBackendFlag,
+
 			&cli.BoolFlag{
 				Name:    "dry-run",
 				Default: false,
@@ -217,6 +229,10 @@ func (c *Command) Base() (*latticectl.BaseCommand, error) {
 				if err != nil {
 					fmt.Printf("error getting kube config: %v", kubeConfig)
 				}
+			}
+
+			options.Terraform = baseboostrapper.TerraformOptions{
+				Backend: *terraformBackendOptions,
 			}
 
 			cloudBootstrapper, err := cloudprovider.NewLatticeBootstrapper(latticeID, cloudBootstrapOptions)
