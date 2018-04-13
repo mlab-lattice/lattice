@@ -146,6 +146,7 @@ resource "aws_launch_configuration" "aws_launch_configuration" {
 
   iam_instance_profile = "${aws_iam_instance_profile.iam_instance_profile.name}"
 
+  # XXX: revisit etcd data archive
   user_data = <<EOF
 #cloud-config
 write_files:
@@ -161,6 +162,9 @@ write_files:
     permissions: '0644'
     content: |
 ${var.etc_lattice_config_content}
+runcmd:
+-   [systemctl, daemon-reload]
+-   [tar, cvzf, /opt/lattice/etcd_seed_data.tgz, /var/opt/etcd]
 EOF
 
   # TODO: remove temporary_ssh_group when done testing
