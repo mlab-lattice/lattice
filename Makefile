@@ -57,14 +57,6 @@ test.verbose: gazelle
 e2e-test: e2e-test.build
 	@$(DIR)/bazel-bin/test/e2e/darwin_amd64_stripped/go_default_test -cluster-url $(CLUSTER_URL)
 
-.PHONY: e2e-test.provider
-e2e-test.provider: e2e-test.build
-	@$(DIR)/bazel-bin/test/e2e/darwin_amd64_stripped/go_default_test -cloud-provider $(PROVIDER)
-
-.PHONY: e2e-test.local
-e2e-test.local: e2e-test.build
-	@$(MAKE) e2e-test.provider PROVIDER=local
-
 .PHONY: e2e-test.build
 e2e-test.build: gazelle
 	@bazel build //test/e2e/...
@@ -133,7 +125,7 @@ docker.push-image-no-gazelle:
 		--workspace_status_command $(DIR)/scripts/bazel/docker-workspace-status.sh \
 		//docker:push-debug-$(IMAGE)
 
-CONTAINER_PUSHES := $(addprefix docker.push-image-,$(DOCKER_IMAGES))
+IMAGE_PUSHES := $(addprefix docker.push-image-,$(DOCKER_IMAGES))
 .PHONY: $(IMAGE_PUSHES)
 $(IMAGE_PUSHES):
 	@$(MAKE) docker.push-image IMAGE=$(patsubst docker.push-image-%,%,$@)
