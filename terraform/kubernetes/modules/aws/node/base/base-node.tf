@@ -146,24 +146,13 @@ resource "aws_launch_configuration" "aws_launch_configuration" {
 
   iam_instance_profile = "${aws_iam_instance_profile.iam_instance_profile.name}"
 
-
-# sed -i -r -e 's/(Environment="KUBELET_EXTRA_ARGS=.+)(")/\1 foo \2/' \
-#              "${SYSTEMD_DIR}/kubelet.service.d/kubeadm-override.conf"
-
-  # XXX: revisit etcd data archive
   user_data = <<EOF
 #cloud-config
-runcmd:
-- 
-  - sed
-  - -i
-  - -r
-  - -e
-  - s|(Environment="KUBELET_EXTRA_ARGS=.+)(")|\1 --node-labels ${var.kubelet_labels} --register-with-taints ${var.kubelet_taints}\2|
-  - /etc/systemd/system/kubelet.service.d/kubeadm-override.conf
--   [systemctl, daemon-reload]
--   [tar, cvzf, /opt/lattice/etcd_seed_data.tgz, /var/opt/etcd]
 write_files:
+-   path: /opt/lattice/append_kubelet_extra_args
+    owner: root:root
+    permissions: '0644'
+    content: "--node-labels ${var.kubelet_labels} --register-with-taints ${var.kubelet_taints}"
 -   path: /etc/lattice/config.json
     owner: root:root
     permissions: '0644'
