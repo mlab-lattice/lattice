@@ -37,7 +37,7 @@ func writeDoc(bc *cli.Command, writer io.Writer) error {
 
 	fmt.Fprintf(writer, "%s \n", markdown.WrapH2("Introduction"))
 
-	fmt.Fprintf(writer, "%s\n", bc.Short)
+	fmt.Fprintf(writer, "%s  \n", bc.Short)
 
 	fmt.Fprintf(writer, "%s \n", markdown.WrapH2("Commands"))
 
@@ -98,7 +98,7 @@ func printCommand(fullCmdName string, cmd *cli.Command, writer io.Writer) error 
 	fmt.Fprintf(writer, "%s  \n", markdown.WrapH3(fullCmdName))
 
 	if cmd.Short != "" {
-		fmt.Fprint(writer, "%s \n\n", markdown.WrapItalic(cmd.Short))
+		fmt.Fprintf(writer, "%s  \n\n", markdown.WrapItalic(cmd.Short))
 	}
 
 	// includes any extra markdown command description
