@@ -3,88 +3,49 @@ package markdown
 import (
 	"fmt"
 	"io"
-	"reflect"
-	"strings"
-
-	"github.com/mlab-lattice/lattice/pkg/util/cli"
 )
 
-func WriteH1(w io.Writer, header string) {
-	fmt.Fprintf(w, "# %s \n", header)
+func WrapH1(header string) string {
+	return fmt.Sprintf("# %s", header)
 }
 
-func WriteH2(w io.Writer, header string) {
-	fmt.Fprintf(w, "## %s \n", header)
+func WrapH2(header string) string {
+	return fmt.Sprintf("## %s", header)
 }
 
-func WriteH3(w io.Writer, header string) {
-	fmt.Fprintf(w, "### %s  \n", header)
+func WrapH3(header string) string {
+	return fmt.Sprintf("### %s", header)
 }
 
-func WriteFlagArgTableHeader(w io.Writer) {
-	fmt.Fprint(w, "| Name | Description | \n")
-	fmt.Fprint(w, "| --- | --- | \n")
-}
+func WriteTableHeader(w io.Writer, headers []string) {
+	for _, header := range headers {
+		fmt.Fprintf(w, "| %v ", header)
+	}
+	fmt.Fprintln(w, "|")
 
-func WriteArgFlagHeader(w io.Writer, text string) {
-	fmt.Fprintf(w, "**%s**:  ", text)
-}
-
-func WriteEmphasisedText(w io.Writer, text string) {
-	fmt.Fprintf(w, "*%s*", text)
-}
-
-// WriteFlagTableRow writes flag table row
-func WriteFlagTableRow(w io.Writer, flagPtr cli.Flag) {
-	currentFlag := flagPtr
-	var isBoolFlag bool
-
-	if reflect.TypeOf(currentFlag).String() == "*command.BoolFlag" {
-		isBoolFlag = true
+	for range headers {
+		fmt.Fprint(w, "| --- ")
 	}
 
-	flagRow := "| `"
-
-	flagRow += "--" + currentFlag.GetName()
-
-	if !isBoolFlag {
-		flagRow += " " + strings.ToUpper(currentFlag.GetName())
-	}
-
-	if currentFlag.GetShort() != "" {
-		flagRow += "`, `-" + currentFlag.GetShort()
-
-		if !isBoolFlag {
-			flagRow += " " + strings.ToUpper(currentFlag.GetName())
-		}
-	}
-
-	flagRow += "` "
-
-	if currentFlag.IsRequired() {
-		flagRow += "**(required)** "
-	}
-
-	flagRow += "| "
-
-	flagRow += currentFlag.GetUsage() + " | \n"
-
-	fmt.Fprint(w, flagRow)
+	fmt.Fprintln(w, "|")
 }
 
-// WriteArgTableRow writes arg table row
-func WriteArgTableRow(w io.Writer, argPtr cli.Arg) {
-	currentArg := argPtr
-
-	argRow := "| `" + currentArg.Name + "` "
-
-	if currentArg.Required {
-		argRow += "**(required)** "
+func WriteTableRow(w io.Writer, cells []string) {
+	for _, cell := range cells {
+		fmt.Fprintf(w, "| %v ", cell)
 	}
 
-	argRow += "| "
+	fmt.Fprintln(w, "|")
+}
 
-	argRow += currentArg.Description + " | \n"
+func WrapBold(text string) string {
+	return fmt.Sprintf("**%s**", text)
+}
 
-	fmt.Fprint(w, argRow)
+func WrapItalic(text string) string {
+	return fmt.Sprintf("*%s*", text)
+}
+
+func WrapInlineCode(text string) string {
+	return fmt.Sprintf("`%s`", text)
 }

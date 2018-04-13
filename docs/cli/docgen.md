@@ -19,4 +19,4 @@ All docs for a given repo will be output into a single `docs.md` file in the dir
 | Name | Description |  
 | --- | --- |  
 |`--input-docs INPUT-DOCS` | Extra markdown docs input directory (default value: `./docs/cli`) |  
-|`--output-docs OUTPUT-DOCS` | Markdown docs output directory (default value: `./doc.md`) |
+|`--output-docs OUTPUT-DOCS` | Markdown docs output file path (default value: `./doc.md`) |

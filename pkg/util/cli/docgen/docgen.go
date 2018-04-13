@@ -33,10 +33,13 @@ func GenerateMarkdown(cmd *cli.Command) (io.Reader, error) {
 // writeDoc writes command tree to file
 func writeDoc(bc *cli.Command, writer io.Writer) error {
 	// header
-	markdown.WriteH1(writer, bc.Name)
-	markdown.WriteH2(writer, "Introduction")
-	fmt.Fprint(writer, bc.Short+"\n")
-	markdown.WriteH2(writer, "Commands")
+	fmt.Fprintf(writer, "%s \n", markdown.WrapH1(bc.Name))
+
+	fmt.Fprintf(writer, "%s \n", markdown.WrapH2("Introduction"))
+
+	fmt.Fprintf(writer, "%s\n", bc.Short)
+
+	fmt.Fprintf(writer, "%s \n", markdown.WrapH2("Commands"))
 
 	// mapping between command name (e.g. `laasctl systems builds`) and the command.
 	// the output to file can therefore be sorted by command name (ascending),
@@ -49,7 +52,7 @@ func writeDoc(bc *cli.Command, writer io.Writer) error {
 		recurse(childCmd, cmds, writer, commandMapping)
 	}
 
-	// uses sorted map keys to iterate over the map in alphabetical
+	// uses sorted map keys to iterate over the map in alphabetical order
 	keys := make([]string, 0)
 	for k := range commandMapping {
 		keys = append(keys, k)
@@ -92,13 +95,10 @@ func recurse(cmd *cli.Command, ancestorCommands []cli.Command, writer io.Writer,
 // printCommand prints the command docs
 // fullCmdName includes all command ancestor except the root command (e.g. 'latticectl')
 func printCommand(fullCmdName string, cmd *cli.Command, writer io.Writer) error {
-	// header command name (add extra #s here if want hierarchy)
-	markdown.WriteH3(writer, fullCmdName)
+	fmt.Fprintf(writer, "%s  \n", markdown.WrapH3(fullCmdName))
 
-	// description
 	if cmd.Short != "" {
-		markdown.WriteEmphasisedText(writer, cmd.Short)
-		fmt.Fprint(writer, "\n\n")
+		fmt.Fprint(writer, "%s \n\n", markdown.WrapItalic(cmd.Short))
 	}
 
 	// includes any extra markdown command description
@@ -108,16 +108,14 @@ func printCommand(fullCmdName string, cmd *cli.Command, writer io.Writer) error 
 	}
 
 	if mdFileContent != "" {
-		fmt.Fprint(writer, mdFileContent)
-		fmt.Fprint(writer, "\n")
+		fmt.Fprintln(writer, mdFileContent)
 	}
 
-	// validates that required args are defined first
 	if len(cmd.Args) > 0 {
 		writeArgs(writer, cmd.Args)
 	}
 
-	// write flags sorting them first by required/not required and then alphabetically
+	// writes flags sorting them first by required/not required and then alphabetically
 	if len(cmd.Flags) > 0 {
 		sort.Slice(cmd.Flags, func(i, j int) bool {
 			result := cmd.Flags[i].IsRequired()
@@ -134,36 +132,66 @@ func printCommand(fullCmdName string, cmd *cli.Command, writer io.Writer) error 
 
 // writeArgs writes args section to a markdown table
 func writeArgs(writer io.Writer, cmdArgs cli.Args) {
-	markdown.WriteArgFlagHeader(writer, "Args")
-	fmt.Fprint(writer, "\n\n")
+	fmt.Fprintf(writer, "%s: \n\n", markdown.WrapBold("Args"))
 
-	// table header
-	markdown.WriteFlagArgTableHeader(writer)
+	markdown.WriteTableHeader(writer, []string{"Name", "Description"})
 
-	// table rows
 	for _, tempArg := range cmdArgs {
-		markdown.WriteArgTableRow(writer, tempArg)
+		writeArgTableRow(writer, tempArg)
 	}
 
-	// new line separator
 	fmt.Fprint(writer, "\n\n")
+}
+
+// writeArgTableRow writes arg table row
+func writeArgTableRow(w io.Writer, arg cli.Arg) {
+	name := markdown.WrapInlineCode(arg.Name)
+
+	if arg.Required {
+		name += fmt.Sprintf(" %s", markdown.WrapBold("(required)"))
+	}
+
+	row := []string{name, arg.Description}
+
+	markdown.WriteTableRow(w, row)
 }
 
 // writeFlags writes flags section to a markdown table
 func writeFlags(writer io.Writer, cmdFlags cli.Flags) {
-	markdown.WriteArgFlagHeader(writer, "Flags")
-	fmt.Fprint(writer, "\n\n")
+	fmt.Fprintf(writer, "%s: \n\n", markdown.WrapBold("Flags"))
 
-	// table header
-	markdown.WriteFlagArgTableHeader(writer)
+	markdown.WriteTableHeader(writer, []string{"Name", "Description"})
 
-	// table rows
 	for _, tempFlag := range cmdFlags {
-		markdown.WriteFlagTableRow(writer, tempFlag)
+		writeFlagTableRow(writer, tempFlag)
 	}
 
-	// new line separator
 	fmt.Fprint(writer, "\n\n")
+}
+
+// writeFlagTableRow writes flag table row
+func writeFlagTableRow(w io.Writer, flag cli.Flag) {
+
+	name := fmt.Sprintf("--%s", flag.GetName())
+
+	// if the flag isn't a bool flag then print out a placeholder value with the name of the flag
+	if _, ok := flag.(*cli.BoolFlag); !ok {
+		name += fmt.Sprintf(" %s", strings.ToUpper(flag.GetName()))
+	}
+	name = markdown.WrapInlineCode(name)
+
+	short := flag.GetShort()
+	if short != "" {
+		name += fmt.Sprintf(", %s", markdown.WrapInlineCode(fmt.Sprintf("-%s", short)))
+	}
+
+	if flag.IsRequired() {
+		name += fmt.Sprintf(" %s", markdown.WrapBold("(required)"))
+	}
+
+	row := []string{name, flag.GetUsage()}
+
+	markdown.WriteTableRow(w, row)
 }
 
 // getMarkdownFileContent reads external Markdown file content
