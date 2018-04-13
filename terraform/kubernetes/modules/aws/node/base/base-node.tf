@@ -162,9 +162,9 @@ write_files:
     permissions: '0644'
     content: |
 ${var.etc_lattice_config_content}
-runcmd:
--   [systemctl, daemon-reload]
--   [tar, cvzf, /opt/lattice/etcd_seed_data.tgz, /var/opt/etcd]
+bootcmd:
+-   [cloud-init-per, instance, reload-kubelet-lattice-override, systemctl, daemon-reload]
+-   [cloud-init-per, instance, archive-etcd-before-mount, tar, cvzf, /opt/lattice/etcd_seed_data.tgz, /var/opt/etcd]
 EOF
 
   # TODO: remove temporary_ssh_group when done testing
