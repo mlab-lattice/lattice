@@ -159,7 +159,7 @@ runcmd:
   - -i
   - -r
   - -e
-  - s/(Environment="KUBELET_EXTRA_ARGS=.+)(")/\1 --node-labels ${var.kubelet_labels} --register-with-taints ${var.kubelet_taints}\2/
+  - s|(Environment="KUBELET_EXTRA_ARGS=.+)(")|\1 --node-labels ${var.kubelet_labels} --register-with-taints ${var.kubelet_taints}\2|
   - /etc/systemd/system/kubelet.service.d/kubeadm-override.conf
 -   [systemctl, daemon-reload]
 -   [tar, cvzf, /opt/lattice/etcd_seed_data.tgz, /var/opt/etcd]
