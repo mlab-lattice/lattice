@@ -149,6 +149,9 @@ resource "aws_launch_configuration" "aws_launch_configuration" {
   # XXX: revisit etcd data archive
   user_data = <<EOF
 #cloud-config
+runcmd:
+-   [systemctl, daemon-reload]
+-   [tar, cvzf, /opt/lattice/etcd_seed_data.tgz, /var/opt/etcd]
 write_files:
 -   path: /etc/systemd/system/kubelet.service.d/10-override.conf
     owner: root:root
@@ -162,9 +165,6 @@ write_files:
     permissions: '0644'
     content: |
 ${var.etc_lattice_config_content}
-bootcmd:
--   [cloud-init-per, instance, reload-kubelet-lattice-override, systemctl, daemon-reload]
--   [cloud-init-per, instance, archive-etcd-before-mount, tar, cvzf, /opt/lattice/etcd_seed_data.tgz, /var/opt/etcd]
 EOF
 
   # TODO: remove temporary_ssh_group when done testing
