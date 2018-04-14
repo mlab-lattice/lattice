@@ -633,6 +633,9 @@ func (c *Controller) getDeploymentStatus(service *latticev1.Service, deployment 
 			// there only exists UpdatedInstances, and they're all available,
 			// but there isn't enough of them yet
 			state = deploymentStateScaling
+		} else if terminatingInstances > 0 {
+			// weThere are still pods cleaning up
+			state = deploymentStateScaling
 		} else {
 			// there are enough available updated instances, and no other instances
 			state = deploymentStateStable
