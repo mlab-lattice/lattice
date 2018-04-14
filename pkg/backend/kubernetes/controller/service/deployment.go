@@ -6,7 +6,7 @@ import (
 	"reflect"
 	"sort"
 
-	kubeconstants "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/constants"
+	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/constants"
 	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/controller/service/util"
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	kubeutil "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/kubernetes"
@@ -16,7 +16,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	kubelabels "k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/apimachinery/pkg/util/intstr"
 
@@ -31,8 +31,8 @@ const (
 )
 
 func (c *Controller) syncServiceDeployment(service *latticev1.Service, nodePool *latticev1.NodePool) (*appsv1.Deployment, error) {
-	selector := kubelabels.NewSelector()
-	requirement, err := kubelabels.NewRequirement(kubeconstants.LabelKeyServiceID, selection.Equals, []string{service.Name})
+	selector := labels.NewSelector()
+	requirement, err := labels.NewRequirement(constants.LabelKeyServiceID, selection.Equals, []string{service.Name})
 	if err != nil {
 		return nil, err
 	}
@@ -134,7 +134,7 @@ func (c *Controller) newDeployment(service *latticev1.Service, nodePool *lattice
 		ObjectMeta: metav1.ObjectMeta{
 			Name:            name,
 			Labels:          labels,
-			OwnerReferences: []metav1.OwnerReference{*metav1.NewControllerRef(service, controllerKind)},
+			OwnerReferences: []metav1.OwnerReference{*controllerRef(service)},
 		},
 		Spec: spec,
 	}
@@ -149,7 +149,7 @@ func deploymentName(service *latticev1.Service) string {
 
 func deploymentLabels(service *latticev1.Service) map[string]string {
 	return map[string]string{
-		kubeconstants.LabelKeyServiceID: service.Name,
+		constants.LabelKeyServiceID: service.Name,
 	}
 }
 
@@ -215,7 +215,7 @@ func (c *Controller) untransformedDeploymentSpec(
 		// Since we also add a RequiredDuringScheduling NodeAffinity for our NodePool,
 		// this NodePool's nodes are the only nodes that these pods could be scheduled on,
 		// so this TopologyKey doesn't really matter (besides being required).
-		TopologyKey: kubeconstants.LabelKeyNodeRoleNodePool,
+		TopologyKey: constants.LabelKeyNodeRoleNodePool,
 	}
 
 	// TODO(kevinrosendahl): Make this a PreferredDuringScheduling PodAntiAffinity if the service is running on a shared NodePool
@@ -459,4 +459,133 @@ func (c *Controller) isDeploymentSpecUpdated(
 	}
 
 	return true, ""
+}
+
+type deploymentStatus struct {
+	UpdateProcessed bool
+
+	State       deploymentState
+	FailureInfo *deploymentStatusFailureInfo
+
+	TotalInstances       int32
+	UpdatedInstances     int32
+	StaleInstances       int32
+	AvailableInstances   int32
+	TerminatingInstances int32
+}
+
+type deploymentState int
+
+const (
+	deploymentStateScaling deploymentState = iota
+	deploymentStateStable
+	deploymentStateFailed
+)
+
+type deploymentStatusFailureInfo struct {
+	Reason  string
+	Message string
+	Time    metav1.Time
+}
+
+func (s *deploymentStatus) Failed() (bool, *deploymentStatusFailureInfo) {
+	return s.State == deploymentStateFailed, s.FailureInfo
+}
+
+func (s *deploymentStatus) Stable() bool {
+	return s.State == deploymentStateStable
+}
+
+func (c *Controller) getDeploymentStatus(service *latticev1.Service, deployment *appsv1.Deployment) (*deploymentStatus, error) {
+	var state deploymentState
+	totalInstances := deployment.Status.Replicas
+	updatedInstances := deployment.Status.UpdatedReplicas
+	availableInstances := deployment.Status.AvailableReplicas
+	staleInstances := totalInstances - updatedInstances
+
+	var failureInfo *deploymentStatusFailureInfo
+	for _, condition := range deployment.Status.Conditions {
+		notProgressing := condition.Type == appsv1.DeploymentProgressing && condition.Status == corev1.ConditionFalse
+		if notProgressing && condition.Reason == reasonTimedOut {
+			state = deploymentStateFailed
+			failureInfo = &deploymentStatusFailureInfo{
+				Reason:  condition.Reason,
+				Message: condition.Message,
+				Time:    condition.LastTransitionTime,
+			}
+		}
+	}
+
+	// Via https://kubernetes.io/docs/concepts/workloads/pods/pod#termination-of-pods,
+	// when a pod is Terminating:
+	// Pod is removed from endpoints list for service, and are no longer considered part of the set of
+	// running pods for replication controllers. Pods that shutdown slowly can continue to serve traffic
+	// as load balancers (like the service proxy) remove them from their rotations.
+	//
+	// That is, when the pod is in Terminating, it has been delivered a SIGTERM but is possibly still running.
+	// If, for example, a client has an open connection to the pod, that client can still make requests
+	// to the pod. However, at the same time the deployment will not report that this Terminating pod exists.
+	// If we were to take the deployment at its word, we could end up saying that this service is stably
+	// rolled out to the version specified, even though an old version still exists and could have open
+	// connections to it.
+	//
+	// So if we think that the service is stable, check to see if any pods exist that match are labeled with
+	// the service's ID, but have a non-null deletionTimestamp (i.e. they are terminating).
+	//
+	// TODO: investigate if/how it's possible for pods to get stuck in Terminating, and investigate what
+	//       automated processes we can put in place to clean up stuck pods so that deploys don't get stalled
+	//       forever
+	selector := labels.NewSelector()
+	requirement, err := labels.NewRequirement(constants.LabelKeyServiceID, selection.Equals, []string{service.Name})
+	if err != nil {
+		return nil, err
+	}
+	selector = selector.Add(*requirement)
+
+	pods, err := c.podLister.Pods(service.Namespace).List(selector)
+	if err != nil {
+		return nil, err
+	}
+
+	var terminatingInstances int32
+	for _, pod := range pods {
+		if pod.DeletionTimestamp != nil {
+			terminatingInstances++
+		}
+	}
+
+	if state != deploymentStateFailed {
+		if updatedInstances < totalInstances {
+			// The updated pods have not yet all been created
+			state = deploymentStateScaling
+		} else if totalInstances > updatedInstances {
+			// There are extra pods still
+			state = deploymentStateScaling
+		} else if availableInstances < updatedInstances {
+			// there's only updated instances but there aren't enough available instances yet
+			state = deploymentStateScaling
+		} else if updatedInstances < service.Spec.NumInstances {
+			// there only exists UpdatedInstances, and they're all available,
+			// but there isn't enough of them yet
+			state = deploymentStateScaling
+		} else {
+			// there are enough available updated instances, and no other instances
+			state = deploymentStateStable
+		}
+	}
+
+	status := &deploymentStatus{
+		UpdateProcessed: deployment.Generation <= deployment.Status.ObservedGeneration,
+
+		State:       state,
+		FailureInfo: failureInfo,
+
+		TotalInstances:       totalInstances,
+		UpdatedInstances:     updatedInstances,
+		StaleInstances:       staleInstances,
+		AvailableInstances:   availableInstances,
+		TerminatingInstances: terminatingInstances,
+	}
+
+	return status, nil
 }

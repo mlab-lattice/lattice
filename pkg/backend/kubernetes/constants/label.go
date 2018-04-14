@@ -11,6 +11,10 @@ const (
 	LabelKeyBuildNode        = LabelKeyNodeRoleLattice + "/build"
 	LabelKeyNodeRoleNodePool = LabelKeyNodeRoleLattice + "/node-pool"
 
+	LabelKeyNodePool           = "node-pool.lattice.mlab.com"
+	LabelKeyNodePoolPath       = LabelKeyNodePool + "/path"
+	LabelKeyNodePoolGeneration = LabelKeyNodePool + "/generation"
+
 	LabelKeyComponentBuildID = "component.build.lattice.mlab.com/id"
 
 	LabelKeySystemRolloutVersion = "rollout.system.lattice.mlab.com/version"

@@ -5,4 +5,6 @@ const (
 	AnnotationKeyComponentBuildDefinitionHash    = "component.build.lattice.mlab.com/definition-hash"
 	AnnotationKeyComponentBuildLastObservedPhase = "component.build.lattice.mlab.com/last-observed-phase"
 	AnnotationKeyComponentBuildFailureInfo       = "component.build.lattice.mlab.com/failure-info"
+
+	AnnotationNodePoolGeneration = LabelKeyNodePool + "/generation"
 )

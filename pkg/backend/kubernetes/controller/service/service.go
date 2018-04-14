@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"reflect"
 
+	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/constants"
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	kubeutil "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/kubernetes"
 
@@ -12,11 +13,10 @@ import (
 
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
-	"github.com/golang/glog"
-	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/constants"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
+
+	"github.com/golang/glog"
 )
 
 const (
@@ -69,7 +69,7 @@ func (c *Controller) syncServiceStatus(
 		// there's only updated instances but there aren't enough available instances yet
 		state = latticev1.ServiceStateScaling
 	} else if updatedInstances < desiredInstances {
-		// there only exists updatedInstances, and they're all available,
+		// there only exists UpdatedInstances, and they're all available,
 		// but there isn't enough of them yet
 		state = latticev1.ServiceStateScaling
 	} else {
@@ -239,6 +239,7 @@ type lookupDelete struct {
 	delete func() error
 }
 
+// FIXME: remove this, was a remnant of cascading garbage collection not working for CRDs, add owner reference instead
 func (c *Controller) syncDeletedService(service *latticev1.Service) error {
 	lookupDeletes := []lookupDelete{
 		// node pool
@@ -334,6 +335,11 @@ func resourceExists(lookupFunc func() (interface{}, error)) (bool, error) {
 	return false, nil
 }
 
+func controllerRef(service *latticev1.Service) *metav1.OwnerReference {
+	return metav1.NewControllerRef(service, controllerKind)
+}
+
+// FIXME: don't think we need a finalizer anymore if cascading garbage collection works
 func (c *Controller) addFinalizer(service *latticev1.Service) (*latticev1.Service, error) {
 	// Check to see if the finalizer already exists. If so nothing needs to be done.
 	for _, finalizer := range service.Finalizers {

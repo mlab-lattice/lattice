@@ -897,12 +897,12 @@ func (c *Controller) syncService(key string) error {
 		return err
 	}
 
-	nodePool, err := c.syncServiceNodePool(service)
+	nodePool, nodePoolReady, err := c.syncServiceNodePool(service)
 	if err != nil {
 		return err
 	}
 
-	deployment, err := c.syncServiceDeployment(service, nodePool)
+	deployment, err := c.syncServiceDeployment(service, nodePool, nodePoolReady)
 	if err != nil {
 		return err
 	}
