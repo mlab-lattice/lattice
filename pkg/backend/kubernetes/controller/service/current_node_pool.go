@@ -2,20 +2,20 @@ package service
 
 import (
 	"fmt"
+	"sort"
 
+	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/constants"
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
+	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
 
-	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/constants"
-	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 	"github.com/satori/go.uuid"
-	"sort"
 )
 
-func (c *Controller) syncServiceNodePool(service *latticev1.Service) (*latticev1.NodePool, bool, error) {
+func (c *Controller) syncCurrentNodePool(service *latticev1.Service) (*latticev1.NodePool, bool, error) {
 	resources := service.Spec.Definition.Resources()
 
 	var numInstances int32

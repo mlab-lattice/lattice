@@ -10,7 +10,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func (c *Controller) syncServiceKubeService(service *latticev1.Service) (*corev1.Service, error) {
+func (c *Controller) syncKubeService(service *latticev1.Service) (*corev1.Service, error) {
 	name := kubeutil.GetKubeServiceNameForService(service.Name)
 	kubeService, err := c.kubeServiceLister.Services(service.Namespace).Get(name)
 	if err != nil {
