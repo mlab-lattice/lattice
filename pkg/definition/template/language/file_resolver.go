@@ -13,7 +13,7 @@ import (
 // readTemplateFromURL reads the template file by resolving the url into a Template w
 func readTemplateFromURL(url string, env *environment) (*Template, error) {
 	// if its a git url then return a templateURLInfo for a git url
-	if isGitURL(url) {
+	if isGitTemplateURL(url) {
 		return readTemplateFromGitURL(url, env)
 	}
 
@@ -48,11 +48,11 @@ type Template struct {
 
 // readTemplateFromGitURL resolves a git url
 func readTemplateFromGitURL(url string, env *environment) (*Template, error) {
-	if !isGitURL(url) {
+	if !isGitTemplateURL(url) {
 		return nil, fmt.Errorf("invalid git url: '%s'", url)
 	}
 
-	parts := gitURLRegex.FindAllStringSubmatch(url, -1)
+	parts := gitTemplateURLRegex.FindAllStringSubmatch(url, -1)
 
 	protocol := parts[0][1]
 	repoPath := parts[0][3]
@@ -93,11 +93,11 @@ func newTemplate(url, baseURL string, fileName string, bytes []byte) (*Template,
 }
 
 // regex for matching git file urls
-var gitURLRegex = regexp.MustCompile(`((?:git|file|ssh|https?|git@[-\w.]+)):(//)?(.*.git)(#(([-\d\w._])+)?)?(/(.*))?$`)
+var gitTemplateURLRegex = regexp.MustCompile(`((?:git|file|ssh|https?|git@[-\w.]+)):(//)?(.*.git)(#(([-\d\w._])+)?)?(/(.*))?$`)
 
-// isGitURL
-func isGitURL(url string) bool {
-	return gitURLRegex.MatchString(url)
+// isGitTemplateURL
+func isGitTemplateURL(url string) bool {
+	return gitTemplateURLRegex.MatchString(url)
 }
 
 // isRelativeURL

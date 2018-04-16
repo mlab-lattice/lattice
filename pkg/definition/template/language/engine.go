@@ -116,7 +116,7 @@ func NewEngine() *TemplateEngine {
 func (engine *TemplateEngine) EvalFromURL(url string, parameters map[string]interface{}, options *Options) (*Result, error) {
 
 	// validate url
-	if !isGitURL(url) {
+	if !isGitTemplateURL(url) {
 		return nil, fmt.Errorf("bad url '%v'. url must be a valid git url", url)
 	}
 
