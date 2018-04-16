@@ -146,12 +146,13 @@ resource "aws_launch_configuration" "aws_launch_configuration" {
 
   iam_instance_profile = "${aws_iam_instance_profile.iam_instance_profile.name}"
 
+  # XXX: clean up etcd bootcmd and make sure it only runs on first boot
   user_data = <<EOF
 #cloud-config
 bootcmd:
--   if [ ! -f /opt/lattice/etcd.tgz ]; then tar cvzf /opt/lattice/etcd.tgz /var/opt/etcd; fi
+-   if [ -d /var/opt/etcd && ! -f /opt/lattice/etcd.tgz ]; then tar cvzf /opt/lattice/etcd.tgz /var/opt/etcd; fi
 write_files:
--   path: /opt/lattice/append_kubelet_extra_args
+-   path: /opt/lattice/kubelet_extra_args
     owner: root:root
     permissions: '0644'
     content: "--node-labels ${var.kubelet_labels} --register-with-taints ${var.kubelet_taints}"
@@ -160,6 +161,8 @@ write_files:
     permissions: '0644'
     content: |
 ${var.etc_lattice_config_content}
+runcmd:
+-   /opt/lattice/bin/append-kubelet-extra-args
 EOF
 
   # TODO: remove temporary_ssh_group when done testing
