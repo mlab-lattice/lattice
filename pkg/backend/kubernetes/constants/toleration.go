@@ -6,8 +6,7 @@ import (
 
 var TolerationKubernetesMasterNode = corev1.Toleration{
 	Key:      LabelKeyNodeRollKubernetesMaster,
-	Operator: corev1.TolerationOpEqual,
-	Value:    "true",
+	Operator: corev1.TolerationOpExists,
 	Effect:   corev1.TaintEffectNoSchedule,
 }
 
