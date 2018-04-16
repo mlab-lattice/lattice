@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
+	"strings"
 	"testing"
 	"time"
 
@@ -17,14 +18,9 @@ const (
 	testRepoDir    = "/tmp/lattice-core/test/git/my-repo"
 	testWorkDir    = "/tmp/lattice-core/test/git/work"
 	testFile       = "hello.txt"
-	localRepoURI1  = "/tmp/lattice-core/test/git/my-repo"
-	localRepoURI2  = "/tmp/lattice-core/test/git/my-repo/.git"
-	localRepoURI3  = "file:///tmp/lattice-core/test/git/my-repo"
-	localRepoURI4  = "file:///tmp/lattice-core/test/git/my-repo/.git"
-	localRepoURI5  = "git://tmp/lattice-core/test/git/my-repo"
-	localRepoURI6  = "git://tmp/lattice-core/test/git/my-repo/.git"
-	remoteRepoURI1 = "https://github.com/mlab-lattice/testing__system"
-	remoteRepoURI2 = "https://github.com/mlab-lattice/testing__system.git"
+	localRepoURI1  = "file:///tmp/lattice-core/test/git/my-repo/.git"
+	localRepoURI2  = "git://tmp/lattice-core/test/git/my-repo/.git"
+	remoteRepoURI1 = "https://github.com/mlab-lattice/testing__system.git"
 )
 
 func TestGitResolver(t *testing.T) {
@@ -38,6 +34,7 @@ func TestGitResolver(t *testing.T) {
 	t.Run("TestCloneGithubRepo", testCloneGithubRepo)
 	t.Run("TestTags", testTags)
 	t.Run("TestFileContents", testFileContents)
+	t.Run("TestInvalidURI", testInvalidURI)
 }
 
 func setupGitResolverTest() {
@@ -66,15 +63,10 @@ func deleteTempDirs() {
 func testCloneLocalRepo(t *testing.T) {
 	testCloneURI(t, localRepoURI1)
 	testCloneURI(t, localRepoURI2)
-	testCloneURI(t, localRepoURI3)
-	testCloneURI(t, localRepoURI4)
-	testCloneURI(t, localRepoURI5)
-	testCloneURI(t, localRepoURI6)
 }
 
 func testCloneGithubRepo(t *testing.T) {
 	testCloneURI(t, remoteRepoURI1)
-	testCloneURI(t, remoteRepoURI2)
 }
 
 func testTags(t *testing.T) {
@@ -84,7 +76,7 @@ func testTags(t *testing.T) {
 		t.Fatalf("Got error: %v", err)
 	}
 
-	ctx := &Context{URI: testRepoDir,
+	ctx := &Context{URI: localRepoURI1,
 		Options: &Options{},
 	}
 
@@ -105,8 +97,8 @@ func testTags(t *testing.T) {
 }
 
 func testFileContents(t *testing.T) {
-	testFileContent(t, testRepoDir+"#v1", "hello.txt", "hello")
-	testFileContent(t, testRepoDir+"#v2", "hello.txt", "hello there")
+	testFileContent(t, localRepoURI1+"#v1", "hello.txt", "hello")
+	testFileContent(t, localRepoURI1+"#v2", "hello.txt", "hello there")
 }
 
 func testFileContent(t *testing.T, uri string, filename string, contents string) {
@@ -157,6 +149,27 @@ func testCloneURI(t *testing.T, uri string) {
 		t.Fatalf("Failed to clone uri '%v'. Error: %s", uri, err)
 	}
 
+}
+
+func testInvalidURI(t *testing.T) {
+	resolver, err := NewResolver(testWorkDir)
+
+	if err != nil {
+		t.Fatalf("Got error: %v", err)
+	}
+
+	invalidURI := "this is a bad uri"
+	ctx := &Context{URI: invalidURI,
+		Options: &Options{},
+	}
+
+	_, err = resolver.Clone(ctx)
+
+	if err == nil || !strings.Contains(fmt.Sprintf("%v", err), "bad uri") {
+		t.Fatalf("Expected a bad uri error")
+	} else {
+		fmt.Printf("Got expected error: %v\n", err)
+	}
 }
 
 func createTestGitRepo() {
