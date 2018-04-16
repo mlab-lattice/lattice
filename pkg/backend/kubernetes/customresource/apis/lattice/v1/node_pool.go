@@ -78,7 +78,7 @@ func (np *NodePool) Affinity() *corev1.NodeAffinity {
 				{
 					MatchExpressions: []corev1.NodeSelectorRequirement{
 						{
-							Key:      constants.LabelKeyNodeRoleNodePool,
+							Key:      constants.LabelKeyNodeRoleLatticeNodePool,
 							Operator: corev1.NodeSelectorOpIn,
 							Values:   []string{np.IDLabelValue()},
 						},
@@ -91,7 +91,7 @@ func (np *NodePool) Affinity() *corev1.NodeAffinity {
 
 func (np *NodePool) Toleration() corev1.Toleration {
 	return corev1.Toleration{
-		Key:      constants.LabelKeyNodeRoleNodePool,
+		Key:      constants.LabelKeyNodeRoleLatticeNodePool,
 		Operator: corev1.TolerationOpEqual,
 		Value:    np.IDLabelValue(),
 		Effect:   corev1.TaintEffectNoSchedule,

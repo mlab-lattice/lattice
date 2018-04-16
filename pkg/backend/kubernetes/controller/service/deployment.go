@@ -279,7 +279,7 @@ func (c *Controller) untransformedDeploymentSpec(
 		// Since we also add a RequiredDuringScheduling NodeAffinity for our NodePool,
 		// this NodePool's nodes are the only nodes that these pods could be scheduled on,
 		// so this TopologyKey doesn't really matter (besides being required).
-		TopologyKey: constants.LabelKeyNodeRoleNodePool,
+		TopologyKey: constants.LabelKeyNodeRoleLatticeNodePool,
 	}
 
 	// TODO(kevinrosendahl): Make this a PreferredDuringScheduling PodAntiAffinity if the service is running on a shared NodePool
@@ -634,7 +634,7 @@ func (c *Controller) getDeploymentStatus(service *latticev1.Service, deployment 
 			// but there isn't enough of them yet
 			state = deploymentStateScaling
 		} else if terminatingInstances > 0 {
-			// weThere are still pods cleaning up
+			// There are still pods cleaning up
 			state = deploymentStateScaling
 		} else {
 			// there are enough available updated instances, and no other instances

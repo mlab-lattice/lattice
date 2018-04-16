@@ -6,10 +6,13 @@ const (
 	LabelKeyControlPlane        = "control-plane.lattice.mlab.com"
 	LabelKeyControlPlaneService = LabelKeyControlPlane + "/service"
 
-	LabelKeyNodeRoleLattice  = "node-role.lattice.mlab.com"
-	LabelKeyMasterNode       = LabelKeyNodeRoleLattice + "/master"
-	LabelKeyBuildNode        = LabelKeyNodeRoleLattice + "/build"
-	LabelKeyNodeRoleNodePool = LabelKeyNodeRoleLattice + "/node-pool"
+	LabelKeyNodeRollKubernetes       = "node-role.kubernetes.io"
+	LabelKeyNodeRollKubernetesMaster = LabelKeyNodeRollKubernetes + "/master"
+
+	LabelKeyNodeRoleLattice         = "node-role.lattice.mlab.com"
+	LabelKeyNodeRoleLatticeMaster   = LabelKeyNodeRoleLattice + "/master"
+	LabelKeyNodeRoleLatticeBuild    = LabelKeyNodeRoleLattice + "/build"
+	LabelKeyNodeRoleLatticeNodePool = LabelKeyNodeRoleLattice + "/node-pool"
 
 	LabelKeyNodePool           = "node-pool.lattice.mlab.com"
 	LabelKeyNodePoolPath       = LabelKeyNodePool + "/path"
