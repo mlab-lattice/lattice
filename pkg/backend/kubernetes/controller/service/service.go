@@ -7,16 +7,12 @@ import (
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	kubeutil "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/kubernetes"
 
-	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/golang/glog"
-	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/constants"
-	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/apimachinery/pkg/selection"
 )
 
 const (
@@ -28,9 +24,11 @@ const (
 
 func (c *Controller) syncServiceStatus(
 	service *latticev1.Service,
-	deployment *appsv1.Deployment,
-	kubeService *corev1.Service,
 	nodePool *latticev1.NodePool,
+	nodePoolReady bool,
+	deploymentStatus *deploymentStatus,
+	extraNodePoolsExist bool,
+	kubeService *corev1.Service,
 	serviceAddress *latticev1.ServiceAddress,
 	loadBalancer *latticev1.LoadBalancer,
 	loadBalancerNeeded bool,
@@ -40,52 +38,18 @@ func (c *Controller) syncServiceStatus(
 	failureMessage := ""
 	var failureTime *metav1.Time
 
-	desiredInstances := service.Spec.NumInstances
-	updatedInstances := deployment.Status.UpdatedReplicas
-	totalInstances := deployment.Status.Replicas
-	availableInstances := deployment.Status.AvailableReplicas
-	staleInstances := totalInstances - updatedInstances
-
-	for _, condition := range deployment.Status.Conditions {
-		notProgressing := condition.Type == appsv1.DeploymentProgressing && condition.Status == corev1.ConditionFalse
-		if notProgressing && condition.Reason == reasonTimedOut {
-			failed = true
-			failureReason = condition.Reason
-			failureMessage = condition.Message
-			failureTime = &condition.LastTransitionTime
-		}
-	}
-
-	// First get a basic scaling up/down vs stable state
-	// With a little help from: https://github.com/kubernetes/kubernetes/blob/v1.9.0/pkg/kubectl/rollout_status.go#L66-L97
 	var state latticev1.ServiceState
-	if updatedInstances < totalInstances {
-		// The updated pods have not yet all been created
-		state = latticev1.ServiceStateScaling
-	} else if totalInstances > updatedInstances {
-		// There are extra pods still
-		state = latticev1.ServiceStateScaling
-	} else if availableInstances < updatedInstances {
-		// there's only updated instances but there aren't enough available instances yet
-		state = latticev1.ServiceStateScaling
-	} else if updatedInstances < desiredInstances {
-		// there only exists updatedInstances, and they're all available,
-		// but there isn't enough of them yet
+	if !deploymentStatus.UpdateProcessed {
+		state = latticev1.ServiceStateUpdating
+	} else if deploymentStatus.State == deploymentStateFailed {
+		failed = true
+		failureReason = deploymentStatus.FailureInfo.Reason
+		failureMessage = deploymentStatus.FailureInfo.Message
+		failureTime = &deploymentStatus.FailureInfo.Time
+	} else if deploymentStatus.State == deploymentStateScaling {
 		state = latticev1.ServiceStateScaling
 	} else {
-		// there are enough available updated instances, and no other instances
 		state = latticev1.ServiceStateStable
-	}
-
-	// If the Deployment controller hasn't yet seen the update, it's updating
-	if deployment.Generation > deployment.Status.ObservedGeneration {
-		state = latticev1.ServiceStateUpdating
-	}
-
-	// If we have any stale instances though, we are updating (which can include scaling)
-	// An updating status takes priority over a scaling/stable state
-	if staleInstances != 0 {
-		state = latticev1.ServiceStateUpdating
 	}
 
 	// The cloud controller is responsible for creating the Kubernetes Service.
@@ -156,50 +120,7 @@ func (c *Controller) syncServiceStatus(
 		}
 	}
 
-	if state == latticev1.ServiceStateStable {
-		// If we still think that the deployment is stable, check to see if there are any pods
-		// for this service that are terminating.
-		//
-		// Via https://kubernetes.io/docs/concepts/workloads/pods/pod#termination-of-pods,
-		// when a pod is Terminating:
-		// Pod is removed from endpoints list for service, and are no longer considered part of the set of
-		// running pods for replication controllers. Pods that shutdown slowly can continue to serve traffic
-		// as load balancers (like the service proxy) remove them from their rotations.
-		//
-		// That is, when the pod is in Terminating, it has been delivered a SIGTERM but is possibly still running.
-		// If, for example, a client has an open connection to the pod, that client can still make requests
-		// to the pod. However, at the same time the deployment will not report that this Terminating pod exists.
-		// If we were to take the deployment at its word, we could end up saying that this service is stably
-		// rolled out to the version specified, even though an old version still exists and could have open
-		// connections to it.
-		//
-		// So if we think that the service is stable, check to see if any pods exist that match are labeled with
-		// the service's ID, but have a non-null deletionTimestamp (i.e. they are terminating).
-		//
-		// TODO: investigate if/how it's possible for pods to get stuck in Terminating, and investigate what
-		//       automated processes we can put in place to clean up stuck pods so that deploys don't get stalled
-		//       forever
-		selector := labels.NewSelector()
-		requirement, err := labels.NewRequirement(constants.LabelKeyServiceID, selection.Equals, []string{service.Name})
-		if err != nil {
-			return nil, err
-		}
-		selector = selector.Add(*requirement)
-
-		pods, err := c.podLister.Pods(service.Namespace).List(selector)
-		if err != nil {
-			return nil, err
-		}
-
-		for _, pod := range pods {
-			if pod.DeletionTimestamp != nil {
-				state = latticev1.ServiceStateScaling
-				staleInstances++
-			}
-		}
-	}
-
-	return c.updateServiceStatus(service, state, updatedInstances, staleInstances, publicPorts, failureInfo)
+	return c.updateServiceStatus(service, state, deploymentStatus.UpdatedInstances, deploymentStatus.StaleInstances, publicPorts, failureInfo)
 }
 
 func (c *Controller) updateServiceStatus(
@@ -239,6 +160,7 @@ type lookupDelete struct {
 	delete func() error
 }
 
+// FIXME: remove this, was a remnant of cascading garbage collection not working for CRDs, add owner reference instead
 func (c *Controller) syncDeletedService(service *latticev1.Service) error {
 	lookupDeletes := []lookupDelete{
 		// node pool
@@ -334,6 +256,11 @@ func resourceExists(lookupFunc func() (interface{}, error)) (bool, error) {
 	return false, nil
 }
 
+func controllerRef(service *latticev1.Service) *metav1.OwnerReference {
+	return metav1.NewControllerRef(service, controllerKind)
+}
+
+// FIXME: don't think we need a finalizer anymore if cascading garbage collection works
 func (c *Controller) addFinalizer(service *latticev1.Service) (*latticev1.Service, error) {
 	// Check to see if the finalizer already exists. If so nothing needs to be done.
 	for _, finalizer := range service.Finalizers {

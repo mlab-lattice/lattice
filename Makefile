@@ -57,14 +57,6 @@ test.verbose: gazelle
 e2e-test: e2e-test.build
 	@$(DIR)/bazel-bin/test/e2e/darwin_amd64_stripped/go_default_test -cluster-url $(CLUSTER_URL)
 
-.PHONY: e2e-test.provider
-e2e-test.provider: e2e-test.build
-	@$(DIR)/bazel-bin/test/e2e/darwin_amd64_stripped/go_default_test -cloud-provider $(PROVIDER)
-
-.PHONY: e2e-test.local
-e2e-test.local: e2e-test.build
-	@$(MAKE) e2e-test.provider PROVIDER=local
-
 .PHONY: e2e-test.build
 e2e-test.build: gazelle
 	@bazel build //test/e2e/...
@@ -133,14 +125,14 @@ docker.push-image-no-gazelle:
 		--workspace_status_command $(DIR)/scripts/bazel/docker-workspace-status.sh \
 		//docker:push-debug-$(IMAGE)
 
-CONTAINER_PUSHES := $(addprefix docker.push-image-,$(DOCKER_IMAGES))
-.PHONY: $(CONTAINER_PUSHES)
-$(CONTAINER_PUSHES):
+IMAGE_PUSHES := $(addprefix docker.push-image-,$(DOCKER_IMAGES))
+.PHONY: $(IMAGE_PUSHES)
+$(IMAGE_PUSHES):
 	@$(MAKE) docker.push-image IMAGE=$(patsubst docker.push-image-%,%,$@)
 
-CONTAINER_PUSHES_NO_GAZELLE := $(addprefix docker.push-image-no-gazelle-,$(DOCKER_IMAGES))
-.PHONY: $(CONTAINER_PUSHES_NO_GAZELLE)
-$(CONTAINER_PUSHES_NO_GAZELLE):
+IMAGE_PUSHES_NO_GAZELLE := $(addprefix docker.push-image-no-gazelle-,$(DOCKER_IMAGES))
+.PHONY: $(IMAGE_PUSHES_NO_GAZELLE)
+$(IMAGE_PUSHES_NO_GAZELLE):
 	@$(MAKE) docker.push-image-no-gazelle IMAGE=$(patsubst docker.push-image-no-gazelle-%,%,$@)
 
 .PHONY: docker.push-all
@@ -156,11 +148,21 @@ docker.save-image: gazelle
 		//docker:debug-$(IMAGE) \
 		-- --norun
 
-CONTAINER_SAVES := $(addprefix docker.save-image-,$(DOCKER_IMAGES))
+IMAGE_SAVES := $(addprefix docker.save-image-,$(DOCKER_IMAGES))
 
-.PHONY: $(CONTAINER_SAVES)
-$(CONTAINER_SAVES):
+.PHONY: $(IMAGE_SAVES)
+$(IMAGE_SAVES):
 	@$(MAKE) docker.save-image IMAGE=$(patsubst docker.save-image-%,%,$@)
+
+.PHONY: docker.run-shell
+docker.run-shell: docker.save-image
+	@docker run -it --entrypoint sh bazel/docker:debug-$(IMAGE)
+
+IMAGE_RUNS := $(addprefix docker.run-shell-,$(DOCKER_IMAGES))
+
+.PHONY: $(IMAGE_RUNS)
+$(IMAGE_RUNS):
+	@$(MAKE) docker.run-shell IMAGE=$(patsubst docker.run-shell-%,%,$@)
 
 # kubernetes
 .PHONY: kubernetes.update-dependencies

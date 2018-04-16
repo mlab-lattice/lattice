@@ -13,7 +13,7 @@ import (
 	"github.com/golang/glog"
 )
 
-func (c *Controller) syncServiceServiceAddress(service *latticev1.Service) (*latticev1.ServiceAddress, error) {
+func (c *Controller) syncServiceAddress(service *latticev1.Service) (*latticev1.ServiceAddress, error) {
 	serviceAddress, err := c.serviceAddressLister.ServiceAddresses(service.Namespace).Get(service.Name)
 	if err != nil {
 		if errors.IsNotFound(err) {

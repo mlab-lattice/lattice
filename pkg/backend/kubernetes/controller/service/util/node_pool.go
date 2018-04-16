@@ -13,7 +13,7 @@ import (
 func ServicesForNodePool(latticeClient latticeclientset.Interface, nodePool *latticev1.NodePool) ([]latticev1.Service, error) {
 	// TODO(kevinrosendahl): will have to change query's namespace when supporting cluster-level node pools
 	selector := labels.NewSelector()
-	requirement, err := labels.NewRequirement(constants.LabelKeyNodeRoleNodePool, selection.Equals, []string{nodePool.IDLabelValue()})
+	requirement, err := labels.NewRequirement(constants.LabelKeyNodeRoleLatticeNodePool, selection.Equals, []string{nodePool.IDLabelValue()})
 	if err != nil {
 		return nil, err
 	}

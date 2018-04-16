@@ -34,7 +34,7 @@ type Service struct {
 func (s *Service) Description() string {
 	systemID, err := kubeutil.SystemID(s.Namespace)
 	if err != nil {
-		systemID = v1.SystemID(fmt.Sprintf("UNKNOWN (namespace: %v)", systemID))
+		systemID = v1.SystemID(fmt.Sprintf("UNKNOWN (namespace: %v)", s.Namespace))
 	}
 
 	path, err := s.PathLabel()

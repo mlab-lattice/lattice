@@ -1,7 +1,7 @@
 package base
 
 import (
-	kubeconstants "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/constants"
+	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/constants"
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/lifecycle/lattice/bootstrap/bootstrapper"
 	kubeutil "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/kubernetes"
@@ -18,7 +18,7 @@ import (
 
 func (b *DefaultBootstrapper) controllerManagerResources(resources *bootstrapper.Resources) {
 	internalNamespace := kubeutil.InternalNamespace(b.LatticeID)
-	name := fmt.Sprintf("%v-%v", b.LatticeID, kubeconstants.ControlPlaneServiceLatticeControllerManager)
+	name := fmt.Sprintf("%v-%v", b.LatticeID, constants.ControlPlaneServiceLatticeControllerManager)
 
 	clusterRole := &rbacv1.ClusterRole{
 		// Include TypeMeta so if this is a dry run it will be printed out
@@ -104,7 +104,7 @@ func (b *DefaultBootstrapper) controllerManagerResources(resources *bootstrapper
 			APIVersion: corev1.SchemeGroupVersion.String(),
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      kubeconstants.ControlPlaneServiceLatticeControllerManager,
+			Name:      constants.ControlPlaneServiceLatticeControllerManager,
 			Namespace: internalNamespace,
 		},
 	}
@@ -153,7 +153,7 @@ func (b *DefaultBootstrapper) controllerManagerResources(resources *bootstrapper
 	}
 
 	labels := map[string]string{
-		kubeconstants.LabelKeyControlPlaneService: kubeconstants.ControlPlaneServiceLatticeControllerManager,
+		constants.LabelKeyControlPlaneService: constants.ControlPlaneServiceLatticeControllerManager,
 	}
 
 	daemonSet := &appsv1.DaemonSet{
@@ -163,7 +163,7 @@ func (b *DefaultBootstrapper) controllerManagerResources(resources *bootstrapper
 			APIVersion: appsv1.SchemeGroupVersion.String(),
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      kubeconstants.ControlPlaneServiceLatticeControllerManager,
+			Name:      constants.ControlPlaneServiceLatticeControllerManager,
 			Namespace: internalNamespace,
 			Labels:    labels,
 		},
@@ -173,24 +173,25 @@ func (b *DefaultBootstrapper) controllerManagerResources(resources *bootstrapper
 			},
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:   kubeconstants.ControlPlaneServiceLatticeControllerManager,
+					Name:   constants.ControlPlaneServiceLatticeControllerManager,
 					Labels: labels,
 				},
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{
 						{
-							Name:  kubeconstants.ControlPlaneServiceLatticeControllerManager,
+							Name:  constants.ControlPlaneServiceLatticeControllerManager,
 							Image: b.Options.MasterComponents.LatticeControllerManager.Image,
 							Args:  args,
 						},
 					},
 					DNSPolicy:          corev1.DNSDefault,
-					ServiceAccountName: kubeconstants.ServiceAccountLatticeControllerManager,
+					ServiceAccountName: constants.ServiceAccountLatticeControllerManager,
 					Tolerations: []corev1.Toleration{
-						kubeconstants.TolerationMasterNode,
+						constants.TolerationKubernetesMasterNode,
+						constants.TolerationLatticeMasterNode,
 					},
 					Affinity: &corev1.Affinity{
-						NodeAffinity: &kubeconstants.NodeAffinityMasterNode,
+						NodeAffinity: &constants.NodeAffinityMasterNode,
 					},
 				},
 			},

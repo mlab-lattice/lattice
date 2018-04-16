@@ -6,7 +6,7 @@ import (
 	"reflect"
 	"sort"
 
-	kubeconstants "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/constants"
+	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/constants"
 	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/controller/service/util"
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	kubeutil "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/kubernetes"
@@ -16,7 +16,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	kubelabels "k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/apimachinery/pkg/util/intstr"
 
@@ -30,50 +30,106 @@ const (
 	dnsOptionNdots     = "ndots"
 )
 
-func (c *Controller) syncServiceDeployment(service *latticev1.Service, nodePool *latticev1.NodePool) (*appsv1.Deployment, error) {
-	selector := kubelabels.NewSelector()
-	requirement, err := kubelabels.NewRequirement(kubeconstants.LabelKeyServiceID, selection.Equals, []string{service.Name})
+func (c *Controller) syncDeployment(service *latticev1.Service, nodePool *latticev1.NodePool, nodePoolReady bool) (*deploymentStatus, error) {
+	deployment, err := c.deployment(service)
+	if err != nil {
+		return nil, err
+	}
+
+	if deployment == nil {
+		// If we need to create a new deployment, we need to wait until the
+		// node pool is ready so we can get the right affinity and toleration.
+		if !nodePoolReady {
+			status := &deploymentStatus{
+				UpdateProcessed: true,
+
+				State: deploymentStatePending,
+
+				TotalInstances:       0,
+				UpdatedInstances:     0,
+				StaleInstances:       0,
+				AvailableInstances:   0,
+				TerminatingInstances: 0,
+			}
+			return status, nil
+		}
+
+		return c.createNewDeployment(service, nodePool)
+	}
+
+	// If the new node pool isn't ready yet, we shouldn't update the deployment's spec
+	// yet. If we do, the deployment will try to start rolling out, which will essentially
+	// just result in terminating some pods while waiting for the node pool to be ready.
+	if !nodePoolReady {
+		return c.getDeploymentStatus(service, deployment)
+	}
+
+	return c.syncExistingDeployment(service, nodePool, deployment)
+}
+
+func (c *Controller) deployment(service *latticev1.Service) (*appsv1.Deployment, error) {
+	// First check the cache for the deployment
+	selector := labels.NewSelector()
+	requirement, err := labels.NewRequirement(constants.LabelKeyServiceID, selection.Equals, []string{service.Name})
 	if err != nil {
 		return nil, err
 	}
 
 	selector = selector.Add(*requirement)
-	deployments, err := c.deploymentLister.Deployments(service.Namespace).List(selector)
+
+	cachedDeployments, err := c.deploymentLister.Deployments(service.Namespace).List(selector)
 	if err != nil {
 		return nil, err
 	}
 
-	if len(deployments) > 1 {
+	if len(cachedDeployments) > 1 {
 		// This may become valid when doing blue/green deploys
 		return nil, fmt.Errorf("found multiple deployments for %v/%v", service.Namespace, service.Name)
 	}
 
-	if len(deployments) == 0 {
-		return c.createNewDeployment(service, nodePool)
+	if len(cachedDeployments) == 1 {
+		return cachedDeployments[0], nil
 	}
 
-	return c.syncExistingDeployment(service, nodePool, deployments[0])
+	// Didn't find the deployment in the cache. This likely means it hasn't been created, but since
+	// we can't orphan deployments, we need to do a quorum read first to ensure that the deployment
+	// doesn't exist
+	deployments, err := c.kubeClient.AppsV1().Deployments(service.Namespace).List(metav1.ListOptions{LabelSelector: selector.String()})
+	if err != nil {
+		return nil, err
+	}
+
+	if len(deployments.Items) > 1 {
+		// This may become valid when doing blue/green deploys
+		return nil, fmt.Errorf("found multiple deployments for %v/%v", service.Namespace, service.Name)
+	}
+
+	if len(deployments.Items) == 1 {
+		return &deployments.Items[0], nil
+	}
+
+	return nil, nil
 }
 
 func (c *Controller) syncExistingDeployment(
 	service *latticev1.Service,
 	nodePool *latticev1.NodePool,
 	deployment *appsv1.Deployment,
-) (*appsv1.Deployment, error) {
+) (*deploymentStatus, error) {
 	// Need a consistent view of our config while generating the deployment spec
 	c.configLock.RLock()
 	defer c.configLock.RUnlock()
 
 	name := deploymentName(service)
-	labels := deploymentLabels(service)
+	deploymentLabels := deploymentLabels(service)
 
-	desiredSpec, err := c.deploymentSpec(service, name, labels, nodePool)
+	desiredSpec, err := c.deploymentSpec(service, name, deploymentLabels, nodePool)
 	if err != nil {
 		return nil, err
 	}
 
 	currentSpec := deployment.Spec
-	untransformedSpec, err := c.untransformedDeploymentSpec(service, name, labels, nodePool)
+	untransformedSpec, err := c.untransformedDeploymentSpec(service, name, deploymentLabels, nodePool)
 	if err != nil {
 		return nil, err
 	}
@@ -90,10 +146,13 @@ func (c *Controller) syncExistingDeployment(
 			service.Name,
 			reason,
 		)
-		return c.updateDeploymentSpec(deployment, desiredSpec)
+		deployment, err = c.updateDeploymentSpec(deployment, desiredSpec)
+		if err != nil {
+			return nil, err
+		}
 	}
 
-	return deployment, nil
+	return c.getDeploymentStatus(service, deployment)
 }
 
 func (c *Controller) updateDeploymentSpec(deployment *appsv1.Deployment, spec appsv1.DeploymentSpec) (*appsv1.Deployment, error) {
@@ -108,13 +167,18 @@ func (c *Controller) updateDeploymentSpec(deployment *appsv1.Deployment, spec ap
 	return c.kubeClient.AppsV1().Deployments(deployment.Namespace).Update(deployment)
 }
 
-func (c *Controller) createNewDeployment(service *latticev1.Service, nodePool *latticev1.NodePool) (*appsv1.Deployment, error) {
+func (c *Controller) createNewDeployment(service *latticev1.Service, nodePool *latticev1.NodePool) (*deploymentStatus, error) {
 	deployment, err := c.newDeployment(service, nodePool)
 	if err != nil {
 		return nil, err
 	}
 
-	return c.kubeClient.AppsV1().Deployments(service.Namespace).Create(deployment)
+	deployment, err = c.kubeClient.AppsV1().Deployments(service.Namespace).Create(deployment)
+	if err != nil {
+		return nil, err
+	}
+
+	return c.getDeploymentStatus(service, deployment)
 }
 
 func (c *Controller) newDeployment(service *latticev1.Service, nodePool *latticev1.NodePool) (*appsv1.Deployment, error) {
@@ -134,7 +198,7 @@ func (c *Controller) newDeployment(service *latticev1.Service, nodePool *lattice
 		ObjectMeta: metav1.ObjectMeta{
 			Name:            name,
 			Labels:          labels,
-			OwnerReferences: []metav1.OwnerReference{*metav1.NewControllerRef(service, controllerKind)},
+			OwnerReferences: []metav1.OwnerReference{*controllerRef(service)},
 		},
 		Spec: spec,
 	}
@@ -149,7 +213,7 @@ func deploymentName(service *latticev1.Service) string {
 
 func deploymentLabels(service *latticev1.Service) map[string]string {
 	return map[string]string{
-		kubeconstants.LabelKeyServiceID: service.Name,
+		constants.LabelKeyServiceID: service.Name,
 	}
 }
 
@@ -215,7 +279,7 @@ func (c *Controller) untransformedDeploymentSpec(
 		// Since we also add a RequiredDuringScheduling NodeAffinity for our NodePool,
 		// this NodePool's nodes are the only nodes that these pods could be scheduled on,
 		// so this TopologyKey doesn't really matter (besides being required).
-		TopologyKey: kubeconstants.LabelKeyNodeRoleNodePool,
+		TopologyKey: constants.LabelKeyNodeRoleLatticeNodePool,
 	}
 
 	// TODO(kevinrosendahl): Make this a PreferredDuringScheduling PodAntiAffinity if the service is running on a shared NodePool
@@ -459,4 +523,137 @@ func (c *Controller) isDeploymentSpecUpdated(
 	}
 
 	return true, ""
+}
+
+type deploymentStatus struct {
+	UpdateProcessed bool
+
+	State       deploymentState
+	FailureInfo *deploymentStatusFailureInfo
+
+	TotalInstances       int32
+	UpdatedInstances     int32
+	StaleInstances       int32
+	AvailableInstances   int32
+	TerminatingInstances int32
+}
+
+type deploymentState int
+
+const (
+	deploymentStateScaling deploymentState = iota
+	deploymentStateStable
+	deploymentStateFailed
+	deploymentStatePending
+)
+
+type deploymentStatusFailureInfo struct {
+	Reason  string
+	Message string
+	Time    metav1.Time
+}
+
+func (s *deploymentStatus) Failed() (bool, *deploymentStatusFailureInfo) {
+	return s.State == deploymentStateFailed, s.FailureInfo
+}
+
+func (s *deploymentStatus) Stable() bool {
+	return s.State == deploymentStateStable
+}
+
+func (c *Controller) getDeploymentStatus(service *latticev1.Service, deployment *appsv1.Deployment) (*deploymentStatus, error) {
+	var state deploymentState
+	totalInstances := deployment.Status.Replicas
+	updatedInstances := deployment.Status.UpdatedReplicas
+	availableInstances := deployment.Status.AvailableReplicas
+	staleInstances := totalInstances - updatedInstances
+
+	var failureInfo *deploymentStatusFailureInfo
+	for _, condition := range deployment.Status.Conditions {
+		notProgressing := condition.Type == appsv1.DeploymentProgressing && condition.Status == corev1.ConditionFalse
+		if notProgressing && condition.Reason == reasonTimedOut {
+			state = deploymentStateFailed
+			failureInfo = &deploymentStatusFailureInfo{
+				Reason:  condition.Reason,
+				Message: condition.Message,
+				Time:    condition.LastTransitionTime,
+			}
+		}
+	}
+
+	// Via https://kubernetes.io/docs/concepts/workloads/pods/pod#termination-of-pods,
+	// when a pod is Terminating:
+	// Pod is removed from endpoints list for service, and are no longer considered part of the set of
+	// running pods for replication controllers. Pods that shutdown slowly can continue to serve traffic
+	// as load balancers (like the service proxy) remove them from their rotations.
+	//
+	// That is, when the pod is in Terminating, it has been delivered a SIGTERM but is possibly still running.
+	// If, for example, a client has an open connection to the pod, that client can still make requests
+	// to the pod. However, at the same time the deployment will not report that this Terminating pod exists.
+	// If we were to take the deployment at its word, we could end up saying that this service is stably
+	// rolled out to the version specified, even though an old version still exists and could have open
+	// connections to it.
+	//
+	// So if we think that the service is stable, check to see if any pods exist that match are labeled with
+	// the service's ID, but have a non-null deletionTimestamp (i.e. they are terminating).
+	//
+	// TODO: investigate if/how it's possible for pods to get stuck in Terminating, and investigate what
+	//       automated processes we can put in place to clean up stuck pods so that deploys don't get stalled
+	//       forever
+	selector := labels.NewSelector()
+	requirement, err := labels.NewRequirement(constants.LabelKeyServiceID, selection.Equals, []string{service.Name})
+	if err != nil {
+		return nil, err
+	}
+	selector = selector.Add(*requirement)
+
+	pods, err := c.podLister.Pods(service.Namespace).List(selector)
+	if err != nil {
+		return nil, err
+	}
+
+	var terminatingInstances int32
+	for _, pod := range pods {
+		if pod.DeletionTimestamp != nil {
+			terminatingInstances++
+		}
+	}
+
+	if state != deploymentStateFailed {
+		if updatedInstances < totalInstances {
+			// The updated pods have not yet all been created
+			state = deploymentStateScaling
+		} else if totalInstances > updatedInstances {
+			// There are extra pods still
+			state = deploymentStateScaling
+		} else if availableInstances < updatedInstances {
+			// there's only updated instances but there aren't enough available instances yet
+			state = deploymentStateScaling
+		} else if updatedInstances < service.Spec.NumInstances {
+			// there only exists UpdatedInstances, and they're all available,
+			// but there isn't enough of them yet
+			state = deploymentStateScaling
+		} else if terminatingInstances > 0 {
+			// There are still pods cleaning up
+			state = deploymentStateScaling
+		} else {
+			// there are enough available updated instances, and no other instances
+			state = deploymentStateStable
+		}
+	}
+
+	status := &deploymentStatus{
+		UpdateProcessed: deployment.Generation <= deployment.Status.ObservedGeneration,
+
+		State:       state,
+		FailureInfo: failureInfo,
+
+		TotalInstances:       totalInstances,
+		UpdatedInstances:     updatedInstances,
+		StaleInstances:       staleInstances,
+		AvailableInstances:   availableInstances,
+		TerminatingInstances: terminatingInstances,
+	}
+
+	return status, nil
 }

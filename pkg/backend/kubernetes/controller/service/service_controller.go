@@ -897,22 +897,27 @@ func (c *Controller) syncService(key string) error {
 		return err
 	}
 
-	nodePool, err := c.syncServiceNodePool(service)
+	nodePool, nodePoolReady, err := c.syncCurrentNodePool(service)
 	if err != nil {
 		return err
 	}
 
-	deployment, err := c.syncServiceDeployment(service, nodePool)
+	deploymentStatus, err := c.syncDeployment(service, nodePool, nodePoolReady)
 	if err != nil {
 		return err
 	}
 
-	kubeService, err := c.syncServiceKubeService(service)
+	extraNodePoolsExist, err := c.deleteExtraNodePools(service, nodePool, nodePoolReady, deploymentStatus)
 	if err != nil {
 		return err
 	}
 
-	serviceAddress, err := c.syncServiceServiceAddress(service)
+	kubeService, err := c.syncKubeService(service)
+	if err != nil {
+		return err
+	}
+
+	serviceAddress, err := c.syncServiceAddress(service)
 	if err != nil {
 		return err
 	}
@@ -924,9 +929,11 @@ func (c *Controller) syncService(key string) error {
 
 	_, err = c.syncServiceStatus(
 		service,
-		deployment,
-		kubeService,
 		nodePool,
+		nodePoolReady,
+		deploymentStatus,
+		extraNodePoolsExist,
+		kubeService,
 		serviceAddress,
 		loadBalancer,
 		loadBalancerNeeded,
