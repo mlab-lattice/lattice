@@ -26,7 +26,7 @@ func main() {
 	latticectl := app.Latticectl
 	cmd, er := latticectl.Init()
 	if er != nil {
-		log.Fatalf("FATAL: Error while initialising laasctl")
+		log.Fatalf("FATAL: Error while initialising latticectl")
 	}
 
 	reader, err := docgen.GenerateMarkdown(cmd)

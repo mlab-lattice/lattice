@@ -7,6 +7,7 @@ import (
 	"io"
 	"io/ioutil"
 	"log"
+	"os"
 	"sort"
 	"strings"
 
@@ -20,9 +21,9 @@ func GenerateMarkdown(cmd *cli.Command) (io.Reader, error) {
 	var buffer bytes.Buffer
 	writer := bufio.NewWriter(&buffer)
 
-	writeErr := writeDoc(cmd, writer)
-	if writeErr != nil {
-		return nil, writeErr
+	err := writeDoc(cmd, writer)
+	if err != nil {
+		return nil, err
 	}
 
 	writer.Flush()
@@ -211,13 +212,14 @@ func getMarkdownFileContent(cmdName string) (string, error) {
 
 	buffer, err := ioutil.ReadFile(markdownPath)
 
-	if err == nil {
-		log.Printf("Markdown file found: %s", markdownPath)
-		return string(buffer), nil
-	} else if strings.Contains(err.Error(), "no such file or directory") {
+	if err != nil {
+		if !os.IsNotExist(err) {
+			return "", err
+		}
+		// File doesn't exist, so nothing to return
 		return "", nil
 	}
 
-	log.Printf("Error: Markdown file '%s' cannot be read: %s", markdownPath, err)
-	return "", err
+	log.Printf("Markdown file found: %s", markdownPath)
+	return string(buffer), nil
 }
