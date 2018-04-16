@@ -2,7 +2,7 @@ package basecontrollers
 
 import (
 	controller "github.com/mlab-lattice/lattice/cmd/kubernetes/lattice-controller-manager/app/common"
-	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/controller/base/systemlifecycle"
+	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/controller/systemlifecycle"
 )
 
 func initializeSystemRolloutController(ctx controller.Context) {

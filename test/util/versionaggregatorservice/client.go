@@ -5,8 +5,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"reflect"
 
 	"github.com/mlab-lattice/lattice/pkg/util/rest"
+
+	"github.com/sergi/go-diff/diffmatchpatch"
 )
 
 type Aggregation struct {
@@ -103,4 +106,37 @@ func (c *DefaultClient) Aggregate(versionServices []VersionService, aggregatorSe
 	}
 
 	return response, nil
+}
+
+func (c *DefaultClient) CheckStatusAndAggregation(versionServices []VersionService, aggregatorServices []VersionAggregatorService, expectedAggregation *Aggregation) error {
+	ok, err := c.Status()
+	if err != nil {
+		return fmt.Errorf("error getting status: %v", err)
+	}
+	if !ok {
+		return fmt.Errorf("status was not okay")
+	}
+
+	aggregation, err := c.Aggregate(versionServices, aggregatorServices)
+	if err != nil {
+		return fmt.Errorf("error getting aggregation: %v", err)
+	}
+
+	if !reflect.DeepEqual(expectedAggregation, aggregation) {
+		expectedJSON, err := json.Marshal(expectedAggregation)
+		if err != nil {
+			return err
+		}
+
+		aggregationJSON, err := json.Marshal(aggregation)
+		if err != nil {
+			return err
+		}
+
+		dmp := diffmatchpatch.New()
+		diffs := dmp.DiffMain(string(expectedJSON), string(aggregationJSON), true)
+		return fmt.Errorf("expected aggregation did not match the result: %v", dmp.DiffPrettyText(diffs))
+	}
+
+	return nil
 }

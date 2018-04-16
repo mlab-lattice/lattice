@@ -1,7 +1,4 @@
 # Bazel
 /bazel-*
 
-/tmp
-/cloud-images/.state
-
 /.lattice

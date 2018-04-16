@@ -91,7 +91,7 @@ func (kb *KubernetesBackend) transformSystem(system *latticev1.System) (*v1.Syst
 		state = v1.SystemStateDeleting
 	} else {
 		var err error
-		state, err = getSystemState(system.Status.State)
+		state, err = getSystemState(system.Status.State, system.Status.UpdateProcessed)
 		if err != nil {
 			return nil, err
 		}
@@ -117,13 +117,25 @@ func (kb *KubernetesBackend) transformSystem(system *latticev1.System) (*v1.Syst
 	return externalSystem, nil
 }
 
-func getSystemState(state latticev1.SystemState) (v1.SystemState, error) {
-	switch state {
-	case latticev1.SystemStatePending:
+func getSystemState(state latticev1.SystemState, updateProcessed bool) (v1.SystemState, error) {
+	// If the system is pending or failed, it doesn't matter if the controller has seen the most
+	// recent spec
+	if state == latticev1.SystemStatePending {
 		return v1.SystemStatePending, nil
-	case latticev1.SystemStateFailed:
-		return v1.SystemStateFailed, nil
+	}
 
+	if state == latticev1.SystemStateFailed {
+		return v1.SystemStateFailed, nil
+	}
+
+	// If the system is in a created state, but the controller has not yet seen the most up to date
+	// spec, then the system is updating
+	if !updateProcessed {
+		return v1.SystemStateUpdating, nil
+	}
+
+	// If the controller has seen the most recent spec, then we can return the true system status
+	switch state {
 	case latticev1.SystemStateStable:
 		return v1.SystemStateStable, nil
 	case latticev1.SystemStateDegraded:

@@ -6,37 +6,36 @@ go_base_images = {
     True: "@go_debug_image_base//image",
 }
 
-build_user_stamp_prefix = "{BUILD_USER}-"
 debug_prefix = "debug-"
 push_prefix = "push-"
-registry = "gcr.io/lattice-dev"
-stable_prefix = "stable-"
-user_prefix = "user-"
 
-def lattice_base_container_images(base_images):
-  for image in base_images:
-    lattice_base_container_image(image, False)
-    lattice_base_container_image(image, True)
+# creates both production and debug versions of the base go image
+# the base_image argument should be the name of a container_image target
+def lattice_base_go_container_image(name, base_layer_target):
+  _lattice_base_go_container_image(
+      name=name,
+      base_layer_target=base_layer_target,
+      debug=False,
+  )
 
+  _lattice_base_go_container_image(
+      name=name,
+      base_layer_target=base_layer_target,
+      debug=True,
+  )
 
-def lattice_base_container_image(base_image, debug=False):
-  name = base_image if not debug else debug_prefix + base_image
-  base = "@go_image_base//image"
+def _lattice_base_go_container_image(name, base_layer_target, debug=False):
+  name = name if not debug else debug_prefix + name
   container_image(
       name = name,
       base = go_base_images[debug],
-      tars = [":base-" + base_image],
+      tars = [base_layer_target],
   )
 
 
-def lattice_container_images(go_targets):
-  for target in go_targets:
-    lattice_go_container_image(target)
-
-
-def lattice_go_container_image(target, debug=False):
-  (name, base_image, path) = target
-
+# creates both go_image and container_push targets for both stripped and debug versions
+# of the target
+def lattice_go_container_image(name, base_image, path):
   debug_name = debug_prefix + name
 
   prod_base_image = base_image if base_image else go_base_images[False]
@@ -50,19 +49,11 @@ def lattice_go_container_image(target, debug=False):
   )
 
   container_push(
-      name = push_prefix + stable_prefix + name,
+      name = push_prefix + name,
       format = "Docker",
       image = ":" + name,
-      registry = registry,
-      repository = stable_prefix + name,
-  )
-
-  container_push(
-      name = push_prefix + user_prefix + name,
-      format = "Docker",
-      image = ":" + name,
-      registry = registry,
-      repository = build_user_stamp_prefix + name,
+      registry = "{REGISTRY}",
+      repository = "{CHANNEL}-" + name,
       stamp = True,
   )
 
@@ -73,21 +64,11 @@ def lattice_go_container_image(target, debug=False):
       visibility = ["//visibility:public"],
   )
 
-
   container_push(
-      name = push_prefix + stable_prefix + debug_name,
+      name = push_prefix + debug_name,
       format = "Docker",
       image = ":" + debug_name,
-      registry = registry,
-      repository = stable_prefix + debug_name,
-  )
-
-
-  container_push(
-      name = push_prefix + user_prefix + debug_name,
-      format = "Docker",
-      image = ":" + debug_name,
-      registry = registry,
-      repository = build_user_stamp_prefix + debug_name,
+      registry = "{REGISTRY}",
+      repository = "{CHANNEL}-" + debug_name,
       stamp = True,
   )

@@ -1,7 +1,7 @@
 package base
 
 import (
-	kubeconstants "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/constants"
+	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/constants"
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/lifecycle/lattice/bootstrap/bootstrapper"
 	kubeutil "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/kubernetes"
@@ -19,7 +19,7 @@ func (b *DefaultBootstrapper) configResources(resources *bootstrapper.Resources)
 			APIVersion: latticev1.SchemeGroupVersion.String(),
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      kubeconstants.ConfigGlobal,
+			Name:      constants.ConfigGlobal,
 			Namespace: namespace,
 		},
 		Spec: b.Options.Config,

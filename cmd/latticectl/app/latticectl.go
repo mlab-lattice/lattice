@@ -2,9 +2,9 @@ package app
 
 import (
 	"github.com/mlab-lattice/lattice/pkg/latticectl"
-	"github.com/mlab-lattice/lattice/pkg/latticectl/commands/bootstrap"
-	"github.com/mlab-lattice/lattice/pkg/latticectl/commands/bootstrap/kubernetes"
 	"github.com/mlab-lattice/lattice/pkg/latticectl/commands/context"
+	"github.com/mlab-lattice/lattice/pkg/latticectl/commands/kubernetes"
+	"github.com/mlab-lattice/lattice/pkg/latticectl/commands/kubernetes/bootstrap"
 	"github.com/mlab-lattice/lattice/pkg/latticectl/commands/local"
 	"github.com/mlab-lattice/lattice/pkg/latticectl/commands/services"
 	"github.com/mlab-lattice/lattice/pkg/latticectl/commands/systems"
@@ -21,19 +21,20 @@ var Latticectl = latticectl.Latticectl{
 		Name:  "latticectl",
 		Short: "command line utility for interacting with lattices and systems",
 		Subcommands: []latticectl.Command{
-			// Bootstrap commands
-			&bootstrap.Command{
-				Subcommands: []latticectl.Command{
-					&kubernetes.Command{},
-				},
-			},
 			// Context commands
 			&context.Command{
 				Subcommands: []latticectl.Command{
-					&context.GetCommand{},
 					&context.SetCommand{},
 				},
 			},
+
+			// Kubernetes commands
+			&kubernetes.Command{
+				Subcommands: []latticectl.Command{
+					&bootstrap.Command{},
+				},
+			},
+
 			// Local commands
 			&local.Command{
 				Subcommands: []latticectl.Command{
@@ -41,14 +42,17 @@ var Latticectl = latticectl.Latticectl{
 					&local.UpCommand{},
 				},
 			},
+
 			// System commands
 			&systems.ListSystemsCommand{
 				Subcommands: []latticectl.Command{
 					&systems.CreateCommand{},
 					&systems.StatusCommand{},
 					&systems.DeleteCommand{},
+
 					// Version commands
 					&systems.ListVersionsCommand{},
+
 					// Build commands
 					&systems.BuildCommand{},
 					&builds.ListBuildsCommand{
@@ -56,6 +60,7 @@ var Latticectl = latticectl.Latticectl{
 							&builds.StatusCommand{},
 						},
 					},
+
 					// Deploy commands
 					&systems.DeployCommand{},
 					&deploys.ListDeploysCommand{
@@ -63,6 +68,7 @@ var Latticectl = latticectl.Latticectl{
 							&deploys.StatusCommand{},
 						},
 					},
+
 					// Teardown commands
 					&systems.TeardownCommand{},
 					&teardowns.ListTeardownsCommand{
@@ -70,6 +76,7 @@ var Latticectl = latticectl.Latticectl{
 							&teardowns.StatusCommand{},
 						},
 					},
+
 					// Secret commands
 					&secrets.ListSecretsCommand{
 						Subcommands: []latticectl.Command{
@@ -79,6 +86,7 @@ var Latticectl = latticectl.Latticectl{
 					},
 				},
 			},
+
 			// Service commands
 			&services.ListServicesCommand{
 				Subcommands: []latticectl.Command{

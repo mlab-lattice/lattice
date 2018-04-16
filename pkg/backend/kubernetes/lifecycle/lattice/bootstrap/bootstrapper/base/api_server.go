@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strconv"
 
-	kubeconstants "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/constants"
+	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/constants"
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/lifecycle/lattice/bootstrap/bootstrapper"
 	kubeutil "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/kubernetes"
@@ -19,7 +19,7 @@ import (
 
 func (b *DefaultBootstrapper) aPIServerResources(resources *bootstrapper.Resources) {
 	internalNamespace := kubeutil.InternalNamespace(b.LatticeID)
-	name := fmt.Sprintf("%v-%v", b.LatticeID, kubeconstants.ControlPlaneServiceAPIServer)
+	name := fmt.Sprintf("%v-%v", b.LatticeID, constants.ControlPlaneServiceAPIServer)
 
 	clusterRole := &rbacv1.ClusterRole{
 		// Include TypeMeta so if this is a dry run it will be printed out
@@ -61,10 +61,16 @@ func (b *DefaultBootstrapper) aPIServerResources(resources *bootstrapper.Resourc
 				Resources: []string{latticev1.ResourcePluralComponentBuild},
 				Verbs:     readVerbs,
 			},
-			// lattice rollout build and create
+			// lattice deploy read and create
 			{
 				APIGroups: []string{latticev1.GroupName},
 				Resources: []string{latticev1.ResourcePluralDeploy},
+				Verbs:     readAndCreateVerbs,
+			},
+			// lattice teardown read and create
+			{
+				APIGroups: []string{latticev1.GroupName},
+				Resources: []string{latticev1.ResourcePluralTeardown},
 				Verbs:     readAndCreateVerbs,
 			},
 			// lattice service read
@@ -121,7 +127,7 @@ func (b *DefaultBootstrapper) aPIServerResources(resources *bootstrapper.Resourc
 			APIVersion: corev1.SchemeGroupVersion.String(),
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      kubeconstants.ServiceAccountAPIServer,
+			Name:      constants.ServiceAccountAPIServer,
 			Namespace: internalNamespace,
 		},
 	}
@@ -157,7 +163,7 @@ func (b *DefaultBootstrapper) aPIServerResources(resources *bootstrapper.Resourc
 	}
 	args = append(args, b.Options.MasterComponents.APIServer.Args...)
 	labels := map[string]string{
-		kubeconstants.LabelKeyControlPlaneService: kubeconstants.ControlPlaneServiceAPIServer,
+		constants.LabelKeyControlPlaneService: constants.ControlPlaneServiceAPIServer,
 	}
 
 	daemonSet := &appsv1.DaemonSet{
@@ -167,7 +173,7 @@ func (b *DefaultBootstrapper) aPIServerResources(resources *bootstrapper.Resourc
 			APIVersion: appsv1.SchemeGroupVersion.String(),
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      kubeconstants.ControlPlaneServiceAPIServer,
+			Name:      constants.ControlPlaneServiceAPIServer,
 			Namespace: internalNamespace,
 			Labels:    labels,
 		},
@@ -177,13 +183,13 @@ func (b *DefaultBootstrapper) aPIServerResources(resources *bootstrapper.Resourc
 			},
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:   kubeconstants.ControlPlaneServiceAPIServer,
+					Name:   constants.ControlPlaneServiceAPIServer,
 					Labels: labels,
 				},
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{
 						{
-							Name:  kubeconstants.ControlPlaneServiceAPIServer,
+							Name:  constants.ControlPlaneServiceAPIServer,
 							Image: b.Options.MasterComponents.APIServer.Image,
 							Args:  args,
 							Ports: []corev1.ContainerPort{
@@ -197,12 +203,13 @@ func (b *DefaultBootstrapper) aPIServerResources(resources *bootstrapper.Resourc
 					},
 					HostNetwork:        b.Options.MasterComponents.APIServer.HostNetwork,
 					DNSPolicy:          corev1.DNSDefault,
-					ServiceAccountName: kubeconstants.ServiceAccountAPIServer,
+					ServiceAccountName: constants.ServiceAccountAPIServer,
 					Tolerations: []corev1.Toleration{
-						kubeconstants.TolerationMasterNode,
+						constants.TolerationKubernetesMasterNode,
+						constants.TolerationLatticeMasterNode,
 					},
 					Affinity: &corev1.Affinity{
-						NodeAffinity: &kubeconstants.NodeAffinityMasterNode,
+						NodeAffinity: &constants.NodeAffinityMasterNode,
 					},
 				},
 			},

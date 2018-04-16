@@ -9,7 +9,7 @@ var NodeSelectorMasterNode = corev1.NodeSelector{
 		{
 			MatchExpressions: []corev1.NodeSelectorRequirement{
 				{
-					Key:      LabelKeyMasterNode,
+					Key:      LabelKeyNodeRoleLatticeMaster,
 					Operator: corev1.NodeSelectorOpIn,
 					Values:   []string{"true"},
 				},
@@ -23,7 +23,7 @@ var NodeSelectorBuildNode = corev1.NodeSelector{
 		{
 			MatchExpressions: []corev1.NodeSelectorRequirement{
 				{
-					Key:      LabelKeyBuildNode,
+					Key:      LabelKeyNodeRoleLatticeBuild,
 					Operator: corev1.NodeSelectorOpIn,
 					Values:   []string{"true"},
 				},
@@ -37,7 +37,7 @@ var NodeSelectorNodePool = corev1.NodeSelector{
 		{
 			MatchExpressions: []corev1.NodeSelectorRequirement{
 				{
-					Key:      LabelKeyNodeRoleNodePool,
+					Key:      LabelKeyNodeRoleLatticeNodePool,
 					Operator: corev1.NodeSelectorOpExists,
 				},
 			},

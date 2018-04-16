@@ -2,6 +2,9 @@ package terraform
 
 import (
 	"encoding/json"
+	"fmt"
+
+	"github.com/mlab-lattice/lattice/pkg/util/cli"
 )
 
 const (
@@ -34,4 +37,46 @@ func (b S3BackendConfig) MarshalJSON() ([]byte, error) {
 		},
 	}
 	return json.Marshal(moduleMap)
+}
+
+func BackendS3Flags() (cli.Flags, *BackendOptionsS3) {
+	options := &BackendOptionsS3{}
+	flags := cli.Flags{
+		&cli.StringFlag{
+			Name:     "bucket",
+			Required: true,
+			Target:   &options.Bucket,
+		},
+	}
+	return flags, options
+}
+
+func BackendFlags(backend *string) (cli.Flag, *BackendOptions) {
+	s3Flags, s3Options := BackendS3Flags()
+	options := &BackendOptions{}
+
+	flag := &cli.DelayedEmbeddedFlag{
+		Name:     "terraform-backend-var",
+		Required: false,
+		Usage:    "configuration for the terraform backend",
+		Flags: map[string]cli.Flags{
+			BackendS3: s3Flags,
+		},
+		FlagChooser: func() (*string, error) {
+			if backend == nil || *backend == "" {
+				return nil, nil
+			}
+
+			switch *backend {
+			case BackendS3:
+				options.S3 = s3Options
+			default:
+				return nil, fmt.Errorf("unsupported terraform backend %v", *backend)
+			}
+
+			return backend, nil
+		},
+	}
+
+	return flag, options
 }

@@ -9,12 +9,11 @@ type (
 )
 
 const (
-	ServiceStatePending     ServiceState = "pending"
-	ServiceStateScalingDown ServiceState = "scaling down"
-	ServiceStateScalingUp   ServiceState = "scaling up"
-	ServiceStateUpdating    ServiceState = "updating"
-	ServiceStateStable      ServiceState = "stable"
-	ServiceStateFailed      ServiceState = "failed"
+	ServiceStatePending  ServiceState = "pending"
+	ServiceStateScaling  ServiceState = "scaling"
+	ServiceStateUpdating ServiceState = "updating"
+	ServiceStateStable   ServiceState = "stable"
+	ServiceStateFailed   ServiceState = "failed"
 )
 
 // FIXME: should we expose Service ID, or just Path?

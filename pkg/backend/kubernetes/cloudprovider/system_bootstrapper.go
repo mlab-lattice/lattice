@@ -41,16 +41,16 @@ func SystemBoostrapperFlag(cloudProvider *string) (cli.Flag, *SystemBootstrapper
 			AWS:   awsFlags,
 			Local: localFlags,
 		},
-		FlagChooser: func() (string, error) {
+		FlagChooser: func() (*string, error) {
 			if cloudProvider == nil {
-				return "", fmt.Errorf("cloud provider cannot be nil")
+				return nil, fmt.Errorf("cloud provider cannot be nil")
 			}
 
 			switch *cloudProvider {
 			case Local, AWS:
-				return *cloudProvider, nil
+				return cloudProvider, nil
 			default:
-				return "", fmt.Errorf("unsupported cloud provider %v", *cloudProvider)
+				return nil, fmt.Errorf("unsupported cloud provider %v", *cloudProvider)
 			}
 		},
 	}

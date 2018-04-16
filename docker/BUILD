@@ -1,12 +1,12 @@
 load("@io_bazel_rules_docker//container:container.bzl", "container_image")
-load("//bazel/docker:image.bzl", "lattice_base_container_images", "lattice_container_images")
+load("//bazel/docker:image.bzl", "lattice_base_go_container_image", "lattice_go_container_image")
 load("@package_bundle//file:packages.bzl", "packages")
 
 # base container image layers
 container_image(
     name = "base-iptables",
     debs = [
-        # See WORKSPACE for more info.
+        # See bazel/docker/dependencies.bzl for more info.
         packages["iptables"],
         packages["libip4tc0"],
         packages["libip6tc0"],
@@ -16,19 +16,9 @@ container_image(
 )
 
 container_image(
-    name = "base-libstdc++6",
-    debs = [
-        # See bazel/dependencies.bzl for more info.
-        packages["libstdc++6"],
-        packages["libgcc1"],
-    ],
-    visibility = ["//visibility:public"],
-)
-
-container_image(
     name = "base-openssh-client",
     debs = [
-        # See WORKSPACE for more info.
+        # See bazel/docker/dependencies.bzl for more info.
         packages["openssh-client"],
         packages["zlib1g"],
     ],
@@ -58,48 +48,61 @@ container_image(
     visibility = ["//visibility:public"],
 )
 
-container_image(
-    name = "base-libstdc++6-openssh-client",
-    tars = [
-        ":base-libstdc++6",
-        ":base-openssh-client",
-    ],
-    visibility = ["//visibility:public"],
+# base container go images
+lattice_base_go_container_image(
+    name = "iptables",
+    base_layer_target = ":base-iptables",
 )
 
-container_image(
-    name = "base-libstdc++6-terraform",
-    tars = [
-        ":base-libstdc++6",
-        ":base-terraform",
-    ],
-    visibility = ["//visibility:public"],
+lattice_base_go_container_image(
+    name = "openssh-client",
+    base_layer_target = ":base-openssh-client",
 )
 
-# base container images
-base_images = [
-    "iptables",
-    "libstdc++6",
-    "libstdc++6-openssh-client",
-    "libstdc++6-terraform",
-]
+lattice_base_go_container_image(
+    name = "terraform",
+    base_layer_target = ":base-terraform",
+)
 
-lattice_base_container_images(base_images)
+# lattice go container images
+lattice_go_container_image(
+    name = "kubernetes-api-server-rest",
+    base_image = None,
+    path = "cmd/kubernetes/api-server/rest",
+)
 
-# lattice container images
-# this will yield the following rules:
-# (container-image) foo
-# (container-image) debug-foo
-# (container-push) push-foo
-# (container-push) push-debug-foo
-go_targets = [
-    ("kubernetes-api-server-rest", "libstdc++6", "cmd/kubernetes/api-server/rest"),
-    ("kubernetes-component-builder", "libstdc++6-openssh-client", "cmd/kubernetes/component-builder"),
-    ("kubernetes-envoy-prepare", "iptables", "cmd/kubernetes/envoy/prepare"),
-    ("kubernetes-envoy-xds-api-rest-per-node", "libstdc++6", "cmd/kubernetes/envoy/xdsapi/v1/rest/per-node"),
-    ("kubernetes-lattice-controller-manager", "libstdc++6-terraform", "cmd/kubernetes/lattice-controller-manager"),
-    ("kubernetes-local-dns-controller", "libstdc++6", "cmd/kubernetes/local/dns/controller"),
-    ("latticectl", "libstdc++6", "cmd/latticectl"),
-]
+lattice_go_container_image(
+    name = "kubernetes-component-builder",
+    base_image = "openssh-client",
+    path = "cmd/kubernetes/component-builder",
+)
 
-lattice_container_images(go_targets)
+lattice_go_container_image(
+    name = "kubernetes-envoy-prepare",
+    base_image = "iptables",
+    path = "cmd/kubernetes/envoy/prepare",
+)
+
+lattice_go_container_image(
+    name = "kubernetes-envoy-xds-api-rest-per-node",
+    base_image = None,
+    path = "cmd/kubernetes/envoy/xdsapi/v1/rest/per-node",
+)
+
+lattice_go_container_image(
+    name = "kubernetes-lattice-controller-manager",
+    base_image = "terraform",
+    path = "cmd/kubernetes/lattice-controller-manager",
+)
+
+lattice_go_container_image(
+    name = "kubernetes-local-dns-controller",
+    base_image = None,
+    path = "cmd/kubernetes/local/dns/controller",
+)
+
+lattice_go_container_image(
+    name = "latticectl",
+    base_image = None,
+    path = "cmd/latticectl",
+)

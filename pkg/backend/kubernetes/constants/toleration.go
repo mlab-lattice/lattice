@@ -4,22 +4,28 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
-var TolerationMasterNode = corev1.Toleration{
-	Key:      LabelKeyMasterNode,
+var TolerationKubernetesMasterNode = corev1.Toleration{
+	Key:      LabelKeyNodeRollKubernetesMaster,
+	Operator: corev1.TolerationOpExists,
+	Effect:   corev1.TaintEffectNoSchedule,
+}
+
+var TolerationLatticeMasterNode = corev1.Toleration{
+	Key:      LabelKeyNodeRoleLatticeMaster,
 	Operator: corev1.TolerationOpEqual,
 	Value:    "true",
 	Effect:   corev1.TaintEffectNoSchedule,
 }
 
 var TolerationBuildNode = corev1.Toleration{
-	Key:      LabelKeyBuildNode,
+	Key:      LabelKeyNodeRoleLatticeBuild,
 	Operator: corev1.TolerationOpEqual,
 	Value:    "true",
 	Effect:   corev1.TaintEffectNoSchedule,
 }
 
 var TolerationNodePool = corev1.Toleration{
-	Key:      LabelKeyNodeRoleNodePool,
+	Key:      LabelKeyNodeRoleLatticeNodePool,
 	Operator: corev1.TolerationOpExists,
 	Effect:   corev1.TaintEffectNoSchedule,
 }

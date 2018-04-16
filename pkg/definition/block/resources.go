@@ -1,17 +1,67 @@
 package block
 
 import (
+	"encoding/json"
 	"errors"
+	"fmt"
 )
 
 type Resources struct {
-	// TODO: add resource pool
 	// TODO: add scaling
-	MinInstances *int32    `json:"min_instances,omitempty"`
-	MaxInstances *int32    `json:"max_instances,omitempty"`
-	NumInstances *int32    `json:"num_instances,omitempty"`
-	InstanceType *string   `json:"instance_type,omitempty"`
-	NodePool     *NodePool `json:"node_pool,omitempty"`
+	MinInstances *int32             `json:"min_instances,omitempty"`
+	MaxInstances *int32             `json:"max_instances,omitempty"`
+	NumInstances *int32             `json:"num_instances,omitempty"`
+	InstanceType *string            `json:"instance_type,omitempty"`
+	NodePool     *ResourcesNodePool `json:"node_pool,omitempty"`
+}
+
+type ResourcesNodePool struct {
+	NodePool     *NodePool
+	NodePoolName *string
+}
+
+func (np *ResourcesNodePool) MarshalJSON() ([]byte, error) {
+	if np.NodePool != nil {
+		return json.Marshal(np.NodePool)
+	}
+
+	if np.NodePoolName != nil {
+		return json.Marshal(*np.NodePoolName)
+	}
+
+	return json.Marshal(nil)
+}
+
+func (np *ResourcesNodePool) UnmarshalJSON(data []byte) error {
+	if string(data) == "null" {
+		return nil
+	}
+
+	var nodePoolName string
+	err := json.Unmarshal(data, &nodePoolName)
+	if err == nil {
+		np.NodePoolName = &nodePoolName
+		return nil
+	}
+
+	// Ensure the Unmarshalling failed due to the data not being a string
+	if _, ok := err.(*json.UnmarshalTypeError); !ok {
+		return err
+	}
+
+	var nodePool *NodePool
+	err = json.Unmarshal(data, &nodePool)
+	if err == nil {
+		np.NodePool = nodePool
+		return nil
+	}
+
+	// Ensure the Unmarshalling failed due to the data not being a string
+	if _, ok := err.(*json.UnmarshalTypeError); !ok {
+		return err
+	}
+
+	return fmt.Errorf("invalid node_pool json")
 }
 
 // Validate implements Interface

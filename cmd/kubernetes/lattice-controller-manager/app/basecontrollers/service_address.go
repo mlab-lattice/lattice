@@ -2,7 +2,7 @@ package basecontrollers
 
 import (
 	controller "github.com/mlab-lattice/lattice/cmd/kubernetes/lattice-controller-manager/app/common"
-	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/controller/base/serviceaddress"
+	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/controller/serviceaddress"
 )
 
 func initializeServiceAddressController(ctx controller.Context) {

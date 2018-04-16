@@ -107,10 +107,8 @@ func getServiceState(state latticev1.ServiceState) (v1.ServiceState, error) {
 	switch state {
 	case latticev1.ServiceStatePending:
 		return v1.ServiceStatePending, nil
-	case latticev1.ServiceStateScalingDown:
-		return v1.ServiceStateScalingDown, nil
-	case latticev1.ServiceStateScalingUp:
-		return v1.ServiceStateScalingUp, nil
+	case latticev1.ServiceStateScaling:
+		return v1.ServiceStateScaling, nil
 	case latticev1.ServiceStateUpdating:
 		return v1.ServiceStateUpdating, nil
 	case latticev1.ServiceStateStable:
