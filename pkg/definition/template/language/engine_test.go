@@ -41,6 +41,7 @@ func doTestEngine(t *testing.T) {
 	testInclude(t)
 	testValidateParams(t)
 	testOperatorSiblings(t)
+	testBadUrl(t)
 }
 
 func testInclude(t *testing.T) {
@@ -203,6 +204,20 @@ func testValidateParams(t *testing.T) {
 
 	if err == nil || !strings.Contains(fmt.Sprintf("%v", err), "parameter name is required") {
 		t.Fatalf("Required parameter 'name' has not been validated")
+	}
+
+}
+
+func testBadUrl(t *testing.T) {
+	engine := NewEngine()
+
+	options, _ := CreateOptions(testWorkDir, nil)
+
+	fmt.Println("Bad url validation")
+	_, err := engine.EvalFromURL("foo", nil, options)
+
+	if err == nil || !strings.Contains(fmt.Sprintf("%v", err), "bad url") {
+		t.Fatalf("bad url is not being validated")
 	}
 
 }

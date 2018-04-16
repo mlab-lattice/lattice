@@ -115,6 +115,11 @@ func NewEngine() *TemplateEngine {
 // EvalFromURL evaluates the template from the specified url with the specified parameters and options
 func (engine *TemplateEngine) EvalFromURL(url string, parameters map[string]interface{}, options *Options) (*Result, error) {
 
+	// validate url
+	if !isGitURL(url) {
+		return nil, fmt.Errorf("bad url '%v'. url must be a valid git url", url)
+	}
+
 	// make parameters if not set
 	if parameters == nil {
 		parameters = make(map[string]interface{})
