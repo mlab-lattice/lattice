@@ -4,12 +4,16 @@ import (
 	"fmt"
 
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
+	systembootstrapper "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/lifecycle/system/bootstrap/bootstrapper"
 	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/servicemesh/envoy"
+	"github.com/mlab-lattice/lattice/pkg/util/cli"
 
 	appsv1 "k8s.io/api/apps/v1"
 )
 
 type Interface interface {
+	systembootstrapper.Interface
+
 	ServiceAnnotations(*latticev1.Service) (map[string]string, error)
 
 	// TransformServiceDeploymentSpec takes in the DeploymentSpec generated for a Service, and applies an service mesh
@@ -71,4 +75,34 @@ func NewServiceMesh(options *Options) (Interface, error) {
 	}
 
 	return nil, fmt.Errorf("must provide service mesh options")
+}
+
+func Flag(serviceMesh *string) (cli.Flag, *Options) {
+	envoyFlags, envoyOptions := envoy.Flags()
+	options := &Options{}
+
+	flag := &cli.DelayedEmbeddedFlag{
+		Name:     "service-mesh-var",
+		Required: true,
+		Usage:    "configuration for the service mesh",
+		Flags: map[string]cli.Flags{
+			Envoy: envoyFlags,
+		},
+		FlagChooser: func() (*string, error) {
+			if serviceMesh == nil {
+				return nil, fmt.Errorf("cloud provider cannot be nil")
+			}
+
+			switch *serviceMesh {
+			case Envoy:
+				options.Envoy = envoyOptions
+			default:
+				return nil, fmt.Errorf("unsupported service mesh %v", *serviceMesh)
+			}
+
+			return serviceMesh, nil
+		},
+	}
+
+	return flag, options
 }

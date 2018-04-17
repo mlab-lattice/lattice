@@ -1,4 +1,4 @@
-package aws
+package terraform
 
 type ApplicationLoadBalancer struct {
 	Source string `json:"source"`

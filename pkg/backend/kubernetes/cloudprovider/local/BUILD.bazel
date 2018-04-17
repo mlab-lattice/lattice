@@ -6,7 +6,7 @@ go_library(
         "cloudprovider.go",
         "lattice_bootstrapper.go",
         "lattice_provisioner.go",
-        "system_bootstrapper.go",
+        "node_pool.go",
     ],
     importpath = "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/cloudprovider/local",
     visibility = ["//visibility:public"],

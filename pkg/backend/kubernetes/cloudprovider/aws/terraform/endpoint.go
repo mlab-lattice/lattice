@@ -1,4 +1,4 @@
-package aws
+package terraform
 
 type ExternalNameEndpoint struct {
 	Source string `json:"source"`

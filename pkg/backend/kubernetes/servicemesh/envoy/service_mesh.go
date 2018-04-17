@@ -9,7 +9,9 @@ import (
 
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	kubeutil "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/kubernetes"
+	"github.com/mlab-lattice/lattice/pkg/util/cli"
 
+	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/lifecycle/system/bootstrap/bootstrapper"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 )
@@ -55,11 +57,19 @@ func NewEnvoyServiceMesh(options *Options) *DefaultEnvoyServiceMesh {
 	}
 }
 
+func Flags() (cli.Flags, *Options) {
+	// all options should be set with dynamic config (i.e. custom resource)
+	return cli.Flags{}, &Options{}
+}
+
 type DefaultEnvoyServiceMesh struct {
 	prepareImage      string
 	image             string
 	redirectCIDRBlock string
 	xdsAPIPort        int32
+}
+
+func (sm *DefaultEnvoyServiceMesh) BootstrapSystemResources(resources *bootstrapper.SystemResources) {
 }
 
 func (sm *DefaultEnvoyServiceMesh) ServiceAnnotations(service *latticev1.Service) (map[string]string, error) {

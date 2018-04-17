@@ -104,17 +104,17 @@ type NodePoolSpec struct {
 }
 
 type NodePoolStatus struct {
-	State NodePoolState `json:"state"`
+	ObservedGeneration int64         `json:"observedGeneration"`
+	State              NodePoolState `json:"state"`
 }
 
 type NodePoolState string
 
 const (
-	NodePoolStatePending     NodePoolState = "pending"
-	NodePoolStateScalingDown NodePoolState = "scaling down"
-	NodePoolStateScalingUp   NodePoolState = "scaling up"
-	NodePoolStateStable      NodePoolState = "stable"
-	NodePoolStateFailed      NodePoolState = "failed"
+	NodePoolStatePending NodePoolState = "pending"
+	NodePoolStateScaling NodePoolState = "scaling"
+	NodePoolStateStable  NodePoolState = "stable"
+	NodePoolStateFailed  NodePoolState = "failed"
 )
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

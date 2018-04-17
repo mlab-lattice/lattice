@@ -2,6 +2,8 @@ package local
 
 import (
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
+	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/lifecycle/system/bootstrap/bootstrapper"
+	"github.com/mlab-lattice/lattice/pkg/util/cli"
 
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
@@ -28,8 +30,11 @@ type Options struct {
 	IP string
 }
 
-type CloudProvider interface {
-	IP() string
+func NewOptions(staticOptions *Options, dynamicConfig *latticev1.ConfigCloudProviderLocal) (*Options, error) {
+	options := &Options{
+		IP: staticOptions.IP,
+	}
+	return options, nil
 }
 
 func NewCloudProvider(options *Options) *DefaultLocalCloudProvider {
@@ -38,8 +43,27 @@ func NewCloudProvider(options *Options) *DefaultLocalCloudProvider {
 	}
 }
 
+func Flags() (cli.Flags, *Options) {
+	options := &Options{}
+	flags := cli.Flags{
+		&cli.StringFlag{
+			Name:     "ip",
+			Required: true,
+			Target:   &options.IP,
+		},
+	}
+	return flags, options
+}
+
 type DefaultLocalCloudProvider struct {
 	ip string
+}
+
+func (cp *DefaultLocalCloudProvider) BootstrapSystemResources(resources *bootstrapper.SystemResources) {
+	for _, daemonSet := range resources.DaemonSets {
+		template := transformPodTemplateSpec(&daemonSet.Spec.Template)
+		daemonSet.Spec.Template = *template
+	}
 }
 
 func (cp *DefaultLocalCloudProvider) TransformComponentBuildJobSpec(spec *batchv1.JobSpec) *batchv1.JobSpec {

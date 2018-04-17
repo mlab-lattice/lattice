@@ -1,4 +1,4 @@
-package aws
+package terraform
 
 import (
 	"fmt"

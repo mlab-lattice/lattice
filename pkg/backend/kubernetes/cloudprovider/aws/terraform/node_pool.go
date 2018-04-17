@@ -1,4 +1,10 @@
-package aws
+package terraform
+
+import (
+	"strings"
+
+	"github.com/mlab-lattice/lattice/pkg/api/v1"
+)
 
 type NodePool struct {
 	Source string `json:"source"`
@@ -19,7 +25,9 @@ type NodePool struct {
 }
 
 func NewNodePoolModule(
-	moduleRoot, awsAccountID, region, latticeID, vpcID, subnetIDs,
+	moduleRoot, awsAccountID, region string, latticeID v1.LatticeID,
+	vpcID string,
+	subnetIDs []string,
 	masterNodeSecurityGroupID, workerNodeAMIID, keyName, name string,
 	numInstances int32,
 	instanceType string,
@@ -30,9 +38,9 @@ func NewNodePoolModule(
 		AWSAccountID: awsAccountID,
 		Region:       region,
 
-		LatticeID:                 latticeID,
+		LatticeID:                 string(latticeID),
 		VPCID:                     vpcID,
-		SubnetIDs:                 subnetIDs,
+		SubnetIDs:                 strings.Join(subnetIDs, ","),
 		MasterNodeSecurityGroupID: masterNodeSecurityGroupID,
 		WorkerNodeAMIID:           workerNodeAMIID,
 		KeyName:                   keyName,
