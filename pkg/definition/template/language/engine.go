@@ -71,24 +71,29 @@ func NewEngine() *TemplateEngine {
 
 	operatorConfigs := []*operatorConfig{
 		{
-			key:       "$parameters",
-			evaluator: &ParametersEvaluator{},
+			key:              "$parameters",
+			evaluator:        &ParametersEvaluator{},
+			disallowSiblings: false,
 		},
 		{
-			key:       "$variables",
-			evaluator: &VariablesEvaluator{},
+			key:              "$variables",
+			evaluator:        &VariablesEvaluator{},
+			disallowSiblings: false,
 		},
 		{
-			key:       "$reference",
-			evaluator: &ReferenceEvaluator{},
+			key:              "$reference",
+			evaluator:        &ReferenceEvaluator{},
+			disallowSiblings: true,
 		},
 		{
-			key:       "$secret",
-			evaluator: &SecretEvaluator{},
+			key:              "$secret",
+			evaluator:        &SecretEvaluator{},
+			disallowSiblings: true,
 		},
 		{
-			key:       "$include",
-			evaluator: &IncludeEvaluator{},
+			key:              "$include",
+			evaluator:        &IncludeEvaluator{},
+			disallowSiblings: true,
 		},
 	}
 
@@ -109,6 +114,11 @@ func NewEngine() *TemplateEngine {
 
 // EvalFromURL evaluates the template from the specified url with the specified parameters and options
 func (engine *TemplateEngine) EvalFromURL(url string, parameters map[string]interface{}, options *Options) (*Result, error) {
+
+	// validate url
+	if !isGitTemplateURL(url) {
+		return nil, fmt.Errorf("bad url '%v'. url must be a valid git url", url)
+	}
 
 	// make parameters if not set
 	if parameters == nil {
@@ -257,7 +267,11 @@ func (engine *TemplateEngine) evalOperatorsInMap(m map[string]interface{}, env *
 
 	for _, operator := range engine.operatorConfigs {
 		if operand, operatorExists := m[operator.key]; operatorExists {
+			// validate against disallow siblings if specified
 
+			if operator.disallowSiblings && len(m) > 1 {
+				return nil, fmt.Errorf("sibling fields are not allowed with operators '%s' did", operator.key)
+			}
 			// push the the current operator to the property stack
 			currentPropertyPath := env.getCurrentPropertyPath()
 

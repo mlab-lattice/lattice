@@ -11,8 +11,9 @@ type OperatorEvaluator interface {
 }
 
 type operatorConfig struct {
-	key       string
-	evaluator OperatorEvaluator
+	key              string            // operator key
+	evaluator        OperatorEvaluator // evaluator to handle the the operator
+	disallowSiblings bool              // flag to disallow other sibling keys with the operator
 }
 
 // IncludeEvaluator. evaluates $include
@@ -31,7 +32,7 @@ func (evaluator *IncludeEvaluator) eval(o interface{}, env *environment) (interf
 			"url": o,
 		}
 	} else {
-		return nil, fmt.Errorf("Invalid $include %s", includeObject)
+		return nil, fmt.Errorf("invalid $include %s", includeObject)
 	}
 
 	// validate include object
