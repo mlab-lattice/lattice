@@ -59,7 +59,7 @@ func NewResolver(workDirectory string) (*Resolver, error) {
 func (r *Resolver) Clone(ctx *Context) (*git.Repository, error) {
 
 	// validate repo url
-	if !isGitRepositoryURI(ctx.URI) {
+	if !IsValidRepositoryURI(ctx.URI) {
 		return nil, fmt.Errorf("bad git uri '%v'", ctx.URI)
 	}
 	repoDir := r.GetRepositoryPath(ctx)
@@ -267,8 +267,8 @@ type uriInfo struct {
 // regex for matching git repo urls
 var gitRepositoryURIRegex = regexp.MustCompile(`((?:git|file|ssh|https?|git@[-\w.]+)):(//)?(.*.git)(#(([-\d\w._])+)?)?$`)
 
-// isGitRepositoryURI
-func isGitRepositoryURI(uri string) bool {
+// IsValidRepositoryURI
+func IsValidRepositoryURI(uri string) bool {
 	return gitRepositoryURIRegex.MatchString(uri)
 }
 
