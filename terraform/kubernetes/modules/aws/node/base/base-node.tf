@@ -150,7 +150,7 @@ resource "aws_launch_configuration" "aws_launch_configuration" {
   user_data = <<EOF
 #cloud-config
 bootcmd:
--   if [ -d /var/opt/etcd && ! -f /opt/lattice/etcd.tgz ]; then tar cvzf /opt/lattice/etcd.tgz /var/opt/etcd; fi
+-   if [ -d /var/opt/etcd -a ! -f /opt/lattice/etcd.tgz ]; then tar cvzf /opt/lattice/etcd.tgz /var/opt/etcd; fi
 write_files:
 -   path: /opt/lattice/kubelet_extra_args
     owner: root:root
