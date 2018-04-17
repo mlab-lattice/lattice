@@ -161,8 +161,6 @@ write_files:
     permissions: '0644'
     content: |
 ${var.etc_lattice_config_content}
-runcmd:
--   /opt/lattice/bin/append-kubelet-extra-args
 EOF
 
   # TODO: remove temporary_ssh_group when done testing
