@@ -16,7 +16,8 @@ variable "iam_instance_profile_role_name" {}
 
 variable "etc_lattice_config_content" {
   type    = "string"
-  default = "{}"
+  # NOTE: indentation is important here
+  default = "      {}"
 }
 
 variable "kubelet_labels" {}
