@@ -117,7 +117,7 @@ func (c *Controller) syncSharedNodePool(namespace string, path tree.NodePath) (*
 
 	var ready bool
 	switch nodePool.Status.State {
-	case latticev1.NodePoolStateStable, latticev1.NodePoolStateScalingUp, latticev1.NodePoolStateScalingDown:
+	case latticev1.NodePoolStateStable, latticev1.NodePoolStateScaling:
 		ready = true
 	default:
 		ready = false
