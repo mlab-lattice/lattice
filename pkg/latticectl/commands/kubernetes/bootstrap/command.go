@@ -234,6 +234,10 @@ func (c *Command) Base() (*latticectl.BaseCommand, error) {
 				Backend: *terraformBackendOptions,
 			}
 
+			if componentBuildRegistryAuthType != "" {
+				options.Config.ComponentBuild.DockerArtifact.RegistryAuthType = &componentBuildRegistryAuthType
+			}
+
 			cloudBootstrapper, err := cloudprovider.NewLatticeBootstrapper(latticeID, cloudBootstrapOptions)
 			if err != nil {
 				fmt.Printf("error getting cloud bootstrapper: %v", err)

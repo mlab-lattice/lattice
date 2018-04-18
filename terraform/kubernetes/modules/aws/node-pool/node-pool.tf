@@ -56,8 +56,6 @@ provider "aws" {
 # Role
 
 resource "aws_iam_role" "node_pool_role" {
-  // name limited to 64 chars
-  name               = "${var.name}"
   assume_role_policy = "${module.assume_role_from_ec2_service_policy_doucment.json}"
 }
 
