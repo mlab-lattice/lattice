@@ -15,7 +15,8 @@ variable "key_name" {}
 variable "iam_instance_profile_role_name" {}
 
 variable "etc_lattice_config_content" {
-  type    = "string"
+  type = "string"
+
   # NOTE: indentation is important here
   # NOTE: the indentation here is important for cloud-init user-data to get
   #       parsed correctly

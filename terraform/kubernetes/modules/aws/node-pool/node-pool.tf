@@ -113,7 +113,7 @@ data "aws_iam_policy_document" "node_pool_role_policy_document" {
     ]
 
     resources = [
-      "arn:aws:ecr:${var.region}:${var.aws_account_id}:repository/component-builds",
+      "arn:aws:ecr:${var.region}:${var.aws_account_id}:repository/${var.lattice_id}.component-builds",
     ]
   }
 }
