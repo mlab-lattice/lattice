@@ -147,7 +147,7 @@ resource "aws_launch_configuration" "aws_launch_configuration" {
   instance_type = "${var.instance_type}"
   key_name      = "${var.key_name}"
 
-  iam_instance_profile = "${aws_iam_instance_profile.iam_instance_profile.name}"
+  iam_instance_profile = "${aws_iam_instance_profile.iam_instance_profile.arn}"
 
   # XXX: clean up etcd bootcmd and make sure it only runs on first boot
   user_data = <<EOF

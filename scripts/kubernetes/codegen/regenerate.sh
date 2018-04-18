@@ -10,7 +10,7 @@ cd ${GOPATH}/src/k8s.io/code-generator
 git fetch origin
 git checkout kubernetes-${KUBERNETES_VERSION}
 ./generate-groups.sh all \
-                     github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/generated \
-                     github.com/mlab-lattice/system/pkg/backend/kubernetes/customresource/apis \
+                     github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/generated \
+                     github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis \
                      lattice:v1 \
-                     --go-header-file ~/go/src/github.com/mlab-lattice/system/scripts/kubernetes/codegen/go-header.txt
+                     --go-header-file ~/go/src/github.com/mlab-lattice/lattice/scripts/kubernetes/codegen/go-header.txt

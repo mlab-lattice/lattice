@@ -61,7 +61,9 @@ func (t *Table) Overwrite(b bytes.Buffer, lastHeight int) int {
 	for i := 0; i <= lastHeight; i++ {
 		if i != 0 {
 			goterm.MoveCursorUp(1)
-			goterm.ResetLine("")
+			// Return cursor to start of line and clear the rest of the line
+			// Waiting on burger/goterm#23 to be merged to use ResetLine
+			goterm.Print("\r\033[K")
 		}
 	}
 
