@@ -17,6 +17,12 @@ import (
 
 var InputDocsDir string
 
+// extra markdown file name
+const (
+	descriptionFile = "description.md"
+	examplesFile    = "examples.md"
+)
+
 func GenerateMarkdown(cmd *cli.Command) (io.Reader, error) {
 	var buffer bytes.Buffer
 	writer := bufio.NewWriter(&buffer)
@@ -41,12 +47,12 @@ func writeDoc(bc *cli.Command, writer io.Writer) error {
 	fmt.Fprintf(writer, "%s  \n", bc.Short)
 
 	// extra description in the intro section
-	introMdFileContent, err := getMarkdownFileContent("")
+	introMdFileContent, err := getMarkdownFileContent("", descriptionFile)
 	if err != nil {
 		return err
 	}
 	if introMdFileContent != "" {
-		fmt.Fprintln(writer, introMdFileContent)
+		fmt.Fprintf(writer, "%s \n\n", introMdFileContent)
 	}
 
 	fmt.Fprintf(writer, "%s \n", markdown.WrapH2("Commands"))
@@ -112,13 +118,13 @@ func printCommand(fullCmdName string, cmd *cli.Command, writer io.Writer) error 
 	}
 
 	// includes any extra markdown command description
-	mdFileContent, err := getMarkdownFileContent(fullCmdName)
+	descMdFile, err := getMarkdownFileContent(fullCmdName, descriptionFile)
 	if err != nil {
 		return err
 	}
 
-	if mdFileContent != "" {
-		fmt.Fprintln(writer, mdFileContent)
+	if descMdFile != "" {
+		fmt.Fprintf(writer, "%s \n\n", descMdFile)
 	}
 
 	if len(cmd.Args) > 0 {
@@ -137,6 +143,16 @@ func printCommand(fullCmdName string, cmd *cli.Command, writer io.Writer) error 
 		writeFlags(writer, cmd.Flags)
 	}
 
+	// includes any extra markdown command examples
+	examplesMdFile, err := getMarkdownFileContent(fullCmdName, examplesFile)
+	if err != nil {
+		return err
+	}
+
+	if examplesMdFile != "" {
+		fmt.Fprintf(writer, "%s \n\n", examplesMdFile)
+	}
+
 	return nil
 }
 
@@ -150,7 +166,7 @@ func writeArgs(writer io.Writer, cmdArgs cli.Args) {
 		writeArgTableRow(writer, tempArg)
 	}
 
-	fmt.Fprint(writer, "\n\n")
+	fmt.Fprintln(writer, "")
 }
 
 // writeArgTableRow writes arg table row
@@ -176,12 +192,11 @@ func writeFlags(writer io.Writer, cmdFlags cli.Flags) {
 		writeFlagTableRow(writer, tempFlag)
 	}
 
-	fmt.Fprint(writer, "\n\n")
+	fmt.Fprintln(writer, "")
 }
 
 // writeFlagTableRow writes flag table row
 func writeFlagTableRow(w io.Writer, flag cli.Flag) {
-
 	name := fmt.Sprintf("--%s", flag.GetName())
 
 	// if the flag isn't a bool flag then print out a placeholder value with the name of the flag
@@ -205,8 +220,7 @@ func writeFlagTableRow(w io.Writer, flag cli.Flag) {
 }
 
 // getMarkdownFileContent reads external Markdown file content
-func getMarkdownFileContent(cmdName string) (string, error) {
-
+func getMarkdownFileContent(cmdName string, fileName string) (string, error) {
 	// root path
 	markdownPath := InputDocsDir
 
@@ -217,7 +231,7 @@ func getMarkdownFileContent(cmdName string) (string, error) {
 	}
 
 	// appends file name
-	markdownPath += "/description.md"
+	markdownPath += "/" + fileName
 
 	buffer, err := ioutil.ReadFile(markdownPath)
 
