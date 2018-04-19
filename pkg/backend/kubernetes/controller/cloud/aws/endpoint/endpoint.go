@@ -7,7 +7,6 @@ import (
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	kubeutil "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/kubernetes"
 	kubetf "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/terraform/aws"
-	endpointutil "github.com/mlab-lattice/lattice/pkg/util/endpoint"
 	tf "github.com/mlab-lattice/lattice/pkg/util/terraform"
 	awstfprovider "github.com/mlab-lattice/lattice/pkg/util/terraform/provider/aws"
 
