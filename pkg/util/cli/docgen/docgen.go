@@ -40,6 +40,15 @@ func writeDoc(bc *cli.Command, writer io.Writer) error {
 
 	fmt.Fprintf(writer, "%s  \n", bc.Short)
 
+	// extra description in the intro section
+	introMdFileContent, err := getMarkdownFileContent("")
+	if err != nil {
+		return err
+	}
+	if introMdFileContent != "" {
+		fmt.Fprintln(writer, introMdFileContent)
+	}
+
 	fmt.Fprintf(writer, "%s \n", markdown.WrapH2("Commands"))
 
 	// mapping between command name (e.g. `laasctl systems builds`) and the command.
