@@ -60,15 +60,17 @@ func (c *Command) Base() (*latticectl.BaseCommand, error) {
 		Name: "bootstrap",
 		Flags: cli.Flags{
 			&cli.StringFlag{
-				Name:   "lattice-id",
-				Target: &latticeID,
-				Usage:  "ID of the Lattice to bootstrap",
+				Name:     "lattice-id",
+				Required: true,
+				Target:   &latticeID,
+				Usage:    "ID of the Lattice to bootstrap",
 			},
 
 			&cli.StringFlag{
-				Name:   "namespace-prefix",
-				Target: &namespacePrefix,
-				Usage:  "ID of the Lattice to bootstrap",
+				Name:    "namespace-prefix",
+				Default: "lattice",
+				Target:  &namespacePrefix,
+				Usage:   "ID of the Lattice to bootstrap",
 			},
 
 			&cli.StringFlag{

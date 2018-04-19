@@ -7,6 +7,7 @@ import (
 
 func (c *Controller) syncPendingSystem(system *latticev1.System) error {
 	_, err := bootstrap.Bootstrap(
+		c.namespacePrefix,
 		c.latticeID,
 		system.V1ID(),
 		system.Spec.DefinitionURL,
