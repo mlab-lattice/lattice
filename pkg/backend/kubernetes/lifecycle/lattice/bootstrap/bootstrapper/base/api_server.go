@@ -17,9 +17,9 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 )
 
-func (b *DefaultBootstrapper) aPIServerResources(resources *bootstrapper.Resources) {
-	internalNamespace := kubeutil.InternalNamespace(b.LatticeID)
-	name := fmt.Sprintf("%v-%v", b.LatticeID, constants.ControlPlaneServiceAPIServer)
+func (b *DefaultBootstrapper) apiServerResources(resources *bootstrapper.Resources) {
+	internalNamespace := kubeutil.InternalNamespace(b.NamespacePrefix)
+	name := fmt.Sprintf("%v-%v", b.NamespacePrefix, constants.ControlPlaneServiceAPIServer)
 
 	clusterRole := &rbacv1.ClusterRole{
 		// Include TypeMeta so if this is a dry run it will be printed out
@@ -159,7 +159,8 @@ func (b *DefaultBootstrapper) aPIServerResources(resources *bootstrapper.Resourc
 
 	args := []string{
 		"--port", strconv.Itoa(int(b.Options.MasterComponents.APIServer.Port)),
-		"--lattice-id", string(b.LatticeID),
+		"--namespace-prefix", b.NamespacePrefix,
+		"--alsologtostderr",
 	}
 	args = append(args, b.Options.MasterComponents.APIServer.Args...)
 	labels := map[string]string{

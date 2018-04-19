@@ -39,11 +39,12 @@ type OptionsDNS struct {
 	ControllerArgs    []string
 }
 
-func NewLatticeBootstrapper(latticeID v1.LatticeID, options *LatticeBootstrapperOptions) *DefaultLocalLatticeBootstrapper {
+func NewLatticeBootstrapper(latticeID v1.LatticeID, namespacePrefix string, options *LatticeBootstrapperOptions) *DefaultLocalLatticeBootstrapper {
 	return &DefaultLocalLatticeBootstrapper{
-		LatticeID: latticeID,
-		ip:        options.IP,
-		DNS:       options.DNS,
+		LatticeID:       latticeID,
+		NamespacePrefix: namespacePrefix,
+		IP:              options.IP,
+		DNS:             options.DNS,
 	}
 }
 
@@ -53,7 +54,7 @@ func LatticeBootstrapperFlags() (cli.Flags, *LatticeBootstrapperOptions) {
 	}
 	flags := cli.Flags{
 		&cli.StringFlag{
-			Name:     "ip",
+			Name:     "IP",
 			Required: true,
 			Target:   &options.IP,
 		},
@@ -89,9 +90,10 @@ func LatticeBootstrapperFlags() (cli.Flags, *LatticeBootstrapperOptions) {
 }
 
 type DefaultLocalLatticeBootstrapper struct {
-	LatticeID v1.LatticeID
-	ip        string
-	DNS       *OptionsDNS
+	LatticeID       v1.LatticeID
+	NamespacePrefix string
+	IP              string
+	DNS             *OptionsDNS
 }
 
 func (cp *DefaultLocalLatticeBootstrapper) BootstrapLatticeResources(resources *bootstrapper.Resources) {
@@ -103,7 +105,7 @@ func (cp *DefaultLocalLatticeBootstrapper) BootstrapLatticeResources(resources *
 		if daemonSet.Name == kubeconstants.ControlPlaneServiceLatticeControllerManager {
 			template.Spec.Containers[0].Args = append(
 				template.Spec.Containers[0].Args,
-				"--cloud-provider-var", fmt.Sprintf("ip=%v", cp.ip),
+				"--cloud-provider-var", fmt.Sprintf("ip=%v", cp.IP),
 			)
 		}
 
@@ -112,9 +114,9 @@ func (cp *DefaultLocalLatticeBootstrapper) BootstrapLatticeResources(resources *
 }
 
 func (cp *DefaultLocalLatticeBootstrapper) bootstrapLatticeDNS(resources *bootstrapper.Resources) {
-	namespace := kubeutil.InternalNamespace(cp.LatticeID)
+	namespace := kubeutil.InternalNamespace(cp.NamespacePrefix)
 
-	controllerArgs := []string{"--lattice-id", string(cp.LatticeID)}
+	controllerArgs := []string{"--lattice-id", string(cp.LatticeID), "--namespace-prefix", cp.NamespacePrefix}
 	controllerArgs = append(controllerArgs, cp.DNS.ControllerArgs...)
 
 	dnsmasqNannyArgs := []string{}

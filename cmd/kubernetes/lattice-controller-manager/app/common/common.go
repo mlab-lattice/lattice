@@ -35,8 +35,9 @@ func (cb LatticeClientBuilder) ClientOrDie(name string) latticeclientset.Interfa
 }
 
 type Context struct {
-	LatticeID     v1.LatticeID
-	CloudProvider cloudprovider.Interface
+	NamespacePrefix string
+	LatticeID       v1.LatticeID
+	CloudProvider   cloudprovider.Interface
 
 	SystemBootstrappers []bootstrapper.Interface
 

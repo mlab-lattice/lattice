@@ -27,6 +27,7 @@ type Command struct {
 // Base implements the latticectl.Command interface.
 func (c *Command) Base() (*latticectl.BaseCommand, error) {
 	var latticeID string
+	var namespacePrefix string
 	var kubeConfigPath string
 
 	options := &bootstrap.Options{
@@ -59,10 +60,15 @@ func (c *Command) Base() (*latticectl.BaseCommand, error) {
 		Name: "bootstrap",
 		Flags: cli.Flags{
 			&cli.StringFlag{
-				Name:    "lattice-id",
-				Default: "lattice",
-				Target:  &latticeID,
-				Usage:   "ID of the Lattice to bootstrap",
+				Name:   "lattice-id",
+				Target: &latticeID,
+				Usage:  "ID of the Lattice to bootstrap",
+			},
+
+			&cli.StringFlag{
+				Name:   "namespace-prefix",
+				Target: &namespacePrefix,
+				Usage:  "ID of the Lattice to bootstrap",
 			},
 
 			&cli.StringFlag{
@@ -238,12 +244,12 @@ func (c *Command) Base() (*latticectl.BaseCommand, error) {
 				options.Config.ComponentBuild.DockerArtifact.RegistryAuthType = &componentBuildRegistryAuthType
 			}
 
-			cloudBootstrapper, err := cloudprovider.NewLatticeBootstrapper(latticeID, cloudBootstrapOptions)
+			cloudBootstrapper, err := cloudprovider.NewLatticeBootstrapper(latticeID, namespacePrefix, cloudBootstrapOptions)
 			if err != nil {
 				fmt.Printf("error getting cloud bootstrapper: %v", err)
 			}
 
-			serviceMeshBootstrapper, err := servicemesh.NewLatticeBootstrapper(latticeID, serviceMeshBootstrapOptions)
+			serviceMeshBootstrapper, err := servicemesh.NewLatticeBootstrapper(namespacePrefix, serviceMeshBootstrapOptions)
 			if err != nil {
 				fmt.Printf("error getting service mesh bootstrapper: %v", err)
 			}
@@ -255,7 +261,7 @@ func (c *Command) Base() (*latticectl.BaseCommand, error) {
 				cloudBootstrapper,
 			}
 
-			err = BootstrapKubernetesLattice(v1.LatticeID(latticeID), kubeConfig, cloudProvider, bootstrappers, options, dryRun, print)
+			err = BootstrapKubernetesLattice(v1.LatticeID(latticeID), namespacePrefix, kubeConfig, cloudProvider, bootstrappers, options, dryRun, print)
 			if err != nil {
 				fmt.Printf("error bootstrapping lattice: %v\n", err)
 				os.Exit(1)
@@ -268,6 +274,7 @@ func (c *Command) Base() (*latticectl.BaseCommand, error) {
 
 func BootstrapKubernetesLattice(
 	latticeID v1.LatticeID,
+	namespacePrefix string,
 	kubeConfig *rest.Config,
 	cloudProvider string,
 	bootstrappers []bootstrapper.Interface,
@@ -283,6 +290,7 @@ func BootstrapKubernetesLattice(
 	if dryRun {
 		resources, err = bootstrap.GetBootstrapResources(
 			latticeID,
+			namespacePrefix,
 			cloudProvider,
 			options,
 			bootstrappers,
@@ -300,6 +308,7 @@ func BootstrapKubernetesLattice(
 
 		resources, err = bootstrap.Bootstrap(
 			latticeID,
+			namespacePrefix,
 			cloudProvider,
 			options,
 			bootstrappers,

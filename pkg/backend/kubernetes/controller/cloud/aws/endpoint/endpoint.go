@@ -113,7 +113,7 @@ func (c *Controller) deprovisionIPEndpoint(endpoint *latticev1.Endpoint) error {
 }
 
 func (c *Controller) endpointConfig(endpoint *latticev1.Endpoint, endpointModule interface{}) (*tf.Config, error) {
-	systemID, err := kubeutil.SystemID(endpoint.Namespace)
+	systemID, err := kubeutil.SystemID(c.namespacePrefix, endpoint.Namespace)
 	if err != nil {
 		return nil, err
 	}
@@ -174,7 +174,7 @@ func (c *Controller) externalNameEndpointModule(endpoint *latticev1.Endpoint) (*
 }
 
 func (c *Controller) endpointDNSName(endpoint *latticev1.Endpoint) (string, error) {
-	systemID, err := kubeutil.SystemID(endpoint.Namespace)
+	systemID, err := kubeutil.SystemID(c.namespacePrefix, endpoint.Namespace)
 	if err != nil {
 		return "", err
 	}

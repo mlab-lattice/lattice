@@ -5,7 +5,6 @@ import (
 
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
-	kubeutil "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/kubernetes"
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -17,8 +16,7 @@ func (kb *KubernetesBackend) ListServices(systemID v1.SystemID) ([]v1.Service, e
 		return nil, err
 	}
 
-	namespace := kubeutil.SystemNamespace(kb.latticeID, systemID)
-
+	namespace := kb.systemNamespace(systemID)
 	services, err := kb.latticeClient.LatticeV1().Services(namespace).List(metav1.ListOptions{})
 	if err != nil {
 		return nil, err
@@ -49,7 +47,7 @@ func (kb *KubernetesBackend) GetService(systemID v1.SystemID, path tree.NodePath
 		return nil, err
 	}
 
-	namespace := kubeutil.SystemNamespace(kb.latticeID, systemID)
+	namespace := kb.systemNamespace(systemID)
 	service, err := kb.latticeClient.LatticeV1().Services(namespace).Get(path.ToDomain(), metav1.GetOptions{})
 	if err != nil {
 		return nil, err

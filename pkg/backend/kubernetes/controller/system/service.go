@@ -27,7 +27,7 @@ func (c *Controller) syncSystemServices(system *latticev1.System) (map[tree.Node
 	// can continue to just look at the label as the confirmed path of the service, as opposed to trying
 	// to figure out if a rename is in flight.
 	services := make(map[tree.NodePath]latticev1.SystemStatusService)
-	systemNamespace := system.ResourceNamespace(c.latticeID)
+	systemNamespace := system.ResourceNamespace(c.namespacePrefix)
 	serviceNames := set.NewSet()
 
 	// Loop through the services defined in the system's Spec, and create/update any that need it
@@ -151,7 +151,7 @@ func (c *Controller) syncSystemServices(system *latticev1.System) (map[tree.Node
 		if !serviceNames.Contains(service.Name) {
 			glog.V(4).Infof(
 				"Found %v that is no longer in the system Spec",
-				service.Description(),
+				service.Description(c.namespacePrefix),
 			)
 			deletedServices = append(deletedServices, service.Name)
 
@@ -192,7 +192,7 @@ func (c *Controller) newService(
 		return nil, err
 	}
 
-	systemNamespace := system.ResourceNamespace(c.latticeID)
+	systemNamespace := system.ResourceNamespace(c.namespacePrefix)
 
 	service := &latticev1.Service{
 		ObjectMeta: metav1.ObjectMeta{

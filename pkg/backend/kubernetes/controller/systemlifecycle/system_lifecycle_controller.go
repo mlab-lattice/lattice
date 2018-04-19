@@ -34,7 +34,7 @@ type lifecycleAction struct {
 type Controller struct {
 	syncHandler func(sysRolloutKey string) error
 
-	latticeID v1.LatticeID
+	namespacePrefix string
 
 	kubeClient    kubeclientset.Interface
 	latticeClient latticeclientset.Interface
@@ -74,7 +74,7 @@ type Controller struct {
 }
 
 func NewController(
-	latticeID v1.LatticeID,
+	namespacePrefix string,
 	kubeClient kubeclientset.Interface,
 	latticeClient latticeclientset.Interface,
 	deployInformer latticeinformers.DeployInformer,
@@ -85,7 +85,7 @@ func NewController(
 	componentBuildInformer latticeinformers.ComponentBuildInformer,
 ) *Controller {
 	src := &Controller{
-		latticeID:                    latticeID,
+		namespacePrefix:              namespacePrefix,
 		kubeClient:                   kubeClient,
 		latticeClient:                latticeClient,
 		owningLifecycleActions:       make(map[types.UID]*lifecycleAction),
@@ -234,7 +234,7 @@ func (c *Controller) handleSystemAdd(obj interface{}) {
 	system := obj.(*latticev1.System)
 	glog.V(4).Infof("System %s added", system.Name)
 
-	systemNamespace := kubeutil.SystemNamespace(c.latticeID, v1.SystemID(system.Name))
+	systemNamespace := kubeutil.SystemNamespace(c.namespacePrefix, v1.SystemID(system.Name))
 	action, exists := c.getOwningAction(systemNamespace)
 	if !exists {
 		// No ongoing action
@@ -273,7 +273,7 @@ func (c *Controller) handleSystemUpdate(old, cur interface{}) {
 		return
 	}
 
-	systemNamespace := kubeutil.SystemNamespace(c.latticeID, v1.SystemID(curSystem.Name))
+	systemNamespace := kubeutil.SystemNamespace(c.namespacePrefix, v1.SystemID(curSystem.Name))
 	action, exists := c.getOwningAction(systemNamespace)
 	if !exists {
 		glog.V(4).Infof("System %v/%v has no owning actions, skipping", curSystem.Namespace, curSystem.Name)

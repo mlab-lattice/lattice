@@ -3,7 +3,6 @@ package servicemesh
 import (
 	"fmt"
 
-	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	clusterbootstrapper "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/lifecycle/lattice/bootstrap/bootstrapper"
 	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/servicemesh/envoy"
 	"github.com/mlab-lattice/lattice/pkg/util/cli"
@@ -13,9 +12,9 @@ type ClusterBootstrapperOptions struct {
 	Envoy *envoy.LatticeBootstrapperOptions
 }
 
-func NewLatticeBootstrapper(latticeID v1.LatticeID, options *ClusterBootstrapperOptions) (clusterbootstrapper.Interface, error) {
+func NewLatticeBootstrapper(namespacePrefix string, options *ClusterBootstrapperOptions) (clusterbootstrapper.Interface, error) {
 	if options.Envoy != nil {
-		return envoy.NewLatticeBootstrapper(latticeID, options.Envoy), nil
+		return envoy.NewLatticeBootstrapper(namespacePrefix, options.Envoy), nil
 	}
 
 	return nil, fmt.Errorf("must provide service mesh options")

@@ -183,14 +183,14 @@ func (c *Controller) getBuildContainer(build *latticev1.ComponentBuild) (*corev1
 		tag = fmt.Sprint(time.Now().Unix())
 	}
 
-	systemID, err := kubeutil.SystemID(build.Namespace)
+	systemID, err := kubeutil.SystemID(c.namespacePrefix, build.Namespace)
 	if err != nil {
 		return nil, "", err
 	}
 
 	args := []string{
 		"--component-build-id", build.Name,
-		"--lattice-id", string(c.latticeID),
+		"--namespace-prefix", c.namespacePrefix,
 		"--system-id", string(systemID),
 		"--component-build-definition", string(buildJSON),
 		"--docker-registry", c.config.ComponentBuild.DockerArtifact.Registry,

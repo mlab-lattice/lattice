@@ -7,6 +7,7 @@ import (
 
 func initializeSystemController(ctx controller.Context) {
 	go system.NewController(
+		ctx.NamespacePrefix,
 		ctx.LatticeID,
 		ctx.SystemBootstrappers,
 		ctx.KubeClientBuilder.ClientOrDie("lattice-controller-lattice-system"),

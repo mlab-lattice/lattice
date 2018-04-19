@@ -287,7 +287,7 @@ func (c *Controller) untransformedDeploymentSpec(
 		RequiredDuringSchedulingIgnoredDuringExecution: []corev1.PodAffinityTerm{podAffinityTerm},
 	}
 
-	systemID, err := kubeutil.SystemID(service.Namespace)
+	systemID, err := kubeutil.SystemID(c.namespacePrefix, service.Namespace)
 	if err != nil {
 		return nil, err
 	}

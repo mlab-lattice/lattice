@@ -98,7 +98,7 @@ func (c *Controller) loadBalancerConfig(
 	loadBalancer *latticev1.LoadBalancer,
 	loadBalancerModule *kubetf.ApplicationLoadBalancer,
 ) (*tf.Config, error) {
-	systemID, err := kubeutil.SystemID(loadBalancer.Namespace)
+	systemID, err := kubeutil.SystemID(c.namespacePrefix, loadBalancer.Namespace)
 	if err != nil {
 		return nil, err
 	}
@@ -156,7 +156,7 @@ func (c *Controller) loadBalancerModule(loadBalancer *latticev1.LoadBalancer) (*
 		nodePorts[servicePorts[port.Port]] = port.NodePort
 	}
 
-	systemID, err := kubeutil.SystemID(loadBalancer.Namespace)
+	systemID, err := kubeutil.SystemID(c.namespacePrefix, loadBalancer.Namespace)
 	if err != nil {
 		return nil, err
 	}

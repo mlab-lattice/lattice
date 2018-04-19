@@ -5,7 +5,6 @@ import (
 
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
-	kubeutil "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/kubernetes"
 
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -21,7 +20,7 @@ func (kb *KubernetesBackend) TearDown(systemID v1.SystemID) (*v1.Teardown, error
 
 	teardown := newTeardown()
 
-	namespace := kubeutil.SystemNamespace(kb.latticeID, systemID)
+	namespace := kb.systemNamespace(systemID)
 	teardown, err := kb.latticeClient.LatticeV1().Teardowns(namespace).Create(teardown)
 	if err != nil {
 		return nil, err
@@ -53,7 +52,7 @@ func (kb *KubernetesBackend) ListTeardowns(systemID v1.SystemID) ([]v1.Teardown,
 		return nil, err
 	}
 
-	namespace := kubeutil.SystemNamespace(kb.latticeID, systemID)
+	namespace := kb.systemNamespace(systemID)
 	teardowns, err := kb.latticeClient.LatticeV1().Teardowns(namespace).List(metav1.ListOptions{})
 	if err != nil {
 		return nil, err
@@ -78,7 +77,7 @@ func (kb *KubernetesBackend) GetTeardown(systemID v1.SystemID, teardownID v1.Tea
 		return nil, err
 	}
 
-	namespace := kubeutil.SystemNamespace(kb.latticeID, systemID)
+	namespace := kb.systemNamespace(systemID)
 	teardown, err := kb.latticeClient.LatticeV1().Teardowns(namespace).Get(string(teardownID), metav1.GetOptions{})
 	if err != nil {
 		if errors.IsNotFound(err) {

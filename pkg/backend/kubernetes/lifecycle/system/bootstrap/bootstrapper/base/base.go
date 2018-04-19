@@ -13,23 +13,26 @@ import (
 )
 
 type Options struct {
-	LatticeID     v1.LatticeID
-	SystemID      v1.SystemID
-	DefinitionURL string
+	LatticeID       v1.LatticeID
+	NamespacePrefix string
+	SystemID        v1.SystemID
+	DefinitionURL   string
 }
 
 func NewBootstrapper(options *Options) *DefaultBootstrapper {
 	return &DefaultBootstrapper{
-		latticeID:     options.LatticeID,
-		systemID:      options.SystemID,
-		definitionURL: options.DefinitionURL,
+		latticeID:       options.LatticeID,
+		namespacePrefix: options.NamespacePrefix,
+		systemID:        options.SystemID,
+		definitionURL:   options.DefinitionURL,
 	}
 }
 
 type DefaultBootstrapper struct {
-	latticeID     v1.LatticeID
-	systemID      v1.SystemID
-	definitionURL string
+	latticeID       v1.LatticeID
+	namespacePrefix string
+	systemID        v1.SystemID
+	definitionURL   string
 }
 
 func (b *DefaultBootstrapper) BootstrapSystemResources(resources *bootstrapper.SystemResources) {
@@ -40,7 +43,7 @@ func (b *DefaultBootstrapper) BootstrapSystemResources(resources *bootstrapper.S
 			APIVersion: corev1.SchemeGroupVersion.String(),
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name: kubeutil.SystemNamespace(b.latticeID, b.systemID),
+			Name: kubeutil.SystemNamespace(b.namespacePrefix, b.systemID),
 			Labels: map[string]string{
 				kubeconstants.LabelKeyLatticeID: string(b.latticeID),
 			},
@@ -61,7 +64,7 @@ func (b *DefaultBootstrapper) BootstrapSystemResources(resources *bootstrapper.S
 	}
 	resources.ServiceAccounts = append(resources.ServiceAccounts, componentBuilderSA)
 
-	componentBuilderCRName := kubeutil.ComponentBuilderClusterRoleName(b.latticeID)
+	componentBuilderCRName := kubeutil.ComponentBuilderClusterRoleName(b.namespacePrefix)
 	componentBuilderRB := &rbacv1.RoleBinding{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "RoleBinding",

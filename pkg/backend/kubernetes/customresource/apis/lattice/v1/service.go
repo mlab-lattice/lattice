@@ -31,8 +31,8 @@ type Service struct {
 	Status            ServiceStatus `json:"status,omitempty"`
 }
 
-func (s *Service) Description() string {
-	systemID, err := kubeutil.SystemID(s.Namespace)
+func (s *Service) Description(namespacePrefix string) string {
+	systemID, err := kubeutil.SystemID(namespacePrefix, s.Namespace)
 	if err != nil {
 		systemID = v1.SystemID(fmt.Sprintf("UNKNOWN (namespace: %v)", s.Namespace))
 	}

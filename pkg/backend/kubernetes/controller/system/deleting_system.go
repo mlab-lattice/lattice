@@ -8,7 +8,7 @@ import (
 )
 
 func (c *Controller) syncDeletingSystem(system *latticev1.System) error {
-	systemNamespace := system.ResourceNamespace(c.latticeID)
+	systemNamespace := system.ResourceNamespace(c.namespacePrefix)
 	ns, err := c.kubeClient.CoreV1().Namespaces().Get(systemNamespace, metav1.GetOptions{})
 	if err != nil {
 		// If the namespace has been fully terminated, the system can be deleted as well,
