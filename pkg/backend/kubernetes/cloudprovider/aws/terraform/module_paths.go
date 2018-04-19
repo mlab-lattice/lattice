@@ -1,10 +1,10 @@
 package terraform
 
 const (
-	modulePathEndpoint                = "/endpoint"
-	modulePathEndpointExternalName    = modulePathEndpoint + "/external-name"
-	modulePathEndpointIP              = modulePathEndpoint + "/ip"
-	modulePathLoadBalancer            = "/load-balancer"
-	modulePathApplicationLoadBalancer = modulePathLoadBalancer + "/application"
-	modulePathNodePool                = "/node-pool"
+	ModulePathEndpoint                = "/endpoint"
+	ModulePathEndpointExternalName    = ModulePathEndpoint + "/external-name"
+	ModulePathEndpointIP              = ModulePathEndpoint + "/ip"
+	ModulePathLoadBalancer            = "/load-balancer"
+	ModulePathApplicationLoadBalancer = ModulePathLoadBalancer + "/application"
+	ModulePathNodePool                = "/node-pool"
 )

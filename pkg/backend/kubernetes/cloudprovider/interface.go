@@ -2,7 +2,6 @@ package cloudprovider
 
 import (
 	"fmt"
-	"time"
 
 	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/cloudprovider/aws"
 	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/cloudprovider/local"
@@ -37,9 +36,15 @@ type Interface interface {
 	// DeploymentSpec that was passed in to TransformServiceDeploymentSpec.
 	IsDeploymentSpecUpdated(service *latticev1.Service, current, desired, untransformed *appsv1.DeploymentSpec) (bool, string, *appsv1.DeploymentSpec)
 
-	ProvisionNodePool(v1.LatticeID, *latticev1.NodePool) (nodePool *latticev1.NodePool, requeueTime *time.Duration, err error)
-	DeprovisionNodePool(v1.LatticeID, *latticev1.NodePool) (requeueTime *time.Duration, err error)
-	NodePoolState(v1.LatticeID, *latticev1.NodePool) (latticev1.NodePoolState, error)
+	NodePool
+}
+
+type NodePool interface {
+	NodePoolNeedsNewEpoch(*latticev1.NodePool) (bool, error)
+	NodePoolCurrentEpochState(v1.LatticeID, *latticev1.NodePool) (latticev1.NodePoolState, error)
+	NodePoolAddAnnotations(v1.LatticeID, *latticev1.NodePool, map[string]string, latticev1.NodePoolEpoch) error
+	ProvisionNodePoolEpoch(v1.LatticeID, *latticev1.NodePool, latticev1.NodePoolEpoch) error
+	DeprovisionNodePoolEpoch(v1.LatticeID, *latticev1.NodePool, latticev1.NodePoolEpoch) error
 }
 
 type Options struct {

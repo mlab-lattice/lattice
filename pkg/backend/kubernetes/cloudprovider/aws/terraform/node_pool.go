@@ -1,12 +1,52 @@
 package terraform
 
 import (
+	"encoding/json"
 	"strings"
 
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 )
 
 type NodePool struct {
+	Source string
+
+	AWSAccountID string
+	Region       string
+
+	LatticeID                 v1.LatticeID
+	VPCID                     string
+	SubnetIDs                 []string
+	MasterNodeSecurityGroupID string
+	WorkerNodeAMIID           string
+	KeyName                   string
+
+	Name         string
+	NumInstances int32
+	InstanceType string
+}
+
+func (np *NodePool) MarshalJSON() ([]byte, error) {
+	encoder := nodePoolEncoder{
+		Source: np.Source,
+
+		AWSAccountID: np.AWSAccountID,
+		Region:       np.Region,
+
+		LatticeID:                 string(np.LatticeID),
+		VPCID:                     np.VPCID,
+		SubnetIDs:                 strings.Join(np.SubnetIDs, ","),
+		MasterNodeSecurityGroupID: np.MasterNodeSecurityGroupID,
+		WorkerNodeAMIID:           np.WorkerNodeAMIID,
+		KeyName:                   np.KeyName,
+
+		Name:         np.Name,
+		NumInstances: np.NumInstances,
+		InstanceType: np.InstanceType,
+	}
+	return json.Marshal(&encoder)
+}
+
+type nodePoolEncoder struct {
 	Source string `json:"source"`
 
 	AWSAccountID string `json:"aws_account_id"`
@@ -22,31 +62,4 @@ type NodePool struct {
 	Name         string `json:"name"`
 	NumInstances int32  `json:"num_instances"`
 	InstanceType string `json:"instance_type"`
-}
-
-func NewNodePoolModule(
-	moduleRoot, awsAccountID, region string, latticeID v1.LatticeID,
-	vpcID string,
-	subnetIDs []string,
-	masterNodeSecurityGroupID, workerNodeAMIID, keyName, name string,
-	numInstances int32,
-	instanceType string,
-) *NodePool {
-	return &NodePool{
-		Source: moduleRoot + modulePathNodePool,
-
-		AWSAccountID: awsAccountID,
-		Region:       region,
-
-		LatticeID:                 string(latticeID),
-		VPCID:                     vpcID,
-		SubnetIDs:                 strings.Join(subnetIDs, ","),
-		MasterNodeSecurityGroupID: masterNodeSecurityGroupID,
-		WorkerNodeAMIID:           workerNodeAMIID,
-		KeyName:                   keyName,
-
-		Name:         name,
-		NumInstances: numInstances,
-		InstanceType: instanceType,
-	}
 }

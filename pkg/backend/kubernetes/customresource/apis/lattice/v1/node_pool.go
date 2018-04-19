@@ -107,38 +107,6 @@ func (np *NodePool) Description() string {
 
 type NodePoolEpoch int64
 
-func (np *NodePool) Epochs() []NodePoolEpoch {
-	var epochs []NodePoolEpoch
-	for epoch := range np.Status.Epochs {
-		epochs = append(epochs, epoch)
-	}
-
-	sort.Slice(epochs, func(i, j int) bool {
-		return epochs[i] < epochs[j]
-	})
-
-	return epochs
-}
-
-func (np *NodePool) CurrentEpoch() (NodePoolEpoch, bool) {
-	epochs := np.Epochs()
-
-	if len(epochs) == 0 {
-		return 0, false
-	}
-
-	return epochs[len(epochs)-1], true
-}
-
-func (np *NodePool) NextEpoch() NodePoolEpoch {
-	current, ok := np.CurrentEpoch()
-	if !ok {
-		return 1
-	}
-
-	return current + 1
-}
-
 func (np *NodePool) Affinity(epoch NodePoolEpoch) *corev1.NodeAffinity {
 	return &corev1.NodeAffinity{
 		RequiredDuringSchedulingIgnoredDuringExecution: &corev1.NodeSelector{
@@ -181,11 +149,45 @@ type NodePoolStatus struct {
 	// and thus requires a new epoch of the node pool.
 	// Changing the number of nodes in a node pool does not require replacing the
 	// existing nodes, simply scaling them, and thus does not require a new epoch.
-	Epochs map[NodePoolEpoch]NodePoolStatusEpoch `json:"epochs"`
+	Epochs NodePoolStatusEpochs `json:"epochs"`
 }
 
-func (s *NodePoolStatus) Epoch(epoch NodePoolEpoch) (*NodePoolStatusEpoch, bool) {
-	status, ok := s.Epochs[epoch]
+type NodePoolStatusEpochs map[NodePoolEpoch]NodePoolStatusEpoch
+
+func (e NodePoolStatusEpochs) Epochs() []NodePoolEpoch {
+	var epochs []NodePoolEpoch
+	for epoch := range e {
+		epochs = append(epochs, epoch)
+	}
+
+	sort.Slice(epochs, func(i, j int) bool {
+		return epochs[i] < epochs[j]
+	})
+
+	return epochs
+}
+
+func (e NodePoolStatusEpochs) CurrentEpoch() (NodePoolEpoch, bool) {
+	epochs := e.Epochs()
+
+	if len(epochs) == 0 {
+		return 0, false
+	}
+
+	return epochs[len(epochs)-1], true
+}
+
+func (e NodePoolStatusEpochs) NextEpoch() NodePoolEpoch {
+	current, ok := e.CurrentEpoch()
+	if !ok {
+		return 1
+	}
+
+	return current + 1
+}
+
+func (e NodePoolStatusEpochs) Epoch(epoch NodePoolEpoch) (*NodePoolStatusEpoch, bool) {
+	status, ok := e[epoch]
 	if !ok {
 		return nil, false
 	}
@@ -204,8 +206,9 @@ const (
 )
 
 type NodePoolStatusEpoch struct {
-	Spec  NodePoolSpec  `json:"spec"`
-	State NodePoolState `json:"state"`
+	NumInstances int32         `json:"numInstances"`
+	InstanceType string        `json:"instanceType"`
+	State        NodePoolState `json:"state"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

@@ -6,12 +6,14 @@ import (
 	"time"
 
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
+	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/cloudprovider"
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	latticeclientset "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/generated/clientset/versioned"
 	latticeinformers "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/generated/informers/externalversions/lattice/v1"
 	latticelisters "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/generated/listers/lattice/v1"
 
 	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
 
@@ -19,7 +21,6 @@ import (
 	"k8s.io/client-go/util/workqueue"
 
 	"github.com/golang/glog"
-	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/cloudprovider"
 )
 
 type Controller struct {
@@ -229,6 +230,66 @@ func (c *Controller) handleNodePoolDelete(obj interface{}) {
 	}
 
 	c.enqueueNodePool(nodePool)
+}
+
+func (c *Controller) handleServiceAdd(obj interface{}) {
+	service := obj.(*latticev1.Service)
+	glog.V(4).Infof("%v add", service.Description())
+
+	nodePools, err := c.nodePoolLister.NodePools(service.Namespace).List(labels.Everything())
+	if err != nil {
+		// FIXME: send warning
+		return
+	}
+
+	for _, nodePool := range nodePools {
+		c.enqueueNodePool(nodePool)
+	}
+}
+
+func (c *Controller) handleServiceUpdate(old, cur interface{}) {
+	curService := cur.(*latticev1.Service)
+	glog.V(5).Info("%v update", curService.Description())
+
+	nodePools, err := c.nodePoolLister.NodePools(curService.Namespace).List(labels.Everything())
+	if err != nil {
+		// FIXME: send warning
+		return
+	}
+
+	for _, nodePool := range nodePools {
+		c.enqueueNodePool(nodePool)
+	}
+}
+
+func (c *Controller) handleServiceDelete(obj interface{}) {
+	service, ok := obj.(*latticev1.Service)
+
+	// When a delete is dropped, the relist will notice a pod in the store not
+	// in the list, leading to the insertion of a tombstone object which contains
+	// the deleted key/value.
+	if !ok {
+		tombstone, ok := obj.(cache.DeletedFinalStateUnknown)
+		if !ok {
+			runtime.HandleError(fmt.Errorf("couldn't get object from tombstone %#v", obj))
+			return
+		}
+		service, ok = tombstone.Obj.(*latticev1.Service)
+		if !ok {
+			runtime.HandleError(fmt.Errorf("tombstone contained object that is not a Service %#v", obj))
+			return
+		}
+	}
+
+	nodePools, err := c.nodePoolLister.NodePools(service.Namespace).List(labels.Everything())
+	if err != nil {
+		// FIXME: send warning
+		return
+	}
+
+	for _, nodePool := range nodePools {
+		c.enqueueNodePool(nodePool)
+	}
 }
 
 func (c *Controller) enqueue(nodePool *latticev1.NodePool) {

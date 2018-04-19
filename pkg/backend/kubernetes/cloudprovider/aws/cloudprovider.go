@@ -16,14 +16,7 @@ import (
 const (
 	workDirectoryVolumeHostPathPrefix = "/var/lib/component-builder"
 
-	AnnotationKeyLoadBalancerDNSName          = "load-balancer.aws.cloud-provider.lattice.mlab.com/dns-name"
-	AnnotationKeyNodePoolAutoscalingGroupName = "node-pool.aws.cloud-provider.lattice.mlab.com/autoscaling-group-name"
-	AnnotationKeyNodePoolSecurityGroupID      = "node-pool.aws.cloud-provider.lattice.mlab.com/security-group-id"
-
-	terraformOutputAutoscalingGroupID              = "autoscaling_group_id"
-	terraformOutputAutoscalingGroupName            = "autoscaling_group_name"
-	terraformOutputAutoscalingGroupDesiredCapacity = "autoscaling_group_desired_capacity"
-	terraformOutputSecurityGroupID                 = "security_group_id"
+	AnnotationKeyLoadBalancerDNSName = "load-balancer.aws.cloud-provider.lattice.mlab.com/dns-name"
 )
 
 type Options struct {

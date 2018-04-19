@@ -1,12 +1,15 @@
 package nodepool
 
 import (
+	"fmt"
 	"reflect"
 
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 
-	"github.com/golang/glog"
 	"k8s.io/apimachinery/pkg/labels"
+
+	set "github.com/deckarep/golang-set"
+	"github.com/golang/glog"
 )
 
 const (
@@ -14,70 +17,169 @@ const (
 )
 
 func (c *Controller) syncActiveNodePool(nodePool *latticev1.NodePool) error {
-	state, err := c.cloudProvider.NodePoolState(c.latticeID, nodePool)
+	// Get the status of existing epochs.
+	epochs := make(latticev1.NodePoolStatusEpochs)
+	for _, epoch := range nodePool.Status.Epochs.Epochs() {
+		epochInfo, ok := nodePool.Status.Epochs.Epoch(epoch)
+		if !ok {
+			return fmt.Errorf("could not get info for %v epoch %v", nodePool.Description(), epoch)
+		}
+
+		epochs[epoch] = latticev1.NodePoolStatusEpoch{
+			NumInstances: epochInfo.NumInstances,
+			InstanceType: epochInfo.InstanceType,
+			State:        epochInfo.State,
+		}
+	}
+
+	needsNewEpoch, err := c.cloudProvider.NodePoolNeedsNewEpoch(nodePool)
 	if err != nil {
 		return err
 	}
 
-	nodePool, err = c.updateNodePoolStatus(nodePool, state)
+	// If the node pool needs a new epoch, generate it and add it to the status.
+	// Otherwise just get the current epoch and see if the cloud provider needs to act on it.
+	var epoch latticev1.NodePoolEpoch
+	var needsProvision bool
+
+	if needsNewEpoch {
+		epoch = nodePool.Status.Epochs.NextEpoch()
+		epochs[epoch] = latticev1.NodePoolStatusEpoch{
+			InstanceType: nodePool.Spec.InstanceType,
+			NumInstances: nodePool.Spec.NumInstances,
+			State:        latticev1.NodePoolStatePending,
+		}
+
+		needsProvision = true
+	} else {
+		var ok bool
+		epoch, ok = nodePool.Status.Epochs.CurrentEpoch()
+		if !ok {
+			return fmt.Errorf("cloud provider reported that %v did not need new epoch, but it does not have a current epoch", nodePool.Description())
+		}
+
+		state, err := c.cloudProvider.NodePoolCurrentEpochState(c.latticeID, nodePool)
+		if err != nil {
+			return fmt.Errorf("error getting %v state for current epoch (%v) from cloud provider: %v", nodePool.Description(), epoch, err)
+		}
+
+		// Only want to call out to the cloud provider to provision the current epoch if
+		// the epoch isn't already stable.
+		// Due to the number of times that node pools are going to be assessed (currently have to
+		// reconsider it every time any service in its namespace changes), we really want to minimize
+		// the number of cloud API calls.
+		needsProvision = state != latticev1.NodePoolStateStable
+	}
+
+	// Update the node pool's status prior to telling the cloud provider to provision the current epoch.
+	nodePool, err = c.updateNodePoolStatus(nodePool, epochs)
 	if err != nil {
 		return err
 	}
 
-	nodePool, requeueTime, err := c.cloudProvider.ProvisionNodePool(c.latticeID, nodePool)
+	// To reduce the potential number of cloud API requests, only call provision and get annotations
+	// when the node pool needs to scale or be provisioned.
+	if needsProvision {
+		err = c.cloudProvider.ProvisionNodePoolEpoch(c.latticeID, nodePool, epoch)
+		if err != nil {
+			return fmt.Errorf("cloud provider could not provision %v epoch %v: %v", nodePool.Description(), epoch, err)
+		}
+
+		// Add any annotations needed by the cloud provider.
+		// Copy annotations so cloud provider doesn't mutate the cache
+		annotations := make(map[string]string)
+		for k, v := range nodePool.Annotations {
+			annotations[k] = v
+		}
+
+		err = c.cloudProvider.NodePoolAddAnnotations(c.latticeID, nodePool, annotations, epoch)
+		if err != nil {
+			return fmt.Errorf("cloud provider could not get annotations for %v epoch %v: %v", nodePool.Description(), epoch, err)
+		}
+
+		nodePool, err = c.updateNodePoolAnnotations(nodePool, annotations)
+		if err != nil {
+			return fmt.Errorf("could not update %v annotations: %v", nodePool.Description(), err)
+		}
+	}
+
+	// If we got to here, the node pool's current epoch is stable, so update the status to reflect that.
+	epochs[epoch] = latticev1.NodePoolStatusEpoch{
+		InstanceType: nodePool.Spec.InstanceType,
+		NumInstances: nodePool.Spec.NumInstances,
+		State:        latticev1.NodePoolStateStable,
+	}
+	nodePool, err = c.updateNodePoolStatus(nodePool, epochs)
 	if err != nil {
 		return err
 	}
 
-	nodePool, err = c.updateNodePool(nodePool)
-	if err != nil {
-		return err
-	}
-
-	if requeueTime != nil {
-		c.queue.AddAfter(nodePool, *requeueTime)
-		return nil
-	}
-
-	// FIXME: drain then deprovision old nodes
-	return nil
+	// We successfully provisioned the current epoch, so we can start trying to retire
+	// any earlier epochs.
+	_, err = c.retireEpochs(nodePool, false)
+	return err
 }
 
 func (c *Controller) syncDeletedNodePool(nodePool *latticev1.NodePool) error {
-	// FIXME: add drain
-	requeueTime, err := c.cloudProvider.DeprovisionNodePool(c.latticeID, nodePool)
+	nodePool, err := c.retireEpochs(nodePool, true)
 	if err != nil {
 		return err
 	}
 
-	if requeueTime != nil {
-		c.queue.AddAfter(nodePool, *requeueTime)
+	// If there are still epochs that weren't able to be retired yet, we are done for this round.
+	// Workloads will be terminated and this node pool will be requeued and reassessed.
+	if len(nodePool.Status.Epochs) > 0 {
 		return nil
 	}
 
+	// If all of the epochs were retired, the node pool has been deleted so we can remove the finalizer.
 	_, err = c.removeFinalizer(nodePool)
 	return err
 }
 
-func (c *Controller) updateNodePool(nodePool *latticev1.NodePool) (*latticev1.NodePool, error) {
-	return c.latticeClient.LatticeV1().NodePools(nodePool.Namespace).Update(nodePool)
-}
+func (c *Controller) retireEpochs(nodePool *latticev1.NodePool, retireCurrent bool) (*latticev1.NodePool, error) {
+	retiredEpochs := set.NewSet()
+	for _, epoch := range nodePool.Status.Epochs.Epochs() {
+		if !retireCurrent {
+			currentEpoch, ok := nodePool.Status.Epochs.CurrentEpoch()
+			if !ok {
+				return nil, fmt.Errorf("trying to retire %v epochs but it does not have a current epoch", nodePool.Description())
+			}
 
-func (c *Controller) updateNodePoolStatus(nodePool *latticev1.NodePool, state latticev1.NodePoolState) (*latticev1.NodePool, error) {
-	status := latticev1.NodePoolStatus{
-		ObservedGeneration: nodePool.ObjectMeta.Generation,
-		State:              state,
+			if epoch == currentEpoch {
+				continue
+			}
+		}
+
+		// If the node pool can be retired, ask the cloud provider to deprovision it.
+		retired, err := c.isEpochRetired(nodePool, epoch)
+		if err != nil {
+			return nil, fmt.Errorf("error trying to check if %v epoch %v is retired: %v", nodePool.Description(), epoch, err)
+		}
+
+		if !retired {
+			continue
+		}
+
+		err = c.cloudProvider.DeprovisionNodePoolEpoch(c.latticeID, nodePool, epoch)
+		if err != nil {
+			return nil, fmt.Errorf("cloud provider could not deprovision %v epoch %v: %v", nodePool.Description(), epoch, err)
+		}
+
+		retiredEpochs.Add(epoch)
 	}
 
-	if reflect.DeepEqual(nodePool.Status, status) {
-		return nodePool, nil
+	// Create a new map of epochs for the node pool's status, removing the epochs that were just retired.
+	epochs := make(map[latticev1.NodePoolEpoch]latticev1.NodePoolStatusEpoch)
+	for epoch, epochInfo := range nodePool.Status.Epochs {
+		if retiredEpochs.Contains(epoch) {
+			continue
+		}
+
+		epochs[epoch] = epochInfo
 	}
 
-	// Copy the service so the shared cache isn't mutated
-	nodePool = nodePool.DeepCopy()
-	nodePool.Status = status
-
-	return c.latticeClient.LatticeV1().NodePools(nodePool.Namespace).UpdateStatus(nodePool)
+	return c.updateNodePoolStatus(nodePool, epochs)
 }
 
 func (c *Controller) isEpochRetired(nodePool *latticev1.NodePool, epoch latticev1.NodePoolEpoch) (bool, error) {
@@ -136,7 +238,7 @@ func (c *Controller) serviceRunningOnEpoch(nodePool *latticev1.NodePool, epoch l
 
 		// If the service controller hasn't processed the most recent update to the service,
 		// it's possible that it's in the process of annotating it with this epoch.
-		if service.UpdateProcessed() {
+		if !service.UpdateProcessed() {
 			return true, nil
 		}
 
@@ -144,10 +246,73 @@ func (c *Controller) serviceRunningOnEpoch(nodePool *latticev1.NodePool, epoch l
 		// If the service were updated to run on this node pool, the service controller would have
 		// at least this current version of the node pool in its cache, if not a more recent version,
 		// and therefore would not assign the service to this epoch.
+		// NOTE: this relies on the fact that the nodepool controller and service controller are both
+		// operating on the same cache.
 		continue
 	}
 
+	// Didn't find any services that could be running on the epoch.
 	return false, nil
+}
+
+func (c *Controller) updateNodePoolAnnotations(nodePool *latticev1.NodePool, annotations map[string]string) (*latticev1.NodePool, error) {
+	if reflect.DeepEqual(nodePool.Annotations, annotations) {
+		return nodePool, nil
+	}
+
+	// Copy so we don't mutate the cache
+	nodePool = nodePool.DeepCopy()
+	nodePool.Annotations = annotations
+
+	return c.latticeClient.LatticeV1().NodePools(nodePool.Namespace).Update(nodePool)
+}
+
+func (c *Controller) updateNodePoolStatus(
+	nodePool *latticev1.NodePool,
+	epochs map[latticev1.NodePoolEpoch]latticev1.NodePoolStatusEpoch,
+) (*latticev1.NodePool, error) {
+	state, err := nodePoolState(epochs)
+	if err != nil {
+		return nil, fmt.Errorf("error trying to get state for %v: %v", nodePool.Description(), err)
+	}
+
+	status := latticev1.NodePoolStatus{
+		ObservedGeneration: nodePool.ObjectMeta.Generation,
+		State:              state,
+		Epochs:             epochs,
+	}
+
+	if reflect.DeepEqual(nodePool.Status, status) {
+		return nodePool, nil
+	}
+
+	// Copy the service so the shared cache isn't mutated
+	nodePool = nodePool.DeepCopy()
+	nodePool.Status = status
+
+	return c.latticeClient.LatticeV1().NodePools(nodePool.Namespace).UpdateStatus(nodePool)
+}
+
+func nodePoolState(epochs latticev1.NodePoolStatusEpochs) (latticev1.NodePoolState, error) {
+	if len(epochs) == 0 {
+		return latticev1.NodePoolStatePending, nil
+	}
+
+	if len(epochs) > 1 {
+		return latticev1.NodePoolStateUpdating, nil
+	}
+
+	current, ok := epochs.CurrentEpoch()
+	if !ok {
+		return latticev1.NodePoolStatePending, fmt.Errorf("epochs had an epoch but could not get current epoch")
+	}
+
+	epochInfo, ok := epochs.Epoch(current)
+	if !ok {
+		return latticev1.NodePoolStatePending, fmt.Errorf("epochs had a current epoch but could not get current epoch info")
+	}
+
+	return epochInfo.State, nil
 }
 
 func (c *Controller) addFinalizer(nodePool *latticev1.NodePool) (*latticev1.NodePool, error) {

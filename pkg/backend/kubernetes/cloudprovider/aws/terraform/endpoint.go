@@ -12,7 +12,7 @@ type ExternalNameEndpoint struct {
 
 func NewExternalNameEndpointModule(moduleRoot, region, zoneID, name, externalName string) *ExternalNameEndpoint {
 	return &ExternalNameEndpoint{
-		Source: moduleRoot + modulePathEndpointExternalName,
+		Source: moduleRoot + ModulePathEndpointExternalName,
 
 		Region: region,
 
@@ -34,7 +34,7 @@ type IPEndpoint struct {
 
 func NewIPEndpointModule(moduleRoot, region, zoneID, name, ip string) *IPEndpoint {
 	return &IPEndpoint{
-		Source: moduleRoot + modulePathEndpointIP,
+		Source: moduleRoot + ModulePathEndpointIP,
 
 		Region: region,
 

@@ -23,7 +23,7 @@ func NewApplicationLoadBalancerModule(
 	ports map[int32]int32,
 ) *ApplicationLoadBalancer {
 	return &ApplicationLoadBalancer{
-		Source: moduleRoot + modulePathApplicationLoadBalancer,
+		Source: moduleRoot + ModulePathApplicationLoadBalancer,
 
 		Region: region,
 
