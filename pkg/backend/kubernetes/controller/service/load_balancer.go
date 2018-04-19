@@ -7,8 +7,12 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func (c *Controller) syncLoadBalancer(service *latticev1.Service) (*latticev1.LoadBalancer, bool, error) {
+func (c *Controller) syncLoadBalancer(service *latticev1.Service, nodePool *latticev1.NodePool, nodePoolReady bool) (*latticev1.LoadBalancer, bool, error) {
 	lbNeeded := needsLoadBalancer(service)
+
+	if !nodePoolReady {
+		return nil, lbNeeded, nil
+	}
 
 	loadBalancer, err := c.loadBalancerLister.LoadBalancers(service.Namespace).Get(service.Name)
 	if err != nil {
@@ -17,7 +21,7 @@ func (c *Controller) syncLoadBalancer(service *latticev1.Service) (*latticev1.Lo
 				return nil, false, nil
 			}
 
-			loadBalancer, err := c.createNewLoadBalancer(service)
+			loadBalancer, err := c.createNewLoadBalancer(service, nodePool)
 			return loadBalancer, true, err
 		}
 
@@ -39,8 +43,8 @@ func needsLoadBalancer(service *latticev1.Service) bool {
 	return false
 }
 
-func (c *Controller) createNewLoadBalancer(service *latticev1.Service) (*latticev1.LoadBalancer, error) {
-	loadBalancer := newLoadBalancer(service)
+func (c *Controller) createNewLoadBalancer(service *latticev1.Service, nodePool *latticev1.NodePool) (*latticev1.LoadBalancer, error) {
+	loadBalancer := newLoadBalancer(service, nodePool)
 
 	loadBalancer, err := c.latticeClient.LatticeV1().LoadBalancers(service.Namespace).Create(loadBalancer)
 	if err != nil {
@@ -51,13 +55,15 @@ func (c *Controller) createNewLoadBalancer(service *latticev1.Service) (*lattice
 	return loadBalancer, nil
 }
 
-func newLoadBalancer(service *latticev1.Service) *latticev1.LoadBalancer {
+func newLoadBalancer(service *latticev1.Service, nodePool *latticev1.NodePool) *latticev1.LoadBalancer {
 	return &latticev1.LoadBalancer{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:            service.Name,
 			OwnerReferences: []metav1.OwnerReference{*metav1.NewControllerRef(service, controllerKind)},
 		},
-		Spec: latticev1.LoadBalancerSpec{},
+		Spec: latticev1.LoadBalancerSpec{
+			NodePool: nodePool.Name,
+		},
 		Status: latticev1.LoadBalancerStatus{
 			State: latticev1.LoadBalancerStatePending,
 		},

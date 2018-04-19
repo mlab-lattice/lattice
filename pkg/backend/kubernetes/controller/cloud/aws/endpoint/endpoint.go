@@ -179,7 +179,7 @@ func (c *Controller) endpointDNSName(endpoint *latticev1.Endpoint) (string, erro
 		return "", err
 	}
 
-	name := endpointutil.DNSName(endpoint.Spec.Path.ToDomain(), systemID, c.latticeID)
+	name := fmt.Sprintf("%v.local.%v", endpoint.Spec.Path.ToDomain(), systemID)
 	return name, nil
 }
 

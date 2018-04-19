@@ -292,7 +292,8 @@ func (c *Controller) untransformedDeploymentSpec(
 		return nil, err
 	}
 
-	baseSearchPath := fmt.Sprintf("%v.%v.local", systemID, c.latticeID)
+	// FIXME: make "lattice.local" suffix configurable
+	baseSearchPath := fmt.Sprintf("%v.lattice.local", systemID)
 	dnsSearches := []string{baseSearchPath}
 
 	// If the service is not the root node, we need to append its parent as a search in resolv.conf

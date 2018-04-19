@@ -218,7 +218,7 @@ func (c *Controller) rewriteDnsmasqConfig(endpoints []*latticev1.Endpoint) error
 		}
 
 		domain := endpoint.Spec.Path.ToDomain()
-		cname := endpointutil.DNSName(domain, systemID, c.latticeID)
+		cname := endpointutil.DNSName(domain, systemID)
 
 		if endpoint.Spec.IP != nil {
 			hostConfigFileContents += fmt.Sprintf("%v %v\n", *endpoint.Spec.IP, cname)

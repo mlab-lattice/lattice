@@ -37,7 +37,7 @@ func (c *Controller) syncDeletedLoadBalancer(loadBalancer *latticev1.LoadBalance
 }
 
 func (c *Controller) nodePoolProvisioned(loadBalancer *latticev1.LoadBalancer) (bool, error) {
-	nodePool, err := c.nodePoolLister.NodePools(loadBalancer.Namespace).Get(loadBalancer.Name)
+	nodePool, err := c.nodePoolLister.NodePools(loadBalancer.Namespace).Get(loadBalancer.Spec.NodePool)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			return false, nil
@@ -161,7 +161,7 @@ func (c *Controller) loadBalancerModule(loadBalancer *latticev1.LoadBalancer) (*
 		return nil, err
 	}
 
-	nodePool, err := c.nodePoolLister.NodePools(loadBalancer.Namespace).Get(loadBalancer.Name)
+	nodePool, err := c.nodePoolLister.NodePools(loadBalancer.Namespace).Get(loadBalancer.Spec.NodePool)
 	if err != nil {
 		return nil, err
 	}

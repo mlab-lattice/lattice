@@ -926,7 +926,7 @@ func (c *Controller) syncService(key string) error {
 		return err
 	}
 
-	loadBalancer, loadBalancerNeeded, err := c.syncLoadBalancer(service)
+	loadBalancer, loadBalancerNeeded, err := c.syncLoadBalancer(service, nodePool, nodePoolReady)
 	if err != nil {
 		return err
 	}
