@@ -2,7 +2,6 @@ package v1
 
 import (
 	"fmt"
-	"strconv"
 
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/constants"
@@ -21,6 +20,18 @@ const (
 	ResourceScopeNodePool     = apiextensionsv1beta1.NamespaceScoped
 )
 
+// NodePoolServiceDedicatedID is the key for a label indicating that the node pool is dedicated for a service.
+// The label's value should be the ID of the service.
+var NodePoolServiceDedicatedIDLabelKey = fmt.Sprintf("service.dedicated.node-pool.%v/id", SchemeGroupVersion.String())
+
+// NodePoolServiceDedicatedID is the key for a label indicating that the node pool is shared for a system.
+// The label's value should be the node pool's path in the system definition.
+var NodePoolSystemSharedPathLabelKey = fmt.Sprintf("shared.node-pool.%v/path", SchemeGroupVersion.String())
+
+// WorkloadNodePoolAnnotationKey is the key that should be used in an annotation by
+// workloads that run on a node pool.
+var WorkloadNodePoolAnnotationKey = fmt.Sprintf("workload.%v/node-pools", SchemeGroupVersion.String())
+
 // +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
@@ -31,8 +42,48 @@ type NodePool struct {
 	Status            NodePoolStatus `json:"status,omitempty"`
 }
 
-func (np *NodePool) ID(epoch int64) string {
+func (np *NodePool) ID(epoch NodePoolEpoch) string {
 	return fmt.Sprintf("%v.%v.%v", np.Namespace, np.Name, epoch)
+}
+
+type NodePoolType string
+
+const (
+	NodePoolTypeServiceDedicated NodePoolType = "service-dedicated"
+	NodePoolTypeSystemShared     NodePoolType = "system-shared"
+	NodePoolTypeUnknown          NodePoolType = "unknown"
+)
+
+func (np *NodePool) Type() NodePoolType {
+	if np.Labels == nil {
+		return NodePoolTypeUnknown
+	}
+
+	if _, ok := np.Labels[NodePoolServiceDedicatedIDLabelKey]; ok {
+		return NodePoolTypeServiceDedicated
+	}
+
+	if _, ok := np.Labels[NodePoolSystemSharedPathLabelKey]; ok {
+		return NodePoolTypeSystemShared
+	}
+
+	return NodePoolTypeUnknown
+}
+
+func (np *NodePool) TypeDescription() string {
+	if np.Labels == nil {
+		return "UNKNOWN"
+	}
+
+	if serviceID, ok := np.Labels[NodePoolServiceDedicatedIDLabelKey]; ok {
+		return fmt.Sprintf("dedicated for service %v", serviceID)
+	}
+
+	if path, ok := np.Labels[NodePoolSystemSharedPathLabelKey]; ok {
+		return fmt.Sprintf("shared node pool %v", path)
+	}
+
+	return "UNKNOWN"
 }
 
 func (np *NodePool) Description() string {
@@ -54,12 +105,10 @@ func (np *NodePool) Description() string {
 	return fmt.Sprintf("node pool %v (%v in system %v)", np.Name, typeDescription, systemID)
 }
 
-func (np *NodePool) CurrentEpoch() (int64, bool) {
-	if len(np.Status.Epochs) == 0 {
-		return 0, false
-	}
+type NodePoolEpoch int64
 
-	var epochs []int64
+func (np *NodePool) Epochs() []NodePoolEpoch {
+	var epochs []NodePoolEpoch
 	for epoch := range np.Status.Epochs {
 		epochs = append(epochs, epoch)
 	}
@@ -68,10 +117,29 @@ func (np *NodePool) CurrentEpoch() (int64, bool) {
 		return epochs[i] < epochs[j]
 	})
 
+	return epochs
+}
+
+func (np *NodePool) CurrentEpoch() (NodePoolEpoch, bool) {
+	epochs := np.Epochs()
+
+	if len(epochs) == 0 {
+		return 0, false
+	}
+
 	return epochs[len(epochs)-1], true
 }
 
-func (np *NodePool) Affinity(epoch int64) *corev1.NodeAffinity {
+func (np *NodePool) NextEpoch() NodePoolEpoch {
+	current, ok := np.CurrentEpoch()
+	if !ok {
+		return 1
+	}
+
+	return current + 1
+}
+
+func (np *NodePool) Affinity(epoch NodePoolEpoch) *corev1.NodeAffinity {
 	return &corev1.NodeAffinity{
 		RequiredDuringSchedulingIgnoredDuringExecution: &corev1.NodeSelector{
 			NodeSelectorTerms: []corev1.NodeSelectorTerm{
@@ -89,7 +157,7 @@ func (np *NodePool) Affinity(epoch int64) *corev1.NodeAffinity {
 	}
 }
 
-func (np *NodePool) Toleration(epoch int64) corev1.Toleration {
+func (np *NodePool) Toleration(epoch NodePoolEpoch) corev1.Toleration {
 	return corev1.Toleration{
 		Key:      constants.LabelKeyNodeRoleLatticeNodePool,
 		Operator: corev1.TolerationOpEqual,
@@ -104,9 +172,25 @@ type NodePoolSpec struct {
 }
 
 type NodePoolStatus struct {
-	ObservedGeneration int64                         `json:"observedGeneration"`
-	State              NodePoolState                 `json:"state"`
-	Epochs             map[int64]NodePoolStatusEpoch `json:"epochs"`
+	ObservedGeneration int64         `json:"observedGeneration"`
+	State              NodePoolState `json:"state"`
+
+	// Epochs is a mapping from an epoch to the status of that epoch.
+	// An epoch is a manifestation of the node pool that requires replacing infrastructure.
+	// For example, changing the instance type of a node pool will require new nodes,
+	// and thus requires a new epoch of the node pool.
+	// Changing the number of nodes in a node pool does not require replacing the
+	// existing nodes, simply scaling them, and thus does not require a new epoch.
+	Epochs map[NodePoolEpoch]NodePoolStatusEpoch `json:"epochs"`
+}
+
+func (s *NodePoolStatus) Epoch(epoch NodePoolEpoch) (*NodePoolStatusEpoch, bool) {
+	status, ok := s.Epochs[epoch]
+	if !ok {
+		return nil, false
+	}
+
+	return &status, true
 }
 
 type NodePoolState string
@@ -130,4 +214,101 @@ type NodePoolList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata"`
 	Items           []NodePool `json:"items"`
+}
+
+// NodePoolAnnotation is the type that should be the value of the WorkloadNodePoolAnnotationKey annotation.
+// It maps from namespaces to a map of names to a slice of epochs.
+// For example, if a service is currently running on the abc node pool in namespace bar, and is
+// on both epochs 1 and 2 of that node pool, and is also currently running on the xyz node pool
+// in namespace foo, and is running on epoch 5 of that node pool, the annotation should have
+// the following value:
+//	{
+//		"bar": { "abc": [1, 2] },
+//		"foo": { "xyz": [5] }
+//	}
+type NodePoolAnnotationValue map[string]map[string][]NodePoolEpoch
+
+func (a NodePoolAnnotationValue) IsEmpty() bool {
+	return len(a) == 0
+}
+
+func (a NodePoolAnnotationValue) NodePools(namespace string) (map[string][]NodePoolEpoch, bool) {
+	nodePools, ok := a[namespace]
+	return nodePools, ok
+}
+
+func (a NodePoolAnnotationValue) Add(namespace, nodePool string, epoch NodePoolEpoch) {
+	nodePools, ok := a.NodePools(namespace)
+	if !ok {
+		nodePools = make(map[string][]NodePoolEpoch)
+	}
+
+	epochs, ok := nodePools[nodePool]
+	if !ok {
+		epochs = make([]NodePoolEpoch, 0)
+	}
+
+	containsEpoch := false
+	for _, e := range epochs {
+		if e == epoch {
+			containsEpoch = true
+			break
+		}
+	}
+
+	if !containsEpoch {
+		epochs = append(epochs, epoch)
+	}
+
+	sort.Slice(epochs, func(i, j int) bool {
+		return epochs[i] < epochs[j]
+	})
+
+	nodePools[nodePool] = epochs
+	a[namespace] = nodePools
+}
+
+func (a NodePoolAnnotationValue) Epochs(namespace, nodePool string) ([]NodePoolEpoch, bool) {
+	nodePools, ok := a.NodePools(namespace)
+	if !ok {
+		return nil, false
+	}
+
+	epochs, ok := nodePools[nodePool]
+	return epochs, ok
+}
+
+func (a NodePoolAnnotationValue) ContainsNodePool(namespace, nodePool string) bool {
+	_, ok := a.Epochs(namespace, nodePool)
+	return ok
+}
+
+func (a NodePoolAnnotationValue) ContainsLargerEpoch(namespace, nodePool string, epoch NodePoolEpoch) bool {
+	epochs, ok := a.Epochs(namespace, nodePool)
+	if !ok {
+		return false
+	}
+
+	for _, e := range epochs {
+		if e > epoch {
+			return true
+		}
+	}
+
+	return false
+}
+
+func (a NodePoolAnnotationValue) ContainsEpoch(namespace, nodePool string, epoch NodePoolEpoch) bool {
+	epochs, ok := a.Epochs(namespace, nodePool)
+	if !ok {
+		return false
+	}
+
+	for _, e := range epochs {
+		if e == epoch {
+			return true
+		}
+	}
+
+	return false
 }

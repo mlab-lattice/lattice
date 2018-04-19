@@ -1,6 +1,7 @@
 package service
 
 import (
+	"encoding/json"
 	"fmt"
 	"reflect"
 
@@ -25,7 +26,7 @@ const (
 func (c *Controller) syncServiceStatus(
 	service *latticev1.Service,
 	nodePool *latticev1.NodePool,
-	nodePoolReady bool,
+	nodePoolUpToDate bool,
 	deploymentStatus *deploymentStatus,
 	extraNodePoolsExist bool,
 	kubeService *corev1.Service,
@@ -54,6 +55,10 @@ func (c *Controller) syncServiceStatus(
 
 	// The cloud controller is responsible for creating the Kubernetes Service.
 	if kubeService == nil {
+		state = latticev1.ServiceStateUpdating
+	}
+
+	if !nodePoolUpToDate {
 		state = latticev1.ServiceStateUpdating
 	}
 
@@ -121,6 +126,48 @@ func (c *Controller) syncServiceStatus(
 	}
 
 	return c.updateServiceStatus(service, state, deploymentStatus.UpdatedInstances, deploymentStatus.StaleInstances, publicPorts, failureInfo)
+}
+
+func (c *Controller) updateServiceNodePoolAnnotation(
+	service *latticev1.Service,
+	nodePool *latticev1.NodePool,
+	state latticev1.ServiceState,
+) (*latticev1.Service, error) {
+	newAnnotation := make(latticev1.NodePoolAnnotationValue)
+	existingAnnotation, err := service.NodePoolAnnotation()
+	if err != nil {
+		return nil, fmt.Errorf("error getting existing node pool annotation for %v: %v", service.Description(), err)
+	}
+
+	// If the service is currently stable, then we are only running on the
+	// current epoch of the current node pool. If it's not stable we can't
+	// assume that we're fully off of previous node pools and epochs, so
+	// we have to include the values from the existing annotation.
+	if state != latticev1.ServiceStateStable {
+		newAnnotation = existingAnnotation
+	}
+
+	epoch, ok := nodePool.CurrentEpoch()
+	if !ok {
+		return nil, fmt.Errorf("%v is stable but does not have a current epoch", nodePool.Description())
+	}
+
+	newAnnotation.Add(nodePool.Namespace, nodePool.Name, epoch)
+
+	if reflect.DeepEqual(existingAnnotation, newAnnotation) {
+		return service, nil
+	}
+
+	newAnnotationJSON, err := json.Marshal(&newAnnotation)
+	if err != nil {
+		return nil, fmt.Errorf("error marshalling node pool annotation: %v", err)
+	}
+
+	// Copy the service so the shared cache isn't mutated
+	service = service.DeepCopy()
+	service.Annotations[latticev1.WorkloadNodePoolAnnotationKey] = string(newAnnotationJSON)
+
+	return c.latticeClient.LatticeV1().Services(service.Namespace).Update(service)
 }
 
 func (c *Controller) updateServiceStatus(

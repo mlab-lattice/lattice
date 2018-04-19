@@ -30,7 +30,7 @@ const (
 	dnsOptionNdots     = "ndots"
 )
 
-func (c *Controller) syncDeployment(service *latticev1.Service, nodePool *latticev1.NodePool, nodePoolReady bool) (*deploymentStatus, error) {
+func (c *Controller) syncDeployment(service *latticev1.Service, nodePool *latticev1.NodePool, nodePoolUpToDate bool) (*deploymentStatus, error) {
 	deployment, err := c.deployment(service)
 	if err != nil {
 		return nil, err
@@ -39,7 +39,7 @@ func (c *Controller) syncDeployment(service *latticev1.Service, nodePool *lattic
 	if deployment == nil {
 		// If we need to create a new deployment, we need to wait until the
 		// node pool is ready so we can get the right affinity and toleration.
-		if !nodePoolReady {
+		if !nodePoolUpToDate {
 			status := &deploymentStatus{
 				UpdateProcessed: true,
 
@@ -60,7 +60,7 @@ func (c *Controller) syncDeployment(service *latticev1.Service, nodePool *lattic
 	// If the new node pool isn't ready yet, we shouldn't update the deployment's spec
 	// yet. If we do, the deployment will try to start rolling out, which will essentially
 	// just result in terminating some pods while waiting for the node pool to be ready.
-	if !nodePoolReady {
+	if !nodePoolUpToDate {
 		return c.getDeploymentStatus(service, deployment)
 	}
 

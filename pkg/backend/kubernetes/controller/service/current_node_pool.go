@@ -94,36 +94,14 @@ func (c *Controller) syncSharedNodePool(namespace string, path tree.NodePath) (*
 		return nil, false, nil
 	}
 
-	// find the shared node pool with the largest generation
-	sort.Slice(nodePools, func(i, j int) bool {
-		iGeneration, err := nodePools[i].Generation()
-		if err != nil {
-			// FIXME: send warning
-			// If we're unable to get the generation, the node pool has a smaller generation
-			return true
-		}
-
-		jGeneration, err := nodePools[j].Generation()
-		if err != nil {
-			// FIXME: send warning
-			// If we're unable to get the generation, the node pool has a smaller generation
-			return false
-		}
-
-		return iGeneration < jGeneration
-	})
-
-	nodePool := nodePools[len(nodePools)-1]
-
-	var ready bool
-	switch nodePool.Status.State {
-	case latticev1.NodePoolStateStable, latticev1.NodePoolStateScaling:
-		ready = true
-	default:
-		ready = false
+	if len(nodePools) > 1 {
+		// FIXME: send warning or something
+		return nil, false, fmt.Errorf("found multiple node pools matching path %v in namespace %v", path.String(), namespace)
 	}
 
-	return nodePool, ready, nil
+	nodePool := nodePools[0]
+	upToDate := nodePool.Status.ObservedGeneration >= nodePool.Generation
+	return nodePool, upToDate, nil
 }
 
 func (c *Controller) syncExistingDedicatedNodePool(nodePool *latticev1.NodePool, numInstances int32, instanceType string) (*latticev1.NodePool, error) {

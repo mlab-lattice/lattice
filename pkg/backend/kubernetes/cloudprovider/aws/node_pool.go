@@ -13,47 +13,99 @@ import (
 	awstfprovider "github.com/mlab-lattice/lattice/pkg/util/terraform/provider/aws"
 )
 
-func (cp *DefaultAWSCloudProvider) ProvisionNodePool(latticeID v1.LatticeID, nodePool *latticev1.NodePool) (*latticev1.NodePool, *time.Duration, error) {
-	config := cp.nodePoolTerraformConfig(latticeID, nodePool)
-	_, err := terraform.Apply(nodePoolWorkDirectory(nodePool.IDLabelValue()), config)
+func (cp *DefaultAWSCloudProvider) NodePoolEpoch(latticeID v1.LatticeID, nodePool *latticev1.NodePool) (int64, error) {
+	needsNewEpoch, err := cp.nodePoolNeedsNewEpoch(nodePool)
 	if err != nil {
-		return nil, nil, err
+		return 0, err
 	}
 
-	annotations, err := cp.nodePoolAnnotations(latticeID, nodePool)
-	if err != nil {
-		return nil, nil, err
+	if needsNewEpoch {
+		return nodePool.NextEpoch(), nil
 	}
 
-	if !reflect.DeepEqual(nodePool.Annotations, annotations) {
-		// Copy so the shared cache isn't mutated
-		nodePool = nodePool.DeepCopy()
-		nodePool.Annotations = annotations
+	currentEpoch, ok := nodePool.CurrentEpoch()
+	if !ok {
+		return 0, fmt.Errorf("%v does not need new epoch but does not have current epoch", nodePool.Description())
 	}
 
-	return nodePool, nil, nil
+	return currentEpoch, nil
 }
 
-func (cp *DefaultAWSCloudProvider) DeprovisionNodePool(latticeID v1.LatticeID, nodePool *latticev1.NodePool) (*time.Duration, error) {
+func (cp *DefaultAWSCloudProvider) ProvisionNodePoolEpoch(latticeID v1.LatticeID, nodePool *latticev1.NodePool, epoch int64) (latticev1.NodePoolState, *time.Duration, error) {
 	config := cp.nodePoolTerraformConfig(latticeID, nodePool)
-	_, err := terraform.Destroy(nodePoolWorkDirectory(nodePool.IDLabelValue()), config)
+	_, err := terraform.Apply(nodePoolWorkDirectory(nodePool.ID(epoch)), config)
+	if err != nil {
+		return latticev1.NodePoolStatePending, nil, err
+	}
+
+	return latticev1.NodePoolStateStable, nil, nil
+}
+
+func (cp *DefaultAWSCloudProvider) DeprovisionNodePoolEpoch(latticeID v1.LatticeID, nodePool *latticev1.NodePool, epoch int64) (*time.Duration, error) {
+	config := cp.nodePoolTerraformConfig(latticeID, nodePool)
+
+	_, err := terraform.Destroy(nodePoolWorkDirectory(nodePool.ID(epoch)), config)
 	return nil, err
 }
 
-func (cp *DefaultAWSCloudProvider) NodePoolState(latticeID v1.LatticeID, nodePool *latticev1.NodePool) (latticev1.NodePoolState, error) {
+//func (cp *DefaultAWSCloudProvider) NodePoolState(latticeID v1.LatticeID, nodePool *latticev1.NodePool) (latticev1.NodePoolState, error) {
+//	info, err := cp.currentNodePoolInfo(latticeID, nodePool)
+//
+//	if err != nil {
+//		// For now, assume an error retrieving output values means that the node pool hasn't been provisioned
+//		// TODO: look into adding different exit codes to `terraform output`
+//		return latticev1.NodePoolStatePending, nil
+//	}
+//
+//	if info.NumInstances != nodePool.Spec.NumInstances {
+//		return latticev1.NodePoolStateScaling, nil
+//	}
+//
+//	return latticev1.NodePoolStateStable, nil
+//}
+
+func (cp *DefaultAWSCloudProvider) NodePoolAnnotations(latticeID v1.LatticeID, nodePool *latticev1.NodePool) (map[string]string, error) {
 	info, err := cp.currentNodePoolInfo(latticeID, nodePool)
-
 	if err != nil {
-		// For now, assume an error retrieving output values means that the node pool hasn't been provisioned
-		// TODO: look into adding different exit codes to `terraform output`
-		return latticev1.NodePoolStatePending, nil
+		return nil, err
 	}
 
-	if info.NumInstances != nodePool.Spec.NumInstances {
-		return latticev1.NodePoolStateScaling, nil
+	annotations := map[string]string{
+		AnnotationKeyNodePoolAutoscalingGroupName: info.AutoScalingGroupName,
+		AnnotationKeyNodePoolSecurityGroupID:      info.SecurityGroupID,
+	}
+	return annotations, nil
+}
+
+func (cp *DefaultAWSCloudProvider) DeprovisionNodePool(latticeID v1.LatticeID, nodePool *latticev1.NodePool) (*time.Duration, error) {
+	for _, epoch := range nodePool.Epochs() {
+		config := cp.nodePoolTerraformConfig(latticeID, nodePool)
+
+		_, err := terraform.Destroy(nodePoolWorkDirectory(nodePool.ID(epoch)), config)
+		if err != nil {
+			return nil, err
+		}
 	}
 
-	return latticev1.NodePoolStateStable, nil
+	return nil, nil
+}
+
+func (cp *DefaultAWSCloudProvider) nodePoolNeedsNewEpoch(nodePool *latticev1.NodePool) (bool, error) {
+	current, ok := nodePool.CurrentEpoch()
+
+	// If the node pool doesn't have an epoch yet, it needs a new one
+	if !ok {
+		return true, nil
+	}
+
+	epoch, ok := nodePool.Status.Epoch(current)
+	if !ok {
+		return false, fmt.Errorf("could not get epoch status for current epoch %v", current)
+	}
+
+	// If the node pool's instance type is not the instance type of the current epoch, we
+	// need a new epoch.
+	return nodePool.Spec.InstanceType != epoch.Spec.InstanceType, nil
 }
 
 func (cp *DefaultAWSCloudProvider) nodePoolTerraformConfig(latticeID v1.LatticeID, nodePool *latticev1.NodePool) *terraform.Config {
@@ -141,19 +193,6 @@ func (cp *DefaultAWSCloudProvider) currentNodePoolInfo(latticeID v1.LatticeID, n
 		SecurityGroupID:      values[terraformOutputSecurityGroupID],
 	}
 	return info, nil
-}
-
-func (cp *DefaultAWSCloudProvider) nodePoolAnnotations(latticeID v1.LatticeID, nodePool *latticev1.NodePool) (map[string]string, error) {
-	info, err := cp.currentNodePoolInfo(latticeID, nodePool)
-	if err != nil {
-		return nil, err
-	}
-
-	annotations := map[string]string{
-		AnnotationKeyNodePoolAutoscalingGroupName: info.AutoScalingGroupName,
-		AnnotationKeyNodePoolSecurityGroupID:      info.SecurityGroupID,
-	}
-	return annotations, nil
 }
 
 func nodePoolWorkDirectory(nodePoolID string) string {

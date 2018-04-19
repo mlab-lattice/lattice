@@ -21,6 +21,9 @@ const (
 	ResourceScopeService     = apiextensionsv1beta1.NamespaceScoped
 )
 
+// ServiceID label is the key that should be used in a label referencing a service's ID.
+var ServiceIDLabelKey = fmt.Sprintf("service.%v/id", SchemeGroupVersion.String())
+
 // +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
@@ -29,6 +32,11 @@ type Service struct {
 	metav1.ObjectMeta `json:"metadata"`
 	Spec              ServiceSpec   `json:"spec"`
 	Status            ServiceStatus `json:"status,omitempty"`
+}
+
+func (s *Service) UpdateProcessed() bool {
+	// TODO: update to ObservedGeneration when upgrading to 1.10
+	return s.Status.UpdateProcessed
 }
 
 func (s *Service) Description() string {
@@ -52,6 +60,19 @@ func (s *Service) PathLabel() (tree.NodePath, error) {
 	}
 
 	return tree.NodePathFromDomain(path)
+}
+
+func (s *Service) NodePoolAnnotation() (NodePoolAnnotationValue, error) {
+	annotation := make(NodePoolAnnotationValue)
+	existingAnnotationString, ok := s.Annotations[WorkloadNodePoolAnnotationKey]
+	if ok {
+		err := json.Unmarshal([]byte(existingAnnotationString), &annotation)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return annotation, nil
 }
 
 // N.B.: important: if you update the ServiceSpec you must also update

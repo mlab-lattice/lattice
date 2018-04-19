@@ -4,15 +4,15 @@ import (
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 )
 
-func (c *Controller) deleteExtraNodePools(
+func (c *Controller) cleanUpDedicatedNodePool(
 	service *latticev1.Service,
 	nodePool *latticev1.NodePool,
-	nodePoolReady bool,
+	nodePoolUpToDate bool,
 	deploymentStatus *deploymentStatus,
 ) (bool, error) {
 	// Need to wait until the current node pool for the deployment is ready, and the deployment is
 	// stable on that node pool before we can clean up old node pools.
-	if !nodePoolReady || !deploymentStatus.UpdateProcessed || deploymentStatus.State == deploymentStateStable {
+	if !nodePoolUpToDate || nodePool.Status.State != latticev1.NodePoolStateStable || !deploymentStatus.UpdateProcessed || deploymentStatus.State == deploymentStateStable {
 		return false, nil
 	}
 

@@ -897,17 +897,19 @@ func (c *Controller) syncService(key string) error {
 		return err
 	}
 
-	nodePool, nodePoolReady, err := c.syncCurrentNodePool(service)
+	nodePool, nodePoolUpToDate, err := c.syncCurrentNodePool(service)
 	if err != nil {
 		return err
 	}
 
-	deploymentStatus, err := c.syncDeployment(service, nodePool, nodePoolReady)
+	deploymentStatus, err := c.syncDeployment(service, nodePool, nodePoolUpToDate)
 	if err != nil {
 		return err
 	}
 
-	extraNodePoolsExist, err := c.deleteExtraNodePools(service, nodePool, nodePoolReady, deploymentStatus)
+	// If the service is moving from a dedicated node pool to a shared node pool, clean
+	// up the dedicated node pool once the move has completed.
+	extraNodePoolsExist, err := c.cleanUpDedicatedNodePool(service, nodePool, nodePoolUpToDate, deploymentStatus)
 	if err != nil {
 		return err
 	}
@@ -930,7 +932,7 @@ func (c *Controller) syncService(key string) error {
 	_, err = c.syncServiceStatus(
 		service,
 		nodePool,
-		nodePoolReady,
+		nodePoolUpToDate,
 		deploymentStatus,
 		extraNodePoolsExist,
 		kubeService,

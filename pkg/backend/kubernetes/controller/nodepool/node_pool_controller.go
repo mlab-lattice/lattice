@@ -43,6 +43,9 @@ type Controller struct {
 	nodePoolLister       latticelisters.NodePoolLister
 	nodePoolListerSynced cache.InformerSynced
 
+	serviceLister       latticelisters.ServiceLister
+	serviceListerSynced cache.InformerSynced
+
 	queue workqueue.RateLimitingInterface
 }
 
@@ -52,6 +55,7 @@ func NewController(
 	latticeClient latticeclientset.Interface,
 	configInformer latticeinformers.ConfigInformer,
 	nodePoolInformer latticeinformers.NodePoolInformer,
+	serviceInformer latticeinformers.ServiceInformer,
 ) *Controller {
 	sc := &Controller{
 		latticeID:                  latticeID,
@@ -81,6 +85,14 @@ func NewController(
 	sc.nodePoolLister = nodePoolInformer.Lister()
 	sc.nodePoolListerSynced = nodePoolInformer.Informer().HasSynced
 
+	serviceInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+		AddFunc:    sc.handleServiceAdd,
+		UpdateFunc: sc.handleServiceUpdate,
+		DeleteFunc: sc.handleServiceDelete,
+	})
+	sc.serviceLister = serviceInformer.Lister()
+	sc.serviceListerSynced = serviceInformer.Informer().HasSynced
+
 	return sc
 }
 
@@ -94,7 +106,7 @@ func (c *Controller) Run(workers int, stopCh <-chan struct{}) {
 	defer glog.Infof("Shutting down endpoint controller")
 
 	// wait for your secondary caches to fill before starting your work
-	if !cache.WaitForCacheSync(stopCh, c.configListerSynced, c.nodePoolListerSynced) {
+	if !cache.WaitForCacheSync(stopCh, c.configListerSynced, c.nodePoolListerSynced, c.serviceListerSynced) {
 		return
 	}
 
