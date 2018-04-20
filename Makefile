@@ -7,7 +7,7 @@ build: gazelle
 	@bazel build \
 		//pkg/...:all \
 		//cmd/...:all \
-		//test/...:all
+		//e2e/...:all
 
 .PHONY: build.all
 build.all: build.darwin \
@@ -19,7 +19,7 @@ build.darwin: gazelle
 		--platforms=@io_bazel_rules_go//go/toolchain:darwin_amd64 \
 		//pkg/...:all \
 		//cmd/...:all \
-		//test/...:all
+		//e2e/...:all
 
 .PHONY: build.linux
 build.linux: gazelle
@@ -27,7 +27,7 @@ build.linux: gazelle
 		--platforms=@io_bazel_rules_go//go/toolchain:linux_amd64 \
 		//pkg/...:all \
 		//cmd/...:all \
-		//test/...:all
+		//e2e/...:all
 
 .PHONY: gazelle
 gazelle:

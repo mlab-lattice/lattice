@@ -4,11 +4,11 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/mlab-lattice/lattice/e2e/util/lattice/v1/system"
+	"github.com/mlab-lattice/lattice/e2e/util/versionaggregatorservice"
 	v1client "github.com/mlab-lattice/lattice/pkg/api/client/v1"
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
-	"github.com/mlab-lattice/lattice/test/util/lattice/v1/system"
-	"github.com/mlab-lattice/lattice/test/util/versionaggregatorservice"
 
 	"k8s.io/apimachinery/pkg/util/wait"
 

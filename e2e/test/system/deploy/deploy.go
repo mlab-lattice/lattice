@@ -3,13 +3,13 @@ package deploy
 import (
 	"time"
 
+	"github.com/mlab-lattice/lattice/e2e/test/context"
+	. "github.com/mlab-lattice/lattice/e2e/util/ginkgo"
+	"github.com/mlab-lattice/lattice/e2e/util/lattice/v1/system"
+	"github.com/mlab-lattice/lattice/e2e/util/lattice/v1/system/build"
+	"github.com/mlab-lattice/lattice/e2e/util/lattice/v1/system/deploy"
+	"github.com/mlab-lattice/lattice/e2e/util/testingsystem"
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
-	"github.com/mlab-lattice/lattice/test/e2e/context"
-	. "github.com/mlab-lattice/lattice/test/util/ginkgo"
-	"github.com/mlab-lattice/lattice/test/util/lattice/v1/system"
-	"github.com/mlab-lattice/lattice/test/util/lattice/v1/system/build"
-	"github.com/mlab-lattice/lattice/test/util/lattice/v1/system/deploy"
-	"github.com/mlab-lattice/lattice/test/util/testingsystem"
 
 	. "github.com/onsi/ginkgo"
 )

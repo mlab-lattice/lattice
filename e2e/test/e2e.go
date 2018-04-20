@@ -5,8 +5,8 @@ import (
 	"testing"
 
 	// test sources
-	"github.com/mlab-lattice/lattice/test/e2e/context"
-	_ "github.com/mlab-lattice/lattice/test/e2e/system"
+	"github.com/mlab-lattice/lattice/e2e/test/context"
+	_ "github.com/mlab-lattice/lattice/e2e/test/system"
 
 	"github.com/onsi/ginkgo"
 	"github.com/onsi/gomega"

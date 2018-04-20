@@ -1,8 +1,8 @@
 package system
 
 import (
-	//_ "github.com/mlab-lattice/lattice/test/e2e/system/build"
-	//_ "github.com/mlab-lattice/lattice/test/e2e/system/crud"
-	_ "github.com/mlab-lattice/lattice/test/e2e/system/deploy"
-	//_ "github.com/mlab-lattice/lattice/test/e2e/system/secret"
+	//_ "github.com/mlab-lattice/lattice/e2e/test/system/build"
+	//_ "github.com/mlab-lattice/lattice/e2e/test/system/crud"
+	_ "github.com/mlab-lattice/lattice/e2e/test/system/deploy"
+	//_ "github.com/mlab-lattice/lattice/e2e/test/system/secret"
 )

@@ -6,7 +6,7 @@ go_library(
         "crud.go",
         "wait.go",
     ],
-    importpath = "github.com/mlab-lattice/lattice/test/util/lattice/v1/system",
+    importpath = "github.com/mlab-lattice/lattice/e2e/util/lattice/v1/system",
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/api/client/v1:go_default_library",
