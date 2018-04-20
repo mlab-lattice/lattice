@@ -2,7 +2,7 @@
 
 ## Dependencies
 
-Only [Bazel](https://bazel.build) is required to build lattice binaries. For building lattice docker images, please see the [docker documentation](docker-images.md).
+Only [Bazel](https://bazel.build) is required to build lattice binaries. For building lattice docker images, please see the docker image [documentation](docker-images.md).
 
 ## Make
 
@@ -260,7 +260,7 @@ Note that we had to explicitly list all our non standard library dependencies (`
 Now, if you run `bazel run //cmd`, you would see something like the following:
 
 ```shell
- bazel run //cmd
+$ bazel run //cmd
 INFO: Analysed target //cmd:cmd (0 packages loaded).
 INFO: Found 1 target...
 Target //cmd:cmd up-to-date:
@@ -387,7 +387,7 @@ Now if we try to run `bazel run //cmd`, we'll get a failure:
 
 
 ```shell
-$ bazel run //cmdd
+$ bazel run //cmd
 INFO: Analysed target //cmd:cmd (0 packages loaded).
 INFO: Found 1 target...
 ERROR: /Users/kevinrosendahl/go/src/github.com/acme/example-bazel/pkg/spinner/BUILD:3:1: GoCompile pkg/spinner/darwin_amd64_stripped/spinner_library~/github.com/acme/example/pkg/spinner.a failed (Exit 1)

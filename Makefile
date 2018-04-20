@@ -100,8 +100,8 @@ install.govet:
 # git
 .PHONY: git.install-hooks
 git.install-hooks:
-	cp -f scripts/git/pre-commit.sh .git/hooks/pre-commit
-	cp -f scripts/git/pre-push.sh .git/hooks/pre-push
+	cp -f hack/git/pre-commit.sh .git/hooks/pre-commit
+	cp -f hack/git/pre-push.sh .git/hooks/pre-push
 
 
 # docker
@@ -113,63 +113,89 @@ DOCKER_IMAGES := kubernetes-api-server-rest             \
                  kubernetes-local-dns-controller        \
                  latticectl
 
-.PHONY: docker.push-image
-docker.push-image: gazelle \
-                   docker.push-image-no-gazelle
+.PHONY: docker.push
+docker.push: gazelle \
+             docker.push-no-gazelle
 
-.PHONY: docker.push-image-no-gazelle
-docker.push-image-no-gazelle:
-	# currently only pushing debug images
+.PHONY: docker.push-no-gazelle
+docker.push-no-gazelle:
 	@bazel run \
 		--platforms=@io_bazel_rules_go//go/toolchain:linux_amd64 \
-		--workspace_status_command "REGISTRY=$(REGISTRY) CHANNEL=$(CHANNEL) $(DIR)/scripts/bazel/docker-workspace-status.sh" \
-		//docker:push-debug-$(IMAGE)
+		--workspace_status_command "REGISTRY=$(REGISTRY) CHANNEL=$(CHANNEL) $(DIR)/hack/bazel/docker-workspace-status.sh" \
+		//docker:push-$(IMAGE)
 
-IMAGE_PUSHES := $(addprefix docker.push-image-,$(DOCKER_IMAGES))
+IMAGE_PUSHES := $(addprefix docker.push.,$(DOCKER_IMAGES))
 .PHONY: $(IMAGE_PUSHES)
 $(IMAGE_PUSHES):
-	@$(MAKE) docker.push-image IMAGE=$(patsubst docker.push-image-%,%,$@)
+	@$(MAKE) docker.push IMAGE=$(patsubst docker.push.%,%,$@)
 
-IMAGE_PUSHES_NO_GAZELLE := $(addprefix docker.push-image-no-gazelle-,$(DOCKER_IMAGES))
+IMAGE_PUSHES_NO_GAZELLE := $(addprefix docker.push-no-gazelle.,$(DOCKER_IMAGES))
 .PHONY: $(IMAGE_PUSHES_NO_GAZELLE)
 $(IMAGE_PUSHES_NO_GAZELLE):
-	@$(MAKE) docker.push-image-no-gazelle IMAGE=$(patsubst docker.push-image-no-gazelle-%,%,$@)
+	@$(MAKE) docker.push-image-no-gazelle IMAGE=$(patsubst docker.push-no-gazelle.%,%,$@)
 
-.PHONY: docker.push-all
-docker.push-all: gazelle
+.PHONY: docker.push.all
+docker.push.all: gazelle
 	@for image in $(DOCKER_IMAGES); do \
-		$(MAKE) docker.push-image-no-gazelle-$$image || exit 1; \
+		$(MAKE) docker.push-no-gazelle.$$image || exit 1; \
 	done
 
-.PHONY: docker.save-image
-docker.save-image: gazelle
+.PHONY: docker.push-stripped
+docker.push-stripped: gazelle \
+                      docker.push-stripped-no-gazelle
+
+.PHONY: docker.push-stripped-no-gazelle
+docker.push-stripped-no-gazelle:
 	@bazel run \
 		--platforms=@io_bazel_rules_go//go/toolchain:linux_amd64 \
-		//docker:debug-$(IMAGE) \
+		--workspace_status_command "REGISTRY=$(REGISTRY) CHANNEL=$(CHANNEL) $(DIR)/hack/bazel/docker-workspace-status.sh" \
+		//docker:push-$(IMAGE)-stripped
+
+STRIPPED_IMAGE_PUSHES := $(addprefix docker.push-stripped.,$(DOCKER_IMAGES))
+.PHONY: $(STRIPPED_IMAGE_PUSHES)
+$(STRIPPED_IMAGE_PUSHES):
+	@$(MAKE) docker.push-stripped IMAGE=$(patsubst docker.push-stripped.%,%,$@)
+
+STRIPPED_IMAGE_PUSHES_NO_GAZELLE := $(addprefix docker.push-stripped-no-gazelle.,$(DOCKER_IMAGES))
+.PHONY: $(STRIPPED_IMAGE_PUSHES_NO_GAZELLE)
+$(STRIPPED_IMAGE_PUSHES_NO_GAZELLE):
+	@$(MAKE) docker.push-stripped-image-no-gazelle IMAGE=$(patsubst docker.push-stripped-no-gazelle.%,%,$@)
+
+.PHONY: docker.push-stripped.all
+docker.push-stripped.all: gazelle
+	@for image in $(DOCKER_IMAGES); do \
+		$(MAKE) docker.push-stripped-no-gazelle.$$image || exit 1; \
+	done
+
+.PHONY: docker.save
+docker.save: gazelle
+	@bazel run \
+		--platforms=@io_bazel_rules_go//go/toolchain:linux_amd64 \
+		//docker:$(IMAGE) \
 		-- --norun
 
-IMAGE_SAVES := $(addprefix docker.save-image-,$(DOCKER_IMAGES))
+IMAGE_SAVES := $(addprefix docker.save.,$(DOCKER_IMAGES))
 
 .PHONY: $(IMAGE_SAVES)
 $(IMAGE_SAVES):
-	@$(MAKE) docker.save-image IMAGE=$(patsubst docker.save-image-%,%,$@)
+	@$(MAKE) docker.save IMAGE=$(patsubst docker.save.%,%,$@)
 
-.PHONY: docker.run-shell
-docker.run-shell: docker.save-image
-	@docker run -it --entrypoint sh bazel/docker:debug-$(IMAGE)
+.PHONY: docker.run
+docker.run: docker.save
+	@docker run -it --entrypoint sh bazel/docker:$(IMAGE)
 
-IMAGE_RUNS := $(addprefix docker.run-shell-,$(DOCKER_IMAGES))
+IMAGE_RUNS := $(addprefix docker.run.,$(DOCKER_IMAGES))
 
 .PHONY: $(IMAGE_RUNS)
 $(IMAGE_RUNS):
-	@$(MAKE) docker.run-shell IMAGE=$(patsubst docker.run-shell-%,%,$@)
+	@$(MAKE) docker.run IMAGE=$(patsubst docker.run.%,%,$@)
 
 # kubernetes
 .PHONY: kubernetes.update-dependencies
 kubernetes.update-dependencies:
-	LATTICE_ROOT=$(DIR) KUBERNETES_VERSION=$(VERSION) $(DIR)/scripts/kubernetes/dependencies/update-kubernetes-version.sh
+	LATTICE_ROOT=$(DIR) KUBERNETES_VERSION=$(VERSION) $(DIR)/hack/kubernetes/dependencies/update-kubernetes-version.sh
 	$(MAKE) kubernetes.regenerate-custom-resource-clients VERSION=$(VERSION)
 
 .PHONY: kubernetes.regenerate-custom-resource-clients
 kubernetes.regenerate-custom-resource-clients:
-	KUBERNETES_VERSION=$(VERSION) $(DIR)/scripts/kubernetes/codegen/regenerate.sh
+	KUBERNETES_VERSION=$(VERSION) $(DIR)/hack/kubernetes/codegen/regenerate.sh
