@@ -31,10 +31,10 @@ type Service struct {
 	Status            ServiceStatus `json:"status,omitempty"`
 }
 
-func (s *Service) Description() string {
-	systemID, err := kubeutil.SystemID(s.Namespace)
+func (s *Service) Description(namespacePrefix string) string {
+	systemID, err := kubeutil.SystemID(namespacePrefix, s.Namespace)
 	if err != nil {
-		systemID = v1.SystemID(fmt.Sprintf("UNKNOWN (namespace: %v)", systemID))
+		systemID = v1.SystemID(fmt.Sprintf("UNKNOWN (namespace: %v)", s.Namespace))
 	}
 
 	path, err := s.PathLabel()
@@ -105,23 +105,24 @@ func (s *ServiceSpec) UnmarshalJSON(data []byte) error {
 }
 
 type ServiceStatus struct {
-	State              ServiceState             `json:"state"`
-	ObservedGeneration int64                    `json:"observedGeneration"`
-	UpdatedInstances   int32                    `json:"updatedInstances"`
-	StaleInstances     int32                    `json:"staleInstances"`
-	PublicPorts        ServiceStatusPublicPorts `json:"publicPorts"`
-	FailureInfo        *ServiceFailureInfo      `json:"failureInfo,omitempty"`
+	State              ServiceState `json:"state"`
+	ObservedGeneration int64        `json:"observedGeneration"`
+	// FIXME: remove this when upgrading to kube v1.10.0
+	UpdateProcessed  bool                     `json:"updateProcessed"`
+	UpdatedInstances int32                    `json:"updatedInstances"`
+	StaleInstances   int32                    `json:"staleInstances"`
+	PublicPorts      ServiceStatusPublicPorts `json:"publicPorts"`
+	FailureInfo      *ServiceFailureInfo      `json:"failureInfo,omitempty"`
 }
 
 type ServiceState string
 
 const (
-	ServiceStatePending     ServiceState = "pending"
-	ServiceStateScalingDown ServiceState = "scaling down"
-	ServiceStateScalingUp   ServiceState = "scaling up"
-	ServiceStateUpdating    ServiceState = "updating"
-	ServiceStateStable      ServiceState = "stable"
-	ServiceStateFailed      ServiceState = "failed"
+	ServiceStatePending  ServiceState = "pending"
+	ServiceStateScaling  ServiceState = "scaling"
+	ServiceStateUpdating ServiceState = "updating"
+	ServiceStateStable   ServiceState = "stable"
+	ServiceStateFailed   ServiceState = "failed"
 )
 
 type ServiceStatusPublicPorts map[int32]ServiceStatusPublicPort

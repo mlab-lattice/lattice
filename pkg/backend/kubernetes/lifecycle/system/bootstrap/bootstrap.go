@@ -16,13 +16,14 @@ import (
 )
 
 func Bootstrap(
+	namespacePrefix string,
 	latticeID v1.LatticeID,
 	systemID v1.SystemID,
 	definitionURL string,
 	bootstrappers []bootstrapper.Interface,
 	kubeClient kubeclientset.Interface,
 ) (*bootstrapper.SystemResources, error) {
-	resources := GetBootstrapResources(latticeID, systemID, definitionURL, bootstrappers)
+	resources := GetBootstrapResources(namespacePrefix, latticeID, systemID, definitionURL, bootstrappers)
 
 	namespace, err := kubeClient.CoreV1().Namespaces().Create(resources.Namespace)
 	if err != nil {
@@ -97,15 +98,17 @@ func Bootstrap(
 }
 
 func GetBootstrapResources(
+	namespacePrefix string,
 	latticeID v1.LatticeID,
 	systemID v1.SystemID,
 	definitionURL string,
 	bootstrappers []bootstrapper.Interface,
 ) *bootstrapper.SystemResources {
 	baseOptions := &basebootstrapper.Options{
-		LatticeID:     latticeID,
-		SystemID:      systemID,
-		DefinitionURL: definitionURL,
+		NamespacePrefix: namespacePrefix,
+		LatticeID:       latticeID,
+		SystemID:        systemID,
+		DefinitionURL:   definitionURL,
 	}
 
 	baseBootstrapper := basebootstrapper.NewBootstrapper(baseOptions)

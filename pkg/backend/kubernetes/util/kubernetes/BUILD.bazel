@@ -8,7 +8,6 @@ go_library(
         "kube_service.go",
         "kubeconfig.go",
         "namespace.go",
-        "system.go",
     ],
     importpath = "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/kubernetes",
     visibility = ["//visibility:public"],

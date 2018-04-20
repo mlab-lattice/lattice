@@ -15,13 +15,13 @@ type ClusterBootstrapperOptions struct {
 	Local *local.LatticeBootstrapperOptions
 }
 
-func NewLatticeBootstrapper(latticeID v1.LatticeID, options *ClusterBootstrapperOptions) (clusterbootstrapper.Interface, error) {
+func NewLatticeBootstrapper(latticeID v1.LatticeID, namespacePrefix string, options *ClusterBootstrapperOptions) (clusterbootstrapper.Interface, error) {
 	if options.AWS != nil {
 		return aws.NewLatticeBootstrapper(options.AWS), nil
 	}
 
 	if options.Local != nil {
-		return local.NewLatticeBootstrapper(latticeID, options.Local), nil
+		return local.NewLatticeBootstrapper(latticeID, namespacePrefix, options.Local), nil
 	}
 
 	return nil, fmt.Errorf("must provide cloud provider options")
@@ -40,9 +40,9 @@ func LatticeBoostrapperFlag(cloudProvider *string) (cli.Flag, *ClusterBootstrapp
 			AWS:   awsFlags,
 			Local: localFlags,
 		},
-		FlagChooser: func() (string, error) {
+		FlagChooser: func() (*string, error) {
 			if cloudProvider == nil {
-				return "", fmt.Errorf("cloud provider cannot be nil")
+				return nil, fmt.Errorf("cloud provider cannot be nil")
 			}
 
 			switch *cloudProvider {
@@ -51,10 +51,10 @@ func LatticeBoostrapperFlag(cloudProvider *string) (cli.Flag, *ClusterBootstrapp
 			case AWS:
 				options.AWS = awsOptions
 			default:
-				return "", fmt.Errorf("unsupported cloud provider %v", *cloudProvider)
+				return nil, fmt.Errorf("unsupported cloud provider %v", *cloudProvider)
 			}
 
-			return *cloudProvider, nil
+			return cloudProvider, nil
 		},
 	}
 

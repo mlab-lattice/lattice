@@ -31,6 +31,9 @@ type Controller struct {
 	externalNameEndpoints set.Set
 	ipEndpoints           set.Set
 
+	namespacePrefix string
+	latticeID       v1.LatticeID
+
 	latticeClient latticeclientset.Interface
 
 	endpointister        latticelisters.EndpointLister
@@ -40,7 +43,6 @@ type Controller struct {
 
 	dnsmasqConfigPath string
 	hostFilePath      string
-	latticeID         v1.LatticeID
 }
 
 var (
@@ -49,26 +51,30 @@ var (
 
 // NewController returns a newly created DNS Controller.
 func NewController(
+	namespacePrefix string,
+	latticeID v1.LatticeID,
 	dnsmasqConfigPath string,
 	hostConfigPath string,
-	latticeID v1.LatticeID,
 	latticeClient latticeclientset.Interface,
 	client clientset.Interface,
 	endpointInformer latticeinformers.EndpointInformer,
 ) *Controller {
 
 	c := &Controller{
+		namespacePrefix: namespacePrefix,
+		latticeID:       latticeID,
+
 		latticeClient: latticeClient,
-		queue:         workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "system"),
+
+		dnsmasqConfigPath: dnsmasqConfigPath,
+		hostFilePath:      hostConfigPath,
+
+		queue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "system"),
 	}
 
 	eventBroadcaster := record.NewBroadcaster()
 	eventBroadcaster.StartLogging(glog.Infof)
 	eventBroadcaster.StartRecordingToSink(&v1core.EventSinkImpl{Interface: v1core.New(client.CoreV1().RESTClient()).Events("")})
-
-	c.dnsmasqConfigPath = dnsmasqConfigPath
-	c.hostFilePath = hostConfigPath
-	c.latticeID = latticeID
 
 	c.endpointister = endpointInformer.Lister()
 	c.endpointListerSynced = endpointInformer.Informer().HasSynced
@@ -206,13 +212,13 @@ func (c *Controller) rewriteDnsmasqConfig(endpoints []*latticev1.Endpoint) error
 	hostConfigFileContents := ""
 
 	for _, endpoint := range endpoints {
-		systemID, err := kubeutil.SystemID(endpoint.Namespace)
+		systemID, err := kubeutil.SystemID(c.namespacePrefix, endpoint.Namespace)
 		if err != nil {
 			return err
 		}
 
 		domain := endpoint.Spec.Path.ToDomain()
-		cname := endpointutil.DNSName(domain, systemID, c.latticeID)
+		cname := endpointutil.DNSName(domain, systemID)
 
 		if endpoint.Spec.IP != nil {
 			hostConfigFileContents += fmt.Sprintf("%v %v\n", *endpoint.Spec.IP, cname)

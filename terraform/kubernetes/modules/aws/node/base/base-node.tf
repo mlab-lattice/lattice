@@ -15,8 +15,12 @@ variable "key_name" {}
 variable "iam_instance_profile_role_name" {}
 
 variable "etc_lattice_config_content" {
-  type    = "string"
-  default = "{}"
+  type = "string"
+
+  # NOTE: indentation is important here
+  # NOTE: the indentation here is important for cloud-init user-data to get
+  #       parsed correctly
+  default = "      {}"
 }
 
 variable "kubelet_labels" {}
@@ -144,20 +148,23 @@ resource "aws_launch_configuration" "aws_launch_configuration" {
   instance_type = "${var.instance_type}"
   key_name      = "${var.key_name}"
 
-  iam_instance_profile = "${aws_iam_instance_profile.iam_instance_profile.name}"
+  iam_instance_profile = "${aws_iam_instance_profile.iam_instance_profile.arn}"
 
+  # XXX: clean up etcd bootcmd and make sure it only runs on first boot
   user_data = <<EOF
+#cloud-config
+bootcmd:
+-   if [ -d /var/opt/etcd -a ! -f /opt/lattice/etcd.tgz ]; then tar cvzf /opt/lattice/etcd.tgz /var/opt/etcd; fi
 write_files:
--   path: /etc/systemd/system/kubelet.service.d/10-override.conf
+-   path: /opt/lattice/kubelet_extra_args
     owner: root:root
     permissions: '0644'
-    content: |
-        "[Service]\nEnvironment=\"KUBELET_LABELS=${var.kubelet_labels}\"\nEnvironment=\"KUBELET_TAINTS=${var.kubelet_taints}\""
+    content: "--node-labels ${var.kubelet_labels} --register-with-taints ${var.kubelet_taints}"
 -   path: /etc/lattice/config.json
     owner: root:root
     permissions: '0644'
     content: |
-        ${var.etc_lattice_config_content}
+${var.etc_lattice_config_content}
 EOF
 
   # TODO: remove temporary_ssh_group when done testing

@@ -205,12 +205,13 @@ func (p *DefaultLocalLatticeProvisioner) bootstrap(address string, name string) 
 							Args: append(
 								bootstrapArgs,
 								[]string{
-									"bootstrap:kubernetes",
+									"kubernetes:bootstrap",
+									"--lattice-id", "local",
 									"--controller-manager-var", fmt.Sprintf("image=%v", p.getLatticeContainerImage("kubernetes-lattice-controller-manager")),
 									"--controller-manager-var", "args=-v=5",
-									"--controller-manager-var", "args=--alsologtostderr",
 									"--api-var", fmt.Sprintf("image=%v", p.getLatticeContainerImage("kubernetes-api-server-rest")),
 									"--component-builder-var", fmt.Sprintf("image=%v", p.getLatticeContainerImage("kubernetes-component-builder")),
+									"--component-builder-var", "docker-api-version=1.35",
 									"--component-build-docker-artifact-var", "registry=lattice-local",
 									"--component-build-docker-artifact-var", "repository-per-image=true",
 									"--component-build-docker-artifact-var", "push=false",
@@ -219,7 +220,7 @@ func (p *DefaultLocalLatticeProvisioner) bootstrap(address string, name string) 
 									"--service-mesh-var", fmt.Sprintf("xds-api-image=%v", p.getLatticeContainerImage("kubernetes-envoy-xds-api-rest-per-node")),
 									"--service-mesh-var", "redirect-cidr-block=172.16.0.0/16",
 									"--cloud-provider", "local",
-									"--cloud-provider-var", "ip=" + address,
+									"--cloud-provider-var", "IP=" + address,
 									"--cloud-provider-var", fmt.Sprintf("dns-var=controller-image=%v", p.getLatticeContainerImage(DockerImageDNSController)),
 									"--cloud-provider-var", fmt.Sprintf("dns-var=dnsmasq-nanny-image=%v", DockerImageDnsmasqNanny),
 								}...,
@@ -311,5 +312,5 @@ func (p *DefaultLocalLatticeProvisioner) Deprovision(name string, force bool) er
 }
 
 func (p *DefaultLocalLatticeProvisioner) getLatticeContainerImage(image string) string {
-	return p.latticeContainerRegistry + "/" + p.latticeContainerRepoPrefix + image
+	return fmt.Sprintf("%v/%v-%v", p.latticeContainerRegistry, p.latticeContainerRepoPrefix, image)
 }

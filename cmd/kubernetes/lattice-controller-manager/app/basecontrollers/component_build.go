@@ -2,12 +2,12 @@ package basecontrollers
 
 import (
 	controller "github.com/mlab-lattice/lattice/cmd/kubernetes/lattice-controller-manager/app/common"
-	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/controller/base/componentbuild"
+	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/controller/componentbuild"
 )
 
 func initializeComponentBuildController(ctx controller.Context) {
 	go componentbuild.NewController(
-		ctx.LatticeID,
+		ctx.NamespacePrefix,
 		ctx.CloudProvider,
 		ctx.KubeClientBuilder.ClientOrDie("kubernetes-build-controller"),
 		ctx.LatticeClientBuilder.ClientOrDie("kubernetes-build-controller"),

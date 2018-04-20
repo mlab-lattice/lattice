@@ -11,7 +11,7 @@ import (
 )
 
 func (b *DefaultBootstrapper) componentBuilderResources(resources *bootstrapper.Resources) {
-	name := kubeutil.ComponentBuilderClusterRoleName(b.LatticeID)
+	name := kubeutil.ComponentBuilderClusterRoleName(b.NamespacePrefix)
 
 	clusterRole := &rbacv1.ClusterRole{
 		// Include TypeMeta so if this is a dry run it will be printed out

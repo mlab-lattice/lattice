@@ -31,8 +31,9 @@ import (
 )
 
 var (
-	kubeconfig string
-	latticeID  string
+	kubeconfig      string
+	latticeID       string
+	namespacePrefix string
 
 	cloudProviderName string
 	cloudProviderVars []string
@@ -81,7 +82,7 @@ var RootCmd = &cobra.Command{
 		}
 
 		// TODO: setting stop as nil for now, won't actually need it until leader-election is used
-		ctx, err := CreateControllerContext(latticeID, systemBoostrappers, config, nil, terraformModulePath)
+		ctx, err := CreateControllerContext(namespacePrefix, latticeID, systemBoostrappers, config, nil, terraformModulePath)
 		if err != nil {
 			panic(err)
 		}
@@ -114,6 +115,7 @@ func init() {
 
 	RootCmd.Flags().StringVar(&kubeconfig, "kubeconfig", "", "path to kubeconfig file")
 	RootCmd.Flags().StringVar(&latticeID, "lattice-id", "", "id of the lattice")
+	RootCmd.Flags().StringVar(&namespacePrefix, "namespace-prefix", "", "namespace prefix of the lattice")
 	RootCmd.MarkFlagRequired("lattice-id")
 
 	RootCmd.Flags().StringVar(&cloudProviderName, "cloud-provider", "", "cloud provider that lattice is being run on")
@@ -138,6 +140,7 @@ func initCmd() {
 }
 
 func CreateControllerContext(
+	namespacePrefix string,
 	latticeID v1.LatticeID,
 	systemBootstrappers []bootstrapper.Interface,
 	kubeconfig *rest.Config,
@@ -173,8 +176,9 @@ func CreateControllerContext(
 	latticeInformers := latticeinformers.NewSharedInformerFactory(versionedLatticeClient, time.Duration(12*time.Hour))
 
 	ctx := controller.Context{
-		LatticeID:     latticeID,
-		CloudProvider: cloudProvider,
+		NamespacePrefix: namespacePrefix,
+		LatticeID:       latticeID,
+		CloudProvider:   cloudProvider,
 
 		SystemBootstrappers: systemBootstrappers,
 

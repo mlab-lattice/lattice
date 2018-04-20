@@ -33,8 +33,8 @@ func (s *System) V1ID() v1.SystemID {
 	return v1.SystemID(s.Name)
 }
 
-func (s *System) ResourceNamespace(latticeID v1.LatticeID) string {
-	return kubeutil.SystemNamespace(latticeID, s.V1ID())
+func (s *System) ResourceNamespace(namespacePrefix string) string {
+	return kubeutil.SystemNamespace(namespacePrefix, s.V1ID())
 }
 
 // N.B.: important: if you update the SystemSpec or SystemSpecServiceInfo you must also update

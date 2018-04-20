@@ -6,7 +6,6 @@ import (
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	kubeconstants "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/constants"
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
-	kubeutil "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/kubernetes"
 	"github.com/mlab-lattice/lattice/pkg/definition"
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 
@@ -27,7 +26,7 @@ func (kb *KubernetesBackend) Build(systemID v1.SystemID, definitionRoot tree.Nod
 		return nil, err
 	}
 
-	namespace := kubeutil.SystemNamespace(kb.latticeID, systemID)
+	namespace := kb.systemNamespace(systemID)
 	build, err = kb.latticeClient.LatticeV1().Builds(namespace).Create(build)
 	if err != nil {
 		return nil, err
@@ -75,7 +74,7 @@ func (kb *KubernetesBackend) ListBuilds(systemID v1.SystemID) ([]v1.Build, error
 		return nil, err
 	}
 
-	namespace := kubeutil.SystemNamespace(kb.latticeID, systemID)
+	namespace := kb.systemNamespace(systemID)
 	builds, err := kb.latticeClient.LatticeV1().Builds(namespace).List(metav1.ListOptions{})
 	if err != nil {
 		return nil, err
@@ -102,7 +101,7 @@ func (kb *KubernetesBackend) GetBuild(systemID v1.SystemID, buildID v1.BuildID) 
 		return nil, err
 	}
 
-	namespace := kubeutil.SystemNamespace(kb.latticeID, systemID)
+	namespace := kb.systemNamespace(systemID)
 	build, err := kb.latticeClient.LatticeV1().Builds(namespace).Get(string(buildID), metav1.GetOptions{})
 	if err != nil {
 		if errors.IsNotFound(err) {

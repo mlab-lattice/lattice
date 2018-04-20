@@ -7,7 +7,6 @@ import (
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	kubeutil "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/kubernetes"
 	kubetf "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/terraform/aws"
-	endpointutil "github.com/mlab-lattice/lattice/pkg/util/endpoint"
 	tf "github.com/mlab-lattice/lattice/pkg/util/terraform"
 	awstfprovider "github.com/mlab-lattice/lattice/pkg/util/terraform/provider/aws"
 
@@ -113,7 +112,7 @@ func (c *Controller) deprovisionIPEndpoint(endpoint *latticev1.Endpoint) error {
 }
 
 func (c *Controller) endpointConfig(endpoint *latticev1.Endpoint, endpointModule interface{}) (*tf.Config, error) {
-	systemID, err := kubeutil.SystemID(endpoint.Namespace)
+	systemID, err := kubeutil.SystemID(c.namespacePrefix, endpoint.Namespace)
 	if err != nil {
 		return nil, err
 	}
@@ -174,12 +173,12 @@ func (c *Controller) externalNameEndpointModule(endpoint *latticev1.Endpoint) (*
 }
 
 func (c *Controller) endpointDNSName(endpoint *latticev1.Endpoint) (string, error) {
-	systemID, err := kubeutil.SystemID(endpoint.Namespace)
+	systemID, err := kubeutil.SystemID(c.namespacePrefix, endpoint.Namespace)
 	if err != nil {
 		return "", err
 	}
 
-	name := endpointutil.DNSName(endpoint.Spec.Path.ToDomain(), systemID, c.latticeID)
+	name := fmt.Sprintf("%v.local.%v", endpoint.Spec.Path.ToDomain(), systemID)
 	return name, nil
 }
 

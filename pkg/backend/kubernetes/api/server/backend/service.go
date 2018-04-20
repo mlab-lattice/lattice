@@ -5,7 +5,6 @@ import (
 
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
-	kubeutil "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/kubernetes"
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -17,8 +16,7 @@ func (kb *KubernetesBackend) ListServices(systemID v1.SystemID) ([]v1.Service, e
 		return nil, err
 	}
 
-	namespace := kubeutil.SystemNamespace(kb.latticeID, systemID)
-
+	namespace := kb.systemNamespace(systemID)
 	services, err := kb.latticeClient.LatticeV1().Services(namespace).List(metav1.ListOptions{})
 	if err != nil {
 		return nil, err
@@ -49,7 +47,7 @@ func (kb *KubernetesBackend) GetService(systemID v1.SystemID, path tree.NodePath
 		return nil, err
 	}
 
-	namespace := kubeutil.SystemNamespace(kb.latticeID, systemID)
+	namespace := kb.systemNamespace(systemID)
 	service, err := kb.latticeClient.LatticeV1().Services(namespace).Get(path.ToDomain(), metav1.GetOptions{})
 	if err != nil {
 		return nil, err
@@ -107,10 +105,8 @@ func getServiceState(state latticev1.ServiceState) (v1.ServiceState, error) {
 	switch state {
 	case latticev1.ServiceStatePending:
 		return v1.ServiceStatePending, nil
-	case latticev1.ServiceStateScalingDown:
-		return v1.ServiceStateScalingDown, nil
-	case latticev1.ServiceStateScalingUp:
-		return v1.ServiceStateScalingUp, nil
+	case latticev1.ServiceStateScaling:
+		return v1.ServiceStateScaling, nil
 	case latticev1.ServiceStateUpdating:
 		return v1.ServiceStateUpdating, nil
 	case latticev1.ServiceStateStable:

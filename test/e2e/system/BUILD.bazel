@@ -5,10 +5,5 @@ go_library(
     srcs = ["system.go"],
     importpath = "github.com/mlab-lattice/lattice/test/e2e/system",
     visibility = ["//visibility:public"],
-    deps = [
-        "//test/e2e/system/build:go_default_library",
-        "//test/e2e/system/crud:go_default_library",
-        "//test/e2e/system/deploy:go_default_library",
-        "//test/e2e/system/secret:go_default_library",
-    ],
+    deps = ["//test/e2e/system/deploy:go_default_library"],
 )

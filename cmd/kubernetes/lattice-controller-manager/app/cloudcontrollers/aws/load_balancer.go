@@ -10,6 +10,7 @@ func initializeLoadBalancerController(ctx controller.Context) {
 	awsCloudProvider := ctx.CloudProvider.(*aws.DefaultAWSCloudProvider)
 
 	go loadbalancer.NewController(
+		ctx.NamespacePrefix,
 		ctx.LatticeID,
 		aws.CloudProvider(awsCloudProvider),
 		ctx.TerraformModulePath,
