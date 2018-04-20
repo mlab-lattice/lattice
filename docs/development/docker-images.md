@@ -4,7 +4,7 @@ Prior to reading this, please read [building](building.md).
 
 ## Dependencies
 
-In addition to [Bazel](building.md), `jq` and `xz` are required to build docker images. These can be installed via brew for macOS (`brew install jq`, `brew install xz`).
+In addition to [Bazel](building.md), `jq` and `xz` are required to build docker images. These can be installed via `brew` on macOS (`brew install jq`, `brew install xz`).
 
 ## Overview
 
@@ -140,7 +140,7 @@ The stripped images are labeled in the following format: `<REGISTRY>/<REPOSITORY
 
 In order to be able to push to a remote registry, you will need to be authenticated and authorized.
 
-Here is how to get set up to push to Google Container Registry repository.
+Here is how to get set up to push to a Google Container Registry repository.
 
 First, ask the project administrator to make your user a `Storage Admin` (https://cloud.google.com/container-registry/docs/access-control).
 
