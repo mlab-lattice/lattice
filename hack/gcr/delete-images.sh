@@ -1,20 +1,25 @@
 #!/usr/bin/env bash
 
 set -e
+
+if [[ -z ${REPOSITORY} ]]; then
+    REPOSITORY=gcr.io/$(gcloud config get-value project)
+fi
+
 set -u
 
 PROJECT=$(gcloud config get-value project)
-IMAGES=$(gcloud container images list --filter="name:${FILTER}")
+IMAGES=$(gcloud container images list --repository ${REPOSITORY} --filter="name:${FILTER}")
 printf "will delete the following images: ${IMAGES}"
 
 echo && echo
-read -p "Are you sure you want to delete these images in gcr.io/${PROJECT} [y/N]? " -r
+read -p "Are you sure you want to delete these images in ${REPOSITORY} [y/N]? " -r
 echo
 if [[ $REPLY =~ ^[Yy]$ ]]
 then
     while [[ 1 ]]
     do
-        IMAGE=$(gcloud container images list --filter="name:${FILTER}" --limit 1 2>/dev/null | tail -n 1)
+        IMAGE=$(gcloud container images list --repository ${REPOSITORY} --filter="name:${FILTER}" --limit 1 2>/dev/null | tail -n 1)
         if [[ -z ${IMAGE} ]]; then
             break
          fi
