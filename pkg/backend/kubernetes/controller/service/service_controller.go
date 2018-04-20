@@ -42,14 +42,21 @@ type Controller struct {
 	syncHandler    func(bKey string) error
 	enqueueService func(cb *latticev1.Service)
 
-	cloudProvider cloudprovider.Interface
-	serviceMesh   servicemesh.Interface
+	namespacePrefix string
+	latticeID       v1.LatticeID
 
 	kubeClient    kubeclientset.Interface
 	latticeClient latticeclientset.Interface
 
-	namespacePrefix string
-	latticeID       v1.LatticeID
+	// NOTE: you must get a read lock on the configLock for the duration
+	//       of your use of the cloudProvider
+	staticCloudProviderOptions *cloudprovider.Options
+	cloudProvider              cloudprovider.Interface
+
+	// NOTE: you must get a read lock on the configLock for the duration
+	//       of your use of the serviceMesh
+	staticServiceMeshOptions *servicemesh.Options
+	serviceMesh              servicemesh.Interface
 
 	configLister       latticelisters.ConfigLister
 	configListerSynced cache.InformerSynced
@@ -83,11 +90,12 @@ type Controller struct {
 }
 
 func NewController(
-	cloudProvider cloudprovider.Interface,
 	namespacePrefix string,
 	latticeID v1.LatticeID,
 	kubeClient kubeclientset.Interface,
 	latticeClient latticeclientset.Interface,
+	cloudProviderOptions *cloudprovider.Options,
+	serviceMeshOptions *servicemesh.Options,
 	configInformer latticeinformers.ConfigInformer,
 	serviceInformer latticeinformers.ServiceInformer,
 	nodePoolInformer latticeinformers.NodePoolInformer,
@@ -98,13 +106,15 @@ func NewController(
 	loadBalancerInformer latticeinformers.LoadBalancerInformer,
 ) *Controller {
 	sc := &Controller{
-		cloudProvider: cloudProvider,
-
 		namespacePrefix: namespacePrefix,
 		latticeID:       latticeID,
 
 		kubeClient:    kubeClient,
 		latticeClient: latticeClient,
+
+		staticCloudProviderOptions: cloudProviderOptions,
+		staticServiceMeshOptions:   serviceMeshOptions,
+
 		configSetChan: make(chan struct{}),
 		queue:         workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "service"),
 	}
@@ -230,14 +240,19 @@ func (c *Controller) handleConfigAdd(obj interface{}) {
 	defer c.configLock.Unlock()
 	c.config = config.DeepCopy().Spec
 
-	serviceMesh, err := c.newServiceMesh()
+	err := c.newCloudProvider()
 	if err != nil {
 		glog.Errorf("error creating service mesh: %v", err)
 		// FIXME: what to do here?
 		return
 	}
 
-	c.serviceMesh = serviceMesh
+	err = c.newServiceMesh()
+	if err != nil {
+		glog.Errorf("error creating service mesh: %v", err)
+		// FIXME: what to do here?
+		return
+	}
 
 	if !c.configSet {
 		c.configSet = true
@@ -254,28 +269,49 @@ func (c *Controller) handleConfigUpdate(old, cur interface{}) {
 	defer c.configLock.Unlock()
 	c.config = curConfig.DeepCopy().Spec
 
-	serviceMesh, err := c.newServiceMesh()
+	err := c.newCloudProvider()
 	if err != nil {
 		glog.Errorf("error creating service mesh: %v", err)
 		// FIXME: what to do here?
 		return
 	}
 
-	c.serviceMesh = serviceMesh
+	err = c.newServiceMesh()
+	if err != nil {
+		glog.Errorf("error creating service mesh: %v", err)
+		// FIXME: what to do here?
+		return
+	}
 }
 
-func (c *Controller) newServiceMesh() (servicemesh.Interface, error) {
-	serviceMeshOptions, err := servicemesh.OptionsFromConfig(&c.config.ServiceMesh)
+func (c *Controller) newCloudProvider() error {
+	options, err := cloudprovider.OverlayConfigOptions(c.staticCloudProviderOptions, &c.config.CloudProvider)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	serviceMesh, err := servicemesh.NewServiceMesh(serviceMeshOptions)
+	cloudProvider, err := cloudprovider.NewCloudProvider(c.namespacePrefix, options)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	return serviceMesh, nil
+	c.cloudProvider = cloudProvider
+	return nil
+}
+
+func (c *Controller) newServiceMesh() error {
+	options, err := servicemesh.OverlayConfigOptions(c.staticServiceMeshOptions, &c.config.ServiceMesh)
+	if err != nil {
+		return err
+	}
+
+	serviceMesh, err := servicemesh.NewServiceMesh(options)
+	if err != nil {
+		return err
+	}
+
+	c.serviceMesh = serviceMesh
+	return nil
 }
 
 func (c *Controller) handleServiceAdd(obj interface{}) {
