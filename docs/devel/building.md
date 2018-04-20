@@ -1,10 +1,29 @@
 # Building
 
+## Dependencies
+
+Only [Bazel](https://bazel.build) is required to build lattice binaries. For building lattice docker images, please see the [docker documentation](docker-images.md).
+
+## Make
+
+To build lattice, after installing Bazel you should simply be able to run `make`.
+
+Lattice's [Makefile](../../Makefile) contains some other convenient targets for common operations.
+
+
+## Platforms
+
+Lattice can currently be built for darwin and linux.
+
+`make` will build lattice for the platform it is being invoked on.
+
+To build for a specific platform, you can run `make build.darwin` or `make build.linux`. `make build.all` will build lattice for all supported platforms.
+
+The built binaries can be found under the `bazel-bin` directory. You can read more about the directory layouts produced by bazel [here](https://docs.bazel.build/versions/master/output_directories.html).
+
 ## Bazel
 
 Lattice uses Bazel heavily. As such, it's recommended that you familiarize yourself with bazel via its [docs](https://docs.bazel.build), at the very least [Concepts and Terminology](https://docs.bazel.build/versions/master/build-ref.html#concepts-and-terminology).
-
-Lattice currently requires Bazel version 0.11.0, as well as `xz`. Both can be installed through `brew` for OS X (`brew install bazel` and `brew install xz` respectively).
 
 To get you started though, we'll give a brief overview of Bazel and the capabilities being used by Lattice.
 
@@ -16,14 +35,14 @@ There's a decent amount to take in here. I'd recommend reading [Commands](#comma
 
 Bazel has two main commands to be aware of:
 
-```
-bazel build <target>
+```shell
+$ bazel build <target>
 ```
 
 and
 
-```
-bazel run <target>
+```shell
+$ bazel run <target>
 ```
 
 `bazel build <target>` will build all of the target's dependencies and the target.
@@ -42,7 +61,7 @@ Bazel defines targets for the previously mentioned commands through `BUILD` file
 
 A `BUILD` file may then look like this:
 
-```
+```python
 my_rule(
     name = "foo",
     *args,
@@ -54,7 +73,7 @@ This defines a rule `foo`. The target produced by by this rule depends on the bu
 
 For example, say the project looked like this, with the each `BUILD` file looking like above:
 
-```
+```shell
 $ tree
 .
 ├── BUILD
@@ -81,7 +100,7 @@ You can load custom (not built in) rules via the built in `load(label, rules...)
 
 So you could include another git repository that contains a `.bzl` file containing rule definitions and use those rule definitions by including this in your `WORKSPACE` file (using the [git_repository WORKSPACE rule](https://docs.bazel.build/versions/master/be/workspace.html#git_repository)):
 
-```
+```python
 git_repository(
     name = "my_other_repo",
     remote = "https://github.com/acme/other_rules.git",
@@ -91,7 +110,7 @@ git_repository(
 
 If this repository contained the following structure:
 
-```
+```shell
 $ tree
 .
 ├── BUILD
@@ -103,7 +122,7 @@ $ tree
 
 and `custom_rules.bzl` contained the definition for the `my_rule` example above, in your `BUILD` file, you could load and use this rule:
 
-```
+```python
 load("@my_other_repo//bar/custom_rules.bzl", "my_rule")
 
 my_rule(
@@ -117,7 +136,7 @@ As mentioned earlier, the `WORKSPACE` file containes external dependency declara
 
 So if your `WORKSPACE` file contained a rule:
 
-```
+```python
 external_dependency(
     name = "other_repo",
     *args,
@@ -140,7 +159,7 @@ Lets say we wanted to have a repository at `github.com/acme/example` that contai
 
 Let's first just make the shell of the application before adding the spinning functionality. We could create that like so:
 
-```
+```shell
 $ mkdir -p cmd pkg/spinner
 
 $ cat > cmd/main.go << EOF
@@ -174,7 +193,7 @@ $ tree
 
 In order to build this with Bazel we'll first have to include the `rules_go` rules in our `WORKSPACE`:
 
-```
+```shell
 $ cat > WORKSPACE << EOF
 http_archive(
     name = "io_bazel_rules_go",
@@ -189,7 +208,7 @@ EOF
 
 Then we have to create two additional `BUILD` files: `pkg/hello/BUILD` and `cmd/BUILD`.
 
-```
+```shell
 $ cat > pkg/spinner/BUILD << EOF
 load("@io_bazel_rules_go//go:def.bzl", "go_library")
 
@@ -240,7 +259,7 @@ Note that we had to explicitly list all our non standard library dependencies (`
 
 Now, if you run `bazel run //cmd`, you would see something like the following:
 
-```
+```shell
  bazel run //cmd
 INFO: Analysed target //cmd:cmd (0 packages loaded).
 INFO: Found 1 target...
@@ -258,7 +277,7 @@ That's all great, but it's a lot of manual work. Luckily, there's a different ba
 
 If we include `gazelle`:
 
-```
+```shell
 $ rm -f WORKSPACE && cat > WORKSPACE << EOF
 http_archive(
     name = "io_bazel_rules_go",
@@ -281,7 +300,8 @@ EOF
 ```
 
 and instead of creating the two specific files `pkg/spinner/BUILD` and `cmd/BUILD` we instead wrote `BUILD` as:
-```
+
+```shell
 $ rm -f pkg/hello/BUILD cmd/BUILD && cat > BUILD << EOF
 load("@bazel_gazelle//:def.bzl", "gazelle")
 
@@ -296,7 +316,7 @@ You could then run `bazel run //:gazelle`, and `gazelle` would walk the filesyst
 
 Then you could run `bazel run //cmd` again just as before, since `gazelle` generated the `go_binary` rule for us at `//cmd:cmd`. Let's try it:
 
-```
+```shell
 $ tree
   .
   ├── BUILD
@@ -345,7 +365,7 @@ I can't spin :(
 
 Now, say we wanted to add spinning to our library using the repository [https://github.com/briandowns/spinner](https://github.com/briandowns/spinner).
 
-```
+```shell
 $ rm -f pkg/spinner/spinner.go && cat > pkg/spinner/spinner.go << EOF
 package spinner
 
@@ -366,7 +386,7 @@ EOF
 Now if we try to run `bazel run //cmd`, we'll get a failure:
 
 
-```
+```shell
 $ bazel run //cmdd
 INFO: Analysed target //cmd:cmd (0 packages loaded).
 INFO: Found 1 target...
@@ -384,7 +404,7 @@ We need to run `gazelle` again so that it can update `/pkg/spinner/BUILD` with t
 
 Run `gazelle` and try again:
 
-```
+```shell
 $ bazel run //:gazelle
 INFO: Found 1 target...
 Target //:gazelle up-to-date:
@@ -406,7 +426,7 @@ Now Bazel complains that it could not find `@com_github_briandowns_spinner`.
 
 Let's look at the `pkg/spinner/BUILD` file `gazelle` generated for us:
 
-```
+```shell
 $ cat pkg/spinner/BUILD
 load("@io_bazel_rules_go//go:def.bzl", "go_library")
   
@@ -425,7 +445,7 @@ What's happened here is that `gazelle` recognized we have an external dependency
 
 Let's include it and try again:
 
-```
+```shell
 $ rm -f WORKSPACE && cat > WORKSPACE <<EOF
 http_archive(
     name = "io_bazel_rules_go",
@@ -468,7 +488,7 @@ Turns out that `github.com/briandowns/spinner` in turn depends on `github.com/fa
 
 Let's put those in `WORKSPACE` and try one more time:
 
-```
+```shell
 $ rm -f WORKSPACE && cat > WORKSPACE << EOF
 http_archive(
     name = "io_bazel_rules_go",
@@ -520,12 +540,10 @@ There are a number of macros in the [bazel](../../bazel) directory that make org
 
 Take a look at the [WORKSPACE](../../WORKSPACE) file or the [docker BUILD file](../../docker/BUILD) for examples of using them.
 
-## Make
-
-Lattice has a [Makefile](../../Makefile) that contains some nice targets for common operations.
 
 ## Best practices and enforcement
 
-In general, you should always default to simply running `make build`. This will run `gazelle` to make sure you have up-to-date `BUILD` files as well as ensure that everything can compile.
+In general, you should default to simply running `make`. This will run `gazelle` to make sure you have up-to-date `BUILD` files as well as ensure that everything can compile. Once you build lattice once, subsequent builds are incremental.
 
-The `pre-push` git hook for the repository will in fact ensure that `make build` and `make test` both succeed, so it behooves you to usually be running `make build` so that your push will be fast. This may or may not be revisited in the future.
+The pre-commit hook for the repository (installable by running `make git.install-hooks`) will check that bazel `BUILD` files are up to date and that all code is formatted.
+
