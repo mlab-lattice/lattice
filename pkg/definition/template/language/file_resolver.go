@@ -10,17 +10,14 @@ import (
 	"github.com/mlab-lattice/lattice/pkg/util/git"
 )
 
-// resolveURL reads the template file by resolving the url into a urlResource w
-func resolveURL(url string, env *environment) (*urlResource, error) {
+// readTemplateFromURL reads the template file by resolving the url into a Template w
+func readTemplateFromURL(url string, env *environment) (*Template, error) {
 	// if its a git url then return a templateURLInfo for a git url
-	if isGitURL(url) {
-		return resolveGitURL(url, env)
-	} else if isRelativeURL(url) {
-		return resolveRelativeURL(url, env)
-
+	if isGitTemplateURL(url) {
+		return readTemplateFromGitURL(url, env)
 	}
 
-	return nil, fmt.Errorf("Unsupported url %s", url)
+	return nil, fmt.Errorf("unsupported url %s", url)
 }
 
 // fetchGitFileContents fetches the specified git file contents
@@ -40,8 +37,8 @@ func fetchGitFileContents(repoURL string, fileName string, env *environment) ([]
 
 }
 
-// urlResource artifact for url resolution
-type urlResource struct {
+// Template artifact for url resolution
+type Template struct {
 	url      string
 	baseURL  string
 	fileName string
@@ -49,13 +46,13 @@ type urlResource struct {
 	data     map[string]interface{}
 }
 
-// resolveGitURL resolves a git url
-func resolveGitURL(url string, env *environment) (*urlResource, error) {
-	if !isGitURL(url) {
-		return nil, fmt.Errorf("Invalid git url: '%s'", url)
+// readTemplateFromGitURL resolves a git url
+func readTemplateFromGitURL(url string, env *environment) (*Template, error) {
+	if !isGitTemplateURL(url) {
+		return nil, fmt.Errorf("invalid git url: '%s'", url)
 	}
 
-	parts := gitURLRegex.FindAllStringSubmatch(url, -1)
+	parts := gitTemplateURLRegex.FindAllStringSubmatch(url, -1)
 
 	protocol := parts[0][1]
 	repoPath := parts[0][3]
@@ -76,18 +73,18 @@ func resolveGitURL(url string, env *environment) (*urlResource, error) {
 		return nil, err
 	}
 
-	return newURLResource(url, baseURL, fileName, bytes)
+	return newTemplate(url, baseURL, fileName, bytes)
 
 }
 
-// newURLResource creates a new urlResource struct
-func newURLResource(url, baseURL string, fileName string, bytes []byte) (*urlResource, error) {
+// newTemplate creates a new Template struct
+func newTemplate(url, baseURL string, fileName string, bytes []byte) (*Template, error) {
 	data, err := unmarshalBytes(bytes, fileName)
 	if err != nil {
 		return nil, err
 	}
 
-	return &urlResource{
+	return &Template{
 		url:     url,
 		baseURL: baseURL,
 		bytes:   bytes,
@@ -95,21 +92,12 @@ func newURLResource(url, baseURL string, fileName string, bytes []byte) (*urlRes
 	}, nil
 }
 
-// resolveRelativeURL resolves a relative url by creating a full url with the existing url base
-func resolveRelativeURL(url string, env *environment) (*urlResource, error) {
-
-	// construct a full url using the existing baseURL in env
-	fullURL := fmt.Sprintf("%v/%v", env.currentFrame().resource.baseURL, url)
-
-	return resolveURL(fullURL, env)
-}
-
 // regex for matching git file urls
-var gitURLRegex = regexp.MustCompile(`((?:git|file|ssh|https?|git@[-\w.]+)):(//)?(.*.git)(#(([-\d\w._])+)?)?(/(.*))?$`)
+var gitTemplateURLRegex = regexp.MustCompile(`((?:git|file|ssh|https?|git@[-\w.]+)):(//)?(.*.git)(#(([-\d\w._])+)?)?(/(.*))?$`)
 
-// isGitURL
-func isGitURL(url string) bool {
-	return gitURLRegex.MatchString(url)
+// isGitTemplateURL
+func isGitTemplateURL(url string) bool {
+	return gitTemplateURLRegex.MatchString(url)
 }
 
 // isRelativeURL
@@ -134,6 +122,6 @@ func unmarshalBytes(bytes []byte, fileName string) (map[string]interface{}, erro
 		return result, nil
 	}
 
-	return nil, error(fmt.Errorf("Unsupported file %s", fileName))
+	return nil, error(fmt.Errorf("unsupported file %s", fileName))
 
 }

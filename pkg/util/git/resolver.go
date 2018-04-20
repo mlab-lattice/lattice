@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
+	"regexp"
 	"strings"
 
 	"golang.org/x/crypto/ssh"
@@ -56,6 +57,11 @@ func NewResolver(workDirectory string) (*Resolver, error) {
 // Clone will  open the repository and return it If the repository specified in the Context has already been cloned,
 // otherwise it will attempt to clone the repository and on success return the cloned repository
 func (r *Resolver) Clone(ctx *Context) (*git.Repository, error) {
+
+	// validate repo url
+	if !IsValidRepositoryURI(ctx.URI) {
+		return nil, fmt.Errorf("bad git uri '%v'", ctx.URI)
+	}
 	repoDir := r.GetRepositoryPath(ctx)
 
 	// If the repository already exists, simply open it.
@@ -256,6 +262,14 @@ type uriInfo struct {
 	CloneURI string
 	Ref      string
 	RepoName string
+}
+
+// regex for matching git repo urls
+var gitRepositoryURIRegex = regexp.MustCompile(`((?:git|file|ssh|https?|git@[-\w.]+)):(//)?(.*.git)(#(([-\d\w._])+)?)?$`)
+
+// IsValidRepositoryURI
+func IsValidRepositoryURI(uri string) bool {
+	return gitRepositoryURIRegex.MatchString(uri)
 }
 
 func parseGitURI(gitURI string) uriInfo {

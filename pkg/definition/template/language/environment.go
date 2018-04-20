@@ -14,6 +14,9 @@ type environment struct {
 
 	propertyMetadataMap map[string]*PropertyMetadata // mapping of property paths and metadata
 	propertyStack       *environmentStack
+
+	// track reference recipients. Map of reference to array of recipients
+	referenceRecipients map[string][]string
 }
 
 // newEnvironment creates a new environment object
@@ -24,6 +27,7 @@ func newEnvironment(engine *TemplateEngine, options *Options) *environment {
 		options:             options,
 		propertyMetadataMap: make(map[string]*PropertyMetadata),
 		propertyStack:       newStack(10),
+		referenceRecipients: make(map[string][]string),
 	}
 
 	return env
@@ -45,11 +49,11 @@ func (env *environment) parametersAndVariables() map[string]interface{} {
 
 // push pushes current environment to the stack. Should be called in $include
 func (env *environment) push(
-	resource *urlResource,
+	template *Template,
 	parameters map[string]interface{},
 	variables map[string]interface{}) {
 	env.stack.push(&environmentStackFrame{
-		resource:   resource,
+		template:   template,
 		parameters: parameters,
 		variables:  variables,
 	})
@@ -86,22 +90,22 @@ func (env *environment) pushProperty(property string) string {
 }
 
 // popProperty
-func (env *environment) popProperty() error {
-	_, err := env.propertyStack.pop()
-	return err
+func (env *environment) popProperty() (string, error) {
+	prop, err := env.propertyStack.pop()
+	return prop.(string), err
 }
 
 // fillPropertyMetadata
 func (env *environment) fillPropertyMetadata(propertyPath string) {
-	var currentResource *urlResource
+	var currentTemplate *Template
 
 	if env.currentFrame() != nil {
-		currentResource = env.currentFrame().resource
+		currentTemplate = env.currentFrame().template
 	}
 
 	metadata := &PropertyMetadata{
 		propertyPath: propertyPath,
-		resource:     currentResource,
+		template:     currentTemplate,
 	}
 
 	env.propertyMetadataMap[propertyPath] = metadata
@@ -110,7 +114,7 @@ func (env *environment) fillPropertyMetadata(propertyPath string) {
 	metadata.relativePropertyPath = env.computeRelativePropertyPathFor(metadata)
 }
 
-// computeRelativePropertyPathFor determines the relative path of the property, i.e. relative to the resource
+// computeRelativePropertyPathFor determines the relative path of the property, i.e. relative to the template
 // that contains that property
 func (env *environment) computeRelativePropertyPathFor(metadata *PropertyMetadata) string {
 	parentPropertyPath := getParentPropertyPath(metadata.propertyPath)
@@ -118,8 +122,8 @@ func (env *environment) computeRelativePropertyPathFor(metadata *PropertyMetadat
 	for parentPropertyPath != "" {
 		parentMeta := env.getPropertyMetaData(parentPropertyPath)
 
-		// if the parent is in a different resource then
-		if parentMeta.resource == nil || parentMeta.resource != metadata.resource {
+		// if the parent is in a different template then
+		if parentMeta.template == nil || parentMeta.template != metadata.template {
 			break
 		}
 		relativePropertyPath = fmt.Sprintf("%v.%v", parentMeta.PropertyName(), relativePropertyPath)
@@ -127,6 +131,32 @@ func (env *environment) computeRelativePropertyPathFor(metadata *PropertyMetadat
 	}
 
 	return relativePropertyPath
+}
+
+// relativePathToAbsolute
+func (env *environment) relativePathToAbsolute(relativePath string) string {
+	currentFrame := env.currentFrame()
+
+	if currentFrame == nil || currentFrame.template == nil {
+		return relativePath
+	}
+
+	rootPath := env.getCurrentPropertyPath()
+
+	for rootPath != "" {
+		propertyMeta := env.getPropertyMetaData(rootPath)
+
+		// climb up until we reach the root property path for the current template
+		if propertyMeta == nil || propertyMeta.template == nil || propertyMeta.template != currentFrame.template {
+			break
+		}
+		rootPath = getParentPropertyPath(rootPath)
+	}
+
+	if rootPath != "" {
+		return fmt.Sprintf("%v.%v", rootPath, relativePath)
+	}
+	return relativePath
 }
 
 // getPropertyMetaData
@@ -144,6 +174,41 @@ func (env *environment) getCurrentPropertyPath() string {
 	return strings.Join(propertyPath, ".")
 }
 
+// captureReferenceRecipient
+func (env *environment) captureReferenceRecipient(reference Reference) {
+	recipient := env.getCurrentPropertyPath()
+
+	// if we are part of an operator eval like $variables or $parameters or parameters of an $include then bail
+	if env.propertyPathHasOperator(recipient) {
+		return
+	}
+
+	allRecipients := env.referenceRecipients[reference.getTarget()]
+	if allRecipients == nil {
+		allRecipients = []string{recipient}
+	} else {
+		// append recipient to array
+		allRecipients = append(allRecipients, recipient)
+	}
+
+	env.referenceRecipients[reference.getTarget()] = allRecipients
+
+}
+
+// propertyPathHasOperator
+func (env *environment) propertyPathHasOperator(propertyPath string) bool {
+	parts := strings.Split(propertyPath, ".")
+	// ensure that this is a valid recipient
+	for _, part := range parts {
+		for operatorKey := range env.engine.operatorMap {
+			if part == operatorKey {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 // environment stack
 type environmentStack struct {
 	data []interface{}
@@ -151,7 +216,7 @@ type environmentStack struct {
 
 // environment stack frame
 type environmentStackFrame struct {
-	resource   *urlResource
+	template   *Template
 	parameters map[string]interface{}
 	variables  map[string]interface{}
 }
