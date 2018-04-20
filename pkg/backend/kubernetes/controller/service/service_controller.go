@@ -48,7 +48,8 @@ type Controller struct {
 	kubeClient    kubeclientset.Interface
 	latticeClient latticeclientset.Interface
 
-	latticeID v1.LatticeID
+	namespacePrefix string
+	latticeID       v1.LatticeID
 
 	configLister       latticelisters.ConfigLister
 	configListerSynced cache.InformerSynced
@@ -83,6 +84,7 @@ type Controller struct {
 
 func NewController(
 	cloudProvider cloudprovider.Interface,
+	namespacePrefix string,
 	latticeID v1.LatticeID,
 	kubeClient kubeclientset.Interface,
 	latticeClient latticeclientset.Interface,
@@ -98,9 +100,11 @@ func NewController(
 	sc := &Controller{
 		cloudProvider: cloudProvider,
 
+		namespacePrefix: namespacePrefix,
+		latticeID:       latticeID,
+
 		kubeClient:    kubeClient,
 		latticeClient: latticeClient,
-		latticeID:     latticeID,
 		configSetChan: make(chan struct{}),
 		queue:         workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "service"),
 	}
@@ -924,7 +928,7 @@ func (c *Controller) syncService(key string) error {
 		return err
 	}
 
-	loadBalancer, loadBalancerNeeded, err := c.syncLoadBalancer(service)
+	loadBalancer, loadBalancerNeeded, err := c.syncLoadBalancer(service, nodePool, nodePoolReady)
 	if err != nil {
 		return err
 	}

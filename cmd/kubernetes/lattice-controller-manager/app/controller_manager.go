@@ -27,6 +27,7 @@ func Command() *cli.Command {
 	goflag.CommandLine.Parse([]string{})
 
 	var kubeconfig string
+	var namespacePrefix string
 	var latticeID string
 
 	var enabledControllers []string
@@ -44,6 +45,12 @@ func Command() *cli.Command {
 				Name:   "kubeconfig",
 				Usage:  "path to kubeconfig file",
 				Target: &kubeconfig,
+			},
+			&cli.StringFlag{
+				Name:     "namespace-prefix",
+				Usage:    "namespace prefix of the lattice",
+				Required: true,
+				Target:   &namespacePrefix,
 			},
 			&cli.StringFlag{
 				Name:     "lattice-id",
@@ -87,7 +94,14 @@ func Command() *cli.Command {
 			}
 
 			// TODO: setting stop as nil for now, won't actually need it until leader-election is used
-			ctx, err := createControllerContext(v1.LatticeID(latticeID), config, cloudProviderOptions, serviceMeshOptions, nil)
+			ctx, err := createControllerContext(
+				namespacePrefix,
+				v1.LatticeID(latticeID),
+				config,
+				cloudProviderOptions,
+				serviceMeshOptions,
+				nil,
+			)
 			if err != nil {
 				panic(err)
 			}
@@ -107,6 +121,7 @@ func Command() *cli.Command {
 }
 
 func createControllerContext(
+	namespacePrefix string,
 	latticeID v1.LatticeID,
 	kubeconfig *rest.Config,
 	cloudProviderOptions *cloudprovider.Options,
@@ -127,7 +142,8 @@ func createControllerContext(
 	latticeInformers := latticeinformers.NewSharedInformerFactory(versionedLatticeClient, time.Duration(12*time.Hour))
 
 	ctx := controllers.Context{
-		LatticeID: latticeID,
+		NamespacePrefix: namespacePrefix,
+		LatticeID:       latticeID,
 
 		CloudProviderOptions: cloudProviderOptions,
 		ServiceMeshOptions:   serviceMeshOptions,

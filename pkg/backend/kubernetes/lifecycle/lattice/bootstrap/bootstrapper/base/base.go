@@ -39,6 +39,7 @@ type TerraformOptions struct {
 
 func NewBootstrapper(
 	latticeID v1.LatticeID,
+	namespacePrefix string,
 	cloudProviderName string,
 	options *Options,
 ) (*DefaultBootstrapper, error) {
@@ -48,6 +49,7 @@ func NewBootstrapper(
 
 	b := &DefaultBootstrapper{
 		Options:           options,
+		NamespacePrefix:   namespacePrefix,
 		LatticeID:         latticeID,
 		CloudProviderName: cloudProviderName,
 	}
@@ -56,6 +58,7 @@ func NewBootstrapper(
 
 type DefaultBootstrapper struct {
 	Options           *Options
+	NamespacePrefix   string
 	LatticeID         v1.LatticeID
 	CloudProviderName string
 }
@@ -66,5 +69,5 @@ func (b *DefaultBootstrapper) BootstrapClusterResources(resources *bootstrapper.
 	b.configResources(resources)
 	b.componentBuilderResources(resources)
 	b.controllerManagerResources(resources)
-	b.aPIServerResources(resources)
+	b.apiServerResources(resources)
 }

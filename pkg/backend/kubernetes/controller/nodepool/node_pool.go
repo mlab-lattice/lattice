@@ -22,7 +22,7 @@ func (c *Controller) syncActiveNodePool(nodePool *latticev1.NodePool) error {
 	for _, epoch := range nodePool.Status.Epochs.Epochs() {
 		epochInfo, ok := nodePool.Status.Epochs.Epoch(epoch)
 		if !ok {
-			return fmt.Errorf("could not get info for %v epoch %v", nodePool.Description(), epoch)
+			return fmt.Errorf("could not get info for %v epoch %v", nodePool.Description(c.namespacePrefix), epoch)
 		}
 
 		epochs[epoch] = latticev1.NodePoolStatusEpoch{
@@ -55,12 +55,12 @@ func (c *Controller) syncActiveNodePool(nodePool *latticev1.NodePool) error {
 		var ok bool
 		epoch, ok = nodePool.Status.Epochs.CurrentEpoch()
 		if !ok {
-			return fmt.Errorf("cloud provider reported that %v did not need new epoch, but it does not have a current epoch", nodePool.Description())
+			return fmt.Errorf("cloud provider reported that %v did not need new epoch, but it does not have a current epoch", nodePool.Description(c.namespacePrefix))
 		}
 
 		state, err := c.cloudProvider.NodePoolCurrentEpochState(c.latticeID, nodePool)
 		if err != nil {
-			return fmt.Errorf("error getting %v state for current epoch (%v) from cloud provider: %v", nodePool.Description(), epoch, err)
+			return fmt.Errorf("error getting %v state for current epoch (%v) from cloud provider: %v", nodePool.Description(c.namespacePrefix), epoch, err)
 		}
 
 		// Only want to call out to the cloud provider to provision the current epoch if
@@ -82,7 +82,7 @@ func (c *Controller) syncActiveNodePool(nodePool *latticev1.NodePool) error {
 	if needsProvision {
 		err = c.cloudProvider.ProvisionNodePoolEpoch(c.latticeID, nodePool, epoch)
 		if err != nil {
-			return fmt.Errorf("cloud provider could not provision %v epoch %v: %v", nodePool.Description(), epoch, err)
+			return fmt.Errorf("cloud provider could not provision %v epoch %v: %v", nodePool.Description(c.namespacePrefix), epoch, err)
 		}
 
 		// Add any annotations needed by the cloud provider.
@@ -94,12 +94,12 @@ func (c *Controller) syncActiveNodePool(nodePool *latticev1.NodePool) error {
 
 		err = c.cloudProvider.NodePoolAddAnnotations(c.latticeID, nodePool, annotations, epoch)
 		if err != nil {
-			return fmt.Errorf("cloud provider could not get annotations for %v epoch %v: %v", nodePool.Description(), epoch, err)
+			return fmt.Errorf("cloud provider could not get annotations for %v epoch %v: %v", nodePool.Description(c.namespacePrefix), epoch, err)
 		}
 
 		nodePool, err = c.updateNodePoolAnnotations(nodePool, annotations)
 		if err != nil {
-			return fmt.Errorf("could not update %v annotations: %v", nodePool.Description(), err)
+			return fmt.Errorf("could not update %v annotations: %v", nodePool.Description(c.namespacePrefix), err)
 		}
 	}
 
@@ -143,7 +143,7 @@ func (c *Controller) retireEpochs(nodePool *latticev1.NodePool, retireCurrent bo
 		if !retireCurrent {
 			currentEpoch, ok := nodePool.Status.Epochs.CurrentEpoch()
 			if !ok {
-				return nil, fmt.Errorf("trying to retire %v epochs but it does not have a current epoch", nodePool.Description())
+				return nil, fmt.Errorf("trying to retire %v epochs but it does not have a current epoch", nodePool.Description(c.namespacePrefix))
 			}
 
 			if epoch == currentEpoch {
@@ -154,7 +154,7 @@ func (c *Controller) retireEpochs(nodePool *latticev1.NodePool, retireCurrent bo
 		// If the node pool can be retired, ask the cloud provider to deprovision it.
 		retired, err := c.isEpochRetired(nodePool, epoch)
 		if err != nil {
-			return nil, fmt.Errorf("error trying to check if %v epoch %v is retired: %v", nodePool.Description(), epoch, err)
+			return nil, fmt.Errorf("error trying to check if %v epoch %v is retired: %v", nodePool.Description(c.namespacePrefix), epoch, err)
 		}
 
 		if !retired {
@@ -163,7 +163,7 @@ func (c *Controller) retireEpochs(nodePool *latticev1.NodePool, retireCurrent bo
 
 		err = c.cloudProvider.DeprovisionNodePoolEpoch(c.latticeID, nodePool, epoch)
 		if err != nil {
-			return nil, fmt.Errorf("cloud provider could not deprovision %v epoch %v: %v", nodePool.Description(), epoch, err)
+			return nil, fmt.Errorf("cloud provider could not deprovision %v epoch %v: %v", nodePool.Description(c.namespacePrefix), epoch, err)
 		}
 
 		retiredEpochs.Add(epoch)
@@ -273,7 +273,7 @@ func (c *Controller) updateNodePoolStatus(
 ) (*latticev1.NodePool, error) {
 	state, err := nodePoolState(epochs)
 	if err != nil {
-		return nil, fmt.Errorf("error trying to get state for %v: %v", nodePool.Description(), err)
+		return nil, fmt.Errorf("error trying to get state for %v: %v", nodePool.Description(c.namespacePrefix), err)
 	}
 
 	status := latticev1.NodePoolStatus{

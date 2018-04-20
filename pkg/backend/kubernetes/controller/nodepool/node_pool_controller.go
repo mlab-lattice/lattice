@@ -27,7 +27,8 @@ type Controller struct {
 	syncHandler     func(bKey string) error
 	enqueueNodePool func(cb *latticev1.NodePool)
 
-	latticeID v1.LatticeID
+	namespacePrefix string
+	latticeID       v1.LatticeID
 
 	latticeClient latticeclientset.Interface
 
@@ -51,6 +52,7 @@ type Controller struct {
 }
 
 func NewController(
+	namespacePrefix string,
 	latticeID v1.LatticeID,
 	cloudProviderOptions *cloudprovider.Options,
 	latticeClient latticeclientset.Interface,
@@ -59,6 +61,7 @@ func NewController(
 	serviceInformer latticeinformers.ServiceInformer,
 ) *Controller {
 	sc := &Controller{
+		namespacePrefix:            namespacePrefix,
 		latticeID:                  latticeID,
 		latticeClient:              latticeClient,
 		staticCloudProviderOptions: cloudProviderOptions,
@@ -174,7 +177,7 @@ func (c *Controller) newCloudProvider() (cloudprovider.Interface, error) {
 		return nil, err
 	}
 
-	cloudProvider, err := cloudprovider.NewCloudProvider(options)
+	cloudProvider, err := cloudprovider.NewCloudProvider(c.namespacePrefix, options)
 	if err != nil {
 		return nil, err
 	}
@@ -234,7 +237,7 @@ func (c *Controller) handleNodePoolDelete(obj interface{}) {
 
 func (c *Controller) handleServiceAdd(obj interface{}) {
 	service := obj.(*latticev1.Service)
-	glog.V(4).Infof("%v add", service.Description())
+	glog.V(4).Infof("%v add", service.Description(c.namespacePrefix))
 
 	nodePools, err := c.nodePoolLister.NodePools(service.Namespace).List(labels.Everything())
 	if err != nil {
@@ -249,7 +252,7 @@ func (c *Controller) handleServiceAdd(obj interface{}) {
 
 func (c *Controller) handleServiceUpdate(old, cur interface{}) {
 	curService := cur.(*latticev1.Service)
-	glog.V(5).Info("%v update", curService.Description())
+	glog.V(5).Info("%v update", curService.Description(c.namespacePrefix))
 
 	nodePools, err := c.nodePoolLister.NodePools(curService.Namespace).List(labels.Everything())
 	if err != nil {

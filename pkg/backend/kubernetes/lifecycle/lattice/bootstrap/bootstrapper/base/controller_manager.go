@@ -17,8 +17,8 @@ import (
 )
 
 func (b *DefaultBootstrapper) controllerManagerResources(resources *bootstrapper.Resources) {
-	internalNamespace := kubeutil.InternalNamespace(b.LatticeID)
-	name := fmt.Sprintf("%v-%v", b.LatticeID, constants.ControlPlaneServiceLatticeControllerManager)
+	internalNamespace := kubeutil.InternalNamespace(b.NamespacePrefix)
+	name := fmt.Sprintf("%v-%v", b.NamespacePrefix, constants.ControlPlaneServiceLatticeControllerManager)
 
 	clusterRole := &rbacv1.ClusterRole{
 		// Include TypeMeta so if this is a dry run it will be printed out
@@ -134,7 +134,12 @@ func (b *DefaultBootstrapper) controllerManagerResources(resources *bootstrapper
 	}
 	resources.ClusterRoleBindings = append(resources.ClusterRoleBindings, clusterRoleBinding)
 
-	args := []string{"--cloud-provider", b.CloudProviderName, "--lattice-id", string(b.LatticeID)}
+	args := []string{
+		"--cloud-provider", b.CloudProviderName,
+		"--lattice-id", string(b.LatticeID),
+		"--namespace-prefix", b.NamespacePrefix,
+		"--alsologtostderr",
+	}
 	args = append(args, b.Options.MasterComponents.LatticeControllerManager.Args...)
 
 	if b.Options.MasterComponents.LatticeControllerManager.TerraformModulePath != "" {

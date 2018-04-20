@@ -17,7 +17,7 @@ func (b *DefaultBootstrapper) namespaceResources(resources *bootstrapper.Resourc
 			APIVersion: corev1.SchemeGroupVersion.String(),
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name: kubeutil.InternalNamespace(b.LatticeID),
+			Name: kubeutil.InternalNamespace(b.NamespacePrefix),
 		},
 	}
 	resources.Namespaces = append(resources.Namespaces, namespace)

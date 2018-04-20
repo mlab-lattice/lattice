@@ -24,7 +24,7 @@ func (c *Controller) syncCurrentNodePool(service *latticev1.Service) (*latticev1
 	} else if service.Spec.Definition.Resources().MinInstances != nil {
 		numInstances = *service.Spec.Definition.Resources().MinInstances
 	} else {
-		return nil, false, fmt.Errorf("%v did not specify num instances or min instances", service.Description())
+		return nil, false, fmt.Errorf("%v did not specify num instances or min instances", service.Description(c.namespacePrefix))
 	}
 
 	var instanceType string
@@ -45,7 +45,7 @@ func (c *Controller) syncCurrentNodePool(service *latticev1.Service) (*latticev1
 		instanceType = resources.NodePool.NodePool.InstanceType
 	} else {
 		if resources.InstanceType == nil {
-			return nil, false, fmt.Errorf("%v did not specify a node pool or instance type", service.Description())
+			return nil, false, fmt.Errorf("%v did not specify a node pool or instance type", service.Description(c.namespacePrefix))
 		}
 		instanceType = *resources.InstanceType
 	}
@@ -138,15 +138,15 @@ func (c *Controller) dedicatedNodePool(service *latticev1.Service, instanceType 
 	for _, nodePool := range cachedNodePools {
 		if nodePool.Spec.InstanceType == instanceType {
 			if nodePool.DeletionTimestamp != nil {
-				return nil, fmt.Errorf("found %v for %v but it is being deleted", nodePool.Description(), service.Description())
+				return nil, fmt.Errorf("found %v for %v but it is being deleted", nodePool.Description(c.namespacePrefix), service.Description(c.namespacePrefix))
 			}
 
 			if matchingNodePool != nil {
 				err := fmt.Errorf(
 					"found multiple identical dedicated node pools (at least %v and %v) for service %v",
-					matchingNodePool.Description(),
-					nodePool.Description(),
-					service.Description(),
+					matchingNodePool.Description(c.namespacePrefix),
+					nodePool.Description(c.namespacePrefix),
+					service.Description(c.namespacePrefix),
 				)
 				return nil, err
 			}
@@ -170,15 +170,15 @@ func (c *Controller) dedicatedNodePool(service *latticev1.Service, instanceType 
 	for _, nodePool := range nodePools {
 		if nodePool.Spec.InstanceType == instanceType {
 			if nodePool.DeletionTimestamp != nil {
-				return nil, fmt.Errorf("found %v for %v but it is being deleted", nodePool.Description(), service.Description())
+				return nil, fmt.Errorf("found %v for %v but it is being deleted", nodePool.Description(c.namespacePrefix), service.Description(c.namespacePrefix))
 			}
 
 			if matchingNodePool != nil {
 				err := fmt.Errorf(
 					"found multiple identical dedicated node pools (at least %v and %v) for service %v",
-					matchingNodePool.Description(),
-					nodePool.Description(),
-					service.Description(),
+					matchingNodePool.Description(c.namespacePrefix),
+					nodePool.Description(c.namespacePrefix),
+					service.Description(c.namespacePrefix),
 				)
 				return nil, err
 			}

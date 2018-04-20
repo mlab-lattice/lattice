@@ -15,13 +15,13 @@ type ClusterBootstrapperOptions struct {
 	Local *local.LatticeBootstrapperOptions
 }
 
-func NewLatticeBootstrapper(latticeID v1.LatticeID, options *ClusterBootstrapperOptions) (clusterbootstrapper.Interface, error) {
+func NewLatticeBootstrapper(latticeID v1.LatticeID, namespacePrefix string, options *ClusterBootstrapperOptions) (clusterbootstrapper.Interface, error) {
 	if options.AWS != nil {
 		return aws.NewLatticeBootstrapper(options.AWS), nil
 	}
 
 	if options.Local != nil {
-		return local.NewLatticeBootstrapper(latticeID, options.Local), nil
+		return local.NewLatticeBootstrapper(latticeID, namespacePrefix, options.Local), nil
 	}
 
 	return nil, fmt.Errorf("must provide cloud provider options")

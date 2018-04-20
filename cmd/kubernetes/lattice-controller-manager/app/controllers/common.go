@@ -44,7 +44,8 @@ func (cb LatticeClientBuilder) ClientOrDie(name string) latticeclientset.Interfa
 }
 
 type Context struct {
-	LatticeID v1.LatticeID
+	NamespacePrefix string
+	LatticeID       v1.LatticeID
 
 	CloudProviderOptions *cloudprovider.Options
 	ServiceMeshOptions   *servicemesh.Options

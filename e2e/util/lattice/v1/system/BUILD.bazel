@@ -1,0 +1,18 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "crud.go",
+        "wait.go",
+    ],
+    importpath = "github.com/mlab-lattice/lattice/e2e/util/lattice/v1/system",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//pkg/api/client/v1:go_default_library",
+        "//pkg/api/v1:go_default_library",
+        "@com_github_deckarep_golang_set//:go_default_library",
+        "@com_github_onsi_gomega//:go_default_library",
+        "@io_k8s_apimachinery//pkg/util/wait:go_default_library",
+    ],
+)

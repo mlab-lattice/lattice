@@ -2,24 +2,14 @@ package language
 
 import (
 	"fmt"
-	"io/ioutil"
-	"os"
-	"path"
+
 	"strings"
 	"testing"
-	"time"
-
-	gogit "gopkg.in/src-d/go-git.v4"
-	"gopkg.in/src-d/go-git.v4/plumbing"
-	"gopkg.in/src-d/go-git.v4/plumbing/object"
 )
 
 const (
-	testRepoDir = "/tmp/lattice-core/test/template-engine/my-repo"
-	testWorkDir = "/tmp/lattice-core/test/engine"
-	t1File      = "t1.json"
-	t2File      = "t2.json"
-	t1FileURL   = "file:///tmp/lattice-core/test/template-engine/my-repo/.git/t1.json"
+	t1File = "t1.json"
+	t2File = "t2.json"
 )
 
 func TestEngine(t *testing.T) {
@@ -34,24 +24,27 @@ func TestEngine(t *testing.T) {
 
 func setupEngineTest() {
 	fmt.Println("Setting up test")
-	// ensure work directory
-	os.Mkdir(testRepoDir, 0700)
+	initTestRepo()
 
-	gogit.PlainInit(testRepoDir, false)
-
-	commitTestFiles()
+	commitTestFile(t1File, t1JSON)
+	commitTestFile(t2File, t2JSON)
+	commitTestFile("t3.json", t3JSON)
 
 }
 
 func teardownEngineTest() {
 	fmt.Println("Tearing down template engine test")
-	// remove the test repo
-	os.RemoveAll(testRepoDir)
-	// remove work dir
-	os.RemoveAll(testWorkDir)
+	deleteTestRepo()
 }
 
 func doTestEngine(t *testing.T) {
+	testInclude(t)
+	testValidateParams(t)
+	testOperatorSiblings(t)
+	testBadUrl(t)
+}
+
+func testInclude(t *testing.T) {
 
 	fmt.Println("Starting TemplateEngine test....")
 	engine := NewEngine()
@@ -60,6 +53,8 @@ func doTestEngine(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Got error: %v", err)
 	}
+
+	t1FileURL := getTestFileURL(t1File)
 
 	fmt.Printf("calling EvalFromURL('%s')\n", t1FileURL)
 
@@ -116,14 +111,6 @@ func doTestEngine(t *testing.T) {
 		t.Fatal("wrong array length")
 	}
 
-	// ensure that some parameters are required
-	fmt.Println("ensure that name parameter is required...")
-	_, err = engine.EvalFromURL(t1FileURL, nil, options)
-
-	if err == nil || !strings.Contains(fmt.Sprintf("%v", err), "parameter name is required") {
-		t.Fatalf("Required parameter 'name' has not been validated")
-	}
-
 	fmt.Println("Validating include...")
 	if resultMap["address"] == nil {
 		t.Fatal("address is nil")
@@ -152,24 +139,6 @@ func doTestEngine(t *testing.T) {
 	fmt.Println("validate default parameters")
 	if address["state"] != "CA" {
 		t.Fatal("invalid state")
-	}
-
-	// validate $include to parent
-	fmt.Println("validate include to parent")
-
-	if resultMap["city"] != "San Francisco" {
-		t.Fatal("invalid city")
-	}
-
-	if resultMap["state"] != "CA" {
-		t.Fatal("invalid state")
-	}
-
-	// ensure that some parameters are required
-	fmt.Println("ensure that name parameter is required...")
-	_, err = engine.EvalFromURL(t1FileURL, nil, options)
-	if err == nil || !strings.Contains(fmt.Sprintf("%v", err), "parameter name is required") {
-		t.Fatalf("Required parameter 'name' has not been validated")
 	}
 
 	fmt.Println("Testing metadata")
@@ -221,36 +190,50 @@ func doTestEngine(t *testing.T) {
 	if arrMetadata.LineNumber() != 24 {
 		t.Fatalf("invalid line number for array.0. Expected 24 but found %v", arrMetadata.LineNumber())
 	}
+}
+
+func testValidateParams(t *testing.T) {
+	engine := NewEngine()
+
+	t1FileURL := getTestFileURL(t1File)
+	options, _ := CreateOptions(testWorkDir, nil)
+
+	// ensure that some parameters are required
+	fmt.Println("ensure that name parameter is required...")
+	_, err := engine.EvalFromURL(t1FileURL, nil, options)
+
+	if err == nil || !strings.Contains(fmt.Sprintf("%v", err), "parameter name is required") {
+		t.Fatalf("Required parameter 'name' has not been validated")
+	}
 
 }
 
-func commitTestFiles() {
+func testBadUrl(t *testing.T) {
+	engine := NewEngine()
 
-	ioutil.WriteFile(path.Join(testRepoDir, t1File), []byte(t1JSON), 0644)
+	options, _ := CreateOptions(testWorkDir, nil)
 
-	ioutil.WriteFile(path.Join(testRepoDir, t2File), []byte(t2JSON), 0644)
+	fmt.Println("Bad url validation")
+	_, err := engine.EvalFromURL("foo", nil, options)
 
-	repo, _ := gogit.PlainOpen(testRepoDir)
+	if err == nil || !strings.Contains(fmt.Sprintf("%v", err), "bad url") {
+		t.Fatalf("bad url is not being validated")
+	}
 
-	workTree, _ := repo.Worktree()
+}
 
-	workTree.Add(t1File)
+func testOperatorSiblings(t *testing.T) {
+	engine := NewEngine()
 
-	workTree.Add(t2File)
+	t3FileURL := getTestFileURL("t3.json")
+	options, _ := CreateOptions(testWorkDir, nil)
 
-	// commit
-	hash, _ := workTree.Commit("test", &gogit.CommitOptions{
-		Author: &object.Signature{
-			Name:  "Test",
-			Email: "test@mlab-lattice.com",
-			When:  time.Now(),
-		},
-	})
-
-	// create the tag
-	n := plumbing.ReferenceName("refs/tags/testv1")
-	t := plumbing.NewHashReference(n, hash)
-	repo.Storer.SetReference(t)
+	// ensure that some parameters are required
+	fmt.Println("ensure that $include disallows other sibling keys")
+	_, err := engine.EvalFromURL(t3FileURL, nil, options)
+	if err == nil || !strings.Contains(fmt.Sprintf("%v", err), "sibling fields are not") {
+		t.Fatalf("$include should disallow siblings")
+	}
 
 }
 
@@ -291,13 +274,6 @@ const t1JSON = `
     }
   },
 
-  "$include": {
-    "url": "t2.json",
-    "parameters": {
-	  "city": "San Francisco"
-    }
-},
-
   "int": 1,
   "bool": true
 
@@ -317,5 +293,16 @@ const t2JSON = `
 
    "city": "${city}",
    "state": "${state}"
+}
+`
+
+const t3JSON = `
+{
+  "address": {
+    "bad": "bad sibling for include",
+    "$include": {
+      "url": "t2.json"
+    }
+  }
 }
 `

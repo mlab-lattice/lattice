@@ -75,11 +75,9 @@ type ConfigServiceMesh struct {
 }
 
 type ConfigServiceMeshEnvoy struct {
-	PrepareImage      string `json:"prepareImage"`
-	Image             string `json:"image"`
-	RedirectCIDRBlock string `json:"redirectCidrBlock"`
-	XDSAPIImage       string `json:"xdsApiImage"`
-	XDSAPIPort        int32  `json:"xdsApiPort"`
+	PrepareImage string `json:"prepareImage"`
+	Image        string `json:"image"`
+	XDSAPIImage  string `json:"xdsApiImage"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

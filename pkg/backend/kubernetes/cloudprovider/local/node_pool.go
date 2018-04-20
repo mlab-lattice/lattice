@@ -19,12 +19,12 @@ func (cp *DefaultLocalCloudProvider) NodePoolCurrentEpochState(
 ) (latticev1.NodePoolState, error) {
 	current, ok := nodePool.Status.Epochs.CurrentEpoch()
 	if !ok {
-		return latticev1.NodePoolStatePending, fmt.Errorf("could not get current epoch for %v", nodePool.Description())
+		return latticev1.NodePoolStatePending, fmt.Errorf("could not get current epoch for %v", nodePool.Description(cp.namespacePrefix))
 	}
 
 	epochInfo, ok := nodePool.Status.Epochs.Epoch(current)
 	if !ok {
-		return latticev1.NodePoolStatePending, fmt.Errorf("could not get epoch status for %v epoch %v", nodePool.Description(), current)
+		return latticev1.NodePoolStatePending, fmt.Errorf("could not get epoch status for %v epoch %v", nodePool.Description(cp.namespacePrefix), current)
 	}
 
 	return epochInfo.State, nil

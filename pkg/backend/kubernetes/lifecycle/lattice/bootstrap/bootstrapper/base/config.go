@@ -10,7 +10,7 @@ import (
 )
 
 func (b *DefaultBootstrapper) configResources(resources *bootstrapper.Resources) {
-	namespace := kubeutil.InternalNamespace(b.LatticeID)
+	namespace := kubeutil.InternalNamespace(b.NamespacePrefix)
 
 	config := &latticev1.Config{
 		// Include TypeMeta so if this is a dry run it will be printed out

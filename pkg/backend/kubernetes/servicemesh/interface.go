@@ -52,26 +52,29 @@ type Options struct {
 	Envoy *envoy.Options
 }
 
-func OptionsFromConfig(config *latticev1.ConfigServiceMesh) (*Options, error) {
-	if config.Envoy != nil {
-		options := &Options{
-			Envoy: &envoy.Options{
-				PrepareImage:      config.Envoy.PrepareImage,
-				Image:             config.Envoy.Image,
-				RedirectCIDRBlock: config.Envoy.RedirectCIDRBlock,
-				XDSAPIPort:        config.Envoy.XDSAPIPort,
-			},
-		}
-
-		return options, nil
-	}
-
-	return nil, fmt.Errorf("must provide service mesh config")
-}
-
 func NewServiceMesh(options *Options) (Interface, error) {
 	if options.Envoy != nil {
 		return envoy.NewEnvoyServiceMesh(options.Envoy), nil
+	}
+
+	return nil, fmt.Errorf("must provide service mesh options")
+}
+
+func OverlayConfigOptions(staticOptions *Options, dynamicConfig *latticev1.ConfigServiceMesh) (*Options, error) {
+	if staticOptions.Envoy != nil {
+		if dynamicConfig.Envoy == nil {
+			return nil, fmt.Errorf("static options were for envoy but dynamic config did not have envoy options set")
+		}
+
+		envoyOptions, err := envoy.NewOptions(staticOptions.Envoy, dynamicConfig.Envoy)
+		if err != nil {
+			return nil, err
+		}
+
+		options := &Options{
+			Envoy: envoyOptions,
+		}
+		return options, nil
 	}
 
 	return nil, fmt.Errorf("must provide service mesh options")

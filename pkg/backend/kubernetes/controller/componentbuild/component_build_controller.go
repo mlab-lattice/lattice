@@ -6,7 +6,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/cloudprovider"
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	latticeclientset "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/generated/clientset/versioned"
@@ -35,8 +34,8 @@ type Controller struct {
 	syncHandler func(bKey string) error
 	enqueue     func(cb *latticev1.ComponentBuild)
 
-	latticeID     v1.LatticeID
-	cloudProvider cloudprovider.Interface
+	namespacePrefix string
+	cloudProvider   cloudprovider.Interface
 
 	kubeClient    kubeclientset.Interface
 	latticeClient latticeclientset.Interface
@@ -58,7 +57,7 @@ type Controller struct {
 }
 
 func NewController(
-	latticeID v1.LatticeID,
+	namespacePrefix string,
 	cloudProvider cloudprovider.Interface,
 	kubeClient kubeclientset.Interface,
 	latticeClient latticeclientset.Interface,
@@ -67,12 +66,12 @@ func NewController(
 	jobInformer batchinformers.JobInformer,
 ) *Controller {
 	cbc := &Controller{
-		latticeID:     latticeID,
-		cloudProvider: cloudProvider,
-		kubeClient:    kubeClient,
-		latticeClient: latticeClient,
-		configSetChan: make(chan struct{}),
-		queue:         workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "component-build"),
+		namespacePrefix: namespacePrefix,
+		cloudProvider:   cloudProvider,
+		kubeClient:      kubeClient,
+		latticeClient:   latticeClient,
+		configSetChan:   make(chan struct{}),
+		queue:           workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "component-build"),
 	}
 
 	cbc.syncHandler = cbc.syncComponentBuild

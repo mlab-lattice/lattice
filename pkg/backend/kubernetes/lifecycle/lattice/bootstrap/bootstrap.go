@@ -28,6 +28,7 @@ type Options struct {
 
 func Bootstrap(
 	latticeID v1.LatticeID,
+	namespacePrefix string,
 	cloudProviderName string,
 	options *Options,
 	bootstrappers []bootstrapper.Interface,
@@ -35,7 +36,7 @@ func Bootstrap(
 	kubeClient kubeclientset.Interface,
 	latticeClient latticeclientset.Interface,
 ) (*bootstrapper.Resources, error) {
-	resources, err := GetBootstrapResources(latticeID, cloudProviderName, options, bootstrappers)
+	resources, err := GetBootstrapResources(latticeID, namespacePrefix, cloudProviderName, options, bootstrappers)
 	if err != nil {
 		return nil, err
 	}
@@ -231,6 +232,7 @@ func idempotentSeed(resourceDescription string, seedFunc func() error) error {
 
 func GetBootstrapResources(
 	latticeID v1.LatticeID,
+	namespacePrefix string,
 	cloudProviderName string,
 	options *Options,
 	bootstrappers []bootstrapper.Interface,
@@ -241,7 +243,7 @@ func GetBootstrapResources(
 		TerraformOptions: options.Terraform,
 	}
 
-	baseBootstrapper, err := base.NewBootstrapper(latticeID, cloudProviderName, baseOptions)
+	baseBootstrapper, err := base.NewBootstrapper(latticeID, namespacePrefix, cloudProviderName, baseOptions)
 	if err != nil {
 		return nil, err
 	}

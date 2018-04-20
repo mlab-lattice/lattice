@@ -15,8 +15,8 @@ import (
 const (
 	workDirectoryVolumeHostPathPrefix = "/data/component-builder"
 
-	DockerImageDNSController = "kubernetes-local-dns-controller"
-	DockerImageDnsmasqNanny  = "gcr.io/google_containers/k8s-dns-dnsmasq-nanny-amd64:1.14.7"
+	dockerImageDNSController = "kubernetes-local-dns-controller"
+	dockerImageDnsmasqNanny  = "gcr.io/google_containers/k8s-dns-dnsmasq-nanny-amd64:1.14.7"
 
 	// This is the default IP for kube-dns
 	localDNSServerIP = "10.96.0.53"
@@ -37,9 +37,10 @@ func NewOptions(staticOptions *Options, dynamicConfig *latticev1.ConfigCloudProv
 	return options, nil
 }
 
-func NewCloudProvider(options *Options) *DefaultLocalCloudProvider {
+func NewCloudProvider(namespacePrefix string, options *Options) *DefaultLocalCloudProvider {
 	return &DefaultLocalCloudProvider{
-		ip: options.IP,
+		namespacePrefix: namespacePrefix,
+		ip:              options.IP,
 	}
 }
 
@@ -56,7 +57,8 @@ func Flags() (cli.Flags, *Options) {
 }
 
 type DefaultLocalCloudProvider struct {
-	ip string
+	namespacePrefix string
+	ip              string
 }
 
 func (cp *DefaultLocalCloudProvider) BootstrapSystemResources(resources *bootstrapper.SystemResources) {

@@ -40,12 +40,14 @@ type Options struct {
 	XDSAPIPort        int32
 }
 
-type ServiceMesh interface {
-	EgressPort(*latticev1.Service) (int32, error)
-	ServiceMeshPort(*latticev1.Service, int32) (int32, error)
-	ServiceMeshPorts(*latticev1.Service) (map[int32]int32, error)
-	ServicePort(*latticev1.Service, int32) (int32, error)
-	ServicePorts(*latticev1.Service) (map[int32]int32, error)
+func NewOptions(staticOptions *Options, dynamicConfig *latticev1.ConfigServiceMeshEnvoy) (*Options, error) {
+	options := &Options{
+		PrepareImage:      dynamicConfig.PrepareImage,
+		Image:             dynamicConfig.Image,
+		RedirectCIDRBlock: staticOptions.RedirectCIDRBlock,
+		XDSAPIPort:        staticOptions.XDSAPIPort,
+	}
+	return options, nil
 }
 
 func NewEnvoyServiceMesh(options *Options) *DefaultEnvoyServiceMesh {
@@ -58,8 +60,21 @@ func NewEnvoyServiceMesh(options *Options) *DefaultEnvoyServiceMesh {
 }
 
 func Flags() (cli.Flags, *Options) {
-	// all options should be set with dynamic config (i.e. custom resource)
-	return cli.Flags{}, &Options{}
+	options := &Options{}
+
+	flags := cli.Flags{
+		&cli.StringFlag{
+			Name:     "redirect-cidr-block",
+			Required: true,
+			Target:   &options.RedirectCIDRBlock,
+		},
+		&cli.Int32Flag{
+			Name:     "xds-api-port",
+			Required: true,
+			Target:   &options.XDSAPIPort,
+		},
+	}
+	return flags, options
 }
 
 type DefaultEnvoyServiceMesh struct {

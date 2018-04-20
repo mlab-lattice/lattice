@@ -3,7 +3,6 @@ package envoy
 import (
 	"fmt"
 
-	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	kubeconstants "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/constants"
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/lifecycle/lattice/bootstrap/bootstrapper"
@@ -25,9 +24,9 @@ type LatticeBootstrapperOptions struct {
 	XDSAPIPort        int32
 }
 
-func NewLatticeBootstrapper(latticeID v1.LatticeID, options *LatticeBootstrapperOptions) *DefaultEnvoylatticeBootstrapper {
+func NewLatticeBootstrapper(namespacePrefix string, options *LatticeBootstrapperOptions) *DefaultEnvoylatticeBootstrapper {
 	return &DefaultEnvoylatticeBootstrapper{
-		latticeID: latticeID,
+		namespacePrefix: namespacePrefix,
 
 		prepareImage:      options.PrepareImage,
 		image:             options.Image,
@@ -70,7 +69,7 @@ func LatticeBootstrapperFlags() (cli.Flags, *LatticeBootstrapperOptions) {
 }
 
 type DefaultEnvoylatticeBootstrapper struct {
-	latticeID v1.LatticeID
+	namespacePrefix string
 
 	prepareImage      string
 	image             string
@@ -80,7 +79,7 @@ type DefaultEnvoylatticeBootstrapper struct {
 }
 
 func (b *DefaultEnvoylatticeBootstrapper) BootstrapLatticeResources(resources *bootstrapper.Resources) {
-	internalNamespace := kubeutil.InternalNamespace(b.latticeID)
+	internalNamespace := kubeutil.InternalNamespace(b.namespacePrefix)
 	xdsAPIName := fmt.Sprintf("service-mesh-envoy-%v", xdsAPI)
 
 	for _, daemonSet := range resources.DaemonSets {
@@ -88,11 +87,13 @@ func (b *DefaultEnvoylatticeBootstrapper) BootstrapLatticeResources(resources *b
 			daemonSet.Spec.Template.Spec.Containers[0].Args = append(
 				daemonSet.Spec.Template.Spec.Containers[0].Args,
 				"--service-mesh", Envoy,
+				"--service-mesh-var", fmt.Sprintf("redirect-cidr-block=%v", b.redirectCIDRBlock),
+				"--service-mesh-var", fmt.Sprintf("xds-api-port=%v", b.xdsAPIPort),
 			)
 		}
 	}
 
-	xdsAPIclusterRoleName := fmt.Sprintf("%v-%v", b.latticeID, xdsAPIName)
+	xdsAPIclusterRoleName := fmt.Sprintf("%v-%v", b.namespacePrefix, xdsAPIName)
 	clusterRole := &rbacv1.ClusterRole{
 		// Include TypeMeta so if this is a dry run it will be printed out
 		TypeMeta: metav1.TypeMeta{
@@ -202,11 +203,9 @@ func (b *DefaultEnvoylatticeBootstrapper) BootstrapLatticeResources(resources *b
 
 	resources.Config.Spec.ServiceMesh = latticev1.ConfigServiceMesh{
 		Envoy: &latticev1.ConfigServiceMeshEnvoy{
-			PrepareImage:      b.prepareImage,
-			Image:             b.image,
-			RedirectCIDRBlock: b.redirectCIDRBlock,
-			XDSAPIImage:       b.xdsAPIImage,
-			XDSAPIPort:        b.xdsAPIPort,
+			PrepareImage: b.prepareImage,
+			Image:        b.image,
+			XDSAPIImage:  b.xdsAPIImage,
 		},
 	}
 }

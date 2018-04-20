@@ -54,8 +54,10 @@ func NewOptions(staticOptions *Options, dynamicConfig *latticev1.ConfigCloudProv
 	return options, nil
 }
 
-func NewCloudProvider(options *Options) *DefaultAWSCloudProvider {
+func NewCloudProvider(namespacePrefix string, options *Options) *DefaultAWSCloudProvider {
 	return &DefaultAWSCloudProvider{
+		namespacePrefix: namespacePrefix,
+
 		region:    options.Region,
 		accountID: options.AccountID,
 		vpcID:     options.VPCID,
@@ -128,6 +130,8 @@ func Flags() (cli.Flags, *Options) {
 }
 
 type DefaultAWSCloudProvider struct {
+	namespacePrefix string
+
 	region    string
 	accountID string
 	vpcID     string

@@ -35,7 +35,8 @@ const (
 	logToStderr         = true
 	loggingLevelDefault = "10"
 
-	latticeID = "lattice"
+	latticeID       = "lattice"
+	namespacePrefix = "lattice"
 )
 
 type hostEntry struct {
@@ -273,7 +274,7 @@ func TestEndpointCreation(t *testing.T) {
 		endpointInformer := informers.Lattice().V1().Endpoints()
 		endpoints := informers.Lattice().V1().Endpoints().Informer().GetStore()
 
-		controller := NewController(dnsmasqConfigPath, hostsFilePath, latticeID, latticeClient, client, endpointInformer)
+		controller := NewController(namespacePrefix, latticeID, dnsmasqConfigPath, hostsFilePath, latticeClient, client, endpointInformer)
 
 		for _, e := range testCase.EndpointsBefore {
 			s := e.DeepCopy()

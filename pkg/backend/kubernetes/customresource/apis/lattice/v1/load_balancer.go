@@ -23,6 +23,7 @@ type LoadBalancer struct {
 }
 
 type LoadBalancerSpec struct {
+	NodePool string `json:"nodePool"`
 }
 
 type LoadBalancerStatus struct {

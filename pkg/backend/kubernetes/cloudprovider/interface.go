@@ -52,13 +52,13 @@ type Options struct {
 	Local *local.Options
 }
 
-func NewCloudProvider(options *Options) (Interface, error) {
+func NewCloudProvider(namespacePrefix string, options *Options) (Interface, error) {
 	if options.AWS != nil {
-		return aws.NewCloudProvider(options.AWS), nil
+		return aws.NewCloudProvider(namespacePrefix, options.AWS), nil
 	}
 
 	if options.Local != nil {
-		return local.NewCloudProvider(options.Local), nil
+		return local.NewCloudProvider(namespacePrefix, options.Local), nil
 	}
 
 	return nil, fmt.Errorf("must provide cloud provider options")

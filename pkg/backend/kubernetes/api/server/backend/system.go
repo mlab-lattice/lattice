@@ -6,7 +6,6 @@ import (
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	kubeconstants "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/constants"
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
-	kubeutil "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/kubernetes"
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -27,7 +26,7 @@ func (kb *KubernetesBackend) CreateSystem(id v1.SystemID, definitionURL string) 
 		},
 	}
 
-	system, err := kb.latticeClient.LatticeV1().Systems(kubeutil.InternalNamespace(kb.latticeID)).Create(system)
+	system, err := kb.latticeClient.LatticeV1().Systems(kb.internalNamespace()).Create(system)
 	if err != nil {
 		if errors.IsAlreadyExists(err) {
 			return nil, v1.NewSystemAlreadyExistsError(id)
@@ -41,7 +40,7 @@ func (kb *KubernetesBackend) CreateSystem(id v1.SystemID, definitionURL string) 
 
 func (kb *KubernetesBackend) ListSystems() ([]v1.System, error) {
 	listOptions := metav1.ListOptions{}
-	systems, err := kb.latticeClient.LatticeV1().Systems(kubeutil.InternalNamespace(kb.latticeID)).List(listOptions)
+	systems, err := kb.latticeClient.LatticeV1().Systems(kb.internalNamespace()).List(listOptions)
 	if err != nil {
 		return nil, err
 	}
@@ -60,7 +59,7 @@ func (kb *KubernetesBackend) ListSystems() ([]v1.System, error) {
 }
 
 func (kb *KubernetesBackend) GetSystem(systemID v1.SystemID) (*v1.System, error) {
-	system, err := kb.latticeClient.LatticeV1().Systems(kubeutil.InternalNamespace(kb.latticeID)).Get(string(systemID), metav1.GetOptions{})
+	system, err := kb.latticeClient.LatticeV1().Systems(kb.internalNamespace()).Get(string(systemID), metav1.GetOptions{})
 	if err != nil {
 		if errors.IsNotFound(err) {
 			return nil, v1.NewInvalidSystemIDError(systemID)
@@ -73,7 +72,7 @@ func (kb *KubernetesBackend) GetSystem(systemID v1.SystemID) (*v1.System, error)
 }
 
 func (kb *KubernetesBackend) DeleteSystem(systemID v1.SystemID) error {
-	err := kb.latticeClient.LatticeV1().Systems(kubeutil.InternalNamespace(kb.latticeID)).Delete(string(systemID), nil)
+	err := kb.latticeClient.LatticeV1().Systems(kb.internalNamespace()).Delete(string(systemID), nil)
 	if err == nil {
 		return nil
 	}

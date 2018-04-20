@@ -44,12 +44,12 @@ func isSystemStatusCurrent(system *latticev1.System) bool {
 }
 
 func (c *Controller) getSystem(namespace string) (*latticev1.System, error) {
-	systemID, err := kubeutil.SystemID(namespace)
+	systemID, err := kubeutil.SystemID(c.namespacePrefix, namespace)
 	if err != nil {
 		return nil, err
 	}
 
-	internalNamespace := kubeutil.InternalNamespace(c.latticeID)
+	internalNamespace := kubeutil.InternalNamespace(c.namespacePrefix)
 	return c.systemLister.Systems(internalNamespace).Get(string(systemID))
 }
 

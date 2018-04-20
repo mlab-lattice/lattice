@@ -44,7 +44,7 @@ func initializeBuildController(ctx Context) {
 
 func initializeComponentBuildController(ctx Context) {
 	go componentbuild.NewController(
-		ctx.LatticeID,
+		ctx.NamespacePrefix,
 		ctx.CloudProviderOptions,
 		ctx.KubeClientBuilder.ClientOrDie(controllerName(ComponentBuildController)),
 		ctx.LatticeClientBuilder.ClientOrDie(controllerName(ComponentBuildController)),
@@ -79,17 +79,20 @@ func initializeLoadBalancerController(ctx Context) {
 
 func initializeNodePoolController(ctx Context) {
 	go nodepool.NewController(
+		ctx.NamespacePrefix,
 		ctx.LatticeID,
 		ctx.CloudProviderOptions,
 		ctx.LatticeClientBuilder.ClientOrDie(controllerName(NodePoolController)),
 		ctx.LatticeInformerFactory.Lattice().V1().Configs(),
 		ctx.LatticeInformerFactory.Lattice().V1().NodePools(),
+		ctx.LatticeInformerFactory.Lattice().V1().Services(),
 	).Run(4, ctx.Stop)
 }
 
 func initializeServiceController(ctx Context) {
 	go service.NewController(
 		ctx.CloudProviderOptions,
+		ctx.NamespacePrefix,
 		ctx.LatticeID,
 		ctx.KubeClientBuilder.ClientOrDie(controllerName(ServiceController)),
 		ctx.LatticeClientBuilder.ClientOrDie(controllerName(ServiceController)),
@@ -123,6 +126,7 @@ func initializeServiceBuildController(ctx Context) {
 
 func initializeSystemController(ctx Context) {
 	go system.NewController(
+		ctx.NamespacePrefix,
 		ctx.LatticeID,
 		ctx.CloudProviderOptions,
 		ctx.ServiceMeshOptions,
@@ -137,7 +141,7 @@ func initializeSystemController(ctx Context) {
 
 func initializeSystemLifecycleController(ctx Context) {
 	go systemlifecycle.NewController(
-		ctx.LatticeID,
+		ctx.NamespacePrefix,
 		ctx.KubeClientBuilder.ClientOrDie(controllerName(SystemLifecycleController)),
 		ctx.LatticeClientBuilder.ClientOrDie(controllerName(SystemLifecycleController)),
 		ctx.LatticeInformerFactory.Lattice().V1().Deploies(),

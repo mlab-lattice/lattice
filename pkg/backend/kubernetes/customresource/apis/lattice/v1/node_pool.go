@@ -86,9 +86,9 @@ func (np *NodePool) TypeDescription() string {
 	return "UNKNOWN"
 }
 
-func (np *NodePool) Description() string {
+func (np *NodePool) Description(namespacePrefix string) string {
 	// TODO: when adding lattice node pools may have to adjust his
-	systemID, err := kubeutil.SystemID(np.Namespace)
+	systemID, err := kubeutil.SystemID(namespacePrefix, np.Namespace)
 	if err != nil {
 		systemID = v1.SystemID(fmt.Sprintf("UNKNOWN (namespace: %v)", np.Namespace))
 	}

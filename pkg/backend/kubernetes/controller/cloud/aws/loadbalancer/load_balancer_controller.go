@@ -28,6 +28,7 @@ import (
 	"k8s.io/client-go/util/workqueue"
 
 	"github.com/golang/glog"
+	"k8s.io/apimachinery/pkg/labels"
 )
 
 var controllerKind = latticev1.SchemeGroupVersion.WithKind("LoadBalancer")
@@ -36,7 +37,8 @@ type Controller struct {
 	syncHandler         func(bKey string) error
 	enqueueLoadBalancer func(cb *latticev1.LoadBalancer)
 
-	latticeID v1.LatticeID
+	namespacePrefix string
+	latticeID       v1.LatticeID
 
 	awsCloudProvider aws.CloudProvider
 	serviceMesh      servicemesh.Interface
@@ -70,6 +72,7 @@ type Controller struct {
 }
 
 func NewController(
+	namespacePrefix string,
 	latticeID v1.LatticeID,
 	awsCloudProvider aws.CloudProvider,
 	terraformModuleRoot string,
@@ -84,6 +87,7 @@ func NewController(
 ) *Controller {
 	sc := &Controller{
 		latticeID:               latticeID,
+		namespacePrefix:         namespacePrefix,
 		kubeClient:              kubeClient,
 		latticeClient:           latticeClient,
 		awsCloudProvider:        awsCloudProvider,
@@ -363,13 +367,17 @@ func (c *Controller) handleNodePoolAdd(obj interface{}) {
 		return
 	}
 
-	loadBalancer, err := c.loadBalancerLister.LoadBalancers(nodePool.Namespace).Get(nodePool.Name)
+	loadBalancers, err := c.loadBalancerLister.LoadBalancers(nodePool.Namespace).List(labels.Everything())
 	if err != nil {
 		// FIXME: handle error
 		return
 	}
 
-	c.enqueueLoadBalancer(loadBalancer)
+	for _, loadBalancer := range loadBalancers {
+		if loadBalancer.Spec.NodePool == nodePool.Name {
+			c.enqueueLoadBalancer(loadBalancer)
+		}
+	}
 }
 
 func (c *Controller) handleNodePoolUpdate(old, cur interface{}) {
@@ -383,13 +391,17 @@ func (c *Controller) handleNodePoolUpdate(old, cur interface{}) {
 		return
 	}
 
-	loadBalancer, err := c.loadBalancerLister.LoadBalancers(curNodePool.Namespace).Get(curNodePool.Name)
+	loadBalancers, err := c.loadBalancerLister.LoadBalancers(curNodePool.Namespace).List(labels.Everything())
 	if err != nil {
 		// FIXME: handle error
 		return
 	}
 
-	c.enqueueLoadBalancer(loadBalancer)
+	for _, loadBalancer := range loadBalancers {
+		if loadBalancer.Spec.NodePool == curNodePool.Name {
+			c.enqueueLoadBalancer(loadBalancer)
+		}
+	}
 }
 
 func (c *Controller) handleNodePoolDelete(obj interface{}) {
@@ -411,13 +423,17 @@ func (c *Controller) handleNodePoolDelete(obj interface{}) {
 		}
 	}
 
-	loadBalancer, err := c.loadBalancerLister.LoadBalancers(nodePool.Namespace).Get(nodePool.Name)
+	loadBalancers, err := c.loadBalancerLister.LoadBalancers(nodePool.Namespace).List(labels.Everything())
 	if err != nil {
 		// FIXME: handle error
 		return
 	}
 
-	c.enqueueLoadBalancer(loadBalancer)
+	for _, loadBalancer := range loadBalancers {
+		if loadBalancer.Spec.NodePool == nodePool.Name {
+			c.enqueueLoadBalancer(loadBalancer)
+		}
+	}
 }
 
 func (c *Controller) handleKubeServiceAdd(obj interface{}) {

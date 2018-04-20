@@ -22,11 +22,13 @@ var (
 	hostsFilePath     string
 	dnsmasqConfigPath string
 	latticeID         string
+	namespacePrefix   string
 )
 
 func init() {
 	flag.StringVar(&kubeconfig, "kubeconfig", "", "path to kubeconfig file")
 	flag.StringVar(&latticeID, "lattice-id", "", "ID of the lattice")
+	flag.StringVar(&namespacePrefix, "namespace-prefix", "", "namespace prefix for the lattice")
 	flag.StringVar(&dnsmasqConfigPath, "dnsmasq-config-path", local.DnsmasqConfigFile, "path to the additional dnsmasq configuration file")
 	flag.StringVar(&hostsFilePath, "hosts-file-path", local.DNSHostsFile, "path to the additional dnsmasq hosts")
 	flag.Parse()
@@ -52,9 +54,10 @@ func main() {
 	glog.V(1).Info("Starting dns controller")
 
 	go controller.NewController(
+		namespacePrefix,
+		v1.LatticeID(latticeID),
 		dnsmasqConfigPath,
 		hostsFilePath,
-		v1.LatticeID(latticeID),
 		versionedLatticeClient,
 		clientset.NewForConfigOrDie(config),
 		latticeInformers.Lattice().V1().Endpoints(),

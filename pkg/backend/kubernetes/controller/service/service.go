@@ -64,35 +64,39 @@ func (c *Controller) syncServiceStatus(
 
 	publicPorts := latticev1.ServiceStatusPublicPorts{}
 	if loadBalancerNeeded {
-		switch loadBalancer.Status.State {
-		case latticev1.LoadBalancerStatePending, latticev1.LoadBalancerStateProvisioning:
+		if loadBalancer == nil {
 			state = latticev1.ServiceStateUpdating
+		} else {
+			switch loadBalancer.Status.State {
+			case latticev1.LoadBalancerStatePending, latticev1.LoadBalancerStateProvisioning:
+				state = latticev1.ServiceStateUpdating
 
-		case latticev1.LoadBalancerStateCreated:
-			for port, portInfo := range loadBalancer.Status.Ports {
-				publicPorts[port] = latticev1.ServiceStatusPublicPort{
-					Address: portInfo.Address,
+			case latticev1.LoadBalancerStateCreated:
+				for port, portInfo := range loadBalancer.Status.Ports {
+					publicPorts[port] = latticev1.ServiceStatusPublicPort{
+						Address: portInfo.Address,
+					}
 				}
-			}
 
-		case latticev1.LoadBalancerStateFailed:
-			// Only create new failure info if we didn't fail above
-			if !failed {
-				now := metav1.Now()
-				failed = true
-				failureReason = reasonLoadBalancerFailed
-				failureMessage = ""
-				failureTime = &now
-			}
+			case latticev1.LoadBalancerStateFailed:
+				// Only create new failure info if we didn't fail above
+				if !failed {
+					now := metav1.Now()
+					failed = true
+					failureReason = reasonLoadBalancerFailed
+					failureMessage = ""
+					failureTime = &now
+				}
 
-		default:
-			err := fmt.Errorf(
-				"LoadBalancer %v/%v has unexpected state %v",
-				loadBalancer.Namespace,
-				loadBalancer.Name,
-				loadBalancer.Status.State,
-			)
-			return nil, err
+			default:
+				err := fmt.Errorf(
+					"LoadBalancer %v/%v has unexpected state %v",
+					loadBalancer.Namespace,
+					loadBalancer.Name,
+					loadBalancer.Status.State,
+				)
+				return nil, err
+			}
 		}
 	}
 

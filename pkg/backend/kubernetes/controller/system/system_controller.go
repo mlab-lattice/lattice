@@ -11,7 +11,6 @@ import (
 	latticeclientset "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/generated/clientset/versioned"
 	latticeinformers "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/generated/informers/externalversions/lattice/v1"
 	latticelisters "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/generated/listers/lattice/v1"
-	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/lifecycle/system/bootstrap/bootstrapper"
 	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/servicemesh"
 	kubeutil "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/kubernetes"
 
@@ -29,6 +28,7 @@ import (
 	"k8s.io/client-go/util/workqueue"
 
 	"github.com/golang/glog"
+	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/cloudprovider"
 )
 
 var controllerKind = latticev1.SchemeGroupVersion.WithKind("System")
@@ -37,10 +37,18 @@ type Controller struct {
 	syncHandler   func(sysKey string) error
 	enqueueSystem func(sysBuild *latticev1.System)
 
-	latticeID v1.LatticeID
+	namespacePrefix string
+	latticeID       v1.LatticeID
 
-	serviceMesh         servicemesh.Interface
-	systemBootstrappers []bootstrapper.Interface
+	// NOTE: you must get a read lock on the configLock for the duration
+	//       of your use of the cloudProvider
+	staticCloudProviderOptions *cloudprovider.Options
+	cloudProvider              cloudprovider.Interface
+
+	// NOTE: you must get a read lock on the configLock for the duration
+	//       of your use of the serviceMesh
+	staticServiceMeshOptions *servicemesh.Options
+	serviceMesh              servicemesh.Interface
 
 	kubeClient    kubeclientset.Interface
 	latticeClient latticeclientset.Interface
@@ -65,8 +73,10 @@ type Controller struct {
 }
 
 func NewController(
+	namespacePrefix string,
 	latticeID v1.LatticeID,
-	systemBootstrappers []bootstrapper.Interface,
+	cloudProviderOptions *cloudprovider.Options,
+	serviceMeshOptions *servicemesh.Options,
 	kubeClient kubeclientset.Interface,
 	latticeClient latticeclientset.Interface,
 	configInformer latticeinformers.ConfigInformer,
@@ -75,12 +85,16 @@ func NewController(
 	namespaceInformer coreinformers.NamespaceInformer,
 ) *Controller {
 	sc := &Controller{
-		latticeID:           latticeID,
-		systemBootstrappers: systemBootstrappers,
-		kubeClient:          kubeClient,
-		latticeClient:       latticeClient,
-		configSetChan:       make(chan struct{}),
-		queue:               workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "system"),
+		namespacePrefix: namespacePrefix,
+		latticeID:       latticeID,
+
+		staticCloudProviderOptions: cloudProviderOptions,
+		staticServiceMeshOptions:   serviceMeshOptions,
+
+		kubeClient:    kubeClient,
+		latticeClient: latticeClient,
+		configSetChan: make(chan struct{}),
+		queue:         workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "system"),
 	}
 
 	sc.enqueueSystem = sc.enqueue
@@ -160,14 +174,19 @@ func (c *Controller) handleConfigAdd(obj interface{}) {
 	defer c.configLock.Unlock()
 	c.config = config.DeepCopy().Spec
 
-	serviceMesh, err := c.newServiceMesh()
+	err := c.newCloudProvider()
 	if err != nil {
 		glog.Errorf("error creating service mesh: %v", err)
 		// FIXME: what to do here?
 		return
 	}
 
-	c.serviceMesh = serviceMesh
+	err = c.newServiceMesh()
+	if err != nil {
+		glog.Errorf("error creating service mesh: %v", err)
+		// FIXME: what to do here?
+		return
+	}
 
 	if !c.configSet {
 		c.configSet = true
@@ -184,28 +203,49 @@ func (c *Controller) handleConfigUpdate(old, cur interface{}) {
 	defer c.configLock.Unlock()
 	c.config = curConfig.DeepCopy().Spec
 
-	serviceMesh, err := c.newServiceMesh()
+	err := c.newCloudProvider()
 	if err != nil {
 		glog.Errorf("error creating service mesh: %v", err)
 		// FIXME: what to do here?
 		return
 	}
 
-	c.serviceMesh = serviceMesh
+	err = c.newServiceMesh()
+	if err != nil {
+		glog.Errorf("error creating service mesh: %v", err)
+		// FIXME: what to do here?
+		return
+	}
 }
 
-func (c *Controller) newServiceMesh() (servicemesh.Interface, error) {
-	serviceMeshOptions, err := servicemesh.OptionsFromConfig(&c.config.ServiceMesh)
+func (c *Controller) newCloudProvider() error {
+	options, err := cloudprovider.OverlayConfigOptions(c.staticCloudProviderOptions, &c.config.CloudProvider)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	serviceMesh, err := servicemesh.NewServiceMesh(serviceMeshOptions)
+	cloudProvider, err := cloudprovider.NewCloudProvider(c.namespacePrefix, options)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	return serviceMesh, nil
+	c.cloudProvider = cloudProvider
+	return nil
+}
+
+func (c *Controller) newServiceMesh() error {
+	options, err := servicemesh.OverlayConfigOptions(c.staticServiceMeshOptions, &c.config.ServiceMesh)
+	if err != nil {
+		return err
+	}
+
+	serviceMesh, err := servicemesh.NewServiceMesh(options)
+	if err != nil {
+		return err
+	}
+
+	c.serviceMesh = serviceMesh
+	return nil
 }
 
 func (c *Controller) handleSystemAdd(obj interface{}) {
@@ -352,14 +392,14 @@ func (c *Controller) handleNamespaceDelete(obj interface{}) {
 }
 
 func (c *Controller) resolveNamespaceSystem(namespace string) *latticev1.System {
-	systemID, err := kubeutil.SystemID(namespace)
+	systemID, err := kubeutil.SystemID(c.namespacePrefix, namespace)
 	if err != nil {
 		// namespace did not conform to the system namespace convention,
 		// so it is not a system namespace and thus we don't care about it
 		return nil
 	}
 
-	system, err := c.systemLister.Systems(kubeutil.InternalNamespace(c.latticeID)).Get(string(systemID))
+	system, err := c.systemLister.Systems(kubeutil.InternalNamespace(c.namespacePrefix)).Get(string(systemID))
 	if err != nil {
 		// FIXME: probably want to send a warning if this wasn't a does not exist
 		return nil
@@ -380,7 +420,7 @@ func (c *Controller) resolveControllerRef(namespace string, controllerRef *metav
 		return nil
 	}
 
-	internalNamespace := kubeutil.InternalNamespace(c.latticeID)
+	internalNamespace := kubeutil.InternalNamespace(c.namespacePrefix)
 	system, err := c.systemLister.Systems(internalNamespace).Get(controllerRef.Name)
 	if err != nil {
 		return nil
@@ -396,7 +436,7 @@ func (c *Controller) resolveControllerRef(namespace string, controllerRef *metav
 }
 
 func (c *Controller) enqueue(sys *latticev1.System) {
-	if sys.Namespace != kubeutil.InternalNamespace(c.latticeID) {
+	if sys.Namespace != kubeutil.InternalNamespace(c.namespacePrefix) {
 		glog.V(4).Infof("System %v/%v is not a part of this lattice, ignoring", sys.Namespace, sys.Name)
 	}
 
