@@ -2,7 +2,11 @@
 
 ## Dependencies
 
-Only [Bazel](https://bazel.build) is required to build lattice binaries. For building lattice docker images, please see the docker image [documentation](docker-images.md).
+Only [Bazel](https://bazel.build) is required to build lattice binaries. On macOS, it's recommended to use the official binary installer: https://docs.bazel.build/versions/master/install-os-x.html#installing-using-binary-installer
+
+Bazel is available via homebrew, but the homebrew install utilizes /private/var/tmp as the root of bazel's cache, and in practice that ends up disappearing requiring all dependencies and targets to be rebuilt. Installing using the binary installer with `--user` will install bazel into `~/bin/bazel` and set its cache root to `~/.cache`.
+
+For building lattice docker images, please see the docker image [documentation](docker-images.md).
 
 ## Make
 
