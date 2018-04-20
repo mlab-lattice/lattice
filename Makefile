@@ -122,7 +122,7 @@ docker.push-image-no-gazelle:
 	# currently only pushing debug images
 	@bazel run \
 		--platforms=@io_bazel_rules_go//go/toolchain:linux_amd64 \
-		--workspace_status_command $(DIR)/scripts/bazel/docker-workspace-status.sh \
+		--workspace_status_command "REGISTRY=$(REGISTRY) CHANNEL=$(CHANNEL) $(DIR)/scripts/bazel/docker-workspace-status.sh" \
 		//docker:push-debug-$(IMAGE)
 
 IMAGE_PUSHES := $(addprefix docker.push-image-,$(DOCKER_IMAGES))
