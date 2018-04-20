@@ -3,9 +3,11 @@ package local
 import (
 	"fmt"
 	"os/user"
+	"path/filepath"
 	"time"
 
 	"github.com/mlab-lattice/lattice/pkg/api/client/rest"
+	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	kubeconstants "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/constants"
 	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/servicemesh"
 	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/minikube"
@@ -20,7 +22,6 @@ import (
 
 	clientset "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
-	"path/filepath"
 )
 
 const (
@@ -51,31 +52,24 @@ var (
 	}
 )
 
-type LatticeProvisionerOptions struct {
-}
-
 type DefaultLocalLatticeProvisioner struct {
-	latticeContainerRegistry   string
-	latticeContainerRepoPrefix string
-	mec                        *minikube.ExecContext
+	mec *minikube.ExecContext
 }
 
-func NewLatticeProvisioner(latticeContainerRegistry, latticeContainerRepoPrefix, workingDir string, options *LatticeProvisionerOptions) (*DefaultLocalLatticeProvisioner, error) {
+func NewLatticeProvisioner(workingDir string) (*DefaultLocalLatticeProvisioner, error) {
 	mec, err := minikube.NewMinikubeExecContext(fmt.Sprintf("%v/logs", workingDir))
 	if err != nil {
 		return nil, err
 	}
 
 	provisioner := &DefaultLocalLatticeProvisioner{
-		latticeContainerRegistry:   latticeContainerRegistry,
-		latticeContainerRepoPrefix: latticeContainerRepoPrefix,
 		mec: mec,
 	}
 	return provisioner, nil
 }
 
-func (p *DefaultLocalLatticeProvisioner) Provision(latticeID string) (string, error) {
-	prefixedName := clusterNamePrefixMinikube + latticeID
+func (p *DefaultLocalLatticeProvisioner) Provision(id v1.LatticeID, containerChannel string) (string, error) {
+	prefixedName := clusterNamePrefixMinikube + string(id)
 	result, logFilename, err := p.mec.Start(prefixedName)
 	if err != nil {
 		return "", err
@@ -88,12 +82,12 @@ func (p *DefaultLocalLatticeProvisioner) Provision(latticeID string) (string, er
 		return "", err
 	}
 
-	address, err := p.address(latticeID)
+	address, err := p.address(id)
 	if err != nil {
 		return "", err
 	}
 
-	err = p.bootstrap(address, latticeID)
+	err = p.bootstrap(containerChannel, address, id)
 	if err != nil {
 		return "", err
 	}
@@ -112,8 +106,9 @@ func (p *DefaultLocalLatticeProvisioner) Provision(latticeID string) (string, er
 	return address, nil
 }
 
-func (p *DefaultLocalLatticeProvisioner) address(latticeID string) (string, error) {
-	address, err := p.mec.IP(clusterNamePrefixMinikube + latticeID)
+func (p *DefaultLocalLatticeProvisioner) address(id v1.LatticeID) (string, error) {
+	prefixedName := clusterNamePrefixMinikube + string(id)
+	address, err := p.mec.IP(prefixedName)
 	if err != nil {
 		return "", err
 	}
@@ -121,7 +116,7 @@ func (p *DefaultLocalLatticeProvisioner) address(latticeID string) (string, erro
 	return fmt.Sprintf("http://%v", address), nil
 }
 
-func (p *DefaultLocalLatticeProvisioner) bootstrap(address string, name string) error {
+func (p *DefaultLocalLatticeProvisioner) bootstrap(containerChannel, address string, id v1.LatticeID) error {
 	fmt.Println("Bootstrapping")
 	usr, err := user.Current()
 	if err != nil {
@@ -201,28 +196,28 @@ func (p *DefaultLocalLatticeProvisioner) bootstrap(address string, name string) 
 					Containers: []corev1.Container{
 						{
 							Name:  "bootstrap-lattice",
-							Image: p.getLatticeContainerImage("latticectl"),
+							Image: getLatticeContainerImage(containerChannel, "latticectl"),
 							Args: append(
 								bootstrapArgs,
 								[]string{
 									"kubernetes:bootstrap",
 									"--lattice-id", "local",
-									"--controller-manager-var", fmt.Sprintf("image=%v", p.getLatticeContainerImage("kubernetes-lattice-controller-manager")),
+									"--controller-manager-var", fmt.Sprintf("image=%v", getLatticeContainerImage(containerChannel, "kubernetes-lattice-controller-manager")),
 									"--controller-manager-var", "args=-v=5",
-									"--api-var", fmt.Sprintf("image=%v", p.getLatticeContainerImage("kubernetes-api-server-rest")),
-									"--component-builder-var", fmt.Sprintf("image=%v", p.getLatticeContainerImage("kubernetes-component-builder")),
+									"--api-var", fmt.Sprintf("image=%v", getLatticeContainerImage(containerChannel, "kubernetes-api-server-rest")),
+									"--component-builder-var", fmt.Sprintf("image=%v", getLatticeContainerImage(containerChannel, "kubernetes-component-builder")),
 									"--component-builder-var", "docker-api-version=1.35",
 									"--component-build-docker-artifact-var", "registry=lattice-local",
 									"--component-build-docker-artifact-var", "repository-per-image=true",
 									"--component-build-docker-artifact-var", "push=false",
 									"--service-mesh", servicemesh.Envoy,
-									"--service-mesh-var", fmt.Sprintf("prepare-image=%v", p.getLatticeContainerImage("kubernetes-envoy-prepare")),
-									"--service-mesh-var", fmt.Sprintf("xds-api-image=%v", p.getLatticeContainerImage("kubernetes-envoy-xds-api-rest-per-node")),
+									"--service-mesh-var", fmt.Sprintf("prepare-image=%v", getLatticeContainerImage(containerChannel, "kubernetes-envoy-prepare")),
+									"--service-mesh-var", fmt.Sprintf("xds-api-image=%v", getLatticeContainerImage(containerChannel, "kubernetes-envoy-xds-api-rest-per-node")),
 									"--service-mesh-var", "redirect-cidr-block=172.16.0.0/16",
 									"--cloud-provider", "local",
 									"--cloud-provider-var", "IP=" + address,
-									"--cloud-provider-var", fmt.Sprintf("dns-var=controller-image=%v", p.getLatticeContainerImage(DockerImageDNSController)),
-									"--cloud-provider-var", fmt.Sprintf("dns-var=dnsmasq-nanny-image=%v", DockerImageDnsmasqNanny),
+									"--cloud-provider-var", fmt.Sprintf("dns-var=controller-image=%v", getLatticeContainerImage(containerChannel, dockerImageDNSController)),
+									"--cloud-provider-var", fmt.Sprintf("dns-var=dnsmasq-nanny-image=%v", dockerImageDnsmasqNanny),
 								}...,
 							),
 						},
@@ -311,6 +306,6 @@ func (p *DefaultLocalLatticeProvisioner) Deprovision(name string, force bool) er
 	return result.Wait()
 }
 
-func (p *DefaultLocalLatticeProvisioner) getLatticeContainerImage(image string) string {
-	return fmt.Sprintf("%v/%v-%v", p.latticeContainerRegistry, p.latticeContainerRepoPrefix, image)
+func getLatticeContainerImage(channel, image string) string {
+	return fmt.Sprintf("%v/%v", channel, image)
 }

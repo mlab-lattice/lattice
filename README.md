@@ -1,2 +1,3 @@
-# system
-packages and binaries for running Lattice systems
+# lattice
+
+Please read the [development documentation](docs/development).

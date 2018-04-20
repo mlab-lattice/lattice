@@ -38,7 +38,7 @@ func (c *DownCommand) Base() (*latticectl.BaseCommand, error) {
 }
 
 func Down(name, workDirectory string) {
-	provisioner, err := local.NewLatticeProvisioner("", "", workDirectory, nil)
+	provisioner, err := local.NewLatticeProvisioner(workDirectory)
 	if err != nil {
 		log.Fatal(err)
 	}
