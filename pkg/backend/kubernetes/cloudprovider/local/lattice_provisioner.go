@@ -69,7 +69,7 @@ func NewLatticeProvisioner(workingDir string) (*DefaultLocalLatticeProvisioner, 
 }
 
 func (p *DefaultLocalLatticeProvisioner) Provision(id v1.LatticeID, containerChannel string) (string, error) {
-	prefixedName := clusterNamePrefixMinikube + id
+	prefixedName := clusterNamePrefixMinikube + string(id)
 	result, logFilename, err := p.mec.Start(prefixedName)
 	if err != nil {
 		return "", err
@@ -106,8 +106,9 @@ func (p *DefaultLocalLatticeProvisioner) Provision(id v1.LatticeID, containerCha
 	return address, nil
 }
 
-func (p *DefaultLocalLatticeProvisioner) address(latticeID v1.LatticeID) (string, error) {
-	address, err := p.mec.IP(clusterNamePrefixMinikube + latticeID)
+func (p *DefaultLocalLatticeProvisioner) address(id v1.LatticeID) (string, error) {
+	prefixedName := clusterNamePrefixMinikube + string(id)
+	address, err := p.mec.IP(prefixedName)
 	if err != nil {
 		return "", err
 	}

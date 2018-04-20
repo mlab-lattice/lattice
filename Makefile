@@ -55,11 +55,11 @@ test.verbose: gazelle
 # e2e testing
 .PHONY: e2e-test
 e2e-test: e2e-test.build
-	@$(DIR)/bazel-bin/test/e2e/darwin_amd64_stripped/go_default_test -cluster-url $(CLUSTER_URL)
+	@$(DIR)/bazel-bin/e2e/test/darwin_amd64_stripped/go_default_test -cluster-url $(CLUSTER_URL)
 
 .PHONY: e2e-test.build
 e2e-test.build: gazelle
-	@bazel build //test/e2e/...
+	@bazel build //e2e/test/...
 
 
 # formatting/linting
@@ -132,7 +132,7 @@ $(IMAGE_PUSHES):
 IMAGE_PUSHES_NO_GAZELLE := $(addprefix docker.push-no-gazelle.,$(DOCKER_IMAGES))
 .PHONY: $(IMAGE_PUSHES_NO_GAZELLE)
 $(IMAGE_PUSHES_NO_GAZELLE):
-	@$(MAKE) docker.push-image-no-gazelle IMAGE=$(patsubst docker.push-no-gazelle.%,%,$@)
+	@$(MAKE) docker.push-no-gazelle IMAGE=$(patsubst docker.push-no-gazelle.%,%,$@)
 
 .PHONY: docker.push.all
 docker.push.all: gazelle
@@ -159,7 +159,7 @@ $(STRIPPED_IMAGE_PUSHES):
 STRIPPED_IMAGE_PUSHES_NO_GAZELLE := $(addprefix docker.push-stripped-no-gazelle.,$(DOCKER_IMAGES))
 .PHONY: $(STRIPPED_IMAGE_PUSHES_NO_GAZELLE)
 $(STRIPPED_IMAGE_PUSHES_NO_GAZELLE):
-	@$(MAKE) docker.push-stripped-image-no-gazelle IMAGE=$(patsubst docker.push-stripped-no-gazelle.%,%,$@)
+	@$(MAKE) docker.push-stripped-no-gazelle IMAGE=$(patsubst docker.push-stripped-no-gazelle.%,%,$@)
 
 .PHONY: docker.push-stripped.all
 docker.push-stripped.all: gazelle
