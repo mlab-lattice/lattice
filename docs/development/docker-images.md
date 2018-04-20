@@ -134,7 +134,7 @@ or
 $ make docker.push-stripped.all
 ```
 
-The stripped images are labeled in the following format: `<REGISTRY>/<REPOSITORY-PREFIX>/<CHANNEL>/<IMAGE>-stripped`, for example `gcr.io/lattice-dev/testing/latticectl-stripped`.
+The stripped images are labeled in the following format: `<REGISTRY>/<REPOSITORY-PREFIX>/<CHANNEL>/stripped/<IMAGE>`, for example `gcr.io/lattice-dev/testing/stripped/latticectl`.
 
 ### Auth
 

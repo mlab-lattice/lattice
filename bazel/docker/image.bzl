@@ -69,6 +69,6 @@ def lattice_go_container_image(name, base_image, path):
       format = "Docker",
       image = ":" + stripped_name,
       registry = "{REGISTRY}",
-      repository = "{REPOSITORY_PREFIX}/{CHANNEL}/" + stripped_name,
+      repository = "{REPOSITORY_PREFIX}/{CHANNEL}/stripped/" + name,
       stamp = True,
   )

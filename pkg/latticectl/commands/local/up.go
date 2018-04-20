@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 
+	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/cloudprovider/local"
 	"github.com/mlab-lattice/lattice/pkg/latticectl"
 	"github.com/mlab-lattice/lattice/pkg/util/cli"
@@ -13,8 +14,7 @@ type UpCommand struct {
 }
 
 func (c *UpCommand) Base() (*latticectl.BaseCommand, error) {
-	var name string
-	var registry string
+	var id string
 	var channel string
 	var workDirectory string
 
@@ -22,18 +22,13 @@ func (c *UpCommand) Base() (*latticectl.BaseCommand, error) {
 		Name: "up",
 		Flags: cli.Flags{
 			&cli.StringFlag{
-				Name:    "name",
-				Default: "default",
-				Target:  &name,
-			},
-			&cli.StringFlag{
-				Name:    "container-registry",
-				Default: "gcr.io/lattice-dev",
-				Target:  &registry,
+				Name:    "id",
+				Default: "lattice",
+				Target:  &id,
 			},
 			&cli.StringFlag{
 				Name:    "container-channel",
-				Default: "stable-debug-",
+				Default: "gcr.io/lattice-dev/alpha",
 				Target:  &channel,
 			},
 			&cli.StringFlag{
@@ -43,20 +38,20 @@ func (c *UpCommand) Base() (*latticectl.BaseCommand, error) {
 			},
 		},
 		Run: func(lctl *latticectl.Latticectl, args []string) {
-			Up(name, registry, channel, workDirectory)
+			Up(v1.LatticeID(id), channel, workDirectory)
 		},
 	}
 
 	return cmd.Base()
 }
 
-func Up(name, registry, channel, workDirectory string) {
-	provisioner, err := local.NewLatticeProvisioner(registry, channel, workDirectory, nil)
+func Up(id v1.LatticeID, containerChannel, workDirectory string) {
+	provisioner, err := local.NewLatticeProvisioner(workDirectory)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	address, err := provisioner.Provision(name)
+	address, err := provisioner.Provision(id, containerChannel)
 	if err != nil {
 		log.Fatal(err)
 	}

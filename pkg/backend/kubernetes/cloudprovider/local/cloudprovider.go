@@ -13,8 +13,8 @@ import (
 const (
 	workDirectoryVolumeHostPathPrefix = "/data/component-builder"
 
-	DockerImageDNSController = "kubernetes-local-dns-controller"
-	DockerImageDnsmasqNanny  = "gcr.io/google_containers/k8s-dns-dnsmasq-nanny-amd64:1.14.7"
+	dockerImageDNSController = "kubernetes-local-dns-controller"
+	dockerImageDnsmasqNanny  = "gcr.io/google_containers/k8s-dns-dnsmasq-nanny-amd64:1.14.7"
 
 	// This is the default IP for kube-dns
 	localDNSServerIP = "10.96.0.53"
