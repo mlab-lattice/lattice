@@ -36,6 +36,8 @@ func (f *genericInformer) Lister() cache.GenericLister {
 func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource) (GenericInformer, error) {
 	switch resource {
 	// Group=lattice.mlab.com, Version=v1
+	case v1.SchemeGroupVersion.WithResource("addresses"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Lattice().V1().Addresses().Informer()}, nil
 	case v1.SchemeGroupVersion.WithResource("builds"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Lattice().V1().Builds().Informer()}, nil
 	case v1.SchemeGroupVersion.WithResource("componentbuilds"):
@@ -52,8 +54,6 @@ func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Lattice().V1().NodePools().Informer()}, nil
 	case v1.SchemeGroupVersion.WithResource("services"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Lattice().V1().Services().Informer()}, nil
-	case v1.SchemeGroupVersion.WithResource("serviceaddresses"):
-		return &genericInformer{resource: resource.GroupResource(), informer: f.Lattice().V1().ServiceAddresses().Informer()}, nil
 	case v1.SchemeGroupVersion.WithResource("servicebuilds"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Lattice().V1().ServiceBuilds().Informer()}, nil
 	case v1.SchemeGroupVersion.WithResource("systems"):

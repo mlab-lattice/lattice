@@ -561,7 +561,7 @@ func (sm *DefaultEnvoyServiceMesh) envoyContainers(service *latticev1.Service) (
 	return prepareEnvoy, envoy, nil
 }
 
-func (sm *DefaultEnvoyServiceMesh) GetEndpointSpec(address *latticev1.ServiceAddress) (*latticev1.EndpointSpec, error) {
+func (sm *DefaultEnvoyServiceMesh) GetEndpointSpec(address *latticev1.Address) (*latticev1.EndpointSpec, error) {
 	ip, _, err := net.ParseCIDR(sm.redirectCIDRBlock)
 	if err != nil {
 		return nil, err

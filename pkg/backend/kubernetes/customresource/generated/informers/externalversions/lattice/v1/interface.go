@@ -8,6 +8,8 @@ import (
 
 // Interface provides access to all the informers in this group version.
 type Interface interface {
+	// Addresses returns a AddressInformer.
+	Addresses() AddressInformer
 	// Builds returns a BuildInformer.
 	Builds() BuildInformer
 	// ComponentBuilds returns a ComponentBuildInformer.
@@ -24,8 +26,6 @@ type Interface interface {
 	NodePools() NodePoolInformer
 	// Services returns a ServiceInformer.
 	Services() ServiceInformer
-	// ServiceAddresses returns a ServiceAddressInformer.
-	ServiceAddresses() ServiceAddressInformer
 	// ServiceBuilds returns a ServiceBuildInformer.
 	ServiceBuilds() ServiceBuildInformer
 	// Systems returns a SystemInformer.
@@ -43,6 +43,11 @@ type version struct {
 // New returns a new Interface.
 func New(f internalinterfaces.SharedInformerFactory, namespace string, tweakListOptions internalinterfaces.TweakListOptionsFunc) Interface {
 	return &version{factory: f, namespace: namespace, tweakListOptions: tweakListOptions}
+}
+
+// Addresses returns a AddressInformer.
+func (v *version) Addresses() AddressInformer {
+	return &addressInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
 }
 
 // Builds returns a BuildInformer.
@@ -83,11 +88,6 @@ func (v *version) NodePools() NodePoolInformer {
 // Services returns a ServiceInformer.
 func (v *version) Services() ServiceInformer {
 	return &serviceInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
-}
-
-// ServiceAddresses returns a ServiceAddressInformer.
-func (v *version) ServiceAddresses() ServiceAddressInformer {
-	return &serviceAddressInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
 }
 
 // ServiceBuilds returns a ServiceBuildInformer.

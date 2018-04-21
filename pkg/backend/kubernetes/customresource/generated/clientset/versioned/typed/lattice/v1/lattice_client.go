@@ -9,6 +9,7 @@ import (
 
 type LatticeV1Interface interface {
 	RESTClient() rest.Interface
+	AddressesGetter
 	BuildsGetter
 	ComponentBuildsGetter
 	ConfigsGetter
@@ -17,7 +18,6 @@ type LatticeV1Interface interface {
 	LoadBalancersGetter
 	NodePoolsGetter
 	ServicesGetter
-	ServiceAddressesGetter
 	ServiceBuildsGetter
 	SystemsGetter
 	TeardownsGetter
@@ -26,6 +26,10 @@ type LatticeV1Interface interface {
 // LatticeV1Client is used to interact with features provided by the lattice.mlab.com group.
 type LatticeV1Client struct {
 	restClient rest.Interface
+}
+
+func (c *LatticeV1Client) Addresses(namespace string) AddressInterface {
+	return newAddresses(c, namespace)
 }
 
 func (c *LatticeV1Client) Builds(namespace string) BuildInterface {
@@ -58,10 +62,6 @@ func (c *LatticeV1Client) NodePools(namespace string) NodePoolInterface {
 
 func (c *LatticeV1Client) Services(namespace string) ServiceInterface {
 	return newServices(c, namespace)
-}
-
-func (c *LatticeV1Client) ServiceAddresses(namespace string) ServiceAddressInterface {
-	return newServiceAddresses(c, namespace)
 }
 
 func (c *LatticeV1Client) ServiceBuilds(namespace string) ServiceBuildInterface {

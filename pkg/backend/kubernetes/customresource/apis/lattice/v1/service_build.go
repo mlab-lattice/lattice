@@ -8,10 +8,9 @@ import (
 )
 
 const (
-	ResourceSingularServiceBuild  = "servicebuild"
-	ResourcePluralServiceBuild    = "servicebuilds"
-	ResourceShortNameServiceBuild = "lsvcb"
-	ResourceScopeServiceBuild     = apiextensionsv1beta1.NamespaceScoped
+	ResourceSingularServiceBuild = "servicebuild"
+	ResourcePluralServiceBuild   = "servicebuilds"
+	ResourceScopeServiceBuild    = apiextensionsv1beta1.NamespaceScoped
 )
 
 // +genclient

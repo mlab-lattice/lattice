@@ -8,10 +8,9 @@ import (
 )
 
 const (
-	ResourceSingularEndpoint  = "endpoint"
-	ResourcePluralEndpoint    = "endpoints"
-	ResourceShortNameEndpoint = "lep"
-	ResourceScopeEndpoint     = apiextensionsv1beta1.NamespaceScoped
+	ResourceSingularEndpoint = "endpoint"
+	ResourcePluralEndpoint   = "endpoints"
+	ResourceScopeEndpoint    = apiextensionsv1beta1.NamespaceScoped
 )
 
 // +genclient

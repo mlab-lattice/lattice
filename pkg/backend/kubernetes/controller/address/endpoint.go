@@ -1,4 +1,4 @@
-package serviceaddress
+package address
 
 import (
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
@@ -9,7 +9,7 @@ import (
 	"reflect"
 )
 
-func (c *Controller) syncEndpoint(address *latticev1.ServiceAddress) (*latticev1.Endpoint, error) {
+func (c *Controller) syncEndpoint(address *latticev1.Address) (*latticev1.Endpoint, error) {
 	endpoint, err := c.endpointLister.Endpoints(address.Namespace).Get(address.Name)
 	if err != nil {
 		if errors.IsNotFound(err) {
@@ -28,7 +28,7 @@ func (c *Controller) syncEndpoint(address *latticev1.ServiceAddress) (*latticev1
 }
 
 func (c *Controller) syncExistingEndpoint(
-	address *latticev1.ServiceAddress,
+	address *latticev1.Address,
 	endpoint *latticev1.Endpoint,
 ) (*latticev1.Endpoint, error) {
 	spec, err := c.serviceMesh.GetEndpointSpec(address)
@@ -54,7 +54,7 @@ func (c *Controller) updateEndpointSpec(
 	return c.latticeClient.LatticeV1().Endpoints(endpoint.Namespace).Update(endpoint)
 }
 
-func (c *Controller) createNewEndpoint(address *latticev1.ServiceAddress) (*latticev1.Endpoint, error) {
+func (c *Controller) createNewEndpoint(address *latticev1.Address) (*latticev1.Endpoint, error) {
 	endpoint, err := c.newEndpoint(address)
 	if err != nil {
 		return nil, err
@@ -69,7 +69,7 @@ func (c *Controller) createNewEndpoint(address *latticev1.ServiceAddress) (*latt
 	return endpoint, nil
 }
 
-func (c *Controller) newEndpoint(address *latticev1.ServiceAddress) (*latticev1.Endpoint, error) {
+func (c *Controller) newEndpoint(address *latticev1.Address) (*latticev1.Endpoint, error) {
 	spec, err := c.serviceMesh.GetEndpointSpec(address)
 	if err != nil {
 		return nil, err

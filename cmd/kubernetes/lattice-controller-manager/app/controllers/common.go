@@ -13,12 +13,12 @@ import (
 )
 
 const (
+	AddressController         = "address"
 	BuildController           = "build"
 	ComponentBuildController  = "componentbuild"
 	EndpointController        = "endpoint"
 	LoadBalancerController    = "loadbalancer"
 	NodePoolController        = "nodepool"
-	ServiceAddressController  = "serviceaddress"
 	ServiceBuildController    = "servicebuild"
 	ServiceController         = "service"
 	SystemController          = "system"

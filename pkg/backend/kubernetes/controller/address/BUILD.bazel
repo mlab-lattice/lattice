@@ -3,11 +3,11 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library")
 go_library(
     name = "go_default_library",
     srcs = [
+        "address.go",
+        "address_controller.go",
         "endpoint.go",
-        "service_address.go",
-        "service_address_controller.go",
     ],
-    importpath = "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/controller/serviceaddress",
+    importpath = "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/controller/address",
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/backend/kubernetes/customresource/apis/lattice/v1:go_default_library",

@@ -1,4 +1,4 @@
-package serviceaddress
+package address
 
 import (
 	"fmt"
@@ -8,10 +8,10 @@ import (
 )
 
 func (c *Controller) syncServiceAddressStatus(
-	address *latticev1.ServiceAddress,
+	address *latticev1.Address,
 	endpoint *latticev1.Endpoint,
-) (*latticev1.ServiceAddress, error) {
-	var state latticev1.ServiceAddressState
+) (*latticev1.Address, error) {
+	var state latticev1.AddressState
 	switch endpoint.Status.State {
 	case latticev1.EndpointStatePending:
 		state = latticev1.ServiceAddressStatePending
@@ -30,10 +30,10 @@ func (c *Controller) syncServiceAddressStatus(
 }
 
 func (c *Controller) updateServiceStatus(
-	address *latticev1.ServiceAddress,
-	state latticev1.ServiceAddressState,
-) (*latticev1.ServiceAddress, error) {
-	status := latticev1.ServiceAddressStatus{
+	address *latticev1.Address,
+	state latticev1.AddressState,
+) (*latticev1.Address, error) {
+	status := latticev1.AddressStatus{
 		State:              state,
 		ObservedGeneration: address.Generation,
 	}
@@ -46,7 +46,7 @@ func (c *Controller) updateServiceStatus(
 	address = address.DeepCopy()
 	address.Status = status
 
-	return c.latticeClient.LatticeV1().ServiceAddresses(address.Namespace).Update(address)
+	return c.latticeClient.LatticeV1().Addresses(address.Namespace).Update(address)
 
 	// TODO: switch to this when https://github.com/kubernetes/kubernetes/issues/38113 is merged
 	// TODO: also watch https://github.com/kubernetes/kubernetes/pull/55168

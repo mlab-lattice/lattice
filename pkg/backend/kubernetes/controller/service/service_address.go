@@ -13,7 +13,7 @@ import (
 	"github.com/golang/glog"
 )
 
-func (c *Controller) syncServiceAddress(service *latticev1.Service) (*latticev1.ServiceAddress, error) {
+func (c *Controller) syncServiceAddress(service *latticev1.Service) (*latticev1.Address, error) {
 	serviceAddress, err := c.serviceAddressLister.ServiceAddresses(service.Namespace).Get(service.Name)
 	if err != nil {
 		if errors.IsNotFound(err) {
@@ -44,8 +44,8 @@ func (c *Controller) syncServiceAddress(service *latticev1.Service) (*latticev1.
 
 func (c *Controller) syncExistingServiceAddress(
 	service *latticev1.Service,
-	address *latticev1.ServiceAddress,
-) (*latticev1.ServiceAddress, error) {
+	address *latticev1.Address,
+) (*latticev1.Address, error) {
 	spec, err := c.serviceAddressSpec(service)
 	if err != nil {
 		return nil, err
@@ -60,9 +60,9 @@ func (c *Controller) syncExistingServiceAddress(
 }
 
 func (c *Controller) updateServiceAddressSpec(
-	address *latticev1.ServiceAddress,
-	spec latticev1.ServiceAddressSpec,
-) (*latticev1.ServiceAddress, error) {
+	address *latticev1.Address,
+	spec latticev1.AddressSpec,
+) (*latticev1.Address, error) {
 	if reflect.DeepEqual(address.Spec, spec) {
 		return address, nil
 	}
@@ -74,7 +74,7 @@ func (c *Controller) updateServiceAddressSpec(
 	return c.latticeClient.LatticeV1().ServiceAddresses(address.Namespace).Update(address)
 }
 
-func (c *Controller) createNewServiceAddress(service *latticev1.Service) (*latticev1.ServiceAddress, error) {
+func (c *Controller) createNewServiceAddress(service *latticev1.Service) (*latticev1.Address, error) {
 	serviceAddress, err := c.newServiceAddress(service)
 	if err != nil {
 		return nil, err
@@ -83,18 +83,18 @@ func (c *Controller) createNewServiceAddress(service *latticev1.Service) (*latti
 	return c.latticeClient.LatticeV1().ServiceAddresses(service.Namespace).Create(serviceAddress)
 }
 
-func (c *Controller) newServiceAddress(service *latticev1.Service) (*latticev1.ServiceAddress, error) {
+func (c *Controller) newServiceAddress(service *latticev1.Service) (*latticev1.Address, error) {
 	spec, err := c.serviceAddressSpec(service)
 	if err != nil {
 		return nil, err
 	}
 
-	serviceAddress := &latticev1.ServiceAddress{
+	serviceAddress := &latticev1.Address{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: service.Name,
 		},
 		Spec: spec,
-		Status: latticev1.ServiceAddressStatus{
+		Status: latticev1.AddressStatus{
 			State: latticev1.ServiceAddressStatePending,
 		},
 	}
@@ -102,10 +102,10 @@ func (c *Controller) newServiceAddress(service *latticev1.Service) (*latticev1.S
 	return serviceAddress, nil
 }
 
-func (c *Controller) serviceAddressSpec(service *latticev1.Service) (latticev1.ServiceAddressSpec, error) {
+func (c *Controller) serviceAddressSpec(service *latticev1.Service) (latticev1.AddressSpec, error) {
 	path, err := service.PathLabel()
 	if err != nil {
-		return latticev1.ServiceAddressSpec{}, err
+		return latticev1.AddressSpec{}, err
 	}
 
 	endpointGroups := map[string]latticev1.ServiceAddressEndpointGroup{
@@ -121,7 +121,7 @@ func (c *Controller) serviceAddressSpec(service *latticev1.Service) (latticev1.S
 			case block.ProtocolHTTP:
 				httpPortConfig, err := c.serviceAddressHTTPPort(service, componentPort)
 				if err != nil {
-					return latticev1.ServiceAddressSpec{}, err
+					return latticev1.AddressSpec{}, err
 				}
 
 				ports[componentPort.Port] = latticev1.ServiceAddressPort{
@@ -129,12 +129,12 @@ func (c *Controller) serviceAddressSpec(service *latticev1.Service) (latticev1.S
 				}
 
 			default:
-				return latticev1.ServiceAddressSpec{}, fmt.Errorf("unsupported protocol %v", componentPort.Protocol)
+				return latticev1.AddressSpec{}, fmt.Errorf("unsupported protocol %v", componentPort.Protocol)
 			}
 		}
 	}
 
-	spec := latticev1.ServiceAddressSpec{
+	spec := latticev1.AddressSpec{
 		Path:           path,
 		EndpointGroups: endpointGroups,
 		Ports:          ports,

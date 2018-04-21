@@ -3,13 +3,13 @@ package controllers
 import (
 	"fmt"
 
+	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/controller/address"
 	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/controller/build"
 	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/controller/componentbuild"
 	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/controller/endpoint"
 	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/controller/loadbalancer"
 	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/controller/nodepool"
 	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/controller/service"
-	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/controller/serviceaddress"
 	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/controller/servicebuild"
 	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/controller/system"
 	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/controller/systemlifecycle"
@@ -18,13 +18,13 @@ import (
 type Initializer func(context Context)
 
 var Initializers = map[string]Initializer{
+	AddressController:         initializeAddressController,
 	BuildController:           initializeBuildController,
 	ComponentBuildController:  initializeComponentBuildController,
 	EndpointController:        initializeEndpointController,
 	LoadBalancerController:    initializeLoadBalancerController,
 	NodePoolController:        initializeNodePoolController,
 	ServiceController:         initializeServiceController,
-	ServiceAddressController:  initializeServiceAddressController,
 	ServiceBuildController:    initializeServiceBuildController,
 	SystemController:          initializeSystemController,
 	SystemLifecycleController: initializeSystemLifecycleController,
@@ -32,6 +32,16 @@ var Initializers = map[string]Initializer{
 
 func controllerName(name string) string {
 	return fmt.Sprintf("lattice-controller-%v", name)
+}
+
+func initializeAddressController(ctx Context) {
+	go address.NewController(
+		ctx.ServiceMeshOptions,
+		ctx.LatticeClientBuilder.ClientOrDie(controllerName(AddressController)),
+		ctx.LatticeInformerFactory.Lattice().V1().Configs(),
+		ctx.LatticeInformerFactory.Lattice().V1().ServiceAddresses(),
+		ctx.LatticeInformerFactory.Lattice().V1().Endpoints(),
+	).Run(4, ctx.Stop)
 }
 
 func initializeBuildController(ctx Context) {
@@ -91,9 +101,10 @@ func initializeNodePoolController(ctx Context) {
 
 func initializeServiceController(ctx Context) {
 	go service.NewController(
-		ctx.CloudProviderOptions,
 		ctx.NamespacePrefix,
 		ctx.LatticeID,
+		ctx.CloudProviderOptions,
+		ctx.ServiceMeshOptions,
 		ctx.KubeClientBuilder.ClientOrDie(controllerName(ServiceController)),
 		ctx.LatticeClientBuilder.ClientOrDie(controllerName(ServiceController)),
 		ctx.LatticeInformerFactory.Lattice().V1().Configs(),
@@ -104,15 +115,6 @@ func initializeServiceController(ctx Context) {
 		ctx.KubeInformerFactory.Core().V1().Services(),
 		ctx.LatticeInformerFactory.Lattice().V1().ServiceAddresses(),
 		ctx.LatticeInformerFactory.Lattice().V1().LoadBalancers(),
-	).Run(4, ctx.Stop)
-}
-
-func initializeServiceAddressController(ctx Context) {
-	go serviceaddress.NewController(
-		ctx.LatticeClientBuilder.ClientOrDie(controllerName(ServiceAddressController)),
-		ctx.LatticeInformerFactory.Lattice().V1().Configs(),
-		ctx.LatticeInformerFactory.Lattice().V1().ServiceAddresses(),
-		ctx.LatticeInformerFactory.Lattice().V1().Endpoints(),
 	).Run(4, ctx.Stop)
 }
 

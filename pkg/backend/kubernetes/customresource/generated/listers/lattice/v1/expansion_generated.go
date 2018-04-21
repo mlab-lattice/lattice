@@ -2,6 +2,14 @@
 
 package v1
 
+// AddressListerExpansion allows custom methods to be added to
+// AddressLister.
+type AddressListerExpansion interface{}
+
+// AddressNamespaceListerExpansion allows custom methods to be added to
+// AddressNamespaceLister.
+type AddressNamespaceListerExpansion interface{}
+
 // BuildListerExpansion allows custom methods to be added to
 // BuildLister.
 type BuildListerExpansion interface{}
@@ -65,14 +73,6 @@ type ServiceListerExpansion interface{}
 // ServiceNamespaceListerExpansion allows custom methods to be added to
 // ServiceNamespaceLister.
 type ServiceNamespaceListerExpansion interface{}
-
-// ServiceAddressListerExpansion allows custom methods to be added to
-// ServiceAddressLister.
-type ServiceAddressListerExpansion interface{}
-
-// ServiceAddressNamespaceListerExpansion allows custom methods to be added to
-// ServiceAddressNamespaceLister.
-type ServiceAddressNamespaceListerExpansion interface{}
 
 // ServiceBuildListerExpansion allows custom methods to be added to
 // ServiceBuildLister.

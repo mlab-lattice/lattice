@@ -6,10 +6,9 @@ import (
 )
 
 const (
-	ResourceSingularTeardown  = "teardown"
-	ResourcePluralTeardown    = "teardowns"
-	ResourceShortNameTeardown = "ltdwn"
-	ResourceScopeTeardown     = apiextensionsv1beta1.NamespaceScoped
+	ResourceSingularTeardown = "teardown"
+	ResourcePluralTeardown   = "teardowns"
+	ResourceScopeTeardown    = apiextensionsv1beta1.NamespaceScoped
 )
 
 // +genclient

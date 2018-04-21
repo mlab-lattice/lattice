@@ -15,10 +15,9 @@ import (
 )
 
 const (
-	ResourceSingularService  = "service"
-	ResourcePluralService    = "services"
-	ResourceShortNameService = "lsvc"
-	ResourceScopeService     = apiextensionsv1beta1.NamespaceScoped
+	ResourceSingularService = "service"
+	ResourcePluralService   = "services"
+	ResourceScopeService    = apiextensionsv1beta1.NamespaceScoped
 )
 
 // ServiceID label is the key that should be used in a label referencing a service's ID.

@@ -69,7 +69,7 @@ type Controller struct {
 	componentBuildLister       latticelisters.ComponentBuildLister
 	componentBuildListerSynced cache.InformerSynced
 
-	rolloutQueue  workqueue.RateLimitingInterface
+	deployQueue   workqueue.RateLimitingInterface
 	teardownQueue workqueue.RateLimitingInterface
 }
 
@@ -85,13 +85,16 @@ func NewController(
 	componentBuildInformer latticeinformers.ComponentBuildInformer,
 ) *Controller {
 	src := &Controller{
-		namespacePrefix:              namespacePrefix,
-		kubeClient:                   kubeClient,
-		latticeClient:                latticeClient,
+		namespacePrefix: namespacePrefix,
+
+		kubeClient:    kubeClient,
+		latticeClient: latticeClient,
+
 		owningLifecycleActions:       make(map[types.UID]*lifecycleAction),
 		owningLifecycleActionsSynced: make(chan struct{}),
-		rolloutQueue:                 workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "system-rollout"),
-		teardownQueue:                workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "system-teardown"),
+
+		deployQueue:   workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "deploy"),
+		teardownQueue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "teardown"),
 	}
 
 	src.syncHandler = src.syncDeploy
@@ -141,7 +144,7 @@ func (c *Controller) Run(workers int, stopCh <-chan struct{}) {
 	// don't let panics crash the process
 	defer runtime.HandleCrash()
 	// make sure the work queue is shutdown which will trigger workers to end
-	defer c.rolloutQueue.ShutDown()
+	defer c.deployQueue.ShutDown()
 	defer c.teardownQueue.ShutDown()
 
 	glog.Infof("Starting system-rollout controller")
@@ -363,7 +366,7 @@ func (c *Controller) enqueueDeploy(deploy *latticev1.Deploy) {
 		return
 	}
 
-	c.rolloutQueue.Add(key)
+	c.deployQueue.Add(key)
 }
 
 func (c *Controller) enqueueTeardown(teardown *latticev1.Teardown) {
@@ -438,7 +441,7 @@ func (c *Controller) runRolloutWorker() {
 	// hot loop until we're told to stop.  processNextWorkItem will
 	// automatically wait until there's work available, so we don't worry
 	// about secondary waits
-	for c.processNextWorkItem(c.rolloutQueue, c.syncDeploy) {
+	for c.processNextWorkItem(c.deployQueue, c.syncDeploy) {
 	}
 }
 

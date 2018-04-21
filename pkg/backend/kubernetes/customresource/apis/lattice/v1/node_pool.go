@@ -14,10 +14,9 @@ import (
 )
 
 const (
-	ResourceSingularNodePool  = "nodepool"
-	ResourcePluralNodePool    = "nodepools"
-	ResourceShortNameNodePool = "lnp"
-	ResourceScopeNodePool     = apiextensionsv1beta1.NamespaceScoped
+	ResourceSingularNodePool = "nodepool"
+	ResourcePluralNodePool   = "nodepools"
+	ResourceScopeNodePool    = apiextensionsv1beta1.NamespaceScoped
 )
 
 // NodePoolServiceDedicatedID is the key for a label indicating that the node pool is dedicated for a service.

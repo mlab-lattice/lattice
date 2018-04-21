@@ -10,6 +10,10 @@ type FakeLatticeV1 struct {
 	*testing.Fake
 }
 
+func (c *FakeLatticeV1) Addresses(namespace string) v1.AddressInterface {
+	return &FakeAddresses{c, namespace}
+}
+
 func (c *FakeLatticeV1) Builds(namespace string) v1.BuildInterface {
 	return &FakeBuilds{c, namespace}
 }
@@ -40,10 +44,6 @@ func (c *FakeLatticeV1) NodePools(namespace string) v1.NodePoolInterface {
 
 func (c *FakeLatticeV1) Services(namespace string) v1.ServiceInterface {
 	return &FakeServices{c, namespace}
-}
-
-func (c *FakeLatticeV1) ServiceAddresses(namespace string) v1.ServiceAddressInterface {
-	return &FakeServiceAddresses{c, namespace}
 }
 
 func (c *FakeLatticeV1) ServiceBuilds(namespace string) v1.ServiceBuildInterface {

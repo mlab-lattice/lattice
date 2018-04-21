@@ -13,8 +13,7 @@ const (
 	// need to find a way to customize this name, until then, use the misspelling
 	ResourcePluralDeploy = "deploies"
 	//ResourcePluralDeploy    = "deploys"
-	ResourceShortNameDeploy = "ldply"
-	ResourceScopeDeploy     = apiextensionsv1beta1.NamespaceScoped
+	ResourceScopeDeploy = apiextensionsv1beta1.NamespaceScoped
 )
 
 // +genclient

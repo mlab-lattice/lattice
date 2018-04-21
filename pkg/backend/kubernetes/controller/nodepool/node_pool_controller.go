@@ -61,12 +61,16 @@ func NewController(
 	serviceInformer latticeinformers.ServiceInformer,
 ) *Controller {
 	sc := &Controller{
-		namespacePrefix:            namespacePrefix,
-		latticeID:                  latticeID,
-		latticeClient:              latticeClient,
+		namespacePrefix: namespacePrefix,
+		latticeID:       latticeID,
+
+		latticeClient: latticeClient,
+
 		staticCloudProviderOptions: cloudProviderOptions,
-		configSetChan:              make(chan struct{}),
-		queue:                      workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "service"),
+
+		configSetChan: make(chan struct{}),
+
+		queue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "service"),
 	}
 
 	sc.syncHandler = sc.syncNodePool

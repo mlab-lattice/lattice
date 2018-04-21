@@ -45,7 +45,7 @@ type Interface interface {
 		current, desired, untransformed *appsv1.DeploymentSpec,
 	) (bool, string, *appsv1.DeploymentSpec)
 
-	GetEndpointSpec(*latticev1.ServiceAddress) (*latticev1.EndpointSpec, error)
+	GetEndpointSpec(*latticev1.Address) (*latticev1.EndpointSpec, error)
 }
 
 type Options struct {

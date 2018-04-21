@@ -13,10 +13,9 @@ import (
 )
 
 const (
-	ResourceSingularSystem  = "system"
-	ResourcePluralSystem    = "systems"
-	ResourceShortNameSystem = "lsys"
-	ResourceScopeSystem     = apiextensionsv1beta1.NamespaceScoped
+	ResourceSingularSystem = "system"
+	ResourcePluralSystem   = "systems"
+	ResourceScopeSystem    = apiextensionsv1beta1.NamespaceScoped
 )
 
 // +genclient

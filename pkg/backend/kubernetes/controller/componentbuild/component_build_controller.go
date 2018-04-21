@@ -35,7 +35,11 @@ type Controller struct {
 	enqueue     func(cb *latticev1.ComponentBuild)
 
 	namespacePrefix string
-	cloudProvider   cloudprovider.Interface
+
+	// NOTE: you must get a read lock on the configLock for the duration
+	//       of your use of the cloudProvider
+	staticCloudProviderOptions *cloudprovider.Options
+	cloudProvider              cloudprovider.Interface
 
 	kubeClient    kubeclientset.Interface
 	latticeClient latticeclientset.Interface
@@ -45,7 +49,7 @@ type Controller struct {
 	configSetChan      chan struct{}
 	configSet          bool
 	configLock         sync.RWMutex
-	config             *latticev1.ConfigSpec
+	config             latticev1.ConfigSpec
 
 	componentBuildLister       latticelisters.ComponentBuildLister
 	componentBuildListerSynced cache.InformerSynced
@@ -58,7 +62,7 @@ type Controller struct {
 
 func NewController(
 	namespacePrefix string,
-	cloudProvider cloudprovider.Interface,
+	cloudProviderOptions *cloudprovider.Options,
 	kubeClient kubeclientset.Interface,
 	latticeClient latticeclientset.Interface,
 	configInformer latticeinformers.ConfigInformer,
@@ -67,11 +71,15 @@ func NewController(
 ) *Controller {
 	cbc := &Controller{
 		namespacePrefix: namespacePrefix,
-		cloudProvider:   cloudProvider,
-		kubeClient:      kubeClient,
-		latticeClient:   latticeClient,
-		configSetChan:   make(chan struct{}),
-		queue:           workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "component-build"),
+
+		staticCloudProviderOptions: cloudProviderOptions,
+
+		kubeClient:    kubeClient,
+		latticeClient: latticeClient,
+
+		configSetChan: make(chan struct{}),
+
+		queue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "component-build"),
 	}
 
 	cbc.syncHandler = cbc.syncComponentBuild
@@ -79,8 +87,8 @@ func NewController(
 
 	configInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		// It's assumed there is always one and only one config object.
-		AddFunc:    cbc.addConfig,
-		UpdateFunc: cbc.updateConfig,
+		AddFunc:    cbc.handleConfigAdd,
+		UpdateFunc: cbc.handleConfigUpdate,
 		// TODO: for now it is assumed that ComponentBuilds are not deleted.
 		// in the future we'll probably want to add a GC process for ComponentBuilds.
 		// At that point we should listen here for those deletes.
@@ -90,19 +98,19 @@ func NewController(
 	cbc.configListerSynced = configInformer.Informer().HasSynced
 
 	componentBuildInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc:    cbc.addComponentBuild,
-		UpdateFunc: cbc.updateComponentBuild,
+		AddFunc:    cbc.handleComponentBuildAdd,
+		UpdateFunc: cbc.handleComponentBuildUpdate,
 		// TODO: for now we'll assume that Config is never deleted
 	})
 	cbc.componentBuildLister = componentBuildInformer.Lister()
 	cbc.componentBuildListerSynced = componentBuildInformer.Informer().HasSynced
 
 	jobInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc:    cbc.addJob,
-		UpdateFunc: cbc.updateJob,
+		AddFunc:    cbc.handleJobAdd,
+		UpdateFunc: cbc.handleJobUpdate,
 		// We should probably never delete BuildComponent jobs, but just in case
 		// we need to pull the plug on one we'll look out for it.
-		DeleteFunc: cbc.deleteJob,
+		DeleteFunc: cbc.handleJobDelete,
 	})
 	cbc.jobLister = jobInformer.Lister()
 	cbc.jobListerSynced = jobInformer.Informer().HasSynced
@@ -141,13 +149,20 @@ func (c *Controller) Run(workers int, stopCh <-chan struct{}) {
 	<-stopCh
 }
 
-func (c *Controller) addConfig(obj interface{}) {
+func (c *Controller) handleConfigAdd(obj interface{}) {
 	config := obj.(*latticev1.Config)
 	glog.V(4).Infof("Adding Config %s", config.Name)
 
 	c.configLock.Lock()
 	defer c.configLock.Unlock()
-	c.config = &config.DeepCopy().Spec
+	c.config = config.DeepCopy().Spec
+
+	err := c.newCloudProvider()
+	if err != nil {
+		glog.Errorf("error creating service mesh: %v", err)
+		// FIXME: what to do here?
+		return
+	}
 
 	if !c.configSet {
 		c.configSet = true
@@ -155,37 +170,59 @@ func (c *Controller) addConfig(obj interface{}) {
 	}
 }
 
-func (c *Controller) updateConfig(old, cur interface{}) {
+func (c *Controller) handleConfigUpdate(old, cur interface{}) {
 	oldConfig := old.(*latticev1.Config)
 	curConfig := cur.(*latticev1.Config)
 	glog.V(4).Infof("Updating Config %s", oldConfig.Name)
 
 	c.configLock.Lock()
 	defer c.configLock.Unlock()
-	c.config = &curConfig.DeepCopy().Spec
+	c.config = curConfig.DeepCopy().Spec
+
+	err := c.newCloudProvider()
+	if err != nil {
+		glog.Errorf("error creating service mesh: %v", err)
+		// FIXME: what to do here?
+		return
+	}
 }
 
-func (c *Controller) addComponentBuild(obj interface{}) {
+func (c *Controller) newCloudProvider() error {
+	options, err := cloudprovider.OverlayConfigOptions(c.staticCloudProviderOptions, &c.config.CloudProvider)
+	if err != nil {
+		return err
+	}
+
+	cloudProvider, err := cloudprovider.NewCloudProvider(c.namespacePrefix, options)
+	if err != nil {
+		return err
+	}
+
+	c.cloudProvider = cloudProvider
+	return nil
+}
+
+func (c *Controller) handleComponentBuildAdd(obj interface{}) {
 	cb := obj.(*latticev1.ComponentBuild)
 	glog.V(4).Infof("Adding ComponentBuild %s", cb.Name)
 	c.enqueueComponentBuild(cb)
 }
 
-func (c *Controller) updateComponentBuild(old, cur interface{}) {
+func (c *Controller) handleComponentBuildUpdate(old, cur interface{}) {
 	oldCb := old.(*latticev1.ComponentBuild)
 	curCb := cur.(*latticev1.ComponentBuild)
 	glog.V(4).Infof("Updating ComponentBuild %s", oldCb.Name)
 	c.enqueueComponentBuild(curCb)
 }
 
-// addJob enqueues the ComponentBuild that manages a Job when the Job is created.
-func (c *Controller) addJob(obj interface{}) {
+// handleJobAdd enqueues the ComponentBuild that manages a Job when the Job is created.
+func (c *Controller) handleJobAdd(obj interface{}) {
 	job := obj.(*batchv1.Job)
 
 	if job.DeletionTimestamp != nil {
 		// On a restart of the controller manager, it's possible for an object to
 		// show up in a state that is already pending deletion.
-		c.deleteJob(job)
+		c.handleJobDelete(job)
 		return
 	}
 
@@ -207,12 +244,12 @@ func (c *Controller) addJob(obj interface{}) {
 	// always have a ControllerRef, so therefore this Job is not a ComponentBuild Job.
 }
 
-// updateJob figures out what ComponentBuild manages a Job when the Job
+// handleJobUpdate figures out what ComponentBuild manages a Job when the Job
 // is updated and wake them up.
 // Note that a ComponentBuild Job should only ever and should always be owned by a single ComponentBuild
 // (the one referenced in its ControllerRef), so an updated job should
 // have the same controller ref for both the old and current versions.
-func (c *Controller) updateJob(old, cur interface{}) {
+func (c *Controller) handleJobUpdate(old, cur interface{}) {
 	glog.V(5).Info("Got Job putComponentBuildUpdate")
 	oldJob := old.(*batchv1.Job)
 	curJob := cur.(*batchv1.Job)
@@ -250,13 +287,13 @@ func (c *Controller) updateJob(old, cur interface{}) {
 	// always have a ControllerRef, so therefore this Job is not a ComponentBuild Job.
 }
 
-// deleteJob enqueues the ComponentBuild that manages a Job when
+// handleJobDelete enqueues the ComponentBuild that manages a Job when
 // the Job is deleted. obj could be an *extensions.ComponentBuild, or
 // a DeletionFinalStateUnknown marker item.
 // Note that this should never really happen. ComponentBuild Jobs should not
 // be getting deleted. But if they do, we should write a warn event
 // and putComponentBuildUpdate the ComponentBuild.
-func (c *Controller) deleteJob(obj interface{}) {
+func (c *Controller) handleJobDelete(obj interface{}) {
 	job, ok := obj.(*batchv1.Job)
 
 	// When a delete is dropped, the relist will notice a pod in the store not

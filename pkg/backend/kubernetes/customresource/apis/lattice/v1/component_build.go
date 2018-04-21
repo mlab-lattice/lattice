@@ -9,10 +9,9 @@ import (
 )
 
 const (
-	ResourceSingularComponentBuild  = "componentbuild"
-	ResourcePluralComponentBuild    = "componentbuilds"
-	ResourceShortNameComponentBuild = "lcb"
-	ResourceScopeComponentBuild     = apiextensionsv1beta1.NamespaceScoped
+	ResourceSingularComponentBuild = "componentbuild"
+	ResourcePluralComponentBuild   = "componentbuilds"
+	ResourceScopeComponentBuild    = apiextensionsv1beta1.NamespaceScoped
 )
 
 // +genclient

@@ -42,7 +42,8 @@ func NewController(
 ) *Controller {
 	sbc := &Controller{
 		latticeClient: latticeClient,
-		queue:         workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "service-build"),
+
+		queue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "service-build"),
 	}
 
 	sbc.syncHandler = sbc.syncServiceBuild

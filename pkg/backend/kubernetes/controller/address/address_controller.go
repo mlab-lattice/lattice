@@ -1,4 +1,4 @@
-package serviceaddress
+package address
 
 import (
 	"fmt"
@@ -23,13 +23,16 @@ import (
 	"github.com/golang/glog"
 )
 
-var controllerKind = latticev1.SchemeGroupVersion.WithKind("ServiceAddress")
+var controllerKind = latticev1.SchemeGroupVersion.WithKind("Address")
 
 type Controller struct {
 	syncHandler           func(bKey string) error
-	enqueueServiceAddress func(cb *latticev1.ServiceAddress)
+	enqueueServiceAddress func(cb *latticev1.Address)
 
-	serviceMesh servicemesh.Interface
+	// NOTE: you must get a read lock on the configLock for the duration
+	//       of your use of the serviceMesh
+	staticServiceMeshOptions *servicemesh.Options
+	serviceMesh              servicemesh.Interface
 
 	latticeClient latticeclientset.Interface
 
@@ -40,8 +43,8 @@ type Controller struct {
 	configLock         sync.RWMutex
 	config             latticev1.ConfigSpec
 
-	serviceAddressLister       latticelisters.ServiceAddressLister
-	serviceAddressListerSynced cache.InformerSynced
+	addressLister       latticelisters.AddressLister
+	addressListerSynced cache.InformerSynced
 
 	endpointLister       latticelisters.EndpointLister
 	endpointListerSynced cache.InformerSynced
@@ -50,15 +53,20 @@ type Controller struct {
 }
 
 func NewController(
+	serviceMeshOptions *servicemesh.Options,
 	latticeClient latticeclientset.Interface,
 	configInformer latticeinformers.ConfigInformer,
-	serviceAddressInformer latticeinformers.ServiceAddressInformer,
+	addressInformer latticeinformers.AddressInformer,
 	endpointInformer latticeinformers.EndpointInformer,
 ) *Controller {
 	sc := &Controller{
+		staticServiceMeshOptions: serviceMeshOptions,
+
 		latticeClient: latticeClient,
+
 		configSetChan: make(chan struct{}),
-		queue:         workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "service"),
+
+		queue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "service"),
 	}
 
 	sc.syncHandler = sc.syncService
@@ -72,13 +80,13 @@ func NewController(
 	sc.configLister = configInformer.Lister()
 	sc.configListerSynced = configInformer.Informer().HasSynced
 
-	serviceAddressInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc:    sc.handleServiceAddressAdd,
-		UpdateFunc: sc.handleServiceAddressUpdate,
-		DeleteFunc: sc.handleServiceAddressDelete,
+	addressInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+		AddFunc:    sc.handleAddressAdd,
+		UpdateFunc: sc.handleAddressUpdate,
+		DeleteFunc: sc.handdleAddressDelete,
 	})
-	sc.serviceAddressLister = serviceAddressInformer.Lister()
-	sc.serviceAddressListerSynced = serviceAddressInformer.Informer().HasSynced
+	sc.addressLister = addressInformer.Lister()
+	sc.addressListerSynced = addressInformer.Informer().HasSynced
 
 	endpointInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    sc.handleEndpointAdd,
@@ -101,7 +109,7 @@ func (c *Controller) Run(workers int, stopCh <-chan struct{}) {
 	defer glog.Infof("Shutting down service controller")
 
 	// wait for your secondary caches to fill before starting your work
-	if !cache.WaitForCacheSync(stopCh, c.configListerSynced, c.serviceAddressListerSynced, c.endpointListerSynced) {
+	if !cache.WaitForCacheSync(stopCh, c.configListerSynced, c.addressListerSynced, c.endpointListerSynced) {
 		return
 	}
 
@@ -132,14 +140,12 @@ func (c *Controller) handleConfigAdd(obj interface{}) {
 	defer c.configLock.Unlock()
 	c.config = config.DeepCopy().Spec
 
-	serviceMesh, err := c.newServiceMesh()
+	err := c.newServiceMesh()
 	if err != nil {
 		glog.Errorf("error creating service mesh: %v", err)
 		// FIXME: what to do here?
 		return
 	}
-
-	c.serviceMesh = serviceMesh
 
 	if !c.configSet {
 		c.configSet = true
@@ -156,48 +162,47 @@ func (c *Controller) handleConfigUpdate(old, cur interface{}) {
 	defer c.configLock.Unlock()
 	c.config = curConfig.DeepCopy().Spec
 
-	serviceMesh, err := c.newServiceMesh()
+	err := c.newServiceMesh()
 	if err != nil {
 		glog.Errorf("error creating service mesh: %v", err)
 		// FIXME: what to do here?
 		return
 	}
+}
+
+func (c *Controller) newServiceMesh() error {
+	options, err := servicemesh.OverlayConfigOptions(c.staticServiceMeshOptions, &c.config.ServiceMesh)
+	if err != nil {
+		return err
+	}
+
+	serviceMesh, err := servicemesh.NewServiceMesh(options)
+	if err != nil {
+		return err
+	}
 
 	c.serviceMesh = serviceMesh
+	return nil
 }
 
-func (c *Controller) newServiceMesh() (servicemesh.Interface, error) {
-	serviceMeshOptions, err := servicemesh.OptionsFromConfig(&c.config.ServiceMesh)
-	if err != nil {
-		return nil, err
-	}
-
-	serviceMesh, err := servicemesh.NewServiceMesh(serviceMeshOptions)
-	if err != nil {
-		return nil, err
-	}
-
-	return serviceMesh, nil
-}
-
-func (c *Controller) handleServiceAddressAdd(obj interface{}) {
-	address := obj.(*latticev1.ServiceAddress)
-	glog.V(4).Infof("ServiceAddress %v/%v added", address.Namespace, address.Name)
+func (c *Controller) handleAddressAdd(obj interface{}) {
+	address := obj.(*latticev1.Address)
+	glog.V(4).Infof("Address %v/%v added", address.Namespace, address.Name)
 
 	if address.DeletionTimestamp != nil {
 		// On a restart of the controller manager, it's possible for an object to
 		// show up in a state that is already pending deletion.
-		c.handleServiceAddressDelete(address)
+		c.handdleAddressDelete(address)
 		return
 	}
 
 	c.enqueueServiceAddress(address)
 }
 
-func (c *Controller) handleServiceAddressUpdate(old, cur interface{}) {
-	oldAddress := old.(*latticev1.ServiceAddress)
-	curAddress := cur.(*latticev1.ServiceAddress)
-	glog.V(5).Info("Got ServiceAddress %v/%v update", curAddress.Namespace, curAddress.Name)
+func (c *Controller) handleAddressUpdate(old, cur interface{}) {
+	oldAddress := old.(*latticev1.Address)
+	curAddress := cur.(*latticev1.Address)
+	glog.V(5).Info("Got Address %v/%v update", curAddress.Namespace, curAddress.Name)
 	if curAddress.ResourceVersion == oldAddress.ResourceVersion {
 		// Periodic resync will send update events for all known Services.
 		// Two different versions of the same Service will always have different RVs.
@@ -208,8 +213,8 @@ func (c *Controller) handleServiceAddressUpdate(old, cur interface{}) {
 	c.enqueueServiceAddress(curAddress)
 }
 
-func (c *Controller) handleServiceAddressDelete(obj interface{}) {
-	address, ok := obj.(*latticev1.ServiceAddress)
+func (c *Controller) handdleAddressDelete(obj interface{}) {
+	address, ok := obj.(*latticev1.Address)
 
 	// When a delete is dropped, the relist will notice a pod in the store not
 	// in the list, leading to the insertion of a tombstone object which contains
@@ -220,7 +225,7 @@ func (c *Controller) handleServiceAddressDelete(obj interface{}) {
 			runtime.HandleError(fmt.Errorf("couldn't get object from tombstone %#v", obj))
 			return
 		}
-		address, ok = tombstone.Obj.(*latticev1.ServiceAddress)
+		address, ok = tombstone.Obj.(*latticev1.Address)
 		if !ok {
 			runtime.HandleError(fmt.Errorf("tombstone contained object that is not a Service %#v", obj))
 			return
@@ -242,7 +247,7 @@ func (c *Controller) handleEndpointAdd(obj interface{}) {
 	if controllerRef := metav1.GetControllerOf(endpoint); controllerRef != nil {
 		address := c.resolveControllerRef(endpoint.Namespace, controllerRef)
 
-		// Not a ServiceAddress. This shouldn't happen.
+		// Not a Address. This shouldn't happen.
 		if address == nil {
 			// FIXME: send error event
 			return
@@ -332,7 +337,7 @@ func (c *Controller) handleEndpointDelete(obj interface{}) {
 	c.enqueueServiceAddress(address)
 }
 
-func (c *Controller) enqueue(svc *latticev1.ServiceAddress) {
+func (c *Controller) enqueue(svc *latticev1.Address) {
 	key, err := cache.DeletionHandlingMetaNamespaceKeyFunc(svc)
 	if err != nil {
 		runtime.HandleError(fmt.Errorf("couldn't get key for object %#v: %v", svc, err))
@@ -345,14 +350,14 @@ func (c *Controller) enqueue(svc *latticev1.ServiceAddress) {
 // resolveControllerRef returns the controller referenced by a ControllerRef,
 // or nil if the ControllerRef could not be resolved to a matching controller
 // of the correct Kind.
-func (c *Controller) resolveControllerRef(namespace string, controllerRef *metav1.OwnerReference) *latticev1.ServiceAddress {
+func (c *Controller) resolveControllerRef(namespace string, controllerRef *metav1.OwnerReference) *latticev1.Address {
 	// We can't look up by Name, so look up by Name and then verify Name.
 	// Don't even try to look up by Name if it's the wrong Kind.
 	if controllerRef.Kind != controllerKind.Kind {
 		return nil
 	}
 
-	address, err := c.serviceAddressLister.ServiceAddresses(namespace).Get(controllerRef.Name)
+	address, err := c.addressLister.Addresses(namespace).Get(controllerRef.Name)
 	if err != nil {
 		// FIXME(kevinrosendahl): send error?
 		return nil
@@ -427,7 +432,7 @@ func (c *Controller) syncService(key string) error {
 		return err
 	}
 
-	address, err := c.serviceAddressLister.ServiceAddresses(namespace).Get(name)
+	address, err := c.addressLister.Addresses(namespace).Get(name)
 	if errors.IsNotFound(err) {
 		glog.V(2).Infof("Service %v has been deleted", key)
 		return nil

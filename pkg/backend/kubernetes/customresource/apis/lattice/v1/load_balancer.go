@@ -6,10 +6,9 @@ import (
 )
 
 const (
-	ResourceSingularLoadBalancer  = "loadbalancer"
-	ResourcePluralLoadBalancer    = "loadbalancers"
-	ResourceShortNameLoadBalancer = "llb"
-	ResourceScopeLoadBalancer     = apiextensionsv1beta1.NamespaceScoped
+	ResourceSingularLoadBalancer = "loadbalancer"
+	ResourcePluralLoadBalancer   = "loadbalancers"
+	ResourceScopeLoadBalancer    = apiextensionsv1beta1.NamespaceScoped
 )
 
 // +genclient

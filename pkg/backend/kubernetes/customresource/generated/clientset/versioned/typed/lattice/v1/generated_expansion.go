@@ -1,5 +1,7 @@
 package v1
 
+type AddressExpansion interface{}
+
 type BuildExpansion interface{}
 
 type ComponentBuildExpansion interface{}
@@ -15,8 +17,6 @@ type LoadBalancerExpansion interface{}
 type NodePoolExpansion interface{}
 
 type ServiceExpansion interface{}
-
-type ServiceAddressExpansion interface{}
 
 type ServiceBuildExpansion interface{}
 

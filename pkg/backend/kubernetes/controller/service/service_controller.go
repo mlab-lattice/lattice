@@ -92,10 +92,10 @@ type Controller struct {
 func NewController(
 	namespacePrefix string,
 	latticeID v1.LatticeID,
-	kubeClient kubeclientset.Interface,
-	latticeClient latticeclientset.Interface,
 	cloudProviderOptions *cloudprovider.Options,
 	serviceMeshOptions *servicemesh.Options,
+	kubeClient kubeclientset.Interface,
+	latticeClient latticeclientset.Interface,
 	configInformer latticeinformers.ConfigInformer,
 	serviceInformer latticeinformers.ServiceInformer,
 	nodePoolInformer latticeinformers.NodePoolInformer,
@@ -116,7 +116,8 @@ func NewController(
 		staticServiceMeshOptions:   serviceMeshOptions,
 
 		configSetChan: make(chan struct{}),
-		queue:         workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "service"),
+
+		queue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "service"),
 	}
 
 	sc.syncHandler = sc.syncService
@@ -654,8 +655,8 @@ func (c *Controller) handleKubeServiceDelete(obj interface{}) {
 }
 
 func (c *Controller) handleServiceAddressAdd(obj interface{}) {
-	address := obj.(*latticev1.ServiceAddress)
-	glog.V(4).Infof("ServiceAddress %v/%v added", address.Namespace, address.Name)
+	address := obj.(*latticev1.Address)
+	glog.V(4).Infof("Address %v/%v added", address.Namespace, address.Name)
 
 	if address.DeletionTimestamp != nil {
 		// On a restart of the controller manager, it's possible for an object to
@@ -675,8 +676,8 @@ func (c *Controller) handleServiceAddressAdd(obj interface{}) {
 
 func (c *Controller) handleServiceAddressUpdate(old, cur interface{}) {
 	glog.V(5).Info("Got kube Service update")
-	oldAddress := old.(*latticev1.ServiceAddress)
-	curAddress := cur.(*latticev1.ServiceAddress)
+	oldAddress := old.(*latticev1.Address)
+	curAddress := cur.(*latticev1.Address)
 	if curAddress.ResourceVersion == oldAddress.ResourceVersion {
 		// Periodic resync will send update events for all known Services.
 		// Two different versions of the same Service will always have different RVs.
@@ -694,7 +695,7 @@ func (c *Controller) handleServiceAddressUpdate(old, cur interface{}) {
 }
 
 func (c *Controller) handleServiceAddressDelete(obj interface{}) {
-	address, ok := obj.(*latticev1.ServiceAddress)
+	address, ok := obj.(*latticev1.Address)
 
 	// When a delete is dropped, the relist will notice a pod in the store not
 	// in the list, leading to the insertion of a tombstone object which contains
@@ -705,7 +706,7 @@ func (c *Controller) handleServiceAddressDelete(obj interface{}) {
 			runtime.HandleError(fmt.Errorf("couldn't get object from tombstone %#v", obj))
 			return
 		}
-		address, ok = tombstone.Obj.(*latticev1.ServiceAddress)
+		address, ok = tombstone.Obj.(*latticev1.Address)
 		if !ok {
 			runtime.HandleError(fmt.Errorf("tombstone contained object that is not a Service %#v", obj))
 			return

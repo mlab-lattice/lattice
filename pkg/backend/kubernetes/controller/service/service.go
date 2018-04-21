@@ -30,7 +30,7 @@ func (c *Controller) syncServiceStatus(
 	deploymentStatus *deploymentStatus,
 	extraNodePoolsExist bool,
 	kubeService *corev1.Service,
-	serviceAddress *latticev1.ServiceAddress,
+	serviceAddress *latticev1.Address,
 	loadBalancer *latticev1.LoadBalancer,
 	loadBalancerNeeded bool,
 ) (*latticev1.Service, error) {

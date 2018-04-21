@@ -11,10 +11,9 @@ import (
 )
 
 const (
-	ResourceSingularBuild  = "build"
-	ResourcePluralBuild    = "builds"
-	ResourceShortNameBuild = "lbld"
-	ResourceScopeBuild     = apiextensionsv1beta1.NamespaceScoped
+	ResourceSingularBuild = "build"
+	ResourcePluralBuild   = "builds"
+	ResourceScopeBuild    = apiextensionsv1beta1.NamespaceScoped
 )
 
 // +genclient
