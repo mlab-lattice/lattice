@@ -9,7 +9,7 @@ import (
 	"reflect"
 )
 
-func (c *Controller) syncEndpoint(address *latticev1.Address) (*latticev1.Endpoint, error) {
+func (c *Controller) syncDNS(address *latticev1.Address) error {
 	endpoint, err := c.endpointLister.Endpoints(address.Namespace).Get(address.Name)
 	if err != nil {
 		if errors.IsNotFound(err) {

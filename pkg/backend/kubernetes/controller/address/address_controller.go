@@ -2,7 +2,6 @@ package address
 
 import (
 	"fmt"
-	"reflect"
 	"sync"
 	"time"
 
@@ -46,9 +45,6 @@ type Controller struct {
 	addressLister       latticelisters.AddressLister
 	addressListerSynced cache.InformerSynced
 
-	endpointLister       latticelisters.EndpointLister
-	endpointListerSynced cache.InformerSynced
-
 	queue workqueue.RateLimitingInterface
 }
 
@@ -57,7 +53,6 @@ func NewController(
 	latticeClient latticeclientset.Interface,
 	configInformer latticeinformers.ConfigInformer,
 	addressInformer latticeinformers.AddressInformer,
-	endpointInformer latticeinformers.EndpointInformer,
 ) *Controller {
 	sc := &Controller{
 		staticServiceMeshOptions: serviceMeshOptions,
@@ -69,7 +64,7 @@ func NewController(
 		queue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "service"),
 	}
 
-	sc.syncHandler = sc.syncService
+	sc.syncHandler = sc.syncAddress
 	sc.enqueueServiceAddress = sc.enqueue
 
 	configInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
@@ -83,18 +78,10 @@ func NewController(
 	addressInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    sc.handleAddressAdd,
 		UpdateFunc: sc.handleAddressUpdate,
-		DeleteFunc: sc.handdleAddressDelete,
+		DeleteFunc: sc.handleAddressDelete,
 	})
 	sc.addressLister = addressInformer.Lister()
 	sc.addressListerSynced = addressInformer.Informer().HasSynced
-
-	endpointInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc:    sc.handleEndpointAdd,
-		UpdateFunc: sc.handleEndpointUpdate,
-		DeleteFunc: sc.handleEndpointDelete,
-	})
-	sc.endpointLister = endpointInformer.Lister()
-	sc.endpointListerSynced = endpointInformer.Informer().HasSynced
 
 	return sc
 }
@@ -109,7 +96,7 @@ func (c *Controller) Run(workers int, stopCh <-chan struct{}) {
 	defer glog.Infof("Shutting down service controller")
 
 	// wait for your secondary caches to fill before starting your work
-	if !cache.WaitForCacheSync(stopCh, c.configListerSynced, c.addressListerSynced, c.endpointListerSynced) {
+	if !cache.WaitForCacheSync(stopCh, c.configListerSynced, c.addressListerSynced) {
 		return
 	}
 
@@ -192,7 +179,7 @@ func (c *Controller) handleAddressAdd(obj interface{}) {
 	if address.DeletionTimestamp != nil {
 		// On a restart of the controller manager, it's possible for an object to
 		// show up in a state that is already pending deletion.
-		c.handdleAddressDelete(address)
+		c.handleAddressDelete(address)
 		return
 	}
 
@@ -213,7 +200,7 @@ func (c *Controller) handleAddressUpdate(old, cur interface{}) {
 	c.enqueueServiceAddress(curAddress)
 }
 
-func (c *Controller) handdleAddressDelete(obj interface{}) {
+func (c *Controller) handleAddressDelete(obj interface{}) {
 	address, ok := obj.(*latticev1.Address)
 
 	// When a delete is dropped, the relist will notice a pod in the store not
@@ -232,108 +219,6 @@ func (c *Controller) handdleAddressDelete(obj interface{}) {
 		}
 	}
 
-	c.enqueueServiceAddress(address)
-}
-
-func (c *Controller) handleEndpointAdd(obj interface{}) {
-	endpoint := obj.(*latticev1.Endpoint)
-
-	if endpoint.DeletionTimestamp != nil {
-		c.handleEndpointDelete(endpoint)
-		return
-	}
-
-	// If it has a ControllerRef, that's all that matters.
-	if controllerRef := metav1.GetControllerOf(endpoint); controllerRef != nil {
-		address := c.resolveControllerRef(endpoint.Namespace, controllerRef)
-
-		// Not a Address. This shouldn't happen.
-		if address == nil {
-			// FIXME: send error event
-			return
-		}
-
-		glog.V(4).Infof("Service %s added.", endpoint.Name)
-		c.enqueueServiceAddress(address)
-		return
-	}
-
-	// It's an orphan. This shouldn't happen.
-	// FIXME: send error event
-}
-
-func (c *Controller) handleEndpointUpdate(old, cur interface{}) {
-	glog.V(5).Info("Got Deployment update")
-	oldEndpoint := old.(*latticev1.Endpoint)
-	curEndpoint := cur.(*latticev1.Endpoint)
-	if curEndpoint.ResourceVersion == oldEndpoint.ResourceVersion {
-		// Periodic resync will send update events for all known Deployments.
-		// Two different versions of the same Deployment will always have different RVs.
-		glog.V(5).Info("Deployment ResourceVersions are the same")
-		return
-	}
-
-	curControllerRef := metav1.GetControllerOf(curEndpoint)
-	oldControllerRef := metav1.GetControllerOf(oldEndpoint)
-	controllerRefChanged := !reflect.DeepEqual(curControllerRef, oldControllerRef)
-	if controllerRefChanged {
-		// The ControllerRef was changed. If this is a Service Deployment, this shouldn't happen.
-		if address := c.resolveControllerRef(oldEndpoint.Namespace, oldControllerRef); address != nil {
-			// FIXME(kevinrosendahl): send error event here, this should not happen
-		}
-	}
-
-	// If it has a ControllerRef, that's all that matters.
-	if curControllerRef != nil {
-		address := c.resolveControllerRef(curEndpoint.Namespace, curControllerRef)
-
-		// Not a Service Deployment
-		if address == nil {
-			return
-		}
-
-		c.enqueueServiceAddress(address)
-		return
-	}
-
-	// Otherwise, it's an orphan. These should never exist. All deployments should be run by some
-	// controller.
-	// FIXME(kevinrosendahl): send warn event
-}
-
-func (c *Controller) handleEndpointDelete(obj interface{}) {
-	endpoint, ok := obj.(*latticev1.Endpoint)
-
-	// When a delete is dropped, the relist will notice a pod in the store not
-	// in the list, leading to the insertion of a tombstone object which contains
-	// the deleted key/value.
-	if !ok {
-		tombstone, ok := obj.(cache.DeletedFinalStateUnknown)
-		if !ok {
-			runtime.HandleError(fmt.Errorf("couldn't get object from tombstone %#v", obj))
-			return
-		}
-		endpoint, ok = tombstone.Obj.(*latticev1.Endpoint)
-		if !ok {
-			runtime.HandleError(fmt.Errorf("tombstone contained object that is not a Deployment %#v", obj))
-			return
-		}
-	}
-
-	controllerRef := metav1.GetControllerOf(endpoint)
-	if controllerRef == nil {
-		// No controller should care about orphans being deleted.
-		return
-	}
-
-	address := c.resolveControllerRef(endpoint.Namespace, controllerRef)
-
-	// Not a Service Deployment
-	if address == nil {
-		return
-	}
-
-	glog.V(4).Infof("Endpoint %v/%v deleted.", endpoint.Namespace, endpoint.Name)
 	c.enqueueServiceAddress(address)
 }
 
@@ -417,9 +302,9 @@ func (c *Controller) processNextWorkItem() bool {
 	return true
 }
 
-// syncService will sync the Service with the given key.
+// syncAddress will sync the address with the given key.
 // This function is not meant to be invoked concurrently with the same key.
-func (c *Controller) syncService(key string) error {
+func (c *Controller) syncAddress(key string) error {
 	glog.Flush()
 	startTime := time.Now()
 	glog.V(4).Infof("Started syncing Service %q (%v)", key, startTime)
@@ -441,11 +326,11 @@ func (c *Controller) syncService(key string) error {
 		return err
 	}
 
-	endpoint, err := c.syncEndpoint(address)
+	endpoint, err := c.syncDNS(address)
 	if err != nil {
 		return err
 	}
 
-	_, err = c.syncServiceAddressStatus(address, endpoint)
+	_, err = c.syncAddressStatus(address, endpoint)
 	return err
 }

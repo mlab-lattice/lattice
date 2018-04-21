@@ -4,8 +4,9 @@
 variable "region" {}
 
 variable "zone_id" {}
+variable "type" {}
 variable "name" {}
-variable "ip" {}
+variable "value" {}
 
 ###############################################################################
 # Provider
@@ -20,7 +21,7 @@ provider "aws" {
 resource "aws_route53_record" "endpoint" {
   zone_id = "${var.zone_id}"
   name    = "${var.name}"
-  type    = "A"
+  type    = "${var.type}"
   ttl     = "60"
-  records = ["${var.ip}"]
+  records = ["${var.value}"]
 }

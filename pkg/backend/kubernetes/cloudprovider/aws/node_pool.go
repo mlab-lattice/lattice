@@ -91,11 +91,7 @@ func (cp *DefaultAWSCloudProvider) ProvisionNodePoolEpoch(
 ) error {
 	config := cp.nodePoolTerraformConfig(latticeID, nodePool, epoch)
 	_, err := terraform.Apply(nodePoolWorkDirectory(nodePool.ID(epoch)), config)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return err
 }
 
 func (cp *DefaultAWSCloudProvider) DeprovisionNodePoolEpoch(
@@ -103,9 +99,7 @@ func (cp *DefaultAWSCloudProvider) DeprovisionNodePoolEpoch(
 	nodePool *latticev1.NodePool,
 	epoch latticev1.NodePoolEpoch,
 ) error {
-	config := cp.nodePoolTerraformConfig(latticeID, nodePool, epoch)
-
-	_, err := terraform.Destroy(nodePoolWorkDirectory(nodePool.ID(epoch)), config)
+	_, err := terraform.Destroy(nodePoolWorkDirectory(nodePool.ID(epoch)), nil)
 	return err
 }
 
@@ -157,7 +151,7 @@ func (cp *DefaultAWSCloudProvider) nodePoolTerraformConfig(
 			Bucket: cp.terraformBackendOptions.S3.Bucket,
 			Key: fmt.Sprintf(
 				"%v/%v",
-				kubetf.GetS3BackendNodePoolPathRoot(latticeID, nodePoolID),
+				kubetf.GetS3BackendNodePoolPathRoot(latticeID, nodePool.Namespace, nodePoolID),
 				nodePoolID,
 			),
 			Encrypt: true,

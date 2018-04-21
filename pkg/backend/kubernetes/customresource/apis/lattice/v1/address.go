@@ -23,6 +23,10 @@ type Address struct {
 	Status            AddressStatus `json:"status"`
 }
 
+func (a *Address) UpdateProcessed() bool {
+	return a.Status.ObservedGeneration >= a.Generation
+}
+
 type AddressSpec struct {
 	Path         tree.NodePath  `json:"path"`
 	Service      *tree.NodePath `json:"service,omitempty"`
@@ -32,6 +36,9 @@ type AddressSpec struct {
 type AddressStatus struct {
 	State              AddressState `json:"state"`
 	ObservedGeneration int64        `json:"observedGeneration"`
+
+	// Public maps ports to their publicly accessible address
+	Public map[int32]string
 }
 
 type AddressState string

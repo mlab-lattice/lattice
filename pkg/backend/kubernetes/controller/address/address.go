@@ -7,7 +7,7 @@ import (
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 )
 
-func (c *Controller) syncServiceAddressStatus(
+func (c *Controller) syncAddressStatus(
 	address *latticev1.Address,
 	endpoint *latticev1.Endpoint,
 ) (*latticev1.Address, error) {
