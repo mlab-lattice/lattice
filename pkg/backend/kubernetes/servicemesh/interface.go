@@ -34,6 +34,9 @@ type Interface interface {
 	// which the service mesh is listening on for the given key.
 	ServicePorts(*latticev1.Service) (map[int32]int32, error)
 
+	// ServiceIP returns the IP address that should be registered in DNS for the service.
+	ServiceIP(service *latticev1.Service) (string, error)
+
 	// IsDeploymentSpecUpdated checks to see if any part of the current DeploymentSpec that the service mesh is responsible
 	// for is out of date compared to the desired deployment spec. If the current DeploymentSpec is current, it also returns
 	// a copy of the desired DeploymentSpec with the negation of TransformServiceDeploymentSpec applied.
@@ -44,8 +47,6 @@ type Interface interface {
 		service *latticev1.Service,
 		current, desired, untransformed *appsv1.DeploymentSpec,
 	) (bool, string, *appsv1.DeploymentSpec)
-
-	GetEndpointSpec(*latticev1.Address) (*latticev1.EndpointSpec, error)
 }
 
 type Options struct {

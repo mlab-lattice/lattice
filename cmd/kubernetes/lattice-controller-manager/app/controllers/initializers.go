@@ -6,8 +6,6 @@ import (
 	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/controller/address"
 	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/controller/build"
 	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/controller/componentbuild"
-	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/controller/endpoint"
-	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/controller/loadbalancer"
 	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/controller/nodepool"
 	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/controller/service"
 	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/controller/servicebuild"
@@ -21,8 +19,6 @@ var Initializers = map[string]Initializer{
 	AddressController:         initializeAddressController,
 	BuildController:           initializeBuildController,
 	ComponentBuildController:  initializeComponentBuildController,
-	EndpointController:        initializeEndpointController,
-	LoadBalancerController:    initializeLoadBalancerController,
 	NodePoolController:        initializeNodePoolController,
 	ServiceController:         initializeServiceController,
 	ServiceBuildController:    initializeServiceBuildController,
@@ -36,11 +32,14 @@ func controllerName(name string) string {
 
 func initializeAddressController(ctx Context) {
 	go address.NewController(
+		ctx.NamespacePrefix,
+		ctx.LatticeID,
+		ctx.CloudProviderOptions,
 		ctx.ServiceMeshOptions,
 		ctx.LatticeClientBuilder.ClientOrDie(controllerName(AddressController)),
 		ctx.LatticeInformerFactory.Lattice().V1().Configs(),
-		ctx.LatticeInformerFactory.Lattice().V1().ServiceAddresses(),
-		ctx.LatticeInformerFactory.Lattice().V1().Endpoints(),
+		ctx.LatticeInformerFactory.Lattice().V1().Addresses(),
+		ctx.LatticeInformerFactory.Lattice().V1().Addresses(),
 	).Run(4, ctx.Stop)
 }
 
@@ -61,29 +60,6 @@ func initializeComponentBuildController(ctx Context) {
 		ctx.LatticeInformerFactory.Lattice().V1().Configs(),
 		ctx.LatticeInformerFactory.Lattice().V1().ComponentBuilds(),
 		ctx.KubeInformerFactory.Batch().V1().Jobs(),
-	).Run(4, ctx.Stop)
-}
-
-func initializeEndpointController(ctx Context) {
-	go endpoint.NewController(
-		ctx.LatticeID,
-		ctx.CloudProviderOptions,
-		ctx.LatticeClientBuilder.ClientOrDie(controllerName(EndpointController)),
-		ctx.LatticeInformerFactory.Lattice().V1().Endpoints(),
-	).Run(4, ctx.Stop)
-}
-
-func initializeLoadBalancerController(ctx Context) {
-	go loadbalancer.NewController(
-		ctx.LatticeID,
-		ctx.CloudProviderOptions,
-		ctx.KubeClientBuilder.ClientOrDie(controllerName(LoadBalancerController)),
-		ctx.LatticeClientBuilder.ClientOrDie(controllerName(LoadBalancerController)),
-		ctx.LatticeInformerFactory.Lattice().V1().Configs(),
-		ctx.LatticeInformerFactory.Lattice().V1().LoadBalancers(),
-		ctx.LatticeInformerFactory.Lattice().V1().NodePools(),
-		ctx.LatticeInformerFactory.Lattice().V1().Services(),
-		ctx.KubeInformerFactory.Core().V1().Services(),
 	).Run(4, ctx.Stop)
 }
 

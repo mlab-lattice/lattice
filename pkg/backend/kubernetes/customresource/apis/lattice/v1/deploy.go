@@ -7,11 +7,7 @@ import (
 
 const (
 	ResourceSingularDeploy = "deploy"
-	// github.com/kubernetes/code-generator doesn't allow you to specify
-	// the plural name of a struct it's generating clients for, and "deploys"
-	// doesn't follow the plural rules here: https://github.com/kubernetes/gengo/blob/master/namer/plural_namer.go#L68-L74
-	// need to find a way to customize this name, until then, use the misspelling
-	ResourcePluralDeploy = "deploies"
+	ResourcePluralDeploy   = "deploys"
 	//ResourcePluralDeploy    = "deploys"
 	ResourceScopeDeploy = apiextensionsv1beta1.NamespaceScoped
 )

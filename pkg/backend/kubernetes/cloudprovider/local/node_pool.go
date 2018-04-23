@@ -39,7 +39,7 @@ func (cp *DefaultLocalCloudProvider) NodePoolAddAnnotations(
 	return nil
 }
 
-func (cp *DefaultLocalCloudProvider) ProvisionNodePoolEpoch(
+func (cp *DefaultLocalCloudProvider) EnsureNodePoolEpoch(
 	latticeID v1.LatticeID,
 	nodePool *latticev1.NodePool,
 	epoch latticev1.NodePoolEpoch,
@@ -47,7 +47,7 @@ func (cp *DefaultLocalCloudProvider) ProvisionNodePoolEpoch(
 	return nil
 }
 
-func (cp *DefaultLocalCloudProvider) DeprovisionNodePoolEpoch(
+func (cp *DefaultLocalCloudProvider) DestroyNodePoolEpoch(
 	latticeID v1.LatticeID,
 	nodePool *latticev1.NodePool,
 	epoch latticev1.NodePoolEpoch,

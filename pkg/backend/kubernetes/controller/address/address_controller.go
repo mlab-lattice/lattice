@@ -5,6 +5,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/mlab-lattice/lattice/pkg/api/v1"
+	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/cloudprovider"
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	latticeclientset "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/generated/clientset/versioned"
 	latticeinformers "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/generated/informers/externalversions/lattice/v1"
@@ -13,9 +15,13 @@ import (
 
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
 
+	coreinformers "k8s.io/client-go/informers/core/v1"
+	kubeclientset "k8s.io/client-go/kubernetes"
+	corelisters "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
 
@@ -25,8 +31,16 @@ import (
 var controllerKind = latticev1.SchemeGroupVersion.WithKind("Address")
 
 type Controller struct {
-	syncHandler           func(bKey string) error
-	enqueueServiceAddress func(cb *latticev1.Address)
+	syncHandler    func(bKey string) error
+	enqueueAddress func(cb *latticev1.Address)
+
+	namespacePrefix string
+	latticeID       v1.LatticeID
+
+	// NOTE: you must get a read lock on the configLock for the duration
+	//       of your use of the cloudProvider
+	staticCloudProviderOptions *cloudprovider.Options
+	cloudProvider              cloudprovider.Interface
 
 	// NOTE: you must get a read lock on the configLock for the duration
 	//       of your use of the serviceMesh
@@ -34,6 +48,7 @@ type Controller struct {
 	serviceMesh              servicemesh.Interface
 
 	latticeClient latticeclientset.Interface
+	kubeClient    kubeclientset.Interface
 
 	configLister       latticelisters.ConfigLister
 	configListerSynced cache.InformerSynced
@@ -45,45 +60,73 @@ type Controller struct {
 	addressLister       latticelisters.AddressLister
 	addressListerSynced cache.InformerSynced
 
+	serviceLister       latticelisters.ServiceLister
+	serviceListerSynced cache.InformerSynced
+
+	kubeServiceLister       corelisters.ServiceLister
+	kubeServiceListerSynced cache.InformerSynced
+
 	queue workqueue.RateLimitingInterface
 }
 
 func NewController(
+	namespacePrefix string,
+	latticeID v1.LatticeID,
+	cloudProviderOptions *cloudprovider.Options,
 	serviceMeshOptions *servicemesh.Options,
 	latticeClient latticeclientset.Interface,
+	kubeClient kubeclientset.Interface,
 	configInformer latticeinformers.ConfigInformer,
 	addressInformer latticeinformers.AddressInformer,
+	serviceInformer latticeinformers.ServiceInformer,
+	kubeServiceInformer coreinformers.ServiceInformer,
 ) *Controller {
-	sc := &Controller{
-		staticServiceMeshOptions: serviceMeshOptions,
+	c := &Controller{
+		namespacePrefix: namespacePrefix,
+		latticeID:       latticeID,
+
+		staticCloudProviderOptions: cloudProviderOptions,
+		staticServiceMeshOptions:   serviceMeshOptions,
 
 		latticeClient: latticeClient,
+		kubeClient:    kubeClient,
 
 		configSetChan: make(chan struct{}),
 
 		queue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "service"),
 	}
 
-	sc.syncHandler = sc.syncAddress
-	sc.enqueueServiceAddress = sc.enqueue
+	c.syncHandler = c.syncAddress
+	c.enqueueAddress = c.enqueue
 
 	configInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		// It's assumed there is always one and only one config object.
-		AddFunc:    sc.handleConfigAdd,
-		UpdateFunc: sc.handleConfigUpdate,
+		AddFunc:    c.handleConfigAdd,
+		UpdateFunc: c.handleConfigUpdate,
 	})
-	sc.configLister = configInformer.Lister()
-	sc.configListerSynced = configInformer.Informer().HasSynced
+	c.configLister = configInformer.Lister()
+	c.configListerSynced = configInformer.Informer().HasSynced
 
 	addressInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc:    sc.handleAddressAdd,
-		UpdateFunc: sc.handleAddressUpdate,
-		DeleteFunc: sc.handleAddressDelete,
+		AddFunc:    c.handleAddressAdd,
+		UpdateFunc: c.handleAddressUpdate,
+		DeleteFunc: c.handleAddressDelete,
 	})
-	sc.addressLister = addressInformer.Lister()
-	sc.addressListerSynced = addressInformer.Informer().HasSynced
+	c.addressLister = addressInformer.Lister()
+	c.addressListerSynced = addressInformer.Informer().HasSynced
 
-	return sc
+	serviceInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+		AddFunc:    c.handleServiceAdd,
+		UpdateFunc: c.handleServiceUpdate,
+		DeleteFunc: c.handleServiceDelete,
+	})
+	c.serviceLister = serviceInformer.Lister()
+	c.serviceListerSynced = serviceInformer.Informer().HasSynced
+
+	c.kubeServiceLister = kubeServiceInformer.Lister()
+	c.kubeServiceListerSynced = kubeServiceInformer.Informer().HasSynced
+
+	return c
 }
 
 func (c *Controller) Run(workers int, stopCh <-chan struct{}) {
@@ -96,7 +139,7 @@ func (c *Controller) Run(workers int, stopCh <-chan struct{}) {
 	defer glog.Infof("Shutting down service controller")
 
 	// wait for your secondary caches to fill before starting your work
-	if !cache.WaitForCacheSync(stopCh, c.configListerSynced, c.addressListerSynced) {
+	if !cache.WaitForCacheSync(stopCh, c.configListerSynced, c.addressListerSynced, c.serviceListerSynced, c.kubeServiceListerSynced) {
 		return
 	}
 
@@ -157,6 +200,21 @@ func (c *Controller) handleConfigUpdate(old, cur interface{}) {
 	}
 }
 
+func (c *Controller) newCloudProvider() error {
+	options, err := cloudprovider.OverlayConfigOptions(c.staticCloudProviderOptions, &c.config.CloudProvider)
+	if err != nil {
+		return err
+	}
+
+	cloudProvider, err := cloudprovider.NewCloudProvider(c.namespacePrefix, c.kubeClient, c.kubeServiceLister, options)
+	if err != nil {
+		return err
+	}
+
+	c.cloudProvider = cloudProvider
+	return nil
+}
+
 func (c *Controller) newServiceMesh() error {
 	options, err := servicemesh.OverlayConfigOptions(c.staticServiceMeshOptions, &c.config.ServiceMesh)
 	if err != nil {
@@ -183,7 +241,7 @@ func (c *Controller) handleAddressAdd(obj interface{}) {
 		return
 	}
 
-	c.enqueueServiceAddress(address)
+	c.enqueueAddress(address)
 }
 
 func (c *Controller) handleAddressUpdate(old, cur interface{}) {
@@ -197,7 +255,7 @@ func (c *Controller) handleAddressUpdate(old, cur interface{}) {
 		return
 	}
 
-	c.enqueueServiceAddress(curAddress)
+	c.enqueueAddress(curAddress)
 }
 
 func (c *Controller) handleAddressDelete(obj interface{}) {
@@ -219,7 +277,70 @@ func (c *Controller) handleAddressDelete(obj interface{}) {
 		}
 	}
 
-	c.enqueueServiceAddress(address)
+	c.enqueueAddress(address)
+}
+
+func (c *Controller) handleServiceAdd(obj interface{}) {
+	service := obj.(*latticev1.Service)
+	glog.V(4).Infof("%v added", service.Description(c.namespacePrefix))
+
+	if service.DeletionTimestamp != nil {
+		// On a restart of the controller manager, it's possible for an object to
+		// show up in a state that is already pending deletion.
+		c.handleServiceDelete(service)
+		return
+	}
+
+	c.handleServiceEvent(service)
+}
+
+func (c *Controller) handleServiceUpdate(old, cur interface{}) {
+	service := cur.(*latticev1.Service)
+	glog.V(5).Info("%v updated", service.Description(c.namespacePrefix))
+
+	c.handleServiceEvent(service)
+}
+
+func (c *Controller) handleServiceDelete(obj interface{}) {
+	service, ok := obj.(*latticev1.Service)
+
+	// When a delete is dropped, the relist will notice a pod in the store not
+	// in the list, leading to the insertion of a tombstone object which contains
+	// the deleted key/value.
+	if !ok {
+		tombstone, ok := obj.(cache.DeletedFinalStateUnknown)
+		if !ok {
+			runtime.HandleError(fmt.Errorf("couldn't get object from tombstone %#v", obj))
+			return
+		}
+		service, ok = tombstone.Obj.(*latticev1.Service)
+		if !ok {
+			runtime.HandleError(fmt.Errorf("tombstone contained object that is not a Service %#v", obj))
+			return
+		}
+	}
+
+	c.handleServiceEvent(service)
+}
+
+func (c *Controller) handleServiceEvent(service *latticev1.Service) {
+	path, err := service.PathLabel()
+	if err != nil {
+		// FIXME: send warn event
+		return
+	}
+
+	addresses, err := c.addressLister.Addresses(service.Namespace).List(labels.Everything())
+	if err != nil {
+		// FIXME: send warn event
+		return
+	}
+
+	for _, address := range addresses {
+		if address.Spec.Service != nil && path == *address.Spec.Service {
+			c.enqueueAddress(address)
+		}
+	}
 }
 
 func (c *Controller) enqueue(svc *latticev1.Address) {
@@ -307,9 +428,9 @@ func (c *Controller) processNextWorkItem() bool {
 func (c *Controller) syncAddress(key string) error {
 	glog.Flush()
 	startTime := time.Now()
-	glog.V(4).Infof("Started syncing Service %q (%v)", key, startTime)
+	glog.V(4).Infof("started syncing service %q (%v)", key, startTime)
 	defer func() {
-		glog.V(4).Infof("Finished syncing Service %q (%v)", key, time.Now().Sub(startTime))
+		glog.V(4).Infof("finished syncing service %q (%v)", key, time.Now().Sub(startTime))
 	}()
 
 	namespace, name, err := cache.SplitMetaNamespaceKey(key)
@@ -318,19 +439,31 @@ func (c *Controller) syncAddress(key string) error {
 	}
 
 	address, err := c.addressLister.Addresses(namespace).Get(name)
-	if errors.IsNotFound(err) {
-		glog.V(2).Infof("Service %v has been deleted", key)
-		return nil
+	if err != nil {
+		if errors.IsNotFound(err) {
+			glog.V(2).Infof("service %v has been deleted", key)
+			return nil
+		}
+
+		return err
 	}
+
+	if address.DeletionTimestamp != nil {
+		return c.syncDeletedAddress(address)
+	}
+
+	address, err = c.addFinalizer(address)
 	if err != nil {
 		return err
 	}
 
-	endpoint, err := c.syncDNS(address)
-	if err != nil {
-		return err
+	if address.Spec.Service != nil {
+		return c.syncServiceAddress(address)
 	}
 
-	_, err = c.syncAddressStatus(address, endpoint)
-	return err
+	if address.Spec.ExternalName != nil {
+		return c.syncExternalNameAddress(address)
+	}
+
+	return fmt.Errorf("%v has neither service nor external name", address.Description(c.namespacePrefix))
 }

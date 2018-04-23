@@ -22,7 +22,7 @@ func (kb *KubernetesBackend) DeployBuild(systemID v1.SystemID, buildID v1.BuildI
 
 	deploy := newDeploy(build)
 	namespace := kb.systemNamespace(systemID)
-	deploy, err = kb.latticeClient.LatticeV1().Deploies(namespace).Create(deploy)
+	deploy, err = kb.latticeClient.LatticeV1().Deploys(namespace).Create(deploy)
 	if err != nil {
 		return nil, err
 	}
@@ -71,7 +71,7 @@ func (kb *KubernetesBackend) ListDeploys(systemID v1.SystemID) ([]v1.Deploy, err
 	}
 
 	namespace := kb.systemNamespace(systemID)
-	deploys, err := kb.latticeClient.LatticeV1().Deploies(namespace).List(metav1.ListOptions{})
+	deploys, err := kb.latticeClient.LatticeV1().Deploys(namespace).List(metav1.ListOptions{})
 	if err != nil {
 		return nil, err
 	}
@@ -97,7 +97,7 @@ func (kb *KubernetesBackend) GetDeploy(systemID v1.SystemID, deployID v1.DeployI
 	}
 
 	namespace := kb.systemNamespace(systemID)
-	deploy, err := kb.latticeClient.LatticeV1().Deploies(namespace).Get(string(deployID), metav1.GetOptions{})
+	deploy, err := kb.latticeClient.LatticeV1().Deploys(namespace).Get(string(deployID), metav1.GetOptions{})
 	if err != nil {
 		if errors.IsNotFound(err) {
 			return nil, v1.NewInvalidDeployIDError(deployID)

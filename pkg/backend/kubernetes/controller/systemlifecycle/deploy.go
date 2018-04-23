@@ -25,7 +25,7 @@ func (c *Controller) updateDeployStatus(
 	deploy = deploy.DeepCopy()
 	deploy.Status = status
 
-	return c.latticeClient.LatticeV1().Deploies(deploy.Namespace).Update(deploy)
+	return c.latticeClient.LatticeV1().Deploys(deploy.Namespace).Update(deploy)
 
 	// TODO: switch to this when https://github.com/kubernetes/kubernetes/issues/38113 is merged
 	// TODO: also watch https://github.com/kubernetes/kubernetes/pull/55168

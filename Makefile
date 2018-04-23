@@ -199,3 +199,4 @@ kubernetes.update-dependencies:
 .PHONY: kubernetes.regenerate-custom-resource-clients
 kubernetes.regenerate-custom-resource-clients:
 	KUBERNETES_VERSION=$(VERSION) $(DIR)/hack/kubernetes/codegen/regenerate.sh
+	$(MAKE) gazelle

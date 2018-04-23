@@ -38,9 +38,8 @@ func (c *Controller) syncActiveNodePool(nodePool *latticev1.NodePool) error {
 	}
 
 	// If the node pool needs a new epoch, generate it and add it to the status.
-	// Otherwise just get the current epoch and see if the cloud provider needs to act on it.
+	// Otherwise just get the current epoch.
 	var epoch latticev1.NodePoolEpoch
-	var needsProvision bool
 
 	if needsNewEpoch {
 		epoch = nodePool.Status.Epochs.NextEpoch()
@@ -49,26 +48,12 @@ func (c *Controller) syncActiveNodePool(nodePool *latticev1.NodePool) error {
 			NumInstances: nodePool.Spec.NumInstances,
 			State:        latticev1.NodePoolStatePending,
 		}
-
-		needsProvision = true
 	} else {
 		var ok bool
 		epoch, ok = nodePool.Status.Epochs.CurrentEpoch()
 		if !ok {
 			return fmt.Errorf("cloud provider reported that %v did not need new epoch, but it does not have a current epoch", nodePool.Description(c.namespacePrefix))
 		}
-
-		state, err := c.cloudProvider.NodePoolCurrentEpochState(c.latticeID, nodePool)
-		if err != nil {
-			return fmt.Errorf("error getting %v state for current epoch (%v) from cloud provider: %v", nodePool.Description(c.namespacePrefix), epoch, err)
-		}
-
-		// Only want to call out to the cloud provider to provision the current epoch if
-		// the epoch isn't already stable.
-		// Due to the number of times that node pools are going to be assessed (currently have to
-		// reconsider it every time any service in its namespace changes), we really want to minimize
-		// the number of cloud API calls.
-		needsProvision = state != latticev1.NodePoolStateStable
 	}
 
 	// Update the node pool's status prior to telling the cloud provider to provision the current epoch.
@@ -77,30 +62,26 @@ func (c *Controller) syncActiveNodePool(nodePool *latticev1.NodePool) error {
 		return err
 	}
 
-	// To reduce the potential number of cloud API requests, only call provision and get annotations
-	// when the node pool needs to scale or be provisioned.
-	if needsProvision {
-		err = c.cloudProvider.ProvisionNodePoolEpoch(c.latticeID, nodePool, epoch)
-		if err != nil {
-			return fmt.Errorf("cloud provider could not provision %v epoch %v: %v", nodePool.Description(c.namespacePrefix), epoch, err)
-		}
+	err = c.cloudProvider.EnsureNodePoolEpoch(c.latticeID, nodePool, epoch)
+	if err != nil {
+		return fmt.Errorf("cloud provider could not ensure %v epoch %v: %v", nodePool.Description(c.namespacePrefix), epoch, err)
+	}
 
-		// Add any annotations needed by the cloud provider.
-		// Copy annotations so cloud provider doesn't mutate the cache
-		annotations := make(map[string]string)
-		for k, v := range nodePool.Annotations {
-			annotations[k] = v
-		}
+	// Add any annotations needed by the cloud provider.
+	// Copy annotations so cloud provider doesn't mutate the cache
+	annotations := make(map[string]string)
+	for k, v := range nodePool.Annotations {
+		annotations[k] = v
+	}
 
-		err = c.cloudProvider.NodePoolAddAnnotations(c.latticeID, nodePool, annotations, epoch)
-		if err != nil {
-			return fmt.Errorf("cloud provider could not get annotations for %v epoch %v: %v", nodePool.Description(c.namespacePrefix), epoch, err)
-		}
+	err = c.cloudProvider.NodePoolAddAnnotations(c.latticeID, nodePool, annotations, epoch)
+	if err != nil {
+		return fmt.Errorf("cloud provider could not get annotations for %v epoch %v: %v", nodePool.Description(c.namespacePrefix), epoch, err)
+	}
 
-		nodePool, err = c.updateNodePoolAnnotations(nodePool, annotations)
-		if err != nil {
-			return fmt.Errorf("could not update %v annotations: %v", nodePool.Description(c.namespacePrefix), err)
-		}
+	nodePool, err = c.updateNodePoolAnnotations(nodePool, annotations)
+	if err != nil {
+		return fmt.Errorf("could not update %v annotations: %v", nodePool.Description(c.namespacePrefix), err)
 	}
 
 	// If we got to here, the node pool's current epoch is stable, so update the status to reflect that.
@@ -161,7 +142,7 @@ func (c *Controller) retireEpochs(nodePool *latticev1.NodePool, retireCurrent bo
 			continue
 		}
 
-		err = c.cloudProvider.DeprovisionNodePoolEpoch(c.latticeID, nodePool, epoch)
+		err = c.cloudProvider.DestroyNodePoolEpoch(c.latticeID, nodePool, epoch)
 		if err != nil {
 			return nil, fmt.Errorf("cloud provider could not deprovision %v epoch %v: %v", nodePool.Description(c.namespacePrefix), epoch, err)
 		}
@@ -319,16 +300,13 @@ func (c *Controller) addFinalizer(nodePool *latticev1.NodePool) (*latticev1.Node
 	// Check to see if the finalizer already exists. If so nothing needs to be done.
 	for _, finalizer := range nodePool.Finalizers {
 		if finalizer == finalizerName {
-			glog.V(5).Infof("NodePool %v has %v finalizer", nodePool.Name, finalizerName)
 			return nodePool, nil
 		}
 	}
 
-	// Add the finalizer to the list and update.
-	// If this fails due to a race the Endpoint should get requeued by the controller, so
-	// not a big deal.
+	// Copy so we don't mutate the shared cache
+	nodePool = nodePool.DeepCopy()
 	nodePool.Finalizers = append(nodePool.Finalizers, finalizerName)
-	glog.V(5).Infof("NodePool %v missing %v finalizer, adding it", nodePool.Name, finalizerName)
 
 	return c.latticeClient.LatticeV1().NodePools(nodePool.Namespace).Update(nodePool)
 }
@@ -350,7 +328,9 @@ func (c *Controller) removeFinalizer(nodePool *latticev1.NodePool) (*latticev1.N
 		return nodePool, nil
 	}
 
-	// The finalizer was in the list, so we should remove it.
+	// Copy so we don't mutate the shared cache
+	nodePool = nodePool.DeepCopy()
 	nodePool.Finalizers = finalizers
+
 	return c.latticeClient.LatticeV1().NodePools(nodePool.Namespace).Update(nodePool)
 }

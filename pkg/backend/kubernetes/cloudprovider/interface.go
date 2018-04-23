@@ -3,20 +3,27 @@ package cloudprovider
 import (
 	"fmt"
 
+	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/cloudprovider/aws"
 	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/cloudprovider/local"
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
+	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/dnsprovider"
 	systembootstrapper "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/lifecycle/system/bootstrap/bootstrapper"
 	"github.com/mlab-lattice/lattice/pkg/util/cli"
 
-	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
+
+	kubeclientset "k8s.io/client-go/kubernetes"
+	corelisters "k8s.io/client-go/listers/core/v1"
 )
 
 type Interface interface {
 	systembootstrapper.Interface
+	dnsprovider.Interface
+	AddressLoadBalancer
+	NodePool
 
 	// TransformComponentBuildJobSpec takes in the JobSpec generated for a ComponentBuild, and applies any cloud provider
 	// related transforms necessary to a copy of the JobSpec, and returns it.
@@ -35,16 +42,20 @@ type Interface interface {
 	// current, this method should return true, along with a copy of the DeploymentSpec that should be identical to the
 	// DeploymentSpec that was passed in to TransformServiceDeploymentSpec.
 	IsDeploymentSpecUpdated(service *latticev1.Service, current, desired, untransformed *appsv1.DeploymentSpec) (bool, string, *appsv1.DeploymentSpec)
+}
 
-	NodePool
+type AddressLoadBalancer interface {
+	EnsureServiceAddressLoadBalancer(v1.LatticeID, *latticev1.Address, *latticev1.Service) error
+	DestroyServiceAddressLoadBalancer(v1.LatticeID, *latticev1.Address, *latticev1.Service) error
+	ServiceAddressLoadBalancerAddAnnotations(v1.LatticeID, *latticev1.Address, *latticev1.Service, map[string]string) error
+	ServiceAddressLoadBalancerPorts(v1.LatticeID, *latticev1.Address, *latticev1.Service) (map[int32]string, error)
 }
 
 type NodePool interface {
 	NodePoolNeedsNewEpoch(*latticev1.NodePool) (bool, error)
-	NodePoolCurrentEpochState(v1.LatticeID, *latticev1.NodePool) (latticev1.NodePoolState, error)
+	EnsureNodePoolEpoch(v1.LatticeID, *latticev1.NodePool, latticev1.NodePoolEpoch) error
+	DestroyNodePoolEpoch(v1.LatticeID, *latticev1.NodePool, latticev1.NodePoolEpoch) error
 	NodePoolAddAnnotations(v1.LatticeID, *latticev1.NodePool, map[string]string, latticev1.NodePoolEpoch) error
-	ProvisionNodePoolEpoch(v1.LatticeID, *latticev1.NodePool, latticev1.NodePoolEpoch) error
-	DeprovisionNodePoolEpoch(v1.LatticeID, *latticev1.NodePool, latticev1.NodePoolEpoch) error
 }
 
 type Options struct {
@@ -52,13 +63,18 @@ type Options struct {
 	Local *local.Options
 }
 
-func NewCloudProvider(namespacePrefix string, options *Options) (Interface, error) {
+func NewCloudProvider(
+	namespacePrefix string,
+	kubeClient kubeclientset.Interface,
+	kubeServiceLister corelisters.ServiceLister,
+	options *Options,
+) (Interface, error) {
 	if options.AWS != nil {
-		return aws.NewCloudProvider(namespacePrefix, options.AWS), nil
+		return aws.NewCloudProvider(namespacePrefix, kubeClient, kubeServiceLister, options.AWS), nil
 	}
 
 	if options.Local != nil {
-		return local.NewCloudProvider(namespacePrefix, options.Local), nil
+		return local.NewCloudProvider(namespacePrefix, kubeClient, kubeServiceLister, options.Local), nil
 	}
 
 	return nil, fmt.Errorf("must provide cloud provider options")
@@ -83,7 +99,7 @@ func OverlayConfigOptions(staticOptions *Options, dynamicConfig *latticev1.Confi
 
 	if staticOptions.Local != nil {
 		if dynamicConfig.Local == nil {
-			return nil, fmt.Errorf("static options were for Local but dynamic config did not have Local options set")
+			return nil, fmt.Errorf("static options were for local but dynamic config did not have local options set")
 		}
 
 		localOptions, err := local.NewOptions(staticOptions.Local, dynamicConfig.Local)

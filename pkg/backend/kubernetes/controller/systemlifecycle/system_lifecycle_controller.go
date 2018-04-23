@@ -506,7 +506,7 @@ func (c *Controller) syncDeploy(key string) error {
 		return err
 	}
 
-	deploy, err := c.deployLister.Deploies(namespace).Get(name)
+	deploy, err := c.deployLister.Deploys(namespace).Get(name)
 	if errors.IsNotFound(err) {
 		glog.V(2).Infof("Deploy %v has been deleted", key)
 		return nil

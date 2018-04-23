@@ -3,7 +3,9 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library")
 go_library(
     name = "go_default_library",
     srcs = [
+        "address_load_balancer.go",
         "cloudprovider.go",
+        "dns.go",
         "lattice_bootstrapper.go",
         "lattice_provisioner.go",
         "node_pool.go",
@@ -31,6 +33,7 @@ go_library(
         "@io_k8s_apimachinery//pkg/util/intstr:go_default_library",
         "@io_k8s_apimachinery//pkg/util/wait:go_default_library",
         "@io_k8s_client_go//kubernetes:go_default_library",
+        "@io_k8s_client_go//listers/core/v1:go_default_library",
         "@io_k8s_client_go//tools/clientcmd:go_default_library",
     ],
 )

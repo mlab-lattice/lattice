@@ -36,7 +36,7 @@ const (
 type Options struct {
 	PrepareImage      string
 	Image             string
-	RedirectCIDRBlock string
+	RedirectCIDRBlock net.IPNet
 	XDSAPIPort        int32
 }
 
@@ -63,7 +63,7 @@ func Flags() (cli.Flags, *Options) {
 	options := &Options{}
 
 	flags := cli.Flags{
-		&cli.StringFlag{
+		&cli.IPNetFlag{
 			Name:     "redirect-cidr-block",
 			Required: true,
 			Target:   &options.RedirectCIDRBlock,
@@ -80,7 +80,7 @@ func Flags() (cli.Flags, *Options) {
 type DefaultEnvoyServiceMesh struct {
 	prepareImage      string
 	image             string
-	redirectCIDRBlock string
+	redirectCIDRBlock net.IPNet
 	xdsAPIPort        int32
 }
 
@@ -207,6 +207,47 @@ func (sm *DefaultEnvoyServiceMesh) TransformServiceDeploymentSpec(
 	return spec, nil
 }
 
+func (sm *DefaultEnvoyServiceMesh) ServiceMeshPort(service *latticev1.Service, port int32) (int32, error) {
+	serviceMeshPorts, err := sm.ServiceMeshPorts(service)
+	if err != nil {
+		return 0, err
+	}
+
+	serviceMeshPort, ok := serviceMeshPorts[port]
+	if !ok {
+		err := fmt.Errorf(
+			"service %v/%v does not have expected port %v",
+			service.Namespace,
+			service.Name,
+			port,
+		)
+		return 0, err
+	}
+
+	return serviceMeshPort, nil
+}
+
+func (sm *DefaultEnvoyServiceMesh) ServiceMeshPorts(service *latticev1.Service) (map[int32]int32, error) {
+	serviceMeshPortsJSON, ok := service.Annotations[annotationKeyServiceMeshPorts]
+	if !ok {
+		err := fmt.Errorf(
+			"service %v/%v does not have expected annotation %v",
+			service.Namespace,
+			service.Name,
+			serviceMeshPortsJSON,
+		)
+		return nil, err
+	}
+
+	serviceMeshPorts := map[int32]int32{}
+	err := json.Unmarshal([]byte(serviceMeshPortsJSON), &serviceMeshPorts)
+	if err != nil {
+		return nil, err
+	}
+
+	return serviceMeshPorts, nil
+}
+
 func (sm *DefaultEnvoyServiceMesh) ServicePort(service *latticev1.Service, port int32) (int32, error) {
 	servicePorts, err := sm.ServicePorts(service)
 	if err != nil {
@@ -241,45 +282,13 @@ func (sm *DefaultEnvoyServiceMesh) ServicePorts(service *latticev1.Service) (map
 	return servicePorts, nil
 }
 
-func (sm *DefaultEnvoyServiceMesh) ServiceMeshPort(service *latticev1.Service, port int32) (int32, error) {
-	serviceMeshPorts, err := sm.ServiceMeshPorts(service)
+func (sm *DefaultEnvoyServiceMesh) ServiceIP(service *latticev1.Service) (string, error) {
+	ip, _, err := net.ParseCIDR(sm.redirectCIDRBlock.String())
 	if err != nil {
-		return 0, err
+		return "", err
 	}
 
-	serviceMeshPort, ok := serviceMeshPorts[port]
-	if !ok {
-		err := fmt.Errorf(
-			"Service %v/%v does not have expected port %v",
-			service.Namespace,
-			service.Name,
-			port,
-		)
-		return 0, err
-	}
-
-	return serviceMeshPort, nil
-}
-
-func (sm *DefaultEnvoyServiceMesh) ServiceMeshPorts(service *latticev1.Service) (map[int32]int32, error) {
-	serviceMeshPortsJSON, ok := service.Annotations[annotationKeyServiceMeshPorts]
-	if !ok {
-		err := fmt.Errorf(
-			"Service %v/%v does not have expected annotation %v",
-			service.Namespace,
-			service.Name,
-			serviceMeshPortsJSON,
-		)
-		return nil, err
-	}
-
-	serviceMeshPorts := map[int32]int32{}
-	err := json.Unmarshal([]byte(serviceMeshPortsJSON), &serviceMeshPorts)
-	if err != nil {
-		return nil, err
-	}
-
-	return serviceMeshPorts, nil
+	return ip.String(), nil
 }
 
 func (sm *DefaultEnvoyServiceMesh) IsDeploymentSpecUpdated(
@@ -464,7 +473,7 @@ func (sm *DefaultEnvoyServiceMesh) envoyContainers(service *latticev1.Service) (
 			},
 			{
 				Name:  "REDIRECT_EGRESS_CIDR_BLOCK",
-				Value: sm.redirectCIDRBlock,
+				Value: sm.redirectCIDRBlock.String(),
 			},
 			{
 				Name:  "CONFIG_DIR",
@@ -559,20 +568,6 @@ func (sm *DefaultEnvoyServiceMesh) envoyContainers(service *latticev1.Service) (
 	}
 
 	return prepareEnvoy, envoy, nil
-}
-
-func (sm *DefaultEnvoyServiceMesh) GetEndpointSpec(address *latticev1.Address) (*latticev1.EndpointSpec, error) {
-	ip, _, err := net.ParseCIDR(sm.redirectCIDRBlock)
-	if err != nil {
-		return nil, err
-	}
-
-	ipStr := ip.String()
-	spec := &latticev1.EndpointSpec{
-		Path: address.Spec.Path,
-		IP:   &ipStr,
-	}
-	return spec, nil
 }
 
 func (sm *DefaultEnvoyServiceMesh) EgressPort(service *latticev1.Service) (int32, error) {

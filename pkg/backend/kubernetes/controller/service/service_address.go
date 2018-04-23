@@ -95,7 +95,7 @@ func (c *Controller) newServiceAddress(service *latticev1.Service) (*latticev1.A
 		},
 		Spec: spec,
 		Status: latticev1.AddressStatus{
-			State: latticev1.ServiceAddressStatePending,
+			State: latticev1.AddressStatePending,
 		},
 	}
 

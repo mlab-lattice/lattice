@@ -9,6 +9,9 @@ import (
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 
+	kubeclientset "k8s.io/client-go/kubernetes"
+	corelisters "k8s.io/client-go/listers/core/v1"
+
 	"github.com/golang/glog"
 )
 
@@ -37,10 +40,18 @@ func NewOptions(staticOptions *Options, dynamicConfig *latticev1.ConfigCloudProv
 	return options, nil
 }
 
-func NewCloudProvider(namespacePrefix string, options *Options) *DefaultLocalCloudProvider {
+func NewCloudProvider(
+	namespacePrefix string,
+	kubeClient kubeclientset.Interface,
+	kubeServiceLister corelisters.ServiceLister,
+	options *Options,
+) *DefaultLocalCloudProvider {
 	return &DefaultLocalCloudProvider{
 		namespacePrefix: namespacePrefix,
 		ip:              options.IP,
+
+		kubeClient:        kubeClient,
+		kubeServiceLister: kubeServiceLister,
 	}
 }
 
@@ -59,6 +70,9 @@ func Flags() (cli.Flags, *Options) {
 type DefaultLocalCloudProvider struct {
 	namespacePrefix string
 	ip              string
+
+	kubeServiceLister corelisters.ServiceLister
+	kubeClient        kubeclientset.Interface
 }
 
 func (cp *DefaultLocalCloudProvider) BootstrapSystemResources(resources *bootstrapper.SystemResources) {

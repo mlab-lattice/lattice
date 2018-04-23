@@ -2,15 +2,15 @@ package v1
 
 import (
 	"encoding/json"
+	"fmt"
 
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	kubeutil "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/kubernetes"
 	"github.com/mlab-lattice/lattice/pkg/definition"
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 
-	"fmt"
-	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/constants"
 	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -21,7 +21,10 @@ const (
 )
 
 // ServiceID label is the key that should be used in a label referencing a service's ID.
-var ServiceIDLabelKey = fmt.Sprintf("service.%v/id", SchemeGroupVersion.String())
+var ServiceIDLabelKey = fmt.Sprintf("service.%v/id", GroupName)
+
+// ServiceID label is the key that should be used for the path of the service.
+var ServicePathLabelKey = fmt.Sprintf("service.%v/path", GroupName)
 
 // +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
@@ -53,7 +56,7 @@ func (s *Service) Description(namespacePrefix string) string {
 }
 
 func (s *Service) PathLabel() (tree.NodePath, error) {
-	path, ok := s.Labels[constants.LabelKeyServicePath]
+	path, ok := s.Labels[ServicePathLabelKey]
 	if !ok {
 		return "", fmt.Errorf("service did not contain service path label")
 	}
@@ -128,11 +131,11 @@ type ServiceStatus struct {
 	State              ServiceState `json:"state"`
 	ObservedGeneration int64        `json:"observedGeneration"`
 	// FIXME: remove this when upgrading to kube v1.10.0
-	UpdateProcessed  bool                     `json:"updateProcessed"`
-	UpdatedInstances int32                    `json:"updatedInstances"`
-	StaleInstances   int32                    `json:"staleInstances"`
-	PublicPorts      ServiceStatusPublicPorts `json:"publicPorts"`
-	FailureInfo      *ServiceFailureInfo      `json:"failureInfo,omitempty"`
+	UpdateProcessed  bool                      `json:"updateProcessed"`
+	UpdatedInstances int32                     `json:"updatedInstances"`
+	StaleInstances   int32                     `json:"staleInstances"`
+	PublicPorts      ServiceStatusPublicPorts  `json:"publicPorts"`
+	FailureInfo      *ServiceStatusFailureInfo `json:"failureInfo,omitempty"`
 }
 
 type ServiceState string
@@ -151,7 +154,7 @@ type ServiceStatusPublicPort struct {
 	Address string `json:"address"`
 }
 
-type ServiceFailureInfo struct {
+type ServiceStatusFailureInfo struct {
 	Message  string      `json:"message"`
 	Internal bool        `json:"internal"`
 	Time     metav1.Time `json:"time"`

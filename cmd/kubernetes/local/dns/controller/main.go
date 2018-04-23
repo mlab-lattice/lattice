@@ -10,7 +10,7 @@ import (
 	latticeclientset "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/generated/clientset/versioned"
 	latticeinformers "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/generated/informers/externalversions"
 
-	clientset "k8s.io/client-go/kubernetes"
+	kubeclientset "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 
@@ -48,8 +48,8 @@ func main() {
 
 	stop := make(chan struct{})
 
-	versionedLatticeClient := latticeclientset.NewForConfigOrDie(config)
-	latticeInformers := latticeinformers.NewSharedInformerFactory(versionedLatticeClient, time.Duration(12*time.Hour))
+	latticeClient := latticeclientset.NewForConfigOrDie(config)
+	latticeInformers := latticeinformers.NewSharedInformerFactory(latticeClient, time.Duration(12*time.Hour))
 
 	glog.V(1).Info("Starting dns controller")
 
@@ -58,9 +58,11 @@ func main() {
 		v1.LatticeID(latticeID),
 		dnsmasqConfigPath,
 		hostsFilePath,
-		versionedLatticeClient,
-		clientset.NewForConfigOrDie(config),
-		latticeInformers.Lattice().V1().Endpoints(),
+		latticeClient,
+		kubeclientset.NewForConfigOrDie(config),
+		latticeInformers.Lattice().V1().Configs(),
+		latticeInformers.Lattice().V1().Addresses(),
+		latticeInformers.Lattice().V1().Services(),
 	).Run(stop)
 
 	glog.V(1).Info("Starting informer factory")

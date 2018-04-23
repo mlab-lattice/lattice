@@ -39,35 +39,6 @@ func (cp *DefaultAWSCloudProvider) NodePoolNeedsNewEpoch(nodePool *latticev1.Nod
 	return nodePool.Spec.InstanceType != epoch.InstanceType, nil
 }
 
-func (cp *DefaultAWSCloudProvider) NodePoolCurrentEpochState(
-	latticeID v1.LatticeID,
-	nodePool *latticev1.NodePool,
-) (latticev1.NodePoolState, error) {
-	current, ok := nodePool.Status.Epochs.CurrentEpoch()
-	if !ok {
-		return latticev1.NodePoolStatePending, fmt.Errorf("could not get current epoch for %v", nodePool.Description(cp.namespacePrefix))
-	}
-
-	epochInfo, ok := nodePool.Status.Epochs.Epoch(current)
-	if !ok {
-		return latticev1.NodePoolStatePending, fmt.Errorf("could not get epoch status for %v epoch %v", nodePool.Description(cp.namespacePrefix), current)
-	}
-
-	// Invariant: NodePoolCurrentEpochState will only be called if NodePoolNeedsNewEpoch returns false.
-	// Therefore, we don't have to check the instance type since NodePoolNeedsNewEpoch would have returned
-	// true if the they mismatched.
-
-	if epochInfo.State == latticev1.NodePoolStatePending {
-		return latticev1.NodePoolStatePending, nil
-	}
-
-	if nodePool.Spec.NumInstances != epochInfo.NumInstances {
-		return latticev1.NodePoolStateScaling, nil
-	}
-
-	return latticev1.NodePoolStateStable, nil
-}
-
 func (cp *DefaultAWSCloudProvider) NodePoolAddAnnotations(
 	latticeID v1.LatticeID,
 	nodePool *latticev1.NodePool,
@@ -84,23 +55,66 @@ func (cp *DefaultAWSCloudProvider) NodePoolAddAnnotations(
 	return nil
 }
 
-func (cp *DefaultAWSCloudProvider) ProvisionNodePoolEpoch(
+func (cp *DefaultAWSCloudProvider) EnsureNodePoolEpoch(
 	latticeID v1.LatticeID,
 	nodePool *latticev1.NodePool,
 	epoch latticev1.NodePoolEpoch,
 ) error {
+	state, err := cp.nodePoolCurrentEpochState(latticeID, nodePool)
+	if err != nil {
+		return fmt.Errorf("error getting state for current epoch (%v): %v", epoch, err)
+	}
+
+	// Only want to call out to the cloud provider to provision the current epoch if
+	// the epoch isn't already stable.
+	// Due to the number of times that node pools are going to be assessed (currently have to
+	// reconsider it every time any service in its namespace changes), we really want to minimize
+	// the number of cloud API calls.
+	if state == latticev1.NodePoolStateStable {
+		return nil
+	}
+
 	config := cp.nodePoolTerraformConfig(latticeID, nodePool, epoch)
-	_, err := terraform.Apply(nodePoolWorkDirectory(nodePool.ID(epoch)), config)
+	_, err = terraform.Apply(nodePoolWorkDirectory(nodePool.ID(epoch)), config)
 	return err
 }
 
-func (cp *DefaultAWSCloudProvider) DeprovisionNodePoolEpoch(
+func (cp *DefaultAWSCloudProvider) DestroyNodePoolEpoch(
 	latticeID v1.LatticeID,
 	nodePool *latticev1.NodePool,
 	epoch latticev1.NodePoolEpoch,
 ) error {
 	_, err := terraform.Destroy(nodePoolWorkDirectory(nodePool.ID(epoch)), nil)
 	return err
+}
+
+func (cp *DefaultAWSCloudProvider) nodePoolCurrentEpochState(
+	latticeID v1.LatticeID,
+	nodePool *latticev1.NodePool,
+) (latticev1.NodePoolState, error) {
+	current, ok := nodePool.Status.Epochs.CurrentEpoch()
+	if !ok {
+		return latticev1.NodePoolStatePending, fmt.Errorf("could not get current epoch for %v", nodePool.Description(cp.namespacePrefix))
+	}
+
+	epochInfo, ok := nodePool.Status.Epochs.Epoch(current)
+	if !ok {
+		return latticev1.NodePoolStatePending, fmt.Errorf("could not get epoch status for %v epoch %v", nodePool.Description(cp.namespacePrefix), current)
+	}
+
+	// Invariant: nodePoolCurrentEpochState will only be called if NodePoolNeedsNewEpoch returns false.
+	// Therefore, we don't have to check the instance type since NodePoolNeedsNewEpoch would have returned
+	// true if the they mismatched.
+
+	if epochInfo.State == latticev1.NodePoolStatePending {
+		return latticev1.NodePoolStatePending, nil
+	}
+
+	if nodePool.Spec.NumInstances != epochInfo.NumInstances {
+		return latticev1.NodePoolStateScaling, nil
+	}
+
+	return latticev1.NodePoolStateStable, nil
 }
 
 func (cp *DefaultAWSCloudProvider) nodePoolEpochInfo(

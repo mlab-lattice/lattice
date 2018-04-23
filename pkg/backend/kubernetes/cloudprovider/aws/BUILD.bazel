@@ -3,7 +3,9 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library")
 go_library(
     name = "go_default_library",
     srcs = [
+        "address_load_balancer.go",
         "cloudprovider.go",
+        "dns.go",
         "lattice_bootstrapper.go",
         "node_pool.go",
     ],
@@ -16,11 +18,16 @@ go_library(
         "//pkg/backend/kubernetes/customresource/apis/lattice/v1:go_default_library",
         "//pkg/backend/kubernetes/lifecycle/lattice/bootstrap/bootstrapper:go_default_library",
         "//pkg/backend/kubernetes/lifecycle/system/bootstrap/bootstrapper:go_default_library",
+        "//pkg/backend/kubernetes/util/kubernetes:go_default_library",
         "//pkg/util/cli:go_default_library",
         "//pkg/util/terraform:go_default_library",
         "//pkg/util/terraform/provider/aws:go_default_library",
         "@io_k8s_api//apps/v1:go_default_library",
         "@io_k8s_api//batch/v1:go_default_library",
         "@io_k8s_api//core/v1:go_default_library",
+        "@io_k8s_apimachinery//pkg/api/errors:go_default_library",
+        "@io_k8s_apimachinery//pkg/apis/meta/v1:go_default_library",
+        "@io_k8s_client_go//kubernetes:go_default_library",
+        "@io_k8s_client_go//listers/core/v1:go_default_library",
     ],
 )

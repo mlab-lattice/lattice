@@ -102,26 +102,26 @@ func (c *Controller) syncServiceStatus(
 
 	// But if we have a failure, our updating or scaling has failed
 	// A failed status takes priority over an updating status
-	var failureInfo *latticev1.ServiceFailureInfo
+	var failureInfo *latticev1.ServiceStatusFailureInfo
 	if failed {
 		state = latticev1.ServiceStateFailed
 		switch failureReason {
 		case reasonTimedOut:
-			failureInfo = &latticev1.ServiceFailureInfo{
+			failureInfo = &latticev1.ServiceStatusFailureInfo{
 				Internal: false,
 				Message:  "timed out",
 				Time:     *failureTime,
 			}
 
 		case reasonLoadBalancerFailed:
-			failureInfo = &latticev1.ServiceFailureInfo{
+			failureInfo = &latticev1.ServiceStatusFailureInfo{
 				Internal: false,
 				Message:  "load balancer failed",
 				Time:     *failureTime,
 			}
 
 		default:
-			failureInfo = &latticev1.ServiceFailureInfo{
+			failureInfo = &latticev1.ServiceStatusFailureInfo{
 				Internal: true,
 				Message:  fmt.Sprintf("%v: %v", failureReason, failureMessage),
 				Time:     *failureTime,
@@ -179,7 +179,7 @@ func (c *Controller) updateServiceStatus(
 	state latticev1.ServiceState,
 	updatedInstances, staleInstances int32,
 	publicPorts latticev1.ServiceStatusPublicPorts,
-	failureInfo *latticev1.ServiceFailureInfo,
+	failureInfo *latticev1.ServiceStatusFailureInfo,
 ) (*latticev1.Service, error) {
 	status := latticev1.ServiceStatus{
 		State:              state,

@@ -9,11 +9,11 @@ import (
 	awstfprovider "github.com/mlab-lattice/lattice/pkg/util/terraform/provider/aws"
 )
 
-func (cp *DefaultAWSCloudProvider) ProvisionDNSARecord(latticeID v1.LatticeID, name, value string) error {
+func (cp *DefaultAWSCloudProvider) EnsureDNSARecord(latticeID v1.LatticeID, name, value string) error {
 	return cp.provisionRoute53Record(latticeID, "A", name, value)
 }
 
-func (cp *DefaultAWSCloudProvider) ProvisionDNSCNAMERecord(latticeID v1.LatticeID, name, value string) error {
+func (cp *DefaultAWSCloudProvider) EnsureDNSCNAMERecord(latticeID v1.LatticeID, name, value string) error {
 	return cp.provisionRoute53Record(latticeID, "CNAME", name, value)
 }
 
@@ -23,11 +23,11 @@ func (cp *DefaultAWSCloudProvider) provisionRoute53Record(latticeID v1.LatticeID
 	return err
 }
 
-func (cp *DefaultAWSCloudProvider) DeprovisionDNSARecord(latticeID v1.LatticeID, name string) error {
+func (cp *DefaultAWSCloudProvider) DestroyDNSARecord(latticeID v1.LatticeID, name string) error {
 	return cp.deprovisionRoute53Record(latticeID, name)
 }
 
-func (cp *DefaultAWSCloudProvider) DeprovisionDNSCNAMERecord(latticeID v1.LatticeID, name string) error {
+func (cp *DefaultAWSCloudProvider) DestroyDNSCNAMERecord(latticeID v1.LatticeID, name string) error {
 	return cp.deprovisionRoute53Record(latticeID, name)
 }
 

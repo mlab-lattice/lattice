@@ -11,6 +11,9 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
+
+	kubeclientset "k8s.io/client-go/kubernetes"
+	corelisters "k8s.io/client-go/listers/core/v1"
 )
 
 const (
@@ -54,7 +57,12 @@ func NewOptions(staticOptions *Options, dynamicConfig *latticev1.ConfigCloudProv
 	return options, nil
 }
 
-func NewCloudProvider(namespacePrefix string, options *Options) *DefaultAWSCloudProvider {
+func NewCloudProvider(
+	namespacePrefix string,
+	kubeClient kubeclientset.Interface,
+	kubeServiceLister corelisters.ServiceLister,
+	options *Options,
+) *DefaultAWSCloudProvider {
 	return &DefaultAWSCloudProvider{
 		namespacePrefix: namespacePrefix,
 
@@ -71,6 +79,9 @@ func NewCloudProvider(namespacePrefix string, options *Options) *DefaultAWSCloud
 
 		terraformModulePath:     options.TerraformModulePath,
 		terraformBackendOptions: options.TerraformBackendOptions,
+
+		kubeClient:        kubeClient,
+		kubeServiceLister: kubeServiceLister,
 	}
 }
 
@@ -145,6 +156,9 @@ type DefaultAWSCloudProvider struct {
 
 	terraformModulePath     string
 	terraformBackendOptions *terraform.BackendOptions
+
+	kubeClient        kubeclientset.Interface
+	kubeServiceLister corelisters.ServiceLister
 }
 
 func (cp *DefaultAWSCloudProvider) BootstrapSystemResources(resources *bootstrapper.SystemResources) {

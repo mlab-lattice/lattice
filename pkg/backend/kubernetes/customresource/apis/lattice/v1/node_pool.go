@@ -104,6 +104,8 @@ func (np *NodePool) Description(namespacePrefix string) string {
 	return fmt.Sprintf("node pool %v (%v in system %v)", np.Name, typeDescription, systemID)
 }
 
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
 type NodePoolEpoch int64
 
 func (np *NodePool) Affinity(epoch NodePoolEpoch) *corev1.NodeAffinity {
@@ -228,7 +230,11 @@ type NodePoolList struct {
 //		"bar": { "abc": [1, 2] },
 //		"foo": { "xyz": [5] }
 //	}
-type NodePoolAnnotationValue map[string]map[string][]NodePoolEpoch
+// +k8s:deepcopy-gen=false
+type NodePoolAnnotationValue map[string]NodePoolAnnotationValueNamespace
+
+// +k8s:deepcopy-gen=false
+type NodePoolAnnotationValueNamespace map[string][]NodePoolEpoch
 
 func (a NodePoolAnnotationValue) IsEmpty() bool {
 	return len(a) == 0

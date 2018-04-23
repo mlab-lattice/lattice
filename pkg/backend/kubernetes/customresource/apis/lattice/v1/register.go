@@ -25,9 +25,9 @@ var (
 		ListType runtime.Object
 	}{
 		{
-			Singular: ResourceSingularServiceAddress,
-			Plural:   ResourcePluralServiceAddress,
-			Scope:    ResourceScopeServiceAddress,
+			Singular: ResourceSingularAddress,
+			Plural:   ResourcePluralAddress,
+			Scope:    ResourceScopeAddress,
 			Kind:     "Address",
 			ListKind: "AddressList",
 			Type:     &Address{},
@@ -68,15 +68,6 @@ var (
 			ListKind: "DeployList",
 			Type:     &Deploy{},
 			ListType: &DeployList{},
-		},
-		{
-			Singular: ResourceSingularEndpoint,
-			Plural:   ResourcePluralEndpoint,
-			Scope:    ResourceScopeEndpoint,
-			Kind:     "Endpoint",
-			ListKind: "EndpointList",
-			Type:     &Endpoint{},
-			ListType: &EndpointList{},
 		},
 		{
 			Singular: ResourceSingularLoadBalancer,
