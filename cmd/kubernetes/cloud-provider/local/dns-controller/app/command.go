@@ -16,7 +16,7 @@ import (
 	"github.com/mlab-lattice/lattice/pkg/util/cli"
 )
 
-func Execute() {
+func Command() *cli.Command {
 	var kubeconfig string
 	var namespacePrefix string
 	var dnsmasqConfigPath string
@@ -25,7 +25,7 @@ func Execute() {
 	var serviceMesh string
 	serviceMeshFlag, serviceMeshOptions := servicemesh.Flag(&serviceMesh)
 
-	command := cli.Command{
+	command := &cli.Command{
 		Name: "dns-controller",
 		Flags: cli.Flags{
 			&cli.StringFlag{
@@ -34,19 +34,22 @@ func Execute() {
 				Target: &kubeconfig,
 			},
 			&cli.StringFlag{
-				Name:   "namespace-prefix",
-				Usage:  "namespace prefix for the lattice",
-				Target: &namespacePrefix,
+				Name:     "namespace-prefix",
+				Usage:    "namespace prefix for the lattice",
+				Required: true,
+				Target:   &namespacePrefix,
 			},
 			&cli.StringFlag{
-				Name:   "dnsmasq-config-path",
-				Usage:  "path to the additional dnsmasq configuration file",
-				Target: &dnsmasqConfigPath,
+				Name:    "dnsmasq-config-path",
+				Usage:   "path to the additional dnsmasq configuration file",
+				Default: "/var/run/lattice/dnsmasq.conf",
+				Target:  &dnsmasqConfigPath,
 			},
 			&cli.StringFlag{
-				Name:   "dnsmasq-hosts-file-path",
-				Usage:  "path to the additional dnsmasq hosts",
-				Target: &dnsmasqHostsFilePath,
+				Name:    "dnsmasq-hosts-file-path",
+				Usage:   "path to the additional dnsmasq hosts",
+				Default: "/var/run/lattice/hosts",
+				Target:  &dnsmasqHostsFilePath,
 			},
 
 			&cli.StringFlag{
@@ -95,5 +98,5 @@ func Execute() {
 		},
 	}
 
-	command.Execute()
+	return command
 }

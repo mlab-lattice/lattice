@@ -4,7 +4,7 @@ go_library(
     name = "go_default_library",
     srcs = ["main.go"],
     importpath = "github.com/mlab-lattice/lattice/cmd/kubernetes/cloud-provider/local/dns-controller",
-    visibility = ["//visibility:private"],
+    visibility = ["//visibility:public"],
     deps = ["//cmd/kubernetes/cloud-provider/local/dns-controller/app:go_default_library"],
 )
 

@@ -16,6 +16,7 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"strings"
 )
 
 const (
@@ -23,6 +24,10 @@ const (
 	dnsController = "local-dns-controller"
 	dnsmasqNanny  = "local-dnsmasq-nanny"
 	dnsService    = "local-dns-service"
+
+	dnsConfigDirectory = "/var/run/lattice"
+	DNSHostsFile       = dnsConfigDirectory + "hosts"
+	DnsmasqConfigFile  = dnsConfigDirectory + "dnsmasq.conf"
 
 	serviceAccountDNS = "local-dns"
 )
@@ -97,12 +102,17 @@ type DefaultLocalLatticeBootstrapper struct {
 }
 
 func (cp *DefaultLocalLatticeBootstrapper) BootstrapLatticeResources(resources *bootstrapper.Resources) {
-	cp.bootstrapLatticeDNS(resources)
-
+	var serviceMeshVars []string
 	for _, daemonSet := range resources.DaemonSets {
 		template := transformPodTemplateSpec(&daemonSet.Spec.Template)
 
 		if daemonSet.Name == kubeconstants.ControlPlaneServiceLatticeControllerManager {
+			for _, arg := range template.Spec.Containers[0].Args {
+				if strings.HasPrefix(arg, "--service-mesh") {
+					serviceMeshVars = append(serviceMeshVars, arg)
+				}
+			}
+
 			template.Spec.Containers[0].Args = append(
 				template.Spec.Containers[0].Args,
 				"--cloud-provider-var", fmt.Sprintf("ip=%v", cp.IP),
@@ -111,15 +121,21 @@ func (cp *DefaultLocalLatticeBootstrapper) BootstrapLatticeResources(resources *
 
 		daemonSet.Spec.Template = *template
 	}
+
+	cp.bootstrapLatticeDNS(resources, serviceMeshVars)
 }
 
-func (cp *DefaultLocalLatticeBootstrapper) bootstrapLatticeDNS(resources *bootstrapper.Resources) {
+func (cp *DefaultLocalLatticeBootstrapper) bootstrapLatticeDNS(resources *bootstrapper.Resources, serviceMeshVars []string) {
 	namespace := kubeutil.InternalNamespace(cp.NamespacePrefix)
 
-	controllerArgs := []string{"--lattice-id", string(cp.LatticeID), "--namespace-prefix", cp.NamespacePrefix}
+	controllerArgs := []string{
+		"--lattice-id", string(cp.LatticeID),
+		"--namespace-prefix", cp.NamespacePrefix,
+	}
 	controllerArgs = append(controllerArgs, cp.DNS.ControllerArgs...)
+	controllerArgs = append(controllerArgs, serviceMeshVars...)
 
-	dnsmasqNannyArgs := []string{}
+	var dnsmasqNannyArgs []string
 	dnsmasqNannyArgs = append(dnsmasqNannyArgs, cp.DNS.DnsmasqNannyArgs...)
 
 	labels := map[string]string{
@@ -154,7 +170,7 @@ func (cp *DefaultLocalLatticeBootstrapper) bootstrapLatticeDNS(resources *bootst
 							VolumeMounts: []corev1.VolumeMount{
 								{
 									Name:      "dns-config",
-									MountPath: DNSConfigDirectory,
+									MountPath: dnsConfigDirectory,
 								},
 							},
 						},
@@ -172,7 +188,7 @@ func (cp *DefaultLocalLatticeBootstrapper) bootstrapLatticeDNS(resources *bootst
 							VolumeMounts: []corev1.VolumeMount{
 								{
 									Name:      "dns-config",
-									MountPath: DNSConfigDirectory,
+									MountPath: dnsConfigDirectory,
 								},
 							},
 						},
@@ -184,7 +200,7 @@ func (cp *DefaultLocalLatticeBootstrapper) bootstrapLatticeDNS(resources *bootst
 							Name: "dns-config",
 							VolumeSource: corev1.VolumeSource{
 								HostPath: &corev1.HostPathVolumeSource{
-									Path: DNSConfigDirectory,
+									Path: dnsConfigDirectory,
 								},
 							},
 						},
