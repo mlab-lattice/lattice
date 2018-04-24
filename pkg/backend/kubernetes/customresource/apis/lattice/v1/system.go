@@ -22,6 +22,9 @@ const (
 var (
 	SystemKind     = SchemeGroupVersion.WithKind("System")
 	SystemListKind = SchemeGroupVersion.WithKind("SystemList")
+
+	SystemDefinitionURLLabelKey     = fmt.Sprintf("system.%v/definition-url", GroupName)
+	SystemDefinitionVersionLabelKey = fmt.Sprintf("system.%v/definition-version", GroupName)
 )
 
 // +genclient
@@ -97,8 +100,7 @@ func (i *SystemSpecServiceInfo) UnmarshalJSON(data []byte) error {
 type SystemStatus struct {
 	ObservedGeneration int64 `json:"observedGeneration"`
 
-	State   SystemState `json:"state"`
-	Version *string     `json:"version"`
+	State SystemState `json:"state"`
 
 	// Maps a Service path to its Service.Status
 	Services map[tree.NodePath]SystemStatusService `json:"services"`

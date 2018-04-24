@@ -3,6 +3,7 @@ package systemlifecycle
 import (
 	"fmt"
 
+	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 )
 
@@ -26,6 +27,28 @@ func (c *Controller) syncAcceptedDeploy(deploy *latticev1.Deploy) error {
 
 	case latticev1.BuildStateSucceeded:
 		system, err := c.getSystem(deploy.Namespace)
+		if err != nil {
+			return err
+		}
+
+		definitionURL := "unknown"
+		if label, ok := deploy.DefinitionURLLabel(); ok {
+			definitionURL = label
+		}
+
+		version := v1.SystemVersion("unknown")
+		if label, ok := deploy.DefinitionVersionLabel(); ok {
+			version = label
+		}
+
+		buildID := v1.BuildID("unknown")
+		if label, ok := deploy.BuildIDLabel(); ok {
+			buildID = label
+		}
+
+		deployID := v1.DeployID(deploy.Name)
+
+		system, err = c.updateSystemLabels(system, &definitionURL, &version, &deployID, &buildID)
 		if err != nil {
 			return err
 		}

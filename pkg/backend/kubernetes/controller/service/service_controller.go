@@ -36,8 +36,6 @@ import (
 	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/constants"
 )
 
-var controllerKind = latticev1.SchemeGroupVersion.WithKind("Service")
-
 type Controller struct {
 	syncHandler    func(bKey string) error
 	enqueueService func(cb *latticev1.Service)
@@ -725,7 +723,7 @@ func (c *Controller) enqueue(svc *latticev1.Service) {
 func (c *Controller) resolveControllerRef(namespace string, controllerRef *metav1.OwnerReference) *latticev1.Service {
 	// We can't look up by Name, so look up by Name and then verify Name.
 	// Don't even try to look up by Name if it's the wrong Kind.
-	if controllerRef.Kind != controllerKind.Kind {
+	if controllerRef.Kind != latticev1.ServiceKind.Kind {
 		return nil
 	}
 

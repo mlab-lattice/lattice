@@ -2,7 +2,6 @@ package backend
 
 import (
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
-	kubeconstants "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/constants"
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 
@@ -14,13 +13,14 @@ import (
 )
 
 func (kb *KubernetesBackend) DeployBuild(systemID v1.SystemID, buildID v1.BuildID) (*v1.Deploy, error) {
-	// this ensures the system is created as well
+	system, err := kb.ensureSystemCreated(systemID)
+
 	build, err := kb.GetBuild(systemID, buildID)
 	if err != nil {
 		return nil, err
 	}
 
-	deploy := newDeploy(build)
+	deploy := newDeploy(system, build)
 	namespace := kb.systemNamespace(systemID)
 	deploy, err = kb.latticeClient.LatticeV1().Deploys(namespace).Create(deploy)
 	if err != nil {
@@ -45,10 +45,11 @@ func (kb *KubernetesBackend) DeployVersion(systemID v1.SystemID, definitionRoot 
 	return kb.DeployBuild(systemID, build.ID)
 }
 
-func newDeploy(build *v1.Build) *latticev1.Deploy {
+func newDeploy(system *v1.System, build *v1.Build) *latticev1.Deploy {
 	labels := map[string]string{
-		kubeconstants.LabelKeySystemRolloutVersion: string(build.Version),
-		kubeconstants.LabelKeySystemRolloutBuildID: string(build.ID),
+		latticev1.DeployDefinitionURLLabelKey:     system.DefinitionURL,
+		latticev1.DeployDefinitionVersionLabelKey: string(build.Version),
+		latticev1.BuildIDLabelKey:                 string(build.ID),
 	}
 
 	return &latticev1.Deploy{

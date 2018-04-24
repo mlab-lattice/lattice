@@ -3,7 +3,6 @@ package service
 import (
 	"fmt"
 
-	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/constants"
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 
@@ -77,7 +76,7 @@ func (c *Controller) syncDedicatedNodePool(service *latticev1.Service, numInstan
 
 func (c *Controller) syncSharedNodePool(namespace string, path tree.NodePath) (*latticev1.NodePool, error) {
 	selector := labels.NewSelector()
-	requirement, err := labels.NewRequirement(constants.LabelKeyNodePoolPath, selection.Equals, []string{path.String()})
+	requirement, err := labels.NewRequirement(latticev1.NodePoolSystemSharedPathLabelKey, selection.Equals, []string{path.ToDomain()})
 	if err != nil {
 		return nil, err
 	}
@@ -190,7 +189,7 @@ func (c *Controller) dedicatedNodePool(service *latticev1.Service, instanceType 
 
 func (c *Controller) cachedDedicatedNodePools(service *latticev1.Service) ([]*latticev1.NodePool, error) {
 	selector := labels.NewSelector()
-	requirement, err := labels.NewRequirement(constants.LabelKeyServiceID, selection.Equals, []string{service.Name})
+	requirement, err := labels.NewRequirement(latticev1.NodePoolServiceDedicatedIDLabelKey, selection.Equals, []string{service.Name})
 	if err != nil {
 		return nil, err
 	}
@@ -201,7 +200,7 @@ func (c *Controller) cachedDedicatedNodePools(service *latticev1.Service) ([]*la
 
 func (c *Controller) quorumDedicatedNodePools(service *latticev1.Service) ([]latticev1.NodePool, error) {
 	selector := labels.NewSelector()
-	requirement, err := labels.NewRequirement(constants.LabelKeyServiceID, selection.Equals, []string{service.Name})
+	requirement, err := labels.NewRequirement(latticev1.NodePoolServiceDedicatedIDLabelKey, selection.Equals, []string{service.Name})
 	if err != nil {
 		return nil, err
 	}
@@ -217,15 +216,14 @@ func (c *Controller) quorumDedicatedNodePools(service *latticev1.Service) ([]lat
 
 func newDedicatedNodePool(service *latticev1.Service, numInstances int32, instanceType string) *latticev1.NodePool {
 	spec := nodePoolSpec(numInstances, instanceType)
-	npLabels := map[string]string{
-		constants.LabelKeyServiceID: service.Name,
-	}
 
 	nodePool := &latticev1.NodePool{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:            uuid.NewV4().String(),
-			Labels:          npLabels,
 			OwnerReferences: []metav1.OwnerReference{*controllerRef(service)},
+			Labels: map[string]string{
+				latticev1.NodePoolServiceDedicatedIDLabelKey: service.Name,
+			},
 		},
 		Spec: spec,
 		Status: latticev1.NodePoolStatus{

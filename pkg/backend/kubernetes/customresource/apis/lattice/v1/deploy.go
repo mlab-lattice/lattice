@@ -20,6 +20,7 @@ var (
 	DeployKind     = SchemeGroupVersion.WithKind("Deploy")
 	DeployListKind = SchemeGroupVersion.WithKind("DeployList")
 
+	DeployIDLabelKey                = fmt.Sprintf("deploy.%v/id", GroupName)
 	DeployDefinitionURLLabelKey     = fmt.Sprintf("deploy.%v/definition-url", GroupName)
 	DeployDefinitionVersionLabelKey = fmt.Sprintf("deploy.%v/definition-version", GroupName)
 )
@@ -34,9 +35,9 @@ type Deploy struct {
 	Status            DeployStatus `json:"status"`
 }
 
-func (d *Deploy) BuildIDLabel() (string, bool) {
+func (d *Deploy) BuildIDLabel() (v1.BuildID, bool) {
 	id, ok := d.Labels[BuildIDLabelKey]
-	return id, ok
+	return v1.BuildID(id), ok
 }
 
 func (d *Deploy) DefinitionURLLabel() (string, bool) {
@@ -44,9 +45,9 @@ func (d *Deploy) DefinitionURLLabel() (string, bool) {
 	return url, ok
 }
 
-func (d *Deploy) DefinitionVersionLabel() (string, bool) {
+func (d *Deploy) DefinitionVersionLabel() (v1.SystemVersion, bool) {
 	version, ok := d.Labels[DeployDefinitionVersionLabelKey]
-	return version, ok
+	return v1.SystemVersion(version), ok
 }
 
 func (d *Deploy) Description(namespacePrefix string) string {
@@ -55,9 +56,14 @@ func (d *Deploy) Description(namespacePrefix string) string {
 		systemID = v1.SystemID(fmt.Sprintf("UNKNOWN (namespace: %v)", d.Namespace))
 	}
 
-	version := "unknown"
+	version := v1.SystemVersion("unknown")
 	if label, ok := d.DefinitionVersionLabel(); ok {
 		version = label
+	}
+
+	buildID := v1.BuildID("unknown")
+	if label, ok := d.BuildIDLabel(); ok {
+		buildID = label
 	}
 
 	definitionURL := "unknown definition URL"
@@ -65,7 +71,15 @@ func (d *Deploy) Description(namespacePrefix string) string {
 		definitionURL = label
 	}
 
-	return fmt.Sprintf("deploy %v (build %v, version %v of %v in system %v)", d.Name, d.Spec.BuildName, version, definitionURL, systemID)
+	return fmt.Sprintf(
+		"deploy %v (build %v, version %v of %v (build %v) in system %v)",
+		d.Name,
+		d.Spec.BuildName,
+		version,
+		definitionURL,
+		buildID,
+		systemID,
+	)
 }
 
 type DeploySpec struct {

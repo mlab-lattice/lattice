@@ -5,7 +5,6 @@ import (
 	"reflect"
 
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
-	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -13,12 +12,7 @@ import (
 )
 
 func (c *Controller) syncAddress(service *latticev1.Service) (*latticev1.Address, error) {
-	path, err := service.PathLabel()
-	if err != nil {
-		return nil, fmt.Errorf("error getting path for %v: %v", service.Description(c.namespacePrefix), err)
-	}
-
-	address, err := c.address(service.Namespace, path)
+	address, err := c.address(service)
 	if err != nil {
 		return nil, err
 	}
@@ -74,9 +68,19 @@ func (c *Controller) newServiceAddress(service *latticev1.Service) (*latticev1.A
 		return nil, err
 	}
 
+	path, err := service.PathLabel()
+	if err != nil {
+		return nil, err
+	}
+
 	serviceAddress := &latticev1.Address{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: service.Name,
+			Name:            service.Name,
+			OwnerReferences: []metav1.OwnerReference{*controllerRef(service)},
+			Labels: map[string]string{
+				latticev1.AddressPathLabelKey: path.ToDomain(),
+				latticev1.ServiceIDLabelKey:   service.Name,
+			},
 		},
 		Spec: spec,
 		Status: latticev1.AddressStatus{
@@ -99,8 +103,8 @@ func (c *Controller) addressSpec(service *latticev1.Service) (latticev1.AddressS
 	return spec, nil
 }
 
-func (c *Controller) address(namespace string, path tree.NodePath) (*latticev1.Address, error) {
-	address, err := c.cachedAddress(namespace, path)
+func (c *Controller) address(service *latticev1.Service) (*latticev1.Address, error) {
+	address, err := c.cachedAddress(service)
 	if err != nil {
 		return nil, err
 	}
@@ -109,18 +113,18 @@ func (c *Controller) address(namespace string, path tree.NodePath) (*latticev1.A
 		return address, nil
 	}
 
-	return c.quorumAddress(namespace, path)
+	return c.quorumAddress(service)
 }
 
-func (c *Controller) cachedAddress(namespace string, path tree.NodePath) (*latticev1.Address, error) {
+func (c *Controller) cachedAddress(service *latticev1.Service) (*latticev1.Address, error) {
 	selector := labels.NewSelector()
-	requirement, err := labels.NewRequirement(latticev1.AddressPathLabelKey, selection.Equals, []string{path.ToDomain()})
+	requirement, err := labels.NewRequirement(latticev1.ServiceIDLabelKey, selection.Equals, []string{service.Name})
 	if err != nil {
 		return nil, err
 	}
 	selector = selector.Add(*requirement)
 
-	addresses, err := c.addressLister.Addresses(namespace).List(selector)
+	addresses, err := c.addressLister.Addresses(service.Namespace).List(selector)
 	if err != nil {
 		return nil, err
 	}
@@ -130,21 +134,21 @@ func (c *Controller) cachedAddress(namespace string, path tree.NodePath) (*latti
 	}
 
 	if len(addresses) > 1 {
-		return nil, fmt.Errorf("found multiple addresses for path %v in namespace %v", path.String(), namespace)
+		return nil, fmt.Errorf("found multiple addresses for %v", service.Description(c.namespacePrefix))
 	}
 
 	return addresses[0], nil
 }
 
-func (c *Controller) quorumAddress(namespace string, path tree.NodePath) (*latticev1.Address, error) {
+func (c *Controller) quorumAddress(service *latticev1.Service) (*latticev1.Address, error) {
 	selector := labels.NewSelector()
-	requirement, err := labels.NewRequirement(latticev1.AddressPathLabelKey, selection.Equals, []string{path.ToDomain()})
+	requirement, err := labels.NewRequirement(latticev1.ServiceIDLabelKey, selection.Equals, []string{service.Name})
 	if err != nil {
 		return nil, err
 	}
 	selector = selector.Add(*requirement)
 
-	addressList, err := c.latticeClient.LatticeV1().Addresses(namespace).List(metav1.ListOptions{LabelSelector: selector.String()})
+	addressList, err := c.latticeClient.LatticeV1().Addresses(service.Namespace).List(metav1.ListOptions{LabelSelector: selector.String()})
 	if err != nil {
 		return nil, err
 	}
@@ -155,7 +159,7 @@ func (c *Controller) quorumAddress(namespace string, path tree.NodePath) (*latti
 	}
 
 	if len(addresses) > 1 {
-		return nil, fmt.Errorf("found multiple addresses for path %v in namespace %v", path.String(), namespace)
+		return nil, fmt.Errorf("found multiple addresses for %v", service.Description(c.namespacePrefix))
 	}
 
 	return &addresses[0], nil

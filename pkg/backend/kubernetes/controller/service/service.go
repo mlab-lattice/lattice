@@ -160,5 +160,5 @@ func (c *Controller) updateServiceStatus(
 }
 
 func controllerRef(service *latticev1.Service) *metav1.OwnerReference {
-	return metav1.NewControllerRef(service, controllerKind)
+	return metav1.NewControllerRef(service, latticev1.ServiceKind)
 }

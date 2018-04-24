@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"reflect"
 
+	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	kubeutil "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/kubernetes"
 	"github.com/mlab-lattice/lattice/pkg/definition"
@@ -11,6 +12,49 @@ import (
 
 	"k8s.io/apimachinery/pkg/api/errors"
 )
+
+func (c *Controller) updateSystemLabels(
+	system *latticev1.System,
+	definitionURL *string,
+	version *v1.SystemVersion,
+	deployID *v1.DeployID,
+	buildID *v1.BuildID,
+) (*latticev1.System, error) {
+	labels := make(map[string]string)
+	for k, v := range system.Labels {
+		labels[k] = v
+	}
+
+	delete(labels, latticev1.SystemDefinitionURLLabelKey)
+	if definitionURL != nil {
+		labels[latticev1.SystemDefinitionURLLabelKey] = *definitionURL
+	}
+
+	delete(labels, latticev1.SystemDefinitionVersionLabelKey)
+	if version != nil {
+		labels[latticev1.SystemDefinitionVersionLabelKey] = string(*version)
+	}
+
+	delete(labels, latticev1.DeployIDLabelKey)
+	if deployID != nil {
+		labels[latticev1.DeployIDLabelKey] = string(*deployID)
+	}
+
+	delete(labels, latticev1.BuildIDLabelKey)
+	if buildID != nil {
+		labels[latticev1.BuildIDLabelKey] = string(*buildID)
+	}
+
+	if reflect.DeepEqual(labels, system.Labels) {
+		return system, nil
+	}
+
+	// Copy so the original object isn't mutated
+	system = system.DeepCopy()
+	system.Labels = labels
+
+	return c.latticeClient.LatticeV1().Systems(system.Namespace).Update(system)
+}
 
 func (c *Controller) updateSystem(
 	system *latticev1.System,

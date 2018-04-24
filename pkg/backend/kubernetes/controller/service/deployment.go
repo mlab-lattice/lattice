@@ -75,7 +75,7 @@ func (c *Controller) syncDeployment(service *latticev1.Service, nodePool *lattic
 func (c *Controller) deployment(service *latticev1.Service) (*appsv1.Deployment, error) {
 	// First check the cache for the deployment
 	selector := labels.NewSelector()
-	requirement, err := labels.NewRequirement(constants.LabelKeyServiceID, selection.Equals, []string{service.Name})
+	requirement, err := labels.NewRequirement(latticev1.ServiceIDLabelKey, selection.Equals, []string{service.Name})
 	if err != nil {
 		return nil, err
 	}
@@ -200,9 +200,9 @@ func (c *Controller) newDeployment(service *latticev1.Service, nodePool *lattice
 	defer c.configLock.RUnlock()
 
 	name := deploymentName(service)
-	labels := deploymentLabels(service)
+	deploymentLabels := deploymentLabels(service)
 
-	spec, err := c.deploymentSpec(service, name, labels, nodePool)
+	spec, err := c.deploymentSpec(service, name, deploymentLabels, nodePool)
 	if err != nil {
 		return nil, err
 	}
@@ -210,7 +210,7 @@ func (c *Controller) newDeployment(service *latticev1.Service, nodePool *lattice
 	d := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:            name,
-			Labels:          labels,
+			Labels:          deploymentLabels,
 			OwnerReferences: []metav1.OwnerReference{*controllerRef(service)},
 		},
 		Spec: spec,
@@ -226,7 +226,7 @@ func deploymentName(service *latticev1.Service) string {
 
 func deploymentLabels(service *latticev1.Service) map[string]string {
 	return map[string]string{
-		constants.LabelKeyServiceID: service.Name,
+		latticev1.ServiceIDLabelKey: service.Name,
 	}
 }
 
@@ -630,7 +630,7 @@ func (c *Controller) getDeploymentStatus(
 	//       automated processes we can put in place to clean up stuck pods so that deploys don't get stalled
 	//       forever
 	selector := labels.NewSelector()
-	requirement, err := labels.NewRequirement(constants.LabelKeyServiceID, selection.Equals, []string{service.Name})
+	requirement, err := labels.NewRequirement(latticev1.ServiceIDLabelKey, selection.Equals, []string{service.Name})
 	if err != nil {
 		return nil, err
 	}

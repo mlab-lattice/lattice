@@ -34,7 +34,7 @@ func (c *Controller) createNewKubeService(service *latticev1.Service) (*corev1.S
 	kubeService := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:            name,
-			OwnerReferences: []metav1.OwnerReference{*metav1.NewControllerRef(service, controllerKind)},
+			OwnerReferences: []metav1.OwnerReference{*controllerRef(service)},
 		},
 		Spec: spec,
 	}

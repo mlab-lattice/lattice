@@ -27,6 +27,7 @@ var (
 
 	// NodePoolServiceDedicatedID is the key for a label indicating that the node pool is dedicated for a service.
 	// The label's value should be the ID of the service.
+	// TODO: should we just use ServiceIDLabelKey here instead? if so what do we use for shared/lattice node pools
 	NodePoolServiceDedicatedIDLabelKey = fmt.Sprintf("service.dedicated.node-pool.%v/id", GroupName)
 
 	// NodePoolServiceDedicatedID is the key for a label indicating that the node pool is shared for a system.

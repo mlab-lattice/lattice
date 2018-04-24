@@ -201,7 +201,10 @@ func (c *Controller) newService(
 		ObjectMeta: metav1.ObjectMeta{
 			Name:            name,
 			Namespace:       systemNamespace,
-			OwnerReferences: []metav1.OwnerReference{*metav1.NewControllerRef(system, controllerKind)},
+			OwnerReferences: []metav1.OwnerReference{*metav1.NewControllerRef(system, latticev1.SystemKind)},
+			Labels: map[string]string{
+				latticev1.ServicePathLabelKey: path.ToDomain(),
+			},
 		},
 		Spec: spec,
 		Status: latticev1.ServiceStatus{

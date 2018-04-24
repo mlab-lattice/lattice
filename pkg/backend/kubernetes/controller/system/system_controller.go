@@ -31,8 +31,6 @@ import (
 	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/cloudprovider"
 )
 
-var controllerKind = latticev1.SchemeGroupVersion.WithKind("System")
-
 type Controller struct {
 	syncHandler   func(sysKey string) error
 	enqueueSystem func(sysBuild *latticev1.System)
@@ -414,7 +412,7 @@ func (c *Controller) resolveNamespaceSystem(namespace string) *latticev1.System 
 func (c *Controller) resolveControllerRef(namespace string, controllerRef *metav1.OwnerReference) *latticev1.System {
 	// We can't look up by Name, so look up by Name and then verify Name.
 	// Don't even try to look up by Name if it's the wrong Kind.
-	if controllerRef.Kind != controllerKind.Kind {
+	if controllerRef.Kind != latticev1.SystemKind.Kind {
 		// This shouldn't happen
 		// FIXME: send error event
 		return nil
