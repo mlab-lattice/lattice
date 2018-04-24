@@ -18,7 +18,9 @@ const (
 )
 
 var (
-	AddressKind         = SchemeGroupVersion.WithKind("Address")
+	AddressKind     = SchemeGroupVersion.WithKind("Address")
+	AddressListKind = SchemeGroupVersion.WithKind("AddressList")
+
 	AddressPathLabelKey = fmt.Sprintf("address.%v/path", GroupName)
 )
 

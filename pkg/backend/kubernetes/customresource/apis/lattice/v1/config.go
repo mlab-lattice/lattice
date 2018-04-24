@@ -11,6 +11,11 @@ const (
 	ResourceScopeConfig    = apiextensionsv1beta1.NamespaceScoped
 )
 
+var (
+	ConfigKind     = SchemeGroupVersion.WithKind("Config")
+	ConfigListKind = SchemeGroupVersion.WithKind("ConfigList")
+)
+
 // +genclient
 // +genclient:noStatus
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

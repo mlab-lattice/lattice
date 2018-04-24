@@ -16,6 +16,11 @@ const (
 	ResourceScopeTeardown    = apiextensionsv1beta1.NamespaceScoped
 )
 
+var (
+	TeardownKind     = SchemeGroupVersion.WithKind("Teardown")
+	TeardownListKind = SchemeGroupVersion.WithKind("TeardownList")
+)
+
 // +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 

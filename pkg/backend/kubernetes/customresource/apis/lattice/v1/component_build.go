@@ -1,6 +1,7 @@
 package v1
 
 import (
+	"encoding/json"
 	"fmt"
 
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
@@ -18,7 +19,14 @@ const (
 )
 
 var (
-	ComponentBuildKind = SchemeGroupVersion.WithKind("ComponentBuild")
+	ComponentBuildKind     = SchemeGroupVersion.WithKind("ComponentBuild")
+	ComponentBuildListKind = SchemeGroupVersion.WithKind("ComponentBuildList")
+
+	ComponentBuildIDLabelKey = fmt.Sprintf("component.build.%v/id", GroupName)
+
+	ComponentBuildDefinitionHashAnnotationKey    = fmt.Sprintf("component.build.%v/definition-hash", GroupName)
+	ComponentBuildLastObservedPhaseAnnotationKey = fmt.Sprintf("component.build.%v/last-observed-phase", GroupName)
+	ComponentBuildFailureInfoAnnotationKey       = fmt.Sprintf("component.build.%v/last-observed-phase", GroupName)
 )
 
 // +genclient
@@ -29,6 +37,31 @@ type ComponentBuild struct {
 	metav1.ObjectMeta `json:"metadata"`
 	Spec              ComponentBuildSpec   `json:"spec"`
 	Status            ComponentBuildStatus `json:"status"`
+}
+
+func (b *ComponentBuild) DefinitionHashAnnotation() (string, bool) {
+	hash, ok := b.Annotations[ComponentBuildDefinitionHashAnnotationKey]
+	return hash, ok
+}
+
+func (b *ComponentBuild) LastObservedPhaseAnnotation() (string, bool) {
+	phase, ok := b.Annotations[ComponentBuildLastObservedPhaseAnnotationKey]
+	return phase, ok
+}
+
+func (b *ComponentBuild) FailureInfoAnnotation() (*v1.ComponentBuildFailureInfo, error) {
+	infoStr, ok := b.Annotations[ComponentBuildFailureInfoAnnotationKey]
+	if !ok {
+		return nil, nil
+	}
+
+	failureInfo := v1.ComponentBuildFailureInfo{}
+	err := json.Unmarshal([]byte(infoStr), &failureInfo)
+	if err != nil {
+		return nil, err
+	}
+
+	return &failureInfo, nil
 }
 
 func (b *ComponentBuild) Description(namespacePrefix string) string {

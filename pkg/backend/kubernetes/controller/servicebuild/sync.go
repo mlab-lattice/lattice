@@ -112,6 +112,12 @@ func (c *Controller) syncMissingComponentBuildsServiceBuild(build *latticev1.Ser
 		// Found an existing ComponentBuild.
 		if componentBuild != nil && componentBuild.Status.State != latticev1.ComponentBuildStateFailed {
 			glog.V(4).Infof("Found ComponentBuild %v for %v of %v/%v", componentBuild.Name, component, build.Namespace, build.Name)
+
+			componentBuild, err := c.addOwnerReference(build, componentBuild)
+			if err != nil {
+				return err
+			}
+
 			componentBuilds[component] = componentBuild.Name
 			componentBuildStatuses[componentBuild.Name] = componentBuild.Status
 			continue
@@ -127,7 +133,7 @@ func (c *Controller) syncMissingComponentBuildsServiceBuild(build *latticev1.Ser
 		// This shouldn't actually matter in the ComponentBuild case. On the next try, the controller would find the
 		// ComponentBuild thanks to the definition hash, and would use it anyways.
 		glog.V(4).Infof("No ComponentBuild found for %v/%v component %v", build.Namespace, build.Name, component)
-		componentBuild, err = c.createNewComponentBuild(build.Namespace, componentInfo, definitionHash, previousCbName)
+		componentBuild, err = c.createNewComponentBuild(build, componentInfo, definitionHash, previousCbName)
 		if err != nil {
 			return err
 		}

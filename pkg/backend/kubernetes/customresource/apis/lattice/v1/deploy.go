@@ -17,7 +17,9 @@ const (
 )
 
 var (
-	DeployKind                      = SchemeGroupVersion.WithKind("Deploy")
+	DeployKind     = SchemeGroupVersion.WithKind("Deploy")
+	DeployListKind = SchemeGroupVersion.WithKind("DeployList")
+
 	DeployDefinitionURLLabelKey     = fmt.Sprintf("deploy.%v/definition-url", GroupName)
 	DeployDefinitionVersionLabelKey = fmt.Sprintf("deploy.%v/definition-version", GroupName)
 )

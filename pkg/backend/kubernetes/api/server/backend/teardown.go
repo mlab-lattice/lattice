@@ -14,7 +14,7 @@ import (
 
 func (kb *KubernetesBackend) TearDown(systemID v1.SystemID) (*v1.Teardown, error) {
 	// ensure the system exists
-	if err := kb.ensureSystemCreated(systemID); err != nil {
+	if _, err := kb.ensureSystemCreated(systemID); err != nil {
 		return nil, err
 	}
 
@@ -48,7 +48,7 @@ func newTeardown() *latticev1.Teardown {
 
 func (kb *KubernetesBackend) ListTeardowns(systemID v1.SystemID) ([]v1.Teardown, error) {
 	// ensure the system exists
-	if err := kb.ensureSystemCreated(systemID); err != nil {
+	if _, err := kb.ensureSystemCreated(systemID); err != nil {
 		return nil, err
 	}
 
@@ -73,7 +73,7 @@ func (kb *KubernetesBackend) ListTeardowns(systemID v1.SystemID) ([]v1.Teardown,
 
 func (kb *KubernetesBackend) GetTeardown(systemID v1.SystemID, teardownID v1.TeardownID) (*v1.Teardown, error) {
 	// ensure the system exists
-	if err := kb.ensureSystemCreated(systemID); err != nil {
+	if _, err := kb.ensureSystemCreated(systemID); err != nil {
 		return nil, err
 	}
 

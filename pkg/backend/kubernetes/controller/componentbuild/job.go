@@ -33,7 +33,7 @@ const (
 // getJobForBuild uses ControllerRefManager to retrieve the Job for a ComponentBuild
 func (c *Controller) getJobForBuild(build *latticev1.ComponentBuild) (*batchv1.Job, error) {
 	selector := labels.NewSelector()
-	requirement, err := labels.NewRequirement(kubeconstants.LabelKeyComponentBuildID, selection.Equals, []string{build.Name})
+	requirement, err := labels.NewRequirement(latticev1.ComponentBuildIDLabelKey, selection.Equals, []string{build.Name})
 	if err != nil {
 		return nil, err
 	}
@@ -99,10 +99,10 @@ func (c *Controller) newJob(build *latticev1.ComponentBuild) (*batchv1.Job, erro
 				jobDockerFqnAnnotationKey: dockerImageFQN,
 			},
 			Labels: map[string]string{
-				kubeconstants.LabelKeyComponentBuildID: build.Name,
+				latticev1.ComponentBuildIDLabelKey: build.Name,
 			},
 			Name:            name,
-			OwnerReferences: []metav1.OwnerReference{*metav1.NewControllerRef(build, controllerKind)},
+			OwnerReferences: []metav1.OwnerReference{*metav1.NewControllerRef(build, latticev1.ComponentBuildKind)},
 		},
 		Spec: spec,
 	}
@@ -110,7 +110,7 @@ func (c *Controller) newJob(build *latticev1.ComponentBuild) (*batchv1.Job, erro
 }
 
 func jobName(build *latticev1.ComponentBuild) string {
-	return fmt.Sprintf("lattice-build-%s", build.Name)
+	return fmt.Sprintf("lattice-component-build-%s", build.Name)
 }
 
 func (c *Controller) jobSpec(build *latticev1.ComponentBuild) (batchv1.JobSpec, string, error) {

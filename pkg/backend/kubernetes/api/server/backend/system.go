@@ -148,18 +148,18 @@ func getSystemState(state latticev1.SystemState, updateProcessed bool) (v1.Syste
 	}
 }
 
-func (kb *KubernetesBackend) ensureSystemCreated(systemID v1.SystemID) error {
+func (kb *KubernetesBackend) ensureSystemCreated(systemID v1.SystemID) (*v1.System, error) {
 	system, err := kb.GetSystem(systemID)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	switch system.State {
 	case v1.SystemStatePending, v1.SystemStateFailed, v1.SystemStateDeleting:
-		return v1.NewSystemNotCreatedError(systemID, system.State)
+		return system, v1.NewSystemNotCreatedError(systemID, system.State)
 	case v1.SystemStateStable, v1.SystemStateDegraded, v1.SystemStateScaling, v1.SystemStateUpdating:
-		return nil
+		return system, nil
 	default:
-		return fmt.Errorf("invalid system state: %v", system.State)
+		return nil, fmt.Errorf("invalid system state: %v", system.State)
 	}
 }

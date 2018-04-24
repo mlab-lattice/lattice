@@ -21,7 +21,8 @@ const (
 )
 
 var (
-	ServiceKind = SchemeGroupVersion.WithKind("Service")
+	ServiceKind     = SchemeGroupVersion.WithKind("Service")
+	ServiceListKind = SchemeGroupVersion.WithKind("ServiceList")
 
 	// ServiceID label is the key that should be used in a label referencing a service's ID.
 	ServiceIDLabelKey = fmt.Sprintf("service.%v/id", GroupName)

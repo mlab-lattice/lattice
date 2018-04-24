@@ -20,7 +20,8 @@ const (
 )
 
 var (
-	NodePoolKind = SchemeGroupVersion.WithKind("NodePool")
+	NodePoolKind     = SchemeGroupVersion.WithKind("NodePool")
+	NodePoolListKind = SchemeGroupVersion.WithKind("NodePoolList")
 
 	NodePoolIDLabelKey = fmt.Sprintf("node-pool.%v/id", GroupName)
 

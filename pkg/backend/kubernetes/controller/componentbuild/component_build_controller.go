@@ -28,8 +28,6 @@ import (
 	"github.com/golang/glog"
 )
 
-var controllerKind = latticev1.SchemeGroupVersion.WithKind("ComponentBuild")
-
 type Controller struct {
 	syncHandler func(bKey string) error
 	enqueue     func(cb *latticev1.ComponentBuild)
@@ -345,7 +343,7 @@ func (c *Controller) enqueueComponentBuild(build *latticev1.ComponentBuild) {
 func (c *Controller) resolveControllerRef(namespace string, controllerRef *metav1.OwnerReference) *latticev1.ComponentBuild {
 	// We can't look up by Name, so look up by Name and then verify Name.
 	// Don't even try to look up by Name if it's the wrong Kind.
-	if controllerRef.Kind != controllerKind.Kind {
+	if controllerRef.Kind != latticev1.ComponentBuildKind.Kind {
 		return nil
 	}
 

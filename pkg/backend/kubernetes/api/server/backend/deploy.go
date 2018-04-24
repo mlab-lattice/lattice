@@ -66,7 +66,7 @@ func newDeploy(build *v1.Build) *latticev1.Deploy {
 }
 
 func (kb *KubernetesBackend) ListDeploys(systemID v1.SystemID) ([]v1.Deploy, error) {
-	if err := kb.ensureSystemCreated(systemID); err != nil {
+	if _, err := kb.ensureSystemCreated(systemID); err != nil {
 		return nil, err
 	}
 
@@ -92,7 +92,7 @@ func (kb *KubernetesBackend) ListDeploys(systemID v1.SystemID) ([]v1.Deploy, err
 }
 
 func (kb *KubernetesBackend) GetDeploy(systemID v1.SystemID, deployID v1.DeployID) (*v1.Deploy, error) {
-	if err := kb.ensureSystemCreated(systemID); err != nil {
+	if _, err := kb.ensureSystemCreated(systemID); err != nil {
 		return nil, err
 	}
 

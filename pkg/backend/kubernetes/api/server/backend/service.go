@@ -12,7 +12,7 @@ import (
 
 func (kb *KubernetesBackend) ListServices(systemID v1.SystemID) ([]v1.Service, error) {
 	// ensure the system exists
-	if err := kb.ensureSystemCreated(systemID); err != nil {
+	if _, err := kb.ensureSystemCreated(systemID); err != nil {
 		return nil, err
 	}
 
@@ -43,7 +43,7 @@ func (kb *KubernetesBackend) ListServices(systemID v1.SystemID) ([]v1.Service, e
 
 func (kb *KubernetesBackend) GetService(systemID v1.SystemID, path tree.NodePath) (*v1.Service, error) {
 	// ensure the system exists
-	if err := kb.ensureSystemCreated(systemID); err != nil {
+	if _, err := kb.ensureSystemCreated(systemID); err != nil {
 		return nil, err
 	}
 

@@ -20,7 +20,9 @@ const (
 )
 
 var (
-	BuildKind                      = SchemeGroupVersion.WithKind("Build")
+	BuildKind     = SchemeGroupVersion.WithKind("Build")
+	BuildListKind = SchemeGroupVersion.WithKind("BuildList")
+
 	BuildIDLabelKey                = fmt.Sprintf("build.%v/id", GroupName)
 	BuildDefinitionURLLabelKey     = fmt.Sprintf("build.%v/definition-url", GroupName)
 	BuildDefinitionVersionLabelKey = fmt.Sprintf("build.%v/definition-version", GroupName)

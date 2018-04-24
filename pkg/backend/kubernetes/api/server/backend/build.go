@@ -17,11 +17,12 @@ import (
 
 func (kb *KubernetesBackend) Build(systemID v1.SystemID, definitionRoot tree.Node, version v1.SystemVersion) (*v1.Build, error) {
 	// ensure the system exists
-	if err := kb.ensureSystemCreated(systemID); err != nil {
+	system, err := kb.ensureSystemCreated(systemID)
+	if err != nil {
 		return nil, err
 	}
 
-	build, err := newBuild(definitionRoot, version)
+	build, err := newBuild(system.DefinitionURL, definitionRoot, version)
 	if err != nil {
 		return nil, err
 	}
@@ -40,9 +41,10 @@ func (kb *KubernetesBackend) Build(systemID v1.SystemID, definitionRoot tree.Nod
 	return &externalBuild, nil
 }
 
-func newBuild(definitionRoot tree.Node, version v1.SystemVersion) (*latticev1.Build, error) {
+func newBuild(definitionURL string, definitionRoot tree.Node, version v1.SystemVersion) (*latticev1.Build, error) {
 	labels := map[string]string{
-		kubeconstants.LabelKeySystemVersion: string(version),
+		latticev1.BuildDefinitionURLLabelKey:     definitionURL,
+		latticev1.BuildDefinitionVersionLabelKey: string(version),
 	}
 
 	services := map[tree.NodePath]latticev1.BuildSpecServiceInfo{}
@@ -70,7 +72,7 @@ func newBuild(definitionRoot tree.Node, version v1.SystemVersion) (*latticev1.Bu
 }
 
 func (kb *KubernetesBackend) ListBuilds(systemID v1.SystemID) ([]v1.Build, error) {
-	if err := kb.ensureSystemCreated(systemID); err != nil {
+	if _, err := kb.ensureSystemCreated(systemID); err != nil {
 		return nil, err
 	}
 
@@ -97,7 +99,7 @@ func (kb *KubernetesBackend) ListBuilds(systemID v1.SystemID) ([]v1.Build, error
 
 func (kb *KubernetesBackend) GetBuild(systemID v1.SystemID, buildID v1.BuildID) (*v1.Build, error) {
 	// Ensure the system exists
-	if err := kb.ensureSystemCreated(systemID); err != nil {
+	if _, err := kb.ensureSystemCreated(systemID); err != nil {
 		return nil, err
 	}
 

@@ -19,6 +19,11 @@ const (
 	ResourceScopeSystem    = apiextensionsv1beta1.NamespaceScoped
 )
 
+var (
+	SystemKind     = SchemeGroupVersion.WithKind("System")
+	SystemListKind = SchemeGroupVersion.WithKind("SystemList")
+)
+
 // +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 

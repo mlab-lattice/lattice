@@ -1,7 +1,6 @@
 package build
 
 import (
-	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/constants"
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	"github.com/mlab-lattice/lattice/pkg/definition"
 
@@ -26,8 +25,15 @@ func serviceBuild(
 	serviceDefinition definition.Service,
 ) *latticev1.ServiceBuild {
 	labels := map[string]string{
-		constants.LabelKeySystemBuildID: build.Name,
-		constants.LabelKeyServicePath:   servicePath.ToDomain(),
+		latticev1.ServiceBuildPathLabelKey: servicePath.ToDomain(),
+	}
+
+	if label, ok := build.DefinitionURLLabel(); ok {
+		labels[latticev1.ServiceBuildDefinitionURLLabelKey] = label
+	}
+
+	if label, ok := build.DefinitionVersionLabel(); ok {
+		labels[latticev1.ServiceBuildDefinitionVersionLabelKey] = label
 	}
 
 	spec := serviceBuildSpec(serviceDefinition)
@@ -36,7 +42,7 @@ func serviceBuild(
 		ObjectMeta: metav1.ObjectMeta{
 			Name:            uuid.NewV4().String(),
 			Labels:          labels,
-			OwnerReferences: []metav1.OwnerReference{*metav1.NewControllerRef(build, latticev1.BuildKind)},
+			OwnerReferences: []metav1.OwnerReference{*newOwnerReference(build)},
 		},
 		Spec: spec,
 		Status: latticev1.ServiceBuildStatus{
@@ -55,5 +61,25 @@ func serviceBuildSpec(serviceDefinition definition.Service) latticev1.ServiceBui
 
 	return latticev1.ServiceBuildSpec{
 		Components: components,
+	}
+}
+
+func newOwnerReference(build *latticev1.Build) *metav1.OwnerReference {
+	gvk := latticev1.BuildKind
+	blockOwnerDeletion := true
+
+	// set isController to false, since there should only be one controller
+	// owning the lifecycle of the service build. since other builds may also
+	// end up adopting the service build, we shouldn't think of any given
+	// build as the controller build
+	isController := false
+
+	return &metav1.OwnerReference{
+		APIVersion:         gvk.GroupVersion().String(),
+		Kind:               gvk.Kind,
+		Name:               build.Name,
+		UID:                build.UID,
+		BlockOwnerDeletion: &blockOwnerDeletion,
+		Controller:         &isController,
 	}
 }

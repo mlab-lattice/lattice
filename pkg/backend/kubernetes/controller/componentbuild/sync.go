@@ -1,7 +1,6 @@
 package componentbuild
 
 import (
-	"encoding/json"
 	"reflect"
 
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
@@ -9,6 +8,8 @@ import (
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 
 	batchv1 "k8s.io/api/batch/v1"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/golang/glog"
 )
@@ -33,24 +34,65 @@ func (c *Controller) syncSuccessfulComponentBuild(build *latticev1.ComponentBuil
 		return nil
 	}
 
-	_, err := c.updateComponentBuildStatus(build, latticev1.ComponentBuildStateSucceeded, artifacts)
+	completionTimestamp := build.Status.CompletionTimestamp
+	if completionTimestamp == nil {
+		now := metav1.Now()
+		completionTimestamp = &now
+	}
+
+	_, err := c.updateComponentBuildStatus(
+		build,
+		latticev1.ComponentBuildStateSucceeded,
+		build.Status.StartTimestamp,
+		completionTimestamp,
+		artifacts,
+	)
 	return err
 }
 
-func (c *Controller) syncFailedComponentBuild(cb *latticev1.ComponentBuild) error {
-	_, err := c.updateComponentBuildState(cb, latticev1.ComponentBuildStateFailed)
+func (c *Controller) syncFailedComponentBuild(build *latticev1.ComponentBuild) error {
+	completionTimestamp := build.Status.CompletionTimestamp
+	if completionTimestamp == nil {
+		now := metav1.Now()
+		completionTimestamp = &now
+	}
+
+	_, err := c.updateComponentBuildStatus(
+		build,
+		latticev1.ComponentBuildStateFailed,
+		build.Status.StartTimestamp,
+		completionTimestamp,
+		build.Status.Artifacts,
+	)
 	return err
 }
 
-func (c *Controller) syncUnfinishedComponentBuild(cb *latticev1.ComponentBuild, j *batchv1.Job) error {
+func (c *Controller) syncUnfinishedComponentBuild(build *latticev1.ComponentBuild, j *batchv1.Job) error {
 	// The Job Pods have been able to be scheduled, so the ComponentBuild is "running" even though
 	// a Job Pod may not currently be active.
 	if j.Status.Active > 0 || j.Status.Failed > 0 {
-		_, err := c.updateComponentBuildState(cb, latticev1.ComponentBuildStateRunning)
+		startTimestamp := build.Status.StartTimestamp
+		if startTimestamp == nil {
+			now := metav1.Now()
+			startTimestamp = &now
+		}
+		_, err := c.updateComponentBuildStatus(
+			build,
+			latticev1.ComponentBuildStateRunning,
+			startTimestamp,
+			nil,
+			build.Status.Artifacts,
+		)
 		return err
 	}
 
-	_, err := c.updateComponentBuildState(cb, latticev1.ComponentBuildStateQueued)
+	_, err := c.updateComponentBuildStatus(
+		build,
+		latticev1.ComponentBuildStateQueued,
+		nil,
+		nil,
+		build.Status.Artifacts,
+	)
 	return err
 }
 
@@ -58,12 +100,26 @@ func (c *Controller) updateComponentBuildState(
 	build *latticev1.ComponentBuild,
 	state latticev1.ComponentBuildState,
 ) (*latticev1.ComponentBuild, error) {
-	return c.updateComponentBuildStatus(build, state, build.Status.Artifacts)
+	startTimestamp := build.Status.StartTimestamp
+	completionTimestamp := build.Status.CompletionTimestamp
+	switch state {
+	case latticev1.ComponentBuildStateFailed, latticev1.ComponentBuildStateSucceeded:
+
+	case latticev1.ComponentBuildStateRunning:
+		if startTimestamp == nil {
+			now := metav1.Now()
+			startTimestamp = &now
+		}
+	}
+
+	return c.updateComponentBuildStatus(build, state, startTimestamp, completionTimestamp, build.Status.Artifacts)
 }
 
 func (c *Controller) updateComponentBuildStatus(
 	build *latticev1.ComponentBuild,
 	state latticev1.ComponentBuildState,
+	startTimestamp *metav1.Time,
+	completionTimestamp *metav1.Time,
 	artifacts *latticev1.ComponentBuildArtifacts,
 ) (*latticev1.ComponentBuild, error) {
 	var phasePtr *v1.ComponentBuildPhase
@@ -72,20 +128,14 @@ func (c *Controller) updateComponentBuildStatus(
 		phasePtr = &phase
 	}
 
-	var failureInfoPtr *v1.ComponentBuildFailureInfo
-	if failureInfoData, ok := build.Annotations[kubeconstants.AnnotationKeyComponentBuildFailureInfo]; ok {
-		failureInfo := v1.ComponentBuildFailureInfo{}
-		err := json.Unmarshal([]byte(failureInfoData), &failureInfo)
-		if err != nil {
-			return nil, err
-		}
-
-		failureInfoPtr = &failureInfo
+	failureInfo, err := build.FailureInfoAnnotation()
+	if err != nil {
+		return nil, err
 	}
 
 	status := latticev1.ComponentBuildStatus{
 		State:       state,
-		FailureInfo: failureInfoPtr,
+		FailureInfo: failureInfo,
 
 		Artifacts:         artifacts,
 		LastObservedPhase: phasePtr,
@@ -98,9 +148,6 @@ func (c *Controller) updateComponentBuildStatus(
 	// Copy so the shared cache isn't mutated
 	build = build.DeepCopy()
 	build.Status = status
-	return c.latticeClient.LatticeV1().ComponentBuilds(build.Namespace).Update(build)
 
-	// TODO: switch to this when https://github.com/kubernetes/kubernetes/issues/38113 is merged
-	// TODO: also watch https://github.com/kubernetes/kubernetes/pull/55168
-	//return c.latticeClient.LatticeV1().ComponentBuilds(build.Namespace).UpdateStatus(build)
+	return c.latticeClient.LatticeV1().ComponentBuilds(build.Namespace).UpdateStatus(build)
 }
