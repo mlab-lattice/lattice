@@ -93,7 +93,7 @@ type SystemStatus struct {
 	ObservedGeneration int64 `json:"observedGeneration"`
 
 	State   SystemState `json:"state"`
-	Version string      `json:"version"`
+	Version *string     `json:"version"`
 
 	// Maps a Service path to its Service.Status
 	Services map[tree.NodePath]SystemStatusService `json:"services"`

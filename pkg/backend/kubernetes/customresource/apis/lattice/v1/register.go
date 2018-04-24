@@ -179,7 +179,9 @@ func GetCustomResourceDefinitions() []*apiextensionsv1beta1.CustomResourceDefini
 		}
 
 		if resource.StatusSubresource {
-			definition.Spec.Subresources.Status = &apiextensionsv1beta1.CustomResourceSubresourceStatus{}
+			definition.Spec.Subresources = &apiextensionsv1beta1.CustomResourceSubresources{
+				Status: &apiextensionsv1beta1.CustomResourceSubresourceStatus{},
+			}
 		}
 
 		definitions = append(definitions, definition)

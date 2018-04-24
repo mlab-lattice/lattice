@@ -13,8 +13,7 @@ import (
 const (
 	ResourceSingularDeploy = "deploy"
 	ResourcePluralDeploy   = "deploys"
-	//ResourcePluralDeploy    = "deploys"
-	ResourceScopeDeploy = apiextensionsv1beta1.NamespaceScoped
+	ResourceScopeDeploy    = apiextensionsv1beta1.NamespaceScoped
 )
 
 var (

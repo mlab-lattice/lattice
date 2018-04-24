@@ -58,7 +58,7 @@ func (b *DefaultBootstrapper) controllerManagerResources(resources *bootstrapper
 			{
 				APIGroups: []string{corev1.GroupName},
 				Resources: []string{"pods"},
-				Verbs:     readVerbs,
+				Verbs:     ReadVerbs,
 			},
 
 			// system bootstrapping permissions
@@ -66,25 +66,25 @@ func (b *DefaultBootstrapper) controllerManagerResources(resources *bootstrapper
 			{
 				APIGroups: []string{corev1.GroupName},
 				Resources: []string{"namespaces"},
-				Verbs:     readCreateAndDeleteVerbs,
+				Verbs:     ReadCreateAndDeleteVerbs,
 			},
 			// kube service-account read, update, and delete
 			{
 				APIGroups: []string{corev1.GroupName},
 				Resources: []string{"serviceaccounts"},
-				Verbs:     readCreateAndDeleteVerbs,
+				Verbs:     ReadCreateAndDeleteVerbs,
 			},
 			// kube role-binding read, update, and delete
 			{
 				APIGroups: []string{rbacv1.GroupName},
 				Resources: []string{"rolebindings"},
-				Verbs:     readCreateAndDeleteVerbs,
+				Verbs:     ReadCreateAndDeleteVerbs,
 			},
 			// kube daemonsets read, update, and delete
 			{
 				APIGroups: []string{appsv1.GroupName},
 				Resources: []string{"daemonsets"},
-				Verbs:     readCreateAndDeleteVerbs,
+				Verbs:     ReadCreateAndDeleteVerbs,
 			},
 		},
 	}

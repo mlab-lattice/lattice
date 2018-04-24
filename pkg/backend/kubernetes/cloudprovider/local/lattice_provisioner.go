@@ -32,8 +32,8 @@ var (
 	dnsControllerArgList = []string{
 		"-v", "5",
 		"--logtostderr",
-		"--dnsmasq-config-path", DnsmasqConfigFile,
-		"--hosts-file-path", DNSHostsFile,
+		"--dnsmasq-config-path", dnsmasqConfigFile,
+		"--hosts-file-path", dnsHostsFile,
 	}
 
 	// arguments for the dnsmasq nanny itself
