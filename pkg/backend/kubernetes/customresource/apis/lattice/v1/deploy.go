@@ -19,8 +19,8 @@ const (
 
 var (
 	DeployKind                      = SchemeGroupVersion.WithKind("Deploy")
-	DeployDefinitionURLLabelKey     = fmt.Sprintf("deploy.%v/definition/url", GroupName)
-	DeployDefinitionVersionLabelKey = fmt.Sprintf("deploy.%v/definition/version", GroupName)
+	DeployDefinitionURLLabelKey     = fmt.Sprintf("deploy.%v/definition-url", GroupName)
+	DeployDefinitionVersionLabelKey = fmt.Sprintf("deploy.%v/definition-version", GroupName)
 )
 
 // +genclient

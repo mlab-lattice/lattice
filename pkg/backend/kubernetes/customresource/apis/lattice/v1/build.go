@@ -22,8 +22,8 @@ const (
 var (
 	BuildKind                      = SchemeGroupVersion.WithKind("Build")
 	BuildIDLabelKey                = fmt.Sprintf("build.%v/id", GroupName)
-	BuildDefinitionURLLabelKey     = fmt.Sprintf("build.%v/definition/url", GroupName)
-	BuildDefinitionVersionLabelKey = fmt.Sprintf("build.%v/definition/version", GroupName)
+	BuildDefinitionURLLabelKey     = fmt.Sprintf("build.%v/definition-url", GroupName)
+	BuildDefinitionVersionLabelKey = fmt.Sprintf("build.%v/definition-version", GroupName)
 )
 
 // +genclient

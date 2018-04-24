@@ -304,13 +304,13 @@ func (c *Controller) syncSystemBuild(key string) error {
 
 	switch stateInfo.state {
 	case stateHasFailedServiceBuilds:
-		return c.syncFailedSystemBuild(build, stateInfo)
+		return c.syncFailedBuild(build, stateInfo)
 	case stateHasOnlyRunningOrSucceededServiceBuilds:
-		return c.syncRunningSystemBuild(build, stateInfo)
+		return c.syncRunningBuild(build, stateInfo)
 	case stateNoFailuresNeedsNewServiceBuilds:
-		return c.syncMissingServiceBuildsSystemBuild(build, stateInfo)
+		return c.syncMissingServiceBuildsBuild(build, stateInfo)
 	case stateAllServiceBuildsSucceeded:
-		return c.syncSucceededSystemBuild(build, stateInfo)
+		return c.syncSucceededBuild(build, stateInfo)
 	default:
 		return fmt.Errorf("unrecognized state %v", stateInfo.state)
 	}

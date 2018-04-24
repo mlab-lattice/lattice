@@ -21,8 +21,8 @@ const (
 var (
 	ServiceBuildKind = SchemeGroupVersion.WithKind("ServiceBuild")
 
-	ServiceBuildDefinitionURLLabelKey     = fmt.Sprintf("service.build.%v/definition/url", GroupName)
-	ServiceBuildDefinitionVersionLabelKey = fmt.Sprintf("service.build.%v/definition/version", GroupName)
+	ServiceBuildDefinitionURLLabelKey     = fmt.Sprintf("service.build.%v/definition-url", GroupName)
+	ServiceBuildDefinitionVersionLabelKey = fmt.Sprintf("service.build.%v/definition-version", GroupName)
 	ServiceBuildPathLabelKey              = fmt.Sprintf("service.build.%v/path", GroupName)
 )
 

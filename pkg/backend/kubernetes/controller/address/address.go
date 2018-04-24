@@ -18,9 +18,11 @@ func (c *Controller) updateAddressStatus(
 ) (*latticev1.Address, error) {
 	status := latticev1.AddressStatus{
 		ObservedGeneration: address.Generation,
-		State:              state,
-		FailureInfo:        failureInfo,
-		Ports:              ports,
+
+		State:       state,
+		FailureInfo: failureInfo,
+
+		Ports: ports,
 	}
 
 	if reflect.DeepEqual(address.Status, status) {

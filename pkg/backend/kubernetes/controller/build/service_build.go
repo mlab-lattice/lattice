@@ -36,7 +36,7 @@ func serviceBuild(
 		ObjectMeta: metav1.ObjectMeta{
 			Name:            uuid.NewV4().String(),
 			Labels:          labels,
-			OwnerReferences: []metav1.OwnerReference{*metav1.NewControllerRef(build, controllerKind)},
+			OwnerReferences: []metav1.OwnerReference{*metav1.NewControllerRef(build, latticev1.BuildKind)},
 		},
 		Spec: spec,
 		Status: latticev1.ServiceBuildStatus{
