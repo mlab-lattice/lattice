@@ -30,7 +30,7 @@ const (
 	dnsOptionNdots     = "ndots"
 )
 
-func (c *Controller) syncDeployment(service *latticev1.Service, nodePool *latticev1.NodePool, nodePoolUpToDate bool) (*deploymentStatus, error) {
+func (c *Controller) syncDeployment(service *latticev1.Service, nodePool *latticev1.NodePool, address *latticev1.Address) (*deploymentStatus, error) {
 	deployment, err := c.deployment(service)
 	if err != nil {
 		return nil, err
@@ -38,12 +38,24 @@ func (c *Controller) syncDeployment(service *latticev1.Service, nodePool *lattic
 
 	if deployment == nil {
 		// If we need to create a new deployment, we need to wait until the
-		// node pool is ready so we can get the right affinity and toleration.
-		if !nodePoolUpToDate {
+		// node pool and address are ready so we can get the right affinity and toleration,
+		// and so that the load balancer if it exists is ready to forward traffic to the new
+		// node pool.
+		if !nodePool.Stable() || !address.Stable() {
+			reason := ""
+			if !address.Stable() {
+				reason = address.Reason(c.namespacePrefix)
+			}
+
+			if !nodePool.Stable() {
+				reason = nodePool.Reason(c.namespacePrefix)
+			}
+
 			status := &deploymentStatus{
 				UpdateProcessed: true,
 
-				State: deploymentStatePending,
+				State:  deploymentStatePending,
+				Reason: &reason,
 
 				TotalInstances:       0,
 				UpdatedInstances:     0,
@@ -54,17 +66,10 @@ func (c *Controller) syncDeployment(service *latticev1.Service, nodePool *lattic
 			return status, nil
 		}
 
-		return c.createNewDeployment(service, nodePool)
+		return c.createNewDeployment(service, nodePool, address)
 	}
 
-	// If the new node pool isn't ready yet, we shouldn't update the deployment's spec
-	// yet. If we do, the deployment will try to start rolling out, which will essentially
-	// just result in terminating some pods while waiting for the node pool to be ready.
-	if !nodePoolUpToDate {
-		return c.getDeploymentStatus(service, deployment)
-	}
-
-	return c.syncExistingDeployment(service, nodePool, deployment)
+	return c.syncExistingDeployment(service, deployment, nodePool, address)
 }
 
 func (c *Controller) deployment(service *latticev1.Service) (*appsv1.Deployment, error) {
@@ -113,9 +118,17 @@ func (c *Controller) deployment(service *latticev1.Service) (*appsv1.Deployment,
 
 func (c *Controller) syncExistingDeployment(
 	service *latticev1.Service,
-	nodePool *latticev1.NodePool,
 	deployment *appsv1.Deployment,
+	nodePool *latticev1.NodePool,
+	address *latticev1.Address,
 ) (*deploymentStatus, error) {
+	// If the new node pool or address isn't ready yet, we shouldn't update the deployment's spec
+	// yet. If we do, the deployment will try to start rolling out, which will essentially
+	// just result in terminating some pods while waiting for the node pool to be ready.
+	if !nodePool.Stable() || !address.Stable() {
+		return c.getDeploymentStatus(service, deployment, nodePool, address)
+	}
+
 	// Need a consistent view of our config while generating the deployment spec
 	c.configLock.RLock()
 	defer c.configLock.RUnlock()
@@ -152,7 +165,7 @@ func (c *Controller) syncExistingDeployment(
 		}
 	}
 
-	return c.getDeploymentStatus(service, deployment)
+	return c.getDeploymentStatus(service, deployment, nodePool, address)
 }
 
 func (c *Controller) updateDeploymentSpec(deployment *appsv1.Deployment, spec appsv1.DeploymentSpec) (*appsv1.Deployment, error) {
@@ -167,7 +180,7 @@ func (c *Controller) updateDeploymentSpec(deployment *appsv1.Deployment, spec ap
 	return c.kubeClient.AppsV1().Deployments(deployment.Namespace).Update(deployment)
 }
 
-func (c *Controller) createNewDeployment(service *latticev1.Service, nodePool *latticev1.NodePool) (*deploymentStatus, error) {
+func (c *Controller) createNewDeployment(service *latticev1.Service, nodePool *latticev1.NodePool, address *latticev1.Address) (*deploymentStatus, error) {
 	deployment, err := c.newDeployment(service, nodePool)
 	if err != nil {
 		return nil, err
@@ -178,7 +191,7 @@ func (c *Controller) createNewDeployment(service *latticev1.Service, nodePool *l
 		return nil, err
 	}
 
-	return c.getDeploymentStatus(service, deployment)
+	return c.getDeploymentStatus(service, deployment, nodePool, address)
 }
 
 func (c *Controller) newDeployment(service *latticev1.Service, nodePool *latticev1.NodePool) (*appsv1.Deployment, error) {
@@ -320,6 +333,11 @@ func (c *Controller) untransformedDeploymentSpec(
 		Searches: dnsSearches,
 	}
 
+	nodePoolEpoch, ok := nodePool.Status.Epochs.CurrentEpoch()
+	if !ok {
+		return nil, fmt.Errorf("unable to get current epoch for %v: %v", nodePool.Description(c.namespacePrefix), err)
+	}
+
 	// IMPORTANT: if you change anything in here, you _must_ update isDeploymentSpecUpdated to accommodate it
 	spec := &appsv1.DeploymentSpec{
 		Replicas: &replicas,
@@ -338,11 +356,11 @@ func (c *Controller) untransformedDeploymentSpec(
 				DNSPolicy:  corev1.DNSDefault,
 				DNSConfig:  &dnsConfig,
 				Affinity: &corev1.Affinity{
-					NodeAffinity:    nodePool.Affinity(),
+					NodeAffinity:    nodePool.Affinity(nodePoolEpoch),
 					PodAntiAffinity: podAntiAffinity,
 				},
 				Tolerations: []corev1.Toleration{
-					nodePool.Toleration(),
+					nodePool.Toleration(nodePoolEpoch),
 				},
 			},
 		},
@@ -530,6 +548,7 @@ type deploymentStatus struct {
 	UpdateProcessed bool
 
 	State       deploymentState
+	Reason      *string
 	FailureInfo *deploymentStatusFailureInfo
 
 	TotalInstances       int32
@@ -562,7 +581,16 @@ func (s *deploymentStatus) Stable() bool {
 	return s.State == deploymentStateStable
 }
 
-func (c *Controller) getDeploymentStatus(service *latticev1.Service, deployment *appsv1.Deployment) (*deploymentStatus, error) {
+func (s *deploymentStatus) Ready() bool {
+	return s.UpdateProcessed && s.Stable()
+}
+
+func (c *Controller) getDeploymentStatus(
+	service *latticev1.Service,
+	deployment *appsv1.Deployment,
+	nodePool *latticev1.NodePool,
+	address *latticev1.Address,
+) (*deploymentStatus, error) {
 	var state deploymentState
 	totalInstances := deployment.Status.Replicas
 	updatedInstances := deployment.Status.UpdatedReplicas
@@ -643,10 +671,22 @@ func (c *Controller) getDeploymentStatus(service *latticev1.Service, deployment 
 		}
 	}
 
+	var reason *string
+	if !address.Stable() {
+		r := address.Reason(c.namespacePrefix)
+		reason = &r
+	}
+
+	if !nodePool.Stable() {
+		r := nodePool.Reason(c.namespacePrefix)
+		reason = &r
+	}
+
 	status := &deploymentStatus{
 		UpdateProcessed: deployment.Generation <= deployment.Status.ObservedGeneration,
 
 		State:       state,
+		Reason:      reason,
 		FailureInfo: failureInfo,
 
 		TotalInstances:       totalInstances,

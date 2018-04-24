@@ -16,19 +16,15 @@ const (
 	ServiceStateFailed   ServiceState = "failed"
 )
 
-// FIXME: should we expose Service ID, or just Path?
 type Service struct {
-	Path             tree.NodePath      `json:"path"`
-	State            ServiceState       `json:"state"`
-	UpdatedInstances int32              `json:"updatedInstances"`
-	StaleInstances   int32              `json:"staleInstances"`
-	PublicPorts      ServicePublicPorts `json:"publicPorts"`
-	FailureMessage   *string            `json:"failureMessage,omitempty"`
-}
+	Path tree.NodePath `json:"path"`
 
-type (
-	ServicePublicPorts map[int32]ServicePublicPort
-	ServicePublicPort  struct {
-		Address string `json:"address"`
-	}
-)
+	State          ServiceState `json:"state"`
+	FailureMessage *string      `json:"failureMessage,omitempty"`
+	Reason         *string      `json:"reason,omitempty"`
+
+	UpdatedInstances int32 `json:"updatedInstances"`
+	StaleInstances   int32 `json:"staleInstances"`
+
+	Ports map[int32]string
+}

@@ -46,7 +46,7 @@ type Interface interface {
 
 type AddressLoadBalancer interface {
 	EnsureServiceAddressLoadBalancer(v1.LatticeID, *latticev1.Address, *latticev1.Service) error
-	DestroyServiceAddressLoadBalancer(v1.LatticeID, *latticev1.Address, *latticev1.Service) error
+	DestroyServiceAddressLoadBalancer(v1.LatticeID, *latticev1.Address) error
 	ServiceAddressLoadBalancerAddAnnotations(v1.LatticeID, *latticev1.Address, *latticev1.Service, map[string]string) error
 	ServiceAddressLoadBalancerPorts(v1.LatticeID, *latticev1.Address, *latticev1.Service) (map[int32]string, error)
 }

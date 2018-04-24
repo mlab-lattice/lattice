@@ -87,7 +87,7 @@ func (c *Controller) syncDeletedServiceAddress(address *latticev1.Address) error
 		return err
 	}
 
-	err = c.cloudProvider.DestroyAddressLoadBalancer(c.latticeID, address)
+	err = c.cloudProvider.DestroyServiceAddressLoadBalancer(c.latticeID, address)
 	if err != nil {
 		state := latticev1.AddressStateFailed
 		failureInfo := &latticev1.AddressStatusFailureInfo{

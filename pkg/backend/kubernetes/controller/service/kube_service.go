@@ -10,18 +10,19 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func (c *Controller) syncKubeService(service *latticev1.Service) (*corev1.Service, error) {
+func (c *Controller) syncKubeService(service *latticev1.Service) error {
 	name := kubeutil.GetKubeServiceNameForService(service.Name)
-	kubeService, err := c.kubeServiceLister.Services(service.Namespace).Get(name)
+	_, err := c.kubeServiceLister.Services(service.Namespace).Get(name)
 	if err != nil {
 		if !errors.IsNotFound(err) {
-			return nil, err
+			return err
 		}
 
-		return c.createNewKubeService(service)
+		_, err = c.createNewKubeService(service)
+		return err
 	}
 
-	return kubeService, nil
+	return nil
 }
 
 func (c *Controller) createNewKubeService(service *latticev1.Service) (*corev1.Service, error) {

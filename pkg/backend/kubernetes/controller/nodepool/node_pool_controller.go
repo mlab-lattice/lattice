@@ -181,7 +181,7 @@ func (c *Controller) newCloudProvider() (cloudprovider.Interface, error) {
 		return nil, err
 	}
 
-	cloudProvider, err := cloudprovider.NewCloudProvider(c.namespacePrefix, options)
+	cloudProvider, err := cloudprovider.NewCloudProvider(c.namespacePrefix, nil, nil, options)
 	if err != nil {
 		return nil, err
 	}

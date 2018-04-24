@@ -12,8 +12,6 @@ type ConfigExpansion interface{}
 
 type DeployExpansion interface{}
 
-type LoadBalancerExpansion interface{}
-
 type NodePoolExpansion interface{}
 
 type ServiceExpansion interface{}

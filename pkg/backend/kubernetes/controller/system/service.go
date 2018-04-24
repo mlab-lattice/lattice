@@ -65,6 +65,7 @@ func (c *Controller) syncSystemServices(system *latticev1.System) (map[tree.Node
 					// Successfully created the service. No need to check if it needs to be updated.
 					services[path] = latticev1.SystemStatusService{
 						Name:          service.Name,
+						Generation:    service.Generation,
 						ServiceStatus: service.Status,
 					}
 					serviceNames.Add(service.Name)
@@ -98,6 +99,7 @@ func (c *Controller) syncSystemServices(system *latticev1.System) (map[tree.Node
 						// If we created the service, no need to do any more work on it.
 						services[path] = latticev1.SystemStatusService{
 							Name:          service.Name,
+							Generation:    service.Generation,
 							ServiceStatus: service.Status,
 						}
 						continue
@@ -133,6 +135,7 @@ func (c *Controller) syncSystemServices(system *latticev1.System) (map[tree.Node
 
 		services[path] = latticev1.SystemStatusService{
 			Name:          service.Name,
+			Generation:    service.Generation,
 			ServiceStatus: service.Status,
 		}
 	}
@@ -202,8 +205,7 @@ func (c *Controller) newService(
 		},
 		Spec: spec,
 		Status: latticev1.ServiceStatus{
-			State:           latticev1.ServiceStatePending,
-			UpdateProcessed: false,
+			State: latticev1.ServiceStatePending,
 		},
 	}
 
@@ -280,9 +282,6 @@ func (c *Controller) updateService(service *latticev1.Service, spec latticev1.Se
 		service.Labels = make(map[string]string)
 	}
 	service.Labels[constants.LabelKeyServicePath] = path.ToDomain()
-
-	// FIXME: remove this when updated to kube 1.10.0
-	service.Status.UpdateProcessed = false
 
 	return c.latticeClient.LatticeV1().Services(service.Namespace).Update(service)
 }

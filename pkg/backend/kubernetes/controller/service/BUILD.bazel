@@ -3,13 +3,12 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library")
 go_library(
     name = "go_default_library",
     srcs = [
+        "address.go",
         "clean_up_node_pools.go",
         "current_node_pool.go",
         "deployment.go",
         "kube_service.go",
-        "load_balancer.go",
         "service.go",
-        "service_address.go",
         "service_controller.go",
     ],
     importpath = "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/controller/service",

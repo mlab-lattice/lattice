@@ -31,16 +31,7 @@ func (c *Controller) updateSystemSpec(system *latticev1.System, spec latticev1.S
 	system = system.DeepCopy()
 	system.Spec = spec
 
-	// FIXME: remove this when ObservedGeneration is supported for CRD
-	system.Status.UpdateProcessed = false
-
 	return c.latticeClient.LatticeV1().Systems(system.Namespace).Update(system)
-}
-
-func isSystemStatusCurrent(system *latticev1.System) bool {
-	return system.Status.UpdateProcessed
-	// FIXME: go back to this when ObservedGeneration is supported for CRD
-	//return system.Status.ObservedGeneration == system.Generation
 }
 
 func (c *Controller) getSystem(namespace string) (*latticev1.System, error) {

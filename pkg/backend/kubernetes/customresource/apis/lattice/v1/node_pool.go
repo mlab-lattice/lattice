@@ -104,6 +104,38 @@ func (np *NodePool) Description(namespacePrefix string) string {
 	return fmt.Sprintf("node pool %v (%v in system %v)", np.Name, typeDescription, systemID)
 }
 
+func (np *NodePool) Stable() bool {
+	return np.UpdateProcessed() && np.Status.State == NodePoolStateStable
+}
+
+func (np *NodePool) UpdateProcessed() bool {
+	return np.Status.ObservedGeneration >= np.Generation
+}
+
+func (np *NodePool) Reason(namespacePrefix string) string {
+	if !np.UpdateProcessed() {
+		return fmt.Sprintf("waiting for update to %v to be processed", np.Description(namespacePrefix))
+	}
+
+	switch np.Status.State {
+	case NodePoolStateStable:
+		return ""
+	case NodePoolStatePending:
+		return fmt.Sprintf("%v is pending", np.Description(namespacePrefix))
+	case NodePoolStateScaling:
+		return fmt.Sprintf("%v is scaling", np.Description(namespacePrefix))
+	case NodePoolStateFailed:
+		failureReason := "unknown reason"
+		if np.Status.FailureInfo != nil {
+			failureReason = fmt.Sprintf("%v at %v", np.Status.FailureInfo.Message, np.Status.FailureInfo.Time.String())
+		}
+
+		return fmt.Sprintf("%v failed: %v", np.Description(namespacePrefix), failureReason)
+	default:
+		return fmt.Sprintf("%v in unknown state: %v", np.Description(namespacePrefix), np.Status.State)
+	}
+}
+
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 type NodePoolEpoch int64
@@ -141,8 +173,10 @@ type NodePoolSpec struct {
 }
 
 type NodePoolStatus struct {
-	ObservedGeneration int64         `json:"observedGeneration"`
-	State              NodePoolState `json:"state"`
+	ObservedGeneration int64 `json:"observedGeneration"`
+
+	State       NodePoolState              `json:"state"`
+	FailureInfo *NodePoolStatusFailureInfo `json:"failureInfo"`
 
 	// Epochs is a mapping from an epoch to the status of that epoch.
 	// An epoch is a manifestation of the node pool that requires replacing infrastructure.
@@ -151,6 +185,11 @@ type NodePoolStatus struct {
 	// Changing the number of nodes in a node pool does not require replacing the
 	// existing nodes, simply scaling them, and thus does not require a new epoch.
 	Epochs NodePoolStatusEpochs `json:"epochs"`
+}
+
+type NodePoolStatusFailureInfo struct {
+	Message string      `json:"message"`
+	Time    metav1.Time `json:"time"`
 }
 
 type NodePoolStatusEpochs map[NodePoolEpoch]NodePoolStatusEpoch

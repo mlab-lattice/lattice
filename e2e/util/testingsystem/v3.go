@@ -47,7 +47,7 @@ func (v *V3) ValidateStable() {
 	Expect(serviceCB.State).To(Equal(v1.ServiceStateStable))
 	Expect(serviceCB.StaleInstances).To(Equal(int32(0)))
 	Expect(serviceCB.UpdatedInstances).To(Equal(v.numServiceCBInstances))
-	Expect(len(serviceCB.PublicPorts)).To(Equal(0))
+	Expect(len(serviceCB.Ports)).To(Equal(0))
 
 	serviceA, ok := sys.Services[V3ServiceAPath]
 	Expect(ok).To(BeTrue())
@@ -55,11 +55,11 @@ func (v *V3) ValidateStable() {
 	Expect(serviceA.State).To(Equal(v1.ServiceStateStable))
 	Expect(serviceA.StaleInstances).To(Equal(int32(0)))
 	Expect(serviceA.UpdatedInstances).To(Equal(int32(1)))
-	Expect(len(serviceA.PublicPorts)).To(Equal(1))
-	port, ok := serviceA.PublicPorts[V3ServiceAPublicPort]
+	Expect(len(serviceA.Ports)).To(Equal(1))
+	address, ok := serviceA.Ports[V3ServiceAPublicPort]
 	Expect(ok).To(BeTrue())
 
-	err := v.poll(port.Address, time.Second, 30*time.Second)
+	err := v.poll(address, time.Second, 30*time.Second)
 	Expect(err).To(Not(HaveOccurred()))
 }
 

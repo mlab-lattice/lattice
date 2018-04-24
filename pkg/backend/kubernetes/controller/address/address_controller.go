@@ -47,8 +47,8 @@ type Controller struct {
 	staticServiceMeshOptions *servicemesh.Options
 	serviceMesh              servicemesh.Interface
 
-	latticeClient latticeclientset.Interface
 	kubeClient    kubeclientset.Interface
+	latticeClient latticeclientset.Interface
 
 	configLister       latticelisters.ConfigLister
 	configListerSynced cache.InformerSynced
@@ -74,8 +74,8 @@ func NewController(
 	latticeID v1.LatticeID,
 	cloudProviderOptions *cloudprovider.Options,
 	serviceMeshOptions *servicemesh.Options,
-	latticeClient latticeclientset.Interface,
 	kubeClient kubeclientset.Interface,
+	latticeClient latticeclientset.Interface,
 	configInformer latticeinformers.ConfigInformer,
 	addressInformer latticeinformers.AddressInformer,
 	serviceInformer latticeinformers.ServiceInformer,

@@ -9,7 +9,6 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 
 	set "github.com/deckarep/golang-set"
-	"github.com/golang/glog"
 )
 
 const (

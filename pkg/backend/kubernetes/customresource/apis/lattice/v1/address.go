@@ -32,10 +32,6 @@ type Address struct {
 	Status            AddressStatus `json:"status"`
 }
 
-func (a *Address) UpdateProcessed() bool {
-	return a.Status.ObservedGeneration >= a.Generation
-}
-
 func (a *Address) Description(namespacePrefix string) string {
 	systemID, err := kubeutil.SystemID(namespacePrefix, a.Namespace)
 	if err != nil {
@@ -59,6 +55,36 @@ func (a *Address) PathLabel() (tree.NodePath, error) {
 	return tree.NodePathFromDomain(path)
 }
 
+func (a *Address) Stable() bool {
+	return a.UpdateProcessed() && a.Status.State == AddressStateStable
+}
+
+func (a *Address) UpdateProcessed() bool {
+	return a.Status.ObservedGeneration >= a.Generation
+}
+
+func (a *Address) Reason(namespacePrefix string) string {
+	if !a.UpdateProcessed() {
+		return fmt.Sprintf("waiting for update to %v to be processed", a.Description(namespacePrefix))
+	}
+
+	switch a.Status.State {
+	case AddressStateStable:
+		return ""
+	case AddressStateUpdating:
+		return fmt.Sprintf("%v is updating", a.Description(namespacePrefix))
+	case AddressStateFailed:
+		failureReason := "unknown reason"
+		if a.Status.FailureInfo != nil {
+			failureReason = fmt.Sprintf("%v at %v", a.Status.FailureInfo.Message, a.Status.FailureInfo.Time.String())
+		}
+
+		return fmt.Sprintf("%v failed: %v", a.Description(namespacePrefix), failureReason)
+	default:
+		return fmt.Sprintf("%v in unknown state: %v", a.Description(namespacePrefix), a.Status.State)
+	}
+}
+
 type AddressSpec struct {
 	Service      *tree.NodePath `json:"service,omitempty"`
 	ExternalName *string        `json:"externalName,omitempty"`
@@ -77,9 +103,9 @@ type AddressStatus struct {
 type AddressState string
 
 const (
-	AddressStatePending AddressState = "pending"
-	AddressStateStable  AddressState = "created"
-	AddressStateFailed  AddressState = "failed"
+	AddressStateUpdating AddressState = "updating"
+	AddressStateStable   AddressState = "stable"
+	AddressStateFailed   AddressState = "failed"
 )
 
 type AddressStatusFailureInfo struct {

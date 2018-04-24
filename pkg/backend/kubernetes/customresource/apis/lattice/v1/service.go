@@ -36,9 +36,12 @@ type Service struct {
 	Status            ServiceStatus `json:"status,omitempty"`
 }
 
+func (s *Service) Stable() bool {
+	return s.UpdateProcessed() && s.Status.State == ServiceStateStable
+}
+
 func (s *Service) UpdateProcessed() bool {
-	// TODO: update to ObservedGeneration when upgrading to 1.10
-	return s.Status.UpdateProcessed
+	return s.Status.ObservedGeneration >= s.Generation
 }
 
 func (s *Service) Description(namespacePrefix string) string {
@@ -128,14 +131,16 @@ func (s *ServiceSpec) UnmarshalJSON(data []byte) error {
 }
 
 type ServiceStatus struct {
-	State              ServiceState `json:"state"`
-	ObservedGeneration int64        `json:"observedGeneration"`
-	// FIXME: remove this when upgrading to kube v1.10.0
-	UpdateProcessed  bool                      `json:"updateProcessed"`
-	UpdatedInstances int32                     `json:"updatedInstances"`
-	StaleInstances   int32                     `json:"staleInstances"`
-	PublicPorts      ServiceStatusPublicPorts  `json:"publicPorts"`
-	FailureInfo      *ServiceStatusFailureInfo `json:"failureInfo,omitempty"`
+	ObservedGeneration int64 `json:"observedGeneration"`
+
+	State       ServiceState              `json:"state"`
+	Reason      *string                   `json:"reason"`
+	FailureInfo *ServiceStatusFailureInfo `json:"failureInfo,omitempty"`
+
+	UpdatedInstances int32 `json:"updatedInstances"`
+	StaleInstances   int32 `json:"staleInstances"`
+
+	Ports map[int32]string `json:"ports"`
 }
 
 type ServiceState string
@@ -147,12 +152,6 @@ const (
 	ServiceStateStable   ServiceState = "stable"
 	ServiceStateFailed   ServiceState = "failed"
 )
-
-type ServiceStatusPublicPorts map[int32]ServiceStatusPublicPort
-
-type ServiceStatusPublicPort struct {
-	Address string `json:"address"`
-}
 
 type ServiceStatusFailureInfo struct {
 	Message  string      `json:"message"`

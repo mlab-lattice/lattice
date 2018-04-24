@@ -36,6 +36,14 @@ func (s *System) ResourceNamespace(namespacePrefix string) string {
 	return kubeutil.SystemNamespace(namespacePrefix, s.V1ID())
 }
 
+func (s *System) Stable() bool {
+	return s.UpdateProcessed() && s.Status.State == SystemStateStable
+}
+
+func (s *System) UpdateProcessed() bool {
+	return s.Status.ObservedGeneration >= s.Generation
+}
+
 // N.B.: important: if you update the SystemSpec or SystemSpecServiceInfo you must also update
 // the systemSpecEncoder and SystemSpec's UnmarshalJSON
 // +k8s:deepcopy-gen=false
@@ -77,18 +85,17 @@ func (i *SystemSpecServiceInfo) UnmarshalJSON(data []byte) error {
 
 // +k8s:deepcopy-gen=false
 type SystemStatus struct {
-	State              SystemState `json:"state"`
-	ObservedGeneration int64       `json:"observedGeneration"`
+	ObservedGeneration int64 `json:"observedGeneration"`
 
-	// FIXME: remove this when ObservedGeneration is supported for CRD
-	UpdateProcessed bool `json:"updateProcessed"`
+	State SystemState `json:"state"`
 
 	// Maps a Service path to its Service.Status
 	Services map[tree.NodePath]SystemStatusService `json:"services"`
 }
 
 type SystemStatusService struct {
-	Name string `json:"name"`
+	Name       string `json:"name"`
+	Generation int64  `json:"generation"`
 	ServiceStatus
 }
 

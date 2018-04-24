@@ -70,15 +70,6 @@ var (
 			ListType: &DeployList{},
 		},
 		{
-			Singular: ResourceSingularLoadBalancer,
-			Plural:   ResourcePluralLoadBalancer,
-			Scope:    ResourceScopeLoadBalancer,
-			Kind:     "LoadBalancer",
-			ListKind: "LoadBalancerList",
-			Type:     &LoadBalancer{},
-			ListType: &LoadBalancerList{},
-		},
-		{
 			Singular: ResourceSingularNodePool,
 			Plural:   ResourcePluralNodePool,
 			Scope:    ResourceScopeNodePool,

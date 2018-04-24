@@ -6,7 +6,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	latticeclientset "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/generated/clientset/versioned"
 	latticeinformers "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/generated/informers/externalversions/lattice/v1"
@@ -21,7 +20,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
 
-	clientset "k8s.io/client-go/kubernetes"
+	kubeclientset "k8s.io/client-go/kubernetes"
 	v1core "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
@@ -35,10 +34,9 @@ type Controller struct {
 	serviceAddresses      set.Set
 
 	namespacePrefix string
-	latticeID       v1.LatticeID
 
-	dnsmasqConfigPath string
-	hostFilePath      string
+	dnsmasqConfigPath    string
+	dnsmasqHostsFilePath string
 
 	// NOTE: you must get a read lock on the configLock for the duration
 	//       of your use of the serviceMesh
@@ -68,12 +66,11 @@ var (
 // NewController returns a newly created DNS Controller.
 func NewController(
 	namespacePrefix string,
-	latticeID v1.LatticeID,
 	dnsmasqConfigPath string,
-	hostConfigPath string,
+	dnsmasqHostsFilePath string,
 	serviceMeshOptions *servicemesh.Options,
 	latticeClient latticeclientset.Interface,
-	kubeClient clientset.Interface,
+	kubeClient kubeclientset.Interface,
 	configInformer latticeinformers.ConfigInformer,
 	addressInformer latticeinformers.AddressInformer,
 	serviceInformer latticeinformers.ServiceInformer,
@@ -81,10 +78,9 @@ func NewController(
 
 	c := &Controller{
 		namespacePrefix: namespacePrefix,
-		latticeID:       latticeID,
 
-		dnsmasqConfigPath: dnsmasqConfigPath,
-		hostFilePath:      hostConfigPath,
+		dnsmasqConfigPath:    dnsmasqConfigPath,
+		dnsmasqHostsFilePath: dnsmasqHostsFilePath,
 
 		staticServiceMeshOptions: serviceMeshOptions,
 
@@ -320,7 +316,7 @@ func (c *Controller) rewriteDnsmasqConfig(addresses []*latticev1.Address) error 
 		return err
 	}
 
-	err = ioutil.WriteFile(c.hostFilePath, []byte(hostConfigFileContents), 0660)
+	err = ioutil.WriteFile(c.dnsmasqHostsFilePath, []byte(hostConfigFileContents), 0660)
 	if err != nil {
 		return err
 	}

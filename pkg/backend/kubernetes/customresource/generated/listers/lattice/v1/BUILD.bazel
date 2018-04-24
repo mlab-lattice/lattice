@@ -9,7 +9,6 @@ go_library(
         "config.go",
         "deploy.go",
         "expansion_generated.go",
-        "loadbalancer.go",
         "nodepool.go",
         "service.go",
         "servicebuild.go",

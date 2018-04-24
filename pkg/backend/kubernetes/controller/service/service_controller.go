@@ -80,11 +80,8 @@ type Controller struct {
 	kubeServiceLister       corelisters.ServiceLister
 	kubeServiceListerSynced cache.InformerSynced
 
-	serviceAddressLister       latticelisters.ServiceAddressLister
-	serviceAddressListerSynced cache.InformerSynced
-
-	loadBalancerLister       latticelisters.LoadBalancerLister
-	loadBalancerListerSynced cache.InformerSynced
+	addressLister       latticelisters.AddressLister
+	addressListerSynced cache.InformerSynced
 
 	queue workqueue.RateLimitingInterface
 }
@@ -98,12 +95,11 @@ func NewController(
 	latticeClient latticeclientset.Interface,
 	configInformer latticeinformers.ConfigInformer,
 	serviceInformer latticeinformers.ServiceInformer,
+	addressInformer latticeinformers.AddressInformer,
 	nodePoolInformer latticeinformers.NodePoolInformer,
 	deploymentInformer appinformers.DeploymentInformer,
 	podInformer coreinformers.PodInformer,
 	kubeServiceInformer coreinformers.ServiceInformer,
-	serviceAddressInformer latticeinformers.ServiceAddressInformer,
-	loadBalancerInformer latticeinformers.LoadBalancerInformer,
 ) *Controller {
 	sc := &Controller{
 		namespacePrefix: namespacePrefix,
@@ -174,21 +170,13 @@ func NewController(
 	sc.kubeServiceLister = kubeServiceInformer.Lister()
 	sc.kubeServiceListerSynced = kubeServiceInformer.Informer().HasSynced
 
-	serviceAddressInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+	addressInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    sc.handleServiceAddressAdd,
 		UpdateFunc: sc.handleServiceAddressUpdate,
 		DeleteFunc: sc.handleServiceAddressDelete,
 	})
-	sc.serviceAddressLister = serviceAddressInformer.Lister()
-	sc.serviceAddressListerSynced = serviceAddressInformer.Informer().HasSynced
-
-	loadBalancerInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc:    sc.handleLoadBalancerAdd,
-		UpdateFunc: sc.handleLoadBalancerUpdate,
-		DeleteFunc: sc.handleLoadBalancerDelete,
-	})
-	sc.loadBalancerLister = loadBalancerInformer.Lister()
-	sc.loadBalancerListerSynced = loadBalancerInformer.Informer().HasSynced
+	sc.addressLister = addressInformer.Lister()
+	sc.addressListerSynced = addressInformer.Informer().HasSynced
 
 	return sc
 }
@@ -210,8 +198,7 @@ func (c *Controller) Run(workers int, stopCh <-chan struct{}) {
 		c.deploymentListerSynced,
 		c.podListerSynced,
 		c.kubeServiceListerSynced,
-		c.serviceAddressListerSynced,
-		c.loadBalancerListerSynced,
+		c.addressListerSynced,
 	) {
 		return
 	}
@@ -291,7 +278,7 @@ func (c *Controller) newCloudProvider() error {
 		return err
 	}
 
-	cloudProvider, err := cloudprovider.NewCloudProvider(c.namespacePrefix, options)
+	cloudProvider, err := cloudprovider.NewCloudProvider(c.namespacePrefix, nil, nil, options)
 	if err != nil {
 		return err
 	}
@@ -722,108 +709,6 @@ func (c *Controller) handleServiceAddressDelete(obj interface{}) {
 	c.enqueueService(service)
 }
 
-func (c *Controller) handleLoadBalancerAdd(obj interface{}) {
-	loadBalancer := obj.(*latticev1.LoadBalancer)
-
-	if loadBalancer.DeletionTimestamp != nil {
-		c.handleLoadBalancerDelete(loadBalancer)
-		return
-	}
-
-	// If it has a ControllerRef, that's all that matters.
-	if controllerRef := metav1.GetControllerOf(loadBalancer); controllerRef != nil {
-		address := c.resolveControllerRef(loadBalancer.Namespace, controllerRef)
-
-		// Not a Service. This shouldn't happen.
-		if address == nil {
-			// FIXME: send error event
-			return
-		}
-
-		glog.V(4).Infof("Service %s added.", loadBalancer.Name)
-		c.enqueueService(address)
-		return
-	}
-
-	// It's an orphan. This shouldn't happen.
-	// FIXME: send error event
-}
-
-func (c *Controller) handleLoadBalancerUpdate(old, cur interface{}) {
-	glog.V(5).Info("Got LoadBalancer update")
-	oldLoadBalancer := old.(*latticev1.LoadBalancer)
-	curLoadBalancer := cur.(*latticev1.LoadBalancer)
-	if curLoadBalancer.ResourceVersion == oldLoadBalancer.ResourceVersion {
-		// Periodic resync will send update events for all known Deployments.
-		// Two different versions of the same Deployment will always have different RVs.
-		glog.V(5).Info("Deployment ResourceVersions are the same")
-		return
-	}
-
-	curControllerRef := metav1.GetControllerOf(curLoadBalancer)
-	oldControllerRef := metav1.GetControllerOf(oldLoadBalancer)
-	controllerRefChanged := !reflect.DeepEqual(curControllerRef, oldControllerRef)
-	if controllerRefChanged {
-		// The ControllerRef was changed. If this is a Service Deployment, this shouldn't happen.
-		if address := c.resolveControllerRef(oldLoadBalancer.Namespace, oldControllerRef); address != nil {
-			// FIXME(kevinrosendahl): send error event here, this should not happen
-		}
-	}
-
-	// If it has a ControllerRef, that's all that matters.
-	if curControllerRef != nil {
-		address := c.resolveControllerRef(curLoadBalancer.Namespace, curControllerRef)
-
-		// Not a Service Deployment
-		if address == nil {
-			return
-		}
-
-		c.enqueueService(address)
-		return
-	}
-
-	// Otherwise, it's an orphan. These should never exist. All deployments should be run by some
-	// controller.
-	// FIXME(kevinrosendahl): send warn event
-}
-
-func (c *Controller) handleLoadBalancerDelete(obj interface{}) {
-	loadBalancer, ok := obj.(*latticev1.LoadBalancer)
-
-	// When a delete is dropped, the relist will notice a pod in the store not
-	// in the list, leading to the insertion of a tombstone object which contains
-	// the deleted key/value.
-	if !ok {
-		tombstone, ok := obj.(cache.DeletedFinalStateUnknown)
-		if !ok {
-			runtime.HandleError(fmt.Errorf("couldn't get object from tombstone %#v", obj))
-			return
-		}
-		loadBalancer, ok = tombstone.Obj.(*latticev1.LoadBalancer)
-		if !ok {
-			runtime.HandleError(fmt.Errorf("tombstone contained object that is not a Deployment %#v", obj))
-			return
-		}
-	}
-
-	controllerRef := metav1.GetControllerOf(loadBalancer)
-	if controllerRef == nil {
-		// No controller should care about orphans being deleted.
-		return
-	}
-
-	address := c.resolveControllerRef(loadBalancer.Namespace, controllerRef)
-
-	// Not a Service Deployment
-	if address == nil {
-		return
-	}
-
-	glog.V(4).Infof("LoadBalancer %v/%v deleted.", loadBalancer.Namespace, loadBalancer.Name)
-	c.enqueueService(address)
-}
-
 func (c *Controller) enqueue(svc *latticev1.Service) {
 	key, err := cache.DeletionHandlingMetaNamespaceKeyFunc(svc)
 	if err != nil {
@@ -929,43 +814,29 @@ func (c *Controller) syncService(key string) error {
 		return err
 	}
 
-	if service.DeletionTimestamp != nil {
-		return c.syncDeletedService(service)
-	}
-
-	service, err = c.addFinalizer(service)
+	nodePool, err := c.syncCurrentNodePool(service)
 	if err != nil {
 		return err
 	}
 
-	nodePool, nodePoolUpToDate, err := c.syncCurrentNodePool(service)
+	address, err := c.syncAddress(service)
 	if err != nil {
 		return err
 	}
 
-	deploymentStatus, err := c.syncDeployment(service, nodePool, nodePoolUpToDate)
+	err = c.syncKubeService(service)
+	if err != nil {
+		return err
+	}
+
+	deploymentStatus, err := c.syncDeployment(service, nodePool, address)
 	if err != nil {
 		return err
 	}
 
 	// If the service is moving from a dedicated node pool to a shared node pool, clean
 	// up the dedicated node pool once the move has completed.
-	extraNodePoolsExist, err := c.cleanUpDedicatedNodePool(service, nodePool, nodePoolUpToDate, deploymentStatus)
-	if err != nil {
-		return err
-	}
-
-	kubeService, err := c.syncKubeService(service)
-	if err != nil {
-		return err
-	}
-
-	serviceAddress, err := c.syncServiceAddress(service)
-	if err != nil {
-		return err
-	}
-
-	loadBalancer, loadBalancerNeeded, err := c.syncLoadBalancer(service, nodePool, nodePoolReady)
+	extraNodePoolsExist, err := c.cleanUpDedicatedNodePool(service, nodePool, deploymentStatus)
 	if err != nil {
 		return err
 	}
@@ -973,13 +844,9 @@ func (c *Controller) syncService(key string) error {
 	_, err = c.syncServiceStatus(
 		service,
 		nodePool,
-		nodePoolUpToDate,
+		address,
 		deploymentStatus,
 		extraNodePoolsExist,
-		kubeService,
-		serviceAddress,
-		loadBalancer,
-		loadBalancerNeeded,
 	)
 	return err
 }

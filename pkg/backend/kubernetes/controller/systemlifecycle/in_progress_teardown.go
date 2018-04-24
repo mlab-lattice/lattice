@@ -29,7 +29,7 @@ func (c *Controller) syncInProgressTeardown(teardown *latticev1.Teardown) error 
 	// Check to see if the system controller has processed updates to its Spec.
 	// If it hasn't, the system.Status.State is not up to date. Return no error
 	// and wait until the System has been updated to resync.
-	if !isSystemStatusCurrent(system) {
+	if !system.UpdateProcessed() {
 		return nil
 	}
 

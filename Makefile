@@ -3,7 +3,11 @@ DIR := $(patsubst %/,%,$(dir $(abspath $(lastword $(MAKEFILE_LIST)))))
 
 # build
 .PHONY: build
-build: gazelle
+build: gazelle \
+       build.no-gazelle
+
+.PHONY: build.no-gazelle
+build.no-gazelle:
 	@bazel build \
 		//pkg/...:all \
 		//cmd/...:all \

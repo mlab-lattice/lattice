@@ -90,7 +90,7 @@ func (kb *KubernetesBackend) transformSystem(system *latticev1.System) (*v1.Syst
 		state = v1.SystemStateDeleting
 	} else {
 		var err error
-		state, err = getSystemState(system.Status.State, system.Status.UpdateProcessed)
+		state, err = getSystemState(system.Status.State, system.UpdateProcessed())
 		if err != nil {
 			return nil, err
 		}

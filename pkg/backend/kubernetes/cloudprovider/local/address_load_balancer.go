@@ -83,7 +83,6 @@ func (cp *DefaultLocalCloudProvider) EnsureServiceAddressLoadBalancer(
 func (cp *DefaultLocalCloudProvider) DestroyServiceAddressLoadBalancer(
 	latticeID v1.LatticeID,
 	address *latticev1.Address,
-	service *latticev1.Service,
 ) error {
 	kubeServiceName := kubeutil.GetKubeServiceNameForLoadBalancer(address.Name)
 

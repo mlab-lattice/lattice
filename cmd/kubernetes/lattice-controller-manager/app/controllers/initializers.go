@@ -36,10 +36,12 @@ func initializeAddressController(ctx Context) {
 		ctx.LatticeID,
 		ctx.CloudProviderOptions,
 		ctx.ServiceMeshOptions,
+		ctx.KubeClientBuilder.ClientOrDie(controllerName(AddressController)),
 		ctx.LatticeClientBuilder.ClientOrDie(controllerName(AddressController)),
 		ctx.LatticeInformerFactory.Lattice().V1().Configs(),
 		ctx.LatticeInformerFactory.Lattice().V1().Addresses(),
-		ctx.LatticeInformerFactory.Lattice().V1().Addresses(),
+		ctx.LatticeInformerFactory.Lattice().V1().Services(),
+		ctx.KubeInformerFactory.Core().V1().Services(),
 	).Run(4, ctx.Stop)
 }
 
@@ -85,12 +87,11 @@ func initializeServiceController(ctx Context) {
 		ctx.LatticeClientBuilder.ClientOrDie(controllerName(ServiceController)),
 		ctx.LatticeInformerFactory.Lattice().V1().Configs(),
 		ctx.LatticeInformerFactory.Lattice().V1().Services(),
+		ctx.LatticeInformerFactory.Lattice().V1().Addresses(),
 		ctx.LatticeInformerFactory.Lattice().V1().NodePools(),
 		ctx.KubeInformerFactory.Apps().V1().Deployments(),
 		ctx.KubeInformerFactory.Core().V1().Pods(),
 		ctx.KubeInformerFactory.Core().V1().Services(),
-		ctx.LatticeInformerFactory.Lattice().V1().ServiceAddresses(),
-		ctx.LatticeInformerFactory.Lattice().V1().LoadBalancers(),
 	).Run(4, ctx.Stop)
 }
 
@@ -122,7 +123,7 @@ func initializeSystemLifecycleController(ctx Context) {
 		ctx.NamespacePrefix,
 		ctx.KubeClientBuilder.ClientOrDie(controllerName(SystemLifecycleController)),
 		ctx.LatticeClientBuilder.ClientOrDie(controllerName(SystemLifecycleController)),
-		ctx.LatticeInformerFactory.Lattice().V1().Deploies(),
+		ctx.LatticeInformerFactory.Lattice().V1().Deploys(),
 		ctx.LatticeInformerFactory.Lattice().V1().Teardowns(),
 		ctx.LatticeInformerFactory.Lattice().V1().Systems(),
 		ctx.LatticeInformerFactory.Lattice().V1().Builds(),

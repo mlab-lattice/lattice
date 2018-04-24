@@ -281,7 +281,6 @@ func TestAddressCreation(t *testing.T) {
 
 		controller := NewController(
 			namespacePrefix,
-			v1.LatticeID("dns-controller-test"),
 			dnsmasqConfigPath,
 			hostsFilePath,
 			serviceMeshOptions,

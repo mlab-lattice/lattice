@@ -161,8 +161,8 @@ func servicesPrinter(services []v1.Service, format printer.Format) printer.Inter
 			}
 
 			var addresses []string
-			for port, address := range service.PublicPorts {
-				addresses = append(addresses, fmt.Sprintf("%v: %v", port, address.Address))
+			for port, address := range service.Ports {
+				addresses = append(addresses, fmt.Sprintf("%v: %v", port, address))
 			}
 
 			rows = append(rows, []string{

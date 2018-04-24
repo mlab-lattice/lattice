@@ -19,8 +19,7 @@ func (c *Controller) syncSystemStatus(
 	hasScalingService := false
 
 	for path, status := range services {
-		// FIXME: move this to ObservedGeneration < Generation once updated to 1.10.0
-		if !status.UpdateProcessed {
+		if status.ObservedGeneration < status.Generation {
 			hasUpdatingService = true
 			continue
 		}
@@ -72,11 +71,9 @@ func (c *Controller) updateSystemStatus(
 	services map[tree.NodePath]latticev1.SystemStatusService,
 ) (*latticev1.System, error) {
 	status := latticev1.SystemStatus{
-		State:              state,
 		ObservedGeneration: system.Generation,
-		// FIXME: remove this when ObservedGeneration is supported for CRD
-		UpdateProcessed: true,
-		Services:        services,
+		State:              state,
+		Services:           services,
 	}
 
 	if reflect.DeepEqual(system.Status, status) {
@@ -87,11 +84,7 @@ func (c *Controller) updateSystemStatus(
 	system = system.DeepCopy()
 	system.Status = status
 
-	return c.latticeClient.LatticeV1().Systems(system.Namespace).Update(system)
-
-	// TODO: switch to this when https://github.com/kubernetes/kubernetes/issues/38113 is merged
-	// TODO: also watch https://github.com/kubernetes/kubernetes/pull/55168
-	//return c.latticeClient.LatticeV1().Systems(system.Namespace).UpdateStatus(system)
+	return c.latticeClient.LatticeV1().Systems(system.Namespace).UpdateStatus(system)
 }
 
 func (c *Controller) removeFinalizer(system *latticev1.System) (*latticev1.System, error) {

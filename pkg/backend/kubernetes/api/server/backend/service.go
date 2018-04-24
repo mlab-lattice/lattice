@@ -72,19 +72,16 @@ func (kb *KubernetesBackend) transformService(path tree.NodePath, status *lattic
 	}
 
 	service := v1.Service{
-		Path:             path,
-		State:            state,
+		Path: path,
+
+		State:  state,
+		Reason: status.Reason,
+
 		UpdatedInstances: status.UpdatedInstances,
 		StaleInstances:   status.StaleInstances,
-	}
 
-	ports := v1.ServicePublicPorts{}
-	for port, portInfo := range status.PublicPorts {
-		ports[port] = v1.ServicePublicPort{
-			Address: portInfo.Address,
-		}
+		Ports: status.Ports,
 	}
-	service.PublicPorts = ports
 
 	var failureMessage *string
 	if status.FailureInfo != nil {

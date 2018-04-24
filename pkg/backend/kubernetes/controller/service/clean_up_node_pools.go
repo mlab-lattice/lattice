@@ -7,12 +7,11 @@ import (
 func (c *Controller) cleanUpDedicatedNodePool(
 	service *latticev1.Service,
 	nodePool *latticev1.NodePool,
-	nodePoolUpToDate bool,
 	deploymentStatus *deploymentStatus,
 ) (bool, error) {
-	// Need to wait until the current node pool for the deployment is ready, and the deployment is
-	// stable on that node pool before we can clean up old node pools.
-	if !nodePoolUpToDate || nodePool.Status.State != latticev1.NodePoolStateStable || !deploymentStatus.UpdateProcessed || deploymentStatus.State == deploymentStateStable {
+	// If the deployment is ready, that means that it is fully stable on the most up to date
+	// epoch of the correct node pool, and no pods are running on any other node pool epochs.
+	if !deploymentStatus.Ready() {
 		return false, nil
 	}
 

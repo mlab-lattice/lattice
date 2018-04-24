@@ -59,7 +59,7 @@ func (c *Controller) syncServiceAddress(address *latticev1.Address) error {
 		return err
 	}
 
-	err = c.cloudProvider.EnsureAddressLoadBalancer(c.latticeID, address)
+	err = c.cloudProvider.EnsureServiceAddressLoadBalancer(c.latticeID, address, service)
 	if err != nil {
 		state := latticev1.AddressStateFailed
 		failureInfo := &latticev1.AddressStatusFailureInfo{
@@ -78,7 +78,7 @@ func (c *Controller) syncServiceAddress(address *latticev1.Address) error {
 		annotations[k] = v
 	}
 
-	err = c.cloudProvider.AddressLoadBalancerAddAnnotations(c.latticeID, address, annotations)
+	err = c.cloudProvider.ServiceAddressLoadBalancerAddAnnotations(c.latticeID, address, service, annotations)
 	if err != nil {
 		return fmt.Errorf("cloud provider could not get annotations for %v: %v", address.Description(c.namespacePrefix), err)
 	}
@@ -89,7 +89,7 @@ func (c *Controller) syncServiceAddress(address *latticev1.Address) error {
 	}
 
 	// FIXME: add public ports
-	ports, err := c.cloudProvider.AddressLoadBalancerPorts(c.latticeID, address)
+	ports, err := c.cloudProvider.ServiceAddressLoadBalancerPorts(c.latticeID, address, service)
 	if err != nil {
 		return err
 	}
@@ -101,7 +101,7 @@ func (c *Controller) syncServiceAddress(address *latticev1.Address) error {
 
 func (c *Controller) service(namespace string, path tree.NodePath) (*latticev1.Service, error) {
 	selector := labels.NewSelector()
-	requirement, err := labels.NewRequirement(latticev1.ServicePathLabelKey, selection.Equals, []string{path.String()})
+	requirement, err := labels.NewRequirement(latticev1.ServicePathLabelKey, selection.Equals, []string{path.ToDomain()})
 	if err != nil {
 		return nil, err
 	}

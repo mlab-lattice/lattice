@@ -16,7 +16,6 @@ type LatticeV1Interface interface {
 	ComponentBuildsGetter
 	ConfigsGetter
 	DeploysGetter
-	LoadBalancersGetter
 	NodePoolsGetter
 	ServicesGetter
 	ServiceBuildsGetter
@@ -47,10 +46,6 @@ func (c *LatticeV1Client) Configs(namespace string) ConfigInterface {
 
 func (c *LatticeV1Client) Deploys(namespace string) DeployInterface {
 	return newDeploys(c, namespace)
-}
-
-func (c *LatticeV1Client) LoadBalancers(namespace string) LoadBalancerInterface {
-	return newLoadBalancers(c, namespace)
 }
 
 func (c *LatticeV1Client) NodePools(namespace string) NodePoolInterface {
