@@ -2,6 +2,7 @@ package v1
 
 import (
 	"encoding/json"
+	"fmt"
 
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	kubeutil "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/kubernetes"
@@ -42,6 +43,10 @@ func (s *System) Stable() bool {
 
 func (s *System) UpdateProcessed() bool {
 	return s.Status.ObservedGeneration >= s.Generation
+}
+
+func (s *System) Description() string {
+	return fmt.Sprintf("system %v", s.V1ID())
 }
 
 // N.B.: important: if you update the SystemSpec or SystemSpecServiceInfo you must also update
@@ -87,7 +92,8 @@ func (i *SystemSpecServiceInfo) UnmarshalJSON(data []byte) error {
 type SystemStatus struct {
 	ObservedGeneration int64 `json:"observedGeneration"`
 
-	State SystemState `json:"state"`
+	State   SystemState `json:"state"`
+	Version string      `json:"version"`
 
 	// Maps a Service path to its Service.Status
 	Services map[tree.NodePath]SystemStatusService `json:"services"`

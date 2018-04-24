@@ -1,7 +1,10 @@
 package v1
 
 import (
+	"fmt"
+
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
+	kubeutil "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/kubernetes"
 	"github.com/mlab-lattice/lattice/pkg/definition/block"
 
 	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
@@ -14,6 +17,10 @@ const (
 	ResourceScopeComponentBuild    = apiextensionsv1beta1.NamespaceScoped
 )
 
+var (
+	ComponentBuildKind = SchemeGroupVersion.WithKind("ComponentBuild")
+)
+
 // +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
@@ -24,17 +31,31 @@ type ComponentBuild struct {
 	Status            ComponentBuildStatus `json:"status"`
 }
 
+func (b *ComponentBuild) Description(namespacePrefix string) string {
+	systemID, err := kubeutil.SystemID(namespacePrefix, b.Namespace)
+	if err != nil {
+		systemID = v1.SystemID(fmt.Sprintf("UNKNOWN (namespace: %v)", b.Namespace))
+	}
+
+	return fmt.Sprintf("component build %v (system %v)", b.Name, systemID)
+}
+
 // +k8s:deepcopy-gen=false
 type ComponentBuildSpec struct {
 	BuildDefinitionBlock block.ComponentBuild `json:"definitionBlock"`
 }
 
 type ComponentBuildStatus struct {
-	State              ComponentBuildState           `json:"state"`
-	ObservedGeneration int64                         `json:"observedGeneration"`
-	Artifacts          *ComponentBuildArtifacts      `json:"artifacts,omitempty"`
-	LastObservedPhase  *v1.ComponentBuildPhase       `json:"lastObservedPhase,omitempty"`
-	FailureInfo        *v1.ComponentBuildFailureInfo `json:"failureInfo,omitempty"`
+	// ComponentBuilds are immutable so no need for ObservedGeneration
+
+	State       ComponentBuildState           `json:"state"`
+	FailureInfo *v1.ComponentBuildFailureInfo `json:"failureInfo,omitempty"`
+
+	StartTimestamp      *metav1.Time `json:"startTimestamp,omitempty"`
+	CompletionTimestamp *metav1.Time `json:"completionTimestamp,omitempty"`
+
+	Artifacts         *ComponentBuildArtifacts `json:"artifacts,omitempty"`
+	LastObservedPhase *v1.ComponentBuildPhase  `json:"lastObservedPhase,omitempty"`
 }
 
 type ComponentBuildState string

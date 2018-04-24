@@ -113,10 +113,6 @@ func (c *Controller) syncSucceededSystemBuild(build *latticev1.Build, stateInfo 
 	return err
 }
 
-func (c *Controller) putSystemBuildUpdate(sysb *latticev1.Build) (*latticev1.Build, error) {
-	return c.latticeClient.LatticeV1().Builds(sysb.Namespace).Update(sysb)
-}
-
 func (c *Controller) updateSystemBuildStatus(
 	build *latticev1.Build,
 	state latticev1.BuildState,
@@ -126,7 +122,6 @@ func (c *Controller) updateSystemBuildStatus(
 ) (*latticev1.Build, error) {
 	status := latticev1.BuildStatus{
 		State:                state,
-		ObservedGeneration:   build.Generation,
 		Message:              message,
 		ServiceBuilds:        serviceBuilds,
 		ServiceBuildStatuses: serviceBuildStatuses,
@@ -139,9 +134,6 @@ func (c *Controller) updateSystemBuildStatus(
 	// Copy so the shared cache isn't mutated
 	build = build.DeepCopy()
 	build.Status = status
-	return c.latticeClient.LatticeV1().Builds(build.Namespace).Update(build)
 
-	// TODO: switch to this when https://github.com/kubernetes/kubernetes/issues/38113 is merged
-	// TODO: also watch https://github.com/kubernetes/kubernetes/pull/55168
-	//return c.latticeClient.LatticeV1().SystemBuilds(build.Namespace).UpdateStatus(build)
+	return c.latticeClient.LatticeV1().Builds(build.Namespace).UpdateStatus(build)
 }

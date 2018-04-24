@@ -20,11 +20,15 @@ const (
 	ResourceScopeService    = apiextensionsv1beta1.NamespaceScoped
 )
 
-// ServiceID label is the key that should be used in a label referencing a service's ID.
-var ServiceIDLabelKey = fmt.Sprintf("service.%v/id", GroupName)
+var (
+	ServiceKind = SchemeGroupVersion.WithKind("Service")
 
-// ServiceID label is the key that should be used for the path of the service.
-var ServicePathLabelKey = fmt.Sprintf("service.%v/path", GroupName)
+	// ServiceID label is the key that should be used in a label referencing a service's ID.
+	ServiceIDLabelKey = fmt.Sprintf("service.%v/id", GroupName)
+
+	// ServiceID label is the key that should be used for the path of the service.
+	ServicePathLabelKey = fmt.Sprintf("service.%v/path", GroupName)
+)
 
 // +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
@@ -69,7 +73,7 @@ func (s *Service) PathLabel() (tree.NodePath, error) {
 
 func (s *Service) NodePoolAnnotation() (NodePoolAnnotationValue, error) {
 	annotation := make(NodePoolAnnotationValue)
-	existingAnnotationString, ok := s.Annotations[WorkloadNodePoolAnnotationKey]
+	existingAnnotationString, ok := s.Annotations[NodePoolWorkloadAnnotationKey]
 	if ok {
 		err := json.Unmarshal([]byte(existingAnnotationString), &annotation)
 		if err != nil {

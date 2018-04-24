@@ -23,15 +23,7 @@ func (cp *DefaultAWSCloudProvider) provisionRoute53Record(latticeID v1.LatticeID
 	return err
 }
 
-func (cp *DefaultAWSCloudProvider) DestroyDNSARecord(latticeID v1.LatticeID, name string) error {
-	return cp.deprovisionRoute53Record(latticeID, name)
-}
-
-func (cp *DefaultAWSCloudProvider) DestroyDNSCNAMERecord(latticeID v1.LatticeID, name string) error {
-	return cp.deprovisionRoute53Record(latticeID, name)
-}
-
-func (cp *DefaultAWSCloudProvider) deprovisionRoute53Record(latticeID v1.LatticeID, name string) error {
+func (cp *DefaultAWSCloudProvider) DestroyDNSRecord(latticeID v1.LatticeID, name string) error {
 	_, err := terraform.Destroy(route53RecordWorkDirectory(cp.route53PrivateZoneID, name), nil)
 	return err
 }

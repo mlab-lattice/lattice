@@ -4,9 +4,9 @@ import (
 	"fmt"
 
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
-	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/constants"
 	kubeutil "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/kubernetes"
 
+	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -19,17 +19,23 @@ const (
 	ResourceScopeNodePool    = apiextensionsv1beta1.NamespaceScoped
 )
 
-// NodePoolServiceDedicatedID is the key for a label indicating that the node pool is dedicated for a service.
-// The label's value should be the ID of the service.
-var NodePoolServiceDedicatedIDLabelKey = fmt.Sprintf("service.dedicated.node-pool.%v/id", SchemeGroupVersion.String())
+var (
+	NodePoolKind = SchemeGroupVersion.WithKind("NodePool")
 
-// NodePoolServiceDedicatedID is the key for a label indicating that the node pool is shared for a system.
-// The label's value should be the node pool's path in the system definition.
-var NodePoolSystemSharedPathLabelKey = fmt.Sprintf("shared.node-pool.%v/path", SchemeGroupVersion.String())
+	NodePoolIDLabelKey = fmt.Sprintf("node-pool.%v/id", GroupName)
 
-// WorkloadNodePoolAnnotationKey is the key that should be used in an annotation by
-// workloads that run on a node pool.
-var WorkloadNodePoolAnnotationKey = fmt.Sprintf("workload.%v/node-pools", SchemeGroupVersion.String())
+	// NodePoolServiceDedicatedID is the key for a label indicating that the node pool is dedicated for a service.
+	// The label's value should be the ID of the service.
+	NodePoolServiceDedicatedIDLabelKey = fmt.Sprintf("service.dedicated.node-pool.%v/id", GroupName)
+
+	// NodePoolServiceDedicatedID is the key for a label indicating that the node pool is shared for a system.
+	// The label's value should be the node pool's path in the system definition.
+	NodePoolSystemSharedPathLabelKey = fmt.Sprintf("shared.node-pool.%v/path", GroupName)
+
+	// NodePoolWorkloadAnnotationKey is the key that should be used in an annotation by
+	// workloads that run on a node pool.
+	NodePoolWorkloadAnnotationKey = fmt.Sprintf("workload.%v/node-pools", GroupName)
+)
 
 // +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
@@ -53,16 +59,31 @@ const (
 	NodePoolTypeUnknown          NodePoolType = "unknown"
 )
 
+func (np *NodePool) ServiceDedicatedIDLabel() (string, bool) {
+	serviceID, ok := np.Labels[NodePoolServiceDedicatedIDLabelKey]
+	return serviceID, ok
+}
+
+func (np *NodePool) SystemSharedPathLabel() (tree.NodePath, bool, error) {
+	domain, ok := np.Labels[NodePoolSystemSharedPathLabelKey]
+	if !ok {
+		return "", false, nil
+	}
+
+	path, err := tree.NodePathFromDomain(domain)
+	return path, true, err
+}
+
 func (np *NodePool) Type() NodePoolType {
 	if np.Labels == nil {
 		return NodePoolTypeUnknown
 	}
 
-	if _, ok := np.Labels[NodePoolServiceDedicatedIDLabelKey]; ok {
+	if _, ok := np.ServiceDedicatedIDLabel(); ok {
 		return NodePoolTypeServiceDedicated
 	}
 
-	if _, ok := np.Labels[NodePoolSystemSharedPathLabelKey]; ok {
+	if _, ok, err := np.SystemSharedPathLabel(); err == nil && ok {
 		return NodePoolTypeSystemShared
 	}
 
@@ -74,11 +95,11 @@ func (np *NodePool) TypeDescription() string {
 		return "UNKNOWN"
 	}
 
-	if serviceID, ok := np.Labels[NodePoolServiceDedicatedIDLabelKey]; ok {
+	if serviceID, ok := np.ServiceDedicatedIDLabel(); ok {
 		return fmt.Sprintf("dedicated for service %v", serviceID)
 	}
 
-	if path, ok := np.Labels[NodePoolSystemSharedPathLabelKey]; ok {
+	if path, ok, err := np.SystemSharedPathLabel(); err == nil && ok {
 		return fmt.Sprintf("shared node pool %v", path)
 	}
 
@@ -86,22 +107,13 @@ func (np *NodePool) TypeDescription() string {
 }
 
 func (np *NodePool) Description(namespacePrefix string) string {
-	// TODO: when adding lattice node pools may have to adjust his
+	// TODO: when adding lattice node pools may have to adjust this
 	systemID, err := kubeutil.SystemID(namespacePrefix, np.Namespace)
 	if err != nil {
 		systemID = v1.SystemID(fmt.Sprintf("UNKNOWN (namespace: %v)", np.Namespace))
 	}
 
-	typeDescription := "UNKNOWN"
-	if np.Labels != nil {
-		if serviceID, ok := np.Labels[constants.LabelKeyServiceID]; ok {
-			typeDescription = fmt.Sprintf("dedicated for service %v", serviceID)
-		}
-
-		// FIXME: add path type for system node pools
-	}
-
-	return fmt.Sprintf("node pool %v (%v in system %v)", np.Name, typeDescription, systemID)
+	return fmt.Sprintf("node pool %v (%v in system %v)", np.Name, np.TypeDescription(), systemID)
 }
 
 func (np *NodePool) Stable() bool {
@@ -147,7 +159,7 @@ func (np *NodePool) Affinity(epoch NodePoolEpoch) *corev1.NodeAffinity {
 				{
 					MatchExpressions: []corev1.NodeSelectorRequirement{
 						{
-							Key:      constants.LabelKeyNodeRoleLatticeNodePool,
+							Key:      NodePoolIDLabelKey,
 							Operator: corev1.NodeSelectorOpIn,
 							Values:   []string{np.ID(epoch)},
 						},
@@ -160,7 +172,7 @@ func (np *NodePool) Affinity(epoch NodePoolEpoch) *corev1.NodeAffinity {
 
 func (np *NodePool) Toleration(epoch NodePoolEpoch) corev1.Toleration {
 	return corev1.Toleration{
-		Key:      constants.LabelKeyNodeRoleLatticeNodePool,
+		Key:      NodePoolIDLabelKey,
 		Operator: corev1.TolerationOpEqual,
 		Value:    np.ID(epoch),
 		Effect:   corev1.TaintEffectNoSchedule,
@@ -259,7 +271,7 @@ type NodePoolList struct {
 	Items           []NodePool `json:"items"`
 }
 
-// NodePoolAnnotation is the type that should be the value of the WorkloadNodePoolAnnotationKey annotation.
+// NodePoolAnnotation is the type that should be the value of the NodePoolWorkloadAnnotationKey annotation.
 // It maps from namespaces to a map of names to a slice of epochs.
 // For example, if a service is currently running on the abc node pool in namespace bar, and is
 // on both epochs 1 and 2 of that node pool, and is also currently running on the xyz node pool

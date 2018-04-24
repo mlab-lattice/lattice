@@ -123,7 +123,7 @@ func (c *Controller) updateServiceNodePoolAnnotation(
 
 	// Copy the service so the shared cache isn't mutated
 	service = service.DeepCopy()
-	service.Annotations[latticev1.WorkloadNodePoolAnnotationKey] = string(newAnnotationJSON)
+	service.Annotations[latticev1.NodePoolWorkloadAnnotationKey] = string(newAnnotationJSON)
 
 	return c.latticeClient.LatticeV1().Services(service.Namespace).Update(service)
 }

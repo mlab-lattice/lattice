@@ -12,9 +12,8 @@ func (c *Controller) updateDeployStatus(
 	message string,
 ) (*latticev1.Deploy, error) {
 	status := latticev1.DeployStatus{
-		State:              state,
-		ObservedGeneration: deploy.Generation,
-		Message:            message,
+		State:   state,
+		Message: message,
 	}
 
 	if reflect.DeepEqual(deploy.Status, status) {
@@ -25,9 +24,5 @@ func (c *Controller) updateDeployStatus(
 	deploy = deploy.DeepCopy()
 	deploy.Status = status
 
-	return c.latticeClient.LatticeV1().Deploys(deploy.Namespace).Update(deploy)
-
-	// TODO: switch to this when https://github.com/kubernetes/kubernetes/issues/38113 is merged
-	// TODO: also watch https://github.com/kubernetes/kubernetes/pull/55168
-	//return c.latticeClient.LatticeV1().SystemRollouts(deploy.Namespace).UpdateStatus(deploy)
+	return c.latticeClient.LatticeV1().Deploys(deploy.Namespace).UpdateStatus(deploy)
 }

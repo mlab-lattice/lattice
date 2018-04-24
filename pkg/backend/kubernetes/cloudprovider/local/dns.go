@@ -12,10 +12,6 @@ func (cp *DefaultLocalCloudProvider) EnsureDNSCNAMERecord(latticeID v1.LatticeID
 	return nil
 }
 
-func (cp *DefaultLocalCloudProvider) DestroyDNSARecord(latticeID v1.LatticeID, name string) error {
-	return nil
-}
-
-func (cp *DefaultLocalCloudProvider) DestroyDNSCNAMERecord(latticeID v1.LatticeID, name string) error {
+func (cp *DefaultLocalCloudProvider) DestroyDNSRecord(latticeID v1.LatticeID, name string) error {
 	return nil
 }

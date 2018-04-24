@@ -449,6 +449,6 @@ func (c *Controller) syncComponentBuild(key string) error {
 	case stateJobRunning:
 		return c.syncUnfinishedComponentBuild(build, stateInfo.job)
 	default:
-		return fmt.Errorf("ComponentBuild %v in unexpected state %v", key, stateInfo.state)
+		return fmt.Errorf("unexpected state %v", key, stateInfo.state)
 	}
 }

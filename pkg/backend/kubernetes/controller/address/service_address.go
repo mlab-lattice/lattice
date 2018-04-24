@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
-	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/kubernetes"
+	kubeutil "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/kubernetes"
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -26,7 +26,11 @@ func (c *Controller) syncServiceAddress(address *latticev1.Address) error {
 	}
 
 	if service == nil {
-		// FIXME: update status with info about service not existing yet
+		if address.Status.State == latticev1.AddressStateStable {
+			_, err = c.updateAddressStatus(address, latticev1.AddressStateUpdating, nil, address.Status.Ports)
+			return err
+		}
+
 		return nil
 	}
 
@@ -40,13 +44,12 @@ func (c *Controller) syncServiceAddress(address *latticev1.Address) error {
 		return err
 	}
 
-	systemID, err := kubernetes.SystemID(c.namespacePrefix, address.Namespace)
+	systemID, err := kubeutil.SystemID(c.namespacePrefix, address.Namespace)
 	if err != nil {
 		return err
 	}
 
-	// FIXME: factor out dns name creation
-	domain := fmt.Sprintf("%v.local.%v", path.ToDomain(), systemID)
+	domain := kubeutil.InternalSubdomain(path.ToDomain(), systemID, c.latticeID)
 	err = c.cloudProvider.EnsureDNSARecord(c.latticeID, domain, ip)
 	if err != nil {
 		state := latticev1.AddressStateFailed
@@ -88,7 +91,6 @@ func (c *Controller) syncServiceAddress(address *latticev1.Address) error {
 		return fmt.Errorf("could not update %v annotations: %v", address.Description(c.namespacePrefix), err)
 	}
 
-	// FIXME: add public ports
 	ports, err := c.cloudProvider.ServiceAddressLoadBalancerPorts(c.latticeID, address, service)
 	if err != nil {
 		return err

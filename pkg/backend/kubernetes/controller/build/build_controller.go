@@ -312,7 +312,6 @@ func (c *Controller) syncSystemBuild(key string) error {
 	case stateAllServiceBuildsSucceeded:
 		return c.syncSucceededSystemBuild(build, stateInfo)
 	default:
-		// FIXME: return error
-		panic("unreachable")
+		return fmt.Errorf("unrecognized state %v", stateInfo.state)
 	}
 }

@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
-	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/kubernetes"
+	kubeutil "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/kubernetes"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -22,12 +22,12 @@ func (c *Controller) syncExternalNameAddress(address *latticev1.Address) error {
 		return err
 	}
 
-	systemID, err := kubernetes.SystemID(c.namespacePrefix, address.Namespace)
+	systemID, err := kubeutil.SystemID(c.namespacePrefix, address.Namespace)
 	if err != nil {
 		return err
 	}
 
-	domain := fmt.Sprintf("%v.local.%v", path.ToDomain(), systemID)
+	domain := kubeutil.InternalSubdomain(path.ToDomain(), systemID, c.latticeID)
 	err = c.cloudProvider.EnsureDNSCNAMERecord(c.latticeID, domain, *address.Spec.ExternalName)
 	if err != nil {
 		return err

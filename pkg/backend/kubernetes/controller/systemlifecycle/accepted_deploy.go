@@ -12,14 +12,6 @@ func (c *Controller) syncAcceptedDeploy(deploy *latticev1.Deploy) error {
 		return err
 	}
 
-	// Check to see if the system build controller has processed updates to its Spec.
-	// If it hasn't, the build.Status.State is not up to date. Return no error
-	// and wait until the System has been updated to resync.
-	// TODO: don't think we actually need this here
-	if !isSystemBuildStatusCurrent(build) {
-		return nil
-	}
-
 	switch build.Status.State {
 	case latticev1.BuildStatePending, latticev1.BuildStateRunning:
 		return nil

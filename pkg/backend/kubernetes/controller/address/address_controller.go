@@ -14,7 +14,6 @@ import (
 	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/servicemesh"
 
 	"k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -232,7 +231,7 @@ func (c *Controller) newServiceMesh() error {
 
 func (c *Controller) handleAddressAdd(obj interface{}) {
 	address := obj.(*latticev1.Address)
-	glog.V(4).Infof("Address %v/%v added", address.Namespace, address.Name)
+	glog.V(4).Infof("%v added", address.Description(c.namespacePrefix))
 
 	if address.DeletionTimestamp != nil {
 		// On a restart of the controller manager, it's possible for an object to
@@ -245,17 +244,10 @@ func (c *Controller) handleAddressAdd(obj interface{}) {
 }
 
 func (c *Controller) handleAddressUpdate(old, cur interface{}) {
-	oldAddress := old.(*latticev1.Address)
-	curAddress := cur.(*latticev1.Address)
-	glog.V(5).Info("Got Address %v/%v update", curAddress.Namespace, curAddress.Name)
-	if curAddress.ResourceVersion == oldAddress.ResourceVersion {
-		// Periodic resync will send update events for all known Services.
-		// Two different versions of the same Service will always have different RVs.
-		glog.V(5).Info("kube Service %v/%v ResourceVersions are the same", curAddress.Namespace, curAddress.Name)
-		return
-	}
+	address := cur.(*latticev1.Address)
+	glog.V(5).Info("%v updated", address.Description(c.namespacePrefix))
 
-	c.enqueueAddress(curAddress)
+	c.enqueueAddress(address)
 }
 
 func (c *Controller) handleAddressDelete(obj interface{}) {
@@ -276,6 +268,8 @@ func (c *Controller) handleAddressDelete(obj interface{}) {
 			return
 		}
 	}
+
+	glog.V(5).Info("%v deleted", address.Description(c.namespacePrefix))
 
 	c.enqueueAddress(address)
 }
@@ -320,6 +314,8 @@ func (c *Controller) handleServiceDelete(obj interface{}) {
 		}
 	}
 
+	glog.V(5).Info("%v deleted", service.Description(c.namespacePrefix))
+
 	c.handleServiceEvent(service)
 }
 
@@ -351,30 +347,6 @@ func (c *Controller) enqueue(svc *latticev1.Address) {
 	}
 
 	c.queue.Add(key)
-}
-
-// resolveControllerRef returns the controller referenced by a ControllerRef,
-// or nil if the ControllerRef could not be resolved to a matching controller
-// of the correct Kind.
-func (c *Controller) resolveControllerRef(namespace string, controllerRef *metav1.OwnerReference) *latticev1.Address {
-	// We can't look up by Name, so look up by Name and then verify Name.
-	// Don't even try to look up by Name if it's the wrong Kind.
-	if controllerRef.Kind != controllerKind.Kind {
-		return nil
-	}
-
-	address, err := c.addressLister.Addresses(namespace).Get(controllerRef.Name)
-	if err != nil {
-		// FIXME(kevinrosendahl): send error?
-		return nil
-	}
-
-	if address.UID != controllerRef.UID {
-		// The controller we found with this Name is not the same one that the
-		// ControllerRef points to.
-		return nil
-	}
-	return address
 }
 
 func (c *Controller) runWorker() {
@@ -428,9 +400,9 @@ func (c *Controller) processNextWorkItem() bool {
 func (c *Controller) syncAddress(key string) error {
 	glog.Flush()
 	startTime := time.Now()
-	glog.V(4).Infof("started syncing service %q (%v)", key, startTime)
+	glog.V(4).Infof("started syncing address %q (%v)", key, startTime)
 	defer func() {
-		glog.V(4).Infof("finished syncing service %q (%v)", key, time.Now().Sub(startTime))
+		glog.V(4).Infof("finished syncing address %q (%v)", key, time.Now().Sub(startTime))
 	}()
 
 	namespace, name, err := cache.SplitMetaNamespaceKey(key)
@@ -441,7 +413,7 @@ func (c *Controller) syncAddress(key string) error {
 	address, err := c.addressLister.Addresses(namespace).Get(name)
 	if err != nil {
 		if errors.IsNotFound(err) {
-			glog.V(2).Infof("service %v has been deleted", key)
+			glog.V(2).Infof("address %v has been deleted", key)
 			return nil
 		}
 

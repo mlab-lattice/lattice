@@ -11,7 +11,6 @@ go_library(
         "pending_deploy.go",
         "pending_teardown.go",
         "system.go",
-        "system_build.go",
         "system_lifecycle_controller.go",
         "teardown.go",
     ],

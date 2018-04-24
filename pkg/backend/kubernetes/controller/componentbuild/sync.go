@@ -84,11 +84,11 @@ func (c *Controller) updateComponentBuildStatus(
 	}
 
 	status := latticev1.ComponentBuildStatus{
-		State:              state,
-		ObservedGeneration: build.Generation,
-		Artifacts:          artifacts,
-		LastObservedPhase:  phasePtr,
-		FailureInfo:        failureInfoPtr,
+		State:       state,
+		FailureInfo: failureInfoPtr,
+
+		Artifacts:         artifacts,
+		LastObservedPhase: phasePtr,
 	}
 
 	if reflect.DeepEqual(build.Status, status) {
