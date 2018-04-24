@@ -105,6 +105,7 @@ type AddressStatus struct {
 type AddressState string
 
 const (
+	AddressStatePending  AddressState = ""
 	AddressStateUpdating AddressState = "updating"
 	AddressStateStable   AddressState = "stable"
 	AddressStateFailed   AddressState = "failed"

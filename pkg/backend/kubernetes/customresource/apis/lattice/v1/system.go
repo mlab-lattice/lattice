@@ -23,7 +23,6 @@ var (
 	SystemKind     = SchemeGroupVersion.WithKind("System")
 	SystemListKind = SchemeGroupVersion.WithKind("SystemList")
 
-	SystemDefinitionURLLabelKey     = fmt.Sprintf("system.%v/definition-url", GroupName)
 	SystemDefinitionVersionLabelKey = fmt.Sprintf("system.%v/definition-version", GroupName)
 )
 
@@ -116,7 +115,7 @@ type SystemState string
 
 const (
 	// lifecycle states
-	SystemStatePending SystemState = "pending"
+	SystemStatePending SystemState = ""
 	SystemStateFailed  SystemState = "failed"
 
 	// transient states once the system has been created

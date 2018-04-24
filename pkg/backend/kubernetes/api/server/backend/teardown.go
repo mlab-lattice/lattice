@@ -40,9 +40,6 @@ func newTeardown() *latticev1.Teardown {
 			Name: uuid.NewV4().String(),
 		},
 		Spec: latticev1.TeardownSpec{},
-		Status: latticev1.TeardownStatus{
-			State: latticev1.TeardownStatePending,
-		},
 	}
 }
 

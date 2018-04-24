@@ -17,12 +17,11 @@ import (
 
 func (kb *KubernetesBackend) Build(systemID v1.SystemID, definitionRoot tree.Node, version v1.SystemVersion) (*v1.Build, error) {
 	// ensure the system exists
-	system, err := kb.ensureSystemCreated(systemID)
-	if err != nil {
+	if _, err := kb.ensureSystemCreated(systemID); err != nil {
 		return nil, err
 	}
 
-	build, err := newBuild(system.DefinitionURL, definitionRoot, version)
+	build, err := newBuild(definitionRoot, version)
 	if err != nil {
 		return nil, err
 	}
@@ -41,9 +40,8 @@ func (kb *KubernetesBackend) Build(systemID v1.SystemID, definitionRoot tree.Nod
 	return &externalBuild, nil
 }
 
-func newBuild(definitionURL string, definitionRoot tree.Node, version v1.SystemVersion) (*latticev1.Build, error) {
+func newBuild(definitionRoot tree.Node, version v1.SystemVersion) (*latticev1.Build, error) {
 	labels := map[string]string{
-		latticev1.BuildDefinitionURLLabelKey:     definitionURL,
 		latticev1.BuildDefinitionVersionLabelKey: string(version),
 	}
 
@@ -62,9 +60,6 @@ func newBuild(definitionURL string, definitionRoot tree.Node, version v1.SystemV
 		Spec: latticev1.BuildSpec{
 			DefinitionRoot: definitionRoot,
 			Services:       services,
-		},
-		Status: latticev1.BuildStatus{
-			State: latticev1.BuildStatePending,
 		},
 	}
 

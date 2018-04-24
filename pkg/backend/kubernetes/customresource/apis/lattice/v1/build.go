@@ -24,7 +24,6 @@ var (
 	BuildListKind = SchemeGroupVersion.WithKind("BuildList")
 
 	BuildIDLabelKey                = fmt.Sprintf("build.%v/id", GroupName)
-	BuildDefinitionURLLabelKey     = fmt.Sprintf("build.%v/definition-url", GroupName)
 	BuildDefinitionVersionLabelKey = fmt.Sprintf("build.%v/definition-version", GroupName)
 )
 
@@ -36,11 +35,6 @@ type Build struct {
 	metav1.ObjectMeta `json:"metadata"`
 	Spec              BuildSpec   `json:"spec"`
 	Status            BuildStatus `json:"status,omitempty"`
-}
-
-func (b *Build) DefinitionURLLabel() (string, bool) {
-	url, ok := b.Labels[BuildDefinitionURLLabelKey]
-	return url, ok
 }
 
 func (b *Build) DefinitionVersionLabel() (string, bool) {
@@ -59,12 +53,7 @@ func (b *Build) Description(namespacePrefix string) string {
 		version = label
 	}
 
-	definitionURL := "unknown definition URL"
-	if label, ok := b.DefinitionURLLabel(); ok {
-		definitionURL = label
-	}
-
-	return fmt.Sprintf("build %v (version %v of %v in system %v)", b.Name, version, definitionURL, systemID)
+	return fmt.Sprintf("build %v (version %v in system %v)", b.Name, version, systemID)
 }
 
 // N.B.: important: if you update the BuildSpec or BuildSpecServiceInfo you must also update
@@ -143,7 +132,7 @@ type BuildStatus struct {
 type BuildState string
 
 const (
-	BuildStatePending   BuildState = "pending"
+	BuildStatePending   BuildState = ""
 	BuildStateRunning   BuildState = "running"
 	BuildStateSucceeded BuildState = "succeeded"
 	BuildStateFailed    BuildState = "failed"

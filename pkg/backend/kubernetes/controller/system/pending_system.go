@@ -4,6 +4,8 @@ import (
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/lifecycle/system/bootstrap"
 	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/lifecycle/system/bootstrap/bootstrapper"
+
+	"github.com/golang/glog"
 )
 
 func (c *Controller) syncPendingSystem(system *latticev1.System) error {
@@ -16,6 +18,7 @@ func (c *Controller) syncPendingSystem(system *latticev1.System) error {
 		c.cloudProvider,
 	}
 
+	glog.Infof("about to bootstrap %v\n", system.Name)
 	_, err := bootstrap.Bootstrap(
 		c.namespacePrefix,
 		c.latticeID,

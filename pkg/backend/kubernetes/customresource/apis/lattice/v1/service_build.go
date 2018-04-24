@@ -22,9 +22,8 @@ var (
 	ServiceBuildKind     = SchemeGroupVersion.WithKind("ServiceBuild")
 	ServiceBuildListKind = SchemeGroupVersion.WithKind("ServiceBuildList")
 
-	ServiceBuildDefinitionURLLabelKey     = fmt.Sprintf("service.build.%v/definition-url", GroupName)
-	ServiceBuildDefinitionVersionLabelKey = fmt.Sprintf("service.build.%v/definition-version", GroupName)
-	ServiceBuildPathLabelKey              = fmt.Sprintf("service.build.%v/path", GroupName)
+	ServiceBuildDefinitionVersionLabelKey = fmt.Sprintf("servicebuild.%v/definition-version", GroupName)
+	ServiceBuildPathLabelKey              = fmt.Sprintf("servicebuild.%v/path", GroupName)
 )
 
 // +genclient
@@ -40,11 +39,6 @@ type ServiceBuild struct {
 func (b *ServiceBuild) BuildIDLabel() (string, bool) {
 	id, ok := b.Labels[BuildIDLabelKey]
 	return id, ok
-}
-
-func (b *ServiceBuild) DefinitionURLLabel() (string, bool) {
-	url, ok := b.Labels[ServiceBuildDefinitionURLLabelKey]
-	return url, ok
 }
 
 func (b *ServiceBuild) DefinitionVersionLabel() (string, bool) {
@@ -82,18 +76,12 @@ func (b *ServiceBuild) Description(namespacePrefix string) string {
 		version = label
 	}
 
-	definitionURL := "unknown definition URL"
-	if label, ok := b.DefinitionURLLabel(); ok {
-		definitionURL = label
-	}
-
 	return fmt.Sprintf(
-		"service build %v (service %v in build %v, version %v of %v system %v)",
+		"service build %v (service %v in build %v, version %v of system %v)",
 		b.Name,
 		path.String(),
 		build,
 		version,
-		definitionURL,
 		systemID,
 	)
 }
@@ -127,7 +115,7 @@ type ServiceBuildStatus struct {
 type ServiceBuildState string
 
 const (
-	ServiceBuildStatePending   ServiceBuildState = "pending"
+	ServiceBuildStatePending   ServiceBuildState = ""
 	ServiceBuildStateRunning   ServiceBuildState = "running"
 	ServiceBuildStateSucceeded ServiceBuildState = "succeeded"
 	ServiceBuildStateFailed    ServiceBuildState = "failed"

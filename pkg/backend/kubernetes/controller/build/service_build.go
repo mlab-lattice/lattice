@@ -28,10 +28,6 @@ func serviceBuild(
 		latticev1.ServiceBuildPathLabelKey: servicePath.ToDomain(),
 	}
 
-	if label, ok := build.DefinitionURLLabel(); ok {
-		labels[latticev1.ServiceBuildDefinitionURLLabelKey] = label
-	}
-
 	if label, ok := build.DefinitionVersionLabel(); ok {
 		labels[latticev1.ServiceBuildDefinitionVersionLabelKey] = label
 	}
@@ -45,9 +41,6 @@ func serviceBuild(
 			OwnerReferences: []metav1.OwnerReference{*newOwnerReference(build)},
 		},
 		Spec: spec,
-		Status: latticev1.ServiceBuildStatus{
-			State: latticev1.ServiceBuildStatePending,
-		},
 	}
 }
 

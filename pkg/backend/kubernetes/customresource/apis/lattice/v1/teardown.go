@@ -52,7 +52,7 @@ type TeardownStatus struct {
 type TeardownState string
 
 const (
-	TeardownStatePending    TeardownState = "pending"
+	TeardownStatePending    TeardownState = ""
 	TeardownStateInProgress TeardownState = "in progress"
 	TeardownStateSucceeded  TeardownState = "succeeded"
 	TeardownStateFailed     TeardownState = "failed"

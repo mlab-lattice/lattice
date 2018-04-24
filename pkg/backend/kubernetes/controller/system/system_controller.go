@@ -521,6 +521,8 @@ func (c *Controller) syncSystem(key string) error {
 		return c.syncDeletingSystem(system)
 	}
 
+	glog.Infof("system %v in state %v", system.Name, system.Status.State)
+
 	if system.Status.State == latticev1.SystemStatePending {
 		return c.syncPendingSystem(system)
 	}

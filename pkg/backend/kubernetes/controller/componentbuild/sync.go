@@ -1,6 +1,7 @@
 package componentbuild
 
 import (
+	"fmt"
 	"reflect"
 
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
@@ -25,13 +26,19 @@ func (c *Controller) syncJoblessComponentBuild(build *latticev1.ComponentBuild) 
 	return c.syncUnfinishedComponentBuild(build, job)
 }
 
-func (c *Controller) syncSuccessfulComponentBuild(build *latticev1.ComponentBuild, j *batchv1.Job) error {
-	artifacts := &latticev1.ComponentBuildArtifacts{
-		DockerImageFQN: j.Annotations[jobDockerFqnAnnotationKey],
+func (c *Controller) syncSuccessfulComponentBuild(build *latticev1.ComponentBuild, job *batchv1.Job) error {
+	dockerImageFQN, ok := build.DockerImageFQNAnnotation()
+	if !ok {
+		return fmt.Errorf(
+			"%v claims to be in state %v but does not have %v annotation",
+			build.Description(c.namespacePrefix),
+			latticev1.ComponentBuildStateSucceeded,
+			latticev1.ComponentBuildDockerImageFQNAnnotationKey,
+		)
 	}
 
-	if reflect.DeepEqual(build.Status.State, latticev1.ComponentBuildStateSucceeded) && reflect.DeepEqual(build.Status.Artifacts, artifacts) {
-		return nil
+	artifacts := &latticev1.ComponentBuildArtifacts{
+		DockerImageFQN: dockerImageFQN,
 	}
 
 	completionTimestamp := build.Status.CompletionTimestamp
@@ -67,10 +74,10 @@ func (c *Controller) syncFailedComponentBuild(build *latticev1.ComponentBuild) e
 	return err
 }
 
-func (c *Controller) syncUnfinishedComponentBuild(build *latticev1.ComponentBuild, j *batchv1.Job) error {
+func (c *Controller) syncUnfinishedComponentBuild(build *latticev1.ComponentBuild, job *batchv1.Job) error {
 	// The Job Pods have been able to be scheduled, so the ComponentBuild is "running" even though
 	// a Job Pod may not currently be active.
-	if j.Status.Active > 0 || j.Status.Failed > 0 {
+	if job.Status.Active > 0 || job.Status.Failed > 0 {
 		startTimestamp := build.Status.StartTimestamp
 		if startTimestamp == nil {
 			now := metav1.Now()

@@ -21,7 +21,6 @@ var (
 	DeployListKind = SchemeGroupVersion.WithKind("DeployList")
 
 	DeployIDLabelKey                = fmt.Sprintf("deploy.%v/id", GroupName)
-	DeployDefinitionURLLabelKey     = fmt.Sprintf("deploy.%v/definition-url", GroupName)
 	DeployDefinitionVersionLabelKey = fmt.Sprintf("deploy.%v/definition-version", GroupName)
 )
 
@@ -38,11 +37,6 @@ type Deploy struct {
 func (d *Deploy) BuildIDLabel() (v1.BuildID, bool) {
 	id, ok := d.Labels[BuildIDLabelKey]
 	return v1.BuildID(id), ok
-}
-
-func (d *Deploy) DefinitionURLLabel() (string, bool) {
-	url, ok := d.Labels[DeployDefinitionURLLabelKey]
-	return url, ok
 }
 
 func (d *Deploy) DefinitionVersionLabel() (v1.SystemVersion, bool) {
@@ -66,17 +60,11 @@ func (d *Deploy) Description(namespacePrefix string) string {
 		buildID = label
 	}
 
-	definitionURL := "unknown definition URL"
-	if label, ok := d.DefinitionURLLabel(); ok {
-		definitionURL = label
-	}
-
 	return fmt.Sprintf(
-		"deploy %v (build %v, version %v of %v (build %v) in system %v)",
+		"deploy %v (build %v, version %v (build %v) in system %v)",
 		d.Name,
 		d.Spec.BuildName,
 		version,
-		definitionURL,
 		buildID,
 		systemID,
 	)
@@ -99,7 +87,7 @@ type DeployStatus struct {
 type DeployState string
 
 const (
-	DeployStatePending    DeployState = "pending"
+	DeployStatePending    DeployState = ""
 	DeployStateAccepted   DeployState = "accepted"
 	DeployStateInProgress DeployState = "in progress"
 	DeployStateSucceeded  DeployState = "succeeded"

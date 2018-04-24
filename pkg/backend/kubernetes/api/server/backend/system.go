@@ -21,9 +21,6 @@ func (kb *KubernetesBackend) CreateSystem(id v1.SystemID, definitionURL string) 
 		Spec: latticev1.SystemSpec{
 			DefinitionURL: definitionURL,
 		},
-		Status: latticev1.SystemStatus{
-			State: latticev1.SystemStatePending,
-		},
 	}
 
 	system, err := kb.latticeClient.LatticeV1().Systems(kb.internalNamespace()).Create(system)

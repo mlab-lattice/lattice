@@ -151,7 +151,7 @@ type ServiceStatus struct {
 type ServiceState string
 
 const (
-	ServiceStatePending  ServiceState = "pending"
+	ServiceStatePending  ServiceState = ""
 	ServiceStateScaling  ServiceState = "scaling"
 	ServiceStateUpdating ServiceState = "updating"
 	ServiceStateStable   ServiceState = "stable"

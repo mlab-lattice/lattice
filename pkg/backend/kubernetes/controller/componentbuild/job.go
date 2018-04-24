@@ -26,8 +26,6 @@ const (
 	jobDockerSocketVolumePath = "/var/run/docker.sock"
 	jobDockerSocketPath       = "/var/run/docker.sock"
 	jobDockerSocketVolumeName = "dockersock"
-
-	jobDockerFqnAnnotationKey = "docker-image-fqn"
 )
 
 // getJobForBuild uses ControllerRefManager to retrieve the Job for a ComponentBuild

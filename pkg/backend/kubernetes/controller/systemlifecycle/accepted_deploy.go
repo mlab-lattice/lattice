@@ -31,11 +31,6 @@ func (c *Controller) syncAcceptedDeploy(deploy *latticev1.Deploy) error {
 			return err
 		}
 
-		definitionURL := "unknown"
-		if label, ok := deploy.DefinitionURLLabel(); ok {
-			definitionURL = label
-		}
-
 		version := v1.SystemVersion("unknown")
 		if label, ok := deploy.DefinitionVersionLabel(); ok {
 			version = label
@@ -48,7 +43,7 @@ func (c *Controller) syncAcceptedDeploy(deploy *latticev1.Deploy) error {
 
 		deployID := v1.DeployID(deploy.Name)
 
-		system, err = c.updateSystemLabels(system, &definitionURL, &version, &deployID, &buildID)
+		system, err = c.updateSystemLabels(system, &version, &deployID, &buildID)
 		if err != nil {
 			return err
 		}

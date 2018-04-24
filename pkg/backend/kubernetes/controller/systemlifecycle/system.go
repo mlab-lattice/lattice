@@ -15,7 +15,6 @@ import (
 
 func (c *Controller) updateSystemLabels(
 	system *latticev1.System,
-	definitionURL *string,
 	version *v1.SystemVersion,
 	deployID *v1.DeployID,
 	buildID *v1.BuildID,
@@ -23,11 +22,6 @@ func (c *Controller) updateSystemLabels(
 	labels := make(map[string]string)
 	for k, v := range system.Labels {
 		labels[k] = v
-	}
-
-	delete(labels, latticev1.SystemDefinitionURLLabelKey)
-	if definitionURL != nil {
-		labels[latticev1.SystemDefinitionURLLabelKey] = *definitionURL
 	}
 
 	delete(labels, latticev1.SystemDefinitionVersionLabelKey)

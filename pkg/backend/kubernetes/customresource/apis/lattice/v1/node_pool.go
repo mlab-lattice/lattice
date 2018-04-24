@@ -252,7 +252,7 @@ func (e NodePoolStatusEpochs) Epoch(epoch NodePoolEpoch) (*NodePoolStatusEpoch, 
 type NodePoolState string
 
 const (
-	NodePoolStatePending  NodePoolState = "pending"
+	NodePoolStatePending  NodePoolState = ""
 	NodePoolStateScaling  NodePoolState = "scaling"
 	NodePoolStateUpdating NodePoolState = "updating"
 	NodePoolStateStable   NodePoolState = "stable"

@@ -61,9 +61,6 @@ func newComponentBuild(build *latticev1.ServiceBuild, cbInfo latticev1.ServiceBu
 		Spec: latticev1.ComponentBuildSpec{
 			BuildDefinitionBlock: cbInfo.DefinitionBlock,
 		},
-		Status: latticev1.ComponentBuildStatus{
-			State: latticev1.ComponentBuildStatePending,
-		},
 	}
 }
 

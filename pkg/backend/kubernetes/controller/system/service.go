@@ -207,9 +207,6 @@ func (c *Controller) newService(
 			},
 		},
 		Spec: spec,
-		Status: latticev1.ServiceStatus{
-			State: latticev1.ServiceStatePending,
-		},
 	}
 
 	annotations, err := c.serviceMesh.ServiceAnnotations(service)

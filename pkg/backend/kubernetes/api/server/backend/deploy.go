@@ -13,14 +13,13 @@ import (
 )
 
 func (kb *KubernetesBackend) DeployBuild(systemID v1.SystemID, buildID v1.BuildID) (*v1.Deploy, error) {
-	system, err := kb.ensureSystemCreated(systemID)
-
+	// this also ensures the system exists
 	build, err := kb.GetBuild(systemID, buildID)
 	if err != nil {
 		return nil, err
 	}
 
-	deploy := newDeploy(system, build)
+	deploy := newDeploy(build)
 	namespace := kb.systemNamespace(systemID)
 	deploy, err = kb.latticeClient.LatticeV1().Deploys(namespace).Create(deploy)
 	if err != nil {
@@ -45,9 +44,8 @@ func (kb *KubernetesBackend) DeployVersion(systemID v1.SystemID, definitionRoot 
 	return kb.DeployBuild(systemID, build.ID)
 }
 
-func newDeploy(system *v1.System, build *v1.Build) *latticev1.Deploy {
+func newDeploy(build *v1.Build) *latticev1.Deploy {
 	labels := map[string]string{
-		latticev1.DeployDefinitionURLLabelKey:     system.DefinitionURL,
 		latticev1.DeployDefinitionVersionLabelKey: string(build.Version),
 		latticev1.BuildIDLabelKey:                 string(build.ID),
 	}
@@ -59,9 +57,6 @@ func newDeploy(system *v1.System, build *v1.Build) *latticev1.Deploy {
 		},
 		Spec: latticev1.DeploySpec{
 			BuildName: string(build.ID),
-		},
-		Status: latticev1.DeployStatus{
-			State: latticev1.DeployStatePending,
 		},
 	}
 }

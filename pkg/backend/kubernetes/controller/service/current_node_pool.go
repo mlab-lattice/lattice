@@ -226,9 +226,6 @@ func newDedicatedNodePool(service *latticev1.Service, numInstances int32, instan
 			},
 		},
 		Spec: spec,
-		Status: latticev1.NodePoolStatus{
-			State: latticev1.NodePoolStatePending,
-		},
 	}
 	return nodePool
 }

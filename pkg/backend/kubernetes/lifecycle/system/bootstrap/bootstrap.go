@@ -13,6 +13,8 @@ import (
 
 	"k8s.io/apimachinery/pkg/api/errors"
 	kubeclientset "k8s.io/client-go/kubernetes"
+
+	"github.com/golang/glog"
 )
 
 func Bootstrap(
@@ -24,6 +26,8 @@ func Bootstrap(
 	kubeClient kubeclientset.Interface,
 ) (*bootstrapper.SystemResources, error) {
 	resources := GetBootstrapResources(namespacePrefix, latticeID, systemID, definitionURL, bootstrappers)
+	glog.Info("going to create the resources")
+	glog.Infof("creating namespace %v\n", resources.Namespace.Name)
 
 	namespace, err := kubeClient.CoreV1().Namespaces().Create(resources.Namespace)
 	if err != nil {

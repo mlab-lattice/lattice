@@ -22,11 +22,12 @@ var (
 	ComponentBuildKind     = SchemeGroupVersion.WithKind("ComponentBuild")
 	ComponentBuildListKind = SchemeGroupVersion.WithKind("ComponentBuildList")
 
-	ComponentBuildIDLabelKey = fmt.Sprintf("component.build.%v/id", GroupName)
+	ComponentBuildIDLabelKey = fmt.Sprintf("componentbuild.%v/id", GroupName)
 
-	ComponentBuildDefinitionHashAnnotationKey    = fmt.Sprintf("component.build.%v/definition-hash", GroupName)
-	ComponentBuildLastObservedPhaseAnnotationKey = fmt.Sprintf("component.build.%v/last-observed-phase", GroupName)
-	ComponentBuildFailureInfoAnnotationKey       = fmt.Sprintf("component.build.%v/last-observed-phase", GroupName)
+	ComponentBuildDefinitionHashAnnotationKey    = fmt.Sprintf("componentbuild.%v/definition-hash", GroupName)
+	ComponentBuildDockerImageFQNAnnotationKey    = fmt.Sprintf("componentbuild.%v/docker-image-fqn", GroupName)
+	ComponentBuildFailureInfoAnnotationKey       = fmt.Sprintf("componentbuild.%v/last-observed-phase", GroupName)
+	ComponentBuildLastObservedPhaseAnnotationKey = fmt.Sprintf("componentbuild.%v/last-observed-phase", GroupName)
 )
 
 // +genclient
@@ -44,9 +45,9 @@ func (b *ComponentBuild) DefinitionHashAnnotation() (string, bool) {
 	return hash, ok
 }
 
-func (b *ComponentBuild) LastObservedPhaseAnnotation() (string, bool) {
-	phase, ok := b.Annotations[ComponentBuildLastObservedPhaseAnnotationKey]
-	return phase, ok
+func (b *ComponentBuild) DockerImageFQNAnnotation() (string, bool) {
+	fqn, ok := b.Annotations[ComponentBuildDockerImageFQNAnnotationKey]
+	return fqn, ok
 }
 
 func (b *ComponentBuild) FailureInfoAnnotation() (*v1.ComponentBuildFailureInfo, error) {
@@ -62,6 +63,11 @@ func (b *ComponentBuild) FailureInfoAnnotation() (*v1.ComponentBuildFailureInfo,
 	}
 
 	return &failureInfo, nil
+}
+
+func (b *ComponentBuild) LastObservedPhaseAnnotation() (string, bool) {
+	phase, ok := b.Annotations[ComponentBuildLastObservedPhaseAnnotationKey]
+	return phase, ok
 }
 
 func (b *ComponentBuild) Description(namespacePrefix string) string {
@@ -94,7 +100,7 @@ type ComponentBuildStatus struct {
 type ComponentBuildState string
 
 const (
-	ComponentBuildStatePending   ComponentBuildState = "pending"
+	ComponentBuildStatePending   ComponentBuildState = ""
 	ComponentBuildStateQueued    ComponentBuildState = "queued"
 	ComponentBuildStateRunning   ComponentBuildState = "running"
 	ComponentBuildStateSucceeded ComponentBuildState = "succeeded"
