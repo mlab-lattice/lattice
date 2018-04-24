@@ -94,7 +94,7 @@ func (c *Controller) newJob(build *latticev1.ComponentBuild) (*batchv1.Job, erro
 	job := &batchv1.Job{
 		ObjectMeta: metav1.ObjectMeta{
 			Annotations: map[string]string{
-				jobDockerFqnAnnotationKey: dockerImageFQN,
+				latticev1.ComponentBuildDockerImageFQNAnnotationKey: dockerImageFQN,
 			},
 			Labels: map[string]string{
 				latticev1.ComponentBuildIDLabelKey: build.Name,

@@ -11,7 +11,7 @@ import (
 )
 
 func (c *Controller) findComponentBuildForDefinitionHash(namespace, definitionHash string) (*latticev1.ComponentBuild, error) {
-	// TODO: similar scalability concerns to getServiceBuildsForComponentBuild
+	// TODO: similar scalability concerns to owningServiceBuilds
 	cbs, err := c.componentBuildLister.List(labels.Everything())
 	if err != nil {
 		return nil, err
@@ -81,7 +81,15 @@ func (c *Controller) addOwnerReference(build *latticev1.ServiceBuild, componentB
 
 func newOwnerReference(build *latticev1.ServiceBuild) *metav1.OwnerReference {
 	gvk := latticev1.ServiceBuildKind
-	blockOwnerDeletion := true
+
+	// we don't want the existence of the component build to prevent the
+	// service build from being deleted.
+	// we'll add a finalizer which removes the owner reference. once
+	// the owner reference has been removed, the component build can
+	// check to see if it has any owner reference still, and if not
+	// it can be garbage collected.
+	// FIXME: figure out what we want our build garbage collection story to be
+	blockOwnerDeletion := false
 
 	// set isController to false, since there should only be one controller
 	// owning the lifecycle of the service build. since other service builds

@@ -59,7 +59,15 @@ func serviceBuildSpec(serviceDefinition definition.Service) latticev1.ServiceBui
 
 func newOwnerReference(build *latticev1.Build) *metav1.OwnerReference {
 	gvk := latticev1.BuildKind
-	blockOwnerDeletion := true
+
+	// we don't want the existence of the service build to prevent the
+	// build from being deleted.
+	// we'll add a finalizer which removes the owner reference. once
+	// the owner reference has been removed, the service build can
+	// check to see if it has any owner reference still, and if not
+	// it can be garbage collected.
+	// FIXME: figure out what we want our build garbage collection story to be
+	blockOwnerDeletion := false
 
 	// set isController to false, since there should only be one controller
 	// owning the lifecycle of the service build. since other builds may also

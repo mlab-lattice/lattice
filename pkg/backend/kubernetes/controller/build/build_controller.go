@@ -2,7 +2,6 @@ package build
 
 import (
 	"fmt"
-	"reflect"
 	"time"
 
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
@@ -11,21 +10,24 @@ import (
 	latticelisters "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/generated/listers/lattice/v1"
 
 	"k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
 
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
 
+	"github.com/deckarep/golang-set"
 	"github.com/golang/glog"
+	"k8s.io/apimachinery/pkg/labels"
 )
 
 var controllerKind = latticev1.SchemeGroupVersion.WithKind("Build")
 
 type Controller struct {
-	syncHandler        func(bKey string) error
-	enqueueSystemBuild func(sysBuild *latticev1.Build)
+	syncHandler  func(bKey string) error
+	enqueueBuild func(sysBuild *latticev1.Build)
+
+	namespacePrefix string
 
 	latticeClient latticeclientset.Interface
 
@@ -39,18 +41,20 @@ type Controller struct {
 }
 
 func NewController(
+	namespacePrefix string,
 	latticeClient latticeclientset.Interface,
 	buildInformer latticeinformers.BuildInformer,
 	serviceBuildInformer latticeinformers.ServiceBuildInformer,
-
 ) *Controller {
 	sbc := &Controller{
+		namespacePrefix: namespacePrefix,
+
 		latticeClient: latticeClient,
 
 		queue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "build"),
 	}
 
-	sbc.enqueueSystemBuild = sbc.enqueue
+	sbc.enqueueBuild = sbc.enqueue
 	sbc.syncHandler = sbc.syncSystemBuild
 
 	buildInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
@@ -108,15 +112,14 @@ func (c *Controller) Run(workers int, stopCh <-chan struct{}) {
 
 func (c *Controller) addBuild(obj interface{}) {
 	build := obj.(*latticev1.Build)
-	glog.V(4).Infof("Adding Build %s", build.Name)
-	c.enqueueSystemBuild(build)
+	glog.V(4).Infof("%s added", build.Description(c.namespacePrefix))
+	c.enqueueBuild(build)
 }
 
 func (c *Controller) updateBuild(old, cur interface{}) {
-	oldBuild := old.(*latticev1.Build)
-	curBuild := cur.(*latticev1.Build)
-	glog.V(4).Infof("Updating Build %s", oldBuild.Name)
-	c.enqueueSystemBuild(curBuild)
+	build := cur.(*latticev1.Build)
+	glog.V(4).Infof("%s updated", build.Description(c.namespacePrefix))
+	c.enqueueBuild(build)
 }
 
 // addServiceBuild enqueues the System that manages a Service when the Service is created.
@@ -124,95 +127,70 @@ func (c *Controller) addServiceBuild(obj interface{}) {
 	serviceBuild := obj.(*latticev1.ServiceBuild)
 
 	if serviceBuild.DeletionTimestamp != nil {
-		// We assume for now that ServiceBuilds do not get deleted.
-		// FIXME: send error event
+		// On a restart of the controller manager, it's possible for an object to
+		// show up in a state that is already pending deletion.
+		// component builds should only be deleted if there are no service builds
+		// pointing at it, so no need to enqueue anything
 		return
 	}
 
-	// If it has a ControllerRef, that's all that matters.
-	if controllerRef := metav1.GetControllerOf(serviceBuild); controllerRef != nil {
-		build := c.resolveControllerRef(serviceBuild.Namespace, controllerRef)
-
-		// Not a Build. This shouldn't happen.
-		if build == nil {
-			// FIXME: send error event
-			return
-		}
-
-		glog.V(4).Infof("ServiceBuild %s added.", serviceBuild.Name)
-		c.enqueueSystemBuild(build)
+	glog.V(4).Infof("%s added", serviceBuild.Description(c.namespacePrefix))
+	builds, err := c.owningBuilds(serviceBuild)
+	if err != nil {
+		// FIXME: send error event?
 		return
 	}
-
-	// It's an orphan. This shouldn't happen.
-	// FIXME: send error event
+	for _, build := range builds {
+		c.enqueueBuild(&build)
+	}
 }
 
 // updateServiceBuild figures out what Build manages a Service when the
 // Service is updated and enqueues them.
 func (c *Controller) updateServiceBuild(old, cur interface{}) {
-	glog.V(5).Info("Got ServiceBuild update")
-	oldServiceBuild := old.(*latticev1.ServiceBuild)
-	curServiceBuild := cur.(*latticev1.ServiceBuild)
-	if curServiceBuild.ResourceVersion == oldServiceBuild.ResourceVersion {
-		// Periodic resync will send update events for all known ServiceBuilds.
-		// Two different versions of the same job will always have different RVs.
-		glog.V(5).Info("ServiceBuild ResourceVersions are the same")
+	serviceBuild := cur.(*latticev1.ServiceBuild)
+
+	glog.V(4).Infof("%s updated", serviceBuild.Description(c.namespacePrefix))
+	builds, err := c.owningBuilds(serviceBuild)
+	if err != nil {
+		// FIXME: send error event?
 		return
 	}
 
-	curControllerRef := metav1.GetControllerOf(curServiceBuild)
-	oldControllerRef := metav1.GetControllerOf(oldServiceBuild)
-	controllerRefChanged := !reflect.DeepEqual(curControllerRef, oldControllerRef)
-	if controllerRefChanged {
-		// This shouldn't happen
-		// FIXME: send error event
+	for _, build := range builds {
+		c.enqueueBuild(&build)
 	}
-
-	// If it has a ControllerRef, that's all that matters.
-	if curControllerRef != nil {
-		build := c.resolveControllerRef(curServiceBuild.Namespace, curControllerRef)
-
-		// Not a Build. This shouldn't happen.
-		if build == nil {
-			// FIXME: send error event
-			return
-		}
-
-		c.enqueueSystemBuild(build)
-		return
-	}
-
-	// Otherwise, it's an orphan. This should not happen.
-	// FIXME: send error event
 }
 
-// resolveControllerRef returns the controller referenced by a ControllerRef,
-// or nil if the ControllerRef could not be resolved to a matching controller
-// of the correct Kind.
-func (c *Controller) resolveControllerRef(namespace string, controllerRef *metav1.OwnerReference) *latticev1.Build {
-	// We can't look up by Name, so look up by Name and then verify Name.
-	// Don't even try to look up by Name if it's the wrong Kind.
-	if controllerRef.Kind != controllerKind.Kind {
-		// This shouldn't happen
-		// FIXME: send error event
-		return nil
+func (c *Controller) owningBuilds(serviceBuild *latticev1.ServiceBuild) ([]latticev1.Build, error) {
+	owningBuilds := mapset.NewSet()
+	for _, owner := range serviceBuild.OwnerReferences {
+		// Not a lattice.mlab.com owner (probably shouldn't happen)
+		if owner.APIVersion != latticev1.SchemeGroupVersion.String() {
+			continue
+		}
+
+		// Not a build owner (probably shouldn't happen)
+		if owner.Kind != latticev1.BuildKind.Kind {
+			continue
+		}
+
+		owningBuilds.Add(owner.UID)
 	}
 
-	build, err := c.buildLister.Builds(namespace).Get(controllerRef.Name)
+	builds, err := c.buildLister.List(labels.Everything())
 	if err != nil {
-		// This shouldn't happen.
-		// FIXME: send error event
-		return nil
+		return nil, err
 	}
 
-	if build.UID != controllerRef.UID {
-		// The controller we found with this Name is not the same one that the
-		// ControllerRef points to. This shouldn't happen.
-		// FIXME: send error event
-		return nil
+	var matchingBuilds []latticev1.Build
+	for _, build := range builds {
+		if owningBuilds.Contains(build.UID) {
+			matchingBuilds = append(matchingBuilds, *build)
+		}
 	}
-	return build
+
+	return matchingBuilds, nil
 }
 
 func (c *Controller) enqueue(sysb *latticev1.Build) {

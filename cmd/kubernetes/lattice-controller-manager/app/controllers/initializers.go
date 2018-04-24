@@ -47,6 +47,7 @@ func initializeAddressController(ctx Context) {
 
 func initializeBuildController(ctx Context) {
 	go build.NewController(
+		ctx.NamespacePrefix,
 		ctx.LatticeClientBuilder.ClientOrDie(controllerName(BuildController)),
 		ctx.LatticeInformerFactory.Lattice().V1().Builds(),
 		ctx.LatticeInformerFactory.Lattice().V1().ServiceBuilds(),
@@ -97,6 +98,7 @@ func initializeServiceController(ctx Context) {
 
 func initializeServiceBuildController(ctx Context) {
 	go servicebuild.NewController(
+		ctx.NamespacePrefix,
 		ctx.LatticeClientBuilder.ClientOrDie(controllerName(ServiceBuildController)),
 		ctx.LatticeInformerFactory.Lattice().V1().ServiceBuilds(),
 		ctx.LatticeInformerFactory.Lattice().V1().ComponentBuilds(),

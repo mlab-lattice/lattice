@@ -17,12 +17,15 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
 
+	"github.com/deckarep/golang-set"
 	"github.com/golang/glog"
 )
 
 type Controller struct {
 	syncHandler func(svcBuildKey string) error
 	enqueue     func(svcBuild *latticev1.ServiceBuild)
+
+	namespacePrefix string
 
 	latticeClient latticeclientset.Interface
 
@@ -36,11 +39,14 @@ type Controller struct {
 }
 
 func NewController(
+	namespacePrefix string,
 	latticeClient latticeclientset.Interface,
 	serviceBuildInformer latticeinformers.ServiceBuildInformer,
 	componentBuildInformer latticeinformers.ComponentBuildInformer,
 ) *Controller {
 	sbc := &Controller{
+		namespacePrefix: namespacePrefix,
+
 		latticeClient: latticeClient,
 
 		queue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "service-build"),
@@ -50,8 +56,8 @@ func NewController(
 	sbc.enqueue = sbc.enqueueServiceBuild
 
 	serviceBuildInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc:    sbc.addServiceBuild,
-		UpdateFunc: sbc.updateServiceBuild,
+		AddFunc:    sbc.handleServiceBuildAdd,
+		UpdateFunc: sbc.handleServiceBuildUpdate,
 		// TODO: for now it is assumed that ServiceBuilds are not deleted.
 		// in the future we'll probably want to add a GC process for ServiceBuilds.
 		// At that point we should listen here for those deletes.
@@ -61,8 +67,8 @@ func NewController(
 	sbc.serviceBuildListerSynced = serviceBuildInformer.Informer().HasSynced
 
 	componentBuildInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc:    sbc.addComponentBuild,
-		UpdateFunc: sbc.updateComponentBuild,
+		AddFunc:    sbc.handleComponentBuildAdd,
+		UpdateFunc: sbc.handleComponentBuildUpdate,
 		// TODO: for now it is assumed that ComponentBuilds are not deleted.
 		// in the future we'll probably want to add a GC process for ComponentBuilds.
 		// At that point we should listen here for those deletes.
@@ -102,75 +108,84 @@ func (c *Controller) Run(workers int, stopCh <-chan struct{}) {
 	<-stopCh
 }
 
-func (c *Controller) addServiceBuild(obj interface{}) {
+func (c *Controller) handleServiceBuildAdd(obj interface{}) {
 	build := obj.(*latticev1.ServiceBuild)
-	glog.V(4).Infof("Adding ServiceBuild %s", build.Name)
+	glog.V(4).Infof("Adding %s", build.Description(c.namespacePrefix))
 	c.enqueueServiceBuild(build)
 }
 
-func (c *Controller) updateServiceBuild(old, cur interface{}) {
-	oldBuild := old.(*latticev1.ServiceBuild)
-	curBuild := cur.(*latticev1.ServiceBuild)
-	glog.V(4).Infof("Updating ServiceBuild %s", oldBuild.Name)
-	c.enqueueServiceBuild(curBuild)
+func (c *Controller) handleServiceBuildUpdate(old, cur interface{}) {
+	build := cur.(*latticev1.ServiceBuild)
+	glog.V(4).Infof("Updating %s", build.Description(c.namespacePrefix))
+	c.enqueueServiceBuild(build)
 }
 
-// addComponentBuild enqueues any ServiceBuilds which may be interested in it when
+// handleComponentBuildAdd enqueues any ServiceBuilds which may be interested in it when
 // a ComponentBuild is added.
-func (c *Controller) addComponentBuild(obj interface{}) {
+func (c *Controller) handleComponentBuildAdd(obj interface{}) {
 	componentBuild := obj.(*latticev1.ComponentBuild)
 
 	if componentBuild.DeletionTimestamp != nil {
 		// On a restart of the controller manager, it's possible for an object to
 		// show up in a state that is already pending deletion.
-		// FIXME: send error event
+		// component builds should only be deleted if there are no service builds
+		// pointing at it, so no need to enqueue anything
 		return
 	}
 
-	glog.V(4).Infof("ComponentBuild %s added.", componentBuild.Name)
-	builds, err := c.getServiceBuildsForComponentBuild(componentBuild)
+	glog.V(4).Infof("%s added", componentBuild.Description(c.namespacePrefix))
+	builds, err := c.owningServiceBuilds(componentBuild)
 	if err != nil {
 		// FIXME: send error event?
+		return
 	}
 	for _, build := range builds {
-		c.enqueueServiceBuild(build)
+		c.enqueueServiceBuild(&build)
 	}
 }
 
-// updateComponentBuild enqueues any ServiceBuilds which may be interested in it when
+// handleComponentBuildUpdate enqueues any ServiceBuilds which may be interested in it when
 // a ComponentBuild is updated.
-func (c *Controller) updateComponentBuild(old, cur interface{}) {
-	glog.V(5).Info("Got ComponentBuild update")
-	oldComponentBuild := old.(*latticev1.ComponentBuild)
-	curComponentBuild := cur.(*latticev1.ComponentBuild)
-	if curComponentBuild.ResourceVersion == oldComponentBuild.ResourceVersion {
-		// Periodic resync will send update events for all known ComponentBuilds.
-		// Two different versions of the same job will always have different RVs.
-		glog.V(5).Info("ComponentBuild ResourceVersions are the same")
+func (c *Controller) handleComponentBuildUpdate(old, cur interface{}) {
+	componentBuild := cur.(*latticev1.ComponentBuild)
+
+	glog.V(4).Infof("%s updated", componentBuild.Description(c.namespacePrefix))
+	builds, err := c.owningServiceBuilds(componentBuild)
+	if err != nil {
+		// FIXME: send error event?
 		return
 	}
 
-	builds, err := c.getServiceBuildsForComponentBuild(curComponentBuild)
-	if err != nil {
-		// FIXME: send error event?
-	}
 	for _, build := range builds {
-		c.enqueueServiceBuild(build)
+		c.enqueueServiceBuild(&build)
 	}
 }
 
-func (c *Controller) getServiceBuildsForComponentBuild(componentBuild *latticev1.ComponentBuild) ([]*latticev1.ServiceBuild, error) {
-	// TODO: this could eventually get expensive
+func (c *Controller) owningServiceBuilds(componentBuild *latticev1.ComponentBuild) ([]latticev1.ServiceBuild, error) {
+	owningBuilds := mapset.NewSet()
+	for _, owner := range componentBuild.OwnerReferences {
+		// Not a lattice.mlab.com owner (probably shouldn't happen)
+		if owner.APIVersion != latticev1.SchemeGroupVersion.String() {
+			continue
+		}
+
+		// Not a service build owner (probably shouldn't happen)
+		if owner.Kind != latticev1.ServiceBuildKind.Kind {
+			continue
+		}
+
+		owningBuilds.Add(owner.UID)
+	}
+
 	builds, err := c.serviceBuildLister.List(labels.Everything())
 	if err != nil {
 		return nil, err
 	}
 
-	var matchingBuilds []*latticev1.ServiceBuild
+	var matchingBuilds []latticev1.ServiceBuild
 	for _, build := range builds {
-		// Check to see if the ServiceBuild is waiting on this ComponentBuild
-		if _, ok := build.Status.ComponentBuildStatuses[componentBuild.Name]; ok {
-			matchingBuilds = append(matchingBuilds, build)
+		if owningBuilds.Contains(build.UID) {
+			matchingBuilds = append(matchingBuilds, *build)
 		}
 	}
 
