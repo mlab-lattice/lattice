@@ -120,11 +120,15 @@ func (c *Controller) syncServiceAddress(address *latticev1.Address) error {
 	}
 
 	_, err = c.updateAddressStatus(address, latticev1.AddressStateStable, nil, ports)
-	return fmt.Errorf(
-		"error updating %v status: %v",
-		address.Description(c.namespacePrefix),
-		err,
-	)
+	if err != nil {
+		fmt.Errorf(
+			"error updating %v status: %v",
+			address.Description(c.namespacePrefix),
+			err,
+		)
+	}
+
+	return nil
 }
 
 func (c *Controller) service(namespace string, path tree.NodePath) (*latticev1.Service, error) {
