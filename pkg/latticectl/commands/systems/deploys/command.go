@@ -35,17 +35,15 @@ func (c *ListDeploysCommand) Base() (*latticectl.BaseCommand, error) {
 		SupportedFormats: ListDeploysSupportedFormats,
 	}
 	var watch bool
+	watchFlag := &latticectl.WatchFlag{
+		Target:  &watch,
+	}
 
 	cmd := &latticectl.SystemCommand{
 		Name: "deploys",
 		Flags: cli.Flags{
 			output.Flag(),
-			&cli.BoolFlag{
-				Name:    "watch",
-				Short:   "w",
-				Default: false,
-				Target:  &watch,
-			},
+			watchFlag.Flag(),
 		},
 		Run: func(ctx latticectl.SystemCommandContext, args []string) {
 			format, err := output.Value()

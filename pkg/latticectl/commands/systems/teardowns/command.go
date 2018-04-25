@@ -38,17 +38,15 @@ func (c *ListTeardownsCommand) Base() (*latticectl.BaseCommand, error) {
 		SupportedFormats: ListTeardownsSupportedFormats,
 	}
 	var watch bool
+	watchFlag := &latticectl.WatchFlag{
+		Target:  &watch,
+	}
 
 	cmd := &latticectl.SystemCommand{
 		Name: "teardowns",
 		Flags: cli.Flags{
 			output.Flag(),
-			&cli.BoolFlag{
-				Name:    "watch",
-				Short:   "w",
-				Default: false,
-				Target:  &watch,
-			},
+			watchFlag.Flag(),
 		},
 		Run: func(ctx latticectl.SystemCommandContext, args []string) {
 			format, err := output.Value()

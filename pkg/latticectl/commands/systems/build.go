@@ -23,6 +23,9 @@ func (c *BuildCommand) Base() (*latticectl.BaseCommand, error) {
 		SupportedFormats: ListSystemsSupportedFormats,
 	}
 	var watch bool
+	watchFlag := &latticectl.WatchFlag{
+		Target:  &watch,
+	}
 	var version string
 
 	cmd := &latticectl.SystemCommand{
@@ -34,12 +37,7 @@ func (c *BuildCommand) Base() (*latticectl.BaseCommand, error) {
 				Required: true,
 				Target:   &version,
 			},
-			&cli.BoolFlag{
-				Name:    "watch",
-				Short:   "w",
-				Default: false,
-				Target:  &watch,
-			},
+			watchFlag.Flag(),
 		},
 		Run: func(ctx latticectl.SystemCommandContext, args []string) {
 			format, err := output.Value()
