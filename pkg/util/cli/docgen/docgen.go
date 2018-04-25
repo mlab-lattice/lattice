@@ -44,7 +44,7 @@ func writeDoc(bc *cli.Command, writer io.Writer) error {
 
 	fmt.Fprintf(writer, "%s \n", markdown.WrapH2("Introduction"))
 
-	fmt.Fprintf(writer, "%s  \n", bc.Short)
+	// fmt.Fprintf(writer, "%s  \n", bc.Short)
 
 	// extra description in the intro section
 	introMdFileContent, err := getMarkdownFileContent("", descriptionFile)
@@ -94,7 +94,7 @@ func recurse(cmd *cli.Command, ancestorCommands []cli.Command, writer io.Writer,
 	// joins consecutive ancestor command names
 	var ancestorCmdsStr string
 	for _, tempCmd := range ancestorCommands {
-		ancestorCmdsStr += tempCmd.Name + " "
+		ancestorCmdsStr += tempCmd.Name + ":"
 	}
 	ancestorCmdsStr += cmd.Name
 
@@ -111,7 +111,7 @@ func recurse(cmd *cli.Command, ancestorCommands []cli.Command, writer io.Writer,
 // printCommand prints the command docs
 // fullCmdName includes all command ancestor except the root command (e.g. 'latticectl')
 func printCommand(fullCmdName string, cmd *cli.Command, writer io.Writer) error {
-	fmt.Fprintf(writer, "%s  \n", markdown.WrapH3(fullCmdName))
+	fmt.Fprintf(writer, "%s  \n", markdown.WrapH2(fullCmdName))
 
 	if cmd.Short != "" {
 		fmt.Fprintf(writer, "%s  \n\n", markdown.WrapItalic(cmd.Short))
@@ -150,6 +150,7 @@ func printCommand(fullCmdName string, cmd *cli.Command, writer io.Writer) error 
 	}
 
 	if examplesMdFile != "" {
+		fmt.Fprintf(writer, "%s \n\n", markdown.WrapBold("Examples:"))
 		fmt.Fprintf(writer, "%s \n\n", examplesMdFile)
 	}
 
@@ -184,7 +185,7 @@ func writeArgTableRow(w io.Writer, arg cli.Arg) {
 
 // writeFlags writes flags section to a markdown table
 func writeFlags(writer io.Writer, cmdFlags cli.Flags) {
-	fmt.Fprintf(writer, "%s: \n\n", markdown.WrapBold("Flags"))
+	fmt.Fprintf(writer, "%s \n\n", markdown.WrapBold("Flags:"))
 
 	markdown.WriteTableHeader(writer, []string{"Name", "Description"})
 
@@ -225,7 +226,7 @@ func getMarkdownFileContent(cmdName string, fileName string) (string, error) {
 	markdownPath := InputDocsDir
 
 	// appends the remainder of the file path
-	words := strings.Fields(cmdName)
+	words := strings.Split(cmdName, ":")
 	for _, subCmd := range words {
 		markdownPath += "/" + subCmd
 	}
