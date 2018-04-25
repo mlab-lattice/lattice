@@ -7,6 +7,7 @@ go_library(
         "address_controller.go",
         "deleted_address.go",
         "external_name_address.go",
+        "informer_event_handlers.go",
         "service_address.go",
     ],
     importpath = "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/controller/address",

@@ -14,7 +14,6 @@ import (
 	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/servicemesh"
 
 	"k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
 
@@ -26,8 +25,6 @@ import (
 
 	"github.com/golang/glog"
 )
-
-var controllerKind = latticev1.SchemeGroupVersion.WithKind("Address")
 
 type Controller struct {
 	syncHandler    func(bKey string) error
@@ -134,20 +131,20 @@ func (c *Controller) Run(workers int, stopCh <-chan struct{}) {
 	// make sure the work queue is shutdown which will trigger workers to end
 	defer c.queue.ShutDown()
 
-	glog.Infof("Starting service controller")
-	defer glog.Infof("Shutting down service controller")
+	glog.Infof("starting address controller")
+	defer glog.Infof("shutting down service controller")
 
 	// wait for your secondary caches to fill before starting your work
 	if !cache.WaitForCacheSync(stopCh, c.configListerSynced, c.addressListerSynced, c.serviceListerSynced, c.kubeServiceListerSynced) {
 		return
 	}
 
-	glog.V(4).Info("Caches synced. Waiting for config to be set")
+	glog.V(4).Info("caches synced, waiting for config to be set")
 
 	// wait for config to be set
 	<-c.configSetChan
 
-	glog.V(4).Info("Config set")
+	glog.V(4).Info("config set")
 
 	// start up your worker threads based on threadiness.  Some controllers
 	// have multiple kinds of workers
@@ -159,198 +156,6 @@ func (c *Controller) Run(workers int, stopCh <-chan struct{}) {
 
 	// wait until we're told to stop
 	<-stopCh
-}
-
-func (c *Controller) handleConfigAdd(obj interface{}) {
-	config := obj.(*latticev1.Config)
-	glog.V(4).Infof("Adding Config %s", config.Name)
-
-	c.configLock.Lock()
-	defer c.configLock.Unlock()
-	c.config = config.DeepCopy().Spec
-
-	err := c.newCloudProvider()
-	if err != nil {
-		glog.Errorf("error creating cloud provider: %v", err)
-		// FIXME: what to do here?
-		return
-	}
-
-	err = c.newServiceMesh()
-	if err != nil {
-		glog.Errorf("error creating service mesh: %v", err)
-		// FIXME: what to do here?
-		return
-	}
-
-	if !c.configSet {
-		c.configSet = true
-		close(c.configSetChan)
-	}
-}
-
-func (c *Controller) handleConfigUpdate(old, cur interface{}) {
-	oldConfig := old.(*latticev1.Config)
-	curConfig := cur.(*latticev1.Config)
-	glog.V(4).Infof("Updating Config %s", oldConfig.Name)
-
-	c.configLock.Lock()
-	defer c.configLock.Unlock()
-	c.config = curConfig.DeepCopy().Spec
-
-	err := c.newCloudProvider()
-	if err != nil {
-		glog.Errorf("error creating cloud provider: %v", err)
-		// FIXME: what to do here?
-		return
-	}
-
-	err = c.newServiceMesh()
-	if err != nil {
-		glog.Errorf("error creating service mesh: %v", err)
-		// FIXME: what to do here?
-		return
-	}
-}
-
-func (c *Controller) newCloudProvider() error {
-	options, err := cloudprovider.OverlayConfigOptions(c.staticCloudProviderOptions, &c.config.CloudProvider)
-	if err != nil {
-		return err
-	}
-
-	cloudProvider, err := cloudprovider.NewCloudProvider(c.namespacePrefix, c.kubeClient, c.kubeServiceLister, options)
-	if err != nil {
-		return err
-	}
-
-	c.cloudProvider = cloudProvider
-	return nil
-}
-
-func (c *Controller) newServiceMesh() error {
-	options, err := servicemesh.OverlayConfigOptions(c.staticServiceMeshOptions, &c.config.ServiceMesh)
-	if err != nil {
-		return err
-	}
-
-	serviceMesh, err := servicemesh.NewServiceMesh(options)
-	if err != nil {
-		return err
-	}
-
-	c.serviceMesh = serviceMesh
-	return nil
-}
-
-func (c *Controller) handleAddressAdd(obj interface{}) {
-	address := obj.(*latticev1.Address)
-	glog.V(4).Infof("%v added", address.Description(c.namespacePrefix))
-
-	if address.DeletionTimestamp != nil {
-		// On a restart of the controller manager, it's possible for an object to
-		// show up in a state that is already pending deletion.
-		c.handleAddressDelete(address)
-		return
-	}
-
-	c.enqueueAddress(address)
-}
-
-func (c *Controller) handleAddressUpdate(old, cur interface{}) {
-	address := cur.(*latticev1.Address)
-	glog.V(5).Info("%v updated", address.Description(c.namespacePrefix))
-
-	c.enqueueAddress(address)
-}
-
-func (c *Controller) handleAddressDelete(obj interface{}) {
-	address, ok := obj.(*latticev1.Address)
-
-	// When a delete is dropped, the relist will notice a pod in the store not
-	// in the list, leading to the insertion of a tombstone object which contains
-	// the deleted key/value.
-	if !ok {
-		tombstone, ok := obj.(cache.DeletedFinalStateUnknown)
-		if !ok {
-			runtime.HandleError(fmt.Errorf("couldn't get object from tombstone %#v", obj))
-			return
-		}
-		address, ok = tombstone.Obj.(*latticev1.Address)
-		if !ok {
-			runtime.HandleError(fmt.Errorf("tombstone contained object that is not a Service %#v", obj))
-			return
-		}
-	}
-
-	glog.V(5).Info("%v deleted", address.Description(c.namespacePrefix))
-
-	c.enqueueAddress(address)
-}
-
-func (c *Controller) handleServiceAdd(obj interface{}) {
-	service := obj.(*latticev1.Service)
-	glog.V(4).Infof("%v added", service.Description(c.namespacePrefix))
-
-	if service.DeletionTimestamp != nil {
-		// On a restart of the controller manager, it's possible for an object to
-		// show up in a state that is already pending deletion.
-		c.handleServiceDelete(service)
-		return
-	}
-
-	c.handleServiceEvent(service)
-}
-
-func (c *Controller) handleServiceUpdate(old, cur interface{}) {
-	service := cur.(*latticev1.Service)
-	glog.V(5).Info("%v updated", service.Description(c.namespacePrefix))
-
-	c.handleServiceEvent(service)
-}
-
-func (c *Controller) handleServiceDelete(obj interface{}) {
-	service, ok := obj.(*latticev1.Service)
-
-	// When a delete is dropped, the relist will notice a pod in the store not
-	// in the list, leading to the insertion of a tombstone object which contains
-	// the deleted key/value.
-	if !ok {
-		tombstone, ok := obj.(cache.DeletedFinalStateUnknown)
-		if !ok {
-			runtime.HandleError(fmt.Errorf("couldn't get object from tombstone %#v", obj))
-			return
-		}
-		service, ok = tombstone.Obj.(*latticev1.Service)
-		if !ok {
-			runtime.HandleError(fmt.Errorf("tombstone contained object that is not a Service %#v", obj))
-			return
-		}
-	}
-
-	glog.V(5).Info("%v deleted", service.Description(c.namespacePrefix))
-
-	c.handleServiceEvent(service)
-}
-
-func (c *Controller) handleServiceEvent(service *latticev1.Service) {
-	path, err := service.PathLabel()
-	if err != nil {
-		// FIXME: send warn event
-		return
-	}
-
-	addresses, err := c.addressLister.Addresses(service.Namespace).List(labels.Everything())
-	if err != nil {
-		// FIXME: send warn event
-		return
-	}
-
-	for _, address := range addresses {
-		if address.Spec.Service != nil && path == *address.Spec.Service {
-			c.enqueueAddress(address)
-		}
-	}
 }
 
 func (c *Controller) enqueue(svc *latticev1.Address) {

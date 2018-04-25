@@ -14,7 +14,7 @@ import (
 
 func (c *Controller) syncServiceAddress(address *latticev1.Address) error {
 	if address.Spec.Service == nil {
-		return fmt.Errorf("cannot sync service address with no service path")
+		return fmt.Errorf("cannot sync service address with no service path (%v)", address.Description(c.namespacePrefix))
 	}
 
 	c.configLock.RLock()
@@ -28,7 +28,7 @@ func (c *Controller) syncServiceAddress(address *latticev1.Address) error {
 	if service == nil {
 		if address.Status.State == latticev1.AddressStateStable {
 			_, err = c.updateAddressStatus(address, latticev1.AddressStateUpdating, nil, address.Status.Ports)
-			return fmt.Errorf("error updating %v to updating: %v", address.Description(c.namespacePrefix), err)
+			return err
 		}
 
 		return nil
@@ -55,7 +55,7 @@ func (c *Controller) syncServiceAddress(address *latticev1.Address) error {
 
 	systemID, err := kubeutil.SystemID(c.namespacePrefix, address.Namespace)
 	if err != nil {
-		return err
+		return fmt.Errorf("error getting system id for %v: %v", address.Description(c.namespacePrefix), err)
 	}
 
 	domain := kubeutil.InternalSubdomain(path.ToDomain(), systemID, c.latticeID)
@@ -67,13 +67,14 @@ func (c *Controller) syncServiceAddress(address *latticev1.Address) error {
 			Time:    metav1.Now(),
 		}
 
+		// swallow any errors from updating the status and return the original error
 		c.updateAddressStatus(address, state, failureInfo, address.Status.Ports)
-		return fmt.Errorf("error creating service address DNS A record: %v", err)
+		return fmt.Errorf("error creating service address DNS A record for %v: %v", address.Description(c.namespacePrefix), err)
 	}
 
 	if !serviceNeedsAddressLoadBalancer(service) {
-		c.updateAddressStatus(address, latticev1.AddressStateStable, nil, nil)
-		return nil
+		_, err := c.updateAddressStatus(address, latticev1.AddressStateStable, nil, nil)
+		return err
 	}
 
 	err = c.cloudProvider.EnsureServiceAddressLoadBalancer(c.latticeID, address, service)
@@ -84,12 +85,9 @@ func (c *Controller) syncServiceAddress(address *latticev1.Address) error {
 			Time:    metav1.Now(),
 		}
 
-		_, err := c.updateAddressStatus(address, state, failureInfo, address.Status.Ports)
-		if err != nil {
-			return fmt.Errorf("error updating %v status: %v", address.Description(c.namespacePrefix), err)
-		}
-
-		return nil
+		// swallow any errors from updating the status and return the original error
+		c.updateAddressStatus(address, state, failureInfo, address.Status.Ports)
+		return fmt.Errorf("error creating load balancer for %v: %v", address.Description(c.namespacePrefix), err)
 	}
 
 	// Add any annotations needed by the cloud provider.
@@ -106,7 +104,7 @@ func (c *Controller) syncServiceAddress(address *latticev1.Address) error {
 
 	address, err = c.updateAddressAnnotations(address, annotations)
 	if err != nil {
-		return fmt.Errorf("could not update %v annotations: %v", address.Description(c.namespacePrefix), err)
+		return err
 	}
 
 	ports, err := c.cloudProvider.ServiceAddressLoadBalancerPorts(c.latticeID, address, service)
@@ -120,15 +118,7 @@ func (c *Controller) syncServiceAddress(address *latticev1.Address) error {
 	}
 
 	_, err = c.updateAddressStatus(address, latticev1.AddressStateStable, nil, ports)
-	if err != nil {
-		fmt.Errorf(
-			"error updating %v status: %v",
-			address.Description(c.namespacePrefix),
-			err,
-		)
-	}
-
-	return nil
+	return err
 }
 
 func (c *Controller) service(namespace string, path tree.NodePath) (*latticev1.Service, error) {
