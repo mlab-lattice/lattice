@@ -24,7 +24,7 @@ func (c *BuildCommand) Base() (*latticectl.BaseCommand, error) {
 	}
 	var watch bool
 	watchFlag := &latticectl.WatchFlag{
-		Target:  &watch,
+		Target: &watch,
 	}
 	var version string
 
