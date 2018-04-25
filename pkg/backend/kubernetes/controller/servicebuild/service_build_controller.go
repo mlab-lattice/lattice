@@ -20,8 +20,8 @@ import (
 )
 
 type Controller struct {
-	syncHandler func(svcBuildKey string) error
-	enqueue     func(svcBuild *latticev1.ServiceBuild)
+	syncHandler func(key string) error
+	enqueue     func(build *latticev1.ServiceBuild)
 
 	namespacePrefix string
 

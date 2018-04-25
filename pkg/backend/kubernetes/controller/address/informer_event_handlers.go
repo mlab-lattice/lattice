@@ -139,7 +139,7 @@ func (c *Controller) handleAddressDelete(obj interface{}) {
 
 func (c *Controller) handleAddressEvent(address *latticev1.Address, verb string) {
 	glog.V(5).Info("%v %v", address.Description(c.namespacePrefix), verb)
-	c.enqueueAddress(address)
+	c.enqueue(address)
 }
 
 func (c *Controller) handleServiceAdd(obj interface{}) {
@@ -199,7 +199,7 @@ func (c *Controller) handleServiceEvent(service *latticev1.Service, verb string)
 
 	for _, address := range addresses {
 		if address.Spec.Service != nil && path == *address.Spec.Service {
-			c.enqueueAddress(address)
+			c.enqueue(address)
 		}
 	}
 }

@@ -20,8 +20,7 @@ func (c *Controller) syncJoblessComponentBuild(build *latticev1.ComponentBuild) 
 		return err
 	}
 
-	glog.V(4).Infof("Created Job %s", job.Name)
-	// FIXME: send normal event
+	glog.V(4).Infof("created job %v for %v", job.Name, build.Description(c.namespacePrefix))
 	return c.syncUnfinishedComponentBuild(build, job)
 }
 
@@ -40,6 +39,14 @@ func (c *Controller) syncSuccessfulComponentBuild(build *latticev1.ComponentBuil
 		DockerImageFQN: dockerImageFQN,
 	}
 
+	// if we haven't logged a start timestamp yet, use now
+	startTimestamp := build.Status.StartTimestamp
+	if startTimestamp == nil {
+		now := metav1.Now()
+		startTimestamp = &now
+	}
+
+	// if we haven't logged a completion timestamp yet, use now
 	completionTimestamp := build.Status.CompletionTimestamp
 	if completionTimestamp == nil {
 		now := metav1.Now()
@@ -57,6 +64,14 @@ func (c *Controller) syncSuccessfulComponentBuild(build *latticev1.ComponentBuil
 }
 
 func (c *Controller) syncFailedComponentBuild(build *latticev1.ComponentBuild) error {
+	// if we haven't logged a start timestamp yet, use now
+	startTimestamp := build.Status.StartTimestamp
+	if startTimestamp == nil {
+		now := metav1.Now()
+		startTimestamp = &now
+	}
+
+	// if we haven't logged a start timestamp yet, use now
 	completionTimestamp := build.Status.CompletionTimestamp
 	if completionTimestamp == nil {
 		now := metav1.Now()
@@ -74,14 +89,14 @@ func (c *Controller) syncFailedComponentBuild(build *latticev1.ComponentBuild) e
 }
 
 func (c *Controller) syncUnfinishedComponentBuild(build *latticev1.ComponentBuild, job *batchv1.Job) error {
-	// The Job Pods have been able to be scheduled, so the ComponentBuild is "running" even though
-	// a Job Pod may not currently be active.
+	// if we haven't logged a start timestamp yet, use now
+	startTimestamp := build.Status.StartTimestamp
+	if startTimestamp == nil {
+		now := metav1.Now()
+		startTimestamp = &now
+	}
+
 	if job.Status.Active > 0 || job.Status.Failed > 0 {
-		startTimestamp := build.Status.StartTimestamp
-		if startTimestamp == nil {
-			now := metav1.Now()
-			startTimestamp = &now
-		}
 		_, err := c.updateComponentBuildStatus(
 			build,
 			latticev1.ComponentBuildStateRunning,
@@ -95,30 +110,11 @@ func (c *Controller) syncUnfinishedComponentBuild(build *latticev1.ComponentBuil
 	_, err := c.updateComponentBuildStatus(
 		build,
 		latticev1.ComponentBuildStateQueued,
-		nil,
+		startTimestamp,
 		nil,
 		build.Status.Artifacts,
 	)
 	return err
-}
-
-func (c *Controller) updateComponentBuildState(
-	build *latticev1.ComponentBuild,
-	state latticev1.ComponentBuildState,
-) (*latticev1.ComponentBuild, error) {
-	startTimestamp := build.Status.StartTimestamp
-	completionTimestamp := build.Status.CompletionTimestamp
-	switch state {
-	case latticev1.ComponentBuildStateFailed, latticev1.ComponentBuildStateSucceeded:
-
-	case latticev1.ComponentBuildStateRunning:
-		if startTimestamp == nil {
-			now := metav1.Now()
-			startTimestamp = &now
-		}
-	}
-
-	return c.updateComponentBuildStatus(build, state, startTimestamp, completionTimestamp, build.Status.Artifacts)
 }
 
 func (c *Controller) updateComponentBuildStatus(
@@ -141,6 +137,9 @@ func (c *Controller) updateComponentBuildStatus(
 	status := latticev1.ComponentBuildStatus{
 		State:       state,
 		FailureInfo: failureInfo,
+
+		StartTimestamp:      startTimestamp,
+		CompletionTimestamp: completionTimestamp,
 
 		Artifacts:         artifacts,
 		LastObservedPhase: phasePtr,

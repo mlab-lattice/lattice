@@ -20,8 +20,8 @@ import (
 )
 
 type Controller struct {
-	syncHandler  func(bKey string) error
-	enqueueBuild func(sysBuild *latticev1.Build)
+	syncHandler func(key string) error
+	enqueue     func(build *latticev1.Build)
 
 	namespacePrefix string
 
@@ -50,7 +50,7 @@ func NewController(
 		queue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "build"),
 	}
 
-	sbc.enqueueBuild = sbc.enqueue
+	sbc.enqueue = sbc.enqueueBuild
 	sbc.syncHandler = sbc.syncSystemBuild
 
 	buildInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
@@ -100,7 +100,7 @@ func (c *Controller) Run(workers int, stopCh <-chan struct{}) {
 	<-stopCh
 }
 
-func (c *Controller) enqueue(sysb *latticev1.Build) {
+func (c *Controller) enqueueBuild(sysb *latticev1.Build) {
 	key, err := cache.DeletionHandlingMetaNamespaceKeyFunc(sysb)
 	if err != nil {
 		runtime.HandleError(fmt.Errorf("couldn't get key for object %#v: %v", sysb, err))

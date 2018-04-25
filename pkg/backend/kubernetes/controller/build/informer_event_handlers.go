@@ -32,7 +32,7 @@ func (c *Controller) handleBuildDelete(obj interface{}) {
 
 func (c *Controller) handleBuildEvent(build *latticev1.Build, verb string) {
 	glog.V(4).Infof("%s %s", build.Description(c.namespacePrefix), verb)
-	c.enqueueBuild(build)
+	c.enqueue(build)
 }
 
 // handleServiceBuildAdd enqueues the System that manages a Service when the Service is created.
@@ -64,7 +64,7 @@ func (c *Controller) handleServiceBuildEvent(serviceBuild *latticev1.ServiceBuil
 	}
 
 	for _, build := range builds {
-		c.enqueueBuild(&build)
+		c.enqueue(&build)
 	}
 }
 

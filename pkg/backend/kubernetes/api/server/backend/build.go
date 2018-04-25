@@ -234,10 +234,15 @@ func transformComponentBuild(name string, status latticev1.ComponentBuildStatus)
 		failureMessage = &message
 	}
 
+	phase := status.LastObservedPhase
+	if state == v1.ComponentBuildStateSucceeded {
+		phase = nil
+	}
+
 	externalBuild := v1.ComponentBuild{
 		ID:                v1.ComponentBuildID(name),
 		State:             state,
-		LastObservedPhase: status.LastObservedPhase,
+		LastObservedPhase: phase,
 		FailureMessage:    failureMessage,
 	}
 

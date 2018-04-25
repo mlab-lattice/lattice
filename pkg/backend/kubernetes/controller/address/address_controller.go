@@ -27,8 +27,8 @@ import (
 )
 
 type Controller struct {
-	syncHandler    func(bKey string) error
-	enqueueAddress func(cb *latticev1.Address)
+	syncHandler func(key string) error
+	enqueue     func(address *latticev1.Address)
 
 	namespacePrefix string
 	latticeID       v1.LatticeID
@@ -93,7 +93,7 @@ func NewController(
 	}
 
 	c.syncHandler = c.syncAddress
-	c.enqueueAddress = c.enqueue
+	c.enqueue = c.enqueueAddress
 
 	configInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		// It's assumed there is always one and only one config object.
@@ -158,7 +158,7 @@ func (c *Controller) Run(workers int, stopCh <-chan struct{}) {
 	<-stopCh
 }
 
-func (c *Controller) enqueue(svc *latticev1.Address) {
+func (c *Controller) enqueueAddress(svc *latticev1.Address) {
 	key, err := cache.DeletionHandlingMetaNamespaceKeyFunc(svc)
 	if err != nil {
 		runtime.HandleError(fmt.Errorf("couldn't get key for object %#v: %v", svc, err))

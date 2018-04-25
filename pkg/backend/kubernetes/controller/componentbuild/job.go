@@ -28,12 +28,11 @@ const (
 	jobDockerSocketVolumeName = "dockersock"
 )
 
-// getJobForBuild uses ControllerRefManager to retrieve the Job for a ComponentBuild
 func (c *Controller) getJobForBuild(build *latticev1.ComponentBuild) (*batchv1.Job, error) {
 	selector := labels.NewSelector()
 	requirement, err := labels.NewRequirement(latticev1.ComponentBuildIDLabelKey, selection.Equals, []string{build.Name})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error creating requirement for %v cache job lookup: %v", build.Description(c.namespacePrefix), err)
 	}
 
 	selector = selector.Add(*requirement)
@@ -47,36 +46,38 @@ func (c *Controller) getJobForBuild(build *latticev1.ComponentBuild) (*batchv1.J
 	}
 
 	if len(jobs) > 1 {
-		return nil, fmt.Errorf("ComponentBuild %v has multiple Jobs", build.Name)
+		return nil, fmt.Errorf("multiple cached jobs found for %v", build.Description(c.namespacePrefix))
 	}
 
 	// Didn't find anything in the cache. Will do a full API query to see if one exists.
-	listOptions := metav1.ListOptions{
-		LabelSelector: selector.String(),
-	}
-	jobItems, err := c.kubeClient.BatchV1().Jobs(build.Namespace).List(listOptions)
+	jobList, err := c.kubeClient.BatchV1().Jobs(build.Namespace).List(metav1.ListOptions{LabelSelector: selector.String()})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error creating requirement for %v quorum job lookup: %v", build.Description(c.namespacePrefix), err)
 	}
 
-	if len(jobItems.Items) == 0 {
+	if len(jobList.Items) == 0 {
 		return nil, nil
 	}
 
-	if len(jobItems.Items) > 1 {
-		return nil, fmt.Errorf("ComponentBuild %v has multiple Jobs", build.Name)
+	if len(jobList.Items) > 1 {
+		return nil, fmt.Errorf("multiple jobs found for %v", build.Description(c.namespacePrefix))
 	}
 
-	return &jobItems.Items[0], nil
+	return &jobList.Items[0], nil
 }
 
 func (c *Controller) createNewJob(build *latticev1.ComponentBuild) (*batchv1.Job, error) {
 	job, err := c.newJob(build)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error getting new job for %v: %v", build.Description(c.namespacePrefix), err)
 	}
 
-	return c.kubeClient.BatchV1().Jobs(build.Namespace).Create(job)
+	result, err := c.kubeClient.BatchV1().Jobs(build.Namespace).Create(job)
+	if err != nil {
+		return nil, fmt.Errorf("error creating new job for %v: %v", build.Description(c.namespacePrefix), err)
+	}
+
+	return result, nil
 }
 
 func (c *Controller) newJob(build *latticev1.ComponentBuild) (*batchv1.Job, error) {

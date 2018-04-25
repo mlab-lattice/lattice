@@ -4,6 +4,7 @@ go_library(
     name = "go_default_library",
     srcs = [
         "component_build_controller.go",
+        "informer_event_handlers.go",
         "job.go",
         "state.go",
         "sync.go",

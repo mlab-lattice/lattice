@@ -30,6 +30,14 @@ func (c *Controller) syncFailedServiceBuild(build *latticev1.ServiceBuild, state
 		message = message + " " + component
 	}
 
+	// if we haven't logged a start timestamp yet, use now
+	startTimestamp := build.Status.StartTimestamp
+	if startTimestamp == nil {
+		now := metav1.Now()
+		startTimestamp = &now
+	}
+
+	// if we haven't logged a completion timestamp yet, use now
 	completionTimestamp := build.Status.CompletionTimestamp
 	if completionTimestamp == nil {
 		now := metav1.Now()
@@ -40,7 +48,7 @@ func (c *Controller) syncFailedServiceBuild(build *latticev1.ServiceBuild, state
 		build,
 		latticev1.ServiceBuildStateFailed,
 		message,
-		build.Status.StartTimestamp,
+		startTimestamp,
 		completionTimestamp,
 		build.Status.ComponentBuilds,
 		stateInfo.componentBuildStatuses,
@@ -65,9 +73,7 @@ func (c *Controller) syncRunningServiceBuild(build *latticev1.ServiceBuild, stat
 		message = message + " " + component
 	}
 
-	// If we haven't logged a start timestamp yet, use now.
-	// This should only happen if we created all of the service builds
-	// but then failed to update the status.
+	// if we haven't logged a start timestamp yet, use now
 	startTimestamp := build.Status.StartTimestamp
 	if startTimestamp == nil {
 		now := metav1.Now()
@@ -168,7 +174,7 @@ func (c *Controller) syncMissingComponentBuildsServiceBuild(build *latticev1.Ser
 		componentBuildHashes[definitionHash] = componentBuild
 	}
 
-	// If we haven't logged a start timestamp yet, use now.
+	// if we haven't logged a start timestamp yet, use now
 	startTimestamp := build.Status.StartTimestamp
 	if startTimestamp == nil {
 		now := metav1.Now()
@@ -188,6 +194,14 @@ func (c *Controller) syncMissingComponentBuildsServiceBuild(build *latticev1.Ser
 }
 
 func (c *Controller) syncSucceededServiceBuild(build *latticev1.ServiceBuild, stateInfo stateInfo) error {
+	// if we haven't logged a start timestamp yet, use now
+	startTimestamp := build.Status.StartTimestamp
+	if startTimestamp == nil {
+		now := metav1.Now()
+		startTimestamp = &now
+	}
+
+	// if we haven't logged a completion timestamp yet, use now
 	completionTimestamp := build.Status.CompletionTimestamp
 	if completionTimestamp == nil {
 		now := metav1.Now()
@@ -198,7 +212,7 @@ func (c *Controller) syncSucceededServiceBuild(build *latticev1.ServiceBuild, st
 		build,
 		latticev1.ServiceBuildStateSucceeded,
 		"",
-		build.Status.StartTimestamp,
+		startTimestamp,
 		completionTimestamp,
 		build.Status.ComponentBuilds,
 		stateInfo.componentBuildStatuses,

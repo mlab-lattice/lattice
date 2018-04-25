@@ -31,7 +31,7 @@ func (c *Controller) handleServiceBuildDelete(obj interface{}) {
 
 func (c *Controller) handleServiceBuildEvent(build *latticev1.ServiceBuild, verb string) {
 	glog.V(4).Infof("%s %s", build.Description(c.namespacePrefix), verb)
-	c.enqueueServiceBuild(build)
+	c.enqueue(build)
 }
 
 func (c *Controller) handleComponentBuildAdd(obj interface{}) {
@@ -62,7 +62,7 @@ func (c *Controller) handleComponentBuildEvent(componentBuild *latticev1.Compone
 	}
 
 	for _, serviceBuild := range serviceBuilds {
-		c.enqueueServiceBuild(&serviceBuild)
+		c.enqueue(&serviceBuild)
 	}
 }
 
