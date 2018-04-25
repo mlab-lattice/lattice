@@ -122,6 +122,10 @@ func (np *NodePool) Stable() bool {
 	return np.UpdateProcessed() && np.Status.State == NodePoolStateStable
 }
 
+func (np *NodePool) Failed() bool {
+	return np.UpdateProcessed() && np.Status.State == NodePoolStateFailed
+}
+
 func (np *NodePool) UpdateProcessed() bool {
 	return np.Status.ObservedGeneration >= np.Generation
 }

@@ -61,6 +61,10 @@ func (a *Address) Stable() bool {
 	return a.UpdateProcessed() && a.Status.State == AddressStateStable
 }
 
+func (a *Address) Failed() bool {
+	return a.UpdateProcessed() && a.Status.State == AddressStateFailed
+}
+
 func (a *Address) UpdateProcessed() bool {
 	return a.Status.ObservedGeneration >= a.Generation
 }
@@ -99,7 +103,7 @@ type AddressStatus struct {
 	FailureInfo *AddressStatusFailureInfo `json:"failureInfo"`
 
 	// Ports maps ports to their publicly accessible address
-	Ports map[int32]string
+	Ports map[int32]string `json:"ports"`
 }
 
 type AddressState string

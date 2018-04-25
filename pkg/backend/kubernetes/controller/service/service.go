@@ -24,17 +24,19 @@ func (c *Controller) syncServiceStatus(
 ) (*latticev1.Service, error) {
 	failed := false
 	failureReason := ""
-	failureMessage := ""
 	var failureTime *metav1.Time
 
 	var state latticev1.ServiceState
 	if !deploymentStatus.UpdateProcessed {
 		state = latticev1.ServiceStateUpdating
+	} else if deploymentStatus.State == deploymentStatePending {
+		state = latticev1.ServiceStateUpdating
 	} else if deploymentStatus.State == deploymentStateFailed {
 		failed = true
-		failureReason = deploymentStatus.FailureInfo.Reason
-		failureMessage = deploymentStatus.FailureInfo.Message
-		failureTime = &deploymentStatus.FailureInfo.Time
+		if deploymentStatus.FailureInfo != nil {
+			failureReason = deploymentStatus.FailureInfo.Reason
+			failureTime = &deploymentStatus.FailureInfo.Time
+		}
 	} else if deploymentStatus.State == deploymentStateScaling {
 		state = latticev1.ServiceStateScaling
 	} else {
@@ -46,6 +48,11 @@ func (c *Controller) syncServiceStatus(
 	var failureInfo *latticev1.ServiceStatusFailureInfo
 	if failed {
 		state = latticev1.ServiceStateFailed
+		if failureTime == nil {
+			now := metav1.Now()
+			failureTime = &now
+		}
+
 		switch failureReason {
 		case reasonTimedOut:
 			failureInfo = &latticev1.ServiceStatusFailureInfo{
@@ -64,7 +71,7 @@ func (c *Controller) syncServiceStatus(
 		default:
 			failureInfo = &latticev1.ServiceStatusFailureInfo{
 				Internal: true,
-				Message:  fmt.Sprintf("%v: %v", failureReason, failureMessage),
+				Message:  failureReason,
 				Time:     *failureTime,
 			}
 		}

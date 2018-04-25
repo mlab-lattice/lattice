@@ -1,17 +1,22 @@
 package local
 
 import (
+	"encoding/json"
 	"fmt"
+	"reflect"
+	"sort"
 
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
-	kubeutil "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/kubernetes"
 
 	corev1 "k8s.io/api/core/v1"
 
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"reflect"
+	"k8s.io/apimachinery/pkg/types"
+
+	"github.com/golang/glog"
+	"k8s.io/apimachinery/pkg/util/strategicpatch"
 )
 
 func (cp *DefaultLocalCloudProvider) EnsureServiceAddressLoadBalancer(
@@ -19,14 +24,8 @@ func (cp *DefaultLocalCloudProvider) EnsureServiceAddressLoadBalancer(
 	address *latticev1.Address,
 	service *latticev1.Service,
 ) error {
-	if !needsServiceAddressLoadBalancer(service) {
-		return nil
-	}
-
-	// FIXME: move this out of kubeutil
-	kubeServiceName := kubeutil.GetKubeServiceNameForLoadBalancer(address.Name)
-
 	// Try to find the kube service in the cache
+	kubeServiceName := serviceAddressKubeServiceLoadBalancerName(address)
 	kubeService, err := cp.kubeServiceLister.Services(address.Namespace).Get(kubeServiceName)
 	if err != nil {
 		if !errors.IsNotFound(err) {
@@ -34,11 +33,7 @@ func (cp *DefaultLocalCloudProvider) EnsureServiceAddressLoadBalancer(
 		}
 
 		// If it wasn't found, try to create it.
-		spec, err := cp.kubeServiceSpec(address, service)
-		if err != nil {
-			return err
-		}
-
+		spec := cp.kubeServiceSpec(address, service)
 		kubeService = &corev1.Service{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:            kubeServiceName,
@@ -70,29 +65,38 @@ func (cp *DefaultLocalCloudProvider) EnsureServiceAddressLoadBalancer(
 		}
 	}
 
-	spec, err := cp.kubeServiceSpec(address, service)
-	if err != nil {
-		return err
-	}
+	spec := cp.kubeServiceSpec(address, service)
 
+	// FIXME: once patching is fixed, only compare fields we care about
+	//if kubeServiceSpecNeedsUpdate(spec, kubeService.Spec)
 	// If the kube service's spec isn't up to date, update it.
 	if reflect.DeepEqual(spec, kubeService.Spec) {
 		return nil
 	}
 
-	// Copy so we don't mutate the shared cache
-	kubeService = kubeService.DeepCopy()
-	kubeService.Spec = spec
+	strategicMergePatchBytes, err := kubeServiceStrategicMergePatchBytes(spec, kubeService.Spec)
+	if err != nil {
+		return fmt.Errorf("error creating json patches for kube service spec patch: %v", err)
+	}
 
-	_, err = cp.kubeClient.CoreV1().Services(address.Namespace).Update(kubeService)
-	return err
+	glog.Infof("patching %v: %v", kubeService.Name, string(strategicMergePatchBytes))
+
+	_, err = cp.kubeClient.CoreV1().Services(address.Namespace).Patch(
+		kubeService.Name,
+		types.StrategicMergePatchType,
+		strategicMergePatchBytes,
+	)
+	if err != nil {
+		fmt.Errorf("error patching kube service for %v: %v", address.Description(cp.namespacePrefix), err)
+	}
+	return nil
 }
 
 func (cp *DefaultLocalCloudProvider) DestroyServiceAddressLoadBalancer(
 	latticeID v1.LatticeID,
 	address *latticev1.Address,
 ) error {
-	kubeServiceName := kubeutil.GetKubeServiceNameForLoadBalancer(address.Name)
+	kubeServiceName := serviceAddressKubeServiceLoadBalancerName(address)
 
 	err := cp.kubeClient.CoreV1().Services(address.Namespace).Delete(kubeServiceName, nil)
 	if err != nil {
@@ -119,7 +123,7 @@ func (cp *DefaultLocalCloudProvider) ServiceAddressLoadBalancerPorts(
 	address *latticev1.Address,
 	service *latticev1.Service,
 ) (map[int32]string, error) {
-	kubeServiceName := kubeutil.GetKubeServiceNameForLoadBalancer(address.Name)
+	kubeServiceName := serviceAddressKubeServiceLoadBalancerName(address)
 	kubeService, err := cp.kubeServiceLister.Services(address.Namespace).Get(kubeServiceName)
 	if err != nil {
 		return nil, err
@@ -133,7 +137,7 @@ func (cp *DefaultLocalCloudProvider) ServiceAddressLoadBalancerPorts(
 	return ports, nil
 }
 
-func (cp *DefaultLocalCloudProvider) kubeServiceSpec(address *latticev1.Address, service *latticev1.Service) (corev1.ServiceSpec, error) {
+func (cp *DefaultLocalCloudProvider) kubeServiceSpec(address *latticev1.Address, service *latticev1.Service) corev1.ServiceSpec {
 	var ports []corev1.ServicePort
 
 	for component, componentPorts := range service.Spec.Ports {
@@ -148,25 +152,68 @@ func (cp *DefaultLocalCloudProvider) kubeServiceSpec(address *latticev1.Address,
 		}
 	}
 
+	// sort the ports so we have a deterministic spec
+	sort.Slice(ports, func(i, j int) bool {
+		return ports[i].Port < ports[j].Port
+	})
+
 	labels := map[string]string{
 		latticev1.ServiceIDLabelKey: service.Name,
 	}
-	spec := corev1.ServiceSpec{
+
+	// Note: if you add or remove any fields here,
+	// update kubeServiceStrategicMergePatchBytes as well
+	return corev1.ServiceSpec{
 		Selector: labels,
 		Type:     corev1.ServiceTypeNodePort,
 		Ports:    ports,
 	}
-	return spec, nil
 }
 
-func needsServiceAddressLoadBalancer(service *latticev1.Service) bool {
-	for _, componentPorts := range service.Spec.Ports {
-		for _, componentPort := range componentPorts {
-			if componentPort.Public {
-				return true
-			}
-		}
+func kubeServiceStrategicMergePatchBytes(desired corev1.ServiceSpec, current corev1.ServiceSpec) ([]byte, error) {
+	// there's about 0 documentation on how to do a merge patch with the kubernetes go client
+	// the below was eventually divined from: https://github.com/kubernetes/kubernetes/blob/v1.10.1/pkg/kubectl/cmd/patch.go#L260-L284
+	spec := current.DeepCopy()
+	spec.Selector = desired.Selector
+	spec.Type = desired.Type
+	spec.Ports = desired.Ports
+
+	currentJSON, err := json.Marshal(&current)
+	if err != nil {
+		return nil, fmt.Errorf("error marshalling current kube service spec: %v", err)
 	}
 
-	return false
+	var currentJSONMap strategicpatch.JSONMap
+	err = json.Unmarshal(currentJSON, &currentJSONMap)
+	if err != nil {
+		return nil, fmt.Errorf("error unmarshalling current kube service spec: %v", err)
+	}
+
+	desiredJSON, err := json.Marshal(&spec)
+	if err != nil {
+		return nil, fmt.Errorf("error marshalling desired kube service spec: %v", err)
+	}
+
+	var desiredJSONMap strategicpatch.JSONMap
+	err = json.Unmarshal(desiredJSON, &desiredJSONMap)
+	if err != nil {
+		return nil, fmt.Errorf("error unmarshalling desired kube service spec: %v", err)
+	}
+
+	obj := corev1.ServiceSpec{}
+	patchMap, err := strategicpatch.StrategicMergeMapPatch(currentJSONMap, desiredJSONMap, obj)
+	if err != nil {
+		return nil, fmt.Errorf("error getting strategic merge patch: %v", err)
+	}
+
+	patchMapBytes, err := json.Marshal(&patchMap)
+	if err != nil {
+		return nil, fmt.Errorf("error marshalling strategic merge patch: %v", err)
+	}
+
+	return patchMapBytes, nil
+}
+
+func serviceAddressKubeServiceLoadBalancerName(address *latticev1.Address) string {
+	return fmt.Sprintf("load-balancer-address-%v", address.Name)
 }

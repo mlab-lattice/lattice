@@ -56,10 +56,41 @@ func (c *Controller) syncDeployment(
 				reason = nodePool.Reason(c.namespacePrefix)
 			}
 
+			var failureInfo *deploymentStatusFailureInfo
+			state := deploymentStatePending
+
+			if address.Failed() {
+				state = deploymentStateFailed
+				reason = address.Reason(c.namespacePrefix)
+
+				failureInfo = &deploymentStatusFailureInfo{
+					Reason: reason,
+					Time:   metav1.Now(),
+				}
+				if address.Status.FailureInfo != nil {
+					failureInfo.Reason = address.Status.FailureInfo.Message
+					failureInfo.Time = address.Status.FailureInfo.Time
+				}
+			}
+
+			if nodePool.Failed() {
+				state = deploymentStateFailed
+				reason = nodePool.Reason(c.namespacePrefix)
+
+				failureInfo = &deploymentStatusFailureInfo{
+					Reason: reason,
+					Time:   metav1.Now(),
+				}
+				if nodePool.Status.FailureInfo != nil {
+					failureInfo.Reason = nodePool.Status.FailureInfo.Message
+					failureInfo.Time = nodePool.Status.FailureInfo.Time
+				}
+			}
+
 			status := &deploymentStatus{
 				UpdateProcessed: true,
 
-				State:  deploymentStatePending,
+				State:  state,
 				Reason: &reason,
 
 				TotalInstances:       0,
@@ -581,9 +612,8 @@ const (
 )
 
 type deploymentStatusFailureInfo struct {
-	Reason  string
-	Message string
-	Time    metav1.Time
+	Reason string
+	Time   metav1.Time
 }
 
 func (s *deploymentStatus) Failed() (bool, *deploymentStatusFailureInfo) {
@@ -616,9 +646,8 @@ func (c *Controller) getDeploymentStatus(
 		if notProgressing && condition.Reason == reasonTimedOut {
 			state = deploymentStateFailed
 			failureInfo = &deploymentStatusFailureInfo{
-				Reason:  condition.Reason,
-				Message: condition.Message,
-				Time:    condition.LastTransitionTime,
+				Reason: condition.Reason,
+				Time:   condition.LastTransitionTime,
 			}
 		}
 	}

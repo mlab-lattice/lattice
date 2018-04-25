@@ -22,13 +22,13 @@ func (c *Controller) syncServiceAddress(address *latticev1.Address) error {
 
 	service, err := c.service(address.Namespace, *address.Spec.Service)
 	if err != nil {
-		return err
+		return fmt.Errorf("error finding service for %v: %v", address.Description(c.namespacePrefix), err)
 	}
 
 	if service == nil {
 		if address.Status.State == latticev1.AddressStateStable {
 			_, err = c.updateAddressStatus(address, latticev1.AddressStateUpdating, nil, address.Status.Ports)
-			return err
+			return fmt.Errorf("error updating %v to updating: %v", address.Description(c.namespacePrefix), err)
 		}
 
 		return nil
@@ -36,12 +36,21 @@ func (c *Controller) syncServiceAddress(address *latticev1.Address) error {
 
 	ip, err := c.serviceMesh.ServiceIP(service)
 	if err != nil {
-		return err
+		return fmt.Errorf(
+			"error getting %v %v ip from service mesh: %v",
+			address.Description(c.namespacePrefix),
+			service.Description(c.namespacePrefix),
+			err,
+		)
 	}
 
 	path, err := address.PathLabel()
 	if err != nil {
-		return err
+		return fmt.Errorf(
+			"error getting path label for %v: %v",
+			service.Description(c.namespacePrefix),
+			err,
+		)
 	}
 
 	systemID, err := kubeutil.SystemID(c.namespacePrefix, address.Namespace)
@@ -59,7 +68,12 @@ func (c *Controller) syncServiceAddress(address *latticev1.Address) error {
 		}
 
 		c.updateAddressStatus(address, state, failureInfo, address.Status.Ports)
-		return err
+		return fmt.Errorf("error creating service address DNS A record: %v", err)
+	}
+
+	if !serviceNeedsAddressLoadBalancer(service) {
+		c.updateAddressStatus(address, latticev1.AddressStateStable, nil, nil)
+		return nil
 	}
 
 	err = c.cloudProvider.EnsureServiceAddressLoadBalancer(c.latticeID, address, service)
@@ -71,7 +85,7 @@ func (c *Controller) syncServiceAddress(address *latticev1.Address) error {
 		}
 
 		c.updateAddressStatus(address, state, failureInfo, address.Status.Ports)
-		return err
+		return fmt.Errorf("error updating %v status: %v", address.Description(c.namespacePrefix), err)
 	}
 
 	// Add any annotations needed by the cloud provider.
@@ -93,12 +107,20 @@ func (c *Controller) syncServiceAddress(address *latticev1.Address) error {
 
 	ports, err := c.cloudProvider.ServiceAddressLoadBalancerPorts(c.latticeID, address, service)
 	if err != nil {
-		return err
+		return fmt.Errorf(
+			"error getting %v %v load balancer ports: %v",
+			address.Description(c.namespacePrefix),
+			service.Description(c.namespacePrefix),
+			err,
+		)
 	}
 
 	_, err = c.updateAddressStatus(address, latticev1.AddressStateStable, nil, ports)
-
-	return nil
+	return fmt.Errorf(
+		"error updating %v status: %v",
+		address.Description(c.namespacePrefix),
+		err,
+	)
 }
 
 func (c *Controller) service(namespace string, path tree.NodePath) (*latticev1.Service, error) {
@@ -123,4 +145,16 @@ func (c *Controller) service(namespace string, path tree.NodePath) (*latticev1.S
 	}
 
 	return services[0], nil
+}
+
+func serviceNeedsAddressLoadBalancer(service *latticev1.Service) bool {
+	for _, componentPorts := range service.Spec.Ports {
+		for _, componentPort := range componentPorts {
+			if componentPort.Public {
+				return true
+			}
+		}
+	}
+
+	return false
 }
