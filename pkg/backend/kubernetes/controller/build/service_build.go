@@ -22,14 +22,23 @@ func (c *Controller) findServiceBuildForDefinitionHash(namespace, definitionHash
 	}
 	selector = selector.Add(*requirement)
 
-	builds, err := c.serviceBuildLister.List(selector)
+	serviceBuilds, err := c.serviceBuildLister.List(selector)
 	if err != nil {
 		return nil, err
 	}
-	for _, build := range builds {
-		if build.Status.State != latticev1.ServiceBuildStateFailed {
-			return build, nil
+
+	// look for a service build that is either running or successfully completed,
+	// and is not actively being garbage collected
+	for _, serviceBuild := range serviceBuilds {
+		if serviceBuild.DeletionTimestamp != nil {
+			continue
 		}
+
+		if serviceBuild.Status.State == latticev1.ServiceBuildStateFailed {
+			continue
+		}
+
+		return serviceBuild, nil
 	}
 
 	return nil, nil
@@ -41,12 +50,12 @@ func (c *Controller) createNewServiceBuild(
 	definitionHash string,
 ) (*latticev1.ServiceBuild, error) {
 	serviceBuild := serviceBuild(build, serviceDefinition, definitionHash)
-	serviceBuild, err := c.latticeClient.LatticeV1().ServiceBuilds(build.Namespace).Create(serviceBuild)
+	result, err := c.latticeClient.LatticeV1().ServiceBuilds(build.Namespace).Create(serviceBuild)
 	if err != nil {
 		return nil, fmt.Errorf("error creating service build for %v with definition hash %v", build.Description(c.namespacePrefix), definitionHash)
 	}
 
-	return serviceBuild, nil
+	return result, nil
 }
 
 func serviceBuild(
@@ -57,11 +66,11 @@ func serviceBuild(
 	spec := serviceBuildSpec(serviceDefinition)
 	return &latticev1.ServiceBuild{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: uuid.NewV4().String(),
+			Name:            uuid.NewV4().String(),
+			OwnerReferences: []metav1.OwnerReference{*newOwnerReference(build)},
 			Labels: map[string]string{
 				latticev1.ServiceBuildDefinitionHashLabelKey: definitionHash,
 			},
-			OwnerReferences: []metav1.OwnerReference{*newOwnerReference(build)},
 		},
 		Spec: spec,
 	}
@@ -83,7 +92,7 @@ func serviceBuildSpec(serviceDefinition definition.Service) latticev1.ServiceBui
 func (c *Controller) addOwnerReference(build *latticev1.Build, serviceBuild *latticev1.ServiceBuild) (*latticev1.ServiceBuild, error) {
 	ownerRef := kubeutil.GetOwnerReference(serviceBuild, build)
 
-	// already has the service build as an owner
+	// already has the build as an owner
 	if ownerRef != nil {
 		return serviceBuild, nil
 	}
@@ -92,10 +101,10 @@ func (c *Controller) addOwnerReference(build *latticev1.Build, serviceBuild *lat
 	serviceBuild = serviceBuild.DeepCopy()
 	serviceBuild.OwnerReferences = append(serviceBuild.OwnerReferences, *newOwnerReference(build))
 
-	serviceBuild, err := c.latticeClient.LatticeV1().ServiceBuilds(serviceBuild.Namespace).Update(serviceBuild)
+	result, err := c.latticeClient.LatticeV1().ServiceBuilds(serviceBuild.Namespace).Update(serviceBuild)
 	if err != nil {
 		err = fmt.Errorf(
-			"error adding owner reference to %v to %v: %v",
+			"error adding owner reference (owner: %v, ownee: %v): %v",
 			build.Description(c.namespacePrefix),
 			serviceBuild.Description(c.namespacePrefix),
 			err,
@@ -103,7 +112,7 @@ func (c *Controller) addOwnerReference(build *latticev1.Build, serviceBuild *lat
 		return nil, err
 	}
 
-	return serviceBuild, nil
+	return result, nil
 }
 
 func (c *Controller) removeOwnerReference(build *latticev1.Build, serviceBuild *latticev1.ServiceBuild) (*latticev1.ServiceBuild, error) {
@@ -126,10 +135,10 @@ func (c *Controller) removeOwnerReference(build *latticev1.Build, serviceBuild *
 	serviceBuild = serviceBuild.DeepCopy()
 	serviceBuild.OwnerReferences = ownerRefs
 
-	serviceBuild, err := c.latticeClient.LatticeV1().ServiceBuilds(serviceBuild.Namespace).Update(serviceBuild)
+	result, err := c.latticeClient.LatticeV1().ServiceBuilds(serviceBuild.Namespace).Update(serviceBuild)
 	if err != nil {
 		err = fmt.Errorf(
-			"error removing owner reference to %v from %v: %v",
+			"error removing owner reference (owner: %v, ownee: %v): %v",
 			build.Description(c.namespacePrefix),
 			serviceBuild.Description(c.namespacePrefix),
 			err,
@@ -137,7 +146,7 @@ func (c *Controller) removeOwnerReference(build *latticev1.Build, serviceBuild *
 		return nil, err
 	}
 
-	return serviceBuild, nil
+	return result, nil
 }
 
 func newOwnerReference(build *latticev1.Build) *metav1.OwnerReference {
@@ -149,7 +158,6 @@ func newOwnerReference(build *latticev1.Build) *metav1.OwnerReference {
 	// the owner reference has been removed, the service build can
 	// check to see if it has any owner reference still, and if not
 	// it can be garbage collected.
-	// FIXME: figure out what we want our build garbage collection story to be
 	blockOwnerDeletion := false
 
 	// set isController to false, since there should only be one controller

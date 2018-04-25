@@ -1,6 +1,8 @@
 package servicebuild
 
 import (
+	"fmt"
+
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	kubeutil "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/kubernetes"
 
@@ -19,14 +21,23 @@ func (c *Controller) findComponentBuildForDefinitionHash(namespace, definitionHa
 	}
 	selector = selector.Add(*requirement)
 
-	builds, err := c.componentBuildLister.List(selector)
+	componentBuilds, err := c.componentBuildLister.List(selector)
 	if err != nil {
 		return nil, err
 	}
-	for _, build := range builds {
-		if build.Status.State != latticev1.ComponentBuildStateFailed {
-			return build, nil
+
+	// look for a component build that is either running or successfully completed,
+	// and is not actively being garbage collected
+	for _, componentBuild := range componentBuilds {
+		if componentBuild.DeletionTimestamp != nil {
+			continue
 		}
+
+		if componentBuild.Status.State == latticev1.ComponentBuildStateFailed {
+			continue
+		}
+
+		return componentBuild, nil
 	}
 
 	return nil, nil
@@ -39,12 +50,12 @@ func (c *Controller) createNewComponentBuild(
 ) (*latticev1.ComponentBuild, error) {
 	// If there is no new entry in the build cache, create a new ComponentBuild.
 	componentBuild := newComponentBuild(build, componentBuildInfo, definitionHash)
-	componentBuild, err := c.latticeClient.LatticeV1().ComponentBuilds(build.Namespace).Create(componentBuild)
+	result, err := c.latticeClient.LatticeV1().ComponentBuilds(build.Namespace).Create(componentBuild)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error creating component build for %v with definition hash %v", build.Description(c.namespacePrefix), definitionHash)
 	}
 
-	return componentBuild, nil
+	return result, nil
 }
 
 func newComponentBuild(build *latticev1.ServiceBuild, cbInfo latticev1.ServiceBuildSpecComponentBuildInfo, definitionHash string) *latticev1.ComponentBuild {
@@ -74,7 +85,52 @@ func (c *Controller) addOwnerReference(build *latticev1.ServiceBuild, componentB
 	componentBuild = componentBuild.DeepCopy()
 	componentBuild.OwnerReferences = append(componentBuild.OwnerReferences, *newOwnerReference(build))
 
-	return c.latticeClient.LatticeV1().ComponentBuilds(componentBuild.Namespace).Update(componentBuild)
+	result, err := c.latticeClient.LatticeV1().ComponentBuilds(componentBuild.Namespace).Update(componentBuild)
+	if err != nil {
+		err = fmt.Errorf(
+			"error adding owner reference (owner: %v, ownee: %v): %v",
+			build.Description(c.namespacePrefix),
+			componentBuild.Description(c.namespacePrefix),
+			err,
+		)
+		return nil, err
+	}
+
+	return result, nil
+}
+
+func (c *Controller) removeOwnerReference(build *latticev1.ServiceBuild, componentBuild *latticev1.ComponentBuild) (*latticev1.ComponentBuild, error) {
+	found := false
+	var ownerRefs []metav1.OwnerReference
+	for _, ref := range componentBuild.GetOwnerReferences() {
+		if ref.UID == build.GetUID() {
+			found = true
+			break
+		}
+
+		ownerRefs = append(ownerRefs, ref)
+	}
+
+	if !found {
+		return componentBuild, nil
+	}
+
+	// Copy so we don't mutate the cache
+	componentBuild = componentBuild.DeepCopy()
+	componentBuild.OwnerReferences = ownerRefs
+
+	result, err := c.latticeClient.LatticeV1().ComponentBuilds(componentBuild.Namespace).Update(componentBuild)
+	if err != nil {
+		err = fmt.Errorf(
+			"error removing owner reference (owner: %v, ownee: %v): %v",
+			build.Description(c.namespacePrefix),
+			componentBuild.Description(c.namespacePrefix),
+			err,
+		)
+		return nil, err
+	}
+
+	return result, nil
 }
 
 func newOwnerReference(build *latticev1.ServiceBuild) *metav1.OwnerReference {
@@ -86,7 +142,6 @@ func newOwnerReference(build *latticev1.ServiceBuild) *metav1.OwnerReference {
 	// the owner reference has been removed, the component build can
 	// check to see if it has any owner reference still, and if not
 	// it can be garbage collected.
-	// FIXME: figure out what we want our build garbage collection story to be
 	blockOwnerDeletion := false
 
 	// set isController to false, since there should only be one controller

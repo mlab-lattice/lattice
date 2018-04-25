@@ -60,9 +60,8 @@ func (c *Controller) calculateState(build *latticev1.ServiceBuild) (stateInfo, e
 			if err != nil {
 				if errors.IsNotFound(err) {
 					err := fmt.Errorf(
-						"ServiceBuild %v/%v has ComponentBuild.Name %v for component %v, but ComponentBuild does not exist",
-						build.Namespace,
-						build.Name,
+						"%v has component build %v for %v, but component build does not exist",
+						build.Description(c.namespacePrefix),
 						componentBuildName,
 						component,
 					)
@@ -85,7 +84,12 @@ func (c *Controller) calculateState(build *latticev1.ServiceBuild) (stateInfo, e
 			successfulComponentBuilds[component] = componentBuild
 		default:
 			// FIXME: send warn event
-			return stateInfo{}, fmt.Errorf("ComponentBuild %v/%v has unexpected state %v", componentBuild.Namespace, componentBuild.Name, componentBuild.Status.State)
+			err := fmt.Errorf(
+				"%v has unexpected state %v",
+				componentBuild.Description(c.namespacePrefix),
+				componentBuild.Status.State,
+			)
+			return stateInfo{}, err
 		}
 	}
 

@@ -56,10 +56,7 @@ func NewController(
 	buildInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    sbc.handleBuildAdd,
 		UpdateFunc: sbc.handleBuildUpdate,
-		// TODO: for now it is assumed that SystemBuilds are not deleted.
-		// in the future we'll probably want to add a GC process for SystemBuilds.
-		// At that point we should listen here for those deletes.
-		// FIXME: Document SysB GC ideas (need to write down last used date, lock properly, etc)
+		DeleteFunc: sbc.handleBuildDelete,
 	})
 	sbc.buildLister = buildInformer.Lister()
 	sbc.buildListerSynced = buildInformer.Informer().HasSynced
@@ -67,10 +64,7 @@ func NewController(
 	serviceBuildInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    sbc.handleServiceBuildAdd,
 		UpdateFunc: sbc.handleServiceBuildUpdate,
-		// TODO: for now it is assumed that ServiceBuilds are not deleted.
-		// in the future we'll probably want to add a GC process for ServiceBuilds.
-		// At that point we should listen here for those deletes.
-		// FIXME: Document SvcB GC ideas (need to write down last used date, lock properly, etc)
+		// only orphaned service builds should be deleted
 	})
 	sbc.serviceBuildLister = serviceBuildInformer.Lister()
 	sbc.serviceBuildListerSynced = serviceBuildInformer.Informer().HasSynced
@@ -84,15 +78,15 @@ func (c *Controller) Run(workers int, stopCh <-chan struct{}) {
 	// make sure the work queue is shutdown which will trigger workers to end
 	defer c.queue.ShutDown()
 
-	glog.Infof("Starting system-build controller")
-	defer glog.Infof("Shutting down system-build controller")
+	glog.Infof("starting system-build controller")
+	defer glog.Infof("shutting down system-build controller")
 
 	// wait for your secondary caches to fill before starting your work
 	if !cache.WaitForCacheSync(stopCh, c.buildListerSynced, c.serviceBuildListerSynced) {
 		return
 	}
 
-	glog.V(4).Info("Caches synced.")
+	glog.V(4).Info("caches synced.")
 
 	// start up your worker threads based on threadiness.  Some controllers
 	// have multiple kinds of workers

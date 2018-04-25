@@ -11,12 +11,23 @@ import (
 
 func (c *Controller) handleBuildAdd(obj interface{}) {
 	build := obj.(*latticev1.Build)
+
+	if build.DeletionTimestamp != nil {
+		c.handleBuildDelete(build)
+		return
+	}
+
 	c.handleBuildEvent(build, "added")
 }
 
 func (c *Controller) handleBuildUpdate(old, cur interface{}) {
 	build := cur.(*latticev1.Build)
 	c.handleBuildEvent(build, "updated")
+}
+
+func (c *Controller) handleBuildDelete(obj interface{}) {
+	build := obj.(*latticev1.Build)
+	c.handleBuildEvent(build, "deleted")
 }
 
 func (c *Controller) handleBuildEvent(build *latticev1.Build, verb string) {
@@ -27,6 +38,12 @@ func (c *Controller) handleBuildEvent(build *latticev1.Build, verb string) {
 // handleServiceBuildAdd enqueues the System that manages a Service when the Service is created.
 func (c *Controller) handleServiceBuildAdd(obj interface{}) {
 	serviceBuild := obj.(*latticev1.ServiceBuild)
+
+	if serviceBuild.DeletionTimestamp != nil {
+		// only orphaned service builds should be deleted
+		return
+	}
+
 	c.handleServiceBuildEvent(serviceBuild, "added")
 }
 
@@ -54,12 +71,12 @@ func (c *Controller) handleServiceBuildEvent(serviceBuild *latticev1.ServiceBuil
 func (c *Controller) owningBuilds(serviceBuild *latticev1.ServiceBuild) ([]latticev1.Build, error) {
 	owningBuilds := mapset.NewSet()
 	for _, owner := range serviceBuild.OwnerReferences {
-		// Not a lattice.mlab.com owner (probably shouldn't happen)
+		// not a lattice.mlab.com owner (probably shouldn't happen)
 		if owner.APIVersion != latticev1.SchemeGroupVersion.String() {
 			continue
 		}
 
-		// Not a build owner (probably shouldn't happen)
+		// not a build owner (probably shouldn't happen)
 		if owner.Kind != latticev1.BuildKind.Kind {
 			continue
 		}

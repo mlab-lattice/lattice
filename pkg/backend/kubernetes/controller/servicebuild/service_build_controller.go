@@ -10,14 +10,12 @@ import (
 	latticelisters "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/generated/listers/lattice/v1"
 
 	"k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
 
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
 
-	"github.com/deckarep/golang-set"
 	"github.com/golang/glog"
 )
 
@@ -49,7 +47,7 @@ func NewController(
 
 		latticeClient: latticeClient,
 
-		queue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "service-build"),
+		queue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "servicebuild"),
 	}
 
 	sbc.syncHandler = sbc.syncServiceBuild
@@ -58,10 +56,7 @@ func NewController(
 	serviceBuildInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    sbc.handleServiceBuildAdd,
 		UpdateFunc: sbc.handleServiceBuildUpdate,
-		// TODO: for now it is assumed that ServiceBuilds are not deleted.
-		// in the future we'll probably want to add a GC process for ServiceBuilds.
-		// At that point we should listen here for those deletes.
-		// FIXME: Document SvcB GC ideas (need to write down last used date, lock properly, etc)
+		DeleteFunc: sbc.handleServiceBuildDelete,
 	})
 	sbc.serviceBuildLister = serviceBuildInformer.Lister()
 	sbc.serviceBuildListerSynced = serviceBuildInformer.Informer().HasSynced
@@ -69,10 +64,7 @@ func NewController(
 	componentBuildInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    sbc.handleComponentBuildAdd,
 		UpdateFunc: sbc.handleComponentBuildUpdate,
-		// TODO: for now it is assumed that ComponentBuilds are not deleted.
-		// in the future we'll probably want to add a GC process for ComponentBuilds.
-		// At that point we should listen here for those deletes.
-		// FIXME: Document CB GC ideas (need to write down last used date, lock properly, etc)
+		// only orphaned service builds should be deleted
 	})
 	sbc.componentBuildLister = componentBuildInformer.Lister()
 	sbc.componentBuildListerSynced = componentBuildInformer.Informer().HasSynced
@@ -86,15 +78,15 @@ func (c *Controller) Run(workers int, stopCh <-chan struct{}) {
 	// make sure the work queue is shutdown which will trigger workers to end
 	defer c.queue.ShutDown()
 
-	glog.Infof("Starting service-build controller")
-	defer glog.Infof("Shutting down service-build controller")
+	glog.Infof("starting service-build controller")
+	defer glog.Infof("shutting down service-build controller")
 
 	// wait for your secondary caches to fill before starting your work
 	if !cache.WaitForCacheSync(stopCh, c.serviceBuildListerSynced, c.componentBuildListerSynced) {
 		return
 	}
 
-	glog.V(4).Info("Caches synced.")
+	glog.V(4).Info("caches synced.")
 
 	// start up your worker threads based on threadiness.  Some controllers
 	// have multiple kinds of workers
@@ -106,90 +98,6 @@ func (c *Controller) Run(workers int, stopCh <-chan struct{}) {
 
 	// wait until we're told to stop
 	<-stopCh
-}
-
-func (c *Controller) handleServiceBuildAdd(obj interface{}) {
-	build := obj.(*latticev1.ServiceBuild)
-	glog.V(4).Infof("Adding %s", build.Description(c.namespacePrefix))
-	c.enqueueServiceBuild(build)
-}
-
-func (c *Controller) handleServiceBuildUpdate(old, cur interface{}) {
-	build := cur.(*latticev1.ServiceBuild)
-	glog.V(4).Infof("Updating %s", build.Description(c.namespacePrefix))
-	c.enqueueServiceBuild(build)
-}
-
-// handleComponentBuildAdd enqueues any ServiceBuilds which may be interested in it when
-// a ComponentBuild is added.
-func (c *Controller) handleComponentBuildAdd(obj interface{}) {
-	componentBuild := obj.(*latticev1.ComponentBuild)
-
-	if componentBuild.DeletionTimestamp != nil {
-		// On a restart of the controller manager, it's possible for an object to
-		// show up in a state that is already pending deletion.
-		// component builds should only be deleted if there are no service builds
-		// pointing at it, so no need to enqueue anything
-		return
-	}
-
-	glog.V(4).Infof("%s added", componentBuild.Description(c.namespacePrefix))
-	builds, err := c.owningServiceBuilds(componentBuild)
-	if err != nil {
-		// FIXME: send error event?
-		return
-	}
-	for _, build := range builds {
-		c.enqueueServiceBuild(&build)
-	}
-}
-
-// handleComponentBuildUpdate enqueues any ServiceBuilds which may be interested in it when
-// a ComponentBuild is updated.
-func (c *Controller) handleComponentBuildUpdate(old, cur interface{}) {
-	componentBuild := cur.(*latticev1.ComponentBuild)
-
-	glog.V(4).Infof("%s updated", componentBuild.Description(c.namespacePrefix))
-	builds, err := c.owningServiceBuilds(componentBuild)
-	if err != nil {
-		// FIXME: send error event?
-		return
-	}
-
-	for _, build := range builds {
-		c.enqueueServiceBuild(&build)
-	}
-}
-
-func (c *Controller) owningServiceBuilds(componentBuild *latticev1.ComponentBuild) ([]latticev1.ServiceBuild, error) {
-	owningBuilds := mapset.NewSet()
-	for _, owner := range componentBuild.OwnerReferences {
-		// Not a lattice.mlab.com owner (probably shouldn't happen)
-		if owner.APIVersion != latticev1.SchemeGroupVersion.String() {
-			continue
-		}
-
-		// Not a service build owner (probably shouldn't happen)
-		if owner.Kind != latticev1.ServiceBuildKind.Kind {
-			continue
-		}
-
-		owningBuilds.Add(owner.UID)
-	}
-
-	builds, err := c.serviceBuildLister.List(labels.Everything())
-	if err != nil {
-		return nil, err
-	}
-
-	var matchingBuilds []latticev1.ServiceBuild
-	for _, build := range builds {
-		if owningBuilds.Contains(build.UID) {
-			matchingBuilds = append(matchingBuilds, *build)
-		}
-	}
-
-	return matchingBuilds, nil
 }
 
 func (c *Controller) enqueueServiceBuild(build *latticev1.ServiceBuild) {
@@ -253,9 +161,9 @@ func (c *Controller) processNextWorkItem() bool {
 func (c *Controller) syncServiceBuild(key string) error {
 	glog.Flush()
 	startTime := time.Now()
-	glog.V(4).Infof("Started syncing ServiceBuild %q (%v)", key, startTime)
+	glog.V(4).Infof("started syncing service build %q (%v)", key, startTime)
 	defer func() {
-		glog.V(4).Infof("Finished syncing ServiceBuild %q (%v)", key, time.Now().Sub(startTime))
+		glog.V(4).Infof("finished syncing service build %q (%v)", key, time.Now().Sub(startTime))
 	}()
 
 	namespace, name, err := cache.SplitMetaNamespaceKey(key)
@@ -265,9 +173,23 @@ func (c *Controller) syncServiceBuild(key string) error {
 
 	build, err := c.serviceBuildLister.ServiceBuilds(namespace).Get(name)
 	if errors.IsNotFound(err) {
-		glog.V(2).Infof("ServiceBuild %v has been deleted", key)
+		glog.V(2).Infof("service build %v has been deleted", key)
 		return nil
 	}
+	if err != nil {
+		return err
+	}
+
+	if build.DeletionTimestamp != nil {
+		return c.syncDeletedServiceBuild(build)
+	}
+
+	// garbage collect the build if nothing owns it anymore
+	if isOrphaned(build) {
+		return c.syncOrphanedServiceBuild(build)
+	}
+
+	build, err = c.addFinalizer(build)
 	if err != nil {
 		return err
 	}
@@ -277,7 +199,7 @@ func (c *Controller) syncServiceBuild(key string) error {
 		return err
 	}
 
-	glog.V(5).Infof("ServiceBuild %v state: %v", key, stateInfo.state)
+	glog.V(5).Infof("%v state: %v", build.Description(c.namespacePrefix), stateInfo.state)
 
 	switch stateInfo.state {
 	case stateHasFailedComponentBuilds:
@@ -289,6 +211,6 @@ func (c *Controller) syncServiceBuild(key string) error {
 	case stateAllComponentBuildsSucceeded:
 		return c.syncSucceededServiceBuild(build, stateInfo)
 	default:
-		return fmt.Errorf("ServiceBuild %v in unexpected state %v", key, stateInfo.state)
+		return fmt.Errorf("%v in unexpected state %v", build.Description(c.namespacePrefix), stateInfo.state)
 	}
 }

@@ -1,4 +1,4 @@
-package build
+package servicebuild
 
 import (
 	"fmt"
@@ -6,29 +6,29 @@ import (
 
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	kubeutil "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/kubernetes"
-	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func (c *Controller) updateBuildStatus(
-	build *latticev1.Build,
-	state latticev1.BuildState,
+func (c *Controller) updateServiceBuildStatus(
+	build *latticev1.ServiceBuild,
+	state latticev1.ServiceBuildState,
 	message string,
 	startTimestamp *metav1.Time,
 	completionTimestamp *metav1.Time,
-	serviceBuilds map[tree.NodePath]string,
-	serviceBuildStatuses map[string]latticev1.ServiceBuildStatus,
-) (*latticev1.Build, error) {
-	status := latticev1.BuildStatus{
+	componentBuilds map[string]string,
+	componentBuildStatuses map[string]latticev1.ComponentBuildStatus,
+) (*latticev1.ServiceBuild, error) {
+	status := latticev1.ServiceBuildStatus{
 		State:   state,
 		Message: message,
 
 		StartTimestamp:      startTimestamp,
 		CompletionTimestamp: completionTimestamp,
 
-		ServiceBuilds:        serviceBuilds,
-		ServiceBuildStatuses: serviceBuildStatuses,
+		ComponentBuilds:        componentBuilds,
+		ComponentBuildStatuses: componentBuildStatuses,
 	}
 
 	if reflect.DeepEqual(build.Status, status) {
@@ -39,7 +39,7 @@ func (c *Controller) updateBuildStatus(
 	build = build.DeepCopy()
 	build.Status = status
 
-	result, err := c.latticeClient.LatticeV1().Builds(build.Namespace).UpdateStatus(build)
+	result, err := c.latticeClient.LatticeV1().ServiceBuilds(build.Namespace).UpdateStatus(build)
 	if err != nil {
 		return nil, fmt.Errorf("error updating status for %v: %v", build.Description(c.namespacePrefix), err)
 	}
@@ -47,10 +47,32 @@ func (c *Controller) updateBuildStatus(
 	return result, nil
 }
 
-func (c *Controller) addFinalizer(build *latticev1.Build) (*latticev1.Build, error) {
+func (c *Controller) deleteServiceBuild(build *latticev1.ServiceBuild) error {
+	backgroundDelete := metav1.DeletePropagationBackground
+	deleteOptions := &metav1.DeleteOptions{
+		PropagationPolicy: &backgroundDelete,
+	}
+
+	err := c.latticeClient.LatticeV1().ServiceBuilds(build.Namespace).Delete(build.Name, deleteOptions)
+	if err != nil {
+		if errors.IsNotFound(err) {
+			return nil
+		}
+
+		return fmt.Errorf("error deleting %v: %v", build.Description(c.namespacePrefix), err)
+	}
+
+	return nil
+}
+
+func isOrphaned(build *latticev1.ServiceBuild) bool {
+	return len(build.OwnerReferences) == 0
+}
+
+func (c *Controller) addFinalizer(build *latticev1.ServiceBuild) (*latticev1.ServiceBuild, error) {
 	// Check to see if the finalizer already exists. If so nothing needs to be done.
 	for _, finalizer := range build.Finalizers {
-		if finalizer == kubeutil.BuildControllerFinalizer {
+		if finalizer == kubeutil.ServiceBuildControllerFinalizer {
 			return build, nil
 		}
 	}
@@ -59,7 +81,7 @@ func (c *Controller) addFinalizer(build *latticev1.Build) (*latticev1.Build, err
 	build = build.DeepCopy()
 	build.Finalizers = append(build.Finalizers, kubeutil.AddressControllerFinalizer)
 
-	result, err := c.latticeClient.LatticeV1().Builds(build.Namespace).Update(build)
+	result, err := c.latticeClient.LatticeV1().ServiceBuilds(build.Namespace).Update(build)
 	if err != nil {
 		return nil, fmt.Errorf("error adding %v finalizer: %v", build.Description(c.namespacePrefix), err)
 	}
@@ -67,12 +89,12 @@ func (c *Controller) addFinalizer(build *latticev1.Build) (*latticev1.Build, err
 	return result, nil
 }
 
-func (c *Controller) removeFinalizer(build *latticev1.Build) (*latticev1.Build, error) {
+func (c *Controller) removeFinalizer(build *latticev1.ServiceBuild) (*latticev1.ServiceBuild, error) {
 	// Build up a list of all the finalizers except the aws service controller finalizer.
 	var finalizers []string
 	found := false
 	for _, finalizer := range build.Finalizers {
-		if finalizer == kubeutil.BuildControllerFinalizer {
+		if finalizer == kubeutil.ServiceBuildControllerFinalizer {
 			found = true
 			continue
 		}
@@ -88,7 +110,7 @@ func (c *Controller) removeFinalizer(build *latticev1.Build) (*latticev1.Build, 
 	build = build.DeepCopy()
 	build.Finalizers = finalizers
 
-	result, err := c.latticeClient.LatticeV1().Builds(build.Namespace).Update(build)
+	result, err := c.latticeClient.LatticeV1().ServiceBuilds(build.Namespace).Update(build)
 	if err != nil {
 		return nil, fmt.Errorf("error removing %v finalizer: %v", build.Description(c.namespacePrefix), err)
 	}

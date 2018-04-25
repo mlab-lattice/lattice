@@ -89,7 +89,7 @@ func NewController(
 
 		configSetChan: make(chan struct{}),
 
-		queue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "service"),
+		queue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "address"),
 	}
 
 	c.syncHandler = c.syncAddress

@@ -4,10 +4,11 @@ import (
 	"crypto/sha1"
 	"encoding/hex"
 	"encoding/json"
-	"reflect"
 	"sort"
 
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/golang/glog"
 )
@@ -21,7 +22,7 @@ func (c *Controller) syncFailedServiceBuild(build *latticev1.ServiceBuild, state
 
 	sort.Strings(failedComponents)
 
-	message := "The following components failed to build:"
+	message := "the following components failed to build:"
 	for i, component := range failedComponents {
 		if i != 0 {
 			message = message + ","
@@ -29,10 +30,18 @@ func (c *Controller) syncFailedServiceBuild(build *latticev1.ServiceBuild, state
 		message = message + " " + component
 	}
 
+	completionTimestamp := build.Status.CompletionTimestamp
+	if completionTimestamp == nil {
+		now := metav1.Now()
+		completionTimestamp = &now
+	}
+
 	_, err := c.updateServiceBuildStatus(
 		build,
 		latticev1.ServiceBuildStateFailed,
 		message,
+		build.Status.StartTimestamp,
+		completionTimestamp,
 		build.Status.ComponentBuilds,
 		stateInfo.componentBuildStatuses,
 	)
@@ -56,10 +65,21 @@ func (c *Controller) syncRunningServiceBuild(build *latticev1.ServiceBuild, stat
 		message = message + " " + component
 	}
 
+	// If we haven't logged a start timestamp yet, use now.
+	// This should only happen if we created all of the service builds
+	// but then failed to update the status.
+	startTimestamp := build.Status.StartTimestamp
+	if startTimestamp == nil {
+		now := metav1.Now()
+		startTimestamp = &now
+	}
+
 	_, err := c.updateServiceBuildStatus(
 		build,
 		latticev1.ServiceBuildStateRunning,
 		message,
+		startTimestamp,
+		nil,
 		build.Status.ComponentBuilds,
 		stateInfo.componentBuildStatuses,
 	)
@@ -69,13 +89,15 @@ func (c *Controller) syncRunningServiceBuild(build *latticev1.ServiceBuild, stat
 func (c *Controller) syncMissingComponentBuildsServiceBuild(build *latticev1.ServiceBuild, stateInfo stateInfo) error {
 	componentBuilds := stateInfo.componentBuilds
 	if componentBuilds == nil {
-		componentBuilds = map[string]string{}
+		componentBuilds = make(map[string]string)
 	}
 
 	componentBuildStatuses := stateInfo.componentBuildStatuses
 	if componentBuildStatuses == nil {
-		componentBuildStatuses = map[string]latticev1.ComponentBuildStatus{}
+		componentBuildStatuses = make(map[string]latticev1.ComponentBuildStatus)
 	}
+
+	componentBuildHashes := make(map[string]*latticev1.ComponentBuild)
 
 	for _, component := range stateInfo.needsNewComponentBuilds {
 		componentInfo := build.Spec.Components[component]
@@ -96,9 +118,15 @@ func (c *Controller) syncMissingComponentBuildsServiceBuild(build *latticev1.Ser
 
 		definitionHash := hex.EncodeToString(h.Sum(nil))
 
-		componentBuild, err := c.findComponentBuildForDefinitionHash(build.Namespace, definitionHash)
-		if err != nil {
-			return err
+		// first check to see if we've already seen or created
+		// a component build matching this hash so far
+		componentBuild, ok := componentBuildHashes[definitionHash]
+		if !ok {
+			// if not, check all the component builds to see if one already matches the hash
+			componentBuild, err = c.findComponentBuildForDefinitionHash(build.Namespace, definitionHash)
+			if err != nil {
+				return err
+			}
 		}
 
 		// found an existing component build
@@ -117,6 +145,7 @@ func (c *Controller) syncMissingComponentBuildsServiceBuild(build *latticev1.Ser
 
 			componentBuilds[component] = componentBuild.Name
 			componentBuildStatuses[componentBuild.Name] = componentBuild.Status
+			componentBuildHashes[definitionHash] = componentBuild
 			continue
 		}
 
@@ -129,19 +158,29 @@ func (c *Controller) syncMissingComponentBuildsServiceBuild(build *latticev1.Ser
 		}
 
 		glog.V(4).Infof(
-			"Created %v for component %v of %v",
+			"created %v for component %v of %v",
 			componentBuild.Description(c.namespacePrefix),
 			component,
 			build.Description(c.namespacePrefix),
 		)
 		componentBuilds[component] = componentBuild.Name
 		componentBuildStatuses[componentBuild.Name] = componentBuild.Status
+		componentBuildHashes[definitionHash] = componentBuild
+	}
+
+	// If we haven't logged a start timestamp yet, use now.
+	startTimestamp := build.Status.StartTimestamp
+	if startTimestamp == nil {
+		now := metav1.Now()
+		startTimestamp = &now
 	}
 
 	_, err := c.updateServiceBuildStatus(
 		build,
 		latticev1.ServiceBuildStateRunning,
 		"",
+		startTimestamp,
+		nil,
 		componentBuilds,
 		componentBuildStatuses,
 	)
@@ -149,37 +188,20 @@ func (c *Controller) syncMissingComponentBuildsServiceBuild(build *latticev1.Ser
 }
 
 func (c *Controller) syncSucceededServiceBuild(build *latticev1.ServiceBuild, stateInfo stateInfo) error {
+	completionTimestamp := build.Status.CompletionTimestamp
+	if completionTimestamp == nil {
+		now := metav1.Now()
+		completionTimestamp = &now
+	}
+
 	_, err := c.updateServiceBuildStatus(
 		build,
 		latticev1.ServiceBuildStateSucceeded,
 		"",
+		build.Status.StartTimestamp,
+		completionTimestamp,
 		build.Status.ComponentBuilds,
 		stateInfo.componentBuildStatuses,
 	)
 	return err
-}
-
-func (c *Controller) updateServiceBuildStatus(
-	build *latticev1.ServiceBuild,
-	state latticev1.ServiceBuildState,
-	message string,
-	componentBuilds map[string]string,
-	componentBuildStatuses map[string]latticev1.ComponentBuildStatus,
-) (*latticev1.ServiceBuild, error) {
-	status := latticev1.ServiceBuildStatus{
-		State:                  state,
-		Message:                message,
-		ComponentBuilds:        componentBuilds,
-		ComponentBuildStatuses: componentBuildStatuses,
-	}
-
-	if reflect.DeepEqual(build.Status, status) {
-		return build, nil
-	}
-
-	// Copy so the shared cache isn't mutated
-	build = build.DeepCopy()
-	build.Status = status
-
-	return c.latticeClient.LatticeV1().ServiceBuilds(build.Namespace).UpdateStatus(build)
 }

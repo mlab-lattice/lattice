@@ -31,12 +31,12 @@ func (c *Controller) updateAddressStatus(
 	address = address.DeepCopy()
 	address.Status = status
 
-	address, err := c.latticeClient.LatticeV1().Addresses(address.Namespace).UpdateStatus(address)
+	result, err := c.latticeClient.LatticeV1().Addresses(address.Namespace).UpdateStatus(address)
 	if err != nil {
 		return nil, fmt.Errorf("error updating %v status: %v", address.Description(c.namespacePrefix), err)
 	}
 
-	return address, nil
+	return result, nil
 }
 
 func (c *Controller) updateAddressAnnotations(address *latticev1.Address, annotations map[string]string) (*latticev1.Address, error) {
@@ -48,12 +48,12 @@ func (c *Controller) updateAddressAnnotations(address *latticev1.Address, annota
 	address = address.DeepCopy()
 	address.Annotations = annotations
 
-	address, err := c.latticeClient.LatticeV1().Addresses(address.Namespace).Update(address)
+	result, err := c.latticeClient.LatticeV1().Addresses(address.Namespace).Update(address)
 	if err != nil {
 		return nil, fmt.Errorf("error updating %v annotations: %v", address.Description(c.namespacePrefix), err)
 	}
 
-	return address, nil
+	return result, nil
 }
 
 func (c *Controller) addFinalizer(address *latticev1.Address) (*latticev1.Address, error) {
@@ -68,12 +68,12 @@ func (c *Controller) addFinalizer(address *latticev1.Address) (*latticev1.Addres
 	address = address.DeepCopy()
 	address.Finalizers = append(address.Finalizers, kubeutil.AddressControllerFinalizer)
 
-	address, err := c.latticeClient.LatticeV1().Addresses(address.Namespace).Update(address)
+	result, err := c.latticeClient.LatticeV1().Addresses(address.Namespace).Update(address)
 	if err != nil {
 		return nil, fmt.Errorf("error adding %v finalizer: %v", address.Description(c.namespacePrefix), err)
 	}
 
-	return address, nil
+	return result, nil
 }
 
 func (c *Controller) removeFinalizer(address *latticev1.Address) (*latticev1.Address, error) {
@@ -97,10 +97,10 @@ func (c *Controller) removeFinalizer(address *latticev1.Address) (*latticev1.Add
 	address = address.DeepCopy()
 	address.Finalizers = finalizers
 
-	address, err := c.latticeClient.LatticeV1().Addresses(address.Namespace).Update(address)
+	result, err := c.latticeClient.LatticeV1().Addresses(address.Namespace).Update(address)
 	if err != nil {
 		return nil, fmt.Errorf("error removing %v finalizer: %v", address.Description(c.namespacePrefix), err)
 	}
 
-	return address, nil
+	return result, nil
 }

@@ -25,7 +25,7 @@ func (c *Controller) syncFailedBuild(build *latticev1.Build, stateInfo stateInfo
 		return string(failedServices[i]) < string(failedServices[j])
 	})
 
-	message := "The following services failed to build:"
+	message := "the following services failed to build:"
 	for i, service := range failedServices {
 		if i != 0 {
 			message = message + ","
@@ -62,7 +62,7 @@ func (c *Controller) syncRunningBuild(build *latticev1.Build, stateInfo stateInf
 		return string(activeServices[i]) < string(activeServices[j])
 	})
 
-	message := "The following services are still building:"
+	message := "the following services are still building:"
 	for i, service := range activeServices {
 		if i != 0 {
 			message = message + ","
@@ -83,7 +83,7 @@ func (c *Controller) syncRunningBuild(build *latticev1.Build, stateInfo stateInf
 		build,
 		latticev1.BuildStateRunning,
 		message,
-		build.Status.StartTimestamp,
+		startTimestamp,
 		nil,
 		stateInfo.serviceBuilds,
 		stateInfo.serviceBuildStatuses,
@@ -94,12 +94,12 @@ func (c *Controller) syncRunningBuild(build *latticev1.Build, stateInfo stateInf
 func (c *Controller) syncMissingServiceBuildsBuild(build *latticev1.Build, stateInfo stateInfo) error {
 	serviceBuilds := stateInfo.serviceBuilds
 	if serviceBuilds == nil {
-		serviceBuilds = map[tree.NodePath]string{}
+		serviceBuilds = make(map[tree.NodePath]string)
 	}
 
 	serviceBuildStatuses := stateInfo.serviceBuildStatuses
 	if serviceBuildStatuses == nil {
-		serviceBuildStatuses = map[string]latticev1.ServiceBuildStatus{}
+		serviceBuildStatuses = make(map[string]latticev1.ServiceBuildStatus)
 	}
 
 	serviceBuildHashes := make(map[string]*latticev1.ServiceBuild)
@@ -125,8 +125,8 @@ func (c *Controller) syncMissingServiceBuildsBuild(build *latticev1.Build, state
 
 		definitionHash := hex.EncodeToString(h.Sum(nil))
 
-		// first check to see if we've already seen a service build
-		// matching this hash so far
+		// first check to see if we've already seen or created
+		// a service build matching this hash so far
 		serviceBuild, ok := serviceBuildHashes[definitionHash]
 		if !ok {
 			// if not, check all the service builds to see if one already matches the hash
