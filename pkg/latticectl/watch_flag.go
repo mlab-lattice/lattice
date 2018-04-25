@@ -22,7 +22,7 @@ func (f *WatchFlag) Flag() cli.Flag {
 		short = *f.Short
 	}
 
-	usage := "If the watch flag is set, the output will update. For outputs in table form, the table will update every 5 seconds. For outputs in JSON form, updated JSON objects will stream every 5 seconds."
+	usage := "If the watch flag is set, the output will update every 5 seconds."
 	if f.Usage != "" {
 		usage = f.Usage
 	}
