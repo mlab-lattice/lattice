@@ -24,9 +24,15 @@ func (f *OutputFlag) Flag() cli.Flag {
 		short = *f.Short
 	}
 
+	usage := "Set the output format of the command. Options are table (which is the default) and json."
+	if f.Usage != "" {
+		usage = f.Usage
+	}
+
 	return &cli.StringFlag{
 		Name:   name,
 		Short:  short,
+		Usage:  usage,
 		Target: &f.value,
 	}
 }
