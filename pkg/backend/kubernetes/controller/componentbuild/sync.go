@@ -26,13 +26,13 @@ func (c *Controller) syncJoblessComponentBuild(build *latticev1.ComponentBuild) 
 }
 
 func (c *Controller) syncSuccessfulComponentBuild(build *latticev1.ComponentBuild, job *batchv1.Job) error {
-	dockerImageFQN, ok := build.DockerImageFQNAnnotation()
+	dockerImageFQN, ok := job.Annotations[latticev1.ComponentBuildJobDockerImageFQNAnnotationKey]
 	if !ok {
 		return fmt.Errorf(
-			"%v claims to be in state %v but does not have %v annotation",
+			"job %v for %v claims to have succeeded but does not have %v annotation",
+			job.Name,
 			build.Description(c.namespacePrefix),
-			latticev1.ComponentBuildStateSucceeded,
-			latticev1.ComponentBuildDockerImageFQNAnnotationKey,
+			latticev1.ComponentBuildJobDockerImageFQNAnnotationKey,
 		)
 	}
 

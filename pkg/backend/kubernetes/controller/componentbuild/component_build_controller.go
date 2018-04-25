@@ -411,9 +411,9 @@ func (c *Controller) processNextWorkItem() bool {
 func (c *Controller) syncComponentBuild(key string) error {
 	glog.Flush()
 	startTime := time.Now()
-	glog.V(4).Infof("Started syncing ComponentBuild %q (%v)", key, startTime)
+	glog.V(4).Infof("started syncing component build %q (%v)", key, startTime)
 	defer func() {
-		glog.V(4).Infof("Finished syncing ComponentBuild %q (%v)", key, time.Now().Sub(startTime))
+		glog.V(4).Infof("finished syncing component build %q (%v)", key, time.Now().Sub(startTime))
 	}()
 
 	namespace, name, err := cache.SplitMetaNamespaceKey(key)
@@ -423,7 +423,7 @@ func (c *Controller) syncComponentBuild(key string) error {
 
 	build, err := c.componentBuildLister.ComponentBuilds(namespace).Get(name)
 	if errors.IsNotFound(err) {
-		glog.V(2).Infof("ComponentBuild %v has been deleted", key)
+		glog.V(2).Infof("component build %v has been deleted", key)
 		return nil
 	}
 	if err != nil {
@@ -435,7 +435,7 @@ func (c *Controller) syncComponentBuild(key string) error {
 		return err
 	}
 
-	glog.V(5).Infof("ComponentBuild %v state: %v", key, stateInfo.state)
+	glog.V(5).Infof("component build %v state: %v", key, stateInfo.state)
 
 	switch stateInfo.state {
 	case stateJobNotCreated:
@@ -447,6 +447,6 @@ func (c *Controller) syncComponentBuild(key string) error {
 	case stateJobRunning:
 		return c.syncUnfinishedComponentBuild(build, stateInfo.job)
 	default:
-		return fmt.Errorf("unexpected state %v", key, stateInfo.state)
+		return fmt.Errorf("component build %v in unexpected state %v", key, stateInfo.state)
 	}
 }

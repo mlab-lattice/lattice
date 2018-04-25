@@ -1,7 +1,7 @@
 package servicebuild
 
 import (
-	"crypto/sha256"
+	"crypto/sha1"
 	"encoding/hex"
 	"encoding/json"
 	"reflect"
@@ -80,15 +80,16 @@ func (c *Controller) syncMissingComponentBuildsServiceBuild(build *latticev1.Ser
 	for _, component := range stateInfo.needsNewComponentBuilds {
 		componentInfo := build.Spec.Components[component]
 
-		// TODO: is json marshalling of a struct deterministic in order? If not could potentially get
-		//		 different SHAs for the same definition. This is OK in the correctness sense, since we'll
-		//		 just be duplicating work, but still not ideal
+		// Note: json marshalling is deterministic: https://godoc.org/encoding/json#Marshal
+		// "Map values encode as JSON objects. The map's key type must either be a string,
+		//  an integer type, or implement encoding.TextMarshaler. The map keys are sorted
+		//  and used as JSON object keys..."
 		definitionJSON, err := json.Marshal(componentInfo.DefinitionBlock)
 		if err != nil {
 			return err
 		}
 
-		h := sha256.New()
+		h := sha1.New()
 		if _, err = h.Write(definitionJSON); err != nil {
 			return err
 		}

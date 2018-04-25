@@ -19,6 +19,10 @@ func (cp *DefaultLocalCloudProvider) EnsureServiceAddressLoadBalancer(
 	address *latticev1.Address,
 	service *latticev1.Service,
 ) error {
+	if !needsServiceAddressLoadBalancer(service) {
+		return nil
+	}
+
 	// FIXME: move this out of kubeutil
 	kubeServiceName := kubeutil.GetKubeServiceNameForLoadBalancer(address.Name)
 
@@ -57,7 +61,11 @@ func (cp *DefaultLocalCloudProvider) EnsureServiceAddressLoadBalancer(
 					return err
 				}
 
-				return fmt.Errorf("could not create kube service %v for %v because it already exists, but could not find it", kubeServiceName, address.Description(cp.namespacePrefix))
+				return fmt.Errorf(
+					"could not create kube service %v for %v because it already exists, but could not find it",
+					kubeServiceName,
+					address.Description(cp.namespacePrefix),
+				)
 			}
 		}
 	}
@@ -149,4 +157,16 @@ func (cp *DefaultLocalCloudProvider) kubeServiceSpec(address *latticev1.Address,
 		Ports:    ports,
 	}
 	return spec, nil
+}
+
+func needsServiceAddressLoadBalancer(service *latticev1.Service) bool {
+	for _, componentPorts := range service.Spec.Ports {
+		for _, componentPort := range componentPorts {
+			if componentPort.Public {
+				return true
+			}
+		}
+	}
+
+	return false
 }

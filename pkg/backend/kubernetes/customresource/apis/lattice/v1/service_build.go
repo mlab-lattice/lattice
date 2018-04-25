@@ -21,8 +21,7 @@ var (
 	ServiceBuildKind     = SchemeGroupVersion.WithKind("ServiceBuild")
 	ServiceBuildListKind = SchemeGroupVersion.WithKind("ServiceBuildList")
 
-	ServiceBuildDefinitionHashLabelKey    = fmt.Sprintf("servicebuild.%v/definition-hash", GroupName)
-	ServiceBuildDefinitionVersionLabelKey = fmt.Sprintf("servicebuild.%v/definition-version", GroupName)
+	ServiceBuildDefinitionHashLabelKey = fmt.Sprintf("servicebuild.%v/definition-hash", GroupName)
 )
 
 // +genclient
@@ -35,37 +34,15 @@ type ServiceBuild struct {
 	Status            ServiceBuildStatus `json:"status,omitempty"`
 }
 
-func (b *ServiceBuild) BuildIDLabel() (string, bool) {
-	id, ok := b.Labels[BuildIDLabelKey]
-	return id, ok
-}
-
-func (b *ServiceBuild) DefinitionVersionLabel() (string, bool) {
-	version, ok := b.Labels[ServiceBuildDefinitionVersionLabelKey]
-	return version, ok
-}
-
 func (b *ServiceBuild) Description(namespacePrefix string) string {
 	systemID, err := kubeutil.SystemID(namespacePrefix, b.Namespace)
 	if err != nil {
 		systemID = v1.SystemID(fmt.Sprintf("UNKNOWN (namespace: %v)", b.Namespace))
 	}
 
-	build := "unknown"
-	if label, ok := b.BuildIDLabel(); ok {
-		build = label
-	}
-
-	version := "unknown"
-	if label, ok := b.DefinitionVersionLabel(); ok {
-		version = label
-	}
-
 	return fmt.Sprintf(
-		"service build %v (build %v, version %v of system %v)",
+		"service build %v (system %v)",
 		b.Name,
-		build,
-		version,
 		systemID,
 	)
 }

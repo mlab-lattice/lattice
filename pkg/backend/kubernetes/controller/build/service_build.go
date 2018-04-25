@@ -51,10 +51,6 @@ func serviceBuild(
 		latticev1.ServiceBuildDefinitionHashLabelKey: definitionHash,
 	}
 
-	if label, ok := build.DefinitionVersionLabel(); ok {
-		buildLabels[latticev1.ServiceBuildDefinitionVersionLabelKey] = string(label)
-	}
-
 	spec := serviceBuildSpec(serviceDefinition)
 
 	return &latticev1.ServiceBuild{

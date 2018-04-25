@@ -25,8 +25,9 @@ var (
 	ComponentBuildIDLabelKey             = fmt.Sprintf("componentbuild.%v/id", GroupName)
 	ComponentBuildDefinitionHashLabelKey = fmt.Sprintf("componentbuild.%v/definition-hash", GroupName)
 
-	ComponentBuildDockerImageFQNAnnotationKey    = fmt.Sprintf("componentbuild.%v/docker-image-fqn", GroupName)
-	ComponentBuildFailureInfoAnnotationKey       = fmt.Sprintf("componentbuild.%v/last-observed-phase", GroupName)
+	ComponentBuildJobDockerImageFQNAnnotationKey = fmt.Sprintf("componentbuild.%v/docker-image-fqn", GroupName)
+
+	ComponentBuildFailureInfoAnnotationKey       = fmt.Sprintf("componentbuild.%v/failure-info", GroupName)
 	ComponentBuildLastObservedPhaseAnnotationKey = fmt.Sprintf("componentbuild.%v/last-observed-phase", GroupName)
 )
 
@@ -41,13 +42,8 @@ type ComponentBuild struct {
 }
 
 func (b *ComponentBuild) DefinitionHashLabel() (string, bool) {
-	hash, ok := b.Annotations[ComponentBuildDefinitionHashLabelKey]
+	hash, ok := b.Labels[ComponentBuildDefinitionHashLabelKey]
 	return hash, ok
-}
-
-func (b *ComponentBuild) DockerImageFQNAnnotation() (string, bool) {
-	fqn, ok := b.Annotations[ComponentBuildDockerImageFQNAnnotationKey]
-	return fqn, ok
 }
 
 func (b *ComponentBuild) FailureInfoAnnotation() (*v1.ComponentBuildFailureInfo, error) {

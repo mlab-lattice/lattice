@@ -169,7 +169,14 @@ func (c *Controller) handleConfigAdd(obj interface{}) {
 	defer c.configLock.Unlock()
 	c.config = config.DeepCopy().Spec
 
-	err := c.newServiceMesh()
+	err := c.newCloudProvider()
+	if err != nil {
+		glog.Errorf("error creating cloud provider: %v", err)
+		// FIXME: what to do here?
+		return
+	}
+
+	err = c.newServiceMesh()
 	if err != nil {
 		glog.Errorf("error creating service mesh: %v", err)
 		// FIXME: what to do here?
@@ -191,7 +198,14 @@ func (c *Controller) handleConfigUpdate(old, cur interface{}) {
 	defer c.configLock.Unlock()
 	c.config = curConfig.DeepCopy().Spec
 
-	err := c.newServiceMesh()
+	err := c.newCloudProvider()
+	if err != nil {
+		glog.Errorf("error creating cloud provider: %v", err)
+		// FIXME: what to do here?
+		return
+	}
+
+	err = c.newServiceMesh()
 	if err != nil {
 		glog.Errorf("error creating service mesh: %v", err)
 		// FIXME: what to do here?
