@@ -4,7 +4,6 @@ go_library(
     name = "go_default_library",
     srcs = [
         "affinity.go",
-        "annotation.go",
         "config.go",
         "control_plane.go",
         "finalizer.go",

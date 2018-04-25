@@ -35,7 +35,6 @@ func (c *Controller) createNewComponentBuild(
 	build *latticev1.ServiceBuild,
 	componentBuildInfo latticev1.ServiceBuildSpecComponentBuildInfo,
 	definitionHash string,
-	previousCbName *string,
 ) (*latticev1.ComponentBuild, error) {
 	// If there is no new entry in the build cache, create a new ComponentBuild.
 	componentBuild := newComponentBuild(build, componentBuildInfo, definitionHash)

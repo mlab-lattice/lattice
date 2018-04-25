@@ -29,7 +29,7 @@ func serviceBuild(
 	}
 
 	if label, ok := build.DefinitionVersionLabel(); ok {
-		labels[latticev1.ServiceBuildDefinitionVersionLabelKey] = label
+		labels[latticev1.ServiceBuildDefinitionVersionLabelKey] = string(label)
 	}
 
 	spec := serviceBuildSpec(serviceDefinition)

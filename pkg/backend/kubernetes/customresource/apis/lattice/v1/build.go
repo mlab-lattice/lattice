@@ -37,9 +37,9 @@ type Build struct {
 	Status            BuildStatus `json:"status,omitempty"`
 }
 
-func (b *Build) DefinitionVersionLabel() (string, bool) {
+func (b *Build) DefinitionVersionLabel() (v1.SystemVersion, bool) {
 	version, ok := b.Labels[BuildDefinitionVersionLabelKey]
-	return version, ok
+	return v1.SystemVersion(version), ok
 }
 
 func (b *Build) Description(namespacePrefix string) string {
@@ -48,7 +48,7 @@ func (b *Build) Description(namespacePrefix string) string {
 		systemID = v1.SystemID(fmt.Sprintf("UNKNOWN (namespace: %v)", b.Namespace))
 	}
 
-	version := "unknown"
+	version := v1.SystemVersion("unknown")
 	if label, ok := b.DefinitionVersionLabel(); ok {
 		version = label
 	}

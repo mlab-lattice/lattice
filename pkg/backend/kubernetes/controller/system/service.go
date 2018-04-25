@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"reflect"
 
-	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/constants"
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 
@@ -281,7 +280,7 @@ func (c *Controller) updateService(service *latticev1.Service, spec latticev1.Se
 	if service.Labels == nil {
 		service.Labels = make(map[string]string)
 	}
-	service.Labels[constants.LabelKeyServicePath] = path.ToDomain()
+	service.Labels[latticev1.ServicePathLabelKey] = path.ToDomain()
 
 	return c.latticeClient.LatticeV1().Services(service.Namespace).Update(service)
 }
@@ -301,7 +300,7 @@ func (c *Controller) serviceNeedsUpdate(service *latticev1.Service, spec lattice
 
 func (c *Controller) getServiceFromCache(namespace string, path tree.NodePath) (*latticev1.Service, error) {
 	selector := labels.NewSelector()
-	requirement, err := labels.NewRequirement(constants.LabelKeyServicePath, selection.Equals, []string{path.ToDomain()})
+	requirement, err := labels.NewRequirement(latticev1.ServicePathLabelKey, selection.Equals, []string{path.ToDomain()})
 	if err != nil {
 		return nil, err
 	}
@@ -325,7 +324,7 @@ func (c *Controller) getServiceFromCache(namespace string, path tree.NodePath) (
 
 func (c *Controller) getServiceFromAPI(namespace string, path tree.NodePath) (*latticev1.Service, error) {
 	selector := labels.NewSelector()
-	requirement, err := labels.NewRequirement(constants.LabelKeyServicePath, selection.Equals, []string{path.ToDomain()})
+	requirement, err := labels.NewRequirement(latticev1.ServicePathLabelKey, selection.Equals, []string{path.ToDomain()})
 	if err != nil {
 		return nil, err
 	}

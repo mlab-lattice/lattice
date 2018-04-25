@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	kubeconstants "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/constants"
+	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/constants"
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	kubeutil "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/kubernetes"
 	"github.com/mlab-lattice/lattice/pkg/util/docker"
@@ -128,13 +128,13 @@ func (c *Controller) jobSpec(build *latticev1.ComponentBuild) (batchv1.JobSpec, 
 			ObjectMeta: metav1.ObjectMeta{
 				Name: name,
 				Labels: map[string]string{
-					kubeconstants.LabelKeyComponentBuildID: build.Name,
+					latticev1.ComponentBuildIDLabelKey: build.Name,
 				},
 			},
 			Spec: corev1.PodSpec{
 				Tolerations: []corev1.Toleration{
 					// Can tolerate build node taint even in local case
-					kubeconstants.TolerationBuildNode,
+					constants.TolerationBuildNode,
 				},
 				Volumes: []corev1.Volume{
 					{
@@ -151,12 +151,12 @@ func (c *Controller) jobSpec(build *latticev1.ComponentBuild) (batchv1.JobSpec, 
 					},
 				},
 				Containers:         []corev1.Container{*buildContainer},
-				ServiceAccountName: kubeconstants.ServiceAccountComponentBuilder,
+				ServiceAccountName: constants.ServiceAccountComponentBuilder,
 				RestartPolicy:      corev1.RestartPolicyNever,
 				DNSPolicy:          corev1.DNSDefault,
 				Affinity: &corev1.Affinity{
 					NodeAffinity: &corev1.NodeAffinity{
-						RequiredDuringSchedulingIgnoredDuringExecution: &kubeconstants.NodeSelectorBuildNode,
+						RequiredDuringSchedulingIgnoredDuringExecution: &constants.NodeSelectorBuildNode,
 					},
 				},
 			},
@@ -175,9 +175,18 @@ func (c *Controller) getBuildContainer(build *latticev1.ComponentBuild) (*corev1
 	}
 
 	repo := c.config.ComponentBuild.DockerArtifact.Repository
-	tag := build.Annotations[kubeconstants.AnnotationKeyComponentBuildDefinitionHash]
+	tag, ok := build.DefinitionHashAnnotation()
+	if !ok {
+		err := fmt.Errorf(
+			"%v does not have %v annotation",
+			build.Description(c.namespacePrefix),
+			latticev1.ComponentBuildDefinitionHashAnnotationKey,
+		)
+		return nil, "", err
+	}
+
 	if c.config.ComponentBuild.DockerArtifact.RepositoryPerImage {
-		repo = build.Annotations[kubeconstants.AnnotationKeyComponentBuildDefinitionHash]
+		repo = tag
 		tag = fmt.Sprint(time.Now().Unix())
 	}
 

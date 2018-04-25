@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
-	kubeconstants "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/constants"
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	"github.com/mlab-lattice/lattice/pkg/definition"
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
@@ -122,10 +121,15 @@ func transformBuild(build *latticev1.Build) (v1.Build, error) {
 		return v1.Build{}, err
 	}
 
+	version := v1.SystemVersion("unknown")
+	if label, ok := build.DefinitionVersionLabel(); ok {
+		version = label
+	}
+
 	externalBuild := v1.Build{
 		ID:       v1.BuildID(build.Name),
 		State:    state,
-		Version:  v1.SystemVersion(build.Labels[kubeconstants.LabelKeySystemVersion]),
+		Version:  version,
 		Services: map[tree.NodePath]v1.ServiceBuild{},
 	}
 

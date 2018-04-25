@@ -3,7 +3,6 @@ package build
 import (
 	"fmt"
 
-	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/constants"
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 
@@ -43,6 +42,8 @@ func (c *Controller) calculateState(build *latticev1.Build) (stateInfo, error) {
 	failedServiceBuilds := map[tree.NodePath]*latticev1.ServiceBuild{}
 	var needsNewServiceBuilds []tree.NodePath
 
+	// FIXME: reuse existing service builds
+
 	serviceBuilds := map[tree.NodePath]string{}
 	serviceBuildStatuses := map[string]latticev1.ServiceBuildStatus{}
 
@@ -57,17 +58,17 @@ func (c *Controller) calculateState(build *latticev1.Build) (stateInfo, error) {
 			// so we'll optimize here for assuming we don't hit the unfortunate error timing _and_ lose the race, and
 			// if we do we'll orphan a ServiceBuild, which is okay.
 			selector := kubelabels.NewSelector()
-			requirement, err := kubelabels.NewRequirement(constants.LabelKeySystemBuildID, selection.Equals, []string{build.Name})
+			requirement, err := kubelabels.NewRequirement(latticev1.BuildIDLabelKey, selection.Equals, []string{build.Name})
 			if err != nil {
 				return stateInfo{}, err
 			}
 			selector = selector.Add(*requirement)
 
-			requirement, err = kubelabels.NewRequirement(
-				constants.LabelKeyServicePath,
-				selection.Equals,
-				[]string{servicePath.ToDomain()},
-			)
+			//requirement, err = kubelabels.NewRequirement(
+			//	constants.LabelKeyServicePath,
+			//	selection.Equals,
+			//	[]string{servicePath.ToDomain()},
+			//)
 			if err != nil {
 				return stateInfo{}, err
 			}

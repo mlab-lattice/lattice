@@ -65,9 +65,9 @@ func (b *ComponentBuild) FailureInfoAnnotation() (*v1.ComponentBuildFailureInfo,
 	return &failureInfo, nil
 }
 
-func (b *ComponentBuild) LastObservedPhaseAnnotation() (string, bool) {
+func (b *ComponentBuild) LastObservedPhaseAnnotation() (v1.ComponentBuildPhase, bool) {
 	phase, ok := b.Annotations[ComponentBuildLastObservedPhaseAnnotationKey]
-	return phase, ok
+	return v1.ComponentBuildPhase(phase), ok
 }
 
 func (b *ComponentBuild) Description(namespacePrefix string) string {

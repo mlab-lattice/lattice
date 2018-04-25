@@ -5,7 +5,6 @@ import (
 	"reflect"
 
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
-	kubeconstants "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/constants"
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 
 	batchv1 "k8s.io/api/batch/v1"
@@ -130,8 +129,7 @@ func (c *Controller) updateComponentBuildStatus(
 	artifacts *latticev1.ComponentBuildArtifacts,
 ) (*latticev1.ComponentBuild, error) {
 	var phasePtr *v1.ComponentBuildPhase
-	if phase, ok := build.Annotations[kubeconstants.AnnotationKeyComponentBuildLastObservedPhase]; ok {
-		phase := v1.ComponentBuildPhase(phase)
+	if phase, ok := build.LastObservedPhaseAnnotation(); ok {
 		phasePtr = &phase
 	}
 

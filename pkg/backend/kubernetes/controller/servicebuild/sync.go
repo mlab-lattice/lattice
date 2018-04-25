@@ -4,11 +4,9 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
-	"fmt"
 	"reflect"
 	"sort"
 
-	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/constants"
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 
 	"github.com/golang/glog"
@@ -50,7 +48,7 @@ func (c *Controller) syncRunningServiceBuild(build *latticev1.ServiceBuild, stat
 
 	sort.Strings(activeComponents)
 
-	message := "The following components are still building:"
+	message := "the following components are still building:"
 	for i, component := range activeComponents {
 		if i != 0 {
 			message = message + ","
@@ -81,13 +79,6 @@ func (c *Controller) syncMissingComponentBuildsServiceBuild(build *latticev1.Ser
 
 	for _, component := range stateInfo.needsNewComponentBuilds {
 		componentInfo := build.Spec.Components[component]
-		definitionBlock := componentInfo.DefinitionBlock
-
-		// FIXME: support references
-		if definitionBlock.GitRepository != nil && definitionBlock.GitRepository.SSHKey != nil {
-			secretName := fmt.Sprintf("%v:%v", build.Labels[constants.LabelKeyServicePath], *definitionBlock.GitRepository.SSHKey.Name)
-			definitionBlock.GitRepository.SSHKey.Name = &secretName
-		}
 
 		// TODO: is json marshalling of a struct deterministic in order? If not could potentially get
 		//		 different SHAs for the same definition. This is OK in the correctness sense, since we'll
@@ -109,9 +100,14 @@ func (c *Controller) syncMissingComponentBuildsServiceBuild(build *latticev1.Ser
 			return err
 		}
 
-		// Found an existing ComponentBuild.
+		// found an existing component build
 		if componentBuild != nil && componentBuild.Status.State != latticev1.ComponentBuildStateFailed {
-			glog.V(4).Infof("Found ComponentBuild %v for %v of %v/%v", componentBuild.Name, component, build.Namespace, build.Name)
+			glog.V(4).Infof(
+				"found %v for component %v of %v",
+				componentBuild.Description(c.namespacePrefix),
+				component,
+				build.Description(c.namespacePrefix),
+			)
 
 			componentBuild, err := c.addOwnerReference(build, componentBuild)
 			if err != nil {
@@ -123,27 +119,19 @@ func (c *Controller) syncMissingComponentBuildsServiceBuild(build *latticev1.Ser
 			continue
 		}
 
-		// Existing ComponentBuild failed. We'll try it again.
-		var previousCbName *string
-		if componentBuild != nil {
-			previousCbName = &componentBuild.Name
-		}
-
-		// TODO: there's a race here. We could create a new component build and fail before updating build.Status
-		// This shouldn't actually matter in the ComponentBuild case. On the next try, the controller would find the
-		// ComponentBuild thanks to the definition hash, and would use it anyways.
-		glog.V(4).Infof("No ComponentBuild found for %v/%v component %v", build.Namespace, build.Name, component)
-		componentBuild, err = c.createNewComponentBuild(build, componentInfo, definitionHash, previousCbName)
+		// previous component build failed or does not exist
+		// create a new one
+		glog.V(4).Infof("no component build found for component %v of %v", component, build.Description(c.namespacePrefix))
+		componentBuild, err = c.createNewComponentBuild(build, componentInfo, definitionHash)
 		if err != nil {
 			return err
 		}
 
 		glog.V(4).Infof(
-			"Created ComponentBuild %v for %v/%v component %v",
-			componentBuild.Name,
-			build.Namespace,
-			build.Name,
+			"Created %v for component %v of %v",
+			componentBuild.Description(c.namespacePrefix),
 			component,
+			build.Description(c.namespacePrefix),
 		)
 		componentBuilds[component] = componentBuild.Name
 		componentBuildStatuses[componentBuild.Name] = componentBuild.Status
@@ -156,20 +144,7 @@ func (c *Controller) syncMissingComponentBuildsServiceBuild(build *latticev1.Ser
 		componentBuilds,
 		componentBuildStatuses,
 	)
-	if err != nil {
-		return err
-	}
-
-	// FIXME: ensure that these updates will create an updateServiceBuildEvent and that the ServiceBuild will be re-queued and processed again.
-	// This is needed for the following scenario:
-	// Service SB needs to build Component C, and finds a Running ComponentBuild CB.
-	// SB decides to use it, so it will update its ComponentBuildsInfo to reflect this.
-	// Before it updates however, CB finishes. When updateComponentBuild is called, SB is not found
-	// as a Service to enqueue. Once SB is updated, it may never get notified that CB finishes.
-	// By enqueueing it, we make sure we have up to date status information, then from there can rely
-	// on updateComponentBuild to update SB's Status.
-	c.queue.Add(fmt.Sprintf("%v/%v", build.Namespace, build.Name))
-	return nil
+	return err
 }
 
 func (c *Controller) syncSucceededServiceBuild(build *latticev1.ServiceBuild, stateInfo stateInfo) error {

@@ -7,7 +7,6 @@ import (
 	"sort"
 
 	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/constants"
-	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/controller/service/util"
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	kubeutil "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/kubernetes"
 	"github.com/mlab-lattice/lattice/pkg/definition/block"
@@ -20,6 +19,8 @@ import (
 	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/apimachinery/pkg/util/intstr"
 
+	k8sappsv1 "k8s.io/kubernetes/pkg/apis/apps/v1"
+
 	"github.com/golang/glog"
 	"github.com/sergi/go-diff/diffmatchpatch"
 )
@@ -30,7 +31,11 @@ const (
 	dnsOptionNdots     = "ndots"
 )
 
-func (c *Controller) syncDeployment(service *latticev1.Service, nodePool *latticev1.NodePool, address *latticev1.Address) (*deploymentStatus, error) {
+func (c *Controller) syncDeployment(
+	service *latticev1.Service,
+	nodePool *latticev1.NodePool,
+	address *latticev1.Address,
+) (*deploymentStatus, error) {
 	deployment, err := c.deployment(service)
 	if err != nil {
 		return nil, err
@@ -147,8 +152,8 @@ func (c *Controller) syncExistingDeployment(
 		return nil, err
 	}
 
-	defaultedUntransformedSpec := util.SetDeploymentSpecDefaults(untransformedSpec)
-	defaultedDesiredSpec := util.SetDeploymentSpecDefaults(&desiredSpec)
+	defaultedUntransformedSpec := setDeploymentSpecDefaults(untransformedSpec)
+	defaultedDesiredSpec := setDeploymentSpecDefaults(&desiredSpec)
 
 	isUpdated, reason := c.isDeploymentSpecUpdated(service, &currentSpec, defaultedDesiredSpec, defaultedUntransformedSpec)
 	if !isUpdated {
@@ -180,7 +185,11 @@ func (c *Controller) updateDeploymentSpec(deployment *appsv1.Deployment, spec ap
 	return c.kubeClient.AppsV1().Deployments(deployment.Namespace).Update(deployment)
 }
 
-func (c *Controller) createNewDeployment(service *latticev1.Service, nodePool *latticev1.NodePool, address *latticev1.Address) (*deploymentStatus, error) {
+func (c *Controller) createNewDeployment(
+	service *latticev1.Service,
+	nodePool *latticev1.NodePool,
+	address *latticev1.Address,
+) (*deploymentStatus, error) {
 	deployment, err := c.newDeployment(service, nodePool)
 	if err != nil {
 		return nil, err
@@ -369,7 +378,11 @@ func (c *Controller) untransformedDeploymentSpec(
 	return spec, nil
 }
 
-func containerFromComponent(service *latticev1.Service, component *block.Component, buildArtifacts *latticev1.ComponentBuildArtifacts) (corev1.Container, error) {
+func containerFromComponent(
+	service *latticev1.Service,
+	component *block.Component,
+	buildArtifacts *latticev1.ComponentBuildArtifacts,
+) (corev1.Container, error) {
 	path, err := service.PathLabel()
 	if err != nil {
 		return corev1.Container{}, err
@@ -697,4 +710,16 @@ func (c *Controller) getDeploymentStatus(
 	}
 
 	return status, nil
+}
+
+func setDeploymentSpecDefaults(spec *appsv1.DeploymentSpec) *appsv1.DeploymentSpec {
+	// Copy so the shared cache isn't mutated
+	spec = spec.DeepCopy()
+
+	deployment := &appsv1.Deployment{
+		Spec: *spec,
+	}
+	k8sappsv1.SetObjectDefaults_Deployment(deployment)
+
+	return &deployment.Spec
 }
