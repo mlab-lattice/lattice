@@ -22,9 +22,9 @@ var (
 	ComponentBuildKind     = SchemeGroupVersion.WithKind("ComponentBuild")
 	ComponentBuildListKind = SchemeGroupVersion.WithKind("ComponentBuildList")
 
-	ComponentBuildIDLabelKey = fmt.Sprintf("componentbuild.%v/id", GroupName)
+	ComponentBuildIDLabelKey             = fmt.Sprintf("componentbuild.%v/id", GroupName)
+	ComponentBuildDefinitionHashLabelKey = fmt.Sprintf("componentbuild.%v/definition-hash", GroupName)
 
-	ComponentBuildDefinitionHashAnnotationKey    = fmt.Sprintf("componentbuild.%v/definition-hash", GroupName)
 	ComponentBuildDockerImageFQNAnnotationKey    = fmt.Sprintf("componentbuild.%v/docker-image-fqn", GroupName)
 	ComponentBuildFailureInfoAnnotationKey       = fmt.Sprintf("componentbuild.%v/last-observed-phase", GroupName)
 	ComponentBuildLastObservedPhaseAnnotationKey = fmt.Sprintf("componentbuild.%v/last-observed-phase", GroupName)
@@ -40,8 +40,8 @@ type ComponentBuild struct {
 	Status            ComponentBuildStatus `json:"status"`
 }
 
-func (b *ComponentBuild) DefinitionHashAnnotation() (string, bool) {
-	hash, ok := b.Annotations[ComponentBuildDefinitionHashAnnotationKey]
+func (b *ComponentBuild) DefinitionHashLabel() (string, bool) {
+	hash, ok := b.Annotations[ComponentBuildDefinitionHashLabelKey]
 	return hash, ok
 }
 

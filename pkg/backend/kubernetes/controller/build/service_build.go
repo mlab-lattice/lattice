@@ -2,34 +2,57 @@ package build
 
 import (
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
+	kubeutil "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/kubernetes"
 	"github.com/mlab-lattice/lattice/pkg/definition"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/selection"
 
-	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 	"github.com/satori/go.uuid"
 )
 
+func (c *Controller) findServiceBuildForDefinitionHash(namespace, definitionHash string) (*latticev1.ServiceBuild, error) {
+	selector := labels.NewSelector()
+	requirement, err := labels.NewRequirement(latticev1.ServiceBuildDefinitionHashLabelKey, selection.Equals, []string{definitionHash})
+	if err != nil {
+		return nil, err
+	}
+	selector = selector.Add(*requirement)
+
+	builds, err := c.serviceBuildLister.List(selector)
+	if err != nil {
+		return nil, err
+	}
+	for _, build := range builds {
+		if build.Status.State != latticev1.ServiceBuildStateFailed {
+			return build, nil
+		}
+	}
+
+	return nil, nil
+}
+
 func (c *Controller) createNewServiceBuild(
 	build *latticev1.Build,
-	servicePath tree.NodePath,
 	serviceDefinition definition.Service,
+	definitionHash string,
 ) (*latticev1.ServiceBuild, error) {
-	serviceBuild := serviceBuild(build, servicePath, serviceDefinition)
+	serviceBuild := serviceBuild(build, serviceDefinition, definitionHash)
 	return c.latticeClient.LatticeV1().ServiceBuilds(build.Namespace).Create(serviceBuild)
 }
 
 func serviceBuild(
 	build *latticev1.Build,
-	servicePath tree.NodePath,
 	serviceDefinition definition.Service,
+	definitionHash string,
 ) *latticev1.ServiceBuild {
-	labels := map[string]string{
-		latticev1.ServiceBuildPathLabelKey: servicePath.ToDomain(),
+	buildLabels := map[string]string{
+		latticev1.ServiceBuildDefinitionHashLabelKey: definitionHash,
 	}
 
 	if label, ok := build.DefinitionVersionLabel(); ok {
-		labels[latticev1.ServiceBuildDefinitionVersionLabelKey] = string(label)
+		buildLabels[latticev1.ServiceBuildDefinitionVersionLabelKey] = string(label)
 	}
 
 	spec := serviceBuildSpec(serviceDefinition)
@@ -37,7 +60,7 @@ func serviceBuild(
 	return &latticev1.ServiceBuild{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:            uuid.NewV4().String(),
-			Labels:          labels,
+			Labels:          buildLabels,
 			OwnerReferences: []metav1.OwnerReference{*newOwnerReference(build)},
 		},
 		Spec: spec,
@@ -55,6 +78,21 @@ func serviceBuildSpec(serviceDefinition definition.Service) latticev1.ServiceBui
 	return latticev1.ServiceBuildSpec{
 		Components: components,
 	}
+}
+
+func (c *Controller) addOwnerReference(build *latticev1.Build, serviceBuild *latticev1.ServiceBuild) (*latticev1.ServiceBuild, error) {
+	ownerRef := kubeutil.GetOwnerReference(serviceBuild, build)
+
+	// already has the service build as an owner
+	if ownerRef != nil {
+		return serviceBuild, nil
+	}
+
+	// Copy so we don't mutate the cache
+	serviceBuild = serviceBuild.DeepCopy()
+	serviceBuild.OwnerReferences = append(serviceBuild.OwnerReferences, *newOwnerReference(build))
+
+	return c.latticeClient.LatticeV1().ServiceBuilds(serviceBuild.Namespace).Update(serviceBuild)
 }
 
 func newOwnerReference(build *latticev1.Build) *metav1.OwnerReference {

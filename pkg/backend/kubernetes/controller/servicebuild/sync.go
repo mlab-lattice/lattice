@@ -101,7 +101,7 @@ func (c *Controller) syncMissingComponentBuildsServiceBuild(build *latticev1.Ser
 		}
 
 		// found an existing component build
-		if componentBuild != nil && componentBuild.Status.State != latticev1.ComponentBuildStateFailed {
+		if componentBuild != nil {
 			glog.V(4).Infof(
 				"found %v for component %v of %v",
 				componentBuild.Description(c.namespacePrefix),

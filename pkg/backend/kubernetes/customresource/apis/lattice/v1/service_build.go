@@ -6,7 +6,6 @@ import (
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	kubeutil "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/kubernetes"
 	"github.com/mlab-lattice/lattice/pkg/definition/block"
-	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 
 	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -22,8 +21,8 @@ var (
 	ServiceBuildKind     = SchemeGroupVersion.WithKind("ServiceBuild")
 	ServiceBuildListKind = SchemeGroupVersion.WithKind("ServiceBuildList")
 
+	ServiceBuildDefinitionHashLabelKey    = fmt.Sprintf("servicebuild.%v/definition-hash", GroupName)
 	ServiceBuildDefinitionVersionLabelKey = fmt.Sprintf("servicebuild.%v/definition-version", GroupName)
-	ServiceBuildPathLabelKey              = fmt.Sprintf("servicebuild.%v/path", GroupName)
 )
 
 // +genclient
@@ -46,24 +45,10 @@ func (b *ServiceBuild) DefinitionVersionLabel() (string, bool) {
 	return version, ok
 }
 
-func (b *ServiceBuild) PathLabel() (tree.NodePath, error) {
-	path, ok := b.Labels[ServiceBuildPathLabelKey]
-	if !ok {
-		return "", fmt.Errorf("service build did not contain service path label")
-	}
-
-	return tree.NodePathFromDomain(path)
-}
-
 func (b *ServiceBuild) Description(namespacePrefix string) string {
 	systemID, err := kubeutil.SystemID(namespacePrefix, b.Namespace)
 	if err != nil {
 		systemID = v1.SystemID(fmt.Sprintf("UNKNOWN (namespace: %v)", b.Namespace))
-	}
-
-	path, err := b.PathLabel()
-	if err != nil {
-		path = tree.NodePath("unknown")
 	}
 
 	build := "unknown"
@@ -77,9 +62,8 @@ func (b *ServiceBuild) Description(namespacePrefix string) string {
 	}
 
 	return fmt.Sprintf(
-		"service build %v (service %v in build %v, version %v of system %v)",
+		"service build %v (build %v, version %v of system %v)",
 		b.Name,
-		path.String(),
 		build,
 		version,
 		systemID,

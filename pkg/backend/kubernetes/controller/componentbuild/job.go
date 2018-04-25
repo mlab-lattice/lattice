@@ -175,12 +175,12 @@ func (c *Controller) getBuildContainer(build *latticev1.ComponentBuild) (*corev1
 	}
 
 	repo := c.config.ComponentBuild.DockerArtifact.Repository
-	tag, ok := build.DefinitionHashAnnotation()
+	tag, ok := build.DefinitionHashLabel()
 	if !ok {
 		err := fmt.Errorf(
-			"%v does not have %v annotation",
+			"%v does not have %v label",
 			build.Description(c.namespacePrefix),
-			latticev1.ComponentBuildDefinitionHashAnnotationKey,
+			latticev1.ComponentBuildDefinitionHashLabelKey,
 		)
 		return nil, "", err
 	}

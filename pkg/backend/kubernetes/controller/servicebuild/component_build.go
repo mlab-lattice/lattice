@@ -6,25 +6,26 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/selection"
 
 	"github.com/satori/go.uuid"
 )
 
 func (c *Controller) findComponentBuildForDefinitionHash(namespace, definitionHash string) (*latticev1.ComponentBuild, error) {
-	// TODO: similar scalability concerns to owningServiceBuilds
-	cbs, err := c.componentBuildLister.List(labels.Everything())
+	selector := labels.NewSelector()
+	requirement, err := labels.NewRequirement(latticev1.ComponentBuildDefinitionHashLabelKey, selection.Equals, []string{definitionHash})
 	if err != nil {
 		return nil, err
 	}
-	for _, cb := range cbs {
-		hash, ok := cb.DefinitionHashAnnotation()
-		if !ok {
-			// FIXME: add warn event
-			continue
-		}
+	selector = selector.Add(*requirement)
 
-		if hash == definitionHash && cb.Status.State != latticev1.ComponentBuildStateFailed {
-			return cb, nil
+	builds, err := c.componentBuildLister.List(selector)
+	if err != nil {
+		return nil, err
+	}
+	for _, build := range builds {
+		if build.Status.State != latticev1.ComponentBuildStateFailed {
+			return build, nil
 		}
 	}
 
@@ -47,15 +48,13 @@ func (c *Controller) createNewComponentBuild(
 }
 
 func newComponentBuild(build *latticev1.ServiceBuild, cbInfo latticev1.ServiceBuildSpecComponentBuildInfo, definitionHash string) *latticev1.ComponentBuild {
-	cbAnnotations := map[string]string{
-		latticev1.ComponentBuildDefinitionHashAnnotationKey: definitionHash,
-	}
-
 	return &latticev1.ComponentBuild{
 		ObjectMeta: metav1.ObjectMeta{
-			Annotations:     cbAnnotations,
 			Name:            uuid.NewV4().String(),
 			OwnerReferences: []metav1.OwnerReference{*newOwnerReference(build)},
+			Labels: map[string]string{
+				latticev1.ComponentBuildDefinitionHashLabelKey: definitionHash,
+			},
 		},
 		Spec: latticev1.ComponentBuildSpec{
 			BuildDefinitionBlock: cbInfo.DefinitionBlock,

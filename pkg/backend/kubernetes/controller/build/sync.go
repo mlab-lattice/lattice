@@ -1,12 +1,17 @@
 package build
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
 	"reflect"
 	"sort"
 
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/golang/glog"
 )
 
 func (c *Controller) syncFailedBuild(build *latticev1.Build, stateInfo stateInfo) error {
@@ -87,28 +92,73 @@ func (c *Controller) syncRunningBuild(build *latticev1.Build, stateInfo stateInf
 }
 
 func (c *Controller) syncMissingServiceBuildsBuild(build *latticev1.Build, stateInfo stateInfo) error {
-	// Copy so the shared cache isn't mutated
-	status := build.Status.DeepCopy()
-	serviceBuilds := status.ServiceBuilds
+	serviceBuilds := stateInfo.serviceBuilds
 	if serviceBuilds == nil {
 		serviceBuilds = map[tree.NodePath]string{}
 	}
 
-	serviceBuildStatuses := status.ServiceBuildStatuses
+	serviceBuildStatuses := stateInfo.serviceBuildStatuses
 	if serviceBuildStatuses == nil {
 		serviceBuildStatuses = map[string]latticev1.ServiceBuildStatus{}
 	}
 
-	for _, service := range stateInfo.needsNewServiceBuilds {
-		serviceInfo := build.Spec.Services[service]
+	for _, path := range stateInfo.needsNewServiceBuilds {
+		serviceInfo := build.Spec.Services[path]
 
-		// Otherwise we'll have to create a new Service.
-		serviceBuild, err := c.createNewServiceBuild(build, service, serviceInfo.Definition)
+		// TODO: is json marshalling of a struct deterministic in order? If not could potentially get
+		//		 different SHAs for the same definition. This is OK in the correctness sense, since we'll
+		//		 just be duplicating work, but still not ideal
+		definitionJSON, err := json.Marshal(serviceInfo.Definition)
 		if err != nil {
 			return err
 		}
 
-		serviceBuilds[service] = serviceBuild.Name
+		h := sha256.New()
+		if _, err = h.Write(definitionJSON); err != nil {
+			return err
+		}
+
+		definitionHash := hex.EncodeToString(h.Sum(nil))
+
+		serviceBuild, err := c.findServiceBuildForDefinitionHash(build.Namespace, definitionHash)
+		if err != nil {
+			return err
+		}
+
+		// found an existing service build
+		if serviceBuild != nil {
+			glog.V(4).Infof(
+				"found %v for service %v of %v",
+				serviceBuild.Description(c.namespacePrefix),
+				path.String(),
+				build.Description(c.namespacePrefix),
+			)
+
+			serviceBuild, err := c.addOwnerReference(build, serviceBuild)
+			if err != nil {
+				return err
+			}
+
+			serviceBuilds[path] = serviceBuild.Name
+			serviceBuildStatuses[serviceBuild.Name] = serviceBuild.Status
+			continue
+		}
+
+		// previous service build failed or does not exist
+		// create a new one
+		glog.V(4).Infof("no service build found for path %v of %v", path.String(), build.Description(c.namespacePrefix))
+		serviceBuild, err = c.createNewServiceBuild(build, serviceInfo.Definition, definitionHash)
+		if err != nil {
+			return err
+		}
+
+		glog.V(4).Infof(
+			"created %v for service %v of %v",
+			serviceBuild.Description(c.namespacePrefix),
+			path.String(),
+			build.Description(c.namespacePrefix),
+		)
+		serviceBuilds[path] = serviceBuild.Name
 		serviceBuildStatuses[serviceBuild.Name] = serviceBuild.Status
 	}
 
