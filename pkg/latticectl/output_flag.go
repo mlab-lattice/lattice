@@ -10,6 +10,7 @@ type OutputFlag struct {
 	Name             string
 	Short            *string
 	SupportedFormats []printer.Format
+	Usage            string
 	value            string
 }
 
