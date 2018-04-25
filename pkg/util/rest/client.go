@@ -1,6 +1,7 @@
 package rest
 
 import (
+	"crypto/tls"
 	"encoding/json"
 	"io"
 	"io/ioutil"
@@ -97,6 +98,18 @@ func NewHeaderedClient(headers map[string]string) *DefaultClient {
 	return &DefaultClient{
 		defaultHeaders: headers,
 		client:         http.DefaultClient,
+	}
+}
+
+// NewInsecureClient client that skips certificate validate. We should XXX.
+func NewInsecureClient() *DefaultClient {
+	insecureTransport := &http.Transport{
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	}
+
+	return &DefaultClient{
+		defaultHeaders: map[string]string{},
+		client:         &http.Client{Transport: insecureTransport},
 	}
 }
 
