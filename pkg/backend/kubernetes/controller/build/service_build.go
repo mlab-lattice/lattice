@@ -1,6 +1,8 @@
 package build
 
 import (
+	"fmt"
+
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	kubeutil "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/kubernetes"
 	"github.com/mlab-lattice/lattice/pkg/definition"
@@ -39,7 +41,12 @@ func (c *Controller) createNewServiceBuild(
 	definitionHash string,
 ) (*latticev1.ServiceBuild, error) {
 	serviceBuild := serviceBuild(build, serviceDefinition, definitionHash)
-	return c.latticeClient.LatticeV1().ServiceBuilds(build.Namespace).Create(serviceBuild)
+	serviceBuild, err := c.latticeClient.LatticeV1().ServiceBuilds(build.Namespace).Create(serviceBuild)
+	if err != nil {
+		return nil, fmt.Errorf("error creating service build for %v with definition hash %v", build.Description(c.namespacePrefix), definitionHash)
+	}
+
+	return serviceBuild, nil
 }
 
 func serviceBuild(
@@ -47,16 +54,13 @@ func serviceBuild(
 	serviceDefinition definition.Service,
 	definitionHash string,
 ) *latticev1.ServiceBuild {
-	buildLabels := map[string]string{
-		latticev1.ServiceBuildDefinitionHashLabelKey: definitionHash,
-	}
-
 	spec := serviceBuildSpec(serviceDefinition)
-
 	return &latticev1.ServiceBuild{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:            uuid.NewV4().String(),
-			Labels:          buildLabels,
+			Name: uuid.NewV4().String(),
+			Labels: map[string]string{
+				latticev1.ServiceBuildDefinitionHashLabelKey: definitionHash,
+			},
 			OwnerReferences: []metav1.OwnerReference{*newOwnerReference(build)},
 		},
 		Spec: spec,
@@ -88,7 +92,52 @@ func (c *Controller) addOwnerReference(build *latticev1.Build, serviceBuild *lat
 	serviceBuild = serviceBuild.DeepCopy()
 	serviceBuild.OwnerReferences = append(serviceBuild.OwnerReferences, *newOwnerReference(build))
 
-	return c.latticeClient.LatticeV1().ServiceBuilds(serviceBuild.Namespace).Update(serviceBuild)
+	serviceBuild, err := c.latticeClient.LatticeV1().ServiceBuilds(serviceBuild.Namespace).Update(serviceBuild)
+	if err != nil {
+		err = fmt.Errorf(
+			"error adding owner reference to %v to %v: %v",
+			build.Description(c.namespacePrefix),
+			serviceBuild.Description(c.namespacePrefix),
+			err,
+		)
+		return nil, err
+	}
+
+	return serviceBuild, nil
+}
+
+func (c *Controller) removeOwnerReference(build *latticev1.Build, serviceBuild *latticev1.ServiceBuild) (*latticev1.ServiceBuild, error) {
+	found := false
+	var ownerRefs []metav1.OwnerReference
+	for _, ref := range serviceBuild.GetOwnerReferences() {
+		if ref.UID == build.GetUID() {
+			found = true
+			break
+		}
+
+		ownerRefs = append(ownerRefs, ref)
+	}
+
+	if !found {
+		return serviceBuild, nil
+	}
+
+	// Copy so we don't mutate the cache
+	serviceBuild = serviceBuild.DeepCopy()
+	serviceBuild.OwnerReferences = ownerRefs
+
+	serviceBuild, err := c.latticeClient.LatticeV1().ServiceBuilds(serviceBuild.Namespace).Update(serviceBuild)
+	if err != nil {
+		err = fmt.Errorf(
+			"error removing owner reference to %v from %v: %v",
+			build.Description(c.namespacePrefix),
+			serviceBuild.Description(c.namespacePrefix),
+			err,
+		)
+		return nil, err
+	}
+
+	return serviceBuild, nil
 }
 
 func newOwnerReference(build *latticev1.Build) *metav1.OwnerReference {

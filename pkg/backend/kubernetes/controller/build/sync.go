@@ -4,11 +4,11 @@ import (
 	"crypto/sha1"
 	"encoding/hex"
 	"encoding/json"
-	"reflect"
 	"sort"
 
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/golang/glog"
@@ -39,7 +39,7 @@ func (c *Controller) syncFailedBuild(build *latticev1.Build, stateInfo stateInfo
 		completionTimestamp = &now
 	}
 
-	_, err := c.updateSystemBuildStatus(
+	_, err := c.updateBuildStatus(
 		build,
 		latticev1.BuildStateFailed,
 		message,
@@ -79,7 +79,7 @@ func (c *Controller) syncRunningBuild(build *latticev1.Build, stateInfo stateInf
 		startTimestamp = &now
 	}
 
-	_, err := c.updateSystemBuildStatus(
+	_, err := c.updateBuildStatus(
 		build,
 		latticev1.BuildStateRunning,
 		message,
@@ -102,6 +102,8 @@ func (c *Controller) syncMissingServiceBuildsBuild(build *latticev1.Build, state
 		serviceBuildStatuses = map[string]latticev1.ServiceBuildStatus{}
 	}
 
+	serviceBuildHashes := make(map[string]*latticev1.ServiceBuild)
+
 	for _, path := range stateInfo.needsNewServiceBuilds {
 		serviceInfo := build.Spec.Services[path]
 
@@ -123,9 +125,15 @@ func (c *Controller) syncMissingServiceBuildsBuild(build *latticev1.Build, state
 
 		definitionHash := hex.EncodeToString(h.Sum(nil))
 
-		serviceBuild, err := c.findServiceBuildForDefinitionHash(build.Namespace, definitionHash)
-		if err != nil {
-			return err
+		// first check to see if we've already seen a service build
+		// matching this hash so far
+		serviceBuild, ok := serviceBuildHashes[definitionHash]
+		if !ok {
+			// if not, check all the service builds to see if one already matches the hash
+			serviceBuild, err = c.findServiceBuildForDefinitionHash(build.Namespace, definitionHash)
+			if err != nil {
+				return err
+			}
 		}
 
 		// found an existing service build
@@ -144,6 +152,7 @@ func (c *Controller) syncMissingServiceBuildsBuild(build *latticev1.Build, state
 
 			serviceBuilds[path] = serviceBuild.Name
 			serviceBuildStatuses[serviceBuild.Name] = serviceBuild.Status
+			serviceBuildHashes[definitionHash] = serviceBuild
 			continue
 		}
 
@@ -163,6 +172,7 @@ func (c *Controller) syncMissingServiceBuildsBuild(build *latticev1.Build, state
 		)
 		serviceBuilds[path] = serviceBuild.Name
 		serviceBuildStatuses[serviceBuild.Name] = serviceBuild.Status
+		serviceBuildHashes[definitionHash] = serviceBuild
 	}
 
 	// If we haven't logged a start timestamp yet, use now.
@@ -172,7 +182,7 @@ func (c *Controller) syncMissingServiceBuildsBuild(build *latticev1.Build, state
 		startTimestamp = &now
 	}
 
-	_, err := c.updateSystemBuildStatus(
+	_, err := c.updateBuildStatus(
 		build,
 		latticev1.BuildStateRunning,
 		"",
@@ -191,45 +201,14 @@ func (c *Controller) syncSucceededBuild(build *latticev1.Build, stateInfo stateI
 		completionTimestamp = &now
 	}
 
-	_, err := c.updateSystemBuildStatus(
+	_, err := c.updateBuildStatus(
 		build,
 		latticev1.BuildStateSucceeded,
 		"",
 		build.Status.StartTimestamp,
-		build.Status.CompletionTimestamp,
+		completionTimestamp,
 		stateInfo.serviceBuilds,
 		stateInfo.serviceBuildStatuses,
 	)
 	return err
-}
-
-func (c *Controller) updateSystemBuildStatus(
-	build *latticev1.Build,
-	state latticev1.BuildState,
-	message string,
-	startTimestamp *metav1.Time,
-	completionTimestamp *metav1.Time,
-	serviceBuilds map[tree.NodePath]string,
-	serviceBuildStatuses map[string]latticev1.ServiceBuildStatus,
-) (*latticev1.Build, error) {
-	status := latticev1.BuildStatus{
-		State:   state,
-		Message: message,
-
-		StartTimestamp:      startTimestamp,
-		CompletionTimestamp: completionTimestamp,
-
-		ServiceBuilds:        serviceBuilds,
-		ServiceBuildStatuses: serviceBuildStatuses,
-	}
-
-	if reflect.DeepEqual(build.Status, status) {
-		return build, nil
-	}
-
-	// Copy so the shared cache isn't mutated
-	build = build.DeepCopy()
-	build.Status = status
-
-	return c.latticeClient.LatticeV1().Builds(build.Namespace).UpdateStatus(build)
 }

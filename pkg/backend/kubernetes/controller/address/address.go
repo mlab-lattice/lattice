@@ -1,14 +1,11 @@
 package address
 
 import (
+	"fmt"
 	"reflect"
 
-	"github.com/mlab-lattice/lattice/bazel-lattice/external/go_sdk/src/fmt"
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
-)
-
-const (
-	finalizerName = "controller.lattice.mlab.com/address"
+	kubeutil "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/kubernetes"
 )
 
 func (c *Controller) updateAddressStatus(
@@ -62,14 +59,14 @@ func (c *Controller) updateAddressAnnotations(address *latticev1.Address, annota
 func (c *Controller) addFinalizer(address *latticev1.Address) (*latticev1.Address, error) {
 	// Check to see if the finalizer already exists. If so nothing needs to be done.
 	for _, finalizer := range address.Finalizers {
-		if finalizer == finalizerName {
+		if finalizer == kubeutil.AddressControllerFinalizer {
 			return address, nil
 		}
 	}
 
 	// Copy so we don't mutate the shared cache
 	address = address.DeepCopy()
-	address.Finalizers = append(address.Finalizers, finalizerName)
+	address.Finalizers = append(address.Finalizers, kubeutil.AddressControllerFinalizer)
 
 	address, err := c.latticeClient.LatticeV1().Addresses(address.Namespace).Update(address)
 	if err != nil {
@@ -84,7 +81,7 @@ func (c *Controller) removeFinalizer(address *latticev1.Address) (*latticev1.Add
 	var finalizers []string
 	found := false
 	for _, finalizer := range address.Finalizers {
-		if finalizer == finalizerName {
+		if finalizer == kubeutil.AddressControllerFinalizer {
 			found = true
 			continue
 		}

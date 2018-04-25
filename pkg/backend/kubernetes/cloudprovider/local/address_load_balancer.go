@@ -80,8 +80,9 @@ func (cp *DefaultLocalCloudProvider) EnsureServiceAddressLoadBalancer(
 		strategicMergePatchBytes,
 	)
 	if err != nil {
-		fmt.Errorf("error patching kube service for %v: %v", address.Description(cp.namespacePrefix), err)
+		return fmt.Errorf("error patching kube service for %v: %v", address.Description(cp.namespacePrefix), err)
 	}
+
 	return nil
 }
 

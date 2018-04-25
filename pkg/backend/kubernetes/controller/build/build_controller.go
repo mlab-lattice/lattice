@@ -16,12 +16,8 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
 
-	"github.com/deckarep/golang-set"
 	"github.com/golang/glog"
-	"k8s.io/apimachinery/pkg/labels"
 )
-
-var controllerKind = latticev1.SchemeGroupVersion.WithKind("Build")
 
 type Controller struct {
 	syncHandler  func(bKey string) error
@@ -58,8 +54,8 @@ func NewController(
 	sbc.syncHandler = sbc.syncSystemBuild
 
 	buildInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc:    sbc.addBuild,
-		UpdateFunc: sbc.updateBuild,
+		AddFunc:    sbc.handleBuildAdd,
+		UpdateFunc: sbc.handleBuildUpdate,
 		// TODO: for now it is assumed that SystemBuilds are not deleted.
 		// in the future we'll probably want to add a GC process for SystemBuilds.
 		// At that point we should listen here for those deletes.
@@ -69,8 +65,8 @@ func NewController(
 	sbc.buildListerSynced = buildInformer.Informer().HasSynced
 
 	serviceBuildInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc:    sbc.addServiceBuild,
-		UpdateFunc: sbc.updateServiceBuild,
+		AddFunc:    sbc.handleServiceBuildAdd,
+		UpdateFunc: sbc.handleServiceBuildUpdate,
 		// TODO: for now it is assumed that ServiceBuilds are not deleted.
 		// in the future we'll probably want to add a GC process for ServiceBuilds.
 		// At that point we should listen here for those deletes.
@@ -108,89 +104,6 @@ func (c *Controller) Run(workers int, stopCh <-chan struct{}) {
 
 	// wait until we're told to stop
 	<-stopCh
-}
-
-func (c *Controller) addBuild(obj interface{}) {
-	build := obj.(*latticev1.Build)
-	glog.V(4).Infof("%s added", build.Description(c.namespacePrefix))
-	c.enqueueBuild(build)
-}
-
-func (c *Controller) updateBuild(old, cur interface{}) {
-	build := cur.(*latticev1.Build)
-	glog.V(4).Infof("%s updated", build.Description(c.namespacePrefix))
-	c.enqueueBuild(build)
-}
-
-// addServiceBuild enqueues the System that manages a Service when the Service is created.
-func (c *Controller) addServiceBuild(obj interface{}) {
-	serviceBuild := obj.(*latticev1.ServiceBuild)
-
-	if serviceBuild.DeletionTimestamp != nil {
-		// On a restart of the controller manager, it's possible for an object to
-		// show up in a state that is already pending deletion.
-		// component builds should only be deleted if there are no service builds
-		// pointing at it, so no need to enqueue anything
-		return
-	}
-
-	glog.V(4).Infof("%s added", serviceBuild.Description(c.namespacePrefix))
-	builds, err := c.owningBuilds(serviceBuild)
-	if err != nil {
-		// FIXME: send error event?
-		return
-	}
-	for _, build := range builds {
-		c.enqueueBuild(&build)
-	}
-}
-
-// updateServiceBuild figures out what Build manages a Service when the
-// Service is updated and enqueues them.
-func (c *Controller) updateServiceBuild(old, cur interface{}) {
-	serviceBuild := cur.(*latticev1.ServiceBuild)
-
-	glog.V(4).Infof("%s updated", serviceBuild.Description(c.namespacePrefix))
-	builds, err := c.owningBuilds(serviceBuild)
-	if err != nil {
-		// FIXME: send error event?
-		return
-	}
-
-	for _, build := range builds {
-		c.enqueueBuild(&build)
-	}
-}
-
-func (c *Controller) owningBuilds(serviceBuild *latticev1.ServiceBuild) ([]latticev1.Build, error) {
-	owningBuilds := mapset.NewSet()
-	for _, owner := range serviceBuild.OwnerReferences {
-		// Not a lattice.mlab.com owner (probably shouldn't happen)
-		if owner.APIVersion != latticev1.SchemeGroupVersion.String() {
-			continue
-		}
-
-		// Not a build owner (probably shouldn't happen)
-		if owner.Kind != latticev1.BuildKind.Kind {
-			continue
-		}
-
-		owningBuilds.Add(owner.UID)
-	}
-
-	builds, err := c.buildLister.List(labels.Everything())
-	if err != nil {
-		return nil, err
-	}
-
-	var matchingBuilds []latticev1.Build
-	for _, build := range builds {
-		if owningBuilds.Contains(build.UID) {
-			matchingBuilds = append(matchingBuilds, *build)
-		}
-	}
-
-	return matchingBuilds, nil
 }
 
 func (c *Controller) enqueue(sysb *latticev1.Build) {
@@ -254,9 +167,9 @@ func (c *Controller) processNextWorkItem() bool {
 func (c *Controller) syncSystemBuild(key string) error {
 	glog.Flush()
 	startTime := time.Now()
-	glog.V(4).Infof("Started syncing Build %q (%v)", key, startTime)
+	glog.V(4).Infof("started syncing build %q (%v)", key, startTime)
 	defer func() {
-		glog.V(4).Infof("Finished syncing Build %q (%v)", key, time.Now().Sub(startTime))
+		glog.V(4).Infof("finished syncing build %q (%v)", key, time.Now().Sub(startTime))
 	}()
 
 	namespace, name, err := cache.SplitMetaNamespaceKey(key)
@@ -266,9 +179,18 @@ func (c *Controller) syncSystemBuild(key string) error {
 
 	build, err := c.buildLister.Builds(namespace).Get(name)
 	if errors.IsNotFound(err) {
-		glog.V(2).Infof("Build %v has been deleted", key)
+		glog.V(2).Infof("build %v has been deleted", key)
 		return nil
 	}
+	if err != nil {
+		return err
+	}
+
+	if build.DeletionTimestamp != nil {
+		return c.syncDeletedBuild(build)
+	}
+
+	build, err = c.addFinalizer(build)
 	if err != nil {
 		return err
 	}
@@ -278,7 +200,7 @@ func (c *Controller) syncSystemBuild(key string) error {
 		return err
 	}
 
-	glog.V(5).Infof("Build %v state: %v", key, stateInfo.state)
+	glog.V(5).Infof("%v state: %v", build.Description(c.namespacePrefix), stateInfo.state)
 
 	switch stateInfo.state {
 	case stateHasFailedServiceBuilds:
@@ -290,6 +212,6 @@ func (c *Controller) syncSystemBuild(key string) error {
 	case stateAllServiceBuildsSucceeded:
 		return c.syncSucceededBuild(build, stateInfo)
 	default:
-		return fmt.Errorf("unrecognized state %v", stateInfo.state)
+		return fmt.Errorf("%v in unrecognized state %v", build.Description(c.namespacePrefix), stateInfo.state)
 	}
 }
