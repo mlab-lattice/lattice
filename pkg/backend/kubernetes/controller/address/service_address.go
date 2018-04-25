@@ -84,8 +84,12 @@ func (c *Controller) syncServiceAddress(address *latticev1.Address) error {
 			Time:    metav1.Now(),
 		}
 
-		c.updateAddressStatus(address, state, failureInfo, address.Status.Ports)
-		return fmt.Errorf("error updating %v status: %v", address.Description(c.namespacePrefix), err)
+		_, err := c.updateAddressStatus(address, state, failureInfo, address.Status.Ports)
+		if err != nil {
+			return fmt.Errorf("error updating %v status: %v", address.Description(c.namespacePrefix), err)
+		}
+
+		return nil
 	}
 
 	// Add any annotations needed by the cloud provider.

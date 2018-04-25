@@ -14,8 +14,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-
-	"github.com/golang/glog"
 	"k8s.io/apimachinery/pkg/util/strategicpatch"
 )
 
@@ -67,19 +65,14 @@ func (cp *DefaultLocalCloudProvider) EnsureServiceAddressLoadBalancer(
 
 	spec := cp.kubeServiceSpec(address, service)
 
-	// FIXME: once patching is fixed, only compare fields we care about
-	//if kubeServiceSpecNeedsUpdate(spec, kubeService.Spec)
-	// If the kube service's spec isn't up to date, update it.
-	if reflect.DeepEqual(spec, kubeService.Spec) {
+	if !serviceAddressKubeServiceSpecNeedsUpdate(spec, kubeService.Spec) {
 		return nil
 	}
 
-	strategicMergePatchBytes, err := kubeServiceStrategicMergePatchBytes(spec, kubeService.Spec)
+	strategicMergePatchBytes, err := serviceAddressKubeServiceStrategicMergePatchBytes(spec, kubeService.Spec)
 	if err != nil {
 		return fmt.Errorf("error creating json patches for kube service spec patch: %v", err)
 	}
-
-	glog.Infof("patching %v: %v", kubeService.Name, string(strategicMergePatchBytes))
 
 	_, err = cp.kubeClient.CoreV1().Services(address.Namespace).Patch(
 		kubeService.Name,
@@ -162,7 +155,7 @@ func (cp *DefaultLocalCloudProvider) kubeServiceSpec(address *latticev1.Address,
 	}
 
 	// Note: if you add or remove any fields here,
-	// update kubeServiceStrategicMergePatchBytes as well
+	// update serviceAddressKubeServiceStrategicMergePatchBytes as well
 	return corev1.ServiceSpec{
 		Selector: labels,
 		Type:     corev1.ServiceTypeNodePort,
@@ -170,7 +163,23 @@ func (cp *DefaultLocalCloudProvider) kubeServiceSpec(address *latticev1.Address,
 	}
 }
 
-func kubeServiceStrategicMergePatchBytes(desired corev1.ServiceSpec, current corev1.ServiceSpec) ([]byte, error) {
+func serviceAddressKubeServiceSpecNeedsUpdate(desired, current corev1.ServiceSpec) bool {
+	if desired.Type != current.Type {
+		return true
+	}
+
+	if !reflect.DeepEqual(desired.Selector, current.Selector) {
+		return true
+	}
+
+	if !reflect.DeepEqual(desired.Ports, current.Ports) {
+		return true
+	}
+
+	return false
+}
+
+func serviceAddressKubeServiceStrategicMergePatchBytes(desired, current corev1.ServiceSpec) ([]byte, error) {
 	// there's about 0 documentation on how to do a merge patch with the kubernetes go client
 	// the below was eventually divined from: https://github.com/kubernetes/kubernetes/blob/v1.10.1/pkg/kubectl/cmd/patch.go#L260-L284
 	spec := current.DeepCopy()
