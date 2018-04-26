@@ -7,6 +7,7 @@ go_library(
         "deploy.go",
         "in_progress_deploy.go",
         "in_progress_teardown.go",
+        "informer_event_handlers.go",
         "lifecycle_action.go",
         "pending_deploy.go",
         "pending_teardown.go",

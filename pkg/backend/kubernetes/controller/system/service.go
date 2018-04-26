@@ -130,7 +130,7 @@ func (c *Controller) syncSystemServices(system *latticev1.System) (map[tree.Node
 	for _, service := range allServices {
 		if !serviceNames.Contains(service.Name) {
 			if service.DeletionTimestamp == nil {
-				err := c.latticeClient.LatticeV1().Services(service.Namespace).Delete(service.Name, &metav1.DeleteOptions{})
+				err := c.deleteService(service)
 				if err != nil {
 					return nil, err
 				}
@@ -257,6 +257,20 @@ func (c *Controller) serviceSpec(
 		NumInstances: numInstances,
 	}
 	return spec, nil
+}
+
+func (c *Controller) deleteService(service *latticev1.Service) error {
+	foregroundDelete := metav1.DeletePropagationForeground
+	deleteOptions := &metav1.DeleteOptions{
+		PropagationPolicy: &foregroundDelete,
+	}
+
+	err := c.latticeClient.LatticeV1().Services(service.Namespace).Delete(service.Name, deleteOptions)
+	if err != nil {
+		return fmt.Errorf("error deleting %v: %v", service.Description(c.namespacePrefix), err)
+	}
+
+	return nil
 }
 
 func (c *Controller) updateService(service *latticev1.Service, spec latticev1.ServiceSpec, path tree.NodePath) (*latticev1.Service, error) {

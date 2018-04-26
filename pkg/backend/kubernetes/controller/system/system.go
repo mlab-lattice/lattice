@@ -23,22 +23,20 @@ func (c *Controller) syncSystemStatus(
 			continue
 		}
 
-		if status.State == latticev1.ServiceStateFailed {
+		switch status.State {
+		case latticev1.ServiceStateFailed:
 			hasFailedService = true
-			continue
-		}
 
-		if status.State == latticev1.ServiceStateUpdating || status.State == latticev1.ServiceStatePending || status.State == latticev1.ServiceStateDeleting {
-			hasUpdatingService = true
-			continue
-		}
-
-		if status.State == latticev1.ServiceStateScaling {
+		case latticev1.ServiceStateScaling:
 			hasScalingService = true
-			continue
-		}
 
-		if status.State != latticev1.ServiceStateStable {
+		case latticev1.ServiceStateUpdating, latticev1.ServiceStatePending, latticev1.ServiceStateDeleting:
+			hasUpdatingService = true
+
+		case latticev1.ServiceStateStable:
+			// nothing to do
+
+		default:
 			return fmt.Errorf("service %v (%v) had unexpected state: %v", path.ToDomain(), system.Description(), status.State)
 		}
 	}

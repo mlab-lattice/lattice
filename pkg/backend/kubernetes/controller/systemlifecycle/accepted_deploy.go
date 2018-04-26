@@ -10,7 +10,12 @@ import (
 func (c *Controller) syncAcceptedDeploy(deploy *latticev1.Deploy) error {
 	build, err := c.buildLister.Builds(deploy.Namespace).Get(deploy.Spec.BuildName)
 	if err != nil {
-		return err
+		return fmt.Errorf(
+			"error getting build %v for %v: %v",
+			deploy.Spec.BuildName,
+			deploy.Description(c.namespacePrefix),
+			err,
+		)
 	}
 
 	switch build.Status.State {
@@ -18,7 +23,11 @@ func (c *Controller) syncAcceptedDeploy(deploy *latticev1.Deploy) error {
 		return nil
 
 	case latticev1.BuildStateFailed:
-		_, err := c.updateDeployStatus(deploy, latticev1.DeployStateFailed, fmt.Sprintf("SystemBuild %v failed", build.Name))
+		_, err := c.updateDeployStatus(
+			deploy,
+			latticev1.DeployStateFailed,
+			fmt.Sprintf("%v failed", build.Description(c.namespacePrefix)),
+		)
 		if err != nil {
 			return err
 		}
@@ -50,7 +59,7 @@ func (c *Controller) syncAcceptedDeploy(deploy *latticev1.Deploy) error {
 
 		services, err := c.systemServices(deploy, build)
 		if err != nil {
-			return err
+			return fmt.Errorf("error getting services for %v: %v", build.Description(c.namespacePrefix), err)
 		}
 
 		_, err = c.updateSystem(system, services)
@@ -62,6 +71,6 @@ func (c *Controller) syncAcceptedDeploy(deploy *latticev1.Deploy) error {
 		return err
 
 	default:
-		return fmt.Errorf("SystemBuild %v/%v in unexpected state %v", build.Namespace, build.Name, build.Status.State)
+		return fmt.Errorf("%v in unexpected state %v", build.Description(c.namespacePrefix), build.Status.State)
 	}
 }

@@ -8,6 +8,7 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 
 	"github.com/deckarep/golang-set"
+	"github.com/golang/glog"
 )
 
 func (c *Controller) retireEpochs(nodePool *latticev1.NodePool, retireCurrent bool) (*latticev1.NodePool, error) {
@@ -24,13 +25,14 @@ func (c *Controller) retireEpochs(nodePool *latticev1.NodePool, retireCurrent bo
 			}
 		}
 
-		// If the node pool can be retired, ask the cloud provider to deprovision it.
-		retired, err := c.isEpochRetired(nodePool, epoch)
+		// If the node pool can be retireable, ask the cloud provider to deprovision it.
+		retireable, reason, err := c.isEpochRetired(nodePool, epoch)
 		if err != nil {
-			return nil, fmt.Errorf("error trying to check if %v epoch %v is retired: %v", nodePool.Description(c.namespacePrefix), epoch, err)
+			return nil, fmt.Errorf("error trying to check if %v epoch %v is retireable: %v", nodePool.Description(c.namespacePrefix), epoch, err)
 		}
 
-		if !retired {
+		if !retireable {
+			glog.V(4).Infof("%v epoch %v is not able to be retireable: %v", nodePool.Description(c.namespacePrefix), epoch, reason)
 			continue
 		}
 
@@ -55,20 +57,20 @@ func (c *Controller) retireEpochs(nodePool *latticev1.NodePool, retireCurrent bo
 	return c.updateNodePoolStatus(nodePool, epochs)
 }
 
-func (c *Controller) isEpochRetired(nodePool *latticev1.NodePool, epoch latticev1.NodePoolEpoch) (bool, error) {
+func (c *Controller) isEpochRetired(nodePool *latticev1.NodePool, epoch latticev1.NodePoolEpoch) (bool, string, error) {
 	// Check to see if any workload is still possibly using the epoch
 	serviceRunning, err := c.serviceRunningOnEpoch(nodePool, epoch)
 	if err != nil {
-		return false, err
+		return false, "", err
 	}
 
 	if serviceRunning {
-		return false, nil
+		return false, "services still potentially running", nil
 	}
 
 	// TODO: check for jobs when we have them
 
-	return true, nil
+	return true, "", nil
 }
 
 func (c *Controller) serviceRunningOnEpoch(nodePool *latticev1.NodePool, epoch latticev1.NodePoolEpoch) (bool, error) {

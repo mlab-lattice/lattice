@@ -32,7 +32,7 @@ func (c *Controller) syncInProgressDeploy(deploy *latticev1.Deploy) error {
 		state = latticev1.DeployStateFailed
 
 	default:
-		return fmt.Errorf("System %v/%v in unexpected state %v", system.Namespace, system.Name, system.Status.State)
+		return fmt.Errorf("%v in unexpected state %v", system.Description(), system.Status.State)
 	}
 
 	deploy, err = c.updateDeployStatus(deploy, state, "")

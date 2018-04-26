@@ -41,6 +41,10 @@ type Service struct {
 	Status            ServiceStatus `json:"status,omitempty"`
 }
 
+func (s *Service) Deleted() bool {
+	return s.DeletionTimestamp != nil
+}
+
 func (s *Service) Stable() bool {
 	return s.UpdateProcessed() && s.Status.State == ServiceStateStable
 }

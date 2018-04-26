@@ -1,6 +1,7 @@
 package systemlifecycle
 
 import (
+	"fmt"
 	"reflect"
 
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
@@ -24,5 +25,10 @@ func (c *Controller) updateDeployStatus(
 	deploy = deploy.DeepCopy()
 	deploy.Status = status
 
-	return c.latticeClient.LatticeV1().Deploys(deploy.Namespace).UpdateStatus(deploy)
+	result, err := c.latticeClient.LatticeV1().Deploys(deploy.Namespace).UpdateStatus(deploy)
+	if err != nil {
+		return nil, fmt.Errorf("error updating %v status: %v", deploy.Description(c.namespacePrefix), err)
+	}
+
+	return result, nil
 }

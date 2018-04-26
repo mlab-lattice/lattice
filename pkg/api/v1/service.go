@@ -10,6 +10,8 @@ type (
 
 const (
 	ServiceStatePending  ServiceState = "pending"
+	ServiceStateDeleting ServiceState = "deleting"
+
 	ServiceStateScaling  ServiceState = "scaling"
 	ServiceStateUpdating ServiceState = "updating"
 	ServiceStateStable   ServiceState = "stable"

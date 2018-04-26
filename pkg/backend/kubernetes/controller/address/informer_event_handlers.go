@@ -130,7 +130,7 @@ func (c *Controller) handleAddressDelete(obj interface{}) {
 }
 
 func (c *Controller) handleAddressEvent(address *latticev1.Address, verb string) {
-	glog.V(5).Info("%v %v", address.Description(c.namespacePrefix), verb)
+	glog.V(4).Infof("%v %v", address.Description(c.namespacePrefix), verb)
 	c.enqueue(address)
 }
 
@@ -175,7 +175,7 @@ func (c *Controller) handleServiceDelete(obj interface{}) {
 }
 
 func (c *Controller) handleServiceEvent(service *latticev1.Service, verb string) {
-	glog.V(5).Info("%v %v", service.Description(c.namespacePrefix), verb)
+	glog.V(4).Infof("%v %v", service.Description(c.namespacePrefix), verb)
 
 	path, err := service.PathLabel()
 	if err != nil {

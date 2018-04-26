@@ -107,7 +107,7 @@ func (c *Controller) handleNodePoolDelete(obj interface{}) {
 }
 
 func (c *Controller) handleNodePoolEvent(nodePool *latticev1.NodePool, verb string) {
-	glog.V(5).Info("%v %v", nodePool.Description(c.namespacePrefix), verb)
+	glog.V(4).Infof("%v %v", nodePool.Description(c.namespacePrefix), verb)
 	c.enqueue(nodePool)
 }
 
@@ -152,7 +152,7 @@ func (c *Controller) handleServiceDelete(obj interface{}) {
 }
 
 func (c *Controller) handleServiceEvent(service *latticev1.Service, verb string) {
-	glog.V(5).Info("%v %v", service.Description(c.namespacePrefix), verb)
+	glog.V(4).Infof("%v %v", service.Description(c.namespacePrefix), verb)
 
 	// FIXME: for now, just enqueue every node pool when services are updated, in the future
 	//        should think about which node pools actually need to be synced
