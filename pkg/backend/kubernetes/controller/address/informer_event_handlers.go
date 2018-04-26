@@ -121,7 +121,7 @@ func (c *Controller) handleAddressDelete(obj interface{}) {
 		}
 		address, ok = tombstone.Obj.(*latticev1.Address)
 		if !ok {
-			runtime.HandleError(fmt.Errorf("tombstone contained object that is not a Service %#v", obj))
+			runtime.HandleError(fmt.Errorf("tombstone contained object that is not an address %#v", obj))
 			return
 		}
 	}
@@ -166,7 +166,7 @@ func (c *Controller) handleServiceDelete(obj interface{}) {
 		}
 		service, ok = tombstone.Obj.(*latticev1.Service)
 		if !ok {
-			runtime.HandleError(fmt.Errorf("tombstone contained object that is not a Service %#v", obj))
+			runtime.HandleError(fmt.Errorf("tombstone contained object that is not a service %#v", obj))
 			return
 		}
 	}

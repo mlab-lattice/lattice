@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
-	kubeconstants "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/constants"
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 
@@ -15,8 +14,7 @@ import (
 func (kb *KubernetesBackend) CreateSystem(id v1.SystemID, definitionURL string) (*v1.System, error) {
 	system := &latticev1.System{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:       string(id),
-			Finalizers: []string{kubeconstants.KubeFinalizerSystemController},
+			Name: string(id),
 		},
 		Spec: latticev1.SystemSpec{
 			DefinitionURL: definitionURL,

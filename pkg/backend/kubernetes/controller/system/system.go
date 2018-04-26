@@ -4,15 +4,14 @@ import (
 	"fmt"
 	"reflect"
 
-	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/constants"
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
+	kubeutil "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/kubernetes"
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 )
 
 func (c *Controller) syncSystemStatus(
 	system *latticev1.System,
 	services map[tree.NodePath]latticev1.SystemStatusService,
-	deletedServices []string,
 ) error {
 	hasFailedService := false
 	hasUpdatingService := false
@@ -29,7 +28,7 @@ func (c *Controller) syncSystemStatus(
 			continue
 		}
 
-		if status.State == latticev1.ServiceStateUpdating || status.State == latticev1.ServiceStatePending {
+		if status.State == latticev1.ServiceStateUpdating || status.State == latticev1.ServiceStatePending || status.State == latticev1.ServiceStateDeleting {
 			hasUpdatingService = true
 			continue
 		}
@@ -40,7 +39,7 @@ func (c *Controller) syncSystemStatus(
 		}
 
 		if status.State != latticev1.ServiceStateStable {
-			return fmt.Errorf("service %v (%v) had unexpected state: %v", path.ToDomain(), system.Name, status.State)
+			return fmt.Errorf("service %v (%v) had unexpected state: %v", path.ToDomain(), system.Description(), status.State)
 		}
 	}
 
@@ -52,7 +51,7 @@ func (c *Controller) syncSystemStatus(
 	}
 
 	// An updating status takes priority over a scaling status
-	if hasUpdatingService || len(deletedServices) != 0 {
+	if hasUpdatingService {
 		state = latticev1.SystemStateUpdating
 	}
 
@@ -84,7 +83,32 @@ func (c *Controller) updateSystemStatus(
 	system = system.DeepCopy()
 	system.Status = status
 
-	return c.latticeClient.LatticeV1().Systems(system.Namespace).UpdateStatus(system)
+	result, err := c.latticeClient.LatticeV1().Systems(system.Namespace).UpdateStatus(system)
+	if err != nil {
+		return nil, fmt.Errorf("error updating %v status: %v", system.Description(), err)
+	}
+
+	return result, nil
+}
+
+func (c *Controller) addFinalizer(system *latticev1.System) (*latticev1.System, error) {
+	// Check to see if the finalizer already exists. If so nothing needs to be done.
+	for _, finalizer := range system.Finalizers {
+		if finalizer == kubeutil.SystemControllerFinalizer {
+			return system, nil
+		}
+	}
+
+	// Copy so we don't mutate the shared cache
+	system = system.DeepCopy()
+	system.Finalizers = append(system.Finalizers, kubeutil.SystemControllerFinalizer)
+
+	result, err := c.latticeClient.LatticeV1().Systems(system.Namespace).Update(system)
+	if err != nil {
+		return nil, fmt.Errorf("error adding %v finalizer: %v", system.Description(), err)
+	}
+
+	return result, nil
 }
 
 func (c *Controller) removeFinalizer(system *latticev1.System) (*latticev1.System, error) {
@@ -92,7 +116,7 @@ func (c *Controller) removeFinalizer(system *latticev1.System) (*latticev1.Syste
 	var finalizers []string
 	found := false
 	for _, finalizer := range system.Finalizers {
-		if finalizer == constants.KubeFinalizerSystemController {
+		if finalizer == kubeutil.SystemControllerFinalizer {
 			found = true
 			continue
 		}
@@ -108,5 +132,10 @@ func (c *Controller) removeFinalizer(system *latticev1.System) (*latticev1.Syste
 	system = system.DeepCopy()
 	system.Finalizers = finalizers
 
-	return c.latticeClient.LatticeV1().Systems(system.Namespace).Update(system)
+	result, err := c.latticeClient.LatticeV1().Systems(system.Namespace).Update(system)
+	if err != nil {
+		return nil, fmt.Errorf("error removing finalizer from %v: %v", system.Description(), err)
+	}
+
+	return result, nil
 }

@@ -154,6 +154,8 @@ type ServiceState string
 
 const (
 	ServiceStatePending  ServiceState = ""
+	ServiceStateDeleting ServiceState = "deleting"
+
 	ServiceStateScaling  ServiceState = "scaling"
 	ServiceStateUpdating ServiceState = "updating"
 	ServiceStateStable   ServiceState = "stable"

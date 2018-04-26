@@ -98,7 +98,7 @@ func (c *Controller) handleNodePoolDelete(obj interface{}) {
 		}
 		nodePool, ok = tombstone.Obj.(*latticev1.NodePool)
 		if !ok {
-			runtime.HandleError(fmt.Errorf("tombstone contained object that is not a Service %#v", obj))
+			runtime.HandleError(fmt.Errorf("tombstone contained object that is not a node pool %#v", obj))
 			return
 		}
 	}
@@ -143,7 +143,7 @@ func (c *Controller) handleServiceDelete(obj interface{}) {
 		}
 		service, ok = tombstone.Obj.(*latticev1.Service)
 		if !ok {
-			runtime.HandleError(fmt.Errorf("tombstone contained object that is not a Service %#v", obj))
+			runtime.HandleError(fmt.Errorf("tombstone contained object that is not a service %#v", obj))
 			return
 		}
 	}

@@ -6,7 +6,6 @@ go_library(
         "affinity.go",
         "config.go",
         "control_plane.go",
-        "finalizer.go",
         "label.go",
         "namespace.go",
         "node_selector.go",

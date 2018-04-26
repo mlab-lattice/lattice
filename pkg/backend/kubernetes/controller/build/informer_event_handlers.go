@@ -1,9 +1,14 @@
 package build
 
 import (
+	"fmt"
+
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/util/runtime"
+
+	"k8s.io/client-go/tools/cache"
 
 	"github.com/deckarep/golang-set"
 	"github.com/golang/glog"
@@ -26,7 +31,24 @@ func (c *Controller) handleBuildUpdate(old, cur interface{}) {
 }
 
 func (c *Controller) handleBuildDelete(obj interface{}) {
-	build := obj.(*latticev1.Build)
+	build, ok := obj.(*latticev1.Build)
+
+	// When a delete is dropped, the relist will notice a pod in the store not
+	// in the list, leading to the insertion of a tombstone object which contains
+	// the deleted key/value.
+	if !ok {
+		tombstone, ok := obj.(cache.DeletedFinalStateUnknown)
+		if !ok {
+			runtime.HandleError(fmt.Errorf("couldn't get object from tombstone %#v", obj))
+			return
+		}
+		build, ok = tombstone.Obj.(*latticev1.Build)
+		if !ok {
+			runtime.HandleError(fmt.Errorf("tombstone contained object that is not a build %#v", obj))
+			return
+		}
+	}
+
 	c.handleBuildEvent(build, "deleted")
 }
 

@@ -122,7 +122,7 @@ func (c *Controller) handleServiceDelete(obj interface{}) {
 		}
 		service, ok = tombstone.Obj.(*latticev1.Service)
 		if !ok {
-			runtime.HandleError(fmt.Errorf("tombstone contained object that is not a Service %#v", obj))
+			runtime.HandleError(fmt.Errorf("tombstone contained object that is not a service %#v", obj))
 			return
 		}
 	}
@@ -167,7 +167,7 @@ func (c *Controller) handleNodePoolDelete(obj interface{}) {
 		}
 		nodePool, ok = tombstone.Obj.(*latticev1.NodePool)
 		if !ok {
-			runtime.HandleError(fmt.Errorf("tombstone contained object that is not a Deployment %#v", obj))
+			runtime.HandleError(fmt.Errorf("tombstone contained object that is not a node pool %#v", obj))
 			return
 		}
 	}
@@ -226,7 +226,7 @@ func (c *Controller) handleDeploymentDelete(obj interface{}) {
 		}
 		deployment, ok = tombstone.Obj.(*appsv1.Deployment)
 		if !ok {
-			runtime.HandleError(fmt.Errorf("tombstone contained object that is not a Deployment %#v", obj))
+			runtime.HandleError(fmt.Errorf("tombstone contained object that is not a deployment %#v", obj))
 			return
 		}
 	}
@@ -268,7 +268,7 @@ func (c *Controller) handlePodDelete(obj interface{}) {
 		}
 		pod, ok = tombstone.Obj.(*corev1.Pod)
 		if !ok {
-			runtime.HandleError(fmt.Errorf("tombstone contained object that is not a Deployment %#v", obj))
+			runtime.HandleError(fmt.Errorf("tombstone contained object that is not a pod %#v", obj))
 			return
 		}
 	}
@@ -327,7 +327,7 @@ func (c *Controller) handleKubeServiceDelete(obj interface{}) {
 		}
 		kubeService, ok = tombstone.Obj.(*corev1.Service)
 		if !ok {
-			runtime.HandleError(fmt.Errorf("tombstone contained object that is not a Service %#v", obj))
+			runtime.HandleError(fmt.Errorf("tombstone contained object that is not a kube service %#v", obj))
 			return
 		}
 	}
@@ -387,7 +387,7 @@ func (c *Controller) handleAddressDelete(obj interface{}) {
 		}
 		address, ok = tombstone.Obj.(*latticev1.Address)
 		if !ok {
-			runtime.HandleError(fmt.Errorf("tombstone contained object that is not a Service %#v", obj))
+			runtime.HandleError(fmt.Errorf("tombstone contained object that is not an address %#v", obj))
 			return
 		}
 	}
