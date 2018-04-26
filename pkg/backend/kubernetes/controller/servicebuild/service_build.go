@@ -48,9 +48,12 @@ func (c *Controller) updateServiceBuildStatus(
 }
 
 func (c *Controller) deleteServiceBuild(build *latticev1.ServiceBuild) error {
-	backgroundDelete := metav1.DeletePropagationBackground
+	// don't attempt to delete dependants of the service build
+	// the service build has a finalizer that will remove its ownerReferences
+	// and then the component builds will sort themselves out
+	orphanDelete := metav1.DeletePropagationOrphan
 	deleteOptions := &metav1.DeleteOptions{
-		PropagationPolicy: &backgroundDelete,
+		PropagationPolicy: &orphanDelete,
 	}
 
 	err := c.latticeClient.LatticeV1().ServiceBuilds(build.Namespace).Delete(build.Name, deleteOptions)

@@ -90,7 +90,7 @@ func NewController(
 	componentBuildInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    c.handleComponentBuildAdd,
 		UpdateFunc: c.handleComponentBuildUpdate,
-		DeleteFunc: c.handleComponentBuildDelete,
+		// nothing to be done for deleted component builds
 	})
 	c.componentBuildLister = componentBuildInformer.Lister()
 	c.componentBuildListerSynced = componentBuildInformer.Informer().HasSynced
@@ -216,6 +216,17 @@ func (c *Controller) syncComponentBuild(key string) error {
 	}
 	if err != nil {
 		return err
+	}
+
+	// nothing to do if the component build is being deleted
+	// TODO: should we clean up container artifacts as well?
+	if build.DeletionTimestamp != nil {
+		glog.V(5).Infof("%v is being deleted", build.Description(c.namespacePrefix))
+		return nil
+	}
+
+	if isOrphaned(build) {
+		return c.syncOrphanedComponentBuild(build)
 	}
 
 	stateInfo, err := c.calculateState(build)

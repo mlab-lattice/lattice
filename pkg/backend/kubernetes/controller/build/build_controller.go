@@ -180,6 +180,8 @@ func (c *Controller) syncSystemBuild(key string) error {
 		return err
 	}
 
+	// TODO: when adding delete build to the api, make sure to make it an orphaning delete
+	// see pkg/backend/kubernetes/controller/servicebuild/service_build.go:deleteServiceBuild for reasoning
 	if build.DeletionTimestamp != nil {
 		return c.syncDeletedBuild(build)
 	}

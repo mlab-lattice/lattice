@@ -88,7 +88,7 @@ func (c *Controller) addOwnerReference(build *latticev1.ServiceBuild, componentB
 	result, err := c.latticeClient.LatticeV1().ComponentBuilds(componentBuild.Namespace).Update(componentBuild)
 	if err != nil {
 		err = fmt.Errorf(
-			"error adding owner reference (owner: %v, ownee: %v): %v",
+			"error adding owner reference (owner: %v, dependent: %v): %v",
 			build.Description(c.namespacePrefix),
 			componentBuild.Description(c.namespacePrefix),
 			err,
@@ -122,7 +122,7 @@ func (c *Controller) removeOwnerReference(build *latticev1.ServiceBuild, compone
 	result, err := c.latticeClient.LatticeV1().ComponentBuilds(componentBuild.Namespace).Update(componentBuild)
 	if err != nil {
 		err = fmt.Errorf(
-			"error removing owner reference (owner: %v, ownee: %v): %v",
+			"error removing owner reference (owner: %v, dependent: %v): %v",
 			build.Description(c.namespacePrefix),
 			componentBuild.Description(c.namespacePrefix),
 			err,

@@ -104,7 +104,7 @@ func (c *Controller) addOwnerReference(build *latticev1.Build, serviceBuild *lat
 	result, err := c.latticeClient.LatticeV1().ServiceBuilds(serviceBuild.Namespace).Update(serviceBuild)
 	if err != nil {
 		err = fmt.Errorf(
-			"error adding owner reference (owner: %v, ownee: %v): %v",
+			"error adding owner reference (owner: %v, dependent: %v): %v",
 			build.Description(c.namespacePrefix),
 			serviceBuild.Description(c.namespacePrefix),
 			err,
@@ -138,7 +138,7 @@ func (c *Controller) removeOwnerReference(build *latticev1.Build, serviceBuild *
 	result, err := c.latticeClient.LatticeV1().ServiceBuilds(serviceBuild.Namespace).Update(serviceBuild)
 	if err != nil {
 		err = fmt.Errorf(
-			"error removing owner reference (owner: %v, ownee: %v): %v",
+			"error removing owner reference (owner: %v, dependent: %v): %v",
 			build.Description(c.namespacePrefix),
 			serviceBuild.Description(c.namespacePrefix),
 			err,

@@ -68,7 +68,7 @@ func (c *Controller) handleComponentBuildAdd(obj interface{}) {
 	build := obj.(*latticev1.ComponentBuild)
 
 	if build.DeletionTimestamp != nil {
-		c.handleComponentBuildDelete(build)
+		// nothing to be done for deleted component builds
 		return
 	}
 
@@ -78,11 +78,6 @@ func (c *Controller) handleComponentBuildAdd(obj interface{}) {
 func (c *Controller) handleComponentBuildUpdate(old, cur interface{}) {
 	build := cur.(*latticev1.ComponentBuild)
 	c.handleComponentBuildEvent(build, "updated")
-}
-
-func (c *Controller) handleComponentBuildDelete(obj interface{}) {
-	build := obj.(*latticev1.ComponentBuild)
-	c.handleComponentBuildEvent(build, "deleted")
 }
 
 func (c *Controller) handleComponentBuildEvent(build *latticev1.ComponentBuild, verb string) {
