@@ -23,8 +23,10 @@ type Service struct {
 	FailureMessage *string      `json:"failureMessage,omitempty"`
 	Reason         *string      `json:"reason,omitempty"`
 
-	UpdatedInstances int32 `json:"updatedInstances"`
-	StaleInstances   int32 `json:"staleInstances"`
+	AvailableInstances   int32 `json:"availableInstances"`
+	UpdatedInstances     int32 `json:"updatedInstances"`
+	StaleInstances       int32 `json:"staleInstances"`
+	TerminatingInstances int32 `json:"terminatingInstances"`
 
 	Ports map[int32]string
 }

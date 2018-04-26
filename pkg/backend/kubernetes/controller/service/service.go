@@ -93,8 +93,10 @@ func (c *Controller) syncServiceStatus(
 		state,
 		deploymentStatus.Reason,
 		failureInfo,
+		deploymentStatus.AvailableInstances,
 		deploymentStatus.UpdatedInstances,
 		deploymentStatus.StaleInstances,
+		deploymentStatus.TerminatingInstances,
 		address.Status.Ports,
 	)
 }
@@ -146,7 +148,7 @@ func (c *Controller) updateServiceStatus(
 	state latticev1.ServiceState,
 	reason *string,
 	failureInfo *latticev1.ServiceStatusFailureInfo,
-	updatedInstances, staleInstances int32,
+	availableInstances, updatedInstances, staleInstances, terminatingInstances int32,
 	ports map[int32]string,
 ) (*latticev1.Service, error) {
 	status := latticev1.ServiceStatus{
@@ -156,9 +158,12 @@ func (c *Controller) updateServiceStatus(
 		Reason:      reason,
 		FailureInfo: failureInfo,
 
-		UpdatedInstances: updatedInstances,
-		StaleInstances:   staleInstances,
-		Ports:            ports,
+		AvailableInstances:   availableInstances,
+		UpdatedInstances:     updatedInstances,
+		StaleInstances:       staleInstances,
+		TerminatingInstances: terminatingInstances,
+
+		Ports: ports,
 	}
 
 	if reflect.DeepEqual(service.Status, status) {

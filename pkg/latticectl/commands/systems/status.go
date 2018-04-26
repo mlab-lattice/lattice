@@ -181,9 +181,11 @@ func SystemPrinter(system *v1.System, format printer.Format) printer.Interface {
 	var p printer.Interface
 	switch format {
 	case printer.FormatDefault, printer.FormatTable:
-		headers := []string{"Service", "State", "Updated", "Stale", "Addresses", "Info"}
+		headers := []string{"Service", "State", "Available", "Updated", "Stale", "Terminating", "Ports", "Info"}
 
 		headerColors := []tw.Colors{
+			{tw.Bold},
+			{tw.Bold},
 			{tw.Bold},
 			{tw.Bold},
 			{tw.Bold},
@@ -199,11 +201,15 @@ func SystemPrinter(system *v1.System, format printer.Format) printer.Interface {
 			{},
 			{},
 			{},
+			{},
+			{},
 		}
 
 		columnAlignment := []int{
 			tw.ALIGN_LEFT,
 			tw.ALIGN_LEFT,
+			tw.ALIGN_RIGHT,
+			tw.ALIGN_RIGHT,
 			tw.ALIGN_RIGHT,
 			tw.ALIGN_RIGHT,
 			tw.ALIGN_LEFT,
@@ -219,10 +225,10 @@ func SystemPrinter(system *v1.System, format printer.Format) printer.Interface {
 			// fmt.Fprint(os.Stdout, "COMPONENT STATE", component.State, "    ")
 			var infoMessage string
 
-			if service.FailureMessage == nil {
+			if service.Reason == nil {
 				infoMessage = ""
 			} else {
-				infoMessage = string(*service.FailureMessage)
+				infoMessage = string(*service.Reason)
 			}
 
 			var stateColor color.Color
@@ -243,8 +249,10 @@ func SystemPrinter(system *v1.System, format printer.Format) printer.Interface {
 			rows = append(rows, []string{
 				string(serviceName),
 				stateColor(string(service.State)),
+				fmt.Sprintf("%d", service.AvailableInstances),
 				fmt.Sprintf("%d", service.UpdatedInstances),
 				fmt.Sprintf("%d", service.StaleInstances),
+				fmt.Sprintf("%d", service.TerminatingInstances),
 				strings.Join(addresses, ","),
 				string(infoMessage),
 			})

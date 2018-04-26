@@ -130,9 +130,11 @@ func servicePrinter(service *v1.Service, format printer.Format) printer.Interfac
 	var p printer.Interface
 	switch format {
 	case printer.FormatDefault, printer.FormatTable:
-		headers := []string{"Service", "State", "Updated", "Stale", "Addresses", "Info"}
+		headers := []string{"Service", "State", "Available", "Updated", "Stale", "Terminating", "Addresses", "Info"}
 
 		headerColors := []tw.Colors{
+			{tw.Bold},
+			{tw.Bold},
 			{tw.Bold},
 			{tw.Bold},
 			{tw.Bold},
@@ -148,11 +150,15 @@ func servicePrinter(service *v1.Service, format printer.Format) printer.Interfac
 			{},
 			{},
 			{},
+			{},
+			{},
 		}
 
 		columnAlignment := []int{
 			tw.ALIGN_LEFT,
 			tw.ALIGN_LEFT,
+			tw.ALIGN_RIGHT,
+			tw.ALIGN_RIGHT,
 			tw.ALIGN_RIGHT,
 			tw.ALIGN_RIGHT,
 			tw.ALIGN_LEFT,
@@ -172,10 +178,10 @@ func servicePrinter(service *v1.Service, format printer.Format) printer.Interfac
 		}
 
 		var info string
-		if service.FailureMessage == nil {
+		if service.Reason == nil {
 			info = ""
 		} else {
-			info = *service.FailureMessage
+			info = *service.Reason
 		}
 
 		var addresses []string
@@ -186,8 +192,10 @@ func servicePrinter(service *v1.Service, format printer.Format) printer.Interfac
 		rows = append(rows, []string{
 			string(service.Path),
 			stateColor(string(service.State)),
+			fmt.Sprintf("%d", service.AvailableInstances),
 			fmt.Sprintf("%d", service.UpdatedInstances),
 			fmt.Sprintf("%d", service.StaleInstances),
+			fmt.Sprintf("%d", service.TerminatingInstances),
 			strings.Join(addresses, ","),
 			string(info),
 		})

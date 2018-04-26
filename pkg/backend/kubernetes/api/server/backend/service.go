@@ -77,8 +77,10 @@ func (kb *KubernetesBackend) transformService(path tree.NodePath, status *lattic
 		State:  state,
 		Reason: status.Reason,
 
-		UpdatedInstances: status.UpdatedInstances,
-		StaleInstances:   status.StaleInstances,
+		AvailableInstances:   status.AvailableInstances,
+		UpdatedInstances:     status.UpdatedInstances,
+		StaleInstances:       status.StaleInstances,
+		TerminatingInstances: status.TerminatingInstances,
 
 		Ports: status.Ports,
 	}

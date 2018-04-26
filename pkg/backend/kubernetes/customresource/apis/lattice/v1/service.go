@@ -142,8 +142,10 @@ type ServiceStatus struct {
 	Reason      *string                   `json:"reason"`
 	FailureInfo *ServiceStatusFailureInfo `json:"failureInfo,omitempty"`
 
-	UpdatedInstances int32 `json:"updatedInstances"`
-	StaleInstances   int32 `json:"staleInstances"`
+	AvailableInstances   int32 `json:"availableInstances"`
+	UpdatedInstances     int32 `json:"updatedInstances"`
+	StaleInstances       int32 `json:"staleInstances"`
+	TerminatingInstances int32 `json:"terminatingInstances"`
 
 	Ports map[int32]string `json:"ports"`
 }
