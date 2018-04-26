@@ -29,8 +29,8 @@ import (
 )
 
 type Controller struct {
-	syncHandler    func(bKey string) error
-	enqueueService func(cb *latticev1.Service)
+	syncHandler func(bKey string) error
+	enqueue     func(cb *latticev1.Service)
 
 	namespacePrefix string
 	latticeID       v1.LatticeID
@@ -107,7 +107,7 @@ func NewController(
 	}
 
 	sc.syncHandler = sc.syncService
-	sc.enqueueService = sc.enqueue
+	sc.enqueue = sc.enqueueService
 
 	configInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		// It's assumed there is always one and only one config object.
@@ -177,12 +177,13 @@ func (c *Controller) Run(workers int, stopCh <-chan struct{}) {
 	// make sure the work queue is shutdown which will trigger workers to end
 	defer c.queue.ShutDown()
 
-	glog.Infof("Starting service controller")
-	defer glog.Infof("Shutting down service controller")
+	glog.Infof("starting service controller")
+	defer glog.Infof("shutting down service controller")
 
 	// wait for your secondary caches to fill before starting your work
 	if !cache.WaitForCacheSync(
 		stopCh,
+		c.configListerSynced,
 		c.serviceListerSynced,
 		c.nodePoolListerSynced,
 		c.deploymentListerSynced,
@@ -193,10 +194,12 @@ func (c *Controller) Run(workers int, stopCh <-chan struct{}) {
 		return
 	}
 
-	glog.V(4).Info("Caches synced. Waiting for config to be set")
+	glog.V(4).Info("caches synced, waiting for config to be set")
 
 	// wait for config to be set
 	<-c.configSetChan
+
+	glog.V(4).Info("config set")
 
 	// start up your worker threads based on threadiness.  Some controllers
 	// have multiple kinds of workers
@@ -210,7 +213,7 @@ func (c *Controller) Run(workers int, stopCh <-chan struct{}) {
 	<-stopCh
 }
 
-func (c *Controller) enqueue(svc *latticev1.Service) {
+func (c *Controller) enqueueService(svc *latticev1.Service) {
 	key, err := cache.DeletionHandlingMetaNamespaceKeyFunc(svc)
 	if err != nil {
 		runtime.HandleError(fmt.Errorf("couldn't get key for object %#v: %v", svc, err))
@@ -271,9 +274,9 @@ func (c *Controller) processNextWorkItem() bool {
 func (c *Controller) syncService(key string) error {
 	glog.Flush()
 	startTime := time.Now()
-	glog.V(4).Infof("Started syncing Service %q (%v)", key, startTime)
+	glog.V(4).Infof("started syncing service %q (%v)", key, startTime)
 	defer func() {
-		glog.V(4).Infof("Finished syncing Service %q (%v)", key, time.Now().Sub(startTime))
+		glog.V(4).Infof("finished syncing service %q (%v)", key, time.Now().Sub(startTime))
 	}()
 
 	namespace, name, err := cache.SplitMetaNamespaceKey(key)
@@ -284,7 +287,7 @@ func (c *Controller) syncService(key string) error {
 	service, err := c.serviceLister.Services(namespace).Get(name)
 	if err != nil {
 		if errors.IsNotFound(err) {
-			glog.V(2).Infof("Service %v has been deleted", key)
+			glog.V(2).Infof("service %v has been deleted", key)
 			return nil
 		}
 

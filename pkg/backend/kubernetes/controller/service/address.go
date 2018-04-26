@@ -50,7 +50,13 @@ func (c *Controller) updateAddressSpec(address *latticev1.Address, spec latticev
 	address = address.DeepCopy()
 	address.Spec = spec
 
-	return c.latticeClient.LatticeV1().Addresses(address.Namespace).Update(address)
+	result, err := c.latticeClient.LatticeV1().Addresses(address.Namespace).Update(address)
+	if err != nil {
+		err := fmt.Errorf("error trying to update %v: %v", address.Description(c.namespacePrefix), err)
+		return nil, err
+	}
+
+	return result, nil
 }
 
 func (c *Controller) createNewAddress(service *latticev1.Service) (*latticev1.Address, error) {
@@ -59,7 +65,13 @@ func (c *Controller) createNewAddress(service *latticev1.Service) (*latticev1.Ad
 		return nil, err
 	}
 
-	return c.latticeClient.LatticeV1().Addresses(service.Namespace).Create(serviceAddress)
+	result, err := c.latticeClient.LatticeV1().Addresses(service.Namespace).Create(serviceAddress)
+	if err != nil {
+		err := fmt.Errorf("error trying to create new address for %v: %v", service.Description(c.namespacePrefix), err)
+		return nil, err
+	}
+
+	return result, nil
 }
 
 func (c *Controller) newServiceAddress(service *latticev1.Service) (*latticev1.Address, error) {
@@ -70,6 +82,7 @@ func (c *Controller) newServiceAddress(service *latticev1.Service) (*latticev1.A
 
 	path, err := service.PathLabel()
 	if err != nil {
+		err := fmt.Errorf("error getting %v path label: %v", service.Description(c.namespacePrefix), err)
 		return nil, err
 	}
 
@@ -91,6 +104,7 @@ func (c *Controller) newServiceAddress(service *latticev1.Service) (*latticev1.A
 func (c *Controller) addressSpec(service *latticev1.Service) (latticev1.AddressSpec, error) {
 	path, err := service.PathLabel()
 	if err != nil {
+		err := fmt.Errorf("error getting %v path label: %v", service.Description(c.namespacePrefix), err)
 		return latticev1.AddressSpec{}, err
 	}
 
@@ -123,6 +137,7 @@ func (c *Controller) cachedAddress(service *latticev1.Service) (*latticev1.Addre
 
 	addresses, err := c.addressLister.Addresses(service.Namespace).List(selector)
 	if err != nil {
+		err := fmt.Errorf("error tyring to get cached address for %v: %v", service.Description(c.namespacePrefix), err)
 		return nil, err
 	}
 
@@ -131,7 +146,7 @@ func (c *Controller) cachedAddress(service *latticev1.Service) (*latticev1.Addre
 	}
 
 	if len(addresses) > 1 {
-		return nil, fmt.Errorf("found multiple addresses for %v", service.Description(c.namespacePrefix))
+		return nil, fmt.Errorf("found multiple cached addresses for %v", service.Description(c.namespacePrefix))
 	}
 
 	return addresses[0], nil
@@ -147,6 +162,7 @@ func (c *Controller) quorumAddress(service *latticev1.Service) (*latticev1.Addre
 
 	addressList, err := c.latticeClient.LatticeV1().Addresses(service.Namespace).List(metav1.ListOptions{LabelSelector: selector.String()})
 	if err != nil {
+		err := fmt.Errorf("error tyring to get address for %v: %v", service.Description(c.namespacePrefix), err)
 		return nil, err
 	}
 

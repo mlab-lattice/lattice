@@ -21,26 +21,13 @@ import (
 
 func (c *Controller) handleConfigAdd(obj interface{}) {
 	config := obj.(*latticev1.Config)
-	glog.V(4).Infof("Adding Config %s", config.Name)
+	err := c.handleConfigEvent(config, "added")
+	if err != nil {
+		return
+	}
 
 	c.configLock.Lock()
 	defer c.configLock.Unlock()
-	c.config = config.DeepCopy().Spec
-
-	err := c.newCloudProvider()
-	if err != nil {
-		glog.Errorf("error creating service mesh: %v", err)
-		// FIXME: what to do here?
-		return
-	}
-
-	err = c.newServiceMesh()
-	if err != nil {
-		glog.Errorf("error creating service mesh: %v", err)
-		// FIXME: what to do here?
-		return
-	}
-
 	if !c.configSet {
 		c.configSet = true
 		close(c.configSetChan)
@@ -48,27 +35,32 @@ func (c *Controller) handleConfigAdd(obj interface{}) {
 }
 
 func (c *Controller) handleConfigUpdate(old, cur interface{}) {
-	oldConfig := old.(*latticev1.Config)
-	curConfig := cur.(*latticev1.Config)
-	glog.V(4).Infof("Updating Config %s", oldConfig.Name)
+	config := cur.(*latticev1.Config)
+	c.handleConfigEvent(config, "updated")
+}
+
+func (c *Controller) handleConfigEvent(config *latticev1.Config, verb string) error {
+	glog.V(4).Infof("config %v/%v %v", config.Namespace, config.Name, verb)
 
 	c.configLock.Lock()
 	defer c.configLock.Unlock()
-	c.config = curConfig.DeepCopy().Spec
+	c.config = config.DeepCopy().Spec
 
 	err := c.newCloudProvider()
 	if err != nil {
-		glog.Errorf("error creating service mesh: %v", err)
+		glog.Errorf("error creating cloud provider: %v", err)
 		// FIXME: what to do here?
-		return
+		return err
 	}
 
 	err = c.newServiceMesh()
 	if err != nil {
 		glog.Errorf("error creating service mesh: %v", err)
 		// FIXME: what to do here?
-		return
+		return err
 	}
+
+	return nil
 }
 
 func (c *Controller) newCloudProvider() error {
@@ -103,18 +95,25 @@ func (c *Controller) newServiceMesh() error {
 
 func (c *Controller) handleServiceAdd(obj interface{}) {
 	service := obj.(*latticev1.Service)
-	glog.V(4).Infof("%v added", service.Description(c.namespacePrefix))
-	c.enqueueService(service)
+
+	if service.DeletionTimestamp != nil {
+		// On a restart of the controller manager, it's possible for an object to
+		// show up in a state that is already pending deletion.
+		c.handleServiceDelete(service)
+		return
+	}
+
+	c.handleServiceEvent(service, "added")
 }
 
 func (c *Controller) handleServiceUpdate(old, cur interface{}) {
 	service := cur.(*latticev1.Service)
-	glog.V(4).Infof("%v updated", service.Description(c.namespacePrefix))
-	c.enqueueService(service)
+	c.handleServiceEvent(service, "updated")
 }
 
 func (c *Controller) handleServiceDelete(obj interface{}) {
 	service, ok := obj.(*latticev1.Service)
+
 	if !ok {
 		tombstone, ok := obj.(cache.DeletedFinalStateUnknown)
 		if !ok {
@@ -127,12 +126,25 @@ func (c *Controller) handleServiceDelete(obj interface{}) {
 			return
 		}
 	}
-	glog.V(4).Infof("%v delete", service.Description(c.namespacePrefix))
-	c.enqueueService(service)
+
+	c.handleServiceEvent(service, "deleted")
+}
+
+func (c *Controller) handleServiceEvent(service *latticev1.Service, verb string) {
+	glog.V(4).Infof("%v %v", service.Description(c.namespacePrefix), verb)
+	c.enqueue(service)
 }
 
 func (c *Controller) handleNodePoolAdd(obj interface{}) {
 	nodePool := obj.(*latticev1.NodePool)
+
+	if nodePool.DeletionTimestamp != nil {
+		// On a restart of the controller manager, it's possible for an object to
+		// show up in a state that is already pending deletion.
+		c.handleNodePoolDelete(nodePool)
+		return
+	}
+
 	c.handleNodePoolEvent(nodePool, "added")
 }
 
@@ -173,7 +185,7 @@ func (c *Controller) handleNodePoolEvent(nodePool *latticev1.NodePool, verb stri
 	}
 
 	for _, service := range services {
-		c.enqueueService(&service)
+		c.enqueue(&service)
 	}
 }
 
@@ -234,7 +246,7 @@ func (c *Controller) handleDeploymentEvent(deployment *appsv1.Deployment, verb s
 			return
 		}
 
-		c.enqueueService(service)
+		c.enqueue(service)
 		return
 	}
 
@@ -242,8 +254,6 @@ func (c *Controller) handleDeploymentEvent(deployment *appsv1.Deployment, verb s
 	// TODO: maybe log/send warn event if there's an orphan deployment in a lattice controlled namespace
 }
 
-// handlePodDelete enqueues the Service that manages a Pod when
-// the Pod is deleted.
 func (c *Controller) handlePodDelete(obj interface{}) {
 	pod, ok := obj.(*corev1.Pod)
 
@@ -282,7 +292,7 @@ func (c *Controller) handlePodDelete(obj interface{}) {
 	}
 
 	glog.V(4).Infof("pod %s/%s deleted", pod.Namespace, pod.Name)
-	c.enqueueService(service)
+	c.enqueue(service)
 }
 
 func (c *Controller) handleKubeServiceAdd(obj interface{}) {
@@ -337,7 +347,7 @@ func (c *Controller) handleKubeServiceEvent(kubeService *corev1.Service, verb st
 			return
 		}
 
-		c.enqueueService(service)
+		c.enqueue(service)
 		return
 	}
 
@@ -397,7 +407,7 @@ func (c *Controller) handleAddressEvent(address *latticev1.Address, verb string)
 			return
 		}
 
-		c.enqueueService(service)
+		c.enqueue(service)
 		return
 	}
 

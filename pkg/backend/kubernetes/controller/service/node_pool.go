@@ -10,6 +10,7 @@ import (
 	"k8s.io/apimachinery/pkg/selection"
 
 	"github.com/satori/go.uuid"
+	"reflect"
 )
 
 // dedicatedNodePool returns a dedicated node pool for the service that has the same instanceType.
@@ -17,70 +18,75 @@ import (
 // Returns nil, nil if it could not find a matching node pool.
 func (c *Controller) dedicatedNodePool(service *latticev1.Service, instanceType string) (*latticev1.NodePool, error) {
 	// First check the cache to see if there are any matching node pools
-	cachedNodePools, err := c.cachedDedicatedNodePools(service)
+	nodePool, err := c.cachedDedicatedNodePool(service)
 	if err != nil {
 		return nil, err
 	}
 
-	// Try to find a node pool that can be synced in place.
-	// Currently, this means the instance types match
-	var matchingNodePool *latticev1.NodePool
-	for _, nodePool := range cachedNodePools {
-		if nodePool.Spec.InstanceType == instanceType {
-			if nodePool.DeletionTimestamp != nil {
-				return nil, fmt.Errorf("found %v for %v but it is being deleted", nodePool.Description(c.namespacePrefix), service.Description(c.namespacePrefix))
-			}
-
-			if matchingNodePool != nil {
-				err := fmt.Errorf(
-					"found multiple identical dedicated node pools (at least %v and %v) for service %v",
-					matchingNodePool.Description(c.namespacePrefix),
-					nodePool.Description(c.namespacePrefix),
-					service.Description(c.namespacePrefix),
-				)
-				return nil, err
-			}
-
-			matchingNodePool = nodePool
-		}
-	}
-
-	if matchingNodePool != nil {
-		return matchingNodePool, nil
+	if nodePool != nil {
+		return nodePool, nil
 	}
 
 	// Couldn't find a matching node pool in the cache. This likely means one doesn't exist,
 	// but because we shouldn't orphan node pools, we need to do a quorom read from the API
 	// to ensure a matching node pool does not exist before we can create a new one
-	nodePools, err := c.quorumDedicatedNodePools(service)
+	return c.quorumDedicatedNodePools(service)
+}
+
+func (c *Controller) cachedDedicatedNodePool(service *latticev1.Service) (*latticev1.NodePool, error) {
+	selector := labels.NewSelector()
+	requirement, err := labels.NewRequirement(latticev1.NodePoolServiceDedicatedIDLabelKey, selection.Equals, []string{service.Name})
 	if err != nil {
 		return nil, err
 	}
+	selector = selector.Add(*requirement)
 
-	for _, nodePool := range nodePools {
-		if nodePool.Spec.InstanceType == instanceType {
-			if nodePool.DeletionTimestamp != nil {
-				return nil, fmt.Errorf("found %v for %v but it is being deleted", nodePool.Description(c.namespacePrefix), service.Description(c.namespacePrefix))
-			}
+	nodePools, err := c.nodePoolLister.NodePools(service.Namespace).List(selector)
+	if err != nil {
+		err := fmt.Errorf(
+			"error trying to get cached dedicated node pool for %v: %v",
+			service.Description(c.namespacePrefix),
+			err,
+		)
+		return nil, err
+	}
 
-			if matchingNodePool != nil {
-				err := fmt.Errorf(
-					"found multiple identical dedicated node pools (at least %v and %v) for service %v",
-					matchingNodePool.Description(c.namespacePrefix),
-					nodePool.Description(c.namespacePrefix),
-					service.Description(c.namespacePrefix),
-				)
-				return nil, err
-			}
+	if len(nodePools) == 0 {
+		return nil, nil
+	}
 
-			matchingNodePool = &nodePool
+	if len(nodePools) == 1 {
+		nodePool := nodePools[0]
+		if nodePool.DeletionTimestamp != nil {
+			return nil, nil
 		}
+
+		return nodePool, nil
 	}
 
-	return matchingNodePool, nil
+	var nodePool *latticev1.NodePool
+	for _, np := range nodePools {
+		if np.DeletionTimestamp != nil {
+			continue
+		}
+
+		if nodePool != nil {
+			err := fmt.Errorf(
+				"found multiple matching cached dedicated node pools for %v: at least %v and %v",
+				service.Description(c.namespacePrefix),
+				nodePool.Description(c.namespacePrefix),
+				np.Description(c.namespacePrefix),
+			)
+			return nil, err
+		}
+
+		nodePool = np
+	}
+
+	return nodePool, nil
 }
 
-func (c *Controller) cachedDedicatedNodePools(service *latticev1.Service) ([]*latticev1.NodePool, error) {
+func (c *Controller) quorumDedicatedNodePools(service *latticev1.Service) (*latticev1.NodePool, error) {
 	selector := labels.NewSelector()
 	requirement, err := labels.NewRequirement(latticev1.NodePoolServiceDedicatedIDLabelKey, selection.Equals, []string{service.Name})
 	if err != nil {
@@ -88,23 +94,49 @@ func (c *Controller) cachedDedicatedNodePools(service *latticev1.Service) ([]*la
 	}
 
 	selector = selector.Add(*requirement)
-	return c.nodePoolLister.NodePools(service.Namespace).List(selector)
-}
-
-func (c *Controller) quorumDedicatedNodePools(service *latticev1.Service) ([]latticev1.NodePool, error) {
-	selector := labels.NewSelector()
-	requirement, err := labels.NewRequirement(latticev1.NodePoolServiceDedicatedIDLabelKey, selection.Equals, []string{service.Name})
+	nodePoolList, err := c.latticeClient.LatticeV1().NodePools(service.Namespace).List(metav1.ListOptions{LabelSelector: selector.String()})
 	if err != nil {
+		err := fmt.Errorf(
+			"error trying to get dedicated node pool for %v: %v",
+			service.Description(c.namespacePrefix),
+			err,
+		)
 		return nil, err
 	}
 
-	selector = selector.Add(*requirement)
-	list, err := c.latticeClient.LatticeV1().NodePools(service.Namespace).List(metav1.ListOptions{LabelSelector: selector.String()})
-	if err != nil {
-		return nil, err
+	if len(nodePoolList.Items) == 0 {
+		return nil, nil
 	}
 
-	return list.Items, nil
+	if len(nodePoolList.Items) == 1 {
+		nodePool := &nodePoolList.Items[0]
+		if nodePool.DeletionTimestamp != nil {
+			return nil, nil
+		}
+
+		return nodePool, nil
+	}
+
+	var nodePool *latticev1.NodePool
+	for _, np := range nodePoolList.Items {
+		if np.DeletionTimestamp != nil {
+			continue
+		}
+
+		if nodePool != nil {
+			err := fmt.Errorf(
+				"found multiple matching dedicated node pools for %v: at least %v and %v",
+				service.Description(c.namespacePrefix),
+				nodePool.Description(c.namespacePrefix),
+				np.Description(c.namespacePrefix),
+			)
+			return nil, err
+		}
+
+		nodePool = &np
+	}
+
+	return nodePool, nil
 }
 
 func (c *Controller) nodePoolServices(nodePool *latticev1.NodePool) ([]latticev1.Service, error) {
@@ -152,16 +184,36 @@ func (c *Controller) nodePoolServices(nodePool *latticev1.NodePool) ([]latticev1
 }
 
 func (c *Controller) updateNodePoolSpec(nodePool *latticev1.NodePool, desiredSpec latticev1.NodePoolSpec) (*latticev1.NodePool, error) {
+	if reflect.DeepEqual(nodePool.Spec, desiredSpec) {
+		return nodePool, nil
+	}
+
 	// Copy so the shared cache isn't mutated
 	nodePool = nodePool.DeepCopy()
 	nodePool.Spec = desiredSpec
 
-	return c.latticeClient.LatticeV1().NodePools(nodePool.Namespace).Update(nodePool)
+	result, err := c.latticeClient.LatticeV1().NodePools(nodePool.Namespace).Update(nodePool)
+	if err != nil {
+		err := fmt.Errorf("error trying to update %v spec: %v", nodePool.Description(c.namespacePrefix), err)
+		return nil, err
+	}
+
+	return result, nil
 }
 
 func (c *Controller) createNewDedicatedNodePool(service *latticev1.Service, numInstances int32, instanceType string) (*latticev1.NodePool, error) {
 	nodePool := newDedicatedNodePool(service, numInstances, instanceType)
-	return c.latticeClient.LatticeV1().NodePools(service.Namespace).Create(nodePool)
+	result, err := c.latticeClient.LatticeV1().NodePools(service.Namespace).Create(nodePool)
+	if err != nil {
+		err := fmt.Errorf(
+			"error trying to create new dedicated node pool for %v: %v",
+			service.Description(c.namespacePrefix),
+			err,
+		)
+		return nil, err
+	}
+
+	return result, nil
 }
 
 func newDedicatedNodePool(service *latticev1.Service, numInstances int32, instanceType string) *latticev1.NodePool {

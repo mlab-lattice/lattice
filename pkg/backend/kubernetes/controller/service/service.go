@@ -109,7 +109,8 @@ func (c *Controller) updateServiceNodePoolAnnotation(
 	newAnnotation := make(latticev1.NodePoolAnnotationValue)
 	existingAnnotation, err := service.NodePoolAnnotation()
 	if err != nil {
-		return nil, fmt.Errorf("error getting existing node pool annotation for %v: %v", service.Description(c.namespacePrefix), err)
+		err := fmt.Errorf("error getting existing node pool annotation for %v: %v", service.Description(c.namespacePrefix), err)
+		return nil, err
 	}
 
 	// If the service is currently stable, then we are only running on the
@@ -140,7 +141,12 @@ func (c *Controller) updateServiceNodePoolAnnotation(
 	service = service.DeepCopy()
 	service.Annotations[latticev1.NodePoolWorkloadAnnotationKey] = string(newAnnotationJSON)
 
-	return c.latticeClient.LatticeV1().Services(service.Namespace).Update(service)
+	result, err := c.latticeClient.LatticeV1().Services(service.Namespace).Update(service)
+	if err != nil {
+		return nil, fmt.Errorf("error updating %v node pool annotation: %v", service.Description(c.namespacePrefix), err)
+	}
+
+	return result, nil
 }
 
 func (c *Controller) updateServiceStatus(
@@ -174,7 +180,12 @@ func (c *Controller) updateServiceStatus(
 	service = service.DeepCopy()
 	service.Status = status
 
-	return c.latticeClient.LatticeV1().Services(service.Namespace).UpdateStatus(service)
+	result, err := c.latticeClient.LatticeV1().Services(service.Namespace).UpdateStatus(service)
+	if err != nil {
+		return nil, fmt.Errorf("error updating status for %v: %v", service.Description(c.namespacePrefix), err)
+	}
+
+	return result, nil
 }
 
 func controllerRef(service *latticev1.Service) *metav1.OwnerReference {

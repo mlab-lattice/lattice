@@ -67,11 +67,11 @@ func (c *Controller) syncDedicatedNodePool(service *latticev1.Service, numInstan
 		return nodePool, nil
 	}
 
-	nodePool, err = c.syncExistingDedicatedNodePool(nodePool, numInstances, instanceType)
-	return nodePool, err
+	return c.syncExistingDedicatedNodePool(nodePool, numInstances, instanceType)
 }
 
 func (c *Controller) syncSharedNodePool(namespace string, path tree.NodePath) (*latticev1.NodePool, error) {
+	// TODO: how to handle a shared node pool move?
 	selector := labels.NewSelector()
 	requirement, err := labels.NewRequirement(latticev1.NodePoolSystemSharedPathLabelKey, selection.Equals, []string{path.ToDomain()})
 	if err != nil {
@@ -91,11 +91,15 @@ func (c *Controller) syncSharedNodePool(namespace string, path tree.NodePath) (*
 
 	if len(nodePools) > 1 {
 		// FIXME: send warning or something
-		return nil, fmt.Errorf("found multiple node pools matching path %v in namespace %v", path.String(), namespace)
+		err := fmt.Errorf(
+			"found multiple shared node pools matching path %v in namespace %v",
+			path.String(),
+			namespace,
+		)
+		return nil, err
 	}
 
-	nodePool := nodePools[0]
-	return nodePool, nil
+	return nodePools[0], nil
 }
 
 func (c *Controller) syncExistingDedicatedNodePool(nodePool *latticev1.NodePool, numInstances int32, instanceType string) (*latticev1.NodePool, error) {

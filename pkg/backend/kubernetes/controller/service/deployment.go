@@ -125,7 +125,7 @@ func (c *Controller) deployment(service *latticev1.Service) (*appsv1.Deployment,
 
 	if len(cachedDeployments) > 1 {
 		// This may become valid when doing blue/green deploys
-		return nil, fmt.Errorf("found multiple deployments for %v/%v", service.Namespace, service.Name)
+		return nil, fmt.Errorf("found multiple cached deployments for %v", service.Description(c.namespacePrefix))
 	}
 
 	if len(cachedDeployments) == 1 {
@@ -142,7 +142,7 @@ func (c *Controller) deployment(service *latticev1.Service) (*appsv1.Deployment,
 
 	if len(deployments.Items) > 1 {
 		// This may become valid when doing blue/green deploys
-		return nil, fmt.Errorf("found multiple deployments for %v/%v", service.Namespace, service.Name)
+		return nil, fmt.Errorf("found multiple deployments for %v", service.Description(c.namespacePrefix))
 	}
 
 	if len(deployments.Items) == 1 {
@@ -174,12 +174,24 @@ func (c *Controller) syncExistingDeployment(
 
 	desiredSpec, err := c.deploymentSpec(service, name, deploymentLabels, nodePool)
 	if err != nil {
+		err := fmt.Errorf(
+			"error getting desired deployment spec for %v (on %v): %v",
+			service.Description(c.namespacePrefix),
+			nodePool.Description(c.namespacePrefix),
+			err,
+		)
 		return nil, err
 	}
 
 	currentSpec := deployment.Spec
 	untransformedSpec, err := c.untransformedDeploymentSpec(service, name, deploymentLabels, nodePool)
 	if err != nil {
+		err := fmt.Errorf(
+			"error getting untransformed deployment spec for %v (on %v): %v",
+			service.Description(c.namespacePrefix),
+			nodePool.Description(c.namespacePrefix),
+			err,
+		)
 		return nil, err
 	}
 
@@ -195,7 +207,7 @@ func (c *Controller) syncExistingDeployment(
 			service.Name,
 			reason,
 		)
-		deployment, err = c.updateDeploymentSpec(deployment, desiredSpec)
+		deployment, err = c.updateDeploymentSpec(service, deployment, desiredSpec)
 		if err != nil {
 			return nil, err
 		}
@@ -204,7 +216,11 @@ func (c *Controller) syncExistingDeployment(
 	return c.getDeploymentStatus(service, deployment, nodePool, address)
 }
 
-func (c *Controller) updateDeploymentSpec(deployment *appsv1.Deployment, spec appsv1.DeploymentSpec) (*appsv1.Deployment, error) {
+func (c *Controller) updateDeploymentSpec(
+	service *latticev1.Service,
+	deployment *appsv1.Deployment,
+	spec appsv1.DeploymentSpec,
+) (*appsv1.Deployment, error) {
 	if reflect.DeepEqual(deployment.Spec, spec) {
 		return deployment, nil
 	}
@@ -213,7 +229,18 @@ func (c *Controller) updateDeploymentSpec(deployment *appsv1.Deployment, spec ap
 	deployment = deployment.DeepCopy()
 	deployment.Spec = spec
 
-	return c.kubeClient.AppsV1().Deployments(deployment.Namespace).Update(deployment)
+	result, err := c.kubeClient.AppsV1().Deployments(deployment.Namespace).Update(deployment)
+	if err != nil {
+		err := fmt.Errorf(
+			"error updating deployment %v for %v: %v",
+			deployment.Name,
+			service.Description(c.namespacePrefix),
+			err,
+		)
+		return nil, err
+	}
+
+	return result, nil
 }
 
 func (c *Controller) createNewDeployment(
@@ -226,12 +253,13 @@ func (c *Controller) createNewDeployment(
 		return nil, err
 	}
 
-	deployment, err = c.kubeClient.AppsV1().Deployments(service.Namespace).Create(deployment)
+	result, err := c.kubeClient.AppsV1().Deployments(service.Namespace).Create(deployment)
 	if err != nil {
+		err := fmt.Errorf("error creating deployment for %v: %v", service.Description(c.namespacePrefix), err)
 		return nil, err
 	}
 
-	return c.getDeploymentStatus(service, deployment, nodePool, address)
+	return c.getDeploymentStatus(service, result, nodePool, address)
 }
 
 func (c *Controller) newDeployment(service *latticev1.Service, nodePool *latticev1.NodePool) (*appsv1.Deployment, error) {
@@ -244,10 +272,16 @@ func (c *Controller) newDeployment(service *latticev1.Service, nodePool *lattice
 
 	spec, err := c.deploymentSpec(service, name, deploymentLabels, nodePool)
 	if err != nil {
+		err := fmt.Errorf(
+			"error generating desired deployment spec for %v (on %v): %v",
+			service.Description(c.namespacePrefix),
+			nodePool.Description(c.namespacePrefix),
+			err,
+		)
 		return nil, err
 	}
 
-	d := &appsv1.Deployment{
+	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:            name,
 			Labels:          deploymentLabels,
@@ -255,8 +289,7 @@ func (c *Controller) newDeployment(service *latticev1.Service, nodePool *lattice
 		},
 		Spec: spec,
 	}
-
-	return d, nil
+	return deployment, nil
 }
 
 func deploymentName(service *latticev1.Service) string {
@@ -302,8 +335,7 @@ func (c *Controller) untransformedDeploymentSpec(
 ) (*appsv1.DeploymentSpec, error) {
 	path, err := service.PathLabel()
 	if err != nil {
-		// FIXME: in general, if the path label is misformed or missing, the controllers will barf on the whole system.
-		// should probably ignore the service and send an error
+		err := fmt.Errorf("error getting path label for %v: %v", service.Description(c.namespacePrefix), err)
 		return nil, err
 	}
 
@@ -342,6 +374,7 @@ func (c *Controller) untransformedDeploymentSpec(
 
 	systemID, err := kubeutil.SystemID(c.namespacePrefix, service.Namespace)
 	if err != nil {
+		err := fmt.Errorf("error getting system ID for %v: %v", service.Description(c.namespacePrefix), err)
 		return nil, err
 	}
 
@@ -353,6 +386,7 @@ func (c *Controller) untransformedDeploymentSpec(
 	if !path.IsRoot() {
 		parentNode, err := path.Parent()
 		if err != nil {
+			err := fmt.Errorf("service %v is not root but cannot get parrent: %v", service.Description(c.namespacePrefix), err)
 			return nil, err
 		}
 
@@ -685,13 +719,13 @@ func (c *Controller) getDeploymentStatus(
 	selector := labels.NewSelector()
 	requirement, err := labels.NewRequirement(latticev1.ServiceIDLabelKey, selection.Equals, []string{service.Name})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error making pod label selector for %v: %v", service.Description(c.namespacePrefix), err)
 	}
 	selector = selector.Add(*requirement)
 
 	pods, err := c.podLister.Pods(service.Namespace).List(selector)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error listing pods for %v: %v", service.Description(c.namespacePrefix), err)
 	}
 
 	var terminatingInstances int32
