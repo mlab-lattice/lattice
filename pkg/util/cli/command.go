@@ -16,8 +16,8 @@ type Command struct {
 	Run         func(args []string)
 	Subcommands []*Command
 	cobraCmd    *cobra.Command
-	UsageTemplate string
-	HelpTemplate  string
+	UsageFunc 	func(*cobra.Command) error
+	HelpFunc  	func(*cobra.Command) error
 }
 
 func (c *Command) Execute() {
@@ -53,12 +53,12 @@ func (c *Command) Init() error {
 		return fmt.Errorf("error initializing subcommands: %v", err)
 	}
 
-	if c.UsageTemplate != "" {
-		c.cobraCmd.SetUsageTemplate(c.UsageTemplate)
+	if c.UsageFunc != nil {
+		c.cobraCmd.SetUsageFunc(c.UsageFunc)
 	}
 
-	if c.HelpTemplate != "" {
-		c.cobraCmd.SetHelpTemplate(c.HelpTemplate)
+	if c.HelpFunc != nil {
+		c.cobraCmd.SetUsageFunc(c.HelpFunc)
 	}
 
 	c.cobraCmd.PreRun = func(cmd *cobra.Command, args []string) {
