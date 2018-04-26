@@ -21,6 +21,14 @@ func NewClient(apiServerURL string) *Client {
 	}
 }
 
+// NewInsecureClient client that skips certificate validate. We should XXX.
+func NewInsecureClient(apiServerURL string) *Client {
+	return &Client{
+		restClient:   rest.NewInsecureClient(),
+		apiServerURL: apiServerURL,
+	}
+}
+
 func (c *Client) Health() (bool, error) {
 	resp, err := c.restClient.Get(fmt.Sprintf("%v/health", c.apiServerURL)).Do()
 	if err != nil {
