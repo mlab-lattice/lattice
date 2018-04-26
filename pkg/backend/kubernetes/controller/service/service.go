@@ -77,9 +77,15 @@ func (c *Controller) syncServiceStatus(
 		}
 	}
 
-	service, err := c.updateServiceNodePoolAnnotation(service, nodePool, state)
-	if err != nil {
-		return nil, err
+	// we only update the deployment spec once the node pool is stable,
+	// so if it is not stable we don't need to update the service's node
+	// pool annotation
+	if nodePool.Stable() {
+		var err error
+		service, err = c.updateServiceNodePoolAnnotation(service, nodePool, state)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return c.updateServiceStatus(

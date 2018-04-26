@@ -554,11 +554,22 @@ func (c *Controller) isDeploymentSpecUpdated(
 	service *latticev1.Service,
 	current, desired, untransformed *appsv1.DeploymentSpec,
 ) (bool, string) {
-	// FIXME: currently Replicas is the only thing we're changing, may want to add other fields to compare as well
-	if current.Replicas != desired.Replicas {
+	// NOTE: currently the only thing we change about the top level of the deployment spec (i.e. not in
+	// the pod template spec) is replicas. if we change other things we may want to reconsider this
+	// comparison strategy.
+	if current.Replicas == nil && desired.Replicas != nil {
 		return false, "num replicas is out of date"
 	}
 
+	if current.Replicas != nil && desired.Replicas == nil {
+		return false, "num replicas is out of date"
+	}
+
+	if current.Replicas != nil && desired.Replicas != nil && *current.Replicas != *desired.Replicas {
+		return false, "num replicas is out of date"
+	}
+
+	// FIXME: is this actually true?
 	// IMPORTANT: the order of these IsDeploymentSpecUpdated and the order of the TransformServiceDeploymentSpec
 	// calls in deploymentSpec _must_ be inverses.
 	// That is, if we call serviceMesh then cloudProvider here, we _must_ call cloudProvider then serviceMesh
