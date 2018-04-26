@@ -57,7 +57,7 @@ func (c *Controller) addFinalizer(build *latticev1.Build) (*latticev1.Build, err
 
 	// Copy so we don't mutate the shared cache
 	build = build.DeepCopy()
-	build.Finalizers = append(build.Finalizers, kubeutil.AddressControllerFinalizer)
+	build.Finalizers = append(build.Finalizers, kubeutil.BuildControllerFinalizer)
 
 	result, err := c.latticeClient.LatticeV1().Builds(build.Namespace).Update(build)
 	if err != nil {
