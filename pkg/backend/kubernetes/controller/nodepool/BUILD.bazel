@@ -3,6 +3,10 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library")
 go_library(
     name = "go_default_library",
     srcs = [
+        "active_node_pool.go",
+        "deleted_node_pool.go",
+        "epoch.go",
+        "informer_event_handlers.go",
         "node_pool.go",
         "node_pool_controller.go",
     ],
@@ -15,6 +19,7 @@ go_library(
         "//pkg/backend/kubernetes/customresource/generated/clientset/versioned:go_default_library",
         "//pkg/backend/kubernetes/customresource/generated/informers/externalversions/lattice/v1:go_default_library",
         "//pkg/backend/kubernetes/customresource/generated/listers/lattice/v1:go_default_library",
+        "//pkg/backend/kubernetes/util/kubernetes:go_default_library",
         "@com_github_deckarep_golang_set//:go_default_library",
         "@com_github_golang_glog//:go_default_library",
         "@io_k8s_apimachinery//pkg/api/errors:go_default_library",

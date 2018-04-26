@@ -13,19 +13,13 @@ import (
 
 func (c *Controller) handleConfigAdd(obj interface{}) {
 	config := obj.(*latticev1.Config)
-	glog.V(4).Infof("Adding Config %s", config.Name)
-
-	c.configLock.Lock()
-	defer c.configLock.Unlock()
-	c.config = config.DeepCopy().Spec
-
-	err := c.newCloudProvider()
+	err := c.handleConfigEvent(config, "added")
 	if err != nil {
-		glog.Errorf("error creating service mesh: %v", err)
-		// FIXME: what to do here?
 		return
 	}
 
+	c.configLock.Lock()
+	defer c.configLock.Unlock()
 	if !c.configSet {
 		c.configSet = true
 		close(c.configSetChan)
@@ -33,20 +27,25 @@ func (c *Controller) handleConfigAdd(obj interface{}) {
 }
 
 func (c *Controller) handleConfigUpdate(old, cur interface{}) {
-	oldConfig := old.(*latticev1.Config)
-	curConfig := cur.(*latticev1.Config)
-	glog.V(4).Infof("Updating Config %s", oldConfig.Name)
+	config := cur.(*latticev1.Config)
+	c.handleConfigEvent(config, "updated")
+}
+
+func (c *Controller) handleConfigEvent(config *latticev1.Config, verb string) error {
+	glog.V(4).Infof("config %v/%v %v", config.Namespace, config.Name, verb)
 
 	c.configLock.Lock()
 	defer c.configLock.Unlock()
-	c.config = curConfig.DeepCopy().Spec
+	c.config = config.DeepCopy().Spec
 
 	err := c.newCloudProvider()
 	if err != nil {
-		glog.Errorf("error creating service mesh: %v", err)
+		glog.Errorf("error creating cloud provider: %v", err)
 		// FIXME: what to do here?
-		return
+		return err
 	}
+
+	return nil
 }
 
 func (c *Controller) newCloudProvider() error {

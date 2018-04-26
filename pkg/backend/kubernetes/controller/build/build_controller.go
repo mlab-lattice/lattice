@@ -86,7 +86,7 @@ func (c *Controller) Run(workers int, stopCh <-chan struct{}) {
 		return
 	}
 
-	glog.V(4).Info("caches synced.")
+	glog.V(4).Info("caches synced")
 
 	// start up your worker threads based on threadiness.  Some controllers
 	// have multiple kinds of workers

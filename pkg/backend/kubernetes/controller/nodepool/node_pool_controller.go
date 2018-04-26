@@ -13,7 +13,6 @@ import (
 	latticelisters "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/generated/listers/lattice/v1"
 
 	"k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
 
@@ -24,8 +23,8 @@ import (
 )
 
 type Controller struct {
-	syncHandler     func(bKey string) error
-	enqueueNodePool func(cb *latticev1.NodePool)
+	syncHandler func(key string) error
+	enqueue     func(nodePool *latticev1.NodePool)
 
 	namespacePrefix string
 	latticeID       v1.LatticeID
@@ -70,17 +69,17 @@ func NewController(
 
 		configSetChan: make(chan struct{}),
 
-		queue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "service"),
+		queue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "nodepool"),
 	}
 
 	sc.syncHandler = sc.syncNodePool
-	sc.enqueueNodePool = sc.enqueue
+	sc.enqueue = sc.enqueueNodePool
 
 	configInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		// It's assumed there is always one and only one config object.
 		AddFunc:    sc.handleConfigAdd,
 		UpdateFunc: sc.handleConfigUpdate,
-		// TODO(kevinrosendahl): for now it is assumed that ComponentBuilds are not deleted.
+		// TODO(kevinrosendahl): for now it is assumed that configs are not deleted.
 	})
 	sc.configLister = configInformer.Lister()
 	sc.configListerSynced = configInformer.Informer().HasSynced
@@ -110,18 +109,20 @@ func (c *Controller) Run(workers int, stopCh <-chan struct{}) {
 	// make sure the work queue is shutdown which will trigger workers to end
 	defer c.queue.ShutDown()
 
-	glog.Infof("Starting endpoint controller")
-	defer glog.Infof("Shutting down endpoint controller")
+	glog.Infof("starting node pool controller")
+	defer glog.Infof("shutting down endpoint controller")
 
 	// wait for your secondary caches to fill before starting your work
 	if !cache.WaitForCacheSync(stopCh, c.configListerSynced, c.nodePoolListerSynced, c.serviceListerSynced) {
 		return
 	}
 
-	glog.V(4).Info("Caches synced. Waiting for config to be set")
+	glog.V(4).Info("caches synced, waiting for config to be set")
 
 	// wait for config to be set
 	<-c.configSetChan
+
+	glog.V(4).Info("config set")
 
 	// start up your worker threads based on threadiness.  Some controllers
 	// have multiple kinds of workers
@@ -135,171 +136,7 @@ func (c *Controller) Run(workers int, stopCh <-chan struct{}) {
 	<-stopCh
 }
 
-func (c *Controller) handleConfigAdd(obj interface{}) {
-	config := obj.(*latticev1.Config)
-	glog.V(4).Infof("Adding Config %s", config.Name)
-
-	c.configLock.Lock()
-	defer c.configLock.Unlock()
-	c.config = config.DeepCopy().Spec
-
-	cloudProvider, err := c.newCloudProvider()
-	if err != nil {
-		glog.Warningf("error updating cloud provider: %v", err)
-		return
-	}
-
-	c.cloudProvider = cloudProvider
-
-	if !c.configSet {
-		c.configSet = true
-		close(c.configSetChan)
-	}
-}
-
-func (c *Controller) handleConfigUpdate(old, cur interface{}) {
-	oldConfig := old.(*latticev1.Config)
-	curConfig := cur.(*latticev1.Config)
-	glog.V(4).Infof("Updating Config %s", oldConfig.Name)
-
-	c.configLock.Lock()
-	defer c.configLock.Unlock()
-	c.config = curConfig.DeepCopy().Spec
-
-	cloudProvider, err := c.newCloudProvider()
-	if err != nil {
-		glog.Warningf("error updating cloud provider: %v", err)
-		return
-	}
-
-	c.cloudProvider = cloudProvider
-}
-
-func (c *Controller) newCloudProvider() (cloudprovider.Interface, error) {
-	options, err := cloudprovider.OverlayConfigOptions(c.staticCloudProviderOptions, &c.config.CloudProvider)
-	if err != nil {
-		return nil, err
-	}
-
-	cloudProvider, err := cloudprovider.NewCloudProvider(c.namespacePrefix, nil, nil, options)
-	if err != nil {
-		return nil, err
-	}
-
-	return cloudProvider, nil
-}
-
-func (c *Controller) handleNodePoolAdd(obj interface{}) {
-	nodePool := obj.(*latticev1.NodePool)
-	glog.V(4).Infof("NodePool %v/%v added", nodePool.Namespace, nodePool.Name)
-
-	if nodePool.DeletionTimestamp != nil {
-		// On a restart of the controller manager, it's possible for an object to
-		// show up in a state that is already pending deletion.
-		c.handleNodePoolDelete(nodePool)
-		return
-	}
-
-	c.enqueueNodePool(nodePool)
-}
-
-func (c *Controller) handleNodePoolUpdate(old, cur interface{}) {
-	oldNodePool := old.(*latticev1.NodePool)
-	curNodePool := cur.(*latticev1.NodePool)
-	glog.V(5).Info("Got NodePool %v/%v update", curNodePool.Namespace, curNodePool.Name)
-	if curNodePool.ResourceVersion == oldNodePool.ResourceVersion {
-		// Periodic resync will send update events for all known Services.
-		// Two different versions of the same Service will always have different RVs.
-		glog.V(5).Info("NodePool %v/%v ResourceVersions are the same", curNodePool.Namespace, curNodePool.Name)
-		return
-	}
-
-	c.enqueueNodePool(curNodePool)
-}
-
-func (c *Controller) handleNodePoolDelete(obj interface{}) {
-	nodePool, ok := obj.(*latticev1.NodePool)
-
-	// When a delete is dropped, the relist will notice a pod in the store not
-	// in the list, leading to the insertion of a tombstone object which contains
-	// the deleted key/value.
-	if !ok {
-		tombstone, ok := obj.(cache.DeletedFinalStateUnknown)
-		if !ok {
-			runtime.HandleError(fmt.Errorf("couldn't get object from tombstone %#v", obj))
-			return
-		}
-		nodePool, ok = tombstone.Obj.(*latticev1.NodePool)
-		if !ok {
-			runtime.HandleError(fmt.Errorf("tombstone contained object that is not a Service %#v", obj))
-			return
-		}
-	}
-
-	c.enqueueNodePool(nodePool)
-}
-
-func (c *Controller) handleServiceAdd(obj interface{}) {
-	service := obj.(*latticev1.Service)
-	glog.V(4).Infof("%v add", service.Description(c.namespacePrefix))
-
-	nodePools, err := c.nodePoolLister.NodePools(service.Namespace).List(labels.Everything())
-	if err != nil {
-		// FIXME: send warning
-		return
-	}
-
-	for _, nodePool := range nodePools {
-		c.enqueueNodePool(nodePool)
-	}
-}
-
-func (c *Controller) handleServiceUpdate(old, cur interface{}) {
-	curService := cur.(*latticev1.Service)
-	glog.V(5).Info("%v update", curService.Description(c.namespacePrefix))
-
-	nodePools, err := c.nodePoolLister.NodePools(curService.Namespace).List(labels.Everything())
-	if err != nil {
-		// FIXME: send warning
-		return
-	}
-
-	for _, nodePool := range nodePools {
-		c.enqueueNodePool(nodePool)
-	}
-}
-
-func (c *Controller) handleServiceDelete(obj interface{}) {
-	service, ok := obj.(*latticev1.Service)
-
-	// When a delete is dropped, the relist will notice a pod in the store not
-	// in the list, leading to the insertion of a tombstone object which contains
-	// the deleted key/value.
-	if !ok {
-		tombstone, ok := obj.(cache.DeletedFinalStateUnknown)
-		if !ok {
-			runtime.HandleError(fmt.Errorf("couldn't get object from tombstone %#v", obj))
-			return
-		}
-		service, ok = tombstone.Obj.(*latticev1.Service)
-		if !ok {
-			runtime.HandleError(fmt.Errorf("tombstone contained object that is not a Service %#v", obj))
-			return
-		}
-	}
-
-	nodePools, err := c.nodePoolLister.NodePools(service.Namespace).List(labels.Everything())
-	if err != nil {
-		// FIXME: send warning
-		return
-	}
-
-	for _, nodePool := range nodePools {
-		c.enqueueNodePool(nodePool)
-	}
-}
-
-func (c *Controller) enqueue(nodePool *latticev1.NodePool) {
+func (c *Controller) enqueueNodePool(nodePool *latticev1.NodePool) {
 	key, err := cache.DeletionHandlingMetaNamespaceKeyFunc(nodePool)
 	if err != nil {
 		runtime.HandleError(fmt.Errorf("couldn't get key for object %#v: %v", nodePool, err))
@@ -360,9 +197,9 @@ func (c *Controller) processNextWorkItem() bool {
 func (c *Controller) syncNodePool(key string) error {
 	glog.Flush()
 	startTime := time.Now()
-	glog.V(4).Infof("Started syncing NodePool %q (%v)", key, startTime)
+	glog.V(4).Infof("started syncing node pool %q (%v)", key, startTime)
 	defer func() {
-		glog.V(4).Infof("Finished syncing NodePool %q (%v)", key, time.Now().Sub(startTime))
+		glog.V(4).Infof("finished syncing node pool %q (%v)", key, time.Now().Sub(startTime))
 	}()
 
 	namespace, name, err := cache.SplitMetaNamespaceKey(key)
@@ -373,7 +210,7 @@ func (c *Controller) syncNodePool(key string) error {
 	nodePool, err := c.nodePoolLister.NodePools(namespace).Get(name)
 	if err != nil {
 		if errors.IsNotFound(err) {
-			glog.V(2).Infof("NodePool %v has been deleted", key)
+			glog.V(2).Infof("node pool %v has been deleted", key)
 			return nil
 		}
 

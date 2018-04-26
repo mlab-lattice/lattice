@@ -1,11 +1,10 @@
-package address
+package nodepool
 
 import (
 	"fmt"
 
 	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/cloudprovider"
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
-	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/servicemesh"
 
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/runtime"
@@ -49,13 +48,6 @@ func (c *Controller) handleConfigEvent(config *latticev1.Config, verb string) er
 		return err
 	}
 
-	err = c.newServiceMesh()
-	if err != nil {
-		glog.Errorf("error creating service mesh: %v", err)
-		// FIXME: what to do here?
-		return err
-	}
-
 	return nil
 }
 
@@ -65,7 +57,7 @@ func (c *Controller) newCloudProvider() error {
 		return err
 	}
 
-	cloudProvider, err := cloudprovider.NewCloudProvider(c.namespacePrefix, c.kubeClient, c.kubeServiceLister, options)
+	cloudProvider, err := cloudprovider.NewCloudProvider(c.namespacePrefix, nil, nil, options)
 	if err != nil {
 		return err
 	}
@@ -74,41 +66,26 @@ func (c *Controller) newCloudProvider() error {
 	return nil
 }
 
-func (c *Controller) newServiceMesh() error {
-	options, err := servicemesh.OverlayConfigOptions(c.staticServiceMeshOptions, &c.config.ServiceMesh)
-	if err != nil {
-		return err
-	}
+func (c *Controller) handleNodePoolAdd(obj interface{}) {
+	nodePool := obj.(*latticev1.NodePool)
 
-	serviceMesh, err := servicemesh.NewServiceMesh(options)
-	if err != nil {
-		return err
-	}
-
-	c.serviceMesh = serviceMesh
-	return nil
-}
-
-func (c *Controller) handleAddressAdd(obj interface{}) {
-	address := obj.(*latticev1.Address)
-
-	if address.DeletionTimestamp != nil {
-		// On a restart of the controller manager, it's possible for an object to
-		// show up in a state that is already pending deletion.
-		c.handleAddressDelete(address)
+	if nodePool.DeletionTimestamp != nil {
+		// on a restart of the controller manager, it's possible for an object to
+		// show up in a state that is already pending deletion
+		c.handleNodePoolDelete(nodePool)
 		return
 	}
 
-	c.handleAddressEvent(address, "added")
+	c.handleNodePoolEvent(nodePool, "added")
 }
 
-func (c *Controller) handleAddressUpdate(old, cur interface{}) {
-	address := cur.(*latticev1.Address)
-	c.handleAddressEvent(address, "updated")
+func (c *Controller) handleNodePoolUpdate(old, cur interface{}) {
+	nodePool := cur.(*latticev1.NodePool)
+	c.handleNodePoolEvent(nodePool, "updated")
 }
 
-func (c *Controller) handleAddressDelete(obj interface{}) {
-	address, ok := obj.(*latticev1.Address)
+func (c *Controller) handleNodePoolDelete(obj interface{}) {
+	nodePool, ok := obj.(*latticev1.NodePool)
 
 	// When a delete is dropped, the relist will notice a pod in the store not
 	// in the list, leading to the insertion of a tombstone object which contains
@@ -119,19 +96,19 @@ func (c *Controller) handleAddressDelete(obj interface{}) {
 			runtime.HandleError(fmt.Errorf("couldn't get object from tombstone %#v", obj))
 			return
 		}
-		address, ok = tombstone.Obj.(*latticev1.Address)
+		nodePool, ok = tombstone.Obj.(*latticev1.NodePool)
 		if !ok {
 			runtime.HandleError(fmt.Errorf("tombstone contained object that is not a Service %#v", obj))
 			return
 		}
 	}
 
-	c.handleAddressEvent(address, "deleted")
+	c.handleNodePoolEvent(nodePool, "deleted")
 }
 
-func (c *Controller) handleAddressEvent(address *latticev1.Address, verb string) {
-	glog.V(5).Info("%v %v", address.Description(c.namespacePrefix), verb)
-	c.enqueue(address)
+func (c *Controller) handleNodePoolEvent(nodePool *latticev1.NodePool, verb string) {
+	glog.V(5).Info("%v %v", nodePool.Description(c.namespacePrefix), verb)
+	c.enqueue(nodePool)
 }
 
 func (c *Controller) handleServiceAdd(obj interface{}) {
@@ -177,21 +154,15 @@ func (c *Controller) handleServiceDelete(obj interface{}) {
 func (c *Controller) handleServiceEvent(service *latticev1.Service, verb string) {
 	glog.V(5).Info("%v %v", service.Description(c.namespacePrefix), verb)
 
-	path, err := service.PathLabel()
+	// FIXME: for now, just enqueue every node pool when services are updated, in the future
+	//        should think about which node pools actually need to be synced
+	nodePools, err := c.nodePoolLister.NodePools(service.Namespace).List(labels.Everything())
 	if err != nil {
-		// FIXME: send warn event
+		// FIXME: send warning
 		return
 	}
 
-	addresses, err := c.addressLister.Addresses(service.Namespace).List(labels.Everything())
-	if err != nil {
-		// FIXME: send warn event
-		return
-	}
-
-	for _, address := range addresses {
-		if address.Spec.Service != nil && path == *address.Spec.Service {
-			c.enqueue(address)
-		}
+	for _, nodePool := range nodePools {
+		c.enqueue(nodePool)
 	}
 }

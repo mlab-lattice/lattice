@@ -6,5 +6,6 @@ const (
 
 	AddressControllerFinalizer      = "address." + controllerLabel + finalizerSuffix
 	BuildControllerFinalizer        = "build." + controllerLabel + finalizerSuffix
+	NodePoolControllerFinalizer     = "nodepool." + controllerLabel + finalizerSuffix
 	ServiceBuildControllerFinalizer = "servicebuild." + controllerLabel + finalizerSuffix
 )

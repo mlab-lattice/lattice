@@ -121,10 +121,12 @@ func (c *Controller) Run(workers int, stopCh <-chan struct{}) {
 		return
 	}
 
-	glog.V(4).Info("Caches synced. Waiting for config to be set")
+	glog.V(4).Info("caches synced, waiting for config to be set")
 
 	// wait for config to be set
 	<-c.configSetChan
+
+	glog.V(4).Info("config set")
 
 	// start up your worker threads based on threadiness.  Some controllers
 	// have multiple kinds of workers
@@ -141,7 +143,7 @@ func (c *Controller) Run(workers int, stopCh <-chan struct{}) {
 func (c *Controller) enqueueComponentBuild(build *latticev1.ComponentBuild) {
 	key, err := cache.DeletionHandlingMetaNamespaceKeyFunc(build)
 	if err != nil {
-		runtime.HandleError(fmt.Errorf("Couldn't get key for object %#v: %v", build, err))
+		runtime.HandleError(fmt.Errorf("couldn't get key for object %#v: %v", build, err))
 		return
 	}
 
