@@ -33,17 +33,15 @@ func (c *StatusCommand) Base() (*latticectl.BaseCommand, error) {
 		SupportedFormats: ListBuildsSupportedFormats,
 	}
 	var watch bool
+	watchFlag := &latticectl.WatchFlag{
+		Target: &watch,
+	}
 
 	cmd := &latticectl.BuildCommand{
 		Name: "status",
 		Flags: cli.Flags{
 			output.Flag(),
-			&cli.BoolFlag{
-				Name:    "watch",
-				Short:   "w",
-				Default: false,
-				Target:  &watch,
-			},
+			watchFlag.Flag(),
 		},
 		Run: func(ctx latticectl.BuildCommandContext, args []string) {
 			format, err := output.Value()

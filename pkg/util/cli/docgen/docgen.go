@@ -17,6 +17,12 @@ import (
 
 var InputDocsDir string
 
+// extra markdown file name
+const (
+	descriptionFile = "description.md"
+	examplesFile    = "examples.md"
+)
+
 func GenerateMarkdown(cmd *cli.Command) (io.Reader, error) {
 	var buffer bytes.Buffer
 	writer := bufio.NewWriter(&buffer)
@@ -38,7 +44,16 @@ func writeDoc(bc *cli.Command, writer io.Writer) error {
 
 	fmt.Fprintf(writer, "%s \n", markdown.WrapH2("Introduction"))
 
-	fmt.Fprintf(writer, "%s  \n", bc.Short)
+	// fmt.Fprintf(writer, "%s  \n", bc.Short)
+
+	// extra description in the intro section
+	introMdFileContent, err := getMarkdownFileContent("", descriptionFile)
+	if err != nil {
+		return err
+	}
+	if introMdFileContent != "" {
+		fmt.Fprintf(writer, "%s \n\n", introMdFileContent)
+	}
 
 	fmt.Fprintf(writer, "%s \n", markdown.WrapH2("Commands"))
 
@@ -79,7 +94,7 @@ func recurse(cmd *cli.Command, ancestorCommands []cli.Command, writer io.Writer,
 	// joins consecutive ancestor command names
 	var ancestorCmdsStr string
 	for _, tempCmd := range ancestorCommands {
-		ancestorCmdsStr += tempCmd.Name + " "
+		ancestorCmdsStr += tempCmd.Name + ":"
 	}
 	ancestorCmdsStr += cmd.Name
 
@@ -96,20 +111,20 @@ func recurse(cmd *cli.Command, ancestorCommands []cli.Command, writer io.Writer,
 // printCommand prints the command docs
 // fullCmdName includes all command ancestor except the root command (e.g. 'latticectl')
 func printCommand(fullCmdName string, cmd *cli.Command, writer io.Writer) error {
-	fmt.Fprintf(writer, "%s  \n", markdown.WrapH3(fullCmdName))
+	fmt.Fprintf(writer, "%s  \n", markdown.WrapH2(fullCmdName))
 
 	if cmd.Short != "" {
 		fmt.Fprintf(writer, "%s  \n\n", markdown.WrapItalic(cmd.Short))
 	}
 
 	// includes any extra markdown command description
-	mdFileContent, err := getMarkdownFileContent(fullCmdName)
+	descMdFile, err := getMarkdownFileContent(fullCmdName, descriptionFile)
 	if err != nil {
 		return err
 	}
 
-	if mdFileContent != "" {
-		fmt.Fprintln(writer, mdFileContent)
+	if descMdFile != "" {
+		fmt.Fprintf(writer, "%s \n\n", descMdFile)
 	}
 
 	if len(cmd.Args) > 0 {
@@ -128,6 +143,17 @@ func printCommand(fullCmdName string, cmd *cli.Command, writer io.Writer) error 
 		writeFlags(writer, cmd.Flags)
 	}
 
+	// includes any extra markdown command examples
+	examplesMdFile, err := getMarkdownFileContent(fullCmdName, examplesFile)
+	if err != nil {
+		return err
+	}
+
+	if examplesMdFile != "" {
+		fmt.Fprintf(writer, "%s \n\n", markdown.WrapBold("Examples:"))
+		fmt.Fprintf(writer, "%s \n\n", examplesMdFile)
+	}
+
 	return nil
 }
 
@@ -141,7 +167,7 @@ func writeArgs(writer io.Writer, cmdArgs cli.Args) {
 		writeArgTableRow(writer, tempArg)
 	}
 
-	fmt.Fprint(writer, "\n\n")
+	fmt.Fprintln(writer, "")
 }
 
 // writeArgTableRow writes arg table row
@@ -159,7 +185,7 @@ func writeArgTableRow(w io.Writer, arg cli.Arg) {
 
 // writeFlags writes flags section to a markdown table
 func writeFlags(writer io.Writer, cmdFlags cli.Flags) {
-	fmt.Fprintf(writer, "%s: \n\n", markdown.WrapBold("Flags"))
+	fmt.Fprintf(writer, "%s \n\n", markdown.WrapBold("Flags:"))
 
 	markdown.WriteTableHeader(writer, []string{"Name", "Description"})
 
@@ -167,12 +193,11 @@ func writeFlags(writer io.Writer, cmdFlags cli.Flags) {
 		writeFlagTableRow(writer, tempFlag)
 	}
 
-	fmt.Fprint(writer, "\n\n")
+	fmt.Fprintln(writer, "")
 }
 
 // writeFlagTableRow writes flag table row
 func writeFlagTableRow(w io.Writer, flag cli.Flag) {
-
 	name := fmt.Sprintf("--%s", flag.GetName())
 
 	// if the flag isn't a bool flag then print out a placeholder value with the name of the flag
@@ -196,19 +221,18 @@ func writeFlagTableRow(w io.Writer, flag cli.Flag) {
 }
 
 // getMarkdownFileContent reads external Markdown file content
-func getMarkdownFileContent(cmdName string) (string, error) {
-
+func getMarkdownFileContent(cmdName string, fileName string) (string, error) {
 	// root path
 	markdownPath := InputDocsDir
 
 	// appends the remainder of the file path
-	words := strings.Fields(cmdName)
+	words := strings.Split(cmdName, ":")
 	for _, subCmd := range words {
 		markdownPath += "/" + subCmd
 	}
 
 	// appends file name
-	markdownPath += "/description.md"
+	markdownPath += "/" + fileName
 
 	buffer, err := ioutil.ReadFile(markdownPath)
 
