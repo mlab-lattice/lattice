@@ -294,6 +294,10 @@ func (c *Controller) syncService(key string) error {
 		return err
 	}
 
+	if service.Deleted() {
+		return c.syncDeletedService(service)
+	}
+
 	nodePool, err := c.syncCurrentNodePool(service)
 	if err != nil {
 		return err

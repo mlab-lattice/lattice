@@ -58,7 +58,6 @@ type NodePoolType string
 const (
 	NodePoolTypeServiceDedicated NodePoolType = "service-dedicated"
 	NodePoolTypeSystemShared     NodePoolType = "system-shared"
-	NodePoolTypeUnknown          NodePoolType = "unknown"
 )
 
 func (np *NodePool) ServiceDedicatedIDLabel() (string, bool) {
@@ -74,22 +73,6 @@ func (np *NodePool) SystemSharedPathLabel() (tree.NodePath, bool, error) {
 
 	path, err := tree.NodePathFromDomain(domain)
 	return path, true, err
-}
-
-func (np *NodePool) Type() NodePoolType {
-	if np.Labels == nil {
-		return NodePoolTypeUnknown
-	}
-
-	if _, ok := np.ServiceDedicatedIDLabel(); ok {
-		return NodePoolTypeServiceDedicated
-	}
-
-	if _, ok, err := np.SystemSharedPathLabel(); err == nil && ok {
-		return NodePoolTypeSystemShared
-	}
-
-	return NodePoolTypeUnknown
 }
 
 func (np *NodePool) TypeDescription() string {

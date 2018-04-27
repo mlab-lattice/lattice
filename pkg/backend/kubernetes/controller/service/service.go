@@ -7,6 +7,7 @@ import (
 
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 
+	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -14,6 +15,82 @@ const (
 	reasonTimedOut           = "ProgressDeadlineExceeded"
 	reasonLoadBalancerFailed = "LoadBalancerFailed"
 )
+
+type nodePoolInfo struct {
+	nodePoolType latticev1.NodePoolType
+
+	// dedicated node pool options
+	instanceType string
+	numInstances int32
+
+	// shared system node pool options
+	path tree.NodePath
+}
+
+func (c *Controller) numInstances(service *latticev1.Service) (int32, error) {
+	if service.Spec.Definition.Resources().NumInstances != nil {
+		return *service.Spec.Definition.Resources().NumInstances, nil
+	}
+
+	if service.Spec.Definition.Resources().MinInstances != nil {
+		return *service.Spec.Definition.Resources().MinInstances, nil
+	}
+
+	err := fmt.Errorf(
+		"error getting num instances for %v: did not specify num instances or min instances",
+		service.Description(c.namespacePrefix),
+	)
+	return 0, err
+}
+
+func (c *Controller) nodePoolInfo(service *latticev1.Service) (nodePoolInfo, error) {
+	resources := service.Spec.Definition.Resources()
+
+	// dedicated per-instance node pool
+	if resources.NodePool == nil {
+		if resources.InstanceType == nil {
+			return nodePoolInfo{}, fmt.Errorf("%v did not specify a node pool or instance type", service.Description(c.namespacePrefix))
+		}
+
+		numInstances, err := c.numInstances(service)
+		if err != nil {
+			return nodePoolInfo{}, err
+		}
+
+		info := nodePoolInfo{
+			nodePoolType: latticev1.NodePoolTypeServiceDedicated,
+			instanceType: *resources.InstanceType,
+			numInstances: numInstances,
+		}
+		return info, nil
+	}
+
+	// dedicated not per-instance node pool
+	if resources.NodePool.NodePool != nil {
+		info := nodePoolInfo{
+			nodePoolType: latticev1.NodePoolTypeServiceDedicated,
+			instanceType: resources.NodePool.NodePool.InstanceType,
+			numInstances: resources.NodePool.NodePool.NumInstances,
+		}
+		return info, nil
+	}
+
+	if resources.NodePool.NodePoolName != nil {
+		path, err := tree.NewNodePath(*resources.NodePool.NodePoolName)
+		if err != nil {
+			err := fmt.Errorf("error parsing shared node pool path for %v: %v", service.Description(c.namespacePrefix), err)
+			return nodePoolInfo{}, err
+		}
+
+		info := nodePoolInfo{
+			nodePoolType: latticev1.NodePoolTypeSystemShared,
+			path:         path,
+		}
+		return info, nil
+	}
+
+	return nodePoolInfo{}, fmt.Errorf("%v did not specify a node pool or instance type", service.Description(c.namespacePrefix))
+}
 
 func (c *Controller) syncServiceStatus(
 	service *latticev1.Service,

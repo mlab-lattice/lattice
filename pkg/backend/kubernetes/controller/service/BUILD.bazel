@@ -6,6 +6,7 @@ go_library(
         "address.go",
         "clean_up_node_pools.go",
         "current_node_pool.go",
+        "deleted_service.go",
         "deployment.go",
         "informer_event_handlers.go",
         "kube_service.go",

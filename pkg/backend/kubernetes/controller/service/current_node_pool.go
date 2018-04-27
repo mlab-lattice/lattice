@@ -11,41 +11,21 @@ import (
 )
 
 func (c *Controller) syncCurrentNodePool(service *latticev1.Service) (*latticev1.NodePool, error) {
-	resources := service.Spec.Definition.Resources()
-
-	var numInstances int32
-	if service.Spec.Definition.Resources().NumInstances != nil {
-		numInstances = *service.Spec.Definition.Resources().NumInstances
-	} else if service.Spec.Definition.Resources().MinInstances != nil {
-		numInstances = *service.Spec.Definition.Resources().MinInstances
-	} else {
-		return nil, fmt.Errorf("%v did not specify num instances or min instances", service.Description(c.namespacePrefix))
+	info, err := c.nodePoolInfo(service)
+	if err != nil {
+		return nil, err
 	}
 
-	var instanceType string
-	if resources.NodePool != nil {
-		if resources.NodePool.NodePoolName != nil {
-			nodePoolPath, err := tree.NewNodePath(*resources.NodePool.NodePoolName)
-			if err != nil {
-				return nil, fmt.Errorf("error parsing shared node pool path: %v", err)
-			}
+	switch info.nodePoolType {
+	case latticev1.NodePoolTypeServiceDedicated:
+		return c.syncDedicatedNodePool(service, info.numInstances, info.instanceType)
+	case latticev1.NodePoolTypeSystemShared:
+		return c.syncSharedNodePool(service.Namespace, info.path)
 
-			return c.syncSharedNodePool(service.Namespace, nodePoolPath)
-		}
-
-		if resources.NodePool.NodePool == nil {
-			return nil, fmt.Errorf("%v has non-null node pool block, but does not specify node pool name or node pool", service)
-		}
-
-		instanceType = resources.NodePool.NodePool.InstanceType
-	} else {
-		if resources.InstanceType == nil {
-			return nil, fmt.Errorf("%v did not specify a node pool or instance type", service.Description(c.namespacePrefix))
-		}
-		instanceType = *resources.InstanceType
+	default:
+		err := fmt.Errorf("unrecognized node pool type for %v: %v", service.Description(c.namespacePrefix), info.nodePoolType)
+		return nil, err
 	}
-
-	return c.syncDedicatedNodePool(service, numInstances, instanceType)
 }
 
 // syncDedicatedNodePool checks to see if a node pool dedicated to running a single instance of this
