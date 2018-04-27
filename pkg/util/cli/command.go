@@ -16,8 +16,8 @@ type Command struct {
 	Run         func(args []string)
 	Subcommands []*Command
 	cobraCmd    *cobra.Command
-	UsageFunc 	func(*cobra.Command) error
-	HelpFunc  	func(*cobra.Command) error
+	UsageFunc   func(*cobra.Command) error
+	HelpFunc    func(*cobra.Command) error
 }
 
 func (c *Command) Execute() {
