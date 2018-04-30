@@ -8,5 +8,6 @@ const (
 	BuildControllerFinalizer        = "build." + controllerLabel + finalizerSuffix
 	NodePoolControllerFinalizer     = "nodepool." + controllerLabel + finalizerSuffix
 	ServiceBuildControllerFinalizer = "servicebuild." + controllerLabel + finalizerSuffix
+	ServiceControllerFinalizer      = "service." + controllerLabel + finalizerSuffix
 	SystemControllerFinalizer       = "system." + controllerLabel + finalizerSuffix
 )

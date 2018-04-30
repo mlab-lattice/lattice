@@ -260,9 +260,11 @@ func (c *Controller) serviceSpec(
 }
 
 func (c *Controller) deleteService(service *latticev1.Service) error {
-	foregroundDelete := metav1.DeletePropagationForeground
+	// orphan the service so that the service controller can do its own
+	// properly ordered garbage collection
+	orphanDelete := metav1.DeletePropagationOrphan
 	deleteOptions := &metav1.DeleteOptions{
-		PropagationPolicy: &foregroundDelete,
+		PropagationPolicy: &orphanDelete,
 	}
 
 	err := c.latticeClient.LatticeV1().Services(service.Namespace).Delete(service.Name, deleteOptions)

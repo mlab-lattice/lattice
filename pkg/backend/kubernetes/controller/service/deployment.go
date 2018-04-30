@@ -47,59 +47,7 @@ func (c *Controller) syncDeployment(
 		// and so that the load balancer if it exists is ready to forward traffic to the new
 		// node pool.
 		if !nodePool.Stable() || !address.Stable() {
-			reason := ""
-			if !address.Stable() {
-				reason = address.Reason(c.namespacePrefix)
-			}
-
-			if !nodePool.Stable() {
-				reason = nodePool.Reason(c.namespacePrefix)
-			}
-
-			var failureInfo *deploymentStatusFailureInfo
-			state := deploymentStatePending
-
-			if address.Failed() {
-				state = deploymentStateFailed
-				reason = address.Reason(c.namespacePrefix)
-
-				failureInfo = &deploymentStatusFailureInfo{
-					Reason: reason,
-					Time:   metav1.Now(),
-				}
-				if address.Status.FailureInfo != nil {
-					failureInfo.Reason = address.Status.FailureInfo.Message
-					failureInfo.Time = address.Status.FailureInfo.Time
-				}
-			}
-
-			if nodePool.Failed() {
-				state = deploymentStateFailed
-				reason = nodePool.Reason(c.namespacePrefix)
-
-				failureInfo = &deploymentStatusFailureInfo{
-					Reason: reason,
-					Time:   metav1.Now(),
-				}
-				if nodePool.Status.FailureInfo != nil {
-					failureInfo.Reason = nodePool.Status.FailureInfo.Message
-					failureInfo.Time = nodePool.Status.FailureInfo.Time
-				}
-			}
-
-			status := &deploymentStatus{
-				UpdateProcessed: true,
-
-				State:  state,
-				Reason: &reason,
-
-				TotalInstances:       0,
-				UpdatedInstances:     0,
-				StaleInstances:       0,
-				AvailableInstances:   0,
-				TerminatingInstances: 0,
-			}
-			return status, nil
+			return &pendingDeploymentStatus, nil
 		}
 
 		return c.createNewDeployment(service, nodePool, address)
@@ -162,7 +110,7 @@ func (c *Controller) syncExistingDeployment(
 	// yet. If we do, the deployment will try to start rolling out, which will essentially
 	// just result in terminating some pods while waiting for the node pool to be ready.
 	if !nodePool.Stable() || !address.Stable() {
-		return c.getDeploymentStatus(service, deployment, nodePool, address)
+		return c.getDeploymentStatus(service, deployment)
 	}
 
 	// Need a consistent view of our config while generating the deployment spec
@@ -213,7 +161,7 @@ func (c *Controller) syncExistingDeployment(
 		}
 	}
 
-	return c.getDeploymentStatus(service, deployment, nodePool, address)
+	return c.getDeploymentStatus(service, deployment)
 }
 
 func (c *Controller) updateDeploymentSpec(
@@ -259,7 +207,7 @@ func (c *Controller) createNewDeployment(
 		return nil, err
 	}
 
-	return c.getDeploymentStatus(service, result, nodePool, address)
+	return c.getDeploymentStatus(service, result)
 }
 
 func (c *Controller) newDeployment(service *latticev1.Service, nodePool *latticev1.NodePool) (*appsv1.Deployment, error) {
@@ -637,7 +585,6 @@ type deploymentStatus struct {
 	UpdateProcessed bool
 
 	State       deploymentState
-	Reason      *string
 	FailureInfo *deploymentStatusFailureInfo
 
 	TotalInstances       int32
@@ -661,6 +608,18 @@ type deploymentStatusFailureInfo struct {
 	Time   metav1.Time
 }
 
+var pendingDeploymentStatus = deploymentStatus{
+	UpdateProcessed: true,
+
+	State: deploymentStatePending,
+
+	TotalInstances:       0,
+	UpdatedInstances:     0,
+	StaleInstances:       0,
+	AvailableInstances:   0,
+	TerminatingInstances: 0,
+}
+
 func (s *deploymentStatus) Failed() (bool, *deploymentStatusFailureInfo) {
 	return s.State == deploymentStateFailed, s.FailureInfo
 }
@@ -676,8 +635,6 @@ func (s *deploymentStatus) Ready() bool {
 func (c *Controller) getDeploymentStatus(
 	service *latticev1.Service,
 	deployment *appsv1.Deployment,
-	nodePool *latticev1.NodePool,
-	address *latticev1.Address,
 ) (*deploymentStatus, error) {
 	var state deploymentState
 	totalInstances := deployment.Status.Replicas
@@ -758,22 +715,10 @@ func (c *Controller) getDeploymentStatus(
 		}
 	}
 
-	var reason *string
-	if !address.Stable() {
-		r := address.Reason(c.namespacePrefix)
-		reason = &r
-	}
-
-	if !nodePool.Stable() {
-		r := nodePool.Reason(c.namespacePrefix)
-		reason = &r
-	}
-
 	status := &deploymentStatus{
 		UpdateProcessed: deployment.Generation <= deployment.Status.ObservedGeneration,
 
 		State:       state,
-		Reason:      reason,
 		FailureInfo: failureInfo,
 
 		TotalInstances:       totalInstances,

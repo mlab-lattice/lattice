@@ -16,7 +16,7 @@ import (
 // dedicatedNodePool returns a dedicated node pool for the service that has the same instanceType.
 // Will return an error if it finds multiple node pools with the same instance type.
 // Returns nil, nil if it could not find a matching node pool.
-func (c *Controller) dedicatedNodePool(service *latticev1.Service, instanceType string) (*latticev1.NodePool, error) {
+func (c *Controller) dedicatedNodePool(service *latticev1.Service) (*latticev1.NodePool, error) {
 	// First check the cache to see if there are any matching node pools
 	nodePool, err := c.cachedDedicatedNodePool(service)
 	if err != nil {

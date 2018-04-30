@@ -19,6 +19,7 @@ func (c *Controller) syncCurrentNodePool(service *latticev1.Service) (*latticev1
 	switch info.nodePoolType {
 	case latticev1.NodePoolTypeServiceDedicated:
 		return c.syncDedicatedNodePool(service, info.numInstances, info.instanceType)
+
 	case latticev1.NodePoolTypeSystemShared:
 		return c.syncSharedNodePool(service.Namespace, info.path)
 
@@ -32,7 +33,7 @@ func (c *Controller) syncCurrentNodePool(service *latticev1.Service) (*latticev1
 // service on each node exists. if it does not exist, it creates one. if it does exist, it updates it if the update
 // is one that can be done in place (e.g. scaling), or creates a new one if it requires a rolling update (e.g. instance type change)
 func (c *Controller) syncDedicatedNodePool(service *latticev1.Service, numInstances int32, instanceType string) (*latticev1.NodePool, error) {
-	nodePool, err := c.dedicatedNodePool(service, instanceType)
+	nodePool, err := c.dedicatedNodePool(service)
 	if err != nil {
 		return nil, err
 	}

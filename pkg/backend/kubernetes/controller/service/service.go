@@ -6,8 +6,9 @@ import (
 	"reflect"
 
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
-
+	kubeutil "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/kubernetes"
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -158,17 +159,30 @@ func (c *Controller) syncServiceStatus(
 	// so if it is not stable we don't need to update the service's node
 	// pool annotation
 	if nodePool.Stable() {
-		var err error
-		service, err = c.updateServiceNodePoolAnnotation(service, nodePool, state)
+		annotation, err := c.serviceNodePoolAnnotation(service, nodePool, state)
+		if err != nil {
+			return nil, err
+		}
+
+		service, err = c.updateServiceNodePoolAnnotation(service, annotation)
 		if err != nil {
 			return nil, err
 		}
 	}
 
+	reason := ""
+	if !address.Stable() {
+		reason = address.Reason(c.namespacePrefix)
+	}
+
+	if !nodePool.Stable() {
+		reason = nodePool.Reason(c.namespacePrefix)
+	}
+
 	return c.updateServiceStatus(
 		service,
 		state,
-		deploymentStatus.Reason,
+		&reason,
 		failureInfo,
 		deploymentStatus.AvailableInstances,
 		deploymentStatus.UpdatedInstances,
@@ -178,11 +192,11 @@ func (c *Controller) syncServiceStatus(
 	)
 }
 
-func (c *Controller) updateServiceNodePoolAnnotation(
+func (c *Controller) serviceNodePoolAnnotation(
 	service *latticev1.Service,
 	nodePool *latticev1.NodePool,
 	state latticev1.ServiceState,
-) (*latticev1.Service, error) {
+) (latticev1.NodePoolAnnotationValue, error) {
 	newAnnotation := make(latticev1.NodePoolAnnotationValue)
 	existingAnnotation, err := service.NodePoolAnnotation()
 	if err != nil {
@@ -204,12 +218,24 @@ func (c *Controller) updateServiceNodePoolAnnotation(
 	}
 
 	newAnnotation.Add(nodePool.Namespace, nodePool.Name, epoch)
+	return newAnnotation, nil
+}
 
-	if reflect.DeepEqual(existingAnnotation, newAnnotation) {
+func (c *Controller) updateServiceNodePoolAnnotation(
+	service *latticev1.Service,
+	annotation latticev1.NodePoolAnnotationValue,
+) (*latticev1.Service, error) {
+	existingAnnotation, err := service.NodePoolAnnotation()
+	if err != nil {
+		err := fmt.Errorf("error getting existing node pool annotation for %v: %v", service.Description(c.namespacePrefix), err)
+		return nil, err
+	}
+
+	if reflect.DeepEqual(existingAnnotation, annotation) {
 		return service, nil
 	}
 
-	newAnnotationJSON, err := json.Marshal(&newAnnotation)
+	newAnnotationJSON, err := json.Marshal(&annotation)
 	if err != nil {
 		return nil, fmt.Errorf("error marshalling node pool annotation: %v", err)
 	}
@@ -260,6 +286,55 @@ func (c *Controller) updateServiceStatus(
 	result, err := c.latticeClient.LatticeV1().Services(service.Namespace).UpdateStatus(service)
 	if err != nil {
 		return nil, fmt.Errorf("error updating status for %v: %v", service.Description(c.namespacePrefix), err)
+	}
+
+	return result, nil
+}
+
+func (c *Controller) addFinalizer(service *latticev1.Service) (*latticev1.Service, error) {
+	// Check to see if the finalizer already exists. If so nothing needs to be done.
+	for _, finalizer := range service.Finalizers {
+		if finalizer == kubeutil.ServiceControllerFinalizer {
+			return service, nil
+		}
+	}
+
+	// Copy so we don't mutate the shared cache
+	service = service.DeepCopy()
+	service.Finalizers = append(service.Finalizers, kubeutil.ServiceControllerFinalizer)
+
+	result, err := c.latticeClient.LatticeV1().Services(service.Namespace).Update(service)
+	if err != nil {
+		return nil, fmt.Errorf("error adding %v finalizer: %v", service.Description(c.namespacePrefix), err)
+	}
+
+	return result, nil
+}
+
+func (c *Controller) removeFinalizer(service *latticev1.Service) (*latticev1.Service, error) {
+	// Build up a list of all the finalizers except the aws service controller finalizer.
+	var finalizers []string
+	found := false
+	for _, finalizer := range service.Finalizers {
+		if finalizer == kubeutil.ServiceControllerFinalizer {
+			found = true
+			continue
+		}
+		finalizers = append(finalizers, finalizer)
+	}
+
+	// If the finalizer wasn't part of the list, nothing to do.
+	if !found {
+		return service, nil
+	}
+
+	// Copy so we don't mutate the shared cache
+	service = service.DeepCopy()
+	service.Finalizers = finalizers
+
+	result, err := c.latticeClient.LatticeV1().Services(service.Namespace).Update(service)
+	if err != nil {
+		return nil, fmt.Errorf("error removing %v finalizer: %v", service.Description(c.namespacePrefix), err)
 	}
 
 	return result, nil

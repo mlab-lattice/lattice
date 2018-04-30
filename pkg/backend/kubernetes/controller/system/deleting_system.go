@@ -9,6 +9,7 @@ import (
 )
 
 func (c *Controller) syncDeletingSystem(system *latticev1.System) error {
+	// FIXME: should we teardown here or fail if not torn down here?
 	systemNamespace := system.ResourceNamespace(c.namespacePrefix)
 	namespace, err := c.namespaceLister.Get(systemNamespace)
 	if err != nil {

@@ -298,6 +298,11 @@ func (c *Controller) syncService(key string) error {
 		return c.syncDeletedService(service)
 	}
 
+	service, err = c.addFinalizer(service)
+	if err != nil {
+		return err
+	}
+
 	nodePool, err := c.syncCurrentNodePool(service)
 	if err != nil {
 		return err
