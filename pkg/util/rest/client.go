@@ -83,6 +83,8 @@ type Client interface {
 	Delete(url string) *RequestContext
 	Patch(url, contentType string, body io.Reader) *RequestContext
 	PatchJSON(url string, body io.Reader) *RequestContext
+	Put(url, contentType string, body io.Reader) *RequestContext
+	PutJSON(url string, body io.Reader) *RequestContext
 	Post(url, contentType string, body io.Reader) *RequestContext
 	PostJSON(url string, body io.Reader) *RequestContext
 }
@@ -146,6 +148,26 @@ func (dc *DefaultClient) Patch(url, contentType string, body io.Reader) *Request
 
 func (dc *DefaultClient) PatchJSON(url string, body io.Reader) *RequestContext {
 	return dc.Patch(url, ContentTypeJSON, body)
+}
+
+func (dc *DefaultClient) Put(url, contentType string, body io.Reader) *RequestContext {
+	headers := make(map[string]string)
+	for k, v := range dc.defaultHeaders {
+		headers[k] = v
+	}
+	headers[headerContentType] = contentType
+
+	return &RequestContext{
+		Client:      dc.client,
+		Method:      http.MethodPut,
+		Headers:     headers,
+		RequestBody: body,
+		URL:         url,
+	}
+}
+
+func (dc *DefaultClient) PutJSON(url string, body io.Reader) *RequestContext {
+	return dc.Put(url, ContentTypeJSON, body)
 }
 
 func (dc *DefaultClient) Post(url, contentType string, body io.Reader) *RequestContext {
