@@ -149,10 +149,9 @@ func (c *Controller) syncExistingDeployment(
 	isUpdated, reason := c.isDeploymentSpecUpdated(service, &currentSpec, defaultedDesiredSpec, defaultedUntransformedSpec)
 	if !isUpdated {
 		glog.V(4).Infof(
-			"Deployment %v for Service %v/%v not up to date: %v",
+			"deployment %v for %v not up to date: %v",
 			deployment.Name,
-			service.Namespace,
-			service.Name,
+			service.Description(c.namespacePrefix),
 			reason,
 		)
 		deployment, err = c.updateDeploymentSpec(service, deployment, desiredSpec)

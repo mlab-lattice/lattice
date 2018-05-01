@@ -234,9 +234,9 @@ func (c *Controller) processNextWorkItem() bool {
 func (c *Controller) syncSystem(key string) error {
 	glog.Flush()
 	startTime := time.Now()
-	glog.V(4).Infof("started syncing System %q (%v)", key, startTime)
+	glog.V(4).Infof("started syncing system %q (%v)", key, startTime)
 	defer func() {
-		glog.V(4).Infof("finished syncing System %q (%v)", key, time.Now().Sub(startTime))
+		glog.V(4).Infof("finished syncing system %q (%v)", key, time.Now().Sub(startTime))
 	}()
 
 	namespace, name, err := cache.SplitMetaNamespaceKey(key)

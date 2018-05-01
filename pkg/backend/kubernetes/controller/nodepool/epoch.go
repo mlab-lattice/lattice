@@ -93,6 +93,18 @@ func (c *Controller) serviceRunningOnEpoch(nodePool *latticev1.NodePool, epoch l
 			continue
 		}
 
+		// If the service is being deleted, if it contains the epoch then the service is
+		// clearly possibly still running on the epoch. But if it doesn't have the epoch
+		// annotated we know that it will not in the future, so we are safe to say
+		// the service will not be running on this epoch.
+		if service.Deleted() {
+			if annotation.ContainsEpoch(nodePool.Namespace, nodePool.Name, epoch) {
+				return true, nil
+			}
+
+			continue
+		}
+
 		// If the service hasn't annotated its intended node pool yet, it's possible it's in
 		// the process of annotating it with this epoch, so it's possible there's a service
 		// running on the epoch.

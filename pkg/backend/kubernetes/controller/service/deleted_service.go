@@ -4,7 +4,9 @@ import (
 	"fmt"
 
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
+	kubeutil "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/kubernetes"
 
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -19,10 +21,18 @@ func (c *Controller) syncDeletedService(service *latticev1.Service) error {
 		return err
 	}
 
+	deploymentStatus := &pendingDeploymentStatus
+	if deployment != nil {
+		deploymentStatus, err = c.getDeploymentStatus(service, deployment)
+		if err != nil {
+			return err
+		}
+	}
+
 	// if the address still exists, delete it first so traffic stops being sent to the service
 	if address != nil {
 		// if the address is still deleting, nothing to do for now
-		if address.DeletionTimestamp == nil {
+		if address.DeletionTimestamp != nil {
 			// FIXME: update status
 			return nil
 		}
@@ -42,17 +52,20 @@ func (c *Controller) syncDeletedService(service *latticev1.Service) error {
 			)
 		}
 
-		// FIXME: update status
-		return nil
+		reason := "waiting for address to be deleted"
+		_, err = c.updateDeletedServiceStatus(service, &reason, deploymentStatus)
+		return err
 	}
 
 	// if the deployment still exists, delete it once the address is deleted
 	// FIXME: check to see if the deployment is deleted while pods are still terminating
 	if deployment != nil {
+		reason := "waiting for instances to be deleted"
+
 		// if the deployment is still deleting, nothing to do for now
-		if address.DeletionTimestamp == nil {
-			// FIXME: update status
-			return nil
+		if deployment.DeletionTimestamp != nil {
+			_, err = c.updateDeletedServiceStatus(service, &reason, deploymentStatus)
+			return err
 		}
 
 		foregroundDelete := metav1.DeletePropagationForeground
@@ -70,8 +83,46 @@ func (c *Controller) syncDeletedService(service *latticev1.Service) error {
 			)
 		}
 
-		// FIXME: update status
-		return nil
+		_, err = c.updateDeletedServiceStatus(service, &reason, deploymentStatus)
+		return err
+	}
+
+	kubeServiceName := kubeutil.GetKubeServiceNameForService(service.Name)
+	kubeService, err := c.kubeServiceLister.Services(service.Namespace).Get(kubeServiceName)
+	if err != nil {
+		if !errors.IsNotFound(err) {
+			return fmt.Errorf("error getting kube service for %v: %v", service.Description(c.namespacePrefix), err)
+		}
+
+		kubeService = nil
+	}
+
+	if kubeService != nil {
+		reason := "waiting for internal resources to be deleted"
+
+		// if the kube service is still deleting, nothing to do for now
+		if kubeService.DeletionTimestamp != nil {
+			_, err = c.updateDeletedServiceStatus(service, &reason, deploymentStatus)
+			return err
+		}
+
+		foregroundDelete := metav1.DeletePropagationForeground
+		deleteOptions := &metav1.DeleteOptions{
+			PropagationPolicy: &foregroundDelete,
+		}
+
+		err := c.kubeClient.CoreV1().Services(kubeService.Namespace).Delete(kubeService.Name, deleteOptions)
+		if err != nil {
+			return fmt.Errorf(
+				"error deleting kube service %v for %v: %v",
+				kubeService.Name,
+				service.Description(c.namespacePrefix),
+				err,
+			)
+		}
+
+		_, err = c.updateDeletedServiceStatus(service, &reason, deploymentStatus)
+		return err
 	}
 
 	// if the deployment is deleted, update the service's node pool workload annotation
@@ -89,10 +140,12 @@ func (c *Controller) syncDeletedService(service *latticev1.Service) error {
 	}
 
 	if dedicatedNodePool != nil {
+		reason := "waiting for node pool to be deleted"
+
 		// if the address is still deleting, nothing to do for now
-		if address.DeletionTimestamp == nil {
-			// FIXME: update status
-			return nil
+		if dedicatedNodePool.DeletionTimestamp != nil {
+			_, err = c.updateDeletedServiceStatus(service, &reason, deploymentStatus)
+			return err
 		}
 
 		foregroundDelete := metav1.DeletePropagationForeground
@@ -110,10 +163,28 @@ func (c *Controller) syncDeletedService(service *latticev1.Service) error {
 			)
 		}
 
-		// FIXME: update status
-		return nil
+		_, err = c.updateDeletedServiceStatus(service, &reason, deploymentStatus)
+		return err
 	}
 
 	_, err = c.removeFinalizer(service)
 	return err
+}
+
+func (c *Controller) updateDeletedServiceStatus(
+	service *latticev1.Service,
+	reason *string,
+	deploymentStatus *deploymentStatus,
+) (*latticev1.Service, error) {
+	return c.updateServiceStatus(
+		service,
+		latticev1.ServiceStateDeleting,
+		reason,
+		nil,
+		deploymentStatus.AvailableInstances,
+		deploymentStatus.UpdatedInstances,
+		deploymentStatus.StaleInstances,
+		deploymentStatus.TerminatingInstances,
+		service.Status.Ports,
+	)
 }

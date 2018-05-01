@@ -75,7 +75,6 @@ func (c *Controller) syncSystemServices(system *latticev1.System) (map[tree.Node
 		} else {
 			// There is supposedly already a service for this path.
 			serviceName := serviceStatus.Name
-			serviceNames.Add(serviceName)
 			var err error
 
 			service, err = c.serviceLister.Services(systemNamespace).Get(serviceName)
@@ -111,6 +110,7 @@ func (c *Controller) syncSystemServices(system *latticev1.System) (map[tree.Node
 			return nil, err
 		}
 
+		serviceNames.Add(service.Name)
 		services[path] = latticev1.SystemStatusService{
 			Name:          service.Name,
 			Generation:    service.Generation,
@@ -260,11 +260,12 @@ func (c *Controller) serviceSpec(
 }
 
 func (c *Controller) deleteService(service *latticev1.Service) error {
-	// orphan the service so that the service controller can do its own
-	// properly ordered garbage collection
-	orphanDelete := metav1.DeletePropagationOrphan
+	// background delete will add deletionTimestamp to the service, but will not
+	// try to act upon any of the dependents since the service has a finalizer
+	// this allows us to clean up the service in a controlled way
+	backgroundDelete := metav1.DeletePropagationBackground
 	deleteOptions := &metav1.DeleteOptions{
-		PropagationPolicy: &orphanDelete,
+		PropagationPolicy: &backgroundDelete,
 	}
 
 	err := c.latticeClient.LatticeV1().Services(service.Namespace).Delete(service.Name, deleteOptions)

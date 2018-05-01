@@ -106,10 +106,8 @@ func (c *Controller) handleSystemAdd(obj interface{}) {
 }
 
 func (c *Controller) handleSystemUpdate(old, cur interface{}) {
-	oldSystem := old.(*latticev1.System)
-	curSystem := cur.(*latticev1.System)
-	glog.V(4).Infof("Updating System %s", oldSystem.Name)
-	c.enqueue(curSystem)
+	system := cur.(*latticev1.System)
+	c.enqueue(system)
 }
 
 func (c *Controller) handleSystemDelete(obj interface{}) {
@@ -230,7 +228,7 @@ func (c *Controller) handleNamespaceDelete(obj interface{}) {
 }
 
 func (c *Controller) handleNamespaceEvent(namespace *corev1.Namespace, verb string) {
-	glog.V(4).Infof("namespace %v %v", namespace.Namespace, verb)
+	glog.V(4).Infof("namespace %v %v", namespace.Name, verb)
 
 	system := c.resolveNamespaceSystem(namespace.Name)
 	if system != nil {
