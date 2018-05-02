@@ -2,8 +2,8 @@ package cli
 
 import (
 	"fmt"
-	"os"
 	"log"
+	"os"
 	"text/template"
 
 	"github.com/spf13/cobra"
@@ -61,7 +61,7 @@ func (c *Command) Init() error {
 	}
 
 	c.cobraCmd.SetUsageFunc(c.usageFuncWrapper)
-    c.cobraCmd.SetHelpFunc(c.helpFuncWrapper)
+	c.cobraCmd.SetHelpFunc(c.helpFuncWrapper)
 
 	c.cobraCmd.PreRun = func(cmd *cobra.Command, args []string) {
 		for name, parser := range c.getFlagParsers() {
@@ -82,53 +82,51 @@ func (c *Command) Init() error {
 
 // usageFuncWrapper calls the correct usage function, and lets the usageFunction be called on a Command rather than a cobra.Command
 func (c *Command) usageFuncWrapper(command *cobra.Command) error {
-    if c.UsageFunc != nil {
-        return c.UsageFunc(c)
-    }
+	if c.UsageFunc != nil {
+		return c.UsageFunc(c)
+	}
 
-    return c.defaultUsageFunc(c)
+	return c.defaultUsageFunc(c)
 }
 
 // helpFuncWrapper calls the correct help function, and lets the usageFunction be called on a Command rather than a cobra.Command
 func (c *Command) helpFuncWrapper(command *cobra.Command, strings []string) {
-    if c.HelpFunc != nil {
-        c.HelpFunc(c)
-    }
+	if c.HelpFunc != nil {
+		c.HelpFunc(c)
+	}
 
-    c.defaultHelpFunc(c)
+	c.defaultHelpFunc(c)
 }
 
 // defaultUsageFunc is the Usage function that will be called if none is provided
 func (c *Command) defaultUsageFunc(command *Command) error {
-    tmplName := "defaultHelpTemplate"
-    tmpl, err := template.New(tmplName).Funcs(templateFuncs).Parse(DefaultUsageTemplate)
-    if err != nil {
-        log.Fatalf("error creating %v template: %v \n", tmplName, err)
-        return err
-    }
+	tmplName := "defaultHelpTemplate"
+	tmpl, err := template.New(tmplName).Funcs(templateFuncs).Parse(DefaultTemplate)
+	if err != nil {
+		log.Fatalf("error creating %v template: %v \n", tmplName, err)
+		return err
+	}
 
-    err = tmpl.Execute(os.Stdout, c)
-    if err != nil {
-        log.Fatalf("error executing %v: %v \n", tmplName, err)
-    }
-    return err
+	err = tmpl.ExecuteTemplate(os.Stdout, "UsageTemplate", c)
+	if err != nil {
+		log.Fatalf("error executing %v: %v \n", tmplName, err)
+	}
+	return err
 }
-
 
 // defaultHelpFunc is the Help function that will be called if none is provided
 func (c *Command) defaultHelpFunc(command *Command) {
-    tmplName := "defaultHelpTemplate"
-    tmpl, err := template.New(tmplName).Funcs(templateFuncs).Parse(DefaultHelpTemplate)
-    if err != nil {
-        log.Fatalf("error creating %v template: %v \n", tmplName, err)
-    }
+	tmplName := "defaultHelpTemplate"
+	tmpl, err := template.New(tmplName).Funcs(templateFuncs).Parse(DefaultTemplate)
+	if err != nil {
+		log.Fatalf("error creating %v template: %v \n", tmplName, err)
+	}
 
-    err = tmpl.Execute(os.Stdout, c)
-    if err != nil {
-        log.Fatalf("error executing %v: %v \n", tmplName, err)
-    }
+	err = tmpl.ExecuteTemplate(os.Stdout, "HelpTemplate", c)
+	if err != nil {
+		log.Fatalf("error executing %v: %v \n", tmplName, err)
+	}
 }
-
 
 func (c *Command) addArgs() error {
 	if err := c.Args.validate(); err != nil {
@@ -281,13 +279,8 @@ func (c *Command) exit(err error) {
 
 // Template helpers
 
-// FIXME :: unless alternative provided
-func (c *Command) UsageTemplate() string {
-	return DefaultUsageTemplate
-}
-
-func (c *Command) HelpTemplate() string {
-	return DefaultHelpTemplate
+func (c *Command) HasSubcommands() bool {
+	return len(c.Subcommands) != 0
 }
 
 func (c *Command) NamePadding() int {
