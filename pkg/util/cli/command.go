@@ -122,7 +122,7 @@ func (c *Command) defaultHelpFunc(command *Command) {
 		log.Fatalf("error creating %v template: %v \n", tmplName, err)
 	}
 
-	err = tmpl.ExecuteTemplate(os.Stdout, "HelpTemplate", c)
+	err = tmpl.ExecuteTemplate(os.Stdout, "HelpTemplateGrouped", c)
 	if err != nil {
 		log.Fatalf("error executing %v: %v \n", tmplName, err)
 	}
@@ -313,6 +313,45 @@ func (c *Command) AllSubcommands() []*Command {
 			found = append(found, queue[0])
 			queue = append(queue, queue[0].Subcommands...)
 			queue = queue[1:]
+		}
+	}
+
+	return found
+}
+
+type CommandGroup struct {
+	Commands  []*Command
+	GroupName string
+}
+
+// SubcommandsByGroup returns commands grouped by their nesting. The order is a pre order.
+func (c *Command) SubcommandsByGroup() []*CommandGroup {
+	// found is a list of all flattened subcommands
+	found := make([]*CommandGroup, 0)
+	// queue is the list of Commands that still need to be flattened
+	queue := make([]*Command, 0)
+	queue = append(queue, c)
+
+	done := false
+	for done == false {
+		if len(queue) == 0 {
+			// nothing left to search, found contains all the subcommands
+			done = true
+		} else {
+			// explore the first element in the queue. Add this node to found and add each subcommand to the queue
+			nextElem := queue[0]
+			queue = queue[1:]
+			if len(nextElem.Subcommands) == 0 {
+				continue
+			}
+
+			groupName := nextElem.CommandPath()
+			newCmdGroup := &CommandGroup{
+				Commands:  nextElem.Subcommands,
+				GroupName: groupName,
+			}
+			found = append(found, newCmdGroup)
+			queue = append(queue, nextElem.Subcommands...)
 		}
 	}
 
