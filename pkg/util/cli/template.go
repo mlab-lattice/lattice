@@ -9,7 +9,7 @@ import (
 "unicode"
 )
 
-// Adds the default command template as well as some default functions to use for this template
+// These here for reference
 
 var CobraUsageTemplate = `Usage:{{if .Runnable}}
   {{.UseLine}}{{end}}{{if .HasAvailableSubCommands}}
@@ -44,14 +44,13 @@ var DefaultUsageTemplate = `Usage template for command {{.Name}}
 Cant access helpTempl from here
 `
 
-var DefaultHelpTemplate = `Called {{.CommandPath}}:
-{{if (ne .Short "") }} {{.Short}}
-{{end}}
+var DefaultHelpTemplate = `{{.CommandPath}}{{if (ne .Short "") }} - {{.Short}}{{end}}
+{{if (gt (len .Flags) 0)}}
 Flags {{range .Flags}}
-    --{{ rpad .GetName 10 }} {{if (ne .GetShort "") }} -{{ rpad .GetShort 2 }} {{end}} {{ .GetUsage }}{{end}}
-
-General Commands:{{range .AllSubcommands}}
-  {{rpad .CommandPath 10 }} {{.Short}}{{end}}
+    --{{ rpad .GetName $.FlagNamePadding }} {{if (ne .GetShort "") }} -{{ rpad .GetShort 2 }} {{ .GetUsage }} {{else}} {{rpad " " 4}}{{ .GetUsage }}{{end}}{{end}}
+{{end}}
+Available Commands:{{range .AllSubcommands}}
+  {{rpad .CommandPath .NamePadding }} {{.Short}}{{end}}
 
 `
 
@@ -62,6 +61,7 @@ var templateFuncs = template.FuncMap{
     "trimTrailingWhitespaces": trimRightSpace,
     //"appendIfNotPresent":      appendIfNotPresent,
     "rpad": rpad,
+    "lpad": lpad,
     "gt":   Gt,
     "eq":   Eq,
 }
@@ -73,8 +73,16 @@ func trimRightSpace(s string) string {
 // rpad adds padding to the right of a string.
 func rpad(s string, padding int) string {
     template := fmt.Sprintf("%%-%ds", padding)
+    // %-4s
     return fmt.Sprintf(template, s)
 }
+
+// lpad adds padding to the left of a string.
+func lpad(s string, padding int) string {
+    template := fmt.Sprintf("%% %ds", padding)
+    return fmt.Sprintf(template, s)
+}
+
 
 // Gt takes two types and checks whether the first type is greater than the second. In case of types Arrays, Chans,
 // Maps and Slices, Gt will compare their lengths. Ints are compared directly while strings are first parsed as

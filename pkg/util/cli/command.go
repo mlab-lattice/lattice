@@ -217,18 +217,6 @@ func (c *Command) ExecuteColon() {
 }
 
 func (c *Command) initColon() error {
-	c.cobraCmd = &cobra.Command{
-		Use:   c.Name,
-		Short: c.Short,
-		Run: func(cmd *cobra.Command, args []string) {
-			if c.Run == nil {
-				c.emptyRun(cmd)
-			}
-
-			c.Run(args)
-		},
-	}
-
 	for _, subcommand := range c.Subcommands {
 		if err := subcommand.Init(); err != nil {
 			return err
@@ -292,6 +280,24 @@ func (c *Command) exit(err error) {
 }
 
 // Template helpers
+
+// FIXME :: unless alternative provided
+func (c *Command) UsageTemplate() string {
+	return DefaultUsageTemplate
+}
+
+func (c *Command) HelpTemplate() string {
+	return DefaultHelpTemplate
+}
+
+func (c *Command) NamePadding() int {
+	return 35
+}
+
+func (c *Command) FlagNamePadding() int {
+	return 10
+}
+
 func (c *Command) CommandPath() string {
 	return c.cobraCmd.CommandPath()
 }
