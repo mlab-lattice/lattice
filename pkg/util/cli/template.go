@@ -7,6 +7,8 @@ import (
 	"strings"
 	"text/template"
 	"unicode"
+
+	"github.com/fatih/color"
 )
 
 // These here for reference
@@ -53,17 +55,15 @@ Flags: {{range .Flags}}
 {{end}}{{end}}
 {{define "HelpTemplateGrouped"}}{{.CommandPath}}{{if (ne .Short "") }} - {{.Short}}{{end}}
 {{if (gt (len .Flags) 0)}}
-Flags: {{range .Flags}}
+{{colored "Flags:" "white"}} {{range .Flags}}
     --{{ rpad .GetName $.FlagNamePadding }} {{if (ne .GetShort "") }} -{{ rpad .GetShort 2 }} {{ .GetUsage }} {{else}} {{rpad " " 4}}{{ .GetUsage }}{{end}}{{end}}
 {{end}}
 {{if .HasSubcommands}}Available Commands:
 
-{{range .SubcommandsByGroup}}{{ .GroupName }}: {{range .Commands}}
-    {{rpad .Name .NamePadding }} {{.Short}}{{end}}
+{{range .SubcommandsByGroup}}{{ colored .GroupName "blue" }}: {{range .Commands}}
+    {{ colored (rpad .Name .NamePadding) "none" }} {{colored .Short "gray"}}{{end}}
 
-{{end}}
-
-{{end}}{{end}}
+{{end}}{{end}}{{end}}
 {{define "UsageTemplate"}}{{template "HelpTemplate" .}}{{end}}`
 
 // These are pretty much taken straight from cobra. Used to get a working template with similar behavior.
@@ -72,14 +72,40 @@ var templateFuncs = template.FuncMap{
 	"trimRightSpace":          trimRightSpace,
 	"trimTrailingWhitespaces": trimRightSpace,
 	//"appendIfNotPresent":      appendIfNotPresent,
-	"rpad": rpad,
-	"lpad": lpad,
-	"gt":   Gt,
-	"eq":   Eq,
+	"rpad":    rpad,
+	"lpad":    lpad,
+	"gt":      Gt,
+	"eq":      Eq,
+	"colored": colored,
 }
 
 func trimRightSpace(s string) string {
 	return strings.TrimRightFunc(s, unicode.IsSpace)
+}
+
+// rpad adds padding to the right of a string.
+func colored(s string, colChoice string) string {
+	col := color.New(color.FgBlue).SprintFunc()
+
+	switch colChoice {
+	case "blue":
+		col = color.New(color.FgBlue).SprintFunc()
+	case "hiblue":
+		col = color.New(color.Faint + color.FgBlue).SprintFunc()
+	case "gray":
+		col = color.New(color.FgBlack).SprintFunc()
+	case "red":
+		col = color.New(color.FgRed).SprintFunc()
+	case "cyan":
+		col = color.New(color.FgCyan).SprintFunc()
+	case "white":
+		col = color.New(color.FgWhite).SprintFunc()
+	case "none":
+		return fmt.Sprint(s)
+	default:
+		return fmt.Sprint(s)
+	}
+	return fmt.Sprintf("%s", col(s))
 }
 
 // rpad adds padding to the right of a string.
