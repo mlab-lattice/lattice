@@ -40,15 +40,18 @@ func (c *Controller) syncInProgressTeardown(teardown *latticev1.Teardown) error 
 		return nil
 
 	case latticev1.SystemStateStable:
-		state = latticev1.TeardownStateSucceeded
-
 		system, err = c.updateSystemLabels(system, nil, nil, nil)
+		if err != nil {
+			return err
+		}
+
+		state = latticev1.TeardownStateSucceeded
 
 	case latticev1.SystemStateDegraded:
 		state = latticev1.TeardownStateFailed
 
 	default:
-		return fmt.Errorf("System %v/%v in unexpected state %v", system.Namespace, system.Name, system.Status.State)
+		return fmt.Errorf("%v in unexpected state %v", system.Description(), system.Status.State)
 	}
 
 	teardown, err = c.updateTeardownStatus(teardown, state, "")

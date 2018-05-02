@@ -59,7 +59,7 @@ func (v *V3) ValidateStable() {
 	address, ok := serviceA.Ports[V3ServiceAPublicPort]
 	Expect(ok).To(BeTrue())
 
-	err := v.poll(address, time.Second, 30*time.Second)
+	err := v.poll(address, time.Second, 10*time.Second)
 	Expect(err).To(Not(HaveOccurred()))
 }
 
