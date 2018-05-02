@@ -11,6 +11,7 @@ go_library(
         "int32_flag.go",
         "int_flag.go",
         "string_flag.go",
+        "template.go",
     ],
     importpath = "github.com/mlab-lattice/lattice/pkg/util/cli",
     visibility = ["//visibility:public"],

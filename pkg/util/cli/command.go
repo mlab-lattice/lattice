@@ -19,7 +19,13 @@ type Command struct {
 	Subcommands []*Command
 	cobraCmd    *cobra.Command
 	UsageFunc   func(*Command) error
-	HelpFunc    func(*Command) error
+	HelpFunc    func(*Command)
+}
+
+func (c *Command) emptyRun(cmd *cobra.Command) {
+	c.cobraCmd.SetHelpFunc(c.helpFuncWrapper)
+	cmd.Help()
+	os.Exit(1)
 }
 
 func (c *Command) Execute() {
@@ -36,8 +42,7 @@ func (c *Command) Init() error {
 		Short: c.Short,
 		Run: func(cmd *cobra.Command, args []string) {
 			if c.Run == nil {
-				cmd.Help()
-				os.Exit(1)
+				c.emptyRun(cmd)
 			}
 			c.Run(args)
 		},
@@ -56,7 +61,7 @@ func (c *Command) Init() error {
 	}
 
 	c.cobraCmd.SetUsageFunc(c.usageFuncWrapper)
-    c.cobraCmd.SetUsageFunc(c.helpFuncWrapper)
+    c.cobraCmd.SetHelpFunc(c.helpFuncWrapper)
 
 	c.cobraCmd.PreRun = func(cmd *cobra.Command, args []string) {
 		for name, parser := range c.getFlagParsers() {
@@ -85,12 +90,12 @@ func (c *Command) usageFuncWrapper(command *cobra.Command) error {
 }
 
 // helpFuncWrapper calls the correct help function, and lets the usageFunction be called on a Command rather than a cobra.Command
-func (c *Command) helpFuncWrapper(command *cobra.Command) error {
+func (c *Command) helpFuncWrapper(command *cobra.Command, strings []string) {
     if c.HelpFunc != nil {
-        return c.HelpFunc(c)
+        c.HelpFunc(c)
     }
 
-    return c.defaultHelpFunc(c)
+    c.defaultHelpFunc(c)
 }
 
 // defaultUsageFunc is the Usage function that will be called if none is provided
@@ -111,19 +116,17 @@ func (c *Command) defaultUsageFunc(command *Command) error {
 
 
 // defaultHelpFunc is the Help function that will be called if none is provided
-func (c *Command) defaultHelpFunc(command *Command) error {
+func (c *Command) defaultHelpFunc(command *Command) {
     tmplName := "defaultHelpTemplate"
     tmpl, err := template.New(tmplName).Funcs(templateFuncs).Parse(DefaultHelpTemplate)
     if err != nil {
         log.Fatalf("error creating %v template: %v \n", tmplName, err)
-        return err
     }
 
     err = tmpl.Execute(os.Stdout, c)
     if err != nil {
         log.Fatalf("error executing %v: %v \n", tmplName, err)
     }
-    return err
 }
 
 
@@ -219,8 +222,7 @@ func (c *Command) initColon() error {
 		Short: c.Short,
 		Run: func(cmd *cobra.Command, args []string) {
 			if c.Run == nil {
-				cmd.Help()
-				os.Exit(1)
+				c.emptyRun(cmd)
 			}
 
 			c.Run(args)
@@ -246,8 +248,7 @@ func (c *Command) initColon() error {
 		subcommand.cobraCmd.Run = func(run func([]string)) func(*cobra.Command, []string) {
 			return func(cmd *cobra.Command, args []string) {
 				if run == nil {
-					cmd.Help()
-					os.Exit(1)
+					c.emptyRun(cmd)
 				}
 
 				run(args)
@@ -288,4 +289,33 @@ func (c *Command) exit(err error) {
 	}
 
 	os.Exit(0)
+}
+
+// Template helpers
+func (c *Command) CommandPath() string {
+	return c.cobraCmd.CommandPath()
+}
+
+// AllSubcommands flattens returns the recursive subcommand tree as one flat array.
+func (c *Command) AllSubcommands() []*Command {
+	// found is a list of all flattened subcommands
+	found := make([]*Command, 0)
+	// queue is the list of Commands that still need to be flattened
+	queue := make([]*Command, 0)
+	queue = c.Subcommands
+
+	done := false
+	for done == false {
+		if len(queue) == 0 {
+			// nothing left to search, found contains all the subcommands
+			done = true
+		} else {
+			// explore the first element in the queue. Add this node to found and add each subcommand to the queue
+			found = append(found, queue[0])
+			queue = append(queue, queue[0].Subcommands...)
+			queue = queue[1:]
+		}
+	}
+
+	return found
 }

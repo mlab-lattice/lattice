@@ -44,13 +44,14 @@ var DefaultUsageTemplate = `Usage template for command {{.Name}}
 Cant access helpTempl from here
 `
 
-var DefaultHelpTemplate = `Called {{.Name}}:
-Short {{.Short}}
+var DefaultHelpTemplate = `Called {{.CommandPath}}:
+{{if (ne .Short "") }} {{.Short}}
+{{end}}
+Flags {{range .Flags}}
+    --{{ rpad .GetName 10 }} {{if (ne .GetShort "") }} -{{ rpad .GetShort 2 }} {{end}} {{ .GetUsage }}{{end}}
 
-Flags {{.Flags}}
-
-General Commands:{{range .Subcommands}}
-  {{rpad .Name 10 }} {{.Short}}{{end}}
+General Commands:{{range .AllSubcommands}}
+  {{rpad .CommandPath 10 }} {{.Short}}{{end}}
 
 `
 
