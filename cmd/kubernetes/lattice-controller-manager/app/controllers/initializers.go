@@ -82,6 +82,7 @@ func initializeServiceController(ctx Context) {
 	go service.NewController(
 		ctx.NamespacePrefix,
 		ctx.LatticeID,
+		ctx.InternalDNSDomain,
 		ctx.CloudProviderOptions,
 		ctx.ServiceMeshOptions,
 		ctx.KubeClientBuilder.ClientOrDie(controllerName(ServiceController)),

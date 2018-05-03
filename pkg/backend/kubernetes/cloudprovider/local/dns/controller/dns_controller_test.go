@@ -37,7 +37,9 @@ const (
 	dnsmasqConfigPathPrefix = "./server_config"
 	hostConfigPathPrefix    = "./host_config"
 
-	namespacePrefix = "lattice"
+	namespacePrefix   = "lattice"
+	latticeID         = v1.LatticeID("lattice-local")
+	internalDNSDomain = "lattice.local"
 )
 
 type hostEntry struct {
@@ -61,7 +63,7 @@ func hostFileOutput(entries []hostEntry) string {
 	*/
 	str := ""
 	for _, v := range entries {
-		fullPath := v.name + ".local." + string(v.systemID) + "." + "lattice.local"
+		fullPath := fmt.Sprintf("%v.local.%v.%v.%v", v.name, v.systemID, latticeID, internalDNSDomain)
 		newLine := v.value + " " + fullPath + "\n"
 		str = str + newLine
 	}
@@ -76,7 +78,7 @@ func dnsmasqConfigFileOutput(entries []cnameEntry) string {
 	*/
 	str := ""
 	for _, v := range entries {
-		fullPath := v.name + ".local." + string(v.systemID) + "." + "lattice.local"
+		fullPath := fmt.Sprintf("%v.local.%v.%v.%v", v.name, v.systemID, latticeID, internalDNSDomain)
 		newLine := "cname=" + fullPath + "," + v.value + "\n"
 		str = str + newLine
 	}
@@ -280,7 +282,9 @@ func TestAddressCreation(t *testing.T) {
 		}
 
 		controller := NewController(
+			latticeID,
 			namespacePrefix,
+			internalDNSDomain,
 			dnsmasqConfigPath,
 			hostsFilePath,
 			serviceMeshOptions,

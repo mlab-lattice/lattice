@@ -138,6 +138,7 @@ func (b *DefaultBootstrapper) controllerManagerResources(resources *bootstrapper
 		"--cloud-provider", b.CloudProviderName,
 		"--lattice-id", string(b.LatticeID),
 		"--namespace-prefix", b.NamespacePrefix,
+		"--internal-dns-domain", b.InternalDNSDomain,
 		"--alsologtostderr",
 	}
 	args = append(args, b.Options.MasterComponents.LatticeControllerManager.Args...)

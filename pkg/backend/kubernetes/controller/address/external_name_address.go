@@ -27,7 +27,7 @@ func (c *Controller) syncExternalNameAddress(address *latticev1.Address) error {
 		return err
 	}
 
-	domain := kubeutil.InternalSubdomain(path.ToDomain(), systemID, c.latticeID)
+	domain := kubeutil.InternalAddressSubdomain(path.ToDomain(), systemID, c.latticeID)
 	err = c.cloudProvider.EnsureDNSCNAMERecord(c.latticeID, domain, *address.Spec.ExternalName)
 	if err != nil {
 		return err

@@ -47,6 +47,8 @@ type Context struct {
 	NamespacePrefix string
 	LatticeID       v1.LatticeID
 
+	InternalDNSDomain string
+
 	CloudProviderOptions *cloudprovider.Options
 	ServiceMeshOptions   *servicemesh.Options
 

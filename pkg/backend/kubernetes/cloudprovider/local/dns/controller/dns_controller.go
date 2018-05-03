@@ -13,7 +13,6 @@ import (
 	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/servicemesh"
 	kubeutil "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/kubernetes"
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
-	endpointutil "github.com/mlab-lattice/lattice/pkg/util/endpoint"
 
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
@@ -27,13 +26,17 @@ import (
 
 	set "github.com/deckarep/golang-set"
 	"github.com/golang/glog"
+	"github.com/mlab-lattice/lattice/pkg/api/v1"
 )
 
 type Controller struct {
 	externalNameAddresses set.Set
 	serviceAddresses      set.Set
 
+	latticeID       v1.LatticeID
 	namespacePrefix string
+
+	internalDNSDomain string
 
 	dnsmasqConfigPath    string
 	dnsmasqHostsFilePath string
@@ -65,7 +68,9 @@ var (
 
 // NewController returns a newly created DNS Controller.
 func NewController(
+	latticeID v1.LatticeID,
 	namespacePrefix string,
+	internalDNSDomain string,
 	dnsmasqConfigPath string,
 	dnsmasqHostsFilePath string,
 	serviceMeshOptions *servicemesh.Options,
@@ -77,7 +82,10 @@ func NewController(
 ) *Controller {
 
 	c := &Controller{
+		latticeID:       latticeID,
 		namespacePrefix: namespacePrefix,
+
+		internalDNSDomain: internalDNSDomain,
 
 		dnsmasqConfigPath:    dnsmasqConfigPath,
 		dnsmasqHostsFilePath: dnsmasqHostsFilePath,
@@ -281,8 +289,7 @@ func (c *Controller) rewriteDnsmasqConfig(addresses []*latticev1.Address) error 
 			continue
 		}
 
-		domain := path.ToDomain()
-		cname := endpointutil.DNSName(domain, systemID)
+		domain := kubeutil.FullyQualifiedInternalAddressSubdomain(path.ToDomain(), systemID, c.latticeID, c.internalDNSDomain)
 
 		if address.Spec.Service != nil {
 			service, err := c.service(address.Namespace, *address.Spec.Service)
@@ -303,11 +310,11 @@ func (c *Controller) rewriteDnsmasqConfig(addresses []*latticev1.Address) error 
 				continue
 			}
 
-			hostConfigFileContents += fmt.Sprintf("%v %v\n", ip, cname)
+			hostConfigFileContents += fmt.Sprintf("%v %v\n", ip, domain)
 		}
 
 		if address.Spec.ExternalName != nil {
-			dnsmasqConfigFileContents += fmt.Sprintf("cname=%v,%v\n", cname, *address.Spec.ExternalName)
+			dnsmasqConfigFileContents += fmt.Sprintf("cname=%v,%v\n", domain, *address.Spec.ExternalName)
 		}
 	}
 

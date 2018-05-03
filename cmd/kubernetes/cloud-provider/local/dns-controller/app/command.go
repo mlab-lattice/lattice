@@ -13,12 +13,15 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 
 	"github.com/golang/glog"
+	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	"github.com/mlab-lattice/lattice/pkg/util/cli"
 )
 
 func Command() *cli.Command {
 	var kubeconfig string
 	var namespacePrefix string
+	var latticeID string
+	var internalDNSDomain string
 	var dnsmasqConfigPath string
 	var dnsmasqHostsFilePath string
 
@@ -38,6 +41,18 @@ func Command() *cli.Command {
 				Usage:    "namespace prefix for the lattice",
 				Required: true,
 				Target:   &namespacePrefix,
+			},
+			&cli.StringFlag{
+				Name:     "lattice-id",
+				Usage:    "ID of the lattice",
+				Required: true,
+				Target:   &latticeID,
+			},
+			&cli.StringFlag{
+				Name:     "internal-dns-domain",
+				Usage:    "domain to use for internal dns",
+				Required: true,
+				Target:   &internalDNSDomain,
 			},
 			&cli.StringFlag{
 				Name:    "dnsmasq-config-path",
@@ -80,7 +95,9 @@ func Command() *cli.Command {
 			glog.V(1).Info("Starting dns controller")
 
 			go controller.NewController(
+				v1.LatticeID(latticeID),
 				namespacePrefix,
+				internalDNSDomain,
 				dnsmasqConfigPath,
 				dnsmasqHostsFilePath,
 				serviceMeshOptions,

@@ -355,8 +355,7 @@ func (c *Controller) untransformedDeploymentSpec(
 		return nil, err
 	}
 
-	// FIXME: make "lattice.local" suffix configurable
-	baseSearchPath := fmt.Sprintf("%v.lattice.local", systemID)
+	baseSearchPath := kubeutil.FullyQualifiedInternalSystemSubdomain(systemID, c.latticeID, c.internalDNSDomain)
 	dnsSearches := []string{baseSearchPath}
 
 	// If the service is not the root node, we need to append its parent as a search in resolv.conf
@@ -367,8 +366,8 @@ func (c *Controller) untransformedDeploymentSpec(
 			return nil, err
 		}
 
-		parentDomain := parentNode.ToDomain()
-		dnsSearches = append(dnsSearches, fmt.Sprintf("%v.local.%v", parentDomain, baseSearchPath))
+		parentDomain := kubeutil.FullyQualifiedInternalAddressSubdomain(parentNode.ToDomain(), systemID, c.latticeID, c.internalDNSDomain)
+		dnsSearches = append(dnsSearches, parentDomain)
 	}
 
 	// as a constant cant be referenced, create a local copy

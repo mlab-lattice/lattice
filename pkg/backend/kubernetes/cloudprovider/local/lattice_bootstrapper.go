@@ -41,12 +41,13 @@ type OptionsDNS struct {
 	ControllerArgs    []string
 }
 
-func NewLatticeBootstrapper(latticeID v1.LatticeID, namespacePrefix string, options *LatticeBootstrapperOptions) *DefaultLocalLatticeBootstrapper {
+func NewLatticeBootstrapper(latticeID v1.LatticeID, namespacePrefix, internalDNSDomain string, options *LatticeBootstrapperOptions) *DefaultLocalLatticeBootstrapper {
 	return &DefaultLocalLatticeBootstrapper{
-		LatticeID:       latticeID,
-		NamespacePrefix: namespacePrefix,
-		IP:              options.IP,
-		DNS:             options.DNS,
+		LatticeID:         latticeID,
+		NamespacePrefix:   namespacePrefix,
+		InternalDNSDomain: internalDNSDomain,
+		IP:                options.IP,
+		DNS:               options.DNS,
 	}
 }
 
@@ -92,10 +93,11 @@ func LatticeBootstrapperFlags() (cli.Flags, *LatticeBootstrapperOptions) {
 }
 
 type DefaultLocalLatticeBootstrapper struct {
-	LatticeID       v1.LatticeID
-	NamespacePrefix string
-	IP              string
-	DNS             *OptionsDNS
+	LatticeID         v1.LatticeID
+	NamespacePrefix   string
+	InternalDNSDomain string
+	IP                string
+	DNS               *OptionsDNS
 }
 
 func (cp *DefaultLocalLatticeBootstrapper) BootstrapLatticeResources(resources *bootstrapper.Resources) {
@@ -206,6 +208,7 @@ func (cp *DefaultLocalLatticeBootstrapper) bootstrapLatticeDNS(resources *bootst
 
 	controllerArgs := []string{
 		"--namespace-prefix", cp.NamespacePrefix,
+		"--internal-dns-domain", cp.InternalDNSDomain,
 	}
 	controllerArgs = append(controllerArgs, cp.DNS.ControllerArgs...)
 	controllerArgs = append(controllerArgs, serviceMeshVars...)

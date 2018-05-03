@@ -35,6 +35,8 @@ type Controller struct {
 	namespacePrefix string
 	latticeID       v1.LatticeID
 
+	internalDNSDomain string
+
 	kubeClient    kubeclientset.Interface
 	latticeClient latticeclientset.Interface
 
@@ -79,6 +81,7 @@ type Controller struct {
 func NewController(
 	namespacePrefix string,
 	latticeID v1.LatticeID,
+	internalDNSDomain string,
 	cloudProviderOptions *cloudprovider.Options,
 	serviceMeshOptions *servicemesh.Options,
 	kubeClient kubeclientset.Interface,
@@ -94,6 +97,8 @@ func NewController(
 	sc := &Controller{
 		namespacePrefix: namespacePrefix,
 		latticeID:       latticeID,
+
+		internalDNSDomain: internalDNSDomain,
 
 		kubeClient:    kubeClient,
 		latticeClient: latticeClient,

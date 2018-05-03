@@ -58,7 +58,7 @@ func (c *Controller) syncServiceAddress(address *latticev1.Address) error {
 		return fmt.Errorf("error getting system id for %v: %v", address.Description(c.namespacePrefix), err)
 	}
 
-	domain := kubeutil.InternalSubdomain(path.ToDomain(), systemID, c.latticeID)
+	domain := kubeutil.InternalAddressSubdomain(path.ToDomain(), systemID, c.latticeID)
 	err = c.cloudProvider.EnsureDNSARecord(c.latticeID, domain, ip)
 	if err != nil {
 		state := latticev1.AddressStateFailed

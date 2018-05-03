@@ -29,6 +29,7 @@ func Command() *cli.Command {
 	var kubeconfig string
 	var namespacePrefix string
 	var latticeID string
+	var internalDNSDomain string
 
 	var enabledControllers []string
 
@@ -57,6 +58,12 @@ func Command() *cli.Command {
 				Usage:    "ID of the lattice",
 				Required: true,
 				Target:   &latticeID,
+			},
+			&cli.StringFlag{
+				Name:     "internal-dns-domain",
+				Usage:    "domain to use for internal dns",
+				Required: true,
+				Target:   &internalDNSDomain,
 			},
 			&cli.StringSliceFlag{
 				Name:    "controllers",
@@ -97,6 +104,7 @@ func Command() *cli.Command {
 			ctx, err := createControllerContext(
 				namespacePrefix,
 				v1.LatticeID(latticeID),
+				internalDNSDomain,
 				config,
 				cloudProviderOptions,
 				serviceMeshOptions,
@@ -123,6 +131,7 @@ func Command() *cli.Command {
 func createControllerContext(
 	namespacePrefix string,
 	latticeID v1.LatticeID,
+	internalDNSDomain string,
 	kubeconfig *rest.Config,
 	cloudProviderOptions *cloudprovider.Options,
 	serviceMeshOptions *servicemesh.Options,
@@ -144,6 +153,8 @@ func createControllerContext(
 	ctx := controllers.Context{
 		NamespacePrefix: namespacePrefix,
 		LatticeID:       latticeID,
+
+		InternalDNSDomain: internalDNSDomain,
 
 		CloudProviderOptions: cloudProviderOptions,
 		ServiceMeshOptions:   serviceMeshOptions,
