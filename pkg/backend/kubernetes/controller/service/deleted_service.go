@@ -53,7 +53,7 @@ func (c *Controller) syncDeletedService(service *latticev1.Service) error {
 		}
 
 		reason := "waiting for address to be deleted"
-		_, err = c.updateDeletedServiceStatus(service, &reason, deploymentStatus)
+		_, err = c.updateDeletedServiceStatus(service, &reason, deploymentStatus, service.Status.Ports)
 		return err
 	}
 
@@ -64,7 +64,7 @@ func (c *Controller) syncDeletedService(service *latticev1.Service) error {
 
 		// if the deployment is still deleting, nothing to do for now
 		if deployment.DeletionTimestamp != nil {
-			_, err = c.updateDeletedServiceStatus(service, &reason, deploymentStatus)
+			_, err = c.updateDeletedServiceStatus(service, &reason, deploymentStatus, nil)
 			return err
 		}
 
@@ -83,7 +83,7 @@ func (c *Controller) syncDeletedService(service *latticev1.Service) error {
 			)
 		}
 
-		_, err = c.updateDeletedServiceStatus(service, &reason, deploymentStatus)
+		_, err = c.updateDeletedServiceStatus(service, &reason, deploymentStatus, nil)
 		return err
 	}
 
@@ -102,7 +102,7 @@ func (c *Controller) syncDeletedService(service *latticev1.Service) error {
 
 		// if the kube service is still deleting, nothing to do for now
 		if kubeService.DeletionTimestamp != nil {
-			_, err = c.updateDeletedServiceStatus(service, &reason, deploymentStatus)
+			_, err = c.updateDeletedServiceStatus(service, &reason, deploymentStatus, nil)
 			return err
 		}
 
@@ -121,7 +121,7 @@ func (c *Controller) syncDeletedService(service *latticev1.Service) error {
 			)
 		}
 
-		_, err = c.updateDeletedServiceStatus(service, &reason, deploymentStatus)
+		_, err = c.updateDeletedServiceStatus(service, &reason, deploymentStatus, nil)
 		return err
 	}
 
@@ -144,7 +144,7 @@ func (c *Controller) syncDeletedService(service *latticev1.Service) error {
 
 		// if the address is still deleting, nothing to do for now
 		if dedicatedNodePool.DeletionTimestamp != nil {
-			_, err = c.updateDeletedServiceStatus(service, &reason, deploymentStatus)
+			_, err = c.updateDeletedServiceStatus(service, &reason, deploymentStatus, nil)
 			return err
 		}
 
@@ -163,7 +163,7 @@ func (c *Controller) syncDeletedService(service *latticev1.Service) error {
 			)
 		}
 
-		_, err = c.updateDeletedServiceStatus(service, &reason, deploymentStatus)
+		_, err = c.updateDeletedServiceStatus(service, &reason, deploymentStatus, nil)
 		return err
 	}
 
@@ -175,6 +175,7 @@ func (c *Controller) updateDeletedServiceStatus(
 	service *latticev1.Service,
 	reason *string,
 	deploymentStatus *deploymentStatus,
+	ports map[int32]string,
 ) (*latticev1.Service, error) {
 	return c.updateServiceStatus(
 		service,
@@ -185,6 +186,6 @@ func (c *Controller) updateDeletedServiceStatus(
 		deploymentStatus.UpdatedInstances,
 		deploymentStatus.StaleInstances,
 		deploymentStatus.TerminatingInstances,
-		service.Status.Ports,
+		ports,
 	)
 }
