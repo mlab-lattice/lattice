@@ -32,6 +32,8 @@ func colored(s string, colChoice string) string {
 	col := color.New(color.FgBlue).SprintFunc()
 
 	switch colChoice {
+	case "bold":
+		col = color.New(color.Bold).SprintFunc()
 	case "blue":
 		col = color.New(color.FgBlue).SprintFunc()
 	case "hiblue":

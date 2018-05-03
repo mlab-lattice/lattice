@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"sort"
+	"strings"
 
 	"github.com/spf13/cobra"
 
@@ -11,16 +13,17 @@ import (
 )
 
 type Command struct {
-	Name        string
-	Short       string
-	Args        Args
-	Flags       Flags
-	PreRun      func()
-	Run         func(args []string)
-	Subcommands []*Command
-	cobraCmd    *cobra.Command
-	UsageFunc   func(*Command) error
-	HelpFunc    func(*Command)
+	Name             string
+	Short            string
+	Args             Args
+	Flags            Flags
+	PreRun           func()
+	Run              func(args []string)
+	Subcommands      []*Command
+	cobraCmd         *cobra.Command
+	UsageFunc        func(*Command) error
+	HelpFunc         func(*Command)
+	isSpaceSeparated bool
 }
 
 func (c *Command) emptyRun(cmd *cobra.Command) {
@@ -78,6 +81,8 @@ func (c *Command) Init() error {
 		}
 	}
 
+	c.isSpaceSeparated = true
+
 	return nil
 }
 
@@ -102,6 +107,7 @@ func (c *Command) helpFuncWrapper(command *cobra.Command, strings []string) {
 
 // defaultUsageFunc is the Usage function that will be called if none is provided
 func (c *Command) defaultUsageFunc(command *Command) error {
+	// TODO :: Seems like Usage & Help have the same use for us right now. (Perhaps just for default)
 	tmplName := "defaultHelpTemplate"
 	templateToExecute := "UsageTemplate"
 	return template.TryExecuteTemplate(template.DefaultTemplate, tmplName, templateToExecute, template.DefaultTemplateFuncs, c)
@@ -110,7 +116,7 @@ func (c *Command) defaultUsageFunc(command *Command) error {
 // defaultHelpFunc is the Help function that will be called if none is provided
 func (c *Command) defaultHelpFunc(command *Command) {
 	tmplName := "defaultHelpTemplate"
-	templateToExecute := "HelpTemplate"
+	templateToExecute := "UsageTemplate"
 	err := template.TryExecuteTemplate(template.DefaultTemplate, tmplName, templateToExecute, template.DefaultTemplateFuncs, c)
 	if err != nil {
 		log.Fatalf(err.Error())
@@ -233,6 +239,8 @@ func (c *Command) initColon() error {
 		c.cobraCmd.AddCommand(subcommand.cobraCmd)
 	}
 
+	c.isSpaceSeparated = false
+
 	return nil
 }
 
@@ -268,8 +276,25 @@ func (c *Command) exit(err error) {
 
 // Template helpers
 
+// CommandSeparator returns the string needed to invoke a subcommand. This is either a space or ':'.
+func (c *Command) CommandSeparator() string {
+	if c.isSpaceSeparated {
+		return " "
+	}
+
+	return ":"
+}
+
+func (c *Command) IsRunnable() bool {
+	return c.cobraCmd.Runnable()
+}
+
 func (c *Command) HasSubcommands() bool {
 	return len(c.Subcommands) != 0
+}
+
+func (c *Command) HasFlags() bool {
+	return len(c.Flags) != 0
 }
 
 func (c *Command) NamePadding() int {
@@ -282,6 +307,31 @@ func (c *Command) FlagNamePadding() int {
 
 func (c *Command) CommandPath() string {
 	return c.cobraCmd.CommandPath()
+}
+
+func (c *Command) FlagsSorted() Flags {
+	flags := c.Flags
+	sort.Sort(flags)
+	return flags
+}
+
+func SortCommands(commands CommandList) CommandList {
+	sort.Sort(commands)
+	return commands
+}
+
+type CommandList []*Command
+
+func (c CommandList) Len() int {
+	return len(c)
+}
+
+func (c CommandList) Swap(i, j int) {
+	c[i], c[j] = c[j], c[i]
+}
+
+func (c CommandList) Less(i, j int) bool {
+	return strings.Compare(c[i].CommandPath(), c[j].CommandPath()) == -1
 }
 
 // AllSubcommands flattens returns the recursive subcommand tree as one flat array.
@@ -305,7 +355,7 @@ func (c *Command) AllSubcommands() []*Command {
 		}
 	}
 
-	return found
+	return SortCommands(found)
 }
 
 type CommandGroup struct {
@@ -336,7 +386,7 @@ func (c *Command) SubcommandsByGroup() []*CommandGroup {
 
 			groupName := nextElem.CommandPath()
 			newCmdGroup := &CommandGroup{
-				Commands:  nextElem.Subcommands,
+				Commands:  SortCommands(nextElem.Subcommands),
 				GroupName: groupName,
 			}
 			found = append(found, newCmdGroup)
