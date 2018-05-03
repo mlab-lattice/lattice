@@ -4,9 +4,10 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"text/template"
 
 	"github.com/spf13/cobra"
+
+	"github.com/mlab-lattice/lattice/pkg/util/cli/template"
 )
 
 type Command struct {
@@ -93,6 +94,7 @@ func (c *Command) usageFuncWrapper(command *cobra.Command) error {
 func (c *Command) helpFuncWrapper(command *cobra.Command, strings []string) {
 	if c.HelpFunc != nil {
 		c.HelpFunc(c)
+		return
 	}
 
 	c.defaultHelpFunc(c)
@@ -101,30 +103,17 @@ func (c *Command) helpFuncWrapper(command *cobra.Command, strings []string) {
 // defaultUsageFunc is the Usage function that will be called if none is provided
 func (c *Command) defaultUsageFunc(command *Command) error {
 	tmplName := "defaultHelpTemplate"
-	tmpl, err := template.New(tmplName).Funcs(templateFuncs).Parse(DefaultTemplate)
-	if err != nil {
-		log.Fatalf("error creating %v template: %v \n", tmplName, err)
-		return err
-	}
-
-	err = tmpl.ExecuteTemplate(os.Stdout, "UsageTemplate", c)
-	if err != nil {
-		log.Fatalf("error executing %v: %v \n", tmplName, err)
-	}
-	return err
+	templateToExecute := "UsageTemplate"
+	return template.TryExecuteTemplate(template.DefaultTemplate, tmplName, templateToExecute, template.DefaultTemplateFuncs, c)
 }
 
 // defaultHelpFunc is the Help function that will be called if none is provided
 func (c *Command) defaultHelpFunc(command *Command) {
 	tmplName := "defaultHelpTemplate"
-	tmpl, err := template.New(tmplName).Funcs(templateFuncs).Parse(DefaultTemplate)
+	templateToExecute := "HelpTemplate"
+	err := template.TryExecuteTemplate(template.DefaultTemplate, tmplName, templateToExecute, template.DefaultTemplateFuncs, c)
 	if err != nil {
-		log.Fatalf("error creating %v template: %v \n", tmplName, err)
-	}
-
-	err = tmpl.ExecuteTemplate(os.Stdout, "HelpTemplateGrouped", c)
-	if err != nil {
-		log.Fatalf("error executing %v: %v \n", tmplName, err)
+		log.Fatalf(err.Error())
 	}
 }
 

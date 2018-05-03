@@ -43,6 +43,8 @@ func (c *BaseCommand) Command(latticectl *Latticectl) (*cli.Command, error) {
 		Args:        c.Args,
 		Flags:       c.Flags,
 		Subcommands: subcommands,
+		UsageFunc:   cli.UsageFuncGroupedCommands,
+		HelpFunc:    cli.HelpFuncGroupedCommands,
 	}
 	if c.Run != nil {
 		cmd.Run = func(args []string) {
