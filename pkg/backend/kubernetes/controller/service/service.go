@@ -23,6 +23,7 @@ type nodePoolInfo struct {
 	// dedicated node pool options
 	instanceType string
 	numInstances int32
+	perInstance  bool
 
 	// shared system node pool options
 	path tree.NodePath
@@ -62,6 +63,7 @@ func (c *Controller) nodePoolInfo(service *latticev1.Service) (nodePoolInfo, err
 			nodePoolType: latticev1.NodePoolTypeServiceDedicated,
 			instanceType: *resources.InstanceType,
 			numInstances: numInstances,
+			perInstance:  true,
 		}
 		return info, nil
 	}
@@ -72,6 +74,7 @@ func (c *Controller) nodePoolInfo(service *latticev1.Service) (nodePoolInfo, err
 			nodePoolType: latticev1.NodePoolTypeServiceDedicated,
 			instanceType: resources.NodePool.NodePool.InstanceType,
 			numInstances: resources.NodePool.NodePool.NumInstances,
+			perInstance:  false,
 		}
 		return info, nil
 	}

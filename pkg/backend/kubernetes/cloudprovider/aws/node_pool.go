@@ -171,7 +171,7 @@ func (cp *DefaultAWSCloudProvider) nodePoolTerraformConfig(
 			Encrypt: true,
 		},
 		Modules: map[string]interface{}{
-			"node-pool": kubetf.NodePool{
+			"node-pool": &kubetf.NodePool{
 				Source: cp.terraformModulePath + kubetf.ModulePathNodePool,
 
 				AWSAccountID: cp.accountID,

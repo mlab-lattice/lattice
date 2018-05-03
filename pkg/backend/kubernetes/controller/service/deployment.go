@@ -6,7 +6,6 @@ import (
 	"reflect"
 	"sort"
 
-	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/constants"
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	kubeutil "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/kubernetes"
 	"github.com/mlab-lattice/lattice/pkg/definition/block"
@@ -311,12 +310,43 @@ func (c *Controller) untransformedDeploymentSpec(
 		// Since we also add a RequiredDuringScheduling NodeAffinity for our NodePool,
 		// this NodePool's nodes are the only nodes that these pods could be scheduled on,
 		// so this TopologyKey doesn't really matter (besides being required).
-		TopologyKey: constants.LabelKeyNodeRoleLatticeNodePool,
+		TopologyKey: latticev1.NodePoolIDLabelKey,
 	}
 
-	// TODO(kevinrosendahl): Make this a PreferredDuringScheduling PodAntiAffinity if the service is running on a shared NodePool
-	podAntiAffinity := &corev1.PodAntiAffinity{
-		RequiredDuringSchedulingIgnoredDuringExecution: []corev1.PodAffinityTerm{podAffinityTerm},
+	nodePoolInfo, err := c.nodePoolInfo(service)
+	if err != nil {
+		return nil, err
+	}
+
+	// if the service is running on a per-instance dedicated node pool,
+	// then ensure that pods aren't scheduled on the same node.
+	// if it's running on a shared node pool, either dedicated or system-level
+	// then prefer that pods aren't scheduled on the same node
+	podAntiAffinity := &corev1.PodAntiAffinity{}
+	switch nodePoolInfo.nodePoolType {
+	case latticev1.NodePoolTypeServiceDedicated:
+		if nodePoolInfo.perInstance {
+			podAntiAffinity.RequiredDuringSchedulingIgnoredDuringExecution = []corev1.PodAffinityTerm{podAffinityTerm}
+		} else {
+			podAntiAffinity.PreferredDuringSchedulingIgnoredDuringExecution = []corev1.WeightedPodAffinityTerm{
+				{
+					Weight:          50,
+					PodAffinityTerm: podAffinityTerm,
+				},
+			}
+		}
+
+	case latticev1.NodePoolTypeSystemShared:
+		podAntiAffinity.PreferredDuringSchedulingIgnoredDuringExecution = []corev1.WeightedPodAffinityTerm{
+			{
+				Weight:          50,
+				PodAffinityTerm: podAffinityTerm,
+			},
+		}
+
+	default:
+		err := fmt.Errorf("unrecognized node pool type for %v: %v", service.Description(c.namespacePrefix), nodePoolInfo.nodePoolType)
+		return nil, err
 	}
 
 	systemID, err := kubeutil.SystemID(c.namespacePrefix, service.Namespace)

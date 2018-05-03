@@ -124,10 +124,9 @@ func Flags() (cli.Flags, *Options) {
 			Required: true,
 			Target:   &options.MasterNodeSecurityGroupID,
 		},
-		// worker-node-ami-id and key-name should be set with dynamic config (i.e. custom resource)
 		&cli.StringFlag{
 			Name:    "terraform-module-path",
-			Default: "/etc/terraform/modules/kubernetes/aws",
+			Default: "/etc/terraform/modules/aws",
 			Target:  &options.TerraformModulePath,
 		},
 		&cli.StringFlag{

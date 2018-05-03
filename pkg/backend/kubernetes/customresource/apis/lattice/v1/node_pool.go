@@ -37,6 +37,29 @@ var (
 	// NodePoolWorkloadAnnotationKey is the key that should be used in an annotation by
 	// workloads that run on a node pool.
 	NodePoolWorkloadAnnotationKey = fmt.Sprintf("workload.%v/node-pools", GroupName)
+
+	AllNodePoolsSelector = corev1.NodeSelector{
+		NodeSelectorTerms: []corev1.NodeSelectorTerm{
+			{
+				MatchExpressions: []corev1.NodeSelectorRequirement{
+					{
+						Key:      NodePoolIDLabelKey,
+						Operator: corev1.NodeSelectorOpExists,
+					},
+				},
+			},
+		},
+	}
+
+	AllNodePoolAffinity = corev1.NodeAffinity{
+		RequiredDuringSchedulingIgnoredDuringExecution: &AllNodePoolsSelector,
+	}
+
+	AllNodePoolTolleration = corev1.Toleration{
+		Key:      NodePoolIDLabelKey,
+		Operator: corev1.TolerationOpExists,
+		Effect:   corev1.TaintEffectNoSchedule,
+	}
 )
 
 // +genclient

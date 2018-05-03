@@ -190,10 +190,10 @@ func (b *DefaultEnvoylatticeBootstrapper) BootstrapLatticeResources(resources *b
 					DNSPolicy:          corev1.DNSDefault,
 					ServiceAccountName: serviceAccount.Name,
 					Tolerations: []corev1.Toleration{
-						kubeconstants.TolerationNodePool,
+						latticev1.AllNodePoolTolleration,
 					},
 					Affinity: &corev1.Affinity{
-						NodeAffinity: &kubeconstants.NodeAffinityNodePool,
+						NodeAffinity: &latticev1.AllNodePoolAffinity,
 					},
 				},
 			},

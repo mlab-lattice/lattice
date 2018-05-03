@@ -121,11 +121,6 @@ func (c *Command) Base() (*latticectl.BaseCommand, error) {
 						Target:   &options.MasterComponents.LatticeControllerManager.Image,
 						Usage:    "docker image to user for the controller-manager",
 					},
-					&cli.StringFlag{
-						Name:   "terraform-module-path",
-						Target: &options.MasterComponents.LatticeControllerManager.TerraformModulePath,
-						Usage:  "path to terraform modules",
-					},
 					&cli.StringSliceFlag{
 						Name:   "args",
 						Target: &options.MasterComponents.LatticeControllerManager.Args,

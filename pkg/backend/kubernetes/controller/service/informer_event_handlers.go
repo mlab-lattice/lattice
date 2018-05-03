@@ -16,7 +16,6 @@ import (
 
 	"k8s.io/client-go/tools/cache"
 
-	"encoding/json"
 	"github.com/golang/glog"
 )
 
@@ -236,21 +235,14 @@ func (c *Controller) handleDeploymentDelete(obj interface{}) {
 }
 
 func (c *Controller) handleDeploymentEvent(deployment *appsv1.Deployment, verb string) {
-	// FIXME: this doesn't seem to be enqueueing services correctly
 	glog.V(4).Infof("deployment %v/%v %v", deployment.Namespace, deployment.Name, verb)
 
-	data, _ := json.Marshal(&deployment.OwnerReferences)
-	glog.Infof("deployment %v/%v owner refs: %v", deployment.Namespace, deployment.Name, string(data))
-
-	data, _ = json.Marshal(&deployment.Finalizers)
-	glog.Infof("deployment %v/%v finalizers: %v", deployment.Namespace, deployment.Name, string(data))
 	// see if the deployment has a service as a controller owning reference
 	if controllerRef := metav1.GetControllerOf(deployment); controllerRef != nil {
 		service := c.resolveControllerRef(deployment.Namespace, controllerRef)
 
 		// Not a Service Deployment.
 		if service == nil {
-			glog.Warningf("deployment %v/%v has a controller ref but it is not a service", deployment.Namespace, deployment.Name)
 			return
 		}
 
@@ -260,7 +252,6 @@ func (c *Controller) handleDeploymentEvent(deployment *appsv1.Deployment, verb s
 
 	// Otherwise, it's an orphan. These shouldn't exist within a lattice controlled namespace.
 	// TODO: maybe log/send warn event if there's an orphan deployment in a lattice controlled namespace
-	glog.Warningf("deployment %v/%v has no controller ref", deployment.Namespace, deployment.Name)
 }
 
 func (c *Controller) handlePodDelete(obj interface{}) {

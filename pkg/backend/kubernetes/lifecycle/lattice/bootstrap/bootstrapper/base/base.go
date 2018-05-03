@@ -21,9 +21,8 @@ type MasterComponentOptions struct {
 }
 
 type LatticeControllerManagerOptions struct {
-	Image               string
-	Args                []string
-	TerraformModulePath string
+	Image string
+	Args  []string
 }
 
 type APIServerOptions struct {
