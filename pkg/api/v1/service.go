@@ -30,5 +30,5 @@ type Service struct {
 	StaleInstances       int32 `json:"staleInstances"`
 	TerminatingInstances int32 `json:"terminatingInstances"`
 
-	Ports map[int32]string
+	Ports map[int32]string `json:"ports"`
 }
