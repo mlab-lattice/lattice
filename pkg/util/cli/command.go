@@ -20,9 +20,9 @@ type Command struct {
 	PreRun           func()
 	Run              func(args []string)
 	Subcommands      []*Command
-	cobraCmd         *cobra.Command
 	UsageFunc        func(*Command) error
 	HelpFunc         func(*Command)
+	cobraCmd         *cobra.Command
 	isSpaceSeparated bool
 }
 
@@ -334,7 +334,7 @@ func (c CommandList) Less(i, j int) bool {
 	return strings.Compare(c[i].CommandPath(), c[j].CommandPath()) == -1
 }
 
-// AllSubcommands flattens returns the recursive subcommand tree as one flat array.
+// AllSubcommands returns the recursive subcommand tree as one flat sorted array.
 func (c *Command) AllSubcommands() []*Command {
 	// found is a list of all flattened subcommands
 	found := make([]*Command, 0)
@@ -363,7 +363,7 @@ type CommandGroup struct {
 	GroupName string
 }
 
-// SubcommandsByGroup returns commands grouped by their nesting. The order is a pre order.
+// SubcommandsByGroup returns commands grouped by immediate children of a node. The order is a pre order. The elements in each group are sorted.
 func (c *Command) SubcommandsByGroup() []*CommandGroup {
 	// found is a list of all flattened subcommands
 	found := make([]*CommandGroup, 0)
