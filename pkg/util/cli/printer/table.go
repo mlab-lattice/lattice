@@ -27,15 +27,24 @@ func (t *Table) Print(writer io.Writer) error {
 
 	table := tablewriter.NewWriter(writer)
 
+	var hs []string
+	for _, h := range t.Headers {
+		hs = append(hs, strings.ToUpper(h))
+	}
+
+	t.Headers = hs
+
 	table.SetRowLine(false)
-	table.SetAlignment(tablewriter.ALIGN_CENTER)
+	table.SetAlignment(tablewriter.ALIGN_LEFT)
+	table.SetHeaderAlignment(tablewriter.ALIGN_LEFT)
 
 	table.SetHeader(t.Headers)
 	table.SetAutoFormatHeaders(false)
 	table.SetBorder(false)
-	table.SetCenterSeparator(FgHiBlack("|"))
-	table.SetColumnSeparator(FgHiBlack("|"))
-	table.SetRowSeparator(FgHiBlack("-"))
+	table.SetHeaderLine(false)
+	table.SetCenterSeparator(FgHiBlack(""))
+	table.SetColumnSeparator(FgHiBlack(""))
+	table.SetRowSeparator(FgHiBlack(""))
 	table.SetAutoWrapText(false)
 	table.SetReflowDuringAutoWrap(false)
 
