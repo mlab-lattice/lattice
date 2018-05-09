@@ -77,7 +77,12 @@ func (c *Controller) syncServiceAddress(address *latticev1.Address) error {
 		return err
 	}
 
-	err = c.cloudProvider.EnsureServiceAddressLoadBalancer(c.latticeID, address, service)
+	serviceMeshPorts, err := c.serviceMesh.ServiceMeshPorts(service)
+	if err != nil {
+		return fmt.Errorf("error getting service mesh ports for %v: %v", service.Description(c.namespacePrefix), err)
+	}
+
+	err = c.cloudProvider.EnsureServiceAddressLoadBalancer(c.latticeID, address, service, serviceMeshPorts)
 	if err != nil {
 		state := latticev1.AddressStateFailed
 		failureInfo := &latticev1.AddressStatusFailureInfo{
@@ -97,7 +102,7 @@ func (c *Controller) syncServiceAddress(address *latticev1.Address) error {
 		annotations[k] = v
 	}
 
-	err = c.cloudProvider.ServiceAddressLoadBalancerAddAnnotations(c.latticeID, address, service, annotations)
+	err = c.cloudProvider.ServiceAddressLoadBalancerAddAnnotations(c.latticeID, address, service, serviceMeshPorts, annotations)
 	if err != nil {
 		return fmt.Errorf("cloud provider could not get annotations for %v: %v", address.Description(c.namespacePrefix), err)
 	}

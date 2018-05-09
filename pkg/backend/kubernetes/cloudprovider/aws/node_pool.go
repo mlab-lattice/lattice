@@ -74,9 +74,19 @@ func (cp *DefaultAWSCloudProvider) EnsureNodePoolEpoch(
 		return nil
 	}
 
-	config := cp.nodePoolTerraformConfig(latticeID, nodePool, epoch)
+	module := cp.nodePoolTerraformModule(latticeID, nodePool, epoch)
+	config := cp.nodePoolTerraformConfig(latticeID, nodePool, epoch, module)
 	_, err = terraform.Apply(nodePoolWorkDirectory(nodePool.ID(epoch)), config)
-	return err
+	if err != nil {
+		return fmt.Errorf(
+			"error applying terraform for %v epoch %v: %v",
+			nodePool.Description(cp.namespacePrefix),
+			epoch,
+			err,
+		)
+	}
+
+	return nil
 }
 
 func (cp *DefaultAWSCloudProvider) DestroyNodePoolEpoch(
@@ -84,8 +94,18 @@ func (cp *DefaultAWSCloudProvider) DestroyNodePoolEpoch(
 	nodePool *latticev1.NodePool,
 	epoch latticev1.NodePoolEpoch,
 ) error {
-	_, err := terraform.Destroy(nodePoolWorkDirectory(nodePool.ID(epoch)), nil)
-	return err
+	config := cp.nodePoolTerraformConfig(latticeID, nodePool, epoch, nil)
+	_, err := terraform.Destroy(nodePoolWorkDirectory(nodePool.ID(epoch)), config)
+	if err != nil {
+		return fmt.Errorf(
+			"error destroying terraform for %v epoch %v: %v",
+			nodePool.Description(cp.namespacePrefix),
+			epoch,
+			err,
+		)
+	}
+
+	return nil
 }
 
 func (cp *DefaultAWSCloudProvider) nodePoolCurrentEpochState(
@@ -94,12 +114,18 @@ func (cp *DefaultAWSCloudProvider) nodePoolCurrentEpochState(
 ) (latticev1.NodePoolState, error) {
 	current, ok := nodePool.Status.Epochs.CurrentEpoch()
 	if !ok {
-		return latticev1.NodePoolStatePending, fmt.Errorf("could not get current epoch for %v", nodePool.Description(cp.namespacePrefix))
+		err := fmt.Errorf("could not get current epoch for %v", nodePool.Description(cp.namespacePrefix))
+		return latticev1.NodePoolStatePending, err
 	}
 
 	epochInfo, ok := nodePool.Status.Epochs.Epoch(current)
 	if !ok {
-		return latticev1.NodePoolStatePending, fmt.Errorf("could not get epoch status for %v epoch %v", nodePool.Description(cp.namespacePrefix), current)
+		err := fmt.Errorf(
+			"could not get epoch status for %v epoch %v",
+			nodePool.Description(cp.namespacePrefix),
+			current,
+		)
+		return latticev1.NodePoolStatePending, err
 	}
 
 	// Invariant: nodePoolCurrentEpochState will only be called if NodePoolNeedsNewEpoch returns false.
@@ -129,7 +155,8 @@ func (cp *DefaultAWSCloudProvider) nodePoolEpochInfo(
 		terraformOutputNodePoolSecurityGroupID,
 	}
 
-	config := cp.nodePoolTerraformConfig(latticeID, nodePool, epoch)
+	module := cp.nodePoolTerraformModule(latticeID, nodePool, epoch)
+	config := cp.nodePoolTerraformConfig(latticeID, nodePool, epoch, module)
 	values, err := terraform.Output(nodePoolWorkDirectory(nodePool.ID(epoch)), config, outputVars)
 	if err != nil {
 		return nodePoolInfo{}, err
@@ -153,43 +180,28 @@ func (cp *DefaultAWSCloudProvider) nodePoolTerraformConfig(
 	latticeID v1.LatticeID,
 	nodePool *latticev1.NodePool,
 	epoch latticev1.NodePoolEpoch,
+	module *kubetf.NodePool,
 ) *terraform.Config {
 	nodePoolID := nodePool.ID(epoch)
 
-	return &terraform.Config{
+	config := &terraform.Config{
 		Provider: awstfprovider.Provider{
 			Region: cp.region,
 		},
 		Backend: terraform.S3BackendConfig{
-			Region: cp.region,
-			Bucket: cp.terraformBackendOptions.S3.Bucket,
-			Key: fmt.Sprintf(
-				"%v/%v",
-				kubetf.GetS3BackendNodePoolPathRoot(latticeID, nodePool.Namespace, nodePoolID),
-				nodePoolID,
-			),
+			Region:  cp.region,
+			Bucket:  cp.terraformBackendOptions.S3.Bucket,
+			Key:     kubetf.GetS3BackendNodePoolPathRoot(latticeID, nodePool.Namespace, nodePoolID),
 			Encrypt: true,
 		},
-		Modules: map[string]interface{}{
-			"node-pool": &kubetf.NodePool{
-				Source: cp.terraformModulePath + kubetf.ModulePathNodePool,
+	}
 
-				AWSAccountID: cp.accountID,
-				Region:       cp.region,
+	if module != nil {
+		config.Modules = map[string]interface{}{
+			"node-pool": module,
+		}
 
-				LatticeID:                 latticeID,
-				VPCID:                     cp.vpcID,
-				SubnetIDs:                 cp.subnetIDs,
-				MasterNodeSecurityGroupID: cp.masterNodeSecurityGroupID,
-				WorkerNodeAMIID:           cp.workerNodeAMIID,
-				KeyName:                   cp.keyName,
-
-				Name:         nodePoolID,
-				NumInstances: nodePool.Spec.NumInstances,
-				InstanceType: nodePool.Spec.InstanceType,
-			},
-		},
-		Output: map[string]terraform.ConfigOutput{
+		config.Output = map[string]terraform.ConfigOutput{
 			terraformOutputNodePoolAutoscalingGroupID: {
 				Value: fmt.Sprintf("${module.node-pool.%v}", terraformOutputNodePoolAutoscalingGroupID),
 			},
@@ -202,7 +214,35 @@ func (cp *DefaultAWSCloudProvider) nodePoolTerraformConfig(
 			terraformOutputNodePoolSecurityGroupID: {
 				Value: fmt.Sprintf("${module.node-pool.%v}", terraformOutputNodePoolSecurityGroupID),
 			},
-		},
+		}
+	}
+
+	return config
+}
+
+func (cp *DefaultAWSCloudProvider) nodePoolTerraformModule(
+	latticeID v1.LatticeID,
+	nodePool *latticev1.NodePool,
+	epoch latticev1.NodePoolEpoch,
+) *kubetf.NodePool {
+	nodePoolID := nodePool.ID(epoch)
+
+	return &kubetf.NodePool{
+		Source: cp.terraformModulePath + kubetf.ModulePathNodePool,
+
+		AWSAccountID: cp.accountID,
+		Region:       cp.region,
+
+		LatticeID:                 latticeID,
+		VPCID:                     cp.vpcID,
+		SubnetIDs:                 cp.subnetIDs,
+		MasterNodeSecurityGroupID: cp.masterNodeSecurityGroupID,
+		WorkerNodeAMIID:           cp.workerNodeAMIID,
+		KeyName:                   cp.keyName,
+
+		Name:         nodePoolID,
+		NumInstances: nodePool.Spec.NumInstances,
+		InstanceType: nodePool.Spec.InstanceType,
 	}
 }
 

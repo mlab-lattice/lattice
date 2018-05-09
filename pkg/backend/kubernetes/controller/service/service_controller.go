@@ -323,7 +323,7 @@ func (c *Controller) syncService(key string) error {
 		return err
 	}
 
-	deploymentStatus, err := c.syncDeployment(service, nodePool, address)
+	deploymentStatus, err := c.syncDeployment(service, nodePool)
 	if err != nil {
 		return err
 	}

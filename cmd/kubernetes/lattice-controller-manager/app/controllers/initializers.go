@@ -42,6 +42,7 @@ func initializeAddressController(ctx Context) {
 		ctx.LatticeInformerFactory.Lattice().V1().Addresses(),
 		ctx.LatticeInformerFactory.Lattice().V1().Services(),
 		ctx.KubeInformerFactory.Core().V1().Services(),
+		ctx.LatticeInformerFactory.Lattice().V1().NodePools(),
 	).Run(4, ctx.Stop)
 }
 

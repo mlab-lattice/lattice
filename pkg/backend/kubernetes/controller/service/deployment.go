@@ -33,8 +33,9 @@ const (
 func (c *Controller) syncDeployment(
 	service *latticev1.Service,
 	nodePool *latticev1.NodePool,
-	address *latticev1.Address,
 ) (*deploymentStatus, error) {
+	// FIXME: need to think about implications of rolling deploy between nodes w/ public load balancer
+	// probably is just that you need to wait for the address to be updated before syncing an existing deployment
 	deployment, err := c.deployment(service)
 	if err != nil {
 		return nil, err
@@ -42,17 +43,15 @@ func (c *Controller) syncDeployment(
 
 	if deployment == nil {
 		// If we need to create a new deployment, we need to wait until the
-		// node pool and address are ready so we can get the right affinity and toleration,
-		// and so that the load balancer if it exists is ready to forward traffic to the new
-		// node pool.
-		if !nodePool.Stable() || !address.Stable() {
+		// node pool so we can get the right affinity and toleration.
+		if !nodePool.Stable() {
 			return &pendingDeploymentStatus, nil
 		}
 
-		return c.createNewDeployment(service, nodePool, address)
+		return c.createNewDeployment(service, nodePool)
 	}
 
-	return c.syncExistingDeployment(service, deployment, nodePool, address)
+	return c.syncExistingDeployment(service, deployment, nodePool)
 }
 
 func (c *Controller) deployment(service *latticev1.Service) (*appsv1.Deployment, error) {
@@ -103,12 +102,11 @@ func (c *Controller) syncExistingDeployment(
 	service *latticev1.Service,
 	deployment *appsv1.Deployment,
 	nodePool *latticev1.NodePool,
-	address *latticev1.Address,
 ) (*deploymentStatus, error) {
 	// If the new node pool or address isn't ready yet, we shouldn't update the deployment's spec
 	// yet. If we do, the deployment will try to start rolling out, which will essentially
 	// just result in terminating some pods while waiting for the node pool to be ready.
-	if !nodePool.Stable() || !address.Stable() {
+	if !nodePool.Stable() {
 		return c.getDeploymentStatus(service, deployment)
 	}
 
@@ -192,7 +190,6 @@ func (c *Controller) updateDeploymentSpec(
 func (c *Controller) createNewDeployment(
 	service *latticev1.Service,
 	nodePool *latticev1.NodePool,
-	address *latticev1.Address,
 ) (*deploymentStatus, error) {
 	deployment, err := c.newDeployment(service, nodePool)
 	if err != nil {

@@ -65,7 +65,13 @@ func (c *Controller) newCloudProvider() error {
 		return err
 	}
 
-	cloudProvider, err := cloudprovider.NewCloudProvider(c.namespacePrefix, c.kubeClient, c.kubeServiceLister, options)
+	cloudProvider, err := cloudprovider.NewCloudProvider(
+		c.namespacePrefix,
+		c.kubeClient,
+		c.kubeServiceLister,
+		c.nodePoolLister,
+		options,
+	)
 	if err != nil {
 		return err
 	}

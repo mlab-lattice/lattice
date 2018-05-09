@@ -62,6 +62,9 @@ type Controller struct {
 	kubeServiceLister       corelisters.ServiceLister
 	kubeServiceListerSynced cache.InformerSynced
 
+	nodePoolLister       latticelisters.NodePoolLister
+	nodePoolListerSynced cache.InformerSynced
+
 	queue workqueue.RateLimitingInterface
 }
 
@@ -76,6 +79,7 @@ func NewController(
 	addressInformer latticeinformers.AddressInformer,
 	serviceInformer latticeinformers.ServiceInformer,
 	kubeServiceInformer coreinformers.ServiceInformer,
+	nodePoolInformer latticeinformers.NodePoolInformer,
 ) *Controller {
 	c := &Controller{
 		namespacePrefix: namespacePrefix,
@@ -122,6 +126,9 @@ func NewController(
 	c.kubeServiceLister = kubeServiceInformer.Lister()
 	c.kubeServiceListerSynced = kubeServiceInformer.Informer().HasSynced
 
+	c.nodePoolLister = nodePoolInformer.Lister()
+	c.nodePoolListerSynced = nodePoolInformer.Informer().HasSynced
+
 	return c
 }
 
@@ -135,7 +142,14 @@ func (c *Controller) Run(workers int, stopCh <-chan struct{}) {
 	defer glog.Infof("shutting down service controller")
 
 	// wait for your secondary caches to fill before starting your work
-	if !cache.WaitForCacheSync(stopCh, c.configListerSynced, c.addressListerSynced, c.serviceListerSynced, c.kubeServiceListerSynced) {
+	if !cache.WaitForCacheSync(
+		stopCh,
+		c.configListerSynced,
+		c.addressListerSynced,
+		c.serviceListerSynced,
+		c.kubeServiceListerSynced,
+		c.nodePoolListerSynced,
+	) {
 		return
 	}
 

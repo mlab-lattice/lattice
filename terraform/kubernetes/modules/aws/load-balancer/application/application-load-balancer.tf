@@ -9,10 +9,14 @@ variable "vpc_id" {}
 variable "subnet_ids" {}
 
 variable "name" {}
-variable "autoscaling_group_name" {}
-variable "node_pool_security_group_id" {}
 
-# The port_numbers variable maps the port that the load balancer should expose to
+# The autoscaling_group_security_group_ids variable maps the name of an autoscaling
+# group that the load balancer should attach to to the id of its security group.
+variable "autoscaling_group_security_group_ids" {
+  type = "map"
+}
+
+# The ports variable maps the port that the load balancer should expose to
 # the port on the autoscaling group that it should target.
 variable "ports" {
   type = "map"
@@ -79,11 +83,13 @@ resource "aws_alb_listener" "load_balancer" {
   }
 }
 
+# For each autoscaling group, for each port in ports, attach the autoscaling group
+# to the target group for the port.
 resource "aws_autoscaling_attachment" "load_balancer" {
-  count = "${length(var.ports)}"
+  count = "${length(var.ports) * length(var.autoscaling_group_security_group_ids)}"
 
-  autoscaling_group_name = "${var.autoscaling_group_name}"
-  alb_target_group_arn   = "${element(aws_alb_target_group.load_balancer.*.arn, count.index)}"
+  autoscaling_group_name = "${element(var.autoscaling_group_security_group_ids, count.index % length(var.autoscaling_group_security_group_ids))}"
+  alb_target_group_arn   = "${element(aws_alb_target_group.load_balancer.*.arn, count.index % length(var.ports))}"
 }
 
 ###############################################################################
@@ -98,30 +104,35 @@ resource "aws_security_group" "load_balancer_lb" {
   }
 }
 
-resource "aws_security_group_rule" "load_balancer_allow_ingress_from_lb" {
-  count = "${length(var.ports)}"
+# For each autoscaling group, for each port in ports, add the load balancer to the
+# autoscaling group's ingress allow rules for the port
+resource "aws_security_group_rule" "load_balancer_allow_ingress_asg_from_lb" {
+  count = "${length(var.ports) * length(var.autoscaling_group_security_group_ids)}"
 
-  security_group_id = "${var.node_pool_security_group_id}"
+  security_group_id = "${element(values(var.autoscaling_group_security_group_ids), count.index % length(var.autoscaling_group_security_group_ids))}"
 
   type                     = "ingress"
-  from_port                = "${element(values(var.ports), count.index)}"
-  to_port                  = "${element(values(var.ports), count.index)}"
+  from_port                = "${element(values(var.ports), count.index % length(var.ports))}"
+  to_port                  = "${element(values(var.ports), count.index % length(var.ports))}"
   protocol                 = "tcp"
   source_security_group_id = "${aws_security_group.load_balancer_lb.id}"
 }
 
-resource "aws_security_group_rule" "load_balancer_allow_egress_to_lb" {
-  count = "${length(var.ports)}"
+# For each autoscaling group, for each port in ports, add the load balancer to the
+# autoscaling group's egress allow rules for the port.
+resource "aws_security_group_rule" "load_balancer_allow_egress_asg_to_lb" {
+  count = "${length(var.ports) * length(var.autoscaling_group_security_group_ids)}"
 
-  security_group_id = "${var.node_pool_security_group_id}"
+  security_group_id = "${element(values(var.autoscaling_group_security_group_ids), count.index % length(var.autoscaling_group_security_group_ids))}"
 
   type                     = "egress"
-  from_port                = "${element(values(var.ports), count.index)}"
-  to_port                  = "${element(values(var.ports), count.index)}"
+  from_port                = "${element(values(var.ports), count.index % length(var.ports))}"
+  to_port                  = "${element(values(var.ports), count.index % length(var.ports))}"
   protocol                 = "tcp"
   source_security_group_id = "${aws_security_group.load_balancer_lb.id}"
 }
 
+# Add each port to the load balancer's ingress allow rules.
 resource "aws_security_group_rule" "lb_allow_ingress" {
   count = "${length(var.ports)}"
 
@@ -134,8 +145,10 @@ resource "aws_security_group_rule" "lb_allow_ingress" {
   cidr_blocks = ["0.0.0.0/0"]
 }
 
+# For each autoscaling group, for each port in ports, add the autoscaling group
+# to the load balancer's egress allow rules for the port.
 resource "aws_security_group_rule" "lb_allow_egress_to_load_balancer" {
-  count = "${length(var.ports)}"
+  count = "${length(var.ports) * length(var.autoscaling_group_security_group_ids)}"
 
   security_group_id = "${aws_security_group.load_balancer_lb.id}"
 
@@ -143,5 +156,5 @@ resource "aws_security_group_rule" "lb_allow_egress_to_load_balancer" {
   from_port                = "${element(values(var.ports), count.index)}"
   to_port                  = "${element(values(var.ports), count.index)}"
   protocol                 = "tcp"
-  source_security_group_id = "${var.node_pool_security_group_id}"
+  source_security_group_id = "${element(values(var.autoscaling_group_security_group_ids), count.index % length(var.autoscaling_group_security_group_ids))}"
 }

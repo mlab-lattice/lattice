@@ -57,7 +57,7 @@ func (c *Controller) newCloudProvider() error {
 		return err
 	}
 
-	cloudProvider, err := cloudprovider.NewCloudProvider(c.namespacePrefix, nil, nil, options)
+	cloudProvider, err := cloudprovider.NewCloudProvider(c.namespacePrefix, nil, nil, nil, options)
 	if err != nil {
 		return err
 	}

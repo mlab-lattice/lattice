@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
+	latticelisters "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/generated/listers/lattice/v1"
 	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/lifecycle/system/bootstrap/bootstrapper"
 	"github.com/mlab-lattice/lattice/pkg/util/cli"
 	"github.com/mlab-lattice/lattice/pkg/util/terraform"
@@ -61,6 +62,7 @@ func NewCloudProvider(
 	namespacePrefix string,
 	kubeClient kubeclientset.Interface,
 	kubeServiceLister corelisters.ServiceLister,
+	nodePoolLister latticelisters.NodePoolLister,
 	options *Options,
 ) *DefaultAWSCloudProvider {
 	return &DefaultAWSCloudProvider{
@@ -82,6 +84,8 @@ func NewCloudProvider(
 
 		kubeClient:        kubeClient,
 		kubeServiceLister: kubeServiceLister,
+
+		nodePoolLister: nodePoolLister,
 	}
 }
 
@@ -158,6 +162,8 @@ type DefaultAWSCloudProvider struct {
 
 	kubeClient        kubeclientset.Interface
 	kubeServiceLister corelisters.ServiceLister
+
+	nodePoolLister latticelisters.NodePoolLister
 }
 
 func (cp *DefaultAWSCloudProvider) BootstrapSystemResources(resources *bootstrapper.SystemResources) {

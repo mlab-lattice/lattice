@@ -1,6 +1,46 @@
 package terraform
 
+import (
+	"encoding/json"
+	"strings"
+
+	"github.com/mlab-lattice/lattice/pkg/api/v1"
+)
+
 type ApplicationLoadBalancer struct {
+	Source string `json:"source"`
+
+	Region string `json:"region"`
+
+	LatticeID v1.LatticeID `json:"lattice_id"`
+	SystemID  v1.SystemID  `json:"system_id"`
+	VPCID     string       `json:"vpc_id"`
+	SubnetIDs []string     `json:"subnet_ids"`
+
+	Name                             string            `json:"name"`
+	AutoscalingGroupSecurityGroupIDs map[string]string `json:"autoscaling_group_security_group_ids"`
+	Ports                            map[int32]int32   `json:"ports"`
+}
+
+func (np *ApplicationLoadBalancer) MarshalJSON() ([]byte, error) {
+	encoder := applicationLoadBalancerEncoder{
+		Source: np.Source,
+
+		Region: np.Region,
+
+		LatticeID: string(np.LatticeID),
+		SystemID:  string(np.SystemID),
+		VPCID:     np.VPCID,
+		SubnetIDs: strings.Join(np.SubnetIDs, ","),
+
+		Name: np.Name,
+		AutoscalingGroupSecurityGroupIDs: np.AutoscalingGroupSecurityGroupIDs,
+		Ports: np.Ports,
+	}
+	return json.Marshal(&encoder)
+}
+
+type applicationLoadBalancerEncoder struct {
 	Source string `json:"source"`
 
 	Region string `json:"region"`
@@ -10,32 +50,7 @@ type ApplicationLoadBalancer struct {
 	VPCID     string `json:"vpc_id"`
 	SubnetIDs string `json:"subnet_ids"`
 
-	Name                    string `json:"name"`
-	AutoscalingGroupName    string `json:"autoscaling_group_name"`
-	NodePoolSecurityGroupID string `json:"node_pool_security_group_id"`
-
-	Ports map[int32]int32 `json:"ports"`
-}
-
-func NewApplicationLoadBalancerModule(
-	moduleRoot, region, latticeID, systemID, vpcID, subnetIDs,
-	name, autoscalingGroupName, nodePoolSecurityGroupID string,
-	ports map[int32]int32,
-) *ApplicationLoadBalancer {
-	return &ApplicationLoadBalancer{
-		Source: moduleRoot + ModulePathApplicationLoadBalancer,
-
-		Region: region,
-
-		LatticeID: latticeID,
-		SystemID:  systemID,
-		VPCID:     vpcID,
-		SubnetIDs: subnetIDs,
-
-		Name:                    name,
-		AutoscalingGroupName:    autoscalingGroupName,
-		NodePoolSecurityGroupID: nodePoolSecurityGroupID,
-
-		Ports: ports,
-	}
+	Name                             string            `json:"name"`
+	AutoscalingGroupSecurityGroupIDs map[string]string `json:"autoscaling_group_security_group_ids"`
+	Ports                            map[int32]int32   `json:"ports"`
 }

@@ -7,7 +7,11 @@ import (
 	"sort"
 
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
+	kubetf "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/cloudprovider/aws/terraform"
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
+	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/kubernetes"
+	"github.com/mlab-lattice/lattice/pkg/util/terraform"
+	awstfprovider "github.com/mlab-lattice/lattice/pkg/util/terraform/provider/aws"
 
 	corev1 "k8s.io/api/core/v1"
 
@@ -17,21 +21,243 @@ import (
 	"k8s.io/apimachinery/pkg/util/strategicpatch"
 )
 
+const (
+	AnnotationKeyAddressServiceLoadBalancerDNSName = "service-load-balancer.address.aws.cloud-provider.lattice.mlab.com/dns-name"
+
+	terraformOutputServiceAddressLoadBalancerDNSName = "dns_name"
+)
+
 func (cp *DefaultAWSCloudProvider) EnsureServiceAddressLoadBalancer(
 	latticeID v1.LatticeID,
 	address *latticev1.Address,
 	service *latticev1.Service,
+	serviceMeshPorts map[int32]int32,
 ) error {
+	kubeService, err := cp.ensureKubeService(address, service, serviceMeshPorts)
+	if err != nil {
+		return err
+	}
+
+	serviceMeshPortsLookup := make(map[int32]int32)
+	for k, v := range serviceMeshPorts {
+		serviceMeshPortsLookup[v] = k
+	}
+
+	targetPorts := make(map[int32]int32)
+	for _, kubeServicePort := range kubeService.Spec.Ports {
+		servicePort, ok := serviceMeshPortsLookup[kubeServicePort.Port]
+		if !ok {
+			return fmt.Errorf(
+				"service mesh ports does not contain kube service port %v for %v",
+				kubeServicePort.Port,
+				service.Description(cp.namespacePrefix),
+			)
+		}
+
+		targetPorts[servicePort] = kubeServicePort.NodePort
+	}
+
+	module, err := cp.serviceAddressLoadBalancerTerraformModule(latticeID, address, service, targetPorts)
+	if err != nil {
+		return err
+	}
+
+	config, err := cp.serviceAddressLoadBalancerTerraformConfig(latticeID, address, module)
+	if err != nil {
+		return err
+	}
+
+	_, err = terraform.Apply(serviceAddressLoadBalancerWorkDirectory(address.Name), config)
+	if err != nil {
+		return fmt.Errorf(
+			"error applying terraform for %v service load balancer: %v",
+			address.Description(cp.namespacePrefix),
+			err,
+		)
+	}
+
+	return nil
+}
+
+func (cp *DefaultAWSCloudProvider) DestroyServiceAddressLoadBalancer(
+	latticeID v1.LatticeID,
+	address *latticev1.Address,
+) error {
+	config, err := cp.serviceAddressLoadBalancerTerraformConfig(latticeID, address, nil)
+	if err != nil {
+		return err
+	}
+
+	_, err = terraform.Destroy(serviceAddressLoadBalancerWorkDirectory(address.Name), config)
+	if err != nil {
+		return fmt.Errorf(
+			"error destroying terraform for %v service load balancer: %v",
+			address.Description(cp.namespacePrefix),
+			err,
+		)
+	}
+
+	return nil
+}
+
+func (cp *DefaultAWSCloudProvider) ServiceAddressLoadBalancerAddAnnotations(
+	latticeID v1.LatticeID,
+	address *latticev1.Address,
+	service *latticev1.Service,
+	serviceMeshPorts map[int32]int32,
+	annotations map[string]string,
+) error {
+	info, err := cp.serviceAddressLoadBalancerInfo(latticeID, address, service, serviceMeshPorts)
+	if err != nil {
+		return err
+	}
+
+	annotations[AnnotationKeyAddressServiceLoadBalancerDNSName] = info.DNSName
+	return nil
+}
+
+func (cp *DefaultAWSCloudProvider) ServiceAddressLoadBalancerPorts(
+	latticeID v1.LatticeID,
+	address *latticev1.Address,
+	service *latticev1.Service,
+) (map[int32]string, error) {
+	dnsName, ok := address.Annotations[AnnotationKeyAddressServiceLoadBalancerDNSName]
+	if !ok {
+		err := fmt.Errorf(
+			"%v does not have annotation %v",
+			address.Description(cp.namespacePrefix),
+			AnnotationKeyAddressServiceLoadBalancerDNSName,
+		)
+		return nil, err
+	}
+
+	ports := make(map[int32]string)
+	for _, componentPorts := range service.Spec.Ports {
+		for _, componentPort := range componentPorts {
+			if componentPort.Public {
+				ports[componentPort.Port] = fmt.Sprintf("http://%v:%v", dnsName, componentPort.Port)
+			}
+		}
+	}
+
+	return ports, nil
+}
+
+func (cp *DefaultAWSCloudProvider) serviceAddressLoadBalancerTerraformConfig(
+	latticeID v1.LatticeID,
+	address *latticev1.Address,
+	module *kubetf.ApplicationLoadBalancer,
+) (*terraform.Config, error) {
+	config := &terraform.Config{
+		Provider: awstfprovider.Provider{
+			Region: cp.region,
+		},
+		Backend: terraform.S3BackendConfig{
+			Region:  cp.region,
+			Bucket:  cp.terraformBackendOptions.S3.Bucket,
+			Key:     kubetf.GetS3BackendServiceAddressLoadBalancerPathRoot(latticeID, address.Namespace, address.Name),
+			Encrypt: true,
+		},
+	}
+
+	if module != nil {
+		config.Modules = map[string]interface{}{
+			"load-balancer": module,
+		}
+		config.Output = map[string]terraform.ConfigOutput{
+			terraformOutputServiceAddressLoadBalancerDNSName: {
+				Value: fmt.Sprintf("${module.load-balancer.%v}", terraformOutputServiceAddressLoadBalancerDNSName),
+			},
+		}
+	}
+
+	return config, nil
+}
+
+func (cp *DefaultAWSCloudProvider) serviceAddressLoadBalancerTerraformModule(
+	latticeID v1.LatticeID,
+	address *latticev1.Address,
+	service *latticev1.Service,
+	targetPorts map[int32]int32,
+) (*kubetf.ApplicationLoadBalancer, error) {
+	systemID, err := kubernetes.SystemID(cp.namespacePrefix, address.Namespace)
+	if err != nil {
+		return nil, fmt.Errorf("error getting system ID for %v: %v", address.Description(cp.namespacePrefix), err)
+	}
+
+	nodePoolAnnotation, err := service.NodePoolAnnotation()
+	if err != nil {
+		return nil, err
+	}
+
+	autoscalingGroupSecurityGroupIDS := make(map[string]string)
+	for ns := range nodePoolAnnotation {
+		for nodePoolName := range nodePoolAnnotation[ns] {
+			nodePool, err := cp.nodePoolLister.NodePools(ns).Get(nodePoolName)
+			if err != nil {
+				return nil, fmt.Errorf("error getting node pool %v/%v: %v", ns, nodePoolName, err)
+			}
+
+			autoscalingGroupName, ok := nodePool.Annotations[AnnotationKeyNodePoolAutoscalingGroupName]
+			if !ok {
+				err := fmt.Errorf(
+					"%v does not have %v annotation",
+					nodePool.Description(cp.namespacePrefix),
+					AnnotationKeyNodePoolAutoscalingGroupName,
+				)
+				return nil, err
+			}
+
+			securityGroupID, ok := nodePool.Annotations[AnnotationKeyNodePoolSecurityGroupID]
+			if !ok {
+				err := fmt.Errorf(
+					"%v does not have %v annotation",
+					nodePool.Description(cp.namespacePrefix),
+					AnnotationKeyNodePoolSecurityGroupID,
+				)
+				return nil, err
+			}
+
+			autoscalingGroupSecurityGroupIDS[autoscalingGroupName] = securityGroupID
+		}
+	}
+
+	module := &kubetf.ApplicationLoadBalancer{
+		Source: cp.terraformModulePath + kubetf.ModulePathNodePool,
+
+		Region: cp.region,
+
+		LatticeID: latticeID,
+		SystemID:  systemID,
+		VPCID:     cp.vpcID,
+		SubnetIDs: cp.subnetIDs,
+
+		Name: address.Name,
+		AutoscalingGroupSecurityGroupIDs: autoscalingGroupSecurityGroupIDS,
+		Ports: targetPorts,
+	}
+	return module, nil
+}
+
+func (cp *DefaultAWSCloudProvider) ensureKubeService(
+	address *latticev1.Address,
+	service *latticev1.Service,
+	serviceMeshPorts map[int32]int32,
+) (*corev1.Service, error) {
 	// Try to find the kube service in the cache
 	kubeServiceName := serviceAddressKubeServiceLoadBalancerName(address)
 	kubeService, err := cp.kubeServiceLister.Services(address.Namespace).Get(kubeServiceName)
 	if err != nil {
 		if !errors.IsNotFound(err) {
-			return err
+			return nil, err
 		}
 
 		// If it wasn't found, try to create it.
-		spec := cp.kubeServiceSpec(address, service)
+		spec, err := cp.kubeServiceSpec(address, service, serviceMeshPorts)
+		if err != nil {
+			return nil, err
+		}
+
 		kubeService = &corev1.Service{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:            kubeServiceName,
@@ -45,102 +271,75 @@ func (cp *DefaultAWSCloudProvider) EnsureServiceAddressLoadBalancer(
 		kubeService, err = cp.kubeClient.CoreV1().Services(address.Namespace).Create(kubeService)
 		if err != nil {
 			if !errors.IsAlreadyExists(err) {
-				return err
+				return nil, err
 			}
 
 			kubeService, err = cp.kubeClient.CoreV1().Services(address.Namespace).Get(kubeServiceName, metav1.GetOptions{})
 			if err != nil {
 				if !errors.IsNotFound(err) {
-					return err
+					return nil, err
 				}
 
-				return fmt.Errorf(
+				err := fmt.Errorf(
 					"could not create kube service %v for %v because it already exists, but could not find it",
 					kubeServiceName,
 					address.Description(cp.namespacePrefix),
 				)
+				return nil, err
 			}
 		}
 	}
 
-	spec := cp.kubeServiceSpec(address, service)
+	spec, err := cp.kubeServiceSpec(address, service, serviceMeshPorts)
+	if err != nil {
+		return nil, err
+	}
 
 	if !serviceAddressKubeServiceSpecNeedsUpdate(spec, kubeService.Spec) {
-		return nil
+		return kubeService, nil
 	}
 
 	strategicMergePatchBytes, err := serviceAddressKubeServiceStrategicMergePatchBytes(spec, kubeService.Spec)
 	if err != nil {
-		return fmt.Errorf("error creating json patches for kube service spec patch: %v", err)
+		return nil, fmt.Errorf("error creating json patches for kube service spec patch: %v", err)
 	}
 
-	_, err = cp.kubeClient.CoreV1().Services(address.Namespace).Patch(
+	kubeService, err = cp.kubeClient.CoreV1().Services(address.Namespace).Patch(
 		kubeService.Name,
 		types.StrategicMergePatchType,
 		strategicMergePatchBytes,
 	)
 	if err != nil {
-		return fmt.Errorf("error patching kube service for %v: %v", address.Description(cp.namespacePrefix), err)
+		return nil, fmt.Errorf("error patching kube service for %v: %v", address.Description(cp.namespacePrefix), err)
 	}
 
-	return nil
+	return kubeService, nil
 }
 
-func (cp *DefaultAWSCloudProvider) DestroyServiceAddressLoadBalancer(
-	latticeID v1.LatticeID,
-	address *latticev1.Address,
-) error {
-	kubeServiceName := serviceAddressKubeServiceLoadBalancerName(address)
-
-	err := cp.kubeClient.CoreV1().Services(address.Namespace).Delete(kubeServiceName, nil)
-	if err != nil {
-		// if the kube service is already deleted then it's not an error
-		if !errors.IsNotFound(err) {
-			return err
-		}
-	}
-
-	return nil
-}
-
-func (cp *DefaultAWSCloudProvider) ServiceAddressLoadBalancerAddAnnotations(
-	latticeID v1.LatticeID,
+func (cp *DefaultAWSCloudProvider) kubeServiceSpec(
 	address *latticev1.Address,
 	service *latticev1.Service,
-	annotations map[string]string,
-) error {
-	return nil
-}
-
-func (cp *DefaultAWSCloudProvider) ServiceAddressLoadBalancerPorts(
-	latticeID v1.LatticeID,
-	address *latticev1.Address,
-	service *latticev1.Service,
-) (map[int32]string, error) {
-	kubeServiceName := serviceAddressKubeServiceLoadBalancerName(address)
-	kubeService, err := cp.kubeServiceLister.Services(address.Namespace).Get(kubeServiceName)
-	if err != nil {
-		return nil, err
-	}
-
-	ports := make(map[int32]string)
-	for _, port := range kubeService.Spec.Ports {
-		ports[port.Port] = fmt.Sprintf("node:%v", port.NodePort)
-	}
-
-	return ports, nil
-}
-
-func (cp *DefaultAWSCloudProvider) kubeServiceSpec(address *latticev1.Address, service *latticev1.Service) corev1.ServiceSpec {
+	serviceMeshPorts map[int32]int32,
+) (corev1.ServiceSpec, error) {
 	var ports []corev1.ServicePort
 
 	for component, componentPorts := range service.Spec.Ports {
 		for _, componentPort := range componentPorts {
 			if componentPort.Public {
+				targetPort, ok := serviceMeshPorts[componentPort.Port]
+				if !ok {
+					err := fmt.Errorf(
+						"component port %v not found in service mesh ports for %v",
+						componentPort.Port,
+						service.Description(cp.namespacePrefix),
+					)
+					return corev1.ServiceSpec{}, err
+				}
+
 				ports = append(ports, corev1.ServicePort{
 					// FIXME: need a better naming scheme
 					Name: fmt.Sprintf("%v-%v", component, componentPort.Name),
-					Port: componentPort.Port,
+					Port: targetPort,
 				})
 			}
 		}
@@ -157,11 +356,12 @@ func (cp *DefaultAWSCloudProvider) kubeServiceSpec(address *latticev1.Address, s
 
 	// Note: if you add or remove any fields here,
 	// update serviceAddressKubeServiceStrategicMergePatchBytes as well
-	return corev1.ServiceSpec{
+	spec := corev1.ServiceSpec{
 		Selector: labels,
 		Type:     corev1.ServiceTypeNodePort,
 		Ports:    ports,
 	}
+	return spec, nil
 }
 
 func serviceAddressKubeServiceSpecNeedsUpdate(desired, current corev1.ServiceSpec) bool {
@@ -226,4 +426,46 @@ func serviceAddressKubeServiceStrategicMergePatchBytes(desired, current corev1.S
 
 func serviceAddressKubeServiceLoadBalancerName(address *latticev1.Address) string {
 	return fmt.Sprintf("load-balancer-address-%v", address.Name)
+}
+
+func serviceAddressLoadBalancerWorkDirectory(addressID string) string {
+	return workDirectory("address/service-load-balancer", addressID)
+}
+
+type serviceAddressLoadBalancerInfo struct {
+	DNSName string
+}
+
+func (cp *DefaultAWSCloudProvider) serviceAddressLoadBalancerInfo(
+	latticeID v1.LatticeID,
+	address *latticev1.Address,
+	service *latticev1.Service,
+	serviceMeshPorts map[int32]int32,
+) (serviceAddressLoadBalancerInfo, error) {
+	outputVars := []string{terraformOutputServiceAddressLoadBalancerDNSName}
+
+	module, err := cp.serviceAddressLoadBalancerTerraformModule(latticeID, address, service, serviceMeshPorts)
+	if err != nil {
+		return serviceAddressLoadBalancerInfo{}, err
+	}
+
+	config, err := cp.serviceAddressLoadBalancerTerraformConfig(latticeID, address, module)
+	if err != nil {
+		return serviceAddressLoadBalancerInfo{}, err
+	}
+
+	values, err := terraform.Output(serviceAddressLoadBalancerWorkDirectory(address.Name), config, outputVars)
+	if err != nil {
+		err := fmt.Errorf(
+			"error getting terraform output for %v service load balancer: %v",
+			address.Description(cp.namespacePrefix),
+			err,
+		)
+		return serviceAddressLoadBalancerInfo{}, err
+	}
+
+	info := serviceAddressLoadBalancerInfo{
+		DNSName: values[terraformOutputServiceAddressLoadBalancerDNSName],
+	}
+	return info, nil
 }

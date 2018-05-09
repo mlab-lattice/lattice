@@ -18,6 +18,14 @@ func GetS3BackendNodePoolPathRoot(latticeID v1.LatticeID, namespace, nodePoolID 
 	return fmt.Sprintf("%v/node-pool/%v", GetS3BackendNamespaceStatePathRoot(latticeID, namespace), nodePoolID)
 }
 
+func GetS3BackendAddressPathRoot(latticeID v1.LatticeID, namespace, addressID string) string {
+	return fmt.Sprintf("%v/address/%v", GetS3BackendNamespaceStatePathRoot(latticeID, namespace), addressID)
+}
+
+func GetS3BackendServiceAddressLoadBalancerPathRoot(latticeID v1.LatticeID, namespace, addressID string) string {
+	return fmt.Sprintf("%v/service-load-balancer", GetS3BackendAddressPathRoot(latticeID, namespace, addressID))
+}
+
 func GetS3BackendRoute53PathRoot(latticeID v1.LatticeID, zoneID string) string {
 	return fmt.Sprintf("%v/route53/%v", GetS3BackendStatePathRoot(latticeID), zoneID)
 }

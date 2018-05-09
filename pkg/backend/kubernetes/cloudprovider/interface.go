@@ -7,6 +7,7 @@ import (
 	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/cloudprovider/aws"
 	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/cloudprovider/local"
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
+	latticelisters "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/generated/listers/lattice/v1"
 	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/dnsprovider"
 	systembootstrapper "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/lifecycle/system/bootstrap/bootstrapper"
 	"github.com/mlab-lattice/lattice/pkg/util/cli"
@@ -45,9 +46,20 @@ type Interface interface {
 }
 
 type AddressLoadBalancer interface {
-	EnsureServiceAddressLoadBalancer(v1.LatticeID, *latticev1.Address, *latticev1.Service) error
+	EnsureServiceAddressLoadBalancer(
+		latticeID v1.LatticeID,
+		address *latticev1.Address,
+		service *latticev1.Service,
+		serviceMeshPorts map[int32]int32,
+	) error
 	DestroyServiceAddressLoadBalancer(v1.LatticeID, *latticev1.Address) error
-	ServiceAddressLoadBalancerAddAnnotations(v1.LatticeID, *latticev1.Address, *latticev1.Service, map[string]string) error
+	ServiceAddressLoadBalancerAddAnnotations(
+		latticeID v1.LatticeID,
+		address *latticev1.Address,
+		service *latticev1.Service,
+		serviceMeshPorts map[int32]int32,
+		annotations map[string]string,
+	) error
 	ServiceAddressLoadBalancerPorts(v1.LatticeID, *latticev1.Address, *latticev1.Service) (map[int32]string, error)
 }
 
@@ -67,10 +79,11 @@ func NewCloudProvider(
 	namespacePrefix string,
 	kubeClient kubeclientset.Interface,
 	kubeServiceLister corelisters.ServiceLister,
+	nodePoolLister latticelisters.NodePoolLister,
 	options *Options,
 ) (Interface, error) {
 	if options.AWS != nil {
-		return aws.NewCloudProvider(namespacePrefix, kubeClient, kubeServiceLister, options.AWS), nil
+		return aws.NewCloudProvider(namespacePrefix, kubeClient, kubeServiceLister, nodePoolLister, options.AWS), nil
 	}
 
 	if options.Local != nil {

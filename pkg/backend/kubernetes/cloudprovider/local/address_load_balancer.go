@@ -21,6 +21,7 @@ func (cp *DefaultLocalCloudProvider) EnsureServiceAddressLoadBalancer(
 	latticeID v1.LatticeID,
 	address *latticev1.Address,
 	service *latticev1.Service,
+	serviceMeshPorts map[int32]int32,
 ) error {
 	// Try to find the kube service in the cache
 	kubeServiceName := serviceAddressKubeServiceLoadBalancerName(address)
@@ -107,6 +108,7 @@ func (cp *DefaultLocalCloudProvider) ServiceAddressLoadBalancerAddAnnotations(
 	latticeID v1.LatticeID,
 	address *latticev1.Address,
 	service *latticev1.Service,
+	serviceMeshPorts map[int32]int32,
 	annotations map[string]string,
 ) error {
 	return nil
