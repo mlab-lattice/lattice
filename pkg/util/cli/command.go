@@ -108,14 +108,14 @@ func (c *Command) helpFuncWrapper(command *cobra.Command, strings []string) {
 // defaultUsageFunc is the Usage function that will be called if none is provided
 func (c *Command) defaultUsageFunc(command *Command) error {
 	// TODO :: Seems like Usage & Help have the same use for us right now. (Perhaps just for default)
-	tmplName := "defaultHelpTemplate"
+	tmplName := "defaultTemplate"
 	templateToExecute := "UsageTemplate"
 	return template.TryExecuteTemplate(template.DefaultTemplate, tmplName, templateToExecute, template.DefaultTemplateFuncs, c)
 }
 
 // defaultHelpFunc is the Help function that will be called if none is provided
 func (c *Command) defaultHelpFunc(command *Command) {
-	tmplName := "defaultHelpTemplate"
+	tmplName := "defaultTemplate"
 	templateToExecute := "UsageTemplate"
 	err := template.TryExecuteTemplate(template.DefaultTemplate, tmplName, templateToExecute, template.DefaultTemplateFuncs, c)
 	if err != nil {

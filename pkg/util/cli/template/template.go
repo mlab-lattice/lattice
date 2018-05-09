@@ -6,19 +6,19 @@ import (
 	"text/template"
 )
 
-//FIXME :: root command doesn't have a proper execution. Usage should therefore be cmdname COMMAND rather than cmdname or cmdname FLAGS
-var DefaultTemplate = `{{define "Header"}}{{ colored "Usage: " "white" }}{{.CommandPath}}{{.CommandSeparator}}{{if not .IsRunnable }}{{colored "COMMAND" "bold"}}{{end}}{{if .HasFlags}}{{ colored "[FLAGS] " "bold"}}{{end}}
-{{if (ne .Short "") }}
+//FIXME :: Seem to get : rather than " " when running command systems -h, but not when running command -h or command systems:status -h
+var DefaultTemplate = `{{define "Header"}}{{ colored "Usage: " "white" }}{{.CommandPath}}{{.CommandSeparator}}{{if not .IsRunnable }}{{colored "COMMAND" "bold"}}{{end}}{{if .HasFlags}}{{ colored "[FLAGS] " "bold"}}{{else}}{{colored "COMMAND" "bold"}}{{end}}
+{{if .Short}}{{if (ne .Short "") }}
     {{colored .Short "bold"}}{{end}}
-
+{{end}}
 Type {{.CommandPath}}{{.CommandSeparator}}{{if .HasSubcommands}}{{ colored "[COMMAND] " "bold"}}{{end}}{{colored "-h" "bold"}} for help and examples.{{end}}
 
 {{define "HelpTemplate"}}{{template "Header" .}}
 {{if (gt (len .Flags) 0)}}
-Flags: {{range .FlagsSorted}}
+{{colored "Flags:" "white"}} {{range .FlagsSorted}}
     --{{ rpad .GetName $.FlagNamePadding }} {{if (ne .GetShort "") }} -{{ rpad .GetShort 2 }} {{ .GetUsage }} {{else}} {{rpad " " 4}}{{ .GetUsage }}{{end}}{{end}}
 {{end}}
-{{if .HasSubcommands}}Subcommands:{{range .AllSubcommands}}
+{{if .HasSubcommands}}{{ colored "Subcommands: " "white" }}{{range .AllSubcommands}}
     {{rpad .CommandPath .NamePadding }} {{.Short}}{{end}}
 
 {{end}}{{end}}
@@ -35,8 +35,8 @@ Flags: {{range .FlagsSorted}}
 
 {{end}}{{end}}{{end}}
 
-{{define "UsageTemplate"}}{{template "Header"}}{{template "HelpTemplate" .}}{{end}}
-{{define "UsageTemplateGrouped"}}{{template "Header"}}{{template "HelpTemplateGrouped" .}}{{end}}`
+{{define "UsageTemplate"}}{{template "HelpTemplate" .}}{{end}}
+{{define "UsageTemplateGrouped"}}{{template "HelpTemplateGrouped" .}}{{end}}`
 
 // TryExecuteTemplate provides a simple wrapper to try and execute a template with some common options, and write the result to Stdout.
 func TryExecuteTemplate(templateContents string, templateToCreate string, subtemplateToExecute string, templateFunctions template.FuncMap, c interface{}) error {
