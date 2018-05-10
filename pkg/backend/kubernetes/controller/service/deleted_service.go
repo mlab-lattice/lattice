@@ -133,19 +133,26 @@ func (c *Controller) syncDeletedService(service *latticev1.Service) error {
 		return err
 	}
 
-	// clean up the service's dedicated node pool if one exists
-	dedicatedNodePool, err := c.dedicatedNodePool(service)
+	selector, err := serviceNodePoolSelector(service)
 	if err != nil {
 		return err
 	}
 
-	if dedicatedNodePool != nil {
-		message := "waiting for node pool to be deleted"
+	nodePools, err := c.nodePoolLister.NodePools(service.Namespace).List(selector)
+	if err != nil {
+		err := fmt.Errorf(
+			"error trying to get cached dedicated node pool for %v: %v",
+			service.Description(c.namespacePrefix),
+			err,
+		)
+		return err
+	}
 
+	// clean up the service's dedicated node pools if they exists
+	for _, nodePool := range nodePools {
 		// if the address is still deleting, nothing to do for now
-		if dedicatedNodePool.DeletionTimestamp != nil {
-			_, err = c.updateDeletedServiceStatus(service, &message, deploymentStatus, nil)
-			return err
+		if nodePool.DeletionTimestamp != nil {
+			continue
 		}
 
 		foregroundDelete := metav1.DeletePropagationForeground
@@ -153,16 +160,19 @@ func (c *Controller) syncDeletedService(service *latticev1.Service) error {
 			PropagationPolicy: &foregroundDelete,
 		}
 
-		err := c.latticeClient.LatticeV1().NodePools(dedicatedNodePool.Namespace).Delete(dedicatedNodePool.Name, deleteOptions)
+		err := c.latticeClient.LatticeV1().NodePools(nodePool.Namespace).Delete(nodePool.Name, deleteOptions)
 		if err != nil {
 			return fmt.Errorf(
 				"error deleting %v for %v: %v",
-				dedicatedNodePool.Description(c.namespacePrefix),
+				nodePool.Description(c.namespacePrefix),
 				service.Description(c.namespacePrefix),
 				err,
 			)
 		}
+	}
 
+	if len(nodePools) > 0 {
+		message := "waiting for node pool to be deleted"
 		_, err = c.updateDeletedServiceStatus(service, &message, deploymentStatus, nil)
 		return err
 	}

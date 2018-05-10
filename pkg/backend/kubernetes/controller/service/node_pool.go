@@ -34,12 +34,10 @@ func (c *Controller) dedicatedNodePool(service *latticev1.Service) (*latticev1.N
 }
 
 func (c *Controller) cachedDedicatedNodePool(service *latticev1.Service) (*latticev1.NodePool, error) {
-	selector := labels.NewSelector()
-	requirement, err := labels.NewRequirement(latticev1.NodePoolServiceDedicatedIDLabelKey, selection.Equals, []string{service.Name})
+	selector, err := serviceNodePoolSelector(service)
 	if err != nil {
 		return nil, err
 	}
-	selector = selector.Add(*requirement)
 
 	nodePools, err := c.nodePoolLister.NodePools(service.Namespace).List(selector)
 	if err != nil {
@@ -87,13 +85,11 @@ func (c *Controller) cachedDedicatedNodePool(service *latticev1.Service) (*latti
 }
 
 func (c *Controller) quorumDedicatedNodePools(service *latticev1.Service) (*latticev1.NodePool, error) {
-	selector := labels.NewSelector()
-	requirement, err := labels.NewRequirement(latticev1.NodePoolServiceDedicatedIDLabelKey, selection.Equals, []string{service.Name})
+	selector, err := serviceNodePoolSelector(service)
 	if err != nil {
 		return nil, err
 	}
 
-	selector = selector.Add(*requirement)
 	nodePoolList, err := c.latticeClient.LatticeV1().NodePools(service.Namespace).List(metav1.ListOptions{LabelSelector: selector.String()})
 	if err != nil {
 		err := fmt.Errorf(
@@ -137,6 +133,17 @@ func (c *Controller) quorumDedicatedNodePools(service *latticev1.Service) (*latt
 	}
 
 	return nodePool, nil
+}
+
+func serviceNodePoolSelector(service *latticev1.Service) (labels.Selector, error) {
+	selector := labels.NewSelector()
+	requirement, err := labels.NewRequirement(latticev1.NodePoolServiceDedicatedIDLabelKey, selection.Equals, []string{service.Name})
+	if err != nil {
+		return nil, err
+	}
+
+	selector = selector.Add(*requirement)
+	return selector, nil
 }
 
 func (c *Controller) nodePoolServices(nodePool *latticev1.NodePool) ([]latticev1.Service, error) {
