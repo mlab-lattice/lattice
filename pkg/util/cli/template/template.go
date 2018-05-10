@@ -7,10 +7,11 @@ import (
 )
 
 //FIXME :: Seem to get : rather than " " when running command systems -h, but not when running command -h or command systems:status -h
+//FIXME :: Add a CommandPath variable that isn't prefixed with the program name beforehand. Subcommands should not say `lattice systems ...` but rather `systems`
 var DefaultTemplate = `{{define "Header"}}{{ colored "Usage: " "white" }}{{.CommandPath}}{{.CommandSeparator}}{{if not .IsRunnable }}{{colored "COMMAND" "bold"}}{{end}}{{if .HasFlags}}{{ colored "[FLAGS] " "bold"}}{{else}}{{colored "COMMAND" "bold"}}{{end}}
-{{if .Short}}{{if (ne .Short "") }}
+{{if not (eq .Short "") }}
     {{colored .Short "bold"}}{{end}}
-{{end}}
+
 Type {{.CommandPath}}{{.CommandSeparator}}{{if .HasSubcommands}}{{ colored "[COMMAND] " "bold"}}{{end}}{{colored "-h" "bold"}} for help and examples.{{end}}
 
 {{define "HelpTemplate"}}{{template "Header" .}}
@@ -19,8 +20,7 @@ Type {{.CommandPath}}{{.CommandSeparator}}{{if .HasSubcommands}}{{ colored "[COM
     --{{ rpad .GetName $.FlagNamePadding }} {{if (ne .GetShort "") }} -{{ rpad .GetShort 2 }} {{ .GetUsage }} {{else}} {{rpad " " 4}}{{ .GetUsage }}{{end}}{{end}}
 {{end}}
 {{if .HasSubcommands}}{{ colored "Subcommands: " "white" }}{{range .AllSubcommands}}
-    {{rpad .CommandPath .NamePadding }} {{.Short}}{{end}}
-
+    {{ colored (rpad .CommandPath .NamePadding) "blue" }} {{ colored .Short "gray" }}{{end}}
 {{end}}{{end}}
 
 {{define "HelpTemplateGrouped"}}{{template "Header" .}}
@@ -29,10 +29,9 @@ Type {{.CommandPath}}{{.CommandSeparator}}{{if .HasSubcommands}}{{ colored "[COM
     --{{ rpad .GetName $.FlagNamePadding }} {{if (ne .GetShort "") }} -{{ rpad .GetShort 2 }} {{ .GetUsage }} {{else}} {{rpad " " 4}}{{ .GetUsage }}{{end}}{{end}}
 {{end}}
 {{if .HasSubcommands}}{{ colored "Subcommands: " "white" }}
-
-{{range .SubcommandsByGroup}}{{ colored .GroupName "blue" }}: {{range .Commands}}
+{{range .SubcommandsByGroup}}
+{{ colored .GroupName "blue" }}: {{range .Commands}}
  {{ colored (rpad .Name .NamePadding) "none" }} {{colored .Short "gray"}}{{end}}
-
 {{end}}{{end}}{{end}}
 
 {{define "UsageTemplate"}}{{template "HelpTemplate" .}}{{end}}
