@@ -306,6 +306,10 @@ func (c *Command) FlagNamePadding() int {
 }
 
 func (c *Command) CommandPath() string {
+	return c.cobraCmd.Name()
+}
+
+func (c *Command) CommandPathBinary() string {
 	return c.cobraCmd.CommandPath()
 }
 
