@@ -52,19 +52,19 @@ func (c *Controller) syncDeletedService(service *latticev1.Service) error {
 			)
 		}
 
-		reason := "waiting for address to be deleted"
-		_, err = c.updateDeletedServiceStatus(service, &reason, deploymentStatus, service.Status.Ports)
+		message := "waiting for address to be deleted"
+		_, err = c.updateDeletedServiceStatus(service, &message, deploymentStatus, service.Status.Ports)
 		return err
 	}
 
 	// if the deployment still exists, delete it once the address is deleted
 	// FIXME: check to see if the deployment is deleted while pods are still terminating
 	if deployment != nil {
-		reason := "waiting for instances to be deleted"
+		message := "waiting for instances to be deleted"
 
 		// if the deployment is still deleting, nothing to do for now
 		if deployment.DeletionTimestamp != nil {
-			_, err = c.updateDeletedServiceStatus(service, &reason, deploymentStatus, nil)
+			_, err = c.updateDeletedServiceStatus(service, &message, deploymentStatus, nil)
 			return err
 		}
 
@@ -83,7 +83,7 @@ func (c *Controller) syncDeletedService(service *latticev1.Service) error {
 			)
 		}
 
-		_, err = c.updateDeletedServiceStatus(service, &reason, deploymentStatus, nil)
+		_, err = c.updateDeletedServiceStatus(service, &message, deploymentStatus, nil)
 		return err
 	}
 
@@ -98,11 +98,11 @@ func (c *Controller) syncDeletedService(service *latticev1.Service) error {
 	}
 
 	if kubeService != nil {
-		reason := "waiting for internal resources to be deleted"
+		message := "waiting for internal resources to be deleted"
 
 		// if the kube service is still deleting, nothing to do for now
 		if kubeService.DeletionTimestamp != nil {
-			_, err = c.updateDeletedServiceStatus(service, &reason, deploymentStatus, nil)
+			_, err = c.updateDeletedServiceStatus(service, &message, deploymentStatus, nil)
 			return err
 		}
 
@@ -121,7 +121,7 @@ func (c *Controller) syncDeletedService(service *latticev1.Service) error {
 			)
 		}
 
-		_, err = c.updateDeletedServiceStatus(service, &reason, deploymentStatus, nil)
+		_, err = c.updateDeletedServiceStatus(service, &message, deploymentStatus, nil)
 		return err
 	}
 
@@ -140,11 +140,11 @@ func (c *Controller) syncDeletedService(service *latticev1.Service) error {
 	}
 
 	if dedicatedNodePool != nil {
-		reason := "waiting for node pool to be deleted"
+		message := "waiting for node pool to be deleted"
 
 		// if the address is still deleting, nothing to do for now
 		if dedicatedNodePool.DeletionTimestamp != nil {
-			_, err = c.updateDeletedServiceStatus(service, &reason, deploymentStatus, nil)
+			_, err = c.updateDeletedServiceStatus(service, &message, deploymentStatus, nil)
 			return err
 		}
 
@@ -163,7 +163,7 @@ func (c *Controller) syncDeletedService(service *latticev1.Service) error {
 			)
 		}
 
-		_, err = c.updateDeletedServiceStatus(service, &reason, deploymentStatus, nil)
+		_, err = c.updateDeletedServiceStatus(service, &message, deploymentStatus, nil)
 		return err
 	}
 
@@ -173,14 +173,14 @@ func (c *Controller) syncDeletedService(service *latticev1.Service) error {
 
 func (c *Controller) updateDeletedServiceStatus(
 	service *latticev1.Service,
-	reason *string,
+	message *string,
 	deploymentStatus *deploymentStatus,
 	ports map[int32]string,
 ) (*latticev1.Service, error) {
 	return c.updateServiceStatus(
 		service,
 		latticev1.ServiceStateDeleting,
-		reason,
+		message,
 		nil,
 		deploymentStatus.AvailableInstances,
 		deploymentStatus.UpdatedInstances,

@@ -69,25 +69,25 @@ func (a *Address) UpdateProcessed() bool {
 	return a.Status.ObservedGeneration >= a.Generation
 }
 
-func (a *Address) Reason(namespacePrefix string) string {
+func (a *Address) Reason() string {
 	if !a.UpdateProcessed() {
-		return fmt.Sprintf("waiting for update to %v to be processed", a.Description(namespacePrefix))
+		return "waiting for update to be processed"
 	}
 
 	switch a.Status.State {
 	case AddressStateStable:
 		return ""
 	case AddressStateUpdating:
-		return fmt.Sprintf("%v is updating", a.Description(namespacePrefix))
+		return "updating"
 	case AddressStateFailed:
 		failureReason := "unknown reason"
 		if a.Status.FailureInfo != nil {
 			failureReason = fmt.Sprintf("%v at %v", a.Status.FailureInfo.Message, a.Status.FailureInfo.Time.String())
 		}
 
-		return fmt.Sprintf("%v failed: %v", a.Description(namespacePrefix), failureReason)
+		return fmt.Sprintf("failed: %v", failureReason)
 	default:
-		return fmt.Sprintf("%v in unknown state: %v", a.Description(namespacePrefix), a.Status.State)
+		return fmt.Sprintf("in unknown state: %v", a.Status.State)
 	}
 }
 

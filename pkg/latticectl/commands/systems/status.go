@@ -156,9 +156,14 @@ func PrintSystemStateDuringStatus(writer io.Writer, s *spinner.Spinner, system *
 
 		for serviceName, service := range system.Services {
 			if service.State == v1.ServiceStateFailed {
+				message := "unknown"
+				if service.FailureInfo != nil {
+					message = service.FailureInfo.Message
+				}
+
 				serviceErrors = append(serviceErrors, []string{
 					fmt.Sprintf("%s", serviceName),
-					string(*service.FailureMessage),
+					message,
 				})
 			}
 		}
@@ -217,18 +222,13 @@ func SystemPrinter(system *v1.System, format printer.Format) printer.Interface {
 		}
 
 		var rows [][]string
-		// fmt.Fprintln(os.Stdout, system)
 		for serviceName, service := range system.Services {
-			// fmt.Fprintln(os.Stdout, service)
-
-			// fmt.Fprintln(os.Stdout, component)
-			// fmt.Fprint(os.Stdout, "COMPONENT STATE", component.State, "    ")
-			var infoMessage string
-
-			if service.Reason == nil {
-				infoMessage = ""
-			} else {
-				infoMessage = string(*service.Reason)
+			var message string
+			if service.Message != nil {
+				message = *service.Message
+			}
+			if service.FailureInfo != nil {
+				message = service.FailureInfo.Message
 			}
 
 			var stateColor color.Color
@@ -254,7 +254,7 @@ func SystemPrinter(system *v1.System, format printer.Format) printer.Interface {
 				fmt.Sprintf("%d", service.StaleInstances),
 				fmt.Sprintf("%d", service.TerminatingInstances),
 				strings.Join(addresses, ","),
-				string(infoMessage),
+				string(message),
 			})
 
 			sort.Slice(rows, func(i, j int) bool { return rows[i][0] < rows[j][0] })

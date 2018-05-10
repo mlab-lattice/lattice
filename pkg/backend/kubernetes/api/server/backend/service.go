@@ -70,11 +70,29 @@ func (kb *KubernetesBackend) transformService(path tree.NodePath, status *lattic
 		return v1.Service{}, err
 	}
 
+	message := status.Message
+
+	var failureInfo *v1.ServiceFailureInfo
+	if status.FailureInfo != nil {
+		message = nil
+
+		failureMessage := status.FailureInfo.Message
+		if status.FailureInfo.Internal {
+			failureMessage = "internal error"
+		}
+
+		failureInfo = &v1.ServiceFailureInfo{
+			Time:    status.FailureInfo.Timestamp.Time,
+			Message: failureMessage,
+		}
+	}
+
 	service := v1.Service{
 		Path: path,
 
-		State:  state,
-		Reason: status.Reason,
+		State:       state,
+		Message:     message,
+		FailureInfo: failureInfo,
 
 		AvailableInstances:   status.AvailableInstances,
 		UpdatedInstances:     status.UpdatedInstances,
@@ -83,18 +101,6 @@ func (kb *KubernetesBackend) transformService(path tree.NodePath, status *lattic
 
 		Ports: status.Ports,
 	}
-
-	var failureMessage *string
-	if status.FailureInfo != nil {
-		internalError := "internal error"
-		failureMessage = &internalError
-
-		if !status.FailureInfo.Internal {
-			errorMessage := fmt.Sprintf("%v: %v", status.FailureInfo.Time, status.FailureInfo.Message)
-			failureMessage = &errorMessage
-		}
-	}
-	service.FailureMessage = failureMessage
 
 	return service, nil
 }

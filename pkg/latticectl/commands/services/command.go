@@ -154,10 +154,11 @@ func servicesPrinter(services []v1.Service, format printer.Format) printer.Inter
 			}
 
 			var info string
-			if service.FailureMessage == nil {
-				info = ""
-			} else {
-				info = *service.FailureMessage
+			if service.Message != nil {
+				info = *service.Message
+			}
+			if service.FailureInfo != nil {
+				info = service.FailureInfo.Message
 			}
 
 			var addresses []string

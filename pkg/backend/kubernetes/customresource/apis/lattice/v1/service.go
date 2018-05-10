@@ -143,7 +143,7 @@ type ServiceStatus struct {
 	ObservedGeneration int64 `json:"observedGeneration"`
 
 	State       ServiceState              `json:"state"`
-	Reason      *string                   `json:"reason"`
+	Message     *string                   `json:"message"`
 	FailureInfo *ServiceStatusFailureInfo `json:"failureInfo,omitempty"`
 
 	AvailableInstances   int32 `json:"availableInstances"`
@@ -167,9 +167,9 @@ const (
 )
 
 type ServiceStatusFailureInfo struct {
-	Message  string      `json:"message"`
-	Internal bool        `json:"internal"`
-	Time     metav1.Time `json:"time"`
+	Message   string      `json:"message"`
+	Internal  bool        `json:"internal"`
+	Timestamp metav1.Time `json:"timestamp"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

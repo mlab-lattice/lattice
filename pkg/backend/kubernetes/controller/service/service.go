@@ -137,23 +137,23 @@ func (c *Controller) syncServiceStatus(
 		switch failureReason {
 		case reasonTimedOut:
 			failureInfo = &latticev1.ServiceStatusFailureInfo{
-				Internal: false,
-				Message:  "timed out",
-				Time:     *failureTime,
+				Internal:  false,
+				Message:   "timed out",
+				Timestamp: *failureTime,
 			}
 
 		case reasonLoadBalancerFailed:
 			failureInfo = &latticev1.ServiceStatusFailureInfo{
-				Internal: false,
-				Message:  "load balancer failed",
-				Time:     *failureTime,
+				Internal:  false,
+				Message:   "load balancer failed",
+				Timestamp: *failureTime,
 			}
 
 		default:
 			failureInfo = &latticev1.ServiceStatusFailureInfo{
-				Internal: true,
-				Message:  failureReason,
-				Time:     *failureTime,
+				Internal:  true,
+				Message:   failureReason,
+				Timestamp: *failureTime,
 			}
 		}
 	}
@@ -175,11 +175,11 @@ func (c *Controller) syncServiceStatus(
 
 	reason := ""
 	if !address.Stable() {
-		reason = address.Reason(c.namespacePrefix)
+		reason = fmt.Sprintf("address is %v", address.Reason())
 	}
 
 	if !nodePool.Stable() {
-		reason = nodePool.Reason(c.namespacePrefix)
+		reason = fmt.Sprintf("node pool is %v", nodePool.Reason())
 	}
 
 	return c.updateServiceStatus(
@@ -258,7 +258,7 @@ func (c *Controller) updateServiceNodePoolAnnotation(
 func (c *Controller) updateServiceStatus(
 	service *latticev1.Service,
 	state latticev1.ServiceState,
-	reason *string,
+	message *string,
 	failureInfo *latticev1.ServiceStatusFailureInfo,
 	availableInstances, updatedInstances, staleInstances, terminatingInstances int32,
 	ports map[int32]string,
@@ -267,7 +267,7 @@ func (c *Controller) updateServiceStatus(
 		ObservedGeneration: service.Generation,
 
 		State:       state,
-		Reason:      reason,
+		Message:     message,
 		FailureInfo: failureInfo,
 
 		AvailableInstances:   availableInstances,

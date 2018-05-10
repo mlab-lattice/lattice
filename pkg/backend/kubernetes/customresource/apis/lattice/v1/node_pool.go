@@ -136,27 +136,27 @@ func (np *NodePool) UpdateProcessed() bool {
 	return np.Status.ObservedGeneration >= np.Generation
 }
 
-func (np *NodePool) Reason(namespacePrefix string) string {
+func (np *NodePool) Reason() string {
 	if !np.UpdateProcessed() {
-		return fmt.Sprintf("waiting for update to %v to be processed", np.Description(namespacePrefix))
+		return "waiting for update to be processed"
 	}
 
 	switch np.Status.State {
 	case NodePoolStateStable:
 		return ""
 	case NodePoolStatePending:
-		return fmt.Sprintf("%v is pending", np.Description(namespacePrefix))
+		return "pending"
 	case NodePoolStateScaling:
-		return fmt.Sprintf("%v is scaling", np.Description(namespacePrefix))
+		return "scaling"
 	case NodePoolStateFailed:
 		failureReason := "unknown reason"
 		if np.Status.FailureInfo != nil {
 			failureReason = fmt.Sprintf("%v at %v", np.Status.FailureInfo.Message, np.Status.FailureInfo.Time.String())
 		}
 
-		return fmt.Sprintf("%v failed: %v", np.Description(namespacePrefix), failureReason)
+		return fmt.Sprintf("failed: %v", failureReason)
 	default:
-		return fmt.Sprintf("%v in unknown state: %v", np.Description(namespacePrefix), np.Status.State)
+		return fmt.Sprintf("in unknown state: %v", np.Status.State)
 	}
 }
 

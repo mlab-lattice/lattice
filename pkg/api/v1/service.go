@@ -2,6 +2,7 @@ package v1
 
 import (
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
+	"time"
 )
 
 type (
@@ -19,11 +20,12 @@ const (
 )
 
 type Service struct {
+	ID   string        `json:"id"`
 	Path tree.NodePath `json:"path"`
 
-	State          ServiceState `json:"state"`
-	FailureMessage *string      `json:"failureMessage,omitempty"`
-	Reason         *string      `json:"reason,omitempty"`
+	State       ServiceState        `json:"state"`
+	Message     *string             `json:"message,omitempty"`
+	FailureInfo *ServiceFailureInfo `json:"failureInfo,omitempty"`
 
 	AvailableInstances   int32 `json:"availableInstances"`
 	UpdatedInstances     int32 `json:"updatedInstances"`
@@ -31,4 +33,9 @@ type Service struct {
 	TerminatingInstances int32 `json:"terminatingInstances"`
 
 	Ports map[int32]string `json:"ports"`
+}
+
+type ServiceFailureInfo struct {
+	Time    time.Time
+	Message string `json:"message"`
 }

@@ -170,9 +170,14 @@ func printSystemStateDuringDeploy(writer io.Writer, s *spinner.Spinner, system *
 
 		for serviceName, service := range system.Services {
 			if service.State == v1.ServiceStateFailed {
+				message := "unknown"
+				if service.FailureInfo != nil {
+					message = service.FailureInfo.Message
+				}
+
 				serviceErrors = append(serviceErrors, []string{
 					fmt.Sprintf("%s", serviceName),
-					string(*service.FailureMessage),
+					message,
 				})
 			}
 		}

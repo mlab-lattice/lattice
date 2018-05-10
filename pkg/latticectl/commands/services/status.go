@@ -122,7 +122,12 @@ func printServiceState(writer io.Writer, s *spinner.Spinner, service *v1.Service
 		fmt.Fprint(writer, color.BoldHiSuccess("Service %s is stable.", string(service.Path)))
 	case v1.ServiceStateFailed:
 		s.Stop()
-		fmt.Fprint(writer, color.BoldHiFailure("Service %s has failed. Error: %s", string(service.Path), service.FailureMessage))
+		message := "unknown"
+		if service.FailureInfo != nil {
+			message = service.FailureInfo.Message
+		}
+
+		fmt.Fprint(writer, color.BoldHiFailure("Service %s has failed. Error: %s", service.Path.String(), message))
 	}
 }
 
@@ -178,10 +183,11 @@ func servicePrinter(service *v1.Service, format printer.Format) printer.Interfac
 		}
 
 		var info string
-		if service.Reason == nil {
-			info = ""
-		} else {
-			info = *service.Reason
+		if service.Message != nil {
+			info = *service.Message
+		}
+		if service.FailureInfo != nil {
+			info = service.FailureInfo.Message
 		}
 
 		var addresses []string
