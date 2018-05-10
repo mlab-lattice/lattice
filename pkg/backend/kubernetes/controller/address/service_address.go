@@ -65,47 +65,41 @@ func (c *Controller) syncServiceAddress(address *latticev1.Address) error {
 		return fmt.Errorf("error getting system id for %v: %v", address.Description(c.namespacePrefix), err)
 	}
 
-	message := "creating internal DNS record"
-	address, err = c.updateAddressStatus(
-		address,
-		latticev1.AddressStateUpdating,
-		&message,
-		nil,
-		address.Status.Ports,
-	)
+	domain := kubeutil.InternalAddressSubdomain(path.ToDomain(), systemID, c.latticeID)
+	needsUpdate, err := c.cloudProvider.DNSARecordNeedsUpdate(c.latticeID, domain, ip)
 	if err != nil {
-		return err
+		return fmt.Errorf(
+			"error checking if DNS A record for %v needs update: %v",
+			address.Description(c.namespacePrefix),
+			err,
+		)
 	}
 
-	domain := kubeutil.InternalAddressSubdomain(path.ToDomain(), systemID, c.latticeID)
-	err = c.cloudProvider.EnsureDNSARecord(c.latticeID, domain, ip)
-	if err != nil {
-		state := latticev1.AddressStateFailed
-		failureInfo := &latticev1.AddressStatusFailureInfo{
-			Message: fmt.Sprintf("error creating DNS A record: %v", err),
-			Time:    metav1.Now(),
+	if needsUpdate {
+		message := "updating internal DNS record"
+		address, err = c.updateAddressStatus(
+			address,
+			latticev1.AddressStateUpdating,
+			&message,
+			nil,
+			address.Status.Ports,
+		)
+		if err != nil {
+			return err
 		}
 
-		// swallow any errors from updating the status and return the original error
-		c.updateAddressStatus(address, state, &failureInfo.Message, failureInfo, address.Status.Ports)
-		return fmt.Errorf("error creating service address DNS A record for %v: %v", address.Description(c.namespacePrefix), err)
-	}
+		err = c.cloudProvider.EnsureDNSARecord(c.latticeID, domain, ip)
+		if err != nil {
+			state := latticev1.AddressStateFailed
+			failureInfo := &latticev1.AddressStatusFailureInfo{
+				Message: fmt.Sprintf("error creating DNS A record: %v", err),
+				Time:    metav1.Now(),
+			}
 
-	if !serviceNeedsAddressLoadBalancer(service) {
-		_, err := c.updateAddressStatus(address, latticev1.AddressStateStable, nil, nil, nil)
-		return err
-	}
-
-	message = "creating load balancer"
-	address, err = c.updateAddressStatus(
-		address,
-		latticev1.AddressStateUpdating,
-		&message,
-		nil,
-		address.Status.Ports,
-	)
-	if err != nil {
-		return err
+			// swallow any errors from updating the status and return the original error
+			c.updateAddressStatus(address, state, &failureInfo.Message, failureInfo, address.Status.Ports)
+			return fmt.Errorf("error creating service address DNS A record for %v: %v", address.Description(c.namespacePrefix), err)
+		}
 	}
 
 	serviceMeshPorts, err := c.serviceMesh.ServiceMeshPorts(service)
@@ -113,44 +107,68 @@ func (c *Controller) syncServiceAddress(address *latticev1.Address) error {
 		return fmt.Errorf("error getting service mesh ports for %v: %v", service.Description(c.namespacePrefix), err)
 	}
 
-	err = c.cloudProvider.EnsureServiceAddressLoadBalancer(c.latticeID, address, service, serviceMeshPorts)
-	if err != nil {
-		state := latticev1.AddressStateFailed
-		failureInfo := &latticev1.AddressStatusFailureInfo{
-			Message: fmt.Sprintf("error creating load balancer: %v", err),
-			Time:    metav1.Now(),
-		}
-
-		// swallow any errors from updating the status and return the original error
-		c.updateAddressStatus(address, state, &failureInfo.Message, failureInfo, address.Status.Ports)
-		return fmt.Errorf("error creating load balancer for %v: %v", address.Description(c.namespacePrefix), err)
-	}
-
-	// Add any annotations needed by the cloud provider.
-	// Copy annotations so cloud provider doesn't mutate the cache
-	annotations := make(map[string]string)
-	for k, v := range address.Annotations {
-		annotations[k] = v
-	}
-
-	err = c.cloudProvider.ServiceAddressLoadBalancerAddAnnotations(c.latticeID, address, service, serviceMeshPorts, annotations)
-	if err != nil {
-		return fmt.Errorf("cloud provider could not get annotations for %v: %v", address.Description(c.namespacePrefix), err)
-	}
-
-	address, err = c.updateAddressAnnotations(address, annotations)
-	if err != nil {
-		return err
-	}
-
-	ports, err := c.cloudProvider.ServiceAddressLoadBalancerPorts(c.latticeID, address, service)
+	needsUpdate, err = c.cloudProvider.ServiceAddressLoadBalancerNeedsUpdate(c.latticeID, address, service, serviceMeshPorts)
 	if err != nil {
 		return fmt.Errorf(
-			"error getting %v %v load balancer ports: %v",
+			"error checking if load balancer for %v needs update: %v",
 			address.Description(c.namespacePrefix),
-			service.Description(c.namespacePrefix),
 			err,
 		)
+	}
+
+	ports := service.Status.Ports
+	if needsUpdate {
+		message := "updating load balancer"
+		address, err = c.updateAddressStatus(
+			address,
+			latticev1.AddressStateUpdating,
+			&message,
+			nil,
+			address.Status.Ports,
+		)
+		if err != nil {
+			return err
+		}
+
+		err = c.cloudProvider.EnsureServiceAddressLoadBalancer(c.latticeID, address, service, serviceMeshPorts)
+		if err != nil {
+			state := latticev1.AddressStateFailed
+			failureInfo := &latticev1.AddressStatusFailureInfo{
+				Message: fmt.Sprintf("error creating load balancer: %v", err),
+				Time:    metav1.Now(),
+			}
+
+			// swallow any errors from updating the status and return the original error
+			c.updateAddressStatus(address, state, &failureInfo.Message, failureInfo, address.Status.Ports)
+			return fmt.Errorf("error creating load balancer for %v: %v", address.Description(c.namespacePrefix), err)
+		}
+
+		// Add any annotations needed by the cloud provider.
+		// Copy annotations so cloud provider doesn't mutate the cache
+		annotations := make(map[string]string)
+		for k, v := range address.Annotations {
+			annotations[k] = v
+		}
+
+		err = c.cloudProvider.ServiceAddressLoadBalancerAddAnnotations(c.latticeID, address, service, serviceMeshPorts, annotations)
+		if err != nil {
+			return fmt.Errorf("cloud provider could not get annotations for %v: %v", address.Description(c.namespacePrefix), err)
+		}
+
+		address, err = c.updateAddressAnnotations(address, annotations)
+		if err != nil {
+			return err
+		}
+
+		ports, err = c.cloudProvider.ServiceAddressLoadBalancerPorts(c.latticeID, address, service)
+		if err != nil {
+			return fmt.Errorf(
+				"error getting %v %v load balancer ports: %v",
+				address.Description(c.namespacePrefix),
+				service.Description(c.namespacePrefix),
+				err,
+			)
+		}
 	}
 
 	_, err = c.updateAddressStatus(address, latticev1.AddressStateStable, nil, nil, ports)
@@ -179,16 +197,4 @@ func (c *Controller) service(namespace string, path tree.NodePath) (*latticev1.S
 	}
 
 	return services[0], nil
-}
-
-func serviceNeedsAddressLoadBalancer(service *latticev1.Service) bool {
-	for _, componentPorts := range service.Spec.Ports {
-		for _, componentPort := range componentPorts {
-			if componentPort.Public {
-				return true
-			}
-		}
-	}
-
-	return false
 }

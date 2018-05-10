@@ -29,7 +29,7 @@ func (kb *KubernetesBackend) ListServices(systemID v1.SystemID) ([]v1.Service, e
 			return nil, err
 		}
 
-		externalService, err := kb.transformService(servicePath, &service.Status)
+		externalService, err := kb.transformService(service.Name, servicePath, &service.Status)
 		if err != nil {
 			return nil, err
 		}
@@ -56,7 +56,7 @@ func (kb *KubernetesBackend) GetService(systemID v1.SystemID, path tree.NodePath
 	if err != nil {
 		return nil, err
 	}
-	externalService, err := kb.transformService(servicePath, &service.Status)
+	externalService, err := kb.transformService(service.Name, servicePath, &service.Status)
 	if err != nil {
 		return nil, err
 	}
@@ -64,7 +64,7 @@ func (kb *KubernetesBackend) GetService(systemID v1.SystemID, path tree.NodePath
 	return &externalService, nil
 }
 
-func (kb *KubernetesBackend) transformService(path tree.NodePath, status *latticev1.ServiceStatus) (v1.Service, error) {
+func (kb *KubernetesBackend) transformService(id string, path tree.NodePath, status *latticev1.ServiceStatus) (v1.Service, error) {
 	state, err := getServiceState(status.State)
 	if err != nil {
 		return v1.Service{}, err
@@ -88,6 +88,7 @@ func (kb *KubernetesBackend) transformService(path tree.NodePath, status *lattic
 	}
 
 	service := v1.Service{
+		ID:   id,
 		Path: path,
 
 		State:       state,

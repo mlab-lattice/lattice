@@ -144,6 +144,8 @@ func (np *NodePool) Reason() string {
 	switch np.Status.State {
 	case NodePoolStateStable:
 		return ""
+	case NodePoolStateUpdating:
+		return "updating"
 	case NodePoolStatePending:
 		return "pending"
 	case NodePoolStateScaling:

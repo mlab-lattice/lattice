@@ -4,6 +4,10 @@ import (
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 )
 
+func (cp *DefaultLocalCloudProvider) DNSARecordNeedsUpdate(latticeID v1.LatticeID, name, value string) (bool, error) {
+	return false, nil
+}
+
 func (cp *DefaultLocalCloudProvider) EnsureDNSARecord(latticeID v1.LatticeID, name, value string) error {
 	return nil
 }

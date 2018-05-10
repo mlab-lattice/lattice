@@ -99,7 +99,7 @@ func (kb *KubernetesBackend) transformSystem(system *latticev1.System) (*v1.Syst
 
 	externalServices := map[tree.NodePath]v1.Service{}
 	for path, status := range system.Status.Services {
-		externalService, err := kb.transformService(path, &status.ServiceStatus)
+		externalService, err := kb.transformService("XXX UNKNOWN", path, &status.ServiceStatus)
 		if err != nil {
 			return nil, err
 		}

@@ -27,37 +27,108 @@ const (
 	terraformOutputServiceAddressLoadBalancerDNSName = "dns_name"
 )
 
+func (cp *DefaultAWSCloudProvider) ServiceAddressLoadBalancerNeedsUpdate(
+	latticeID v1.LatticeID,
+	address *latticev1.Address,
+	service *latticev1.Service,
+	serviceMeshPorts map[int32]int32,
+) (bool, error) {
+	loadBalancerNeeded := serviceNeedsAddressLoadBalancer(service)
+
+	kubeService, err := cp.getKubeService(address)
+	if err != nil {
+		return false, err
+	}
+
+	if kubeService == nil && loadBalancerNeeded {
+		return true, nil
+	}
+
+	if !loadBalancerNeeded {
+		if kubeService != nil {
+			return true, nil
+		}
+
+		config, err := cp.serviceAddressLoadBalancerTerraformConfig(latticeID, address, nil)
+		if err != nil {
+			return false, err
+		}
+
+		result, _, err := terraform.Plan(serviceAddressLoadBalancerWorkDirectory(address.Name), config, true)
+		if err != nil {
+			return false, err
+		}
+
+		switch result {
+		case terraform.PlanResultError:
+			return false, fmt.Errorf("unknown error")
+
+		case terraform.PlanResultEmpty:
+			return false, nil
+
+		case terraform.PlanResultNotEmpty:
+			return true, nil
+
+		default:
+			return false, fmt.Errorf("unexpected terraform plan result: %v", result)
+		}
+	}
+
+	spec, err := cp.kubeServiceSpec(address, service, serviceMeshPorts)
+	if err != nil {
+		return false, err
+	}
+
+	if serviceAddressKubeServiceSpecNeedsUpdate(spec, kubeService.Spec) {
+		return true, nil
+	}
+
+	module, err := cp.serviceAddressLoadBalancerTerraformModule(latticeID, address, service, serviceMeshPorts, kubeService)
+	if err != nil {
+		return false, err
+	}
+
+	config, err := cp.serviceAddressLoadBalancerTerraformConfig(latticeID, address, module)
+	if err != nil {
+		return false, err
+	}
+
+	result, _, err := terraform.Plan(serviceAddressLoadBalancerWorkDirectory(address.Name), config, false)
+	if err != nil {
+		return false, err
+	}
+
+	switch result {
+	case terraform.PlanResultError:
+		return false, fmt.Errorf("unknown error")
+
+	case terraform.PlanResultEmpty:
+		return false, nil
+
+	case terraform.PlanResultNotEmpty:
+		return true, nil
+
+	default:
+		return false, fmt.Errorf("unexpected terraform plan result: %v", result)
+	}
+}
+
 func (cp *DefaultAWSCloudProvider) EnsureServiceAddressLoadBalancer(
 	latticeID v1.LatticeID,
 	address *latticev1.Address,
 	service *latticev1.Service,
 	serviceMeshPorts map[int32]int32,
 ) error {
+	if !serviceNeedsAddressLoadBalancer(service) {
+		return cp.DestroyServiceAddressLoadBalancer(latticeID, address)
+	}
+
 	kubeService, err := cp.ensureKubeService(address, service, serviceMeshPorts)
 	if err != nil {
 		return err
 	}
 
-	serviceMeshPortsLookup := make(map[int32]int32)
-	for k, v := range serviceMeshPorts {
-		serviceMeshPortsLookup[v] = k
-	}
-
-	targetPorts := make(map[int32]int32)
-	for _, kubeServicePort := range kubeService.Spec.Ports {
-		servicePort, ok := serviceMeshPortsLookup[kubeServicePort.Port]
-		if !ok {
-			return fmt.Errorf(
-				"service mesh ports does not contain kube service port %v for %v",
-				kubeServicePort.Port,
-				service.Description(cp.namespacePrefix),
-			)
-		}
-
-		targetPorts[servicePort] = kubeServicePort.NodePort
-	}
-
-	module, err := cp.serviceAddressLoadBalancerTerraformModule(latticeID, address, service, targetPorts)
+	module, err := cp.serviceAddressLoadBalancerTerraformModule(latticeID, address, service, serviceMeshPorts, kubeService)
 	if err != nil {
 		return err
 	}
@@ -97,7 +168,16 @@ func (cp *DefaultAWSCloudProvider) DestroyServiceAddressLoadBalancer(
 		)
 	}
 
-	return nil
+	kubeService, err := cp.getKubeService(address)
+	if err != nil {
+		return err
+	}
+
+	if kubeService == nil {
+		return nil
+	}
+
+	return cp.kubeClient.CoreV1().Services(kubeService.Namespace).Delete(kubeService.Name, nil)
 }
 
 func (cp *DefaultAWSCloudProvider) ServiceAddressLoadBalancerAddAnnotations(
@@ -178,7 +258,8 @@ func (cp *DefaultAWSCloudProvider) serviceAddressLoadBalancerTerraformModule(
 	latticeID v1.LatticeID,
 	address *latticev1.Address,
 	service *latticev1.Service,
-	targetPorts map[int32]int32,
+	serviceMeshPorts map[int32]int32,
+	kubeService *corev1.Service,
 ) (*kubetf.ApplicationLoadBalancer, error) {
 	systemID, err := kubernetes.SystemID(cp.namespacePrefix, address.Namespace)
 	if err != nil {
@@ -188,6 +269,26 @@ func (cp *DefaultAWSCloudProvider) serviceAddressLoadBalancerTerraformModule(
 	nodePoolAnnotation, err := service.NodePoolAnnotation()
 	if err != nil {
 		return nil, err
+	}
+
+	serviceMeshPortsLookup := make(map[int32]int32)
+	for k, v := range serviceMeshPorts {
+		serviceMeshPortsLookup[v] = k
+	}
+
+	targetPorts := make(map[int32]int32)
+	for _, kubeServicePort := range kubeService.Spec.Ports {
+		servicePort, ok := serviceMeshPortsLookup[kubeServicePort.Port]
+		if !ok {
+			err := fmt.Errorf(
+				"service mesh ports does not contain kube service port %v for %v",
+				kubeServicePort.Port,
+				service.Description(cp.namespacePrefix),
+			)
+			return nil, err
+		}
+
+		targetPorts[servicePort] = kubeServicePort.NodePort
 	}
 
 	autoscalingGroupSecurityGroupIDS := make(map[string]string)
@@ -245,19 +346,19 @@ func (cp *DefaultAWSCloudProvider) ensureKubeService(
 	serviceMeshPorts map[int32]int32,
 ) (*corev1.Service, error) {
 	// Try to find the kube service in the cache
-	kubeServiceName := serviceAddressKubeServiceLoadBalancerName(address)
-	kubeService, err := cp.kubeServiceLister.Services(address.Namespace).Get(kubeServiceName)
+	kubeService, err := cp.getKubeService(address)
 	if err != nil {
-		if !errors.IsNotFound(err) {
-			return nil, err
-		}
+		return nil, err
+	}
 
+	if kubeService == nil {
 		// If it wasn't found, try to create it.
 		spec, err := cp.kubeServiceSpec(address, service, serviceMeshPorts)
 		if err != nil {
 			return nil, err
 		}
 
+		kubeServiceName := serviceAddressKubeServiceLoadBalancerName(address)
 		kubeService = &corev1.Service{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:            kubeServiceName,
@@ -311,6 +412,21 @@ func (cp *DefaultAWSCloudProvider) ensureKubeService(
 	)
 	if err != nil {
 		return nil, fmt.Errorf("error patching kube service for %v: %v", address.Description(cp.namespacePrefix), err)
+	}
+
+	return kubeService, nil
+}
+
+func (cp *DefaultAWSCloudProvider) getKubeService(address *latticev1.Address) (*corev1.Service, error) {
+	// Try to find the kube service in the cache
+	kubeServiceName := serviceAddressKubeServiceLoadBalancerName(address)
+	kubeService, err := cp.kubeServiceLister.Services(address.Namespace).Get(kubeServiceName)
+	if err != nil {
+		if !errors.IsNotFound(err) {
+			return nil, err
+		}
+
+		return nil, nil
 	}
 
 	return kubeService, nil
@@ -442,9 +558,16 @@ func (cp *DefaultAWSCloudProvider) serviceAddressLoadBalancerInfo(
 	service *latticev1.Service,
 	serviceMeshPorts map[int32]int32,
 ) (serviceAddressLoadBalancerInfo, error) {
-	outputVars := []string{terraformOutputServiceAddressLoadBalancerDNSName}
+	kubeService, err := cp.getKubeService(address)
+	if err != nil {
+		return serviceAddressLoadBalancerInfo{}, err
+	}
 
-	module, err := cp.serviceAddressLoadBalancerTerraformModule(latticeID, address, service, serviceMeshPorts)
+	if kubeService == nil {
+		return serviceAddressLoadBalancerInfo{}, fmt.Errorf("could not get load balancer kube service")
+	}
+
+	module, err := cp.serviceAddressLoadBalancerTerraformModule(latticeID, address, service, serviceMeshPorts, kubeService)
 	if err != nil {
 		return serviceAddressLoadBalancerInfo{}, err
 	}
@@ -454,6 +577,7 @@ func (cp *DefaultAWSCloudProvider) serviceAddressLoadBalancerInfo(
 		return serviceAddressLoadBalancerInfo{}, err
 	}
 
+	outputVars := []string{terraformOutputServiceAddressLoadBalancerDNSName}
 	values, err := terraform.Output(serviceAddressLoadBalancerWorkDirectory(address.Name), config, outputVars)
 	if err != nil {
 		err := fmt.Errorf(
@@ -468,4 +592,16 @@ func (cp *DefaultAWSCloudProvider) serviceAddressLoadBalancerInfo(
 		DNSName: values[terraformOutputServiceAddressLoadBalancerDNSName],
 	}
 	return info, nil
+}
+
+func serviceNeedsAddressLoadBalancer(service *latticev1.Service) bool {
+	for _, componentPorts := range service.Spec.Ports {
+		for _, componentPort := range componentPorts {
+			if componentPort.Public {
+				return true
+			}
+		}
+	}
+
+	return false
 }

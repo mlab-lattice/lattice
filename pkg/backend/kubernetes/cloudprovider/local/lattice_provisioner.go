@@ -202,6 +202,7 @@ func (p *DefaultLocalLatticeProvisioner) bootstrap(containerChannel, address str
 								[]string{
 									"kubernetes:bootstrap",
 									"--lattice-id", "local",
+									"--internal-dns-domain", "lattice.local",
 									"--controller-manager-var", fmt.Sprintf("image=%v", getLatticeContainerImage(containerChannel, "kubernetes-lattice-controller-manager")),
 									"--controller-manager-var", "args=-v=5",
 									"--api-var", fmt.Sprintf("image=%v", getLatticeContainerImage(containerChannel, "kubernetes-api-server-rest")),

@@ -103,60 +103,7 @@ func (c *Controller) syncServiceStatus(
 	deploymentStatus *deploymentStatus,
 	extraNodePoolsExist bool,
 ) (*latticev1.Service, error) {
-	failed := false
-	failureReason := ""
-	var failureTime *metav1.Time
-
-	var state latticev1.ServiceState
-	if !deploymentStatus.UpdateProcessed {
-		state = latticev1.ServiceStateUpdating
-	} else if deploymentStatus.State == deploymentStatePending {
-		state = latticev1.ServiceStateUpdating
-	} else if deploymentStatus.State == deploymentStateFailed {
-		failed = true
-		if deploymentStatus.FailureInfo != nil {
-			failureReason = deploymentStatus.FailureInfo.Reason
-			failureTime = &deploymentStatus.FailureInfo.Time
-		}
-	} else if deploymentStatus.State == deploymentStateScaling {
-		state = latticev1.ServiceStateScaling
-	} else {
-		state = latticev1.ServiceStateStable
-	}
-
-	// But if we have a failure, our updating or scaling has failed
-	// A failed status takes priority over an updating status
-	var failureInfo *latticev1.ServiceStatusFailureInfo
-	if failed {
-		state = latticev1.ServiceStateFailed
-		if failureTime == nil {
-			now := metav1.Now()
-			failureTime = &now
-		}
-
-		switch failureReason {
-		case reasonTimedOut:
-			failureInfo = &latticev1.ServiceStatusFailureInfo{
-				Internal:  false,
-				Message:   "timed out",
-				Timestamp: *failureTime,
-			}
-
-		case reasonLoadBalancerFailed:
-			failureInfo = &latticev1.ServiceStatusFailureInfo{
-				Internal:  false,
-				Message:   "load balancer failed",
-				Timestamp: *failureTime,
-			}
-
-		default:
-			failureInfo = &latticev1.ServiceStatusFailureInfo{
-				Internal:  true,
-				Message:   failureReason,
-				Timestamp: *failureTime,
-			}
-		}
-	}
+	state, message, failureInfo := serviceStatus(nodePool, address, deploymentStatus, extraNodePoolsExist)
 
 	// we only update the deployment spec once the node pool is stable,
 	// so if it is not stable we don't need to update the service's node
@@ -173,19 +120,10 @@ func (c *Controller) syncServiceStatus(
 		}
 	}
 
-	reason := ""
-	if !address.Stable() {
-		reason = fmt.Sprintf("address is %v", address.Reason())
-	}
-
-	if !nodePool.Stable() {
-		reason = fmt.Sprintf("node pool is %v", nodePool.Reason())
-	}
-
 	return c.updateServiceStatus(
 		service,
 		state,
-		&reason,
+		message,
 		failureInfo,
 		deploymentStatus.AvailableInstances,
 		deploymentStatus.UpdatedInstances,
@@ -193,6 +131,82 @@ func (c *Controller) syncServiceStatus(
 		deploymentStatus.TerminatingInstances,
 		address.Status.Ports,
 	)
+}
+
+func serviceStatus(
+	nodePool *latticev1.NodePool,
+	address *latticev1.Address,
+	deploymentStatus *deploymentStatus,
+	extraNodePoolsExist bool,
+) (latticev1.ServiceState, *string, *latticev1.ServiceStatusFailureInfo) {
+	if !deploymentStatus.UpdateProcessed {
+		message := "waiting for update to be processed"
+		return latticev1.ServiceStateUpdating, &message, nil
+	}
+
+	if deploymentStatus.State == deploymentStateFailed {
+		failureInfo := &latticev1.ServiceStatusFailureInfo{
+			Message:   "unknown error",
+			Internal:  true,
+			Timestamp: metav1.Now(),
+		}
+
+		if deploymentStatus.FailureInfo != nil {
+			failureInfo.Timestamp = deploymentStatus.FailureInfo.Time
+
+			switch deploymentStatus.FailureInfo.Reason {
+			case reasonTimedOut:
+				failureInfo = &latticev1.ServiceStatusFailureInfo{
+					Internal: false,
+					Message:  "timed out",
+				}
+
+			case reasonLoadBalancerFailed:
+				failureInfo = &latticev1.ServiceStatusFailureInfo{
+					Internal: false,
+					Message:  "load balancer failed",
+				}
+
+			default:
+				failureInfo = &latticev1.ServiceStatusFailureInfo{
+					Internal: true,
+					Message:  deploymentStatus.FailureInfo.Reason,
+				}
+			}
+		}
+
+		return latticev1.ServiceStateFailed, nil, failureInfo
+	}
+
+	if !nodePool.Stable() {
+		message := fmt.Sprintf("node pool is %v", nodePool.Reason())
+		return latticev1.ServiceStateUpdating, &message, nil
+	}
+
+	if !address.Stable() {
+		message := fmt.Sprintf("address is %v", address.Reason())
+		return latticev1.ServiceStateUpdating, &message, nil
+	}
+
+	if extraNodePoolsExist {
+		message := "destroying stale node pools"
+		return latticev1.ServiceStateUpdating, &message, nil
+	}
+
+	// this probably shouldn't happen (deployment shouldn't be pending if both
+	// node pool and address are stable)
+	if deploymentStatus.State == deploymentStatePending {
+		message := "waiting for update to be processed"
+		return latticev1.ServiceStateUpdating, &message, nil
+	}
+
+	if deploymentStatus.State == deploymentStateScaling {
+		message := "instances are scaling"
+		return latticev1.ServiceStateScaling, &message, nil
+
+	}
+
+	return latticev1.ServiceStateStable, nil, nil
 }
 
 func (c *Controller) serviceNodePoolAnnotation(

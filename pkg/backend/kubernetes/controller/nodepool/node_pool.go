@@ -75,6 +75,10 @@ func nodePoolState(epochs latticev1.NodePoolStatusEpochs) (latticev1.NodePoolSta
 		return latticev1.NodePoolStatePending, fmt.Errorf("epochs had a current epoch but could not get current epoch info")
 	}
 
+	if epochInfo.State == latticev1.NodePoolStatePending {
+		return latticev1.NodePoolStateUpdating, nil
+	}
+
 	return epochInfo.State, nil
 }
 

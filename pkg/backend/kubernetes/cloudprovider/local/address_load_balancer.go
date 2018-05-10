@@ -17,6 +17,25 @@ import (
 	"k8s.io/apimachinery/pkg/util/strategicpatch"
 )
 
+func (cp *DefaultLocalCloudProvider) ServiceAddressLoadBalancerNeedsUpdate(
+	latticeID v1.LatticeID,
+	address *latticev1.Address,
+	service *latticev1.Service,
+	serviceMeshPorts map[int32]int32,
+) (bool, error) {
+	kubeService, err := cp.getKubeService(address)
+	if err != nil {
+		return false, err
+	}
+
+	spec, err := cp.kubeServiceSpec(address, service, serviceMeshPorts)
+	if err != nil {
+		return false, err
+	}
+
+	return serviceAddressKubeServiceSpecNeedsUpdate(spec, kubeService.Spec), nil
+}
+
 func (cp *DefaultLocalCloudProvider) EnsureServiceAddressLoadBalancer(
 	latticeID v1.LatticeID,
 	address *latticev1.Address,
@@ -24,15 +43,19 @@ func (cp *DefaultLocalCloudProvider) EnsureServiceAddressLoadBalancer(
 	serviceMeshPorts map[int32]int32,
 ) error {
 	// Try to find the kube service in the cache
-	kubeServiceName := serviceAddressKubeServiceLoadBalancerName(address)
-	kubeService, err := cp.kubeServiceLister.Services(address.Namespace).Get(kubeServiceName)
+	kubeService, err := cp.getKubeService(address)
 	if err != nil {
-		if !errors.IsNotFound(err) {
+		return err
+	}
+
+	if kubeService == nil {
+		// If it wasn't found, try to create it.
+		spec, err := cp.kubeServiceSpec(address, service, serviceMeshPorts)
+		if err != nil {
 			return err
 		}
 
-		// If it wasn't found, try to create it.
-		spec := cp.kubeServiceSpec(address, service)
+		kubeServiceName := serviceAddressKubeServiceLoadBalancerName(address)
 		kubeService = &corev1.Service{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:            kubeServiceName,
@@ -55,16 +78,20 @@ func (cp *DefaultLocalCloudProvider) EnsureServiceAddressLoadBalancer(
 					return err
 				}
 
-				return fmt.Errorf(
+				err := fmt.Errorf(
 					"could not create kube service %v for %v because it already exists, but could not find it",
 					kubeServiceName,
 					address.Description(cp.namespacePrefix),
 				)
+				return err
 			}
 		}
 	}
 
-	spec := cp.kubeServiceSpec(address, service)
+	spec, err := cp.kubeServiceSpec(address, service, serviceMeshPorts)
+	if err != nil {
+		return err
+	}
 
 	if !serviceAddressKubeServiceSpecNeedsUpdate(spec, kubeService.Spec) {
 		return nil
@@ -133,16 +160,30 @@ func (cp *DefaultLocalCloudProvider) ServiceAddressLoadBalancerPorts(
 	return ports, nil
 }
 
-func (cp *DefaultLocalCloudProvider) kubeServiceSpec(address *latticev1.Address, service *latticev1.Service) corev1.ServiceSpec {
+func (cp *DefaultLocalCloudProvider) kubeServiceSpec(
+	address *latticev1.Address,
+	service *latticev1.Service,
+	serviceMeshPorts map[int32]int32,
+) (corev1.ServiceSpec, error) {
 	var ports []corev1.ServicePort
 
 	for component, componentPorts := range service.Spec.Ports {
 		for _, componentPort := range componentPorts {
 			if componentPort.Public {
+				targetPort, ok := serviceMeshPorts[componentPort.Port]
+				if !ok {
+					err := fmt.Errorf(
+						"component port %v not found in service mesh ports for %v",
+						componentPort.Port,
+						service.Description(cp.namespacePrefix),
+					)
+					return corev1.ServiceSpec{}, err
+				}
+
 				ports = append(ports, corev1.ServicePort{
 					// FIXME: need a better naming scheme
 					Name: fmt.Sprintf("%v-%v", component, componentPort.Name),
-					Port: componentPort.Port,
+					Port: targetPort,
 				})
 			}
 		}
@@ -159,11 +200,27 @@ func (cp *DefaultLocalCloudProvider) kubeServiceSpec(address *latticev1.Address,
 
 	// Note: if you add or remove any fields here,
 	// update serviceAddressKubeServiceStrategicMergePatchBytes as well
-	return corev1.ServiceSpec{
+	spec := corev1.ServiceSpec{
 		Selector: labels,
 		Type:     corev1.ServiceTypeNodePort,
 		Ports:    ports,
 	}
+	return spec, nil
+}
+
+func (cp *DefaultLocalCloudProvider) getKubeService(address *latticev1.Address) (*corev1.Service, error) {
+	// Try to find the kube service in the cache
+	kubeServiceName := serviceAddressKubeServiceLoadBalancerName(address)
+	kubeService, err := cp.kubeServiceLister.Services(address.Namespace).Get(kubeServiceName)
+	if err != nil {
+		if !errors.IsNotFound(err) {
+			return nil, err
+		}
+
+		return nil, nil
+	}
+
+	return kubeService, nil
 }
 
 func serviceAddressKubeServiceSpecNeedsUpdate(desired, current corev1.ServiceSpec) bool {

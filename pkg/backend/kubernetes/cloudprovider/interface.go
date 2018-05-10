@@ -46,6 +46,12 @@ type Interface interface {
 }
 
 type AddressLoadBalancer interface {
+	ServiceAddressLoadBalancerNeedsUpdate(
+		latticeID v1.LatticeID,
+		address *latticev1.Address,
+		service *latticev1.Service,
+		serviceMeshPorts map[int32]int32,
+	) (bool, error)
 	EnsureServiceAddressLoadBalancer(
 		latticeID v1.LatticeID,
 		address *latticev1.Address,

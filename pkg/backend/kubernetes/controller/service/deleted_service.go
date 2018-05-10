@@ -31,10 +31,12 @@ func (c *Controller) syncDeletedService(service *latticev1.Service) error {
 
 	// if the address still exists, delete it first so traffic stops being sent to the service
 	if address != nil {
+		message := "waiting for address to be deleted"
+
 		// if the address is still deleting, nothing to do for now
 		if address.DeletionTimestamp != nil {
-			// FIXME: update status
-			return nil
+			_, err = c.updateDeletedServiceStatus(service, &message, deploymentStatus, service.Status.Ports)
+			return err
 		}
 
 		foregroundDelete := metav1.DeletePropagationForeground
@@ -52,7 +54,6 @@ func (c *Controller) syncDeletedService(service *latticev1.Service) error {
 			)
 		}
 
-		message := "waiting for address to be deleted"
 		_, err = c.updateDeletedServiceStatus(service, &message, deploymentStatus, service.Status.Ports)
 		return err
 	}
