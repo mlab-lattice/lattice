@@ -1,7 +1,11 @@
 package v1
 
 import (
+	"encoding/json"
+	"fmt"
+
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
+	kubeutil "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/kubernetes"
 	"github.com/mlab-lattice/lattice/pkg/definition/block"
 
 	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
@@ -9,10 +13,22 @@ import (
 )
 
 const (
-	ResourceSingularComponentBuild  = "componentbuild"
-	ResourcePluralComponentBuild    = "componentbuilds"
-	ResourceShortNameComponentBuild = "lcb"
-	ResourceScopeComponentBuild     = apiextensionsv1beta1.NamespaceScoped
+	ResourceSingularComponentBuild = "componentbuild"
+	ResourcePluralComponentBuild   = "componentbuilds"
+	ResourceScopeComponentBuild    = apiextensionsv1beta1.NamespaceScoped
+)
+
+var (
+	ComponentBuildKind     = SchemeGroupVersion.WithKind("ComponentBuild")
+	ComponentBuildListKind = SchemeGroupVersion.WithKind("ComponentBuildList")
+
+	ComponentBuildIDLabelKey             = fmt.Sprintf("componentbuild.%v/id", GroupName)
+	ComponentBuildDefinitionHashLabelKey = fmt.Sprintf("componentbuild.%v/definition-hash", GroupName)
+
+	ComponentBuildJobDockerImageFQNAnnotationKey = fmt.Sprintf("componentbuild.%v/docker-image-fqn", GroupName)
+
+	ComponentBuildFailureInfoAnnotationKey       = fmt.Sprintf("componentbuild.%v/failure-info", GroupName)
+	ComponentBuildLastObservedPhaseAnnotationKey = fmt.Sprintf("componentbuild.%v/last-observed-phase", GroupName)
 )
 
 // +genclient
@@ -25,23 +41,62 @@ type ComponentBuild struct {
 	Status            ComponentBuildStatus `json:"status"`
 }
 
+func (b *ComponentBuild) DefinitionHashLabel() (string, bool) {
+	hash, ok := b.Labels[ComponentBuildDefinitionHashLabelKey]
+	return hash, ok
+}
+
+func (b *ComponentBuild) FailureInfoAnnotation() (*v1.ComponentBuildFailureInfo, error) {
+	infoStr, ok := b.Annotations[ComponentBuildFailureInfoAnnotationKey]
+	if !ok {
+		return nil, nil
+	}
+
+	failureInfo := v1.ComponentBuildFailureInfo{}
+	err := json.Unmarshal([]byte(infoStr), &failureInfo)
+	if err != nil {
+		return nil, err
+	}
+
+	return &failureInfo, nil
+}
+
+func (b *ComponentBuild) LastObservedPhaseAnnotation() (v1.ComponentBuildPhase, bool) {
+	phase, ok := b.Annotations[ComponentBuildLastObservedPhaseAnnotationKey]
+	return v1.ComponentBuildPhase(phase), ok
+}
+
+func (b *ComponentBuild) Description(namespacePrefix string) string {
+	systemID, err := kubeutil.SystemID(namespacePrefix, b.Namespace)
+	if err != nil {
+		systemID = v1.SystemID(fmt.Sprintf("UNKNOWN (namespace: %v)", b.Namespace))
+	}
+
+	return fmt.Sprintf("component build %v (system %v)", b.Name, systemID)
+}
+
 // +k8s:deepcopy-gen=false
 type ComponentBuildSpec struct {
 	BuildDefinitionBlock block.ComponentBuild `json:"definitionBlock"`
 }
 
 type ComponentBuildStatus struct {
-	State              ComponentBuildState           `json:"state"`
-	ObservedGeneration int64                         `json:"observedGeneration"`
-	Artifacts          *ComponentBuildArtifacts      `json:"artifacts,omitempty"`
-	LastObservedPhase  *v1.ComponentBuildPhase       `json:"lastObservedPhase,omitempty"`
-	FailureInfo        *v1.ComponentBuildFailureInfo `json:"failureInfo,omitempty"`
+	// ComponentBuilds are immutable so no need for ObservedGeneration
+
+	State       ComponentBuildState           `json:"state"`
+	FailureInfo *v1.ComponentBuildFailureInfo `json:"failureInfo,omitempty"`
+
+	StartTimestamp      *metav1.Time `json:"startTimestamp,omitempty"`
+	CompletionTimestamp *metav1.Time `json:"completionTimestamp,omitempty"`
+
+	Artifacts         *ComponentBuildArtifacts `json:"artifacts,omitempty"`
+	LastObservedPhase *v1.ComponentBuildPhase  `json:"lastObservedPhase,omitempty"`
 }
 
 type ComponentBuildState string
 
 const (
-	ComponentBuildStatePending   ComponentBuildState = "pending"
+	ComponentBuildStatePending   ComponentBuildState = ""
 	ComponentBuildStateQueued    ComponentBuildState = "queued"
 	ComponentBuildStateRunning   ComponentBuildState = "running"
 	ComponentBuildStateSucceeded ComponentBuildState = "succeeded"

@@ -7,6 +7,7 @@ import (
 	kubeconstants "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/constants"
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/lifecycle/lattice/bootstrap/bootstrapper"
+	basebootstrapper "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/lifecycle/lattice/bootstrap/bootstrapper/base"
 	kubeutil "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/kubernetes"
 	"github.com/mlab-lattice/lattice/pkg/util/cli"
 
@@ -16,15 +17,16 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"strings"
 )
 
 const (
-	dnsPod        = "local-dns"
-	dnsController = "local-dns-controller"
-	dnsmasqNanny  = "local-dnsmasq-nanny"
-	dnsService    = "local-dns-service"
+	dnsController = "dns-controller"
+	dnsmasqNanny  = "dnsmasq-nanny"
 
-	serviceAccountDNS = "local-dns"
+	dnsConfigDirectory = "/var/run/lattice"
+	dnsHostsFile       = dnsConfigDirectory + "hosts"
+	dnsmasqConfigFile  = dnsConfigDirectory + "dnsmasq.conf"
 )
 
 type LatticeBootstrapperOptions struct {
@@ -39,12 +41,13 @@ type OptionsDNS struct {
 	ControllerArgs    []string
 }
 
-func NewLatticeBootstrapper(latticeID v1.LatticeID, namespacePrefix string, options *LatticeBootstrapperOptions) *DefaultLocalLatticeBootstrapper {
+func NewLatticeBootstrapper(latticeID v1.LatticeID, namespacePrefix, internalDNSDomain string, options *LatticeBootstrapperOptions) *DefaultLocalLatticeBootstrapper {
 	return &DefaultLocalLatticeBootstrapper{
-		LatticeID:       latticeID,
-		NamespacePrefix: namespacePrefix,
-		IP:              options.IP,
-		DNS:             options.DNS,
+		LatticeID:         latticeID,
+		NamespacePrefix:   namespacePrefix,
+		InternalDNSDomain: internalDNSDomain,
+		IP:                options.IP,
+		DNS:               options.DNS,
 	}
 }
 
@@ -90,19 +93,34 @@ func LatticeBootstrapperFlags() (cli.Flags, *LatticeBootstrapperOptions) {
 }
 
 type DefaultLocalLatticeBootstrapper struct {
-	LatticeID       v1.LatticeID
-	NamespacePrefix string
-	IP              string
-	DNS             *OptionsDNS
+	LatticeID         v1.LatticeID
+	NamespacePrefix   string
+	InternalDNSDomain string
+	IP                string
+	DNS               *OptionsDNS
 }
 
 func (cp *DefaultLocalLatticeBootstrapper) BootstrapLatticeResources(resources *bootstrapper.Resources) {
-	cp.bootstrapLatticeDNS(resources)
+	resources.Config.Spec.CloudProvider.Local = &latticev1.ConfigCloudProviderLocal{}
 
+	var serviceMeshVars []string
 	for _, daemonSet := range resources.DaemonSets {
 		template := transformPodTemplateSpec(&daemonSet.Spec.Template)
 
 		if daemonSet.Name == kubeconstants.ControlPlaneServiceLatticeControllerManager {
+			serviceMeshArg := false
+			for _, arg := range template.Spec.Containers[0].Args {
+				if serviceMeshArg {
+					serviceMeshVars = append(serviceMeshVars, arg)
+					serviceMeshArg = false
+				}
+
+				if strings.HasPrefix(arg, "--service-mesh") {
+					serviceMeshArg = true
+					serviceMeshVars = append(serviceMeshVars, arg)
+				}
+			}
+
 			template.Spec.Containers[0].Args = append(
 				template.Spec.Containers[0].Args,
 				"--cloud-provider-var", fmt.Sprintf("ip=%v", cp.IP),
@@ -111,28 +129,104 @@ func (cp *DefaultLocalLatticeBootstrapper) BootstrapLatticeResources(resources *
 
 		daemonSet.Spec.Template = *template
 	}
+
+	cp.bootstrapLatticeDNS(resources, serviceMeshVars)
 }
 
-func (cp *DefaultLocalLatticeBootstrapper) bootstrapLatticeDNS(resources *bootstrapper.Resources) {
+func (cp *DefaultLocalLatticeBootstrapper) bootstrapLatticeDNS(resources *bootstrapper.Resources, serviceMeshVars []string) {
 	namespace := kubeutil.InternalNamespace(cp.NamespacePrefix)
 
-	controllerArgs := []string{"--lattice-id", string(cp.LatticeID), "--namespace-prefix", cp.NamespacePrefix}
-	controllerArgs = append(controllerArgs, cp.DNS.ControllerArgs...)
+	serviceAccount := &corev1.ServiceAccount{
+		// Include TypeMeta so if this is a dry run it will be printed out
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "ServiceAccount",
+			APIVersion: "v1",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      dnsController,
+			Namespace: namespace,
+		},
+	}
 
-	dnsmasqNannyArgs := []string{}
+	resources.ServiceAccounts = append(resources.ServiceAccounts, serviceAccount)
+
+	clusterRole := &rbacv1.ClusterRole{
+		// Include TypeMeta so if this is a dry run it will be printed out
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "ClusterRole",
+			APIVersion: rbacv1.SchemeGroupVersion.String(),
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: dnsController,
+		},
+		Rules: []rbacv1.PolicyRule{
+			// lattice config
+			{
+				APIGroups: []string{latticev1.GroupName},
+				Resources: []string{"configs"},
+				Verbs:     basebootstrapper.ReadVerbs,
+			},
+			{
+				APIGroups: []string{latticev1.GroupName},
+				Resources: []string{"addresses"},
+				Verbs:     basebootstrapper.ReadVerbs,
+			},
+			{
+				APIGroups: []string{latticev1.GroupName},
+				Resources: []string{"services"},
+				Verbs:     basebootstrapper.ReadVerbs,
+			},
+		},
+	}
+
+	resources.ClusterRoles = append(resources.ClusterRoles, clusterRole)
+
+	clusterRoleBinding := &rbacv1.ClusterRoleBinding{
+		// Include TypeMeta so if this is a dry run it will be printed out
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "ClusterRoleBinding",
+			APIVersion: rbacv1.SchemeGroupVersion.String(),
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: dnsController,
+		},
+		Subjects: []rbacv1.Subject{
+			{
+				Kind:      rbacv1.ServiceAccountKind,
+				Name:      serviceAccount.Name,
+				Namespace: serviceAccount.Namespace,
+			},
+		},
+		RoleRef: rbacv1.RoleRef{
+			APIGroup: rbacv1.GroupName,
+			Kind:     "ClusterRole",
+			Name:     clusterRole.Name,
+		},
+	}
+
+	resources.ClusterRoleBindings = append(resources.ClusterRoleBindings, clusterRoleBinding)
+
+	controllerArgs := []string{
+		"--namespace-prefix", cp.NamespacePrefix,
+		"--internal-dns-domain", cp.InternalDNSDomain,
+	}
+	controllerArgs = append(controllerArgs, cp.DNS.ControllerArgs...)
+	controllerArgs = append(controllerArgs, serviceMeshVars...)
+
+	var dnsmasqNannyArgs []string
 	dnsmasqNannyArgs = append(dnsmasqNannyArgs, cp.DNS.DnsmasqNannyArgs...)
 
 	labels := map[string]string{
-		"local.cloud-provider.lattice.mlab.com/dns": dnsmasqNanny,
+		"local.cloud-provider.lattice.mlab.com/dns-controller": dnsmasqNanny,
 	}
 
 	daemonSet := &appsv1.DaemonSet{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "DaemonSet",
-			APIVersion: appsv1.GroupName + "/v1",
+			APIVersion: appsv1.SchemeGroupVersion.String(),
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      dnsPod,
+			Name:      dnsController,
 			Namespace: namespace,
 			Labels:    labels,
 		},
@@ -142,7 +236,7 @@ func (cp *DefaultLocalLatticeBootstrapper) bootstrapLatticeDNS(resources *bootst
 			},
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:   dnsPod,
+					Name:   dnsController,
 					Labels: labels,
 				},
 				Spec: corev1.PodSpec{
@@ -154,7 +248,7 @@ func (cp *DefaultLocalLatticeBootstrapper) bootstrapLatticeDNS(resources *bootst
 							VolumeMounts: []corev1.VolumeMount{
 								{
 									Name:      "dns-config",
-									MountPath: DNSConfigDirectory,
+									MountPath: dnsConfigDirectory,
 								},
 							},
 						},
@@ -172,19 +266,19 @@ func (cp *DefaultLocalLatticeBootstrapper) bootstrapLatticeDNS(resources *bootst
 							VolumeMounts: []corev1.VolumeMount{
 								{
 									Name:      "dns-config",
-									MountPath: DNSConfigDirectory,
+									MountPath: dnsConfigDirectory,
 								},
 							},
 						},
 					},
 					DNSPolicy:          corev1.DNSDefault,
-					ServiceAccountName: serviceAccountDNS,
+					ServiceAccountName: serviceAccount.Name,
 					Volumes: []corev1.Volume{
 						{
 							Name: "dns-config",
 							VolumeSource: corev1.VolumeSource{
 								HostPath: &corev1.HostPathVolumeSource{
-									Path: DNSConfigDirectory,
+									Path: dnsConfigDirectory,
 								},
 							},
 						},
@@ -197,8 +291,12 @@ func (cp *DefaultLocalLatticeBootstrapper) bootstrapLatticeDNS(resources *bootst
 	resources.DaemonSets = append(resources.DaemonSets, daemonSet)
 
 	service := &corev1.Service{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "Service",
+			APIVersion: corev1.SchemeGroupVersion.String(),
+		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      dnsService,
+			Name:      dnsController,
 			Namespace: namespace,
 			Labels:    labels,
 		},
@@ -224,64 +322,4 @@ func (cp *DefaultLocalLatticeBootstrapper) bootstrapLatticeDNS(resources *bootst
 	}
 
 	resources.Services = append(resources.Services, service)
-
-	clusterRole := &rbacv1.ClusterRole{
-		// Include TypeMeta so if this is a dry run it will be printed out
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "ClusterRole",
-			APIVersion: rbacv1.GroupName + "/v1",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name: serviceAccountDNS,
-		},
-		Rules: []rbacv1.PolicyRule{
-			// lattice endpoints
-			{
-				APIGroups: []string{latticev1.GroupName},
-				Resources: []string{"endpoints"},
-				Verbs:     []string{rbacv1.VerbAll},
-			},
-		},
-	}
-
-	resources.ClusterRoles = append(resources.ClusterRoles, clusterRole)
-
-	serviceAccount := &corev1.ServiceAccount{
-		// Include TypeMeta so if this is a dry run it will be printed out
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "ServiceAccount",
-			APIVersion: "v1",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      serviceAccountDNS,
-			Namespace: namespace,
-		},
-	}
-
-	resources.ServiceAccounts = append(resources.ServiceAccounts, serviceAccount)
-
-	clusterRoleBinding := &rbacv1.ClusterRoleBinding{
-		// Include TypeMeta so if this is a dry run it will be printed out
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "ClusterRoleBinding",
-			APIVersion: rbacv1.GroupName + "/v1",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name: serviceAccountDNS,
-		},
-		Subjects: []rbacv1.Subject{
-			{
-				Kind:      rbacv1.ServiceAccountKind,
-				Name:      serviceAccount.Name,
-				Namespace: serviceAccount.Namespace,
-			},
-		},
-		RoleRef: rbacv1.RoleRef{
-			APIGroup: rbacv1.GroupName,
-			Kind:     "ClusterRole",
-			Name:     clusterRole.Name,
-		},
-	}
-
-	resources.ClusterRoleBindings = append(resources.ClusterRoleBindings, clusterRoleBinding)
 }

@@ -96,10 +96,10 @@ func AddressPrinter(service *v1.Service, format printer.Format) printer.Interfac
 		}
 
 		var rows [][]string
-		for port, address := range service.PublicPorts {
+		for port, address := range service.Ports {
 			rows = append(rows, []string{
 				fmt.Sprintf("%d", port),
-				string(address.Address),
+				address,
 			})
 		}
 
@@ -115,7 +115,7 @@ func AddressPrinter(service *v1.Service, format printer.Format) printer.Interfac
 
 	case printer.FormatJSON:
 		p = &printer.JSON{
-			Value: service.PublicPorts,
+			Value: service.Ports,
 		}
 	}
 

@@ -4,12 +4,16 @@ import (
 	"fmt"
 
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
+	systembootstrapper "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/lifecycle/system/bootstrap/bootstrapper"
 	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/servicemesh/envoy"
+	"github.com/mlab-lattice/lattice/pkg/util/cli"
 
 	appsv1 "k8s.io/api/apps/v1"
 )
 
 type Interface interface {
+	systembootstrapper.Interface
+
 	ServiceAnnotations(*latticev1.Service) (map[string]string, error)
 
 	// TransformServiceDeploymentSpec takes in the DeploymentSpec generated for a Service, and applies an service mesh
@@ -30,6 +34,9 @@ type Interface interface {
 	// which the service mesh is listening on for the given key.
 	ServicePorts(*latticev1.Service) (map[int32]int32, error)
 
+	// ServiceIP returns the IP address that should be registered in DNS for the service.
+	ServiceIP(service *latticev1.Service) (string, error)
+
 	// IsDeploymentSpecUpdated checks to see if any part of the current DeploymentSpec that the service mesh is responsible
 	// for is out of date compared to the desired deployment spec. If the current DeploymentSpec is current, it also returns
 	// a copy of the desired DeploymentSpec with the negation of TransformServiceDeploymentSpec applied.
@@ -40,29 +47,10 @@ type Interface interface {
 		service *latticev1.Service,
 		current, desired, untransformed *appsv1.DeploymentSpec,
 	) (bool, string, *appsv1.DeploymentSpec)
-
-	GetEndpointSpec(*latticev1.ServiceAddress) (*latticev1.EndpointSpec, error)
 }
 
 type Options struct {
 	Envoy *envoy.Options
-}
-
-func OptionsFromConfig(config *latticev1.ConfigServiceMesh) (*Options, error) {
-	if config.Envoy != nil {
-		options := &Options{
-			Envoy: &envoy.Options{
-				PrepareImage:      config.Envoy.PrepareImage,
-				Image:             config.Envoy.Image,
-				RedirectCIDRBlock: config.Envoy.RedirectCIDRBlock,
-				XDSAPIPort:        config.Envoy.XDSAPIPort,
-			},
-		}
-
-		return options, nil
-	}
-
-	return nil, fmt.Errorf("must provide service mesh config")
 }
 
 func NewServiceMesh(options *Options) (Interface, error) {
@@ -71,4 +59,54 @@ func NewServiceMesh(options *Options) (Interface, error) {
 	}
 
 	return nil, fmt.Errorf("must provide service mesh options")
+}
+
+func OverlayConfigOptions(staticOptions *Options, dynamicConfig *latticev1.ConfigServiceMesh) (*Options, error) {
+	if staticOptions.Envoy != nil {
+		if dynamicConfig.Envoy == nil {
+			return nil, fmt.Errorf("static options were for envoy but dynamic config did not have envoy options set")
+		}
+
+		envoyOptions, err := envoy.NewOptions(staticOptions.Envoy, dynamicConfig.Envoy)
+		if err != nil {
+			return nil, err
+		}
+
+		options := &Options{
+			Envoy: envoyOptions,
+		}
+		return options, nil
+	}
+
+	return nil, fmt.Errorf("must provide service mesh options")
+}
+
+func Flag(serviceMesh *string) (cli.Flag, *Options) {
+	envoyFlags, envoyOptions := envoy.Flags()
+	options := &Options{}
+
+	flag := &cli.DelayedEmbeddedFlag{
+		Name:     "service-mesh-var",
+		Required: true,
+		Usage:    "configuration for the service mesh",
+		Flags: map[string]cli.Flags{
+			Envoy: envoyFlags,
+		},
+		FlagChooser: func() (*string, error) {
+			if serviceMesh == nil {
+				return nil, fmt.Errorf("cloud provider cannot be nil")
+			}
+
+			switch *serviceMesh {
+			case Envoy:
+				options.Envoy = envoyOptions
+			default:
+				return nil, fmt.Errorf("unsupported service mesh %v", *serviceMesh)
+			}
+
+			return serviceMesh, nil
+		},
+	}
+
+	return flag, options
 }

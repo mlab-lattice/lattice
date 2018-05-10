@@ -6,7 +6,6 @@ go_library(
         "constants.go",
         "interface.go",
         "lattice_bootstrapper.go",
-        "system_bootstrapper.go",
     ],
     importpath = "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/servicemesh",
     visibility = ["//visibility:public"],

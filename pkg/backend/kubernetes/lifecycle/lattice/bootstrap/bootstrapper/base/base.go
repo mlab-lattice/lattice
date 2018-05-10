@@ -21,9 +21,8 @@ type MasterComponentOptions struct {
 }
 
 type LatticeControllerManagerOptions struct {
-	Image               string
-	Args                []string
-	TerraformModulePath string
+	Image string
+	Args  []string
 }
 
 type APIServerOptions struct {
@@ -40,6 +39,7 @@ type TerraformOptions struct {
 func NewBootstrapper(
 	latticeID v1.LatticeID,
 	namespacePrefix string,
+	internalDNSDomain string,
 	cloudProviderName string,
 	options *Options,
 ) (*DefaultBootstrapper, error) {
@@ -50,6 +50,7 @@ func NewBootstrapper(
 	b := &DefaultBootstrapper{
 		Options:           options,
 		NamespacePrefix:   namespacePrefix,
+		InternalDNSDomain: internalDNSDomain,
 		LatticeID:         latticeID,
 		CloudProviderName: cloudProviderName,
 	}
@@ -59,6 +60,7 @@ func NewBootstrapper(
 type DefaultBootstrapper struct {
 	Options           *Options
 	NamespacePrefix   string
+	InternalDNSDomain string
 	LatticeID         v1.LatticeID
 	CloudProviderName string
 }

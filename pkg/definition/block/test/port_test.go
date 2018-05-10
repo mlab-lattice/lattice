@@ -122,13 +122,13 @@ func TestExternalAccess_Validate(t *testing.T) {
 				DefinitionBlock: &block.ExternalAccess{},
 			},
 			{
-				Description: "Public false",
+				Description: "Ports false",
 				DefinitionBlock: &block.ExternalAccess{
 					Public: false,
 				},
 			},
 			{
-				Description: "Public true",
+				Description: "Ports true",
 				DefinitionBlock: &block.ExternalAccess{
 					Public: true,
 				},

@@ -1,6 +1,7 @@
 package systemlifecycle
 
 import (
+	"fmt"
 	"reflect"
 
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
@@ -25,9 +26,10 @@ func (c *Controller) updateTeardownStatus(
 	teardown = teardown.DeepCopy()
 	teardown.Status = status
 
-	return c.latticeClient.LatticeV1().Teardowns(teardown.Namespace).Update(teardown)
+	result, err := c.latticeClient.LatticeV1().Teardowns(teardown.Namespace).UpdateStatus(teardown)
+	if err != nil {
+		return nil, fmt.Errorf("error updating status for %v: %v", teardown.Description(c.namespacePrefix), err)
+	}
 
-	// TODO: switch to this when https://github.com/kubernetes/kubernetes/issues/38113 is merged
-	// TODO: also watch https://github.com/kubernetes/kubernetes/pull/55168
-	//return c.latticeClient.LatticeV1().SystemTeardowns(teardown.Namespace).UpdateStatus(teardown)
+	return result, nil
 }

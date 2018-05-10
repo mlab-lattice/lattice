@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	kubeconstants "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/constants"
+	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/constants"
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	kubeutil "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/kubernetes"
 	"github.com/mlab-lattice/lattice/pkg/util/docker"
@@ -26,16 +26,13 @@ const (
 	jobDockerSocketVolumePath = "/var/run/docker.sock"
 	jobDockerSocketPath       = "/var/run/docker.sock"
 	jobDockerSocketVolumeName = "dockersock"
-
-	jobDockerFqnAnnotationKey = "docker-image-fqn"
 )
 
-// getJobForBuild uses ControllerRefManager to retrieve the Job for a ComponentBuild
 func (c *Controller) getJobForBuild(build *latticev1.ComponentBuild) (*batchv1.Job, error) {
 	selector := labels.NewSelector()
-	requirement, err := labels.NewRequirement(kubeconstants.LabelKeyComponentBuildID, selection.Equals, []string{build.Name})
+	requirement, err := labels.NewRequirement(latticev1.ComponentBuildIDLabelKey, selection.Equals, []string{build.Name})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error creating requirement for %v cache job lookup: %v", build.Description(c.namespacePrefix), err)
 	}
 
 	selector = selector.Add(*requirement)
@@ -49,36 +46,38 @@ func (c *Controller) getJobForBuild(build *latticev1.ComponentBuild) (*batchv1.J
 	}
 
 	if len(jobs) > 1 {
-		return nil, fmt.Errorf("ComponentBuild %v has multiple Jobs", build.Name)
+		return nil, fmt.Errorf("multiple cached jobs found for %v", build.Description(c.namespacePrefix))
 	}
 
 	// Didn't find anything in the cache. Will do a full API query to see if one exists.
-	listOptions := metav1.ListOptions{
-		LabelSelector: selector.String(),
-	}
-	jobItems, err := c.kubeClient.BatchV1().Jobs(build.Namespace).List(listOptions)
+	jobList, err := c.kubeClient.BatchV1().Jobs(build.Namespace).List(metav1.ListOptions{LabelSelector: selector.String()})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error creating requirement for %v quorum job lookup: %v", build.Description(c.namespacePrefix), err)
 	}
 
-	if len(jobItems.Items) == 0 {
+	if len(jobList.Items) == 0 {
 		return nil, nil
 	}
 
-	if len(jobItems.Items) > 1 {
-		return nil, fmt.Errorf("ComponentBuild %v has multiple Jobs", build.Name)
+	if len(jobList.Items) > 1 {
+		return nil, fmt.Errorf("multiple jobs found for %v", build.Description(c.namespacePrefix))
 	}
 
-	return &jobItems.Items[0], nil
+	return &jobList.Items[0], nil
 }
 
 func (c *Controller) createNewJob(build *latticev1.ComponentBuild) (*batchv1.Job, error) {
 	job, err := c.newJob(build)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error getting new job for %v: %v", build.Description(c.namespacePrefix), err)
 	}
 
-	return c.kubeClient.BatchV1().Jobs(build.Namespace).Create(job)
+	result, err := c.kubeClient.BatchV1().Jobs(build.Namespace).Create(job)
+	if err != nil {
+		return nil, fmt.Errorf("error creating new job for %v: %v", build.Description(c.namespacePrefix), err)
+	}
+
+	return result, nil
 }
 
 func (c *Controller) newJob(build *latticev1.ComponentBuild) (*batchv1.Job, error) {
@@ -96,13 +95,13 @@ func (c *Controller) newJob(build *latticev1.ComponentBuild) (*batchv1.Job, erro
 	job := &batchv1.Job{
 		ObjectMeta: metav1.ObjectMeta{
 			Annotations: map[string]string{
-				jobDockerFqnAnnotationKey: dockerImageFQN,
+				latticev1.ComponentBuildJobDockerImageFQNAnnotationKey: dockerImageFQN,
 			},
 			Labels: map[string]string{
-				kubeconstants.LabelKeyComponentBuildID: build.Name,
+				latticev1.ComponentBuildIDLabelKey: build.Name,
 			},
 			Name:            name,
-			OwnerReferences: []metav1.OwnerReference{*metav1.NewControllerRef(build, controllerKind)},
+			OwnerReferences: []metav1.OwnerReference{*metav1.NewControllerRef(build, latticev1.ComponentBuildKind)},
 		},
 		Spec: spec,
 	}
@@ -110,7 +109,7 @@ func (c *Controller) newJob(build *latticev1.ComponentBuild) (*batchv1.Job, erro
 }
 
 func jobName(build *latticev1.ComponentBuild) string {
-	return fmt.Sprintf("lattice-build-%s", build.Name)
+	return fmt.Sprintf("lattice-component-build-%s", build.Name)
 }
 
 func (c *Controller) jobSpec(build *latticev1.ComponentBuild) (batchv1.JobSpec, string, error) {
@@ -130,13 +129,13 @@ func (c *Controller) jobSpec(build *latticev1.ComponentBuild) (batchv1.JobSpec, 
 			ObjectMeta: metav1.ObjectMeta{
 				Name: name,
 				Labels: map[string]string{
-					kubeconstants.LabelKeyComponentBuildID: build.Name,
+					latticev1.ComponentBuildIDLabelKey: build.Name,
 				},
 			},
 			Spec: corev1.PodSpec{
 				Tolerations: []corev1.Toleration{
 					// Can tolerate build node taint even in local case
-					kubeconstants.TolerationBuildNode,
+					constants.TolerationBuildNode,
 				},
 				Volumes: []corev1.Volume{
 					{
@@ -153,12 +152,12 @@ func (c *Controller) jobSpec(build *latticev1.ComponentBuild) (batchv1.JobSpec, 
 					},
 				},
 				Containers:         []corev1.Container{*buildContainer},
-				ServiceAccountName: kubeconstants.ServiceAccountComponentBuilder,
+				ServiceAccountName: constants.ServiceAccountComponentBuilder,
 				RestartPolicy:      corev1.RestartPolicyNever,
 				DNSPolicy:          corev1.DNSDefault,
 				Affinity: &corev1.Affinity{
 					NodeAffinity: &corev1.NodeAffinity{
-						RequiredDuringSchedulingIgnoredDuringExecution: &kubeconstants.NodeSelectorBuildNode,
+						RequiredDuringSchedulingIgnoredDuringExecution: &constants.NodeSelectorBuildNode,
 					},
 				},
 			},
@@ -177,9 +176,18 @@ func (c *Controller) getBuildContainer(build *latticev1.ComponentBuild) (*corev1
 	}
 
 	repo := c.config.ComponentBuild.DockerArtifact.Repository
-	tag := build.Annotations[kubeconstants.AnnotationKeyComponentBuildDefinitionHash]
+	tag, ok := build.DefinitionHashLabel()
+	if !ok {
+		err := fmt.Errorf(
+			"%v does not have %v label",
+			build.Description(c.namespacePrefix),
+			latticev1.ComponentBuildDefinitionHashLabelKey,
+		)
+		return nil, "", err
+	}
+
 	if c.config.ComponentBuild.DockerArtifact.RepositoryPerImage {
-		repo = build.Annotations[kubeconstants.AnnotationKeyComponentBuildDefinitionHash]
+		repo = tag
 		tag = fmt.Sprint(time.Now().Unix())
 	}
 

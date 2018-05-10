@@ -9,9 +9,10 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+// FIXME: add proper errors etc to all this
 func (a *lifecycleAction) String() string {
-	if a.rollout != nil {
-		return fmt.Sprintf("Deploy %v", a.rollout.Name)
+	if a.deploy != nil {
+		return fmt.Sprintf("Deploy %v", a.deploy.Name)
 	}
 
 	if a.teardown != nil {
@@ -23,12 +24,12 @@ func (a *lifecycleAction) String() string {
 }
 
 func (a *lifecycleAction) Equal(other *lifecycleAction) bool {
-	if a.rollout != nil {
-		if other.rollout == nil {
+	if a.deploy != nil {
+		if other.deploy == nil {
 			return false
 		}
 
-		return a.rollout.Namespace == other.rollout.Namespace && a.rollout.Name == other.rollout.Name
+		return a.deploy.Namespace == other.deploy.Namespace && a.deploy.Name == other.deploy.Name
 	}
 
 	if a.teardown != nil {
@@ -59,7 +60,7 @@ func (c *Controller) getOwningAction(namespace string) (*lifecycleAction, bool) 
 
 func (c *Controller) attemptToClaimDeployOwningAction(rollout *latticev1.Deploy) (*lifecycleAction, error) {
 	action := &lifecycleAction{
-		rollout: rollout,
+		deploy: rollout,
 	}
 
 	namespace, err := c.kubeClient.CoreV1().Namespaces().Get(rollout.Namespace, metav1.GetOptions{})
@@ -97,7 +98,7 @@ func (c *Controller) attemptToClaimOwningAction(namespace *corev1.Namespace, act
 
 func (c *Controller) relinquishDeployOwningActionClaim(rollout *latticev1.Deploy) error {
 	action := &lifecycleAction{
-		rollout: rollout,
+		deploy: rollout,
 	}
 
 	namespace, err := c.kubeClient.CoreV1().Namespaces().Get(rollout.Namespace, metav1.GetOptions{})

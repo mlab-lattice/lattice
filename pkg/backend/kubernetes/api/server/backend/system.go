@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
-	kubeconstants "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/constants"
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 
@@ -15,14 +14,10 @@ import (
 func (kb *KubernetesBackend) CreateSystem(id v1.SystemID, definitionURL string) (*v1.System, error) {
 	system := &latticev1.System{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:       string(id),
-			Finalizers: []string{kubeconstants.KubeFinalizerSystemController},
+			Name: string(id),
 		},
 		Spec: latticev1.SystemSpec{
 			DefinitionURL: definitionURL,
-		},
-		Status: latticev1.SystemStatus{
-			State: latticev1.SystemStatePending,
 		},
 	}
 
@@ -90,7 +85,7 @@ func (kb *KubernetesBackend) transformSystem(system *latticev1.System) (*v1.Syst
 		state = v1.SystemStateDeleting
 	} else {
 		var err error
-		state, err = getSystemState(system.Status.State, system.Status.UpdateProcessed)
+		state, err = getSystemState(system.Status.State, system.UpdateProcessed())
 		if err != nil {
 			return nil, err
 		}
@@ -104,7 +99,7 @@ func (kb *KubernetesBackend) transformSystem(system *latticev1.System) (*v1.Syst
 
 	externalServices := map[tree.NodePath]v1.Service{}
 	for path, status := range system.Status.Services {
-		externalService, err := kb.transformService(path, &status.ServiceStatus)
+		externalService, err := kb.transformService("XXX UNKNOWN", path, &status.ServiceStatus)
 		if err != nil {
 			return nil, err
 		}
@@ -148,18 +143,18 @@ func getSystemState(state latticev1.SystemState, updateProcessed bool) (v1.Syste
 	}
 }
 
-func (kb *KubernetesBackend) ensureSystemCreated(systemID v1.SystemID) error {
+func (kb *KubernetesBackend) ensureSystemCreated(systemID v1.SystemID) (*v1.System, error) {
 	system, err := kb.GetSystem(systemID)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	switch system.State {
 	case v1.SystemStatePending, v1.SystemStateFailed, v1.SystemStateDeleting:
-		return v1.NewSystemNotCreatedError(systemID, system.State)
+		return system, v1.NewSystemNotCreatedError(systemID, system.State)
 	case v1.SystemStateStable, v1.SystemStateDegraded, v1.SystemStateScaling, v1.SystemStateUpdating:
-		return nil
+		return system, nil
 	default:
-		return fmt.Errorf("invalid system state: %v", system.State)
+		return nil, fmt.Errorf("invalid system state: %v", system.State)
 	}
 }

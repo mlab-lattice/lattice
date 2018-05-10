@@ -2,7 +2,10 @@ package v1
 
 import (
 	"encoding/json"
+	"fmt"
 
+	"github.com/mlab-lattice/lattice/pkg/api/v1"
+	kubeutil "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/kubernetes"
 	"github.com/mlab-lattice/lattice/pkg/definition"
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 
@@ -11,10 +14,17 @@ import (
 )
 
 const (
-	ResourceSingularBuild  = "build"
-	ResourcePluralBuild    = "builds"
-	ResourceShortNameBuild = "lbld"
-	ResourceScopeBuild     = apiextensionsv1beta1.NamespaceScoped
+	ResourceSingularBuild = "build"
+	ResourcePluralBuild   = "builds"
+	ResourceScopeBuild    = apiextensionsv1beta1.NamespaceScoped
+)
+
+var (
+	BuildKind     = SchemeGroupVersion.WithKind("Build")
+	BuildListKind = SchemeGroupVersion.WithKind("BuildList")
+
+	BuildIDLabelKey                = fmt.Sprintf("build.%v/id", GroupName)
+	BuildDefinitionVersionLabelKey = fmt.Sprintf("build.%v/definition-version", GroupName)
 )
 
 // +genclient
@@ -25,6 +35,25 @@ type Build struct {
 	metav1.ObjectMeta `json:"metadata"`
 	Spec              BuildSpec   `json:"spec"`
 	Status            BuildStatus `json:"status,omitempty"`
+}
+
+func (b *Build) DefinitionVersionLabel() (v1.SystemVersion, bool) {
+	version, ok := b.Labels[BuildDefinitionVersionLabelKey]
+	return v1.SystemVersion(version), ok
+}
+
+func (b *Build) Description(namespacePrefix string) string {
+	systemID, err := kubeutil.SystemID(namespacePrefix, b.Namespace)
+	if err != nil {
+		systemID = v1.SystemID(fmt.Sprintf("UNKNOWN (namespace: %v)", b.Namespace))
+	}
+
+	version := v1.SystemVersion("unknown")
+	if label, ok := b.DefinitionVersionLabel(); ok {
+		version = label
+	}
+
+	return fmt.Sprintf("build %v (version %v in system %v)", b.Name, version, systemID)
 }
 
 // N.B.: important: if you update the BuildSpec or BuildSpecServiceInfo you must also update
@@ -85,9 +114,13 @@ func (sbs *BuildSpec) UnmarshalJSON(data []byte) error {
 }
 
 type BuildStatus struct {
-	State              BuildState `json:"state"`
-	ObservedGeneration int64      `json:"observedGeneration"`
-	Message            string     `json:"message"`
+	// Builds are immutable so no need for ObservedGeneration
+
+	State   BuildState `json:"state"`
+	Message string     `json:"message"`
+
+	StartTimestamp      *metav1.Time `json:"startTimestamp,omitempty"`
+	CompletionTimestamp *metav1.Time `json:"completionTimestamp,omitempty"`
 
 	// Maps a service path to the ServiceBuild.Name responsible for it
 	ServiceBuilds map[tree.NodePath]string `json:"serviceBuilds"`
@@ -99,7 +132,7 @@ type BuildStatus struct {
 type BuildState string
 
 const (
-	BuildStatePending   BuildState = "pending"
+	BuildStatePending   BuildState = ""
 	BuildStateRunning   BuildState = "running"
 	BuildStateSucceeded BuildState = "succeeded"
 	BuildStateFailed    BuildState = "failed"

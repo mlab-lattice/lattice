@@ -2,6 +2,7 @@ package v1
 
 import (
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
+	"time"
 )
 
 type (
@@ -10,25 +11,31 @@ type (
 
 const (
 	ServiceStatePending  ServiceState = "pending"
+	ServiceStateDeleting ServiceState = "deleting"
+
 	ServiceStateScaling  ServiceState = "scaling"
 	ServiceStateUpdating ServiceState = "updating"
 	ServiceStateStable   ServiceState = "stable"
 	ServiceStateFailed   ServiceState = "failed"
 )
 
-// FIXME: should we expose Service ID, or just Path?
 type Service struct {
-	Path             tree.NodePath      `json:"path"`
-	State            ServiceState       `json:"state"`
-	UpdatedInstances int32              `json:"updatedInstances"`
-	StaleInstances   int32              `json:"staleInstances"`
-	PublicPorts      ServicePublicPorts `json:"publicPorts"`
-	FailureMessage   *string            `json:"failureMessage,omitempty"`
+	ID   string        `json:"id"`
+	Path tree.NodePath `json:"path"`
+
+	State       ServiceState        `json:"state"`
+	Message     *string             `json:"message,omitempty"`
+	FailureInfo *ServiceFailureInfo `json:"failureInfo,omitempty"`
+
+	AvailableInstances   int32 `json:"availableInstances"`
+	UpdatedInstances     int32 `json:"updatedInstances"`
+	StaleInstances       int32 `json:"staleInstances"`
+	TerminatingInstances int32 `json:"terminatingInstances"`
+
+	Ports map[int32]string `json:"ports"`
 }
 
-type (
-	ServicePublicPorts map[int32]ServicePublicPort
-	ServicePublicPort  struct {
-		Address string `json:"address"`
-	}
-)
+type ServiceFailureInfo struct {
+	Time    time.Time
+	Message string `json:"message"`
+}

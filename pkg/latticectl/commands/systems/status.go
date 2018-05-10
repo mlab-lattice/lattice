@@ -156,9 +156,14 @@ func PrintSystemStateDuringStatus(writer io.Writer, s *spinner.Spinner, system *
 
 		for serviceName, service := range system.Services {
 			if service.State == v1.ServiceStateFailed {
+				message := "unknown"
+				if service.FailureInfo != nil {
+					message = service.FailureInfo.Message
+				}
+
 				serviceErrors = append(serviceErrors, []string{
 					fmt.Sprintf("%s", serviceName),
-					string(*service.FailureMessage),
+					message,
 				})
 			}
 		}
@@ -181,9 +186,11 @@ func SystemPrinter(system *v1.System, format printer.Format) printer.Interface {
 	var p printer.Interface
 	switch format {
 	case printer.FormatDefault, printer.FormatTable:
-		headers := []string{"Service", "State", "Updated", "Stale", "Addresses", "Info"}
+		headers := []string{"Service", "State", "Available", "Updated", "Stale", "Terminating", "Ports", "Info"}
 
 		headerColors := []tw.Colors{
+			{tw.Bold},
+			{tw.Bold},
 			{tw.Bold},
 			{tw.Bold},
 			{tw.Bold},
@@ -199,6 +206,8 @@ func SystemPrinter(system *v1.System, format printer.Format) printer.Interface {
 			{},
 			{},
 			{},
+			{},
+			{},
 		}
 
 		columnAlignment := []int{
@@ -206,23 +215,20 @@ func SystemPrinter(system *v1.System, format printer.Format) printer.Interface {
 			tw.ALIGN_LEFT,
 			tw.ALIGN_RIGHT,
 			tw.ALIGN_RIGHT,
+			tw.ALIGN_RIGHT,
+			tw.ALIGN_RIGHT,
 			tw.ALIGN_LEFT,
 			tw.ALIGN_LEFT,
 		}
 
 		var rows [][]string
-		// fmt.Fprintln(os.Stdout, system)
 		for serviceName, service := range system.Services {
-			// fmt.Fprintln(os.Stdout, service)
-
-			// fmt.Fprintln(os.Stdout, component)
-			// fmt.Fprint(os.Stdout, "COMPONENT STATE", component.State, "    ")
-			var infoMessage string
-
-			if service.FailureMessage == nil {
-				infoMessage = ""
-			} else {
-				infoMessage = string(*service.FailureMessage)
+			var message string
+			if service.Message != nil {
+				message = *service.Message
+			}
+			if service.FailureInfo != nil {
+				message = service.FailureInfo.Message
 			}
 
 			var stateColor color.Color
@@ -236,17 +242,19 @@ func SystemPrinter(system *v1.System, format printer.Format) printer.Interface {
 			}
 
 			var addresses []string
-			for port, address := range service.PublicPorts {
-				addresses = append(addresses, fmt.Sprintf("%v: %v", port, address.Address))
+			for port, address := range service.Ports {
+				addresses = append(addresses, fmt.Sprintf("%v: %v", port, address))
 			}
 
 			rows = append(rows, []string{
 				string(serviceName),
 				stateColor(string(service.State)),
+				fmt.Sprintf("%d", service.AvailableInstances),
 				fmt.Sprintf("%d", service.UpdatedInstances),
 				fmt.Sprintf("%d", service.StaleInstances),
+				fmt.Sprintf("%d", service.TerminatingInstances),
 				strings.Join(addresses, ","),
-				string(infoMessage),
+				string(message),
 			})
 
 			sort.Slice(rows, func(i, j int) bool { return rows[i][0] < rows[j][0] })

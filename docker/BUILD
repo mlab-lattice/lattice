@@ -98,7 +98,7 @@ lattice_go_container_image(
 lattice_go_container_image(
     name = "kubernetes-local-dns-controller",
     base_image = None,
-    path = "cmd/kubernetes/local/dns/controller",
+    path = "cmd/kubernetes/cloud-provider/local/dns-controller",
 )
 
 lattice_go_container_image(

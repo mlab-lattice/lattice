@@ -1,147 +1,295 @@
 package service
 
 import (
+	"encoding/json"
 	"fmt"
 	"reflect"
 
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	kubeutil "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/kubernetes"
+	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 
-	corev1 "k8s.io/api/core/v1"
-
-	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
-	"github.com/golang/glog"
 )
 
 const (
-	finalizerName = "service.lattice.mlab.com"
-
 	reasonTimedOut           = "ProgressDeadlineExceeded"
 	reasonLoadBalancerFailed = "LoadBalancerFailed"
 )
 
+type nodePoolInfo struct {
+	nodePoolType latticev1.NodePoolType
+
+	// dedicated node pool options
+	instanceType string
+	numInstances int32
+	perInstance  bool
+
+	// shared system node pool options
+	path tree.NodePath
+}
+
+func (c *Controller) numInstances(service *latticev1.Service) (int32, error) {
+	if service.Spec.Definition.Resources().NumInstances != nil {
+		return *service.Spec.Definition.Resources().NumInstances, nil
+	}
+
+	if service.Spec.Definition.Resources().MinInstances != nil {
+		return *service.Spec.Definition.Resources().MinInstances, nil
+	}
+
+	err := fmt.Errorf(
+		"error getting num instances for %v: did not specify num instances or min instances",
+		service.Description(c.namespacePrefix),
+	)
+	return 0, err
+}
+
+func (c *Controller) nodePoolInfo(service *latticev1.Service) (nodePoolInfo, error) {
+	resources := service.Spec.Definition.Resources()
+
+	// dedicated per-instance node pool
+	if resources.NodePool == nil {
+		if resources.InstanceType == nil {
+			return nodePoolInfo{}, fmt.Errorf("%v did not specify a node pool or instance type", service.Description(c.namespacePrefix))
+		}
+
+		numInstances, err := c.numInstances(service)
+		if err != nil {
+			return nodePoolInfo{}, err
+		}
+
+		info := nodePoolInfo{
+			nodePoolType: latticev1.NodePoolTypeServiceDedicated,
+			instanceType: *resources.InstanceType,
+			numInstances: numInstances,
+			perInstance:  true,
+		}
+		return info, nil
+	}
+
+	// dedicated not per-instance node pool
+	if resources.NodePool.NodePool != nil {
+		info := nodePoolInfo{
+			nodePoolType: latticev1.NodePoolTypeServiceDedicated,
+			instanceType: resources.NodePool.NodePool.InstanceType,
+			numInstances: resources.NodePool.NodePool.NumInstances,
+			perInstance:  false,
+		}
+		return info, nil
+	}
+
+	if resources.NodePool.NodePoolName != nil {
+		path, err := tree.NewNodePath(*resources.NodePool.NodePoolName)
+		if err != nil {
+			err := fmt.Errorf("error parsing shared node pool path for %v: %v", service.Description(c.namespacePrefix), err)
+			return nodePoolInfo{}, err
+		}
+
+		info := nodePoolInfo{
+			nodePoolType: latticev1.NodePoolTypeSystemShared,
+			path:         path,
+		}
+		return info, nil
+	}
+
+	return nodePoolInfo{}, fmt.Errorf("%v did not specify a node pool or instance type", service.Description(c.namespacePrefix))
+}
+
 func (c *Controller) syncServiceStatus(
 	service *latticev1.Service,
 	nodePool *latticev1.NodePool,
-	nodePoolReady bool,
+	address *latticev1.Address,
 	deploymentStatus *deploymentStatus,
 	extraNodePoolsExist bool,
-	kubeService *corev1.Service,
-	serviceAddress *latticev1.ServiceAddress,
-	loadBalancer *latticev1.LoadBalancer,
-	loadBalancerNeeded bool,
 ) (*latticev1.Service, error) {
-	failed := false
-	failureReason := ""
-	failureMessage := ""
-	var failureTime *metav1.Time
+	state, message, failureInfo := serviceStatus(nodePool, address, deploymentStatus, extraNodePoolsExist)
 
-	var state latticev1.ServiceState
+	// we only update the deployment spec once the node pool is stable,
+	// so if it is not stable we don't need to update the service's node
+	// pool annotation
+	if nodePool.Stable() {
+		annotation, err := c.serviceNodePoolAnnotation(service, nodePool, state)
+		if err != nil {
+			return nil, err
+		}
+
+		service, err = c.updateServiceNodePoolAnnotation(service, annotation)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return c.updateServiceStatus(
+		service,
+		state,
+		message,
+		failureInfo,
+		deploymentStatus.AvailableInstances,
+		deploymentStatus.UpdatedInstances,
+		deploymentStatus.StaleInstances,
+		deploymentStatus.TerminatingInstances,
+		address.Status.Ports,
+	)
+}
+
+func serviceStatus(
+	nodePool *latticev1.NodePool,
+	address *latticev1.Address,
+	deploymentStatus *deploymentStatus,
+	extraNodePoolsExist bool,
+) (latticev1.ServiceState, *string, *latticev1.ServiceStatusFailureInfo) {
 	if !deploymentStatus.UpdateProcessed {
-		state = latticev1.ServiceStateUpdating
-	} else if deploymentStatus.State == deploymentStateFailed {
-		failed = true
-		failureReason = deploymentStatus.FailureInfo.Reason
-		failureMessage = deploymentStatus.FailureInfo.Message
-		failureTime = &deploymentStatus.FailureInfo.Time
-	} else if deploymentStatus.State == deploymentStateScaling {
-		state = latticev1.ServiceStateScaling
-	} else {
-		state = latticev1.ServiceStateStable
+		message := "waiting for update to be processed"
+		return latticev1.ServiceStateUpdating, &message, nil
 	}
 
-	// The cloud controller is responsible for creating the Kubernetes Service.
-	if kubeService == nil {
-		state = latticev1.ServiceStateUpdating
-	}
+	if deploymentStatus.State == deploymentStateFailed {
+		failureInfo := &latticev1.ServiceStatusFailureInfo{
+			Message:   "unknown error",
+			Internal:  true,
+			Timestamp: metav1.Now(),
+		}
 
-	publicPorts := latticev1.ServiceStatusPublicPorts{}
-	if loadBalancerNeeded {
-		if loadBalancer == nil {
-			state = latticev1.ServiceStateUpdating
-		} else {
-			switch loadBalancer.Status.State {
-			case latticev1.LoadBalancerStatePending, latticev1.LoadBalancerStateProvisioning:
-				state = latticev1.ServiceStateUpdating
+		if deploymentStatus.FailureInfo != nil {
+			failureInfo.Timestamp = deploymentStatus.FailureInfo.Time
 
-			case latticev1.LoadBalancerStateCreated:
-				for port, portInfo := range loadBalancer.Status.Ports {
-					publicPorts[port] = latticev1.ServiceStatusPublicPort{
-						Address: portInfo.Address,
-					}
+			switch deploymentStatus.FailureInfo.Reason {
+			case reasonTimedOut:
+				failureInfo = &latticev1.ServiceStatusFailureInfo{
+					Internal: false,
+					Message:  "timed out",
 				}
 
-			case latticev1.LoadBalancerStateFailed:
-				// Only create new failure info if we didn't fail above
-				if !failed {
-					now := metav1.Now()
-					failed = true
-					failureReason = reasonLoadBalancerFailed
-					failureMessage = ""
-					failureTime = &now
+			case reasonLoadBalancerFailed:
+				failureInfo = &latticev1.ServiceStatusFailureInfo{
+					Internal: false,
+					Message:  "load balancer failed",
 				}
 
 			default:
-				err := fmt.Errorf(
-					"LoadBalancer %v/%v has unexpected state %v",
-					loadBalancer.Namespace,
-					loadBalancer.Name,
-					loadBalancer.Status.State,
-				)
-				return nil, err
+				failureInfo = &latticev1.ServiceStatusFailureInfo{
+					Internal: true,
+					Message:  deploymentStatus.FailureInfo.Reason,
+				}
 			}
 		}
+
+		return latticev1.ServiceStateFailed, nil, failureInfo
 	}
 
-	// But if we have a failure, our updating or scaling has failed
-	// A failed status takes priority over an updating status
-	var failureInfo *latticev1.ServiceFailureInfo
-	if failed {
-		state = latticev1.ServiceStateFailed
-		switch failureReason {
-		case reasonTimedOut:
-			failureInfo = &latticev1.ServiceFailureInfo{
-				Internal: false,
-				Message:  "timed out",
-				Time:     *failureTime,
-			}
-
-		case reasonLoadBalancerFailed:
-			failureInfo = &latticev1.ServiceFailureInfo{
-				Internal: false,
-				Message:  "load balancer failed",
-				Time:     *failureTime,
-			}
-
-		default:
-			failureInfo = &latticev1.ServiceFailureInfo{
-				Internal: true,
-				Message:  fmt.Sprintf("%v: %v", failureReason, failureMessage),
-				Time:     *failureTime,
-			}
-		}
+	if !nodePool.Stable() {
+		message := fmt.Sprintf("node pool is %v", nodePool.Reason())
+		return latticev1.ServiceStateUpdating, &message, nil
 	}
 
-	return c.updateServiceStatus(service, state, deploymentStatus.UpdatedInstances, deploymentStatus.StaleInstances, publicPorts, failureInfo)
+	if !address.Stable() {
+		message := fmt.Sprintf("address is %v", address.Reason())
+		return latticev1.ServiceStateUpdating, &message, nil
+	}
+
+	if extraNodePoolsExist {
+		message := "destroying stale node pools"
+		return latticev1.ServiceStateUpdating, &message, nil
+	}
+
+	// this probably shouldn't happen (deployment shouldn't be pending if both
+	// node pool and address are stable)
+	if deploymentStatus.State == deploymentStatePending {
+		message := "waiting for update to be processed"
+		return latticev1.ServiceStateUpdating, &message, nil
+	}
+
+	if deploymentStatus.State == deploymentStateScaling {
+		message := "instances are scaling"
+		return latticev1.ServiceStateScaling, &message, nil
+
+	}
+
+	return latticev1.ServiceStateStable, nil, nil
+}
+
+func (c *Controller) serviceNodePoolAnnotation(
+	service *latticev1.Service,
+	nodePool *latticev1.NodePool,
+	state latticev1.ServiceState,
+) (latticev1.NodePoolAnnotationValue, error) {
+	newAnnotation := make(latticev1.NodePoolAnnotationValue)
+	existingAnnotation, err := service.NodePoolAnnotation()
+	if err != nil {
+		err := fmt.Errorf("error getting existing node pool annotation for %v: %v", service.Description(c.namespacePrefix), err)
+		return nil, err
+	}
+
+	// If the service is currently stable, then we are only running on the
+	// current epoch of the current node pool. If it's not stable we can't
+	// assume that we're fully off of previous node pools and epochs, so
+	// we have to include the values from the existing annotation.
+	if state != latticev1.ServiceStateStable {
+		newAnnotation = existingAnnotation
+	}
+
+	epoch, ok := nodePool.Status.Epochs.CurrentEpoch()
+	if !ok {
+		return nil, fmt.Errorf("%v is stable but does not have a current epoch", nodePool.Description(c.namespacePrefix))
+	}
+
+	newAnnotation.Add(nodePool.Namespace, nodePool.Name, epoch)
+	return newAnnotation, nil
+}
+
+func (c *Controller) updateServiceNodePoolAnnotation(
+	service *latticev1.Service,
+	annotation latticev1.NodePoolAnnotationValue,
+) (*latticev1.Service, error) {
+	existingAnnotation, err := service.NodePoolAnnotation()
+	if err != nil {
+		err := fmt.Errorf("error getting existing node pool annotation for %v: %v", service.Description(c.namespacePrefix), err)
+		return nil, err
+	}
+
+	if reflect.DeepEqual(existingAnnotation, annotation) {
+		return service, nil
+	}
+
+	newAnnotationJSON, err := json.Marshal(&annotation)
+	if err != nil {
+		return nil, fmt.Errorf("error marshalling node pool annotation: %v", err)
+	}
+
+	// Copy the service so the shared cache isn't mutated
+	service = service.DeepCopy()
+	service.Annotations[latticev1.NodePoolWorkloadAnnotationKey] = string(newAnnotationJSON)
+
+	result, err := c.latticeClient.LatticeV1().Services(service.Namespace).Update(service)
+	if err != nil {
+		return nil, fmt.Errorf("error updating %v node pool annotation: %v", service.Description(c.namespacePrefix), err)
+	}
+
+	return result, nil
 }
 
 func (c *Controller) updateServiceStatus(
 	service *latticev1.Service,
 	state latticev1.ServiceState,
-	updatedInstances, staleInstances int32,
-	publicPorts latticev1.ServiceStatusPublicPorts,
-	failureInfo *latticev1.ServiceFailureInfo,
+	message *string,
+	failureInfo *latticev1.ServiceStatusFailureInfo,
+	availableInstances, updatedInstances, staleInstances, terminatingInstances int32,
+	ports map[int32]string,
 ) (*latticev1.Service, error) {
 	status := latticev1.ServiceStatus{
-		State:              state,
 		ObservedGeneration: service.Generation,
-		UpdateProcessed:    true,
-		UpdatedInstances:   updatedInstances,
-		StaleInstances:     staleInstances,
-		PublicPorts:        publicPorts,
-		FailureInfo:        failureInfo,
+
+		State:       state,
+		Message:     message,
+		FailureInfo: failureInfo,
+
+		AvailableInstances:   availableInstances,
+		UpdatedInstances:     updatedInstances,
+		StaleInstances:       staleInstances,
+		TerminatingInstances: terminatingInstances,
+
+		Ports: ports,
 	}
 
 	if reflect.DeepEqual(service.Status, status) {
@@ -152,143 +300,40 @@ func (c *Controller) updateServiceStatus(
 	service = service.DeepCopy()
 	service.Status = status
 
-	return c.latticeClient.LatticeV1().Services(service.Namespace).Update(service)
-
-	// TODO: switch to this when https://github.com/kubernetes/kubernetes/issues/38113 is merged
-	// TODO: also watch https://github.com/kubernetes/kubernetes/pull/55168
-	//return c.latticeClient.LatticeV1().Services(service.Namespace).UpdateStatus(service)
-}
-
-type lookupDelete struct {
-	lookup func() (interface{}, error)
-	delete func() error
-}
-
-// FIXME: remove this, was a remnant of cascading garbage collection not working for CRDs, add owner reference instead
-func (c *Controller) syncDeletedService(service *latticev1.Service) error {
-	lookupDeletes := []lookupDelete{
-		// node pool
-		// FIXME: need to change this to support system etc level node pools
-		// FIXME: should potentially wait until deployment is cleaned up before deleting node pool
-		//        to allow for graceful termination
-		{
-			lookup: func() (interface{}, error) {
-				return c.nodePoolLister.NodePools(service.Namespace).Get(service.Name)
-			},
-			delete: func() error {
-				return c.latticeClient.LatticeV1().NodePools(service.Namespace).Delete(service.Name, nil)
-			},
-		},
-		// deployment
-		// FIXME: is any of this even working? we don't name the deployment this
-		{
-			lookup: func() (interface{}, error) {
-				return c.deploymentLister.Deployments(service.Namespace).Get(service.Name)
-			},
-			delete: func() error {
-				return c.kubeClient.AppsV1().Deployments(service.Namespace).Delete(service.Name, nil)
-			},
-		},
-		// kube service
-		{
-			lookup: func() (interface{}, error) {
-				name := kubeutil.GetKubeServiceNameForService(service.Name)
-				return c.kubeServiceLister.Services(service.Namespace).Get(name)
-			},
-			delete: func() error {
-				name := kubeutil.GetKubeServiceNameForService(service.Name)
-				return c.kubeClient.CoreV1().Services(service.Namespace).Delete(name, nil)
-			},
-		},
-		// service address
-		{
-			lookup: func() (interface{}, error) {
-				return c.serviceAddressLister.ServiceAddresses(service.Namespace).Get(service.Name)
-			},
-			delete: func() error {
-				return c.latticeClient.LatticeV1().ServiceAddresses(service.Namespace).Delete(service.Name, nil)
-			},
-		},
-		// load balancer
-		{
-			lookup: func() (interface{}, error) {
-				return c.loadBalancerLister.LoadBalancers(service.Namespace).Get(service.Name)
-			},
-			delete: func() error {
-				return c.latticeClient.LatticeV1().LoadBalancers(service.Namespace).Delete(service.Name, nil)
-			},
-		},
+	result, err := c.latticeClient.LatticeV1().Services(service.Namespace).UpdateStatus(service)
+	if err != nil {
+		return nil, fmt.Errorf("error updating status for %v: %v", service.Description(c.namespacePrefix), err)
 	}
 
-	existingResource := false
-	for _, lookupDelete := range lookupDeletes {
-		exists, err := resourceExists(lookupDelete.lookup)
-		if err != nil {
-			return err
-		}
-
-		if exists {
-			existingResource = true
-			if err := lookupDelete.delete(); err != nil {
-				return err
-			}
-
-			continue
-		}
-	}
-
-	if existingResource {
-		return nil
-	}
-
-	// All of the children resources have been cleaned up
-	_, err := c.removeFinalizer(service)
-	return err
+	return result, nil
 }
 
-func resourceExists(lookupFunc func() (interface{}, error)) (bool, error) {
-	_, err := lookupFunc()
-	if err == nil {
-		// resource still exists, wait until it is deleted
-		return true, nil
-	}
-
-	if !errors.IsNotFound(err) {
-		return false, err
-	}
-
-	return false, nil
-}
-
-func controllerRef(service *latticev1.Service) *metav1.OwnerReference {
-	return metav1.NewControllerRef(service, controllerKind)
-}
-
-// FIXME: don't think we need a finalizer anymore if cascading garbage collection works
 func (c *Controller) addFinalizer(service *latticev1.Service) (*latticev1.Service, error) {
 	// Check to see if the finalizer already exists. If so nothing needs to be done.
 	for _, finalizer := range service.Finalizers {
-		if finalizer == finalizerName {
-			glog.V(5).Infof("service %v has %v finalizer", service.Name, finalizerName)
+		if finalizer == kubeutil.ServiceControllerFinalizer {
 			return service, nil
 		}
 	}
 
-	// Add the finalizer to the list and update.
-	// If this fails due to a race the Endpoint should get requeued by the controller, so
-	// not a big deal.
-	service.Finalizers = append(service.Finalizers, finalizerName)
-	glog.V(5).Infof("service %v missing %v finalizer, adding it", service.Name, finalizerName)
+	// Copy so we don't mutate the shared cache
+	service = service.DeepCopy()
+	service.Finalizers = append(service.Finalizers, kubeutil.ServiceControllerFinalizer)
 
-	return c.latticeClient.LatticeV1().Services(service.Namespace).Update(service)
+	result, err := c.latticeClient.LatticeV1().Services(service.Namespace).Update(service)
+	if err != nil {
+		return nil, fmt.Errorf("error adding %v finalizer: %v", service.Description(c.namespacePrefix), err)
+	}
+
+	return result, nil
 }
 
 func (c *Controller) removeFinalizer(service *latticev1.Service) (*latticev1.Service, error) {
 	// Build up a list of all the finalizers except the aws service controller finalizer.
-	found := false
 	var finalizers []string
+	found := false
 	for _, finalizer := range service.Finalizers {
-		if finalizer == finalizerName {
+		if finalizer == kubeutil.ServiceControllerFinalizer {
 			found = true
 			continue
 		}
@@ -300,7 +345,18 @@ func (c *Controller) removeFinalizer(service *latticev1.Service) (*latticev1.Ser
 		return service, nil
 	}
 
-	// The finalizer was in the list, so we should remove it.
+	// Copy so we don't mutate the shared cache
+	service = service.DeepCopy()
 	service.Finalizers = finalizers
-	return c.latticeClient.LatticeV1().Services(service.Namespace).Update(service)
+
+	result, err := c.latticeClient.LatticeV1().Services(service.Namespace).Update(service)
+	if err != nil {
+		return nil, fmt.Errorf("error removing %v finalizer: %v", service.Description(c.namespacePrefix), err)
+	}
+
+	return result, nil
+}
+
+func controllerRef(service *latticev1.Service) *metav1.OwnerReference {
+	return metav1.NewControllerRef(service, latticev1.ServiceKind)
 }
