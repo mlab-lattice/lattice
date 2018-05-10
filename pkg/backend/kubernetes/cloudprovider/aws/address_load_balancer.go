@@ -454,8 +454,9 @@ func (cp *DefaultAWSCloudProvider) kubeServiceSpec(
 
 				ports = append(ports, corev1.ServicePort{
 					// FIXME: need a better naming scheme
-					Name: fmt.Sprintf("%v-%v", component, componentPort.Name),
-					Port: targetPort,
+					Name:     fmt.Sprintf("%v-%v", component, componentPort.Name),
+					Protocol: corev1.ProtocolTCP,
+					Port:     targetPort,
 				})
 			}
 		}
@@ -489,8 +490,32 @@ func serviceAddressKubeServiceSpecNeedsUpdate(desired, current corev1.ServiceSpe
 		return true
 	}
 
-	if !reflect.DeepEqual(desired.Ports, current.Ports) {
+	if serviceAddressKubeServiceSpecPortsNeedUpdate(desired.Ports, current.Ports) {
 		return true
+	}
+
+	return false
+}
+
+func serviceAddressKubeServiceSpecPortsNeedUpdate(desired, current []corev1.ServicePort) bool {
+	currentPorts := make(map[int32]corev1.ServicePort)
+	for _, p := range current {
+		currentPorts[p.Port] = p
+	}
+
+	for _, p := range desired {
+		current, ok := currentPorts[p.Port]
+		if !ok {
+			return true
+		}
+
+		if p.Protocol != current.Protocol {
+			return true
+		}
+
+		if p.Name != current.Name {
+			return true
+		}
 	}
 
 	return false
