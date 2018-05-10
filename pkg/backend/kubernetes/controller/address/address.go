@@ -11,6 +11,7 @@ import (
 func (c *Controller) updateAddressStatus(
 	address *latticev1.Address,
 	state latticev1.AddressState,
+	message *string,
 	failureInfo *latticev1.AddressStatusFailureInfo,
 	ports map[int32]string,
 ) (*latticev1.Address, error) {
@@ -18,6 +19,7 @@ func (c *Controller) updateAddressStatus(
 		ObservedGeneration: address.Generation,
 
 		State:       state,
+		Message:     message,
 		FailureInfo: failureInfo,
 
 		Ports: ports,

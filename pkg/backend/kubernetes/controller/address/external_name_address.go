@@ -14,6 +14,18 @@ func (c *Controller) syncExternalNameAddress(address *latticev1.Address) error {
 		return fmt.Errorf("cannot sync external name address with no external name")
 	}
 
+	message := "creating internal DNS record"
+	address, err := c.updateAddressStatus(
+		address,
+		latticev1.AddressStateUpdating,
+		&message,
+		nil,
+		address.Status.Ports,
+	)
+	if err != nil {
+		return err
+	}
+
 	c.configLock.RLock()
 	defer c.configLock.RUnlock()
 
@@ -43,7 +55,7 @@ func (c *Controller) syncExternalNameAddress(address *latticev1.Address) error {
 		}
 	}
 
-	_, updateErr := c.updateAddressStatus(address, state, failureInfo, address.Status.Ports)
+	_, updateErr := c.updateAddressStatus(address, state, &failureInfo.Message, failureInfo, address.Status.Ports)
 	if err != nil {
 		return err
 	}

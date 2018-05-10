@@ -100,6 +100,7 @@ type AddressStatus struct {
 	ObservedGeneration int64 `json:"observedGeneration"`
 
 	State       AddressState              `json:"state"`
+	Message     *string                   `json:"message"`
 	FailureInfo *AddressStatusFailureInfo `json:"failureInfo"`
 
 	// Ports maps ports to their publicly accessible address
@@ -113,6 +114,7 @@ const (
 	AddressStateUpdating AddressState = "updating"
 	AddressStateStable   AddressState = "stable"
 	AddressStateFailed   AddressState = "failed"
+	AddressStateDeleting AddressState = "deleting"
 )
 
 type AddressStatusFailureInfo struct {

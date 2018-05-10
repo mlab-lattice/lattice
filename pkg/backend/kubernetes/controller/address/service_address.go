@@ -27,7 +27,14 @@ func (c *Controller) syncServiceAddress(address *latticev1.Address) error {
 
 	if service == nil {
 		if address.Status.State == latticev1.AddressStateStable {
-			_, err = c.updateAddressStatus(address, latticev1.AddressStateUpdating, nil, address.Status.Ports)
+			message := fmt.Sprintf("waiting for service %v", *address.Spec.Service)
+			_, err = c.updateAddressStatus(
+				address,
+				latticev1.AddressStateUpdating,
+				&message,
+				nil,
+				address.Status.Ports,
+			)
 			return err
 		}
 
@@ -58,6 +65,18 @@ func (c *Controller) syncServiceAddress(address *latticev1.Address) error {
 		return fmt.Errorf("error getting system id for %v: %v", address.Description(c.namespacePrefix), err)
 	}
 
+	message := "creating internal DNS record"
+	address, err = c.updateAddressStatus(
+		address,
+		latticev1.AddressStateUpdating,
+		&message,
+		nil,
+		address.Status.Ports,
+	)
+	if err != nil {
+		return err
+	}
+
 	domain := kubeutil.InternalAddressSubdomain(path.ToDomain(), systemID, c.latticeID)
 	err = c.cloudProvider.EnsureDNSARecord(c.latticeID, domain, ip)
 	if err != nil {
@@ -68,12 +87,24 @@ func (c *Controller) syncServiceAddress(address *latticev1.Address) error {
 		}
 
 		// swallow any errors from updating the status and return the original error
-		c.updateAddressStatus(address, state, failureInfo, address.Status.Ports)
+		c.updateAddressStatus(address, state, &failureInfo.Message, failureInfo, address.Status.Ports)
 		return fmt.Errorf("error creating service address DNS A record for %v: %v", address.Description(c.namespacePrefix), err)
 	}
 
 	if !serviceNeedsAddressLoadBalancer(service) {
-		_, err := c.updateAddressStatus(address, latticev1.AddressStateStable, nil, nil)
+		_, err := c.updateAddressStatus(address, latticev1.AddressStateStable, nil, nil, nil)
+		return err
+	}
+
+	message = "creating load balancer"
+	address, err = c.updateAddressStatus(
+		address,
+		latticev1.AddressStateUpdating,
+		&message,
+		nil,
+		address.Status.Ports,
+	)
+	if err != nil {
 		return err
 	}
 
@@ -91,7 +122,7 @@ func (c *Controller) syncServiceAddress(address *latticev1.Address) error {
 		}
 
 		// swallow any errors from updating the status and return the original error
-		c.updateAddressStatus(address, state, failureInfo, address.Status.Ports)
+		c.updateAddressStatus(address, state, &failureInfo.Message, failureInfo, address.Status.Ports)
 		return fmt.Errorf("error creating load balancer for %v: %v", address.Description(c.namespacePrefix), err)
 	}
 
@@ -122,7 +153,7 @@ func (c *Controller) syncServiceAddress(address *latticev1.Address) error {
 		)
 	}
 
-	_, err = c.updateAddressStatus(address, latticev1.AddressStateStable, nil, ports)
+	_, err = c.updateAddressStatus(address, latticev1.AddressStateStable, nil, nil, ports)
 	return err
 }
 
