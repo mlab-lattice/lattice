@@ -26,8 +26,22 @@ func (c *Controller) calculateState(build *latticev1.ComponentBuild) (*stateInfo
 		return nil, err
 	}
 
-	// FIXME: if a ComponentBuild was successful, but then for some reason the Job is deleted, should it still be
-	// considered successful or should a new Job be spun up? Right now a new Job will be spun up.
+	if build.Status.State == latticev1.ComponentBuildStateFailed {
+		stateInfo := &stateInfo{
+			state: stateJobFailed,
+			job:   job,
+		}
+		return stateInfo, nil
+	}
+
+	if build.Status.State == latticev1.ComponentBuildStateSucceeded {
+		stateInfo := &stateInfo{
+			state: stateJobSucceeded,
+			job:   job,
+		}
+		return stateInfo, nil
+	}
+
 	if job == nil {
 		stateInfo := &stateInfo{
 			state: stateJobNotCreated,

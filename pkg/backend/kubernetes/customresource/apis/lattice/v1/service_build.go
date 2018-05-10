@@ -1,6 +1,10 @@
 package v1
 
 import (
+	"fmt"
+
+	"github.com/mlab-lattice/lattice/pkg/api/v1"
+	kubeutil "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/kubernetes"
 	"github.com/mlab-lattice/lattice/pkg/definition/block"
 
 	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
@@ -8,10 +12,16 @@ import (
 )
 
 const (
-	ResourceSingularServiceBuild  = "servicebuild"
-	ResourcePluralServiceBuild    = "servicebuilds"
-	ResourceShortNameServiceBuild = "lsvcb"
-	ResourceScopeServiceBuild     = apiextensionsv1beta1.NamespaceScoped
+	ResourceSingularServiceBuild = "servicebuild"
+	ResourcePluralServiceBuild   = "servicebuilds"
+	ResourceScopeServiceBuild    = apiextensionsv1beta1.NamespaceScoped
+)
+
+var (
+	ServiceBuildKind     = SchemeGroupVersion.WithKind("ServiceBuild")
+	ServiceBuildListKind = SchemeGroupVersion.WithKind("ServiceBuildList")
+
+	ServiceBuildDefinitionHashLabelKey = fmt.Sprintf("servicebuild.%v/definition-hash", GroupName)
 )
 
 // +genclient
@@ -22,6 +32,19 @@ type ServiceBuild struct {
 	metav1.ObjectMeta `json:"metadata"`
 	Spec              ServiceBuildSpec   `json:"spec"`
 	Status            ServiceBuildStatus `json:"status,omitempty"`
+}
+
+func (b *ServiceBuild) Description(namespacePrefix string) string {
+	systemID, err := kubeutil.SystemID(namespacePrefix, b.Namespace)
+	if err != nil {
+		systemID = v1.SystemID(fmt.Sprintf("UNKNOWN (namespace: %v)", b.Namespace))
+	}
+
+	return fmt.Sprintf(
+		"service build %v (system %v)",
+		b.Name,
+		systemID,
+	)
 }
 
 // +k8s:deepcopy-gen=false
@@ -35,9 +58,13 @@ type ServiceBuildSpecComponentBuildInfo struct {
 }
 
 type ServiceBuildStatus struct {
-	State              ServiceBuildState `json:"state"`
-	ObservedGeneration int64             `json:"observedGeneration"`
-	Message            string            `json:"message"`
+	// ServiceBuilds are immutable so no need for ObservedGeneration
+
+	State   ServiceBuildState `json:"state"`
+	Message string            `json:"message"`
+
+	StartTimestamp      *metav1.Time `json:"startTimestamp,omitempty"`
+	CompletionTimestamp *metav1.Time `json:"completionTimestamp,omitempty"`
 
 	// Maps a component name to the ComponentBuild.Name responsible for it
 	ComponentBuilds map[string]string `json:"componentsBuilds"`
@@ -49,7 +76,7 @@ type ServiceBuildStatus struct {
 type ServiceBuildState string
 
 const (
-	ServiceBuildStatePending   ServiceBuildState = "pending"
+	ServiceBuildStatePending   ServiceBuildState = ""
 	ServiceBuildStateRunning   ServiceBuildState = "running"
 	ServiceBuildStateSucceeded ServiceBuildState = "succeeded"
 	ServiceBuildStateFailed    ServiceBuildState = "failed"

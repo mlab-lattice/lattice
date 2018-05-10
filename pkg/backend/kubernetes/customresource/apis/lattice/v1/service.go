@@ -2,23 +2,33 @@ package v1
 
 import (
 	"encoding/json"
+	"fmt"
 
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	kubeutil "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/kubernetes"
 	"github.com/mlab-lattice/lattice/pkg/definition"
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 
-	"fmt"
-	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/constants"
 	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 const (
-	ResourceSingularService  = "service"
-	ResourcePluralService    = "services"
-	ResourceShortNameService = "lsvc"
-	ResourceScopeService     = apiextensionsv1beta1.NamespaceScoped
+	ResourceSingularService = "service"
+	ResourcePluralService   = "services"
+	ResourceScopeService    = apiextensionsv1beta1.NamespaceScoped
+)
+
+var (
+	ServiceKind     = SchemeGroupVersion.WithKind("Service")
+	ServiceListKind = SchemeGroupVersion.WithKind("ServiceList")
+
+	// ServiceID label is the key that should be used in a label referencing a service's ID.
+	ServiceIDLabelKey = fmt.Sprintf("service.%v/id", GroupName)
+
+	// ServiceID label is the key that should be used for the path of the service.
+	ServicePathLabelKey = fmt.Sprintf("service.%v/path", GroupName)
 )
 
 // +genclient
@@ -29,6 +39,18 @@ type Service struct {
 	metav1.ObjectMeta `json:"metadata"`
 	Spec              ServiceSpec   `json:"spec"`
 	Status            ServiceStatus `json:"status,omitempty"`
+}
+
+func (s *Service) Deleted() bool {
+	return s.DeletionTimestamp != nil
+}
+
+func (s *Service) Stable() bool {
+	return s.UpdateProcessed() && s.Status.State == ServiceStateStable
+}
+
+func (s *Service) UpdateProcessed() bool {
+	return s.Status.ObservedGeneration >= s.Generation
 }
 
 func (s *Service) Description(namespacePrefix string) string {
@@ -46,12 +68,25 @@ func (s *Service) Description(namespacePrefix string) string {
 }
 
 func (s *Service) PathLabel() (tree.NodePath, error) {
-	path, ok := s.Labels[constants.LabelKeyServicePath]
+	path, ok := s.Labels[ServicePathLabelKey]
 	if !ok {
 		return "", fmt.Errorf("service did not contain service path label")
 	}
 
 	return tree.NodePathFromDomain(path)
+}
+
+func (s *Service) NodePoolAnnotation() (NodePoolAnnotationValue, error) {
+	annotation := make(NodePoolAnnotationValue)
+	existingAnnotationString, ok := s.Annotations[NodePoolWorkloadAnnotationKey]
+	if ok {
+		err := json.Unmarshal([]byte(existingAnnotationString), &annotation)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return annotation, nil
 }
 
 // N.B.: important: if you update the ServiceSpec you must also update
@@ -105,36 +140,36 @@ func (s *ServiceSpec) UnmarshalJSON(data []byte) error {
 }
 
 type ServiceStatus struct {
-	State              ServiceState `json:"state"`
-	ObservedGeneration int64        `json:"observedGeneration"`
-	// FIXME: remove this when upgrading to kube v1.10.0
-	UpdateProcessed  bool                     `json:"updateProcessed"`
-	UpdatedInstances int32                    `json:"updatedInstances"`
-	StaleInstances   int32                    `json:"staleInstances"`
-	PublicPorts      ServiceStatusPublicPorts `json:"publicPorts"`
-	FailureInfo      *ServiceFailureInfo      `json:"failureInfo,omitempty"`
+	ObservedGeneration int64 `json:"observedGeneration"`
+
+	State       ServiceState              `json:"state"`
+	Message     *string                   `json:"message"`
+	FailureInfo *ServiceStatusFailureInfo `json:"failureInfo,omitempty"`
+
+	AvailableInstances   int32 `json:"availableInstances"`
+	UpdatedInstances     int32 `json:"updatedInstances"`
+	StaleInstances       int32 `json:"staleInstances"`
+	TerminatingInstances int32 `json:"terminatingInstances"`
+
+	Ports map[int32]string `json:"ports"`
 }
 
 type ServiceState string
 
 const (
-	ServiceStatePending  ServiceState = "pending"
+	ServiceStatePending  ServiceState = ""
+	ServiceStateDeleting ServiceState = "deleting"
+
 	ServiceStateScaling  ServiceState = "scaling"
 	ServiceStateUpdating ServiceState = "updating"
 	ServiceStateStable   ServiceState = "stable"
 	ServiceStateFailed   ServiceState = "failed"
 )
 
-type ServiceStatusPublicPorts map[int32]ServiceStatusPublicPort
-
-type ServiceStatusPublicPort struct {
-	Address string `json:"address"`
-}
-
-type ServiceFailureInfo struct {
-	Message  string      `json:"message"`
-	Internal bool        `json:"internal"`
-	Time     metav1.Time `json:"time"`
+type ServiceStatusFailureInfo struct {
+	Message   string      `json:"message"`
+	Internal  bool        `json:"internal"`
+	Timestamp metav1.Time `json:"timestamp"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

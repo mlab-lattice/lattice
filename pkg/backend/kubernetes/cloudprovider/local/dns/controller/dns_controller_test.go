@@ -1,10 +1,13 @@
 package controller
 
 import (
+	"crypto/sha256"
+	"encoding/base64"
 	"flag"
 	"fmt"
 	"hash/fnv"
 	"io/ioutil"
+	"net"
 	"os"
 	"strconv"
 	"testing"
@@ -13,125 +16,117 @@ import (
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	fakelattice "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/generated/clientset/versioned/fake"
 	latticeinformers "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/generated/informers/externalversions"
+	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/servicemesh"
+	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/servicemesh/envoy"
 	kubeutil "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/kubernetes"
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	runtimeutil "k8s.io/apimachinery/pkg/util/runtime"
 
 	"k8s.io/client-go/kubernetes/fake"
 
 	"github.com/davecgh/go-spew/spew"
 	"github.com/golang/glog"
+	"github.com/satori/go.uuid"
 )
 
 const (
 	dnsmasqConfigPathPrefix = "./server_config"
 	hostConfigPathPrefix    = "./host_config"
 
-	defaultSystemID = "system-id"
-
-	logToStderr         = true
-	loggingLevelDefault = "10"
-
-	latticeID       = "lattice"
-	namespacePrefix = "lattice"
+	namespacePrefix   = "lattice"
+	latticeID         = v1.LatticeID("lattice-local")
+	internalDNSDomain = "lattice.local"
 )
 
 type hostEntry struct {
-	host     string
-	systemID string
-	ip       string
+	systemID v1.SystemID
+	name     string
+	value    string
 }
 
 type cnameEntry struct {
-	original string
-	systemID string
-	alias    string
+	systemID v1.SystemID
+	name     string
+	value    string
 }
 
-// hostFileOutput returns the expected file output that the host file should contain for the given hosts
-func hostFileOutput(hosts []hostEntry) string {
+// hostFileOutput returns the expected file output that the name file should contain for the given hosts
+func hostFileOutput(entries []hostEntry) string {
 	/*
 	   Expected format:
-	       ip name0 name1 ..
+	       value name0 name1 ..
 	       ...
 	*/
 	str := ""
-	for _, v := range hosts {
-		systemID := defaultSystemID
-
-		if v.systemID != "" {
-			// Allow overriding system id for certain tests.
-			systemID = v.systemID
-		}
-
-		fullPath := v.host + ".local." + systemID + "." + latticeID + ".local"
-		newLine := v.ip + " " + fullPath + "\n"
+	for _, v := range entries {
+		fullPath := fmt.Sprintf("%v.local.%v.%v.%v", v.name, v.systemID, latticeID, internalDNSDomain)
+		newLine := v.value + " " + fullPath + "\n"
 		str = str + newLine
 	}
 	return str
 }
 
 // dnsmasqConfigFileOutput returns the expected file output that the server configuration file should contain.
-func dnsmasqConfigFileOutput(nameservers []cnameEntry) string {
+func dnsmasqConfigFileOutput(entries []cnameEntry) string {
 	/*
 	   Expected format:
-	       cname=alias,target
+	       cname=value,target
 	*/
 	str := ""
-	for _, v := range nameservers {
-		systemID := defaultSystemID
-
-		if v.systemID != "" {
-			// Allow overriding system id for certain tests.
-			systemID = v.systemID
-		}
-
-		fullPath := v.alias + ".local." + systemID + "." + latticeID + ".local"
-		newLine := "cname=" + fullPath + "," + v.original + "\n"
+	for _, v := range entries {
+		fullPath := fmt.Sprintf("%v.local.%v.%v.%v", v.name, v.systemID, latticeID, internalDNSDomain)
+		newLine := "cname=" + fullPath + "," + v.value + "\n"
 		str = str + newLine
 	}
 	return str
 }
 
-// endpoint creates an endpoint schema with the specified parameters.
-func endpoint(key, ip, endpoint, systemID string, path tree.NodePath) latticev1.Endpoint {
-	ec := latticev1.Endpoint{
+// address creates an address schema with the specified parameters.
+func address(name string, addressPath tree.NodePath, servicePath *tree.NodePath, endpoint *string, systemID v1.SystemID) latticev1.Address {
+	namespace := kubeutil.SystemNamespace(namespacePrefix, systemID)
+	hash := sha256.New()
+	hash.Write([]byte(fmt.Sprintf("%v/%v", namespace, name)))
+
+	return latticev1.Address{
 		ObjectMeta: metav1.ObjectMeta{
-			// Our tests shouldn't be concerned about unique naming - let this be provided for us
-			Name:            key,
-			UID:             "12345",
-			Namespace:       kubeutil.SystemNamespace(latticeID, v1.SystemID(systemID)),
+			Name:            name,
+			Namespace:       namespace,
+			UID:             types.UID(base64.StdEncoding.EncodeToString(hash.Sum(nil))),
 			ResourceVersion: "1",
+			Labels: map[string]string{
+				latticev1.AddressPathLabelKey: addressPath.ToDomain(),
+			},
 		},
-		Status: latticev1.EndpointStatus{
-			State: latticev1.EndpointStatePending,
+		Spec: latticev1.AddressSpec{
+			Service:      servicePath,
+			ExternalName: endpoint,
 		},
-		Spec: latticev1.EndpointSpec{
-			IP:           &ip,
-			ExternalName: &endpoint,
-			Path:         path,
+		Status: latticev1.AddressStatus{
+			State: latticev1.AddressStateStable,
 		},
 	}
-
-	// Unset some fields instead of using the empty string
-	if ip == "" {
-		ec.Spec.IP = nil
-	}
-
-	if endpoint == "" {
-		ec.Spec.ExternalName = nil
-	}
-
-	return ec
 }
 
-// makeNdoePathPanic tries to create a NodePath from the url string, and panics is it is unable to.
-func makeNodePathPanic(pathString string) tree.NodePath {
-	np, err := tree.NewNodePath(pathString)
+func service(path tree.NodePath, systemID v1.SystemID) latticev1.Service {
+	return latticev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:            uuid.NewV4().String(),
+			Namespace:       kubeutil.SystemNamespace(namespacePrefix, systemID),
+			UID:             types.UID(uuid.NewV4().String()),
+			ResourceVersion: "1",
+			Labels: map[string]string{
+				latticev1.ServicePathLabelKey: path.ToDomain(),
+			},
+		},
+	}
+}
 
+func nodePathOrDie(path string) tree.NodePath {
+	np, err := tree.NewNodePath(path)
 	if err != nil {
 		panic(err)
 	}
@@ -142,179 +137,209 @@ func makeNodePathPanic(pathString string) tree.NodePath {
 type testCase struct {
 	ClientObjects []runtime.Object
 
-	EndpointsBefore []latticev1.Endpoint
-	EndpointsAfter  []latticev1.Endpoint
+	Services []latticev1.Service
+
+	AddressesBefore []latticev1.Address
+	AddressesAfter  []latticev1.Address
 
 	ExpectedHosts  []hostEntry
 	ExpectedCnames []cnameEntry
 }
 
 // TestEndpointCreation tests the DNS and cname file contents of the dns controller
-func TestEndpointCreation(t *testing.T) {
-	if logToStderr {
-		flag.Set("alsologtostderr", fmt.Sprintf("%t", true))
-	}
+func TestAddressCreation(t *testing.T) {
+	flag.Set("alsologtostderr", fmt.Sprintf("%t", true))
 
 	var logLevel string
-	flag.StringVar(&logLevel, "logLevel", loggingLevelDefault, "test")
+	flag.StringVar(&logLevel, "logLevel", "6", "test")
 	flag.Lookup("v").Value.Set(logLevel)
 
-	testcases := map[string]testCase{
-		"new endpoint with ip is written to host file": {
-			EndpointsAfter: []latticev1.Endpoint{
-				endpoint("key", "1", "", defaultSystemID, makeNodePathPanic("/nodepath")),
+	expectedIP, redirectCIDRBlock, _ := net.ParseCIDR("172.16.0.0/16")
+
+	path1 := nodePathOrDie("/a")
+	path2 := nodePathOrDie("/a/b/c")
+	path3 := nodePathOrDie("/a/d/e/f")
+	externalName1 := "mlab.com"
+	externalName2 := "lattice.mlab.com"
+
+	systemID1 := v1.SystemID(uuid.NewV4().String())
+	systemID2 := v1.SystemID(uuid.NewV4().String())
+
+	addressName1 := uuid.NewV4().String()
+	addressName2 := uuid.NewV4().String()
+
+	tests := map[string]testCase{
+		"new address address is written to name file": {
+			Services:       []latticev1.Service{service(path1, systemID1)},
+			AddressesAfter: []latticev1.Address{address(addressName1, path1, &path1, nil, systemID1)},
+			ExpectedHosts: []hostEntry{
+				{
+					systemID: systemID1,
+					name:     path1.ToDomain(),
+					value:    expectedIP.String(),
+				},
+			},
+		},
+		"new external name address is written as cname file": {
+			AddressesAfter: []latticev1.Address{address(addressName1, path1, nil, &externalName1, systemID1)},
+			ExpectedCnames: []cnameEntry{
+				{
+					systemID: systemID1,
+					name:     path1.ToDomain(),
+					value:    externalName1,
+				},
+			},
+		},
+		"addresses write url correctly": {
+			Services: []latticev1.Service{service(path3, systemID1)},
+			AddressesAfter: []latticev1.Address{
+				address(addressName1, path2, nil, &externalName1, systemID1),
+				address(addressName2, path3, &path3, nil, systemID1),
+			},
+			ExpectedCnames: []cnameEntry{
+				{
+					systemID: systemID1,
+					name:     path2.ToDomain(),
+					value:    externalName1,
+				},
 			},
 			ExpectedHosts: []hostEntry{
 				{
-					ip:   "1",
-					host: "nodepath",
+					systemID: systemID1,
+					name:     path3.ToDomain(),
+					value:    expectedIP.String(),
 				},
 			},
 		},
-		"new endpoint with name is written as cname file": {
-			EndpointsAfter: []latticev1.Endpoint{
-				endpoint("key", "", "my_cname", defaultSystemID, makeNodePathPanic("/nodepath")),
-			},
+		"address update changes the underlying address": {
+			AddressesBefore: []latticev1.Address{address(addressName1, path2, nil, &externalName1, systemID1)},
+			AddressesAfter:  []latticev1.Address{address(addressName1, path2, nil, &externalName2, systemID1)},
 			ExpectedCnames: []cnameEntry{
 				{
-					original: "my_cname",
-					alias:    "nodepath",
-				},
-			},
-		},
-		"endpoints write url correctly": {
-			EndpointsAfter: []latticev1.Endpoint{
-				endpoint("key", "", "my_cname", defaultSystemID, makeNodePathPanic("/root/nested/nested_some_more")),
-				endpoint("key2", "1", "", defaultSystemID, makeNodePathPanic("/root/nested/nested_again_but_different")),
-			},
-			ExpectedCnames: []cnameEntry{
-				{
-					original: "my_cname",
-					alias:    "nested_some_more.nested.root",
-				},
-			},
-			ExpectedHosts: []hostEntry{
-				{
-					ip:   "1",
-					host: "nested_again_but_different.nested.root",
-				},
-			},
-		},
-		"normal endpoint update changes the underlying endpoint": {
-			EndpointsBefore: []latticev1.Endpoint{
-				endpoint("key", "", "my_cname", defaultSystemID, makeNodePathPanic("/nodepath")),
-			},
-			EndpointsAfter: []latticev1.Endpoint{
-				endpoint("key", "", "my_cname_2", defaultSystemID, makeNodePathPanic("/root/nested/nested_some_more")),
-			},
-			ExpectedCnames: []cnameEntry{
-				{
-					original: "my_cname_2",
-					alias:    "nested_some_more.nested.root",
+					systemID: systemID1,
+					name:     path2.ToDomain(),
+					value:    externalName2,
 				},
 			},
 			ExpectedHosts: []hostEntry{},
 		},
-		"endpoint update can change between cname and IP address type endpoint": {
-			EndpointsBefore: []latticev1.Endpoint{
-				endpoint("key", "", "my_cname", defaultSystemID, makeNodePathPanic("/nodepath")),
-			},
-			EndpointsAfter: []latticev1.Endpoint{
-				endpoint("key", "5.5.5.5", "", defaultSystemID, makeNodePathPanic("/root/nested/nested_again_but_different")),
-			},
-			ExpectedCnames: []cnameEntry{},
+		"address update can change between external name and service address": {
+			Services:        []latticev1.Service{service(path3, systemID1)},
+			AddressesBefore: []latticev1.Address{address(addressName1, path2, nil, &externalName2, systemID1)},
+			AddressesAfter:  []latticev1.Address{address(addressName1, path2, &path3, nil, systemID1)},
+			ExpectedCnames:  []cnameEntry{},
 			ExpectedHosts: []hostEntry{
 				{
-					ip:   "5.5.5.5",
-					host: "nested_again_but_different.nested.root",
+					systemID: systemID1,
+					name:     path2.ToDomain(),
+					value:    expectedIP.String(),
 				},
 			},
 		},
 		"rewriting the cache with no endpoints clears it": {
-			EndpointsBefore: []latticev1.Endpoint{
-				endpoint("key", "", "my_cname", defaultSystemID, makeNodePathPanic("/nodepath")),
-			},
-			EndpointsAfter: []latticev1.Endpoint{},
-			ExpectedCnames: []cnameEntry{},
-			ExpectedHosts:  []hostEntry{},
+			AddressesBefore: []latticev1.Address{address(addressName1, path2, nil, &externalName1, systemID1)},
+			AddressesAfter:  []latticev1.Address{},
+			ExpectedCnames:  []cnameEntry{},
+			ExpectedHosts:   []hostEntry{},
 		},
-		"changing endpoint to a new namespace changes the output": {
-			EndpointsBefore: []latticev1.Endpoint{
-				endpoint("key", "", "my_cname", defaultSystemID, makeNodePathPanic("/nodepath")),
-			},
-			EndpointsAfter: []latticev1.Endpoint{
-				endpoint("key", "", "my_cname", "new-namespace", makeNodePathPanic("/nodepath")),
-			},
+		"changing address to a new namespace changes the output": {
+			AddressesBefore: []latticev1.Address{address(addressName1, path2, nil, &externalName1, systemID1)},
+			AddressesAfter:  []latticev1.Address{address(addressName1, path2, nil, &externalName1, systemID2)},
 			ExpectedCnames: []cnameEntry{
 				{
-					systemID: "new-namespace",
-					alias:    "nodepath",
-					original: "my_cname",
+					systemID: systemID2,
+					name:     path2.ToDomain(),
+					value:    externalName1,
 				},
 			},
 			ExpectedHosts: []hostEntry{},
 		},
 	}
 
-	for testName, testCase := range testcases {
-		glog.Infof(testName)
+	for description, test := range tests {
+		glog.Infof(description)
 
 		// Write to different files on each iteration by using a hash of the test string
 		hash := fnv.New32a()
-		hash.Write([]byte(testName))
+		hash.Write([]byte(description))
 		pathSuffix := strconv.Itoa(int(hash.Sum32()))
 
 		dnsmasqConfigPath := dnsmasqConfigPathPrefix + "_" + pathSuffix
 		hostsFilePath := hostConfigPathPrefix + "_" + pathSuffix
 
-		latticeClient := fakelattice.NewSimpleClientset(testCase.ClientObjects...)
-		client := fake.NewSimpleClientset()
+		latticeClient := fakelattice.NewSimpleClientset(test.ClientObjects...)
+		kubeClient := fake.NewSimpleClientset()
 
 		informers := latticeinformers.NewSharedInformerFactory(latticeClient, 0)
-		endpointInformer := informers.Lattice().V1().Endpoints()
-		endpoints := informers.Lattice().V1().Endpoints().Informer().GetStore()
+		configInformer := informers.Lattice().V1().Configs()
+		addressInformer := informers.Lattice().V1().Addresses()
+		serviceInformer := informers.Lattice().V1().Services()
 
-		controller := NewController(namespacePrefix, latticeID, dnsmasqConfigPath, hostsFilePath, latticeClient, client, endpointInformer)
+		serviceMeshOptions := &servicemesh.Options{
+			Envoy: &envoy.Options{
+				RedirectCIDRBlock: *redirectCIDRBlock,
+			},
+		}
 
-		for _, e := range testCase.EndpointsBefore {
-			s := e.DeepCopy()
-			err := endpoints.Add(s)
+		controller := NewController(
+			latticeID,
+			namespacePrefix,
+			internalDNSDomain,
+			dnsmasqConfigPath,
+			hostsFilePath,
+			serviceMeshOptions,
+			latticeClient,
+			kubeClient,
+			configInformer,
+			addressInformer,
+			serviceInformer,
+		)
 
-			if err != nil {
+		config := &latticev1.Config{
+			Spec: latticev1.ConfigSpec{
+				ServiceMesh: latticev1.ConfigServiceMesh{
+					Envoy: &latticev1.ConfigServiceMeshEnvoy{},
+				},
+			},
+		}
+		configs := informers.Lattice().V1().Configs().Informer().GetStore()
+		configs.Add(config)
+
+		services := informers.Lattice().V1().Services().Informer().GetStore()
+		for _, service := range test.Services {
+			if err := services.Add(service.DeepCopy()); err != nil {
 				t.Fatal(err)
 			}
 		}
 
-		controller.updateConfigs()
-
-		for _, e := range testCase.EndpointsBefore {
-			s := e.DeepCopy()
-			err := endpoints.Delete(s)
-
-			if err != nil {
+		addresses := informers.Lattice().V1().Addresses().Informer().GetStore()
+		for _, address := range test.AddressesBefore {
+			if err := addresses.Add(address.DeepCopy()); err != nil {
 				t.Fatal(err)
 			}
 		}
 
-		if testCase.EndpointsAfter != nil {
-			for _, v := range testCase.EndpointsAfter {
-				s := v.DeepCopy()
-				err := endpoints.Add(s)
+		controller.handleConfigAdd(config)
+		controller.syncAddresses()
 
-				if err != nil {
+		for _, address := range test.AddressesBefore {
+			if err := addresses.Delete(address.DeepCopy()); err != nil {
+				t.Fatal(err)
+			}
+		}
+
+		if test.AddressesAfter != nil {
+			for _, address := range test.AddressesAfter {
+				if err := addresses.Add(address.DeepCopy()); err != nil {
 					t.Fatal(err)
 				}
 			}
 
 			t.Logf("Updating cache and writing to: %v", hostsFilePath)
-			controller.updateConfigs()
+			controller.syncAddresses()
 		}
 
-		if controller.queue.Len() > 0 {
-			t.Errorf("%s: unexpected items in endpoint queue: %d", testName, controller.queue.Len())
-		}
-
-		if testCase.ExpectedCnames != nil {
+		if test.ExpectedCnames != nil {
 			dnsmasqConfig, err := ioutil.ReadFile(dnsmasqConfigPath)
 			if err != nil {
 				t.Errorf("Error reading cname file: %v", err)
@@ -322,10 +347,10 @@ func TestEndpointCreation(t *testing.T) {
 			}
 
 			dnsmasqConfigStr := string(dnsmasqConfig)
-			expectedDnsmasqConfigStr := dnsmasqConfigFileOutput(testCase.ExpectedCnames)
+			expectedDnsmasqConfigStr := dnsmasqConfigFileOutput(test.ExpectedCnames)
 
 			if dnsmasqConfigStr != expectedDnsmasqConfigStr {
-				t.Errorf("%s:\nExpected:\n%s\ngot:\n%s", testName, spew.Sdump(expectedDnsmasqConfigStr), spew.Sdump(dnsmasqConfigStr))
+				t.Errorf("%s:\nExpected:\n%s\ngot:\n%s", description, spew.Sdump(expectedDnsmasqConfigStr), spew.Sdump(dnsmasqConfigStr))
 			}
 
 			err = os.Remove(dnsmasqConfigPath)
@@ -334,18 +359,18 @@ func TestEndpointCreation(t *testing.T) {
 			}
 		}
 
-		if testCase.ExpectedHosts != nil {
+		if test.ExpectedHosts != nil {
 			hostFile, err := ioutil.ReadFile(hostsFilePath)
 			if err != nil {
-				t.Errorf("Error reading host file: %v", err)
+				t.Errorf("Error reading name file: %v", err)
 				break
 			}
 
 			hostStr := string(hostFile)
-			hostExpectedStr := hostFileOutput(testCase.ExpectedHosts)
+			hostExpectedStr := hostFileOutput(test.ExpectedHosts)
 
 			if hostStr != hostExpectedStr {
-				t.Errorf("%s:\nExpected:\n%s\ngot:\n%s", testName, spew.Sdump(hostExpectedStr), spew.Sdump(hostStr))
+				t.Errorf("%s:\nExpected:\n%s\ngot:\n%s", description, spew.Sdump(hostExpectedStr), spew.Sdump(hostStr))
 			}
 
 			err = os.Remove(hostsFilePath)

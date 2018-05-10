@@ -128,8 +128,8 @@ module "node" {
   lattice_id = "${var.lattice_id}"
   name       = "node-pool-${var.name}"
 
-  kubelet_labels = "node-role.lattice.mlab.com/node-pool=${var.name}"
-  kubelet_taints = "node-role.lattice.mlab.com/node-pool=${var.name}:NoSchedule"
+  kubelet_labels = "node-pool.lattice.mlab.com/id=${var.name}"
+  kubelet_taints = "node-pool.lattice.mlab.com/id=${var.name}:NoSchedule"
 
   region        = "${var.region}"
   vpc_id        = "${var.vpc_id}"

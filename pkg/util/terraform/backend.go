@@ -15,8 +15,23 @@ type BackendOptions struct {
 	S3 *BackendOptionsS3
 }
 
+func (o *BackendOptions) AsFlags() []string {
+	if o.S3 != nil {
+		return o.S3.AsFlags()
+	}
+
+	return nil
+}
+
 type BackendOptionsS3 struct {
 	Bucket string
+}
+
+func (o *BackendOptionsS3) AsFlags() []string {
+	return []string{
+		"terraform-backend=S3",
+		fmt.Sprintf("terraform-backend-var=bucket=%v", o.Bucket),
+	}
 }
 
 type S3BackendConfig struct {

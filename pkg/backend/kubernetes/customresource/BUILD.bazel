@@ -2,7 +2,7 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library")
 
 go_library(
     name = "go_default_library",
-    srcs = ["cr.go"],
+    srcs = ["create.go"],
     importpath = "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource",
     visibility = ["//visibility:public"],
     deps = [

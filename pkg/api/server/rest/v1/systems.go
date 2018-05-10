@@ -480,8 +480,9 @@ func mountTeardownHandlers(router *gin.RouterGroup, backend v1server.Interface) 
 }
 
 func mountVersionHandlers(router *gin.RouterGroup, backend v1server.Interface, sysResolver *resolver.SystemResolver) {
-	systemIDIdentifier := ":system_id"
-	versionsPath := fmt.Sprintf(v1rest.VersionsPathFormat, systemIDIdentifier)
+	systemIDIdentifier := "system_id"
+	systemIDPathComponent := fmt.Sprintf(":%v", systemIDIdentifier)
+	versionsPath := fmt.Sprintf(v1rest.VersionsPathFormat, systemIDPathComponent)
 
 	// list-system-versions
 	router.GET(versionsPath, func(c *gin.Context) {

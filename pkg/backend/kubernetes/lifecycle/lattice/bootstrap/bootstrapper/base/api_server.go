@@ -35,86 +35,86 @@ func (b *DefaultBootstrapper) apiServerResources(resources *bootstrapper.Resourc
 			{
 				APIGroups: []string{latticev1.GroupName},
 				Resources: []string{latticev1.ResourcePluralSystem},
-				Verbs:     readCreateAndDeleteVerbs,
+				Verbs:     ReadCreateAndDeleteVerbs,
 			},
 			// lattice config read
 			{
 				APIGroups: []string{latticev1.GroupName},
 				Resources: []string{latticev1.ResourcePluralConfig},
-				Verbs:     readVerbs,
+				Verbs:     ReadVerbs,
 			},
 			// lattice system build read and create
 			{
 				APIGroups: []string{latticev1.GroupName},
 				Resources: []string{latticev1.ResourcePluralBuild},
-				Verbs:     readAndCreateVerbs,
+				Verbs:     ReadAndCreateVerbs,
 			},
 			// lattice service build read
 			{
 				APIGroups: []string{latticev1.GroupName},
 				Resources: []string{latticev1.ResourcePluralServiceBuild},
-				Verbs:     readVerbs,
+				Verbs:     ReadVerbs,
 			},
 			// lattice component build read
 			{
 				APIGroups: []string{latticev1.GroupName},
 				Resources: []string{latticev1.ResourcePluralComponentBuild},
-				Verbs:     readVerbs,
+				Verbs:     ReadVerbs,
 			},
 			// lattice deploy read and create
 			{
 				APIGroups: []string{latticev1.GroupName},
 				Resources: []string{latticev1.ResourcePluralDeploy},
-				Verbs:     readAndCreateVerbs,
+				Verbs:     ReadAndCreateVerbs,
 			},
 			// lattice teardown read and create
 			{
 				APIGroups: []string{latticev1.GroupName},
 				Resources: []string{latticev1.ResourcePluralTeardown},
-				Verbs:     readAndCreateVerbs,
+				Verbs:     ReadAndCreateVerbs,
 			},
 			// lattice service read
 			{
 				APIGroups: []string{latticev1.GroupName},
 				Resources: []string{latticev1.ResourcePluralService},
-				Verbs:     readVerbs,
+				Verbs:     ReadVerbs,
 			},
 
 			// kube pod read and delete
 			{
 				APIGroups: []string{corev1.GroupName},
 				Resources: []string{"pods"},
-				Verbs:     readAndDeleteVerbs,
+				Verbs:     ReadAndDeleteVerbs,
 			},
 			// kube pod/log read
 			{
 				APIGroups: []string{corev1.GroupName},
 				Resources: []string{"pods/log"},
-				Verbs:     readVerbs,
+				Verbs:     ReadVerbs,
 			},
 			// kube job read
 			{
 				APIGroups: []string{batchv1.GroupName},
 				Resources: []string{"jobs"},
-				Verbs:     readVerbs,
+				Verbs:     ReadVerbs,
 			},
 			// kube service read
 			{
 				APIGroups: []string{corev1.GroupName},
 				Resources: []string{"services"},
-				Verbs:     readVerbs,
+				Verbs:     ReadVerbs,
 			},
 			// kube node read
 			{
 				APIGroups: []string{corev1.GroupName},
 				Resources: []string{"nodes"},
-				Verbs:     readVerbs,
+				Verbs:     ReadVerbs,
 			},
 			// kube secret
 			{
 				APIGroups: []string{corev1.GroupName},
 				Resources: []string{"secrets"},
-				Verbs:     readCreateUpdateAndDeleteVerbs,
+				Verbs:     ReadCreateUpdateAndDeleteVerbs,
 			},
 		},
 	}

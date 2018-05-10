@@ -5,12 +5,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	latticeclientset "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/generated/clientset/versioned"
 	latticeinformers "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/generated/informers/externalversions/lattice/v1"
 	latticelisters "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/generated/listers/lattice/v1"
-	kubeutil "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/kubernetes"
 
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -24,10 +22,12 @@ import (
 	"k8s.io/client-go/util/workqueue"
 
 	"github.com/golang/glog"
+	"github.com/mlab-lattice/lattice/pkg/api/v1"
+	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/kubernetes"
 )
 
 type lifecycleAction struct {
-	rollout  *latticev1.Deploy
+	deploy   *latticev1.Deploy
 	teardown *latticev1.Teardown
 }
 
@@ -39,13 +39,13 @@ type Controller struct {
 	kubeClient    kubeclientset.Interface
 	latticeClient latticeclientset.Interface
 
-	// Each LatticeNamespace may only have one rollout going on at a time.
-	// A rollout is an "owning" rollout while it is rolling out, and until
-	// it has completed and a new rollout has been accepted and becomes the
-	// owning rollout. (e.g. we create Deploy A. It is accepted and becomes
-	// the owning rollout. It then runs to completion. It is still the owning
-	// rollout. Then Deploy B is created. It is accepted because the existing
-	// owning rollout is not running. Now B is the owning rollout)
+	// Each system may only have one deploy going on at a time.
+	// A deploy is an "owning" deploy while it is rolling out, and until
+	// it has completed and a new deploy has been accepted and becomes the
+	// owning deploy. (e.g. we create Deploy A. It is accepted and becomes
+	// the owning deploy. It then runs to completion. It is still the owning
+	// deploy. Then Deploy B is created. It is accepted because the existing
+	// owning deploy is not running. Now B is the owning deploy)
 	// FIXME: rethink this. is there a simpler solution?
 	owningLifecycleActionsLock   sync.RWMutex
 	owningLifecycleActions       map[types.UID]*lifecycleAction
@@ -69,7 +69,7 @@ type Controller struct {
 	componentBuildLister       latticelisters.ComponentBuildLister
 	componentBuildListerSynced cache.InformerSynced
 
-	rolloutQueue  workqueue.RateLimitingInterface
+	deployQueue   workqueue.RateLimitingInterface
 	teardownQueue workqueue.RateLimitingInterface
 }
 
@@ -84,68 +84,71 @@ func NewController(
 	serviceBuildInformer latticeinformers.ServiceBuildInformer,
 	componentBuildInformer latticeinformers.ComponentBuildInformer,
 ) *Controller {
-	src := &Controller{
-		namespacePrefix:              namespacePrefix,
-		kubeClient:                   kubeClient,
-		latticeClient:                latticeClient,
+	c := &Controller{
+		namespacePrefix: namespacePrefix,
+
+		kubeClient:    kubeClient,
+		latticeClient: latticeClient,
+
 		owningLifecycleActions:       make(map[types.UID]*lifecycleAction),
 		owningLifecycleActionsSynced: make(chan struct{}),
-		rolloutQueue:                 workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "system-rollout"),
-		teardownQueue:                workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "system-teardown"),
+
+		deployQueue:   workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "deploy"),
+		teardownQueue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "teardown"),
 	}
 
-	src.syncHandler = src.syncDeploy
+	c.syncHandler = c.syncDeploy
 
 	deployInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc:    src.handleDeployAdd,
-		UpdateFunc: src.handleDeployUpdate,
+		AddFunc:    c.handleDeployAdd,
+		UpdateFunc: c.handleDeployUpdate,
 		// TODO: for now it is assumed that SystemRollouts are not deleted. Revisit this.
 	})
-	src.deployLister = deployInformer.Lister()
-	src.deployListerSynced = deployInformer.Informer().HasSynced
+	c.deployLister = deployInformer.Lister()
+	c.deployListerSynced = deployInformer.Informer().HasSynced
 
 	teardownInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc:    src.handleTeardownAdd,
-		UpdateFunc: src.handleTeardownUpdate,
+		AddFunc:    c.handleTeardownAdd,
+		UpdateFunc: c.handleTeardownUpdate,
 		// TODO: for now it is assumed that SystemRollouts are not deleted. Revisit this.
 	})
-	src.teardownLister = teardownInformer.Lister()
-	src.teardownListerSynced = teardownInformer.Informer().HasSynced
+	c.teardownLister = teardownInformer.Lister()
+	c.teardownListerSynced = teardownInformer.Informer().HasSynced
 
 	systemInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc:    src.handleSystemAdd,
-		UpdateFunc: src.handleSystemUpdate,
+		AddFunc:    c.handleSystemAdd,
+		UpdateFunc: c.handleSystemUpdate,
 		// TODO: for now it is assumed that Systems are not deleted. Revisit this.
 	})
-	src.systemLister = systemInformer.Lister()
-	src.systemListerSynced = systemInformer.Informer().HasSynced
+	c.systemLister = systemInformer.Lister()
+	c.systemListerSynced = systemInformer.Informer().HasSynced
 
 	buildInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc:    src.handleBuildAdd,
-		UpdateFunc: src.handleBuildUpdate,
+		AddFunc:    c.handleBuildAdd,
+		UpdateFunc: c.handleBuildUpdate,
 		// TODO: for now it is assumed that SystemBuilds are not deleted. Revisit this.
 	})
-	src.buildLister = buildInformer.Lister()
-	src.buildListerSynced = buildInformer.Informer().HasSynced
+	c.buildLister = buildInformer.Lister()
+	c.buildListerSynced = buildInformer.Informer().HasSynced
 
-	src.serviceBuildLister = serviceBuildInformer.Lister()
-	src.serviceBuildListerSynced = serviceBuildInformer.Informer().HasSynced
+	c.serviceBuildLister = serviceBuildInformer.Lister()
+	c.serviceBuildListerSynced = serviceBuildInformer.Informer().HasSynced
 
-	src.componentBuildLister = componentBuildInformer.Lister()
-	src.componentBuildListerSynced = componentBuildInformer.Informer().HasSynced
+	c.componentBuildLister = componentBuildInformer.Lister()
+	c.componentBuildListerSynced = componentBuildInformer.Informer().HasSynced
 
-	return src
+	return c
 }
 
 func (c *Controller) Run(workers int, stopCh <-chan struct{}) {
 	// don't let panics crash the process
 	defer runtime.HandleCrash()
 	// make sure the work queue is shutdown which will trigger workers to end
-	defer c.rolloutQueue.ShutDown()
+	defer c.deployQueue.ShutDown()
 	defer c.teardownQueue.ShutDown()
 
-	glog.Infof("Starting system-rollout controller")
-	defer glog.Infof("Shutting down system-rollout controller")
+	glog.Infof("starting system lifecycle controller")
+	defer glog.Infof("shutting down system lifecycle controller")
 
 	// wait for your secondary caches to fill before starting your work
 	if !cache.WaitForCacheSync(
@@ -160,7 +163,7 @@ func (c *Controller) Run(workers int, stopCh <-chan struct{}) {
 		return
 	}
 
-	glog.V(4).Info("Caches synced. Syncing owning SystemRollouts")
+	glog.V(4).Info("caches synced, syncing owning lifecycle actions")
 
 	// It's okay that we're racing with the System and Build informer add/update functions here.
 	// handleDeployAdd and handleDeployUpdate will enqueue all of the existing SystemRollouts already
@@ -188,174 +191,6 @@ func (c *Controller) Run(workers int, stopCh <-chan struct{}) {
 	<-stopCh
 }
 
-func (c *Controller) handleDeployAdd(obj interface{}) {
-	deploy := obj.(*latticev1.Deploy)
-	glog.V(4).Infof("Adding Deploy %v/%v", deploy.Namespace, deploy.Name)
-	c.enqueueDeploy(deploy)
-}
-
-func (c *Controller) handleDeployUpdate(old, cur interface{}) {
-	oldDeploy := old.(*latticev1.Deploy)
-	curDeploy := cur.(*latticev1.Deploy)
-	if oldDeploy.ResourceVersion == curDeploy.ResourceVersion {
-		// Periodic resync will send update events for all known Deploy.
-		// Two different versions of the same job will always have different RVs.
-		glog.V(5).Info("Deploy ResourceVersions are the same")
-		return
-	}
-
-	glog.V(4).Infof("Updating Deploy %s/%s", curDeploy.Namespace, curDeploy.Name)
-	c.enqueueDeploy(curDeploy)
-}
-
-func (c *Controller) handleTeardownAdd(obj interface{}) {
-	teardown := obj.(*latticev1.Teardown)
-	glog.V(4).Infof("Adding Teardown %s", teardown.Name)
-	c.enqueueTeardown(teardown)
-}
-
-func (c *Controller) handleTeardownUpdate(old, cur interface{}) {
-	oldTeardown := old.(*latticev1.Teardown)
-	curTeardown := cur.(*latticev1.Teardown)
-	if oldTeardown.ResourceVersion == curTeardown.ResourceVersion {
-		// Periodic resync will send update events for all known Deploy.
-		// Two different versions of the same job will always have different RVs.
-		glog.V(5).Info("Deploy ResourceVersions are the same")
-		return
-	}
-
-	glog.V(4).Infof("Updating Teardown %s", oldTeardown.Name)
-	c.enqueueTeardown(curTeardown)
-}
-
-func (c *Controller) handleSystemAdd(obj interface{}) {
-	<-c.owningLifecycleActionsSynced
-
-	system := obj.(*latticev1.System)
-	glog.V(4).Infof("System %s added", system.Name)
-
-	systemNamespace := kubeutil.SystemNamespace(c.namespacePrefix, v1.SystemID(system.Name))
-	action, exists := c.getOwningAction(systemNamespace)
-	if !exists {
-		// No ongoing action
-		glog.V(4).Infof("System %v/%v has no owning actions, skipping", system.Namespace, system.Name)
-		return
-	}
-
-	if action == nil {
-		// FIXME: send warn event
-		return
-	}
-
-	if action.rollout != nil {
-		c.enqueueDeploy(action.rollout)
-		return
-	}
-
-	if action.teardown != nil {
-		c.enqueueTeardown(action.teardown)
-		return
-	}
-
-	// FIXME: Send warn event
-}
-
-func (c *Controller) handleSystemUpdate(old, cur interface{}) {
-	<-c.owningLifecycleActionsSynced
-
-	glog.V(4).Info("Got System update")
-	oldSystem := old.(*latticev1.System)
-	curSystem := cur.(*latticev1.System)
-	if oldSystem.ResourceVersion == curSystem.ResourceVersion {
-		// Periodic resync will send update events for all known ServiceBuilds.
-		// Two different versions of the same job will always have different RVs.
-		glog.V(5).Info("System ResourceVersions are the same")
-		return
-	}
-
-	systemNamespace := kubeutil.SystemNamespace(c.namespacePrefix, v1.SystemID(curSystem.Name))
-	action, exists := c.getOwningAction(systemNamespace)
-	if !exists {
-		glog.V(4).Infof("System %v/%v has no owning actions, skipping", curSystem.Namespace, curSystem.Name)
-		// No ongoing action
-		return
-	}
-
-	if action == nil {
-		// FIXME: send warn event
-		return
-	}
-
-	if action.rollout != nil {
-		c.enqueueDeploy(action.rollout)
-		return
-	}
-
-	if action.teardown != nil {
-		c.enqueueTeardown(action.teardown)
-		return
-	}
-
-	// FIXME: Send warn event
-}
-
-func (c *Controller) handleBuildAdd(obj interface{}) {
-	<-c.owningLifecycleActionsSynced
-
-	build := obj.(*latticev1.Build)
-	glog.V(4).Infof("Build %s added", build.Name)
-
-	action, exists := c.getOwningAction(build.Namespace)
-	if !exists {
-		// No ongoing action
-		return
-	}
-
-	if action == nil {
-		// FIXME: send warn event
-		return
-	}
-
-	if action.rollout != nil {
-		c.enqueueDeploy(action.rollout)
-		return
-	}
-
-	// only need to update rollouts on builds finishing
-}
-
-func (c *Controller) handleBuildUpdate(old, cur interface{}) {
-	<-c.owningLifecycleActionsSynced
-
-	glog.V(4).Infof("Got Build update")
-	oldBuild := old.(*latticev1.Build)
-	curBuild := cur.(*latticev1.Build)
-	if oldBuild.ResourceVersion == curBuild.ResourceVersion {
-		// Periodic resync will send update events for all known ServiceBuilds.
-		// Two different versions of the same job will always have different RVs.
-		glog.V(5).Info("Build ResourceVersions are the same")
-		return
-	}
-
-	action, exists := c.getOwningAction(curBuild.Namespace)
-	if !exists {
-		// No ongoing action
-		return
-	}
-
-	if action == nil {
-		// FIXME: send warn event
-		return
-	}
-
-	if action.rollout != nil {
-		c.enqueueDeploy(action.rollout)
-		return
-	}
-
-	// only need to update rollouts on builds finishing
-}
-
 func (c *Controller) enqueueDeploy(deploy *latticev1.Deploy) {
 	key, err := cache.DeletionHandlingMetaNamespaceKeyFunc(deploy)
 	if err != nil {
@@ -363,7 +198,7 @@ func (c *Controller) enqueueDeploy(deploy *latticev1.Deploy) {
 		return
 	}
 
-	c.rolloutQueue.Add(key)
+	c.deployQueue.Add(key)
 }
 
 func (c *Controller) enqueueTeardown(teardown *latticev1.Teardown) {
@@ -380,28 +215,33 @@ func (c *Controller) syncOwningActions() error {
 	c.owningLifecycleActionsLock.Lock()
 	defer c.owningLifecycleActionsLock.Unlock()
 
-	rollouts, err := c.deployLister.List(labels.Everything())
+	deploys, err := c.deployLister.List(labels.Everything())
 	if err != nil {
 		return err
 	}
 
-	for _, rollout := range rollouts {
-		if rollout.Status.State != latticev1.DeployStateInProgress {
+	for _, deploy := range deploys {
+		if deploy.Status.State != latticev1.DeployStateInProgress {
 			continue
 		}
 
-		namespace, err := c.kubeClient.CoreV1().Namespaces().Get(rollout.Namespace, metav1.GetOptions{})
+		namespace, err := c.kubeClient.CoreV1().Namespaces().Get(deploy.Namespace, metav1.GetOptions{})
 		if err != nil {
 			return err
 		}
 
 		_, exists := c.owningLifecycleActions[namespace.UID]
 		if exists {
-			return fmt.Errorf("System %v has multiple owning actions", rollout.Namespace)
+			systemID := v1.SystemID(fmt.Sprintf("with namespace %v", deploy.Namespace))
+			if id, err := kubernetes.SystemID(c.namespacePrefix, deploy.Namespace); err != nil {
+				systemID = id
+			}
+
+			return fmt.Errorf("system %v has multiple owning actions", systemID)
 		}
 
 		c.owningLifecycleActions[namespace.UID] = &lifecycleAction{
-			rollout: rollout,
+			deploy: deploy,
 		}
 	}
 
@@ -422,7 +262,12 @@ func (c *Controller) syncOwningActions() error {
 
 		_, exists := c.owningLifecycleActions[namespace.UID]
 		if exists {
-			return fmt.Errorf("System %v has multiple owning actions", teardown.Namespace)
+			systemID := v1.SystemID(fmt.Sprintf("with namespace %v", teardown.Namespace))
+			if id, err := kubernetes.SystemID(c.namespacePrefix, teardown.Namespace); err != nil {
+				systemID = id
+			}
+
+			return fmt.Errorf("system %v has multiple owning actions", systemID)
 		}
 
 		c.owningLifecycleActions[namespace.UID] = &lifecycleAction{
@@ -438,7 +283,7 @@ func (c *Controller) runRolloutWorker() {
 	// hot loop until we're told to stop.  processNextWorkItem will
 	// automatically wait until there's work available, so we don't worry
 	// about secondary waits
-	for c.processNextWorkItem(c.rolloutQueue, c.syncDeploy) {
+	for c.processNextWorkItem(c.deployQueue, c.syncDeploy) {
 	}
 }
 
@@ -493,9 +338,9 @@ func (c *Controller) processNextWorkItem(queue workqueue.RateLimitingInterface, 
 func (c *Controller) syncDeploy(key string) error {
 	glog.Flush()
 	startTime := time.Now()
-	glog.V(4).Infof("Started syncing Deploy %q (%v)", key, startTime)
+	glog.V(4).Infof("started syncing deploy %q (%v)", key, startTime)
 	defer func() {
-		glog.V(4).Infof("Finished syncing Deploy %q (%v)", key, time.Now().Sub(startTime))
+		glog.V(4).Infof("finished syncing deploy %q (%v)", key, time.Now().Sub(startTime))
 	}()
 
 	namespace, name, err := cache.SplitMetaNamespaceKey(key)
@@ -503,20 +348,20 @@ func (c *Controller) syncDeploy(key string) error {
 		return err
 	}
 
-	deploy, err := c.deployLister.Deploies(namespace).Get(name)
+	deploy, err := c.deployLister.Deploys(namespace).Get(name)
 	if errors.IsNotFound(err) {
-		glog.V(2).Infof("Deploy %v has been deleted", key)
+		glog.V(2).Infof("deploy %v has been deleted", key)
 		return nil
 	}
 	if err != nil {
 		return err
 	}
 
-	glog.V(5).Infof("Deploy %v state: %v", key, deploy.Status.State)
+	glog.V(5).Infof("%v state: %v", deploy.Description(c.namespacePrefix), deploy.Status.State)
 
 	switch deploy.Status.State {
 	case latticev1.DeployStateSucceeded, latticev1.DeployStateFailed:
-		glog.V(4).Infof("Deploy %s already completed", key)
+		glog.V(4).Infof("%v already completed", deploy.Description(c.namespacePrefix))
 		return nil
 
 	case latticev1.DeployStateInProgress:
@@ -529,7 +374,7 @@ func (c *Controller) syncDeploy(key string) error {
 		return c.syncPendingDeploy(deploy)
 
 	default:
-		return fmt.Errorf("Deploy %v has unexpected state: %v", key, deploy.Status.State)
+		return fmt.Errorf("%v has unexpected state: %v", deploy.Description(c.namespacePrefix), deploy.Status.State)
 	}
 }
 
@@ -538,9 +383,9 @@ func (c *Controller) syncDeploy(key string) error {
 func (c *Controller) syncTeardown(key string) error {
 	glog.Flush()
 	startTime := time.Now()
-	glog.V(4).Infof("Started syncing SystemTeardown %q (%v)", key, startTime)
+	glog.V(4).Infof("started syncing teardown %q (%v)", key, startTime)
 	defer func() {
-		glog.V(4).Infof("Finished syncing SystemTeardown %q (%v)", key, time.Now().Sub(startTime))
+		glog.V(4).Infof("finished syncing teardown %q (%v)", key, time.Now().Sub(startTime))
 	}()
 
 	namespace, name, err := cache.SplitMetaNamespaceKey(key)
@@ -550,7 +395,7 @@ func (c *Controller) syncTeardown(key string) error {
 
 	teardown, err := c.teardownLister.Teardowns(namespace).Get(name)
 	if errors.IsNotFound(err) {
-		glog.V(2).Infof("SystemTeardown %v has been deleted", key)
+		glog.V(2).Infof("teardown %v has been deleted", key)
 		return nil
 	}
 	if err != nil {
@@ -559,7 +404,7 @@ func (c *Controller) syncTeardown(key string) error {
 
 	switch teardown.Status.State {
 	case latticev1.TeardownStateSucceeded, latticev1.TeardownStateFailed:
-		glog.V(4).Infof("SystemTeardown %s already completed", key)
+		glog.V(4).Infof("%v already completed", teardown.Description(c.namespacePrefix))
 		return nil
 
 	case latticev1.TeardownStateInProgress:
@@ -569,6 +414,6 @@ func (c *Controller) syncTeardown(key string) error {
 		return c.syncPendingTeardown(teardown)
 
 	default:
-		return fmt.Errorf("SystemTeardown %v has unexpected state: %v", key, teardown.Status.State)
+		return fmt.Errorf("%v has unexpected state: %v", teardown.Description(c.namespacePrefix), teardown.Status.State)
 	}
 }

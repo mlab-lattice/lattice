@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"reflect"
 
+	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	kubeutil "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/kubernetes"
 	"github.com/mlab-lattice/lattice/pkg/definition"
@@ -11,6 +12,48 @@ import (
 
 	"k8s.io/apimachinery/pkg/api/errors"
 )
+
+func (c *Controller) updateSystemLabels(
+	system *latticev1.System,
+	version *v1.SystemVersion,
+	deployID *v1.DeployID,
+	buildID *v1.BuildID,
+) (*latticev1.System, error) {
+	labels := make(map[string]string)
+	for k, v := range system.Labels {
+		labels[k] = v
+	}
+
+	delete(labels, latticev1.SystemDefinitionVersionLabelKey)
+	if version != nil {
+		labels[latticev1.SystemDefinitionVersionLabelKey] = string(*version)
+	}
+
+	delete(labels, latticev1.DeployIDLabelKey)
+	if deployID != nil {
+		labels[latticev1.DeployIDLabelKey] = string(*deployID)
+	}
+
+	delete(labels, latticev1.BuildIDLabelKey)
+	if buildID != nil {
+		labels[latticev1.BuildIDLabelKey] = string(*buildID)
+	}
+
+	if reflect.DeepEqual(labels, system.Labels) {
+		return system, nil
+	}
+
+	// Copy so the original object isn't mutated
+	system = system.DeepCopy()
+	system.Labels = labels
+
+	result, err := c.latticeClient.LatticeV1().Systems(system.Namespace).Update(system)
+	if err != nil {
+		return nil, fmt.Errorf("error updating labels for %v: %v", system.Description(), err)
+	}
+
+	return result, nil
+}
 
 func (c *Controller) updateSystem(
 	system *latticev1.System,
@@ -31,16 +74,12 @@ func (c *Controller) updateSystemSpec(system *latticev1.System, spec latticev1.S
 	system = system.DeepCopy()
 	system.Spec = spec
 
-	// FIXME: remove this when ObservedGeneration is supported for CRD
-	system.Status.UpdateProcessed = false
+	result, err := c.latticeClient.LatticeV1().Systems(system.Namespace).Update(system)
+	if err != nil {
+		return nil, fmt.Errorf("error updating %v spec: %v", system.Description(), err)
+	}
 
-	return c.latticeClient.LatticeV1().Systems(system.Namespace).Update(system)
-}
-
-func isSystemStatusCurrent(system *latticev1.System) bool {
-	return system.Status.UpdateProcessed
-	// FIXME: go back to this when ObservedGeneration is supported for CRD
-	//return system.Status.ObservedGeneration == system.Generation
+	return result, nil
 }
 
 func (c *Controller) getSystem(namespace string) (*latticev1.System, error) {
@@ -50,20 +89,12 @@ func (c *Controller) getSystem(namespace string) (*latticev1.System, error) {
 	}
 
 	internalNamespace := kubeutil.InternalNamespace(c.namespacePrefix)
-	return c.systemLister.Systems(internalNamespace).Get(string(systemID))
-}
-
-func (c *Controller) systemSpec(rollout *latticev1.Deploy, build *latticev1.Build) (latticev1.SystemSpec, error) {
-	services, err := c.systemServices(rollout, build)
+	result, err := c.systemLister.Systems(internalNamespace).Get(string(systemID))
 	if err != nil {
-		return latticev1.SystemSpec{}, err
+		return nil, fmt.Errorf("error getting system for namespace %v: %v", namespace, err)
 	}
 
-	spec := latticev1.SystemSpec{
-		Services: services,
-	}
-
-	return spec, nil
+	return result, nil
 }
 
 func (c *Controller) systemServices(
@@ -72,21 +103,24 @@ func (c *Controller) systemServices(
 ) (map[tree.NodePath]latticev1.SystemSpecServiceInfo, error) {
 	if build.Status.State != latticev1.BuildStateSucceeded {
 		err := fmt.Errorf(
-			"cannot get system services for build %v/%v, must be in state %v but is in %v",
-			build.Namespace,
-			build.Name,
+			"cannot get services for %v, must be in state %v but is in %v",
+			build.Description(c.namespacePrefix),
 			latticev1.BuildStateSucceeded,
 			build.Status.State,
 		)
 		return nil, err
 	}
 
-	services := map[tree.NodePath]latticev1.SystemSpecServiceInfo{}
+	services := make(map[tree.NodePath]latticev1.SystemSpecServiceInfo)
 	for path, service := range build.Spec.DefinitionRoot.Services() {
 		serviceBuildName, ok := build.Status.ServiceBuilds[path]
 		if !ok {
 			// FIXME: send warn event
-			err := fmt.Errorf("Build %v/%v does not have expected Service %v", build.Namespace, build.Name, path)
+			err := fmt.Errorf(
+				"%v does not have expected serviced %v",
+				build.Description(c.namespacePrefix),
+				path.String(),
+			)
 			return nil, err
 		}
 
@@ -94,9 +128,8 @@ func (c *Controller) systemServices(
 		if err != nil {
 			if errors.IsNotFound(err) {
 				err = fmt.Errorf(
-					"Build %v/%v has ServiceBuild %v for Service %v but it does not exist",
-					build.Namespace,
-					build.Name,
+					"%v has service build %v for service %v but it does not exist",
+					build.Description(c.namespacePrefix),
 					serviceBuildName,
 					path,
 				)
@@ -105,15 +138,14 @@ func (c *Controller) systemServices(
 			return nil, err
 		}
 
-		// Create latticev1.ComponentBuildArtifacts for each Component in the Service
-		componentBuildArtifacts := map[string]latticev1.ComponentBuildArtifacts{}
+		// Create ComponentBuildArtifacts for each Component in the Service
+		componentBuildArtifacts := make(map[string]latticev1.ComponentBuildArtifacts)
 		for component := range serviceBuild.Spec.Components {
 			componentBuildName, ok := serviceBuild.Status.ComponentBuilds[component]
 			if !ok {
 				err := fmt.Errorf(
-					"ServiceBuild %v/%v component %v does not have a ComponentBuild",
-					serviceBuild.Namespace,
-					serviceBuild.Name,
+					"%v component %v does not have a component build",
+					serviceBuild.Description(c.namespacePrefix),
 					component,
 				)
 				return nil, err
@@ -122,9 +154,8 @@ func (c *Controller) systemServices(
 			componentBuildStatus, ok := serviceBuild.Status.ComponentBuildStatuses[componentBuildName]
 			if !ok {
 				err := fmt.Errorf(
-					"ServiceBuild %v/%v ComponentBuild %v does not have a ComponentBuildStatus",
-					serviceBuild.Namespace,
-					serviceBuild.Name,
+					"%v component build %v does not have a status",
+					serviceBuild.Description(c.namespacePrefix),
 					componentBuildName,
 				)
 				return nil, err
@@ -132,7 +163,11 @@ func (c *Controller) systemServices(
 
 			if componentBuildStatus.Artifacts == nil {
 				// FIXME: send warn event
-				err := fmt.Errorf("ComponentBuild %v/%v Status does not have Artifacts", build.Namespace, componentBuildName)
+				err := fmt.Errorf(
+					"%v component build %v status does not have artifacts",
+					build.Description(c.namespacePrefix),
+					componentBuildName,
+				)
 				return nil, err
 			}
 

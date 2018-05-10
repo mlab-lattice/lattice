@@ -62,7 +62,7 @@ func (f *StringFlag) AddToFlagSet(flags *pflag.FlagSet) {
 type StringSliceFlag struct {
 	Name     string
 	Required bool
-	Default  string
+	Default  []string
 	Short    string
 	Usage    string
 	Target   *[]string
@@ -105,7 +105,7 @@ func (f *StringSliceFlag) Parse() func() error {
 }
 
 func (f *StringSliceFlag) AddToFlagSet(flags *pflag.FlagSet) {
-	flags.StringSliceVarP(f.Target, f.Name, f.Short, nil, f.Usage)
+	flags.StringSliceVarP(f.Target, f.Name, f.Short, f.Default, f.Usage)
 
 	if f.Required {
 		markFlagRequired(f.Name, flags)

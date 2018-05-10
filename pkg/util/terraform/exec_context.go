@@ -15,6 +15,7 @@ const (
 	destroyCmd = "destroy"
 	initCmd    = "init"
 	outputCmd  = "output"
+	planCmd    = "plan"
 
 	logsDir = "logs"
 )
@@ -89,4 +90,14 @@ func (tec ExecContext) Output(outputVar string) (string, error) {
 	}
 
 	return strings.TrimSpace(stdout), nil
+}
+
+func (tec *ExecContext) Plan(vars map[string]string, destroy bool) (*executil.Result, string, error) {
+	args := []string{planCmd, "-detailed-exitcode", "-input=false", "-no-color", fmt.Sprintf("-destroy=%v", destroy)}
+
+	for k, v := range vars {
+		args = append(args, fmt.Sprintf("-var='%s=%s'", k, v))
+	}
+
+	return tec.ExecWithLogFile("terraform-"+planCmd, args...)
 }

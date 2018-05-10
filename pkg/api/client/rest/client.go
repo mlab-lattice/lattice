@@ -16,7 +16,8 @@ type Client struct {
 
 func NewClient(apiServerURL string) *Client {
 	return &Client{
-		restClient:   rest.NewClient(),
+		// FIXME: remove this or make it optional when we can
+		restClient:   rest.NewInsecureClient(),
 		apiServerURL: apiServerURL,
 	}
 }

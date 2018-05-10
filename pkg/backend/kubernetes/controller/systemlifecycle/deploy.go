@@ -1,6 +1,7 @@
 package systemlifecycle
 
 import (
+	"fmt"
 	"reflect"
 
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
@@ -12,9 +13,8 @@ func (c *Controller) updateDeployStatus(
 	message string,
 ) (*latticev1.Deploy, error) {
 	status := latticev1.DeployStatus{
-		State:              state,
-		ObservedGeneration: deploy.Generation,
-		Message:            message,
+		State:   state,
+		Message: message,
 	}
 
 	if reflect.DeepEqual(deploy.Status, status) {
@@ -25,9 +25,10 @@ func (c *Controller) updateDeployStatus(
 	deploy = deploy.DeepCopy()
 	deploy.Status = status
 
-	return c.latticeClient.LatticeV1().Deploies(deploy.Namespace).Update(deploy)
+	result, err := c.latticeClient.LatticeV1().Deploys(deploy.Namespace).UpdateStatus(deploy)
+	if err != nil {
+		return nil, fmt.Errorf("error updating %v status: %v", deploy.Description(c.namespacePrefix), err)
+	}
 
-	// TODO: switch to this when https://github.com/kubernetes/kubernetes/issues/38113 is merged
-	// TODO: also watch https://github.com/kubernetes/kubernetes/pull/55168
-	//return c.latticeClient.LatticeV1().SystemRollouts(deploy.Namespace).UpdateStatus(deploy)
+	return result, nil
 }

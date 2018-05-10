@@ -15,7 +15,7 @@ func (c *Controller) syncInProgressDeploy(deploy *latticev1.Deploy) error {
 	// Check to see if the system controller has processed updates to its Spec.
 	// If it hasn't, the system.Status.State is not up to date. Return no error
 	// and wait until the System has been updated to resync.
-	if !isSystemStatusCurrent(system) {
+	if !system.UpdateProcessed() {
 		return nil
 	}
 
@@ -32,7 +32,7 @@ func (c *Controller) syncInProgressDeploy(deploy *latticev1.Deploy) error {
 		state = latticev1.DeployStateFailed
 
 	default:
-		return fmt.Errorf("System %v/%v in unexpected state %v", system.Namespace, system.Name, system.Status.State)
+		return fmt.Errorf("%v in unexpected state %v", system.Description(), system.Status.State)
 	}
 
 	deploy, err = c.updateDeployStatus(deploy, state, "")

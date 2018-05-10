@@ -14,7 +14,7 @@ import (
 
 func (kb *KubernetesBackend) ListSystemSecrets(systemID v1.SystemID) ([]v1.Secret, error) {
 	// ensure the system exists
-	if err := kb.ensureSystemCreated(systemID); err != nil {
+	if _, err := kb.ensureSystemCreated(systemID); err != nil {
 		return nil, err
 	}
 
@@ -54,7 +54,7 @@ func (kb *KubernetesBackend) ListSystemSecrets(systemID v1.SystemID) ([]v1.Secre
 
 func (kb *KubernetesBackend) GetSystemSecret(systemID v1.SystemID, path tree.NodePath, name string) (*v1.Secret, error) {
 	// ensure the system exists
-	if err := kb.ensureSystemCreated(systemID); err != nil {
+	if _, err := kb.ensureSystemCreated(systemID); err != nil {
 		return nil, err
 	}
 
@@ -83,7 +83,7 @@ func (kb *KubernetesBackend) GetSystemSecret(systemID v1.SystemID, path tree.Nod
 
 func (kb *KubernetesBackend) SetSystemSecret(systemID v1.SystemID, path tree.NodePath, name, value string) error {
 	// ensure the system exists
-	if err := kb.ensureSystemCreated(systemID); err != nil {
+	if _, err := kb.ensureSystemCreated(systemID); err != nil {
 		return err
 	}
 
@@ -134,7 +134,7 @@ func (kb *KubernetesBackend) createSecret(systemID v1.SystemID, path tree.NodePa
 
 func (kb *KubernetesBackend) UnsetSystemSecret(systemID v1.SystemID, path tree.NodePath, name string) error {
 	// ensure the system exists
-	if err := kb.ensureSystemCreated(systemID); err != nil {
+	if _, err := kb.ensureSystemCreated(systemID); err != nil {
 		return err
 	}
 
