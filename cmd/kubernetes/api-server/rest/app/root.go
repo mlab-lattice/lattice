@@ -17,12 +17,15 @@ var (
 	namespacePrefix  string
 	port             int
 	workingDirectory string
+	// add api auth key here
+	apiAuthKey string
 )
 
 // RootCmd represents the base command when called without any subcommands
 var RootCmd = &cobra.Command{
 	Use: "api-server",
 	Run: func(cmd *cobra.Command, args []string) {
+		fmt.Printf("ARGS FOR API SERVER: %s\n", args)
 		kubernetesBackend, err := backend.NewKubernetesBackend(
 			namespacePrefix,
 			kubeconfig,
@@ -31,7 +34,7 @@ var RootCmd = &cobra.Command{
 			panic(err)
 		}
 
-		rest.RunNewRestServer(kubernetesBackend, int32(port), workingDirectory)
+		rest.RunNewRestServer(kubernetesBackend, int32(port), workingDirectory, apiAuthKey)
 	},
 }
 
@@ -56,6 +59,8 @@ func init() {
 	RootCmd.Flags().StringVar(&namespacePrefix, "namespace-prefix", "", "namespace prefix of the lattice")
 	RootCmd.Flags().StringVar(&workingDirectory, "workingDirectory", "/tmp/lattice-manager-api", "working directory to use")
 	RootCmd.Flags().IntVar(&port, "port", 8080, "port to bind to")
+	RootCmd.Flags().StringVar(&apiAuthKey, "api-auth-key", "", "api auth key")
+	// add flag here
 }
 
 func initCmd() {
