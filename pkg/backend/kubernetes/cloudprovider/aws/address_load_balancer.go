@@ -223,7 +223,7 @@ func (cp *DefaultAWSCloudProvider) serviceAddressLoadBalancerTerraformModule(
 	}
 
 	module := &kubetf.ApplicationLoadBalancer{
-		Source: cp.terraformModulePath + kubetf.ModulePathNodePool,
+		Source: cp.terraformModulePath + kubetf.ModulePathApplicationLoadBalancer,
 
 		Region: cp.region,
 

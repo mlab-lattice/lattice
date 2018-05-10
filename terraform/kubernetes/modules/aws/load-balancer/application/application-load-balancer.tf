@@ -88,7 +88,7 @@ resource "aws_alb_listener" "load_balancer" {
 resource "aws_autoscaling_attachment" "load_balancer" {
   count = "${length(var.ports) * length(var.autoscaling_group_security_group_ids)}"
 
-  autoscaling_group_name = "${element(var.autoscaling_group_security_group_ids, count.index % length(var.autoscaling_group_security_group_ids))}"
+  autoscaling_group_name = "${element(keys(var.autoscaling_group_security_group_ids), count.index % length(var.autoscaling_group_security_group_ids))}"
   alb_target_group_arn   = "${element(aws_alb_target_group.load_balancer.*.arn, count.index % length(var.ports))}"
 }
 
