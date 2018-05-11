@@ -27,7 +27,12 @@ import (
 type StatusCommand struct {
 }
 
-type PrintSystemState func(io.Writer, *spinner.Spinner, *v1.System)
+type FullSystemTree struct {
+	System   *v1.System
+	Services []v1.Service
+}
+
+type PrintSystemState func(io.Writer, *spinner.Spinner, *v1.System, []v1.Service)
 
 func (c *StatusCommand) Base() (*latticectl.BaseCommand, error) {
 	output := &latticectl.OutputFlag{
@@ -71,19 +76,29 @@ func (c *StatusCommand) Base() (*latticectl.BaseCommand, error) {
 	return cmd.Base()
 }
 
-func GetSystem(client v1client.SystemClient, systemID v1.SystemID, format printer.Format, writer io.Writer) error {
-	system, err := client.Get(systemID)
+func GetSystem(systemClient v1client.SystemClient, systemID v1.SystemID, format printer.Format, writer io.Writer) error {
+	serviceClient := systemClient.Services(systemID)
+
+	// TODO: Make requests in parallel
+	system, err := systemClient.Get(systemID)
 	if err != nil {
 		return err
 	}
 
-	p := SystemPrinter(system, format)
+	serviceList, err := serviceClient.List()
+	if err != nil {
+		return err
+	}
+
+	p := SystemPrinter(system, serviceList, format)
 	p.Print(writer)
 	return nil
 }
 
-func WatchSystem(client v1client.SystemClient, systemID v1.SystemID, format printer.Format, writer io.Writer, PrintSystemStateDuringStatus PrintSystemState, exitable bool) error {
-	systems := make(chan *v1.System)
+func WatchSystem(systemClient v1client.SystemClient, systemID v1.SystemID, format printer.Format, writer io.Writer, PrintSystemStateDuringStatus PrintSystemState, exitable bool) error {
+	fullSystemTrees := make(chan FullSystemTree)
+
+	serviceClient := systemClient.Services(systemID)
 
 	lastHeight := 0
 	var returnError error
@@ -95,25 +110,32 @@ func WatchSystem(client v1client.SystemClient, systemID v1.SystemID, format prin
 	go wait.PollImmediateInfinite(
 		5*time.Second,
 		func() (bool, error) {
-			system, err := client.Get(systemID)
+			// TODO: Make requests in parallel
+			system, err := systemClient.Get(systemID)
 			if err != nil {
 				return false, err
 			}
 
-			systems <- system
+			serviceList, err := serviceClient.List()
+			if err != nil {
+				return false, err
+			}
+
+			fullSystemTrees <- FullSystemTree{system, serviceList}
+
 			return false, nil
 		},
 	)
 
-	for system := range systems {
-		p := SystemPrinter(system, format)
+	for fullSystemTree := range fullSystemTrees {
+		p := SystemPrinter(fullSystemTree.System, fullSystemTree.Services, format)
 		lastHeight = p.Overwrite(b, lastHeight)
 
 		if format == printer.FormatDefault || format == printer.FormatTable {
-			PrintSystemStateDuringStatus(writer, s, system)
+			PrintSystemStateDuringStatus(writer, s, fullSystemTree.System, fullSystemTree.Services)
 		}
 
-		exit, returnError = systemInExitableState(system)
+		exit, returnError = systemInExitableState(fullSystemTree.System)
 
 		if exitable && exit {
 			return returnError
@@ -134,7 +156,7 @@ func systemInExitableState(system *v1.System) (bool, error) {
 	}
 }
 
-func PrintSystemStateDuringStatus(writer io.Writer, s *spinner.Spinner, system *v1.System) {
+func PrintSystemStateDuringStatus(writer io.Writer, s *spinner.Spinner, system *v1.System, services []v1.Service) {
 	switch system.State {
 	case v1.SystemStateScaling:
 		s.Start()
@@ -154,7 +176,7 @@ func PrintSystemStateDuringStatus(writer io.Writer, s *spinner.Spinner, system *
 
 		var serviceErrors [][]string
 
-		for serviceName, service := range system.Services {
+		for _, service := range services {
 			if service.State == v1.ServiceStateFailed {
 				message := "unknown"
 				if service.FailureInfo != nil {
@@ -162,7 +184,7 @@ func PrintSystemStateDuringStatus(writer io.Writer, s *spinner.Spinner, system *
 				}
 
 				serviceErrors = append(serviceErrors, []string{
-					fmt.Sprintf("%s", serviceName),
+					fmt.Sprintf("%s", service.Path),
 					message,
 				})
 			}
@@ -182,7 +204,7 @@ func printSystemFailure(writer io.Writer, systemID v1.SystemID, serviceErrors []
 }
 
 // Currently just prints systems. In the future, could print more details (e.g. jobs, node pools)
-func SystemPrinter(system *v1.System, format printer.Format) printer.Interface {
+func SystemPrinter(system *v1.System, services []v1.Service, format printer.Format) printer.Interface {
 	var p printer.Interface
 	switch format {
 	case printer.FormatDefault, printer.FormatTable:
@@ -222,7 +244,7 @@ func SystemPrinter(system *v1.System, format printer.Format) printer.Interface {
 		}
 
 		var rows [][]string
-		for serviceName, service := range system.Services {
+		for _, service := range services {
 			var message string
 			if service.Message != nil {
 				message = *service.Message
@@ -247,7 +269,7 @@ func SystemPrinter(system *v1.System, format printer.Format) printer.Interface {
 			}
 
 			rows = append(rows, []string{
-				string(serviceName),
+				string(service.Path),
 				stateColor(string(service.State)),
 				fmt.Sprintf("%d", service.AvailableInstances),
 				fmt.Sprintf("%d", service.UpdatedInstances),
