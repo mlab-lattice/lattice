@@ -4,6 +4,7 @@ go_library(
     name = "go_default_library",
     srcs = [
         "deleting_system.go",
+        "informer_event_handlers.go",
         "live_system.go",
         "pending_system.go",
         "service.go",
@@ -14,7 +15,7 @@ go_library(
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/api/v1:go_default_library",
-        "//pkg/backend/kubernetes/constants:go_default_library",
+        "//pkg/backend/kubernetes/cloudprovider:go_default_library",
         "//pkg/backend/kubernetes/customresource/apis/lattice/v1:go_default_library",
         "//pkg/backend/kubernetes/customresource/generated/clientset/versioned:go_default_library",
         "//pkg/backend/kubernetes/customresource/generated/informers/externalversions/lattice/v1:go_default_library",

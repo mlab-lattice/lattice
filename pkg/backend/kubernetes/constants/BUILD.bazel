@@ -4,10 +4,8 @@ go_library(
     name = "go_default_library",
     srcs = [
         "affinity.go",
-        "annotation.go",
         "config.go",
         "control_plane.go",
-        "finalizer.go",
         "label.go",
         "namespace.go",
         "node_selector.go",

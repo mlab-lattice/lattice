@@ -2,6 +2,7 @@ package v1
 
 import (
 	"encoding/json"
+	"fmt"
 
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	kubeutil "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/kubernetes"
@@ -13,10 +14,16 @@ import (
 )
 
 const (
-	ResourceSingularSystem  = "system"
-	ResourcePluralSystem    = "systems"
-	ResourceShortNameSystem = "lsys"
-	ResourceScopeSystem     = apiextensionsv1beta1.NamespaceScoped
+	ResourceSingularSystem = "system"
+	ResourcePluralSystem   = "systems"
+	ResourceScopeSystem    = apiextensionsv1beta1.NamespaceScoped
+)
+
+var (
+	SystemKind     = SchemeGroupVersion.WithKind("System")
+	SystemListKind = SchemeGroupVersion.WithKind("SystemList")
+
+	SystemDefinitionVersionLabelKey = fmt.Sprintf("system.%v/definition-version", GroupName)
 )
 
 // +genclient
@@ -35,6 +42,18 @@ func (s *System) V1ID() v1.SystemID {
 
 func (s *System) ResourceNamespace(namespacePrefix string) string {
 	return kubeutil.SystemNamespace(namespacePrefix, s.V1ID())
+}
+
+func (s *System) Stable() bool {
+	return s.UpdateProcessed() && s.Status.State == SystemStateStable
+}
+
+func (s *System) UpdateProcessed() bool {
+	return s.Status.ObservedGeneration >= s.Generation
+}
+
+func (s *System) Description() string {
+	return fmt.Sprintf("system %v", s.V1ID())
 }
 
 // N.B.: important: if you update the SystemSpec or SystemSpecServiceInfo you must also update
@@ -78,18 +97,17 @@ func (i *SystemSpecServiceInfo) UnmarshalJSON(data []byte) error {
 
 // +k8s:deepcopy-gen=false
 type SystemStatus struct {
-	State              SystemState `json:"state"`
-	ObservedGeneration int64       `json:"observedGeneration"`
+	ObservedGeneration int64 `json:"observedGeneration"`
 
-	// FIXME: remove this when ObservedGeneration is supported for CRD
-	UpdateProcessed bool `json:"updateProcessed"`
+	State SystemState `json:"state"`
 
 	// Maps a Service path to its Service.Status
 	Services map[tree.NodePath]SystemStatusService `json:"services"`
 }
 
 type SystemStatusService struct {
-	Name string `json:"name"`
+	Name       string `json:"name"`
+	Generation int64  `json:"generation"`
 	ServiceStatus
 }
 
@@ -97,7 +115,7 @@ type SystemState string
 
 const (
 	// lifecycle states
-	SystemStatePending SystemState = "pending"
+	SystemStatePending SystemState = ""
 	SystemStateFailed  SystemState = "failed"
 
 	// transient states once the system has been created

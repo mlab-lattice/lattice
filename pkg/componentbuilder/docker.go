@@ -163,7 +163,7 @@ func (b *Builder) pullDockerImage(dockerImageFQN string) error {
 	if b.StatusUpdater != nil {
 		// For now ignore status update errors, don't need to fail a build because the status could
 		// not be updated.
-		b.StatusUpdater.UpdateProgress(b.BuildID, b.SystemID, v1.ComponentBuildPhasePushingDockerImage)
+		b.StatusUpdater.UpdateProgress(b.BuildID, b.SystemID, v1.ComponentBuildPhasePullingDockerImage)
 	}
 
 	// TODO: add support for registry creds

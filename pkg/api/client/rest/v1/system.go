@@ -113,7 +113,7 @@ func (c *SystemClient) Versions(id v1.SystemID) ([]v1.SystemVersion, error) {
 
 	if statusCode == http.StatusOK {
 		var versions []v1.SystemVersion
-		err = rest.UnmarshalBodyJSON(body, versions)
+		err = rest.UnmarshalBodyJSON(body, &versions)
 		return versions, err
 	}
 

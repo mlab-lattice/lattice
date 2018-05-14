@@ -1,15 +1,14 @@
 package servicebuild
 
 import (
-	"crypto/sha256"
+	"crypto/sha1"
 	"encoding/hex"
 	"encoding/json"
-	"fmt"
-	"reflect"
 	"sort"
 
-	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/constants"
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/golang/glog"
 )
@@ -23,7 +22,7 @@ func (c *Controller) syncFailedServiceBuild(build *latticev1.ServiceBuild, state
 
 	sort.Strings(failedComponents)
 
-	message := "The following components failed to build:"
+	message := "the following components failed to build:"
 	for i, component := range failedComponents {
 		if i != 0 {
 			message = message + ","
@@ -31,10 +30,26 @@ func (c *Controller) syncFailedServiceBuild(build *latticev1.ServiceBuild, state
 		message = message + " " + component
 	}
 
+	// if we haven't logged a start timestamp yet, use now
+	startTimestamp := build.Status.StartTimestamp
+	if startTimestamp == nil {
+		now := metav1.Now()
+		startTimestamp = &now
+	}
+
+	// if we haven't logged a completion timestamp yet, use now
+	completionTimestamp := build.Status.CompletionTimestamp
+	if completionTimestamp == nil {
+		now := metav1.Now()
+		completionTimestamp = &now
+	}
+
 	_, err := c.updateServiceBuildStatus(
 		build,
 		latticev1.ServiceBuildStateFailed,
 		message,
+		startTimestamp,
+		completionTimestamp,
 		build.Status.ComponentBuilds,
 		stateInfo.componentBuildStatuses,
 	)
@@ -50,7 +65,7 @@ func (c *Controller) syncRunningServiceBuild(build *latticev1.ServiceBuild, stat
 
 	sort.Strings(activeComponents)
 
-	message := "The following components are still building:"
+	message := "the following components are still building:"
 	for i, component := range activeComponents {
 		if i != 0 {
 			message = message + ","
@@ -58,10 +73,19 @@ func (c *Controller) syncRunningServiceBuild(build *latticev1.ServiceBuild, stat
 		message = message + " " + component
 	}
 
+	// if we haven't logged a start timestamp yet, use now
+	startTimestamp := build.Status.StartTimestamp
+	if startTimestamp == nil {
+		now := metav1.Now()
+		startTimestamp = &now
+	}
+
 	_, err := c.updateServiceBuildStatus(
 		build,
 		latticev1.ServiceBuildStateRunning,
 		message,
+		startTimestamp,
+		nil,
 		build.Status.ComponentBuilds,
 		stateInfo.componentBuildStatuses,
 	)
@@ -71,137 +95,127 @@ func (c *Controller) syncRunningServiceBuild(build *latticev1.ServiceBuild, stat
 func (c *Controller) syncMissingComponentBuildsServiceBuild(build *latticev1.ServiceBuild, stateInfo stateInfo) error {
 	componentBuilds := stateInfo.componentBuilds
 	if componentBuilds == nil {
-		componentBuilds = map[string]string{}
+		componentBuilds = make(map[string]string)
 	}
 
 	componentBuildStatuses := stateInfo.componentBuildStatuses
 	if componentBuildStatuses == nil {
-		componentBuildStatuses = map[string]latticev1.ComponentBuildStatus{}
+		componentBuildStatuses = make(map[string]latticev1.ComponentBuildStatus)
 	}
+
+	componentBuildHashes := make(map[string]*latticev1.ComponentBuild)
 
 	for _, component := range stateInfo.needsNewComponentBuilds {
 		componentInfo := build.Spec.Components[component]
-		definitionBlock := componentInfo.DefinitionBlock
 
-		// FIXME: support references
-		if definitionBlock.GitRepository != nil && definitionBlock.GitRepository.SSHKey != nil {
-			secretName := fmt.Sprintf("%v:%v", build.Labels[constants.LabelKeyServicePath], *definitionBlock.GitRepository.SSHKey.Name)
-			definitionBlock.GitRepository.SSHKey.Name = &secretName
-		}
-
-		// TODO: is json marshalling of a struct deterministic in order? If not could potentially get
-		//		 different SHAs for the same definition. This is OK in the correctness sense, since we'll
-		//		 just be duplicating work, but still not ideal
+		// Note: json marshalling is deterministic: https://godoc.org/encoding/json#Marshal
+		// "Map values encode as JSON objects. The map's key type must either be a string,
+		//  an integer type, or implement encoding.TextMarshaler. The map keys are sorted
+		//  and used as JSON object keys..."
 		definitionJSON, err := json.Marshal(componentInfo.DefinitionBlock)
 		if err != nil {
 			return err
 		}
 
-		h := sha256.New()
+		h := sha1.New()
 		if _, err = h.Write(definitionJSON); err != nil {
 			return err
 		}
 
 		definitionHash := hex.EncodeToString(h.Sum(nil))
 
-		componentBuild, err := c.findComponentBuildForDefinitionHash(build.Namespace, definitionHash)
-		if err != nil {
-			return err
+		// first check to see if we've already seen or created
+		// a component build matching this hash so far
+		componentBuild, ok := componentBuildHashes[definitionHash]
+		if !ok {
+			// if not, check all the component builds to see if one already matches the hash
+			componentBuild, err = c.findComponentBuildForDefinitionHash(build.Namespace, definitionHash)
+			if err != nil {
+				return err
+			}
 		}
 
-		// Found an existing ComponentBuild.
-		if componentBuild != nil && componentBuild.Status.State != latticev1.ComponentBuildStateFailed {
-			glog.V(4).Infof("Found ComponentBuild %v for %v of %v/%v", componentBuild.Name, component, build.Namespace, build.Name)
+		// found an existing component build
+		if componentBuild != nil {
+			glog.V(4).Infof(
+				"found %v for component %v of %v",
+				componentBuild.Description(c.namespacePrefix),
+				component,
+				build.Description(c.namespacePrefix),
+			)
+
+			componentBuild, err := c.addOwnerReference(build, componentBuild)
+			if err != nil {
+				return err
+			}
+
 			componentBuilds[component] = componentBuild.Name
 			componentBuildStatuses[componentBuild.Name] = componentBuild.Status
+			componentBuildHashes[definitionHash] = componentBuild
 			continue
 		}
 
-		// Existing ComponentBuild failed. We'll try it again.
-		var previousCbName *string
-		if componentBuild != nil {
-			previousCbName = &componentBuild.Name
-		}
-
-		// TODO: there's a race here. We could create a new component build and fail before updating build.Status
-		// This shouldn't actually matter in the ComponentBuild case. On the next try, the controller would find the
-		// ComponentBuild thanks to the definition hash, and would use it anyways.
-		glog.V(4).Infof("No ComponentBuild found for %v/%v component %v", build.Namespace, build.Name, component)
-		componentBuild, err = c.createNewComponentBuild(build.Namespace, componentInfo, definitionHash, previousCbName)
+		// previous component build failed or does not exist
+		// create a new one
+		glog.V(4).Infof("no component build found for component %v of %v", component, build.Description(c.namespacePrefix))
+		componentBuild, err = c.createNewComponentBuild(build, componentInfo, definitionHash)
 		if err != nil {
 			return err
 		}
 
 		glog.V(4).Infof(
-			"Created ComponentBuild %v for %v/%v component %v",
-			componentBuild.Name,
-			build.Namespace,
-			build.Name,
+			"created %v for component %v of %v",
+			componentBuild.Description(c.namespacePrefix),
 			component,
+			build.Description(c.namespacePrefix),
 		)
 		componentBuilds[component] = componentBuild.Name
 		componentBuildStatuses[componentBuild.Name] = componentBuild.Status
+		componentBuildHashes[definitionHash] = componentBuild
+	}
+
+	// if we haven't logged a start timestamp yet, use now
+	startTimestamp := build.Status.StartTimestamp
+	if startTimestamp == nil {
+		now := metav1.Now()
+		startTimestamp = &now
 	}
 
 	_, err := c.updateServiceBuildStatus(
 		build,
 		latticev1.ServiceBuildStateRunning,
 		"",
+		startTimestamp,
+		nil,
 		componentBuilds,
 		componentBuildStatuses,
-	)
-	if err != nil {
-		return err
-	}
-
-	// FIXME: ensure that these updates will create an updateServiceBuildEvent and that the ServiceBuild will be re-queued and processed again.
-	// This is needed for the following scenario:
-	// Service SB needs to build Component C, and finds a Running ComponentBuild CB.
-	// SB decides to use it, so it will update its ComponentBuildsInfo to reflect this.
-	// Before it updates however, CB finishes. When updateComponentBuild is called, SB is not found
-	// as a Service to enqueue. Once SB is updated, it may never get notified that CB finishes.
-	// By enqueueing it, we make sure we have up to date status information, then from there can rely
-	// on updateComponentBuild to update SB's Status.
-	c.queue.Add(fmt.Sprintf("%v/%v", build.Namespace, build.Name))
-	return nil
-}
-
-func (c *Controller) syncSucceededServiceBuild(build *latticev1.ServiceBuild, stateInfo stateInfo) error {
-	_, err := c.updateServiceBuildStatus(
-		build,
-		latticev1.ServiceBuildStateSucceeded,
-		"",
-		build.Status.ComponentBuilds,
-		stateInfo.componentBuildStatuses,
 	)
 	return err
 }
 
-func (c *Controller) updateServiceBuildStatus(
-	build *latticev1.ServiceBuild,
-	state latticev1.ServiceBuildState,
-	message string,
-	componentBuilds map[string]string,
-	componentBuildStatuses map[string]latticev1.ComponentBuildStatus,
-) (*latticev1.ServiceBuild, error) {
-	status := latticev1.ServiceBuildStatus{
-		State:                  state,
-		ObservedGeneration:     build.Generation,
-		Message:                message,
-		ComponentBuilds:        componentBuilds,
-		ComponentBuildStatuses: componentBuildStatuses,
+func (c *Controller) syncSucceededServiceBuild(build *latticev1.ServiceBuild, stateInfo stateInfo) error {
+	// if we haven't logged a start timestamp yet, use now
+	startTimestamp := build.Status.StartTimestamp
+	if startTimestamp == nil {
+		now := metav1.Now()
+		startTimestamp = &now
 	}
 
-	if reflect.DeepEqual(build.Status, status) {
-		return build, nil
+	// if we haven't logged a completion timestamp yet, use now
+	completionTimestamp := build.Status.CompletionTimestamp
+	if completionTimestamp == nil {
+		now := metav1.Now()
+		completionTimestamp = &now
 	}
 
-	// Copy so the shared cache isn't mutated
-	build = build.DeepCopy()
-	build.Status = status
-	return c.latticeClient.LatticeV1().ServiceBuilds(build.Namespace).Update(build)
-
-	// TODO: switch to this when https://github.com/kubernetes/kubernetes/issues/38113 is merged
-	// TODO: also watch https://github.com/kubernetes/kubernetes/pull/55168
-	//return c.latticeClient.LatticeV1().ServiceBuilds(build.Namespace).UpdateStatus(build)
+	_, err := c.updateServiceBuildStatus(
+		build,
+		latticev1.ServiceBuildStateSucceeded,
+		"",
+		startTimestamp,
+		completionTimestamp,
+		build.Status.ComponentBuilds,
+		stateInfo.componentBuildStatuses,
+	)
+	return err
 }

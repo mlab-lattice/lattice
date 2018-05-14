@@ -6,8 +6,6 @@ import (
 	"reflect"
 	"sort"
 
-	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/constants"
-	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/controller/service/util"
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	kubeutil "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/kubernetes"
 	"github.com/mlab-lattice/lattice/pkg/definition/block"
@@ -20,6 +18,8 @@ import (
 	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/apimachinery/pkg/util/intstr"
 
+	k8sappsv1 "k8s.io/kubernetes/pkg/apis/apps/v1"
+
 	"github.com/golang/glog"
 	"github.com/sergi/go-diff/diffmatchpatch"
 )
@@ -30,7 +30,12 @@ const (
 	dnsOptionNdots     = "ndots"
 )
 
-func (c *Controller) syncDeployment(service *latticev1.Service, nodePool *latticev1.NodePool, nodePoolReady bool) (*deploymentStatus, error) {
+func (c *Controller) syncDeployment(
+	service *latticev1.Service,
+	nodePool *latticev1.NodePool,
+) (*deploymentStatus, error) {
+	// FIXME: need to think about implications of rolling deploy between nodes w/ public load balancer
+	// probably is just that you need to wait for the address to be updated before syncing an existing deployment
 	deployment, err := c.deployment(service)
 	if err != nil {
 		return nil, err
@@ -38,39 +43,21 @@ func (c *Controller) syncDeployment(service *latticev1.Service, nodePool *lattic
 
 	if deployment == nil {
 		// If we need to create a new deployment, we need to wait until the
-		// node pool is ready so we can get the right affinity and toleration.
-		if !nodePoolReady {
-			status := &deploymentStatus{
-				UpdateProcessed: true,
-
-				State: deploymentStatePending,
-
-				TotalInstances:       0,
-				UpdatedInstances:     0,
-				StaleInstances:       0,
-				AvailableInstances:   0,
-				TerminatingInstances: 0,
-			}
-			return status, nil
+		// node pool so we can get the right affinity and toleration.
+		if !nodePool.Stable() {
+			return &pendingDeploymentStatus, nil
 		}
 
 		return c.createNewDeployment(service, nodePool)
 	}
 
-	// If the new node pool isn't ready yet, we shouldn't update the deployment's spec
-	// yet. If we do, the deployment will try to start rolling out, which will essentially
-	// just result in terminating some pods while waiting for the node pool to be ready.
-	if !nodePoolReady {
-		return c.getDeploymentStatus(service, deployment)
-	}
-
-	return c.syncExistingDeployment(service, nodePool, deployment)
+	return c.syncExistingDeployment(service, deployment, nodePool)
 }
 
 func (c *Controller) deployment(service *latticev1.Service) (*appsv1.Deployment, error) {
 	// First check the cache for the deployment
 	selector := labels.NewSelector()
-	requirement, err := labels.NewRequirement(constants.LabelKeyServiceID, selection.Equals, []string{service.Name})
+	requirement, err := labels.NewRequirement(latticev1.ServiceIDLabelKey, selection.Equals, []string{service.Name})
 	if err != nil {
 		return nil, err
 	}
@@ -84,7 +71,7 @@ func (c *Controller) deployment(service *latticev1.Service) (*appsv1.Deployment,
 
 	if len(cachedDeployments) > 1 {
 		// This may become valid when doing blue/green deploys
-		return nil, fmt.Errorf("found multiple deployments for %v/%v", service.Namespace, service.Name)
+		return nil, fmt.Errorf("found multiple cached deployments for %v", service.Description(c.namespacePrefix))
 	}
 
 	if len(cachedDeployments) == 1 {
@@ -101,7 +88,7 @@ func (c *Controller) deployment(service *latticev1.Service) (*appsv1.Deployment,
 
 	if len(deployments.Items) > 1 {
 		// This may become valid when doing blue/green deploys
-		return nil, fmt.Errorf("found multiple deployments for %v/%v", service.Namespace, service.Name)
+		return nil, fmt.Errorf("found multiple deployments for %v", service.Description(c.namespacePrefix))
 	}
 
 	if len(deployments.Items) == 1 {
@@ -113,9 +100,16 @@ func (c *Controller) deployment(service *latticev1.Service) (*appsv1.Deployment,
 
 func (c *Controller) syncExistingDeployment(
 	service *latticev1.Service,
-	nodePool *latticev1.NodePool,
 	deployment *appsv1.Deployment,
+	nodePool *latticev1.NodePool,
 ) (*deploymentStatus, error) {
+	// If the new node pool or address isn't ready yet, we shouldn't update the deployment's spec
+	// yet. If we do, the deployment will try to start rolling out, which will essentially
+	// just result in terminating some pods while waiting for the node pool to be ready.
+	if !nodePool.Stable() {
+		return c.getDeploymentStatus(service, deployment)
+	}
+
 	// Need a consistent view of our config while generating the deployment spec
 	c.configLock.RLock()
 	defer c.configLock.RUnlock()
@@ -125,28 +119,39 @@ func (c *Controller) syncExistingDeployment(
 
 	desiredSpec, err := c.deploymentSpec(service, name, deploymentLabels, nodePool)
 	if err != nil {
+		err := fmt.Errorf(
+			"error getting desired deployment spec for %v (on %v): %v",
+			service.Description(c.namespacePrefix),
+			nodePool.Description(c.namespacePrefix),
+			err,
+		)
 		return nil, err
 	}
 
 	currentSpec := deployment.Spec
 	untransformedSpec, err := c.untransformedDeploymentSpec(service, name, deploymentLabels, nodePool)
 	if err != nil {
+		err := fmt.Errorf(
+			"error getting untransformed deployment spec for %v (on %v): %v",
+			service.Description(c.namespacePrefix),
+			nodePool.Description(c.namespacePrefix),
+			err,
+		)
 		return nil, err
 	}
 
-	defaultedUntransformedSpec := util.SetDeploymentSpecDefaults(untransformedSpec)
-	defaultedDesiredSpec := util.SetDeploymentSpecDefaults(&desiredSpec)
+	defaultedUntransformedSpec := setDeploymentSpecDefaults(untransformedSpec)
+	defaultedDesiredSpec := setDeploymentSpecDefaults(&desiredSpec)
 
 	isUpdated, reason := c.isDeploymentSpecUpdated(service, &currentSpec, defaultedDesiredSpec, defaultedUntransformedSpec)
 	if !isUpdated {
 		glog.V(4).Infof(
-			"Deployment %v for Service %v/%v not up to date: %v",
+			"deployment %v for %v not up to date: %v",
 			deployment.Name,
-			service.Namespace,
-			service.Name,
+			service.Description(c.namespacePrefix),
 			reason,
 		)
-		deployment, err = c.updateDeploymentSpec(deployment, desiredSpec)
+		deployment, err = c.updateDeploymentSpec(service, deployment, desiredSpec)
 		if err != nil {
 			return nil, err
 		}
@@ -155,7 +160,11 @@ func (c *Controller) syncExistingDeployment(
 	return c.getDeploymentStatus(service, deployment)
 }
 
-func (c *Controller) updateDeploymentSpec(deployment *appsv1.Deployment, spec appsv1.DeploymentSpec) (*appsv1.Deployment, error) {
+func (c *Controller) updateDeploymentSpec(
+	service *latticev1.Service,
+	deployment *appsv1.Deployment,
+	spec appsv1.DeploymentSpec,
+) (*appsv1.Deployment, error) {
 	if reflect.DeepEqual(deployment.Spec, spec) {
 		return deployment, nil
 	}
@@ -164,21 +173,36 @@ func (c *Controller) updateDeploymentSpec(deployment *appsv1.Deployment, spec ap
 	deployment = deployment.DeepCopy()
 	deployment.Spec = spec
 
-	return c.kubeClient.AppsV1().Deployments(deployment.Namespace).Update(deployment)
+	result, err := c.kubeClient.AppsV1().Deployments(deployment.Namespace).Update(deployment)
+	if err != nil {
+		err := fmt.Errorf(
+			"error updating deployment %v for %v: %v",
+			deployment.Name,
+			service.Description(c.namespacePrefix),
+			err,
+		)
+		return nil, err
+	}
+
+	return result, nil
 }
 
-func (c *Controller) createNewDeployment(service *latticev1.Service, nodePool *latticev1.NodePool) (*deploymentStatus, error) {
+func (c *Controller) createNewDeployment(
+	service *latticev1.Service,
+	nodePool *latticev1.NodePool,
+) (*deploymentStatus, error) {
 	deployment, err := c.newDeployment(service, nodePool)
 	if err != nil {
 		return nil, err
 	}
 
-	deployment, err = c.kubeClient.AppsV1().Deployments(service.Namespace).Create(deployment)
+	result, err := c.kubeClient.AppsV1().Deployments(service.Namespace).Create(deployment)
 	if err != nil {
+		err := fmt.Errorf("error creating deployment for %v: %v", service.Description(c.namespacePrefix), err)
 		return nil, err
 	}
 
-	return c.getDeploymentStatus(service, deployment)
+	return c.getDeploymentStatus(service, result)
 }
 
 func (c *Controller) newDeployment(service *latticev1.Service, nodePool *latticev1.NodePool) (*appsv1.Deployment, error) {
@@ -187,23 +211,28 @@ func (c *Controller) newDeployment(service *latticev1.Service, nodePool *lattice
 	defer c.configLock.RUnlock()
 
 	name := deploymentName(service)
-	labels := deploymentLabels(service)
+	deploymentLabels := deploymentLabels(service)
 
-	spec, err := c.deploymentSpec(service, name, labels, nodePool)
+	spec, err := c.deploymentSpec(service, name, deploymentLabels, nodePool)
 	if err != nil {
+		err := fmt.Errorf(
+			"error generating desired deployment spec for %v (on %v): %v",
+			service.Description(c.namespacePrefix),
+			nodePool.Description(c.namespacePrefix),
+			err,
+		)
 		return nil, err
 	}
 
-	d := &appsv1.Deployment{
+	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:            name,
-			Labels:          labels,
+			Labels:          deploymentLabels,
 			OwnerReferences: []metav1.OwnerReference{*controllerRef(service)},
 		},
 		Spec: spec,
 	}
-
-	return d, nil
+	return deployment, nil
 }
 
 func deploymentName(service *latticev1.Service) string {
@@ -213,7 +242,7 @@ func deploymentName(service *latticev1.Service) string {
 
 func deploymentLabels(service *latticev1.Service) map[string]string {
 	return map[string]string{
-		constants.LabelKeyServiceID: service.Name,
+		latticev1.ServiceIDLabelKey: service.Name,
 	}
 }
 
@@ -249,8 +278,7 @@ func (c *Controller) untransformedDeploymentSpec(
 ) (*appsv1.DeploymentSpec, error) {
 	path, err := service.PathLabel()
 	if err != nil {
-		// FIXME: in general, if the path label is misformed or missing, the controllers will barf on the whole system.
-		// should probably ignore the service and send an error
+		err := fmt.Errorf("error getting path label for %v: %v", service.Description(c.namespacePrefix), err)
 		return nil, err
 	}
 
@@ -279,32 +307,64 @@ func (c *Controller) untransformedDeploymentSpec(
 		// Since we also add a RequiredDuringScheduling NodeAffinity for our NodePool,
 		// this NodePool's nodes are the only nodes that these pods could be scheduled on,
 		// so this TopologyKey doesn't really matter (besides being required).
-		TopologyKey: constants.LabelKeyNodeRoleLatticeNodePool,
+		TopologyKey: latticev1.NodePoolIDLabelKey,
 	}
 
-	// TODO(kevinrosendahl): Make this a PreferredDuringScheduling PodAntiAffinity if the service is running on a shared NodePool
-	podAntiAffinity := &corev1.PodAntiAffinity{
-		RequiredDuringSchedulingIgnoredDuringExecution: []corev1.PodAffinityTerm{podAffinityTerm},
-	}
-
-	systemID, err := kubeutil.SystemID(c.namespacePrefix, service.Namespace)
+	nodePoolInfo, err := c.nodePoolInfo(service)
 	if err != nil {
 		return nil, err
 	}
 
-	// FIXME: make "lattice.local" suffix configurable
-	baseSearchPath := fmt.Sprintf("%v.lattice.local", systemID)
+	// if the service is running on a per-instance dedicated node pool,
+	// then ensure that pods aren't scheduled on the same node.
+	// if it's running on a shared node pool, either dedicated or system-level
+	// then prefer that pods aren't scheduled on the same node
+	podAntiAffinity := &corev1.PodAntiAffinity{}
+	switch nodePoolInfo.nodePoolType {
+	case latticev1.NodePoolTypeServiceDedicated:
+		if nodePoolInfo.perInstance {
+			podAntiAffinity.RequiredDuringSchedulingIgnoredDuringExecution = []corev1.PodAffinityTerm{podAffinityTerm}
+		} else {
+			podAntiAffinity.PreferredDuringSchedulingIgnoredDuringExecution = []corev1.WeightedPodAffinityTerm{
+				{
+					Weight:          50,
+					PodAffinityTerm: podAffinityTerm,
+				},
+			}
+		}
+
+	case latticev1.NodePoolTypeSystemShared:
+		podAntiAffinity.PreferredDuringSchedulingIgnoredDuringExecution = []corev1.WeightedPodAffinityTerm{
+			{
+				Weight:          50,
+				PodAffinityTerm: podAffinityTerm,
+			},
+		}
+
+	default:
+		err := fmt.Errorf("unrecognized node pool type for %v: %v", service.Description(c.namespacePrefix), nodePoolInfo.nodePoolType)
+		return nil, err
+	}
+
+	systemID, err := kubeutil.SystemID(c.namespacePrefix, service.Namespace)
+	if err != nil {
+		err := fmt.Errorf("error getting system ID for %v: %v", service.Description(c.namespacePrefix), err)
+		return nil, err
+	}
+
+	baseSearchPath := kubeutil.FullyQualifiedInternalSystemSubdomain(systemID, c.latticeID, c.internalDNSDomain)
 	dnsSearches := []string{baseSearchPath}
 
 	// If the service is not the root node, we need to append its parent as a search in resolv.conf
 	if !path.IsRoot() {
 		parentNode, err := path.Parent()
 		if err != nil {
+			err := fmt.Errorf("service %v is not root but cannot get parrent: %v", service.Description(c.namespacePrefix), err)
 			return nil, err
 		}
 
-		parentDomain := parentNode.ToDomain()
-		dnsSearches = append(dnsSearches, fmt.Sprintf("%v.local.%v", parentDomain, baseSearchPath))
+		parentDomain := kubeutil.FullyQualifiedInternalAddressSubdomain(parentNode.ToDomain(), systemID, c.latticeID, c.internalDNSDomain)
+		dnsSearches = append(dnsSearches, parentDomain)
 	}
 
 	// as a constant cant be referenced, create a local copy
@@ -318,6 +378,11 @@ func (c *Controller) untransformedDeploymentSpec(
 			},
 		},
 		Searches: dnsSearches,
+	}
+
+	nodePoolEpoch, ok := nodePool.Status.Epochs.CurrentEpoch()
+	if !ok {
+		return nil, fmt.Errorf("unable to get current epoch for %v: %v", nodePool.Description(c.namespacePrefix), err)
 	}
 
 	// IMPORTANT: if you change anything in here, you _must_ update isDeploymentSpecUpdated to accommodate it
@@ -338,11 +403,11 @@ func (c *Controller) untransformedDeploymentSpec(
 				DNSPolicy:  corev1.DNSDefault,
 				DNSConfig:  &dnsConfig,
 				Affinity: &corev1.Affinity{
-					NodeAffinity:    nodePool.Affinity(),
+					NodeAffinity:    nodePool.Affinity(nodePoolEpoch),
 					PodAntiAffinity: podAntiAffinity,
 				},
 				Tolerations: []corev1.Toleration{
-					nodePool.Toleration(),
+					nodePool.Toleration(nodePoolEpoch),
 				},
 			},
 		},
@@ -351,7 +416,11 @@ func (c *Controller) untransformedDeploymentSpec(
 	return spec, nil
 }
 
-func containerFromComponent(service *latticev1.Service, component *block.Component, buildArtifacts *latticev1.ComponentBuildArtifacts) (corev1.Container, error) {
+func containerFromComponent(
+	service *latticev1.Service,
+	component *block.Component,
+	buildArtifacts *latticev1.ComponentBuildArtifacts,
+) (corev1.Container, error) {
 	path, err := service.PathLabel()
 	if err != nil {
 		return corev1.Container{}, err
@@ -492,11 +561,22 @@ func (c *Controller) isDeploymentSpecUpdated(
 	service *latticev1.Service,
 	current, desired, untransformed *appsv1.DeploymentSpec,
 ) (bool, string) {
-	// FIXME: currently Replicas is the only thing we're changing, may want to add other fields to compare as well
-	if current.Replicas != desired.Replicas {
+	// NOTE: currently the only thing we change about the top level of the deployment spec (i.e. not in
+	// the pod template spec) is replicas. if we change other things we may want to reconsider this
+	// comparison strategy.
+	if current.Replicas == nil && desired.Replicas != nil {
 		return false, "num replicas is out of date"
 	}
 
+	if current.Replicas != nil && desired.Replicas == nil {
+		return false, "num replicas is out of date"
+	}
+
+	if current.Replicas != nil && desired.Replicas != nil && *current.Replicas != *desired.Replicas {
+		return false, "num replicas is out of date"
+	}
+
+	// FIXME: is this actually true?
 	// IMPORTANT: the order of these IsDeploymentSpecUpdated and the order of the TransformServiceDeploymentSpec
 	// calls in deploymentSpec _must_ be inverses.
 	// That is, if we call serviceMesh then cloudProvider here, we _must_ call cloudProvider then serviceMesh
@@ -549,9 +629,20 @@ const (
 )
 
 type deploymentStatusFailureInfo struct {
-	Reason  string
-	Message string
-	Time    metav1.Time
+	Reason string
+	Time   metav1.Time
+}
+
+var pendingDeploymentStatus = deploymentStatus{
+	UpdateProcessed: true,
+
+	State: deploymentStatePending,
+
+	TotalInstances:       0,
+	UpdatedInstances:     0,
+	StaleInstances:       0,
+	AvailableInstances:   0,
+	TerminatingInstances: 0,
 }
 
 func (s *deploymentStatus) Failed() (bool, *deploymentStatusFailureInfo) {
@@ -562,7 +653,14 @@ func (s *deploymentStatus) Stable() bool {
 	return s.State == deploymentStateStable
 }
 
-func (c *Controller) getDeploymentStatus(service *latticev1.Service, deployment *appsv1.Deployment) (*deploymentStatus, error) {
+func (s *deploymentStatus) Ready() bool {
+	return s.UpdateProcessed && s.Stable()
+}
+
+func (c *Controller) getDeploymentStatus(
+	service *latticev1.Service,
+	deployment *appsv1.Deployment,
+) (*deploymentStatus, error) {
 	var state deploymentState
 	totalInstances := deployment.Status.Replicas
 	updatedInstances := deployment.Status.UpdatedReplicas
@@ -575,9 +673,8 @@ func (c *Controller) getDeploymentStatus(service *latticev1.Service, deployment 
 		if notProgressing && condition.Reason == reasonTimedOut {
 			state = deploymentStateFailed
 			failureInfo = &deploymentStatusFailureInfo{
-				Reason:  condition.Reason,
-				Message: condition.Message,
-				Time:    condition.LastTransitionTime,
+				Reason: condition.Reason,
+				Time:   condition.LastTransitionTime,
 			}
 		}
 	}
@@ -602,15 +699,15 @@ func (c *Controller) getDeploymentStatus(service *latticev1.Service, deployment 
 	//       automated processes we can put in place to clean up stuck pods so that deploys don't get stalled
 	//       forever
 	selector := labels.NewSelector()
-	requirement, err := labels.NewRequirement(constants.LabelKeyServiceID, selection.Equals, []string{service.Name})
+	requirement, err := labels.NewRequirement(latticev1.ServiceIDLabelKey, selection.Equals, []string{service.Name})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error making pod label selector for %v: %v", service.Description(c.namespacePrefix), err)
 	}
 	selector = selector.Add(*requirement)
 
 	pods, err := c.podLister.Pods(service.Namespace).List(selector)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error listing pods for %v: %v", service.Description(c.namespacePrefix), err)
 	}
 
 	var terminatingInstances int32
@@ -657,4 +754,16 @@ func (c *Controller) getDeploymentStatus(service *latticev1.Service, deployment 
 	}
 
 	return status, nil
+}
+
+func setDeploymentSpecDefaults(spec *appsv1.DeploymentSpec) *appsv1.DeploymentSpec {
+	// Copy so the shared cache isn't mutated
+	spec = spec.DeepCopy()
+
+	deployment := &appsv1.Deployment{
+		Spec: *spec,
+	}
+	k8sappsv1.SetObjectDefaults_Deployment(deployment)
+
+	return &deployment.Spec
 }

@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"reflect"
 
-	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/constants"
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 
@@ -13,12 +12,11 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
 
-	set "github.com/deckarep/golang-set"
-	"github.com/golang/glog"
+	"github.com/deckarep/golang-set"
 	"github.com/satori/go.uuid"
 )
 
-func (c *Controller) syncSystemServices(system *latticev1.System) (map[tree.NodePath]latticev1.SystemStatusService, []string, error) {
+func (c *Controller) syncSystemServices(system *latticev1.System) (map[tree.NodePath]latticev1.SystemStatusService, error) {
 	// N.B.: as it currently is, this controller does not allow for a "move" i.e.
 	// renaming a service (changing its path). When it comes time to implement that,
 	// a possible approach would be to add an annotation indicating what moves need to be made,
@@ -28,7 +26,7 @@ func (c *Controller) syncSystemServices(system *latticev1.System) (map[tree.Node
 	// to figure out if a rename is in flight.
 	services := make(map[tree.NodePath]latticev1.SystemStatusService)
 	systemNamespace := system.ResourceNamespace(c.namespacePrefix)
-	serviceNames := set.NewSet()
+	serviceNames := mapset.NewSet()
 
 	// Loop through the services defined in the system's Spec, and create/update any that need it
 	for path, serviceInfo := range system.Spec.Services {
@@ -43,28 +41,29 @@ func (c *Controller) syncSystemServices(system *latticev1.System) (map[tree.Node
 			var err error
 			service, err = c.getServiceFromCache(systemNamespace, path)
 			if err != nil {
-				if !errors.IsNotFound(err) {
-					return nil, nil, err
-				}
+				return nil, err
+			}
 
+			if service == nil {
 				// The service wasn't in the cache, so do a quorum read to see if it was created.
 				// N.B.: could first loop through and check to see if we need to do a quorum read
 				// on any of the services, then just do one list.
 				service, err = c.getServiceFromAPI(systemNamespace, path)
 				if err != nil {
-					if !errors.IsNotFound(err) {
-						return nil, nil, err
-					}
+					return nil, err
+				}
 
+				if service == nil {
 					// The service actually doesn't exist yet. Create it with a new UUID as the name.
-					service, err = c.createNewService(uuid.NewV4().String(), system, &serviceInfo, path)
+					service, err = c.createNewService(system, &serviceInfo, path)
 					if err != nil {
-						return nil, nil, err
+						return nil, err
 					}
 
 					// Successfully created the service. No need to check if it needs to be updated.
 					services[path] = latticev1.SystemStatusService{
 						Name:          service.Name,
+						Generation:    service.Generation,
 						ServiceStatus: service.Status,
 					}
 					serviceNames.Add(service.Name)
@@ -76,45 +75,25 @@ func (c *Controller) syncSystemServices(system *latticev1.System) (map[tree.Node
 		} else {
 			// There is supposedly already a service for this path.
 			serviceName := serviceStatus.Name
-			serviceNames.Add(serviceName)
 			var err error
 
 			service, err = c.serviceLister.Services(systemNamespace).Get(serviceName)
 			if err != nil {
 				if !errors.IsNotFound(err) {
-					return nil, nil, err
+					return nil, fmt.Errorf("error trying to get cached service %v for %v", serviceName, system.Description())
 				}
 
 				// The service wasn't in the cache. Perhaps it was recently created. Do a quorum read.
 				service, err = c.latticeClient.LatticeV1().Services(systemNamespace).Get(serviceName, metav1.GetOptions{})
 				if err != nil {
 					if !errors.IsNotFound(err) {
-						return nil, nil, err
+						return nil, fmt.Errorf("error trying to get service %v for %v", serviceName, system.Description())
 					}
 
-					// For some reason the service was deleted. Try to recreate it.
-					service, err = c.createNewService(serviceName, system, &serviceInfo, path)
-					if err == nil {
-						// If we created the service, no need to do any more work on it.
-						services[path] = latticev1.SystemStatusService{
-							Name:          service.Name,
-							ServiceStatus: service.Status,
-						}
-						continue
-					}
-
-					// There was some unexpected error creating the service.
-					if !errors.IsAlreadyExists(err) {
-						return nil, nil, err
-					}
-
-					err = fmt.Errorf(
-						"could not create service %v (%v, system %v) because it already existed, but it does not exist",
-						serviceName,
-						path,
-						system.V1ID(),
-					)
-					return nil, nil, err
+					// FIXME: should we just recreate the service here?
+					// what happens when a deploy doesnt fully succeed and there's a leftover terminating service with
+					// the same path as a new service?
+					return nil, fmt.Errorf("%v has reference to non existant service %v", system.Description(), serviceName)
 				}
 			}
 		}
@@ -123,16 +102,18 @@ func (c *Controller) syncSystemServices(system *latticev1.System) (map[tree.Node
 		// and update the service if its current Spec is different.
 		spec, err := c.serviceSpec(system, &serviceInfo, path)
 		if err != nil {
-			return nil, nil, err
+			return nil, fmt.Errorf("error getting desired spec for service %v in %v: %v", path.String(), system.Description(), err)
 		}
 
 		service, err = c.updateService(service, spec, path)
 		if err != nil {
-			return nil, nil, err
+			return nil, err
 		}
 
+		serviceNames.Add(service.Name)
 		services[path] = latticev1.SystemStatusService{
 			Name:          service.Name,
+			Generation:    service.Generation,
 			ServiceStatus: service.Status,
 		}
 	}
@@ -143,46 +124,58 @@ func (c *Controller) syncSystemServices(system *latticev1.System) (map[tree.Node
 	// need to figure out what the rollout/automatic roll-back strategy is
 	allServices, err := c.serviceLister.Services(systemNamespace).List(labels.Everything())
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
-	var deletedServices []string
 	for _, service := range allServices {
 		if !serviceNames.Contains(service.Name) {
-			glog.V(4).Infof(
-				"Found %v that is no longer in the system Spec",
-				service.Description(c.namespacePrefix),
-			)
-			deletedServices = append(deletedServices, service.Name)
-
 			if service.DeletionTimestamp == nil {
-				err := c.latticeClient.LatticeV1().Services(service.Namespace).Delete(service.Name, &metav1.DeleteOptions{})
+				err := c.deleteService(service)
 				if err != nil {
-					return nil, nil, err
+					return nil, err
 				}
+			}
+
+			path, err := service.PathLabel()
+			if err != nil {
+				// FIXME: warn
+				continue
+			}
+
+			// copy so the shared cache isn't mutated
+			status := service.Status.DeepCopy()
+			status.State = latticev1.ServiceStateDeleting
+
+			services[path] = latticev1.SystemStatusService{
+				Name:          service.Name,
+				Generation:    service.Generation,
+				ServiceStatus: *status,
 			}
 		}
 	}
 
-	return services, deletedServices, nil
+	return services, nil
 }
 
 func (c *Controller) createNewService(
-	name string,
 	system *latticev1.System,
 	serviceInfo *latticev1.SystemSpecServiceInfo,
 	path tree.NodePath,
 ) (*latticev1.Service, error) {
-	service, err := c.newService(name, system, serviceInfo, path)
+	service, err := c.newService(system, serviceInfo, path)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error getting new service for %v in %v: %v", path.String(), system.Description(), err)
 	}
 
-	return c.latticeClient.LatticeV1().Services(service.Namespace).Create(service)
+	result, err := c.latticeClient.LatticeV1().Services(service.Namespace).Create(service)
+	if err != nil {
+		return nil, fmt.Errorf("error creating new service for %v in %v: %v", path.String(), system.Description(), err)
+	}
+
+	return result, nil
 }
 
 func (c *Controller) newService(
-	name string,
 	system *latticev1.System,
 	serviceInfo *latticev1.SystemSpecServiceInfo,
 	path tree.NodePath,
@@ -196,15 +189,14 @@ func (c *Controller) newService(
 
 	service := &latticev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:            name,
+			Name:            uuid.NewV4().String(),
 			Namespace:       systemNamespace,
-			OwnerReferences: []metav1.OwnerReference{*metav1.NewControllerRef(system, controllerKind)},
+			OwnerReferences: []metav1.OwnerReference{*metav1.NewControllerRef(system, latticev1.SystemKind)},
+			Labels: map[string]string{
+				latticev1.ServicePathLabelKey: path.ToDomain(),
+			},
 		},
 		Spec: spec,
-		Status: latticev1.ServiceStatus{
-			State:           latticev1.ServiceStatePending,
-			UpdateProcessed: false,
-		},
 	}
 
 	annotations, err := c.serviceMesh.ServiceAnnotations(service)
@@ -267,6 +259,23 @@ func (c *Controller) serviceSpec(
 	return spec, nil
 }
 
+func (c *Controller) deleteService(service *latticev1.Service) error {
+	// background delete will add deletionTimestamp to the service, but will not
+	// try to act upon any of the dependents since the service has a finalizer
+	// this allows us to clean up the service in a controlled way
+	backgroundDelete := metav1.DeletePropagationBackground
+	deleteOptions := &metav1.DeleteOptions{
+		PropagationPolicy: &backgroundDelete,
+	}
+
+	err := c.latticeClient.LatticeV1().Services(service.Namespace).Delete(service.Name, deleteOptions)
+	if err != nil {
+		return fmt.Errorf("error deleting %v: %v", service.Description(c.namespacePrefix), err)
+	}
+
+	return nil
+}
+
 func (c *Controller) updateService(service *latticev1.Service, spec latticev1.ServiceSpec, path tree.NodePath) (*latticev1.Service, error) {
 	if !c.serviceNeedsUpdate(service, spec, path) {
 		return service, nil
@@ -279,12 +288,14 @@ func (c *Controller) updateService(service *latticev1.Service, spec latticev1.Se
 	if service.Labels == nil {
 		service.Labels = make(map[string]string)
 	}
-	service.Labels[constants.LabelKeyServicePath] = path.ToDomain()
+	service.Labels[latticev1.ServicePathLabelKey] = path.ToDomain()
 
-	// FIXME: remove this when updated to kube 1.10.0
-	service.Status.UpdateProcessed = false
+	result, err := c.latticeClient.LatticeV1().Services(service.Namespace).Update(service)
+	if err != nil {
+		return nil, fmt.Errorf("error updating %v: %v", service.Description(c.namespacePrefix), err)
+	}
 
-	return c.latticeClient.LatticeV1().Services(service.Namespace).Update(service)
+	return result, err
 }
 
 func (c *Controller) serviceNeedsUpdate(service *latticev1.Service, spec latticev1.ServiceSpec, path tree.NodePath) bool {
@@ -302,23 +313,23 @@ func (c *Controller) serviceNeedsUpdate(service *latticev1.Service, spec lattice
 
 func (c *Controller) getServiceFromCache(namespace string, path tree.NodePath) (*latticev1.Service, error) {
 	selector := labels.NewSelector()
-	requirement, err := labels.NewRequirement(constants.LabelKeyServicePath, selection.Equals, []string{path.ToDomain()})
+	requirement, err := labels.NewRequirement(latticev1.ServicePathLabelKey, selection.Equals, []string{path.ToDomain()})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error getting selector for cached service %v in namespace %v", path.String(), namespace)
 	}
 	selector = selector.Add(*requirement)
 
 	services, err := c.serviceLister.Services(namespace).List(selector)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error getting cached services in namespace %v", namespace)
 	}
 
 	if len(services) == 0 {
-		return nil, errors.NewNotFound(latticev1.Resource(latticev1.ResourceSingularService), path.ToDomain())
+		return nil, nil
 	}
 
 	if len(services) > 1 {
-		return nil, fmt.Errorf("found multiple services with path %v", path.String())
+		return nil, fmt.Errorf("found multiple cached services with path %v in namespace %v", path.String(), namespace)
 	}
 
 	return services[0], nil
@@ -326,23 +337,23 @@ func (c *Controller) getServiceFromCache(namespace string, path tree.NodePath) (
 
 func (c *Controller) getServiceFromAPI(namespace string, path tree.NodePath) (*latticev1.Service, error) {
 	selector := labels.NewSelector()
-	requirement, err := labels.NewRequirement(constants.LabelKeyServicePath, selection.Equals, []string{path.ToDomain()})
+	requirement, err := labels.NewRequirement(latticev1.ServicePathLabelKey, selection.Equals, []string{path.ToDomain()})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error getting selector for  service %v in namespace %v", path.String(), namespace)
 	}
 	selector = selector.Add(*requirement)
 
 	services, err := c.latticeClient.LatticeV1().Services(namespace).List(metav1.ListOptions{LabelSelector: selector.String()})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error getting services in namespace %v", namespace)
 	}
 
 	if len(services.Items) == 0 {
-		return nil, errors.NewNotFound(latticev1.Resource(latticev1.ResourceSingularService), path.ToDomain())
+		return nil, nil
 	}
 
 	if len(services.Items) > 1 {
-		return nil, fmt.Errorf("found multiple services with path %v", path.String())
+		return nil, fmt.Errorf("found multiple services with path %v in namespace %v", path.String(), namespace)
 	}
 
 	return &services.Items[0], nil

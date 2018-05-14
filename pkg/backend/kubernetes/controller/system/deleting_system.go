@@ -1,15 +1,17 @@
 package system
 
 import (
+	"fmt"
+
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 
 	"k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func (c *Controller) syncDeletingSystem(system *latticev1.System) error {
+	// FIXME: should we teardown here or fail if not torn down here?
 	systemNamespace := system.ResourceNamespace(c.namespacePrefix)
-	ns, err := c.kubeClient.CoreV1().Namespaces().Get(systemNamespace, metav1.GetOptions{})
+	namespace, err := c.namespaceLister.Get(systemNamespace)
 	if err != nil {
 		// If the namespace has been fully terminated, the system can be deleted as well,
 		// so remove the finalizer.
@@ -18,12 +20,12 @@ func (c *Controller) syncDeletingSystem(system *latticev1.System) error {
 			return err
 		}
 
-		return err
+		return fmt.Errorf("error trying to get namespace %v for %v: %v", systemNamespace, system.Description(), err)
 	}
 
 	// Have already deleted the namespace, so waiting for it to finish terminating.
 	// The system should be requeued when the namespace changes.
-	if ns.DeletionTimestamp != nil {
+	if namespace.DeletionTimestamp != nil {
 		return nil
 	}
 
@@ -31,5 +33,15 @@ func (c *Controller) syncDeletingSystem(system *latticev1.System) error {
 	// Once it goes out of the terminating phase, the system should be requeued
 	// and the namespace will not be found, resulting in the finalizer being removed
 	// and the system being fully deleted.
-	return c.kubeClient.CoreV1().Namespaces().Delete(ns.Name, nil)
+	err = c.kubeClient.CoreV1().Namespaces().Delete(namespace.Name, nil)
+	if err != nil {
+		return fmt.Errorf(
+			"error trying to delete system %v namespace %v: %v",
+			system.Description(),
+			namespace.Name,
+			err,
+		)
+	}
+
+	return nil
 }

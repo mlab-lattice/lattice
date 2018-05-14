@@ -22,7 +22,7 @@ import (
 )
 
 type KubernetesPerNodeBackend struct {
-	serviceMesh envoy.ServiceMesh
+	serviceMesh *envoy.DefaultEnvoyServiceMesh
 
 	kubeEndpointLister       corelisters.EndpointsLister
 	kubeEndpointListerSynced cache.InformerSynced

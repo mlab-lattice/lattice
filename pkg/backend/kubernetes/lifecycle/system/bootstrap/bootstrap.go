@@ -24,7 +24,6 @@ func Bootstrap(
 	kubeClient kubeclientset.Interface,
 ) (*bootstrapper.SystemResources, error) {
 	resources := GetBootstrapResources(namespacePrefix, latticeID, systemID, definitionURL, bootstrappers)
-
 	namespace, err := kubeClient.CoreV1().Namespaces().Create(resources.Namespace)
 	if err != nil {
 		if !errors.IsAlreadyExists(err) {

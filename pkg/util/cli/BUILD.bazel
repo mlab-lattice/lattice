@@ -10,6 +10,7 @@ go_library(
         "flag.go",
         "int32_flag.go",
         "int_flag.go",
+        "ip_net_flag.go",
         "string_flag.go",
         "usage_functions.go",
     ],

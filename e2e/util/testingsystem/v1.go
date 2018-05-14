@@ -44,11 +44,11 @@ func (v *V1) ValidateStable() {
 	Expect(service.State).To(Equal(v1.ServiceStateStable))
 	Expect(service.StaleInstances).To(Equal(int32(0)))
 	Expect(service.UpdatedInstances).To(Equal(int32(1)))
-	Expect(len(service.PublicPorts)).To(Equal(1))
-	port, ok := service.PublicPorts[V1ServiceAPublicPort]
+	Expect(len(service.Ports)).To(Equal(1))
+	address, ok := service.Ports[V1ServiceAPublicPort]
 	Expect(ok).To(BeTrue())
 
-	err := v.poll(port.Address, time.Second, 30*time.Second)
+	err := v.poll(address, time.Second, 10*time.Second)
 	Expect(err).To(Not(HaveOccurred()))
 }
 

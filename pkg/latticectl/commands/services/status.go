@@ -108,19 +108,24 @@ func printServiceState(writer io.Writer, s *spinner.Spinner, service *v1.Service
 	switch service.State {
 	case v1.ServiceStatePending:
 		s.Start()
-		s.Suffix = fmt.Sprintf(" Service %s is pending...", color.ID(string(service.Path)))
+		s.Suffix = fmt.Sprintf(" Service %s is pending...", color.ID(service.Path.String()))
 	case v1.ServiceStateScaling:
 		s.Start()
-		s.Suffix = fmt.Sprintf(" Service %s is scaling...", color.ID(string(service.Path)))
+		s.Suffix = fmt.Sprintf(" Service %s is scaling...", color.ID(service.Path.String()))
 	case v1.ServiceStateUpdating:
 		s.Start()
-		s.Suffix = fmt.Sprintf(" Service %s is updating...", color.ID(string(service.Path)))
+		s.Suffix = fmt.Sprintf(" Service %s is updating...", color.ID(service.Path.String()))
 	case v1.ServiceStateStable:
 		s.Stop()
-		fmt.Fprint(writer, color.BoldHiSuccess("Service %s is stable.", string(service.Path)))
+		fmt.Fprint(writer, color.BoldHiSuccess("Service %s is stable.", service.Path.String()))
 	case v1.ServiceStateFailed:
 		s.Stop()
-		fmt.Fprint(writer, color.BoldHiFailure("Service %s has failed. Error: %s", string(service.Path), service.FailureMessage))
+		message := "unknown"
+		if service.FailureInfo != nil {
+			message = service.FailureInfo.Message
+		}
+
+		fmt.Fprint(writer, color.BoldHiFailure("Service %s has failed. Error: %s", service.Path.String(), message))
 	}
 }
 
@@ -128,9 +133,11 @@ func servicePrinter(service *v1.Service, format printer.Format) printer.Interfac
 	var p printer.Interface
 	switch format {
 	case printer.FormatDefault, printer.FormatTable:
-		headers := []string{"Service", "State", "Updated", "Stale", "Addresses", "Info"}
+		headers := []string{"Service", "State", "Available", "Updated", "Stale", "Terminating", "Addresses", "Info"}
 
 		headerColors := []tw.Colors{
+			{tw.Bold},
+			{tw.Bold},
 			{tw.Bold},
 			{tw.Bold},
 			{tw.Bold},
@@ -146,11 +153,15 @@ func servicePrinter(service *v1.Service, format printer.Format) printer.Interfac
 			{},
 			{},
 			{},
+			{},
+			{},
 		}
 
 		columnAlignment := []int{
 			tw.ALIGN_LEFT,
 			tw.ALIGN_LEFT,
+			tw.ALIGN_RIGHT,
+			tw.ALIGN_RIGHT,
 			tw.ALIGN_RIGHT,
 			tw.ALIGN_RIGHT,
 			tw.ALIGN_LEFT,
@@ -170,22 +181,25 @@ func servicePrinter(service *v1.Service, format printer.Format) printer.Interfac
 		}
 
 		var info string
-		if service.FailureMessage == nil {
-			info = ""
-		} else {
-			info = *service.FailureMessage
+		if service.Message != nil {
+			info = *service.Message
+		}
+		if service.FailureInfo != nil {
+			info = service.FailureInfo.Message
 		}
 
 		var addresses []string
-		for port, address := range service.PublicPorts {
-			addresses = append(addresses, fmt.Sprintf("%v: %v", port, address.Address))
+		for port, address := range service.Ports {
+			addresses = append(addresses, fmt.Sprintf("%v: %v", port, address))
 		}
 
 		rows = append(rows, []string{
-			string(service.Path),
+			service.Path.String(),
 			stateColor(string(service.State)),
+			fmt.Sprintf("%d", service.AvailableInstances),
 			fmt.Sprintf("%d", service.UpdatedInstances),
 			fmt.Sprintf("%d", service.StaleInstances),
+			fmt.Sprintf("%d", service.TerminatingInstances),
 			strings.Join(addresses, ","),
 			string(info),
 		})

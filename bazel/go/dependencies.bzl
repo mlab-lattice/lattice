@@ -88,7 +88,7 @@ GO_DEPENDENCIES = {
             "name": "io_k8s_api",
             # https://github.com/bazelbuild/rules_go/issues/964
             "build_file_proto_mode": "disable",
-            "tag": "kubernetes-1.9.3",
+            "tag": "kubernetes-1.10.1",
             "importpath": "k8s.io/api",
         },
         "k8s.io/apimachinery": {
@@ -98,7 +98,7 @@ GO_DEPENDENCIES = {
             "build_file_name": "BUILD.bazel",
             # https://github.com/bazelbuild/rules_go/issues/964
             "build_file_proto_mode": "disable",
-            "tag": "kubernetes-1.9.3",
+            "tag": "kubernetes-1.10.1",
             "importpath": "k8s.io/apimachinery",
         },
         "k8s.io/apiextensions-apiserver": {
@@ -108,19 +108,19 @@ GO_DEPENDENCIES = {
             "build_file_name": "BUILD.bazel",
             # https://github.com/bazelbuild/rules_go/issues/964
             "build_file_proto_mode": "disable",
-            "tag": "kubernetes-1.9.3",
+            "tag": "kubernetes-1.10.1",
             "importpath": "k8s.io/apiextensions-apiserver",
         },
         "k8s.io/client-go": {
             "name": "io_k8s_client_go",
-            "tag": "kubernetes-1.9.3",
+            "tag": "kubernetes-1.10.1",
             "importpath": "k8s.io/client-go",
         },
         "k8s.io/kubernetes": {
             "name": "io_k8s_kubernetes",
             "build_file_generation": "on",
             "build_file_name": "BUILD.bazel",
-            "tag": "v1.9.3",
+            "tag": "v1.10.1",
             "importpath": "k8s.io/kubernetes",
         },
 
@@ -360,7 +360,7 @@ GO_DEPENDENCIES = {
         },
         "github.com/go-openapi/spec": {
             "name": "com_github_go_openapi_spec",
-            "commit": "7abd5745472fff5eb3685386d5fb8bf38683154d",
+            "commit": "1de3e0542de65ad8d75452a595886fdd0befb363",
             "importpath": "github.com/go-openapi/spec",
         },
         "github.com/go-openapi/swag": {
@@ -417,14 +417,14 @@ GO_DEPENDENCIES = {
         },
         "github.com/json-iterator/go": {
             "name": "com_github_json_iterator_go",
-            "commit": "36b14963da70d11297d313183d7e6388c8510e1e",
+            "commit": "13f86432b882000a51c6e610c620974462691a97",
             "importpath": "github.com/json-iterator/go",
         },
-        "github.com/juju/ratelimit": {
-            "name": "com_github_juju_ratelimit",
-            "commit": "5b9ff866471762aa2ab2dced63c9fb6f53921342",
-            "importpath": "github.com/juju/ratelimit",
-        },
+#        "github.com/juju/ratelimit": {
+#            "name": "com_github_juju_ratelimit",
+#            "commit": "5b9ff866471762aa2ab2dced63c9fb6f53921342",
+#            "importpath": "github.com/juju/ratelimit",
+#        },
         "github.com/mailru/easyjson": {
             "name": "com_github_mailru_easyjson",
             "commit": "2f5df55504ebc322e4d52d34df6a1f5b503bf26d",
@@ -466,6 +466,11 @@ GO_DEPENDENCIES = {
             "commit": "b19bf474d317b857955b12035d2c5acb57ce8b01",
             "importpath": "golang.org/x/text",
         },
+        "golang.org/x/time": {
+            "name": "org_golang_x_time",
+            "commit": "f51c12702a4d776e4c1fa9b0fabab841babae631",
+            "importpath": "golang.org/x/time",
+        },
         "golang.org/x/tools": {
             "name": "org_golang_x_tools",
             "commit": "2382e3994d48b1d22acc2c86bcad0a2aff028e32",
@@ -478,7 +483,7 @@ GO_DEPENDENCIES = {
         },
         "google.golang.org/grpc": {
             "name": "org_golang_google_grpc",
-            "commit": "d2e1b51f33ff8c5e4a15560ff049d200e83726c5",
+            "commit": "5b3c4e850e90a4cf6a20ebd46c8b32a0a3afcb9e",
             "importpath": "google.golang.org/grpc",
         },
         "gopkg.in/inf.v0": {
@@ -489,17 +494,17 @@ GO_DEPENDENCIES = {
         # also depended upon by github.com/gin-gonic/gin
         "gopkg.in/yaml.v2": {
             "name": "in_gopkg_yaml_v2",
-            "commit": "53feefa2559fb8dfa8d81baad31be332c97d6c77",
+            "commit": "670d4cfef0544295bc27a114dbac37980d83185a",
             "importpath": "gopkg.in/yaml.v2",
         },
         "k8s.io/apiserver": {
             "name": "io_k8s_apiserver",
-            "tag": "kubernetes-1.9.3",
+            "tag": "kubernetes-1.10.1",
             "importpath": "k8s.io/apiserver",
         },
         "k8s.io/kube-openapi": {
             "name": "io_k8s_kube_openapi",
-            "commit": "39a7bf85c140f972372c2a0d1ee40adbf0c8bfe1",
+            "commit": "50ae88d24ede7b8bad68e23c805b5d3da5c8abaf",
             "importpath": "k8s.io/kube-openapi",
         },
     },

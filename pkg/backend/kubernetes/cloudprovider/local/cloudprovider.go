@@ -2,10 +2,15 @@ package local
 
 import (
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
+	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/lifecycle/system/bootstrap/bootstrapper"
+	"github.com/mlab-lattice/lattice/pkg/util/cli"
 
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
+
+	kubeclientset "k8s.io/client-go/kubernetes"
+	corelisters "k8s.io/client-go/listers/core/v1"
 
 	"github.com/golang/glog"
 )
@@ -18,28 +23,59 @@ const (
 
 	// This is the default IP for kube-dns
 	localDNSServerIP = "10.96.0.53"
-
-	DNSConfigDirectory = "/etc/lattice/local/dns/"
-	DNSHostsFile       = DNSConfigDirectory + "hosts"
-	DnsmasqConfigFile  = DNSConfigDirectory + "dnsmasq.conf"
 )
 
 type Options struct {
 	IP string
 }
 
-type CloudProvider interface {
-	IP() string
+func NewOptions(staticOptions *Options, dynamicConfig *latticev1.ConfigCloudProviderLocal) (*Options, error) {
+	options := &Options{
+		IP: staticOptions.IP,
+	}
+	return options, nil
 }
 
-func NewCloudProvider(options *Options) *DefaultLocalCloudProvider {
+func NewCloudProvider(
+	namespacePrefix string,
+	kubeClient kubeclientset.Interface,
+	kubeServiceLister corelisters.ServiceLister,
+	options *Options,
+) *DefaultLocalCloudProvider {
 	return &DefaultLocalCloudProvider{
-		ip: options.IP,
+		namespacePrefix: namespacePrefix,
+		ip:              options.IP,
+
+		kubeClient:        kubeClient,
+		kubeServiceLister: kubeServiceLister,
 	}
 }
 
+func Flags() (cli.Flags, *Options) {
+	options := &Options{}
+	flags := cli.Flags{
+		&cli.StringFlag{
+			Name:     "ip",
+			Required: true,
+			Target:   &options.IP,
+		},
+	}
+	return flags, options
+}
+
 type DefaultLocalCloudProvider struct {
-	ip string
+	namespacePrefix string
+	ip              string
+
+	kubeServiceLister corelisters.ServiceLister
+	kubeClient        kubeclientset.Interface
+}
+
+func (cp *DefaultLocalCloudProvider) BootstrapSystemResources(resources *bootstrapper.SystemResources) {
+	for _, daemonSet := range resources.DaemonSets {
+		template := transformPodTemplateSpec(&daemonSet.Spec.Template)
+		daemonSet.Spec.Template = *template
+	}
 }
 
 func (cp *DefaultLocalCloudProvider) TransformComponentBuildJobSpec(spec *batchv1.JobSpec) *batchv1.JobSpec {

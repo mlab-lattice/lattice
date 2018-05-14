@@ -29,7 +29,7 @@ func (c *Controller) syncInProgressTeardown(teardown *latticev1.Teardown) error 
 	// Check to see if the system controller has processed updates to its Spec.
 	// If it hasn't, the system.Status.State is not up to date. Return no error
 	// and wait until the System has been updated to resync.
-	if !isSystemStatusCurrent(system) {
+	if !system.UpdateProcessed() {
 		return nil
 	}
 
@@ -40,13 +40,18 @@ func (c *Controller) syncInProgressTeardown(teardown *latticev1.Teardown) error 
 		return nil
 
 	case latticev1.SystemStateStable:
+		system, err = c.updateSystemLabels(system, nil, nil, nil)
+		if err != nil {
+			return err
+		}
+
 		state = latticev1.TeardownStateSucceeded
 
 	case latticev1.SystemStateDegraded:
 		state = latticev1.TeardownStateFailed
 
 	default:
-		return fmt.Errorf("System %v/%v in unexpected state %v", system.Namespace, system.Name, system.Status.State)
+		return fmt.Errorf("%v in unexpected state %v", system.Description(), system.Status.State)
 	}
 
 	teardown, err = c.updateTeardownStatus(teardown, state, "")
