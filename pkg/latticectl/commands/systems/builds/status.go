@@ -200,9 +200,11 @@ func BuildPrinter(build *v1.Build, format printer.Format) printer.Interface {
 	var p printer.Interface
 	switch format {
 	case printer.FormatDefault, printer.FormatTable:
-		headers := []string{"Component", "State", "Info"}
+		headers := []string{"Component", "State", "Started At", "Completed At", "Info"}
 
 		headerColors := []tw.Colors{
+			{tw.Bold},
+			{tw.Bold},
 			{tw.Bold},
 			{tw.Bold},
 			{tw.Bold},
@@ -212,9 +214,13 @@ func BuildPrinter(build *v1.Build, format printer.Format) printer.Interface {
 			{tw.FgHiCyanColor},
 			{},
 			{},
+			{},
+			{},
 		}
 
 		columnAlignment := []int{
+			tw.ALIGN_LEFT,
+			tw.ALIGN_LEFT,
 			tw.ALIGN_LEFT,
 			tw.ALIGN_LEFT,
 			tw.ALIGN_LEFT,
@@ -249,9 +255,22 @@ func BuildPrinter(build *v1.Build, format printer.Format) printer.Interface {
 					stateColor = color.Warning
 				}
 
+				startTimestamp := ""
+				completionTimestamp := ""
+
+				if component.StartTimestamp != nil {
+					startTimestamp = component.StartTimestamp.String()
+				}
+
+				if component.CompletionTimestamp != nil {
+					completionTimestamp = component.CompletionTimestamp.String()
+				}
+
 				rows = append(rows, []string{
 					fmt.Sprintf("%s:%s", serviceName, componentName),
 					stateColor(string(component.State)),
+					startTimestamp,
+					completionTimestamp,
 					string(infoMessage),
 				})
 
