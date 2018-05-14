@@ -121,21 +121,27 @@ func buildsPrinter(builds []v1.Build, format printer.Format) printer.Interface {
 	var p printer.Interface
 	switch format {
 	case printer.FormatDefault, printer.FormatTable:
-		headers := []string{"ID", "Version", "State"}
+		headers := []string{"Started At", "Completed At", "ID", "Version", "State"}
 
 		headerColors := []tw.Colors{
+			{tw.Bold},
+			{tw.Bold},
 			{tw.Bold},
 			{tw.Bold},
 			{tw.Bold},
 		}
 
 		columnColors := []tw.Colors{
+			{},
+			{},
 			{tw.FgHiCyanColor},
 			{},
 			{},
 		}
 
 		columnAlignment := []int{
+			tw.ALIGN_LEFT,
+			tw.ALIGN_LEFT,
 			tw.ALIGN_LEFT,
 			tw.ALIGN_LEFT,
 			tw.ALIGN_LEFT,
@@ -153,7 +159,20 @@ func buildsPrinter(builds []v1.Build, format printer.Format) printer.Interface {
 				stateColor = color.Warning
 			}
 
+			startTimestamp := ""
+			completionTimestamp := ""
+
+			if build.StartTimestamp != nil {
+				startTimestamp = build.StartTimestamp.String()
+			}
+
+			if build.CompletionTimestamp != nil {
+				completionTimestamp = build.CompletionTimestamp.String()
+			}
+
 			rows = append(rows, []string{
+				startTimestamp,
+				completionTimestamp,
 				string(build.ID),
 				string(build.Version),
 				stateColor(string(build.State)),

@@ -110,16 +110,16 @@ func printServiceState(writer io.Writer, s *spinner.Spinner, service *v1.Service
 	switch service.State {
 	case v1.ServiceStatePending:
 		s.Start()
-		s.Suffix = fmt.Sprintf(" Service %s is pending...", color.ID(string(service.Path)))
+		s.Suffix = fmt.Sprintf(" Service %s is pending...", color.ID(service.Path.String()))
 	case v1.ServiceStateScaling:
 		s.Start()
-		s.Suffix = fmt.Sprintf(" Service %s is scaling...", color.ID(string(service.Path)))
+		s.Suffix = fmt.Sprintf(" Service %s is scaling...", color.ID(service.Path.String()))
 	case v1.ServiceStateUpdating:
 		s.Start()
-		s.Suffix = fmt.Sprintf(" Service %s is updating...", color.ID(string(service.Path)))
+		s.Suffix = fmt.Sprintf(" Service %s is updating...", color.ID(service.Path.String()))
 	case v1.ServiceStateStable:
 		s.Stop()
-		fmt.Fprint(writer, color.BoldHiSuccess("Service %s is stable.", string(service.Path)))
+		fmt.Fprint(writer, color.BoldHiSuccess("Service %s is stable.", service.Path.String()))
 	case v1.ServiceStateFailed:
 		s.Stop()
 		message := "unknown"
@@ -196,7 +196,7 @@ func servicePrinter(service *v1.Service, format printer.Format) printer.Interfac
 		}
 
 		rows = append(rows, []string{
-			string(service.Path),
+			service.Path.String(),
 			stateColor(string(service.State)),
 			fmt.Sprintf("%d", service.AvailableInstances),
 			fmt.Sprintf("%d", service.UpdatedInstances),
