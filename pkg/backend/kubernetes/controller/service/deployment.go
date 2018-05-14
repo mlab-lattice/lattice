@@ -103,10 +103,17 @@ func (c *Controller) syncExistingDeployment(
 	deployment *appsv1.Deployment,
 	nodePool *latticev1.NodePool,
 ) (*deploymentStatus, error) {
-	// If the new node pool or address isn't ready yet, we shouldn't update the deployment's spec
-	// yet. If we do, the deployment will try to start rolling out, which will essentially
-	// just result in terminating some pods while waiting for the node pool to be ready.
-	if !nodePool.Stable() {
+	currentEpochStable, err := c.currentEpochStable(nodePool)
+	if err != nil {
+		err := fmt.Errorf(
+			"error checking if current epoch for %v node pool is stable: %v",
+			service.Description(c.namespacePrefix),
+			err,
+		)
+		return nil, err
+	}
+
+	if !currentEpochStable {
 		return c.getDeploymentStatus(service, deployment)
 	}
 
@@ -650,7 +657,7 @@ func (s *deploymentStatus) Failed() (bool, *deploymentStatusFailureInfo) {
 }
 
 func (s *deploymentStatus) Stable() bool {
-	return s.State == deploymentStateStable
+	return s.UpdateProcessed && s.State == deploymentStateStable
 }
 
 func (s *deploymentStatus) Ready() bool {
