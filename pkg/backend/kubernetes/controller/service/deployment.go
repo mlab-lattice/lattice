@@ -660,10 +660,6 @@ func (s *deploymentStatus) Stable() bool {
 	return s.UpdateProcessed && s.State == deploymentStateStable
 }
 
-func (s *deploymentStatus) Ready() bool {
-	return s.UpdateProcessed && s.Stable()
-}
-
 func (c *Controller) getDeploymentStatus(
 	service *latticev1.Service,
 	deployment *appsv1.Deployment,

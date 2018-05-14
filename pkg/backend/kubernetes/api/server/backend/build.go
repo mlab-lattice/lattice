@@ -2,17 +2,22 @@ package backend
 
 import (
 	"fmt"
+	"io"
+	"time"
 
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	"github.com/mlab-lattice/lattice/pkg/definition"
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 
+	corev1 "k8s.io/api/core/v1"
+
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/selection"
 
 	"github.com/satori/go.uuid"
-	"time"
 )
 
 func (kb *KubernetesBackend) Build(systemID v1.SystemID, definitionRoot tree.Node, version v1.SystemVersion) (*v1.Build, error) {
@@ -114,6 +119,79 @@ func (kb *KubernetesBackend) GetBuild(systemID v1.SystemID, buildID v1.BuildID) 
 	}
 
 	return &externalBuild, nil
+}
+
+func (kb *KubernetesBackend) BuildLogs(
+	systemID v1.SystemID,
+	buildID v1.BuildID,
+	path tree.NodePath,
+	component string,
+	follow bool,
+) (io.ReadCloser, error) {
+	// Ensure the system exists
+	if _, err := kb.ensureSystemCreated(systemID); err != nil {
+		return nil, err
+	}
+
+	namespace := kb.systemNamespace(systemID)
+	build, err := kb.latticeClient.LatticeV1().Builds(namespace).Get(string(buildID), metav1.GetOptions{})
+	if err != nil {
+		if errors.IsNotFound(err) {
+			return nil, v1.NewInvalidBuildIDError(buildID)
+		}
+
+		return nil, err
+	}
+
+	serviceBuildID, ok := build.Status.ServiceBuilds[path]
+	if !ok {
+		if errors.IsNotFound(err) {
+			return nil, v1.NewInvalidServicePathError(path)
+		}
+
+		return nil, err
+	}
+
+	status, ok := build.Status.ServiceBuildStatuses[serviceBuildID]
+	if !ok {
+		err := fmt.Errorf(
+			"%v has service build ID %v for %v, but does not have a status for it",
+			build.Description(kb.namespacePrefix),
+			serviceBuildID,
+			path.String(),
+		)
+		return nil, err
+	}
+
+	componentBuildID, ok := status.ComponentBuilds[component]
+	if !ok {
+		return nil, v1.NewInvalidComponentError(component)
+	}
+
+	selector := labels.NewSelector()
+	requirement, err := labels.NewRequirement(latticev1.ComponentBuildIDLabelKey, selection.Equals, []string{componentBuildID})
+	if err != nil {
+		return nil, fmt.Errorf("error creating requirement for %v/%v job lookup: %v", namespace, componentBuildID, err)
+	}
+
+	selector = selector.Add(*requirement)
+	pods, err := kb.kubeClient.CoreV1().Pods(namespace).List(metav1.ListOptions{LabelSelector: selector.String()})
+	if err != nil {
+		return nil, err
+	}
+
+	if len(pods.Items) > 1 {
+		return nil, fmt.Errorf("found multiple pods for %v/%v", namespace, componentBuildID)
+	}
+
+	if len(pods.Items) == 0 {
+		return nil, nil
+	}
+
+	pod := pods.Items[0]
+	logOptions := &corev1.PodLogOptions{Follow: follow}
+	req := kb.kubeClient.CoreV1().Pods(namespace).GetLogs(pod.Name, logOptions)
+	return req.Stream()
 }
 
 func (kb *KubernetesBackend) transformBuild(build *latticev1.Build) (v1.Build, error) {

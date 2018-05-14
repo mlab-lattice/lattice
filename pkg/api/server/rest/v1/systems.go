@@ -15,6 +15,9 @@ import (
 	"github.com/mlab-lattice/lattice/pkg/util/git"
 
 	"github.com/gin-gonic/gin"
+	"io"
+	"io/ioutil"
+	"strconv"
 )
 
 func mountSystemHandlers(router *gin.Engine, backend v1server.Interface, sysResolver *resolver.SystemResolver) {
@@ -148,6 +151,77 @@ func mountBuildHandlers(router *gin.Engine, backend v1server.Interface, sysResol
 		}
 
 		c.JSON(http.StatusOK, build)
+	})
+
+	componentIdentifier := "component"
+	componentIdentifierPathComponent := fmt.Sprintf(":%v", componentIdentifier)
+	componentLogPath := fmt.Sprintf(
+		v1rest.BuildLogPathFormat,
+		systemIdentifierPathComponent,
+		buildIdentifierPathComponent,
+		componentIdentifierPathComponent,
+	)
+
+	// get-build-logs
+	router.GET(componentLogPath, func(c *gin.Context) {
+		systemID := v1.SystemID(c.Param(systemIdentifier))
+		buildID := v1.BuildID(c.Param(buildIdentifier))
+		component := c.Param(componentIdentifier)
+		followQuery := c.DefaultQuery("follow", "false")
+
+		follow, err := strconv.ParseBool(followQuery)
+		if err != nil {
+			c.Status(http.StatusBadRequest)
+			return
+		}
+
+		parts := strings.Split(component, ":")
+		if len(parts) != 2 {
+			c.Status(http.StatusBadRequest)
+			return
+		}
+
+		path, err := tree.NewNodePath(parts[0])
+		if err != nil {
+			c.Status(http.StatusBadRequest)
+			return
+		}
+
+		component = parts[1]
+
+		log, err := backend.BuildLogs(systemID, buildID, path, component, follow)
+		if err != nil {
+			handleError(c, err)
+			return
+		}
+
+		if log == nil {
+			c.Status(http.StatusOK)
+			return
+		}
+
+		defer log.Close()
+		if !follow {
+			logContents, err := ioutil.ReadAll(log)
+			if err != nil {
+				c.String(http.StatusInternalServerError, "")
+				return
+			}
+			c.String(http.StatusOK, string(logContents))
+			return
+		}
+
+		// FIXME: totally arbitrary buffer size choice
+		buf := make([]byte, 1024*4)
+		c.Stream(func(w io.Writer) bool {
+			n, err := log.Read(buf)
+			if err != nil {
+				return false
+			}
+
+			w.Write(buf[:n])
+			return true
+		})
 	})
 }
 

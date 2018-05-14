@@ -58,6 +58,7 @@ var Latticectl = latticectl.Latticectl{
 					&builds.ListBuildsCommand{
 						Subcommands: []latticectl.Command{
 							&builds.StatusCommand{},
+							&builds.LogsCommand{},
 						},
 					},
 

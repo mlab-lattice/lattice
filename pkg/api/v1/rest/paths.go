@@ -6,8 +6,10 @@ const (
 	SystemsPath      = RootPath + "/systems"
 	SystemPathFormat = SystemsPath + "/%v"
 
-	BuildsPathFormat = SystemPathFormat + "/builds"
-	BuildPathFormat  = BuildsPathFormat + "/%v"
+	BuildsPathFormat    = SystemPathFormat + "/builds"
+	BuildPathFormat     = BuildsPathFormat + "/%v"
+	BuildLogsPathFormat = BuildPathFormat + "/logs"
+	BuildLogPathFormat  = BuildLogsPathFormat + "/%v"
 
 	DeploysPathFormat = SystemPathFormat + "/deploys"
 	DeployPathFormat  = DeploysPathFormat + "/%v"
