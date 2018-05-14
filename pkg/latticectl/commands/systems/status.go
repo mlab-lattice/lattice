@@ -184,7 +184,7 @@ func PrintSystemStateDuringStatus(writer io.Writer, s *spinner.Spinner, system *
 				}
 
 				serviceErrors = append(serviceErrors, []string{
-					fmt.Sprintf("%s", service.Path),
+					service.Path.String(),
 					message,
 				})
 			}
@@ -269,7 +269,7 @@ func SystemPrinter(system *v1.System, services []v1.Service, format printer.Form
 			}
 
 			rows = append(rows, []string{
-				string(service.Path),
+				service.Path.String(),
 				stateColor(string(service.State)),
 				fmt.Sprintf("%d", service.AvailableInstances),
 				fmt.Sprintf("%d", service.UpdatedInstances),

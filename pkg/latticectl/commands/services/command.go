@@ -173,7 +173,7 @@ func servicesPrinter(services []v1.Service, format printer.Format) printer.Inter
 			}
 
 			rows = append(rows, []string{
-				string(service.Path),
+				service.Path.String(),
 				stateColor(string(service.State)),
 				fmt.Sprintf("%d", service.AvailableInstances),
 				fmt.Sprintf("%d", service.UpdatedInstances),

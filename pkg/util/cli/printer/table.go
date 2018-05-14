@@ -41,7 +41,6 @@ func (t *Table) Print(writer io.Writer) error {
 	table.SetHeader(t.Headers)
 	table.SetAutoFormatHeaders(false)
 	table.SetBorder(false)
-	//table.SetHeaderLine(false)
 	table.SetCenterSeparator(FgHiBlack(" "))
 	table.SetColumnSeparator(FgHiBlack(" "))
 	table.SetRowSeparator(FgHiBlack("-"))

@@ -107,7 +107,7 @@ func printSystemStateDuringTeardown(writer io.Writer, s *spinner.Spinner, system
 				}
 
 				serviceErrors = append(serviceErrors, []string{
-					fmt.Sprintf("%s", service.Path),
+					service.Path.String(),
 					message,
 				})
 			}
