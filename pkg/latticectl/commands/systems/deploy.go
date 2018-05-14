@@ -148,7 +148,7 @@ func printBuildStateDuringDeploy(writer io.Writer, s *spinner.Spinner, build *v1
 	}
 }
 
-func printSystemStateDuringDeploy(writer io.Writer, s *spinner.Spinner, system *v1.System) {
+func printSystemStateDuringDeploy(writer io.Writer, s *spinner.Spinner, system *v1.System, services []v1.Service) {
 	switch system.State {
 	case v1.SystemStateScaling:
 		s.Start()
@@ -168,7 +168,7 @@ func printSystemStateDuringDeploy(writer io.Writer, s *spinner.Spinner, system *
 
 		var serviceErrors [][]string
 
-		for serviceName, service := range system.Services {
+		for _, service := range services {
 			if service.State == v1.ServiceStateFailed {
 				message := "unknown"
 				if service.FailureInfo != nil {
@@ -176,7 +176,7 @@ func printSystemStateDuringDeploy(writer io.Writer, s *spinner.Spinner, system *
 				}
 
 				serviceErrors = append(serviceErrors, []string{
-					fmt.Sprintf("%s", serviceName),
+					service.Path.String(),
 					message,
 				})
 			}

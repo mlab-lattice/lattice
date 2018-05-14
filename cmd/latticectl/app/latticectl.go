@@ -82,6 +82,7 @@ var Latticectl = latticectl.Latticectl{
 						Subcommands: []latticectl.Command{
 							&secrets.GetCommand{},
 							&secrets.SetCommand{},
+							&secrets.UnsetCommand{},
 						},
 					},
 				},
