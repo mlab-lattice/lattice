@@ -14,7 +14,6 @@ import (
 	"github.com/mlab-lattice/lattice/pkg/util/cli/color"
 	"github.com/mlab-lattice/lattice/pkg/util/cli/printer"
 
-	tw "github.com/tfogo/tablewriter"
 	"k8s.io/apimachinery/pkg/util/wait"
 )
 
@@ -116,24 +115,9 @@ func teardownsPrinter(teardowns []v1.Teardown, format printer.Format) printer.In
 	var p printer.Interface
 	switch format {
 	case printer.FormatTable:
+		var rows [][]string
 		headers := []string{"ID", "State"}
 
-		headerColors := []tw.Colors{
-			{tw.Bold},
-			{tw.Bold},
-		}
-
-		columnColors := []tw.Colors{
-			{tw.FgHiCyanColor},
-			{},
-		}
-
-		columnAlignment := []int{
-			tw.ALIGN_LEFT,
-			tw.ALIGN_LEFT,
-		}
-
-		var rows [][]string
 		for _, teardown := range teardowns {
 			var stateColor color.Color
 			switch teardown.State {
@@ -146,17 +130,14 @@ func teardownsPrinter(teardowns []v1.Teardown, format printer.Format) printer.In
 			}
 
 			rows = append(rows, []string{
-				string(teardown.ID),
+				color.ID(string(teardown.ID)),
 				stateColor(string(teardown.State)),
 			})
 		}
 
 		p = &printer.Table{
-			Headers:         headers,
-			Rows:            rows,
-			HeaderColors:    headerColors,
-			ColumnColors:    columnColors,
-			ColumnAlignment: columnAlignment,
+			Headers: headers,
+			Rows:    rows,
 		}
 
 	case printer.FormatJSON:

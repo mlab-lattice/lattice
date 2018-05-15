@@ -15,8 +15,6 @@ import (
 	"github.com/mlab-lattice/lattice/pkg/util/cli/printer"
 
 	"k8s.io/apimachinery/pkg/util/wait"
-
-	tw "github.com/tfogo/tablewriter"
 )
 
 // ListSystemsSupportedFormats is the list of printer.Formats supported
@@ -120,27 +118,9 @@ func systemsPrinter(systems []v1.System, format printer.Format) printer.Interfac
 	var p printer.Interface
 	switch format {
 	case printer.FormatTable:
+		var rows [][]string
 		headers := []string{"Name", "Definition", "Status"}
 
-		headerColors := []tw.Colors{
-			{tw.Bold},
-			{tw.Bold},
-			{tw.Bold},
-		}
-
-		columnColors := []tw.Colors{
-			{tw.FgHiCyanColor},
-			{},
-			{},
-		}
-
-		columnAlignment := []int{
-			tw.ALIGN_LEFT,
-			tw.ALIGN_LEFT,
-			tw.ALIGN_LEFT,
-		}
-
-		var rows [][]string
 		for _, system := range systems {
 			var stateColor color.Color
 			switch system.State {
@@ -153,18 +133,15 @@ func systemsPrinter(systems []v1.System, format printer.Format) printer.Interfac
 			}
 
 			rows = append(rows, []string{
-				string(system.ID),
+				color.ID(string(system.ID)),
 				system.DefinitionURL,
 				stateColor(string(system.State)),
 			})
 		}
 
 		p = &printer.Table{
-			Headers:         headers,
-			Rows:            rows,
-			HeaderColors:    headerColors,
-			ColumnColors:    columnColors,
-			ColumnAlignment: columnAlignment,
+			Headers: headers,
+			Rows:    rows,
 		}
 
 	case printer.FormatJSON:

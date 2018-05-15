@@ -14,7 +14,6 @@ import (
 	"github.com/mlab-lattice/lattice/pkg/util/cli/color"
 	"github.com/mlab-lattice/lattice/pkg/util/cli/printer"
 
-	tw "github.com/tfogo/tablewriter"
 	"k8s.io/apimachinery/pkg/util/wait"
 )
 
@@ -105,27 +104,9 @@ func deploysPrinter(deploys []v1.Deploy, format printer.Format) printer.Interfac
 	var p printer.Interface
 	switch format {
 	case printer.FormatTable:
+		var rows [][]string
 		headers := []string{"ID", "Build ID", "State"}
 
-		headerColors := []tw.Colors{
-			{tw.Bold},
-			{tw.Bold},
-			{tw.Bold},
-		}
-
-		columnColors := []tw.Colors{
-			{tw.FgHiCyanColor},
-			{tw.FgHiCyanColor},
-			{},
-		}
-
-		columnAlignment := []int{
-			tw.ALIGN_LEFT,
-			tw.ALIGN_LEFT,
-			tw.ALIGN_LEFT,
-		}
-
-		var rows [][]string
 		for _, deploy := range deploys {
 			var stateColor color.Color
 			switch deploy.State {
@@ -138,18 +119,15 @@ func deploysPrinter(deploys []v1.Deploy, format printer.Format) printer.Interfac
 			}
 
 			rows = append(rows, []string{
-				string(deploy.ID),
-				string(deploy.BuildID),
+				color.ID(string(deploy.ID)),
+				color.ID(string(deploy.BuildID)),
 				stateColor(string(deploy.State)),
 			})
 		}
 
 		p = &printer.Table{
-			Headers:         headers,
-			Rows:            rows,
-			HeaderColors:    headerColors,
-			ColumnColors:    columnColors,
-			ColumnAlignment: columnAlignment,
+			Headers: headers,
+			Rows:    rows,
 		}
 
 	case printer.FormatJSON:

@@ -20,7 +20,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 
 	"github.com/briandowns/spinner"
-	tw "github.com/tfogo/tablewriter"
 )
 
 type StatusCommand struct {
@@ -198,39 +197,11 @@ func BuildPrinter(build *v1.Build, format printer.Format) printer.Interface {
 	var p printer.Interface
 	switch format {
 	case printer.FormatTable:
+		var rows [][]string
 		headers := []string{"Component", "State", "Started At", "Completed At", "Info"}
 
-		headerColors := []tw.Colors{
-			{tw.Bold},
-			{tw.Bold},
-			{tw.Bold},
-			{tw.Bold},
-			{tw.Bold},
-		}
-
-		columnColors := []tw.Colors{
-			{tw.FgHiCyanColor},
-			{},
-			{},
-			{},
-			{},
-		}
-
-		columnAlignment := []int{
-			tw.ALIGN_LEFT,
-			tw.ALIGN_LEFT,
-			tw.ALIGN_LEFT,
-			tw.ALIGN_LEFT,
-			tw.ALIGN_LEFT,
-		}
-
-		var rows [][]string
-		// fmt.Fprintln(os.Stdout, build)
 		for serviceName, service := range build.Services {
-			// fmt.Fprintln(os.Stdout, service)
 			for componentName, component := range service.Components {
-				// fmt.Fprintln(os.Stdout, component)
-				//fmt.Fprint(os.Stdout, "COMPONENT STATE", component.State, "    ")
 				var infoMessage string
 
 				if component.FailureMessage == nil {
@@ -265,23 +236,20 @@ func BuildPrinter(build *v1.Build, format printer.Format) printer.Interface {
 				}
 
 				rows = append(rows, []string{
-					fmt.Sprintf("%s:%s", serviceName, componentName),
+					color.ID(fmt.Sprintf("%s:%s", serviceName, componentName)),
 					stateColor(string(component.State)),
 					startTimestamp,
 					completionTimestamp,
 					string(infoMessage),
 				})
-
-				sort.Slice(rows, func(i, j int) bool { return rows[i][0] < rows[j][0] })
 			}
 		}
 
+		sort.Slice(rows, func(i, j int) bool { return rows[i][0] < rows[j][0] })
+
 		p = &printer.Table{
-			Headers:         headers,
-			Rows:            rows,
-			HeaderColors:    headerColors,
-			ColumnColors:    columnColors,
-			ColumnAlignment: columnAlignment,
+			Headers: headers,
+			Rows:    rows,
 		}
 
 	case printer.FormatJSON:

@@ -21,7 +21,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 
 	"github.com/briandowns/spinner"
-	tw "github.com/tfogo/tablewriter"
 )
 
 type StatusCommand struct {
@@ -206,42 +205,9 @@ func SystemPrinter(system *v1.System, services []v1.Service, format printer.Form
 	var p printer.Interface
 	switch format {
 	case printer.FormatTable:
+		var rows [][]string
 		headers := []string{"Service", "State", "Available", "Updated", "Stale", "Terminating", "Ports", "Info"}
 
-		headerColors := []tw.Colors{
-			{tw.Bold},
-			{tw.Bold},
-			{tw.Bold},
-			{tw.Bold},
-			{tw.Bold},
-			{tw.Bold},
-			{tw.Bold},
-			{tw.Bold},
-		}
-
-		columnColors := []tw.Colors{
-			{tw.FgHiCyanColor},
-			{},
-			{},
-			{},
-			{},
-			{},
-			{},
-			{},
-		}
-
-		columnAlignment := []int{
-			tw.ALIGN_LEFT,
-			tw.ALIGN_LEFT,
-			tw.ALIGN_RIGHT,
-			tw.ALIGN_RIGHT,
-			tw.ALIGN_RIGHT,
-			tw.ALIGN_RIGHT,
-			tw.ALIGN_LEFT,
-			tw.ALIGN_LEFT,
-		}
-
-		var rows [][]string
 		for _, service := range services {
 			var message string
 			if service.Message != nil {
@@ -267,7 +233,7 @@ func SystemPrinter(system *v1.System, services []v1.Service, format printer.Form
 			}
 
 			rows = append(rows, []string{
-				service.Path.String(),
+				color.ID(service.Path.String()),
 				stateColor(string(service.State)),
 				fmt.Sprintf("%d", service.AvailableInstances),
 				fmt.Sprintf("%d", service.UpdatedInstances),
@@ -276,16 +242,13 @@ func SystemPrinter(system *v1.System, services []v1.Service, format printer.Form
 				strings.Join(addresses, ","),
 				string(message),
 			})
-
-			sort.Slice(rows, func(i, j int) bool { return rows[i][0] < rows[j][0] })
 		}
 
+		sort.Slice(rows, func(i, j int) bool { return rows[i][0] < rows[j][0] })
+
 		p = &printer.Table{
-			Headers:         headers,
-			Rows:            rows,
-			HeaderColors:    headerColors,
-			ColumnColors:    columnColors,
-			ColumnAlignment: columnAlignment,
+			Headers: headers,
+			Rows:    rows,
 		}
 
 	case printer.FormatJSON:

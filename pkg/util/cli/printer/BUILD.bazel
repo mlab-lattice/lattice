@@ -15,6 +15,5 @@ go_library(
         "//pkg/util/cli/color:go_default_library",
         "@com_github_buger_goterm//:go_default_library",
         "@com_github_mattn_go_runewidth//:go_default_library",
-        "@com_github_tfogo_tablewriter//:go_default_library",
     ],
 )

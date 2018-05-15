@@ -20,7 +20,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 
 	"github.com/briandowns/spinner"
-	tw "github.com/tfogo/tablewriter"
 )
 
 type StatusCommand struct {
@@ -133,42 +132,8 @@ func servicePrinter(service *v1.Service, format printer.Format) printer.Interfac
 	var p printer.Interface
 	switch format {
 	case printer.FormatTable:
-		headers := []string{"Service", "State", "Available", "Updated", "Stale", "Terminating", "Addresses", "Info"}
-
-		headerColors := []tw.Colors{
-			{tw.Bold},
-			{tw.Bold},
-			{tw.Bold},
-			{tw.Bold},
-			{tw.Bold},
-			{tw.Bold},
-			{tw.Bold},
-			{tw.Bold},
-		}
-
-		columnColors := []tw.Colors{
-			{tw.FgHiCyanColor},
-			{},
-			{},
-			{},
-			{},
-			{},
-			{},
-			{},
-		}
-
-		columnAlignment := []int{
-			tw.ALIGN_LEFT,
-			tw.ALIGN_LEFT,
-			tw.ALIGN_RIGHT,
-			tw.ALIGN_RIGHT,
-			tw.ALIGN_RIGHT,
-			tw.ALIGN_RIGHT,
-			tw.ALIGN_LEFT,
-			tw.ALIGN_LEFT,
-		}
-
 		var rows [][]string
+		headers := []string{"Service", "State", "Available", "Updated", "Stale", "Terminating", "Addresses", "Info"}
 
 		var stateColor color.Color
 		switch service.State {
@@ -194,7 +159,7 @@ func servicePrinter(service *v1.Service, format printer.Format) printer.Interfac
 		}
 
 		rows = append(rows, []string{
-			service.Path.String(),
+			color.ID(service.Path.String()),
 			stateColor(string(service.State)),
 			fmt.Sprintf("%d", service.AvailableInstances),
 			fmt.Sprintf("%d", service.UpdatedInstances),
@@ -205,11 +170,8 @@ func servicePrinter(service *v1.Service, format printer.Format) printer.Interfac
 		})
 
 		p = &printer.Table{
-			Headers:         headers,
-			Rows:            rows,
-			HeaderColors:    headerColors,
-			ColumnColors:    columnColors,
-			ColumnAlignment: columnAlignment,
+			Headers: headers,
+			Rows:    rows,
 		}
 
 	case printer.FormatJSON:

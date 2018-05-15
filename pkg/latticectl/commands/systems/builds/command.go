@@ -15,7 +15,6 @@ import (
 	"github.com/mlab-lattice/lattice/pkg/util/cli/color"
 	"github.com/mlab-lattice/lattice/pkg/util/cli/printer"
 
-	tw "github.com/tfogo/tablewriter"
 	"k8s.io/apimachinery/pkg/util/wait"
 )
 
@@ -119,33 +118,9 @@ func buildsPrinter(builds []v1.Build, format printer.Format) printer.Interface {
 	var p printer.Interface
 	switch format {
 	case printer.FormatTable:
+		var rows [][]string
 		headers := []string{"ID", "Started At", "Completed At", "Version", "State"}
 
-		headerColors := []tw.Colors{
-			{tw.Bold},
-			{tw.Bold},
-			{tw.Bold},
-			{tw.Bold},
-			{tw.Bold},
-		}
-
-		columnColors := []tw.Colors{
-			{tw.FgHiCyanColor},
-			{},
-			{},
-			{},
-			{},
-		}
-
-		columnAlignment := []int{
-			tw.ALIGN_LEFT,
-			tw.ALIGN_LEFT,
-			tw.ALIGN_LEFT,
-			tw.ALIGN_LEFT,
-			tw.ALIGN_LEFT,
-		}
-
-		var rows [][]string
 		for _, build := range builds {
 			var stateColor color.Color
 			switch build.State {
@@ -169,7 +144,7 @@ func buildsPrinter(builds []v1.Build, format printer.Format) printer.Interface {
 			}
 
 			rows = append(rows, []string{
-				string(build.ID),
+				color.ID(string(build.ID)),
 				startTimestamp,
 				completionTimestamp,
 				string(build.Version),
@@ -180,11 +155,8 @@ func buildsPrinter(builds []v1.Build, format printer.Format) printer.Interface {
 		sort.Slice(rows, func(i, j int) bool { return rows[i][2] < rows[j][2] })
 
 		p = &printer.Table{
-			Headers:         headers,
-			Rows:            rows,
-			HeaderColors:    headerColors,
-			ColumnColors:    columnColors,
-			ColumnAlignment: columnAlignment,
+			Headers: headers,
+			Rows:    rows,
 		}
 
 	case printer.FormatJSON:
