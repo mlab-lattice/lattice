@@ -1,6 +1,8 @@
 package local
 
 import (
+	"fmt"
+
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/lifecycle/system/bootstrap/bootstrapper"
 	"github.com/mlab-lattice/lattice/pkg/util/cli"
@@ -9,8 +11,10 @@ import (
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 
+	kubeinformers "k8s.io/client-go/informers"
 	kubeclientset "k8s.io/client-go/kubernetes"
 	corelisters "k8s.io/client-go/listers/core/v1"
+	"k8s.io/client-go/tools/cache"
 
 	"github.com/golang/glog"
 )
@@ -39,16 +43,28 @@ func NewOptions(staticOptions *Options, dynamicConfig *latticev1.ConfigCloudProv
 func NewCloudProvider(
 	namespacePrefix string,
 	kubeClient kubeclientset.Interface,
-	kubeServiceLister corelisters.ServiceLister,
+	kubeInformerFactory kubeinformers.SharedInformerFactory,
 	options *Options,
-) *DefaultLocalCloudProvider {
-	return &DefaultLocalCloudProvider{
+) (*DefaultLocalCloudProvider, error) {
+	cp := &DefaultLocalCloudProvider{
 		namespacePrefix: namespacePrefix,
 		ip:              options.IP,
 
 		kubeClient:        kubeClient,
-		kubeServiceLister: kubeServiceLister,
+		kubeNodeLister:    kubeInformerFactory.Core().V1().Nodes().Lister(),
+		kubeServiceLister: kubeInformerFactory.Core().V1().Services().Lister(),
 	}
+
+	// wait for secondary caches to fill
+	if !cache.WaitForCacheSync(
+		nil,
+		kubeInformerFactory.Core().V1().Nodes().Informer().HasSynced,
+		kubeInformerFactory.Core().V1().Services().Informer().HasSynced,
+	) {
+		return nil, fmt.Errorf("failed to sync caches for aws cloud provider")
+	}
+
+	return cp, nil
 }
 
 func Flags() (cli.Flags, *Options) {
@@ -67,8 +83,9 @@ type DefaultLocalCloudProvider struct {
 	namespacePrefix string
 	ip              string
 
-	kubeServiceLister corelisters.ServiceLister
 	kubeClient        kubeclientset.Interface
+	kubeNodeLister    corelisters.NodeLister
+	kubeServiceLister corelisters.ServiceLister
 }
 
 func (cp *DefaultLocalCloudProvider) BootstrapSystemResources(resources *bootstrapper.SystemResources) {

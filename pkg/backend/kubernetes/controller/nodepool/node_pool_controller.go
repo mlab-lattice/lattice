@@ -9,13 +9,15 @@ import (
 	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/cloudprovider"
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	latticeclientset "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/generated/clientset/versioned"
-	latticeinformers "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/generated/informers/externalversions/lattice/v1"
+	latticeinformers "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/generated/informers/externalversions"
 	latticelisters "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/generated/listers/lattice/v1"
 
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
 
+	kubeinformers "k8s.io/client-go/informers"
+	kubeclientset "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
 
@@ -29,7 +31,11 @@ type Controller struct {
 	namespacePrefix string
 	latticeID       v1.LatticeID
 
+	kubeClient    kubeclientset.Interface
 	latticeClient latticeclientset.Interface
+
+	kubeInformerFactory    kubeinformers.SharedInformerFactory
+	latticeInformerFactory latticeinformers.SharedInformerFactory
 
 	staticCloudProviderOptions *cloudprovider.Options
 	cloudProvider              cloudprovider.Interface
@@ -54,16 +60,20 @@ func NewController(
 	namespacePrefix string,
 	latticeID v1.LatticeID,
 	cloudProviderOptions *cloudprovider.Options,
+	kubeClient kubeclientset.Interface,
 	latticeClient latticeclientset.Interface,
-	configInformer latticeinformers.ConfigInformer,
-	nodePoolInformer latticeinformers.NodePoolInformer,
-	serviceInformer latticeinformers.ServiceInformer,
+	kubeInformerFactory kubeinformers.SharedInformerFactory,
+	latticeInformerFactory latticeinformers.SharedInformerFactory,
 ) *Controller {
 	sc := &Controller{
 		namespacePrefix: namespacePrefix,
 		latticeID:       latticeID,
 
+		kubeClient:    kubeClient,
 		latticeClient: latticeClient,
+
+		kubeInformerFactory:    kubeInformerFactory,
+		latticeInformerFactory: latticeInformerFactory,
 
 		staticCloudProviderOptions: cloudProviderOptions,
 
@@ -75,6 +85,7 @@ func NewController(
 	sc.syncHandler = sc.syncNodePool
 	sc.enqueue = sc.enqueueNodePool
 
+	configInformer := latticeInformerFactory.Lattice().V1().Configs()
 	configInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		// It's assumed there is always one and only one config object.
 		AddFunc:    sc.handleConfigAdd,
@@ -84,6 +95,7 @@ func NewController(
 	sc.configLister = configInformer.Lister()
 	sc.configListerSynced = configInformer.Informer().HasSynced
 
+	nodePoolInformer := latticeInformerFactory.Lattice().V1().NodePools()
 	nodePoolInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    sc.handleNodePoolAdd,
 		UpdateFunc: sc.handleNodePoolUpdate,
@@ -92,6 +104,7 @@ func NewController(
 	sc.nodePoolLister = nodePoolInformer.Lister()
 	sc.nodePoolListerSynced = nodePoolInformer.Informer().HasSynced
 
+	serviceInformer := latticeInformerFactory.Lattice().V1().Services()
 	serviceInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    sc.handleServiceAdd,
 		UpdateFunc: sc.handleServiceUpdate,

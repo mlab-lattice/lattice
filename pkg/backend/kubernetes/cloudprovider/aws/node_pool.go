@@ -9,6 +9,11 @@ import (
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	"github.com/mlab-lattice/lattice/pkg/util/terraform"
 	awstfprovider "github.com/mlab-lattice/lattice/pkg/util/terraform/provider/aws"
+
+	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/kubernetes"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/selection"
 )
 
 const (
@@ -55,38 +60,85 @@ func (cp *DefaultAWSCloudProvider) NodePoolAddAnnotations(
 	return nil
 }
 
+func (cp *DefaultAWSCloudProvider) NodePoolEpochStatus(
+	latticeID v1.LatticeID,
+	nodePool *latticev1.NodePool,
+	epoch latticev1.NodePoolEpoch,
+	epochSpec *latticev1.NodePoolSpec,
+) (*latticev1.NodePoolStatusEpoch, error) {
+	selector := labels.NewSelector()
+	requirement, err := labels.NewRequirement(latticev1.NodePoolIDLabelKey, selection.Equals, []string{nodePool.ID(epoch)})
+	if err != nil {
+		return nil, fmt.Errorf("error making requirement for %v node lookup: %v", nodePool.Description(cp.namespacePrefix), err)
+	}
+
+	selector = selector.Add(*requirement)
+	nodes, err := cp.kubeNodeLister.List(selector)
+	if err != nil {
+		return nil, fmt.Errorf("error getting nodes for %v: %v", nodePool.Description(cp.namespacePrefix), err)
+	}
+
+	var n []corev1.Node
+	for _, node := range nodes {
+		n = append(n, *node)
+	}
+
+	ready := kubernetes.NumReadyNodes(n)
+	status := &latticev1.NodePoolStatusEpoch{
+		NumInstances: ready,
+		InstanceType: epochSpec.InstanceType,
+		State:        latticev1.NodePoolStateScaling,
+	}
+
+	if ready == epochSpec.NumInstances {
+		status.State = latticev1.NodePoolStateStable
+	}
+
+	return status, nil
+}
+
 func (cp *DefaultAWSCloudProvider) EnsureNodePoolEpoch(
 	latticeID v1.LatticeID,
 	nodePool *latticev1.NodePool,
 	epoch latticev1.NodePoolEpoch,
 ) error {
-	state, err := cp.nodePoolCurrentEpochState(latticeID, nodePool)
-	if err != nil {
-		return fmt.Errorf("error getting state for current epoch (%v): %v", epoch, err)
-	}
-
-	// Only want to call out to the cloud provider to provision the current epoch if
-	// the epoch isn't already stable.
-	// Due to the number of times that node pools are going to be assessed (currently have to
-	// reconsider it every time any service in its namespace changes), we really want to minimize
-	// the number of cloud API calls.
-	if state == latticev1.NodePoolStateStable {
-		return nil
-	}
-
 	module := cp.nodePoolTerraformModule(latticeID, nodePool, epoch)
 	config := cp.nodePoolTerraformConfig(latticeID, nodePool, epoch, module)
-	_, err = terraform.Apply(nodePoolWorkDirectory(nodePool.ID(epoch)), config)
+
+	result, _, err := terraform.Plan(nodePoolWorkDirectory(nodePool.ID(epoch)), config, false)
 	if err != nil {
 		return fmt.Errorf(
-			"error applying terraform for %v epoch %v: %v",
+			"error getting terraform plan for %v epoch %v: %v",
 			nodePool.Description(cp.namespacePrefix),
 			epoch,
 			err,
 		)
 	}
 
-	return nil
+	switch result {
+	case terraform.PlanResultNotEmpty:
+		_, err = terraform.Apply(nodePoolWorkDirectory(nodePool.ID(epoch)), config)
+		if err != nil {
+			return fmt.Errorf(
+				"error applying terraform for %v epoch %v: %v",
+				nodePool.Description(cp.namespacePrefix),
+				epoch,
+				err,
+			)
+		}
+
+		return nil
+
+	case terraform.PlanResultEmpty:
+		return nil
+
+	default:
+		return fmt.Errorf(
+			"unknown error getting terraform plan for %v epoch %v",
+			nodePool.Description(cp.namespacePrefix),
+			epoch,
+		)
+	}
 }
 
 func (cp *DefaultAWSCloudProvider) DestroyNodePoolEpoch(

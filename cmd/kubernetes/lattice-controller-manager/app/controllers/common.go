@@ -16,8 +16,6 @@ const (
 	AddressController         = "address"
 	BuildController           = "build"
 	ComponentBuildController  = "componentbuild"
-	EndpointController        = "endpoint"
-	LoadBalancerController    = "loadbalancer"
 	NodePoolController        = "nodepool"
 	ServiceBuildController    = "servicebuild"
 	ServiceController         = "service"
