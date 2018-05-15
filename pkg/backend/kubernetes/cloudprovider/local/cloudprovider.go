@@ -55,6 +55,12 @@ func NewCloudProvider(
 		kubeServiceLister: kubeInformerFactory.Core().V1().Services().Lister(),
 	}
 
+	// shared informer factories only start informers which have been referenced
+	// by the time start is called
+	// so we'll start the factories back up here in case the factories were started
+	// before without having these listers referenced
+	kubeInformerFactory.Start(nil)
+
 	// wait for secondary caches to fill
 	if !cache.WaitForCacheSync(
 		nil,

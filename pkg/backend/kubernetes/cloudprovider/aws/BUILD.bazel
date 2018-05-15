@@ -6,7 +6,6 @@ go_library(
         "address_load_balancer.go",
         "cloudprovider.go",
         "dns.go",
-        "ec2.go",
         "lattice_bootstrapper.go",
         "node_pool.go",
     ],

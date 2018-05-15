@@ -41,7 +41,7 @@ func (cp *DefaultAWSCloudProvider) NodePoolNeedsNewEpoch(nodePool *latticev1.Nod
 
 	// If the node pool's instance type is not the instance type of the current epoch, we
 	// need a new epoch.
-	return nodePool.Spec.InstanceType != epoch.InstanceType, nil
+	return nodePool.Spec.InstanceType != epoch.Spec.InstanceType, nil
 }
 
 func (cp *DefaultAWSCloudProvider) NodePoolAddAnnotations(
@@ -65,7 +65,7 @@ func (cp *DefaultAWSCloudProvider) NodePoolEpochStatus(
 	nodePool *latticev1.NodePool,
 	epoch latticev1.NodePoolEpoch,
 	epochSpec *latticev1.NodePoolSpec,
-) (*latticev1.NodePoolStatusEpoch, error) {
+) (*latticev1.NodePoolStatusEpochStatus, error) {
 	selector := labels.NewSelector()
 	requirement, err := labels.NewRequirement(latticev1.NodePoolIDLabelKey, selection.Equals, []string{nodePool.ID(epoch)})
 	if err != nil {
@@ -84,7 +84,7 @@ func (cp *DefaultAWSCloudProvider) NodePoolEpochStatus(
 	}
 
 	ready := kubernetes.NumReadyNodes(n)
-	status := &latticev1.NodePoolStatusEpoch{
+	status := &latticev1.NodePoolStatusEpochStatus{
 		NumInstances: ready,
 		InstanceType: epochSpec.InstanceType,
 		State:        latticev1.NodePoolStateScaling,
@@ -158,41 +158,6 @@ func (cp *DefaultAWSCloudProvider) DestroyNodePoolEpoch(
 	}
 
 	return nil
-}
-
-func (cp *DefaultAWSCloudProvider) nodePoolCurrentEpochState(
-	latticeID v1.LatticeID,
-	nodePool *latticev1.NodePool,
-) (latticev1.NodePoolState, error) {
-	current, ok := nodePool.Status.Epochs.CurrentEpoch()
-	if !ok {
-		err := fmt.Errorf("could not get current epoch for %v", nodePool.Description(cp.namespacePrefix))
-		return latticev1.NodePoolStatePending, err
-	}
-
-	epochInfo, ok := nodePool.Status.Epochs.Epoch(current)
-	if !ok {
-		err := fmt.Errorf(
-			"could not get epoch status for %v epoch %v",
-			nodePool.Description(cp.namespacePrefix),
-			current,
-		)
-		return latticev1.NodePoolStatePending, err
-	}
-
-	// Invariant: nodePoolCurrentEpochState will only be called if NodePoolNeedsNewEpoch returns false.
-	// Therefore, we don't have to check the instance type since NodePoolNeedsNewEpoch would have returned
-	// true if the they mismatched.
-
-	if epochInfo.State == latticev1.NodePoolStatePending {
-		return latticev1.NodePoolStatePending, nil
-	}
-
-	if nodePool.Spec.NumInstances != epochInfo.NumInstances {
-		return latticev1.NodePoolStateScaling, nil
-	}
-
-	return latticev1.NodePoolStateStable, nil
 }
 
 func (cp *DefaultAWSCloudProvider) nodePoolEpochInfo(

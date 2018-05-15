@@ -78,7 +78,7 @@ type NodePool interface {
 		nodePool *latticev1.NodePool,
 		epoch latticev1.NodePoolEpoch,
 		epochSpec *latticev1.NodePoolSpec,
-	) (*latticev1.NodePoolStatusEpoch, error)
+	) (*latticev1.NodePoolStatusEpochStatus, error)
 	NodePoolAddAnnotations(v1.LatticeID, *latticev1.NodePool, map[string]string, latticev1.NodePoolEpoch) error
 }
 

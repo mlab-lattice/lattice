@@ -272,6 +272,11 @@ const (
 )
 
 type NodePoolStatusEpoch struct {
+	Spec   NodePoolSpec              `json:"spec"`
+	Status NodePoolStatusEpochStatus `json:"status"`
+}
+
+type NodePoolStatusEpochStatus struct {
 	NumInstances int32         `json:"numInstances"`
 	InstanceType string        `json:"instanceType"`
 	State        NodePoolState `json:"state"`

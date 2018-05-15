@@ -270,5 +270,5 @@ func (c *Controller) currentEpochStable(nodePool *latticev1.NodePool) (bool, err
 		return false, err
 	}
 
-	return epochStatus.State == latticev1.NodePoolStateStable, nil
+	return epochStatus.Status.State == latticev1.NodePoolStateStable, nil
 }
