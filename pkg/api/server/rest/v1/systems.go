@@ -18,6 +18,8 @@ import (
 )
 
 func mountSystemHandlers(router *gin.RouterGroup, backend v1server.Interface, sysResolver *resolver.SystemResolver) {
+
+	fmt.Println("MOUNTING HANDLERS")
 	// create-system
 	router.POST(v1rest.SystemsPath, func(c *gin.Context) {
 		var req v1rest.CreateSystemRequest
