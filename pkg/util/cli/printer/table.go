@@ -6,6 +6,7 @@ import (
 	"io"
 	"regexp"
 	"strings"
+	"errors"
 
 	"github.com/buger/goterm"
 	"github.com/mattn/go-runewidth"
@@ -24,12 +25,17 @@ func (t *Table) Print(writer io.Writer) error {
 	var w int
 	var cellWidth int
 
-	// Number of cols = number of cells in header (first row)
-	t.nCols = len(t.Rows[0])
+	// Number of cols = number of cells in header
+	t.nCols = len(t.Headers)
+	// Check number of cells in each row match
+	if err := t.checkRowLengths(); err != nil {
+		return err
+	}
 
 	// Apply style to header
 	t.formatHeader()
 
+	// Prepend headers to rows for printing
 	t.Rows = append([][]string{t.Headers}, t.Rows...)
 
 	// Calculate width of columns from max width of cells
@@ -91,6 +97,16 @@ func (t *Table) getRowsWithHeaderBreak() [][]string {
 		headerBreak = append(headerBreak, strings.Repeat("-", w))
 	}
 	return append(t.Rows[:1], append([][]string{headerBreak}, t.Rows[1:]...)...)
+}
+
+func (t *Table) checkRowLengths() error {
+	for _, row := range t.Rows {
+		fmt.Println(len(row), t.nCols)
+		if len(row) != t.nCols {
+			return errors.New("Table formatting error: Number of cells do not match. Run with -o json to see unformatted output.")
+		}
+	}
+	return nil
 }
 
 // Pad spaces right
