@@ -43,10 +43,7 @@ func (c *Controller) syncActiveNodePool(nodePool *latticev1.NodePool) error {
 	if needsNewEpoch {
 		epoch = nodePool.Status.Epochs.NextEpoch()
 		epochs[epoch] = latticev1.NodePoolStatusEpoch{
-			Spec: latticev1.NodePoolSpec{
-				InstanceType: nodePool.Spec.InstanceType,
-				NumInstances: nodePool.Spec.NumInstances,
-			},
+			Spec: nodePool.Spec,
 			Status: latticev1.NodePoolStatusEpochStatus{
 				State: latticev1.NodePoolStatePending,
 			},
@@ -59,6 +56,21 @@ func (c *Controller) syncActiveNodePool(nodePool *latticev1.NodePool) error {
 				"cloud provider reported that %v did not need new epoch, but it does not have a current epoch",
 				nodePool.Description(c.namespacePrefix),
 			)
+		}
+
+		status, err := c.cloudProvider.NodePoolEpochStatus(c.latticeID, nodePool, epoch, &nodePool.Spec)
+		if err != nil {
+			return fmt.Errorf(
+				"error getting status for %v epoch %v: %v",
+				nodePool.Description(c.namespacePrefix),
+				epoch,
+				err,
+			)
+		}
+
+		epochs[epoch] = latticev1.NodePoolStatusEpoch{
+			Spec:   nodePool.Spec,
+			Status: *status,
 		}
 	}
 

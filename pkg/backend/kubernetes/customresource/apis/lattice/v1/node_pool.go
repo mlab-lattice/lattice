@@ -11,6 +11,8 @@ import (
 	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sort"
+	"strconv"
+	"strings"
 )
 
 const (
@@ -61,6 +63,28 @@ var (
 		Effect:   corev1.TaintEffectNoSchedule,
 	}
 )
+
+func NodePoolIDLabelInfo(namespacePrefix, value string) (v1.SystemID, string, NodePoolEpoch, error) {
+	parts := strings.Split(value, ".")
+	if len(parts) != 3 {
+		return "", "", 0, fmt.Errorf("malformed node pool ID label")
+	}
+
+	systemID, err := kubeutil.SystemID(namespacePrefix, parts[0])
+	if err != nil {
+		return "", "", 0, err
+	}
+
+	nodePoolID := parts[1]
+	epochStr := parts[2]
+
+	epoch, err := strconv.ParseInt(epochStr, 10, 64)
+	if err != nil {
+		return "", "", 0, fmt.Errorf("error converting epoch string value %v: %v", epochStr, err)
+	}
+
+	return systemID, nodePoolID, NodePoolEpoch(epoch), nil
+}
 
 // +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

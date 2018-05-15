@@ -18,6 +18,7 @@ import (
 
 	kubeinformers "k8s.io/client-go/informers"
 	kubeclientset "k8s.io/client-go/kubernetes"
+	corelisters "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
 
@@ -52,6 +53,9 @@ type Controller struct {
 
 	serviceLister       latticelisters.ServiceLister
 	serviceListerSynced cache.InformerSynced
+
+	kubeNodeLister       corelisters.NodeLister
+	kubeNodeListerSynced cache.InformerSynced
 
 	queue workqueue.RateLimitingInterface
 }
@@ -112,6 +116,15 @@ func NewController(
 	})
 	sc.serviceLister = serviceInformer.Lister()
 	sc.serviceListerSynced = serviceInformer.Informer().HasSynced
+
+	kubeNodeInformer := kubeInformerFactory.Core().V1().Nodes()
+	kubeNodeInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+		AddFunc:    sc.handleKubeNodeAdd,
+		UpdateFunc: sc.handleKubeNodeUpdate,
+		DeleteFunc: sc.handleKubeNodeDelete,
+	})
+	sc.kubeNodeLister = kubeNodeInformer.Lister()
+	sc.serviceListerSynced = kubeNodeInformer.Informer().HasSynced
 
 	return sc
 }
