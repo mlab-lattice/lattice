@@ -58,14 +58,11 @@ func (c *StatusCommand) Base() (*latticectl.BaseCommand, error) {
 
 			if watch {
 				err = WatchSystem(c, ctx.SystemID(), format, os.Stdout, PrintSystemStateDuringStatus, false)
-				if err != nil {
-					os.Exit(1)
-				}
+			} else {
+				err = GetSystem(c, ctx.SystemID(), format, os.Stdout)
 			}
-
-			err = GetSystem(c, ctx.SystemID(), format, os.Stdout)
 			if err != nil {
-				os.Exit(1)
+				log.Fatal(err)
 			}
 		},
 	}
@@ -88,7 +85,9 @@ func GetSystem(systemClient v1client.SystemClient, systemID v1.SystemID, format 
 	}
 
 	p := SystemPrinter(system, serviceList, format)
-	p.Print(writer)
+	if err := p.Print(writer); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -101,6 +100,7 @@ func WatchSystem(systemClient v1client.SystemClient, systemID v1.SystemID, forma
 	var returnError error
 	var exit bool
 	var b bytes.Buffer
+	var err error
 	s := spinner.New(spinner.CharSets[14], 100*time.Millisecond)
 
 	// Poll the API for the builds and send it to the channel
@@ -126,7 +126,10 @@ func WatchSystem(systemClient v1client.SystemClient, systemID v1.SystemID, forma
 
 	for fullSystemTree := range fullSystemTrees {
 		p := SystemPrinter(fullSystemTree.System, fullSystemTree.Services, format)
-		lastHeight = p.Overwrite(b, lastHeight)
+		err, lastHeight = p.Overwrite(b, lastHeight)
+		if err != nil {
+			return err
+		}
 
 		if format == printer.FormatTable {
 			PrintSystemStateDuringStatus(writer, s, fullSystemTree.System, fullSystemTree.Services)

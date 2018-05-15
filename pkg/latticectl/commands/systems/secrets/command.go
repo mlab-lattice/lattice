@@ -56,7 +56,9 @@ func ListSecrets(client v1client.SecretClient, format printer.Format, writer io.
 	}
 
 	p := secretsPrinter(secrets, format)
-	p.Print(writer)
+	if err := p.Print(writer); err != nil {
+		return err
+	}
 	return nil
 }
 

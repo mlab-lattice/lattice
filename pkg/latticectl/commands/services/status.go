@@ -49,10 +49,10 @@ func (c *StatusCommand) Base() (*latticectl.BaseCommand, error) {
 			c := ctx.Client().Systems().Services(ctx.SystemID())
 
 			if watch {
-				WatchService(c, ctx.ServicePath(), format, os.Stdout)
+				err = WatchService(c, ctx.ServicePath(), format, os.Stdout)
+			} else {
+				err = GetService(c, ctx.ServicePath(), format, os.Stdout)
 			}
-
-			err = GetService(c, ctx.ServicePath(), format, os.Stdout)
 			if err != nil {
 				log.Fatal(err)
 			}
@@ -68,16 +68,21 @@ func GetService(client v1client.ServiceClient, servicePath tree.NodePath, format
 		return err
 	}
 
-	printer := servicePrinter(service, format)
-	printer.Print(writer)
+	p := servicePrinter(service, format)
+
+	if err := p.Print(writer); err != nil {
+		return err
+	}
+
 	return nil
 }
 
-func WatchService(client v1client.ServiceClient, servicePath tree.NodePath, format printer.Format, writer io.Writer) {
+func WatchService(client v1client.ServiceClient, servicePath tree.NodePath, format printer.Format, writer io.Writer) error {
 	services := make(chan *v1.Service)
 
 	lastHeight := 0
 	var b bytes.Buffer
+	var err error
 	s := spinner.New(spinner.CharSets[14], 100*time.Millisecond)
 
 	go wait.PollImmediateInfinite(
@@ -95,12 +100,17 @@ func WatchService(client v1client.ServiceClient, servicePath tree.NodePath, form
 
 	for service := range services {
 		p := servicePrinter(service, format)
-		lastHeight = p.Overwrite(b, lastHeight)
+		err, lastHeight = p.Overwrite(b, lastHeight)
+		if err != nil {
+			return err
+		}
 
 		if format == printer.FormatTable {
 			printServiceState(writer, s, service)
 		}
 	}
+
+	return nil
 }
 
 func printServiceState(writer io.Writer, s *spinner.Spinner, service *v1.Service) {

@@ -52,12 +52,12 @@ func (c *ListServicesCommand) Base() (*latticectl.BaseCommand, error) {
 			}
 
 			if watch {
-				WatchServices(ctx.Client().Systems().Services(ctx.SystemID()), format, os.Stdout)
+				err = WatchServices(ctx.Client().Systems().Services(ctx.SystemID()), format, os.Stdout)
 			} else {
-				err := ListServices(ctx.Client().Systems().Services(ctx.SystemID()), format, os.Stdout)
-				if err != nil {
-					log.Fatal(err)
-				}
+				err = ListServices(ctx.Client().Systems().Services(ctx.SystemID()), format, os.Stdout)
+			}
+			if err != nil {
+				log.Fatal(err)
 			}
 		},
 		Subcommands: c.Subcommands,
@@ -72,16 +72,20 @@ func ListServices(client v1client.ServiceClient, format printer.Format, writer i
 		return err
 	}
 
-	printer := servicesPrinter(deploys, format)
-	printer.Print(writer)
+	p := servicesPrinter(deploys, format)
+
+	if err := p.Print(writer); err != nil {
+		return err
+	}
 	//fmt.Printf("%v\n", deploys)
 	return nil
 }
 
-func WatchServices(client v1client.ServiceClient, format printer.Format, writer io.Writer) {
+func WatchServices(client v1client.ServiceClient, format printer.Format, writer io.Writer) error {
 	serviceLists := make(chan []v1.Service)
 
 	lastHeight := 0
+	var err error
 	var b bytes.Buffer
 
 	go wait.PollImmediateInfinite(
@@ -99,8 +103,13 @@ func WatchServices(client v1client.ServiceClient, format printer.Format, writer 
 
 	for serviceList := range serviceLists {
 		p := servicesPrinter(serviceList, format)
-		lastHeight = p.Overwrite(b, lastHeight)
+		err, lastHeight = p.Overwrite(b, lastHeight)
+		if err != nil {
+			return err
+		}
 	}
+
+	return nil
 }
 
 func servicesPrinter(services []v1.Service, format printer.Format) printer.Interface {

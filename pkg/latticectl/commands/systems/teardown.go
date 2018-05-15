@@ -56,7 +56,7 @@ func (c *TeardownCommand) Base() (*latticectl.BaseCommand, error) {
 func TeardownSystem(client v1client.SystemClient, systemID v1.SystemID, format printer.Format, writer io.Writer, watch bool) error {
 	teardown, err := client.Teardowns(systemID).Create()
 	if err != nil {
-		log.Panic(err)
+		return err
 	}
 
 	if watch {
@@ -65,7 +65,7 @@ func TeardownSystem(client v1client.SystemClient, systemID v1.SystemID, format p
 		}
 		err = WatchSystem(client, systemID, format, writer, printSystemStateDuringTeardown, true)
 		if err != nil {
-			log.Panic(err)
+			return err
 		}
 	} else {
 		fmt.Fprintf(writer, "\nTearing down system %s. Teardown ID: %s\n\n", color.ID(string(systemID)), color.ID(string(teardown.ID)))

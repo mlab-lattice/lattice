@@ -65,6 +65,8 @@ func GetSecret(client v1client.SecretClient, path tree.NodePath, name string, fo
 	}
 
 	p := secretsPrinter([]v1.Secret{*secret}, format)
-	p.Print(writer)
+	if err := p.Print(writer); err != nil {
+		return err
+	}
 	return nil
 }

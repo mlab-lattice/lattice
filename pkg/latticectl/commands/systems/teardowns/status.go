@@ -50,11 +50,10 @@ func (c *StatusCommand) Base() (*latticectl.BaseCommand, error) {
 			c := ctx.Client().Systems().Teardowns(ctx.SystemID())
 
 			if watch {
-				WatchTeardown(c, ctx.TeardownID(), format, os.Stdout)
-				return
+				err = WatchTeardown(c, ctx.TeardownID(), format, os.Stdout)
+			} else {
+				err = GetTeardown(c, ctx.TeardownID(), format, os.Stdout)
 			}
-
-			err = GetTeardown(c, ctx.TeardownID(), format, os.Stdout)
 			if err != nil {
 				log.Fatal(err)
 			}
@@ -71,15 +70,18 @@ func GetTeardown(client v1client.TeardownClient, teardownID v1.TeardownID, forma
 	}
 
 	p := teardownsPrinter([]v1.Teardown{*teardown}, format)
-	p.Print(writer)
+	if err := p.Print(writer); err != nil {
+		return err
+	}
 	return nil
 }
 
-func WatchTeardown(client v1client.TeardownClient, teardownID v1.TeardownID, format printer.Format, writer io.Writer) {
+func WatchTeardown(client v1client.TeardownClient, teardownID v1.TeardownID, format printer.Format, writer io.Writer) error {
 	teardowns := make(chan *v1.Teardown)
 
 	lastHeight := 0
 	var b bytes.Buffer
+	var err error
 
 	go wait.PollImmediateInfinite(
 		5*time.Second,
@@ -96,6 +98,11 @@ func WatchTeardown(client v1client.TeardownClient, teardownID v1.TeardownID, for
 
 	for teardown := range teardowns {
 		p := teardownsPrinter([]v1.Teardown{*teardown}, format)
-		lastHeight = p.Overwrite(b, lastHeight)
+		err, lastHeight = p.Overwrite(b, lastHeight)
+		if err != nil {
+			return err
+		}
 	}
+
+	return err
 }

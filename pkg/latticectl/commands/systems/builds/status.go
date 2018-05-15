@@ -52,12 +52,9 @@ func (c *StatusCommand) Base() (*latticectl.BaseCommand, error) {
 
 			if watch {
 				err = WatchBuild(c, ctx.BuildID(), format, os.Stdout, PrintBuildStateDuringWatchBuild)
-				if err != nil {
-					os.Exit(1)
-				}
+			} else {
+				err = GetBuild(c, ctx.BuildID(), format, os.Stdout)
 			}
-
-			err = GetBuild(c, ctx.BuildID(), format, os.Stdout)
 			if err != nil {
 				log.Fatal(err)
 			}
@@ -74,7 +71,10 @@ func GetBuild(client v1client.BuildClient, buildID v1.BuildID, format printer.Fo
 	}
 
 	p := BuildPrinter(build, format)
-	p.Print(writer)
+	if err := p.Print(writer); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -103,6 +103,7 @@ func WatchBuild(
 	var returnError error
 	var exit bool
 	var b bytes.Buffer
+	var err error
 	s := spinner.New(spinner.CharSets[14], 100*time.Millisecond)
 
 	go wait.PollImmediateInfinite(
@@ -120,7 +121,10 @@ func WatchBuild(
 
 	for build := range builds {
 		p := BuildPrinter(build, format)
-		lastHeight = p.Overwrite(b, lastHeight)
+		err, lastHeight = p.Overwrite(b, lastHeight)
+		if err != nil {
+			return err
+		}
 
 		if format == printer.FormatTable {
 			PrintBuildStateDuringWatchBuild(writer, s, build)

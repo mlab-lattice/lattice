@@ -55,11 +55,10 @@ func (c *ListTeardownsCommand) Base() (*latticectl.BaseCommand, error) {
 			c := ctx.Client().Systems().Teardowns(ctx.SystemID())
 
 			if watch {
-				WatchTeardowns(c, format, os.Stdout)
-				return
+				err = WatchTeardowns(c, format, os.Stdout)
+			} else {
+				err = ListTeardowns(c, format, os.Stdout)
 			}
-
-			err = ListTeardowns(c, format, os.Stdout)
 			if err != nil {
 				log.Fatal(err)
 			}
@@ -78,19 +77,22 @@ func ListTeardowns(client v1cient.TeardownClient, format printer.Format, writer 
 	}
 
 	p := teardownsPrinter(teardowns, format)
-	p.Print(writer)
+	if err := p.Print(writer); err != nil {
+		return err
+	}
 	return nil
 }
 
 // WatchTeardowns polls the API for the current Teardowns, and writes out the Teardowns to the
 // the supplied io.Writer in the given printer.Format, unless the printer.Format is
 // printer.FormatTable, in which case it always writes to the terminal.
-func WatchTeardowns(client v1cient.TeardownClient, format printer.Format, writer io.Writer) {
+func WatchTeardowns(client v1cient.TeardownClient, format printer.Format, writer io.Writer) error {
 	// Poll the API for the teardowns and send it to the channel
 	teardownLists := make(chan []v1.Teardown)
 
 	lastHeight := 0
 	var b bytes.Buffer
+	var err error
 
 	go wait.PollImmediateInfinite(
 		5*time.Second,
@@ -107,8 +109,13 @@ func WatchTeardowns(client v1cient.TeardownClient, format printer.Format, writer
 
 	for teardownList := range teardownLists {
 		p := teardownsPrinter(teardownList, format)
-		lastHeight = p.Overwrite(b, lastHeight)
+		err, lastHeight = p.Overwrite(b, lastHeight)
+		if err != nil {
+			return err
+		}
 	}
+
+	return nil
 }
 
 func teardownsPrinter(teardowns []v1.Teardown, format printer.Format) printer.Interface {

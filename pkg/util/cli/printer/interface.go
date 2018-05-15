@@ -7,5 +7,5 @@ import (
 
 type Interface interface {
 	Print(writer io.Writer) error
-	Overwrite(b bytes.Buffer, lastHeight int) int
+	Overwrite(b bytes.Buffer, lastHeight int) (error, int)
 }

@@ -2,11 +2,11 @@ package printer
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"regexp"
 	"strings"
-	"errors"
 
 	"github.com/buger/goterm"
 	"github.com/mattn/go-runewidth"
@@ -64,10 +64,13 @@ func (t *Table) Print(writer io.Writer) error {
 	return nil
 }
 
-func (t *Table) Overwrite(b bytes.Buffer, lastHeight int) int {
+func (t *Table) Overwrite(b bytes.Buffer, lastHeight int) (error, int) {
 
 	// Read the new printer's output
-	t.Print(&b)
+	if err := t.Print(&b); err != nil {
+		return err, 0
+	}
+
 	output := b.String()
 	// Remove the new printer's output from the buffer
 	b.Truncate(0)
@@ -82,7 +85,7 @@ func (t *Table) Overwrite(b bytes.Buffer, lastHeight int) int {
 	goterm.Print(output)
 	goterm.Flush() // TODO: Fix for large outputs (e.g. systems:builds)
 
-	return len(strings.Split(output, "\n"))
+	return nil, len(strings.Split(output, "\n"))
 }
 
 func (t *Table) formatHeader() {
@@ -101,7 +104,6 @@ func (t *Table) getRowsWithHeaderBreak() [][]string {
 
 func (t *Table) checkRowLengths() error {
 	for _, row := range t.Rows {
-		fmt.Println(len(row), t.nCols)
 		if len(row) != t.nCols {
 			return errors.New("Table formatting error: Number of cells do not match. Run with -o json to see unformatted output.")
 		}
