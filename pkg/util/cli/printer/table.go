@@ -54,6 +54,7 @@ func (t *Table) Print(writer io.Writer) error {
 	t.Rows = t.getRowsWithHeaderBreak()
 
 	// Print rows
+	fmt.Fprint(writer, "\n") // Newline before table
 	for _, row := range t.Rows {
 		for col, cell := range row {
 			fmt.Fprint(writer, pad(cell, t.colWidths[col])+"   ")
@@ -78,7 +79,11 @@ func (t *Table) Overwrite(b bytes.Buffer, lastHeight int) (error, int) {
 	for i := 0; i <= lastHeight; i++ {
 		if i != 0 {
 			goterm.MoveCursorUp(1)
-			goterm.ResetLine("")
+			// Return cursor to start of line and clear the rest of the line
+			// Waiting on burger/goterm#23 to be merged to use ResetLine
+			// Later note: It seems burger/goterm#23 didn't fix the issue. So keep this line in.
+			// TODO: Investigate why ResetLine isn't working.
+			goterm.Print("\r\033[K")
 		}
 	}
 
