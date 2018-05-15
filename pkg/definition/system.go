@@ -3,10 +3,13 @@ package definition
 import (
 	"encoding/json"
 	"fmt"
+
+	"github.com/mlab-lattice/lattice/pkg/definition/block"
 )
 
 type System interface {
 	Interface
+	NodePools() map[string]block.NodePool
 	Subsystems() []Interface
 }
 
@@ -37,22 +40,28 @@ func NewSystemFromJSON(data []byte) (System, error) {
 	s := &system{
 		name:        decoded.Name,
 		description: decoded.Description,
-		subsystems:  subsystems,
+
+		nodePools:  decoded.NodePools,
+		subsystems: subsystems,
 	}
 	return s, nil
 }
 
 type systemEncoder struct {
-	Type        string            `json:"type"`
-	Name        string            `json:"name"`
-	Description string            `json:"description"`
-	Subsystems  []json.RawMessage `json:"subsystems"`
+	Type        string `json:"type"`
+	Name        string `json:"name"`
+	Description string `json:"description"`
+
+	NodePools  map[string]block.NodePool `json:"node_pools"`
+	Subsystems []json.RawMessage         `json:"subsystems"`
 }
 
 type system struct {
 	name        string
 	description string
-	subsystems  []Interface
+
+	nodePools  map[string]block.NodePool
+	subsystems []Interface
 }
 
 func (s *system) Type() string {
@@ -65,6 +74,10 @@ func (s *system) Name() string {
 
 func (s *system) Description() string {
 	return s.description
+}
+
+func (s *system) NodePools() map[string]block.NodePool {
+	return s.nodePools
 }
 
 func (s *system) Subsystems() []Interface {

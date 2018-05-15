@@ -58,9 +58,11 @@ func (c *Controller) updateSystemLabels(
 func (c *Controller) updateSystem(
 	system *latticev1.System,
 	services map[tree.NodePath]latticev1.SystemSpecServiceInfo,
+	nodePools map[v1.NodePoolPath]latticev1.NodePoolSpec,
 ) (*latticev1.System, error) {
 	spec := system.Spec.DeepCopy()
 	spec.Services = services
+	spec.NodePools = nodePools
 
 	return c.updateSystemSpec(system, *spec)
 }
@@ -98,7 +100,6 @@ func (c *Controller) getSystem(namespace string) (*latticev1.System, error) {
 }
 
 func (c *Controller) systemServices(
-	rollout *latticev1.Deploy,
 	build *latticev1.Build,
 ) (map[tree.NodePath]latticev1.SystemSpecServiceInfo, error) {
 	if build.Status.State != latticev1.BuildStateSucceeded {
@@ -181,4 +182,31 @@ func (c *Controller) systemServices(
 	}
 
 	return services, nil
+}
+
+func (c *Controller) systemNodePools(
+	build *latticev1.Build,
+) (map[v1.NodePoolPath]latticev1.NodePoolSpec, error) {
+	nodePools := make(map[v1.NodePoolPath]latticev1.NodePoolSpec)
+	err := tree.Walk(build.Spec.DefinitionRoot, func(n tree.Node) error {
+		path := n.Path()
+		pools := n.NodePools()
+
+		for name, nodePool := range pools {
+			p := v1.NewSystemSharedNodePoolPath(path, name)
+			spec := latticev1.NodePoolSpec{
+				NumInstances: nodePool.NumInstances,
+				InstanceType: nodePool.InstanceType,
+			}
+			nodePools[p] = spec
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	return nodePools, nil
 }

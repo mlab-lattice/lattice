@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"reflect"
 
+	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	kubeutil "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/kubernetes"
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
@@ -12,7 +13,40 @@ import (
 func (c *Controller) syncSystemStatus(
 	system *latticev1.System,
 	services map[tree.NodePath]latticev1.SystemStatusService,
+	nodePools map[v1.NodePoolPath]latticev1.SystemStatusNodePool,
 ) error {
+	hasFailedService, hasUpdatingService, hasScalingService, err := servicesStateInfo(services)
+	if err != nil {
+		return fmt.Errorf("error getting services info for %v: %v", system.Description(), err)
+	}
+
+	hasFailedNodePool, hasUpdatingNodePool, hasScalingNodePool, err := nodePoolsStateInfo(nodePools)
+	if err != nil {
+		return fmt.Errorf("error getting node pools info for %v: %v", system.Description(), err)
+	}
+
+	state := latticev1.SystemStateStable
+
+	// A scaling status takes priority over a stable status
+	if hasScalingService || hasScalingNodePool {
+		state = latticev1.SystemStateScaling
+	}
+
+	// An updating status takes priority over a scaling status
+	if hasUpdatingService || hasUpdatingNodePool {
+		state = latticev1.SystemStateUpdating
+	}
+
+	// A failed status takes priority over an updating status
+	if hasFailedService || hasFailedNodePool {
+		state = latticev1.SystemStateDegraded
+	}
+
+	_, err = c.updateSystemStatus(system, state, services)
+	return err
+}
+
+func servicesStateInfo(services map[tree.NodePath]latticev1.SystemStatusService) (bool, bool, bool, error) {
 	hasFailedService := false
 	hasUpdatingService := false
 	hasScalingService := false
@@ -37,29 +71,43 @@ func (c *Controller) syncSystemStatus(
 			// nothing to do
 
 		default:
-			return fmt.Errorf("service %v (%v) had unexpected state: %v", path.ToDomain(), system.Description(), status.State)
+			return false, false, false, fmt.Errorf("service %v had unexpected state: %v", path.String(), status.State)
 		}
 	}
 
-	state := latticev1.SystemStateStable
+	return hasFailedService, hasUpdatingService, hasScalingService, nil
+}
 
-	// A scaling status takes priority over a stable status
-	if hasScalingService {
-		state = latticev1.SystemStateScaling
+func nodePoolsStateInfo(nodePools map[v1.NodePoolPath]latticev1.SystemStatusNodePool) (bool, bool, bool, error) {
+	hasFailedNodePool := false
+	hasUpdatingNodePool := false
+	hasScalingNodePool := false
+
+	for path, status := range nodePools {
+		if status.ObservedGeneration < status.Generation {
+			hasUpdatingNodePool = true
+			continue
+		}
+
+		switch status.State {
+		case latticev1.NodePoolStateFailed:
+			hasFailedNodePool = true
+
+		case latticev1.NodePoolStateScaling:
+			hasScalingNodePool = true
+
+		case latticev1.NodePoolStateUpdating, latticev1.NodePoolStatePending, latticev1.NodePoolStateDeleting:
+			hasUpdatingNodePool = true
+
+		case latticev1.NodePoolStateStable:
+			// nothing to do
+
+		default:
+			return false, false, false, fmt.Errorf("node pool %v had unexpected state: %v", path.String(), status.State)
+		}
 	}
 
-	// An updating status takes priority over a scaling status
-	if hasUpdatingService {
-		state = latticev1.SystemStateUpdating
-	}
-
-	// A failed status takes priority over an updating status
-	if hasFailedService {
-		state = latticev1.SystemStateDegraded
-	}
-
-	_, err := c.updateSystemStatus(system, state, services)
-	return err
+	return hasFailedNodePool, hasUpdatingNodePool, hasScalingNodePool, nil
 }
 
 func (c *Controller) updateSystemStatus(

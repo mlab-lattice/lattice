@@ -86,6 +86,10 @@ func NodePoolIDLabelInfo(namespacePrefix, value string) (v1.SystemID, string, No
 	return systemID, nodePoolID, NodePoolEpoch(epoch), nil
 }
 
+func NodePoolSystemSharedPathLabelValue(path tree.NodePath, name string) string {
+	return fmt.Sprintf("%v.%v", path.ToDomain(), name)
+}
+
 // +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
@@ -112,14 +116,23 @@ func (np *NodePool) ServiceDedicatedIDLabel() (string, bool) {
 	return serviceID, ok
 }
 
-func (np *NodePool) SystemSharedPathLabel() (tree.NodePath, bool, error) {
-	domain, ok := np.Labels[NodePoolSystemSharedPathLabelKey]
+func (np *NodePool) SystemSharedPathLabel() (v1.NodePoolPath, bool, error) {
+	label, ok := np.Labels[NodePoolSystemSharedPathLabelKey]
 	if !ok {
 		return "", false, nil
 	}
 
-	path, err := tree.NodePathFromDomain(domain)
-	return path, true, err
+	parts := strings.Split(label, ".")
+	if len(parts) != 2 {
+		return "", false, fmt.Errorf("invalid node pool path label: %v", label)
+	}
+
+	path, err := tree.NodePathFromDomain(parts[0])
+	if err != nil {
+		return "", false, err
+	}
+
+	return v1.NewSystemSharedNodePoolPath(path, parts[1]), true, nil
 }
 
 func (np *NodePool) TypeDescription() string {
@@ -174,6 +187,8 @@ func (np *NodePool) Reason() string {
 		return "pending"
 	case NodePoolStateScaling:
 		return "scaling"
+	case NodePoolStateDeleting:
+		return "deleting"
 	case NodePoolStateFailed:
 		failureReason := "unknown reason"
 		if np.Status.FailureInfo != nil {
@@ -293,6 +308,7 @@ const (
 	NodePoolStateUpdating NodePoolState = "updating"
 	NodePoolStateStable   NodePoolState = "stable"
 	NodePoolStateFailed   NodePoolState = "failed"
+	NodePoolStateDeleting NodePoolState = "deleting"
 )
 
 type NodePoolStatusEpoch struct {

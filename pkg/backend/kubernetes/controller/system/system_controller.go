@@ -63,6 +63,9 @@ type Controller struct {
 	serviceLister       latticelisters.ServiceLister
 	serviceListerSynced cache.InformerSynced
 
+	nodePoolLister       latticelisters.NodePoolLister
+	nodePoolListerSynced cache.InformerSynced
+
 	namespaceLister       corelisters.NamespaceLister
 	namespaceListerSynced cache.InformerSynced
 
@@ -126,6 +129,15 @@ func NewController(
 	})
 	sc.serviceLister = serviceInformer.Lister()
 	sc.serviceListerSynced = serviceInformer.Informer().HasSynced
+
+	nodePoolInformer := latticeInformerFactory.Lattice().V1().NodePools()
+	nodePoolInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+		AddFunc:    sc.handleNodePoolAdd,
+		UpdateFunc: sc.handleNodePoolUpdate,
+		DeleteFunc: sc.handleNodePoolDelete,
+	})
+	sc.nodePoolLister = nodePoolInformer.Lister()
+	sc.nodePoolListerSynced = nodePoolInformer.Informer().HasSynced
 
 	namespaceInformer := kubeInformerFactory.Core().V1().Namespaces()
 	namespaceInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{

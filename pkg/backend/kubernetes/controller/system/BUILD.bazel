@@ -6,6 +6,7 @@ go_library(
         "deleting_system.go",
         "informer_event_handlers.go",
         "live_system.go",
+        "node_pool.go",
         "pending_system.go",
         "service.go",
         "system.go",
