@@ -32,8 +32,8 @@ var (
 	dnsControllerArgList = []string{
 		"-v", "5",
 		"--logtostderr",
-		"--dnsmasq-config-path", DnsmasqConfigFile,
-		"--hosts-file-path", DNSHostsFile,
+		"--dnsmasq-config-path", dnsmasqConfigFile,
+		"--hosts-file-path", dnsHostsFile,
 	}
 
 	// arguments for the dnsmasq nanny itself
@@ -41,14 +41,14 @@ var (
 		"-v=2",
 		"-logtostderr",
 		"-restartDnsmasq=true",
-		"-configDir=" + DNSConfigDirectory,
+		"-configDir=" + dnsConfigDirectory,
 	}
 
 	// arguments passed through dnsmasq-nanny to dnsmasq
 	dnsmasqArgList = []string{
 		"-k", // Keep in foreground so as to not immediately exit.
-		"--hostsdir=" + DNSConfigDirectory,             // Read all the hosts from this directory. File changes read automatically by dnsmasq.
-		"--conf-dir=" + DNSConfigDirectory + ",*.conf", // Read all *.conf files in the directory as dns config files
+		"--hostsdir=" + dnsConfigDirectory,             // Read all the hosts from this directory. File changes read automatically by dnsmasq.
+		"--conf-dir=" + dnsConfigDirectory + ",*.conf", // Read all *.conf files in the directory as dns config files
 	}
 )
 
@@ -202,6 +202,7 @@ func (p *DefaultLocalLatticeProvisioner) bootstrap(containerChannel, address str
 								[]string{
 									"kubernetes:bootstrap",
 									"--lattice-id", "local",
+									"--internal-dns-domain", "lattice.local",
 									"--controller-manager-var", fmt.Sprintf("image=%v", getLatticeContainerImage(containerChannel, "kubernetes-lattice-controller-manager")),
 									"--controller-manager-var", "args=-v=5",
 									"--api-var", fmt.Sprintf("image=%v", getLatticeContainerImage(containerChannel, "kubernetes-api-server-rest")),

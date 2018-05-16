@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
-	kubeconstants "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/constants"
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	"github.com/mlab-lattice/lattice/pkg/definition"
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
@@ -13,11 +12,12 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/satori/go.uuid"
+	"time"
 )
 
 func (kb *KubernetesBackend) Build(systemID v1.SystemID, definitionRoot tree.Node, version v1.SystemVersion) (*v1.Build, error) {
 	// ensure the system exists
-	if err := kb.ensureSystemCreated(systemID); err != nil {
+	if _, err := kb.ensureSystemCreated(systemID); err != nil {
 		return nil, err
 	}
 
@@ -32,7 +32,7 @@ func (kb *KubernetesBackend) Build(systemID v1.SystemID, definitionRoot tree.Nod
 		return nil, err
 	}
 
-	externalBuild, err := transformBuild(build)
+	externalBuild, err := kb.transformBuild(build)
 	if err != nil {
 		return nil, err
 	}
@@ -42,7 +42,7 @@ func (kb *KubernetesBackend) Build(systemID v1.SystemID, definitionRoot tree.Nod
 
 func newBuild(definitionRoot tree.Node, version v1.SystemVersion) (*latticev1.Build, error) {
 	labels := map[string]string{
-		kubeconstants.LabelKeySystemVersion: string(version),
+		latticev1.BuildDefinitionVersionLabelKey: string(version),
 	}
 
 	services := map[tree.NodePath]latticev1.BuildSpecServiceInfo{}
@@ -61,16 +61,13 @@ func newBuild(definitionRoot tree.Node, version v1.SystemVersion) (*latticev1.Bu
 			DefinitionRoot: definitionRoot,
 			Services:       services,
 		},
-		Status: latticev1.BuildStatus{
-			State: latticev1.BuildStatePending,
-		},
 	}
 
 	return build, nil
 }
 
 func (kb *KubernetesBackend) ListBuilds(systemID v1.SystemID) ([]v1.Build, error) {
-	if err := kb.ensureSystemCreated(systemID); err != nil {
+	if _, err := kb.ensureSystemCreated(systemID); err != nil {
 		return nil, err
 	}
 
@@ -84,7 +81,7 @@ func (kb *KubernetesBackend) ListBuilds(systemID v1.SystemID) ([]v1.Build, error
 	// if builds.Items is empty
 	externalBuilds := make([]v1.Build, 0)
 	for _, build := range builds.Items {
-		externalBuild, err := transformBuild(&build)
+		externalBuild, err := kb.transformBuild(&build)
 		if err != nil {
 			return nil, err
 		}
@@ -97,7 +94,7 @@ func (kb *KubernetesBackend) ListBuilds(systemID v1.SystemID) ([]v1.Build, error
 
 func (kb *KubernetesBackend) GetBuild(systemID v1.SystemID, buildID v1.BuildID) (*v1.Build, error) {
 	// Ensure the system exists
-	if err := kb.ensureSystemCreated(systemID); err != nil {
+	if _, err := kb.ensureSystemCreated(systemID); err != nil {
 		return nil, err
 	}
 
@@ -111,7 +108,7 @@ func (kb *KubernetesBackend) GetBuild(systemID v1.SystemID, buildID v1.BuildID) 
 		return nil, err
 	}
 
-	externalBuild, err := transformBuild(build)
+	externalBuild, err := kb.transformBuild(build)
 	if err != nil {
 		return nil, err
 	}
@@ -119,16 +116,35 @@ func (kb *KubernetesBackend) GetBuild(systemID v1.SystemID, buildID v1.BuildID) 
 	return &externalBuild, nil
 }
 
-func transformBuild(build *latticev1.Build) (v1.Build, error) {
+func (kb *KubernetesBackend) transformBuild(build *latticev1.Build) (v1.Build, error) {
 	state, err := getBuildState(build.Status.State)
 	if err != nil {
 		return v1.Build{}, err
 	}
 
+	version := v1.SystemVersion("unknown")
+	if label, ok := build.DefinitionVersionLabel(); ok {
+		version = label
+	}
+
+	var startTimestamp *time.Time
+	if build.Status.StartTimestamp != nil {
+		startTimestamp = &build.Status.StartTimestamp.Time
+	}
+
+	var completionTimestamp *time.Time
+	if build.Status.CompletionTimestamp != nil {
+		completionTimestamp = &build.Status.CompletionTimestamp.Time
+	}
+
 	externalBuild := v1.Build{
-		ID:       v1.BuildID(build.Name),
-		State:    state,
-		Version:  v1.SystemVersion(build.Labels[kubeconstants.LabelKeySystemVersion]),
+		ID:    v1.BuildID(build.Name),
+		State: state,
+
+		StartTimestamp:      startTimestamp,
+		CompletionTimestamp: completionTimestamp,
+
+		Version:  version,
 		Services: map[tree.NodePath]v1.ServiceBuild{},
 	}
 
@@ -136,9 +152,8 @@ func transformBuild(build *latticev1.Build) (v1.Build, error) {
 		serviceBuildStatus, ok := build.Status.ServiceBuildStatuses[serviceBuildName]
 		if !ok {
 			err := fmt.Errorf(
-				"System build %v/%v has ServiceBuild %v but no Status for it",
-				build.Namespace,
-				build.Name,
+				"%v has service build %v but no Status for it",
+				build.Description(kb.namespacePrefix),
 				serviceBuildName,
 			)
 			return v1.Build{}, err
@@ -176,9 +191,22 @@ func transformServiceBuild(namespace, name string, status *latticev1.ServiceBuil
 		return v1.ServiceBuild{}, err
 	}
 
+	var startTimestamp *time.Time
+	if status.StartTimestamp != nil {
+		startTimestamp = &status.StartTimestamp.Time
+	}
+
+	var completionTimestamp *time.Time
+	if status.CompletionTimestamp != nil {
+		completionTimestamp = &status.CompletionTimestamp.Time
+	}
+
 	externalBuild := v1.ServiceBuild{
-		ID:         v1.ServiceBuildID(name),
-		State:      state,
+		State: state,
+
+		StartTimestamp:      startTimestamp,
+		CompletionTimestamp: completionTimestamp,
+
 		Components: map[string]v1.ComponentBuild{},
 	}
 
@@ -186,7 +214,7 @@ func transformServiceBuild(namespace, name string, status *latticev1.ServiceBuil
 		componentBuildStatus, ok := status.ComponentBuildStatuses[componentBuildName]
 		if !ok {
 			err := fmt.Errorf(
-				"ServiceBuild %v/%v has ComponentBuild %v for component %v but does not have its status",
+				"service build %v/%v has component build %v for component %v but does not have its status",
 				namespace,
 				name,
 				componentBuildName,
@@ -195,7 +223,7 @@ func transformServiceBuild(namespace, name string, status *latticev1.ServiceBuil
 			return v1.ServiceBuild{}, err
 		}
 
-		externalComponentBuild, err := transformComponentBuild(componentBuildName, componentBuildStatus)
+		externalComponentBuild, err := transformComponentBuild(componentBuildStatus)
 		if err != nil {
 			return v1.ServiceBuild{}, err
 		}
@@ -221,7 +249,7 @@ func getServiceBuildState(state latticev1.ServiceBuildState) (v1.ServiceBuildSta
 	}
 }
 
-func transformComponentBuild(name string, status latticev1.ComponentBuildStatus) (v1.ComponentBuild, error) {
+func transformComponentBuild(status latticev1.ComponentBuildStatus) (v1.ComponentBuild, error) {
 	state, err := getComponentBuildState(status.State)
 	if err != nil {
 		return v1.ComponentBuild{}, err
@@ -233,10 +261,28 @@ func transformComponentBuild(name string, status latticev1.ComponentBuildStatus)
 		failureMessage = &message
 	}
 
+	phase := status.LastObservedPhase
+	if state == v1.ComponentBuildStateSucceeded {
+		phase = nil
+	}
+
+	var startTimestamp *time.Time
+	if status.StartTimestamp != nil {
+		startTimestamp = &status.StartTimestamp.Time
+	}
+
+	var completionTimestamp *time.Time
+	if status.CompletionTimestamp != nil {
+		completionTimestamp = &status.CompletionTimestamp.Time
+	}
+
 	externalBuild := v1.ComponentBuild{
-		ID:                v1.ComponentBuildID(name),
-		State:             state,
-		LastObservedPhase: status.LastObservedPhase,
+		State: state,
+
+		StartTimestamp:      startTimestamp,
+		CompletionTimestamp: completionTimestamp,
+
+		LastObservedPhase: phase,
 		FailureMessage:    failureMessage,
 	}
 

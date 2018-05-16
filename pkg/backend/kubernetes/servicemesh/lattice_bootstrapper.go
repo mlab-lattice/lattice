@@ -8,11 +8,11 @@ import (
 	"github.com/mlab-lattice/lattice/pkg/util/cli"
 )
 
-type ClusterBootstrapperOptions struct {
+type LatticeBootstrapperOptions struct {
 	Envoy *envoy.LatticeBootstrapperOptions
 }
 
-func NewLatticeBootstrapper(namespacePrefix string, options *ClusterBootstrapperOptions) (clusterbootstrapper.Interface, error) {
+func NewLatticeBootstrapper(namespacePrefix string, options *LatticeBootstrapperOptions) (clusterbootstrapper.Interface, error) {
 	if options.Envoy != nil {
 		return envoy.NewLatticeBootstrapper(namespacePrefix, options.Envoy), nil
 	}
@@ -20,9 +20,9 @@ func NewLatticeBootstrapper(namespacePrefix string, options *ClusterBootstrapper
 	return nil, fmt.Errorf("must provide service mesh options")
 }
 
-func LatticeBoostrapperFlag(serviceMesh *string) (cli.Flag, *ClusterBootstrapperOptions) {
+func LatticeBoostrapperFlag(serviceMesh *string) (cli.Flag, *LatticeBootstrapperOptions) {
 	envoyFlags, envoyOptions := envoy.LatticeBootstrapperFlags()
-	options := &ClusterBootstrapperOptions{}
+	options := &LatticeBootstrapperOptions{}
 
 	flag := &cli.DelayedEmbeddedFlag{
 		Name:     "service-mesh-var",

@@ -3,7 +3,11 @@ DIR := $(patsubst %/,%,$(dir $(abspath $(lastword $(MAKEFILE_LIST)))))
 
 # build
 .PHONY: build
-build: gazelle
+build: gazelle \
+       build.no-gazelle
+
+.PHONY: build.no-gazelle
+build.no-gazelle:
 	@bazel build \
 		//pkg/...:all \
 		//cmd/...:all \
@@ -199,3 +203,4 @@ kubernetes.update-dependencies:
 .PHONY: kubernetes.regenerate-custom-resource-clients
 kubernetes.regenerate-custom-resource-clients:
 	KUBERNETES_VERSION=$(VERSION) $(DIR)/hack/kubernetes/codegen/regenerate.sh
+	@$(MAKE) gazelle

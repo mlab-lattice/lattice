@@ -2,7 +2,6 @@ package build
 
 import (
 	"fmt"
-	"reflect"
 	"time"
 
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
@@ -11,7 +10,6 @@ import (
 	latticelisters "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/generated/listers/lattice/v1"
 
 	"k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
 
@@ -21,11 +19,11 @@ import (
 	"github.com/golang/glog"
 )
 
-var controllerKind = latticev1.SchemeGroupVersion.WithKind("Build")
-
 type Controller struct {
-	syncHandler        func(bKey string) error
-	enqueueSystemBuild func(sysBuild *latticev1.Build)
+	syncHandler func(key string) error
+	enqueue     func(build *latticev1.Build)
+
+	namespacePrefix string
 
 	latticeClient latticeclientset.Interface
 
@@ -39,37 +37,34 @@ type Controller struct {
 }
 
 func NewController(
+	namespacePrefix string,
 	latticeClient latticeclientset.Interface,
 	buildInformer latticeinformers.BuildInformer,
 	serviceBuildInformer latticeinformers.ServiceBuildInformer,
-
 ) *Controller {
 	sbc := &Controller{
+		namespacePrefix: namespacePrefix,
+
 		latticeClient: latticeClient,
-		queue:         workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "system-build"),
+
+		queue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "build"),
 	}
 
-	sbc.enqueueSystemBuild = sbc.enqueue
+	sbc.enqueue = sbc.enqueueBuild
 	sbc.syncHandler = sbc.syncSystemBuild
 
 	buildInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc:    sbc.addBuild,
-		UpdateFunc: sbc.updateBuild,
-		// TODO: for now it is assumed that SystemBuilds are not deleted.
-		// in the future we'll probably want to add a GC process for SystemBuilds.
-		// At that point we should listen here for those deletes.
-		// FIXME: Document SysB GC ideas (need to write down last used date, lock properly, etc)
+		AddFunc:    sbc.handleBuildAdd,
+		UpdateFunc: sbc.handleBuildUpdate,
+		DeleteFunc: sbc.handleBuildDelete,
 	})
 	sbc.buildLister = buildInformer.Lister()
 	sbc.buildListerSynced = buildInformer.Informer().HasSynced
 
 	serviceBuildInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc:    sbc.addServiceBuild,
-		UpdateFunc: sbc.updateServiceBuild,
-		// TODO: for now it is assumed that ServiceBuilds are not deleted.
-		// in the future we'll probably want to add a GC process for ServiceBuilds.
-		// At that point we should listen here for those deletes.
-		// FIXME: Document SvcB GC ideas (need to write down last used date, lock properly, etc)
+		AddFunc:    sbc.handleServiceBuildAdd,
+		UpdateFunc: sbc.handleServiceBuildUpdate,
+		// only orphaned service builds should be deleted
 	})
 	sbc.serviceBuildLister = serviceBuildInformer.Lister()
 	sbc.serviceBuildListerSynced = serviceBuildInformer.Informer().HasSynced
@@ -83,15 +78,15 @@ func (c *Controller) Run(workers int, stopCh <-chan struct{}) {
 	// make sure the work queue is shutdown which will trigger workers to end
 	defer c.queue.ShutDown()
 
-	glog.Infof("Starting system-build controller")
-	defer glog.Infof("Shutting down system-build controller")
+	glog.Infof("starting system-build controller")
+	defer glog.Infof("shutting down system-build controller")
 
 	// wait for your secondary caches to fill before starting your work
 	if !cache.WaitForCacheSync(stopCh, c.buildListerSynced, c.serviceBuildListerSynced) {
 		return
 	}
 
-	glog.V(4).Info("Caches synced.")
+	glog.V(4).Info("caches synced")
 
 	// start up your worker threads based on threadiness.  Some controllers
 	// have multiple kinds of workers
@@ -105,116 +100,7 @@ func (c *Controller) Run(workers int, stopCh <-chan struct{}) {
 	<-stopCh
 }
 
-func (c *Controller) addBuild(obj interface{}) {
-	build := obj.(*latticev1.Build)
-	glog.V(4).Infof("Adding Build %s", build.Name)
-	c.enqueueSystemBuild(build)
-}
-
-func (c *Controller) updateBuild(old, cur interface{}) {
-	oldBuild := old.(*latticev1.Build)
-	curBuild := cur.(*latticev1.Build)
-	glog.V(4).Infof("Updating Build %s", oldBuild.Name)
-	c.enqueueSystemBuild(curBuild)
-}
-
-// addServiceBuild enqueues the System that manages a Service when the Service is created.
-func (c *Controller) addServiceBuild(obj interface{}) {
-	serviceBuild := obj.(*latticev1.ServiceBuild)
-
-	if serviceBuild.DeletionTimestamp != nil {
-		// We assume for now that ServiceBuilds do not get deleted.
-		// FIXME: send error event
-		return
-	}
-
-	// If it has a ControllerRef, that's all that matters.
-	if controllerRef := metav1.GetControllerOf(serviceBuild); controllerRef != nil {
-		build := c.resolveControllerRef(serviceBuild.Namespace, controllerRef)
-
-		// Not a Build. This shouldn't happen.
-		if build == nil {
-			// FIXME: send error event
-			return
-		}
-
-		glog.V(4).Infof("ServiceBuild %s added.", serviceBuild.Name)
-		c.enqueueSystemBuild(build)
-		return
-	}
-
-	// It's an orphan. This shouldn't happen.
-	// FIXME: send error event
-}
-
-// updateServiceBuild figures out what Build manages a Service when the
-// Service is updated and enqueues them.
-func (c *Controller) updateServiceBuild(old, cur interface{}) {
-	glog.V(5).Info("Got ServiceBuild update")
-	oldServiceBuild := old.(*latticev1.ServiceBuild)
-	curServiceBuild := cur.(*latticev1.ServiceBuild)
-	if curServiceBuild.ResourceVersion == oldServiceBuild.ResourceVersion {
-		// Periodic resync will send update events for all known ServiceBuilds.
-		// Two different versions of the same job will always have different RVs.
-		glog.V(5).Info("ServiceBuild ResourceVersions are the same")
-		return
-	}
-
-	curControllerRef := metav1.GetControllerOf(curServiceBuild)
-	oldControllerRef := metav1.GetControllerOf(oldServiceBuild)
-	controllerRefChanged := !reflect.DeepEqual(curControllerRef, oldControllerRef)
-	if controllerRefChanged {
-		// This shouldn't happen
-		// FIXME: send error event
-	}
-
-	// If it has a ControllerRef, that's all that matters.
-	if curControllerRef != nil {
-		build := c.resolveControllerRef(curServiceBuild.Namespace, curControllerRef)
-
-		// Not a Build. This shouldn't happen.
-		if build == nil {
-			// FIXME: send error event
-			return
-		}
-
-		c.enqueueSystemBuild(build)
-		return
-	}
-
-	// Otherwise, it's an orphan. This should not happen.
-	// FIXME: send error event
-}
-
-// resolveControllerRef returns the controller referenced by a ControllerRef,
-// or nil if the ControllerRef could not be resolved to a matching controller
-// of the correct Kind.
-func (c *Controller) resolveControllerRef(namespace string, controllerRef *metav1.OwnerReference) *latticev1.Build {
-	// We can't look up by Name, so look up by Name and then verify Name.
-	// Don't even try to look up by Name if it's the wrong Kind.
-	if controllerRef.Kind != controllerKind.Kind {
-		// This shouldn't happen
-		// FIXME: send error event
-		return nil
-	}
-
-	build, err := c.buildLister.Builds(namespace).Get(controllerRef.Name)
-	if err != nil {
-		// This shouldn't happen.
-		// FIXME: send error event
-		return nil
-	}
-
-	if build.UID != controllerRef.UID {
-		// The controller we found with this Name is not the same one that the
-		// ControllerRef points to. This shouldn't happen.
-		// FIXME: send error event
-		return nil
-	}
-	return build
-}
-
-func (c *Controller) enqueue(sysb *latticev1.Build) {
+func (c *Controller) enqueueBuild(sysb *latticev1.Build) {
 	key, err := cache.DeletionHandlingMetaNamespaceKeyFunc(sysb)
 	if err != nil {
 		runtime.HandleError(fmt.Errorf("couldn't get key for object %#v: %v", sysb, err))
@@ -275,9 +161,9 @@ func (c *Controller) processNextWorkItem() bool {
 func (c *Controller) syncSystemBuild(key string) error {
 	glog.Flush()
 	startTime := time.Now()
-	glog.V(4).Infof("Started syncing Build %q (%v)", key, startTime)
+	glog.V(4).Infof("started syncing build %q (%v)", key, startTime)
 	defer func() {
-		glog.V(4).Infof("Finished syncing Build %q (%v)", key, time.Now().Sub(startTime))
+		glog.V(4).Infof("finished syncing build %q (%v)", key, time.Now().Sub(startTime))
 	}()
 
 	namespace, name, err := cache.SplitMetaNamespaceKey(key)
@@ -287,9 +173,20 @@ func (c *Controller) syncSystemBuild(key string) error {
 
 	build, err := c.buildLister.Builds(namespace).Get(name)
 	if errors.IsNotFound(err) {
-		glog.V(2).Infof("Build %v has been deleted", key)
+		glog.V(2).Infof("build %v has been deleted", key)
 		return nil
 	}
+	if err != nil {
+		return err
+	}
+
+	// TODO: when adding delete build to the api, make sure to make it an orphaning delete
+	// see pkg/backend/kubernetes/controller/servicebuild/service_build.go:deleteServiceBuild for reasoning
+	if build.DeletionTimestamp != nil {
+		return c.syncDeletedBuild(build)
+	}
+
+	build, err = c.addFinalizer(build)
 	if err != nil {
 		return err
 	}
@@ -299,19 +196,18 @@ func (c *Controller) syncSystemBuild(key string) error {
 		return err
 	}
 
-	glog.V(5).Infof("Build %v state: %v", key, stateInfo.state)
+	glog.V(5).Infof("%v state: %v", build.Description(c.namespacePrefix), stateInfo.state)
 
 	switch stateInfo.state {
 	case stateHasFailedServiceBuilds:
-		return c.syncFailedSystemBuild(build, stateInfo)
+		return c.syncFailedBuild(build, stateInfo)
 	case stateHasOnlyRunningOrSucceededServiceBuilds:
-		return c.syncRunningSystemBuild(build, stateInfo)
+		return c.syncRunningBuild(build, stateInfo)
 	case stateNoFailuresNeedsNewServiceBuilds:
-		return c.syncMissingServiceBuildsSystemBuild(build, stateInfo)
+		return c.syncMissingServiceBuildsBuild(build, stateInfo)
 	case stateAllServiceBuildsSucceeded:
-		return c.syncSucceededSystemBuild(build, stateInfo)
+		return c.syncSucceededBuild(build, stateInfo)
 	default:
-		// FIXME: return error
-		panic("unreachable")
+		return fmt.Errorf("%v in unrecognized state %v", build.Description(c.namespacePrefix), stateInfo.state)
 	}
 }

@@ -79,7 +79,7 @@ func TeardownSystem(client v1client.SystemClient, systemID v1.SystemID, format p
 }
 
 //TODO: Need to get the flavour text the correct context for tearing down
-func printSystemStateDuringTeardown(writer io.Writer, s *spinner.Spinner, system *v1.System) {
+func printSystemStateDuringTeardown(writer io.Writer, s *spinner.Spinner, system *v1.System, services []v1.Service) {
 	switch system.State {
 	case v1.SystemStateScaling:
 		s.Start()
@@ -99,11 +99,16 @@ func printSystemStateDuringTeardown(writer io.Writer, s *spinner.Spinner, system
 
 		var serviceErrors [][]string
 
-		for serviceName, service := range system.Services {
+		for _, service := range services {
 			if service.State == v1.ServiceStateFailed {
+				message := "unknown"
+				if service.FailureInfo != nil {
+					message = service.FailureInfo.Message
+				}
+
 				serviceErrors = append(serviceErrors, []string{
-					fmt.Sprintf("%s", serviceName),
-					string(*service.FailureMessage),
+					service.Path.String(),
+					message,
 				})
 			}
 		}

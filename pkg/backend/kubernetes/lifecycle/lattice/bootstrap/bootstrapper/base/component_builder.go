@@ -32,6 +32,6 @@ var componentBuilderRBACPolicyRules = []rbacv1.PolicyRule{
 	{
 		APIGroups: []string{latticev1.GroupName},
 		Resources: []string{latticev1.ResourcePluralComponentBuild},
-		Verbs:     readAndUpdateVerbs,
+		Verbs:     ReadAndUpdateVerbs,
 	},
 }

@@ -88,6 +88,8 @@ func (b *DefaultEnvoylatticeBootstrapper) BootstrapLatticeResources(resources *b
 			daemonSet.Spec.Template.Spec.Containers[0].Args = append(
 				daemonSet.Spec.Template.Spec.Containers[0].Args,
 				"--service-mesh", Envoy,
+				"--service-mesh-var", fmt.Sprintf("redirect-cidr-block=%v", b.redirectCIDRBlock),
+				"--service-mesh-var", fmt.Sprintf("xds-api-port=%v", b.xdsAPIPort),
 			)
 		}
 	}
@@ -189,10 +191,10 @@ func (b *DefaultEnvoylatticeBootstrapper) BootstrapLatticeResources(resources *b
 					DNSPolicy:          corev1.DNSDefault,
 					ServiceAccountName: serviceAccount.Name,
 					Tolerations: []corev1.Toleration{
-						kubeconstants.TolerationNodePool,
+						latticev1.AllNodePoolTolleration,
 					},
 					Affinity: &corev1.Affinity{
-						NodeAffinity: &kubeconstants.NodeAffinityNodePool,
+						NodeAffinity: &latticev1.AllNodePoolAffinity,
 					},
 				},
 			},
@@ -202,11 +204,9 @@ func (b *DefaultEnvoylatticeBootstrapper) BootstrapLatticeResources(resources *b
 
 	resources.Config.Spec.ServiceMesh = latticev1.ConfigServiceMesh{
 		Envoy: &latticev1.ConfigServiceMeshEnvoy{
-			PrepareImage:      b.prepareImage,
-			Image:             b.image,
-			RedirectCIDRBlock: b.redirectCIDRBlock,
-			XDSAPIImage:       b.xdsAPIImage,
-			XDSAPIPort:        b.xdsAPIPort,
+			PrepareImage: b.prepareImage,
+			Image:        b.image,
+			XDSAPIImage:  b.xdsAPIImage,
 		},
 	}
 }

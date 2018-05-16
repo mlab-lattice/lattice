@@ -33,11 +33,12 @@ func RunNewRestServer(b xdsapi.Backend, port int32) {
 
 	s.mountHandlers()
 
-	glog.V(1).Info("Waiting for backend to be ready")
+	glog.Info("waiting for backend to be ready")
 	if !b.Ready() {
 		panic("backend Ready() failed")
 	}
 
+	glog.Info("backend ready, starting server")
 	s.router.Run(fmt.Sprintf(":%v", port))
 }
 

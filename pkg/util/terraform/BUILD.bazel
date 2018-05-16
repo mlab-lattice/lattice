@@ -9,6 +9,7 @@ go_library(
         "destroy.go",
         "exec_context.go",
         "output.go",
+        "plan.go",
     ],
     importpath = "github.com/mlab-lattice/lattice/pkg/util/terraform",
     visibility = ["//visibility:public"],

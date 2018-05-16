@@ -112,9 +112,11 @@ func servicesPrinter(services []v1.Service, format printer.Format) printer.Inter
 	var p printer.Interface
 	switch format {
 	case printer.FormatDefault, printer.FormatTable:
-		headers := []string{"Service", "State", "Updated", "Stale", "Addresses", "Info"}
+		headers := []string{"Service", "State", "Available", "Updated", "Stale", "Terminating", "Addresses", "Info"}
 
 		headerColors := []tw.Colors{
+			{tw.Bold},
+			{tw.Bold},
 			{tw.Bold},
 			{tw.Bold},
 			{tw.Bold},
@@ -130,13 +132,17 @@ func servicesPrinter(services []v1.Service, format printer.Format) printer.Inter
 			{},
 			{},
 			{},
+			{},
+			{},
 		}
 
 		columnAlignment := []int{
 			tw.ALIGN_LEFT,
 			tw.ALIGN_LEFT,
-			tw.ALIGN_RIGHT,
-			tw.ALIGN_RIGHT,
+			tw.ALIGN_LEFT,
+			tw.ALIGN_LEFT,
+			tw.ALIGN_LEFT,
+			tw.ALIGN_LEFT,
 			tw.ALIGN_LEFT,
 			tw.ALIGN_LEFT,
 		}
@@ -154,22 +160,25 @@ func servicesPrinter(services []v1.Service, format printer.Format) printer.Inter
 			}
 
 			var info string
-			if service.FailureMessage == nil {
-				info = ""
-			} else {
-				info = *service.FailureMessage
+			if service.Message != nil {
+				info = *service.Message
+			}
+			if service.FailureInfo != nil {
+				info = service.FailureInfo.Message
 			}
 
 			var addresses []string
-			for port, address := range service.PublicPorts {
-				addresses = append(addresses, fmt.Sprintf("%v: %v", port, address.Address))
+			for port, address := range service.Ports {
+				addresses = append(addresses, fmt.Sprintf("%v: %v", port, address))
 			}
 
 			rows = append(rows, []string{
-				string(service.Path),
+				service.Path.String(),
 				stateColor(string(service.State)),
+				fmt.Sprintf("%d", service.AvailableInstances),
 				fmt.Sprintf("%d", service.UpdatedInstances),
 				fmt.Sprintf("%d", service.StaleInstances),
+				fmt.Sprintf("%d", service.TerminatingInstances),
 				strings.Join(addresses, ","),
 				string(info),
 			})

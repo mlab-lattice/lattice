@@ -1,0 +1,15 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "load_balancer.go",
+        "module_paths.go",
+        "node_pool.go",
+        "route53.go",
+        "util.go",
+    ],
+    importpath = "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/cloudprovider/aws/terraform",
+    visibility = ["//visibility:public"],
+    deps = ["//pkg/api/v1:go_default_library"],
+)

@@ -2,7 +2,6 @@ package backend
 
 import (
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
-	kubeconstants "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/constants"
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 
@@ -14,7 +13,7 @@ import (
 )
 
 func (kb *KubernetesBackend) DeployBuild(systemID v1.SystemID, buildID v1.BuildID) (*v1.Deploy, error) {
-	// this ensures the system is created as well
+	// this also ensures the system exists
 	build, err := kb.GetBuild(systemID, buildID)
 	if err != nil {
 		return nil, err
@@ -22,7 +21,7 @@ func (kb *KubernetesBackend) DeployBuild(systemID v1.SystemID, buildID v1.BuildI
 
 	deploy := newDeploy(build)
 	namespace := kb.systemNamespace(systemID)
-	deploy, err = kb.latticeClient.LatticeV1().Deploies(namespace).Create(deploy)
+	deploy, err = kb.latticeClient.LatticeV1().Deploys(namespace).Create(deploy)
 	if err != nil {
 		return nil, err
 	}
@@ -47,8 +46,8 @@ func (kb *KubernetesBackend) DeployVersion(systemID v1.SystemID, definitionRoot 
 
 func newDeploy(build *v1.Build) *latticev1.Deploy {
 	labels := map[string]string{
-		kubeconstants.LabelKeySystemRolloutVersion: string(build.Version),
-		kubeconstants.LabelKeySystemRolloutBuildID: string(build.ID),
+		latticev1.DeployDefinitionVersionLabelKey: string(build.Version),
+		latticev1.BuildIDLabelKey:                 string(build.ID),
 	}
 
 	return &latticev1.Deploy{
@@ -59,19 +58,16 @@ func newDeploy(build *v1.Build) *latticev1.Deploy {
 		Spec: latticev1.DeploySpec{
 			BuildName: string(build.ID),
 		},
-		Status: latticev1.DeployStatus{
-			State: latticev1.DeployStatePending,
-		},
 	}
 }
 
 func (kb *KubernetesBackend) ListDeploys(systemID v1.SystemID) ([]v1.Deploy, error) {
-	if err := kb.ensureSystemCreated(systemID); err != nil {
+	if _, err := kb.ensureSystemCreated(systemID); err != nil {
 		return nil, err
 	}
 
 	namespace := kb.systemNamespace(systemID)
-	deploys, err := kb.latticeClient.LatticeV1().Deploies(namespace).List(metav1.ListOptions{})
+	deploys, err := kb.latticeClient.LatticeV1().Deploys(namespace).List(metav1.ListOptions{})
 	if err != nil {
 		return nil, err
 	}
@@ -92,12 +88,12 @@ func (kb *KubernetesBackend) ListDeploys(systemID v1.SystemID) ([]v1.Deploy, err
 }
 
 func (kb *KubernetesBackend) GetDeploy(systemID v1.SystemID, deployID v1.DeployID) (*v1.Deploy, error) {
-	if err := kb.ensureSystemCreated(systemID); err != nil {
+	if _, err := kb.ensureSystemCreated(systemID); err != nil {
 		return nil, err
 	}
 
 	namespace := kb.systemNamespace(systemID)
-	deploy, err := kb.latticeClient.LatticeV1().Deploies(namespace).Get(string(deployID), metav1.GetOptions{})
+	deploy, err := kb.latticeClient.LatticeV1().Deploys(namespace).Get(string(deployID), metav1.GetOptions{})
 	if err != nil {
 		if errors.IsNotFound(err) {
 			return nil, v1.NewInvalidDeployIDError(deployID)

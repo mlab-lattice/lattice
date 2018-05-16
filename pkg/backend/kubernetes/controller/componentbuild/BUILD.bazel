@@ -3,8 +3,11 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library")
 go_library(
     name = "go_default_library",
     srcs = [
+        "component_build.go",
         "component_build_controller.go",
+        "informer_event_handlers.go",
         "job.go",
+        "orphaned_component_build.go",
         "state.go",
         "sync.go",
     ],

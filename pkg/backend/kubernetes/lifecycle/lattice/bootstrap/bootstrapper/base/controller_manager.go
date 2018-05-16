@@ -1,19 +1,19 @@
 package base
 
 import (
+	"fmt"
+
 	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/constants"
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/lifecycle/lattice/bootstrap/bootstrapper"
 	kubeutil "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/kubernetes"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
-	"fmt"
-	"github.com/mlab-lattice/lattice/pkg/util/terraform"
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func (b *DefaultBootstrapper) controllerManagerResources(resources *bootstrapper.Resources) {
@@ -58,7 +58,7 @@ func (b *DefaultBootstrapper) controllerManagerResources(resources *bootstrapper
 			{
 				APIGroups: []string{corev1.GroupName},
 				Resources: []string{"pods"},
-				Verbs:     readVerbs,
+				Verbs:     ReadVerbs,
 			},
 
 			// system bootstrapping permissions
@@ -66,25 +66,25 @@ func (b *DefaultBootstrapper) controllerManagerResources(resources *bootstrapper
 			{
 				APIGroups: []string{corev1.GroupName},
 				Resources: []string{"namespaces"},
-				Verbs:     readCreateAndDeleteVerbs,
+				Verbs:     ReadCreateAndDeleteVerbs,
 			},
 			// kube service-account read, update, and delete
 			{
 				APIGroups: []string{corev1.GroupName},
 				Resources: []string{"serviceaccounts"},
-				Verbs:     readCreateAndDeleteVerbs,
+				Verbs:     ReadCreateAndDeleteVerbs,
 			},
 			// kube role-binding read, update, and delete
 			{
 				APIGroups: []string{rbacv1.GroupName},
 				Resources: []string{"rolebindings"},
-				Verbs:     readCreateAndDeleteVerbs,
+				Verbs:     ReadCreateAndDeleteVerbs,
 			},
 			// kube daemonsets read, update, and delete
 			{
 				APIGroups: []string{appsv1.GroupName},
 				Resources: []string{"daemonsets"},
-				Verbs:     readCreateAndDeleteVerbs,
+				Verbs:     ReadCreateAndDeleteVerbs,
 			},
 		},
 	}
@@ -138,24 +138,10 @@ func (b *DefaultBootstrapper) controllerManagerResources(resources *bootstrapper
 		"--cloud-provider", b.CloudProviderName,
 		"--lattice-id", string(b.LatticeID),
 		"--namespace-prefix", b.NamespacePrefix,
+		"--internal-dns-domain", b.InternalDNSDomain,
 		"--alsologtostderr",
 	}
 	args = append(args, b.Options.MasterComponents.LatticeControllerManager.Args...)
-
-	if b.Options.MasterComponents.LatticeControllerManager.TerraformModulePath != "" {
-		args = append(
-			args,
-			"--terraform-module-path", b.Options.MasterComponents.LatticeControllerManager.TerraformModulePath,
-		)
-	}
-
-	if b.Options.TerraformOptions.Backend.S3 != nil {
-		args = append(
-			args,
-			"--terraform-backend", terraform.BackendS3,
-			"--terraform-backend-var", fmt.Sprintf("bucket=%v", b.Options.TerraformOptions.Backend.S3.Bucket),
-		)
-	}
 
 	labels := map[string]string{
 		constants.LabelKeyControlPlaneService: constants.ControlPlaneServiceLatticeControllerManager,

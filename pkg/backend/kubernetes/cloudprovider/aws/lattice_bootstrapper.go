@@ -8,6 +8,7 @@ import (
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/lifecycle/lattice/bootstrap/bootstrapper"
 	"github.com/mlab-lattice/lattice/pkg/util/cli"
+	"github.com/mlab-lattice/lattice/pkg/util/terraform"
 )
 
 type LatticeBootstrapperOptions struct {
@@ -21,6 +22,13 @@ type LatticeBootstrapperOptions struct {
 
 	WorkerNodeAMIID string
 	KeyName         string
+
+	ControllerManagerOptions *LatticeBootstrapperControllerManagerOptions
+}
+
+type LatticeBootstrapperControllerManagerOptions struct {
+	TerraformModulePath     string
+	TerraformBackendOptions *terraform.BackendOptions
 }
 
 func NewLatticeBootstrapper(options *LatticeBootstrapperOptions) *DefaultAWSLatticeBootstrapper {
@@ -35,11 +43,20 @@ func NewLatticeBootstrapper(options *LatticeBootstrapperOptions) *DefaultAWSLatt
 
 		workerNodeAMIID: options.WorkerNodeAMIID,
 		keyName:         options.KeyName,
+
+		controllerManagerOptions: options.ControllerManagerOptions,
 	}
 }
 
 func LatticeBootstrapperFlags() (cli.Flags, *LatticeBootstrapperOptions) {
-	options := &LatticeBootstrapperOptions{}
+	var terraformBackend string
+	terraformBackendFlag, terraformBackendOptions := terraform.BackendFlags(&terraformBackend)
+
+	options := &LatticeBootstrapperOptions{
+		ControllerManagerOptions: &LatticeBootstrapperControllerManagerOptions{
+			TerraformBackendOptions: terraformBackendOptions,
+		},
+	}
 	flags := cli.Flags{
 		&cli.StringFlag{
 			Name:     "region",
@@ -82,6 +99,26 @@ func LatticeBootstrapperFlags() (cli.Flags, *LatticeBootstrapperOptions) {
 			Required: true,
 			Target:   &options.KeyName,
 		},
+
+		&cli.EmbeddedFlag{
+			Name:     "controller-manager-var",
+			Required: true,
+			Flags: cli.Flags{
+				&cli.StringFlag{
+					Name:    "terraform-module-path",
+					Default: "/etc/terraform/modules/aws",
+					Target:  &options.ControllerManagerOptions.TerraformModulePath,
+				},
+				&cli.StringFlag{
+					Name:     "terraform-backend",
+					Required: true,
+					Target:   &terraformBackend,
+				},
+				terraformBackendFlag,
+			},
+		},
+
+		terraformBackendFlag,
 	}
 	return flags, options
 }
@@ -97,6 +134,8 @@ type DefaultAWSLatticeBootstrapper struct {
 
 	workerNodeAMIID string
 	keyName         string
+
+	controllerManagerOptions *LatticeBootstrapperControllerManagerOptions
 }
 
 func (cp *DefaultAWSLatticeBootstrapper) BootstrapLatticeResources(resources *bootstrapper.Resources) {
@@ -118,6 +157,14 @@ func (cp *DefaultAWSLatticeBootstrapper) BootstrapLatticeResources(resources *bo
 			"--cloud-provider-var", fmt.Sprintf("route53-private-zone-id=%v", cp.route53PrivateZoneID),
 			"--cloud-provider-var", fmt.Sprintf("subnet-ids=%v", strings.Join(cp.subnetIDs, ",")),
 			"--cloud-provider-var", fmt.Sprintf("master-node-security-group-id=%v", cp.masterNodeSecurityGroupID),
+			"--cloud-provider-var", fmt.Sprintf("terraform-module-path=%v", cp.controllerManagerOptions.TerraformModulePath),
 		)
+
+		for _, flag := range cp.controllerManagerOptions.TerraformBackendOptions.AsFlags() {
+			daemonSet.Spec.Template.Spec.Containers[0].Args = append(
+				daemonSet.Spec.Template.Spec.Containers[0].Args,
+				"--cloud-provider-var", flag,
+			)
+		}
 	}
 }

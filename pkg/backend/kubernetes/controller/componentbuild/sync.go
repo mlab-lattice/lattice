@@ -1,14 +1,15 @@
 package componentbuild
 
 import (
-	"encoding/json"
+	"fmt"
 	"reflect"
 
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
-	kubeconstants "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/constants"
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 
 	batchv1 "k8s.io/api/batch/v1"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/golang/glog"
 )
@@ -19,76 +20,129 @@ func (c *Controller) syncJoblessComponentBuild(build *latticev1.ComponentBuild) 
 		return err
 	}
 
-	glog.V(4).Infof("Created Job %s", job.Name)
-	// FIXME: send normal event
+	glog.V(4).Infof("created job %v for %v", job.Name, build.Description(c.namespacePrefix))
 	return c.syncUnfinishedComponentBuild(build, job)
 }
 
-func (c *Controller) syncSuccessfulComponentBuild(build *latticev1.ComponentBuild, j *batchv1.Job) error {
+func (c *Controller) syncSuccessfulComponentBuild(build *latticev1.ComponentBuild, job *batchv1.Job) error {
+	dockerImageFQN, ok := job.Annotations[latticev1.ComponentBuildJobDockerImageFQNAnnotationKey]
+	if !ok {
+		return fmt.Errorf(
+			"job %v for %v claims to have succeeded but does not have %v annotation",
+			job.Name,
+			build.Description(c.namespacePrefix),
+			latticev1.ComponentBuildJobDockerImageFQNAnnotationKey,
+		)
+	}
+
 	artifacts := &latticev1.ComponentBuildArtifacts{
-		DockerImageFQN: j.Annotations[jobDockerFqnAnnotationKey],
+		DockerImageFQN: dockerImageFQN,
 	}
 
-	if reflect.DeepEqual(build.Status.State, latticev1.ComponentBuildStateSucceeded) && reflect.DeepEqual(build.Status.Artifacts, artifacts) {
-		return nil
+	// if we haven't logged a start timestamp yet, use now
+	startTimestamp := build.Status.StartTimestamp
+	if startTimestamp == nil {
+		now := metav1.Now()
+		startTimestamp = &now
 	}
 
-	_, err := c.updateComponentBuildStatus(build, latticev1.ComponentBuildStateSucceeded, artifacts)
+	// if we haven't logged a completion timestamp yet, use now
+	completionTimestamp := build.Status.CompletionTimestamp
+	if completionTimestamp == nil {
+		now := metav1.Now()
+		completionTimestamp = &now
+	}
+
+	_, err := c.updateComponentBuildStatus(
+		build,
+		latticev1.ComponentBuildStateSucceeded,
+		build.Status.StartTimestamp,
+		completionTimestamp,
+		artifacts,
+	)
 	return err
 }
 
-func (c *Controller) syncFailedComponentBuild(cb *latticev1.ComponentBuild) error {
-	_, err := c.updateComponentBuildState(cb, latticev1.ComponentBuildStateFailed)
+func (c *Controller) syncFailedComponentBuild(build *latticev1.ComponentBuild) error {
+	// if we haven't logged a start timestamp yet, use now
+	startTimestamp := build.Status.StartTimestamp
+	if startTimestamp == nil {
+		now := metav1.Now()
+		startTimestamp = &now
+	}
+
+	// if we haven't logged a start timestamp yet, use now
+	completionTimestamp := build.Status.CompletionTimestamp
+	if completionTimestamp == nil {
+		now := metav1.Now()
+		completionTimestamp = &now
+	}
+
+	_, err := c.updateComponentBuildStatus(
+		build,
+		latticev1.ComponentBuildStateFailed,
+		build.Status.StartTimestamp,
+		completionTimestamp,
+		build.Status.Artifacts,
+	)
 	return err
 }
 
-func (c *Controller) syncUnfinishedComponentBuild(cb *latticev1.ComponentBuild, j *batchv1.Job) error {
-	// The Job Pods have been able to be scheduled, so the ComponentBuild is "running" even though
-	// a Job Pod may not currently be active.
-	if j.Status.Active > 0 || j.Status.Failed > 0 {
-		_, err := c.updateComponentBuildState(cb, latticev1.ComponentBuildStateRunning)
+func (c *Controller) syncUnfinishedComponentBuild(build *latticev1.ComponentBuild, job *batchv1.Job) error {
+	// if we haven't logged a start timestamp yet, use now
+	startTimestamp := build.Status.StartTimestamp
+	if startTimestamp == nil {
+		now := metav1.Now()
+		startTimestamp = &now
+	}
+
+	if job.Status.Active > 0 || job.Status.Failed > 0 {
+		_, err := c.updateComponentBuildStatus(
+			build,
+			latticev1.ComponentBuildStateRunning,
+			startTimestamp,
+			nil,
+			build.Status.Artifacts,
+		)
 		return err
 	}
 
-	_, err := c.updateComponentBuildState(cb, latticev1.ComponentBuildStateQueued)
+	_, err := c.updateComponentBuildStatus(
+		build,
+		latticev1.ComponentBuildStateQueued,
+		startTimestamp,
+		nil,
+		build.Status.Artifacts,
+	)
 	return err
-}
-
-func (c *Controller) updateComponentBuildState(
-	build *latticev1.ComponentBuild,
-	state latticev1.ComponentBuildState,
-) (*latticev1.ComponentBuild, error) {
-	return c.updateComponentBuildStatus(build, state, build.Status.Artifacts)
 }
 
 func (c *Controller) updateComponentBuildStatus(
 	build *latticev1.ComponentBuild,
 	state latticev1.ComponentBuildState,
+	startTimestamp *metav1.Time,
+	completionTimestamp *metav1.Time,
 	artifacts *latticev1.ComponentBuildArtifacts,
 ) (*latticev1.ComponentBuild, error) {
 	var phasePtr *v1.ComponentBuildPhase
-	if phase, ok := build.Annotations[kubeconstants.AnnotationKeyComponentBuildLastObservedPhase]; ok {
-		phase := v1.ComponentBuildPhase(phase)
+	if phase, ok := build.LastObservedPhaseAnnotation(); ok {
 		phasePtr = &phase
 	}
 
-	var failureInfoPtr *v1.ComponentBuildFailureInfo
-	if failureInfoData, ok := build.Annotations[kubeconstants.AnnotationKeyComponentBuildFailureInfo]; ok {
-		failureInfo := v1.ComponentBuildFailureInfo{}
-		err := json.Unmarshal([]byte(failureInfoData), &failureInfo)
-		if err != nil {
-			return nil, err
-		}
-
-		failureInfoPtr = &failureInfo
+	failureInfo, err := build.FailureInfoAnnotation()
+	if err != nil {
+		return nil, err
 	}
 
 	status := latticev1.ComponentBuildStatus{
-		State:              state,
-		ObservedGeneration: build.Generation,
-		Artifacts:          artifacts,
-		LastObservedPhase:  phasePtr,
-		FailureInfo:        failureInfoPtr,
+		State:       state,
+		FailureInfo: failureInfo,
+
+		StartTimestamp:      startTimestamp,
+		CompletionTimestamp: completionTimestamp,
+
+		Artifacts:         artifacts,
+		LastObservedPhase: phasePtr,
 	}
 
 	if reflect.DeepEqual(build.Status, status) {
@@ -98,9 +152,6 @@ func (c *Controller) updateComponentBuildStatus(
 	// Copy so the shared cache isn't mutated
 	build = build.DeepCopy()
 	build.Status = status
-	return c.latticeClient.LatticeV1().ComponentBuilds(build.Namespace).Update(build)
 
-	// TODO: switch to this when https://github.com/kubernetes/kubernetes/issues/38113 is merged
-	// TODO: also watch https://github.com/kubernetes/kubernetes/pull/55168
-	//return c.latticeClient.LatticeV1().ComponentBuilds(build.Namespace).UpdateStatus(build)
+	return c.latticeClient.LatticeV1().ComponentBuilds(build.Namespace).UpdateStatus(build)
 }

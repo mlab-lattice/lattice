@@ -2,7 +2,7 @@ package componentbuilder
 
 import (
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
-	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/constants"
+	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	latticeclientset "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/generated/clientset/versioned"
 	kubeutil "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/kubernetes"
 
@@ -57,7 +57,7 @@ func (u *KubernetesStatusUpdater) updateProgressInternal(buildID v1.ComponentBui
 		return u.updateProgressInternal(buildID, systemID, phase, numRetries-1)
 	}
 
-	build.Annotations[constants.AnnotationKeyComponentBuildLastObservedPhase] = string(phase)
+	build.Annotations[latticev1.ComponentBuildLastObservedPhaseAnnotationKey] = string(phase)
 
 	_, err = u.LatticeClient.LatticeV1().ComponentBuilds(build.Namespace).Update(build)
 	if err != nil {
@@ -93,7 +93,7 @@ func (u *KubernetesStatusUpdater) updateErrorInternal(buildID v1.ComponentBuildI
 		return err
 	}
 
-	build.Annotations[constants.AnnotationKeyComponentBuildFailureInfo] = string(data)
+	build.Annotations[latticev1.ComponentBuildFailureInfoAnnotationKey] = string(data)
 
 	_, err = u.LatticeClient.LatticeV1().ComponentBuilds(build.Namespace).Update(build)
 	if err != nil {
