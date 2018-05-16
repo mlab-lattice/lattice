@@ -20,6 +20,7 @@ type LatticeBootstrapperOptions struct {
 	PrepareImage      string
 	Image             string
 	RedirectCIDRBlock string
+	XDSAPIVersion     string
 	XDSAPIImage       string
 	XDSAPIPort        int32
 }
