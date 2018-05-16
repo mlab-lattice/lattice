@@ -44,8 +44,6 @@ func writeDoc(bc *cli.Command, writer io.Writer) error {
 
 	fmt.Fprintf(writer, "%s \n", markdown.WrapH2("Introduction"))
 
-	// fmt.Fprintf(writer, "%s  \n", bc.Short)
-
 	// extra description in the intro section
 	introMdFileContent, err := getMarkdownFileContent("", descriptionFile)
 	if err != nil {
