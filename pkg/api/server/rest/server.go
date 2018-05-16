@@ -50,10 +50,13 @@ func (r *restServer) mountHandlers(apiAuthKey string) {
 	})
 
 	routerGroup := r.router.Group("/")
-
+	fmt.Println("apiAuthKey: " + apiAuthKey)
 	// setup api key authentication if specified
 	if apiAuthKey != "" {
+		fmt.Println("Setting up authentication with apiAuthKey")
 		routerGroup.Use(authenticateRequest(apiAuthKey))
+	} else {
+		fmt.Println("NOT Setting up authentication with apiAuthKey")
 	}
 
 	restv1.MountHandlers(routerGroup, r.backend, r.resolver)
