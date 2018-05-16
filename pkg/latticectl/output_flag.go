@@ -10,7 +10,7 @@ import (
 
 type OutputFlag struct {
 	Name             string
-	Short            *string
+	Short            string
 	SupportedFormats []printer.Format
 	DefaultFormat    printer.Format
 	Usage            string
@@ -24,8 +24,8 @@ func (f *OutputFlag) Flag() cli.Flag {
 	}
 
 	short := "o"
-	if f.Short != nil {
-		short = *f.Short
+	if f.Short != "" {
+		short = f.Short
 	}
 
 	// You can set the default format per command, but the overall default is table
