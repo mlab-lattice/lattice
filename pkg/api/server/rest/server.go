@@ -50,13 +50,13 @@ func (r *restServer) mountHandlers(apiAuthKey string) {
 	})
 
 	routerGroup := r.router.Group("/")
-	fmt.Println("apiAuthKey: " + apiAuthKey)
+	fmt.Printf("apiAuthKey: '%s'\n", apiAuthKey)
 	// setup api key authentication if specified
 	if apiAuthKey != "" {
-		fmt.Println("Setting up authentication with apiAuthKey")
+		fmt.Printf("Setting up authentication with api key header %s\n", apiKeyHeader)
 		routerGroup.Use(authenticateRequest(apiAuthKey))
 	} else {
-		fmt.Println("NOT Setting up authentication with apiAuthKey")
+		fmt.Println("WARNING: Api key authentication not set")
 	}
 
 	restv1.MountHandlers(routerGroup, r.backend, r.resolver)
@@ -69,9 +69,9 @@ func authenticateRequest(apiAuthKey string) gin.HandlerFunc {
 		// grab request API key from header
 		requestApiKey := c.Request.Header.Get(apiKeyHeader)
 		if requestApiKey == "" {
-			fmt.Printf("Auth failure: %s header is not set\n", apiKeyHeader)
+			fmt.Printf("WARNING: Auth failure: %s header is not set\n", apiKeyHeader)
 		} else if requestApiKey != apiAuthKey {
-			fmt.Printf("Auth failure: invalid %s\n", apiKeyHeader)
+			fmt.Printf("WARNING: Auth failure: invalid %s\n", apiKeyHeader)
 			// TODO enable when all clients provide authentication key
 			//c.JSON(http.StatusForbidden, gin.H{"error": "Invalid API_KEY"})
 		} else {
