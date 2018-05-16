@@ -130,6 +130,12 @@ func (c *Controller) syncSystemNodePools(
 
 	for _, nodePool := range allNodePools {
 		if !nodePoolNames.Contains(nodePool.Name) {
+			// if the node pool is not a system shared node pool, it's not our responsibility
+			// to clean it up
+			if _, ok, err := nodePool.SystemSharedPathLabel(); err == nil || !ok {
+				continue
+			}
+
 			if nodePool.DeletionTimestamp == nil {
 				err := c.deleteNodePool(nodePool)
 				if err != nil {

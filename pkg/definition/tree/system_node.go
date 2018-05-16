@@ -86,5 +86,5 @@ func (s *SystemNode) Services() map[NodePath]*ServiceNode {
 }
 
 func (s *SystemNode) NodePools() map[string]block.NodePool {
-	return s.NodePools()
+	return s.definition.NodePools()
 }
