@@ -123,7 +123,7 @@ func WatchBuild(
 		p := BuildPrinter(build, format)
 		lastHeight = p.Overwrite(b, lastHeight)
 
-		if format == printer.FormatDefault || format == printer.FormatTable {
+		if format == printer.FormatTable {
 			PrintBuildStateDuringWatchBuild(writer, s, build)
 		}
 
@@ -197,7 +197,7 @@ func PrintBuildFailure(writer io.Writer, version string, componentErrors [][]str
 func BuildPrinter(build *v1.Build, format printer.Format) printer.Interface {
 	var p printer.Interface
 	switch format {
-	case printer.FormatDefault, printer.FormatTable:
+	case printer.FormatTable:
 		headers := []string{"Component", "State", "Started At", "Completed At", "Info"}
 
 		headerColors := []tw.Colors{

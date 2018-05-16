@@ -71,7 +71,7 @@ func BuildSystem(
 	}
 
 	if watch {
-		if format == printer.FormatDefault || format == printer.FormatTable {
+		if format == printer.FormatTable {
 			fmt.Fprintf(writer, "\nBuild ID: %s\n", color.ID(string(build.ID)))
 		}
 		return builds.WatchBuild(client, build.ID, format, os.Stdout, builds.PrintBuildStateDuringWatchBuild)
