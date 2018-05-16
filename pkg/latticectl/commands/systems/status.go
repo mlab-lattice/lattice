@@ -205,13 +205,8 @@ func printSystemFailure(writer io.Writer, systemID v1.SystemID, serviceErrors []
 func SystemPrinter(system *v1.System, services []v1.Service, format printer.Format) printer.Interface {
 	var p printer.Interface
 	switch format {
-<<<<<<< HEAD
-	case printer.FormatDefault, printer.FormatTable:
-		headers := []string{"Service", "State", "Available", "Updated", "Stale", "Terminating", "Ports", "Info"}
-=======
 	case printer.FormatTable:
-		headers := []string{"Service", "State", "Updated", "Stale", "Addresses", "Info"}
->>>>>>> Add DefaultFormat to output flag, remove the 'default' format
+		headers := []string{"Service", "State", "Available", "Updated", "Stale", "Terminating", "Ports", "Info"}
 
 		headerColors := []tw.Colors{
 			{tw.Bold},
