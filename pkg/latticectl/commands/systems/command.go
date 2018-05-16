@@ -22,7 +22,6 @@ import (
 // ListSystemsSupportedFormats is the list of printer.Formats supported
 // by the ListSystems function.
 var ListSystemsSupportedFormats = []printer.Format{
-	printer.FormatDefault,
 	printer.FormatJSON,
 	printer.FormatTable,
 }
@@ -120,7 +119,7 @@ func WatchSystems(client clientv1.SystemClient, format printer.Format, writer io
 func systemsPrinter(systems []v1.System, format printer.Format) printer.Interface {
 	var p printer.Interface
 	switch format {
-	case printer.FormatDefault, printer.FormatTable:
+	case printer.FormatTable:
 		headers := []string{"Name", "Definition", "Status"}
 
 		headerColors := []tw.Colors{

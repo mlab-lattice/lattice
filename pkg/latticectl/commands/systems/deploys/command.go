@@ -21,7 +21,6 @@ import (
 // ListDeploysSupportedFormats is the list of printer.Formats supported
 // by the ListDeploys function.
 var ListDeploysSupportedFormats = []printer.Format{
-	printer.FormatDefault,
 	printer.FormatJSON,
 	printer.FormatTable,
 }
@@ -105,7 +104,7 @@ func WatchDeploys(client v1client.DeployClient, format printer.Format, writer io
 func deploysPrinter(deploys []v1.Deploy, format printer.Format) printer.Interface {
 	var p printer.Interface
 	switch format {
-	case printer.FormatDefault, printer.FormatTable:
+	case printer.FormatTable:
 		headers := []string{"ID", "Build ID", "State"}
 
 		headerColors := []tw.Colors{

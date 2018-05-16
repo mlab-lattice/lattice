@@ -21,7 +21,6 @@ import (
 // ListBuildsSupportedFormats is the list of printer.Formats supported
 // by the ListBuilds function.
 var ListBuildsSupportedFormats = []printer.Format{
-	printer.FormatDefault,
 	printer.FormatJSON,
 	printer.FormatTable,
 }
@@ -118,7 +117,7 @@ func WatchBuilds(client v1client.BuildClient, format printer.Format, writer io.W
 func buildsPrinter(builds []v1.Build, format printer.Format) printer.Interface {
 	var p printer.Interface
 	switch format {
-	case printer.FormatDefault, printer.FormatTable:
+	case printer.FormatTable:
 		headers := []string{"Started At", "Completed At", "ID", "Version", "State"}
 
 		headerColors := []tw.Colors{
