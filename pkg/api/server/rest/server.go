@@ -62,12 +62,11 @@ func (r *restServer) mountHandlers(apiAuthKey string) {
 // authenticateRequest authenticates the request against the configured authentication api key
 func authenticateRequest(apiAuthKey string) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		fmt.Println(c.Request.URL.Path)
 		// grab request API key from header
-		requestApiKey := c.Request.Header.Get(apiKeyHeader)
-		if requestApiKey == "" {
+		requestAPIKey := c.Request.Header.Get(apiKeyHeader)
+		if requestAPIKey == "" {
 			fmt.Printf("WARNING: Auth failure: %s header is not set\n", apiKeyHeader)
-		} else if requestApiKey != apiAuthKey {
+		} else if requestAPIKey != apiAuthKey {
 			fmt.Printf("WARNING: Auth failure: invalid %s\n", apiKeyHeader)
 			// TODO enable when all clients provide authentication key
 			//c.JSON(http.StatusForbidden, gin.H{"error": "Invalid API_KEY"})

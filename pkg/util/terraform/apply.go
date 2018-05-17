@@ -5,7 +5,6 @@ import (
 )
 
 func Apply(workDirectory string, config *Config) (string, error) {
-
 	tec, err := NewTerrafromExecContext(workDirectory, nil)
 	if err != nil {
 		return "", err

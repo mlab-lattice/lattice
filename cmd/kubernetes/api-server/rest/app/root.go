@@ -25,8 +25,6 @@ var (
 var RootCmd = &cobra.Command{
 	Use: "api-server",
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Printf("***************************: %s\n", args)
-		fmt.Printf("ARGS FOR API SERVER: %s\n", args)
 		kubernetesBackend, err := backend.NewKubernetesBackend(
 			namespacePrefix,
 			kubeconfig,
