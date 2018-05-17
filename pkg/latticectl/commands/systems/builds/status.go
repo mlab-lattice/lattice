@@ -33,17 +33,15 @@ func (c *StatusCommand) Base() (*latticectl.BaseCommand, error) {
 		SupportedFormats: ListBuildsSupportedFormats,
 	}
 	var watch bool
+	watchFlag := &latticectl.WatchFlag{
+		Target: &watch,
+	}
 
 	cmd := &latticectl.BuildCommand{
 		Name: "status",
 		Flags: cli.Flags{
 			output.Flag(),
-			&cli.BoolFlag{
-				Name:    "watch",
-				Short:   "w",
-				Default: false,
-				Target:  &watch,
-			},
+			watchFlag.Flag(),
 		},
 		Run: func(ctx latticectl.BuildCommandContext, args []string) {
 			format, err := output.Value()
@@ -125,7 +123,7 @@ func WatchBuild(
 		p := BuildPrinter(build, format)
 		lastHeight = p.Overwrite(b, lastHeight)
 
-		if format == printer.FormatDefault || format == printer.FormatTable {
+		if format == printer.FormatTable {
 			PrintBuildStateDuringWatchBuild(writer, s, build)
 		}
 
@@ -199,7 +197,7 @@ func PrintBuildFailure(writer io.Writer, version string, componentErrors [][]str
 func BuildPrinter(build *v1.Build, format printer.Format) printer.Interface {
 	var p printer.Interface
 	switch format {
-	case printer.FormatDefault, printer.FormatTable:
+	case printer.FormatTable:
 		headers := []string{"Component", "State", "Started At", "Completed At", "Info"}
 
 		headerColors := []tw.Colors{

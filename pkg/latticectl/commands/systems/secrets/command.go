@@ -19,7 +19,6 @@ type ListSecretsCommand struct {
 }
 
 var ListSecretsSupportedFormats = []printer.Format{
-	printer.FormatDefault,
 	printer.FormatJSON,
 	printer.FormatTable,
 }
@@ -65,7 +64,7 @@ func ListSecrets(client v1client.SecretClient, format printer.Format, writer io.
 func secretsPrinter(secrets []v1.Secret, format printer.Format) printer.Interface {
 	var p printer.Interface
 	switch format {
-	case printer.FormatDefault, printer.FormatTable:
+	case printer.FormatTable:
 		headers := []string{"Path", "Name", "Value"}
 
 		headerColors := []tw.Colors{
