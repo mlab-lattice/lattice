@@ -32,9 +32,10 @@ var (
 	// TODO: should we just use ServiceIDLabelKey here instead? if so what do we use for shared/lattice node pools
 	NodePoolServiceDedicatedIDLabelKey = fmt.Sprintf("service.dedicated.node-pool.%v/id", GroupName)
 
-	// NodePoolServiceDedicatedID is the key for a label indicating that the node pool is shared for a system.
+	// NodePoolSystemSharedPathLabelKey is the key for a label indicating that the node pool is shared for a system.
 	// The label's value should be the node pool's path in the system definition.
 	NodePoolSystemSharedPathLabelKey = fmt.Sprintf("shared.node-pool.%v/path", GroupName)
+	NodePoolSystemSharedNameLabelKey = fmt.Sprintf("shared.node-pool.%v/name", GroupName)
 
 	// NodePoolWorkloadAnnotationKey is the key that should be used in an annotation by
 	// workloads that run on a node pool.
@@ -119,17 +120,17 @@ func (np *NodePool) ServiceDedicatedIDLabel() (string, bool) {
 func (np *NodePool) SystemSharedPathLabel() (v1.NodePoolPath, bool, error) {
 	label, ok := np.Labels[NodePoolSystemSharedPathLabelKey]
 	if !ok {
-		return "", false, nil
+		return v1.NodePoolPath{}, false, nil
 	}
 
 	parts := strings.Split(label, ".")
 	if len(parts) != 2 {
-		return "", false, fmt.Errorf("invalid node pool path label: %v", label)
+		return v1.NodePoolPath{}, false, fmt.Errorf("invalid node pool path label: %v", label)
 	}
 
 	path, err := tree.NodePathFromDomain(parts[0])
 	if err != nil {
-		return "", false, err
+		return v1.NodePoolPath{}, false, err
 	}
 
 	return v1.NewSystemSharedNodePoolPath(path, parts[1]), true, nil

@@ -1,42 +1,75 @@
 package v1
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 )
 
-type NodePoolPath string
+type NodePoolPath struct {
+	Path tree.NodePath
+	Name *string
+}
 
 func (p NodePoolPath) String() string {
-	return string(p)
+	return fmt.Sprintf("%v:%v", p.Path, p.Name)
+}
+
+func (p NodePoolPath) MarshalJSON() ([]byte, error) {
+	return []byte(p.String()), nil
+}
+
+func (p *NodePoolPath) UnmarshalJSON(data []byte) error {
+	var path string
+	err := json.Unmarshal(data, &path)
+	if err != nil {
+		return err
+	}
+
+	np, err := ParseNodePoolPath(path)
+	if err != nil {
+		return err
+	}
+
+	p.Path = np.Path
+	p.Name = np.Name
+	return nil
 }
 
 func NewServiceNodePoolPath(path tree.NodePath) NodePoolPath {
-	return NodePoolPath(path.String())
+	return NodePoolPath{Path: path}
 }
 
 func NewSystemSharedNodePoolPath(path tree.NodePath, name string) NodePoolPath {
-	return NodePoolPath(fmt.Sprintf("%v:%v", path.String(), name))
+	return NodePoolPath{
+		Path: path,
+		Name: &name,
+	}
 }
 
-func ParseNodePoolPath(path NodePoolPath) (tree.NodePath, *string, error) {
-	parts := strings.Split(path.String(), ":")
+func ParseNodePoolPath(path string) (NodePoolPath, error) {
+	parts := strings.Split(path, ":")
 	if len(parts) > 2 || len(parts) == 0 {
-		return "", nil, fmt.Errorf("invalid node pool path format")
+		return NodePoolPath{}, fmt.Errorf("invalid node pool path format")
 	}
 
 	p, err := tree.NewNodePath(parts[0])
 	if err != nil {
-		return "", nil, err
+		return NodePoolPath{}, err
 	}
 
 	if len(parts) == 1 {
-		return p, nil, nil
+		np := NodePoolPath{Path: p}
+		return np, nil
 	}
 
-	return p, &parts[1], nil
+	np := NodePoolPath{
+		Path: p,
+		Name: &parts[1],
+	}
+	return np, nil
 }
 
 type NodePool struct {

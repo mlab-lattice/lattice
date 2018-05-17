@@ -44,7 +44,7 @@ func (c *Controller) syncDeployment(
 	if deployment == nil {
 		// If we need to create a new deployment, we need to wait until the
 		// node pool so we can get the right affinity and toleration.
-		if !nodePool.Stable() {
+		if nodePool == nil || !nodePool.Stable() {
 			return &pendingDeploymentStatus, nil
 		}
 
@@ -103,6 +103,10 @@ func (c *Controller) syncExistingDeployment(
 	deployment *appsv1.Deployment,
 	nodePool *latticev1.NodePool,
 ) (*deploymentStatus, error) {
+	if nodePool == nil {
+		return c.getDeploymentStatus(service, deployment)
+	}
+
 	currentEpochStable, err := c.currentEpochStable(nodePool)
 	if err != nil {
 		err := fmt.Errorf(

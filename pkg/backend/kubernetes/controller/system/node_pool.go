@@ -27,27 +27,22 @@ func (c *Controller) syncSystemNodePools(
 	nodePoolNames := mapset.NewSet()
 
 	// Loop through the nodePools defined in the system's Spec, and create/update any that need it
-	for npPath, spec := range system.Spec.NodePools {
+	for path, spec := range system.Spec.NodePools {
 		var nodePool *latticev1.NodePool
-		path, nameP, err := v1.ParseNodePoolPath(npPath)
-		if err != nil {
-			return nil, fmt.Errorf("error parsing node pool path %v: %v", npPath.String(), err)
+
+		if path.Name == nil {
+			// FIXME: all system level node pools should have a path, send a warn if it doesn't
+			continue
 		}
 
-		if nameP == nil {
-			return nil, fmt.Errorf("expected node pool path %v to have name but it did not", npPath.String())
-		}
-
-		name := *nameP
-
-		nodePoolStatus, ok := system.Status.NodePools[npPath]
+		nodePoolStatus, ok := system.Status.NodePools[path]
 		if !ok {
 			// If a status for this node pool's path hasn't been set, then either we haven't created the node pool yet,
 			// or we were unable to update the system's Status after creating the node pool
 
 			// First check our cache to see if the node pool exists.
 			var err error
-			nodePool, err = c.getNodePoolFromCache(systemNamespace, path, name)
+			nodePool, err = c.getNodePoolFromCache(systemNamespace, path.Path, *path.Name)
 			if err != nil {
 				return nil, err
 			}
@@ -56,20 +51,20 @@ func (c *Controller) syncSystemNodePools(
 				// The nodePool wasn't in the cache, so do a quorum read to see if it was created.
 				// N.B.: could first loop through and check to see if we need to do a quorum read
 				// on any of the nodePools, then just do one list.
-				nodePool, err = c.getNodePoolFromAPI(systemNamespace, path, name)
+				nodePool, err = c.getNodePoolFromAPI(systemNamespace, path.Path, *path.Name)
 				if err != nil {
 					return nil, err
 				}
 
 				if nodePool == nil {
 					// The nodePool actually doesn't exist yet. Create it with a new UUID as the name.
-					nodePool, err = c.createNewNodePool(system, path, name, spec)
+					nodePool, err = c.createNewNodePool(system, path.Path, *path.Name, spec)
 					if err != nil {
 						return nil, err
 					}
 
 					// Successfully created the nodePool. No need to check if it needs to be updated.
-					nodePools[npPath] = latticev1.SystemStatusNodePool{
+					nodePools[path] = latticev1.SystemStatusNodePool{
 						Name:           nodePool.Name,
 						Generation:     nodePool.Generation,
 						NodePoolStatus: nodePool.Status,
@@ -107,13 +102,13 @@ func (c *Controller) syncSystemNodePools(
 		}
 
 		// We found an existing nodePool, update it if needed
-		nodePool, err = c.updateNodePool(nodePool, spec, path, name)
+		nodePool, err := c.updateNodePool(nodePool, spec, path.Path, *path.Name)
 		if err != nil {
 			return nil, err
 		}
 
 		nodePoolNames.Add(nodePool.Name)
-		nodePools[npPath] = latticev1.SystemStatusNodePool{
+		nodePools[path] = latticev1.SystemStatusNodePool{
 			Name:           nodePool.Name,
 			Generation:     nodePool.Generation,
 			NodePoolStatus: nodePool.Status,

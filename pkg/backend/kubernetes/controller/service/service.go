@@ -103,7 +103,6 @@ func (c *Controller) syncServiceStatus(
 	deploymentStatus *deploymentStatus,
 	extraNodePoolsExist bool,
 ) (*latticev1.Service, error) {
-	fmt.Printf("deployment state: %v, terminating instances: %v", deploymentStatus.State, deploymentStatus.TerminatingInstances)
 	currentEpochStable, err := c.currentEpochStable(nodePool)
 	if err != nil {
 		err := fmt.Errorf(
@@ -186,6 +185,11 @@ func serviceStatus(
 		}
 
 		return latticev1.ServiceStateFailed, nil, failureInfo
+	}
+
+	if nodePool == nil {
+		message := "node pool is pending"
+		return latticev1.ServiceStateUpdating, &message, nil
 	}
 
 	if !nodePool.Stable() {

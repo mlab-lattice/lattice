@@ -99,6 +99,7 @@ func (s *system) MarshalJSON() ([]byte, error) {
 		Type:        TypeSystem,
 		Name:        s.name,
 		Description: s.description,
+		NodePools:   s.nodePools,
 		Subsystems:  subsystems,
 	}
 

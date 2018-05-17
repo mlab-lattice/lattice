@@ -247,7 +247,7 @@ func nodePoolSpec(numInstances int32, instanceType string) latticev1.NodePoolSpe
 }
 
 func (c *Controller) currentEpochStable(nodePool *latticev1.NodePool) (bool, error) {
-	if !nodePool.UpdateProcessed() {
+	if nodePool == nil || !nodePool.UpdateProcessed() {
 		return false, nil
 	}
 
