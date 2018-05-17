@@ -209,6 +209,7 @@ func (cp *DefaultLocalLatticeBootstrapper) bootstrapLatticeDNS(resources *bootst
 	controllerArgs := []string{
 		"--namespace-prefix", cp.NamespacePrefix,
 		"--internal-dns-domain", cp.InternalDNSDomain,
+		"--lattice-id", string(cp.LatticeID),
 	}
 	controllerArgs = append(controllerArgs, cp.DNS.ControllerArgs...)
 	controllerArgs = append(controllerArgs, serviceMeshVars...)
