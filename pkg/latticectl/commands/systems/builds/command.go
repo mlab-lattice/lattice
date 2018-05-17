@@ -5,6 +5,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"sort"
 	"time"
 
 	v1client "github.com/mlab-lattice/lattice/pkg/api/client/v1"
@@ -118,7 +119,7 @@ func buildsPrinter(builds []v1.Build, format printer.Format) printer.Interface {
 	var p printer.Interface
 	switch format {
 	case printer.FormatTable:
-		headers := []string{"Started At", "Completed At", "ID", "Version", "State"}
+		headers := []string{"ID", "Started At", "Completed At", "Version", "State"}
 
 		headerColors := []tw.Colors{
 			{tw.Bold},
@@ -129,9 +130,9 @@ func buildsPrinter(builds []v1.Build, format printer.Format) printer.Interface {
 		}
 
 		columnColors := []tw.Colors{
-			{},
-			{},
 			{tw.FgHiCyanColor},
+			{},
+			{},
 			{},
 			{},
 		}
@@ -160,21 +161,23 @@ func buildsPrinter(builds []v1.Build, format printer.Format) printer.Interface {
 			completionTimestamp := ""
 
 			if build.StartTimestamp != nil {
-				startTimestamp = build.StartTimestamp.String()
+				startTimestamp = build.StartTimestamp.Format(time.RFC3339)
 			}
 
 			if build.CompletionTimestamp != nil {
-				completionTimestamp = build.CompletionTimestamp.String()
+				completionTimestamp = build.CompletionTimestamp.Format(time.RFC3339)
 			}
 
 			rows = append(rows, []string{
+				string(build.ID),
 				startTimestamp,
 				completionTimestamp,
-				string(build.ID),
 				string(build.Version),
 				stateColor(string(build.State)),
 			})
 		}
+
+		sort.Slice(rows, func(i, j int) bool { return rows[i][2] < rows[j][2] })
 
 		p = &printer.Table{
 			Headers:         headers,
