@@ -27,8 +27,6 @@ func RunNewRestServer(backend v1.Interface, port int32, workingDirectory string,
 		panic(err)
 	}
 
-	fmt.Sprintf("server.go: API AUTH KEY '%s'\n", apiAuthKey)
-
 	router := gin.Default()
 	// Some of our paths use URL encoded paths, so don't have
 	// gin decode those
@@ -50,7 +48,6 @@ func (r *restServer) mountHandlers(apiAuthKey string) {
 	})
 
 	routerGroup := r.router.Group("/")
-	fmt.Printf("apiAuthKey: '%s'\n", apiAuthKey)
 	// setup api key authentication if specified
 	if apiAuthKey != "" {
 		fmt.Printf("Setting up authentication with api key header %s\n", apiKeyHeader)
@@ -75,7 +72,7 @@ func authenticateRequest(apiAuthKey string) gin.HandlerFunc {
 			// TODO enable when all clients provide authentication key
 			//c.JSON(http.StatusForbidden, gin.H{"error": "Invalid API_KEY"})
 		} else {
-			fmt.Println("Auth SUCCESS!")
+			fmt.Println("Auth success!")
 		}
 	}
 }
