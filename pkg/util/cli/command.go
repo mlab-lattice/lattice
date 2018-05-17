@@ -26,12 +26,6 @@ type Command struct {
 	isSpaceSeparated bool
 }
 
-func (c *Command) emptyRun(cmd *cobra.Command) {
-	c.cobraCmd.SetHelpFunc(c.helpFuncWrapper)
-	cmd.Help()
-	os.Exit(1)
-}
-
 func (c *Command) Execute() {
 	if err := c.Init(); err != nil {
 		c.exit(err)
@@ -44,12 +38,6 @@ func (c *Command) Init() error {
 	c.cobraCmd = &cobra.Command{
 		Use:   c.Name,
 		Short: c.Short,
-		Run: func(cmd *cobra.Command, args []string) {
-			if c.Run == nil {
-				c.emptyRun(cmd)
-			}
-			c.Run(args)
-		},
 	}
 
 	if err := c.addArgs(); err != nil {
@@ -67,6 +55,14 @@ func (c *Command) Init() error {
 	c.cobraCmd.SetUsageFunc(c.usageFuncWrapper)
 	c.cobraCmd.SetHelpFunc(c.helpFuncWrapper)
 
+	c.cobraCmd.Run = func(cmd *cobra.Command, args []string) {
+		if c.Run == nil {
+			cmd.Help()
+			os.Exit(1)
+		}
+		c.Run(args)
+	}
+
 	c.cobraCmd.PreRun = func(cmd *cobra.Command, args []string) {
 		for name, parser := range c.getFlagParsers() {
 			err := parser()
@@ -78,6 +74,7 @@ func (c *Command) Init() error {
 
 		if c.PreRun != nil {
 			c.PreRun()
+			c.PreRun()
 		}
 	}
 
@@ -87,7 +84,7 @@ func (c *Command) Init() error {
 }
 
 // usageFuncWrapper calls the correct usage function, and lets the usageFunction be called on a Command rather than a cobra.Command
-func (c *Command) usageFuncWrapper(command *cobra.Command) error {
+func (c *Command) usageFuncWrapper(*cobra.Command) error {
 	if c.UsageFunc != nil {
 		return c.UsageFunc(c)
 	}
@@ -96,7 +93,7 @@ func (c *Command) usageFuncWrapper(command *cobra.Command) error {
 }
 
 // helpFuncWrapper calls the correct help function, and lets the usageFunction be called on a Command rather than a cobra.Command
-func (c *Command) helpFuncWrapper(command *cobra.Command, strings []string) {
+func (c *Command) helpFuncWrapper(*cobra.Command, []string) {
 	if c.HelpFunc != nil {
 		c.HelpFunc(c)
 		return
@@ -106,18 +103,18 @@ func (c *Command) helpFuncWrapper(command *cobra.Command, strings []string) {
 }
 
 // defaultUsageFunc is the Usage function that will be called if none is provided
-func (c *Command) defaultUsageFunc(command *Command) error {
+func (c *Command) defaultUsageFunc(*Command) error {
 	// TODO :: Seems like Usage & Help have the same use for us right now. (Perhaps just for default)
-	tmplName := "defaultTemplate"
-	templateToExecute := "UsageTemplate"
-	return template.TryExecuteTemplate(template.DefaultTemplate, tmplName, templateToExecute, template.DefaultTemplateFuncs, c)
+	tmplName := template.DefaultTemplate
+	templateToExecute := template.DefaultUsageTemplate
+	return template.TryExecuteTemplate(tmplName, template.DefaultTemplate, templateToExecute, template.DefaultTemplateFuncs, c)
 }
 
 // defaultHelpFunc is the Help function that will be called if none is provided
-func (c *Command) defaultHelpFunc(command *Command) {
-	tmplName := "defaultTemplate"
-	templateToExecute := "UsageTemplate"
-	err := template.TryExecuteTemplate(template.DefaultTemplate, tmplName, templateToExecute, template.DefaultTemplateFuncs, c)
+func (c *Command) defaultHelpFunc(*Command) {
+	tmplName := template.DefaultTemplate
+	templateToExecute := template.DefaultUsageTemplate
+	err := template.TryExecuteTemplate(tmplName, template.DefaultTemplate, templateToExecute, template.DefaultTemplateFuncs, c)
 	if err != nil {
 		log.Fatalf(err.Error())
 	}
@@ -228,10 +225,6 @@ func (c *Command) initColon() error {
 		//  subcommand.Run is a pointer, we need to do this trickery)
 		subcommand.cobraCmd.Run = func(run func([]string)) func(*cobra.Command, []string) {
 			return func(cmd *cobra.Command, args []string) {
-				if run == nil {
-					c.emptyRun(cmd)
-				}
-
 				run(args)
 			}
 		}(subcommand.Run)
@@ -297,14 +290,6 @@ func (c *Command) HasFlags() bool {
 	return len(c.Flags) != 0
 }
 
-func (c *Command) NamePadding() int {
-	return 35
-}
-
-func (c *Command) FlagNamePadding() int {
-	return 10
-}
-
 func (c *Command) CommandPath() string {
 	return c.cobraCmd.Name()
 }
@@ -319,32 +304,12 @@ func (c *Command) FlagsSorted() Flags {
 	return flags
 }
 
-func SortCommands(commands CommandList) CommandList {
-	sort.Sort(commands)
-	return commands
-}
-
-type CommandList []*Command
-
-func (c CommandList) Len() int {
-	return len(c)
-}
-
-func (c CommandList) Swap(i, j int) {
-	c[i], c[j] = c[j], c[i]
-}
-
-func (c CommandList) Less(i, j int) bool {
-	return strings.Compare(c[i].CommandPath(), c[j].CommandPath()) == -1
-}
-
 // AllSubcommands returns the recursive subcommand tree as one flat sorted array.
 func (c *Command) AllSubcommands() []*Command {
 	// found is a list of all flattened subcommands
 	found := make([]*Command, 0)
 	// queue is the list of Commands that still need to be flattened
-	queue := make([]*Command, 0)
-	queue = c.Subcommands
+	queue := c.Subcommands
 
 	done := false
 	for done == false {
@@ -372,14 +337,12 @@ func (c *Command) SubcommandsByGroup() []*CommandGroup {
 	// found is a list of all flattened subcommands
 	found := make([]*CommandGroup, 0)
 	// queue is the list of Commands that still need to be flattened
-	queue := make([]*Command, 0)
-	queue = append(queue, c)
+	queue := []*Command{c}
 
-	done := false
-	for done == false {
+	for {
 		if len(queue) == 0 {
 			// nothing left to search, found contains all the subcommands
-			done = true
+			break
 		} else {
 			// explore the first element in the queue. Add this node to found and add each subcommand to the queue
 			nextElem := queue[0]
@@ -399,4 +362,23 @@ func (c *Command) SubcommandsByGroup() []*CommandGroup {
 	}
 
 	return found
+}
+
+func SortCommands(commands CommandList) CommandList {
+	sort.Sort(commands)
+	return commands
+}
+
+type CommandList []*Command
+
+func (c CommandList) Len() int {
+	return len(c)
+}
+
+func (c CommandList) Swap(i, j int) {
+	c[i], c[j] = c[j], c[i]
+}
+
+func (c CommandList) Less(i, j int) bool {
+	return strings.Compare(c[i].CommandPath(), c[j].CommandPath()) == -1
 }

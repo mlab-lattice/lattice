@@ -13,13 +13,10 @@ import (
 
 // DefaultTemplateFuncs provides the template functions used by the default help/usage parser. This is exported so that a new implementation can use these functions too.
 var DefaultTemplateFuncs = template.FuncMap{
-	"trim":                    strings.TrimSpace,
-	"trimRightSpace":          trimRightSpace,
-	"trimTrailingWhitespaces": trimRightSpace,
 	"rpad":    rpad,
 	"lpad":    lpad,
-	"gt":      Gt,
-	"eq":      Eq,
+	"gt":      gt,
+	"eq":      eq,
 	"colored": colored,
 }
 
@@ -54,23 +51,22 @@ func colored(s string, colChoice string) string {
 	return fmt.Sprintf("%s", col(s))
 }
 
-// rpad adds padding to the right of a string.
+// rpad adds whitespace padding to the right of a string.
 func rpad(s string, padding int) string {
-	template := fmt.Sprintf("%%-%ds", padding)
-	// %-4s
-	return fmt.Sprintf(template, s)
+	paddedString := fmt.Sprintf("%%-%ds", padding)
+	return fmt.Sprintf(paddedString, s)
 }
 
 // lpad adds padding to the left of a string.
 func lpad(s string, padding int) string {
-	template := fmt.Sprintf("%% %ds", padding)
-	return fmt.Sprintf(template, s)
+	paddedString := fmt.Sprintf("%% %ds", padding)
+	return fmt.Sprintf(paddedString, s)
 }
 
-// Gt takes two types and checks whether the first type is greater than the second. In case of types Arrays, Chans,
+// gt takes two types and checks whether the first type is greater than the second. In case of types Arrays, Chans,
 // Maps and Slices, Gt will compare their lengths. Ints are compared directly while strings are first parsed as
 // ints and then compared.
-func Gt(a interface{}, b interface{}) bool {
+func gt(a interface{}, b interface{}) bool {
 	var left, right int64
 	av := reflect.ValueOf(a)
 
@@ -97,8 +93,8 @@ func Gt(a interface{}, b interface{}) bool {
 	return left > right
 }
 
-// Eq takes two types and checks whether they are equal. Supported types are int and string. Unsupported types will panic.
-func Eq(a interface{}, b interface{}) bool {
+// eq takes two types and checks whether they are equal. Supported types are int and string. Unsupported types will panic.
+func eq(a interface{}, b interface{}) bool {
 	av := reflect.ValueOf(a)
 	bv := reflect.ValueOf(b)
 
