@@ -31,17 +31,15 @@ func (c *StatusCommand) Base() (*latticectl.BaseCommand, error) {
 		SupportedFormats: ListServicesSupportedFormats,
 	}
 	var watch bool
+	watchFlag := &latticectl.WatchFlag{
+		Target: &watch,
+	}
 
 	cmd := &latticectl.ServiceCommand{
 		Name: "status",
 		Flags: cli.Flags{
 			output.Flag(),
-			&cli.BoolFlag{
-				Name:    "watch",
-				Short:   "w",
-				Default: false,
-				Target:  &watch,
-			},
+			watchFlag.Flag(),
 		},
 		Run: func(ctx latticectl.ServiceCommandContext, args []string) {
 			format, err := output.Value()
@@ -100,7 +98,7 @@ func WatchService(client v1client.ServiceClient, servicePath tree.NodePath, form
 		p := servicePrinter(service, format)
 		lastHeight = p.Overwrite(b, lastHeight)
 
-		if format == printer.FormatDefault || format == printer.FormatTable {
+		if format == printer.FormatTable {
 			printServiceState(writer, s, service)
 		}
 	}
@@ -134,7 +132,7 @@ func printServiceState(writer io.Writer, s *spinner.Spinner, service *v1.Service
 func servicePrinter(service *v1.Service, format printer.Format) printer.Interface {
 	var p printer.Interface
 	switch format {
-	case printer.FormatDefault, printer.FormatTable:
+	case printer.FormatTable:
 		headers := []string{"Service", "State", "Available", "Updated", "Stale", "Terminating", "Addresses", "Info"}
 
 		headerColors := []tw.Colors{

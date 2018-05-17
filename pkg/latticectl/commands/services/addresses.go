@@ -77,7 +77,7 @@ func GetServiceAddress(client v1client.ServiceClient, servicePath tree.NodePath,
 func AddressPrinter(service *v1.Service, format printer.Format) printer.Interface {
 	var p printer.Interface
 	switch format {
-	case printer.FormatDefault, printer.FormatTable:
+	case printer.FormatTable:
 		headers := []string{"Port", "Address"}
 
 		headerColors := []tw.Colors{

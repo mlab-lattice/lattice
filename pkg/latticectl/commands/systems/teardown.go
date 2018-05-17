@@ -25,17 +25,15 @@ func (c *TeardownCommand) Base() (*latticectl.BaseCommand, error) {
 		SupportedFormats: teardowns.ListTeardownsSupportedFormats,
 	}
 	var watch bool
+	watchFlag := &latticectl.WatchFlag{
+		Target: &watch,
+	}
 
 	cmd := &latticectl.SystemCommand{
 		Name: "teardown",
 		Flags: []cli.Flag{
 			output.Flag(),
-			&cli.BoolFlag{
-				Name:    "watch",
-				Short:   "w",
-				Default: false,
-				Target:  &watch,
-			},
+			watchFlag.Flag(),
 		},
 		Run: func(ctx latticectl.SystemCommandContext, args []string) {
 			format, err := output.Value()
@@ -62,7 +60,7 @@ func TeardownSystem(client v1client.SystemClient, systemID v1.SystemID, format p
 	}
 
 	if watch {
-		if format == printer.FormatDefault || format == printer.FormatTable {
+		if format == printer.FormatTable {
 			fmt.Fprintf(writer, "\nTearing down system %s. Teardown ID: %s\n\n", color.ID(string(systemID)), color.ID(string(teardown.ID)))
 		}
 		err = WatchSystem(client, systemID, format, writer, printSystemStateDuringTeardown, true)

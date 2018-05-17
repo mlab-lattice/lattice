@@ -21,7 +21,6 @@ import (
 // ListTeardownsSupportedFormats is the list of printer.Formats supported
 // by the ListTeardowns function.
 var ListTeardownsSupportedFormats = []printer.Format{
-	printer.FormatDefault,
 	printer.FormatJSON,
 	printer.FormatTable,
 }
@@ -38,17 +37,15 @@ func (c *ListTeardownsCommand) Base() (*latticectl.BaseCommand, error) {
 		SupportedFormats: ListTeardownsSupportedFormats,
 	}
 	var watch bool
+	watchFlag := &latticectl.WatchFlag{
+		Target: &watch,
+	}
 
 	cmd := &latticectl.SystemCommand{
 		Name: "teardowns",
 		Flags: cli.Flags{
 			output.Flag(),
-			&cli.BoolFlag{
-				Name:    "watch",
-				Short:   "w",
-				Default: false,
-				Target:  &watch,
-			},
+			watchFlag.Flag(),
 		},
 		Run: func(ctx latticectl.SystemCommandContext, args []string) {
 			format, err := output.Value()
@@ -118,7 +115,7 @@ func WatchTeardowns(client v1cient.TeardownClient, format printer.Format, writer
 func teardownsPrinter(teardowns []v1.Teardown, format printer.Format) printer.Interface {
 	var p printer.Interface
 	switch format {
-	case printer.FormatDefault, printer.FormatTable:
+	case printer.FormatTable:
 		headers := []string{"ID", "State"}
 
 		headerColors := []tw.Colors{
