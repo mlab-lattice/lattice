@@ -19,7 +19,6 @@ import (
 // GetTeardownsSupportedFormats is the list of printer.Formats supported
 // by the GetTeardown function.
 var GetTeardownsSupportedFormats = []printer.Format{
-	printer.FormatDefault,
 	printer.FormatJSON,
 	printer.FormatTable,
 }

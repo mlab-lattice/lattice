@@ -2,14 +2,17 @@ package latticectl
 
 import (
 	"fmt"
+	"strings"
+
 	"github.com/mlab-lattice/lattice/pkg/util/cli"
 	"github.com/mlab-lattice/lattice/pkg/util/cli/printer"
 )
 
 type OutputFlag struct {
 	Name             string
-	Short            *string
+	Short            string
 	SupportedFormats []printer.Format
+	DefaultFormat    printer.Format
 	Usage            string
 	value            string
 }
@@ -21,11 +24,28 @@ func (f *OutputFlag) Flag() cli.Flag {
 	}
 
 	short := "o"
-	if f.Short != nil {
-		short = *f.Short
+	if f.Short != "" {
+		short = f.Short
 	}
 
-	usage := "Set the output format of the command. Options are table (which is the default) and json."
+	// You can set the default format per command, but the overall default is table
+	if f.DefaultFormat == "" {
+		f.DefaultFormat = printer.FormatTable
+	}
+
+	usage := "Set the output format of the command. Valid options: "
+
+	var formats []string
+	for _, format := range f.SupportedFormats {
+		if format == f.DefaultFormat {
+			formats = append(formats, string(format)+" (default)")
+		} else {
+			formats = append(formats, string(format))
+		}
+	}
+
+	usage += strings.Join(formats, ", ")
+
 	if f.Usage != "" {
 		usage = f.Usage
 	}
@@ -40,7 +60,7 @@ func (f *OutputFlag) Flag() cli.Flag {
 
 func (f *OutputFlag) Value() (printer.Format, error) {
 	if f.value == "" {
-		return printer.FormatDefault, nil
+		return f.DefaultFormat, nil
 	}
 
 	value := printer.Format(f.value)
