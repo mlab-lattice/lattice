@@ -13,17 +13,18 @@ const DefaultHelpTemplateGrouped = "HelpTemplateGrouped"
 
 //FIXME :: Seem to get : rather than " " when running command systems -h, but not when running command -h or command systems:status -h
 var DefaultTemplate = `
-{{define "Header"}}{{ colored "Usage: " "white" }}{{.CommandPathBinary}}{{.CommandSeparator}}{{if not .IsRunnable }}{{colored "COMMAND" "bold"}}{{end}}{{if .HasFlags}}{{ colored "[FLAGS] " "bold"}}{{else}}{{colored "COMMAND" "bold"}}{{end}}
-{{if not (eq .Short "") }}
-    {{colored .Short "bold"}}{{end}}{{end}}
+{{define "Header"}}{{ colored "Usage: " "white" }}{{.CommandPathBinary}}{{.CommandSeparator}}{{if not .IsRunnable }}{{colored "COMMAND" "bold"}}{{end}}{{if .HasFlags}}{{ colored "[FLAGS] " "bold"}}{{else}}{{colored "COMMAND" "bold"}}{{end}}{{if not (eq .Short "") }}
+
+	{{colored .Short "bold"}}{{end}}{{end}}
 
 {{define "HeaderHelp"}}{{template "Header" .}}{{end}}
 
 {{define "HeaderUsage"}}{{template "Header" .}}
-Type {{.CommandPathBinary}}{{.CommandSeparator}}{{if .HasSubcommands}}{{ colored "[COMMAND] " "bold"}}{{end}}{{colored "-h" "bold"}} for help and examples.
-{{end}}
+
+Type {{.CommandPathBinary}}{{.CommandSeparator}}{{if .HasSubcommands}}{{ colored "[COMMAND] " "bold"}}{{end}}{{colored "-h" "bold"}} for help and examples.{{end}}
 
 {{define "Flags"}}{{if (gt (len .Flags) 0)}}{{ $namePadding := 10 }}
+
 {{colored "Flags:" "white"}} {{range .FlagsSorted}}
     --{{ rpad .GetName $namePadding }} {{if (ne .GetShort "") }} -{{ rpad .GetShort 2 }} {{ .GetUsage }} {{else}} {{rpad " " 4}}{{ .GetUsage }}{{end}}{{end}}{{end}}{{end}}
 
