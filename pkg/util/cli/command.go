@@ -113,7 +113,7 @@ func (c *Command) defaultUsageFunc(*Command) error {
 // defaultHelpFunc is the Help function that will be called if none is provided
 func (c *Command) defaultHelpFunc(*Command) {
 	tmplName := template.DefaultTemplate
-	templateToExecute := template.DefaultUsageTemplate
+	templateToExecute := template.DefaultHelpTemplate
 	err := template.TryExecuteTemplate(tmplName, template.DefaultTemplate, templateToExecute, template.DefaultTemplateFuncs, c)
 	if err != nil {
 		log.Fatalf(err.Error())
