@@ -28,6 +28,10 @@ func (cp *DefaultLocalCloudProvider) ServiceAddressLoadBalancerNeedsUpdate(
 		return false, err
 	}
 
+	if kubeService == nil {
+		return true, nil
+	}
+
 	spec, err := cp.kubeServiceSpec(address, service, serviceMeshPorts)
 	if err != nil {
 		return false, err
