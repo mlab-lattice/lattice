@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"reflect"
 
-	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	kubeutil "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/kubernetes"
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
@@ -13,7 +12,7 @@ import (
 func (c *Controller) syncSystemStatus(
 	system *latticev1.System,
 	services map[tree.NodePath]latticev1.SystemStatusService,
-	nodePools map[v1.NodePoolPath]latticev1.SystemStatusNodePool,
+	nodePools map[string]latticev1.SystemStatusNodePool,
 ) error {
 	hasFailedService, hasUpdatingService, hasScalingService, err := servicesStateInfo(services)
 	if err != nil {
@@ -78,7 +77,7 @@ func servicesStateInfo(services map[tree.NodePath]latticev1.SystemStatusService)
 	return hasFailedService, hasUpdatingService, hasScalingService, nil
 }
 
-func nodePoolsStateInfo(nodePools map[v1.NodePoolPath]latticev1.SystemStatusNodePool) (bool, bool, bool, error) {
+func nodePoolsStateInfo(nodePools map[string]latticev1.SystemStatusNodePool) (bool, bool, bool, error) {
 	hasFailedNodePool := false
 	hasUpdatingNodePool := false
 	hasScalingNodePool := false
@@ -103,7 +102,7 @@ func nodePoolsStateInfo(nodePools map[v1.NodePoolPath]latticev1.SystemStatusNode
 			// nothing to do
 
 		default:
-			return false, false, false, fmt.Errorf("node pool %v had unexpected state: %v", path.String(), status.State)
+			return false, false, false, fmt.Errorf("node pool %v had unexpected state: %v", path, status.State)
 		}
 	}
 

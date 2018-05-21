@@ -5,10 +5,9 @@ import (
 	"fmt"
 	"reflect"
 
+	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	kubeutil "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/kubernetes"
-	"github.com/mlab-lattice/lattice/pkg/definition/tree"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -26,7 +25,7 @@ type nodePoolInfo struct {
 	perInstance  bool
 
 	// shared system node pool options
-	path tree.NodePath
+	path v1.NodePoolPath
 }
 
 func (c *Controller) numInstances(service *latticev1.Service) (int32, error) {
@@ -80,7 +79,7 @@ func (c *Controller) nodePoolInfo(service *latticev1.Service) (nodePoolInfo, err
 	}
 
 	if resources.NodePool.NodePoolName != nil {
-		path, err := tree.NewNodePath(*resources.NodePool.NodePoolName)
+		path, err := v1.ParseNodePoolPath(*resources.NodePool.NodePoolName)
 		if err != nil {
 			err := fmt.Errorf("error parsing shared node pool path for %v: %v", service.Description(c.namespacePrefix), err)
 			return nodePoolInfo{}, err

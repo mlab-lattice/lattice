@@ -19,21 +19,21 @@ import (
 
 func (c *Controller) syncSystemNodePools(
 	system *latticev1.System,
-) (map[v1.NodePoolPath]latticev1.SystemStatusNodePool, error) {
+) (map[string]latticev1.SystemStatusNodePool, error) {
 	// N.B.: as it currently is, this controller does not allow for a "move" i.e.
 	// renaming a node pool (changing its path). (see nodePool.go for more information)
-	nodePools := make(map[v1.NodePoolPath]latticev1.SystemStatusNodePool)
+	nodePools := make(map[string]latticev1.SystemStatusNodePool)
 	systemNamespace := system.ResourceNamespace(c.namespacePrefix)
 	nodePoolNames := mapset.NewSet()
 
 	// Loop through the nodePools defined in the system's Spec, and create/update any that need it
 	for path, spec := range system.Spec.NodePools {
-		var nodePool *latticev1.NodePool
-
-		if path.Name == nil {
+		p, err := v1.ParseNodePoolPath(path)
+		if err != nil || p.Name == nil {
 			// FIXME: all system level node pools should have a path, send a warn if it doesn't
 			continue
 		}
+		var nodePool *latticev1.NodePool
 
 		nodePoolStatus, ok := system.Status.NodePools[path]
 		if !ok {
@@ -42,7 +42,7 @@ func (c *Controller) syncSystemNodePools(
 
 			// First check our cache to see if the node pool exists.
 			var err error
-			nodePool, err = c.getNodePoolFromCache(systemNamespace, path.Path, *path.Name)
+			nodePool, err = c.getNodePoolFromCache(systemNamespace, p.Path, *p.Name)
 			if err != nil {
 				return nil, err
 			}
@@ -51,14 +51,14 @@ func (c *Controller) syncSystemNodePools(
 				// The nodePool wasn't in the cache, so do a quorum read to see if it was created.
 				// N.B.: could first loop through and check to see if we need to do a quorum read
 				// on any of the nodePools, then just do one list.
-				nodePool, err = c.getNodePoolFromAPI(systemNamespace, path.Path, *path.Name)
+				nodePool, err = c.getNodePoolFromAPI(systemNamespace, p.Path, *p.Name)
 				if err != nil {
 					return nil, err
 				}
 
 				if nodePool == nil {
 					// The nodePool actually doesn't exist yet. Create it with a new UUID as the name.
-					nodePool, err = c.createNewNodePool(system, path.Path, *path.Name, spec)
+					nodePool, err = c.createNewNodePool(system, p.Path, *p.Name, spec)
 					if err != nil {
 						return nil, err
 					}
@@ -102,7 +102,7 @@ func (c *Controller) syncSystemNodePools(
 		}
 
 		// We found an existing nodePool, update it if needed
-		nodePool, err := c.updateNodePool(nodePool, spec, path.Path, *path.Name)
+		nodePool, err = c.updateNodePool(nodePool, spec, p.Path, *p.Name)
 		if err != nil {
 			return nil, err
 		}
@@ -127,7 +127,7 @@ func (c *Controller) syncSystemNodePools(
 		if !nodePoolNames.Contains(nodePool.Name) {
 			// if the node pool is not a system shared node pool, it's not our responsibility
 			// to clean it up
-			if _, ok, err := nodePool.SystemSharedPathLabel(); err == nil || !ok {
+			if _, ok, err := nodePool.SystemSharedPathLabel(); err != nil || !ok {
 				continue
 			}
 
@@ -148,7 +148,7 @@ func (c *Controller) syncSystemNodePools(
 			status := nodePool.Status.DeepCopy()
 			status.State = latticev1.NodePoolStatePending
 
-			nodePools[path] = latticev1.SystemStatusNodePool{
+			nodePools[path.String()] = latticev1.SystemStatusNodePool{
 				Name:           nodePool.Name,
 				Generation:     nodePool.Generation,
 				NodePoolStatus: *status,
@@ -189,7 +189,8 @@ func (c *Controller) newNodePool(
 			Namespace:       systemNamespace,
 			OwnerReferences: []metav1.OwnerReference{*metav1.NewControllerRef(system, latticev1.SystemKind)},
 			Labels: map[string]string{
-				latticev1.NodePoolSystemSharedPathLabelKey: latticev1.NodePoolSystemSharedPathLabelValue(path, name),
+				latticev1.NodePoolSystemSharedPathLabelKey: path.ToDomain(),
+				latticev1.NodePoolSystemSharedNameLabelKey: name,
 			},
 		},
 		Spec: spec,
@@ -230,7 +231,8 @@ func (c *Controller) updateNodePool(
 	if nodePool.Labels == nil {
 		nodePool.Labels = make(map[string]string)
 	}
-	nodePool.Labels[latticev1.NodePoolSystemSharedPathLabelKey] = latticev1.NodePoolSystemSharedPathLabelValue(path, name)
+	nodePool.Labels[latticev1.NodePoolSystemSharedPathLabelKey] = path.ToDomain()
+	nodePool.Labels[latticev1.NodePoolSystemSharedNameLabelKey] = name
 
 	result, err := c.latticeClient.LatticeV1().NodePools(nodePool.Namespace).Update(nodePool)
 	if err != nil {
@@ -260,16 +262,10 @@ func (c *Controller) nodePoolNeedsUpdate(
 }
 
 func (c *Controller) getNodePoolFromCache(namespace string, path tree.NodePath, name string) (*latticev1.NodePool, error) {
-	selector := labels.NewSelector()
-	requirement, err := labels.NewRequirement(
-		latticev1.NodePoolSystemSharedPathLabelKey,
-		selection.Equals,
-		[]string{latticev1.NodePoolSystemSharedPathLabelValue(path, name)},
-	)
+	selector, err := sharedNodePoolSelector(namespace, path, name)
 	if err != nil {
-		return nil, fmt.Errorf("error getting selector for cached node pool %v in namespace %v", path.String(), namespace)
+		return nil, err
 	}
-	selector = selector.Add(*requirement)
 
 	nodePools, err := c.nodePoolLister.NodePools(namespace).List(selector)
 	if err != nil {
@@ -288,16 +284,10 @@ func (c *Controller) getNodePoolFromCache(namespace string, path tree.NodePath, 
 }
 
 func (c *Controller) getNodePoolFromAPI(namespace string, path tree.NodePath, name string) (*latticev1.NodePool, error) {
-	selector := labels.NewSelector()
-	requirement, err := labels.NewRequirement(
-		latticev1.ServicePathLabelKey,
-		selection.Equals,
-		[]string{latticev1.NodePoolSystemSharedPathLabelValue(path, name)},
-	)
+	selector, err := sharedNodePoolSelector(namespace, path, name)
 	if err != nil {
-		return nil, fmt.Errorf("error getting selector for node pool %v in namespace %v", path.String(), namespace)
+		return nil, err
 	}
-	selector = selector.Add(*requirement)
 
 	nodePools, err := c.latticeClient.LatticeV1().NodePools(namespace).List(metav1.ListOptions{LabelSelector: selector.String()})
 	if err != nil {
@@ -313,4 +303,29 @@ func (c *Controller) getNodePoolFromAPI(namespace string, path tree.NodePath, na
 	}
 
 	return &nodePools.Items[0], nil
+}
+
+func sharedNodePoolSelector(namespace string, path tree.NodePath, name string) (labels.Selector, error) {
+	selector := labels.NewSelector()
+	requirement, err := labels.NewRequirement(
+		latticev1.NodePoolSystemSharedPathLabelKey,
+		selection.Equals,
+		[]string{path.ToDomain()},
+	)
+	if err != nil {
+		return nil, fmt.Errorf("error getting selector for cached node pool %v:%v in namespace %v", path.String(), name, namespace)
+	}
+	selector = selector.Add(*requirement)
+
+	requirement, err = labels.NewRequirement(
+		latticev1.NodePoolSystemSharedNameLabelKey,
+		selection.Equals,
+		[]string{name},
+	)
+	if err != nil {
+		return nil, fmt.Errorf("error getting selector for cached node pool %v in namespace %v", path.String(), namespace)
+	}
+	selector = selector.Add(*requirement)
+
+	return selector, nil
 }

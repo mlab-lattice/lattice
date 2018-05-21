@@ -14,7 +14,11 @@ type NodePoolPath struct {
 }
 
 func (p NodePoolPath) String() string {
-	return fmt.Sprintf("%v:%v", p.Path, p.Name)
+	if p.Name == nil {
+		return p.Path.String()
+	}
+
+	return fmt.Sprintf("%v:%v", p.Path, *p.Name)
 }
 
 func (p NodePoolPath) MarshalJSON() ([]byte, error) {

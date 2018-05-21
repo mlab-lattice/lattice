@@ -87,10 +87,6 @@ func NodePoolIDLabelInfo(namespacePrefix, value string) (v1.SystemID, string, No
 	return systemID, nodePoolID, NodePoolEpoch(epoch), nil
 }
 
-func NodePoolSystemSharedPathLabelValue(path tree.NodePath, name string) string {
-	return fmt.Sprintf("%v.%v", path.ToDomain(), name)
-}
-
 // +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
@@ -118,22 +114,22 @@ func (np *NodePool) ServiceDedicatedIDLabel() (string, bool) {
 }
 
 func (np *NodePool) SystemSharedPathLabel() (v1.NodePoolPath, bool, error) {
-	label, ok := np.Labels[NodePoolSystemSharedPathLabelKey]
+	pathLabel, ok := np.Labels[NodePoolSystemSharedPathLabelKey]
 	if !ok {
 		return v1.NodePoolPath{}, false, nil
 	}
 
-	parts := strings.Split(label, ".")
-	if len(parts) != 2 {
-		return v1.NodePoolPath{}, false, fmt.Errorf("invalid node pool path label: %v", label)
+	nameLabel, ok := np.Labels[NodePoolSystemSharedNameLabelKey]
+	if !ok {
+		return v1.NodePoolPath{}, false, nil
 	}
 
-	path, err := tree.NodePathFromDomain(parts[0])
+	path, err := tree.NodePathFromDomain(pathLabel)
 	if err != nil {
 		return v1.NodePoolPath{}, false, err
 	}
 
-	return v1.NewSystemSharedNodePoolPath(path, parts[1]), true, nil
+	return v1.NewSystemSharedNodePoolPath(path, nameLabel), true, nil
 }
 
 func (np *NodePool) TypeDescription() string {

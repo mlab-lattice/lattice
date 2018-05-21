@@ -58,7 +58,7 @@ func (c *Controller) updateSystemLabels(
 func (c *Controller) updateSystem(
 	system *latticev1.System,
 	services map[tree.NodePath]latticev1.SystemSpecServiceInfo,
-	nodePools map[v1.NodePoolPath]latticev1.NodePoolSpec,
+	nodePools map[string]latticev1.NodePoolSpec,
 ) (*latticev1.System, error) {
 	spec := system.Spec.DeepCopy()
 	spec.Services = services
@@ -186,8 +186,8 @@ func (c *Controller) systemServices(
 
 func (c *Controller) systemNodePools(
 	build *latticev1.Build,
-) (map[v1.NodePoolPath]latticev1.NodePoolSpec, error) {
-	nodePools := make(map[v1.NodePoolPath]latticev1.NodePoolSpec)
+) (map[string]latticev1.NodePoolSpec, error) {
+	nodePools := make(map[string]latticev1.NodePoolSpec)
 	err := tree.Walk(build.Spec.DefinitionRoot, func(n tree.Node) error {
 		path := n.Path()
 		pools := n.NodePools()
@@ -198,7 +198,7 @@ func (c *Controller) systemNodePools(
 				NumInstances: nodePool.NumInstances,
 				InstanceType: nodePool.InstanceType,
 			}
-			nodePools[p] = spec
+			nodePools[p.String()] = spec
 		}
 
 		return nil
