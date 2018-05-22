@@ -9,7 +9,7 @@ import (
 	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/cloudprovider"
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	latticeclientset "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/generated/clientset/versioned"
-	latticeinformers "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/generated/informers/externalversions/lattice/v1"
+	latticeinformers "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/generated/informers/externalversions"
 	latticelisters "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/generated/listers/lattice/v1"
 	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/servicemesh"
 	kubeutil "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/kubernetes"
@@ -18,7 +18,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
 
-	coreinformers "k8s.io/client-go/informers/core/v1"
+	kubeinformers "k8s.io/client-go/informers"
 	kubeclientset "k8s.io/client-go/kubernetes"
 	corelisters "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/tools/cache"
@@ -47,6 +47,9 @@ type Controller struct {
 	kubeClient    kubeclientset.Interface
 	latticeClient latticeclientset.Interface
 
+	kubeInformerFactory    kubeinformers.SharedInformerFactory
+	latticeInformerFactory latticeinformers.SharedInformerFactory
+
 	configLister       latticelisters.ConfigLister
 	configListerSynced cache.InformerSynced
 	configSetChan      chan struct{}
@@ -59,6 +62,9 @@ type Controller struct {
 
 	serviceLister       latticelisters.ServiceLister
 	serviceListerSynced cache.InformerSynced
+
+	nodePoolLister       latticelisters.NodePoolLister
+	nodePoolListerSynced cache.InformerSynced
 
 	namespaceLister       corelisters.NamespaceLister
 	namespaceListerSynced cache.InformerSynced
@@ -73,10 +79,8 @@ func NewController(
 	serviceMeshOptions *servicemesh.Options,
 	kubeClient kubeclientset.Interface,
 	latticeClient latticeclientset.Interface,
-	configInformer latticeinformers.ConfigInformer,
-	systemInformer latticeinformers.SystemInformer,
-	serviceInformer latticeinformers.ServiceInformer,
-	namespaceInformer coreinformers.NamespaceInformer,
+	kubeInformerFactory kubeinformers.SharedInformerFactory,
+	latticeInformerFactory latticeinformers.SharedInformerFactory,
 ) *Controller {
 	sc := &Controller{
 		namespacePrefix: namespacePrefix,
@@ -87,6 +91,10 @@ func NewController(
 
 		kubeClient:    kubeClient,
 		latticeClient: latticeClient,
+
+		kubeInformerFactory:    kubeInformerFactory,
+		latticeInformerFactory: latticeInformerFactory,
+
 		configSetChan: make(chan struct{}),
 		queue:         workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "system"),
 	}
@@ -94,6 +102,7 @@ func NewController(
 	sc.enqueue = sc.enqueueSystem
 	sc.syncHandler = sc.syncSystem
 
+	configInformer := latticeInformerFactory.Lattice().V1().Configs()
 	configInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		// It's assumed there is always one and only one config object.
 		AddFunc:    sc.handleConfigAdd,
@@ -103,6 +112,7 @@ func NewController(
 	sc.configLister = configInformer.Lister()
 	sc.configListerSynced = configInformer.Informer().HasSynced
 
+	systemInformer := latticeInformerFactory.Lattice().V1().Systems()
 	systemInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    sc.handleSystemAdd,
 		UpdateFunc: sc.handleSystemUpdate,
@@ -111,6 +121,7 @@ func NewController(
 	sc.systemLister = systemInformer.Lister()
 	sc.systemListerSynced = systemInformer.Informer().HasSynced
 
+	serviceInformer := latticeInformerFactory.Lattice().V1().Services()
 	serviceInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    sc.handleServiceAdd,
 		UpdateFunc: sc.handleServiceUpdate,
@@ -119,6 +130,16 @@ func NewController(
 	sc.serviceLister = serviceInformer.Lister()
 	sc.serviceListerSynced = serviceInformer.Informer().HasSynced
 
+	nodePoolInformer := latticeInformerFactory.Lattice().V1().NodePools()
+	nodePoolInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+		AddFunc:    sc.handleNodePoolAdd,
+		UpdateFunc: sc.handleNodePoolUpdate,
+		DeleteFunc: sc.handleNodePoolDelete,
+	})
+	sc.nodePoolLister = nodePoolInformer.Lister()
+	sc.nodePoolListerSynced = nodePoolInformer.Informer().HasSynced
+
+	namespaceInformer := kubeInformerFactory.Core().V1().Namespaces()
 	namespaceInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    sc.handleNamespaceAdd,
 		UpdateFunc: sc.handleNamespaceUpdate,

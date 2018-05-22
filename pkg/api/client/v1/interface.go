@@ -3,6 +3,7 @@ package v1
 import (
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
+	"io"
 )
 
 type Interface interface {
@@ -27,6 +28,7 @@ type BuildClient interface {
 	Create(version v1.SystemVersion) (*v1.Build, error)
 	List() ([]v1.Build, error)
 	Get(v1.BuildID) (*v1.Build, error)
+	Logs(id v1.BuildID, component string, follow bool) (io.ReadCloser, error)
 }
 
 type DeployClient interface {

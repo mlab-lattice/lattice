@@ -245,3 +245,30 @@ func nodePoolSpec(numInstances int32, instanceType string) latticev1.NodePoolSpe
 		InstanceType: instanceType,
 	}
 }
+
+func (c *Controller) currentEpochStable(nodePool *latticev1.NodePool) (bool, error) {
+	if nodePool == nil || !nodePool.UpdateProcessed() {
+		return false, nil
+	}
+
+	currentEpoch, ok := nodePool.Status.Epochs.CurrentEpoch()
+	if !ok {
+		err := fmt.Errorf(
+			"%v for %v is processed but does not have a current epoch",
+			nodePool.Description(c.namespacePrefix),
+		)
+		return false, err
+	}
+
+	epochStatus, ok := nodePool.Status.Epochs.Epoch(currentEpoch)
+	if !ok {
+		err := fmt.Errorf(
+			"%v claims to have current epoch %v but does not have a status for it",
+			nodePool.Description(c.namespacePrefix),
+			currentEpoch,
+		)
+		return false, err
+	}
+
+	return epochStatus.Status.State == latticev1.NodePoolStateStable, nil
+}

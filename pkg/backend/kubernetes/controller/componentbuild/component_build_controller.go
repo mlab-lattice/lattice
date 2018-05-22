@@ -8,14 +8,14 @@ import (
 	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/cloudprovider"
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	latticeclientset "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/generated/clientset/versioned"
-	latticeinformers "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/generated/informers/externalversions/lattice/v1"
+	latticeinformers "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/generated/informers/externalversions"
 	latticelisters "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/generated/listers/lattice/v1"
 
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
 
-	batchinformers "k8s.io/client-go/informers/batch/v1"
+	kubeinformers "k8s.io/client-go/informers"
 	kubeclientset "k8s.io/client-go/kubernetes"
 	batchlisters "k8s.io/client-go/listers/batch/v1"
 	"k8s.io/client-go/tools/cache"
@@ -30,13 +30,16 @@ type Controller struct {
 
 	namespacePrefix string
 
+	kubeClient    kubeclientset.Interface
+	latticeClient latticeclientset.Interface
+
+	kubeInformerFactory    kubeinformers.SharedInformerFactory
+	latticeInformerFactory latticeinformers.SharedInformerFactory
+
 	// NOTE: you must get a read lock on the configLock for the duration
 	//       of your use of the cloudProvider
 	staticCloudProviderOptions *cloudprovider.Options
 	cloudProvider              cloudprovider.Interface
-
-	kubeClient    kubeclientset.Interface
-	latticeClient latticeclientset.Interface
 
 	configLister       latticelisters.ConfigLister
 	configListerSynced cache.InformerSynced
@@ -59,17 +62,19 @@ func NewController(
 	cloudProviderOptions *cloudprovider.Options,
 	kubeClient kubeclientset.Interface,
 	latticeClient latticeclientset.Interface,
-	configInformer latticeinformers.ConfigInformer,
-	componentBuildInformer latticeinformers.ComponentBuildInformer,
-	jobInformer batchinformers.JobInformer,
+	kubeInformerFactory kubeinformers.SharedInformerFactory,
+	latticeInformerFactory latticeinformers.SharedInformerFactory,
 ) *Controller {
 	c := &Controller{
 		namespacePrefix: namespacePrefix,
 
-		staticCloudProviderOptions: cloudProviderOptions,
-
 		kubeClient:    kubeClient,
 		latticeClient: latticeClient,
+
+		kubeInformerFactory:    kubeInformerFactory,
+		latticeInformerFactory: latticeInformerFactory,
+
+		staticCloudProviderOptions: cloudProviderOptions,
 
 		configSetChan: make(chan struct{}),
 
@@ -79,6 +84,7 @@ func NewController(
 	c.syncHandler = c.syncComponentBuild
 	c.enqueue = c.enqueueComponentBuild
 
+	configInformer := latticeInformerFactory.Lattice().V1().Configs()
 	configInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		// It's assumed there is always one and only one config object.
 		AddFunc:    c.handleConfigAdd,
@@ -87,6 +93,7 @@ func NewController(
 	c.configLister = configInformer.Lister()
 	c.configListerSynced = configInformer.Informer().HasSynced
 
+	componentBuildInformer := latticeInformerFactory.Lattice().V1().ComponentBuilds()
 	componentBuildInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    c.handleComponentBuildAdd,
 		UpdateFunc: c.handleComponentBuildUpdate,
@@ -95,6 +102,7 @@ func NewController(
 	c.componentBuildLister = componentBuildInformer.Lister()
 	c.componentBuildListerSynced = componentBuildInformer.Informer().HasSynced
 
+	jobInformer := kubeInformerFactory.Batch().V1().Jobs()
 	jobInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    c.handleJobAdd,
 		UpdateFunc: c.handleJobUpdate,

@@ -20,8 +20,9 @@ func (c *Controller) syncInProgressTeardown(teardown *latticev1.Teardown) error 
 	// and it failed, it would never get rerun since syncInProgressTeardown would always be called from there on out.
 	// So instead we set the system.Spec in here to make sure it gets run even after failures.
 	services := map[tree.NodePath]latticev1.SystemSpecServiceInfo{}
+	nodePools := map[string]latticev1.NodePoolSpec{}
 
-	system, err = c.updateSystem(system, services)
+	system, err = c.updateSystem(system, services, nodePools)
 	if err != nil {
 		return err
 	}

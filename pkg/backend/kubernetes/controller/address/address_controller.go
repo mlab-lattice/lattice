@@ -9,7 +9,7 @@ import (
 	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/cloudprovider"
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	latticeclientset "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/generated/clientset/versioned"
-	latticeinformers "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/generated/informers/externalversions/lattice/v1"
+	latticeinformers "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/generated/informers/externalversions"
 	latticelisters "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/generated/listers/lattice/v1"
 	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/servicemesh"
 
@@ -17,9 +17,8 @@ import (
 	"k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
 
-	coreinformers "k8s.io/client-go/informers/core/v1"
+	kubeinformers "k8s.io/client-go/informers"
 	kubeclientset "k8s.io/client-go/kubernetes"
-	corelisters "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
 
@@ -46,6 +45,9 @@ type Controller struct {
 	kubeClient    kubeclientset.Interface
 	latticeClient latticeclientset.Interface
 
+	kubeInformerFactory    kubeinformers.SharedInformerFactory
+	latticeInformerFactory latticeinformers.SharedInformerFactory
+
 	configLister       latticelisters.ConfigLister
 	configListerSynced cache.InformerSynced
 	configSetChan      chan struct{}
@@ -59,12 +61,6 @@ type Controller struct {
 	serviceLister       latticelisters.ServiceLister
 	serviceListerSynced cache.InformerSynced
 
-	kubeServiceLister       corelisters.ServiceLister
-	kubeServiceListerSynced cache.InformerSynced
-
-	nodePoolLister       latticelisters.NodePoolLister
-	nodePoolListerSynced cache.InformerSynced
-
 	queue workqueue.RateLimitingInterface
 }
 
@@ -75,11 +71,8 @@ func NewController(
 	serviceMeshOptions *servicemesh.Options,
 	kubeClient kubeclientset.Interface,
 	latticeClient latticeclientset.Interface,
-	configInformer latticeinformers.ConfigInformer,
-	addressInformer latticeinformers.AddressInformer,
-	serviceInformer latticeinformers.ServiceInformer,
-	kubeServiceInformer coreinformers.ServiceInformer,
-	nodePoolInformer latticeinformers.NodePoolInformer,
+	kubeInformerFactory kubeinformers.SharedInformerFactory,
+	latticeInformerFactory latticeinformers.SharedInformerFactory,
 ) *Controller {
 	c := &Controller{
 		namespacePrefix: namespacePrefix,
@@ -91,6 +84,9 @@ func NewController(
 		latticeClient: latticeClient,
 		kubeClient:    kubeClient,
 
+		latticeInformerFactory: latticeInformerFactory,
+		kubeInformerFactory:    kubeInformerFactory,
+
 		configSetChan: make(chan struct{}),
 
 		queue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "address"),
@@ -99,6 +95,7 @@ func NewController(
 	c.syncHandler = c.syncAddress
 	c.enqueue = c.enqueueAddress
 
+	configInformer := latticeInformerFactory.Lattice().V1().Configs()
 	configInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		// It's assumed there is always one and only one config object.
 		AddFunc:    c.handleConfigAdd,
@@ -107,6 +104,7 @@ func NewController(
 	c.configLister = configInformer.Lister()
 	c.configListerSynced = configInformer.Informer().HasSynced
 
+	addressInformer := latticeInformerFactory.Lattice().V1().Addresses()
 	addressInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    c.handleAddressAdd,
 		UpdateFunc: c.handleAddressUpdate,
@@ -115,6 +113,7 @@ func NewController(
 	c.addressLister = addressInformer.Lister()
 	c.addressListerSynced = addressInformer.Informer().HasSynced
 
+	serviceInformer := latticeInformerFactory.Lattice().V1().Services()
 	serviceInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    c.handleServiceAdd,
 		UpdateFunc: c.handleServiceUpdate,
@@ -122,12 +121,6 @@ func NewController(
 	})
 	c.serviceLister = serviceInformer.Lister()
 	c.serviceListerSynced = serviceInformer.Informer().HasSynced
-
-	c.kubeServiceLister = kubeServiceInformer.Lister()
-	c.kubeServiceListerSynced = kubeServiceInformer.Informer().HasSynced
-
-	c.nodePoolLister = nodePoolInformer.Lister()
-	c.nodePoolListerSynced = nodePoolInformer.Informer().HasSynced
 
 	return c
 }
@@ -147,8 +140,6 @@ func (c *Controller) Run(workers int, stopCh <-chan struct{}) {
 		c.configListerSynced,
 		c.addressListerSynced,
 		c.serviceListerSynced,
-		c.kubeServiceListerSynced,
-		c.nodePoolListerSynced,
 	) {
 		return
 	}
