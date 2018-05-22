@@ -227,7 +227,7 @@ func (c *Controller) handleKubeNodeEvent(node *corev1.Node, verb string) {
 	systemID, nodePoolID, _, err := latticev1.NodePoolIDLabelInfo(c.namespacePrefix, idLabel)
 	if err != nil {
 		// FIXME: send warn event
-		glog.Warning("error getting node pool id label info for node %v: %v", node.Name, err)
+		glog.Warningf("error getting node pool id label info for node %v: %v", node.Name, err)
 		return
 	}
 
@@ -235,6 +235,7 @@ func (c *Controller) handleKubeNodeEvent(node *corev1.Node, verb string) {
 	nodePool, err := c.nodePoolLister.NodePools(namespace).Get(nodePoolID)
 	if err != nil {
 		// FIXME: send warning
+		glog.Warningf("error getting node pool %v in namespace %v (node: %v, label: %v): %v", nodePoolID, namespace, node.Name, idLabel, err)
 		return
 	}
 
