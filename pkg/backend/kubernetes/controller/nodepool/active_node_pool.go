@@ -107,11 +107,12 @@ func (c *Controller) syncActiveNodePool(nodePool *latticev1.NodePool) error {
 		)
 	}
 
-	nodePool, err = c.updateNodePoolAnnotations(nodePool, annotations)
+	result, err := c.updateNodePoolAnnotations(nodePool, annotations)
 	if err != nil {
 		return fmt.Errorf("could not update %v annotations: %v", nodePool.Description(c.namespacePrefix), err)
 	}
 
+	nodePool = result
 	status, err := c.cloudProvider.NodePoolEpochStatus(c.latticeID, nodePool, epoch, &nodePool.Spec)
 	if err != nil {
 		return fmt.Errorf(

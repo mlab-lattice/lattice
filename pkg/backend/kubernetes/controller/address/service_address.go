@@ -116,7 +116,7 @@ func (c *Controller) syncServiceAddress(address *latticev1.Address) error {
 		)
 	}
 
-	ports := service.Status.Ports
+	ports := address.Status.Ports
 	if needsUpdate {
 		message := "updating load balancer"
 		address, err = c.updateAddressStatus(
