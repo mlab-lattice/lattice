@@ -17,6 +17,7 @@ func (c *UpCommand) Base() (*latticectl.BaseCommand, error) {
 	var id string
 	var channel string
 	var workDirectory string
+	var apiAuthKey string
 
 	cmd := &latticectl.BaseCommand{
 		Name: "up",
@@ -28,7 +29,7 @@ func (c *UpCommand) Base() (*latticectl.BaseCommand, error) {
 			},
 			&cli.StringFlag{
 				Name:    "container-channel",
-				Default: "gcr.io/lattice-dev/alpha",
+				Default: "gcr.io/lattice-dev/laas/alpha",
 				Target:  &channel,
 			},
 			&cli.StringFlag{
@@ -36,22 +37,27 @@ func (c *UpCommand) Base() (*latticectl.BaseCommand, error) {
 				Default: "/tmp/latticectl/local",
 				Target:  &workDirectory,
 			},
+			&cli.StringFlag{
+				Name:    "api-auth-key",
+				Default: "",
+				Target:  &apiAuthKey,
+			},
 		},
 		Run: func(lctl *latticectl.Latticectl, args []string) {
-			Up(v1.LatticeID(id), channel, workDirectory)
+			Up(v1.LatticeID(id), channel, workDirectory, apiAuthKey)
 		},
 	}
 
 	return cmd.Base()
 }
 
-func Up(id v1.LatticeID, containerChannel, workDirectory string) {
+func Up(id v1.LatticeID, containerChannel, workDirectory string, apiAuthKey string) {
 	provisioner, err := local.NewLatticeProvisioner(workDirectory)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	address, err := provisioner.Provision(id, containerChannel)
+	address, err := provisioner.Provision(id, containerChannel, apiAuthKey)
 	if err != nil {
 		log.Fatal(err)
 	}
