@@ -82,6 +82,7 @@ func mountSystemHandlers(router *gin.Engine, backend v1server.Interface, sysReso
 	mountVersionHandlers(router, backend, sysResolver)
 	mountBuildHandlers(router, backend, sysResolver)
 	mountDeployHandlers(router, backend, sysResolver)
+	mountNodePoolHandlers(router, backend)
 	mountServiceHandlers(router, backend)
 	mountSecretHandlers(router, backend)
 	mountTeardownHandlers(router, backend)
@@ -308,6 +309,57 @@ func mountDeployHandlers(router *gin.Engine, backend v1server.Interface, sysReso
 		}
 
 		c.JSON(http.StatusOK, deploy)
+	})
+}
+
+func mountNodePoolHandlers(router *gin.Engine, backend v1server.Interface) {
+	systemIdentifier := "system_id"
+	systemIdentifierPathComponent := fmt.Sprintf(":%v", systemIdentifier)
+	nodePoolsPath := fmt.Sprintf(v1rest.NodePoolsPathFormat, systemIdentifierPathComponent)
+
+	// list-node-pools
+	router.GET(nodePoolsPath, func(c *gin.Context) {
+		systemID := v1.SystemID(c.Param(systemIdentifier))
+
+		nodePools, err := backend.ListNodePools(systemID)
+		if err != nil {
+			handleError(c, err)
+			return
+		}
+
+		c.JSON(http.StatusOK, nodePools)
+	})
+
+	nodePoolIdentifier := "node_pool_path"
+	nodePoolIdentifierPathComponent := fmt.Sprintf(":%v", nodePoolIdentifier)
+	nodePoolPath := fmt.Sprintf(v1rest.NodePoolPathFormat, systemIdentifierPathComponent, nodePoolIdentifierPathComponent)
+
+	// get-node-pool
+	router.GET(nodePoolPath, func(c *gin.Context) {
+		systemID := v1.SystemID(c.Param(systemIdentifier))
+		escapedNodePoolPath := c.Param(nodePoolIdentifier)
+
+		nodePoolPathString, err := url.PathUnescape(escapedNodePoolPath)
+		if err != nil {
+			// FIXME: send invalid nodePool error
+			c.Status(http.StatusBadRequest)
+			return
+		}
+
+		path, err := v1.ParseNodePoolPath(nodePoolPathString)
+		if err != nil {
+			// FIXME: send invalid nodePool error
+			c.Status(http.StatusBadRequest)
+			return
+		}
+
+		nodePool, err := backend.GetNodePool(systemID, path)
+		if err != nil {
+			handleError(c, err)
+			return
+		}
+
+		c.JSON(http.StatusOK, nodePool)
 	})
 }
 
