@@ -60,8 +60,10 @@ func (s *System) Description() string {
 // the systemSpecEncoder and SystemSpec's UnmarshalJSON
 // +k8s:deepcopy-gen=false
 type SystemSpec struct {
-	DefinitionURL string                                  `json:"definitionUrl"`
-	Services      map[tree.NodePath]SystemSpecServiceInfo `json:"services"`
+	DefinitionURL string `json:"definitionUrl"`
+
+	NodePools map[string]NodePoolSpec                 `json:"nodePools"`
+	Services  map[tree.NodePath]SystemSpecServiceInfo `json:"services"`
 }
 
 // +k8s:deepcopy-gen=false
@@ -101,14 +103,20 @@ type SystemStatus struct {
 
 	State SystemState `json:"state"`
 
-	// Maps a Service path to its Service.Status
-	Services map[tree.NodePath]SystemStatusService `json:"services"`
+	Services  map[tree.NodePath]SystemStatusService `json:"services"`
+	NodePools map[string]SystemStatusNodePool       `json:"nodePools"`
 }
 
 type SystemStatusService struct {
 	Name       string `json:"name"`
 	Generation int64  `json:"generation"`
 	ServiceStatus
+}
+
+type SystemStatusNodePool struct {
+	Name       string `json:"name"`
+	Generation int64  `json:"generation"`
+	NodePoolStatus
 }
 
 type SystemState string

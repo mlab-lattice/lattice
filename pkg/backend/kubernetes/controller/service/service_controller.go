@@ -9,7 +9,7 @@ import (
 	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/cloudprovider"
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	latticeclientset "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/generated/clientset/versioned"
-	latticeinformers "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/generated/informers/externalversions/lattice/v1"
+	latticeinformers "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/generated/informers/externalversions"
 	latticelisters "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/generated/listers/lattice/v1"
 	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/servicemesh"
 
@@ -17,8 +17,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
 
-	appinformers "k8s.io/client-go/informers/apps/v1"
-	coreinformers "k8s.io/client-go/informers/core/v1"
+	kubeinformers "k8s.io/client-go/informers"
 	kubeclientset "k8s.io/client-go/kubernetes"
 	appslisters "k8s.io/client-go/listers/apps/v1"
 	corelisters "k8s.io/client-go/listers/core/v1"
@@ -39,6 +38,9 @@ type Controller struct {
 
 	kubeClient    kubeclientset.Interface
 	latticeClient latticeclientset.Interface
+
+	kubeInformerFactory    kubeinformers.SharedInformerFactory
+	latticeInformerFactory latticeinformers.SharedInformerFactory
 
 	// NOTE: you must get a read lock on the configLock for the duration
 	//       of your use of the cloudProvider
@@ -86,13 +88,8 @@ func NewController(
 	serviceMeshOptions *servicemesh.Options,
 	kubeClient kubeclientset.Interface,
 	latticeClient latticeclientset.Interface,
-	configInformer latticeinformers.ConfigInformer,
-	serviceInformer latticeinformers.ServiceInformer,
-	addressInformer latticeinformers.AddressInformer,
-	nodePoolInformer latticeinformers.NodePoolInformer,
-	deploymentInformer appinformers.DeploymentInformer,
-	podInformer coreinformers.PodInformer,
-	kubeServiceInformer coreinformers.ServiceInformer,
+	kubeInformerFactory kubeinformers.SharedInformerFactory,
+	latticeInformerFactory latticeinformers.SharedInformerFactory,
 ) *Controller {
 	sc := &Controller{
 		namespacePrefix: namespacePrefix,
@@ -102,6 +99,9 @@ func NewController(
 
 		kubeClient:    kubeClient,
 		latticeClient: latticeClient,
+
+		kubeInformerFactory:    kubeInformerFactory,
+		latticeInformerFactory: latticeInformerFactory,
 
 		staticCloudProviderOptions: cloudProviderOptions,
 		staticServiceMeshOptions:   serviceMeshOptions,
@@ -114,6 +114,7 @@ func NewController(
 	sc.syncHandler = sc.syncService
 	sc.enqueue = sc.enqueueService
 
+	configInformer := latticeInformerFactory.Lattice().V1().Configs()
 	configInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		// It's assumed there is always one and only one config object.
 		AddFunc:    sc.handleConfigAdd,
@@ -123,6 +124,7 @@ func NewController(
 	sc.configLister = configInformer.Lister()
 	sc.configListerSynced = configInformer.Informer().HasSynced
 
+	serviceInformer := latticeInformerFactory.Lattice().V1().Services()
 	serviceInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    sc.handleServiceAdd,
 		UpdateFunc: sc.handleServiceUpdate,
@@ -131,6 +133,7 @@ func NewController(
 	sc.serviceLister = serviceInformer.Lister()
 	sc.serviceListerSynced = serviceInformer.Informer().HasSynced
 
+	nodePoolInformer := latticeInformerFactory.Lattice().V1().NodePools()
 	nodePoolInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    sc.handleNodePoolAdd,
 		UpdateFunc: sc.handleNodePoolUpdate,
@@ -139,6 +142,7 @@ func NewController(
 	sc.nodePoolLister = nodePoolInformer.Lister()
 	sc.nodePoolListerSynced = nodePoolInformer.Informer().HasSynced
 
+	deploymentInformer := kubeInformerFactory.Apps().V1().Deployments()
 	deploymentInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    sc.handleDeploymentAdd,
 		UpdateFunc: sc.handleDeploymentUpdate,
@@ -147,6 +151,7 @@ func NewController(
 	sc.deploymentLister = deploymentInformer.Lister()
 	sc.deploymentListerSynced = deploymentInformer.Informer().HasSynced
 
+	podInformer := kubeInformerFactory.Core().V1().Pods()
 	podInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		// We need to get updated when pods are deleted so we can reassess
 		// services that were waiting on gracefully terminated pods.
@@ -157,6 +162,7 @@ func NewController(
 	sc.podLister = podInformer.Lister()
 	sc.podListerSynced = podInformer.Informer().HasSynced
 
+	kubeServiceInformer := kubeInformerFactory.Core().V1().Services()
 	kubeServiceInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    sc.handleKubeServiceAdd,
 		UpdateFunc: sc.handleKubeServiceUpdate,
@@ -165,6 +171,7 @@ func NewController(
 	sc.kubeServiceLister = kubeServiceInformer.Lister()
 	sc.kubeServiceListerSynced = kubeServiceInformer.Informer().HasSynced
 
+	addressInformer := latticeInformerFactory.Lattice().V1().Addresses()
 	addressInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    sc.handleAddressAdd,
 		UpdateFunc: sc.handleAddressUpdate,

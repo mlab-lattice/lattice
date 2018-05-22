@@ -6,6 +6,7 @@ import (
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 
+	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
 )
@@ -51,15 +52,16 @@ func (c *Controller) syncDedicatedNodePool(service *latticev1.Service, numInstan
 	return c.syncExistingDedicatedNodePool(nodePool, numInstances, instanceType)
 }
 
-func (c *Controller) syncSharedNodePool(namespace string, path tree.NodePath) (*latticev1.NodePool, error) {
-	// TODO: how to handle a shared node pool move?
-	selector := labels.NewSelector()
-	requirement, err := labels.NewRequirement(latticev1.NodePoolSystemSharedPathLabelKey, selection.Equals, []string{path.ToDomain()})
+func (c *Controller) syncSharedNodePool(namespace string, path v1.NodePoolPath) (*latticev1.NodePool, error) {
+	if path.Name == nil {
+		return nil, fmt.Errorf("expected shared node pool path to have name, only has path %v", path.Path.String())
+	}
+
+	selector, err := sharedNodePoolSelector(namespace, path.Path, *path.Name)
 	if err != nil {
 		return nil, err
 	}
 
-	selector = selector.Add(*requirement)
 	nodePools, err := c.nodePoolLister.NodePools(namespace).List(selector)
 	if err != nil {
 		return nil, err
@@ -86,4 +88,29 @@ func (c *Controller) syncSharedNodePool(namespace string, path tree.NodePath) (*
 func (c *Controller) syncExistingDedicatedNodePool(nodePool *latticev1.NodePool, numInstances int32, instanceType string) (*latticev1.NodePool, error) {
 	spec := nodePoolSpec(numInstances, instanceType)
 	return c.updateNodePoolSpec(nodePool, spec)
+}
+
+func sharedNodePoolSelector(namespace string, path tree.NodePath, name string) (labels.Selector, error) {
+	selector := labels.NewSelector()
+	requirement, err := labels.NewRequirement(
+		latticev1.NodePoolSystemSharedPathLabelKey,
+		selection.Equals,
+		[]string{path.ToDomain()},
+	)
+	if err != nil {
+		return nil, fmt.Errorf("error getting selector for cached node pool %v:%v in namespace %v", path.String(), name, namespace)
+	}
+	selector = selector.Add(*requirement)
+
+	requirement, err = labels.NewRequirement(
+		latticev1.NodePoolSystemSharedNameLabelKey,
+		selection.Equals,
+		[]string{name},
+	)
+	if err != nil {
+		return nil, fmt.Errorf("error getting selector for cached node pool %v in namespace %v", path.String(), namespace)
+	}
+	selector = selector.Add(*requirement)
+
+	return selector, nil
 }

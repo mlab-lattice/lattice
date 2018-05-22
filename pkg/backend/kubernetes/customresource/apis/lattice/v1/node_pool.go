@@ -11,6 +11,8 @@ import (
 	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sort"
+	"strconv"
+	"strings"
 )
 
 const (
@@ -30,9 +32,10 @@ var (
 	// TODO: should we just use ServiceIDLabelKey here instead? if so what do we use for shared/lattice node pools
 	NodePoolServiceDedicatedIDLabelKey = fmt.Sprintf("service.dedicated.node-pool.%v/id", GroupName)
 
-	// NodePoolServiceDedicatedID is the key for a label indicating that the node pool is shared for a system.
+	// NodePoolSystemSharedPathLabelKey is the key for a label indicating that the node pool is shared for a system.
 	// The label's value should be the node pool's path in the system definition.
 	NodePoolSystemSharedPathLabelKey = fmt.Sprintf("shared.node-pool.%v/path", GroupName)
+	NodePoolSystemSharedNameLabelKey = fmt.Sprintf("shared.node-pool.%v/name", GroupName)
 
 	// NodePoolWorkloadAnnotationKey is the key that should be used in an annotation by
 	// workloads that run on a node pool.
@@ -62,6 +65,28 @@ var (
 	}
 )
 
+func NodePoolIDLabelInfo(namespacePrefix, value string) (v1.SystemID, string, NodePoolEpoch, error) {
+	parts := strings.Split(value, ".")
+	if len(parts) != 3 {
+		return "", "", 0, fmt.Errorf("malformed node pool ID label")
+	}
+
+	systemID, err := kubeutil.SystemID(namespacePrefix, parts[0])
+	if err != nil {
+		return "", "", 0, err
+	}
+
+	nodePoolID := parts[1]
+	epochStr := parts[2]
+
+	epoch, err := strconv.ParseInt(epochStr, 10, 64)
+	if err != nil {
+		return "", "", 0, fmt.Errorf("error converting epoch string value %v: %v", epochStr, err)
+	}
+
+	return systemID, nodePoolID, NodePoolEpoch(epoch), nil
+}
+
 // +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
@@ -88,14 +113,23 @@ func (np *NodePool) ServiceDedicatedIDLabel() (string, bool) {
 	return serviceID, ok
 }
 
-func (np *NodePool) SystemSharedPathLabel() (tree.NodePath, bool, error) {
-	domain, ok := np.Labels[NodePoolSystemSharedPathLabelKey]
+func (np *NodePool) SystemSharedPathLabel() (v1.NodePoolPath, bool, error) {
+	pathLabel, ok := np.Labels[NodePoolSystemSharedPathLabelKey]
 	if !ok {
-		return "", false, nil
+		return v1.NodePoolPath{}, false, nil
 	}
 
-	path, err := tree.NodePathFromDomain(domain)
-	return path, true, err
+	nameLabel, ok := np.Labels[NodePoolSystemSharedNameLabelKey]
+	if !ok {
+		return v1.NodePoolPath{}, false, nil
+	}
+
+	path, err := tree.NodePathFromDomain(pathLabel)
+	if err != nil {
+		return v1.NodePoolPath{}, false, err
+	}
+
+	return v1.NewSystemSharedNodePoolPath(path, nameLabel), true, nil
 }
 
 func (np *NodePool) TypeDescription() string {
@@ -150,10 +184,16 @@ func (np *NodePool) Reason() string {
 		return "pending"
 	case NodePoolStateScaling:
 		return "scaling"
+	case NodePoolStateDeleting:
+		return "deleting"
 	case NodePoolStateFailed:
 		failureReason := "unknown reason"
 		if np.Status.FailureInfo != nil {
-			failureReason = fmt.Sprintf("%v at %v", np.Status.FailureInfo.Message, np.Status.FailureInfo.Time.String())
+			failureReason = fmt.Sprintf(
+				"%v at %v",
+				np.Status.FailureInfo.Message,
+				np.Status.FailureInfo.Timestamp.String(),
+			)
 		}
 
 		return fmt.Sprintf("failed: %v", failureReason)
@@ -214,8 +254,8 @@ type NodePoolStatus struct {
 }
 
 type NodePoolStatusFailureInfo struct {
-	Message string      `json:"message"`
-	Time    metav1.Time `json:"time"`
+	Message   string      `json:"message"`
+	Timestamp metav1.Time `json:"time"`
 }
 
 type NodePoolStatusEpochs map[NodePoolEpoch]NodePoolStatusEpoch
@@ -269,9 +309,15 @@ const (
 	NodePoolStateUpdating NodePoolState = "updating"
 	NodePoolStateStable   NodePoolState = "stable"
 	NodePoolStateFailed   NodePoolState = "failed"
+	NodePoolStateDeleting NodePoolState = "deleting"
 )
 
 type NodePoolStatusEpoch struct {
+	Spec   NodePoolSpec              `json:"spec"`
+	Status NodePoolStatusEpochStatus `json:"status"`
+}
+
+type NodePoolStatusEpochStatus struct {
 	NumInstances int32         `json:"numInstances"`
 	InstanceType string        `json:"instanceType"`
 	State        NodePoolState `json:"state"`

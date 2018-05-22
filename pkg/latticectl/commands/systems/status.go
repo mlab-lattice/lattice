@@ -39,17 +39,15 @@ func (c *StatusCommand) Base() (*latticectl.BaseCommand, error) {
 		SupportedFormats: ListSystemsSupportedFormats,
 	}
 	var watch bool
+	watchFlag := &latticectl.WatchFlag{
+		Target: &watch,
+	}
 
 	cmd := &latticectl.SystemCommand{
 		Name: "status",
 		Flags: cli.Flags{
 			output.Flag(),
-			&cli.BoolFlag{
-				Name:    "watch",
-				Short:   "w",
-				Default: false,
-				Target:  &watch,
-			},
+			watchFlag.Flag(),
 		},
 		Run: func(ctx latticectl.SystemCommandContext, args []string) {
 			format, err := output.Value()
@@ -131,7 +129,7 @@ func WatchSystem(systemClient v1client.SystemClient, systemID v1.SystemID, forma
 		p := SystemPrinter(fullSystemTree.System, fullSystemTree.Services, format)
 		lastHeight = p.Overwrite(b, lastHeight)
 
-		if format == printer.FormatDefault || format == printer.FormatTable {
+		if format == printer.FormatTable {
 			PrintSystemStateDuringStatus(writer, s, fullSystemTree.System, fullSystemTree.Services)
 		}
 
@@ -207,7 +205,7 @@ func printSystemFailure(writer io.Writer, systemID v1.SystemID, serviceErrors []
 func SystemPrinter(system *v1.System, services []v1.Service, format printer.Format) printer.Interface {
 	var p printer.Interface
 	switch format {
-	case printer.FormatDefault, printer.FormatTable:
+	case printer.FormatTable:
 		headers := []string{"Service", "State", "Available", "Updated", "Stale", "Terminating", "Ports", "Info"}
 
 		headerColors := []tw.Colors{

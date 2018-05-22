@@ -5,10 +5,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	urlutil "net/url"
 
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	v1rest "github.com/mlab-lattice/lattice/pkg/api/v1/rest"
 	"github.com/mlab-lattice/lattice/pkg/util/rest"
+	"io"
 )
 
 type BuildClient struct {
@@ -78,6 +80,26 @@ func (c *BuildClient) Get(id v1.BuildID) (*v1.Build, error) {
 		build := &v1.Build{}
 		err = rest.UnmarshalBodyJSON(body, &build)
 		return build, err
+	}
+
+	return nil, HandleErrorStatusCode(statusCode, body)
+}
+
+func (c *BuildClient) Logs(id v1.BuildID, component string, follow bool) (io.ReadCloser, error) {
+	escapedPath := urlutil.PathEscape(component)
+	url := fmt.Sprintf(
+		"%v%v?follow=%v",
+		c.apiServerURL,
+		fmt.Sprintf(v1rest.BuildLogPathFormat, c.systemID, id, escapedPath),
+		follow,
+	)
+	body, statusCode, err := c.restClient.Get(url).Body()
+	if err != nil {
+		return nil, err
+	}
+
+	if statusCode == http.StatusOK {
+		return body, nil
 	}
 
 	return nil, HandleErrorStatusCode(statusCode, body)

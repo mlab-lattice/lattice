@@ -6,11 +6,16 @@ const (
 	SystemsPath      = RootPath + "/systems"
 	SystemPathFormat = SystemsPath + "/%v"
 
-	BuildsPathFormat = SystemPathFormat + "/builds"
-	BuildPathFormat  = BuildsPathFormat + "/%v"
+	BuildsPathFormat    = SystemPathFormat + "/builds"
+	BuildPathFormat     = BuildsPathFormat + "/%v"
+	BuildLogsPathFormat = BuildPathFormat + "/logs"
+	BuildLogPathFormat  = BuildLogsPathFormat + "/%v"
 
 	DeploysPathFormat = SystemPathFormat + "/deploys"
 	DeployPathFormat  = DeploysPathFormat + "/%v"
+
+	NodePoolsPathFormat = SystemPathFormat + "/node-pools"
+	NodePoolPathFormat  = NodePoolsPathFormat + "/%v"
 
 	SystemSecretsPathFormat = SystemPathFormat + "/secrets"
 	SystemSecretPathFormat  = SystemSecretsPathFormat + "/%v"

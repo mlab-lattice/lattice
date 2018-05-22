@@ -24,7 +24,6 @@ import (
 // ListServicesSupportedFormats is the list of printer.Formats supported
 // by the ListDeploys function.
 var ListServicesSupportedFormats = []printer.Format{
-	printer.FormatDefault,
 	printer.FormatJSON,
 	printer.FormatTable,
 }
@@ -38,17 +37,15 @@ func (c *ListServicesCommand) Base() (*latticectl.BaseCommand, error) {
 		SupportedFormats: ListServicesSupportedFormats,
 	}
 	var watch bool
+	watchFlag := &latticectl.WatchFlag{
+		Target: &watch,
+	}
 
 	cmd := &latticectl.SystemCommand{
 		Name: "services",
 		Flags: cli.Flags{
 			output.Flag(),
-			&cli.BoolFlag{
-				Name:    "watch",
-				Short:   "w",
-				Default: false,
-				Target:  &watch,
-			},
+			watchFlag.Flag(),
 		},
 		Run: func(ctx latticectl.SystemCommandContext, args []string) {
 			format, err := output.Value()
@@ -111,7 +108,7 @@ func WatchServices(client v1client.ServiceClient, format printer.Format, writer 
 func servicesPrinter(services []v1.Service, format printer.Format) printer.Interface {
 	var p printer.Interface
 	switch format {
-	case printer.FormatDefault, printer.FormatTable:
+	case printer.FormatTable:
 		headers := []string{"Service", "State", "Available", "Updated", "Stale", "Terminating", "Addresses", "Info"}
 
 		headerColors := []tw.Colors{

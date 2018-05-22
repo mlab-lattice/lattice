@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 
 	"github.com/mlab-lattice/lattice/pkg/definition"
+	"github.com/mlab-lattice/lattice/pkg/definition/block"
 )
 
 type ServiceNode struct {
@@ -57,4 +58,8 @@ func (s *ServiceNode) Services() map[NodePath]*ServiceNode {
 	return map[NodePath]*ServiceNode{
 		s.Path(): s,
 	}
+}
+
+func (s *ServiceNode) NodePools() map[string]block.NodePool {
+	return nil
 }

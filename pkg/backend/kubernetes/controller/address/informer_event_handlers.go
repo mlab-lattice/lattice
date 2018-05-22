@@ -68,8 +68,8 @@ func (c *Controller) newCloudProvider() error {
 	cloudProvider, err := cloudprovider.NewCloudProvider(
 		c.namespacePrefix,
 		c.kubeClient,
-		c.kubeServiceLister,
-		c.nodePoolLister,
+		c.kubeInformerFactory,
+		c.latticeInformerFactory,
 		options,
 	)
 	if err != nil {

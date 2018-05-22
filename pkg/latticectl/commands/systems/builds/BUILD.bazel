@@ -4,6 +4,7 @@ go_library(
     name = "go_default_library",
     srcs = [
         "command.go",
+        "logs.go",
         "status.go",
     ],
     importpath = "github.com/mlab-lattice/lattice/pkg/latticectl/commands/systems/builds",
