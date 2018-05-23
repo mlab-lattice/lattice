@@ -15,7 +15,6 @@ go_library(
         "//pkg/util/cli:go_default_library",
         "//pkg/util/cli/color:go_default_library",
         "//pkg/util/cli/printer:go_default_library",
-        "@com_github_tfogo_tablewriter//:go_default_library",
         "@io_k8s_apimachinery//pkg/util/wait:go_default_library",
     ],
 )

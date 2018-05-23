@@ -20,7 +20,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 
 	"github.com/briandowns/spinner"
-	tw "github.com/tfogo/tablewriter"
 )
 
 type StatusCommand struct {
@@ -53,12 +52,9 @@ func (c *StatusCommand) Base() (*latticectl.BaseCommand, error) {
 
 			if watch {
 				err = WatchBuild(c, ctx.BuildID(), format, os.Stdout, PrintBuildStateDuringWatchBuild)
-				if err != nil {
-					os.Exit(1)
-				}
+			} else {
+				err = GetBuild(c, ctx.BuildID(), format, os.Stdout)
 			}
-
-			err = GetBuild(c, ctx.BuildID(), format, os.Stdout)
 			if err != nil {
 				log.Fatal(err)
 			}
@@ -75,7 +71,10 @@ func GetBuild(client v1client.BuildClient, buildID v1.BuildID, format printer.Fo
 	}
 
 	p := BuildPrinter(build, format)
-	p.Print(writer)
+	if err := p.Print(writer); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -104,6 +103,7 @@ func WatchBuild(
 	var returnError error
 	var exit bool
 	var b bytes.Buffer
+	var err error
 	s := spinner.New(spinner.CharSets[14], 100*time.Millisecond)
 
 	go wait.PollImmediateInfinite(
@@ -121,7 +121,10 @@ func WatchBuild(
 
 	for build := range builds {
 		p := BuildPrinter(build, format)
-		lastHeight = p.Overwrite(b, lastHeight)
+		err, lastHeight = p.Overwrite(b, lastHeight)
+		if err != nil {
+			return err
+		}
 
 		if format == printer.FormatTable {
 			PrintBuildStateDuringWatchBuild(writer, s, build)
@@ -198,39 +201,11 @@ func BuildPrinter(build *v1.Build, format printer.Format) printer.Interface {
 	var p printer.Interface
 	switch format {
 	case printer.FormatTable:
+		var rows [][]string
 		headers := []string{"Component", "State", "Started At", "Completed At", "Info"}
 
-		headerColors := []tw.Colors{
-			{tw.Bold},
-			{tw.Bold},
-			{tw.Bold},
-			{tw.Bold},
-			{tw.Bold},
-		}
-
-		columnColors := []tw.Colors{
-			{tw.FgHiCyanColor},
-			{},
-			{},
-			{},
-			{},
-		}
-
-		columnAlignment := []int{
-			tw.ALIGN_LEFT,
-			tw.ALIGN_LEFT,
-			tw.ALIGN_LEFT,
-			tw.ALIGN_LEFT,
-			tw.ALIGN_LEFT,
-		}
-
-		var rows [][]string
-		// fmt.Fprintln(os.Stdout, build)
 		for serviceName, service := range build.Services {
-			// fmt.Fprintln(os.Stdout, service)
 			for componentName, component := range service.Components {
-				// fmt.Fprintln(os.Stdout, component)
-				//fmt.Fprint(os.Stdout, "COMPONENT STATE", component.State, "    ")
 				var infoMessage string
 
 				if component.FailureMessage == nil {
@@ -265,23 +240,20 @@ func BuildPrinter(build *v1.Build, format printer.Format) printer.Interface {
 				}
 
 				rows = append(rows, []string{
-					fmt.Sprintf("%s:%s", serviceName, componentName),
+					color.ID(fmt.Sprintf("%s:%s", serviceName, componentName)),
 					stateColor(string(component.State)),
 					startTimestamp,
 					completionTimestamp,
 					string(infoMessage),
 				})
-
-				sort.Slice(rows, func(i, j int) bool { return rows[i][0] < rows[j][0] })
 			}
 		}
 
+		sort.Slice(rows, func(i, j int) bool { return rows[i][0] < rows[j][0] })
+
 		p = &printer.Table{
-			Headers:         headers,
-			Rows:            rows,
-			HeaderColors:    headerColors,
-			ColumnColors:    columnColors,
-			ColumnAlignment: columnAlignment,
+			Headers: headers,
+			Rows:    rows,
 		}
 
 	case printer.FormatJSON:

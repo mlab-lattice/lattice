@@ -2,66 +2,76 @@ package printer
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
+	"regexp"
 	"strings"
-	//"time"
-	//"sync"
 
 	"github.com/buger/goterm"
-	"github.com/fatih/color"
-	"github.com/tfogo/tablewriter"
+	"github.com/mattn/go-runewidth"
+
+	"github.com/mlab-lattice/lattice/pkg/util/cli/color"
 )
 
 type Table struct {
-	Headers         []string
-	Rows            [][]string
-	HeaderColors    []tablewriter.Colors
-	ColumnColors    []tablewriter.Colors
-	ColumnAlignment []int
+	Rows      [][]string
+	Headers   []string
+	nCols     int
+	colWidths []int
 }
 
 func (t *Table) Print(writer io.Writer) error {
+	var w int
+	var cellWidth int
 
-	FgHiBlack := color.New(color.FgHiBlack).SprintFunc()
-
-	table := tablewriter.NewWriter(writer)
-
-	var hs []string
-	for _, h := range t.Headers {
-		hs = append(hs, strings.ToUpper(h))
+	// Number of cols = number of cells in header
+	t.nCols = len(t.Headers)
+	// Check number of cells in each row match
+	if err := t.checkRowLengths(); err != nil {
+		return err
 	}
 
-	t.Headers = hs
+	// Apply style to header
+	t.formatHeader()
 
-	table.SetRowLine(false)
-	table.SetAlignment(tablewriter.ALIGN_LEFT)
-	table.SetHeaderAlignment(tablewriter.ALIGN_LEFT)
+	// Prepend headers to rows for printing
+	t.Rows = append([][]string{t.Headers}, t.Rows...)
 
-	table.SetHeader(t.Headers)
-	table.SetAutoFormatHeaders(false)
-	table.SetBorder(false)
-	table.SetCenterSeparator(FgHiBlack(" "))
-	table.SetColumnSeparator(FgHiBlack(" "))
-	table.SetRowSeparator(FgHiBlack("-"))
-	table.SetAutoWrapText(false)
-	table.SetReflowDuringAutoWrap(false)
+	// Calculate width of columns from max width of cells
+	for i := 0; i < t.nCols; i++ {
+		w = 0
+		for _, row := range t.Rows {
+			cellWidth = runeWidth(row[i])
+			if cellWidth > w {
+				w = cellWidth
+			}
+		}
+		t.colWidths = append(t.colWidths, w)
+	}
 
-	table.SetHeaderColor(t.HeaderColors...)
-	table.SetColumnColor(t.ColumnColors...)
-	table.SetColumnAlignment(t.ColumnAlignment)
+	// Add hyphen break after headers
+	t.Rows = t.getRowsWithHeaderBreak()
 
-	table.AppendBulk(t.Rows)
+	// Print rows
+	fmt.Fprint(writer, "\n") // Newline before table
+	for _, row := range t.Rows {
+		for col, cell := range row {
+			fmt.Fprint(writer, pad(cell, t.colWidths[col])+"   ")
+		}
+		fmt.Fprint(writer, "\n")
+	}
 
-	fmt.Fprintln(writer, "")
-	table.Render()
 	return nil
 }
 
-func (t *Table) Overwrite(b bytes.Buffer, lastHeight int) int {
+func (t *Table) Overwrite(b bytes.Buffer, lastHeight int) (error, int) {
 
 	// Read the new printer's output
-	t.Print(&b)
+	if err := t.Print(&b); err != nil {
+		return err, 0
+	}
+
 	output := b.String()
 	// Remove the new printer's output from the buffer
 	b.Truncate(0)
@@ -71,6 +81,8 @@ func (t *Table) Overwrite(b bytes.Buffer, lastHeight int) int {
 			goterm.MoveCursorUp(1)
 			// Return cursor to start of line and clear the rest of the line
 			// Waiting on burger/goterm#23 to be merged to use ResetLine
+			// Later note: It seems burger/goterm#23 didn't fix the issue. So keep this line in.
+			// TODO: Investigate why ResetLine isn't working.
 			goterm.Print("\r\033[K")
 		}
 	}
@@ -78,5 +90,44 @@ func (t *Table) Overwrite(b bytes.Buffer, lastHeight int) int {
 	goterm.Print(output)
 	goterm.Flush() // TODO: Fix for large outputs (e.g. systems:builds)
 
-	return len(strings.Split(output, "\n"))
+	return nil, len(strings.Split(output, "\n"))
+}
+
+func (t *Table) formatHeader() {
+	for col, cell := range t.Headers {
+		t.Headers[col] = color.Bold(cell)
+	}
+}
+
+func (t *Table) getRowsWithHeaderBreak() [][]string {
+	var headerBreak []string
+	for _, w := range t.colWidths {
+		headerBreak = append(headerBreak, strings.Repeat("-", w))
+	}
+	return append(t.Rows[:1], append([][]string{headerBreak}, t.Rows[1:]...)...)
+}
+
+func (t *Table) checkRowLengths() error {
+	for _, row := range t.Rows {
+		if len(row) != t.nCols {
+			return errors.New("Table formatting error: Number of cells do not match. Run with -o json to see unformatted output.")
+		}
+	}
+	return nil
+}
+
+// Pad spaces right
+func pad(s string, width int) string {
+	difference := width - runeWidth(s)
+	return s + strings.Repeat(" ", difference)
+}
+
+// Regex for ANSI CSI Sequences (specifically SGRs and ELs)
+// See https://en.wikipedia.org/wiki/ANSI_escape_code#CSI_sequences
+var ansi = regexp.MustCompile("\033\\[(?:[0-9]{1,3}(?:;[0-9]{1,3})*)?[m|K]")
+
+// Returns the rune width of a string. Ignores ANSI SGRs.
+// Takes variable width East Asian characters into account.
+func runeWidth(s string) int {
+	return runewidth.StringWidth(ansi.ReplaceAllLiteralString(s, ""))
 }

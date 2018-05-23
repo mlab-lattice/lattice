@@ -17,8 +17,6 @@ import (
 	"github.com/mlab-lattice/lattice/pkg/util/cli/printer"
 
 	"k8s.io/apimachinery/pkg/util/wait"
-
-	tw "github.com/tfogo/tablewriter"
 )
 
 // ListServicesSupportedFormats is the list of printer.Formats supported
@@ -54,12 +52,12 @@ func (c *ListServicesCommand) Base() (*latticectl.BaseCommand, error) {
 			}
 
 			if watch {
-				WatchServices(ctx.Client().Systems().Services(ctx.SystemID()), format, os.Stdout)
+				err = WatchServices(ctx.Client().Systems().Services(ctx.SystemID()), format, os.Stdout)
 			} else {
-				err := ListServices(ctx.Client().Systems().Services(ctx.SystemID()), format, os.Stdout)
-				if err != nil {
-					log.Fatal(err)
-				}
+				err = ListServices(ctx.Client().Systems().Services(ctx.SystemID()), format, os.Stdout)
+			}
+			if err != nil {
+				log.Fatal(err)
 			}
 		},
 		Subcommands: c.Subcommands,
@@ -74,16 +72,20 @@ func ListServices(client v1client.ServiceClient, format printer.Format, writer i
 		return err
 	}
 
-	printer := servicesPrinter(deploys, format)
-	printer.Print(writer)
+	p := servicesPrinter(deploys, format)
+
+	if err := p.Print(writer); err != nil {
+		return err
+	}
 	//fmt.Printf("%v\n", deploys)
 	return nil
 }
 
-func WatchServices(client v1client.ServiceClient, format printer.Format, writer io.Writer) {
+func WatchServices(client v1client.ServiceClient, format printer.Format, writer io.Writer) error {
 	serviceLists := make(chan []v1.Service)
 
 	lastHeight := 0
+	var err error
 	var b bytes.Buffer
 
 	go wait.PollImmediateInfinite(
@@ -101,50 +103,22 @@ func WatchServices(client v1client.ServiceClient, format printer.Format, writer 
 
 	for serviceList := range serviceLists {
 		p := servicesPrinter(serviceList, format)
-		lastHeight = p.Overwrite(b, lastHeight)
+		err, lastHeight = p.Overwrite(b, lastHeight)
+		if err != nil {
+			return err
+		}
 	}
+
+	return nil
 }
 
 func servicesPrinter(services []v1.Service, format printer.Format) printer.Interface {
 	var p printer.Interface
 	switch format {
 	case printer.FormatTable:
+		var rows [][]string
 		headers := []string{"Service", "State", "Available", "Updated", "Stale", "Terminating", "Addresses", "Info"}
 
-		headerColors := []tw.Colors{
-			{tw.Bold},
-			{tw.Bold},
-			{tw.Bold},
-			{tw.Bold},
-			{tw.Bold},
-			{tw.Bold},
-			{tw.Bold},
-			{tw.Bold},
-		}
-
-		columnColors := []tw.Colors{
-			{tw.FgHiCyanColor},
-			{},
-			{},
-			{},
-			{},
-			{},
-			{},
-			{},
-		}
-
-		columnAlignment := []int{
-			tw.ALIGN_LEFT,
-			tw.ALIGN_LEFT,
-			tw.ALIGN_LEFT,
-			tw.ALIGN_LEFT,
-			tw.ALIGN_LEFT,
-			tw.ALIGN_LEFT,
-			tw.ALIGN_LEFT,
-			tw.ALIGN_LEFT,
-		}
-
-		var rows [][]string
 		for _, service := range services {
 			var stateColor color.Color
 			switch service.State {
@@ -170,7 +144,7 @@ func servicesPrinter(services []v1.Service, format printer.Format) printer.Inter
 			}
 
 			rows = append(rows, []string{
-				service.Path.String(),
+				color.ID(service.Path.String()),
 				stateColor(string(service.State)),
 				fmt.Sprintf("%d", service.AvailableInstances),
 				fmt.Sprintf("%d", service.UpdatedInstances),
@@ -182,11 +156,8 @@ func servicesPrinter(services []v1.Service, format printer.Format) printer.Inter
 		}
 
 		p = &printer.Table{
-			Headers:         headers,
-			Rows:            rows,
-			HeaderColors:    headerColors,
-			ColumnColors:    columnColors,
-			ColumnAlignment: columnAlignment,
+			Headers: headers,
+			Rows:    rows,
 		}
 
 	case printer.FormatJSON:

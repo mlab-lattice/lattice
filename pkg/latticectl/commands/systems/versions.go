@@ -31,7 +31,7 @@ func (c *ListVersionsCommand) Base() (*latticectl.BaseCommand, error) {
 func ListVersions(client v1client.SystemClient, id v1.SystemID) error {
 	versions, err := client.Versions(id)
 	if err != nil {
-		log.Panic(err)
+		return err
 	}
 
 	for _, version := range versions {

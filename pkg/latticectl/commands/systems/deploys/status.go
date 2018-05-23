@@ -50,10 +50,10 @@ func (c *StatusCommand) Base() (*latticectl.BaseCommand, error) {
 			c := ctx.Client().Systems().Deploys(ctx.SystemID())
 
 			if watch {
-				WatchDeploy(c, ctx.DeployID(), format, os.Stdout)
+				err = WatchDeploy(c, ctx.DeployID(), format, os.Stdout)
+			} else {
+				err = GetDeploy(c, ctx.DeployID(), format, os.Stdout)
 			}
-
-			err = GetDeploy(c, ctx.DeployID(), format, os.Stdout)
 			if err != nil {
 				log.Fatal(err)
 			}
@@ -70,15 +70,18 @@ func GetDeploy(client v1client.DeployClient, deployID v1.DeployID, format printe
 	}
 
 	p := deploysPrinter([]v1.Deploy{*deploy}, format)
-	p.Print(writer)
+	if err := p.Print(writer); err != nil {
+		return err
+	}
 	return nil
 }
 
-func WatchDeploy(client v1client.DeployClient, deployID v1.DeployID, format printer.Format, writer io.Writer) {
+func WatchDeploy(client v1client.DeployClient, deployID v1.DeployID, format printer.Format, writer io.Writer) error {
 	deploys := make(chan *v1.Deploy)
 
 	lastHeight := 0
 	var b bytes.Buffer
+	var err error
 
 	go wait.PollImmediateInfinite(
 		5*time.Second,
@@ -95,6 +98,11 @@ func WatchDeploy(client v1client.DeployClient, deployID v1.DeployID, format prin
 
 	for deploy := range deploys {
 		p := deploysPrinter([]v1.Deploy{*deploy}, format)
-		lastHeight = p.Overwrite(b, lastHeight)
+		err, lastHeight = p.Overwrite(b, lastHeight)
+		if err != nil {
+			return err
+		}
 	}
+
+	return nil
 }

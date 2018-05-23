@@ -14,7 +14,6 @@ import (
 	"github.com/mlab-lattice/lattice/pkg/util/cli/color"
 	"github.com/mlab-lattice/lattice/pkg/util/cli/printer"
 
-	tw "github.com/tfogo/tablewriter"
 	"k8s.io/apimachinery/pkg/util/wait"
 )
 
@@ -51,10 +50,10 @@ func (c *ListDeploysCommand) Base() (*latticectl.BaseCommand, error) {
 			}
 
 			if watch {
-				WatchDeploys(ctx.Client().Systems().Deploys(ctx.SystemID()), format, os.Stdout)
+				err = WatchDeploys(ctx.Client().Systems().Deploys(ctx.SystemID()), format, os.Stdout)
+			} else {
+				err = ListDeploys(ctx.Client().Systems().Deploys(ctx.SystemID()), format, os.Stdout)
 			}
-
-			err = ListDeploys(ctx.Client().Systems().Deploys(ctx.SystemID()), format, os.Stdout)
 			if err != nil {
 				log.Fatal(err)
 			}
@@ -72,15 +71,19 @@ func ListDeploys(client v1client.DeployClient, format printer.Format, writer io.
 	}
 
 	p := deploysPrinter(deploys, format)
-	p.Print(writer)
+	if err := p.Print(writer); err != nil {
+		return err
+	}
+
 	return nil
 }
 
-func WatchDeploys(client v1client.DeployClient, format printer.Format, writer io.Writer) {
+func WatchDeploys(client v1client.DeployClient, format printer.Format, writer io.Writer) error {
 	deployLists := make(chan []v1.Deploy)
 
 	lastHeight := 0
 	var b bytes.Buffer
+	var err error
 
 	go wait.PollImmediateInfinite(
 		5*time.Second,
@@ -97,35 +100,22 @@ func WatchDeploys(client v1client.DeployClient, format printer.Format, writer io
 
 	for deployList := range deployLists {
 		p := deploysPrinter(deployList, format)
-		lastHeight = p.Overwrite(b, lastHeight)
+		err, lastHeight = p.Overwrite(b, lastHeight)
+		if err != nil {
+			return err
+		}
 	}
+
+	return nil
 }
 
 func deploysPrinter(deploys []v1.Deploy, format printer.Format) printer.Interface {
 	var p printer.Interface
 	switch format {
 	case printer.FormatTable:
+		var rows [][]string
 		headers := []string{"ID", "Build ID", "State"}
 
-		headerColors := []tw.Colors{
-			{tw.Bold},
-			{tw.Bold},
-			{tw.Bold},
-		}
-
-		columnColors := []tw.Colors{
-			{tw.FgHiCyanColor},
-			{tw.FgHiCyanColor},
-			{},
-		}
-
-		columnAlignment := []int{
-			tw.ALIGN_LEFT,
-			tw.ALIGN_LEFT,
-			tw.ALIGN_LEFT,
-		}
-
-		var rows [][]string
 		for _, deploy := range deploys {
 			var stateColor color.Color
 			switch deploy.State {
@@ -138,18 +128,15 @@ func deploysPrinter(deploys []v1.Deploy, format printer.Format) printer.Interfac
 			}
 
 			rows = append(rows, []string{
-				string(deploy.ID),
-				string(deploy.BuildID),
+				color.ID(string(deploy.ID)),
+				color.ID(string(deploy.BuildID)),
 				stateColor(string(deploy.State)),
 			})
 		}
 
 		p = &printer.Table{
-			Headers:         headers,
-			Rows:            rows,
-			HeaderColors:    headerColors,
-			ColumnColors:    columnColors,
-			ColumnAlignment: columnAlignment,
+			Headers: headers,
+			Rows:    rows,
 		}
 
 	case printer.FormatJSON:

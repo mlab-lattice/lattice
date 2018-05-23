@@ -14,7 +14,6 @@ import (
 	"github.com/mlab-lattice/lattice/pkg/util/cli/color"
 	"github.com/mlab-lattice/lattice/pkg/util/cli/printer"
 
-	tw "github.com/tfogo/tablewriter"
 	"k8s.io/apimachinery/pkg/util/wait"
 )
 
@@ -56,11 +55,10 @@ func (c *ListTeardownsCommand) Base() (*latticectl.BaseCommand, error) {
 			c := ctx.Client().Systems().Teardowns(ctx.SystemID())
 
 			if watch {
-				WatchTeardowns(c, format, os.Stdout)
-				return
+				err = WatchTeardowns(c, format, os.Stdout)
+			} else {
+				err = ListTeardowns(c, format, os.Stdout)
 			}
-
-			err = ListTeardowns(c, format, os.Stdout)
 			if err != nil {
 				log.Fatal(err)
 			}
@@ -79,19 +77,22 @@ func ListTeardowns(client v1cient.TeardownClient, format printer.Format, writer 
 	}
 
 	p := teardownsPrinter(teardowns, format)
-	p.Print(writer)
+	if err := p.Print(writer); err != nil {
+		return err
+	}
 	return nil
 }
 
 // WatchTeardowns polls the API for the current Teardowns, and writes out the Teardowns to the
 // the supplied io.Writer in the given printer.Format, unless the printer.Format is
 // printer.FormatTable, in which case it always writes to the terminal.
-func WatchTeardowns(client v1cient.TeardownClient, format printer.Format, writer io.Writer) {
+func WatchTeardowns(client v1cient.TeardownClient, format printer.Format, writer io.Writer) error {
 	// Poll the API for the teardowns and send it to the channel
 	teardownLists := make(chan []v1.Teardown)
 
 	lastHeight := 0
 	var b bytes.Buffer
+	var err error
 
 	go wait.PollImmediateInfinite(
 		5*time.Second,
@@ -108,32 +109,22 @@ func WatchTeardowns(client v1cient.TeardownClient, format printer.Format, writer
 
 	for teardownList := range teardownLists {
 		p := teardownsPrinter(teardownList, format)
-		lastHeight = p.Overwrite(b, lastHeight)
+		err, lastHeight = p.Overwrite(b, lastHeight)
+		if err != nil {
+			return err
+		}
 	}
+
+	return nil
 }
 
 func teardownsPrinter(teardowns []v1.Teardown, format printer.Format) printer.Interface {
 	var p printer.Interface
 	switch format {
 	case printer.FormatTable:
+		var rows [][]string
 		headers := []string{"ID", "State"}
 
-		headerColors := []tw.Colors{
-			{tw.Bold},
-			{tw.Bold},
-		}
-
-		columnColors := []tw.Colors{
-			{tw.FgHiCyanColor},
-			{},
-		}
-
-		columnAlignment := []int{
-			tw.ALIGN_LEFT,
-			tw.ALIGN_LEFT,
-		}
-
-		var rows [][]string
 		for _, teardown := range teardowns {
 			var stateColor color.Color
 			switch teardown.State {
@@ -146,17 +137,14 @@ func teardownsPrinter(teardowns []v1.Teardown, format printer.Format) printer.In
 			}
 
 			rows = append(rows, []string{
-				string(teardown.ID),
+				color.ID(string(teardown.ID)),
 				stateColor(string(teardown.State)),
 			})
 		}
 
 		p = &printer.Table{
-			Headers:         headers,
-			Rows:            rows,
-			HeaderColors:    headerColors,
-			ColumnColors:    columnColors,
-			ColumnAlignment: columnAlignment,
+			Headers: headers,
+			Rows:    rows,
 		}
 
 	case printer.FormatJSON:

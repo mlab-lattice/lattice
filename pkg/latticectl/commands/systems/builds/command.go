@@ -15,7 +15,6 @@ import (
 	"github.com/mlab-lattice/lattice/pkg/util/cli/color"
 	"github.com/mlab-lattice/lattice/pkg/util/cli/printer"
 
-	tw "github.com/tfogo/tablewriter"
 	"k8s.io/apimachinery/pkg/util/wait"
 )
 
@@ -57,11 +56,10 @@ func (c *ListBuildsCommand) Base() (*latticectl.BaseCommand, error) {
 			c := ctx.Client().Systems().Builds(ctx.SystemID())
 
 			if watch {
-				WatchBuilds(c, format, os.Stdout)
-				return
+				err = WatchBuilds(c, format, os.Stdout)
+			} else {
+				err = ListBuilds(c, format, os.Stdout)
 			}
-
-			err = ListBuilds(c, format, os.Stdout)
 			if err != nil {
 				log.Fatal(err)
 			}
@@ -80,18 +78,22 @@ func ListBuilds(client v1client.BuildClient, format printer.Format, writer io.Wr
 	}
 
 	p := buildsPrinter(builds, format)
-	p.Print(writer)
+	if err := p.Print(writer); err != nil {
+		return err
+	}
+
 	return nil
 }
 
 // WatchBuilds polls the API for the current Builds, and writes out the Builds to the
 // the supplied io.Writer in the given printer.Format, unless the printer.Format is
 // printer.FormatTable, in which case it always writes to the terminal.
-func WatchBuilds(client v1client.BuildClient, format printer.Format, writer io.Writer) {
+func WatchBuilds(client v1client.BuildClient, format printer.Format, writer io.Writer) error {
 	// Poll the API for the builds and send it to the channel
 	buildLists := make(chan []v1.Build)
 	lastHeight := 0
 	var b bytes.Buffer
+	var err error
 
 	go wait.PollImmediateInfinite(
 		5*time.Second,
@@ -108,44 +110,25 @@ func WatchBuilds(client v1client.BuildClient, format printer.Format, writer io.W
 
 	for buildList := range buildLists {
 		p := buildsPrinter(buildList, format)
-		lastHeight = p.Overwrite(b, lastHeight)
+		err, lastHeight = p.Overwrite(b, lastHeight)
+		if err != nil {
+			return err
+		}
 
 		// Note: Watching builds is never exitable.
 		// There is no fail state for an entire list of builds.
 	}
+
+	return nil
 }
 
 func buildsPrinter(builds []v1.Build, format printer.Format) printer.Interface {
 	var p printer.Interface
 	switch format {
 	case printer.FormatTable:
+		var rows [][]string
 		headers := []string{"ID", "Started At", "Completed At", "Version", "State"}
 
-		headerColors := []tw.Colors{
-			{tw.Bold},
-			{tw.Bold},
-			{tw.Bold},
-			{tw.Bold},
-			{tw.Bold},
-		}
-
-		columnColors := []tw.Colors{
-			{tw.FgHiCyanColor},
-			{},
-			{},
-			{},
-			{},
-		}
-
-		columnAlignment := []int{
-			tw.ALIGN_LEFT,
-			tw.ALIGN_LEFT,
-			tw.ALIGN_LEFT,
-			tw.ALIGN_LEFT,
-			tw.ALIGN_LEFT,
-		}
-
-		var rows [][]string
 		for _, build := range builds {
 			var stateColor color.Color
 			switch build.State {
@@ -169,7 +152,7 @@ func buildsPrinter(builds []v1.Build, format printer.Format) printer.Interface {
 			}
 
 			rows = append(rows, []string{
-				string(build.ID),
+				color.ID(string(build.ID)),
 				startTimestamp,
 				completionTimestamp,
 				string(build.Version),
@@ -180,11 +163,8 @@ func buildsPrinter(builds []v1.Build, format printer.Format) printer.Interface {
 		sort.Slice(rows, func(i, j int) bool { return rows[i][2] < rows[j][2] })
 
 		p = &printer.Table{
-			Headers:         headers,
-			Rows:            rows,
-			HeaderColors:    headerColors,
-			ColumnColors:    columnColors,
-			ColumnAlignment: columnAlignment,
+			Headers: headers,
+			Rows:    rows,
 		}
 
 	case printer.FormatJSON:
