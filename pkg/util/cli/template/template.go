@@ -31,7 +31,7 @@ Type {{.CommandPathBinary}}{{.CommandSeparator}}{{if .HasSubcommands}}{{ colored
 {{define "TemplateBody"}}{{template "Flags" .}}{{ $namePadding := 35 }}
 {{if .HasSubcommands}}
 {{ colored "Subcommands: " "white" }}{{range .AllSubcommands}}
-    {{ colored (rpad .CommandPath $namePadding) "blue" }} {{ colored .Short "gray" }}{{end}}
+    {{ colored (rpad .CommandPathBinary $namePadding) "blue" }} {{ colored .Short "gray" }}{{end}}
 {{end}}{{end}}
 
 {{define "TemplateGroupedBody"}}{{template "Flags" .}}{{ $namePadding := 35 }}

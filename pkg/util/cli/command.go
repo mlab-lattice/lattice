@@ -351,7 +351,7 @@ func (c *Command) SubcommandsByGroup() []*CommandGroup {
 				continue
 			}
 
-			groupName := nextElem.CommandPath()
+			groupName := nextElem.CommandPathBinary()
 			newCmdGroup := &CommandGroup{
 				Commands:  SortCommands(nextElem.Subcommands),
 				GroupName: groupName,
