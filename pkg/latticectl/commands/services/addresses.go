@@ -7,9 +7,7 @@ import (
 	"os"
 	"sort"
 
-	v1client "github.com/mlab-lattice/lattice/pkg/api/client/v1"
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
-	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 	"github.com/mlab-lattice/lattice/pkg/latticectl"
 	"github.com/mlab-lattice/lattice/pkg/util/cli"
 	"github.com/mlab-lattice/lattice/pkg/util/cli/printer"
@@ -36,7 +34,8 @@ func (c *AddressCommand) Base() (*latticectl.BaseCommand, error) {
 				log.Fatal(err)
 			}
 
-			err = GetServiceAddress(ctx.Client().Systems().Services(ctx.SystemID()), ctx.ServicePath(), format, os.Stdout)
+			service, err := lookupService(ctx)
+			err = PrintServiceAddress(service, format, os.Stdout)
 			if err != nil {
 				log.Fatal(err)
 			}
@@ -46,27 +45,7 @@ func (c *AddressCommand) Base() (*latticectl.BaseCommand, error) {
 	return cmd.Base()
 }
 
-func GetServiceAddresses(client v1client.ServiceClient, format printer.Format, writer io.Writer) error {
-	services, err := client.List()
-	if err != nil {
-		return err
-	}
-
-	for _, service := range services {
-		err = GetServiceAddress(client, service.Path, format, writer)
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-func GetServiceAddress(client v1client.ServiceClient, servicePath tree.NodePath, format printer.Format, writer io.Writer) error {
-	service, err := client.Get(servicePath)
-	if err != nil {
-		return err
-	}
+func PrintServiceAddress(service *v1.Service, format printer.Format, writer io.Writer) error {
 
 	p := AddressPrinter(service, format)
 	p.Print(writer)

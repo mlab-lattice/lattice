@@ -25,9 +25,8 @@ import (
 )
 
 const (
-	userResourcePrefix = "lattice-user-"
-	ndotsValue         = "15"
-	dnsOptionNdots     = "ndots"
+	ndotsValue     = "15"
+	dnsOptionNdots = "ndots"
 )
 
 func (c *Controller) syncDeployment(
@@ -502,7 +501,7 @@ func containerFromComponent(
 
 	probe := deploymentProbe(component.HealthCheck)
 	container := corev1.Container{
-		Name:            userResourcePrefix + component.Name,
+		Name:            kubeutil.UserResourcePrefix + component.Name,
 		Image:           buildArtifacts.DockerImageFQN,
 		ImagePullPolicy: corev1.PullIfNotPresent,
 		Command:         component.Exec.Command,

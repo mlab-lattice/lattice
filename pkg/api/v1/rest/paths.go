@@ -17,8 +17,9 @@ const (
 	SystemSecretsPathFormat = SystemPathFormat + "/secrets"
 	SystemSecretPathFormat  = SystemSecretsPathFormat + "/%v"
 
-	ServicesPathFormat = SystemPathFormat + "/services"
-	ServicePathFormat  = ServicesPathFormat + "/%v"
+	ServicesPathFormat    = SystemPathFormat + "/services"
+	ServicePathFormat     = ServicesPathFormat + "/%v"
+	ServiceLogsPathFormat = ServicePathFormat + "/logs"
 
 	TeardownsPathFormat = SystemPathFormat + "/teardowns"
 	TeardownPathFormat  = TeardownsPathFormat + "%v"

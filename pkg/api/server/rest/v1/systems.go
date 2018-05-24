@@ -6,6 +6,8 @@ import (
 	"net/url"
 	"strings"
 
+	"bufio"
+
 	v1server "github.com/mlab-lattice/lattice/pkg/api/server/v1"
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	v1rest "github.com/mlab-lattice/lattice/pkg/api/v1/rest"
@@ -14,10 +16,10 @@ import (
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 	"github.com/mlab-lattice/lattice/pkg/util/git"
 
-	"github.com/gin-gonic/gin"
 	"io"
-	"io/ioutil"
 	"strconv"
+
+	"github.com/gin-gonic/gin"
 )
 
 func mountSystemHandlers(router *gin.Engine, backend v1server.Interface, sysResolver *resolver.SystemResolver) {
@@ -200,28 +202,7 @@ func mountBuildHandlers(router *gin.Engine, backend v1server.Interface, sysResol
 			return
 		}
 
-		defer log.Close()
-		if !follow {
-			logContents, err := ioutil.ReadAll(log)
-			if err != nil {
-				c.String(http.StatusInternalServerError, "")
-				return
-			}
-			c.String(http.StatusOK, string(logContents))
-			return
-		}
-
-		// FIXME: totally arbitrary buffer size choice
-		buf := make([]byte, 1024*4)
-		c.Stream(func(w io.Writer) bool {
-			n, err := log.Read(buf)
-			if err != nil {
-				return false
-			}
-
-			w.Write(buf[:n])
-			return true
-		})
+		serveLogFile(log, follow, c)
 	})
 }
 
@@ -319,7 +300,34 @@ func mountServiceHandlers(router *gin.Engine, backend v1server.Interface) {
 	// list-services
 	router.GET(servicesPath, func(c *gin.Context) {
 		systemID := v1.SystemID(c.Param(systemIdentifier))
+		servicePathParam := c.Query("servicePath")
 
+		// check if its a query by service path
+
+		if servicePathParam != "" {
+			servicePath, err := tree.NewNodePath(servicePathParam)
+			if err != nil {
+				handleError(c, err)
+				return
+			}
+
+			service, err := backend.GetServiceByPath(systemID, servicePath)
+
+			if err != nil {
+				handleError(c, err)
+				return
+			}
+
+			if service == nil {
+				c.Status(http.StatusBadRequest)
+				return
+			}
+
+			c.JSON(http.StatusOK, []*v1.Service{service})
+			return
+		}
+
+		// otherwise its just a normal list services request
 		services, err := backend.ListServices(systemID)
 		if err != nil {
 			handleError(c, err)
@@ -329,30 +337,16 @@ func mountServiceHandlers(router *gin.Engine, backend v1server.Interface) {
 		c.JSON(http.StatusOK, services)
 	})
 
-	serviceIdentifier := "service_path"
+	serviceIdentifier := "service_id"
 	serviceIdentifierPathComponent := fmt.Sprintf(":%v", serviceIdentifier)
 	servicePath := fmt.Sprintf(v1rest.ServicePathFormat, systemIdentifierPathComponent, serviceIdentifierPathComponent)
 
 	// get-service
 	router.GET(servicePath, func(c *gin.Context) {
 		systemID := v1.SystemID(c.Param(systemIdentifier))
-		escapedServicePath := c.Param(serviceIdentifier)
+		serviceID := v1.ServiceID(c.Param(serviceIdentifier))
 
-		servicePathString, err := url.PathUnescape(escapedServicePath)
-		if err != nil {
-			// FIXME: send invalid service error
-			c.Status(http.StatusBadRequest)
-			return
-		}
-
-		servicePath, err := tree.NewNodePath(servicePathString)
-		if err != nil {
-			// FIXME: send invalid service error
-			c.Status(http.StatusBadRequest)
-			return
-		}
-
-		service, err := backend.GetService(systemID, servicePath)
+		service, err := backend.GetService(systemID, serviceID)
 		if err != nil {
 			handleError(c, err)
 			return
@@ -360,8 +354,69 @@ func mountServiceHandlers(router *gin.Engine, backend v1server.Interface) {
 
 		c.JSON(http.StatusOK, service)
 	})
+
+	// service component log path
+
+	serviceLogPath := fmt.Sprintf(
+		v1rest.ServiceLogsPathFormat,
+		systemIdentifierPathComponent,
+		serviceIdentifierPathComponent,
+	)
+
+	router.GET(serviceLogPath, func(c *gin.Context) {
+		systemID := v1.SystemID(c.Param(systemIdentifier))
+		serviceId := v1.ServiceID(c.Param(serviceIdentifier))
+		component := c.Query("component")
+		followQuery := c.DefaultQuery("follow", "false")
+
+		// validate component
+		if component == "" {
+			c.Status(http.StatusBadRequest)
+			return
+		}
+
+		follow, err := strconv.ParseBool(followQuery)
+		if err != nil {
+			c.Status(http.StatusBadRequest)
+			return
+		}
+
+		log, err := backend.ServiceLogs(systemID, serviceId, component, follow)
+		if err != nil {
+			handleError(c, err)
+			return
+		}
+
+		if log == nil {
+			c.Status(http.StatusOK)
+			return
+		}
+
+		serveLogFile(log, follow, c)
+
+	})
 }
 
+// serveLogFile
+func serveLogFile(log io.ReadCloser, follow bool, c *gin.Context) {
+	defer log.Close()
+	scanner := bufio.NewScanner(log)
+	if !follow {
+		for scanner.Scan() {
+			c.Writer.Write(scanner.Bytes())
+		}
+
+		return
+	}
+
+	c.Stream(func(w io.Writer) bool {
+		if scanner.Scan() {
+			w.Write(scanner.Bytes())
+		}
+
+		return true
+	})
+}
 func mountSecretHandlers(router *gin.Engine, backend v1server.Interface) {
 	systemIdentifier := "system_id"
 	systemIdentifierPathComponent := fmt.Sprintf(":%v", systemIdentifier)

@@ -1,9 +1,10 @@
 package v1
 
 import (
+	"io"
+
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
-	"io"
 )
 
 type Interface interface {
@@ -46,7 +47,9 @@ type TeardownClient interface {
 
 type ServiceClient interface {
 	List() ([]v1.Service, error)
-	Get(tree.NodePath) (*v1.Service, error)
+	Get(id v1.ServiceID) (*v1.Service, error)
+	GetByServicePath(path tree.NodePath) (*v1.Service, error)
+	Logs(id v1.ServiceID, component string, follow bool) (io.ReadCloser, error)
 }
 
 type SecretClient interface {

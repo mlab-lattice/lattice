@@ -2,6 +2,7 @@ package v1
 
 import (
 	"fmt"
+	"io"
 	"net/http"
 	urlutil "net/url"
 
@@ -42,9 +43,8 @@ func (c *ServiceClient) List() ([]v1.Service, error) {
 	return nil, HandleErrorStatusCode(statusCode, body)
 }
 
-func (c *ServiceClient) Get(path tree.NodePath) (*v1.Service, error) {
-	escapedPath := urlutil.PathEscape(string(path))
-	url := fmt.Sprintf("%v%v", c.apiServerURL, fmt.Sprintf(v1rest.ServicePathFormat, c.systemID, escapedPath))
+func (c *ServiceClient) Get(id v1.ServiceID) (*v1.Service, error) {
+	url := fmt.Sprintf("%v%v", c.apiServerURL, fmt.Sprintf(v1rest.ServicePathFormat, c.systemID, id))
 	body, statusCode, err := c.restClient.Get(url).Body()
 	if err != nil {
 		return nil, err
@@ -55,6 +55,54 @@ func (c *ServiceClient) Get(path tree.NodePath) (*v1.Service, error) {
 		service := &v1.Service{}
 		err = rest.UnmarshalBodyJSON(body, &service)
 		return service, err
+	}
+
+	return nil, HandleErrorStatusCode(statusCode, body)
+}
+
+func (c *ServiceClient) GetByServicePath(path tree.NodePath) (*v1.Service, error) {
+	escapedPath := urlutil.PathEscape(string(path))
+	url := fmt.Sprintf("%v%v?servicePath=%v", c.apiServerURL,
+		fmt.Sprintf(v1rest.ServicesPathFormat, c.systemID), escapedPath)
+	body, statusCode, err := c.restClient.Get(url).Body()
+	if err != nil {
+		return nil, err
+	}
+	defer body.Close()
+
+	if statusCode == http.StatusOK {
+		var services []v1.Service
+		err = rest.UnmarshalBodyJSON(body, &services)
+
+		if err != nil {
+			return nil, err
+		}
+
+		if len(services) != 1 {
+			return nil, fmt.Errorf("server returned more than one service for path '%s'", path)
+		}
+		return &services[0], err
+	}
+
+	return nil, HandleErrorStatusCode(statusCode, body)
+}
+
+func (c *ServiceClient) Logs(id v1.ServiceID, component string, follow bool) (io.ReadCloser, error) {
+	url := fmt.Sprintf(
+		"%v%v?component=%v&follow=%v",
+		c.apiServerURL,
+		fmt.Sprintf(v1rest.ServiceLogsPathFormat, c.systemID, id),
+		component, follow,
+	)
+
+	fmt.Println(url)
+	body, statusCode, err := c.restClient.Get(url).Body()
+	if err != nil {
+		return nil, err
+	}
+
+	if statusCode == http.StatusOK {
+		return body, nil
 	}
 
 	return nil, HandleErrorStatusCode(statusCode, body)
