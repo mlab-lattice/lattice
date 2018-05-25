@@ -155,21 +155,29 @@ func mountBuildHandlers(router *gin.Engine, backend v1server.Interface, sysResol
 		c.JSON(http.StatusOK, build)
 	})
 
-	componentIdentifier := "component"
-	componentIdentifierPathComponent := fmt.Sprintf(":%v", componentIdentifier)
-	componentLogPath := fmt.Sprintf(
-		v1rest.BuildLogPathFormat,
+	buildsLogPath := fmt.Sprintf(
+		v1rest.BuildLogsPathFormat,
 		systemIdentifierPathComponent,
 		buildIdentifierPathComponent,
-		componentIdentifierPathComponent,
 	)
 
 	// get-build-logs
-	router.GET(componentLogPath, func(c *gin.Context) {
+	router.GET(buildsLogPath, func(c *gin.Context) {
 		systemID := v1.SystemID(c.Param(systemIdentifier))
 		buildID := v1.BuildID(c.Param(buildIdentifier))
-		component := c.Param(componentIdentifier)
+		path := c.Query("path")
+		component := c.Query("component")
 		followQuery := c.DefaultQuery("follow", "false")
+
+		if component == "" {
+			c.Status(http.StatusBadRequest)
+			return
+		}
+
+		if path == "" {
+			c.Status(http.StatusBadRequest)
+			return
+		}
 
 		follow, err := strconv.ParseBool(followQuery)
 		if err != nil {
@@ -177,21 +185,13 @@ func mountBuildHandlers(router *gin.Engine, backend v1server.Interface, sysResol
 			return
 		}
 
-		parts := strings.Split(component, ":")
-		if len(parts) != 2 {
-			c.Status(http.StatusBadRequest)
-			return
-		}
-
-		path, err := tree.NewNodePath(parts[0])
+		nodePath, err := tree.NewNodePath(path)
 		if err != nil {
 			c.Status(http.StatusBadRequest)
 			return
 		}
 
-		component = parts[1]
-
-		log, err := backend.BuildLogs(systemID, buildID, path, component, follow)
+		log, err := backend.BuildLogs(systemID, buildID, nodePath, component, follow)
 		if err != nil {
 			handleError(c, err)
 			return

@@ -1,13 +1,14 @@
 package builds
 
 import (
+	"io"
+	"log"
+	"os"
+
 	v1client "github.com/mlab-lattice/lattice/pkg/api/client/v1"
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	"github.com/mlab-lattice/lattice/pkg/latticectl"
 	"github.com/mlab-lattice/lattice/pkg/util/cli"
-	"io"
-	"log"
-	"os"
 )
 
 type LogsCommand struct {
@@ -15,11 +16,18 @@ type LogsCommand struct {
 
 func (c *LogsCommand) Base() (*latticectl.BaseCommand, error) {
 	var follow bool
+	var path string
 	var component string
 
 	cmd := &latticectl.BuildCommand{
 		Name: "logs",
 		Flags: cli.Flags{
+			&cli.StringFlag{
+				Name:     "path",
+				Short:    "p",
+				Required: true,
+				Target:   &path,
+			},
 			&cli.StringFlag{
 				Name:     "component",
 				Short:    "c",
@@ -35,7 +43,7 @@ func (c *LogsCommand) Base() (*latticectl.BaseCommand, error) {
 		},
 		Run: func(ctx latticectl.BuildCommandContext, args []string) {
 			c := ctx.Client().Systems().Builds(ctx.SystemID())
-			err := GetBuildLogs(c, ctx.BuildID(), component, follow, os.Stdout)
+			err := GetBuildLogs(c, ctx.BuildID(), path, component, follow, os.Stdout)
 			if err != nil {
 				log.Fatal(err)
 			}
@@ -45,8 +53,9 @@ func (c *LogsCommand) Base() (*latticectl.BaseCommand, error) {
 	return cmd.Base()
 }
 
-func GetBuildLogs(client v1client.BuildClient, buildID v1.BuildID, component string, follow bool, w io.Writer) error {
-	logs, err := client.Logs(buildID, component, follow)
+func GetBuildLogs(client v1client.BuildClient, buildID v1.BuildID, path string,
+	component string, follow bool, w io.Writer) error {
+	logs, err := client.Logs(buildID, path, component, follow)
 	if err != nil {
 		return err
 	}
