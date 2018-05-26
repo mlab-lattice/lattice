@@ -79,6 +79,12 @@ func (b *DefaultBootstrapper) apiServerResources(resources *bootstrapper.Resourc
 				Resources: []string{latticev1.ResourcePluralService},
 				Verbs:     ReadVerbs,
 			},
+			// lattice node pool read
+			{
+				APIGroups: []string{latticev1.GroupName},
+				Resources: []string{latticev1.ResourcePluralNodePool},
+				Verbs:     ReadVerbs,
+			},
 
 			// kube pod read and delete
 			{

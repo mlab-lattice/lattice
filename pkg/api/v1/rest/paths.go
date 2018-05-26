@@ -13,6 +13,9 @@ const (
 	DeploysPathFormat = SystemPathFormat + "/deploys"
 	DeployPathFormat  = DeploysPathFormat + "/%v"
 
+	NodePoolsPathFormat = SystemPathFormat + "/node-pools"
+	NodePoolPathFormat  = NodePoolsPathFormat + "/%v"
+
 	SystemSecretsPathFormat = SystemPathFormat + "/secrets"
 	SystemSecretPathFormat  = SystemSecretsPathFormat + "/%v"
 

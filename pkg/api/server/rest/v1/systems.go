@@ -22,7 +22,8 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func mountSystemHandlers(router *gin.Engine, backend v1server.Interface, sysResolver *resolver.SystemResolver) {
+func mountSystemHandlers(router *gin.RouterGroup, backend v1server.Interface, sysResolver *resolver.SystemResolver) {
+
 	// create-system
 	router.POST(v1rest.SystemsPath, func(c *gin.Context) {
 		var req v1rest.CreateSystemRequest
@@ -84,12 +85,13 @@ func mountSystemHandlers(router *gin.Engine, backend v1server.Interface, sysReso
 	mountVersionHandlers(router, backend, sysResolver)
 	mountBuildHandlers(router, backend, sysResolver)
 	mountDeployHandlers(router, backend, sysResolver)
+	mountNodePoolHandlers(router, backend)
 	mountServiceHandlers(router, backend)
 	mountSecretHandlers(router, backend)
 	mountTeardownHandlers(router, backend)
 }
 
-func mountBuildHandlers(router *gin.Engine, backend v1server.Interface, sysResolver *resolver.SystemResolver) {
+func mountBuildHandlers(router *gin.RouterGroup, backend v1server.Interface, sysResolver *resolver.SystemResolver) {
 	systemIdentifier := "system_id"
 	systemIdentifierPathComponent := fmt.Sprintf(":%v", systemIdentifier)
 	buildsPath := fmt.Sprintf(v1rest.BuildsPathFormat, systemIdentifierPathComponent)
@@ -206,7 +208,7 @@ func mountBuildHandlers(router *gin.Engine, backend v1server.Interface, sysResol
 	})
 }
 
-func mountDeployHandlers(router *gin.Engine, backend v1server.Interface, sysResolver *resolver.SystemResolver) {
+func mountDeployHandlers(router *gin.RouterGroup, backend v1server.Interface, sysResolver *resolver.SystemResolver) {
 	systemIdentifier := "system_id"
 	systemIdentifierPathComponent := fmt.Sprintf(":%v", systemIdentifier)
 	deploysPath := fmt.Sprintf(v1rest.DeploysPathFormat, systemIdentifierPathComponent)
@@ -292,7 +294,58 @@ func mountDeployHandlers(router *gin.Engine, backend v1server.Interface, sysReso
 	})
 }
 
-func mountServiceHandlers(router *gin.Engine, backend v1server.Interface) {
+func mountNodePoolHandlers(router *gin.RouterGroup, backend v1server.Interface) {
+	systemIdentifier := "system_id"
+	systemIdentifierPathComponent := fmt.Sprintf(":%v", systemIdentifier)
+	nodePoolsPath := fmt.Sprintf(v1rest.NodePoolsPathFormat, systemIdentifierPathComponent)
+
+	// list-node-pools
+	router.GET(nodePoolsPath, func(c *gin.Context) {
+		systemID := v1.SystemID(c.Param(systemIdentifier))
+
+		nodePools, err := backend.ListNodePools(systemID)
+		if err != nil {
+			handleError(c, err)
+			return
+		}
+
+		c.JSON(http.StatusOK, nodePools)
+	})
+
+	nodePoolIdentifier := "node_pool_path"
+	nodePoolIdentifierPathComponent := fmt.Sprintf(":%v", nodePoolIdentifier)
+	nodePoolPath := fmt.Sprintf(v1rest.NodePoolPathFormat, systemIdentifierPathComponent, nodePoolIdentifierPathComponent)
+
+	// get-node-pool
+	router.GET(nodePoolPath, func(c *gin.Context) {
+		systemID := v1.SystemID(c.Param(systemIdentifier))
+		escapedNodePoolPath := c.Param(nodePoolIdentifier)
+
+		nodePoolPathString, err := url.PathUnescape(escapedNodePoolPath)
+		if err != nil {
+			// FIXME: send invalid nodePool error
+			c.Status(http.StatusBadRequest)
+			return
+		}
+
+		path, err := v1.ParseNodePoolPath(nodePoolPathString)
+		if err != nil {
+			// FIXME: send invalid nodePool error
+			c.Status(http.StatusBadRequest)
+			return
+		}
+
+		nodePool, err := backend.GetNodePool(systemID, path)
+		if err != nil {
+			handleError(c, err)
+			return
+		}
+
+		c.JSON(http.StatusOK, nodePool)
+	})
+}
+
+func mountServiceHandlers(router *gin.RouterGroup, backend v1server.Interface) {
 	systemIdentifier := "system_id"
 	systemIdentifierPathComponent := fmt.Sprintf(":%v", systemIdentifier)
 	servicesPath := fmt.Sprintf(v1rest.ServicesPathFormat, systemIdentifierPathComponent)
@@ -417,7 +470,8 @@ func serveLogFile(log io.ReadCloser, follow bool, c *gin.Context) {
 		return true
 	})
 }
-func mountSecretHandlers(router *gin.Engine, backend v1server.Interface) {
+
+func mountSecretHandlers(router *gin.RouterGroup, backend v1server.Interface) {
 	systemIdentifier := "system_id"
 	systemIdentifierPathComponent := fmt.Sprintf(":%v", systemIdentifier)
 	secretsPath := fmt.Sprintf(v1rest.SystemSecretsPathFormat, systemIdentifierPathComponent)
@@ -558,7 +612,7 @@ func mountSecretHandlers(router *gin.Engine, backend v1server.Interface) {
 	})
 }
 
-func mountTeardownHandlers(router *gin.Engine, backend v1server.Interface) {
+func mountTeardownHandlers(router *gin.RouterGroup, backend v1server.Interface) {
 	systemIdentifier := "system_id"
 	systemIdentifierPathComponent := fmt.Sprintf(":%v", systemIdentifier)
 	teardownsPath := fmt.Sprintf(v1rest.TeardownsPathFormat, systemIdentifierPathComponent)
@@ -608,7 +662,7 @@ func mountTeardownHandlers(router *gin.Engine, backend v1server.Interface) {
 	})
 }
 
-func mountVersionHandlers(router *gin.Engine, backend v1server.Interface, sysResolver *resolver.SystemResolver) {
+func mountVersionHandlers(router *gin.RouterGroup, backend v1server.Interface, sysResolver *resolver.SystemResolver) {
 	systemIDIdentifier := "system_id"
 	systemIDPathComponent := fmt.Sprintf(":%v", systemIDIdentifier)
 	versionsPath := fmt.Sprintf(v1rest.VersionsPathFormat, systemIDPathComponent)

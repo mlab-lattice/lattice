@@ -42,4 +42,7 @@ type Interface interface {
 	GetSystemSecret(systemID v1.SystemID, path tree.NodePath, name string) (*v1.Secret, error)
 	SetSystemSecret(systemID v1.SystemID, path tree.NodePath, name, value string) error
 	UnsetSystemSecret(systemID v1.SystemID, path tree.NodePath, name string) error
+
+	ListNodePools(v1.SystemID) ([]v1.NodePool, error)
+	GetNodePool(v1.SystemID, v1.NodePoolPath) (*v1.NodePool, error)
 }

@@ -189,7 +189,11 @@ func (np *NodePool) Reason() string {
 	case NodePoolStateFailed:
 		failureReason := "unknown reason"
 		if np.Status.FailureInfo != nil {
-			failureReason = fmt.Sprintf("%v at %v", np.Status.FailureInfo.Message, np.Status.FailureInfo.Time.String())
+			failureReason = fmt.Sprintf(
+				"%v at %v",
+				np.Status.FailureInfo.Message,
+				np.Status.FailureInfo.Timestamp.String(),
+			)
 		}
 
 		return fmt.Sprintf("failed: %v", failureReason)
@@ -250,8 +254,8 @@ type NodePoolStatus struct {
 }
 
 type NodePoolStatusFailureInfo struct {
-	Message string      `json:"message"`
-	Time    metav1.Time `json:"time"`
+	Message   string      `json:"message"`
+	Timestamp metav1.Time `json:"time"`
 }
 
 type NodePoolStatusEpochs map[NodePoolEpoch]NodePoolStatusEpoch

@@ -4,13 +4,43 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 )
 
+type NodePoolState string
+
+const (
+	NodePoolStatePending  = "pending"
+	NodePoolStateDeleting = "deleting"
+
+	NodePoolStateStable   = "stable"
+	NodePoolStateScaling  = "scaling"
+	NodePoolStateUpdating = "updating"
+	NodePoolStateFailed   = "failed"
+)
+
+type NodePool struct {
+	ID   string `json:"id"`
+	Path string `json:"path"`
+
+	// FIXME: how to deal with epochs?
+	InstanceType string `json:"instanceType"`
+	NumInstances int32  `json:"numInstances"`
+
+	State       NodePoolState        `json:"state"`
+	FailureInfo *NodePoolFailureInfo `json:"failure_info"`
+}
+
+type NodePoolFailureInfo struct {
+	Time    time.Time
+	Message string `json:"message"`
+}
+
 type NodePoolPath struct {
-	Path tree.NodePath
-	Name *string
+	Path tree.NodePath `json:"path"`
+	Name *string       `json:"name,omitempty"`
 }
 
 func (p NodePoolPath) String() string {
@@ -75,23 +105,3 @@ func ParseNodePoolPath(path string) (NodePoolPath, error) {
 	}
 	return np, nil
 }
-
-type NodePool struct {
-	ID   string       `json:"id"`
-	Path NodePoolPath `json:"path"`
-
-	// FIXME: how to deal with epochs?
-	InstanceType string `json:"instanceType"`
-	NumInstances int32  `json:"numInstances"`
-
-	State NodePoolState `json:"state"`
-}
-
-type NodePoolState string
-
-const (
-	NodePoolStatePending  = "pending"
-	NodePoolStateScaling  = "scaling"
-	NodePoolStateUpdating = "updating"
-	NodePoolStateFailed   = "failed"
-)

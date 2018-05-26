@@ -168,15 +168,15 @@ func (c *Controller) nodePoolServices(nodePool *latticev1.NodePool) ([]latticev1
 
 		var nodePoolServices []latticev1.Service
 		for _, service := range services {
-			nodePools, err := service.NodePoolAnnotation()
-			if err != nil {
-				// FIXME: log/send warn event
-				continue
-			}
+			// FIXME: this method was not working for services that had not yet annotated themselves
+			//nodePools, err := service.NodePoolAnnotation()
+			//if err != nil {
+			//	continue
+			//}
 
-			if nodePools.ContainsNodePool(nodePool.Namespace, nodePool.Name) {
-				nodePoolServices = append(nodePoolServices, *service)
-			}
+			//if nodePools.ContainsNodePool(nodePool.Namespace, nodePool.Name) {
+			nodePoolServices = append(nodePoolServices, *service)
+			//}
 		}
 		return nodePoolServices, nil
 	}
