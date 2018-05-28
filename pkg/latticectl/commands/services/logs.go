@@ -45,13 +45,8 @@ func (c *LogsCommand) Base() (*latticectl.BaseCommand, error) {
 
 func GetServiceLogs(ctx latticectl.ServiceCommandContext, component string, follow bool, w io.Writer) error {
 	c := ctx.Client().Systems().Services(ctx.SystemID())
-	service, err := lookupService(ctx)
 
-	if err != nil {
-		return err
-	}
-
-	logs, err := c.Logs(service.ID, component, follow)
+	logs, err := c.Logs(ctx.ServiceId(), component, follow)
 	if err != nil {
 		return err
 	}

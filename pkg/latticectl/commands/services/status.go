@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	v1client "github.com/mlab-lattice/lattice/pkg/api/client/v1"
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	"github.com/mlab-lattice/lattice/pkg/latticectl"
 	"github.com/mlab-lattice/lattice/pkg/util/cli"
@@ -45,11 +46,13 @@ func (c *StatusCommand) Base() (*latticectl.BaseCommand, error) {
 				log.Fatal(err)
 			}
 
+			c := ctx.Client().Systems().Services(ctx.SystemID())
+
 			if watch {
-				WatchService(ctx, format, os.Stdout)
+				WatchService(c, ctx.ServiceId(), format, os.Stdout)
 			}
 
-			err = GetService(ctx, format, os.Stdout)
+			err = GetService(c, ctx.ServiceId(), format, os.Stdout)
 			if err != nil {
 				log.Fatal(err)
 			}
@@ -59,8 +62,8 @@ func (c *StatusCommand) Base() (*latticectl.BaseCommand, error) {
 	return cmd.Base()
 }
 
-func GetService(ctx latticectl.ServiceCommandContext, format printer.Format, writer io.Writer) error {
-	service, err := lookupService(ctx)
+func GetService(client v1client.ServiceClient, serviceID v1.ServiceID, format printer.Format, writer io.Writer) error {
+	service, err := client.Get(serviceID)
 	if err != nil {
 		return err
 	}
@@ -70,7 +73,7 @@ func GetService(ctx latticectl.ServiceCommandContext, format printer.Format, wri
 	return nil
 }
 
-func WatchService(ctx latticectl.ServiceCommandContext, format printer.Format, writer io.Writer) {
+func WatchService(client v1client.ServiceClient, serviceID v1.ServiceID, format printer.Format, writer io.Writer) {
 	services := make(chan *v1.Service)
 
 	lastHeight := 0
@@ -80,7 +83,7 @@ func WatchService(ctx latticectl.ServiceCommandContext, format printer.Format, w
 	go wait.PollImmediateInfinite(
 		5*time.Second,
 		func() (bool, error) {
-			service, err := lookupService(ctx)
+			service, err := client.Get(serviceID)
 			if err != nil {
 				return false, err
 			}

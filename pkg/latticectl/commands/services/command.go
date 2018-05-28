@@ -197,15 +197,3 @@ func servicesPrinter(services []v1.Service, format printer.Format) printer.Inter
 
 	return p
 }
-
-func lookupService(ctx latticectl.ServiceCommandContext) (*v1.Service, error) {
-	c := ctx.Client().Systems().Services(ctx.SystemID())
-	if ctx.ServiceId() != "" {
-		return c.Get(ctx.ServiceId())
-	} else if ctx.ServicePath() != "" {
-		return c.GetByServicePath(ctx.ServicePath())
-	}
-
-	return nil, fmt.Errorf("failed to lookup service: need service id or path to be specified")
-
-}
