@@ -95,7 +95,6 @@ func (c *ServiceClient) Logs(id v1.ServiceID, component string, follow bool) (io
 		component, follow,
 	)
 
-	fmt.Println(url)
 	body, statusCode, err := c.restClient.Get(url).Body()
 	if err != nil {
 		return nil, err

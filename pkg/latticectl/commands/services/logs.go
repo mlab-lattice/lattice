@@ -5,6 +5,8 @@ import (
 	"log"
 	"os"
 
+	v1client "github.com/mlab-lattice/lattice/pkg/api/client/v1"
+	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	"github.com/mlab-lattice/lattice/pkg/latticectl"
 	"github.com/mlab-lattice/lattice/pkg/util/cli"
 )
@@ -33,7 +35,8 @@ func (c *LogsCommand) Base() (*latticectl.BaseCommand, error) {
 			},
 		},
 		Run: func(ctx latticectl.ServiceCommandContext, args []string) {
-			err := GetServiceLogs(ctx, component, follow, os.Stdout)
+			c := ctx.Client().Systems().Services(ctx.SystemID())
+			err := GetServiceLogs(c, ctx.ServiceId(), component, follow, os.Stdout)
 			if err != nil {
 				log.Fatal(err)
 			}
@@ -43,10 +46,9 @@ func (c *LogsCommand) Base() (*latticectl.BaseCommand, error) {
 	return cmd.Base()
 }
 
-func GetServiceLogs(ctx latticectl.ServiceCommandContext, component string, follow bool, w io.Writer) error {
-	c := ctx.Client().Systems().Services(ctx.SystemID())
+func GetServiceLogs(client v1client.ServiceClient, serviceID v1.ServiceID, component string, follow bool, w io.Writer) error {
 
-	logs, err := c.Logs(ctx.ServiceId(), component, follow)
+	logs, err := client.Logs(serviceID, component, follow)
 	if err != nil {
 		return err
 	}

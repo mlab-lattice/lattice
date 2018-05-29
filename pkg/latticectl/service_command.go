@@ -19,18 +19,12 @@ type ServiceCommand struct {
 
 type ServiceCommandContext interface {
 	SystemCommandContext
-	ServicePath() tree.NodePath
 	ServiceId() v1.ServiceID
 }
 
 type serviceCommandContext struct {
 	SystemCommandContext
-	servicePath tree.NodePath
-	serviceID   v1.ServiceID
-}
-
-func (c *serviceCommandContext) ServicePath() tree.NodePath {
-	return c.servicePath
+	serviceID v1.ServiceID
 }
 
 func (c *serviceCommandContext) ServiceId() v1.ServiceID {
@@ -61,23 +55,32 @@ func (c *ServiceCommand) Base() (*BaseCommand, error) {
 		Args:  c.Args,
 		Flags: flags,
 		Run: func(sctx SystemCommandContext, args []string) {
-
-			var servicePath tree.NodePath
-
+			var serviceID v1.ServiceID
+			// resolve service id
 			if serviceIDStr == "" && servicePathStr == "" {
 				log.Fatal("Need to specify service or servicePath")
+			} else if serviceIDStr != "" {
+				serviceID = v1.ServiceID(serviceIDStr)
 			} else if servicePathStr != "" {
+				// lookup service by node path
 				nodePath, err := tree.NewNodePath(servicePathStr)
 				if err != nil {
 					log.Fatal("invalid service path: " + servicePathStr)
 				}
-				servicePath = nodePath
+
+				c := sctx.Client().Systems().Services(sctx.SystemID())
+				service, err := c.GetByServicePath(nodePath)
+
+				if err != nil {
+					log.Fatalf("error looking up service by path: %v", err)
+				}
+
+				serviceID = service.ID
 			}
 
 			ctx := &serviceCommandContext{
 				SystemCommandContext: sctx,
-				serviceID:            v1.ServiceID(serviceIDStr),
-				servicePath:          servicePath,
+				serviceID:            serviceID,
 			}
 			c.Run(ctx, args)
 		},
