@@ -196,8 +196,6 @@ func servicePrinter(service *v1.Service, format printer.Format) printer.Interfac
 			addresses = append(addresses, fmt.Sprintf("%v: %v", port, address))
 		}
 
-		instances := strings.Join(service.Instances, ",")
-
 		rows = append(rows, []string{
 			service.Path.String(),
 			stateColor(string(service.State)),
@@ -207,7 +205,7 @@ func servicePrinter(service *v1.Service, format printer.Format) printer.Interfac
 			fmt.Sprintf("%d", service.TerminatingInstances),
 			strings.Join(addresses, ","),
 			string(info),
-			instances,
+			fmt.Sprintf("%v", service.Instances),
 		})
 
 		p = &printer.Table{

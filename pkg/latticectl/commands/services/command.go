@@ -109,9 +109,11 @@ func servicesPrinter(services []v1.Service, format printer.Format) printer.Inter
 	var p printer.Interface
 	switch format {
 	case printer.FormatTable:
-		headers := []string{"Service", "State", "Available", "Updated", "Stale", "Terminating", "Addresses", "Info"}
+		headers := []string{"Service", "State", "Available", "Updated", "Stale", "Terminating", "Addresses", "Info",
+			"Instances"}
 
 		headerColors := []tw.Colors{
+			{tw.Bold},
 			{tw.Bold},
 			{tw.Bold},
 			{tw.Bold},
@@ -131,9 +133,11 @@ func servicesPrinter(services []v1.Service, format printer.Format) printer.Inter
 			{},
 			{},
 			{},
+			{},
 		}
 
 		columnAlignment := []int{
+			tw.ALIGN_LEFT,
 			tw.ALIGN_LEFT,
 			tw.ALIGN_LEFT,
 			tw.ALIGN_LEFT,
@@ -178,6 +182,7 @@ func servicesPrinter(services []v1.Service, format printer.Format) printer.Inter
 				fmt.Sprintf("%d", service.TerminatingInstances),
 				strings.Join(addresses, ","),
 				string(info),
+				fmt.Sprintf("%v", service.Instances),
 			})
 		}
 
