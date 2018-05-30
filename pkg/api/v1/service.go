@@ -35,6 +35,8 @@ type Service struct {
 	TerminatingInstances int32 `json:"terminatingInstances"`
 
 	Ports map[int32]string `json:"ports"`
+
+	Instances []string `json:"instances"`
 }
 
 type ServiceFailureInfo struct {

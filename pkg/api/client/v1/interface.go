@@ -49,7 +49,7 @@ type ServiceClient interface {
 	List() ([]v1.Service, error)
 	Get(id v1.ServiceID) (*v1.Service, error)
 	GetByServicePath(path tree.NodePath) (*v1.Service, error)
-	Logs(id v1.ServiceID, component string, follow bool) (io.ReadCloser, error)
+	Logs(id v1.ServiceID, component string, instance string, follow bool) (io.ReadCloser, error)
 }
 
 type SecretClient interface {

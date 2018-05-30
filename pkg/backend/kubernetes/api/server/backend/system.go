@@ -91,6 +91,8 @@ func (kb *KubernetesBackend) transformSystem(system *latticev1.System) (*v1.Syst
 		}
 	}
 
+	namespace := kb.systemNamespace(v1.SystemID(system.Name))
+
 	externalSystem := &v1.System{
 		ID:            v1.SystemID(system.Name),
 		State:         state,
@@ -99,7 +101,7 @@ func (kb *KubernetesBackend) transformSystem(system *latticev1.System) (*v1.Syst
 
 	externalServices := map[tree.NodePath]v1.Service{}
 	for path, status := range system.Status.Services {
-		externalService, err := kb.transformService("XXX UNKNOWN", path, &status.ServiceStatus)
+		externalService, err := kb.transformService(status.Name, path, &status.ServiceStatus, namespace)
 		if err != nil {
 			return nil, err
 		}

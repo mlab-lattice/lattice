@@ -420,6 +420,7 @@ func mountServiceHandlers(router *gin.RouterGroup, backend v1server.Interface) {
 		systemID := v1.SystemID(c.Param(systemIdentifier))
 		serviceId := v1.ServiceID(c.Param(serviceIdentifier))
 		component := c.Query("component")
+		instance := c.Query("instance")
 		followQuery := c.DefaultQuery("follow", "false")
 
 		// validate component
@@ -434,7 +435,7 @@ func mountServiceHandlers(router *gin.RouterGroup, backend v1server.Interface) {
 			return
 		}
 
-		log, err := backend.ServiceLogs(systemID, serviceId, component, follow)
+		log, err := backend.ServiceLogs(systemID, serviceId, component, instance, follow)
 		if err != nil {
 			handleError(c, err)
 			return
