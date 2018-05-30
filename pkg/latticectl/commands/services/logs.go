@@ -31,7 +31,7 @@ func (c *LogsCommand) Base() (*latticectl.BaseCommand, error) {
 			&cli.StringFlag{
 				Name:     "instance",
 				Short:    "i",
-				Required: true,
+				Required: false,
 				Target:   &instance,
 			},
 			&cli.BoolFlag{
