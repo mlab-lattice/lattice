@@ -29,7 +29,7 @@ type BuildClient interface {
 	Create(version v1.SystemVersion) (*v1.Build, error)
 	List() ([]v1.Build, error)
 	Get(v1.BuildID) (*v1.Build, error)
-	Logs(id v1.BuildID, path string, component string, follow bool) (io.ReadCloser, error)
+	Logs(id v1.BuildID, path tree.NodePath, component string, follow bool) (io.ReadCloser, error)
 }
 
 type DeployClient interface {

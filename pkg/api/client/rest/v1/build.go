@@ -11,6 +11,7 @@ import (
 
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	v1rest "github.com/mlab-lattice/lattice/pkg/api/v1/rest"
+	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 	"github.com/mlab-lattice/lattice/pkg/util/rest"
 )
 
@@ -86,8 +87,8 @@ func (c *BuildClient) Get(id v1.BuildID) (*v1.Build, error) {
 	return nil, HandleErrorStatusCode(statusCode, body)
 }
 
-func (c *BuildClient) Logs(id v1.BuildID, path string, component string, follow bool) (io.ReadCloser, error) {
-	escapedPath := urlutil.PathEscape(path)
+func (c *BuildClient) Logs(id v1.BuildID, path tree.NodePath, component string, follow bool) (io.ReadCloser, error) {
+	escapedPath := urlutil.PathEscape(path.String())
 	url := fmt.Sprintf(
 		"%v%v?path=%v&component=%v&follow=%v",
 		c.apiServerURL,

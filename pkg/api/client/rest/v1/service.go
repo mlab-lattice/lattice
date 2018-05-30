@@ -61,7 +61,7 @@ func (c *ServiceClient) Get(id v1.ServiceID) (*v1.Service, error) {
 }
 
 func (c *ServiceClient) GetByServicePath(path tree.NodePath) (*v1.Service, error) {
-	escapedPath := urlutil.PathEscape(string(path))
+	escapedPath := urlutil.PathEscape(path.String())
 	url := fmt.Sprintf("%v%v?servicePath=%v", c.apiServerURL,
 		fmt.Sprintf(v1rest.ServicesPathFormat, c.systemID), escapedPath)
 	body, statusCode, err := c.restClient.Get(url).Body()

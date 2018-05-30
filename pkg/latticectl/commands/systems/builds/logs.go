@@ -7,6 +7,7 @@ import (
 
 	v1client "github.com/mlab-lattice/lattice/pkg/api/client/v1"
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
+	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 	"github.com/mlab-lattice/lattice/pkg/latticectl"
 	"github.com/mlab-lattice/lattice/pkg/util/cli"
 )
@@ -16,7 +17,7 @@ type LogsCommand struct {
 
 func (c *LogsCommand) Base() (*latticectl.BaseCommand, error) {
 	var follow bool
-	var path string
+	var pathStr string
 	var component string
 
 	cmd := &latticectl.BuildCommand{
@@ -26,7 +27,7 @@ func (c *LogsCommand) Base() (*latticectl.BaseCommand, error) {
 				Name:     "path",
 				Short:    "p",
 				Required: true,
-				Target:   &path,
+				Target:   &pathStr,
 			},
 			&cli.StringFlag{
 				Name:     "component",
@@ -42,8 +43,15 @@ func (c *LogsCommand) Base() (*latticectl.BaseCommand, error) {
 			},
 		},
 		Run: func(ctx latticectl.BuildCommandContext, args []string) {
+
+			path, err := tree.NewNodePath(pathStr)
+			if err != nil {
+				log.Fatal("invalid node path: " + pathStr)
+			}
+
 			c := ctx.Client().Systems().Builds(ctx.SystemID())
-			err := GetBuildLogs(c, ctx.BuildID(), path, component, follow, os.Stdout)
+			err = GetBuildLogs(c, ctx.BuildID(), path, component, follow, os.Stdout)
+
 			if err != nil {
 				log.Fatal(err)
 			}
@@ -53,7 +61,7 @@ func (c *LogsCommand) Base() (*latticectl.BaseCommand, error) {
 	return cmd.Base()
 }
 
-func GetBuildLogs(client v1client.BuildClient, buildID v1.BuildID, path string,
+func GetBuildLogs(client v1client.BuildClient, buildID v1.BuildID, path tree.NodePath,
 	component string, follow bool, w io.Writer) error {
 	logs, err := client.Logs(buildID, path, component, follow)
 	if err != nil {

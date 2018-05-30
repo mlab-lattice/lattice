@@ -79,30 +79,41 @@ func (kb *KubernetesBackend) GetServiceByPath(systemID v1.SystemID, path tree.No
 	}
 
 	namespace := kb.systemNamespace(systemID)
-	// TODO fixme try to push query to kube api instead of manually filtering it here
-	services, err := kb.latticeClient.LatticeV1().Services(namespace).List(metav1.ListOptions{})
+
+	selector := labels.NewSelector()
+	requirement, err := labels.NewRequirement(latticev1.ServicePathLabelKey, selection.Equals, []string{path.ToDomain()})
+
+	if err != nil {
+		return nil, fmt.Errorf("error getting selector for  service %v in namespace %v", path.String(), namespace)
+	}
+
+	selector = selector.Add(*requirement)
+
+	services, err := kb.latticeClient.LatticeV1().Services(namespace).List(
+		metav1.ListOptions{LabelSelector: selector.String()})
+
 	if err != nil {
 		return nil, err
 	}
 
-	for _, service := range services.Items {
-
-		servicePath, err := service.PathLabel()
-		if err != nil {
-			return nil, err
-		}
-
-		if path == servicePath {
-			externalService, err := kb.transformService(service.Name, servicePath, &service.Status, namespace)
-			if err != nil {
-				return nil, err
-			}
-
-			return &externalService, nil
-		}
+	if len(services.Items) == 0 {
+		return nil, nil
 	}
 
-	return nil, nil
+	// ensure result is a singleton
+
+	if len(services.Items) > 1 {
+		return nil, fmt.Errorf("found multiple services with path %v in namespace %v", path.String(), namespace)
+	}
+
+	service := services.Items[0]
+	externalService, err := kb.transformService(service.Name, path, &service.Status, namespace)
+	if err != nil {
+		return nil, err
+	}
+
+	return &externalService, nil
+
 }
 func (kb *KubernetesBackend) ServiceLogs(systemID v1.SystemID, serviceID v1.ServiceID, component string,
 	instance string, follow bool) (io.ReadCloser, error) {
