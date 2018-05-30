@@ -19,7 +19,7 @@ type ServiceCommand struct {
 
 type ServiceCommandContext interface {
 	SystemCommandContext
-	ServiceId() v1.ServiceID
+	ServiceID() v1.ServiceID
 }
 
 type serviceCommandContext struct {
@@ -27,7 +27,7 @@ type serviceCommandContext struct {
 	serviceID v1.ServiceID
 }
 
-func (c *serviceCommandContext) ServiceId() v1.ServiceID {
+func (c *serviceCommandContext) ServiceID() v1.ServiceID {
 	return c.serviceID
 }
 

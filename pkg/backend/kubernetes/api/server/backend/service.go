@@ -137,7 +137,7 @@ func (kb *KubernetesBackend) findServicePod(serviceId v1.ServiceID, instance str
 
 	// check if instance was specified
 	if instance != "" {
-		podName := toServiceInstanceFullId(serviceId, instance)
+		podName := toServiceInstanceFullID(serviceId, instance)
 		pod, err := kb.kubeClient.CoreV1().Pods(namespace).Get(podName, metav1.GetOptions{})
 		if err != nil {
 			return nil, fmt.Errorf("error fetching pod for instance %v/%v", namespace, podName)
@@ -258,18 +258,18 @@ func (kb *KubernetesBackend) getServiceInstances(serviceID v1.ServiceID, namespa
 	instances := make([]string, len(pods.Items))
 
 	for i, podItem := range pods.Items {
-		instances[i] = toServiceInstanceShortId(serviceID, podItem.Name)
+		instances[i] = toServiceInstanceShortID(serviceID, podItem.Name)
 	}
 
 	return instances, nil
 }
 
-func toServiceInstanceShortId(serviceID v1.ServiceID, podName string) string {
+func toServiceInstanceShortID(serviceID v1.ServiceID, podName string) string {
 	// TODO Reuse existing deployment naming utilties
 	return strings.TrimPrefix(podName, "lattice-service-"+string(serviceID)+"-")
 }
 
-func toServiceInstanceFullId(serviceID v1.ServiceID, podName string) string {
+func toServiceInstanceFullID(serviceID v1.ServiceID, podName string) string {
 	// TODO Reuse existing deployment naming utilities
 	return "lattice-service-" + string(serviceID) + "-" + podName
 }

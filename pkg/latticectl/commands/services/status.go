@@ -49,10 +49,10 @@ func (c *StatusCommand) Base() (*latticectl.BaseCommand, error) {
 			c := ctx.Client().Systems().Services(ctx.SystemID())
 
 			if watch {
-				WatchService(c, ctx.ServiceId(), format, os.Stdout)
+				WatchService(c, ctx.ServiceID(), format, os.Stdout)
 			}
 
-			err = GetService(c, ctx.ServiceId(), format, os.Stdout)
+			err = GetService(c, ctx.ServiceID(), format, os.Stdout)
 			if err != nil {
 				log.Fatal(err)
 			}

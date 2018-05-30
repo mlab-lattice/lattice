@@ -9,8 +9,9 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
 
-	"github.com/satori/go.uuid"
 	"reflect"
+
+	"github.com/satori/go.uuid"
 )
 
 // dedicatedNodePool returns a dedicated node pool for the service that has the same instanceType.
@@ -254,7 +255,7 @@ func (c *Controller) currentEpochStable(nodePool *latticev1.NodePool) (bool, err
 	currentEpoch, ok := nodePool.Status.Epochs.CurrentEpoch()
 	if !ok {
 		err := fmt.Errorf(
-			"%v for %v is processed but does not have a current epoch",
+			"%v is processed but does not have a current epoch",
 			nodePool.Description(c.namespacePrefix),
 		)
 		return false, err

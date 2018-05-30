@@ -35,7 +35,7 @@ func (c *AddressCommand) Base() (*latticectl.BaseCommand, error) {
 				log.Fatal(err)
 			}
 
-			err = GetServiceAddress(ctx.Client().Systems().Services(ctx.SystemID()), ctx.ServiceId(), format, os.Stdout)
+			err = GetServiceAddress(ctx.Client().Systems().Services(ctx.SystemID()), ctx.ServiceID(), format, os.Stdout)
 			if err != nil {
 				log.Fatal(err)
 			}

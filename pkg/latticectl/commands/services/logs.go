@@ -43,7 +43,7 @@ func (c *LogsCommand) Base() (*latticectl.BaseCommand, error) {
 		},
 		Run: func(ctx latticectl.ServiceCommandContext, args []string) {
 			c := ctx.Client().Systems().Services(ctx.SystemID())
-			err := GetServiceLogs(c, ctx.ServiceId(), component, instance, follow, os.Stdout)
+			err := GetServiceLogs(c, ctx.ServiceID(), component, instance, follow, os.Stdout)
 			if err != nil {
 				log.Fatal(err)
 			}
