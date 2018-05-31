@@ -33,7 +33,9 @@ type Interface interface {
 
 	// Service
 	ListServices(v1.SystemID) ([]v1.Service, error)
-	GetService(v1.SystemID, tree.NodePath) (*v1.Service, error)
+	GetService(v1.SystemID, v1.ServiceID) (*v1.Service, error)
+	GetServiceByPath(v1.SystemID, tree.NodePath) (*v1.Service, error)
+	ServiceLogs(systemID v1.SystemID, serviceID v1.ServiceID, component string, instance string, follow bool) (io.ReadCloser, error)
 
 	// System Secret
 	ListSystemSecrets(v1.SystemID) ([]v1.Secret, error)

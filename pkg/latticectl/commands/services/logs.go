@@ -1,4 +1,4 @@
-package builds
+package services
 
 import (
 	"io"
@@ -7,7 +7,6 @@ import (
 
 	v1client "github.com/mlab-lattice/lattice/pkg/api/client/v1"
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
-	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 	"github.com/mlab-lattice/lattice/pkg/latticectl"
 	"github.com/mlab-lattice/lattice/pkg/util/cli"
 )
@@ -17,23 +16,23 @@ type LogsCommand struct {
 
 func (c *LogsCommand) Base() (*latticectl.BaseCommand, error) {
 	var follow bool
-	var pathStr string
 	var component string
+	var instance string
 
-	cmd := &latticectl.BuildCommand{
+	cmd := &latticectl.ServiceCommand{
 		Name: "logs",
 		Flags: cli.Flags{
-			&cli.StringFlag{
-				Name:     "path",
-				Short:    "p",
-				Required: true,
-				Target:   &pathStr,
-			},
 			&cli.StringFlag{
 				Name:     "component",
 				Short:    "c",
 				Required: true,
 				Target:   &component,
+			},
+			&cli.StringFlag{
+				Name:     "instance",
+				Short:    "i",
+				Required: false,
+				Target:   &instance,
 			},
 			&cli.BoolFlag{
 				Name:    "follow",
@@ -42,16 +41,9 @@ func (c *LogsCommand) Base() (*latticectl.BaseCommand, error) {
 				Target:  &follow,
 			},
 		},
-		Run: func(ctx latticectl.BuildCommandContext, args []string) {
-
-			path, err := tree.NewNodePath(pathStr)
-			if err != nil {
-				log.Fatal("invalid node path: " + pathStr)
-			}
-
-			c := ctx.Client().Systems().Builds(ctx.SystemID())
-			err = GetBuildLogs(c, ctx.BuildID(), path, component, follow, os.Stdout)
-
+		Run: func(ctx latticectl.ServiceCommandContext, args []string) {
+			c := ctx.Client().Systems().Services(ctx.SystemID())
+			err := GetServiceLogs(c, ctx.ServiceID(), component, instance, follow, os.Stdout)
 			if err != nil {
 				log.Fatal(err)
 			}
@@ -61,9 +53,10 @@ func (c *LogsCommand) Base() (*latticectl.BaseCommand, error) {
 	return cmd.Base()
 }
 
-func GetBuildLogs(client v1client.BuildClient, buildID v1.BuildID, path tree.NodePath,
-	component string, follow bool, w io.Writer) error {
-	logs, err := client.Logs(buildID, path, component, follow)
+func GetServiceLogs(client v1client.ServiceClient, serviceID v1.ServiceID, component string, instance string,
+	follow bool, w io.Writer) error {
+
+	logs, err := client.Logs(serviceID, component, instance, follow)
 	if err != nil {
 		return err
 	}

@@ -7,10 +7,12 @@ import (
 	"net/http"
 	urlutil "net/url"
 
+	"io"
+
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	v1rest "github.com/mlab-lattice/lattice/pkg/api/v1/rest"
+	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 	"github.com/mlab-lattice/lattice/pkg/util/rest"
-	"io"
 )
 
 type BuildClient struct {
@@ -85,12 +87,14 @@ func (c *BuildClient) Get(id v1.BuildID) (*v1.Build, error) {
 	return nil, HandleErrorStatusCode(statusCode, body)
 }
 
-func (c *BuildClient) Logs(id v1.BuildID, component string, follow bool) (io.ReadCloser, error) {
-	escapedPath := urlutil.PathEscape(component)
+func (c *BuildClient) Logs(id v1.BuildID, path tree.NodePath, component string, follow bool) (io.ReadCloser, error) {
+	escapedPath := urlutil.PathEscape(path.String())
 	url := fmt.Sprintf(
-		"%v%v?follow=%v",
+		"%v%v?path=%v&component=%v&follow=%v",
 		c.apiServerURL,
-		fmt.Sprintf(v1rest.BuildLogPathFormat, c.systemID, id, escapedPath),
+		fmt.Sprintf(v1rest.BuildLogsPathFormat, c.systemID, id),
+		escapedPath,
+		component,
 		follow,
 	)
 	body, statusCode, err := c.restClient.Get(url).Body()
