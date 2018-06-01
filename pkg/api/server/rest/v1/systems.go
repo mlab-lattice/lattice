@@ -458,7 +458,8 @@ func serveLogFile(log io.ReadCloser, c *gin.Context) {
 	c.Stream(func(w io.Writer) bool {
 
 		n, err := log.Read(buff)
-		if err == io.EOF {
+
+		if err != nil {
 			return false
 		}
 
