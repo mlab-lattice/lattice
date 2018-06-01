@@ -1,0 +1,32 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = ["backend.go"],
+    importpath = "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/servicemesh/envoy/xdsapi/v2/backend/pernode",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//pkg/backend/kubernetes/customresource/generated/clientset/versioned:go_default_library",
+        "//pkg/backend/kubernetes/customresource/generated/informers/externalversions:go_default_library",
+        "//pkg/backend/kubernetes/customresource/generated/listers/lattice/v1:go_default_library",
+        "//pkg/backend/kubernetes/servicemesh/envoy:go_default_library",
+        "//pkg/backend/kubernetes/servicemesh/envoy/xdsapi/v2:go_default_library",
+        "//pkg/backend/kubernetes/util/kubernetes:go_default_library",
+        "//pkg/definition/tree:go_default_library",
+        "@com_github_envoyproxy_go_control_plane//envoy/api/v2:go_default_library",
+        "@com_github_envoyproxy_go_control_plane//envoy/api/v2/core:go_default_library",
+        "@com_github_envoyproxy_go_control_plane//pkg/cache:go_default_library",
+        "@com_github_golang_glog//:go_default_library",
+        "@io_k8s_apimachinery//pkg/apis/meta/v1:go_default_library",
+        "@io_k8s_apimachinery//pkg/labels:go_default_library",
+        "@io_k8s_apimachinery//pkg/util/runtime:go_default_library",
+        "@io_k8s_apimachinery//pkg/util/wait:go_default_library",
+        "@io_k8s_client_go//informers:go_default_library",
+        "@io_k8s_client_go//kubernetes:go_default_library",
+        "@io_k8s_client_go//listers/core/v1:go_default_library",
+        "@io_k8s_client_go//rest:go_default_library",
+        "@io_k8s_client_go//tools/cache:go_default_library",
+        "@io_k8s_client_go//tools/clientcmd:go_default_library",
+        "@io_k8s_client_go//util/workqueue:go_default_library",
+    ],
+)

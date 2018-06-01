@@ -1,0 +1,17 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "backend.go",
+        "types.go",
+    ],
+    importpath = "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/servicemesh/envoy/xdsapi/v2",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//pkg/definition/tree:go_default_library",
+        "@com_github_envoyproxy_go_control_plane//pkg/cache:go_default_library",
+        "@com_github_envoyproxy_go_control_plane//pkg/log:go_default_library",
+        "@com_github_envoyproxy_go_control_plane//pkg/server:go_default_library",
+    ],
+)

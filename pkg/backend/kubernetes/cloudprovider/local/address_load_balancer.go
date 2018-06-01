@@ -23,9 +23,25 @@ func (cp *DefaultLocalCloudProvider) ServiceAddressLoadBalancerNeedsUpdate(
 	service *latticev1.Service,
 	serviceMeshPorts map[int32]int32,
 ) (bool, error) {
+	loadBalancerNeeded := serviceNeedsAddressLoadBalancer(service)
+
 	kubeService, err := cp.getKubeService(address)
 	if err != nil {
 		return false, err
+	}
+
+	if kubeService == nil && loadBalancerNeeded {
+		return true, nil
+	}
+
+	if !loadBalancerNeeded {
+		if kubeService != nil {
+			return true, nil
+		}
+
+		// XXX: what needs to happen here?
+
+		return false, nil
 	}
 
 	spec, err := cp.kubeServiceSpec(address, service, serviceMeshPorts)
@@ -212,6 +228,9 @@ func (cp *DefaultLocalCloudProvider) getKubeService(address *latticev1.Address) 
 	// Try to find the kube service in the cache
 	kubeServiceName := serviceAddressKubeServiceLoadBalancerName(address)
 	kubeService, err := cp.kubeServiceLister.Services(address.Namespace).Get(kubeServiceName)
+	fmt.Printf("kubeServiceName: %v\naddress.Name: %v\naddress.Namespace: %v\n",
+		kubeServiceName, address.Name, address.Namespace)
+	fmt.Printf("getKubeServiceErr: %v\n", err)
 	if err != nil {
 		if !errors.IsNotFound(err) {
 			return nil, err
@@ -285,4 +304,16 @@ func serviceAddressKubeServiceStrategicMergePatchBytes(desired, current corev1.S
 
 func serviceAddressKubeServiceLoadBalancerName(address *latticev1.Address) string {
 	return fmt.Sprintf("load-balancer-address-%v", address.Name)
+}
+
+func serviceNeedsAddressLoadBalancer(service *latticev1.Service) bool {
+	for _, componentPorts := range service.Spec.Ports {
+		for _, componentPort := range componentPorts {
+			if componentPort.Public {
+				return true
+			}
+		}
+	}
+
+	return false
 }

@@ -33,9 +33,14 @@ GO_DEPENDENCIES = {
         },
         "github.com/docker/docker": {
             "name": "com_github_docker_docker",
-            # corresponds to docker v18.02.0-ce
-            "commit": "6e7715d65ba892a47d355e16bf9ad87fb537a2d0",
+            # corresponds to docker v18.05.0-ce
+            "commit": "1a57535aa277e0f2a3c1922c736551148c5b4351",
             "importpath": "github.com/docker/docker",
+        },
+        "github.com/envoyproxy/go-control-plane": {
+            "name": "com_github_envoyproxy_go_control_plane",
+            "tag": "v0.2",
+            "importpath": "github.com/envoyproxy/go-control-plane",
         },
         "github.com/fatih/color": {
             "name": "com_github_fatih_color",
@@ -164,9 +169,9 @@ GO_DEPENDENCIES = {
     # the corresponding release. Then go to components/engine and look at the most recent commit.
     # At the bottom of the commit message it should say what commit is was cherry picked from.
     # Go to github.com/moby/moby and go to that commit and check vendor.conf
-    # Taken from https://github.com/docker/docker-ce/tree/v18.02.0-ce/components/engine
-    #   -> https://github.com/docker/docker-ce/commit/ba58fe58e79ce9ae81b11a19ef072e734ae71046
-    #   -> https://github.com/moby/moby/blob/6e7715d65ba892a47d355e16bf9ad87fb537a2d0/vendor.conf
+    # Taken from https://github.com/docker/docker-ce/tree/v18.05.0-ce/components/engine
+    #   -> https://github.com/docker/docker-ce/commit/c1ef5d203fff0b7c86c403d614a1e81a014fae56
+    #   -> https://github.com/moby/moby/blob/1a57535aa277e0f2a3c1922c736551148c5b4351/vendor.conf
     "github.com/docker/docker": {
         "github.com/docker/distribution": {
             "name": "com_github_docker_distribution",
@@ -175,7 +180,7 @@ GO_DEPENDENCIES = {
         },
         "github.com/docker/go-connections": {
             "name": "com_github_docker_go_connections",
-            "commit": "3ede32e2033de7505e6500d6c868c2b9ed9f169d",
+            "commit": "7beb39f0b969b075d1325fecb092faf27fd357b6",
             "importpath": "github.com/docker/go-connections",
         },
         "github.com/docker/go-units": {
@@ -185,7 +190,7 @@ GO_DEPENDENCIES = {
         },
         "github.com/opencontainers/runc": {
             "name": "com_github_opencontainers_runc",
-            "commit": "9f9c96235cc97674e935002fc3d78361b696a69e",
+            "commit": "4fc53a81fb7c994640722ac585fa9ca548971871",
             "importpath": "github.com/opencontainers/runc",
         },
         "github.com/pkg/errors": {
@@ -200,7 +205,7 @@ GO_DEPENDENCIES = {
         },
         "github.com/opencontainers/go-digest": {
             "name": "com_github_opencontainers_go_digest",
-            "commit": "a6d0ee40d4207ea02364bd3b9e8e77b9159ba1eb",
+            "tag": "v1.0.0-rc1",
             "importpath": "github.com/opencontainers/go-digest",
         },
         "github.com/Nvveen/Gotty": {
@@ -233,8 +238,82 @@ GO_DEPENDENCIES = {
         # TODO: need to figure out the type alias issue (or see if docker updates their dependency)
         "golang.org/x/net": {
             "name": "org_golang_x_net",
-            "commit": "f01ecb60fe3835d80d9a0b7b2bf24b228c89260e",
+            "commit": "5561cd9b4330353950f399814f427425c0a26fd2",
             "importpath": "golang.org/x/net",
+        },
+    },
+
+    # commits taken from: https://github.com/envoyproxy/go-control-plane/blob/v0.2/glide.lock
+    "github.com/envoyproxy/go-control-plane": {
+        "github.com/envoyproxy/data-plane-api": {
+            "name": "com_github_envoyproxy_data_plane_api",
+            "commit": "22d98ce77228bde6984dfee38a285f501e748343",
+            "importpath": "github.com/envoyproxy/data-plane-api",
+        },
+        "github.com/gogo/googleapis": {
+            "name": "com_github_gogo_googleapis",
+            "commit": "0cd9801be74a10d5ac39d69626eac8255ffcd502",
+            "importpath": "github.com/gogo/googleapis",
+            "build_file_proto_mode": "disable",
+        },
+        # NOTE: included in k8s.io deps
+        "github.com/gogo/protobuf": {
+            "name": "com_github_gogo_protobuf",
+            "commit": "342cbe0a04158f6dcb03ca0079991a51a4248c02",
+            "importpath": "github.com/gogo/protobuf",
+            "build_file_proto_mode": "disable",
+        },
+        "github.com/golang/protobuf": {
+            "name": "com_github_golang_protobuf",
+            "commit": "ab9f9a6dab164b7d1246e0e688b0ab7b94d8553e",
+            "importpath": "github.com/golang/protobuf",
+        },
+        "github.com/lyft/protoc-gen-validate": {
+            "name": "com_github_lyft_protoc_gen_validate",
+            "commit": "cae364899cd8c08b83bfdcabf4ce4dd4a68ca6da",
+            "importpath": "github.com/lyft/protoc-gen-validate",
+            "build_file_proto_mode": "disable",
+        },
+        "github.com/sirupsen/logrus": {
+            "name": "com_github_sirupsen_logrus",
+            "commit": "c155da19408a8799da419ed3eeb0cb5db0ad5dbc",
+            "importpath": "github.com/sirupsen/logrus",
+        },
+        "golang.org/x/crypto": {
+            "name": "org_golang_x_crypto",
+            "commit": "5119cf507ed5294cc409c092980c7497ee5d6fd2",
+            "importpath": "golang.org/x/crypto",
+        },
+        # XXX: see note for issues with golang.org/x/net and docker above
+        # "golang.org/x/net": {
+        #     "name": "org_golang_x_net",
+        #     "commit": "5ccada7d0a7ba9aeb5d3aca8d3501b4c2a509fec",
+        #     "importpath": "golang.org/x/net",
+        # },
+        "golang.org/x/sys": {
+            "name": "org_golang_x_sys",
+            "commit": "37707fdb30a5b38865cfb95e5aab41707daec7fd",
+            "importpath": "golang.org/x/sys",
+        },
+        "golang.org/x/text": {
+            "name": "org_golang_x_text",
+            "commit": "e19ae1496984b1c655b8044a65c0300a3c878dd3",
+            "importpath": "golang.org/x/text",
+        },
+        "google.golang.org/genproto": {
+            "name": "org_golang_google_genproto",
+            "commit": "a8101f21cf983e773d0c1133ebc5424792003214",
+            "importpath": "google.golang.org/genproto",
+        },
+        "google.golang.org/grpc": {
+            "name": "org_golang_google_grpc",
+            "commit": "1e2570b1b19ade82d8dbb31bba4e65e9f9ef5b34",
+            "importpath": "google.golang.org/grpc",
+        },
+        "istio.io/gogo-genproto": {
+            "name": "io_istio_gogo_genproto",
+            "commit": "dd2b5b6a8f1400838165245e704a011a30154a44",
+            "importpath": "istio.io/gogo-genproto",
         },
     },
 
@@ -373,11 +452,12 @@ GO_DEPENDENCIES = {
             "commit": "1643683e1b54a9e88ad26d98f81400c8c9d9f4f9",
             "importpath": "github.com/golang/protobuf",
         },
-        "github.com/gogo/protobuf": {
-            "name": "com_github_gogo_protobuf",
-            "commit": "c0656edd0d9eab7c66d1eb0c568f9039345796f7",
-            "importpath": "github.com/gogo/protobuf",
-        },
+        # "github.com/gogo/protobuf": {
+        #     "name": "com_github_gogo_protobuf",
+        #     "commit": "c0656edd0d9eab7c66d1eb0c568f9039345796f7",
+        #     "importpath": "github.com/gogo/protobuf",
+        #     "build_file_proto_mode": "disable",
+        # },
         "github.com/google/btree": {
             "name": "com_github_google_btree",
             "commit": "7d79101e329e5a3adf994758c578dab82b90c017",

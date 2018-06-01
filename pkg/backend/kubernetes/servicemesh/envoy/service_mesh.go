@@ -29,6 +29,7 @@ const (
 	initContainerNamePrepareEnvoy = deploymentResourcePrefix + "prepare-envoy"
 	containerNameEnvoy            = deploymentResourcePrefix + "envoy"
 
+	xdsAPIVersion       = "2"
 	xdsAPI              = "xds-api"
 	labelKeyEnvoyXDSAPI = "envoy.servicemesh.lattice.mlab.com/xds-api"
 )
@@ -482,6 +483,10 @@ func (sm *DefaultEnvoyServiceMesh) envoyContainers(service *latticev1.Service) (
 			{
 				Name:  "ADMIN_PORT",
 				Value: adminPort,
+			},
+			{
+				Name:  "XDS_API_VERSION",
+				Value: xdsAPIVersion,
 			},
 			{
 				Name: "XDS_API_HOST",
