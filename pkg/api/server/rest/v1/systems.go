@@ -456,15 +456,12 @@ func serveLogFile(log io.ReadCloser, c *gin.Context) {
 	buff := make([]byte, 1024)
 
 	c.Stream(func(w io.Writer) bool {
-
 		n, err := log.Read(buff)
-
 		if err != nil {
 			return false
 		}
 
 		w.Write(buff[:n])
-
 		return true
 	})
 }
