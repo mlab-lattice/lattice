@@ -5,10 +5,9 @@ import (
 	"fmt"
 	"reflect"
 
+	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	kubeutil "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/kubernetes"
-	"github.com/mlab-lattice/lattice/pkg/definition/tree"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -26,7 +25,7 @@ type nodePoolInfo struct {
 	perInstance  bool
 
 	// shared system node pool options
-	path tree.NodePath
+	path v1.NodePoolPath
 }
 
 func (c *Controller) numInstances(service *latticev1.Service) (int32, error) {
@@ -80,7 +79,7 @@ func (c *Controller) nodePoolInfo(service *latticev1.Service) (nodePoolInfo, err
 	}
 
 	if resources.NodePool.NodePoolName != nil {
-		path, err := tree.NewNodePath(*resources.NodePool.NodePoolName)
+		path, err := v1.ParseNodePoolPath(*resources.NodePool.NodePoolName)
 		if err != nil {
 			err := fmt.Errorf("error parsing shared node pool path for %v: %v", service.Description(c.namespacePrefix), err)
 			return nodePoolInfo{}, err
@@ -103,13 +102,21 @@ func (c *Controller) syncServiceStatus(
 	deploymentStatus *deploymentStatus,
 	extraNodePoolsExist bool,
 ) (*latticev1.Service, error) {
-	state, message, failureInfo := serviceStatus(nodePool, address, deploymentStatus, extraNodePoolsExist)
+	currentEpochStable, err := c.currentEpochStable(nodePool)
+	if err != nil {
+		err := fmt.Errorf(
+			"error checking if current epoch for %v node pool is stable: %v",
+			service.Description(c.namespacePrefix),
+			err,
+		)
+		return nil, err
+	}
 
 	// we only update the deployment spec once the node pool is stable,
 	// so if it is not stable we don't need to update the service's node
 	// pool annotation
-	if nodePool.Stable() {
-		annotation, err := c.serviceNodePoolAnnotation(service, nodePool, state)
+	if currentEpochStable {
+		annotation, err := c.serviceNodePoolAnnotation(service, nodePool, deploymentStatus)
 		if err != nil {
 			return nil, err
 		}
@@ -120,6 +127,7 @@ func (c *Controller) syncServiceStatus(
 		}
 	}
 
+	state, message, failureInfo := serviceStatus(nodePool, address, deploymentStatus, extraNodePoolsExist)
 	return c.updateServiceStatus(
 		service,
 		state,
@@ -178,6 +186,11 @@ func serviceStatus(
 		return latticev1.ServiceStateFailed, nil, failureInfo
 	}
 
+	if nodePool == nil {
+		message := "node pool is pending"
+		return latticev1.ServiceStateUpdating, &message, nil
+	}
+
 	if !nodePool.Stable() {
 		message := fmt.Sprintf("node pool is %v", nodePool.Reason())
 		return latticev1.ServiceStateUpdating, &message, nil
@@ -212,21 +225,29 @@ func serviceStatus(
 func (c *Controller) serviceNodePoolAnnotation(
 	service *latticev1.Service,
 	nodePool *latticev1.NodePool,
-	state latticev1.ServiceState,
+	status *deploymentStatus,
 ) (latticev1.NodePoolAnnotationValue, error) {
 	newAnnotation := make(latticev1.NodePoolAnnotationValue)
-	existingAnnotation, err := service.NodePoolAnnotation()
-	if err != nil {
-		err := fmt.Errorf("error getting existing node pool annotation for %v: %v", service.Description(c.namespacePrefix), err)
-		return nil, err
-	}
 
-	// If the service is currently stable, then we are only running on the
+	// If the deployment is currently stable, then we are only running on the
 	// current epoch of the current node pool. If it's not stable we can't
 	// assume that we're fully off of previous node pools and epochs, so
 	// we have to include the values from the existing annotation.
-	if state != latticev1.ServiceStateStable {
+	if !status.Stable() {
+		fmt.Println("using old annotation")
+		existingAnnotation, err := service.NodePoolAnnotation()
+		if err != nil {
+			err := fmt.Errorf(
+				"error getting existing node pool annotation for %v: %v",
+				service.Description(c.namespacePrefix),
+				err,
+			)
+			return nil, err
+		}
+
 		newAnnotation = existingAnnotation
+	} else {
+		fmt.Println("using new annotation")
 	}
 
 	epoch, ok := nodePool.Status.Epochs.CurrentEpoch()

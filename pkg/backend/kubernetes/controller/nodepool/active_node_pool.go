@@ -15,10 +15,19 @@ func (c *Controller) syncActiveNodePool(nodePool *latticev1.NodePool) error {
 			return fmt.Errorf("could not get info for %v epoch %v", nodePool.Description(c.namespacePrefix), epoch)
 		}
 
+		status, err := c.cloudProvider.NodePoolEpochStatus(c.latticeID, nodePool, epoch, &epochInfo.Spec)
+		if err != nil {
+			return fmt.Errorf(
+				"error getting status for %v epoch %v: %v",
+				nodePool.Description(c.namespacePrefix),
+				epoch,
+				err,
+			)
+		}
+
 		epochs[epoch] = latticev1.NodePoolStatusEpoch{
-			NumInstances: epochInfo.NumInstances,
-			InstanceType: epochInfo.InstanceType,
-			State:        epochInfo.State,
+			Spec:   epochInfo.Spec,
+			Status: *status,
 		}
 	}
 
@@ -34,9 +43,10 @@ func (c *Controller) syncActiveNodePool(nodePool *latticev1.NodePool) error {
 	if needsNewEpoch {
 		epoch = nodePool.Status.Epochs.NextEpoch()
 		epochs[epoch] = latticev1.NodePoolStatusEpoch{
-			InstanceType: nodePool.Spec.InstanceType,
-			NumInstances: nodePool.Spec.NumInstances,
-			State:        latticev1.NodePoolStatePending,
+			Spec: nodePool.Spec,
+			Status: latticev1.NodePoolStatusEpochStatus{
+				State: latticev1.NodePoolStatePending,
+			},
 		}
 	} else {
 		var ok bool
@@ -46,6 +56,21 @@ func (c *Controller) syncActiveNodePool(nodePool *latticev1.NodePool) error {
 				"cloud provider reported that %v did not need new epoch, but it does not have a current epoch",
 				nodePool.Description(c.namespacePrefix),
 			)
+		}
+
+		status, err := c.cloudProvider.NodePoolEpochStatus(c.latticeID, nodePool, epoch, &nodePool.Spec)
+		if err != nil {
+			return fmt.Errorf(
+				"error getting status for %v epoch %v: %v",
+				nodePool.Description(c.namespacePrefix),
+				epoch,
+				err,
+			)
+		}
+
+		epochs[epoch] = latticev1.NodePoolStatusEpoch{
+			Spec:   nodePool.Spec,
+			Status: *status,
 		}
 	}
 
@@ -82,16 +107,26 @@ func (c *Controller) syncActiveNodePool(nodePool *latticev1.NodePool) error {
 		)
 	}
 
-	nodePool, err = c.updateNodePoolAnnotations(nodePool, annotations)
+	result, err := c.updateNodePoolAnnotations(nodePool, annotations)
 	if err != nil {
 		return fmt.Errorf("could not update %v annotations: %v", nodePool.Description(c.namespacePrefix), err)
 	}
 
+	nodePool = result
+	status, err := c.cloudProvider.NodePoolEpochStatus(c.latticeID, nodePool, epoch, &nodePool.Spec)
+	if err != nil {
+		return fmt.Errorf(
+			"error getting status for %v epoch %v: %v",
+			nodePool.Description(c.namespacePrefix),
+			epoch,
+			err,
+		)
+	}
+
 	// If we got to here, the node pool's current epoch is stable, so update the status to reflect that.
 	epochs[epoch] = latticev1.NodePoolStatusEpoch{
-		InstanceType: nodePool.Spec.InstanceType,
-		NumInstances: nodePool.Spec.NumInstances,
-		State:        latticev1.NodePoolStateStable,
+		Spec:   nodePool.Spec,
+		Status: *status,
 	}
 	nodePool, err = c.updateNodePoolStatus(nodePool, epochs)
 	if err != nil {

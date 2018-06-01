@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/mlab-lattice/lattice/pkg/definition"
+	"github.com/mlab-lattice/lattice/pkg/definition/block"
 )
 
 // The Node interface represents a Node in the tree of a System definition.
@@ -15,6 +16,7 @@ type Node interface {
 	Path() NodePath
 	Subsystems() map[NodePath]Node
 	Services() map[NodePath]*ServiceNode
+	NodePools() map[string]block.NodePool
 }
 
 func NewNode(d definition.Interface, parent Node) (Node, error) {
@@ -54,6 +56,22 @@ func NewNode(d definition.Interface, parent Node) (Node, error) {
 	}
 
 	return node, nil
+}
+
+func Walk(n Node, fn func(Node) error) error {
+	err := fn(n)
+	if err != nil {
+		return fmt.Errorf("error walking node %v: %v", n.Path().String(), err)
+	}
+
+	for _, subsystem := range n.Subsystems() {
+		err := Walk(subsystem, fn)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func getPath(parent Node, definition definition.Interface) NodePath {

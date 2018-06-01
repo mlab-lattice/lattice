@@ -15,6 +15,7 @@ go_library(
         "service_command.go",
         "system_command.go",
         "teardown_command.go",
+        "watch_flag.go",
     ],
     importpath = "github.com/mlab-lattice/lattice/pkg/latticectl",
     visibility = ["//visibility:public"],

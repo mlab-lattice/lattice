@@ -68,7 +68,7 @@ func NewLatticeProvisioner(workingDir string) (*DefaultLocalLatticeProvisioner, 
 	return provisioner, nil
 }
 
-func (p *DefaultLocalLatticeProvisioner) Provision(id v1.LatticeID, containerChannel string) (string, error) {
+func (p *DefaultLocalLatticeProvisioner) Provision(id v1.LatticeID, containerChannel string, apiAuthKey string) (string, error) {
 	prefixedName := clusterNamePrefixMinikube + string(id)
 	result, logFilename, err := p.mec.Start(prefixedName)
 	if err != nil {
@@ -87,7 +87,7 @@ func (p *DefaultLocalLatticeProvisioner) Provision(id v1.LatticeID, containerCha
 		return "", err
 	}
 
-	err = p.bootstrap(containerChannel, address, id)
+	err = p.bootstrap(containerChannel, address, apiAuthKey, id)
 	if err != nil {
 		return "", err
 	}
@@ -116,7 +116,7 @@ func (p *DefaultLocalLatticeProvisioner) address(id v1.LatticeID) (string, error
 	return fmt.Sprintf("http://%v", address), nil
 }
 
-func (p *DefaultLocalLatticeProvisioner) bootstrap(containerChannel, address string, id v1.LatticeID) error {
+func (p *DefaultLocalLatticeProvisioner) bootstrap(containerChannel, address string, apiAuthKey string, id v1.LatticeID) error {
 	fmt.Println("Bootstrapping")
 	usr, err := user.Current()
 	if err != nil {
@@ -261,6 +261,14 @@ func (p *DefaultLocalLatticeProvisioner) bootstrap(containerChannel, address str
 			job.Spec.Template.Spec.Containers[0].Args,
 			"--cloud-provider-var",
 			fmt.Sprintf("dns-var=dnsmasq-nanny-args=%v", arg),
+		)
+	}
+
+	// add api authentication key if specified
+	if apiAuthKey != "" {
+		job.Spec.Template.Spec.Containers[0].Args = append(
+			job.Spec.Template.Spec.Containers[0].Args,
+			"--api-var", fmt.Sprintf("args=--api-auth-key=%s", apiAuthKey),
 		)
 	}
 

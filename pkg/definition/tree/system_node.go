@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/mlab-lattice/lattice/pkg/definition"
+	"github.com/mlab-lattice/lattice/pkg/definition/block"
 )
 
 type SystemNode struct {
@@ -82,4 +83,8 @@ func (s *SystemNode) Services() map[NodePath]*ServiceNode {
 	}
 
 	return svcNodes
+}
+
+func (s *SystemNode) NodePools() map[string]block.NodePool {
+	return s.definition.NodePools()
 }

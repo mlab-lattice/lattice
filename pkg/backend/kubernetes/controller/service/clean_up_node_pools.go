@@ -16,7 +16,7 @@ func (c *Controller) cleanUpDedicatedNodePool(
 ) (bool, error) {
 	// If the deployment is ready, that means that it is fully stable on the most up to date
 	// epoch of the correct node pool, and no pods are running on any other node pool epochs.
-	if !deploymentStatus.Ready() {
+	if !deploymentStatus.Stable() {
 		return false, nil
 	}
 

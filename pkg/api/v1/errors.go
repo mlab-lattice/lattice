@@ -18,6 +18,7 @@ const (
 	ErrorCodeInvalidDeployID      ErrorCode = "INVALID_DEPLOY_ID"
 	ErrorCodeInvalidTeardownID    ErrorCode = "INVALID_TEARDOWN_ID"
 	ErrorCodeInvalidServicePath   ErrorCode = "INVALID_SERVICE_PATH"
+	ErrorCodeInvalidComponent     ErrorCode = "INVALID_COMPONENT"
 	ErrorCodeInvalidSystemSecret  ErrorCode = "INVALID_SYSTEM_SECRET"
 	ErrorCodeConflict             ErrorCode = "CONFLICT"
 )
@@ -175,6 +176,12 @@ func (e *InvalidTeardownIDError) Code() ErrorCode {
 	return ErrorCodeInvalidTeardownID
 }
 
+func NewInvalidServicePathError(path tree.NodePath) *InvalidServicePathError {
+	return &InvalidServicePathError{
+		Path: path,
+	}
+}
+
 type InvalidServicePathError struct {
 	Path tree.NodePath `json:"path"`
 }
@@ -185,6 +192,24 @@ func (e *InvalidServicePathError) Error() string {
 
 func (e *InvalidServicePathError) Code() ErrorCode {
 	return ErrorCodeInvalidServicePath
+}
+
+func NewInvalidComponentError(component string) *InvalidComponentError {
+	return &InvalidComponentError{
+		Component: component,
+	}
+}
+
+type InvalidComponentError struct {
+	Component string `json:"component"`
+}
+
+func (e *InvalidComponentError) Error() string {
+	return fmt.Sprintf("invalid component %v", e.Component)
+}
+
+func (e *InvalidComponentError) Code() ErrorCode {
+	return ErrorCodeInvalidComponent
 }
 
 func NewInvalidSystemSecretError(path tree.NodePath, name string) *InvalidSystemSecretError {

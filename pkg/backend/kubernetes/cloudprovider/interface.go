@@ -7,7 +7,7 @@ import (
 	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/cloudprovider/aws"
 	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/cloudprovider/local"
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
-	latticelisters "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/generated/listers/lattice/v1"
+	latticeinformers "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/generated/informers/externalversions"
 	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/dnsprovider"
 	systembootstrapper "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/lifecycle/system/bootstrap/bootstrapper"
 	"github.com/mlab-lattice/lattice/pkg/util/cli"
@@ -16,8 +16,8 @@ import (
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 
+	kubeinformers "k8s.io/client-go/informers"
 	kubeclientset "k8s.io/client-go/kubernetes"
-	corelisters "k8s.io/client-go/listers/core/v1"
 )
 
 type Interface interface {
@@ -73,6 +73,12 @@ type NodePool interface {
 	NodePoolNeedsNewEpoch(*latticev1.NodePool) (bool, error)
 	EnsureNodePoolEpoch(v1.LatticeID, *latticev1.NodePool, latticev1.NodePoolEpoch) error
 	DestroyNodePoolEpoch(v1.LatticeID, *latticev1.NodePool, latticev1.NodePoolEpoch) error
+	NodePoolEpochStatus(
+		latticeID v1.LatticeID,
+		nodePool *latticev1.NodePool,
+		epoch latticev1.NodePoolEpoch,
+		epochSpec *latticev1.NodePoolSpec,
+	) (*latticev1.NodePoolStatusEpochStatus, error)
 	NodePoolAddAnnotations(v1.LatticeID, *latticev1.NodePool, map[string]string, latticev1.NodePoolEpoch) error
 }
 
@@ -84,16 +90,27 @@ type Options struct {
 func NewCloudProvider(
 	namespacePrefix string,
 	kubeClient kubeclientset.Interface,
-	kubeServiceLister corelisters.ServiceLister,
-	nodePoolLister latticelisters.NodePoolLister,
+	kubeInformerFactory kubeinformers.SharedInformerFactory,
+	latticeInformerFactory latticeinformers.SharedInformerFactory,
 	options *Options,
 ) (Interface, error) {
 	if options.AWS != nil {
-		return aws.NewCloudProvider(namespacePrefix, kubeClient, kubeServiceLister, nodePoolLister, options.AWS), nil
+		return aws.NewCloudProvider(
+			namespacePrefix,
+			kubeClient,
+			kubeInformerFactory,
+			latticeInformerFactory,
+			options.AWS,
+		)
 	}
 
 	if options.Local != nil {
-		return local.NewCloudProvider(namespacePrefix, kubeClient, kubeServiceLister, options.Local), nil
+		return local.NewCloudProvider(
+			namespacePrefix,
+			kubeClient,
+			kubeInformerFactory,
+			options.Local,
+		)
 	}
 
 	return nil, fmt.Errorf("must provide cloud provider options")

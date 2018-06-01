@@ -22,7 +22,6 @@ import (
 // ListBuildsSupportedFormats is the list of printer.Formats supported
 // by the ListBuilds function.
 var ListBuildsSupportedFormats = []printer.Format{
-	printer.FormatDefault,
 	printer.FormatJSON,
 	printer.FormatTable,
 }
@@ -39,17 +38,15 @@ func (c *ListBuildsCommand) Base() (*latticectl.BaseCommand, error) {
 		SupportedFormats: ListBuildsSupportedFormats,
 	}
 	var watch bool
+	watchFlag := &latticectl.WatchFlag{
+		Target: &watch,
+	}
 
 	cmd := &latticectl.SystemCommand{
 		Name: "builds",
 		Flags: cli.Flags{
 			output.Flag(),
-			&cli.BoolFlag{
-				Name:    "watch",
-				Short:   "w",
-				Default: false,
-				Target:  &watch,
-			},
+			watchFlag.Flag(),
 		},
 		Run: func(ctx latticectl.SystemCommandContext, args []string) {
 			format, err := output.Value()
@@ -121,7 +118,7 @@ func WatchBuilds(client v1client.BuildClient, format printer.Format, writer io.W
 func buildsPrinter(builds []v1.Build, format printer.Format) printer.Interface {
 	var p printer.Interface
 	switch format {
-	case printer.FormatDefault, printer.FormatTable:
+	case printer.FormatTable:
 		headers := []string{"ID", "Started At", "Completed At", "Version", "State"}
 
 		headerColors := []tw.Colors{

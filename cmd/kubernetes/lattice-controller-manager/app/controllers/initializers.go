@@ -38,11 +38,8 @@ func initializeAddressController(ctx Context) {
 		ctx.ServiceMeshOptions,
 		ctx.KubeClientBuilder.ClientOrDie(controllerName(AddressController)),
 		ctx.LatticeClientBuilder.ClientOrDie(controllerName(AddressController)),
-		ctx.LatticeInformerFactory.Lattice().V1().Configs(),
-		ctx.LatticeInformerFactory.Lattice().V1().Addresses(),
-		ctx.LatticeInformerFactory.Lattice().V1().Services(),
-		ctx.KubeInformerFactory.Core().V1().Services(),
-		ctx.LatticeInformerFactory.Lattice().V1().NodePools(),
+		ctx.KubeInformerFactory,
+		ctx.LatticeInformerFactory,
 	).Run(4, ctx.Stop)
 }
 
@@ -61,9 +58,8 @@ func initializeComponentBuildController(ctx Context) {
 		ctx.CloudProviderOptions,
 		ctx.KubeClientBuilder.ClientOrDie(controllerName(ComponentBuildController)),
 		ctx.LatticeClientBuilder.ClientOrDie(controllerName(ComponentBuildController)),
-		ctx.LatticeInformerFactory.Lattice().V1().Configs(),
-		ctx.LatticeInformerFactory.Lattice().V1().ComponentBuilds(),
-		ctx.KubeInformerFactory.Batch().V1().Jobs(),
+		ctx.KubeInformerFactory,
+		ctx.LatticeInformerFactory,
 	).Run(4, ctx.Stop)
 }
 
@@ -72,10 +68,10 @@ func initializeNodePoolController(ctx Context) {
 		ctx.NamespacePrefix,
 		ctx.LatticeID,
 		ctx.CloudProviderOptions,
+		ctx.KubeClientBuilder.ClientOrDie(controllerName(NodePoolController)),
 		ctx.LatticeClientBuilder.ClientOrDie(controllerName(NodePoolController)),
-		ctx.LatticeInformerFactory.Lattice().V1().Configs(),
-		ctx.LatticeInformerFactory.Lattice().V1().NodePools(),
-		ctx.LatticeInformerFactory.Lattice().V1().Services(),
+		ctx.KubeInformerFactory,
+		ctx.LatticeInformerFactory,
 	).Run(4, ctx.Stop)
 }
 
@@ -88,13 +84,8 @@ func initializeServiceController(ctx Context) {
 		ctx.ServiceMeshOptions,
 		ctx.KubeClientBuilder.ClientOrDie(controllerName(ServiceController)),
 		ctx.LatticeClientBuilder.ClientOrDie(controllerName(ServiceController)),
-		ctx.LatticeInformerFactory.Lattice().V1().Configs(),
-		ctx.LatticeInformerFactory.Lattice().V1().Services(),
-		ctx.LatticeInformerFactory.Lattice().V1().Addresses(),
-		ctx.LatticeInformerFactory.Lattice().V1().NodePools(),
-		ctx.KubeInformerFactory.Apps().V1().Deployments(),
-		ctx.KubeInformerFactory.Core().V1().Pods(),
-		ctx.KubeInformerFactory.Core().V1().Services(),
+		ctx.KubeInformerFactory,
+		ctx.LatticeInformerFactory,
 	).Run(4, ctx.Stop)
 }
 
@@ -115,10 +106,8 @@ func initializeSystemController(ctx Context) {
 		ctx.ServiceMeshOptions,
 		ctx.KubeClientBuilder.ClientOrDie(controllerName(SystemController)),
 		ctx.LatticeClientBuilder.ClientOrDie(controllerName(SystemController)),
-		ctx.LatticeInformerFactory.Lattice().V1().Configs(),
-		ctx.LatticeInformerFactory.Lattice().V1().Systems(),
-		ctx.LatticeInformerFactory.Lattice().V1().Services(),
-		ctx.KubeInformerFactory.Core().V1().Namespaces(),
+		ctx.KubeInformerFactory,
+		ctx.LatticeInformerFactory,
 	).Run(4, ctx.Stop)
 }
 

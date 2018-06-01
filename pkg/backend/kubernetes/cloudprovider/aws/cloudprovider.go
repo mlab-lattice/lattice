@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
+	latticeinformers "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/generated/informers/externalversions"
 	latticelisters "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/generated/listers/lattice/v1"
 	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/lifecycle/system/bootstrap/bootstrapper"
 	"github.com/mlab-lattice/lattice/pkg/util/cli"
@@ -13,8 +14,12 @@ import (
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/session"
+	kubeinformers "k8s.io/client-go/informers"
 	kubeclientset "k8s.io/client-go/kubernetes"
 	corelisters "k8s.io/client-go/listers/core/v1"
+	"k8s.io/client-go/tools/cache"
 )
 
 const (
@@ -61,12 +66,19 @@ func NewOptions(staticOptions *Options, dynamicConfig *latticev1.ConfigCloudProv
 func NewCloudProvider(
 	namespacePrefix string,
 	kubeClient kubeclientset.Interface,
-	kubeServiceLister corelisters.ServiceLister,
-	nodePoolLister latticelisters.NodePoolLister,
+	kubeInformerFactory kubeinformers.SharedInformerFactory,
+	latticeInformerFactory latticeinformers.SharedInformerFactory,
 	options *Options,
-) *DefaultAWSCloudProvider {
-	return &DefaultAWSCloudProvider{
+) (*DefaultAWSCloudProvider, error) {
+	s, err := session.NewSession(&aws.Config{Region: &options.Region})
+	if err != nil {
+		return nil, err
+	}
+
+	cp := &DefaultAWSCloudProvider{
 		namespacePrefix: namespacePrefix,
+
+		session: s,
 
 		region:    options.Region,
 		accountID: options.AccountID,
@@ -83,10 +95,30 @@ func NewCloudProvider(
 		terraformBackendOptions: options.TerraformBackendOptions,
 
 		kubeClient:        kubeClient,
-		kubeServiceLister: kubeServiceLister,
+		kubeServiceLister: kubeInformerFactory.Core().V1().Services().Lister(),
+		kubeNodeLister:    kubeInformerFactory.Core().V1().Nodes().Lister(),
 
-		nodePoolLister: nodePoolLister,
+		nodePoolLister: latticeInformerFactory.Lattice().V1().NodePools().Lister(),
 	}
+
+	// shared informer factories only start informers which have been referenced
+	// by the time start is called
+	// so we'll start the factories back up here in case the factories were started
+	// before without having these listers referenced
+	kubeInformerFactory.Start(nil)
+	latticeInformerFactory.Start(nil)
+
+	// wait for secondary caches to fill
+	if !cache.WaitForCacheSync(
+		nil,
+		kubeInformerFactory.Core().V1().Nodes().Informer().HasSynced,
+		kubeInformerFactory.Core().V1().Services().Informer().HasSynced,
+		latticeInformerFactory.Lattice().V1().NodePools().Informer().HasSynced,
+	) {
+		return nil, fmt.Errorf("failed to sync caches for aws cloud provider")
+	}
+
+	return cp, nil
 }
 
 func Flags() (cli.Flags, *Options) {
@@ -146,6 +178,8 @@ func Flags() (cli.Flags, *Options) {
 type DefaultAWSCloudProvider struct {
 	namespacePrefix string
 
+	session *session.Session
+
 	region    string
 	accountID string
 	vpcID     string
@@ -160,8 +194,10 @@ type DefaultAWSCloudProvider struct {
 	terraformModulePath     string
 	terraformBackendOptions *terraform.BackendOptions
 
-	kubeClient        kubeclientset.Interface
+	kubeClient kubeclientset.Interface
+
 	kubeServiceLister corelisters.ServiceLister
+	kubeNodeLister    corelisters.NodeLister
 
 	nodePoolLister latticelisters.NodePoolLister
 }

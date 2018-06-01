@@ -2,12 +2,18 @@ package backend
 
 import (
 	"fmt"
+	"io"
+
+	"strings"
 
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
+	kubeutil "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/kubernetes"
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
-
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/selection"
 )
 
 func (kb *KubernetesBackend) ListServices(systemID v1.SystemID) ([]v1.Service, error) {
@@ -29,7 +35,7 @@ func (kb *KubernetesBackend) ListServices(systemID v1.SystemID) ([]v1.Service, e
 			return nil, err
 		}
 
-		externalService, err := kb.transformService(service.Name, servicePath, &service.Status)
+		externalService, err := kb.transformService(service.Name, servicePath, &service.Status, namespace)
 		if err != nil {
 			return nil, err
 		}
@@ -40,23 +46,25 @@ func (kb *KubernetesBackend) ListServices(systemID v1.SystemID) ([]v1.Service, e
 	return externalServices, nil
 }
 
-func (kb *KubernetesBackend) GetService(systemID v1.SystemID, path tree.NodePath) (*v1.Service, error) {
+func (kb *KubernetesBackend) GetService(systemID v1.SystemID, serviceID v1.ServiceID) (*v1.Service, error) {
 	// ensure the system exists
 	if _, err := kb.ensureSystemCreated(systemID); err != nil {
 		return nil, err
 	}
 
 	namespace := kb.systemNamespace(systemID)
-	service, err := kb.latticeClient.LatticeV1().Services(namespace).Get(path.ToDomain(), metav1.GetOptions{})
+	service, err := kb.latticeClient.LatticeV1().Services(namespace).Get(string(serviceID), metav1.GetOptions{})
 	if err != nil {
 		return nil, err
 	}
 
-	servicePath, err := tree.NodePathFromDomain(service.Name)
+	servicePath, err := service.PathLabel()
+
 	if err != nil {
 		return nil, err
 	}
-	externalService, err := kb.transformService(service.Name, servicePath, &service.Status)
+
+	externalService, err := kb.transformService(service.Name, servicePath, &service.Status, namespace)
 	if err != nil {
 		return nil, err
 	}
@@ -64,7 +72,116 @@ func (kb *KubernetesBackend) GetService(systemID v1.SystemID, path tree.NodePath
 	return &externalService, nil
 }
 
-func (kb *KubernetesBackend) transformService(id string, path tree.NodePath, status *latticev1.ServiceStatus) (v1.Service, error) {
+func (kb *KubernetesBackend) GetServiceByPath(systemID v1.SystemID, path tree.NodePath) (*v1.Service, error) {
+	// ensure the system exists
+	if _, err := kb.ensureSystemCreated(systemID); err != nil {
+		return nil, err
+	}
+
+	namespace := kb.systemNamespace(systemID)
+
+	selector := labels.NewSelector()
+	requirement, err := labels.NewRequirement(latticev1.ServicePathLabelKey, selection.Equals, []string{path.ToDomain()})
+
+	if err != nil {
+		return nil, fmt.Errorf("error getting selector for  service %v in namespace %v", path.String(), namespace)
+	}
+
+	selector = selector.Add(*requirement)
+
+	services, err := kb.latticeClient.LatticeV1().Services(namespace).List(
+		metav1.ListOptions{LabelSelector: selector.String()})
+
+	if err != nil {
+		return nil, err
+	}
+
+	if len(services.Items) == 0 {
+		return nil, nil
+	}
+
+	// ensure result is a singleton
+
+	if len(services.Items) > 1 {
+		return nil, fmt.Errorf("found multiple services with path %v in namespace %v", path.String(), namespace)
+	}
+
+	service := services.Items[0]
+	externalService, err := kb.transformService(service.Name, path, &service.Status, namespace)
+	if err != nil {
+		return nil, err
+	}
+
+	return &externalService, nil
+
+}
+func (kb *KubernetesBackend) ServiceLogs(systemID v1.SystemID, serviceID v1.ServiceID, component string,
+	instance string, follow bool) (io.ReadCloser, error) {
+	// Ensure the system exists
+	if _, err := kb.ensureSystemCreated(systemID); err != nil {
+		return nil, err
+	}
+
+	namespace := kb.systemNamespace(systemID)
+
+	_, err := kb.latticeClient.LatticeV1().Services(namespace).Get(string(serviceID), metav1.GetOptions{})
+	if err != nil {
+		return nil, err
+	}
+
+	pod, err := kb.findServicePod(serviceID, instance, namespace)
+
+	if err != nil {
+		return nil, err
+	}
+
+	container := kubeutil.UserResourcePrefix + component
+	logOptions := &corev1.PodLogOptions{Follow: follow, Container: container}
+
+	req := kb.kubeClient.CoreV1().Pods(namespace).GetLogs(pod.Name, logOptions)
+	return req.Stream()
+
+}
+
+// findServicePod finds service pod by instance id or service's single pod if id was not specified
+func (kb *KubernetesBackend) findServicePod(serviceId v1.ServiceID, instance string, namespace string) (*corev1.Pod, error) {
+
+	// check if instance was specified
+	if instance != "" {
+		podName := toServiceInstanceFullID(serviceId, instance)
+		pod, err := kb.kubeClient.CoreV1().Pods(namespace).Get(podName, metav1.GetOptions{})
+		if err != nil {
+			return nil, fmt.Errorf("error fetching pod for instance %v/%v", namespace, podName)
+		}
+		return pod, nil
+	}
+
+	selector := labels.NewSelector()
+	requirement, err := labels.NewRequirement(latticev1.ServiceIDLabelKey, selection.Equals, []string{string(serviceId)})
+	if err != nil {
+		return nil, fmt.Errorf("error creating requirement for %v/%v job lookup: %v", namespace, serviceId, err)
+	}
+
+	selector = selector.Add(*requirement)
+	pods, err := kb.kubeClient.CoreV1().Pods(namespace).List(metav1.ListOptions{LabelSelector: selector.String()})
+	if err != nil {
+		return nil, err
+	}
+
+	if len(pods.Items) > 1 {
+		return nil, fmt.Errorf("found multiple pods for %v/%v. Need to specify an instance", namespace, serviceId)
+	}
+
+	if len(pods.Items) == 0 {
+		return nil, fmt.Errorf("no pods for %v/%v", namespace, serviceId)
+	}
+
+	return &pods.Items[0], nil
+
+}
+
+func (kb *KubernetesBackend) transformService(id string, path tree.NodePath, status *latticev1.ServiceStatus,
+	namespace string) (v1.Service, error) {
 	state, err := getServiceState(status.State)
 	if err != nil {
 		return v1.Service{}, err
@@ -87,8 +204,16 @@ func (kb *KubernetesBackend) transformService(id string, path tree.NodePath, sta
 		}
 	}
 
+	// get service instances
+
+	instances, err := kb.getServiceInstances(v1.ServiceID(id), namespace)
+
+	if err != nil {
+		return v1.Service{}, err
+	}
+
 	service := v1.Service{
-		ID:   id,
+		ID:   v1.ServiceID(id),
 		Path: path,
 
 		State:       state,
@@ -100,7 +225,8 @@ func (kb *KubernetesBackend) transformService(id string, path tree.NodePath, sta
 		StaleInstances:       status.StaleInstances,
 		TerminatingInstances: status.TerminatingInstances,
 
-		Ports: status.Ports,
+		Ports:     status.Ports,
+		Instances: instances,
 	}
 
 	return service, nil
@@ -124,4 +250,37 @@ func getServiceState(state latticev1.ServiceState) (v1.ServiceState, error) {
 	default:
 		return "", fmt.Errorf("invalid service state: %v", state)
 	}
+}
+
+func (kb *KubernetesBackend) getServiceInstances(serviceID v1.ServiceID, namespace string) ([]string, error) {
+
+	selector := labels.NewSelector()
+	requirement, err := labels.NewRequirement(latticev1.ServiceIDLabelKey, selection.Equals, []string{string(serviceID)})
+	if err != nil {
+		return nil, fmt.Errorf("error creating requirement for service '%v' instances lookup: %v", serviceID, err)
+	}
+
+	selector = selector.Add(*requirement)
+	pods, err := kb.kubeClient.CoreV1().Pods(namespace).List(metav1.ListOptions{LabelSelector: selector.String()})
+	if err != nil {
+		return nil, err
+	}
+
+	instances := make([]string, len(pods.Items))
+
+	for i, podItem := range pods.Items {
+		instances[i] = toServiceInstanceShortID(serviceID, podItem.Name)
+	}
+
+	return instances, nil
+}
+
+func toServiceInstanceShortID(serviceID v1.ServiceID, podName string) string {
+	// TODO Reuse existing deployment naming utilties
+	return strings.TrimPrefix(podName, "lattice-service-"+string(serviceID)+"-")
+}
+
+func toServiceInstanceFullID(serviceID v1.ServiceID, podName string) string {
+	// TODO Reuse existing deployment naming utilities
+	return "lattice-service-" + string(serviceID) + "-" + podName
 }

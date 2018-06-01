@@ -10,4 +10,6 @@ const (
 	ServiceBuildControllerFinalizer = "servicebuild." + controllerLabel + finalizerSuffix
 	ServiceControllerFinalizer      = "service." + controllerLabel + finalizerSuffix
 	SystemControllerFinalizer       = "system." + controllerLabel + finalizerSuffix
+
+	UserResourcePrefix = "lattice-user-"
 )

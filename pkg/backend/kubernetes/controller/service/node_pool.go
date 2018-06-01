@@ -9,8 +9,9 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
 
-	"github.com/satori/go.uuid"
 	"reflect"
+
+	"github.com/satori/go.uuid"
 )
 
 // dedicatedNodePool returns a dedicated node pool for the service that has the same instanceType.
@@ -168,15 +169,15 @@ func (c *Controller) nodePoolServices(nodePool *latticev1.NodePool) ([]latticev1
 
 		var nodePoolServices []latticev1.Service
 		for _, service := range services {
-			nodePools, err := service.NodePoolAnnotation()
-			if err != nil {
-				// FIXME: log/send warn event
-				continue
-			}
+			// FIXME: this method was not working for services that had not yet annotated themselves
+			//nodePools, err := service.NodePoolAnnotation()
+			//if err != nil {
+			//	continue
+			//}
 
-			if nodePools.ContainsNodePool(nodePool.Namespace, nodePool.Name) {
-				nodePoolServices = append(nodePoolServices, *service)
-			}
+			//if nodePools.ContainsNodePool(nodePool.Namespace, nodePool.Name) {
+			nodePoolServices = append(nodePoolServices, *service)
+			//}
 		}
 		return nodePoolServices, nil
 	}
@@ -244,4 +245,31 @@ func nodePoolSpec(numInstances int32, instanceType string) latticev1.NodePoolSpe
 		NumInstances: numInstances,
 		InstanceType: instanceType,
 	}
+}
+
+func (c *Controller) currentEpochStable(nodePool *latticev1.NodePool) (bool, error) {
+	if nodePool == nil || !nodePool.UpdateProcessed() {
+		return false, nil
+	}
+
+	currentEpoch, ok := nodePool.Status.Epochs.CurrentEpoch()
+	if !ok {
+		err := fmt.Errorf(
+			"%v is processed but does not have a current epoch",
+			nodePool.Description(c.namespacePrefix),
+		)
+		return false, err
+	}
+
+	epochStatus, ok := nodePool.Status.Epochs.Epoch(currentEpoch)
+	if !ok {
+		err := fmt.Errorf(
+			"%v claims to have current epoch %v but does not have a status for it",
+			nodePool.Description(c.namespacePrefix),
+			currentEpoch,
+		)
+		return false, err
+	}
+
+	return epochStatus.Status.State == latticev1.NodePoolStateStable, nil
 }
