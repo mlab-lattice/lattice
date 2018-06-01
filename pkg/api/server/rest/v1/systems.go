@@ -6,8 +6,6 @@ import (
 	"net/url"
 	"strings"
 
-	"bufio"
-
 	v1server "github.com/mlab-lattice/lattice/pkg/api/server/v1"
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	v1rest "github.com/mlab-lattice/lattice/pkg/api/v1/rest"
@@ -204,7 +202,7 @@ func mountBuildHandlers(router *gin.RouterGroup, backend v1server.Interface, sys
 			return
 		}
 
-		serveLogFile(log, follow, c)
+		serveLogFile(log, c)
 	})
 }
 
@@ -446,28 +444,24 @@ func mountServiceHandlers(router *gin.RouterGroup, backend v1server.Interface) {
 			return
 		}
 
-		serveLogFile(log, follow, c)
+		serveLogFile(log, c)
 
 	})
 }
 
 // serveLogFile
-func serveLogFile(log io.ReadCloser, follow bool, c *gin.Context) {
+func serveLogFile(log io.ReadCloser, c *gin.Context) {
 	defer log.Close()
-	scanner := bufio.NewScanner(log)
-	if !follow {
-		for scanner.Scan() {
-			c.Writer.Write(scanner.Bytes())
-		}
 
-		return
-	}
+	buff := make([]byte, 1024)
 
 	c.Stream(func(w io.Writer) bool {
-		if scanner.Scan() {
-			w.Write(scanner.Bytes())
+		n, err := log.Read(buff)
+		if err != nil {
+			return false
 		}
 
+		w.Write(buff[:n])
 		return true
 	})
 }
