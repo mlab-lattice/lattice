@@ -7,44 +7,46 @@ import (
 	"github.com/mlab-lattice/lattice/pkg/definition/block"
 )
 
-type System interface {
-	Interface
-	NodePools() map[string]block.NodePool
-	Subsystems() []Interface
+// Note: if you change anything here, update systemEncoder as well
+type System struct {
+	Type        string `json:"type"`
+	Name        string `json:"name"`
+	Description string `json:"description"`
+
+	NodePools  map[string]block.NodePool `json:"node_pools"`
+	Subsystems []interface{}             `json:"subsystems"`
 }
 
-type SystemValidator interface {
-	Validate(System) error
-}
-
-func NewSystemFromJSON(data []byte) (System, error) {
-	var decoded systemEncoder
-	if err := json.Unmarshal(data, &decoded); err != nil {
-		return nil, err
+func (s *System) UnmarshalJSON(data []byte) error {
+	var e *systemEncoder
+	if err := json.Unmarshal(data, &e); err != nil {
+		return err
 	}
 
-	if decoded.Type != TypeSystem {
-		return nil, fmt.Errorf("system type must be %v", TypeSystem)
+	if e.Type != TypeSystem {
+		return fmt.Errorf("expected type to be %v but got %v", TypeSystem, e.Type)
 	}
 
-	var subsystems []Interface
-	for _, subsystemJSON := range decoded.Subsystems {
+	var subsystems []interface{}
+	for _, subsystemJSON := range e.Subsystems {
 		subsystem, err := NewFromJSON(subsystemJSON)
 		if err != nil {
-			return nil, err
+			return err
 		}
 
 		subsystems = append(subsystems, subsystem)
 	}
 
-	s := &system{
-		name:        decoded.Name,
-		description: decoded.Description,
+	system := &System{
+		Type:        e.Type,
+		Name:        e.Name,
+		Description: e.Description,
 
-		nodePools:  decoded.NodePools,
-		subsystems: subsystems,
+		NodePools:  e.NodePools,
+		Subsystems: subsystems,
 	}
-	return s, nil
+	*s = *system
+	return nil
 }
 
 type systemEncoder struct {
@@ -54,54 +56,4 @@ type systemEncoder struct {
 
 	NodePools  map[string]block.NodePool `json:"node_pools"`
 	Subsystems []json.RawMessage         `json:"subsystems"`
-}
-
-type system struct {
-	name        string
-	description string
-
-	nodePools  map[string]block.NodePool
-	subsystems []Interface
-}
-
-func (s *system) Type() string {
-	return TypeSystem
-}
-
-func (s *system) Name() string {
-	return s.name
-}
-
-func (s *system) Description() string {
-	return s.description
-}
-
-func (s *system) NodePools() map[string]block.NodePool {
-	return s.nodePools
-}
-
-func (s *system) Subsystems() []Interface {
-	return s.subsystems
-}
-
-func (s *system) MarshalJSON() ([]byte, error) {
-	var subsystems []json.RawMessage
-	for _, subsystem := range s.subsystems {
-		subsystemJSON, err := json.Marshal(subsystem)
-		if err != nil {
-			return nil, err
-		}
-
-		subsystems = append(subsystems, subsystemJSON)
-	}
-
-	encoder := systemEncoder{
-		Type:        TypeSystem,
-		Name:        s.name,
-		Description: s.description,
-		NodePools:   s.nodePools,
-		Subsystems:  subsystems,
-	}
-
-	return json.Marshal(&encoder)
 }

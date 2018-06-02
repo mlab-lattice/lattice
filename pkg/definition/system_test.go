@@ -6,6 +6,7 @@ import (
 
 	//"github.com/mlab-lattice/lattice/pkg/definition/block"
 	//"github.com/mlab-lattice/lattice/pkg/definition/block/mock"
+	"encoding/json"
 	jsonutil "github.com/mlab-lattice/lattice/pkg/util/json"
 )
 
@@ -13,14 +14,14 @@ func Test_NewSystemFromJSON(t *testing.T) {
 	valid := []fromJSONTest{
 		{
 			description: "only type and name",
-			bytes:       systemExpectedJSON(quoted(TypeSystem), quoted("system"), nil),
+			bytes:       systemExpectedJSON(quoted(TypeSystem), quoted("System"), nil),
 			additionalTests: []additionalFromJSONTest{
 				{
 					description: "check attributes",
 					test: func(result interface{}) error {
-						system := result.(System)
+						system := result.(*System)
 
-						subsystems := system.Subsystems()
+						subsystems := system.Subsystems
 						if subsystems != nil {
 							return fmt.Errorf("expected Subsystems() to be nil but got %#v", subsystems)
 						}
@@ -119,27 +120,29 @@ func Test_NewSystemFromJSON(t *testing.T) {
 	}
 
 	expectFromJSONSuccesses(t, valid, func(data []byte) (interface{}, error) {
-		system, err := NewSystemFromJSON(data)
+		var system *System
+		err := json.Unmarshal(data, &system)
 		return interface{}(system), err
 	})
 
 	invalid := []fromJSONTest{
 		{
 			description: "invalid type",
-			bytes:       serviceExpectedJSON(quoted(TypeService), nil, nil, nil, nil),
+			bytes:       serviceExpectedJSON(quoted(TypeService), nil, nil, nil),
 		},
 		{
 			description: "no type",
-			bytes:       serviceExpectedJSON(nil, nil, nil, nil, nil),
+			bytes:       serviceExpectedJSON(nil, nil, nil, nil),
 		},
 		{
 			description: "emptystring type",
-			bytes:       serviceExpectedJSON(quoted("\"\""), nil, nil, nil, nil),
+			bytes:       serviceExpectedJSON(quoted("\"\""), nil, nil, nil),
 		},
 	}
 
 	expectFromJSONFailures(t, invalid, func(data []byte) (interface{}, error) {
-		system, err := NewSystemFromJSON(data)
+		var system *System
+		err := json.Unmarshal(data, &system)
 		return interface{}(system), err
 	})
 }

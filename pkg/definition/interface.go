@@ -10,18 +10,7 @@ const (
 	TypeService = "service"
 )
 
-type Interface interface {
-	Type() string
-	Name() string
-	Description() string
-	json.Marshaler
-}
-
-type Validator interface {
-	Validate(Interface) error
-}
-
-func NewFromJSON(data []byte) (Interface, error) {
+func NewFromJSON(data []byte) (interface{}, error) {
 	var decoded typeDecoder
 	if err := json.Unmarshal(data, &decoded); err != nil {
 		return nil, err
@@ -31,32 +20,30 @@ func NewFromJSON(data []byte) (Interface, error) {
 		return nil, fmt.Errorf("definition must have a type")
 	}
 
-	var definition Interface
 	switch decoded.Type {
 	case TypeSystem:
-		system, err := NewSystemFromJSON(data)
+		var system *System
+		err := json.Unmarshal(data, &system)
 		if err != nil {
 			return nil, err
 		}
 
-		definition = system.(Interface)
+		return system, nil
 
 	case TypeService:
-		service, err := NewServiceFromJSON(data)
+		var service *Service
+		err := json.Unmarshal(data, &service)
 		if err != nil {
 			return nil, err
 		}
 
-		definition = service.(Interface)
+		return service, nil
 
 	default:
 		return nil, fmt.Errorf("unsupported definition type: %v", decoded.Type)
 	}
-
-	return definition, nil
 }
 
 type typeDecoder struct {
-	Type      string `json:"type"`
-	Remainder json.RawMessage
+	Type string `json:"type"`
 }

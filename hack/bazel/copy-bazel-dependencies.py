@@ -5,6 +5,7 @@ import traceback
 import os
 import shutil
 import json
+from subprocess import call
 
 FORCE = False
 ########################################################################################################################
@@ -54,16 +55,8 @@ def copy_dependency_to_gopath(dependency):
     dest = get_dependency_destination_gopath(dependency)
 
     try:
-        if os.path.exists(dest):
-            print "Already exists %s"\
-                  % dest
-            if FORCE:
-                print "Replacing..."
-                shutil.rmtree(dest)
-            else:
-                return
         print "Copying %s from '%s' to '%s'" % (dependency["name"], src, dest)
-        shutil.copytree(src, dest)
+        call(["go", "get", "-d", dependency["importpath"]])
     except Exception as ex:
         print "ERROR: %s" % ex
 

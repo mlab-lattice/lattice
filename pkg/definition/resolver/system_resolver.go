@@ -8,6 +8,8 @@ import (
 	"github.com/mlab-lattice/lattice/pkg/definition/template/language"
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 	"github.com/mlab-lattice/lattice/pkg/util/git"
+	"os"
+	"reflect"
 )
 
 // SystemResolver resolves system definitions from different sources such as git
@@ -65,16 +67,14 @@ func (resolver *SystemResolver) ListDefinitionVersions(uri string, gitResolveOpt
 
 // readNodeFromFile reads a definition node from a file
 func (resolver *SystemResolver) readNodeFromFile(ctx *resolveContext) (tree.Node, error) {
-
 	engine := language.NewEngine()
-	options, err := language.CreateOptions(resolver.gitResolver.WorkDirectory, ctx.gitResolveOptions)
 
+	options, err := language.CreateOptions(resolver.gitResolver.WorkDirectory, ctx.gitResolveOptions)
 	if err != nil {
 		return nil, err
 	}
 
 	result, err := engine.EvalFromURL(ctx.gitURI, make(map[string]interface{}), options)
-
 	if err != nil {
 		return nil, err
 	}
@@ -84,13 +84,19 @@ func (resolver *SystemResolver) readNodeFromFile(ctx *resolveContext) (tree.Node
 		return nil, err
 	}
 
-	defInterface, err := definition.NewFromJSON(jsonBytes)
-
+	def, err := definition.NewFromJSON(jsonBytes)
 	if err != nil {
 		return nil, err
 	}
 
-	return tree.NewNode(defInterface, nil)
+	fmt.Fprintf(os.Stderr, "struct: (%v) %#v\n", reflect.TypeOf(def), def)
+	n, err := tree.NewNode(def, nil)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "failure: %v\n", err)
+	} else {
+		fmt.Fprintf(os.Stderr, "success\n")
+	}
+	return n, err
 }
 
 // lists the tags in a repo

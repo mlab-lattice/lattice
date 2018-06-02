@@ -7,95 +7,46 @@ import (
 	"github.com/mlab-lattice/lattice/pkg/definition/block"
 )
 
-type Service interface {
-	Interface
-	Volumes() []*block.Volume
-	Components() []*block.Component
-	Resources() block.Resources
-	Secrets() map[string]block.Secret
+// Note: if you change anything here, update serviceEncoder as well
+type Service struct {
+	Type        string `json:"type"`
+	Name        string `json:"name"`
+	Description string `json:"description"`
+
+	Components []block.Component       `json:"components"`
+	Resources  block.Resources         `json:"resources"`
+	Secrets    map[string]block.Secret `json:"secrets"`
 }
 
-type ServiceValidator interface {
-	Validate(Service) error
-}
-
-func NewServiceFromJSON(data []byte) (Service, error) {
-	var decoded serviceEncoder
-	if err := json.Unmarshal(data, &decoded); err != nil {
-		return nil, err
+func (s *Service) UnmarshalJSON(data []byte) error {
+	var e *ServiceEncoder
+	if err := json.Unmarshal(data, &e); err != nil {
+		return err
 	}
 
-	if decoded.Type != TypeService {
-		return nil, fmt.Errorf("service type must be %v, got %v", TypeService, decoded.Type)
+	if e.Type != TypeService {
+		return fmt.Errorf("expected type to be %v but got %v", TypeService, e.Type)
 	}
 
-	s := &service{
-		name:       decoded.Name,
-		volumes:    decoded.Volumes,
-		components: decoded.Components,
-		resources:  decoded.Resources,
-		secrets:    decoded.Secrets,
+	Service := &Service{
+		Type:        e.Type,
+		Name:        e.Name,
+		Description: e.Description,
+
+		Components: e.Components,
+		Resources:  e.Resources,
+		Secrets:    e.Secrets,
 	}
-	return s, nil
+	*s = *Service
+	return nil
 }
 
-type serviceEncoder struct {
-	Type        string                  `json:"type"`
-	Name        string                  `json:"name"`
-	Description string                  `json:"description"`
-	Volumes     []*block.Volume         `json:"volumes"`
-	Components  []*block.Component      `json:"components"`
-	Resources   block.Resources         `json:"resources"`
-	Secrets     map[string]block.Secret `json:"secrets"`
-}
+type ServiceEncoder struct {
+	Type        string `json:"type"`
+	Name        string `json:"name"`
+	Description string `json:"description"`
 
-type service struct {
-	name        string
-	description string
-	volumes     []*block.Volume
-	components  []*block.Component
-	resources   block.Resources
-	secrets     map[string]block.Secret
-}
-
-func (s *service) Type() string {
-	return TypeService
-}
-
-func (s *service) Name() string {
-	return s.name
-}
-
-func (s *service) Description() string {
-	return s.description
-}
-
-func (s *service) Volumes() []*block.Volume {
-	return s.volumes
-}
-
-func (s *service) Components() []*block.Component {
-	return s.components
-}
-
-func (s *service) Resources() block.Resources {
-	return s.resources
-}
-
-func (s *service) Secrets() map[string]block.Secret {
-	return s.secrets
-}
-
-func (s *service) MarshalJSON() ([]byte, error) {
-	encoder := serviceEncoder{
-		Type:        TypeService,
-		Name:        s.name,
-		Description: s.description,
-		Volumes:     s.volumes,
-		Components:  s.components,
-		Resources:   s.resources,
-		Secrets:     s.secrets,
-	}
-
-	return json.Marshal(&encoder)
+	Components []block.Component       `json:"components"`
+	Resources  block.Resources         `json:"resources"`
+	Secrets    map[string]block.Secret `json:"secrets"`
 }

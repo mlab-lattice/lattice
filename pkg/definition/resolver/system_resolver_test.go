@@ -10,6 +10,8 @@ import (
 
 	"github.com/mlab-lattice/lattice/pkg/util/git"
 
+	"github.com/mlab-lattice/lattice/pkg/definition"
+	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 	gogit "gopkg.in/src-d/go-git.v4"
 	"gopkg.in/src-d/go-git.v4/plumbing"
 	"gopkg.in/src-d/go-git.v4/plumbing/object"
@@ -52,19 +54,26 @@ func testV1(t *testing.T) {
 		t.Fatalf("Error is not nil: %v", err)
 	}
 
-	if defNode.Name() != "my-system-v1" {
+	sysNode := defNode.(*tree.SystemNode)
+
+	def := sysNode.Definition().(*definition.System)
+
+	if def.Name != "my-system-v1" {
 		t.Error("Wrong system name")
 	}
 
-	if len(defNode.Subsystems()) != 2 {
+	if len(sysNode.Subsystems()) != 2 {
 		t.Error("Wrong # of subsystems")
 	}
 
-	if len(defNode.Services()) != 2 {
+	if len(sysNode.Services()) != 2 {
 		t.Error("Wrong # of services")
 	}
 
-	if defNode.Subsystems()["/my-system-v1/my-service"].Name() != "my-service" {
+	serviceNode := defNode.Subsystems()["/my-system-v1/my-service"].(*tree.ServiceNode)
+	serviceDef := serviceNode.Definition().(*definition.Service)
+
+	if serviceDef.Name != "my-service" {
 		t.Error("Invalid Subsystem map")
 	}
 
@@ -84,7 +93,9 @@ func testV2(t *testing.T) {
 		t.Error("Error is not nil: ", err)
 	}
 
-	if defNode.Name() != "my-system-v2" {
+	def := defNode.Definition().(*definition.System)
+
+	if def.Name != "my-system-v2" {
 		t.Error("Wrong system name")
 	}
 }

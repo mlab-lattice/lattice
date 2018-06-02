@@ -1,5 +1,5 @@
 package definition
 
 const (
-	SystemDefinitionRootPathDefault = "system.json"
+	SystemDefinitionRootPathDefault = "System.json"
 )

@@ -9,52 +9,36 @@ import (
 )
 
 type SystemNode struct {
-	parent         Node
-	path           NodePath
-	subsystemNodes map[NodePath]Node
-	definition     definition.System
+	parent     Node
+	path       NodePath
+	subsystems map[NodePath]Node
+	definition *definition.System
 }
 
-func NewSystemNode(definition definition.System, parent Node) (*SystemNode, error) {
+func NewSystemNode(def *definition.System, parent Node) (*SystemNode, error) {
 	s := &SystemNode{
-		parent:         parent,
-		path:           getPath(parent, definition),
-		definition:     definition,
-		subsystemNodes: map[NodePath]Node{},
+		parent:     parent,
+		path:       getPath(parent, def.Name),
+		subsystems: make(map[NodePath]Node),
+		definition: def,
 	}
 
-	for _, subsystem := range definition.Subsystems() {
-		child, err := NewNode(subsystem, Node(s))
+	for _, subsystem := range def.Subsystems {
+		child, err := NewNode(subsystem, s)
 		if err != nil {
 			return nil, err
 		}
 
 		// Add child Node to subsystem
 		childPath := child.Path()
-		if _, exists := s.subsystemNodes[childPath]; exists {
-			return nil, fmt.Errorf("System has multiple subsystems named %v", childPath)
+		if _, exists := s.subsystems[childPath]; exists {
+			return nil, fmt.Errorf("system has multiple subsystems named %v", childPath)
 		}
 
-		s.subsystemNodes[childPath] = child
+		s.subsystems[childPath] = child
 	}
 
 	return s, nil
-}
-
-func (s *SystemNode) Type() string {
-	return s.definition.Type()
-}
-
-func (s *SystemNode) Name() string {
-	return s.definition.Name()
-}
-
-func (s *SystemNode) Description() string {
-	return s.definition.Description()
-}
-
-func (s *SystemNode) MarshalJSON() ([]byte, error) {
-	return json.Marshal(s.definition)
 }
 
 func (s *SystemNode) Parent() Node {
@@ -62,29 +46,52 @@ func (s *SystemNode) Parent() Node {
 }
 
 func (s *SystemNode) Path() NodePath {
-	return NodePath(s.path)
-}
-
-func (s *SystemNode) Definition() definition.Interface {
-	return s.definition
+	return s.path
 }
 
 func (s *SystemNode) Subsystems() map[NodePath]Node {
-	return s.subsystemNodes
+	return s.subsystems
+}
+
+func (s *SystemNode) Definition() interface{} {
+	return s.definition
 }
 
 func (s *SystemNode) Services() map[NodePath]*ServiceNode {
-	svcNodes := map[NodePath]*ServiceNode{}
+	services := make(map[NodePath]*ServiceNode)
 
 	for _, subsystem := range s.Subsystems() {
-		for path, svcNode := range subsystem.Services() {
-			svcNodes[path] = svcNode
+		switch s := subsystem.(type) {
+		case *SystemNode:
+			for path, service := range s.Services() {
+				services[path] = service
+			}
+
+		case *ServiceNode:
+			services[s.Path()] = s
 		}
 	}
 
-	return svcNodes
+	return services
 }
 
 func (s *SystemNode) NodePools() map[string]block.NodePool {
-	return s.definition.NodePools()
+	return s.definition.NodePools
+}
+
+func (s *SystemNode) UnmarshalJSON(data []byte) error {
+	var def *definition.System
+	err := json.Unmarshal(data, &def)
+	if err != nil {
+		return err
+	}
+
+	// unmarshalling a SystemNode will set it to be the root
+	n, err := NewSystemNode(def, nil)
+	if err != nil {
+		return err
+	}
+
+	*s = *n
+	return nil
 }
