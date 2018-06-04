@@ -4,6 +4,8 @@ import (
 	"github.com/mlab-lattice/lattice/pkg/definition"
 )
 
+type ServiceNodePath NodePath
+
 type ServiceNode struct {
 	parent     Node
 	path       NodePath
