@@ -29,12 +29,12 @@ type nodePoolInfo struct {
 }
 
 func (c *Controller) numInstances(service *latticev1.Service) (int32, error) {
-	if service.Spec.Definition.Resources().NumInstances != nil {
-		return *service.Spec.Definition.Resources().NumInstances, nil
+	if service.Spec.Definition.Resources.NumInstances != nil {
+		return *service.Spec.Definition.Resources.NumInstances, nil
 	}
 
-	if service.Spec.Definition.Resources().MinInstances != nil {
-		return *service.Spec.Definition.Resources().MinInstances, nil
+	if service.Spec.Definition.Resources.MinInstances != nil {
+		return *service.Spec.Definition.Resources.MinInstances, nil
 	}
 
 	err := fmt.Errorf(
@@ -45,7 +45,7 @@ func (c *Controller) numInstances(service *latticev1.Service) (int32, error) {
 }
 
 func (c *Controller) nodePoolInfo(service *latticev1.Service) (nodePoolInfo, error) {
-	resources := service.Spec.Definition.Resources()
+	resources := service.Spec.Definition.Resources
 
 	// dedicated per-instance node pool
 	if resources.NodePool == nil {

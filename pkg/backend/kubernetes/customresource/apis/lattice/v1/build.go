@@ -1,7 +1,6 @@
 package v1
 
 import (
-	"encoding/json"
 	"fmt"
 
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
@@ -56,61 +55,15 @@ func (b *Build) Description(namespacePrefix string) string {
 	return fmt.Sprintf("build %v (version %v in system %v)", b.Name, version, systemID)
 }
 
-// N.B.: important: if you update the BuildSpec or BuildSpecServiceInfo you must also update
-// the buildSpecEncoder and BuildSpec's UnmarshalJSON
 // +k8s:deepcopy-gen=false
 type BuildSpec struct {
-	DefinitionRoot tree.Node                              `json:"definitionRoot"`
-	Services       map[tree.NodePath]BuildSpecServiceInfo `json:"services"`
+	Definition *tree.SystemNode                       `json:"definition"`
+	Services   map[tree.NodePath]BuildSpecServiceInfo `json:"services"`
 }
 
 // +k8s:deepcopy-gen=false
 type BuildSpecServiceInfo struct {
-	Definition definition.Service `json:"definition"`
-}
-
-type buildSpecEncoder struct {
-	Services       map[tree.NodePath]buildSpecServiceInfoEncoder `json:"services"`
-	DefinitionRoot json.RawMessage                               `json:"definitionRoot"`
-}
-
-type buildSpecServiceInfoEncoder struct {
-	Definition json.RawMessage `json:"definition"`
-}
-
-func (sbs *BuildSpec) UnmarshalJSON(data []byte) error {
-	var decoded buildSpecEncoder
-	if err := json.Unmarshal(data, &decoded); err != nil {
-		return err
-	}
-
-	def, err := definition.NewFromJSON(decoded.DefinitionRoot)
-	if err != nil {
-		return err
-	}
-
-	rootNode, err := tree.NewNode(def, nil)
-	if err != nil {
-		return err
-	}
-
-	services := map[tree.NodePath]BuildSpecServiceInfo{}
-	for path, serviceInfo := range decoded.Services {
-		service, err := definition.NewServiceFromJSON(serviceInfo.Definition)
-		if err != nil {
-			return err
-		}
-
-		services[path] = BuildSpecServiceInfo{
-			Definition: service,
-		}
-	}
-
-	*sbs = BuildSpec{
-		DefinitionRoot: rootNode,
-		Services:       services,
-	}
-	return nil
+	Definition *definition.Service `json:"definition"`
 }
 
 type BuildStatus struct {

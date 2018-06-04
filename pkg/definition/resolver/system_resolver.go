@@ -8,8 +8,6 @@ import (
 	"github.com/mlab-lattice/lattice/pkg/definition/template/language"
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 	"github.com/mlab-lattice/lattice/pkg/util/git"
-	"os"
-	"reflect"
 )
 
 // SystemResolver resolves system definitions from different sources such as git
@@ -89,14 +87,7 @@ func (resolver *SystemResolver) readNodeFromFile(ctx *resolveContext) (tree.Node
 		return nil, err
 	}
 
-	fmt.Fprintf(os.Stderr, "struct: (%v) %#v\n", reflect.TypeOf(def), def)
-	n, err := tree.NewNode(def, nil)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "failure: %v\n", err)
-	} else {
-		fmt.Fprintf(os.Stderr, "success\n")
-	}
-	return n, err
+	return tree.NewNode(def, nil)
 }
 
 // lists the tags in a repo

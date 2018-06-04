@@ -89,11 +89,9 @@ func (s *Service) NodePoolAnnotation() (NodePoolAnnotationValue, error) {
 	return annotation, nil
 }
 
-// N.B.: important: if you update the ServiceSpec you must also update
-// the serviceSpecEncoder and ServiceSpec's UnmarshalJSON
 // +k8s:deepcopy-gen=false
 type ServiceSpec struct {
-	Definition definition.Service `json:"definition"`
+	Definition *definition.Service `json:"definition"`
 
 	// ComponentBuildArtifacts maps Component names to the artifacts created by their build
 	ComponentBuildArtifacts map[string]ComponentBuildArtifacts `json:"componentBuildArtifacts"`
@@ -104,39 +102,11 @@ type ServiceSpec struct {
 	NumInstances int32 `json:"numInstances"`
 }
 
-// +k8s:deepcopy-gen=false
 type ComponentPort struct {
 	Name     string `json:"name"`
 	Port     int32  `json:"port"`
 	Protocol string `json:"protocol"`
 	Public   bool   `json:"public"`
-}
-
-type serviceSpecEncoder struct {
-	Definition              json.RawMessage                    `json:"definition"`
-	ComponentBuildArtifacts map[string]ComponentBuildArtifacts `json:"componentBuildArtifacts"`
-	Ports                   map[string][]ComponentPort         `json:"ports"`
-	NumInstances            int32                              `json:"numInstances"`
-}
-
-func (s *ServiceSpec) UnmarshalJSON(data []byte) error {
-	var decoded serviceSpecEncoder
-	if err := json.Unmarshal(data, &decoded); err != nil {
-		return err
-	}
-
-	service, err := definition.NewServiceFromJSON(decoded.Definition)
-	if err != nil {
-		return err
-	}
-
-	*s = ServiceSpec{
-		Definition:              service,
-		ComponentBuildArtifacts: decoded.ComponentBuildArtifacts,
-		Ports:        decoded.Ports,
-		NumInstances: decoded.NumInstances,
-	}
-	return nil
 }
 
 type ServiceStatus struct {

@@ -215,10 +215,10 @@ func (c *Controller) serviceSpec(
 	path tree.NodePath,
 ) (latticev1.ServiceSpec, error) {
 	var numInstances int32
-	if serviceInfo.Definition.Resources().NumInstances != nil {
-		numInstances = *(serviceInfo.Definition.Resources().NumInstances)
-	} else if serviceInfo.Definition.Resources().MinInstances != nil {
-		numInstances = *(serviceInfo.Definition.Resources().MinInstances)
+	if serviceInfo.Definition.Resources.NumInstances != nil {
+		numInstances = *(serviceInfo.Definition.Resources.NumInstances)
+	} else if serviceInfo.Definition.Resources.MinInstances != nil {
+		numInstances = *(serviceInfo.Definition.Resources.MinInstances)
 	} else {
 		err := fmt.Errorf(
 			"service %v (%v) invalid definition: num_instances or min_instances must be set",
@@ -230,7 +230,7 @@ func (c *Controller) serviceSpec(
 
 	componentPorts := map[string][]latticev1.ComponentPort{}
 
-	for _, component := range serviceInfo.Definition.Components() {
+	for _, component := range serviceInfo.Definition.Components {
 		var ports []latticev1.ComponentPort
 		for _, port := range component.Ports {
 			componentPort := latticev1.ComponentPort{

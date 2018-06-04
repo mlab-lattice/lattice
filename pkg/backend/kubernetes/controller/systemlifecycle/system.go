@@ -113,7 +113,7 @@ func (c *Controller) systemServices(
 	}
 
 	services := make(map[tree.NodePath]latticev1.SystemSpecServiceInfo)
-	for path, service := range build.Spec.DefinitionRoot.Services() {
+	for path, service := range build.Spec.Definition.Services() {
 		serviceBuildName, ok := build.Status.ServiceBuilds[path]
 		if !ok {
 			// FIXME: send warn event
@@ -176,7 +176,7 @@ func (c *Controller) systemServices(
 		}
 
 		services[path] = latticev1.SystemSpecServiceInfo{
-			Definition:              service.Definition().(definition.Service),
+			Definition:              service.Definition().(*definition.Service),
 			ComponentBuildArtifacts: componentBuildArtifacts,
 		}
 	}
@@ -188,9 +188,14 @@ func (c *Controller) systemNodePools(
 	build *latticev1.Build,
 ) (map[string]latticev1.NodePoolSpec, error) {
 	nodePools := make(map[string]latticev1.NodePoolSpec)
-	err := tree.Walk(build.Spec.DefinitionRoot, func(n tree.Node) error {
-		path := n.Path()
-		pools := n.NodePools()
+	err := tree.Walk(build.Spec.Definition, func(n tree.Node) error {
+		system, ok := n.(*tree.SystemNode)
+		if !ok {
+			return nil
+		}
+
+		path := system.Path()
+		pools := system.NodePools()
 
 		for name, nodePool := range pools {
 			p := v1.NewSystemSharedNodePoolPath(path, name)

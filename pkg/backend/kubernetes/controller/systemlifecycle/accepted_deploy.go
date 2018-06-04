@@ -8,11 +8,11 @@ import (
 )
 
 func (c *Controller) syncAcceptedDeploy(deploy *latticev1.Deploy) error {
-	build, err := c.buildLister.Builds(deploy.Namespace).Get(deploy.Spec.BuildName)
+	build, err := c.buildLister.Builds(deploy.Namespace).Get(deploy.Spec.Build)
 	if err != nil {
 		return fmt.Errorf(
 			"error getting build %v for %v: %v",
-			deploy.Spec.BuildName,
+			deploy.Spec.Build,
 			deploy.Description(c.namespacePrefix),
 			err,
 		)

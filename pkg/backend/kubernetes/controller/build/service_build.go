@@ -46,7 +46,7 @@ func (c *Controller) findServiceBuildForDefinitionHash(namespace, definitionHash
 
 func (c *Controller) createNewServiceBuild(
 	build *latticev1.Build,
-	serviceDefinition definition.Service,
+	serviceDefinition *definition.Service,
 	definitionHash string,
 ) (*latticev1.ServiceBuild, error) {
 	serviceBuild := serviceBuild(build, serviceDefinition, definitionHash)
@@ -60,7 +60,7 @@ func (c *Controller) createNewServiceBuild(
 
 func serviceBuild(
 	build *latticev1.Build,
-	serviceDefinition definition.Service,
+	serviceDefinition *definition.Service,
 	definitionHash string,
 ) *latticev1.ServiceBuild {
 	spec := serviceBuildSpec(serviceDefinition)
@@ -76,9 +76,9 @@ func serviceBuild(
 	}
 }
 
-func serviceBuildSpec(serviceDefinition definition.Service) latticev1.ServiceBuildSpec {
+func serviceBuildSpec(serviceDefinition *definition.Service) latticev1.ServiceBuildSpec {
 	components := map[string]latticev1.ServiceBuildSpecComponentBuildInfo{}
-	for _, component := range serviceDefinition.Components() {
+	for _, component := range serviceDefinition.Components {
 		components[component.Name] = latticev1.ServiceBuildSpecComponentBuildInfo{
 			DefinitionBlock: component.Build,
 		}

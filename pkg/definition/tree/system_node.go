@@ -8,8 +8,6 @@ import (
 	"github.com/mlab-lattice/lattice/pkg/definition/block"
 )
 
-type SystemNodePath NodePath
-
 type SystemNode struct {
 	parent     Node
 	path       NodePath

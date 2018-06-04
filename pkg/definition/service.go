@@ -19,7 +19,7 @@ type Service struct {
 }
 
 func (s *Service) UnmarshalJSON(data []byte) error {
-	var e *ServiceEncoder
+	var e *serviceEncoder
 	if err := json.Unmarshal(data, &e); err != nil {
 		return err
 	}
@@ -41,7 +41,7 @@ func (s *Service) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-type ServiceEncoder struct {
+type serviceEncoder struct {
 	Type        string `json:"type"`
 	Name        string `json:"name"`
 	Description string `json:"description"`

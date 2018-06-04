@@ -20,13 +20,13 @@ import (
 	"github.com/satori/go.uuid"
 )
 
-func (kb *KubernetesBackend) Build(systemID v1.SystemID, definitionRoot tree.Node, version v1.SystemVersion) (*v1.Build, error) {
+func (kb *KubernetesBackend) Build(systemID v1.SystemID, def *tree.SystemNode, version v1.SystemVersion) (*v1.Build, error) {
 	// ensure the system exists
 	if _, err := kb.ensureSystemCreated(systemID); err != nil {
 		return nil, err
 	}
 
-	build, err := newBuild(definitionRoot, version)
+	build, err := newBuild(def, version)
 	if err != nil {
 		return nil, err
 	}
@@ -45,15 +45,15 @@ func (kb *KubernetesBackend) Build(systemID v1.SystemID, definitionRoot tree.Nod
 	return &externalBuild, nil
 }
 
-func newBuild(definitionRoot tree.Node, version v1.SystemVersion) (*latticev1.Build, error) {
+func newBuild(def *tree.SystemNode, version v1.SystemVersion) (*latticev1.Build, error) {
 	labels := map[string]string{
 		latticev1.BuildDefinitionVersionLabelKey: string(version),
 	}
 
 	services := map[tree.NodePath]latticev1.BuildSpecServiceInfo{}
-	for path, svcNode := range definitionRoot.Services() {
+	for path, svcNode := range def.Services() {
 		services[path] = latticev1.BuildSpecServiceInfo{
-			Definition: svcNode.Definition().(definition.Service),
+			Definition: svcNode.Definition().(*definition.Service),
 		}
 	}
 
@@ -63,8 +63,8 @@ func newBuild(definitionRoot tree.Node, version v1.SystemVersion) (*latticev1.Bu
 			Labels: labels,
 		},
 		Spec: latticev1.BuildSpec{
-			DefinitionRoot: definitionRoot,
-			Services:       services,
+			Definition: def,
+			Services:   services,
 		},
 	}
 

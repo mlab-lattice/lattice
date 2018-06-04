@@ -687,7 +687,12 @@ func mountVersionHandlers(router *gin.RouterGroup, backend v1server.Interface, s
 	})
 }
 
-func getSystemDefinitionRoot(backend v1server.Interface, sysResolver *resolver.SystemResolver, systemID v1.SystemID, version v1.SystemVersion) (tree.Node, error) {
+func getSystemDefinitionRoot(
+	backend v1server.Interface,
+	sysResolver *resolver.SystemResolver,
+	systemID v1.SystemID,
+	version v1.SystemVersion,
+) (*tree.SystemNode, error) {
 	system, err := backend.GetSystem(systemID)
 	if err != nil {
 		return nil, err
@@ -700,7 +705,16 @@ func getSystemDefinitionRoot(backend v1server.Interface, sysResolver *resolver.S
 		definition.SystemDefinitionRootPathDefault,
 	)
 
-	return sysResolver.ResolveDefinition(systemDefURI, &git.Options{})
+	root, err := sysResolver.ResolveDefinition(systemDefURI, &git.Options{})
+	if err != nil {
+		return nil, err
+	}
+
+	if def, ok := root.(*tree.SystemNode); ok {
+		return def, nil
+	}
+
+	return nil, fmt.Errorf("definition is not a system")
 }
 
 func getSystemVersions(backend v1server.Interface, sysResolver *resolver.SystemResolver, systemID v1.SystemID) ([]string, error) {

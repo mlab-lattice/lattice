@@ -296,9 +296,9 @@ func (c *Controller) untransformedDeploymentSpec(
 
 	// Create a container for each Component in the Service
 	var containers []corev1.Container
-	for _, component := range service.Spec.Definition.Components() {
+	for _, component := range service.Spec.Definition.Components {
 		buildArtifacts := service.Spec.ComponentBuildArtifacts[component.Name]
-		container, err := containerFromComponent(service, component, &buildArtifacts)
+		container, err := containerFromComponent(service, &component, &buildArtifacts)
 		if err != nil {
 			return nil, err
 		}
