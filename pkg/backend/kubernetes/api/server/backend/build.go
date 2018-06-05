@@ -50,7 +50,7 @@ func newBuild(def *tree.SystemNode, version v1.SystemVersion) (*latticev1.Build,
 		latticev1.BuildDefinitionVersionLabelKey: string(version),
 	}
 
-	services := map[tree.NodePath]latticev1.BuildSpecServiceInfo{}
+	services := make(map[tree.NodePath]latticev1.BuildSpecServiceInfo)
 	for path, svcNode := range def.Services() {
 		services[path] = latticev1.BuildSpecServiceInfo{
 			Definition: svcNode.Definition().(*definition.Service),

@@ -79,6 +79,10 @@ func (s *SystemNode) NodePools() map[string]block.NodePool {
 	return s.definition.NodePools
 }
 
+func (s *SystemNode) MarshalJSON() ([]byte, error) {
+	return json.Marshal(&s.definition)
+}
+
 func (s *SystemNode) UnmarshalJSON(data []byte) error {
 	var def *definition.System
 	err := json.Unmarshal(data, &def)

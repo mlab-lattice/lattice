@@ -66,7 +66,12 @@ type AddressLoadBalancer interface {
 		serviceMeshPorts map[int32]int32,
 		annotations map[string]string,
 	) error
-	ServiceAddressLoadBalancerPorts(v1.LatticeID, *latticev1.Address, *latticev1.Service) (map[int32]string, error)
+	ServiceAddressLoadBalancerPorts(
+		latticeID v1.LatticeID,
+		address *latticev1.Address,
+		service *latticev1.Service,
+		serviceMeshPorts map[int32]int32,
+	) (map[int32]string, error)
 }
 
 type NodePool interface {

@@ -1,6 +1,8 @@
 package tree
 
 import (
+	"encoding/json"
+
 	"github.com/mlab-lattice/lattice/pkg/definition"
 )
 
@@ -33,4 +35,25 @@ func (s *ServiceNode) Subsystems() map[NodePath]Node {
 
 func (s *ServiceNode) Definition() interface{} {
 	return s.definition
+}
+
+func (s *ServiceNode) MarshalJSON() ([]byte, error) {
+	return json.Marshal(&s.definition)
+}
+
+func (s *ServiceNode) UnmarshalJSON(data []byte) error {
+	var def *definition.Service
+	err := json.Unmarshal(data, &def)
+	if err != nil {
+		return err
+	}
+
+	// unmarshalling a ServiceNode will set it to be the root
+	n, err := NewServiceNode(def, nil)
+	if err != nil {
+		return err
+	}
+
+	*s = *n
+	return nil
 }

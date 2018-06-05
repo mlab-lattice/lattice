@@ -161,6 +161,7 @@ func (cp *DefaultLocalCloudProvider) ServiceAddressLoadBalancerPorts(
 	latticeID v1.LatticeID,
 	address *latticev1.Address,
 	service *latticev1.Service,
+	serviceMeshPorts map[int32]int32,
 ) (map[int32]string, error) {
 	kubeServiceName := serviceAddressKubeServiceLoadBalancerName(address)
 	kubeService, err := cp.kubeServiceLister.Services(address.Namespace).Get(kubeServiceName)
@@ -168,9 +169,19 @@ func (cp *DefaultLocalCloudProvider) ServiceAddressLoadBalancerPorts(
 		return nil, err
 	}
 
-	ports := make(map[int32]string)
+	kubeServicePorts := make(map[int32]int32)
 	for _, port := range kubeService.Spec.Ports {
-		ports[port.Port] = fmt.Sprintf("%v:%v", cp.IP(), port.NodePort)
+		kubeServicePorts[port.Port] = port.NodePort
+	}
+
+	ports := make(map[int32]string)
+	for _, componentPorts := range service.Spec.Ports {
+		for _, componentPort := range componentPorts {
+			if componentPort.Public {
+				kubeServicePort := kubeServicePorts[serviceMeshPorts[componentPort.Port]]
+				ports[componentPort.Port] = fmt.Sprintf("%v:%v", cp.IP(), kubeServicePort)
+			}
+		}
 	}
 
 	return ports, nil

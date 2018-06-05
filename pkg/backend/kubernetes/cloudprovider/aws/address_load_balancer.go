@@ -200,6 +200,7 @@ func (cp *DefaultAWSCloudProvider) ServiceAddressLoadBalancerPorts(
 	latticeID v1.LatticeID,
 	address *latticev1.Address,
 	service *latticev1.Service,
+	serviceMeshPorts map[int32]int32,
 ) (map[int32]string, error) {
 	dnsName, ok := address.Annotations[AnnotationKeyAddressServiceLoadBalancerDNSName]
 	if !ok {

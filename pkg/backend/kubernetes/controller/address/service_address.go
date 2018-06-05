@@ -160,7 +160,7 @@ func (c *Controller) syncServiceAddress(address *latticev1.Address) error {
 			return err
 		}
 
-		ports, err = c.cloudProvider.ServiceAddressLoadBalancerPorts(c.latticeID, address, service)
+		ports, err = c.cloudProvider.ServiceAddressLoadBalancerPorts(c.latticeID, address, service, serviceMeshPorts)
 		if err != nil {
 			return fmt.Errorf(
 				"error getting %v %v load balancer ports: %v",
