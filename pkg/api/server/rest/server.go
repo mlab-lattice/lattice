@@ -65,13 +65,10 @@ func authenticateRequest(apiAuthKey string) gin.HandlerFunc {
 		// grab request API key from header
 		requestAPIKey := c.Request.Header.Get(apiKeyHeader)
 		if requestAPIKey == "" {
-			fmt.Printf("WARNING: Auth failure: %s header is not set\n", apiKeyHeader)
+			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": fmt.Sprintf("'%s' header not set.", apiKeyHeader)})
 		} else if requestAPIKey != apiAuthKey {
-			fmt.Printf("WARNING: Auth failure: invalid %s\n", apiKeyHeader)
-			// TODO enable when all clients provide authentication key
-			//c.JSON(http.StatusForbidden, gin.H{"error": "Invalid API_KEY"})
-		} else {
-			fmt.Println("Auth success!")
+			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": fmt.Sprintf("Invalid '%s'.", apiKeyHeader)})
 		}
+		// Auth Success!
 	}
 }
