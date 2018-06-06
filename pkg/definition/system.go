@@ -9,12 +9,12 @@ import (
 
 // Note: if you change anything here, update systemEncoder as well
 type System struct {
-	Type        string `json:"type"`
-	Name        string `json:"name"`
-	Description string `json:"description"`
+	Type        string
+	Name        string
+	Description string
 
-	NodePools  map[string]block.NodePool `json:"node_pools"`
-	Subsystems []interface{}             `json:"subsystems"`
+	NodePools  map[string]block.NodePool
+	Subsystems []interface{}
 }
 
 func (s *System) UnmarshalJSON(data []byte) error {

@@ -9,13 +9,13 @@ import (
 
 // Note: if you change anything here, update serviceEncoder as well
 type Service struct {
-	Type        string `json:"type"`
-	Name        string `json:"name"`
-	Description string `json:"description"`
+	Type        string
+	Name        string
+	Description string
 
-	Components []block.Component       `json:"components"`
-	Resources  block.Resources         `json:"resources"`
-	Secrets    map[string]block.Secret `json:"secrets"`
+	Components []block.Component
+	Resources  block.Resources
+	Secrets    map[string]block.Secret
 }
 
 func (s *Service) UnmarshalJSON(data []byte) error {
