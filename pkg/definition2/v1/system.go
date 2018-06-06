@@ -17,7 +17,7 @@ var SystemType = resource.Type{
 type System struct {
 	Description string
 
-	Subsystems map[string]resource.Interface
+	Resources map[string]resource.Interface
 }
 
 func (s *System) Type() resource.Type {
@@ -29,7 +29,7 @@ func (s *System) MarshalJSON() ([]byte, error) {
 		Type:        SystemType,
 		Description: s.Description,
 
-		Subsystems: s.Subsystems,
+		Resources: s.Resources,
 	}
 	return json.Marshal(&e)
 }
@@ -51,7 +51,7 @@ func (s *System) UnmarshalJSON(data []byte) error {
 	system := &System{
 		Description: e.Description,
 
-		Subsystems: e.Subsystems,
+		Resources: e.Resources,
 	}
 	*s = *system
 	return nil
@@ -61,5 +61,5 @@ type systemEncoder struct {
 	Type        resource.Type `json:"type"`
 	Description string        `json:"description,omitempty"`
 
-	Subsystems map[string]resource.Interface `json:"subsystems"`
+	Resources map[string]resource.Interface `json:"resources"`
 }

@@ -15,7 +15,7 @@ type Type struct {
 	Type       string
 }
 
-func (t *Type) String() string {
+func (t Type) String() string {
 	return fmt.Sprintf("%v/%v", t.APIVersion, t.Type)
 }
 

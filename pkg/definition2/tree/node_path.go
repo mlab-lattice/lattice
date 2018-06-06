@@ -19,6 +19,14 @@ const (
 // For example: /a/b/c
 type NodePath string
 
+func RootNodePath() NodePath {
+	return NodePath("/")
+}
+
+func ChildNodePath(path NodePath, child string) NodePath {
+	return NodePath(fmt.Sprintf("%v/%v", path.String(), child))
+}
+
 // NewNodePath validates the string passed in and returns a NodePath.
 func NewNodePath(p string) (NodePath, error) {
 	if p == "" {
