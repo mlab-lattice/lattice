@@ -21,26 +21,26 @@ const (
 type stateInfo struct {
 	state state
 
-	successfulComponentBuilds map[string]*latticev1.ComponentBuild
-	activeComponentBuilds     map[string]*latticev1.ComponentBuild
-	failedComponentBuilds     map[string]*latticev1.ComponentBuild
+	successfulComponentBuilds map[string]*latticev1.ContainerBuild
+	activeComponentBuilds     map[string]*latticev1.ContainerBuild
+	failedComponentBuilds     map[string]*latticev1.ContainerBuild
 	needsNewComponentBuilds   []string
 
-	// Maps a component's name to the Name of the ComponentBuild that's responsible for it
+	// Maps a component's name to the Name of the ContainerBuild that's responsible for it
 	componentBuilds map[string]string
 
-	// Maps a ComponentBuild.Name to its ComponentBuild.Status
-	componentBuildStatuses map[string]latticev1.ComponentBuildStatus
+	// Maps a ContainerBuild.Name to its ContainerBuild.Status
+	componentBuildStatuses map[string]latticev1.ContainerBuildStatus
 }
 
 func (c *Controller) calculateState(build *latticev1.ServiceBuild) (stateInfo, error) {
-	successfulComponentBuilds := map[string]*latticev1.ComponentBuild{}
-	activeComponentBuilds := map[string]*latticev1.ComponentBuild{}
-	failedComponentBuilds := map[string]*latticev1.ComponentBuild{}
+	successfulComponentBuilds := map[string]*latticev1.ContainerBuild{}
+	activeComponentBuilds := map[string]*latticev1.ContainerBuild{}
+	failedComponentBuilds := map[string]*latticev1.ContainerBuild{}
 	var needsNewComponentBuilds []string
 
 	componentBuilds := map[string]string{}
-	componentBuildStatuses := map[string]latticev1.ComponentBuildStatus{}
+	componentBuildStatuses := map[string]latticev1.ContainerBuildStatus{}
 
 	for component := range build.Spec.Components {
 		componentBuildName, ok := build.Status.ComponentBuilds[component]
@@ -55,7 +55,7 @@ func (c *Controller) calculateState(build *latticev1.ServiceBuild) (stateInfo, e
 				return stateInfo{}, err
 			}
 
-			// If the ComponentBuild wasn't in the cache, double check with the API.
+			// If the ContainerBuild wasn't in the cache, double check with the API.
 			componentBuild, err = c.latticeClient.LatticeV1().ComponentBuilds(build.Namespace).Get(componentBuildName, metav1.GetOptions{})
 			if err != nil {
 				if errors.IsNotFound(err) {

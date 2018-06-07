@@ -35,7 +35,7 @@ func (c *Controller) handleServiceBuildEvent(build *latticev1.ServiceBuild, verb
 }
 
 func (c *Controller) handleComponentBuildAdd(obj interface{}) {
-	componentBuild := obj.(*latticev1.ComponentBuild)
+	componentBuild := obj.(*latticev1.ContainerBuild)
 
 	if componentBuild.DeletionTimestamp != nil {
 		// only orphaned component builds should be deleted
@@ -46,13 +46,13 @@ func (c *Controller) handleComponentBuildAdd(obj interface{}) {
 }
 
 // handleComponentBuildUpdate enqueues any ServiceBuilds which may be interested in it when
-// a ComponentBuild is updated.
+// a ContainerBuild is updated.
 func (c *Controller) handleComponentBuildUpdate(old, cur interface{}) {
-	componentBuild := cur.(*latticev1.ComponentBuild)
+	componentBuild := cur.(*latticev1.ContainerBuild)
 	c.handleComponentBuildEvent(componentBuild, "updated")
 }
 
-func (c *Controller) handleComponentBuildEvent(componentBuild *latticev1.ComponentBuild, verb string) {
+func (c *Controller) handleComponentBuildEvent(componentBuild *latticev1.ContainerBuild, verb string) {
 	glog.V(4).Infof("%s %s", componentBuild.Description(c.namespacePrefix), verb)
 
 	serviceBuilds, err := c.owningServiceBuilds(componentBuild)
@@ -66,7 +66,7 @@ func (c *Controller) handleComponentBuildEvent(componentBuild *latticev1.Compone
 	}
 }
 
-func (c *Controller) owningServiceBuilds(componentBuild *latticev1.ComponentBuild) ([]latticev1.ServiceBuild, error) {
+func (c *Controller) owningServiceBuilds(componentBuild *latticev1.ContainerBuild) ([]latticev1.ServiceBuild, error) {
 	owningBuilds := mapset.NewSet()
 	for _, owner := range componentBuild.OwnerReferences {
 		// not a lattice.mlab.com owner (probably shouldn't happen)

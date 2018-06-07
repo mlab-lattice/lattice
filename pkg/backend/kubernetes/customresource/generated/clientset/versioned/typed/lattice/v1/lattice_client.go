@@ -13,12 +13,11 @@ type LatticeV1Interface interface {
 	RESTClient() rest.Interface
 	AddressesGetter
 	BuildsGetter
-	ComponentBuildsGetter
 	ConfigsGetter
+	ContainerBuildsGetter
 	DeploysGetter
 	NodePoolsGetter
 	ServicesGetter
-	ServiceBuildsGetter
 	SystemsGetter
 	TeardownsGetter
 }
@@ -36,12 +35,12 @@ func (c *LatticeV1Client) Builds(namespace string) BuildInterface {
 	return newBuilds(c, namespace)
 }
 
-func (c *LatticeV1Client) ComponentBuilds(namespace string) ComponentBuildInterface {
-	return newComponentBuilds(c, namespace)
-}
-
 func (c *LatticeV1Client) Configs(namespace string) ConfigInterface {
 	return newConfigs(c, namespace)
+}
+
+func (c *LatticeV1Client) ContainerBuilds(namespace string) ContainerBuildInterface {
+	return newContainerBuilds(c, namespace)
 }
 
 func (c *LatticeV1Client) Deploys(namespace string) DeployInterface {
@@ -54,10 +53,6 @@ func (c *LatticeV1Client) NodePools(namespace string) NodePoolInterface {
 
 func (c *LatticeV1Client) Services(namespace string) ServiceInterface {
 	return newServices(c, namespace)
-}
-
-func (c *LatticeV1Client) ServiceBuilds(namespace string) ServiceBuildInterface {
-	return newServiceBuilds(c, namespace)
 }
 
 func (c *LatticeV1Client) Systems(namespace string) SystemInterface {

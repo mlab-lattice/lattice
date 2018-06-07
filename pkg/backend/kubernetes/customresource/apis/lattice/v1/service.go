@@ -6,8 +6,8 @@ import (
 
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	kubeutil "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/kubernetes"
-	"github.com/mlab-lattice/lattice/pkg/definition"
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
+	definitionv1 "github.com/mlab-lattice/lattice/pkg/definition/v1"
 
 	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 
@@ -91,18 +91,18 @@ func (s *Service) NodePoolAnnotation() (NodePoolAnnotationValue, error) {
 
 // +k8s:deepcopy-gen=false
 type ServiceSpec struct {
-	Definition *definition.Service `json:"definition"`
+	Definition *definitionv1.Service `json:"definition"`
 
-	// ComponentBuildArtifacts maps Component names to the artifacts created by their build
-	ComponentBuildArtifacts map[string]ComponentBuildArtifacts `json:"componentBuildArtifacts"`
+	// ContainerBuildArtifacts maps Component names to the artifacts created by their build
+	ContainerBuildArtifacts map[string]ContainerBuildArtifacts `json:"containerBuildArtifacts"`
 
 	// Ports maps Component names to a list of information about its ports
-	Ports map[string][]ComponentPort `json:"ports"`
+	Ports map[string][]ContainerPort `json:"ports"`
 
 	NumInstances int32 `json:"numInstances"`
 }
 
-type ComponentPort struct {
+type ContainerPort struct {
 	Name     string `json:"name"`
 	Port     int32  `json:"port"`
 	Protocol string `json:"protocol"`

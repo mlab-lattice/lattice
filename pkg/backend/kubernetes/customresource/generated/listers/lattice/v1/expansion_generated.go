@@ -18,14 +18,6 @@ type BuildListerExpansion interface{}
 // BuildNamespaceLister.
 type BuildNamespaceListerExpansion interface{}
 
-// ComponentBuildListerExpansion allows custom methods to be added to
-// ComponentBuildLister.
-type ComponentBuildListerExpansion interface{}
-
-// ComponentBuildNamespaceListerExpansion allows custom methods to be added to
-// ComponentBuildNamespaceLister.
-type ComponentBuildNamespaceListerExpansion interface{}
-
 // ConfigListerExpansion allows custom methods to be added to
 // ConfigLister.
 type ConfigListerExpansion interface{}
@@ -33,6 +25,14 @@ type ConfigListerExpansion interface{}
 // ConfigNamespaceListerExpansion allows custom methods to be added to
 // ConfigNamespaceLister.
 type ConfigNamespaceListerExpansion interface{}
+
+// ContainerBuildListerExpansion allows custom methods to be added to
+// ContainerBuildLister.
+type ContainerBuildListerExpansion interface{}
+
+// ContainerBuildNamespaceListerExpansion allows custom methods to be added to
+// ContainerBuildNamespaceLister.
+type ContainerBuildNamespaceListerExpansion interface{}
 
 // DeployListerExpansion allows custom methods to be added to
 // DeployLister.
@@ -57,14 +57,6 @@ type ServiceListerExpansion interface{}
 // ServiceNamespaceListerExpansion allows custom methods to be added to
 // ServiceNamespaceLister.
 type ServiceNamespaceListerExpansion interface{}
-
-// ServiceBuildListerExpansion allows custom methods to be added to
-// ServiceBuildLister.
-type ServiceBuildListerExpansion interface{}
-
-// ServiceBuildNamespaceListerExpansion allows custom methods to be added to
-// ServiceBuildNamespaceLister.
-type ServiceBuildNamespaceListerExpansion interface{}
 
 // SystemListerExpansion allows custom methods to be added to
 // SystemLister.

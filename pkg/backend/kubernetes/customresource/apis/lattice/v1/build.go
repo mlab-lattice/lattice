@@ -5,8 +5,8 @@ import (
 
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	kubeutil "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/kubernetes"
-	"github.com/mlab-lattice/lattice/pkg/definition"
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
+	definitionv1 "github.com/mlab-lattice/lattice/pkg/definition/v1"
 
 	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -57,13 +57,13 @@ func (b *Build) Description(namespacePrefix string) string {
 
 // +k8s:deepcopy-gen=false
 type BuildSpec struct {
-	Definition *tree.SystemNode                       `json:"definition"`
+	Definition *definitionv1.SystemNode               `json:"definition"`
 	Services   map[tree.NodePath]BuildSpecServiceInfo `json:"services"`
 }
 
 // +k8s:deepcopy-gen=false
 type BuildSpecServiceInfo struct {
-	Definition *definition.Service `json:"definition"`
+	Definition *definitionv1.Service `json:"definition"`
 }
 
 type BuildStatus struct {
@@ -99,7 +99,7 @@ type BuildStatusServiceInfo struct {
 
 type BuildStatusServiceInfoComponentInfo struct {
 	Name   string               `json:"name"`
-	Status ComponentBuildStatus `json:"status"`
+	Status ContainerBuildStatus `json:"status"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

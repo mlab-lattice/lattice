@@ -53,7 +53,7 @@ func initializeBuildController(ctx Context) {
 }
 
 func initializeComponentBuildController(ctx Context) {
-	go componentbuild.NewController(
+	go containerbuild.NewController(
 		ctx.NamespacePrefix,
 		ctx.CloudProviderOptions,
 		ctx.KubeClientBuilder.ClientOrDie(controllerName(ComponentBuildController)),

@@ -31,7 +31,7 @@ var componentBuilderRBACPolicyRules = []rbacv1.PolicyRule{
 	// Read and update lattice component builds
 	{
 		APIGroups: []string{latticev1.GroupName},
-		Resources: []string{latticev1.ResourcePluralComponentBuild},
+		Resources: []string{latticev1.ResourcePluralContainerBuild},
 		Verbs:     ReadAndUpdateVerbs,
 	},
 }

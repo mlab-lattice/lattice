@@ -26,7 +26,7 @@ type Interface interface {
 	AddressLoadBalancer
 	NodePool
 
-	// TransformComponentBuildJobSpec takes in the JobSpec generated for a ComponentBuild, and applies any cloud provider
+	// TransformComponentBuildJobSpec takes in the JobSpec generated for a ContainerBuild, and applies any cloud provider
 	// related transforms necessary to a copy of the JobSpec, and returns it.
 	TransformComponentBuildJobSpec(*batchv1.JobSpec) *batchv1.JobSpec
 

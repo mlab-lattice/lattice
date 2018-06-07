@@ -139,8 +139,8 @@ func (c *Controller) systemServices(
 			return nil, err
 		}
 
-		// Create ComponentBuildArtifacts for each Component in the Service
-		componentBuildArtifacts := make(map[string]latticev1.ComponentBuildArtifacts)
+		// Create ContainerBuildArtifacts for each Component in the Service
+		componentBuildArtifacts := make(map[string]latticev1.ContainerBuildArtifacts)
 		for component := range serviceBuild.Spec.Components {
 			componentBuildName, ok := serviceBuild.Status.ComponentBuilds[component]
 			if !ok {
@@ -177,7 +177,7 @@ func (c *Controller) systemServices(
 
 		services[path] = latticev1.SystemSpecServiceInfo{
 			Definition:              service.Definition().(*definition.Service),
-			ComponentBuildArtifacts: componentBuildArtifacts,
+			ContainerBuildArtifacts: componentBuildArtifacts,
 		}
 	}
 

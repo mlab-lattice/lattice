@@ -5,8 +5,8 @@ import (
 
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	kubeutil "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/kubernetes"
-	"github.com/mlab-lattice/lattice/pkg/definition"
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
+	definitionv1 "github.com/mlab-lattice/lattice/pkg/definition/v1"
 
 	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -67,10 +67,10 @@ type SystemSpec struct {
 
 // +k8s:deepcopy-gen=false
 type SystemSpecServiceInfo struct {
-	Definition *definition.Service `json:"definition"`
+	Definition *definitionv1.Service `json:"definition"`
 
-	// ComponentBuildArtifacts maps Component names to the artifacts created by their build
-	ComponentBuildArtifacts map[string]ComponentBuildArtifacts `json:"componentBuildArtifacts"`
+	// ContainerBuildArtifacts maps Component names to the artifacts created by their build
+	ContainerBuildArtifacts map[string]ContainerBuildArtifacts `json:"containerBuildArtifacts"`
 }
 
 // +k8s:deepcopy-gen=false

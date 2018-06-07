@@ -297,7 +297,7 @@ func (c *Controller) untransformedDeploymentSpec(
 	// Create a container for each Component in the Service
 	var containers []corev1.Container
 	for _, component := range service.Spec.Definition.Components {
-		buildArtifacts := service.Spec.ComponentBuildArtifacts[component.Name]
+		buildArtifacts := service.Spec.ContainerBuildArtifacts[component.Name]
 		container, err := containerFromComponent(service, &component, &buildArtifacts)
 		if err != nil {
 			return nil, err
@@ -429,7 +429,7 @@ func (c *Controller) untransformedDeploymentSpec(
 func containerFromComponent(
 	service *latticev1.Service,
 	component *block.Component,
-	buildArtifacts *latticev1.ComponentBuildArtifacts,
+	buildArtifacts *latticev1.ContainerBuildArtifacts,
 ) (corev1.Container, error) {
 	path, err := service.PathLabel()
 	if err != nil {

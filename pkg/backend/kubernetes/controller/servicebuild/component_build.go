@@ -13,9 +13,9 @@ import (
 	"github.com/satori/go.uuid"
 )
 
-func (c *Controller) findComponentBuildForDefinitionHash(namespace, definitionHash string) (*latticev1.ComponentBuild, error) {
+func (c *Controller) findComponentBuildForDefinitionHash(namespace, definitionHash string) (*latticev1.ContainerBuild, error) {
 	selector := labels.NewSelector()
-	requirement, err := labels.NewRequirement(latticev1.ComponentBuildDefinitionHashLabelKey, selection.Equals, []string{definitionHash})
+	requirement, err := labels.NewRequirement(latticev1.ContainerBuildDefinitionHashLabelKey, selection.Equals, []string{definitionHash})
 	if err != nil {
 		return nil, err
 	}
@@ -47,8 +47,8 @@ func (c *Controller) createNewComponentBuild(
 	build *latticev1.ServiceBuild,
 	componentBuildInfo latticev1.ServiceBuildSpecComponentBuildInfo,
 	definitionHash string,
-) (*latticev1.ComponentBuild, error) {
-	// If there is no new entry in the build cache, create a new ComponentBuild.
+) (*latticev1.ContainerBuild, error) {
+	// If there is no new entry in the build cache, create a new ContainerBuild.
 	componentBuild := newComponentBuild(build, componentBuildInfo, definitionHash)
 	result, err := c.latticeClient.LatticeV1().ComponentBuilds(build.Namespace).Create(componentBuild)
 	if err != nil {
@@ -58,22 +58,22 @@ func (c *Controller) createNewComponentBuild(
 	return result, nil
 }
 
-func newComponentBuild(build *latticev1.ServiceBuild, cbInfo latticev1.ServiceBuildSpecComponentBuildInfo, definitionHash string) *latticev1.ComponentBuild {
-	return &latticev1.ComponentBuild{
+func newComponentBuild(build *latticev1.ServiceBuild, cbInfo latticev1.ServiceBuildSpecComponentBuildInfo, definitionHash string) *latticev1.ContainerBuild {
+	return &latticev1.ContainerBuild{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:            uuid.NewV4().String(),
 			OwnerReferences: []metav1.OwnerReference{*newOwnerReference(build)},
 			Labels: map[string]string{
-				latticev1.ComponentBuildDefinitionHashLabelKey: definitionHash,
+				latticev1.ContainerBuildDefinitionHashLabelKey: definitionHash,
 			},
 		},
-		Spec: latticev1.ComponentBuildSpec{
+		Spec: latticev1.ContainerBuildSpec{
 			BuildDefinitionBlock: cbInfo.DefinitionBlock,
 		},
 	}
 }
 
-func (c *Controller) addOwnerReference(build *latticev1.ServiceBuild, componentBuild *latticev1.ComponentBuild) (*latticev1.ComponentBuild, error) {
+func (c *Controller) addOwnerReference(build *latticev1.ServiceBuild, componentBuild *latticev1.ContainerBuild) (*latticev1.ContainerBuild, error) {
 	ownerRef := kubeutil.GetOwnerReference(componentBuild, build)
 
 	// already has the service build as an owner
@@ -99,7 +99,7 @@ func (c *Controller) addOwnerReference(build *latticev1.ServiceBuild, componentB
 	return result, nil
 }
 
-func (c *Controller) removeOwnerReference(build *latticev1.ServiceBuild, componentBuild *latticev1.ComponentBuild) (*latticev1.ComponentBuild, error) {
+func (c *Controller) removeOwnerReference(build *latticev1.ServiceBuild, componentBuild *latticev1.ContainerBuild) (*latticev1.ContainerBuild, error) {
 	found := false
 	var ownerRefs []metav1.OwnerReference
 	for _, ref := range componentBuild.GetOwnerReferences() {

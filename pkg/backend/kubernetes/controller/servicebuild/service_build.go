@@ -18,7 +18,7 @@ func (c *Controller) updateServiceBuildStatus(
 	startTimestamp *metav1.Time,
 	completionTimestamp *metav1.Time,
 	componentBuilds map[string]string,
-	componentBuildStatuses map[string]latticev1.ComponentBuildStatus,
+	componentBuildStatuses map[string]latticev1.ContainerBuildStatus,
 ) (*latticev1.ServiceBuild, error) {
 	status := latticev1.ServiceBuildStatus{
 		State:   state,

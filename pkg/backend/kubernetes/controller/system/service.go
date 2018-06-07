@@ -228,12 +228,12 @@ func (c *Controller) serviceSpec(
 		return latticev1.ServiceSpec{}, err
 	}
 
-	componentPorts := map[string][]latticev1.ComponentPort{}
+	componentPorts := map[string][]latticev1.ContainerPort{}
 
 	for _, component := range serviceInfo.Definition.Components {
-		var ports []latticev1.ComponentPort
+		var ports []latticev1.ContainerPort
 		for _, port := range component.Ports {
-			componentPort := latticev1.ComponentPort{
+			componentPort := latticev1.ContainerPort{
 				Name:     port.Name,
 				Port:     int32(port.Port),
 				Protocol: port.Protocol,
@@ -252,7 +252,7 @@ func (c *Controller) serviceSpec(
 
 	spec := latticev1.ServiceSpec{
 		Definition:              serviceInfo.Definition,
-		ComponentBuildArtifacts: serviceInfo.ComponentBuildArtifacts,
+		ContainerBuildArtifacts: serviceInfo.ContainerBuildArtifacts,
 		Ports:        componentPorts,
 		NumInstances: numInstances,
 	}

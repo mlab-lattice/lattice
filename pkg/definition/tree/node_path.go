@@ -19,6 +19,10 @@ const (
 // For example: /a/b/c
 type NodePath string
 
+func RootNodePath() NodePath {
+	return NodePath("/")
+}
+
 // NewNodePath validates the string passed in and returns a NodePath.
 func NewNodePath(p string) (NodePath, error) {
 	if p == "" {
@@ -52,6 +56,16 @@ func NewNodePathFromDomain(d string) (NodePath, error) {
 	}
 
 	return NewNodePath(p)
+}
+
+// Child returns the path of a child of the NodePath
+// For example, child c of /a/b returns /a/b/c
+func (np NodePath) Child(child string) NodePath {
+	if np.IsRoot() {
+		return NodePath(fmt.Sprintf("/%v", child))
+	}
+
+	return NodePath(fmt.Sprintf("%v/%v", np.String(), child))
 }
 
 // ToDomain returns the domain version of the path.

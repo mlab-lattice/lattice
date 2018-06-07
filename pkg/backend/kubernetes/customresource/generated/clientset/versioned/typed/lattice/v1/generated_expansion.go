@@ -6,17 +6,15 @@ type AddressExpansion interface{}
 
 type BuildExpansion interface{}
 
-type ComponentBuildExpansion interface{}
-
 type ConfigExpansion interface{}
+
+type ContainerBuildExpansion interface{}
 
 type DeployExpansion interface{}
 
 type NodePoolExpansion interface{}
 
 type ServiceExpansion interface{}
-
-type ServiceBuildExpansion interface{}
 
 type SystemExpansion interface{}
 

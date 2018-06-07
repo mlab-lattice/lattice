@@ -14,7 +14,7 @@ import (
 )
 
 func (c *Controller) syncFailedServiceBuild(build *latticev1.ServiceBuild, stateInfo stateInfo) error {
-	// Sort the ComponentBuild names so the Status.Message is the same for the same failed ComponentBuilds
+	// Sort the ContainerBuild names so the Status.Message is the same for the same failed ComponentBuilds
 	var failedComponents []string
 	for component := range stateInfo.failedComponentBuilds {
 		failedComponents = append(failedComponents, component)
@@ -57,7 +57,7 @@ func (c *Controller) syncFailedServiceBuild(build *latticev1.ServiceBuild, state
 }
 
 func (c *Controller) syncRunningServiceBuild(build *latticev1.ServiceBuild, stateInfo stateInfo) error {
-	// Sort the ComponentBuild names so the Status.Message is the same for the same active ComponentBuilds
+	// Sort the ContainerBuild names so the Status.Message is the same for the same active ComponentBuilds
 	var activeComponents []string
 	for component := range stateInfo.activeComponentBuilds {
 		activeComponents = append(activeComponents, component)
@@ -100,10 +100,10 @@ func (c *Controller) syncMissingComponentBuildsServiceBuild(build *latticev1.Ser
 
 	componentBuildStatuses := stateInfo.componentBuildStatuses
 	if componentBuildStatuses == nil {
-		componentBuildStatuses = make(map[string]latticev1.ComponentBuildStatus)
+		componentBuildStatuses = make(map[string]latticev1.ContainerBuildStatus)
 	}
 
-	componentBuildHashes := make(map[string]*latticev1.ComponentBuild)
+	componentBuildHashes := make(map[string]*latticev1.ContainerBuild)
 
 	for _, component := range stateInfo.needsNewComponentBuilds {
 		componentInfo := build.Spec.Components[component]

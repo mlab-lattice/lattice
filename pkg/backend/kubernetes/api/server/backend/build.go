@@ -169,7 +169,7 @@ func (kb *KubernetesBackend) BuildLogs(
 	}
 
 	selector := labels.NewSelector()
-	requirement, err := labels.NewRequirement(latticev1.ComponentBuildIDLabelKey, selection.Equals, []string{componentBuildID})
+	requirement, err := labels.NewRequirement(latticev1.ContainerBuildIDLabelKey, selection.Equals, []string{componentBuildID})
 	if err != nil {
 		return nil, fmt.Errorf("error creating requirement for %v/%v job lookup: %v", namespace, componentBuildID, err)
 	}
@@ -327,7 +327,7 @@ func getServiceBuildState(state latticev1.ServiceBuildState) (v1.ServiceBuildSta
 	}
 }
 
-func transformComponentBuild(status latticev1.ComponentBuildStatus) (v1.ComponentBuild, error) {
+func transformComponentBuild(status latticev1.ContainerBuildStatus) (v1.ComponentBuild, error) {
 	state, err := getComponentBuildState(status.State)
 	if err != nil {
 		return v1.ComponentBuild{}, err
