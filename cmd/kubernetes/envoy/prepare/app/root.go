@@ -24,6 +24,10 @@ const (
 	envVarXDSAPIHost              = "XDS_API_HOST"
 	envVarXDSAPIPort              = "XDS_API_PORT"
 
+	// XXX: needed for V2 config (`--service-cluster` and `--service-node` do not set this appropriately)
+	envVarServiceCluster = "SERVICE_CLUSTER"
+	envVarServiceNode    = "SERVICE_NODE"
+
 	DefaultXDSClusterName             = "xds-api"
 	DefaultXDSClusterRefreshDelayMS   = 10000
 	DefaultXDSClusterConnectTimeoutMS = 250
@@ -72,18 +76,30 @@ func Execute() {
 }
 
 func parseEnv() (map[string]string, error) {
-	fail := func(key string) error {
-		return fmt.Errorf("%s not set", key)
-	}
-
 	env := map[string]string{}
 
-	for _, envVar := range envVars {
-		val, ok := os.LookupEnv(envVar)
+	getEnvVar := func(key string) error {
+		val, ok := os.LookupEnv(key)
 		if !ok {
-			return nil, fail(envVar)
+			return fmt.Errorf("%s not set", key)
 		}
-		env[envVar] = val
+		env[key] = val
+		return nil
+	}
+
+	for _, envVar := range envVars {
+		if err := getEnvVar(envVar); err != nil {
+			return nil, err
+		}
+	}
+
+	// XXX: see comment above
+	if env[envVarXDSAPIVersion] == "2" {
+		for _, envVar := range []string{envVarServiceCluster, envVarServiceNode} {
+			if err := getEnvVar(envVar); err != nil {
+				return nil, err
+			}
+		}
 	}
 
 	return env, nil
@@ -159,9 +175,15 @@ type XDSV1Host struct {
 // -----------------------------------------------------------------------------
 
 type XDSV2BootstrapConfig struct {
+	Node             XDSV2Node             `json:"node"`
 	Admin            XDSV2Admin            `json:"admin"`
 	StaticResources  XDSV2StaticResources  `json:"static_resources"`
 	DynamicResources XDSV2DynamicResources `json:"dynamic_resources"`
+}
+
+type XDSV2Node struct {
+	Id      string `json:"id"`
+	Cluster string `json:"cluster"`
 }
 
 type XDSV2Admin struct {
@@ -288,6 +310,10 @@ func outputEnvoyConfig(env map[string]string) error {
 		}, "", "  ")
 	case "2":
 		contents, err = json.MarshalIndent(XDSV2BootstrapConfig{
+			Node: XDSV2Node{
+				Id:      env[envVarServiceNode],
+				Cluster: env[envVarServiceCluster],
+			},
 			Admin: XDSV2Admin{
 				AccessLogPath: "/dev/null",
 				Address: XDSV2Address{

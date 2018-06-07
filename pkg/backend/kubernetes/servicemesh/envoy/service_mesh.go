@@ -464,6 +464,11 @@ func (sm *DefaultEnvoyServiceMesh) envoyContainers(service *latticev1.Service) (
 		return corev1.Container{}, corev1.Container{}, err
 	}
 
+	servicePath, err := service.PathLabel()
+	if err != nil {
+		return corev1.Container{}, corev1.Container{}, err
+	}
+
 	prepareEnvoy := corev1.Container{
 		Name:  initContainerNamePrepareEnvoy,
 		Image: sm.prepareImage,
@@ -499,6 +504,15 @@ func (sm *DefaultEnvoyServiceMesh) envoyContainers(service *latticev1.Service) (
 			{
 				Name:  "XDS_API_PORT",
 				Value: fmt.Sprintf("%v", sm.xdsAPIPort),
+			},
+			// XXX: needed for V2
+			{
+				Name:  "SERVICE_CLUSTER",
+				Value: service.Namespace,
+			},
+			{
+				Name:  "SERVICE_NODE",
+				Value: servicePath.ToDomain(),
 			},
 		},
 		VolumeMounts: []corev1.VolumeMount{
@@ -544,11 +558,12 @@ func (sm *DefaultEnvoyServiceMesh) envoyContainers(service *latticev1.Service) (
 		}
 	}
 
-	servicePath, err := service.PathLabel()
-	if err != nil {
-		return corev1.Container{}, corev1.Container{}, err
-	}
-
+	// XXX: `--service-cluster` and `--service-node` do not seem to have
+	//      any effect when running v2 (i.e., they do not set the
+	//      service cluster or service node nor do they override whatever
+	//      might be set in the config)
+	// XXX: adding environment variables to envoy prepare spec to set the
+	//      appropriate values in the generated envoy config
 	envoy := corev1.Container{
 		Name:            containerNameEnvoy,
 		Image:           sm.image,
@@ -561,6 +576,8 @@ func (sm *DefaultEnvoyServiceMesh) envoyContainers(service *latticev1.Service) (
 			service.Namespace,
 			"--service-node",
 			servicePath.ToDomain(),
+			// "-l", "debug",
+			// "--v2-config-only",
 		},
 		Ports: envoyPorts,
 		VolumeMounts: []corev1.VolumeMount{

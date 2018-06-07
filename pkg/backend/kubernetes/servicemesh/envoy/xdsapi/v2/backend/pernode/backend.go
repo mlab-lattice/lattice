@@ -4,8 +4,10 @@ import (
 	"encoding/json"
 	"fmt"
 	// "reflect"
+	"sync"
 	"time"
 
+	// "github.com/gogo/protobuf/jsonpb"
 	"github.com/golang/glog"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/runtime"
@@ -17,6 +19,7 @@ import (
 
 	envoyv2 "github.com/envoyproxy/go-control-plane/envoy/api/v2"
 	envoycore "github.com/envoyproxy/go-control-plane/envoy/api/v2/core"
+	// envoyendpoint "github.com/envoyproxy/go-control-plane/envoy/api/v2/endpoint"
 	envoycache "github.com/envoyproxy/go-control-plane/pkg/cache"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kubeinformers "k8s.io/client-go/informers"
@@ -31,6 +34,7 @@ import (
 	latticeinformers "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/generated/informers/externalversions"
 	latticelisters "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/generated/listers/lattice/v1"
 	xdsapi "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/servicemesh/envoy/xdsapi/v2"
+	xdsservice "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/servicemesh/envoy/xdsapi/v2/service"
 )
 
 // TODO: add events
@@ -46,29 +50,15 @@ type KubernetesPerNodeBackend struct {
 
 	queue workqueue.RateLimitingInterface
 
+	count int
+
+	lock sync.Mutex
+
+	services map[string]*xdsservice.Service
 	xdsCache envoycache.SnapshotCache
 
 	stopCh <-chan struct{}
 }
-
-// I0531 16:50:06.323342       1 server.go:16] Per-node GRPC server starting on port 8080
-// I0531 16:50:06.323671       1 backend.go:111] Starting per-node backend...
-// I0531 16:50:06.323687       1 backend.go:112] Waiting for caches to sync
-// I0531 16:50:06.323989       1 reflector.go:202] Starting reflector *v1.Endpoints (12h0m0s) from external/io_k8s_client_go/tools/cache/reflector.go:99
-// I0531 16:50:06.324019       1 reflector.go:240] Listing and watching *v1.Endpoints from external/io_k8s_client_go/tools/cache/reflector.go:99
-// I0531 16:50:06.324605       1 reflector.go:202] Starting reflector *v1.Service (12h0m0s) from external/io_k8s_client_go/tools/cache/reflector.go:99
-// I0531 16:50:06.324624       1 reflector.go:240] Listing and watching *v1.Service from external/io_k8s_client_go/tools/cache/reflector.go:99
-// I0531 16:50:06.423922       1 shared_informer.go:123] caches populated
-// I0531 16:50:06.423998       1 backend.go:118] Starting workers
-// I0531 16:50:06.424010       1 backend.go:123] Per-node backend started
-// I0531 16:58:07.345046       1 reflector.go:428] external/io_k8s_client_go/tools/cache/reflector.go:99: Watch close - *v1.Endpoints total 480 items received
-// I0531 16:59:48.350041       1 reflector.go:428] external/io_k8s_client_go/tools/cache/reflector.go:99: Watch close - *v1.Service total 0 items received
-// I0531 17:00:57.290362       1 backend.go:266] OnStreamOpen called: 1,
-// I0531 17:00:57.290448       1 backend.go:262] OnStreamRequest called: 1, node:<build_version:"0bcdb5d7611a79fd22f823fd707a8b6f7b5f756e/1.7.0-dev/Clean/RELEASE" > type_url:"type.googleapis.com/envoy.api.v2.Cluster"
-// I0531 17:00:57.290571       1 backend.go:252] open watch 1 for type.googleapis.com/envoy.api.v2.Cluster[] from nodeID "", version ""
-// I0531 17:00:58.589383       1 backend.go:266] OnStreamOpen called: 2,
-// I0531 17:00:58.591280       1 backend.go:262] OnStreamRequest called: 2, node:<build_version:"0bcdb5d7611a79fd22f823fd707a8b6f7b5f756e/1.7.0-dev/Clean/RELEASE" > type_url:"type.googleapis.com/envoy.api.v2.Cluster"
-// I0531 17:00:58.591376       1 backend.go:252] open watch 2 for type.googleapis.com/envoy.api.v2.Cluster[] from nodeID "", version ""
 
 func NewKubernetesPerNodeBackend(kubeconfig string, stopCh <-chan struct{}) (*KubernetesPerNodeBackend, error) {
 	var config *rest.Config
@@ -110,6 +100,7 @@ func NewKubernetesPerNodeBackend(kubeconfig string, stopCh <-chan struct{}) (*Ku
 		queue:                    workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "envoy-api-backend"),
 		stopCh:                   stopCh,
 	}
+	b.services = make(map[string]*xdsservice.Service)
 	b.xdsCache = envoycache.NewSnapshotCache(true, b, b)
 
 	kubeEndpointInformer.Informer().AddEventHandlerWithResyncPeriod(cache.ResourceEventHandlerFuncs{
@@ -198,15 +189,41 @@ func (b *KubernetesPerNodeBackend) XDSCache() envoycache.Cache {
 
 // methods
 
+func (b *KubernetesPerNodeBackend) SetXDSCacheSnapshot(id string, endpoints, clusters, routes, listeners []envoycache.Resource) error {
+	// disallow concurrent updates to the cache
+	// XXX: is this necessary?
+	b.lock.Lock()
+	defer b.lock.Unlock()
+
+	b.count++
+	version := fmt.Sprintf("%d", b.count)
+	b.xdsCache.SetSnapshot(id, envoycache.NewSnapshot(version, endpoints, clusters, routes, listeners))
+
+	return nil
+}
+
 func (b *KubernetesPerNodeBackend) enqueueCacheUpdateTask(_type xdsapi.EntityType, obj interface{}) (string, error) {
 	var err error
+	var ok bool
 	var name string
 	var task []byte
 
-	name, err = cache.MetaNamespaceKeyFunc(obj)
-	if err != nil {
-		return "", err
+	switch _type {
+	case xdsapi.EnvoyEntityType:
+		name, ok = obj.(string)
+		if !ok {
+			return "", err
+		}
+	case xdsapi.KubeEntityType, xdsapi.LatticeEntityType:
+		// generates name in the format "<namespace>/<name>"
+		name, err = cache.MetaNamespaceKeyFunc(obj)
+		if err != nil {
+			return "", err
+		}
+	default:
+		return "", fmt.Errorf("Got unkown entity type <%d>", _type)
 	}
+
 	task, err = json.Marshal(xdsapi.CacheUpdateTask{
 		Name: name,
 		Type: _type,
@@ -279,19 +296,92 @@ func (b *KubernetesPerNodeBackend) Worker() {
 	}
 }
 
+func (b *KubernetesPerNodeBackend) handleEnvoySyncXDSCache(entityName string) error {
+	glog.Infof("Per-node backend handling envoy sync task")
+	b.lock.Lock()
+	xdsService, ok := b.services[entityName]
+	b.lock.Unlock()
+	if !ok {
+		return fmt.Errorf("Couldn't find Envoy service with ID <%s>", entityName)
+	}
+	return xdsService.Update(b)
+}
+
+func (b *KubernetesPerNodeBackend) getServicesForNamespace(namespace string) []*xdsservice.Service {
+	var services []*xdsservice.Service
+
+	b.lock.Lock()
+	for serviceId, service := range b.services {
+		if _namespace, _, err := cache.SplitMetaNamespaceKey(serviceId); err == nil && _namespace == namespace {
+			services = append(services, service)
+		}
+	}
+	b.lock.Unlock()
+
+	return services
+}
+
+func (b *KubernetesPerNodeBackend) handleKubeSyncXDSCache(entityName string) error {
+	glog.Infof("Per-node backend handling kube sync task")
+	namespace, _, err := cache.SplitMetaNamespaceKey(entityName)
+	if err != nil {
+		return err
+	}
+	for _, service := range b.getServicesForNamespace(namespace) {
+		err = service.Update(b)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (b *KubernetesPerNodeBackend) handleLatticeSyncXDSCache(entityName string) error {
+	glog.Infof("Per-node backend handling lattice sync task")
+	namespace, _, err := cache.SplitMetaNamespaceKey(entityName)
+	if err != nil {
+		return err
+	}
+	for _, service := range b.getServicesForNamespace(namespace) {
+		err = service.Update(b)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func (b *KubernetesPerNodeBackend) syncXDSCache(key string) error {
 	glog.Infof("Per-node backend syncing '%s'", key)
-	glog.Infof("Per-node backend synced '%s'", key)
+	var err error
+	var task xdsapi.CacheUpdateTask = xdsapi.CacheUpdateTask{}
+	err = json.Unmarshal([]byte(key), &task)
+	if err != nil {
+		return err
+	}
+	switch task.Type {
+	case xdsapi.EnvoyEntityType:
+		err = b.handleEnvoySyncXDSCache(task.Name)
+	case xdsapi.KubeEntityType:
+		err = b.handleKubeSyncXDSCache(task.Name)
+	case xdsapi.LatticeEntityType:
+		err = b.handleLatticeSyncXDSCache(task.Name)
+	default:
+		return fmt.Errorf("Got unkown entity type <%d>", task.Type)
+	}
+	if err == nil {
+		glog.Infof("Per-node backend synced '%s'", key)
+	}
+	return err
+}
+
+func (b *KubernetesPerNodeBackend) setNewSnapshot() error {
+	b.lock.Lock()
+	defer b.lock.Unlock()
 	return nil
 }
 
 func (b *KubernetesPerNodeBackend) Services(serviceCluster string) (map[tree.NodePath]*xdsapi.Service, error) {
-	// TODO: probably want to have Services return a cached snapshot of the service state so we don't have to recompute this every time
-	// 	     For example, could add hooks to the informers which creates a new Services map and changes the pointer to point to the new one
-	//       so future Services() calls will return the new map.
-	// 		 Could also have the backend have a channel passed into it and it could notify the API when an update has occurred.
-	//       This could be useful for the GRPC streaming version of the API.
-	// N.B.: keep an eye on https://github.com/envoyproxy/go-control-plane
 	namespace := serviceCluster
 	result := map[tree.NodePath]*xdsapi.Service{}
 
@@ -363,7 +453,7 @@ func (b *KubernetesPerNodeBackend) Services(serviceCluster string) (map[tree.Nod
 // github.com/envoyproxy/go-control-plane/pkg/cache#NodeHash{} -- for b.xdsCache
 
 func (b *KubernetesPerNodeBackend) ID(node *envoycore.Node) string {
-	return node.GetId()
+	return node.GetCluster() + "/" + node.GetId()
 }
 
 // github.com/envoyproxy/go-control-plane/pkg/log#Logger{} -- for b.xdsCache
@@ -379,7 +469,26 @@ func (b *KubernetesPerNodeBackend) Errorf(format string, args ...interface{}) {
 // github.com/envoyproxy/go-control-plane/pkg/server#Callbacks{} -- for github.com/envoyproxy/go-control-plane/pkg/server#Server
 
 func (b *KubernetesPerNodeBackend) OnStreamRequest(id int64, req *envoyv2.DiscoveryRequest) {
-	glog.Infof("OnStreamRequest called: %d, %v", id, req)
+	reqStr, _ := json.MarshalIndent(req, "", "  ")
+	glog.Infof("OnStreamRequest called: %d\n%v", id, string(reqStr[:]))
+	node := req.GetNode()
+	serviceId := b.ID(node)
+
+	b.lock.Lock()
+	if _, ok := b.services[serviceId]; !ok {
+		b.services[serviceId] = xdsservice.NewService(serviceId, node)
+	}
+	b.lock.Unlock()
+
+	glog.Infof("Got node <%s>: %v", serviceId, node)
+
+	task, err := b.enqueueCacheUpdateTask(xdsapi.EnvoyEntityType, serviceId)
+	if err != nil {
+		glog.Error(err)
+		runtime.HandleError(err)
+	} else {
+		glog.Infof("Got new Envoy connection task: %s", task)
+	}
 }
 
 func (b *KubernetesPerNodeBackend) OnStreamOpen(id int64, urlType string) {

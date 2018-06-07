@@ -16,6 +16,7 @@ type EntityType int
 const (
 	KubeEntityType EntityType = iota
 	LatticeEntityType
+	EnvoyEntityType
 )
 
 func (t EntityType) String() string {
@@ -25,6 +26,8 @@ func (t EntityType) String() string {
 		_type = "KubeEntityType"
 	case LatticeEntityType:
 		_type = "LatticeEntityType"
+	case EnvoyEntityType:
+		_type = "EnvoyEntityType"
 	}
 	return _type
 }
