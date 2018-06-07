@@ -26,10 +26,10 @@ type stateInfo struct {
 	failedComponentBuilds     map[string]*latticev1.ContainerBuild
 	needsNewComponentBuilds   []string
 
-	// Maps a component's name to the Name of the ContainerBuild that's responsible for it
+	// Maps a component's name to the Name of the Definition that's responsible for it
 	componentBuilds map[string]string
 
-	// Maps a ContainerBuild.Name to its ContainerBuild.Status
+	// Maps a Definition.Name to its Definition.Status
 	componentBuildStatuses map[string]latticev1.ContainerBuildStatus
 }
 
@@ -55,7 +55,7 @@ func (c *Controller) calculateState(build *latticev1.ServiceBuild) (stateInfo, e
 				return stateInfo{}, err
 			}
 
-			// If the ContainerBuild wasn't in the cache, double check with the API.
+			// If the Definition wasn't in the cache, double check with the API.
 			componentBuild, err = c.latticeClient.LatticeV1().ComponentBuilds(build.Namespace).Get(componentBuildName, metav1.GetOptions{})
 			if err != nil {
 				if errors.IsNotFound(err) {
@@ -76,11 +76,11 @@ func (c *Controller) calculateState(build *latticev1.ServiceBuild) (stateInfo, e
 		componentBuildStatuses[componentBuild.Name] = componentBuild.Status
 
 		switch componentBuild.Status.State {
-		case latticev1.ComponentBuildStatePending, latticev1.ComponentBuildStateQueued, latticev1.ComponentBuildStateRunning:
+		case latticev1.ContainerBuildStatePending, latticev1.ContainerBuildStateQueued, latticev1.ContainerBuildStateRunning:
 			activeComponentBuilds[component] = componentBuild
-		case latticev1.ComponentBuildStateFailed:
+		case latticev1.ContainerBuildStateFailed:
 			failedComponentBuilds[component] = componentBuild
-		case latticev1.ComponentBuildStateSucceeded:
+		case latticev1.ContainerBuildStateSucceeded:
 			successfulComponentBuilds[component] = componentBuild
 		default:
 			// FIXME: send warn event

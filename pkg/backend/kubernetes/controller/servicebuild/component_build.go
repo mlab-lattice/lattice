@@ -33,7 +33,7 @@ func (c *Controller) findComponentBuildForDefinitionHash(namespace, definitionHa
 			continue
 		}
 
-		if componentBuild.Status.State == latticev1.ComponentBuildStateFailed {
+		if componentBuild.Status.State == latticev1.ContainerBuildStateFailed {
 			continue
 		}
 
@@ -48,7 +48,7 @@ func (c *Controller) createNewComponentBuild(
 	componentBuildInfo latticev1.ServiceBuildSpecComponentBuildInfo,
 	definitionHash string,
 ) (*latticev1.ContainerBuild, error) {
-	// If there is no new entry in the build cache, create a new ContainerBuild.
+	// If there is no new entry in the build cache, create a new Definition.
 	componentBuild := newComponentBuild(build, componentBuildInfo, definitionHash)
 	result, err := c.latticeClient.LatticeV1().ComponentBuilds(build.Namespace).Create(componentBuild)
 	if err != nil {

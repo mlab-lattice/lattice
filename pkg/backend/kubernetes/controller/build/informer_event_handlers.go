@@ -57,29 +57,29 @@ func (c *Controller) handleBuildEvent(build *latticev1.Build, verb string) {
 	c.enqueue(build)
 }
 
-// handleServiceBuildAdd enqueues the System that manages a Service when the Service is created.
-func (c *Controller) handleServiceBuildAdd(obj interface{}) {
-	serviceBuild := obj.(*latticev1.ServiceBuild)
+// handleContainerBuildAdd enqueues the System that manages a Service when the Service is created.
+func (c *Controller) handleContainerBuildAdd(obj interface{}) {
+	containerBuild := obj.(*latticev1.ContainerBuild)
 
-	if serviceBuild.DeletionTimestamp != nil {
+	if containerBuild.DeletionTimestamp != nil {
 		// only orphaned service builds should be deleted
 		return
 	}
 
-	c.handleServiceBuildEvent(serviceBuild, "added")
+	c.handleServiceBuildEvent(containerBuild, "added")
 }
 
-// handleServiceBuildUpdate figures out what Build manages a Service when the
+// handleContainerBuildUpdate figures out what Build manages a Service when the
 // Service is updated and enqueues them.
-func (c *Controller) handleServiceBuildUpdate(old, cur interface{}) {
-	serviceBuild := cur.(*latticev1.ServiceBuild)
-	c.handleServiceBuildEvent(serviceBuild, "updated")
+func (c *Controller) handleContainerBuildUpdate(old, cur interface{}) {
+	containerBuild := cur.(*latticev1.ContainerBuild)
+	c.handleServiceBuildEvent(containerBuild, "updated")
 }
 
-func (c *Controller) handleServiceBuildEvent(serviceBuild *latticev1.ServiceBuild, verb string) {
-	glog.V(4).Infof("%s %s", serviceBuild.Description(c.namespacePrefix), verb)
+func (c *Controller) handleServiceBuildEvent(containerBuild *latticev1.ContainerBuild, verb string) {
+	glog.V(4).Infof("%s %s", containerBuild.Description(c.namespacePrefix), verb)
 
-	builds, err := c.owningBuilds(serviceBuild)
+	builds, err := c.owningBuilds(containerBuild)
 	if err != nil {
 		// FIXME: send error event?
 		return
@@ -90,9 +90,9 @@ func (c *Controller) handleServiceBuildEvent(serviceBuild *latticev1.ServiceBuil
 	}
 }
 
-func (c *Controller) owningBuilds(serviceBuild *latticev1.ServiceBuild) ([]latticev1.Build, error) {
+func (c *Controller) owningBuilds(containerBuild *latticev1.ContainerBuild) ([]latticev1.Build, error) {
 	owningBuilds := mapset.NewSet()
-	for _, owner := range serviceBuild.OwnerReferences {
+	for _, owner := range containerBuild.OwnerReferences {
 		// not a lattice.mlab.com owner (probably shouldn't happen)
 		if owner.APIVersion != latticev1.SchemeGroupVersion.String() {
 			continue

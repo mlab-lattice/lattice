@@ -55,7 +55,7 @@ func (c *Controller) syncSuccessfulComponentBuild(build *latticev1.ContainerBuil
 
 	_, err := c.updateComponentBuildStatus(
 		build,
-		latticev1.ComponentBuildStateSucceeded,
+		latticev1.ContainerBuildStateSucceeded,
 		build.Status.StartTimestamp,
 		completionTimestamp,
 		artifacts,
@@ -80,7 +80,7 @@ func (c *Controller) syncFailedComponentBuild(build *latticev1.ContainerBuild) e
 
 	_, err := c.updateComponentBuildStatus(
 		build,
-		latticev1.ComponentBuildStateFailed,
+		latticev1.ContainerBuildStateFailed,
 		build.Status.StartTimestamp,
 		completionTimestamp,
 		build.Status.Artifacts,
@@ -99,7 +99,7 @@ func (c *Controller) syncUnfinishedComponentBuild(build *latticev1.ContainerBuil
 	if job.Status.Active > 0 || job.Status.Failed > 0 {
 		_, err := c.updateComponentBuildStatus(
 			build,
-			latticev1.ComponentBuildStateRunning,
+			latticev1.ContainerBuildStateRunning,
 			startTimestamp,
 			nil,
 			build.Status.Artifacts,
@@ -109,7 +109,7 @@ func (c *Controller) syncUnfinishedComponentBuild(build *latticev1.ContainerBuil
 
 	_, err := c.updateComponentBuildStatus(
 		build,
-		latticev1.ComponentBuildStateQueued,
+		latticev1.ContainerBuildStateQueued,
 		startTimestamp,
 		nil,
 		build.Status.Artifacts,

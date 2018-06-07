@@ -45,8 +45,8 @@ func (c *Controller) handleComponentBuildAdd(obj interface{}) {
 	c.handleComponentBuildEvent(componentBuild, "added")
 }
 
-// handleComponentBuildUpdate enqueues any ServiceBuilds which may be interested in it when
-// a ContainerBuild is updated.
+// handleComponentBuildUpdate enqueues any ContainerBuilds which may be interested in it when
+// a Definition is updated.
 func (c *Controller) handleComponentBuildUpdate(old, cur interface{}) {
 	componentBuild := cur.(*latticev1.ContainerBuild)
 	c.handleComponentBuildEvent(componentBuild, "updated")

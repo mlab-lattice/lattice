@@ -9,9 +9,9 @@ import (
 )
 
 func (c *Controller) syncDeletedBuild(build *latticev1.Build) error {
-	serviceBuilds, err := c.serviceBuildLister.ServiceBuilds(build.Namespace).List(labels.Everything())
+	serviceBuilds, err := c.containerBuildLister.ContainerBuilds(build.Namespace).List(labels.Everything())
 	if err != nil {
-		return fmt.Errorf("error getting service builds for deletion of %v: %v", build.Description(c.namespacePrefix), err)
+		return fmt.Errorf("error getting container builds for deletion of %v: %v", build.Description(c.namespacePrefix), err)
 	}
 
 	for _, serviceBuild := range serviceBuilds {

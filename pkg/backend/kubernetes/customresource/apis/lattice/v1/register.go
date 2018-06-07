@@ -52,7 +52,7 @@ var (
 			Kind:              ContainerBuildKind.Kind,
 			ListKind:          ContainerBuildListKind.Kind,
 			Type:              &ContainerBuild{},
-			ListType:          &ComponentBuildList{},
+			ListType:          &ContainerBuildList{},
 			StatusSubresource: true,
 		},
 		{
@@ -93,16 +93,6 @@ var (
 			ListKind:          ServiceListKind.Kind,
 			Type:              &Service{},
 			ListType:          &ServiceList{},
-			StatusSubresource: true,
-		},
-		{
-			Singular:          ResourceSingularServiceBuild,
-			Plural:            ResourcePluralServiceBuild,
-			Scope:             ResourceScopeServiceBuild,
-			Kind:              ServiceBuildKind.Kind,
-			ListKind:          ServiceBuildListKind.Kind,
-			Type:              &ServiceBuild{},
-			ListType:          &ServiceBuildList{},
 			StatusSubresource: true,
 		},
 		{

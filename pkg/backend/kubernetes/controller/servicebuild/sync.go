@@ -14,7 +14,7 @@ import (
 )
 
 func (c *Controller) syncFailedServiceBuild(build *latticev1.ServiceBuild, stateInfo stateInfo) error {
-	// Sort the ContainerBuild names so the Status.Message is the same for the same failed ComponentBuilds
+	// Sort the Definition names so the Status.Message is the same for the same failed ContainerBuilds
 	var failedComponents []string
 	for component := range stateInfo.failedComponentBuilds {
 		failedComponents = append(failedComponents, component)
@@ -57,7 +57,7 @@ func (c *Controller) syncFailedServiceBuild(build *latticev1.ServiceBuild, state
 }
 
 func (c *Controller) syncRunningServiceBuild(build *latticev1.ServiceBuild, stateInfo stateInfo) error {
-	// Sort the ContainerBuild names so the Status.Message is the same for the same active ComponentBuilds
+	// Sort the Definition names so the Status.Message is the same for the same active ContainerBuilds
 	var activeComponents []string
 	for component := range stateInfo.activeComponentBuilds {
 		activeComponents = append(activeComponents, component)

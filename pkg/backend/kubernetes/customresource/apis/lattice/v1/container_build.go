@@ -19,7 +19,7 @@ const (
 )
 
 var (
-	ContainerBuildKind     = SchemeGroupVersion.WithKind("ContainerBuild")
+	ContainerBuildKind     = SchemeGroupVersion.WithKind("Definition")
 	ContainerBuildListKind = SchemeGroupVersion.WithKind("ContainerBuildList")
 
 	ContainerBuildIDLabelKey             = fmt.Sprintf("containerbuild.%v/id", GroupName)
@@ -77,11 +77,11 @@ func (b *ContainerBuild) Description(namespacePrefix string) string {
 
 // +k8s:deepcopy-gen=false
 type ContainerBuildSpec struct {
-	ContainerBuild definitionv1.ContainerBuild `json:"containerBuild"`
+	Definition *definitionv1.ContainerBuild `json:"definition"`
 }
 
 type ContainerBuildStatus struct {
-	// ComponentBuilds are immutable so no need for ObservedGeneration
+	// ContainerBuilds are immutable so no need for ObservedGeneration
 
 	State       ComponentBuildState           `json:"state"`
 	FailureInfo *v1.ComponentBuildFailureInfo `json:"failureInfo,omitempty"`
@@ -96,11 +96,11 @@ type ContainerBuildStatus struct {
 type ComponentBuildState string
 
 const (
-	ComponentBuildStatePending   ComponentBuildState = ""
-	ComponentBuildStateQueued    ComponentBuildState = "queued"
-	ComponentBuildStateRunning   ComponentBuildState = "running"
-	ComponentBuildStateSucceeded ComponentBuildState = "succeeded"
-	ComponentBuildStateFailed    ComponentBuildState = "failed"
+	ContainerBuildStatePending   ComponentBuildState = ""
+	ContainerBuildStateQueued    ComponentBuildState = "queued"
+	ContainerBuildStateRunning   ComponentBuildState = "running"
+	ContainerBuildStateSucceeded ComponentBuildState = "succeeded"
+	ContainerBuildStateFailed    ComponentBuildState = "failed"
 )
 
 type ContainerBuildArtifacts struct {
@@ -109,7 +109,7 @@ type ContainerBuildArtifacts struct {
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-type ComponentBuildList struct {
+type ContainerBuildList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata"`
 	Items           []ContainerBuild `json:"items"`

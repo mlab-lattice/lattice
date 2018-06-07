@@ -143,7 +143,7 @@ func (kb *KubernetesBackend) BuildLogs(
 		return nil, err
 	}
 
-	serviceBuildID, ok := build.Status.ServiceBuilds[path]
+	serviceBuildID, ok := build.Status.ContainerBuilds[path]
 	if !ok {
 		if errors.IsNotFound(err) {
 			return nil, v1.NewInvalidServicePathError(path)
@@ -152,7 +152,7 @@ func (kb *KubernetesBackend) BuildLogs(
 		return nil, err
 	}
 
-	status, ok := build.Status.ServiceBuildStatuses[serviceBuildID]
+	status, ok := build.Status.ContainerBuildStatuses[serviceBuildID]
 	if !ok {
 		err := fmt.Errorf(
 			"%v has service build ID %v for %v, but does not have a status for it",
@@ -226,8 +226,8 @@ func (kb *KubernetesBackend) transformBuild(build *latticev1.Build) (v1.Build, e
 		Services: map[tree.NodePath]v1.ServiceBuild{},
 	}
 
-	for service, serviceBuildName := range build.Status.ServiceBuilds {
-		serviceBuildStatus, ok := build.Status.ServiceBuildStatuses[serviceBuildName]
+	for service, serviceBuildName := range build.Status.ContainerBuilds {
+		serviceBuildStatus, ok := build.Status.ContainerBuildStatuses[serviceBuildName]
 		if !ok {
 			err := fmt.Errorf(
 				"%v has service build %v but no Status for it",
@@ -369,15 +369,15 @@ func transformComponentBuild(status latticev1.ContainerBuildStatus) (v1.Componen
 
 func getComponentBuildState(state latticev1.ComponentBuildState) (v1.ComponentBuildState, error) {
 	switch state {
-	case latticev1.ComponentBuildStatePending:
+	case latticev1.ContainerBuildStatePending:
 		return v1.ComponentBuildStatePending, nil
-	case latticev1.ComponentBuildStateQueued:
+	case latticev1.ContainerBuildStateQueued:
 		return v1.ComponentBuildStateQueued, nil
-	case latticev1.ComponentBuildStateRunning:
+	case latticev1.ContainerBuildStateRunning:
 		return v1.ComponentBuildStateRunning, nil
-	case latticev1.ComponentBuildStateSucceeded:
+	case latticev1.ContainerBuildStateSucceeded:
 		return v1.ComponentBuildStateSucceeded, nil
-	case latticev1.ComponentBuildStateFailed:
+	case latticev1.ContainerBuildStateFailed:
 		return v1.ComponentBuildStateFailed, nil
 	default:
 		return "", fmt.Errorf("invalid component state: %v", state)

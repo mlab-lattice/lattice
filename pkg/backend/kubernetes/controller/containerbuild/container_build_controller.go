@@ -204,7 +204,7 @@ func (c *Controller) processNextWorkItem() bool {
 	return true
 }
 
-// syncComponentBuild will sync the ContainerBuild with the given key.
+// syncComponentBuild will sync the Definition with the given key.
 // This function is not meant to be invoked concurrently with the same key.
 func (c *Controller) syncComponentBuild(key string) error {
 	glog.Flush()

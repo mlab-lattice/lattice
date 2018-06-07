@@ -169,7 +169,7 @@ func (c *Controller) jobSpec(build *latticev1.ContainerBuild) (batchv1.JobSpec, 
 }
 
 func (c *Controller) getBuildContainer(build *latticev1.ContainerBuild) (*corev1.Container, string, error) {
-	buildJSON, err := json.Marshal(&build.Spec.ContainerBuild)
+	buildJSON, err := json.Marshal(&build.Spec.Definition)
 	if err != nil {
 		return nil, "", err
 	}
@@ -237,7 +237,7 @@ func (c *Controller) getBuildContainer(build *latticev1.ContainerBuild) (*corev1
 	}
 
 	// FIXME: add back ssh key support
-	//if build.Spec.ContainerBuild.GitRepository != nil && build.Spec.ContainerBuild.GitRepository.SSHKey != nil {
+	//if build.Spec.Definition.GitRepository != nil && build.Spec.Definition.GitRepository.SSHKey != nil {
 	//	FIXME: add support for references
 	//secretParts := strings.Split(*build.Spec.BuildDefinitionBlock.GitRepository.SSHKey.Name, ":")
 	//if len(secretParts) != 2 {

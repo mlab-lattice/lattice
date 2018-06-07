@@ -26,7 +26,7 @@ func (c *Controller) calculateState(build *latticev1.ContainerBuild) (*stateInfo
 		return nil, err
 	}
 
-	if build.Status.State == latticev1.ComponentBuildStateFailed {
+	if build.Status.State == latticev1.ContainerBuildStateFailed {
 		stateInfo := &stateInfo{
 			state: stateJobFailed,
 			job:   job,
@@ -34,7 +34,7 @@ func (c *Controller) calculateState(build *latticev1.ContainerBuild) (*stateInfo
 		return stateInfo, nil
 	}
 
-	if build.Status.State == latticev1.ComponentBuildStateSucceeded {
+	if build.Status.State == latticev1.ContainerBuildStateSucceeded {
 		stateInfo := &stateInfo{
 			state: stateJobSucceeded,
 			job:   job,

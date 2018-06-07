@@ -75,11 +75,16 @@ type BuildStatus struct {
 	StartTimestamp      *metav1.Time `json:"startTimestamp,omitempty"`
 	CompletionTimestamp *metav1.Time `json:"completionTimestamp,omitempty"`
 
-	// Maps a service path to the ServiceBuild.Name responsible for it
-	ServiceBuilds map[tree.NodePath]string `json:"serviceBuilds"`
+	// Maps a service path to the information about its container builds
+	Services map[tree.NodePath]BuildStatusService `json:"services"`
 
 	// Maps a ServiceBuild.Name to the ServiceBuild.Status
-	ServiceBuildStatuses map[string]ServiceBuildStatus `json:"serviceBuildStatuses"`
+	ContainerBuildStatuses map[string]ContainerBuildStatus `json:"containerBuildStatuses"`
+}
+
+type BuildStatusService struct {
+	MainContainer string            `json:"mainContainer"`
+	Sidecars      map[string]string `json:"sidecars"`
 }
 
 type BuildState string
@@ -90,17 +95,6 @@ const (
 	BuildStateSucceeded BuildState = "succeeded"
 	BuildStateFailed    BuildState = "failed"
 )
-
-type BuildStatusServiceInfo struct {
-	Name       string                                         `json:"name"`
-	Status     ServiceBuildStatus                             `json:"status"`
-	Components map[string]BuildStatusServiceInfoComponentInfo `json:"components"`
-}
-
-type BuildStatusServiceInfoComponentInfo struct {
-	Name   string               `json:"name"`
-	Status ContainerBuildStatus `json:"status"`
-}
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 

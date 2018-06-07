@@ -114,7 +114,7 @@ func (c *Controller) systemServices(
 
 	services := make(map[tree.NodePath]latticev1.SystemSpecServiceInfo)
 	for path, service := range build.Spec.Definition.Services() {
-		serviceBuildName, ok := build.Status.ServiceBuilds[path]
+		serviceBuildName, ok := build.Status.ContainerBuilds[path]
 		if !ok {
 			// FIXME: send warn event
 			err := fmt.Errorf(
