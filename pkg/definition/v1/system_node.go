@@ -3,7 +3,8 @@ package v1
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/mlab-lattice/lattice/pkg/definition/resource"
+
+	"github.com/mlab-lattice/lattice/pkg/definition/component"
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 )
 
@@ -13,10 +14,10 @@ type SystemNode struct {
 
 	system *System
 
-	resources map[string]tree.Node
-	systems   map[string]*SystemNode
-	services  map[string]*ServiceNode
-	jobs      map[string]*JobNode
+	components map[string]tree.Node
+	systems    map[string]*SystemNode
+	services   map[string]*ServiceNode
+	jobs       map[string]*JobNode
 }
 
 func NewSystemNode(system *System, name string, parent tree.Node) (*SystemNode, error) {
@@ -31,21 +32,21 @@ func NewSystemNode(system *System, name string, parent tree.Node) (*SystemNode, 
 
 		system: system,
 
-		resources: make(map[string]tree.Node),
-		systems:   make(map[string]*SystemNode),
-		services:  make(map[string]*ServiceNode),
-		jobs:      make(map[string]*JobNode),
+		components: make(map[string]tree.Node),
+		systems:    make(map[string]*SystemNode),
+		services:   make(map[string]*ServiceNode),
+		jobs:       make(map[string]*JobNode),
 	}
 
-	for n, r := range system.Resources {
-		resourceNode, err := NewNode(r, n, node)
+	for n, c := range system.Components {
+		componentNode, err := NewNode(c, n, node)
 		if err != nil {
 			return nil, err
 		}
 
-		node.resources[n] = resourceNode
+		node.components[n] = componentNode
 
-		switch typedNode := resourceNode.(type) {
+		switch typedNode := componentNode.(type) {
 		case *JobNode:
 			node.jobs[n] = typedNode
 
@@ -71,7 +72,7 @@ func (n *SystemNode) Path() tree.NodePath {
 	return n.path
 }
 
-func (n *SystemNode) Resource() resource.Interface {
+func (n *SystemNode) Component() component.Interface {
 	return n.system
 }
 
@@ -79,8 +80,8 @@ func (n *SystemNode) System() *System {
 	return n.system
 }
 
-func (n *SystemNode) Resources() map[string]tree.Node {
-	return n.resources
+func (n *SystemNode) Components() map[string]tree.Node {
+	return n.components
 }
 
 func (n *SystemNode) Jobs() map[string]*JobNode {
@@ -93,6 +94,22 @@ func (n *SystemNode) Services() map[string]*ServiceNode {
 
 func (n *SystemNode) Systems() map[string]*SystemNode {
 	return n.systems
+}
+
+func (n *SystemNode) Walk(fn func(*SystemNode) error) error {
+	err := fn(n)
+	if err != nil {
+		return fmt.Errorf("error walking node %v: %v", n.Path().String(), err)
+	}
+
+	for _, subsystem := range n.Systems() {
+		err := subsystem.Walk(fn)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func (n *SystemNode) MarshalJSON() ([]byte, error) {

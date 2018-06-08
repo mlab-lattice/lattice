@@ -1,7 +1,7 @@
 package tree
 
 import (
-	"github.com/mlab-lattice/lattice/pkg/definition/resource"
+	"github.com/mlab-lattice/lattice/pkg/definition/component"
 )
 
 // The Node interface represents a Node in the tree of a System definition.
@@ -10,5 +10,5 @@ import (
 type Node interface {
 	Parent() Node
 	Path() NodePath
-	Resource() resource.Interface
+	Component() component.Interface
 }

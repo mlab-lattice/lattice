@@ -7,10 +7,7 @@ import (
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	kubeutil "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/kubernetes"
-	"github.com/mlab-lattice/lattice/pkg/definition"
-	"github.com/mlab-lattice/lattice/pkg/definition/tree"
-
-	"k8s.io/apimachinery/pkg/api/errors"
+	defintionv1 "github.com/mlab-lattice/lattice/pkg/definition/v1"
 )
 
 func (c *Controller) updateSystemLabels(
@@ -113,8 +110,9 @@ func (c *Controller) systemServices(
 	}
 
 	services := make(map[tree.NodePath]latticev1.SystemSpecServiceInfo)
-	for path, service := range build.Spec.Definition.Services() {
-		serviceBuildName, ok := build.Status.ContainerBuilds[path]
+	for _, serviceNode := range build.Spec.Definition.Services() {
+		path := serviceNode.Path()
+		serviceInfo, ok := build.Status.Services[path]
 		if !ok {
 			// FIXME: send warn event
 			err := fmt.Errorf(
@@ -125,59 +123,42 @@ func (c *Controller) systemServices(
 			return nil, err
 		}
 
-		serviceBuild, err := c.serviceBuildLister.ServiceBuilds(build.Namespace).Get(serviceBuildName)
-		if err != nil {
-			if errors.IsNotFound(err) {
-				err = fmt.Errorf(
-					"%v has service build %v for service %v but it does not exist",
-					build.Description(c.namespacePrefix),
-					serviceBuildName,
-					path,
-				)
-				return nil, err
-			}
-			return nil, err
+		containerBuilds := map[string]string{
+			kubeutil.UserMainContainerName: serviceInfo.MainContainer,
+		}
+		for sidecar, containerBuild := range serviceInfo.Sidecars {
+			containerBuilds[kubeutil.UserSidecarContainerName(sidecar)] = containerBuild
 		}
 
-		// Create ContainerBuildArtifacts for each Component in the Service
-		componentBuildArtifacts := make(map[string]latticev1.ContainerBuildArtifacts)
-		for component := range serviceBuild.Spec.Components {
-			componentBuildName, ok := serviceBuild.Status.ComponentBuilds[component]
-			if !ok {
-				err := fmt.Errorf(
-					"%v component %v does not have a component build",
-					serviceBuild.Description(c.namespacePrefix),
-					component,
+		// create artifacts for each container in the service
+		containerBuildArtifacts := make(map[string]latticev1.ContainerBuildArtifacts)
+		for containerName, containerBuildName := range containerBuilds {
+			containerBuild, err := c.containerBuildLister.ContainerBuilds(build.Namespace).Get(containerBuildName)
+			if err != nil {
+				err = fmt.Errorf(
+					"%v has container build %v but it does not exist",
+					build.Description(c.namespacePrefix),
+					containerBuildName,
 				)
 				return nil, err
 			}
 
-			componentBuildStatus, ok := serviceBuild.Status.ComponentBuildStatuses[componentBuildName]
-			if !ok {
-				err := fmt.Errorf(
-					"%v component build %v does not have a status",
-					serviceBuild.Description(c.namespacePrefix),
-					componentBuildName,
-				)
-				return nil, err
-			}
-
-			if componentBuildStatus.Artifacts == nil {
+			if containerBuild.Status.Artifacts == nil {
 				// FIXME: send warn event
 				err := fmt.Errorf(
 					"%v component build %v status does not have artifacts",
 					build.Description(c.namespacePrefix),
-					componentBuildName,
+					containerBuildName,
 				)
 				return nil, err
 			}
 
-			componentBuildArtifacts[component] = *componentBuildStatus.Artifacts
+			containerBuildArtifacts[containerName] = *containerBuild.Status.Artifacts
 		}
 
 		services[path] = latticev1.SystemSpecServiceInfo{
-			Definition:              service.Definition().(*definition.Service),
-			ContainerBuildArtifacts: componentBuildArtifacts,
+			Definition:              serviceNode.Service(),
+			ContainerBuildArtifacts: containerBuildArtifacts,
 		}
 	}
 
@@ -188,14 +169,9 @@ func (c *Controller) systemNodePools(
 	build *latticev1.Build,
 ) (map[string]latticev1.NodePoolSpec, error) {
 	nodePools := make(map[string]latticev1.NodePoolSpec)
-	err := tree.Walk(build.Spec.Definition, func(n tree.Node) error {
-		system, ok := n.(*tree.SystemNode)
-		if !ok {
-			return nil
-		}
-
-		path := system.Path()
-		pools := system.NodePools()
+	err := build.Spec.Definition.Walk(func(n *defintionv1.SystemNode) error {
+		path := n.Path()
+		pools := n.NodePools()
 
 		for name, nodePool := range pools {
 			p := v1.NewSystemSharedNodePoolPath(path, name)

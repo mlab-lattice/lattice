@@ -33,7 +33,7 @@ func (c *Command) Base() (*latticectl.BaseCommand, error) {
 
 	options := &bootstrap.Options{
 		Config: latticev1.ConfigSpec{
-			ComponentBuild: latticev1.ConfigComponentBuild{
+			ComponentBuild: latticev1.ConfigContainerBuild{
 				Builder:        latticev1.ConfigComponentBuildBuilder{},
 				DockerArtifact: latticev1.ConfigComponentBuildDockerArtifact{},
 			},

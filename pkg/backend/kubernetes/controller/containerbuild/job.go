@@ -108,7 +108,7 @@ func (c *Controller) newJob(build *latticev1.ContainerBuild) (*batchv1.Job, erro
 }
 
 func jobName(build *latticev1.ContainerBuild) string {
-	return fmt.Sprintf("lattice-component-build-%s", build.Name)
+	return fmt.Sprintf("lattice-container-build-%s", build.Name)
 }
 
 func (c *Controller) jobSpec(build *latticev1.ContainerBuild) (batchv1.JobSpec, string, error) {
@@ -174,7 +174,7 @@ func (c *Controller) getBuildContainer(build *latticev1.ContainerBuild) (*corev1
 		return nil, "", err
 	}
 
-	repo := c.config.ComponentBuild.DockerArtifact.Repository
+	repo := c.config.ContainerBuild.DockerArtifact.Repository
 	tag, ok := build.DefinitionHashLabel()
 	if !ok {
 		err := fmt.Errorf(
@@ -185,7 +185,7 @@ func (c *Controller) getBuildContainer(build *latticev1.ContainerBuild) (*corev1
 		return nil, "", err
 	}
 
-	if c.config.ComponentBuild.DockerArtifact.RepositoryPerImage {
+	if c.config.ContainerBuild.DockerArtifact.RepositoryPerImage {
 		repo = tag
 		tag = fmt.Sprint(time.Now().Unix())
 	}
@@ -196,32 +196,32 @@ func (c *Controller) getBuildContainer(build *latticev1.ContainerBuild) (*corev1
 	}
 
 	args := []string{
-		"--component-build-id", build.Name,
+		"--container-build-id", build.Name,
 		"--namespace-prefix", c.namespacePrefix,
 		"--system-id", string(systemID),
-		"--component-build-definition", string(buildJSON),
-		"--docker-registry", c.config.ComponentBuild.DockerArtifact.Registry,
+		"--container-build-definition", string(buildJSON),
+		"--docker-registry", c.config.ContainerBuild.DockerArtifact.Registry,
 		"--docker-repository", repo,
 		"--docker-tag", tag,
 		"--work-directory", jobWorkingDirectory,
 	}
 
-	if c.config.ComponentBuild.DockerArtifact.Push {
+	if c.config.ContainerBuild.DockerArtifact.Push {
 		args = append(args, "--docker-push")
 	}
 
-	if c.config.ComponentBuild.DockerArtifact.RegistryAuthType != nil {
-		args = append(args, "--docker-registry-auth-type", *c.config.ComponentBuild.DockerArtifact.RegistryAuthType)
+	if c.config.ContainerBuild.DockerArtifact.RegistryAuthType != nil {
+		args = append(args, "--docker-registry-auth-type", *c.config.ContainerBuild.DockerArtifact.RegistryAuthType)
 	}
 
 	buildContainer := &corev1.Container{
 		Name:  "build",
-		Image: c.config.ComponentBuild.Builder.Image,
+		Image: c.config.ContainerBuild.Builder.Image,
 		Args:  args,
 		Env: []corev1.EnvVar{
 			{
 				Name:  docker.APIVersionEnvironmentVariable,
-				Value: c.config.ComponentBuild.Builder.DockerAPIVersion,
+				Value: c.config.ContainerBuild.Builder.DockerAPIVersion,
 			},
 		},
 		VolumeMounts: []corev1.VolumeMount{
@@ -262,7 +262,7 @@ func (c *Controller) getBuildContainer(build *latticev1.ContainerBuild) (*corev1
 
 	dockerImageFQN := fmt.Sprintf(
 		"%v/%v:%v",
-		c.config.ComponentBuild.DockerArtifact.Registry,
+		c.config.ContainerBuild.DockerArtifact.Registry,
 		repo,
 		tag,
 	)

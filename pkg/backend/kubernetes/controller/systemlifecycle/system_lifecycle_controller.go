@@ -63,6 +63,9 @@ type Controller struct {
 	buildLister       latticelisters.BuildLister
 	buildListerSynced cache.InformerSynced
 
+	containerBuildLister       latticelisters.ContainerBuildLister
+	containerBuildListerSynced cache.InformerSynced
+
 	deployQueue   workqueue.RateLimitingInterface
 	teardownQueue workqueue.RateLimitingInterface
 }
@@ -75,6 +78,7 @@ func NewController(
 	teardownInformer latticeinformers.TeardownInformer,
 	systemInformer latticeinformers.SystemInformer,
 	buildInformer latticeinformers.BuildInformer,
+	containerBuildInformer latticeinformers.ContainerBuildInformer,
 ) *Controller {
 	c := &Controller{
 		namespacePrefix: namespacePrefix,
@@ -123,6 +127,9 @@ func NewController(
 	c.buildLister = buildInformer.Lister()
 	c.buildListerSynced = buildInformer.Informer().HasSynced
 
+	c.containerBuildLister = containerBuildInformer.Lister()
+	c.containerBuildListerSynced = containerBuildInformer.Informer().HasSynced
+
 	return c
 }
 
@@ -143,6 +150,7 @@ func (c *Controller) Run(workers int, stopCh <-chan struct{}) {
 		c.teardownListerSynced,
 		c.systemListerSynced,
 		c.buildListerSynced,
+		c.containerBuildListerSynced,
 	) {
 		return
 	}

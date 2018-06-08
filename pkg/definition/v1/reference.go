@@ -1,14 +1,14 @@
 package v1
 
 import (
-	"github.com/mlab-lattice/lattice/pkg/definition/resource"
+	"github.com/mlab-lattice/lattice/pkg/definition/component"
 )
 
-const ResourceTypeReference = "reference"
+const ComponentTypeReference = "reference"
 
-var ReferenceType = resource.Type{
+var ReferenceType = component.Type{
 	APIVersion: APIVersion,
-	Type:       ResourceTypeReference,
+	Type:       ComponentTypeReference,
 }
 
 type Reference struct {
@@ -18,5 +18,5 @@ type Reference struct {
 
 type ReferenceOrResource struct {
 	Reference *Reference
-	Resource  resource.Interface
+	Resource  component.Interface
 }

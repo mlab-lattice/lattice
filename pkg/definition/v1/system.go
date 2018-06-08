@@ -4,23 +4,23 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/mlab-lattice/lattice/pkg/definition/resource"
+	"github.com/mlab-lattice/lattice/pkg/definition/component"
 )
 
-const ResourceTypeSystem = "system"
+const ComponentTypeSystem = "system"
 
-var SystemType = resource.Type{
+var SystemType = component.Type{
 	APIVersion: APIVersion,
-	Type:       ResourceTypeSystem,
+	Type:       ComponentTypeSystem,
 }
 
 type System struct {
 	Description string
 
-	Resources map[string]resource.Interface
+	Components map[string]component.Interface
 }
 
-func (s *System) Type() resource.Type {
+func (s *System) Type() component.Type {
 	return SystemType
 }
 
@@ -29,7 +29,7 @@ func (s *System) MarshalJSON() ([]byte, error) {
 		Type:        SystemType,
 		Description: s.Description,
 
-		Resources: s.Resources,
+		Components: s.Components,
 	}
 	return json.Marshal(&e)
 }
@@ -44,13 +44,13 @@ func (s *System) UnmarshalJSON(data []byte) error {
 		return fmt.Errorf("expected api version %v but got %v", APIVersion, e.Type.APIVersion)
 	}
 
-	if e.Type.Type != ResourceTypeSystem {
-		return fmt.Errorf("expected resource type %v but got %v", ResourceTypeSystem, e.Type.Type)
+	if e.Type.Type != ComponentTypeSystem {
+		return fmt.Errorf("expected resource type %v but got %v", ComponentTypeSystem, e.Type.Type)
 	}
 
-	resources := make(map[string]resource.Interface)
-	for n, d := range e.Resources {
-		res, err := NewResource(d)
+	resources := make(map[string]component.Interface)
+	for n, d := range e.Components {
+		res, err := NewComponentFromJSON(d)
 		if err != nil {
 			return err
 		}
@@ -61,22 +61,22 @@ func (s *System) UnmarshalJSON(data []byte) error {
 	system := &System{
 		Description: e.Description,
 
-		Resources: resources,
+		Components: resources,
 	}
 	*s = *system
 	return nil
 }
 
 type systemEncoder struct {
-	Type        resource.Type `json:"type"`
-	Description string        `json:"description,omitempty"`
+	Type        component.Type `json:"type"`
+	Description string         `json:"description,omitempty"`
 
-	Resources map[string]resource.Interface `json:"resources"`
+	Components map[string]component.Interface `json:"components"`
 }
 
 type systemDecoder struct {
-	Type        resource.Type `json:"type"`
-	Description string        `json:"description,omitempty"`
+	Type        component.Type `json:"type"`
+	Description string         `json:"description,omitempty"`
 
-	Resources map[string]json.RawMessage `json:"resources"`
+	Components map[string]json.RawMessage `json:"components"`
 }

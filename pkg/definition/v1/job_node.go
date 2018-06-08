@@ -1,7 +1,7 @@
 package v1
 
 import (
-	"github.com/mlab-lattice/lattice/pkg/definition/resource"
+	"github.com/mlab-lattice/lattice/pkg/definition/component"
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 )
 
@@ -27,7 +27,7 @@ func (n *JobNode) Path() tree.NodePath {
 	return n.path
 }
 
-func (n *JobNode) Resource() resource.Interface {
+func (n *JobNode) Component() component.Interface {
 	return n.job
 }
 

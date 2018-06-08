@@ -4,14 +4,14 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/mlab-lattice/lattice/pkg/definition/resource"
+	"github.com/mlab-lattice/lattice/pkg/definition/component"
 )
 
-const ResourceTypeJob = "job"
+const ComponentTypeJob = "job"
 
-var JobType = resource.Type{
+var JobType = component.Type{
 	APIVersion: APIVersion,
-	Type:       ResourceTypeJob,
+	Type:       ComponentTypeJob,
 }
 
 type Job struct {
@@ -24,7 +24,7 @@ type Job struct {
 	NodePool string `json:"node_pool"`
 }
 
-func (j *Job) Type() resource.Type {
+func (j *Job) Type() component.Type {
 	return JobType
 }
 
@@ -49,8 +49,8 @@ func (j *Job) UnmarshalJSON(data []byte) error {
 		return fmt.Errorf("expected api version %v but got %v", APIVersion, e.Type.APIVersion)
 	}
 
-	if e.Type.Type != ResourceTypeJob {
-		return fmt.Errorf("expected resource type %v but got %v", ResourceTypeJob, e.Type.Type)
+	if e.Type.Type != ComponentTypeJob {
+		return fmt.Errorf("expected resource type %v but got %v", ComponentTypeJob, e.Type.Type)
 	}
 
 	job := &Job{
@@ -64,8 +64,8 @@ func (j *Job) UnmarshalJSON(data []byte) error {
 }
 
 type jobEncoder struct {
-	Type        resource.Type `json:"type"`
-	Description string        `json:"description,omitempty"`
+	Type        component.Type `json:"type"`
+	Description string         `json:"description,omitempty"`
 
 	Container
 	Sidecars map[string]Container `json:"sidecars,omitempty"`

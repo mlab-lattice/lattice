@@ -4,9 +4,9 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/mlab-lattice/lattice/pkg/definition"
 	"github.com/mlab-lattice/lattice/pkg/definition/template/language"
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
+	definitionv1 "github.com/mlab-lattice/lattice/pkg/definition/v1"
 	"github.com/mlab-lattice/lattice/pkg/util/git"
 )
 
@@ -82,12 +82,12 @@ func (resolver *SystemResolver) readNodeFromFile(ctx *resolveContext) (tree.Node
 		return nil, err
 	}
 
-	def, err := definition.NewFromJSON(jsonBytes)
+	def, err := definitionv1.NewComponentFromJSON(jsonBytes)
 	if err != nil {
 		return nil, err
 	}
 
-	return tree.NewNode(def, nil)
+	return definitionv1.NewNode(def, "", nil)
 }
 
 // lists the tags in a repo

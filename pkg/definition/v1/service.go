@@ -4,14 +4,14 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/mlab-lattice/lattice/pkg/definition/resource"
+	"github.com/mlab-lattice/lattice/pkg/definition/component"
 )
 
-const ResourceTypeService = "service"
+const ComponentTypeService = "service"
 
-var ServiceType = resource.Type{
+var ServiceType = component.Type{
 	APIVersion: APIVersion,
-	Type:       ResourceTypeService,
+	Type:       ComponentTypeService,
 }
 
 type Service struct {
@@ -26,7 +26,7 @@ type Service struct {
 	InstanceType *string
 }
 
-func (s *Service) Type() resource.Type {
+func (s *Service) Type() component.Type {
 	return ServiceType
 }
 
@@ -53,8 +53,8 @@ func (s *Service) UnmarshalJSON(data []byte) error {
 		return fmt.Errorf("expected api version %v but got %v", APIVersion, e.Type.APIVersion)
 	}
 
-	if e.Type.Type != ResourceTypeService {
-		return fmt.Errorf("expected resource type %v but got %v", ResourceTypeService, e.Type.Type)
+	if e.Type.Type != ComponentTypeService {
+		return fmt.Errorf("expected resource type %v but got %v", ComponentTypeService, e.Type.Type)
 	}
 
 	service := &Service{
@@ -72,8 +72,8 @@ func (s *Service) UnmarshalJSON(data []byte) error {
 }
 
 type serviceEncoder struct {
-	Type        resource.Type `json:"type"`
-	Description string        `json:"description,omitempty"`
+	Type        component.Type `json:"type"`
+	Description string         `json:"description,omitempty"`
 
 	Container
 	Sidecars map[string]Container `json:"sidecars,omitempty"`
