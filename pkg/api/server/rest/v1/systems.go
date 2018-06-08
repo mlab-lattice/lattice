@@ -9,9 +9,9 @@ import (
 	v1server "github.com/mlab-lattice/lattice/pkg/api/server/v1"
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	v1rest "github.com/mlab-lattice/lattice/pkg/api/v1/rest"
-	"github.com/mlab-lattice/lattice/pkg/definition"
 	"github.com/mlab-lattice/lattice/pkg/definition/resolver"
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
+	definitionv1 "github.com/mlab-lattice/lattice/pkg/definition/v1"
 	"github.com/mlab-lattice/lattice/pkg/util/git"
 
 	"io"
@@ -166,12 +166,12 @@ func mountBuildHandlers(router *gin.RouterGroup, backend v1server.Interface, sys
 		systemID := v1.SystemID(c.Param(systemIdentifier))
 		buildID := v1.BuildID(c.Param(buildIdentifier))
 		path := c.Query("path")
-		component := c.Query("component")
 		followQuery := c.DefaultQuery("follow", "false")
 
-		if component == "" {
-			c.Status(http.StatusBadRequest)
-			return
+		sidecarQuery, sidecarSet := c.GetQuery("sidecar")
+		var sidecar *string
+		if sidecarSet {
+			sidecar = &sidecarQuery
 		}
 
 		if path == "" {
@@ -191,7 +191,7 @@ func mountBuildHandlers(router *gin.RouterGroup, backend v1server.Interface, sys
 			return
 		}
 
-		log, err := backend.BuildLogs(systemID, buildID, nodePath, component, follow)
+		log, err := backend.BuildLogs(systemID, buildID, nodePath, sidecar, follow)
 		if err != nil {
 			handleError(c, err)
 			return
@@ -686,7 +686,7 @@ func getSystemDefinitionRoot(
 	sysResolver *resolver.SystemResolver,
 	systemID v1.SystemID,
 	version v1.SystemVersion,
-) (*tree.SystemNode, error) {
+) (*definitionv1.SystemNode, error) {
 	system, err := backend.GetSystem(systemID)
 	if err != nil {
 		return nil, err
@@ -696,7 +696,7 @@ func getSystemDefinitionRoot(
 		"%v#%v/%s",
 		system.DefinitionURL,
 		version,
-		definition.SystemDefinitionRootPathDefault,
+		definitionv1.SystemDefinitionRootPathDefault,
 	)
 
 	root, err := sysResolver.ResolveDefinition(systemDefURI, &git.Options{})
@@ -704,7 +704,7 @@ func getSystemDefinitionRoot(
 		return nil, err
 	}
 
-	if def, ok := root.(*tree.SystemNode); ok {
+	if def, ok := root.(*definitionv1.SystemNode); ok {
 		return def, nil
 	}
 

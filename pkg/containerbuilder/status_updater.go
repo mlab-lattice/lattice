@@ -5,6 +5,6 @@ import (
 )
 
 type StatusUpdater interface {
-	UpdateProgress(v1.ComponentBuildID, v1.SystemID, v1.ComponentBuildPhase) error
-	UpdateError(buildID v1.ComponentBuildID, systemID v1.SystemID, internal bool, err error) error
+	UpdateProgress(v1.ContainerBuildID, v1.SystemID, v1.ContainerBuildPhase) error
+	UpdateError(buildID v1.ContainerBuildID, systemID v1.SystemID, internal bool, err error) error
 }

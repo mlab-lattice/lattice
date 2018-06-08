@@ -26,63 +26,48 @@ type Build struct {
 	CompletionTimestamp *time.Time `json:"completionTimestamp,omitempty"`
 
 	Version SystemVersion `json:"version"`
+
 	// Services maps service paths (e.g. /foo/bar/buzz) to the
 	// status of the build for that service in the Build.
 	Services map[tree.NodePath]ServiceBuild `json:"services"`
 }
 
-type (
-	ServiceBuildID    string
-	ServiceBuildState string
-)
-
-const (
-	ServiceBuildStatePending   ServiceBuildState = "pending"
-	ServiceBuildStateRunning   ServiceBuildState = "running"
-	ServiceBuildStateSucceeded ServiceBuildState = "succeeded"
-	ServiceBuildStateFailed    ServiceBuildState = "failed"
-)
-
 type ServiceBuild struct {
-	State ServiceBuildState `json:"state"`
-
-	StartTimestamp      *time.Time `json:"startTimestamp,omitempty"`
-	CompletionTimestamp *time.Time `json:"completionTimestamp,omitempty"`
-
-	// Components maps the component name to the build for that component.
-	Components map[string]ComponentBuild `json:"components"`
+	ContainerBuild
+	Sidecars map[string]ContainerBuild `json:"sidecars"`
 }
 
 type (
-	ComponentBuildID    string
-	ComponentBuildState string
-	ComponentBuildPhase string
+	ContainerBuildState string
+	ContainerBuildPhase string
+	ContainerBuildID    string
 )
 
 const (
-	ComponentBuildPhasePullingGitRepository ComponentBuildPhase = "pulling git repository"
-	ComponentBuildPhasePullingDockerImage   ComponentBuildPhase = "pulling docker image"
-	ComponentBuildPhaseBuildingDockerImage  ComponentBuildPhase = "building docker image"
-	ComponentBuildPhasePushingDockerImage   ComponentBuildPhase = "pushing docker image"
+	ContainerBuildPhasePullingGitRepository ContainerBuildPhase = "pulling git repository"
+	ContainerBuildPhasePullingDockerImage   ContainerBuildPhase = "pulling docker image"
+	ContainerBuildPhaseBuildingDockerImage  ContainerBuildPhase = "building docker image"
+	ContainerBuildPhasePushingDockerImage   ContainerBuildPhase = "pushing docker image"
 
-	ComponentBuildStatePending   ComponentBuildState = "pending"
-	ComponentBuildStateQueued    ComponentBuildState = "queued"
-	ComponentBuildStateRunning   ComponentBuildState = "running"
-	ComponentBuildStateSucceeded ComponentBuildState = "succeeded"
-	ComponentBuildStateFailed    ComponentBuildState = "failed"
+	ContainerBuildStatePending   ContainerBuildState = "pending"
+	ContainerBuildStateQueued    ContainerBuildState = "queued"
+	ContainerBuildStateRunning   ContainerBuildState = "running"
+	ContainerBuildStateSucceeded ContainerBuildState = "succeeded"
+	ContainerBuildStateFailed    ContainerBuildState = "failed"
 )
 
-type ComponentBuild struct {
-	State ComponentBuildState `json:"state"`
+type ContainerBuild struct {
+	ID    ContainerBuildID    `json:"id"`
+	State ContainerBuildState `json:"state"`
 
 	StartTimestamp      *time.Time `json:"startTimestamp,omitempty"`
 	CompletionTimestamp *time.Time `json:"completionTimestamp,omitempty"`
 
-	LastObservedPhase *ComponentBuildPhase `json:"lastObservedPhase,omitempty"`
+	LastObservedPhase *ContainerBuildPhase `json:"lastObservedPhase,omitempty"`
 	FailureMessage    *string              `json:"failureMessage,omitempty"`
 }
 
-type ComponentBuildFailureInfo struct {
+type ContainerBuildFailureInfo struct {
 	Message  string `json:"message"`
 	Internal bool   `json:"internal"`
 }

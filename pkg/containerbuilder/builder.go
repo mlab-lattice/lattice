@@ -13,7 +13,7 @@ import (
 )
 
 type Builder struct {
-	BuildID            v1.ComponentBuildID
+	BuildID            v1.ContainerBuildID
 	SystemID           v1.SystemID
 	WorkingDir         string
 	ContainerBuild     *definitionv1.ContainerBuild
@@ -66,11 +66,11 @@ func (e *ErrorInternal) Error() string {
 
 type Failure struct {
 	Error error
-	Phase v1.ComponentBuildPhase
+	Phase v1.ContainerBuildPhase
 }
 
 func NewBuilder(
-	buildID v1.ComponentBuildID,
+	buildID v1.ContainerBuildID,
 	systemID v1.SystemID,
 	workDirectory string,
 	dockerOptions *DockerOptions,

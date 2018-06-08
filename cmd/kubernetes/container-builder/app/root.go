@@ -25,7 +25,7 @@ const (
 
 var (
 	workDirectory    string
-	componentBuildID string
+	containerBuildID string
 	systemIDString   string
 	namespacePrefix  string
 
@@ -47,7 +47,7 @@ var RootCmd = &cobra.Command{
 		cb := &definitionv1.ContainerBuild{}
 		err := json.Unmarshal([]byte(containerBuildDefinition), cb)
 		if err != nil {
-			log.Fatal("error unmarshaling component build: " + err.Error())
+			log.Fatal("error unmarshaling container build: " + err.Error())
 		}
 
 		dockerOptions := &containerbuilder.DockerOptions{
@@ -79,7 +79,7 @@ var RootCmd = &cobra.Command{
 		setupSSH()
 
 		builder, err := containerbuilder.NewBuilder(
-			v1.ComponentBuildID(componentBuildID),
+			v1.ContainerBuildID(containerBuildID),
 			systemID,
 			workDirectory,
 			dockerOptions,
@@ -136,7 +136,7 @@ func Execute() {
 }
 
 func init() {
-	RootCmd.Flags().StringVar(&componentBuildID, "container-build-id", "", "ID of the container build")
+	RootCmd.Flags().StringVar(&containerBuildID, "container-build-id", "", "ID of the container build")
 	RootCmd.MarkFlagRequired("container-build-id")
 	RootCmd.Flags().StringVar(&namespacePrefix, "namespace-prefix", "", "namespace prefix of the lattice")
 	RootCmd.MarkFlagRequired("lattice-id")
@@ -155,5 +155,5 @@ func init() {
 	RootCmd.Flags().BoolVar(&dockerPush, "docker-push", false, "whether or not the image should be pushed to the registry")
 
 	RootCmd.Flags().StringVar(&kubeconfig, "kubeconfig", "", "path to kubeconfig")
-	RootCmd.Flags().StringVar(&workDirectory, "work-directory", "/tmp/component-build", "path to use to store build artifacts")
+	RootCmd.Flags().StringVar(&workDirectory, "work-directory", "/tmp/container-build", "path to use to store build artifacts")
 }

@@ -64,14 +64,14 @@ func (b *DefaultBootstrapper) BootstrapSystemResources(resources *bootstrapper.S
 	}
 	resources.ServiceAccounts = append(resources.ServiceAccounts, componentBuilderSA)
 
-	componentBuilderCRName := kubeutil.ComponentBuilderClusterRoleName(b.namespacePrefix)
+	componentBuilderCRName := kubeutil.ContainerBuilderClusterRoleName(b.namespacePrefix)
 	componentBuilderRB := &rbacv1.RoleBinding{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "RoleBinding",
 			APIVersion: rbacv1.SchemeGroupVersion.String(),
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      kubeconstants.ControlPlaneServiceComponentBuilder,
+			Name:      kubeconstants.ControlPlaneServiceContainerBuilder,
 			Namespace: componentBuilderSA.Namespace,
 		},
 		Subjects: []rbacv1.Subject{

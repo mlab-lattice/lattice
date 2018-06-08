@@ -46,13 +46,13 @@ func (b *ContainerBuild) DefinitionHashLabel() (string, bool) {
 	return hash, ok
 }
 
-func (b *ContainerBuild) FailureInfoAnnotation() (*v1.ComponentBuildFailureInfo, error) {
+func (b *ContainerBuild) FailureInfoAnnotation() (*v1.ContainerBuildFailureInfo, error) {
 	infoStr, ok := b.Annotations[ContainerBuildFailureInfoAnnotationKey]
 	if !ok {
 		return nil, nil
 	}
 
-	failureInfo := v1.ComponentBuildFailureInfo{}
+	failureInfo := v1.ContainerBuildFailureInfo{}
 	err := json.Unmarshal([]byte(infoStr), &failureInfo)
 	if err != nil {
 		return nil, err
@@ -61,9 +61,9 @@ func (b *ContainerBuild) FailureInfoAnnotation() (*v1.ComponentBuildFailureInfo,
 	return &failureInfo, nil
 }
 
-func (b *ContainerBuild) LastObservedPhaseAnnotation() (v1.ComponentBuildPhase, bool) {
+func (b *ContainerBuild) LastObservedPhaseAnnotation() (v1.ContainerBuildPhase, bool) {
 	phase, ok := b.Annotations[ContainerBuildLastObservedPhaseAnnotationKey]
-	return v1.ComponentBuildPhase(phase), ok
+	return v1.ContainerBuildPhase(phase), ok
 }
 
 func (b *ContainerBuild) Description(namespacePrefix string) string {
@@ -84,13 +84,13 @@ type ContainerBuildStatus struct {
 	// ContainerBuilds are immutable so no need for ObservedGeneration
 
 	State       ComponentBuildState           `json:"state"`
-	FailureInfo *v1.ComponentBuildFailureInfo `json:"failureInfo,omitempty"`
+	FailureInfo *v1.ContainerBuildFailureInfo `json:"failureInfo,omitempty"`
 
 	StartTimestamp      *metav1.Time `json:"startTimestamp,omitempty"`
 	CompletionTimestamp *metav1.Time `json:"completionTimestamp,omitempty"`
 
 	Artifacts         *ContainerBuildArtifacts `json:"artifacts,omitempty"`
-	LastObservedPhase *v1.ComponentBuildPhase  `json:"lastObservedPhase,omitempty"`
+	LastObservedPhase *v1.ContainerBuildPhase  `json:"lastObservedPhase,omitempty"`
 }
 
 type ComponentBuildState string

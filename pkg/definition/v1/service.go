@@ -30,6 +30,30 @@ func (s *Service) Type() component.Type {
 	return ServiceType
 }
 
+func (s *Service) Containers() []Container {
+	containers := []Container{s.Container}
+	for _, sidecarContainer := range s.Sidecars {
+		containers = append(containers, sidecarContainer)
+	}
+
+	return containers
+}
+
+func (s *Service) ContainerPorts() map[int32]ContainerPort {
+	ports := make(map[int32]ContainerPort)
+	for _, container := range s.Containers() {
+		if container.Port != nil {
+			ports[container.Port.Port] = *container.Port
+		}
+
+		for _, port := range container.Ports {
+			ports[port.Port] = port
+		}
+	}
+
+	return ports
+}
+
 func (s *Service) MarshalJSON() ([]byte, error) {
 	e := serviceEncoder{
 		Type:        ServiceType,

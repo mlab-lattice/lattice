@@ -5,8 +5,8 @@ go_library(
     srcs = [
         "api_server.go",
         "base.go",
-        "component_builder.go",
         "config.go",
+        "container_builder.go",
         "controller_manager.go",
         "crd.go",
         "namespace.go",

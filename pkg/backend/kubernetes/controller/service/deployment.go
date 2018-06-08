@@ -293,9 +293,9 @@ func (c *Controller) untransformedDeploymentSpec(
 		return nil, err
 	}
 
-	replicas := service.Spec.NumInstances
+	replicas := service.Spec.Definition.NumInstances
 
-	// Create a kube container for each Component in the Service
+	// Create a kube container for each Sidecar in the Service
 	containers := map[string]definitionv1.Container{
 		kubeutil.UserMainContainerName: service.Spec.Definition.Container,
 	}
@@ -707,7 +707,7 @@ func (c *Controller) getDeploymentStatus(
 		} else if availableInstances < updatedInstances {
 			// there's only updated instances but there aren't enough available instances yet
 			state = deploymentStateScaling
-		} else if updatedInstances < service.Spec.NumInstances {
+		} else if updatedInstances < service.Spec.Definition.NumInstances {
 			// there only exists UpdatedInstances, and they're all available,
 			// but there isn't enough of them yet
 			state = deploymentStateScaling

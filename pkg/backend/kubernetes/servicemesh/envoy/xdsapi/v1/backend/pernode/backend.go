@@ -8,11 +8,11 @@ import (
 	latticelisters "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/generated/listers/lattice/v1"
 	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/servicemesh/envoy"
 	xdsapi "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/servicemesh/envoy/xdsapi/v1"
+	kubeutil "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/kubernetes"
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 
 	"k8s.io/apimachinery/pkg/labels"
 
-	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/kubernetes"
 	kubeinformers "k8s.io/client-go/informers"
 	kubeclientset "k8s.io/client-go/kubernetes"
 	corelisters "k8s.io/client-go/listers/core/v1"
@@ -99,7 +99,7 @@ func (b *KubernetesPerNodeBackend) Services(serviceCluster string) (map[tree.Nod
 			continue
 		}
 
-		kubeServiceName := kubernetes.GetKubeServiceNameForService(service.Name)
+		kubeServiceName := kubeutil.GetKubeServiceNameForService(service.Name)
 		endpoint, err := b.kubeEndpointLister.Endpoints(service.Namespace).Get(kubeServiceName)
 		if err != nil {
 			return nil, err
@@ -112,7 +112,7 @@ func (b *KubernetesPerNodeBackend) Services(serviceCluster string) (map[tree.Nod
 
 		xdsService := &xdsapi.Service{
 			EgressPort:  egressPort,
-			Components:  map[string]xdsapi.Component{},
+			Containers:  map[string]xdsapi.Container{},
 			IPAddresses: []string{},
 		}
 
@@ -127,21 +127,52 @@ func (b *KubernetesPerNodeBackend) Services(serviceCluster string) (map[tree.Nod
 			}
 		}
 
-		for component, ports := range service.Spec.Ports {
-			bc := xdsapi.Component{
-				Ports: map[int32]int32{},
+		mainContainer := xdsapi.Container{
+			Ports: make(map[int32]int32),
+		}
+		if service.Spec.Definition.Port != nil {
+			mainContainerPort := service.Spec.Definition.Port
+			envoyPort, err := b.serviceMesh.ServiceMeshPort(service, mainContainerPort.Port)
+			if err != nil {
+				return nil, err
 			}
 
-			for _, port := range ports {
+			mainContainer.Ports[mainContainerPort.Port] = envoyPort
+		}
+
+		for _, port := range service.Spec.Definition.Ports {
+			envoyPort, err := b.serviceMesh.ServiceMeshPort(service, port.Port)
+			if err != nil {
+				return nil, err
+			}
+
+			mainContainer.Ports[port.Port] = envoyPort
+		}
+		xdsService.Containers[kubeutil.UserMainContainerName] = mainContainer
+
+		for sidecar, sidecarContainer := range service.Spec.Definition.Sidecars {
+			sidecarXDSContainer := xdsapi.Container{
+				Ports: make(map[int32]int32),
+			}
+			if sidecarContainer.Port != nil {
+				port := sidecarContainer.Port
 				envoyPort, err := b.serviceMesh.ServiceMeshPort(service, port.Port)
 				if err != nil {
 					return nil, err
 				}
 
-				bc.Ports[port.Port] = envoyPort
+				sidecarXDSContainer.Ports[port.Port] = envoyPort
 			}
 
-			xdsService.Components[component] = bc
+			for _, port := range sidecarContainer.Ports {
+				envoyPort, err := b.serviceMesh.ServiceMeshPort(service, port.Port)
+				if err != nil {
+					return nil, err
+				}
+
+				sidecarXDSContainer.Ports[port.Port] = envoyPort
+			}
+			xdsService.Containers[kubeutil.UserSidecarContainerName(sidecar)] = sidecarXDSContainer
 		}
 
 		result[path] = xdsService

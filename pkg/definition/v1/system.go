@@ -18,6 +18,9 @@ type System struct {
 	Description string
 
 	Components map[string]component.Interface
+
+	// FIXME: remove this
+	NodePools map[string]NodePool
 }
 
 func (s *System) Type() component.Type {
@@ -30,6 +33,8 @@ func (s *System) MarshalJSON() ([]byte, error) {
 		Description: s.Description,
 
 		Components: s.Components,
+
+		NodePools: s.NodePools,
 	}
 	return json.Marshal(&e)
 }
@@ -48,20 +53,22 @@ func (s *System) UnmarshalJSON(data []byte) error {
 		return fmt.Errorf("expected resource type %v but got %v", ComponentTypeSystem, e.Type.Type)
 	}
 
-	resources := make(map[string]component.Interface)
+	components := make(map[string]component.Interface)
 	for n, d := range e.Components {
 		res, err := NewComponentFromJSON(d)
 		if err != nil {
 			return err
 		}
 
-		resources[n] = res
+		components[n] = res
 	}
 
 	system := &System{
 		Description: e.Description,
 
-		Components: resources,
+		Components: components,
+
+		NodePools: e.NodePools,
 	}
 	*s = *system
 	return nil
@@ -72,6 +79,8 @@ type systemEncoder struct {
 	Description string         `json:"description,omitempty"`
 
 	Components map[string]component.Interface `json:"components"`
+
+	NodePools map[string]NodePool `json:"node_pools,omitempty"`
 }
 
 type systemDecoder struct {
@@ -79,4 +88,5 @@ type systemDecoder struct {
 	Description string         `json:"description,omitempty"`
 
 	Components map[string]json.RawMessage `json:"components"`
+	NodePools  map[string]NodePool        `json:"node_pools,omitempty"`
 }

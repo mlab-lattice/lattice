@@ -69,7 +69,7 @@ type SystemSpec struct {
 type SystemSpecServiceInfo struct {
 	Definition *definitionv1.Service `json:"definition"`
 
-	// ContainerBuildArtifacts maps Component names to the artifacts created by their build
+	// ContainerBuildArtifacts maps Sidecar names to the artifacts created by their build
 	ContainerBuildArtifacts map[string]ContainerBuildArtifacts `json:"containerBuildArtifacts"`
 }
 

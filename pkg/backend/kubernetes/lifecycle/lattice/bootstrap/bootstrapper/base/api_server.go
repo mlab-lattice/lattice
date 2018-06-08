@@ -49,12 +49,6 @@ func (b *DefaultBootstrapper) apiServerResources(resources *bootstrapper.Resourc
 				Resources: []string{latticev1.ResourcePluralBuild},
 				Verbs:     ReadAndCreateVerbs,
 			},
-			// lattice service build read
-			{
-				APIGroups: []string{latticev1.GroupName},
-				Resources: []string{latticev1.ResourcePluralServiceBuild},
-				Verbs:     ReadVerbs,
-			},
 			// lattice component build read
 			{
 				APIGroups: []string{latticev1.GroupName},

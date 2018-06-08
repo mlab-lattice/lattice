@@ -33,7 +33,7 @@ func (c *Command) Base() (*latticectl.BaseCommand, error) {
 
 	options := &bootstrap.Options{
 		Config: latticev1.ConfigSpec{
-			ComponentBuild: latticev1.ConfigContainerBuild{
+			ContainerBuild: latticev1.ConfigContainerBuild{
 				Builder:        latticev1.ConfigComponentBuildBuilder{},
 				DockerArtifact: latticev1.ConfigComponentBuildDockerArtifact{},
 			},
@@ -43,7 +43,7 @@ func (c *Command) Base() (*latticectl.BaseCommand, error) {
 			APIServer:                baseboostrapper.APIServerOptions{},
 		},
 	}
-	var componentBuildRegistryAuthType string
+	var containerBuildRegistryAuthType string
 
 	var cloudProvider string
 	cloudBootstrapFlag, cloudBootstrapOptions := cloudprovider.LatticeBoostrapperFlag(&cloudProvider)
@@ -138,56 +138,56 @@ func (c *Command) Base() (*latticectl.BaseCommand, error) {
 			},
 
 			&cli.EmbeddedFlag{
-				Name:     "component-builder-var",
+				Name:     "container-builder-var",
 				Required: true,
-				Usage:    "configuration for the component builder",
+				Usage:    "configuration for the container builder",
 				Flags: cli.Flags{
 					&cli.StringFlag{
 						Name:     "image",
 						Required: true,
-						Target:   &options.Config.ComponentBuild.Builder.Image,
-						Usage:    "docker image to user for the component-builder",
+						Target:   &options.Config.ContainerBuild.Builder.Image,
+						Usage:    "docker image to user for the container-builder",
 					},
 					&cli.StringFlag{
 						Name:   "docker-api-version",
-						Target: &options.Config.ComponentBuild.Builder.DockerAPIVersion,
+						Target: &options.Config.ContainerBuild.Builder.DockerAPIVersion,
 						Usage:  "version of the docker API used by the build node docker daemon",
 					},
 				},
 			},
 
 			&cli.EmbeddedFlag{
-				Name:     "component-build-docker-artifact-var",
+				Name:     "container-build-docker-artifact-var",
 				Required: true,
-				Usage:    "configuration for the docker artifacts produced by the component builder",
+				Usage:    "configuration for the docker artifacts produced by the container builder",
 				Flags: cli.Flags{
 					&cli.StringFlag{
 						Name:     "registry",
-						Target:   &options.Config.ComponentBuild.DockerArtifact.Registry,
+						Target:   &options.Config.ContainerBuild.DockerArtifact.Registry,
 						Required: true,
-						Usage:    "registry to tag component build docker artifacts with",
+						Usage:    "registry to tag container build docker artifacts with",
 					},
 					&cli.StringFlag{
 						Name:   "registry-auth-type",
-						Target: &componentBuildRegistryAuthType,
-						Usage:  "type of auth to use for the component build registry",
+						Target: &containerBuildRegistryAuthType,
+						Usage:  "type of auth to use for the container build registry",
 					},
 					&cli.BoolFlag{
 						Name:    "repository-per-image",
-						Target:  &options.Config.ComponentBuild.DockerArtifact.RepositoryPerImage,
+						Target:  &options.Config.ContainerBuild.DockerArtifact.RepositoryPerImage,
 						Default: false,
 						Usage:   "if false, one repository with a new tag for each artifact will be use, if true a new repository for each artifact will be used",
 					},
 					&cli.StringFlag{
 						Name:   "repository",
-						Target: &options.Config.ComponentBuild.DockerArtifact.Repository,
-						Usage:  "repository to tag component build docker artifacts with, required if component-build-docker-artifact-repository-per-image is false",
+						Target: &options.Config.ContainerBuild.DockerArtifact.Repository,
+						Usage:  "repository to tag container build docker artifacts with, required if container-build-docker-artifact-repository-per-image is false",
 					},
 					&cli.BoolFlag{
 						Name:    "push",
-						Target:  &options.Config.ComponentBuild.DockerArtifact.Push,
+						Target:  &options.Config.ContainerBuild.DockerArtifact.Push,
 						Default: true,
-						Usage:   "whether or not the component-builder should push the docker artifact (use false for local)",
+						Usage:   "whether or not the container-builder should push the docker artifact (use false for local)",
 					},
 				},
 			},
@@ -245,8 +245,8 @@ func (c *Command) Base() (*latticectl.BaseCommand, error) {
 				Backend: *terraformBackendOptions,
 			}
 
-			if componentBuildRegistryAuthType != "" {
-				options.Config.ComponentBuild.DockerArtifact.RegistryAuthType = &componentBuildRegistryAuthType
+			if containerBuildRegistryAuthType != "" {
+				options.Config.ContainerBuild.DockerArtifact.RegistryAuthType = &containerBuildRegistryAuthType
 			}
 
 			cloudBootstrapper, err := cloudprovider.NewLatticeBootstrapper(latticeID, namespacePrefix, internalDNSDomain, cloudBootstrapOptions)

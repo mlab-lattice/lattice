@@ -5,6 +5,7 @@ import (
 
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
+	definitionv1 "github.com/mlab-lattice/lattice/pkg/definition/v1"
 )
 
 type Interface interface {
@@ -15,14 +16,14 @@ type Interface interface {
 	DeleteSystem(v1.SystemID) error
 
 	// Build
-	Build(systemID v1.SystemID, def *tree.SystemNode, v v1.SystemVersion) (*v1.Build, error)
+	Build(systemID v1.SystemID, def *definitionv1.SystemNode, v v1.SystemVersion) (*v1.Build, error)
 	ListBuilds(v1.SystemID) ([]v1.Build, error)
 	GetBuild(v1.SystemID, v1.BuildID) (*v1.Build, error)
-	BuildLogs(systemID v1.SystemID, buildID v1.BuildID, path tree.NodePath, component string, follow bool) (io.ReadCloser, error)
+	BuildLogs(systemID v1.SystemID, buildID v1.BuildID, path tree.NodePath, sidecar *string, follow bool) (io.ReadCloser, error)
 
 	// Deploy
 	DeployBuild(v1.SystemID, v1.BuildID) (*v1.Deploy, error)
-	DeployVersion(systemID v1.SystemID, def *tree.SystemNode, version v1.SystemVersion) (*v1.Deploy, error)
+	DeployVersion(systemID v1.SystemID, def *definitionv1.SystemNode, version v1.SystemVersion) (*v1.Deploy, error)
 	ListDeploys(v1.SystemID) ([]v1.Deploy, error)
 	GetDeploy(v1.SystemID, v1.DeployID) (*v1.Deploy, error)
 

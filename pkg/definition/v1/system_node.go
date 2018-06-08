@@ -80,6 +80,10 @@ func (n *SystemNode) System() *System {
 	return n.system
 }
 
+func (n *SystemNode) NodePools() map[string]NodePool {
+	return n.system.NodePools
+}
+
 func (n *SystemNode) Components() map[string]tree.Node {
 	return n.components
 }

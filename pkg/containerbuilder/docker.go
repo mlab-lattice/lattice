@@ -49,7 +49,7 @@ func (b *Builder) buildDockerImage(sourceDirectory string) error {
 	if b.StatusUpdater != nil {
 		// For now ignore status update errors, don't need to fail a build because the status could
 		// not be updated.
-		b.StatusUpdater.UpdateProgress(b.BuildID, b.SystemID, v1.ComponentBuildPhaseBuildingDockerImage)
+		b.StatusUpdater.UpdateProgress(b.BuildID, b.SystemID, v1.ContainerBuildPhaseBuildingDockerImage)
 	}
 
 	// Get Dockerfile contents and write them to the directory
@@ -164,7 +164,7 @@ func (b *Builder) pullDockerImage(dockerImageFQN string) error {
 	if b.StatusUpdater != nil {
 		// For now ignore status update errors, don't need to fail a build because the status could
 		// not be updated.
-		b.StatusUpdater.UpdateProgress(b.BuildID, b.SystemID, v1.ComponentBuildPhasePullingDockerImage)
+		b.StatusUpdater.UpdateProgress(b.BuildID, b.SystemID, v1.ContainerBuildPhasePullingDockerImage)
 	}
 
 	// TODO: add support for registry creds
@@ -216,7 +216,7 @@ func (b *Builder) pushDockerImage() error {
 	if b.StatusUpdater != nil {
 		// For now ignore status update errors, don't need to fail a build because the status could
 		// not be updated.
-		b.StatusUpdater.UpdateProgress(b.BuildID, b.SystemID, v1.ComponentBuildPhasePushingDockerImage)
+		b.StatusUpdater.UpdateProgress(b.BuildID, b.SystemID, v1.ContainerBuildPhasePushingDockerImage)
 	}
 
 	// Assumes the image has already been built and tagged.

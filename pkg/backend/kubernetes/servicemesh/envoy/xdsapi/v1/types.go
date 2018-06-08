@@ -2,11 +2,11 @@ package v1
 
 type Service struct {
 	EgressPort  int32
-	Components  map[string]Component
+	Containers  map[string]Container
 	IPAddresses []string
 }
 
-type Component struct {
-	// Ports maps the Component's ports to their envoy ports.
+type Container struct {
+	// Ports maps the Sidecar's ports to their envoy ports.
 	Ports map[int32]int32
 }

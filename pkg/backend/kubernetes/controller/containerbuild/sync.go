@@ -124,7 +124,7 @@ func (c *Controller) updateComponentBuildStatus(
 	completionTimestamp *metav1.Time,
 	artifacts *latticev1.ContainerBuildArtifacts,
 ) (*latticev1.ContainerBuild, error) {
-	var phasePtr *v1.ComponentBuildPhase
+	var phasePtr *v1.ContainerBuildPhase
 	if phase, ok := build.LastObservedPhaseAnnotation(); ok {
 		phasePtr = &phase
 	}

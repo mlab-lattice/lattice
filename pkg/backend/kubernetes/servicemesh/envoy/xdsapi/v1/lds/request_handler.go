@@ -63,7 +63,7 @@ func (r *RequestHandler) GetResponse(serviceCluster, serviceNode string) (*Respo
 	}
 
 	// There's a listener for each port of Service, listening on the port's EnvoyPort
-	for componentName, component := range service.Components {
+	for componentName, component := range service.Containers {
 		for port, envoyPort := range component.Ports {
 			listenerName := fmt.Sprintf("%v %v port %v ingress", path, componentName, port)
 			listeners = append(listeners, types.Listener{

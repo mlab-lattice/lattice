@@ -93,20 +93,8 @@ func (s *Service) NodePoolAnnotation() (NodePoolAnnotationValue, error) {
 type ServiceSpec struct {
 	Definition *definitionv1.Service `json:"definition"`
 
-	// ContainerBuildArtifacts maps Component names to the artifacts created by their build
+	// ContainerBuildArtifacts maps Sidecar names to the artifacts created by their build
 	ContainerBuildArtifacts map[string]ContainerBuildArtifacts `json:"containerBuildArtifacts"`
-
-	// Ports maps Component names to a list of information about its ports
-	Ports map[string][]ContainerPort `json:"ports"`
-
-	NumInstances int32 `json:"numInstances"`
-}
-
-type ContainerPort struct {
-	Name     string `json:"name"`
-	Port     int32  `json:"port"`
-	Protocol string `json:"protocol"`
-	Public   bool   `json:"public"`
 }
 
 type ServiceStatus struct {

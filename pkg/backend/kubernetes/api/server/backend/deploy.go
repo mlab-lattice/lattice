@@ -3,7 +3,7 @@ package backend
 import (
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
-	"github.com/mlab-lattice/lattice/pkg/definition/tree"
+	definitionv1 "github.com/mlab-lattice/lattice/pkg/definition/v1"
 
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -34,7 +34,7 @@ func (kb *KubernetesBackend) DeployBuild(systemID v1.SystemID, buildID v1.BuildI
 	return &externalDeploy, nil
 }
 
-func (kb *KubernetesBackend) DeployVersion(systemID v1.SystemID, def *tree.SystemNode, version v1.SystemVersion) (*v1.Deploy, error) {
+func (kb *KubernetesBackend) DeployVersion(systemID v1.SystemID, def *definitionv1.SystemNode, version v1.SystemVersion) (*v1.Deploy, error) {
 	// this ensures the system is created as well
 	build, err := kb.Build(systemID, def, version)
 	if err != nil {

@@ -8,7 +8,6 @@ import (
 	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/controller/containerbuild"
 	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/controller/nodepool"
 	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/controller/service"
-	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/controller/servicebuild"
 	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/controller/system"
 	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/controller/systemlifecycle"
 )
@@ -110,5 +109,6 @@ func initializeSystemLifecycleController(ctx Context) {
 		ctx.LatticeInformerFactory.Lattice().V1().Teardowns(),
 		ctx.LatticeInformerFactory.Lattice().V1().Systems(),
 		ctx.LatticeInformerFactory.Lattice().V1().Builds(),
+		ctx.LatticeInformerFactory.Lattice().V1().ContainerBuilds(),
 	).Run(4, ctx.Stop)
 }

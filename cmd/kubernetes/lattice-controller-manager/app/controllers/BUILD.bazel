@@ -16,7 +16,6 @@ go_library(
         "//pkg/backend/kubernetes/controller/containerbuild:go_default_library",
         "//pkg/backend/kubernetes/controller/nodepool:go_default_library",
         "//pkg/backend/kubernetes/controller/service:go_default_library",
-        "//pkg/backend/kubernetes/controller/servicebuild:go_default_library",
         "//pkg/backend/kubernetes/controller/system:go_default_library",
         "//pkg/backend/kubernetes/controller/systemlifecycle:go_default_library",
         "//pkg/backend/kubernetes/customresource/generated/clientset/versioned:go_default_library",

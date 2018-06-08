@@ -35,9 +35,13 @@ type ContainerEnvironmentVariable struct {
 }
 
 type ContainerPort struct {
-	Port           int32          `json:"port"`
-	Protocol       string         `json:"protocol"`
-	ExternalAccess *ContainerPort `json:"external_access,omitempty"`
+	Port           int32                        `json:"port"`
+	Protocol       string                       `json:"protocol"`
+	ExternalAccess *ContainerPortExternalAccess `json:"external_access,omitempty"`
+}
+
+func (c ContainerPort) Public() bool {
+	return c.ExternalAccess != nil && c.ExternalAccess.Public
 }
 
 type ContainerPortExternalAccess struct {

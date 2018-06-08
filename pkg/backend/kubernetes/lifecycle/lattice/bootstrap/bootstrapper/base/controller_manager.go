@@ -99,7 +99,7 @@ func (b *DefaultBootstrapper) controllerManagerResources(resources *bootstrapper
 	// builder SAs due to privilege escalation
 	clusterRole.Rules = append(
 		clusterRole.Rules,
-		componentBuilderRBACPolicyRules...,
+		containerBuilderRBACPolicyRules...,
 	)
 	resources.ClusterRoles = append(resources.ClusterRoles, clusterRole)
 

@@ -11,7 +11,7 @@ import (
 )
 
 func (b *DefaultBootstrapper) componentBuilderResources(resources *bootstrapper.Resources) {
-	name := kubeutil.ComponentBuilderClusterRoleName(b.NamespacePrefix)
+	name := kubeutil.ContainerBuilderClusterRoleName(b.NamespacePrefix)
 
 	clusterRole := &rbacv1.ClusterRole{
 		// Include TypeMeta so if this is a dry run it will be printed out
@@ -22,12 +22,12 @@ func (b *DefaultBootstrapper) componentBuilderResources(resources *bootstrapper.
 		ObjectMeta: metav1.ObjectMeta{
 			Name: name,
 		},
-		Rules: componentBuilderRBACPolicyRules,
+		Rules: containerBuilderRBACPolicyRules,
 	}
 	resources.ClusterRoles = append(resources.ClusterRoles, clusterRole)
 }
 
-var componentBuilderRBACPolicyRules = []rbacv1.PolicyRule{
+var containerBuilderRBACPolicyRules = []rbacv1.PolicyRule{
 	// Read and update lattice component builds
 	{
 		APIGroups: []string{latticev1.GroupName},
