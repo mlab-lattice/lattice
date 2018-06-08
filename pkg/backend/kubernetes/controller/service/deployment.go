@@ -8,7 +8,7 @@ import (
 
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	kubeutil "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/kubernetes"
-	"github.com/mlab-lattice/lattice/pkg/definition/block"
+	definitionv1 "github.com/mlab-lattice/lattice/pkg/definition/v1"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -22,6 +22,7 @@ import (
 
 	"github.com/golang/glog"
 	"github.com/sergi/go-diff/diffmatchpatch"
+	"strconv"
 )
 
 const (
@@ -294,16 +295,23 @@ func (c *Controller) untransformedDeploymentSpec(
 
 	replicas := service.Spec.NumInstances
 
-	// Create a container for each Component in the Service
-	var containers []corev1.Container
-	for _, component := range service.Spec.Definition.Components {
-		buildArtifacts := service.Spec.ContainerBuildArtifacts[component.Name]
-		container, err := containerFromComponent(service, &component, &buildArtifacts)
+	// Create a kube container for each Component in the Service
+	containers := map[string]definitionv1.Container{
+		kubeutil.UserMainContainerName: service.Spec.Definition.Container,
+	}
+	for name, container := range service.Spec.Definition.Sidecars {
+		containers[name] = container
+	}
+
+	var kubeContainers []corev1.Container
+	for name, container := range containers {
+		buildArtifacts := service.Spec.ContainerBuildArtifacts[name]
+		container, err := containerFromComponent(service, name, &container, &buildArtifacts)
 		if err != nil {
 			return nil, err
 		}
 
-		containers = append(containers, container)
+		kubeContainers = append(kubeContainers, container)
 	}
 
 	podAffinityTerm := corev1.PodAffinityTerm{
@@ -409,7 +417,7 @@ func (c *Controller) untransformedDeploymentSpec(
 				Labels: deploymentLabels,
 			},
 			Spec: corev1.PodSpec{
-				Containers: containers,
+				Containers: kubeContainers,
 				DNSPolicy:  corev1.DNSDefault,
 				DNSConfig:  &dnsConfig,
 				Affinity: &corev1.Affinity{
@@ -428,7 +436,8 @@ func (c *Controller) untransformedDeploymentSpec(
 
 func containerFromComponent(
 	service *latticev1.Service,
-	component *block.Component,
+	containerName string,
+	container *definitionv1.Container,
 	buildArtifacts *latticev1.ContainerBuildArtifacts,
 ) (corev1.Container, error) {
 	path, err := service.PathLabel()
@@ -436,12 +445,19 @@ func containerFromComponent(
 		return corev1.Container{}, err
 	}
 
+	containerPorts := container.Ports
+	if container.Port != nil {
+		containerPorts = map[string]definitionv1.ContainerPort{
+			strconv.Itoa(int(container.Port.Port)): *container.Port,
+		}
+	}
+
 	var ports []corev1.ContainerPort
-	for _, port := range component.Ports {
+	for name, port := range containerPorts {
 		ports = append(
 			ports,
 			corev1.ContainerPort{
-				Name:          port.Name,
+				Name:          name,
 				Protocol:      corev1.ProtocolTCP,
 				ContainerPort: int32(port.Port),
 			},
@@ -452,7 +468,7 @@ func containerFromComponent(
 	// so we can more easily check to see if the spec needs
 	// to be updated.
 	var envVarNames []string
-	for name := range component.Exec.Environment {
+	for name := range container.Exec.Environment {
 		envVarNames = append(envVarNames, name)
 	}
 
@@ -460,7 +476,7 @@ func containerFromComponent(
 
 	var envVars []corev1.EnvVar
 	for _, name := range envVarNames {
-		envVar := component.Exec.Environment[name]
+		envVar := container.Exec.Environment[name]
 		if envVar.Value != nil {
 			envVars = append(
 				envVars,
@@ -470,41 +486,31 @@ func containerFromComponent(
 				},
 			)
 		} else if envVar.Secret != nil {
-			if envVar.Secret.Name != nil {
-				envVars = append(
-					envVars,
-					corev1.EnvVar{
-						Name: name,
-						ValueFrom: &corev1.EnvVarSource{
-							SecretKeyRef: &corev1.SecretKeySelector{
-								LocalObjectReference: corev1.LocalObjectReference{
-									Name: path.ToDomain(),
-								},
-								Key: *envVar.Secret.Name,
+			envVars = append(
+				envVars,
+				corev1.EnvVar{
+					Name: name,
+					ValueFrom: &corev1.EnvVarSource{
+						SecretKeyRef: &corev1.SecretKeySelector{
+							LocalObjectReference: corev1.LocalObjectReference{
+								Name: path.ToDomain(),
 							},
+							Key: *envVar.Secret,
 						},
 					},
-				)
-			} else {
-				glog.Warning(
-					"Component %v for Service %v/%v has environment variable %v which neither has a value or a secret",
-					component.Name,
-					service.Namespace,
-					service.Name,
-					name,
-				)
-			}
+				},
+			)
 
 			// FIXME: add reference
 		}
 	}
 
-	probe := deploymentProbe(component.HealthCheck)
-	container := corev1.Container{
-		Name:            kubeutil.UserResourcePrefix + component.Name,
+	probe := deploymentProbe(container.HealthCheck)
+	kubeContainer := corev1.Container{
+		Name:            containerName,
 		Image:           buildArtifacts.DockerImageFQN,
 		ImagePullPolicy: corev1.PullIfNotPresent,
-		Command:         component.Exec.Command,
+		Command:         container.Exec.Command,
 		Ports:           ports,
 		Env:             envVars,
 		// TODO(kevinrosendahl): maybe add Resources
@@ -512,52 +518,20 @@ func containerFromComponent(
 		LivenessProbe:  probe,
 		ReadinessProbe: probe,
 	}
-	return container, nil
+	return kubeContainer, nil
 }
 
-func deploymentProbe(hc *block.ComponentHealthCheck) *corev1.Probe {
+func deploymentProbe(hc *definitionv1.ContainerHealthCheck) *corev1.Probe {
 	if hc == nil {
 		return nil
 	}
 
-	if hc.Exec != nil {
-		return &corev1.Probe{
-			Handler: corev1.Handler{
-				Exec: &corev1.ExecAction{
-					Command: hc.Exec.Command,
-				},
-			},
-		}
-	}
-
 	if hc.HTTP != nil {
-		// Sort the header names so the array order is deterministic
-		// so we can more easily check to see if the spec needs
-		// to be updated.
-		var headerNames []string
-		for name := range hc.HTTP.Headers {
-			headerNames = append(headerNames, name)
-		}
-
-		sort.Strings(headerNames)
-
-		var headers []corev1.HTTPHeader
-		for _, name := range headerNames {
-			headers = append(
-				headers,
-				corev1.HTTPHeader{
-					Name:  name,
-					Value: hc.HTTP.Headers[name],
-				},
-			)
-		}
-
 		return &corev1.Probe{
 			Handler: corev1.Handler{
 				HTTPGet: &corev1.HTTPGetAction{
-					Path:        hc.HTTP.Path,
-					Port:        intstr.FromString(hc.HTTP.Port),
-					HTTPHeaders: headers,
+					Path: hc.HTTP.Path,
+					Port: intstr.FromString(hc.HTTP.Port),
 				},
 			},
 		}

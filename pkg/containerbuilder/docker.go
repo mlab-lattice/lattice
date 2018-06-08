@@ -1,4 +1,4 @@
-package componentbuilder
+package containerbuilder
 
 import (
 	"context"
@@ -8,9 +8,10 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
-	"github.com/mlab-lattice/lattice/pkg/definition/block"
+	definitionv1 "github.com/mlab-lattice/lattice/pkg/definition/v1"
 	"github.com/mlab-lattice/lattice/pkg/util/tar"
 
 	dockertypes "github.com/docker/docker/api/types"
@@ -19,7 +20,7 @@ import (
 )
 
 func (b *Builder) buildDockerImageComponent() error {
-	sourceDockerImageFQN, err := getDockerImageFQNFromDockerImageBlock(b.ComponentBuildBlock.DockerImage)
+	sourceDockerImageFQN, err := getDockerImageFQNFromDockerImageBlock(b.ContainerBuild.DockerImage)
 	if err != nil {
 		return err
 	}
@@ -107,7 +108,7 @@ func (b *Builder) buildDockerImage(sourceDirectory string) error {
 }
 
 func (b *Builder) getDockerfileContents(sourceDirectory string) (string, error) {
-	if b.ComponentBuildBlock.Command == nil {
+	if b.ContainerBuild.Command == nil {
 		return "", newErrorUser("component build command cannot be nil")
 	}
 
@@ -131,25 +132,25 @@ COPY %v /usr/src/app
 RUN %v`,
 		baseDockerImage,
 		relativeSourceDirectory,
-		*b.ComponentBuildBlock.Command,
+		strings.Join(b.ContainerBuild.Command, " "),
 	)
 
 	return dockerfileContents, nil
 }
 
 func (b *Builder) getBaseDockerImage() (string, error) {
-	if b.ComponentBuildBlock.BaseDockerImage != nil {
-		return getDockerImageFQNFromDockerImageBlock(b.ComponentBuildBlock.BaseDockerImage)
+	if b.ContainerBuild.BaseDockerImage != nil {
+		return getDockerImageFQNFromDockerImageBlock(b.ContainerBuild.BaseDockerImage)
 	}
 
-	if b.ComponentBuildBlock.Language != nil {
-		return *b.ComponentBuildBlock.Language, nil
+	if b.ContainerBuild.Language != nil {
+		return *b.ContainerBuild.Language, nil
 	}
 
 	return "", newErrorUser("component build must have base_docker_image or language")
 }
 
-func getDockerImageFQNFromDockerImageBlock(image *block.DockerImage) (string, error) {
+func getDockerImageFQNFromDockerImageBlock(image *definitionv1.DockerImage) (string, error) {
 	if image == nil {
 		return "", newErrorInternal("cannot get docker image FQN from nil image")
 	}

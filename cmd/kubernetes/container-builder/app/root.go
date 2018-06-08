@@ -8,9 +8,9 @@ import (
 	"os/exec"
 
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
-	kubecomponentbuilder "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/componentbuilder"
-	"github.com/mlab-lattice/lattice/pkg/componentbuilder"
-	"github.com/mlab-lattice/lattice/pkg/definition/block"
+	kubecontainerbuilder "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/containerbuilder"
+	"github.com/mlab-lattice/lattice/pkg/containerbuilder"
+	definitionv1 "github.com/mlab-lattice/lattice/pkg/definition/v1"
 	"github.com/mlab-lattice/lattice/pkg/util/aws"
 
 	"github.com/spf13/cobra"
@@ -36,7 +36,7 @@ var (
 	dockerPush             bool
 
 	kubeconfig               string
-	componentBuildDefinition string
+	containerBuildDefinition string
 )
 
 // RootCmd represents the base command when called without any subcommands
@@ -44,13 +44,13 @@ var RootCmd = &cobra.Command{
 	Use:   "bootstrap-lattice",
 	Short: "Bootstraps a kubernetes cluster to run lattice",
 	Run: func(cmd *cobra.Command, args []string) {
-		cb := &block.ComponentBuild{}
-		err := json.Unmarshal([]byte(componentBuildDefinition), cb)
+		cb := &definitionv1.ContainerBuild{}
+		err := json.Unmarshal([]byte(containerBuildDefinition), cb)
 		if err != nil {
 			log.Fatal("error unmarshaling component build: " + err.Error())
 		}
 
-		dockerOptions := &componentbuilder.DockerOptions{
+		dockerOptions := &containerbuilder.DockerOptions{
 			Registry:   dockerRegistry,
 			Repository: dockerRepository,
 			Tag:        dockerTag,
@@ -63,22 +63,22 @@ var RootCmd = &cobra.Command{
 
 		systemID := v1.SystemID(systemIDString)
 
-		statusUpdater, err := kubecomponentbuilder.NewKubernetesStatusUpdater(namespacePrefix, kubeconfig)
+		statusUpdater, err := kubecontainerbuilder.NewKubernetesStatusUpdater(namespacePrefix, kubeconfig)
 		if err != nil {
 			log.Fatal("error getting status updater: " + err.Error())
 		}
 
 		gitRepoSSHKey := os.Getenv(gitRepoSSHKeyEnvVarName)
-		var gitResolverOptions *componentbuilder.GitResolverOptions
+		var gitResolverOptions *containerbuilder.GitResolverOptions
 		if gitRepoSSHKey != "" {
-			gitResolverOptions = &componentbuilder.GitResolverOptions{
+			gitResolverOptions = &containerbuilder.GitResolverOptions{
 				SSHKey: []byte(gitRepoSSHKey),
 			}
 		}
 
 		setupSSH()
 
-		builder, err := componentbuilder.NewBuilder(
+		builder, err := containerbuilder.NewBuilder(
 			v1.ComponentBuildID(componentBuildID),
 			systemID,
 			workDirectory,
@@ -136,14 +136,14 @@ func Execute() {
 }
 
 func init() {
-	RootCmd.Flags().StringVar(&componentBuildID, "component-build-id", "", "ID of the component build")
-	RootCmd.MarkFlagRequired("component-build-id")
+	RootCmd.Flags().StringVar(&componentBuildID, "container-build-id", "", "ID of the container build")
+	RootCmd.MarkFlagRequired("container-build-id")
 	RootCmd.Flags().StringVar(&namespacePrefix, "namespace-prefix", "", "namespace prefix of the lattice")
 	RootCmd.MarkFlagRequired("lattice-id")
 	RootCmd.Flags().StringVar(&systemIDString, "system-id", "", "ID of the system")
 	RootCmd.MarkFlagRequired("system-id")
-	RootCmd.Flags().StringVar(&componentBuildDefinition, "component-build-definition", "", "JSON serialized version of the component build definition block")
-	RootCmd.MarkFlagRequired("component-build-definition")
+	RootCmd.Flags().StringVar(&containerBuildDefinition, "container-build-definition", "", "JSON serialized version of the container build definition block")
+	RootCmd.MarkFlagRequired("container-build-definition")
 
 	RootCmd.Flags().StringVar(&dockerRegistry, "docker-registry", "", "registry to tag the docker image artifact with")
 	RootCmd.MarkFlagRequired("docker-registry")

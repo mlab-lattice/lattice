@@ -9,6 +9,7 @@ go_library(
         "job.go",
         "job_node.go",
         "node.go",
+        "node_pool.go",
         "reference.go",
         "resource.go",
         "service.go",

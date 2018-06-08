@@ -110,7 +110,7 @@ git.install-hooks:
 
 # docker
 DOCKER_IMAGES := kubernetes-api-server-rest             \
-                 kubernetes-component-builder           \
+                 kubernetes-container-builder           \
                  kubernetes-envoy-prepare               \
                  kubernetes-envoy-xds-api-rest-per-node \
                  kubernetes-lattice-controller-manager  \

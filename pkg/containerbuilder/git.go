@@ -1,4 +1,4 @@
-package componentbuilder
+package containerbuilder
 
 import (
 	"fmt"
@@ -18,18 +18,13 @@ func (b *Builder) buildGitRepositoryComponent() error {
 		b.StatusUpdater.UpdateProgress(b.BuildID, b.SystemID, v1.ComponentBuildPhasePullingGitRepository)
 	}
 
-	gitRepo := b.ComponentBuildBlock.GitRepository
-	if err := gitRepo.Validate(nil); err != nil {
-		return newErrorUser("invalid git repository config: " + err.Error())
-	}
-
 	gitResolver, err := git.NewResolver(b.WorkingDir + "/git")
 	if err != nil {
 		return newErrorInternal("failed to create git resolver: " + err.Error())
 	}
 	b.GitResolver = gitResolver
 
-	uri, err := git.GetGitURIFromComponentBuild(gitRepo)
+	uri, err := git.GetGitURIFromDefinition(b.ContainerBuild.GitRepository)
 	if err != nil {
 		return newErrorInternal("failed to get git URI from component build: " + err.Error())
 	}

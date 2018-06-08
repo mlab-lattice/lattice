@@ -19,24 +19,31 @@ type Service struct {
 
 	Container
 	Sidecars map[string]Container
+
+	// FIXME: remove these
+	NumInstances int32
+	NodePool     *NodePoolOrReference
+	InstanceType *string
 }
 
-func (j *Service) Type() resource.Type {
+func (s *Service) Type() resource.Type {
 	return ServiceType
 }
 
-func (j *Service) MarshalJSON() ([]byte, error) {
+func (s *Service) MarshalJSON() ([]byte, error) {
 	e := serviceEncoder{
 		Type:        ServiceType,
-		Description: j.Description,
+		Description: s.Description,
 
-		Container: j.Container,
-		Sidecars:  j.Sidecars,
+		Container: s.Container,
+		Sidecars:  s.Sidecars,
+
+		NumInstances: s.NumInstances,
 	}
 	return json.Marshal(&e)
 }
 
-func (j *Service) UnmarshalJSON(data []byte) error {
+func (s *Service) UnmarshalJSON(data []byte) error {
 	var e *serviceEncoder
 	if err := json.Unmarshal(data, &e); err != nil {
 		return err
@@ -55,8 +62,12 @@ func (j *Service) UnmarshalJSON(data []byte) error {
 
 		Container: e.Container,
 		Sidecars:  e.Sidecars,
+
+		NumInstances: e.NumInstances,
+		NodePool:     e.NodePool,
+		InstanceType: e.InstanceType,
 	}
-	*j = *service
+	*s = *service
 	return nil
 }
 
@@ -66,4 +77,8 @@ type serviceEncoder struct {
 
 	Container
 	Sidecars map[string]Container `json:"sidecars,omitempty"`
+
+	NumInstances int32                `json:"num_instances"`
+	NodePool     *NodePoolOrReference `json:"node_pool"`
+	InstanceType *string              `json:"instance_type"`
 }

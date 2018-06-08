@@ -13,7 +13,7 @@ go_library(
         "//pkg/backend/kubernetes/cloudprovider:go_default_library",
         "//pkg/backend/kubernetes/controller/address:go_default_library",
         "//pkg/backend/kubernetes/controller/build:go_default_library",
-        "//pkg/backend/kubernetes/controller/componentbuild:go_default_library",
+        "//pkg/backend/kubernetes/controller/containerbuild:go_default_library",
         "//pkg/backend/kubernetes/controller/nodepool:go_default_library",
         "//pkg/backend/kubernetes/controller/service:go_default_library",
         "//pkg/backend/kubernetes/controller/servicebuild:go_default_library",

@@ -1,4 +1,4 @@
-package componentbuilder
+package containerbuilder
 
 import (
 	"github.com/mlab-lattice/lattice/pkg/api/v1"

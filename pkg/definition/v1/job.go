@@ -19,6 +19,9 @@ type Job struct {
 
 	Container
 	Sidecars map[string]Container
+
+	// FIXME: remove these
+	NodePool string `json:"node_pool"`
 }
 
 func (j *Job) Type() resource.Type {

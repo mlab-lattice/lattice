@@ -8,11 +8,11 @@ go_library(
         "git.go",
         "status_updater.go",
     ],
-    importpath = "github.com/mlab-lattice/lattice/pkg/componentbuilder",
+    importpath = "github.com/mlab-lattice/lattice/pkg/containerbuilder",
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/api/v1:go_default_library",
-        "//pkg/definition/block:go_default_library",
+        "//pkg/definition/v1:go_default_library",
         "//pkg/util/docker:go_default_library",
         "//pkg/util/git:go_default_library",
         "//pkg/util/tar:go_default_library",

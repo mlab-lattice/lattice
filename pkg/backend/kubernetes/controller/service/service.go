@@ -29,27 +29,15 @@ type nodePoolInfo struct {
 }
 
 func (c *Controller) numInstances(service *latticev1.Service) (int32, error) {
-	if service.Spec.Definition.Resources.NumInstances != nil {
-		return *service.Spec.Definition.Resources.NumInstances, nil
-	}
-
-	if service.Spec.Definition.Resources.MinInstances != nil {
-		return *service.Spec.Definition.Resources.MinInstances, nil
-	}
-
-	err := fmt.Errorf(
-		"error getting num instances for %v: did not specify num instances or min instances",
-		service.Description(c.namespacePrefix),
-	)
-	return 0, err
+	return service.Spec.Definition.NumInstances, nil
 }
 
 func (c *Controller) nodePoolInfo(service *latticev1.Service) (nodePoolInfo, error) {
-	resources := service.Spec.Definition.Resources
+	definition := service.Spec.Definition
 
 	// dedicated per-instance node pool
-	if resources.NodePool == nil {
-		if resources.InstanceType == nil {
+	if definition.NodePool == nil {
+		if definition.InstanceType == nil {
 			return nodePoolInfo{}, fmt.Errorf("%v did not specify a node pool or instance type", service.Description(c.namespacePrefix))
 		}
 
@@ -60,7 +48,7 @@ func (c *Controller) nodePoolInfo(service *latticev1.Service) (nodePoolInfo, err
 
 		info := nodePoolInfo{
 			nodePoolType: latticev1.NodePoolTypeServiceDedicated,
-			instanceType: *resources.InstanceType,
+			instanceType: *definition.InstanceType,
 			numInstances: numInstances,
 			perInstance:  true,
 		}
@@ -68,18 +56,18 @@ func (c *Controller) nodePoolInfo(service *latticev1.Service) (nodePoolInfo, err
 	}
 
 	// dedicated not per-instance node pool
-	if resources.NodePool.NodePool != nil {
+	if definition.NodePool.NodePool != nil {
 		info := nodePoolInfo{
 			nodePoolType: latticev1.NodePoolTypeServiceDedicated,
-			instanceType: resources.NodePool.NodePool.InstanceType,
-			numInstances: resources.NodePool.NodePool.NumInstances,
+			instanceType: definition.NodePool.NodePool.InstanceType,
+			numInstances: definition.NodePool.NodePool.NumInstances,
 			perInstance:  false,
 		}
 		return info, nil
 	}
 
-	if resources.NodePool.NodePoolName != nil {
-		path, err := v1.ParseNodePoolPath(*resources.NodePool.NodePoolName)
+	if definition.NodePool.NodePoolName != nil {
+		path, err := v1.ParseNodePoolPath(*definition.NodePool.NodePoolName)
 		if err != nil {
 			err := fmt.Errorf("error parsing shared node pool path for %v: %v", service.Description(c.namespacePrefix), err)
 			return nodePoolInfo{}, err
