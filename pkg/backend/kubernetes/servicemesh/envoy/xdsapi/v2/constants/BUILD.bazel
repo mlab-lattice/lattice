@@ -7,7 +7,6 @@ go_library(
         "listener.go",
         "ports.go",
         "routes.go",
-        "xds.go",
     ],
     importpath = "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/servicemesh/envoy/xdsapi/v2/constants",
     visibility = ["//visibility:public"],

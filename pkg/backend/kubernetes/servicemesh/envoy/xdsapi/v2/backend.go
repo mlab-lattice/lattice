@@ -1,17 +1,16 @@
 package v2
 
 import (
-	"github.com/envoyproxy/go-control-plane/pkg/log"
-	"github.com/envoyproxy/go-control-plane/pkg/server"
-
 	envoycache "github.com/envoyproxy/go-control-plane/pkg/cache"
+	envoylog "github.com/envoyproxy/go-control-plane/pkg/log"
+	envoyserver "github.com/envoyproxy/go-control-plane/pkg/server"
 
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 )
 
 type Backend interface {
-	log.Logger
-	server.Callbacks
+	envoylog.Logger
+	envoyserver.Callbacks
 	envoycache.NodeHash
 
 	Ready() bool

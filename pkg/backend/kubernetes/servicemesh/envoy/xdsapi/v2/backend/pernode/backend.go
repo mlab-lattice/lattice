@@ -19,8 +19,8 @@ import (
 
 	envoyv2 "github.com/envoyproxy/go-control-plane/envoy/api/v2"
 	envoycore "github.com/envoyproxy/go-control-plane/envoy/api/v2/core"
-	// envoyendpoint "github.com/envoyproxy/go-control-plane/envoy/api/v2/endpoint"
 	envoycache "github.com/envoyproxy/go-control-plane/pkg/cache"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kubeinformers "k8s.io/client-go/informers"
 	kubeclientset "k8s.io/client-go/kubernetes"
@@ -33,6 +33,7 @@ import (
 	latticeclientset "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/generated/clientset/versioned"
 	latticeinformers "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/generated/informers/externalversions"
 	latticelisters "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/generated/listers/lattice/v1"
+
 	xdsapi "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/servicemesh/envoy/xdsapi/v2"
 	xdsservice "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/servicemesh/envoy/xdsapi/v2/service"
 )
@@ -177,7 +178,7 @@ func (b *KubernetesPerNodeBackend) enqueueCacheUpdateTask(_type xdsapi.EntityTyp
 		if !ok {
 			return "", err
 		}
-	case xdsapi.KubeEntityType, xdsapi.LatticeEntityType:
+	case xdsapi.LatticeEntityType:
 		// generates name in the format "<namespace>/<name>"
 		name, err = cache.MetaNamespaceKeyFunc(obj)
 		if err != nil {
@@ -285,22 +286,6 @@ func (b *KubernetesPerNodeBackend) getServicesForNamespace(namespace string) []*
 	return services
 }
 
-// XXX: remove me
-func (b *KubernetesPerNodeBackend) handleKubeSyncXDSCache(entityName string) error {
-	glog.Infof("Per-node backend handling kube sync task")
-	namespace, _, err := cache.SplitMetaNamespaceKey(entityName)
-	if err != nil {
-		return err
-	}
-	for _, service := range b.getServicesForNamespace(namespace) {
-		err = service.Update(b)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
 func (b *KubernetesPerNodeBackend) handleLatticeSyncXDSCache(entityName string) error {
 	glog.Infof("Per-node backend handling lattice sync task")
 	namespace, _, err := cache.SplitMetaNamespaceKey(entityName)
@@ -327,8 +312,6 @@ func (b *KubernetesPerNodeBackend) syncXDSCache(key string) error {
 	switch task.Type {
 	case xdsapi.EnvoyEntityType:
 		err = b.handleEnvoySyncXDSCache(task.Name)
-	case xdsapi.KubeEntityType:
-		err = b.handleKubeSyncXDSCache(task.Name)
 	case xdsapi.LatticeEntityType:
 		err = b.handleLatticeSyncXDSCache(task.Name)
 	default:

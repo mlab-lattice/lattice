@@ -14,21 +14,17 @@ type Component struct {
 type EntityType int
 
 const (
-	// XXX: remove KubeEntityType
-	KubeEntityType EntityType = iota
+	EnvoyEntityType EntityType = iota
 	LatticeEntityType
-	EnvoyEntityType
 )
 
 func (t EntityType) String() string {
 	var _type string
 	switch t {
-	case KubeEntityType:
-		_type = "KubeEntityType"
-	case LatticeEntityType:
-		_type = "LatticeEntityType"
 	case EnvoyEntityType:
 		_type = "EnvoyEntityType"
+	case LatticeEntityType:
+		_type = "LatticeEntityType"
 	}
 	return _type
 }

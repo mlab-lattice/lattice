@@ -88,6 +88,7 @@ func (s *Service) getClusters(services map[tree.NodePath]*xdsapi.Service) ([]env
 								Ads: &envoycore.AggregatedConfigSource{},
 							},
 						},
+						ServiceName: clusterName,
 					},
 				})
 
@@ -217,7 +218,7 @@ func (s *Service) getListeners(services map[tree.NodePath]*xdsapi.Service) ([]en
 		},
 		HttpFilters: []*envoyhttpcxnmgr.HttpFilter{
 			{
-				Name: xdsconstants.HTTPFilterNameRouter,
+				Name: xdsconstants.HTTPFilterRouterName,
 				// type.Struct
 				// Config: httpFilterConfigPBStruct,
 			},
@@ -243,7 +244,7 @@ func (s *Service) getListeners(services map[tree.NodePath]*xdsapi.Service) ([]en
 			{
 				Filters: []envoylistener.Filter{
 					{
-						Name: xdsconstants.FilterNameHTTPConnectionManager,
+						Name: xdsconstants.FilterHTTPConnectionManagerName,
 						// type.Struct
 						Config: filterConfigPBStruct,
 					},
@@ -287,7 +288,7 @@ func (s *Service) getListeners(services map[tree.NodePath]*xdsapi.Service) ([]en
 				},
 				HttpFilters: []*envoyhttpcxnmgr.HttpFilter{
 					{
-						Name: xdsconstants.HTTPFilterNameRouter,
+						Name: xdsconstants.HTTPFilterRouterName,
 						// Config: httpFilterConfigPBStruct,
 					},
 				},
@@ -314,7 +315,7 @@ func (s *Service) getListeners(services map[tree.NodePath]*xdsapi.Service) ([]en
 					{
 						Filters: []envoylistener.Filter{
 							{
-								Name:   xdsconstants.FilterNameHTTPConnectionManager,
+								Name:   xdsconstants.FilterHTTPConnectionManagerName,
 								Config: filterConfigPBStruct,
 							},
 						},
