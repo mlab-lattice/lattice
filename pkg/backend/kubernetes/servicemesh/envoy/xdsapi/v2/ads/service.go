@@ -1,4 +1,4 @@
-package service
+package ads
 
 import (
 	"encoding/json"
@@ -62,10 +62,10 @@ func (s *Service) Namespace() string {
 	return s.EnvoyNode.GetCluster()
 }
 
-func (s *Service) getClusters(services map[tree.NodePath]*xdsapi.Service) ([]envoycache.Resource, error) {
+func (s *Service) getClusters(systemServices map[tree.NodePath]*xdsapi.Service) ([]envoycache.Resource, error) {
 	clusters := make([]envoycache.Resource, 0)
 
-	for path, service := range services {
+	for path, service := range systemServices {
 		servicePath, err := s.Path()
 		if err != nil {
 			return nil, err
@@ -125,7 +125,7 @@ func (s *Service) getClusters(services map[tree.NodePath]*xdsapi.Service) ([]env
 
 func (s *Service) getEndpoints(
 	clusters []envoycache.Resource,
-	services map[tree.NodePath]*xdsapi.Service) ([]envoycache.Resource, error) {
+	systemServices map[tree.NodePath]*xdsapi.Service) ([]envoycache.Resource, error) {
 	endpoints := make([]envoycache.Resource, 0, len(clusters))
 	for _, resource := range clusters {
 		cluster := resource.(*envoyv2.Cluster)
@@ -137,7 +137,7 @@ func (s *Service) getEndpoints(
 		if err != nil {
 			return nil, err
 		}
-		service, ok := services[path]
+		service, ok := systemServices[path]
 		if !ok {
 			return nil, fmt.Errorf("Invalid Service path <%v>", path)
 		}
@@ -179,7 +179,7 @@ func (s *Service) getEndpoints(
 	return endpoints, nil
 }
 
-func (s *Service) getListeners(services map[tree.NodePath]*xdsapi.Service) ([]envoycache.Resource, error) {
+func (s *Service) getListeners(systemServices map[tree.NodePath]*xdsapi.Service) ([]envoycache.Resource, error) {
 	var err error
 
 	listeners := make([]envoycache.Resource, 0)
@@ -189,7 +189,7 @@ func (s *Service) getListeners(services map[tree.NodePath]*xdsapi.Service) ([]en
 		return nil, err
 	}
 
-	service, ok := services[path]
+	service, ok := systemServices[path]
 	if !ok {
 		return nil, fmt.Errorf("Invalid Service path <%v>", path)
 	}
@@ -327,13 +327,13 @@ func (s *Service) getListeners(services map[tree.NodePath]*xdsapi.Service) ([]en
 	return listeners, nil
 }
 
-func (s *Service) getRoutes(services map[tree.NodePath]*xdsapi.Service) ([]envoycache.Resource, error) {
+func (s *Service) getRoutes(systemServices map[tree.NodePath]*xdsapi.Service) ([]envoycache.Resource, error) {
 	route := &envoyv2.RouteConfiguration{
 		Name:         xdsconstants.RouteNameEgress,
 		VirtualHosts: []envoyroute.VirtualHost{},
 	}
 
-	for path, service := range services {
+	for path, service := range systemServices {
 		for componentName, component := range service.Components {
 			for port := range component.Ports {
 				domain := fmt.Sprintf("%v.local", path.ToDomain())
@@ -379,24 +379,24 @@ func (s *Service) Update(backend xdsapi.Backend) error {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
-	services, err := backend.Services(s.Namespace())
+	systemServices, err := backend.SystemServices(s.Namespace())
 	if err != nil {
 		return err
 	}
 
-	clusters, err := s.getClusters(services)
+	clusters, err := s.getClusters(systemServices)
 	if err != nil {
 		return err
 	}
-	endpoints, err := s.getEndpoints(clusters, services)
+	endpoints, err := s.getEndpoints(clusters, systemServices)
 	if err != nil {
 		return err
 	}
-	listeners, err := s.getListeners(services)
+	listeners, err := s.getListeners(systemServices)
 	if err != nil {
 		return err
 	}
-	routes, err := s.getRoutes(services)
+	routes, err := s.getRoutes(systemServices)
 	if err != nil {
 		return err
 	}

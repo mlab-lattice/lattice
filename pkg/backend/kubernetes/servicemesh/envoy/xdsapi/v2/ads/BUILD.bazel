@@ -2,8 +2,14 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library")
 
 go_library(
     name = "go_default_library",
-    srcs = ["service.go"],
-    importpath = "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/servicemesh/envoy/xdsapi/v2/service",
+    srcs = [
+        "cds.go",
+        "eds.go",
+        "lds.go",
+        "rds.go",
+        "service.go",
+    ],
+    importpath = "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/servicemesh/envoy/xdsapi/v2/ads",
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/backend/kubernetes/servicemesh/envoy/xdsapi/v2:go_default_library",
