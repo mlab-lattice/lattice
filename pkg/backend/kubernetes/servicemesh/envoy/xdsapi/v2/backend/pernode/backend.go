@@ -35,7 +35,7 @@ import (
 	latticelisters "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/generated/listers/lattice/v1"
 
 	xdsapi "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/servicemesh/envoy/xdsapi/v2"
-	xdsads "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/servicemesh/envoy/xdsapi/v2/ads"
+	xdsservice_node "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/servicemesh/envoy/xdsapi/v2/service_node"
 )
 
 // TODO: add events
@@ -55,8 +55,8 @@ type KubernetesPerNodeBackend struct {
 
 	lock sync.Mutex
 
-	services map[string]*xdsads.Service
-	xdsCache envoycache.SnapshotCache
+	serviceNodes map[string]*xdsservice_node.ServiceNode
+	xdsCache     envoycache.SnapshotCache
 
 	stopCh <-chan struct{}
 }
@@ -101,7 +101,7 @@ func NewKubernetesPerNodeBackend(kubeconfig string, stopCh <-chan struct{}) (*Ku
 		queue:                    workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "envoy-api-backend"),
 		stopCh:                   stopCh,
 	}
-	b.services = make(map[string]*xdsads.Service)
+	b.serviceNodes = make(map[string]*xdsservice_node.ServiceNode)
 	b.xdsCache = envoycache.NewSnapshotCache(true, b, b)
 
 	serviceInformer.Informer().AddEventHandlerWithResyncPeriod(cache.ResourceEventHandlerFuncs{
@@ -262,7 +262,7 @@ func (b *KubernetesPerNodeBackend) Worker() {
 func (b *KubernetesPerNodeBackend) handleEnvoySyncXDSCache(entityName string) error {
 	glog.Infof("Per-node backend handling envoy sync task")
 	b.lock.Lock()
-	service, ok := b.services[entityName]
+	service, ok := b.serviceNodes[entityName]
 	b.lock.Unlock()
 	if !ok {
 		return fmt.Errorf("Couldn't find Envoy service with ID <%s>", entityName)
@@ -270,14 +270,14 @@ func (b *KubernetesPerNodeBackend) handleEnvoySyncXDSCache(entityName string) er
 	return service.Update(b)
 }
 
-func (b *KubernetesPerNodeBackend) getServicesForNamespace(namespace string) []*xdsads.Service {
-	var services []*xdsads.Service
+func (b *KubernetesPerNodeBackend) getServicesForServiceCluster(serviceCluster string) []*xdsservice_node.ServiceNode {
+	var services []*xdsservice_node.ServiceNode
 
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
-	for serviceId, service := range b.services {
-		if _namespace, _, err := cache.SplitMetaNamespaceKey(serviceId); err == nil && _namespace == namespace {
+	for serviceId, service := range b.serviceNodes {
+		if _serviceCluster, _, err := cache.SplitMetaNamespaceKey(serviceId); err == nil && _serviceCluster == serviceCluster {
 			services = append(services, service)
 		}
 	}
@@ -287,11 +287,11 @@ func (b *KubernetesPerNodeBackend) getServicesForNamespace(namespace string) []*
 
 func (b *KubernetesPerNodeBackend) handleLatticeSyncXDSCache(entityName string) error {
 	glog.Infof("Per-node backend handling lattice sync task")
-	namespace, _, err := cache.SplitMetaNamespaceKey(entityName)
+	serviceCluster, _, err := cache.SplitMetaNamespaceKey(entityName)
 	if err != nil {
 		return err
 	}
-	for _, service := range b.getServicesForNamespace(namespace) {
+	for _, service := range b.getServicesForServiceCluster(serviceCluster) {
 		err = service.Update(b)
 		if err != nil {
 			return err
@@ -422,8 +422,8 @@ func (b *KubernetesPerNodeBackend) OnStreamRequest(id int64, req *envoyv2.Discov
 	serviceId := b.ID(node)
 
 	b.lock.Lock()
-	if _, ok := b.services[serviceId]; !ok {
-		b.services[serviceId] = xdsads.NewService(serviceId, node)
+	if _, ok := b.serviceNodes[serviceId]; !ok {
+		b.serviceNodes[serviceId] = xdsservice_node.NewServiceNode(serviceId, node)
 	}
 	b.lock.Unlock()
 

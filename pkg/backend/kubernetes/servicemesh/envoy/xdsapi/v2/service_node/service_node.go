@@ -1,4 +1,4 @@
-package ads
+package service_node
 
 import (
 	"encoding/json"
@@ -17,7 +17,7 @@ import (
 
 // XXX: rename to ServiceNode
 
-type Service struct {
+type ServiceNode struct {
 	Id string
 
 	EnvoyNode *envoycore.Node
@@ -30,14 +30,14 @@ type Service struct {
 	listeners []envoycache.Resource
 }
 
-func NewService(id string, envoyNode *envoycore.Node) *Service {
-	return &Service{
+func NewServiceNode(id string, envoyNode *envoycore.Node) *ServiceNode {
+	return &ServiceNode{
 		Id:        id,
 		EnvoyNode: envoyNode,
 	}
 }
 
-func (s *Service) Path() (tree.NodePath, error) {
+func (s *ServiceNode) Path() (tree.NodePath, error) {
 	tnPath, err := tree.NodePathFromDomain(s.EnvoyNode.GetId())
 	if err != nil {
 		return "", err
@@ -45,17 +45,17 @@ func (s *Service) Path() (tree.NodePath, error) {
 	return tnPath, nil
 }
 
-func (s *Service) Namespace() string {
+func (s *ServiceNode) ServiceCluster() string {
 	return s.EnvoyNode.GetCluster()
 }
 
-func (s *Service) Update(backend xdsapi.Backend) error {
-	glog.Info("Service.update called")
+func (s *ServiceNode) Update(backend xdsapi.Backend) error {
+	glog.Info("ServiceNode.update called")
 	// disallow concurrent updates to service state
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
-	systemServices, err := backend.SystemServices(s.Namespace())
+	systemServices, err := backend.SystemServices(s.ServiceCluster())
 	if err != nil {
 		return err
 	}

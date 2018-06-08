@@ -5,8 +5,8 @@ go_library(
     srcs = [
         "cluster.go",
         "listener.go",
-        "ports.go",
-        "routes.go",
+        "port.go",
+        "route.go",
     ],
     importpath = "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/servicemesh/envoy/xdsapi/v2/constants",
     visibility = ["//visibility:public"],

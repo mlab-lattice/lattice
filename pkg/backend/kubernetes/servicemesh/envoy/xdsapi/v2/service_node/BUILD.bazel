@@ -7,9 +7,9 @@ go_library(
         "endpoints.go",
         "listeners.go",
         "routes.go",
-        "service.go",
+        "service_node.go",
     ],
-    importpath = "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/servicemesh/envoy/xdsapi/v2/ads",
+    importpath = "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/servicemesh/envoy/xdsapi/v2/service_node",
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/backend/kubernetes/servicemesh/envoy/xdsapi/v2:go_default_library",

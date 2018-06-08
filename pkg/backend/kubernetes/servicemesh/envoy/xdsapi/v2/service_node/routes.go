@@ -1,4 +1,4 @@
-package ads
+package service_node
 
 import (
 	"fmt"
@@ -14,7 +14,7 @@ import (
 	xdsutil "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/servicemesh/envoy/xdsapi/v2/util"
 )
 
-func (s *Service) getRoutes(systemServices map[tree.NodePath]*xdsapi.Service) ([]envoycache.Resource, error) {
+func (s *ServiceNode) getRoutes(systemServices map[tree.NodePath]*xdsapi.Service) ([]envoycache.Resource, error) {
 	route := &envoyv2.RouteConfiguration{
 		Name:         xdsconstants.RouteNameEgress,
 		VirtualHosts: []envoyroute.VirtualHost{},
@@ -46,7 +46,7 @@ func (s *Service) getRoutes(systemServices map[tree.NodePath]*xdsapi.Service) ([
 							Action: &envoyroute.Route_Route{
 								Route: &envoyroute.RouteAction{
 									ClusterSpecifier: &envoyroute.RouteAction_Cluster{
-										Cluster: xdsutil.GetClusterNameForComponentPort(s.Namespace(), path, componentName, port),
+										Cluster: xdsutil.GetClusterNameForComponentPort(s.ServiceCluster(), path, componentName, port),
 									},
 								},
 							},

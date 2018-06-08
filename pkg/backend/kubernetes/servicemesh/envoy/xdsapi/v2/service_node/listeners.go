@@ -1,4 +1,4 @@
-package ads
+package service_node
 
 import (
 	"fmt"
@@ -18,7 +18,7 @@ import (
 	xdsutil "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/servicemesh/envoy/xdsapi/v2/util"
 )
 
-func (s *Service) getListeners(systemServices map[tree.NodePath]*xdsapi.Service) ([]envoycache.Resource, error) {
+func (s *ServiceNode) getListeners(systemServices map[tree.NodePath]*xdsapi.Service) ([]envoycache.Resource, error) {
 	var err error
 
 	listeners := make([]envoycache.Resource, 0)
@@ -115,7 +115,8 @@ func (s *Service) getListeners(systemServices map[tree.NodePath]*xdsapi.Service)
 										Action: &envoyroute.Route_Route{
 											Route: &envoyroute.RouteAction{
 												ClusterSpecifier: &envoyroute.RouteAction_Cluster{
-													Cluster: xdsutil.GetLocalClusterNameForComponentPort(s.Namespace(), path, componentName, port),
+													Cluster: xdsutil.GetLocalClusterNameForComponentPort(
+														s.ServiceCluster(), path, componentName, port),
 												},
 											},
 										},

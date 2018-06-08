@@ -1,4 +1,4 @@
-package ads
+package service_node
 
 import (
 	"fmt"
@@ -14,7 +14,7 @@ import (
 	xdsutil "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/servicemesh/envoy/xdsapi/v2/util"
 )
 
-func (s *Service) getEndpoints(
+func (s *ServiceNode) getEndpoints(
 	clusters []envoycache.Resource,
 	systemServices map[tree.NodePath]*xdsapi.Service) ([]envoycache.Resource, error) {
 	endpoints := make([]envoycache.Resource, 0, len(clusters))
