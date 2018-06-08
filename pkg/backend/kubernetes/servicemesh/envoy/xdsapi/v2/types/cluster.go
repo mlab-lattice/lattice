@@ -13,11 +13,11 @@ type EDSClusterConfig struct {
 
 // https://www.envoyproxy.io/docs/envoy/latest/api-v2/api/v2/cds.proto#cluster
 type Cluster struct {
-	Name             string           `json:"name"`
-	Type             string           `json:"type"`
-	ConnectTimeout   string           `json:"connect_timeout"`
-	LBPolicy         string           `json:"lb_policy"`
-	Hosts            []Address        `json:"hosts,omitempty"`
-	EDSClusterConfig EDSClusterConfig `json:"eds_cluster_config",omitempty`
+	Name             string            `json:"name"`
+	Type             string            `json:"type"`
+	ConnectTimeout   string            `json:"connect_timeout"`
+	LBPolicy         string            `json:"lb_policy"`
+	Hosts            []Address         `json:"hosts,omitempty"`
+	EDSClusterConfig *EDSClusterConfig `json:"eds_cluster_config",omitempty`
 	// TODO: reexamine other fields
 }

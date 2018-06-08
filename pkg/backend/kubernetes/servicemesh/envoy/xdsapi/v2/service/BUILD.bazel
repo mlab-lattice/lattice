@@ -16,11 +16,10 @@ go_library(
         "@com_github_envoyproxy_go_control_plane//envoy/api/v2/endpoint:go_default_library",
         "@com_github_envoyproxy_go_control_plane//envoy/api/v2/listener:go_default_library",
         "@com_github_envoyproxy_go_control_plane//envoy/api/v2/route:go_default_library",
-        "@com_github_envoyproxy_go_control_plane//envoy/config/filter/http/router/v2:go_default_library",
         "@com_github_envoyproxy_go_control_plane//envoy/config/filter/network/http_connection_manager/v2:go_default_library",
         "@com_github_envoyproxy_go_control_plane//pkg/cache:go_default_library",
+        "@com_github_envoyproxy_go_control_plane//pkg/util:go_default_library",
         "@com_github_gogo_protobuf//jsonpb:go_default_library",
-        "@com_github_gogo_protobuf//types:go_default_library",
         "@com_github_golang_glog//:go_default_library",
     ],
 )

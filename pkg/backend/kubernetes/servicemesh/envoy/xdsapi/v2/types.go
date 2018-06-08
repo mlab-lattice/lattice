@@ -14,6 +14,7 @@ type Component struct {
 type EntityType int
 
 const (
+	// XXX: remove KubeEntityType
 	KubeEntityType EntityType = iota
 	LatticeEntityType
 	EnvoyEntityType

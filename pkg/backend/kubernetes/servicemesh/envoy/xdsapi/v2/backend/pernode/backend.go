@@ -103,43 +103,6 @@ func NewKubernetesPerNodeBackend(kubeconfig string, stopCh <-chan struct{}) (*Ku
 	b.services = make(map[string]*xdsservice.Service)
 	b.xdsCache = envoycache.NewSnapshotCache(true, b, b)
 
-	kubeEndpointInformer.Informer().AddEventHandlerWithResyncPeriod(cache.ResourceEventHandlerFuncs{
-		AddFunc: func(obj interface{}) {
-			task, err := b.enqueueCacheUpdateTask(xdsapi.KubeEntityType, obj)
-			if err != nil {
-				glog.Error(err)
-				runtime.HandleError(err)
-			} else {
-				glog.Infof("Got Kube \"Add\" event: %s", task)
-			}
-		},
-		UpdateFunc: func(old, cur interface{}) {
-			_old := old.(metav1.Object)
-			_cur := cur.(metav1.Object)
-			glog.Infof("old version: %s, new version: %s", _old.GetResourceVersion(), _cur.GetResourceVersion())
-			// if !reflect.DeepEqual(old, cur) {
-			if _old.GetResourceVersion() != _cur.GetResourceVersion() {
-				task, err := b.enqueueCacheUpdateTask(xdsapi.KubeEntityType, cur)
-				if err != nil {
-					glog.Error(err)
-					runtime.HandleError(err)
-				} else {
-					glog.Infof("Got Kube \"Update\" event: %s", task)
-				}
-			} else {
-				glog.Info("Skipping Kube \"Update\" event: old and current objects are equal")
-			}
-		},
-		DeleteFunc: func(obj interface{}) {
-			task, err := b.enqueueCacheUpdateTask(xdsapi.KubeEntityType, obj)
-			if err != nil {
-				glog.Error(err)
-				runtime.HandleError(err)
-			} else {
-				glog.Infof("Got Kube \"Delete\" event: %s", task)
-			}
-		},
-	}, time.Duration(1*time.Minute))
 	serviceInformer.Informer().AddEventHandlerWithResyncPeriod(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			task, err := b.enqueueCacheUpdateTask(xdsapi.LatticeEntityType, obj)
@@ -311,16 +274,18 @@ func (b *KubernetesPerNodeBackend) getServicesForNamespace(namespace string) []*
 	var services []*xdsservice.Service
 
 	b.lock.Lock()
+	defer b.lock.Unlock()
+
 	for serviceId, service := range b.services {
 		if _namespace, _, err := cache.SplitMetaNamespaceKey(serviceId); err == nil && _namespace == namespace {
 			services = append(services, service)
 		}
 	}
-	b.lock.Unlock()
 
 	return services
 }
 
+// XXX: remove me
 func (b *KubernetesPerNodeBackend) handleKubeSyncXDSCache(entityName string) error {
 	glog.Infof("Per-node backend handling kube sync task")
 	namespace, _, err := cache.SplitMetaNamespaceKey(entityName)

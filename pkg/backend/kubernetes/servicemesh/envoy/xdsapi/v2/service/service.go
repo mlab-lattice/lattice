@@ -14,10 +14,11 @@ import (
 	envoyendpoint "github.com/envoyproxy/go-control-plane/envoy/api/v2/endpoint"
 	envoylistener "github.com/envoyproxy/go-control-plane/envoy/api/v2/listener"
 	envoyroute "github.com/envoyproxy/go-control-plane/envoy/api/v2/route"
-	envoyhttprouter "github.com/envoyproxy/go-control-plane/envoy/config/filter/http/router/v2"
+	// envoyhttprouter "github.com/envoyproxy/go-control-plane/envoy/config/filter/http/router/v2"
 	envoyhttpcxnmgr "github.com/envoyproxy/go-control-plane/envoy/config/filter/network/http_connection_manager/v2"
 	envoycache "github.com/envoyproxy/go-control-plane/pkg/cache"
-	pbtypes "github.com/gogo/protobuf/types"
+	envoyutil "github.com/envoyproxy/go-control-plane/pkg/util"
+	// pbtypes "github.com/gogo/protobuf/types"
 
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 
@@ -80,9 +81,7 @@ func (s *Service) getClusters(services map[tree.NodePath]*xdsapi.Service) ([]env
 					// TODO: figure out a good value for this
 					ConnectTimeout: xdsconstants.ClusterConnectTimeout,
 					LBPolicy:       xdsconstants.LBPolicyRoundRobin,
-					EDSClusterConfig: xdstypes.EDSClusterConfig{
-						// XXX: optional, can set a name that differs from clusterName here...
-						//      what does this get us?
+					EDSClusterConfig: &xdstypes.EDSClusterConfig{
 						ServiceName: clusterName,
 					},
 				})
@@ -187,18 +186,13 @@ func (s *Service) getListeners(services map[tree.NodePath]*xdsapi.Service) ([]en
 		return nil, fmt.Errorf("Invalid Service path <%v>", path)
 	}
 
-	var configBytes []byte
+	// var configBytes []byte
 
-	// defined as protobuf type.Struct in its parent protobuf
-	httpFilterConfig := envoyhttprouter.Router{}
-	var httpFilterConfigPBStruct pbtypes.Struct = pbtypes.Struct{}
-	configBytes, err = json.Marshal(httpFilterConfig)
-	if err != nil {
-		return nil, err
-	}
-	if err := jsonpb.UnmarshalString(string(configBytes), &httpFilterConfigPBStruct); err != nil {
-		return nil, err
-	}
+	// httpFilterConfig := envoyhttprouter.Router{}
+	// httpFilterConfigPBStruct, err := envoyutil.MessageToStruct(&httpFilterConfig)
+	// if err != nil {
+	// 	return nil, err
+	// }
 
 	// defined as protobuf type.Struct in its parent protobuf
 	filterConfig := envoyhttpcxnmgr.HttpConnectionManager{
@@ -218,16 +212,12 @@ func (s *Service) getListeners(services map[tree.NodePath]*xdsapi.Service) ([]en
 			{
 				Name: xdsconstants.HTTPFilterNameRouter,
 				// type.Struct
-				Config: &httpFilterConfigPBStruct,
+				// Config: httpFilterConfigPBStruct,
 			},
 		},
 	}
-	var filterConfigPBStruct pbtypes.Struct = pbtypes.Struct{}
-	configBytes, err = json.Marshal(filterConfig)
+	filterConfigPBStruct, err := envoyutil.MessageToStruct(&filterConfig)
 	if err != nil {
-		return nil, err
-	}
-	if err := jsonpb.UnmarshalString(string(configBytes), &filterConfigPBStruct); err != nil {
 		return nil, err
 	}
 
@@ -248,7 +238,7 @@ func (s *Service) getListeners(services map[tree.NodePath]*xdsapi.Service) ([]en
 					{
 						Name: xdsconstants.FilterNameHTTPConnectionManager,
 						// type.Struct
-						Config: &filterConfigPBStruct,
+						Config: filterConfigPBStruct,
 					},
 				},
 			},
@@ -290,19 +280,15 @@ func (s *Service) getListeners(services map[tree.NodePath]*xdsapi.Service) ([]en
 				},
 				HttpFilters: []*envoyhttpcxnmgr.HttpFilter{
 					{
-						Name:   xdsconstants.HTTPFilterNameRouter,
-						Config: &httpFilterConfigPBStruct,
+						Name: xdsconstants.HTTPFilterNameRouter,
+						// Config: httpFilterConfigPBStruct,
 					},
 				},
 				// FIXME: add health_check filter
 				// FIXME: look into other filters (buffer, potentially add fault injection for testing)
 			}
-			filterConfigPBStruct = pbtypes.Struct{}
-			configBytes, err = json.Marshal(filterConfig)
+			filterConfigPBStruct, err = envoyutil.MessageToStruct(&filterConfig)
 			if err != nil {
-				return nil, err
-			}
-			if err := jsonpb.UnmarshalString(string(configBytes), &filterConfigPBStruct); err != nil {
 				return nil, err
 			}
 
@@ -322,7 +308,7 @@ func (s *Service) getListeners(services map[tree.NodePath]*xdsapi.Service) ([]en
 						Filters: []envoylistener.Filter{
 							{
 								Name:   xdsconstants.FilterNameHTTPConnectionManager,
-								Config: &filterConfigPBStruct,
+								Config: filterConfigPBStruct,
 							},
 						},
 					},
@@ -334,7 +320,10 @@ func (s *Service) getListeners(services map[tree.NodePath]*xdsapi.Service) ([]en
 }
 
 func (s *Service) getRoutes(services map[tree.NodePath]*xdsapi.Service) ([]envoycache.Resource, error) {
-	routes := make([]envoycache.Resource, 0)
+	route := &envoyv2.RouteConfiguration{
+		Name:         xdsconstants.RouteNameEgress,
+		VirtualHosts: []envoyroute.VirtualHost{},
+	}
 
 	for path, service := range services {
 		for componentName, component := range service.Components {
@@ -349,24 +338,20 @@ func (s *Service) getRoutes(services map[tree.NodePath]*xdsapi.Service) ([]envoy
 					domains = append(domains, domain)
 				}
 
-				routes = append(routes, &envoyv2.RouteConfiguration{
-					VirtualHosts: []envoyroute.VirtualHost{
+				route.VirtualHosts = append(route.VirtualHosts, envoyroute.VirtualHost{
+					Name:    string(path),
+					Domains: domains,
+					Routes: []envoyroute.Route{
 						{
-							Name:    string(path),
-							Domains: domains,
-							Routes: []envoyroute.Route{
-								{
-									Match: envoyroute.RouteMatch{
-										PathSpecifier: &envoyroute.RouteMatch_Prefix{
-											Prefix: "/",
-										},
-									},
-									Action: &envoyroute.Route_Route{
-										Route: &envoyroute.RouteAction{
-											ClusterSpecifier: &envoyroute.RouteAction_Cluster{
-												Cluster: xdsutil.GetClusterNameForComponentPort(s.Namespace(), path, componentName, port),
-											},
-										},
+							Match: envoyroute.RouteMatch{
+								PathSpecifier: &envoyroute.RouteMatch_Prefix{
+									Prefix: "/",
+								},
+							},
+							Action: &envoyroute.Route_Route{
+								Route: &envoyroute.RouteAction{
+									ClusterSpecifier: &envoyroute.RouteAction_Cluster{
+										Cluster: xdsutil.GetClusterNameForComponentPort(s.Namespace(), path, componentName, port),
 									},
 								},
 							},
@@ -377,7 +362,7 @@ func (s *Service) getRoutes(services map[tree.NodePath]*xdsapi.Service) ([]envoy
 		}
 	}
 
-	return routes, nil
+	return []envoycache.Resource{route}, nil
 }
 
 func (s *Service) Update(backend xdsapi.Backend) error {
@@ -421,7 +406,7 @@ func (s *Service) Update(backend xdsapi.Backend) error {
 		listenersJson, _ := json.MarshalIndent(s.listeners, "", "  ")
 		routesJson, _ := json.MarshalIndent(s.routes, "", "  ")
 		glog.Infof("Setting new snapshot for %v\nclusters\n%v\nendpoints\n%v\nlisteners\n%v\nroutes\n%v",
-			s.Id, clustersJson, endpointsJson, listenersJson, routesJson)
+			s.Id, string(clustersJson), string(endpointsJson), string(listenersJson), string(routesJson))
 		err := backend.SetXDSCacheSnapshot(s.Id, s.endpoints, s.clusters, s.routes, s.listeners)
 		if err != nil {
 			return err
