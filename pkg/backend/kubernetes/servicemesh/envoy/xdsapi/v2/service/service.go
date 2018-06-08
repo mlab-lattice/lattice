@@ -6,7 +6,7 @@ import (
 	"reflect"
 	"sync"
 
-	"github.com/gogo/protobuf/jsonpb"
+	// "github.com/gogo/protobuf/jsonpb"
 	"github.com/golang/glog"
 
 	envoyv2 "github.com/envoyproxy/go-control-plane/envoy/api/v2"
@@ -24,7 +24,7 @@ import (
 
 	xdsapi "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/servicemesh/envoy/xdsapi/v2"
 	xdsconstants "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/servicemesh/envoy/xdsapi/v2/constants"
-	xdstypes "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/servicemesh/envoy/xdsapi/v2/types"
+	// xdstypes "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/servicemesh/envoy/xdsapi/v2/types"
 	xdsutil "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/servicemesh/envoy/xdsapi/v2/util"
 )
 
@@ -63,7 +63,8 @@ func (s *Service) Namespace() string {
 }
 
 func (s *Service) getClusters(services map[tree.NodePath]*xdsapi.Service) ([]envoycache.Resource, error) {
-	var clusters []xdstypes.Cluster
+	clusters := make([]envoycache.Resource, 0)
+
 	for path, service := range services {
 		servicePath, err := s.Path()
 		if err != nil {
@@ -75,31 +76,40 @@ func (s *Service) getClusters(services map[tree.NodePath]*xdsapi.Service) ([]env
 			for port := range component.Ports {
 				clusterName := xdsutil.GetClusterNameForComponentPort(
 					s.Namespace(), path, componentName, port)
-				clusters = append(clusters, xdstypes.Cluster{
+				clusters = append(clusters, &envoyv2.Cluster{
 					Name: clusterName,
-					Type: xdsconstants.ClusterTypeEDS,
+					Type: envoyv2.Cluster_EDS,
 					// TODO: figure out a good value for this
 					ConnectTimeout: xdsconstants.ClusterConnectTimeout,
-					LBPolicy:       xdsconstants.LBPolicyRoundRobin,
-					EDSClusterConfig: &xdstypes.EDSClusterConfig{
-						ServiceName: clusterName,
+					LbPolicy:       envoyv2.Cluster_ROUND_ROBIN,
+					EdsClusterConfig: &envoyv2.Cluster_EdsClusterConfig{
+						EdsConfig: &envoycore.ConfigSource{
+							ConfigSourceSpecifier: &envoycore.ConfigSource_Ads{
+								Ads: &envoycore.AggregatedConfigSource{},
+							},
+						},
 					},
 				})
 
 				if isLocalService {
-					clusters = append(clusters, xdstypes.Cluster{
-						Name: xdsutil.GetLocalClusterNameForComponentPort(
-							s.Namespace(), path, componentName, port),
-						Type: xdsconstants.ClusterTypeStatic,
+					clusterName = xdsutil.GetLocalClusterNameForComponentPort(
+						s.Namespace(), path, componentName, port)
+					clusters = append(clusters, &envoyv2.Cluster{
+						Name: clusterName,
+						Type: envoyv2.Cluster_STATIC,
 						// TODO: figure out a good value for this
 						ConnectTimeout: xdsconstants.ClusterConnectTimeout,
-						LBPolicy:       xdsconstants.LBPolicyRoundRobin,
-						Hosts: []xdstypes.Address{
+						LbPolicy:       envoyv2.Cluster_ROUND_ROBIN,
+						Hosts: []*envoycore.Address{
 							{
-								SocketAddress: xdstypes.SocketAddress{
-									// XXX: add envoycore.TCP after converting to pb types
-									Address:   "127.0.0.1",
-									PortValue: port,
+								Address: &envoycore.Address_SocketAddress{
+									SocketAddress: &envoycore.SocketAddress{
+										Protocol: envoycore.TCP,
+										Address:  "127.0.0.1",
+										PortSpecifier: &envoycore.SocketAddress_PortValue{
+											PortValue: uint32(port),
+										},
+									},
 								},
 							},
 						},
@@ -109,17 +119,7 @@ func (s *Service) getClusters(services map[tree.NodePath]*xdsapi.Service) ([]env
 		}
 	}
 
-	envoyClusters := make([]envoycache.Resource, 0)
-	for _, cluster := range clusters {
-		envoyCluster := envoyv2.Cluster{}
-		s, _ := json.Marshal(cluster)
-		if err := jsonpb.UnmarshalString(string(s), &envoyCluster); err != nil {
-			return nil, err
-		}
-		envoyClusters = append(envoyClusters, &envoyCluster)
-	}
-
-	return envoyClusters, nil
+	return clusters, nil
 }
 
 func (s *Service) getEndpoints(
@@ -155,9 +155,11 @@ func (s *Service) getEndpoints(
 					Address: &envoycore.Address{
 						Address: &envoycore.Address_SocketAddress{
 							SocketAddress: &envoycore.SocketAddress{
-								Protocol:      envoycore.TCP,
-								Address:       address,
-								PortSpecifier: &envoycore.SocketAddress_PortValue{PortValue: uint32(envoyPort)},
+								Protocol: envoycore.TCP,
+								Address:  address,
+								PortSpecifier: &envoycore.SocketAddress_PortValue{
+									PortValue: uint32(envoyPort),
+								},
 							},
 						},
 					},
@@ -166,7 +168,12 @@ func (s *Service) getEndpoints(
 		}
 		endpoints = append(endpoints, &envoyv2.ClusterLoadAssignment{
 			ClusterName: cluster.EdsClusterConfig.ServiceName,
-			Endpoints:   []envoyendpoint.LocalityLbEndpoints{{LbEndpoints: addresses}}})
+			Endpoints: []envoyendpoint.LocalityLbEndpoints{
+				{
+					LbEndpoints: addresses,
+				},
+			},
+		})
 	}
 	return endpoints, nil
 }
