@@ -1,5 +1,16 @@
 package v1
 
+import (
+	"github.com/mlab-lattice/lattice/pkg/definition/component"
+)
+
+const ComponentTypeContainer = "container"
+
+var ContainerType = component.Type{
+	APIVersion: APIVersion,
+	Type:       ComponentTypeContainer,
+}
+
 type Container struct {
 	Build *ContainerBuild `json:"build,omitempty"`
 	Exec  *ContainerExec  `json:"exec,omitempty"`
