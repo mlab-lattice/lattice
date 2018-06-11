@@ -116,7 +116,7 @@ func (kb *KubernetesBackend) GetServiceByPath(systemID v1.SystemID, path tree.No
 
 }
 func (kb *KubernetesBackend) ServiceLogs(systemID v1.SystemID, serviceID v1.ServiceID, component string,
-	instance string, follow bool) (io.ReadCloser, error) {
+	instance string, logOptions *v1.ContainerLogOptions) (io.ReadCloser, error) {
 	// Ensure the system exists
 	if _, err := kb.ensureSystemCreated(systemID); err != nil {
 		return nil, err
@@ -136,9 +136,12 @@ func (kb *KubernetesBackend) ServiceLogs(systemID v1.SystemID, serviceID v1.Serv
 	}
 
 	container := kubeutil.UserResourcePrefix + component
-	logOptions := &corev1.PodLogOptions{Follow: follow, Container: container}
-
-	req := kb.kubeClient.CoreV1().Pods(namespace).GetLogs(pod.Name, logOptions)
+	podLogOptions, err := toPodLogOptions(logOptions)
+	if err != nil {
+		return nil, err
+	}
+	podLogOptions.Container = container
+	req := kb.kubeClient.CoreV1().Pods(namespace).GetLogs(pod.Name, podLogOptions)
 	return req.Stream()
 
 }
