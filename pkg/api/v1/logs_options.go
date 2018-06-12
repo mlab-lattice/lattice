@@ -3,7 +3,7 @@ package v1
 // ContainerLogOptions represents options for retrieving log files
 type ContainerLogOptions struct {
 	Follow     bool
-	TailLines  *int64
+	Tail       *int64
 	Previous   bool
 	Since      string
 	SinceTime  string

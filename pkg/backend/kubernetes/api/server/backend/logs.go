@@ -17,7 +17,7 @@ func toPodLogOptions(logOptions *v1.ContainerLogOptions) (*corev1.PodLogOptions,
 
 	podLogOptions := &corev1.PodLogOptions{
 		Follow:       logOptions.Follow,
-		TailLines:    logOptions.TailLines,
+		TailLines:    logOptions.Tail,
 		Previous:     logOptions.Previous,
 		Timestamps:   logOptions.Timestamps,
 		SinceSeconds: nil,

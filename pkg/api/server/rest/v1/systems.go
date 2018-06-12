@@ -467,15 +467,15 @@ func requestedLogOptions(c *gin.Context) (*v1.ContainerLogOptions, error) {
 	if err != nil {
 		return nil, err
 	}
-	// tailLines
-	var tailLines *int64
-	tailLinesStr := c.Query("tailLines")
-	if tailLinesStr != "" {
-		lines, err := strconv.ParseInt(tailLinesStr, 10, 64)
+	// tail
+	var tail *int64
+	tailStr := c.Query("tail")
+	if tailStr != "" {
+		lines, err := strconv.ParseInt(tailStr, 10, 64)
 		if err != nil {
 			return nil, err
 		}
-		tailLines = &lines
+		tail = &lines
 	}
 
 	// since
@@ -488,7 +488,7 @@ func requestedLogOptions(c *gin.Context) (*v1.ContainerLogOptions, error) {
 	logOptions.Follow = follow
 	logOptions.Timestamps = timestamps
 	logOptions.Previous = previous
-	logOptions.TailLines = tailLines
+	logOptions.Tail = tail
 	logOptions.Since = since
 	logOptions.SinceTime = sinceTime
 
