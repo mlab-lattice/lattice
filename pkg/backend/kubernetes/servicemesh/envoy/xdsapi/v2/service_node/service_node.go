@@ -1,7 +1,7 @@
 package service_node
 
 import (
-	"encoding/json"
+	// "encoding/json"
 	"reflect"
 	"sync"
 
@@ -18,11 +18,13 @@ import (
 // XXX: rename to ServiceNode
 
 type ServiceNode struct {
-	Id string
+	Id                 string
+	latticeServiceName string
 
 	EnvoyNode *envoycore.Node
 
-	lock sync.Mutex
+	lock    sync.Mutex
+	deleted bool
 
 	clusters  []envoycache.Resource
 	endpoints []envoycache.Resource
@@ -37,6 +39,10 @@ func NewServiceNode(id string, envoyNode *envoycore.Node) *ServiceNode {
 	}
 }
 
+func (s *ServiceNode) Domain() string {
+	return s.EnvoyNode.GetId()
+}
+
 func (s *ServiceNode) Path() (tree.NodePath, error) {
 	tnPath, err := tree.NodePathFromDomain(s.EnvoyNode.GetId())
 	if err != nil {
@@ -49,8 +55,20 @@ func (s *ServiceNode) ServiceCluster() string {
 	return s.EnvoyNode.GetCluster()
 }
 
+func (s *ServiceNode) GetLatticeServiceName() string {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+	return s.latticeServiceName
+}
+
+func (s *ServiceNode) SetLatticeServiceName(latticeServiceName string) {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+	s.latticeServiceName = latticeServiceName
+}
+
 func (s *ServiceNode) Update(backend xdsapi.Backend) error {
-	glog.Info("ServiceNode.update called")
+	glog.Info("ServiceNode.Update called")
 	// disallow concurrent updates to service state
 	s.lock.Lock()
 	defer s.lock.Unlock()
@@ -85,17 +103,29 @@ func (s *ServiceNode) Update(backend xdsapi.Backend) error {
 		s.endpoints = endpoints
 		s.listeners = listeners
 		s.routes = routes
-		clustersJson, _ := json.MarshalIndent(s.clusters, "", "  ")
-		endpointsJson, _ := json.MarshalIndent(s.endpoints, "", "  ")
-		listenersJson, _ := json.MarshalIndent(s.listeners, "", "  ")
-		routesJson, _ := json.MarshalIndent(s.routes, "", "  ")
-		glog.Infof("Setting new snapshot for %v\nclusters\n%v\nendpoints\n%v\nlisteners\n%v\nroutes\n%v",
-			s.Id, string(clustersJson), string(endpointsJson), string(listenersJson), string(routesJson))
-		err := backend.SetXDSCacheSnapshot(s.Id, s.endpoints, s.clusters, s.routes, s.listeners)
-		if err != nil {
-			return err
+		if !s.deleted {
+			glog.V(4).Info("ServiceNode.Update updating XDS cache")
+			err := backend.SetXDSCacheSnapshot(s.Id, s.endpoints, s.clusters, s.routes, s.listeners)
+			if err != nil {
+				return err
+			}
+		} else {
+			// XXX: call clear on cache here?
+			glog.Warning("ServiceNode.Update called on deleted node")
 		}
 	}
+
+	return nil
+}
+
+func (s *ServiceNode) Cleanup(backend xdsapi.Backend) error {
+	glog.V(4).Info("ServiceNode.Cleanup called")
+
+	s.lock.Lock()
+	defer s.lock.Unlock()
+
+	backend.ClearXDSCacheSnapshot(s.Id)
+	s.deleted = true
 
 	return nil
 }

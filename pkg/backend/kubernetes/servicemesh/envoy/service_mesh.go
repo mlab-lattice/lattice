@@ -576,8 +576,6 @@ func (sm *DefaultEnvoyServiceMesh) envoyContainers(service *latticev1.Service) (
 			service.Namespace,
 			"--service-node",
 			servicePath.ToDomain(),
-			// "-l", "debug",
-			// "--v2-config-only",
 		},
 		Ports: envoyPorts,
 		VolumeMounts: []corev1.VolumeMount{

@@ -29,15 +29,17 @@ func (t EntityType) String() string {
 	return _type
 }
 
-type InformerEvent int
+type Event int
 
 const (
-	InformerAddEvent InformerEvent = iota
+	InformerAddEvent Event = iota
 	InformerUpdateEvent
 	InformerDeleteEvent
+
+	EnvoyStreamRequestEvent
 )
 
-func (e InformerEvent) String() string {
+func (e Event) String() string {
 	var event string
 	switch e {
 	case InformerAddEvent:
@@ -46,11 +48,14 @@ func (e InformerEvent) String() string {
 		event = "InformerUpdateEvent"
 	case InformerDeleteEvent:
 		event = "InformerDeleteEvent"
+	case EnvoyStreamRequestEvent:
+		event = "EnvoyStreamRequestEvent"
 	}
 	return event
 }
 
 type CacheUpdateTask struct {
-	Name string     `json:"name"`
-	Type EntityType `json:"type"`
+	Name  string     `json:"name"`
+	Type  EntityType `json:"type"`
+	Event Event      `json:"event"`
 }
