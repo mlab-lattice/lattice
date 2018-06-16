@@ -110,7 +110,6 @@ func (s *ServiceNode) Update(backend xdsapi.Backend) error {
 				return err
 			}
 		} else {
-			// XXX: call clear on cache here?
 			glog.Warning("ServiceNode.Update called on deleted node")
 		}
 	}

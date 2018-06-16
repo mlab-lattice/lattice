@@ -5,5 +5,6 @@ import (
 )
 
 const (
-	ClusterConnectTimeout = time.Duration(250) * time.Millisecond
+	ClusterConnectTimeout     = time.Duration(250) * time.Millisecond
+	ClusterLbPolicyRoundRobin = "ROUND_ROBIN"
 )
