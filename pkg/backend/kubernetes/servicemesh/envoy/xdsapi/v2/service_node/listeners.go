@@ -3,25 +3,28 @@ package service_node
 import (
 	"fmt"
 
-	envoyv2 "github.com/envoyproxy/go-control-plane/envoy/api/v2"
-	envoycore "github.com/envoyproxy/go-control-plane/envoy/api/v2/core"
 	envoylistener "github.com/envoyproxy/go-control-plane/envoy/api/v2/listener"
 	envoyroute "github.com/envoyproxy/go-control-plane/envoy/api/v2/route"
 	envoyhttpcxnmgr "github.com/envoyproxy/go-control-plane/envoy/config/filter/network/http_connection_manager/v2"
 	envoycache "github.com/envoyproxy/go-control-plane/pkg/cache"
-	envoyutil "github.com/envoyproxy/go-control-plane/pkg/util"
 
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 
 	xdsapi "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/servicemesh/envoy/xdsapi/v2"
 	xdsconstants "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/servicemesh/envoy/xdsapi/v2/constants"
+	xdsmsgs "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/servicemesh/envoy/xdsapi/v2/service_node/messages"
 	xdsutil "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/servicemesh/envoy/xdsapi/v2/util"
+	lerror "github.com/mlab-lattice/lattice/pkg/util/error"
 )
 
-func (s *ServiceNode) getListeners(systemServices map[tree.NodePath]*xdsapi.Service) ([]envoycache.Resource, error) {
-	var err error
+func (s *ServiceNode) getListeners(systemServices map[tree.NodePath]*xdsapi.Service) (listeners []envoycache.Resource, err error) {
+	defer func() {
+		if _panic := recover(); _panic != nil {
+			err = lerror.Errorf("%v", _panic)
+		}
+	}()
 
-	listeners := make([]envoycache.Resource, 0)
+	listeners = make([]envoycache.Resource, 0)
 
 	path, err := s.Path()
 	if err != nil {
@@ -33,135 +36,61 @@ func (s *ServiceNode) getListeners(systemServices map[tree.NodePath]*xdsapi.Serv
 		return nil, fmt.Errorf("Invalid Service path <%v>", path)
 	}
 
-	// var configBytes []byte
-
-	// httpFilterConfig := envoyhttprouter.Router{}
-	// httpFilterConfigPBStruct, err := envoyutil.MessageToStruct(&httpFilterConfig)
-	// if err != nil {
-	// 	return nil, err
-	// }
-
-	// defined as protobuf type.Struct in its parent protobuf
-	filterConfig := envoyhttpcxnmgr.HttpConnectionManager{
-		CodecType:  envoyhttpcxnmgr.AUTO,
-		StatPrefix: "egress",
-		RouteSpecifier: &envoyhttpcxnmgr.HttpConnectionManager_Rds{
-			Rds: &envoyhttpcxnmgr.Rds{
-				ConfigSource: envoycore.ConfigSource{
-					ConfigSourceSpecifier: &envoycore.ConfigSource_Ads{
-						Ads: &envoycore.AggregatedConfigSource{},
-					},
-				},
-				RouteConfigName: xdsconstants.RouteNameEgress,
-			},
-		},
-		HttpFilters: []*envoyhttpcxnmgr.HttpFilter{
-			{
-				Name: xdsconstants.HTTPFilterRouterName,
-				// type.Struct
-				// Config: httpFilterConfigPBStruct,
-			},
-		},
-	}
-	filterConfigPBStruct, err := envoyutil.MessageToStruct(&filterConfig)
-	if err != nil {
-		return nil, err
+	httpFilters := []*envoyhttpcxnmgr.HttpFilter{
+		xdsmsgs.NewHttpRouterFilter(),
 	}
 
-	listeners = append(listeners, &envoyv2.Listener{
-		Name: "egress",
-		Address: envoycore.Address{
-			Address: &envoycore.Address_SocketAddress{
-				SocketAddress: &envoycore.SocketAddress{
-					Protocol:      envoycore.TCP,
-					Address:       "0.0.0.0",
-					PortSpecifier: &envoycore.SocketAddress_PortValue{PortValue: uint32(service.EgressPort)},
-				},
-			},
-		},
-		FilterChains: []envoylistener.FilterChain{
-			{
-				Filters: []envoylistener.Filter{
-					{
-						Name: xdsconstants.FilterHTTPConnectionManagerName,
-						// type.Struct
-						Config: filterConfigPBStruct,
-					},
-				},
-			},
-		},
-	})
+	filters := []envoylistener.Filter{
+		*xdsmsgs.NewRdsHttpConnectionManagerFilter(
+			"egress", xdsconstants.RouteNameEgress, httpFilters),
+	}
+
+	filterChains := []envoylistener.FilterChain{
+		*xdsmsgs.NewFilterChain(nil, nil, false, filters),
+	}
+
+	address := xdsmsgs.NewTcpSocketAddress("0.0.0.0", service.EgressPort)
+
+	listeners = append(listeners, xdsmsgs.NewListener("egress", address, filterChains))
 
 	// There's a listener for each port of Service, listening on the port's EnvoyPort
 	for componentName, component := range service.Components {
 		for port, envoyPort := range component.Ports {
 			listenerName := fmt.Sprintf("%v %v port %v ingress", path, componentName, port)
-			filterConfig := envoyhttpcxnmgr.HttpConnectionManager{
-				CodecType:  envoyhttpcxnmgr.AUTO,
-				StatPrefix: listenerName,
-				RouteSpecifier: &envoyhttpcxnmgr.HttpConnectionManager_RouteConfig{
-					RouteConfig: &envoyv2.RouteConfiguration{
-						VirtualHosts: []envoyroute.VirtualHost{
-							{
-								Name:    fmt.Sprintf("%v %v port %v", path, componentName, port),
-								Domains: []string{"*"},
-								Routes: []envoyroute.Route{
-									{
-										Match: envoyroute.RouteMatch{
-											PathSpecifier: &envoyroute.RouteMatch_Prefix{
-												Prefix: "/",
-											},
-										},
-										Action: &envoyroute.Route_Route{
-											Route: &envoyroute.RouteAction{
-												ClusterSpecifier: &envoyroute.RouteAction_Cluster{
-													Cluster: xdsutil.GetLocalClusterNameForComponentPort(
-														s.ServiceCluster(), path, componentName, port),
-												},
-											},
-										},
-									},
-								},
-							},
-						},
-					},
-				},
-				HttpFilters: []*envoyhttpcxnmgr.HttpFilter{
-					{
-						Name: xdsconstants.HTTPFilterRouterName,
-						// Config: httpFilterConfigPBStruct,
-					},
-				},
-				// FIXME: add health_check filter
-				// FIXME: look into other filters (buffer, potentially add fault injection for testing)
-			}
-			filterConfigPBStruct, err = envoyutil.MessageToStruct(&filterConfig)
-			if err != nil {
-				return nil, err
+
+			httpFilters = []*envoyhttpcxnmgr.HttpFilter{
+				xdsmsgs.NewHttpRouterFilter(),
 			}
 
-			listeners = append(listeners, &envoyv2.Listener{
-				Name: listenerName,
-				Address: envoycore.Address{
-					Address: &envoycore.Address_SocketAddress{
-						SocketAddress: &envoycore.SocketAddress{
-							Protocol:      envoycore.TCP,
-							Address:       "0.0.0.0",
-							PortSpecifier: &envoycore.SocketAddress_PortValue{PortValue: uint32(envoyPort)},
-						},
-					},
-				},
-				FilterChains: []envoylistener.FilterChain{
-					{
-						Filters: []envoylistener.Filter{
-							{
-								Name:   xdsconstants.FilterHTTPConnectionManagerName,
-								Config: filterConfigPBStruct,
-							},
-						},
-					},
-				},
-			})
+			routes := []envoyroute.Route{
+				*xdsmsgs.NewRouteRoute(
+					xdsmsgs.NewPrefixRouteMatch("/"),
+					xdsmsgs.NewClusterRouteActionRouteRoute(
+						xdsutil.GetLocalClusterNameForComponentPort(
+							s.ServiceCluster(), path, componentName, port))),
+			}
+
+			virtualHosts := []envoyroute.VirtualHost{
+				*xdsmsgs.NewVirtualHost(
+					fmt.Sprintf("%v %v port %v", path, componentName, port),
+					[]string{"*"},
+					routes),
+			}
+
+			// FIXME: add health_check filter
+			// FIXME: look into other filters (buffer, potentially add fault injection for testing)
+			filters = []envoylistener.Filter{
+				*xdsmsgs.NewStaticHttpConnectionManagerFilter(
+					listenerName, virtualHosts, httpFilters),
+			}
+
+			filterChains = []envoylistener.FilterChain{
+				*xdsmsgs.NewFilterChain(nil, nil, false, filters),
+			}
+
+			address = xdsmsgs.NewTcpSocketAddress("0.0.0.0", envoyPort)
+
+			listeners = append(listeners, xdsmsgs.NewListener(listenerName, address, filterChains))
 		}
 	}
 	return listeners, nil
