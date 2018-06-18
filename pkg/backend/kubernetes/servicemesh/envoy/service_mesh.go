@@ -21,7 +21,7 @@ const (
 	annotationKeyServiceMeshPorts = "envoy.servicemesh.lattice.mlab.com/service-mesh-ports"
 	annotationKeyEgressPort       = "envoy.servicemesh.lattice.mlab.com/egress-port"
 
-	deploymentResourcePrefix = "lattice-service-mesh-envoy-"
+	deploymentResourcePrefix = "envoy-"
 
 	envoyConfigDirectory           = "/etc/envoy"
 	envoyConfigDirectoryVolumeName = deploymentResourcePrefix + "envoyconfig"
@@ -154,12 +154,12 @@ func envoyPorts(service *latticev1.Service) ([]int32, error) {
 func assignEnvoyPorts(service *latticev1.Service, envoyPorts []int32) (map[int32]int32, []int32, error) {
 	// Assign an envoy port to each component port, and pop the used envoy port off the slice each time.
 	componentPorts := map[int32]int32{}
-	for _, port := range service.Spec.Definition.ContainerPorts() {
+	for portNum := range service.Spec.Definition.ContainerPorts() {
 		if len(envoyPorts) == 0 {
 			return nil, nil, fmt.Errorf("ran out of ports when assigning envoyPorts")
 		}
 
-		componentPorts[port.Port] = envoyPorts[0]
+		componentPorts[int32(portNum)] = envoyPorts[0]
 		envoyPorts = envoyPorts[1:]
 	}
 
@@ -508,14 +508,14 @@ func (sm *DefaultEnvoyServiceMesh) envoyContainers(service *latticev1.Service) (
 		return corev1.Container{}, corev1.Container{}, err
 	}
 
-	for _, port := range service.Spec.Definition.ContainerPorts() {
-		envoyPort, ok := serviceMeshPorts[port.Port]
+	for portNum := range service.Spec.Definition.ContainerPorts() {
+		envoyPort, ok := serviceMeshPorts[portNum]
 		if !ok {
 			err := fmt.Errorf(
 				"service %v/%v does not have expected port %v",
 				service.Namespace,
 				service.Name,
-				port,
+				portNum,
 			)
 			return corev1.Container{}, corev1.Container{}, err
 		}
@@ -523,7 +523,7 @@ func (sm *DefaultEnvoyServiceMesh) envoyContainers(service *latticev1.Service) (
 		envoyPorts = append(
 			envoyPorts,
 			corev1.ContainerPort{
-				Name:          fmt.Sprintf("%v%v", deploymentResourcePrefix, strconv.Itoa(int(port.Port))),
+				Name:          fmt.Sprintf("%v%v", deploymentResourcePrefix, strconv.Itoa(int(portNum))),
 				ContainerPort: envoyPort,
 			},
 		)
@@ -546,6 +546,12 @@ func (sm *DefaultEnvoyServiceMesh) envoyContainers(service *latticev1.Service) (
 			service.Namespace,
 			"--service-node",
 			servicePath.ToDomain(),
+			// by default, the max cluster name size is 60.
+			// however, we use the cluster name to encode information, so the names can often be much longer.
+			// https://www.envoyproxy.io/docs/envoy/latest/operations/cli#cmdoption-max-obj-name-len
+			// FIXME: figure out what this should actually be set to
+			"--max-obj-name-len",
+			strconv.Itoa(256),
 		},
 		Ports: envoyPorts,
 		VolumeMounts: []corev1.VolumeMount{
@@ -564,7 +570,7 @@ func (sm *DefaultEnvoyServiceMesh) EgressPort(service *latticev1.Service) (int32
 	egressPortStr, ok := service.Annotations[annotationKeyEgressPort]
 	if !ok {
 		err := fmt.Errorf(
-			"Service %v/%v does not have expected annotation %v",
+			"service %v/%v does not have expected annotation %v",
 			service.Namespace,
 			service.Name,
 			annotationKeyEgressPort,

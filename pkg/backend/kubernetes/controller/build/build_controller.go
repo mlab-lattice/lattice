@@ -204,7 +204,7 @@ func (c *Controller) syncSystemBuild(key string) error {
 	case stateHasOnlyRunningOrSucceededContainerBuilds:
 		return c.syncRunningBuild(build, stateInfo)
 	case stateNoFailuresNeedsNewContainerBuilds:
-		return c.syncMissingServiceBuildsBuild(build, stateInfo)
+		return c.syncMissingContainerBuildsBuild(build, stateInfo)
 	case stateAllContainerBuildsSucceeded:
 		return c.syncSucceededBuild(build, stateInfo)
 	default:

@@ -19,7 +19,7 @@ const (
 )
 
 var (
-	ContainerBuildKind     = SchemeGroupVersion.WithKind("Definition")
+	ContainerBuildKind     = SchemeGroupVersion.WithKind("ContainerBuild")
 	ContainerBuildListKind = SchemeGroupVersion.WithKind("ContainerBuildList")
 
 	ContainerBuildIDLabelKey             = fmt.Sprintf("containerbuild.%v/id", GroupName)

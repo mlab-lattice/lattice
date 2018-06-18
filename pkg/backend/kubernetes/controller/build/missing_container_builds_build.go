@@ -9,13 +9,14 @@ import (
 	kubeutil "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/kubernetes"
 	definitionv1 "github.com/mlab-lattice/lattice/pkg/definition/v1"
 
+	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func (c *Controller) syncMissingServiceBuildsBuild(build *latticev1.Build, stateInfo stateInfo) error {
+func (c *Controller) syncMissingContainerBuildsBuild(build *latticev1.Build, stateInfo stateInfo) error {
 	containerBuildStatuses := stateInfo.containerBuildStatuses
 	containerBuildHashes := make(map[string]*latticev1.ContainerBuild)
-	services := build.Status.Services
+	services := make(map[tree.NodePath]latticev1.BuildStatusService)
 
 	// look through all the containers of each service to see if there are any containers that
 	// don't have builds yet

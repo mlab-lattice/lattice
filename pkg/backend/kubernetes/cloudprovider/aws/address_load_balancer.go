@@ -214,9 +214,9 @@ func (cp *DefaultAWSCloudProvider) ServiceAddressLoadBalancerPorts(
 	}
 
 	ports := make(map[int32]string)
-	for _, port := range service.Spec.Definition.ContainerPorts() {
+	for portNum, port := range service.Spec.Definition.ContainerPorts() {
 		if port.Public() {
-			ports[port.Port] = fmt.Sprintf("http://%v:%v", dnsName, port.Port)
+			ports[portNum] = fmt.Sprintf("http://%v:%v", dnsName, portNum)
 		}
 	}
 
@@ -439,20 +439,20 @@ func (cp *DefaultAWSCloudProvider) kubeServiceSpec(
 ) (corev1.ServiceSpec, error) {
 	var ports []corev1.ServicePort
 
-	for _, port := range service.Spec.Definition.ContainerPorts() {
+	for portNum, port := range service.Spec.Definition.ContainerPorts() {
 		if port.Public() {
-			targetPort, ok := serviceMeshPorts[port.Port]
+			targetPort, ok := serviceMeshPorts[portNum]
 			if !ok {
 				err := fmt.Errorf(
 					"component port %v not found in service mesh ports for %v",
-					port.Port,
+					portNum,
 					service.Description(cp.namespacePrefix),
 				)
 				return corev1.ServiceSpec{}, err
 			}
 
 			ports = append(ports, corev1.ServicePort{
-				Name:     strconv.Itoa(int(port.Port)),
+				Name:     strconv.Itoa(int(portNum)),
 				Protocol: corev1.ProtocolTCP,
 				Port:     targetPort,
 			})

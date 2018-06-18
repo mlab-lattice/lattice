@@ -42,12 +42,8 @@ func (s *Service) Containers() []Container {
 func (s *Service) ContainerPorts() map[int32]ContainerPort {
 	ports := make(map[int32]ContainerPort)
 	for _, container := range s.Containers() {
-		if container.Port != nil {
-			ports[container.Port.Port] = *container.Port
-		}
-
-		for _, port := range container.Ports {
-			ports[port.Port] = port
+		for portNum, port := range container.Ports {
+			ports[portNum] = port
 		}
 	}
 
@@ -63,6 +59,8 @@ func (s *Service) MarshalJSON() ([]byte, error) {
 		Sidecars:  s.Sidecars,
 
 		NumInstances: s.NumInstances,
+		NodePool:     s.NodePool,
+		InstanceType: s.InstanceType,
 	}
 	return json.Marshal(&e)
 }

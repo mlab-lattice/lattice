@@ -22,7 +22,6 @@ import (
 
 	"github.com/golang/glog"
 	"github.com/sergi/go-diff/diffmatchpatch"
-	"strconv"
 )
 
 const (
@@ -373,14 +372,13 @@ func (c *Controller) untransformedDeploymentSpec(
 	baseSearchPath := kubeutil.FullyQualifiedInternalSystemSubdomain(systemID, c.latticeID, c.internalDNSDomain)
 	dnsSearches := []string{baseSearchPath}
 
-	// If the service is not the root node, we need to append its parent as a search in resolv.conf
-	if !path.IsRoot() {
-		parentNode, err := path.Parent()
-		if err != nil {
-			err := fmt.Errorf("service %v is not root but cannot get parrent: %v", service.Description(c.namespacePrefix), err)
-			return nil, err
-		}
+	// If the service's parent is not the root node, we need to append its parent as a search in resolv.conf
+	parentNode, err := path.Parent()
+	if err != nil {
+		return nil, fmt.Errorf("cannot get parent for %v: %v", service.Description(c.namespacePrefix), err)
+	}
 
+	if !parentNode.IsRoot() {
 		parentDomain := kubeutil.FullyQualifiedInternalAddressSubdomain(parentNode.ToDomain(), systemID, c.latticeID, c.internalDNSDomain)
 		dnsSearches = append(dnsSearches, parentDomain)
 	}
@@ -445,21 +443,14 @@ func containerFromComponent(
 		return corev1.Container{}, err
 	}
 
-	containerPorts := container.Ports
-	if container.Port != nil {
-		containerPorts = map[string]definitionv1.ContainerPort{
-			strconv.Itoa(int(container.Port.Port)): *container.Port,
-		}
-	}
-
 	var ports []corev1.ContainerPort
-	for name, port := range containerPorts {
+	for portNum := range container.Ports {
 		ports = append(
 			ports,
 			corev1.ContainerPort{
-				Name:          name,
+				Name:          fmt.Sprintf("port-%v", portNum),
 				Protocol:      corev1.ProtocolTCP,
-				ContainerPort: int32(port.Port),
+				ContainerPort: portNum,
 			},
 		)
 	}
@@ -531,7 +522,7 @@ func deploymentProbe(hc *definitionv1.ContainerHealthCheck) *corev1.Probe {
 			Handler: corev1.Handler{
 				HTTPGet: &corev1.HTTPGetAction{
 					Path: hc.HTTP.Path,
-					Port: intstr.FromString(hc.HTTP.Port),
+					Port: intstr.FromInt(int(hc.HTTP.Port)),
 				},
 			},
 		}

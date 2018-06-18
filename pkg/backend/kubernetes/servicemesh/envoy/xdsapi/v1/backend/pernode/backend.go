@@ -130,23 +130,14 @@ func (b *KubernetesPerNodeBackend) Services(serviceCluster string) (map[tree.Nod
 		mainContainer := xdsapi.Container{
 			Ports: make(map[int32]int32),
 		}
-		if service.Spec.Definition.Port != nil {
-			mainContainerPort := service.Spec.Definition.Port
-			envoyPort, err := b.serviceMesh.ServiceMeshPort(service, mainContainerPort.Port)
+
+		for portNum := range service.Spec.Definition.Ports {
+			envoyPort, err := b.serviceMesh.ServiceMeshPort(service, portNum)
 			if err != nil {
 				return nil, err
 			}
 
-			mainContainer.Ports[mainContainerPort.Port] = envoyPort
-		}
-
-		for _, port := range service.Spec.Definition.Ports {
-			envoyPort, err := b.serviceMesh.ServiceMeshPort(service, port.Port)
-			if err != nil {
-				return nil, err
-			}
-
-			mainContainer.Ports[port.Port] = envoyPort
+			mainContainer.Ports[portNum] = envoyPort
 		}
 		xdsService.Containers[kubeutil.UserMainContainerName] = mainContainer
 
@@ -154,23 +145,14 @@ func (b *KubernetesPerNodeBackend) Services(serviceCluster string) (map[tree.Nod
 			sidecarXDSContainer := xdsapi.Container{
 				Ports: make(map[int32]int32),
 			}
-			if sidecarContainer.Port != nil {
-				port := sidecarContainer.Port
-				envoyPort, err := b.serviceMesh.ServiceMeshPort(service, port.Port)
+
+			for portNum := range sidecarContainer.Ports {
+				envoyPort, err := b.serviceMesh.ServiceMeshPort(service, portNum)
 				if err != nil {
 					return nil, err
 				}
 
-				sidecarXDSContainer.Ports[port.Port] = envoyPort
-			}
-
-			for _, port := range sidecarContainer.Ports {
-				envoyPort, err := b.serviceMesh.ServiceMeshPort(service, port.Port)
-				if err != nil {
-					return nil, err
-				}
-
-				sidecarXDSContainer.Ports[port.Port] = envoyPort
+				sidecarXDSContainer.Ports[portNum] = envoyPort
 			}
 			xdsService.Containers[kubeutil.UserSidecarContainerName(sidecar)] = sidecarXDSContainer
 		}

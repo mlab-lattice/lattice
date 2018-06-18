@@ -1,6 +1,8 @@
 package v1
 
 import (
+	"encoding/json"
+	"fmt"
 	"github.com/mlab-lattice/lattice/pkg/definition/component"
 )
 
@@ -15,8 +17,7 @@ type Container struct {
 	Build *ContainerBuild `json:"build,omitempty"`
 	Exec  *ContainerExec  `json:"exec,omitempty"`
 
-	Port  *ContainerPort           `json:"port,omitempty"`
-	Ports map[string]ContainerPort `json:"ports,omitempty"`
+	Ports map[int32]ContainerPort `json:"ports,omitempty"`
 
 	HealthCheck *ContainerHealthCheck `json:"health_check,omitempty"`
 
@@ -38,15 +39,61 @@ type ContainerExec struct {
 	Environment ContainerEnvironment `json:"environment,omitempty"`
 }
 
-type ContainerEnvironment map[string]*ContainerEnvironmentVariable
+type ContainerEnvironment map[string]ContainerEnvironmentVariable
 
 type ContainerEnvironmentVariable struct {
 	Value  *string
 	Secret *string
 }
 
+func (cev ContainerEnvironmentVariable) MarshalJSON() ([]byte, error) {
+	if cev.Value != nil {
+		e := containerEnvironmentVariableEncoder(*cev.Value)
+		return json.Marshal(&e)
+	}
+
+	if cev.Secret != nil {
+		e := containerEnvironmentVariableSecretEncoder{
+			Secret: *cev.Secret,
+		}
+		return json.Marshal(&e)
+	}
+
+	return nil, fmt.Errorf("ContainerEnvironmentVariable must have either value or secret")
+}
+
+func (cev *ContainerEnvironmentVariable) UnmarshalJSON(data []byte) error {
+	var val containerEnvironmentVariableEncoder
+	err := json.Unmarshal(data, &val)
+	if err == nil {
+		strVal := string(val)
+		cev.Value = &strVal
+		return nil
+	}
+
+	// If the error wasn't that the data wasn't a string, return the error.
+	if _, ok := err.(*json.UnmarshalTypeError); !ok {
+		return err
+	}
+
+	// Otherwise, try to see if the environment variable is a secret
+	var secret containerEnvironmentVariableSecretEncoder
+	err = json.Unmarshal(data, &secret)
+	if err == nil {
+		cev.Secret = &secret.Secret
+		return nil
+	}
+
+	return err
+}
+
+type containerEnvironmentVariableEncoder string
+
+type containerEnvironmentVariableSecretEncoder struct {
+	Secret string `json:"secret"`
+}
+
 type ContainerPort struct {
-	Port           int32                        `json:"port"`
 	Protocol       string                       `json:"protocol"`
 	ExternalAccess *ContainerPortExternalAccess `json:"external_access,omitempty"`
 }
@@ -65,7 +112,7 @@ type ContainerHealthCheck struct {
 
 type ContainerHealthCheckHTTP struct {
 	Path string `json:"path"`
-	Port string `json:"port"`
+	Port int32  `json:"port"`
 }
 
 type ContainerResources struct {

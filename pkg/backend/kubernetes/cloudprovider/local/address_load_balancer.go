@@ -176,10 +176,10 @@ func (cp *DefaultLocalCloudProvider) ServiceAddressLoadBalancerPorts(
 	}
 
 	ports := make(map[int32]string)
-	for _, port := range service.Spec.Definition.ContainerPorts() {
+	for portNum, port := range service.Spec.Definition.ContainerPorts() {
 		if port.Public() {
-			kubeServicePort := kubeServicePorts[serviceMeshPorts[port.Port]]
-			ports[port.Port] = fmt.Sprintf("%v:%v", cp.IP(), kubeServicePort)
+			kubeServicePort := kubeServicePorts[serviceMeshPorts[portNum]]
+			ports[portNum] = fmt.Sprintf("%v:%v", cp.IP(), kubeServicePort)
 		}
 	}
 
@@ -193,20 +193,20 @@ func (cp *DefaultLocalCloudProvider) kubeServiceSpec(
 ) (corev1.ServiceSpec, error) {
 	var ports []corev1.ServicePort
 
-	for _, port := range service.Spec.Definition.ContainerPorts() {
+	for portNum, port := range service.Spec.Definition.ContainerPorts() {
 		if port.Public() {
-			targetPort, ok := serviceMeshPorts[port.Port]
+			targetPort, ok := serviceMeshPorts[portNum]
 			if !ok {
 				err := fmt.Errorf(
 					"container port %v not found in service mesh ports for %v",
-					port.Port,
+					portNum,
 					service.Description(cp.namespacePrefix),
 				)
 				return corev1.ServiceSpec{}, err
 			}
 
 			ports = append(ports, corev1.ServicePort{
-				Name:     strconv.Itoa(int(port.Port)),
+				Name:     strconv.Itoa(int(portNum)),
 				Protocol: corev1.ProtocolTCP,
 				Port:     targetPort,
 			})

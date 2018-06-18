@@ -52,7 +52,13 @@ func (c *Controller) createNewContainerBuild(
 	containerBuild := containerBuild(build, containerBuildDefinition, definitionHash)
 	result, err := c.latticeClient.LatticeV1().ContainerBuilds(build.Namespace).Create(containerBuild)
 	if err != nil {
-		return nil, fmt.Errorf("error creating service build for %v with definition hash %v", build.Description(c.namespacePrefix), definitionHash)
+		err = fmt.Errorf(
+			"error creating container build for %v with definition hash %v: %v",
+			build.Description(c.namespacePrefix),
+			definitionHash,
+			err,
+		)
+		return nil, err
 	}
 
 	return result, nil
