@@ -5,6 +5,7 @@ import (
 
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
+	definitionv1 "github.com/mlab-lattice/lattice/pkg/definition/v1"
 
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -26,8 +27,8 @@ type stateInfo struct {
 	activeContainerBuilds     map[string]*latticev1.ContainerBuild
 	failedContainerBuilds     map[string]*latticev1.ContainerBuild
 
-	servicesNeedNewContainerBuilds []tree.NodePath
-	jobsNeedNewContainerBuilds     []tree.NodePath
+	servicesNeedNewContainerBuilds map[tree.NodePath]*definitionv1.Service
+	jobsNeedNewContainerBuilds     map[tree.NodePath]*definitionv1.Job
 
 	// Maps a container build's name to its status
 	containerBuildStatuses map[string]latticev1.ContainerBuildStatus
@@ -43,19 +44,19 @@ func (c *Controller) calculateState(build *latticev1.Build) (stateInfo, error) {
 	successfulContainerBuilds := make(map[string]*latticev1.ContainerBuild)
 	activeContainerBuilds := make(map[string]*latticev1.ContainerBuild)
 	failedContainerBuilds := make(map[string]*latticev1.ContainerBuild)
-	var servicesNeedNewContainerBuilds []tree.NodePath
-	var jobsNeedNewContainerBuilds []tree.NodePath
+	servicesNeedNewContainerBuilds := make(map[tree.NodePath]*definitionv1.Service)
+	jobsNeedNewContainerBuilds := make(map[tree.NodePath]*definitionv1.Job)
 
 	containerBuildStatuses := make(map[string]latticev1.ContainerBuildStatus)
 	containerBuildServices := make(map[string][]tree.NodePath)
 	containerBuildJobs := make(map[string][]tree.NodePath)
 
 	// TODO: think about refactoring this and jobs to DRY it up
-	for path := range build.Spec.Services {
+	for path, service := range build.Spec.Definition.AllServices() {
 		serviceInfo, ok := build.Status.Services[path]
 		// If the service doesn't have build info yet, note that and continue
 		if !ok {
-			servicesNeedNewContainerBuilds = append(servicesNeedNewContainerBuilds, path)
+			servicesNeedNewContainerBuilds[path] = service.Service()
 			continue
 		}
 
@@ -86,11 +87,11 @@ func (c *Controller) calculateState(build *latticev1.Build) (stateInfo, error) {
 		}
 	}
 
-	for path := range build.Spec.Jobs {
+	for path, job := range build.Spec.Definition.AllJobs() {
 		jobInfo, ok := build.Status.Jobs[path]
 		// If the job doesn't have build info yet, note that and continue
 		if !ok {
-			jobsNeedNewContainerBuilds = append(jobsNeedNewContainerBuilds, path)
+			jobsNeedNewContainerBuilds[path] = job.Job()
 			continue
 		}
 

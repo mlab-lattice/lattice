@@ -92,8 +92,36 @@ func (n *SystemNode) Jobs() map[string]*JobNode {
 	return n.jobs
 }
 
+// FIXME: come up with a better name for this
+func (n *SystemNode) AllJobs() map[tree.NodePath]*JobNode {
+	jobs := make(map[tree.NodePath]*JobNode)
+	n.Walk(func(node *SystemNode) error {
+		for _, job := range node.Jobs() {
+			jobs[job.Path()] = job
+		}
+
+		return nil
+	})
+
+	return jobs
+}
+
 func (n *SystemNode) Services() map[string]*ServiceNode {
 	return n.services
+}
+
+// FIXME: come up with a better name for this
+func (n *SystemNode) AllServices() map[tree.NodePath]*ServiceNode {
+	services := make(map[tree.NodePath]*ServiceNode)
+	n.Walk(func(node *SystemNode) error {
+		for _, service := range node.Services() {
+			services[service.Path()] = service
+		}
+
+		return nil
+	})
+
+	return services
 }
 
 func (n *SystemNode) Systems() map[string]*SystemNode {

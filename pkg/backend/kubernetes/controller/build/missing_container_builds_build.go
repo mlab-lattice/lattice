@@ -22,13 +22,11 @@ func (c *Controller) syncMissingContainerBuildsBuild(build *latticev1.Build, sta
 	// look through all the containers of each service to see if there are any containers that
 	// don't have builds yet
 	// TODO: think about how to refactor this to DRY it up
-	for _, path := range stateInfo.servicesNeedNewContainerBuilds {
-		serviceInfo := build.Spec.Services[path]
-
+	for path, service := range stateInfo.servicesNeedNewContainerBuilds {
 		containers := map[string]definitionv1.Container{
-			kubeutil.UserMainContainerName: serviceInfo.Definition.Container,
+			kubeutil.UserMainContainerName: service.Container,
 		}
-		for name, sidecarContainer := range serviceInfo.Definition.Sidecars {
+		for name, sidecarContainer := range service.Sidecars {
 			containers[kubeutil.UserSidecarContainerName(name)] = sidecarContainer
 		}
 
@@ -43,19 +41,17 @@ func (c *Controller) syncMissingContainerBuildsBuild(build *latticev1.Build, sta
 			MainContainer: containerBuilds[kubeutil.UserMainContainerName],
 			Sidecars:      make(map[string]string),
 		}
-		for sidecar := range serviceInfo.Definition.Sidecars {
+		for sidecar := range service.Sidecars {
 			statusServiceInfo.Sidecars[sidecar] = containerBuilds[kubeutil.UserSidecarContainerName(sidecar)]
 		}
 		services[path] = statusServiceInfo
 	}
 
-	for _, path := range stateInfo.jobsNeedNewContainerBuilds {
-		jobInfo := build.Spec.Services[path]
-
+	for path, job := range stateInfo.jobsNeedNewContainerBuilds {
 		containers := map[string]definitionv1.Container{
-			kubeutil.UserMainContainerName: jobInfo.Definition.Container,
+			kubeutil.UserMainContainerName: job.Container,
 		}
-		for name, sidecarContainer := range jobInfo.Definition.Sidecars {
+		for name, sidecarContainer := range job.Sidecars {
 			containers[kubeutil.UserSidecarContainerName(name)] = sidecarContainer
 		}
 
@@ -70,7 +66,7 @@ func (c *Controller) syncMissingContainerBuildsBuild(build *latticev1.Build, sta
 			MainContainer: containerBuilds[kubeutil.UserMainContainerName],
 			Sidecars:      make(map[string]string),
 		}
-		for sidecar := range jobInfo.Definition.Sidecars {
+		for sidecar := range job.Sidecars {
 			statusJobInfo.Sidecars[sidecar] = containerBuilds[kubeutil.UserSidecarContainerName(sidecar)]
 		}
 		jobs[path] = statusJobInfo

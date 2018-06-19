@@ -57,19 +57,7 @@ func (b *Build) Description(namespacePrefix string) string {
 
 // +k8s:deepcopy-gen=false
 type BuildSpec struct {
-	Definition *definitionv1.SystemNode               `json:"definition"`
-	Services   map[tree.NodePath]BuildSpecServiceInfo `json:"services"`
-	Jobs       map[tree.NodePath]BuildSpecJobInfo     `json:"services"`
-}
-
-// +k8s:deepcopy-gen=false
-type BuildSpecServiceInfo struct {
-	Definition *definitionv1.Service `json:"definition"`
-}
-
-// +k8s:deepcopy-gen=false
-type BuildSpecJobInfo struct {
-	Definition *definitionv1.Job `json:"definition"`
+	Definition *definitionv1.SystemNode `json:"definition"`
 }
 
 type BuildStatus struct {

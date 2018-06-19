@@ -50,13 +50,6 @@ func newBuild(def *defintionv1.SystemNode, version v1.SystemVersion) (*latticev1
 		latticev1.BuildDefinitionVersionLabelKey: string(version),
 	}
 
-	services := make(map[tree.NodePath]latticev1.BuildSpecServiceInfo)
-	for _, serviceNode := range def.Services() {
-		services[serviceNode.Path()] = latticev1.BuildSpecServiceInfo{
-			Definition: serviceNode.Service(),
-		}
-	}
-
 	build := &latticev1.Build{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:   uuid.NewV4().String(),
@@ -64,7 +57,6 @@ func newBuild(def *defintionv1.SystemNode, version v1.SystemVersion) (*latticev1
 		},
 		Spec: latticev1.BuildSpec{
 			Definition: def,
-			Services:   services,
 		},
 	}
 
