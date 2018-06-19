@@ -42,6 +42,22 @@ type DeployListerExpansion interface{}
 // DeployNamespaceLister.
 type DeployNamespaceListerExpansion interface{}
 
+// JobListerExpansion allows custom methods to be added to
+// JobLister.
+type JobListerExpansion interface{}
+
+// JobNamespaceListerExpansion allows custom methods to be added to
+// JobNamespaceLister.
+type JobNamespaceListerExpansion interface{}
+
+// JobRunListerExpansion allows custom methods to be added to
+// JobRunLister.
+type JobRunListerExpansion interface{}
+
+// JobRunNamespaceListerExpansion allows custom methods to be added to
+// JobRunNamespaceLister.
+type JobRunNamespaceListerExpansion interface{}
+
 // NodePoolListerExpansion allows custom methods to be added to
 // NodePoolLister.
 type NodePoolListerExpansion interface{}

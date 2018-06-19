@@ -63,13 +63,22 @@ type SystemSpec struct {
 
 	NodePools map[string]NodePoolSpec                 `json:"nodePools"`
 	Services  map[tree.NodePath]SystemSpecServiceInfo `json:"services"`
+	Jobs      map[tree.NodePath]SystemSpecJobInfo     `json:"jobs"`
 }
 
 // +k8s:deepcopy-gen=false
 type SystemSpecServiceInfo struct {
 	Definition *definitionv1.Service `json:"definition"`
 
-	// ContainerBuildArtifacts maps Sidecar names to the artifacts created by their build
+	// ContainerBuildArtifacts maps container names to the artifacts created by their build
+	ContainerBuildArtifacts map[string]ContainerBuildArtifacts `json:"containerBuildArtifacts"`
+}
+
+// +k8s:deepcopy-gen=false
+type SystemSpecJobInfo struct {
+	Definition *definitionv1.Job `json:"definition"`
+
+	// ContainerBuildArtifacts maps container names to the artifacts created by their build
 	ContainerBuildArtifacts map[string]ContainerBuildArtifacts `json:"containerBuildArtifacts"`
 }
 

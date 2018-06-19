@@ -17,9 +17,11 @@ func (c *Controller) syncMissingContainerBuildsBuild(build *latticev1.Build, sta
 	containerBuildStatuses := stateInfo.containerBuildStatuses
 	containerBuildHashes := make(map[string]*latticev1.ContainerBuild)
 	services := make(map[tree.NodePath]latticev1.BuildStatusService)
+	jobs := make(map[tree.NodePath]latticev1.BuildStatusJob)
 
 	// look through all the containers of each service to see if there are any containers that
 	// don't have builds yet
+	// TODO: think about how to refactor this to DRY it up
 	for _, path := range stateInfo.servicesNeedNewContainerBuilds {
 		serviceInfo := build.Spec.Services[path]
 
@@ -32,44 +34,9 @@ func (c *Controller) syncMissingContainerBuildsBuild(build *latticev1.Build, sta
 
 		// maps the service's container names to the container builds for them
 		containerBuilds := make(map[string]string)
-		for containerName, container := range containers {
-			definitionHash, err := hashContainerBuild(container)
-			if err != nil {
-				return err
-			}
-
-			// check if we've already observed a container build with this hash
-			containerBuild, ok := containerBuildHashes[definitionHash]
-			if !ok {
-				// if not, see if an active or succeeded container build already exists with this hash
-				containerBuild, err = c.findContainerBuildForDefinitionHash(build.Namespace, definitionHash)
-				if err != nil {
-					return err
-				}
-			}
-
-			// if we found a container build, add an owner reference to it
-			if containerBuild != nil {
-				containerBuild, err := c.addOwnerReference(build, containerBuild)
-				if err != nil {
-					return err
-				}
-
-				containerBuildStatuses[containerBuild.Name] = containerBuild.Status
-				containerBuildHashes[definitionHash] = containerBuild
-				containerBuilds[containerName] = containerBuild.Name
-				continue
-			}
-
-			// haven't found a container build so need to create one
-			containerBuild, err = c.createNewContainerBuild(build, container.Build, definitionHash)
-			if err != nil {
-				return err
-			}
-
-			containerBuildStatuses[containerBuild.Name] = containerBuild.Status
-			containerBuildHashes[definitionHash] = containerBuild
-			containerBuilds[containerName] = containerBuild.Name
+		err := c.getContainerBuilds(build, containers, containerBuilds, containerBuildHashes, containerBuildStatuses)
+		if err != nil {
+			return nil
 		}
 
 		statusServiceInfo := latticev1.BuildStatusService{
@@ -80,6 +47,33 @@ func (c *Controller) syncMissingContainerBuildsBuild(build *latticev1.Build, sta
 			statusServiceInfo.Sidecars[sidecar] = containerBuilds[kubeutil.UserSidecarContainerName(sidecar)]
 		}
 		services[path] = statusServiceInfo
+	}
+
+	for _, path := range stateInfo.jobsNeedNewContainerBuilds {
+		jobInfo := build.Spec.Services[path]
+
+		containers := map[string]definitionv1.Container{
+			kubeutil.UserMainContainerName: jobInfo.Definition.Container,
+		}
+		for name, sidecarContainer := range jobInfo.Definition.Sidecars {
+			containers[kubeutil.UserSidecarContainerName(name)] = sidecarContainer
+		}
+
+		// maps the service's container names to the container builds for them
+		containerBuilds := make(map[string]string)
+		err := c.getContainerBuilds(build, containers, containerBuilds, containerBuildHashes, containerBuildStatuses)
+		if err != nil {
+			return nil
+		}
+
+		statusJobInfo := latticev1.BuildStatusJob{
+			MainContainer: containerBuilds[kubeutil.UserMainContainerName],
+			Sidecars:      make(map[string]string),
+		}
+		for sidecar := range jobInfo.Definition.Sidecars {
+			statusJobInfo.Sidecars[sidecar] = containerBuilds[kubeutil.UserSidecarContainerName(sidecar)]
+		}
+		jobs[path] = statusJobInfo
 	}
 
 	// If we haven't logged a start timestamp yet, use now.
@@ -99,6 +93,56 @@ func (c *Controller) syncMissingContainerBuildsBuild(build *latticev1.Build, sta
 		containerBuildStatuses,
 	)
 	return err
+}
+
+func (c *Controller) getContainerBuilds(
+	build *latticev1.Build,
+	containers map[string]definitionv1.Container,
+	containerBuilds map[string]string,
+	containerBuildHashes map[string]*latticev1.ContainerBuild,
+	containerBuildStatuses map[string]latticev1.ContainerBuildStatus,
+) error {
+	for containerName, container := range containers {
+		definitionHash, err := hashContainerBuild(container)
+		if err != nil {
+			return err
+		}
+
+		// check if we've already observed a container build with this hash
+		containerBuild, ok := containerBuildHashes[definitionHash]
+		if !ok {
+			// if not, see if an active or succeeded container build already exists with this hash
+			containerBuild, err = c.findContainerBuildForDefinitionHash(build.Namespace, definitionHash)
+			if err != nil {
+				return err
+			}
+		}
+
+		// if we found a container build, add an owner reference to it
+		if containerBuild != nil {
+			containerBuild, err := c.addOwnerReference(build, containerBuild)
+			if err != nil {
+				return err
+			}
+
+			containerBuildStatuses[containerBuild.Name] = containerBuild.Status
+			containerBuildHashes[definitionHash] = containerBuild
+			containerBuilds[containerName] = containerBuild.Name
+			continue
+		}
+
+		// haven't found a container build so need to create one
+		containerBuild, err = c.createNewContainerBuild(build, container.Build, definitionHash)
+		if err != nil {
+			return err
+		}
+
+		containerBuildStatuses[containerBuild.Name] = containerBuild.Status
+		containerBuildHashes[definitionHash] = containerBuild
+		containerBuilds[containerName] = containerBuild.Name
+	}
+
+	return nil
 }
 
 func hashContainerBuild(container definitionv1.Container) (string, error) {

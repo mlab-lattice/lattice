@@ -18,6 +18,10 @@ type Interface interface {
 	ContainerBuilds() ContainerBuildInformer
 	// Deploys returns a DeployInformer.
 	Deploys() DeployInformer
+	// Jobs returns a JobInformer.
+	Jobs() JobInformer
+	// JobRuns returns a JobRunInformer.
+	JobRuns() JobRunInformer
 	// NodePools returns a NodePoolInformer.
 	NodePools() NodePoolInformer
 	// Services returns a ServiceInformer.
@@ -62,6 +66,16 @@ func (v *version) ContainerBuilds() ContainerBuildInformer {
 // Deploys returns a DeployInformer.
 func (v *version) Deploys() DeployInformer {
 	return &deployInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
+}
+
+// Jobs returns a JobInformer.
+func (v *version) Jobs() JobInformer {
+	return &jobInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
+}
+
+// JobRuns returns a JobRunInformer.
+func (v *version) JobRuns() JobRunInformer {
+	return &jobRunInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
 }
 
 // NodePools returns a NodePoolInformer.

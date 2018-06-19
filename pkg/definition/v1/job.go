@@ -28,6 +28,15 @@ func (j *Job) Type() component.Type {
 	return JobType
 }
 
+func (j *Job) Containers() []Container {
+	containers := []Container{j.Container}
+	for _, sidecarContainer := range j.Sidecars {
+		containers = append(containers, sidecarContainer)
+	}
+
+	return containers
+}
+
 func (j *Job) MarshalJSON() ([]byte, error) {
 	e := jobEncoder{
 		Type:        JobType,
@@ -35,6 +44,8 @@ func (j *Job) MarshalJSON() ([]byte, error) {
 
 		Container: j.Container,
 		Sidecars:  j.Sidecars,
+
+		NodePool: j.NodePool,
 	}
 	return json.Marshal(&e)
 }
@@ -58,6 +69,8 @@ func (j *Job) UnmarshalJSON(data []byte) error {
 
 		Container: e.Container,
 		Sidecars:  e.Sidecars,
+
+		NodePool: e.NodePool,
 	}
 	*j = *job
 	return nil
@@ -69,4 +82,6 @@ type jobEncoder struct {
 
 	Container
 	Sidecars map[string]Container `json:"sidecars,omitempty"`
+
+	NodePool string `json:"node_pool"`
 }

@@ -27,12 +27,16 @@ type stateInfo struct {
 	failedContainerBuilds     map[string]*latticev1.ContainerBuild
 
 	servicesNeedNewContainerBuilds []tree.NodePath
+	jobsNeedNewContainerBuilds     []tree.NodePath
 
 	// Maps a container build's name to its status
 	containerBuildStatuses map[string]latticev1.ContainerBuildStatus
 
 	// Maps a container build's name  to the path of services that are using it
 	containerBuildServices map[string][]tree.NodePath
+
+	// Maps a container build's name  to the path of jobs that are using it
+	containerBuildJobs map[string][]tree.NodePath
 }
 
 func (c *Controller) calculateState(build *latticev1.Build) (stateInfo, error) {
@@ -40,15 +44,18 @@ func (c *Controller) calculateState(build *latticev1.Build) (stateInfo, error) {
 	activeContainerBuilds := make(map[string]*latticev1.ContainerBuild)
 	failedContainerBuilds := make(map[string]*latticev1.ContainerBuild)
 	var servicesNeedNewContainerBuilds []tree.NodePath
+	var jobsNeedNewContainerBuilds []tree.NodePath
 
 	containerBuildStatuses := make(map[string]latticev1.ContainerBuildStatus)
 	containerBuildServices := make(map[string][]tree.NodePath)
+	containerBuildJobs := make(map[string][]tree.NodePath)
 
-	for servicePath := range build.Spec.Services {
-		serviceInfo, ok := build.Status.Services[servicePath]
-		// If the service doesn't have build info yet, note that nad continue
+	// TODO: think about refactoring this and jobs to DRY it up
+	for path := range build.Spec.Services {
+		serviceInfo, ok := build.Status.Services[path]
+		// If the service doesn't have build info yet, note that and continue
 		if !ok {
-			servicesNeedNewContainerBuilds = append(servicesNeedNewContainerBuilds, servicePath)
+			servicesNeedNewContainerBuilds = append(servicesNeedNewContainerBuilds, path)
 			continue
 		}
 
@@ -62,7 +69,7 @@ func (c *Controller) calculateState(build *latticev1.Build) (stateInfo, error) {
 				services = make([]tree.NodePath, 0)
 			}
 
-			services = append(services, servicePath)
+			services = append(services, path)
 			containerBuildServices[containerBuildName] = services
 		}
 
@@ -79,14 +86,52 @@ func (c *Controller) calculateState(build *latticev1.Build) (stateInfo, error) {
 		}
 	}
 
+	for path := range build.Spec.Jobs {
+		jobInfo, ok := build.Status.Jobs[path]
+		// If the job doesn't have build info yet, note that and continue
+		if !ok {
+			jobsNeedNewContainerBuilds = append(jobsNeedNewContainerBuilds, path)
+			continue
+		}
+
+		// Grab all of the container builds for this service
+		containerBuildNames := []string{jobInfo.MainContainer}
+		for _, containerBuildName := range jobInfo.Sidecars {
+			containerBuildNames = append(containerBuildNames, containerBuildName)
+
+			jobs, ok := containerBuildJobs[containerBuildName]
+			if !ok {
+				jobs = make([]tree.NodePath, 0)
+			}
+
+			jobs = append(jobs, path)
+			containerBuildJobs[containerBuildName] = jobs
+		}
+
+		err := c.updateContainerBuildStatuses(
+			build,
+			containerBuildNames,
+			containerBuildStatuses,
+			activeContainerBuilds,
+			failedContainerBuilds,
+			successfulContainerBuilds,
+		)
+		if err != nil {
+			return stateInfo{}, err
+		}
+	}
+
 	stateInfo := stateInfo{
-		successfulContainerBuilds:      successfulContainerBuilds,
-		activeContainerBuilds:          activeContainerBuilds,
-		failedContainerBuilds:          failedContainerBuilds,
+		successfulContainerBuilds: successfulContainerBuilds,
+		activeContainerBuilds:     activeContainerBuilds,
+		failedContainerBuilds:     failedContainerBuilds,
+
 		servicesNeedNewContainerBuilds: servicesNeedNewContainerBuilds,
+		jobsNeedNewContainerBuilds:     jobsNeedNewContainerBuilds,
 
 		containerBuildStatuses: containerBuildStatuses,
 		containerBuildServices: containerBuildServices,
+		containerBuildJobs:     containerBuildJobs,
 	}
 
 	if len(failedContainerBuilds) > 0 {
@@ -94,7 +139,7 @@ func (c *Controller) calculateState(build *latticev1.Build) (stateInfo, error) {
 		return stateInfo, nil
 	}
 
-	if len(servicesNeedNewContainerBuilds) > 0 {
+	if len(servicesNeedNewContainerBuilds) > 0 || len(jobsNeedNewContainerBuilds) > 0 {
 		stateInfo.state = stateNoFailuresNeedsNewContainerBuilds
 		return stateInfo, nil
 	}
@@ -116,7 +161,7 @@ func (c *Controller) updateContainerBuildStatuses(
 	failedContainerBuilds map[string]*latticev1.ContainerBuild,
 	successfulContainerBuilds map[string]*latticev1.ContainerBuild,
 ) error {
-	// Get the current status of each of the container builds for this service
+	// Get the current status of each of the container builds for this component
 	for _, name := range names {
 		// If we've already processed this container build, no need to do so again
 		if _, ok := statuses[name]; ok {

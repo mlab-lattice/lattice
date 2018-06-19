@@ -59,11 +59,17 @@ func (b *Build) Description(namespacePrefix string) string {
 type BuildSpec struct {
 	Definition *definitionv1.SystemNode               `json:"definition"`
 	Services   map[tree.NodePath]BuildSpecServiceInfo `json:"services"`
+	Jobs       map[tree.NodePath]BuildSpecJobInfo     `json:"services"`
 }
 
 // +k8s:deepcopy-gen=false
 type BuildSpecServiceInfo struct {
 	Definition *definitionv1.Service `json:"definition"`
+}
+
+// +k8s:deepcopy-gen=false
+type BuildSpecJobInfo struct {
+	Definition *definitionv1.Job `json:"definition"`
 }
 
 type BuildStatus struct {
@@ -78,11 +84,19 @@ type BuildStatus struct {
 	// Maps a service path to the information about its container builds
 	Services map[tree.NodePath]BuildStatusService `json:"services"`
 
+	// Maps a service path to the information about its container builds
+	Jobs map[tree.NodePath]BuildStatusJob `json:"jobs"`
+
 	// Maps a ServiceBuild.Name to the ServiceBuild.Status
 	ContainerBuildStatuses map[string]ContainerBuildStatus `json:"containerBuildStatuses"`
 }
 
 type BuildStatusService struct {
+	MainContainer string            `json:"mainContainer"`
+	Sidecars      map[string]string `json:"sidecars"`
+}
+
+type BuildStatusJob struct {
 	MainContainer string            `json:"mainContainer"`
 	Sidecars      map[string]string `json:"sidecars"`
 }

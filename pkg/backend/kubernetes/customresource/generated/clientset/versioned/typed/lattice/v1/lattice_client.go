@@ -16,6 +16,8 @@ type LatticeV1Interface interface {
 	ConfigsGetter
 	ContainerBuildsGetter
 	DeploysGetter
+	JobsGetter
+	JobRunsGetter
 	NodePoolsGetter
 	ServicesGetter
 	SystemsGetter
@@ -45,6 +47,14 @@ func (c *LatticeV1Client) ContainerBuilds(namespace string) ContainerBuildInterf
 
 func (c *LatticeV1Client) Deploys(namespace string) DeployInterface {
 	return newDeploys(c, namespace)
+}
+
+func (c *LatticeV1Client) Jobs(namespace string) JobInterface {
+	return newJobs(c, namespace)
+}
+
+func (c *LatticeV1Client) JobRuns(namespace string) JobRunInterface {
+	return newJobRuns(c, namespace)
 }
 
 func (c *LatticeV1Client) NodePools(namespace string) NodePoolInterface {

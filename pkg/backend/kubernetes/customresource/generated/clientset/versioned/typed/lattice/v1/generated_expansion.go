@@ -12,6 +12,10 @@ type ContainerBuildExpansion interface{}
 
 type DeployExpansion interface{}
 
+type JobExpansion interface{}
+
+type JobRunExpansion interface{}
+
 type NodePoolExpansion interface{}
 
 type ServiceExpansion interface{}

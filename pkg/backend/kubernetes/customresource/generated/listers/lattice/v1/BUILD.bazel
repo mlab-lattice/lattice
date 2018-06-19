@@ -9,6 +9,8 @@ go_library(
         "containerbuild.go",
         "deploy.go",
         "expansion_generated.go",
+        "job.go",
+        "jobrun.go",
         "nodepool.go",
         "service.go",
         "system.go",

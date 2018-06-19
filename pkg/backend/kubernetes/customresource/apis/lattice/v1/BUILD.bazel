@@ -10,6 +10,8 @@ go_library(
         "deepcopy.go",
         "deploy.go",
         "doc.go",
+        "job.go",
+        "job_run.go",
         "node_pool.go",
         "register.go",
         "service.go",
