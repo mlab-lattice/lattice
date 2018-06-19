@@ -1,6 +1,7 @@
 package messages
 
 import (
+	envoyv2 "github.com/envoyproxy/go-control-plane/envoy/api/v2"
 	envoyroute "github.com/envoyproxy/go-control-plane/envoy/api/v2/route"
 )
 
@@ -37,5 +38,13 @@ func NewVirtualHost(
 		Name:    name,
 		Domains: domains,
 		Routes:  routes,
+	}
+}
+
+func NewRouteConfiguration(
+	name string, virtualHosts []envoyroute.VirtualHost) *envoyv2.RouteConfiguration {
+	return &envoyv2.RouteConfiguration{
+		Name:         name,
+		VirtualHosts: virtualHosts,
 	}
 }

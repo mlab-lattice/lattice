@@ -4,20 +4,28 @@ import (
 	"fmt"
 
 	envoyv2 "github.com/envoyproxy/go-control-plane/envoy/api/v2"
-	envoycore "github.com/envoyproxy/go-control-plane/envoy/api/v2/core"
 	envoyendpoint "github.com/envoyproxy/go-control-plane/envoy/api/v2/endpoint"
 	envoycache "github.com/envoyproxy/go-control-plane/pkg/cache"
 
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 
 	xdsapi "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/servicemesh/envoy/xdsapi/v2"
+	xdsmsgs "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/servicemesh/envoy/xdsapi/v2/service_node/messages"
 	xdsutil "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/servicemesh/envoy/xdsapi/v2/util"
+	lerror "github.com/mlab-lattice/lattice/pkg/util/error"
 )
 
 func (s *ServiceNode) getEndpoints(
 	clusters []envoycache.Resource,
-	systemServices map[tree.NodePath]*xdsapi.Service) ([]envoycache.Resource, error) {
-	endpoints := make([]envoycache.Resource, 0, len(clusters))
+	systemServices map[tree.NodePath]*xdsapi.Service) (endpoints []envoycache.Resource, err error) {
+	defer func() {
+		if _panic := recover(); _panic != nil {
+			err = lerror.Errorf("%v", _panic)
+		}
+	}()
+
+	endpoints = make([]envoycache.Resource, 0, len(clusters))
+
 	for _, resource := range clusters {
 		cluster := resource.(*envoyv2.Cluster)
 		if cluster.EdsClusterConfig == nil {
@@ -42,30 +50,13 @@ func (s *ServiceNode) getEndpoints(
 		}
 		addresses := make([]envoyendpoint.LbEndpoint, 0, len(service.IPAddresses))
 		for _, address := range service.IPAddresses {
-			addresses = append(addresses, envoyendpoint.LbEndpoint{
-				Endpoint: &envoyendpoint.Endpoint{
-					Address: &envoycore.Address{
-						Address: &envoycore.Address_SocketAddress{
-							SocketAddress: &envoycore.SocketAddress{
-								Protocol: envoycore.TCP,
-								Address:  address,
-								PortSpecifier: &envoycore.SocketAddress_PortValue{
-									PortValue: uint32(envoyPort),
-								},
-							},
-						},
-					},
-				},
-			})
+			addresses = append(
+				addresses, *xdsmsgs.NewLbEndpoint(
+					xdsmsgs.NewTcpSocketAddress(address, envoyPort)))
 		}
-		endpoints = append(endpoints, &envoyv2.ClusterLoadAssignment{
-			ClusterName: cluster.EdsClusterConfig.ServiceName,
-			Endpoints: []envoyendpoint.LocalityLbEndpoints{
-				{
-					LbEndpoints: addresses,
-				},
-			},
-		})
+		endpoints = append(
+			endpoints, xdsmsgs.NewClusterLoadAssignment(
+				cluster.EdsClusterConfig.ServiceName, addresses))
 	}
-	return endpoints, nil
+	return endpoints, err
 }

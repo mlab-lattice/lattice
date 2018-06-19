@@ -3,7 +3,6 @@ package service_node
 import (
 	"fmt"
 
-	envoyv2 "github.com/envoyproxy/go-control-plane/envoy/api/v2"
 	envoyroute "github.com/envoyproxy/go-control-plane/envoy/api/v2/route"
 	envoycache "github.com/envoyproxy/go-control-plane/pkg/cache"
 
@@ -11,14 +10,20 @@ import (
 
 	xdsapi "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/servicemesh/envoy/xdsapi/v2"
 	xdsconstants "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/servicemesh/envoy/xdsapi/v2/constants"
+	xdsmsgs "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/servicemesh/envoy/xdsapi/v2/service_node/messages"
 	xdsutil "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/servicemesh/envoy/xdsapi/v2/util"
+	lerror "github.com/mlab-lattice/lattice/pkg/util/error"
 )
 
-func (s *ServiceNode) getRoutes(systemServices map[tree.NodePath]*xdsapi.Service) ([]envoycache.Resource, error) {
-	route := &envoyv2.RouteConfiguration{
-		Name:         xdsconstants.RouteNameEgress,
-		VirtualHosts: []envoyroute.VirtualHost{},
-	}
+func (s *ServiceNode) getRoutes(
+	systemServices map[tree.NodePath]*xdsapi.Service) (routes []envoycache.Resource, err error) {
+	defer func() {
+		if _panic := recover(); _panic != nil {
+			err = lerror.Errorf("%v", _panic)
+		}
+	}()
+
+	virtualHosts := make([]envoyroute.VirtualHost, 0)
 
 	for path, service := range systemServices {
 		for componentName, component := range service.Components {
@@ -32,30 +37,20 @@ func (s *ServiceNode) getRoutes(systemServices map[tree.NodePath]*xdsapi.Service
 				if port == xdsconstants.PortHTTPDefault {
 					domains = append(domains, domain)
 				}
-
-				route.VirtualHosts = append(route.VirtualHosts, envoyroute.VirtualHost{
-					Name:    string(path),
-					Domains: domains,
-					Routes: []envoyroute.Route{
-						{
-							Match: envoyroute.RouteMatch{
-								PathSpecifier: &envoyroute.RouteMatch_Prefix{
-									Prefix: "/",
-								},
-							},
-							Action: &envoyroute.Route_Route{
-								Route: &envoyroute.RouteAction{
-									ClusterSpecifier: &envoyroute.RouteAction_Cluster{
-										Cluster: xdsutil.GetClusterNameForComponentPort(s.ServiceCluster(), path, componentName, port),
-									},
-								},
-							},
-						},
-					},
-				})
+				virtualHosts = append(
+					virtualHosts, *xdsmsgs.NewVirtualHost(
+						string(path), domains, []envoyroute.Route{
+							*xdsmsgs.NewRouteRoute(
+								xdsmsgs.NewPrefixRouteMatch("/"),
+								xdsmsgs.NewClusterRouteActionRouteRoute(
+									xdsutil.GetClusterNameForComponentPort(
+										s.ServiceCluster(), path, componentName, port))),
+						}))
 			}
 		}
 	}
 
-	return []envoycache.Resource{route}, nil
+	return []envoycache.Resource{
+		xdsmsgs.NewRouteConfiguration(xdsconstants.RouteNameEgress, virtualHosts),
+	}, err
 }
