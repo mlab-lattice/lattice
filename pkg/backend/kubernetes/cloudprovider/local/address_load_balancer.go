@@ -229,9 +229,6 @@ func (cp *DefaultLocalCloudProvider) getKubeService(address *latticev1.Address) 
 	// Try to find the kube service in the cache
 	kubeServiceName := serviceAddressKubeServiceLoadBalancerName(address)
 	kubeService, err := cp.kubeServiceLister.Services(address.Namespace).Get(kubeServiceName)
-	fmt.Printf("kubeServiceName: %v\naddress.Name: %v\naddress.Namespace: %v\n",
-		kubeServiceName, address.Name, address.Namespace)
-	fmt.Printf("getKubeServiceErr: %v\n", err)
 	if err != nil {
 		if !errors.IsNotFound(err) {
 			return nil, err
