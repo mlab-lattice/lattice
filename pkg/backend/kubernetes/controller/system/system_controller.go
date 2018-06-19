@@ -63,6 +63,9 @@ type Controller struct {
 	serviceLister       latticelisters.ServiceLister
 	serviceListerSynced cache.InformerSynced
 
+	jobLister       latticelisters.JobLister
+	jobListerSynced cache.InformerSynced
+
 	nodePoolLister       latticelisters.NodePoolLister
 	nodePoolListerSynced cache.InformerSynced
 
@@ -130,6 +133,10 @@ func NewController(
 	sc.serviceLister = serviceInformer.Lister()
 	sc.serviceListerSynced = serviceInformer.Informer().HasSynced
 
+	jobInformer := latticeInformerFactory.Lattice().V1().Jobs()
+	sc.jobLister = jobInformer.Lister()
+	sc.jobListerSynced = jobInformer.Informer().HasSynced
+
 	nodePoolInformer := latticeInformerFactory.Lattice().V1().NodePools()
 	nodePoolInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    sc.handleNodePoolAdd,
@@ -166,6 +173,7 @@ func (c *Controller) Run(workers int, stopCh <-chan struct{}) {
 		c.configListerSynced,
 		c.systemListerSynced,
 		c.serviceListerSynced,
+		c.jobListerSynced,
 		c.namespaceListerSynced,
 	) {
 		return

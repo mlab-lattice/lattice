@@ -19,10 +19,11 @@ func (c *Controller) syncInProgressTeardown(teardown *latticev1.Teardown) error 
 	// we must update the teardown.Status.State first. If we were then to try to update system.Spec in syncPendingTeardown
 	// and it failed, it would never get rerun since syncInProgressTeardown would always be called from there on out.
 	// So instead we set the system.Spec in here to make sure it gets run even after failures.
-	services := map[tree.NodePath]latticev1.SystemSpecServiceInfo{}
-	nodePools := map[string]latticev1.NodePoolSpec{}
+	services := make(map[tree.NodePath]latticev1.SystemSpecServiceInfo)
+	jobs := make(map[tree.NodePath]latticev1.SystemSpecJobInfo)
+	nodePools := make(map[string]latticev1.NodePoolSpec)
 
-	system, err = c.updateSystem(system, services, nodePools)
+	system, err = c.updateSystem(system, services, jobs, nodePools)
 	if err != nil {
 		return err
 	}
