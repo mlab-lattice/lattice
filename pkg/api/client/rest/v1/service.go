@@ -87,12 +87,14 @@ func (c *ServiceClient) GetByServicePath(path tree.NodePath) (*v1.Service, error
 	return nil, HandleErrorStatusCode(statusCode, body)
 }
 
-func (c *ServiceClient) Logs(id v1.ServiceID, component string, instance string, follow bool) (io.ReadCloser, error) {
+func (c *ServiceClient) Logs(id v1.ServiceID, component string, instance string, logOptions *v1.ContainerLogOptions) (io.ReadCloser, error) {
 	url := fmt.Sprintf(
-		"%v%v?component=%v&instance=%v&follow=%v",
+		"%v%v?component=%v&instance=%v&%v",
 		c.apiServerURL,
 		fmt.Sprintf(v1rest.ServiceLogsPathFormat, c.systemID, id),
-		component, instance, follow,
+		component,
+		instance,
+		logOptionsToQueryString(logOptions),
 	)
 
 	body, statusCode, err := c.restClient.Get(url).Body()

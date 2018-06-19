@@ -57,6 +57,9 @@ func (u *KubernetesStatusUpdater) updateProgressInternal(buildID v1.ComponentBui
 		return u.updateProgressInternal(buildID, systemID, phase, numRetries-1)
 	}
 
+	if build.Annotations == nil {
+		build.Annotations = make(map[string]string)
+	}
 	build.Annotations[latticev1.ComponentBuildLastObservedPhaseAnnotationKey] = string(phase)
 
 	_, err = u.LatticeClient.LatticeV1().ComponentBuilds(build.Namespace).Update(build)
@@ -93,6 +96,9 @@ func (u *KubernetesStatusUpdater) updateErrorInternal(buildID v1.ComponentBuildI
 		return err
 	}
 
+	if build.Annotations == nil {
+		build.Annotations = make(map[string]string)
+	}
 	build.Annotations[latticev1.ComponentBuildFailureInfoAnnotationKey] = string(data)
 
 	_, err = u.LatticeClient.LatticeV1().ComponentBuilds(build.Namespace).Update(build)

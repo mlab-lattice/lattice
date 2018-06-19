@@ -32,22 +32,14 @@ func (c *serviceCommandContext) ServiceID() v1.ServiceID {
 }
 
 func (c *ServiceCommand) Base() (*BaseCommand, error) {
-	var serviceIDStr string
-	var servicePathStr string
+	var serviceStr string
 	serviceIDFlag := &cli.StringFlag{
 		Name:     "service",
-		Required: false,
-		Target:   &serviceIDStr,
-	}
-
-	servicePathFlag := &cli.StringFlag{
-		Name:     "service-path",
-		Required: false,
-		Target:   &servicePathStr,
+		Required: true,
+		Target:   &serviceStr,
 	}
 
 	flags := append(c.Flags, serviceIDFlag)
-	flags = append(flags, servicePathFlag)
 
 	cmd := &SystemCommand{
 		Name:  c.Name,
@@ -57,17 +49,9 @@ func (c *ServiceCommand) Base() (*BaseCommand, error) {
 		Run: func(sctx SystemCommandContext, args []string) {
 			var serviceID v1.ServiceID
 			// resolve service id
-			if serviceIDStr == "" && servicePathStr == "" {
-				log.Fatal("Need to specify service or servicePath")
-			} else if serviceIDStr != "" {
-				serviceID = v1.ServiceID(serviceIDStr)
-			} else if servicePathStr != "" {
-				// lookup service by node path
-				nodePath, err := tree.NewNodePath(servicePathStr)
-				if err != nil {
-					log.Fatal("invalid service path: " + servicePathStr)
-				}
 
+			nodePath, err := tree.NewNodePath(serviceStr)
+			if err == nil {
 				c := sctx.Client().Systems().Services(sctx.SystemID())
 				service, err := c.GetByServicePath(nodePath)
 
@@ -76,6 +60,9 @@ func (c *ServiceCommand) Base() (*BaseCommand, error) {
 				}
 
 				serviceID = service.ID
+			} else {
+				//TODO validate that serviceStr is a valid service id
+				serviceID = v1.ServiceID(serviceStr)
 			}
 
 			ctx := &serviceCommandContext{
