@@ -16,9 +16,14 @@ type LogsCommand struct {
 }
 
 func (c *LogsCommand) Base() (*latticectl.BaseCommand, error) {
-	var follow bool
 	var pathStr string
 	var component string
+	var follow bool
+	var previous bool
+	var timestamps bool
+	var sinceTime string
+	var since string
+	var tail int
 
 	cmd := &latticectl.BuildCommand{
 		Name: "logs",
@@ -41,6 +46,32 @@ func (c *LogsCommand) Base() (*latticectl.BaseCommand, error) {
 				Default: false,
 				Target:  &follow,
 			},
+			&cli.BoolFlag{
+				Name:    "previous",
+				Default: false,
+				Target:  &previous,
+			},
+			&cli.BoolFlag{
+				Name:    "timestamps",
+				Default: false,
+				Target:  &timestamps,
+			},
+			&cli.StringFlag{
+				Name:     "since-time",
+				Required: false,
+				Target:   &sinceTime,
+			},
+			&cli.StringFlag{
+				Name:     "since",
+				Required: false,
+				Target:   &since,
+			},
+			&cli.IntFlag{
+				Name:     "tail",
+				Required: false,
+				Short:    "t",
+				Target:   &tail,
+			},
 		},
 		Run: func(ctx latticectl.BuildCommandContext, args []string) {
 
@@ -49,8 +80,20 @@ func (c *LogsCommand) Base() (*latticectl.BaseCommand, error) {
 				log.Fatal("invalid node path: " + pathStr)
 			}
 
+			logOptions := v1.NewContainerLogOptions()
+			logOptions.Follow = follow
+			logOptions.Previous = previous
+			logOptions.Timestamps = timestamps
+			logOptions.SinceTime = sinceTime
+			logOptions.Since = since
+
+			if tail != 0 {
+				tl := int64(tail)
+				logOptions.Tail = &tl
+			}
+
 			c := ctx.Client().Systems().Builds(ctx.SystemID())
-			err = GetBuildLogs(c, ctx.BuildID(), path, component, follow, os.Stdout)
+			err = GetBuildLogs(c, ctx.BuildID(), path, component, logOptions, os.Stdout)
 
 			if err != nil {
 				log.Fatal(err)
@@ -62,8 +105,8 @@ func (c *LogsCommand) Base() (*latticectl.BaseCommand, error) {
 }
 
 func GetBuildLogs(client v1client.BuildClient, buildID v1.BuildID, path tree.NodePath,
-	component string, follow bool, w io.Writer) error {
-	logs, err := client.Logs(buildID, path, component, follow)
+	component string, logOptions *v1.ContainerLogOptions, w io.Writer) error {
+	logs, err := client.Logs(buildID, path, component, logOptions)
 	if err != nil {
 		return err
 	}

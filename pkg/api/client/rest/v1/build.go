@@ -87,15 +87,16 @@ func (c *BuildClient) Get(id v1.BuildID) (*v1.Build, error) {
 	return nil, HandleErrorStatusCode(statusCode, body)
 }
 
-func (c *BuildClient) Logs(id v1.BuildID, path tree.NodePath, component string, follow bool) (io.ReadCloser, error) {
+func (c *BuildClient) Logs(id v1.BuildID, path tree.NodePath, component string,
+	logOptions *v1.ContainerLogOptions) (io.ReadCloser, error) {
 	escapedPath := urlutil.PathEscape(path.String())
 	url := fmt.Sprintf(
-		"%v%v?path=%v&component=%v&follow=%v",
+		"%v%v?path=%v&component=%v&%v",
 		c.apiServerURL,
 		fmt.Sprintf(v1rest.BuildLogsPathFormat, c.systemID, id),
 		escapedPath,
 		component,
-		follow,
+		logOptionsToQueryString(logOptions),
 	)
 	body, statusCode, err := c.restClient.Get(url).Body()
 	if err != nil {
