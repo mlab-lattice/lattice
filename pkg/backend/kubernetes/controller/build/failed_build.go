@@ -17,7 +17,9 @@ type failedServiceInfo struct {
 
 func (c *Controller) syncFailedBuild(build *latticev1.Build, stateInfo stateInfo) error {
 	failedServicesInfo := make(map[tree.NodePath]failedServiceInfo)
+	failedJobsInfo := make(map[tree.NodePath]failedServiceInfo)
 	var failedServices []tree.NodePath
+	var failedJobs []tree.NodePath
 
 	for buildName := range stateInfo.failedContainerBuilds {
 		buildFailedServices, ok := stateInfo.containerBuildServices[buildName]
@@ -45,6 +47,37 @@ func (c *Controller) syncFailedBuild(build *latticev1.Build, stateInfo stateInfo
 					info.FailedSidecars = append(info.FailedSidecars, sidecar)
 				}
 			}
+
+			failedServicesInfo[servicePath] = info
+		}
+
+		buildFailedJobs, ok := stateInfo.containerBuildJobs[buildName]
+		if !ok {
+			continue
+		}
+
+		failedJobs = append(failedJobs, buildFailedJobs...)
+
+		for _, jobPath := range buildFailedJobs {
+			jobInfo, ok := build.Status.Jobs[jobPath]
+			if !ok {
+				// this really really shouldn't happen...
+				failedJobsInfo[jobPath] = failedServiceInfo{}
+				continue
+			}
+
+			info := failedServiceInfo{}
+			if jobInfo.MainContainer == buildName {
+				info.MainContainerFailed = true
+			}
+
+			for sidecar, sidecarBuild := range jobInfo.Sidecars {
+				if sidecarBuild == buildName {
+					info.FailedSidecars = append(info.FailedSidecars, sidecar)
+				}
+			}
+
+			failedJobsInfo[jobPath] = info
 		}
 	}
 
@@ -61,6 +94,37 @@ func (c *Controller) syncFailedBuild(build *latticev1.Build, stateInfo stateInfo
 
 		info := failedServicesInfo[service]
 		serviceMessage := fmt.Sprintf("%v (", service.String())
+		previousFailure := false
+
+		if info.MainContainerFailed {
+			serviceMessage += "main container"
+			previousFailure = true
+		}
+
+		for _, sidecar := range info.FailedSidecars {
+			if previousFailure {
+				serviceMessage += ", "
+			}
+
+			serviceMessage += fmt.Sprintf("%v sidecar", sidecar)
+		}
+
+		message = message + " " + serviceMessage
+	}
+
+	// Sort the job paths so the message is the same for the same failed container builds
+	sort.Slice(failedJobs, func(i, j int) bool {
+		return string(failedJobs[i]) < string(failedJobs[j])
+	})
+
+	message += "\nthe following jobs failed to build:"
+	for i, job := range failedJobs {
+		if i != 0 {
+			message = message + ","
+		}
+
+		info := failedJobsInfo[job]
+		serviceMessage := fmt.Sprintf("%v (", job.String())
 		previousFailure := false
 
 		if info.MainContainerFailed {
@@ -100,6 +164,7 @@ func (c *Controller) syncFailedBuild(build *latticev1.Build, stateInfo stateInfo
 		startTimestamp,
 		completionTimestamp,
 		build.Status.Services,
+		build.Status.Jobs,
 		stateInfo.containerBuildStatuses,
 	)
 	return err

@@ -86,6 +86,7 @@ func (c *Controller) syncMissingContainerBuildsBuild(build *latticev1.Build, sta
 		startTimestamp,
 		nil,
 		services,
+		jobs,
 		containerBuildStatuses,
 	)
 	return err

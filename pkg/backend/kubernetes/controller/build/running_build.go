@@ -17,7 +17,9 @@ type runningServiceInfo struct {
 
 func (c *Controller) syncRunningBuild(build *latticev1.Build, stateInfo stateInfo) error {
 	runningServicesInfo := make(map[tree.NodePath]runningServiceInfo)
+	runningJobsInfo := make(map[tree.NodePath]runningServiceInfo)
 	var activeServices []tree.NodePath
+	var activeJobs []tree.NodePath
 
 	for buildName := range stateInfo.activeContainerBuilds {
 		buildActiveServices, ok := stateInfo.containerBuildServices[buildName]
@@ -45,6 +47,37 @@ func (c *Controller) syncRunningBuild(build *latticev1.Build, stateInfo stateInf
 					info.FailedSidecars = append(info.FailedSidecars, sidecar)
 				}
 			}
+
+			runningServicesInfo[servicePath] = info
+		}
+
+		buildActiveJobs, ok := stateInfo.containerBuildJobs[buildName]
+		if !ok {
+			continue
+		}
+
+		activeJobs = append(activeJobs, buildActiveJobs...)
+
+		for _, jobPath := range buildActiveJobs {
+			jobInfo, ok := build.Status.Jobs[jobPath]
+			if !ok {
+				// this really really shouldn't happen...
+				runningJobsInfo[jobPath] = runningServiceInfo{}
+				continue
+			}
+
+			info := runningServiceInfo{}
+			if jobInfo.MainContainer == buildName {
+				info.MainContainerFailed = true
+			}
+
+			for sidecar, sidecarBuild := range jobInfo.Sidecars {
+				if sidecarBuild == buildName {
+					info.FailedSidecars = append(info.FailedSidecars, sidecar)
+				}
+			}
+
+			runningJobsInfo[jobPath] = info
 		}
 	}
 
@@ -79,6 +112,37 @@ func (c *Controller) syncRunningBuild(build *latticev1.Build, stateInfo stateInf
 		message = message + " " + serviceMessage
 	}
 
+	// Sort the job paths so the message is the same for the same failed container builds
+	sort.Slice(activeJobs, func(i, j int) bool {
+		return string(activeJobs[i]) < string(activeJobs[j])
+	})
+
+	message += "\nthe following jobs are still building:"
+	for i, job := range activeJobs {
+		if i != 0 {
+			message = message + ","
+		}
+
+		info := runningJobsInfo[job]
+		serviceMessage := fmt.Sprintf("%v (", job.String())
+		previousFailure := false
+
+		if info.MainContainerFailed {
+			serviceMessage += "main container"
+			previousFailure = true
+		}
+
+		for _, sidecar := range info.FailedSidecars {
+			if previousFailure {
+				serviceMessage += ", "
+			}
+
+			serviceMessage += fmt.Sprintf("%v sidecar", sidecar)
+		}
+
+		message = message + " " + serviceMessage
+	}
+
 	// If we haven't logged a start timestamp yet, use now.
 	// This should only happen if we created all of the service builds
 	// but then failed to update the status.
@@ -95,6 +159,7 @@ func (c *Controller) syncRunningBuild(build *latticev1.Build, stateInfo stateInf
 		startTimestamp,
 		nil,
 		build.Status.Services,
+		build.Status.Jobs,
 		stateInfo.containerBuildStatuses,
 	)
 	return err

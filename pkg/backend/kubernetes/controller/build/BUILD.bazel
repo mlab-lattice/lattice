@@ -5,12 +5,12 @@ go_library(
     srcs = [
         "build.go",
         "build_controller.go",
+        "container_build.go",
         "deleted_build.go",
         "failed_build.go",
         "informer_event_handlers.go",
         "missing_container_builds_build.go",
         "running_build.go",
-        "service_build.go",
         "state.go",
         "succeeded_build.go",
     ],

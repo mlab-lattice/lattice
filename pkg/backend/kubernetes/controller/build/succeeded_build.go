@@ -26,6 +26,7 @@ func (c *Controller) syncSucceededBuild(build *latticev1.Build, stateInfo stateI
 		startTimestamp,
 		completionTimestamp,
 		build.Status.Services,
+		build.Status.Jobs,
 		stateInfo.containerBuildStatuses,
 	)
 	return err
