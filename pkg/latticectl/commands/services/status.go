@@ -11,7 +11,6 @@ import (
 
 	v1client "github.com/mlab-lattice/lattice/pkg/api/client/v1"
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
-	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 	"github.com/mlab-lattice/lattice/pkg/latticectl"
 	"github.com/mlab-lattice/lattice/pkg/util/cli"
 	"github.com/mlab-lattice/lattice/pkg/util/cli/color"
@@ -50,10 +49,10 @@ func (c *StatusCommand) Base() (*latticectl.BaseCommand, error) {
 			c := ctx.Client().Systems().Services(ctx.SystemID())
 
 			if watch {
-				WatchService(c, ctx.ServicePath(), format, os.Stdout)
+				WatchService(c, ctx.ServiceID(), format, os.Stdout)
 			}
 
-			err = GetService(c, ctx.ServicePath(), format, os.Stdout)
+			err = GetService(c, ctx.ServiceID(), format, os.Stdout)
 			if err != nil {
 				log.Fatal(err)
 			}
@@ -63,8 +62,8 @@ func (c *StatusCommand) Base() (*latticectl.BaseCommand, error) {
 	return cmd.Base()
 }
 
-func GetService(client v1client.ServiceClient, servicePath tree.NodePath, format printer.Format, writer io.Writer) error {
-	service, err := client.Get(servicePath)
+func GetService(client v1client.ServiceClient, serviceID v1.ServiceID, format printer.Format, writer io.Writer) error {
+	service, err := client.Get(serviceID)
 	if err != nil {
 		return err
 	}
@@ -74,7 +73,7 @@ func GetService(client v1client.ServiceClient, servicePath tree.NodePath, format
 	return nil
 }
 
-func WatchService(client v1client.ServiceClient, servicePath tree.NodePath, format printer.Format, writer io.Writer) {
+func WatchService(client v1client.ServiceClient, serviceID v1.ServiceID, format printer.Format, writer io.Writer) {
 	services := make(chan *v1.Service)
 
 	lastHeight := 0
@@ -84,7 +83,7 @@ func WatchService(client v1client.ServiceClient, servicePath tree.NodePath, form
 	go wait.PollImmediateInfinite(
 		5*time.Second,
 		func() (bool, error) {
-			service, err := client.Get(servicePath)
+			service, err := client.Get(serviceID)
 			if err != nil {
 				return false, err
 			}
@@ -133,9 +132,11 @@ func servicePrinter(service *v1.Service, format printer.Format) printer.Interfac
 	var p printer.Interface
 	switch format {
 	case printer.FormatTable:
-		headers := []string{"Service", "State", "Available", "Updated", "Stale", "Terminating", "Addresses", "Info"}
+		headers := []string{"Service", "State", "Available", "Updated", "Stale", "Terminating", "Addresses", "Info",
+			"Instances"}
 
 		headerColors := []tw.Colors{
+			{tw.Bold},
 			{tw.Bold},
 			{tw.Bold},
 			{tw.Bold},
@@ -155,6 +156,7 @@ func servicePrinter(service *v1.Service, format printer.Format) printer.Interfac
 			{},
 			{},
 			{},
+			{},
 		}
 
 		columnAlignment := []int{
@@ -164,6 +166,7 @@ func servicePrinter(service *v1.Service, format printer.Format) printer.Interfac
 			tw.ALIGN_RIGHT,
 			tw.ALIGN_RIGHT,
 			tw.ALIGN_RIGHT,
+			tw.ALIGN_LEFT,
 			tw.ALIGN_LEFT,
 			tw.ALIGN_LEFT,
 		}
@@ -202,6 +205,7 @@ func servicePrinter(service *v1.Service, format printer.Format) printer.Interfac
 			fmt.Sprintf("%d", service.TerminatingInstances),
 			strings.Join(addresses, ","),
 			string(info),
+			fmt.Sprintf("%v", service.Instances),
 		})
 
 		p = &printer.Table{

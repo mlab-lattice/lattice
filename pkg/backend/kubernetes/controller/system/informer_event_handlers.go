@@ -68,7 +68,13 @@ func (c *Controller) newCloudProvider() error {
 		return err
 	}
 
-	cloudProvider, err := cloudprovider.NewCloudProvider(c.namespacePrefix, nil, nil, nil, options)
+	cloudProvider, err := cloudprovider.NewCloudProvider(
+		c.namespacePrefix,
+		c.kubeClient,
+		c.kubeInformerFactory,
+		c.latticeInformerFactory,
+		options,
+	)
 	if err != nil {
 		return err
 	}
@@ -189,6 +195,59 @@ func (c *Controller) handleServiceEvent(service *latticev1.Service, verb string)
 
 	// It's an orphan. This shouldn't happen.
 	// FIXME: send error event
+}
+
+func (c *Controller) handleNodePoolAdd(obj interface{}) {
+	nodePool := obj.(*latticev1.NodePool)
+
+	if nodePool.DeletionTimestamp != nil {
+		c.handleNodePoolDelete(nodePool)
+		return
+	}
+
+	c.handleNodePoolEvent(nodePool, "added")
+}
+
+func (c *Controller) handleNodePoolUpdate(old, cur interface{}) {
+	nodePool := cur.(*latticev1.NodePool)
+	c.handleNodePoolEvent(nodePool, "updated")
+}
+
+func (c *Controller) handleNodePoolDelete(obj interface{}) {
+	nodePool, ok := obj.(*latticev1.NodePool)
+	if !ok {
+		tombstone, ok := obj.(cache.DeletedFinalStateUnknown)
+		if !ok {
+			runtime.HandleError(fmt.Errorf("couldn't get object from tombstone %#v", obj))
+			return
+		}
+		nodePool, ok = tombstone.Obj.(*latticev1.NodePool)
+		if !ok {
+			runtime.HandleError(fmt.Errorf("tombstone contained object that is not a node pool %#v", obj))
+			return
+		}
+	}
+
+	c.handleNodePoolEvent(nodePool, "deleted")
+}
+
+func (c *Controller) handleNodePoolEvent(nodePool *latticev1.NodePool, verb string) {
+	glog.V(4).Infof("%v %v", nodePool.Description(c.namespacePrefix), verb)
+
+	// If it has a ControllerRef, that's all that matters.
+	if controllerRef := metav1.GetControllerOf(nodePool); controllerRef != nil {
+		system := c.resolveControllerRef(nodePool.Namespace, controllerRef)
+
+		// not a system
+		if system == nil {
+			return
+		}
+
+		c.enqueue(system)
+		return
+	}
+
+	// it's an orphan, this shouldn't happen
 }
 
 // handleNamespaceAdd enqueues the System that manages a Service when the Service is created.

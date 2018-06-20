@@ -6,6 +6,8 @@ go_library(
         "build.go",
         "deploy.go",
         "kubernetes_backend.go",
+        "logs.go",
+        "node_pool.go",
         "service.go",
         "system.go",
         "system_secret.go",

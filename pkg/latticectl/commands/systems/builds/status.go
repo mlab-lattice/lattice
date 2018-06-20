@@ -155,9 +155,15 @@ func PrintBuildStateDuringWatchBuild(writer io.Writer, s *spinner.Spinner, build
 		for serviceName, service := range build.Services {
 			for componentName, component := range service.Components {
 				if component.State == v1.ComponentBuildStateFailed {
+					componentErrorMessage := ""
+
+					if component.FailureMessage != nil {
+						componentErrorMessage = *component.FailureMessage
+					}
+
 					componentErrors = append(componentErrors, []string{
 						fmt.Sprintf("%s:%s", serviceName, componentName),
-						string(*component.FailureMessage),
+						componentErrorMessage,
 					})
 				}
 			}

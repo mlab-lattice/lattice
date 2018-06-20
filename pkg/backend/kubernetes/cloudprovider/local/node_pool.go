@@ -27,7 +27,7 @@ func (cp *DefaultLocalCloudProvider) NodePoolCurrentEpochState(
 		return latticev1.NodePoolStatePending, fmt.Errorf("could not get epoch status for %v epoch %v", nodePool.Description(cp.namespacePrefix), current)
 	}
 
-	return epochInfo.State, nil
+	return epochInfo.Status.State, nil
 }
 
 func (cp *DefaultLocalCloudProvider) NodePoolAddAnnotations(
@@ -53,4 +53,18 @@ func (cp *DefaultLocalCloudProvider) DestroyNodePoolEpoch(
 	epoch latticev1.NodePoolEpoch,
 ) error {
 	return nil
+}
+
+func (cp *DefaultLocalCloudProvider) NodePoolEpochStatus(
+	latticeID v1.LatticeID,
+	nodePool *latticev1.NodePool,
+	epoch latticev1.NodePoolEpoch,
+	epochSpec *latticev1.NodePoolSpec,
+) (*latticev1.NodePoolStatusEpochStatus, error) {
+	status := &latticev1.NodePoolStatusEpochStatus{
+		NumInstances: epochSpec.NumInstances,
+		InstanceType: epochSpec.InstanceType,
+		State:        latticev1.NodePoolStateStable,
+	}
+	return status, nil
 }

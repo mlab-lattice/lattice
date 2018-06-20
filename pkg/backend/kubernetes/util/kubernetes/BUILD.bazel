@@ -10,6 +10,7 @@ go_library(
         "kube_service.go",
         "kubeconfig.go",
         "namespace.go",
+        "node.go",
         "owner_reference.go",
     ],
     importpath = "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/kubernetes",

@@ -3,6 +3,7 @@ package latticectl
 import (
 	"log"
 
+	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 	"github.com/mlab-lattice/lattice/pkg/util/cli"
 )
@@ -18,25 +19,26 @@ type ServiceCommand struct {
 
 type ServiceCommandContext interface {
 	SystemCommandContext
-	ServicePath() tree.NodePath
+	ServiceID() v1.ServiceID
 }
 
 type serviceCommandContext struct {
 	SystemCommandContext
-	servicePath tree.NodePath
+	serviceID v1.ServiceID
 }
 
-func (c *serviceCommandContext) ServicePath() tree.NodePath {
-	return c.servicePath
+func (c *serviceCommandContext) ServiceID() v1.ServiceID {
+	return c.serviceID
 }
 
 func (c *ServiceCommand) Base() (*BaseCommand, error) {
-	var servicePathStr string
+	var serviceStr string
 	serviceIDFlag := &cli.StringFlag{
 		Name:     "service",
 		Required: true,
-		Target:   &servicePathStr,
+		Target:   &serviceStr,
 	}
+
 	flags := append(c.Flags, serviceIDFlag)
 
 	cmd := &SystemCommand{
@@ -45,14 +47,27 @@ func (c *ServiceCommand) Base() (*BaseCommand, error) {
 		Args:  c.Args,
 		Flags: flags,
 		Run: func(sctx SystemCommandContext, args []string) {
-			servicePath, err := tree.NewNodePath(servicePathStr)
-			if err != nil {
-				log.Fatal("invalid service path: " + servicePathStr)
+			var serviceID v1.ServiceID
+			// resolve service id
+
+			nodePath, err := tree.NewNodePath(serviceStr)
+			if err == nil {
+				c := sctx.Client().Systems().Services(sctx.SystemID())
+				service, err := c.GetByServicePath(nodePath)
+
+				if err != nil {
+					log.Fatalf("error looking up service by path: %v", err)
+				}
+
+				serviceID = service.ID
+			} else {
+				//TODO validate that serviceStr is a valid service id
+				serviceID = v1.ServiceID(serviceStr)
 			}
 
 			ctx := &serviceCommandContext{
 				SystemCommandContext: sctx,
-				servicePath:          servicePath,
+				serviceID:            serviceID,
 			}
 			c.Run(ctx, args)
 		},

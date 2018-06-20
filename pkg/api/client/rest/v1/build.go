@@ -5,9 +5,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	urlutil "net/url"
+
+	"io"
 
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	v1rest "github.com/mlab-lattice/lattice/pkg/api/v1/rest"
+	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 	"github.com/mlab-lattice/lattice/pkg/util/rest"
 )
 
@@ -78,6 +82,29 @@ func (c *BuildClient) Get(id v1.BuildID) (*v1.Build, error) {
 		build := &v1.Build{}
 		err = rest.UnmarshalBodyJSON(body, &build)
 		return build, err
+	}
+
+	return nil, HandleErrorStatusCode(statusCode, body)
+}
+
+func (c *BuildClient) Logs(id v1.BuildID, path tree.NodePath, component string,
+	logOptions *v1.ContainerLogOptions) (io.ReadCloser, error) {
+	escapedPath := urlutil.PathEscape(path.String())
+	url := fmt.Sprintf(
+		"%v%v?path=%v&component=%v&%v",
+		c.apiServerURL,
+		fmt.Sprintf(v1rest.BuildLogsPathFormat, c.systemID, id),
+		escapedPath,
+		component,
+		logOptionsToQueryString(logOptions),
+	)
+	body, statusCode, err := c.restClient.Get(url).Body()
+	if err != nil {
+		return nil, err
+	}
+
+	if statusCode == http.StatusOK {
+		return body, nil
 	}
 
 	return nil, HandleErrorStatusCode(statusCode, body)

@@ -5,6 +5,9 @@ import (
 
 	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/cloudprovider"
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
+	kubeutil "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/kubernetes"
+
+	corev1 "k8s.io/api/core/v1"
 
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/runtime"
@@ -57,7 +60,13 @@ func (c *Controller) newCloudProvider() error {
 		return err
 	}
 
-	cloudProvider, err := cloudprovider.NewCloudProvider(c.namespacePrefix, nil, nil, nil, options)
+	cloudProvider, err := cloudprovider.NewCloudProvider(
+		c.namespacePrefix,
+		c.kubeClient,
+		c.kubeInformerFactory,
+		c.latticeInformerFactory,
+		options,
+	)
 	if err != nil {
 		return err
 	}
@@ -165,4 +174,70 @@ func (c *Controller) handleServiceEvent(service *latticev1.Service, verb string)
 	for _, nodePool := range nodePools {
 		c.enqueue(nodePool)
 	}
+}
+
+func (c *Controller) handleKubeNodeAdd(obj interface{}) {
+	node := obj.(*corev1.Node)
+
+	if node.DeletionTimestamp != nil {
+		// On a restart of the controller manager, it's possible for an object to
+		// show up in a state that is already pending deletion.
+		c.handleKubeNodeDelete(node)
+		return
+	}
+
+	c.handleKubeNodeEvent(node, "added")
+}
+
+func (c *Controller) handleKubeNodeUpdate(old, cur interface{}) {
+	node := cur.(*corev1.Node)
+	c.handleKubeNodeEvent(node, "updated")
+}
+
+func (c *Controller) handleKubeNodeDelete(obj interface{}) {
+	node, ok := obj.(*corev1.Node)
+
+	// When a delete is dropped, the relist will notice a pod in the store not
+	// in the list, leading to the insertion of a tombstone object which contains
+	// the deleted key/value.
+	if !ok {
+		tombstone, ok := obj.(cache.DeletedFinalStateUnknown)
+		if !ok {
+			runtime.HandleError(fmt.Errorf("couldn't get object from tombstone %#v", obj))
+			return
+		}
+		node, ok = tombstone.Obj.(*corev1.Node)
+		if !ok {
+			runtime.HandleError(fmt.Errorf("tombstone contained object that is not a node %#v", obj))
+			return
+		}
+	}
+
+	c.handleKubeNodeEvent(node, "deleted")
+}
+
+func (c *Controller) handleKubeNodeEvent(node *corev1.Node, verb string) {
+	glog.V(4).Infof("%v %v", node.Name, verb)
+
+	idLabel, ok := node.Labels[latticev1.NodePoolIDLabelKey]
+	if !ok {
+		return
+	}
+
+	systemID, nodePoolID, _, err := latticev1.NodePoolIDLabelInfo(c.namespacePrefix, idLabel)
+	if err != nil {
+		// FIXME: send warn event
+		glog.Warningf("error getting node pool id label info for node %v: %v", node.Name, err)
+		return
+	}
+
+	namespace := kubeutil.SystemNamespace(c.namespacePrefix, systemID)
+	nodePool, err := c.nodePoolLister.NodePools(namespace).Get(nodePoolID)
+	if err != nil {
+		// FIXME: send warning
+		glog.Warningf("error getting node pool %v in namespace %v (node: %v, label: %v): %v", nodePoolID, namespace, node.Name, idLabel, err)
+		return
+	}
+
+	c.enqueue(nodePool)
 }

@@ -16,7 +16,7 @@ const (
 
 type ECRRegistryAuthProvider struct{}
 
-func (erap *ECRRegistryAuthProvider) GetLoginCredentials(registryURI string) (string, string, error) {
+func (p *ECRRegistryAuthProvider) GetLoginCredentials(registryURI string) (string, string, error) {
 	registry, err := parseECRRegistryURI(registryURI)
 	if err != nil {
 		return "", "", err

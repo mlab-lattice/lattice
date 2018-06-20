@@ -57,12 +57,17 @@ func (c *Controller) syncAcceptedDeploy(deploy *latticev1.Deploy) error {
 			return err
 		}
 
-		services, err := c.systemServices(deploy, build)
+		services, err := c.systemServices(build)
 		if err != nil {
 			return fmt.Errorf("error getting services for %v: %v", build.Description(c.namespacePrefix), err)
 		}
 
-		_, err = c.updateSystem(system, services)
+		nodePools, err := c.systemNodePools(build)
+		if err != nil {
+			return fmt.Errorf("error getting node pools for %v: %v", build.Description(c.namespacePrefix), err)
+		}
+
+		_, err = c.updateSystem(system, services, nodePools)
 		if err != nil {
 			return err
 		}

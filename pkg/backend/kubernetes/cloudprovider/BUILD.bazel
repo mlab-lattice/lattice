@@ -14,7 +14,7 @@ go_library(
         "//pkg/backend/kubernetes/cloudprovider/aws:go_default_library",
         "//pkg/backend/kubernetes/cloudprovider/local:go_default_library",
         "//pkg/backend/kubernetes/customresource/apis/lattice/v1:go_default_library",
-        "//pkg/backend/kubernetes/customresource/generated/listers/lattice/v1:go_default_library",
+        "//pkg/backend/kubernetes/customresource/generated/informers/externalversions:go_default_library",
         "//pkg/backend/kubernetes/dnsprovider:go_default_library",
         "//pkg/backend/kubernetes/lifecycle/lattice/bootstrap/bootstrapper:go_default_library",
         "//pkg/backend/kubernetes/lifecycle/system/bootstrap/bootstrapper:go_default_library",
@@ -22,7 +22,7 @@ go_library(
         "@io_k8s_api//apps/v1:go_default_library",
         "@io_k8s_api//batch/v1:go_default_library",
         "@io_k8s_api//core/v1:go_default_library",
+        "@io_k8s_client_go//informers:go_default_library",
         "@io_k8s_client_go//kubernetes:go_default_library",
-        "@io_k8s_client_go//listers/core/v1:go_default_library",
     ],
 )

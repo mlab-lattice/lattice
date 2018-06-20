@@ -23,9 +23,25 @@ func (cp *DefaultLocalCloudProvider) ServiceAddressLoadBalancerNeedsUpdate(
 	service *latticev1.Service,
 	serviceMeshPorts map[int32]int32,
 ) (bool, error) {
+	loadBalancerNeeded := serviceNeedsAddressLoadBalancer(service)
+
 	kubeService, err := cp.getKubeService(address)
 	if err != nil {
 		return false, err
+	}
+
+	if kubeService == nil && loadBalancerNeeded {
+		return true, nil
+	}
+
+	if !loadBalancerNeeded {
+		if kubeService != nil {
+			return true, nil
+		}
+
+		// XXX: something else need to happen here?
+
+		return false, nil
 	}
 
 	spec, err := cp.kubeServiceSpec(address, service, serviceMeshPorts)
@@ -182,8 +198,9 @@ func (cp *DefaultLocalCloudProvider) kubeServiceSpec(
 
 				ports = append(ports, corev1.ServicePort{
 					// FIXME: need a better naming scheme
-					Name: fmt.Sprintf("%v-%v", component, componentPort.Name),
-					Port: targetPort,
+					Name:     fmt.Sprintf("%v-%v", component, componentPort.Name),
+					Protocol: corev1.ProtocolTCP,
+					Port:     targetPort,
 				})
 			}
 		}
@@ -232,8 +249,32 @@ func serviceAddressKubeServiceSpecNeedsUpdate(desired, current corev1.ServiceSpe
 		return true
 	}
 
-	if !reflect.DeepEqual(desired.Ports, current.Ports) {
+	if serviceAddressKubeServiceSpecPortsNeedUpdate(desired.Ports, current.Ports) {
 		return true
+	}
+
+	return false
+}
+
+func serviceAddressKubeServiceSpecPortsNeedUpdate(desired, current []corev1.ServicePort) bool {
+	currentPorts := make(map[int32]corev1.ServicePort)
+	for _, p := range current {
+		currentPorts[p.Port] = p
+	}
+
+	for _, p := range desired {
+		current, ok := currentPorts[p.Port]
+		if !ok {
+			return true
+		}
+
+		if p.Protocol != current.Protocol {
+			return true
+		}
+
+		if p.Name != current.Name {
+			return true
+		}
 	}
 
 	return false
@@ -285,4 +326,16 @@ func serviceAddressKubeServiceStrategicMergePatchBytes(desired, current corev1.S
 
 func serviceAddressKubeServiceLoadBalancerName(address *latticev1.Address) string {
 	return fmt.Sprintf("load-balancer-address-%v", address.Name)
+}
+
+func serviceNeedsAddressLoadBalancer(service *latticev1.Service) bool {
+	for _, componentPorts := range service.Spec.Ports {
+		for _, componentPort := range componentPorts {
+			if componentPort.Public {
+				return true
+			}
+		}
+	}
+
+	return false
 }
