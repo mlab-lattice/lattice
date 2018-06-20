@@ -258,7 +258,7 @@ func (sm *DefaultEnvoyServiceMesh) ServicePort(service *latticev1.Service, port 
 	servicePort, ok := servicePorts[port]
 	if !ok {
 		err := fmt.Errorf(
-			"Service %v/%v does not have expected port %v",
+			"service %v/%v does not have expected port %v",
 			service.Namespace,
 			service.Name,
 			port,
@@ -451,7 +451,7 @@ func (sm *DefaultEnvoyServiceMesh) envoyContainers(service *latticev1.Service) (
 	adminPort, ok := service.Annotations[annotationKeyAdminPort]
 	if !ok {
 		err := fmt.Errorf(
-			"Service %v/%v does not have expected annotation %v",
+			"service %v/%v does not have expected annotation %v",
 			service.Namespace,
 			service.Name,
 			annotationKeyAdminPort,
@@ -540,7 +540,7 @@ func (sm *DefaultEnvoyServiceMesh) envoyContainers(service *latticev1.Service) (
 			envoyPort, ok := serviceMeshPorts[port.Port]
 			if !ok {
 				err := fmt.Errorf(
-					"Service %v/%v does not have expected port %v",
+					"service %v/%v does not have expected port %v",
 					service.Namespace,
 					service.Name,
 					port,
@@ -594,7 +594,7 @@ func (sm *DefaultEnvoyServiceMesh) EgressPort(service *latticev1.Service) (int32
 	egressPortStr, ok := service.Annotations[annotationKeyEgressPort]
 	if !ok {
 		err := fmt.Errorf(
-			"Service %v/%v does not have expected annotation %v",
+			"service %v/%v does not have expected annotation %v",
 			service.Namespace,
 			service.Name,
 			annotationKeyEgressPort,

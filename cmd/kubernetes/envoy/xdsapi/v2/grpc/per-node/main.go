@@ -10,7 +10,6 @@ import (
 
 var (
 	kubeconfig string
-	namespace  string
 )
 
 func init() {

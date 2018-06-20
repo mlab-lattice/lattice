@@ -38,10 +38,10 @@ func NewHttpRouterFilter() *envoyhttpcxnmgr.HttpFilter {
 	filterConfig := envoyhttprouter.Router{}
 	filterConfigPBStruct, err := envoyutil.MessageToStruct(&filterConfig)
 	if err != nil {
-		panic(fmt.Sprintf("Error serializing http router filter: %v", err))
+		panic(fmt.Sprintf("error serializing http router filter: %v", err))
 	}
 	return &envoyhttpcxnmgr.HttpFilter{
-		Name:   xdsconstants.HttpRouterFilterName,
+		Name:   xdsconstants.HTTPRouterFilterName,
 		Config: filterConfigPBStruct,
 	}
 }
@@ -69,10 +69,10 @@ func NewRdsHttpConnectionManagerFilter(
 	}
 	filterConfigPBStruct, err := envoyutil.MessageToStruct(&filterConfig)
 	if err != nil {
-		panic(fmt.Sprintf("Error serializing http connection manager filter: %v", err))
+		panic(fmt.Sprintf("error serializing http connection manager filter: %v", err))
 	}
 	return &envoylistener.Filter{
-		Name:   xdsconstants.HttpConnectionManagerFilterName,
+		Name:   xdsconstants.HTTPConnectionManagerFilterName,
 		Config: filterConfigPBStruct,
 	}
 }
@@ -93,10 +93,10 @@ func NewStaticHttpConnectionManagerFilter(
 	}
 	filterConfigPBStruct, err := envoyutil.MessageToStruct(&filterConfig)
 	if err != nil {
-		panic(fmt.Sprintf("Error serializing http connection manager filter: %v", err))
+		panic(fmt.Sprintf("error serializing http connection manager filter: %v", err))
 	}
 	return &envoylistener.Filter{
-		Name:   xdsconstants.HttpConnectionManagerFilterName,
+		Name:   xdsconstants.HTTPConnectionManagerFilterName,
 		Config: filterConfigPBStruct,
 	}
 }

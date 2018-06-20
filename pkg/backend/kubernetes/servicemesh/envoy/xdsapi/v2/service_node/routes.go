@@ -1,4 +1,4 @@
-package service_node
+package servicenode
 
 import (
 	"fmt"
@@ -17,6 +17,8 @@ import (
 
 func (s *ServiceNode) getRoutes(
 	systemServices map[tree.NodePath]*xdsapi.Service) (routes []envoycache.Resource, err error) {
+	// NOTE: https://github.com/golang/go/wiki/PanicAndRecover#usage-in-a-package
+	//       support nested builder funcs
 	defer func() {
 		if _panic := recover(); _panic != nil {
 			err = lerror.Errorf("%v", _panic)

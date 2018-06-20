@@ -358,7 +358,7 @@ func outputEnvoyConfig(env map[string]string) error {
 			},
 		}, "", "  ")
 	default:
-		err = fmt.Errorf("Unknown envoy boostrap config version: %v", env[envVarXDSAPIVersion])
+		err = fmt.Errorf("unknown envoy boostrap config version: %v", env[envVarXDSAPIVersion])
 	}
 	if err != nil {
 		return err

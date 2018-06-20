@@ -1,6 +1,85 @@
 load("@io_bazel_rules_go//go:def.bzl", "go_repository")
 
 GO_DEPENDENCIES = {
+    "overlaps": {
+        # github.com/envoyproxy/go-control-plane:v0.2 -> 342cbe0a04158f6dcb03ca0079991a51a4248c02
+        # k8s.io:v1.9.3 -> c0656edd0d9eab7c66d1eb0c568f9039345796f7
+        "github.com/gogo/protobuf": {
+            "name": "com_github_gogo_protobuf",
+            "commit": "342cbe0a04158f6dcb03ca0079991a51a4248c02",
+            "importpath": "github.com/gogo/protobuf",
+            "build_file_proto_mode": "disable",
+        },
+        # github.com/envoyproxy/go-control-plane:v0.2 -> ab9f9a6dab164b7d1246e0e688b0ab7b94d8553e
+        # k8s.io:v1.9.3 -> 1643683e1b54a9e88ad26d98f81400c8c9d9f4f9
+        "github.com/golang/protobuf": {
+            "name": "com_github_golang_protobuf",
+            "commit": "ab9f9a6dab164b7d1246e0e688b0ab7b94d8553e",
+            "importpath": "github.com/golang/protobuf",
+        },
+        # github.com/envoyproxy/go-control-plane:v0.2 -> c155da19408a8799da419ed3eeb0cb5db0ad5dbc
+        # github.com/docker/docker:1a57535aa277e0f2a3c1922c736551148c5b4351 -> v1.0.3
+        "github.com/sirupsen/logrus": {
+            "name": "com_github_sirupsen_logrus",
+            "commit": "c155da19408a8799da419ed3eeb0cb5db0ad5dbc",
+            "importpath": "github.com/sirupsen/logrus",
+        },
+        # github.com/mlab-lattice/lattice -> 81e90905daefcd6fd217b62423c0908922eadb30
+        # github.com/envoyproxy/go-control-plane:v0.2 -> 5119cf507ed5294cc409c092980c7497ee5d6fd2
+        "golang.org/x/crypto": {
+            "name": "org_golang_x_crypto",
+            "commit": "81e90905daefcd6fd217b62423c0908922eadb30",
+            "importpath": "golang.org/x/crypto",
+        },
+        # github.com/docker/docker:1a57535aa277e0f2a3c1922c736551148c5b4351 -> 5561cd9b4330353950f399814f427425c0a26fd2
+        # k8s.io:v1.9.3 -> ?
+        # github.com/envoyproxy/go-control-plane:v0.2 -> 5ccada7d0a7ba9aeb5d3aca8d3501b4c2a509fec
+        #
+        # golang.org/x/net is a bit of a tricky one.
+        # - docker's vendor.conf specifies commit 7dcfb8076726a3fdd9353b6b8a1f1b6be6811bd6 which is from May 24, 2017
+        # - k8s.io wants commit 1c05540f6879653db88113bc4a2b70aec4bd491f which is from August 3, 2017.
+        # - commit b3756b4b77d7b13260a0a2ec658753cf48922eac from July 15, 2017 type aliases golang.org/x/net/context
+        #   to the standard libary's context.Context. this makes the build fail with errors like:
+        #   github.com/mlab-lattice/system/pkg/componentbuilder.(*Builder).buildDockerImage: relocation target type.golang.org/x/net/context.Context not defined
+        # - there's a fix for a null pointer dereference that was biting us that is fixed in commit
+        #   3470a06c1357df533e251f14d3a181f67396fe35 which is from May 26, 2017.
+        # - so we took the parent commit of the commit that added the type alias, so we can get the null pointer
+        #   dereference fix, but not have the type alias
+        # TODO: need to figure out the type alias issue (or see if docker updates their dependency)
+        "golang.org/x/net": {
+            "name": "org_golang_x_net",
+            "commit": "5561cd9b4330353950f399814f427425c0a26fd2",
+            "importpath": "golang.org/x/net",
+        },
+        # github.com/envoyproxy/go-control-plane:v0.2 -> 37707fdb30a5b38865cfb95e5aab41707daec7fd
+        # k8s.io:v1.9.3 -> 95c6576299259db960f6c5b9b69ea52422860fce
+        "golang.org/x/sys": {
+            "name": "org_golang_x_sys",
+            "commit": "37707fdb30a5b38865cfb95e5aab41707daec7fd",
+            "importpath": "golang.org/x/sys",
+        },
+        # github.com/envoyproxy/go-control-plane:v0.2 -> e19ae1496984b1c655b8044a65c0300a3c878dd3
+        # k8s.io:v1.9.3 -> b19bf474d317b857955b12035d2c5acb57ce8b01
+        "golang.org/x/text": {
+            "name": "org_golang_x_text",
+            "commit": "e19ae1496984b1c655b8044a65c0300a3c878dd3",
+            "importpath": "golang.org/x/text",
+        },
+        # github.com/envoyproxy/go-control-plane:v0.2 -> a8101f21cf983e773d0c1133ebc5424792003214
+        # k8s.io:v1.9.3 -> 09f6ed296fc66555a25fe4ce95173148778dfa85
+        "google.golang.org/genproto": {
+            "name": "org_golang_google_genproto",
+            "commit": "a8101f21cf983e773d0c1133ebc5424792003214",
+            "importpath": "google.golang.org/genproto",
+        },
+        # github.com/envoyproxy/go-control-plane:v0.2 -> 1e2570b1b19ade82d8dbb31bba4e65e9f9ef5b34
+        # k8s.io:v1.9.3 -> 5b3c4e850e90a4cf6a20ebd46c8b32a0a3afcb9e
+        "google.golang.org/grpc": {
+            "name": "org_golang_google_grpc",
+            "commit": "1e2570b1b19ade82d8dbb31bba4e65e9f9ef5b34",
+            "importpath": "google.golang.org/grpc",
+        },
+    },
     "github.com/mlab-lattice/lattice": {
         "github.com/aws/aws-sdk-go": {
             "name": "com_github_aws_aws_sdk_go",
@@ -78,11 +157,6 @@ GO_DEPENDENCIES = {
             "name": "com_github_tidwall_gjson",
             "tag": "v1.0.6",
             "importpath": "github.com/tidwall/gjson",
-        },
-        "golang.org/x/crypto": {
-            "name": "org_golang_x_crypto",
-            "commit": "81e90905daefcd6fd217b62423c0908922eadb30",
-            "importpath": "golang.org/x/crypto",
         },
         "gopkg.in/src-d/go-git.v4": {
             "name": "in_gopkg_src_d_go_git_v4",
@@ -198,11 +272,6 @@ GO_DEPENDENCIES = {
             "commit": "839d9e913e063e28dfd0e6c7b7512793e0a48be9",
             "importpath": "github.com/pkg/errors",
         },
-        "github.com/Sirupsen/logrus": {
-            "name": "com_github_Sirupsen_logrus",
-            "tag": "v1.0.3",
-            "importpath": "github.com/Sirupsen/logrus",
-        },
         "github.com/opencontainers/go-digest": {
             "name": "com_github_opencontainers_go_digest",
             "tag": "v1.0.0-rc1",
@@ -224,23 +293,6 @@ GO_DEPENDENCIES = {
             "commit": "9cbd2a1374f46905c68a4eb3694a130610adc62a",
             "importpath": "github.com/docker/libtrust",
         },
-        # also required by k8s.io
-        # golang.org/x/net is a bit of a tricky one.
-        # - docker's vendor.conf specifies commit 7dcfb8076726a3fdd9353b6b8a1f1b6be6811bd6 which is from May 24, 2017
-        # - k8s.io wants commit 1c05540f6879653db88113bc4a2b70aec4bd491f which is from August 3, 2017.
-        # - commit b3756b4b77d7b13260a0a2ec658753cf48922eac from July 15, 2017 type aliases golang.org/x/net/context
-        #   to the standard libary's context.Context. this makes the build fail with errors like:
-        #   github.com/mlab-lattice/system/pkg/componentbuilder.(*Builder).buildDockerImage: relocation target type.golang.org/x/net/context.Context not defined
-        # - there's a fix for a null pointer dereference that was biting us that is fixed in commit
-        #   3470a06c1357df533e251f14d3a181f67396fe35 which is from May 26, 2017.
-        # - so we took the parent commit of the commit that added the type alias, so we can get the null pointer
-        #   dereference fix, but not have the type alias
-        # TODO: need to figure out the type alias issue (or see if docker updates their dependency)
-        "golang.org/x/net": {
-            "name": "org_golang_x_net",
-            "commit": "5561cd9b4330353950f399814f427425c0a26fd2",
-            "importpath": "golang.org/x/net",
-        },
     },
 
     # commits taken from: https://github.com/envoyproxy/go-control-plane/blob/v0.2/glide.lock
@@ -256,13 +308,6 @@ GO_DEPENDENCIES = {
             "importpath": "github.com/gogo/googleapis",
             "build_file_proto_mode": "disable",
         },
-        # NOTE: included in k8s.io deps
-        "github.com/gogo/protobuf": {
-            "name": "com_github_gogo_protobuf",
-            "commit": "342cbe0a04158f6dcb03ca0079991a51a4248c02",
-            "importpath": "github.com/gogo/protobuf",
-            "build_file_proto_mode": "disable",
-        },
         "github.com/golang/protobuf": {
             "name": "com_github_golang_protobuf",
             "commit": "ab9f9a6dab164b7d1246e0e688b0ab7b94d8553e",
@@ -273,42 +318,6 @@ GO_DEPENDENCIES = {
             "commit": "cae364899cd8c08b83bfdcabf4ce4dd4a68ca6da",
             "importpath": "github.com/lyft/protoc-gen-validate",
             "build_file_proto_mode": "disable",
-        },
-        "github.com/sirupsen/logrus": {
-            "name": "com_github_sirupsen_logrus",
-            "commit": "c155da19408a8799da419ed3eeb0cb5db0ad5dbc",
-            "importpath": "github.com/sirupsen/logrus",
-        },
-        "golang.org/x/crypto": {
-            "name": "org_golang_x_crypto",
-            "commit": "5119cf507ed5294cc409c092980c7497ee5d6fd2",
-            "importpath": "golang.org/x/crypto",
-        },
-        # XXX: see note for issues with golang.org/x/net and docker above
-        # "golang.org/x/net": {
-        #     "name": "org_golang_x_net",
-        #     "commit": "5ccada7d0a7ba9aeb5d3aca8d3501b4c2a509fec",
-        #     "importpath": "golang.org/x/net",
-        # },
-        "golang.org/x/sys": {
-            "name": "org_golang_x_sys",
-            "commit": "37707fdb30a5b38865cfb95e5aab41707daec7fd",
-            "importpath": "golang.org/x/sys",
-        },
-        "golang.org/x/text": {
-            "name": "org_golang_x_text",
-            "commit": "e19ae1496984b1c655b8044a65c0300a3c878dd3",
-            "importpath": "golang.org/x/text",
-        },
-        "google.golang.org/genproto": {
-            "name": "org_golang_google_genproto",
-            "commit": "a8101f21cf983e773d0c1133ebc5424792003214",
-            "importpath": "google.golang.org/genproto",
-        },
-        "google.golang.org/grpc": {
-            "name": "org_golang_google_grpc",
-            "commit": "1e2570b1b19ade82d8dbb31bba4e65e9f9ef5b34",
-            "importpath": "google.golang.org/grpc",
         },
         "istio.io/gogo-genproto": {
             "name": "io_istio_gogo_genproto",
@@ -447,17 +456,6 @@ GO_DEPENDENCIES = {
             "commit": "f3f9494671f93fcff853e3c6e9e948b3eb71e590",
             "importpath": "github.com/go-openapi/swag",
         },
-        "github.com/golang/protobuf": {
-            "name": "com_github_golang_protobuf",
-            "commit": "1643683e1b54a9e88ad26d98f81400c8c9d9f4f9",
-            "importpath": "github.com/golang/protobuf",
-        },
-        # "github.com/gogo/protobuf": {
-        #     "name": "com_github_gogo_protobuf",
-        #     "commit": "c0656edd0d9eab7c66d1eb0c568f9039345796f7",
-        #     "importpath": "github.com/gogo/protobuf",
-        #     "build_file_proto_mode": "disable",
-        # },
         "github.com/google/btree": {
             "name": "com_github_google_btree",
             "commit": "7d79101e329e5a3adf994758c578dab82b90c017",
@@ -536,16 +534,6 @@ GO_DEPENDENCIES = {
             "commit": "ded73eae5db7e7a0ef6f55aace87a2873c5d2b74",
             "importpath": "github.com/ugorji/go",
         },
-        "golang.org/x/sys": {
-            "name": "org_golang_x_sys",
-            "commit": "95c6576299259db960f6c5b9b69ea52422860fce",
-            "importpath": "golang.org/x/sys",
-        },
-        "golang.org/x/text": {
-            "name": "org_golang_x_text",
-            "commit": "b19bf474d317b857955b12035d2c5acb57ce8b01",
-            "importpath": "golang.org/x/text",
-        },
         "golang.org/x/time": {
             "name": "org_golang_x_time",
             "commit": "f51c12702a4d776e4c1fa9b0fabab841babae631",
@@ -555,16 +543,6 @@ GO_DEPENDENCIES = {
             "name": "org_golang_x_tools",
             "commit": "2382e3994d48b1d22acc2c86bcad0a2aff028e32",
             "importpath": "golang.org/x/tools",
-        },
-        "google.golang.org/genproto": {
-            "name": "org_golang_google_genproto",
-            "commit": "09f6ed296fc66555a25fe4ce95173148778dfa85",
-            "importpath": "google.golang.org/genproto",
-        },
-        "google.golang.org/grpc": {
-            "name": "org_golang_google_grpc",
-            "commit": "5b3c4e850e90a4cf6a20ebd46c8b32a0a3afcb9e",
-            "importpath": "google.golang.org/grpc",
         },
         "gopkg.in/inf.v0": {
             "name": "in_gopkg_inf_v0",

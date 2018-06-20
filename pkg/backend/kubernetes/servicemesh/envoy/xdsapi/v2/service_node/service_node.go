@@ -1,7 +1,6 @@
-package service_node
+package servicenode
 
 import (
-	// "encoding/json"
 	"reflect"
 	"sync"
 
@@ -15,10 +14,8 @@ import (
 	xdsapi "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/servicemesh/envoy/xdsapi/v2"
 )
 
-// XXX: rename to ServiceNode
-
 type ServiceNode struct {
-	Id                 string
+	ID                 string
 	latticeServiceName string
 
 	EnvoyNode *envoycore.Node
@@ -34,7 +31,7 @@ type ServiceNode struct {
 
 func NewServiceNode(id string, envoyNode *envoycore.Node) *ServiceNode {
 	return &ServiceNode{
-		Id:        id,
+		ID:        id,
 		EnvoyNode: envoyNode,
 	}
 }
@@ -105,7 +102,7 @@ func (s *ServiceNode) Update(backend xdsapi.Backend) error {
 		s.routes = routes
 		if !s.deleted {
 			glog.V(4).Info("ServiceNode.Update updating XDS cache")
-			err := backend.SetXDSCacheSnapshot(s.Id, s.endpoints, s.clusters, s.routes, s.listeners)
+			err := backend.SetXDSCacheSnapshot(s.ID, s.endpoints, s.clusters, s.routes, s.listeners)
 			if err != nil {
 				return err
 			}
@@ -123,7 +120,7 @@ func (s *ServiceNode) Cleanup(backend xdsapi.Backend) error {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
-	backend.ClearXDSCacheSnapshot(s.Id)
+	backend.ClearXDSCacheSnapshot(s.ID)
 	s.deleted = true
 
 	return nil

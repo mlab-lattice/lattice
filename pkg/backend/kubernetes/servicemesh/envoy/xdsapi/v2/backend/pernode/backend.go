@@ -3,11 +3,9 @@ package pernode
 import (
 	"encoding/json"
 	"fmt"
-	// "reflect"
 	"sync"
 	"time"
 
-	// "github.com/gogo/protobuf/jsonpb"
 	"github.com/golang/glog"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
@@ -37,7 +35,7 @@ import (
 	latticelisters "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/generated/listers/lattice/v1"
 
 	xdsapi "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/servicemesh/envoy/xdsapi/v2"
-	xdsservice_node "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/servicemesh/envoy/xdsapi/v2/service_node"
+	xdsservicenode "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/servicemesh/envoy/xdsapi/v2/service_node"
 )
 
 // TODO: add events
@@ -58,9 +56,8 @@ type KubernetesPerNodeBackend struct {
 
 	lock sync.Mutex
 
-	serviceNodes        map[string]*xdsservice_node.ServiceNode
-	serviceNameToNodeId map[string]string
-	xdsCache            envoycache.SnapshotCache
+	serviceNodes map[string]*xdsservicenode.ServiceNode
+	xdsCache     envoycache.SnapshotCache
 
 	stopCh <-chan struct{}
 }
@@ -105,8 +102,7 @@ func NewKubernetesPerNodeBackend(kubeconfig string, stopCh <-chan struct{}) (*Ku
 		queue:                    workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "envoy-api-backend"),
 		stopCh:                   stopCh,
 	}
-	b.serviceNodes = make(map[string]*xdsservice_node.ServiceNode)
-	b.serviceNameToNodeId = make(map[string]string)
+	b.serviceNodes = make(map[string]*xdsservicenode.ServiceNode)
 	b.xdsCache = envoycache.NewSnapshotCache(true, b, b)
 
 	serviceInformer.Informer().AddEventHandlerWithResyncPeriod(cache.ResourceEventHandlerFuncs{
@@ -122,7 +118,6 @@ func NewKubernetesPerNodeBackend(kubeconfig string, stopCh <-chan struct{}) (*Ku
 			_old := old.(metav1.Object)
 			_cur := cur.(metav1.Object)
 			glog.V(4).Infof("old version: %s, new version: %s", _old.GetResourceVersion(), _cur.GetResourceVersion())
-			// if !reflect.DeepEqual(old, cur) {
 			if _old.GetResourceVersion() != _cur.GetResourceVersion() {
 				task, err := b.enqueueCacheUpdateTask(xdsapi.LatticeEntityType, xdsapi.InformerUpdateEvent, cur)
 				if err != nil {
@@ -206,7 +201,7 @@ func (b *KubernetesPerNodeBackend) enqueueCacheUpdateTask(_type xdsapi.EntityTyp
 			}
 		}
 	default:
-		return "", fmt.Errorf("Got unkown entity type <%d>", _type)
+		return "", fmt.Errorf("got unkown entity type <%d>", _type)
 	}
 
 	task, err = json.Marshal(xdsapi.CacheUpdateTask{
@@ -235,7 +230,7 @@ func (b *KubernetesPerNodeBackend) Run(threadiness int) error {
 	glog.Info("Waiting for caches to sync")
 
 	if ok := b.Ready(); !ok {
-		return fmt.Errorf("Failed to sync caches")
+		return fmt.Errorf("failed to sync caches")
 	}
 
 	glog.Info("Starting workers")
@@ -265,11 +260,11 @@ func (b *KubernetesPerNodeBackend) Worker() {
 
 			if key, ok = obj.(string); !ok {
 				b.queue.Forget(obj)
-				return fmt.Errorf("Per-node backend worker got: %#v", obj)
+				return fmt.Errorf("per-node backend worker got: %#v", obj)
 			}
 
 			if err := b.syncXDSCache(key); err != nil {
-				return fmt.Errorf("Per-node backend got error syncing XDS cache for '%s': %s", key, err.Error())
+				return fmt.Errorf("per-node backend got error syncing XDS cache for '%s': %s", key, err.Error())
 			}
 
 			b.queue.Forget(obj)
@@ -282,12 +277,12 @@ func (b *KubernetesPerNodeBackend) Worker() {
 	}
 }
 
-func (b *KubernetesPerNodeBackend) getServiceNode(id string) (*xdsservice_node.ServiceNode, error) {
+func (b *KubernetesPerNodeBackend) getServiceNode(id string) (*xdsservicenode.ServiceNode, error) {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 	service, ok := b.serviceNodes[id]
 	if !ok {
-		return nil, fmt.Errorf("Couldn't find Envoy service with ID <%s>", id)
+		return nil, fmt.Errorf("couldn't find Envoy service with ID <%s>", id)
 	}
 	return service, nil
 }
@@ -312,21 +307,21 @@ func (b *KubernetesPerNodeBackend) handleEnvoySyncXDSCache(entityName string) er
 			return err
 		}
 		if len(services) != 1 {
-			return fmt.Errorf("Found %d services matching %v, expected 1", len(services), selector)
+			return fmt.Errorf("found %d services matching %v, expected 1", len(services), selector)
 		}
 		service.SetLatticeServiceName(services[0].Name)
 	}
 	return service.Update(b)
 }
 
-func (b *KubernetesPerNodeBackend) getServicesForServiceCluster(serviceCluster string) []*xdsservice_node.ServiceNode {
-	var services []*xdsservice_node.ServiceNode
+func (b *KubernetesPerNodeBackend) getServicesForServiceCluster(serviceCluster string) []*xdsservicenode.ServiceNode {
+	var services []*xdsservicenode.ServiceNode
 
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
-	for serviceId, service := range b.serviceNodes {
-		if _serviceCluster, _, err := cache.SplitMetaNamespaceKey(serviceId); err == nil && _serviceCluster == serviceCluster {
+	for serviceID, service := range b.serviceNodes {
+		if _serviceCluster, _, err := cache.SplitMetaNamespaceKey(serviceID); err == nil && _serviceCluster == serviceCluster {
 			services = append(services, service)
 		}
 	}
@@ -344,21 +339,21 @@ func (b *KubernetesPerNodeBackend) handleLatticeSyncXDSCache(entityName string, 
 		err = func() error {
 			b.lock.Lock()
 			defer b.lock.Unlock()
-			var serviceNodeId string
-			for _serviceNodeId, serviceNode := range b.serviceNodes {
+			var serviceNodeID string
+			for _serviceNodeID, serviceNode := range b.serviceNodes {
 				// use the lattice service name we set earlier to identify the envoy service node
 				// to clean up
 				if serviceNode.GetLatticeServiceName() == serviceName {
-					serviceNodeId = _serviceNodeId
+					serviceNodeID = _serviceNodeID
 					break
 				}
 			}
-			if serviceNodeId == "" {
-				return fmt.Errorf("Couldn't find <%v> on delete", serviceName)
+			if serviceNodeID == "" {
+				return fmt.Errorf("couldn't find <%v> on delete", serviceName)
 			}
-			glog.Infof("Deleting node <%v> and clearing its cache", serviceNodeId)
-			b.serviceNodes[serviceNodeId].Cleanup(b)
-			delete(b.serviceNodes, serviceNodeId)
+			glog.Infof("Deleting node <%v> and clearing its cache", serviceNodeID)
+			b.serviceNodes[serviceNodeID].Cleanup(b)
+			delete(b.serviceNodes, serviceNodeID)
 			return nil
 		}()
 		if err != nil {
@@ -367,7 +362,7 @@ func (b *KubernetesPerNodeBackend) handleLatticeSyncXDSCache(entityName string, 
 	}
 	var serviceNodeKeys []string
 	b.lock.Lock()
-	for k, _ := range b.serviceNodes {
+	for k := range b.serviceNodes {
 		serviceNodeKeys = append(serviceNodeKeys, k)
 	}
 	b.lock.Unlock()
@@ -385,19 +380,23 @@ func (b *KubernetesPerNodeBackend) handleLatticeSyncXDSCache(entityName string, 
 func (b *KubernetesPerNodeBackend) syncXDSCache(key string) error {
 	glog.V(4).Infof("Per-node backend syncing '%s'", key)
 	var err error
-	var task xdsapi.CacheUpdateTask = xdsapi.CacheUpdateTask{}
+
+	task := xdsapi.CacheUpdateTask{}
+
 	err = json.Unmarshal([]byte(key), &task)
 	if err != nil {
 		return err
 	}
+
 	switch task.Type {
 	case xdsapi.EnvoyEntityType:
 		err = b.handleEnvoySyncXDSCache(task.Name)
 	case xdsapi.LatticeEntityType:
 		err = b.handleLatticeSyncXDSCache(task.Name, task.Event)
 	default:
-		return fmt.Errorf("Got unkown entity type <%d>", task.Type)
+		return fmt.Errorf("got unkown entity type <%d>", task.Type)
 	}
+
 	if err == nil {
 		glog.V(4).Infof("Per-node backend synced '%s'", key)
 	}
@@ -406,7 +405,7 @@ func (b *KubernetesPerNodeBackend) syncXDSCache(key string) error {
 
 func (b *KubernetesPerNodeBackend) SystemServices(serviceCluster string) (map[tree.NodePath]*xdsapi.Service, error) {
 	namespace := serviceCluster
-	result := map[tree.NodePath]*xdsapi.Service{}
+	result := make(map[tree.NodePath]*xdsapi.Service)
 
 	services, err := b.serviceLister.Services(namespace).List(labels.Everything())
 	if err != nil {
@@ -437,7 +436,7 @@ func (b *KubernetesPerNodeBackend) SystemServices(serviceCluster string) (map[tr
 			IPAddresses: []string{},
 		}
 
-		addressSet := map[string]bool{}
+		addressSet := make(map[string]bool)
 		for _, subset := range endpoint.Subsets {
 			for _, address := range subset.Addresses {
 				// FIXME: check if this is necessary (i.e. does Endpoint ever repeat IPAddresses)
@@ -450,7 +449,7 @@ func (b *KubernetesPerNodeBackend) SystemServices(serviceCluster string) (map[tr
 
 		for component, ports := range service.Spec.Ports {
 			bc := xdsapi.Component{
-				Ports: map[int32]int32{},
+				Ports: make(map[int32]int32),
 			}
 
 			for _, port := range ports {
@@ -495,17 +494,17 @@ func (b *KubernetesPerNodeBackend) OnStreamRequest(id int64, req *envoyv2.Discov
 	reqStr, _ := json.MarshalIndent(req, "", "  ")
 	glog.V(4).Infof("OnStreamRequest called: %d\n%v", id, string(reqStr[:]))
 	node := req.GetNode()
-	serviceId := b.ID(node)
+	serviceID := b.ID(node)
 
 	b.lock.Lock()
-	if _, ok := b.serviceNodes[serviceId]; !ok {
-		b.serviceNodes[serviceId] = xdsservice_node.NewServiceNode(serviceId, node)
+	if _, ok := b.serviceNodes[serviceID]; !ok {
+		b.serviceNodes[serviceID] = xdsservicenode.NewServiceNode(serviceID, node)
 	}
 	b.lock.Unlock()
 
-	glog.V(4).Infof("Got node <%s>: %v", serviceId, node)
+	glog.V(4).Infof("Got node <%s>: %v", serviceID, node)
 
-	task, err := b.enqueueCacheUpdateTask(xdsapi.EnvoyEntityType, xdsapi.EnvoyStreamRequestEvent, serviceId)
+	task, err := b.enqueueCacheUpdateTask(xdsapi.EnvoyEntityType, xdsapi.EnvoyStreamRequestEvent, serviceID)
 	if err != nil {
 		runtime.HandleError(err)
 	} else {

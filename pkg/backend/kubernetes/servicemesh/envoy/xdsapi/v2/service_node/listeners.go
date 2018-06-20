@@ -1,4 +1,4 @@
-package service_node
+package servicenode
 
 import (
 	"fmt"
@@ -18,6 +18,8 @@ import (
 )
 
 func (s *ServiceNode) getListeners(systemServices map[tree.NodePath]*xdsapi.Service) (listeners []envoycache.Resource, err error) {
+	// NOTE: https://github.com/golang/go/wiki/PanicAndRecover#usage-in-a-package
+	//       support nested builder funcs
 	defer func() {
 		if _panic := recover(); _panic != nil {
 			err = lerror.Errorf("%v", _panic)
@@ -33,7 +35,7 @@ func (s *ServiceNode) getListeners(systemServices map[tree.NodePath]*xdsapi.Serv
 
 	service, ok := systemServices[path]
 	if !ok {
-		return nil, fmt.Errorf("Invalid Service path <%v>", path)
+		return nil, fmt.Errorf("invalid Service path <%v>", path)
 	}
 
 	httpFilters := []*envoyhttpcxnmgr.HttpFilter{

@@ -1,4 +1,4 @@
-package service_node
+package servicenode
 
 import (
 	envoycore "github.com/envoyproxy/go-control-plane/envoy/api/v2/core"
@@ -15,6 +15,8 @@ import (
 
 func (s *ServiceNode) getClusters(
 	systemServices map[tree.NodePath]*xdsapi.Service) (clusters []envoycache.Resource, err error) {
+	// NOTE: https://github.com/golang/go/wiki/PanicAndRecover#usage-in-a-package
+	//       support nested builder funcs
 	defer func() {
 		if _panic := recover(); _panic != nil {
 			err = lerror.Errorf("%v", _panic)
@@ -39,7 +41,7 @@ func (s *ServiceNode) getClusters(
 				clusters = append(clusters, xdsmsgs.NewEdsCluster(
 					clusterName,
 					xdsconstants.ClusterConnectTimeout,
-					xdsconstants.ClusterLbPolicyRoundRobin))
+					xdsconstants.ClusterLBPolicyRoundRobin))
 
 				if isLocalService {
 					clusterName = xdsutil.GetLocalClusterNameForComponentPort(
@@ -48,7 +50,7 @@ func (s *ServiceNode) getClusters(
 					clusters = append(clusters, xdsmsgs.NewStaticCluster(
 						clusterName,
 						xdsconstants.ClusterConnectTimeout,
-						xdsconstants.ClusterLbPolicyRoundRobin,
+						xdsconstants.ClusterLBPolicyRoundRobin,
 						[]*envoycore.Address{xdsmsgs.NewTcpSocketAddress(xdsconstants.Localhost, port)}))
 				}
 			}
