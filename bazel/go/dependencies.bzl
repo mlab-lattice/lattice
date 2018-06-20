@@ -35,6 +35,7 @@ GO_DEPENDENCIES = {
         # k8s.io:v1.9.3 -> ?
         # github.com/envoyproxy/go-control-plane:v0.2 -> 5ccada7d0a7ba9aeb5d3aca8d3501b4c2a509fec
         #
+        # ----------------------------------------------------------------------
         # golang.org/x/net is a bit of a tricky one.
         # - docker's vendor.conf specifies commit 7dcfb8076726a3fdd9353b6b8a1f1b6be6811bd6 which is from May 24, 2017
         # - k8s.io wants commit 1c05540f6879653db88113bc4a2b70aec4bd491f which is from August 3, 2017.
@@ -45,7 +46,7 @@ GO_DEPENDENCIES = {
         #   3470a06c1357df533e251f14d3a181f67396fe35 which is from May 26, 2017.
         # - so we took the parent commit of the commit that added the type alias, so we can get the null pointer
         #   dereference fix, but not have the type alias
-        # TODO: need to figure out the type alias issue (or see if docker updates their dependency)
+        # ----------------------------------------------------------------------
         "golang.org/x/net": {
             "name": "org_golang_x_net",
             "commit": "5561cd9b4330353950f399814f427425c0a26fd2",
