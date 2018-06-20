@@ -3,7 +3,9 @@ package v1
 import (
 	"encoding/json"
 	"fmt"
+
 	"github.com/mlab-lattice/lattice/pkg/definition/component"
+	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 )
 
 const ComponentTypeContainer = "container"
@@ -43,7 +45,7 @@ type ContainerEnvironment map[string]ContainerEnvironmentVariable
 
 type ContainerEnvironmentVariable struct {
 	Value  *string
-	Secret *string
+	Secret *tree.NodePathSubcomponent
 }
 
 func (cev ContainerEnvironmentVariable) MarshalJSON() ([]byte, error) {
@@ -90,7 +92,7 @@ func (cev *ContainerEnvironmentVariable) UnmarshalJSON(data []byte) error {
 type containerEnvironmentVariableEncoder string
 
 type containerEnvironmentVariableSecretEncoder struct {
-	Secret string `json:"secret"`
+	Secret tree.NodePathSubcomponent `json:"secret"`
 }
 
 type ContainerPort struct {

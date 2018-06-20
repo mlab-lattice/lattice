@@ -1,6 +1,7 @@
 package tree
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 )
@@ -139,13 +140,45 @@ func (np NodePath) String() string {
 	return string(np)
 }
 
+// UnmarshalJSON implements json.Unmarshaler
+func (n *NodePath) UnmarshalJSON(data []byte) error {
+	var val string
+	err := json.Unmarshal(data, &val)
+	if err != nil {
+		return err
+	}
+
+	tmp, err := NewNodePath(val)
+	if err != nil {
+		return err
+	}
+
+	*n = tmp
+	return nil
+}
+
 // NodePathSubcomponent contains a node path and the name of a subcomponent
 // The subcomponent is separated from the node path with a colon.
 // For example: /a/b/c:foo
 type NodePathSubcomponent string
 
-// NewNodePathSubcomponent returns a validated NodePathSubcomponent using the path and subcomponent.
-func NewNodePathSubcomponent(path NodePath, subcomponent string) (NodePathSubcomponent, error) {
+// NewNodePathSubcomponent returns a validated NodePathSubcomponent from the supplied value.
+func NewNodePathSubcomponent(val string) (NodePathSubcomponent, error) {
+	parts := strings.Split(val, NodePathSubcomponentSeparator)
+	if len(parts) != 2 {
+		return "", fmt.Errorf("improperly formatted NodePathSubcomponent: %v", val)
+	}
+
+	path, err := NewNodePath(parts[0])
+	if err != nil {
+		return "", err
+	}
+
+	return NewNodePathSubcomponentFromParts(path, parts[1])
+}
+
+// NewNodePathSubcomponentFromParts returns a validated NodePathSubcomponent using the path and subcomponent.
+func NewNodePathSubcomponentFromParts(path NodePath, subcomponent string) (NodePathSubcomponent, error) {
 	if subcomponent == "" {
 		return NodePathSubcomponent(""), fmt.Errorf("cannot pass empty string as subcomponent")
 	}
@@ -163,35 +196,52 @@ func NewNodePathSubcomponent(path NodePath, subcomponent string) (NodePathSubcom
 
 // NodePath returns the NodePath of the NodePathSubcomponent.
 // For example: /a/b/c:foo returns /a/b/c
-func (n NodePathSubcomponent) NodePath() (NodePath, error) {
-	path, _, err := n.Parts()
-	return path, err
+// N.B.: panics if the NodePathSubcomponent is improperly formed.
+func (n NodePathSubcomponent) NodePath() NodePath {
+	path, _ := n.Parts()
+	return path
 }
 
 // NodePath returns the subcomponent of the NodePathSubcomponent.
 // For example: /a/b/c:foo returns foo
-func (n NodePathSubcomponent) Subcomponent() (string, error) {
-	_, subcomponent, err := n.Parts()
-	return subcomponent, err
+// N.B.: panics if the NodePathSubcomponent is improperly formed.
+func (n NodePathSubcomponent) Subcomponent() string {
+	_, subcomponent := n.Parts()
+	return subcomponent
 }
 
 // NodePath returns the NodePath and subcomponent of the NodePathSubcomponent.
 // For example: /a/b/c:foo returns /a/b/c, foo
-func (n NodePathSubcomponent) Parts() (NodePath, string, error) {
+// N.B.: panics if the NodePathSubcomponent is improperly formed.
+func (n NodePathSubcomponent) Parts() (NodePath, string) {
 	parts := strings.Split(n.String(), NodePathSubcomponentSeparator)
-	if len(parts) != 2 {
-		return "", "", fmt.Errorf("improperly formatted NodePathSubccomponent: %v", n)
-	}
 
 	path, err := NewNodePath(parts[0])
 	if err != nil {
-		return "", "", err
+		panic(err)
 	}
 
-	return path, parts[1], nil
+	return path, parts[1]
 }
 
 // String returns a string representation of the NodePathSubcomponent
 func (n NodePathSubcomponent) String() string {
 	return string(n)
+}
+
+// UnmarshalJSON implements json.Unmarshaler
+func (n *NodePathSubcomponent) UnmarshalJSON(data []byte) error {
+	var val string
+	err := json.Unmarshal(data, &val)
+	if err != nil {
+		return err
+	}
+
+	tmp, err := NewNodePathSubcomponent(val)
+	if err != nil {
+		return err
+	}
+
+	*n = tmp
+	return nil
 }

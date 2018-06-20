@@ -289,7 +289,7 @@ func (c *Controller) syncJobRun(key string) error {
 		return err
 	}
 
-	nodePool, err := c.syncCurrentNodePool(jobRun)
+	nodePool, err := c.nodePool(jobRun)
 	if err != nil {
 		return err
 	}

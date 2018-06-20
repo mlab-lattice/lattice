@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/mlab-lattice/lattice/pkg/definition/component"
+	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 )
 
 const ComponentTypeJob = "job"
@@ -21,7 +22,7 @@ type Job struct {
 	Sidecars map[string]Container
 
 	// FIXME: remove these
-	NodePool string `json:"node_pool"`
+	NodePool tree.NodePathSubcomponent `json:"node_pool"`
 }
 
 func (j *Job) Type() component.Type {
@@ -83,5 +84,5 @@ type jobEncoder struct {
 	Container
 	Sidecars map[string]Container `json:"sidecars,omitempty"`
 
-	NodePool string `json:"node_pool"`
+	NodePool tree.NodePathSubcomponent `json:"node_pool"`
 }

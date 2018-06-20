@@ -3,6 +3,8 @@ package v1
 import (
 	"encoding/json"
 	"fmt"
+
+	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 )
 
 type NodePool struct {
@@ -12,7 +14,7 @@ type NodePool struct {
 
 type NodePoolOrReference struct {
 	NodePool     *NodePool
-	NodePoolName *string
+	NodePoolPath *tree.NodePathSubcomponent
 }
 
 func (np *NodePoolOrReference) MarshalJSON() ([]byte, error) {
@@ -20,8 +22,8 @@ func (np *NodePoolOrReference) MarshalJSON() ([]byte, error) {
 		return json.Marshal(np.NodePool)
 	}
 
-	if np.NodePoolName != nil {
-		return json.Marshal(*np.NodePoolName)
+	if np.NodePoolPath != nil {
+		return json.Marshal(*np.NodePoolPath)
 	}
 
 	return json.Marshal(nil)
@@ -32,10 +34,15 @@ func (np *NodePoolOrReference) UnmarshalJSON(data []byte) error {
 		return nil
 	}
 
-	var nodePoolName string
-	err := json.Unmarshal(data, &nodePoolName)
+	var nodePoolPathString string
+	err := json.Unmarshal(data, &nodePoolPathString)
 	if err == nil {
-		np.NodePoolName = &nodePoolName
+		nodePoolPath, err := tree.NewNodePathSubcomponent(nodePoolPathString)
+		if err != nil {
+			return err
+		}
+
+		np.NodePoolPath = &nodePoolPath
 		return nil
 	}
 

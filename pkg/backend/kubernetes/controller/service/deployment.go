@@ -438,11 +438,6 @@ func containerFromComponent(
 	container *definitionv1.Container,
 	buildArtifacts *latticev1.ContainerBuildArtifacts,
 ) (corev1.Container, error) {
-	path, err := service.PathLabel()
-	if err != nil {
-		return corev1.Container{}, err
-	}
-
 	var ports []corev1.ContainerPort
 	for portNum := range container.Ports {
 		ports = append(
@@ -484,9 +479,9 @@ func containerFromComponent(
 					ValueFrom: &corev1.EnvVarSource{
 						SecretKeyRef: &corev1.SecretKeySelector{
 							LocalObjectReference: corev1.LocalObjectReference{
-								Name: path.ToDomain(),
+								Name: envVar.Secret.NodePath().ToDomain(),
 							},
-							Key: *envVar.Secret,
+							Key: envVar.Secret.Subcomponent(),
 						},
 					},
 				},

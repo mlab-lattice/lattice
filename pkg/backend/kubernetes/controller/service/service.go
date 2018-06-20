@@ -66,8 +66,8 @@ func (c *Controller) nodePoolInfo(service *latticev1.Service) (nodePoolInfo, err
 		return info, nil
 	}
 
-	if definition.NodePool.NodePoolName != nil {
-		path, err := v1.ParseNodePoolPath(*definition.NodePool.NodePoolName)
+	if definition.NodePool.NodePoolPath != nil {
+		path, err := v1.ParseNodePoolPath(definition.NodePool.NodePoolPath.String())
 		if err != nil {
 			err := fmt.Errorf("error parsing shared node pool path for %v: %v", service.Description(c.namespacePrefix), err)
 			return nodePoolInfo{}, err
