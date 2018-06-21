@@ -92,9 +92,10 @@ type JobRunSpec struct {
 }
 
 type JobRunStatus struct {
-	State       JobRunState              `json:"state"`
-	Message     *string                  `json:"message"`
-	FailureInfo *JobRunStatusFailureInfo `json:"failureInfo,omitempty"`
+	State JobRunState `json:"state"`
+
+	StartTimestamp      *metav1.Time `json:"startTimestamp,omitempty"`
+	CompletionTimestamp *metav1.Time `json:"completionTimestamp,omitempty"`
 }
 
 type JobRunState string
@@ -108,12 +109,6 @@ const (
 	JobRunStateSucceeded JobRunState = "succeeded"
 	JobRunStateFailed    JobRunState = "failed"
 )
-
-type JobRunStatusFailureInfo struct {
-	Message   string      `json:"message"`
-	Internal  bool        `json:"internal"`
-	Timestamp metav1.Time `json:"timestamp"`
-}
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 

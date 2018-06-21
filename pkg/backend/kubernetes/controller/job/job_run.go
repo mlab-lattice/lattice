@@ -2,11 +2,87 @@ package job
 
 import (
 	"fmt"
+	"reflect"
 
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	kubeutil "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/kubernetes"
+
+	batchv1 "k8s.io/api/batch/v1"
+	corev1 "k8s.io/api/core/v1"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 )
+
+func (c *Controller) syncJobRunStatus(jobRun *latticev1.JobRun, kubeJob *batchv1.Job) (*latticev1.JobRun, error) {
+	startTimestamp := jobRun.Status.StartTimestamp
+	if startTimestamp == nil {
+		now := metav1.Now()
+		startTimestamp = &now
+	}
+
+	completionTimestamp := jobRun.Status.CompletionTimestamp
+	if completionTimestamp == nil {
+		now := metav1.Now()
+		completionTimestamp = &now
+	}
+
+	state := jobRunState(kubeJob.Status)
+	return c.updateJobRunStatus(jobRun, state, startTimestamp, completionTimestamp)
+}
+
+func jobRunState(kubeJobStatus batchv1.JobStatus) latticev1.JobRunState {
+	if kubeJobStatusContainsCondition(kubeJobStatus, batchv1.JobComplete) {
+		return latticev1.JobRunStateSucceeded
+	}
+
+	if kubeJobStatusContainsCondition(kubeJobStatus, batchv1.JobFailed) {
+		return latticev1.JobRunStateFailed
+	}
+
+	if kubeJobStatus.Active > 0 || kubeJobStatus.Failed > 0 || kubeJobStatus.Succeeded > 0 {
+		return latticev1.JobRunStateRunning
+	}
+
+	return latticev1.JobRunStateQueued
+}
+
+func kubeJobStatusContainsCondition(kubeJobStatus batchv1.JobStatus, conditionType batchv1.JobConditionType) bool {
+	for _, c := range kubeJobStatus.Conditions {
+		if c.Type == conditionType {
+			return c.Status == corev1.ConditionTrue
+		}
+	}
+
+	return false
+}
+
+func (c *Controller) updateJobRunStatus(
+	jobRun *latticev1.JobRun,
+	state latticev1.JobRunState,
+	startTimestamp, completionTimestamp *metav1.Time,
+) (*latticev1.JobRun, error) {
+	status := latticev1.JobRunStatus{
+		State:               state,
+		StartTimestamp:      startTimestamp,
+		CompletionTimestamp: completionTimestamp,
+	}
+
+	if reflect.DeepEqual(jobRun.Status, status) {
+		return jobRun, nil
+	}
+
+	// copy so we don't mutate the cache
+	jobRun = jobRun.DeepCopy()
+	jobRun.Status = status
+
+	result, err := c.latticeClient.LatticeV1().JobRuns(jobRun.Namespace).UpdateStatus(jobRun)
+	if err != nil {
+		return nil, fmt.Errorf("error updating status for %v: %v", jobRun.Description(c.namespacePrefix), err)
+	}
+
+	return result, nil
+}
 
 func (c *Controller) nodePoolJobRuns(nodePool *latticev1.NodePool) ([]latticev1.JobRun, error) {
 	_, ok, err := nodePool.SystemSharedPathLabel()

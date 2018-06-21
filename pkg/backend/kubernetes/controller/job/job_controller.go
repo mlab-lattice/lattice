@@ -294,18 +294,19 @@ func (c *Controller) syncJobRun(key string) error {
 		return err
 	}
 
-	//kubeJob, err := c.syncKubeJob(jobRun, nodePool)
-	_, err = c.syncKubeJob(jobRun, nodePool)
+	if nodePool == nil {
+		// FIXME: update status
+		return nil
+	}
+
+	kubeJob, err := c.syncKubeJob(jobRun, nodePool)
 	if err != nil {
 		return err
 	}
 
-	//_, err = c.syncJobRunStatus(
-	//	jobRun,
-	//	nodePool,
-	//	address,
-	//	deploymentStatus,
-	//	extraNodePoolsExist,
-	//)
+	_, err = c.syncJobRunStatus(
+		jobRun,
+		kubeJob,
+	)
 	return err
 }
