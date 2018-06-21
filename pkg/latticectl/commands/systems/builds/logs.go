@@ -17,7 +17,7 @@ type LogsCommand struct {
 
 func (c *LogsCommand) Base() (*latticectl.BaseCommand, error) {
 	var pathStr string
-	var component string
+	var sidecarStr string
 	var follow bool
 	var previous bool
 	var timestamps bool
@@ -35,10 +35,10 @@ func (c *LogsCommand) Base() (*latticectl.BaseCommand, error) {
 				Target:   &pathStr,
 			},
 			&cli.StringFlag{
-				Name:     "component",
-				Short:    "c",
+				Name:     "sidecar",
+				Short:    "s",
 				Required: true,
-				Target:   &component,
+				Target:   &sidecarStr,
 			},
 			&cli.BoolFlag{
 				Name:    "follow",
@@ -74,10 +74,14 @@ func (c *LogsCommand) Base() (*latticectl.BaseCommand, error) {
 			},
 		},
 		Run: func(ctx latticectl.BuildCommandContext, args []string) {
-
 			path, err := tree.NewNodePath(pathStr)
 			if err != nil {
 				log.Fatal("invalid node path: " + pathStr)
+			}
+
+			var sidecar *string
+			if sidecarStr != "" {
+				sidecar = &sidecarStr
 			}
 
 			logOptions := v1.NewContainerLogOptions()
@@ -93,7 +97,7 @@ func (c *LogsCommand) Base() (*latticectl.BaseCommand, error) {
 			}
 
 			c := ctx.Client().Systems().Builds(ctx.SystemID())
-			err = GetBuildLogs(c, ctx.BuildID(), path, component, logOptions, os.Stdout)
+			err = GetBuildLogs(c, ctx.BuildID(), path, sidecar, logOptions, os.Stdout)
 
 			if err != nil {
 				log.Fatal(err)
@@ -104,9 +108,15 @@ func (c *LogsCommand) Base() (*latticectl.BaseCommand, error) {
 	return cmd.Base()
 }
 
-func GetBuildLogs(client v1client.BuildClient, buildID v1.BuildID, path tree.NodePath,
-	component string, logOptions *v1.ContainerLogOptions, w io.Writer) error {
-	logs, err := client.Logs(buildID, path, component, logOptions)
+func GetBuildLogs(
+	client v1client.BuildClient,
+	buildID v1.BuildID,
+	path tree.NodePath,
+	sidecar *string,
+	logOptions *v1.ContainerLogOptions,
+	w io.Writer,
+) error {
+	logs, err := client.Logs(buildID, path, sidecar, logOptions)
 	if err != nil {
 		return err
 	}

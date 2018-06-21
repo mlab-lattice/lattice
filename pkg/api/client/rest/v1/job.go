@@ -15,30 +15,30 @@ import (
 	"github.com/mlab-lattice/lattice/pkg/util/rest"
 )
 
-type BuildClient struct {
+type JobClient struct {
 	restClient   rest.Client
 	apiServerURL string
 	systemID     v1.SystemID
 }
 
-func newBuildClient(c rest.Client, apiServerURL string, systemID v1.SystemID) *BuildClient {
-	return &BuildClient{
+func newJobClient(c rest.Client, apiServerURL string, systemID v1.SystemID) *JobClient {
+	return &JobClient{
 		restClient:   c,
 		apiServerURL: apiServerURL,
 		systemID:     systemID,
 	}
 }
 
-func (c *BuildClient) Create(version v1.SystemVersion) (*v1.Build, error) {
-	request := &v1rest.BuildRequest{
-		Version: version,
+func (c *JobClient) Create(path tree.NodePath) (*v1.Job, error) {
+	request := &v1rest.RunJobRequest{
+		Path: path,
 	}
 	requestJSON, err := json.Marshal(request)
 	if err != nil {
 		return nil, err
 	}
 
-	url := fmt.Sprintf("%v%v", c.apiServerURL, fmt.Sprintf(v1rest.BuildsPathFormat, c.systemID))
+	url := fmt.Sprintf("%v%v", c.apiServerURL, fmt.Sprintf(v1rest.JobsPathFormat, c.systemID))
 	body, statusCode, err := c.restClient.PostJSON(url, bytes.NewReader(requestJSON)).Body()
 	if err != nil {
 		return nil, err
@@ -46,16 +46,16 @@ func (c *BuildClient) Create(version v1.SystemVersion) (*v1.Build, error) {
 	defer body.Close()
 
 	if statusCode == http.StatusCreated {
-		build := &v1.Build{}
-		err = rest.UnmarshalBodyJSON(body, &build)
-		return build, err
+		job := &v1.Job{}
+		err = rest.UnmarshalBodyJSON(body, &job)
+		return job, err
 	}
 
 	return nil, HandleErrorStatusCode(statusCode, body)
 }
 
-func (c *BuildClient) List() ([]v1.Build, error) {
-	url := fmt.Sprintf("%v%v", c.apiServerURL, fmt.Sprintf(v1rest.BuildsPathFormat, c.systemID))
+func (c *JobClient) List() ([]v1.Job, error) {
+	url := fmt.Sprintf("%v%v", c.apiServerURL, fmt.Sprintf(v1rest.JobsPathFormat, c.systemID))
 	body, statusCode, err := c.restClient.Get(url).Body()
 	if err != nil {
 		return nil, err
@@ -63,32 +63,32 @@ func (c *BuildClient) List() ([]v1.Build, error) {
 	defer body.Close()
 
 	if statusCode == http.StatusOK {
-		var builds []v1.Build
-		err = rest.UnmarshalBodyJSON(body, &builds)
-		return builds, err
+		var jobs []v1.Job
+		err = rest.UnmarshalBodyJSON(body, &jobs)
+		return jobs, err
 	}
 
 	return nil, HandleErrorStatusCode(statusCode, body)
 }
 
-func (c *BuildClient) Get(id v1.BuildID) (*v1.Build, error) {
-	url := fmt.Sprintf("%v%v", c.apiServerURL, fmt.Sprintf(v1rest.BuildPathFormat, c.systemID, id))
+func (c *JobClient) Get(id v1.JobID) (*v1.Job, error) {
+	url := fmt.Sprintf("%v%v", c.apiServerURL, fmt.Sprintf(v1rest.JobPathFormat, c.systemID, id))
 	body, statusCode, err := c.restClient.Get(url).Body()
 	if err != nil {
 		return nil, err
 	}
 
 	if statusCode == http.StatusOK {
-		build := &v1.Build{}
-		err = rest.UnmarshalBodyJSON(body, &build)
-		return build, err
+		job := &v1.Job{}
+		err = rest.UnmarshalBodyJSON(body, &job)
+		return job, err
 	}
 
 	return nil, HandleErrorStatusCode(statusCode, body)
 }
 
-func (c *BuildClient) Logs(
-	id v1.BuildID,
+func (c *JobClient) Logs(
+	id v1.JobID,
 	path tree.NodePath,
 	sidecar *string,
 	logOptions *v1.ContainerLogOptions,
@@ -97,7 +97,7 @@ func (c *BuildClient) Logs(
 	url := fmt.Sprintf(
 		"%v%v?path=%v&%v",
 		c.apiServerURL,
-		fmt.Sprintf(v1rest.BuildLogsPathFormat, c.systemID, id),
+		fmt.Sprintf(v1rest.JobLogsPathFormat, c.systemID, id),
 		escapedPath,
 		logOptionsToQueryString(logOptions),
 	)

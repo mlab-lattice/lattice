@@ -352,7 +352,7 @@ func mountServiceHandlers(router *gin.RouterGroup, backend v1server.Interface) {
 	// list-services
 	router.GET(servicesPath, func(c *gin.Context) {
 		systemID := v1.SystemID(c.Param(systemIdentifier))
-		servicePathParam := c.Query("servicePath")
+		servicePathParam := c.Query("path")
 
 		// check if its a query by service path
 
