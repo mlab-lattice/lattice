@@ -29,6 +29,7 @@ const (
 	initContainerNamePrepareEnvoy = deploymentResourcePrefix + "prepare-envoy"
 	containerNameEnvoy            = deploymentResourcePrefix + "envoy"
 
+	xdsAPIVersion       = "2"
 	xdsAPI              = "xds-api"
 	labelKeyEnvoyXDSAPI = "envoy.servicemesh.lattice.mlab.com/xds-api"
 )
@@ -257,7 +258,7 @@ func (sm *DefaultEnvoyServiceMesh) ServicePort(service *latticev1.Service, port 
 	servicePort, ok := servicePorts[port]
 	if !ok {
 		err := fmt.Errorf(
-			"Service %v/%v does not have expected port %v",
+			"service %v/%v does not have expected port %v",
 			service.Namespace,
 			service.Name,
 			port,
@@ -450,7 +451,7 @@ func (sm *DefaultEnvoyServiceMesh) envoyContainers(service *latticev1.Service) (
 	adminPort, ok := service.Annotations[annotationKeyAdminPort]
 	if !ok {
 		err := fmt.Errorf(
-			"Service %v/%v does not have expected annotation %v",
+			"service %v/%v does not have expected annotation %v",
 			service.Namespace,
 			service.Name,
 			annotationKeyAdminPort,
@@ -459,6 +460,11 @@ func (sm *DefaultEnvoyServiceMesh) envoyContainers(service *latticev1.Service) (
 	}
 
 	egressPort, err := sm.EgressPort(service)
+	if err != nil {
+		return corev1.Container{}, corev1.Container{}, err
+	}
+
+	servicePath, err := service.PathLabel()
 	if err != nil {
 		return corev1.Container{}, corev1.Container{}, err
 	}
@@ -484,6 +490,10 @@ func (sm *DefaultEnvoyServiceMesh) envoyContainers(service *latticev1.Service) (
 				Value: adminPort,
 			},
 			{
+				Name:  "XDS_API_VERSION",
+				Value: xdsAPIVersion,
+			},
+			{
 				Name: "XDS_API_HOST",
 				ValueFrom: &corev1.EnvVarSource{
 					FieldRef: &corev1.ObjectFieldSelector{
@@ -494,6 +504,15 @@ func (sm *DefaultEnvoyServiceMesh) envoyContainers(service *latticev1.Service) (
 			{
 				Name:  "XDS_API_PORT",
 				Value: fmt.Sprintf("%v", sm.xdsAPIPort),
+			},
+			// XXX: needed for V2
+			{
+				Name:  "SERVICE_CLUSTER",
+				Value: service.Namespace,
+			},
+			{
+				Name:  "SERVICE_NODE",
+				Value: servicePath.ToDomain(),
 			},
 		},
 		VolumeMounts: []corev1.VolumeMount{
@@ -521,7 +540,7 @@ func (sm *DefaultEnvoyServiceMesh) envoyContainers(service *latticev1.Service) (
 			envoyPort, ok := serviceMeshPorts[port.Port]
 			if !ok {
 				err := fmt.Errorf(
-					"Service %v/%v does not have expected port %v",
+					"service %v/%v does not have expected port %v",
 					service.Namespace,
 					service.Name,
 					port,
@@ -539,11 +558,12 @@ func (sm *DefaultEnvoyServiceMesh) envoyContainers(service *latticev1.Service) (
 		}
 	}
 
-	servicePath, err := service.PathLabel()
-	if err != nil {
-		return corev1.Container{}, corev1.Container{}, err
-	}
-
+	// XXX: `--service-cluster` and `--service-node` do not seem to have
+	//      any effect when running v2 (i.e., they do not set the
+	//      service cluster or service node nor do they override whatever
+	//      might be set in the config)
+	// XXX: adding environment variables to envoy prepare spec to set the
+	//      appropriate values in the generated envoy config
 	envoy := corev1.Container{
 		Name:            containerNameEnvoy,
 		Image:           sm.image,
@@ -574,7 +594,7 @@ func (sm *DefaultEnvoyServiceMesh) EgressPort(service *latticev1.Service) (int32
 	egressPortStr, ok := service.Annotations[annotationKeyEgressPort]
 	if !ok {
 		err := fmt.Errorf(
-			"Service %v/%v does not have expected annotation %v",
+			"service %v/%v does not have expected annotation %v",
 			service.Namespace,
 			service.Name,
 			annotationKeyEgressPort,
