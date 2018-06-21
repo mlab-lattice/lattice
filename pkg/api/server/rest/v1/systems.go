@@ -166,7 +166,6 @@ func mountBuildHandlers(router *gin.RouterGroup, backend v1server.Interface, sys
 		systemID := v1.SystemID(c.Param(systemIdentifier))
 		buildID := v1.BuildID(c.Param(buildIdentifier))
 		path := c.Query("path")
-		followQuery := c.DefaultQuery("follow", "false")
 
 		sidecarQuery, sidecarSet := c.GetQuery("sidecar")
 		var sidecar *string
@@ -179,19 +178,20 @@ func mountBuildHandlers(router *gin.RouterGroup, backend v1server.Interface, sys
 			return
 		}
 
-		follow, err := strconv.ParseBool(followQuery)
-		if err != nil {
-			c.Status(http.StatusBadRequest)
-			return
-		}
-
 		nodePath, err := tree.NewNodePath(path)
 		if err != nil {
 			c.Status(http.StatusBadRequest)
 			return
 		}
 
-		log, err := backend.BuildLogs(systemID, buildID, nodePath, sidecar, follow)
+		logOptions, err := requestedLogOptions(c)
+
+		if err != nil {
+			c.Status(http.StatusBadRequest)
+			return
+		}
+
+		log, err := backend.BuildLogs(systemID, buildID, nodePath, sidecar, logOptions)
 		if err != nil {
 			handleError(c, err)
 			return
@@ -417,23 +417,23 @@ func mountServiceHandlers(router *gin.RouterGroup, backend v1server.Interface) {
 	router.GET(serviceLogPath, func(c *gin.Context) {
 		systemID := v1.SystemID(c.Param(systemIdentifier))
 		serviceId := v1.ServiceID(c.Param(serviceIdentifier))
-		component := c.Query("component")
 		instance := c.Query("instance")
-		followQuery := c.DefaultQuery("follow", "false")
 
-		// validate component
-		if component == "" {
-			c.Status(http.StatusBadRequest)
-			return
+		sidecarQuery, sidecarSet := c.GetQuery("sidecar")
+		var sidecar *string
+		if sidecarSet {
+			sidecar = &sidecarQuery
 		}
 
-		follow, err := strconv.ParseBool(followQuery)
+		logOptions, err := requestedLogOptions(c)
+
 		if err != nil {
 			c.Status(http.StatusBadRequest)
 			return
 		}
 
-		log, err := backend.ServiceLogs(systemID, serviceId, component, instance, follow)
+		log, err := backend.ServiceLogs(systemID, serviceId, sidecar, instance, logOptions)
+
 		if err != nil {
 			handleError(c, err)
 			return
@@ -447,6 +447,51 @@ func mountServiceHandlers(router *gin.RouterGroup, backend v1server.Interface) {
 		serveLogFile(log, c)
 
 	})
+}
+
+// requestedLogOptions
+func requestedLogOptions(c *gin.Context) (*v1.ContainerLogOptions, error) {
+	// follow
+	follow, err := strconv.ParseBool(c.DefaultQuery("follow", "false"))
+	if err != nil {
+		return nil, err
+	}
+	// previous
+	previous, err := strconv.ParseBool(c.DefaultQuery("previous", "false"))
+	if err != nil {
+		return nil, err
+	}
+	//timestamps
+	timestamps, err := strconv.ParseBool(c.DefaultQuery("timestamps", "false"))
+	if err != nil {
+		return nil, err
+	}
+	// tail
+	var tail *int64
+	tailStr := c.Query("tail")
+	if tailStr != "" {
+		lines, err := strconv.ParseInt(tailStr, 10, 64)
+		if err != nil {
+			return nil, err
+		}
+		tail = &lines
+	}
+
+	// since
+	since := c.Query("since")
+
+	// sinceTime
+	sinceTime := c.Query("sinceTime")
+
+	logOptions := v1.NewContainerLogOptions()
+	logOptions.Follow = follow
+	logOptions.Timestamps = timestamps
+	logOptions.Previous = previous
+	logOptions.Tail = tail
+	logOptions.Since = since
+	logOptions.SinceTime = sinceTime
+
+	return logOptions, nil
 }
 
 // serveLogFile

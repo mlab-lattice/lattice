@@ -19,7 +19,13 @@ type Interface interface {
 	Build(systemID v1.SystemID, def *definitionv1.SystemNode, v v1.SystemVersion) (*v1.Build, error)
 	ListBuilds(v1.SystemID) ([]v1.Build, error)
 	GetBuild(v1.SystemID, v1.BuildID) (*v1.Build, error)
-	BuildLogs(systemID v1.SystemID, buildID v1.BuildID, path tree.NodePath, sidecar *string, follow bool) (io.ReadCloser, error)
+	BuildLogs(
+		systemID v1.SystemID,
+		buildID v1.BuildID,
+		path tree.NodePath,
+		sidecar *string,
+		logOptions *v1.ContainerLogOptions,
+	) (io.ReadCloser, error)
 
 	// Deploy
 	DeployBuild(v1.SystemID, v1.BuildID) (*v1.Deploy, error)
@@ -36,12 +42,18 @@ type Interface interface {
 	ListServices(v1.SystemID) ([]v1.Service, error)
 	GetService(v1.SystemID, v1.ServiceID) (*v1.Service, error)
 	GetServiceByPath(v1.SystemID, tree.NodePath) (*v1.Service, error)
-	ServiceLogs(systemID v1.SystemID, serviceID v1.ServiceID, component string, instance string, follow bool) (io.ReadCloser, error)
+	ServiceLogs(
+		systemID v1.SystemID,
+		serviceID v1.ServiceID,
+		sidecar *string,
+		instance string,
+		logOptions *v1.ContainerLogOptions,
+	) (io.ReadCloser, error)
 
 	// Jobs
 	ListJobs(v1.SystemID) ([]v1.Job, error)
 	GetJob(v1.SystemID, v1.JobID) (*v1.Job, error)
-	JobLogs(systemID v1.SystemID, jobID v1.JobID, follow bool) (io.ReadCloser, error)
+	JobLogs(systemID v1.SystemID, jobID v1.JobID, logOptions *v1.ContainerLogOptions) (io.ReadCloser, error)
 
 	// System Secret
 	ListSystemSecrets(v1.SystemID) ([]v1.Secret, error)

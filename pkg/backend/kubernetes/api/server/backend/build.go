@@ -10,8 +10,6 @@ import (
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 	defintionv1 "github.com/mlab-lattice/lattice/pkg/definition/v1"
 
-	corev1 "k8s.io/api/core/v1"
-
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -118,7 +116,7 @@ func (kb *KubernetesBackend) BuildLogs(
 	buildID v1.BuildID,
 	path tree.NodePath,
 	sidecar *string,
-	follow bool,
+	logOptions *v1.ContainerLogOptions,
 ) (io.ReadCloser, error) {
 	// Ensure the system exists
 	if _, err := kb.ensureSystemCreated(systemID); err != nil {
@@ -173,8 +171,11 @@ func (kb *KubernetesBackend) BuildLogs(
 	}
 
 	pod := pods.Items[0]
-	logOptions := &corev1.PodLogOptions{Follow: follow}
-	req := kb.kubeClient.CoreV1().Pods(namespace).GetLogs(pod.Name, logOptions)
+	podLogOptions, err := toPodLogOptions(logOptions)
+	if err != nil {
+		return nil, err
+	}
+	req := kb.kubeClient.CoreV1().Pods(namespace).GetLogs(pod.Name, podLogOptions)
 	return req.Stream()
 }
 
