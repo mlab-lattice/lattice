@@ -2,7 +2,10 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "go_default_library",
-    srcs = ["system_resolver.go"],
+    srcs = [
+        "interface.go",
+        "system_resolver.go",
+    ],
     importpath = "github.com/mlab-lattice/lattice/pkg/definition/resolver",
     visibility = ["//visibility:public"],
     deps = [
