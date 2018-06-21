@@ -80,13 +80,14 @@ func mountSystemHandlers(router *gin.RouterGroup, backend v1server.Interface, sy
 		c.Status(http.StatusOK)
 	})
 
-	mountVersionHandlers(router, backend, sysResolver)
 	mountBuildHandlers(router, backend, sysResolver)
 	mountDeployHandlers(router, backend, sysResolver)
 	mountNodePoolHandlers(router, backend)
 	mountServiceHandlers(router, backend)
+	mountJobHandlers(router, backend)
 	mountSecretHandlers(router, backend)
 	mountTeardownHandlers(router, backend)
+	mountVersionHandlers(router, backend, sysResolver)
 }
 
 func mountBuildHandlers(router *gin.RouterGroup, backend v1server.Interface, sysResolver *resolver.SystemResolver) {
@@ -446,6 +447,111 @@ func mountServiceHandlers(router *gin.RouterGroup, backend v1server.Interface) {
 
 		serveLogFile(log, c)
 
+	})
+}
+
+func mountJobHandlers(router *gin.RouterGroup, backend v1server.Interface) {
+	systemIdentifier := "system_id"
+	systemIdentifierPathComponent := fmt.Sprintf(":%v", systemIdentifier)
+	jobsPath := fmt.Sprintf(v1rest.JobsPathFormat, systemIdentifierPathComponent)
+
+	// run-job
+	//router.POST(jobsPath, func(c *gin.Context) {
+	//	systemID := v1.SystemID(c.Param(systemIdentifier))
+	//
+	//	var req v1rest.BuildRequest
+	//	if err := c.BindJSON(&req); err != nil {
+	//		handleBadRequestBody(c)
+	//		return
+	//	}
+	//
+	//	root, err := getSystemDefinitionRoot(backend, sysResolver, systemID, req.Version)
+	//	if err != nil {
+	//		handleError(c, err)
+	//		return
+	//	}
+	//
+	//	build, err := backend.Build(
+	//		systemID,
+	//		root,
+	//		req.Version,
+	//	)
+	//
+	//	if err != nil {
+	//		handleError(c, err)
+	//		return
+	//	}
+	//
+	//	c.JSON(http.StatusCreated, build)
+	//})
+
+	// list-jobs
+	router.GET(jobsPath, func(c *gin.Context) {
+		systemID := v1.SystemID(c.Param(systemIdentifier))
+
+		jobs, err := backend.ListJobs(systemID)
+		if err != nil {
+			handleError(c, err)
+			return
+		}
+
+		c.JSON(http.StatusOK, jobs)
+	})
+
+	jobIdentifier := "job_id"
+	jobIdentifierPathComponent := fmt.Sprintf(":%v", jobIdentifier)
+	jobPath := fmt.Sprintf(v1rest.JobPathFormat, systemIdentifierPathComponent, jobIdentifierPathComponent)
+
+	// get-job
+	router.GET(jobPath, func(c *gin.Context) {
+		systemID := v1.SystemID(c.Param(systemIdentifier))
+		jobID := v1.JobID(c.Param(jobIdentifier))
+
+		job, err := backend.GetJob(systemID, jobID)
+		if err != nil {
+			handleError(c, err)
+			return
+		}
+
+		c.JSON(http.StatusOK, job)
+	})
+
+	jobLogPath := fmt.Sprintf(
+		v1rest.JobLogsPathFormat,
+		systemIdentifierPathComponent,
+		jobIdentifierPathComponent,
+	)
+
+	// get-job-logs
+	router.GET(jobLogPath, func(c *gin.Context) {
+		systemID := v1.SystemID(c.Param(systemIdentifier))
+		jobID := v1.JobID(c.Param(jobIdentifier))
+
+		sidecarQuery, sidecarSet := c.GetQuery("sidecar")
+		var sidecar *string
+		if sidecarSet {
+			sidecar = &sidecarQuery
+		}
+
+		logOptions, err := requestedLogOptions(c)
+
+		if err != nil {
+			c.Status(http.StatusBadRequest)
+			return
+		}
+
+		log, err := backend.JobLogs(systemID, jobID, sidecar, logOptions)
+		if err != nil {
+			handleError(c, err)
+			return
+		}
+
+		if log == nil {
+			c.Status(http.StatusOK)
+			return
+		}
+
+		serveLogFile(log, c)
 	})
 }
 
