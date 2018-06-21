@@ -5,7 +5,42 @@ import (
 
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	kubeutil "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/kubernetes"
+	"k8s.io/apimachinery/pkg/labels"
 )
+
+func (c *Controller) nodePoolJobRuns(nodePool *latticev1.NodePool) ([]latticev1.JobRun, error) {
+	_, ok, err := nodePool.SystemSharedPathLabel()
+	if err != nil {
+		return nil, err
+	}
+	if ok {
+		jobRuns, err := c.jobRunLister.JobRuns(nodePool.Namespace).List(labels.Everything())
+		if err != nil {
+			return nil, err
+		}
+
+		var nodePoolJobRuns []latticev1.JobRun
+		for _, jobRun := range jobRuns {
+			// FIXME: this method was not working for services that had not yet annotated themselves
+			//nodePools, err := jobRun.NodePoolAnnotation()
+			//if err != nil {
+			//	continue
+			//}
+
+			//if nodePools.ContainsNodePool(nodePool.Namespace, nodePool.Name) {
+			nodePoolJobRuns = append(nodePoolJobRuns, *jobRun)
+			//}
+		}
+		return nodePoolJobRuns, nil
+	}
+
+	err = fmt.Errorf(
+		"%v did not have %v annotation",
+		nodePool.Description(c.namespacePrefix),
+		latticev1.NodePoolSystemSharedPathLabelKey,
+	)
+	return nil, err
+}
 
 func (c *Controller) addFinalizer(jobRun *latticev1.JobRun) (*latticev1.JobRun, error) {
 	// Check to see if the finalizer already exists. If so nothing needs to be done.

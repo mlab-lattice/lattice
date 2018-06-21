@@ -280,9 +280,9 @@ func (c *Controller) syncJobRun(key string) error {
 		return err
 	}
 
-	if jobRun.Deleted() {
-		return c.syncDeletedJobRun(jobRun)
-	}
+	//if jobRun.Deleted() {
+	//	return c.syncDeletedJobRun(jobRun)
+	//}
 
 	jobRun, err = c.addFinalizer(jobRun)
 	if err != nil {
@@ -294,17 +294,18 @@ func (c *Controller) syncJobRun(key string) error {
 		return err
 	}
 
-	kubeJobStatus, err := c.syncKubeJob(jobRun, nodePool)
+	//kubeJob, err := c.syncKubeJob(jobRun, nodePool)
+	_, err = c.syncKubeJob(jobRun, nodePool)
 	if err != nil {
 		return err
 	}
 
-	_, err = c.syncJobRunStatus(
-		jobRun,
-		nodePool,
-		address,
-		deploymentStatus,
-		extraNodePoolsExist,
-	)
+	//_, err = c.syncJobRunStatus(
+	//	jobRun,
+	//	nodePool,
+	//	address,
+	//	deploymentStatus,
+	//	extraNodePoolsExist,
+	//)
 	return err
 }

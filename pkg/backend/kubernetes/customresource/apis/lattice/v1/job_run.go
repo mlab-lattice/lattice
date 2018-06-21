@@ -85,6 +85,8 @@ func (s *JobRun) NodePoolAnnotation() (NodePoolAnnotationValue, error) {
 type JobRunSpec struct {
 	Definition *definitionv1.Job `json:"definition"`
 
+	NumRetries *int32
+
 	// ContainerBuildArtifacts maps container names to the artifacts created by their build
 	ContainerBuildArtifacts map[string]ContainerBuildArtifacts `json:"containerBuildArtifacts"`
 }
