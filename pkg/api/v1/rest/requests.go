@@ -2,6 +2,7 @@ package rest
 
 import (
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
+	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 )
 
 type CreateSystemRequest struct {
@@ -16,6 +17,10 @@ type BuildRequest struct {
 type DeployRequest struct {
 	Version *v1.SystemVersion `json:"version,omitempty"`
 	BuildID *v1.BuildID       `json:"buildId,omitempty"`
+}
+
+type RunJobRequest struct {
+	Path tree.NodePath `json:"path"`
 }
 
 type SetSecretRequest struct {

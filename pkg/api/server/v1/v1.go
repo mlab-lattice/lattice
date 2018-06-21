@@ -38,6 +38,11 @@ type Interface interface {
 	GetServiceByPath(v1.SystemID, tree.NodePath) (*v1.Service, error)
 	ServiceLogs(systemID v1.SystemID, serviceID v1.ServiceID, component string, instance string, follow bool) (io.ReadCloser, error)
 
+	// Jobs
+	ListJobs(v1.SystemID) ([]v1.Job, error)
+	GetJob(v1.SystemID, v1.JobID) (*v1.Job, error)
+	JobLogs(systemID v1.SystemID, jobID v1.JobID, follow bool) (io.ReadCloser, error)
+
 	// System Secret
 	ListSystemSecrets(v1.SystemID) ([]v1.Secret, error)
 	GetSystemSecret(systemID v1.SystemID, path tree.NodePath, name string) (*v1.Secret, error)
