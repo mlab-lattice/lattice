@@ -89,11 +89,11 @@ func (backend *MockBackend) Build(systemID v1.SystemID, definitionRoot tree.Node
 		return nil, v1.NewInvalidSystemIDError(systemID)
 	}
 
-	build := newMockBuild(systemID, v)
+	build := backend.newMockBuild(systemID, v)
 
 	record.builds[build.ID] = build
 	// run the build
-	go runBuild(build)
+	go backend.runBuild(build)
 	return build, nil
 }
 
@@ -250,7 +250,28 @@ func (backend *MockBackend) GetNodePool(v1.SystemID, v1.NodePoolPath) (*v1.NodeP
 
 // helpers
 
-func newMockBuild(systemID v1.SystemID, v v1.SystemVersion) *v1.Build {
+func (backend *MockBackend) getSystemRecordForBuild(buildID v1.BuildID) *SystemRecord {
+	for _, systemRecord := range backend.systemRegistry {
+		if _, exists := systemRecord.builds[buildID]; exists {
+			return systemRecord
+		}
+	}
+
+	return nil
+}
+
+func (backend *MockBackend) getDeployForBuild(buildID v1.BuildID) *v1.Deploy {
+	for _, systemRecord := range backend.systemRegistry {
+		for _, deploy := range systemRecord.deploys {
+			if deploy.BuildID == buildID {
+				return deploy
+			}
+		}
+	}
+	return nil
+}
+
+func (backend *MockBackend) newMockBuild(systemID v1.SystemID, v v1.SystemVersion) *v1.Build {
 	service1Path := tree.NodePath(fmt.Sprintf("/%s/api", systemID))
 	build := &v1.Build{
 		ID:      v1.BuildID(uuid.NewV4().String()),
@@ -271,50 +292,81 @@ func newMockBuild(systemID v1.SystemID, v v1.SystemVersion) *v1.Build {
 	return build
 }
 
-func runBuild(build *v1.Build) {
+func (backend *MockBackend) runBuild(build *v1.Build) {
 	// try to simulate reality by making things take a little longer. Sleep for a bit...
 	time.Sleep(2 * time.Second)
 
 	// change state to running
 	build.State = v1.BuildStateRunning
-	startTime := time.Now()
-	build.StartTimestamp = &startTime
+	now := time.Now()
+	build.StartTimestamp = &now
 
 	// run service builds
 	for sp, s := range build.Services {
 		s.State = v1.ServiceBuildStateRunning
-		s.StartTimestamp = &startTime
+		s.StartTimestamp = &now
 		for cp, c := range s.Components {
 			c.State = v1.ComponentBuildStateRunning
-			c.StartTimestamp = &startTime
+			c.StartTimestamp = &now
 			s.Components[cp] = c
 		}
 
 		build.Services[sp] = s
 	}
+
+	// run associated deploy
+	deploy := backend.getDeployForBuild(build.ID)
+	deploy.State = v1.DeployStateInProgress
 
 	// sleep
 	fmt.Printf("Mock: Running build %s. Sleeping for 20 seconds\n", build.ID)
 	time.Sleep(20 * time.Second)
+	backend.finishBuild(build)
 
-	// wake up
+}
+
+func (backend *MockBackend) finishBuild(build *v1.Build) {
 	// change state to succeeded
-	endTime := time.Now()
+	now := time.Now()
 
 	// finish service builds
 	for sp, s := range build.Services {
 		s.State = v1.ServiceBuildStateSucceeded
-		s.CompletionTimestamp = &endTime
+		s.CompletionTimestamp = &now
 		for cp, c := range s.Components {
-			c.CompletionTimestamp = &startTime
+			c.CompletionTimestamp = &now
 			c.State = v1.ComponentBuildStateSucceeded
 			s.Components[cp] = c
 		}
-		s.CompletionTimestamp = &startTime
+		s.CompletionTimestamp = &now
 		build.Services[sp] = s
 	}
 
-	build.CompletionTimestamp = &endTime
+	build.CompletionTimestamp = &now
 	build.State = v1.BuildStateSucceeded
+
+	// succeed associated deploy
+	deploy := backend.getDeployForBuild(build.ID)
+	deploy.State = v1.DeployStateSucceeded
+
 	fmt.Printf("Build %s finished\n", build.ID)
+
+	// update system services...
+	systemRecord := backend.getSystemRecordForBuild(build.ID)
+	services := make(map[tree.NodePath]v1.Service)
+	for _, build := range systemRecord.builds {
+		for path, _ := range build.Services {
+			services[path] = v1.Service{
+				ID:                 v1.ServiceID(uuid.NewV4().String()),
+				State:              v1.ServiceStateStable,
+				Instances:          []string{uuid.NewV4().String()},
+				Path:               path,
+				AvailableInstances: 1,
+			}
+		}
+		break
+	}
+
+	systemRecord.system.Services = services
+
 }
