@@ -3,6 +3,7 @@ package backend
 import (
 	"fmt"
 	"io"
+	"time"
 
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
@@ -14,8 +15,62 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
-	"time"
+
+	"github.com/satori/go.uuid"
 )
+
+func (kb *KubernetesBackend) RunJob(systemID v1.SystemID, path tree.NodePath) (*v1.Job, error) {
+	// ensure the system exists
+	if _, err := kb.ensureSystemCreated(systemID); err != nil {
+		return nil, err
+	}
+
+	namespace := kb.systemNamespace(systemID)
+
+	selector := labels.NewSelector()
+	requirement, err := labels.NewRequirement(latticev1.JobPathLabelKey, selection.Equals, []string{path.ToDomain()})
+	if err != nil {
+		return nil, fmt.Errorf("error creating requirement for job %v/%v lookup: %v", namespace, path.String(), err)
+	}
+	selector = selector.Add(*requirement)
+
+	jobs, err := kb.latticeClient.LatticeV1().Jobs(namespace).List(metav1.ListOptions{LabelSelector: selector.String()})
+	if err != nil {
+		return nil, err
+	}
+
+	if len(jobs.Items) != 1 {
+		err := fmt.Errorf("expected to find a job for %v in %v but found %v", path.String(), namespace, len(jobs.Items))
+		return nil, err
+	}
+
+	job := jobs.Items[0]
+
+	jobRun := &latticev1.JobRun{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: uuid.NewV4().String(),
+			Labels: map[string]string{
+				latticev1.JobRunPathLabelKey: path.ToDomain(),
+			},
+		},
+		Spec: latticev1.JobRunSpec{
+			Definition:              job.Spec.Definition,
+			ContainerBuildArtifacts: job.Spec.ContainerBuildArtifacts,
+		},
+	}
+
+	result, err := kb.latticeClient.LatticeV1().JobRuns(namespace).Create(jobRun)
+	if err != nil {
+		return nil, fmt.Errorf("error trying to create job run: %v", err)
+	}
+
+	externalJob, err := kb.transformJobRun(v1.JobID(result.Name), path, &result.Status, namespace)
+	if err != nil {
+		return nil, err
+	}
+
+	return &externalJob, nil
+}
 
 func (kb *KubernetesBackend) ListJobs(systemID v1.SystemID) ([]v1.Job, error) {
 	// ensure the system exists

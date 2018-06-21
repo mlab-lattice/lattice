@@ -456,34 +456,23 @@ func mountJobHandlers(router *gin.RouterGroup, backend v1server.Interface) {
 	jobsPath := fmt.Sprintf(v1rest.JobsPathFormat, systemIdentifierPathComponent)
 
 	// run-job
-	//router.POST(jobsPath, func(c *gin.Context) {
-	//	systemID := v1.SystemID(c.Param(systemIdentifier))
-	//
-	//	var req v1rest.BuildRequest
-	//	if err := c.BindJSON(&req); err != nil {
-	//		handleBadRequestBody(c)
-	//		return
-	//	}
-	//
-	//	root, err := getSystemDefinitionRoot(backend, sysResolver, systemID, req.Version)
-	//	if err != nil {
-	//		handleError(c, err)
-	//		return
-	//	}
-	//
-	//	build, err := backend.Build(
-	//		systemID,
-	//		root,
-	//		req.Version,
-	//	)
-	//
-	//	if err != nil {
-	//		handleError(c, err)
-	//		return
-	//	}
-	//
-	//	c.JSON(http.StatusCreated, build)
-	//})
+	router.POST(jobsPath, func(c *gin.Context) {
+		systemID := v1.SystemID(c.Param(systemIdentifier))
+
+		var req v1rest.RunJobRequest
+		if err := c.BindJSON(&req); err != nil {
+			handleBadRequestBody(c)
+			return
+		}
+
+		job, err := backend.RunJob(systemID, req.Path)
+		if err != nil {
+			handleError(c, err)
+			return
+		}
+
+		c.JSON(http.StatusCreated, job)
+	})
 
 	// list-jobs
 	router.GET(jobsPath, func(c *gin.Context) {

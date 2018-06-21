@@ -51,6 +51,7 @@ type Interface interface {
 	) (io.ReadCloser, error)
 
 	// Jobs
+	RunJob(v1.SystemID, tree.NodePath) (*v1.Job, error)
 	ListJobs(v1.SystemID) ([]v1.Job, error)
 	GetJob(v1.SystemID, v1.JobID) (*v1.Job, error)
 	JobLogs(
