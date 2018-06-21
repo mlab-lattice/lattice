@@ -53,7 +53,12 @@ type Interface interface {
 	// Jobs
 	ListJobs(v1.SystemID) ([]v1.Job, error)
 	GetJob(v1.SystemID, v1.JobID) (*v1.Job, error)
-	JobLogs(systemID v1.SystemID, jobID v1.JobID, logOptions *v1.ContainerLogOptions) (io.ReadCloser, error)
+	JobLogs(
+		systemID v1.SystemID,
+		jobID v1.JobID,
+		sidecar *string,
+		logOptions *v1.ContainerLogOptions,
+	) (io.ReadCloser, error)
 
 	// System Secret
 	ListSystemSecrets(v1.SystemID) ([]v1.Secret, error)
