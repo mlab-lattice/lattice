@@ -20,7 +20,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func mountSystemHandlers(router *gin.RouterGroup, backend v1server.Interface, sysResolver *resolver.SystemResolver) {
+func mountSystemHandlers(router *gin.RouterGroup, backend v1server.Interface, sysResolver resolver.SystemResolver) {
 
 	// create-system
 	router.POST(v1rest.SystemsPath, func(c *gin.Context) {
@@ -89,7 +89,7 @@ func mountSystemHandlers(router *gin.RouterGroup, backend v1server.Interface, sy
 	mountTeardownHandlers(router, backend)
 }
 
-func mountBuildHandlers(router *gin.RouterGroup, backend v1server.Interface, sysResolver *resolver.SystemResolver) {
+func mountBuildHandlers(router *gin.RouterGroup, backend v1server.Interface, sysResolver resolver.SystemResolver) {
 	systemIdentifier := "system_id"
 	systemIdentifierPathComponent := fmt.Sprintf(":%v", systemIdentifier)
 	buildsPath := fmt.Sprintf(v1rest.BuildsPathFormat, systemIdentifierPathComponent)
@@ -206,7 +206,7 @@ func mountBuildHandlers(router *gin.RouterGroup, backend v1server.Interface, sys
 	})
 }
 
-func mountDeployHandlers(router *gin.RouterGroup, backend v1server.Interface, sysResolver *resolver.SystemResolver) {
+func mountDeployHandlers(router *gin.RouterGroup, backend v1server.Interface, sysResolver resolver.SystemResolver) {
 	systemIdentifier := "system_id"
 	systemIdentifierPathComponent := fmt.Sprintf(":%v", systemIdentifier)
 	deploysPath := fmt.Sprintf(v1rest.DeploysPathFormat, systemIdentifierPathComponent)
@@ -703,7 +703,7 @@ func mountTeardownHandlers(router *gin.RouterGroup, backend v1server.Interface) 
 	})
 }
 
-func mountVersionHandlers(router *gin.RouterGroup, backend v1server.Interface, sysResolver *resolver.SystemResolver) {
+func mountVersionHandlers(router *gin.RouterGroup, backend v1server.Interface, sysResolver resolver.SystemResolver) {
 	systemIDIdentifier := "system_id"
 	systemIDPathComponent := fmt.Sprintf(":%v", systemIDIdentifier)
 	versionsPath := fmt.Sprintf(v1rest.VersionsPathFormat, systemIDPathComponent)
@@ -727,7 +727,7 @@ func mountVersionHandlers(router *gin.RouterGroup, backend v1server.Interface, s
 	})
 }
 
-func getSystemDefinitionRoot(backend v1server.Interface, sysResolver *resolver.SystemResolver, systemID v1.SystemID, version v1.SystemVersion) (tree.Node, error) {
+func getSystemDefinitionRoot(backend v1server.Interface, sysResolver resolver.SystemResolver, systemID v1.SystemID, version v1.SystemVersion) (tree.Node, error) {
 	system, err := backend.GetSystem(systemID)
 	if err != nil {
 		return nil, err
@@ -743,7 +743,7 @@ func getSystemDefinitionRoot(backend v1server.Interface, sysResolver *resolver.S
 	return sysResolver.ResolveDefinition(systemDefURI, &git.Options{})
 }
 
-func getSystemVersions(backend v1server.Interface, sysResolver *resolver.SystemResolver, systemID v1.SystemID) ([]string, error) {
+func getSystemVersions(backend v1server.Interface, sysResolver resolver.SystemResolver, systemID v1.SystemID) ([]string, error) {
 	system, err := backend.GetSystem(systemID)
 	if err != nil {
 		return nil, err

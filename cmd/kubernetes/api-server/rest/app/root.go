@@ -7,6 +7,7 @@ import (
 
 	"github.com/mlab-lattice/lattice/pkg/api/server/rest"
 	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/api/server/backend"
+	"github.com/mlab-lattice/lattice/pkg/definition/resolver"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
@@ -33,7 +34,12 @@ var RootCmd = &cobra.Command{
 			panic(err)
 		}
 
-		rest.RunNewRestServer(kubernetesBackend, int32(port), workingDirectory, apiAuthKey)
+		systemResolver, err := resolver.NewSystemResolver(workingDirectory)
+		if err != nil {
+			panic(err)
+		}
+
+		rest.RunNewRestServer(kubernetesBackend, int32(port), systemResolver, apiAuthKey)
 	},
 }
 

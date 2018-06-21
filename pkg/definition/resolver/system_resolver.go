@@ -10,8 +10,8 @@ import (
 	"github.com/mlab-lattice/lattice/pkg/util/git"
 )
 
-// SystemResolver resolves system definitions from different sources such as git
-type SystemResolver struct {
+//DefaultSystemResolver default implementation for SystemResolver interface
+type DefaultSystemResolver struct {
 	gitResolver *git.Resolver
 }
 
@@ -20,7 +20,7 @@ type resolveContext struct {
 	gitResolveOptions *git.Options
 }
 
-func NewSystemResolver(workDirectory string) (*SystemResolver, error) {
+func NewSystemResolver(workDirectory string) (SystemResolver, error) {
 	if workDirectory == "" {
 		return nil, fmt.Errorf("must supply workDirectory")
 	}
@@ -30,14 +30,14 @@ func NewSystemResolver(workDirectory string) (*SystemResolver, error) {
 		return nil, err
 	}
 
-	sr := &SystemResolver{
+	sr := &DefaultSystemResolver{
 		gitResolver: gitResolver,
 	}
 	return sr, nil
 }
 
 // resolves the definition
-func (resolver *SystemResolver) ResolveDefinition(uri string, gitResolveOptions *git.Options) (tree.Node, error) {
+func (resolver *DefaultSystemResolver) ResolveDefinition(uri string, gitResolveOptions *git.Options) (tree.Node, error) {
 
 	if gitResolveOptions == nil {
 		gitResolveOptions = &git.Options{}
@@ -51,7 +51,7 @@ func (resolver *SystemResolver) ResolveDefinition(uri string, gitResolveOptions 
 }
 
 // lists the versions of the specified definition's uri
-func (resolver *SystemResolver) ListDefinitionVersions(uri string, gitResolveOptions *git.Options) ([]string, error) {
+func (resolver *DefaultSystemResolver) ListDefinitionVersions(uri string, gitResolveOptions *git.Options) ([]string, error) {
 	if gitResolveOptions == nil {
 		gitResolveOptions = &git.Options{}
 	}
@@ -64,7 +64,7 @@ func (resolver *SystemResolver) ListDefinitionVersions(uri string, gitResolveOpt
 }
 
 // readNodeFromFile reads a definition node from a file
-func (resolver *SystemResolver) readNodeFromFile(ctx *resolveContext) (tree.Node, error) {
+func (resolver *DefaultSystemResolver) readNodeFromFile(ctx *resolveContext) (tree.Node, error) {
 
 	engine := language.NewEngine()
 	options, err := language.CreateOptions(resolver.gitResolver.WorkDirectory, ctx.gitResolveOptions)
@@ -94,7 +94,7 @@ func (resolver *SystemResolver) readNodeFromFile(ctx *resolveContext) (tree.Node
 }
 
 // lists the tags in a repo
-func (resolver *SystemResolver) listRepoVersionTags(ctx *resolveContext) ([]string, error) {
+func (resolver *DefaultSystemResolver) listRepoVersionTags(ctx *resolveContext) ([]string, error) {
 	gitResolverContext := &git.Context{
 		URI:     ctx.gitURI,
 		Options: ctx.gitResolveOptions,
