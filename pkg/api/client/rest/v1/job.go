@@ -12,6 +12,7 @@ import (
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	v1rest "github.com/mlab-lattice/lattice/pkg/api/v1/rest"
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
+	definitionv1 "github.com/mlab-lattice/lattice/pkg/definition/v1"
 	"github.com/mlab-lattice/lattice/pkg/util/rest"
 )
 
@@ -29,9 +30,11 @@ func newJobClient(c rest.Client, apiServerURL string, systemID v1.SystemID) *Job
 	}
 }
 
-func (c *JobClient) Create(path tree.NodePath) (*v1.Job, error) {
+func (c *JobClient) Create(path tree.NodePath, command []string, environment definitionv1.ContainerEnvironment) (*v1.Job, error) {
 	request := &v1rest.RunJobRequest{
-		Path: path,
+		Path:        path,
+		Command:     command,
+		Environment: environment,
 	}
 	requestJSON, err := json.Marshal(request)
 	if err != nil {

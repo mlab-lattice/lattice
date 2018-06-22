@@ -465,7 +465,7 @@ func mountJobHandlers(router *gin.RouterGroup, backend v1server.Interface) {
 			return
 		}
 
-		job, err := backend.RunJob(systemID, req.Path)
+		job, err := backend.RunJob(systemID, req.Path, req.Command, req.Environment)
 		if err != nil {
 			handleError(c, err)
 			return

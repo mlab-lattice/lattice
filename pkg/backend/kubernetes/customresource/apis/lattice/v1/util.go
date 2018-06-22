@@ -24,6 +24,7 @@ func PodTemplateSpecForComponent(
 	namespacePrefix, namespace, name string,
 	labels map[string]string,
 	buildArtifacts map[string]ContainerBuildArtifacts,
+	restartPolicy corev1.RestartPolicy,
 	affinity *corev1.Affinity,
 	tolerations []corev1.Toleration,
 ) (corev1.PodTemplateSpec, error) {
@@ -106,11 +107,12 @@ func PodTemplateSpecForComponent(
 			Labels: labels,
 		},
 		Spec: corev1.PodSpec{
-			Containers:  kubeContainers,
-			DNSPolicy:   corev1.DNSDefault,
-			DNSConfig:   dnsConfig,
-			Affinity:    affinity,
-			Tolerations: tolerations,
+			Containers:    kubeContainers,
+			RestartPolicy: restartPolicy,
+			DNSPolicy:     corev1.DNSDefault,
+			DNSConfig:     dnsConfig,
+			Affinity:      affinity,
+			Tolerations:   tolerations,
 		},
 	}
 	return podSpecTemplate, nil
@@ -198,7 +200,7 @@ func KubeContainerForContainer(
 	}
 
 	var probe *corev1.Probe
-	if container.HealthCheck.HTTP != nil {
+	if container.HealthCheck != nil && container.HealthCheck.HTTP != nil {
 		probe = &corev1.Probe{
 			Handler: corev1.Handler{
 				HTTPGet: &corev1.HTTPGetAction{

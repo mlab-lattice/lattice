@@ -5,6 +5,7 @@ import (
 
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
+	definitionv1 "github.com/mlab-lattice/lattice/pkg/definition/v1"
 )
 
 type Interface interface {
@@ -54,7 +55,7 @@ type ServiceClient interface {
 }
 
 type JobClient interface {
-	Create(tree.NodePath) (*v1.Job, error)
+	Create(path tree.NodePath, command []string, environment definitionv1.ContainerEnvironment) (*v1.Job, error)
 	List() ([]v1.Job, error)
 	Get(v1.JobID) (*v1.Job, error)
 	Logs(id v1.JobID, path tree.NodePath, sidecar *string, logOptions *v1.ContainerLogOptions) (io.ReadCloser, error)

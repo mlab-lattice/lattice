@@ -25,10 +25,10 @@ var (
 	JobRunListKind = SchemeGroupVersion.WithKind("JobRunList")
 
 	// JobRunID label is the key that should be used in a label referencing a jobRun's ID.
-	JobRunIDLabelKey = fmt.Sprintf("jobRun.%v/id", GroupName)
+	JobRunIDLabelKey = fmt.Sprintf("jobrun.%v/id", GroupName)
 
 	// JobRunID label is the key that should be used for the path of the jobRun.
-	JobRunPathLabelKey = fmt.Sprintf("jobRun.%v/path", GroupName)
+	JobRunPathLabelKey = fmt.Sprintf("jobrun.%v/path", GroupName)
 )
 
 // +genclient
@@ -85,7 +85,9 @@ func (s *JobRun) NodePoolAnnotation() (NodePoolAnnotationValue, error) {
 type JobRunSpec struct {
 	Definition *definitionv1.Job `json:"definition"`
 
-	NumRetries *int32
+	NumRetries  *int32                            `json:"numRetries"`
+	Command     []string                          `json:"command"`
+	Environment definitionv1.ContainerEnvironment `json:"environment"`
 
 	// ContainerBuildArtifacts maps container names to the artifacts created by their build
 	ContainerBuildArtifacts map[string]ContainerBuildArtifacts `json:"containerBuildArtifacts"`

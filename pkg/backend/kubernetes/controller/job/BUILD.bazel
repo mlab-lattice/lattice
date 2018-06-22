@@ -21,6 +21,7 @@ go_library(
         "//pkg/backend/kubernetes/servicemesh:go_default_library",
         "//pkg/backend/kubernetes/util/kubernetes:go_default_library",
         "//pkg/definition/tree:go_default_library",
+        "//pkg/definition/v1:go_default_library",
         "@com_github_golang_glog//:go_default_library",
         "@io_k8s_api//batch/v1:go_default_library",
         "@io_k8s_api//core/v1:go_default_library",

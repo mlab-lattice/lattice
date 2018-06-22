@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
+	definitionv1 "github.com/mlab-lattice/lattice/pkg/definition/v1"
 
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -32,7 +33,7 @@ func (c *Controller) syncKubeJob(
 func (c *Controller) kubeJob(jobRun *latticev1.JobRun) (*batchv1.Job, error) {
 	// First check the cache for the deployment
 	selector := labels.NewSelector()
-	requirement, err := labels.NewRequirement(latticev1.JobIDLabelKey, selection.Equals, []string{jobRun.Name})
+	requirement, err := labels.NewRequirement(latticev1.JobRunIDLabelKey, selection.Equals, []string{jobRun.Name})
 	if err != nil {
 		return nil, err
 	}
@@ -176,38 +177,46 @@ func (c *Controller) untransformedPodTemplateSpec(
 		return corev1.PodTemplateSpec{}, err
 	}
 
-	podAffinityTerm := corev1.PodAffinityTerm{
-		LabelSelector: &metav1.LabelSelector{
-			MatchLabels: jobRunLabels,
-		},
-		Namespaces: []string{jobRun.Namespace},
+	//podAffinityTerm := corev1.PodAffinityTerm{
+	//	LabelSelector: &metav1.LabelSelector{
+	//		MatchLabels: jobRunLabels,
+	//	},
+	//	Namespaces: []string{jobRun.Namespace},
+	//
+	//	// This basically tells the pod anti-affinity to only be applied to nodes who all
+	//	// have the same value for that label.
+	//	// Since we also add a RequiredDuringScheduling NodeAffinity for our NodePool,
+	//	// this NodePool's nodes are the only nodes that these pods could be scheduled on,
+	//	// so this TopologyKey doesn't really matter (besides being required).
+	//	TopologyKey: latticev1.NodePoolIDLabelKey,
+	//}
+	//
+	//nodePoolEpoch, ok := nodePool.Status.Epochs.CurrentEpoch()
+	//if !ok {
+	//	return corev1.PodTemplateSpec{}, fmt.Errorf("unable to get current epoch for %v: %v", nodePool.Description(c.namespacePrefix), err)
+	//}
+	//
+	//affinity := &corev1.Affinity{
+	//	NodeAffinity: nodePool.Affinity(nodePoolEpoch),
+	//	PodAntiAffinity: &corev1.PodAntiAffinity{
+	//		PreferredDuringSchedulingIgnoredDuringExecution: []corev1.WeightedPodAffinityTerm{
+	//			{
+	//				Weight:          50,
+	//				PodAffinityTerm: podAffinityTerm,
+	//			},
+	//		},
+	//	},
+	//}
 
-		// This basically tells the pod anti-affinity to only be applied to nodes who all
-		// have the same value for that label.
-		// Since we also add a RequiredDuringScheduling NodeAffinity for our NodePool,
-		// this NodePool's nodes are the only nodes that these pods could be scheduled on,
-		// so this TopologyKey doesn't really matter (besides being required).
-		TopologyKey: latticev1.NodePoolIDLabelKey,
+	//tolerations := []corev1.Toleration{nodePool.Toleration(nodePoolEpoch)}
+
+	// use the supplied command and environment as the job container's exec
+	// copy so we don't mutate the cache
+	jobRun = jobRun.DeepCopy()
+	jobRun.Spec.Definition.Exec = &definitionv1.ContainerExec{
+		Command:     jobRun.Spec.Command,
+		Environment: jobRun.Spec.Environment,
 	}
-
-	nodePoolEpoch, ok := nodePool.Status.Epochs.CurrentEpoch()
-	if !ok {
-		return corev1.PodTemplateSpec{}, fmt.Errorf("unable to get current epoch for %v: %v", nodePool.Description(c.namespacePrefix), err)
-	}
-
-	affinity := &corev1.Affinity{
-		NodeAffinity: nodePool.Affinity(nodePoolEpoch),
-		PodAntiAffinity: &corev1.PodAntiAffinity{
-			PreferredDuringSchedulingIgnoredDuringExecution: []corev1.WeightedPodAffinityTerm{
-				{
-					Weight:          50,
-					PodAffinityTerm: podAffinityTerm,
-				},
-			},
-		},
-	}
-
-	tolerations := []corev1.Toleration{nodePool.Toleration(nodePoolEpoch)}
 
 	return latticev1.PodTemplateSpecForComponent(
 		jobRun.Spec.Definition,
@@ -219,8 +228,11 @@ func (c *Controller) untransformedPodTemplateSpec(
 		jobRun.Name,
 		jobRunLabels,
 		jobRun.Spec.ContainerBuildArtifacts,
-		affinity,
-		tolerations,
+		corev1.RestartPolicyNever,
+		//affinity,
+		//tolerations,
+		nil,
+		nil,
 	)
 }
 

@@ -128,7 +128,7 @@ func (c *Controller) addFinalizer(jobRun *latticev1.JobRun) (*latticev1.JobRun, 
 
 	// Copy so we don't mutate the shared cache
 	jobRun = jobRun.DeepCopy()
-	jobRun.Finalizers = append(jobRun.Finalizers, kubeutil.ServiceControllerFinalizer)
+	jobRun.Finalizers = append(jobRun.Finalizers, kubeutil.JobControllerFinalizer)
 
 	result, err := c.latticeClient.LatticeV1().JobRuns(jobRun.Namespace).Update(jobRun)
 	if err != nil {

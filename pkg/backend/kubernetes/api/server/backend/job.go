@@ -9,6 +9,7 @@ import (
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	kubeutil "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/kubernetes"
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
+	definitionv1 "github.com/mlab-lattice/lattice/pkg/definition/v1"
 
 	corev1 "k8s.io/api/core/v1"
 
@@ -19,7 +20,12 @@ import (
 	"github.com/satori/go.uuid"
 )
 
-func (kb *KubernetesBackend) RunJob(systemID v1.SystemID, path tree.NodePath) (*v1.Job, error) {
+func (kb *KubernetesBackend) RunJob(
+	systemID v1.SystemID,
+	path tree.NodePath,
+	command []string,
+	environment definitionv1.ContainerEnvironment,
+) (*v1.Job, error) {
 	// ensure the system exists
 	if _, err := kb.ensureSystemCreated(systemID); err != nil {
 		return nil, err
@@ -54,7 +60,11 @@ func (kb *KubernetesBackend) RunJob(systemID v1.SystemID, path tree.NodePath) (*
 			},
 		},
 		Spec: latticev1.JobRunSpec{
-			Definition:              job.Spec.Definition,
+			Definition: job.Spec.Definition,
+
+			Command:     command,
+			Environment: environment,
+
 			ContainerBuildArtifacts: job.Spec.ContainerBuildArtifacts,
 		},
 	}

@@ -6,6 +6,7 @@ import (
 	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/controller/address"
 	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/controller/build"
 	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/controller/containerbuild"
+	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/controller/job"
 	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/controller/nodepool"
 	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/controller/service"
 	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/controller/system"
@@ -18,6 +19,7 @@ var Initializers = map[string]Initializer{
 	AddressController:         initializeAddressController,
 	BuildController:           initializeBuildController,
 	ContainerBuildController:  initializeContainerBuildController,
+	JobController:             initializeJobController,
 	NodePoolController:        initializeNodePoolController,
 	ServiceController:         initializeServiceController,
 	SystemController:          initializeSystemController,
@@ -54,6 +56,20 @@ func initializeContainerBuildController(ctx Context) {
 	go containerbuild.NewController(
 		ctx.NamespacePrefix,
 		ctx.CloudProviderOptions,
+		ctx.KubeClientBuilder.ClientOrDie(controllerName(ContainerBuildController)),
+		ctx.LatticeClientBuilder.ClientOrDie(controllerName(ContainerBuildController)),
+		ctx.KubeInformerFactory,
+		ctx.LatticeInformerFactory,
+	).Run(4, ctx.Stop)
+}
+
+func initializeJobController(ctx Context) {
+	go job.NewController(
+		ctx.NamespacePrefix,
+		ctx.LatticeID,
+		ctx.InternalDNSDomain,
+		ctx.CloudProviderOptions,
+		ctx.ServiceMeshOptions,
 		ctx.KubeClientBuilder.ClientOrDie(controllerName(ContainerBuildController)),
 		ctx.LatticeClientBuilder.ClientOrDie(controllerName(ContainerBuildController)),
 		ctx.KubeInformerFactory,

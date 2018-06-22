@@ -8,10 +8,12 @@ import (
 
 	v1client "github.com/mlab-lattice/lattice/pkg/api/client/v1"
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
+	definitionv1 "github.com/mlab-lattice/lattice/pkg/definition/v1"
 	"github.com/mlab-lattice/lattice/pkg/latticectl"
 	"github.com/mlab-lattice/lattice/pkg/util/cli"
 	"github.com/mlab-lattice/lattice/pkg/util/cli/color"
 	"github.com/mlab-lattice/lattice/pkg/util/cli/printer"
+	"strings"
 )
 
 type BuildCommand struct {
@@ -26,16 +28,40 @@ func (c *BuildCommand) Base() (*latticectl.BaseCommand, error) {
 		Target: &watch,
 	}
 	var pathStr string
+	var follow bool
+	var command string
+	var jobArgs []string
+	var envStrings []string
 
 	cmd := &latticectl.SystemCommand{
 		Name: "run",
 		Flags: []cli.Flag{
-			output.Flag(),
 			&cli.StringFlag{
 				Name:     "path",
 				Required: true,
 				Target:   &pathStr,
 			},
+			&cli.BoolFlag{
+				Name:   "follow",
+				Short:  "f",
+				Target: &follow,
+			},
+			&cli.StringFlag{
+				Name:   "command",
+				Short:  "c",
+				Target: &command,
+			},
+			&cli.StringSliceFlag{
+				Name:   "arg",
+				Short:  "a",
+				Target: &jobArgs,
+			},
+			&cli.StringSliceFlag{
+				Name:   "env",
+				Short:  "e",
+				Target: &envStrings,
+			},
+			output.Flag(),
 			watchFlag.Flag(),
 		},
 		Run: func(ctx latticectl.SystemCommandContext, args []string) {
@@ -50,11 +76,29 @@ func (c *BuildCommand) Base() (*latticectl.BaseCommand, error) {
 				os.Exit(1)
 			}
 
+			fullCommand := []string{command}
+			fullCommand = append(fullCommand, jobArgs...)
+
+			env := definitionv1.ContainerEnvironment{}
+			for _, kv := range envStrings {
+				// FIXME: support comma escaping
+				parts := strings.Split(kv, "=")
+				if len(parts) != 2 {
+					fmt.Fprintf(os.Stderr, "invalid environment variable %v", kv)
+					os.Exit(1)
+				}
+
+				// FIXME: support secrets
+				env[parts[0]] = definitionv1.ContainerEnvironmentVariable{
+					Value: &parts[1],
+				}
+			}
+
 			c := ctx.Client().Systems().Jobs(ctx.SystemID())
 
-			err = RunJob(c, path, format, os.Stdout, watch)
+			err = RunJob(c, path, fullCommand, env, format, os.Stdout, watch, follow)
 			if err != nil {
-				//log.Fatal(err)
+				fmt.Fprintf(os.Stderr, "%v", err)
 				os.Exit(1)
 			}
 		},
@@ -66,11 +110,14 @@ func (c *BuildCommand) Base() (*latticectl.BaseCommand, error) {
 func RunJob(
 	client v1client.JobClient,
 	path tree.NodePath,
+	command []string,
+	environment definitionv1.ContainerEnvironment,
 	format printer.Format,
 	writer io.Writer,
 	watch bool,
+	follow bool,
 ) error {
-	job, err := client.Create(path)
+	job, err := client.Create(path, command, environment)
 	if err != nil {
 		return err
 	}

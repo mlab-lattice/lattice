@@ -106,9 +106,10 @@ func jobsPrinter(jobs []v1.Job, format printer.Format) printer.Interface {
 	var p printer.Interface
 	switch format {
 	case printer.FormatTable:
-		headers := []string{"Path", "State", "Start", "Completion"}
+		headers := []string{"ID", "Path", "State", "Start", "Completion"}
 
 		headerColors := []tw.Colors{
+			{tw.Bold},
 			{tw.Bold},
 			{tw.Bold},
 			{tw.Bold},
@@ -120,9 +121,11 @@ func jobsPrinter(jobs []v1.Job, format printer.Format) printer.Interface {
 			{},
 			{},
 			{},
+			{},
 		}
 
 		columnAlignment := []int{
+			tw.ALIGN_LEFT,
 			tw.ALIGN_LEFT,
 			tw.ALIGN_LEFT,
 			tw.ALIGN_LEFT,
@@ -152,6 +155,7 @@ func jobsPrinter(jobs []v1.Job, format printer.Format) printer.Interface {
 			}
 
 			rows = append(rows, []string{
+				string(job.ID),
 				job.Path.String(),
 				stateColor(string(job.State)),
 				startTimestamp,

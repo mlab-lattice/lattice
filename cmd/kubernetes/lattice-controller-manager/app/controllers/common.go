@@ -16,6 +16,7 @@ const (
 	AddressController         = "address"
 	BuildController           = "build"
 	ContainerBuildController  = "containerbuild"
+	JobController             = "job"
 	NodePoolController        = "nodepool"
 	ServiceController         = "service"
 	SystemController          = "system"

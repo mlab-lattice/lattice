@@ -3,6 +3,7 @@ package rest
 import (
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
+	definitionv1 "github.com/mlab-lattice/lattice/pkg/definition/v1"
 )
 
 type CreateSystemRequest struct {
@@ -20,7 +21,9 @@ type DeployRequest struct {
 }
 
 type RunJobRequest struct {
-	Path tree.NodePath `json:"path"`
+	Path        tree.NodePath                     `json:"path"`
+	Command     []string                          `json:"command"`
+	Environment definitionv1.ContainerEnvironment `json:"environment"`
 }
 
 type SetSecretRequest struct {

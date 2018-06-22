@@ -113,7 +113,7 @@ func (c *Controller) newJob(
 			Namespace:       systemNamespace,
 			OwnerReferences: []metav1.OwnerReference{*metav1.NewControllerRef(system, latticev1.SystemKind)},
 			Labels: map[string]string{
-				latticev1.ServicePathLabelKey: path.ToDomain(),
+				latticev1.JobPathLabelKey: path.ToDomain(),
 			},
 		},
 		Spec: jobSpec(jobInfo),
