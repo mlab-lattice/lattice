@@ -23,17 +23,19 @@ func newMockBackend() *MockBackend {
 }
 
 type SystemRecord struct {
-	system  *v1.System
-	builds  map[v1.BuildID]*v1.Build
-	deploys map[v1.DeployID]*v1.Deploy
+	system    *v1.System
+	builds    map[v1.BuildID]*v1.Build
+	deploys   map[v1.DeployID]*v1.Deploy
+	teardowns map[v1.TeardownID]*v1.Teardown
 }
 
 // newSystemRecord
 func newSystemRecord(system *v1.System) *SystemRecord {
 	return &SystemRecord{
-		system:  system,
-		builds:  make(map[v1.BuildID]*v1.Build),
-		deploys: make(map[v1.DeployID]*v1.Deploy),
+		system:    system,
+		builds:    make(map[v1.BuildID]*v1.Build),
+		deploys:   make(map[v1.DeployID]*v1.Deploy),
+		teardowns: make(map[v1.TeardownID]*v1.Teardown),
 	}
 }
 
@@ -82,8 +84,6 @@ func (backend *MockBackend) DeleteSystem(systemID v1.SystemID) error {
 
 // Builds
 func (backend *MockBackend) Build(systemID v1.SystemID, definitionRoot tree.Node, v v1.SystemVersion) (*v1.Build, error) {
-
-	// ensure the system exists
 	record, exists := backend.systemRegistry[systemID]
 	if !exists {
 		return nil, v1.NewInvalidSystemIDError(systemID)
@@ -177,7 +177,6 @@ func (backend *MockBackend) ListDeploys(systemID v1.SystemID) ([]v1.Deploy, erro
 }
 
 func (backend *MockBackend) GetDeploy(systemID v1.SystemID, deployID v1.DeployID) (*v1.Deploy, error) {
-	// ensure the system exists
 	record, exists := backend.systemRegistry[systemID]
 	if !exists {
 		return nil, v1.NewInvalidSystemIDError(systemID)
@@ -193,29 +192,94 @@ func (backend *MockBackend) GetDeploy(systemID v1.SystemID, deployID v1.DeployID
 }
 
 // Teardown
-func (backend *MockBackend) TearDown(v1.SystemID) (*v1.Teardown, error) {
-	return nil, nil
+func (backend *MockBackend) TearDown(systemID v1.SystemID) (*v1.Teardown, error) {
+	record, exists := backend.systemRegistry[systemID]
+	if !exists {
+		return nil, v1.NewInvalidSystemIDError(systemID)
+	}
+
+	teardown := &v1.Teardown{
+		ID:    v1.TeardownID(uuid.NewV4().String()),
+		State: v1.TeardownStatePending,
+	}
+
+	record.teardowns[teardown.ID] = teardown
+	// run the teardown
+	go backend.runTeardown(teardown)
+	return teardown, nil
 }
 
-func (backend *MockBackend) ListTeardowns(v1.SystemID) ([]v1.Teardown, error) {
-	return nil, nil
+func (backend *MockBackend) ListTeardowns(systemID v1.SystemID) ([]v1.Teardown, error) {
+	record, exists := backend.systemRegistry[systemID]
+	if !exists {
+		return nil, v1.NewInvalidSystemIDError(systemID)
+	}
+
+	teardowns := []v1.Teardown{}
+	for _, teardown := range record.teardowns {
+		teardowns = append(teardowns, *teardown)
+	}
+	return teardowns, nil
 }
 
-func (backend *MockBackend) GetTeardown(v1.SystemID, v1.TeardownID) (*v1.Teardown, error) {
-	return nil, nil
+func (backend *MockBackend) GetTeardown(systemID v1.SystemID, teardownID v1.TeardownID) (*v1.Teardown, error) {
+	// ensure the system exists
+	record, exists := backend.systemRegistry[systemID]
+	if !exists {
+		return nil, v1.NewInvalidSystemIDError(systemID)
+	}
+
+	teardown, exists := record.teardowns[teardownID]
+
+	if !exists {
+		return nil, v1.NewInvalidTeardownIDError(teardownID)
+	}
+
+	return teardown, nil
 }
 
 // Services
-func (backend *MockBackend) ListServices(v1.SystemID) ([]v1.Service, error) {
-	return nil, nil
+func (backend *MockBackend) ListServices(systemID v1.SystemID) ([]v1.Service, error) {
+	record, exists := backend.systemRegistry[systemID]
+	if !exists {
+		return nil, v1.NewInvalidSystemIDError(systemID)
+	}
+
+	services := []v1.Service{}
+	for _, service := range record.system.Services {
+		services = append(services, service)
+	}
+	return services, nil
 }
 
-func (backend *MockBackend) GetService(v1.SystemID, v1.ServiceID) (*v1.Service, error) {
-	return nil, nil
+func (backend *MockBackend) GetService(systemID v1.SystemID, serviceID v1.ServiceID) (*v1.Service, error) {
+	record, exists := backend.systemRegistry[systemID]
+	if !exists {
+		return nil, v1.NewInvalidSystemIDError(systemID)
+	}
+
+	for _, service := range record.system.Services {
+		if service.ID == serviceID {
+			return &service, nil
+		}
+	}
+
+	return nil, v1.NewInvalidServiceIDError(serviceID)
 }
 
-func (backend *MockBackend) GetServiceByPath(v1.SystemID, tree.NodePath) (*v1.Service, error) {
-	return nil, nil
+func (backend *MockBackend) GetServiceByPath(systemID v1.SystemID, path tree.NodePath) (*v1.Service, error) {
+	record, exists := backend.systemRegistry[systemID]
+	if !exists {
+		return nil, v1.NewInvalidSystemIDError(systemID)
+	}
+
+	service, exists := record.system.Services[path]
+
+	if !exists {
+		return nil, v1.NewInvalidServicePathError(path)
+	}
+
+	return &service, nil
 }
 
 func (backend *MockBackend) ServiceLogs(systemID v1.SystemID, serviceID v1.ServiceID, component string,
@@ -369,4 +433,36 @@ func (backend *MockBackend) finishBuild(build *v1.Build) {
 
 	systemRecord.system.Services = services
 
+}
+
+func (backend *MockBackend) getSystemRecordForTeardown(teardownID v1.TeardownID) *SystemRecord {
+	for _, systemRecord := range backend.systemRegistry {
+		if _, exists := systemRecord.teardowns[teardownID]; exists {
+			return systemRecord
+		}
+	}
+	return nil
+}
+
+func (backend *MockBackend) runTeardown(teardown *v1.Teardown) {
+	// try to simulate reality by making things take a little longer. Sleep for a bit...
+	time.Sleep(2 * time.Second)
+
+	// change state to running
+	teardown.State = v1.TeardownStateInProgress
+
+	systemRecord := backend.getSystemRecordForTeardown(teardown.ID)
+	// run service builds
+	for sp, s := range systemRecord.system.Services {
+		s.State = v1.ServiceStateDeleting
+
+		systemRecord.system.Services[sp] = s
+	}
+
+	// sleep
+	fmt.Printf("Mock: Running teardown %s. Sleeping for 20 seconds\n", teardown.ID)
+	time.Sleep(20 * time.Second)
+
+	systemRecord.system.Services = nil
+	teardown.State = v1.TeardownStateSucceeded
 }
