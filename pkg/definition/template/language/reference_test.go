@@ -64,7 +64,6 @@ func templateReferenceTest(t *testing.T) {
 	}
 
 	fmt.Println("Evaluation result")
-	prettyPrint(result.Value())
 
 	// validate result
 
