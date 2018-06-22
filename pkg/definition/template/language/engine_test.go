@@ -75,6 +75,7 @@ func testInclude(t *testing.T) {
 	resultMap := result.ValueAsMap()
 
 	fmt.Println("Evaluation Result: ")
+	prettyPrint(resultMap)
 
 	fmt.Println("Validating Eval result...")
 

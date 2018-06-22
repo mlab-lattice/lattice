@@ -62,6 +62,8 @@ func templateSecretsTest(t *testing.T) {
 	}
 
 	fmt.Println("Evaluation result")
+	prettyPrint(result.Value())
+
 	// validate result
 
 	resultMap := result.ValueAsMap()
