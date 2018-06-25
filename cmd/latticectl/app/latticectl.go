@@ -103,6 +103,7 @@ var Latticectl = latticectl.Latticectl{
 			&jobs.ListJobsCommand{
 				Subcommands: []latticectl.Command{
 					&jobs.BuildCommand{},
+					&jobs.LogsCommand{},
 				},
 			},
 		},

@@ -58,7 +58,7 @@ type JobClient interface {
 	Create(path tree.NodePath, command []string, environment definitionv1.ContainerEnvironment) (*v1.Job, error)
 	List() ([]v1.Job, error)
 	Get(v1.JobID) (*v1.Job, error)
-	Logs(id v1.JobID, path tree.NodePath, sidecar *string, logOptions *v1.ContainerLogOptions) (io.ReadCloser, error)
+	Logs(id v1.JobID, sidecar *string, logOptions *v1.ContainerLogOptions) (io.ReadCloser, error)
 }
 
 type SecretClient interface {

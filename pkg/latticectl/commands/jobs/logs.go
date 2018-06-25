@@ -1,4 +1,4 @@
-package services
+package jobs
 
 import (
 	"io"
@@ -16,15 +16,13 @@ type LogsCommand struct {
 
 func (c *LogsCommand) Base() (*latticectl.BaseCommand, error) {
 	var sidecarStr string
-	var instanceStr string
 	var follow bool
-	var previous bool
 	var timestamps bool
 	var sinceTime string
 	var since string
 	var tail int
 
-	cmd := &latticectl.ServiceCommand{
+	cmd := &latticectl.JobCommand{
 		Name: "logs",
 		Flags: cli.Flags{
 			&cli.StringFlag{
@@ -32,22 +30,11 @@ func (c *LogsCommand) Base() (*latticectl.BaseCommand, error) {
 				Short:  "s",
 				Target: &sidecarStr,
 			},
-			&cli.StringFlag{
-				Name:     "instanceStr",
-				Short:    "i",
-				Required: false,
-				Target:   &instanceStr,
-			},
 			&cli.BoolFlag{
 				Name:    "follow",
 				Short:   "f",
 				Default: false,
 				Target:  &follow,
-			},
-			&cli.BoolFlag{
-				Name:    "previous",
-				Default: false,
-				Target:  &previous,
 			},
 			&cli.BoolFlag{
 				Name:    "timestamps",
@@ -71,11 +58,10 @@ func (c *LogsCommand) Base() (*latticectl.BaseCommand, error) {
 				Target:   &tail,
 			},
 		},
-		Run: func(ctx latticectl.ServiceCommandContext, args []string) {
-			c := ctx.Client().Systems().Services(ctx.SystemID())
+		Run: func(ctx latticectl.JobCommandContext, args []string) {
+			c := ctx.Client().Systems().Jobs(ctx.SystemID())
 			logOptions := v1.NewContainerLogOptions()
 			logOptions.Follow = follow
-			logOptions.Previous = previous
 			logOptions.Timestamps = timestamps
 			logOptions.SinceTime = sinceTime
 			logOptions.Since = since
@@ -90,12 +76,7 @@ func (c *LogsCommand) Base() (*latticectl.BaseCommand, error) {
 				sidecar = &sidecarStr
 			}
 
-			var instance *string
-			if instanceStr != "" {
-				instance = &instanceStr
-			}
-
-			err := GetServiceLogs(c, ctx.ServiceID(), sidecar, instance, logOptions, os.Stdout)
+			err := GetJobLogs(c, ctx.JobID(), sidecar, logOptions, os.Stdout)
 			if err != nil {
 				log.Fatal(err)
 			}
@@ -105,15 +86,14 @@ func (c *LogsCommand) Base() (*latticectl.BaseCommand, error) {
 	return cmd.Base()
 }
 
-func GetServiceLogs(
-	client v1client.ServiceClient,
-	serviceID v1.ServiceID,
-	sidecar, instance *string,
+func GetJobLogs(
+	client v1client.JobClient,
+	jobID v1.JobID,
+	sidecar *string,
 	logOptions *v1.ContainerLogOptions,
 	w io.Writer,
 ) error {
-
-	logs, err := client.Logs(serviceID, sidecar, instance, logOptions)
+	logs, err := client.Logs(jobID, sidecar, logOptions)
 	if err != nil {
 		return err
 	}

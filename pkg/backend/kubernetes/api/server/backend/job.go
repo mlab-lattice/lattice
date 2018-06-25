@@ -180,7 +180,7 @@ func (kb *KubernetesBackend) JobLogs(
 // findServicePod finds service pod by instance id or service's single pod if id was not specified
 func (kb *KubernetesBackend) findJobPod(jobID v1.JobID, namespace string) (*corev1.Pod, error) {
 	selector := labels.NewSelector()
-	requirement, err := labels.NewRequirement(latticev1.JobIDLabelKey, selection.Equals, []string{string(jobID)})
+	requirement, err := labels.NewRequirement(latticev1.JobRunIDLabelKey, selection.Equals, []string{string(jobID)})
 	if err != nil {
 		return nil, fmt.Errorf("error creating requirement for %v/%v job lookup: %v", namespace, jobID, err)
 	}

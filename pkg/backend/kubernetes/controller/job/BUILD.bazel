@@ -3,6 +3,7 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library")
 go_library(
     name = "go_default_library",
     srcs = [
+        "deleted_job_run.go",
         "informer_event_handlers.go",
         "job_controller.go",
         "job_run.go",

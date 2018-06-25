@@ -7,6 +7,7 @@ import (
 	"os"
 
 	v1client "github.com/mlab-lattice/lattice/pkg/api/client/v1"
+	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 	definitionv1 "github.com/mlab-lattice/lattice/pkg/definition/v1"
 	"github.com/mlab-lattice/lattice/pkg/latticectl"
@@ -14,6 +15,7 @@ import (
 	"github.com/mlab-lattice/lattice/pkg/util/cli/color"
 	"github.com/mlab-lattice/lattice/pkg/util/cli/printer"
 	"strings"
+	"time"
 )
 
 type BuildCommand struct {
@@ -120,6 +122,15 @@ func RunJob(
 	job, err := client.Create(path, command, environment)
 	if err != nil {
 		return err
+	}
+
+	if follow {
+		// need to wait until job is at least queued
+		// FIXME: do this better
+		time.Sleep(2 * time.Second)
+
+		logOptions := &v1.ContainerLogOptions{Follow: true}
+		return GetJobLogs(client, job.ID, nil, logOptions, writer)
 	}
 
 	//if watch {

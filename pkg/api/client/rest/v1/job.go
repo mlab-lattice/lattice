@@ -4,10 +4,8 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"net/http"
-	urlutil "net/url"
-
 	"io"
+	"net/http"
 
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	v1rest "github.com/mlab-lattice/lattice/pkg/api/v1/rest"
@@ -92,16 +90,13 @@ func (c *JobClient) Get(id v1.JobID) (*v1.Job, error) {
 
 func (c *JobClient) Logs(
 	id v1.JobID,
-	path tree.NodePath,
 	sidecar *string,
 	logOptions *v1.ContainerLogOptions,
 ) (io.ReadCloser, error) {
-	escapedPath := urlutil.PathEscape(path.String())
 	url := fmt.Sprintf(
-		"%v%v?path=%v&%v",
+		"%v%v?%v",
 		c.apiServerURL,
 		fmt.Sprintf(v1rest.JobLogsPathFormat, c.systemID, id),
-		escapedPath,
 		logOptionsToQueryString(logOptions),
 	)
 

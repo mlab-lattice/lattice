@@ -280,9 +280,9 @@ func (c *Controller) syncJobRun(key string) error {
 		return err
 	}
 
-	//if jobRun.Deleted() {
-	//	return c.syncDeletedJobRun(jobRun)
-	//}
+	if jobRun.Deleted() {
+		return c.syncDeletedJobRun(jobRun)
+	}
 
 	jobRun, err = c.addFinalizer(jobRun)
 	if err != nil {
