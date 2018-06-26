@@ -1,0 +1,8 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = ["stop_signal.go"],
+    importpath = "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/servicemesh/envoy/util",
+    visibility = ["//visibility:public"],
+)
