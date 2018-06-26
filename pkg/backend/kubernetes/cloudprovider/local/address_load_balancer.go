@@ -24,7 +24,7 @@ func (cp *DefaultLocalCloudProvider) ServiceAddressLoadBalancerNeedsUpdate(
 	service *latticev1.Service,
 	serviceMeshPorts map[int32]int32,
 ) (bool, error) {
-	loadBalancerNeeded := serviceNeedsAddressLoadBalancer(service)
+	loadBalancerNeeded := service.NeedsAddressLoadBalancer()
 
 	kubeService, err := cp.getKubeService(address)
 	if err != nil {
@@ -333,14 +333,4 @@ func serviceAddressKubeServiceStrategicMergePatchBytes(desired, current corev1.S
 
 func serviceAddressKubeServiceLoadBalancerName(address *latticev1.Address) string {
 	return fmt.Sprintf("load-balancer-address-%v", address.Name)
-}
-
-func serviceNeedsAddressLoadBalancer(service *latticev1.Service) bool {
-	for _, port := range service.Spec.Definition.ContainerPorts() {
-		if port.Public() {
-			return true
-		}
-	}
-
-	return false
 }

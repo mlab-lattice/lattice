@@ -34,7 +34,7 @@ func (cp *DefaultAWSCloudProvider) ServiceAddressLoadBalancerNeedsUpdate(
 	service *latticev1.Service,
 	serviceMeshPorts map[int32]int32,
 ) (bool, error) {
-	loadBalancerNeeded := serviceNeedsAddressLoadBalancer(service)
+	loadBalancerNeeded := service.NeedsAddressLoadBalancer()
 
 	kubeService, err := cp.getKubeService(address)
 	if err != nil {
@@ -120,7 +120,7 @@ func (cp *DefaultAWSCloudProvider) EnsureServiceAddressLoadBalancer(
 	service *latticev1.Service,
 	serviceMeshPorts map[int32]int32,
 ) error {
-	if !serviceNeedsAddressLoadBalancer(service) {
+	if !service.NeedsAddressLoadBalancer() {
 		return cp.DestroyServiceAddressLoadBalancer(latticeID, address)
 	}
 
@@ -614,14 +614,4 @@ func (cp *DefaultAWSCloudProvider) serviceAddressLoadBalancerInfo(
 		DNSName: values[terraformOutputServiceAddressLoadBalancerDNSName],
 	}
 	return info, nil
-}
-
-func serviceNeedsAddressLoadBalancer(service *latticev1.Service) bool {
-	for _, port := range service.Spec.Definition.ContainerPorts() {
-		if port.Public() {
-			return true
-		}
-	}
-
-	return false
 }

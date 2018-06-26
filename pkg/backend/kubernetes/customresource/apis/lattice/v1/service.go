@@ -89,6 +89,16 @@ func (s *Service) NodePoolAnnotation() (NodePoolAnnotationValue, error) {
 	return annotation, nil
 }
 
+func (s *Service) NeedsAddressLoadBalancer() bool {
+	for _, port := range s.Spec.Definition.ContainerPorts() {
+		if port.Public() {
+			return true
+		}
+	}
+
+	return false
+}
+
 // +k8s:deepcopy-gen=false
 type ServiceSpec struct {
 	Definition *definitionv1.Service `json:"definition"`

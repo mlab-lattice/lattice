@@ -35,10 +35,9 @@ func (c *LogsCommand) Base() (*latticectl.BaseCommand, error) {
 				Target:   &pathStr,
 			},
 			&cli.StringFlag{
-				Name:     "sidecar",
-				Short:    "s",
-				Required: true,
-				Target:   &sidecarStr,
+				Name:   "sidecar",
+				Short:  "s",
+				Target: &sidecarStr,
 			},
 			&cli.BoolFlag{
 				Name:    "follow",

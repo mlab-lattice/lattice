@@ -116,7 +116,6 @@ func (c *Controller) syncServiceAddress(address *latticev1.Address) error {
 		)
 	}
 
-	ports := address.Status.Ports
 	if needsUpdate {
 		message := "updating load balancer"
 		address, err = c.updateAddressStatus(
@@ -159,7 +158,10 @@ func (c *Controller) syncServiceAddress(address *latticev1.Address) error {
 		if err != nil {
 			return err
 		}
+	}
 
+	ports := address.Status.Ports
+	if service.NeedsAddressLoadBalancer() {
 		ports, err = c.cloudProvider.ServiceAddressLoadBalancerPorts(c.latticeID, address, service, serviceMeshPorts)
 		if err != nil {
 			return fmt.Errorf(

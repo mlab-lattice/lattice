@@ -222,7 +222,6 @@ func (c *Controller) serviceNodePoolAnnotation(
 	// assume that we're fully off of previous node pools and epochs, so
 	// we have to include the values from the existing annotation.
 	if !status.Stable() {
-		fmt.Println("using old annotation")
 		existingAnnotation, err := service.NodePoolAnnotation()
 		if err != nil {
 			err := fmt.Errorf(
@@ -234,8 +233,6 @@ func (c *Controller) serviceNodePoolAnnotation(
 		}
 
 		newAnnotation = existingAnnotation
-	} else {
-		fmt.Println("using new annotation")
 	}
 
 	epoch, ok := nodePool.Status.Epochs.CurrentEpoch()
