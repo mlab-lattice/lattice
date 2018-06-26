@@ -3,21 +3,15 @@ package service
 import (
 	"encoding/json"
 	"fmt"
-	"reflect"
-	"sort"
-
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	kubeutil "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/kubernetes"
-	definitionv1 "github.com/mlab-lattice/lattice/pkg/definition/v1"
-
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	"reflect"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
-	"k8s.io/apimachinery/pkg/util/intstr"
-
 	k8sappsv1 "k8s.io/kubernetes/pkg/apis/apps/v1"
 
 	"github.com/golang/glog"
@@ -126,11 +120,10 @@ func (c *Controller) syncExistingDeployment(
 
 	name := deploymentName(service)
 	deploymentLabels := deploymentLabels(service)
-
-	desiredSpec, err := c.deploymentSpec(service, name, deploymentLabels, nodePool)
+	desiredPodTemplateSpec, err := c.podTemplateSpec(service, name, deploymentLabels, nodePool)
 	if err != nil {
 		err := fmt.Errorf(
-			"error getting desired deployment spec for %v (on %v): %v",
+			"error getting desired pod template spec for %v (on %v): %v",
 			service.Description(c.namespacePrefix),
 			nodePool.Description(c.namespacePrefix),
 			err,
@@ -138,11 +131,13 @@ func (c *Controller) syncExistingDeployment(
 		return nil, err
 	}
 
+	desiredSpec := c.deploymentSpec(service, deploymentLabels, desiredPodTemplateSpec)
 	currentSpec := deployment.Spec
-	untransformedSpec, err := c.untransformedDeploymentSpec(service, name, deploymentLabels, nodePool)
+
+	untransformedPodTemplateSpec, err := c.untransformedPodTemplateSpec(service, name, deploymentLabels, nodePool)
 	if err != nil {
 		err := fmt.Errorf(
-			"error getting untransformed deployment spec for %v (on %v): %v",
+			"error getting untransformed pod template spec for %v (on %v): %v",
 			service.Description(c.namespacePrefix),
 			nodePool.Description(c.namespacePrefix),
 			err,
@@ -150,7 +145,8 @@ func (c *Controller) syncExistingDeployment(
 		return nil, err
 	}
 
-	defaultedUntransformedSpec := setDeploymentSpecDefaults(untransformedSpec)
+	untransformedSpec := c.deploymentSpec(service, deploymentLabels, untransformedPodTemplateSpec)
+	defaultedUntransformedSpec := setDeploymentSpecDefaults(&untransformedSpec)
 	defaultedDesiredSpec := setDeploymentSpecDefaults(&desiredSpec)
 
 	isUpdated, reason := c.isDeploymentSpecUpdated(service, &currentSpec, defaultedDesiredSpec, defaultedUntransformedSpec)
@@ -222,11 +218,10 @@ func (c *Controller) newDeployment(service *latticev1.Service, nodePool *lattice
 
 	name := deploymentName(service)
 	deploymentLabels := deploymentLabels(service)
-
-	spec, err := c.deploymentSpec(service, name, deploymentLabels, nodePool)
+	podTemplateSpec, err := c.podTemplateSpec(service, name, deploymentLabels, nodePool)
 	if err != nil {
 		err := fmt.Errorf(
-			"error generating desired deployment spec for %v (on %v): %v",
+			"error generating desired pod template spec for %v (on %v): %v",
 			service.Description(c.namespacePrefix),
 			nodePool.Description(c.namespacePrefix),
 			err,
@@ -234,6 +229,7 @@ func (c *Controller) newDeployment(service *latticev1.Service, nodePool *lattice
 		return nil, err
 	}
 
+	spec := c.deploymentSpec(service, deploymentLabels, podTemplateSpec)
 	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:            name,
@@ -258,59 +254,56 @@ func deploymentLabels(service *latticev1.Service) map[string]string {
 
 func (c *Controller) deploymentSpec(
 	service *latticev1.Service,
-	name string,
 	deploymentLabels map[string]string,
-	nodePool *latticev1.NodePool,
-) (appsv1.DeploymentSpec, error) {
-	spec, err := c.untransformedDeploymentSpec(service, name, deploymentLabels, nodePool)
-	if err != nil {
-		return appsv1.DeploymentSpec{}, err
+	podTemplateSpec *corev1.PodTemplateSpec,
+) appsv1.DeploymentSpec {
+	replicas := service.Spec.Definition.NumInstances
+	// IMPORTANT: if you change anything in here, you _must_ update isDeploymentSpecUpdated to accommodate it
+	return appsv1.DeploymentSpec{
+		Replicas: &replicas,
+		// FIXME: this is here because envoy currently takes 15 seconds to cycle through XDS API calls
+		MinReadySeconds: 15,
+		Selector: &metav1.LabelSelector{
+			MatchLabels: deploymentLabels,
+		},
+		Template: *podTemplateSpec,
 	}
-
-	// IMPORTANT: the order of these TransformServiceDeploymentSpec and the order of the IsDeploymentSpecUpdated calls in
-	// isDeploymentSpecUpdated _must_ be inverses.
-	// That is, if we call cloudProvider then serviceMesh here, we _must_ call serviceMesh then cloudProvider
-	// in isDeploymentSpecUpdated.
-	spec, err = c.serviceMesh.TransformServiceDeploymentSpec(service, spec)
-	if err != nil {
-		return appsv1.DeploymentSpec{}, err
-	}
-	spec = c.cloudProvider.TransformServiceDeploymentSpec(service, spec)
-
-	return *spec, nil
 }
 
-func (c *Controller) untransformedDeploymentSpec(
+func (c *Controller) podTemplateSpec(
 	service *latticev1.Service,
 	name string,
 	deploymentLabels map[string]string,
 	nodePool *latticev1.NodePool,
-) (*appsv1.DeploymentSpec, error) {
+) (*corev1.PodTemplateSpec, error) {
+	podTemplateSpec, err := c.untransformedPodTemplateSpec(service, name, deploymentLabels, nodePool)
+	if err != nil {
+		return nil, err
+	}
+
+	// IMPORTANT: the order of these TransformServicePodTemplateSpec and the order of the IsDeploymentSpecUpdated calls in
+	// isDeploymentSpecUpdated _must_ be inverses.
+	// That is, if we call cloudProvider then serviceMesh here, we _must_ call serviceMesh then cloudProvider
+	// in isDeploymentSpecUpdated.
+	podTemplateSpec, err = c.serviceMesh.TransformServicePodTemplateSpec(service, podTemplateSpec)
+	if err != nil {
+		return nil, err
+	}
+	podTemplateSpec = c.cloudProvider.TransformPodTemplateSpec(podTemplateSpec)
+
+	return podTemplateSpec, nil
+}
+
+func (c *Controller) untransformedPodTemplateSpec(
+	service *latticev1.Service,
+	name string,
+	deploymentLabels map[string]string,
+	nodePool *latticev1.NodePool,
+) (*corev1.PodTemplateSpec, error) {
 	path, err := service.PathLabel()
 	if err != nil {
 		err := fmt.Errorf("error getting path label for %v: %v", service.Description(c.namespacePrefix), err)
 		return nil, err
-	}
-
-	replicas := service.Spec.Definition.NumInstances
-
-	// Create a kube container for each Sidecar in the Service
-	containers := map[string]definitionv1.Container{
-		kubeutil.UserMainContainerName: service.Spec.Definition.Container,
-	}
-	for name, container := range service.Spec.Definition.Sidecars {
-		containers[name] = container
-	}
-
-	var kubeContainers []corev1.Container
-	for name, container := range containers {
-		buildArtifacts := service.Spec.ContainerBuildArtifacts[name]
-		container, err := containerFromComponent(service, name, &container, &buildArtifacts)
-		if err != nil {
-			return nil, err
-		}
-
-		kubeContainers = append(kubeContainers, container)
 	}
 
 	podAffinityTerm := corev1.PodAffinityTerm{
@@ -363,168 +356,39 @@ func (c *Controller) untransformedDeploymentSpec(
 		return nil, err
 	}
 
-	systemID, err := kubeutil.SystemID(c.namespacePrefix, service.Namespace)
-	if err != nil {
-		err := fmt.Errorf("error getting system ID for %v: %v", service.Description(c.namespacePrefix), err)
-		return nil, err
-	}
-
-	baseSearchPath := kubeutil.FullyQualifiedInternalSystemSubdomain(systemID, c.latticeID, c.internalDNSDomain)
-	dnsSearches := []string{baseSearchPath}
-
-	// If the service's parent is not the root node, we need to append its parent as a search in resolv.conf
-	parentNode, err := path.Parent()
-	if err != nil {
-		return nil, fmt.Errorf("cannot get parent for %v: %v", service.Description(c.namespacePrefix), err)
-	}
-
-	if !parentNode.IsRoot() {
-		parentDomain := kubeutil.FullyQualifiedInternalAddressSubdomain(parentNode.ToDomain(), systemID, c.latticeID, c.internalDNSDomain)
-		dnsSearches = append(dnsSearches, parentDomain)
-	}
-
-	// as a constant cant be referenced, create a local copy
-	ndotsValue := ndotsValue
-	dnsConfig := corev1.PodDNSConfig{
-		Nameservers: []string{},
-		Options: []corev1.PodDNSConfigOption{
-			{
-				Name:  dnsOptionNdots,
-				Value: &ndotsValue,
-			},
-		},
-		Searches: dnsSearches,
-	}
-
 	nodePoolEpoch, ok := nodePool.Status.Epochs.CurrentEpoch()
 	if !ok {
 		return nil, fmt.Errorf("unable to get current epoch for %v: %v", nodePool.Description(c.namespacePrefix), err)
 	}
 
-	// IMPORTANT: if you change anything in here, you _must_ update isDeploymentSpecUpdated to accommodate it
-	spec := &appsv1.DeploymentSpec{
-		Replicas: &replicas,
-		// FIXME: this is here because envoy currently takes 15 seconds to cycle through XDS API calls
-		MinReadySeconds: 15,
-		Selector: &metav1.LabelSelector{
-			MatchLabels: deploymentLabels,
-		},
-		Template: corev1.PodTemplateSpec{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:   name,
-				Labels: deploymentLabels,
-			},
-			Spec: corev1.PodSpec{
-				Containers: kubeContainers,
-				DNSPolicy:  corev1.DNSDefault,
-				DNSConfig:  &dnsConfig,
-				Affinity: &corev1.Affinity{
-					NodeAffinity:    nodePool.Affinity(nodePoolEpoch),
-					PodAntiAffinity: podAntiAffinity,
-				},
-				Tolerations: []corev1.Toleration{
-					nodePool.Toleration(nodePoolEpoch),
+	affinity := &corev1.Affinity{
+		NodeAffinity: nodePool.Affinity(nodePoolEpoch),
+		PodAntiAffinity: &corev1.PodAntiAffinity{
+			PreferredDuringSchedulingIgnoredDuringExecution: []corev1.WeightedPodAffinityTerm{
+				{
+					Weight:          50,
+					PodAffinityTerm: podAffinityTerm,
 				},
 			},
 		},
 	}
 
-	return spec, nil
-}
+	tolerations := []corev1.Toleration{nodePool.Toleration(nodePoolEpoch)}
 
-func containerFromComponent(
-	service *latticev1.Service,
-	containerName string,
-	container *definitionv1.Container,
-	buildArtifacts *latticev1.ContainerBuildArtifacts,
-) (corev1.Container, error) {
-	var ports []corev1.ContainerPort
-	for portNum := range container.Ports {
-		ports = append(
-			ports,
-			corev1.ContainerPort{
-				Name:          fmt.Sprintf("port-%v", portNum),
-				Protocol:      corev1.ProtocolTCP,
-				ContainerPort: portNum,
-			},
-		)
-	}
-
-	// Sort the env var names so the array order is deterministic
-	// so we can more easily check to see if the spec needs
-	// to be updated.
-	var envVarNames []string
-	for name := range container.Exec.Environment {
-		envVarNames = append(envVarNames, name)
-	}
-
-	sort.Strings(envVarNames)
-
-	var envVars []corev1.EnvVar
-	for _, name := range envVarNames {
-		envVar := container.Exec.Environment[name]
-		if envVar.Value != nil {
-			envVars = append(
-				envVars,
-				corev1.EnvVar{
-					Name:  name,
-					Value: *envVar.Value,
-				},
-			)
-		} else if envVar.Secret != nil {
-			envVars = append(
-				envVars,
-				corev1.EnvVar{
-					Name: name,
-					ValueFrom: &corev1.EnvVarSource{
-						SecretKeyRef: &corev1.SecretKeySelector{
-							LocalObjectReference: corev1.LocalObjectReference{
-								Name: envVar.Secret.NodePath().ToDomain(),
-							},
-							Key: envVar.Secret.Subcomponent(),
-						},
-					},
-				},
-			)
-
-			// FIXME: add reference
-		}
-	}
-
-	probe := deploymentProbe(container.HealthCheck)
-	kubeContainer := corev1.Container{
-		Name:            containerName,
-		Image:           buildArtifacts.DockerImageFQN,
-		ImagePullPolicy: corev1.PullIfNotPresent,
-		Command:         container.Exec.Command,
-		Ports:           ports,
-		Env:             envVars,
-		// TODO(kevinrosendahl): maybe add Resources
-		// TODO(kevinrosendahl): add VolumeMounts
-		LivenessProbe:  probe,
-		ReadinessProbe: probe,
-	}
-	return kubeContainer, nil
-}
-
-func deploymentProbe(hc *definitionv1.ContainerHealthCheck) *corev1.Probe {
-	if hc == nil {
-		return nil
-	}
-
-	if hc.HTTP != nil {
-		return &corev1.Probe{
-			Handler: corev1.Handler{
-				HTTPGet: &corev1.HTTPGetAction{
-					Path: hc.HTTP.Path,
-					Port: intstr.FromInt(int(hc.HTTP.Port)),
-				},
-			},
-		}
-	}
-
-	// FIXME: should return error here probably
-	return nil
+	return latticev1.PodTemplateSpecForComponent(
+		service.Spec.Definition,
+		path,
+		c.latticeID,
+		c.internalDNSDomain,
+		c.namespacePrefix,
+		service.Namespace,
+		service.Name,
+		deploymentLabels,
+		service.Spec.ContainerBuildArtifacts,
+		corev1.RestartPolicyAlways,
+		affinity,
+		tolerations,
+	)
 }
 
 func (c *Controller) isDeploymentSpecUpdated(
@@ -547,7 +411,7 @@ func (c *Controller) isDeploymentSpecUpdated(
 	}
 
 	// FIXME: is this actually true?
-	// IMPORTANT: the order of these IsDeploymentSpecUpdated and the order of the TransformServiceDeploymentSpec
+	// IMPORTANT: the order of these IsDeploymentSpecUpdated and the order of the TransformServicePodTemplateSpec
 	// calls in deploymentSpec _must_ be inverses.
 	// That is, if we call serviceMesh then cloudProvider here, we _must_ call cloudProvider then serviceMesh
 	// in deploymentSpec.

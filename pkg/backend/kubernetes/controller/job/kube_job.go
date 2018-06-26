@@ -145,24 +145,24 @@ func (c *Controller) kubeJobSpec(
 		numRetries = *jobRun.Spec.NumRetries
 	}
 
+	//return kubeJobSpec, nil
+	// IMPORTANT: the order of these TransformServicePodTemplateSpec and the order of the IsDeploymentSpecUpdated calls in
+	// isDeploymentSpecUpdated _must_ be inverses.
+	// That is, if we call cloudProvider then serviceMesh here, we _must_ call serviceMesh then cloudProvider
+	// in isDeploymentSpecUpdated.
+	//podTemplateSpec, err = c.serviceMesh.TransformServicePodTemplateSpec(jobRun, podTemplateSpec)
+	//if err != nil {
+	//	return batchv1.DeploymentSpec{}, err
+	//}
+	podTemplateSpec = c.cloudProvider.TransformPodTemplateSpec(podTemplateSpec)
+
 	kubeJobSpec := batchv1.JobSpec{
 		Parallelism:  &one,
 		Completions:  &one,
 		BackoffLimit: &numRetries,
-		Template:     podTemplateSpec,
+		Template:     *podTemplateSpec,
 	}
 	return kubeJobSpec, nil
-	// IMPORTANT: the order of these TransformServiceDeploymentSpec and the order of the IsDeploymentSpecUpdated calls in
-	// isDeploymentSpecUpdated _must_ be inverses.
-	// That is, if we call cloudProvider then serviceMesh here, we _must_ call serviceMesh then cloudProvider
-	// in isDeploymentSpecUpdated.
-	//podTemplateSpec, err = c.serviceMesh.TransformServiceDeploymentSpec(jobRun, podTemplateSpec)
-	//if err != nil {
-	//	return batchv1.DeploymentSpec{}, err
-	//}
-	//podTemplateSpec = c.cloudProvider.TransformServiceDeploymentSpec(jobRun, podTemplateSpec)
-	//
-	//return *podTemplateSpec, nil
 }
 
 func (c *Controller) untransformedPodTemplateSpec(
@@ -170,45 +170,45 @@ func (c *Controller) untransformedPodTemplateSpec(
 	name string,
 	jobRunLabels map[string]string,
 	nodePool *latticev1.NodePool,
-) (corev1.PodTemplateSpec, error) {
+) (*corev1.PodTemplateSpec, error) {
 	path, err := jobRun.PathLabel()
 	if err != nil {
 		err := fmt.Errorf("error getting path label for %v: %v", jobRun.Description(c.namespacePrefix), err)
-		return corev1.PodTemplateSpec{}, err
+		return nil, err
 	}
 
-	//podAffinityTerm := corev1.PodAffinityTerm{
-	//	LabelSelector: &metav1.LabelSelector{
-	//		MatchLabels: jobRunLabels,
-	//	},
-	//	Namespaces: []string{jobRun.Namespace},
-	//
-	//	// This basically tells the pod anti-affinity to only be applied to nodes who all
-	//	// have the same value for that label.
-	//	// Since we also add a RequiredDuringScheduling NodeAffinity for our NodePool,
-	//	// this NodePool's nodes are the only nodes that these pods could be scheduled on,
-	//	// so this TopologyKey doesn't really matter (besides being required).
-	//	TopologyKey: latticev1.NodePoolIDLabelKey,
-	//}
-	//
-	//nodePoolEpoch, ok := nodePool.Status.Epochs.CurrentEpoch()
-	//if !ok {
-	//	return corev1.PodTemplateSpec{}, fmt.Errorf("unable to get current epoch for %v: %v", nodePool.Description(c.namespacePrefix), err)
-	//}
-	//
-	//affinity := &corev1.Affinity{
-	//	NodeAffinity: nodePool.Affinity(nodePoolEpoch),
-	//	PodAntiAffinity: &corev1.PodAntiAffinity{
-	//		PreferredDuringSchedulingIgnoredDuringExecution: []corev1.WeightedPodAffinityTerm{
-	//			{
-	//				Weight:          50,
-	//				PodAffinityTerm: podAffinityTerm,
-	//			},
-	//		},
-	//	},
-	//}
+	podAffinityTerm := corev1.PodAffinityTerm{
+		LabelSelector: &metav1.LabelSelector{
+			MatchLabels: jobRunLabels,
+		},
+		Namespaces: []string{jobRun.Namespace},
 
-	//tolerations := []corev1.Toleration{nodePool.Toleration(nodePoolEpoch)}
+		// This basically tells the pod anti-affinity to only be applied to nodes who all
+		// have the same value for that label.
+		// Since we also add a RequiredDuringScheduling NodeAffinity for our NodePool,
+		// this NodePool's nodes are the only nodes that these pods could be scheduled on,
+		// so this TopologyKey doesn't really matter (besides being required).
+		TopologyKey: latticev1.NodePoolIDLabelKey,
+	}
+
+	nodePoolEpoch, ok := nodePool.Status.Epochs.CurrentEpoch()
+	if !ok {
+		return nil, fmt.Errorf("unable to get current epoch for %v: %v", nodePool.Description(c.namespacePrefix), err)
+	}
+
+	affinity := &corev1.Affinity{
+		NodeAffinity: nodePool.Affinity(nodePoolEpoch),
+		PodAntiAffinity: &corev1.PodAntiAffinity{
+			PreferredDuringSchedulingIgnoredDuringExecution: []corev1.WeightedPodAffinityTerm{
+				{
+					Weight:          50,
+					PodAffinityTerm: podAffinityTerm,
+				},
+			},
+		},
+	}
+
+	tolerations := []corev1.Toleration{nodePool.Toleration(nodePoolEpoch)}
 
 	// use the supplied command and environment as the job container's exec
 	// copy so we don't mutate the cache
@@ -229,10 +229,8 @@ func (c *Controller) untransformedPodTemplateSpec(
 		jobRunLabels,
 		jobRun.Spec.ContainerBuildArtifacts,
 		corev1.RestartPolicyNever,
-		//affinity,
-		//tolerations,
-		nil,
-		nil,
+		affinity,
+		tolerations,
 	)
 }
 

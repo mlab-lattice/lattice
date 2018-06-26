@@ -32,16 +32,16 @@ type Interface interface {
 
 	ComponentBuildWorkDirectoryVolumeSource(jobName string) corev1.VolumeSource
 
-	// TransformServiceDeploymentSpec takes in the DeploymentSpec generated for a Service, and applies any cloud provider
+	// TransformServicePodTemplateSpec takes in the DeploymentSpec generated for a Service, and applies any cloud provider
 	// related transforms necessary to a copy of the DeploymentSpec, and returns it.
-	TransformServiceDeploymentSpec(*latticev1.Service, *appsv1.DeploymentSpec) *appsv1.DeploymentSpec
+	TransformPodTemplateSpec(*corev1.PodTemplateSpec) *corev1.PodTemplateSpec
 
 	// IsDeploymentSpecCurrent checks to see if any part of the current DeploymentSpec that the service mesh is responsible
 	// for is out of date compared to the desired deployment spec. If the current DeploymentSpec is current, it also returns
-	// a copy of the desired DeploymentSpec with the negation of TransformServiceDeploymentSpec applied.
-	// That is, if the aspects of the DeploymentSpec that were transformed by TransformServiceDeploymentSpec are all still
+	// a copy of the desired DeploymentSpec with the negation of TransformServicePodTemplateSpec applied.
+	// That is, if the aspects of the DeploymentSpec that were transformed by TransformServicePodTemplateSpec are all still
 	// current, this method should return true, along with a copy of the DeploymentSpec that should be identical to the
-	// DeploymentSpec that was passed in to TransformServiceDeploymentSpec.
+	// DeploymentSpec that was passed in to TransformServicePodTemplateSpec.
 	IsDeploymentSpecUpdated(service *latticev1.Service, current, desired, untransformed *appsv1.DeploymentSpec) (bool, string, *appsv1.DeploymentSpec)
 }
 

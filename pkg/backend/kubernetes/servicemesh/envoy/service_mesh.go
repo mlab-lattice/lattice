@@ -166,10 +166,10 @@ func assignEnvoyPorts(service *latticev1.Service, envoyPorts []int32) (map[int32
 	return componentPorts, envoyPorts, nil
 }
 
-func (sm *DefaultEnvoyServiceMesh) TransformServiceDeploymentSpec(
+func (sm *DefaultEnvoyServiceMesh) TransformServicePodTemplateSpec(
 	service *latticev1.Service,
-	spec *appsv1.DeploymentSpec,
-) (*appsv1.DeploymentSpec, error) {
+	spec *corev1.PodTemplateSpec,
+) (*corev1.PodTemplateSpec, error) {
 	prepareEnvoyContainer, envoyContainer, err := sm.envoyContainers(service)
 	if err != nil {
 		return nil, err
@@ -183,19 +183,19 @@ func (sm *DefaultEnvoyServiceMesh) TransformServiceDeploymentSpec(
 	}
 
 	initContainers := []corev1.Container{prepareEnvoyContainer}
-	initContainers = append(initContainers, spec.Template.Spec.InitContainers...)
+	initContainers = append(initContainers, spec.Spec.InitContainers...)
 
 	containers := []corev1.Container{envoyContainer}
-	containers = append(containers, spec.Template.Spec.Containers...)
+	containers = append(containers, spec.Spec.Containers...)
 
 	volumes := []corev1.Volume{configVolume}
-	volumes = append(volumes, spec.Template.Spec.Volumes...)
+	volumes = append(volumes, spec.Spec.Volumes...)
 
 	spec = spec.DeepCopy()
 
-	spec.Template.Spec.InitContainers = initContainers
-	spec.Template.Spec.Containers = containers
-	spec.Template.Spec.Volumes = volumes
+	spec.Spec.InitContainers = initContainers
+	spec.Spec.Containers = containers
+	spec.Spec.Volumes = volumes
 	return spec, nil
 }
 

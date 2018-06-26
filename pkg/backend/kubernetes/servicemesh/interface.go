@@ -9,6 +9,7 @@ import (
 	"github.com/mlab-lattice/lattice/pkg/util/cli"
 
 	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
 )
 
 type Interface interface {
@@ -16,9 +17,9 @@ type Interface interface {
 
 	ServiceAnnotations(*latticev1.Service) (map[string]string, error)
 
-	// TransformServiceDeploymentSpec takes in the DeploymentSpec generated for a Service, and applies an service mesh
+	// TransformServicePodTemplateSpec takes in the DeploymentSpec generated for a Service, and applies an service mesh
 	// related transforms necessary to a copy of the DeploymentSpec, and returns it.
-	TransformServiceDeploymentSpec(*latticev1.Service, *appsv1.DeploymentSpec) (*appsv1.DeploymentSpec, error)
+	TransformServicePodTemplateSpec(*latticev1.Service, *corev1.PodTemplateSpec) (*corev1.PodTemplateSpec, error)
 
 	// ServiceMeshPort returns the port the service mesh is listening on for a given component port.
 	ServiceMeshPort(*latticev1.Service, int32) (int32, error)
@@ -39,10 +40,10 @@ type Interface interface {
 
 	// IsDeploymentSpecUpdated checks to see if any part of the current DeploymentSpec that the service mesh is responsible
 	// for is out of date compared to the desired deployment spec. If the current DeploymentSpec is current, it also returns
-	// a copy of the desired DeploymentSpec with the negation of TransformServiceDeploymentSpec applied.
-	// That is, if the aspects of the DeploymentSpec that were transformed by TransformServiceDeploymentSpec are all still
+	// a copy of the desired DeploymentSpec with the negation of TransformServicePodTemplateSpec applied.
+	// That is, if the aspects of the DeploymentSpec that were transformed by TransformServicePodTemplateSpec are all still
 	// current, this method should return true, along with a copy of the DeploymentSpec that should be identical to the
-	// DeploymentSpec that was passed in to TransformServiceDeploymentSpec.
+	// DeploymentSpec that was passed in to TransformServicePodTemplateSpec.
 	IsDeploymentSpecUpdated(
 		service *latticev1.Service,
 		current, desired, untransformed *appsv1.DeploymentSpec,

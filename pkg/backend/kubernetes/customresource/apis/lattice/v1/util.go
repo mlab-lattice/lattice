@@ -27,17 +27,17 @@ func PodTemplateSpecForComponent(
 	restartPolicy corev1.RestartPolicy,
 	affinity *corev1.Affinity,
 	tolerations []corev1.Toleration,
-) (corev1.PodTemplateSpec, error) {
+) (*corev1.PodTemplateSpec, error) {
 	// convert lattice containers into kube containers
 	containersComponent, err := newContainersComponent(component)
 	if err != nil {
-		return corev1.PodTemplateSpec{}, err
+		return nil, err
 	}
 
 	var kubeContainers []corev1.Container
 	mainContainerBuildArtifact, ok := buildArtifacts[kubeutil.UserMainContainerName]
 	if !ok {
-		return corev1.PodTemplateSpec{}, fmt.Errorf("build artifacts did not include artifact for main container")
+		return nil, fmt.Errorf("build artifacts did not include artifact for main container")
 	}
 
 	mainContainer, err := KubeContainerForContainer(
@@ -46,7 +46,7 @@ func PodTemplateSpecForComponent(
 		mainContainerBuildArtifact,
 	)
 	if err != nil {
-		return corev1.PodTemplateSpec{}, err
+		return nil, err
 	}
 
 	kubeContainers = append(kubeContainers, mainContainer)
@@ -54,7 +54,7 @@ func PodTemplateSpecForComponent(
 	for name, sidecar := range containersComponent.Sidecars {
 		buildArtifact, ok := buildArtifacts[kubeutil.UserSidecarContainerName(name)]
 		if !ok {
-			return corev1.PodTemplateSpec{}, fmt.Errorf("build artifacts did not include artifact for sidecar %v", name)
+			return nil, fmt.Errorf("build artifacts did not include artifact for sidecar %v", name)
 		}
 
 		container, err := KubeContainerForContainer(
@@ -63,7 +63,7 @@ func PodTemplateSpecForComponent(
 			buildArtifact,
 		)
 		if err != nil {
-			return corev1.PodTemplateSpec{}, err
+			return nil, err
 		}
 
 		kubeContainers = append(kubeContainers, container)
@@ -73,7 +73,7 @@ func PodTemplateSpecForComponent(
 	systemID, err := kubeutil.SystemID(namespacePrefix, namespace)
 	if err != nil {
 		err := fmt.Errorf("error getting system ID: %v", err)
-		return corev1.PodTemplateSpec{}, err
+		return nil, err
 	}
 
 	baseSearchPath := kubeutil.FullyQualifiedInternalSystemSubdomain(systemID, latticeID, internalDNSDomain)
@@ -81,7 +81,7 @@ func PodTemplateSpecForComponent(
 
 	parentNode, err := path.Parent()
 	if err != nil {
-		return corev1.PodTemplateSpec{}, fmt.Errorf("cannot get parent node path: %v", err)
+		return nil, fmt.Errorf("cannot get parent node path: %v", err)
 	}
 	parentDomain := kubeutil.FullyQualifiedInternalAddressSubdomain(parentNode.ToDomain(), systemID, latticeID, internalDNSDomain)
 	if !parentNode.IsRoot() {
@@ -115,7 +115,7 @@ func PodTemplateSpecForComponent(
 			Tolerations:   tolerations,
 		},
 	}
-	return podSpecTemplate, nil
+	return &podSpecTemplate, nil
 }
 
 type containersComponent struct {
