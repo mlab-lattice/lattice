@@ -72,9 +72,9 @@ lattice_go_container_image(
 )
 
 lattice_go_container_image(
-    name = "kubernetes-component-builder",
+    name = "kubernetes-container-builder",
     base_image = "openssh-client",
-    path = "cmd/kubernetes/component-builder",
+    path = "cmd/kubernetes/container-builder",
 )
 
 lattice_go_container_image(

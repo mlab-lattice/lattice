@@ -6,8 +6,8 @@ import (
 
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	kubeutil "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/kubernetes"
-	"github.com/mlab-lattice/lattice/pkg/definition"
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
+	definitionv1 "github.com/mlab-lattice/lattice/pkg/definition/v1"
 
 	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 
@@ -73,7 +73,7 @@ func (s *Service) PathLabel() (tree.NodePath, error) {
 		return "", fmt.Errorf("service did not contain service path label")
 	}
 
-	return tree.NodePathFromDomain(path)
+	return tree.NewNodePathFromDomain(path)
 }
 
 func (s *Service) NodePoolAnnotation() (NodePoolAnnotationValue, error) {
@@ -89,54 +89,22 @@ func (s *Service) NodePoolAnnotation() (NodePoolAnnotationValue, error) {
 	return annotation, nil
 }
 
-// N.B.: important: if you update the ServiceSpec you must also update
-// the serviceSpecEncoder and ServiceSpec's UnmarshalJSON
+func (s *Service) NeedsAddressLoadBalancer() bool {
+	for _, port := range s.Spec.Definition.ContainerPorts() {
+		if port.Public() {
+			return true
+		}
+	}
+
+	return false
+}
+
 // +k8s:deepcopy-gen=false
 type ServiceSpec struct {
-	Definition definition.Service `json:"definition"`
+	Definition *definitionv1.Service `json:"definition"`
 
-	// ComponentBuildArtifacts maps Component names to the artifacts created by their build
-	ComponentBuildArtifacts map[string]ComponentBuildArtifacts `json:"componentBuildArtifacts"`
-
-	// Ports maps Component names to a list of information about its ports
-	Ports map[string][]ComponentPort `json:"ports"`
-
-	NumInstances int32 `json:"numInstances"`
-}
-
-// +k8s:deepcopy-gen=false
-type ComponentPort struct {
-	Name     string `json:"name"`
-	Port     int32  `json:"port"`
-	Protocol string `json:"protocol"`
-	Public   bool   `json:"public"`
-}
-
-type serviceSpecEncoder struct {
-	Definition              json.RawMessage                    `json:"definition"`
-	ComponentBuildArtifacts map[string]ComponentBuildArtifacts `json:"componentBuildArtifacts"`
-	Ports                   map[string][]ComponentPort         `json:"ports"`
-	NumInstances            int32                              `json:"numInstances"`
-}
-
-func (s *ServiceSpec) UnmarshalJSON(data []byte) error {
-	var decoded serviceSpecEncoder
-	if err := json.Unmarshal(data, &decoded); err != nil {
-		return err
-	}
-
-	service, err := definition.NewServiceFromJSON(decoded.Definition)
-	if err != nil {
-		return err
-	}
-
-	*s = ServiceSpec{
-		Definition:              service,
-		ComponentBuildArtifacts: decoded.ComponentBuildArtifacts,
-		Ports:        decoded.Ports,
-		NumInstances: decoded.NumInstances,
-	}
-	return nil
+	// ContainerBuildArtifacts maps Sidecar names to the artifacts created by their build
+	ContainerBuildArtifacts map[string]ContainerBuildArtifacts `json:"containerBuildArtifacts"`
 }
 
 type ServiceStatus struct {

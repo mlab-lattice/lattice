@@ -35,7 +35,7 @@ func (kb *KubernetesBackend) ListSystemSecrets(systemID v1.SystemID) ([]v1.Secre
 
 	externalSecrets := make([]v1.Secret, 0)
 	for _, secret := range secrets.Items {
-		path, err := tree.NodePathFromDomain(secret.Name)
+		path, err := tree.NewNodePathFromDomain(secret.Name)
 		if err != nil {
 			return nil, err
 		}

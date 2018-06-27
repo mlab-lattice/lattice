@@ -15,9 +15,9 @@ import (
 const (
 	AddressController         = "address"
 	BuildController           = "build"
-	ComponentBuildController  = "componentbuild"
+	ContainerBuildController  = "containerbuild"
+	JobController             = "job"
 	NodePoolController        = "nodepool"
-	ServiceBuildController    = "servicebuild"
 	ServiceController         = "service"
 	SystemController          = "system"
 	SystemLifecycleController = "systemlifecycle"

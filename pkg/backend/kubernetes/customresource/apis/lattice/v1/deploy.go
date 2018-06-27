@@ -63,7 +63,7 @@ func (d *Deploy) Description(namespacePrefix string) string {
 	return fmt.Sprintf(
 		"deploy %v (build %v, version %v (build %v) in system %v)",
 		d.Name,
-		d.Spec.BuildName,
+		d.Spec.Build,
 		version,
 		buildID,
 		systemID,
@@ -71,7 +71,7 @@ func (d *Deploy) Description(namespacePrefix string) string {
 }
 
 type DeploySpec struct {
-	BuildName string `json:"buildName"`
+	Build string `json:"build"`
 }
 
 type DeployStatus struct {

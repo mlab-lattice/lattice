@@ -8,6 +8,7 @@ go_library(
     deps = [
         "//pkg/latticectl:go_default_library",
         "//pkg/latticectl/commands/context:go_default_library",
+        "//pkg/latticectl/commands/jobs:go_default_library",
         "//pkg/latticectl/commands/kubernetes:go_default_library",
         "//pkg/latticectl/commands/kubernetes/bootstrap:go_default_library",
         "//pkg/latticectl/commands/local:go_default_library",

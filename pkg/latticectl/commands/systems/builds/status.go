@@ -150,26 +150,39 @@ func PrintBuildStateDuringWatchBuild(writer io.Writer, s *spinner.Spinner, build
 	case v1.BuildStateFailed:
 		s.Stop()
 
-		var componentErrors [][]string
+		var containerErrors [][]string
 
 		for serviceName, service := range build.Services {
-			for componentName, component := range service.Components {
-				if component.State == v1.ComponentBuildStateFailed {
+			if service.State == v1.ContainerBuildStateFailed {
+				containerFailureMessage := ""
+
+				if service.FailureMessage != nil {
+					containerFailureMessage = *service.FailureMessage
+				}
+
+				containerErrors = append(containerErrors, []string{
+					serviceName.String(),
+					containerFailureMessage,
+				})
+			}
+
+			for sidecar, containerBuild := range service.Sidecars {
+				if containerBuild.State == v1.ContainerBuildStateFailed {
 					componentErrorMessage := ""
 
-					if component.FailureMessage != nil {
-						componentErrorMessage = *component.FailureMessage
+					if containerBuild.FailureMessage != nil {
+						componentErrorMessage = *containerBuild.FailureMessage
 					}
 
-					componentErrors = append(componentErrors, []string{
-						fmt.Sprintf("%s:%s", serviceName, componentName),
+					containerErrors = append(containerErrors, []string{
+						fmt.Sprintf("%s (%s sidecar)", serviceName.String(), sidecar),
 						componentErrorMessage,
 					})
 				}
 			}
 		}
 
-		PrintBuildFailure(writer, string(build.Version), componentErrors)
+		PrintBuildFailure(writer, string(build.Version), containerErrors)
 	}
 }
 
@@ -204,7 +217,7 @@ func BuildPrinter(build *v1.Build, format printer.Format) printer.Interface {
 	var p printer.Interface
 	switch format {
 	case printer.FormatTable:
-		headers := []string{"Component", "State", "Started At", "Completed At", "Info"}
+		headers := []string{"Container", "State", "Started At", "Completed At", "Info"}
 
 		headerColors := []tw.Colors{
 			{tw.Bold},
@@ -231,29 +244,66 @@ func BuildPrinter(build *v1.Build, format printer.Format) printer.Interface {
 		}
 
 		var rows [][]string
-		// fmt.Fprintln(os.Stdout, build)
-		for serviceName, service := range build.Services {
-			// fmt.Fprintln(os.Stdout, service)
-			for componentName, component := range service.Components {
-				// fmt.Fprintln(os.Stdout, component)
-				//fmt.Fprint(os.Stdout, "COMPONENT STATE", component.State, "    ")
+		for path, service := range build.Services {
+			var infoMessage string
+
+			if service.FailureMessage == nil {
+				if service.LastObservedPhase != nil {
+					infoMessage = string(*service.LastObservedPhase)
+				} else {
+					infoMessage = ""
+				}
+			} else {
+				infoMessage = string(*service.FailureMessage)
+			}
+
+			var stateColor color.Color
+			switch service.State {
+			case v1.ContainerBuildStateSucceeded:
+				stateColor = color.Success
+			case v1.ContainerBuildStateFailed:
+				stateColor = color.Failure
+			default:
+				stateColor = color.Warning
+			}
+
+			startTimestamp := ""
+			completionTimestamp := ""
+
+			if service.StartTimestamp != nil {
+				startTimestamp = service.StartTimestamp.String()
+			}
+
+			if service.CompletionTimestamp != nil {
+				completionTimestamp = service.CompletionTimestamp.String()
+			}
+
+			rows = append(rows, []string{
+				path.String(),
+				stateColor(string(service.State)),
+				startTimestamp,
+				completionTimestamp,
+				string(infoMessage),
+			})
+
+			for sidecar, containerBuild := range service.Sidecars {
 				var infoMessage string
 
-				if component.FailureMessage == nil {
-					if component.LastObservedPhase != nil {
-						infoMessage = string(*component.LastObservedPhase)
+				if containerBuild.FailureMessage == nil {
+					if containerBuild.LastObservedPhase != nil {
+						infoMessage = string(*containerBuild.LastObservedPhase)
 					} else {
 						infoMessage = ""
 					}
 				} else {
-					infoMessage = string(*component.FailureMessage)
+					infoMessage = string(*containerBuild.FailureMessage)
 				}
 
 				var stateColor color.Color
-				switch component.State {
-				case v1.ComponentBuildStateSucceeded:
+				switch containerBuild.State {
+				case v1.ContainerBuildStateSucceeded:
 					stateColor = color.Success
-				case v1.ComponentBuildStateFailed:
+				case v1.ContainerBuildStateFailed:
 					stateColor = color.Failure
 				default:
 					stateColor = color.Warning
@@ -262,24 +312,24 @@ func BuildPrinter(build *v1.Build, format printer.Format) printer.Interface {
 				startTimestamp := ""
 				completionTimestamp := ""
 
-				if component.StartTimestamp != nil {
-					startTimestamp = component.StartTimestamp.String()
+				if containerBuild.StartTimestamp != nil {
+					startTimestamp = containerBuild.StartTimestamp.String()
 				}
 
-				if component.CompletionTimestamp != nil {
-					completionTimestamp = component.CompletionTimestamp.String()
+				if containerBuild.CompletionTimestamp != nil {
+					completionTimestamp = containerBuild.CompletionTimestamp.String()
 				}
 
 				rows = append(rows, []string{
-					fmt.Sprintf("%s:%s", serviceName, componentName),
-					stateColor(string(component.State)),
+					fmt.Sprintf("%v (%v sidecar)", path.String(), sidecar),
+					stateColor(string(containerBuild.State)),
 					startTimestamp,
 					completionTimestamp,
 					string(infoMessage),
 				})
-
-				sort.Slice(rows, func(i, j int) bool { return rows[i][0] < rows[j][0] })
 			}
+
+			sort.Slice(rows, func(i, j int) bool { return rows[i][0] < rows[j][0] })
 		}
 
 		p = &printer.Table{

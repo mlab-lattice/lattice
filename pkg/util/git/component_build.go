@@ -3,16 +3,12 @@ package git
 import (
 	"fmt"
 
-	"github.com/mlab-lattice/lattice/pkg/definition/block"
+	definitionv1 "github.com/mlab-lattice/lattice/pkg/definition/v1"
 )
 
-func GetGitURIFromComponentBuild(gitRepo *block.GitRepository) (string, error) {
+func GetGitURIFromDefinition(gitRepo *definitionv1.GitRepository) (string, error) {
 	if gitRepo == nil {
 		return "", fmt.Errorf("cannot get git URI from nil component build")
-	}
-
-	if err := gitRepo.Validate(nil); err != nil {
-		return "", fmt.Errorf("invalid component build git_repository: %v", err.Error())
 	}
 
 	uri := gitRepo.URL

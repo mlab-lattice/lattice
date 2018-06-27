@@ -32,9 +32,9 @@ func TestNewNodePath(t *testing.T) {
 }
 
 func TestNodePathFromDomain(t *testing.T) {
-	p2, err := NodePathFromDomain("BUZZ.Bar.foo")
+	p2, err := NewNodePathFromDomain("BUZZ.Bar.foo")
 	if err != nil {
-		t.Errorf("Expected no error for valid NodePathFromDomain but got %v", err)
+		t.Errorf("Expected no error for valid NewNodePathFromDomain but got %v", err)
 	}
 
 	expectedPath := "/foo/Bar/BUZZ"
@@ -115,6 +115,15 @@ func TestNodePath_IsRoot(t *testing.T) {
 		t.Errorf("Expected no error for valid path but got %v", err)
 	}
 
+	if p.IsRoot() {
+		t.Errorf("Expected NodePath to not be Root")
+	}
+
+	p, err = NewNodePath("/")
+	if err != nil {
+		t.Errorf("Expected no error for valid path but got %v", err)
+	}
+
 	if !p.IsRoot() {
 		t.Errorf("Expected NodePath to be Root")
 	}
@@ -132,7 +141,7 @@ func TestNodePath_Parent(t *testing.T) {
 	}
 
 	expectedPath := "/foo/Bar"
-	if string(p) != expectedPath {
+	if p.String() != expectedPath {
 		t.Errorf("Expected path %v but got %v", expectedPath, string(p))
 	}
 
@@ -142,12 +151,53 @@ func TestNodePath_Parent(t *testing.T) {
 	}
 
 	expectedPath = "/foo"
-	if string(p) != expectedPath {
+	if p.String() != expectedPath {
+		t.Errorf("Expected path %v but got %v", expectedPath, string(p))
+	}
+
+	p, err = p.Parent()
+	if err != nil {
+		t.Errorf("Expected no error for NodePath with parent but got %v", err)
+	}
+
+	expectedPath = "/"
+	if p.String() != expectedPath {
 		t.Errorf("Expected path %v but got %v", expectedPath, string(p))
 	}
 
 	_, err = p.Parent()
 	if err == nil {
 		t.Errorf("Expected error for NodePath with no parent but got nil")
+	}
+}
+
+func TestNewNodePathSubcomponent(t *testing.T) {
+	_, err := NewNodePathSubcomponentFromParts("/foo/Bar/BUZZ", "")
+	if err == nil {
+		t.Errorf("Expected error for empty subcomponent but got nil")
+	}
+
+	_, err = NewNodePathSubcomponentFromParts("/foo/Bar/BUZZ", "bazz")
+	if err != nil {
+		t.Errorf("Expected no error for valid path but got %v", err)
+	}
+}
+
+func TestNodePathSubcomponentParts(t *testing.T) {
+	n, err := NewNodePathSubcomponentFromParts("/foo/Bar/BUZZ", "bazz")
+	if err != nil {
+		t.Errorf("Expected no error for valid path subcomponent but got %v", err)
+	}
+
+	path, component := n.Parts()
+
+	expectedPath := "/foo/Bar/BUZZ"
+	if path.String() != expectedPath {
+		t.Errorf("Expected path %v but got %v", expectedPath, path.String())
+	}
+
+	expectedComponent := "bazz"
+	if component != expectedComponent {
+		t.Errorf("Expected path %v but got %v", expectedPath, path.String())
 	}
 }

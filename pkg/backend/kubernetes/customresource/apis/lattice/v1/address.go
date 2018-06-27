@@ -54,7 +54,7 @@ func (a *Address) PathLabel() (tree.NodePath, error) {
 		return "", fmt.Errorf("service did not contain service path label")
 	}
 
-	return tree.NodePathFromDomain(path)
+	return tree.NewNodePathFromDomain(path)
 }
 
 func (a *Address) Stable() bool {

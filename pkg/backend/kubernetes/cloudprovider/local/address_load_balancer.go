@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"reflect"
 	"sort"
+	"strconv"
 
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
@@ -23,7 +24,7 @@ func (cp *DefaultLocalCloudProvider) ServiceAddressLoadBalancerNeedsUpdate(
 	service *latticev1.Service,
 	serviceMeshPorts map[int32]int32,
 ) (bool, error) {
-	loadBalancerNeeded := serviceNeedsAddressLoadBalancer(service)
+	loadBalancerNeeded := service.NeedsAddressLoadBalancer()
 
 	kubeService, err := cp.getKubeService(address)
 	if err != nil {
@@ -161,6 +162,7 @@ func (cp *DefaultLocalCloudProvider) ServiceAddressLoadBalancerPorts(
 	latticeID v1.LatticeID,
 	address *latticev1.Address,
 	service *latticev1.Service,
+	serviceMeshPorts map[int32]int32,
 ) (map[int32]string, error) {
 	kubeServiceName := serviceAddressKubeServiceLoadBalancerName(address)
 	kubeService, err := cp.kubeServiceLister.Services(address.Namespace).Get(kubeServiceName)
@@ -168,9 +170,17 @@ func (cp *DefaultLocalCloudProvider) ServiceAddressLoadBalancerPorts(
 		return nil, err
 	}
 
-	ports := make(map[int32]string)
+	kubeServicePorts := make(map[int32]int32)
 	for _, port := range kubeService.Spec.Ports {
-		ports[port.Port] = fmt.Sprintf("%v:%v", cp.IP(), port.NodePort)
+		kubeServicePorts[port.Port] = port.NodePort
+	}
+
+	ports := make(map[int32]string)
+	for portNum, port := range service.Spec.Definition.ContainerPorts() {
+		if port.Public() {
+			kubeServicePort := kubeServicePorts[serviceMeshPorts[portNum]]
+			ports[portNum] = fmt.Sprintf("%v:%v", cp.IP(), kubeServicePort)
+		}
 	}
 
 	return ports, nil
@@ -183,26 +193,23 @@ func (cp *DefaultLocalCloudProvider) kubeServiceSpec(
 ) (corev1.ServiceSpec, error) {
 	var ports []corev1.ServicePort
 
-	for component, componentPorts := range service.Spec.Ports {
-		for _, componentPort := range componentPorts {
-			if componentPort.Public {
-				targetPort, ok := serviceMeshPorts[componentPort.Port]
-				if !ok {
-					err := fmt.Errorf(
-						"component port %v not found in service mesh ports for %v",
-						componentPort.Port,
-						service.Description(cp.namespacePrefix),
-					)
-					return corev1.ServiceSpec{}, err
-				}
-
-				ports = append(ports, corev1.ServicePort{
-					// FIXME: need a better naming scheme
-					Name:     fmt.Sprintf("%v-%v", component, componentPort.Name),
-					Protocol: corev1.ProtocolTCP,
-					Port:     targetPort,
-				})
+	for portNum, port := range service.Spec.Definition.ContainerPorts() {
+		if port.Public() {
+			targetPort, ok := serviceMeshPorts[portNum]
+			if !ok {
+				err := fmt.Errorf(
+					"container port %v not found in service mesh ports for %v",
+					portNum,
+					service.Description(cp.namespacePrefix),
+				)
+				return corev1.ServiceSpec{}, err
 			}
+
+			ports = append(ports, corev1.ServicePort{
+				Name:     strconv.Itoa(int(portNum)),
+				Protocol: corev1.ProtocolTCP,
+				Port:     targetPort,
+			})
 		}
 	}
 
@@ -326,16 +333,4 @@ func serviceAddressKubeServiceStrategicMergePatchBytes(desired, current corev1.S
 
 func serviceAddressKubeServiceLoadBalancerName(address *latticev1.Address) string {
 	return fmt.Sprintf("load-balancer-address-%v", address.Name)
-}
-
-func serviceNeedsAddressLoadBalancer(service *latticev1.Service) bool {
-	for _, componentPorts := range service.Spec.Ports {
-		for _, componentPort := range componentPorts {
-			if componentPort.Public {
-				return true
-			}
-		}
-	}
-
-	return false
 }

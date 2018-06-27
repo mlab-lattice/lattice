@@ -5,6 +5,7 @@ go_library(
     srcs = [
         "build.go",
         "deploy.go",
+        "job.go",
         "kubernetes_backend.go",
         "logs.go",
         "node_pool.go",
@@ -22,8 +23,8 @@ go_library(
         "//pkg/backend/kubernetes/customresource/generated/clientset/versioned:go_default_library",
         "//pkg/backend/kubernetes/lifecycle/system/bootstrap/bootstrapper:go_default_library",
         "//pkg/backend/kubernetes/util/kubernetes:go_default_library",
-        "//pkg/definition:go_default_library",
         "//pkg/definition/tree:go_default_library",
+        "//pkg/definition/v1:go_default_library",
         "@com_github_satori_go_uuid//:go_default_library",
         "@io_k8s_api//core/v1:go_default_library",
         "@io_k8s_apimachinery//pkg/api/errors:go_default_library",

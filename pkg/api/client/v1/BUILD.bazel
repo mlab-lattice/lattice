@@ -8,5 +8,6 @@ go_library(
     deps = [
         "//pkg/api/v1:go_default_library",
         "//pkg/definition/tree:go_default_library",
+        "//pkg/definition/v1:go_default_library",
     ],
 )

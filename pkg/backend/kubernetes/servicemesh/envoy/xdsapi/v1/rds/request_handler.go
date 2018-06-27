@@ -29,7 +29,7 @@ func (r *RequestHandler) GetResponse(routeName, serviceCluster, serviceNode stri
 
 	var virtualHosts []types.VirtualHost
 	for path, service := range services {
-		for componentName, component := range service.Components {
+		for componentName, component := range service.Containers {
 			for port := range component.Ports {
 				domain := fmt.Sprintf("%v.local", path.ToDomain())
 				domains := []string{fmt.Sprintf("%v:%v", domain, port)}

@@ -41,18 +41,20 @@ func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Lattice().V1().Addresses().Informer()}, nil
 	case v1.SchemeGroupVersion.WithResource("builds"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Lattice().V1().Builds().Informer()}, nil
-	case v1.SchemeGroupVersion.WithResource("componentbuilds"):
-		return &genericInformer{resource: resource.GroupResource(), informer: f.Lattice().V1().ComponentBuilds().Informer()}, nil
 	case v1.SchemeGroupVersion.WithResource("configs"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Lattice().V1().Configs().Informer()}, nil
+	case v1.SchemeGroupVersion.WithResource("containerbuilds"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Lattice().V1().ContainerBuilds().Informer()}, nil
 	case v1.SchemeGroupVersion.WithResource("deploys"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Lattice().V1().Deploys().Informer()}, nil
+	case v1.SchemeGroupVersion.WithResource("jobs"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Lattice().V1().Jobs().Informer()}, nil
+	case v1.SchemeGroupVersion.WithResource("jobruns"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Lattice().V1().JobRuns().Informer()}, nil
 	case v1.SchemeGroupVersion.WithResource("nodepools"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Lattice().V1().NodePools().Informer()}, nil
 	case v1.SchemeGroupVersion.WithResource("services"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Lattice().V1().Services().Informer()}, nil
-	case v1.SchemeGroupVersion.WithResource("servicebuilds"):
-		return &genericInformer{resource: resource.GroupResource(), informer: f.Lattice().V1().ServiceBuilds().Informer()}, nil
 	case v1.SchemeGroupVersion.WithResource("systems"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Lattice().V1().Systems().Informer()}, nil
 	case v1.SchemeGroupVersion.WithResource("teardowns"):

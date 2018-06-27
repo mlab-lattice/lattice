@@ -6,7 +6,6 @@ import (
 
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
-
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -100,12 +99,8 @@ func (c *Controller) syncSystemServices(system *latticev1.System) (map[tree.Node
 
 		// We found an existing service. Calculate what its Spec should look like,
 		// and update the service if its current Spec is different.
-		spec, err := c.serviceSpec(system, &serviceInfo, path)
-		if err != nil {
-			return nil, fmt.Errorf("error getting desired spec for service %v in %v: %v", path.String(), system.Description(), err)
-		}
-
-		service, err = c.updateService(service, spec, path)
+		spec := serviceSpec(&serviceInfo)
+		service, err := c.updateService(service, spec, path)
 		if err != nil {
 			return nil, err
 		}
@@ -180,13 +175,7 @@ func (c *Controller) newService(
 	serviceInfo *latticev1.SystemSpecServiceInfo,
 	path tree.NodePath,
 ) (*latticev1.Service, error) {
-	spec, err := c.serviceSpec(system, serviceInfo, path)
-	if err != nil {
-		return nil, err
-	}
-
 	systemNamespace := system.ResourceNamespace(c.namespacePrefix)
-
 	service := &latticev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:            uuid.NewV4().String(),
@@ -196,7 +185,7 @@ func (c *Controller) newService(
 				latticev1.ServicePathLabelKey: path.ToDomain(),
 			},
 		},
-		Spec: spec,
+		Spec: serviceSpec(serviceInfo),
 	}
 
 	annotations, err := c.serviceMesh.ServiceAnnotations(service)
@@ -209,54 +198,13 @@ func (c *Controller) newService(
 	return service, nil
 }
 
-func (c *Controller) serviceSpec(
-	system *latticev1.System,
+func serviceSpec(
 	serviceInfo *latticev1.SystemSpecServiceInfo,
-	path tree.NodePath,
-) (latticev1.ServiceSpec, error) {
-	var numInstances int32
-	if serviceInfo.Definition.Resources().NumInstances != nil {
-		numInstances = *(serviceInfo.Definition.Resources().NumInstances)
-	} else if serviceInfo.Definition.Resources().MinInstances != nil {
-		numInstances = *(serviceInfo.Definition.Resources().MinInstances)
-	} else {
-		err := fmt.Errorf(
-			"service %v (%v) invalid definition: num_instances or min_instances must be set",
-			path.ToDomain(),
-			system.V1ID(),
-		)
-		return latticev1.ServiceSpec{}, err
-	}
-
-	componentPorts := map[string][]latticev1.ComponentPort{}
-
-	for _, component := range serviceInfo.Definition.Components() {
-		var ports []latticev1.ComponentPort
-		for _, port := range component.Ports {
-			componentPort := latticev1.ComponentPort{
-				Name:     port.Name,
-				Port:     int32(port.Port),
-				Protocol: port.Protocol,
-				Public:   false,
-			}
-
-			if port.ExternalAccess != nil && port.ExternalAccess.Public {
-				componentPort.Public = true
-			}
-
-			ports = append(ports, componentPort)
-		}
-
-		componentPorts[component.Name] = ports
-	}
-
-	spec := latticev1.ServiceSpec{
+) latticev1.ServiceSpec {
+	return latticev1.ServiceSpec{
 		Definition:              serviceInfo.Definition,
-		ComponentBuildArtifacts: serviceInfo.ComponentBuildArtifacts,
-		Ports:        componentPorts,
-		NumInstances: numInstances,
+		ContainerBuildArtifacts: serviceInfo.ContainerBuildArtifacts,
 	}
-	return spec, nil
 }
 
 func (c *Controller) deleteService(service *latticev1.Service) error {

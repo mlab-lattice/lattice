@@ -20,16 +20,24 @@ func (c *FakeLatticeV1) Builds(namespace string) v1.BuildInterface {
 	return &FakeBuilds{c, namespace}
 }
 
-func (c *FakeLatticeV1) ComponentBuilds(namespace string) v1.ComponentBuildInterface {
-	return &FakeComponentBuilds{c, namespace}
-}
-
 func (c *FakeLatticeV1) Configs(namespace string) v1.ConfigInterface {
 	return &FakeConfigs{c, namespace}
 }
 
+func (c *FakeLatticeV1) ContainerBuilds(namespace string) v1.ContainerBuildInterface {
+	return &FakeContainerBuilds{c, namespace}
+}
+
 func (c *FakeLatticeV1) Deploys(namespace string) v1.DeployInterface {
 	return &FakeDeploys{c, namespace}
+}
+
+func (c *FakeLatticeV1) Jobs(namespace string) v1.JobInterface {
+	return &FakeJobs{c, namespace}
+}
+
+func (c *FakeLatticeV1) JobRuns(namespace string) v1.JobRunInterface {
+	return &FakeJobRuns{c, namespace}
 }
 
 func (c *FakeLatticeV1) NodePools(namespace string) v1.NodePoolInterface {
@@ -38,10 +46,6 @@ func (c *FakeLatticeV1) NodePools(namespace string) v1.NodePoolInterface {
 
 func (c *FakeLatticeV1) Services(namespace string) v1.ServiceInterface {
 	return &FakeServices{c, namespace}
-}
-
-func (c *FakeLatticeV1) ServiceBuilds(namespace string) v1.ServiceBuildInterface {
-	return &FakeServiceBuilds{c, namespace}
 }
 
 func (c *FakeLatticeV1) Systems(namespace string) v1.SystemInterface {

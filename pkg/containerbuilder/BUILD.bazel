@@ -1,0 +1,24 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "builder.go",
+        "docker.go",
+        "git.go",
+        "status_updater.go",
+    ],
+    importpath = "github.com/mlab-lattice/lattice/pkg/containerbuilder",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//pkg/api/v1:go_default_library",
+        "//pkg/definition/v1:go_default_library",
+        "//pkg/util/docker:go_default_library",
+        "//pkg/util/git:go_default_library",
+        "//pkg/util/tar:go_default_library",
+        "@com_github_docker_docker//api/types:go_default_library",
+        "@com_github_docker_docker//client:go_default_library",
+        "@com_github_docker_docker//pkg/jsonmessage:go_default_library",
+        "@com_github_fatih_color//:go_default_library",
+    ],
+)

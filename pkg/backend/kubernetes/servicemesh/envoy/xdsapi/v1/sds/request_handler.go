@@ -32,9 +32,9 @@ func (r *RequestHandler) GetResponse(serviceName string) (*Response, error) {
 		return nil, fmt.Errorf("invalid Service path %v", path)
 	}
 
-	component, ok := svc.Components[componentName]
+	component, ok := svc.Containers[componentName]
 	if !ok {
-		return nil, fmt.Errorf("invalid Component name %v", componentName)
+		return nil, fmt.Errorf("invalid Sidecar name %v", componentName)
 	}
 
 	envoyPort, ok := component.Ports[port]

@@ -15,7 +15,6 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 
-	"fmt"
 	"github.com/golang/glog"
 	"github.com/spf13/pflag"
 )
@@ -119,8 +118,6 @@ func Command() *cli.Command {
 			startControllers(ctx, enabledControllers)
 
 			glog.V(4).Info("Starting informer factory kubeinformers")
-			fmt.Printf("top level kube: %v\n", ctx.KubeInformerFactory)
-			fmt.Printf("top level lattice: %v\n", ctx.LatticeInformerFactory)
 			ctx.KubeInformerFactory.Start(ctx.Stop)
 			ctx.LatticeInformerFactory.Start(ctx.Stop)
 

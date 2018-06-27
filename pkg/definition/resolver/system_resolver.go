@@ -4,9 +4,9 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/mlab-lattice/lattice/pkg/definition"
 	"github.com/mlab-lattice/lattice/pkg/definition/template/language"
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
+	definitionv1 "github.com/mlab-lattice/lattice/pkg/definition/v1"
 	"github.com/mlab-lattice/lattice/pkg/util/git"
 )
 
@@ -65,16 +65,14 @@ func (resolver *SystemResolver) ListDefinitionVersions(uri string, gitResolveOpt
 
 // readNodeFromFile reads a definition node from a file
 func (resolver *SystemResolver) readNodeFromFile(ctx *resolveContext) (tree.Node, error) {
-
 	engine := language.NewEngine()
-	options, err := language.CreateOptions(resolver.gitResolver.WorkDirectory, ctx.gitResolveOptions)
 
+	options, err := language.CreateOptions(resolver.gitResolver.WorkDirectory, ctx.gitResolveOptions)
 	if err != nil {
 		return nil, err
 	}
 
 	result, err := engine.EvalFromURL(ctx.gitURI, make(map[string]interface{}), options)
-
 	if err != nil {
 		return nil, err
 	}
@@ -84,13 +82,12 @@ func (resolver *SystemResolver) readNodeFromFile(ctx *resolveContext) (tree.Node
 		return nil, err
 	}
 
-	defInterface, err := definition.NewFromJSON(jsonBytes)
-
+	def, err := definitionv1.NewComponentFromJSON(jsonBytes)
 	if err != nil {
 		return nil, err
 	}
 
-	return tree.NewNode(defInterface, nil)
+	return definitionv1.NewNode(def, "", nil)
 }
 
 // lists the tags in a repo

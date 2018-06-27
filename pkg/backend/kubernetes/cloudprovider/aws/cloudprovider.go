@@ -218,10 +218,7 @@ func (cp *DefaultAWSCloudProvider) ComponentBuildWorkDirectoryVolumeSource(jobNa
 	}
 }
 
-func (cp *DefaultAWSCloudProvider) TransformServiceDeploymentSpec(
-	service *latticev1.Service,
-	spec *appsv1.DeploymentSpec,
-) *appsv1.DeploymentSpec {
+func (cp *DefaultAWSCloudProvider) TransformPodTemplateSpec(spec *corev1.PodTemplateSpec) *corev1.PodTemplateSpec {
 	// nothing to do
 	return spec
 }

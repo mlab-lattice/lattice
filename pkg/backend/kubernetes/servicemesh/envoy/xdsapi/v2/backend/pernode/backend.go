@@ -447,21 +447,33 @@ func (b *KubernetesPerNodeBackend) SystemServices(serviceCluster string) (map[tr
 			}
 		}
 
-		for component, ports := range service.Spec.Ports {
-			bc := xdsapi.Component{
-				Ports: make(map[int32]int32),
+		// FIXME: we should reevaluate these structures. Component isn't a thing anymore.
+		mainContainer := xdsapi.Component{
+			Ports: make(map[int32]int32),
+		}
+		for port := range service.Spec.Definition.Ports {
+			envoyPort, err := b.serviceMesh.ServiceMeshPort(service, port)
+			if err != nil {
+				return nil, err
 			}
 
-			for _, port := range ports {
-				envoyPort, err := b.serviceMesh.ServiceMeshPort(service, port.Port)
+			mainContainer.Ports[port] = envoyPort
+		}
+		xdsService.Components[kubernetes.UserMainContainerName] = mainContainer
+
+		for name, sidecar := range service.Spec.Definition.Sidecars {
+			c := xdsapi.Component{
+				Ports: make(map[int32]int32),
+			}
+			for port := range sidecar.Ports {
+				envoyPort, err := b.serviceMesh.ServiceMeshPort(service, port)
 				if err != nil {
 					return nil, err
 				}
 
-				bc.Ports[port.Port] = envoyPort
+				c.Ports[port] = envoyPort
 			}
-
-			xdsService.Components[component] = bc
+			xdsService.Components[kubernetes.UserSidecarContainerName(name)] = c
 		}
 
 		result[path] = xdsService

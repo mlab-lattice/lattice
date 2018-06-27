@@ -41,7 +41,7 @@ func (s *ServiceNode) Domain() string {
 }
 
 func (s *ServiceNode) Path() (tree.NodePath, error) {
-	tnPath, err := tree.NodePathFromDomain(s.EnvoyNode.GetId())
+	tnPath, err := tree.NewNodePathFromDomain(s.EnvoyNode.GetId())
 	if err != nil {
 		return "", err
 	}

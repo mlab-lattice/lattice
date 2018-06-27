@@ -18,7 +18,7 @@ const (
 	ErrorCodeInvalidDeployID      ErrorCode = "INVALID_DEPLOY_ID"
 	ErrorCodeInvalidTeardownID    ErrorCode = "INVALID_TEARDOWN_ID"
 	ErrorCodeInvalidServicePath   ErrorCode = "INVALID_SERVICE_PATH"
-	ErrorCodeInvalidComponent     ErrorCode = "INVALID_COMPONENT"
+	ErrorCodeInvalidSidecar       ErrorCode = "INVALID_SIDECAR"
 	ErrorCodeInvalidSystemSecret  ErrorCode = "INVALID_SYSTEM_SECRET"
 	ErrorCodeConflict             ErrorCode = "CONFLICT"
 )
@@ -194,22 +194,22 @@ func (e *InvalidServicePathError) Code() ErrorCode {
 	return ErrorCodeInvalidServicePath
 }
 
-func NewInvalidComponentError(component string) *InvalidComponentError {
-	return &InvalidComponentError{
-		Component: component,
+func NewInvalidSidecarError(sidecar string) *InvalidSidecarError {
+	return &InvalidSidecarError{
+		Sidecar: sidecar,
 	}
 }
 
-type InvalidComponentError struct {
-	Component string `json:"component"`
+type InvalidSidecarError struct {
+	Sidecar string `json:"sidecar"`
 }
 
-func (e *InvalidComponentError) Error() string {
-	return fmt.Sprintf("invalid component %v", e.Component)
+func (e *InvalidSidecarError) Error() string {
+	return fmt.Sprintf("invalid component %v", e.Sidecar)
 }
 
-func (e *InvalidComponentError) Code() ErrorCode {
-	return ErrorCodeInvalidComponent
+func (e *InvalidSidecarError) Code() ErrorCode {
+	return ErrorCodeInvalidSidecar
 }
 
 func NewInvalidSystemSecretError(path tree.NodePath, name string) *InvalidSystemSecretError {

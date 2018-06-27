@@ -6,6 +6,7 @@ go_library(
         "build.go",
         "deploy.go",
         "errors.go",
+        "job.go",
         "lattice.go",
         "logs_options.go",
         "node_pool.go",

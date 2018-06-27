@@ -132,6 +132,10 @@ func (c *SystemClient) Services(id v1.SystemID) clientv1.ServiceClient {
 	return newServiceClient(c.restClient, c.apiServerURL, id)
 }
 
+func (c *SystemClient) Jobs(id v1.SystemID) clientv1.JobClient {
+	return newJobClient(c.restClient, c.apiServerURL, id)
+}
+
 func (c *SystemClient) Secrets(id v1.SystemID) clientv1.SecretClient {
 	return newSystemSecretClient(c.restClient, c.apiServerURL, id)
 }

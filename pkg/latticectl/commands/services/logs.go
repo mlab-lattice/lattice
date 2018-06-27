@@ -15,8 +15,8 @@ type LogsCommand struct {
 }
 
 func (c *LogsCommand) Base() (*latticectl.BaseCommand, error) {
-	var component string
-	var instance string
+	var sidecarStr string
+	var instanceStr string
 	var follow bool
 	var previous bool
 	var timestamps bool
@@ -28,16 +28,15 @@ func (c *LogsCommand) Base() (*latticectl.BaseCommand, error) {
 		Name: "logs",
 		Flags: cli.Flags{
 			&cli.StringFlag{
-				Name:     "component",
-				Short:    "c",
-				Required: true,
-				Target:   &component,
+				Name:   "sidecar",
+				Short:  "s",
+				Target: &sidecarStr,
 			},
 			&cli.StringFlag{
-				Name:     "instance",
+				Name:     "instanceStr",
 				Short:    "i",
 				Required: false,
-				Target:   &instance,
+				Target:   &instanceStr,
 			},
 			&cli.BoolFlag{
 				Name:    "follow",
@@ -86,7 +85,17 @@ func (c *LogsCommand) Base() (*latticectl.BaseCommand, error) {
 				logOptions.Tail = &tl
 			}
 
-			err := GetServiceLogs(c, ctx.ServiceID(), component, instance, logOptions, os.Stdout)
+			var sidecar *string
+			if sidecarStr != "" {
+				sidecar = &sidecarStr
+			}
+
+			var instance *string
+			if instanceStr != "" {
+				instance = &instanceStr
+			}
+
+			err := GetServiceLogs(c, ctx.ServiceID(), sidecar, instance, logOptions, os.Stdout)
 			if err != nil {
 				log.Fatal(err)
 			}
@@ -96,10 +105,15 @@ func (c *LogsCommand) Base() (*latticectl.BaseCommand, error) {
 	return cmd.Base()
 }
 
-func GetServiceLogs(client v1client.ServiceClient, serviceID v1.ServiceID, component string, instance string,
-	logOptions *v1.ContainerLogOptions, w io.Writer) error {
+func GetServiceLogs(
+	client v1client.ServiceClient,
+	serviceID v1.ServiceID,
+	sidecar, instance *string,
+	logOptions *v1.ContainerLogOptions,
+	w io.Writer,
+) error {
 
-	logs, err := client.Logs(serviceID, component, instance, logOptions)
+	logs, err := client.Logs(serviceID, sidecar, instance, logOptions)
 	if err != nil {
 		return err
 	}

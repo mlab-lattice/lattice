@@ -105,7 +105,7 @@ func (cp *DefaultLocalLatticeBootstrapper) BootstrapLatticeResources(resources *
 
 	var serviceMeshVars []string
 	for _, daemonSet := range resources.DaemonSets {
-		template := transformPodTemplateSpec(&daemonSet.Spec.Template)
+		template := removePodTemplateSpecAffinity(&daemonSet.Spec.Template)
 
 		if daemonSet.Name == kubeconstants.ControlPlaneServiceLatticeControllerManager {
 			serviceMeshArg := false

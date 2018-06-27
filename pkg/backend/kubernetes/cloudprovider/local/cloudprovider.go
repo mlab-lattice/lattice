@@ -96,14 +96,14 @@ type DefaultLocalCloudProvider struct {
 
 func (cp *DefaultLocalCloudProvider) BootstrapSystemResources(resources *bootstrapper.SystemResources) {
 	for _, daemonSet := range resources.DaemonSets {
-		template := transformPodTemplateSpec(&daemonSet.Spec.Template)
+		template := removePodTemplateSpecAffinity(&daemonSet.Spec.Template)
 		daemonSet.Spec.Template = *template
 	}
 }
 
 func (cp *DefaultLocalCloudProvider) TransformComponentBuildJobSpec(spec *batchv1.JobSpec) *batchv1.JobSpec {
 	spec = spec.DeepCopy()
-	spec.Template = *transformPodTemplateSpec(&spec.Template)
+	spec.Template = *removePodTemplateSpecAffinity(&spec.Template)
 
 	return spec
 }
@@ -116,21 +116,17 @@ func (cp *DefaultLocalCloudProvider) ComponentBuildWorkDirectoryVolumeSource(job
 	}
 }
 
-func (cp *DefaultLocalCloudProvider) TransformServiceDeploymentSpec(
-	service *latticev1.Service,
-	spec *appsv1.DeploymentSpec,
-) *appsv1.DeploymentSpec {
-	spec = spec.DeepCopy()
-	spec.Template = *transformPodTemplateSpec(&spec.Template)
+func (cp *DefaultLocalCloudProvider) TransformPodTemplateSpec(spec *corev1.PodTemplateSpec) *corev1.PodTemplateSpec {
+	spec = removePodTemplateSpecAffinity(spec)
 
 	// This uses DNSNone and supplies the local dnsmasq server as the only nameserver. This is because it
 	// is the only way to have names in the node to have priority, whilst still inheriting the clusters
 	// dns config. It's hacky, but it's how DNSClusterFirst works aswell:
 	// https://github.com/kubernetes/kubernetes/blob/v1.9.0/pkg/kubelet/network/dns/dns.go#L340-L360
-	spec.Template.Spec.DNSPolicy = corev1.DNSNone
+	spec.Spec.DNSPolicy = corev1.DNSNone
 
 	found := false
-	for idx, nameserver := range spec.Template.Spec.DNSConfig.Nameservers {
+	for idx, nameserver := range spec.Spec.DNSConfig.Nameservers {
 		if nameserver == localDNSServerIP {
 			// Nameserver already present, so no need to update
 			found = true
@@ -145,10 +141,8 @@ func (cp *DefaultLocalCloudProvider) TransformServiceDeploymentSpec(
 
 	if !found {
 		// Add the DNS server IP as the first nameserver.
-		spec.Template.Spec.DNSConfig.Nameservers = append([]string{localDNSServerIP}, spec.Template.Spec.DNSConfig.Nameservers...)
+		spec.Spec.DNSConfig.Nameservers = append([]string{localDNSServerIP}, spec.Spec.DNSConfig.Nameservers...)
 	}
-
-	glog.V(4).Infof("Updated nameservers: %v", spec.Template.Spec.DNSConfig.Nameservers)
 
 	return spec
 }
@@ -169,9 +163,9 @@ func (cp *DefaultLocalCloudProvider) IP() string {
 	return cp.ip
 }
 
-func transformPodTemplateSpec(template *corev1.PodTemplateSpec) *corev1.PodTemplateSpec {
-	template = template.DeepCopy()
-	template.Spec.Affinity = nil
+func removePodTemplateSpecAffinity(spec *corev1.PodTemplateSpec) *corev1.PodTemplateSpec {
+	spec = spec.DeepCopy()
+	spec.Spec.Affinity = nil
 
-	return template
+	return spec
 }

@@ -3,6 +3,7 @@ package app
 import (
 	"github.com/mlab-lattice/lattice/pkg/latticectl"
 	"github.com/mlab-lattice/lattice/pkg/latticectl/commands/context"
+	"github.com/mlab-lattice/lattice/pkg/latticectl/commands/jobs"
 	"github.com/mlab-lattice/lattice/pkg/latticectl/commands/kubernetes"
 	"github.com/mlab-lattice/lattice/pkg/latticectl/commands/kubernetes/bootstrap"
 	"github.com/mlab-lattice/lattice/pkg/latticectl/commands/local"
@@ -95,6 +96,14 @@ var Latticectl = latticectl.Latticectl{
 					&services.StatusCommand{},
 					&services.AddressCommand{},
 					&services.LogsCommand{},
+				},
+			},
+
+			// Job commands
+			&jobs.ListJobsCommand{
+				Subcommands: []latticectl.Command{
+					&jobs.BuildCommand{},
+					&jobs.LogsCommand{},
 				},
 			},
 		},
