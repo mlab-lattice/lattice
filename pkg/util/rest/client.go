@@ -104,13 +104,13 @@ func NewHeaderedClient(headers map[string]string) *DefaultClient {
 }
 
 // NewInsecureClient client that skips certificate validate. We should XXX.
-func NewInsecureClient() *DefaultClient {
+func NewInsecureClient(headers map[string]string) *DefaultClient {
 	insecureTransport := &http.Transport{
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 	}
 
 	return &DefaultClient{
-		defaultHeaders: map[string]string{},
+		defaultHeaders: headers,
 		client:         &http.Client{Transport: insecureTransport},
 	}
 }

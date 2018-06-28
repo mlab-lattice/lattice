@@ -93,7 +93,7 @@ func (p *DefaultLocalLatticeProvisioner) Provision(id v1.LatticeID, containerCha
 	}
 
 	fmt.Println("Waiting for API server to be ready...")
-	clusterClient := rest.NewClient(address)
+	clusterClient := rest.NewClient(address, "")
 	err = wait.Poll(1*time.Second, 300*time.Second, func() (bool, error) {
 		ok, _ := clusterClient.Health()
 		return ok, nil
