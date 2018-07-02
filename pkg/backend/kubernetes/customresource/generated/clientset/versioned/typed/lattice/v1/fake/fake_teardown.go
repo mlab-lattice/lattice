@@ -46,7 +46,7 @@ func (c *FakeTeardowns) List(opts v1.ListOptions) (result *lattice_v1.TeardownLi
 	if label == nil {
 		label = labels.Everything()
 	}
-	list := &lattice_v1.TeardownList{}
+	list := &lattice_v1.TeardownList{ListMeta: obj.(*lattice_v1.TeardownList).ListMeta}
 	for _, item := range obj.(*lattice_v1.TeardownList).Items {
 		if label.Matches(labels.Set(item.Labels)) {
 			list.Items = append(list.Items, item)
