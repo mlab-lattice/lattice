@@ -236,29 +236,20 @@ func (c *Controller) getBuildContainer(build *latticev1.ContainerBuild) (*corev1
 		},
 	}
 
-	// FIXME: add back ssh key support
-	//if build.Spec.Definition.GitRepository != nil && build.Spec.Definition.GitRepository.SSHKey != nil {
-	//	FIXME: add support for references
-	//secretParts := strings.Split(*build.Spec.BuildDefinitionBlock.GitRepository.SSHKey.Name, ":")
-	//if len(secretParts) != 2 {
-	//	return nil, "", fmt.Errorf("invalid secret format for ssh_key")
-	//}
-	//
-	//secretPath := secretParts[0]
-	//secretName := secretParts[1]
-	//
-	//buildContainer.Env = append(buildContainer.Env, corev1.EnvVar{
-	//	Name: "GIT_REPO_SSH_KEY",
-	//	ValueFrom: &corev1.EnvVarSource{
-	//		SecretKeyRef: &corev1.SecretKeySelector{
-	//			LocalObjectReference: corev1.LocalObjectReference{
-	//				Name: secretPath,
-	//			},
-	//			Key: secretName,
-	//		},
-	//	},
-	//})
-	//}
+	if build.Spec.Definition.GitRepository != nil && build.Spec.Definition.GitRepository.SSHKey != nil {
+		sshKeySecret := build.Spec.Definition.GitRepository.SSHKey
+		buildContainer.Env = append(buildContainer.Env, corev1.EnvVar{
+			Name: "GIT_REPO_SSH_KEY",
+			ValueFrom: &corev1.EnvVarSource{
+				SecretKeyRef: &corev1.SecretKeySelector{
+					LocalObjectReference: corev1.LocalObjectReference{
+						Name: sshKeySecret.NodePath().ToDomain(),
+					},
+					Key: sshKeySecret.Subcomponent(),
+				},
+			},
+		})
+	}
 
 	dockerImageFQN := fmt.Sprintf(
 		"%v/%v:%v",
