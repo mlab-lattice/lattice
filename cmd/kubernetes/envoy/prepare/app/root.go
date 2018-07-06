@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"net"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -13,16 +14,19 @@ import (
 )
 
 const (
-	tableNAT    = "nat"
-	chainOutput = "OUTPUT"
+	tableNAT      = "nat"
+	chainOutput   = "OUTPUT"
+	interfaceName = "eth0"
 
-	envVarEgressPort              = "EGRESS_PORT"
-	envVarRedirectEgressCIDRBlock = "REDIRECT_EGRESS_CIDR_BLOCK"
-	envVarConfigDir               = "CONFIG_DIR"
-	envVarAdminPort               = "ADMIN_PORT"
-	envVarXDSAPIVersion           = "XDS_API_VERSION"
-	envVarXDSAPIHost              = "XDS_API_HOST"
-	envVarXDSAPIPort              = "XDS_API_PORT"
+	envVarEgressPortHTTP              = "EGRESS_PORT_HTTP"
+	envVarEgressPortTCP               = "EGRESS_PORT_TCP"
+	envVarRedirectEgressCIDRBlockHTTP = "REDIRECT_EGRESS_CIDR_BLOCK_HTTP"
+	envVarRedirectEgressCIDRBlockTCP  = "REDIRECT_EGRESS_CIDR_BLOCK_TCP"
+	envVarConfigDir                   = "CONFIG_DIR"
+	envVarAdminPort                   = "ADMIN_PORT"
+	envVarXDSAPIVersion               = "XDS_API_VERSION"
+	envVarXDSAPIHost                  = "XDS_API_HOST"
+	envVarXDSAPIPort                  = "XDS_API_PORT"
 
 	// XXX: needed for V2 config (`--service-cluster` and `--service-node` do not set this appropriately)
 	envVarServiceCluster = "SERVICE_CLUSTER"
@@ -35,8 +39,10 @@ const (
 )
 
 var envVars = []string{
-	envVarEgressPort,
-	envVarRedirectEgressCIDRBlock,
+	envVarEgressPortHTTP,
+	envVarEgressPortTCP,
+	envVarRedirectEgressCIDRBlockHTTP,
+	envVarRedirectEgressCIDRBlockTCP,
 	envVarConfigDir,
 	envVarAdminPort,
 	envVarXDSAPIVersion,
@@ -54,7 +60,7 @@ var RootCmd = &cobra.Command{
 			panic(err)
 		}
 
-		err = addIPTableRedirect(env)
+		err = addIPTableRedirects(env)
 		if err != nil {
 			panic(err)
 		}
@@ -105,20 +111,93 @@ func parseEnv() (map[string]string, error) {
 	return env, nil
 }
 
-func addIPTableRedirect(env map[string]string) error {
+func localIP() (string, error) {
+	interface_, err := net.InterfaceByName(interfaceName)
+	if err != nil {
+		return "", err
+	}
+	addresses, err := interface_.Addrs()
+	if err != nil {
+		return "", err
+	}
+	if len(addresses) != 1 {
+		return "", fmt.Errorf("expected 1 IP address for interface %v, got %v", interfaceName, addresses)
+	}
+	// addresses[0].String() give CIDR notation
+	address, _, err := net.ParseCIDR(addresses[0].String())
+	if err != nil {
+		return "", err
+	}
+	return address.String(), nil
+}
+
+func networkContainsIP(cidr, address string) (bool, error) {
+	_, cidrNet, err := net.ParseCIDR(cidr)
+	if err != nil {
+		return false, err
+	}
+	ip := net.ParseIP(address)
+	if ip == nil {
+		return false, fmt.Errorf("couldn't parse IP address: %v", address)
+	}
+	return cidrNet.Contains(ip), nil
+}
+
+func addIPTableRedirects(env map[string]string) error {
 	ipt, err := iptables.New()
 	if err != nil {
 		panic(err)
 	}
 
+	// set up exception for outgoing packets destined for this container
+	localIP_, err := localIP()
+	if err != nil {
+		return err
+	}
+	networkContainsIP_, err := networkContainsIP(env[envVarRedirectEgressCIDRBlockTCP], localIP_)
+	if err != nil {
+		return err
+	} else if !networkContainsIP_ {
+		return fmt.Errorf("CIDR %v does not contain local IP address %v",
+			envVarRedirectEgressCIDRBlockTCP, localIP_)
+	}
 	rulespecs := []string{
 		"-p", "tcp",
-		"-d", env[envVarRedirectEgressCIDRBlock],
-		"-j", "REDIRECT",
-		"--to-port", env[envVarEgressPort],
-		"-m", "comment", "--comment", "\"lattice redirect to envoy\"",
+		"-d", localIP_,
+		"-j", "ACCEPT",
+		"-m", "comment", "--comment",
+		fmt.Sprintf("\"lattice local IP redirect exception\""),
 	}
-	return ipt.Append(tableNAT, chainOutput, rulespecs...)
+	err = ipt.Append(tableNAT, chainOutput, rulespecs...)
+	if err != nil {
+		return err
+	}
+
+	redirects := map[string]map[string]string{
+		"HTTP": map[string]string{
+			"cidr": envVarRedirectEgressCIDRBlockHTTP,
+			"port": envVarEgressPortHTTP,
+		},
+		"TCP": map[string]string{
+			"cidr": envVarRedirectEgressCIDRBlockTCP,
+			"port": envVarEgressPortTCP,
+		},
+	}
+	for protocol, parameters := range redirects {
+		rulespecs := []string{
+			"-p", "tcp",
+			"-d", env[parameters["cidr"]],
+			"-j", "REDIRECT",
+			"--to-port", env[parameters["port"]],
+			"-m", "comment", "--comment",
+			fmt.Sprintf("\"lattice redirect %v traffic to envoy\"", protocol),
+		}
+		err = ipt.Append(tableNAT, chainOutput, rulespecs...)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // -----------------------------------------------------------------------------

@@ -303,14 +303,15 @@ func (c *Controller) rewriteDnsmasqConfig(addresses []*latticev1.Address) error 
 				continue
 			}
 
-			fmt.Println(c.serviceMesh)
-			ip, err := c.serviceMesh.ServiceIP(service)
+			ips, err := c.serviceMesh.ServiceIPs(service, address.Spec.Endpoints)
 			if err != nil {
 				glog.Errorf("error getting service for value for %v (%v): %v, ignoring the address", address.Description(c.namespacePrefix), service.Description(c.namespacePrefix), err)
 				continue
 			}
 
-			hostConfigFileContents += fmt.Sprintf("%v %v\n", ip, domain)
+			for _, ip := range ips {
+				hostConfigFileContents += fmt.Sprintf("%v %v\n", ip, domain)
+			}
 		}
 
 		if address.Spec.ExternalName != nil {

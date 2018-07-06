@@ -41,6 +41,22 @@ func (c *Controller) updateAddressStatus(
 	return result, nil
 }
 
+func (c *Controller) updateAddressEndpoints(
+	address *latticev1.Address,
+	endpoints []string,
+) (*latticev1.Address, error) {
+	// Copy so we don't mutate the shared cache
+	address = address.DeepCopy()
+	address.Spec.Endpoints = endpoints
+
+	result, err := c.latticeClient.LatticeV1().Addresses(address.Namespace).Update(address)
+	if err != nil {
+		return nil, fmt.Errorf("error updating %v endpoints: %v", address.Description(c.namespacePrefix), err)
+	}
+
+	return result, nil
+}
+
 func (c *Controller) updateAddressAnnotations(address *latticev1.Address, annotations map[string]string) (*latticev1.Address, error) {
 	if reflect.DeepEqual(address.Annotations, annotations) {
 		return address, nil

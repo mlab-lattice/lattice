@@ -12,6 +12,7 @@ import (
 )
 
 func (c *Controller) syncAddress(service *latticev1.Service) (*latticev1.Address, error) {
+	// GEB: should endpoints be synced here instead of within the address controller?
 	address, err := c.address(service)
 	if err != nil {
 		return nil, err
@@ -33,6 +34,7 @@ func (c *Controller) syncAddress(service *latticev1.Service) (*latticev1.Address
 }
 
 func (c *Controller) syncExistingAddress(service *latticev1.Service, address *latticev1.Address) (*latticev1.Address, error) {
+	// GEB: this does not set Endpoints, so updateAddressSpec will always result in an update
 	spec, err := c.addressSpec(service)
 	if err != nil {
 		return nil, err

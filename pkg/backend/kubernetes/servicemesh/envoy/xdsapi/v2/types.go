@@ -1,7 +1,11 @@
 package v2
 
+import (
+	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/servicemesh/envoy"
+)
+
 type Service struct {
-	EgressPort  int32
+	EgressPorts envoy.EnvoyEgressPorts
 	Components  map[string]Component
 	IPAddresses []string
 }

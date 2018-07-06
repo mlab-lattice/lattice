@@ -19,6 +19,7 @@ import (
 
 	kubeinformers "k8s.io/client-go/informers"
 	kubeclientset "k8s.io/client-go/kubernetes"
+	kubelisters "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
 
@@ -60,6 +61,9 @@ type Controller struct {
 
 	serviceLister       latticelisters.ServiceLister
 	serviceListerSynced cache.InformerSynced
+
+	endpointLister       kubelisters.EndpointsLister
+	endpointListerSynced cache.InformerSynced
 
 	queue workqueue.RateLimitingInterface
 }
@@ -122,6 +126,10 @@ func NewController(
 	c.serviceLister = serviceInformer.Lister()
 	c.serviceListerSynced = serviceInformer.Informer().HasSynced
 
+	endpointInformer := kubeInformerFactory.Core().V1().Endpoints()
+	c.endpointLister = endpointInformer.Lister()
+	c.endpointListerSynced = endpointInformer.Informer().HasSynced
+
 	return c
 }
 
@@ -140,6 +148,7 @@ func (c *Controller) Run(workers int, stopCh <-chan struct{}) {
 		c.configListerSynced,
 		c.addressListerSynced,
 		c.serviceListerSynced,
+		c.endpointListerSynced,
 	) {
 		return
 	}

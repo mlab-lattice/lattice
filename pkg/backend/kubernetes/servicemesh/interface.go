@@ -35,8 +35,8 @@ type Interface interface {
 	// which the service mesh is listening on for the given key.
 	ServicePorts(*latticev1.Service) (map[int32]int32, error)
 
-	// ServiceIP returns the IP address that should be registered in DNS for the service.
-	ServiceIP(service *latticev1.Service) (string, error)
+	// ServiceIPs returns the IP addresses that should be registered in DNS for the service.
+	ServiceIPs(service *latticev1.Service, endpoints []string) ([]string, error)
 
 	// IsDeploymentSpecUpdated checks to see if any part of the current DeploymentSpec that the service mesh is responsible
 	// for is out of date compared to the desired deployment spec. If the current DeploymentSpec is current, it also returns
@@ -95,7 +95,7 @@ func Flag(serviceMesh *string) (cli.Flag, *Options) {
 		},
 		FlagChooser: func() (*string, error) {
 			if serviceMesh == nil {
-				return nil, fmt.Errorf("cloud provider cannot be nil")
+				return nil, fmt.Errorf("service mesh cannot be nil")
 			}
 
 			switch *serviceMesh {

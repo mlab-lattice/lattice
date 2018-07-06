@@ -51,7 +51,7 @@ func (s *ServiceNode) getListeners(systemServices map[tree.NodePath]*xdsapi.Serv
 		*xdsmsgs.NewFilterChain(nil, nil, false, filters),
 	}
 
-	address := xdsmsgs.NewTcpSocketAddress("0.0.0.0", service.EgressPort)
+	address := xdsmsgs.NewTcpSocketAddress("0.0.0.0", service.EgressPorts.HTTP)
 
 	listeners = append(listeners, xdsmsgs.NewListener("egress", address, filterChains))
 

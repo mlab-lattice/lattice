@@ -156,6 +156,11 @@ func TestAddressCreation(t *testing.T) {
 
 	expectedIP, redirectCIDRBlock, _ := net.ParseCIDR("172.16.0.0/16")
 
+	redirectCIDRBlocks := envoy.ProtoToCIDRBlock{
+		HTTP: *redirectCIDRBlock,
+		TCP:  *redirectCIDRBlock,
+	}
+
 	path1 := nodePathOrDie("/a")
 	path2 := nodePathOrDie("/a/b/c")
 	path3 := nodePathOrDie("/a/d/e/f")
@@ -277,7 +282,7 @@ func TestAddressCreation(t *testing.T) {
 
 		serviceMeshOptions := &servicemesh.Options{
 			Envoy: &envoy.Options{
-				RedirectCIDRBlock: *redirectCIDRBlock,
+				RedirectCIDRBlocks: redirectCIDRBlocks,
 			},
 		}
 

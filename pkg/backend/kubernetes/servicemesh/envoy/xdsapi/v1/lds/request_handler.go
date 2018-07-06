@@ -39,7 +39,7 @@ func (r *RequestHandler) GetResponse(serviceCluster, serviceNode string) (*Respo
 	listeners := []types.Listener{
 		{
 			Name:    &egress,
-			Address: fmt.Sprintf("tcp://0.0.0.0:%v", service.EgressPort),
+			Address: fmt.Sprintf("tcp://0.0.0.0:%v", service.EgressPorts.HTTP),
 			Filters: []types.NetworkFilter{
 				{
 					Name: constants.FilterNameHTTPConnectionManager,

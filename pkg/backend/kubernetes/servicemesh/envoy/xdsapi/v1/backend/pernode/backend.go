@@ -105,13 +105,13 @@ func (b *KubernetesPerNodeBackend) Services(serviceCluster string) (map[tree.Nod
 			return nil, err
 		}
 
-		egressPort, err := b.serviceMesh.EgressPort(service)
+		egressPorts, err := b.serviceMesh.EgressPorts(service)
 		if err != nil {
 			return nil, err
 		}
 
 		xdsService := &xdsapi.Service{
-			EgressPort:  egressPort,
+			EgressPorts: *egressPorts,
 			Containers:  map[string]xdsapi.Container{},
 			IPAddresses: []string{},
 		}
