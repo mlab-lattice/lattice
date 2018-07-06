@@ -17,6 +17,7 @@ const (
 	tableNAT      = "nat"
 	chainOutput   = "OUTPUT"
 	interfaceName = "eth0"
+	envoyUID      = "1000"
 
 	envVarEgressPortHTTP              = "EGRESS_PORT_HTTP"
 	envVarEgressPortTCP               = "EGRESS_PORT_TCP"
@@ -188,7 +189,9 @@ func addIPTableRedirects(env map[string]string) error {
 			"-p", "tcp",
 			"-d", env[parameters["cidr"]],
 			"-j", "REDIRECT",
+			"!", "-s", "127.0.0.1/32",
 			"--to-port", env[parameters["port"]],
+			"-m", "owner", "!", "--uid-owner", envoyUID,
 			"-m", "comment", "--comment",
 			fmt.Sprintf("\"lattice redirect %v traffic to envoy\"", protocol),
 		}
