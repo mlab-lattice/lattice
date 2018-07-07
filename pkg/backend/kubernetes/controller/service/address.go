@@ -2,7 +2,7 @@ package service
 
 import (
 	"fmt"
-	"reflect"
+	//"reflect"
 
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 
@@ -44,7 +44,14 @@ func (c *Controller) syncExistingAddress(service *latticev1.Service, address *la
 }
 
 func (c *Controller) updateAddressSpec(address *latticev1.Address, spec latticev1.AddressSpec) (*latticev1.Address, error) {
-	if reflect.DeepEqual(address.Spec, spec) {
+	// GEB: this does not take ExternalAddress or Endpoints into account... if either of these are update
+	//      in another controller, we go into a loop volleying update back and forth between controllers.
+	//      how best to handle this?
+	// if reflect.DeepEqual(address.Spec, spec) {
+	// 	return address, nil
+	// }
+
+	if *address.Spec.Service == *spec.Service {
 		return address, nil
 	}
 

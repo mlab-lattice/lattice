@@ -646,7 +646,7 @@ func (sm *DefaultEnvoyServiceMesh) envoyContainers(service *latticev1.Service) (
 	// 		},
 	// 	},
 	// }
-	// GEB: seed this image ahead of time with the envoy user
+	// GEB: seed the envoy image with the envoy user ahead of time
 	envoy := corev1.Container{
 		Name:            containerNameEnvoy,
 		Image:           sm.image,
@@ -654,11 +654,10 @@ func (sm *DefaultEnvoyServiceMesh) envoyContainers(service *latticev1.Service) (
 		Command:         []string{"ash"},
 		Args: []string{
 			"-c",
-			"adduser -D -u 1000 envoy " + // UID needs to be 1000 for iptables rules in prepare to work
+			"adduser -D -u 1000 envoy " + // UID needs to be 1000 for iptables rule in prepare job to work
 				"&& " +
 				"su -c \"" +
-				"/usr/local/bin/envoy " +
-				"-c " +
+				"/usr/local/bin/envoy -c " +
 				fmt.Sprintf("%v/config.json", envoyConfigDirectory) + " " +
 				"--service-cluster " +
 				service.Namespace + " " +
