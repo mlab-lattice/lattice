@@ -20,6 +20,18 @@ const (
 // For example: /a/b/c
 type NodePath string
 
+type InvalidNodePathError struct {
+	Message string
+}
+
+func NewInvalidNodePathError(message string) *InvalidNodePathError {
+	return &InvalidNodePathError{message}
+}
+
+func (e *InvalidNodePathError) Error() string {
+	return e.Message
+}
+
 func RootNodePath() NodePath {
 	return NodePath("/")
 }
@@ -27,19 +39,19 @@ func RootNodePath() NodePath {
 // NewNodePath validates the string passed in and returns a NodePath.
 func NewNodePath(p string) (NodePath, error) {
 	if p == "" {
-		return "", fmt.Errorf("cannot pass empty string as path")
+		return "", NewInvalidNodePathError("cannot pass empty string as path")
 	}
 
 	parts := strings.Split(p, NodePathSeparator)
 	if parts[0] != "" {
-		return "", fmt.Errorf("path must start with '%v'", NodePathSeparator)
+		return "", NewInvalidNodePathError(fmt.Sprintf("path must start with '%v'", NodePathSeparator))
 	}
 
 	// allow for '/' (root), but other than that subpaths cannot be empty
 	if len(parts) > 2 {
 		for _, part := range parts[1:] {
 			if part == "" {
-				return "", fmt.Errorf("path cannot contain empty subpath")
+				return "", NewInvalidNodePathError("path cannot contain empty subpath")
 			}
 		}
 	}
@@ -61,19 +73,19 @@ func NewNodePathFromDomain(d string) (NodePath, error) {
 
 // Child returns the path of a child of the NodePath
 // For example, child c of /a/b returns /a/b/c
-func (np NodePath) Child(child string) NodePath {
-	if np.IsRoot() {
+func (p NodePath) Child(child string) NodePath {
+	if p.IsRoot() {
 		return NodePath(fmt.Sprintf("/%v", child))
 	}
 
-	return NodePath(fmt.Sprintf("%v/%v", np.String(), child))
+	return NodePath(fmt.Sprintf("%v/%v", p.String(), child))
 }
 
 // ToDomain returns the domain version of the path.
 // For example: /a/b/c returns c.b.a
 // N.B.: panics if the NodePath is invalid (i.e. does not contain a slash)
-func (np NodePath) ToDomain() string {
-	subpaths := np.Subpaths()
+func (p NodePath) ToDomain() string {
+	subpaths := p.Subpaths()
 
 	domain := ""
 	first := true
@@ -92,8 +104,8 @@ func (np NodePath) ToDomain() string {
 
 // Subpaths returns a slice of the paths making up the NodePath.
 // For example: /a/b/c returns [a, b, c].
-func (np NodePath) Subpaths() []string {
-	subpaths := strings.Split(np.String(), NodePathSeparator)
+func (p NodePath) Subpaths() []string {
+	subpaths := strings.Split(p.String(), NodePathSeparator)
 	if len(subpaths) > 0 {
 		return subpaths[1:]
 	}
@@ -103,8 +115,8 @@ func (np NodePath) Subpaths() []string {
 
 // Depth returns the number of subpaths in the NodePath.
 // For example: /a/b/c returns 3
-func (np NodePath) Depth() int {
-	subpaths := np.Subpaths()
+func (p NodePath) Depth() int {
+	subpaths := p.Subpaths()
 
 	// Check for root ('/') case
 	if len(subpaths) == 1 && subpaths[0] == "" {
@@ -117,31 +129,31 @@ func (np NodePath) Depth() int {
 // Parent returns the NodePath one level up from the NodePath if it is the root,
 // and returns an error if it is the root.
 // For example: /a/b/c returns /a/b
-func (np NodePath) Parent() (NodePath, error) {
-	if np.IsRoot() {
-		return "", fmt.Errorf("NodePath %v does not have a parent", np.String())
+func (p NodePath) Parent() (NodePath, error) {
+	if p.IsRoot() {
+		return "", fmt.Errorf("NodePath %v does not have a parent", p.String())
 	}
 
-	if np.IsRoot() {
+	if p.IsRoot() {
 	}
 
-	subpaths := np.Subpaths()
+	subpaths := p.Subpaths()
 	parentSubpaths := subpaths[:len(subpaths)-1]
 	return NewNodePath(fmt.Sprintf("%v%v", NodePathSeparator, strings.Join(parentSubpaths, NodePathSeparator)))
 }
 
 // IsRoot returns a bool indicating if the node is the root node (i.e. "/")
-func (np NodePath) IsRoot() bool {
-	return np.Depth() == 0
+func (p NodePath) IsRoot() bool {
+	return p.Depth() == 0
 }
 
 // String returns a string representation of the NodePath.
-func (np NodePath) String() string {
-	return string(np)
+func (p NodePath) String() string {
+	return string(p)
 }
 
 // UnmarshalJSON implements json.Unmarshaler
-func (n *NodePath) UnmarshalJSON(data []byte) error {
+func (p *NodePath) UnmarshalJSON(data []byte) error {
 	var val string
 	err := json.Unmarshal(data, &val)
 	if err != nil {
@@ -153,7 +165,7 @@ func (n *NodePath) UnmarshalJSON(data []byte) error {
 		return err
 	}
 
-	*n = tmp
+	*p = tmp
 	return nil
 }
 
@@ -162,11 +174,23 @@ func (n *NodePath) UnmarshalJSON(data []byte) error {
 // For example: /a/b/c:foo
 type NodePathSubcomponent string
 
+type InvalidNodePathSubcomponentError struct {
+	Message string
+}
+
+func NewInvalidNodePathSubcomponentError(message string) *InvalidNodePathSubcomponentError {
+	return &InvalidNodePathSubcomponentError{message}
+}
+
+func (e *InvalidNodePathSubcomponentError) Error() string {
+	return e.Message
+}
+
 // NewNodePathSubcomponent returns a validated NodePathSubcomponent from the supplied value.
 func NewNodePathSubcomponent(val string) (NodePathSubcomponent, error) {
 	parts := strings.Split(val, NodePathSubcomponentSeparator)
 	if len(parts) != 2 {
-		return "", fmt.Errorf("improperly formatted NodePathSubcomponent: %v", val)
+		return "", NewInvalidNodePathSubcomponentError(fmt.Sprintf("improperly formatted NodePathSubcomponent: %v", val))
 	}
 
 	path, err := NewNodePath(parts[0])
@@ -180,7 +204,7 @@ func NewNodePathSubcomponent(val string) (NodePathSubcomponent, error) {
 // NewNodePathSubcomponentFromParts returns a validated NodePathSubcomponent using the path and subcomponent.
 func NewNodePathSubcomponentFromParts(path NodePath, subcomponent string) (NodePathSubcomponent, error) {
 	if subcomponent == "" {
-		return NodePathSubcomponent(""), fmt.Errorf("cannot pass empty string as subcomponent")
+		return "", NewInvalidNodePathSubcomponentError("cannot pass empty string as subcomponent")
 	}
 
 	n := NodePathSubcomponent(

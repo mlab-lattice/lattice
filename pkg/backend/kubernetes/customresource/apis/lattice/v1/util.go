@@ -44,6 +44,7 @@ func PodTemplateSpecForComponent(
 		containersComponent.MainContainer,
 		kubeutil.UserMainContainerName,
 		mainContainerBuildArtifact,
+		path,
 	)
 	if err != nil {
 		return nil, err
@@ -61,6 +62,7 @@ func PodTemplateSpecForComponent(
 			sidecar,
 			kubeutil.UserMainContainerName,
 			buildArtifact,
+			path,
 		)
 		if err != nil {
 			return nil, err
@@ -147,6 +149,7 @@ func KubeContainerForContainer(
 	container definitionv1.Container,
 	containerName string,
 	buildArtifacts ContainerBuildArtifacts,
+	componentPath tree.NodePath,
 ) (corev1.Container, error) {
 	var ports []corev1.ContainerPort
 	for portNum := range container.Ports {
@@ -182,17 +185,34 @@ func KubeContainerForContainer(
 				},
 			)
 		} else if envVar.Secret != nil {
+			var s *corev1.SecretKeySelector
+			switch {
+			case envVar.Secret.Local != nil:
+				s = &corev1.SecretKeySelector{
+					LocalObjectReference: corev1.LocalObjectReference{
+						Name: componentPath.ToDomain(),
+					},
+					Key: *envVar.Secret.Local,
+				}
+
+			case envVar.Secret.Path != nil:
+				s = &corev1.SecretKeySelector{
+					LocalObjectReference: corev1.LocalObjectReference{
+						Name: envVar.Secret.Path.NodePath().ToDomain(),
+					},
+					Key: envVar.Secret.Path.Subcomponent(),
+				}
+
+			default:
+				return corev1.Container{}, fmt.Errorf("secret %v is empty", name)
+			}
+
 			envVars = append(
 				envVars,
 				corev1.EnvVar{
 					Name: name,
 					ValueFrom: &corev1.EnvVarSource{
-						SecretKeyRef: &corev1.SecretKeySelector{
-							LocalObjectReference: corev1.LocalObjectReference{
-								Name: envVar.Secret.NodePath().ToDomain(),
-							},
-							Key: envVar.Secret.Subcomponent(),
-						},
+						SecretKeyRef: s,
 					},
 				},
 			)

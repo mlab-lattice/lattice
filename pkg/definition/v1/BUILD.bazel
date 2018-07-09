@@ -13,6 +13,7 @@ go_library(
         "node.go",
         "node_pool.go",
         "reference.go",
+        "secret.go",
         "service.go",
         "service_node.go",
         "system.go",

@@ -91,7 +91,7 @@ func (c *BuildCommand) Base() (*latticectl.BaseCommand, error) {
 				}
 
 				// FIXME: support secrets
-				env[parts[0]] = definitionv1.ContainerEnvironmentVariable{
+				env[parts[0]] = definitionv1.ValueOrSecret{
 					Value: &parts[1],
 				}
 			}

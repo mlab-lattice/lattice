@@ -1,11 +1,7 @@
 package v1
 
 import (
-	"encoding/json"
-	"fmt"
-
 	"github.com/mlab-lattice/lattice/pkg/definition/component"
-	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 )
 
 const ComponentTypeContainer = "container"
@@ -41,59 +37,7 @@ type ContainerExec struct {
 	Environment ContainerEnvironment `json:"environment,omitempty"`
 }
 
-type ContainerEnvironment map[string]ContainerEnvironmentVariable
-
-type ContainerEnvironmentVariable struct {
-	Value  *string
-	Secret *tree.NodePathSubcomponent
-}
-
-func (cev ContainerEnvironmentVariable) MarshalJSON() ([]byte, error) {
-	if cev.Value != nil {
-		e := containerEnvironmentVariableEncoder(*cev.Value)
-		return json.Marshal(&e)
-	}
-
-	if cev.Secret != nil {
-		e := containerEnvironmentVariableSecretEncoder{
-			Secret: *cev.Secret,
-		}
-		return json.Marshal(&e)
-	}
-
-	return nil, fmt.Errorf("ContainerEnvironmentVariable must have either value or secret")
-}
-
-func (cev *ContainerEnvironmentVariable) UnmarshalJSON(data []byte) error {
-	var val containerEnvironmentVariableEncoder
-	err := json.Unmarshal(data, &val)
-	if err == nil {
-		strVal := string(val)
-		cev.Value = &strVal
-		return nil
-	}
-
-	// If the error wasn't that the data wasn't a string, return the error.
-	if _, ok := err.(*json.UnmarshalTypeError); !ok {
-		return err
-	}
-
-	// Otherwise, try to see if the environment variable is a secret
-	var secret containerEnvironmentVariableSecretEncoder
-	err = json.Unmarshal(data, &secret)
-	if err == nil {
-		cev.Secret = &secret.Secret
-		return nil
-	}
-
-	return err
-}
-
-type containerEnvironmentVariableEncoder string
-
-type containerEnvironmentVariableSecretEncoder struct {
-	Secret tree.NodePathSubcomponent `json:"secret"`
-}
+type ContainerEnvironment map[string]ValueOrSecret
 
 type ContainerPort struct {
 	Protocol       string                       `json:"protocol"`
