@@ -1,9 +1,18 @@
 package messages
 
 import (
+	"fmt"
+	"strings"
+
 	envoyv2 "github.com/envoyproxy/go-control-plane/envoy/api/v2"
+	envoycore "github.com/envoyproxy/go-control-plane/envoy/api/v2/core"
 	envoyroute "github.com/envoyproxy/go-control-plane/envoy/api/v2/route"
+	envoytcpproxy "github.com/envoyproxy/go-control-plane/envoy/config/filter/network/tcp_proxy/v2"
 )
+
+// ------------------------------
+// HTTP connection manager routes
+// ------------------------------
 
 func NewClusterRouteActionRouteRoute(
 	clusterName string) *envoyroute.Route_Route {
@@ -46,5 +55,38 @@ func NewRouteConfiguration(
 	return &envoyv2.RouteConfiguration{
 		Name:         name,
 		VirtualHosts: virtualHosts,
+	}
+}
+
+// ----------------
+// TCP proxy routes
+// ----------------
+
+func NewDeprecatedV1TcpProxyRoutes(
+	routes []*envoytcpproxy.TcpProxy_DeprecatedV1_TCPRoute) *envoytcpproxy.TcpProxy_DeprecatedV1 {
+	return &envoytcpproxy.TcpProxy_DeprecatedV1{
+		Routes: routes,
+	}
+}
+
+func NewDeprecatedV1TcpProxyRoute(
+	cluster string,
+	destinationIPs []string,
+	destinationPorts []int32) *envoytcpproxy.TcpProxy_DeprecatedV1_TCPRoute {
+	destinationIPList := make([]*envoycore.CidrRange, len(destinationIPs))
+	for ip := range destinationIPs {
+		destinationIPList = append(destinationIPList, &envoycore.CidrRange{
+			AddressPrefix: ip,
+			PrefixLen: pbtypes.UInt32Value{
+				Value: 32,
+			},
+		})
+	}
+	destinationPortList := strings.Trim(
+		strings.Join(fmt.Sprint(destinationPorts), ","), "[]")
+	return &envoytcpproxy.TcpProxy_DeprecatedV1_TCPRoute{
+		Cluster:           cluster,
+		DestinationIpList: destinationIPList,
+		DestinationPorts:  destinationPortList,
 	}
 }

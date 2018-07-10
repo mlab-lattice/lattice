@@ -12,7 +12,12 @@ type Service struct {
 
 type Component struct {
 	// Ports maps the Component's ports to their envoy ports.
-	Ports map[int32]int32
+	Ports map[int32]ListenerPort
+}
+
+type ListenerPort struct {
+	Port     int32
+	Protocol string
 }
 
 type EntityType int

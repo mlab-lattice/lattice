@@ -21,7 +21,6 @@ import (
 	envoycache "github.com/envoyproxy/go-control-plane/pkg/cache"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	kubeinformers "k8s.io/client-go/informers"
 	kubeclientset "k8s.io/client-go/kubernetes"
 	corelisters "k8s.io/client-go/listers/core/v1"
 
@@ -43,11 +42,11 @@ import (
 type KubernetesPerNodeBackend struct {
 	serviceMesh *envoy.DefaultEnvoyServiceMesh
 
-	kubeEndpointLister       corelisters.EndpointsLister
-	kubeEndpointListerSynced cache.InformerSynced
-
 	serviceLister       latticelisters.ServiceLister
 	serviceListerSynced cache.InformerSynced
+
+	addressLister       latticelisters.AddressLister
+	addressListerSynced cache.InformerSynced
 
 	queue workqueue.RateLimitingInterface
 
@@ -75,11 +74,6 @@ func NewKubernetesPerNodeBackend(kubeconfig string, stopCh <-chan struct{}) (*Ku
 	}
 
 	rest.AddUserAgent(config, "envoy-api-backend")
-	kubeClient, err := kubeclientset.NewForConfig(config)
-	if err != nil {
-		return nil, err
-	}
-	kubeInformers := kubeinformers.NewSharedInformerFactory(kubeClient, time.Duration(12*time.Hour))
 
 	latticeClient, err := latticeclientset.NewForConfig(config)
 	if err != nil {
@@ -87,20 +81,19 @@ func NewKubernetesPerNodeBackend(kubeconfig string, stopCh <-chan struct{}) (*Ku
 	}
 	latticeInformers := latticeinformers.NewSharedInformerFactory(latticeClient, time.Duration(12*time.Hour))
 
-	go kubeInformers.Start(stopCh)
 	go latticeInformers.Start(stopCh)
 
-	kubeEndpointInformer := kubeInformers.Core().V1().Endpoints()
 	serviceInformer := latticeInformers.Lattice().V1().Services()
+	addressInformer := latticeInformers.Lattice().V1().Addresses()
 
 	b := &KubernetesPerNodeBackend{
-		serviceMesh:              envoy.NewEnvoyServiceMesh(&envoy.Options{}),
-		kubeEndpointLister:       kubeEndpointInformer.Lister(),
-		kubeEndpointListerSynced: kubeEndpointInformer.Informer().HasSynced,
-		serviceLister:            serviceInformer.Lister(),
-		serviceListerSynced:      serviceInformer.Informer().HasSynced,
-		queue:                    workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "envoy-api-backend"),
-		stopCh:                   stopCh,
+		serviceMesh:         envoy.NewEnvoyServiceMesh(&envoy.Options{}),
+		serviceLister:       serviceInformer.Lister(),
+		serviceListerSynced: serviceInformer.Informer().HasSynced,
+		addressLister:       addressInformer.Lister(),
+		addressListerSynced: addressInformer.Informer().HasSynced,
+		queue:               workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "envoy-api-backend"),
+		stopCh:              stopCh,
 	}
 	b.serviceNodes = make(map[string]*xdsservicenode.ServiceNode)
 	b.xdsCache = envoycache.NewSnapshotCache(true, b, b)
@@ -219,7 +212,7 @@ func (b *KubernetesPerNodeBackend) enqueueCacheUpdateTask(_type xdsapi.EntityTyp
 }
 
 func (b *KubernetesPerNodeBackend) Ready() bool {
-	return cache.WaitForCacheSync(b.stopCh, b.kubeEndpointListerSynced, b.serviceListerSynced)
+	return cache.WaitForCacheSync(b.stopCh, b.serviceListerSynced)
 }
 
 func (b *KubernetesPerNodeBackend) Run(threadiness int) error {
@@ -419,8 +412,7 @@ func (b *KubernetesPerNodeBackend) SystemServices(serviceCluster string) (map[tr
 			continue
 		}
 
-		kubeServiceName := kubernetes.GetKubeServiceNameForService(service.Name)
-		endpoint, err := b.kubeEndpointLister.Endpoints(service.Namespace).Get(kubeServiceName)
+		address, err := b.addressLister.Addresses(service.Namespace).Get(service.Name)
 		if err != nil {
 			return nil, err
 		}
@@ -432,32 +424,26 @@ func (b *KubernetesPerNodeBackend) SystemServices(serviceCluster string) (map[tr
 
 		xdsService := &xdsapi.Service{
 			EgressPorts: *egressPorts,
-			Components:  map[string]xdsapi.Component{},
-			IPAddresses: []string{},
+			Components:  make(map[string]xdsapi.Component),
+			IPAddresses: make([]string, len(address.Endpoints)),
 		}
 
-		addressSet := make(map[string]bool)
-		for _, subset := range endpoint.Subsets {
-			for _, address := range subset.Addresses {
-				// FIXME: check if this is necessary (i.e. does Endpoint ever repeat IPAddresses)
-				if _, ok := addressSet[address.IP]; !ok {
-					addressSet[address.IP] = true
-					xdsService.IPAddresses = append(xdsService.IPAddresses, address.IP)
-				}
-			}
-		}
+		copy(xdsService.IPAddresses, address.Endpoints)
 
 		// FIXME: we should reevaluate these structures. Component isn't a thing anymore.
 		mainContainer := xdsapi.Component{
-			Ports: make(map[int32]int32),
+			Ports: make(map[int32]xdsapi.ListenerPort),
 		}
-		for port := range service.Spec.Definition.Ports {
+		for port, containerPort := range service.Spec.Definition.Ports {
 			envoyPort, err := b.serviceMesh.ServiceMeshPort(service, port)
 			if err != nil {
 				return nil, err
 			}
 
-			mainContainer.Ports[port] = envoyPort
+			mainContainer.Ports[port] = xdsapi.ListenerPort{
+				Port:     envoyPort,
+				Protocol: containerPort.Protocol,
+			}
 		}
 		xdsService.Components[kubernetes.UserMainContainerName] = mainContainer
 
@@ -465,13 +451,16 @@ func (b *KubernetesPerNodeBackend) SystemServices(serviceCluster string) (map[tr
 			c := xdsapi.Component{
 				Ports: make(map[int32]int32),
 			}
-			for port := range sidecar.Ports {
+			for port, containerPort := range sidecar.Ports {
 				envoyPort, err := b.serviceMesh.ServiceMeshPort(service, port)
 				if err != nil {
 					return nil, err
 				}
 
-				c.Ports[port] = envoyPort
+				c.Ports[port] = xdsapi.ListenerPort{
+					Port:     envoyPort,
+					Protocol: containerPort.Protocol,
+				}
 			}
 			xdsService.Components[kubernetes.UserSidecarContainerName(name)] = c
 		}

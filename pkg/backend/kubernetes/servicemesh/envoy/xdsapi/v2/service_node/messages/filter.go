@@ -2,6 +2,7 @@ package messages
 
 import (
 	"fmt"
+	"strconv"
 
 	pbtypes "github.com/gogo/protobuf/types"
 
@@ -12,12 +13,16 @@ import (
 	envoyroute "github.com/envoyproxy/go-control-plane/envoy/api/v2/route"
 	envoyhttprouter "github.com/envoyproxy/go-control-plane/envoy/config/filter/http/router/v2"
 	envoyhttpcxnmgr "github.com/envoyproxy/go-control-plane/envoy/config/filter/network/http_connection_manager/v2"
+	envoytcpproxy "github.com/envoyproxy/go-control-plane/envoy/config/filter/network/tcp_proxy/v2"
 	envoyutil "github.com/envoyproxy/go-control-plane/pkg/util"
 
+	xdsapi "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/servicemesh/envoy/xdsapi/v2"
 	xdsconstants "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/servicemesh/envoy/xdsapi/v2/constants"
 )
 
+// -------------
 // filter chains
+// -------------
 
 func NewFilterChain(
 	filterChainMatch *envoylistener.FilterChainMatch,
@@ -32,7 +37,9 @@ func NewFilterChain(
 	}
 }
 
+// ------------
 // http filters
+// ------------
 
 func NewHttpRouterFilter() *envoyhttpcxnmgr.HttpFilter {
 	filterConfig := envoyhttprouter.Router{}
@@ -46,7 +53,11 @@ func NewHttpRouterFilter() *envoyhttpcxnmgr.HttpFilter {
 	}
 }
 
+// ---------------
 // network filters
+// ---------------
+
+// HTTP connection manager
 
 func NewRdsHttpConnectionManagerFilter(
 	statPrefix string,
@@ -98,5 +109,70 @@ func NewStaticHttpConnectionManagerFilter(
 	return &envoylistener.Filter{
 		Name:   xdsconstants.HTTPConnectionManagerFilterName,
 		Config: filterConfigPBStruct,
+	}
+}
+
+// TCP filter
+
+func NewDeprecatedV1TCPProxyFilter(
+	statPrefix string, routes *envoytcpproxy.TcpProxy_DeprecatedV1) *envoylistener.Filter {
+	// https://godoc.org/github.com/envoyproxy/go-control-plane/envoy/config/filter/network/tcp_proxy/v2#TcpProxy
+
+	// NOTE: inspiration drawn from:
+	//       https://github.com/istio/istio/blob/master/pilot/pkg/networking/core/v1alpha3/networkfilter.go#L50
+
+	deprecatedRoutes := &DeprecatedTCPRouteConfig{
+		Routes: make([]*DeprecatedTCPRoute, len(routes.Routes)),
+	}
+
+	for _, route := range routes.Routes {
+		cidrList := make([]string, len(route.DestinationIpList))
+		ports := make([]string, len(route.DestinationPorts))
+		for _, cidr := range route.DestinationIpList {
+			cidrList = append(cidrList, fmt.Sprintf("%s/%d", cidr.AddressPrefix, cidr.PrefixLen.Value))
+		}
+		for _, port := range route.DestinationPorts {
+			ports = append(ports, strconf.Itoa(port))
+		}
+		deprecatedRoutes.Routes = append(deprecatedRoutes.Routes, &DeprecatedTCPRoute{
+			Cluster:           route.Cluster,
+			DestinationIPList: cidrList,
+			DestinationPorts:  ports,
+		})
+	}
+
+	filterConfig := &DeprecatedTCPProxyFilterConfig{
+		StatPrefix:  clusterName,
+		RouteConfig: deprecatedRoutes,
+	}
+
+	data, err := json.Marshal(filterConfig)
+	if err != nil {
+		panic(fmt.Sprintf("error trying to marshal V1 tcp proxy config to JSON: %v", err))
+	}
+	pbs := &pbtypes.Struct{}
+	if err := jsonpb.Unmarshal(bytes.NewReader(data), pbs); err != nil {
+		log.Errorf("filter config could not be unmarshalled: %v", err)
+		return nil, err
+	}
+
+	structValue := pbtypes.Value{
+		Kind: &pbtypes.Value_StructValue{
+			StructValue: pbs,
+		},
+	}
+
+	trueValue := pbtypes.Value{
+		Kind: &pbtypes.Value_BoolValue{
+			BoolValue: true,
+		},
+	}
+
+	tcpFilter := &listener.Filter{
+		Name: xdsutil.TCPProxy,
+		Config: &pbtypes.Struct{Fields: map[string]*pbtypes.Value{
+			"deprecated_v1": &trueValue,
+			"value":         &structValue,
+		}},
 	}
 }

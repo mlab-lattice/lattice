@@ -618,34 +618,6 @@ func (sm *DefaultEnvoyServiceMesh) envoyContainers(service *latticev1.Service) (
 	//      might be set in the config)
 	// XXX: adding environment variables to envoy prepare spec to set the
 	//      appropriate values in the generated envoy config
-	// envoy := corev1.Container{
-	// 	Name:            containerNameEnvoy,
-	// 	Image:           sm.image,
-	// 	ImagePullPolicy: corev1.PullIfNotPresent,
-	// 	Command:         []string{"/usr/local/bin/envoy"},
-	// 	Args: []string{
-	// 		"-c",
-	// 		fmt.Sprintf("%v/config.json", envoyConfigDirectory),
-	// 		"--service-cluster",
-	// 		service.Namespace,
-	// 		"--service-node",
-	// 		servicePath.ToDomain(),
-	// 		// by default, the max cluster name size is 60.
-	// 		// however, we use the cluster name to encode information, so the names can often be much longer.
-	// 		// https://www.envoyproxy.io/docs/envoy/latest/operations/cli#cmdoption-max-obj-name-len
-	// 		// FIXME: figure out what this should actually be set to
-	// 		"--max-obj-name-len",
-	// 		strconv.Itoa(256),
-	// 	},
-	// 	Ports: envoyPorts,
-	// 	VolumeMounts: []corev1.VolumeMount{
-	// 		{
-	// 			Name:      envoyConfigDirectoryVolumeName,
-	// 			MountPath: envoyConfigDirectory,
-	// 			ReadOnly:  true,
-	// 		},
-	// 	},
-	// }
 	// GEB: seed the envoy image with the envoy user ahead of time
 	envoy := corev1.Container{
 		Name:            containerNameEnvoy,
