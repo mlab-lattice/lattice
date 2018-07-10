@@ -13,6 +13,7 @@ go_library(
         "node.go",
         "node_pool.go",
         "reference.go",
+        "reference_node.go",
         "secret.go",
         "service.go",
         "service_node.go",
@@ -23,6 +24,7 @@ go_library(
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/definition/component:go_default_library",
+        "//pkg/definition/resolver:go_default_library",
         "//pkg/definition/tree:go_default_library",
     ],
 )

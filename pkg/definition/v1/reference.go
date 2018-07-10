@@ -16,7 +16,6 @@ type Reference struct {
 	File          *string        `json:"file,omitempty"`
 }
 
-type ReferenceOrResource struct {
-	Reference *Reference
-	Resource  component.Interface
+func (r *Reference) Type() component.Type {
+	return ReferenceType
 }

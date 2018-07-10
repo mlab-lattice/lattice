@@ -27,6 +27,13 @@ func NewComponentFromJSON(data []byte) (component.Interface, error) {
 		}
 		return j, nil
 
+	case ComponentTypeReference:
+		var r *Reference
+		if err := json.Unmarshal(data, &r); err != nil {
+			return nil, err
+		}
+		return r, nil
+
 	case ComponentTypeService:
 		var s *Service
 		if err := json.Unmarshal(data, &s); err != nil {

@@ -3,25 +3,23 @@ package containerbuilder
 import (
 	"os"
 
+	dockerclient "github.com/docker/docker/client"
+	"github.com/fatih/color"
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	definitionv1 "github.com/mlab-lattice/lattice/pkg/definition/v1"
 	"github.com/mlab-lattice/lattice/pkg/util/docker"
 	"github.com/mlab-lattice/lattice/pkg/util/git"
-
-	dockerclient "github.com/docker/docker/client"
-	"github.com/fatih/color"
 )
 
 type Builder struct {
-	BuildID            v1.ContainerBuildID
-	SystemID           v1.SystemID
-	WorkingDir         string
-	ContainerBuild     *definitionv1.ContainerBuild
-	DockerOptions      *DockerOptions
-	DockerClient       *dockerclient.Client
-	GitResolver        *git.Resolver
-	GitResolverOptions *GitResolverOptions
-	StatusUpdater      StatusUpdater
+	BuildID        v1.ContainerBuildID
+	SystemID       v1.SystemID
+	WorkingDir     string
+	ContainerBuild *definitionv1.ContainerBuild
+	DockerOptions  *DockerOptions
+	DockerClient   *dockerclient.Client
+	GitOptions     *git.Options
+	StatusUpdater  StatusUpdater
 }
 
 type DockerOptions struct {
@@ -30,10 +28,6 @@ type DockerOptions struct {
 	Tag                  string
 	Push                 bool
 	RegistryAuthProvider docker.RegistryLoginProvider
-}
-
-type GitResolverOptions struct {
-	SSHKey []byte
 }
 
 type ErrorUser struct {
@@ -74,7 +68,7 @@ func NewBuilder(
 	systemID v1.SystemID,
 	workDirectory string,
 	dockerOptions *DockerOptions,
-	gitResolverOptions *GitResolverOptions,
+	gitResolverOptions *git.Options,
 	containerBuild *definitionv1.ContainerBuild,
 	updater StatusUpdater,
 ) (*Builder, error) {
@@ -87,7 +81,7 @@ func NewBuilder(
 	}
 
 	if gitResolverOptions == nil {
-		gitResolverOptions = &GitResolverOptions{}
+		gitResolverOptions = &git.Options{}
 	}
 
 	if containerBuild == nil {
@@ -103,14 +97,14 @@ func NewBuilder(
 	color.NoColor = false
 
 	b := &Builder{
-		BuildID:            buildID,
-		SystemID:           systemID,
-		WorkingDir:         workDirectory,
-		ContainerBuild:     containerBuild,
-		DockerOptions:      dockerOptions,
-		DockerClient:       dockerClient,
-		GitResolverOptions: gitResolverOptions,
-		StatusUpdater:      updater,
+		BuildID:        buildID,
+		SystemID:       systemID,
+		WorkingDir:     workDirectory,
+		ContainerBuild: containerBuild,
+		DockerOptions:  dockerOptions,
+		DockerClient:   dockerClient,
+		GitOptions:     gitResolverOptions,
+		StatusUpdater:  updater,
 	}
 	return b, nil
 }

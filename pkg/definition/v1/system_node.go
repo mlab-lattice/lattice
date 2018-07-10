@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/mlab-lattice/lattice/pkg/definition/component"
+	"github.com/mlab-lattice/lattice/pkg/definition/resolver"
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 )
 
@@ -18,6 +19,7 @@ type SystemNode struct {
 	systems    map[string]*SystemNode
 	services   map[string]*ServiceNode
 	jobs       map[string]*JobNode
+	references map[string]*ReferenceNode
 }
 
 func NewSystemNode(system *System, name string, parent tree.Node) (*SystemNode, error) {
@@ -36,6 +38,7 @@ func NewSystemNode(system *System, name string, parent tree.Node) (*SystemNode, 
 		systems:    make(map[string]*SystemNode),
 		services:   make(map[string]*ServiceNode),
 		jobs:       make(map[string]*JobNode),
+		references: make(map[string]*ReferenceNode),
 	}
 
 	for n, c := range system.Components {
@@ -49,6 +52,9 @@ func NewSystemNode(system *System, name string, parent tree.Node) (*SystemNode, 
 		switch typedNode := componentNode.(type) {
 		case *JobNode:
 			node.jobs[n] = typedNode
+
+		case *ReferenceNode:
+			node.references[n] = typedNode
 
 		case *ServiceNode:
 			node.services[n] = typedNode
@@ -104,6 +110,25 @@ func (n *SystemNode) AllJobs() map[tree.NodePath]*JobNode {
 	})
 
 	return jobs
+}
+
+func (n *SystemNode) References() map[string]*ReferenceNode {
+	return n.references
+}
+
+func (n *SystemNode) ResolveReferences(r resolver.ComponentResolver) (*SystemNode, error) {
+	components := make(map[string]component.Interface)
+	for k, v := range n.Components() {
+		components[k] = v.Component()
+	}
+
+	for name, refNode := range n.References() {
+		ref := refNode.Reference()
+		switch {
+		case ref.File != nil:
+
+		}
+	}
 }
 
 func (n *SystemNode) Services() map[string]*ServiceNode {

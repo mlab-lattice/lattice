@@ -10,7 +10,7 @@ import (
 
 	"golang.org/x/crypto/ssh"
 
-	git "gopkg.in/src-d/go-git.v4"
+	"gopkg.in/src-d/go-git.v4"
 	gitplumbing "gopkg.in/src-d/go-git.v4/plumbing"
 	gitplumbingobject "gopkg.in/src-d/go-git.v4/plumbing/object"
 	gitssh "gopkg.in/src-d/go-git.v4/plumbing/transport/ssh"
@@ -28,14 +28,21 @@ type Resolver struct {
 }
 
 // Context contains information about the current operation being invoked.
-type Options struct {
-	SSHKey []byte
+type Context struct {
+	Resource Resource
+	Options  *Options
 }
 
-// Context contains information about the current operation being invoked.
-type Context struct {
-	URI     string
-	Options *Options
+type Resource struct {
+	RepositoryURL string
+	Commit        *string
+	Tag           *string
+	Branch        *string
+}
+
+// Options contains information about how to complete the operation.
+type Options struct {
+	SSHKey []byte
 }
 
 func NewResolver(workDirectory string) (*Resolver, error) {
@@ -57,10 +64,9 @@ func NewResolver(workDirectory string) (*Resolver, error) {
 // Clone will  open the repository and return it If the repository specified in the Context has already been cloned,
 // otherwise it will attempt to clone the repository and on success return the cloned repository
 func (r *Resolver) Clone(ctx *Context) (*git.Repository, error) {
-
 	// validate repo url
-	if !IsValidRepositoryURI(ctx.URI) {
-		return nil, fmt.Errorf("bad git uri '%v'", ctx.URI)
+	if !IsValidRepositoryURI(ctx.Resource.RepositoryURL) {
+		return nil, fmt.Errorf("bad git uri '%v'", ctx.Resource.RepositoryURL)
 	}
 	repoDir := r.GetRepositoryPath(ctx)
 
@@ -77,7 +83,7 @@ func (r *Resolver) Clone(ctx *Context) (*git.Repository, error) {
 
 	// Otherwise try to clone the repository.
 	cloneOptions := git.CloneOptions{
-		URL:      ctx.URI,
+		URL:      ctx.Resource.RepositoryURL,
 		Progress: os.Stdout,
 	}
 
@@ -141,43 +147,39 @@ func (r *Resolver) GetCommit(ctx *Context) (*gitplumbingobject.Commit, error) {
 		return nil, err
 	}
 
-	// If no ref is specified, default to HEAD.
-	uriInfo := parseGitURI(ctx.URI)
-	if uriInfo.Ref == "" {
+	var hash gitplumbing.Hash
+	switch {
+	case ctx.Resource.Commit != nil:
+		hash = gitplumbing.NewHash(*ctx.Resource.Commit)
+
+	case ctx.Resource.Branch != nil:
+		refName := gitplumbing.ReferenceName(fmt.Sprintf("%s:refs/remotes/origin", *ctx.Resource.Branch))
+		ref, _ := repository.Reference(refName, false)
+		if ref == nil {
+			return nil, fmt.Errorf("invalid branch name %v", *ctx.Resource.Branch)
+		}
+
+		hash = ref.Hash()
+
+	case ctx.Resource.Tag != nil:
+		refName := gitplumbing.ReferenceName(fmt.Sprintf("refs/tags/%s", *ctx.Resource.Tag))
+		ref, _ := repository.Reference(refName, false)
+		if ref == nil {
+			return nil, fmt.Errorf("invalid tag name %v", *ctx.Resource.Tag)
+		}
+
+		hash = ref.Hash()
+
+	default:
 		head, err := repository.Head()
 		if err != nil {
 			return nil, err
 		}
 
-		return repository.CommitObject(head.Hash())
+		hash = head.Hash()
 	}
 
-	// Otherwise figure out what type of reference it is.
-	// First check if its a branch
-	refName := gitplumbing.ReferenceName(fmt.Sprintf("%s:refs/remotes/origin", uriInfo.Ref))
-	ref, _ := repository.Reference(refName, false)
-	if ref != nil {
-		return repository.CommitObject(ref.Hash())
-	}
-
-	// Next check if it's a tag.
-	refName = gitplumbing.ReferenceName(fmt.Sprintf("refs/tags/%s", uriInfo.Ref))
-	ref, _ = repository.Reference(refName, false)
-	if ref != nil {
-		// check if its an annotated tag
-		tag, _ := repository.TagObject(ref.Hash())
-		if tag != nil {
-			return tag.Commit()
-		}
-
-		// otherwise, check if its a light-weight tag
-		return repository.CommitObject(ref.Hash())
-
-	}
-
-	// Finally, if it's not a branch or a tag, just take it as a hash
-	refHash := gitplumbing.NewHash(uriInfo.Ref)
-	return repository.CommitObject(refHash)
+	return repository.CommitObject(hash)
 }
 
 // Checkout will clone and fetch, then attempt to check out the ref specified in the context.
@@ -225,8 +227,7 @@ func (r *Resolver) FileContents(ctx *Context, fileName string) ([]byte, error) {
 }
 
 func (r *Resolver) GetRepositoryPath(ctx *Context) string {
-	uriInfo := parseGitURI(ctx.URI)
-	return path.Join(r.WorkDirectory, stripProtocol(uriInfo.CloneURI))
+	return path.Join(r.WorkDirectory, stripProtocol(ctx.Resource.RepositoryURL))
 }
 
 // GetTagNames will clone and fetch, and if successful will return the repository's tags (annotated + light-weight).
@@ -247,7 +248,7 @@ func (r *Resolver) GetTagNames(ctx *Context) ([]string, error) {
 		return nil, err
 	}
 
-	tags := []string{}
+	tags := make([]string, 0)
 	err = tagRefs.ForEach(func(t *gitplumbing.Reference) error {
 		tagNameParts := strings.Split(t.Name().String(), "/")
 		tags = append(tags, tagNameParts[len(tagNameParts)-1])
@@ -257,43 +258,12 @@ func (r *Resolver) GetTagNames(ctx *Context) ([]string, error) {
 	return tags, nil
 }
 
-type uriInfo struct {
-	FullURI  string
-	CloneURI string
-	Ref      string
-	RepoName string
-}
-
 // regex for matching git repo urls
 var gitRepositoryURIRegex = regexp.MustCompile(`((?:git|file|ssh|https?|git@[-\w.]+)):(//)?(.*.git)(#(([-\d\w._])+)?)?$`)
 
 // IsValidRepositoryURI
 func IsValidRepositoryURI(uri string) bool {
 	return gitRepositoryURIRegex.MatchString(uri)
-}
-
-func parseGitURI(gitURI string) uriInfo {
-	partByRef := strings.Split(gitURI, "#")
-	cloneURI := partByRef[0]
-
-	// strip /.git from local repositories references
-	if strings.HasSuffix(cloneURI, "/.git") {
-		cloneURI = strings.Replace(cloneURI, "/.git", "", -1)
-	}
-
-	repoNameParts := strings.Split(cloneURI, "/")
-	repoName := strings.Replace(repoNameParts[len(repoNameParts)-1], ".git", "", 1)
-
-	var ref string
-	if len(partByRef) == 2 {
-		ref = partByRef[1]
-	}
-	return uriInfo{
-		FullURI:  gitURI,
-		CloneURI: cloneURI,
-		RepoName: repoName,
-		Ref:      ref,
-	}
 }
 
 func pathExists(path string) (bool, error) {

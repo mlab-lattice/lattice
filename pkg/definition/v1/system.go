@@ -15,10 +15,10 @@ var SystemType = component.Type{
 }
 
 type System struct {
+	URI         string
 	Description string
 
 	Components map[string]component.Interface
-
 	// FIXME: remove this
 	NodePools map[string]NodePool
 }
@@ -30,11 +30,11 @@ func (s *System) Type() component.Type {
 func (s *System) MarshalJSON() ([]byte, error) {
 	e := systemEncoder{
 		Type:        SystemType,
+		URI:         s.URI,
 		Description: s.Description,
 
 		Components: s.Components,
-
-		NodePools: s.NodePools,
+		NodePools:  s.NodePools,
 	}
 	return json.Marshal(&e)
 }
@@ -65,10 +65,10 @@ func (s *System) UnmarshalJSON(data []byte) error {
 
 	system := &System{
 		Description: e.Description,
+		URI:         e.URI,
 
 		Components: components,
-
-		NodePools: e.NodePools,
+		NodePools:  e.NodePools,
 	}
 	*s = *system
 	return nil
@@ -76,15 +76,16 @@ func (s *System) UnmarshalJSON(data []byte) error {
 
 type systemEncoder struct {
 	Type        component.Type `json:"type"`
+	URI         string         `json:"uri"`
 	Description string         `json:"description,omitempty"`
 
 	Components map[string]component.Interface `json:"components"`
-
-	NodePools map[string]NodePool `json:"node_pools,omitempty"`
+	NodePools  map[string]NodePool            `json:"node_pools,omitempty"`
 }
 
 type systemDecoder struct {
 	Type        component.Type `json:"type"`
+	URI         string         `json:"uri"`
 	Description string         `json:"description,omitempty"`
 
 	Components map[string]json.RawMessage `json:"components"`

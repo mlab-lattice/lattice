@@ -44,9 +44,9 @@ func TestValidateSystemResolver(t *testing.T) {
 func testV1(t *testing.T) {
 	fmt.Println("--------------- Testing ResolveDefinition V1")
 
-	_, err := NewSystemResolver(testWorkDir)
+	_, err := NewComponentResolver(testWorkDir)
 	if err != nil {
-		t.Fatalf("Got error calling NewSystemResolver: %v", err)
+		t.Fatalf("Got error calling NewComponentResolver: %v", err)
 	}
 
 	// FIXME: fix tests
@@ -83,9 +83,9 @@ func testV2(t *testing.T) {
 
 	fmt.Println("--------------- Testing ResolveDefinition V2")
 
-	_, err := NewSystemResolver(testWorkDir)
+	_, err := NewComponentResolver(testWorkDir)
 	if err != nil {
-		t.Fatalf("Got error calling NewSystemResolver: %v", err)
+		t.Fatalf("Got error calling NewComponentResolver: %v", err)
 	}
 
 	// FIXME: fix tests
@@ -104,9 +104,9 @@ func testV2(t *testing.T) {
 func testListVersions(t *testing.T) {
 	fmt.Println("--------------- Testing ListDefinitionVersions")
 
-	res, err := NewSystemResolver(testWorkDir)
+	res, err := NewComponentResolver(testWorkDir)
 	if err != nil {
-		t.Fatalf("Got error calling NewSystemResolver: %v", err)
+		t.Fatalf("Got error calling NewComponentResolver: %v", err)
 	}
 
 	versions, err := res.ListDefinitionVersions(testRepoURI2, &git.Options{})

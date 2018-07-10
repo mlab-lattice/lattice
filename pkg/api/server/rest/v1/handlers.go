@@ -7,6 +7,6 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func MountHandlers(router *gin.RouterGroup, backend serverv1.Interface, sysResolver *resolver.SystemResolver) {
+func MountHandlers(router *gin.RouterGroup, backend serverv1.Interface, sysResolver *resolver.DefaultComponentResolver) {
 	mountSystemHandlers(router, backend, sysResolver)
 }
