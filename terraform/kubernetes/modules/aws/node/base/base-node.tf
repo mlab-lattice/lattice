@@ -26,6 +26,15 @@ variable "etc_lattice_config_content" {
 variable "kubelet_labels" {}
 variable "kubelet_taints" {}
 
+variable "kube_bootstrap_token" {}
+
+variable "kube_apiserver_private_ip" {
+  type    = "string"
+  default = ""
+}
+
+variable "kube_apiserver_port" {}
+
 ###############################################################################
 # Output
 
@@ -165,6 +174,14 @@ write_files:
     permissions: '0644'
     content: |
 ${var.etc_lattice_config_content}
+-   path: /opt/lattice/kubernetes-bootstrap-token
+    owner: root:root
+    permissions: '0644'
+    content: "${var.kube_bootstrap_token}"
+-   path: /opt/lattice/kubernetes-apiserver-ip-port
+    owner: root:root
+    permissions: '0644'
+    content: "${var.kube_apiserver_private_ip}:${var.kube_apiserver_port}"
 EOF
 
   # TODO: remove temporary_ssh_group when done testing
