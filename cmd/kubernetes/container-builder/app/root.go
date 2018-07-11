@@ -3,19 +3,20 @@ package app
 import (
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"os"
 	"os/exec"
+	"strings"
 
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	kubecontainerbuilder "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/containerbuilder"
 	"github.com/mlab-lattice/lattice/pkg/containerbuilder"
 	definitionv1 "github.com/mlab-lattice/lattice/pkg/definition/v1"
 	"github.com/mlab-lattice/lattice/pkg/util/aws"
+	"github.com/mlab-lattice/lattice/pkg/util/git"
 
 	"github.com/spf13/cobra"
-	"io/ioutil"
-	"strings"
 )
 
 const (
@@ -69,9 +70,9 @@ var RootCmd = &cobra.Command{
 		}
 
 		gitRepoSSHKey := os.Getenv(gitRepoSSHKeyEnvVarName)
-		var gitResolverOptions *containerbuilder.GitResolverOptions
+		var gitResolverOptions *git.Options
 		if gitRepoSSHKey != "" {
-			gitResolverOptions = &containerbuilder.GitResolverOptions{
+			gitResolverOptions = &git.Options{
 				SSHKey: []byte(gitRepoSSHKey),
 			}
 		}

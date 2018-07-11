@@ -18,11 +18,11 @@ const (
 type restServer struct {
 	router   *gin.Engine
 	backend  v1.Interface
-	resolver *resolver.DefaultComponentResolver
+	resolver *resolver.SystemResolver
 }
 
 func RunNewRestServer(backend v1.Interface, port int32, workingDirectory string, apiAuthKey string) {
-	res, err := resolver.NewComponentResolver(workingDirectory + "/resolver")
+	res, err := resolver.NewSystemResolver(workingDirectory + "/resolver")
 	if err != nil {
 		panic(err)
 	}

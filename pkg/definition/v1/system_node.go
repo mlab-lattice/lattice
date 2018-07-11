@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"github.com/mlab-lattice/lattice/pkg/definition/component"
-	"github.com/mlab-lattice/lattice/pkg/definition/resolver"
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 )
 
@@ -116,20 +115,20 @@ func (n *SystemNode) References() map[string]*ReferenceNode {
 	return n.references
 }
 
-func (n *SystemNode) ResolveReferences(r resolver.ComponentResolver) (*SystemNode, error) {
-	components := make(map[string]component.Interface)
-	for k, v := range n.Components() {
-		components[k] = v.Component()
-	}
-
-	for name, refNode := range n.References() {
-		ref := refNode.Reference()
-		switch {
-		case ref.File != nil:
-
-		}
-	}
-}
+//func (n *SystemNode) ResolveReferences(r resolver.Interface) (*SystemNode, error) {
+//	components := make(map[string]component.Interface)
+//	for k, v := range n.Components() {
+//		components[k] = v.Component()
+//	}
+//
+//	for name, refNode := range n.References() {
+//		ref := refNode.Reference()
+//		switch {
+//		case ref.File != nil:
+//
+//		}
+//	}
+//}
 
 func (n *SystemNode) Services() map[string]*ServiceNode {
 	return n.services

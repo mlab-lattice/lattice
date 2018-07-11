@@ -10,7 +10,7 @@ import (
 
 	"golang.org/x/crypto/ssh"
 
-	"gopkg.in/src-d/go-git.v4"
+	git "gopkg.in/src-d/go-git.v4"
 	gitplumbing "gopkg.in/src-d/go-git.v4/plumbing"
 	gitplumbingobject "gopkg.in/src-d/go-git.v4/plumbing/object"
 	gitssh "gopkg.in/src-d/go-git.v4/plumbing/transport/ssh"
@@ -29,15 +29,14 @@ type Resolver struct {
 
 // Context contains information about the current operation being invoked.
 type Context struct {
-	Resource Resource
-	Options  *Options
+	RepositoryURL string
+	Options       *Options
 }
 
-type Resource struct {
-	RepositoryURL string
-	Commit        *string
-	Tag           *string
-	Branch        *string
+type Reference struct {
+	Commit *string
+	Tag    *string
+	Branch *string
 }
 
 // Options contains information about how to complete the operation.
@@ -65,8 +64,8 @@ func NewResolver(workDirectory string) (*Resolver, error) {
 // otherwise it will attempt to clone the repository and on success return the cloned repository
 func (r *Resolver) Clone(ctx *Context) (*git.Repository, error) {
 	// validate repo url
-	if !IsValidRepositoryURI(ctx.Resource.RepositoryURL) {
-		return nil, fmt.Errorf("bad git uri '%v'", ctx.Resource.RepositoryURL)
+	if !IsValidRepositoryURI(ctx.RepositoryURL) {
+		return nil, fmt.Errorf("bad git uri '%v'", ctx.RepositoryURL)
 	}
 	repoDir := r.GetRepositoryPath(ctx)
 
@@ -83,7 +82,7 @@ func (r *Resolver) Clone(ctx *Context) (*git.Repository, error) {
 
 	// Otherwise try to clone the repository.
 	cloneOptions := git.CloneOptions{
-		URL:      ctx.Resource.RepositoryURL,
+		URL:      ctx.RepositoryURL,
 		Progress: os.Stdout,
 	}
 
@@ -136,7 +135,7 @@ func (r *Resolver) Fetch(ctx *Context) error {
 // GetCommit will parse the Ref (i.e. #<ref>) from the git uri and determine if its a branch/tag/commit.
 // Returns the actual commit object for that ref. Defaults to HEAD.
 // GetCommit will first fetch from origin.
-func (r *Resolver) GetCommit(ctx *Context) (*gitplumbingobject.Commit, error) {
+func (r *Resolver) GetCommit(ctx *Context, ref *Reference) (*gitplumbingobject.Commit, error) {
 	err := r.Fetch(ctx)
 	if err != nil {
 		return nil, err
@@ -149,26 +148,26 @@ func (r *Resolver) GetCommit(ctx *Context) (*gitplumbingobject.Commit, error) {
 
 	var hash gitplumbing.Hash
 	switch {
-	case ctx.Resource.Commit != nil:
-		hash = gitplumbing.NewHash(*ctx.Resource.Commit)
+	case ref.Commit != nil:
+		hash = gitplumbing.NewHash(*ref.Commit)
 
-	case ctx.Resource.Branch != nil:
-		refName := gitplumbing.ReferenceName(fmt.Sprintf("%s:refs/remotes/origin", *ctx.Resource.Branch))
-		ref, _ := repository.Reference(refName, false)
-		if ref == nil {
-			return nil, fmt.Errorf("invalid branch name %v", *ctx.Resource.Branch)
+	case ref.Branch != nil:
+		refName := gitplumbing.ReferenceName(fmt.Sprintf("%s:refs/remotes/origin", *ref.Branch))
+		gitRef, _ := repository.Reference(refName, false)
+		if gitRef == nil {
+			return nil, fmt.Errorf("invalid branch name %v", *ref.Branch)
 		}
 
-		hash = ref.Hash()
+		hash = gitRef.Hash()
 
-	case ctx.Resource.Tag != nil:
-		refName := gitplumbing.ReferenceName(fmt.Sprintf("refs/tags/%s", *ctx.Resource.Tag))
-		ref, _ := repository.Reference(refName, false)
-		if ref == nil {
-			return nil, fmt.Errorf("invalid tag name %v", *ctx.Resource.Tag)
+	case ref.Tag != nil:
+		refName := gitplumbing.ReferenceName(fmt.Sprintf("refs/tags/%s", *ref.Tag))
+		gitRef, _ := repository.Reference(refName, false)
+		if gitRef == nil {
+			return nil, fmt.Errorf("invalid tag name %v", *ref.Tag)
 		}
 
-		hash = ref.Hash()
+		hash = gitRef.Hash()
 
 	default:
 		head, err := repository.Head()
@@ -183,13 +182,13 @@ func (r *Resolver) GetCommit(ctx *Context) (*gitplumbingobject.Commit, error) {
 }
 
 // Checkout will clone and fetch, then attempt to check out the ref specified in the context.
-func (r *Resolver) Checkout(ctx *Context) error {
+func (r *Resolver) Checkout(ctx *Context, ref *Reference) error {
 	repository, err := r.Clone(ctx)
 	if err != nil {
 		return err
 	}
 
-	commit, err := r.GetCommit(ctx)
+	commit, err := r.GetCommit(ctx, ref)
 	if err != nil {
 		return err
 	}
@@ -207,8 +206,8 @@ func (r *Resolver) Checkout(ctx *Context) error {
 
 // FileContents will clone, fetch, and checkout the proper reference, and if successful
 // will attempt to return the contents of the file at fileName.
-func (r *Resolver) FileContents(ctx *Context, fileName string) ([]byte, error) {
-	commit, err := r.GetCommit(ctx)
+func (r *Resolver) FileContents(ctx *Context, ref *Reference, fileName string) ([]byte, error) {
+	commit, err := r.GetCommit(ctx, ref)
 	if err != nil {
 		return nil, err
 	}
@@ -227,11 +226,11 @@ func (r *Resolver) FileContents(ctx *Context, fileName string) ([]byte, error) {
 }
 
 func (r *Resolver) GetRepositoryPath(ctx *Context) string {
-	return path.Join(r.WorkDirectory, stripProtocol(ctx.Resource.RepositoryURL))
+	return path.Join(r.WorkDirectory, stripProtocol(ctx.RepositoryURL))
 }
 
-// GetTagNames will clone and fetch, and if successful will return the repository's tags (annotated + light-weight).
-func (r *Resolver) GetTagNames(ctx *Context) ([]string, error) {
+// Tags will clone and fetch, and if successful will return the repository's tags (annotated + light-weight).
+func (r *Resolver) Tags(ctx *Context) ([]string, error) {
 	err := r.Fetch(ctx)
 	if err != nil {
 		return nil, err

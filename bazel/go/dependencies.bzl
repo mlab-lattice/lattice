@@ -34,19 +34,6 @@ GO_DEPENDENCIES = {
         # github.com/docker/docker:1a57535aa277e0f2a3c1922c736551148c5b4351 -> 5561cd9b4330353950f399814f427425c0a26fd2
         # k8s.io:v1.9.3 -> ?
         # github.com/envoyproxy/go-control-plane:v0.2 -> 5ccada7d0a7ba9aeb5d3aca8d3501b4c2a509fec
-        #
-        # ----------------------------------------------------------------------
-        # golang.org/x/net is a bit of a tricky one.
-        # - docker's vendor.conf specifies commit 7dcfb8076726a3fdd9353b6b8a1f1b6be6811bd6 which is from May 24, 2017
-        # - k8s.io wants commit 1c05540f6879653db88113bc4a2b70aec4bd491f which is from August 3, 2017.
-        # - commit b3756b4b77d7b13260a0a2ec658753cf48922eac from July 15, 2017 type aliases golang.org/x/net/context
-        #   to the standard libary's context.Context. this makes the build fail with errors like:
-        #   github.com/mlab-lattice/system/pkg/componentbuilder.(*Builder).buildDockerImage: relocation target type.golang.org/x/net/context.Context not defined
-        # - there's a fix for a null pointer dereference that was biting us that is fixed in commit
-        #   3470a06c1357df533e251f14d3a181f67396fe35 which is from May 26, 2017.
-        # - so we took the parent commit of the commit that added the type alias, so we can get the null pointer
-        #   dereference fix, but not have the type alias
-        # ----------------------------------------------------------------------
         "golang.org/x/net": {
             "name": "org_golang_x_net",
             "commit": "5561cd9b4330353950f399814f427425c0a26fd2",
@@ -86,6 +73,11 @@ GO_DEPENDENCIES = {
             "name": "com_github_aws_aws_sdk_go",
             "tag": "v1.12.35",
             "importpath": "github.com/aws/aws-sdk-go",
+        },
+        "github.com/blang/semver": {
+            "name": "com_github_blang_semver",
+            "tag": "v3.5.1",
+            "importpath": "github.com/blang/semver",
         },
         "github.com/briandowns/spinner": {
             "name": "com_github_briandowns_spinner",

@@ -24,13 +24,13 @@ func (b *Builder) buildGitRepositoryComponent() error {
 	}
 
 	ctx := &git.Context{
-		Resource: git.Resource{
-			RepositoryURL: b.ContainerBuild.GitRepository.URL,
-			Commit:        b.ContainerBuild.GitRepository.Commit,
-		},
-		Options: b.GitOptions,
+		RepositoryURL: b.ContainerBuild.GitRepository.URL,
+		Options:       b.GitOptions,
 	}
-	if err := gitResolver.Checkout(ctx); err != nil {
+
+	ref := &git.Reference{Commit: b.ContainerBuild.GitRepository.Commit}
+
+	if err := gitResolver.Checkout(ctx, ref); err != nil {
 		return newErrorUser("git repository checkout failed: " + err.Error())
 	}
 

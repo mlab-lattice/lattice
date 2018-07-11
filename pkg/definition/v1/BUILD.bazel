@@ -14,6 +14,7 @@ go_library(
         "node_pool.go",
         "reference.go",
         "reference_node.go",
+        "resolver.go",
         "secret.go",
         "service.go",
         "service_node.go",
@@ -24,7 +25,8 @@ go_library(
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/definition/component:go_default_library",
-        "//pkg/definition/resolver:go_default_library",
         "//pkg/definition/tree:go_default_library",
+        "//pkg/util/git:go_default_library",
+        "@com_github_blang_semver//:go_default_library",
     ],
 )

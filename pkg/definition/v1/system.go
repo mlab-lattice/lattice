@@ -15,7 +15,7 @@ var SystemType = component.Type{
 }
 
 type System struct {
-	URI         string
+	Context     GitRepositoryReference
 	Description string
 
 	Components map[string]component.Interface
@@ -30,7 +30,6 @@ func (s *System) Type() component.Type {
 func (s *System) MarshalJSON() ([]byte, error) {
 	e := systemEncoder{
 		Type:        SystemType,
-		URI:         s.URI,
 		Description: s.Description,
 
 		Components: s.Components,
@@ -65,7 +64,6 @@ func (s *System) UnmarshalJSON(data []byte) error {
 
 	system := &System{
 		Description: e.Description,
-		URI:         e.URI,
 
 		Components: components,
 		NodePools:  e.NodePools,
@@ -76,7 +74,6 @@ func (s *System) UnmarshalJSON(data []byte) error {
 
 type systemEncoder struct {
 	Type        component.Type `json:"type"`
-	URI         string         `json:"uri"`
 	Description string         `json:"description,omitempty"`
 
 	Components map[string]component.Interface `json:"components"`
@@ -85,7 +82,6 @@ type systemEncoder struct {
 
 type systemDecoder struct {
 	Type        component.Type `json:"type"`
-	URI         string         `json:"uri"`
 	Description string         `json:"description,omitempty"`
 
 	Components map[string]json.RawMessage `json:"components"`

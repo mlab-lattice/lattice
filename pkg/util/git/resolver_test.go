@@ -76,13 +76,14 @@ func testTags(t *testing.T) {
 		t.Fatalf("Got error: %v", err)
 	}
 
-	ctx := &Context{URI: localRepoURI1,
-		Options: &Options{},
+	ctx := &Context{
+		RepositoryURL: localRepoURI1,
+		Options:       &Options{},
 	}
 
 	fmt.Println("Testing tags")
 	// test tags
-	tags, err := resolver.GetTagNames(ctx)
+	tags, err := resolver.Tags(ctx)
 
 	if err != nil {
 		t.Fatalf("Failed to get tags: %s", err)
@@ -97,25 +98,29 @@ func testTags(t *testing.T) {
 }
 
 func testFileContents(t *testing.T) {
-	testFileContent(t, localRepoURI1+"#v1", "hello.txt", "hello")
-	testFileContent(t, localRepoURI1+"#v2", "hello.txt", "hello there")
+	v1 := "v1"
+	v2 := "v1"
+	testFileContent(t, localRepoURI1, &Reference{Tag: &v1}, "hello.txt", "hello")
+	testFileContent(t, localRepoURI1+"#v2", &Reference{Tag: &v2}, "hello.txt", "hello there")
 }
 
-func testFileContent(t *testing.T, uri string, filename string, contents string) {
+func testFileContent(t *testing.T, uri string, ref *Reference, filename string, contents string) {
 	resolver, err := NewResolver(testWorkDir)
 
 	if err != nil {
 		t.Fatalf("Got error: %v", err)
 	}
 
-	ctx := &Context{URI: uri,
-		Options: &Options{},
+	ctx := &Context{
+		RepositoryURL: uri,
+		Options:       &Options{},
 	}
 
 	fmt.Printf("Testing file contents for uri '%v', file '%v' against '%v'\n",
 		uri, filename, contents)
 	// test tags
-	bytes, err := resolver.FileContents(ctx, filename)
+
+	bytes, err := resolver.FileContents(ctx, ref, filename)
 
 	if err != nil {
 		t.Fatalf("Got error getting file contents for uri '%v', file '%v'. Error: %v",
@@ -139,8 +144,9 @@ func testCloneURI(t *testing.T, uri string) {
 	}
 
 	// test clone
-	ctx := &Context{URI: uri,
-		Options: &Options{},
+	ctx := &Context{
+		RepositoryURL: uri,
+		Options:       &Options{},
 	}
 
 	_, err = resolver.Clone(ctx)
@@ -159,8 +165,9 @@ func testInvalidURI(t *testing.T) {
 	}
 
 	invalidURI := "this is a bad uri"
-	ctx := &Context{URI: invalidURI,
-		Options: &Options{},
+	ctx := &Context{
+		RepositoryURL: invalidURI,
+		Options:       &Options{},
 	}
 
 	_, err = resolver.Clone(ctx)

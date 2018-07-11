@@ -21,7 +21,7 @@ func readTemplateFromURL(url string, env *environment) (*Template, error) {
 }
 
 // fetchGitFileContents fetches the specified git file contents
-func fetchGitFileContents(repoURL string, fileName string, env *environment) ([]byte, error) {
+func fetchGitFileContents(repoURL string, ref *git.Reference, fileName string, env *environment) ([]byte, error) {
 
 	gitResolver, _ := git.NewResolver(env.options.WorkDirectory)
 	gitOptions := env.options.GitOptions
@@ -29,11 +29,11 @@ func fetchGitFileContents(repoURL string, fileName string, env *environment) ([]
 		gitOptions = &git.Options{}
 	}
 	ctx := &git.Context{
-		URI:     repoURL,
-		Options: gitOptions,
+		RepositoryURL: repoURL,
+		Options:       gitOptions,
 	}
 
-	return gitResolver.FileContents(ctx, fileName)
+	return gitResolver.FileContents(ctx, ref, fileName)
 
 }
 
@@ -64,11 +64,13 @@ func readTemplateFromGitURL(url string, env *environment) (*Template, error) {
 
 	// append ref
 
-	if ref != "" {
-		baseURL = baseURL + "#" + ref
-	}
+	//if ref != "" {
+	//	baseURL = baseURL + "#" + ref
+	//}
+	// FIXME: can't tell if its a branch, commit, or tag
+	gitRef := &git.Reference{Tag: &ref}
 
-	bytes, err := fetchGitFileContents(baseURL, fileName, env)
+	bytes, err := fetchGitFileContents(baseURL, gitRef, fileName, env)
 	if err != nil {
 		return nil, err
 	}
