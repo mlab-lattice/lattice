@@ -15,7 +15,6 @@ var SystemType = component.Type{
 }
 
 type System struct {
-	Context     GitRepositoryReference
 	Description string
 
 	Components map[string]component.Interface
