@@ -12,6 +12,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
+	"github.com/mlab-lattice/lattice/pkg/util/sha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
@@ -188,17 +189,27 @@ func KubeContainerForContainer(
 			var s *corev1.SecretKeySelector
 			switch {
 			case envVar.Secret.Local != nil:
+				secretName, err := sha1.EncodeToHexString([]byte(componentPath.String()))
+				if err != nil {
+					return corev1.Container{}, err
+				}
+
 				s = &corev1.SecretKeySelector{
 					LocalObjectReference: corev1.LocalObjectReference{
-						Name: componentPath.ToDomain(),
+						Name: secretName,
 					},
 					Key: *envVar.Secret.Local,
 				}
 
 			case envVar.Secret.Path != nil:
+				secretName, err := sha1.EncodeToHexString([]byte(envVar.Secret.Path.NodePath().String()))
+				if err != nil {
+					return corev1.Container{}, err
+				}
+
 				s = &corev1.SecretKeySelector{
 					LocalObjectReference: corev1.LocalObjectReference{
-						Name: envVar.Secret.Path.NodePath().ToDomain(),
+						Name: secretName,
 					},
 					Key: envVar.Secret.Path.Subcomponent(),
 				}

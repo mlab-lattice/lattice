@@ -2,10 +2,12 @@ package backend
 
 import (
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
-	"github.com/mlab-lattice/lattice/pkg/definition/tree"
-
 	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/constants"
+	"github.com/mlab-lattice/lattice/pkg/definition/tree"
+	"github.com/mlab-lattice/lattice/pkg/util/sha1"
+
 	corev1 "k8s.io/api/core/v1"
+
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -58,8 +60,13 @@ func (kb *KubernetesBackend) GetSystemSecret(systemID v1.SystemID, path tree.Nod
 		return nil, err
 	}
 
+	name, err := kubeSecretName(path)
+	if err != nil {
+		return nil, err
+	}
+
 	namespace := kb.systemNamespace(systemID)
-	secret, err := kb.kubeClient.CoreV1().Secrets(namespace).Get(path.ToDomain(), metav1.GetOptions{})
+	secret, err := kb.kubeClient.CoreV1().Secrets(namespace).Get(name, metav1.GetOptions{})
 	if err != nil {
 		if errors.IsNotFound(err) {
 			return nil, v1.NewInvalidSystemSecretError(path, name)
@@ -87,8 +94,13 @@ func (kb *KubernetesBackend) SetSystemSecret(systemID v1.SystemID, path tree.Nod
 		return err
 	}
 
+	kubeSecretName, err := kubeSecretName(path)
+	if err != nil {
+		return err
+	}
+
 	namespace := kb.systemNamespace(systemID)
-	secret, err := kb.kubeClient.CoreV1().Secrets(namespace).Get(path.ToDomain(), metav1.GetOptions{})
+	secret, err := kb.kubeClient.CoreV1().Secrets(namespace).Get(kubeSecretName, metav1.GetOptions{})
 	if err != nil {
 		if errors.IsNotFound(err) {
 			return kb.createSecret(systemID, path, name, value)
@@ -115,10 +127,15 @@ func (kb *KubernetesBackend) SetSystemSecret(systemID v1.SystemID, path tree.Nod
 }
 
 func (kb *KubernetesBackend) createSecret(systemID v1.SystemID, path tree.NodePath, name, value string) error {
+	kubeSecretName, err := kubeSecretName(path)
+	if err != nil {
+		return err
+	}
+
 	namespace := kb.systemNamespace(systemID)
 	secret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: path.ToDomain(),
+			Name: kubeSecretName,
 			Labels: map[string]string{
 				constants.LabelKeySecret: "true",
 			},
@@ -128,7 +145,7 @@ func (kb *KubernetesBackend) createSecret(systemID v1.SystemID, path tree.NodePa
 		},
 	}
 
-	_, err := kb.kubeClient.CoreV1().Secrets(namespace).Create(secret)
+	_, err = kb.kubeClient.CoreV1().Secrets(namespace).Create(secret)
 	return err
 }
 
@@ -138,8 +155,13 @@ func (kb *KubernetesBackend) UnsetSystemSecret(systemID v1.SystemID, path tree.N
 		return err
 	}
 
+	kubeSecretName, err := kubeSecretName(path)
+	if err != nil {
+		return err
+	}
+
 	namespace := kb.systemNamespace(systemID)
-	secret, err := kb.kubeClient.CoreV1().Secrets(namespace).Get(path.ToDomain(), metav1.GetOptions{})
+	secret, err := kb.kubeClient.CoreV1().Secrets(namespace).Get(kubeSecretName, metav1.GetOptions{})
 	if err != nil {
 		// If we can't find the secret, then it is unset
 		if errors.IsNotFound(err) {
@@ -173,4 +195,8 @@ func (kb *KubernetesBackend) UnsetSystemSecret(systemID v1.SystemID, path tree.N
 	}
 
 	return err
+}
+
+func kubeSecretName(path tree.NodePath) (string, error) {
+	return sha1.EncodeToHexString([]byte(path.String()))
 }

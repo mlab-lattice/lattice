@@ -13,6 +13,7 @@ import (
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 
+	"github.com/mlab-lattice/lattice/pkg/util/sha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
@@ -238,12 +239,17 @@ func (c *Controller) getBuildContainer(build *latticev1.ContainerBuild) (*corev1
 
 	if build.Spec.Definition.GitRepository != nil && build.Spec.Definition.GitRepository.SSHKey != nil {
 		sshKeySecret := build.Spec.Definition.GitRepository.SSHKey
+		secretName, err := sha1.EncodeToHexString([]byte(sshKeySecret.NodePath().String()))
+		if err != nil {
+			return nil, "", err
+		}
+
 		buildContainer.Env = append(buildContainer.Env, corev1.EnvVar{
 			Name: "GIT_REPO_SSH_KEY",
 			ValueFrom: &corev1.EnvVarSource{
 				SecretKeyRef: &corev1.SecretKeySelector{
 					LocalObjectReference: corev1.LocalObjectReference{
-						Name: sshKeySecret.NodePath().ToDomain(),
+						Name: secretName,
 					},
 					Key: sshKeySecret.Subcomponent(),
 				},
