@@ -3,9 +3,8 @@ package backend
 import (
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/constants"
+	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/latticeutil"
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
-	"github.com/mlab-lattice/lattice/pkg/util/sha1"
-
 	corev1 "k8s.io/api/core/v1"
 
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -198,5 +197,5 @@ func (kb *KubernetesBackend) UnsetSystemSecret(systemID v1.SystemID, path tree.N
 }
 
 func kubeSecretName(path tree.NodePath) (string, error) {
-	return sha1.EncodeToHexString([]byte(path.String()))
+	return latticeutil.HashNodePath(path)
 }

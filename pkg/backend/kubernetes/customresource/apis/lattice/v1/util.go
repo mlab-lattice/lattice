@@ -4,15 +4,15 @@ import (
 	"fmt"
 	"sort"
 
+	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	kubeutil "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/kubernetes"
+	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/latticeutil"
 	"github.com/mlab-lattice/lattice/pkg/definition/component"
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 	definitionv1 "github.com/mlab-lattice/lattice/pkg/definition/v1"
 
 	corev1 "k8s.io/api/core/v1"
 
-	"github.com/mlab-lattice/lattice/pkg/api/v1"
-	"github.com/mlab-lattice/lattice/pkg/util/sha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
@@ -189,7 +189,7 @@ func KubeContainerForContainer(
 			var s *corev1.SecretKeySelector
 			switch {
 			case envVar.Secret.Local != nil:
-				secretName, err := sha1.EncodeToHexString([]byte(componentPath.String()))
+				secretName, err := latticeutil.HashNodePath(componentPath)
 				if err != nil {
 					return corev1.Container{}, err
 				}
@@ -202,7 +202,7 @@ func KubeContainerForContainer(
 				}
 
 			case envVar.Secret.Path != nil:
-				secretName, err := sha1.EncodeToHexString([]byte(envVar.Secret.Path.NodePath().String()))
+				secretName, err := latticeutil.HashNodePath(envVar.Secret.Path.NodePath())
 				if err != nil {
 					return corev1.Container{}, err
 				}
