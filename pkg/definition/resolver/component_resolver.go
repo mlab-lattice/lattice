@@ -53,6 +53,7 @@ func (r *DefaultReferenceResolver) ResolveReference(
 func (r *DefaultReferenceResolver) resolveGitReference(repository *definitionv1.GitRepositoryReference) (component.Interface, error) {
 	ctx := &git.Context{
 		RepositoryURL: repository.URL,
+		Options:       &git.Options{},
 	}
 
 	var ref *git.Reference
