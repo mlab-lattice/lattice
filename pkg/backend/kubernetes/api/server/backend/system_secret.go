@@ -2,7 +2,7 @@ package backend
 
 import (
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
-	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/constants"
+	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/latticeutil"
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 	corev1 "k8s.io/api/core/v1"
@@ -22,7 +22,7 @@ func (kb *KubernetesBackend) ListSystemSecrets(systemID v1.SystemID) ([]v1.Secre
 	// There are secrets in the namespace that are not secrets set for lattice.
 	// Don't expose those in ListSystemSecrets
 	selector := labels.NewSelector()
-	requirement, err := labels.NewRequirement(constants.LabelKeySecret, selection.Exists, nil)
+	requirement, err := labels.NewRequirement(latticev1.SecretPathLabelKey, selection.Exists, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -36,7 +36,7 @@ func (kb *KubernetesBackend) ListSystemSecrets(systemID v1.SystemID) ([]v1.Secre
 
 	externalSecrets := make([]v1.Secret, 0)
 	for _, secret := range secrets.Items {
-		path, err := tree.NewNodePathFromDomain(secret.Name)
+		path, err := tree.NewNodePathFromDomain(secret.Labels[latticev1.SecretPathLabelKey])
 		if err != nil {
 			return nil, err
 		}
@@ -59,13 +59,13 @@ func (kb *KubernetesBackend) GetSystemSecret(systemID v1.SystemID, path tree.Nod
 		return nil, err
 	}
 
-	name, err := kubeSecretName(path)
+	kubeSecretName, err := kubeSecretName(path)
 	if err != nil {
 		return nil, err
 	}
 
 	namespace := kb.systemNamespace(systemID)
-	secret, err := kb.kubeClient.CoreV1().Secrets(namespace).Get(name, metav1.GetOptions{})
+	secret, err := kb.kubeClient.CoreV1().Secrets(namespace).Get(kubeSecretName, metav1.GetOptions{})
 	if err != nil {
 		if errors.IsNotFound(err) {
 			return nil, v1.NewInvalidSystemSecretError(path, name)
@@ -136,7 +136,7 @@ func (kb *KubernetesBackend) createSecret(systemID v1.SystemID, path tree.NodePa
 		ObjectMeta: metav1.ObjectMeta{
 			Name: kubeSecretName,
 			Labels: map[string]string{
-				constants.LabelKeySecret: "true",
+				latticev1.SecretPathLabelKey: path.ToDomain(),
 			},
 		},
 		StringData: map[string]string{
