@@ -229,4 +229,10 @@ var envoyRBACPolicyRules = []rbacv1.PolicyRule{
 		Resources: []string{latticev1.ResourcePluralService},
 		Verbs:     []string{"get", "watch", "list"},
 	},
+	// Read lattice addresses
+	{
+		APIGroups: []string{latticev1.GroupName},
+		Resources: []string{latticev1.ResourcePluralAddress},
+		Verbs:     []string{"get", "watch", "list"},
+	},
 }

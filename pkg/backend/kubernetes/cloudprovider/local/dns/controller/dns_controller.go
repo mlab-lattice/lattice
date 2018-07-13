@@ -247,14 +247,23 @@ func (c *Controller) addressSets(addresses []*latticev1.Address) (set.Set, set.S
 	for _, address := range addresses {
 		key := fmt.Sprintf("%v/%v", address.Namespace, address.Name)
 		if address.Spec.ExternalName != nil {
-			endpointKey := fmt.Sprintf("/%v" + *address.Spec.ExternalName)
+			endpointKey := fmt.Sprintf("/%v", *address.Spec.ExternalName)
 			externalNameAddresses.Add(key + endpointKey)
 			continue
 		}
 
 		if address.Spec.Service != nil {
-			ipKey := fmt.Sprintf("/%v" + address.Spec.Service.String())
+			ipKey := fmt.Sprintf("/%v", address.Spec.Service.String())
 			serviceAddresses.Add(key + ipKey)
+
+			// TODO <GEB>: remove me once we remove Endpoints
+			if address.Spec.Endpoints != nil {
+				for _, endpoint := range address.Spec.Endpoints {
+					ipKey = fmt.Sprintf("/%v", endpoint)
+					serviceAddresses.Add(key + ipKey)
+				}
+			}
+
 			continue
 		}
 

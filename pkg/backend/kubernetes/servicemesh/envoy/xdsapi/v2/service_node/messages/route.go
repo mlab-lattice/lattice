@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"strings"
 
+	pbtypes "github.com/gogo/protobuf/types"
+
 	envoyv2 "github.com/envoyproxy/go-control-plane/envoy/api/v2"
 	envoycore "github.com/envoyproxy/go-control-plane/envoy/api/v2/core"
 	envoyroute "github.com/envoyproxy/go-control-plane/envoy/api/v2/route"
@@ -73,17 +75,17 @@ func NewDeprecatedV1TcpProxyRoute(
 	cluster string,
 	destinationIPs []string,
 	destinationPorts []int32) *envoytcpproxy.TcpProxy_DeprecatedV1_TCPRoute {
-	destinationIPList := make([]*envoycore.CidrRange, len(destinationIPs))
-	for ip := range destinationIPs {
+	destinationIPList := make([]*envoycore.CidrRange, 0, len(destinationIPs))
+	for _, ip := range destinationIPs {
 		destinationIPList = append(destinationIPList, &envoycore.CidrRange{
 			AddressPrefix: ip,
-			PrefixLen: pbtypes.UInt32Value{
+			PrefixLen: &pbtypes.UInt32Value{
 				Value: 32,
 			},
 		})
 	}
 	destinationPortList := strings.Trim(
-		strings.Join(fmt.Sprint(destinationPorts), ","), "[]")
+		strings.Join(strings.Fields(fmt.Sprint(destinationPorts)), ","), "[]")
 	return &envoytcpproxy.TcpProxy_DeprecatedV1_TCPRoute{
 		Cluster:           cluster,
 		DestinationIpList: destinationIPList,

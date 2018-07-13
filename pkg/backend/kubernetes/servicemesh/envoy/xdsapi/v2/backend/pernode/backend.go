@@ -21,6 +21,7 @@ import (
 	envoycache "github.com/envoyproxy/go-control-plane/pkg/cache"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	kubeinformers "k8s.io/client-go/informers"
 	kubeclientset "k8s.io/client-go/kubernetes"
 	corelisters "k8s.io/client-go/listers/core/v1"
 
@@ -41,6 +42,9 @@ import (
 
 type KubernetesPerNodeBackend struct {
 	serviceMesh *envoy.DefaultEnvoyServiceMesh
+
+	kubeEndpointLister       corelisters.EndpointsLister
+	kubeEndpointListerSynced cache.InformerSynced
 
 	serviceLister       latticelisters.ServiceLister
 	serviceListerSynced cache.InformerSynced
@@ -75,25 +79,35 @@ func NewKubernetesPerNodeBackend(kubeconfig string, stopCh <-chan struct{}) (*Ku
 
 	rest.AddUserAgent(config, "envoy-api-backend")
 
+	kubeClient, err := kubeclientset.NewForConfig(config)
+	if err != nil {
+		return nil, err
+	}
+	kubeInformers := kubeinformers.NewSharedInformerFactory(kubeClient, time.Duration(12*time.Hour))
+
 	latticeClient, err := latticeclientset.NewForConfig(config)
 	if err != nil {
 		return nil, err
 	}
 	latticeInformers := latticeinformers.NewSharedInformerFactory(latticeClient, time.Duration(12*time.Hour))
 
+	go kubeInformers.Start(stopCh)
 	go latticeInformers.Start(stopCh)
 
+	kubeEndpointInformer := kubeInformers.Core().V1().Endpoints()
 	serviceInformer := latticeInformers.Lattice().V1().Services()
 	addressInformer := latticeInformers.Lattice().V1().Addresses()
 
 	b := &KubernetesPerNodeBackend{
-		serviceMesh:         envoy.NewEnvoyServiceMesh(&envoy.Options{}),
-		serviceLister:       serviceInformer.Lister(),
-		serviceListerSynced: serviceInformer.Informer().HasSynced,
-		addressLister:       addressInformer.Lister(),
-		addressListerSynced: addressInformer.Informer().HasSynced,
-		queue:               workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "envoy-api-backend"),
-		stopCh:              stopCh,
+		serviceMesh:              envoy.NewEnvoyServiceMesh(&envoy.Options{}),
+		kubeEndpointLister:       kubeEndpointInformer.Lister(),
+		kubeEndpointListerSynced: kubeEndpointInformer.Informer().HasSynced,
+		serviceLister:            serviceInformer.Lister(),
+		serviceListerSynced:      serviceInformer.Informer().HasSynced,
+		addressLister:            addressInformer.Lister(),
+		addressListerSynced:      addressInformer.Informer().HasSynced,
+		queue:                    workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "envoy-api-backend"),
+		stopCh:                   stopCh,
 	}
 	b.serviceNodes = make(map[string]*xdsservicenode.ServiceNode)
 	b.xdsCache = envoycache.NewSnapshotCache(true, b, b)
@@ -387,7 +401,7 @@ func (b *KubernetesPerNodeBackend) syncXDSCache(key string) error {
 	case xdsapi.LatticeEntityType:
 		err = b.handleLatticeSyncXDSCache(task.Name, task.Event)
 	default:
-		return fmt.Errorf("got unkown entity type <%d>", task.Type)
+		return fmt.Errorf("Got unkown entity type <%d>", task.Type)
 	}
 
 	if err == nil {
@@ -412,7 +426,13 @@ func (b *KubernetesPerNodeBackend) SystemServices(serviceCluster string) (map[tr
 			continue
 		}
 
-		address, err := b.addressLister.Addresses(service.Namespace).Get(service.Name)
+		// address, err := b.addressLister.Addresses(service.Namespace).Get(service.Name)
+		// if err != nil {
+		// 	return nil, err
+		// }
+
+		kubeServiceName := kubernetes.GetKubeServiceNameForService(service.Name)
+		endpoint, err := b.kubeEndpointLister.Endpoints(service.Namespace).Get(kubeServiceName)
 		if err != nil {
 			return nil, err
 		}
@@ -425,10 +445,19 @@ func (b *KubernetesPerNodeBackend) SystemServices(serviceCluster string) (map[tr
 		xdsService := &xdsapi.Service{
 			EgressPorts: *egressPorts,
 			Components:  make(map[string]xdsapi.Component),
-			IPAddresses: make([]string, len(address.Endpoints)),
+			IPAddresses: make([]string, 0, len(endpoint.Subsets)),
 		}
 
-		copy(xdsService.IPAddresses, address.Endpoints)
+		addressSet := make(map[string]bool)
+		for _, subset := range endpoint.Subsets {
+			for _, address := range subset.Addresses {
+				// NOTE: Endpoint can repeat IPAddresses
+				if _, ok := addressSet[address.IP]; !ok {
+					addressSet[address.IP] = true
+					xdsService.IPAddresses = append(xdsService.IPAddresses, address.IP)
+				}
+			}
+		}
 
 		// FIXME: we should reevaluate these structures. Component isn't a thing anymore.
 		mainContainer := xdsapi.Component{
@@ -449,7 +478,7 @@ func (b *KubernetesPerNodeBackend) SystemServices(serviceCluster string) (map[tr
 
 		for name, sidecar := range service.Spec.Definition.Sidecars {
 			c := xdsapi.Component{
-				Ports: make(map[int32]int32),
+				Ports: make(map[int32]xdsapi.ListenerPort),
 			}
 			for port, containerPort := range sidecar.Ports {
 				envoyPort, err := b.serviceMesh.ServiceMeshPort(service, port)

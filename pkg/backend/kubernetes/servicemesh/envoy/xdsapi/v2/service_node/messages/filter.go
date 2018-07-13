@@ -1,9 +1,14 @@
 package messages
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
-	"strconv"
+	// "strings"
 
+	"github.com/golang/glog"
+
+	pbjson "github.com/gogo/protobuf/jsonpb"
 	pbtypes "github.com/gogo/protobuf/types"
 
 	envoyv2 "github.com/envoyproxy/go-control-plane/envoy/api/v2"
@@ -16,7 +21,6 @@ import (
 	envoytcpproxy "github.com/envoyproxy/go-control-plane/envoy/config/filter/network/tcp_proxy/v2"
 	envoyutil "github.com/envoyproxy/go-control-plane/pkg/util"
 
-	xdsapi "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/servicemesh/envoy/xdsapi/v2"
 	xdsconstants "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/servicemesh/envoy/xdsapi/v2/constants"
 )
 
@@ -122,43 +126,45 @@ func NewDeprecatedV1TCPProxyFilter(
 	//       https://github.com/istio/istio/blob/master/pilot/pkg/networking/core/v1alpha3/networkfilter.go#L50
 
 	deprecatedRoutes := &DeprecatedTCPRouteConfig{
-		Routes: make([]*DeprecatedTCPRoute, len(routes.Routes)),
+		Routes: make([]*DeprecatedTCPRoute, 0, len(routes.Routes)),
 	}
 
 	for _, route := range routes.Routes {
-		cidrList := make([]string, len(route.DestinationIpList))
-		ports := make([]string, len(route.DestinationPorts))
+		glog.V(4).Infof("route: %v", route)
+		cidrList := make([]string, 0, len(route.DestinationIpList))
+		// portList := make([]int32, 0, len(route.DestinationPorts))
 		for _, cidr := range route.DestinationIpList {
 			cidrList = append(cidrList, fmt.Sprintf("%s/%d", cidr.AddressPrefix, cidr.PrefixLen.Value))
 		}
-		for _, port := range route.DestinationPorts {
-			ports = append(ports, strconf.Itoa(port))
-		}
+		// for _, port := range route.DestinationPorts {
+		// 	portList = append(portList, port)
+		// }
+		// ports := strings.Trim(strings.Join(strings.Fields(fmt.Sprint(portList)), ","), "[]")
 		deprecatedRoutes.Routes = append(deprecatedRoutes.Routes, &DeprecatedTCPRoute{
 			Cluster:           route.Cluster,
 			DestinationIPList: cidrList,
-			DestinationPorts:  ports,
+			// DestinationPorts:  ports,
+			DestinationPorts: route.DestinationPorts,
 		})
 	}
 
 	filterConfig := &DeprecatedTCPProxyFilterConfig{
-		StatPrefix:  clusterName,
+		StatPrefix:  statPrefix,
 		RouteConfig: deprecatedRoutes,
 	}
 
-	data, err := json.Marshal(filterConfig)
+	filterConfigJSON, err := json.Marshal(filterConfig)
 	if err != nil {
 		panic(fmt.Sprintf("error trying to marshal V1 tcp proxy config to JSON: %v", err))
 	}
-	pbs := &pbtypes.Struct{}
-	if err := jsonpb.Unmarshal(bytes.NewReader(data), pbs); err != nil {
-		log.Errorf("filter config could not be unmarshalled: %v", err)
-		return nil, err
+	filterConfigStruct := &pbtypes.Struct{}
+	if err := pbjson.Unmarshal(bytes.NewReader(filterConfigJSON), filterConfigStruct); err != nil {
+		panic(fmt.Sprintf("error trying to unmarshal V1 tcp proxy JSON config to Struct: %v", err))
 	}
 
-	structValue := pbtypes.Value{
+	filterConfigValue := pbtypes.Value{
 		Kind: &pbtypes.Value_StructValue{
-			StructValue: pbs,
+			StructValue: filterConfigStruct,
 		},
 	}
 
@@ -168,11 +174,41 @@ func NewDeprecatedV1TCPProxyFilter(
 		},
 	}
 
-	tcpFilter := &listener.Filter{
-		Name: xdsutil.TCPProxy,
-		Config: &pbtypes.Struct{Fields: map[string]*pbtypes.Value{
-			"deprecated_v1": &trueValue,
-			"value":         &structValue,
-		}},
+	return &envoylistener.Filter{
+		Name: xdsconstants.TCPProxyFilterName,
+		Config: &pbtypes.Struct{
+			Fields: map[string]*pbtypes.Value{
+				"deprecated_v1": &trueValue,
+				"value":         &filterConfigValue,
+			},
+		},
+	}
+}
+
+func NewTCPProxyFilter(statPrefix, clusterName string) *envoylistener.Filter {
+	filterConfig := envoytcpproxy.TcpProxy{
+		StatPrefix: statPrefix,
+		Cluster:    clusterName,
+	}
+
+	filterConfigPBStruct, err := envoyutil.MessageToStruct(&filterConfig)
+	if err != nil {
+		panic(fmt.Sprintf("error serializing tcp proxy filter: %v", err))
+	}
+
+	return &envoylistener.Filter{
+		Name:   xdsconstants.TCPProxyFilterName,
+		Config: filterConfigPBStruct,
+	}
+}
+
+// ----------------
+// listener filters
+// ----------------
+
+func NewOriginalDestinationListenerFilter() *envoylistener.ListenerFilter {
+	return &envoylistener.ListenerFilter{
+		Name:   xdsconstants.OriginalDestinationListenerFilterName,
+		Config: &pbtypes.Struct{},
 	}
 }

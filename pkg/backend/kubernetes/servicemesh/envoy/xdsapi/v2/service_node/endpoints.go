@@ -46,7 +46,7 @@ func (s *ServiceNode) getEndpoints(
 		if !ok {
 			return nil, fmt.Errorf("invalid Component name <%v>", componentName)
 		}
-		envoyPort, ok := component.Ports[port]
+		listenerPort, ok := component.Ports[port]
 		if !ok {
 			return nil, fmt.Errorf("invalid Port <%v>", port)
 		}
@@ -54,7 +54,7 @@ func (s *ServiceNode) getEndpoints(
 		for _, address := range service.IPAddresses {
 			addresses = append(
 				addresses, *xdsmsgs.NewLbEndpoint(
-					xdsmsgs.NewTcpSocketAddress(address, envoyPort)))
+					xdsmsgs.NewTcpSocketAddress(address, listenerPort.Port)))
 		}
 		endpoints = append(
 			endpoints, xdsmsgs.NewClusterLoadAssignment(

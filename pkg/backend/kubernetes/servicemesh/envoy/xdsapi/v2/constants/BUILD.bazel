@@ -5,6 +5,7 @@ go_library(
     srcs = [
         "address.go",
         "cluster.go",
+        "filter.go",
         "listener.go",
         "port.go",
         "route.go",
