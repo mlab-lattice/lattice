@@ -5,14 +5,14 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
-	"regexp"
 	"strings"
 
 	"golang.org/x/crypto/ssh"
 
-	git "gopkg.in/src-d/go-git.v4"
+	"gopkg.in/src-d/go-git.v4"
 	gitplumbing "gopkg.in/src-d/go-git.v4/plumbing"
 	gitplumbingobject "gopkg.in/src-d/go-git.v4/plumbing/object"
+	"gopkg.in/src-d/go-git.v4/plumbing/transport"
 	gitssh "gopkg.in/src-d/go-git.v4/plumbing/transport/ssh"
 )
 
@@ -37,6 +37,10 @@ type Reference struct {
 	Commit *string
 	Tag    *string
 	Branch *string
+}
+
+type Hash struct {
+	gitplumbing.Hash
 }
 
 // Options contains information about how to complete the operation.
@@ -67,7 +71,7 @@ func (r *Resolver) Clone(ctx *Context) (*git.Repository, error) {
 	if !IsValidRepositoryURI(ctx.RepositoryURL) {
 		return nil, fmt.Errorf("bad git uri '%v'", ctx.RepositoryURL)
 	}
-	repoDir := r.GetRepositoryPath(ctx)
+	repoDir := r.RepositoryPath(ctx)
 
 	// If the repository already exists, simply open it.
 	repoExists, err := pathExists(repoDir)
@@ -132,7 +136,7 @@ func (r *Resolver) Fetch(ctx *Context) error {
 	return nil
 }
 
-// GetCommit will parse the Ref (i.e. #<ref>) from the git uri and determine if its a branch/tag/commit.
+// Commit will parse the Ref (i.e. #<ref>) from the git uri and determine if its a branch/tag/commit.
 // Returns the actual commit object for that ref. Defaults to HEAD.
 // GetCommit will first fetch from origin.
 func (r *Resolver) GetCommit(ctx *Context, ref *Reference) (*gitplumbingobject.Commit, error) {
@@ -225,7 +229,7 @@ func (r *Resolver) FileContents(ctx *Context, ref *Reference, fileName string) (
 	return ioutil.ReadAll(reader)
 }
 
-func (r *Resolver) GetRepositoryPath(ctx *Context) string {
+func (r *Resolver) RepositoryPath(ctx *Context) string {
 	return path.Join(r.WorkDirectory, stripProtocol(ctx.RepositoryURL))
 }
 
@@ -257,12 +261,11 @@ func (r *Resolver) Tags(ctx *Context) ([]string, error) {
 	return tags, nil
 }
 
-// regex for matching git repo urls
-var gitRepositoryURIRegex = regexp.MustCompile(`((?:git|file|ssh|https?|git@[-\w.]+)):(//)?(.*.git)(#(([-\d\w._])+)?)?$`)
-
-// IsValidRepositoryURI
+// IsValidRepositoryURI returns a boolean indicating whether or not the
+// uri is a valid git repository.
 func IsValidRepositoryURI(uri string) bool {
-	return gitRepositoryURIRegex.MatchString(uri)
+	_, err := transport.NewEndpoint(uri)
+	return err == nil
 }
 
 func pathExists(path string) (bool, error) {

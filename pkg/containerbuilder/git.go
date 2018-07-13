@@ -37,6 +37,6 @@ func (b *Builder) buildGitRepositoryComponent() error {
 	color.Green("✓ Success!")
 	fmt.Println()
 
-	sourceDirectory := gitResolver.GetRepositoryPath(ctx)
+	sourceDirectory := gitResolver.RepositoryPath(ctx)
 	return b.buildDockerImage(sourceDirectory)
 }
