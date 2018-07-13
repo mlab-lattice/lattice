@@ -13,6 +13,4 @@ const (
 	LabelKeyNodeRoleLatticeMaster   = LabelKeyNodeRoleLattice + "/master"
 	LabelKeyNodeRoleLatticeBuild    = LabelKeyNodeRoleLattice + "/build"
 	LabelKeyNodeRoleLatticeNodePool = LabelKeyNodeRoleLattice + "/node-pool"
-
-	LabelKeySecret = "secret.lattice.mlab.com"
 )
