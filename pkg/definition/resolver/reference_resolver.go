@@ -11,14 +11,20 @@ import (
 	"github.com/blang/semver"
 )
 
+// ReferenceResolver resolves references into fully hydrated (i.e. the template
+// engine has already acted upon it) component.
 type ReferenceResolver interface {
+	// ResolveReference resolves the reference.
 	ResolveReference(ctx *definitionv1.GitRepositoryReference, ref *definitionv1.Reference) (component.Interface, error)
 }
 
+// DefaultReferenceResolver fulfils the ReferenceResolver interface.
 type DefaultReferenceResolver struct {
 	gitResolver *git.Resolver
 }
 
+// NewReferenceResolver returns a ReferenceResolver that uses workDirectory for
+// scratch space such as cloning git repositories.
 func NewReferenceResolver(workDirectory string) (ReferenceResolver, error) {
 	if workDirectory == "" {
 		return nil, fmt.Errorf("must supply workDirectory")
@@ -35,6 +41,7 @@ func NewReferenceResolver(workDirectory string) (ReferenceResolver, error) {
 	return r, nil
 }
 
+// ResolveReference fulfils the ReferenceResolver interface.
 func (r *DefaultReferenceResolver) ResolveReference(
 	ctx *definitionv1.GitRepositoryReference,
 	ref *definitionv1.Reference,
@@ -126,9 +133,12 @@ func (r *DefaultReferenceResolver) resolveFileReference(
 		return nil, fmt.Errorf("file reference context git_repository must have a commit")
 	}
 
-	filePath := filepath.Join(ctx.File, file)
+	filePath := filepath.Join(filepath.Dir(ctx.File), file)
 
-	gitCtx := &git.Context{RepositoryURL: ctx.URL}
+	gitCtx := &git.Context{
+		RepositoryURL: ctx.URL,
+		Options:       &git.Options{},
+	}
 	ref := &git.Reference{Commit: ctx.GitRepository.Commit}
 	data, err := r.gitResolver.FileContents(gitCtx, ref, filePath)
 	if err != nil {

@@ -48,7 +48,55 @@ var (
 )
 
 func TestReferenceResolver(t *testing.T) {
+	testFileReferenceResolve(t)
 	testGitReferenceResolve(t)
+}
+
+func testFileReferenceResolve(t *testing.T) {
+	cleanReferenceResolverWorkDir(t)
+
+	if err := git.Init(remote1Dir); err != nil {
+		t.Fatal(err)
+	}
+
+	serviceBytes, err := json.Marshal(&service1)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	servicePath := "service.json"
+	commit, err := git.WriteAndCommitFile(remote1Dir, servicePath, serviceBytes, 0700, "my commit")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	r, err := NewReferenceResolver(workDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	commitStr := commit.String()
+	ctx := &defintionv1.GitRepositoryReference{
+		File: "foo",
+		GitRepository: &defintionv1.GitRepository{
+			URL:    fmt.Sprintf("file://%v", remote1Dir),
+			Commit: &commitStr,
+		},
+	}
+
+	ref := &defintionv1.Reference{
+		File: &servicePath,
+	}
+
+	if err := shouldResolveToService(r, ctx, ref, &service1); err != nil {
+		t.Error(err)
+	}
+
+	bar := "bar"
+	ref.File = &bar
+	if err := shouldFailToResolve(r, ctx, ref); err != nil {
+		t.Error(err)
+	}
 }
 
 func testGitReferenceResolve(t *testing.T) {
