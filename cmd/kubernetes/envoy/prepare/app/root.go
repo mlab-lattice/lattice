@@ -213,8 +213,16 @@ type XDSV2DynamicResources struct {
 }
 
 type XDSV2ADSConfig struct {
-	APIType      string   `json:"api_type"`
-	ClusterNames []string `json:"cluster_names"`
+	APIType      string             `json:"api_type"`
+	GRPCServices []XDSV2GRPCService `json:"grpc_services"`
+}
+
+type XDSV2GRPCService struct {
+	EnvoyGRPC XDSV2EnvoyGRPC `json:"envoy_grpc"`
+}
+
+type XDSV2EnvoyGRPC struct {
+	ClusterName string `json:"cluster_name"`
 }
 
 type XDSV2LDSConfig struct {
@@ -345,8 +353,12 @@ func outputEnvoyConfig(env map[string]string) error {
 			DynamicResources: XDSV2DynamicResources{
 				ADSConfig: XDSV2ADSConfig{
 					APIType: "GRPC",
-					ClusterNames: []string{
-						DefaultXDSClusterName,
+					GRPCServices: []XDSV2GRPCService{
+						{
+							EnvoyGRPC: XDSV2EnvoyGRPC{
+								ClusterName: DefaultXDSClusterName,
+							},
+						},
 					},
 				},
 				LDSConfig: XDSV2LDSConfig{
