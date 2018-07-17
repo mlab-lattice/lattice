@@ -156,7 +156,7 @@ func (r *Resolver) GetCommit(ctx *Context, ref *Reference) (*gitplumbingobject.C
 		hash = gitplumbing.NewHash(*ref.Commit)
 
 	case ref.Branch != nil:
-		refName := gitplumbing.ReferenceName(fmt.Sprintf("%s:refs/remotes/origin", *ref.Branch))
+		refName := gitplumbing.ReferenceName(fmt.Sprintf("refs/remotes/origin/%s", *ref.Branch))
 		gitRef, _ := repository.Reference(refName, false)
 		if gitRef == nil {
 			return nil, fmt.Errorf("invalid branch name %v", *ref.Branch)

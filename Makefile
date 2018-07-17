@@ -44,16 +44,19 @@ clean:
 
 # testing
 .PHONY: test
+test: TARGET ?= //pkg/...
 test: gazelle
-	@bazel test --test_output=errors //pkg/...
+	@bazel test --test_output=errors $(TARGET)
 
 .PHONY: test.no-cache
+test.no-cache: TARGET ?= //pkg/...
 test.no-cache: gazelle
-	@bazel test --cache_test_results=no --test_output=errors //pkg/...
+	@bazel test --cache_test_results=no --test_output=errors $(TARGET)
 
 .PHONY: test.verbose
+test.verbose: TARGET ?= //pkg/...
 test.verbose: gazelle
-	@bazel test --test_output=all --test_env -v //pkg/...
+	@bazel test --test_output=all --test_env -v $(TARGET)
 
 
 # e2e testing

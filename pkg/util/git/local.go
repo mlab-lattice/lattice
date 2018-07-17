@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"fmt"
 	"gopkg.in/src-d/go-git.v4"
 	gitplumbing "gopkg.in/src-d/go-git.v4/plumbing"
 	gitplumbingobject "gopkg.in/src-d/go-git.v4/plumbing/object"
@@ -90,6 +91,58 @@ func Tag(repositoryPath string, hash Hash, name string) error {
 	refName := gitplumbing.ReferenceName("refs/tags/" + name)
 	t := gitplumbing.NewHashReference(refName, hash.Hash)
 	return repository.Storer.SetReference(t)
+}
+
+func GetBranchHeadCommit(repositoryPath, branch string) (Hash, error) {
+	repository, err := git.PlainOpen(repositoryPath)
+	if err != nil {
+		return Hash{}, err
+	}
+
+	refName := gitplumbing.ReferenceName(fmt.Sprintf("%s:refs/remotes/origin", branch))
+	gitRef, err := repository.Reference(refName, false)
+	if err != nil || gitRef == nil {
+		return Hash{}, fmt.Errorf("invalid branch name %v", branch)
+	}
+
+	hash := Hash{gitRef.Hash()}
+	return hash, nil
+}
+
+func CheckoutCommit(repositoryPath string, commit Hash) error {
+	wt, err := worktree(repositoryPath)
+	if err != nil {
+		return err
+	}
+
+	opts := &git.CheckoutOptions{Hash: commit.Hash}
+	return wt.Checkout(opts)
+}
+
+func CheckoutBranch(repositoryPath, branch string) error {
+	wt, err := worktree(repositoryPath)
+	if err != nil {
+		return err
+	}
+
+	opts := &git.CheckoutOptions{
+		Branch: gitplumbing.ReferenceName(fmt.Sprintf("refs/heads/%s", branch)),
+	}
+	return wt.Checkout(opts)
+}
+
+func CreateBranch(repositoryPath, branch string, commit Hash) error {
+	wt, err := worktree(repositoryPath)
+	if err != nil {
+		return err
+	}
+
+	opts := &git.CheckoutOptions{
+		Hash:   commit.Hash,
+		Branch: gitplumbing.ReferenceName(fmt.Sprintf("refs/heads/%s", branch)),
+		Create: true,
+	}
+	return wt.Checkout(opts)
 }
 
 func worktree(repositoryPath string) (*git.Worktree, error) {
