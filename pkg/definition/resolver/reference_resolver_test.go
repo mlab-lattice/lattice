@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"encoding/json"
+	"github.com/mlab-lattice/lattice/pkg/definition/component"
 	defintionv1 "github.com/mlab-lattice/lattice/pkg/definition/v1"
 	"github.com/mlab-lattice/lattice/pkg/util/git"
 	"os"
@@ -37,6 +38,13 @@ var (
 			},
 		},
 	}
+	service4 = defintionv1.Service{
+		Container: defintionv1.Container{
+			Exec: &defintionv1.ContainerExec{
+				Command: []string{"buzz"},
+			},
+		},
+	}
 )
 
 func TestReferenceResolver(t *testing.T) {
@@ -46,7 +54,7 @@ func TestReferenceResolver(t *testing.T) {
 func testGitReferenceResolve(t *testing.T) {
 	testCommitGitReferenceResolve(t)
 	testBranchGitReferenceResolve(t)
-	//testTagGitReferenceResolve(t)
+	testTagGitReferenceResolve(t)
 }
 
 func testCommitGitReferenceResolve(t *testing.T) {
@@ -90,22 +98,7 @@ func testCommitGitReferenceResolve(t *testing.T) {
 					},
 				}
 
-				c, err := r.ResolveReference(nil, ref)
-				if err != nil {
-					return err
-				}
-
-				switch typed := c.(type) {
-				case *defintionv1.Service:
-					if !reflect.DeepEqual(typed, &service1) {
-						return fmt.Errorf("got invalid contents when resolving git commit reference")
-					}
-
-				default:
-					return fmt.Errorf("got invalid contents when resolving git commit reference (expected service but got something else)")
-				}
-
-				return nil
+				return shouldResolveToService(r, nil, ref, &service1)
 			},
 		},
 		{
@@ -122,12 +115,7 @@ func testCommitGitReferenceResolve(t *testing.T) {
 					},
 				}
 
-				_, err := r.ResolveReference(nil, ref)
-				if err == nil {
-					return fmt.Errorf("expected error retrieving invalid git commit file but got nil")
-				}
-
-				return nil
+				return shouldFailToResolve(r, nil, ref)
 			},
 		},
 		{
@@ -144,12 +132,7 @@ func testCommitGitReferenceResolve(t *testing.T) {
 					},
 				}
 
-				_, err := r.ResolveReference(nil, ref)
-				if err == nil {
-					return fmt.Errorf("expected error retrieving invalid git commit hash but got nil")
-				}
-
-				return nil
+				return shouldFailToResolve(r, nil, ref)
 			},
 		},
 	}
@@ -206,22 +189,7 @@ func testBranchGitReferenceResolve(t *testing.T) {
 					},
 				}
 
-				c, err := r.ResolveReference(nil, ref)
-				if err != nil {
-					return err
-				}
-
-				switch typed := c.(type) {
-				case *defintionv1.Service:
-					if !reflect.DeepEqual(typed, &service1) {
-						return fmt.Errorf("got invalid contents when resolving git branch reference")
-					}
-
-				default:
-					return fmt.Errorf("got invalid contents when resolving git commit reference (expected service but got something else)")
-				}
-
-				return nil
+				return shouldResolveToService(r, nil, ref, &service1)
 			},
 		},
 		{
@@ -253,22 +221,7 @@ func testBranchGitReferenceResolve(t *testing.T) {
 					},
 				}
 
-				c, err := r.ResolveReference(nil, ref)
-				if err != nil {
-					return err
-				}
-
-				switch typed := c.(type) {
-				case *defintionv1.Service:
-					if !reflect.DeepEqual(typed, &service2) {
-						return fmt.Errorf("got invalid contents when resolving git branch reference")
-					}
-
-				default:
-					return fmt.Errorf("got invalid contents when resolving git commit reference (expected service but got something else)")
-				}
-
-				return nil
+				return shouldResolveToService(r, nil, ref, &service2)
 			},
 		},
 		{
@@ -296,22 +249,7 @@ func testBranchGitReferenceResolve(t *testing.T) {
 					},
 				}
 
-				c, err := r.ResolveReference(nil, ref)
-				if err != nil {
-					return err
-				}
-
-				switch typed := c.(type) {
-				case *defintionv1.Service:
-					if !reflect.DeepEqual(typed, &service3) {
-						return fmt.Errorf("got invalid contents when resolving git branch reference")
-					}
-
-				default:
-					return fmt.Errorf("got invalid contents when resolving git commit reference (expected service but got something else)")
-				}
-
-				return nil
+				return shouldResolveToService(r, nil, ref, &service3)
 			},
 		},
 		{
@@ -328,12 +266,7 @@ func testBranchGitReferenceResolve(t *testing.T) {
 					},
 				}
 
-				_, err := r.ResolveReference(nil, ref)
-				if err == nil {
-					return fmt.Errorf("expected error retrieving invalid git commit file but got nil")
-				}
-
-				return nil
+				return shouldFailToResolve(r, nil, ref)
 			},
 		},
 		{
@@ -350,12 +283,272 @@ func testBranchGitReferenceResolve(t *testing.T) {
 					},
 				}
 
-				_, err := r.ResolveReference(nil, ref)
-				if err == nil {
-					return fmt.Errorf("expected error retrieving invalid git branch but got nil")
+				return shouldFailToResolve(r, nil, ref)
+			},
+		},
+	}
+
+	for _, test := range tests {
+		if err := test.Test(); err != nil {
+			t.Errorf("error testing %v: %v", test.Description, err)
+		}
+	}
+}
+
+func testTagGitReferenceResolve(t *testing.T) {
+	cleanReferenceResolverWorkDir(t)
+
+	if err := git.Init(remote1Dir); err != nil {
+		t.Fatal(err)
+	}
+
+	serviceBytes, err := json.Marshal(&service1)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	servicePath := "service.json"
+	commit1, err := git.WriteAndCommitFile(remote1Dir, servicePath, serviceBytes, 0700, "my commit1")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	r, err := NewReferenceResolver(workDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	tests := []struct {
+		Description string
+		Test        func() error
+	}{
+		{
+			Description: "valid tag",
+			Test: func() error {
+				tagName := "foo"
+				if err := git.Tag(remote1Dir, commit1, tagName); err != nil {
+					t.Fatal(err)
 				}
 
-				return nil
+				ref := &defintionv1.Reference{
+					GitRepository: &defintionv1.GitRepositoryReference{
+						GitRepository: &defintionv1.GitRepository{
+							URL: fmt.Sprintf("file://%v", remote1Dir),
+							Tag: &tagName,
+						},
+						File: servicePath,
+					},
+				}
+
+				return shouldResolveToService(r, nil, ref, &service1)
+			},
+		},
+		{
+			Description: "strict semver patch should initially resolve",
+			Test: func() error {
+				// minor and patch semver should work initially
+				tagName := "1.0.0"
+				if err := git.Tag(remote1Dir, commit1, tagName); err != nil {
+					t.Fatal(err)
+				}
+
+				patchSemverTag := "1.0.x"
+				ref := &defintionv1.Reference{
+					GitRepository: &defintionv1.GitRepositoryReference{
+						GitRepository: &defintionv1.GitRepository{
+							URL: fmt.Sprintf("file://%v", remote1Dir),
+							Tag: &patchSemverTag,
+						},
+						File: servicePath,
+					},
+				}
+
+				return shouldResolveToService(r, nil, ref, &service1)
+			},
+		},
+		{
+			Description: "strict semver minor should initially resolve",
+			Test: func() error {
+				minorSemverTag := "1.x"
+				ref := &defintionv1.Reference{
+					GitRepository: &defintionv1.GitRepositoryReference{
+						GitRepository: &defintionv1.GitRepository{
+							URL: fmt.Sprintf("file://%v", remote1Dir),
+							Tag: &minorSemverTag,
+						},
+						File: servicePath,
+					},
+				}
+
+				return shouldResolveToService(r, nil, ref, &service1)
+			},
+		},
+		{
+			Description: "strict semver invalid major should not initially resolve",
+			Test: func() error {
+				invalidSemverTag := "2.x"
+				ref := &defintionv1.Reference{
+					GitRepository: &defintionv1.GitRepositoryReference{
+						GitRepository: &defintionv1.GitRepository{
+							URL: fmt.Sprintf("file://%v", remote1Dir),
+							Tag: &invalidSemverTag,
+						},
+						File: servicePath,
+					},
+				}
+
+				return shouldFailToResolve(r, nil, ref)
+			},
+		},
+		{
+			Description: "strict semver patch resolve should update with patch update",
+			Test: func() error {
+				// minor and patch semver should resolve new definition with a patch bump
+				serviceBytes, err := json.Marshal(&service2)
+				if err != nil {
+					t.Fatal(err)
+				}
+
+				servicePath := "service.json"
+				commit2, err := git.WriteAndCommitFile(remote1Dir, servicePath, serviceBytes, 0700, "my commit1")
+				if err != nil {
+					t.Fatal(err)
+				}
+
+				tagName := "1.0.1"
+				if err := git.Tag(remote1Dir, commit2, tagName); err != nil {
+					t.Fatal(err)
+				}
+
+				patchTag := "1.0.x"
+				ref := &defintionv1.Reference{
+					GitRepository: &defintionv1.GitRepositoryReference{
+						GitRepository: &defintionv1.GitRepository{
+							URL: fmt.Sprintf("file://%v", remote1Dir),
+							Tag: &patchTag,
+						},
+						File: servicePath,
+					},
+				}
+
+				return shouldResolveToService(r, nil, ref, &service2)
+			},
+		},
+		{
+			Description: "strict semver minor resolve should update with patch update",
+			Test: func() error {
+				minorTag := "1.x"
+				ref := &defintionv1.Reference{
+					GitRepository: &defintionv1.GitRepositoryReference{
+						GitRepository: &defintionv1.GitRepository{
+							URL: fmt.Sprintf("file://%v", remote1Dir),
+							Tag: &minorTag,
+						},
+						File: servicePath,
+					},
+				}
+
+				return shouldResolveToService(r, nil, ref, &service2)
+			},
+		},
+		{
+			Description: "strict semver patch resolve should not update with minor update",
+			Test: func() error {
+				serviceBytes, err := json.Marshal(&service3)
+				if err != nil {
+					t.Fatal(err)
+				}
+
+				servicePath := "service.json"
+				commit, err := git.WriteAndCommitFile(remote1Dir, servicePath, serviceBytes, 0700, "my commit1")
+				if err != nil {
+					t.Fatal(err)
+				}
+
+				tagName := "1.1.0"
+				if err := git.Tag(remote1Dir, commit, tagName); err != nil {
+					t.Fatal(err)
+				}
+
+				patchSemverTag := "1.0.x"
+				ref := &defintionv1.Reference{
+					GitRepository: &defintionv1.GitRepositoryReference{
+						GitRepository: &defintionv1.GitRepository{
+							URL: fmt.Sprintf("file://%v", remote1Dir),
+							Tag: &patchSemverTag,
+						},
+						File: servicePath,
+					},
+				}
+
+				return shouldResolveToService(r, nil, ref, &service2)
+			},
+		},
+		{
+			Description: "strict semver minor resolve should update with minor update",
+			Test: func() error {
+				minorSemverTag := "1.x"
+				ref := &defintionv1.Reference{
+					GitRepository: &defintionv1.GitRepositoryReference{
+						GitRepository: &defintionv1.GitRepository{
+							URL: fmt.Sprintf("file://%v", remote1Dir),
+							Tag: &minorSemverTag,
+						},
+						File: servicePath,
+					},
+				}
+
+				return shouldResolveToService(r, nil, ref, &service3)
+			},
+		},
+		{
+			Description: "strict semver patch resolve should not update with major update",
+			Test: func() error {
+				serviceBytes, err := json.Marshal(&service3)
+				if err != nil {
+					t.Fatal(err)
+				}
+
+				servicePath := "service.json"
+				commit, err := git.WriteAndCommitFile(remote1Dir, servicePath, serviceBytes, 0700, "my commit1")
+				if err != nil {
+					t.Fatal(err)
+				}
+
+				tagName := "2.0.0"
+				if err := git.Tag(remote1Dir, commit, tagName); err != nil {
+					t.Fatal(err)
+				}
+
+				patchSemverTag := "1.0.x"
+				ref := &defintionv1.Reference{
+					GitRepository: &defintionv1.GitRepositoryReference{
+						GitRepository: &defintionv1.GitRepository{
+							URL: fmt.Sprintf("file://%v", remote1Dir),
+							Tag: &patchSemverTag,
+						},
+						File: servicePath,
+					},
+				}
+
+				return shouldResolveToService(r, nil, ref, &service2)
+			},
+		},
+		{
+			Description: "strict semver minor resolve should not update with major update",
+			Test: func() error {
+				minorSemverTag := "1.x"
+				ref := &defintionv1.Reference{
+					GitRepository: &defintionv1.GitRepositoryReference{
+						GitRepository: &defintionv1.GitRepository{
+							URL: fmt.Sprintf("file://%v", remote1Dir),
+							Tag: &minorSemverTag,
+						},
+						File: servicePath,
+					},
+				}
+
+				return shouldResolveToService(r, nil, ref, &service3)
 			},
 		},
 	}
@@ -372,4 +565,57 @@ func cleanReferenceResolverWorkDir(t *testing.T) {
 	if err != nil {
 		t.Fatal("unable to clean up work directory")
 	}
+}
+
+func shouldResolveToService(
+	r ReferenceResolver,
+	ctx *defintionv1.GitRepositoryReference,
+	ref *defintionv1.Reference,
+	expected *defintionv1.Service,
+) error {
+	c, err := resolveReference(r, ctx, ref, true)
+	if err != nil {
+		return err
+	}
+
+	switch typed := c.(type) {
+	case *defintionv1.Service:
+		if !reflect.DeepEqual(typed, expected) {
+			return fmt.Errorf("got invalid contents when resolving git branch reference")
+		}
+
+	default:
+		return fmt.Errorf("got invalid contents when resolving git commit reference (expected service but got something else)")
+	}
+
+	return nil
+}
+
+func shouldFailToResolve(
+	r ReferenceResolver,
+	ctx *defintionv1.GitRepositoryReference,
+	ref *defintionv1.Reference,
+) error {
+	_, err := resolveReference(r, ctx, ref, false)
+	return err
+}
+
+func resolveReference(
+	r ReferenceResolver,
+	ctx *defintionv1.GitRepositoryReference,
+	ref *defintionv1.Reference,
+	shouldSucceed bool,
+) (component.Interface, error) {
+	c, err := r.ResolveReference(ctx, ref)
+	if err != nil {
+		if !shouldSucceed {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("did not expect error resolving reference but got: %v", err)
+	}
+
+	if !shouldSucceed {
+		return nil, fmt.Errorf("expected referece resolution to return error but got nil")
+	}
+	return c, nil
 }
