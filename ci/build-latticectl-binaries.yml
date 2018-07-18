@@ -10,5 +10,5 @@ outputs:
 caches:
   - path: cli-build-cache
 run:
-  path: ci/build-latticectl-docs.sh
+  path: ci/build-latticectl-binaries.sh
   dir: src
