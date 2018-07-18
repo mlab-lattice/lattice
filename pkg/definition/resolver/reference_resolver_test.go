@@ -38,15 +38,9 @@ var (
 			},
 		},
 	}
-	service4 = defintionv1.Service{
-		Container: defintionv1.Container{
-			Exec: &defintionv1.ContainerExec{
-				Command: []string{"buzz"},
-			},
-		},
-	}
 )
 
+// TODO: add tests for relative paths
 func TestReferenceResolver(t *testing.T) {
 	testFileReferenceResolve(t)
 	testGitReferenceResolve(t)
