@@ -1,0 +1,14 @@
+---
+platform: linux
+image_resource:
+  type: docker-image
+  source:
+    repository: bash
+    tag: '4'
+inputs:
+  - name: lattice-repo
+  - name: docgen-binary
+outputs:
+  - name: docs-html
+run:
+  path: lattice-repo/ci/gen-latticectl-docs.sh
