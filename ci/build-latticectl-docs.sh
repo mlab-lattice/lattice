@@ -32,11 +32,11 @@ bazel --output_user_root=../cli-build-cache build --cpu k8 --features=static --f
 cp bazel-bin/cmd/generate-latticectl-docs/linux_amd64_static_pure_stripped/generate-latticectl-docs "$DOCGEN_BINARY"
 
 # compile for linux
-bazel --output_user_root=../cli-build-cache build --cpu k8 //cmd/latticectl --workspace_status_command=./scripts/workspace-status.sh
+bazel --output_user_root=../cli-build-cache build --cpu k8 //cmd/latticectl
 cp bazel-bin/cmd/cli/linux_amd64_stripped/latticectl "$LINUX_FILE"
 
 # compile for macOS
-bazel --output_user_root=../cli-build-cache build --experimental_platforms=@io_bazel_rules_go//go/toolchain:darwin_amd64 //cmd/latticectl --workspace_status_command=./scripts/workspace-status.sh
+bazel --output_user_root=../cli-build-cache build --experimental_platforms=@io_bazel_rules_go//go/toolchain:darwin_amd64 //cmd/latticectl
 cp bazel-bin/cmd/cli/darwin_amd64_pure_stripped/latticectl "$DARWIN_FILE"
 
 echo "$TAG_NAME" > "$METADATA_DIRECTORY"/tag
