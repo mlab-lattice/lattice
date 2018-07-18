@@ -19,7 +19,7 @@ if [ "$USE_TAG_FOR_VERSION" = "true" ]; then
     TAG_NAME=$(git describe)
 else
     # get the version from
-    TAG_NAME=$(cat ./.git/ref)
+    TAG_NAME=$(git rev-parse --short HEAD)
 fi
 
 LINUX_FILENAME=lattice_linux_amd64_v"$TAG_NAME"
