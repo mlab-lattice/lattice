@@ -80,6 +80,13 @@ GO_DEPENDENCIES = {
             "commit": "1e2570b1b19ade82d8dbb31bba4e65e9f9ef5b34",
             "importpath": "google.golang.org/grpc",
         },
+        # github.com/stretchr/testify:v1.2.2 -> v1.1.0
+        # k8s.io:v1.9.3 -> 782f4967f2dc4564575ca782fe2d04090b5faca8 (>v1.0.0, <v1.1.0)
+        "github.com/davecgh/go-spew": {
+            "name": "com_github_davecgh_go_spew",
+            "commit": "782f4967f2dc4564575ca782fe2d04090b5faca8",
+            "importpath": "github.com/davecgh/go-spew",
+        },
     },
     "github.com/mlab-lattice/lattice": {
         "github.com/aws/aws-sdk-go": {
@@ -214,6 +221,11 @@ GO_DEPENDENCIES = {
             "name": "com_github_onsi_gomega",
             "tag": "v1.3.0",
             "importpath": "github.com/onsi/gomega",
+        },
+        "github.com/stretchr/testify": {
+            "name": "com_github_stretchr_testify",
+            "tag": "v1.2.2",
+            "importpath": "github.com/stretchr/testify",
         },
     },
 
@@ -417,11 +429,6 @@ GO_DEPENDENCIES = {
 
     # commits taken from https://github.com/kubernetes/kubernetes/blob/v1.9.3/Godeps/Godeps.json
     "k8s.io": {
-        "github.com/davecgh/go-spew": {
-            "name": "com_github_davecgh_go_spew",
-            "commit": "782f4967f2dc4564575ca782fe2d04090b5faca8",
-            "importpath": "github.com/davecgh/go-spew",
-        },
         "github.com/emicklei/go-restful": {
             "name": "com_github_emicklei_go_restful",
             "commit": "ff4f55a206334ef123e4f79bbf348980da81ca46",
@@ -565,6 +572,19 @@ GO_DEPENDENCIES = {
             "name": "io_k8s_kube_openapi",
             "commit": "50ae88d24ede7b8bad68e23c805b5d3da5c8abaf",
             "importpath": "k8s.io/kube-openapi",
+        },
+    },
+    
+    "github.com/stretchr/testify": {
+        "github.com/pmezard/go-difflib": {
+            "name": "com_github_pmezard_go_difflib",
+            "commit": "v1.0.0",
+            "importpath": "github.com/pmezard/go-difflib",
+        },
+        "github.com/stretchr/objx": {
+            "name": "com_github_stretchr_objx",
+            "commit": "v0.1.0",
+            "importpath": "github.com/stretchr/objx",
         },
     },
 }
