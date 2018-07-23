@@ -20,9 +20,9 @@ variable "kubelet_port" {
   default = 10250
 }
 
-variable "kube_bootstrap_token" {}
-variable "kube_apiserver_private_ip" {}
-variable "kube_apiserver_port" {}
+//variable "kube_bootstrap_token" {}
+//variable "kube_apiserver_private_ip" {}
+//variable "kube_apiserver_port" {}
 
 ###############################################################################
 # Output
