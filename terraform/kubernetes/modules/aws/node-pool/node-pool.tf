@@ -135,16 +135,17 @@ module "node" {
   kubelet_labels = "node-pool.lattice.mlab.com/id=${var.name}"
   kubelet_taints = "node-pool.lattice.mlab.com/id=${var.name}:NoSchedule"
 
-  region                    = "${var.region}"
-  vpc_id                    = "${var.vpc_id}"
-  subnet_ids                = "${var.subnet_ids}"
-  num_instances             = "${var.num_instances}"
-  instance_type             = "${var.instance_type}"
-  ami_id                    = "${var.worker_node_ami_id}"
-  key_name                  = "${var.key_name}"
-  kube_bootstrap_token      = "${var.kube_bootstrap_token}"
-  kube_apiserver_private_ip = "${var.kube_apiserver_private_ip}"
-  kube_apiserver_port       = "${var.kube_apiserver_port}"
+  region        = "${var.region}"
+  vpc_id        = "${var.vpc_id}"
+  subnet_ids    = "${var.subnet_ids}"
+  num_instances = "${var.num_instances}"
+  instance_type = "${var.instance_type}"
+  ami_id        = "${var.worker_node_ami_id}"
+  key_name      = "${var.key_name}"
+
+  //  kube_bootstrap_token      = "${var.kube_bootstrap_token}"
+  //  kube_apiserver_private_ip = "${var.kube_apiserver_private_ip}"
+  //  kube_apiserver_port       = "${var.kube_apiserver_port}"
 
   iam_instance_profile_role_name = "${aws_iam_role.node_pool_role.name}"
 }

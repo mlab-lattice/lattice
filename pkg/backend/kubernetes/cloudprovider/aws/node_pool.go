@@ -14,6 +14,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
+	// note - will be GenerateBootstrapToken from "k8s.io/client-go/tools/bootstrap/token/util" at 1.10.4
+	//tokenutil "k8s.io/kubernetes/cmd/kubeadm/app/util/token"
 )
 
 const (
@@ -102,6 +104,11 @@ func (cp *DefaultAWSCloudProvider) EnsureNodePoolEpoch(
 	nodePool *latticev1.NodePool,
 	epoch latticev1.NodePoolEpoch,
 ) error {
+	// TODO get lattice apiserver address + port and push into TF module here too (or downstream in the module fcn)
+	// XXX add a bootstrap token here
+	//bootstrapToken, ok := tokenutil.GenerateToken()
+	//corev1.
+
 	module := cp.nodePoolTerraformModule(latticeID, nodePool, epoch)
 	config := cp.nodePoolTerraformConfig(latticeID, nodePool, epoch, module)
 
@@ -140,6 +147,33 @@ func (cp *DefaultAWSCloudProvider) EnsureNodePoolEpoch(
 		)
 	}
 }
+
+//func (cp *DefaultAWSCloudProvider) CreateBootstrapToken(
+//	latticeId v1.LatticeID,
+//) (*corev1.Secret, error) {
+//	bootstrapToken, err := tokenutil.GenerateToken()
+//	if err != nil {
+//		return nil, fmt.Errorf(
+//			"error generating bootstrap token: %v",
+//			err,
+//		)
+//	}
+//	//cp.kubeClient
+//	secretmap := make(map[string][]byte)
+//	secretmap["asdf"] = []byte(bootstrapToken) // TODO
+//
+//	sec_map := map[string][]byte {
+//		"token-id": []byte("bootstrap-token-123456"),
+//	}
+//
+//	secret := &corev1.Secret{
+//		Data: secretmap,
+//	}
+//	//secret.SetName("asdf")
+//	//secret.SetNamespace("ereere")
+//	cp.kubeClient.CoreV1().Secrets("kube-system").Create(secret)
+//	return secret, nil
+//}
 
 func (cp *DefaultAWSCloudProvider) DestroyNodePoolEpoch(
 	latticeID v1.LatticeID,
