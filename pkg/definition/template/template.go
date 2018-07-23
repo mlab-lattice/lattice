@@ -3,6 +3,7 @@ package template
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 	"regexp"
 	"strings"
 )
@@ -17,6 +18,13 @@ type Template struct {
 	Fields     map[string]interface{}
 }
 
+// UnmarshalJSON implements the json.Unmarshaller interface.
+// The JSON should be an object. UnmarshalJSON will see if
+// the object has a parameters field, and if it does try to
+// Unmarshal it into a Parameters struct. If it succeeds it will
+// use this struct as the Template's Parameters field. It will
+// then use the rest of the fields of the object as the Template's
+// Fields field.
 func (t *Template) UnmarshalJSON(data []byte) error {
 	m := make(map[string]interface{})
 	if err := json.Unmarshal(data, &m); err != nil {
@@ -24,14 +32,21 @@ func (t *Template) UnmarshalJSON(data []byte) error {
 	}
 
 	if p, ok := m["parameters"]; ok {
-		switch params := p.(type) {
-		case Parameters:
-			t.Parameters = params
-
-		default:
-			return fmt.Errorf("invalid parameter type")
+		if _, ok := p.(map[string]interface{}); !ok {
+			return fmt.Errorf("invalid parameter type, expected object")
 		}
 
+		paramBytes, err := json.Marshal(&p)
+		if err != nil {
+			return fmt.Errorf("error marshalling parameters: %v", err)
+		}
+
+		var params Parameters
+		if err := json.Unmarshal(paramBytes, &params); err != nil {
+			return err
+		}
+
+		t.Parameters = params
 		delete(m, "parameters")
 	}
 
@@ -40,22 +55,15 @@ func (t *Template) UnmarshalJSON(data []byte) error {
 }
 
 // Evaluate will crawl the Fields map and inject parameters into the values.
-// N.B.: Evaluate will mutate the Fields field in place to reduce the number of
-// allocations, but returns the result as a convenience.
-func (t *Template) Evaluate(assignments map[string]interface{}) (map[string]interface{}, error) {
-	assignments, err := t.Parameters.Assign(assignments)
+func (t *Template) Evaluate(path tree.NodePath, bindings map[string]interface{}) (map[string]interface{}, error) {
+	bindings, err := t.Parameters.Bind(path, bindings)
 	if err != nil {
 		return nil, err
 	}
 
-	// no parameters to evaluate
-	if len(assignments) == 0 {
-		return t.Fields, nil
-	}
-
 	// evaluate each of the fields
 	for k, v := range t.Fields {
-		result, err := evaluateValue(v, assignments)
+		result, err := evaluateValue(v, bindings)
 		if err != nil {
 			return nil, err
 		}
@@ -66,25 +74,25 @@ func (t *Template) Evaluate(assignments map[string]interface{}) (map[string]inte
 	return t.Fields, nil
 }
 
-func evaluateValue(val interface{}, assignments map[string]interface{}) (interface{}, error) {
+func evaluateValue(val interface{}, bindings map[string]interface{}) (interface{}, error) {
 	switch v := val.(type) {
 	case map[string]interface{}:
-		return evaluateMap(v, assignments)
+		return evaluateMap(v, bindings)
 
 	case []interface{}:
-		return evaluateArray(v, assignments)
+		return evaluateArray(v, bindings)
 
 	case string:
-		return evaluateString(v, assignments)
+		return evaluateString(v, bindings)
 
 	default:
 		return val, nil
 	}
 }
 
-func evaluateMap(val, assignments map[string]interface{}) (map[string]interface{}, error) {
+func evaluateMap(val, bindings map[string]interface{}) (map[string]interface{}, error) {
 	for k, v := range val {
-		result, err := evaluateValue(v, assignments)
+		result, err := evaluateValue(v, bindings)
 		if err != nil {
 			return nil, err
 		}
@@ -95,9 +103,9 @@ func evaluateMap(val, assignments map[string]interface{}) (map[string]interface{
 	return val, nil
 }
 
-func evaluateArray(val []interface{}, assignments map[string]interface{}) ([]interface{}, error) {
+func evaluateArray(val []interface{}, bindings map[string]interface{}) ([]interface{}, error) {
 	for idx, v := range val {
-		result, err := evaluateValue(v, assignments)
+		result, err := evaluateValue(v, bindings)
 		if err != nil {
 			return nil, err
 		}
@@ -108,14 +116,14 @@ func evaluateArray(val []interface{}, assignments map[string]interface{}) ([]int
 	return val, nil
 }
 
-func evaluateString(val string, assignments map[string]interface{}) (interface{}, error) {
+func evaluateString(val string, bindings map[string]interface{}) (interface{}, error) {
 	// If the string is only a single variable (i.e. "${foo}"), we replace the variable with
 	// the true value of the assignment.
 	// For example, if foo was set to 3, we would return 3, not "3".
 	if singleVariableRegex.MatchString(val) {
 		parts := singleVariableRegex.FindStringSubmatch(val)
 		variable := parts[1]
-		v, ok := assignments[variable]
+		v, ok := bindings[variable]
 		if !ok {
 			return nil, fmt.Errorf("invalid template variable %v", variable)
 		}
@@ -131,7 +139,7 @@ func evaluateString(val string, assignments map[string]interface{}) (interface{}
 		variableString := variableParts[0]
 		variableName := variableParts[1]
 
-		v, ok := assignments[variableName]
+		v, ok := bindings[variableName]
 		if !ok {
 			return nil, fmt.Errorf("invalid template variable %v", variableName)
 		}

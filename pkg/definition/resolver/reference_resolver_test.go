@@ -6,6 +6,7 @@ import (
 
 	"encoding/json"
 	"github.com/mlab-lattice/lattice/pkg/definition/component"
+	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 	defintionv1 "github.com/mlab-lattice/lattice/pkg/definition/v1"
 	"github.com/mlab-lattice/lattice/pkg/util/git"
 	"os"
@@ -64,7 +65,7 @@ func testFileReferenceResolve(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	r, err := NewReferenceResolver(workDir)
+	r, err := NewReferenceResolver(workDir, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -82,13 +83,13 @@ func testFileReferenceResolve(t *testing.T) {
 		File: &servicePath,
 	}
 
-	if err := shouldResolveToService(r, ctx, ref, &service1); err != nil {
+	if err := shouldResolveToService(r, tree.RootNodePath(), ctx, ref, &service1); err != nil {
 		t.Error(err)
 	}
 
 	bar := "bar"
 	ref.File = &bar
-	if err := shouldFailToResolve(r, ctx, ref); err != nil {
+	if err := shouldFailToResolve(r, tree.RootNodePath(), ctx, ref); err != nil {
 		t.Error(err)
 	}
 }
@@ -117,7 +118,7 @@ func testCommitGitReferenceResolve(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	r, err := NewReferenceResolver(workDir)
+	r, err := NewReferenceResolver(workDir, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -140,7 +141,7 @@ func testCommitGitReferenceResolve(t *testing.T) {
 					},
 				}
 
-				return shouldResolveToService(r, nil, ref, &service1)
+				return shouldResolveToService(r, tree.RootNodePath(), nil, ref, &service1)
 			},
 		},
 		{
@@ -157,7 +158,7 @@ func testCommitGitReferenceResolve(t *testing.T) {
 					},
 				}
 
-				return shouldFailToResolve(r, nil, ref)
+				return shouldFailToResolve(r, tree.RootNodePath(), nil, ref)
 			},
 		},
 		{
@@ -174,7 +175,7 @@ func testCommitGitReferenceResolve(t *testing.T) {
 					},
 				}
 
-				return shouldFailToResolve(r, nil, ref)
+				return shouldFailToResolve(r, tree.RootNodePath(), nil, ref)
 			},
 		},
 	}
@@ -209,7 +210,7 @@ func testBranchGitReferenceResolve(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	r, err := NewReferenceResolver(workDir)
+	r, err := NewReferenceResolver(workDir, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -231,7 +232,7 @@ func testBranchGitReferenceResolve(t *testing.T) {
 					},
 				}
 
-				return shouldResolveToService(r, nil, ref, &service1)
+				return shouldResolveToService(r, tree.RootNodePath(), nil, ref, &service1)
 			},
 		},
 		{
@@ -263,7 +264,7 @@ func testBranchGitReferenceResolve(t *testing.T) {
 					},
 				}
 
-				return shouldResolveToService(r, nil, ref, &service2)
+				return shouldResolveToService(r, tree.RootNodePath(), nil, ref, &service2)
 			},
 		},
 		{
@@ -291,7 +292,7 @@ func testBranchGitReferenceResolve(t *testing.T) {
 					},
 				}
 
-				return shouldResolveToService(r, nil, ref, &service3)
+				return shouldResolveToService(r, tree.RootNodePath(), nil, ref, &service3)
 			},
 		},
 		{
@@ -308,7 +309,7 @@ func testBranchGitReferenceResolve(t *testing.T) {
 					},
 				}
 
-				return shouldFailToResolve(r, nil, ref)
+				return shouldFailToResolve(r, tree.RootNodePath(), nil, ref)
 			},
 		},
 		{
@@ -325,7 +326,7 @@ func testBranchGitReferenceResolve(t *testing.T) {
 					},
 				}
 
-				return shouldFailToResolve(r, nil, ref)
+				return shouldFailToResolve(r, tree.RootNodePath(), nil, ref)
 			},
 		},
 	}
@@ -355,7 +356,7 @@ func testTagGitReferenceResolve(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	r, err := NewReferenceResolver(workDir)
+	r, err := NewReferenceResolver(workDir, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -382,7 +383,7 @@ func testTagGitReferenceResolve(t *testing.T) {
 					},
 				}
 
-				return shouldResolveToService(r, nil, ref, &service1)
+				return shouldResolveToService(r, tree.RootNodePath(), nil, ref, &service1)
 			},
 		},
 		{
@@ -405,7 +406,7 @@ func testTagGitReferenceResolve(t *testing.T) {
 					},
 				}
 
-				return shouldResolveToService(r, nil, ref, &service1)
+				return shouldResolveToService(r, tree.RootNodePath(), nil, ref, &service1)
 			},
 		},
 		{
@@ -422,7 +423,7 @@ func testTagGitReferenceResolve(t *testing.T) {
 					},
 				}
 
-				return shouldResolveToService(r, nil, ref, &service1)
+				return shouldResolveToService(r, tree.RootNodePath(), nil, ref, &service1)
 			},
 		},
 		{
@@ -439,7 +440,7 @@ func testTagGitReferenceResolve(t *testing.T) {
 					},
 				}
 
-				return shouldFailToResolve(r, nil, ref)
+				return shouldFailToResolve(r, tree.RootNodePath(), nil, ref)
 			},
 		},
 		{
@@ -473,7 +474,7 @@ func testTagGitReferenceResolve(t *testing.T) {
 					},
 				}
 
-				return shouldResolveToService(r, nil, ref, &service2)
+				return shouldResolveToService(r, tree.RootNodePath(), nil, ref, &service2)
 			},
 		},
 		{
@@ -490,7 +491,7 @@ func testTagGitReferenceResolve(t *testing.T) {
 					},
 				}
 
-				return shouldResolveToService(r, nil, ref, &service2)
+				return shouldResolveToService(r, tree.RootNodePath(), nil, ref, &service2)
 			},
 		},
 		{
@@ -523,7 +524,7 @@ func testTagGitReferenceResolve(t *testing.T) {
 					},
 				}
 
-				return shouldResolveToService(r, nil, ref, &service2)
+				return shouldResolveToService(r, tree.RootNodePath(), nil, ref, &service2)
 			},
 		},
 		{
@@ -540,7 +541,7 @@ func testTagGitReferenceResolve(t *testing.T) {
 					},
 				}
 
-				return shouldResolveToService(r, nil, ref, &service3)
+				return shouldResolveToService(r, tree.RootNodePath(), nil, ref, &service3)
 			},
 		},
 		{
@@ -573,7 +574,7 @@ func testTagGitReferenceResolve(t *testing.T) {
 					},
 				}
 
-				return shouldResolveToService(r, nil, ref, &service2)
+				return shouldResolveToService(r, tree.RootNodePath(), nil, ref, &service2)
 			},
 		},
 		{
@@ -590,7 +591,7 @@ func testTagGitReferenceResolve(t *testing.T) {
 					},
 				}
 
-				return shouldResolveToService(r, nil, ref, &service3)
+				return shouldResolveToService(r, tree.RootNodePath(), nil, ref, &service3)
 			},
 		},
 	}
@@ -611,11 +612,12 @@ func cleanReferenceResolverWorkDir(t *testing.T) {
 
 func shouldResolveToService(
 	r ReferenceResolver,
+	p tree.NodePath,
 	ctx *defintionv1.GitRepositoryReference,
 	ref *defintionv1.Reference,
 	expected *defintionv1.Service,
 ) error {
-	c, err := resolveReference(r, ctx, ref, true)
+	c, err := resolveReference(r, p, ctx, ref, true)
 	if err != nil {
 		return err
 	}
@@ -635,20 +637,22 @@ func shouldResolveToService(
 
 func shouldFailToResolve(
 	r ReferenceResolver,
+	p tree.NodePath,
 	ctx *defintionv1.GitRepositoryReference,
 	ref *defintionv1.Reference,
 ) error {
-	_, err := resolveReference(r, ctx, ref, false)
+	_, err := resolveReference(r, p, ctx, ref, false)
 	return err
 }
 
 func resolveReference(
 	r ReferenceResolver,
+	p tree.NodePath,
 	ctx *defintionv1.GitRepositoryReference,
 	ref *defintionv1.Reference,
 	shouldSucceed bool,
 ) (component.Interface, error) {
-	c, err := r.ResolveReference(ctx, ref)
+	c, _, err := r.ResolveReference(p, ctx, ref)
 	if err != nil {
 		if !shouldSucceed {
 			return nil, nil

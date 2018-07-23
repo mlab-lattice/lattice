@@ -1,11 +1,12 @@
 package resolver
 
 import (
+	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 	definitionv1 "github.com/mlab-lattice/lattice/pkg/definition/v1"
 )
 
 type SystemResolver2 interface {
-	ResolveSystem(ctx *definitionv1.GitRepositoryReference, system *definitionv1.System) (*definitionv1.System, error)
+	ResolveSystem(path tree.NodePath, ctx *definitionv1.GitRepositoryReference, system *definitionv1.System) (*definitionv1.System, error)
 }
 
 type DefaultSystemResolver struct {
@@ -17,6 +18,7 @@ func NewSystemResolver2(referenceResolver ReferenceResolver) SystemResolver2 {
 }
 
 func (r *DefaultSystemResolver) ResolveSystem(
+	path tree.NodePath,
 	ctx *definitionv1.GitRepositoryReference,
 	system *definitionv1.System,
 ) (*definitionv1.System, error) {
@@ -24,11 +26,12 @@ func (r *DefaultSystemResolver) ResolveSystem(
 	*s = *system
 
 	for name, c := range system.Components {
+		childPath := path.Child(name)
 		switch typedComponent := c.(type) {
 
 		// If the component is a system, recursively resolve the system and overwrite it in the components map
 		case *definitionv1.System:
-			subSystem, err := r.ResolveSystem(ctx, typedComponent)
+			subSystem, err := r.ResolveSystem(childPath, ctx, typedComponent)
 			if err != nil {
 				return nil, err
 			}
@@ -38,7 +41,7 @@ func (r *DefaultSystemResolver) ResolveSystem(
 		// If the component is a reference, resolve the reference. If the reference ended up being to a system,
 		// recursively resolve the system as well.
 		case *definitionv1.Reference:
-			resolved, err := r.referenceResolver.ResolveReference(ctx, typedComponent)
+			resolved, resolvedCtx, err := r.referenceResolver.ResolveReference(childPath, ctx, typedComponent)
 			if err != nil {
 				return nil, err
 			}
@@ -50,27 +53,7 @@ func (r *DefaultSystemResolver) ResolveSystem(
 				break
 			}
 
-			// If it did resolve to a system, recursively resolve the system.
-			// First generate the proper context for the system to be resolved in.
-			var rCtx *definitionv1.GitRepositoryReference
-			switch {
-
-			// The reference was resolved from the same git repository as the
-			// original system of this function context.
-			case typedComponent.File != nil:
-				rCtx = &definitionv1.GitRepositoryReference{
-					GitRepository: ctx.GitRepository,
-					File:          *typedComponent.File,
-				}
-
-			// The reference was resolved from a new git repository, so the
-			// system should be resolved in the context of the new git repository.
-			case typedComponent.GitRepository != nil:
-				rCtx = &definitionv1.GitRepositoryReference{}
-				*rCtx = *typedComponent.GitRepository
-			}
-
-			subSystem, err := r.ResolveSystem(ctx, resolvedSys)
+			subSystem, err := r.ResolveSystem(childPath, resolvedCtx, resolvedSys)
 			if err != nil {
 				return nil, err
 			}

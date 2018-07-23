@@ -109,7 +109,7 @@ func (r *DefaultReferenceResolver) resolveGitReference(repository *GitRepository
 		return nil, err
 	}
 
-	return NewComponentFromJSON(data)
+	return NewComponent(data)
 }
 
 func (r *DefaultReferenceResolver) resolveFileReference(file string) (component.Interface, error) {

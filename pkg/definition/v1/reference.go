@@ -14,6 +14,8 @@ var ReferenceType = component.Type{
 type Reference struct {
 	GitRepository *GitRepositoryReference `json:"git_repository,omitempty"`
 	File          *string                 `json:"file,omitempty"`
+
+	Parameters map[string]interface{} `json:"parameters"`
 }
 
 type GitRepositoryReference struct {

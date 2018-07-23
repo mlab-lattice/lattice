@@ -6,6 +6,10 @@ import (
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 )
 
+type SecretRef struct {
+	Value tree.NodePathSubcomponent `json:"secret_ref"`
+}
+
 // Secret can either be a local named reference (i.e. just a string name without
 // a path) or a NodePathSubcomponent.
 // N.B.: in the future a secret may just be a local reference depending on how

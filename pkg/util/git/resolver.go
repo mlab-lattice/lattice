@@ -39,10 +39,6 @@ type Reference struct {
 	Branch *string
 }
 
-type Hash struct {
-	gitplumbing.Hash
-}
-
 // Options contains information about how to complete the operation.
 type Options struct {
 	SSHKey []byte

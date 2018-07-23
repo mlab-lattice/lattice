@@ -1,45 +1,118 @@
 package tree
 
 import (
+	"reflect"
 	"testing"
 )
 
 func TestNewNodePath(t *testing.T) {
-	_, err := NewNodePath("")
-	if err == nil {
-		t.Errorf("Expected error for empty string path but got nil")
+	tests := []struct {
+		d string
+		p string
+		e bool
+		r NodePath
+	}{
+		{
+			d: "empty string",
+			p: "",
+			e: true,
+		},
+		{
+			d: "no leading slash",
+			p: "foo/bar",
+			e: true,
+		},
+		{
+			d: "empty internal subpath",
+			p: "/foo//bar",
+			e: true,
+		},
+		{
+			d: "empty trailing subpath",
+			p: "/foo/bar/",
+			e: true,
+		},
+		{
+			d: "root",
+			p: "/",
+			e: false,
+			r: NodePath("/"),
+		},
+		{
+			d: "valid path",
+			p: "/foo/Bar/BUZZ",
+			e: false,
+			r: NodePath("/foo/Bar/BUZZ"),
+		},
 	}
 
-	_, err = NewNodePath("foo/bar")
-	if err == nil {
-		t.Errorf("Expected error for path not beginning with '/' but got nil")
-	}
+	for _, test := range tests {
+		p, err := NewNodePath(test.p)
+		if err != nil {
+			if !test.e {
+				t.Errorf("expected no error for %v but got %e", test.d, err)
+			}
+			continue
+		}
 
-	_, err = NewNodePath("/foo//bar")
-	if err == nil {
-		t.Errorf("Expected error for path with emtpy subpath in middle of path but got nil")
-	}
+		if test.e {
+			t.Errorf("expected error for %v but got nil", test.d)
+			continue
+		}
 
-	_, err = NewNodePath("/foo/bar/")
-	if err == nil {
-		t.Errorf("Expected error for path with emtpy subpath at the end of the path but got nil")
-	}
-
-	_, err = NewNodePath("/foo/Bar/BUZZ")
-	if err != nil {
-		t.Errorf("Expected no error for valid path but got %v", err)
+		if !reflect.DeepEqual(p, test.r) {
+			t.Errorf("expected %v but got %v for %v", p, test.r, test.d)
+		}
 	}
 }
 
 func TestNodePathFromDomain(t *testing.T) {
-	p2, err := NewNodePathFromDomain("BUZZ.Bar.foo")
-	if err != nil {
-		t.Errorf("Expected no error for valid NewNodePathFromDomain but got %v", err)
+	tests := []struct {
+		d string
+		p string
+		e bool
+		r NodePath
+	}{
+		{
+			d: "empty initial subdomain",
+			p: ".bar.foo",
+			e: true,
+		},
+		{
+			d: "empty mid subdomain",
+			p: "bar..foo",
+			e: true,
+		},
+		{
+			d: "empty trailing subdomain",
+			p: "bar.foo.",
+			e: true,
+		},
+		{
+			d: "valid domain",
+			p: "BUZZ.Bar.foo",
+			e: false,
+			r: NodePath("/foo/Bar/BUZZ"),
+		},
 	}
 
-	expectedPath := "/foo/Bar/BUZZ"
-	if string(p2) != expectedPath {
-		t.Errorf("Expected path %v but got %v", expectedPath, string(p2))
+	for _, test := range tests {
+		p, err := NewNodePathFromDomain(test.p)
+		if err != nil {
+			if !test.e {
+				t.Errorf("expected no error for %v but got %e", test.d, err)
+			}
+			continue
+		}
+
+		if test.e {
+			t.Errorf("expected error for %v but got nil", test.d)
+			continue
+		}
+
+		if !reflect.DeepEqual(p, test.r) {
+			t.Errorf("expected %v but got %v for %v", p, test.r, test.d)
+		}
 	}
 }
 

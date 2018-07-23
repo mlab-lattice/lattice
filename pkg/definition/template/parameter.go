@@ -3,6 +3,9 @@ package template
 import (
 	"fmt"
 	"reflect"
+
+	"github.com/mlab-lattice/lattice/pkg/definition/tree"
+	definitionv1 "github.com/mlab-lattice/lattice/pkg/definition/v1"
 )
 
 type ParameterType string
@@ -13,7 +16,9 @@ const (
 	ParameterTypeString ParameterType = "string"
 	ParameterTypeArray  ParameterType = "array"
 	ParameterTypeObject ParameterType = "object"
-	//ParameterTypeSecret ParameterType = "secret"
+	ParameterTypeSecret ParameterType = "secret"
+
+	secretParameterLVal = "$secret"
 )
 
 type ParameterTypeError struct {
@@ -61,6 +66,11 @@ func (d Parameter) Validate(assignment interface{}) error {
 			failed = true
 		}
 
+	case *definitionv1.SecretRef:
+		if d.Type != ParameterTypeSecret {
+			failed = true
+		}
+
 	default:
 		failed = true
 	}
@@ -77,21 +87,66 @@ func (d Parameter) Validate(assignment interface{}) error {
 
 type Parameters map[string]Parameter
 
-func (p Parameters) Assign(assignments map[string]interface{}) (map[string]interface{}, error) {
+// Bind will take in a set of bindings for parameters, type check them, and properly set defaults if necessary.
+// It will then return the checked and defaulted set of parameter bindings.
+func (p Parameters) Bind(path tree.NodePath, bindings map[string]interface{}) (map[string]interface{}, error) {
 	result := make(map[string]interface{})
 
 	for k, p := range p {
-		// Check to see if an assignment was supplied.
+		// Check to see if an binding was supplied.
 		// If one was not but a default value was provided, use the default instead.
 		var a interface{}
 		var ok bool
-		a, ok = assignments[k]
+		a, ok = bindings[k]
 		if !ok {
 			if p.Default == nil {
 				return nil, fmt.Errorf("missing assignment to parameter %v", k)
 			}
 
-			a = p.Default
+			// If the parameter is a secret, its default value should contain something like:
+			// { "$secret": "name" }.
+			// Convert this into a SecretReference: { "$secret_ref": "/path:name" }
+			def := p.Default
+			if p.Type == ParameterTypeSecret {
+				// Ensure the default value is a map
+				secret, ok := def.(map[string]interface{})
+				if !ok {
+					return nil, &ParameterTypeError{
+						Expected: string(ParameterTypeSecret),
+						Actual:   reflect.TypeOf(def).String(),
+					}
+				}
+
+				// Ensure the map has a $secret key
+				nameVal, ok := secret[secretParameterLVal]
+				if !ok {
+					return nil, &ParameterTypeError{
+						Expected: string(ParameterTypeSecret),
+						Actual:   reflect.TypeOf(def).String(),
+					}
+				}
+
+				// Ensure the $secret key is a string
+				// TODO(kevinrosendahl): validate character set here?
+				name, ok := nameVal.(string)
+				if !ok {
+					return nil, &ParameterTypeError{
+						Expected: string(ParameterTypeSecret),
+						Actual:   reflect.TypeOf(def).String(),
+					}
+				}
+
+				secretRefPath, err := tree.NewNodePathSubcomponentFromParts(path, name)
+				if err != nil {
+					return nil, err
+				}
+
+				def = &definitionv1.SecretRef{
+					Value: secretRefPath,
+				}
+			}
+
+			a = def
 		}
 
 		if err := p.Validate(a); err != nil {
@@ -101,6 +156,6 @@ func (p Parameters) Assign(assignments map[string]interface{}) (map[string]inter
 		result[k] = a
 	}
 
-	// TODO(kevinrosendahl): we may want to validate that there are no extra assignments
+	// TODO(kevinrosendahl): we may want to validate that there are no extra bindings
 	return result, nil
 }
