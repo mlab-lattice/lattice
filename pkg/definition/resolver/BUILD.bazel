@@ -4,9 +4,9 @@ go_library(
     name = "go_default_library",
     srcs = [
         "reference_resolver.go",
-        "store.go",
         "system_resolver.go",
         "system_resolver2.go",
+        "template_store.go",
     ],
     importpath = "github.com/mlab-lattice/lattice/pkg/definition/resolver",
     visibility = ["//visibility:public"],
