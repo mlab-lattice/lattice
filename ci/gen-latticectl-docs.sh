@@ -5,7 +5,7 @@ set -o pipefail
 set -o nounset
 set -o xtrace
 
-TAG_NAME=$(cd src; git rev-parse --short HEAD)
+TAG_NAME=$(cd lattice-repo; git rev-parse --short HEAD)
 
 mkdir -p ./docs-html/$(TAG_NAME)
 

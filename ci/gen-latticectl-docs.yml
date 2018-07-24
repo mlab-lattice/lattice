@@ -3,8 +3,7 @@ platform: linux
 image_resource:
   type: docker-image
   source:
-    repository: bash
-    tag: '4'
+    repository: alpine/git
 inputs:
   - name: lattice-repo
   - name: docgen-binary
