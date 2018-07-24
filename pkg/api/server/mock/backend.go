@@ -92,8 +92,7 @@ func (backend *MockBackend) Build(systemID v1.SystemID, definitionRoot tree.Node
 	build := backend.newMockBuild(systemID, v)
 
 	record.builds[build.ID] = build
-	// run the build
-	go backend.runBuild(build)
+
 	return build, nil
 }
 
@@ -135,7 +134,7 @@ func (backend *MockBackend) BuildLogs(systemID v1.SystemID, buildID v1.BuildID, 
 
 // Deploys
 func (backend *MockBackend) DeployBuild(systemID v1.SystemID, buildID v1.BuildID) (*v1.Deploy, error) {
-	_, err := backend.GetBuild(systemID, buildID)
+	build, err := backend.GetBuild(systemID, buildID)
 	if err != nil {
 		return nil, err
 	}
@@ -148,6 +147,9 @@ func (backend *MockBackend) DeployBuild(systemID v1.SystemID, buildID v1.BuildID
 
 	record := backend.systemRegistry[systemID]
 	record.deploys[deploy.ID] = deploy
+
+	// run the build
+	go backend.runBuild(build)
 
 	return deploy, nil
 }
@@ -383,8 +385,8 @@ func (backend *MockBackend) runBuild(build *v1.Build) {
 	deploy.State = v1.DeployStateInProgress
 
 	// sleep
-	fmt.Printf("Mock: Running build %s. Sleeping for 20 seconds\n", build.ID)
-	time.Sleep(20 * time.Second)
+	fmt.Printf("Mock: Running build %s. Sleeping for 7 seconds\n", build.ID)
+	time.Sleep(7 * time.Second)
 	backend.finishBuild(build)
 
 }
