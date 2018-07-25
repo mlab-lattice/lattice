@@ -202,7 +202,6 @@ func buildAndDeploy(latticeClient v1client.Interface, t *testing.T) {
 func testSecrets(latticeClient v1client.Interface, t *testing.T) {
 	fmt.Println("Testing secrets...")
 	path, _ := tree.NewNodePath("/mock/test")
-	fmt.Printf("HIIIII '%v'", path.String())
 	fmt.Println("set secret")
 	err := latticeClient.Systems().Secrets(mockSystemId).Set(path, "x", "1")
 	checkErr(err, t)
