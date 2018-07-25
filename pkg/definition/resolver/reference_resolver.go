@@ -13,6 +13,7 @@ import (
 
 	"github.com/blang/semver"
 	"github.com/ghodss/yaml"
+	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	gitplumbingobject "gopkg.in/src-d/go-git.v4/plumbing/object"
 )
 
@@ -27,10 +28,11 @@ const (
 type ReferenceResolver interface {
 	// ResolveReference resolves the reference.
 	ResolveReference(
+		systemID v1.SystemID,
 		path tree.NodePath,
-		ctx *definitionv1.GitRepositoryReference,
+		ctx *git.FileReference,
 		ref *definitionv1.Reference,
-	) (component.Interface, *definitionv1.GitRepositoryReference, error)
+	) (component.Interface, *git.FileReference, error)
 }
 
 // DefaultReferenceResolver fulfils the ReferenceResolver interface.
@@ -60,12 +62,13 @@ func NewReferenceResolver(workDirectory string, store TemplateStore) (ReferenceR
 
 // ResolveReference fulfils the ReferenceResolver interface.
 func (r *DefaultReferenceResolver) ResolveReference(
+	systemID v1.SystemID,
 	path tree.NodePath,
-	ctx *definitionv1.GitRepositoryReference,
+	ctx *git.FileReference,
 	ref *definitionv1.Reference,
-) (component.Interface, *definitionv1.GitRepositoryReference, error) {
+) (component.Interface, *git.FileReference, error) {
 	// retrieve the template and its commit context
-	t, resolvedCxt, err := r.resolveTemplate(path, ctx, ref)
+	t, resolvedCxt, err := r.resolveTemplate(systemID, path, ctx, ref)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -85,14 +88,16 @@ func (r *DefaultReferenceResolver) ResolveReference(
 	return c, resolvedCxt, nil
 }
 
-func (r *DefaultReferenceResolver) resolveTemplate(path tree.NodePath,
-	ctx *definitionv1.GitRepositoryReference,
+func (r *DefaultReferenceResolver) resolveTemplate(
+	systemID v1.SystemID,
+	path tree.NodePath,
+	ctx *git.FileReference,
 	ref *definitionv1.Reference,
-) (*template.Template, *definitionv1.GitRepositoryReference, error) {
+) (*template.Template, *git.FileReference, error) {
 	// By default use the current context to resolve the reference.
 	// If the reference is a git_repository reference we'll update the URL below.
 	gitCtx := &git.Context{
-		RepositoryURL: ctx.URL,
+		RepositoryURL: ctx.RepositoryURL,
 		Options:       &git.Options{},
 	}
 
@@ -121,20 +126,18 @@ func (r *DefaultReferenceResolver) resolveTemplate(path tree.NodePath,
 	case ref.File != nil:
 		// if the reference is to a file, use the given context as the context, and set the
 		// file to file referenced.
-		gitRef = &git.Reference{Commit: ctx.Commit}
+		gitRef = &git.Reference{Commit: &ctx.Commit}
 		file = *ref.File
 	}
 
-	commitRef := &definitionv1.GitRepositoryReference{
-		File: file,
-		GitRepository: &definitionv1.GitRepository{
-			URL:    gitCtx.RepositoryURL,
-			Commit: gitRef.Commit,
-		},
+	fileRef := &git.FileReference{
+		RepositoryURL: gitCtx.RepositoryURL,
+		Commit:        *gitRef.Commit,
+		File:          file,
 	}
 
 	// see if we already have this commit from this repository in the template store.
-	t, err := r.store.Get(commitRef)
+	t, err := r.store.Get(systemID, fileRef)
 	if err != nil {
 		// if there was an error getting the cached version, get the template from the
 		// repo
@@ -144,14 +147,14 @@ func (r *DefaultReferenceResolver) resolveTemplate(path tree.NodePath,
 		}
 
 		// put the template into the template store
-		if err = r.store.Put(commitRef, t); err != nil {
+		if err = r.store.Put(systemID, fileRef, t); err != nil {
 			return nil, nil, err
 		}
 	}
 
 	// return the template that we found either from the store or from the repository
 	// as well as the commit reference that was used to find the template
-	return t, commitRef, nil
+	return t, fileRef, nil
 }
 
 func (r *DefaultReferenceResolver) gitReferenceCommit(ref *definitionv1.GitRepositoryReference) (*gitplumbingobject.Commit, error) {

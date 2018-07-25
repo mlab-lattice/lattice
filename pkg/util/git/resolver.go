@@ -33,10 +33,29 @@ type Context struct {
 	Options       *Options
 }
 
+// Reference is a sum type containing a reference to a commit, tag, or branch.
 type Reference struct {
 	Commit *string
 	Tag    *string
 	Branch *string
+}
+
+func (r *Reference) Validate() error {
+	if r.Commit == nil && r.Tag == nil && r.Branch == nil {
+		return fmt.Errorf("reference must contain a commit, tag, or branch")
+	}
+
+	if (r.Commit != nil && (r.Tag != nil || r.Branch != nil)) || (r.Tag != nil && r.Branch != nil) {
+		return fmt.Errorf("reference can only contain a single commit, tag, or branch")
+	}
+
+	return nil
+}
+
+type FileReference struct {
+	RepositoryURL string
+	Commit        string
+	File          string
 }
 
 // Options contains information about how to complete the operation.
@@ -136,6 +155,10 @@ func (r *Resolver) Fetch(ctx *Context) error {
 // Returns the actual commit object for that ref. Defaults to HEAD.
 // GetCommit will first fetch from origin.
 func (r *Resolver) GetCommit(ctx *Context, ref *Reference) (*gitplumbingobject.Commit, error) {
+	if err := ref.Validate(); err != nil {
+		return nil, err
+	}
+
 	err := r.Fetch(ctx)
 	if err != nil {
 		return nil, err
@@ -168,14 +191,6 @@ func (r *Resolver) GetCommit(ctx *Context, ref *Reference) (*gitplumbingobject.C
 		}
 
 		hash = gitRef.Hash()
-
-	default:
-		head, err := repository.Head()
-		if err != nil {
-			return nil, err
-		}
-
-		hash = head.Hash()
 	}
 
 	return repository.CommitObject(hash)
@@ -183,6 +198,10 @@ func (r *Resolver) GetCommit(ctx *Context, ref *Reference) (*gitplumbingobject.C
 
 // Checkout will clone and fetch, then attempt to check out the ref specified in the context.
 func (r *Resolver) Checkout(ctx *Context, ref *Reference) error {
+	if err := ref.Validate(); err != nil {
+		return err
+	}
+
 	repository, err := r.Clone(ctx)
 	if err != nil {
 		return err
@@ -207,6 +226,10 @@ func (r *Resolver) Checkout(ctx *Context, ref *Reference) error {
 // FileContents will clone, fetch, and checkout the proper reference, and if successful
 // will attempt to return the contents of the file at fileName.
 func (r *Resolver) FileContents(ctx *Context, ref *Reference, fileName string) ([]byte, error) {
+	if err := ref.Validate(); err != nil {
+		return nil, err
+	}
+
 	commit, err := r.GetCommit(ctx, ref)
 	if err != nil {
 		return nil, err

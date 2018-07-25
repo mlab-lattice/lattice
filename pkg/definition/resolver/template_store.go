@@ -3,13 +3,15 @@ package resolver
 import (
 	"fmt"
 
+	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	"github.com/mlab-lattice/lattice/pkg/definition/template"
-	definitionv1 "github.com/mlab-lattice/lattice/pkg/definition/v1"
+	"github.com/mlab-lattice/lattice/pkg/util/git"
 )
 
 type TemplateStore interface {
-	Put(ref *definitionv1.GitRepositoryReference, t *template.Template) error
-	Get(ref *definitionv1.GitRepositoryReference) (*template.Template, error)
+	Ready() bool
+	Put(systemID v1.SystemID, ref *git.FileReference, t *template.Template) error
+	Get(systemID v1.SystemID, ref *git.FileReference) (*template.Template, error)
 }
 
 type TemplateDoesNotExistError struct{}
@@ -29,13 +31,17 @@ type MemoryTemplateStore struct {
 	store map[string]*template.Template
 }
 
-func (s *MemoryTemplateStore) Put(ref *definitionv1.GitRepositoryReference, t *template.Template) error {
-	s.store[s.refString(ref)] = t
+func (s *MemoryTemplateStore) Ready() bool {
+	return true
+}
+
+func (s *MemoryTemplateStore) Put(systemID v1.SystemID, ref *git.FileReference, t *template.Template) error {
+	s.store[s.refString(systemID, ref)] = t
 	return nil
 }
 
-func (s *MemoryTemplateStore) Get(ref *definitionv1.GitRepositoryReference) (*template.Template, error) {
-	t, ok := s.store[s.refString(ref)]
+func (s *MemoryTemplateStore) Get(systemID v1.SystemID, ref *git.FileReference) (*template.Template, error) {
+	t, ok := s.store[s.refString(systemID, ref)]
 	if !ok {
 		return nil, &TemplateDoesNotExistError{}
 	}
@@ -43,6 +49,6 @@ func (s *MemoryTemplateStore) Get(ref *definitionv1.GitRepositoryReference) (*te
 	return t, nil
 }
 
-func (s *MemoryTemplateStore) refString(ref *definitionv1.GitRepositoryReference) string {
-	return fmt.Sprintf("%v.%v.%v", ref.URL, *ref.Commit, ref.File)
+func (s *MemoryTemplateStore) refString(systemID v1.SystemID, ref *git.FileReference) string {
+	return fmt.Sprintf("%v.%v.%v.%v", systemID, ref.RepositoryURL, ref.Commit, ref.File)
 }

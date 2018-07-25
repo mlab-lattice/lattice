@@ -16,12 +16,14 @@ type LatticeV1Interface interface {
 	ConfigsGetter
 	ContainerBuildsGetter
 	DeploysGetter
+	GitTemplatesGetter
 	JobsGetter
 	JobRunsGetter
 	NodePoolsGetter
 	ServicesGetter
 	SystemsGetter
 	TeardownsGetter
+	TemplatesGetter
 }
 
 // LatticeV1Client is used to interact with features provided by the lattice.mlab.com group.
@@ -49,6 +51,10 @@ func (c *LatticeV1Client) Deploys(namespace string) DeployInterface {
 	return newDeploys(c, namespace)
 }
 
+func (c *LatticeV1Client) GitTemplates(namespace string) GitTemplateInterface {
+	return newGitTemplates(c, namespace)
+}
+
 func (c *LatticeV1Client) Jobs(namespace string) JobInterface {
 	return newJobs(c, namespace)
 }
@@ -71,6 +77,10 @@ func (c *LatticeV1Client) Systems(namespace string) SystemInterface {
 
 func (c *LatticeV1Client) Teardowns(namespace string) TeardownInterface {
 	return newTeardowns(c, namespace)
+}
+
+func (c *LatticeV1Client) Templates(namespace string) TemplateInterface {
+	return newTemplates(c, namespace)
 }
 
 // NewForConfig creates a new LatticeV1Client for the given config.

@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"encoding/json"
+	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	"github.com/mlab-lattice/lattice/pkg/definition/component"
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 	defintionv1 "github.com/mlab-lattice/lattice/pkg/definition/v1"
@@ -16,7 +17,8 @@ import (
 const workDir = "/tmp/lattice/test/pkg/definition/resolver/component_resolver"
 
 var (
-	remote1Dir = fmt.Sprintf("%v/remote1", workDir)
+	systemID   v1.SystemID = "foo"
+	remote1Dir             = fmt.Sprintf("%v/remote1", workDir)
 
 	service1 = defintionv1.Service{
 		Container: defintionv1.Container{
@@ -70,13 +72,10 @@ func testFileReferenceResolve(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	commitStr := commit.String()
-	ctx := &defintionv1.GitRepositoryReference{
-		File: "foo",
-		GitRepository: &defintionv1.GitRepository{
-			URL:    fmt.Sprintf("file://%v", remote1Dir),
-			Commit: &commitStr,
-		},
+	ctx := &git.FileReference{
+		RepositoryURL: fmt.Sprintf("file://%v", remote1Dir),
+		Commit:        commit.String(),
+		File:          "foo",
 	}
 
 	ref := &defintionv1.Reference{
@@ -615,16 +614,16 @@ func shouldResolveToService(
 	ref *defintionv1.Reference,
 	expected *defintionv1.Service,
 ) error {
-	return shouldResolveToServiceCtx(r, &defintionv1.GitRepositoryReference{GitRepository: &defintionv1.GitRepository{}}, ref, expected)
+	return shouldResolveToServiceCtx(r, &git.FileReference{}, ref, expected)
 }
 
 func shouldResolveToServiceCtx(
 	r ReferenceResolver,
-	ctx *defintionv1.GitRepositoryReference,
+	ctx *git.FileReference,
 	ref *defintionv1.Reference,
 	expected *defintionv1.Service,
 ) error {
-	c, err := resolveReference(r, tree.RootNodePath(), ctx, ref, true)
+	c, err := resolveReference(r, systemID, tree.RootNodePath(), ctx, ref, true)
 	if err != nil {
 		return err
 	}
@@ -646,26 +645,27 @@ func shouldFailToResolve(
 	r ReferenceResolver,
 	ref *defintionv1.Reference,
 ) error {
-	return shouldFailToResolveCtx(r, &defintionv1.GitRepositoryReference{GitRepository: &defintionv1.GitRepository{}}, ref)
+	return shouldFailToResolveCtx(r, &git.FileReference{}, ref)
 }
 
 func shouldFailToResolveCtx(
 	r ReferenceResolver,
-	ctx *defintionv1.GitRepositoryReference,
+	ctx *git.FileReference,
 	ref *defintionv1.Reference,
 ) error {
-	_, err := resolveReference(r, tree.RootNodePath(), ctx, ref, false)
+	_, err := resolveReference(r, systemID, tree.RootNodePath(), ctx, ref, false)
 	return err
 }
 
 func resolveReference(
 	r ReferenceResolver,
+	id v1.SystemID,
 	p tree.NodePath,
-	ctx *defintionv1.GitRepositoryReference,
+	ctx *git.FileReference,
 	ref *defintionv1.Reference,
 	shouldSucceed bool,
 ) (component.Interface, error) {
-	c, _, err := r.ResolveReference(p, ctx, ref)
+	c, _, err := r.ResolveReference(id, p, ctx, ref)
 	if err != nil {
 		if !shouldSucceed {
 			return nil, nil

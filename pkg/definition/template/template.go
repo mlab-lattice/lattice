@@ -54,6 +54,16 @@ func (t *Template) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+func (t *Template) MarshalJSON() ([]byte, error) {
+	m := make(map[string]interface{})
+	for k, v := range t.Fields {
+		m[k] = v
+	}
+
+	m["parameters"] = t.Parameters
+	return json.Marshal(&m)
+}
+
 // Evaluate will crawl the Fields map and inject parameters into the values.
 func (t *Template) Evaluate(path tree.NodePath, bindings map[string]interface{}) (map[string]interface{}, error) {
 	bindings, err := t.Parameters.Bind(path, bindings)

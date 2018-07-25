@@ -1,15 +1,18 @@
 package resolver
 
 import (
+	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	"github.com/mlab-lattice/lattice/pkg/definition/component"
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 	definitionv1 "github.com/mlab-lattice/lattice/pkg/definition/v1"
+	"github.com/mlab-lattice/lattice/pkg/util/git"
 )
 
 type ComponentResolver interface {
 	ResolveComponent(
+		systemID v1.SystemID,
 		path tree.NodePath,
-		ctx *definitionv1.GitRepositoryReference,
+		ctx *git.FileReference,
 		ref *definitionv1.Reference,
 	) (component.Interface, error)
 }
@@ -23,24 +26,25 @@ func NewComponentResolver(referenceResolver ReferenceResolver) ComponentResolver
 }
 
 func (r *DefaultComponentResolver) ResolveComponent(
+	systemID v1.SystemID,
 	path tree.NodePath,
-	ctx *definitionv1.GitRepositoryReference,
+	ctx *git.FileReference,
 	ref *definitionv1.Reference,
 ) (component.Interface, error) {
-	c, resolvedContext, err := r.referenceResolver.ResolveReference(path, ctx, ref)
+	c, resolvedContext, err := r.referenceResolver.ResolveReference(systemID, path, ctx, ref)
 	if err != nil {
 		return nil, err
 	}
 
 	// If the reference resolved to another reference, resolve that reference.
 	// FIXME(kevinrosendahl): detect cycles
-	if ref2, ok := c.(*definitionv1.Reference); ok {
-		return r.ResolveComponent(path, resolvedContext, ref2)
+	if resolvedRef, ok := c.(*definitionv1.Reference); ok {
+		return r.ResolveComponent(systemID, path, resolvedContext, resolvedRef)
 	}
 
-	// If the reference resolved to a system, resolve the system's components.
+	// If the reference resolved to a systemID, resolve the system's components.
 	if system, ok := c.(*definitionv1.System); ok {
-		return r.resolveSystemComponents(path, resolvedContext, system)
+		return r.resolveSystemComponents(systemID, path, resolvedContext, system)
 	}
 
 	// Otherwise the reference resolved to a leaf, return the component.
@@ -48,8 +52,9 @@ func (r *DefaultComponentResolver) ResolveComponent(
 }
 
 func (r *DefaultComponentResolver) resolveSystemComponents(
+	systemID v1.SystemID,
 	path tree.NodePath,
-	ctx *definitionv1.GitRepositoryReference,
+	ctx *git.FileReference,
 	system *definitionv1.System,
 ) (*definitionv1.System, error) {
 	// Loop through each of the components.
@@ -62,7 +67,7 @@ func (r *DefaultComponentResolver) resolveSystemComponents(
 
 		case *definitionv1.System:
 			// If the component is a system, recursively resolve the system and overwrite it in the components map
-			subSystem, err := r.resolveSystemComponents(childPath, ctx, typedComponent)
+			subSystem, err := r.resolveSystemComponents(systemID, childPath, ctx, typedComponent)
 			if err != nil {
 				return nil, err
 			}
@@ -71,7 +76,7 @@ func (r *DefaultComponentResolver) resolveSystemComponents(
 
 		case *definitionv1.Reference:
 			// If the component is a reference, resolve the reference.
-			resolved, err := r.ResolveComponent(childPath, ctx, typedComponent)
+			resolved, err := r.ResolveComponent(systemID, childPath, ctx, typedComponent)
 			if err != nil {
 				return nil, err
 			}
