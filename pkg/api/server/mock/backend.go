@@ -27,6 +27,8 @@ type SystemRecord struct {
 	builds    map[v1.BuildID]*v1.Build
 	deploys   map[v1.DeployID]*v1.Deploy
 	teardowns map[v1.TeardownID]*v1.Teardown
+	secrets   []v1.Secret
+	nodePools []v1.NodePool
 }
 
 // newSystemRecord
@@ -36,6 +38,8 @@ func newSystemRecord(system *v1.System) *SystemRecord {
 		builds:    make(map[v1.BuildID]*v1.Build),
 		deploys:   make(map[v1.DeployID]*v1.Deploy),
 		teardowns: make(map[v1.TeardownID]*v1.Teardown),
+		secrets:   []v1.Secret{},
+		nodePools: []v1.NodePool{},
 	}
 }
 
@@ -290,27 +294,87 @@ func (backend *MockBackend) ServiceLogs(systemID v1.SystemID, serviceID v1.Servi
 }
 
 // Secrets
-func (backend *MockBackend) ListSystemSecrets(v1.SystemID) ([]v1.Secret, error) {
-	return nil, nil
+func (backend *MockBackend) ListSystemSecrets(systemID v1.SystemID) ([]v1.Secret, error) {
+	record, exists := backend.systemRegistry[systemID]
+	if !exists {
+		return nil, v1.NewInvalidSystemIDError(systemID)
+	}
+
+	return record.secrets, nil
 }
 
 func (backend *MockBackend) GetSystemSecret(systemID v1.SystemID, path tree.NodePath, name string) (*v1.Secret, error) {
-	return nil, nil
+	record, exists := backend.systemRegistry[systemID]
+	if !exists {
+		return nil, v1.NewInvalidSystemIDError(systemID)
+	}
+
+	for _, secret := range record.secrets {
+		if secret.Path == path && secret.Name == name {
+			scrt := &secret
+			return scrt, nil
+		}
+	}
+
+	return nil, v1.NewInvalidSystemSecretError(path, name)
 }
 
 func (backend *MockBackend) SetSystemSecret(systemID v1.SystemID, path tree.NodePath, name, value string) error {
+	record, exists := backend.systemRegistry[systemID]
+	if !exists {
+		return v1.NewInvalidSystemIDError(systemID)
+	}
+
+	secret := v1.Secret{
+		Path:  path,
+		Name:  name,
+		Value: value,
+	}
+
+	record.secrets = append(record.secrets, secret)
+
 	return nil
 }
 
 func (backend *MockBackend) UnsetSystemSecret(systemID v1.SystemID, path tree.NodePath, name string) error {
-	return nil
+	record, exists := backend.systemRegistry[systemID]
+	if !exists {
+		return v1.NewInvalidSystemIDError(systemID)
+	}
+
+	for i, secret := range record.secrets {
+		if secret.Path == path && secret.Name == name {
+			// delete secret
+			record.secrets = append(record.secrets[:i], record.secrets[i+1:]...)
+
+			return nil
+		}
+	}
+
+	return v1.NewInvalidSystemSecretError(path, name)
 }
 
-func (backend *MockBackend) ListNodePools(v1.SystemID) ([]v1.NodePool, error) {
-	return nil, nil
+func (backend *MockBackend) ListNodePools(systemID v1.SystemID) ([]v1.NodePool, error) {
+	record, exists := backend.systemRegistry[systemID]
+	if !exists {
+		return nil, v1.NewInvalidSystemIDError(systemID)
+	}
+
+	return record.nodePools, nil
 }
 
-func (backend *MockBackend) GetNodePool(v1.SystemID, v1.NodePoolPath) (*v1.NodePool, error) {
+func (backend *MockBackend) GetNodePool(systemID v1.SystemID, path v1.NodePoolPath) (*v1.NodePool, error) {
+	record, exists := backend.systemRegistry[systemID]
+	if !exists {
+		return nil, v1.NewInvalidSystemIDError(systemID)
+	}
+
+	for _, nodePool := range record.nodePools {
+		if nodePool.Path == path.String() {
+			np := &nodePool
+			return np, nil
+		}
+	}
 	return nil, nil
 }
 
@@ -462,8 +526,8 @@ func (backend *MockBackend) runTeardown(teardown *v1.Teardown) {
 	}
 
 	// sleep
-	fmt.Printf("Mock: Running teardown %s. Sleeping for 20 seconds\n", teardown.ID)
-	time.Sleep(20 * time.Second)
+	fmt.Printf("Mock: Running teardown %s. Sleeping for 7 seconds\n", teardown.ID)
+	time.Sleep(7 * time.Second)
 
 	systemRecord.system.Services = nil
 	teardown.State = v1.TeardownStateSucceeded

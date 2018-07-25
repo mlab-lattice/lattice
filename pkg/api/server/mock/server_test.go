@@ -2,12 +2,14 @@ package mock
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 	"time"
 
 	latticerest "github.com/mlab-lattice/lattice/pkg/api/client/rest"
 	v1client "github.com/mlab-lattice/lattice/pkg/api/client/v1"
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
+	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 )
 
 const (
@@ -24,16 +26,20 @@ func TestMockServer(t *testing.T) {
 }
 
 func mockTests(t *testing.T) {
+
 	latticeClient := latticerest.NewClient(mockAPIServerURL).V1()
 
 	// test systems
-	testSystems(latticeClient, t)
+	createSystem(latticeClient, t)
+	buildAndDeploy(latticeClient, t)
+	testSecrets(latticeClient, t)
+	checkSystemHealth(latticeClient, t)
+	teardownSystem(latticeClient, t)
+	deleteSystem(latticeClient, t)
 
-	// test builds
-	testBuildsAndDeploys(latticeClient, t)
 }
 
-func testSystems(latticeClient v1client.Interface, t *testing.T) {
+func createSystem(latticeClient v1client.Interface, t *testing.T) {
 	// test create system
 	fmt.Println("Test create system")
 	system, err := latticeClient.Systems().Create(mockSystemId, mockSystemDefURL)
@@ -74,7 +80,7 @@ func testSystems(latticeClient v1client.Interface, t *testing.T) {
 	}
 }
 
-func testBuildsAndDeploys(latticeClient v1client.Interface, t *testing.T) {
+func buildAndDeploy(latticeClient v1client.Interface, t *testing.T) {
 	// create build
 	fmt.Println("Test Create Build")
 	build, err := latticeClient.Systems().Builds(mockSystemId).Create(mockSystemVersion)
@@ -110,21 +116,18 @@ func testBuildsAndDeploys(latticeClient v1client.Interface, t *testing.T) {
 	fmt.Printf("Depolying build %v\n", build.ID)
 	deploy, err := latticeClient.Systems().Deploys(mockSystemId).CreateFromBuild(build.ID)
 	checkErr(err, t)
+
 	fmt.Printf("Created deploy %v\n", deploy.ID)
 
 	// wait for build to run
 	fmt.Printf("Waiting for build %v to enter running state\n", build.ID)
-	for i := 0; i <= 20; i++ {
+	waitFor(func() bool {
 		build, err = latticeClient.Systems().Builds(mockSystemId).Get(build.ID)
 		checkErr(err, t)
-		if build.State != v1.BuildStateRunning {
-			fmt.Println("...Waiting...")
-			time.Sleep(200 * time.Millisecond)
-		} else {
-			fmt.Printf("Build %v is in running state!\n", build.ID)
-			break
-		}
-	}
+		return build.State == v1.BuildStateRunning
+	}, t)
+
+	fmt.Printf("Build %v is in running state!\n", build.ID)
 
 	// fail if build did not reach running state
 	if build.State != v1.BuildStateRunning {
@@ -138,31 +141,173 @@ func testBuildsAndDeploys(latticeClient v1client.Interface, t *testing.T) {
 		t.Fatal("Deploy must be in the `In progress` state since build is running")
 	}
 
-	// wait for build to finish
-	fmt.Printf("Waiting for build %v to succeed\n", build.ID)
-	for i := 0; i <= 200; i++ {
-		build, err = latticeClient.Systems().Builds(mockSystemId).Get(build.ID)
-		checkErr(err, t)
-		if build.State != v1.BuildStateSucceeded {
-			fmt.Println("...Waiting...")
-			time.Sleep(200 * time.Millisecond)
-		} else {
-			fmt.Printf("Build %v succeeded!\n", build.ID)
-			break
+	// check service builds
+	fmt.Println("Ensuring that service builds are running...")
+	if build.Services == nil || len(build.Services) == 0 {
+		t.Fatal("No service builds running")
+	}
+
+	// ensure that build services are running
+
+	for _, service := range build.Services {
+		if service.State != v1.ServiceBuildStateRunning {
+			t.Fatal("Service build should be in running state")
 		}
 	}
 
-	if build.State != v1.BuildStateSucceeded {
-		t.Fatal("Timed out waiting for build to succeed")
-	}
+	fmt.Println("Service builds looking good!")
+
+	// wait for build to finish
+	fmt.Printf("Waiting for build %v to succeed\n", build.ID)
+
+	waitFor(func() bool {
+		build, err = latticeClient.Systems().Builds(mockSystemId).Get(build.ID)
+		checkErr(err, t)
+		return build.State == v1.BuildStateSucceeded
+	}, t)
+
+	fmt.Printf("Build %v succeeded!\n", build.ID)
 
 	// ensure that deploy state has succeeded
+	fmt.Println("Verifying that deploy has succeeded...")
 	deploy, err = latticeClient.Systems().Deploys(mockSystemId).Get(deploy.ID)
 
 	if deploy.State != v1.DeployStateSucceeded {
 		t.Fatal("Deploy must be in the `succeeded` state since build has succeeded")
 	}
+	fmt.Println("Deploy succeeded!")
 
+	// check service builds succeeded
+	fmt.Println("Ensuring that service builds has succeeded...")
+	for _, service := range build.Services {
+		if service.State != v1.ServiceBuildStateSucceeded {
+			t.Fatal("Service build should be in running state")
+		}
+	}
+	fmt.Println("Service builds succeeded!")
+
+	// list deploys
+	deploys, err := latticeClient.Systems().Deploys(mockSystemId).List()
+	checkErr(err, t)
+
+	if len(deploys) != 1 {
+		t.Fatal("bad # of elements for list deploys")
+	}
+
+	if deploys[0].ID != deploy.ID {
+		t.Fatal("bad list deploy contents")
+	}
+}
+
+func testSecrets(latticeClient v1client.Interface, t *testing.T) {
+	fmt.Println("Testing secrets...")
+	path, _ := tree.NewNodePath("/mock/test")
+	fmt.Printf("HIIIII '%v'", path.String())
+	fmt.Println("set secret")
+	err := latticeClient.Systems().Secrets(mockSystemId).Set(path, "x", "1")
+	checkErr(err, t)
+	secrets, err := latticeClient.Systems().Secrets(mockSystemId).List()
+	checkErr(err, t)
+
+	fmt.Println("list secrets")
+	if secrets == nil || len(secrets) != 1 {
+		t.Fatal("Wrong number of secrets.")
+	}
+
+	fmt.Println("get secret")
+	secret, err := latticeClient.Systems().Secrets(mockSystemId).Get(path, "x")
+	checkErr(err, t)
+	if secret.Value != "1" {
+		t.Fatal("Bad secret.")
+	}
+
+	fmt.Println("unset secret")
+	err = latticeClient.Systems().Secrets(mockSystemId).Unset(path, "x")
+	checkErr(err, t)
+
+	secrets, err = latticeClient.Systems().Secrets(mockSystemId).List()
+	checkErr(err, t)
+
+	if len(secrets) != 0 {
+		t.Fatal("Secret was not unset")
+	}
+}
+
+func checkSystemHealth(latticeClient v1client.Interface, t *testing.T) {
+	// ensure that system services are up
+	system, err := latticeClient.Systems().Get(mockSystemId)
+	checkErr(err, t)
+	if system.Services == nil {
+		t.Fatalf("system services are not set")
+	}
+
+	for _, service := range system.Services {
+		if service.State != v1.ServiceStateStable {
+			t.Fatalf("Service state is not stable")
+		}
+	}
+}
+
+func teardownSystem(latticeClient v1client.Interface, t *testing.T) {
+
+	fmt.Println("Tearing system down...")
+
+	teardown, err := latticeClient.Systems().Teardowns(mockSystemId).Create()
+	checkErr(err, t)
+
+	fmt.Printf("Created teardown %v", teardown.ID)
+
+	if teardown.State != v1.TeardownStatePending {
+		t.Fatalf("teardown state is not pending")
+	}
+
+	// wait for teardown run
+	fmt.Printf("Waiting for teardown %v to run\n", teardown.ID)
+
+	waitFor(func() bool {
+		teardown, err = latticeClient.Systems().Teardowns(mockSystemId).Get(teardown.ID)
+		checkErr(err, t)
+		return teardown.State == v1.TeardownStateInProgress
+	}, t)
+
+	fmt.Printf("Teardown %v entered the in progress state!\n", teardown.ID)
+
+	// wait for teardown succeed
+	fmt.Printf("Waiting for teardown %v to succeed\n", teardown.ID)
+
+	waitFor(func() bool {
+		teardown, err = latticeClient.Systems().Teardowns(mockSystemId).Get(teardown.ID)
+		checkErr(err, t)
+		return teardown.State == v1.TeardownStateSucceeded
+	}, t)
+
+	// check that system services are nil after teardown
+	fmt.Println("Checking that system services are down after teardown...")
+	system, err := latticeClient.Systems().Get(mockSystemId)
+	if system.Services != nil {
+		t.Fatal("System services still up")
+	}
+
+	fmt.Printf("Teardown %v succeeded!\n", teardown.ID)
+}
+
+func deleteSystem(latticeClient v1client.Interface, t *testing.T) {
+	system, err := latticeClient.Systems().Get(mockSystemId)
+	checkErr(err, t)
+
+	if system == nil {
+		t.Fatal("System not found")
+	}
+
+	fmt.Println("Deleting system...")
+	latticeClient.Systems().Delete(mockSystemId)
+
+	_, err = latticeClient.Systems().Get(mockSystemId)
+
+	if err == nil || !strings.Contains(fmt.Sprintf("%v", err), "invalid system") {
+		t.Fatal("Expected an invalid system error")
+	}
+	fmt.Println("System deleted!")
 }
 
 func checkErr(err error, t *testing.T) {
@@ -177,4 +322,19 @@ func setupMockTest() {
 	go RunMockNewRestServer()
 
 	fmt.Println("API server started")
+}
+
+func waitFor(condition func() bool, t *testing.T) {
+	for i := 0; i <= 200; i++ {
+		if !condition() {
+			fmt.Println("...Waiting...")
+			time.Sleep(200 * time.Millisecond)
+		} else {
+			break
+		}
+	}
+
+	if !condition() {
+		t.Fatal("Timed out")
+	}
 }
