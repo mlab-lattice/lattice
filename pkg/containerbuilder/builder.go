@@ -12,14 +12,13 @@ import (
 )
 
 type Builder struct {
-	BuildID        v1.ContainerBuildID
-	SystemID       v1.SystemID
-	WorkingDir     string
-	ContainerBuild *definitionv1.ContainerBuild
-	DockerOptions  *DockerOptions
-	DockerClient   *dockerclient.Client
-	GitOptions     *git.Options
-	StatusUpdater  StatusUpdater
+	BuildID       v1.ContainerBuildID
+	SystemID      v1.SystemID
+	WorkingDir    string
+	DockerOptions *DockerOptions
+	DockerClient  *dockerclient.Client
+	GitOptions    *git.Options
+	StatusUpdater StatusUpdater
 }
 
 type DockerOptions struct {
@@ -69,7 +68,6 @@ func NewBuilder(
 	workDirectory string,
 	dockerOptions *DockerOptions,
 	gitResolverOptions *git.Options,
-	containerBuild *definitionv1.ContainerBuild,
 	updater StatusUpdater,
 ) (*Builder, error) {
 	if workDirectory == "" {
@@ -84,10 +82,6 @@ func NewBuilder(
 		gitResolverOptions = &git.Options{}
 	}
 
-	if containerBuild == nil {
-		return nil, newErrorInternal("containerBuild not supplied")
-	}
-
 	dockerClient, err := dockerclient.NewEnvClient()
 	if err != nil {
 		return nil, newErrorInternal("error getting docker client: " + err.Error())
@@ -97,33 +91,32 @@ func NewBuilder(
 	color.NoColor = false
 
 	b := &Builder{
-		BuildID:        buildID,
-		SystemID:       systemID,
-		WorkingDir:     workDirectory,
-		ContainerBuild: containerBuild,
-		DockerOptions:  dockerOptions,
-		DockerClient:   dockerClient,
-		GitOptions:     gitResolverOptions,
-		StatusUpdater:  updater,
+		BuildID:       buildID,
+		SystemID:      systemID,
+		WorkingDir:    workDirectory,
+		DockerOptions: dockerOptions,
+		DockerClient:  dockerClient,
+		GitOptions:    gitResolverOptions,
+		StatusUpdater: updater,
 	}
 	return b, nil
 }
 
-func (b *Builder) Build() error {
+func (b *Builder) Build(containerBuild *definitionv1.ContainerBuild) error {
 	err := os.MkdirAll(b.WorkingDir, 0777)
 	if err != nil {
 		return newErrorInternal("failed to create working directory: " + err.Error())
 	}
 
-	if b.ContainerBuild.GitRepository != nil {
-		return b.handleError(b.buildGitRepositoryComponent())
+	if containerBuild.CommandBuild != nil {
+		return b.handleError(b.buildCommandBuildContainer(containerBuild.CommandBuild))
 	}
 
-	if b.ContainerBuild.DockerImage != nil {
-		return b.handleError(b.buildDockerImageComponent())
+	if containerBuild.DockerImage != nil {
+		return b.handleError(b.buildDockerImageContainer(containerBuild.DockerImage))
 	}
 
-	return newErrorUser("unsupported component build type")
+	return newErrorUser("unsupported container build type")
 }
 
 func (b *Builder) handleError(err error) error {

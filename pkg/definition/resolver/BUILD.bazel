@@ -3,6 +3,7 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 go_library(
     name = "go_default_library",
     srcs = [
+        "component.go",
         "component_resolver.go",
         "reference_resolver.go",
         "system_resolver.go",

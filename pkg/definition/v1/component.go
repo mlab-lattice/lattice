@@ -9,12 +9,16 @@ import (
 
 const APIVersion = "v1"
 
-func NewComponent(i interface{}) (component.Interface, error) {
-	data, err := json.Marshal(&i)
+func NewComponent(m map[string]interface{}) (component.Interface, error) {
+	data, err := json.Marshal(&m)
 	if err != nil {
 		return nil, err
 	}
 
+	return NewComponentFromJSON(data)
+}
+
+func NewComponentFromJSON(data []byte) (component.Interface, error) {
 	var c componentTypeDecoder
 	if err := json.Unmarshal(data, &c); err != nil {
 		return nil, fmt.Errorf("resource must have valid Type field")

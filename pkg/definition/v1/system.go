@@ -53,7 +53,7 @@ func (s *System) UnmarshalJSON(data []byte) error {
 
 	components := make(map[string]component.Interface)
 	for n, d := range e.Components {
-		res, err := NewComponent(d)
+		res, err := NewComponentFromJSON(d)
 		if err != nil {
 			return err
 		}

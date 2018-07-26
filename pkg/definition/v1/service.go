@@ -14,6 +14,9 @@ var ServiceType = component.Type{
 	Type:       ComponentTypeService,
 }
 
+//  NOTE: if you update the Service struct, you _must_ update the
+//        serviceEncoder struct as well as the serviceIR struct
+
 type Service struct {
 	Description string
 

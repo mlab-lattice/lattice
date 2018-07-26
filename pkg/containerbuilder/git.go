@@ -4,12 +4,13 @@ import (
 	"fmt"
 
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
+	definitionv1 "github.com/mlab-lattice/lattice/pkg/definition/v1"
 	"github.com/mlab-lattice/lattice/pkg/util/git"
 
 	"github.com/fatih/color"
 )
 
-func (b *Builder) buildGitRepositoryComponent() error {
+func (b *Builder) retrieveGitRepository(repository *definitionv1.GitRepository) (string, error) {
 	color.Blue("Cloning git repository...")
 
 	if b.StatusUpdater != nil {
@@ -20,23 +21,22 @@ func (b *Builder) buildGitRepositoryComponent() error {
 
 	gitResolver, err := git.NewResolver(b.WorkingDir + "/git")
 	if err != nil {
-		return newErrorInternal("failed to create git resolver: " + err.Error())
+		return "", newErrorInternal("failed to create git resolver: " + err.Error())
 	}
 
 	ctx := &git.Context{
-		RepositoryURL: b.ContainerBuild.GitRepository.URL,
+		RepositoryURL: repository.URL,
 		Options:       b.GitOptions,
 	}
 
-	ref := &git.Reference{Commit: b.ContainerBuild.GitRepository.Commit}
+	ref := &git.Reference{Commit: repository.Commit}
 
 	if err := gitResolver.Checkout(ctx, ref); err != nil {
-		return newErrorUser("git repository checkout failed: " + err.Error())
+		return "", newErrorUser("git repository checkout failed: " + err.Error())
 	}
 
 	color.Green("✓ Success!")
 	fmt.Println()
 
-	sourceDirectory := gitResolver.RepositoryPath(ctx)
-	return b.buildDockerImage(sourceDirectory)
+	return gitResolver.RepositoryPath(repository.URL), nil
 }

@@ -86,7 +86,7 @@ func (r *Resolver) Clone(ctx *Context) (*git.Repository, error) {
 	if !IsValidRepositoryURI(ctx.RepositoryURL) {
 		return nil, fmt.Errorf("bad git uri '%v'", ctx.RepositoryURL)
 	}
-	repoDir := r.RepositoryPath(ctx)
+	repoDir := r.RepositoryPath(ctx.RepositoryURL)
 
 	// If the repository already exists, simply open it.
 	repoExists, err := pathExists(repoDir)
@@ -248,8 +248,8 @@ func (r *Resolver) FileContents(ctx *Context, ref *Reference, fileName string) (
 	return ioutil.ReadAll(reader)
 }
 
-func (r *Resolver) RepositoryPath(ctx *Context) string {
-	return path.Join(r.WorkDirectory, stripProtocol(ctx.RepositoryURL))
+func (r *Resolver) RepositoryPath(url string) string {
+	return path.Join(r.WorkDirectory, stripProtocol(url))
 }
 
 // Tags will clone and fetch, and if successful will return the repository's tags (annotated + light-weight).

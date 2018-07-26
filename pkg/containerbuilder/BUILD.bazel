@@ -4,8 +4,10 @@ go_library(
     name = "go_default_library",
     srcs = [
         "builder.go",
+        "command_build.go",
         "docker.go",
         "git.go",
+        "source.go",
         "status_updater.go",
     ],
     importpath = "github.com/mlab-lattice/lattice/pkg/containerbuilder",

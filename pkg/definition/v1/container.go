@@ -1,10 +1,17 @@
 package v1
 
 import (
+	"encoding/json"
+	"fmt"
+
 	"github.com/mlab-lattice/lattice/pkg/definition/component"
 )
 
-const ComponentTypeContainer = "container"
+const (
+	ComponentTypeContainer        = "container"
+	ContainerBuildTypeCommand     = "command_build"
+	ContainerBuildTypeDockerImage = "docker_image"
+)
 
 var ContainerType = component.Type{
 	APIVersion: APIVersion,
@@ -23,13 +30,85 @@ type Container struct {
 }
 
 type ContainerBuild struct {
-	GitRepository   *GitRepository       `json:"git_repository,omitempty"`
-	Language        *string              `json:"language,omitempty"`
-	BaseDockerImage *DockerImage         `json:"base_docker_image,omitempty"`
-	Command         []string             `json:"command,omitempty"`
-	Environment     ContainerEnvironment `json:"environment,omitempty"`
+	CommandBuild *ContainerBuildCommand
+	DockerImage  *DockerImage
+}
 
-	DockerImage *DockerImage `json:"docker_image,omitempty"`
+func (b *ContainerBuild) UnmarshalJSON(data []byte) error {
+	var e *containerBuildEncoder
+	if err := json.Unmarshal(data, &e); err != nil {
+		return err
+	}
+
+	switch e.Type {
+	case ContainerBuildTypeCommand:
+		var c *ContainerBuildCommand
+		if err := json.Unmarshal(data, &c); err != nil {
+			return err
+		}
+
+		b.CommandBuild = c
+		return nil
+
+	case ContainerBuildTypeDockerImage:
+		var i *DockerImage
+		if err := json.Unmarshal(data, &i); err != nil {
+			return err
+		}
+
+		b.DockerImage = i
+		return nil
+
+	default:
+		return fmt.Errorf("unrecognized container build type: %v", e.Type)
+	}
+}
+
+func (b *ContainerBuild) MarshalJSON() ([]byte, error) {
+	var e interface{}
+	switch {
+	case b.CommandBuild != nil:
+		e = &containerBuildCommandEncoder{
+			Type: ContainerBuildTypeCommand,
+			ContainerBuildCommand: b.CommandBuild,
+		}
+
+	case b.DockerImage != nil:
+		e = &containerBuildDockerImageEncoder{
+			Type:        ContainerBuildTypeDockerImage,
+			DockerImage: b.DockerImage,
+		}
+
+	default:
+		return nil, fmt.Errorf("container build must have a type")
+	}
+
+	return json.Marshal(&e)
+}
+
+type containerBuildEncoder struct {
+	Type string `json:"type"`
+}
+
+type ContainerBuildCommand struct {
+	Source          *ContainerBuildSource `json:"source,omitempty"`
+	BaseDockerImage DockerImage           `json:"base_docker_image"`
+	Command         []string              `json:"command,omitempty"`
+	Environment     ContainerEnvironment  `json:"environment,omitempty"`
+}
+
+type containerBuildCommandEncoder struct {
+	Type string `json:"type"`
+	*ContainerBuildCommand
+}
+
+type containerBuildDockerImageEncoder struct {
+	Type string `json:"type"`
+	*DockerImage
+}
+
+type ContainerBuildSource struct {
+	GitRepository *GitRepository
 }
 
 type ContainerExec struct {

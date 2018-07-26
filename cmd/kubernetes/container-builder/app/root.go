@@ -85,14 +85,13 @@ var RootCmd = &cobra.Command{
 			workDirectory,
 			dockerOptions,
 			gitResolverOptions,
-			cb,
 			statusUpdater,
 		)
 		if err != nil {
 			log.Fatal("error getting builder: " + err.Error())
 		}
 
-		if err = builder.Build(); err != nil {
+		if err = builder.Build(cb); err != nil {
 			os.Exit(1)
 		}
 	},
