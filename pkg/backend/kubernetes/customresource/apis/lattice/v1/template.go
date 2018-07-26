@@ -25,7 +25,13 @@ var (
 type Template struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata"`
-	Spec              *template.Template `json:"spec"`
+	Spec              TemplateSpec `json:"spec"`
+}
+
+// +k8s:deepcopy-gen=false
+
+type TemplateSpec struct {
+	*template.Template
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

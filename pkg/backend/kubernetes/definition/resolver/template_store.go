@@ -2,8 +2,6 @@ package resolver
 
 import (
 	"encoding/json"
-	"fmt"
-
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	latticeclientset "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/generated/clientset/versioned"
@@ -12,17 +10,15 @@ import (
 	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/kubernetes"
 	"github.com/mlab-lattice/lattice/pkg/definition/resolver"
 	"github.com/mlab-lattice/lattice/pkg/definition/template"
-	definitionv1 "github.com/mlab-lattice/lattice/pkg/definition/v1"
+	"github.com/mlab-lattice/lattice/pkg/util/git"
 	"github.com/mlab-lattice/lattice/pkg/util/sha1"
 
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
-	"github.com/mlab-lattice/lattice/pkg/util/git"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
+
 	"k8s.io/client-go/tools/cache"
-	"sync"
 )
 
 func NewKubernetesTemplateStore(
@@ -58,8 +54,6 @@ type KubernetesTemplateStore struct {
 
 	templateLister          latticelisters.TemplateLister
 	templateListerHasSynced cache.InformerSynced
-
-	insertLock sync.Mutex
 }
 
 func (s *KubernetesTemplateStore) Ready() bool {
@@ -68,7 +62,7 @@ func (s *KubernetesTemplateStore) Ready() bool {
 
 func (s *KubernetesTemplateStore) Put(
 	systemID v1.SystemID,
-	ref git.FileReference,
+	ref *git.FileReference,
 	t *template.Template,
 ) error {
 	// If the git template already exists, return with no error
@@ -108,7 +102,9 @@ func (s *KubernetesTemplateStore) Put(
 			ObjectMeta: metav1.ObjectMeta{
 				Name: digest,
 			},
-			Spec: t,
+			Spec: latticev1.TemplateSpec{
+				Template: t,
+			},
 		}
 
 		// If we get an AlreadyExists error, we lost a race, which is fine
@@ -128,11 +124,11 @@ func (s *KubernetesTemplateStore) Put(
 	return nil
 }
 
-func (s *KubernetesTemplateStore) Get(systemID v1.SystemID, reference git.FileReference) (*template.Template, error) {
+func (s *KubernetesTemplateStore) Get(systemID v1.SystemID, reference *git.FileReference) (*template.Template, error) {
 	return nil, &resolver.TemplateDoesNotExistError{}
 }
 
-func (s *KubernetesTemplateStore) gitTemplateFromLister(systemID v1.SystemID, ref git.FileReference) (*latticev1.GitTemplate, error) {
+func (s *KubernetesTemplateStore) gitTemplateFromLister(systemID v1.SystemID, ref *git.FileReference) (*latticev1.GitTemplate, error) {
 	selector, err := s.gitTemplateSelector(ref)
 	if err != nil {
 		return nil, err
@@ -148,14 +144,16 @@ func (s *KubernetesTemplateStore) gitTemplateFromLister(systemID v1.SystemID, re
 		return nil, &resolver.TemplateDoesNotExistError{}
 	}
 
-	if len(gitTemplates) > 1 {
-		return nil, fmt.Errorf("found multiple templates for repo %v commit %v file %v", ref.RepositoryURL, ref.Commit, ref.File)
-	}
-
+	// It's possible that a race lost and we created two different git templates at the same time.
+	// In theory since they should contain the same contents, they should be identical.
+	// It seems easiest to handle the small chance of this race happening by simply ignoring it
+	// and creating an extra small resource rather than trying to prevent it.
+	// An alternate technique could have been to hash the ref's contents, but then we can't change
+	// the git.FileReference struct at all without having our hashes be invalidated.
 	return gitTemplates[0], nil
 }
 
-func (s *KubernetesTemplateStore) gitTemplateSelector(ref git.FileReference) (labels.Selector, error) {
+func (s *KubernetesTemplateStore) gitTemplateSelector(ref *git.FileReference) (labels.Selector, error) {
 	repoURLRequirement, err := labels.NewRequirement(latticev1.GitTemplateRepoURLLabelKey, selection.Equals, []string{ref.RepositoryURL})
 	if err != nil {
 		return nil, err

@@ -17,7 +17,9 @@ var (
 	GitTemplateKind     = SchemeGroupVersion.WithKind("GitTemplate")
 	GitTemplateListKind = SchemeGroupVersion.WithKind("GitTemplateList")
 
-	GitTemplateReferenceDigestLabelKey = fmt.Sprintf("gittemplate.%v/reference-digest", GroupName)
+	GitTemplateRepoURLLabelKey = fmt.Sprintf("gittemplate.%v/repo-url", GroupName)
+	GitTemplateCommitLabelKey  = fmt.Sprintf("gittemplate.%v/commit", GroupName)
+	GitTemplateFileLabelKey    = fmt.Sprintf("gittemplate.%v/file", GroupName)
 )
 
 // +genclient

@@ -14,7 +14,6 @@ go_library(
         "//pkg/backend/kubernetes/util/kubernetes:go_default_library",
         "//pkg/definition/resolver:go_default_library",
         "//pkg/definition/template:go_default_library",
-        "//pkg/definition/v1:go_default_library",
         "//pkg/util/git:go_default_library",
         "//pkg/util/sha1:go_default_library",
         "@io_k8s_apimachinery//pkg/api/errors:go_default_library",
