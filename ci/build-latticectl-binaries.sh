@@ -18,7 +18,7 @@ if [ "$USE_TAG_FOR_VERSION" = "true" ]; then
     # get the version from git describe
     TAG_NAME=$(git describe)
 else
-    # get the version from
+    # get the version from git
     TAG_NAME=$(git rev-parse --short HEAD)
 fi
 
