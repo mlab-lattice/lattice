@@ -7,7 +7,6 @@ import (
 	"time"
 
 	latticerest "github.com/mlab-lattice/lattice/pkg/api/client/rest"
-	v1client "github.com/mlab-lattice/lattice/pkg/api/client/v1"
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 )
@@ -20,6 +19,8 @@ const (
 	mockSystemVersion = v1.SystemVersion("1.0.0")
 )
 
+var latticeClient = latticerest.NewClient(mockAPIServerURL).V1()
+
 func TestMockServer(t *testing.T) {
 	setupMockTest()
 	t.Run("TestMockServer", mockTests)
@@ -27,19 +28,20 @@ func TestMockServer(t *testing.T) {
 
 func mockTests(t *testing.T) {
 
-	latticeClient := latticerest.NewClient(mockAPIServerURL).V1()
-
-	// test systems
-	createSystem(latticeClient, t)
-	buildAndDeploy(latticeClient, t)
-	testSecrets(latticeClient, t)
-	checkSystemHealth(latticeClient, t)
-	teardownSystem(latticeClient, t)
-	deleteSystem(latticeClient, t)
+	happyPathTest(t)
 
 }
 
-func createSystem(latticeClient v1client.Interface, t *testing.T) {
+func happyPathTest(t *testing.T) {
+	createSystem(t)
+	buildAndDeploy(t)
+	testSecrets(t)
+	checkSystemHealth(t)
+	teardownSystem(t)
+	deleteSystem(t)
+}
+
+func createSystem(t *testing.T) {
 	// test create system
 	fmt.Println("Test create system")
 	system, err := latticeClient.Systems().Create(mockSystemId, mockSystemDefURL)
@@ -80,7 +82,7 @@ func createSystem(latticeClient v1client.Interface, t *testing.T) {
 	}
 }
 
-func buildAndDeploy(latticeClient v1client.Interface, t *testing.T) {
+func buildAndDeploy(t *testing.T) {
 	// create build
 	fmt.Println("Test Create Build")
 	build, err := latticeClient.Systems().Builds(mockSystemId).Create(mockSystemVersion)
@@ -199,7 +201,7 @@ func buildAndDeploy(latticeClient v1client.Interface, t *testing.T) {
 	}
 }
 
-func testSecrets(latticeClient v1client.Interface, t *testing.T) {
+func testSecrets(t *testing.T) {
 	fmt.Println("Testing secrets...")
 	path, _ := tree.NewNodePath("/mock/test")
 	fmt.Println("set secret")
@@ -232,7 +234,7 @@ func testSecrets(latticeClient v1client.Interface, t *testing.T) {
 	}
 }
 
-func checkSystemHealth(latticeClient v1client.Interface, t *testing.T) {
+func checkSystemHealth(t *testing.T) {
 	// ensure that system services are up
 	system, err := latticeClient.Systems().Get(mockSystemId)
 	checkErr(err, t)
@@ -247,7 +249,7 @@ func checkSystemHealth(latticeClient v1client.Interface, t *testing.T) {
 	}
 }
 
-func teardownSystem(latticeClient v1client.Interface, t *testing.T) {
+func teardownSystem(t *testing.T) {
 
 	fmt.Println("Tearing system down...")
 
@@ -290,7 +292,7 @@ func teardownSystem(latticeClient v1client.Interface, t *testing.T) {
 	fmt.Printf("Teardown %v succeeded!\n", teardown.ID)
 }
 
-func deleteSystem(latticeClient v1client.Interface, t *testing.T) {
+func deleteSystem(t *testing.T) {
 	system, err := latticeClient.Systems().Get(mockSystemId)
 	checkErr(err, t)
 
