@@ -32,17 +32,17 @@ bazel --output_user_root=../cli-build-cache build --cpu k8 --features=static --f
 cp bazel-bin/cmd/generate-latticectl-docs/linux_amd64_static_pure_stripped/generate-latticectl-docs "$DOCGEN_BINARY"
 
 # compile for linux
-bazel --output_user_root=../cli-build-cache build --cpu k8 //cmd/latticectl
-cp bazel-bin/cmd/latticectl/linux_amd64_stripped/latticectl "$LINUX_FILE"
+# bazel --output_user_root=../cli-build-cache build --cpu k8 //cmd/latticectl
+# cp bazel-bin/cmd/latticectl/linux_amd64_stripped/latticectl "$LINUX_FILE"
 
 # compile for macOS
-bazel --output_user_root=../cli-build-cache build --experimental_platforms=@io_bazel_rules_go//go/toolchain:darwin_amd64 //cmd/latticectl
-cp bazel-bin/cmd/latticectl/darwin_amd64_pure_stripped/latticectl "$DARWIN_FILE"
+# bazel --output_user_root=../cli-build-cache build --experimental_platforms=@io_bazel_rules_go//go/toolchain:darwin_amd64 //cmd/latticectl
+# cp bazel-bin/cmd/latticectl/darwin_amd64_pure_stripped/latticectl "$DARWIN_FILE"
 
 echo "$TAG_NAME" > "$METADATA_DIRECTORY"/tag
 git tag -l -n "$TAG_NAME" | awk '{$1=""}1' | awk '{$1=$1}1' > "$METADATA_DIRECTORY"/tag_message
 git show -s --format=%an "$TAG_NAME"^{commit} > "$METADATA_DIRECTORY"/tag_author
-echo "$LINUX_FILENAME" > "$METADATA_DIRECTORY"/linux_filename
-echo "$DARWIN_FILENAME" > "$METADATA_DIRECTORY"/darwin_filename
-shasum -a 256 "$LINUX_FILE" | awk '{printf $1}' > "$METADATA_DIRECTORY"/linux_shasum
-shasum -a 256 "$DARWIN_FILE" | awk '{printf $1}' > "$METADATA_DIRECTORY"/darwin_shasum
+# echo "$LINUX_FILENAME" > "$METADATA_DIRECTORY"/linux_filename
+# echo "$DARWIN_FILENAME" > "$METADATA_DIRECTORY"/darwin_filename
+# shasum -a 256 "$LINUX_FILE" | awk '{printf $1}' > "$METADATA_DIRECTORY"/linux_shasum
+# shasum -a 256 "$DARWIN_FILE" | awk '{printf $1}' > "$METADATA_DIRECTORY"/darwin_shasum
