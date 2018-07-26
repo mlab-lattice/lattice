@@ -6,7 +6,7 @@ set -o nounset
 set -o xtrace
 
 cd lattice-repo
-TAG_NAME=$(git rev-parse --abbrev-ref HEAD)
+TAG_NAME=$(git for-each-ref --format='%(refname:short)' refs/heads)
 cd ..
 
 mkdir -p ./docs-html/$TAG_NAME
