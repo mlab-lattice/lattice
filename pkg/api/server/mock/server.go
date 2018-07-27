@@ -6,8 +6,9 @@ import (
 
 const (
 	mockServerAPIPort = 8876
+	mockServerAPIKey  = "abc"
 )
 
 func RunMockNewRestServer() {
-	rest.RunNewRestServer(newMockBackend(), mockServerAPIPort, newMockSystemResolver(), "")
+	rest.RunNewRestServer(newMockBackend(), mockServerAPIPort, newMockSystemResolver(), mockServerAPIKey)
 }

@@ -19,7 +19,7 @@ const (
 	mockSystemVersion = v1.SystemVersion("1.0.0")
 )
 
-var latticeClient = latticerest.NewClient(mockAPIServerURL, "").V1()
+var latticeClient = latticerest.NewClient(mockAPIServerURL, mockServerAPIKey).V1()
 
 func TestMockServer(t *testing.T) {
 	setupMockTest()
@@ -27,9 +27,9 @@ func TestMockServer(t *testing.T) {
 }
 
 func mockTests(t *testing.T) {
-
-	happyPathTest(t)
-
+	authTest(t)
+	//happyPathTest(t)
+	testInvalidIDs(t)
 }
 
 func happyPathTest(t *testing.T) {
@@ -309,6 +309,64 @@ func deleteSystem(t *testing.T) {
 		t.Fatal("Expected an invalid system error")
 	}
 	fmt.Println("System deleted!")
+}
+
+func testInvalidIDs(t *testing.T) {
+	fmt.Println("Test invalid IDs")
+
+	// test invalid system
+	fmt.Println("Test invalid system")
+	_, err := latticeClient.Systems().Get("no-such-system")
+
+	if err == nil || !strings.Contains(fmt.Sprintf("%v", err), "invalid system") {
+		t.Fatal("Expected an invalid system error")
+	}
+
+	// test other stuff
+	testID := v1.SystemID("test")
+	_, err = latticeClient.Systems().Create(testID, "test")
+	checkErr(err, t)
+
+	// test invalid build id error
+	_, err = latticeClient.Systems().Builds(testID).Get("bad-build")
+	if _, isInvalidBuildError := err.(*v1.InvalidBuildIDError); !isInvalidBuildError {
+		t.Fatal("Expected an invalid build error")
+	}
+
+	// test invalid deploy id error
+	_, err = latticeClient.Systems().Deploys(testID).Get("bad-deploy")
+	if _, isInvalidDeployError := err.(*v1.InvalidDeployIDError); !isInvalidDeployError {
+		t.Fatal("Expected an invalid deploy error")
+	}
+
+	// test invalid teardown id error
+	_, err = latticeClient.Systems().Teardowns(testID).Get("bad-teardown")
+	if _, isInvalidTeardownError := err.(*v1.InvalidTeardownIDError); !isInvalidTeardownError {
+		t.Fatal("Expected an invalid teardown error")
+	}
+}
+
+func authTest(t *testing.T) {
+	fmt.Println("Test authentication")
+
+	fmt.Println("Testing auth with good API key")
+	_, err := latticeClient.Systems().List()
+
+	if err != nil {
+		t.Fatal("Failed to authenticate")
+	}
+
+	fmt.Println("Auth success!!")
+
+	fmt.Println("Testing auth with bad API key")
+	badClient := latticerest.NewClient(mockAPIServerURL, "bad api key").V1()
+	_, err = badClient.Systems().List()
+
+	if err != nil && !strings.Contains(fmt.Sprintf("%v", err), "status code 403") {
+		t.Fatal("Expected an authentication error")
+	}
+	fmt.Printf("Got an expected authentication failure error: %v\n", err)
+
 }
 
 func checkErr(err error, t *testing.T) {
