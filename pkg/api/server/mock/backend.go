@@ -10,6 +10,8 @@ import (
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 	"github.com/satori/go.uuid"
+
+	definitionv1 "github.com/mlab-lattice/lattice/pkg/definition/v1"
 )
 
 type MockBackend struct {
@@ -87,7 +89,11 @@ func (backend *MockBackend) DeleteSystem(systemID v1.SystemID) error {
 }
 
 // Builds
-func (backend *MockBackend) Build(systemID v1.SystemID, definitionRoot tree.Node, v v1.SystemVersion) (*v1.Build, error) {
+
+func (backend *MockBackend) Build(
+	systemID v1.SystemID,
+	def *definitionv1.SystemNode,
+	v v1.SystemVersion) (*v1.Build, error) {
 	record, exists := backend.systemRegistry[systemID]
 	if !exists {
 		return nil, v1.NewInvalidSystemIDError(systemID)
@@ -131,8 +137,13 @@ func (backend *MockBackend) GetBuild(systemID v1.SystemID, buildID v1.BuildID) (
 	return build, nil
 }
 
-func (backend *MockBackend) BuildLogs(systemID v1.SystemID, buildID v1.BuildID, path tree.NodePath, component string,
-	logOptions *v1.ContainerLogOptions) (io.ReadCloser, error) {
+func (backend *MockBackend) BuildLogs(
+	systemID v1.SystemID,
+	buildID v1.BuildID,
+	path tree.NodePath,
+	sidecar *string,
+	logOptions *v1.ContainerLogOptions,
+) (io.ReadCloser, error) {
 	return nil, nil
 }
 
@@ -158,9 +169,12 @@ func (backend *MockBackend) DeployBuild(systemID v1.SystemID, buildID v1.BuildID
 	return deploy, nil
 }
 
-func (backend *MockBackend) DeployVersion(systemID v1.SystemID, definitionRoot tree.Node, version v1.SystemVersion) (*v1.Deploy, error) {
+func (backend *MockBackend) DeployVersion(
+	systemID v1.SystemID,
+	def *definitionv1.SystemNode,
+	version v1.SystemVersion) (*v1.Deploy, error) {
 	// this ensures the system is created as well
-	build, err := backend.Build(systemID, definitionRoot, version)
+	build, err := backend.Build(systemID, def, version)
 	if err != nil {
 		return nil, err
 	}
@@ -288,8 +302,13 @@ func (backend *MockBackend) GetServiceByPath(systemID v1.SystemID, path tree.Nod
 	return &service, nil
 }
 
-func (backend *MockBackend) ServiceLogs(systemID v1.SystemID, serviceID v1.ServiceID, component string,
-	instance string, logOptions *v1.ContainerLogOptions) (io.ReadCloser, error) {
+func (backend *MockBackend) ServiceLogs(
+	systemID v1.SystemID,
+	serviceID v1.ServiceID,
+	sidecar *string,
+	instance string,
+	logOptions *v1.ContainerLogOptions,
+) (io.ReadCloser, error) {
 	return nil, nil
 }
 
@@ -378,6 +397,24 @@ func (backend *MockBackend) GetNodePool(systemID v1.SystemID, path v1.NodePoolPa
 	return nil, nil
 }
 
+// Jobs
+func (backend *MockBackend) RunJob(systemID v1.SystemID, path tree.NodePath, command []string,
+	environment definitionv1.ContainerEnvironment,
+) (*v1.Job, error) {
+	return nil, nil
+}
+
+func (backend *MockBackend) ListJobs(v1.SystemID) ([]v1.Job, error) {
+	return nil, nil
+}
+func (backend *MockBackend) GetJob(v1.SystemID, v1.JobID) (*v1.Job, error) {
+	return nil, nil
+}
+func (backend *MockBackend) JobLogs(systemID v1.SystemID, jobID v1.JobID, sidecar *string, logOptions *v1.ContainerLogOptions,
+) (io.ReadCloser, error) {
+	return nil, nil
+}
+
 // helpers
 
 func (backend *MockBackend) getSystemRecordForBuild(buildID v1.BuildID) *SystemRecord {
@@ -409,11 +446,8 @@ func (backend *MockBackend) newMockBuild(systemID v1.SystemID, v v1.SystemVersio
 		Version: v,
 		Services: map[tree.NodePath]v1.ServiceBuild{
 			service1Path: {
-				State: v1.ServiceBuildStatePending,
-				Components: map[string]v1.ComponentBuild{
-					"api": {
-						State: v1.ComponentBuildStatePending,
-					},
+				ContainerBuild: v1.ContainerBuild{
+					State: v1.ContainerBuildStatePending,
 				},
 			},
 		},
@@ -433,13 +467,10 @@ func (backend *MockBackend) runBuild(build *v1.Build) {
 
 	// run service builds
 	for sp, s := range build.Services {
-		s.State = v1.ServiceBuildStateRunning
+		s.State = v1.ContainerBuildStateRunning
 		s.StartTimestamp = &now
-		for cp, c := range s.Components {
-			c.State = v1.ComponentBuildStateRunning
-			c.StartTimestamp = &now
-			s.Components[cp] = c
-		}
+		s.ContainerBuild.State = v1.ContainerBuildStateRunning
+		s.ContainerBuild.StartTimestamp = &now
 
 		build.Services[sp] = s
 	}
@@ -461,13 +492,10 @@ func (backend *MockBackend) finishBuild(build *v1.Build) {
 
 	// finish service builds
 	for sp, s := range build.Services {
-		s.State = v1.ServiceBuildStateSucceeded
+		s.State = v1.ContainerBuildStateSucceeded
 		s.CompletionTimestamp = &now
-		for cp, c := range s.Components {
-			c.CompletionTimestamp = &now
-			c.State = v1.ComponentBuildStateSucceeded
-			s.Components[cp] = c
-		}
+		s.ContainerBuild.CompletionTimestamp = &now
+		s.ContainerBuild.State = v1.ContainerBuildStateSucceeded
 		s.CompletionTimestamp = &now
 		build.Services[sp] = s
 	}

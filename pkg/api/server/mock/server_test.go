@@ -19,7 +19,7 @@ const (
 	mockSystemVersion = v1.SystemVersion("1.0.0")
 )
 
-var latticeClient = latticerest.NewClient(mockAPIServerURL).V1()
+var latticeClient = latticerest.NewClient(mockAPIServerURL, "").V1()
 
 func TestMockServer(t *testing.T) {
 	setupMockTest()
@@ -152,7 +152,7 @@ func buildAndDeploy(t *testing.T) {
 	// ensure that build services are running
 
 	for _, service := range build.Services {
-		if service.State != v1.ServiceBuildStateRunning {
+		if service.State != v1.ContainerBuildStateRunning {
 			t.Fatal("Service build should be in running state")
 		}
 	}
@@ -182,7 +182,7 @@ func buildAndDeploy(t *testing.T) {
 	// check service builds succeeded
 	fmt.Println("Ensuring that service builds has succeeded...")
 	for _, service := range build.Services {
-		if service.State != v1.ServiceBuildStateSucceeded {
+		if service.State != v1.ContainerBuildStateSucceeded {
 			t.Fatal("Service build should be in running state")
 		}
 	}
