@@ -1,10 +1,12 @@
 package envoy
 
-import (
-	"net"
-)
+// TODO <GEB>: remove
 
-type ProtoToCIDRBlock struct {
-	HTTP net.IPNet
-	TCP  net.IPNet
-}
+// import (
+// 	"net"
+// )
+
+// type ProtoToCIDRBlock struct {
+// 	HTTP net.IPNet
+// 	TCP  net.IPNet
+// }

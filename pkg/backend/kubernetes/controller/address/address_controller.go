@@ -12,6 +12,7 @@ import (
 	latticeinformers "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/generated/informers/externalversions"
 	latticelisters "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/generated/listers/lattice/v1"
 	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/servicemesh"
+	netutil "github.com/mlab-lattice/lattice/pkg/util/net"
 
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/util/runtime"
@@ -19,7 +20,6 @@ import (
 
 	kubeinformers "k8s.io/client-go/informers"
 	kubeclientset "k8s.io/client-go/kubernetes"
-	kubelisters "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
 
@@ -62,10 +62,9 @@ type Controller struct {
 	serviceLister       latticelisters.ServiceLister
 	serviceListerSynced cache.InformerSynced
 
-	endpointLister       kubelisters.EndpointsLister
-	endpointListerSynced cache.InformerSynced
-
 	queue workqueue.RateLimitingInterface
+
+	leaseManager netutil.LeaseManager
 }
 
 func NewController(
@@ -126,10 +125,6 @@ func NewController(
 	c.serviceLister = serviceInformer.Lister()
 	c.serviceListerSynced = serviceInformer.Informer().HasSynced
 
-	endpointInformer := kubeInformerFactory.Core().V1().Endpoints()
-	c.endpointLister = endpointInformer.Lister()
-	c.endpointListerSynced = endpointInformer.Informer().HasSynced
-
 	return c
 }
 
@@ -148,7 +143,6 @@ func (c *Controller) Run(workers int, stopCh <-chan struct{}) {
 		c.configListerSynced,
 		c.addressListerSynced,
 		c.serviceListerSynced,
-		c.endpointListerSynced,
 	) {
 		return
 	}
@@ -160,6 +154,14 @@ func (c *Controller) Run(workers int, stopCh <-chan struct{}) {
 
 	glog.V(4).Info("config set")
 
+	// XXX serviceMesh is initialized on config set
+	glog.V(4).Info("syncing lease manager with currently leases")
+	err := c.initLeaseManager()
+	if err != nil {
+		panic(err)
+	}
+	glog.V(4).Info("lease manager synced")
+
 	// start up your worker threads based on threadiness.  Some controllers
 	// have multiple kinds of workers
 	for i := 0; i < workers; i++ {
@@ -170,6 +172,11 @@ func (c *Controller) Run(workers int, stopCh <-chan struct{}) {
 
 	// wait until we're told to stop
 	<-stopCh
+}
+
+func (c *Controller) syncLeaseManager() error {
+
+	return nil
 }
 
 func (c *Controller) enqueueAddress(svc *latticev1.Address) {
@@ -245,6 +252,9 @@ func (c *Controller) syncAddress(key string) error {
 
 	address, err := c.addressLister.Addresses(namespace).Get(name)
 	if err != nil {
+		// XXX <GEB>: how to reclaim an address that may have been leased to this service
+		//            when it is not found and we cannot recover it's annotations?
+		//            might want to add mapping from service name to lease in service mesh
 		if errors.IsNotFound(err) {
 			glog.V(2).Infof("address %v has been deleted", key)
 			return nil

@@ -51,8 +51,7 @@ func (s *ServiceNode) newTCPEgressListener(
 				}
 				clusterName := xdsutil.GetClusterNameForComponentPort(
 					s.ServiceCluster(), path, componentName, servicePort)
-				ips := make([]string, len(_service.IPAddresses))
-				copy(ips, _service.IPAddresses)
+				ips := []string{_service.ServiceIP}
 				tcpProxyRoutes = append(tcpProxyRoutes, xdsmsgs.NewDeprecatedV1TcpProxyRoute(
 					clusterName, ips, []int32{servicePort}))
 			}

@@ -177,7 +177,7 @@ func TestNetOffsets(t *testing.T) {
 }
 
 func TestLeaseManager(t *testing.T) {
-	var l *LeaseManager
+	var l LeaseManager
 
 	setup := func() {
 		l, _ = NewLeaseManagerWithState(

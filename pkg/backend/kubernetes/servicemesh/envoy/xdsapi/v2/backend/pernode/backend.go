@@ -91,6 +91,11 @@ func NewKubernetesPerNodeBackend(kubeconfig string, stopCh <-chan struct{}) (*Ku
 	}
 	latticeInformers := latticeinformers.NewSharedInformerFactory(latticeClient, time.Duration(12*time.Hour))
 
+	serviceMesh, err := envoy.NewEnvoyServiceMesh(&envoy.Options{})
+	if err != nil {
+		return nil, err
+	}
+
 	go kubeInformers.Start(stopCh)
 	go latticeInformers.Start(stopCh)
 
@@ -99,7 +104,7 @@ func NewKubernetesPerNodeBackend(kubeconfig string, stopCh <-chan struct{}) (*Ku
 	addressInformer := latticeInformers.Lattice().V1().Addresses()
 
 	b := &KubernetesPerNodeBackend{
-		serviceMesh:              envoy.NewEnvoyServiceMesh(&envoy.Options{}),
+		serviceMesh:              serviceMesh,
 		kubeEndpointLister:       kubeEndpointInformer.Lister(),
 		kubeEndpointListerSynced: kubeEndpointInformer.Informer().HasSynced,
 		serviceLister:            serviceInformer.Lister(),
@@ -410,7 +415,8 @@ func (b *KubernetesPerNodeBackend) syncXDSCache(key string) error {
 	return err
 }
 
-func (b *KubernetesPerNodeBackend) SystemServices(serviceCluster string) (map[tree.NodePath]*xdsapi.Service, error) {
+func (b *KubernetesPerNodeBackend) SystemServices(
+	serviceCluster string) (map[tree.NodePath]*xdsapi.Service, error) {
 	namespace := serviceCluster
 	result := make(map[tree.NodePath]*xdsapi.Service)
 
@@ -426,10 +432,20 @@ func (b *KubernetesPerNodeBackend) SystemServices(serviceCluster string) (map[tr
 			continue
 		}
 
-		// address, err := b.addressLister.Addresses(service.Namespace).Get(service.Name)
-		// if err != nil {
-		// 	return nil, err
-		// }
+		address, err := b.addressLister.Addresses(service.Namespace).Get(service.Name)
+		if err != nil {
+			return nil, err
+		}
+
+		serviceIP, err := b.serviceMesh.HasServiceIP(address)
+		if err != nil {
+			return nil, err
+		}
+
+		if serviceIP == "" {
+			glog.V(4).Infof("Service %v does not have a ServiceIP assigned yet, skipping...", path)
+			continue
+		}
 
 		kubeServiceName := kubernetes.GetKubeServiceNameForService(service.Name)
 		endpoint, err := b.kubeEndpointLister.Endpoints(service.Namespace).Get(kubeServiceName)
@@ -445,16 +461,17 @@ func (b *KubernetesPerNodeBackend) SystemServices(serviceCluster string) (map[tr
 		xdsService := &xdsapi.Service{
 			EgressPorts: *egressPorts,
 			Components:  make(map[string]xdsapi.Component),
-			IPAddresses: make([]string, 0, len(endpoint.Subsets)),
+			ServiceIP:   serviceIP,
+			EndpointIPs: make([]string, 0, len(endpoint.Subsets)),
 		}
 
 		addressSet := make(map[string]bool)
 		for _, subset := range endpoint.Subsets {
 			for _, address := range subset.Addresses {
-				// NOTE: Endpoint can repeat IPAddresses
+				// NOTE: Endpoint can repeat IP addresses
 				if _, ok := addressSet[address.IP]; !ok {
 					addressSet[address.IP] = true
-					xdsService.IPAddresses = append(xdsService.IPAddresses, address.IP)
+					xdsService.EndpointIPs = append(xdsService.EndpointIPs, address.IP)
 				}
 			}
 		}

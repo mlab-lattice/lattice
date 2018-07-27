@@ -2,6 +2,7 @@ package envoy
 
 import (
 	"fmt"
+	"net"
 
 	kubeconstants "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/constants"
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
@@ -17,22 +18,22 @@ import (
 )
 
 type LatticeBootstrapperOptions struct {
-	PrepareImage       string
-	Image              string
-	RedirectCIDRBlocks ProtoToCIDRBlock
-	XDSAPIImage        string
-	XDSAPIPort         int32
+	PrepareImage      string
+	Image             string
+	RedirectCIDRBlock net.IPNet
+	XDSAPIImage       string
+	XDSAPIPort        int32
 }
 
 func NewLatticeBootstrapper(namespacePrefix string, options *LatticeBootstrapperOptions) *DefaultEnvoylatticeBootstrapper {
 	return &DefaultEnvoylatticeBootstrapper{
 		namespacePrefix: namespacePrefix,
 
-		prepareImage:       options.PrepareImage,
-		image:              options.Image,
-		redirectCIDRBlocks: options.RedirectCIDRBlocks,
-		xdsAPIImage:        options.XDSAPIImage,
-		xdsAPIPort:         options.XDSAPIPort,
+		prepareImage:      options.PrepareImage,
+		image:             options.Image,
+		redirectCIDRBlock: options.RedirectCIDRBlock,
+		xdsAPIImage:       options.XDSAPIImage,
+		xdsAPIPort:        options.XDSAPIPort,
 	}
 }
 
@@ -50,14 +51,9 @@ func LatticeBootstrapperFlags() (cli.Flags, *LatticeBootstrapperOptions) {
 			Target:  &options.Image,
 		},
 		&cli.IPNetFlag{
-			Name:     "redirect-cidr-block-http",
+			Name:     "redirect-cidr-block",
 			Required: true,
-			Target:   &options.RedirectCIDRBlocks.HTTP,
-		},
-		&cli.IPNetFlag{
-			Name:     "redirect-cidr-block-tcp",
-			Required: true,
-			Target:   &options.RedirectCIDRBlocks.TCP,
+			Target:   &options.RedirectCIDRBlock,
 		},
 		&cli.StringFlag{
 			Name:     "xds-api-image",
@@ -76,11 +72,11 @@ func LatticeBootstrapperFlags() (cli.Flags, *LatticeBootstrapperOptions) {
 type DefaultEnvoylatticeBootstrapper struct {
 	namespacePrefix string
 
-	prepareImage       string
-	image              string
-	redirectCIDRBlocks ProtoToCIDRBlock
-	xdsAPIImage        string
-	xdsAPIPort         int32
+	prepareImage      string
+	image             string
+	redirectCIDRBlock net.IPNet
+	xdsAPIImage       string
+	xdsAPIPort        int32
 }
 
 func (b *DefaultEnvoylatticeBootstrapper) BootstrapLatticeResources(resources *bootstrapper.Resources) {
@@ -92,8 +88,7 @@ func (b *DefaultEnvoylatticeBootstrapper) BootstrapLatticeResources(resources *b
 			daemonSet.Spec.Template.Spec.Containers[0].Args = append(
 				daemonSet.Spec.Template.Spec.Containers[0].Args,
 				"--service-mesh", Envoy,
-				"--service-mesh-var", fmt.Sprintf("redirect-cidr-block-http=%v", b.redirectCIDRBlocks.HTTP.String()),
-				"--service-mesh-var", fmt.Sprintf("redirect-cidr-block-tcp=%v", b.redirectCIDRBlocks.TCP.String()),
+				"--service-mesh-var", fmt.Sprintf("redirect-cidr-block=%v", b.redirectCIDRBlock.String()),
 				"--service-mesh-var", fmt.Sprintf("xds-api-port=%v", b.xdsAPIPort),
 			)
 		}

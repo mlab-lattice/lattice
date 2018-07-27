@@ -255,15 +255,6 @@ func (c *Controller) addressSets(addresses []*latticev1.Address) (set.Set, set.S
 		if address.Spec.Service != nil {
 			ipKey := fmt.Sprintf("/%v", address.Spec.Service.String())
 			serviceAddresses.Add(key + ipKey)
-
-			// TODO <GEB>: remove me once we remove Endpoints
-			if address.Spec.Endpoints != nil {
-				for _, endpoint := range address.Spec.Endpoints {
-					ipKey = fmt.Sprintf("/%v", endpoint)
-					serviceAddresses.Add(key + ipKey)
-				}
-			}
-
 			continue
 		}
 
@@ -312,15 +303,16 @@ func (c *Controller) rewriteDnsmasqConfig(addresses []*latticev1.Address) error 
 				continue
 			}
 
-			ips, err := c.serviceMesh.ServiceIPs(service, address.Spec.Endpoints)
+			ip, err := c.serviceMesh.HasServiceIP(address)
 			if err != nil {
 				glog.Errorf("error getting service for value for %v (%v): %v, ignoring the address", address.Description(c.namespacePrefix), service.Description(c.namespacePrefix), err)
 				continue
+			} else if ip == "" {
+				glog.V(4).Infof("Service %v does not have a ServiceIP assigned yet, skipping...", path)
+				continue
 			}
 
-			for _, ip := range ips {
-				hostConfigFileContents += fmt.Sprintf("%v %v\n", ip, domain)
-			}
+			hostConfigFileContents += fmt.Sprintf("%v %v\n", ip, domain)
 		}
 
 		if address.Spec.ExternalName != nil {

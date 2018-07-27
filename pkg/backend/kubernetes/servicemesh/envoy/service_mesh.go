@@ -7,11 +7,14 @@ import (
 	"strconv"
 	"strings"
 
-	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
-	kubeutil "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/kubernetes"
+	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/lifecycle/system/bootstrap/bootstrapper"
 	"github.com/mlab-lattice/lattice/pkg/util/cli"
 
-	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/lifecycle/system/bootstrap/bootstrapper"
+	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
+	smconstants "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/servicemesh/constants"
+	kubeutil "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/kubernetes"
+	netutil "github.com/mlab-lattice/lattice/pkg/util/net"
+
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 )
@@ -20,6 +23,7 @@ const (
 	annotationKeyAdminPort        = "envoy.servicemesh.lattice.mlab.com/admin-port"
 	annotationKeyServiceMeshPorts = "envoy.servicemesh.lattice.mlab.com/service-mesh-ports"
 	annotationKeyEgressPorts      = "envoy.servicemesh.lattice.mlab.com/egress-ports"
+	annotationKeyIP               = smconstants.AnnotationKeyIP
 
 	deploymentResourcePrefix = "envoy-"
 
@@ -35,29 +39,39 @@ const (
 )
 
 type Options struct {
-	PrepareImage       string
-	Image              string
-	RedirectCIDRBlocks ProtoToCIDRBlock
-	XDSAPIPort         int32
+	PrepareImage      string
+	Image             string
+	RedirectCIDRBlock net.IPNet
+	XDSAPIPort        int32
 }
 
 func NewOptions(staticOptions *Options, dynamicConfig *latticev1.ConfigServiceMeshEnvoy) (*Options, error) {
 	options := &Options{
-		PrepareImage:       dynamicConfig.PrepareImage,
-		Image:              dynamicConfig.Image,
-		RedirectCIDRBlocks: staticOptions.RedirectCIDRBlocks,
-		XDSAPIPort:         staticOptions.XDSAPIPort,
+		PrepareImage:      dynamicConfig.PrepareImage,
+		Image:             dynamicConfig.Image,
+		RedirectCIDRBlock: staticOptions.RedirectCIDRBlock,
+		XDSAPIPort:        staticOptions.XDSAPIPort,
 	}
 	return options, nil
 }
 
-func NewEnvoyServiceMesh(options *Options) *DefaultEnvoyServiceMesh {
-	return &DefaultEnvoyServiceMesh{
-		prepareImage:       options.PrepareImage,
-		image:              options.Image,
-		redirectCIDRBlocks: options.RedirectCIDRBlocks,
-		xdsAPIPort:         options.XDSAPIPort,
+func NewEnvoyServiceMesh(options *Options) (*DefaultEnvoyServiceMesh, error) {
+	leaseManager, err := netutil.NewLeaseManager(options.RedirectCIDRBlock.String())
+	if err != nil {
+		return nil, err
 	}
+	// the network IP is reserved for HTTP services, ensure it will not be leased
+	err = leaseManager.Blacklist(options.RedirectCIDRBlock.IP.String())
+	if err != nil {
+		return nil, err
+	}
+	return &DefaultEnvoyServiceMesh{
+		prepareImage:      options.PrepareImage,
+		image:             options.Image,
+		redirectCIDRBlock: options.RedirectCIDRBlock,
+		xdsAPIPort:        options.XDSAPIPort,
+		leaseManager:      leaseManager,
+	}, nil
 }
 
 func Flags() (cli.Flags, *Options) {
@@ -65,14 +79,9 @@ func Flags() (cli.Flags, *Options) {
 
 	flags := cli.Flags{
 		&cli.IPNetFlag{
-			Name:     "redirect-cidr-block-http",
+			Name:     "redirect-cidr-block",
 			Required: true,
-			Target:   &options.RedirectCIDRBlocks.HTTP,
-		},
-		&cli.IPNetFlag{
-			Name:     "redirect-cidr-block-tcp",
-			Required: true,
-			Target:   &options.RedirectCIDRBlocks.TCP,
+			Target:   &options.RedirectCIDRBlock,
 		},
 		&cli.Int32Flag{
 			Name:     "xds-api-port",
@@ -84,10 +93,11 @@ func Flags() (cli.Flags, *Options) {
 }
 
 type DefaultEnvoyServiceMesh struct {
-	prepareImage       string
-	image              string
-	redirectCIDRBlocks ProtoToCIDRBlock
-	xdsAPIPort         int32
+	prepareImage      string
+	image             string
+	redirectCIDRBlock net.IPNet
+	xdsAPIPort        int32
+	leaseManager      netutil.LeaseManager
 }
 
 type EnvoyEgressPorts struct {
@@ -131,6 +141,17 @@ func (sm *DefaultEnvoyServiceMesh) ServiceAnnotations(service *latticev1.Service
 		annotationKeyAdminPort:        strconv.Itoa(int(adminPort)),
 		annotationKeyServiceMeshPorts: string(componentPortsJSON),
 		annotationKeyEgressPorts:      string(egressPortsJSON),
+	}
+
+	return annotations, nil
+}
+
+func (sm *DefaultEnvoyServiceMesh) ServiceAddressAnnotations(
+	address *latticev1.Address) (map[string]string, error) {
+	ip := address.Annotations[annotationKeyIP]
+
+	annotations := map[string]string{
+		annotationKeyIP: ip,
 	}
 
 	return annotations, nil
@@ -291,53 +312,112 @@ func (sm *DefaultEnvoyServiceMesh) ServicePorts(service *latticev1.Service) (map
 	return servicePorts, nil
 }
 
-// XXX: this needs to return IPs not a single IP. when we were just proxying HTTP, all services
-//      got the same "magic" IP that was then routed via the "host" header. with tcp, we can't do
-//      this because there is no host header, so TCP services must resolve to a concrete IP or IPs.
-//      lattice services are currently headless, so this means that we need to resolve TCP services
-//      to a set of IPs because there is no umbrella IP that can be used to disambiguate where
-//      the connection should go.
-func (sm *DefaultEnvoyServiceMesh) ServiceIPs(
-	service *latticev1.Service, endpoints []string) ([]string, error) {
-	var protocol string
+func serviceProtocols(service *latticev1.Service) []string {
 	protocolSet := make(map[string]interface{})
 	for _, componentPort := range service.Spec.Definition.Ports {
 		protocolSet[componentPort.Protocol] = nil
 	}
 
-	if len(protocolSet) == 0 || len(protocolSet) > 1 {
-		return nil, fmt.Errorf("expected 1 protocol in component ports for service %s, found: %v",
-			service.Name, protocolSet)
+	protocols := make([]string, 0, 1)
+	for protocol := range protocolSet {
+		protocols = append(protocols, protocol)
 	}
 
-	// protocolSet has length 1 here
-	for protocol_ := range protocolSet {
-		protocol = protocol_
+	return protocols
+}
+
+func (sm *DefaultEnvoyServiceMesh) HasServiceIP(address *latticev1.Address) (string, error) {
+	annotations, err := sm.ServiceAddressAnnotations(address)
+	if err != nil {
+		return "", err
+	}
+	ip := annotations[annotationKeyIP]
+	return ip, nil
+}
+
+func (sm *DefaultEnvoyServiceMesh) ServiceIP(
+	service *latticev1.Service, address *latticev1.Address) (string, map[string]string, error) {
+	ip := address.Annotations[annotationKeyIP]
+
+	protocols := serviceProtocols(service)
+	if len(protocols) != 1 {
+		return "", nil, fmt.Errorf("expected 1 protocol in component ports for service %s, found: %v",
+			service.Name, protocols)
 	}
 
-	ips := make([]string, 0, len(endpoints))
-
-	switch protocol {
+	switch protocols[0] {
 	case "HTTP":
-		ip, _, err := net.ParseCIDR(sm.redirectCIDRBlocks.HTTP.String())
+		netIP := sm.redirectCIDRBlock.IP.String()
+		if ip != "" && ip != netIP {
+			return "", nil, fmt.Errorf("got IP %s for service %s, expected %s", ip, service.Name, netIP)
+		} else {
+			ip = netIP
+		}
+	case "TCP":
+		var err error
+		ips := make([]string, 0, 1)
+		if ip != "" {
+			// the lease is already active
+			if present, err := sm.leaseManager.IsLeased(ip); err == nil && !present {
+				// if the lease manager does not know about the lease, then add it
+				// note, this can happen if the address controller dies and restarts
+				ips, err = sm.leaseManager.Lease(ip)
+			} else {
+				ips = append(ips, ip)
+			}
+		} else {
+			// get a new lease from the manager
+			ips, err = sm.leaseManager.Lease()
+		}
+		if err != nil {
+			return "", nil, err
+		}
+		ip = ips[0]
+	default:
+		return "", nil, fmt.Errorf("expected protocol type HTTP or TCP for service %s, got: %s",
+			service.Name, protocols[0])
+	}
+
+	annotations, err := sm.ServiceAddressAnnotations(address)
+	if err != nil {
+		return "", nil, err
+	}
+	annotations[annotationKeyIP] = ip
+
+	return ip, annotations, nil
+}
+
+func (sm *DefaultEnvoyServiceMesh) ReleaseServiceIP(address *latticev1.Address) (map[string]string, error) {
+	ip, _ := address.Annotations[annotationKeyIP]
+
+	if ip == "" {
+		return nil, fmt.Errorf("tried to release service IP for %s but found none", address.Name)
+	}
+
+	// check if this ip is being managed by
+	// XXX <GEB>: race here with call to RemoveLeased, don't believe this is an issue in practive, but may
+	//            want to synchronize service mesh methods
+	isLeased, err := sm.leaseManager.IsLeased(ip)
+	if err != nil {
+		return nil, err
+	}
+
+	// only remove lease if actually leased (avoids trying to release blacklisted network IP used for
+	// HTTP services)
+	if isLeased {
+		err := sm.leaseManager.RemoveLeased(ip)
 		if err != nil {
 			return nil, err
 		}
-		ips = append(ips, ip.String())
-	case "TCP":
-		for _, ip := range endpoints {
-			ips = append(ips, ip)
-		}
-	default:
-		return nil, fmt.Errorf("expected protocol type HTTP or TCP for service %s, got: %s",
-			service.Name, protocol)
 	}
 
-	if len(ips) < 1 {
-		return nil, fmt.Errorf("no IPs found for service: %s", service.Name)
+	annotations, err := sm.ServiceAddressAnnotations(address)
+	if err != nil {
+		return nil, err
 	}
+	annotations[annotationKeyIP] = ""
 
-	return ips, nil
+	return annotations, nil
 }
 
 func (sm *DefaultEnvoyServiceMesh) IsDeploymentSpecUpdated(
@@ -530,12 +610,8 @@ func (sm *DefaultEnvoyServiceMesh) envoyContainers(service *latticev1.Service) (
 				Value: strconv.FormatInt(int64(egressPorts.TCP), 10),
 			},
 			{
-				Name:  "REDIRECT_EGRESS_CIDR_BLOCK_HTTP",
-				Value: sm.redirectCIDRBlocks.HTTP.String(),
-			},
-			{
-				Name:  "REDIRECT_EGRESS_CIDR_BLOCK_TCP",
-				Value: sm.redirectCIDRBlocks.TCP.String(),
+				Name:  "REDIRECT_EGRESS_CIDR_BLOCK",
+				Value: sm.redirectCIDRBlock.String(),
 			},
 			{
 				Name:  "CONFIG_DIR",
@@ -618,30 +694,20 @@ func (sm *DefaultEnvoyServiceMesh) envoyContainers(service *latticev1.Service) (
 	//      might be set in the config)
 	// XXX: adding environment variables to envoy prepare spec to set the
 	//      appropriate values in the generated envoy config
-	// GEB: seed the envoy image with the envoy user ahead of time
 	envoy := corev1.Container{
 		Name:            containerNameEnvoy,
 		Image:           sm.image,
 		ImagePullPolicy: corev1.PullIfNotPresent,
-		Command:         []string{"ash"},
+		Command:         []string{"/usr/local/bin/envoy"},
 		Args: []string{
-			"-c",
-			"adduser -D -u 1000 envoy " + // UID needs to be 1000 for iptables rule in prepare job to work
-				"&& " +
-				"su -c \"" +
-				"/usr/local/bin/envoy -c " +
-				fmt.Sprintf("%v/config.json", envoyConfigDirectory) + " " +
-				"--service-cluster " +
-				service.Namespace + " " +
-				"--service-node " +
-				servicePath.ToDomain() + " " +
-				// by default, the max cluster name size is 60.
-				// however, we use the cluster name to encode information, so the names can often be much longer.
-				// https://www.envoyproxy.io/docs/envoy/latest/operations/cli#cmdoption-max-obj-name-len
-				// FIXME: figure out what this should actually be set to
-				"--max-obj-name-len " +
-				strconv.Itoa(256) + "\" " +
-				"envoy",
+			"-c", fmt.Sprintf("%v/config.json", envoyConfigDirectory),
+			"--service-cluster", service.Namespace,
+			"--service-node", servicePath.ToDomain(),
+			// by default, the max cluster name size is 60.
+			// however, we use the cluster name to encode information, so the names can often be much longer.
+			// https://www.envoyproxy.io/docs/envoy/latest/operations/cli#cmdoption-max-obj-name-len
+			// FIXME: figure out what this should actually be set to
+			"--max-obj-name-len", strconv.Itoa(256),
 		},
 		Ports: envoyPorts,
 		VolumeMounts: []corev1.VolumeMount{

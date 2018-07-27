@@ -93,7 +93,6 @@ func (a *Address) Reason() string {
 
 type AddressSpec struct {
 	Service      *tree.NodePath `json:"service,omitempty"`
-	Endpoints    []string       `json:"endpoints,omitempty"`
 	ExternalName *string        `json:"externalName,omitempty"`
 }
 

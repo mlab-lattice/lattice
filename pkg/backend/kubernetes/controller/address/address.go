@@ -41,22 +41,6 @@ func (c *Controller) updateAddressStatus(
 	return result, nil
 }
 
-func (c *Controller) updateAddressEndpoints(
-	address *latticev1.Address,
-	endpoints []string,
-) (*latticev1.Address, error) {
-	// Copy so we don't mutate the shared cache
-	address = address.DeepCopy()
-	address.Spec.Endpoints = endpoints
-
-	result, err := c.latticeClient.LatticeV1().Addresses(address.Namespace).Update(address)
-	if err != nil {
-		return nil, fmt.Errorf("error updating %v endpoints: %v", address.Description(c.namespacePrefix), err)
-	}
-
-	return result, nil
-}
-
 func (c *Controller) updateAddressAnnotations(address *latticev1.Address, annotations map[string]string) (*latticev1.Address, error) {
 	if reflect.DeepEqual(address.Annotations, annotations) {
 		return address, nil
@@ -72,6 +56,17 @@ func (c *Controller) updateAddressAnnotations(address *latticev1.Address, annota
 	}
 
 	return result, nil
+}
+
+func (c *Controller) mergeAndUpdateAddressAnnotations(address *latticev1.Address, annotations map[string]string) (*latticev1.Address, error) {
+	annotations_ := make(map[string]string)
+	for k, v := range address.Annotations {
+		annotations_[k] = v
+	}
+	for k, v := range annotations {
+		annotations_[k] = v
+	}
+	return c.updateAddressAnnotations(address, annotations_)
 }
 
 func (c *Controller) addFinalizer(address *latticev1.Address) (*latticev1.Address, error) {

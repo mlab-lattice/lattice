@@ -2,7 +2,7 @@ package service
 
 import (
 	"fmt"
-	//"reflect"
+	"reflect"
 
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 
@@ -12,7 +12,6 @@ import (
 )
 
 func (c *Controller) syncAddress(service *latticev1.Service) (*latticev1.Address, error) {
-	// GEB: should endpoints be synced here instead of within the address controller?
 	address, err := c.address(service)
 	if err != nil {
 		return nil, err
@@ -34,7 +33,6 @@ func (c *Controller) syncAddress(service *latticev1.Service) (*latticev1.Address
 }
 
 func (c *Controller) syncExistingAddress(service *latticev1.Service, address *latticev1.Address) (*latticev1.Address, error) {
-	// GEB: this does not set Endpoints, so updateAddressSpec will always result in an update
 	spec, err := c.addressSpec(service)
 	if err != nil {
 		return nil, err
@@ -44,12 +42,9 @@ func (c *Controller) syncExistingAddress(service *latticev1.Service, address *la
 }
 
 func (c *Controller) updateAddressSpec(address *latticev1.Address, spec latticev1.AddressSpec) (*latticev1.Address, error) {
-	// GEB: this does not take ExternalAddress or Endpoints into account... if either of these are update
-	//      in another controller, we go into a loop volleying update back and forth between controllers.
-	//      how best to handle this?
-	// if reflect.DeepEqual(address.Spec, spec) {
-	// 	return address, nil
-	// }
+	if reflect.DeepEqual(address.Spec, spec) {
+		return address, nil
+	}
 
 	if *address.Spec.Service == *spec.Service {
 		return address, nil

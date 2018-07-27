@@ -56,6 +56,11 @@ func NewKubernetesPerNodeBackend(kubeconfig string) (*KubernetesPerNodeBackend, 
 	}
 	latticeInformers := latticeinformers.NewSharedInformerFactory(latticeClient, time.Duration(12*time.Hour))
 
+	serviceMesh, err := envoy.NewEnvoyServiceMesh(&envoy.Options{})
+	if err != nil {
+		return nil, err
+	}
+
 	// FIXME: should we add a stopCh?
 	go kubeInformers.Start(nil)
 	go latticeInformers.Start(nil)
@@ -64,7 +69,7 @@ func NewKubernetesPerNodeBackend(kubeconfig string) (*KubernetesPerNodeBackend, 
 	serviceInformer := latticeInformers.Lattice().V1().Services()
 
 	b := &KubernetesPerNodeBackend{
-		serviceMesh:              envoy.NewEnvoyServiceMesh(&envoy.Options{}),
+		serviceMesh:              serviceMesh,
 		kubeEndpointLister:       kubeEndpointInformer.Lister(),
 		kubeEndpointListerSynced: kubeEndpointInformer.Informer().HasSynced,
 		serviceLister:            serviceInformer.Lister(),

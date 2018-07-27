@@ -6,6 +6,7 @@ import (
 	"math"
 	"net"
 	"sort"
+	"sync"
 
 	"github.com/golang/glog"
 )
@@ -88,31 +89,32 @@ func (ns netOffsets) Pop() (netOffset, netOffsets, bool) {
 	return ns[len(ns)-1], ns[:len(ns)-1], true
 }
 
-type LeaseManager struct {
-	// the network to draw leases from
-	net *net.IPNet
-	// array of leases currently issued. each element is an integer offset from the zero address for the network
-	leases netOffsets
-	// array of expired leases that can be reused. each element is an integer offset from the zero address for the network
-	freelist netOffsets
-	// array of leases that should not be granted for this manager
-	blacklist netOffsets
+type LeaseManager interface {
+	NetContains(string) bool
+	GetNetIP() string
+	Blacklist(...string) error
+	IsBlacklisted(string) (bool, error)
+	RemoveBlacklisted(...string) error
+	Lease(...string) ([]string, error)
+	IsLeased(string) (bool, error)
+	RemoveLeased(...string) error
 }
 
-func NewLeaseManager(cidr string) (*LeaseManager, error) {
+func NewLeaseManager(cidr string) (LeaseManager, error) {
 	_, net, err := net.ParseCIDR(cidr)
 	if err != nil {
 		return nil, err
 	}
-	return &LeaseManager{
+	return &LeaseManagerImpl{
 		net:       net,
+		lock:      &sync.RWMutex{},
 		leases:    make(netOffsets, 0, 256),
 		freelist:  make(netOffsets, 0, 256),
 		blacklist: make(netOffsets, 0, 256),
 	}, nil
 }
 
-func NewLeaseManagerWithState(cidr string, leases, blacklist []string) (*LeaseManager, error) {
+func NewLeaseManagerWithState(cidr string, leases, blacklist []string) (LeaseManager, error) {
 	l, err := NewLeaseManager(cidr)
 	if err != nil {
 		return nil, err
@@ -128,17 +130,44 @@ func NewLeaseManagerWithState(cidr string, leases, blacklist []string) (*LeaseMa
 	return l, nil
 }
 
-func (l *LeaseManager) NetContains(ip string) bool {
+type LeaseManagerImpl struct {
+	// the network to draw leases from
+	net *net.IPNet
+	// concurrency control
+	lock *sync.RWMutex
+	// array of leases currently issued. each element is an integer offset from the zero address for the network
+	leases netOffsets
+	// array of expired leases that can be reused. each element is an integer offset from the zero address for the network
+	freelist netOffsets
+	// array of leases that should not be granted for this manager
+	blacklist netOffsets
+}
+
+func (l *LeaseManagerImpl) netContains(ip string) bool {
 	_ip := net.ParseIP(ip).To4()
+
 	return l.net.Contains(_ip)
 }
 
-func (l *LeaseManager) GetNetIP() string {
+func (l *LeaseManagerImpl) NetContains(ip string) bool {
+	l.lock.RLock()
+	defer l.lock.RUnlock()
+	return l.netContains(ip)
+}
+
+func (l *LeaseManagerImpl) getNetIP() string {
 	return l.net.IP.String()
 }
 
-func (l *LeaseManager) getNetOffset(ip string) (netOffset, error) {
-	if !l.NetContains(ip) {
+func (l *LeaseManagerImpl) GetNetIP() string {
+	l.lock.RLock()
+	defer l.lock.RUnlock()
+
+	return l.getNetIP()
+}
+
+func (l *LeaseManagerImpl) getNetOffset(ip string) (netOffset, error) {
+	if !l.netContains(ip) {
 		return 0, fmt.Errorf("invalid IP %s for network %v", ip, l.net)
 	}
 
@@ -152,7 +181,10 @@ func (l *LeaseManager) getNetOffset(ip string) (netOffset, error) {
 	return netOffset(binary.BigEndian.Uint32(hostBytes)), nil
 }
 
-func (l *LeaseManager) Blacklist(ips ...string) error {
+func (l *LeaseManagerImpl) Blacklist(ips ...string) error {
+	l.lock.Lock()
+	defer l.lock.Unlock()
+
 	var ok bool
 
 	nos := make(netOffsets, 0, len(ips))
@@ -185,7 +217,22 @@ func (l *LeaseManager) Blacklist(ips ...string) error {
 	return nil
 }
 
-func (l *LeaseManager) RemoveBlacklisted(ips ...string) error {
+func (l *LeaseManagerImpl) IsBlacklisted(ip string) (bool, error) {
+	l.lock.RLock()
+	defer l.lock.RUnlock()
+
+	no, err := l.getNetOffset(ip)
+	if err != nil {
+		return false, err
+	}
+	present, _ := l.blacklist.Contains(no)
+	return present, nil
+}
+
+func (l *LeaseManagerImpl) RemoveBlacklisted(ips ...string) error {
+	l.lock.Lock()
+	defer l.lock.Unlock()
+
 	var ok bool
 
 	nos := make(netOffsets, 0, len(ips))
@@ -217,7 +264,7 @@ func (l *LeaseManager) RemoveBlacklisted(ips ...string) error {
 	return nil
 }
 
-func (l *LeaseManager) newLease() (string, netOffset, error) {
+func (l *LeaseManagerImpl) newLease() (string, netOffset, error) {
 	var no netOffset = 0
 	if len(l.leases) > 0 {
 		no = l.leases[len(l.leases)-1] + 1
@@ -235,7 +282,10 @@ func (l *LeaseManager) newLease() (string, netOffset, error) {
 	return ip, no, nil
 }
 
-func (l *LeaseManager) Lease(ips ...string) ([]string, error) {
+func (l *LeaseManagerImpl) Lease(ips ...string) ([]string, error) {
+	l.lock.Lock()
+	defer l.lock.Unlock()
+
 	var ip string
 	var ok bool
 	var err error
@@ -307,7 +357,22 @@ func (l *LeaseManager) Lease(ips ...string) ([]string, error) {
 	return ips, nil
 }
 
-func (l *LeaseManager) RemoveLeased(ips ...string) error {
+func (l *LeaseManagerImpl) IsLeased(ip string) (bool, error) {
+	l.lock.RLock()
+	defer l.lock.RUnlock()
+
+	no, err := l.getNetOffset(ip)
+	if err != nil {
+		return false, err
+	}
+	present, _ := l.leases.Contains(no)
+	return present, nil
+}
+
+func (l *LeaseManagerImpl) RemoveLeased(ips ...string) error {
+	l.lock.Lock()
+	defer l.lock.Unlock()
+
 	var ok bool
 
 	nos := make(netOffsets, 0, len(ips))

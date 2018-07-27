@@ -19,15 +19,14 @@ const (
 	interfaceName = "eth0"
 	envoyUID      = "1000"
 
-	envVarEgressPortHTTP              = "EGRESS_PORT_HTTP"
-	envVarEgressPortTCP               = "EGRESS_PORT_TCP"
-	envVarRedirectEgressCIDRBlockHTTP = "REDIRECT_EGRESS_CIDR_BLOCK_HTTP"
-	envVarRedirectEgressCIDRBlockTCP  = "REDIRECT_EGRESS_CIDR_BLOCK_TCP"
-	envVarConfigDir                   = "CONFIG_DIR"
-	envVarAdminPort                   = "ADMIN_PORT"
-	envVarXDSAPIVersion               = "XDS_API_VERSION"
-	envVarXDSAPIHost                  = "XDS_API_HOST"
-	envVarXDSAPIPort                  = "XDS_API_PORT"
+	envVarEgressPortHTTP          = "EGRESS_PORT_HTTP"
+	envVarEgressPortTCP           = "EGRESS_PORT_TCP"
+	envVarRedirectEgressCIDRBlock = "REDIRECT_EGRESS_CIDR_BLOCK"
+	envVarConfigDir               = "CONFIG_DIR"
+	envVarAdminPort               = "ADMIN_PORT"
+	envVarXDSAPIVersion           = "XDS_API_VERSION"
+	envVarXDSAPIHost              = "XDS_API_HOST"
+	envVarXDSAPIPort              = "XDS_API_PORT"
 
 	// XXX: needed for V2 config (`--service-cluster` and `--service-node` do not set this appropriately)
 	envVarServiceCluster = "SERVICE_CLUSTER"
@@ -42,8 +41,7 @@ const (
 var envVars = []string{
 	envVarEgressPortHTTP,
 	envVarEgressPortTCP,
-	envVarRedirectEgressCIDRBlockHTTP,
-	envVarRedirectEgressCIDRBlockTCP,
+	envVarRedirectEgressCIDRBlock,
 	envVarConfigDir,
 	envVarAdminPort,
 	envVarXDSAPIVersion,
@@ -144,62 +142,70 @@ func networkContainsIP(cidr, address string) (bool, error) {
 	return cidrNet.Contains(ip), nil
 }
 
+func networkIP(cidr string) (string, error) {
+	ip, _, err := net.ParseCIDR(cidr)
+	if err != nil {
+		return "", err
+	}
+	ipv4 := ip.To4()
+	if ipv4 == nil {
+		return "", fmt.Errorf("couldn't convert %v to an IPv4 address", ip)
+	}
+	return ipv4.String(), nil
+}
+
 func addIPTableRedirects(env map[string]string) error {
 	ipt, err := iptables.New()
 	if err != nil {
 		panic(err)
 	}
 
-	// set up exception for outgoing packets destined for this container
+	// get local IP
 	localIP_, err := localIP()
 	if err != nil {
 		return err
 	}
-	networkContainsIP_, err := networkContainsIP(env[envVarRedirectEgressCIDRBlockTCP], localIP_)
+	// ensure the local IP is not part of the lattice service network
+	networkContainsIP_, err := networkContainsIP(env[envVarRedirectEgressCIDRBlock], localIP_)
 	if err != nil {
 		return err
 	} else if !networkContainsIP_ {
-		return fmt.Errorf("CIDR %v does not contain local IP address %v",
-			envVarRedirectEgressCIDRBlockTCP, localIP_)
+		return fmt.Errorf("CIDR %v contains local IP address %v",
+			envVarRedirectEgressCIDRBlock, localIP_)
 	}
-	rulespecs := []string{
-		"-p", "tcp",
-		"-d", localIP_,
-		"-j", "ACCEPT",
-		"-m", "comment", "--comment",
-		fmt.Sprintf("\"lattice local IP redirect exception\""),
-	}
-	err = ipt.Append(tableNAT, chainOutput, rulespecs...)
+	// get the network IP used to redirect HTTP traffic
+	networkIP_, err := networkIP(env[envVarRedirectEgressCIDRBlock])
 	if err != nil {
 		return err
 	}
 
-	redirects := map[string]map[string]string{
-		"HTTP": map[string]string{
-			"cidr": envVarRedirectEgressCIDRBlockHTTP,
-			"port": envVarEgressPortHTTP,
-		},
-		"TCP": map[string]string{
-			"cidr": envVarRedirectEgressCIDRBlockTCP,
-			"port": envVarEgressPortTCP,
-		},
-	}
-	for protocol, parameters := range redirects {
-		rulespecs := []string{
+	rulespecs := [][]string{
+		{
 			"-p", "tcp",
-			"-d", env[parameters["cidr"]],
+			"-d", networkIP_,
 			"-j", "REDIRECT",
 			"!", "-s", "127.0.0.1/32",
-			"--to-port", env[parameters["port"]],
-			"-m", "owner", "!", "--uid-owner", envoyUID,
+			"--to-port", env[envVarEgressPortHTTP],
 			"-m", "comment", "--comment",
-			fmt.Sprintf("\"lattice redirect %v traffic to envoy\"", protocol),
-		}
-		err = ipt.Append(tableNAT, chainOutput, rulespecs...)
+			fmt.Sprint("\"lattice redirect HTTP traffic to envoy\""),
+		},
+		{
+			"-p", "tcp",
+			"-d", env[envVarRedirectEgressCIDRBlock],
+			"-j", "REDIRECT",
+			"!", "-s", "127.0.0.1/32",
+			"--to-port", env[envVarEgressPortTCP],
+			"-m", "comment", "--comment",
+			fmt.Sprint("\"lattice redirect TCP traffic to envoy\""),
+		},
+	}
+	for _, rulespec := range rulespecs {
+		err = ipt.Append(tableNAT, chainOutput, rulespec...)
 		if err != nil {
 			return err
 		}
 	}
+
 	return nil
 }
 

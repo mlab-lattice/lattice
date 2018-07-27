@@ -2,7 +2,6 @@ package address
 
 import (
 	"fmt"
-	"sort"
 
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	kubeutil "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/kubernetes"
@@ -42,28 +41,24 @@ func (c *Controller) syncServiceAddress(address *latticev1.Address) error {
 		return nil
 	}
 
-	endpoints, err := c.endpoints(service)
-	if err != nil {
-		return fmt.Errorf("error finding endpoints for %v: %v", address.Description(c.namespacePrefix), err)
-	}
-
-	ips, err := c.serviceMesh.ServiceIPs(service, endpoints)
+	ip, annotations, err := c.serviceMesh.ServiceIP(service, address)
 	if err != nil {
 		return fmt.Errorf(
-			"error getting %v %v IPs from service mesh: %v",
+			"error getting %v %v IP from service mesh: %v",
 			address.Description(c.namespacePrefix),
 			service.Description(c.namespacePrefix),
 			err,
 		)
 	}
 
-	needsUpdate := c.serviceAddressEndpointsNeedUpdate(address, ips)
-
-	if needsUpdate {
-		address, err = c.updateAddressEndpoints(address, ips)
-		if err != nil {
-			return err
-		}
+	// make sure IP annotation gets applied
+	address, err = c.mergeAndUpdateAddressAnnotations(address, annotations)
+	if err != nil {
+		return fmt.Errorf(
+			"error updating %v address annotations: %v",
+			address.Description(c.namespacePrefix),
+			err,
+		)
 	}
 
 	path, err := address.PathLabel()
@@ -81,7 +76,7 @@ func (c *Controller) syncServiceAddress(address *latticev1.Address) error {
 	}
 
 	domain := kubeutil.InternalAddressSubdomain(path.ToDomain(), systemID, c.latticeID)
-	needsUpdate, err = c.cloudProvider.DNSARecordsNeedUpdate(c.latticeID, domain, ips)
+	needsUpdate, err := c.cloudProvider.DNSARecordNeedsUpdate(c.latticeID, domain, ip)
 	if err != nil {
 		return fmt.Errorf(
 			"error checking if DNS A record(s) for %v needs update: %v",
@@ -103,7 +98,7 @@ func (c *Controller) syncServiceAddress(address *latticev1.Address) error {
 			return err
 		}
 
-		err = c.cloudProvider.EnsureDNSARecords(c.latticeID, domain, ips)
+		err = c.cloudProvider.EnsureDNSARecord(c.latticeID, domain, ip)
 		if err != nil {
 			state := latticev1.AddressStateFailed
 			failureInfo := &latticev1.AddressStatusFailureInfo{
@@ -190,41 +185,6 @@ func (c *Controller) syncServiceAddress(address *latticev1.Address) error {
 
 	_, err = c.updateAddressStatus(address, latticev1.AddressStateStable, nil, nil, ports)
 	return err
-}
-
-func (c *Controller) serviceAddressEndpointsNeedUpdate(address *latticev1.Address, IPs []string) bool {
-	if len(address.Spec.Endpoints) != len(IPs) {
-		return true
-	}
-
-	for i := range address.Spec.Endpoints {
-		if IPs[i] != address.Spec.Endpoints[i] {
-			return true
-		}
-	}
-
-	return false
-}
-
-// endpoints gets the IP(s) associated with a service/address
-func (c *Controller) endpoints(service *latticev1.Service) ([]string, error) {
-	kubeServiceName := kubeutil.GetKubeServiceNameForService(service.Name)
-	endpoints, err := c.endpointLister.Endpoints(service.Namespace).Get(kubeServiceName)
-	if err != nil {
-		return nil, err
-	}
-	ipSet := make(map[string]interface{})
-	for _, subset := range endpoints.Subsets {
-		for _, address := range subset.Addresses {
-			ipSet[address.IP] = nil
-		}
-	}
-	ips := make([]string, 0, len(ipSet))
-	for ip := range ipSet {
-		ips = append(ips, ip)
-	}
-	sort.Strings(ips)
-	return ips, nil
 }
 
 func (c *Controller) service(namespace string, path tree.NodePath) (*latticev1.Service, error) {

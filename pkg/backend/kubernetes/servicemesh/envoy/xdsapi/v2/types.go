@@ -7,7 +7,8 @@ import (
 type Service struct {
 	EgressPorts envoy.EnvoyEgressPorts
 	Components  map[string]Component
-	IPAddresses []string
+	ServiceIP   string
+	EndpointIPs []string
 }
 
 type Component struct {

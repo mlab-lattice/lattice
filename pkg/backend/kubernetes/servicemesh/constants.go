@@ -5,5 +5,6 @@ import (
 )
 
 const (
-	Envoy = envoy.Envoy
+	Envoy           = envoy.Envoy
+	AnnotationKeyIP = "envoy.servicemesh.lattice.mlab.com/ip"
 )
