@@ -63,6 +63,9 @@ type Controller struct {
 	serviceLister       latticelisters.ServiceLister
 	serviceListerSynced cache.InformerSynced
 
+	jobLister       latticelisters.JobLister
+	jobListerSynced cache.InformerSynced
+
 	nodePoolLister       latticelisters.NodePoolLister
 	nodePoolListerSynced cache.InformerSynced
 
@@ -107,7 +110,7 @@ func NewController(
 		// It's assumed there is always one and only one config object.
 		AddFunc:    sc.handleConfigAdd,
 		UpdateFunc: sc.handleConfigUpdate,
-		// TODO(kevinrosendahl): for now it is assumed that ComponentBuilds are not deleted.
+		// TODO(kevinrosendahl): for now it is assumed that ContainerBuilds are not deleted.
 	})
 	sc.configLister = configInformer.Lister()
 	sc.configListerSynced = configInformer.Informer().HasSynced
@@ -129,6 +132,10 @@ func NewController(
 	})
 	sc.serviceLister = serviceInformer.Lister()
 	sc.serviceListerSynced = serviceInformer.Informer().HasSynced
+
+	jobInformer := latticeInformerFactory.Lattice().V1().Jobs()
+	sc.jobLister = jobInformer.Lister()
+	sc.jobListerSynced = jobInformer.Informer().HasSynced
 
 	nodePoolInformer := latticeInformerFactory.Lattice().V1().NodePools()
 	nodePoolInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
@@ -166,6 +173,7 @@ func (c *Controller) Run(workers int, stopCh <-chan struct{}) {
 		c.configListerSynced,
 		c.systemListerSynced,
 		c.serviceListerSynced,
+		c.jobListerSynced,
 		c.namespaceListerSynced,
 	) {
 		return

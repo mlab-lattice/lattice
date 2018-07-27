@@ -1,0 +1,30 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "clusters.go",
+        "endpoints.go",
+        "listeners.go",
+        "routes.go",
+        "service_node.go",
+    ],
+    importpath = "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/servicemesh/envoy/xdsapi/v2/service_node",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//pkg/backend/kubernetes/servicemesh/envoy/xdsapi/v2:go_default_library",
+        "//pkg/backend/kubernetes/servicemesh/envoy/xdsapi/v2/constants:go_default_library",
+        "//pkg/backend/kubernetes/servicemesh/envoy/xdsapi/v2/service_node/messages:go_default_library",
+        "//pkg/backend/kubernetes/servicemesh/envoy/xdsapi/v2/util:go_default_library",
+        "//pkg/definition/tree:go_default_library",
+        "//pkg/util/error:go_default_library",
+        "@com_github_envoyproxy_go_control_plane//envoy/api/v2:go_default_library",
+        "@com_github_envoyproxy_go_control_plane//envoy/api/v2/core:go_default_library",
+        "@com_github_envoyproxy_go_control_plane//envoy/api/v2/endpoint:go_default_library",
+        "@com_github_envoyproxy_go_control_plane//envoy/api/v2/listener:go_default_library",
+        "@com_github_envoyproxy_go_control_plane//envoy/api/v2/route:go_default_library",
+        "@com_github_envoyproxy_go_control_plane//envoy/config/filter/network/http_connection_manager/v2:go_default_library",
+        "@com_github_envoyproxy_go_control_plane//pkg/cache:go_default_library",
+        "@com_github_golang_glog//:go_default_library",
+    ],
+)

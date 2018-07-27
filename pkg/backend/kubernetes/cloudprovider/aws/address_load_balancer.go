@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"reflect"
 	"sort"
+	"strconv"
 
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	kubetf "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/cloudprovider/aws/terraform"
@@ -33,7 +34,7 @@ func (cp *DefaultAWSCloudProvider) ServiceAddressLoadBalancerNeedsUpdate(
 	service *latticev1.Service,
 	serviceMeshPorts map[int32]int32,
 ) (bool, error) {
-	loadBalancerNeeded := serviceNeedsAddressLoadBalancer(service)
+	loadBalancerNeeded := service.NeedsAddressLoadBalancer()
 
 	kubeService, err := cp.getKubeService(address)
 	if err != nil {
@@ -119,7 +120,7 @@ func (cp *DefaultAWSCloudProvider) EnsureServiceAddressLoadBalancer(
 	service *latticev1.Service,
 	serviceMeshPorts map[int32]int32,
 ) error {
-	if !serviceNeedsAddressLoadBalancer(service) {
+	if !service.NeedsAddressLoadBalancer() {
 		return cp.DestroyServiceAddressLoadBalancer(latticeID, address)
 	}
 
@@ -200,6 +201,7 @@ func (cp *DefaultAWSCloudProvider) ServiceAddressLoadBalancerPorts(
 	latticeID v1.LatticeID,
 	address *latticev1.Address,
 	service *latticev1.Service,
+	serviceMeshPorts map[int32]int32,
 ) (map[int32]string, error) {
 	dnsName, ok := address.Annotations[AnnotationKeyAddressServiceLoadBalancerDNSName]
 	if !ok {
@@ -212,11 +214,9 @@ func (cp *DefaultAWSCloudProvider) ServiceAddressLoadBalancerPorts(
 	}
 
 	ports := make(map[int32]string)
-	for _, componentPorts := range service.Spec.Ports {
-		for _, componentPort := range componentPorts {
-			if componentPort.Public {
-				ports[componentPort.Port] = fmt.Sprintf("http://%v:%v", dnsName, componentPort.Port)
-			}
+	for portNum, port := range service.Spec.Definition.ContainerPorts() {
+		if port.Public() {
+			ports[portNum] = fmt.Sprintf("http://%v:%v", dnsName, portNum)
 		}
 	}
 
@@ -439,26 +439,23 @@ func (cp *DefaultAWSCloudProvider) kubeServiceSpec(
 ) (corev1.ServiceSpec, error) {
 	var ports []corev1.ServicePort
 
-	for component, componentPorts := range service.Spec.Ports {
-		for _, componentPort := range componentPorts {
-			if componentPort.Public {
-				targetPort, ok := serviceMeshPorts[componentPort.Port]
-				if !ok {
-					err := fmt.Errorf(
-						"component port %v not found in service mesh ports for %v",
-						componentPort.Port,
-						service.Description(cp.namespacePrefix),
-					)
-					return corev1.ServiceSpec{}, err
-				}
-
-				ports = append(ports, corev1.ServicePort{
-					// FIXME: need a better naming scheme
-					Name:     fmt.Sprintf("%v-%v", component, componentPort.Name),
-					Protocol: corev1.ProtocolTCP,
-					Port:     targetPort,
-				})
+	for portNum, port := range service.Spec.Definition.ContainerPorts() {
+		if port.Public() {
+			targetPort, ok := serviceMeshPorts[portNum]
+			if !ok {
+				err := fmt.Errorf(
+					"component port %v not found in service mesh ports for %v",
+					portNum,
+					service.Description(cp.namespacePrefix),
+				)
+				return corev1.ServiceSpec{}, err
 			}
+
+			ports = append(ports, corev1.ServicePort{
+				Name:     strconv.Itoa(int(portNum)),
+				Protocol: corev1.ProtocolTCP,
+				Port:     targetPort,
+			})
 		}
 	}
 
@@ -617,16 +614,4 @@ func (cp *DefaultAWSCloudProvider) serviceAddressLoadBalancerInfo(
 		DNSName: values[terraformOutputServiceAddressLoadBalancerDNSName],
 	}
 	return info, nil
-}
-
-func serviceNeedsAddressLoadBalancer(service *latticev1.Service) bool {
-	for _, componentPorts := range service.Spec.Ports {
-		for _, componentPort := range componentPorts {
-			if componentPort.Public {
-				return true
-			}
-		}
-	}
-
-	return false
 }

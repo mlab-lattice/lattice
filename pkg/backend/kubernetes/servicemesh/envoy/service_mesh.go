@@ -21,7 +21,7 @@ const (
 	annotationKeyServiceMeshPorts = "envoy.servicemesh.lattice.mlab.com/service-mesh-ports"
 	annotationKeyEgressPort       = "envoy.servicemesh.lattice.mlab.com/egress-port"
 
-	deploymentResourcePrefix = "lattice-service-mesh-envoy-"
+	deploymentResourcePrefix = "envoy-"
 
 	envoyConfigDirectory           = "/etc/envoy"
 	envoyConfigDirectoryVolumeName = deploymentResourcePrefix + "envoyconfig"
@@ -29,6 +29,7 @@ const (
 	initContainerNamePrepareEnvoy = deploymentResourcePrefix + "prepare-envoy"
 	containerNameEnvoy            = deploymentResourcePrefix + "envoy"
 
+	xdsAPIVersion       = "2"
 	xdsAPI              = "xds-api"
 	labelKeyEnvoyXDSAPI = "envoy.servicemesh.lattice.mlab.com/xds-api"
 )
@@ -120,38 +121,32 @@ func (sm *DefaultEnvoyServiceMesh) ServiceAnnotations(service *latticev1.Service
 }
 
 func envoyPorts(service *latticev1.Service) ([]int32, error) {
-	portSet := map[int32]struct{}{}
-	for _, componentPorts := range service.Spec.Ports {
-		for _, port := range componentPorts {
-			portSet[int32(port.Port)] = struct{}{}
-		}
-	}
-
+	ports := service.Spec.Definition.ContainerPorts()
 	var envoyPortIdx int32 = 10000
 	var envoyPorts []int32
 
 	// Need to find len(portSet) + 2 unique ports to use for envoy
 	// (one for egress, one for admin, and one per component port for ingress)
-	for i := 0; i <= len(portSet)+1; i++ {
+	for i := 0; i <= len(ports)+1; i++ {
 
 		// Loop up to len(portSet) + 1 times to find an unused port
 		// we can use for envoy.
-		for j := 0; j <= len(portSet); j++ {
+		for j := 0; j <= len(ports); j++ {
 
 			// If the current envoyPortIdx is not being used by a component,
 			// we'll use it for envoy. Otherwise, on to the next one.
 			currPortIdx := envoyPortIdx
 			envoyPortIdx++
 
-			if _, ok := portSet[currPortIdx]; !ok {
+			if _, ok := ports[currPortIdx]; !ok {
 				envoyPorts = append(envoyPorts, currPortIdx)
 				break
 			}
 		}
 	}
 
-	if len(envoyPorts) != len(portSet)+2 {
-		return nil, fmt.Errorf("expected %v envoy ports but got %v", len(portSet)+1, len(envoyPorts))
+	if len(envoyPorts) != len(ports)+2 {
+		return nil, fmt.Errorf("expected %v envoy ports but got %v", len(ports)+1, len(envoyPorts))
 	}
 
 	return envoyPorts, nil
@@ -160,24 +155,22 @@ func envoyPorts(service *latticev1.Service) ([]int32, error) {
 func assignEnvoyPorts(service *latticev1.Service, envoyPorts []int32) (map[int32]int32, []int32, error) {
 	// Assign an envoy port to each component port, and pop the used envoy port off the slice each time.
 	componentPorts := map[int32]int32{}
-	for _, ports := range service.Spec.Ports {
-		for _, port := range ports {
-			if len(envoyPorts) == 0 {
-				return nil, nil, fmt.Errorf("ran out of ports when assigning envoyPorts")
-			}
-
-			componentPorts[port.Port] = envoyPorts[0]
-			envoyPorts = envoyPorts[1:]
+	for portNum := range service.Spec.Definition.ContainerPorts() {
+		if len(envoyPorts) == 0 {
+			return nil, nil, fmt.Errorf("ran out of ports when assigning envoyPorts")
 		}
+
+		componentPorts[int32(portNum)] = envoyPorts[0]
+		envoyPorts = envoyPorts[1:]
 	}
 
 	return componentPorts, envoyPorts, nil
 }
 
-func (sm *DefaultEnvoyServiceMesh) TransformServiceDeploymentSpec(
+func (sm *DefaultEnvoyServiceMesh) TransformServicePodTemplateSpec(
 	service *latticev1.Service,
-	spec *appsv1.DeploymentSpec,
-) (*appsv1.DeploymentSpec, error) {
+	spec *corev1.PodTemplateSpec,
+) (*corev1.PodTemplateSpec, error) {
 	prepareEnvoyContainer, envoyContainer, err := sm.envoyContainers(service)
 	if err != nil {
 		return nil, err
@@ -191,19 +184,19 @@ func (sm *DefaultEnvoyServiceMesh) TransformServiceDeploymentSpec(
 	}
 
 	initContainers := []corev1.Container{prepareEnvoyContainer}
-	initContainers = append(initContainers, spec.Template.Spec.InitContainers...)
+	initContainers = append(initContainers, spec.Spec.InitContainers...)
 
 	containers := []corev1.Container{envoyContainer}
-	containers = append(containers, spec.Template.Spec.Containers...)
+	containers = append(containers, spec.Spec.Containers...)
 
 	volumes := []corev1.Volume{configVolume}
-	volumes = append(volumes, spec.Template.Spec.Volumes...)
+	volumes = append(volumes, spec.Spec.Volumes...)
 
 	spec = spec.DeepCopy()
 
-	spec.Template.Spec.InitContainers = initContainers
-	spec.Template.Spec.Containers = containers
-	spec.Template.Spec.Volumes = volumes
+	spec.Spec.InitContainers = initContainers
+	spec.Spec.Containers = containers
+	spec.Spec.Volumes = volumes
 	return spec, nil
 }
 
@@ -257,7 +250,7 @@ func (sm *DefaultEnvoyServiceMesh) ServicePort(service *latticev1.Service, port 
 	servicePort, ok := servicePorts[port]
 	if !ok {
 		err := fmt.Errorf(
-			"Service %v/%v does not have expected port %v",
+			"service %v/%v does not have expected port %v",
 			service.Namespace,
 			service.Name,
 			port,
@@ -450,7 +443,7 @@ func (sm *DefaultEnvoyServiceMesh) envoyContainers(service *latticev1.Service) (
 	adminPort, ok := service.Annotations[annotationKeyAdminPort]
 	if !ok {
 		err := fmt.Errorf(
-			"Service %v/%v does not have expected annotation %v",
+			"service %v/%v does not have expected annotation %v",
 			service.Namespace,
 			service.Name,
 			annotationKeyAdminPort,
@@ -459,6 +452,11 @@ func (sm *DefaultEnvoyServiceMesh) envoyContainers(service *latticev1.Service) (
 	}
 
 	egressPort, err := sm.EgressPort(service)
+	if err != nil {
+		return corev1.Container{}, corev1.Container{}, err
+	}
+
+	servicePath, err := service.PathLabel()
 	if err != nil {
 		return corev1.Container{}, corev1.Container{}, err
 	}
@@ -484,6 +482,10 @@ func (sm *DefaultEnvoyServiceMesh) envoyContainers(service *latticev1.Service) (
 				Value: adminPort,
 			},
 			{
+				Name:  "XDS_API_VERSION",
+				Value: xdsAPIVersion,
+			},
+			{
 				Name: "XDS_API_HOST",
 				ValueFrom: &corev1.EnvVarSource{
 					FieldRef: &corev1.ObjectFieldSelector{
@@ -494,6 +496,15 @@ func (sm *DefaultEnvoyServiceMesh) envoyContainers(service *latticev1.Service) (
 			{
 				Name:  "XDS_API_PORT",
 				Value: fmt.Sprintf("%v", sm.xdsAPIPort),
+			},
+			// XXX: needed for V2
+			{
+				Name:  "SERVICE_CLUSTER",
+				Value: service.Namespace,
+			},
+			{
+				Name:  "SERVICE_NODE",
+				Value: servicePath.ToDomain(),
 			},
 		},
 		VolumeMounts: []corev1.VolumeMount{
@@ -516,34 +527,33 @@ func (sm *DefaultEnvoyServiceMesh) envoyContainers(service *latticev1.Service) (
 		return corev1.Container{}, corev1.Container{}, err
 	}
 
-	for component, ports := range service.Spec.Ports {
-		for _, port := range ports {
-			envoyPort, ok := serviceMeshPorts[port.Port]
-			if !ok {
-				err := fmt.Errorf(
-					"Service %v/%v does not have expected port %v",
-					service.Namespace,
-					service.Name,
-					port,
-				)
-				return corev1.Container{}, corev1.Container{}, err
-			}
-
-			envoyPorts = append(
-				envoyPorts,
-				corev1.ContainerPort{
-					Name:          component + "-" + port.Name,
-					ContainerPort: envoyPort,
-				},
+	for portNum := range service.Spec.Definition.ContainerPorts() {
+		envoyPort, ok := serviceMeshPorts[portNum]
+		if !ok {
+			err := fmt.Errorf(
+				"service %v/%v does not have expected port %v",
+				service.Namespace,
+				service.Name,
+				portNum,
 			)
+			return corev1.Container{}, corev1.Container{}, err
 		}
+
+		envoyPorts = append(
+			envoyPorts,
+			corev1.ContainerPort{
+				Name:          fmt.Sprintf("%v%v", deploymentResourcePrefix, strconv.Itoa(int(portNum))),
+				ContainerPort: envoyPort,
+			},
+		)
 	}
 
-	servicePath, err := service.PathLabel()
-	if err != nil {
-		return corev1.Container{}, corev1.Container{}, err
-	}
-
+	// XXX: `--service-cluster` and `--service-node` do not seem to have
+	//      any effect when running v2 (i.e., they do not set the
+	//      service cluster or service node nor do they override whatever
+	//      might be set in the config)
+	// XXX: adding environment variables to envoy prepare spec to set the
+	//      appropriate values in the generated envoy config
 	envoy := corev1.Container{
 		Name:            containerNameEnvoy,
 		Image:           sm.image,
@@ -556,6 +566,12 @@ func (sm *DefaultEnvoyServiceMesh) envoyContainers(service *latticev1.Service) (
 			service.Namespace,
 			"--service-node",
 			servicePath.ToDomain(),
+			// by default, the max cluster name size is 60.
+			// however, we use the cluster name to encode information, so the names can often be much longer.
+			// https://www.envoyproxy.io/docs/envoy/latest/operations/cli#cmdoption-max-obj-name-len
+			// FIXME: figure out what this should actually be set to
+			"--max-obj-name-len",
+			strconv.Itoa(256),
 		},
 		Ports: envoyPorts,
 		VolumeMounts: []corev1.VolumeMount{
@@ -574,7 +590,7 @@ func (sm *DefaultEnvoyServiceMesh) EgressPort(service *latticev1.Service) (int32
 	egressPortStr, ok := service.Annotations[annotationKeyEgressPort]
 	if !ok {
 		err := fmt.Errorf(
-			"Service %v/%v does not have expected annotation %v",
+			"service %v/%v does not have expected annotation %v",
 			service.Namespace,
 			service.Name,
 			annotationKeyEgressPort,

@@ -17,8 +17,9 @@ func (c *Controller) updateBuildStatus(
 	message string,
 	startTimestamp *metav1.Time,
 	completionTimestamp *metav1.Time,
-	serviceBuilds map[tree.NodePath]string,
-	serviceBuildStatuses map[string]latticev1.ServiceBuildStatus,
+	services map[tree.NodePath]latticev1.BuildStatusService,
+	jobs map[tree.NodePath]latticev1.BuildStatusJob,
+	containerBuildStatuses map[string]latticev1.ContainerBuildStatus,
 ) (*latticev1.Build, error) {
 	status := latticev1.BuildStatus{
 		State:   state,
@@ -27,8 +28,9 @@ func (c *Controller) updateBuildStatus(
 		StartTimestamp:      startTimestamp,
 		CompletionTimestamp: completionTimestamp,
 
-		ServiceBuilds:        serviceBuilds,
-		ServiceBuildStatuses: serviceBuildStatuses,
+		Services: services,
+		Jobs:     jobs,
+		ContainerBuildStatuses: containerBuildStatuses,
 	}
 
 	if reflect.DeepEqual(build.Status, status) {

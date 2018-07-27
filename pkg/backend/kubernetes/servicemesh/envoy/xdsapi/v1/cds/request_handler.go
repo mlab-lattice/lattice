@@ -24,7 +24,7 @@ func (r *RequestHandler) GetResponse(serviceCluster, serviceNode string) (*Respo
 		return nil, err
 	}
 
-	servicePath, err := tree.NodePathFromDomain(serviceNode)
+	servicePath, err := tree.NewNodePathFromDomain(serviceNode)
 	if err != nil {
 		return nil, err
 	}
@@ -33,7 +33,7 @@ func (r *RequestHandler) GetResponse(serviceCluster, serviceNode string) (*Respo
 	for path, svc := range services {
 		isLocalService := servicePath == path
 
-		for componentName, component := range svc.Components {
+		for componentName, component := range svc.Containers {
 			for port := range component.Ports {
 				clusterName := util.GetClusterNameForComponentPort(serviceCluster, path, componentName, port)
 				clusters = append(clusters, types.Cluster{

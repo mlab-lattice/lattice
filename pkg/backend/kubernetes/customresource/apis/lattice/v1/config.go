@@ -28,7 +28,7 @@ type Config struct {
 
 type ConfigSpec struct {
 	CloudProvider  ConfigCloudProvider  `json:"cloudProvider"`
-	ComponentBuild ConfigComponentBuild `json:"componentBuild"`
+	ContainerBuild ConfigContainerBuild `json:"containerBuild"`
 	ServiceMesh    ConfigServiceMesh    `json:"serviceMesh"`
 }
 
@@ -45,7 +45,7 @@ type ConfigCloudProviderAWS struct {
 	KeyName         string `json:"keyName"`
 }
 
-type ConfigComponentBuild struct {
+type ConfigContainerBuild struct {
 	Builder        ConfigComponentBuildBuilder        `json:"builderConfig"`
 	DockerArtifact ConfigComponentBuildDockerArtifact `json:"dockerConfig"`
 }

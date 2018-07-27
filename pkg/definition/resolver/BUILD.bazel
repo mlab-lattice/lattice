@@ -9,9 +9,9 @@ go_library(
     importpath = "github.com/mlab-lattice/lattice/pkg/definition/resolver",
     visibility = ["//visibility:public"],
     deps = [
-        "//pkg/definition:go_default_library",
         "//pkg/definition/template/language:go_default_library",
         "//pkg/definition/tree:go_default_library",
+        "//pkg/definition/v1:go_default_library",
         "//pkg/util/git:go_default_library",
     ],
 )

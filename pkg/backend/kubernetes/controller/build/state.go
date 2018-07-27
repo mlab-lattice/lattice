@@ -5,6 +5,7 @@ import (
 
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
+	definitionv1 "github.com/mlab-lattice/lattice/pkg/definition/v1"
 
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -13,116 +14,201 @@ import (
 type state string
 
 const (
-	stateHasFailedServiceBuilds                 state = "has-failed-service-builds"
-	stateHasOnlyRunningOrSucceededServiceBuilds state = "has-only-succeeded-or-running-service-builds"
-	stateNoFailuresNeedsNewServiceBuilds        state = "no-failures-needs-new-service-builds"
-	stateAllServiceBuildsSucceeded              state = "all-service-builds-succeeded"
+	stateHasFailedContainerBuilds                 state = "has-failed-container-builds"
+	stateHasOnlyRunningOrSucceededContainerBuilds state = "has-only-succeeded-or-running-container-builds"
+	stateNoFailuresNeedsNewContainerBuilds        state = "no-failures-needs-new-container-builds"
+	stateAllContainerBuildsSucceeded              state = "all-container-builds-succeeded"
 )
 
 type stateInfo struct {
 	state state
 
-	successfulServiceBuilds map[tree.NodePath]*latticev1.ServiceBuild
-	activeServiceBuilds     map[tree.NodePath]*latticev1.ServiceBuild
-	failedServiceBuilds     map[tree.NodePath]*latticev1.ServiceBuild
-	needsNewServiceBuilds   []tree.NodePath
+	successfulContainerBuilds map[string]*latticev1.ContainerBuild
+	activeContainerBuilds     map[string]*latticev1.ContainerBuild
+	failedContainerBuilds     map[string]*latticev1.ContainerBuild
 
-	// Maps a service's path to the Name of the ServiceBuild that's responsible for it
-	serviceBuilds map[tree.NodePath]string
+	servicesNeedNewContainerBuilds map[tree.NodePath]*definitionv1.Service
+	jobsNeedNewContainerBuilds     map[tree.NodePath]*definitionv1.Job
 
-	// Maps a ServiceBuild.Name to its ServiceBuild.Status
-	serviceBuildStatuses map[string]latticev1.ServiceBuildStatus
+	// Maps a container build's name to its status
+	containerBuildStatuses map[string]latticev1.ContainerBuildStatus
+
+	// Maps a container build's name  to the path of services that are using it
+	containerBuildServices map[string][]tree.NodePath
+
+	// Maps a container build's name  to the path of jobs that are using it
+	containerBuildJobs map[string][]tree.NodePath
 }
 
 func (c *Controller) calculateState(build *latticev1.Build) (stateInfo, error) {
-	successfulServiceBuilds := make(map[tree.NodePath]*latticev1.ServiceBuild)
-	activeServiceBuilds := make(map[tree.NodePath]*latticev1.ServiceBuild)
-	failedServiceBuilds := make(map[tree.NodePath]*latticev1.ServiceBuild)
-	var needsNewServiceBuilds []tree.NodePath
+	successfulContainerBuilds := make(map[string]*latticev1.ContainerBuild)
+	activeContainerBuilds := make(map[string]*latticev1.ContainerBuild)
+	failedContainerBuilds := make(map[string]*latticev1.ContainerBuild)
+	servicesNeedNewContainerBuilds := make(map[tree.NodePath]*definitionv1.Service)
+	jobsNeedNewContainerBuilds := make(map[tree.NodePath]*definitionv1.Job)
 
-	serviceBuilds := make(map[tree.NodePath]string)
-	serviceBuildStatuses := make(map[string]latticev1.ServiceBuildStatus)
+	containerBuildStatuses := make(map[string]latticev1.ContainerBuildStatus)
+	containerBuildServices := make(map[string][]tree.NodePath)
+	containerBuildJobs := make(map[string][]tree.NodePath)
 
-	for servicePath := range build.Spec.Services {
-		var serviceBuild *latticev1.ServiceBuild
-
-		serviceBuildName, ok := build.Status.ServiceBuilds[servicePath]
+	// TODO: think about refactoring this and jobs to DRY it up
+	for path, service := range build.Spec.Definition.AllServices() {
+		serviceInfo, ok := build.Status.Services[path]
+		// If the service doesn't have build info yet, note that and continue
 		if !ok {
-			if len(serviceBuilds) == 0 {
-				needsNewServiceBuilds = append(needsNewServiceBuilds, servicePath)
-				continue
-			}
+			servicesNeedNewContainerBuilds[path] = service.Service()
+			continue
 		}
 
-		// if there is already a service build for this path, get it
-		serviceBuild, err := c.serviceBuildLister.ServiceBuilds(build.Namespace).Get(serviceBuildName)
+		// Grab all of the container builds for this service
+		containerBuildNames := []string{serviceInfo.MainContainer}
+		for _, containerBuildName := range serviceInfo.Sidecars {
+			containerBuildNames = append(containerBuildNames, containerBuildName)
+
+			services, ok := containerBuildServices[containerBuildName]
+			if !ok {
+				services = make([]tree.NodePath, 0)
+			}
+
+			services = append(services, path)
+			containerBuildServices[containerBuildName] = services
+		}
+
+		err := c.updateContainerBuildStatuses(
+			build,
+			containerBuildNames,
+			containerBuildStatuses,
+			activeContainerBuilds,
+			failedContainerBuilds,
+			successfulContainerBuilds,
+		)
 		if err != nil {
-			if !errors.IsNotFound(err) {
-				return stateInfo{}, err
-			}
+			return stateInfo{}, err
+		}
+	}
 
-			serviceBuild, err = c.latticeClient.LatticeV1().ServiceBuilds(build.Namespace).Get(serviceBuildName, metav1.GetOptions{})
-			if err != nil {
-				if errors.IsNotFound(err) {
-					err := fmt.Errorf(
-						"%v has service build %v for %v, but service build does not exist",
-						build.Description(c.namespacePrefix),
-						serviceBuildName,
-						servicePath.String(),
-					)
-					return stateInfo{}, err
-				}
-
-				return stateInfo{}, err
-			}
+	for path, job := range build.Spec.Definition.AllJobs() {
+		jobInfo, ok := build.Status.Jobs[path]
+		// If the job doesn't have build info yet, note that and continue
+		if !ok {
+			jobsNeedNewContainerBuilds[path] = job.Job()
+			continue
 		}
 
-		serviceBuilds[servicePath] = serviceBuild.Name
-		serviceBuildStatuses[serviceBuild.Name] = serviceBuild.Status
+		// Grab all of the container builds for this service
+		containerBuildNames := []string{jobInfo.MainContainer}
+		for _, containerBuildName := range jobInfo.Sidecars {
+			containerBuildNames = append(containerBuildNames, containerBuildName)
 
-		switch serviceBuild.Status.State {
-		case latticev1.ServiceBuildStatePending, latticev1.ServiceBuildStateRunning:
-			activeServiceBuilds[servicePath] = serviceBuild
-		case latticev1.ServiceBuildStateFailed:
-			failedServiceBuilds[servicePath] = serviceBuild
-		case latticev1.ServiceBuildStateSucceeded:
-			successfulServiceBuilds[servicePath] = serviceBuild
-		default:
-			// FIXME: send warn event
-			err := fmt.Errorf(
-				"%v has unexpected state %v",
-				serviceBuild.Description(c.namespacePrefix),
-				serviceBuild.Status.State,
-			)
+			jobs, ok := containerBuildJobs[containerBuildName]
+			if !ok {
+				jobs = make([]tree.NodePath, 0)
+			}
+
+			jobs = append(jobs, path)
+			containerBuildJobs[containerBuildName] = jobs
+		}
+
+		err := c.updateContainerBuildStatuses(
+			build,
+			containerBuildNames,
+			containerBuildStatuses,
+			activeContainerBuilds,
+			failedContainerBuilds,
+			successfulContainerBuilds,
+		)
+		if err != nil {
 			return stateInfo{}, err
 		}
 	}
 
 	stateInfo := stateInfo{
-		successfulServiceBuilds: successfulServiceBuilds,
-		activeServiceBuilds:     activeServiceBuilds,
-		failedServiceBuilds:     failedServiceBuilds,
-		needsNewServiceBuilds:   needsNewServiceBuilds,
+		successfulContainerBuilds: successfulContainerBuilds,
+		activeContainerBuilds:     activeContainerBuilds,
+		failedContainerBuilds:     failedContainerBuilds,
 
-		serviceBuilds:        serviceBuilds,
-		serviceBuildStatuses: serviceBuildStatuses,
+		servicesNeedNewContainerBuilds: servicesNeedNewContainerBuilds,
+		jobsNeedNewContainerBuilds:     jobsNeedNewContainerBuilds,
+
+		containerBuildStatuses: containerBuildStatuses,
+		containerBuildServices: containerBuildServices,
+		containerBuildJobs:     containerBuildJobs,
 	}
 
-	if len(failedServiceBuilds) > 0 {
-		stateInfo.state = stateHasFailedServiceBuilds
+	if len(failedContainerBuilds) > 0 {
+		stateInfo.state = stateHasFailedContainerBuilds
 		return stateInfo, nil
 	}
 
-	if len(needsNewServiceBuilds) > 0 {
-		stateInfo.state = stateNoFailuresNeedsNewServiceBuilds
+	if len(servicesNeedNewContainerBuilds) > 0 || len(jobsNeedNewContainerBuilds) > 0 {
+		stateInfo.state = stateNoFailuresNeedsNewContainerBuilds
 		return stateInfo, nil
 	}
 
-	if len(activeServiceBuilds) > 0 {
-		stateInfo.state = stateHasOnlyRunningOrSucceededServiceBuilds
+	if len(activeContainerBuilds) > 0 {
+		stateInfo.state = stateHasOnlyRunningOrSucceededContainerBuilds
 		return stateInfo, nil
 	}
 
-	stateInfo.state = stateAllServiceBuildsSucceeded
+	stateInfo.state = stateAllContainerBuildsSucceeded
 	return stateInfo, nil
+}
+
+func (c *Controller) updateContainerBuildStatuses(
+	build *latticev1.Build,
+	names []string,
+	statuses map[string]latticev1.ContainerBuildStatus,
+	activeContainerBuilds map[string]*latticev1.ContainerBuild,
+	failedContainerBuilds map[string]*latticev1.ContainerBuild,
+	successfulContainerBuilds map[string]*latticev1.ContainerBuild,
+) error {
+	// Get the current status of each of the container builds for this component
+	for _, name := range names {
+		// If we've already processed this container build, no need to do so again
+		if _, ok := statuses[name]; ok {
+			continue
+		}
+
+		containerBuild, err := c.containerBuildLister.ContainerBuilds(build.Namespace).Get(name)
+		if err != nil {
+			if !errors.IsNotFound(err) {
+				return err
+			}
+
+			containerBuild, err = c.latticeClient.LatticeV1().ContainerBuilds(build.Namespace).Get(name, metav1.GetOptions{})
+			if err != nil {
+				if errors.IsNotFound(err) {
+					err := fmt.Errorf(
+						"%v has container build %v, but container build does not exist",
+						build.Description(c.namespacePrefix),
+						name,
+					)
+					return err
+				}
+
+				return err
+			}
+		}
+
+		statuses[name] = containerBuild.Status
+
+		switch containerBuild.Status.State {
+		case latticev1.ContainerBuildStatePending, latticev1.ContainerBuildStateQueued, latticev1.ContainerBuildStateRunning:
+			activeContainerBuilds[containerBuild.Name] = containerBuild
+		case latticev1.ContainerBuildStateFailed:
+			failedContainerBuilds[containerBuild.Name] = containerBuild
+		case latticev1.ContainerBuildStateSucceeded:
+			successfulContainerBuilds[containerBuild.Name] = containerBuild
+		default:
+			// FIXME: send warn event
+			err := fmt.Errorf(
+				"%v has unexpected state %v",
+				containerBuild.Description(c.namespacePrefix),
+				containerBuild.Status.State,
+			)
+			return err
+		}
+	}
+
+	return nil
 }

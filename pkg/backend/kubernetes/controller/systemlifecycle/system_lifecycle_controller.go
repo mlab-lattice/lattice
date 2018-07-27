@@ -63,11 +63,8 @@ type Controller struct {
 	buildLister       latticelisters.BuildLister
 	buildListerSynced cache.InformerSynced
 
-	serviceBuildLister       latticelisters.ServiceBuildLister
-	serviceBuildListerSynced cache.InformerSynced
-
-	componentBuildLister       latticelisters.ComponentBuildLister
-	componentBuildListerSynced cache.InformerSynced
+	containerBuildLister       latticelisters.ContainerBuildLister
+	containerBuildListerSynced cache.InformerSynced
 
 	deployQueue   workqueue.RateLimitingInterface
 	teardownQueue workqueue.RateLimitingInterface
@@ -81,8 +78,7 @@ func NewController(
 	teardownInformer latticeinformers.TeardownInformer,
 	systemInformer latticeinformers.SystemInformer,
 	buildInformer latticeinformers.BuildInformer,
-	serviceBuildInformer latticeinformers.ServiceBuildInformer,
-	componentBuildInformer latticeinformers.ComponentBuildInformer,
+	containerBuildInformer latticeinformers.ContainerBuildInformer,
 ) *Controller {
 	c := &Controller{
 		namespacePrefix: namespacePrefix,
@@ -131,11 +127,8 @@ func NewController(
 	c.buildLister = buildInformer.Lister()
 	c.buildListerSynced = buildInformer.Informer().HasSynced
 
-	c.serviceBuildLister = serviceBuildInformer.Lister()
-	c.serviceBuildListerSynced = serviceBuildInformer.Informer().HasSynced
-
-	c.componentBuildLister = componentBuildInformer.Lister()
-	c.componentBuildListerSynced = componentBuildInformer.Informer().HasSynced
+	c.containerBuildLister = containerBuildInformer.Lister()
+	c.containerBuildListerSynced = containerBuildInformer.Informer().HasSynced
 
 	return c
 }
@@ -157,8 +150,7 @@ func (c *Controller) Run(workers int, stopCh <-chan struct{}) {
 		c.teardownListerSynced,
 		c.systemListerSynced,
 		c.buildListerSynced,
-		c.serviceBuildListerSynced,
-		c.componentBuildListerSynced,
+		c.containerBuildListerSynced,
 	) {
 		return
 	}

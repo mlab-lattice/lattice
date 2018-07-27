@@ -9,6 +9,7 @@ go_library(
         "config.go",
         "context.go",
         "deploy_command.go",
+        "job_command.go",
         "lattice_command.go",
         "latticectl.go",
         "output_flag.go",

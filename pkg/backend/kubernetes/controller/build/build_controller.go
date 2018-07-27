@@ -30,8 +30,8 @@ type Controller struct {
 	buildLister       latticelisters.BuildLister
 	buildListerSynced cache.InformerSynced
 
-	serviceBuildLister       latticelisters.ServiceBuildLister
-	serviceBuildListerSynced cache.InformerSynced
+	containerBuildLister       latticelisters.ContainerBuildLister
+	containerBuildListerSynced cache.InformerSynced
 
 	queue workqueue.RateLimitingInterface
 }
@@ -40,7 +40,7 @@ func NewController(
 	namespacePrefix string,
 	latticeClient latticeclientset.Interface,
 	buildInformer latticeinformers.BuildInformer,
-	serviceBuildInformer latticeinformers.ServiceBuildInformer,
+	containerBuildInformer latticeinformers.ContainerBuildInformer,
 ) *Controller {
 	sbc := &Controller{
 		namespacePrefix: namespacePrefix,
@@ -61,13 +61,13 @@ func NewController(
 	sbc.buildLister = buildInformer.Lister()
 	sbc.buildListerSynced = buildInformer.Informer().HasSynced
 
-	serviceBuildInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc:    sbc.handleServiceBuildAdd,
-		UpdateFunc: sbc.handleServiceBuildUpdate,
+	containerBuildInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+		AddFunc:    sbc.handleContainerBuildAdd,
+		UpdateFunc: sbc.handleContainerBuildUpdate,
 		// only orphaned service builds should be deleted
 	})
-	sbc.serviceBuildLister = serviceBuildInformer.Lister()
-	sbc.serviceBuildListerSynced = serviceBuildInformer.Informer().HasSynced
+	sbc.containerBuildLister = containerBuildInformer.Lister()
+	sbc.containerBuildListerSynced = containerBuildInformer.Informer().HasSynced
 
 	return sbc
 }
@@ -78,11 +78,11 @@ func (c *Controller) Run(workers int, stopCh <-chan struct{}) {
 	// make sure the work queue is shutdown which will trigger workers to end
 	defer c.queue.ShutDown()
 
-	glog.Infof("starting system-build controller")
-	defer glog.Infof("shutting down system-build controller")
+	glog.Infof("starting build controller")
+	defer glog.Infof("shutting down build controller")
 
 	// wait for your secondary caches to fill before starting your work
-	if !cache.WaitForCacheSync(stopCh, c.buildListerSynced, c.serviceBuildListerSynced) {
+	if !cache.WaitForCacheSync(stopCh, c.buildListerSynced, c.containerBuildListerSynced) {
 		return
 	}
 
@@ -199,13 +199,13 @@ func (c *Controller) syncSystemBuild(key string) error {
 	glog.V(5).Infof("%v state: %v", build.Description(c.namespacePrefix), stateInfo.state)
 
 	switch stateInfo.state {
-	case stateHasFailedServiceBuilds:
+	case stateHasFailedContainerBuilds:
 		return c.syncFailedBuild(build, stateInfo)
-	case stateHasOnlyRunningOrSucceededServiceBuilds:
+	case stateHasOnlyRunningOrSucceededContainerBuilds:
 		return c.syncRunningBuild(build, stateInfo)
-	case stateNoFailuresNeedsNewServiceBuilds:
-		return c.syncMissingServiceBuildsBuild(build, stateInfo)
-	case stateAllServiceBuildsSucceeded:
+	case stateNoFailuresNeedsNewContainerBuilds:
+		return c.syncMissingContainerBuildsBuild(build, stateInfo)
+	case stateAllContainerBuildsSucceeded:
 		return c.syncSucceededBuild(build, stateInfo)
 	default:
 		return fmt.Errorf("%v in unrecognized state %v", build.Description(c.namespacePrefix), stateInfo.state)

@@ -14,5 +14,5 @@ var TestContext TestContextType
 
 func SetClusterURL(clusterURL string) {
 	TestContext.LatticeURL = clusterURL
-	TestContext.LatticeAPIClient = rest.NewClient(clusterURL)
+	TestContext.LatticeAPIClient = rest.NewClient(clusterURL, "")
 }

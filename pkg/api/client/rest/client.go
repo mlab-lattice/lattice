@@ -9,23 +9,19 @@ import (
 	"github.com/mlab-lattice/lattice/pkg/util/rest"
 )
 
+const (
+	apiKeyHeader = "API_KEY"
+)
+
 type Client struct {
 	restClient   rest.Client
 	apiServerURL string
 }
 
-func NewClient(apiServerURL string) *Client {
+func NewClient(apiServerURL, apiAuthKey string) *Client {
 	return &Client{
 		// FIXME: remove this or make it optional when we can
-		restClient:   rest.NewInsecureClient(),
-		apiServerURL: apiServerURL,
-	}
-}
-
-// NewInsecureClient client that skips certificate validate. We should XXX.
-func NewInsecureClient(apiServerURL string) *Client {
-	return &Client{
-		restClient:   rest.NewInsecureClient(),
+		restClient:   rest.NewInsecureClient(map[string]string{apiKeyHeader: apiAuthKey}),
 		apiServerURL: apiServerURL,
 	}
 }

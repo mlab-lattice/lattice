@@ -93,7 +93,7 @@ func (p *DefaultLocalLatticeProvisioner) Provision(id v1.LatticeID, containerCha
 	}
 
 	fmt.Println("Waiting for API server to be ready...")
-	clusterClient := rest.NewClient(address)
+	clusterClient := rest.NewClient(address, "")
 	err = wait.Poll(1*time.Second, 300*time.Second, func() (bool, error) {
 		ok, _ := clusterClient.Health()
 		return ok, nil
@@ -206,14 +206,15 @@ func (p *DefaultLocalLatticeProvisioner) bootstrap(containerChannel, address str
 									"--controller-manager-var", fmt.Sprintf("image=%v", getLatticeContainerImage(containerChannel, "kubernetes-lattice-controller-manager")),
 									"--controller-manager-var", "args=-v=5",
 									"--api-var", fmt.Sprintf("image=%v", getLatticeContainerImage(containerChannel, "kubernetes-api-server-rest")),
-									"--component-builder-var", fmt.Sprintf("image=%v", getLatticeContainerImage(containerChannel, "kubernetes-component-builder")),
-									"--component-builder-var", "docker-api-version=1.35",
-									"--component-build-docker-artifact-var", "registry=lattice-local",
-									"--component-build-docker-artifact-var", "repository-per-image=true",
-									"--component-build-docker-artifact-var", "push=false",
+									"--container-builder-var", fmt.Sprintf("image=%v", getLatticeContainerImage(containerChannel, "kubernetes-container-builder")),
+									"--container-builder-var", "docker-api-version=1.35",
+									"--container-build-docker-artifact-var", "registry=lattice-local",
+									"--container-build-docker-artifact-var", "repository-per-image=true",
+									"--container-build-docker-artifact-var", "push=false",
 									"--service-mesh", servicemesh.Envoy,
 									"--service-mesh-var", fmt.Sprintf("prepare-image=%v", getLatticeContainerImage(containerChannel, "kubernetes-envoy-prepare")),
-									"--service-mesh-var", fmt.Sprintf("xds-api-image=%v", getLatticeContainerImage(containerChannel, "kubernetes-envoy-xds-api-rest-per-node")),
+									// "--service-mesh-var", fmt.Sprintf("xds-api-image=%v", getLatticeContainerImage(containerChannel, "kubernetes-envoy-xds-api-rest-per-node")),
+									"--service-mesh-var", fmt.Sprintf("xds-api-image=%v", getLatticeContainerImage(containerChannel, "kubernetes-envoy-xds-api-grpc-per-node")),
 									"--service-mesh-var", "redirect-cidr-block=172.16.0.0/16",
 									"--cloud-provider", "local",
 									"--cloud-provider-var", "IP=" + address,

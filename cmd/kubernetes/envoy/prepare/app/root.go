@@ -1,10 +1,12 @@
 package app
 
 import (
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strconv"
 
 	"github.com/coreos/go-iptables/iptables"
 	"github.com/spf13/cobra"
@@ -18,8 +20,18 @@ const (
 	envVarRedirectEgressCIDRBlock = "REDIRECT_EGRESS_CIDR_BLOCK"
 	envVarConfigDir               = "CONFIG_DIR"
 	envVarAdminPort               = "ADMIN_PORT"
+	envVarXDSAPIVersion           = "XDS_API_VERSION"
 	envVarXDSAPIHost              = "XDS_API_HOST"
 	envVarXDSAPIPort              = "XDS_API_PORT"
+
+	// XXX: needed for V2 config (`--service-cluster` and `--service-node` do not set this appropriately)
+	envVarServiceCluster = "SERVICE_CLUSTER"
+	envVarServiceNode    = "SERVICE_NODE"
+
+	DefaultXDSClusterName             = "xds-api"
+	DefaultXDSClusterRefreshDelayMS   = 10000
+	DefaultXDSClusterConnectTimeoutMS = 250
+	DefaultXDSClusterConnectTimeout   = "0.25s"
 )
 
 var envVars = []string{
@@ -27,6 +39,7 @@ var envVars = []string{
 	envVarRedirectEgressCIDRBlock,
 	envVarConfigDir,
 	envVarAdminPort,
+	envVarXDSAPIVersion,
 	envVarXDSAPIHost,
 	envVarXDSAPIPort,
 }
@@ -63,18 +76,30 @@ func Execute() {
 }
 
 func parseEnv() (map[string]string, error) {
-	fail := func(key string) error {
-		return fmt.Errorf("%s not set", key)
-	}
-
 	env := map[string]string{}
 
-	for _, envVar := range envVars {
-		val, ok := os.LookupEnv(envVar)
+	getEnvVar := func(key string) error {
+		val, ok := os.LookupEnv(key)
 		if !ok {
-			return nil, fail(envVar)
+			return fmt.Errorf("%s not set", key)
 		}
-		env[envVar] = val
+		env[key] = val
+		return nil
+	}
+
+	for _, envVar := range envVars {
+		if err := getEnvVar(envVar); err != nil {
+			return nil, err
+		}
+	}
+
+	// XXX: see comment above
+	if env[envVarXDSAPIVersion] == "2" {
+		for _, envVar := range []string{envVarServiceCluster, envVarServiceNode} {
+			if err := getEnvVar(envVar); err != nil {
+				return nil, err
+			}
+		}
 	}
 
 	return env, nil
@@ -96,6 +121,131 @@ func addIPTableRedirect(env map[string]string) error {
 	return ipt.Append(tableNAT, chainOutput, rulespecs...)
 }
 
+// -----------------------------------------------------------------------------
+// XDS V1 Config
+// -----------------------------------------------------------------------------
+
+type XDSV1BootstrapConfig struct {
+	Listeners      []string            `json:"listeners"`
+	LDS            XDSV1LDS            `json:"lds"`
+	Admin          XDSV1Admin          `json:"admin"`
+	ClusterManager XDSV1ClusterManager `json:"cluster_manager"`
+}
+
+type XDSV1LDS struct {
+	Cluster        string `json:"cluster"`
+	RefreshDelayMS int    `json:"refresh_delay_ms"`
+}
+
+type XDSV1Admin struct {
+	AccessLogPath string `json:"access_log_path"`
+	Address       string `json:"address"`
+}
+
+type XDSV1ClusterManager struct {
+	Clusters []XDSV1Cluster `json:"clusters"`
+	CDS      XDSV1CDS       `json:"cds"`
+	SDS      XDSV1SDS       `json:"sds"`
+}
+
+type XDSV1CDS struct {
+	Cluster        XDSV1Cluster `json:"cluster"`
+	RefreshDelayMS int          `json:"refresh_delay_ms"`
+}
+
+type XDSV1SDS struct {
+	Cluster        XDSV1Cluster `json:"cluster"`
+	RefreshDelayMS int          `json:"refresh_delay_ms"`
+}
+
+type XDSV1Cluster struct {
+	Name             string      `json:"name"`
+	ConnectTimeoutMS int         `json:"connect_timeout_ms"`
+	Type             string      `json:"type"`
+	LBType           string      `json:"lb_type"`
+	Hosts            []XDSV1Host `json:"hosts"`
+}
+
+type XDSV1Host struct {
+	URL string `json:"url"`
+}
+
+// -----------------------------------------------------------------------------
+// XDS V2 Config
+// -----------------------------------------------------------------------------
+
+type XDSV2BootstrapConfig struct {
+	Node             XDSV2Node             `json:"node"`
+	Admin            XDSV2Admin            `json:"admin"`
+	StaticResources  XDSV2StaticResources  `json:"static_resources"`
+	DynamicResources XDSV2DynamicResources `json:"dynamic_resources"`
+}
+
+type XDSV2Node struct {
+	Id      string `json:"id"`
+	Cluster string `json:"cluster"`
+}
+
+type XDSV2Admin struct {
+	AccessLogPath string       `json:"access_log_path"`
+	Address       XDSV2Address `json:"address"`
+}
+
+type XDSV2StaticResources struct {
+	Clusters []XDSV2Cluster `json:"clusters"`
+}
+
+type XDSV2Cluster struct {
+	Name                 string      `json:"name"`
+	ConnectTimeout       string      `json:"connect_timeout"`
+	Type                 string      `json:"type"`
+	LBPolicy             string      `json:"lb_policy"`
+	HTTP2ProtocolOptions struct{}    `json:"http2_protocol_options"`
+	Hosts                []XDSV2Host `json:"hosts"`
+}
+
+// XXX: add extra fields to support non-ads configuration
+
+type XDSV2DynamicResources struct {
+	ADSConfig XDSV2ADSConfig `json:"ads_config"`
+	LDSConfig XDSV2LDSConfig `json:"lds_config"`
+	CDSConfig XDSV2CDSConfig `json:"cds_config"`
+}
+
+type XDSV2ADSConfig struct {
+	APIType      string             `json:"api_type"`
+	GRPCServices []XDSV2GRPCService `json:"grpc_services"`
+}
+
+type XDSV2GRPCService struct {
+	EnvoyGRPC XDSV2EnvoyGRPC `json:"envoy_grpc"`
+}
+
+type XDSV2EnvoyGRPC struct {
+	ClusterName string `json:"cluster_name"`
+}
+
+type XDSV2LDSConfig struct {
+	ADS struct{} `json:"ads"`
+}
+
+type XDSV2CDSConfig struct {
+	ADS struct{} `json:"ads"`
+}
+
+type XDSV2Address struct {
+	SocketAddress XDSV2SocketAddress `json:"socket_address"`
+}
+
+type XDSV2Host struct {
+	SocketAddress XDSV2SocketAddress `json:"socket_address"`
+}
+
+type XDSV2SocketAddress struct {
+	Address   string `json:"address"`
+	PortValue int    `json:"port_value"`
+}
+
 func outputEnvoyConfig(env map[string]string) error {
 	if err := os.MkdirAll(env[envVarConfigDir], 0644); err != nil {
 		return err
@@ -103,68 +253,127 @@ func outputEnvoyConfig(env map[string]string) error {
 
 	configFilename := filepath.Join(env[envVarConfigDir], "config.json")
 
-	xdsAPIURL := fmt.Sprintf("%v:%v", env[envVarXDSAPIHost], env[envVarXDSAPIPort])
+	var contents []byte
+	var err error
 
-	// TODO: factor this out into an envoy config struct
-	contents := fmt.Sprintf(`{
-  "listeners": [],
-  "lds": {
-    "cluster": "xds-api",
-    "refresh_delay_ms": 10000
-  },
-  "admin": {
-    "access_log_path": "/dev/null",
-    "address": "tcp://0.0.0.0:%v"
-  },
-  "cluster_manager": {
-    "clusters": [
-      {
-        "name": "xds-api",
-        "connect_timeout_ms": 250,
-        "type": "static",
-        "lb_type": "round_robin",
-        "hosts": [
-          {
-            "url": "tcp://%v"
-          }
-        ]
-      }
-    ],
-    "cds": {
-      "cluster": {
-        "name": "xds-api-cds",
-        "connect_timeout_ms": 250,
-        "type": "static",
-        "lb_type": "round_robin",
-        "hosts": [
-          {
-            "url": "tcp://%v"
-          }
-        ]
-      },
-      "refresh_delay_ms": 10000
-    },
-    "sds": {
-      "cluster": {
-        "name": "xds-api-sds",
-        "connect_timeout_ms": 250,
-        "type": "static",
-        "lb_type": "round_robin",
-        "hosts": [
-          {
-            "url": "tcp://%v"
-          }
-        ]
-      },
-      "refresh_delay_ms": 10000
-    }
-  }
-}`,
-		env[envVarAdminPort],
-		xdsAPIURL,
-		xdsAPIURL,
-		xdsAPIURL,
-	)
+	adminPort, err := strconv.Atoi(env[envVarAdminPort])
+	xdsAPIPort, err := strconv.Atoi(env[envVarXDSAPIPort])
+	xdsAPIURL := fmt.Sprintf("%v:%v", env[envVarXDSAPIHost], xdsAPIPort)
 
-	return ioutil.WriteFile(configFilename, []byte(contents), 0644)
+	switch env[envVarXDSAPIVersion] {
+	case "1":
+		contents, err = json.MarshalIndent(XDSV1BootstrapConfig{
+			Listeners: []string{},
+			LDS: XDSV1LDS{
+				Cluster:        DefaultXDSClusterName,
+				RefreshDelayMS: DefaultXDSClusterRefreshDelayMS,
+			},
+			Admin: XDSV1Admin{
+				AccessLogPath: "/dev/null",
+				Address:       fmt.Sprintf("tcp://0.0.0.0:%v", env[envVarAdminPort]),
+			},
+			ClusterManager: XDSV1ClusterManager{
+				Clusters: []XDSV1Cluster{
+					{
+						Name:             DefaultXDSClusterName,
+						ConnectTimeoutMS: DefaultXDSClusterConnectTimeoutMS,
+						Type:             "static",
+						LBType:           "round_robin",
+						Hosts: []XDSV1Host{
+							{
+								URL: fmt.Sprintf("tcp://%v", xdsAPIURL),
+							},
+						},
+					},
+				},
+				CDS: XDSV1CDS{
+					Cluster: XDSV1Cluster{
+						Name:             fmt.Sprintf("%v-cds", DefaultXDSClusterName),
+						ConnectTimeoutMS: DefaultXDSClusterConnectTimeoutMS,
+						Type:             "static",
+						LBType:           "round_robin",
+						Hosts: []XDSV1Host{
+							{
+								URL: fmt.Sprintf("tcp://%v", xdsAPIURL),
+							},
+						},
+					},
+					RefreshDelayMS: DefaultXDSClusterRefreshDelayMS,
+				},
+				SDS: XDSV1SDS{
+					Cluster: XDSV1Cluster{
+						Name:             fmt.Sprintf("%v-sds", DefaultXDSClusterName),
+						ConnectTimeoutMS: DefaultXDSClusterConnectTimeoutMS,
+						Type:             "static",
+						LBType:           "round_robin",
+						Hosts: []XDSV1Host{
+							{
+								URL: fmt.Sprintf("tcp://%v", xdsAPIURL),
+							},
+						},
+					},
+					RefreshDelayMS: DefaultXDSClusterRefreshDelayMS,
+				},
+			},
+		}, "", "  ")
+	case "2":
+		contents, err = json.MarshalIndent(XDSV2BootstrapConfig{
+			Node: XDSV2Node{
+				Id:      env[envVarServiceNode],
+				Cluster: env[envVarServiceCluster],
+			},
+			Admin: XDSV2Admin{
+				AccessLogPath: "/dev/null",
+				Address: XDSV2Address{
+					SocketAddress: XDSV2SocketAddress{
+						Address:   "0.0.0.0",
+						PortValue: adminPort,
+					},
+				},
+			},
+			StaticResources: XDSV2StaticResources{
+				Clusters: []XDSV2Cluster{
+					{
+						Name:                 DefaultXDSClusterName,
+						ConnectTimeout:       DefaultXDSClusterConnectTimeout,
+						Type:                 "STATIC",
+						LBPolicy:             "ROUND_ROBIN",
+						HTTP2ProtocolOptions: struct{}{},
+						Hosts: []XDSV2Host{
+							{
+								SocketAddress: XDSV2SocketAddress{
+									Address:   env[envVarXDSAPIHost],
+									PortValue: xdsAPIPort,
+								},
+							},
+						},
+					},
+				},
+			},
+			DynamicResources: XDSV2DynamicResources{
+				ADSConfig: XDSV2ADSConfig{
+					APIType: "GRPC",
+					GRPCServices: []XDSV2GRPCService{
+						{
+							EnvoyGRPC: XDSV2EnvoyGRPC{
+								ClusterName: DefaultXDSClusterName,
+							},
+						},
+					},
+				},
+				LDSConfig: XDSV2LDSConfig{
+					ADS: struct{}{},
+				},
+				CDSConfig: XDSV2CDSConfig{
+					ADS: struct{}{},
+				},
+			},
+		}, "", "  ")
+	default:
+		err = fmt.Errorf("unknown envoy boostrap config version: %v", env[envVarXDSAPIVersion])
+	}
+	if err != nil {
+		return err
+	}
+	return ioutil.WriteFile(configFilename, contents, 0644)
 }

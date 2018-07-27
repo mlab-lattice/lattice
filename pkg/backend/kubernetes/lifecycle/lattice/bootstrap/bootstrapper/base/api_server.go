@@ -49,16 +49,10 @@ func (b *DefaultBootstrapper) apiServerResources(resources *bootstrapper.Resourc
 				Resources: []string{latticev1.ResourcePluralBuild},
 				Verbs:     ReadAndCreateVerbs,
 			},
-			// lattice service build read
-			{
-				APIGroups: []string{latticev1.GroupName},
-				Resources: []string{latticev1.ResourcePluralServiceBuild},
-				Verbs:     ReadVerbs,
-			},
 			// lattice component build read
 			{
 				APIGroups: []string{latticev1.GroupName},
-				Resources: []string{latticev1.ResourcePluralComponentBuild},
+				Resources: []string{latticev1.ResourcePluralContainerBuild},
 				Verbs:     ReadVerbs,
 			},
 			// lattice deploy read and create
@@ -78,6 +72,18 @@ func (b *DefaultBootstrapper) apiServerResources(resources *bootstrapper.Resourc
 				APIGroups: []string{latticev1.GroupName},
 				Resources: []string{latticev1.ResourcePluralService},
 				Verbs:     ReadVerbs,
+			},
+			// lattice job read
+			{
+				APIGroups: []string{latticev1.GroupName},
+				Resources: []string{latticev1.ResourcePluralJob},
+				Verbs:     ReadVerbs,
+			},
+			// lattice job run read and create
+			{
+				APIGroups: []string{latticev1.GroupName},
+				Resources: []string{latticev1.ResourcePluralJobRun},
+				Verbs:     ReadAndCreateVerbs,
 			},
 			// lattice node pool read
 			{

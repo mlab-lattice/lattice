@@ -30,7 +30,7 @@ func GetPartsFromClusterName(clusterName string) (string, tree.NodePath, string,
 		return "", "", "", 0, err
 	}
 
-	path, err := tree.NodePathFromDomain(serviceDomain)
+	path, err := tree.NewNodePathFromDomain(serviceDomain)
 	if err != nil {
 		return "", "", "", 0, err
 	}

@@ -9,9 +9,9 @@ import (
 	v1server "github.com/mlab-lattice/lattice/pkg/api/server/v1"
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	v1rest "github.com/mlab-lattice/lattice/pkg/api/v1/rest"
-	"github.com/mlab-lattice/lattice/pkg/definition"
 	"github.com/mlab-lattice/lattice/pkg/definition/resolver"
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
+	definitionv1 "github.com/mlab-lattice/lattice/pkg/definition/v1"
 	"github.com/mlab-lattice/lattice/pkg/util/git"
 
 	"io"
@@ -80,13 +80,14 @@ func mountSystemHandlers(router *gin.RouterGroup, backend v1server.Interface, sy
 		c.Status(http.StatusOK)
 	})
 
-	mountVersionHandlers(router, backend, sysResolver)
 	mountBuildHandlers(router, backend, sysResolver)
 	mountDeployHandlers(router, backend, sysResolver)
 	mountNodePoolHandlers(router, backend)
 	mountServiceHandlers(router, backend)
+	mountJobHandlers(router, backend)
 	mountSecretHandlers(router, backend)
 	mountTeardownHandlers(router, backend)
+	mountVersionHandlers(router, backend, sysResolver)
 }
 
 func mountBuildHandlers(router *gin.RouterGroup, backend v1server.Interface, sysResolver resolver.SystemResolver) {
@@ -166,11 +167,11 @@ func mountBuildHandlers(router *gin.RouterGroup, backend v1server.Interface, sys
 		systemID := v1.SystemID(c.Param(systemIdentifier))
 		buildID := v1.BuildID(c.Param(buildIdentifier))
 		path := c.Query("path")
-		component := c.Query("component")
 
-		if component == "" {
-			c.Status(http.StatusBadRequest)
-			return
+		sidecarQuery, sidecarSet := c.GetQuery("sidecar")
+		var sidecar *string
+		if sidecarSet {
+			sidecar = &sidecarQuery
 		}
 
 		if path == "" {
@@ -191,7 +192,7 @@ func mountBuildHandlers(router *gin.RouterGroup, backend v1server.Interface, sys
 			return
 		}
 
-		log, err := backend.BuildLogs(systemID, buildID, nodePath, component, logOptions)
+		log, err := backend.BuildLogs(systemID, buildID, nodePath, sidecar, logOptions)
 		if err != nil {
 			handleError(c, err)
 			return
@@ -351,7 +352,7 @@ func mountServiceHandlers(router *gin.RouterGroup, backend v1server.Interface) {
 	// list-services
 	router.GET(servicesPath, func(c *gin.Context) {
 		systemID := v1.SystemID(c.Param(systemIdentifier))
-		servicePathParam := c.Query("servicePath")
+		servicePathParam := c.Query("path")
 
 		// check if its a query by service path
 
@@ -417,13 +418,12 @@ func mountServiceHandlers(router *gin.RouterGroup, backend v1server.Interface) {
 	router.GET(serviceLogPath, func(c *gin.Context) {
 		systemID := v1.SystemID(c.Param(systemIdentifier))
 		serviceId := v1.ServiceID(c.Param(serviceIdentifier))
-		component := c.Query("component")
 		instance := c.Query("instance")
 
-		// validate component
-		if component == "" {
-			c.Status(http.StatusBadRequest)
-			return
+		sidecarQuery, sidecarSet := c.GetQuery("sidecar")
+		var sidecar *string
+		if sidecarSet {
+			sidecar = &sidecarQuery
 		}
 
 		logOptions, err := requestedLogOptions(c)
@@ -433,7 +433,7 @@ func mountServiceHandlers(router *gin.RouterGroup, backend v1server.Interface) {
 			return
 		}
 
-		log, err := backend.ServiceLogs(systemID, serviceId, component, instance, logOptions)
+		log, err := backend.ServiceLogs(systemID, serviceId, sidecar, instance, logOptions)
 
 		if err != nil {
 			handleError(c, err)
@@ -447,6 +447,100 @@ func mountServiceHandlers(router *gin.RouterGroup, backend v1server.Interface) {
 
 		serveLogFile(log, c)
 
+	})
+}
+
+func mountJobHandlers(router *gin.RouterGroup, backend v1server.Interface) {
+	systemIdentifier := "system_id"
+	systemIdentifierPathComponent := fmt.Sprintf(":%v", systemIdentifier)
+	jobsPath := fmt.Sprintf(v1rest.JobsPathFormat, systemIdentifierPathComponent)
+
+	// run-job
+	router.POST(jobsPath, func(c *gin.Context) {
+		systemID := v1.SystemID(c.Param(systemIdentifier))
+
+		var req v1rest.RunJobRequest
+		if err := c.BindJSON(&req); err != nil {
+			handleBadRequestBody(c)
+			return
+		}
+
+		job, err := backend.RunJob(systemID, req.Path, req.Command, req.Environment)
+		if err != nil {
+			handleError(c, err)
+			return
+		}
+
+		c.JSON(http.StatusCreated, job)
+	})
+
+	// list-jobs
+	router.GET(jobsPath, func(c *gin.Context) {
+		systemID := v1.SystemID(c.Param(systemIdentifier))
+
+		jobs, err := backend.ListJobs(systemID)
+		if err != nil {
+			handleError(c, err)
+			return
+		}
+
+		c.JSON(http.StatusOK, jobs)
+	})
+
+	jobIdentifier := "job_id"
+	jobIdentifierPathComponent := fmt.Sprintf(":%v", jobIdentifier)
+	jobPath := fmt.Sprintf(v1rest.JobPathFormat, systemIdentifierPathComponent, jobIdentifierPathComponent)
+
+	// get-job
+	router.GET(jobPath, func(c *gin.Context) {
+		systemID := v1.SystemID(c.Param(systemIdentifier))
+		jobID := v1.JobID(c.Param(jobIdentifier))
+
+		job, err := backend.GetJob(systemID, jobID)
+		if err != nil {
+			handleError(c, err)
+			return
+		}
+
+		c.JSON(http.StatusOK, job)
+	})
+
+	jobLogPath := fmt.Sprintf(
+		v1rest.JobLogsPathFormat,
+		systemIdentifierPathComponent,
+		jobIdentifierPathComponent,
+	)
+
+	// get-job-logs
+	router.GET(jobLogPath, func(c *gin.Context) {
+		systemID := v1.SystemID(c.Param(systemIdentifier))
+		jobID := v1.JobID(c.Param(jobIdentifier))
+
+		sidecarQuery, sidecarSet := c.GetQuery("sidecar")
+		var sidecar *string
+		if sidecarSet {
+			sidecar = &sidecarQuery
+		}
+
+		logOptions, err := requestedLogOptions(c)
+
+		if err != nil {
+			c.Status(http.StatusBadRequest)
+			return
+		}
+
+		log, err := backend.JobLogs(systemID, jobID, sidecar, logOptions)
+		if err != nil {
+			handleError(c, err)
+			return
+		}
+
+		if log == nil {
+			c.Status(http.StatusOK)
+			return
+		}
+
+		serveLogFile(log, c)
 	})
 }
 
@@ -727,7 +821,12 @@ func mountVersionHandlers(router *gin.RouterGroup, backend v1server.Interface, s
 	})
 }
 
-func getSystemDefinitionRoot(backend v1server.Interface, sysResolver resolver.SystemResolver, systemID v1.SystemID, version v1.SystemVersion) (tree.Node, error) {
+func getSystemDefinitionRoot(
+	backend v1server.Interface,
+	sysResolver resolver.SystemResolver,
+	systemID v1.SystemID,
+	version v1.SystemVersion,
+) (*definitionv1.SystemNode, error) {
 	system, err := backend.GetSystem(systemID)
 	if err != nil {
 		return nil, err
@@ -737,10 +836,19 @@ func getSystemDefinitionRoot(backend v1server.Interface, sysResolver resolver.Sy
 		"%v#%v/%s",
 		system.DefinitionURL,
 		version,
-		definition.SystemDefinitionRootPathDefault,
+		definitionv1.SystemDefinitionRootPathDefault,
 	)
 
-	return sysResolver.ResolveDefinition(systemDefURI, &git.Options{})
+	root, err := sysResolver.ResolveDefinition(systemDefURI, &git.Options{})
+	if err != nil {
+		return nil, err
+	}
+
+	if def, ok := root.(*definitionv1.SystemNode); ok {
+		return def, nil
+	}
+
+	return nil, fmt.Errorf("definition is not a system")
 }
 
 func getSystemVersions(backend v1server.Interface, sysResolver resolver.SystemResolver, systemID v1.SystemID) ([]string, error) {

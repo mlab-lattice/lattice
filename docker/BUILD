@@ -72,9 +72,9 @@ lattice_go_container_image(
 )
 
 lattice_go_container_image(
-    name = "kubernetes-component-builder",
+    name = "kubernetes-container-builder",
     base_image = "openssh-client",
-    path = "cmd/kubernetes/component-builder",
+    path = "cmd/kubernetes/container-builder",
 )
 
 lattice_go_container_image(
@@ -87,6 +87,12 @@ lattice_go_container_image(
     name = "kubernetes-envoy-xds-api-rest-per-node",
     base_image = None,
     path = "cmd/kubernetes/envoy/xdsapi/v1/rest/per-node",
+)
+
+lattice_go_container_image(
+    name = "kubernetes-envoy-xds-api-grpc-per-node",
+    base_image = None,
+    path = "cmd/kubernetes/envoy/xdsapi/v2/grpc/per-node",
 )
 
 lattice_go_container_image(

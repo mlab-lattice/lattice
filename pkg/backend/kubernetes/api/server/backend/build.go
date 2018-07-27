@@ -7,8 +7,8 @@ import (
 
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
-	"github.com/mlab-lattice/lattice/pkg/definition"
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
+	defintionv1 "github.com/mlab-lattice/lattice/pkg/definition/v1"
 
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -18,13 +18,13 @@ import (
 	"github.com/satori/go.uuid"
 )
 
-func (kb *KubernetesBackend) Build(systemID v1.SystemID, definitionRoot tree.Node, version v1.SystemVersion) (*v1.Build, error) {
+func (kb *KubernetesBackend) Build(systemID v1.SystemID, def *defintionv1.SystemNode, version v1.SystemVersion) (*v1.Build, error) {
 	// ensure the system exists
 	if _, err := kb.ensureSystemCreated(systemID); err != nil {
 		return nil, err
 	}
 
-	build, err := newBuild(definitionRoot, version)
+	build, err := newBuild(def, version)
 	if err != nil {
 		return nil, err
 	}
@@ -43,16 +43,9 @@ func (kb *KubernetesBackend) Build(systemID v1.SystemID, definitionRoot tree.Nod
 	return &externalBuild, nil
 }
 
-func newBuild(definitionRoot tree.Node, version v1.SystemVersion) (*latticev1.Build, error) {
+func newBuild(def *defintionv1.SystemNode, version v1.SystemVersion) (*latticev1.Build, error) {
 	labels := map[string]string{
 		latticev1.BuildDefinitionVersionLabelKey: string(version),
-	}
-
-	services := map[tree.NodePath]latticev1.BuildSpecServiceInfo{}
-	for path, svcNode := range definitionRoot.Services() {
-		services[path] = latticev1.BuildSpecServiceInfo{
-			Definition: svcNode.Definition().(definition.Service),
-		}
 	}
 
 	build := &latticev1.Build{
@@ -61,8 +54,7 @@ func newBuild(definitionRoot tree.Node, version v1.SystemVersion) (*latticev1.Bu
 			Labels: labels,
 		},
 		Spec: latticev1.BuildSpec{
-			DefinitionRoot: definitionRoot,
-			Services:       services,
+			Definition: def,
 		},
 	}
 
@@ -123,7 +115,7 @@ func (kb *KubernetesBackend) BuildLogs(
 	systemID v1.SystemID,
 	buildID v1.BuildID,
 	path tree.NodePath,
-	component string,
+	sidecar *string,
 	logOptions *v1.ContainerLogOptions,
 ) (io.ReadCloser, error) {
 	// Ensure the system exists
@@ -141,7 +133,7 @@ func (kb *KubernetesBackend) BuildLogs(
 		return nil, err
 	}
 
-	serviceBuildID, ok := build.Status.ServiceBuilds[path]
+	service, ok := build.Status.Services[path]
 	if !ok {
 		if errors.IsNotFound(err) {
 			return nil, v1.NewInvalidServicePathError(path)
@@ -150,26 +142,18 @@ func (kb *KubernetesBackend) BuildLogs(
 		return nil, err
 	}
 
-	status, ok := build.Status.ServiceBuildStatuses[serviceBuildID]
-	if !ok {
-		err := fmt.Errorf(
-			"%v has service build ID %v for %v, but does not have a status for it",
-			build.Description(kb.namespacePrefix),
-			serviceBuildID,
-			path.String(),
-		)
-		return nil, err
-	}
-
-	componentBuildID, ok := status.ComponentBuilds[component]
-	if !ok {
-		return nil, v1.NewInvalidComponentError(component)
+	containerBuildID := service.MainContainer
+	if sidecar != nil {
+		containerBuildID, ok = service.Sidecars[*sidecar]
+		if !ok {
+			return nil, v1.NewInvalidSidecarError(*sidecar)
+		}
 	}
 
 	selector := labels.NewSelector()
-	requirement, err := labels.NewRequirement(latticev1.ComponentBuildIDLabelKey, selection.Equals, []string{componentBuildID})
+	requirement, err := labels.NewRequirement(latticev1.ContainerBuildIDLabelKey, selection.Equals, []string{containerBuildID})
 	if err != nil {
-		return nil, fmt.Errorf("error creating requirement for %v/%v job lookup: %v", namespace, componentBuildID, err)
+		return nil, fmt.Errorf("error creating requirement for %v/%v job lookup: %v", namespace, containerBuildID, err)
 	}
 
 	selector = selector.Add(*requirement)
@@ -179,7 +163,7 @@ func (kb *KubernetesBackend) BuildLogs(
 	}
 
 	if len(pods.Items) > 1 {
-		return nil, fmt.Errorf("found multiple pods for %v/%v", namespace, componentBuildID)
+		return nil, fmt.Errorf("found multiple pods for %v/%v", namespace, containerBuildID)
 	}
 
 	if len(pods.Items) == 0 {
@@ -224,26 +208,21 @@ func (kb *KubernetesBackend) transformBuild(build *latticev1.Build) (v1.Build, e
 		CompletionTimestamp: completionTimestamp,
 
 		Version:  version,
-		Services: map[tree.NodePath]v1.ServiceBuild{},
+		Services: make(map[tree.NodePath]v1.ServiceBuild),
 	}
 
-	for service, serviceBuildName := range build.Status.ServiceBuilds {
-		serviceBuildStatus, ok := build.Status.ServiceBuildStatuses[serviceBuildName]
-		if !ok {
-			err := fmt.Errorf(
-				"%v has service build %v but no Status for it",
-				build.Description(kb.namespacePrefix),
-				serviceBuildName,
-			)
-			return v1.Build{}, err
-		}
-
-		externalServiceBuild, err := transformServiceBuild(build.Namespace, serviceBuildName, &serviceBuildStatus)
+	for path, serviceInfo := range build.Status.Services {
+		externalServiceBuild, err := transformServiceBuild(
+			build.Namespace,
+			build.Name,
+			&serviceInfo,
+			build.Status.ContainerBuildStatuses,
+		)
 		if err != nil {
 			return v1.Build{}, err
 		}
 
-		externalBuild.Services[service] = externalServiceBuild
+		externalBuild.Services[path] = externalServiceBuild
 	}
 
 	return externalBuild, nil
@@ -264,74 +243,59 @@ func getBuildState(state latticev1.BuildState) (v1.BuildState, error) {
 	}
 }
 
-func transformServiceBuild(namespace, name string, status *latticev1.ServiceBuildStatus) (v1.ServiceBuild, error) {
-	state, err := getServiceBuildState(status.State)
+func transformServiceBuild(
+	namespace, name string,
+	serviceInfo *latticev1.BuildStatusService,
+	containerBuildStatuses map[string]latticev1.ContainerBuildStatus,
+) (v1.ServiceBuild, error) {
+	mainContainerBuildStatus, ok := containerBuildStatuses[serviceInfo.MainContainer]
+	if !ok {
+		err := fmt.Errorf(
+			"build %v/%v but does not have status for container build %v",
+			namespace,
+			name,
+			serviceInfo.MainContainer,
+		)
+		return v1.ServiceBuild{}, err
+	}
+
+	externalContainerBuild, err := transformContainerBuild(serviceInfo.MainContainer, mainContainerBuildStatus)
 	if err != nil {
 		return v1.ServiceBuild{}, err
 	}
 
-	var startTimestamp *time.Time
-	if status.StartTimestamp != nil {
-		startTimestamp = &status.StartTimestamp.Time
-	}
-
-	var completionTimestamp *time.Time
-	if status.CompletionTimestamp != nil {
-		completionTimestamp = &status.CompletionTimestamp.Time
-	}
-
 	externalBuild := v1.ServiceBuild{
-		State: state,
-
-		StartTimestamp:      startTimestamp,
-		CompletionTimestamp: completionTimestamp,
-
-		Components: map[string]v1.ComponentBuild{},
+		ContainerBuild: externalContainerBuild,
+		Sidecars:       make(map[string]v1.ContainerBuild),
 	}
 
-	for component, componentBuildName := range status.ComponentBuilds {
-		componentBuildStatus, ok := status.ComponentBuildStatuses[componentBuildName]
+	for sidecar, containerBuildID := range serviceInfo.Sidecars {
+		containerBuildStatus, ok := containerBuildStatuses[containerBuildID]
 		if !ok {
 			err := fmt.Errorf(
-				"service build %v/%v has component build %v for component %v but does not have its status",
+				"build %v/%v but does not have status for container build %v",
 				namespace,
 				name,
-				componentBuildName,
-				component,
+				serviceInfo.MainContainer,
 			)
 			return v1.ServiceBuild{}, err
 		}
 
-		externalComponentBuild, err := transformComponentBuild(componentBuildStatus)
+		externalContainerBuild, err := transformContainerBuild(containerBuildID, containerBuildStatus)
 		if err != nil {
 			return v1.ServiceBuild{}, err
 		}
 
-		externalBuild.Components[component] = externalComponentBuild
+		externalBuild.Sidecars[sidecar] = externalContainerBuild
 	}
 
 	return externalBuild, nil
 }
 
-func getServiceBuildState(state latticev1.ServiceBuildState) (v1.ServiceBuildState, error) {
-	switch state {
-	case latticev1.ServiceBuildStatePending:
-		return v1.ServiceBuildStatePending, nil
-	case latticev1.ServiceBuildStateRunning:
-		return v1.ServiceBuildStateRunning, nil
-	case latticev1.ServiceBuildStateSucceeded:
-		return v1.ServiceBuildStateSucceeded, nil
-	case latticev1.ServiceBuildStateFailed:
-		return v1.ServiceBuildStateFailed, nil
-	default:
-		return "", fmt.Errorf("invalid service build state: %v", state)
-	}
-}
-
-func transformComponentBuild(status latticev1.ComponentBuildStatus) (v1.ComponentBuild, error) {
+func transformContainerBuild(containerBuildID string, status latticev1.ContainerBuildStatus) (v1.ContainerBuild, error) {
 	state, err := getComponentBuildState(status.State)
 	if err != nil {
-		return v1.ComponentBuild{}, err
+		return v1.ContainerBuild{}, err
 	}
 
 	var failureMessage *string
@@ -341,7 +305,7 @@ func transformComponentBuild(status latticev1.ComponentBuildStatus) (v1.Componen
 	}
 
 	phase := status.LastObservedPhase
-	if state == v1.ComponentBuildStateSucceeded {
+	if state == v1.ContainerBuildStateSucceeded {
 		phase = nil
 	}
 
@@ -355,7 +319,8 @@ func transformComponentBuild(status latticev1.ComponentBuildStatus) (v1.Componen
 		completionTimestamp = &status.CompletionTimestamp.Time
 	}
 
-	externalBuild := v1.ComponentBuild{
+	externalBuild := v1.ContainerBuild{
+		ID:    v1.ContainerBuildID(containerBuildID),
 		State: state,
 
 		StartTimestamp:      startTimestamp,
@@ -368,24 +333,24 @@ func transformComponentBuild(status latticev1.ComponentBuildStatus) (v1.Componen
 	return externalBuild, nil
 }
 
-func getComponentBuildState(state latticev1.ComponentBuildState) (v1.ComponentBuildState, error) {
+func getComponentBuildState(state latticev1.ComponentBuildState) (v1.ContainerBuildState, error) {
 	switch state {
-	case latticev1.ComponentBuildStatePending:
-		return v1.ComponentBuildStatePending, nil
-	case latticev1.ComponentBuildStateQueued:
-		return v1.ComponentBuildStateQueued, nil
-	case latticev1.ComponentBuildStateRunning:
-		return v1.ComponentBuildStateRunning, nil
-	case latticev1.ComponentBuildStateSucceeded:
-		return v1.ComponentBuildStateSucceeded, nil
-	case latticev1.ComponentBuildStateFailed:
-		return v1.ComponentBuildStateFailed, nil
+	case latticev1.ContainerBuildStatePending:
+		return v1.ContainerBuildStatePending, nil
+	case latticev1.ContainerBuildStateQueued:
+		return v1.ContainerBuildStateQueued, nil
+	case latticev1.ContainerBuildStateRunning:
+		return v1.ContainerBuildStateRunning, nil
+	case latticev1.ContainerBuildStateSucceeded:
+		return v1.ContainerBuildStateSucceeded, nil
+	case latticev1.ContainerBuildStateFailed:
+		return v1.ContainerBuildStateFailed, nil
 	default:
 		return "", fmt.Errorf("invalid component state: %v", state)
 	}
 }
 
-func getComponentBuildFailureMessage(failureInfo v1.ComponentBuildFailureInfo) string {
+func getComponentBuildFailureMessage(failureInfo v1.ContainerBuildFailureInfo) string {
 	if failureInfo.Internal {
 		return "failed due to an internal error"
 	}

@@ -7,10 +7,8 @@ import (
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	kubeutil "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/kubernetes"
-	"github.com/mlab-lattice/lattice/pkg/definition"
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
-
-	"k8s.io/apimachinery/pkg/api/errors"
+	defintionv1 "github.com/mlab-lattice/lattice/pkg/definition/v1"
 )
 
 func (c *Controller) updateSystemLabels(
@@ -58,10 +56,12 @@ func (c *Controller) updateSystemLabels(
 func (c *Controller) updateSystem(
 	system *latticev1.System,
 	services map[tree.NodePath]latticev1.SystemSpecServiceInfo,
+	jobs map[tree.NodePath]latticev1.SystemSpecJobInfo,
 	nodePools map[string]latticev1.NodePoolSpec,
 ) (*latticev1.System, error) {
 	spec := system.Spec.DeepCopy()
 	spec.Services = services
+	spec.Jobs = jobs
 	spec.NodePools = nodePools
 
 	return c.updateSystemSpec(system, *spec)
@@ -113,8 +113,8 @@ func (c *Controller) systemServices(
 	}
 
 	services := make(map[tree.NodePath]latticev1.SystemSpecServiceInfo)
-	for path, service := range build.Spec.DefinitionRoot.Services() {
-		serviceBuildName, ok := build.Status.ServiceBuilds[path]
+	for path, serviceNode := range build.Spec.Definition.AllServices() {
+		serviceInfo, ok := build.Status.Services[path]
 		if !ok {
 			// FIXME: send warn event
 			err := fmt.Errorf(
@@ -125,70 +125,121 @@ func (c *Controller) systemServices(
 			return nil, err
 		}
 
-		serviceBuild, err := c.serviceBuildLister.ServiceBuilds(build.Namespace).Get(serviceBuildName)
-		if err != nil {
-			if errors.IsNotFound(err) {
-				err = fmt.Errorf(
-					"%v has service build %v for service %v but it does not exist",
-					build.Description(c.namespacePrefix),
-					serviceBuildName,
-					path,
-				)
-				return nil, err
-			}
-			return nil, err
+		containerBuilds := map[string]string{
+			kubeutil.UserMainContainerName: serviceInfo.MainContainer,
+		}
+		for sidecar, containerBuild := range serviceInfo.Sidecars {
+			containerBuilds[kubeutil.UserSidecarContainerName(sidecar)] = containerBuild
 		}
 
-		// Create ComponentBuildArtifacts for each Component in the Service
-		componentBuildArtifacts := make(map[string]latticev1.ComponentBuildArtifacts)
-		for component := range serviceBuild.Spec.Components {
-			componentBuildName, ok := serviceBuild.Status.ComponentBuilds[component]
-			if !ok {
-				err := fmt.Errorf(
-					"%v component %v does not have a component build",
-					serviceBuild.Description(c.namespacePrefix),
-					component,
+		// create artifacts for each container in the service
+		containerBuildArtifacts := make(map[string]latticev1.ContainerBuildArtifacts)
+		for containerName, containerBuildName := range containerBuilds {
+			containerBuild, err := c.containerBuildLister.ContainerBuilds(build.Namespace).Get(containerBuildName)
+			if err != nil {
+				err = fmt.Errorf(
+					"%v has container build %v but it does not exist",
+					build.Description(c.namespacePrefix),
+					containerBuildName,
 				)
 				return nil, err
 			}
 
-			componentBuildStatus, ok := serviceBuild.Status.ComponentBuildStatuses[componentBuildName]
-			if !ok {
-				err := fmt.Errorf(
-					"%v component build %v does not have a status",
-					serviceBuild.Description(c.namespacePrefix),
-					componentBuildName,
-				)
-				return nil, err
-			}
-
-			if componentBuildStatus.Artifacts == nil {
+			if containerBuild.Status.Artifacts == nil {
 				// FIXME: send warn event
 				err := fmt.Errorf(
 					"%v component build %v status does not have artifacts",
 					build.Description(c.namespacePrefix),
-					componentBuildName,
+					containerBuildName,
 				)
 				return nil, err
 			}
 
-			componentBuildArtifacts[component] = *componentBuildStatus.Artifacts
+			containerBuildArtifacts[containerName] = *containerBuild.Status.Artifacts
 		}
 
 		services[path] = latticev1.SystemSpecServiceInfo{
-			Definition:              service.Definition().(definition.Service),
-			ComponentBuildArtifacts: componentBuildArtifacts,
+			Definition:              serviceNode.Service(),
+			ContainerBuildArtifacts: containerBuildArtifacts,
 		}
 	}
 
 	return services, nil
 }
 
+func (c *Controller) systemJobs(
+	build *latticev1.Build,
+) (map[tree.NodePath]latticev1.SystemSpecJobInfo, error) {
+	if build.Status.State != latticev1.BuildStateSucceeded {
+		err := fmt.Errorf(
+			"cannot get services for %v, must be in state %v but is in %v",
+			build.Description(c.namespacePrefix),
+			latticev1.BuildStateSucceeded,
+			build.Status.State,
+		)
+		return nil, err
+	}
+
+	jobs := make(map[tree.NodePath]latticev1.SystemSpecJobInfo)
+	for path, jobNode := range build.Spec.Definition.AllJobs() {
+		jobInfo, ok := build.Status.Jobs[path]
+		if !ok {
+			// FIXME: send warn event
+			err := fmt.Errorf(
+				"%v does not have expected serviced %v",
+				build.Description(c.namespacePrefix),
+				path.String(),
+			)
+			return nil, err
+		}
+
+		containerBuilds := map[string]string{
+			kubeutil.UserMainContainerName: jobInfo.MainContainer,
+		}
+		for sidecar, containerBuild := range jobInfo.Sidecars {
+			containerBuilds[kubeutil.UserSidecarContainerName(sidecar)] = containerBuild
+		}
+
+		// create artifacts for each container in the job
+		containerBuildArtifacts := make(map[string]latticev1.ContainerBuildArtifacts)
+		for containerName, containerBuildName := range containerBuilds {
+			containerBuild, err := c.containerBuildLister.ContainerBuilds(build.Namespace).Get(containerBuildName)
+			if err != nil {
+				err = fmt.Errorf(
+					"%v has container build %v but it does not exist",
+					build.Description(c.namespacePrefix),
+					containerBuildName,
+				)
+				return nil, err
+			}
+
+			if containerBuild.Status.Artifacts == nil {
+				// FIXME: send warn event
+				err := fmt.Errorf(
+					"%v component build %v status does not have artifacts",
+					build.Description(c.namespacePrefix),
+					containerBuildName,
+				)
+				return nil, err
+			}
+
+			containerBuildArtifacts[containerName] = *containerBuild.Status.Artifacts
+		}
+
+		jobs[path] = latticev1.SystemSpecJobInfo{
+			Definition:              jobNode.Job(),
+			ContainerBuildArtifacts: containerBuildArtifacts,
+		}
+	}
+
+	return jobs, nil
+}
+
 func (c *Controller) systemNodePools(
 	build *latticev1.Build,
 ) (map[string]latticev1.NodePoolSpec, error) {
 	nodePools := make(map[string]latticev1.NodePoolSpec)
-	err := tree.Walk(build.Spec.DefinitionRoot, func(n tree.Node) error {
+	err := build.Spec.Definition.Walk(func(n *defintionv1.SystemNode) error {
 		path := n.Path()
 		pools := n.NodePools()
 

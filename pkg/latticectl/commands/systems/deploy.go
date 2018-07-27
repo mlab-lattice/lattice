@@ -129,20 +129,27 @@ func printBuildStateDuringDeploy(writer io.Writer, s *spinner.Spinner, build *v1
 	case v1.BuildStateFailed:
 		s.Stop()
 
-		var componentErrors [][]string
+		var containerBuildErrors [][]string
 
-		for serviceName, service := range build.Services {
-			for componentName, component := range service.Components {
-				if component.State == v1.ComponentBuildStateFailed {
-					componentErrors = append(componentErrors, []string{
-						fmt.Sprintf("%s:%s", serviceName, componentName),
-						string(*component.FailureMessage),
+		for path, service := range build.Services {
+			if service.State == v1.ContainerBuildStateFailed {
+				containerBuildErrors = append(containerBuildErrors, []string{
+					path.String(),
+					string(*service.FailureMessage),
+				})
+			}
+
+			for sidecar, containerBuild := range service.Sidecars {
+				if containerBuild.State == v1.ContainerBuildStateFailed {
+					containerBuildErrors = append(containerBuildErrors, []string{
+						fmt.Sprintf("%v (%v sidecar)", path.String(), sidecar),
+						string(*containerBuild.FailureMessage),
 					})
 				}
 			}
 		}
 
-		builds.PrintBuildFailure(writer, string(build.Version), componentErrors)
+		builds.PrintBuildFailure(writer, string(build.Version), containerBuildErrors)
 	}
 }
 
