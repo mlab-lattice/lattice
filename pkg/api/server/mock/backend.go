@@ -1,18 +1,15 @@
 package mock
 
 import (
-	"io"
-
-	"time"
-
 	"fmt"
+	"io"
+	"time"
 
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
+	definitionv1 "github.com/mlab-lattice/lattice/pkg/definition/v1"
 	"github.com/mlab-lattice/lattice/pkg/util/git"
 	"github.com/satori/go.uuid"
-
-	definitionv1 "github.com/mlab-lattice/lattice/pkg/definition/v1"
 )
 
 type MockBackend struct {
