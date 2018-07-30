@@ -12,7 +12,7 @@ import (
 )
 
 const (
-	mockSystemId     = v1.SystemID("mock-system")
+	mockSystemID     = v1.SystemID("mock-system")
 	mockSystemDefURL = "https://github.com/mlab-lattice/mock-system.git"
 	mockAPIServerURL = "http://localhost:8876"
 
@@ -45,10 +45,10 @@ func happyPathTest(t *testing.T) {
 func createSystem(t *testing.T) {
 	// test create system
 	fmt.Println("Test create system")
-	system, err := latticeClient.Systems().Create(mockSystemId, mockSystemDefURL)
+	system, err := latticeClient.Systems().Create(mockSystemID, mockSystemDefURL)
 	checkErr(err, t)
 
-	if system.ID != mockSystemId {
+	if system.ID != mockSystemID {
 		t.Fatalf("Bad system returned from create")
 	}
 	if system.DefinitionURL != mockSystemDefURL {
@@ -62,10 +62,10 @@ func createSystem(t *testing.T) {
 
 	// test get system
 	fmt.Println("Test Get System")
-	s, err := latticeClient.Systems().Get(mockSystemId)
+	s, err := latticeClient.Systems().Get(mockSystemID)
 	checkErr(err, t)
 
-	if s.ID != mockSystemId {
+	if s.ID != mockSystemID {
 		t.Fatalf("Bad system returned from Get")
 	}
 
@@ -78,7 +78,7 @@ func createSystem(t *testing.T) {
 		t.Fatalf("Wrong number of systems")
 	}
 
-	if systems[0].ID != mockSystemId {
+	if systems[0].ID != mockSystemID {
 		t.Fatal("bad list systems")
 	}
 }
@@ -86,7 +86,7 @@ func createSystem(t *testing.T) {
 func buildAndDeploy(t *testing.T) {
 	// create build
 	fmt.Println("Test Create Build")
-	build, err := latticeClient.Systems().Builds(mockSystemId).Create(mockSystemVersion)
+	build, err := latticeClient.Systems().Builds(mockSystemID).Create(mockSystemVersion)
 	checkErr(err, t)
 
 	fmt.Printf("Successfully created build. ID %v\n", build.ID)
@@ -96,7 +96,7 @@ func buildAndDeploy(t *testing.T) {
 	}
 
 	// get build
-	build1, err := latticeClient.Systems().Builds(mockSystemId).Get(build.ID)
+	build1, err := latticeClient.Systems().Builds(mockSystemID).Get(build.ID)
 	checkErr(err, t)
 
 	if build1 == nil {
@@ -104,7 +104,7 @@ func buildAndDeploy(t *testing.T) {
 	}
 
 	// list builds
-	builds, err := latticeClient.Systems().Builds(mockSystemId).List()
+	builds, err := latticeClient.Systems().Builds(mockSystemID).List()
 
 	if len(builds) != 1 {
 		t.Fatal("bad # of elements for list builds")
@@ -117,7 +117,7 @@ func buildAndDeploy(t *testing.T) {
 	// Deploy the build
 
 	fmt.Printf("Depolying build %v\n", build.ID)
-	deploy, err := latticeClient.Systems().Deploys(mockSystemId).CreateFromBuild(build.ID)
+	deploy, err := latticeClient.Systems().Deploys(mockSystemID).CreateFromBuild(build.ID)
 	checkErr(err, t)
 
 	fmt.Printf("Created deploy %v\n", deploy.ID)
@@ -125,7 +125,7 @@ func buildAndDeploy(t *testing.T) {
 	// wait for build to run
 	fmt.Printf("Waiting for build %v to enter running state\n", build.ID)
 	waitFor(func() bool {
-		build, err = latticeClient.Systems().Builds(mockSystemId).Get(build.ID)
+		build, err = latticeClient.Systems().Builds(mockSystemID).Get(build.ID)
 		checkErr(err, t)
 		return build.State == v1.BuildStateRunning
 	}, t)
@@ -138,7 +138,7 @@ func buildAndDeploy(t *testing.T) {
 	}
 
 	// ensure that deploy has reached running state as well
-	deploy, err = latticeClient.Systems().Deploys(mockSystemId).Get(deploy.ID)
+	deploy, err = latticeClient.Systems().Deploys(mockSystemID).Get(deploy.ID)
 
 	if deploy.State != v1.DeployStateInProgress {
 		t.Fatal("Deploy must be in the `In progress` state since build is running")
@@ -164,7 +164,7 @@ func buildAndDeploy(t *testing.T) {
 	fmt.Printf("Waiting for build %v to succeed\n", build.ID)
 
 	waitFor(func() bool {
-		build, err = latticeClient.Systems().Builds(mockSystemId).Get(build.ID)
+		build, err = latticeClient.Systems().Builds(mockSystemID).Get(build.ID)
 		checkErr(err, t)
 		return build.State == v1.BuildStateSucceeded
 	}, t)
@@ -173,7 +173,7 @@ func buildAndDeploy(t *testing.T) {
 
 	// ensure that deploy state has succeeded
 	fmt.Println("Verifying that deploy has succeeded...")
-	deploy, err = latticeClient.Systems().Deploys(mockSystemId).Get(deploy.ID)
+	deploy, err = latticeClient.Systems().Deploys(mockSystemID).Get(deploy.ID)
 
 	if deploy.State != v1.DeployStateSucceeded {
 		t.Fatal("Deploy must be in the `succeeded` state since build has succeeded")
@@ -190,7 +190,7 @@ func buildAndDeploy(t *testing.T) {
 	fmt.Println("Service builds succeeded!")
 
 	// list deploys
-	deploys, err := latticeClient.Systems().Deploys(mockSystemId).List()
+	deploys, err := latticeClient.Systems().Deploys(mockSystemID).List()
 	checkErr(err, t)
 
 	if len(deploys) != 1 {
@@ -206,9 +206,9 @@ func testSecrets(t *testing.T) {
 	fmt.Println("Testing secrets...")
 	path, _ := tree.NewNodePath("/mock/test")
 	fmt.Println("set secret")
-	err := latticeClient.Systems().Secrets(mockSystemId).Set(path, "x", "1")
+	err := latticeClient.Systems().Secrets(mockSystemID).Set(path, "x", "1")
 	checkErr(err, t)
-	secrets, err := latticeClient.Systems().Secrets(mockSystemId).List()
+	secrets, err := latticeClient.Systems().Secrets(mockSystemID).List()
 	checkErr(err, t)
 
 	fmt.Println("list secrets")
@@ -217,17 +217,17 @@ func testSecrets(t *testing.T) {
 	}
 
 	fmt.Println("get secret")
-	secret, err := latticeClient.Systems().Secrets(mockSystemId).Get(path, "x")
+	secret, err := latticeClient.Systems().Secrets(mockSystemID).Get(path, "x")
 	checkErr(err, t)
 	if secret.Value != "1" {
 		t.Fatal("Bad secret.")
 	}
 
 	fmt.Println("unset secret")
-	err = latticeClient.Systems().Secrets(mockSystemId).Unset(path, "x")
+	err = latticeClient.Systems().Secrets(mockSystemID).Unset(path, "x")
 	checkErr(err, t)
 
-	secrets, err = latticeClient.Systems().Secrets(mockSystemId).List()
+	secrets, err = latticeClient.Systems().Secrets(mockSystemID).List()
 	checkErr(err, t)
 
 	if len(secrets) != 0 {
@@ -237,7 +237,7 @@ func testSecrets(t *testing.T) {
 
 func checkSystemHealth(t *testing.T) {
 	// ensure that system services are up
-	system, err := latticeClient.Systems().Get(mockSystemId)
+	system, err := latticeClient.Systems().Get(mockSystemID)
 	checkErr(err, t)
 	if system.Services == nil {
 		t.Fatalf("system services are not set")
@@ -254,7 +254,7 @@ func teardownSystem(t *testing.T) {
 
 	fmt.Println("Tearing system down...")
 
-	teardown, err := latticeClient.Systems().Teardowns(mockSystemId).Create()
+	teardown, err := latticeClient.Systems().Teardowns(mockSystemID).Create()
 	checkErr(err, t)
 
 	fmt.Printf("Created teardown %v", teardown.ID)
@@ -267,7 +267,7 @@ func teardownSystem(t *testing.T) {
 	fmt.Printf("Waiting for teardown %v to run\n", teardown.ID)
 
 	waitFor(func() bool {
-		teardown, err = latticeClient.Systems().Teardowns(mockSystemId).Get(teardown.ID)
+		teardown, err = latticeClient.Systems().Teardowns(mockSystemID).Get(teardown.ID)
 		checkErr(err, t)
 		return teardown.State == v1.TeardownStateInProgress
 	}, t)
@@ -278,14 +278,14 @@ func teardownSystem(t *testing.T) {
 	fmt.Printf("Waiting for teardown %v to succeed\n", teardown.ID)
 
 	waitFor(func() bool {
-		teardown, err = latticeClient.Systems().Teardowns(mockSystemId).Get(teardown.ID)
+		teardown, err = latticeClient.Systems().Teardowns(mockSystemID).Get(teardown.ID)
 		checkErr(err, t)
 		return teardown.State == v1.TeardownStateSucceeded
 	}, t)
 
 	// check that system services are nil after teardown
 	fmt.Println("Checking that system services are down after teardown...")
-	system, err := latticeClient.Systems().Get(mockSystemId)
+	system, err := latticeClient.Systems().Get(mockSystemID)
 	if system.Services != nil {
 		t.Fatal("System services still up")
 	}
@@ -294,7 +294,7 @@ func teardownSystem(t *testing.T) {
 }
 
 func deleteSystem(t *testing.T) {
-	system, err := latticeClient.Systems().Get(mockSystemId)
+	system, err := latticeClient.Systems().Get(mockSystemID)
 	checkErr(err, t)
 
 	if system == nil {
@@ -302,9 +302,9 @@ func deleteSystem(t *testing.T) {
 	}
 
 	fmt.Println("Deleting system...")
-	latticeClient.Systems().Delete(mockSystemId)
+	latticeClient.Systems().Delete(mockSystemID)
 
-	_, err = latticeClient.Systems().Get(mockSystemId)
+	_, err = latticeClient.Systems().Get(mockSystemID)
 
 	if err == nil || !strings.Contains(fmt.Sprintf("%v", err), "invalid system") {
 		t.Fatal("Expected an invalid system error")
