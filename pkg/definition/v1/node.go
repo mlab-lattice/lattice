@@ -12,6 +12,9 @@ func NewNode(c component.Interface, name string, parent tree.Node) (tree.Node, e
 	case *Job:
 		return NewJobNode(res, name, parent), nil
 
+	case *Reference:
+		return NewReferenceNode(res, name, parent), nil
+
 	case *Service:
 		return NewServiceNode(res, name, parent), nil
 

@@ -15,6 +15,7 @@ type ComponentResolver interface {
 		ctx *git.FileReference,
 		ref *definitionv1.Reference,
 	) (component.Interface, error)
+	Versions(repository string) ([]string, error)
 }
 
 type DefaultComponentResolver struct {
@@ -23,6 +24,10 @@ type DefaultComponentResolver struct {
 
 func NewComponentResolver(referenceResolver ReferenceResolver) ComponentResolver {
 	return &DefaultComponentResolver{referenceResolver}
+}
+
+func (r *DefaultComponentResolver) Versions(repository string) ([]string, error) {
+	return r.referenceResolver.Versions(repository, nil)
 }
 
 func (r *DefaultComponentResolver) ResolveComponent(
