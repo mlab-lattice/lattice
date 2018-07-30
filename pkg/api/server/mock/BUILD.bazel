@@ -12,8 +12,9 @@ go_library(
     deps = [
         "//pkg/api/server/rest:go_default_library",
         "//pkg/api/v1:go_default_library",
-        "//pkg/definition:go_default_library",
+        "//pkg/definition/component:go_default_library",
         "//pkg/definition/tree:go_default_library",
+        "//pkg/definition/v1:go_default_library",
         "//pkg/util/git:go_default_library",
         "@com_github_satori_go_uuid//:go_default_library",
     ],
@@ -26,5 +27,6 @@ go_test(
     deps = [
         "//pkg/api/client/rest:go_default_library",
         "//pkg/api/v1:go_default_library",
+        "//pkg/definition/tree:go_default_library",
     ],
 )

@@ -28,7 +28,7 @@ func TestMockServer(t *testing.T) {
 
 func mockTests(t *testing.T) {
 	authTest(t)
-	//happyPathTest(t)
+	happyPathTest(t)
 	testInvalidIDs(t)
 }
 
@@ -324,7 +324,7 @@ func testInvalidIDs(t *testing.T) {
 
 	// test other stuff
 	testID := v1.SystemID("test")
-	_, err = latticeClient.Systems().Create(testID, "test")
+	_, err = latticeClient.Systems().Create(testID, mockSystemDefURL)
 	checkErr(err, t)
 
 	// test invalid build id error
