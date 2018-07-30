@@ -5,7 +5,6 @@ go_library(
     srcs = [
         "component.go",
         "component_resolver.go",
-        "reference_resolver.go",
         "template_store.go",
     ],
     importpath = "github.com/mlab-lattice/lattice/pkg/definition/resolver",
@@ -26,7 +25,7 @@ go_library(
 go_test(
     name = "go_default_test",
     size = "small",
-    srcs = ["reference_resolver_test.go"],
+    srcs = ["component_resolver_test.go"],
     embed = [":go_default_library"],
     deps = [
         "//pkg/api/v1:go_default_library",

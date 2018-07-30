@@ -67,7 +67,7 @@ func testFileReferenceResolve(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	r, err := NewReferenceResolver(workDir, NewMemoryTemplateStore())
+	r, err := NewComponentResolver(workDir, NewMemoryTemplateStore())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -117,7 +117,7 @@ func testCommitGitReferenceResolve(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	r, err := NewReferenceResolver(workDir, NewMemoryTemplateStore())
+	r, err := NewComponentResolver(workDir, NewMemoryTemplateStore())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -209,7 +209,7 @@ func testBranchGitReferenceResolve(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	r, err := NewReferenceResolver(workDir, NewMemoryTemplateStore())
+	r, err := NewComponentResolver(workDir, NewMemoryTemplateStore())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -355,7 +355,7 @@ func testTagGitReferenceResolve(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	r, err := NewReferenceResolver(workDir, NewMemoryTemplateStore())
+	r, err := NewComponentResolver(workDir, NewMemoryTemplateStore())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -610,7 +610,7 @@ func cleanReferenceResolverWorkDir(t *testing.T) {
 }
 
 func shouldResolveToService(
-	r ReferenceResolver,
+	r ComponentResolver,
 	ref *defintionv1.Reference,
 	expected *defintionv1.Service,
 ) error {
@@ -618,7 +618,7 @@ func shouldResolveToService(
 }
 
 func shouldResolveToServiceCtx(
-	r ReferenceResolver,
+	r ComponentResolver,
 	ctx *git.FileReference,
 	ref *defintionv1.Reference,
 	expected *defintionv1.Service,
@@ -642,14 +642,14 @@ func shouldResolveToServiceCtx(
 }
 
 func shouldFailToResolve(
-	r ReferenceResolver,
+	r ComponentResolver,
 	ref *defintionv1.Reference,
 ) error {
 	return shouldFailToResolveCtx(r, &git.FileReference{}, ref)
 }
 
 func shouldFailToResolveCtx(
-	r ReferenceResolver,
+	r ComponentResolver,
 	ctx *git.FileReference,
 	ref *defintionv1.Reference,
 ) error {
@@ -658,14 +658,14 @@ func shouldFailToResolveCtx(
 }
 
 func resolveReference(
-	r ReferenceResolver,
+	r ComponentResolver,
 	id v1.SystemID,
 	p tree.NodePath,
 	ctx *git.FileReference,
 	ref *defintionv1.Reference,
 	shouldSucceed bool,
 ) (component.Interface, error) {
-	c, _, err := r.ResolveReference(id, p, ctx, ref)
+	c, _, err := r.ResolveReference(id, p, ctx, ref, DepthInfinite)
 	if err != nil {
 		if !shouldSucceed {
 			return nil, nil

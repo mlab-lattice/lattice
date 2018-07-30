@@ -820,7 +820,7 @@ func mountVersionHandlers(router *gin.RouterGroup, backend v1server.Interface, r
 
 func getSystemDefinitionRoot(
 	backend v1server.Interface,
-	resolver resolver.ComponentResolver,
+	r resolver.ComponentResolver,
 	systemID v1.SystemID,
 	version v1.SystemVersion,
 ) (*definitionv1.SystemNode, error) {
@@ -838,7 +838,7 @@ func getSystemDefinitionRoot(
 			},
 		},
 	}
-	c, err := resolver.ResolveComponent(systemID, tree.RootNodePath(), nil, ref)
+	c, _, err := r.ResolveReference(systemID, tree.RootNodePath(), nil, ref, resolver.DepthInfinite)
 	if err != nil {
 		return nil, err
 	}
@@ -861,5 +861,5 @@ func getSystemVersions(backend v1server.Interface, resolver resolver.ComponentRe
 		return nil, err
 	}
 
-	return resolver.Versions(system.DefinitionURL)
+	return resolver.Versions(system.DefinitionURL, nil)
 }

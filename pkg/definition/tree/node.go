@@ -5,7 +5,7 @@ import (
 )
 
 // The Node interface represents a Node in the tree of a System definition.
-// Note that Nodes are assumed to have an Immutable location in the tree,
+// Note that Nodes are assumed to have an immutable location in the tree,
 // i.e. their parent and children will not change.
 type Node interface {
 	Parent() Node

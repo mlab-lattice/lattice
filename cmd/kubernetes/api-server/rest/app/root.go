@@ -91,14 +91,12 @@ func Command() *cli.Command {
 
 			latticeInformers := latticeinformers.NewSharedInformerFactory(latticeClient, time.Duration(12*time.Hour))
 			store := kuberesolver.NewKubernetesTemplateStore(namespacePrefix, latticeClient, latticeInformers, nil)
-			referenceResolver, err := resolver.NewReferenceResolver(workDirectory, store)
+			resolver, err := resolver.NewComponentResolver(workDirectory, store)
 			if err != nil {
 				panic(err)
 			}
 
-			componentResolver := resolver.NewComponentResolver(referenceResolver)
-
-			rest.RunNewRestServer(backend, componentResolver, port, apiAuthKey)
+			rest.RunNewRestServer(backend, resolver, port, apiAuthKey)
 		},
 	}
 
