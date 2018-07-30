@@ -169,9 +169,9 @@ func addIPTableRedirects(env map[string]string) error {
 	networkContainsIP_, err := networkContainsIP(env[envVarRedirectEgressCIDRBlock], localIP_)
 	if err != nil {
 		return err
-	} else if !networkContainsIP_ {
+	} else if networkContainsIP_ {
 		return fmt.Errorf("CIDR %v contains local IP address %v",
-			envVarRedirectEgressCIDRBlock, localIP_)
+			env[envVarRedirectEgressCIDRBlock], localIP_)
 	}
 	// get the network IP used to redirect HTTP traffic
 	networkIP_, err := networkIP(env[envVarRedirectEgressCIDRBlock])

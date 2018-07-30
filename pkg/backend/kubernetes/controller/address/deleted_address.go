@@ -3,6 +3,8 @@ package address
 import (
 	"fmt"
 
+	"github.com/golang/glog"
+
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	kubeutil "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/kubernetes"
 
@@ -55,6 +57,9 @@ func (c *Controller) syncDeletedAddress(address *latticev1.Address) error {
 	annotations, err := c.serviceMesh.ReleaseServiceIP(address)
 	if err != nil {
 		return fmt.Errorf("error releasing service IP: %v", err)
+	} else {
+		glog.V(4).Infof("released service IP for: %v", address.Name)
+		glog.V(4).Infof("service IP annotations: %v", annotations)
 	}
 
 	address, err = c.mergeAndUpdateAddressAnnotations(address, annotations)

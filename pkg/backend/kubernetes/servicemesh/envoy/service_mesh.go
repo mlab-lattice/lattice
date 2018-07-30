@@ -7,11 +7,12 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/golang/glog"
+
 	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/lifecycle/system/bootstrap/bootstrapper"
 	"github.com/mlab-lattice/lattice/pkg/util/cli"
 
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
-	smconstants "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/servicemesh/constants"
 	kubeutil "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/kubernetes"
 	netutil "github.com/mlab-lattice/lattice/pkg/util/net"
 
@@ -23,7 +24,7 @@ const (
 	annotationKeyAdminPort        = "envoy.servicemesh.lattice.mlab.com/admin-port"
 	annotationKeyServiceMeshPorts = "envoy.servicemesh.lattice.mlab.com/service-mesh-ports"
 	annotationKeyEgressPorts      = "envoy.servicemesh.lattice.mlab.com/egress-ports"
-	annotationKeyIP               = smconstants.AnnotationKeyIP
+	annotationKeyIP               = "envoy.servicemesh.lattice.mlab.com/ip"
 
 	deploymentResourcePrefix = "envoy-"
 
@@ -391,11 +392,12 @@ func (sm *DefaultEnvoyServiceMesh) ReleaseServiceIP(address *latticev1.Address) 
 	ip, _ := address.Annotations[annotationKeyIP]
 
 	if ip == "" {
-		return nil, fmt.Errorf("tried to release service IP for %s but found none", address.Name)
+		glog.V(4).Infof("tried to release service IP for %s but found none", address.Name)
+		return sm.ServiceAddressAnnotations(address)
 	}
 
 	// check if this ip is being managed by
-	// XXX <GEB>: race here with call to RemoveLeased, don't believe this is an issue in practive, but may
+	// XXX <GEB>: race here with call to RemoveLeased, don't believe this is an issue in practice, but may
 	//            want to synchronize service mesh methods
 	isLeased, err := sm.leaseManager.IsLeased(ip)
 	if err != nil {

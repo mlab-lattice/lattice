@@ -3,6 +3,7 @@ package pernode
 import (
 	"encoding/json"
 	"fmt"
+	"net"
 	"sync"
 	"time"
 
@@ -65,7 +66,7 @@ type KubernetesPerNodeBackend struct {
 	stopCh <-chan struct{}
 }
 
-func NewKubernetesPerNodeBackend(kubeconfig string, stopCh <-chan struct{}) (*KubernetesPerNodeBackend, error) {
+func NewKubernetesPerNodeBackend(kubeconfig string, redirectCIDRBlock *net.IPNet, stopCh <-chan struct{}) (*KubernetesPerNodeBackend, error) {
 	var config *rest.Config
 	var err error
 	if kubeconfig == "" {
@@ -91,7 +92,10 @@ func NewKubernetesPerNodeBackend(kubeconfig string, stopCh <-chan struct{}) (*Ku
 	}
 	latticeInformers := latticeinformers.NewSharedInformerFactory(latticeClient, time.Duration(12*time.Hour))
 
-	serviceMesh, err := envoy.NewEnvoyServiceMesh(&envoy.Options{})
+	envoyOptions := &envoy.Options{
+		RedirectCIDRBlock: *redirectCIDRBlock,
+	}
+	serviceMesh, err := envoy.NewEnvoyServiceMesh(envoyOptions)
 	if err != nil {
 		return nil, err
 	}

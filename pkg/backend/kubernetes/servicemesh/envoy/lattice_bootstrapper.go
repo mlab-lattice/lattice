@@ -177,6 +177,7 @@ func (b *DefaultEnvoylatticeBootstrapper) BootstrapLatticeResources(resources *b
 							Args: []string{
 								"-v", "5",
 								"-logtostderr",
+								"-redirect-cidr-block", b.redirectCIDRBlock.String(),
 							},
 							Image: b.xdsAPIImage,
 							Ports: []corev1.ContainerPort{
