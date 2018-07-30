@@ -9,6 +9,7 @@ import (
 
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
+	"github.com/mlab-lattice/lattice/pkg/util/git"
 	"github.com/satori/go.uuid"
 
 	definitionv1 "github.com/mlab-lattice/lattice/pkg/definition/v1"
@@ -97,6 +98,15 @@ func (backend *MockBackend) Build(
 	record, exists := backend.systemRegistry[systemID]
 	if !exists {
 		return nil, v1.NewInvalidSystemIDError(systemID)
+	}
+
+	// validate definition URL
+	if !git.IsValidRepositoryURI(record.system.DefinitionURL) {
+		return nil, fmt.Errorf("bad url: %v", record.system.DefinitionURL)
+	}
+	// validate version
+	if v != "1.0.0" {
+		return nil, fmt.Errorf("bad version: %v", v)
 	}
 
 	build := backend.newMockBuild(systemID, v)

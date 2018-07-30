@@ -30,6 +30,7 @@ func mockTests(t *testing.T) {
 	authTest(t)
 	happyPathTest(t)
 	testInvalidIDs(t)
+	testInvalidDefinition(t)
 }
 
 func happyPathTest(t *testing.T) {
@@ -344,6 +345,33 @@ func testInvalidIDs(t *testing.T) {
 	if _, isInvalidTeardownError := err.(*v1.InvalidTeardownIDError); !isInvalidTeardownError {
 		t.Fatal("Expected an invalid teardown error")
 	}
+
+	latticeClient.Systems().Delete("test")
+}
+
+func testInvalidDefinition(t *testing.T) {
+	fmt.Println("Test invalid definition URL")
+
+	testID := v1.SystemID("test")
+	_, err := latticeClient.Systems().Create("test", "giddd://bad-url")
+	checkErr(err, t)
+
+	_, err = latticeClient.Systems().Builds(testID).Create(mockSystemVersion)
+	if err == nil {
+		t.Fatal("Expected invalid definition url error")
+	}
+
+	fmt.Printf("Got expected error: %v\n", err)
+	// test invalid version
+	_, err = latticeClient.Systems().Create("test2", mockSystemDefURL)
+	checkErr(err, t)
+
+	_, err = latticeClient.Systems().Builds(testID).Create("111")
+	if err == nil {
+		t.Fatal("Expected invalid version error")
+	}
+
+	fmt.Printf("Got expected error: %v\n", err)
 }
 
 func authTest(t *testing.T) {
