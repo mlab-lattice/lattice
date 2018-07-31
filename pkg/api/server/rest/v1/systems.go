@@ -816,6 +816,24 @@ func mountVersionHandlers(router *gin.RouterGroup, backend v1server.Interface, r
 
 		c.JSON(http.StatusOK, versions)
 	})
+
+	versionIdentifier := "version_id"
+	versionIdentifierPathComponent := fmt.Sprintf(":%v", versionIdentifier)
+	versionPath := fmt.Sprintf(v1rest.VersionPathFormat, systemIDPathComponent, versionIdentifierPathComponent)
+
+	// get-system-version
+	router.GET(versionPath, func(c *gin.Context) {
+		systemID := v1.SystemID(c.Param(systemIDIdentifier))
+		version := v1.SystemVersion(c.Param(versionIdentifier))
+
+		root, err := getSystemDefinitionRoot(backend, resolver, systemID, version)
+		if err != nil {
+			handleError(c, err)
+			return
+		}
+
+		c.JSON(http.StatusOK, root)
+	})
 }
 
 func getSystemDefinitionRoot(
@@ -836,6 +854,7 @@ func getSystemDefinitionRoot(
 				URL: system.DefinitionURL,
 				Tag: &tag,
 			},
+			File: "system.json",
 		},
 	}
 	c, _, err := r.ResolveReference(systemID, tree.RootNodePath(), nil, ref, resolver.DepthInfinite)

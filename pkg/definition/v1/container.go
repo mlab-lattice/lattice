@@ -91,10 +91,10 @@ type containerBuildEncoder struct {
 }
 
 type ContainerBuildCommand struct {
-	Source          *ContainerBuildSource `json:"source,omitempty"`
-	BaseDockerImage DockerImage           `json:"base_docker_image"`
-	Command         []string              `json:"command,omitempty"`
-	Environment     ContainerEnvironment  `json:"environment,omitempty"`
+	Source      *ContainerBuildSource `json:"source,omitempty"`
+	BaseImage   DockerImage           `json:"base_image"`
+	Command     []string              `json:"command,omitempty"`
+	Environment ContainerEnvironment  `json:"environment,omitempty"`
 }
 
 type containerBuildCommandEncoder struct {

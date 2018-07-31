@@ -16,6 +16,7 @@ go_library(
         "//pkg/definition/template:go_default_library",
         "//pkg/util/git:go_default_library",
         "//pkg/util/sha1:go_default_library",
+        "@com_github_satori_go_uuid//:go_default_library",
         "@io_k8s_apimachinery//pkg/api/errors:go_default_library",
         "@io_k8s_apimachinery//pkg/apis/meta/v1:go_default_library",
         "@io_k8s_apimachinery//pkg/labels:go_default_library",

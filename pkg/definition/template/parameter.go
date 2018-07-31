@@ -32,7 +32,7 @@ func (e *ParameterTypeError) Error() string {
 
 type Parameter struct {
 	Type    ParameterType `json:"type"`
-	Default interface{}   `json:"default"`
+	Default interface{}   `json:"default,omitempty"`
 }
 
 func (d Parameter) Validate(assignment interface{}) error {

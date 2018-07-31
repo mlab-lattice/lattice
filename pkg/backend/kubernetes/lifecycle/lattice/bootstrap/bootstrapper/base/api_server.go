@@ -91,6 +91,18 @@ func (b *DefaultBootstrapper) apiServerResources(resources *bootstrapper.Resourc
 				Resources: []string{latticev1.ResourcePluralNodePool},
 				Verbs:     ReadVerbs,
 			},
+			// lattice git template read/create
+			{
+				APIGroups: []string{latticev1.GroupName},
+				Resources: []string{latticev1.ResourcePluralGitTemplate},
+				Verbs:     ReadAndCreateVerbs,
+			},
+			// lattice template read/create
+			{
+				APIGroups: []string{latticev1.GroupName},
+				Resources: []string{latticev1.ResourcePluralTemplate},
+				Verbs:     ReadAndCreateVerbs,
+			},
 
 			// kube pod read and delete
 			{

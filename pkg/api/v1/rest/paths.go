@@ -28,7 +28,8 @@ const (
 	ServiceLogsPathFormat = ServicePathFormat + "/logs"
 
 	TeardownsPathFormat = SystemPathFormat + "/teardowns"
-	TeardownPathFormat  = TeardownsPathFormat + "%v"
+	TeardownPathFormat  = TeardownsPathFormat + "/%v"
 
 	VersionsPathFormat = SystemPathFormat + "/versions"
+	VersionPathFormat  = VersionsPathFormat + "/%v"
 )

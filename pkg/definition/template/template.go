@@ -8,6 +8,8 @@ import (
 	"strings"
 )
 
+const parametersField = "$parameters"
+
 var (
 	variableRegex       = regexp.MustCompile(`\$\{([a-zA-Z_$][a-zA-Z_$.0-9]*)\}`)
 	singleVariableRegex = regexp.MustCompile(fmt.Sprintf("^%v$", variableRegex.String()))
@@ -31,7 +33,8 @@ func (t *Template) UnmarshalJSON(data []byte) error {
 		return err
 	}
 
-	if p, ok := m["parameters"]; ok {
+	params := make(Parameters)
+	if p, ok := m[parametersField]; ok && p != nil {
 		if _, ok := p.(map[string]interface{}); !ok {
 			return fmt.Errorf("invalid parameter type, expected object")
 		}
@@ -41,16 +44,15 @@ func (t *Template) UnmarshalJSON(data []byte) error {
 			return fmt.Errorf("error marshalling parameters: %v", err)
 		}
 
-		var params Parameters
 		if err := json.Unmarshal(paramBytes, &params); err != nil {
 			return err
 		}
-
-		t.Parameters = params
-		delete(m, "parameters")
 	}
 
+	delete(m, parametersField)
+	t.Parameters = params
 	t.Fields = m
+
 	return nil
 }
 
@@ -60,7 +62,7 @@ func (t *Template) MarshalJSON() ([]byte, error) {
 		m[k] = v
 	}
 
-	m["parameters"] = t.Parameters
+	m[parametersField] = t.Parameters
 	return json.Marshal(&m)
 }
 

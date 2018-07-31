@@ -246,6 +246,10 @@ func (r *DefaultComponentResolver) gitReferenceCommit(ref *definitionv1.GitRepos
 			return nil, err
 		}
 
+		if len(versions) == 0 {
+			return nil, fmt.Errorf("no tags match the requested version")
+		}
+
 		tag := versions[len(versions)-1]
 		gitRef = &git.Reference{Tag: &tag}
 

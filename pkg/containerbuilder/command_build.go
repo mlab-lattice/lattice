@@ -13,7 +13,7 @@ func (b *Builder) buildCommandBuildContainer(commandBuild *v1.ContainerBuildComm
 		return err
 	}
 
-	baseImage, err := getDockerImageFQNFromDockerImageBlock(&commandBuild.BaseDockerImage)
+	baseImage, err := getDockerImageFQNFromDockerImageBlock(&commandBuild.BaseImage)
 	if err != nil {
 		return err
 	}

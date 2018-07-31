@@ -31,7 +31,7 @@ type Template struct {
 // +k8s:deepcopy-gen=false
 
 type TemplateSpec struct {
-	*template.Template
+	Template *template.Template `json:"template"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
