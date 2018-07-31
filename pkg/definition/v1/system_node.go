@@ -77,6 +77,10 @@ func (n *SystemNode) Path() tree.NodePath {
 	return n.path
 }
 
+func (n *SystemNode) Value() interface{} {
+	return n.system
+}
+
 func (n *SystemNode) Component() component.Interface {
 	return n.system
 }

@@ -31,6 +31,10 @@ func (n *JobNode) Component() component.Interface {
 	return n.job
 }
 
+func (n *JobNode) Value() interface{} {
+	return n.job
+}
+
 func (n *JobNode) Job() *Job {
 	return n.job
 }

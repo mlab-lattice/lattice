@@ -27,6 +27,10 @@ func (n *ReferenceNode) Path() tree.NodePath {
 	return n.path
 }
 
+func (n *ReferenceNode) Value() interface{} {
+	return n.reference
+}
+
 func (n *ReferenceNode) Component() component.Interface {
 	return n.reference
 }

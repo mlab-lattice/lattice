@@ -27,6 +27,10 @@ func (n *ServiceNode) Path() tree.NodePath {
 	return n.path
 }
 
+func (n *ServiceNode) Value() interface{} {
+	return n.service
+}
+
 func (n *ServiceNode) Component() component.Interface {
 	return n.service
 }

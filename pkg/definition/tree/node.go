@@ -7,6 +7,7 @@ import (
 // The Node interface represents a node in a tree.
 type Node interface {
 	Path() NodePath
+	Value() interface{}
 }
 
 // The ComponentNode interface represents a node in the tree of a System definition.
