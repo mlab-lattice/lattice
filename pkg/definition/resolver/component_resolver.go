@@ -47,12 +47,12 @@ type DefaultComponentResolver struct {
 
 // NewComponentResolver returns a ComponentResolver that uses workDirectory for
 // scratch space such as cloning git repositories.
-func NewComponentResolver(workDirectory string, store TemplateStore) (ComponentResolver, error) {
+func NewComponentResolver(workDirectory string, allowLocalRepos bool, store TemplateStore) (ComponentResolver, error) {
 	if workDirectory == "" {
 		return nil, fmt.Errorf("must supply workDirectory")
 	}
 
-	gitResolver, err := git.NewResolver(workDirectory+"/git", false)
+	gitResolver, err := git.NewResolver(workDirectory+"/git", allowLocalRepos)
 	if err != nil {
 		return nil, err
 	}

@@ -91,7 +91,7 @@ func Command() *cli.Command {
 
 			latticeInformers := latticeinformers.NewSharedInformerFactory(latticeClient, time.Duration(12*time.Hour))
 			store := kuberesolver.NewKubernetesTemplateStore(namespacePrefix, latticeClient, latticeInformers, nil)
-			resolver, err := resolver.NewComponentResolver(workDirectory, store)
+			resolver, err := resolver.NewComponentResolver(workDirectory, false, store)
 			if err != nil {
 				panic(err)
 			}
