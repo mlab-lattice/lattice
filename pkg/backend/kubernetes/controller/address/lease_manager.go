@@ -58,7 +58,7 @@ func (c *Controller) initLeaseManager() error {
 		if err != nil {
 			return err
 		}
-		address, err = c.mergeAndUpdateAddressAnnotations(address, annotations)
+		_, err = c.mergeAndUpdateAddressAnnotations(address, annotations)
 		if err != nil {
 			return err
 		}

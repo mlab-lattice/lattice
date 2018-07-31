@@ -6,8 +6,6 @@ import (
 	"testing"
 	"unsafe"
 
-	// "github.com/golang/glog"
-
 	"github.com/stretchr/testify/require"
 )
 
@@ -494,7 +492,7 @@ func TestLeaseManager(t *testing.T) {
 		require.Equal(t, netOffsets{0x00}, blacklist)
 	})
 
-	t.Run("LeaseManager get net ip", func(t *testing.T) {
+	t.Run("LeaseManager get net IP", func(t *testing.T) {
 		setup()
 		ip := l.GetNetIP()
 		require.Equal(t, "10.10.0.0", ip)

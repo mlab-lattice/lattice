@@ -3,6 +3,8 @@ package address
 import (
 	"fmt"
 
+	"github.com/golang/glog"
+
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	kubeutil "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/kubernetes"
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
@@ -51,14 +53,25 @@ func (c *Controller) syncServiceAddress(address *latticev1.Address) error {
 		)
 	}
 
-	// make sure IP annotation gets applied
-	address, err = c.mergeAndUpdateAddressAnnotations(address, annotations)
+	address_, err := c.mergeAndUpdateAddressAnnotations(address, annotations)
 	if err != nil {
+		address_ = address.DeepCopy()
+		for k, v := range annotations {
+			address_.Annotations[k] = v
+		}
+		_, err = c.serviceMesh.ReleaseServiceIP(address_)
+		if err != nil {
+			glog.Errorf(
+				"Got an error trying to release a service IP lease for %s after failed update: %v",
+				service.Name, err)
+		}
 		return fmt.Errorf(
 			"error updating %v address annotations: %v",
 			address.Description(c.namespacePrefix),
 			err,
 		)
+	} else {
+		address = address_
 	}
 
 	path, err := address.PathLabel()

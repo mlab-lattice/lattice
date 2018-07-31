@@ -37,18 +37,8 @@ func (cp *DefaultAWSCloudProvider) DNSARecordNeedsUpdate(latticeID v1.LatticeID,
 	}
 }
 
-func (cp *DefaultAWSCloudProvider) DNSARecordsNeedUpdate(latticeID v1.LatticeID, name string, value []string) (bool, error) {
-	// GEB: implement me
-	return false, nil
-}
-
 func (cp *DefaultAWSCloudProvider) EnsureDNSARecord(latticeID v1.LatticeID, name, value string) error {
 	return cp.provisionRoute53Record(latticeID, aRecordType, name, value)
-}
-
-func (cp *DefaultAWSCloudProvider) EnsureDNSARecords(latticeID v1.LatticeID, name string, value []string) error {
-	// GEB: implement me
-	return nil
 }
 
 func (cp *DefaultAWSCloudProvider) EnsureDNSCNAMERecord(latticeID v1.LatticeID, name, value string) error {

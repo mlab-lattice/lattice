@@ -154,8 +154,8 @@ func (c *Controller) Run(workers int, stopCh <-chan struct{}) {
 
 	glog.V(4).Info("config set")
 
-	// XXX serviceMesh is initialized on config set
-	glog.V(4).Info("syncing lease manager with currently leases")
+	// NOTE: serviceMesh is initialized on config set
+	glog.V(4).Info("syncing lease manager with current leases")
 	err := c.initLeaseManager()
 	if err != nil {
 		panic(err)
