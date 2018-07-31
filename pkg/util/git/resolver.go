@@ -24,7 +24,8 @@ const (
 // Resolver provides utility methods for manipulating git repositories
 // under a specific working directory on the filesystem.
 type Resolver struct {
-	WorkDirectory string
+	workDirectory   string
+	allowLocalRepos bool
 }
 
 // Context contains information about the current operation being invoked.
@@ -63,7 +64,7 @@ type Options struct {
 	SSHKey []byte
 }
 
-func NewResolver(workDirectory string) (*Resolver, error) {
+func NewResolver(workDirectory string, allowLocalRepos bool) (*Resolver, error) {
 	if workDirectory == "" {
 		return nil, fmt.Errorf("must supply workDirectory")
 	}
@@ -74,7 +75,8 @@ func NewResolver(workDirectory string) (*Resolver, error) {
 	}
 
 	sr := &Resolver{
-		WorkDirectory: workDirectory,
+		workDirectory:   workDirectory,
+		allowLocalRepos: allowLocalRepos,
 	}
 	return sr, nil
 }
@@ -83,7 +85,7 @@ func NewResolver(workDirectory string) (*Resolver, error) {
 // otherwise it will attempt to clone the repository and on success return the cloned repository
 func (r *Resolver) Clone(ctx *Context) (*git.Repository, error) {
 	// validate repo url
-	if !IsValidRepositoryURI(ctx.RepositoryURL) {
+	if !r.IsValidRepositoryURI(ctx.RepositoryURL) {
 		return nil, fmt.Errorf("bad git uri '%v'", ctx.RepositoryURL)
 	}
 	repoDir := r.RepositoryPath(ctx.RepositoryURL)
@@ -249,7 +251,7 @@ func (r *Resolver) FileContents(ctx *Context, ref *Reference, fileName string) (
 }
 
 func (r *Resolver) RepositoryPath(url string) string {
-	return path.Join(r.WorkDirectory, stripProtocol(url))
+	return path.Join(r.workDirectory, stripProtocol(url))
 }
 
 // Tags will clone and fetch, and if successful will return the repository's tags (annotated + light-weight).
@@ -282,9 +284,17 @@ func (r *Resolver) Tags(ctx *Context) ([]string, error) {
 
 // IsValidRepositoryURI returns a boolean indicating whether or not the
 // uri is a valid git repository.
-func IsValidRepositoryURI(uri string) bool {
-	_, err := transport.NewEndpoint(uri)
-	return err == nil
+func (r *Resolver) IsValidRepositoryURI(uri string) bool {
+	e, err := transport.NewEndpoint(uri)
+	if err != nil {
+		return false
+	}
+
+	if !r.allowLocalRepos {
+		return e.Protocol() != "file"
+	}
+
+	return true
 }
 
 func pathExists(path string) (bool, error) {

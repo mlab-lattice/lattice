@@ -70,7 +70,7 @@ func testCloneGithubRepo(t *testing.T) {
 }
 
 func testTags(t *testing.T) {
-	resolver, err := NewResolver(testWorkDir)
+	resolver, err := NewResolver(testWorkDir, true)
 
 	if err != nil {
 		t.Fatalf("Got error: %v", err)
@@ -99,13 +99,13 @@ func testTags(t *testing.T) {
 
 func testFileContents(t *testing.T) {
 	v1 := "v1"
-	v2 := "v1"
+	v2 := "v2"
 	testFileContent(t, localRepoURI1, &Reference{Tag: &v1}, "hello.txt", "hello")
-	testFileContent(t, localRepoURI1+"#v2", &Reference{Tag: &v2}, "hello.txt", "hello there")
+	testFileContent(t, localRepoURI1, &Reference{Tag: &v2}, "hello.txt", "hello there")
 }
 
 func testFileContent(t *testing.T, uri string, ref *Reference, filename string, contents string) {
-	resolver, err := NewResolver(testWorkDir)
+	resolver, err := NewResolver(testWorkDir, true)
 
 	if err != nil {
 		t.Fatalf("Got error: %v", err)
@@ -137,7 +137,7 @@ func testFileContent(t *testing.T, uri string, ref *Reference, filename string, 
 func testCloneURI(t *testing.T, uri string) {
 	fmt.Printf("Test clone %s\n", uri)
 
-	resolver, err := NewResolver(testWorkDir)
+	resolver, err := NewResolver(testWorkDir, true)
 
 	if err != nil {
 		t.Fatalf("Got error: %v", err)
@@ -158,7 +158,7 @@ func testCloneURI(t *testing.T, uri string) {
 }
 
 func testInvalidURI(t *testing.T) {
-	resolver, err := NewResolver(testWorkDir)
+	resolver, err := NewResolver(testWorkDir, false)
 
 	if err != nil {
 		t.Fatalf("Got error: %v", err)
@@ -172,7 +172,7 @@ func testInvalidURI(t *testing.T) {
 
 	_, err = resolver.Clone(ctx)
 
-	if err == nil || !strings.Contains(fmt.Sprintf("%v", err), "bad uri") {
+	if err == nil || !strings.Contains(fmt.Sprintf("%v", err), "bad git uri") {
 		t.Fatalf("Expected a bad uri error")
 	} else {
 		fmt.Printf("Got expected error: %v\n", err)
