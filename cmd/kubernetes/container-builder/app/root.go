@@ -22,22 +22,6 @@ const (
 	gitRepoSSHKeyEnvVarName = "GIT_REPO_SSH_KEY"
 )
 
-var (
-	workDirectory    string
-	containerBuildID string
-	systemIDString   string
-	namespacePrefix  string
-
-	dockerRegistry         string
-	dockerRegistryAuthType string
-	dockerRepository       string
-	dockerTag              string
-	dockerPush             bool
-
-	kubeconfig               string
-	containerBuildDefinition string
-)
-
 func Command() *cli.Command {
 	var (
 		workDirectory    string
