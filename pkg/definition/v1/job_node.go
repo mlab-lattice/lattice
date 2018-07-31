@@ -6,12 +6,12 @@ import (
 )
 
 type JobNode struct {
-	parent tree.Node
+	parent tree.ComponentNode
 	path   tree.NodePath
 	job    *Job
 }
 
-func NewJobNode(job *Job, name string, parent tree.Node) *JobNode {
+func NewJobNode(job *Job, name string, parent tree.ComponentNode) *JobNode {
 	return &JobNode{
 		parent: parent,
 		path:   parent.Path().Child(name),
@@ -19,7 +19,7 @@ func NewJobNode(job *Job, name string, parent tree.Node) *JobNode {
 	}
 }
 
-func (n *JobNode) Parent() tree.Node {
+func (n *JobNode) Parent() tree.ComponentNode {
 	return n.parent
 }
 

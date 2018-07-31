@@ -6,12 +6,12 @@ import (
 )
 
 type ReferenceNode struct {
-	parent    tree.Node
+	parent    tree.ComponentNode
 	path      tree.NodePath
 	reference *Reference
 }
 
-func NewReferenceNode(reference *Reference, name string, parent tree.Node) *ReferenceNode {
+func NewReferenceNode(reference *Reference, name string, parent tree.ComponentNode) *ReferenceNode {
 	return &ReferenceNode{
 		parent:    parent,
 		path:      parent.Path().Child(name),
@@ -19,7 +19,7 @@ func NewReferenceNode(reference *Reference, name string, parent tree.Node) *Refe
 	}
 }
 
-func (n *ReferenceNode) Parent() tree.Node {
+func (n *ReferenceNode) Parent() tree.ComponentNode {
 	return n.parent
 }
 

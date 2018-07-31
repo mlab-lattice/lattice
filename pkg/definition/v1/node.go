@@ -7,7 +7,7 @@ import (
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 )
 
-func NewNode(c component.Interface, name string, parent tree.Node) (tree.Node, error) {
+func NewNode(c component.Interface, name string, parent tree.ComponentNode) (tree.ComponentNode, error) {
 	switch res := c.(type) {
 	case *Job:
 		return NewJobNode(res, name, parent), nil

@@ -9,19 +9,19 @@ import (
 )
 
 type SystemNode struct {
-	parent tree.Node
+	parent tree.ComponentNode
 	path   tree.NodePath
 
 	system *System
 
-	components map[string]tree.Node
+	components map[string]tree.ComponentNode
 	systems    map[string]*SystemNode
 	services   map[string]*ServiceNode
 	jobs       map[string]*JobNode
 	references map[string]*ReferenceNode
 }
 
-func NewSystemNode(system *System, name string, parent tree.Node) (*SystemNode, error) {
+func NewSystemNode(system *System, name string, parent tree.ComponentNode) (*SystemNode, error) {
 	path := tree.RootNodePath()
 	if parent != nil {
 		path = parent.Path().Child(name)
@@ -33,7 +33,7 @@ func NewSystemNode(system *System, name string, parent tree.Node) (*SystemNode, 
 
 		system: system,
 
-		components: make(map[string]tree.Node),
+		components: make(map[string]tree.ComponentNode),
 		systems:    make(map[string]*SystemNode),
 		services:   make(map[string]*ServiceNode),
 		jobs:       make(map[string]*JobNode),
@@ -69,7 +69,7 @@ func NewSystemNode(system *System, name string, parent tree.Node) (*SystemNode, 
 	return node, nil
 }
 
-func (n *SystemNode) Parent() tree.Node {
+func (n *SystemNode) Parent() tree.ComponentNode {
 	return n.parent
 }
 
@@ -89,7 +89,7 @@ func (n *SystemNode) NodePools() map[string]NodePool {
 	return n.system.NodePools
 }
 
-func (n *SystemNode) Components() map[string]tree.Node {
+func (n *SystemNode) Components() map[string]tree.ComponentNode {
 	return n.components
 }
 

@@ -4,11 +4,13 @@ import (
 	"github.com/mlab-lattice/lattice/pkg/definition/component"
 )
 
-// The Node interface represents a Node in the tree of a System definition.
-// Note that Nodes are assumed to have an immutable location in the tree,
-// i.e. their parent and children will not change.
+// The Node interface represents a node in a tree.
 type Node interface {
-	Parent() Node
 	Path() NodePath
+}
+
+// The ComponentNode interface represents a node in the tree of a System definition.
+type ComponentNode interface {
+	Node
 	Component() component.Interface
 }

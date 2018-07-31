@@ -6,12 +6,12 @@ import (
 )
 
 type ServiceNode struct {
-	parent  tree.Node
+	parent  tree.ComponentNode
 	path    tree.NodePath
 	service *Service
 }
 
-func NewServiceNode(service *Service, name string, parent tree.Node) *ServiceNode {
+func NewServiceNode(service *Service, name string, parent tree.ComponentNode) *ServiceNode {
 	return &ServiceNode{
 		parent:  parent,
 		path:    parent.Path().Child(name),
@@ -19,7 +19,7 @@ func NewServiceNode(service *Service, name string, parent tree.Node) *ServiceNod
 	}
 }
 
-func (n *ServiceNode) Parent() tree.Node {
+func (n *ServiceNode) Parent() tree.ComponentNode {
 	return n.parent
 }
 
