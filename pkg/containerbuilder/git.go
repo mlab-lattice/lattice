@@ -19,7 +19,7 @@ func (b *Builder) retrieveGitRepository(repository *definitionv1.GitRepository) 
 		b.StatusUpdater.UpdateProgress(b.BuildID, b.SystemID, v1.ContainerBuildPhasePullingGitRepository)
 	}
 
-	gitResolver, err := git.NewResolver(b.WorkingDir + "/git")
+	gitResolver, err := git.NewResolver(b.WorkingDir+"/git", false)
 	if err != nil {
 		return "", newErrorInternal("failed to create git resolver: " + err.Error())
 	}

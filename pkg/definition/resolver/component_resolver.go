@@ -52,7 +52,7 @@ func NewComponentResolver(workDirectory string, store TemplateStore) (ComponentR
 		return nil, fmt.Errorf("must supply workDirectory")
 	}
 
-	gitResolver, err := git.NewResolver(workDirectory + "/git")
+	gitResolver, err := git.NewResolver(workDirectory+"/git", false)
 	if err != nil {
 		return nil, err
 	}
