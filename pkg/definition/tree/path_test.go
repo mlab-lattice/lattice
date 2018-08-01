@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-func TestNewNodePath(t *testing.T) {
+func TestNewPath(t *testing.T) {
 	tests := []struct {
 		d string
 		p string
@@ -66,7 +66,7 @@ func TestNewNodePath(t *testing.T) {
 	}
 }
 
-func TestNodePathFromDomain(t *testing.T) {
+func TestPathFromDomain(t *testing.T) {
 	tests := []struct {
 		d string
 		p string
@@ -116,7 +116,7 @@ func TestNodePathFromDomain(t *testing.T) {
 	}
 }
 
-func TestNodePath_ToDomain(t *testing.T) {
+func TestPath_ToDomain(t *testing.T) {
 	p, err := NewPath("/foo/Bar/BUZZ")
 	if err != nil {
 		t.Errorf("Expected no error for valid path but got %v", err)
@@ -129,7 +129,7 @@ func TestNodePath_ToDomain(t *testing.T) {
 	}
 }
 
-func TestNodePath_Depth(t *testing.T) {
+func TestPath_Depth(t *testing.T) {
 	p, err := NewPath("/foo/Bar/BUZZ")
 	if err != nil {
 		t.Errorf("Expected no error for valid path but got %v", err)
@@ -164,7 +164,7 @@ func TestNodePath_Depth(t *testing.T) {
 	}
 }
 
-func TestNodePath_IsRoot(t *testing.T) {
+func TestPath_IsRoot(t *testing.T) {
 	p, err := NewPath("/foo/Bar/BUZZ")
 	if err != nil {
 		t.Errorf("Expected no error for valid path but got %v", err)
@@ -202,7 +202,7 @@ func TestNodePath_IsRoot(t *testing.T) {
 	}
 }
 
-func TestNodePath_Parent(t *testing.T) {
+func TestPath_Parent(t *testing.T) {
 	p, err := NewPath("/foo/Bar/BUZZ")
 	if err != nil {
 		t.Errorf("Expected no error for valid path but got %v", err)
@@ -244,7 +244,7 @@ func TestNodePath_Parent(t *testing.T) {
 	}
 }
 
-func TestNewNodePathSubcomponent(t *testing.T) {
+func TestNewPathSubcomponent(t *testing.T) {
 	_, err := NewPathSubcomponentFromParts("/foo/Bar/BUZZ", "")
 	if err == nil {
 		t.Errorf("Expected error for empty subcomponent but got nil")
@@ -256,7 +256,7 @@ func TestNewNodePathSubcomponent(t *testing.T) {
 	}
 }
 
-func TestNodePathSubcomponentParts(t *testing.T) {
+func TestPathSubcomponentParts(t *testing.T) {
 	n, err := NewPathSubcomponentFromParts("/foo/Bar/BUZZ", "bazz")
 	if err != nil {
 		t.Errorf("Expected no error for valid path subcomponent but got %v", err)
