@@ -277,12 +277,15 @@ func (r *DefaultComponentResolver) gitReferenceCommit(ref *definitionv1.GitRepos
 		gitRef = &git.Reference{Branch: ref.Branch}
 
 	case ref.Tag != nil:
-		rng, err := semver.ParseRange(*ref.Tag)
+		gitRef = &git.Reference{Tag: ref.Tag}
+		break
+
+	case ref.Version != nil:
+		rng, err := semver.ParseRange(*ref.Version)
 
 		// If the tag is not a semver range, just use the tag
 		if err != nil {
-			gitRef = &git.Reference{Tag: ref.Tag}
-			break
+			return nil, fmt.Errorf("version is not a valid semver range")
 		}
 
 		versions, err := r.Versions(ref.URL, rng)

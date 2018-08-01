@@ -98,7 +98,7 @@ func testFileReferenceResolve(t *testing.T) {
 func testGitReferenceResolve(t *testing.T) {
 	testCommitGitReferenceResolve(t)
 	testBranchGitReferenceResolve(t)
-	testTagGitReferenceResolve(t)
+	testTagAndVersionGitReferenceResolve(t)
 }
 
 func testCommitGitReferenceResolve(t *testing.T) {
@@ -368,7 +368,7 @@ func testBranchGitReferenceResolve(t *testing.T) {
 	}
 }
 
-func testTagGitReferenceResolve(t *testing.T) {
+func testTagAndVersionGitReferenceResolve(t *testing.T) {
 	cleanReferenceResolverWorkDir(t)
 
 	if err := git.Init(remote1Dir); err != nil {
@@ -429,8 +429,8 @@ func testTagGitReferenceResolve(t *testing.T) {
 				ref := &defintionv1.Reference{
 					GitRepository: &defintionv1.GitRepositoryReference{
 						GitRepository: &defintionv1.GitRepository{
-							URL: fmt.Sprintf("file://%v", remote1Dir),
-							Tag: &patchSemverTag,
+							URL:     fmt.Sprintf("file://%v", remote1Dir),
+							Version: &patchSemverTag,
 						},
 						File: &servicePath,
 					},
@@ -446,8 +446,8 @@ func testTagGitReferenceResolve(t *testing.T) {
 				ref := &defintionv1.Reference{
 					GitRepository: &defintionv1.GitRepositoryReference{
 						GitRepository: &defintionv1.GitRepository{
-							URL: fmt.Sprintf("file://%v", remote1Dir),
-							Tag: &minorSemverTag,
+							URL:     fmt.Sprintf("file://%v", remote1Dir),
+							Version: &minorSemverTag,
 						},
 						File: &servicePath,
 					},
@@ -463,8 +463,8 @@ func testTagGitReferenceResolve(t *testing.T) {
 				ref := &defintionv1.Reference{
 					GitRepository: &defintionv1.GitRepositoryReference{
 						GitRepository: &defintionv1.GitRepository{
-							URL: fmt.Sprintf("file://%v", remote1Dir),
-							Tag: &invalidSemverTag,
+							URL:     fmt.Sprintf("file://%v", remote1Dir),
+							Version: &invalidSemverTag,
 						},
 						File: &servicePath,
 					},
@@ -497,8 +497,8 @@ func testTagGitReferenceResolve(t *testing.T) {
 				ref := &defintionv1.Reference{
 					GitRepository: &defintionv1.GitRepositoryReference{
 						GitRepository: &defintionv1.GitRepository{
-							URL: fmt.Sprintf("file://%v", remote1Dir),
-							Tag: &patchTag,
+							URL:     fmt.Sprintf("file://%v", remote1Dir),
+							Version: &patchTag,
 						},
 						File: &servicePath,
 					},
@@ -514,8 +514,8 @@ func testTagGitReferenceResolve(t *testing.T) {
 				ref := &defintionv1.Reference{
 					GitRepository: &defintionv1.GitRepositoryReference{
 						GitRepository: &defintionv1.GitRepository{
-							URL: fmt.Sprintf("file://%v", remote1Dir),
-							Tag: &minorTag,
+							URL:     fmt.Sprintf("file://%v", remote1Dir),
+							Version: &minorTag,
 						},
 						File: &servicePath,
 					},
@@ -547,8 +547,8 @@ func testTagGitReferenceResolve(t *testing.T) {
 				ref := &defintionv1.Reference{
 					GitRepository: &defintionv1.GitRepositoryReference{
 						GitRepository: &defintionv1.GitRepository{
-							URL: fmt.Sprintf("file://%v", remote1Dir),
-							Tag: &patchSemverTag,
+							URL:     fmt.Sprintf("file://%v", remote1Dir),
+							Version: &patchSemverTag,
 						},
 						File: &servicePath,
 					},
@@ -564,8 +564,8 @@ func testTagGitReferenceResolve(t *testing.T) {
 				ref := &defintionv1.Reference{
 					GitRepository: &defintionv1.GitRepositoryReference{
 						GitRepository: &defintionv1.GitRepository{
-							URL: fmt.Sprintf("file://%v", remote1Dir),
-							Tag: &minorSemverTag,
+							URL:     fmt.Sprintf("file://%v", remote1Dir),
+							Version: &minorSemverTag,
 						},
 						File: &servicePath,
 					},
@@ -597,8 +597,8 @@ func testTagGitReferenceResolve(t *testing.T) {
 				ref := &defintionv1.Reference{
 					GitRepository: &defintionv1.GitRepositoryReference{
 						GitRepository: &defintionv1.GitRepository{
-							URL: fmt.Sprintf("file://%v", remote1Dir),
-							Tag: &patchSemverTag,
+							URL:     fmt.Sprintf("file://%v", remote1Dir),
+							Version: &patchSemverTag,
 						},
 						File: &servicePath,
 					},
@@ -614,8 +614,8 @@ func testTagGitReferenceResolve(t *testing.T) {
 				ref := &defintionv1.Reference{
 					GitRepository: &defintionv1.GitRepositoryReference{
 						GitRepository: &defintionv1.GitRepository{
-							URL: fmt.Sprintf("file://%v", remote1Dir),
-							Tag: &minorSemverTag,
+							URL:     fmt.Sprintf("file://%v", remote1Dir),
+							Version: &minorSemverTag,
 						},
 						File: &servicePath,
 					},
