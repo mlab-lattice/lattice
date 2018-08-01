@@ -131,10 +131,7 @@ func (p Path) Depth() int {
 // For example: /a/b/c returns /a/b
 func (p Path) Parent() (Path, error) {
 	if p.IsRoot() {
-		return "", fmt.Errorf("Path %v does not have a parent", p.String())
-	}
-
-	if p.IsRoot() {
+		return "", fmt.Errorf("path %v does not have a parent", p.String())
 	}
 
 	subpaths := p.Subpaths()
@@ -145,6 +142,26 @@ func (p Path) Parent() (Path, error) {
 // IsRoot returns a bool indicating if the node is the root node (i.e. "/")
 func (p Path) IsRoot() bool {
 	return p.Depth() == 0
+}
+
+// Shift returns a new Path shifted n components left as well as the components that were shifted out.
+// Returns an error if n > the path's length.
+// For example: /a/b/c shifted 2 would return /c and [a, b]
+func (p Path) Shift(n int) (Path, []string, error) {
+	if n > p.Depth() {
+		return "", nil, fmt.Errorf("cannot shift path with depth %v %v times", p.Depth(), n)
+	}
+
+	subpaths := p.Subpaths()
+	shifted := strings.Join(subpaths[n:], PathSeparator)
+
+	np, err := NewPath(fmt.Sprintf("%v%v", PathSeparator, shifted))
+	if err != nil {
+		// this shouldn't happen if p is a valid Path
+		return "", nil, err
+	}
+
+	return np, subpaths[:n], nil
 }
 
 // String returns a string representation of the Path.

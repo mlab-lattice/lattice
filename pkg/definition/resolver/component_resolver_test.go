@@ -73,9 +73,11 @@ func testFileReferenceResolve(t *testing.T) {
 	}
 
 	ctx := &git.FileReference{
-		RepositoryURL: fmt.Sprintf("file://%v", remote1Dir),
-		Commit:        commit.String(),
-		File:          "foo",
+		CommitReference: git.CommitReference{
+			RepositoryURL: fmt.Sprintf("file://%v", remote1Dir),
+			Commit:        commit.String(),
+		},
+		File: "foo",
 	}
 
 	ref := &defintionv1.Reference{

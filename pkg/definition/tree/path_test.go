@@ -244,6 +244,70 @@ func TestPath_Parent(t *testing.T) {
 	}
 }
 
+func TestPath_Shift(t *testing.T) {
+	tests := []struct {
+		d string
+		p Path
+		n int
+		e bool
+		r Path
+		s []string
+	}{
+		{
+			d: "shift 0",
+			p: Path("/foo/bar/bazz/buzz"),
+			n: 0,
+			r: Path("/foo/bar/bazz/buzz"),
+			s: []string{},
+		},
+		{
+			d: "shift 1",
+			p: Path("/foo/bar/bazz/buzz"),
+			n: 1,
+			r: Path("/bar/bazz/buzz"),
+			s: []string{"foo"},
+		},
+		{
+			d: "shift 2",
+			p: Path("/foo/bar/bazz/buzz"),
+			n: 2,
+			r: Path("/bazz/buzz"),
+			s: []string{"foo", "bar"},
+		},
+		{
+			d: "shift to root",
+			p: Path("/foo/bar/bazz/buzz"),
+			n: 4,
+			r: Path("/"),
+			s: []string{"foo", "bar", "bazz", "buzz"},
+		},
+		{
+			d: "shift past root",
+			p: Path("/foo/bar/bazz/buzz"),
+			n: 5,
+			e: true,
+		},
+	}
+
+	for _, test := range tests {
+		r, s, err := test.p.Shift(test.n)
+		if err != nil {
+			if !test.e {
+				t.Errorf("expected no error for %v but got %v", test.d, err)
+			}
+			continue
+		}
+
+		if !reflect.DeepEqual(r, test.r) {
+			t.Errorf("expected %v but got %v for %v", test.r, r, test.d)
+		}
+
+		if !reflect.DeepEqual(s, test.s) {
+			t.Errorf("expected shifted components %v but got %v for %v", test.s, s, test.d)
+		}
+	}
+}
+
 func TestNewPathSubcomponent(t *testing.T) {
 	_, err := NewPathSubcomponentFromParts("/foo/Bar/BUZZ", "")
 	if err == nil {

@@ -25,6 +25,10 @@ const (
 	fileExtensionYML  = ".yml"
 )
 
+type ResolutionInfo struct {
+	Commit *git.CommitReference
+}
+
 // ComponentResolver resolves references into fully hydrated (i.e. the template
 // engine has already acted upon it) component.
 type ComponentResolver interface {
@@ -36,7 +40,7 @@ type ComponentResolver interface {
 		ctx *git.FileReference,
 		ref *definitionv1.Reference,
 		depth int32,
-	) (component.Interface, *git.FileReference, error)
+	) (component.Interface, *Node, error)
 }
 
 // DefaultComponentResolver fulfils the ComponentResolver interface.
@@ -104,9 +108,15 @@ func (r *DefaultComponentResolver) ResolveReference(
 	ctx *git.FileReference,
 	ref *definitionv1.Reference,
 	depth int32,
-) (component.Interface, *git.FileReference, error) {
+) (component.Interface, *Node, error) {
 	if depth == 0 {
-		return ref, ctx, nil
+		n := NewNode(
+			&ResolutionInfo{Commit: &ctx.CommitReference},
+			path,
+			nil,
+			nil,
+		)
+		return ref, n, nil
 	}
 
 	if depth < DepthInfinite {
@@ -144,11 +154,16 @@ func (r *DefaultComponentResolver) ResolveReference(
 
 	// If the reference resolved to a systemID, resolve the system's components.
 	if system, ok := c.(*definitionv1.System); ok {
-		system, err := r.resolveSystemComponents(systemID, path, resolvedCxt, system, nextDepth)
-		return system, resolvedCxt, err
+		return r.resolveSystemComponents(systemID, path, resolvedCxt, system, nextDepth)
 	}
 
-	return c, resolvedCxt, nil
+	n := NewNode(
+		&ResolutionInfo{Commit: &ctx.CommitReference},
+		path,
+		nil,
+		nil,
+	)
+	return c, n, nil
 }
 
 func (r *DefaultComponentResolver) resolveTemplate(
@@ -192,9 +207,11 @@ func (r *DefaultComponentResolver) resolveTemplate(
 	}
 
 	fileRef := &git.FileReference{
-		RepositoryURL: gitCtx.RepositoryURL,
-		Commit:        *gitRef.Commit,
-		File:          file,
+		CommitReference: git.CommitReference{
+			RepositoryURL: gitCtx.RepositoryURL,
+			Commit:        *gitRef.Commit,
+		},
+		File: file,
 	}
 
 	// see if we already have this commit from this repository in the template store.
@@ -295,34 +312,56 @@ func (r *DefaultComponentResolver) resolveSystemComponents(
 	ctx *git.FileReference,
 	system *definitionv1.System,
 	depth int32,
-) (*definitionv1.System, error) {
+) (*definitionv1.System, *Node, error) {
 	// Loop through each of the components.
 	//  - If the component is a system, recursively resolve its components.
 	//  - If the component is a reference, resolve it (potentially also recursively resolving
 	//    system components if the reference was to a system).
+	n := NewNode(
+		&ResolutionInfo{Commit: &ctx.CommitReference},
+		path,
+		nil,
+		make(map[string]tree.Node),
+	)
+
 	for name, c := range system.Components {
 		childPath := path.Child(name)
+		var child tree.Node
 		switch typedComponent := c.(type) {
 
 		case *definitionv1.System:
 			// If the component is a system, recursively resolve the system and overwrite it in the components map
-			subSystem, err := r.resolveSystemComponents(systemID, childPath, ctx, typedComponent, depth)
+			subSystem, sn, err := r.resolveSystemComponents(systemID, childPath, ctx, typedComponent, depth)
 			if err != nil {
-				return nil, err
+				return nil, nil, err
 			}
 
 			system.Components[name] = subSystem
+			sn.parent = n
+			child = sn
 
 		case *definitionv1.Reference:
 			// If the component is a reference, resolve the reference.
-			resolved, _, err := r.ResolveReference(systemID, childPath, ctx, typedComponent, depth)
+			resolved, sn, err := r.ResolveReference(systemID, childPath, ctx, typedComponent, depth)
 			if err != nil {
-				return nil, err
+				return nil, nil, err
 			}
 
 			system.Components[name] = resolved
+			sn.parent = n
+			child = sn
+
+		default:
+			child = NewNode(
+				&ResolutionInfo{Commit: &ctx.CommitReference},
+				childPath,
+				n,
+				nil,
+			)
 		}
+
+		n.children[name] = child
 	}
 
-	return system, nil
+	return system, n, nil
 }

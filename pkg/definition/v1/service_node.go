@@ -1,6 +1,7 @@
 package v1
 
 import (
+	"github.com/mlab-lattice/lattice/pkg/definition/component"
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 )
 
@@ -10,7 +11,7 @@ type ServiceNode struct {
 	service *Service
 }
 
-func NewServiceNode(service *Service, name string, parent tree.Node) *ServiceNode {
+func NewServiceNode(name string, parent tree.Node, service *Service) *ServiceNode {
 	return &ServiceNode{
 		parent:  parent,
 		path:    parent.Path().Child(name),
@@ -32,6 +33,10 @@ func (n *ServiceNode) Parent() tree.Node {
 
 func (n *ServiceNode) Children() map[string]tree.Node {
 	return nil
+}
+
+func (n *ServiceNode) Component() component.Interface {
+	return n.service
 }
 
 func (n *ServiceNode) Service() *Service {

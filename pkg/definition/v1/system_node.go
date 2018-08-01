@@ -20,7 +20,7 @@ type SystemNode struct {
 	references map[string]*ReferenceNode
 }
 
-func NewSystemNode(system *System, name string, parent tree.Node) (*SystemNode, error) {
+func NewSystemNode(name string, parent tree.Node, system *System) (*SystemNode, error) {
 	path := tree.RootPath()
 	if parent != nil {
 		path = parent.Path().Child(name)
@@ -118,21 +118,6 @@ func (n *SystemNode) References() map[string]*ReferenceNode {
 	return n.references
 }
 
-//func (n *SystemNode) ResolveReferences(r resolver.Interface) (*SystemNode, error) {
-//	components := make(map[string]component.Interface)
-//	for k, v := range n.Components() {
-//		components[k] = v.Component()
-//	}
-//
-//	for name, refNode := range n.References() {
-//		ref := refNode.Reference()
-//		switch {
-//		case ref.File != nil:
-//
-//		}
-//	}
-//}
-
 func (n *SystemNode) Services() map[string]*ServiceNode {
 	return n.services
 }
@@ -181,7 +166,7 @@ func (n *SystemNode) UnmarshalJSON(data []byte) error {
 		return err
 	}
 
-	node, err := NewSystemNode(s, "", nil)
+	node, err := NewSystemNode("", nil, s)
 	if err != nil {
 		return err
 	}

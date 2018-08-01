@@ -1,6 +1,7 @@
 package v1
 
 import (
+	"github.com/mlab-lattice/lattice/pkg/definition/component"
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 )
 
@@ -10,7 +11,7 @@ type JobNode struct {
 	job    *Job
 }
 
-func NewJobNode(job *Job, name string, parent tree.Node) *JobNode {
+func NewJobNode(name string, parent tree.Node, job *Job) *JobNode {
 	return &JobNode{
 		parent: parent,
 		path:   parent.Path().Child(name),
@@ -32,6 +33,10 @@ func (n *JobNode) Parent() tree.Node {
 
 func (n *JobNode) Children() map[string]tree.Node {
 	return nil
+}
+
+func (n *JobNode) Component() component.Interface {
+	return n.job
 }
 
 func (n *JobNode) Job() *Job {

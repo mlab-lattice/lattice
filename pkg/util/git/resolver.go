@@ -53,10 +53,14 @@ func (r *Reference) Validate() error {
 	return nil
 }
 
-type FileReference struct {
+type CommitReference struct {
 	RepositoryURL string
 	Commit        string
-	File          string
+}
+
+type FileReference struct {
+	CommitReference
+	File string
 }
 
 // Options contains information about how to complete the operation.
