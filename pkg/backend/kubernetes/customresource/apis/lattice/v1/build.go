@@ -58,8 +58,8 @@ func (b *Build) Description(namespacePrefix string) string {
 
 // +k8s:deepcopy-gen=false
 type BuildSpec struct {
-	Definition  *definitionv1.SystemNode `json:"definition"`
-	ResolveTree *resolver.Node           `json:"resolveTree"`
+	Definition     *definitionv1.SystemNode `json:"definition"`
+	ResolutionInfo resolver.ResolutionInfo  `json:"resolutionInfo"`
 }
 
 type BuildStatus struct {

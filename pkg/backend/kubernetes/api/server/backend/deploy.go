@@ -38,11 +38,11 @@ func (kb *KubernetesBackend) DeployBuild(systemID v1.SystemID, buildID v1.BuildI
 func (kb *KubernetesBackend) DeployVersion(
 	systemID v1.SystemID,
 	def *definitionv1.SystemNode,
-	rn *resolver.Node,
+	ri resolver.ResolutionInfo,
 	version v1.SystemVersion,
 ) (*v1.Deploy, error) {
 	// this ensures the system is created as well
-	build, err := kb.Build(systemID, def, rn, version)
+	build, err := kb.Build(systemID, def, ri, version)
 	if err != nil {
 		return nil, err
 	}

@@ -159,14 +159,10 @@ func (c *Controller) hydrateContainerBuild(
 		return containerBuild, nil
 	}
 
-	n, ok, err := build.Spec.ResolveTree.Lookup(path)
-	if err != nil {
-		return nil, err
-	}
-
+	i, ok := build.Spec.ResolutionInfo[path]
 	if !ok {
 		err := fmt.Errorf(
-			"%v resolve tree did not have information for %v",
+			"%v resolution info did not have information for %v",
 			build.Description(c.namespacePrefix),
 			path.String(),
 		)
@@ -179,8 +175,8 @@ func (c *Controller) hydrateContainerBuild(
 
 	b.CommandBuild.Source = &definitionv1.ContainerBuildSource{
 		GitRepository: &definitionv1.GitRepository{
-			URL:    n.Info.Commit.RepositoryURL,
-			Commit: &n.Info.Commit.Commit,
+			URL:    i.Commit.RepositoryURL,
+			Commit: &i.Commit.Commit,
 		},
 	}
 	return b, nil

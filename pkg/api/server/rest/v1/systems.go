@@ -102,7 +102,7 @@ func mountBuildHandlers(router *gin.RouterGroup, backend v1server.Interface, res
 			return
 		}
 
-		root, rn, err := getSystemDefinitionRoot(backend, resolver, systemID, req.Version)
+		root, ri, err := getSystemDefinitionRoot(backend, resolver, systemID, req.Version)
 		if err != nil {
 			handleError(c, err)
 			return
@@ -111,7 +111,7 @@ func mountBuildHandlers(router *gin.RouterGroup, backend v1server.Interface, res
 		build, err := backend.Build(
 			systemID,
 			root,
-			rn,
+			ri,
 			req.Version,
 		)
 
@@ -233,7 +233,7 @@ func mountDeployHandlers(router *gin.RouterGroup, backend v1server.Interface, re
 		var deploy *v1.Deploy
 		var err error
 		if req.Version != nil {
-			root, rn, err := getSystemDefinitionRoot(backend, resolver, systemID, *req.Version)
+			root, ri, err := getSystemDefinitionRoot(backend, resolver, systemID, *req.Version)
 			if err != nil {
 				handleError(c, err)
 				return
@@ -242,7 +242,7 @@ func mountDeployHandlers(router *gin.RouterGroup, backend v1server.Interface, re
 			deploy, err = backend.DeployVersion(
 				systemID,
 				root,
-				rn,
+				ri,
 				*req.Version,
 			)
 		} else {
@@ -843,7 +843,7 @@ func getSystemDefinitionRoot(
 	r resolver.ComponentResolver,
 	systemID v1.SystemID,
 	version v1.SystemVersion,
-) (*definitionv1.SystemNode, *resolver.Node, error) {
+) (*definitionv1.SystemNode, resolver.ResolutionInfo, error) {
 	system, err := backend.GetSystem(systemID)
 	if err != nil {
 		return nil, nil, err
@@ -859,18 +859,18 @@ func getSystemDefinitionRoot(
 			File: "system.json",
 		},
 	}
-	c, rn, err := r.ResolveReference(systemID, tree.RootPath(), nil, ref, resolver.DepthInfinite)
+	rr, err := r.ResolveReference(systemID, tree.RootPath(), nil, ref, resolver.DepthInfinite)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	root, err := definitionv1.NewNode(c, "", nil)
+	root, err := definitionv1.NewNode(rr.Component, "", nil)
 	if err != nil {
 		return nil, nil, err
 	}
 
 	if def, ok := root.(*definitionv1.SystemNode); ok {
-		return def, rn, nil
+		return def, rr.Info, nil
 	}
 
 	return nil, nil, fmt.Errorf("definition is not a system")

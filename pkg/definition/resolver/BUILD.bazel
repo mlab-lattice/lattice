@@ -5,7 +5,6 @@ go_library(
     srcs = [
         "component.go",
         "component_resolver.go",
-        "node.go",
         "template_store.go",
     ],
     importpath = "github.com/mlab-lattice/lattice/pkg/definition/resolver",

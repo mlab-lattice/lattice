@@ -22,7 +22,7 @@ import (
 func (kb *KubernetesBackend) Build(
 	systemID v1.SystemID,
 	def *defintionv1.SystemNode,
-	rn *resolver.Node,
+	ri resolver.ResolutionInfo,
 	version v1.SystemVersion,
 ) (*v1.Build, error) {
 	// ensure the system exists
@@ -30,7 +30,7 @@ func (kb *KubernetesBackend) Build(
 		return nil, err
 	}
 
-	build, err := newBuild(def, rn, version)
+	build, err := newBuild(def, ri, version)
 	if err != nil {
 		return nil, err
 	}
@@ -49,7 +49,7 @@ func (kb *KubernetesBackend) Build(
 	return &externalBuild, nil
 }
 
-func newBuild(def *defintionv1.SystemNode, rn *resolver.Node, version v1.SystemVersion) (*latticev1.Build, error) {
+func newBuild(def *defintionv1.SystemNode, ri resolver.ResolutionInfo, version v1.SystemVersion) (*latticev1.Build, error) {
 	labels := map[string]string{
 		latticev1.BuildDefinitionVersionLabelKey: string(version),
 	}
@@ -60,8 +60,8 @@ func newBuild(def *defintionv1.SystemNode, rn *resolver.Node, version v1.SystemV
 			Labels: labels,
 		},
 		Spec: latticev1.BuildSpec{
-			Definition:  def,
-			ResolveTree: rn,
+			Definition:     def,
+			ResolutionInfo: ri,
 		},
 	}
 

@@ -667,7 +667,7 @@ func resolveReference(
 	ref *defintionv1.Reference,
 	shouldSucceed bool,
 ) (component.Interface, error) {
-	c, _, err := r.ResolveReference(id, p, ctx, ref, DepthInfinite)
+	rr, err := r.ResolveReference(id, p, ctx, ref, DepthInfinite)
 	if err != nil {
 		if !shouldSucceed {
 			return nil, nil
@@ -678,5 +678,5 @@ func resolveReference(
 	if !shouldSucceed {
 		return nil, fmt.Errorf("expected referece resolution to return error but got nil")
 	}
-	return c, nil
+	return rr.Component, nil
 }
