@@ -856,7 +856,6 @@ func getSystemDefinitionRoot(
 				URL: system.DefinitionURL,
 				Tag: &tag,
 			},
-			File: "system.json",
 		},
 	}
 	rr, err := r.ResolveReference(systemID, tree.RootPath(), nil, ref, resolver.DepthInfinite)

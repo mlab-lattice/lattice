@@ -23,6 +23,8 @@ const (
 	fileExtensionJSON = ".json"
 	fileExtensionYAML = ".yaml"
 	fileExtensionYML  = ".yml"
+
+	DefaultFile = "lattice.yaml"
 )
 
 // ResolutionResult contains the component as well as information about the resolution
@@ -210,7 +212,10 @@ func (r *DefaultComponentResolver) resolveTemplate(
 		// if the reference is to a git_repository, resolve the commit for the reference,
 		// and set the context to the repo referenced
 		gitCtx.RepositoryURL = ref.GitRepository.URL
-		file = ref.GitRepository.File
+		file = DefaultFile
+		if ref.GitRepository.File != nil {
+			file = *ref.GitRepository.File
+		}
 
 		commit, err := r.gitReferenceCommit(ref.GitRepository)
 		if err != nil {

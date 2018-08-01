@@ -113,8 +113,18 @@ func testCommitGitReferenceResolve(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	service2Bytes, err := json.Marshal(&service2)
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	servicePath := "service.json"
 	commit, err := git.WriteAndCommitFile(remote1Dir, servicePath, serviceBytes, 0700, "my commit")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	defaultCommit, err := git.WriteAndCommitFile(remote1Dir, DefaultFile, service2Bytes, 0700, "default file")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -123,6 +133,8 @@ func testCommitGitReferenceResolve(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	foo := "foo"
 
 	tests := []struct {
 		Description string
@@ -138,11 +150,27 @@ func testCommitGitReferenceResolve(t *testing.T) {
 							URL:    fmt.Sprintf("file://%v", remote1Dir),
 							Commit: &commitStr,
 						},
-						File: servicePath,
+						File: &servicePath,
 					},
 				}
 
 				return shouldResolveToService(r, ref, &service1)
+			},
+		},
+		{
+			Description: "default file",
+			Test: func() error {
+				commitStr := defaultCommit.String()
+				ref := &defintionv1.Reference{
+					GitRepository: &defintionv1.GitRepositoryReference{
+						GitRepository: &defintionv1.GitRepository{
+							URL:    fmt.Sprintf("file://%v", remote1Dir),
+							Commit: &commitStr,
+						},
+					},
+				}
+
+				return shouldResolveToService(r, ref, &service2)
 			},
 		},
 		{
@@ -155,7 +183,7 @@ func testCommitGitReferenceResolve(t *testing.T) {
 							URL:    fmt.Sprintf("file://%v", remote1Dir),
 							Commit: &commitStr,
 						},
-						File: "foo",
+						File: &foo,
 					},
 				}
 
@@ -172,7 +200,7 @@ func testCommitGitReferenceResolve(t *testing.T) {
 							URL:    fmt.Sprintf("file://%v", remote1Dir),
 							Commit: &commitStr,
 						},
-						File: "service.json",
+						File: &servicePath,
 					},
 				}
 
@@ -229,7 +257,7 @@ func testBranchGitReferenceResolve(t *testing.T) {
 							URL:    fmt.Sprintf("file://%v", remote1Dir),
 							Branch: &branchName,
 						},
-						File: servicePath,
+						File: &servicePath,
 					},
 				}
 
@@ -261,7 +289,7 @@ func testBranchGitReferenceResolve(t *testing.T) {
 							URL:    fmt.Sprintf("file://%v", remote1Dir),
 							Branch: &branchName,
 						},
-						File: servicePath,
+						File: &servicePath,
 					},
 				}
 
@@ -289,7 +317,7 @@ func testBranchGitReferenceResolve(t *testing.T) {
 							URL:    fmt.Sprintf("file://%v", remote1Dir),
 							Branch: &branchName,
 						},
-						File: servicePath,
+						File: &servicePath,
 					},
 				}
 
@@ -300,13 +328,14 @@ func testBranchGitReferenceResolve(t *testing.T) {
 			Description: "invalid file",
 			Test: func() error {
 				branchName := "bar"
+				foo := "foo"
 				ref := &defintionv1.Reference{
 					GitRepository: &defintionv1.GitRepositoryReference{
 						GitRepository: &defintionv1.GitRepository{
 							URL:    fmt.Sprintf("file://%v", remote1Dir),
 							Branch: &branchName,
 						},
-						File: "foo",
+						File: &foo,
 					},
 				}
 
@@ -323,7 +352,7 @@ func testBranchGitReferenceResolve(t *testing.T) {
 							URL:    fmt.Sprintf("file://%v", remote1Dir),
 							Branch: &branch,
 						},
-						File: "service.json",
+						File: &servicePath,
 					},
 				}
 
@@ -380,7 +409,7 @@ func testTagGitReferenceResolve(t *testing.T) {
 							URL: fmt.Sprintf("file://%v", remote1Dir),
 							Tag: &tagName,
 						},
-						File: servicePath,
+						File: &servicePath,
 					},
 				}
 
@@ -403,7 +432,7 @@ func testTagGitReferenceResolve(t *testing.T) {
 							URL: fmt.Sprintf("file://%v", remote1Dir),
 							Tag: &patchSemverTag,
 						},
-						File: servicePath,
+						File: &servicePath,
 					},
 				}
 
@@ -420,7 +449,7 @@ func testTagGitReferenceResolve(t *testing.T) {
 							URL: fmt.Sprintf("file://%v", remote1Dir),
 							Tag: &minorSemverTag,
 						},
-						File: servicePath,
+						File: &servicePath,
 					},
 				}
 
@@ -437,7 +466,7 @@ func testTagGitReferenceResolve(t *testing.T) {
 							URL: fmt.Sprintf("file://%v", remote1Dir),
 							Tag: &invalidSemverTag,
 						},
-						File: servicePath,
+						File: &servicePath,
 					},
 				}
 
@@ -471,7 +500,7 @@ func testTagGitReferenceResolve(t *testing.T) {
 							URL: fmt.Sprintf("file://%v", remote1Dir),
 							Tag: &patchTag,
 						},
-						File: servicePath,
+						File: &servicePath,
 					},
 				}
 
@@ -488,7 +517,7 @@ func testTagGitReferenceResolve(t *testing.T) {
 							URL: fmt.Sprintf("file://%v", remote1Dir),
 							Tag: &minorTag,
 						},
-						File: servicePath,
+						File: &servicePath,
 					},
 				}
 
@@ -521,7 +550,7 @@ func testTagGitReferenceResolve(t *testing.T) {
 							URL: fmt.Sprintf("file://%v", remote1Dir),
 							Tag: &patchSemverTag,
 						},
-						File: servicePath,
+						File: &servicePath,
 					},
 				}
 
@@ -538,7 +567,7 @@ func testTagGitReferenceResolve(t *testing.T) {
 							URL: fmt.Sprintf("file://%v", remote1Dir),
 							Tag: &minorSemverTag,
 						},
-						File: servicePath,
+						File: &servicePath,
 					},
 				}
 
@@ -571,7 +600,7 @@ func testTagGitReferenceResolve(t *testing.T) {
 							URL: fmt.Sprintf("file://%v", remote1Dir),
 							Tag: &patchSemverTag,
 						},
-						File: servicePath,
+						File: &servicePath,
 					},
 				}
 
@@ -588,7 +617,7 @@ func testTagGitReferenceResolve(t *testing.T) {
 							URL: fmt.Sprintf("file://%v", remote1Dir),
 							Tag: &minorSemverTag,
 						},
-						File: servicePath,
+						File: &servicePath,
 					},
 				}
 

@@ -19,7 +19,7 @@ type Reference struct {
 }
 
 type GitRepositoryReference struct {
-	File string `json:"file"`
+	File *string `json:"file"`
 	*GitRepository
 }
 
