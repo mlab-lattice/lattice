@@ -67,7 +67,7 @@ func (t *Template) MarshalJSON() ([]byte, error) {
 }
 
 // Evaluate will crawl the Fields map and inject parameters into the values.
-func (t *Template) Evaluate(path tree.NodePath, bindings map[string]interface{}) (map[string]interface{}, error) {
+func (t *Template) Evaluate(path tree.Path, bindings map[string]interface{}) (map[string]interface{}, error) {
 	bindings, err := t.Parameters.Bind(path, bindings)
 	if err != nil {
 		return nil, err

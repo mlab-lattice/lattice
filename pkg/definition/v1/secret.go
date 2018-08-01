@@ -7,15 +7,15 @@ import (
 )
 
 type SecretRef struct {
-	Value tree.NodePathSubcomponent `json:"secret_ref"`
+	Value tree.PathSubcomponent `json:"secret_ref"`
 }
 
 // Secret can either be a local named reference (i.e. just a string name without
-// a path) or a NodePathSubcomponent.
+// a path) or a PathSubcomponent.
 // N.B.: in the future a secret may just be a local reference depending on how
 //       we decide to deal with secret management
 type Secret struct {
-	Path  *tree.NodePathSubcomponent
+	Path  *tree.PathSubcomponent
 	Local *string
 }
 
@@ -32,7 +32,7 @@ func (s Secret) MarshalJSON() ([]byte, error) {
 }
 
 func (s *Secret) UnmarshalJSON(data []byte) error {
-	var path tree.NodePathSubcomponent
+	var path tree.PathSubcomponent
 	err := json.Unmarshal(data, &path)
 	if err == nil {
 		s.Path = &path

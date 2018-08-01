@@ -89,7 +89,7 @@ type Parameters map[string]Parameter
 
 // Bind will take in a set of bindings for parameters, type check them, and properly set defaults if necessary.
 // It will then return the checked and defaulted set of parameter bindings.
-func (p Parameters) Bind(path tree.NodePath, bindings map[string]interface{}) (map[string]interface{}, error) {
+func (p Parameters) Bind(path tree.Path, bindings map[string]interface{}) (map[string]interface{}, error) {
 	result := make(map[string]interface{})
 
 	for k, p := range p {
@@ -136,7 +136,7 @@ func (p Parameters) Bind(path tree.NodePath, bindings map[string]interface{}) (m
 					}
 				}
 
-				secretRefPath, err := tree.NewNodePathSubcomponentFromParts(path, name)
+				secretRefPath, err := tree.NewPathSubcomponentFromParts(path, name)
 				if err != nil {
 					return nil, err
 				}

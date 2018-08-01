@@ -9,5 +9,5 @@ type GitRepository struct {
 	Commit *string `json:"commit,omitempty"`
 	Tag    *string `json:"tag,omitempty"`
 
-	SSHKey *tree.NodePathSubcomponent `json:"ssh_key,omitempty"`
+	SSHKey *tree.PathSubcomponent `json:"ssh_key,omitempty"`
 }

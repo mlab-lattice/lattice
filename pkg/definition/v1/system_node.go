@@ -4,25 +4,24 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/mlab-lattice/lattice/pkg/definition/component"
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 )
 
 type SystemNode struct {
-	parent tree.ComponentNode
-	path   tree.NodePath
+	parent tree.Node
+	path   tree.Path
 
 	system *System
 
-	components map[string]tree.ComponentNode
+	components map[string]tree.Node
 	systems    map[string]*SystemNode
 	services   map[string]*ServiceNode
 	jobs       map[string]*JobNode
 	references map[string]*ReferenceNode
 }
 
-func NewSystemNode(system *System, name string, parent tree.ComponentNode) (*SystemNode, error) {
-	path := tree.RootNodePath()
+func NewSystemNode(system *System, name string, parent tree.Node) (*SystemNode, error) {
+	path := tree.RootPath()
 	if parent != nil {
 		path = parent.Path().Child(name)
 	}
@@ -33,7 +32,7 @@ func NewSystemNode(system *System, name string, parent tree.ComponentNode) (*Sys
 
 		system: system,
 
-		components: make(map[string]tree.ComponentNode),
+		components: make(map[string]tree.Node),
 		systems:    make(map[string]*SystemNode),
 		services:   make(map[string]*ServiceNode),
 		jobs:       make(map[string]*JobNode),
@@ -69,11 +68,7 @@ func NewSystemNode(system *System, name string, parent tree.ComponentNode) (*Sys
 	return node, nil
 }
 
-func (n *SystemNode) Parent() tree.ComponentNode {
-	return n.parent
-}
-
-func (n *SystemNode) Path() tree.NodePath {
+func (n *SystemNode) Path() tree.Path {
 	return n.path
 }
 
@@ -81,8 +76,12 @@ func (n *SystemNode) Value() interface{} {
 	return n.system
 }
 
-func (n *SystemNode) Component() component.Interface {
-	return n.system
+func (n *SystemNode) Parent() tree.Node {
+	return n.parent
+}
+
+func (n *SystemNode) Children() map[string]tree.Node {
+	return n.components
 }
 
 func (n *SystemNode) System() *System {
@@ -93,7 +92,7 @@ func (n *SystemNode) NodePools() map[string]NodePool {
 	return n.system.NodePools
 }
 
-func (n *SystemNode) Components() map[string]tree.ComponentNode {
+func (n *SystemNode) Components() map[string]tree.Node {
 	return n.components
 }
 
@@ -102,8 +101,8 @@ func (n *SystemNode) Jobs() map[string]*JobNode {
 }
 
 // FIXME: come up with a better name for this
-func (n *SystemNode) AllJobs() map[tree.NodePath]*JobNode {
-	jobs := make(map[tree.NodePath]*JobNode)
+func (n *SystemNode) AllJobs() map[tree.Path]*JobNode {
+	jobs := make(map[tree.Path]*JobNode)
 	n.Walk(func(node *SystemNode) error {
 		for _, job := range node.Jobs() {
 			jobs[job.Path()] = job
@@ -139,8 +138,8 @@ func (n *SystemNode) Services() map[string]*ServiceNode {
 }
 
 // FIXME: come up with a better name for this
-func (n *SystemNode) AllServices() map[tree.NodePath]*ServiceNode {
-	services := make(map[tree.NodePath]*ServiceNode)
+func (n *SystemNode) AllServices() map[tree.Path]*ServiceNode {
+	services := make(map[tree.Path]*ServiceNode)
 	n.Walk(func(node *SystemNode) error {
 		for _, service := range node.Services() {
 			services[service.Path()] = service

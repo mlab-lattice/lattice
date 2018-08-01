@@ -19,7 +19,7 @@ import (
 
 func PodTemplateSpecForComponent(
 	component component.Interface,
-	path tree.NodePath,
+	path tree.Path,
 	latticeID v1.LatticeID,
 	internalDNSDomain string,
 	namespacePrefix, namespace, name string,
@@ -150,7 +150,7 @@ func KubeContainerForContainer(
 	container definitionv1.Container,
 	containerName string,
 	buildArtifacts ContainerBuildArtifacts,
-	componentPath tree.NodePath,
+	componentPath tree.Path,
 ) (corev1.Container, error) {
 	var ports []corev1.ContainerPort
 	for portNum := range container.Ports {

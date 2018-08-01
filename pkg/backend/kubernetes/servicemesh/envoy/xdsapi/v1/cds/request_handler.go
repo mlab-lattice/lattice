@@ -24,7 +24,7 @@ func (r *RequestHandler) GetResponse(serviceCluster, serviceNode string) (*Respo
 		return nil, err
 	}
 
-	servicePath, err := tree.NewNodePathFromDomain(serviceNode)
+	servicePath, err := tree.NewPathFromDomain(serviceNode)
 	if err != nil {
 		return nil, err
 	}

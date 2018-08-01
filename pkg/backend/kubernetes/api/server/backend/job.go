@@ -22,7 +22,7 @@ import (
 
 func (kb *KubernetesBackend) RunJob(
 	systemID v1.SystemID,
-	path tree.NodePath,
+	path tree.Path,
 	command []string,
 	environment definitionv1.ContainerEnvironment,
 ) (*v1.Job, error) {
@@ -205,7 +205,7 @@ func (kb *KubernetesBackend) findJobPod(jobID v1.JobID, namespace string) (*core
 
 func (kb *KubernetesBackend) transformJobRun(
 	id v1.JobID,
-	path tree.NodePath,
+	path tree.Path,
 	status *latticev1.JobRunStatus,
 	namespace string,
 ) (v1.Job, error) {

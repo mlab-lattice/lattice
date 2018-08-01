@@ -176,7 +176,7 @@ func mountBuildHandlers(router *gin.RouterGroup, backend v1server.Interface, res
 			return
 		}
 
-		nodePath, err := tree.NewNodePath(path)
+		nodePath, err := tree.NewPath(path)
 		if err != nil {
 			c.Status(http.StatusBadRequest)
 			return
@@ -354,7 +354,7 @@ func mountServiceHandlers(router *gin.RouterGroup, backend v1server.Interface) {
 		// check if its a query by service path
 
 		if servicePathParam != "" {
-			servicePath, err := tree.NewNodePath(servicePathParam)
+			servicePath, err := tree.NewPath(servicePathParam)
 			if err != nil {
 				handleError(c, err)
 				return
@@ -644,7 +644,7 @@ func mountSecretHandlers(router *gin.RouterGroup, backend v1server.Interface) {
 			return
 		}
 
-		path, err := tree.NewNodePath(splitPath[0])
+		path, err := tree.NewPath(splitPath[0])
 		if err != nil {
 			// FIXME: send invalid secret error
 			c.Status(http.StatusBadRequest)
@@ -688,7 +688,7 @@ func mountSecretHandlers(router *gin.RouterGroup, backend v1server.Interface) {
 			return
 		}
 
-		path, err := tree.NewNodePath(splitPath[0])
+		path, err := tree.NewPath(splitPath[0])
 		if err != nil {
 			// FIXME: send invalid secret error
 			c.Status(http.StatusBadRequest)
@@ -725,7 +725,7 @@ func mountSecretHandlers(router *gin.RouterGroup, backend v1server.Interface) {
 			return
 		}
 
-		path, err := tree.NewNodePath(splitPath[0])
+		path, err := tree.NewPath(splitPath[0])
 		if err != nil {
 			// FIXME: send invalid secret error
 			c.Status(http.StatusBadRequest)
@@ -857,7 +857,7 @@ func getSystemDefinitionRoot(
 			File: "system.json",
 		},
 	}
-	c, _, err := r.ResolveReference(systemID, tree.RootNodePath(), nil, ref, resolver.DepthInfinite)
+	c, _, err := r.ResolveReference(systemID, tree.RootPath(), nil, ref, resolver.DepthInfinite)
 	if err != nil {
 		return nil, err
 	}

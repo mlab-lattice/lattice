@@ -21,7 +21,7 @@ type DeployRequest struct {
 }
 
 type RunJobRequest struct {
-	Path        tree.NodePath                     `json:"path"`
+	Path        tree.Path                         `json:"path"`
 	Command     []string                          `json:"command"`
 	Environment definitionv1.ContainerEnvironment `json:"environment"`
 }

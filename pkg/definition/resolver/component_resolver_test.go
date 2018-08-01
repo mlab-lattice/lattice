@@ -623,7 +623,7 @@ func shouldResolveToServiceCtx(
 	ref *defintionv1.Reference,
 	expected *defintionv1.Service,
 ) error {
-	c, err := resolveReference(r, systemID, tree.RootNodePath(), ctx, ref, true)
+	c, err := resolveReference(r, systemID, tree.RootPath(), ctx, ref, true)
 	if err != nil {
 		return err
 	}
@@ -653,14 +653,14 @@ func shouldFailToResolveCtx(
 	ctx *git.FileReference,
 	ref *defintionv1.Reference,
 ) error {
-	_, err := resolveReference(r, systemID, tree.RootNodePath(), ctx, ref, false)
+	_, err := resolveReference(r, systemID, tree.RootPath(), ctx, ref, false)
 	return err
 }
 
 func resolveReference(
 	r ComponentResolver,
 	id v1.SystemID,
-	p tree.NodePath,
+	p tree.Path,
 	ctx *git.FileReference,
 	ref *defintionv1.Reference,
 	shouldSucceed bool,

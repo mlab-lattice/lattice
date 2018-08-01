@@ -16,8 +16,8 @@ import (
 func (c *Controller) syncMissingContainerBuildsBuild(build *latticev1.Build, stateInfo stateInfo) error {
 	containerBuildStatuses := stateInfo.containerBuildStatuses
 	containerBuildHashes := make(map[string]*latticev1.ContainerBuild)
-	services := make(map[tree.NodePath]latticev1.BuildStatusService)
-	jobs := make(map[tree.NodePath]latticev1.BuildStatusJob)
+	services := make(map[tree.Path]latticev1.BuildStatusService)
+	jobs := make(map[tree.Path]latticev1.BuildStatusJob)
 
 	// look through all the containers of each service to see if there are any containers that
 	// don't have builds yet

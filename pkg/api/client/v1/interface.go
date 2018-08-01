@@ -31,7 +31,7 @@ type BuildClient interface {
 	Create(version v1.SystemVersion) (*v1.Build, error)
 	List() ([]v1.Build, error)
 	Get(v1.BuildID) (*v1.Build, error)
-	Logs(id v1.BuildID, path tree.NodePath, sidecar *string, logOptions *v1.ContainerLogOptions) (io.ReadCloser, error)
+	Logs(id v1.BuildID, path tree.Path, sidecar *string, logOptions *v1.ContainerLogOptions) (io.ReadCloser, error)
 }
 
 type DeployClient interface {
@@ -50,12 +50,12 @@ type TeardownClient interface {
 type ServiceClient interface {
 	List() ([]v1.Service, error)
 	Get(id v1.ServiceID) (*v1.Service, error)
-	GetByServicePath(path tree.NodePath) (*v1.Service, error)
+	GetByServicePath(path tree.Path) (*v1.Service, error)
 	Logs(id v1.ServiceID, sidecar, instance *string, logOptions *v1.ContainerLogOptions) (io.ReadCloser, error)
 }
 
 type JobClient interface {
-	Create(path tree.NodePath, command []string, environment definitionv1.ContainerEnvironment) (*v1.Job, error)
+	Create(path tree.Path, command []string, environment definitionv1.ContainerEnvironment) (*v1.Job, error)
 	List() ([]v1.Job, error)
 	Get(v1.JobID) (*v1.Job, error)
 	Logs(id v1.JobID, sidecar *string, logOptions *v1.ContainerLogOptions) (io.ReadCloser, error)
@@ -63,7 +63,7 @@ type JobClient interface {
 
 type SecretClient interface {
 	List() ([]v1.Secret, error)
-	Get(path tree.NodePath, name string) (*v1.Secret, error)
-	Set(path tree.NodePath, name, value string) error
-	Unset(path tree.NodePath, name string) error
+	Get(path tree.Path, name string) (*v1.Secret, error)
+	Set(path tree.Path, name, value string) error
+	Unset(path tree.Path, name string) error
 }

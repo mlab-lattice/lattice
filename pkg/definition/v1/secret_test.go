@@ -10,7 +10,7 @@ import (
 
 func TestValueOrSecretMarshalJSON(t *testing.T) {
 	foo := "foo"
-	path := tree.NodePathSubcomponent("/foo/bar:buzz")
+	path := tree.PathSubcomponent("/foo/bar:buzz")
 	pathSecret := Secret{
 		Path: &path,
 	}
@@ -57,7 +57,7 @@ func TestValueOrSecretMarshalJSON(t *testing.T) {
 
 func TestValueOrSecretUnmarshalJSON(t *testing.T) {
 	foo := "foo"
-	path := tree.NodePathSubcomponent("/foo/bar:buzz")
+	path := tree.PathSubcomponent("/foo/bar:buzz")
 	pathSecret := Secret{
 		Path: &path,
 	}

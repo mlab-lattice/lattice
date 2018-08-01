@@ -114,7 +114,7 @@ func (kb *KubernetesBackend) GetBuild(systemID v1.SystemID, buildID v1.BuildID) 
 func (kb *KubernetesBackend) BuildLogs(
 	systemID v1.SystemID,
 	buildID v1.BuildID,
-	path tree.NodePath,
+	path tree.Path,
 	sidecar *string,
 	logOptions *v1.ContainerLogOptions,
 ) (io.ReadCloser, error) {
@@ -208,7 +208,7 @@ func (kb *KubernetesBackend) transformBuild(build *latticev1.Build) (v1.Build, e
 		CompletionTimestamp: completionTimestamp,
 
 		Version:  version,
-		Services: make(map[tree.NodePath]v1.ServiceBuild),
+		Services: make(map[tree.Path]v1.ServiceBuild),
 	}
 
 	for path, serviceInfo := range build.Status.Services {

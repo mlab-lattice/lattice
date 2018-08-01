@@ -77,7 +77,7 @@ func (b *KubernetesPerNodeBackend) Ready() bool {
 	return cache.WaitForCacheSync(nil, b.kubeEndpointListerSynced, b.serviceListerSynced)
 }
 
-func (b *KubernetesPerNodeBackend) Services(serviceCluster string) (map[tree.NodePath]*xdsapi.Service, error) {
+func (b *KubernetesPerNodeBackend) Services(serviceCluster string) (map[tree.Path]*xdsapi.Service, error) {
 	// TODO: probably want to have Services return a cached snapshot of the service state so we don't have to recompute this every time
 	// 	     For example, could add hooks to the informers which creates a new Services map and changes the pointer to point to the new one
 	//       so future Services() calls will return the new map.
@@ -85,7 +85,7 @@ func (b *KubernetesPerNodeBackend) Services(serviceCluster string) (map[tree.Nod
 	//       This could be useful for the GRPC streaming version of the API.
 	// N.B.: keep an eye on https://github.com/envoyproxy/go-control-plane
 	namespace := serviceCluster
-	result := map[tree.NodePath]*xdsapi.Service{}
+	result := map[tree.Path]*xdsapi.Service{}
 
 	services, err := b.serviceLister.Services(namespace).List(labels.Everything())
 	if err != nil {

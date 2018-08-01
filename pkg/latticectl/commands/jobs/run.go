@@ -72,7 +72,7 @@ func (c *BuildCommand) Base() (*latticectl.BaseCommand, error) {
 				log.Fatal(err)
 			}
 
-			path, err := tree.NewNodePath(pathStr)
+			path, err := tree.NewPath(pathStr)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "invalid path: %v", err)
 				os.Exit(1)
@@ -111,7 +111,7 @@ func (c *BuildCommand) Base() (*latticectl.BaseCommand, error) {
 
 func RunJob(
 	client v1client.JobClient,
-	path tree.NodePath,
+	path tree.Path,
 	command []string,
 	environment definitionv1.ContainerEnvironment,
 	format printer.Format,

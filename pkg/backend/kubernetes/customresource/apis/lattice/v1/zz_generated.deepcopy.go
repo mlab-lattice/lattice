@@ -79,7 +79,7 @@ func (in *AddressSpec) DeepCopyInto(out *AddressSpec) {
 		if *in == nil {
 			*out = nil
 		} else {
-			*out = new(tree.NodePath)
+			*out = new(tree.Path)
 			**out = **in
 		}
 	}
@@ -245,7 +245,7 @@ func (in *BuildStatus) DeepCopyInto(out *BuildStatus) {
 	}
 	if in.Services != nil {
 		in, out := &in.Services, &out.Services
-		*out = make(map[tree.NodePath]BuildStatusService, len(*in))
+		*out = make(map[tree.Path]BuildStatusService, len(*in))
 		for key, val := range *in {
 			newVal := new(BuildStatusService)
 			val.DeepCopyInto(newVal)
@@ -254,7 +254,7 @@ func (in *BuildStatus) DeepCopyInto(out *BuildStatus) {
 	}
 	if in.Jobs != nil {
 		in, out := &in.Jobs, &out.Jobs
-		*out = make(map[tree.NodePath]BuildStatusJob, len(*in))
+		*out = make(map[tree.Path]BuildStatusJob, len(*in))
 		for key, val := range *in {
 			newVal := new(BuildStatusJob)
 			val.DeepCopyInto(newVal)

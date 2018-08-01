@@ -14,7 +14,7 @@ type NodePool struct {
 
 type NodePoolOrReference struct {
 	NodePool     *NodePool
-	NodePoolPath *tree.NodePathSubcomponent
+	NodePoolPath *tree.PathSubcomponent
 }
 
 func (np *NodePoolOrReference) MarshalJSON() ([]byte, error) {
@@ -37,7 +37,7 @@ func (np *NodePoolOrReference) UnmarshalJSON(data []byte) error {
 	var nodePoolPathString string
 	err := json.Unmarshal(data, &nodePoolPathString)
 	if err == nil {
-		nodePoolPath, err := tree.NewNodePathSubcomponent(nodePoolPathString)
+		nodePoolPath, err := tree.NewPathSubcomponent(nodePoolPathString)
 		if err != nil {
 			return err
 		}

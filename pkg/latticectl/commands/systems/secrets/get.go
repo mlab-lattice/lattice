@@ -45,7 +45,7 @@ func (c *GetCommand) Base() (*latticectl.BaseCommand, error) {
 				log.Fatal("invalid secret name format")
 			}
 
-			path := tree.NodePath(splitName[0])
+			path := tree.Path(splitName[0])
 			name = splitName[1]
 
 			err = GetSecret(ctx.Client().Systems().Secrets(ctx.SystemID()), path, name, format, os.Stdout)
@@ -58,7 +58,7 @@ func (c *GetCommand) Base() (*latticectl.BaseCommand, error) {
 	return cmd.Base()
 }
 
-func GetSecret(client v1client.SecretClient, path tree.NodePath, name string, format printer.Format, writer io.Writer) error {
+func GetSecret(client v1client.SecretClient, path tree.Path, name string, format printer.Format, writer io.Writer) error {
 	secret, err := client.Get(path, name)
 	if err != nil {
 		return err

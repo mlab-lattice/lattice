@@ -70,10 +70,10 @@ type BuildStatus struct {
 	CompletionTimestamp *metav1.Time `json:"completionTimestamp,omitempty"`
 
 	// Maps a service path to the information about its container builds
-	Services map[tree.NodePath]BuildStatusService `json:"services"`
+	Services map[tree.Path]BuildStatusService `json:"services"`
 
 	// Maps a service path to the information about its container builds
-	Jobs map[tree.NodePath]BuildStatusJob `json:"jobs"`
+	Jobs map[tree.Path]BuildStatusJob `json:"jobs"`
 
 	// Maps a ServiceBuild.Name to the ServiceBuild.Status
 	ContainerBuildStatuses map[string]ContainerBuildStatus `json:"containerBuildStatuses"`

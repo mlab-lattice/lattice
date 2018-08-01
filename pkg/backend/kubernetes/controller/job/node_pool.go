@@ -40,7 +40,7 @@ func (c *Controller) nodePool(jobRun *latticev1.JobRun) (*latticev1.NodePool, er
 	return nodePools[0], nil
 }
 
-func sharedNodePoolSelector(namespace string, path tree.NodePath, name string) (labels.Selector, error) {
+func sharedNodePoolSelector(namespace string, path tree.Path, name string) (labels.Selector, error) {
 	selector := labels.NewSelector()
 	requirement, err := labels.NewRequirement(
 		latticev1.NodePoolSystemSharedPathLabelKey,

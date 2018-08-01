@@ -36,7 +36,7 @@ func (kb *KubernetesBackend) ListSystemSecrets(systemID v1.SystemID) ([]v1.Secre
 
 	externalSecrets := make([]v1.Secret, 0)
 	for _, secret := range secrets.Items {
-		path, err := tree.NewNodePathFromDomain(secret.Labels[latticev1.SecretPathLabelKey])
+		path, err := tree.NewPathFromDomain(secret.Labels[latticev1.SecretPathLabelKey])
 		if err != nil {
 			return nil, err
 		}
@@ -53,7 +53,7 @@ func (kb *KubernetesBackend) ListSystemSecrets(systemID v1.SystemID) ([]v1.Secre
 	return externalSecrets, nil
 }
 
-func (kb *KubernetesBackend) GetSystemSecret(systemID v1.SystemID, path tree.NodePath, name string) (*v1.Secret, error) {
+func (kb *KubernetesBackend) GetSystemSecret(systemID v1.SystemID, path tree.Path, name string) (*v1.Secret, error) {
 	// ensure the system exists
 	if _, err := kb.ensureSystemCreated(systemID); err != nil {
 		return nil, err
@@ -87,7 +87,7 @@ func (kb *KubernetesBackend) GetSystemSecret(systemID v1.SystemID, path tree.Nod
 	return externalSecret, nil
 }
 
-func (kb *KubernetesBackend) SetSystemSecret(systemID v1.SystemID, path tree.NodePath, name, value string) error {
+func (kb *KubernetesBackend) SetSystemSecret(systemID v1.SystemID, path tree.Path, name, value string) error {
 	// ensure the system exists
 	if _, err := kb.ensureSystemCreated(systemID); err != nil {
 		return err
@@ -125,7 +125,7 @@ func (kb *KubernetesBackend) SetSystemSecret(systemID v1.SystemID, path tree.Nod
 	return err
 }
 
-func (kb *KubernetesBackend) createSecret(systemID v1.SystemID, path tree.NodePath, name, value string) error {
+func (kb *KubernetesBackend) createSecret(systemID v1.SystemID, path tree.Path, name, value string) error {
 	kubeSecretName, err := kubeSecretName(path)
 	if err != nil {
 		return err
@@ -148,7 +148,7 @@ func (kb *KubernetesBackend) createSecret(systemID v1.SystemID, path tree.NodePa
 	return err
 }
 
-func (kb *KubernetesBackend) UnsetSystemSecret(systemID v1.SystemID, path tree.NodePath, name string) error {
+func (kb *KubernetesBackend) UnsetSystemSecret(systemID v1.SystemID, path tree.Path, name string) error {
 	// ensure the system exists
 	if _, err := kb.ensureSystemCreated(systemID); err != nil {
 		return err
@@ -196,6 +196,6 @@ func (kb *KubernetesBackend) UnsetSystemSecret(systemID v1.SystemID, path tree.N
 	return err
 }
 
-func kubeSecretName(path tree.NodePath) (string, error) {
+func kubeSecretName(path tree.Path) (string, error) {
 	return latticeutil.HashNodePath(path)
 }

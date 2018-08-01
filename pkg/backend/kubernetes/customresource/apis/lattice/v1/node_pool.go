@@ -124,7 +124,7 @@ func (np *NodePool) SystemSharedPathLabel() (v1.NodePoolPath, bool, error) {
 		return v1.NodePoolPath{}, false, nil
 	}
 
-	path, err := tree.NewNodePathFromDomain(pathLabel)
+	path, err := tree.NewPathFromDomain(pathLabel)
 	if err != nil {
 		return v1.NodePoolPath{}, false, err
 	}

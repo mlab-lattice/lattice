@@ -32,7 +32,7 @@ type ComponentResolver interface {
 	// ResolveReference resolves the reference.
 	ResolveReference(
 		systemID v1.SystemID,
-		path tree.NodePath,
+		path tree.Path,
 		ctx *git.FileReference,
 		ref *definitionv1.Reference,
 		depth int32,
@@ -100,7 +100,7 @@ func (r *DefaultComponentResolver) Versions(repository string, semverRange semve
 // ResolveReference fulfils the ComponentResolver interface.
 func (r *DefaultComponentResolver) ResolveReference(
 	systemID v1.SystemID,
-	path tree.NodePath,
+	path tree.Path,
 	ctx *git.FileReference,
 	ref *definitionv1.Reference,
 	depth int32,
@@ -153,7 +153,7 @@ func (r *DefaultComponentResolver) ResolveReference(
 
 func (r *DefaultComponentResolver) resolveTemplate(
 	systemID v1.SystemID,
-	path tree.NodePath,
+	path tree.Path,
 	ctx *git.FileReference,
 	ref *definitionv1.Reference,
 ) (*template.Template, *git.FileReference, error) {
@@ -291,7 +291,7 @@ func (r *DefaultComponentResolver) resolveGitTemplate(
 
 func (r *DefaultComponentResolver) resolveSystemComponents(
 	systemID v1.SystemID,
-	path tree.NodePath,
+	path tree.Path,
 	ctx *git.FileReference,
 	system *definitionv1.System,
 	depth int32,

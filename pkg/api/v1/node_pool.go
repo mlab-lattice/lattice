@@ -39,8 +39,8 @@ type NodePoolFailureInfo struct {
 }
 
 type NodePoolPath struct {
-	Path tree.NodePath `json:"path"`
-	Name *string       `json:"name,omitempty"`
+	Path tree.Path `json:"path"`
+	Name *string   `json:"name,omitempty"`
 }
 
 func (p NodePoolPath) String() string {
@@ -72,11 +72,11 @@ func (p *NodePoolPath) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-func NewServiceNodePoolPath(path tree.NodePath) NodePoolPath {
+func NewServiceNodePoolPath(path tree.Path) NodePoolPath {
 	return NodePoolPath{Path: path}
 }
 
-func NewSystemSharedNodePoolPath(path tree.NodePath, name string) NodePoolPath {
+func NewSystemSharedNodePoolPath(path tree.Path, name string) NodePoolPath {
 	return NodePoolPath{
 		Path: path,
 		Name: &name,
@@ -89,7 +89,7 @@ func ParseNodePoolPath(path string) (NodePoolPath, error) {
 		return NodePoolPath{}, fmt.Errorf("invalid node pool path format")
 	}
 
-	p, err := tree.NewNodePath(parts[0])
+	p, err := tree.NewPath(parts[0])
 	if err != nil {
 		return NodePoolPath{}, err
 	}

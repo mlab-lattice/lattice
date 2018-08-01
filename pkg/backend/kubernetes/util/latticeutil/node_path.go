@@ -5,6 +5,6 @@ import (
 	"github.com/mlab-lattice/lattice/pkg/util/sha1"
 )
 
-func HashNodePath(path tree.NodePath) (string, error) {
+func HashNodePath(path tree.Path) (string, error) {
 	return sha1.EncodeToHexString([]byte(path.String()))
 }

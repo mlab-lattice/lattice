@@ -10,7 +10,7 @@ func TestNewNodePath(t *testing.T) {
 		d string
 		p string
 		e bool
-		r NodePath
+		r Path
 	}{
 		{
 			d: "empty string",
@@ -36,18 +36,18 @@ func TestNewNodePath(t *testing.T) {
 			d: "root",
 			p: "/",
 			e: false,
-			r: NodePath("/"),
+			r: Path("/"),
 		},
 		{
 			d: "valid path",
 			p: "/foo/Bar/BUZZ",
 			e: false,
-			r: NodePath("/foo/Bar/BUZZ"),
+			r: Path("/foo/Bar/BUZZ"),
 		},
 	}
 
 	for _, test := range tests {
-		p, err := NewNodePath(test.p)
+		p, err := NewPath(test.p)
 		if err != nil {
 			if !test.e {
 				t.Errorf("expected no error for %v but got %e", test.d, err)
@@ -71,7 +71,7 @@ func TestNodePathFromDomain(t *testing.T) {
 		d string
 		p string
 		e bool
-		r NodePath
+		r Path
 	}{
 		{
 			d: "empty initial subdomain",
@@ -92,12 +92,12 @@ func TestNodePathFromDomain(t *testing.T) {
 			d: "valid domain",
 			p: "BUZZ.Bar.foo",
 			e: false,
-			r: NodePath("/foo/Bar/BUZZ"),
+			r: Path("/foo/Bar/BUZZ"),
 		},
 	}
 
 	for _, test := range tests {
-		p, err := NewNodePathFromDomain(test.p)
+		p, err := NewPathFromDomain(test.p)
 		if err != nil {
 			if !test.e {
 				t.Errorf("expected no error for %v but got %e", test.d, err)
@@ -117,7 +117,7 @@ func TestNodePathFromDomain(t *testing.T) {
 }
 
 func TestNodePath_ToDomain(t *testing.T) {
-	p, err := NewNodePath("/foo/Bar/BUZZ")
+	p, err := NewPath("/foo/Bar/BUZZ")
 	if err != nil {
 		t.Errorf("Expected no error for valid path but got %v", err)
 	}
@@ -130,7 +130,7 @@ func TestNodePath_ToDomain(t *testing.T) {
 }
 
 func TestNodePath_Depth(t *testing.T) {
-	p, err := NewNodePath("/foo/Bar/BUZZ")
+	p, err := NewPath("/foo/Bar/BUZZ")
 	if err != nil {
 		t.Errorf("Expected no error for valid path but got %v", err)
 	}
@@ -141,7 +141,7 @@ func TestNodePath_Depth(t *testing.T) {
 		t.Errorf("Expected depth %v but got %v", expectedDepth, depth)
 	}
 
-	p, err = NewNodePath("/foo/Bar")
+	p, err = NewPath("/foo/Bar")
 	if err != nil {
 		t.Errorf("Expected no error for valid path but got %v", err)
 	}
@@ -152,7 +152,7 @@ func TestNodePath_Depth(t *testing.T) {
 		t.Errorf("Expected depth %v but got %v", expectedDepth, depth)
 	}
 
-	p, err = NewNodePath("/foo")
+	p, err = NewPath("/foo")
 	if err != nil {
 		t.Errorf("Expected no error for valid path but got %v", err)
 	}
@@ -165,52 +165,52 @@ func TestNodePath_Depth(t *testing.T) {
 }
 
 func TestNodePath_IsRoot(t *testing.T) {
-	p, err := NewNodePath("/foo/Bar/BUZZ")
+	p, err := NewPath("/foo/Bar/BUZZ")
 	if err != nil {
 		t.Errorf("Expected no error for valid path but got %v", err)
 	}
 
 	if p.IsRoot() {
-		t.Errorf("Expected NodePath to not be Root")
+		t.Errorf("Expected Path to not be Root")
 	}
 
-	p, err = NewNodePath("/foo/Bar")
+	p, err = NewPath("/foo/Bar")
 	if err != nil {
 		t.Errorf("Expected no error for valid path but got %v", err)
 	}
 
 	if p.IsRoot() {
-		t.Errorf("Expected NodePath to not be Root")
+		t.Errorf("Expected Path to not be Root")
 	}
 
-	p, err = NewNodePath("/foo")
+	p, err = NewPath("/foo")
 	if err != nil {
 		t.Errorf("Expected no error for valid path but got %v", err)
 	}
 
 	if p.IsRoot() {
-		t.Errorf("Expected NodePath to not be Root")
+		t.Errorf("Expected Path to not be Root")
 	}
 
-	p, err = NewNodePath("/")
+	p, err = NewPath("/")
 	if err != nil {
 		t.Errorf("Expected no error for valid path but got %v", err)
 	}
 
 	if !p.IsRoot() {
-		t.Errorf("Expected NodePath to be Root")
+		t.Errorf("Expected Path to be Root")
 	}
 }
 
 func TestNodePath_Parent(t *testing.T) {
-	p, err := NewNodePath("/foo/Bar/BUZZ")
+	p, err := NewPath("/foo/Bar/BUZZ")
 	if err != nil {
 		t.Errorf("Expected no error for valid path but got %v", err)
 	}
 
 	p, err = p.Parent()
 	if err != nil {
-		t.Errorf("Expected no error for NodePath with parent but got %v", err)
+		t.Errorf("Expected no error for Path with parent but got %v", err)
 	}
 
 	expectedPath := "/foo/Bar"
@@ -220,7 +220,7 @@ func TestNodePath_Parent(t *testing.T) {
 
 	p, err = p.Parent()
 	if err != nil {
-		t.Errorf("Expected no error for NodePath with parent but got %v", err)
+		t.Errorf("Expected no error for Path with parent but got %v", err)
 	}
 
 	expectedPath = "/foo"
@@ -230,7 +230,7 @@ func TestNodePath_Parent(t *testing.T) {
 
 	p, err = p.Parent()
 	if err != nil {
-		t.Errorf("Expected no error for NodePath with parent but got %v", err)
+		t.Errorf("Expected no error for Path with parent but got %v", err)
 	}
 
 	expectedPath = "/"
@@ -240,24 +240,24 @@ func TestNodePath_Parent(t *testing.T) {
 
 	_, err = p.Parent()
 	if err == nil {
-		t.Errorf("Expected error for NodePath with no parent but got nil")
+		t.Errorf("Expected error for Path with no parent but got nil")
 	}
 }
 
 func TestNewNodePathSubcomponent(t *testing.T) {
-	_, err := NewNodePathSubcomponentFromParts("/foo/Bar/BUZZ", "")
+	_, err := NewPathSubcomponentFromParts("/foo/Bar/BUZZ", "")
 	if err == nil {
 		t.Errorf("Expected error for empty subcomponent but got nil")
 	}
 
-	_, err = NewNodePathSubcomponentFromParts("/foo/Bar/BUZZ", "bazz")
+	_, err = NewPathSubcomponentFromParts("/foo/Bar/BUZZ", "bazz")
 	if err != nil {
 		t.Errorf("Expected no error for valid path but got %v", err)
 	}
 }
 
 func TestNodePathSubcomponentParts(t *testing.T) {
-	n, err := NewNodePathSubcomponentFromParts("/foo/Bar/BUZZ", "bazz")
+	n, err := NewPathSubcomponentFromParts("/foo/Bar/BUZZ", "bazz")
 	if err != nil {
 		t.Errorf("Expected no error for valid path subcomponent but got %v", err)
 	}
