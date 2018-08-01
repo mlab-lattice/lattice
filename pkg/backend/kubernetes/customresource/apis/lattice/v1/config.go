@@ -45,6 +45,9 @@ type ConfigCloudProviderAWS struct {
 	KeyName         string `json:"keyName"`
 }
 
+//ApiServerAddress string `json:"apiServerAddress"`
+//ApiServerPort    string `json:"apiServerPort"`
+
 type ConfigContainerBuild struct {
 	Builder        ConfigComponentBuildBuilder        `json:"builderConfig"`
 	DockerArtifact ConfigComponentBuildDockerArtifact `json:"dockerConfig"`

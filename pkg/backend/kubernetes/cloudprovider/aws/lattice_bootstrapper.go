@@ -20,8 +20,10 @@ type LatticeBootstrapperOptions struct {
 	SubnetIDs                 []string
 	MasterNodeSecurityGroupID string
 
-	WorkerNodeAMIID string
-	KeyName         string
+	WorkerNodeAMIID  string
+	KeyName          string
+	ApiServerAddress string
+	ApiServerPort    string
 
 	ControllerManagerOptions *LatticeBootstrapperControllerManagerOptions
 }
@@ -31,7 +33,7 @@ type LatticeBootstrapperControllerManagerOptions struct {
 	TerraformBackendOptions *terraform.BackendOptions
 }
 
-func NewLatticeBootstrapper(options *LatticeBootstrapperOptions) *DefaultAWSLatticeBootstrapper {
+func NewLatticeBootstrapper(internalDnsDomain string, options *LatticeBootstrapperOptions) *DefaultAWSLatticeBootstrapper {
 	return &DefaultAWSLatticeBootstrapper{
 		region:    options.Region,
 		accountID: options.AccountID,
@@ -41,8 +43,11 @@ func NewLatticeBootstrapper(options *LatticeBootstrapperOptions) *DefaultAWSLatt
 		subnetIDs:                 options.SubnetIDs,
 		masterNodeSecurityGroupID: options.MasterNodeSecurityGroupID,
 
-		workerNodeAMIID: options.WorkerNodeAMIID,
-		keyName:         options.KeyName,
+		workerNodeAMIID:   options.WorkerNodeAMIID,
+		keyName:           options.KeyName,
+		apiServerAddress:  options.ApiServerAddress,
+		apiServerPort:     options.ApiServerPort,
+		internalDnsDomain: internalDnsDomain,
 
 		controllerManagerOptions: options.ControllerManagerOptions,
 	}
@@ -99,6 +104,16 @@ func LatticeBootstrapperFlags() (cli.Flags, *LatticeBootstrapperOptions) {
 			Required: true,
 			Target:   &options.KeyName,
 		},
+		&cli.StringFlag{
+			Name:     "api-server-address",
+			Required: false,
+			Target:   &options.ApiServerAddress,
+		},
+		&cli.StringFlag{
+			Name:     "api-server-port",
+			Required: false,
+			Target:   &options.ApiServerPort,
+		},
 
 		&cli.EmbeddedFlag{
 			Name:     "controller-manager-var",
@@ -132,8 +147,11 @@ type DefaultAWSLatticeBootstrapper struct {
 	subnetIDs                 []string
 	masterNodeSecurityGroupID string
 
-	workerNodeAMIID string
-	keyName         string
+	workerNodeAMIID   string
+	keyName           string
+	apiServerAddress  string
+	apiServerPort     string
+	internalDnsDomain string
 
 	controllerManagerOptions *LatticeBootstrapperControllerManagerOptions
 }
@@ -158,6 +176,8 @@ func (cp *DefaultAWSLatticeBootstrapper) BootstrapLatticeResources(resources *bo
 			"--cloud-provider-var", fmt.Sprintf("subnet-ids=%v", strings.Join(cp.subnetIDs, ",")),
 			"--cloud-provider-var", fmt.Sprintf("master-node-security-group-id=%v", cp.masterNodeSecurityGroupID),
 			"--cloud-provider-var", fmt.Sprintf("terraform-module-path=%v", cp.controllerManagerOptions.TerraformModulePath),
+			"--cloud-provider-var", fmt.Sprintf("api-server-address=%v.%v", cp.apiServerAddress, cp.internalDnsDomain),
+			"--cloud-provider-var", fmt.Sprintf("api-server-port=%v", cp.apiServerPort),
 		)
 
 		for _, flag := range cp.controllerManagerOptions.TerraformBackendOptions.AsFlags() {

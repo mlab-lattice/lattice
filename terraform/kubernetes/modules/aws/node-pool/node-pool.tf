@@ -20,9 +20,9 @@ variable "kubelet_port" {
   default = 10250
 }
 
-//variable "kube_bootstrap_token" {}
-//variable "kube_apiserver_private_ip" {}
-//variable "kube_apiserver_port" {}
+variable "kube_bootstrap_token" {}
+variable "kube_apiserver_address" {}
+variable "kube_apiserver_port" {}
 
 ###############################################################################
 # Output
@@ -143,9 +143,9 @@ module "node" {
   ami_id        = "${var.worker_node_ami_id}"
   key_name      = "${var.key_name}"
 
-  //  kube_bootstrap_token      = "${var.kube_bootstrap_token}"
-  //  kube_apiserver_private_ip = "${var.kube_apiserver_private_ip}"
-  //  kube_apiserver_port       = "${var.kube_apiserver_port}"
+  kube_bootstrap_token   = "${var.kube_bootstrap_token}"
+  kube_apiserver_address = "${var.kube_apiserver_address}"
+  kube_apiserver_port    = "${var.kube_apiserver_port}"
 
   iam_instance_profile_role_name = "${aws_iam_role.node_pool_role.name}"
 }

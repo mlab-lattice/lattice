@@ -31,7 +31,7 @@ variable "kube_bootstrap_token" {
   default = ""
 }
 
-variable "kube_apiserver_private_ip" {
+variable "kube_apiserver_address" {
   type    = "string"
   default = ""
 }
@@ -41,25 +41,8 @@ variable "kube_apiserver_port" {
   default = ""
 }
 
-###############################################################################
-# Bootstrap data for cloud config
-
-//data "local_file" "bootstrap_file" {
-//  filename = "/opt/lattice/kubernetes-bootstrap-token"
-//}
-//
-//data "local_file" "apiserver_ip_port" {
-//  filename = "/opt/lattice/kubernetes-apiserver-ip-port"
-//}
-
 locals {
-  apiserver_var_string = "${var.kube_apiserver_private_ip}:${var.kube_apiserver_port}"
-
-  //  private_ip_string = "${var.kube_apiserver_private_ip == "" ? data.local_file.apiserver_ip_port.content : local.apiserver_var_string}"
-  //  bootstrap_token = "${var.kube_bootstrap_token == "" ? data.local_file.bootstrap_file.content : var.kube_bootstrap_token}"
-  private_ip_string = "${var.kube_apiserver_private_ip == "" ? file("/opt/lattice/kubernetes-apiserver-ip-port") : local.apiserver_var_string}"
-
-  bootstrap_str = "${var.kube_bootstrap_token == "" ? file("/opt/lattice/kubernetes-bootstrap-token") : var.kube_bootstrap_token}"
+  apiserver_public_ingress_address = "${var.kube_apiserver_address}:${var.kube_apiserver_port}"
 }
 
 ###############################################################################
@@ -204,11 +187,11 @@ ${var.etc_lattice_config_content}
 -   path: /opt/lattice/kubernetes-bootstrap-token
     owner: root:root
     permissions: '0644'
-    content: "${local.bootstrap_str}"
+    content: "${var.kube_bootstrap_token}"
 -   path: /opt/lattice/kubernetes-apiserver-ip-port
     owner: root:root
     permissions: '0644'
-    content: "${local.private_ip_string}"
+    content: "${local.apiserver_public_ingress_address}"
 EOF
 
   # TODO: remove temporary_ssh_group when done testing

@@ -92,6 +92,12 @@ func (b *DefaultBootstrapper) controllerManagerResources(resources *bootstrapper
 				Resources: []string{"daemonsets"},
 				Verbs:     ReadCreateAndDeleteVerbs,
 			},
+			// kube secret create
+			{
+				APIGroups: []string{corev1.GroupName},
+				Resources: []string{"secrets"},
+				Verbs:     []string{rbacv1.VerbAll},
+			},
 		},
 	}
 	// also need to create component builder SAs for the system namespace when bootstrapping a system,
