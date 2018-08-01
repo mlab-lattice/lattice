@@ -8,6 +8,7 @@ import (
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 	definitionv1 "github.com/mlab-lattice/lattice/pkg/definition/v1"
 
+	"github.com/mlab-lattice/lattice/pkg/definition/resolver"
 	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -57,7 +58,8 @@ func (b *Build) Description(namespacePrefix string) string {
 
 // +k8s:deepcopy-gen=false
 type BuildSpec struct {
-	Definition *definitionv1.SystemNode `json:"definition"`
+	Definition  *definitionv1.SystemNode `json:"definition"`
+	ResolveTree *resolver.Node           `json:"resolveTree"`
 }
 
 type BuildStatus struct {

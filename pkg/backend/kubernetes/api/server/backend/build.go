@@ -15,16 +15,22 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
 
+	"github.com/mlab-lattice/lattice/pkg/definition/resolver"
 	"github.com/satori/go.uuid"
 )
 
-func (kb *KubernetesBackend) Build(systemID v1.SystemID, def *defintionv1.SystemNode, version v1.SystemVersion) (*v1.Build, error) {
+func (kb *KubernetesBackend) Build(
+	systemID v1.SystemID,
+	def *defintionv1.SystemNode,
+	rn *resolver.Node,
+	version v1.SystemVersion,
+) (*v1.Build, error) {
 	// ensure the system exists
 	if _, err := kb.ensureSystemCreated(systemID); err != nil {
 		return nil, err
 	}
 
-	build, err := newBuild(def, version)
+	build, err := newBuild(def, rn, version)
 	if err != nil {
 		return nil, err
 	}
@@ -43,7 +49,7 @@ func (kb *KubernetesBackend) Build(systemID v1.SystemID, def *defintionv1.System
 	return &externalBuild, nil
 }
 
-func newBuild(def *defintionv1.SystemNode, version v1.SystemVersion) (*latticev1.Build, error) {
+func newBuild(def *defintionv1.SystemNode, rn *resolver.Node, version v1.SystemVersion) (*latticev1.Build, error) {
 	labels := map[string]string{
 		latticev1.BuildDefinitionVersionLabelKey: string(version),
 	}
@@ -54,7 +60,8 @@ func newBuild(def *defintionv1.SystemNode, version v1.SystemVersion) (*latticev1
 			Labels: labels,
 		},
 		Spec: latticev1.BuildSpec{
-			Definition: def,
+			Definition:  def,
+			ResolveTree: rn,
 		},
 	}
 

@@ -1,15 +1,15 @@
 package build
 
 import (
-	"crypto/sha1"
-	"encoding/hex"
 	"encoding/json"
 
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	kubeutil "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/kubernetes"
-	definitionv1 "github.com/mlab-lattice/lattice/pkg/definition/v1"
-
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
+	definitionv1 "github.com/mlab-lattice/lattice/pkg/definition/v1"
+	"github.com/mlab-lattice/lattice/pkg/util/sha1"
+
+	"fmt"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -32,7 +32,7 @@ func (c *Controller) syncMissingContainerBuildsBuild(build *latticev1.Build, sta
 
 		// maps the service's container names to the container builds for them
 		containerBuilds := make(map[string]string)
-		err := c.getContainerBuilds(build, containers, containerBuilds, containerBuildHashes, containerBuildStatuses)
+		err := c.getContainerBuilds(build, path, containers, containerBuilds, containerBuildHashes, containerBuildStatuses)
 		if err != nil {
 			return nil
 		}
@@ -57,7 +57,7 @@ func (c *Controller) syncMissingContainerBuildsBuild(build *latticev1.Build, sta
 
 		// maps the service's container names to the container builds for them
 		containerBuilds := make(map[string]string)
-		err := c.getContainerBuilds(build, containers, containerBuilds, containerBuildHashes, containerBuildStatuses)
+		err := c.getContainerBuilds(build, path, containers, containerBuilds, containerBuildHashes, containerBuildStatuses)
 		if err != nil {
 			return nil
 		}
@@ -94,13 +94,19 @@ func (c *Controller) syncMissingContainerBuildsBuild(build *latticev1.Build, sta
 
 func (c *Controller) getContainerBuilds(
 	build *latticev1.Build,
+	path tree.Path,
 	containers map[string]definitionv1.Container,
 	containerBuilds map[string]string,
 	containerBuildHashes map[string]*latticev1.ContainerBuild,
 	containerBuildStatuses map[string]latticev1.ContainerBuildStatus,
 ) error {
 	for containerName, container := range containers {
-		definitionHash, err := hashContainerBuild(container)
+		buildDefinition, err := c.hydrateContainerBuild(build, path, container.Build)
+		if err != nil {
+			return err
+		}
+
+		definitionHash, err := hashContainerBuild(buildDefinition)
 		if err != nil {
 			return err
 		}
@@ -129,7 +135,7 @@ func (c *Controller) getContainerBuilds(
 		}
 
 		// haven't found a container build so need to create one
-		containerBuild, err = c.createNewContainerBuild(build, container.Build, definitionHash)
+		containerBuild, err = c.createNewContainerBuild(build, buildDefinition, definitionHash)
 		if err != nil {
 			return err
 		}
@@ -142,23 +148,53 @@ func (c *Controller) getContainerBuilds(
 	return nil
 }
 
-func hashContainerBuild(container definitionv1.Container) (string, error) {
+func (c *Controller) hydrateContainerBuild(
+	build *latticev1.Build,
+	path tree.Path,
+	containerBuild *definitionv1.ContainerBuild,
+) (*definitionv1.ContainerBuild, error) {
+	// If the container build is a command build and a source wasn't specified,
+	// use the git repository commit context that the definition was resolved from.
+	if containerBuild.CommandBuild == nil || containerBuild.CommandBuild.Source != nil {
+		return containerBuild, nil
+	}
+
+	n, ok, err := build.Spec.ResolveTree.Lookup(path)
+	if err != nil {
+		return nil, err
+	}
+
+	if !ok {
+		err := fmt.Errorf(
+			"%v resolve tree did not have information for %v",
+			build.Description(c.namespacePrefix),
+			path.String(),
+		)
+		return nil, err
+	}
+
+	// Copy so we don't mutate the cache
+	b := &definitionv1.ContainerBuild{}
+	*b = *containerBuild
+
+	b.CommandBuild.Source = &definitionv1.ContainerBuildSource{
+		GitRepository: &definitionv1.GitRepository{
+			URL:    n.Info.Commit.RepositoryURL,
+			Commit: &n.Info.Commit.Commit,
+		},
+	}
+	return b, nil
+}
+
+func hashContainerBuild(containerBuild *definitionv1.ContainerBuild) (string, error) {
 	// Note: json marshalling is deterministic: https://godoc.org/encoding/json#Marshal
 	// "Map values encode as JSON objects. The map's key type must either be a string,
 	//  an integer type, or implement encoding.TextMarshaler. The map keys are sorted
 	//  and used as JSON object keys..."
-	definitionJSON, err := json.Marshal(container.Build)
+	definitionJSON, err := json.Marshal(containerBuild)
 	if err != nil {
 		return "", err
 	}
 
-	// using sha1 for now. sha256 requires 64 bytes and label values can only be
-	// up to 63 characters
-	h := sha1.New()
-	if _, err = h.Write(definitionJSON); err != nil {
-		return "", err
-	}
-
-	definitionHash := hex.EncodeToString(h.Sum(nil))
-	return definitionHash, nil
+	return sha1.EncodeToHexString(definitionJSON)
 }

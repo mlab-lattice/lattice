@@ -26,7 +26,7 @@ const (
 )
 
 type ResolutionInfo struct {
-	Commit *git.CommitReference
+	Commit *git.CommitReference `json:"commit"`
 }
 
 // ComponentResolver resolves references into fully hydrated (i.e. the template
@@ -114,7 +114,6 @@ func (r *DefaultComponentResolver) ResolveReference(
 			&ResolutionInfo{Commit: &ctx.CommitReference},
 			path,
 			nil,
-			nil,
 		)
 		return ref, n, nil
 	}
@@ -158,9 +157,8 @@ func (r *DefaultComponentResolver) ResolveReference(
 	}
 
 	n := NewNode(
-		&ResolutionInfo{Commit: &ctx.CommitReference},
+		&ResolutionInfo{Commit: &resolvedCxt.CommitReference},
 		path,
-		nil,
 		nil,
 	)
 	return c, n, nil
@@ -317,12 +315,7 @@ func (r *DefaultComponentResolver) resolveSystemComponents(
 	//  - If the component is a system, recursively resolve its components.
 	//  - If the component is a reference, resolve it (potentially also recursively resolving
 	//    system components if the reference was to a system).
-	n := NewNode(
-		&ResolutionInfo{Commit: &ctx.CommitReference},
-		path,
-		nil,
-		make(map[string]tree.Node),
-	)
+	children := make(map[string]tree.Node)
 
 	for name, c := range system.Components {
 		childPath := path.Child(name)
@@ -337,7 +330,6 @@ func (r *DefaultComponentResolver) resolveSystemComponents(
 			}
 
 			system.Components[name] = subSystem
-			sn.parent = n
 			child = sn
 
 		case *definitionv1.Reference:
@@ -348,20 +340,23 @@ func (r *DefaultComponentResolver) resolveSystemComponents(
 			}
 
 			system.Components[name] = resolved
-			sn.parent = n
 			child = sn
 
 		default:
 			child = NewNode(
 				&ResolutionInfo{Commit: &ctx.CommitReference},
 				childPath,
-				n,
 				nil,
 			)
 		}
 
-		n.children[name] = child
+		children[name] = child
 	}
 
+	n := NewNode(
+		&ResolutionInfo{Commit: &ctx.CommitReference},
+		path,
+		children,
+	)
 	return system, n, nil
 }

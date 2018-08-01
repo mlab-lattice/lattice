@@ -4,6 +4,7 @@ import (
 	"io"
 
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
+	"github.com/mlab-lattice/lattice/pkg/definition/resolver"
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 	definitionv1 "github.com/mlab-lattice/lattice/pkg/definition/v1"
 )
@@ -16,7 +17,7 @@ type Interface interface {
 	DeleteSystem(v1.SystemID) error
 
 	// Build
-	Build(systemID v1.SystemID, def *definitionv1.SystemNode, v v1.SystemVersion) (*v1.Build, error)
+	Build(systemID v1.SystemID, def *definitionv1.SystemNode, rn *resolver.Node, v v1.SystemVersion) (*v1.Build, error)
 	ListBuilds(v1.SystemID) ([]v1.Build, error)
 	GetBuild(v1.SystemID, v1.BuildID) (*v1.Build, error)
 	BuildLogs(
@@ -29,7 +30,7 @@ type Interface interface {
 
 	// Deploy
 	DeployBuild(v1.SystemID, v1.BuildID) (*v1.Deploy, error)
-	DeployVersion(systemID v1.SystemID, def *definitionv1.SystemNode, version v1.SystemVersion) (*v1.Deploy, error)
+	DeployVersion(systemID v1.SystemID, def *definitionv1.SystemNode, rn *resolver.Node, version v1.SystemVersion) (*v1.Deploy, error)
 	ListDeploys(v1.SystemID) ([]v1.Deploy, error)
 	GetDeploy(v1.SystemID, v1.DeployID) (*v1.Deploy, error)
 

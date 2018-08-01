@@ -30,6 +30,7 @@ go_library(
         "//pkg/backend/kubernetes/util/kubernetes:go_default_library",
         "//pkg/backend/kubernetes/util/latticeutil:go_default_library",
         "//pkg/definition/component:go_default_library",
+        "//pkg/definition/resolver:go_default_library",
         "//pkg/definition/template:go_default_library",
         "//pkg/definition/tree:go_default_library",
         "//pkg/definition/v1:go_default_library",

@@ -108,7 +108,7 @@ type containerBuildDockerImageEncoder struct {
 }
 
 type ContainerBuildSource struct {
-	GitRepository *GitRepository
+	GitRepository *GitRepository `json:"git_repository"`
 }
 
 type ContainerExec struct {

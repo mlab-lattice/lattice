@@ -4,7 +4,6 @@ package tree
 type Node interface {
 	Path() Path
 	Value() interface{}
-	Parent() Node
 	Children() map[string]Node
 }
 

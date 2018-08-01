@@ -102,7 +102,7 @@ func mountBuildHandlers(router *gin.RouterGroup, backend v1server.Interface, res
 			return
 		}
 
-		root, err := getSystemDefinitionRoot(backend, resolver, systemID, req.Version)
+		root, rn, err := getSystemDefinitionRoot(backend, resolver, systemID, req.Version)
 		if err != nil {
 			handleError(c, err)
 			return
@@ -111,6 +111,7 @@ func mountBuildHandlers(router *gin.RouterGroup, backend v1server.Interface, res
 		build, err := backend.Build(
 			systemID,
 			root,
+			rn,
 			req.Version,
 		)
 
@@ -232,7 +233,7 @@ func mountDeployHandlers(router *gin.RouterGroup, backend v1server.Interface, re
 		var deploy *v1.Deploy
 		var err error
 		if req.Version != nil {
-			root, err := getSystemDefinitionRoot(backend, resolver, systemID, *req.Version)
+			root, rn, err := getSystemDefinitionRoot(backend, resolver, systemID, *req.Version)
 			if err != nil {
 				handleError(c, err)
 				return
@@ -241,6 +242,7 @@ func mountDeployHandlers(router *gin.RouterGroup, backend v1server.Interface, re
 			deploy, err = backend.DeployVersion(
 				systemID,
 				root,
+				rn,
 				*req.Version,
 			)
 		} else {
@@ -826,7 +828,7 @@ func mountVersionHandlers(router *gin.RouterGroup, backend v1server.Interface, r
 		systemID := v1.SystemID(c.Param(systemIDIdentifier))
 		version := v1.SystemVersion(c.Param(versionIdentifier))
 
-		root, err := getSystemDefinitionRoot(backend, resolver, systemID, version)
+		root, _, err := getSystemDefinitionRoot(backend, resolver, systemID, version)
 		if err != nil {
 			handleError(c, err)
 			return
@@ -841,10 +843,10 @@ func getSystemDefinitionRoot(
 	r resolver.ComponentResolver,
 	systemID v1.SystemID,
 	version v1.SystemVersion,
-) (*definitionv1.SystemNode, error) {
+) (*definitionv1.SystemNode, *resolver.Node, error) {
 	system, err := backend.GetSystem(systemID)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	tag := string(version)
@@ -857,21 +859,21 @@ func getSystemDefinitionRoot(
 			File: "system.json",
 		},
 	}
-	c, _, err := r.ResolveReference(systemID, tree.RootPath(), nil, ref, resolver.DepthInfinite)
+	c, rn, err := r.ResolveReference(systemID, tree.RootPath(), nil, ref, resolver.DepthInfinite)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	root, err := definitionv1.NewNode(c, "", nil)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	if def, ok := root.(*definitionv1.SystemNode); ok {
-		return def, nil
+		return def, rn, nil
 	}
 
-	return nil, fmt.Errorf("definition is not a system")
+	return nil, nil, fmt.Errorf("definition is not a system")
 }
 
 func getSystemVersions(backend v1server.Interface, resolver resolver.ComponentResolver, systemID v1.SystemID) ([]string, error) {
