@@ -174,11 +174,6 @@ func (c *Controller) Run(workers int, stopCh <-chan struct{}) {
 	<-stopCh
 }
 
-func (c *Controller) syncLeaseManager() error {
-
-	return nil
-}
-
 func (c *Controller) enqueueAddress(svc *latticev1.Address) {
 	key, err := cache.DeletionHandlingMetaNamespaceKeyFunc(svc)
 	if err != nil {
