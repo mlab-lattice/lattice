@@ -119,15 +119,23 @@ func localIP() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	if len(addresses) != 1 {
-		return "", fmt.Errorf("expected 1 IP address for interface %v, got %v", interfaceName, addresses)
+	ipv4addresses := make([]net.IP, 0, 1)
+	for _, address := range addresses {
+		// addresses[0].String() give CIDR notation
+		address, _, err := net.ParseCIDR(address.String())
+		if err != nil {
+			return "", err
+		}
+		ipv4address := address.To4()
+		// test we've got an ipv4 address and not an ipv6 address
+		if ipv4address != nil {
+			ipv4addresses = append(ipv4addresses, ipv4address)
+		}
 	}
-	// addresses[0].String() give CIDR notation
-	address, _, err := net.ParseCIDR(addresses[0].String())
-	if err != nil {
-		return "", err
+	if len(ipv4addresses) != 1 {
+		return "", fmt.Errorf("expected 1 IP address for interface %v, got %v", interfaceName, ipv4addresses)
 	}
-	return address.String(), nil
+	return ipv4addresses[0].String(), nil
 }
 
 func networkContainsIP(cidr, address string) (bool, error) {
