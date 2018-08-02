@@ -17,7 +17,6 @@ const (
 	tableNAT      = "nat"
 	chainOutput   = "OUTPUT"
 	interfaceName = "eth0"
-	envoyUID      = "1000"
 
 	envVarEgressPortHTTP          = "EGRESS_PORT_HTTP"
 	envVarEgressPortTCP           = "EGRESS_PORT_TCP"
