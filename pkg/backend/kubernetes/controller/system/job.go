@@ -86,7 +86,7 @@ func (c *Controller) syncSystemJobs(system *latticev1.System) error {
 func (c *Controller) createNewJob(
 	system *latticev1.System,
 	jobInfo *latticev1.SystemSpecJobInfo,
-	path tree.NodePath,
+	path tree.Path,
 ) (*latticev1.Job, error) {
 	job, err := c.newJob(system, jobInfo, path)
 	if err != nil {
@@ -104,7 +104,7 @@ func (c *Controller) createNewJob(
 func (c *Controller) newJob(
 	system *latticev1.System,
 	jobInfo *latticev1.SystemSpecJobInfo,
-	path tree.NodePath,
+	path tree.Path,
 ) (*latticev1.Job, error) {
 	systemNamespace := system.ResourceNamespace(c.namespacePrefix)
 	job := &latticev1.Job{
@@ -153,7 +153,7 @@ func (c *Controller) deleteJob(job *latticev1.Job) error {
 	return nil
 }
 
-func (c *Controller) updateJob(job *latticev1.Job, spec latticev1.JobSpec, path tree.NodePath) (*latticev1.Job, error) {
+func (c *Controller) updateJob(job *latticev1.Job, spec latticev1.JobSpec, path tree.Path) (*latticev1.Job, error) {
 	if !c.jobNeedsUpdate(job, spec, path) {
 		return job, nil
 	}
@@ -175,7 +175,7 @@ func (c *Controller) updateJob(job *latticev1.Job, spec latticev1.JobSpec, path 
 	return result, err
 }
 
-func (c *Controller) jobNeedsUpdate(job *latticev1.Job, spec latticev1.JobSpec, path tree.NodePath) bool {
+func (c *Controller) jobNeedsUpdate(job *latticev1.Job, spec latticev1.JobSpec, path tree.Path) bool {
 	if !reflect.DeepEqual(job.Spec, spec) {
 		return true
 	}
@@ -188,7 +188,7 @@ func (c *Controller) jobNeedsUpdate(job *latticev1.Job, spec latticev1.JobSpec, 
 	return currentPath != path
 }
 
-func (c *Controller) getJobFromCache(namespace string, path tree.NodePath) (*latticev1.Job, error) {
+func (c *Controller) getJobFromCache(namespace string, path tree.Path) (*latticev1.Job, error) {
 	selector := labels.NewSelector()
 	requirement, err := labels.NewRequirement(latticev1.JobPathLabelKey, selection.Equals, []string{path.ToDomain()})
 	if err != nil {
@@ -212,7 +212,7 @@ func (c *Controller) getJobFromCache(namespace string, path tree.NodePath) (*lat
 	return jobs[0], nil
 }
 
-func (c *Controller) getJobFromAPI(namespace string, path tree.NodePath) (*latticev1.Job, error) {
+func (c *Controller) getJobFromAPI(namespace string, path tree.Path) (*latticev1.Job, error) {
 	selector := labels.NewSelector()
 	requirement, err := labels.NewRequirement(latticev1.JobPathLabelKey, selection.Equals, []string{path.ToDomain()})
 	if err != nil {

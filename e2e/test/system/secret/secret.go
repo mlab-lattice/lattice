@@ -33,7 +33,7 @@ var _ = Describe("secret", func() {
 		},
 	)
 
-	secretPath := tree.NodePath("/a/b")
+	secretPath := tree.Path("/a/b")
 	secretName := "buzz"
 	secretValue := "foobar"
 	setSecret := false

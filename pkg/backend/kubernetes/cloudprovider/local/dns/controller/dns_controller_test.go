@@ -93,7 +93,7 @@ func dnsmasqConfigFileOutput(entries []cnameEntry) string {
 }
 
 // address creates an address schema with the specified parameters.
-func address(name string, addressPath tree.NodePath, servicePath *tree.NodePath, endpoint *string, systemID v1.SystemID) latticev1.Address {
+func address(name string, addressPath tree.Path, servicePath *tree.Path, endpoint *string, systemID v1.SystemID) latticev1.Address {
 	namespace := kubeutil.SystemNamespace(namespacePrefix, systemID)
 	hash := sha256.New()
 	hash.Write([]byte(fmt.Sprintf("%v/%v", namespace, name)))
@@ -119,7 +119,7 @@ func address(name string, addressPath tree.NodePath, servicePath *tree.NodePath,
 	}
 }
 
-func service(path tree.NodePath, systemID v1.SystemID) latticev1.Service {
+func service(path tree.Path, systemID v1.SystemID) latticev1.Service {
 	return latticev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:            uuid.NewV4().String(),
@@ -144,8 +144,8 @@ func service(path tree.NodePath, systemID v1.SystemID) latticev1.Service {
 	}
 }
 
-func nodePathOrDie(path string) tree.NodePath {
-	np, err := tree.NewNodePath(path)
+func nodePathOrDie(path string) tree.Path {
+	np, err := tree.NewPath(path)
 	if err != nil {
 		panic(err)
 	}

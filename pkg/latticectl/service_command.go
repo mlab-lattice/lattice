@@ -50,7 +50,7 @@ func (c *ServiceCommand) Base() (*BaseCommand, error) {
 			var serviceID v1.ServiceID
 			// resolve service id
 
-			nodePath, err := tree.NewNodePath(serviceStr)
+			nodePath, err := tree.NewPath(serviceStr)
 			if err == nil {
 				c := sctx.Client().Systems().Services(sctx.SystemID())
 				service, err := c.GetByServicePath(nodePath)

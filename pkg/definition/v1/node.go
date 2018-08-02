@@ -10,13 +10,16 @@ import (
 func NewNode(c component.Interface, name string, parent tree.Node) (tree.Node, error) {
 	switch res := c.(type) {
 	case *Job:
-		return NewJobNode(res, name, parent), nil
+		return NewJobNode(name, parent, res), nil
+
+	case *Reference:
+		return NewReferenceNode(name, parent, res), nil
 
 	case *Service:
-		return NewServiceNode(res, name, parent), nil
+		return NewServiceNode(name, parent, res), nil
 
 	case *System:
-		return NewSystemNode(res, name, parent)
+		return NewSystemNode(name, parent, res)
 
 	default:
 		return nil, fmt.Errorf("unrecognized component type: %v", c.Type().String())

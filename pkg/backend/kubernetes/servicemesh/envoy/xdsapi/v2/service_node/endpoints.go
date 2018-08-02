@@ -17,7 +17,7 @@ import (
 
 func (s *ServiceNode) getEndpoints(
 	clusters []envoycache.Resource,
-	systemServices map[tree.NodePath]*xdsapi.Service) (endpoints []envoycache.Resource, err error) {
+	systemServices map[tree.Path]*xdsapi.Service) (endpoints []envoycache.Resource, err error) {
 	// NOTE: https://github.com/golang/go/wiki/PanicAndRecover#usage-in-a-package
 	//       support nested builder funcs
 	defer func() {

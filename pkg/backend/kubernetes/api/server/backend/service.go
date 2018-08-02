@@ -72,7 +72,7 @@ func (kb *KubernetesBackend) GetService(systemID v1.SystemID, serviceID v1.Servi
 	return &externalService, nil
 }
 
-func (kb *KubernetesBackend) GetServiceByPath(systemID v1.SystemID, path tree.NodePath) (*v1.Service, error) {
+func (kb *KubernetesBackend) GetServiceByPath(systemID v1.SystemID, path tree.Path) (*v1.Service, error) {
 	// ensure the system exists
 	if _, err := kb.ensureSystemCreated(systemID); err != nil {
 		return nil, err
@@ -193,7 +193,7 @@ func (kb *KubernetesBackend) findServicePod(serviceId v1.ServiceID, instance str
 
 }
 
-func (kb *KubernetesBackend) transformService(id string, path tree.NodePath, status *latticev1.ServiceStatus,
+func (kb *KubernetesBackend) transformService(id string, path tree.Path, status *latticev1.ServiceStatus,
 	namespace string) (v1.Service, error) {
 	state, err := getServiceState(status.State)
 	if err != nil {

@@ -19,7 +19,7 @@ type Response struct {
 }
 
 func (r *RequestHandler) GetResponse(serviceCluster, serviceNode string) (*Response, error) {
-	path, err := tree.NewNodePathFromDomain(serviceNode)
+	path, err := tree.NewPathFromDomain(serviceNode)
 	if err != nil {
 		return nil, err
 	}

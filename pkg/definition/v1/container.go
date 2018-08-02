@@ -5,10 +5,13 @@ import (
 	"fmt"
 
 	"github.com/mlab-lattice/lattice/pkg/definition/component"
-	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 )
 
-const ComponentTypeContainer = "container"
+const (
+	ComponentTypeContainer        = "container"
+	ContainerBuildTypeCommand     = "command_build"
+	ContainerBuildTypeDockerImage = "docker_image"
+)
 
 var ContainerType = component.Type{
 	APIVersion: APIVersion,
@@ -27,13 +30,85 @@ type Container struct {
 }
 
 type ContainerBuild struct {
-	GitRepository   *GitRepository       `json:"git_repository,omitempty"`
-	Language        *string              `json:"language,omitempty"`
-	BaseDockerImage *DockerImage         `json:"base_docker_image,omitempty"`
-	Command         []string             `json:"command,omitempty"`
-	Environment     ContainerEnvironment `json:"environment,omitempty"`
+	CommandBuild *ContainerBuildCommand
+	DockerImage  *DockerImage
+}
 
-	DockerImage *DockerImage `json:"docker_image,omitempty"`
+func (b *ContainerBuild) UnmarshalJSON(data []byte) error {
+	var e *containerBuildEncoder
+	if err := json.Unmarshal(data, &e); err != nil {
+		return err
+	}
+
+	switch e.Type {
+	case ContainerBuildTypeCommand:
+		var c *ContainerBuildCommand
+		if err := json.Unmarshal(data, &c); err != nil {
+			return err
+		}
+
+		b.CommandBuild = c
+		return nil
+
+	case ContainerBuildTypeDockerImage:
+		var i *DockerImage
+		if err := json.Unmarshal(data, &i); err != nil {
+			return err
+		}
+
+		b.DockerImage = i
+		return nil
+
+	default:
+		return fmt.Errorf("unrecognized container build type: %v", e.Type)
+	}
+}
+
+func (b *ContainerBuild) MarshalJSON() ([]byte, error) {
+	var e interface{}
+	switch {
+	case b.CommandBuild != nil:
+		e = &containerBuildCommandEncoder{
+			Type: ContainerBuildTypeCommand,
+			ContainerBuildCommand: b.CommandBuild,
+		}
+
+	case b.DockerImage != nil:
+		e = &containerBuildDockerImageEncoder{
+			Type:        ContainerBuildTypeDockerImage,
+			DockerImage: b.DockerImage,
+		}
+
+	default:
+		return nil, fmt.Errorf("container build must have a type")
+	}
+
+	return json.Marshal(&e)
+}
+
+type containerBuildEncoder struct {
+	Type string `json:"type"`
+}
+
+type ContainerBuildCommand struct {
+	Source      *ContainerBuildSource `json:"source,omitempty"`
+	BaseImage   DockerImage           `json:"base_image"`
+	Command     []string              `json:"command,omitempty"`
+	Environment ContainerEnvironment  `json:"environment,omitempty"`
+}
+
+type containerBuildCommandEncoder struct {
+	Type string `json:"type"`
+	*ContainerBuildCommand
+}
+
+type containerBuildDockerImageEncoder struct {
+	Type string `json:"type"`
+	*DockerImage
+}
+
+type ContainerBuildSource struct {
+	GitRepository *GitRepository `json:"git_repository"`
 }
 
 type ContainerExec struct {
@@ -41,59 +116,7 @@ type ContainerExec struct {
 	Environment ContainerEnvironment `json:"environment,omitempty"`
 }
 
-type ContainerEnvironment map[string]ContainerEnvironmentVariable
-
-type ContainerEnvironmentVariable struct {
-	Value  *string
-	Secret *tree.NodePathSubcomponent
-}
-
-func (cev ContainerEnvironmentVariable) MarshalJSON() ([]byte, error) {
-	if cev.Value != nil {
-		e := containerEnvironmentVariableEncoder(*cev.Value)
-		return json.Marshal(&e)
-	}
-
-	if cev.Secret != nil {
-		e := containerEnvironmentVariableSecretEncoder{
-			Secret: *cev.Secret,
-		}
-		return json.Marshal(&e)
-	}
-
-	return nil, fmt.Errorf("ContainerEnvironmentVariable must have either value or secret")
-}
-
-func (cev *ContainerEnvironmentVariable) UnmarshalJSON(data []byte) error {
-	var val containerEnvironmentVariableEncoder
-	err := json.Unmarshal(data, &val)
-	if err == nil {
-		strVal := string(val)
-		cev.Value = &strVal
-		return nil
-	}
-
-	// If the error wasn't that the data wasn't a string, return the error.
-	if _, ok := err.(*json.UnmarshalTypeError); !ok {
-		return err
-	}
-
-	// Otherwise, try to see if the environment variable is a secret
-	var secret containerEnvironmentVariableSecretEncoder
-	err = json.Unmarshal(data, &secret)
-	if err == nil {
-		cev.Secret = &secret.Secret
-		return nil
-	}
-
-	return err
-}
-
-type containerEnvironmentVariableEncoder string
-
-type containerEnvironmentVariableSecretEncoder struct {
-	Secret tree.NodePathSubcomponent `json:"secret"`
-}
+type ContainerEnvironment map[string]ValueOrSecret
 
 type ContainerPort struct {
 	Protocol       string                       `json:"protocol"`

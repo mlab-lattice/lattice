@@ -76,6 +76,16 @@ var (
 			StatusSubresource: true,
 		},
 		{
+			Singular:          ResourceSingularGitTemplate,
+			Plural:            ResourcePluralGitTemplate,
+			Scope:             ResourceScopeGitTemplate,
+			Kind:              GitTemplateKind.Kind,
+			ListKind:          GitTemplateListKind.Kind,
+			Type:              &GitTemplate{},
+			ListType:          &GitTemplateList{},
+			StatusSubresource: true,
+		},
+		{
 			Singular:          ResourceSingularJob,
 			Plural:            ResourcePluralJob,
 			Scope:             ResourceScopeJob,
@@ -133,6 +143,16 @@ var (
 			ListKind:          TeardownListKind.Kind,
 			Type:              &Teardown{},
 			ListType:          &TeardownList{},
+			StatusSubresource: true,
+		},
+		{
+			Singular:          ResourceSingularTemplate,
+			Plural:            ResourcePluralTemplate,
+			Scope:             ResourceScopeTemplate,
+			Kind:              TemplateKind.Kind,
+			ListKind:          TemplateListKind.Kind,
+			Type:              &Template{},
+			ListType:          &TemplateList{},
 			StatusSubresource: true,
 		},
 	}

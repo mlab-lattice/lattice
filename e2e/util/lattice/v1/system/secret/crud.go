@@ -37,12 +37,12 @@ func List(client v1client.SecretClient, expectedSecrets []v1.Secret) {
 	}
 }
 
-func Set(client v1client.SecretClient, path tree.NodePath, name, value string) {
+func Set(client v1client.SecretClient, path tree.Path, name, value string) {
 	err := client.Set(path, name, value)
 	Expect(err).NotTo(HaveOccurred(), "error getting build")
 }
 
-func Get(client v1client.SecretClient, path tree.NodePath, name string) string {
+func Get(client v1client.SecretClient, path tree.Path, name string) string {
 	secret, err := client.Get(path, name)
 	Expect(err).NotTo(HaveOccurred(), "error getting build")
 	Expect(secret.Path).To(Equal(path))
@@ -50,7 +50,7 @@ func Get(client v1client.SecretClient, path tree.NodePath, name string) string {
 	return secret.Value
 }
 
-func Unset(client v1client.SecretClient, path tree.NodePath, name string) {
+func Unset(client v1client.SecretClient, path tree.Path, name string) {
 	err := client.Unset(path, name)
 	Expect(err).NotTo(HaveOccurred(), "error getting build")
 }

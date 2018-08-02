@@ -40,8 +40,8 @@ func (s *ServiceNode) Domain() string {
 	return s.EnvoyNode.GetId()
 }
 
-func (s *ServiceNode) Path() (tree.NodePath, error) {
-	tnPath, err := tree.NewNodePathFromDomain(s.EnvoyNode.GetId())
+func (s *ServiceNode) Path() (tree.Path, error) {
+	tnPath, err := tree.NewPathFromDomain(s.EnvoyNode.GetId())
 	if err != nil {
 		return "", err
 	}

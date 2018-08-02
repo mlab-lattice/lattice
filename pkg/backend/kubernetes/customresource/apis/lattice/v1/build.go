@@ -8,6 +8,7 @@ import (
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 	definitionv1 "github.com/mlab-lattice/lattice/pkg/definition/v1"
 
+	"github.com/mlab-lattice/lattice/pkg/definition/resolver"
 	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -57,7 +58,8 @@ func (b *Build) Description(namespacePrefix string) string {
 
 // +k8s:deepcopy-gen=false
 type BuildSpec struct {
-	Definition *definitionv1.SystemNode `json:"definition"`
+	Definition     *definitionv1.SystemNode `json:"definition"`
+	ResolutionInfo resolver.ResolutionInfo  `json:"resolutionInfo"`
 }
 
 type BuildStatus struct {
@@ -70,10 +72,10 @@ type BuildStatus struct {
 	CompletionTimestamp *metav1.Time `json:"completionTimestamp,omitempty"`
 
 	// Maps a service path to the information about its container builds
-	Services map[tree.NodePath]BuildStatusService `json:"services"`
+	Services map[tree.Path]BuildStatusService `json:"services"`
 
 	// Maps a service path to the information about its container builds
-	Jobs map[tree.NodePath]BuildStatusJob `json:"jobs"`
+	Jobs map[tree.Path]BuildStatusJob `json:"jobs"`
 
 	// Maps a ServiceBuild.Name to the ServiceBuild.Status
 	ContainerBuildStatuses map[string]ContainerBuildStatus `json:"containerBuildStatuses"`

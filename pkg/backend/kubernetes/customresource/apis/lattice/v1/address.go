@@ -48,13 +48,13 @@ func (a *Address) Description(namespacePrefix string) string {
 	return fmt.Sprintf("address %v (no path, system %v)", a.Name, systemID)
 }
 
-func (a *Address) PathLabel() (tree.NodePath, error) {
+func (a *Address) PathLabel() (tree.Path, error) {
 	path, ok := a.Labels[AddressPathLabelKey]
 	if !ok {
 		return "", fmt.Errorf("service did not contain service path label")
 	}
 
-	return tree.NewNodePathFromDomain(path)
+	return tree.NewPathFromDomain(path)
 }
 
 func (a *Address) Stable() bool {
@@ -92,8 +92,8 @@ func (a *Address) Reason() string {
 }
 
 type AddressSpec struct {
-	Service      *tree.NodePath `json:"service,omitempty"`
-	ExternalName *string        `json:"externalName,omitempty"`
+	Service      *tree.Path `json:"service,omitempty"`
+	ExternalName *string    `json:"externalName,omitempty"`
 }
 
 type AddressStatus struct {

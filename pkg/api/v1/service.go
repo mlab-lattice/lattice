@@ -22,8 +22,8 @@ const (
 )
 
 type Service struct {
-	ID   ServiceID     `json:"id"`
-	Path tree.NodePath `json:"path"`
+	ID   ServiceID `json:"id"`
+	Path tree.Path `json:"path"`
 
 	State       ServiceState        `json:"state"`
 	Message     *string             `json:"message,omitempty"`

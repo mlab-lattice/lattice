@@ -40,7 +40,7 @@ func (s *ServiceNode) newHTTPEgressListener(service *xdsapi.Service) *envoyv2.Li
 }
 
 func (s *ServiceNode) newTCPEgressListener(
-	service *xdsapi.Service, systemServices map[tree.NodePath]*xdsapi.Service) *envoyv2.Listener {
+	service *xdsapi.Service, systemServices map[tree.Path]*xdsapi.Service) *envoyv2.Listener {
 	tcpProxyRoutes := make([]*envoytcpproxy.TcpProxy_DeprecatedV1_TCPRoute, 0, len(systemServices))
 	for path, _service := range systemServices {
 		for componentName, component := range _service.Components {
@@ -74,7 +74,7 @@ func (s *ServiceNode) newTCPEgressListener(
 }
 
 func (s *ServiceNode) newHTTPIngressListener(
-	path tree.NodePath,
+	path tree.Path,
 	listenerName, componentName string,
 	servicePort, envoyPort int32) *envoyv2.Listener {
 	httpFilters := []*envoyhttpcxnmgr.HttpFilter{
@@ -113,7 +113,7 @@ func (s *ServiceNode) newHTTPIngressListener(
 }
 
 func (s *ServiceNode) newTCPIngressListener(
-	path tree.NodePath,
+	path tree.Path,
 	listenerName, componentName string,
 	servicePort, envoyPort int32) *envoyv2.Listener {
 	filters := []envoylistener.Filter{
@@ -132,7 +132,7 @@ func (s *ServiceNode) newTCPIngressListener(
 }
 
 func (s *ServiceNode) getListeners(
-	systemServices map[tree.NodePath]*xdsapi.Service) (listeners []envoycache.Resource, err error) {
+	systemServices map[tree.Path]*xdsapi.Service) (listeners []envoycache.Resource, err error) {
 	// TODO <GEB>: lerror not working as expected here: [unable to retrieve function/file/line]
 	// NOTE: https://github.com/golang/go/wiki/PanicAndRecover#usage-in-a-package
 	//       support nested builder funcs
