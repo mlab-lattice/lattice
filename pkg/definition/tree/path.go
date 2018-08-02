@@ -238,7 +238,7 @@ func NewPathSubcomponentFromParts(path Path, subcomponent string) (PathSubcompon
 // Path returns the Path of the PathSubcomponent.
 // For example: /a/b/c:foo returns /a/b/c
 // N.B.: panics if the PathSubcomponent is improperly formed.
-func (n PathSubcomponent) NodePath() Path {
+func (n PathSubcomponent) Path() Path {
 	path, _ := n.Parts()
 	return path
 }

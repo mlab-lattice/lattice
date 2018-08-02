@@ -12,7 +12,7 @@ import (
 
 func (c *Controller) nodePool(jobRun *latticev1.JobRun) (*latticev1.NodePool, error) {
 	nodePoolPath := jobRun.Spec.Definition.NodePool
-	selector, err := sharedNodePoolSelector(jobRun.Namespace, nodePoolPath.NodePath(), nodePoolPath.Subcomponent())
+	selector, err := sharedNodePoolSelector(jobRun.Namespace, nodePoolPath.Path(), nodePoolPath.Subcomponent())
 	if err != nil {
 		return nil, err
 	}

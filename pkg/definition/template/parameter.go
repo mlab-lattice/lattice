@@ -18,7 +18,7 @@ const (
 	ParameterTypeObject ParameterType = "object"
 	ParameterTypeSecret ParameterType = "secret"
 
-	secretParameterLVal = "$secret"
+	SecretParameterLVal = "$secret"
 )
 
 type ParameterTypeError struct {
@@ -118,7 +118,7 @@ func (p Parameters) Bind(path tree.Path, bindings map[string]interface{}) (map[s
 				}
 
 				// Ensure the map has a $secret key
-				nameVal, ok := secret[secretParameterLVal]
+				nameVal, ok := secret[SecretParameterLVal]
 				if !ok {
 					return nil, &ParameterTypeError{
 						Expected: string(ParameterTypeSecret),

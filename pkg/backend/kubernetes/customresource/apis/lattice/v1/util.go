@@ -185,37 +185,17 @@ func KubeContainerForContainer(
 					Value: *envVar.Value,
 				},
 			)
-		} else if envVar.Secret != nil {
-			var s *corev1.SecretKeySelector
-			switch {
-			case envVar.Secret.Local != nil:
-				secretName, err := latticeutil.HashNodePath(componentPath)
-				if err != nil {
-					return corev1.Container{}, err
-				}
+		} else if envVar.SecretRef != nil {
+			secretName, err := latticeutil.HashPath(envVar.SecretRef.Value.Path())
+			if err != nil {
+				return corev1.Container{}, err
+			}
 
-				s = &corev1.SecretKeySelector{
-					LocalObjectReference: corev1.LocalObjectReference{
-						Name: secretName,
-					},
-					Key: *envVar.Secret.Local,
-				}
-
-			case envVar.Secret.Path != nil:
-				secretName, err := latticeutil.HashNodePath(envVar.Secret.Path.NodePath())
-				if err != nil {
-					return corev1.Container{}, err
-				}
-
-				s = &corev1.SecretKeySelector{
-					LocalObjectReference: corev1.LocalObjectReference{
-						Name: secretName,
-					},
-					Key: envVar.Secret.Path.Subcomponent(),
-				}
-
-			default:
-				return corev1.Container{}, fmt.Errorf("secret %v is empty", name)
+			s := &corev1.SecretKeySelector{
+				LocalObjectReference: corev1.LocalObjectReference{
+					Name: secretName,
+				},
+				Key: envVar.SecretRef.Value.Subcomponent(),
 			}
 
 			envVars = append(

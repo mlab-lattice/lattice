@@ -163,8 +163,13 @@ func (r *DefaultComponentResolver) resolveReference(
 		return nil, err
 	}
 
+	p, err := r.hydrateReferenceParameters(path, ref.Parameters)
+	if err != nil {
+		return nil, err
+	}
+
 	// evaluate the template with the reference's parameters
-	result, err := t.Evaluate(path, ref.Parameters)
+	result, err := t.Evaluate(path, p)
 	if err != nil {
 		return nil, err
 	}
@@ -184,9 +189,12 @@ func (r *DefaultComponentResolver) resolveReference(
 	// If the reference resolved to a systemID, resolve the system's components.
 	if system, ok := c.(*definitionv1.System); ok {
 		c, err = r.resolveSystemComponents(systemID, path, resolvedCxt, system, nextDepth, info)
+		if err != nil {
+			return nil, err
+		}
 	}
 
-	info[path] = ResolutionNodeInfo{Commit: ctx.CommitReference}
+	info[path] = ResolutionNodeInfo{Commit: resolvedCxt.CommitReference}
 	return c, nil
 }
 
@@ -334,6 +342,51 @@ func (r *DefaultComponentResolver) resolveGitTemplate(
 	}
 
 	return &t, nil
+}
+
+// FIXME(kevindrosendahl): this is pretty gross
+func (r *DefaultComponentResolver) hydrateReferenceParameters(
+	path tree.Path,
+	parameters map[string]interface{},
+) (map[string]interface{}, error) {
+	p := make(map[string]interface{})
+
+	// look for any secret parameters
+	for k, v := range parameters {
+		p[k] = v
+
+		m, ok := v.(map[string]interface{})
+		if !ok {
+			continue
+		}
+
+		s, ok := m[template.SecretParameterLVal]
+		if !ok {
+			continue
+		}
+
+		ss, ok := s.(string)
+		if !ok {
+			return nil, fmt.Errorf("expected secret value to be a string for parameter %v", k)
+		}
+
+		// path is the tree.Path of the reference being resolved. if there's a secret being passed
+		// down as a parameter, that means that it is the secret of the component which has the
+		// secret, i.e. the parent of the the path that is passed in
+		parent, err := path.Parent()
+		if err != nil {
+			return nil, fmt.Errorf("got error creating secret reference for parameter %v: %v", k, err)
+		}
+
+		sp, err := tree.NewPathSubcomponentFromParts(parent, ss)
+		if err != nil {
+			return nil, fmt.Errorf("got error creating secret reference for parameter %v: %v", k, err)
+		}
+
+		p[k] = &definitionv1.SecretRef{Value: sp}
+	}
+
+	return p, nil
 }
 
 func (r *DefaultComponentResolver) resolveSystemComponents(

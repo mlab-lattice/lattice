@@ -7,7 +7,7 @@ import (
 )
 
 type SecretRef struct {
-	Value tree.PathSubcomponent `json:"secret_ref"`
+	Value tree.PathSubcomponent `json:"$secret_ref"`
 }
 
 // Secret can either be a local named reference (i.e. just a string name without
@@ -51,8 +51,8 @@ func (s *Secret) UnmarshalJSON(data []byte) error {
 
 // ValueOrSecret contains either a value (i.e. just a string value), or a Secret.
 type ValueOrSecret struct {
-	Value  *string
-	Secret *Secret
+	Value     *string
+	SecretRef *SecretRef
 }
 
 func (v ValueOrSecret) MarshalJSON() ([]byte, error) {
@@ -60,17 +60,16 @@ func (v ValueOrSecret) MarshalJSON() ([]byte, error) {
 		return json.Marshal(v.Value)
 	}
 
-	if v.Secret == nil {
+	if v.SecretRef == nil {
 		return json.Marshal(nil)
 	}
-	s := valueOrSecretSecretDecoder{*v.Secret}
-	return json.Marshal(&s)
+	return json.Marshal(v.SecretRef)
 }
 
 func (v *ValueOrSecret) UnmarshalJSON(data []byte) error {
-	var s valueOrSecretSecretDecoder
+	var s SecretRef
 	if err := json.Unmarshal(data, &s); err == nil {
-		v.Secret = &s.Secret
+		v.SecretRef = &s
 		return nil
 	}
 
@@ -81,8 +80,4 @@ func (v *ValueOrSecret) UnmarshalJSON(data []byte) error {
 
 	v.Value = &str
 	return nil
-}
-
-type valueOrSecretSecretDecoder struct {
-	Secret Secret `json:"$secret"`
 }

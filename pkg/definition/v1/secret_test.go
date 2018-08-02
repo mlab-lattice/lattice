@@ -10,12 +10,8 @@ import (
 
 func TestValueOrSecretMarshalJSON(t *testing.T) {
 	foo := "foo"
-	path := tree.PathSubcomponent("/foo/bar:buzz")
-	pathSecret := Secret{
-		Path: &path,
-	}
-	localSecret := Secret{
-		Local: &foo,
+	secretRef := SecretRef{
+		Value: tree.PathSubcomponent("/foo/bar:buzz"),
 	}
 
 	tests := []struct {
@@ -30,15 +26,9 @@ func TestValueOrSecretMarshalJSON(t *testing.T) {
 		},
 		{
 			v: ValueOrSecret{
-				Secret: &pathSecret,
+				SecretRef: &secretRef,
 			},
-			d: []byte(`{"$secret":"/foo/bar:buzz"}`),
-		},
-		{
-			v: ValueOrSecret{
-				Secret: &localSecret,
-			},
-			d: []byte(`{"$secret":"foo"}`),
+			d: []byte(`{"$secret_ref":"/foo/bar:buzz"}`),
 		},
 	}
 
@@ -57,12 +47,8 @@ func TestValueOrSecretMarshalJSON(t *testing.T) {
 
 func TestValueOrSecretUnmarshalJSON(t *testing.T) {
 	foo := "foo"
-	path := tree.PathSubcomponent("/foo/bar:buzz")
-	pathSecret := Secret{
-		Path: &path,
-	}
-	localSecret := Secret{
-		Local: &foo,
+	secretRef := SecretRef{
+		Value: tree.PathSubcomponent("/foo/bar:buzz"),
 	}
 
 	tests := []struct {
@@ -77,15 +63,9 @@ func TestValueOrSecretUnmarshalJSON(t *testing.T) {
 		},
 		{
 			v: ValueOrSecret{
-				Secret: &pathSecret,
+				SecretRef: &secretRef,
 			},
-			d: []byte(`{"$secret":"/foo/bar:buzz"}`),
-		},
-		{
-			v: ValueOrSecret{
-				Secret: &localSecret,
-			},
-			d: []byte(`{"$secret":"foo"}`),
+			d: []byte(`{"$secret_ref":"/foo/bar:buzz"}`),
 		},
 	}
 

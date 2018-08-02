@@ -197,5 +197,5 @@ func (kb *KubernetesBackend) UnsetSystemSecret(systemID v1.SystemID, path tree.P
 }
 
 func kubeSecretName(path tree.Path) (string, error) {
-	return latticeutil.HashNodePath(path)
+	return latticeutil.HashPath(path)
 }

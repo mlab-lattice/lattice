@@ -272,7 +272,7 @@ func maybeSetSSSHKey(build *latticev1.ContainerBuild, container *corev1.Containe
 		return nil
 	}
 
-	secretName, err := sha1.EncodeToHexString([]byte(sshKeySecret.NodePath().String()))
+	secretName, err := sha1.EncodeToHexString([]byte(sshKeySecret.Path().String()))
 	if err != nil {
 		return err
 	}
