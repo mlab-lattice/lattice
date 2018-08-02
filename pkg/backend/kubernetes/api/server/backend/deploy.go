@@ -9,6 +9,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"fmt"
+	"github.com/mlab-lattice/lattice/pkg/definition/resolver"
 	"github.com/satori/go.uuid"
 )
 
@@ -34,9 +35,14 @@ func (kb *KubernetesBackend) DeployBuild(systemID v1.SystemID, buildID v1.BuildI
 	return &externalDeploy, nil
 }
 
-func (kb *KubernetesBackend) DeployVersion(systemID v1.SystemID, def *definitionv1.SystemNode, version v1.SystemVersion) (*v1.Deploy, error) {
+func (kb *KubernetesBackend) DeployVersion(
+	systemID v1.SystemID,
+	def *definitionv1.SystemNode,
+	ri resolver.ResolutionInfo,
+	version v1.SystemVersion,
+) (*v1.Deploy, error) {
 	// this ensures the system is created as well
-	build, err := kb.Build(systemID, def, version)
+	build, err := kb.Build(systemID, def, ri, version)
 	if err != nil {
 		return nil, err
 	}

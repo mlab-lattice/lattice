@@ -18,7 +18,6 @@ type System struct {
 	Description string
 
 	Components map[string]component.Interface
-
 	// FIXME: remove this
 	NodePools map[string]NodePool
 }
@@ -33,8 +32,7 @@ func (s *System) MarshalJSON() ([]byte, error) {
 		Description: s.Description,
 
 		Components: s.Components,
-
-		NodePools: s.NodePools,
+		NodePools:  s.NodePools,
 	}
 	return json.Marshal(&e)
 }
@@ -67,8 +65,7 @@ func (s *System) UnmarshalJSON(data []byte) error {
 		Description: e.Description,
 
 		Components: components,
-
-		NodePools: e.NodePools,
+		NodePools:  e.NodePools,
 	}
 	*s = *system
 	return nil
@@ -79,8 +76,7 @@ type systemEncoder struct {
 	Description string         `json:"description,omitempty"`
 
 	Components map[string]component.Interface `json:"components"`
-
-	NodePools map[string]NodePool `json:"node_pools,omitempty"`
+	NodePools  map[string]NodePool            `json:"node_pools,omitempty"`
 }
 
 type systemDecoder struct {

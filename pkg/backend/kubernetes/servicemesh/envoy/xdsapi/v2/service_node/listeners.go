@@ -17,7 +17,7 @@ import (
 	lerror "github.com/mlab-lattice/lattice/pkg/util/error"
 )
 
-func (s *ServiceNode) getListeners(systemServices map[tree.NodePath]*xdsapi.Service) (listeners []envoycache.Resource, err error) {
+func (s *ServiceNode) getListeners(systemServices map[tree.Path]*xdsapi.Service) (listeners []envoycache.Resource, err error) {
 	// NOTE: https://github.com/golang/go/wiki/PanicAndRecover#usage-in-a-package
 	//       support nested builder funcs
 	defer func() {

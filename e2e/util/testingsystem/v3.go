@@ -17,8 +17,8 @@ import (
 
 const (
 	V3ServiceBCVersion         = "1.0.0"
-	V3ServiceAPath             = tree.NodePath("/test/a")
-	V3ServiceCBPath            = tree.NodePath("/test/b/c")
+	V3ServiceAPath             = tree.Path("/test/a")
+	V3ServiceCBPath            = tree.Path("/test/b/c")
 	V3ServiceAPublicPort int32 = 8080
 )
 

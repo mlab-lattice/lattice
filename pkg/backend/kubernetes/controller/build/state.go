@@ -27,29 +27,29 @@ type stateInfo struct {
 	activeContainerBuilds     map[string]*latticev1.ContainerBuild
 	failedContainerBuilds     map[string]*latticev1.ContainerBuild
 
-	servicesNeedNewContainerBuilds map[tree.NodePath]*definitionv1.Service
-	jobsNeedNewContainerBuilds     map[tree.NodePath]*definitionv1.Job
+	servicesNeedNewContainerBuilds map[tree.Path]*definitionv1.Service
+	jobsNeedNewContainerBuilds     map[tree.Path]*definitionv1.Job
 
 	// Maps a container build's name to its status
 	containerBuildStatuses map[string]latticev1.ContainerBuildStatus
 
 	// Maps a container build's name  to the path of services that are using it
-	containerBuildServices map[string][]tree.NodePath
+	containerBuildServices map[string][]tree.Path
 
 	// Maps a container build's name  to the path of jobs that are using it
-	containerBuildJobs map[string][]tree.NodePath
+	containerBuildJobs map[string][]tree.Path
 }
 
 func (c *Controller) calculateState(build *latticev1.Build) (stateInfo, error) {
 	successfulContainerBuilds := make(map[string]*latticev1.ContainerBuild)
 	activeContainerBuilds := make(map[string]*latticev1.ContainerBuild)
 	failedContainerBuilds := make(map[string]*latticev1.ContainerBuild)
-	servicesNeedNewContainerBuilds := make(map[tree.NodePath]*definitionv1.Service)
-	jobsNeedNewContainerBuilds := make(map[tree.NodePath]*definitionv1.Job)
+	servicesNeedNewContainerBuilds := make(map[tree.Path]*definitionv1.Service)
+	jobsNeedNewContainerBuilds := make(map[tree.Path]*definitionv1.Job)
 
 	containerBuildStatuses := make(map[string]latticev1.ContainerBuildStatus)
-	containerBuildServices := make(map[string][]tree.NodePath)
-	containerBuildJobs := make(map[string][]tree.NodePath)
+	containerBuildServices := make(map[string][]tree.Path)
+	containerBuildJobs := make(map[string][]tree.Path)
 
 	// TODO: think about refactoring this and jobs to DRY it up
 	for path, service := range build.Spec.Definition.AllServices() {
@@ -67,7 +67,7 @@ func (c *Controller) calculateState(build *latticev1.Build) (stateInfo, error) {
 
 			services, ok := containerBuildServices[containerBuildName]
 			if !ok {
-				services = make([]tree.NodePath, 0)
+				services = make([]tree.Path, 0)
 			}
 
 			services = append(services, path)
@@ -102,7 +102,7 @@ func (c *Controller) calculateState(build *latticev1.Build) (stateInfo, error) {
 
 			jobs, ok := containerBuildJobs[containerBuildName]
 			if !ok {
-				jobs = make([]tree.NodePath, 0)
+				jobs = make([]tree.Path, 0)
 			}
 
 			jobs = append(jobs, path)

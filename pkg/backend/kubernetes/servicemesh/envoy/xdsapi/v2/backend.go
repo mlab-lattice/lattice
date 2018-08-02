@@ -18,5 +18,5 @@ type Backend interface {
 	XDSCache() envoycache.Cache
 	SetXDSCacheSnapshot(id string, endpoints, clusters, routes, listeners []envoycache.Resource) error
 	ClearXDSCacheSnapshot(id string) error
-	SystemServices(serviceCluster string) (map[tree.NodePath]*Service, error)
+	SystemServices(serviceCluster string) (map[tree.Path]*Service, error)
 }

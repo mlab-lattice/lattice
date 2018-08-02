@@ -177,7 +177,7 @@ func (c *Controller) syncServiceAddress(address *latticev1.Address) error {
 	return err
 }
 
-func (c *Controller) service(namespace string, path tree.NodePath) (*latticev1.Service, error) {
+func (c *Controller) service(namespace string, path tree.Path) (*latticev1.Service, error) {
 	selector := labels.NewSelector()
 	requirement, err := labels.NewRequirement(latticev1.ServicePathLabelKey, selection.Equals, []string{path.ToDomain()})
 	if err != nil {

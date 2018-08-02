@@ -1,14 +1,27 @@
 package tree
 
-import (
-	"github.com/mlab-lattice/lattice/pkg/definition/component"
-)
-
-// The Node interface represents a Node in the tree of a System definition.
-// Note that Nodes are assumed to have an Immutable location in the tree,
-// i.e. their parent and children will not change.
+// The Node interface represents a node in a tree.
 type Node interface {
-	Parent() Node
-	Path() NodePath
-	Component() component.Interface
+	Path() Path
+	Value() interface{}
+	Children() map[string]Node
+}
+
+func Lookup(n Node, p Path) (Node, bool, error) {
+	if p.IsRoot() {
+		return n, true, nil
+	}
+
+	remainder, c, err := p.Shift(1)
+	if err != nil {
+		return nil, false, err
+	}
+
+	name := c[0]
+	child, ok := n.Children()[name]
+	if !ok {
+		return nil, false, nil
+	}
+
+	return Lookup(child, remainder)
 }

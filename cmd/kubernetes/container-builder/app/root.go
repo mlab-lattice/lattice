@@ -1,21 +1,20 @@
 package app
 
 import (
-	"encoding/json"
-	"fmt"
+	"io/ioutil"
 	"log"
 	"os"
 	"os/exec"
+	"strings"
 
+	"encoding/json"
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	kubecontainerbuilder "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/containerbuilder"
 	"github.com/mlab-lattice/lattice/pkg/containerbuilder"
 	definitionv1 "github.com/mlab-lattice/lattice/pkg/definition/v1"
 	"github.com/mlab-lattice/lattice/pkg/util/aws"
-
-	"github.com/spf13/cobra"
-	"io/ioutil"
-	"strings"
+	"github.com/mlab-lattice/lattice/pkg/util/cli"
+	"github.com/mlab-lattice/lattice/pkg/util/git"
 )
 
 const (
@@ -23,78 +22,143 @@ const (
 	gitRepoSSHKeyEnvVarName = "GIT_REPO_SSH_KEY"
 )
 
-var (
-	workDirectory    string
-	containerBuildID string
-	systemIDString   string
-	namespacePrefix  string
+func Command() *cli.Command {
+	var (
+		workDirectory    string
+		containerBuildID string
+		systemIDString   string
+		namespacePrefix  string
 
-	dockerRegistry         string
-	dockerRegistryAuthType string
-	dockerRepository       string
-	dockerTag              string
-	dockerPush             bool
+		dockerRegistry         string
+		dockerRegistryAuthType string
+		dockerRepository       string
+		dockerTag              string
+		dockerPush             bool
 
-	kubeconfig               string
-	containerBuildDefinition string
-)
+		kubeconfig               string
+		containerBuildDefinition string
+	)
 
-// RootCmd represents the base command when called without any subcommands
-var RootCmd = &cobra.Command{
-	Use:   "bootstrap-lattice",
-	Short: "Bootstraps a kubernetes cluster to run lattice",
-	Run: func(cmd *cobra.Command, args []string) {
-		cb := &definitionv1.ContainerBuild{}
-		err := json.Unmarshal([]byte(containerBuildDefinition), cb)
-		if err != nil {
-			log.Fatal("error unmarshaling container build: " + err.Error())
-		}
-
-		dockerOptions := &containerbuilder.DockerOptions{
-			Registry:   dockerRegistry,
-			Repository: dockerRepository,
-			Tag:        dockerTag,
-			Push:       dockerPush,
-		}
-
-		if dockerRegistryAuthType == aws.EC2RoleDockerRegistryAuth {
-			dockerOptions.RegistryAuthProvider = &aws.ECRRegistryAuthProvider{}
-		}
-
-		systemID := v1.SystemID(systemIDString)
-
-		statusUpdater, err := kubecontainerbuilder.NewKubernetesStatusUpdater(namespacePrefix, kubeconfig)
-		if err != nil {
-			log.Fatal("error getting status updater: " + err.Error())
-		}
-
-		gitRepoSSHKey := os.Getenv(gitRepoSSHKeyEnvVarName)
-		var gitResolverOptions *containerbuilder.GitResolverOptions
-		if gitRepoSSHKey != "" {
-			gitResolverOptions = &containerbuilder.GitResolverOptions{
-				SSHKey: []byte(gitRepoSSHKey),
+	return &cli.Command{
+		Name:  "container-builder",
+		Short: "builds and optionally pushes a container for a lattice container build",
+		Flags: cli.Flags{
+			&cli.StringFlag{
+				Name:     "container-build-id",
+				Usage:    "ID of the container build",
+				Required: true,
+				Target:   &containerBuildID,
+			},
+			&cli.StringFlag{
+				Name:     "namespace-prefix",
+				Usage:    "namespace prefix of the lattice",
+				Required: true,
+				Target:   &namespacePrefix,
+			},
+			&cli.StringFlag{
+				Name:     "system-id",
+				Usage:    "id of the system",
+				Required: true,
+				Target:   &systemIDString,
+			},
+			&cli.StringFlag{
+				Name:     "container-build-definition",
+				Usage:    "JSON serialized version of the container build definition block",
+				Required: true,
+				Target:   &containerBuildDefinition,
+			},
+			&cli.StringFlag{
+				Name:     "docker-registry",
+				Usage:    "registry to tag the docker image artifact with",
+				Required: true,
+				Target:   &dockerRegistry,
+			},
+			&cli.StringFlag{
+				Name:   "docker-registry-auth-type",
+				Usage:  "registry to tag the docker image artifact with",
+				Target: &dockerRegistryAuthType,
+			},
+			&cli.StringFlag{
+				Name:     "docker-repository",
+				Usage:    "repository to tag the docker image artifact with",
+				Required: true,
+				Target:   &dockerRepository,
+			},
+			&cli.StringFlag{
+				Name:     "docker-tag",
+				Usage:    "tag to tag the docker image artifact with",
+				Required: true,
+				Target:   &dockerTag,
+			},
+			&cli.BoolFlag{
+				Name:    "docker-push",
+				Usage:   "whether or not the image should be pushed to the registry",
+				Default: false,
+				Target:  &dockerPush,
+			},
+			&cli.StringFlag{
+				Name:   "kubeconfig",
+				Usage:  "path to kubeconfig",
+				Target: &kubeconfig,
+			},
+			&cli.StringFlag{
+				Name:    "work-directory",
+				Usage:   "path to use to store build artifacts",
+				Default: "/tmp/container-build",
+				Target:  &workDirectory,
+			},
+		},
+		Run: func(args []string) {
+			cb := &definitionv1.ContainerBuild{}
+			if err := json.Unmarshal([]byte(containerBuildDefinition), cb); err != nil {
+				log.Fatal("error unmarshaling container build: " + err.Error())
 			}
-		}
 
-		setupSSH()
+			dockerOptions := &containerbuilder.DockerOptions{
+				Registry:   dockerRegistry,
+				Repository: dockerRepository,
+				Tag:        dockerTag,
+				Push:       dockerPush,
+			}
 
-		builder, err := containerbuilder.NewBuilder(
-			v1.ContainerBuildID(containerBuildID),
-			systemID,
-			workDirectory,
-			dockerOptions,
-			gitResolverOptions,
-			cb,
-			statusUpdater,
-		)
-		if err != nil {
-			log.Fatal("error getting builder: " + err.Error())
-		}
+			if dockerRegistryAuthType == aws.EC2RoleDockerRegistryAuth {
+				dockerOptions.RegistryAuthProvider = &aws.ECRRegistryAuthProvider{}
+			}
 
-		if err = builder.Build(); err != nil {
-			os.Exit(1)
-		}
-	},
+			systemID := v1.SystemID(systemIDString)
+
+			statusUpdater, err := kubecontainerbuilder.NewKubernetesStatusUpdater(namespacePrefix, kubeconfig)
+			if err != nil {
+				log.Fatal("error getting status updater: " + err.Error())
+			}
+
+			gitRepoSSHKey := os.Getenv(gitRepoSSHKeyEnvVarName)
+			var gitResolverOptions *git.Options
+			if gitRepoSSHKey != "" {
+				gitResolverOptions = &git.Options{
+					SSHKey: []byte(gitRepoSSHKey),
+				}
+			}
+
+			setupSSH()
+
+			builder, err := containerbuilder.NewBuilder(
+				v1.ContainerBuildID(containerBuildID),
+				systemID,
+				workDirectory,
+				dockerOptions,
+				gitResolverOptions,
+				statusUpdater,
+			)
+			if err != nil {
+				log.Fatal("error getting builder: " + err.Error())
+			}
+
+			if err = builder.Build(cb); err != nil {
+				os.Exit(1)
+			}
+		},
+	}
 }
 
 func setupSSH() {
@@ -124,36 +188,4 @@ func setupSSH() {
 	if err != nil {
 		log.Fatal("error writing /etc/ssh/ssh_known_hosts: " + err.Error())
 	}
-}
-
-// Execute adds all child commands to the root command and sets flags appropriately.
-// This is called by main.main(). It only needs to happen once to the rootCmd.
-func Execute() {
-	if err := RootCmd.Execute(); err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
-}
-
-func init() {
-	RootCmd.Flags().StringVar(&containerBuildID, "container-build-id", "", "ID of the container build")
-	RootCmd.MarkFlagRequired("container-build-id")
-	RootCmd.Flags().StringVar(&namespacePrefix, "namespace-prefix", "", "namespace prefix of the lattice")
-	RootCmd.MarkFlagRequired("lattice-id")
-	RootCmd.Flags().StringVar(&systemIDString, "system-id", "", "ID of the system")
-	RootCmd.MarkFlagRequired("system-id")
-	RootCmd.Flags().StringVar(&containerBuildDefinition, "container-build-definition", "", "JSON serialized version of the container build definition block")
-	RootCmd.MarkFlagRequired("container-build-definition")
-
-	RootCmd.Flags().StringVar(&dockerRegistry, "docker-registry", "", "registry to tag the docker image artifact with")
-	RootCmd.MarkFlagRequired("docker-registry")
-	RootCmd.Flags().StringVar(&dockerRegistryAuthType, "docker-registry-auth-type", "", "information about how to auth to the docker registry")
-	RootCmd.Flags().StringVar(&dockerRepository, "docker-repository", "", "repository to tag the docker image artifact with")
-	RootCmd.MarkFlagRequired("docker-repository")
-	RootCmd.Flags().StringVar(&dockerTag, "docker-tag", "", "tag to tag the docker image artifact with")
-	RootCmd.MarkFlagRequired("docker-tag")
-	RootCmd.Flags().BoolVar(&dockerPush, "docker-push", false, "whether or not the image should be pushed to the registry")
-
-	RootCmd.Flags().StringVar(&kubeconfig, "kubeconfig", "", "path to kubeconfig")
-	RootCmd.Flags().StringVar(&workDirectory, "work-directory", "/tmp/container-build", "path to use to store build artifacts")
 }

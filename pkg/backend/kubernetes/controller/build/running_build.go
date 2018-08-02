@@ -16,10 +16,10 @@ type runningServiceInfo struct {
 }
 
 func (c *Controller) syncRunningBuild(build *latticev1.Build, stateInfo stateInfo) error {
-	runningServicesInfo := make(map[tree.NodePath]runningServiceInfo)
-	runningJobsInfo := make(map[tree.NodePath]runningServiceInfo)
-	var activeServices []tree.NodePath
-	var activeJobs []tree.NodePath
+	runningServicesInfo := make(map[tree.Path]runningServiceInfo)
+	runningJobsInfo := make(map[tree.Path]runningServiceInfo)
+	var activeServices []tree.Path
+	var activeJobs []tree.Path
 
 	for buildName := range stateInfo.activeContainerBuilds {
 		buildActiveServices, ok := stateInfo.containerBuildServices[buildName]

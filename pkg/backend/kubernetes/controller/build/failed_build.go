@@ -16,10 +16,10 @@ type failedServiceInfo struct {
 }
 
 func (c *Controller) syncFailedBuild(build *latticev1.Build, stateInfo stateInfo) error {
-	failedServicesInfo := make(map[tree.NodePath]failedServiceInfo)
-	failedJobsInfo := make(map[tree.NodePath]failedServiceInfo)
-	var failedServices []tree.NodePath
-	var failedJobs []tree.NodePath
+	failedServicesInfo := make(map[tree.Path]failedServiceInfo)
+	failedJobsInfo := make(map[tree.Path]failedServiceInfo)
+	var failedServices []tree.Path
+	var failedJobs []tree.Path
 
 	for buildName := range stateInfo.failedContainerBuilds {
 		buildFailedServices, ok := stateInfo.containerBuildServices[buildName]

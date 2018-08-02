@@ -32,6 +32,10 @@ func (c *FakeLatticeV1) Deploys(namespace string) v1.DeployInterface {
 	return &FakeDeploys{c, namespace}
 }
 
+func (c *FakeLatticeV1) GitTemplates(namespace string) v1.GitTemplateInterface {
+	return &FakeGitTemplates{c, namespace}
+}
+
 func (c *FakeLatticeV1) Jobs(namespace string) v1.JobInterface {
 	return &FakeJobs{c, namespace}
 }
@@ -54,6 +58,10 @@ func (c *FakeLatticeV1) Systems(namespace string) v1.SystemInterface {
 
 func (c *FakeLatticeV1) Teardowns(namespace string) v1.TeardownInterface {
 	return &FakeTeardowns{c, namespace}
+}
+
+func (c *FakeLatticeV1) Templates(namespace string) v1.TemplateInterface {
+	return &FakeTemplates{c, namespace}
 }
 
 // RESTClient returns a RESTClient that is used to communicate

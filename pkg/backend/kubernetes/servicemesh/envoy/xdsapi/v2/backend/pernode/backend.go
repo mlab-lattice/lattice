@@ -403,9 +403,9 @@ func (b *KubernetesPerNodeBackend) syncXDSCache(key string) error {
 	return err
 }
 
-func (b *KubernetesPerNodeBackend) SystemServices(serviceCluster string) (map[tree.NodePath]*xdsapi.Service, error) {
+func (b *KubernetesPerNodeBackend) SystemServices(serviceCluster string) (map[tree.Path]*xdsapi.Service, error) {
 	namespace := serviceCluster
-	result := make(map[tree.NodePath]*xdsapi.Service)
+	result := make(map[tree.Path]*xdsapi.Service)
 
 	services, err := b.serviceLister.Services(namespace).List(labels.Everything())
 	if err != nil {
