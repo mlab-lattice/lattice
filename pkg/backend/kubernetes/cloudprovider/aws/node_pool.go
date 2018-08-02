@@ -209,7 +209,7 @@ func (cp *DefaultAWSCloudProvider) CreateBootstrapToken(
 		"token-secret":                   tokenSecret,
 		"usage-bootstrap-authentication": "true",
 		"usage-bootstrap-signing":        "true",
-		"auth-extra-groups":              "system:bootstrappers:worker,system:bootstrappers:ingress",
+		"auth-extra-groups":              "system:bootstrappers:kubeadm:default-node-token",
 	}
 	secret := &corev1.Secret{
 		TypeMeta: metav1.TypeMeta{
