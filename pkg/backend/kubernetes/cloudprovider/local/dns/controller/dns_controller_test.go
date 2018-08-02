@@ -1,5 +1,11 @@
 package controller
 
+// FIXME <GEB>: refactor so that test services are more easily referenced by their associated
+//              addresses. currently using list indices to cross-reference. this was not an issue
+//              before because we were not managing leases dependent on protocol before and did
+//              not need access to the service definition to determine the protocol.
+// TODO <GEB>: add tests with TCP based service addresses
+
 import (
 	"crypto/sha256"
 	"encoding/base64"
@@ -20,6 +26,7 @@ import (
 	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/servicemesh/envoy"
 	kubeutil "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/kubernetes"
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
+	definitionv1 "github.com/mlab-lattice/lattice/pkg/definition/v1"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -100,6 +107,7 @@ func address(name string, addressPath tree.Path, servicePath *tree.Path, endpoin
 			Labels: map[string]string{
 				latticev1.AddressPathLabelKey: addressPath.ToDomain(),
 			},
+			Annotations: map[string]string{},
 		},
 		Spec: latticev1.AddressSpec{
 			Service:      servicePath,
@@ -120,6 +128,17 @@ func service(path tree.Path, systemID v1.SystemID) latticev1.Service {
 			ResourceVersion: "1",
 			Labels: map[string]string{
 				latticev1.ServicePathLabelKey: path.ToDomain(),
+			},
+		},
+		Spec: latticev1.ServiceSpec{
+			Definition: &definitionv1.Service{
+				Container: definitionv1.Container{
+					Ports: map[int32]definitionv1.ContainerPort{
+						8080: definitionv1.ContainerPort{
+							Protocol: "HTTP",
+						},
+					},
+				},
 			},
 		},
 	}
@@ -193,8 +212,9 @@ func TestAddressCreation(t *testing.T) {
 		"addresses write url correctly": {
 			Services: []latticev1.Service{service(path3, systemID1)},
 			AddressesAfter: []latticev1.Address{
-				address(addressName1, path2, nil, &externalName1, systemID1),
+				// NOTE: the address order here matters (i.e., the service address's index must be the same as its service)
 				address(addressName2, path3, &path3, nil, systemID1),
+				address(addressName1, path2, nil, &externalName1, systemID1),
 			},
 			ExpectedCnames: []cnameEntry{
 				{
@@ -281,6 +301,34 @@ func TestAddressCreation(t *testing.T) {
 			},
 		}
 
+		serviceMesh, err := servicemesh.NewServiceMesh(serviceMeshOptions)
+		if err != nil {
+			panic(err.Error())
+		}
+		serviceMeshUpdateIP := func(service *latticev1.Service, address *latticev1.Address) (*latticev1.Address, string) {
+			var err error
+			var ip string
+			var annotations map[string]string
+
+			address_ := address.DeepCopy()
+
+			if address_.Spec.Service != nil {
+				ip, err = serviceMesh.HasServiceIP(address_)
+				if err == nil && ip == "" {
+					ip, annotations, err = serviceMesh.ServiceIP(service, address_)
+					for k, v := range annotations {
+						address_.Annotations[k] = v
+					}
+				}
+			}
+
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			return address_, ip
+		}
+
 		controller := NewController(
 			latticeID,
 			namespacePrefix,
@@ -313,8 +361,12 @@ func TestAddressCreation(t *testing.T) {
 		}
 
 		addresses := informers.Lattice().V1().Addresses().Informer().GetStore()
-		for _, address := range test.AddressesBefore {
-			if err := addresses.Add(address.DeepCopy()); err != nil {
+		for i, address := range test.AddressesBefore {
+			address_ := address.DeepCopy()
+			if len(test.Services) > i {
+				address_, _ = serviceMeshUpdateIP(&test.Services[i], &address)
+			}
+			if err := addresses.Add(address_); err != nil {
 				t.Fatal(err)
 			}
 		}
@@ -329,8 +381,12 @@ func TestAddressCreation(t *testing.T) {
 		}
 
 		if test.AddressesAfter != nil {
-			for _, address := range test.AddressesAfter {
-				if err := addresses.Add(address.DeepCopy()); err != nil {
+			for i, address := range test.AddressesAfter {
+				address_ := address.DeepCopy()
+				if len(test.Services) > i {
+					address_, _ = serviceMeshUpdateIP(&test.Services[i], &address)
+				}
+				if err := addresses.Add(address_); err != nil {
 					t.Fatal(err)
 				}
 			}

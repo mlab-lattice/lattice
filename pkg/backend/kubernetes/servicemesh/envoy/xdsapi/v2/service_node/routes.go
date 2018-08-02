@@ -29,14 +29,17 @@ func (s *ServiceNode) getRoutes(
 
 	for path, service := range systemServices {
 		for componentName, component := range service.Components {
-			for port := range component.Ports {
+			for servicePort, listenerPort := range component.Ports {
+				if listenerPort.Protocol != "HTTP" {
+					continue
+				}
 				domain := fmt.Sprintf("%v.local", path.ToDomain())
-				domains := []string{fmt.Sprintf("%v:%v", domain, port)}
+				domains := []string{fmt.Sprintf("%v:%v", domain, servicePort)}
 
 				// Should be able to access an HTTP component on port 80 via either:
 				//   - http://path.to.service:80
 				//   - http://path.to.service
-				if port == xdsconstants.PortHTTPDefault {
+				if servicePort == xdsconstants.PortHTTPDefault {
 					domains = append(domains, domain)
 				}
 				virtualHosts = append(
@@ -46,7 +49,7 @@ func (s *ServiceNode) getRoutes(
 								xdsmsgs.NewPrefixRouteMatch("/"),
 								xdsmsgs.NewClusterRouteActionRouteRoute(
 									xdsutil.GetClusterNameForComponentPort(
-										s.ServiceCluster(), path, componentName, port))),
+										s.ServiceCluster(), path, componentName, servicePort))),
 						}))
 			}
 		}

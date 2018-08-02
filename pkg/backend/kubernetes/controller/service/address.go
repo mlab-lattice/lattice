@@ -46,6 +46,10 @@ func (c *Controller) updateAddressSpec(address *latticev1.Address, spec latticev
 		return address, nil
 	}
 
+	if *address.Spec.Service == *spec.Service {
+		return address, nil
+	}
+
 	// Copy so the shared cache isn't mutated
 	address = address.DeepCopy()
 	address.Spec = spec

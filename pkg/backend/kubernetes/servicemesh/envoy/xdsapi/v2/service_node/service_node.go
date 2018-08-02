@@ -70,32 +70,42 @@ func (s *ServiceNode) Update(backend xdsapi.Backend) error {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
+	glog.V(4).Infof("Retrieving system services in service node %v", s.ID)
 	systemServices, err := backend.SystemServices(s.ServiceCluster())
 	if err != nil {
 		return err
 	}
 
+	glog.V(4).Infof("Retrieving clusters in service node %v", s.ID)
 	clusters, err := s.getClusters(systemServices)
 	if err != nil {
 		return err
 	}
+
+	glog.V(4).Infof("Retrieving endpoints in service node %v", s.ID)
 	endpoints, err := s.getEndpoints(clusters, systemServices)
 	if err != nil {
 		return err
 	}
+
+	glog.V(4).Infof("Retrieving listeners in service node %v", s.ID)
 	listeners, err := s.getListeners(systemServices)
 	if err != nil {
 		return err
 	}
+
+	glog.V(4).Infof("Retrieving routes in service node %v", s.ID)
 	routes, err := s.getRoutes(systemServices)
 	if err != nil {
 		return err
 	}
 
+	glog.V(4).Infof("Checking if service node %v envoy config has changed", s.ID)
 	if !reflect.DeepEqual(clusters, s.clusters) ||
 		!reflect.DeepEqual(endpoints, s.endpoints) ||
 		!reflect.DeepEqual(listeners, s.listeners) ||
 		!reflect.DeepEqual(routes, s.routes) {
+		glog.V(4).Infof("Service node envoy %v config has changed", s.ID)
 		s.clusters = clusters
 		s.endpoints = endpoints
 		s.listeners = listeners
