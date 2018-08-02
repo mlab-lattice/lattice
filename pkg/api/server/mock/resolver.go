@@ -8,18 +8,18 @@ import (
 	"github.com/mlab-lattice/lattice/pkg/util/git"
 )
 
-type MockSystemResolver struct {
+type SystemResolver struct {
 }
 
-func newMockSystemResolver() *MockSystemResolver {
-	return &MockSystemResolver{}
+func newMockSystemResolver() *SystemResolver {
+	return &SystemResolver{}
 }
 
-func (*MockSystemResolver) ResolveDefinition(uri string, gitResolveOptions *git.Options) (tree.Node, error) {
+func (*SystemResolver) ResolveDefinition(uri string, gitResolveOptions *git.Options) (tree.Node, error) {
 	return getMockSystemDefinition()
 }
 
-func (*MockSystemResolver) ListDefinitionVersions(uri string, gitResolveOptions *git.Options) ([]string, error) {
+func (*SystemResolver) ListDefinitionVersions(uri string, gitResolveOptions *git.Options) ([]string, error) {
 	return []string{"1.0.0", "2.0.0"}, nil
 }
 

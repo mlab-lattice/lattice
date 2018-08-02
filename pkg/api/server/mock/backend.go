@@ -3,6 +3,7 @@ package mock
 import (
 	"fmt"
 	"io"
+	"sync"
 	"time"
 
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
@@ -12,28 +13,30 @@ import (
 	"github.com/satori/go.uuid"
 )
 
-type MockBackend struct {
-	systemRegistry map[v1.SystemID]*SystemRecord
+type Backend struct {
+	systemRegistry map[v1.SystemID]*systemRecord
+	registryLock   sync.RWMutex
 }
 
-func newMockBackend() *MockBackend {
-	return &MockBackend{
-		systemRegistry: make(map[v1.SystemID]*SystemRecord),
+func newMockBackend() *Backend {
+	return &Backend{
+		systemRegistry: make(map[v1.SystemID]*systemRecord),
 	}
 }
 
-type SystemRecord struct {
-	system    *v1.System
-	builds    map[v1.BuildID]*v1.Build
-	deploys   map[v1.DeployID]*v1.Deploy
-	teardowns map[v1.TeardownID]*v1.Teardown
-	secrets   []v1.Secret
-	nodePools []v1.NodePool
+type systemRecord struct {
+	system     *v1.System
+	builds     map[v1.BuildID]*v1.Build
+	deploys    map[v1.DeployID]*v1.Deploy
+	teardowns  map[v1.TeardownID]*v1.Teardown
+	secrets    []v1.Secret
+	nodePools  []v1.NodePool
+	recordLock sync.RWMutex
 }
 
 // newSystemRecord
-func newSystemRecord(system *v1.System) *SystemRecord {
-	return &SystemRecord{
+func newSystemRecord(system *v1.System) *systemRecord {
+	return &systemRecord{
 		system:    system,
 		builds:    make(map[v1.BuildID]*v1.Build),
 		deploys:   make(map[v1.DeployID]*v1.Deploy),
@@ -44,7 +47,10 @@ func newSystemRecord(system *v1.System) *SystemRecord {
 }
 
 // Systems
-func (backend *MockBackend) CreateSystem(systemID v1.SystemID, definitionURL string) (*v1.System, error) {
+func (backend *Backend) CreateSystem(systemID v1.SystemID, definitionURL string) (*v1.System, error) {
+	// lock for writing
+	backend.registryLock.Lock()
+	defer backend.registryLock.Unlock()
 
 	if _, exists := backend.systemRegistry[systemID]; exists {
 		return nil, v1.NewSystemAlreadyExistsError(systemID)
@@ -61,7 +67,8 @@ func (backend *MockBackend) CreateSystem(systemID v1.SystemID, definitionURL str
 	return system, nil
 }
 
-func (backend *MockBackend) ListSystems() ([]v1.System, error) {
+func (backend *Backend) ListSystems() ([]v1.System, error) {
+
 	systems := []v1.System{}
 	for _, v := range backend.systemRegistry {
 		systems = append(systems, *v.system)
@@ -69,32 +76,40 @@ func (backend *MockBackend) ListSystems() ([]v1.System, error) {
 	return systems, nil
 }
 
-func (backend *MockBackend) GetSystem(systemID v1.SystemID) (*v1.System, error) {
-	systemRecord, exists := backend.systemRegistry[systemID]
-	if !exists {
-		return nil, v1.NewInvalidSystemIDError(systemID)
+func (backend *Backend) GetSystem(systemID v1.SystemID) (*v1.System, error) {
+	systemRecord, err := backend.getSystemRecord(systemID)
+	if err != nil {
+		return nil, err
 	}
 
 	return systemRecord.system, nil
 }
 
-func (backend *MockBackend) DeleteSystem(systemID v1.SystemID) error {
-	if _, exists := backend.systemRegistry[systemID]; !exists {
-		return v1.NewInvalidSystemIDError(systemID)
+func (backend *Backend) DeleteSystem(systemID v1.SystemID) error {
+
+	_, err := backend.getSystemRecord(systemID)
+	if err != nil {
+		return err
 	}
+
+	// lock for writing
+	backend.registryLock.Lock()
+	defer backend.registryLock.Unlock()
+
 	delete(backend.systemRegistry, systemID)
 	return nil
 }
 
 // Builds
 
-func (backend *MockBackend) Build(
+func (backend *Backend) Build(
 	systemID v1.SystemID,
 	def *definitionv1.SystemNode,
 	v v1.SystemVersion) (*v1.Build, error) {
-	record, exists := backend.systemRegistry[systemID]
-	if !exists {
-		return nil, v1.NewInvalidSystemIDError(systemID)
+
+	record, err := backend.getSystemRecord(systemID)
+	if err != nil {
+		return nil, err
 	}
 
 	// validate definition URL
@@ -103,21 +118,23 @@ func (backend *MockBackend) Build(
 	}
 	// validate version
 	if v != "1.0.0" {
-		return nil, fmt.Errorf("bad version: %v", v)
+		return nil, &v1.InvalidSystemVersionError{Version: string(v)}
 	}
 
 	build := backend.newMockBuild(systemID, v)
 
 	record.builds[build.ID] = build
 
+	// run the build
+	go backend.runBuild(build)
+
 	return build, nil
 }
 
-func (backend *MockBackend) ListBuilds(systemID v1.SystemID) ([]v1.Build, error) {
-	// ensure the system exists
-	record, exists := backend.systemRegistry[systemID]
-	if !exists {
-		return nil, v1.NewInvalidSystemIDError(systemID)
+func (backend *Backend) ListBuilds(systemID v1.SystemID) ([]v1.Build, error) {
+	record, err := backend.getSystemRecord(systemID)
+	if err != nil {
+		return nil, err
 	}
 
 	builds := []v1.Build{}
@@ -128,13 +145,14 @@ func (backend *MockBackend) ListBuilds(systemID v1.SystemID) ([]v1.Build, error)
 
 }
 
-func (backend *MockBackend) GetBuild(systemID v1.SystemID, buildID v1.BuildID) (*v1.Build, error) {
-	// ensure the system exists
-	record, exists := backend.systemRegistry[systemID]
-	if !exists {
-		return nil, v1.NewInvalidSystemIDError(systemID)
+func (backend *Backend) GetBuild(systemID v1.SystemID, buildID v1.BuildID) (*v1.Build, error) {
+	record, err := backend.getSystemRecord(systemID)
+	if err != nil {
+		return nil, err
 	}
 
+	record.recordLock.RLock()
+	defer record.recordLock.RUnlock()
 	build, exists := record.builds[buildID]
 
 	if !exists {
@@ -144,7 +162,7 @@ func (backend *MockBackend) GetBuild(systemID v1.SystemID, buildID v1.BuildID) (
 	return build, nil
 }
 
-func (backend *MockBackend) BuildLogs(
+func (backend *Backend) BuildLogs(
 	systemID v1.SystemID,
 	buildID v1.BuildID,
 	path tree.NodePath,
@@ -155,11 +173,19 @@ func (backend *MockBackend) BuildLogs(
 }
 
 // Deploys
-func (backend *MockBackend) DeployBuild(systemID v1.SystemID, buildID v1.BuildID) (*v1.Deploy, error) {
-	build, err := backend.GetBuild(systemID, buildID)
+func (backend *Backend) DeployBuild(systemID v1.SystemID, buildID v1.BuildID) (*v1.Deploy, error) {
+	record, err := backend.getSystemRecord(systemID)
 	if err != nil {
 		return nil, err
 	}
+	// ensure that build exists
+	_, err = backend.GetBuild(systemID, buildID)
+	if err != nil {
+		return nil, err
+	}
+
+	record.recordLock.Lock()
+	defer record.recordLock.Unlock()
 
 	deploy := &v1.Deploy{
 		ID:      v1.DeployID(uuid.NewV4().String()),
@@ -167,16 +193,15 @@ func (backend *MockBackend) DeployBuild(systemID v1.SystemID, buildID v1.BuildID
 		State:   v1.DeployStatePending,
 	}
 
-	record := backend.systemRegistry[systemID]
 	record.deploys[deploy.ID] = deploy
 
-	// run the build
-	go backend.runBuild(build)
+	// run the deploy
+	go backend.monitorDeployBuild(deploy, buildID, systemID)
 
 	return deploy, nil
 }
 
-func (backend *MockBackend) DeployVersion(
+func (backend *Backend) DeployVersion(
 	systemID v1.SystemID,
 	def *definitionv1.SystemNode,
 	version v1.SystemVersion) (*v1.Deploy, error) {
@@ -189,12 +214,14 @@ func (backend *MockBackend) DeployVersion(
 	return backend.DeployBuild(systemID, build.ID)
 }
 
-func (backend *MockBackend) ListDeploys(systemID v1.SystemID) ([]v1.Deploy, error) {
-	// ensure the system exists
-	record, exists := backend.systemRegistry[systemID]
-	if !exists {
-		return nil, v1.NewInvalidSystemIDError(systemID)
+func (backend *Backend) ListDeploys(systemID v1.SystemID) ([]v1.Deploy, error) {
+	record, err := backend.getSystemRecord(systemID)
+	if err != nil {
+		return nil, err
 	}
+
+	record.recordLock.RLock()
+	defer record.recordLock.RUnlock()
 
 	deploys := []v1.Deploy{}
 	for _, deploy := range record.deploys {
@@ -203,11 +230,14 @@ func (backend *MockBackend) ListDeploys(systemID v1.SystemID) ([]v1.Deploy, erro
 	return deploys, nil
 }
 
-func (backend *MockBackend) GetDeploy(systemID v1.SystemID, deployID v1.DeployID) (*v1.Deploy, error) {
-	record, exists := backend.systemRegistry[systemID]
-	if !exists {
-		return nil, v1.NewInvalidSystemIDError(systemID)
+func (backend *Backend) GetDeploy(systemID v1.SystemID, deployID v1.DeployID) (*v1.Deploy, error) {
+	record, err := backend.getSystemRecord(systemID)
+	if err != nil {
+		return nil, err
 	}
+
+	record.recordLock.RLock()
+	defer record.recordLock.RUnlock()
 
 	deploy, exists := record.deploys[deployID]
 
@@ -219,11 +249,14 @@ func (backend *MockBackend) GetDeploy(systemID v1.SystemID, deployID v1.DeployID
 }
 
 // Teardown
-func (backend *MockBackend) TearDown(systemID v1.SystemID) (*v1.Teardown, error) {
-	record, exists := backend.systemRegistry[systemID]
-	if !exists {
-		return nil, v1.NewInvalidSystemIDError(systemID)
+func (backend *Backend) TearDown(systemID v1.SystemID) (*v1.Teardown, error) {
+	record, err := backend.getSystemRecord(systemID)
+	if err != nil {
+		return nil, err
 	}
+
+	record.recordLock.Lock()
+	defer record.recordLock.Unlock()
 
 	teardown := &v1.Teardown{
 		ID:    v1.TeardownID(uuid.NewV4().String()),
@@ -236,11 +269,14 @@ func (backend *MockBackend) TearDown(systemID v1.SystemID) (*v1.Teardown, error)
 	return teardown, nil
 }
 
-func (backend *MockBackend) ListTeardowns(systemID v1.SystemID) ([]v1.Teardown, error) {
-	record, exists := backend.systemRegistry[systemID]
-	if !exists {
-		return nil, v1.NewInvalidSystemIDError(systemID)
+func (backend *Backend) ListTeardowns(systemID v1.SystemID) ([]v1.Teardown, error) {
+	record, err := backend.getSystemRecord(systemID)
+	if err != nil {
+		return nil, err
 	}
+
+	record.recordLock.RLock()
+	defer record.recordLock.RUnlock()
 
 	teardowns := []v1.Teardown{}
 	for _, teardown := range record.teardowns {
@@ -249,12 +285,14 @@ func (backend *MockBackend) ListTeardowns(systemID v1.SystemID) ([]v1.Teardown, 
 	return teardowns, nil
 }
 
-func (backend *MockBackend) GetTeardown(systemID v1.SystemID, teardownID v1.TeardownID) (*v1.Teardown, error) {
-	// ensure the system exists
-	record, exists := backend.systemRegistry[systemID]
-	if !exists {
-		return nil, v1.NewInvalidSystemIDError(systemID)
+func (backend *Backend) GetTeardown(systemID v1.SystemID, teardownID v1.TeardownID) (*v1.Teardown, error) {
+	record, err := backend.getSystemRecord(systemID)
+	if err != nil {
+		return nil, err
 	}
+
+	record.recordLock.RLock()
+	defer record.recordLock.RUnlock()
 
 	teardown, exists := record.teardowns[teardownID]
 
@@ -266,10 +304,10 @@ func (backend *MockBackend) GetTeardown(systemID v1.SystemID, teardownID v1.Tear
 }
 
 // Services
-func (backend *MockBackend) ListServices(systemID v1.SystemID) ([]v1.Service, error) {
-	record, exists := backend.systemRegistry[systemID]
-	if !exists {
-		return nil, v1.NewInvalidSystemIDError(systemID)
+func (backend *Backend) ListServices(systemID v1.SystemID) ([]v1.Service, error) {
+	record, err := backend.getSystemRecord(systemID)
+	if err != nil {
+		return nil, err
 	}
 
 	services := []v1.Service{}
@@ -279,10 +317,10 @@ func (backend *MockBackend) ListServices(systemID v1.SystemID) ([]v1.Service, er
 	return services, nil
 }
 
-func (backend *MockBackend) GetService(systemID v1.SystemID, serviceID v1.ServiceID) (*v1.Service, error) {
-	record, exists := backend.systemRegistry[systemID]
-	if !exists {
-		return nil, v1.NewInvalidSystemIDError(systemID)
+func (backend *Backend) GetService(systemID v1.SystemID, serviceID v1.ServiceID) (*v1.Service, error) {
+	record, err := backend.getSystemRecord(systemID)
+	if err != nil {
+		return nil, err
 	}
 
 	for _, service := range record.system.Services {
@@ -294,10 +332,10 @@ func (backend *MockBackend) GetService(systemID v1.SystemID, serviceID v1.Servic
 	return nil, v1.NewInvalidServiceIDError(serviceID)
 }
 
-func (backend *MockBackend) GetServiceByPath(systemID v1.SystemID, path tree.NodePath) (*v1.Service, error) {
-	record, exists := backend.systemRegistry[systemID]
-	if !exists {
-		return nil, v1.NewInvalidSystemIDError(systemID)
+func (backend *Backend) GetServiceByPath(systemID v1.SystemID, path tree.NodePath) (*v1.Service, error) {
+	record, err := backend.getSystemRecord(systemID)
+	if err != nil {
+		return nil, err
 	}
 
 	service, exists := record.system.Services[path]
@@ -309,7 +347,7 @@ func (backend *MockBackend) GetServiceByPath(systemID v1.SystemID, path tree.Nod
 	return &service, nil
 }
 
-func (backend *MockBackend) ServiceLogs(
+func (backend *Backend) ServiceLogs(
 	systemID v1.SystemID,
 	serviceID v1.ServiceID,
 	sidecar *string,
@@ -320,20 +358,26 @@ func (backend *MockBackend) ServiceLogs(
 }
 
 // Secrets
-func (backend *MockBackend) ListSystemSecrets(systemID v1.SystemID) ([]v1.Secret, error) {
-	record, exists := backend.systemRegistry[systemID]
-	if !exists {
-		return nil, v1.NewInvalidSystemIDError(systemID)
+func (backend *Backend) ListSystemSecrets(systemID v1.SystemID) ([]v1.Secret, error) {
+	record, err := backend.getSystemRecord(systemID)
+	if err != nil {
+		return nil, err
 	}
+
+	record.recordLock.RLock()
+	defer record.recordLock.RUnlock()
 
 	return record.secrets, nil
 }
 
-func (backend *MockBackend) GetSystemSecret(systemID v1.SystemID, path tree.NodePath, name string) (*v1.Secret, error) {
-	record, exists := backend.systemRegistry[systemID]
-	if !exists {
-		return nil, v1.NewInvalidSystemIDError(systemID)
+func (backend *Backend) GetSystemSecret(systemID v1.SystemID, path tree.NodePath, name string) (*v1.Secret, error) {
+	record, err := backend.getSystemRecord(systemID)
+	if err != nil {
+		return nil, err
 	}
+
+	record.recordLock.RLock()
+	defer record.recordLock.RUnlock()
 
 	for _, secret := range record.secrets {
 		if secret.Path == path && secret.Name == name {
@@ -345,11 +389,14 @@ func (backend *MockBackend) GetSystemSecret(systemID v1.SystemID, path tree.Node
 	return nil, v1.NewInvalidSystemSecretError(path, name)
 }
 
-func (backend *MockBackend) SetSystemSecret(systemID v1.SystemID, path tree.NodePath, name, value string) error {
-	record, exists := backend.systemRegistry[systemID]
-	if !exists {
-		return v1.NewInvalidSystemIDError(systemID)
+func (backend *Backend) SetSystemSecret(systemID v1.SystemID, path tree.NodePath, name, value string) error {
+	record, err := backend.getSystemRecord(systemID)
+	if err != nil {
+		return err
 	}
+
+	record.recordLock.Lock()
+	defer record.recordLock.Unlock()
 
 	secret := v1.Secret{
 		Path:  path,
@@ -362,11 +409,14 @@ func (backend *MockBackend) SetSystemSecret(systemID v1.SystemID, path tree.Node
 	return nil
 }
 
-func (backend *MockBackend) UnsetSystemSecret(systemID v1.SystemID, path tree.NodePath, name string) error {
-	record, exists := backend.systemRegistry[systemID]
-	if !exists {
-		return v1.NewInvalidSystemIDError(systemID)
+func (backend *Backend) UnsetSystemSecret(systemID v1.SystemID, path tree.NodePath, name string) error {
+	record, err := backend.getSystemRecord(systemID)
+	if err != nil {
+		return err
 	}
+
+	record.recordLock.Lock()
+	defer record.recordLock.Unlock()
 
 	for i, secret := range record.secrets {
 		if secret.Path == path && secret.Name == name {
@@ -380,20 +430,25 @@ func (backend *MockBackend) UnsetSystemSecret(systemID v1.SystemID, path tree.No
 	return v1.NewInvalidSystemSecretError(path, name)
 }
 
-func (backend *MockBackend) ListNodePools(systemID v1.SystemID) ([]v1.NodePool, error) {
-	record, exists := backend.systemRegistry[systemID]
-	if !exists {
-		return nil, v1.NewInvalidSystemIDError(systemID)
+func (backend *Backend) ListNodePools(systemID v1.SystemID) ([]v1.NodePool, error) {
+	record, err := backend.getSystemRecord(systemID)
+	if err != nil {
+		return nil, err
 	}
+
+	record.recordLock.RLock()
+	defer record.recordLock.RUnlock()
 
 	return record.nodePools, nil
 }
 
-func (backend *MockBackend) GetNodePool(systemID v1.SystemID, path v1.NodePoolPath) (*v1.NodePool, error) {
-	record, exists := backend.systemRegistry[systemID]
-	if !exists {
-		return nil, v1.NewInvalidSystemIDError(systemID)
+func (backend *Backend) GetNodePool(systemID v1.SystemID, path v1.NodePoolPath) (*v1.NodePool, error) {
+	record, err := backend.getSystemRecord(systemID)
+	if err != nil {
+		return nil, err
 	}
+	record.recordLock.RLock()
+	defer record.recordLock.RUnlock()
 
 	for _, nodePool := range record.nodePools {
 		if nodePool.Path == path.String() {
@@ -405,26 +460,42 @@ func (backend *MockBackend) GetNodePool(systemID v1.SystemID, path v1.NodePoolPa
 }
 
 // Jobs
-func (backend *MockBackend) RunJob(systemID v1.SystemID, path tree.NodePath, command []string,
+func (backend *Backend) RunJob(systemID v1.SystemID, path tree.NodePath, command []string,
 	environment definitionv1.ContainerEnvironment,
 ) (*v1.Job, error) {
+	// TODO implement RunJob
 	return nil, nil
 }
 
-func (backend *MockBackend) ListJobs(v1.SystemID) ([]v1.Job, error) {
+func (backend *Backend) ListJobs(v1.SystemID) ([]v1.Job, error) {
+	// TODO implement ListJobs
 	return nil, nil
 }
-func (backend *MockBackend) GetJob(v1.SystemID, v1.JobID) (*v1.Job, error) {
+func (backend *Backend) GetJob(v1.SystemID, v1.JobID) (*v1.Job, error) {
+	// TODO implement GetJob
 	return nil, nil
 }
-func (backend *MockBackend) JobLogs(systemID v1.SystemID, jobID v1.JobID, sidecar *string, logOptions *v1.ContainerLogOptions,
+func (backend *Backend) JobLogs(systemID v1.SystemID, jobID v1.JobID, sidecar *string, logOptions *v1.ContainerLogOptions,
 ) (io.ReadCloser, error) {
+	// TODO implement JobLogs
 	return nil, nil
 }
 
 // helpers
 
-func (backend *MockBackend) getSystemRecordForBuild(buildID v1.BuildID) *SystemRecord {
+func (backend *Backend) getSystemRecord(systemID v1.SystemID) (*systemRecord, error) {
+	backend.registryLock.RLock()
+	defer backend.registryLock.RUnlock()
+	systemRecord, exists := backend.systemRegistry[systemID]
+
+	if !exists {
+		return nil, v1.NewInvalidSystemIDError(systemID)
+	}
+
+	return systemRecord, nil
+}
+
+func (backend *Backend) getSystemRecordForBuild(buildID v1.BuildID) *systemRecord {
 	for _, systemRecord := range backend.systemRegistry {
 		if _, exists := systemRecord.builds[buildID]; exists {
 			return systemRecord
@@ -434,18 +505,7 @@ func (backend *MockBackend) getSystemRecordForBuild(buildID v1.BuildID) *SystemR
 	return nil
 }
 
-func (backend *MockBackend) getDeployForBuild(buildID v1.BuildID) *v1.Deploy {
-	for _, systemRecord := range backend.systemRegistry {
-		for _, deploy := range systemRecord.deploys {
-			if deploy.BuildID == buildID {
-				return deploy
-			}
-		}
-	}
-	return nil
-}
-
-func (backend *MockBackend) newMockBuild(systemID v1.SystemID, v v1.SystemVersion) *v1.Build {
+func (backend *Backend) newMockBuild(systemID v1.SystemID, v v1.SystemVersion) *v1.Build {
 	service1Path := tree.NodePath(fmt.Sprintf("/%s/api", systemID))
 	build := &v1.Build{
 		ID:      v1.BuildID(uuid.NewV4().String()),
@@ -463,7 +523,7 @@ func (backend *MockBackend) newMockBuild(systemID v1.SystemID, v v1.SystemVersio
 	return build
 }
 
-func (backend *MockBackend) runBuild(build *v1.Build) {
+func (backend *Backend) runBuild(build *v1.Build) {
 	// try to simulate reality by making things take a little longer. Sleep for a bit...
 	time.Sleep(2 * time.Second)
 
@@ -482,10 +542,6 @@ func (backend *MockBackend) runBuild(build *v1.Build) {
 		build.Services[sp] = s
 	}
 
-	// run associated deploy
-	deploy := backend.getDeployForBuild(build.ID)
-	deploy.State = v1.DeployStateInProgress
-
 	// sleep
 	fmt.Printf("Mock: Running build %s. Sleeping for 7 seconds\n", build.ID)
 	time.Sleep(7 * time.Second)
@@ -493,7 +549,7 @@ func (backend *MockBackend) runBuild(build *v1.Build) {
 
 }
 
-func (backend *MockBackend) finishBuild(build *v1.Build) {
+func (backend *Backend) finishBuild(build *v1.Build) {
 	// change state to succeeded
 	now := time.Now()
 
@@ -510,17 +566,13 @@ func (backend *MockBackend) finishBuild(build *v1.Build) {
 	build.CompletionTimestamp = &now
 	build.State = v1.BuildStateSucceeded
 
-	// succeed associated deploy
-	deploy := backend.getDeployForBuild(build.ID)
-	deploy.State = v1.DeployStateSucceeded
-
 	fmt.Printf("Build %s finished\n", build.ID)
 
 	// update system services...
 	systemRecord := backend.getSystemRecordForBuild(build.ID)
 	services := make(map[tree.NodePath]v1.Service)
 	for _, build := range systemRecord.builds {
-		for path, _ := range build.Services {
+		for path := range build.Services {
 			services[path] = v1.Service{
 				ID:                 v1.ServiceID(uuid.NewV4().String()),
 				State:              v1.ServiceStateStable,
@@ -536,7 +588,42 @@ func (backend *MockBackend) finishBuild(build *v1.Build) {
 
 }
 
-func (backend *MockBackend) getSystemRecordForTeardown(teardownID v1.TeardownID) *SystemRecord {
+func (backend *Backend) monitorDeployBuild(deploy *v1.Deploy, buildID v1.BuildID, systemID v1.SystemID) {
+
+	for i := 0; i <= 200; i++ {
+		build, _ := backend.GetBuild(systemID, buildID)
+		newState := getDeployStateByBuild(build.State)
+		if deploy.State != newState {
+			deploy.State = newState
+		}
+
+		if deploy.State == v1.DeployStateSucceeded || deploy.State == v1.DeployStateFailed {
+			return
+		}
+
+		time.Sleep(200 * time.Millisecond)
+	}
+
+	// timed out... fail
+	deploy.State = v1.DeployStateFailed
+
+}
+
+func getDeployStateByBuild(buildState v1.BuildState) v1.DeployState {
+	switch buildState {
+	case v1.BuildStatePending:
+		return v1.DeployStatePending
+	case v1.BuildStateRunning:
+		return v1.DeployStateInProgress
+	case v1.BuildStateFailed:
+		return v1.DeployStateFailed
+	case v1.BuildStateSucceeded:
+		return v1.DeployStateSucceeded
+	default:
+		return v1.DeployStateAccepted
+	}
+}
+func (backend *Backend) getSystemRecordForTeardown(teardownID v1.TeardownID) *systemRecord {
 	for _, systemRecord := range backend.systemRegistry {
 		if _, exists := systemRecord.teardowns[teardownID]; exists {
 			return systemRecord
@@ -545,7 +632,7 @@ func (backend *MockBackend) getSystemRecordForTeardown(teardownID v1.TeardownID)
 	return nil
 }
 
-func (backend *MockBackend) runTeardown(teardown *v1.Teardown) {
+func (backend *Backend) runTeardown(teardown *v1.Teardown) {
 	// try to simulate reality by making things take a little longer. Sleep for a bit...
 	time.Sleep(2 * time.Second)
 
