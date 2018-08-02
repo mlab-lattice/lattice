@@ -305,8 +305,7 @@ func deleteSystem(t *testing.T) {
 	latticeClient.Systems().Delete(mockSystemID)
 
 	_, err = latticeClient.Systems().Get(mockSystemID)
-
-	if err == nil || !strings.Contains(fmt.Sprintf("%v", err), "invalid system") {
+	if _, isErr := err.(*v1.InvalidSystemIDError); !isErr {
 		t.Fatal("Expected an invalid system error")
 	}
 	fmt.Println("System deleted!")
@@ -319,7 +318,7 @@ func testInvalidIDs(t *testing.T) {
 	fmt.Println("Test invalid system")
 	_, err := latticeClient.Systems().Get("no-such-system")
 
-	if err == nil || !strings.Contains(fmt.Sprintf("%v", err), "invalid system") {
+	if _, isErr := err.(*v1.InvalidSystemIDError); !isErr {
 		t.Fatal("Expected an invalid system error")
 	}
 
