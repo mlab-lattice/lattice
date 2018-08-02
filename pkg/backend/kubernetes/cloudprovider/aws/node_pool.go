@@ -158,17 +158,17 @@ func (cp *DefaultAWSCloudProvider) EnsureNodePoolEpoch(
 // TODO push this functionality elsewhere, it shouldn't be here
 func (cp *DefaultAWSCloudProvider) CreateBootstrapToken(
 	latticeId v1.LatticeID,
-) (*corev1.Secret, error) {
+) (string, error) {
 	bootstrapToken, err := tokenutil.GenerateToken()
 	if err != nil {
-		return nil, fmt.Errorf(
+		return "", fmt.Errorf(
 			"error generating bootstrap token: %v",
 			err,
 		)
 	}
 	tokenId, tokenSecret, err := tokenutil.ParseToken(bootstrapToken)
 	if err != nil {
-		return nil, fmt.Errorf(
+		return "", fmt.Errorf(
 			"error splitting bootstrap token into component parts: %v",
 			err,
 		)
@@ -223,8 +223,8 @@ func (cp *DefaultAWSCloudProvider) CreateBootstrapToken(
 		Type:       "bootstrap.kubernetes.io/token",
 		StringData: secretMap,
 	}
-	storedSecret, err := cp.kubeClient.CoreV1().Secrets("kube-system").Create(secret)
-	return storedSecret, err
+	_, errr := cp.kubeClient.CoreV1().Secrets("kube-system").Create(secret)
+	return bootstrapToken, errr
 }
 
 func (cp *DefaultAWSCloudProvider) DestroyNodePoolEpoch(
@@ -258,7 +258,7 @@ func (cp *DefaultAWSCloudProvider) nodePoolEpochInfo(
 		terraformOutputNodePoolSecurityGroupID,
 	}
 
-	module := cp.nodePoolTerraformModule(latticeID, nodePool, epoch, &corev1.Secret{})
+	module := cp.nodePoolTerraformModule(latticeID, nodePool, epoch, "")
 	config := cp.nodePoolTerraformConfig(latticeID, nodePool, epoch, module)
 	values, err := terraform.Output(nodePoolWorkDirectory(nodePool.ID(epoch)), config, outputVars)
 	if err != nil {
@@ -327,18 +327,18 @@ func (cp *DefaultAWSCloudProvider) nodePoolTerraformModule(
 	latticeID v1.LatticeID,
 	nodePool *latticev1.NodePool,
 	epoch latticev1.NodePoolEpoch,
-	bootstrapSecret *corev1.Secret,
+	bootstrapSecret string,
 ) *kubetf.NodePool {
 	nodePoolID := nodePool.ID(epoch)
 
-	bootstrapTokenId := bootstrapSecret.StringData["token-id"]
-	bootstrapTokenSecret := bootstrapSecret.StringData["token-secret"]
-	fmt.Println("full bootstrap token string data: %v", bootstrapSecret.StringData)
-	fmt.Println("bootstrap token ID: %v", bootstrapTokenId)
+	//bootstrapTokenId := bootstrapSecret.StringData["token-id"]
+	//bootstrapTokenSecret := bootstrapSecret.StringData["token-secret"]
+	//fmt.Println("full bootstrap token string data: %v", bootstrapSecret.StringData)
+	//fmt.Println("bootstrap token ID: %v", bootstrapTokenId)
 	fmt.Println("bootstrap token secret: %v", bootstrapSecret)
-	bootstrapSecretString := bootstrapTokenId + "." + bootstrapTokenSecret
+	//bootstrapSecretString := bootstrapTokenId + "." + bootstrapTokenSecret
 
-	// TODO bubble up error
+	//// TODO bubble up error
 	apiServerPort, err := strconv.ParseInt(cp.ApiServerPort, 10, 64)
 	if err != nil {
 		fmt.Sprintf("error parsing apiserver port: %v", err)
@@ -363,7 +363,7 @@ func (cp *DefaultAWSCloudProvider) nodePoolTerraformModule(
 		NumInstances: nodePool.Spec.NumInstances,
 		InstanceType: nodePool.Spec.InstanceType,
 
-		KubeBootstrapToken:      bootstrapSecretString,
+		KubeBootstrapToken:      bootstrapSecret,
 		LatticeApiServerAddress: cp.ApiServerAddress,
 		LatticeApiServerPort:    apiServerPort,
 	}
