@@ -96,7 +96,7 @@ func (b *DefaultBootstrapper) controllerManagerResources(resources *bootstrapper
 			{
 				APIGroups: []string{corev1.GroupName},
 				Resources: []string{"secrets"},
-				Verbs:     []string{rbacv1.VerbAll},
+				Verbs:     ReadCreateAndDeleteVerbs,
 			},
 		},
 	}

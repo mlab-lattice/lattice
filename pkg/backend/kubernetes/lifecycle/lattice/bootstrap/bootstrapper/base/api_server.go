@@ -169,48 +169,6 @@ func (b *DefaultBootstrapper) apiServerResources(resources *bootstrapper.Resourc
 	}
 	resources.ClusterRoleBindings = append(resources.ClusterRoleBindings, clusterRoleBinding)
 
-	///*
-	//	apiVersion: rbac.authorization.k8s.io/v1
-	//	kind: ClusterRoleBinding
-	//	metadata:
-	//	  name: kubeadm:node-autoapprove-bootstrap
-	//	roleRef:
-	//	  apiGroup: rbac.authorization.k8s.io
-	//	  kind: ClusterRole
-	//	  name: system:certificates.k8s.io:certificatesigningrequests:nodeclient
-	//	subjects:
-	//	- kind: Group
-	//	  name: system:bootstrappers:kubeadm:default-node-token
-	//*/
-	//
-	//// XXX midnight 8/1 (8/2): need to add system:bootstrappers:kubeadm:default-node-token role to master controller to
-	//// XXX allow it to make bootstrap tokens for worker nodes (that allow them to join the cluster)
-	//// YYY Aug 02 07:35:39 ip-10-240-10-0 kubelet[1721]: F0802 07:35:39.320478    1721 server.go:233] failed to run Kubelet:
-	//// YYY cannot create certificate signing request: certificatesigningrequests.certificates.k8s.io is forbidden: User
-	//// YYY "system:bootstrap:4a38m8" cannot create certificatesigningrequests.certificates.k8s.io at the cluster scope
-	//crb := &rbacv1.ClusterRoleBinding{
-	//	// Include TypeMeta so if this is a dry run it will be printed out
-	//	TypeMeta: metav1.TypeMeta{
-	//		Kind:       "ClusterRoleBinding",
-	//		APIVersion: rbacv1.GroupName + "/v1",
-	//	},
-	//	ObjectMeta: metav1.ObjectMeta{
-	//		Name: name,
-	//	},
-	//	Subjects: []rbacv1.Subject{
-	//		{
-	//			Kind:      rbacv1.GroupKind,
-	//			Name:      kubeadmconstants.NodeBootstrapTokenAuthGroup,
-	//		},
-	//	},
-	//	RoleRef: rbacv1.RoleRef{
-	//		APIGroup: rbacv1.GroupKind,
-	//		Kind:     "ClusterRole",
-	//		Name:     kubeadmconstants.NodeBootstrapTokenAuthGroup,
-	//	},
-	//}
-	//resources.ClusterRoleBindings = append(resources.ClusterRoleBindings, crb)
-
 	args := []string{
 		"--port", strconv.Itoa(int(b.Options.MasterComponents.APIServer.Port)),
 		"--namespace-prefix", b.NamespacePrefix,
