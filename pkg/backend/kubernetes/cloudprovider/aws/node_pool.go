@@ -316,8 +316,6 @@ func (cp *DefaultAWSCloudProvider) nodePoolTerraformModule(
 	if err != nil {
 		return &kubetf.NodePool{}, fmt.Errorf(
 			"error parsing apiserver port: %v",
-			nodePool.Description(cp.namespacePrefix),
-			epoch,
 			err,
 		)
 	}
