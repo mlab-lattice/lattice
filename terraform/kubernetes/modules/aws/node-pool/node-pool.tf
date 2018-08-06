@@ -44,6 +44,10 @@ output "security_group_id" {
   value = "${module.node.security_group_id}"
 }
 
+output "bootstrap_token" {
+  value = "${var.kube_bootstrap_token}"
+}
+
 ###############################################################################
 # Provider
 #
