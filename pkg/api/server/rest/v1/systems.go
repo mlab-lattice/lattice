@@ -13,72 +13,50 @@ import (
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 	definitionv1 "github.com/mlab-lattice/lattice/pkg/definition/v1"
 	"github.com/mlab-lattice/lattice/pkg/util/git"
+	"github.com/swaggo/gin-swagger"
 
 	"io"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
+
+	// gin-swagger middleware
+	_ "github.com/mlab-lattice/lattice/pkg/api/server/rest/v1/docs"
+	"github.com/swaggo/gin-swagger/swaggerFiles" // swagger embed files
 )
+
+const (
+	systemIdentifier = "system_id"
+)
+
+var systemIdentifierPathComponent = fmt.Sprintf(":%v", systemIdentifier)
+var systemPath = fmt.Sprintf(v1rest.SystemPathFormat, systemIdentifierPathComponent)
+
+// @title Lattice API
+// @version 1.0
+// @description This is a sample server celler server.
+// @termsOfService http://swagger.io/terms/
+
+// @host localhost:8876
+// @BasePath /v1
+
+// @securityDefinitions.apikey ApiKeyAuth
+// @in header
+// @name apiKey
 
 func mountSystemHandlers(router *gin.RouterGroup, backend v1server.Interface, sysResolver resolver.SystemResolver) {
 
 	// create-system
-	router.POST(v1rest.SystemsPath, func(c *gin.Context) {
-		var req v1rest.CreateSystemRequest
-		if err := c.BindJSON(&req); err != nil {
-			handleBadRequestBody(c)
-			return
-		}
-
-		system, err := backend.CreateSystem(req.ID, req.DefinitionURL)
-		if err != nil {
-			handleError(c, err)
-			return
-		}
-
-		c.JSON(http.StatusCreated, system)
-	})
+	router.POST(v1rest.SystemsPath, handleCreateSystem(backend, sysResolver))
 
 	// list-systems
-	router.GET(v1rest.SystemsPath, func(c *gin.Context) {
-		systems, err := backend.ListSystems()
-		if err != nil {
-			handleError(c, err)
-			return
-		}
-
-		c.JSON(http.StatusOK, systems)
-	})
-
-	systemIdentifier := "system_id"
-	systemIdentifierPathComponent := fmt.Sprintf(":%v", systemIdentifier)
-	systemPath := fmt.Sprintf(v1rest.SystemPathFormat, systemIdentifierPathComponent)
+	router.GET(v1rest.SystemsPath, handleListSystems(backend, sysResolver))
 
 	// get-system
-	router.GET(systemPath, func(c *gin.Context) {
-		systemID := v1.SystemID(c.Param(systemIdentifier))
-
-		system, err := backend.GetSystem(systemID)
-		if err != nil {
-			handleError(c, err)
-			return
-		}
-
-		c.JSON(http.StatusOK, system)
-	})
+	router.GET(systemPath, handleGetSystem(backend, sysResolver))
 
 	// delete-system
-	router.DELETE(systemPath, func(c *gin.Context) {
-		systemID := v1.SystemID(c.Param(systemIdentifier))
-
-		err := backend.DeleteSystem(systemID)
-		if err != nil {
-			handleError(c, err)
-			return
-		}
-
-		c.Status(http.StatusOK)
-	})
+	router.DELETE(systemPath, handleDeleteSystem(backend, sysResolver))
 
 	mountBuildHandlers(router, backend, sysResolver)
 	mountDeployHandlers(router, backend, sysResolver)
@@ -88,11 +66,12 @@ func mountSystemHandlers(router *gin.RouterGroup, backend v1server.Interface, sy
 	mountSecretHandlers(router, backend)
 	mountTeardownHandlers(router, backend)
 	mountVersionHandlers(router, backend, sysResolver)
+
+	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+
 }
 
 func mountBuildHandlers(router *gin.RouterGroup, backend v1server.Interface, sysResolver resolver.SystemResolver) {
-	systemIdentifier := "system_id"
-	systemIdentifierPathComponent := fmt.Sprintf(":%v", systemIdentifier)
 	buildsPath := fmt.Sprintf(v1rest.BuildsPathFormat, systemIdentifierPathComponent)
 
 	// build-system
@@ -858,4 +837,98 @@ func getSystemVersions(backend v1server.Interface, sysResolver resolver.SystemRe
 	}
 
 	return sysResolver.ListDefinitionVersions(system.DefinitionURL, &git.Options{})
+}
+
+// CreateSystem godoc
+// @Summary Create a new system
+// @Description create system
+// @ID create-system
+// @Accept  json
+// @Produce  json
+// @Router /v1/systems [post]
+// @Success 200 {object} lattice/pkg/api/v1.System
+func handleCreateSystem(backend v1server.Interface, sysResolver resolver.SystemResolver) func(c *gin.Context) {
+
+	return func(c *gin.Context) {
+		var req v1rest.CreateSystemRequest
+		if err := c.BindJSON(&req); err != nil {
+			handleBadRequestBody(c)
+			return
+		}
+
+		system, err := backend.CreateSystem(req.ID, req.DefinitionURL)
+		if err != nil {
+			handleError(c, err)
+			return
+		}
+
+		c.JSON(http.StatusCreated, system)
+	}
+
+}
+
+// ListSystems godoc
+// @Summary Lists systems
+// @Description list systems
+// @ID list-systems
+// @Accept  json
+// @Produce  json
+// @Router /v1/systems [get]
+func handleListSystems(backend v1server.Interface, sysResolver resolver.SystemResolver) func(c *gin.Context) {
+
+	return func(c *gin.Context) {
+		systems, err := backend.ListSystems()
+		if err != nil {
+			handleError(c, err)
+			return
+		}
+
+		c.JSON(http.StatusOK, systems)
+	}
+
+}
+
+// GetSystem godoc
+// @Summary Get system
+// @Description get system
+// @ID get-system
+// @Accept  json
+// @Produce  json
+// @Router /v1/systems/{id} [get]
+func handleGetSystem(backend v1server.Interface, sysResolver resolver.SystemResolver) func(c *gin.Context) {
+
+	return func(c *gin.Context) {
+		systemID := v1.SystemID(c.Param(systemIdentifier))
+		system, err := backend.GetSystem(systemID)
+		if err != nil {
+			handleError(c, err)
+			return
+		}
+
+		c.JSON(http.StatusOK, system)
+	}
+
+}
+
+// DeleteSystem godoc
+// @Summary Delete system
+// @Description get system
+// @ID delete-system
+// @Accept  json
+// @Produce  json
+// @Router /v1/systems/{id} [delete]
+func handleDeleteSystem(backend v1server.Interface, sysResolver resolver.SystemResolver) func(c *gin.Context) {
+
+	return func(c *gin.Context) {
+		systemID := v1.SystemID(c.Param(systemIdentifier))
+
+		err := backend.DeleteSystem(systemID)
+		if err != nil {
+			handleError(c, err)
+			return
+		}
+
+		c.Status(http.StatusOK)
+	}
+
 }
