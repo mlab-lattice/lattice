@@ -108,7 +108,7 @@ func (cp *DefaultAWSCloudProvider) EnsureNodePoolEpoch(
 	nodePool *latticev1.NodePool,
 	epoch latticev1.NodePoolEpoch,
 ) error {
-	var bootstrapToken string
+	bootstrapToken := ""
 
 	module, err := cp.nodePoolTerraformModule(latticeID, nodePool, epoch, &bootstrapToken)
 	if err != nil {
@@ -242,7 +242,7 @@ func (cp *DefaultAWSCloudProvider) nodePoolEpochInfo(
 		terraformOutputNodePoolSecurityGroupID,
 		terraformOutputBootstrapToken,
 	}
-	var bootstrapToken string
+	bootstrapToken := ""
 
 	module, err := cp.nodePoolTerraformModule(latticeID, nodePool, epoch, &bootstrapToken)
 	if err != nil {
@@ -323,7 +323,10 @@ func (cp *DefaultAWSCloudProvider) nodePoolTerraformModule(
 	bootstrapSecret *string,
 ) (*kubetf.NodePool, error) {
 	nodePoolID := nodePool.ID(epoch)
-	*bootstrapSecret = nodePool.Annotations[AnnotationKeyNodePoolBootstrapToken]
+	existingToken, hasToken := nodePool.Annotations[AnnotationKeyNodePoolBootstrapToken]
+	if hasToken {
+		*bootstrapSecret = existingToken
+	}
 
 	apiServerPort, err := strconv.ParseInt(cp.ApiServerPort, 10, 64)
 	if err != nil {
@@ -350,7 +353,7 @@ func (cp *DefaultAWSCloudProvider) nodePoolTerraformModule(
 		NumInstances: nodePool.Spec.NumInstances,
 		InstanceType: nodePool.Spec.InstanceType,
 
-		KubeBootstrapToken:      *bootstrapSecret,
+		KubeBootstrapToken:      bootstrapSecret,
 		LatticeApiServerAddress: cp.ApiServerAddress,
 		LatticeApiServerPort:    apiServerPort,
 	}, nil

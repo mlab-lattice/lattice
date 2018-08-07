@@ -24,7 +24,7 @@ type NodePool struct {
 	NumInstances int32
 	InstanceType string
 
-	KubeBootstrapToken      string
+	KubeBootstrapToken      *string
 	LatticeApiServerAddress string
 	LatticeApiServerPort    int64
 }
@@ -47,7 +47,7 @@ func (np *NodePool) MarshalJSON() ([]byte, error) {
 		NumInstances: np.NumInstances,
 		InstanceType: np.InstanceType,
 
-		KubeBootstrapToken:      np.KubeBootstrapToken,
+		KubeBootstrapToken:      *np.KubeBootstrapToken,
 		LatticeApiServerAddress: np.LatticeApiServerAddress,
 		LatticeApiServerPort:    np.LatticeApiServerPort,
 	}
