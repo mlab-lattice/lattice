@@ -90,7 +90,7 @@ func (api *LatticeAPI) handleDeploySystem(c *gin.Context) {
 // @ID list-deploys
 // @Summary Lists deploys
 // @Description list deploys
-// @Router /v1/systems/{systemId}/deploys [get]
+// @Router /systems/{systemId}/deploys [get]
 // @Param systemId path string true "System ID"
 // @Accept  json
 // @Produce  json
@@ -111,7 +111,7 @@ func (api *LatticeAPI) handleListDeploys(c *gin.Context) {
 // @ID get-deploy
 // @Summary Get deploy
 // @Description get deploy
-// @Router /v1/systems/{systemId}/deploys/{id} [get]
+// @Router /systems/{systemId}/deploys/{id} [get]
 // @Param systemId path string true "System ID"
 // @Param id path string true "Deploy ID"
 // @Accept  json

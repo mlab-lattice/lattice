@@ -38,7 +38,7 @@ func (api *LatticeAPI) setupJobsEndpoints() {
 // @ID run-job
 // @Summary Run job
 // @Description run job
-// @Router /v1/systems/{systemId}/builds [post]
+// @Router /systems/{systemId}/builds [post]
 // @Param systemId path string true "System ID"
 // @Param jobRequest body rest.RunJobRequest true "Create build"
 // @Accept  json
@@ -67,7 +67,7 @@ func (api *LatticeAPI) handleRunJob(c *gin.Context) {
 // @ID list-jobs
 // @Summary Lists jobs
 // @Description list jobs
-// @Router /v1/systems/{systemId}/jobs [get]
+// @Router /systems/{systemId}/jobs [get]
 // @Param systemId path string true "System ID"
 // @Accept  json
 // @Produce  json
@@ -88,7 +88,7 @@ func (api *LatticeAPI) handleListJobs(c *gin.Context) {
 // @ID get-job
 // @Summary Get job
 // @Description get job
-// @Router /v1/systems/{systemId}/jobs/{id} [get]
+// @Router /systems/{systemId}/jobs/{id} [get]
 // @Param systemId path string true "System ID"
 // @Param id path string true "Job ID"
 // @Accept  json
@@ -111,7 +111,7 @@ func (api *LatticeAPI) handleGetJob(c *gin.Context) {
 // @ID get-job-logs
 // @Summary Get job logs
 // @Description get job logs
-// @Router /v1/systems/{systemId}/jobs/{id}/logs  [get]
+// @Router /systems/{systemId}/jobs/{id}/logs  [get]
 // @Param systemId path string true "System ID"
 // @Param id path string true "Job ID"
 // @Param sidecar query string false "Sidecar"

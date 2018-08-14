@@ -2,175 +2,9 @@ FORMAT: 1A
 
 # Lattice API
 
-This is a sample server celler server.
+Welcome to lattice api
 
-### /v1/systems/{systemId}/deploys
-
-#### Deploy system [POST]
-
-build system
-
-+ Parameters
-
-    + systemId (required)
-
-+ Request (application/json)
-
-    + Headers
-
-            Accept: application/json
-
-    + Body
-
-            {}
-
-    + Schema
-
-            {
-              "type": "object",
-              "properties": {
-                "buildId": {
-                  "type": "object"
-                },
-                "version": {
-                  "type": "object"
-                }
-              }
-            }
-
-+ Response 200 (application/json)
-
-    OK
-
-    + Body
-
-            {}
-
-    + Schema
-
-            {
-              "type": "object",
-              "properties": {
-                "buildId": {
-                  "type": "object"
-                },
-                "id": {
-                  "type": "object"
-                },
-                "state": {
-                  "type": "object"
-                }
-              }
-            }
-
-### /v1/systems/{systemId}/secrets
-
-#### set secret [POST]
-
-set secret
-
-+ Parameters
-
-    + systemId (required)
-
-+ Request (application/json)
-
-    + Headers
-
-            Accept: application/json
-
-    + Body
-
-            {
-              "value": "ea non"
-            }
-
-    + Schema
-
-            {
-              "type": "object",
-              "properties": {
-                "value": {
-                  "type": "string"
-                }
-              }
-            }
-
-+ Response 200 (application/json)
-
-    OK
-
-    + Body
-
-            {
-              "value": "ut enim pariatur incididunt dolore",
-              "name": "amet cillum pariatur elit labore",
-              "path": "exercitation"
-            }
-
-    + Schema
-
-            {
-              "type": "object",
-              "properties": {
-                "name": {
-                  "description": "Name\n",
-                  "type": "string"
-                },
-                "path": {
-                  "description": "Secret service path\n",
-                  "type": "string"
-                },
-                "value": {
-                  "description": "Value\n",
-                  "type": "string"
-                }
-              }
-            }
-
-### /v1/systems/{systemId}/teardowns
-
-#### Teardown system [POST]
-
-teardown system
-
-+ Parameters
-
-    + systemId (required)
-
-+ Request (application/json)
-
-    + Headers
-
-            Accept: application/json
-
-    + Body
-
-+ Response 200 (application/json)
-
-    OK
-
-    + Body
-
-            {}
-
-    + Schema
-
-            {
-              "type": "object",
-              "properties": {
-                "id": {
-                  "description": "ID\n",
-                  "type": "object"
-                },
-                "state": {
-                  "description": "State. [\"pending\", \"in progress\", \"succeeded\", \"failed\"]\n",
-                  "type": "object"
-                }
-              }
-            }
-
-### /v1/v1/systems
+### /v1/systems
 
 #### Lists systems [GET]
 
@@ -191,19 +25,11 @@ list systems
     + Body
 
             [
+              {},
+              {},
               {
-                "definitionUrl": "sunt in dolor"
-              },
-              {
-                "definitionUrl": "dolore Lorem aliquip et"
-              },
-              {
-                "definitionUrl": "sed ad sunt"
-              },
-              {
-                "definitionUrl": "veniam cupidatat amet"
-              },
-              {}
+                "definitionUrl": "ullamco occaecat Ut"
+              }
             ]
 
     + Schema
@@ -293,7 +119,7 @@ create system
               }
             }
 
-### /v1/v1/systems/{id}
+### /v1/systems/{id}
 
 #### Get system [GET]
 
@@ -373,7 +199,7 @@ get system
               "type": "object"
             }
 
-### /v1/v1/systems/{systemId}/builds
+### /v1/systems/{systemId}/builds
 
 #### Lists builds [GET]
 
@@ -398,7 +224,9 @@ list builds
     + Body
 
             [
-              {},
+              {
+                "startTimestamp": "laborum anim reprehenderit"
+              },
               {}
             ]
 
@@ -467,6 +295,63 @@ build system
 
     + Body
 
+            {
+              "completionTimestamp": "dolor eiusmod amet consectetur"
+            }
+
+    + Schema
+
+            {
+              "type": "object",
+              "properties": {
+                "completionTimestamp": {
+                  "type": "string"
+                },
+                "id": {
+                  "type": "object"
+                },
+                "services": {
+                  "description": "Services maps service paths (e.g. /foo/bar/buzz) to the\nstatus of the build for that service in the Build.\n",
+                  "type": "object"
+                },
+                "startTimestamp": {
+                  "type": "string"
+                },
+                "state": {
+                  "type": "object"
+                },
+                "version": {
+                  "type": "object"
+                }
+              }
+            }
+
+### /v1/systems/{systemId}/builds/{id}
+
+#### Get build [GET]
+
+get build
+
++ Parameters
+
+    + systemId (required)
+    
+    + id (required)
+
++ Request (application/json)
+
+    + Headers
+
+            Accept: application/json
+
+    + Body
+
++ Response 200 (application/json)
+
+    OK
+
+    + Body
+
             {}
 
     + Schema
@@ -496,64 +381,7 @@ build system
               }
             }
 
-### /v1/v1/systems/{systemId}/builds/{id}
-
-#### Get build [GET]
-
-get build
-
-+ Parameters
-
-    + systemId (required)
-    
-    + id (required)
-
-+ Request (application/json)
-
-    + Headers
-
-            Accept: application/json
-
-    + Body
-
-+ Response 200 (application/json)
-
-    OK
-
-    + Body
-
-            {
-              "startTimestamp": "esse"
-            }
-
-    + Schema
-
-            {
-              "type": "object",
-              "properties": {
-                "completionTimestamp": {
-                  "type": "string"
-                },
-                "id": {
-                  "type": "object"
-                },
-                "services": {
-                  "description": "Services maps service paths (e.g. /foo/bar/buzz) to the\nstatus of the build for that service in the Build.\n",
-                  "type": "object"
-                },
-                "startTimestamp": {
-                  "type": "string"
-                },
-                "state": {
-                  "type": "object"
-                },
-                "version": {
-                  "type": "object"
-                }
-              }
-            }
-
-#### Get build logs [GET /v1/v1/systems/{systemId}/builds/{id}/logs]
+#### Get build logs [GET /v1/systems/{systemId}/builds/{id}/logs]
 
 get logs
 
@@ -593,7 +421,7 @@ get logs
 
     + Body
 
-            officia magna
+            amet ullamco nisi
 
     + Schema
 
@@ -601,7 +429,7 @@ get logs
               "type": "string"
             }
 
-### /v1/v1/systems/{systemId}/deploys
+### /v1/systems/{systemId}/deploys
 
 #### Lists deploys [GET]
 
@@ -627,8 +455,6 @@ list deploys
 
             [
               {},
-              {},
-              {},
               {}
             ]
 
@@ -652,7 +478,64 @@ list deploys
               }
             }
 
-### /v1/v1/systems/{systemId}/deploys/{id}
+#### Deploy system [POST]
+
+build system
+
++ Parameters
+
+    + systemId (required)
+
++ Request (application/json)
+
+    + Headers
+
+            Accept: application/json
+
+    + Body
+
+            {}
+
+    + Schema
+
+            {
+              "type": "object",
+              "properties": {
+                "buildId": {
+                  "type": "object"
+                },
+                "version": {
+                  "type": "object"
+                }
+              }
+            }
+
++ Response 200 (application/json)
+
+    OK
+
+    + Body
+
+            {}
+
+    + Schema
+
+            {
+              "type": "object",
+              "properties": {
+                "buildId": {
+                  "type": "object"
+                },
+                "id": {
+                  "type": "object"
+                },
+                "state": {
+                  "type": "object"
+                }
+              }
+            }
+
+### /v1/systems/{systemId}/deploys/{id}
 
 #### Get deploy [GET]
 
@@ -697,7 +580,7 @@ get deploy
               }
             }
 
-### /v1/v1/systems/{systemId}/jobs
+### /v1/systems/{systemId}/jobs
 
 #### Lists jobs [GET]
 
@@ -722,8 +605,12 @@ list jobs
     + Body
 
             [
+              {},
+              {},
+              {},
               {
-                "completionTimestamp": "pariatur deserunt nisi adipisicing occaecat"
+                "startTimestamp": "minim occaecat",
+                "path": "amet officia eiusmod culpa Ut"
               }
             ]
 
@@ -753,7 +640,7 @@ list jobs
               }
             }
 
-### /v1/v1/systems/{systemId}/jobs/{id}
+### /v1/systems/{systemId}/jobs/{id}
 
 #### Get job [GET]
 
@@ -804,7 +691,7 @@ get job
               }
             }
 
-#### Get job logs [GET /v1/v1/systems/{systemId}/jobs/{id}/logs]
+#### Get job logs [GET /v1/systems/{systemId}/jobs/{id}/logs]
 
 get job logs
 
@@ -842,7 +729,7 @@ get job logs
 
     + Body
 
-            incididunt reprehenderit sit
+            exercitation
 
     + Schema
 
@@ -850,7 +737,7 @@ get job logs
               "type": "string"
             }
 
-### /v1/v1/systems/{systemId}/node-pools
+### /v1/systems/{systemId}/node-pools
 
 #### Lists node pools [GET]
 
@@ -877,12 +764,12 @@ list node pools
             [
               {
                 "failure_info": {
-                  "time": "sed eiusmod ad",
-                  "message": "qui"
-                },
-                "path": "et Excepteur",
-                "instanceType": "nostrud eu ad"
-              }
+                  "time": "pariatur et",
+                  "message": "non fugiat id"
+                }
+              },
+              {},
+              {}
             ]
 
     + Schema
@@ -923,7 +810,7 @@ list node pools
               }
             }
 
-### /v1/v1/systems/{systemId}/node-pools/{id}
+### /v1/systems/{systemId}/node-pools/{id}
 
 #### Get node pool [GET]
 
@@ -949,10 +836,7 @@ get node pool
 
     + Body
 
-            {
-              "id": "ullamco ut",
-              "numInstances": 33792933
-            }
+            {}
 
     + Schema
 
@@ -989,7 +873,7 @@ get node pool
               }
             }
 
-### /v1/v1/systems/{systemId}/secrets
+### /v1/systems/{systemId}/secrets
 
 #### Lists secrets [GET]
 
@@ -1014,12 +898,14 @@ list secrets
     + Body
 
             [
-              {},
+              {
+                "value": "id dolor",
+                "name": "in dolor fugiat occaecat"
+              },
               {},
               {
-                "name": "magna in"
-              },
-              {}
+                "path": "exerc"
+              }
             ]
 
     + Schema
@@ -1045,7 +931,64 @@ list secrets
               }
             }
 
-### /v1/v1/systems/{systemId}/secrets/{id}
+#### set secret [POST]
+
+set secret
+
++ Parameters
+
+    + systemId (required)
+
++ Request (application/json)
+
+    + Headers
+
+            Accept: application/json
+
+    + Body
+
+            {}
+
+    + Schema
+
+            {
+              "type": "object",
+              "properties": {
+                "value": {
+                  "type": "string"
+                }
+              }
+            }
+
++ Response 200 (application/json)
+
+    OK
+
+    + Body
+
+            {}
+
+    + Schema
+
+            {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "description": "Name\n",
+                  "type": "string"
+                },
+                "path": {
+                  "description": "Secret service path\n",
+                  "type": "string"
+                },
+                "value": {
+                  "description": "Value\n",
+                  "type": "string"
+                }
+              }
+            }
+
+### /v1/systems/{systemId}/secrets/{id}
 
 #### Get secret [GET]
 
@@ -1072,8 +1015,7 @@ get secret
     + Body
 
             {
-              "path": "vol",
-              "value": "laboris reprehenderit ad"
+              "path": "reprehenderit e"
             }
 
     + Schema
@@ -1128,7 +1070,7 @@ get system
               "type": "object"
             }
 
-### /v1/v1/systems/{systemId}/services
+### /v1/systems/{systemId}/services
 
 #### Lists services [GET]
 
@@ -1154,13 +1096,20 @@ list services
 
             [
               {
-                "staleInstances": 7294180
+                "instances": [
+                  "amet eiusmod sint anim"
+                ]
               },
               {
-                "terminatingInstances": -8899031
+                "instances": [
+                  "laborum proident aliquip in officia",
+                  "consectetur mollit voluptate eu"
+                ],
+                "terminatingInstances": -9445769
               },
               {
-                "staleInstances": 44119235
+                "path": "in magna officia eu",
+                "staleInstances": -45941475
               }
             ]
 
@@ -1230,7 +1179,7 @@ list services
               }
             }
 
-### /v1/v1/systems/{systemId}/services/{id}
+### /v1/systems/{systemId}/services/{id}
 
 #### Get service [GET]
 
@@ -1257,15 +1206,7 @@ get service
     + Body
 
             {
-              "staleInstances": 26763259,
-              "path": "minim ad ex Lorem id",
-              "instances": [
-                "aliquip do",
-                "aliquip ut proident",
-                "anim cillum laboris",
-                "fugiat",
-                "dolore Excepteur"
-              ]
+              "updatedInstances": -97109098
             }
 
     + Schema
@@ -1331,7 +1272,7 @@ get service
               }
             }
 
-#### Get service logs [GET /v1/v1/systems/{systemId}/services/{id}/logs]
+#### Get service logs [GET /v1/systems/{systemId}/services/{id}/logs]
 
 get service logs
 
@@ -1371,7 +1312,7 @@ get service logs
 
     + Body
 
-            aliqua Lorem est
+            in Ut reprehenderit
 
     + Schema
 
@@ -1379,7 +1320,7 @@ get service logs
               "type": "string"
             }
 
-### /v1/v1/systems/{systemId}/teardowns
+### /v1/systems/{systemId}/teardowns
 
 #### Lists teardowns [GET]
 
@@ -1428,7 +1369,47 @@ list teardowns
               }
             }
 
-### /v1/v1/systems/{systemId}/teardowns/{id}
+#### Teardown system [POST]
+
+teardown system
+
++ Parameters
+
+    + systemId (required)
+
++ Request (application/json)
+
+    + Headers
+
+            Accept: application/json
+
+    + Body
+
++ Response 200 (application/json)
+
+    OK
+
+    + Body
+
+            {}
+
+    + Schema
+
+            {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "description": "ID\n",
+                  "type": "object"
+                },
+                "state": {
+                  "description": "State. [\"pending\", \"in progress\", \"succeeded\", \"failed\"]\n",
+                  "type": "object"
+                }
+              }
+            }
+
+### /v1/systems/{systemId}/teardowns/{id}
 
 #### Get teardown [GET]
 
@@ -1472,7 +1453,7 @@ get teardown
               }
             }
 
-### /v1/v1/systems/{systemId}/versions
+### /v1/systems/{systemId}/versions
 
 #### Lists system versions [GET]
 
@@ -1497,6 +1478,8 @@ list teardowns
     + Body
 
             [
+              {},
+              {},
               {}
             ]
 

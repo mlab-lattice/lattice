@@ -34,7 +34,7 @@ func (api *LatticeAPI) setupBuildEndpoints() {
 // @ID build-system
 // @Summary Build system
 // @Description build system
-// @Router /v1/systems/{systemId}/builds [post]
+// @Router /systems/{systemId}/builds [post]
 // @Param systemId path string true "System ID"
 // @Param buildRequest body rest.BuildRequest true "Create build"
 // @Accept  json
@@ -74,7 +74,7 @@ func (api *LatticeAPI) handleBuildSystem(c *gin.Context) {
 // @ID list-builds
 // @Summary Lists builds
 // @Description list builds
-// @Router /v1/systems/{systemId}/builds [get]
+// @Router /systems/{systemId}/builds [get]
 // @Param systemId path string true "System ID"
 // @Accept  json
 // @Produce  json
@@ -95,7 +95,7 @@ func (api *LatticeAPI) handleListBuilds(c *gin.Context) {
 // @ID get-build
 // @Summary Get build
 // @Description get build
-// @Router /v1/systems/{systemId}/builds/{id} [get]
+// @Router /systems/{systemId}/builds/{id} [get]
 // @Param systemId path string true "System ID"
 // @Param id path string true "Build ID"
 // @Accept  json
@@ -118,7 +118,7 @@ func (api *LatticeAPI) handleGetBuild(c *gin.Context) {
 // @ID get-build-logs
 // @Summary Get build logs
 // @Description get logs
-// @Router /v1/systems/{systemId}/builds/{id}/logs  [get]
+// @Router /systems/{systemId}/builds/{id}/logs  [get]
 // @Param systemId path string true "System ID"
 // @Param id path string true "Build ID"
 // @Param path query string true "Node Path"

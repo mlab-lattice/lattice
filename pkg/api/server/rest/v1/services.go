@@ -36,7 +36,7 @@ func (api *LatticeAPI) setupServicesEndpoints() {
 // @ID list-services
 // @Summary Lists services
 // @Description list services
-// @Router /v1/systems/{systemId}/services [get]
+// @Router /systems/{systemId}/services [get]
 // @Param systemId path string true "System ID"
 // @Accept  json
 // @Produce  json
@@ -84,7 +84,7 @@ func (api *LatticeAPI) handleListServices(c *gin.Context) {
 // @ID get-service
 // @Summary Get service
 // @Description get service
-// @Router /v1/systems/{systemId}/services/{id} [get]
+// @Router /systems/{systemId}/services/{id} [get]
 // @Param systemId path string true "System ID"
 // @Param id path string true "Service ID"
 // @Accept  json
@@ -107,7 +107,7 @@ func (api *LatticeAPI) handleGetService(c *gin.Context) {
 // @ID get-service-logs
 // @Summary Get service logs
 // @Description get service logs
-// @Router /v1/systems/{systemId}/services/{id}/logs  [get]
+// @Router /systems/{systemId}/services/{id}/logs  [get]
 // @Param systemId path string true "System ID"
 // @Param id path string true "Service ID"
 // @Param instance query string true "Instance"

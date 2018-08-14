@@ -43,7 +43,7 @@ func (api *LatticeAPI) setupSystemEndpoints() {
 // @ID create-system
 // @Summary Create a new system
 // @Description create system
-// @Router /v1/systems [post]
+// @Router /systems [post]
 // @Param account body rest.CreateSystemRequest true "Create system"
 // @Accept  json
 // @Produce  json
@@ -70,7 +70,7 @@ func (api *LatticeAPI) handleCreateSystem(c *gin.Context) {
 // @ID list-systems
 // @Summary Lists systems
 // @Description list systems
-// @Router /v1/systems [get]
+// @Router /systems [get]
 // @Accept  json
 // @Produce  json
 // @Success 200 {array} v1.System
@@ -88,7 +88,7 @@ func (api *LatticeAPI) handleListSystems(c *gin.Context) {
 // @ID get-system
 // @Summary Get system
 // @Description get system
-// @Router /v1/systems/{id} [get]
+// @Router /systems/{id} [get]
 // @Param id path string true "System ID"
 // @Accept  json
 // @Produce  json
@@ -108,7 +108,7 @@ func (api *LatticeAPI) handleGetSystem(c *gin.Context) {
 // @ID delete-system
 // @Summary Delete system
 // @Description get system
-// @Router /v1/systems/{id} [delete]
+// @Router /systems/{id} [delete]
 // @Accept  json
 // @Produce  json
 // @Param id path string true "System ID"

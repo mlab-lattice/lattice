@@ -254,91 +254,14 @@ definitions:
 host: localhost:8876
 info:
   contact: {}
-  description: This is a sample server celler server.
+  description: Welcome to lattice api
   license:
     name: Apache 2.0
-  termsOfService: http://swagger.io/terms/
+  termsOfService: TBD
   title: Lattice API
   version: "1.0"
 paths:
-  /systems/{systemId}/deploys:
-    post:
-      consumes:
-      - application/json
-      description: build system
-      operationId: deploy-system
-      parameters:
-      - description: System ID
-        in: path
-        name: systemId
-        required: true
-        type: string
-      - description: Create deploy
-        in: body
-        name: deployRequest
-        required: true
-        schema:
-          $ref: '#/definitions/rest.DeployRequest'
-          type: object
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/v1.Deploy'
-            type: object
-      summary: Deploy system
-  /systems/{systemId}/secrets:
-    post:
-      consumes:
-      - application/json
-      description: set secret
-      operationId: set-secret
-      parameters:
-      - description: System ID
-        in: path
-        name: systemId
-        required: true
-        type: string
-      - description: Create secret
-        in: body
-        name: secretRequest
-        required: true
-        schema:
-          $ref: '#/definitions/rest.SetSecretRequest'
-          type: object
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/v1.Secret'
-            type: object
-      summary: set secret
-  /systems/{systemId}/teardowns:
-    post:
-      consumes:
-      - application/json
-      description: teardown system
-      operationId: teardown-system
-      parameters:
-      - description: System ID
-        in: path
-        name: systemId
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/v1.Teardown'
-            type: object
-      summary: Teardown system
-  /v1/systems:
+  /systems:
     get:
       consumes:
       - application/json
@@ -376,7 +299,7 @@ paths:
             $ref: '#/definitions/v1.System'
             type: object
       summary: Create a new system
-  /v1/systems/{id}:
+  /systems/{id}:
     delete:
       consumes:
       - application/json
@@ -417,7 +340,7 @@ paths:
             $ref: '#/definitions/v1.System'
             type: object
       summary: Get system
-  /v1/systems/{systemId}/builds:
+  /systems/{systemId}/builds:
     get:
       consumes:
       - application/json
@@ -466,7 +389,7 @@ paths:
             $ref: '#/definitions/v1.Build'
             type: object
       summary: Build system
-  /v1/systems/{systemId}/builds/{id}:
+  /systems/{systemId}/builds/{id}:
     get:
       consumes:
       - application/json
@@ -492,7 +415,7 @@ paths:
             $ref: '#/definitions/v1.Build'
             type: object
       summary: Get build
-  /v1/systems/{systemId}/builds/{id}/logs:
+  /systems/{systemId}/builds/{id}/logs:
     get:
       consumes:
       - application/json
@@ -550,7 +473,7 @@ paths:
           schema:
             type: string
       summary: Get build logs
-  /v1/systems/{systemId}/deploys:
+  /systems/{systemId}/deploys:
     get:
       consumes:
       - application/json
@@ -572,7 +495,34 @@ paths:
               $ref: '#/definitions/v1.Deploy'
             type: array
       summary: Lists deploys
-  /v1/systems/{systemId}/deploys/{id}:
+    post:
+      consumes:
+      - application/json
+      description: build system
+      operationId: deploy-system
+      parameters:
+      - description: System ID
+        in: path
+        name: systemId
+        required: true
+        type: string
+      - description: Create deploy
+        in: body
+        name: deployRequest
+        required: true
+        schema:
+          $ref: '#/definitions/rest.DeployRequest'
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/v1.Deploy'
+            type: object
+      summary: Deploy system
+  /systems/{systemId}/deploys/{id}:
     get:
       consumes:
       - application/json
@@ -598,7 +548,7 @@ paths:
             $ref: '#/definitions/v1.Deploy'
             type: object
       summary: Get deploy
-  /v1/systems/{systemId}/jobs:
+  /systems/{systemId}/jobs:
     get:
       consumes:
       - application/json
@@ -620,7 +570,7 @@ paths:
               $ref: '#/definitions/v1.Job'
             type: array
       summary: Lists jobs
-  /v1/systems/{systemId}/jobs/{id}:
+  /systems/{systemId}/jobs/{id}:
     get:
       consumes:
       - application/json
@@ -646,7 +596,7 @@ paths:
             $ref: '#/definitions/v1.Job'
             type: object
       summary: Get job
-  /v1/systems/{systemId}/jobs/{id}/logs:
+  /systems/{systemId}/jobs/{id}/logs:
     get:
       consumes:
       - application/json
@@ -699,7 +649,7 @@ paths:
           schema:
             type: string
       summary: Get job logs
-  /v1/systems/{systemId}/node-pools:
+  /systems/{systemId}/node-pools:
     get:
       consumes:
       - application/json
@@ -721,7 +671,7 @@ paths:
               $ref: '#/definitions/v1.NodePool'
             type: array
       summary: Lists node pools
-  /v1/systems/{systemId}/node-pools/{id}:
+  /systems/{systemId}/node-pools/{id}:
     get:
       consumes:
       - application/json
@@ -747,7 +697,7 @@ paths:
             $ref: '#/definitions/v1.NodePool'
             type: object
       summary: Get node pool
-  /v1/systems/{systemId}/secrets:
+  /systems/{systemId}/secrets:
     get:
       consumes:
       - application/json
@@ -769,7 +719,34 @@ paths:
               $ref: '#/definitions/v1.Secret'
             type: array
       summary: Lists secrets
-  /v1/systems/{systemId}/secrets/{id}:
+    post:
+      consumes:
+      - application/json
+      description: set secret
+      operationId: set-secret
+      parameters:
+      - description: System ID
+        in: path
+        name: systemId
+        required: true
+        type: string
+      - description: Create secret
+        in: body
+        name: secretRequest
+        required: true
+        schema:
+          $ref: '#/definitions/rest.SetSecretRequest'
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/v1.Secret'
+            type: object
+      summary: set secret
+  /systems/{systemId}/secrets/{id}:
     delete:
       consumes:
       - application/json
@@ -820,7 +797,7 @@ paths:
             $ref: '#/definitions/v1.Secret'
             type: object
       summary: Get secret
-  /v1/systems/{systemId}/services:
+  /systems/{systemId}/services:
     get:
       consumes:
       - application/json
@@ -842,7 +819,7 @@ paths:
               $ref: '#/definitions/v1.Service'
             type: array
       summary: Lists services
-  /v1/systems/{systemId}/services/{id}:
+  /systems/{systemId}/services/{id}:
     get:
       consumes:
       - application/json
@@ -868,7 +845,7 @@ paths:
             $ref: '#/definitions/v1.Service'
             type: object
       summary: Get service
-  /v1/systems/{systemId}/services/{id}/logs:
+  /systems/{systemId}/services/{id}/logs:
     get:
       consumes:
       - application/json
@@ -926,7 +903,7 @@ paths:
           schema:
             type: string
       summary: Get service logs
-  /v1/systems/{systemId}/teardowns:
+  /systems/{systemId}/teardowns:
     get:
       consumes:
       - application/json
@@ -948,7 +925,27 @@ paths:
               $ref: '#/definitions/v1.Teardown'
             type: array
       summary: Lists teardowns
-  /v1/systems/{systemId}/teardowns/{id}:
+    post:
+      consumes:
+      - application/json
+      description: teardown system
+      operationId: teardown-system
+      parameters:
+      - description: System ID
+        in: path
+        name: systemId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/v1.Teardown'
+            type: object
+      summary: Teardown system
+  /systems/{systemId}/teardowns/{id}:
     get:
       consumes:
       - application/json
@@ -974,7 +971,7 @@ paths:
             $ref: '#/definitions/v1.Teardown'
             type: object
       summary: Get teardown
-  /v1/systems/{systemId}/versions:
+  /systems/{systemId}/versions:
     get:
       consumes:
       - application/json

@@ -29,7 +29,7 @@ func (api *LatticeAPI) setupNoodPoolEndpoints() {
 // @ID list-node-pools
 // @Summary Lists node pools
 // @Description list node pools
-// @Router /v1/systems/{systemId}/node-pools [get]
+// @Router /systems/{systemId}/node-pools [get]
 // @Param systemId path string true "System ID"
 // @Accept  json
 // @Produce  json
@@ -50,7 +50,7 @@ func (api *LatticeAPI) handleListNodePools(c *gin.Context) {
 // @ID get-node-pool
 // @Summary Get node pool
 // @Description get node pool
-// @Router /v1/systems/{systemId}/node-pools/{id} [get]
+// @Router /systems/{systemId}/node-pools/{id} [get]
 // @Param systemId path string true "System ID"
 // @Param id path string true "NodePool ID"
 // @Accept  json

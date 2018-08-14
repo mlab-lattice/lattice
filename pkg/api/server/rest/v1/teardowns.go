@@ -55,7 +55,7 @@ func (api *LatticeAPI) handleTeardownSystem(c *gin.Context) {
 // @ID list-teardowns
 // @Summary Lists teardowns
 // @Description list teardowns
-// @Router /v1/systems/{systemId}/teardowns [get]
+// @Router /systems/{systemId}/teardowns [get]
 // @Param systemId path string true "System ID"
 // @Accept  json
 // @Produce  json
@@ -76,7 +76,7 @@ func (api *LatticeAPI) handleListTeardowns(c *gin.Context) {
 // @ID get-teardown
 // @Summary Get teardown
 // @Description get teardown
-// @Router /v1/systems/{systemId}/teardowns/{id} [get]
+// @Router /systems/{systemId}/teardowns/{id} [get]
 // @Param systemId path string true "System ID"
 // @Param id path string true "Teardown ID"
 // @Accept  json

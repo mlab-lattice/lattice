@@ -1,9 +1,9 @@
 {
     "swagger": "2.0",
     "info": {
-        "description": "This is a sample server celler server.",
+        "description": "Welcome to lattice api",
         "title": "Lattice API",
-        "termsOfService": "http://swagger.io/terms/",
+        "termsOfService": "TBD",
         "contact": {},
         "license": {
             "name": "Apache 2.0"
@@ -13,120 +13,7 @@
     "host": "localhost:8876",
     "basePath": "/v1",
     "paths": {
-        "/systems/{systemId}/deploys": {
-            "post": {
-                "description": "build system",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "summary": "Deploy system",
-                "operationId": "deploy-system",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "System ID",
-                        "name": "systemId",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "description": "Create deploy",
-                        "name": "deployRequest",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "type": "object",
-                            "$ref": "#/definitions/rest.DeployRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "object",
-                            "$ref": "#/definitions/v1.Deploy"
-                        }
-                    }
-                }
-            }
-        },
-        "/systems/{systemId}/secrets": {
-            "post": {
-                "description": "set secret",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "summary": "set secret",
-                "operationId": "set-secret",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "System ID",
-                        "name": "systemId",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "description": "Create secret",
-                        "name": "secretRequest",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "type": "object",
-                            "$ref": "#/definitions/rest.SetSecretRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "object",
-                            "$ref": "#/definitions/v1.Secret"
-                        }
-                    }
-                }
-            }
-        },
-        "/systems/{systemId}/teardowns": {
-            "post": {
-                "description": "teardown system",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "summary": "Teardown system",
-                "operationId": "teardown-system",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "System ID",
-                        "name": "systemId",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "object",
-                            "$ref": "#/definitions/v1.Teardown"
-                        }
-                    }
-                }
-            }
-        },
-        "/v1/systems": {
+        "/systems": {
             "get": {
                 "description": "list systems",
                 "consumes": [
@@ -182,7 +69,7 @@
                 }
             }
         },
-        "/v1/systems/{id}": {
+        "/systems/{id}": {
             "get": {
                 "description": "get system",
                 "consumes": [
@@ -242,7 +129,7 @@
                 }
             }
         },
-        "/v1/systems/{systemId}/builds": {
+        "/systems/{systemId}/builds": {
             "get": {
                 "description": "list builds",
                 "consumes": [
@@ -314,7 +201,7 @@
                 }
             }
         },
-        "/v1/systems/{systemId}/builds/{id}": {
+        "/systems/{systemId}/builds/{id}": {
             "get": {
                 "description": "get build",
                 "consumes": [
@@ -352,7 +239,7 @@
                 }
             }
         },
-        "/v1/systems/{systemId}/builds/{id}/logs": {
+        "/systems/{systemId}/builds/{id}/logs": {
             "get": {
                 "description": "get logs",
                 "consumes": [
@@ -438,7 +325,7 @@
                 }
             }
         },
-        "/v1/systems/{systemId}/deploys": {
+        "/systems/{systemId}/deploys": {
             "get": {
                 "description": "list deploys",
                 "consumes": [
@@ -469,9 +356,48 @@
                         }
                     }
                 }
+            },
+            "post": {
+                "description": "build system",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "summary": "Deploy system",
+                "operationId": "deploy-system",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "System ID",
+                        "name": "systemId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Create deploy",
+                        "name": "deployRequest",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object",
+                            "$ref": "#/definitions/rest.DeployRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "$ref": "#/definitions/v1.Deploy"
+                        }
+                    }
+                }
             }
         },
-        "/v1/systems/{systemId}/deploys/{id}": {
+        "/systems/{systemId}/deploys/{id}": {
             "get": {
                 "description": "get deploy",
                 "consumes": [
@@ -509,7 +435,7 @@
                 }
             }
         },
-        "/v1/systems/{systemId}/jobs": {
+        "/systems/{systemId}/jobs": {
             "get": {
                 "description": "list jobs",
                 "consumes": [
@@ -542,7 +468,7 @@
                 }
             }
         },
-        "/v1/systems/{systemId}/jobs/{id}": {
+        "/systems/{systemId}/jobs/{id}": {
             "get": {
                 "description": "get job",
                 "consumes": [
@@ -580,7 +506,7 @@
                 }
             }
         },
-        "/v1/systems/{systemId}/jobs/{id}/logs": {
+        "/systems/{systemId}/jobs/{id}/logs": {
             "get": {
                 "description": "get job logs",
                 "consumes": [
@@ -659,7 +585,7 @@
                 }
             }
         },
-        "/v1/systems/{systemId}/node-pools": {
+        "/systems/{systemId}/node-pools": {
             "get": {
                 "description": "list node pools",
                 "consumes": [
@@ -692,7 +618,7 @@
                 }
             }
         },
-        "/v1/systems/{systemId}/node-pools/{id}": {
+        "/systems/{systemId}/node-pools/{id}": {
             "get": {
                 "description": "get node pool",
                 "consumes": [
@@ -730,7 +656,7 @@
                 }
             }
         },
-        "/v1/systems/{systemId}/secrets": {
+        "/systems/{systemId}/secrets": {
             "get": {
                 "description": "list secrets",
                 "consumes": [
@@ -761,9 +687,48 @@
                         }
                     }
                 }
+            },
+            "post": {
+                "description": "set secret",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "summary": "set secret",
+                "operationId": "set-secret",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "System ID",
+                        "name": "systemId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Create secret",
+                        "name": "secretRequest",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object",
+                            "$ref": "#/definitions/rest.SetSecretRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "$ref": "#/definitions/v1.Secret"
+                        }
+                    }
+                }
             }
         },
-        "/v1/systems/{systemId}/secrets/{id}": {
+        "/systems/{systemId}/secrets/{id}": {
             "get": {
                 "description": "get secret",
                 "consumes": [
@@ -837,7 +802,7 @@
                 }
             }
         },
-        "/v1/systems/{systemId}/services": {
+        "/systems/{systemId}/services": {
             "get": {
                 "description": "list services",
                 "consumes": [
@@ -870,7 +835,7 @@
                 }
             }
         },
-        "/v1/systems/{systemId}/services/{id}": {
+        "/systems/{systemId}/services/{id}": {
             "get": {
                 "description": "get service",
                 "consumes": [
@@ -908,7 +873,7 @@
                 }
             }
         },
-        "/v1/systems/{systemId}/services/{id}/logs": {
+        "/systems/{systemId}/services/{id}/logs": {
             "get": {
                 "description": "get service logs",
                 "consumes": [
@@ -994,7 +959,7 @@
                 }
             }
         },
-        "/v1/systems/{systemId}/teardowns": {
+        "/systems/{systemId}/teardowns": {
             "get": {
                 "description": "list teardowns",
                 "consumes": [
@@ -1025,9 +990,38 @@
                         }
                     }
                 }
+            },
+            "post": {
+                "description": "teardown system",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "summary": "Teardown system",
+                "operationId": "teardown-system",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "System ID",
+                        "name": "systemId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "$ref": "#/definitions/v1.Teardown"
+                        }
+                    }
+                }
             }
         },
-        "/v1/systems/{systemId}/teardowns/{id}": {
+        "/systems/{systemId}/teardowns/{id}": {
             "get": {
                 "description": "get teardown",
                 "consumes": [
@@ -1065,7 +1059,7 @@
                 }
             }
         },
-        "/v1/systems/{systemId}/versions": {
+        "/systems/{systemId}/versions": {
             "get": {
                 "description": "list teardowns",
                 "consumes": [

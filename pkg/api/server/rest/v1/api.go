@@ -25,8 +25,8 @@ func newLatticeAPI(router *gin.RouterGroup, backend v1server.Interface, sysResol
 
 // @title Lattice API
 // @version 1.0
-// @description This is a sample server celler server.
-// @termsOfService http://swagger.io/terms/
+// @description Welcome to lattice api
+// @termsOfService TBD
 // @license.name Apache 2.0
 // @host localhost:8876
 // @BasePath /v1
