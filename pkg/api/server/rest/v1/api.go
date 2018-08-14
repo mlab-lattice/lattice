@@ -41,7 +41,7 @@ func (api *LatticeAPI) setupAPI() {
 	api.setupServicesEndpoints()
 	api.setupJobsEndpoints()
 	api.setupTeardownEndpoints()
+	api.setupSecretsEndpoints()
 	api.setupVersionsEndpoints()
-
 	api.router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 }
