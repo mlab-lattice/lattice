@@ -3,6 +3,7 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library")
 go_library(
     name = "go_default_library",
     srcs = [
+        "api.go",
         "errors.go",
         "handlers.go",
         "systems.go",
@@ -19,5 +20,7 @@ go_library(
         "//pkg/util/git:go_default_library",
         "@com_github_gin_gonic_gin//:go_default_library",
         "@com_github_golang_glog//:go_default_library",
+        "@com_github_swaggo_gin_swagger//:go_default_library",
+        "@com_github_swaggo_gin_swagger//swaggerFiles:go_default_library",
     ],
 )

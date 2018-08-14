@@ -205,3 +205,9 @@ kubernetes.update-dependencies:
 kubernetes.regenerate-custom-resource-clients:
 	KUBERNETES_VERSION=$(VERSION) $(DIR)/hack/kubernetes/codegen/regenerate.sh
 	@$(MAKE) gazelle
+
+# api docs
+.PHONY: api-docs
+api-docs:
+    # we need to cd into the directory first so that swag tool works properly especially with struct field descriptions
+	cd $(DIR)/pkg/api;swag init -g server/rest/v1/api.go;swagger2blueprint docs/swagger/swagger.json docs/lattice-api.apib

@@ -22,8 +22,12 @@ const (
 )
 
 type System struct {
-	ID            SystemID                  `json:"id"`
-	State         SystemState               `json:"state"`
-	DefinitionURL string                    `json:"definitionUrl"`
-	Services      map[tree.NodePath]Service `json:"services"`
+	// System ID
+	ID SystemID `json:"id"`
+	// State. One of "pending", "failed", "deleting", "stable", "degraded", "scaling", "updating"
+	State SystemState `json:"state"`
+	// git url for for where the definition lives in
+	DefinitionURL string `json:"definitionUrl"`
+	// map for service path and services currently running in the system
+	Services map[tree.NodePath]Service `json:"services"`
 }
