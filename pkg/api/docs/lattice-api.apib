@@ -25,11 +25,7 @@ list systems
     + Body
 
             [
-              {},
-              {},
-              {
-                "definitionUrl": "ullamco occaecat Ut"
-              }
+              {}
             ]
 
     + Schema
@@ -93,7 +89,9 @@ create system
 
     + Body
 
-            {}
+            {
+              "definitionUrl": "pariatur fugiat exercitation Ut"
+            }
 
     + Schema
 
@@ -143,7 +141,9 @@ get system
 
     + Body
 
-            {}
+            {
+              "definitionUrl": "ullamco sunt repre"
+            }
 
     + Schema
 
@@ -224,9 +224,8 @@ list builds
     + Body
 
             [
-              {
-                "startTimestamp": "laborum anim reprehenderit"
-              },
+              {},
+              {},
               {}
             ]
 
@@ -295,9 +294,7 @@ build system
 
     + Body
 
-            {
-              "completionTimestamp": "dolor eiusmod amet consectetur"
-            }
+            {}
 
     + Schema
 
@@ -421,7 +418,7 @@ get logs
 
     + Body
 
-            amet ullamco nisi
+            cupidatat nisi eu commodo
 
     + Schema
 
@@ -454,6 +451,7 @@ list deploys
     + Body
 
             [
+              {},
               {},
               {}
             ]
@@ -609,8 +607,7 @@ list jobs
               {},
               {},
               {
-                "startTimestamp": "minim occaecat",
-                "path": "amet officia eiusmod culpa Ut"
+                "completionTimestamp": "officia ullamco"
               }
             ]
 
@@ -666,7 +663,10 @@ get job
 
     + Body
 
-            {}
+            {
+              "startTimestamp": "aliquip",
+              "completionTimestamp": "aute id quis"
+            }
 
     + Schema
 
@@ -729,7 +729,7 @@ get job logs
 
     + Body
 
-            exercitation
+            laboris labore dolor do ullamco
 
     + Schema
 
@@ -764,11 +764,14 @@ list node pools
             [
               {
                 "failure_info": {
-                  "time": "pariatur et",
-                  "message": "non fugiat id"
+                  "message": "tempor dolore culpa dolore minim"
                 }
               },
               {},
+              {},
+              {
+                "id": "voluptate consequat"
+              },
               {}
             ]
 
@@ -899,12 +902,15 @@ list secrets
 
             [
               {
-                "value": "id dolor",
-                "name": "in dolor fugiat occaecat"
+                "value": "ut do"
               },
-              {},
               {
-                "path": "exerc"
+                "value": "id in veniam sit consequat",
+                "name": "fugiat"
+              },
+              {
+                "path": "proident nisi",
+                "name": "ipsum qui officia irure"
               }
             ]
 
@@ -947,7 +953,9 @@ set secret
 
     + Body
 
-            {}
+            {
+              "value": "nisi proident eu laboris"
+            }
 
     + Schema
 
@@ -1015,7 +1023,9 @@ get secret
     + Body
 
             {
-              "path": "reprehenderit e"
+              "name": "nulla nostrud",
+              "path": "velit sunt ut reprehenderit",
+              "value": "pariatur"
             }
 
     + Schema
@@ -1095,22 +1105,21 @@ list services
     + Body
 
             [
+              {},
               {
-                "instances": [
-                  "amet eiusmod sint anim"
-                ]
+                "availableInstances": -76402044,
+                "updatedInstances": 24658370
               },
               {
-                "instances": [
-                  "laborum proident aliquip in officia",
-                  "consectetur mollit voluptate eu"
-                ],
-                "terminatingInstances": -9445769
+                "staleInstances": 55143635
               },
               {
-                "path": "in magna officia eu",
-                "staleInstances": -45941475
-              }
+                "failureInfo": {
+                  "message": "proident amet commodo nostrud",
+                  "time": "incididunt esse"
+                }
+              },
+              {}
             ]
 
     + Schema
@@ -1205,9 +1214,7 @@ get service
 
     + Body
 
-            {
-              "updatedInstances": -97109098
-            }
+            {}
 
     + Schema
 
@@ -1312,7 +1319,7 @@ get service logs
 
     + Body
 
-            in Ut reprehenderit
+            voluptate minim ad nostrud
 
     + Schema
 
@@ -1345,7 +1352,6 @@ list teardowns
     + Body
 
             [
-              {},
               {},
               {}
             ]
@@ -1478,8 +1484,6 @@ list teardowns
     + Body
 
             [
-              {},
-              {},
               {}
             ]
 
