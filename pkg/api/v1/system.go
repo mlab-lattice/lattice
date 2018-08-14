@@ -21,6 +21,7 @@ const (
 	SystemStateUpdating SystemState = "updating"
 )
 
+// System API object documentation goes here
 type System struct {
 	// System ID
 	ID SystemID `json:"id"`

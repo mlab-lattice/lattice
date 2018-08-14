@@ -1,0 +1,1511 @@
+FORMAT: 1A
+
+# Lattice API
+
+This is a sample server celler server.
+
+### /v1/systems/{systemId}/deploys
+
+#### Deploy system [POST]
+
+build system
+
++ Parameters
+
+    + systemId (required)
+
++ Request (application/json)
+
+    + Headers
+
+            Accept: application/json
+
+    + Body
+
+            {}
+
+    + Schema
+
+            {
+              "type": "object",
+              "properties": {
+                "buildId": {
+                  "type": "object"
+                },
+                "version": {
+                  "type": "object"
+                }
+              }
+            }
+
++ Response 200 (application/json)
+
+    OK
+
+    + Body
+
+            {}
+
+    + Schema
+
+            {
+              "type": "object",
+              "properties": {
+                "buildId": {
+                  "type": "object"
+                },
+                "id": {
+                  "type": "object"
+                },
+                "state": {
+                  "type": "object"
+                }
+              }
+            }
+
+### /v1/systems/{systemId}/secrets
+
+#### set secret [POST]
+
+set secret
+
++ Parameters
+
+    + systemId (required)
+
++ Request (application/json)
+
+    + Headers
+
+            Accept: application/json
+
+    + Body
+
+            {
+              "value": "ea non"
+            }
+
+    + Schema
+
+            {
+              "type": "object",
+              "properties": {
+                "value": {
+                  "type": "string"
+                }
+              }
+            }
+
++ Response 200 (application/json)
+
+    OK
+
+    + Body
+
+            {
+              "value": "ut enim pariatur incididunt dolore",
+              "name": "amet cillum pariatur elit labore",
+              "path": "exercitation"
+            }
+
+    + Schema
+
+            {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "description": "Name\n",
+                  "type": "string"
+                },
+                "path": {
+                  "description": "Secret service path\n",
+                  "type": "string"
+                },
+                "value": {
+                  "description": "Value\n",
+                  "type": "string"
+                }
+              }
+            }
+
+### /v1/systems/{systemId}/teardowns
+
+#### Teardown system [POST]
+
+teardown system
+
++ Parameters
+
+    + systemId (required)
+
++ Request (application/json)
+
+    + Headers
+
+            Accept: application/json
+
+    + Body
+
++ Response 200 (application/json)
+
+    OK
+
+    + Body
+
+            {}
+
+    + Schema
+
+            {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "description": "ID\n",
+                  "type": "object"
+                },
+                "state": {
+                  "description": "State. [\"pending\", \"in progress\", \"succeeded\", \"failed\"]\n",
+                  "type": "object"
+                }
+              }
+            }
+
+### /v1/v1/systems
+
+#### Lists systems [GET]
+
+list systems
+
++ Request (application/json)
+
+    + Headers
+
+            Accept: application/json
+
+    + Body
+
++ Response 200 (application/json)
+
+    OK
+
+    + Body
+
+            [
+              {
+                "definitionUrl": "sunt in dolor"
+              },
+              {
+                "definitionUrl": "dolore Lorem aliquip et"
+              },
+              {
+                "definitionUrl": "sed ad sunt"
+              },
+              {
+                "definitionUrl": "veniam cupidatat amet"
+              },
+              {}
+            ]
+
+    + Schema
+
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "definitionUrl": {
+                    "description": "git url for for where the definition lives in\n",
+                    "type": "string"
+                  },
+                  "id": {
+                    "description": "System ID\n",
+                    "type": "object"
+                  },
+                  "services": {
+                    "description": "map for service path and services currently running in the system\n",
+                    "type": "object"
+                  },
+                  "state": {
+                    "description": "State. One of \"pending\", \"failed\", \"deleting\", \"stable\", \"degraded\", \"scaling\", \"updating\"\n",
+                    "type": "object"
+                  }
+                }
+              }
+            }
+
+#### Create a new system [POST]
+
+create system
+
++ Request (application/json)
+
+    + Headers
+
+            Accept: application/json
+
+    + Body
+
+            {}
+
+    + Schema
+
+            {
+              "type": "object",
+              "properties": {
+                "definitionUrl": {
+                  "type": "string"
+                },
+                "id": {
+                  "type": "object"
+                }
+              }
+            }
+
++ Response 200 (application/json)
+
+    OK
+
+    + Body
+
+            {}
+
+    + Schema
+
+            {
+              "type": "object",
+              "properties": {
+                "definitionUrl": {
+                  "description": "git url for for where the definition lives in\n",
+                  "type": "string"
+                },
+                "id": {
+                  "description": "System ID\n",
+                  "type": "object"
+                },
+                "services": {
+                  "description": "map for service path and services currently running in the system\n",
+                  "type": "object"
+                },
+                "state": {
+                  "description": "State. One of \"pending\", \"failed\", \"deleting\", \"stable\", \"degraded\", \"scaling\", \"updating\"\n",
+                  "type": "object"
+                }
+              }
+            }
+
+### /v1/v1/systems/{id}
+
+#### Get system [GET]
+
+get system
+
++ Parameters
+
+    + id (required)
+
++ Request (application/json)
+
+    + Headers
+
+            Accept: application/json
+
+    + Body
+
++ Response 200 (application/json)
+
+    OK
+
+    + Body
+
+            {}
+
+    + Schema
+
+            {
+              "type": "object",
+              "properties": {
+                "definitionUrl": {
+                  "description": "git url for for where the definition lives in\n",
+                  "type": "string"
+                },
+                "id": {
+                  "description": "System ID\n",
+                  "type": "object"
+                },
+                "services": {
+                  "description": "map for service path and services currently running in the system\n",
+                  "type": "object"
+                },
+                "state": {
+                  "description": "State. One of \"pending\", \"failed\", \"deleting\", \"stable\", \"degraded\", \"scaling\", \"updating\"\n",
+                  "type": "object"
+                }
+              }
+            }
+
+#### Delete system [DELETE]
+
+get system
+
++ Parameters
+
+    + id (required)
+
++ Request (application/json)
+
+    + Headers
+
+            Accept: application/json
+
+    + Body
+
++ Response 200 (application/json)
+
+    OK
+
+    + Body
+
+            {}
+
+    + Schema
+
+            {
+              "type": "object"
+            }
+
+### /v1/v1/systems/{systemId}/builds
+
+#### Lists builds [GET]
+
+list builds
+
++ Parameters
+
+    + systemId (required)
+
++ Request (application/json)
+
+    + Headers
+
+            Accept: application/json
+
+    + Body
+
++ Response 200 (application/json)
+
+    OK
+
+    + Body
+
+            [
+              {},
+              {}
+            ]
+
+    + Schema
+
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "completionTimestamp": {
+                    "type": "string"
+                  },
+                  "id": {
+                    "type": "object"
+                  },
+                  "services": {
+                    "description": "Services maps service paths (e.g. /foo/bar/buzz) to the\nstatus of the build for that service in the Build.\n",
+                    "type": "object"
+                  },
+                  "startTimestamp": {
+                    "type": "string"
+                  },
+                  "state": {
+                    "type": "object"
+                  },
+                  "version": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+
+#### Build system [POST]
+
+build system
+
++ Parameters
+
+    + systemId (required)
+
++ Request (application/json)
+
+    + Headers
+
+            Accept: application/json
+
+    + Body
+
+            {}
+
+    + Schema
+
+            {
+              "type": "object",
+              "properties": {
+                "version": {
+                  "type": "object"
+                }
+              }
+            }
+
++ Response 200 (application/json)
+
+    OK
+
+    + Body
+
+            {}
+
+    + Schema
+
+            {
+              "type": "object",
+              "properties": {
+                "completionTimestamp": {
+                  "type": "string"
+                },
+                "id": {
+                  "type": "object"
+                },
+                "services": {
+                  "description": "Services maps service paths (e.g. /foo/bar/buzz) to the\nstatus of the build for that service in the Build.\n",
+                  "type": "object"
+                },
+                "startTimestamp": {
+                  "type": "string"
+                },
+                "state": {
+                  "type": "object"
+                },
+                "version": {
+                  "type": "object"
+                }
+              }
+            }
+
+### /v1/v1/systems/{systemId}/builds/{id}
+
+#### Get build [GET]
+
+get build
+
++ Parameters
+
+    + systemId (required)
+    
+    + id (required)
+
++ Request (application/json)
+
+    + Headers
+
+            Accept: application/json
+
+    + Body
+
++ Response 200 (application/json)
+
+    OK
+
+    + Body
+
+            {
+              "startTimestamp": "esse"
+            }
+
+    + Schema
+
+            {
+              "type": "object",
+              "properties": {
+                "completionTimestamp": {
+                  "type": "string"
+                },
+                "id": {
+                  "type": "object"
+                },
+                "services": {
+                  "description": "Services maps service paths (e.g. /foo/bar/buzz) to the\nstatus of the build for that service in the Build.\n",
+                  "type": "object"
+                },
+                "startTimestamp": {
+                  "type": "string"
+                },
+                "state": {
+                  "type": "object"
+                },
+                "version": {
+                  "type": "object"
+                }
+              }
+            }
+
+#### Get build logs [GET /v1/v1/systems/{systemId}/builds/{id}/logs]
+
+get logs
+
++ Parameters
+
+    + systemId (required)
+    
+    + id (required)
+    
+    + path (required)
+    
+    + sidecar
+    
+    + follow
+    
+    + previous
+    
+    + timestamps
+    
+    + tail
+    
+    + since
+    
+    + sinceTime
+
++ Request (application/json)
+
+    + Headers
+
+            Accept: application/json
+
+    + Body
+
++ Response 200 (application/json)
+
+    log stream
+
+    + Body
+
+            officia magna
+
+    + Schema
+
+            {
+              "type": "string"
+            }
+
+### /v1/v1/systems/{systemId}/deploys
+
+#### Lists deploys [GET]
+
+list deploys
+
++ Parameters
+
+    + systemId (required)
+
++ Request (application/json)
+
+    + Headers
+
+            Accept: application/json
+
+    + Body
+
++ Response 200 (application/json)
+
+    OK
+
+    + Body
+
+            [
+              {},
+              {},
+              {},
+              {}
+            ]
+
+    + Schema
+
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "buildId": {
+                    "type": "object"
+                  },
+                  "id": {
+                    "type": "object"
+                  },
+                  "state": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+
+### /v1/v1/systems/{systemId}/deploys/{id}
+
+#### Get deploy [GET]
+
+get deploy
+
++ Parameters
+
+    + systemId (required)
+    
+    + id (required)
+
++ Request (application/json)
+
+    + Headers
+
+            Accept: application/json
+
+    + Body
+
++ Response 200 (application/json)
+
+    OK
+
+    + Body
+
+            {}
+
+    + Schema
+
+            {
+              "type": "object",
+              "properties": {
+                "buildId": {
+                  "type": "object"
+                },
+                "id": {
+                  "type": "object"
+                },
+                "state": {
+                  "type": "object"
+                }
+              }
+            }
+
+### /v1/v1/systems/{systemId}/jobs
+
+#### Lists jobs [GET]
+
+list jobs
+
++ Parameters
+
+    + systemId (required)
+
++ Request (application/json)
+
+    + Headers
+
+            Accept: application/json
+
+    + Body
+
++ Response 200 (application/json)
+
+    OK
+
+    + Body
+
+            [
+              {
+                "completionTimestamp": "pariatur deserunt nisi adipisicing occaecat"
+              }
+            ]
+
+    + Schema
+
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "completionTimestamp": {
+                    "type": "string"
+                  },
+                  "id": {
+                    "type": "object"
+                  },
+                  "path": {
+                    "type": "string"
+                  },
+                  "startTimestamp": {
+                    "type": "string"
+                  },
+                  "state": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+
+### /v1/v1/systems/{systemId}/jobs/{id}
+
+#### Get job [GET]
+
+get job
+
++ Parameters
+
+    + systemId (required)
+    
+    + id (required)
+
++ Request (application/json)
+
+    + Headers
+
+            Accept: application/json
+
+    + Body
+
++ Response 200 (application/json)
+
+    OK
+
+    + Body
+
+            {}
+
+    + Schema
+
+            {
+              "type": "object",
+              "properties": {
+                "completionTimestamp": {
+                  "type": "string"
+                },
+                "id": {
+                  "type": "object"
+                },
+                "path": {
+                  "type": "string"
+                },
+                "startTimestamp": {
+                  "type": "string"
+                },
+                "state": {
+                  "type": "object"
+                }
+              }
+            }
+
+#### Get job logs [GET /v1/v1/systems/{systemId}/jobs/{id}/logs]
+
+get job logs
+
++ Parameters
+
+    + systemId (required)
+    
+    + id (required)
+    
+    + sidecar
+    
+    + follow
+    
+    + previous
+    
+    + timestamps
+    
+    + tail
+    
+    + since
+    
+    + sinceTime
+
++ Request (application/json)
+
+    + Headers
+
+            Accept: application/json
+
+    + Body
+
++ Response 200 (application/json)
+
+    log stream
+
+    + Body
+
+            incididunt reprehenderit sit
+
+    + Schema
+
+            {
+              "type": "string"
+            }
+
+### /v1/v1/systems/{systemId}/node-pools
+
+#### Lists node pools [GET]
+
+list node pools
+
++ Parameters
+
+    + systemId (required)
+
++ Request (application/json)
+
+    + Headers
+
+            Accept: application/json
+
+    + Body
+
++ Response 200 (application/json)
+
+    OK
+
+    + Body
+
+            [
+              {
+                "failure_info": {
+                  "time": "sed eiusmod ad",
+                  "message": "qui"
+                },
+                "path": "et Excepteur",
+                "instanceType": "nostrud eu ad"
+              }
+            ]
+
+    + Schema
+
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "failure_info": {
+                    "type": "object",
+                    "properties": {
+                      "message": {
+                        "type": "string"
+                      },
+                      "time": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "id": {
+                    "type": "string"
+                  },
+                  "instanceType": {
+                    "description": "FIXME: how to deal with epochs?\n",
+                    "type": "string"
+                  },
+                  "numInstances": {
+                    "type": "integer"
+                  },
+                  "path": {
+                    "type": "string"
+                  },
+                  "state": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+
+### /v1/v1/systems/{systemId}/node-pools/{id}
+
+#### Get node pool [GET]
+
+get node pool
+
++ Parameters
+
+    + systemId (required)
+    
+    + id (required)
+
++ Request (application/json)
+
+    + Headers
+
+            Accept: application/json
+
+    + Body
+
++ Response 200 (application/json)
+
+    OK
+
+    + Body
+
+            {
+              "id": "ullamco ut",
+              "numInstances": 33792933
+            }
+
+    + Schema
+
+            {
+              "type": "object",
+              "properties": {
+                "failure_info": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    },
+                    "time": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "id": {
+                  "type": "string"
+                },
+                "instanceType": {
+                  "description": "FIXME: how to deal with epochs?\n",
+                  "type": "string"
+                },
+                "numInstances": {
+                  "type": "integer"
+                },
+                "path": {
+                  "type": "string"
+                },
+                "state": {
+                  "type": "object"
+                }
+              }
+            }
+
+### /v1/v1/systems/{systemId}/secrets
+
+#### Lists secrets [GET]
+
+list secrets
+
++ Parameters
+
+    + systemId (required)
+
++ Request (application/json)
+
+    + Headers
+
+            Accept: application/json
+
+    + Body
+
++ Response 200 (application/json)
+
+    OK
+
+    + Body
+
+            [
+              {},
+              {},
+              {
+                "name": "magna in"
+              },
+              {}
+            ]
+
+    + Schema
+
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "description": "Name\n",
+                    "type": "string"
+                  },
+                  "path": {
+                    "description": "Secret service path\n",
+                    "type": "string"
+                  },
+                  "value": {
+                    "description": "Value\n",
+                    "type": "string"
+                  }
+                }
+              }
+            }
+
+### /v1/v1/systems/{systemId}/secrets/{id}
+
+#### Get secret [GET]
+
+get secret
+
++ Parameters
+
+    + systemId (required)
+    
+    + id (required)
+
++ Request (application/json)
+
+    + Headers
+
+            Accept: application/json
+
+    + Body
+
++ Response 200 (application/json)
+
+    OK
+
+    + Body
+
+            {
+              "path": "vol",
+              "value": "laboris reprehenderit ad"
+            }
+
+    + Schema
+
+            {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "description": "Name\n",
+                  "type": "string"
+                },
+                "path": {
+                  "description": "Secret service path\n",
+                  "type": "string"
+                },
+                "value": {
+                  "description": "Value\n",
+                  "type": "string"
+                }
+              }
+            }
+
+#### Delete system [DELETE]
+
+get system
+
++ Parameters
+
+    + systemId (required)
+    
+    + id (required)
+
++ Request (application/json)
+
+    + Headers
+
+            Accept: application/json
+
+    + Body
+
++ Response 200 (application/json)
+
+    OK
+
+    + Body
+
+            {}
+
+    + Schema
+
+            {
+              "type": "object"
+            }
+
+### /v1/v1/systems/{systemId}/services
+
+#### Lists services [GET]
+
+list services
+
++ Parameters
+
+    + systemId (required)
+
++ Request (application/json)
+
+    + Headers
+
+            Accept: application/json
+
+    + Body
+
++ Response 200 (application/json)
+
+    OK
+
+    + Body
+
+            [
+              {
+                "staleInstances": 7294180
+              },
+              {
+                "terminatingInstances": -8899031
+              },
+              {
+                "staleInstances": 44119235
+              }
+            ]
+
+    + Schema
+
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "availableInstances": {
+                    "description": "TBD\n",
+                    "type": "integer"
+                  },
+                  "failureInfo": {
+                    "description": "TBD\n",
+                    "type": "object",
+                    "properties": {
+                      "message": {
+                        "type": "string"
+                      },
+                      "time": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "id": {
+                    "description": "Service ID\n",
+                    "type": "object"
+                  },
+                  "instances": {
+                    "description": "TBD\n",
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "message": {
+                    "description": "TBD\n",
+                    "type": "string"
+                  },
+                  "path": {
+                    "description": "Service Path\n",
+                    "type": "string"
+                  },
+                  "ports": {
+                    "description": "TBD\n",
+                    "type": "object"
+                  },
+                  "staleInstances": {
+                    "description": "TBD\n",
+                    "type": "integer"
+                  },
+                  "state": {
+                    "description": "State [\"pending\", \"deleting\", \"scaling\", \"updating\", \"stable\", \"failed\"]\n",
+                    "type": "object"
+                  },
+                  "terminatingInstances": {
+                    "description": "TBD\n",
+                    "type": "integer"
+                  },
+                  "updatedInstances": {
+                    "description": "TBD\n",
+                    "type": "integer"
+                  }
+                }
+              }
+            }
+
+### /v1/v1/systems/{systemId}/services/{id}
+
+#### Get service [GET]
+
+get service
+
++ Parameters
+
+    + systemId (required)
+    
+    + id (required)
+
++ Request (application/json)
+
+    + Headers
+
+            Accept: application/json
+
+    + Body
+
++ Response 200 (application/json)
+
+    OK
+
+    + Body
+
+            {
+              "staleInstances": 26763259,
+              "path": "minim ad ex Lorem id",
+              "instances": [
+                "aliquip do",
+                "aliquip ut proident",
+                "anim cillum laboris",
+                "fugiat",
+                "dolore Excepteur"
+              ]
+            }
+
+    + Schema
+
+            {
+              "type": "object",
+              "properties": {
+                "availableInstances": {
+                  "description": "TBD\n",
+                  "type": "integer"
+                },
+                "failureInfo": {
+                  "description": "TBD\n",
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    },
+                    "time": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "id": {
+                  "description": "Service ID\n",
+                  "type": "object"
+                },
+                "instances": {
+                  "description": "TBD\n",
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "message": {
+                  "description": "TBD\n",
+                  "type": "string"
+                },
+                "path": {
+                  "description": "Service Path\n",
+                  "type": "string"
+                },
+                "ports": {
+                  "description": "TBD\n",
+                  "type": "object"
+                },
+                "staleInstances": {
+                  "description": "TBD\n",
+                  "type": "integer"
+                },
+                "state": {
+                  "description": "State [\"pending\", \"deleting\", \"scaling\", \"updating\", \"stable\", \"failed\"]\n",
+                  "type": "object"
+                },
+                "terminatingInstances": {
+                  "description": "TBD\n",
+                  "type": "integer"
+                },
+                "updatedInstances": {
+                  "description": "TBD\n",
+                  "type": "integer"
+                }
+              }
+            }
+
+#### Get service logs [GET /v1/v1/systems/{systemId}/services/{id}/logs]
+
+get service logs
+
++ Parameters
+
+    + systemId (required)
+    
+    + id (required)
+    
+    + instance (required)
+    
+    + sidecar
+    
+    + follow
+    
+    + previous
+    
+    + timestamps
+    
+    + tail
+    
+    + since
+    
+    + sinceTime
+
++ Request (application/json)
+
+    + Headers
+
+            Accept: application/json
+
+    + Body
+
++ Response 200 (application/json)
+
+    log stream
+
+    + Body
+
+            aliqua Lorem est
+
+    + Schema
+
+            {
+              "type": "string"
+            }
+
+### /v1/v1/systems/{systemId}/teardowns
+
+#### Lists teardowns [GET]
+
+list teardowns
+
++ Parameters
+
+    + systemId (required)
+
++ Request (application/json)
+
+    + Headers
+
+            Accept: application/json
+
+    + Body
+
++ Response 200 (application/json)
+
+    OK
+
+    + Body
+
+            [
+              {},
+              {},
+              {}
+            ]
+
+    + Schema
+
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "description": "ID\n",
+                    "type": "object"
+                  },
+                  "state": {
+                    "description": "State. [\"pending\", \"in progress\", \"succeeded\", \"failed\"]\n",
+                    "type": "object"
+                  }
+                }
+              }
+            }
+
+### /v1/v1/systems/{systemId}/teardowns/{id}
+
+#### Get teardown [GET]
+
+get teardown
+
++ Parameters
+
+    + systemId (required)
+    
+    + id (required)
+
++ Request (application/json)
+
+    + Headers
+
+            Accept: application/json
+
+    + Body
+
++ Response 200 (application/json)
+
+    OK
+
+    + Body
+
+            {}
+
+    + Schema
+
+            {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "description": "ID\n",
+                  "type": "object"
+                },
+                "state": {
+                  "description": "State. [\"pending\", \"in progress\", \"succeeded\", \"failed\"]\n",
+                  "type": "object"
+                }
+              }
+            }
+
+### /v1/v1/systems/{systemId}/versions
+
+#### Lists system versions [GET]
+
+list teardowns
+
++ Parameters
+
+    + systemId (required)
+
++ Request (application/json)
+
+    + Headers
+
+            Accept: application/json
+
+    + Body
+
++ Response 200 (application/json)
+
+    OK
+
+    + Body
+
+            [
+              {}
+            ]
+
+    + Schema
+
+            {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            }
+

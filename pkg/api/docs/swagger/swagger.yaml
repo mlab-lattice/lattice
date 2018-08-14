@@ -1,0 +1,1004 @@
+basePath: /v1
+definitions:
+  rest.BuildRequest:
+    properties:
+      version:
+        $ref: '#/definitions/v1.SystemVersion'
+        type: object
+    type: object
+  rest.CreateSystemRequest:
+    properties:
+      definitionUrl:
+        type: string
+      id:
+        $ref: '#/definitions/v1.SystemID'
+        type: object
+    type: object
+  rest.DeployRequest:
+    properties:
+      buildId:
+        $ref: '#/definitions/v1.BuildID'
+        type: object
+      version:
+        $ref: '#/definitions/v1.SystemVersion'
+        type: object
+    type: object
+  rest.RunJobRequest:
+    properties:
+      command:
+        items:
+          type: string
+        type: array
+      environment:
+        type: string
+      path:
+        type: string
+    type: object
+  rest.SetSecretRequest:
+    properties:
+      value:
+        type: string
+    type: object
+  v1.Build:
+    properties:
+      completionTimestamp:
+        type: string
+      id:
+        $ref: '#/definitions/v1.BuildID'
+        type: object
+      services:
+        description: |
+          Services maps service paths (e.g. /foo/bar/buzz) to the
+          status of the build for that service in the Build.
+        type: object
+      startTimestamp:
+        type: string
+      state:
+        $ref: '#/definitions/v1.BuildState'
+        type: object
+      version:
+        $ref: '#/definitions/v1.SystemVersion'
+        type: object
+    type: object
+  v1.BuildID:
+    type: object
+  v1.BuildState:
+    type: object
+  v1.Deploy:
+    properties:
+      buildId:
+        $ref: '#/definitions/v1.BuildID'
+        type: object
+      id:
+        $ref: '#/definitions/v1.DeployID'
+        type: object
+      state:
+        $ref: '#/definitions/v1.DeployState'
+        type: object
+    type: object
+  v1.DeployID:
+    type: object
+  v1.DeployState:
+    type: object
+  v1.Job:
+    properties:
+      completionTimestamp:
+        type: string
+      id:
+        $ref: '#/definitions/v1.JobID'
+        type: object
+      path:
+        type: string
+      startTimestamp:
+        type: string
+      state:
+        $ref: '#/definitions/v1.JobState'
+        type: object
+    type: object
+  v1.JobID:
+    type: object
+  v1.JobState:
+    type: object
+  v1.NodePool:
+    properties:
+      failure_info:
+        $ref: '#/definitions/v1.NodePoolFailureInfo'
+        type: object
+      id:
+        type: string
+      instanceType:
+        description: |
+          FIXME: how to deal with epochs?
+        type: string
+      numInstances:
+        type: integer
+      path:
+        type: string
+      state:
+        $ref: '#/definitions/v1.NodePoolState'
+        type: object
+    type: object
+  v1.NodePoolFailureInfo:
+    properties:
+      message:
+        type: string
+      time:
+        type: string
+    type: object
+  v1.NodePoolState:
+    type: object
+  v1.Result:
+    type: object
+  v1.Secret:
+    properties:
+      name:
+        description: |
+          Name
+        type: string
+      path:
+        description: |
+          Secret service path
+        type: string
+      value:
+        description: |
+          Value
+        type: string
+    type: object
+  v1.Service:
+    properties:
+      availableInstances:
+        description: |
+          TBD
+        type: integer
+      failureInfo:
+        $ref: '#/definitions/v1.ServiceFailureInfo'
+        description: |
+          TBD
+        type: object
+      id:
+        $ref: '#/definitions/v1.ServiceID'
+        description: |
+          Service ID
+        type: object
+      instances:
+        description: |
+          TBD
+        items:
+          type: string
+        type: array
+      message:
+        description: |
+          TBD
+        type: string
+      path:
+        description: |
+          Service Path
+        type: string
+      ports:
+        description: |
+          TBD
+        type: object
+      staleInstances:
+        description: |
+          TBD
+        type: integer
+      state:
+        $ref: '#/definitions/v1.ServiceState'
+        description: |
+          State ["pending", "deleting", "scaling", "updating", "stable", "failed"]
+        type: object
+      terminatingInstances:
+        description: |
+          TBD
+        type: integer
+      updatedInstances:
+        description: |
+          TBD
+        type: integer
+    type: object
+  v1.ServiceFailureInfo:
+    properties:
+      message:
+        type: string
+      time:
+        type: string
+    type: object
+  v1.ServiceID:
+    type: object
+  v1.ServiceState:
+    type: object
+  v1.System:
+    properties:
+      definitionUrl:
+        description: |
+          git url for for where the definition lives in
+        type: string
+      id:
+        $ref: '#/definitions/v1.SystemID'
+        description: |
+          System ID
+        type: object
+      services:
+        description: |
+          map for service path and services currently running in the system
+        type: object
+      state:
+        $ref: '#/definitions/v1.SystemState'
+        description: |
+          State. One of "pending", "failed", "deleting", "stable", "degraded", "scaling", "updating"
+        type: object
+    type: object
+  v1.SystemID:
+    type: object
+  v1.SystemState:
+    type: object
+  v1.SystemVersion:
+    type: object
+  v1.Teardown:
+    properties:
+      id:
+        $ref: '#/definitions/v1.TeardownID'
+        description: |
+          ID
+        type: object
+      state:
+        $ref: '#/definitions/v1.TeardownState'
+        description: |
+          State. ["pending", "in progress", "succeeded", "failed"]
+        type: object
+    type: object
+  v1.TeardownID:
+    type: object
+  v1.TeardownState:
+    type: object
+host: localhost:8876
+info:
+  contact: {}
+  description: This is a sample server celler server.
+  license:
+    name: Apache 2.0
+  termsOfService: http://swagger.io/terms/
+  title: Lattice API
+  version: "1.0"
+paths:
+  /systems/{systemId}/deploys:
+    post:
+      consumes:
+      - application/json
+      description: build system
+      operationId: deploy-system
+      parameters:
+      - description: System ID
+        in: path
+        name: systemId
+        required: true
+        type: string
+      - description: Create deploy
+        in: body
+        name: deployRequest
+        required: true
+        schema:
+          $ref: '#/definitions/rest.DeployRequest'
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/v1.Deploy'
+            type: object
+      summary: Deploy system
+  /systems/{systemId}/secrets:
+    post:
+      consumes:
+      - application/json
+      description: set secret
+      operationId: set-secret
+      parameters:
+      - description: System ID
+        in: path
+        name: systemId
+        required: true
+        type: string
+      - description: Create secret
+        in: body
+        name: secretRequest
+        required: true
+        schema:
+          $ref: '#/definitions/rest.SetSecretRequest'
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/v1.Secret'
+            type: object
+      summary: set secret
+  /systems/{systemId}/teardowns:
+    post:
+      consumes:
+      - application/json
+      description: teardown system
+      operationId: teardown-system
+      parameters:
+      - description: System ID
+        in: path
+        name: systemId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/v1.Teardown'
+            type: object
+      summary: Teardown system
+  /v1/systems:
+    get:
+      consumes:
+      - application/json
+      description: list systems
+      operationId: list-systems
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/v1.System'
+            type: array
+      summary: Lists systems
+    post:
+      consumes:
+      - application/json
+      description: create system
+      operationId: create-system
+      parameters:
+      - description: Create system
+        in: body
+        name: account
+        required: true
+        schema:
+          $ref: '#/definitions/rest.CreateSystemRequest'
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/v1.System'
+            type: object
+      summary: Create a new system
+  /v1/systems/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: get system
+      operationId: delete-system
+      parameters:
+      - description: System ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/v1.Result'
+            type: object
+      summary: Delete system
+    get:
+      consumes:
+      - application/json
+      description: get system
+      operationId: get-system
+      parameters:
+      - description: System ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/v1.System'
+            type: object
+      summary: Get system
+  /v1/systems/{systemId}/builds:
+    get:
+      consumes:
+      - application/json
+      description: list builds
+      operationId: list-builds
+      parameters:
+      - description: System ID
+        in: path
+        name: systemId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/v1.Build'
+            type: array
+      summary: Lists builds
+    post:
+      consumes:
+      - application/json
+      description: build system
+      operationId: build-system
+      parameters:
+      - description: System ID
+        in: path
+        name: systemId
+        required: true
+        type: string
+      - description: Create build
+        in: body
+        name: buildRequest
+        required: true
+        schema:
+          $ref: '#/definitions/rest.BuildRequest'
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/v1.Build'
+            type: object
+      summary: Build system
+  /v1/systems/{systemId}/builds/{id}:
+    get:
+      consumes:
+      - application/json
+      description: get build
+      operationId: get-build
+      parameters:
+      - description: System ID
+        in: path
+        name: systemId
+        required: true
+        type: string
+      - description: Build ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/v1.Build'
+            type: object
+      summary: Get build
+  /v1/systems/{systemId}/builds/{id}/logs:
+    get:
+      consumes:
+      - application/json
+      description: get logs
+      operationId: get-build-logs
+      parameters:
+      - description: System ID
+        in: path
+        name: systemId
+        required: true
+        type: string
+      - description: Build ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Node Path
+        in: query
+        name: path
+        required: true
+        type: string
+      - description: Sidecar
+        in: query
+        name: sidecar
+        type: string
+      - description: Follow
+        in: query
+        name: follow
+        type: string
+      - description: Previous
+        in: query
+        name: previous
+        type: boolean
+      - description: Timestamps
+        in: query
+        name: timestamps
+        type: boolean
+      - description: tail
+        in: query
+        name: tail
+        type: integer
+      - description: Since
+        in: query
+        name: since
+        type: string
+      - description: Since Time
+        in: query
+        name: sinceTime
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: log stream
+          schema:
+            type: string
+      summary: Get build logs
+  /v1/systems/{systemId}/deploys:
+    get:
+      consumes:
+      - application/json
+      description: list deploys
+      operationId: list-deploys
+      parameters:
+      - description: System ID
+        in: path
+        name: systemId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/v1.Deploy'
+            type: array
+      summary: Lists deploys
+  /v1/systems/{systemId}/deploys/{id}:
+    get:
+      consumes:
+      - application/json
+      description: get deploy
+      operationId: get-deploy
+      parameters:
+      - description: System ID
+        in: path
+        name: systemId
+        required: true
+        type: string
+      - description: Deploy ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/v1.Deploy'
+            type: object
+      summary: Get deploy
+  /v1/systems/{systemId}/jobs:
+    get:
+      consumes:
+      - application/json
+      description: list jobs
+      operationId: list-jobs
+      parameters:
+      - description: System ID
+        in: path
+        name: systemId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/v1.Job'
+            type: array
+      summary: Lists jobs
+  /v1/systems/{systemId}/jobs/{id}:
+    get:
+      consumes:
+      - application/json
+      description: get job
+      operationId: get-job
+      parameters:
+      - description: System ID
+        in: path
+        name: systemId
+        required: true
+        type: string
+      - description: Job ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/v1.Job'
+            type: object
+      summary: Get job
+  /v1/systems/{systemId}/jobs/{id}/logs:
+    get:
+      consumes:
+      - application/json
+      description: get job logs
+      operationId: get-job-logs
+      parameters:
+      - description: System ID
+        in: path
+        name: systemId
+        required: true
+        type: string
+      - description: Job ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Sidecar
+        in: query
+        name: sidecar
+        type: string
+      - description: Follow
+        in: query
+        name: follow
+        type: string
+      - description: Previous
+        in: query
+        name: previous
+        type: boolean
+      - description: Timestamps
+        in: query
+        name: timestamps
+        type: boolean
+      - description: tail
+        in: query
+        name: tail
+        type: integer
+      - description: Since
+        in: query
+        name: since
+        type: string
+      - description: Since Time
+        in: query
+        name: sinceTime
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: log stream
+          schema:
+            type: string
+      summary: Get job logs
+  /v1/systems/{systemId}/node-pools:
+    get:
+      consumes:
+      - application/json
+      description: list node pools
+      operationId: list-node-pools
+      parameters:
+      - description: System ID
+        in: path
+        name: systemId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/v1.NodePool'
+            type: array
+      summary: Lists node pools
+  /v1/systems/{systemId}/node-pools/{id}:
+    get:
+      consumes:
+      - application/json
+      description: get node pool
+      operationId: get-node-pool
+      parameters:
+      - description: System ID
+        in: path
+        name: systemId
+        required: true
+        type: string
+      - description: NodePool ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/v1.NodePool'
+            type: object
+      summary: Get node pool
+  /v1/systems/{systemId}/secrets:
+    get:
+      consumes:
+      - application/json
+      description: list secrets
+      operationId: list-secrets
+      parameters:
+      - description: System ID
+        in: path
+        name: systemId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/v1.Secret'
+            type: array
+      summary: Lists secrets
+  /v1/systems/{systemId}/secrets/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: get system
+      operationId: delete-system
+      parameters:
+      - description: System ID
+        in: path
+        name: systemId
+        required: true
+        type: string
+      - description: Secret ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/v1.Result'
+            type: object
+      summary: Delete system
+    get:
+      consumes:
+      - application/json
+      description: get secret
+      operationId: get-secret
+      parameters:
+      - description: System ID
+        in: path
+        name: systemId
+        required: true
+        type: string
+      - description: Secret ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/v1.Secret'
+            type: object
+      summary: Get secret
+  /v1/systems/{systemId}/services:
+    get:
+      consumes:
+      - application/json
+      description: list services
+      operationId: list-services
+      parameters:
+      - description: System ID
+        in: path
+        name: systemId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/v1.Service'
+            type: array
+      summary: Lists services
+  /v1/systems/{systemId}/services/{id}:
+    get:
+      consumes:
+      - application/json
+      description: get service
+      operationId: get-service
+      parameters:
+      - description: System ID
+        in: path
+        name: systemId
+        required: true
+        type: string
+      - description: Service ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/v1.Service'
+            type: object
+      summary: Get service
+  /v1/systems/{systemId}/services/{id}/logs:
+    get:
+      consumes:
+      - application/json
+      description: get service logs
+      operationId: get-service-logs
+      parameters:
+      - description: System ID
+        in: path
+        name: systemId
+        required: true
+        type: string
+      - description: Service ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Instance
+        in: query
+        name: instance
+        required: true
+        type: string
+      - description: Sidecar
+        in: query
+        name: sidecar
+        type: string
+      - description: Follow
+        in: query
+        name: follow
+        type: string
+      - description: Previous
+        in: query
+        name: previous
+        type: boolean
+      - description: Timestamps
+        in: query
+        name: timestamps
+        type: boolean
+      - description: tail
+        in: query
+        name: tail
+        type: integer
+      - description: Since
+        in: query
+        name: since
+        type: string
+      - description: Since Time
+        in: query
+        name: sinceTime
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: log stream
+          schema:
+            type: string
+      summary: Get service logs
+  /v1/systems/{systemId}/teardowns:
+    get:
+      consumes:
+      - application/json
+      description: list teardowns
+      operationId: list-teardowns
+      parameters:
+      - description: System ID
+        in: path
+        name: systemId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/v1.Teardown'
+            type: array
+      summary: Lists teardowns
+  /v1/systems/{systemId}/teardowns/{id}:
+    get:
+      consumes:
+      - application/json
+      description: get teardown
+      operationId: get-teardown
+      parameters:
+      - description: System ID
+        in: path
+        name: systemId
+        required: true
+        type: string
+      - description: Teardown ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/v1.Teardown'
+            type: object
+      summary: Get teardown
+  /v1/systems/{systemId}/versions:
+    get:
+      consumes:
+      - application/json
+      description: list teardowns
+      operationId: list-system-versions
+      parameters:
+      - description: System ID
+        in: path
+        name: systemId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/v1.SystemVersion'
+            type: array
+      summary: Lists system versions
+securityDefinitions:
+  ApiKeyAuth:
+    in: header
+    name: apiKey
+    type: apiKey
+swagger: "2.0"

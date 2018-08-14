@@ -22,20 +22,27 @@ const (
 )
 
 type Service struct {
-	ID   ServiceID     `json:"id"`
+	// Service ID
+	ID ServiceID `json:"id"`
+	// Service Path
 	Path tree.NodePath `json:"path"`
-
-	State       ServiceState        `json:"state"`
-	Message     *string             `json:"message,omitempty"`
+	// State ["pending", "deleting", "scaling", "updating", "stable", "failed"]
+	State ServiceState `json:"state"`
+	// TBD
+	Message *string `json:"message,omitempty"`
+	// TBD
 	FailureInfo *ServiceFailureInfo `json:"failureInfo,omitempty"`
-
-	AvailableInstances   int32 `json:"availableInstances"`
-	UpdatedInstances     int32 `json:"updatedInstances"`
-	StaleInstances       int32 `json:"staleInstances"`
+	// TBD
+	AvailableInstances int32 `json:"availableInstances"`
+	// TBD
+	UpdatedInstances int32 `json:"updatedInstances"`
+	// TBD
+	StaleInstances int32 `json:"staleInstances"`
+	// TBD
 	TerminatingInstances int32 `json:"terminatingInstances"`
-
+	// TBD
 	Ports map[int32]string `json:"ports"`
-
+	// TBD
 	Instances []string `json:"instances"`
 }
 
