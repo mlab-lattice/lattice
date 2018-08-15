@@ -9,6 +9,15 @@ import (
 
 const APIVersion = "v1"
 
+func NewComponent(m map[string]interface{}) (component.Interface, error) {
+	data, err := json.Marshal(&m)
+	if err != nil {
+		return nil, err
+	}
+
+	return NewComponentFromJSON(data)
+}
+
 func NewComponentFromJSON(data []byte) (component.Interface, error) {
 	var c componentTypeDecoder
 	if err := json.Unmarshal(data, &c); err != nil {
@@ -26,6 +35,13 @@ func NewComponentFromJSON(data []byte) (component.Interface, error) {
 			return nil, err
 		}
 		return j, nil
+
+	case ComponentTypeReference:
+		var r *Reference
+		if err := json.Unmarshal(data, &r); err != nil {
+			return nil, err
+		}
+		return r, nil
 
 	case ComponentTypeService:
 		var s *Service

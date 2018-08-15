@@ -8,15 +8,15 @@ import (
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 )
 
-func GetLocalClusterNameForComponentPort(serviceCluster string, svcPath tree.NodePath, componentName string, port int32) string {
+func GetLocalClusterNameForComponentPort(serviceCluster string, svcPath tree.Path, componentName string, port int32) string {
 	return fmt.Sprintf("local:%v", GetClusterNameForComponentPort(serviceCluster, svcPath, componentName, port))
 }
 
-func GetClusterNameForComponentPort(serviceCluster string, svcPath tree.NodePath, componentName string, port int32) string {
+func GetClusterNameForComponentPort(serviceCluster string, svcPath tree.Path, componentName string, port int32) string {
 	return fmt.Sprintf("%v:%v:%v:%v", serviceCluster, svcPath.ToDomain(), componentName, port)
 }
 
-func GetPartsFromClusterName(clusterName string) (string, tree.NodePath, string, int32, error) {
+func GetPartsFromClusterName(clusterName string) (string, tree.Path, string, int32, error) {
 	parts := strings.Split(clusterName, ":")
 	if len(parts) != 4 {
 		return "", "", "", 0, fmt.Errorf("unexpected cluster name format: %v", clusterName)
@@ -30,7 +30,7 @@ func GetPartsFromClusterName(clusterName string) (string, tree.NodePath, string,
 		return "", "", "", 0, err
 	}
 
-	path, err := tree.NewNodePathFromDomain(serviceDomain)
+	path, err := tree.NewPathFromDomain(serviceDomain)
 	if err != nil {
 		return "", "", "", 0, err
 	}

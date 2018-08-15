@@ -22,9 +22,9 @@ const (
 )
 
 type Job struct {
-	ID    JobID         `json:"id"`
-	Path  tree.NodePath `json:"path"`
-	State JobState      `json:"state"`
+	ID    JobID     `json:"id"`
+	Path  tree.Path `json:"path"`
+	State JobState  `json:"state"`
 
 	StartTimestamp      *time.Time `json:"startTimestamp,omitempty"`
 	CompletionTimestamp *time.Time `json:"completionTimestamp,omitempty"`

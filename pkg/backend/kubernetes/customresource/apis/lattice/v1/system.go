@@ -61,9 +61,9 @@ func (s *System) Description() string {
 type SystemSpec struct {
 	DefinitionURL string `json:"definitionUrl"`
 
-	NodePools map[string]NodePoolSpec                 `json:"nodePools"`
-	Services  map[tree.NodePath]SystemSpecServiceInfo `json:"services"`
-	Jobs      map[tree.NodePath]SystemSpecJobInfo     `json:"jobs"`
+	NodePools map[string]NodePoolSpec             `json:"nodePools"`
+	Services  map[tree.Path]SystemSpecServiceInfo `json:"services"`
+	Jobs      map[tree.Path]SystemSpecJobInfo     `json:"jobs"`
 }
 
 // +k8s:deepcopy-gen=false
@@ -88,8 +88,8 @@ type SystemStatus struct {
 
 	State SystemState `json:"state"`
 
-	Services  map[tree.NodePath]SystemStatusService `json:"services"`
-	NodePools map[string]SystemStatusNodePool       `json:"nodePools"`
+	Services  map[tree.Path]SystemStatusService `json:"services"`
+	NodePools map[string]SystemStatusNodePool   `json:"nodePools"`
 }
 
 type SystemStatusService struct {

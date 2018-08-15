@@ -55,8 +55,8 @@ func (c *Controller) updateSystemLabels(
 
 func (c *Controller) updateSystem(
 	system *latticev1.System,
-	services map[tree.NodePath]latticev1.SystemSpecServiceInfo,
-	jobs map[tree.NodePath]latticev1.SystemSpecJobInfo,
+	services map[tree.Path]latticev1.SystemSpecServiceInfo,
+	jobs map[tree.Path]latticev1.SystemSpecJobInfo,
 	nodePools map[string]latticev1.NodePoolSpec,
 ) (*latticev1.System, error) {
 	spec := system.Spec.DeepCopy()
@@ -101,7 +101,7 @@ func (c *Controller) getSystem(namespace string) (*latticev1.System, error) {
 
 func (c *Controller) systemServices(
 	build *latticev1.Build,
-) (map[tree.NodePath]latticev1.SystemSpecServiceInfo, error) {
+) (map[tree.Path]latticev1.SystemSpecServiceInfo, error) {
 	if build.Status.State != latticev1.BuildStateSucceeded {
 		err := fmt.Errorf(
 			"cannot get services for %v, must be in state %v but is in %v",
@@ -112,7 +112,7 @@ func (c *Controller) systemServices(
 		return nil, err
 	}
 
-	services := make(map[tree.NodePath]latticev1.SystemSpecServiceInfo)
+	services := make(map[tree.Path]latticev1.SystemSpecServiceInfo)
 	for path, serviceNode := range build.Spec.Definition.AllServices() {
 		serviceInfo, ok := build.Status.Services[path]
 		if !ok {
@@ -169,7 +169,7 @@ func (c *Controller) systemServices(
 
 func (c *Controller) systemJobs(
 	build *latticev1.Build,
-) (map[tree.NodePath]latticev1.SystemSpecJobInfo, error) {
+) (map[tree.Path]latticev1.SystemSpecJobInfo, error) {
 	if build.Status.State != latticev1.BuildStateSucceeded {
 		err := fmt.Errorf(
 			"cannot get services for %v, must be in state %v but is in %v",
@@ -180,7 +180,7 @@ func (c *Controller) systemJobs(
 		return nil, err
 	}
 
-	jobs := make(map[tree.NodePath]latticev1.SystemSpecJobInfo)
+	jobs := make(map[tree.Path]latticev1.SystemSpecJobInfo)
 	for path, jobNode := range build.Spec.Definition.AllJobs() {
 		jobInfo, ok := build.Status.Jobs[path]
 		if !ok {

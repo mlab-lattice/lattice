@@ -13,6 +13,7 @@ import (
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 
+	"github.com/mlab-lattice/lattice/pkg/util/sha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
@@ -236,29 +237,9 @@ func (c *Controller) getBuildContainer(build *latticev1.ContainerBuild) (*corev1
 		},
 	}
 
-	// FIXME: add back ssh key support
-	//if build.Spec.Definition.GitRepository != nil && build.Spec.Definition.GitRepository.SSHKey != nil {
-	//	FIXME: add support for references
-	//secretParts := strings.Split(*build.Spec.BuildDefinitionBlock.GitRepository.SSHKey.Name, ":")
-	//if len(secretParts) != 2 {
-	//	return nil, "", fmt.Errorf("invalid secret format for ssh_key")
-	//}
-	//
-	//secretPath := secretParts[0]
-	//secretName := secretParts[1]
-	//
-	//buildContainer.Env = append(buildContainer.Env, corev1.EnvVar{
-	//	Name: "GIT_REPO_SSH_KEY",
-	//	ValueFrom: &corev1.EnvVarSource{
-	//		SecretKeyRef: &corev1.SecretKeySelector{
-	//			LocalObjectReference: corev1.LocalObjectReference{
-	//				Name: secretPath,
-	//			},
-	//			Key: secretName,
-	//		},
-	//	},
-	//})
-	//}
+	if err := maybeSetSSSHKey(build, buildContainer); err != nil {
+		return nil, "", err
+	}
 
 	dockerImageFQN := fmt.Sprintf(
 		"%v/%v:%v",
@@ -268,6 +249,47 @@ func (c *Controller) getBuildContainer(build *latticev1.ContainerBuild) (*corev1
 	)
 
 	return buildContainer, dockerImageFQN, nil
+}
+
+func maybeSetSSSHKey(build *latticev1.ContainerBuild, container *corev1.Container) error {
+	def := build.Spec.Definition
+	if def.CommandBuild == nil {
+		return nil
+	}
+
+	cb := def.CommandBuild
+	if cb.Source == nil {
+		return nil
+	}
+
+	s := cb.Source
+	if s.GitRepository == nil {
+		return nil
+	}
+
+	sshKeySecret := s.GitRepository.SSHKey
+	if sshKeySecret == nil {
+		return nil
+	}
+
+	secretName, err := sha1.EncodeToHexString([]byte(sshKeySecret.Path().String()))
+	if err != nil {
+		return err
+	}
+
+	container.Env = append(container.Env, corev1.EnvVar{
+		Name: "GIT_REPO_SSH_KEY",
+		ValueFrom: &corev1.EnvVarSource{
+			SecretKeyRef: &corev1.SecretKeySelector{
+				LocalObjectReference: corev1.LocalObjectReference{
+					Name: secretName,
+				},
+				Key: sshKeySecret.Subcomponent(),
+			},
+		},
+	})
+
+	return nil
 }
 
 func jobStatus(j *batchv1.Job) (finished bool, succeeded bool) {

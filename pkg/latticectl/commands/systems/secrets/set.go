@@ -37,7 +37,7 @@ func (c *SetCommand) Base() (*latticectl.BaseCommand, error) {
 				log.Fatal("invalid secret name format")
 			}
 
-			path := tree.NodePath(splitName[0])
+			path := tree.Path(splitName[0])
 			name = splitName[1]
 
 			err := SetSecret(ctx.Client().Systems().Secrets(ctx.SystemID()), path, name, value)
@@ -50,7 +50,7 @@ func (c *SetCommand) Base() (*latticectl.BaseCommand, error) {
 	return cmd.Base()
 }
 
-func SetSecret(client v1client.SecretClient, path tree.NodePath, name, value string) error {
+func SetSecret(client v1client.SecretClient, path tree.Path, name, value string) error {
 	err := client.Set(path, name, value)
 	if err != nil {
 		return err

@@ -74,6 +74,11 @@ GO_DEPENDENCIES = {
             "tag": "v1.12.35",
             "importpath": "github.com/aws/aws-sdk-go",
         },
+        "github.com/blang/semver": {
+            "name": "com_github_blang_semver",
+            "tag": "v3.5.1",
+            "importpath": "github.com/blang/semver",
+        },
         "github.com/briandowns/spinner": {
             "name": "com_github_briandowns_spinner",
             "commit": "b3ed21e9d3b2af92b077f7d21edd80599b8fb97f",

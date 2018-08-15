@@ -1,14 +1,13 @@
 package backend
 
 import (
+	serverv1 "github.com/mlab-lattice/lattice/pkg/api/server/v1"
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	latticeclientset "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/generated/clientset/versioned"
 	systembootstrapper "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/lifecycle/system/bootstrap/bootstrapper"
 	kubeutil "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/kubernetes"
 
 	kubeclientset "k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
-	"k8s.io/client-go/tools/clientcmd"
 )
 
 type KubernetesBackend struct {
@@ -21,35 +20,14 @@ type KubernetesBackend struct {
 
 func NewKubernetesBackend(
 	namespacePrefix string,
-	kubeconfig string,
-) (*KubernetesBackend, error) {
-	var config *rest.Config
-	var err error
-	if kubeconfig == "" {
-		config, err = rest.InClusterConfig()
-	} else {
-		config, err = clientcmd.BuildConfigFromFlags("", kubeconfig)
-	}
-	if err != nil {
-		return nil, err
-	}
-
-	kubeClient, err := kubeclientset.NewForConfig(config)
-	if err != nil {
-		return nil, err
-	}
-
-	latticeClient, err := latticeclientset.NewForConfig(config)
-	if err != nil {
-		return nil, err
-	}
-
-	kb := &KubernetesBackend{
+	kubeClient kubeclientset.Interface,
+	latticeClient latticeclientset.Interface,
+) serverv1.Interface {
+	return &KubernetesBackend{
 		namespacePrefix: namespacePrefix,
 		kubeClient:      kubeClient,
 		latticeClient:   latticeClient,
 	}
-	return kb, nil
 }
 
 func (kb *KubernetesBackend) systemNamespace(systemID v1.SystemID) string {

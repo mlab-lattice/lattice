@@ -7,31 +7,24 @@ build: gazelle \
        build.no-gazelle
 
 .PHONY: build.no-gazelle
+build.no-gazelle: PLATFORM ?=
+build.no-gazelle: TARGET ?= //cmd/... //e2e/... //pkg/...
 build.no-gazelle:
 	@bazel build \
-		//pkg/...:all \
-		//cmd/...:all \
-		//e2e/...:all
+		$(PLATFORM) \
+		$(TARGET)
 
-.PHONY: build.all
-build.all: build.darwin \
-           build.linux
+.PHONY: build.platform.all
+build.platform.all: build.platform.darwin \
+                    build.platform.linux
 
-.PHONY: build.darwin
-build.darwin: gazelle
-	@bazel build \
-		--platforms=@io_bazel_rules_go//go/toolchain:darwin_amd64 \
-		//pkg/...:all \
-		//cmd/...:all \
-		//e2e/...:all
+.PHONY: build.platform.darwin
+build.platform.darwin: gazelle
+	@$(MAKE) build.no-gazelle PLATFORM=--platforms=@io_bazel_rules_go//go/toolchain:darwin_amd64 \
 
-.PHONY: build.linux
-build.linux: gazelle
-	@bazel build \
-		--platforms=@io_bazel_rules_go//go/toolchain:linux_amd64 \
-		//pkg/...:all \
-		//cmd/...:all \
-		//e2e/...:all
+.PHONY: build.platform.linux
+build.platform.linux: gazelle
+	@$(MAKE) build.no-gazelle PLATFORM=--platforms=@io_bazel_rules_go//go/toolchain:linux_amd64 \
 
 .PHONY: gazelle
 gazelle:
@@ -44,16 +37,19 @@ clean:
 
 # testing
 .PHONY: test
+test: TARGET ?= //pkg/...
 test: gazelle
-	@bazel test --test_output=errors //pkg/...
+	@bazel test --test_output=errors $(TARGET)
 
 .PHONY: test.no-cache
+test.no-cache: TARGET ?= //pkg/...
 test.no-cache: gazelle
-	@bazel test --cache_test_results=no --test_output=errors //pkg/...
+	@bazel test --cache_test_results=no --test_output=errors $(TARGET)
 
 .PHONY: test.verbose
+test.verbose: TARGET ?= //pkg/...
 test.verbose: gazelle
-	@bazel test --test_output=all --test_env -v //pkg/...
+	@bazel test --test_output=all --test_env -v $(TARGET)
 
 
 # e2e testing

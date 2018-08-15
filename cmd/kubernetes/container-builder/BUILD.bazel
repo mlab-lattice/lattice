@@ -9,13 +9,7 @@ go_library(
 )
 
 go_binary(
-    name = "componentbuilder",
-    embed = [":go_default_library"],
-    visibility = ["//visibility:public"],
-)
-
-go_binary(
-    name = "component-builder",
+    name = "container-builder",
     embed = [":go_default_library"],
     visibility = ["//visibility:public"],
 )

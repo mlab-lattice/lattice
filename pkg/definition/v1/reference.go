@@ -12,11 +12,17 @@ var ReferenceType = component.Type{
 }
 
 type Reference struct {
-	GitRepository *GitRepository `json:"git_repository,omitempty"`
-	File          *string        `json:"file,omitempty"`
+	GitRepository *GitRepositoryReference `json:"git_repository,omitempty"`
+	File          *string                 `json:"file,omitempty"`
+
+	Parameters map[string]interface{} `json:"parameters"`
 }
 
-type ReferenceOrResource struct {
-	Reference *Reference
-	Resource  component.Interface
+type GitRepositoryReference struct {
+	File *string `json:"file"`
+	*GitRepository
+}
+
+func (r *Reference) Type() component.Type {
+	return ReferenceType
 }

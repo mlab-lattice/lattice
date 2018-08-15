@@ -18,6 +18,8 @@ type Interface interface {
 	ContainerBuilds() ContainerBuildInformer
 	// Deploys returns a DeployInformer.
 	Deploys() DeployInformer
+	// GitTemplates returns a GitTemplateInformer.
+	GitTemplates() GitTemplateInformer
 	// Jobs returns a JobInformer.
 	Jobs() JobInformer
 	// JobRuns returns a JobRunInformer.
@@ -30,6 +32,8 @@ type Interface interface {
 	Systems() SystemInformer
 	// Teardowns returns a TeardownInformer.
 	Teardowns() TeardownInformer
+	// Templates returns a TemplateInformer.
+	Templates() TemplateInformer
 }
 
 type version struct {
@@ -68,6 +72,11 @@ func (v *version) Deploys() DeployInformer {
 	return &deployInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
 }
 
+// GitTemplates returns a GitTemplateInformer.
+func (v *version) GitTemplates() GitTemplateInformer {
+	return &gitTemplateInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
+}
+
 // Jobs returns a JobInformer.
 func (v *version) Jobs() JobInformer {
 	return &jobInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
@@ -96,4 +105,9 @@ func (v *version) Systems() SystemInformer {
 // Teardowns returns a TeardownInformer.
 func (v *version) Teardowns() TeardownInformer {
 	return &teardownInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
+}
+
+// Templates returns a TemplateInformer.
+func (v *version) Templates() TemplateInformer {
+	return &templateInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
 }
