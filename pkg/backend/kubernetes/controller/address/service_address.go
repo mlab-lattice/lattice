@@ -3,6 +3,8 @@ package address
 import (
 	"fmt"
 
+	"github.com/golang/glog"
+
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	kubeutil "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/kubernetes"
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
@@ -41,14 +43,35 @@ func (c *Controller) syncServiceAddress(address *latticev1.Address) error {
 		return nil
 	}
 
-	ip, err := c.serviceMesh.ServiceIP(service)
+	ip, annotations, err := c.serviceMesh.ServiceIP(service, address)
 	if err != nil {
 		return fmt.Errorf(
-			"error getting %v %v ip from service mesh: %v",
+			"error getting %v %v IP from service mesh: %v",
 			address.Description(c.namespacePrefix),
 			service.Description(c.namespacePrefix),
 			err,
 		)
+	}
+
+	address_, err := c.mergeAndUpdateAddressAnnotations(address, annotations)
+	if err != nil {
+		address_ = address.DeepCopy()
+		for k, v := range annotations {
+			address_.Annotations[k] = v
+		}
+		_, err = c.serviceMesh.ReleaseServiceIP(address_)
+		if err != nil {
+			glog.Errorf(
+				"Got an error trying to release a service IP lease for %s after failed update: %v",
+				service.Name, err)
+		}
+		return fmt.Errorf(
+			"error updating %v address annotations: %v",
+			address.Description(c.namespacePrefix),
+			err,
+		)
+	} else {
+		address = address_
 	}
 
 	path, err := address.PathLabel()
@@ -69,14 +92,14 @@ func (c *Controller) syncServiceAddress(address *latticev1.Address) error {
 	needsUpdate, err := c.cloudProvider.DNSARecordNeedsUpdate(c.latticeID, domain, ip)
 	if err != nil {
 		return fmt.Errorf(
-			"error checking if DNS A record for %v needs update: %v",
+			"error checking if DNS A record(s) for %v needs update: %v",
 			address.Description(c.namespacePrefix),
 			err,
 		)
 	}
 
 	if needsUpdate {
-		message := "updating internal DNS record"
+		message := "updating internal DNS record(s)"
 		address, err = c.updateAddressStatus(
 			address,
 			latticev1.AddressStateUpdating,

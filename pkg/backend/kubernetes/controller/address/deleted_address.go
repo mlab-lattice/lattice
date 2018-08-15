@@ -49,6 +49,19 @@ func (c *Controller) syncDeletedAddress(address *latticev1.Address) error {
 		return fmt.Errorf("error deleting DNS record: %v", err)
 	}
 
+	// TODO <GEB>: add check to verify the IP found in the DNS A record is the same as the one being
+	//             released
+
+	annotations, err := c.serviceMesh.ReleaseServiceIP(address)
+	if err != nil {
+		return fmt.Errorf("error releasing service IP: %v", err)
+	}
+
+	address, err = c.mergeAndUpdateAddressAnnotations(address, annotations)
+	if err != nil {
+		return fmt.Errorf("error updating address annotations to remove service IP: %v", err)
+	}
+
 	message = "deleting load balancer"
 	address, err = c.updateAddressStatus(
 		address,

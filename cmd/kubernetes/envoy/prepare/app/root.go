@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"net"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -13,10 +14,12 @@ import (
 )
 
 const (
-	tableNAT    = "nat"
-	chainOutput = "OUTPUT"
+	tableNAT      = "nat"
+	chainOutput   = "OUTPUT"
+	interfaceName = "eth0"
 
-	envVarEgressPort              = "EGRESS_PORT"
+	envVarEgressPortHTTP          = "EGRESS_PORT_HTTP"
+	envVarEgressPortTCP           = "EGRESS_PORT_TCP"
 	envVarRedirectEgressCIDRBlock = "REDIRECT_EGRESS_CIDR_BLOCK"
 	envVarConfigDir               = "CONFIG_DIR"
 	envVarAdminPort               = "ADMIN_PORT"
@@ -35,7 +38,8 @@ const (
 )
 
 var envVars = []string{
-	envVarEgressPort,
+	envVarEgressPortHTTP,
+	envVarEgressPortTCP,
 	envVarRedirectEgressCIDRBlock,
 	envVarConfigDir,
 	envVarAdminPort,
@@ -54,7 +58,7 @@ var RootCmd = &cobra.Command{
 			panic(err)
 		}
 
-		err = addIPTableRedirect(env)
+		err = addIPTableRedirects(env)
 		if err != nil {
 			panic(err)
 		}
@@ -105,20 +109,111 @@ func parseEnv() (map[string]string, error) {
 	return env, nil
 }
 
-func addIPTableRedirect(env map[string]string) error {
+func localIP() (string, error) {
+	interface_, err := net.InterfaceByName(interfaceName)
+	if err != nil {
+		return "", err
+	}
+	addresses, err := interface_.Addrs()
+	if err != nil {
+		return "", err
+	}
+	ipv4addresses := make([]net.IP, 0, 1)
+	for _, address := range addresses {
+		// addresses[0].String() give CIDR notation
+		address, _, err := net.ParseCIDR(address.String())
+		if err != nil {
+			return "", err
+		}
+		ipv4address := address.To4()
+		// test we've got an ipv4 address and not an ipv6 address
+		if ipv4address != nil {
+			ipv4addresses = append(ipv4addresses, ipv4address)
+		}
+	}
+	if len(ipv4addresses) != 1 {
+		return "", fmt.Errorf("expected 1 IP address for interface %v, got %v", interfaceName, ipv4addresses)
+	}
+	return ipv4addresses[0].String(), nil
+}
+
+func networkContainsIP(cidr, address string) (bool, error) {
+	_, cidrNet, err := net.ParseCIDR(cidr)
+	if err != nil {
+		return false, err
+	}
+	ip := net.ParseIP(address)
+	if ip == nil {
+		return false, fmt.Errorf("couldn't parse IP address: %v", address)
+	}
+	return cidrNet.Contains(ip), nil
+}
+
+func networkIP(cidr string) (string, error) {
+	ip, _, err := net.ParseCIDR(cidr)
+	if err != nil {
+		return "", err
+	}
+	ipv4 := ip.To4()
+	if ipv4 == nil {
+		return "", fmt.Errorf("couldn't convert %v to an IPv4 address", ip)
+	}
+	return ipv4.String(), nil
+}
+
+func addIPTableRedirects(env map[string]string) error {
 	ipt, err := iptables.New()
 	if err != nil {
 		panic(err)
 	}
 
-	rulespecs := []string{
-		"-p", "tcp",
-		"-d", env[envVarRedirectEgressCIDRBlock],
-		"-j", "REDIRECT",
-		"--to-port", env[envVarEgressPort],
-		"-m", "comment", "--comment", "\"lattice redirect to envoy\"",
+	// get local IP
+	localIP_, err := localIP()
+	if err != nil {
+		return err
 	}
-	return ipt.Append(tableNAT, chainOutput, rulespecs...)
+	// ensure the local IP is not part of the lattice service network
+	networkContainsIP_, err := networkContainsIP(env[envVarRedirectEgressCIDRBlock], localIP_)
+	if err != nil {
+		return err
+	} else if networkContainsIP_ {
+		return fmt.Errorf("CIDR %v contains local IP address %v",
+			env[envVarRedirectEgressCIDRBlock], localIP_)
+	}
+	// get the network IP used to redirect HTTP traffic
+	networkIP_, err := networkIP(env[envVarRedirectEgressCIDRBlock])
+	if err != nil {
+		return err
+	}
+
+	rulespecs := [][]string{
+		{
+			"-p", "tcp",
+			"-d", networkIP_,
+			"-j", "REDIRECT",
+			"!", "-s", "127.0.0.1/32",
+			"--to-port", env[envVarEgressPortHTTP],
+			"-m", "comment", "--comment",
+			fmt.Sprint("\"lattice redirect HTTP traffic to envoy\""),
+		},
+		{
+			"-p", "tcp",
+			"-d", env[envVarRedirectEgressCIDRBlock],
+			"-j", "REDIRECT",
+			"!", "-s", "127.0.0.1/32",
+			"--to-port", env[envVarEgressPortTCP],
+			"-m", "comment", "--comment",
+			fmt.Sprint("\"lattice redirect TCP traffic to envoy\""),
+		},
+	}
+	for _, rulespec := range rulespecs {
+		err = ipt.Append(tableNAT, chainOutput, rulespec...)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 // -----------------------------------------------------------------------------
