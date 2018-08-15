@@ -24,6 +24,7 @@ func (api *LatticeAPI) setupVersionsEndpoints() {
 // @Summary Lists system versions
 // @Description list teardowns
 // @Router /systems/{systemId}/versions [get]
+// @Tags versions
 // @Param systemId path string true "System ID"
 // @Accept  json
 // @Produce  json

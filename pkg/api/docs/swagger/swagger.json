@@ -1,8 +1,8 @@
 {
     "swagger": "2.0",
     "info": {
-        "description": "Welcome to lattice api",
-        "title": "Lattice API",
+        "description": "This document describes the lattice API.",
+        "title": "Lattice API Docs",
         "termsOfService": "TBD",
         "contact": {},
         "license": {
@@ -15,14 +15,17 @@
     "paths": {
         "/systems": {
             "get": {
-                "description": "list systems",
+                "description": "List systems",
                 "consumes": [
                     "application/json"
                 ],
                 "produces": [
                     "application/json"
                 ],
-                "summary": "Lists systems",
+                "tags": [
+                    "systems"
+                ],
+                "summary": "GET /systems",
                 "operationId": "list-systems",
                 "responses": {
                     "200": {
@@ -37,14 +40,17 @@
                 }
             },
             "post": {
-                "description": "create system",
+                "description": "Create a new system",
                 "consumes": [
                     "application/json"
                 ],
                 "produces": [
                     "application/json"
                 ],
-                "summary": "Create a new system",
+                "tags": [
+                    "systems"
+                ],
+                "summary": "POST /systems",
                 "operationId": "create-system",
                 "parameters": [
                     {
@@ -69,7 +75,162 @@
                 }
             }
         },
-        "/systems/{id}": {
+        "/systems/{systemId}/secrets": {
+            "get": {
+                "description": "list secrets",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "secrets"
+                ],
+                "summary": "Lists secrets",
+                "operationId": "list-secrets",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "System ID",
+                        "name": "systemId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/v1.Secret"
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "description": "set secret",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "secrets"
+                ],
+                "summary": "set secret",
+                "operationId": "set-secret",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "System ID",
+                        "name": "systemId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Create secret",
+                        "name": "secretRequest",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object",
+                            "$ref": "#/definitions/rest.SetSecretRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "$ref": "#/definitions/v1.Secret"
+                        }
+                    }
+                }
+            }
+        },
+        "/systems/{systemId}/secrets/{id}": {
+            "get": {
+                "description": "get secret",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "secrets"
+                ],
+                "summary": "Get secret",
+                "operationId": "get-secret",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "System ID",
+                        "name": "systemId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Secret ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "$ref": "#/definitions/v1.Secret"
+                        }
+                    }
+                }
+            }
+        },
+        "/systems/{systemId}/versions": {
+            "get": {
+                "description": "list teardowns",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "versions"
+                ],
+                "summary": "Lists system versions",
+                "operationId": "list-system-versions",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "System ID",
+                        "name": "systemId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/v1.SystemVersion"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/systems/{system}": {
             "get": {
                 "description": "get system",
                 "consumes": [
@@ -78,13 +239,16 @@
                 "produces": [
                     "application/json"
                 ],
-                "summary": "Get system",
+                "tags": [
+                    "systems"
+                ],
+                "summary": "GET /systems/{system}",
                 "operationId": "get-system",
                 "parameters": [
                     {
                         "type": "string",
                         "description": "System ID",
-                        "name": "id",
+                        "name": "system",
                         "in": "path",
                         "required": true
                     }
@@ -100,20 +264,23 @@
                 }
             },
             "delete": {
-                "description": "get system",
+                "description": "Delete system",
                 "consumes": [
                     "application/json"
                 ],
                 "produces": [
                     "application/json"
                 ],
-                "summary": "Delete system",
+                "tags": [
+                    "systems"
+                ],
+                "summary": "DELETE /systems/{system}",
                 "operationId": "delete-system",
                 "parameters": [
                     {
                         "type": "string",
                         "description": "System ID",
-                        "name": "id",
+                        "name": "system",
                         "in": "path",
                         "required": true
                     }
@@ -129,7 +296,7 @@
                 }
             }
         },
-        "/systems/{systemId}/builds": {
+        "/systems/{system}/builds": {
             "get": {
                 "description": "list builds",
                 "consumes": [
@@ -138,13 +305,16 @@
                 "produces": [
                     "application/json"
                 ],
+                "tags": [
+                    "builds"
+                ],
                 "summary": "Lists builds",
                 "operationId": "list-builds",
                 "parameters": [
                     {
                         "type": "string",
                         "description": "System ID",
-                        "name": "systemId",
+                        "name": "system",
                         "in": "path",
                         "required": true
                     }
@@ -162,31 +332,34 @@
                 }
             },
             "post": {
-                "description": "run job",
+                "description": "build system",
                 "consumes": [
                     "application/json"
                 ],
                 "produces": [
                     "application/json"
                 ],
-                "summary": "Run job",
-                "operationId": "run-job",
+                "tags": [
+                    "builds"
+                ],
+                "summary": "Build system",
+                "operationId": "build-system",
                 "parameters": [
                     {
                         "type": "string",
                         "description": "System ID",
-                        "name": "systemId",
+                        "name": "system",
                         "in": "path",
                         "required": true
                     },
                     {
                         "description": "Create build",
-                        "name": "jobRequest",
+                        "name": "buildRequest",
                         "in": "body",
                         "required": true,
                         "schema": {
                             "type": "object",
-                            "$ref": "#/definitions/rest.RunJobRequest"
+                            "$ref": "#/definitions/rest.BuildRequest"
                         }
                     }
                 ],
@@ -195,13 +368,13 @@
                         "description": "OK",
                         "schema": {
                             "type": "object",
-                            "$ref": "#/definitions/v1.Job"
+                            "$ref": "#/definitions/v1.Build"
                         }
                     }
                 }
             }
         },
-        "/systems/{systemId}/builds/{id}": {
+        "/systems/{system}/builds/{id}": {
             "get": {
                 "description": "get build",
                 "consumes": [
@@ -210,13 +383,16 @@
                 "produces": [
                     "application/json"
                 ],
+                "tags": [
+                    "builds"
+                ],
                 "summary": "Get build",
                 "operationId": "get-build",
                 "parameters": [
                     {
                         "type": "string",
                         "description": "System ID",
-                        "name": "systemId",
+                        "name": "system",
                         "in": "path",
                         "required": true
                     },
@@ -239,7 +415,7 @@
                 }
             }
         },
-        "/systems/{systemId}/builds/{id}/logs": {
+        "/systems/{system}/builds/{id}/logs": {
             "get": {
                 "description": "get logs",
                 "consumes": [
@@ -248,13 +424,16 @@
                 "produces": [
                     "application/json"
                 ],
+                "tags": [
+                    "builds"
+                ],
                 "summary": "Get build logs",
                 "operationId": "get-build-logs",
                 "parameters": [
                     {
                         "type": "string",
                         "description": "System ID",
-                        "name": "systemId",
+                        "name": "system",
                         "in": "path",
                         "required": true
                     },
@@ -325,7 +504,7 @@
                 }
             }
         },
-        "/systems/{systemId}/deploys": {
+        "/systems/{system}/deploys": {
             "get": {
                 "description": "list deploys",
                 "consumes": [
@@ -334,13 +513,16 @@
                 "produces": [
                     "application/json"
                 ],
+                "tags": [
+                    "deploys"
+                ],
                 "summary": "Lists deploys",
                 "operationId": "list-deploys",
                 "parameters": [
                     {
                         "type": "string",
                         "description": "System ID",
-                        "name": "systemId",
+                        "name": "system",
                         "in": "path",
                         "required": true
                     }
@@ -365,13 +547,16 @@
                 "produces": [
                     "application/json"
                 ],
+                "tags": [
+                    "deploys"
+                ],
                 "summary": "Deploy system",
                 "operationId": "deploy-system",
                 "parameters": [
                     {
                         "type": "string",
                         "description": "System ID",
-                        "name": "systemId",
+                        "name": "system",
                         "in": "path",
                         "required": true
                     },
@@ -397,7 +582,7 @@
                 }
             }
         },
-        "/systems/{systemId}/deploys/{id}": {
+        "/systems/{system}/deploys/{id}": {
             "get": {
                 "description": "get deploy",
                 "consumes": [
@@ -406,13 +591,16 @@
                 "produces": [
                     "application/json"
                 ],
+                "tags": [
+                    "deploys"
+                ],
                 "summary": "Get deploy",
                 "operationId": "get-deploy",
                 "parameters": [
                     {
                         "type": "string",
                         "description": "System ID",
-                        "name": "systemId",
+                        "name": "system",
                         "in": "path",
                         "required": true
                     },
@@ -435,7 +623,7 @@
                 }
             }
         },
-        "/systems/{systemId}/jobs": {
+        "/systems/{system}/jobs": {
             "get": {
                 "description": "list jobs",
                 "consumes": [
@@ -444,13 +632,16 @@
                 "produces": [
                     "application/json"
                 ],
+                "tags": [
+                    "jobs"
+                ],
                 "summary": "Lists jobs",
                 "operationId": "list-jobs",
                 "parameters": [
                     {
                         "type": "string",
                         "description": "System ID",
-                        "name": "systemId",
+                        "name": "system",
                         "in": "path",
                         "required": true
                     }
@@ -468,7 +659,7 @@
                 }
             }
         },
-        "/systems/{systemId}/jobs/{id}": {
+        "/systems/{system}/jobs/{id}": {
             "get": {
                 "description": "get job",
                 "consumes": [
@@ -477,13 +668,16 @@
                 "produces": [
                     "application/json"
                 ],
+                "tags": [
+                    "jobs"
+                ],
                 "summary": "Get job",
                 "operationId": "get-job",
                 "parameters": [
                     {
                         "type": "string",
                         "description": "System ID",
-                        "name": "systemId",
+                        "name": "system",
                         "in": "path",
                         "required": true
                     },
@@ -506,7 +700,7 @@
                 }
             }
         },
-        "/systems/{systemId}/jobs/{id}/logs": {
+        "/systems/{system}/jobs/{id}/logs": {
             "get": {
                 "description": "get job logs",
                 "consumes": [
@@ -515,13 +709,16 @@
                 "produces": [
                     "application/json"
                 ],
+                "tags": [
+                    "jobs"
+                ],
                 "summary": "Get job logs",
                 "operationId": "get-job-logs",
                 "parameters": [
                     {
                         "type": "string",
                         "description": "System ID",
-                        "name": "systemId",
+                        "name": "system",
                         "in": "path",
                         "required": true
                     },
@@ -585,7 +782,7 @@
                 }
             }
         },
-        "/systems/{systemId}/node-pools": {
+        "/systems/{system}/node-pools": {
             "get": {
                 "description": "list node pools",
                 "consumes": [
@@ -594,13 +791,16 @@
                 "produces": [
                     "application/json"
                 ],
+                "tags": [
+                    "node-pools"
+                ],
                 "summary": "Lists node pools",
                 "operationId": "list-node-pools",
                 "parameters": [
                     {
                         "type": "string",
                         "description": "System ID",
-                        "name": "systemId",
+                        "name": "system",
                         "in": "path",
                         "required": true
                     }
@@ -618,7 +818,7 @@
                 }
             }
         },
-        "/systems/{systemId}/node-pools/{id}": {
+        "/systems/{system}/node-pools/{id}": {
             "get": {
                 "description": "get node pool",
                 "consumes": [
@@ -627,13 +827,16 @@
                 "produces": [
                     "application/json"
                 ],
+                "tags": [
+                    "node-pools"
+                ],
                 "summary": "Get node pool",
                 "operationId": "get-node-pool",
                 "parameters": [
                     {
                         "type": "string",
                         "description": "System ID",
-                        "name": "systemId",
+                        "name": "system",
                         "in": "path",
                         "required": true
                     },
@@ -656,115 +859,7 @@
                 }
             }
         },
-        "/systems/{systemId}/secrets": {
-            "get": {
-                "description": "list secrets",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "summary": "Lists secrets",
-                "operationId": "list-secrets",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "System ID",
-                        "name": "systemId",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/v1.Secret"
-                            }
-                        }
-                    }
-                }
-            },
-            "post": {
-                "description": "set secret",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "summary": "set secret",
-                "operationId": "set-secret",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "System ID",
-                        "name": "systemId",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "description": "Create secret",
-                        "name": "secretRequest",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "type": "object",
-                            "$ref": "#/definitions/rest.SetSecretRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "object",
-                            "$ref": "#/definitions/v1.Secret"
-                        }
-                    }
-                }
-            }
-        },
-        "/systems/{systemId}/secrets/{id}": {
-            "get": {
-                "description": "get secret",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "summary": "Get secret",
-                "operationId": "get-secret",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "System ID",
-                        "name": "systemId",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "Secret ID",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "object",
-                            "$ref": "#/definitions/v1.Secret"
-                        }
-                    }
-                }
-            },
+        "/systems/{system}/secrets/{id}": {
             "delete": {
                 "description": "get system",
                 "consumes": [
@@ -773,13 +868,16 @@
                 "produces": [
                     "application/json"
                 ],
+                "tags": [
+                    "secrets"
+                ],
                 "summary": "Delete system",
                 "operationId": "delete-system",
                 "parameters": [
                     {
                         "type": "string",
                         "description": "System ID",
-                        "name": "systemId",
+                        "name": "system",
                         "in": "path",
                         "required": true
                     },
@@ -802,7 +900,7 @@
                 }
             }
         },
-        "/systems/{systemId}/services": {
+        "/systems/{system}/services": {
             "get": {
                 "description": "list services",
                 "consumes": [
@@ -811,13 +909,16 @@
                 "produces": [
                     "application/json"
                 ],
+                "tags": [
+                    "services"
+                ],
                 "summary": "Lists services",
                 "operationId": "list-services",
                 "parameters": [
                     {
                         "type": "string",
                         "description": "System ID",
-                        "name": "systemId",
+                        "name": "system",
                         "in": "path",
                         "required": true
                     }
@@ -835,7 +936,7 @@
                 }
             }
         },
-        "/systems/{systemId}/services/{id}": {
+        "/systems/{system}/services/{id}": {
             "get": {
                 "description": "get service",
                 "consumes": [
@@ -844,13 +945,16 @@
                 "produces": [
                     "application/json"
                 ],
+                "tags": [
+                    "services"
+                ],
                 "summary": "Get service",
                 "operationId": "get-service",
                 "parameters": [
                     {
                         "type": "string",
                         "description": "System ID",
-                        "name": "systemId",
+                        "name": "system",
                         "in": "path",
                         "required": true
                     },
@@ -873,7 +977,7 @@
                 }
             }
         },
-        "/systems/{systemId}/services/{id}/logs": {
+        "/systems/{system}/services/{id}/logs": {
             "get": {
                 "description": "get service logs",
                 "consumes": [
@@ -882,13 +986,16 @@
                 "produces": [
                     "application/json"
                 ],
+                "tags": [
+                    "services"
+                ],
                 "summary": "Get service logs",
                 "operationId": "get-service-logs",
                 "parameters": [
                     {
                         "type": "string",
                         "description": "System ID",
-                        "name": "systemId",
+                        "name": "system",
                         "in": "path",
                         "required": true
                     },
@@ -959,7 +1066,7 @@
                 }
             }
         },
-        "/systems/{systemId}/teardowns": {
+        "/systems/{system}/teardowns": {
             "get": {
                 "description": "list teardowns",
                 "consumes": [
@@ -968,13 +1075,16 @@
                 "produces": [
                     "application/json"
                 ],
+                "tags": [
+                    "teardowns"
+                ],
                 "summary": "Lists teardowns",
                 "operationId": "list-teardowns",
                 "parameters": [
                     {
                         "type": "string",
                         "description": "System ID",
-                        "name": "systemId",
+                        "name": "system",
                         "in": "path",
                         "required": true
                     }
@@ -999,13 +1109,16 @@
                 "produces": [
                     "application/json"
                 ],
+                "tags": [
+                    "teardowns"
+                ],
                 "summary": "Teardown system",
                 "operationId": "teardown-system",
                 "parameters": [
                     {
                         "type": "string",
                         "description": "System ID",
-                        "name": "systemId",
+                        "name": "system",
                         "in": "path",
                         "required": true
                     }
@@ -1021,7 +1134,7 @@
                 }
             }
         },
-        "/systems/{systemId}/teardowns/{id}": {
+        "/systems/{system}/teardowns/{id}": {
             "get": {
                 "description": "get teardown",
                 "consumes": [
@@ -1030,13 +1143,16 @@
                 "produces": [
                     "application/json"
                 ],
+                "tags": [
+                    "teardowns"
+                ],
                 "summary": "Get teardown",
                 "operationId": "get-teardown",
                 "parameters": [
                     {
                         "type": "string",
                         "description": "System ID",
-                        "name": "systemId",
+                        "name": "system",
                         "in": "path",
                         "required": true
                     },
@@ -1054,39 +1170,6 @@
                         "schema": {
                             "type": "object",
                             "$ref": "#/definitions/v1.Teardown"
-                        }
-                    }
-                }
-            }
-        },
-        "/systems/{systemId}/versions": {
-            "get": {
-                "description": "list teardowns",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "summary": "Lists system versions",
-                "operationId": "list-system-versions",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "System ID",
-                        "name": "systemId",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/v1.SystemVersion"
-                            }
                         }
                     }
                 }

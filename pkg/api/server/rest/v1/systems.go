@@ -41,9 +41,10 @@ func (api *LatticeAPI) setupSystemEndpoints() {
 
 // CreateSystem godoc
 // @ID create-system
-// @Summary Create a new system
-// @Description create system
+// @Summary POST /systems
+// @Description Create a new system
 // @Router /systems [post]
+// @Tags systems
 // @Param account body rest.CreateSystemRequest true "Create system"
 // @Accept  json
 // @Produce  json
@@ -68,9 +69,10 @@ func (api *LatticeAPI) handleCreateSystem(c *gin.Context) {
 
 // ListSystems godoc
 // @ID list-systems
-// @Summary Lists systems
-// @Description list systems
+// @Summary GET /systems
+// @Description List systems
 // @Router /systems [get]
+// @Tags systems
 // @Accept  json
 // @Produce  json
 // @Success 200 {array} v1.System
@@ -86,10 +88,11 @@ func (api *LatticeAPI) handleListSystems(c *gin.Context) {
 
 // GetSystem godoc
 // @ID get-system
-// @Summary Get system
+// @Summary GET /systems/{system}
 // @Description get system
-// @Router /systems/{id} [get]
-// @Param id path string true "System ID"
+// @Router /systems/{system} [get]
+// @Tags systems
+// @Param system path string true "System ID"
 // @Accept  json
 // @Produce  json
 // @Success 200 {object} v1.System
@@ -106,12 +109,13 @@ func (api *LatticeAPI) handleGetSystem(c *gin.Context) {
 
 // DeleteSystem godoc
 // @ID delete-system
-// @Summary Delete system
-// @Description get system
-// @Router /systems/{id} [delete]
+// @Summary DELETE /systems/{system}
+// @Description Delete system
+// @Router /systems/{system} [delete]
+// @Tags systems
 // @Accept  json
 // @Produce  json
-// @Param id path string true "System ID"
+// @Param system path string true "System ID"
 // @Success 200 {object} v1.Result
 func (api *LatticeAPI) handleDeleteSystem(c *gin.Context) {
 	systemID := v1.SystemID(c.Param(systemIdentifier))

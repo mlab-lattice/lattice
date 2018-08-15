@@ -23,9 +23,9 @@ func newLatticeAPI(router *gin.RouterGroup, backend v1server.Interface, sysResol
 	}
 }
 
-// @title Lattice API
+// @title Lattice API Docs
 // @version 1.0
-// @description Welcome to lattice api
+// @description This document describes the lattice API.
 // @termsOfService TBD
 // @license.name Apache 2.0
 // @host localhost:8876

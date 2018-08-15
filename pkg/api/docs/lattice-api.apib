@@ -1,14 +1,16 @@
 FORMAT: 1A
 
-# Lattice API
+# Lattice API Docs
 
-Welcome to lattice api
+This document describes the lattice API.
+
+## Group systems
 
 ### /v1/systems
 
-#### Lists systems [GET]
+#### GET /systems [GET]
 
-list systems
+List systems
 
 + Request (application/json)
 
@@ -25,10 +27,6 @@ list systems
     + Body
 
             [
-              {},
-              {
-                "definitionUrl": "ullamco"
-              },
               {}
             ]
 
@@ -59,9 +57,9 @@ list systems
               }
             }
 
-#### Create a new system [POST]
+#### POST /systems [POST]
 
-create system
+Create a new system
 
 + Request (application/json)
 
@@ -72,7 +70,7 @@ create system
     + Body
 
             {
-              "definitionUrl": "ut tempor cillum amet sit"
+              "definitionUrl": "qui sed"
             }
 
     + Schema
@@ -121,15 +119,15 @@ create system
               }
             }
 
-### /v1/systems/{id}
+### /v1/systems/{system}
 
-#### Get system [GET]
+#### GET /systems/{system} [GET]
 
 get system
 
 + Parameters
 
-    + id (required)
+    + system (required)
 
 + Request (application/json)
 
@@ -146,7 +144,7 @@ get system
     + Body
 
             {
-              "definitionUrl": "eu"
+              "definitionUrl": "in"
             }
 
     + Schema
@@ -173,12 +171,217 @@ get system
               }
             }
 
+#### DELETE /systems/{system} [DELETE]
+
+Delete system
+
++ Parameters
+
+    + system (required)
+
++ Request (application/json)
+
+    + Headers
+
+            Accept: application/json
+
+    + Body
+
++ Response 200 (application/json)
+
+    OK
+
+    + Body
+
+            {}
+
+    + Schema
+
+            {
+              "type": "object"
+            }
+
+## Group secrets
+
+### /v1/systems/{systemId}/secrets
+
+#### Lists secrets [GET]
+
+list secrets
+
++ Parameters
+
+    + systemId (required)
+
++ Request (application/json)
+
+    + Headers
+
+            Accept: application/json
+
+    + Body
+
++ Response 200 (application/json)
+
+    OK
+
+    + Body
+
+            [
+              {
+                "value": "incididunt dolore officia aute"
+              },
+              {
+                "value": "reprehenderit",
+                "name": "amet et no",
+                "path": "enim irure"
+              }
+            ]
+
+    + Schema
+
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "description": "Name\n",
+                    "type": "string"
+                  },
+                  "path": {
+                    "description": "Secret service path\n",
+                    "type": "string"
+                  },
+                  "value": {
+                    "description": "Value\n",
+                    "type": "string"
+                  }
+                }
+              }
+            }
+
+#### set secret [POST]
+
+set secret
+
++ Parameters
+
+    + systemId (required)
+
++ Request (application/json)
+
+    + Headers
+
+            Accept: application/json
+
+    + Body
+
+            {}
+
+    + Schema
+
+            {
+              "type": "object",
+              "properties": {
+                "value": {
+                  "type": "string"
+                }
+              }
+            }
+
++ Response 200 (application/json)
+
+    OK
+
+    + Body
+
+            {
+              "value": "ex dolore sit occaecat sunt"
+            }
+
+    + Schema
+
+            {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "description": "Name\n",
+                  "type": "string"
+                },
+                "path": {
+                  "description": "Secret service path\n",
+                  "type": "string"
+                },
+                "value": {
+                  "description": "Value\n",
+                  "type": "string"
+                }
+              }
+            }
+
+### /v1/systems/{systemId}/secrets/{id}
+
+#### Get secret [GET]
+
+get secret
+
++ Parameters
+
+    + systemId (required)
+    
+    + id (required)
+
++ Request (application/json)
+
+    + Headers
+
+            Accept: application/json
+
+    + Body
+
++ Response 200 (application/json)
+
+    OK
+
+    + Body
+
+            {
+              "path": "sit pariatur labore ea veniam",
+              "name": "elit laborum in amet",
+              "value": "sed nisi magna ex"
+            }
+
+    + Schema
+
+            {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "description": "Name\n",
+                  "type": "string"
+                },
+                "path": {
+                  "description": "Secret service path\n",
+                  "type": "string"
+                },
+                "value": {
+                  "description": "Value\n",
+                  "type": "string"
+                }
+              }
+            }
+
+### /v1/systems/{system}/secrets/{id}
+
 #### Delete system [DELETE]
 
 get system
 
 + Parameters
 
+    + system (required)
+    
     + id (required)
 
 + Request (application/json)
@@ -203,11 +406,13 @@ get system
               "type": "object"
             }
 
-### /v1/systems/{systemId}/builds
+## Group versions
 
-#### Lists builds [GET]
+### /v1/systems/{systemId}/versions
 
-list builds
+#### Lists system versions [GET]
+
+list teardowns
 
 + Parameters
 
@@ -228,15 +433,59 @@ list builds
     + Body
 
             [
-              {
-                "completionTimestamp": "consequat voluptate Ut nisi"
-              },
               {},
-              {
-                "startTimestamp": "culpa est"
-              },
+              {},
+              {},
               {},
               {}
+            ]
+
+    + Schema
+
+            {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            }
+
+## Group builds
+
+### /v1/systems/{system}/builds
+
+#### Lists builds [GET]
+
+list builds
+
++ Parameters
+
+    + system (required)
+
++ Request (application/json)
+
+    + Headers
+
+            Accept: application/json
+
+    + Body
+
++ Response 200 (application/json)
+
+    OK
+
+    + Body
+
+            [
+              {},
+              {
+                "completionTimestamp": "nulla sint quis",
+                "startTimestamp": "ut culpa officia"
+              },
+              {},
+              {
+                "startTimestamp": "irure laborum culpa in dolore",
+                "completionTimestamp": "eu est ullamco dolore velit"
+              }
             ]
 
     + Schema
@@ -274,13 +523,13 @@ list builds
               }
             }
 
-#### Run job [POST]
+#### Build system [POST]
 
-run job
+build system
 
 + Parameters
 
-    + systemId (required)
+    + system (required)
 
 + Request (application/json)
 
@@ -290,31 +539,15 @@ run job
 
     + Body
 
-            {
-              "command": [
-                "quis Excepteur ipsum ullamco cillum",
-                "proident",
-                "reprehenderi",
-                "in id ut in"
-              ]
-            }
+            {}
 
     + Schema
 
             {
               "type": "object",
               "properties": {
-                "command": {
-                  "type": "array",
-                  "items": {
-                    "type": "string"
-                  }
-                },
-                "environment": {
-                  "type": "string"
-                },
-                "path": {
-                  "type": "string"
+                "version": {
+                  "type": "object"
                 }
               }
             }
@@ -326,64 +559,6 @@ run job
     + Body
 
             {}
-
-    + Schema
-
-            {
-              "type": "object",
-              "properties": {
-                "completionTimestamp": {
-                  "description": "CompletionTimestamp\n",
-                  "type": "string"
-                },
-                "id": {
-                  "description": "ID\n",
-                  "type": "object"
-                },
-                "path": {
-                  "description": "Path\n",
-                  "type": "string"
-                },
-                "startTimestamp": {
-                  "description": "StartTimestamp\n",
-                  "type": "string"
-                },
-                "state": {
-                  "description": "State\n",
-                  "type": "object"
-                }
-              }
-            }
-
-### /v1/systems/{systemId}/builds/{id}
-
-#### Get build [GET]
-
-get build
-
-+ Parameters
-
-    + systemId (required)
-    
-    + id (required)
-
-+ Request (application/json)
-
-    + Headers
-
-            Accept: application/json
-
-    + Body
-
-+ Response 200 (application/json)
-
-    OK
-
-    + Body
-
-            {
-              "startTimestamp": "ut Ut anim consectetur"
-            }
 
     + Schema
 
@@ -417,13 +592,73 @@ get build
               }
             }
 
-#### Get build logs [GET /v1/systems/{systemId}/builds/{id}/logs]
+### /v1/systems/{system}/builds/{id}
+
+#### Get build [GET]
+
+get build
+
++ Parameters
+
+    + system (required)
+    
+    + id (required)
+
++ Request (application/json)
+
+    + Headers
+
+            Accept: application/json
+
+    + Body
+
++ Response 200 (application/json)
+
+    OK
+
+    + Body
+
+            {}
+
+    + Schema
+
+            {
+              "type": "object",
+              "properties": {
+                "completionTimestamp": {
+                  "description": "Completion timestamp\n",
+                  "type": "string"
+                },
+                "id": {
+                  "description": "ID\n",
+                  "type": "object"
+                },
+                "services": {
+                  "description": "Services maps service paths (e.g. /foo/bar/buzz) to the status of the build for that service in the Build.\n",
+                  "type": "object"
+                },
+                "startTimestamp": {
+                  "description": "Start timestamp\n",
+                  "type": "string"
+                },
+                "state": {
+                  "description": "State\n",
+                  "type": "object"
+                },
+                "version": {
+                  "description": "Version\n",
+                  "type": "object"
+                }
+              }
+            }
+
+#### Get build logs [GET /v1/systems/{system}/builds/{id}/logs]
 
 get logs
 
 + Parameters
 
-    + systemId (required)
+    + system (required)
     
     + id (required)
     
@@ -457,7 +692,7 @@ get logs
 
     + Body
 
-            nostrud cillum aliquip Ut elit
+            pariatur Ut incididunt sit anim
 
     + Schema
 
@@ -465,7 +700,9 @@ get logs
               "type": "string"
             }
 
-### /v1/systems/{systemId}/deploys
+## Group deploys
+
+### /v1/systems/{system}/deploys
 
 #### Lists deploys [GET]
 
@@ -473,7 +710,7 @@ list deploys
 
 + Parameters
 
-    + systemId (required)
+    + system (required)
 
 + Request (application/json)
 
@@ -523,7 +760,7 @@ build system
 
 + Parameters
 
-    + systemId (required)
+    + system (required)
 
 + Request (application/json)
 
@@ -577,7 +814,7 @@ build system
               }
             }
 
-### /v1/systems/{systemId}/deploys/{id}
+### /v1/systems/{system}/deploys/{id}
 
 #### Get deploy [GET]
 
@@ -585,7 +822,7 @@ get deploy
 
 + Parameters
 
-    + systemId (required)
+    + system (required)
     
     + id (required)
 
@@ -625,7 +862,9 @@ get deploy
               }
             }
 
-### /v1/systems/{systemId}/jobs
+## Group jobs
+
+### /v1/systems/{system}/jobs
 
 #### Lists jobs [GET]
 
@@ -633,7 +872,7 @@ list jobs
 
 + Parameters
 
-    + systemId (required)
+    + system (required)
 
 + Request (application/json)
 
@@ -651,10 +890,9 @@ list jobs
 
             [
               {},
-              {},
               {
-                "completionTimestamp": "cillum",
-                "startTimestamp": "consequat sunt irure"
+                "startTimestamp": "ea",
+                "completionTimestamp": "velit dolor officia esse qui"
               }
             ]
 
@@ -689,7 +927,7 @@ list jobs
               }
             }
 
-### /v1/systems/{systemId}/jobs/{id}
+### /v1/systems/{system}/jobs/{id}
 
 #### Get job [GET]
 
@@ -697,7 +935,7 @@ get job
 
 + Parameters
 
-    + systemId (required)
+    + system (required)
     
     + id (required)
 
@@ -716,7 +954,7 @@ get job
     + Body
 
             {
-              "path": "sed"
+              "completionTimestamp": "occaecat aute"
             }
 
     + Schema
@@ -747,13 +985,13 @@ get job
               }
             }
 
-#### Get job logs [GET /v1/systems/{systemId}/jobs/{id}/logs]
+#### Get job logs [GET /v1/systems/{system}/jobs/{id}/logs]
 
 get job logs
 
 + Parameters
 
-    + systemId (required)
+    + system (required)
     
     + id (required)
     
@@ -785,7 +1023,7 @@ get job logs
 
     + Body
 
-            mollit ipsum ea anim pariatur
+            est labore sed occaecat
 
     + Schema
 
@@ -793,7 +1031,9 @@ get job logs
               "type": "string"
             }
 
-### /v1/systems/{systemId}/node-pools
+## Group node-pools
+
+### /v1/systems/{system}/node-pools
 
 #### Lists node pools [GET]
 
@@ -801,7 +1041,7 @@ list node pools
 
 + Parameters
 
-    + systemId (required)
+    + system (required)
 
 + Request (application/json)
 
@@ -818,7 +1058,13 @@ list node pools
     + Body
 
             [
-              {}
+              {
+                "instanceType": "tempor",
+                "path": "dolore elit"
+              },
+              {
+                "id": "proiden"
+              }
             ]
 
     + Schema
@@ -866,7 +1112,7 @@ list node pools
               }
             }
 
-### /v1/systems/{systemId}/node-pools/{id}
+### /v1/systems/{system}/node-pools/{id}
 
 #### Get node pool [GET]
 
@@ -874,7 +1120,7 @@ get node pool
 
 + Parameters
 
-    + systemId (required)
+    + system (required)
     
     + id (required)
 
@@ -893,7 +1139,10 @@ get node pool
     + Body
 
             {
-              "path": "enim sunt ut in sit"
+              "id": "consectetur nisi",
+              "failure_info": {
+                "time": "deserunt nulla"
+              }
             }
 
     + Schema
@@ -938,202 +1187,9 @@ get node pool
               }
             }
 
-### /v1/systems/{systemId}/secrets
+## Group services
 
-#### Lists secrets [GET]
-
-list secrets
-
-+ Parameters
-
-    + systemId (required)
-
-+ Request (application/json)
-
-    + Headers
-
-            Accept: application/json
-
-    + Body
-
-+ Response 200 (application/json)
-
-    OK
-
-    + Body
-
-            [
-              {
-                "path": "cillum"
-              }
-            ]
-
-    + Schema
-
-            {
-              "type": "array",
-              "items": {
-                "type": "object",
-                "properties": {
-                  "name": {
-                    "description": "Name\n",
-                    "type": "string"
-                  },
-                  "path": {
-                    "description": "Secret service path\n",
-                    "type": "string"
-                  },
-                  "value": {
-                    "description": "Value\n",
-                    "type": "string"
-                  }
-                }
-              }
-            }
-
-#### set secret [POST]
-
-set secret
-
-+ Parameters
-
-    + systemId (required)
-
-+ Request (application/json)
-
-    + Headers
-
-            Accept: application/json
-
-    + Body
-
-            {
-              "value": "Duis"
-            }
-
-    + Schema
-
-            {
-              "type": "object",
-              "properties": {
-                "value": {
-                  "type": "string"
-                }
-              }
-            }
-
-+ Response 200 (application/json)
-
-    OK
-
-    + Body
-
-            {
-              "name": "Ut ea mollit Lorem",
-              "path": "ut veniam"
-            }
-
-    + Schema
-
-            {
-              "type": "object",
-              "properties": {
-                "name": {
-                  "description": "Name\n",
-                  "type": "string"
-                },
-                "path": {
-                  "description": "Secret service path\n",
-                  "type": "string"
-                },
-                "value": {
-                  "description": "Value\n",
-                  "type": "string"
-                }
-              }
-            }
-
-### /v1/systems/{systemId}/secrets/{id}
-
-#### Get secret [GET]
-
-get secret
-
-+ Parameters
-
-    + systemId (required)
-    
-    + id (required)
-
-+ Request (application/json)
-
-    + Headers
-
-            Accept: application/json
-
-    + Body
-
-+ Response 200 (application/json)
-
-    OK
-
-    + Body
-
-            {}
-
-    + Schema
-
-            {
-              "type": "object",
-              "properties": {
-                "name": {
-                  "description": "Name\n",
-                  "type": "string"
-                },
-                "path": {
-                  "description": "Secret service path\n",
-                  "type": "string"
-                },
-                "value": {
-                  "description": "Value\n",
-                  "type": "string"
-                }
-              }
-            }
-
-#### Delete system [DELETE]
-
-get system
-
-+ Parameters
-
-    + systemId (required)
-    
-    + id (required)
-
-+ Request (application/json)
-
-    + Headers
-
-            Accept: application/json
-
-    + Body
-
-+ Response 200 (application/json)
-
-    OK
-
-    + Body
-
-            {}
-
-    + Schema
-
-            {
-              "type": "object"
-            }
-
-### /v1/systems/{systemId}/services
+### /v1/systems/{system}/services
 
 #### Lists services [GET]
 
@@ -1141,7 +1197,7 @@ list services
 
 + Parameters
 
-    + systemId (required)
+    + system (required)
 
 + Request (application/json)
 
@@ -1159,10 +1215,25 @@ list services
 
             [
               {
-                "updatedInstances": -98256387
+                "path": "aute amet"
               },
               {
-                "availableInstances": 52683853
+                "updatedInstances": 78520554,
+                "path": "fugiat labore consequat Lorem"
+              },
+              {
+                "terminatingInstances": -292780,
+                "message": "eiusmod adipisicing do ut dolor"
+              },
+              {
+                "instances": [
+                  "et",
+                  "dolore",
+                  "non",
+                  "aute",
+                  "id quis cupidatat officia"
+                ],
+                "updatedInstances": 44668002
               }
             ]
 
@@ -1234,7 +1305,7 @@ list services
               }
             }
 
-### /v1/systems/{systemId}/services/{id}
+### /v1/systems/{system}/services/{id}
 
 #### Get service [GET]
 
@@ -1242,7 +1313,7 @@ get service
 
 + Parameters
 
-    + systemId (required)
+    + system (required)
     
     + id (required)
 
@@ -1327,13 +1398,13 @@ get service
               }
             }
 
-#### Get service logs [GET /v1/systems/{systemId}/services/{id}/logs]
+#### Get service logs [GET /v1/systems/{system}/services/{id}/logs]
 
 get service logs
 
 + Parameters
 
-    + systemId (required)
+    + system (required)
     
     + id (required)
     
@@ -1367,7 +1438,7 @@ get service logs
 
     + Body
 
-            amet sunt
+            ipsum esse
 
     + Schema
 
@@ -1375,7 +1446,9 @@ get service logs
               "type": "string"
             }
 
-### /v1/systems/{systemId}/teardowns
+## Group teardowns
+
+### /v1/systems/{system}/teardowns
 
 #### Lists teardowns [GET]
 
@@ -1383,7 +1456,7 @@ list teardowns
 
 + Parameters
 
-    + systemId (required)
+    + system (required)
 
 + Request (application/json)
 
@@ -1430,7 +1503,7 @@ teardown system
 
 + Parameters
 
-    + systemId (required)
+    + system (required)
 
 + Request (application/json)
 
@@ -1464,7 +1537,7 @@ teardown system
               }
             }
 
-### /v1/systems/{systemId}/teardowns/{id}
+### /v1/systems/{system}/teardowns/{id}
 
 #### Get teardown [GET]
 
@@ -1472,7 +1545,7 @@ get teardown
 
 + Parameters
 
-    + systemId (required)
+    + system (required)
     
     + id (required)
 
@@ -1505,46 +1578,6 @@ get teardown
                   "description": "State\n",
                   "type": "object"
                 }
-              }
-            }
-
-### /v1/systems/{systemId}/versions
-
-#### Lists system versions [GET]
-
-list teardowns
-
-+ Parameters
-
-    + systemId (required)
-
-+ Request (application/json)
-
-    + Headers
-
-            Accept: application/json
-
-    + Body
-
-+ Response 200 (application/json)
-
-    OK
-
-    + Body
-
-            [
-              {},
-              {},
-              {},
-              {}
-            ]
-
-    + Schema
-
-            {
-              "type": "array",
-              "items": {
-                "type": "object"
               }
             }
 

@@ -40,6 +40,7 @@ func (api *LatticeAPI) setupSecretsEndpoints() {
 // @Summary set secret
 // @Description set secret
 // @Router /systems/{systemId}/secrets [post]
+// @Tags secrets
 // @Param systemId path string true "System ID"
 // @Param secretRequest body rest.SetSecretRequest true "Create secret"
 // @Accept  json
@@ -92,6 +93,7 @@ func (api *LatticeAPI) handleSetSecret(c *gin.Context) {
 // @Summary Lists secrets
 // @Description list secrets
 // @Router /systems/{systemId}/secrets [get]
+// @Tags secrets
 // @Param systemId path string true "System ID"
 // @Accept  json
 // @Produce  json
@@ -113,6 +115,7 @@ func (api *LatticeAPI) handleListSecrets(c *gin.Context) {
 // @Summary Get secret
 // @Description get secret
 // @Router /systems/{systemId}/secrets/{id} [get]
+// @Tags secrets
 // @Param systemId path string true "System ID"
 // @Param id path string true "Secret ID"
 // @Accept  json
@@ -159,10 +162,11 @@ func (api *LatticeAPI) handleGetSecret(c *gin.Context) {
 // @ID delete-system
 // @Summary Delete system
 // @Description get system
-// @Router /systems/{systemId}/secrets/{id} [delete]
+// @Router /systems/{system}/secrets/{id} [delete]
+// @Tags secrets
 // @Accept  json
 // @Produce  json
-// @Param systemId path string true "System ID"
+// @Param system path string true "System ID"
 // @Param id path string true "Secret ID"
 // @Success 200 {object} v1.Result
 func (api *LatticeAPI) handleUnsetSecret(c *gin.Context) {

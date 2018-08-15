@@ -298,18 +298,18 @@ definitions:
 host: localhost:8876
 info:
   contact: {}
-  description: Welcome to lattice api
+  description: This document describes the lattice API.
   license:
     name: Apache 2.0
   termsOfService: TBD
-  title: Lattice API
+  title: Lattice API Docs
   version: "1.0"
 paths:
   /systems:
     get:
       consumes:
       - application/json
-      description: list systems
+      description: List systems
       operationId: list-systems
       produces:
       - application/json
@@ -320,11 +320,13 @@ paths:
             items:
               $ref: '#/definitions/v1.System'
             type: array
-      summary: Lists systems
+      summary: GET /systems
+      tags:
+      - systems
     post:
       consumes:
       - application/json
-      description: create system
+      description: Create a new system
       operationId: create-system
       parameters:
       - description: Create system
@@ -342,17 +344,19 @@ paths:
           schema:
             $ref: '#/definitions/v1.System'
             type: object
-      summary: Create a new system
-  /systems/{id}:
+      summary: POST /systems
+      tags:
+      - systems
+  /systems/{system}:
     delete:
       consumes:
       - application/json
-      description: get system
+      description: Delete system
       operationId: delete-system
       parameters:
       - description: System ID
         in: path
-        name: id
+        name: system
         required: true
         type: string
       produces:
@@ -363,7 +367,9 @@ paths:
           schema:
             $ref: '#/definitions/v1.Result'
             type: object
-      summary: Delete system
+      summary: DELETE /systems/{system}
+      tags:
+      - systems
     get:
       consumes:
       - application/json
@@ -372,7 +378,7 @@ paths:
       parameters:
       - description: System ID
         in: path
-        name: id
+        name: system
         required: true
         type: string
       produces:
@@ -383,8 +389,10 @@ paths:
           schema:
             $ref: '#/definitions/v1.System'
             type: object
-      summary: Get system
-  /systems/{systemId}/builds:
+      summary: GET /systems/{system}
+      tags:
+      - systems
+  /systems/{system}/builds:
     get:
       consumes:
       - application/json
@@ -393,7 +401,7 @@ paths:
       parameters:
       - description: System ID
         in: path
-        name: systemId
+        name: system
         required: true
         type: string
       produces:
@@ -406,23 +414,25 @@ paths:
               $ref: '#/definitions/v1.Build'
             type: array
       summary: Lists builds
+      tags:
+      - builds
     post:
       consumes:
       - application/json
-      description: run job
-      operationId: run-job
+      description: build system
+      operationId: build-system
       parameters:
       - description: System ID
         in: path
-        name: systemId
+        name: system
         required: true
         type: string
       - description: Create build
         in: body
-        name: jobRequest
+        name: buildRequest
         required: true
         schema:
-          $ref: '#/definitions/rest.RunJobRequest'
+          $ref: '#/definitions/rest.BuildRequest'
           type: object
       produces:
       - application/json
@@ -430,10 +440,12 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/v1.Job'
+            $ref: '#/definitions/v1.Build'
             type: object
-      summary: Run job
-  /systems/{systemId}/builds/{id}:
+      summary: Build system
+      tags:
+      - builds
+  /systems/{system}/builds/{id}:
     get:
       consumes:
       - application/json
@@ -442,7 +454,7 @@ paths:
       parameters:
       - description: System ID
         in: path
-        name: systemId
+        name: system
         required: true
         type: string
       - description: Build ID
@@ -459,7 +471,9 @@ paths:
             $ref: '#/definitions/v1.Build'
             type: object
       summary: Get build
-  /systems/{systemId}/builds/{id}/logs:
+      tags:
+      - builds
+  /systems/{system}/builds/{id}/logs:
     get:
       consumes:
       - application/json
@@ -468,7 +482,7 @@ paths:
       parameters:
       - description: System ID
         in: path
-        name: systemId
+        name: system
         required: true
         type: string
       - description: Build ID
@@ -517,7 +531,9 @@ paths:
           schema:
             type: string
       summary: Get build logs
-  /systems/{systemId}/deploys:
+      tags:
+      - builds
+  /systems/{system}/deploys:
     get:
       consumes:
       - application/json
@@ -526,7 +542,7 @@ paths:
       parameters:
       - description: System ID
         in: path
-        name: systemId
+        name: system
         required: true
         type: string
       produces:
@@ -539,6 +555,8 @@ paths:
               $ref: '#/definitions/v1.Deploy'
             type: array
       summary: Lists deploys
+      tags:
+      - deploys
     post:
       consumes:
       - application/json
@@ -547,7 +565,7 @@ paths:
       parameters:
       - description: System ID
         in: path
-        name: systemId
+        name: system
         required: true
         type: string
       - description: Create deploy
@@ -566,7 +584,9 @@ paths:
             $ref: '#/definitions/v1.Deploy'
             type: object
       summary: Deploy system
-  /systems/{systemId}/deploys/{id}:
+      tags:
+      - deploys
+  /systems/{system}/deploys/{id}:
     get:
       consumes:
       - application/json
@@ -575,7 +595,7 @@ paths:
       parameters:
       - description: System ID
         in: path
-        name: systemId
+        name: system
         required: true
         type: string
       - description: Deploy ID
@@ -592,7 +612,9 @@ paths:
             $ref: '#/definitions/v1.Deploy'
             type: object
       summary: Get deploy
-  /systems/{systemId}/jobs:
+      tags:
+      - deploys
+  /systems/{system}/jobs:
     get:
       consumes:
       - application/json
@@ -601,7 +623,7 @@ paths:
       parameters:
       - description: System ID
         in: path
-        name: systemId
+        name: system
         required: true
         type: string
       produces:
@@ -614,7 +636,9 @@ paths:
               $ref: '#/definitions/v1.Job'
             type: array
       summary: Lists jobs
-  /systems/{systemId}/jobs/{id}:
+      tags:
+      - jobs
+  /systems/{system}/jobs/{id}:
     get:
       consumes:
       - application/json
@@ -623,7 +647,7 @@ paths:
       parameters:
       - description: System ID
         in: path
-        name: systemId
+        name: system
         required: true
         type: string
       - description: Job ID
@@ -640,7 +664,9 @@ paths:
             $ref: '#/definitions/v1.Job'
             type: object
       summary: Get job
-  /systems/{systemId}/jobs/{id}/logs:
+      tags:
+      - jobs
+  /systems/{system}/jobs/{id}/logs:
     get:
       consumes:
       - application/json
@@ -649,7 +675,7 @@ paths:
       parameters:
       - description: System ID
         in: path
-        name: systemId
+        name: system
         required: true
         type: string
       - description: Job ID
@@ -693,7 +719,9 @@ paths:
           schema:
             type: string
       summary: Get job logs
-  /systems/{systemId}/node-pools:
+      tags:
+      - jobs
+  /systems/{system}/node-pools:
     get:
       consumes:
       - application/json
@@ -702,7 +730,7 @@ paths:
       parameters:
       - description: System ID
         in: path
-        name: systemId
+        name: system
         required: true
         type: string
       produces:
@@ -715,7 +743,9 @@ paths:
               $ref: '#/definitions/v1.NodePool'
             type: array
       summary: Lists node pools
-  /systems/{systemId}/node-pools/{id}:
+      tags:
+      - node-pools
+  /systems/{system}/node-pools/{id}:
     get:
       consumes:
       - application/json
@@ -724,7 +754,7 @@ paths:
       parameters:
       - description: System ID
         in: path
-        name: systemId
+        name: system
         required: true
         type: string
       - description: NodePool ID
@@ -741,56 +771,9 @@ paths:
             $ref: '#/definitions/v1.NodePool'
             type: object
       summary: Get node pool
-  /systems/{systemId}/secrets:
-    get:
-      consumes:
-      - application/json
-      description: list secrets
-      operationId: list-secrets
-      parameters:
-      - description: System ID
-        in: path
-        name: systemId
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            items:
-              $ref: '#/definitions/v1.Secret'
-            type: array
-      summary: Lists secrets
-    post:
-      consumes:
-      - application/json
-      description: set secret
-      operationId: set-secret
-      parameters:
-      - description: System ID
-        in: path
-        name: systemId
-        required: true
-        type: string
-      - description: Create secret
-        in: body
-        name: secretRequest
-        required: true
-        schema:
-          $ref: '#/definitions/rest.SetSecretRequest'
-          type: object
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/v1.Secret'
-            type: object
-      summary: set secret
-  /systems/{systemId}/secrets/{id}:
+      tags:
+      - node-pools
+  /systems/{system}/secrets/{id}:
     delete:
       consumes:
       - application/json
@@ -799,7 +782,7 @@ paths:
       parameters:
       - description: System ID
         in: path
-        name: systemId
+        name: system
         required: true
         type: string
       - description: Secret ID
@@ -816,32 +799,9 @@ paths:
             $ref: '#/definitions/v1.Result'
             type: object
       summary: Delete system
-    get:
-      consumes:
-      - application/json
-      description: get secret
-      operationId: get-secret
-      parameters:
-      - description: System ID
-        in: path
-        name: systemId
-        required: true
-        type: string
-      - description: Secret ID
-        in: path
-        name: id
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/v1.Secret'
-            type: object
-      summary: Get secret
-  /systems/{systemId}/services:
+      tags:
+      - secrets
+  /systems/{system}/services:
     get:
       consumes:
       - application/json
@@ -850,7 +810,7 @@ paths:
       parameters:
       - description: System ID
         in: path
-        name: systemId
+        name: system
         required: true
         type: string
       produces:
@@ -863,7 +823,9 @@ paths:
               $ref: '#/definitions/v1.Service'
             type: array
       summary: Lists services
-  /systems/{systemId}/services/{id}:
+      tags:
+      - services
+  /systems/{system}/services/{id}:
     get:
       consumes:
       - application/json
@@ -872,7 +834,7 @@ paths:
       parameters:
       - description: System ID
         in: path
-        name: systemId
+        name: system
         required: true
         type: string
       - description: Service ID
@@ -889,7 +851,9 @@ paths:
             $ref: '#/definitions/v1.Service'
             type: object
       summary: Get service
-  /systems/{systemId}/services/{id}/logs:
+      tags:
+      - services
+  /systems/{system}/services/{id}/logs:
     get:
       consumes:
       - application/json
@@ -898,7 +862,7 @@ paths:
       parameters:
       - description: System ID
         in: path
-        name: systemId
+        name: system
         required: true
         type: string
       - description: Service ID
@@ -947,7 +911,9 @@ paths:
           schema:
             type: string
       summary: Get service logs
-  /systems/{systemId}/teardowns:
+      tags:
+      - services
+  /systems/{system}/teardowns:
     get:
       consumes:
       - application/json
@@ -956,7 +922,7 @@ paths:
       parameters:
       - description: System ID
         in: path
-        name: systemId
+        name: system
         required: true
         type: string
       produces:
@@ -969,6 +935,8 @@ paths:
               $ref: '#/definitions/v1.Teardown'
             type: array
       summary: Lists teardowns
+      tags:
+      - teardowns
     post:
       consumes:
       - application/json
@@ -977,7 +945,7 @@ paths:
       parameters:
       - description: System ID
         in: path
-        name: systemId
+        name: system
         required: true
         type: string
       produces:
@@ -989,7 +957,9 @@ paths:
             $ref: '#/definitions/v1.Teardown'
             type: object
       summary: Teardown system
-  /systems/{systemId}/teardowns/{id}:
+      tags:
+      - teardowns
+  /systems/{system}/teardowns/{id}:
     get:
       consumes:
       - application/json
@@ -998,7 +968,7 @@ paths:
       parameters:
       - description: System ID
         in: path
-        name: systemId
+        name: system
         required: true
         type: string
       - description: Teardown ID
@@ -1015,6 +985,89 @@ paths:
             $ref: '#/definitions/v1.Teardown'
             type: object
       summary: Get teardown
+      tags:
+      - teardowns
+  /systems/{systemId}/secrets:
+    get:
+      consumes:
+      - application/json
+      description: list secrets
+      operationId: list-secrets
+      parameters:
+      - description: System ID
+        in: path
+        name: systemId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/v1.Secret'
+            type: array
+      summary: Lists secrets
+      tags:
+      - secrets
+    post:
+      consumes:
+      - application/json
+      description: set secret
+      operationId: set-secret
+      parameters:
+      - description: System ID
+        in: path
+        name: systemId
+        required: true
+        type: string
+      - description: Create secret
+        in: body
+        name: secretRequest
+        required: true
+        schema:
+          $ref: '#/definitions/rest.SetSecretRequest'
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/v1.Secret'
+            type: object
+      summary: set secret
+      tags:
+      - secrets
+  /systems/{systemId}/secrets/{id}:
+    get:
+      consumes:
+      - application/json
+      description: get secret
+      operationId: get-secret
+      parameters:
+      - description: System ID
+        in: path
+        name: systemId
+        required: true
+        type: string
+      - description: Secret ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/v1.Secret'
+            type: object
+      summary: Get secret
+      tags:
+      - secrets
   /systems/{systemId}/versions:
     get:
       consumes:
@@ -1037,6 +1090,8 @@ paths:
               $ref: '#/definitions/v1.SystemVersion'
             type: array
       summary: Lists system versions
+      tags:
+      - versions
 securityDefinitions:
   ApiKeyAuth:
     in: header
