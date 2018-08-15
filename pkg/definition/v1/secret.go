@@ -63,6 +63,7 @@ func (v ValueOrSecret) MarshalJSON() ([]byte, error) {
 	if v.SecretRef == nil {
 		return json.Marshal(nil)
 	}
+
 	return json.Marshal(v.SecretRef)
 }
 
