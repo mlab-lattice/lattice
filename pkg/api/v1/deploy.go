@@ -14,7 +14,10 @@ const (
 )
 
 type Deploy struct {
-	ID      DeployID    `json:"id"`
-	BuildID BuildID     `json:"buildId"`
-	State   DeployState `json:"state"`
+	// ID
+	ID DeployID `json:"id"`
+	// Build ID
+	BuildID BuildID `json:"buildId"`
+	// State
+	State DeployState `json:"state"`
 }

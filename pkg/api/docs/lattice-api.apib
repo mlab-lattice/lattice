@@ -25,6 +25,10 @@ list systems
     + Body
 
             [
+              {},
+              {
+                "definitionUrl": "ullamco"
+              },
               {}
             ]
 
@@ -67,7 +71,9 @@ create system
 
     + Body
 
-            {}
+            {
+              "definitionUrl": "ut tempor cillum amet sit"
+            }
 
     + Schema
 
@@ -89,9 +95,7 @@ create system
 
     + Body
 
-            {
-              "definitionUrl": "pariatur fugiat exercitation Ut"
-            }
+            {}
 
     + Schema
 
@@ -142,7 +146,7 @@ get system
     + Body
 
             {
-              "definitionUrl": "ullamco sunt repre"
+              "definitionUrl": "eu"
             }
 
     + Schema
@@ -224,7 +228,13 @@ list builds
     + Body
 
             [
+              {
+                "completionTimestamp": "consequat voluptate Ut nisi"
+              },
               {},
+              {
+                "startTimestamp": "culpa est"
+              },
               {},
               {}
             ]
@@ -237,31 +247,36 @@ list builds
                 "type": "object",
                 "properties": {
                   "completionTimestamp": {
+                    "description": "Completion timestamp\n",
                     "type": "string"
                   },
                   "id": {
+                    "description": "ID\n",
                     "type": "object"
                   },
                   "services": {
-                    "description": "Services maps service paths (e.g. /foo/bar/buzz) to the\nstatus of the build for that service in the Build.\n",
+                    "description": "Services maps service paths (e.g. /foo/bar/buzz) to the status of the build for that service in the Build.\n",
                     "type": "object"
                   },
                   "startTimestamp": {
+                    "description": "Start timestamp\n",
                     "type": "string"
                   },
                   "state": {
+                    "description": "State\n",
                     "type": "object"
                   },
                   "version": {
+                    "description": "Version\n",
                     "type": "object"
                   }
                 }
               }
             }
 
-#### Build system [POST]
+#### Run job [POST]
 
-build system
+run job
 
 + Parameters
 
@@ -275,15 +290,31 @@ build system
 
     + Body
 
-            {}
+            {
+              "command": [
+                "quis Excepteur ipsum ullamco cillum",
+                "proident",
+                "reprehenderi",
+                "in id ut in"
+              ]
+            }
 
     + Schema
 
             {
               "type": "object",
               "properties": {
-                "version": {
-                  "type": "object"
+                "command": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "environment": {
+                  "type": "string"
+                },
+                "path": {
+                  "type": "string"
                 }
               }
             }
@@ -302,22 +333,23 @@ build system
               "type": "object",
               "properties": {
                 "completionTimestamp": {
+                  "description": "CompletionTimestamp\n",
                   "type": "string"
                 },
                 "id": {
+                  "description": "ID\n",
                   "type": "object"
                 },
-                "services": {
-                  "description": "Services maps service paths (e.g. /foo/bar/buzz) to the\nstatus of the build for that service in the Build.\n",
-                  "type": "object"
+                "path": {
+                  "description": "Path\n",
+                  "type": "string"
                 },
                 "startTimestamp": {
+                  "description": "StartTimestamp\n",
                   "type": "string"
                 },
                 "state": {
-                  "type": "object"
-                },
-                "version": {
+                  "description": "State\n",
                   "type": "object"
                 }
               }
@@ -349,7 +381,9 @@ get build
 
     + Body
 
-            {}
+            {
+              "startTimestamp": "ut Ut anim consectetur"
+            }
 
     + Schema
 
@@ -357,22 +391,27 @@ get build
               "type": "object",
               "properties": {
                 "completionTimestamp": {
+                  "description": "Completion timestamp\n",
                   "type": "string"
                 },
                 "id": {
+                  "description": "ID\n",
                   "type": "object"
                 },
                 "services": {
-                  "description": "Services maps service paths (e.g. /foo/bar/buzz) to the\nstatus of the build for that service in the Build.\n",
+                  "description": "Services maps service paths (e.g. /foo/bar/buzz) to the status of the build for that service in the Build.\n",
                   "type": "object"
                 },
                 "startTimestamp": {
+                  "description": "Start timestamp\n",
                   "type": "string"
                 },
                 "state": {
+                  "description": "State\n",
                   "type": "object"
                 },
                 "version": {
+                  "description": "Version\n",
                   "type": "object"
                 }
               }
@@ -418,7 +457,7 @@ get logs
 
     + Body
 
-            cupidatat nisi eu commodo
+            nostrud cillum aliquip Ut elit
 
     + Schema
 
@@ -452,7 +491,6 @@ list deploys
 
             [
               {},
-              {},
               {}
             ]
 
@@ -464,12 +502,15 @@ list deploys
                 "type": "object",
                 "properties": {
                   "buildId": {
+                    "description": "Build ID\n",
                     "type": "object"
                   },
                   "id": {
+                    "description": "ID\n",
                     "type": "object"
                   },
                   "state": {
+                    "description": "State\n",
                     "type": "object"
                   }
                 }
@@ -522,12 +563,15 @@ build system
               "type": "object",
               "properties": {
                 "buildId": {
+                  "description": "Build ID\n",
                   "type": "object"
                 },
                 "id": {
+                  "description": "ID\n",
                   "type": "object"
                 },
                 "state": {
+                  "description": "State\n",
                   "type": "object"
                 }
               }
@@ -567,12 +611,15 @@ get deploy
               "type": "object",
               "properties": {
                 "buildId": {
+                  "description": "Build ID\n",
                   "type": "object"
                 },
                 "id": {
+                  "description": "ID\n",
                   "type": "object"
                 },
                 "state": {
+                  "description": "State\n",
                   "type": "object"
                 }
               }
@@ -605,9 +652,9 @@ list jobs
             [
               {},
               {},
-              {},
               {
-                "completionTimestamp": "officia ullamco"
+                "completionTimestamp": "cillum",
+                "startTimestamp": "consequat sunt irure"
               }
             ]
 
@@ -619,18 +666,23 @@ list jobs
                 "type": "object",
                 "properties": {
                   "completionTimestamp": {
+                    "description": "CompletionTimestamp\n",
                     "type": "string"
                   },
                   "id": {
+                    "description": "ID\n",
                     "type": "object"
                   },
                   "path": {
+                    "description": "Path\n",
                     "type": "string"
                   },
                   "startTimestamp": {
+                    "description": "StartTimestamp\n",
                     "type": "string"
                   },
                   "state": {
+                    "description": "State\n",
                     "type": "object"
                   }
                 }
@@ -664,8 +716,7 @@ get job
     + Body
 
             {
-              "startTimestamp": "aliquip",
-              "completionTimestamp": "aute id quis"
+              "path": "sed"
             }
 
     + Schema
@@ -674,18 +725,23 @@ get job
               "type": "object",
               "properties": {
                 "completionTimestamp": {
+                  "description": "CompletionTimestamp\n",
                   "type": "string"
                 },
                 "id": {
+                  "description": "ID\n",
                   "type": "object"
                 },
                 "path": {
+                  "description": "Path\n",
                   "type": "string"
                 },
                 "startTimestamp": {
+                  "description": "StartTimestamp\n",
                   "type": "string"
                 },
                 "state": {
+                  "description": "State\n",
                   "type": "object"
                 }
               }
@@ -729,7 +785,7 @@ get job logs
 
     + Body
 
-            laboris labore dolor do ullamco
+            mollit ipsum ea anim pariatur
 
     + Schema
 
@@ -762,16 +818,6 @@ list node pools
     + Body
 
             [
-              {
-                "failure_info": {
-                  "message": "tempor dolore culpa dolore minim"
-                }
-              },
-              {},
-              {},
-              {
-                "id": "voluptate consequat"
-              },
               {}
             ]
 
@@ -783,30 +829,37 @@ list node pools
                 "type": "object",
                 "properties": {
                   "failure_info": {
+                    "description": "FailureInfo\n",
                     "type": "object",
                     "properties": {
                       "message": {
+                        "description": "Message\n",
                         "type": "string"
                       },
                       "time": {
+                        "description": "Time\n",
                         "type": "string"
                       }
                     }
                   },
                   "id": {
+                    "description": "ID\n",
                     "type": "string"
                   },
                   "instanceType": {
-                    "description": "FIXME: how to deal with epochs?\n",
+                    "description": "FIXME: how to deal with epochs?\nInstanceType\n",
                     "type": "string"
                   },
                   "numInstances": {
+                    "description": "NumInstances\n",
                     "type": "integer"
                   },
                   "path": {
+                    "description": "Path\n",
                     "type": "string"
                   },
                   "state": {
+                    "description": "State\n",
                     "type": "object"
                   }
                 }
@@ -839,7 +892,9 @@ get node pool
 
     + Body
 
-            {}
+            {
+              "path": "enim sunt ut in sit"
+            }
 
     + Schema
 
@@ -847,30 +902,37 @@ get node pool
               "type": "object",
               "properties": {
                 "failure_info": {
+                  "description": "FailureInfo\n",
                   "type": "object",
                   "properties": {
                     "message": {
+                      "description": "Message\n",
                       "type": "string"
                     },
                     "time": {
+                      "description": "Time\n",
                       "type": "string"
                     }
                   }
                 },
                 "id": {
+                  "description": "ID\n",
                   "type": "string"
                 },
                 "instanceType": {
-                  "description": "FIXME: how to deal with epochs?\n",
+                  "description": "FIXME: how to deal with epochs?\nInstanceType\n",
                   "type": "string"
                 },
                 "numInstances": {
+                  "description": "NumInstances\n",
                   "type": "integer"
                 },
                 "path": {
+                  "description": "Path\n",
                   "type": "string"
                 },
                 "state": {
+                  "description": "State\n",
                   "type": "object"
                 }
               }
@@ -902,15 +964,7 @@ list secrets
 
             [
               {
-                "value": "ut do"
-              },
-              {
-                "value": "id in veniam sit consequat",
-                "name": "fugiat"
-              },
-              {
-                "path": "proident nisi",
-                "name": "ipsum qui officia irure"
+                "path": "cillum"
               }
             ]
 
@@ -954,7 +1008,7 @@ set secret
     + Body
 
             {
-              "value": "nisi proident eu laboris"
+              "value": "Duis"
             }
 
     + Schema
@@ -974,7 +1028,10 @@ set secret
 
     + Body
 
-            {}
+            {
+              "name": "Ut ea mollit Lorem",
+              "path": "ut veniam"
+            }
 
     + Schema
 
@@ -1022,11 +1079,7 @@ get secret
 
     + Body
 
-            {
-              "name": "nulla nostrud",
-              "path": "velit sunt ut reprehenderit",
-              "value": "pariatur"
-            }
+            {}
 
     + Schema
 
@@ -1105,21 +1158,12 @@ list services
     + Body
 
             [
-              {},
               {
-                "availableInstances": -76402044,
-                "updatedInstances": 24658370
+                "updatedInstances": -98256387
               },
               {
-                "staleInstances": 55143635
-              },
-              {
-                "failureInfo": {
-                  "message": "proident amet commodo nostrud",
-                  "time": "incididunt esse"
-                }
-              },
-              {}
+                "availableInstances": 52683853
+              }
             ]
 
     + Schema
@@ -1130,17 +1174,19 @@ list services
                 "type": "object",
                 "properties": {
                   "availableInstances": {
-                    "description": "TBD\n",
+                    "description": "AvailableInstances\n",
                     "type": "integer"
                   },
                   "failureInfo": {
-                    "description": "TBD\n",
+                    "description": "FailureInfo\n",
                     "type": "object",
                     "properties": {
                       "message": {
+                        "description": "Message\n",
                         "type": "string"
                       },
                       "time": {
+                        "description": "Time\n",
                         "type": "string"
                       }
                     }
@@ -1150,14 +1196,14 @@ list services
                     "type": "object"
                   },
                   "instances": {
-                    "description": "TBD\n",
+                    "description": "Instances\n",
                     "type": "array",
                     "items": {
                       "type": "string"
                     }
                   },
                   "message": {
-                    "description": "TBD\n",
+                    "description": "Message\n",
                     "type": "string"
                   },
                   "path": {
@@ -1165,23 +1211,23 @@ list services
                     "type": "string"
                   },
                   "ports": {
-                    "description": "TBD\n",
+                    "description": "Ports\n",
                     "type": "object"
                   },
                   "staleInstances": {
-                    "description": "TBD\n",
+                    "description": "StaleInstances\n",
                     "type": "integer"
                   },
                   "state": {
-                    "description": "State [\"pending\", \"deleting\", \"scaling\", \"updating\", \"stable\", \"failed\"]\n",
+                    "description": "State\n",
                     "type": "object"
                   },
                   "terminatingInstances": {
-                    "description": "TBD\n",
+                    "description": "TerminatingInstances\n",
                     "type": "integer"
                   },
                   "updatedInstances": {
-                    "description": "TBD\n",
+                    "description": "UpdatedInstances\n",
                     "type": "integer"
                   }
                 }
@@ -1222,17 +1268,19 @@ get service
               "type": "object",
               "properties": {
                 "availableInstances": {
-                  "description": "TBD\n",
+                  "description": "AvailableInstances\n",
                   "type": "integer"
                 },
                 "failureInfo": {
-                  "description": "TBD\n",
+                  "description": "FailureInfo\n",
                   "type": "object",
                   "properties": {
                     "message": {
+                      "description": "Message\n",
                       "type": "string"
                     },
                     "time": {
+                      "description": "Time\n",
                       "type": "string"
                     }
                   }
@@ -1242,14 +1290,14 @@ get service
                   "type": "object"
                 },
                 "instances": {
-                  "description": "TBD\n",
+                  "description": "Instances\n",
                   "type": "array",
                   "items": {
                     "type": "string"
                   }
                 },
                 "message": {
-                  "description": "TBD\n",
+                  "description": "Message\n",
                   "type": "string"
                 },
                 "path": {
@@ -1257,23 +1305,23 @@ get service
                   "type": "string"
                 },
                 "ports": {
-                  "description": "TBD\n",
+                  "description": "Ports\n",
                   "type": "object"
                 },
                 "staleInstances": {
-                  "description": "TBD\n",
+                  "description": "StaleInstances\n",
                   "type": "integer"
                 },
                 "state": {
-                  "description": "State [\"pending\", \"deleting\", \"scaling\", \"updating\", \"stable\", \"failed\"]\n",
+                  "description": "State\n",
                   "type": "object"
                 },
                 "terminatingInstances": {
-                  "description": "TBD\n",
+                  "description": "TerminatingInstances\n",
                   "type": "integer"
                 },
                 "updatedInstances": {
-                  "description": "TBD\n",
+                  "description": "UpdatedInstances\n",
                   "type": "integer"
                 }
               }
@@ -1319,7 +1367,7 @@ get service logs
 
     + Body
 
-            voluptate minim ad nostrud
+            amet sunt
 
     + Schema
 
@@ -1353,6 +1401,7 @@ list teardowns
 
             [
               {},
+              {},
               {}
             ]
 
@@ -1368,7 +1417,7 @@ list teardowns
                     "type": "object"
                   },
                   "state": {
-                    "description": "State. [\"pending\", \"in progress\", \"succeeded\", \"failed\"]\n",
+                    "description": "State\n",
                     "type": "object"
                   }
                 }
@@ -1409,7 +1458,7 @@ teardown system
                   "type": "object"
                 },
                 "state": {
-                  "description": "State. [\"pending\", \"in progress\", \"succeeded\", \"failed\"]\n",
+                  "description": "State\n",
                   "type": "object"
                 }
               }
@@ -1453,7 +1502,7 @@ get teardown
                   "type": "object"
                 },
                 "state": {
-                  "description": "State. [\"pending\", \"in progress\", \"succeeded\", \"failed\"]\n",
+                  "description": "State\n",
                   "type": "object"
                 }
               }
@@ -1484,6 +1533,9 @@ list teardowns
     + Body
 
             [
+              {},
+              {},
+              {},
               {}
             ]
 

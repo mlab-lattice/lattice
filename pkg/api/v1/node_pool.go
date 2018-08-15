@@ -22,25 +22,33 @@ const (
 )
 
 type NodePool struct {
-	ID   string `json:"id"`
+	// ID
+	ID string `json:"id"`
+	// Path
 	Path string `json:"path"`
-
 	// FIXME: how to deal with epochs?
+	// InstanceType
 	InstanceType string `json:"instanceType"`
-	NumInstances int32  `json:"numInstances"`
-
-	State       NodePoolState        `json:"state"`
+	// NumInstances
+	NumInstances int32 `json:"numInstances"`
+	// State
+	State NodePoolState `json:"state"`
+	// FailureInfo
 	FailureInfo *NodePoolFailureInfo `json:"failure_info"`
 }
 
 type NodePoolFailureInfo struct {
-	Time    time.Time
+	// Time
+	Time time.Time
+	// Message
 	Message string `json:"message"`
 }
 
 type NodePoolPath struct {
+	// Path
 	Path tree.NodePath `json:"path"`
-	Name *string       `json:"name,omitempty"`
+	// Name
+	Name *string `json:"name,omitempty"`
 }
 
 func (p NodePoolPath) String() string {

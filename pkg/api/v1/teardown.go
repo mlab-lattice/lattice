@@ -15,6 +15,6 @@ const (
 type Teardown struct {
 	// ID
 	ID TeardownID `json:"id"`
-	// State. ["pending", "in progress", "succeeded", "failed"]
+	// State
 	State TeardownState `json:"state"`
 }

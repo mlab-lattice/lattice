@@ -42,22 +42,31 @@ definitions:
   v1.Build:
     properties:
       completionTimestamp:
+        description: |
+          Completion timestamp
         type: string
       id:
         $ref: '#/definitions/v1.BuildID'
+        description: |
+          ID
         type: object
       services:
         description: |
-          Services maps service paths (e.g. /foo/bar/buzz) to the
-          status of the build for that service in the Build.
+          Services maps service paths (e.g. /foo/bar/buzz) to the status of the build for that service in the Build.
         type: object
       startTimestamp:
+        description: |
+          Start timestamp
         type: string
       state:
         $ref: '#/definitions/v1.BuildState'
+        description: |
+          State
         type: object
       version:
         $ref: '#/definitions/v1.SystemVersion'
+        description: |
+          Version
         type: object
     type: object
   v1.BuildID:
@@ -68,12 +77,18 @@ definitions:
     properties:
       buildId:
         $ref: '#/definitions/v1.BuildID'
+        description: |
+          Build ID
         type: object
       id:
         $ref: '#/definitions/v1.DeployID'
+        description: |
+          ID
         type: object
       state:
         $ref: '#/definitions/v1.DeployState'
+        description: |
+          State
         type: object
     type: object
   v1.DeployID:
@@ -83,16 +98,26 @@ definitions:
   v1.Job:
     properties:
       completionTimestamp:
+        description: |
+          CompletionTimestamp
         type: string
       id:
         $ref: '#/definitions/v1.JobID'
+        description: |
+          ID
         type: object
       path:
+        description: |
+          Path
         type: string
       startTimestamp:
+        description: |
+          StartTimestamp
         type: string
       state:
         $ref: '#/definitions/v1.JobState'
+        description: |
+          State
         type: object
     type: object
   v1.JobID:
@@ -103,26 +128,41 @@ definitions:
     properties:
       failure_info:
         $ref: '#/definitions/v1.NodePoolFailureInfo'
+        description: |
+          FailureInfo
         type: object
       id:
+        description: |
+          ID
         type: string
       instanceType:
         description: |
           FIXME: how to deal with epochs?
+          InstanceType
         type: string
       numInstances:
+        description: |
+          NumInstances
         type: integer
       path:
+        description: |
+          Path
         type: string
       state:
         $ref: '#/definitions/v1.NodePoolState'
+        description: |
+          State
         type: object
     type: object
   v1.NodePoolFailureInfo:
     properties:
       message:
+        description: |
+          Message
         type: string
       time:
+        description: |
+          Time
         type: string
     type: object
   v1.NodePoolState:
@@ -148,12 +188,12 @@ definitions:
     properties:
       availableInstances:
         description: |
-          TBD
+          AvailableInstances
         type: integer
       failureInfo:
         $ref: '#/definitions/v1.ServiceFailureInfo'
         description: |
-          TBD
+          FailureInfo
         type: object
       id:
         $ref: '#/definitions/v1.ServiceID'
@@ -162,13 +202,13 @@ definitions:
         type: object
       instances:
         description: |
-          TBD
+          Instances
         items:
           type: string
         type: array
       message:
         description: |
-          TBD
+          Message
         type: string
       path:
         description: |
@@ -176,31 +216,35 @@ definitions:
         type: string
       ports:
         description: |
-          TBD
+          Ports
         type: object
       staleInstances:
         description: |
-          TBD
+          StaleInstances
         type: integer
       state:
         $ref: '#/definitions/v1.ServiceState'
         description: |
-          State ["pending", "deleting", "scaling", "updating", "stable", "failed"]
+          State
         type: object
       terminatingInstances:
         description: |
-          TBD
+          TerminatingInstances
         type: integer
       updatedInstances:
         description: |
-          TBD
+          UpdatedInstances
         type: integer
     type: object
   v1.ServiceFailureInfo:
     properties:
       message:
+        description: |
+          Message
         type: string
       time:
+        description: |
+          Time
         type: string
     type: object
   v1.ServiceID:
@@ -244,7 +288,7 @@ definitions:
       state:
         $ref: '#/definitions/v1.TeardownState'
         description: |
-          State. ["pending", "in progress", "succeeded", "failed"]
+          State
         type: object
     type: object
   v1.TeardownID:
@@ -365,8 +409,8 @@ paths:
     post:
       consumes:
       - application/json
-      description: build system
-      operationId: build-system
+      description: run job
+      operationId: run-job
       parameters:
       - description: System ID
         in: path
@@ -375,10 +419,10 @@ paths:
         type: string
       - description: Create build
         in: body
-        name: buildRequest
+        name: jobRequest
         required: true
         schema:
-          $ref: '#/definitions/rest.BuildRequest'
+          $ref: '#/definitions/rest.RunJobRequest'
           type: object
       produces:
       - application/json
@@ -386,9 +430,9 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/v1.Build'
+            $ref: '#/definitions/v1.Job'
             type: object
-      summary: Build system
+      summary: Run job
   /systems/{systemId}/builds/{id}:
     get:
       consumes:
