@@ -170,14 +170,14 @@ GO_DEPENDENCIES = {
             "tag": "kubernetes-1.11.0",
             "importpath": "k8s.io/apimachinery",
         },
-#        "k8s.io/apiextensions-apiserver": {
-#            "name": "io_k8s_apiextensions_apiserver",
-#            "build_external": "external",
+        "k8s.io/apiextensions-apiserver": {
+            "name": "io_k8s_apiextensions_apiserver",
+            "build_external": "external",
             # https://github.com/bazelbuild/rules_go/issues/964
-#            "build_file_proto_mode": "disable",
-#            "tag": "kubernetes-1.11.0",
-#            "importpath": "k8s.io/apiextensions-apiserver",
-#        },
+            "build_file_proto_mode": "disable",
+            "tag": "kubernetes-1.11.0",
+            "importpath": "k8s.io/apiextensions-apiserver",
+        },
         "k8s.io/client-go": {
             "name": "io_k8s_client_go",
             "tag": "kubernetes-1.11.0",
@@ -299,7 +299,7 @@ GO_DEPENDENCIES = {
         },
         "github.com/lyft/protoc-gen-validate": {
             "name": "com_github_lyft_protoc_gen_validate",
-            "commit": "cae364899cd8c08b83bfdcabf4ce4dd4a68ca6da",
+            "commit": "2463485ae0c04eea7977c7f521549229f659e39a",
             "importpath": "github.com/lyft/protoc-gen-validate",
             "build_file_proto_mode": "disable",
         },
