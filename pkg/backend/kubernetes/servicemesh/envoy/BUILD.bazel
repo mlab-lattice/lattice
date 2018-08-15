@@ -7,7 +7,6 @@ go_library(
         "lattice_bootstrapper.go",
         "service_mesh.go",
         "system_bootstrapper.go",
-        "types.go",
     ],
     importpath = "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/servicemesh/envoy",
     visibility = ["//visibility:public"],

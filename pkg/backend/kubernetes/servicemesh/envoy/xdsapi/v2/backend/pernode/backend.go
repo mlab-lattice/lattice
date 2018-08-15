@@ -410,7 +410,7 @@ func (b *KubernetesPerNodeBackend) syncXDSCache(key string) error {
 	case xdsapi.LatticeEntityType:
 		err = b.handleLatticeSyncXDSCache(task.Name, task.Event)
 	default:
-		return fmt.Errorf("Got unkown entity type <%d>", task.Type)
+		return fmt.Errorf("got unkown entity type <%d>", task.Type)
 	}
 
 	if err == nil {

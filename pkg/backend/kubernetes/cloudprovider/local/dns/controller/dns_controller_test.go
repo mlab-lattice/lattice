@@ -398,7 +398,7 @@ func TestAddressCreation(t *testing.T) {
 		if test.ExpectedCnames != nil {
 			dnsmasqConfig, err := ioutil.ReadFile(dnsmasqConfigPath)
 			if err != nil {
-				t.Errorf("Error reading cname file: %v", err)
+				t.Errorf("error reading cname file: %v", err)
 				break
 			}
 
@@ -418,7 +418,7 @@ func TestAddressCreation(t *testing.T) {
 		if test.ExpectedHosts != nil {
 			hostFile, err := ioutil.ReadFile(hostsFilePath)
 			if err != nil {
-				t.Errorf("Error reading name file: %v", err)
+				t.Errorf("error reading name file: %v", err)
 				break
 			}
 
