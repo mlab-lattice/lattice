@@ -389,7 +389,7 @@ func (sm *DefaultEnvoyServiceMesh) ServiceIP(
 }
 
 func (sm *DefaultEnvoyServiceMesh) ReleaseServiceIP(address *latticev1.Address) (map[string]string, error) {
-	ip, _ := address.Annotations[annotationKeyIP]
+	ip := address.Annotations[annotationKeyIP]
 
 	if ip == "" {
 		glog.V(4).Infof("tried to release service IP for %s but found none", address.Name)
@@ -417,6 +417,12 @@ func (sm *DefaultEnvoyServiceMesh) ReleaseServiceIP(address *latticev1.Address) 
 	if err != nil {
 		return nil, err
 	}
+
+	// XXX <GEB>: we're setting empty here and passing back to the caller (address controller) to merge into
+	//            the Address's annotations. the caller is not expected to diff the current annotations with
+	//            the ones we return, so this ensures we overwrite the current lease recorded on the Address's
+	//            annotations. revisit and decide whether or not we should go further and actually remove the
+	//            key from the set of annotations as well or leave it as metadata (e.g., service mesh was here).
 	annotations[annotationKeyIP] = ""
 
 	return annotations, nil
