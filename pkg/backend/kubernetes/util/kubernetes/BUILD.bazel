@@ -8,6 +8,7 @@ go_library(
         "controller.go",
         "dns.go",
         "equality.go",
+        "job.go",
         "kube_service.go",
         "kubeconfig.go",
         "namespace.go",

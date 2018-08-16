@@ -146,14 +146,15 @@ func (c *Controller) kubeJobSpec(
 	}
 
 	//return kubeJobSpec, nil
-	// IMPORTANT: the order of these TransformServicePodTemplateSpec and the order of the IsDeploymentSpecUpdated calls in
+	// IMPORTANT: the order of these TransformWorkloadPodTemplateSpec and the order of the IsDeploymentSpecUpdated calls in
 	// isDeploymentSpecUpdated _must_ be inverses.
 	// That is, if we call cloudProvider then serviceMesh here, we _must_ call serviceMesh then cloudProvider
 	// in isDeploymentSpecUpdated.
-	//podTemplateSpec, err = c.serviceMesh.TransformServicePodTemplateSpec(jobRun, podTemplateSpec)
-	//if err != nil {
-	//	return batchv1.DeploymentSpec{}, err
-	//}
+	podTemplateSpec, err = c.serviceMesh.TransformWorkloadPodTemplateSpec(jobRun, podTemplateSpec)
+	if err != nil {
+		return batchv1.JobSpec{}, err
+	}
+
 	podTemplateSpec = c.cloudProvider.TransformPodTemplateSpec(podTemplateSpec)
 
 	kubeJobSpec := batchv1.JobSpec{

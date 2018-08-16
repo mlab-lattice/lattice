@@ -313,9 +313,9 @@ func TestAddressCreation(t *testing.T) {
 			address_ := address.DeepCopy()
 
 			if address_.Spec.Service != nil {
-				ip, err = serviceMesh.HasServiceIP(address_)
+				ip, err = serviceMesh.HasWorkloadIP(address_)
 				if err == nil && ip == "" {
-					ip, annotations, err = serviceMesh.ServiceIP(service, address_)
+					ip, annotations, err = serviceMesh.WorkloadIP(service, address_)
 					for k, v := range annotations {
 						address_.Annotations[k] = v
 					}

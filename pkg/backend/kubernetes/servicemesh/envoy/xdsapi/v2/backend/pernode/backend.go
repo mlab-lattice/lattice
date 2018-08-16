@@ -440,13 +440,13 @@ func (b *KubernetesPerNodeBackend) SystemServices(serviceCluster string) (map[tr
 			return nil, err
 		}
 
-		serviceIP, err := b.serviceMesh.HasServiceIP(address)
+		serviceIP, err := b.serviceMesh.HasWorkloadIP(address)
 		if err != nil {
 			return nil, err
 		}
 
 		if serviceIP == "" {
-			glog.V(4).Infof("Service %v does not have a ServiceIP assigned yet, skipping...", path)
+			glog.V(4).Infof("Service %v does not have a WorkloadIP assigned yet, skipping...", path)
 			continue
 		}
 
@@ -456,7 +456,7 @@ func (b *KubernetesPerNodeBackend) SystemServices(serviceCluster string) (map[tr
 			return nil, err
 		}
 
-		egressPorts, err := b.serviceMesh.EgressPorts(service)
+		egressPorts, err := b.serviceMesh.egressPorts(service)
 		if err != nil {
 			return nil, err
 		}

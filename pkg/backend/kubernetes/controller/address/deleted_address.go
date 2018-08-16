@@ -52,7 +52,7 @@ func (c *Controller) syncDeletedAddress(address *latticev1.Address) error {
 	// TODO <GEB>: add check to verify the IP found in the DNS A record is the same as the one being
 	//             released
 
-	annotations, err := c.serviceMesh.ReleaseServiceIP(address)
+	annotations, err := c.serviceMesh.ReleaseWorkloadIP(address)
 	if err != nil {
 		return fmt.Errorf("error releasing service IP: %v", err)
 	}

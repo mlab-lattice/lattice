@@ -303,12 +303,12 @@ func (c *Controller) rewriteDnsmasqConfig(addresses []*latticev1.Address) error 
 				continue
 			}
 
-			ip, err := c.serviceMesh.HasServiceIP(address)
+			ip, err := c.serviceMesh.HasWorkloadIP(address)
 			if err != nil {
 				glog.Errorf("error getting service for value for %v (%v): %v, ignoring the address", address.Description(c.namespacePrefix), service.Description(c.namespacePrefix), err)
 				continue
 			} else if ip == "" {
-				glog.V(4).Infof("Service %v does not have a ServiceIP assigned yet, skipping...", path)
+				glog.V(4).Infof("Service %v does not have a WorkloadIP assigned yet, skipping...", path)
 				continue
 			}
 

@@ -43,7 +43,7 @@ func (c *Controller) syncServiceAddress(address *latticev1.Address) error {
 		return nil
 	}
 
-	ip, annotations, err := c.serviceMesh.ServiceIP(service, address)
+	ip, annotations, err := c.serviceMesh.WorkloadIP(service, address)
 	if err != nil {
 		return fmt.Errorf(
 			"error getting %v %v IP from service mesh: %v",
@@ -59,7 +59,7 @@ func (c *Controller) syncServiceAddress(address *latticev1.Address) error {
 		for k, v := range annotations {
 			address_.Annotations[k] = v
 		}
-		_, err = c.serviceMesh.ReleaseServiceIP(address_)
+		_, err = c.serviceMesh.ReleaseWorkloadIP(address_)
 		if err != nil {
 			glog.Errorf(
 				"Got an error trying to release a service IP lease for %s after failed update: %v",

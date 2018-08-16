@@ -14,8 +14,10 @@ import (
 
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	kubeutil "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/kubernetes"
+	definitionv1 "github.com/mlab-lattice/lattice/pkg/definition/v1"
 	netutil "github.com/mlab-lattice/lattice/pkg/util/net"
 
+	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 )
@@ -109,13 +111,13 @@ type EnvoyEgressPorts struct {
 func (sm *DefaultEnvoyServiceMesh) BootstrapSystemResources(resources *bootstrapper.SystemResources) {
 }
 
-func (sm *DefaultEnvoyServiceMesh) ServiceAnnotations(service *latticev1.Service) (map[string]string, error) {
-	envoyPorts, err := envoyPorts(service)
+func (sm *DefaultEnvoyServiceMesh) WorkloadAnnotations(ports map[int32]definitionv1.ContainerPort) (map[string]string, error) {
+	envoyPorts, err := envoyPorts(ports)
 	if err != nil {
 		return nil, err
 	}
 
-	componentPorts, remainingEnvoyPorts, err := assignEnvoyPorts(service, envoyPorts)
+	componentPorts, remainingEnvoyPorts, err := assignEnvoyPorts(ports, envoyPorts)
 	if err != nil {
 		return nil, err
 	}
@@ -147,7 +149,7 @@ func (sm *DefaultEnvoyServiceMesh) ServiceAnnotations(service *latticev1.Service
 	return annotations, nil
 }
 
-func (sm *DefaultEnvoyServiceMesh) ServiceAddressAnnotations(
+func (sm *DefaultEnvoyServiceMesh) WorkloadAddressAnnotations(
 	address *latticev1.Address) (map[string]string, error) {
 	ip := address.Annotations[annotationKeyIP]
 
@@ -158,8 +160,7 @@ func (sm *DefaultEnvoyServiceMesh) ServiceAddressAnnotations(
 	return annotations, nil
 }
 
-func envoyPorts(service *latticev1.Service) ([]int32, error) {
-	ports := service.Spec.Definition.ContainerPorts()
+func envoyPorts(ports map[int32]definitionv1.ContainerPort) ([]int32, error) {
 	var envoyPortIdx int32 = 10000
 	var envoyPorts []int32
 
@@ -190,10 +191,10 @@ func envoyPorts(service *latticev1.Service) ([]int32, error) {
 	return envoyPorts, nil
 }
 
-func assignEnvoyPorts(service *latticev1.Service, envoyPorts []int32) (map[int32]int32, []int32, error) {
+func assignEnvoyPorts(ports map[int32]definitionv1.ContainerPort, envoyPorts []int32) (map[int32]int32, []int32, error) {
 	// Assign an envoy port to each component port, and pop the used envoy port off the slice each time.
 	componentPorts := make(map[int32]int32)
-	for portNum := range service.Spec.Definition.ContainerPorts() {
+	for portNum := range ports {
 		if len(envoyPorts) == 0 {
 			return nil, nil, fmt.Errorf("ran out of ports when assigning envoyPorts")
 		}
@@ -205,11 +206,14 @@ func assignEnvoyPorts(service *latticev1.Service, envoyPorts []int32) (map[int32
 	return componentPorts, envoyPorts, nil
 }
 
-func (sm *DefaultEnvoyServiceMesh) TransformServicePodTemplateSpec(
-	service *latticev1.Service,
+func (sm *DefaultEnvoyServiceMesh) TransformWorkloadPodTemplateSpec(
 	spec *corev1.PodTemplateSpec,
+	namespace string,
+	componentPath tree.Path,
+	annotations map[string]string,
+	ports map[int32]definitionv1.ContainerPort,
 ) (*corev1.PodTemplateSpec, error) {
-	prepareEnvoyContainer, envoyContainer, err := sm.envoyContainers(service)
+	prepareEnvoyContainer, envoyContainer, err := sm.envoyContainers(namespace, componentPath, annotations, ports)
 	if err != nil {
 		return nil, err
 	}
@@ -238,8 +242,8 @@ func (sm *DefaultEnvoyServiceMesh) TransformServicePodTemplateSpec(
 	return spec, nil
 }
 
-func (sm *DefaultEnvoyServiceMesh) ServiceMeshPort(service *latticev1.Service, port int32) (int32, error) {
-	serviceMeshPorts, err := sm.ServiceMeshPorts(service)
+func (sm *DefaultEnvoyServiceMesh) ServiceMeshPort(annotations map[string]string, port int32) (int32, error) {
+	serviceMeshPorts, err := sm.ServiceMeshPorts(annotations)
 	if err != nil {
 		return 0, err
 	}
@@ -247,9 +251,7 @@ func (sm *DefaultEnvoyServiceMesh) ServiceMeshPort(service *latticev1.Service, p
 	serviceMeshPort, ok := serviceMeshPorts[port]
 	if !ok {
 		err := fmt.Errorf(
-			"service %v/%v does not have expected port %v",
-			service.Namespace,
-			service.Name,
+			"missing expected port %v",
 			port,
 		)
 		return 0, err
@@ -258,14 +260,12 @@ func (sm *DefaultEnvoyServiceMesh) ServiceMeshPort(service *latticev1.Service, p
 	return serviceMeshPort, nil
 }
 
-func (sm *DefaultEnvoyServiceMesh) ServiceMeshPorts(service *latticev1.Service) (map[int32]int32, error) {
-	serviceMeshPortsJSON, ok := service.Annotations[annotationKeyServiceMeshPorts]
+func (sm *DefaultEnvoyServiceMesh) ServiceMeshPorts(annotations map[string]string) (map[int32]int32, error) {
+	serviceMeshPortsJSON, ok := annotations[annotationKeyServiceMeshPorts]
 	if !ok {
 		err := fmt.Errorf(
-			"service %v/%v does not have expected annotation %v",
-			service.Namespace,
-			service.Name,
-			serviceMeshPortsJSON,
+			"missing expected annotation %v",
+			annotationKeyServiceMeshPorts,
 		)
 		return nil, err
 	}
@@ -279,8 +279,8 @@ func (sm *DefaultEnvoyServiceMesh) ServiceMeshPorts(service *latticev1.Service) 
 	return serviceMeshPorts, nil
 }
 
-func (sm *DefaultEnvoyServiceMesh) ServicePort(service *latticev1.Service, port int32) (int32, error) {
-	servicePorts, err := sm.ServicePorts(service)
+func (sm *DefaultEnvoyServiceMesh) WorkloadPort(annotations map[string]string, port int32) (int32, error) {
+	servicePorts, err := sm.WorkloadPorts(annotations)
 	if err != nil {
 		return 0, err
 	}
@@ -288,9 +288,7 @@ func (sm *DefaultEnvoyServiceMesh) ServicePort(service *latticev1.Service, port 
 	servicePort, ok := servicePorts[port]
 	if !ok {
 		err := fmt.Errorf(
-			"service %v/%v does not have expected port %v",
-			service.Namespace,
-			service.Name,
+			"missing expected port %v",
 			port,
 		)
 		return 0, err
@@ -299,8 +297,8 @@ func (sm *DefaultEnvoyServiceMesh) ServicePort(service *latticev1.Service, port 
 	return servicePort, nil
 }
 
-func (sm *DefaultEnvoyServiceMesh) ServicePorts(service *latticev1.Service) (map[int32]int32, error) {
-	serviceMeshPorts, err := sm.ServiceMeshPorts(service)
+func (sm *DefaultEnvoyServiceMesh) WorkloadPorts(annotations map[string]string) (map[int32]int32, error) {
+	serviceMeshPorts, err := sm.ServiceMeshPorts(annotations)
 	if err != nil {
 		return nil, err
 	}
@@ -313,9 +311,9 @@ func (sm *DefaultEnvoyServiceMesh) ServicePorts(service *latticev1.Service) (map
 	return servicePorts, nil
 }
 
-func serviceProtocols(service *latticev1.Service) []string {
+func workloadProtocols(ports map[int32]definitionv1.ContainerPort) []string {
 	protocolSet := make(map[string]interface{})
-	for _, componentPort := range service.Spec.Definition.Ports {
+	for _, componentPort := range ports {
 		protocolSet[componentPort.Protocol] = nil
 	}
 
@@ -327,8 +325,8 @@ func serviceProtocols(service *latticev1.Service) []string {
 	return protocols
 }
 
-func (sm *DefaultEnvoyServiceMesh) HasServiceIP(address *latticev1.Address) (string, error) {
-	annotations, err := sm.ServiceAddressAnnotations(address)
+func (sm *DefaultEnvoyServiceMesh) HasWorkloadIP(address *latticev1.Address) (string, error) {
+	annotations, err := sm.WorkloadAddressAnnotations(address)
 	if err != nil {
 		return "", err
 	}
@@ -336,21 +334,22 @@ func (sm *DefaultEnvoyServiceMesh) HasServiceIP(address *latticev1.Address) (str
 	return ip, nil
 }
 
-func (sm *DefaultEnvoyServiceMesh) ServiceIP(
-	service *latticev1.Service, address *latticev1.Address) (string, map[string]string, error) {
+func (sm *DefaultEnvoyServiceMesh) WorkloadIP(
+	address *latticev1.Address,
+	workloadPorts map[int32]definitionv1.ContainerPort,
+) (string, map[string]string, error) {
 	ip := address.Annotations[annotationKeyIP]
 
-	protocols := serviceProtocols(service)
+	protocols := workloadProtocols(workloadPorts)
 	if len(protocols) != 1 {
-		return "", nil, fmt.Errorf("expected 1 protocol in component ports for service %s, found: %v",
-			service.Name, protocols)
+		return "", nil, fmt.Errorf("expected 1 protocol in component ports, found: %v", protocols)
 	}
 
 	switch protocols[0] {
 	case "HTTP":
 		netIP := sm.redirectCIDRBlock.IP.String()
 		if ip != "" && ip != netIP {
-			return "", nil, fmt.Errorf("got IP %s for service %s, expected %s", ip, service.Name, netIP)
+			return "", nil, fmt.Errorf("got IP %s, expected %s", ip, netIP)
 		} else {
 			ip = netIP
 		}
@@ -375,11 +374,10 @@ func (sm *DefaultEnvoyServiceMesh) ServiceIP(
 		}
 		ip = ips[0]
 	default:
-		return "", nil, fmt.Errorf("expected protocol type HTTP or TCP for service %s, got: %s",
-			service.Name, protocols[0])
+		return "", nil, fmt.Errorf("expected protocol type HTTP or TCP got: %s", protocols[0])
 	}
 
-	annotations, err := sm.ServiceAddressAnnotations(address)
+	annotations, err := sm.WorkloadAddressAnnotations(address)
 	if err != nil {
 		return "", nil, err
 	}
@@ -388,12 +386,12 @@ func (sm *DefaultEnvoyServiceMesh) ServiceIP(
 	return ip, annotations, nil
 }
 
-func (sm *DefaultEnvoyServiceMesh) ReleaseServiceIP(address *latticev1.Address) (map[string]string, error) {
+func (sm *DefaultEnvoyServiceMesh) ReleaseWorkloadIP(address *latticev1.Address) (map[string]string, error) {
 	ip, _ := address.Annotations[annotationKeyIP]
 
 	if ip == "" {
 		glog.V(4).Infof("tried to release service IP for %s but found none", address.Name)
-		return sm.ServiceAddressAnnotations(address)
+		return sm.WorkloadAddressAnnotations(address)
 	}
 
 	// check if this ip is being managed by
@@ -413,7 +411,7 @@ func (sm *DefaultEnvoyServiceMesh) ReleaseServiceIP(address *latticev1.Address) 
 		}
 	}
 
-	annotations, err := sm.ServiceAddressAnnotations(address)
+	annotations, err := sm.WorkloadAddressAnnotations(address)
 	if err != nil {
 		return nil, err
 	}
@@ -577,24 +575,22 @@ func isServiceMeshResource(name string) bool {
 	return len(parts) >= 2
 }
 
-func (sm *DefaultEnvoyServiceMesh) envoyContainers(service *latticev1.Service) (corev1.Container, corev1.Container, error) {
-	adminPort, ok := service.Annotations[annotationKeyAdminPort]
+func (sm *DefaultEnvoyServiceMesh) envoyContainers(
+	namespace string,
+	componentPath tree.Path,
+	annotations map[string]string,
+	ports map[int32]definitionv1.ContainerPort,
+) (corev1.Container, corev1.Container, error) {
+	adminPort, ok := annotations[annotationKeyAdminPort]
 	if !ok {
 		err := fmt.Errorf(
-			"service %v/%v does not have expected annotation %v",
-			service.Namespace,
-			service.Name,
+			"does not have expected annotation %v",
 			annotationKeyAdminPort,
 		)
 		return corev1.Container{}, corev1.Container{}, err
 	}
 
-	egressPorts, err := sm.EgressPorts(service)
-	if err != nil {
-		return corev1.Container{}, corev1.Container{}, err
-	}
-
-	servicePath, err := service.PathLabel()
+	egressPorts, err := sm.egressPorts(annotations)
 	if err != nil {
 		return corev1.Container{}, corev1.Container{}, err
 	}
@@ -642,11 +638,11 @@ func (sm *DefaultEnvoyServiceMesh) envoyContainers(service *latticev1.Service) (
 			// XXX: needed for V2
 			{
 				Name:  "SERVICE_CLUSTER",
-				Value: service.Namespace,
+				Value: namespace,
 			},
 			{
 				Name:  "SERVICE_NODE",
-				Value: servicePath.ToDomain(),
+				Value: componentPath.ToDomain(),
 			},
 		},
 		VolumeMounts: []corev1.VolumeMount{
@@ -664,18 +660,16 @@ func (sm *DefaultEnvoyServiceMesh) envoyContainers(service *latticev1.Service) (
 	}
 
 	var envoyPorts []corev1.ContainerPort
-	serviceMeshPorts, err := sm.ServiceMeshPorts(service)
+	serviceMeshPorts, err := sm.ServiceMeshPorts(annotations)
 	if err != nil {
 		return corev1.Container{}, corev1.Container{}, err
 	}
 
-	for portNum := range service.Spec.Definition.ContainerPorts() {
+	for portNum := range ports {
 		envoyPort, ok := serviceMeshPorts[portNum]
 		if !ok {
 			err := fmt.Errorf(
-				"service %v/%v does not have expected port %v",
-				service.Namespace,
-				service.Name,
+				"does not have expected port %v",
 				portNum,
 			)
 			return corev1.Container{}, corev1.Container{}, err
@@ -703,8 +697,8 @@ func (sm *DefaultEnvoyServiceMesh) envoyContainers(service *latticev1.Service) (
 		Command:         []string{"/usr/local/bin/envoy"},
 		Args: []string{
 			"-c", fmt.Sprintf("%v/config.json", envoyConfigDirectory),
-			"--service-cluster", service.Namespace,
-			"--service-node", servicePath.ToDomain(),
+			"--service-cluster", namespace,
+			"--service-node", componentPath.ToDomain(),
 			// by default, the max cluster name size is 60.
 			// however, we use the cluster name to encode information, so the names can often be much longer.
 			// https://www.envoyproxy.io/docs/envoy/latest/operations/cli#cmdoption-max-obj-name-len
@@ -724,13 +718,11 @@ func (sm *DefaultEnvoyServiceMesh) envoyContainers(service *latticev1.Service) (
 	return prepareEnvoy, envoy, nil
 }
 
-func (sm *DefaultEnvoyServiceMesh) EgressPorts(service *latticev1.Service) (*EnvoyEgressPorts, error) {
-	egressPortsStr, ok := service.Annotations[annotationKeyEgressPorts]
+func (sm *DefaultEnvoyServiceMesh) egressPorts(annotations map[string]string) (*EnvoyEgressPorts, error) {
+	egressPortsStr, ok := annotations[annotationKeyEgressPorts]
 	if !ok {
 		err := fmt.Errorf(
-			"service %v/%v does not have expected annotation %v",
-			service.Namespace,
-			service.Name,
+			"missing expected annotation %v",
 			annotationKeyEgressPorts,
 		)
 		return nil, err

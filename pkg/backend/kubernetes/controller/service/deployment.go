@@ -281,11 +281,11 @@ func (c *Controller) podTemplateSpec(
 		return nil, err
 	}
 
-	// IMPORTANT: the order of these TransformServicePodTemplateSpec and the order of the IsDeploymentSpecUpdated calls in
+	// IMPORTANT: the order of these TransformWorkloadPodTemplateSpec and the order of the IsDeploymentSpecUpdated calls in
 	// isDeploymentSpecUpdated _must_ be inverses.
 	// That is, if we call cloudProvider then serviceMesh here, we _must_ call serviceMesh then cloudProvider
 	// in isDeploymentSpecUpdated.
-	podTemplateSpec, err = c.serviceMesh.TransformServicePodTemplateSpec(service, podTemplateSpec)
+	podTemplateSpec, err = c.serviceMesh.TransformWorkloadPodTemplateSpec(service, podTemplateSpec)
 	if err != nil {
 		return nil, err
 	}
@@ -411,7 +411,7 @@ func (c *Controller) isDeploymentSpecUpdated(
 	}
 
 	// FIXME: is this actually true?
-	// IMPORTANT: the order of these IsDeploymentSpecUpdated and the order of the TransformServicePodTemplateSpec
+	// IMPORTANT: the order of these IsDeploymentSpecUpdated and the order of the TransformWorkloadPodTemplateSpec
 	// calls in deploymentSpec _must_ be inverses.
 	// That is, if we call serviceMesh then cloudProvider here, we _must_ call cloudProvider then serviceMesh
 	// in deploymentSpec.

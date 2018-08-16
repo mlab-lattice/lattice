@@ -18,11 +18,11 @@ func (c *Controller) initLeaseManager() error {
 		return err
 	}
 	for _, address := range addresses {
-		// NOTE: shouldn't be a race between HasServiceIP here and ServiceIP for addresses still
+		// NOTE: shouldn't be a race between HasWorkloadIP here and WorkloadIP for addresses still
 		//       that still have not been assigned an IP since this method is called before the
 		//       controller starts processing events and we are synchronized with other users of
 		//       the serviceMesh via the configLock
-		ip, err := c.serviceMesh.HasServiceIP(address)
+		ip, err := c.serviceMesh.HasWorkloadIP(address)
 		if err != nil {
 			return err
 		}
@@ -37,9 +37,9 @@ func (c *Controller) initLeaseManager() error {
 		if err != nil {
 			return err
 		}
-		// ServiceIP will respect the IP currently assigned to an Address as specified in the
+		// WorkloadIP will respect the IP currently assigned to an Address as specified in the
 		// annotation
-		ip, annotations, err := c.serviceMesh.ServiceIP(service, address)
+		ip, annotations, err := c.serviceMesh.WorkloadIP(service, address)
 		if err != nil {
 			return err
 		}
@@ -54,7 +54,7 @@ func (c *Controller) initLeaseManager() error {
 		if err != nil {
 			return err
 		}
-		ip, annotations, err := c.serviceMesh.ServiceIP(service, address)
+		ip, annotations, err := c.serviceMesh.WorkloadIP(service, address)
 		if err != nil {
 			return err
 		}

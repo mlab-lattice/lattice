@@ -6,8 +6,10 @@ import (
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	systembootstrapper "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/lifecycle/system/bootstrap/bootstrapper"
 	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/servicemesh/envoy"
+	definitionv1 "github.com/mlab-lattice/lattice/pkg/definition/v1"
 	"github.com/mlab-lattice/lattice/pkg/util/cli"
 
+	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 )
@@ -15,44 +17,50 @@ import (
 type Interface interface {
 	systembootstrapper.Interface
 
-	ServiceAnnotations(*latticev1.Service) (map[string]string, error)
+	WorkloadAnnotations(map[int32]definitionv1.ContainerPort) (map[string]string, error)
 
-	ServiceAddressAnnotations(*latticev1.Address) (map[string]string, error)
+	WorkloadAddressAnnotations(*latticev1.Address) (map[string]string, error)
 
-	// TransformServicePodTemplateSpec takes in the DeploymentSpec generated for a Service, and applies an service mesh
-	// related transforms necessary to a copy of the DeploymentSpec, and returns it.
-	TransformServicePodTemplateSpec(*latticev1.Service, *corev1.PodTemplateSpec) (*corev1.PodTemplateSpec, error)
+	// TransformWorkloadPodTemplateSpec takes in the PodTemplateSpec generated for a workload, and applies any
+	// service mesh related transforms necessary to a copy of the PodTemplateSpec, and returns it.
+	TransformWorkloadPodTemplateSpec(
+		spec *corev1.PodTemplateSpec,
+		namespace string,
+		componentPath tree.Path,
+		annotations map[string]string,
+		ports map[int32]definitionv1.ContainerPort,
+	) (*corev1.PodTemplateSpec, error)
 
 	// ServiceMeshPort returns the port the service mesh is listening on for a given component port.
-	ServiceMeshPort(*latticev1.Service, int32) (int32, error)
+	ServiceMeshPort(annotations map[string]string, port int32) (int32, error)
 
 	// ServiceMeshPorts returns a map whose keys are component ports and values are the port on which the
 	// service mesh is listening on for the given key.
-	ServiceMeshPorts(*latticev1.Service) (map[int32]int32, error)
+	ServiceMeshPorts(annotations map[string]string) (map[int32]int32, error)
 
-	// ServicePort returns the component port for a given port that the service mesh is listening on.
-	ServicePort(*latticev1.Service, int32) (int32, error)
+	// WorkloadPort returns the component port for a given port that the service mesh is listening on.
+	WorkloadPort(annotations map[string]string, port int32) (int32, error)
 
-	// ServicehPorts returns a map whose keys are service mesh ports and values are the component port for
+	// WorkloadPorts returns a map whose keys are service mesh ports and values are the component port for
 	// which the service mesh is listening on for the given key.
-	ServicePorts(*latticev1.Service) (map[int32]int32, error)
+	WorkloadPorts(annotations map[string]string) (map[int32]int32, error)
 
-	// ServiceHasIP returns the assigned IP if there is one and the empty string otherwise
-	HasServiceIP(*latticev1.Address) (string, error)
+	// HasWorkloadIP returns the assigned IP if there is one and the empty string otherwise
+	HasWorkloadIP(*latticev1.Address) (string, error)
 
-	// ServiceIP returns the IP address that should be registered in DNS (assigning one if need be)
+	// WorkloadIP returns the IP address that should be registered in DNS (assigning one if need be)
 	// for the service and annotations that should be applied to the Address.
-	ServiceIP(*latticev1.Service, *latticev1.Address) (string, map[string]string, error)
+	WorkloadIP(address *latticev1.Address, workloadPorts map[int32]definitionv1.ContainerPort) (string, map[string]string, error)
 
-	// ReleaseServiceIP removes a service IP from the pool of currently leased IPs.
-	ReleaseServiceIP(*latticev1.Address) (map[string]string, error)
+	// ReleaseWorkloadIP removes a service IP from the pool of currently leased IPs.
+	ReleaseWorkloadIP(*latticev1.Address) (map[string]string, error)
 
 	// IsDeploymentSpecUpdated checks to see if any part of the current DeploymentSpec that the service mesh is responsible
 	// for is out of date compared to the desired deployment spec. If the current DeploymentSpec is current, it also returns
-	// a copy of the desired DeploymentSpec with the negation of TransformServicePodTemplateSpec applied.
-	// That is, if the aspects of the DeploymentSpec that were transformed by TransformServicePodTemplateSpec are all still
+	// a copy of the desired DeploymentSpec with the negation of TransformWorkloadPodTemplateSpec applied.
+	// That is, if the aspects of the DeploymentSpec that were transformed by TransformWorkloadPodTemplateSpec are all still
 	// current, this method should return true, along with a copy of the DeploymentSpec that should be identical to the
-	// DeploymentSpec that was passed in to TransformServicePodTemplateSpec.
+	// DeploymentSpec that was passed in to TransformWorkloadPodTemplateSpec.
 	IsDeploymentSpecUpdated(
 		service *latticev1.Service,
 		current, desired, untransformed *appsv1.DeploymentSpec,

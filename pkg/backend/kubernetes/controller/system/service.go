@@ -188,7 +188,7 @@ func (c *Controller) newService(
 		Spec: serviceSpec(serviceInfo),
 	}
 
-	annotations, err := c.serviceMesh.ServiceAnnotations(service)
+	annotations, err := c.serviceMesh.WorkloadAnnotations(service)
 	if err != nil {
 		return nil, err
 	}

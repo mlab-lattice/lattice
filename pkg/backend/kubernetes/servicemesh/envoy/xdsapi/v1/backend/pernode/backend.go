@@ -110,7 +110,7 @@ func (b *KubernetesPerNodeBackend) Services(serviceCluster string) (map[tree.Pat
 			return nil, err
 		}
 
-		egressPorts, err := b.serviceMesh.EgressPorts(service)
+		egressPorts, err := b.serviceMesh.egressPorts(service)
 		if err != nil {
 			return nil, err
 		}
