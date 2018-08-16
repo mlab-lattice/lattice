@@ -456,7 +456,7 @@ func (b *KubernetesPerNodeBackend) SystemServices(serviceCluster string) (map[tr
 			return nil, err
 		}
 
-		egressPorts, err := b.serviceMesh.egressPorts(service)
+		egressPorts, err := b.serviceMesh.EgressPorts(service.Annotations)
 		if err != nil {
 			return nil, err
 		}
@@ -484,7 +484,7 @@ func (b *KubernetesPerNodeBackend) SystemServices(serviceCluster string) (map[tr
 			Ports: make(map[int32]xdsapi.ListenerPort),
 		}
 		for port, containerPort := range service.Spec.Definition.Ports {
-			envoyPort, err := b.serviceMesh.ServiceMeshPort(service, port)
+			envoyPort, err := b.serviceMesh.ServiceMeshPort(service.Annotations, port)
 			if err != nil {
 				return nil, err
 			}
@@ -501,7 +501,7 @@ func (b *KubernetesPerNodeBackend) SystemServices(serviceCluster string) (map[tr
 				Ports: make(map[int32]xdsapi.ListenerPort),
 			}
 			for port, containerPort := range sidecar.Ports {
-				envoyPort, err := b.serviceMesh.ServiceMeshPort(service, port)
+				envoyPort, err := b.serviceMesh.ServiceMeshPort(service.Annotations, port)
 				if err != nil {
 					return nil, err
 				}

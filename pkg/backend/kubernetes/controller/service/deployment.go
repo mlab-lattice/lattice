@@ -3,11 +3,14 @@ package service
 import (
 	"encoding/json"
 	"fmt"
+	"reflect"
+
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	kubeutil "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/kubernetes"
+	"github.com/mlab-lattice/lattice/pkg/definition/tree"
+
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	"reflect"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -281,11 +284,39 @@ func (c *Controller) podTemplateSpec(
 		return nil, err
 	}
 
+	pathDomain, ok := service.Annotations[latticev1.ServicePathLabelKey]
+	if !ok {
+		err := fmt.Errorf(
+			"%v is missing expected annotation %v",
+			service.Description(c.namespacePrefix),
+			latticev1.ServicePathLabelKey,
+		)
+		return nil, err
+	}
+
+	path, err := tree.NewPathFromDomain(pathDomain)
+	if err != nil {
+		err := fmt.Errorf(
+			"%v has invalid annotation %v: %v (%v)",
+			service.Description(c.namespacePrefix),
+			latticev1.ServicePathLabelKey,
+			pathDomain,
+			err,
+		)
+		return nil, err
+	}
+
 	// IMPORTANT: the order of these TransformWorkloadPodTemplateSpec and the order of the IsDeploymentSpecUpdated calls in
 	// isDeploymentSpecUpdated _must_ be inverses.
 	// That is, if we call cloudProvider then serviceMesh here, we _must_ call serviceMesh then cloudProvider
 	// in isDeploymentSpecUpdated.
-	podTemplateSpec, err = c.serviceMesh.TransformWorkloadPodTemplateSpec(service, podTemplateSpec)
+	podTemplateSpec, err = c.serviceMesh.TransformWorkloadPodTemplateSpec(
+		podTemplateSpec,
+		service.Namespace,
+		path,
+		service.Annotations,
+		service.Spec.Definition.Ports,
+	)
 	if err != nil {
 		return nil, err
 	}

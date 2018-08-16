@@ -39,7 +39,7 @@ func (c *Controller) initLeaseManager() error {
 		}
 		// WorkloadIP will respect the IP currently assigned to an Address as specified in the
 		// annotation
-		ip, annotations, err := c.serviceMesh.WorkloadIP(service, address)
+		ip, annotations, err := c.serviceMesh.WorkloadIP(address, service.Spec.Definition.Ports)
 		if err != nil {
 			return err
 		}
@@ -54,7 +54,7 @@ func (c *Controller) initLeaseManager() error {
 		if err != nil {
 			return err
 		}
-		ip, annotations, err := c.serviceMesh.WorkloadIP(service, address)
+		ip, annotations, err := c.serviceMesh.WorkloadIP(address, service.Spec.Definition.Ports)
 		if err != nil {
 			return err
 		}

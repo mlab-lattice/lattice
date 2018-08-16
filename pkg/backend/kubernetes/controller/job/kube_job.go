@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
+	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 	definitionv1 "github.com/mlab-lattice/lattice/pkg/definition/v1"
 
 	batchv1 "k8s.io/api/batch/v1"
@@ -145,12 +146,36 @@ func (c *Controller) kubeJobSpec(
 		numRetries = *jobRun.Spec.NumRetries
 	}
 
+	pathDomain, ok := jobRun.Annotations[latticev1.JobRunPathLabelKey]
+	if !ok {
+		err := fmt.Errorf("%v is missing %v annotation", jobRun.Description(c.namespacePrefix), latticev1.JobRunPathLabelKey)
+		return batchv1.JobSpec{}, err
+	}
+
+	path, err := tree.NewPathFromDomain(pathDomain)
+	if err != nil {
+		err := fmt.Errorf(
+			"%v has invalid annotation %v: %v (%v)",
+			jobRun.Description(c.namespacePrefix),
+			latticev1.ServicePathLabelKey,
+			pathDomain,
+			err,
+		)
+		return batchv1.JobSpec{}, err
+	}
+
 	//return kubeJobSpec, nil
 	// IMPORTANT: the order of these TransformWorkloadPodTemplateSpec and the order of the IsDeploymentSpecUpdated calls in
 	// isDeploymentSpecUpdated _must_ be inverses.
 	// That is, if we call cloudProvider then serviceMesh here, we _must_ call serviceMesh then cloudProvider
 	// in isDeploymentSpecUpdated.
-	podTemplateSpec, err = c.serviceMesh.TransformWorkloadPodTemplateSpec(jobRun, podTemplateSpec)
+	podTemplateSpec, err = c.serviceMesh.TransformWorkloadPodTemplateSpec(
+		podTemplateSpec,
+		jobRun.Namespace,
+		path,
+		jobRun.Annotations,
+		jobRun.Spec.Definition.Ports,
+	)
 	if err != nil {
 		return batchv1.JobSpec{}, err
 	}

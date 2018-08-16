@@ -43,7 +43,7 @@ func (c *Controller) syncServiceAddress(address *latticev1.Address) error {
 		return nil
 	}
 
-	ip, annotations, err := c.serviceMesh.WorkloadIP(service, address)
+	ip, annotations, err := c.serviceMesh.WorkloadIP(address, service.Spec.Definition.Ports)
 	if err != nil {
 		return fmt.Errorf(
 			"error getting %v %v IP from service mesh: %v",
@@ -125,7 +125,7 @@ func (c *Controller) syncServiceAddress(address *latticev1.Address) error {
 		}
 	}
 
-	serviceMeshPorts, err := c.serviceMesh.ServiceMeshPorts(service)
+	serviceMeshPorts, err := c.serviceMesh.ServiceMeshPorts(service.Annotations)
 	if err != nil {
 		return fmt.Errorf("error getting service mesh ports for %v: %v", service.Description(c.namespacePrefix), err)
 	}

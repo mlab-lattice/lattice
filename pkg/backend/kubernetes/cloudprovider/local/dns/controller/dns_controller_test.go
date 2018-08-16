@@ -315,7 +315,7 @@ func TestAddressCreation(t *testing.T) {
 			if address_.Spec.Service != nil {
 				ip, err = serviceMesh.HasWorkloadIP(address_)
 				if err == nil && ip == "" {
-					ip, annotations, err = serviceMesh.WorkloadIP(service, address_)
+					ip, annotations, err = serviceMesh.WorkloadIP(address_, service.Spec.Definition.Ports)
 					for k, v := range annotations {
 						address_.Annotations[k] = v
 					}

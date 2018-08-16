@@ -590,7 +590,7 @@ func (sm *DefaultEnvoyServiceMesh) envoyContainers(
 		return corev1.Container{}, corev1.Container{}, err
 	}
 
-	egressPorts, err := sm.egressPorts(annotations)
+	egressPorts, err := sm.EgressPorts(annotations)
 	if err != nil {
 		return corev1.Container{}, corev1.Container{}, err
 	}
@@ -718,7 +718,7 @@ func (sm *DefaultEnvoyServiceMesh) envoyContainers(
 	return prepareEnvoy, envoy, nil
 }
 
-func (sm *DefaultEnvoyServiceMesh) egressPorts(annotations map[string]string) (*EnvoyEgressPorts, error) {
+func (sm *DefaultEnvoyServiceMesh) EgressPorts(annotations map[string]string) (*EnvoyEgressPorts, error) {
 	egressPortsStr, ok := annotations[annotationKeyEgressPorts]
 	if !ok {
 		err := fmt.Errorf(

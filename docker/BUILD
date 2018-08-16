@@ -84,12 +84,6 @@ lattice_go_container_image(
 )
 
 lattice_go_container_image(
-    name = "kubernetes-envoy-xds-api-rest-per-node",
-    base_image = None,
-    path = "cmd/kubernetes/envoy/xdsapi/v1/rest/per-node",
-)
-
-lattice_go_container_image(
     name = "kubernetes-envoy-xds-api-grpc-per-node",
     base_image = None,
     path = "cmd/kubernetes/envoy/xdsapi/v2/grpc/per-node",
