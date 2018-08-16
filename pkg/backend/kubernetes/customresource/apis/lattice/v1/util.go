@@ -168,8 +168,10 @@ func KubeContainerForContainer(
 	// so we can more easily check to see if the spec needs
 	// to be updated.
 	var envVarNames []string
-	for name := range container.Exec.Environment {
-		envVarNames = append(envVarNames, name)
+	if container.Exec != nil {
+		for name := range container.Exec.Environment {
+			envVarNames = append(envVarNames, name)
+		}
 	}
 
 	sort.Strings(envVarNames)

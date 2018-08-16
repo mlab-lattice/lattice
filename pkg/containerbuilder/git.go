@@ -29,7 +29,12 @@ func (b *Builder) retrieveGitRepository(repository *definitionv1.GitRepository) 
 		Options:       b.GitOptions,
 	}
 
-	ref := &git.Reference{Commit: repository.Commit}
+	ref := &git.Reference{
+		Commit:  repository.Commit,
+		Branch:  repository.Branch,
+		Tag:     repository.Tag,
+		Version: repository.Version,
+	}
 
 	if err := gitResolver.Checkout(ctx, ref); err != nil {
 		return "", newErrorUser("git repository checkout failed: " + err.Error())

@@ -78,21 +78,27 @@ func (c *BuildCommand) Base() (*latticectl.BaseCommand, error) {
 				os.Exit(1)
 			}
 
-			fullCommand := []string{command}
+			var fullCommand []string
+			if command != "" {
+				fullCommand = []string{command}
+			}
 			fullCommand = append(fullCommand, jobArgs...)
 
-			env := definitionv1.ContainerEnvironment{}
-			for _, kv := range envStrings {
-				// FIXME: support comma escaping
-				parts := strings.Split(kv, "=")
-				if len(parts) != 2 {
-					fmt.Fprintf(os.Stderr, "invalid environment variable %v", kv)
-					os.Exit(1)
-				}
+			var env definitionv1.ContainerEnvironment
+			if len(envStrings) > 0 {
+				env := make(definitionv1.ContainerEnvironment)
+				for _, kv := range envStrings {
+					// FIXME: support comma escaping
+					parts := strings.Split(kv, "=")
+					if len(parts) != 2 {
+						fmt.Fprintf(os.Stderr, "invalid environment variable %v", kv)
+						os.Exit(1)
+					}
 
-				// FIXME: support secrets
-				env[parts[0]] = definitionv1.ValueOrSecret{
-					Value: &parts[1],
+					// FIXME: support secrets
+					env[parts[0]] = definitionv1.ValueOrSecret{
+						Value: &parts[1],
+					}
 				}
 			}
 

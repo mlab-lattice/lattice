@@ -211,11 +211,22 @@ func (c *Controller) untransformedPodTemplateSpec(
 	tolerations := []corev1.Toleration{nodePool.Toleration(nodePoolEpoch)}
 
 	// use the supplied command and environment as the job container's exec
+	// if they are specified
 	// copy so we don't mutate the cache
 	jobRun = jobRun.DeepCopy()
-	jobRun.Spec.Definition.Exec = &definitionv1.ContainerExec{
-		Command:     jobRun.Spec.Command,
-		Environment: jobRun.Spec.Environment,
+	if jobRun.Spec.Definition.Exec == nil {
+		jobRun.Spec.Definition.Exec = &definitionv1.ContainerExec{
+			Command:     jobRun.Spec.Command,
+			Environment: jobRun.Spec.Environment,
+		}
+	}
+
+	if jobRun.Spec.Command != nil {
+		jobRun.Spec.Definition.Exec.Command = jobRun.Spec.Command
+	}
+
+	if jobRun.Spec.Environment != nil {
+		jobRun.Spec.Definition.Exec.Environment = jobRun.Spec.Environment
 	}
 
 	return latticev1.PodTemplateSpecForComponent(
@@ -228,7 +239,7 @@ func (c *Controller) untransformedPodTemplateSpec(
 		jobRun.Name,
 		jobRunLabels,
 		jobRun.Spec.ContainerBuildArtifacts,
-		corev1.RestartPolicyNever,
+		corev1.RestartPolicyOnFailure,
 		affinity,
 		tolerations,
 	)
