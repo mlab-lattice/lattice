@@ -3,6 +3,7 @@ package v1
 import (
 	"net/http"
 
+	"github.com/mlab-lattice/cli/bazel-cli/external/go_sdk/src/fmt"
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 
 	"github.com/gin-gonic/gin"
@@ -10,8 +11,8 @@ import (
 )
 
 type ErrorResponse struct {
-	Code  v1.ErrorCode `json:"code"`
-	Error error        `json:"error"`
+	Code    v1.ErrorCode `json:"code"`
+	Message string       `json:"message" example:"status bad request"`
 }
 
 func handleError(c *gin.Context, err error) {
@@ -36,8 +37,8 @@ func handleError(c *gin.Context, err error) {
 	}
 
 	errResponse := &ErrorResponse{
-		Code:  code,
-		Error: err,
+		Code:    code,
+		Message: fmt.Sprintf("%v", err),
 	}
 
 	c.JSON(statusCode, errResponse)

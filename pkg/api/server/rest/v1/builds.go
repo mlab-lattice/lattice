@@ -41,6 +41,7 @@ func (api *LatticeAPI) setupBuildEndpoints() {
 // @Accept  json
 // @Produce  json
 // @Success 200 {object} v1.Build
+// @Failure 400 {object} v1.ErrorResponse
 func (api *LatticeAPI) handleBuildSystem(c *gin.Context) {
 	systemID := v1.SystemID(c.Param(systemIdentifier))
 
@@ -104,6 +105,7 @@ func (api *LatticeAPI) handleListBuilds(c *gin.Context) {
 // @Accept  json
 // @Produce  json
 // @Success 200 {object} v1.Build
+// @Failure 404 {object} v1.ErrorResponse
 func (api *LatticeAPI) handleGetBuild(c *gin.Context) {
 	systemID := v1.SystemID(c.Param(systemIdentifier))
 	buildID := v1.BuildID(c.Param(buildIdentifier))
@@ -136,6 +138,7 @@ func (api *LatticeAPI) handleGetBuild(c *gin.Context) {
 // @Accept  json
 // @Produce  json
 // @Success 200 {string} string "log stream"
+// @Failure 404 {object} v1.ErrorResponse
 func (api *LatticeAPI) handleGetBuildLogs(c *gin.Context) {
 	systemID := v1.SystemID(c.Param(systemIdentifier))
 	buildID := v1.BuildID(c.Param(buildIdentifier))

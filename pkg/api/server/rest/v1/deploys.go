@@ -39,6 +39,7 @@ func (api *LatticeAPI) setupDeployEndpoints() {
 // @Accept  json
 // @Produce  json
 // @Success 200 {object} v1.Deploy
+// @Failure 400 {object} v1.ErrorResponse
 func (api *LatticeAPI) handleDeploySystem(c *gin.Context) {
 	systemID := v1.SystemID(c.Param(systemIdentifier))
 
@@ -120,6 +121,7 @@ func (api *LatticeAPI) handleListDeploys(c *gin.Context) {
 // @Accept  json
 // @Produce  json
 // @Success 200 {object} v1.Deploy
+// @Failure 404 {object} v1.ErrorResponse
 func (api *LatticeAPI) handleGetDeploy(c *gin.Context) {
 	systemID := v1.SystemID(c.Param(systemIdentifier))
 	deployID := v1.DeployID(c.Param(deployIdentifier))

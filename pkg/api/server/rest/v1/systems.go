@@ -41,7 +41,7 @@ func (api *LatticeAPI) setupSystemEndpoints() {
 
 // CreateSystem godoc
 // @ID create-system
-// @Summary POST /systems
+// @Summary Create system
 // @Description Create a new system
 // @Router /systems [post]
 // @Tags systems
@@ -49,6 +49,7 @@ func (api *LatticeAPI) setupSystemEndpoints() {
 // @Accept  json
 // @Produce  json
 // @Success 200 {object} v1.System
+// @Failure 400 {object} v1.ErrorResponse
 func (api *LatticeAPI) handleCreateSystem(c *gin.Context) {
 
 	var req v1rest.CreateSystemRequest
@@ -69,7 +70,7 @@ func (api *LatticeAPI) handleCreateSystem(c *gin.Context) {
 
 // ListSystems godoc
 // @ID list-systems
-// @Summary GET /systems
+// @Summary List systems
 // @Description List systems
 // @Router /systems [get]
 // @Tags systems
@@ -88,7 +89,7 @@ func (api *LatticeAPI) handleListSystems(c *gin.Context) {
 
 // GetSystem godoc
 // @ID get-system
-// @Summary GET /systems/{system}
+// @Summary Get system
 // @Description get system
 // @Router /systems/{system} [get]
 // @Tags systems
@@ -96,6 +97,7 @@ func (api *LatticeAPI) handleListSystems(c *gin.Context) {
 // @Accept  json
 // @Produce  json
 // @Success 200 {object} v1.System
+// @Failure 404 {object} v1.ErrorResponse
 func (api *LatticeAPI) handleGetSystem(c *gin.Context) {
 	systemID := v1.SystemID(c.Param(systemIdentifier))
 	system, err := api.backend.GetSystem(systemID)
@@ -109,7 +111,7 @@ func (api *LatticeAPI) handleGetSystem(c *gin.Context) {
 
 // DeleteSystem godoc
 // @ID delete-system
-// @Summary DELETE /systems/{system}
+// @Summary Delete system
 // @Description Delete system
 // @Router /systems/{system} [delete]
 // @Tags systems
@@ -117,6 +119,7 @@ func (api *LatticeAPI) handleGetSystem(c *gin.Context) {
 // @Produce  json
 // @Param system path string true "System ID"
 // @Success 200 {object} v1.Result
+// @Failure 404 {object} v1.ErrorResponse
 func (api *LatticeAPI) handleDeleteSystem(c *gin.Context) {
 	systemID := v1.SystemID(c.Param(systemIdentifier))
 

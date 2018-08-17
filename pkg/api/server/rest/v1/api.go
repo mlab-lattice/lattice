@@ -2,11 +2,12 @@ package v1
 
 import (
 	"github.com/gin-gonic/gin"
-	"github.com/mlab-lattice/lattice/bazel-lattice/external/com_github_swaggo_gin_swagger/swaggerFiles"
+
 	_ "github.com/mlab-lattice/lattice/pkg/api/docs"
 	v1server "github.com/mlab-lattice/lattice/pkg/api/server/v1"
 	"github.com/mlab-lattice/lattice/pkg/definition/resolver"
 	"github.com/swaggo/gin-swagger"
+	"github.com/swaggo/gin-swagger/swaggerFiles"
 )
 
 type LatticeAPI struct {

@@ -58,6 +58,7 @@ func (api *LatticeAPI) handleListNodePools(c *gin.Context) {
 // @Accept  json
 // @Produce  json
 // @Success 200 {object} v1.NodePool
+// @Failure 404 {object} v1.ErrorResponse
 func (api *LatticeAPI) handleGetNodePool(c *gin.Context) {
 	systemID := v1.SystemID(c.Param(systemIdentifier))
 	escapedNodePoolPath := c.Param(nodePoolIdentifier)

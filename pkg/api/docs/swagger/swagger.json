@@ -25,7 +25,7 @@
                 "tags": [
                     "systems"
                 ],
-                "summary": "GET /systems",
+                "summary": "List systems",
                 "operationId": "list-systems",
                 "responses": {
                     "200": {
@@ -50,7 +50,7 @@
                 "tags": [
                     "systems"
                 ],
-                "summary": "POST /systems",
+                "summary": "Create system",
                 "operationId": "create-system",
                 "parameters": [
                     {
@@ -71,160 +71,12 @@
                             "type": "object",
                             "$ref": "#/definitions/v1.System"
                         }
-                    }
-                }
-            }
-        },
-        "/systems/{systemId}/secrets": {
-            "get": {
-                "description": "list secrets",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "secrets"
-                ],
-                "summary": "Lists secrets",
-                "operationId": "list-secrets",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "System ID",
-                        "name": "systemId",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/v1.Secret"
-                            }
-                        }
-                    }
-                }
-            },
-            "post": {
-                "description": "set secret",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "secrets"
-                ],
-                "summary": "set secret",
-                "operationId": "set-secret",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "System ID",
-                        "name": "systemId",
-                        "in": "path",
-                        "required": true
                     },
-                    {
-                        "description": "Create secret",
-                        "name": "secretRequest",
-                        "in": "body",
-                        "required": true,
+                    "400": {
+                        "description": "Bad Request",
                         "schema": {
                             "type": "object",
-                            "$ref": "#/definitions/rest.SetSecretRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "object",
-                            "$ref": "#/definitions/v1.Secret"
-                        }
-                    }
-                }
-            }
-        },
-        "/systems/{systemId}/secrets/{id}": {
-            "get": {
-                "description": "get secret",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "secrets"
-                ],
-                "summary": "Get secret",
-                "operationId": "get-secret",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "System ID",
-                        "name": "systemId",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "Secret ID",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "object",
-                            "$ref": "#/definitions/v1.Secret"
-                        }
-                    }
-                }
-            }
-        },
-        "/systems/{systemId}/versions": {
-            "get": {
-                "description": "list teardowns",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "versions"
-                ],
-                "summary": "Lists system versions",
-                "operationId": "list-system-versions",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "System ID",
-                        "name": "systemId",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/v1.SystemVersion"
-                            }
+                            "$ref": "#/definitions/v1.ErrorResponse"
                         }
                     }
                 }
@@ -242,7 +94,7 @@
                 "tags": [
                     "systems"
                 ],
-                "summary": "GET /systems/{system}",
+                "summary": "Get system",
                 "operationId": "get-system",
                 "parameters": [
                     {
@@ -260,6 +112,13 @@
                             "type": "object",
                             "$ref": "#/definitions/v1.System"
                         }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "$ref": "#/definitions/v1.ErrorResponse"
+                        }
                     }
                 }
             },
@@ -274,7 +133,7 @@
                 "tags": [
                     "systems"
                 ],
-                "summary": "DELETE /systems/{system}",
+                "summary": "Delete system",
                 "operationId": "delete-system",
                 "parameters": [
                     {
@@ -291,6 +150,13 @@
                         "schema": {
                             "type": "object",
                             "$ref": "#/definitions/v1.Result"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "$ref": "#/definitions/v1.ErrorResponse"
                         }
                     }
                 }
@@ -370,6 +236,13 @@
                             "type": "object",
                             "$ref": "#/definitions/v1.Build"
                         }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "$ref": "#/definitions/v1.ErrorResponse"
+                        }
                     }
                 }
             }
@@ -410,6 +283,13 @@
                         "schema": {
                             "type": "object",
                             "$ref": "#/definitions/v1.Build"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "$ref": "#/definitions/v1.ErrorResponse"
                         }
                     }
                 }
@@ -500,6 +380,13 @@
                         "schema": {
                             "type": "string"
                         }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "$ref": "#/definitions/v1.ErrorResponse"
+                        }
                     }
                 }
             }
@@ -578,6 +465,13 @@
                             "type": "object",
                             "$ref": "#/definitions/v1.Deploy"
                         }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "$ref": "#/definitions/v1.ErrorResponse"
+                        }
                     }
                 }
             }
@@ -618,6 +512,13 @@
                         "schema": {
                             "type": "object",
                             "$ref": "#/definitions/v1.Deploy"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "$ref": "#/definitions/v1.ErrorResponse"
                         }
                     }
                 }
@@ -695,6 +596,13 @@
                         "schema": {
                             "type": "object",
                             "$ref": "#/definitions/v1.Job"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "$ref": "#/definitions/v1.ErrorResponse"
                         }
                     }
                 }
@@ -778,6 +686,13 @@
                         "schema": {
                             "type": "string"
                         }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "$ref": "#/definitions/v1.ErrorResponse"
+                        }
                     }
                 }
             }
@@ -855,11 +770,149 @@
                             "type": "object",
                             "$ref": "#/definitions/v1.NodePool"
                         }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "$ref": "#/definitions/v1.ErrorResponse"
+                        }
                     }
                 }
             }
         },
-        "/systems/{system}/secrets/{id}": {
+        "/systems/{system}/secrets": {
+            "get": {
+                "description": "list secrets",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "secrets"
+                ],
+                "summary": "Lists secrets",
+                "operationId": "list-secrets",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "System ID",
+                        "name": "system",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/v1.Secret"
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "description": "set secret",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "secrets"
+                ],
+                "summary": "set secret",
+                "operationId": "set-secret",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "System ID",
+                        "name": "system",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Create secret",
+                        "name": "secretRequest",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object",
+                            "$ref": "#/definitions/rest.SetSecretRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "$ref": "#/definitions/v1.Secret"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "$ref": "#/definitions/v1.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/systems/{system}/secrets/{secret}": {
+            "get": {
+                "description": "get secret",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "secrets"
+                ],
+                "summary": "Get secret",
+                "operationId": "get-secret",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "System ID",
+                        "name": "system",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Secret Path",
+                        "name": "secret",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "$ref": "#/definitions/v1.Secret"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "$ref": "#/definitions/v1.ErrorResponse"
+                        }
+                    }
+                }
+            },
             "delete": {
                 "description": "get system",
                 "consumes": [
@@ -883,8 +936,8 @@
                     },
                     {
                         "type": "string",
-                        "description": "Secret ID",
-                        "name": "id",
+                        "description": "Secret Path",
+                        "name": "secret",
                         "in": "path",
                         "required": true
                     }
@@ -895,6 +948,13 @@
                         "schema": {
                             "type": "object",
                             "$ref": "#/definitions/v1.Result"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "$ref": "#/definitions/v1.ErrorResponse"
                         }
                     }
                 }
@@ -972,6 +1032,13 @@
                         "schema": {
                             "type": "object",
                             "$ref": "#/definitions/v1.Service"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "$ref": "#/definitions/v1.ErrorResponse"
                         }
                     }
                 }
@@ -1062,6 +1129,13 @@
                         "schema": {
                             "type": "string"
                         }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "$ref": "#/definitions/v1.ErrorResponse"
+                        }
                     }
                 }
             }
@@ -1130,6 +1204,20 @@
                             "type": "object",
                             "$ref": "#/definitions/v1.Teardown"
                         }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "$ref": "#/definitions/v1.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "$ref": "#/definitions/v1.ErrorResponse"
+                        }
                     }
                 }
             }
@@ -1170,6 +1258,49 @@
                         "schema": {
                             "type": "object",
                             "$ref": "#/definitions/v1.Teardown"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "$ref": "#/definitions/v1.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/systems/{system}/versions": {
+            "get": {
+                "description": "list teardowns",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "versions"
+                ],
+                "summary": "Lists system versions",
+                "operationId": "list-system-versions",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "System ID",
+                        "name": "system",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/v1.SystemVersion"
+                            }
                         }
                     }
                 }
@@ -1240,29 +1371,29 @@
             "type": "object",
             "properties": {
                 "completionTimestamp": {
-                    "description": "Completion timestamp\n",
+                    "description": "Completion timestamp",
                     "type": "string"
                 },
                 "id": {
-                    "description": "ID\n",
+                    "description": "ID",
                     "type": "object",
                     "$ref": "#/definitions/v1.BuildID"
                 },
                 "services": {
-                    "description": "Services maps service paths (e.g. /foo/bar/buzz) to the status of the build for that service in the Build.\n",
+                    "description": "Services maps service paths (e.g. /foo/bar/buzz) to the status of the build for that service in the Build.",
                     "type": "object"
                 },
                 "startTimestamp": {
-                    "description": "Start timestamp\n",
+                    "description": "Start timestamp",
                     "type": "string"
                 },
                 "state": {
-                    "description": "State\n",
+                    "description": "State",
                     "type": "object",
                     "$ref": "#/definitions/v1.BuildState"
                 },
                 "version": {
-                    "description": "Version\n",
+                    "description": "Version",
                     "type": "object",
                     "$ref": "#/definitions/v1.SystemVersion"
                 }
@@ -1278,17 +1409,17 @@
             "type": "object",
             "properties": {
                 "buildId": {
-                    "description": "Build ID\n",
+                    "description": "Build ID",
                     "type": "object",
                     "$ref": "#/definitions/v1.BuildID"
                 },
                 "id": {
-                    "description": "ID\n",
+                    "description": "ID",
                     "type": "object",
                     "$ref": "#/definitions/v1.DeployID"
                 },
                 "state": {
-                    "description": "State\n",
+                    "description": "State",
                     "type": "object",
                     "$ref": "#/definitions/v1.DeployState"
                 }
@@ -1300,28 +1431,44 @@
         "v1.DeployState": {
             "type": "object"
         },
+        "v1.ErrorCode": {
+            "type": "object"
+        },
+        "v1.ErrorResponse": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "object",
+                    "$ref": "#/definitions/v1.ErrorCode"
+                },
+                "message": {
+                    "type": "string",
+                    "example": "status bad request"
+                }
+            }
+        },
         "v1.Job": {
             "type": "object",
             "properties": {
                 "completionTimestamp": {
-                    "description": "CompletionTimestamp\n",
+                    "description": "CompletionTimestamp",
                     "type": "string"
                 },
                 "id": {
-                    "description": "ID\n",
+                    "description": "ID",
                     "type": "object",
                     "$ref": "#/definitions/v1.JobID"
                 },
                 "path": {
-                    "description": "Path\n",
+                    "description": "Path",
                     "type": "string"
                 },
                 "startTimestamp": {
-                    "description": "StartTimestamp\n",
+                    "description": "StartTimestamp",
                     "type": "string"
                 },
                 "state": {
-                    "description": "State\n",
+                    "description": "State",
                     "type": "object",
                     "$ref": "#/definitions/v1.JobState"
                 }
@@ -1337,28 +1484,28 @@
             "type": "object",
             "properties": {
                 "failure_info": {
-                    "description": "FailureInfo\n",
+                    "description": "FailureInfo",
                     "type": "object",
                     "$ref": "#/definitions/v1.NodePoolFailureInfo"
                 },
                 "id": {
-                    "description": "ID\n",
+                    "description": "ID",
                     "type": "string"
                 },
                 "instanceType": {
-                    "description": "FIXME: how to deal with epochs?\nInstanceType\n",
+                    "description": "FIXME: how to deal with epochs?\nInstanceType",
                     "type": "string"
                 },
                 "numInstances": {
-                    "description": "NumInstances\n",
+                    "description": "NumInstances",
                     "type": "integer"
                 },
                 "path": {
-                    "description": "Path\n",
+                    "description": "Path",
                     "type": "string"
                 },
                 "state": {
-                    "description": "State\n",
+                    "description": "State",
                     "type": "object",
                     "$ref": "#/definitions/v1.NodePoolState"
                 }
@@ -1368,11 +1515,11 @@
             "type": "object",
             "properties": {
                 "message": {
-                    "description": "Message\n",
+                    "description": "Message",
                     "type": "string"
                 },
                 "time": {
-                    "description": "Time\n",
+                    "description": "Time",
                     "type": "string"
                 }
             }
@@ -1387,15 +1534,15 @@
             "type": "object",
             "properties": {
                 "name": {
-                    "description": "Name\n",
+                    "description": "Name",
                     "type": "string"
                 },
                 "path": {
-                    "description": "Secret service path\n",
+                    "description": "Secret service path",
                     "type": "string"
                 },
                 "value": {
-                    "description": "Value\n",
+                    "description": "Value",
                     "type": "string"
                 }
             }
@@ -1404,53 +1551,53 @@
             "type": "object",
             "properties": {
                 "availableInstances": {
-                    "description": "AvailableInstances\n",
+                    "description": "AvailableInstances",
                     "type": "integer"
                 },
                 "failureInfo": {
-                    "description": "FailureInfo\n",
+                    "description": "FailureInfo",
                     "type": "object",
                     "$ref": "#/definitions/v1.ServiceFailureInfo"
                 },
                 "id": {
-                    "description": "Service ID\n",
+                    "description": "Service ID",
                     "type": "object",
                     "$ref": "#/definitions/v1.ServiceID"
                 },
                 "instances": {
-                    "description": "Instances\n",
+                    "description": "Instances",
                     "type": "array",
                     "items": {
                         "type": "string"
                     }
                 },
                 "message": {
-                    "description": "Message\n",
+                    "description": "Message",
                     "type": "string"
                 },
                 "path": {
-                    "description": "Service Path\n",
+                    "description": "Service Path",
                     "type": "string"
                 },
                 "ports": {
-                    "description": "Ports\n",
+                    "description": "Ports",
                     "type": "object"
                 },
                 "staleInstances": {
-                    "description": "StaleInstances\n",
+                    "description": "StaleInstances",
                     "type": "integer"
                 },
                 "state": {
-                    "description": "State\n",
+                    "description": "State",
                     "type": "object",
                     "$ref": "#/definitions/v1.ServiceState"
                 },
                 "terminatingInstances": {
-                    "description": "TerminatingInstances\n",
+                    "description": "TerminatingInstances",
                     "type": "integer"
                 },
                 "updatedInstances": {
-                    "description": "UpdatedInstances\n",
+                    "description": "UpdatedInstances",
                     "type": "integer"
                 }
             }
@@ -1459,11 +1606,11 @@
             "type": "object",
             "properties": {
                 "message": {
-                    "description": "Message\n",
+                    "description": "Message",
                     "type": "string"
                 },
                 "time": {
-                    "description": "Time\n",
+                    "description": "Time",
                     "type": "string"
                 }
             }
@@ -1478,20 +1625,20 @@
             "type": "object",
             "properties": {
                 "definitionUrl": {
-                    "description": "git url for for where the definition lives in\n",
+                    "description": "git url for for where the definition lives in",
                     "type": "string"
                 },
                 "id": {
-                    "description": "System ID\n",
+                    "description": "System ID",
                     "type": "object",
                     "$ref": "#/definitions/v1.SystemID"
                 },
                 "services": {
-                    "description": "map for service path and services currently running in the system\n",
+                    "description": "map for service path and services currently running in the system",
                     "type": "object"
                 },
                 "state": {
-                    "description": "State. One of \"pending\", \"failed\", \"deleting\", \"stable\", \"degraded\", \"scaling\", \"updating\"\n",
+                    "description": "State. One of \"pending\", \"failed\", \"deleting\", \"stable\", \"degraded\", \"scaling\", \"updating\"",
                     "type": "object",
                     "$ref": "#/definitions/v1.SystemState"
                 }
@@ -1510,12 +1657,12 @@
             "type": "object",
             "properties": {
                 "id": {
-                    "description": "ID\n",
+                    "description": "ID",
                     "type": "object",
                     "$ref": "#/definitions/v1.TeardownID"
                 },
                 "state": {
-                    "description": "State\n",
+                    "description": "State",
                     "type": "object",
                     "$ref": "#/definitions/v1.TeardownState"
                 }

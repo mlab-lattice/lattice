@@ -42,31 +42,26 @@ definitions:
   v1.Build:
     properties:
       completionTimestamp:
-        description: |
-          Completion timestamp
+        description: Completion timestamp
         type: string
       id:
         $ref: '#/definitions/v1.BuildID'
-        description: |
-          ID
+        description: ID
         type: object
       services:
-        description: |
-          Services maps service paths (e.g. /foo/bar/buzz) to the status of the build for that service in the Build.
+        description: Services maps service paths (e.g. /foo/bar/buzz) to the status
+          of the build for that service in the Build.
         type: object
       startTimestamp:
-        description: |
-          Start timestamp
+        description: Start timestamp
         type: string
       state:
         $ref: '#/definitions/v1.BuildState'
-        description: |
-          State
+        description: State
         type: object
       version:
         $ref: '#/definitions/v1.SystemVersion'
-        description: |
-          Version
+        description: Version
         type: object
     type: object
   v1.BuildID:
@@ -77,47 +72,50 @@ definitions:
     properties:
       buildId:
         $ref: '#/definitions/v1.BuildID'
-        description: |
-          Build ID
+        description: Build ID
         type: object
       id:
         $ref: '#/definitions/v1.DeployID'
-        description: |
-          ID
+        description: ID
         type: object
       state:
         $ref: '#/definitions/v1.DeployState'
-        description: |
-          State
+        description: State
         type: object
     type: object
   v1.DeployID:
     type: object
   v1.DeployState:
     type: object
+  v1.ErrorCode:
+    type: object
+  v1.ErrorResponse:
+    properties:
+      code:
+        $ref: '#/definitions/v1.ErrorCode'
+        type: object
+      message:
+        example: status bad request
+        type: string
+    type: object
   v1.Job:
     properties:
       completionTimestamp:
-        description: |
-          CompletionTimestamp
+        description: CompletionTimestamp
         type: string
       id:
         $ref: '#/definitions/v1.JobID'
-        description: |
-          ID
+        description: ID
         type: object
       path:
-        description: |
-          Path
+        description: Path
         type: string
       startTimestamp:
-        description: |
-          StartTimestamp
+        description: StartTimestamp
         type: string
       state:
         $ref: '#/definitions/v1.JobState'
-        description: |
-          State
+        description: State
         type: object
     type: object
   v1.JobID:
@@ -128,41 +126,34 @@ definitions:
     properties:
       failure_info:
         $ref: '#/definitions/v1.NodePoolFailureInfo'
-        description: |
-          FailureInfo
+        description: FailureInfo
         type: object
       id:
-        description: |
-          ID
+        description: ID
         type: string
       instanceType:
-        description: |
+        description: |-
           FIXME: how to deal with epochs?
           InstanceType
         type: string
       numInstances:
-        description: |
-          NumInstances
+        description: NumInstances
         type: integer
       path:
-        description: |
-          Path
+        description: Path
         type: string
       state:
         $ref: '#/definitions/v1.NodePoolState'
-        description: |
-          State
+        description: State
         type: object
     type: object
   v1.NodePoolFailureInfo:
     properties:
       message:
-        description: |
-          Message
+        description: Message
         type: string
       time:
-        description: |
-          Time
+        description: Time
         type: string
     type: object
   v1.NodePoolState:
@@ -172,79 +163,63 @@ definitions:
   v1.Secret:
     properties:
       name:
-        description: |
-          Name
+        description: Name
         type: string
       path:
-        description: |
-          Secret service path
+        description: Secret service path
         type: string
       value:
-        description: |
-          Value
+        description: Value
         type: string
     type: object
   v1.Service:
     properties:
       availableInstances:
-        description: |
-          AvailableInstances
+        description: AvailableInstances
         type: integer
       failureInfo:
         $ref: '#/definitions/v1.ServiceFailureInfo'
-        description: |
-          FailureInfo
+        description: FailureInfo
         type: object
       id:
         $ref: '#/definitions/v1.ServiceID'
-        description: |
-          Service ID
+        description: Service ID
         type: object
       instances:
-        description: |
-          Instances
+        description: Instances
         items:
           type: string
         type: array
       message:
-        description: |
-          Message
+        description: Message
         type: string
       path:
-        description: |
-          Service Path
+        description: Service Path
         type: string
       ports:
-        description: |
-          Ports
+        description: Ports
         type: object
       staleInstances:
-        description: |
-          StaleInstances
+        description: StaleInstances
         type: integer
       state:
         $ref: '#/definitions/v1.ServiceState'
-        description: |
-          State
+        description: State
         type: object
       terminatingInstances:
-        description: |
-          TerminatingInstances
+        description: TerminatingInstances
         type: integer
       updatedInstances:
-        description: |
-          UpdatedInstances
+        description: UpdatedInstances
         type: integer
     type: object
   v1.ServiceFailureInfo:
     properties:
       message:
-        description: |
-          Message
+        description: Message
         type: string
       time:
-        description: |
-          Time
+        description: Time
         type: string
     type: object
   v1.ServiceID:
@@ -254,22 +229,19 @@ definitions:
   v1.System:
     properties:
       definitionUrl:
-        description: |
-          git url for for where the definition lives in
+        description: git url for for where the definition lives in
         type: string
       id:
         $ref: '#/definitions/v1.SystemID'
-        description: |
-          System ID
+        description: System ID
         type: object
       services:
-        description: |
-          map for service path and services currently running in the system
+        description: map for service path and services currently running in the system
         type: object
       state:
         $ref: '#/definitions/v1.SystemState'
-        description: |
-          State. One of "pending", "failed", "deleting", "stable", "degraded", "scaling", "updating"
+        description: State. One of "pending", "failed", "deleting", "stable", "degraded",
+          "scaling", "updating"
         type: object
     type: object
   v1.SystemID:
@@ -282,13 +254,11 @@ definitions:
     properties:
       id:
         $ref: '#/definitions/v1.TeardownID'
-        description: |
-          ID
+        description: ID
         type: object
       state:
         $ref: '#/definitions/v1.TeardownState'
-        description: |
-          State
+        description: State
         type: object
     type: object
   v1.TeardownID:
@@ -320,7 +290,7 @@ paths:
             items:
               $ref: '#/definitions/v1.System'
             type: array
-      summary: GET /systems
+      summary: List systems
       tags:
       - systems
     post:
@@ -344,7 +314,12 @@ paths:
           schema:
             $ref: '#/definitions/v1.System'
             type: object
-      summary: POST /systems
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/v1.ErrorResponse'
+            type: object
+      summary: Create system
       tags:
       - systems
   /systems/{system}:
@@ -367,7 +342,12 @@ paths:
           schema:
             $ref: '#/definitions/v1.Result'
             type: object
-      summary: DELETE /systems/{system}
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/v1.ErrorResponse'
+            type: object
+      summary: Delete system
       tags:
       - systems
     get:
@@ -389,7 +369,12 @@ paths:
           schema:
             $ref: '#/definitions/v1.System'
             type: object
-      summary: GET /systems/{system}
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/v1.ErrorResponse'
+            type: object
+      summary: Get system
       tags:
       - systems
   /systems/{system}/builds:
@@ -442,6 +427,11 @@ paths:
           schema:
             $ref: '#/definitions/v1.Build'
             type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/v1.ErrorResponse'
+            type: object
       summary: Build system
       tags:
       - builds
@@ -469,6 +459,11 @@ paths:
           description: OK
           schema:
             $ref: '#/definitions/v1.Build'
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/v1.ErrorResponse'
             type: object
       summary: Get build
       tags:
@@ -530,6 +525,11 @@ paths:
           description: log stream
           schema:
             type: string
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/v1.ErrorResponse'
+            type: object
       summary: Get build logs
       tags:
       - builds
@@ -583,6 +583,11 @@ paths:
           schema:
             $ref: '#/definitions/v1.Deploy'
             type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/v1.ErrorResponse'
+            type: object
       summary: Deploy system
       tags:
       - deploys
@@ -610,6 +615,11 @@ paths:
           description: OK
           schema:
             $ref: '#/definitions/v1.Deploy'
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/v1.ErrorResponse'
             type: object
       summary: Get deploy
       tags:
@@ -662,6 +672,11 @@ paths:
           description: OK
           schema:
             $ref: '#/definitions/v1.Job'
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/v1.ErrorResponse'
             type: object
       summary: Get job
       tags:
@@ -718,6 +733,11 @@ paths:
           description: log stream
           schema:
             type: string
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/v1.ErrorResponse'
+            type: object
       summary: Get job logs
       tags:
       - jobs
@@ -770,10 +790,73 @@ paths:
           schema:
             $ref: '#/definitions/v1.NodePool'
             type: object
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/v1.ErrorResponse'
+            type: object
       summary: Get node pool
       tags:
       - node-pools
-  /systems/{system}/secrets/{id}:
+  /systems/{system}/secrets:
+    get:
+      consumes:
+      - application/json
+      description: list secrets
+      operationId: list-secrets
+      parameters:
+      - description: System ID
+        in: path
+        name: system
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/v1.Secret'
+            type: array
+      summary: Lists secrets
+      tags:
+      - secrets
+    post:
+      consumes:
+      - application/json
+      description: set secret
+      operationId: set-secret
+      parameters:
+      - description: System ID
+        in: path
+        name: system
+        required: true
+        type: string
+      - description: Create secret
+        in: body
+        name: secretRequest
+        required: true
+        schema:
+          $ref: '#/definitions/rest.SetSecretRequest'
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/v1.Secret'
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/v1.ErrorResponse'
+            type: object
+      summary: set secret
+      tags:
+      - secrets
+  /systems/{system}/secrets/{secret}:
     delete:
       consumes:
       - application/json
@@ -785,9 +868,9 @@ paths:
         name: system
         required: true
         type: string
-      - description: Secret ID
+      - description: Secret Path
         in: path
-        name: id
+        name: secret
         required: true
         type: string
       produces:
@@ -798,7 +881,44 @@ paths:
           schema:
             $ref: '#/definitions/v1.Result'
             type: object
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/v1.ErrorResponse'
+            type: object
       summary: Delete system
+      tags:
+      - secrets
+    get:
+      consumes:
+      - application/json
+      description: get secret
+      operationId: get-secret
+      parameters:
+      - description: System ID
+        in: path
+        name: system
+        required: true
+        type: string
+      - description: Secret Path
+        in: path
+        name: secret
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/v1.Secret'
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/v1.ErrorResponse'
+            type: object
+      summary: Get secret
       tags:
       - secrets
   /systems/{system}/services:
@@ -849,6 +969,11 @@ paths:
           description: OK
           schema:
             $ref: '#/definitions/v1.Service'
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/v1.ErrorResponse'
             type: object
       summary: Get service
       tags:
@@ -910,6 +1035,11 @@ paths:
           description: log stream
           schema:
             type: string
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/v1.ErrorResponse'
+            type: object
       summary: Get service logs
       tags:
       - services
@@ -956,6 +1086,16 @@ paths:
           schema:
             $ref: '#/definitions/v1.Teardown'
             type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/v1.ErrorResponse'
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/v1.ErrorResponse'
+            type: object
       summary: Teardown system
       tags:
       - teardowns
@@ -984,91 +1124,15 @@ paths:
           schema:
             $ref: '#/definitions/v1.Teardown'
             type: object
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/v1.ErrorResponse'
+            type: object
       summary: Get teardown
       tags:
       - teardowns
-  /systems/{systemId}/secrets:
-    get:
-      consumes:
-      - application/json
-      description: list secrets
-      operationId: list-secrets
-      parameters:
-      - description: System ID
-        in: path
-        name: systemId
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            items:
-              $ref: '#/definitions/v1.Secret'
-            type: array
-      summary: Lists secrets
-      tags:
-      - secrets
-    post:
-      consumes:
-      - application/json
-      description: set secret
-      operationId: set-secret
-      parameters:
-      - description: System ID
-        in: path
-        name: systemId
-        required: true
-        type: string
-      - description: Create secret
-        in: body
-        name: secretRequest
-        required: true
-        schema:
-          $ref: '#/definitions/rest.SetSecretRequest'
-          type: object
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/v1.Secret'
-            type: object
-      summary: set secret
-      tags:
-      - secrets
-  /systems/{systemId}/secrets/{id}:
-    get:
-      consumes:
-      - application/json
-      description: get secret
-      operationId: get-secret
-      parameters:
-      - description: System ID
-        in: path
-        name: systemId
-        required: true
-        type: string
-      - description: Secret ID
-        in: path
-        name: id
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/v1.Secret'
-            type: object
-      summary: Get secret
-      tags:
-      - secrets
-  /systems/{systemId}/versions:
+  /systems/{system}/versions:
     get:
       consumes:
       - application/json
@@ -1077,7 +1141,7 @@ paths:
       parameters:
       - description: System ID
         in: path
-        name: systemId
+        name: system
         required: true
         type: string
       produces:

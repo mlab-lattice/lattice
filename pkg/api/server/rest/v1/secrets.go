@@ -39,13 +39,14 @@ func (api *LatticeAPI) setupSecretsEndpoints() {
 // @ID set-secret
 // @Summary set secret
 // @Description set secret
-// @Router /systems/{systemId}/secrets [post]
+// @Router /systems/{system}/secrets [post]
 // @Tags secrets
-// @Param systemId path string true "System ID"
+// @Param system path string true "System ID"
 // @Param secretRequest body rest.SetSecretRequest true "Create secret"
 // @Accept  json
 // @Produce  json
 // @Success 200 {object} v1.Secret
+// @Failure 400 {object} v1.ErrorResponse
 func (api *LatticeAPI) handleSetSecret(c *gin.Context) {
 	var req v1rest.SetSecretRequest
 	if err := c.BindJSON(&req); err != nil {
@@ -92,9 +93,9 @@ func (api *LatticeAPI) handleSetSecret(c *gin.Context) {
 // @ID list-secrets
 // @Summary Lists secrets
 // @Description list secrets
-// @Router /systems/{systemId}/secrets [get]
+// @Router /systems/{system}/secrets [get]
 // @Tags secrets
-// @Param systemId path string true "System ID"
+// @Param system path string true "System ID"
 // @Accept  json
 // @Produce  json
 // @Success 200 {array} v1.Secret
@@ -114,13 +115,14 @@ func (api *LatticeAPI) handleListSecrets(c *gin.Context) {
 // @ID get-secret
 // @Summary Get secret
 // @Description get secret
-// @Router /systems/{systemId}/secrets/{id} [get]
+// @Router /systems/{system}/secrets/{secret} [get]
 // @Tags secrets
-// @Param systemId path string true "System ID"
-// @Param id path string true "Secret ID"
+// @Param system path string true "System ID"
+// @Param secret path string true "Secret Path"
 // @Accept  json
 // @Produce  json
 // @Success 200 {object} v1.Secret
+// @Failure 404 {object} v1.ErrorResponse
 func (api *LatticeAPI) handleGetSecret(c *gin.Context) {
 	systemID := v1.SystemID(c.Param(systemIdentifier))
 	escapedSecretPath := c.Param(secretIdentifier)
@@ -162,13 +164,14 @@ func (api *LatticeAPI) handleGetSecret(c *gin.Context) {
 // @ID delete-system
 // @Summary Delete system
 // @Description get system
-// @Router /systems/{system}/secrets/{id} [delete]
+// @Router /systems/{system}/secrets/{secret} [delete]
 // @Tags secrets
 // @Accept  json
 // @Produce  json
 // @Param system path string true "System ID"
-// @Param id path string true "Secret ID"
+// @Param secret path string true "Secret Path"
 // @Success 200 {object} v1.Result
+// @Failure 404 {object} v1.ErrorResponse
 func (api *LatticeAPI) handleUnsetSecret(c *gin.Context) {
 	systemID := v1.SystemID(c.Param(systemIdentifier))
 	escapedSecretPath := c.Param(secretIdentifier)
