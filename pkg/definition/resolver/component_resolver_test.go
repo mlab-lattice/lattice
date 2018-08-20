@@ -67,7 +67,7 @@ func testFileReferenceResolve(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	r, err := NewComponentResolver(workDir, true, NewMemoryTemplateStore())
+	r, err := NewComponentResolver(workDir, true, NewMemoryTemplateStore(), NewMemorySecretStore())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -129,7 +129,7 @@ func testCommitGitReferenceResolve(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	r, err := NewComponentResolver(workDir, true, NewMemoryTemplateStore())
+	r, err := NewComponentResolver(workDir, true, NewMemoryTemplateStore(), NewMemorySecretStore())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -239,7 +239,7 @@ func testBranchGitReferenceResolve(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	r, err := NewComponentResolver(workDir, true, NewMemoryTemplateStore())
+	r, err := NewComponentResolver(workDir, true, NewMemoryTemplateStore(), NewMemorySecretStore())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -386,7 +386,7 @@ func testTagAndVersionGitReferenceResolve(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	r, err := NewComponentResolver(workDir, true, NewMemoryTemplateStore())
+	r, err := NewComponentResolver(workDir, true, NewMemoryTemplateStore(), NewMemorySecretStore())
 	if err != nil {
 		t.Fatal(err)
 	}

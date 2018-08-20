@@ -42,6 +42,11 @@ type ResolutionNodeInfo struct {
 	Commit git.CommitReference `json:"commit"`
 }
 
+type resolutionContext struct {
+	FileReference *git.FileReference
+	SSHKey        []byte
+}
+
 // ComponentResolver resolves references into fully hydrated (i.e. the template
 // engine has already acted upon it) component.
 type ComponentResolver interface {
@@ -58,13 +63,19 @@ type ComponentResolver interface {
 
 // DefaultComponentResolver fulfils the ComponentResolver interface.
 type DefaultComponentResolver struct {
-	gitResolver *git.Resolver
-	store       TemplateStore
+	gitResolver   *git.Resolver
+	templateStore TemplateStore
+	secretStore   SecretStore
 }
 
 // NewComponentResolver returns a ComponentResolver that uses workDirectory for
 // scratch space such as cloning git repositories.
-func NewComponentResolver(workDirectory string, allowLocalRepos bool, store TemplateStore) (ComponentResolver, error) {
+func NewComponentResolver(
+	workDirectory string,
+	allowLocalRepos bool,
+	templateStore TemplateStore,
+	secretStore SecretStore,
+) (ComponentResolver, error) {
 	if workDirectory == "" {
 		return nil, fmt.Errorf("must supply workDirectory")
 	}
@@ -75,8 +86,9 @@ func NewComponentResolver(workDirectory string, allowLocalRepos bool, store Temp
 	}
 
 	r := &DefaultComponentResolver{
-		gitResolver: gitResolver,
-		store:       store,
+		gitResolver:   gitResolver,
+		templateStore: templateStore,
+		secretStore:   secretStore,
 	}
 	return r, nil
 }
@@ -97,8 +109,10 @@ func (r *DefaultComponentResolver) ResolveReference(
 	ref *definitionv1.Reference,
 	depth int32,
 ) (*ResolutionResult, error) {
+	// TODO(kevindrosendahl): this here is why private system definitions aren't supported
+	rctx := &resolutionContext{FileReference: ctx}
 	info := make(ResolutionInfo)
-	c, err := r.resolveReference(systemID, path, ctx, ref, depth, info)
+	c, err := r.resolveReference(systemID, path, rctx, ref, depth, info)
 	if err != nil {
 		return nil, err
 	}
@@ -113,13 +127,13 @@ func (r *DefaultComponentResolver) ResolveReference(
 func (r *DefaultComponentResolver) resolveReference(
 	systemID v1.SystemID,
 	path tree.Path,
-	ctx *git.FileReference,
+	ctx *resolutionContext,
 	ref *definitionv1.Reference,
 	depth int32,
 	info ResolutionInfo,
 ) (component.Interface, error) {
 	if depth == 0 {
-		info[path] = ResolutionNodeInfo{Commit: ctx.CommitReference}
+		info[path] = ResolutionNodeInfo{Commit: ctx.FileReference.CommitReference}
 		return ref, nil
 	}
 
@@ -169,16 +183,16 @@ func (r *DefaultComponentResolver) resolveReference(
 		}
 	}
 
-	info[path] = ResolutionNodeInfo{Commit: resolvedCxt.CommitReference}
+	info[path] = ResolutionNodeInfo{Commit: resolvedCxt.FileReference.CommitReference}
 	return c, nil
 }
 
 func (r *DefaultComponentResolver) resolveTemplate(
 	systemID v1.SystemID,
 	path tree.Path,
-	ctx *git.FileReference,
+	ctx *resolutionContext,
 	ref *definitionv1.Reference,
-) (*template.Template, *git.FileReference, error) {
+) (*template.Template, *resolutionContext, error) {
 	gitCtx := &git.Context{
 		Options: &git.Options{},
 	}
@@ -200,19 +214,31 @@ func (r *DefaultComponentResolver) resolveTemplate(
 			file = *ref.GitRepository.File
 		}
 
-		commit, err := r.gitReferenceCommit(ref.GitRepository)
+		var sshKey []byte
+		if ref.GitRepository.SSHKey != nil {
+			sshKeyVal, err := r.secretStore.Get(systemID, ref.GitRepository.SSHKey.Value)
+			if err != nil {
+				return nil, nil, err
+			}
+
+			sshKey = []byte(sshKeyVal)
+		}
+
+		commit, err := r.gitReferenceCommit(systemID, ref.GitRepository, sshKey)
 		if err != nil {
 			return nil, nil, err
 		}
 
 		commitHash := commit.Hash.String()
 		gitRef = &git.Reference{Commit: &commitHash}
+		gitCtx.Options.SSHKey = sshKey
 
 	case ref.File != nil:
 		// if the reference is to a file, use the given context as the context, and set the
 		// file to file referenced.
-		gitCtx.RepositoryURL = ctx.RepositoryURL
-		gitRef = &git.Reference{Commit: &ctx.Commit}
+		gitCtx.RepositoryURL = ctx.FileReference.RepositoryURL
+		gitCtx.Options.SSHKey = ctx.SSHKey
+		gitRef = &git.Reference{Commit: &ctx.FileReference.Commit}
 		file = *ref.File
 	}
 
@@ -224,31 +250,52 @@ func (r *DefaultComponentResolver) resolveTemplate(
 		File: file,
 	}
 
-	// see if we already have this commit from this repository in the template store.
-	t, err := r.store.Get(systemID, fileRef)
-	if err != nil {
-		// if there was an error getting the cached version, get the template from the
-		// repo
-		t, err = r.resolveGitTemplate(gitCtx, gitRef, file)
-		if err != nil {
-			return nil, nil, err
-		}
+	resolvedContext := &resolutionContext{
+		FileReference: fileRef,
+		SSHKey:        gitCtx.Options.SSHKey,
+	}
 
+	// Only want to check the cache if no credentials are required.
+	// See https://github.com/mlab-lattice/lattice/issues/195 for more info
+	checkCache := resolvedContext.SSHKey == nil
+
+	if checkCache {
+		// see if we already have this commit from this repository in the template store.
+		t, err := r.templateStore.Get(systemID, fileRef)
+		if err == nil {
+			return t, resolvedContext, nil
+		}
+	}
+
+	// if there was an error getting the cached version, get the template from the
+	// repo
+	t, err := r.resolveGitTemplate(gitCtx, gitRef, file)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	if checkCache {
 		// put the template into the template store
-		if err = r.store.Put(systemID, fileRef, t); err != nil {
+		if err = r.templateStore.Put(systemID, fileRef, t); err != nil {
 			return nil, nil, err
 		}
 	}
 
 	// return the template that we found either from the store or from the repository
 	// as well as the commit reference that was used to find the template
-	return t, fileRef, nil
+	return t, resolvedContext, nil
 }
 
-func (r *DefaultComponentResolver) gitReferenceCommit(ref *definitionv1.GitRepositoryReference) (*gitplumbingobject.Commit, error) {
+func (r *DefaultComponentResolver) gitReferenceCommit(
+	systemID v1.SystemID,
+	ref *definitionv1.GitRepositoryReference,
+	sshKey []byte,
+) (*gitplumbingobject.Commit, error) {
 	ctx := &git.Context{
 		RepositoryURL: ref.URL,
-		Options:       &git.Options{},
+		Options: &git.Options{
+			SSHKey: sshKey,
+		},
 	}
 
 	gitRef := &git.Reference{
@@ -338,7 +385,7 @@ func (r *DefaultComponentResolver) hydrateReferenceParameters(
 func (r *DefaultComponentResolver) resolveSystemComponents(
 	systemID v1.SystemID,
 	path tree.Path,
-	ctx *git.FileReference,
+	ctx *resolutionContext,
 	system *definitionv1.System,
 	depth int32,
 	info ResolutionInfo,
@@ -370,7 +417,7 @@ func (r *DefaultComponentResolver) resolveSystemComponents(
 			system.Components[name] = resolved
 
 		default:
-			info[childPath] = ResolutionNodeInfo{Commit: ctx.CommitReference}
+			info[childPath] = ResolutionNodeInfo{Commit: ctx.FileReference.CommitReference}
 		}
 	}
 
