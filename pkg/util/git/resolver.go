@@ -35,7 +35,7 @@ type Context struct {
 	Options       *Options
 }
 
-// Reference is a sum type containing a reference to a commit, tag, or branch.
+// Reference is a union type containing a reference to a commit, tag, or branch.
 type Reference struct {
 	Commit  *string
 	Branch  *string
