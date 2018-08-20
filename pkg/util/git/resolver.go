@@ -9,6 +9,7 @@ import (
 
 	"golang.org/x/crypto/ssh"
 
+	"github.com/blang/semver"
 	"gopkg.in/src-d/go-git.v4"
 	gitplumbing "gopkg.in/src-d/go-git.v4/plumbing"
 	gitplumbingobject "gopkg.in/src-d/go-git.v4/plumbing/object"
@@ -36,18 +37,21 @@ type Context struct {
 
 // Reference is a sum type containing a reference to a commit, tag, or branch.
 type Reference struct {
-	Commit *string
-	Tag    *string
-	Branch *string
+	Commit  *string
+	Branch  *string
+	Tag     *string
+	Version *string
 }
 
 func (r *Reference) Validate() error {
-	if r.Commit == nil && r.Tag == nil && r.Branch == nil {
-		return fmt.Errorf("reference must contain a commit, tag, or branch")
+	if r.Commit == nil && r.Branch == nil && r.Tag == nil && r.Version == nil {
+		return fmt.Errorf("reference must contain a commit, branch, tag, or version")
 	}
 
-	if (r.Commit != nil && (r.Tag != nil || r.Branch != nil)) || (r.Tag != nil && r.Branch != nil) {
-		return fmt.Errorf("reference can only contain a single commit, tag, or branch")
+	if (r.Commit != nil && (r.Tag != nil || r.Branch != nil || r.Version != nil)) ||
+		(r.Tag != nil && (r.Branch != nil || r.Version != nil)) ||
+		(r.Branch != nil && r.Version != nil) {
+		return fmt.Errorf("reference can only contain a single commit, branch, tag, or version")
 	}
 
 	return nil
@@ -197,9 +201,59 @@ func (r *Resolver) GetCommit(ctx *Context, ref *Reference) (*gitplumbingobject.C
 		}
 
 		hash = gitRef.Hash()
+
+	case ref.Version != nil:
+		rng, err := semver.ParseRange(*ref.Version)
+
+		// If the tag is not a semver range, just use the tag
+		if err != nil {
+			return nil, fmt.Errorf("version is not a valid semver range")
+		}
+
+		versions, err := r.Versions(ctx, rng)
+		if err != nil {
+			return nil, err
+		}
+
+		if len(versions) == 0 {
+			return nil, fmt.Errorf("no tags match the requested version")
+		}
+
+		tag := versions[len(versions)-1]
+		ref = &Reference{Tag: &tag}
+		return r.GetCommit(ctx, ref)
 	}
 
 	return repository.CommitObject(hash)
+}
+
+func (r *Resolver) Versions(ctx *Context, semverRange semver.Range) ([]string, error) {
+	tags, err := r.Tags(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	var versions []semver.Version
+	for _, tag := range tags {
+		v, err := semver.Parse(tag)
+		if err != nil {
+			continue
+		}
+
+		// If a semver range was passed in, check to see if the version
+		// matches the range.
+		if semverRange != nil && !semverRange(v) {
+			continue
+		}
+		versions = append(versions, v)
+	}
+
+	semver.Sort(versions)
+	var v []string
+	for _, version := range versions {
+		v = append(v, version.String())
+	}
+	return v, nil
 }
 
 // Checkout will clone and fetch, then attempt to check out the ref specified in the context.

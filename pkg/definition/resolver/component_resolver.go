@@ -86,32 +86,7 @@ func (r *DefaultComponentResolver) Versions(repository string, semverRange semve
 		RepositoryURL: repository,
 		Options:       &git.Options{},
 	}
-	tags, err := r.gitResolver.Tags(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	var versions []semver.Version
-	for _, tag := range tags {
-		v, err := semver.Parse(tag)
-		if err != nil {
-			continue
-		}
-
-		// If a semver range was passed in, check to see if the version
-		// matches the range.
-		if semverRange != nil && !semverRange(v) {
-			continue
-		}
-		versions = append(versions, v)
-	}
-
-	semver.Sort(versions)
-	var v []string
-	for _, version := range versions {
-		v = append(v, version.String())
-	}
-	return v, nil
+	return r.gitResolver.Versions(ctx, semverRange)
 }
 
 // ResolveReference fulfils the ComponentResolver interface.
@@ -276,40 +251,11 @@ func (r *DefaultComponentResolver) gitReferenceCommit(ref *definitionv1.GitRepos
 		Options:       &git.Options{},
 	}
 
-	var gitRef *git.Reference
-	switch {
-	case ref.Commit != nil:
-		gitRef = &git.Reference{Commit: ref.Commit}
-
-	case ref.Branch != nil:
-		gitRef = &git.Reference{Branch: ref.Branch}
-
-	case ref.Tag != nil:
-		gitRef = &git.Reference{Tag: ref.Tag}
-		break
-
-	case ref.Version != nil:
-		rng, err := semver.ParseRange(*ref.Version)
-
-		// If the tag is not a semver range, just use the tag
-		if err != nil {
-			return nil, fmt.Errorf("version is not a valid semver range")
-		}
-
-		versions, err := r.Versions(ref.URL, rng)
-		if err != nil {
-			return nil, err
-		}
-
-		if len(versions) == 0 {
-			return nil, fmt.Errorf("no tags match the requested version")
-		}
-
-		tag := versions[len(versions)-1]
-		gitRef = &git.Reference{Tag: &tag}
-
-	default:
-		return nil, fmt.Errorf("git_repository reference must contain commit, branch, or tag")
+	gitRef := &git.Reference{
+		Commit:  ref.Commit,
+		Branch:  ref.Branch,
+		Tag:     ref.Tag,
+		Version: ref.Version,
 	}
 
 	return r.gitResolver.GetCommit(ctx, gitRef)
