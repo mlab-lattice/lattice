@@ -4,39 +4,49 @@ definitions:
     properties:
       version:
         $ref: '#/definitions/v1.SystemVersion'
+        description: TBD
         type: object
     type: object
   rest.CreateSystemRequest:
     properties:
       definitionUrl:
+        description: TBD
+        example: git://github.com/foo/foo.git
         type: string
       id:
         $ref: '#/definitions/v1.SystemID'
+        description: TBD
         type: object
     type: object
   rest.DeployRequest:
     properties:
       buildId:
         $ref: '#/definitions/v1.BuildID'
+        description: TBD
         type: object
       version:
         $ref: '#/definitions/v1.SystemVersion'
+        description: TBD
         type: object
     type: object
   rest.RunJobRequest:
     properties:
       command:
+        description: TBD
         items:
           type: string
         type: array
       environment:
+        description: TBD
         type: string
       path:
+        description: TBD
         type: string
     type: object
   rest.SetSecretRequest:
     properties:
       value:
+        description: TBD
         type: string
     type: object
   v1.Build:
@@ -204,7 +214,7 @@ definitions:
         type: integer
       state:
         $ref: '#/definitions/v1.ServiceState'
-        description: State
+        description: State. One of (pending, failed, deleting, stable, scaling, updating)
         type: object
       terminatingInstances:
         description: TerminatingInstances
@@ -230,6 +240,7 @@ definitions:
     properties:
       definitionUrl:
         description: git url for for where the definition lives in
+        example: git://github.com/foo/foo.git
         type: string
       id:
         $ref: '#/definitions/v1.SystemID'
@@ -240,8 +251,8 @@ definitions:
         type: object
       state:
         $ref: '#/definitions/v1.SystemState'
-        description: State. One of "pending", "failed", "deleting", "stable", "degraded",
-          "scaling", "updating"
+        description: State. One of (pending, failed, deleting, stable, degraded, scaling,
+          updating)
         type: object
     type: object
   v1.SystemID:

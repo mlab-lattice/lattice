@@ -1312,6 +1312,7 @@
             "type": "object",
             "properties": {
                 "version": {
+                    "description": "TBD",
                     "type": "object",
                     "$ref": "#/definitions/v1.SystemVersion"
                 }
@@ -1321,9 +1322,12 @@
             "type": "object",
             "properties": {
                 "definitionUrl": {
-                    "type": "string"
+                    "description": "TBD",
+                    "type": "string",
+                    "example": "git://github.com/foo/foo.git"
                 },
                 "id": {
+                    "description": "TBD",
                     "type": "object",
                     "$ref": "#/definitions/v1.SystemID"
                 }
@@ -1333,10 +1337,12 @@
             "type": "object",
             "properties": {
                 "buildId": {
+                    "description": "TBD",
                     "type": "object",
                     "$ref": "#/definitions/v1.BuildID"
                 },
                 "version": {
+                    "description": "TBD",
                     "type": "object",
                     "$ref": "#/definitions/v1.SystemVersion"
                 }
@@ -1346,15 +1352,18 @@
             "type": "object",
             "properties": {
                 "command": {
+                    "description": "TBD",
                     "type": "array",
                     "items": {
                         "type": "string"
                     }
                 },
                 "environment": {
+                    "description": "TBD",
                     "type": "string"
                 },
                 "path": {
+                    "description": "TBD",
                     "type": "string"
                 }
             }
@@ -1363,6 +1372,7 @@
             "type": "object",
             "properties": {
                 "value": {
+                    "description": "TBD",
                     "type": "string"
                 }
             }
@@ -1588,7 +1598,7 @@
                     "type": "integer"
                 },
                 "state": {
-                    "description": "State",
+                    "description": "State. One of (pending, failed, deleting, stable, scaling, updating)",
                     "type": "object",
                     "$ref": "#/definitions/v1.ServiceState"
                 },
@@ -1626,7 +1636,8 @@
             "properties": {
                 "definitionUrl": {
                     "description": "git url for for where the definition lives in",
-                    "type": "string"
+                    "type": "string",
+                    "example": "git://github.com/foo/foo.git"
                 },
                 "id": {
                     "description": "System ID",
@@ -1638,7 +1649,7 @@
                     "type": "object"
                 },
                 "state": {
-                    "description": "State. One of \"pending\", \"failed\", \"deleting\", \"stable\", \"degraded\", \"scaling\", \"updating\"",
+                    "description": "State. One of (pending, failed, deleting, stable, degraded, scaling, updating)",
                     "type": "object",
                     "$ref": "#/definitions/v1.SystemState"
                 }

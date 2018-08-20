@@ -27,8 +27,6 @@ List systems
     + Body
 
             [
-              {},
-              {},
               {}
             ]
 
@@ -41,7 +39,8 @@ List systems
                 "properties": {
                   "definitionUrl": {
                     "description": "git url for for where the definition lives in",
-                    "type": "string"
+                    "type": "string",
+                    "example": "git://github.com/foo/foo.git"
                   },
                   "id": {
                     "description": "System ID",
@@ -52,7 +51,7 @@ List systems
                     "type": "object"
                   },
                   "state": {
-                    "description": "State. One of \"pending\", \"failed\", \"deleting\", \"stable\", \"degraded\", \"scaling\", \"updating\"",
+                    "description": "State. One of (pending, failed, deleting, stable, degraded, scaling, updating)",
                     "type": "object"
                   }
                 }
@@ -71,7 +70,9 @@ Create a new system
 
     + Body
 
-            {}
+            {
+              "definitionUrl": "in ipsum est"
+            }
 
     + Schema
 
@@ -79,9 +80,12 @@ Create a new system
               "type": "object",
               "properties": {
                 "definitionUrl": {
-                  "type": "string"
+                  "description": "TBD",
+                  "type": "string",
+                  "example": "git://github.com/foo/foo.git"
                 },
                 "id": {
+                  "description": "TBD",
                   "type": "object"
                 }
               }
@@ -93,7 +97,9 @@ Create a new system
 
     + Body
 
-            {}
+            {
+              "definitionUrl": "incididunt Lorem ul"
+            }
 
     + Schema
 
@@ -102,7 +108,8 @@ Create a new system
               "properties": {
                 "definitionUrl": {
                   "description": "git url for for where the definition lives in",
-                  "type": "string"
+                  "type": "string",
+                  "example": "git://github.com/foo/foo.git"
                 },
                 "id": {
                   "description": "System ID",
@@ -113,7 +120,7 @@ Create a new system
                   "type": "object"
                 },
                 "state": {
-                  "description": "State. One of \"pending\", \"failed\", \"deleting\", \"stable\", \"degraded\", \"scaling\", \"updating\"",
+                  "description": "State. One of (pending, failed, deleting, stable, degraded, scaling, updating)",
                   "type": "object"
                 }
               }
@@ -135,9 +142,12 @@ Create a new system
               "type": "object",
               "properties": {
                 "definitionUrl": {
-                  "type": "string"
+                  "description": "TBD",
+                  "type": "string",
+                  "example": "git://github.com/foo/foo.git"
                 },
                 "id": {
+                  "description": "TBD",
                   "type": "object"
                 }
               }
@@ -199,7 +209,8 @@ get system
               "properties": {
                 "definitionUrl": {
                   "description": "git url for for where the definition lives in",
-                  "type": "string"
+                  "type": "string",
+                  "example": "git://github.com/foo/foo.git"
                 },
                 "id": {
                   "description": "System ID",
@@ -210,7 +221,7 @@ get system
                   "type": "object"
                 },
                 "state": {
-                  "description": "State. One of \"pending\", \"failed\", \"deleting\", \"stable\", \"degraded\", \"scaling\", \"updating\"",
+                  "description": "State. One of (pending, failed, deleting, stable, degraded, scaling, updating)",
                   "type": "object"
                 }
               }
@@ -230,7 +241,9 @@ get system
 
     + Body
 
-            {}
+            {
+              "message": "reprehenderit labore"
+            }
 
     + Schema
 
@@ -291,7 +304,9 @@ Delete system
 
     + Body
 
-            {}
+            {
+              "message": "ad"
+            }
 
     + Schema
 
@@ -335,11 +350,10 @@ list builds
     + Body
 
             [
-              {},
-              {},
-              {},
-              {},
-              {}
+              {
+                "completionTimestamp": "veniam",
+                "startTimestamp": "aliqua occaecat cupidatat enim ad"
+              }
             ]
 
     + Schema
@@ -401,6 +415,7 @@ build system
               "type": "object",
               "properties": {
                 "version": {
+                  "description": "TBD",
                   "type": "object"
                 }
               }
@@ -462,6 +477,7 @@ build system
               "type": "object",
               "properties": {
                 "version": {
+                  "description": "TBD",
                   "type": "object"
                 }
               }
@@ -473,9 +489,7 @@ build system
 
     + Body
 
-            {
-              "message": "nostrud sed fugiat proident et"
-            }
+            {}
 
     + Schema
 
@@ -518,7 +532,9 @@ get build
 
     + Body
 
-            {}
+            {
+              "startTimestamp": "Duis elit velit non"
+            }
 
     + Schema
 
@@ -566,9 +582,7 @@ get build
 
     + Body
 
-            {
-              "message": "deserunt ea in"
-            }
+            {}
 
     + Schema
 
@@ -625,7 +639,7 @@ get logs
 
     + Body
 
-            amet aliquip anim deserunt
+            non commodo
 
     + Schema
 
@@ -647,7 +661,9 @@ get logs
 
     + Body
 
-            {}
+            {
+              "message": "e"
+            }
 
     + Schema
 
@@ -691,6 +707,8 @@ list deploys
     + Body
 
             [
+              {},
+              {},
               {}
             ]
 
@@ -741,9 +759,11 @@ build system
               "type": "object",
               "properties": {
                 "buildId": {
+                  "description": "TBD",
                   "type": "object"
                 },
                 "version": {
+                  "description": "TBD",
                   "type": "object"
                 }
               }
@@ -793,9 +813,11 @@ build system
               "type": "object",
               "properties": {
                 "buildId": {
+                  "description": "TBD",
                   "type": "object"
                 },
                 "version": {
+                  "description": "TBD",
                   "type": "object"
                 }
               }
@@ -807,9 +829,7 @@ build system
 
     + Body
 
-            {
-              "message": "consequ"
-            }
+            {}
 
     + Schema
 
@@ -889,7 +909,7 @@ get deploy
     + Body
 
             {
-              "message": "voluptate laboris occaecat nostrud"
+              "message": "occaecat do tempor est"
             }
 
     + Schema
@@ -934,7 +954,16 @@ list jobs
     + Body
 
             [
-              {}
+              {
+                "path": "ea et aliqua dolore ex"
+              },
+              {
+                "completionTimestamp": "ad ut dolor",
+                "path": "labore laborum"
+              },
+              {
+                "completionTimestamp": "ad eiusmod"
+              }
             ]
 
     + Schema
@@ -994,7 +1023,9 @@ get job
 
     + Body
 
-            {}
+            {
+              "path": "e"
+            }
 
     + Schema
 
@@ -1039,7 +1070,7 @@ get job
     + Body
 
             {
-              "message": "et in sit proident"
+              "message": "elit ut ipsum laboris"
             }
 
     + Schema
@@ -1095,7 +1126,7 @@ get job logs
 
     + Body
 
-            labore aliqua voluptate
+            ullamco non
 
     + Schema
 
@@ -1117,7 +1148,9 @@ get job logs
 
     + Body
 
-            {}
+            {
+              "message": "sint quis"
+            }
 
     + Schema
 
@@ -1161,11 +1194,11 @@ list node pools
     + Body
 
             [
-              {
-                "path": "incididunt pariatur consectetur",
-                "instanceType": "veniam velit mollit",
-                "numInstances": 69984488
-              }
+              {},
+              {},
+              {},
+              {},
+              {}
             ]
 
     + Schema
@@ -1239,9 +1272,7 @@ get node pool
 
     + Body
 
-            {
-              "numInstances": -5525454
-            }
+            {}
 
     + Schema
 
@@ -1299,7 +1330,9 @@ get node pool
 
     + Body
 
-            {}
+            {
+              "message": "Excepteur"
+            }
 
     + Schema
 
@@ -1343,23 +1376,15 @@ list secrets
     + Body
 
             [
-              {
-                "value": "anim occaecat dolore nisi sed"
-              },
-              {
-                "path": "exercitation ea pariatur proident",
-                "value": "ut proident est exercitation"
-              },
-              {
-                "name": "sit mi",
-                "value": "eu aliquip mollit",
-                "path": "aute dolor tempor sunt n"
-              },
               {},
               {
-                "path": "nulla sunt",
-                "value": "aute dolor",
-                "name": "deserunt id"
+                "name": "ullamco",
+                "path": "reprehenderit consequat"
+              },
+              {
+                "name": "tempor",
+                "path": "enim non velit adipisicing aliqua",
+                "value": "tempor consectetur"
               }
             ]
 
@@ -1410,6 +1435,7 @@ set secret
               "type": "object",
               "properties": {
                 "value": {
+                  "description": "TBD",
                   "type": "string"
                 }
               }
@@ -1452,7 +1478,7 @@ set secret
     + Body
 
             {
-              "value": "exercitation enim aliqua"
+              "value": "aute aliqua proident anim sit"
             }
 
     + Schema
@@ -1461,6 +1487,7 @@ set secret
               "type": "object",
               "properties": {
                 "value": {
+                  "description": "TBD",
                   "type": "string"
                 }
               }
@@ -1515,7 +1542,10 @@ get secret
 
     + Body
 
-            {}
+            {
+              "value": "pariatur commodo",
+              "path": "est qui dolor magna do"
+            }
 
     + Schema
 
@@ -1551,7 +1581,9 @@ get secret
 
     + Body
 
-            {}
+            {
+              "message": "eiusmod aute minim"
+            }
 
     + Schema
 
@@ -1614,7 +1646,9 @@ get system
 
     + Body
 
-            {}
+            {
+              "message": "laborum cillum dolore proident"
+            }
 
     + Schema
 
@@ -1659,7 +1693,8 @@ list services
 
             [
               {
-                "updatedInstances": 67368669
+                "message": "amet in",
+                "terminatingInstances": 75871496
               }
             ]
 
@@ -1716,7 +1751,7 @@ list services
                     "type": "integer"
                   },
                   "state": {
-                    "description": "State",
+                    "description": "State. One of (pending, failed, deleting, stable, scaling, updating)",
                     "type": "object"
                   },
                   "terminatingInstances": {
@@ -1810,7 +1845,7 @@ get service
                   "type": "integer"
                 },
                 "state": {
-                  "description": "State",
+                  "description": "State. One of (pending, failed, deleting, stable, scaling, updating)",
                   "type": "object"
                 },
                 "terminatingInstances": {
@@ -1838,9 +1873,7 @@ get service
 
     + Body
 
-            {
-              "message": "es"
-            }
+            {}
 
     + Schema
 
@@ -1897,7 +1930,7 @@ get service logs
 
     + Body
 
-            enim
+            nulla anim enim fug
 
     + Schema
 
@@ -1919,9 +1952,7 @@ get service logs
 
     + Body
 
-            {
-              "message": "sint eiusmod do tempor"
-            }
+            {}
 
     + Schema
 
@@ -1965,6 +1996,9 @@ list teardowns
     + Body
 
             [
+              {},
+              {},
+              {},
               {}
             ]
 
@@ -2072,9 +2106,7 @@ teardown system
 
     + Body
 
-            {
-              "message": "quis cupidatat occaecat sint"
-            }
+            {}
 
     + Schema
 
@@ -2149,9 +2181,7 @@ get teardown
 
     + Body
 
-            {
-              "message": "nisi occaecat esse"
-            }
+            {}
 
     + Schema
 
@@ -2195,8 +2225,6 @@ list teardowns
     + Body
 
             [
-              {},
-              {},
               {},
               {}
             ]

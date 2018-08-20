@@ -2,8 +2,6 @@
 <section id="systems" class="resource-group"><h2 class="group-heading">systems <a href="#systems" class="permalink">&para;</a></h2><div id="systems-" class="resource"><h3 class="resource-heading">List systems <a href="#systems-" class="permalink">&nbsp;&para;</a></h3><div id="systems-get" class="action get"><h4 class="action-heading"><div class="name">List systems</div><a href="#systems-get" class="method get">GET</a><code class="uri">/v1/systems</code></h4><p>List systems</p>
 <h4>Example URI</h4><div class="definition"><span class="method get">GET</span>&nbsp;<span class="uri"><span class="hostname"></span>/v1/systems</span></div><div class="title"><strong>Request</strong><div class="collapse-button"><span class="close">Hide</span><span class="open">Show</span></div></div><div class="collapse-content"><div class="inner"><h5>Headers</h5><pre><code><span class="hljs-attribute">Content-Type</span>: <span class="hljs-string">application/json</span><br><span class="hljs-attribute">Accept</span>: <span class="hljs-string">application/json</span></code></pre><div style="height: 1px;"></div></div></div><div class="title"><strong>Response&nbsp;&nbsp;<code>200</code></strong><div class="collapse-button"><span class="close">Hide</span><span class="open">Show</span></div></div><div class="collapse-content"><div class="inner"><div class="description"><p>OK</p>
 </div><h5>Headers</h5><pre><code><span class="hljs-attribute">Content-Type</span>: <span class="hljs-string">application/json</span></code></pre><div style="height: 1px;"></div><h5>Body</h5><pre><code>[
-  {},
-  {},
   {}
 ]</code></pre><div style="height: 1px;"></div><h5>Schema</h5><pre><code>{
   "<span class="hljs-attribute">type</span>": <span class="hljs-value"><span class="hljs-string">"array"</span></span>,
@@ -12,7 +10,8 @@
     "<span class="hljs-attribute">properties</span>": <span class="hljs-value">{
       "<span class="hljs-attribute">definitionUrl</span>": <span class="hljs-value">{
         "<span class="hljs-attribute">description</span>": <span class="hljs-value"><span class="hljs-string">"git url for for where the definition lives in"</span></span>,
-        "<span class="hljs-attribute">type</span>": <span class="hljs-value"><span class="hljs-string">"string"</span>
+        "<span class="hljs-attribute">type</span>": <span class="hljs-value"><span class="hljs-string">"string"</span></span>,
+        "<span class="hljs-attribute">example</span>": <span class="hljs-value"><span class="hljs-string">"git://github.com/foo/foo.git"</span>
       </span>}</span>,
       "<span class="hljs-attribute">id</span>": <span class="hljs-value">{
         "<span class="hljs-attribute">description</span>": <span class="hljs-value"><span class="hljs-string">"System ID"</span></span>,
@@ -23,29 +22,37 @@
         "<span class="hljs-attribute">type</span>": <span class="hljs-value"><span class="hljs-string">"object"</span>
       </span>}</span>,
       "<span class="hljs-attribute">state</span>": <span class="hljs-value">{
-        "<span class="hljs-attribute">description</span>": <span class="hljs-value"><span class="hljs-string">"State. One of \"pending\", \"failed\", \"deleting\", \"stable\", \"degraded\", \"scaling\", \"updating\""</span></span>,
+        "<span class="hljs-attribute">description</span>": <span class="hljs-value"><span class="hljs-string">"State. One of (pending, failed, deleting, stable, degraded, scaling, updating)"</span></span>,
         "<span class="hljs-attribute">type</span>": <span class="hljs-value"><span class="hljs-string">"object"</span>
       </span>}
     </span>}
   </span>}
 </span>}</code></pre><div style="height: 1px;"></div></div></div></div><div id="systems-post" class="action post"><h4 class="action-heading"><div class="name">Create system</div><a href="#systems-post" class="method post">POST</a><code class="uri">/v1/systems</code></h4><p>Create a new system</p>
-<h4>Example URI</h4><div class="definition"><span class="method post">POST</span>&nbsp;<span class="uri"><span class="hostname"></span>/v1/systems</span></div><div class="title"><strong>Request</strong><div class="collapse-button"><span class="close">Hide</span><span class="open">Show</span></div></div><div class="collapse-content"><div class="inner"><h5>Headers</h5><pre><code><span class="hljs-attribute">Content-Type</span>: <span class="hljs-string">application/json</span><br><span class="hljs-attribute">Accept</span>: <span class="hljs-string">application/json</span></code></pre><div style="height: 1px;"></div><h5>Body</h5><pre><code>{}</code></pre><div style="height: 1px;"></div><h5>Schema</h5><pre><code>{
+<h4>Example URI</h4><div class="definition"><span class="method post">POST</span>&nbsp;<span class="uri"><span class="hostname"></span>/v1/systems</span></div><div class="title"><strong>Request</strong><div class="collapse-button"><span class="close">Hide</span><span class="open">Show</span></div></div><div class="collapse-content"><div class="inner"><h5>Headers</h5><pre><code><span class="hljs-attribute">Content-Type</span>: <span class="hljs-string">application/json</span><br><span class="hljs-attribute">Accept</span>: <span class="hljs-string">application/json</span></code></pre><div style="height: 1px;"></div><h5>Body</h5><pre><code>{
+  "<span class="hljs-attribute">definitionUrl</span>": <span class="hljs-value"><span class="hljs-string">"in ipsum est"</span>
+</span>}</code></pre><div style="height: 1px;"></div><h5>Schema</h5><pre><code>{
   "<span class="hljs-attribute">type</span>": <span class="hljs-value"><span class="hljs-string">"object"</span></span>,
   "<span class="hljs-attribute">properties</span>": <span class="hljs-value">{
     "<span class="hljs-attribute">definitionUrl</span>": <span class="hljs-value">{
-      "<span class="hljs-attribute">type</span>": <span class="hljs-value"><span class="hljs-string">"string"</span>
+      "<span class="hljs-attribute">description</span>": <span class="hljs-value"><span class="hljs-string">"TBD"</span></span>,
+      "<span class="hljs-attribute">type</span>": <span class="hljs-value"><span class="hljs-string">"string"</span></span>,
+      "<span class="hljs-attribute">example</span>": <span class="hljs-value"><span class="hljs-string">"git://github.com/foo/foo.git"</span>
     </span>}</span>,
     "<span class="hljs-attribute">id</span>": <span class="hljs-value">{
+      "<span class="hljs-attribute">description</span>": <span class="hljs-value"><span class="hljs-string">"TBD"</span></span>,
       "<span class="hljs-attribute">type</span>": <span class="hljs-value"><span class="hljs-string">"object"</span>
     </span>}
   </span>}
 </span>}</code></pre><div style="height: 1px;"></div></div></div><div class="title"><strong>Response&nbsp;&nbsp;<code>200</code></strong><div class="collapse-button"><span class="close">Hide</span><span class="open">Show</span></div></div><div class="collapse-content"><div class="inner"><div class="description"><p>OK</p>
-</div><h5>Headers</h5><pre><code><span class="hljs-attribute">Content-Type</span>: <span class="hljs-string">application/json</span></code></pre><div style="height: 1px;"></div><h5>Body</h5><pre><code>{}</code></pre><div style="height: 1px;"></div><h5>Schema</h5><pre><code>{
+</div><h5>Headers</h5><pre><code><span class="hljs-attribute">Content-Type</span>: <span class="hljs-string">application/json</span></code></pre><div style="height: 1px;"></div><h5>Body</h5><pre><code>{
+  "<span class="hljs-attribute">definitionUrl</span>": <span class="hljs-value"><span class="hljs-string">"incididunt Lorem ul"</span>
+</span>}</code></pre><div style="height: 1px;"></div><h5>Schema</h5><pre><code>{
   "<span class="hljs-attribute">type</span>": <span class="hljs-value"><span class="hljs-string">"object"</span></span>,
   "<span class="hljs-attribute">properties</span>": <span class="hljs-value">{
     "<span class="hljs-attribute">definitionUrl</span>": <span class="hljs-value">{
       "<span class="hljs-attribute">description</span>": <span class="hljs-value"><span class="hljs-string">"git url for for where the definition lives in"</span></span>,
-      "<span class="hljs-attribute">type</span>": <span class="hljs-value"><span class="hljs-string">"string"</span>
+      "<span class="hljs-attribute">type</span>": <span class="hljs-value"><span class="hljs-string">"string"</span></span>,
+      "<span class="hljs-attribute">example</span>": <span class="hljs-value"><span class="hljs-string">"git://github.com/foo/foo.git"</span>
     </span>}</span>,
     "<span class="hljs-attribute">id</span>": <span class="hljs-value">{
       "<span class="hljs-attribute">description</span>": <span class="hljs-value"><span class="hljs-string">"System ID"</span></span>,
@@ -56,7 +63,7 @@
       "<span class="hljs-attribute">type</span>": <span class="hljs-value"><span class="hljs-string">"object"</span>
     </span>}</span>,
     "<span class="hljs-attribute">state</span>": <span class="hljs-value">{
-      "<span class="hljs-attribute">description</span>": <span class="hljs-value"><span class="hljs-string">"State. One of \"pending\", \"failed\", \"deleting\", \"stable\", \"degraded\", \"scaling\", \"updating\""</span></span>,
+      "<span class="hljs-attribute">description</span>": <span class="hljs-value"><span class="hljs-string">"State. One of (pending, failed, deleting, stable, degraded, scaling, updating)"</span></span>,
       "<span class="hljs-attribute">type</span>": <span class="hljs-value"><span class="hljs-string">"object"</span>
     </span>}
   </span>}
@@ -64,9 +71,12 @@
   "<span class="hljs-attribute">type</span>": <span class="hljs-value"><span class="hljs-string">"object"</span></span>,
   "<span class="hljs-attribute">properties</span>": <span class="hljs-value">{
     "<span class="hljs-attribute">definitionUrl</span>": <span class="hljs-value">{
-      "<span class="hljs-attribute">type</span>": <span class="hljs-value"><span class="hljs-string">"string"</span>
+      "<span class="hljs-attribute">description</span>": <span class="hljs-value"><span class="hljs-string">"TBD"</span></span>,
+      "<span class="hljs-attribute">type</span>": <span class="hljs-value"><span class="hljs-string">"string"</span></span>,
+      "<span class="hljs-attribute">example</span>": <span class="hljs-value"><span class="hljs-string">"git://github.com/foo/foo.git"</span>
     </span>}</span>,
     "<span class="hljs-attribute">id</span>": <span class="hljs-value">{
+      "<span class="hljs-attribute">description</span>": <span class="hljs-value"><span class="hljs-string">"TBD"</span></span>,
       "<span class="hljs-attribute">type</span>": <span class="hljs-value"><span class="hljs-string">"object"</span>
     </span>}
   </span>}
@@ -89,7 +99,8 @@
   "<span class="hljs-attribute">properties</span>": <span class="hljs-value">{
     "<span class="hljs-attribute">definitionUrl</span>": <span class="hljs-value">{
       "<span class="hljs-attribute">description</span>": <span class="hljs-value"><span class="hljs-string">"git url for for where the definition lives in"</span></span>,
-      "<span class="hljs-attribute">type</span>": <span class="hljs-value"><span class="hljs-string">"string"</span>
+      "<span class="hljs-attribute">type</span>": <span class="hljs-value"><span class="hljs-string">"string"</span></span>,
+      "<span class="hljs-attribute">example</span>": <span class="hljs-value"><span class="hljs-string">"git://github.com/foo/foo.git"</span>
     </span>}</span>,
     "<span class="hljs-attribute">id</span>": <span class="hljs-value">{
       "<span class="hljs-attribute">description</span>": <span class="hljs-value"><span class="hljs-string">"System ID"</span></span>,
@@ -100,12 +111,14 @@
       "<span class="hljs-attribute">type</span>": <span class="hljs-value"><span class="hljs-string">"object"</span>
     </span>}</span>,
     "<span class="hljs-attribute">state</span>": <span class="hljs-value">{
-      "<span class="hljs-attribute">description</span>": <span class="hljs-value"><span class="hljs-string">"State. One of \"pending\", \"failed\", \"deleting\", \"stable\", \"degraded\", \"scaling\", \"updating\""</span></span>,
+      "<span class="hljs-attribute">description</span>": <span class="hljs-value"><span class="hljs-string">"State. One of (pending, failed, deleting, stable, degraded, scaling, updating)"</span></span>,
       "<span class="hljs-attribute">type</span>": <span class="hljs-value"><span class="hljs-string">"object"</span>
     </span>}
   </span>}
 </span>}</code></pre><div style="height: 1px;"></div></div></div><div class="title"><strong>Request</strong><div class="collapse-button"><span class="close">Hide</span><span class="open">Show</span></div></div><div class="collapse-content"><div class="inner"><h5>Headers</h5><pre><code><span class="hljs-attribute">Content-Type</span>: <span class="hljs-string">application/json</span><br><span class="hljs-attribute">Accept</span>: <span class="hljs-string">application/json</span></code></pre><div style="height: 1px;"></div></div></div><div class="title"><strong>Response&nbsp;&nbsp;<code>404</code></strong><div class="collapse-button"><span class="close">Hide</span><span class="open">Show</span></div></div><div class="collapse-content"><div class="inner"><div class="description"><p>Not Found</p>
-</div><h5>Headers</h5><pre><code><span class="hljs-attribute">Content-Type</span>: <span class="hljs-string">application/json</span></code></pre><div style="height: 1px;"></div><h5>Body</h5><pre><code>{}</code></pre><div style="height: 1px;"></div><h5>Schema</h5><pre><code>{
+</div><h5>Headers</h5><pre><code><span class="hljs-attribute">Content-Type</span>: <span class="hljs-string">application/json</span></code></pre><div style="height: 1px;"></div><h5>Body</h5><pre><code>{
+  "<span class="hljs-attribute">message</span>": <span class="hljs-value"><span class="hljs-string">"reprehenderit labore"</span>
+</span>}</code></pre><div style="height: 1px;"></div><h5>Schema</h5><pre><code>{
   "<span class="hljs-attribute">type</span>": <span class="hljs-value"><span class="hljs-string">"object"</span></span>,
   "<span class="hljs-attribute">properties</span>": <span class="hljs-value">{
     "<span class="hljs-attribute">code</span>": <span class="hljs-value">{
@@ -121,7 +134,9 @@
 </div><h5>Headers</h5><pre><code><span class="hljs-attribute">Content-Type</span>: <span class="hljs-string">application/json</span></code></pre><div style="height: 1px;"></div><h5>Body</h5><pre><code>{}</code></pre><div style="height: 1px;"></div><h5>Schema</h5><pre><code>{
   "<span class="hljs-attribute">type</span>": <span class="hljs-value"><span class="hljs-string">"object"</span>
 </span>}</code></pre><div style="height: 1px;"></div></div></div><div class="title"><strong>Request</strong><div class="collapse-button"><span class="close">Hide</span><span class="open">Show</span></div></div><div class="collapse-content"><div class="inner"><h5>Headers</h5><pre><code><span class="hljs-attribute">Content-Type</span>: <span class="hljs-string">application/json</span><br><span class="hljs-attribute">Accept</span>: <span class="hljs-string">application/json</span></code></pre><div style="height: 1px;"></div></div></div><div class="title"><strong>Response&nbsp;&nbsp;<code>404</code></strong><div class="collapse-button"><span class="close">Hide</span><span class="open">Show</span></div></div><div class="collapse-content"><div class="inner"><div class="description"><p>Not Found</p>
-</div><h5>Headers</h5><pre><code><span class="hljs-attribute">Content-Type</span>: <span class="hljs-string">application/json</span></code></pre><div style="height: 1px;"></div><h5>Body</h5><pre><code>{}</code></pre><div style="height: 1px;"></div><h5>Schema</h5><pre><code>{
+</div><h5>Headers</h5><pre><code><span class="hljs-attribute">Content-Type</span>: <span class="hljs-string">application/json</span></code></pre><div style="height: 1px;"></div><h5>Body</h5><pre><code>{
+  "<span class="hljs-attribute">message</span>": <span class="hljs-value"><span class="hljs-string">"ad"</span>
+</span>}</code></pre><div style="height: 1px;"></div><h5>Schema</h5><pre><code>{
   "<span class="hljs-attribute">type</span>": <span class="hljs-value"><span class="hljs-string">"object"</span></span>,
   "<span class="hljs-attribute">properties</span>": <span class="hljs-value">{
     "<span class="hljs-attribute">code</span>": <span class="hljs-value">{
@@ -135,11 +150,10 @@
 </span>}</code></pre><div style="height: 1px;"></div></div></div></div></div></section><section id="builds" class="resource-group"><h2 class="group-heading">builds <a href="#builds" class="permalink">&para;</a></h2><div id="builds-" class="resource"><h3 class="resource-heading">Lists builds <a href="#builds-" class="permalink">&nbsp;&para;</a></h3><div id="builds-get" class="action get"><h4 class="action-heading"><div class="name">Lists builds</div><a href="#builds-get" class="method get">GET</a><code class="uri">/v1/systems/{system}/builds</code></h4><p>list builds</p>
 <h4>Example URI</h4><div class="definition"><span class="method get">GET</span>&nbsp;<span class="uri"><span class="hostname"></span>/v1/systems/<span class="hljs-attribute" title="system">system</span>/builds</span></div><div class="title"><strong>URI Parameters</strong><div class="collapse-button show"><span class="close">Hide</span><span class="open">Show</span></div></div><div class="collapse-content"><dl class="inner"><dt>system</dt><dd><code>string</code>&nbsp;<span class="required">(required)</span>&nbsp;</dd></dl></div><div class="title"><strong>Request</strong><div class="collapse-button"><span class="close">Hide</span><span class="open">Show</span></div></div><div class="collapse-content"><div class="inner"><h5>Headers</h5><pre><code><span class="hljs-attribute">Content-Type</span>: <span class="hljs-string">application/json</span><br><span class="hljs-attribute">Accept</span>: <span class="hljs-string">application/json</span></code></pre><div style="height: 1px;"></div></div></div><div class="title"><strong>Response&nbsp;&nbsp;<code>200</code></strong><div class="collapse-button"><span class="close">Hide</span><span class="open">Show</span></div></div><div class="collapse-content"><div class="inner"><div class="description"><p>OK</p>
 </div><h5>Headers</h5><pre><code><span class="hljs-attribute">Content-Type</span>: <span class="hljs-string">application/json</span></code></pre><div style="height: 1px;"></div><h5>Body</h5><pre><code>[
-  {},
-  {},
-  {},
-  {},
-  {}
+  {
+    "<span class="hljs-attribute">completionTimestamp</span>": <span class="hljs-value"><span class="hljs-string">"veniam"</span></span>,
+    "<span class="hljs-attribute">startTimestamp</span>": <span class="hljs-value"><span class="hljs-string">"aliqua occaecat cupidatat enim ad"</span>
+  </span>}
 ]</code></pre><div style="height: 1px;"></div><h5>Schema</h5><pre><code>{
   "<span class="hljs-attribute">type</span>": <span class="hljs-value"><span class="hljs-string">"array"</span></span>,
   "<span class="hljs-attribute">items</span>": <span class="hljs-value">{
@@ -176,6 +190,7 @@
   "<span class="hljs-attribute">type</span>": <span class="hljs-value"><span class="hljs-string">"object"</span></span>,
   "<span class="hljs-attribute">properties</span>": <span class="hljs-value">{
     "<span class="hljs-attribute">version</span>": <span class="hljs-value">{
+      "<span class="hljs-attribute">description</span>": <span class="hljs-value"><span class="hljs-string">"TBD"</span></span>,
       "<span class="hljs-attribute">type</span>": <span class="hljs-value"><span class="hljs-string">"object"</span>
     </span>}
   </span>}
@@ -212,13 +227,12 @@
   "<span class="hljs-attribute">type</span>": <span class="hljs-value"><span class="hljs-string">"object"</span></span>,
   "<span class="hljs-attribute">properties</span>": <span class="hljs-value">{
     "<span class="hljs-attribute">version</span>": <span class="hljs-value">{
+      "<span class="hljs-attribute">description</span>": <span class="hljs-value"><span class="hljs-string">"TBD"</span></span>,
       "<span class="hljs-attribute">type</span>": <span class="hljs-value"><span class="hljs-string">"object"</span>
     </span>}
   </span>}
 </span>}</code></pre><div style="height: 1px;"></div></div></div><div class="title"><strong>Response&nbsp;&nbsp;<code>400</code></strong><div class="collapse-button"><span class="close">Hide</span><span class="open">Show</span></div></div><div class="collapse-content"><div class="inner"><div class="description"><p>Bad Request</p>
-</div><h5>Headers</h5><pre><code><span class="hljs-attribute">Content-Type</span>: <span class="hljs-string">application/json</span></code></pre><div style="height: 1px;"></div><h5>Body</h5><pre><code>{
-  "<span class="hljs-attribute">message</span>": <span class="hljs-value"><span class="hljs-string">"nostrud sed fugiat proident et"</span>
-</span>}</code></pre><div style="height: 1px;"></div><h5>Schema</h5><pre><code>{
+</div><h5>Headers</h5><pre><code><span class="hljs-attribute">Content-Type</span>: <span class="hljs-string">application/json</span></code></pre><div style="height: 1px;"></div><h5>Body</h5><pre><code>{}</code></pre><div style="height: 1px;"></div><h5>Schema</h5><pre><code>{
   "<span class="hljs-attribute">type</span>": <span class="hljs-value"><span class="hljs-string">"object"</span></span>,
   "<span class="hljs-attribute">properties</span>": <span class="hljs-value">{
     "<span class="hljs-attribute">code</span>": <span class="hljs-value">{
@@ -231,7 +245,9 @@
   </span>}
 </span>}</code></pre><div style="height: 1px;"></div></div></div></div></div><div id="builds--1" class="resource"><h3 class="resource-heading">Get build <a href="#builds--1" class="permalink">&nbsp;&para;</a></h3><div id="builds-get-1" class="action get"><h4 class="action-heading"><div class="name">Get build</div><a href="#builds-get-1" class="method get">GET</a><code class="uri">/v1/systems/{system}/builds/{id}</code></h4><p>get build</p>
 <h4>Example URI</h4><div class="definition"><span class="method get">GET</span>&nbsp;<span class="uri"><span class="hostname"></span>/v1/systems/<span class="hljs-attribute" title="system">system</span>/builds/<span class="hljs-attribute" title="id">id</span></span></div><div class="title"><strong>URI Parameters</strong><div class="collapse-button show"><span class="close">Hide</span><span class="open">Show</span></div></div><div class="collapse-content"><dl class="inner"><dt>system</dt><dd><code>string</code>&nbsp;<span class="required">(required)</span>&nbsp;</dd><dt>id</dt><dd><code>string</code>&nbsp;<span class="required">(required)</span>&nbsp;</dd></dl></div><div class="title"><strong>Request</strong><div class="collapse-button"><span class="close">Hide</span><span class="open">Show</span></div></div><div class="collapse-content"><div class="inner"><h5>Headers</h5><pre><code><span class="hljs-attribute">Content-Type</span>: <span class="hljs-string">application/json</span><br><span class="hljs-attribute">Accept</span>: <span class="hljs-string">application/json</span></code></pre><div style="height: 1px;"></div></div></div><div class="title"><strong>Response&nbsp;&nbsp;<code>200</code></strong><div class="collapse-button"><span class="close">Hide</span><span class="open">Show</span></div></div><div class="collapse-content"><div class="inner"><div class="description"><p>OK</p>
-</div><h5>Headers</h5><pre><code><span class="hljs-attribute">Content-Type</span>: <span class="hljs-string">application/json</span></code></pre><div style="height: 1px;"></div><h5>Body</h5><pre><code>{}</code></pre><div style="height: 1px;"></div><h5>Schema</h5><pre><code>{
+</div><h5>Headers</h5><pre><code><span class="hljs-attribute">Content-Type</span>: <span class="hljs-string">application/json</span></code></pre><div style="height: 1px;"></div><h5>Body</h5><pre><code>{
+  "<span class="hljs-attribute">startTimestamp</span>": <span class="hljs-value"><span class="hljs-string">"Duis elit velit non"</span>
+</span>}</code></pre><div style="height: 1px;"></div><h5>Schema</h5><pre><code>{
   "<span class="hljs-attribute">type</span>": <span class="hljs-value"><span class="hljs-string">"object"</span></span>,
   "<span class="hljs-attribute">properties</span>": <span class="hljs-value">{
     "<span class="hljs-attribute">completionTimestamp</span>": <span class="hljs-value">{
@@ -260,9 +276,7 @@
     </span>}
   </span>}
 </span>}</code></pre><div style="height: 1px;"></div></div></div><div class="title"><strong>Request</strong><div class="collapse-button"><span class="close">Hide</span><span class="open">Show</span></div></div><div class="collapse-content"><div class="inner"><h5>Headers</h5><pre><code><span class="hljs-attribute">Content-Type</span>: <span class="hljs-string">application/json</span><br><span class="hljs-attribute">Accept</span>: <span class="hljs-string">application/json</span></code></pre><div style="height: 1px;"></div></div></div><div class="title"><strong>Response&nbsp;&nbsp;<code>404</code></strong><div class="collapse-button"><span class="close">Hide</span><span class="open">Show</span></div></div><div class="collapse-content"><div class="inner"><div class="description"><p>Not Found</p>
-</div><h5>Headers</h5><pre><code><span class="hljs-attribute">Content-Type</span>: <span class="hljs-string">application/json</span></code></pre><div style="height: 1px;"></div><h5>Body</h5><pre><code>{
-  "<span class="hljs-attribute">message</span>": <span class="hljs-value"><span class="hljs-string">"deserunt ea in"</span>
-</span>}</code></pre><div style="height: 1px;"></div><h5>Schema</h5><pre><code>{
+</div><h5>Headers</h5><pre><code><span class="hljs-attribute">Content-Type</span>: <span class="hljs-string">application/json</span></code></pre><div style="height: 1px;"></div><h5>Body</h5><pre><code>{}</code></pre><div style="height: 1px;"></div><h5>Schema</h5><pre><code>{
   "<span class="hljs-attribute">type</span>": <span class="hljs-value"><span class="hljs-string">"object"</span></span>,
   "<span class="hljs-attribute">properties</span>": <span class="hljs-value">{
     "<span class="hljs-attribute">code</span>": <span class="hljs-value">{
@@ -275,10 +289,12 @@
   </span>}
 </span>}</code></pre><div style="height: 1px;"></div></div></div></div><div id="builds-get-2" class="action get"><h4 class="action-heading"><div class="name">Get build logs</div><a href="#builds-get-2" class="method get">GET</a><code class="uri">/v1/systems/{system}/builds/{id}/logs</code></h4><p>get logs</p>
 <h4>Example URI</h4><div class="definition"><span class="method get">GET</span>&nbsp;<span class="uri"><span class="hostname"></span>/v1/systems/<span class="hljs-attribute" title="system">system</span>/builds/<span class="hljs-attribute" title="id">id</span>/logs</span></div><div class="title"><strong>URI Parameters</strong><div class="collapse-button show"><span class="close">Hide</span><span class="open">Show</span></div></div><div class="collapse-content"><dl class="inner"><dt>system</dt><dd><code>string</code>&nbsp;<span class="required">(required)</span>&nbsp;</dd><dt>id</dt><dd><code>string</code>&nbsp;<span class="required">(required)</span>&nbsp;</dd><dt>path</dt><dd><code>string</code>&nbsp;<span class="required">(required)</span>&nbsp;</dd><dt>sidecar</dt><dd><code>string</code>&nbsp;<span class="required">(required)</span>&nbsp;</dd><dt>follow</dt><dd><code>string</code>&nbsp;<span class="required">(required)</span>&nbsp;</dd><dt>previous</dt><dd><code>string</code>&nbsp;<span class="required">(required)</span>&nbsp;</dd><dt>timestamps</dt><dd><code>string</code>&nbsp;<span class="required">(required)</span>&nbsp;</dd><dt>tail</dt><dd><code>string</code>&nbsp;<span class="required">(required)</span>&nbsp;</dd><dt>since</dt><dd><code>string</code>&nbsp;<span class="required">(required)</span>&nbsp;</dd><dt>sinceTime</dt><dd><code>string</code>&nbsp;<span class="required">(required)</span>&nbsp;</dd></dl></div><div class="title"><strong>Request</strong><div class="collapse-button"><span class="close">Hide</span><span class="open">Show</span></div></div><div class="collapse-content"><div class="inner"><h5>Headers</h5><pre><code><span class="hljs-attribute">Content-Type</span>: <span class="hljs-string">application/json</span><br><span class="hljs-attribute">Accept</span>: <span class="hljs-string">application/json</span></code></pre><div style="height: 1px;"></div></div></div><div class="title"><strong>Response&nbsp;&nbsp;<code>200</code></strong><div class="collapse-button"><span class="close">Hide</span><span class="open">Show</span></div></div><div class="collapse-content"><div class="inner"><div class="description"><p>log stream</p>
-</div><h5>Headers</h5><pre><code><span class="hljs-attribute">Content-Type</span>: <span class="hljs-string">application/json</span></code></pre><div style="height: 1px;"></div><h5>Body</h5><pre><code>amet aliquip anim deserunt</code></pre><div style="height: 1px;"></div><h5>Schema</h5><pre><code>{
+</div><h5>Headers</h5><pre><code><span class="hljs-attribute">Content-Type</span>: <span class="hljs-string">application/json</span></code></pre><div style="height: 1px;"></div><h5>Body</h5><pre><code>non commodo</code></pre><div style="height: 1px;"></div><h5>Schema</h5><pre><code>{
   "<span class="hljs-attribute">type</span>": <span class="hljs-value"><span class="hljs-string">"string"</span>
 </span>}</code></pre><div style="height: 1px;"></div></div></div><div class="title"><strong>Request</strong><div class="collapse-button"><span class="close">Hide</span><span class="open">Show</span></div></div><div class="collapse-content"><div class="inner"><h5>Headers</h5><pre><code><span class="hljs-attribute">Content-Type</span>: <span class="hljs-string">application/json</span><br><span class="hljs-attribute">Accept</span>: <span class="hljs-string">application/json</span></code></pre><div style="height: 1px;"></div></div></div><div class="title"><strong>Response&nbsp;&nbsp;<code>404</code></strong><div class="collapse-button"><span class="close">Hide</span><span class="open">Show</span></div></div><div class="collapse-content"><div class="inner"><div class="description"><p>Not Found</p>
-</div><h5>Headers</h5><pre><code><span class="hljs-attribute">Content-Type</span>: <span class="hljs-string">application/json</span></code></pre><div style="height: 1px;"></div><h5>Body</h5><pre><code>{}</code></pre><div style="height: 1px;"></div><h5>Schema</h5><pre><code>{
+</div><h5>Headers</h5><pre><code><span class="hljs-attribute">Content-Type</span>: <span class="hljs-string">application/json</span></code></pre><div style="height: 1px;"></div><h5>Body</h5><pre><code>{
+  "<span class="hljs-attribute">message</span>": <span class="hljs-value"><span class="hljs-string">"e"</span>
+</span>}</code></pre><div style="height: 1px;"></div><h5>Schema</h5><pre><code>{
   "<span class="hljs-attribute">type</span>": <span class="hljs-value"><span class="hljs-string">"object"</span></span>,
   "<span class="hljs-attribute">properties</span>": <span class="hljs-value">{
     "<span class="hljs-attribute">code</span>": <span class="hljs-value">{
@@ -292,6 +308,8 @@
 </span>}</code></pre><div style="height: 1px;"></div></div></div></div></div></section><section id="deploys" class="resource-group"><h2 class="group-heading">deploys <a href="#deploys" class="permalink">&para;</a></h2><div id="deploys-" class="resource"><h3 class="resource-heading">Lists deploys <a href="#deploys-" class="permalink">&nbsp;&para;</a></h3><div id="deploys-get" class="action get"><h4 class="action-heading"><div class="name">Lists deploys</div><a href="#deploys-get" class="method get">GET</a><code class="uri">/v1/systems/{system}/deploys</code></h4><p>list deploys</p>
 <h4>Example URI</h4><div class="definition"><span class="method get">GET</span>&nbsp;<span class="uri"><span class="hostname"></span>/v1/systems/<span class="hljs-attribute" title="system">system</span>/deploys</span></div><div class="title"><strong>URI Parameters</strong><div class="collapse-button show"><span class="close">Hide</span><span class="open">Show</span></div></div><div class="collapse-content"><dl class="inner"><dt>system</dt><dd><code>string</code>&nbsp;<span class="required">(required)</span>&nbsp;</dd></dl></div><div class="title"><strong>Request</strong><div class="collapse-button"><span class="close">Hide</span><span class="open">Show</span></div></div><div class="collapse-content"><div class="inner"><h5>Headers</h5><pre><code><span class="hljs-attribute">Content-Type</span>: <span class="hljs-string">application/json</span><br><span class="hljs-attribute">Accept</span>: <span class="hljs-string">application/json</span></code></pre><div style="height: 1px;"></div></div></div><div class="title"><strong>Response&nbsp;&nbsp;<code>200</code></strong><div class="collapse-button"><span class="close">Hide</span><span class="open">Show</span></div></div><div class="collapse-content"><div class="inner"><div class="description"><p>OK</p>
 </div><h5>Headers</h5><pre><code><span class="hljs-attribute">Content-Type</span>: <span class="hljs-string">application/json</span></code></pre><div style="height: 1px;"></div><h5>Body</h5><pre><code>[
+  {},
+  {},
   {}
 ]</code></pre><div style="height: 1px;"></div><h5>Schema</h5><pre><code>{
   "<span class="hljs-attribute">type</span>": <span class="hljs-value"><span class="hljs-string">"array"</span></span>,
@@ -317,9 +335,11 @@
   "<span class="hljs-attribute">type</span>": <span class="hljs-value"><span class="hljs-string">"object"</span></span>,
   "<span class="hljs-attribute">properties</span>": <span class="hljs-value">{
     "<span class="hljs-attribute">buildId</span>": <span class="hljs-value">{
+      "<span class="hljs-attribute">description</span>": <span class="hljs-value"><span class="hljs-string">"TBD"</span></span>,
       "<span class="hljs-attribute">type</span>": <span class="hljs-value"><span class="hljs-string">"object"</span>
     </span>}</span>,
     "<span class="hljs-attribute">version</span>": <span class="hljs-value">{
+      "<span class="hljs-attribute">description</span>": <span class="hljs-value"><span class="hljs-string">"TBD"</span></span>,
       "<span class="hljs-attribute">type</span>": <span class="hljs-value"><span class="hljs-string">"object"</span>
     </span>}
   </span>}
@@ -344,16 +364,16 @@
   "<span class="hljs-attribute">type</span>": <span class="hljs-value"><span class="hljs-string">"object"</span></span>,
   "<span class="hljs-attribute">properties</span>": <span class="hljs-value">{
     "<span class="hljs-attribute">buildId</span>": <span class="hljs-value">{
+      "<span class="hljs-attribute">description</span>": <span class="hljs-value"><span class="hljs-string">"TBD"</span></span>,
       "<span class="hljs-attribute">type</span>": <span class="hljs-value"><span class="hljs-string">"object"</span>
     </span>}</span>,
     "<span class="hljs-attribute">version</span>": <span class="hljs-value">{
+      "<span class="hljs-attribute">description</span>": <span class="hljs-value"><span class="hljs-string">"TBD"</span></span>,
       "<span class="hljs-attribute">type</span>": <span class="hljs-value"><span class="hljs-string">"object"</span>
     </span>}
   </span>}
 </span>}</code></pre><div style="height: 1px;"></div></div></div><div class="title"><strong>Response&nbsp;&nbsp;<code>400</code></strong><div class="collapse-button"><span class="close">Hide</span><span class="open">Show</span></div></div><div class="collapse-content"><div class="inner"><div class="description"><p>Bad Request</p>
-</div><h5>Headers</h5><pre><code><span class="hljs-attribute">Content-Type</span>: <span class="hljs-string">application/json</span></code></pre><div style="height: 1px;"></div><h5>Body</h5><pre><code>{
-  "<span class="hljs-attribute">message</span>": <span class="hljs-value"><span class="hljs-string">"consequ"</span>
-</span>}</code></pre><div style="height: 1px;"></div><h5>Schema</h5><pre><code>{
+</div><h5>Headers</h5><pre><code><span class="hljs-attribute">Content-Type</span>: <span class="hljs-string">application/json</span></code></pre><div style="height: 1px;"></div><h5>Body</h5><pre><code>{}</code></pre><div style="height: 1px;"></div><h5>Schema</h5><pre><code>{
   "<span class="hljs-attribute">type</span>": <span class="hljs-value"><span class="hljs-string">"object"</span></span>,
   "<span class="hljs-attribute">properties</span>": <span class="hljs-value">{
     "<span class="hljs-attribute">code</span>": <span class="hljs-value">{
@@ -384,7 +404,7 @@
   </span>}
 </span>}</code></pre><div style="height: 1px;"></div></div></div><div class="title"><strong>Request</strong><div class="collapse-button"><span class="close">Hide</span><span class="open">Show</span></div></div><div class="collapse-content"><div class="inner"><h5>Headers</h5><pre><code><span class="hljs-attribute">Content-Type</span>: <span class="hljs-string">application/json</span><br><span class="hljs-attribute">Accept</span>: <span class="hljs-string">application/json</span></code></pre><div style="height: 1px;"></div></div></div><div class="title"><strong>Response&nbsp;&nbsp;<code>404</code></strong><div class="collapse-button"><span class="close">Hide</span><span class="open">Show</span></div></div><div class="collapse-content"><div class="inner"><div class="description"><p>Not Found</p>
 </div><h5>Headers</h5><pre><code><span class="hljs-attribute">Content-Type</span>: <span class="hljs-string">application/json</span></code></pre><div style="height: 1px;"></div><h5>Body</h5><pre><code>{
-  "<span class="hljs-attribute">message</span>": <span class="hljs-value"><span class="hljs-string">"voluptate laboris occaecat nostrud"</span>
+  "<span class="hljs-attribute">message</span>": <span class="hljs-value"><span class="hljs-string">"occaecat do tempor est"</span>
 </span>}</code></pre><div style="height: 1px;"></div><h5>Schema</h5><pre><code>{
   "<span class="hljs-attribute">type</span>": <span class="hljs-value"><span class="hljs-string">"object"</span></span>,
   "<span class="hljs-attribute">properties</span>": <span class="hljs-value">{
@@ -399,7 +419,16 @@
 </span>}</code></pre><div style="height: 1px;"></div></div></div></div></div></section><section id="jobs" class="resource-group"><h2 class="group-heading">jobs <a href="#jobs" class="permalink">&para;</a></h2><div id="jobs-" class="resource"><h3 class="resource-heading">Lists jobs <a href="#jobs-" class="permalink">&nbsp;&para;</a></h3><div id="jobs-get" class="action get"><h4 class="action-heading"><div class="name">Lists jobs</div><a href="#jobs-get" class="method get">GET</a><code class="uri">/v1/systems/{system}/jobs</code></h4><p>list jobs</p>
 <h4>Example URI</h4><div class="definition"><span class="method get">GET</span>&nbsp;<span class="uri"><span class="hostname"></span>/v1/systems/<span class="hljs-attribute" title="system">system</span>/jobs</span></div><div class="title"><strong>URI Parameters</strong><div class="collapse-button show"><span class="close">Hide</span><span class="open">Show</span></div></div><div class="collapse-content"><dl class="inner"><dt>system</dt><dd><code>string</code>&nbsp;<span class="required">(required)</span>&nbsp;</dd></dl></div><div class="title"><strong>Request</strong><div class="collapse-button"><span class="close">Hide</span><span class="open">Show</span></div></div><div class="collapse-content"><div class="inner"><h5>Headers</h5><pre><code><span class="hljs-attribute">Content-Type</span>: <span class="hljs-string">application/json</span><br><span class="hljs-attribute">Accept</span>: <span class="hljs-string">application/json</span></code></pre><div style="height: 1px;"></div></div></div><div class="title"><strong>Response&nbsp;&nbsp;<code>200</code></strong><div class="collapse-button"><span class="close">Hide</span><span class="open">Show</span></div></div><div class="collapse-content"><div class="inner"><div class="description"><p>OK</p>
 </div><h5>Headers</h5><pre><code><span class="hljs-attribute">Content-Type</span>: <span class="hljs-string">application/json</span></code></pre><div style="height: 1px;"></div><h5>Body</h5><pre><code>[
-  {}
+  {
+    "<span class="hljs-attribute">path</span>": <span class="hljs-value"><span class="hljs-string">"ea et aliqua dolore ex"</span>
+  </span>},
+  {
+    "<span class="hljs-attribute">completionTimestamp</span>": <span class="hljs-value"><span class="hljs-string">"ad ut dolor"</span></span>,
+    "<span class="hljs-attribute">path</span>": <span class="hljs-value"><span class="hljs-string">"labore laborum"</span>
+  </span>},
+  {
+    "<span class="hljs-attribute">completionTimestamp</span>": <span class="hljs-value"><span class="hljs-string">"ad eiusmod"</span>
+  </span>}
 ]</code></pre><div style="height: 1px;"></div><h5>Schema</h5><pre><code>{
   "<span class="hljs-attribute">type</span>": <span class="hljs-value"><span class="hljs-string">"array"</span></span>,
   "<span class="hljs-attribute">items</span>": <span class="hljs-value">{
@@ -429,7 +458,9 @@
   </span>}
 </span>}</code></pre><div style="height: 1px;"></div></div></div></div></div><div id="jobs--1" class="resource"><h3 class="resource-heading">Get job <a href="#jobs--1" class="permalink">&nbsp;&para;</a></h3><div id="jobs-get-1" class="action get"><h4 class="action-heading"><div class="name">Get job</div><a href="#jobs-get-1" class="method get">GET</a><code class="uri">/v1/systems/{system}/jobs/{id}</code></h4><p>get job</p>
 <h4>Example URI</h4><div class="definition"><span class="method get">GET</span>&nbsp;<span class="uri"><span class="hostname"></span>/v1/systems/<span class="hljs-attribute" title="system">system</span>/jobs/<span class="hljs-attribute" title="id">id</span></span></div><div class="title"><strong>URI Parameters</strong><div class="collapse-button show"><span class="close">Hide</span><span class="open">Show</span></div></div><div class="collapse-content"><dl class="inner"><dt>system</dt><dd><code>string</code>&nbsp;<span class="required">(required)</span>&nbsp;</dd><dt>id</dt><dd><code>string</code>&nbsp;<span class="required">(required)</span>&nbsp;</dd></dl></div><div class="title"><strong>Request</strong><div class="collapse-button"><span class="close">Hide</span><span class="open">Show</span></div></div><div class="collapse-content"><div class="inner"><h5>Headers</h5><pre><code><span class="hljs-attribute">Content-Type</span>: <span class="hljs-string">application/json</span><br><span class="hljs-attribute">Accept</span>: <span class="hljs-string">application/json</span></code></pre><div style="height: 1px;"></div></div></div><div class="title"><strong>Response&nbsp;&nbsp;<code>200</code></strong><div class="collapse-button"><span class="close">Hide</span><span class="open">Show</span></div></div><div class="collapse-content"><div class="inner"><div class="description"><p>OK</p>
-</div><h5>Headers</h5><pre><code><span class="hljs-attribute">Content-Type</span>: <span class="hljs-string">application/json</span></code></pre><div style="height: 1px;"></div><h5>Body</h5><pre><code>{}</code></pre><div style="height: 1px;"></div><h5>Schema</h5><pre><code>{
+</div><h5>Headers</h5><pre><code><span class="hljs-attribute">Content-Type</span>: <span class="hljs-string">application/json</span></code></pre><div style="height: 1px;"></div><h5>Body</h5><pre><code>{
+  "<span class="hljs-attribute">path</span>": <span class="hljs-value"><span class="hljs-string">"e"</span>
+</span>}</code></pre><div style="height: 1px;"></div><h5>Schema</h5><pre><code>{
   "<span class="hljs-attribute">type</span>": <span class="hljs-value"><span class="hljs-string">"object"</span></span>,
   "<span class="hljs-attribute">properties</span>": <span class="hljs-value">{
     "<span class="hljs-attribute">completionTimestamp</span>": <span class="hljs-value">{
@@ -455,7 +486,7 @@
   </span>}
 </span>}</code></pre><div style="height: 1px;"></div></div></div><div class="title"><strong>Request</strong><div class="collapse-button"><span class="close">Hide</span><span class="open">Show</span></div></div><div class="collapse-content"><div class="inner"><h5>Headers</h5><pre><code><span class="hljs-attribute">Content-Type</span>: <span class="hljs-string">application/json</span><br><span class="hljs-attribute">Accept</span>: <span class="hljs-string">application/json</span></code></pre><div style="height: 1px;"></div></div></div><div class="title"><strong>Response&nbsp;&nbsp;<code>404</code></strong><div class="collapse-button"><span class="close">Hide</span><span class="open">Show</span></div></div><div class="collapse-content"><div class="inner"><div class="description"><p>Not Found</p>
 </div><h5>Headers</h5><pre><code><span class="hljs-attribute">Content-Type</span>: <span class="hljs-string">application/json</span></code></pre><div style="height: 1px;"></div><h5>Body</h5><pre><code>{
-  "<span class="hljs-attribute">message</span>": <span class="hljs-value"><span class="hljs-string">"et in sit proident"</span>
+  "<span class="hljs-attribute">message</span>": <span class="hljs-value"><span class="hljs-string">"elit ut ipsum laboris"</span>
 </span>}</code></pre><div style="height: 1px;"></div><h5>Schema</h5><pre><code>{
   "<span class="hljs-attribute">type</span>": <span class="hljs-value"><span class="hljs-string">"object"</span></span>,
   "<span class="hljs-attribute">properties</span>": <span class="hljs-value">{
@@ -469,10 +500,12 @@
   </span>}
 </span>}</code></pre><div style="height: 1px;"></div></div></div></div><div id="jobs-get-2" class="action get"><h4 class="action-heading"><div class="name">Get job logs</div><a href="#jobs-get-2" class="method get">GET</a><code class="uri">/v1/systems/{system}/jobs/{id}/logs</code></h4><p>get job logs</p>
 <h4>Example URI</h4><div class="definition"><span class="method get">GET</span>&nbsp;<span class="uri"><span class="hostname"></span>/v1/systems/<span class="hljs-attribute" title="system">system</span>/jobs/<span class="hljs-attribute" title="id">id</span>/logs</span></div><div class="title"><strong>URI Parameters</strong><div class="collapse-button show"><span class="close">Hide</span><span class="open">Show</span></div></div><div class="collapse-content"><dl class="inner"><dt>system</dt><dd><code>string</code>&nbsp;<span class="required">(required)</span>&nbsp;</dd><dt>id</dt><dd><code>string</code>&nbsp;<span class="required">(required)</span>&nbsp;</dd><dt>sidecar</dt><dd><code>string</code>&nbsp;<span class="required">(required)</span>&nbsp;</dd><dt>follow</dt><dd><code>string</code>&nbsp;<span class="required">(required)</span>&nbsp;</dd><dt>previous</dt><dd><code>string</code>&nbsp;<span class="required">(required)</span>&nbsp;</dd><dt>timestamps</dt><dd><code>string</code>&nbsp;<span class="required">(required)</span>&nbsp;</dd><dt>tail</dt><dd><code>string</code>&nbsp;<span class="required">(required)</span>&nbsp;</dd><dt>since</dt><dd><code>string</code>&nbsp;<span class="required">(required)</span>&nbsp;</dd><dt>sinceTime</dt><dd><code>string</code>&nbsp;<span class="required">(required)</span>&nbsp;</dd></dl></div><div class="title"><strong>Request</strong><div class="collapse-button"><span class="close">Hide</span><span class="open">Show</span></div></div><div class="collapse-content"><div class="inner"><h5>Headers</h5><pre><code><span class="hljs-attribute">Content-Type</span>: <span class="hljs-string">application/json</span><br><span class="hljs-attribute">Accept</span>: <span class="hljs-string">application/json</span></code></pre><div style="height: 1px;"></div></div></div><div class="title"><strong>Response&nbsp;&nbsp;<code>200</code></strong><div class="collapse-button"><span class="close">Hide</span><span class="open">Show</span></div></div><div class="collapse-content"><div class="inner"><div class="description"><p>log stream</p>
-</div><h5>Headers</h5><pre><code><span class="hljs-attribute">Content-Type</span>: <span class="hljs-string">application/json</span></code></pre><div style="height: 1px;"></div><h5>Body</h5><pre><code>labore aliqua voluptate</code></pre><div style="height: 1px;"></div><h5>Schema</h5><pre><code>{
+</div><h5>Headers</h5><pre><code><span class="hljs-attribute">Content-Type</span>: <span class="hljs-string">application/json</span></code></pre><div style="height: 1px;"></div><h5>Body</h5><pre><code>ullamco non</code></pre><div style="height: 1px;"></div><h5>Schema</h5><pre><code>{
   "<span class="hljs-attribute">type</span>": <span class="hljs-value"><span class="hljs-string">"string"</span>
 </span>}</code></pre><div style="height: 1px;"></div></div></div><div class="title"><strong>Request</strong><div class="collapse-button"><span class="close">Hide</span><span class="open">Show</span></div></div><div class="collapse-content"><div class="inner"><h5>Headers</h5><pre><code><span class="hljs-attribute">Content-Type</span>: <span class="hljs-string">application/json</span><br><span class="hljs-attribute">Accept</span>: <span class="hljs-string">application/json</span></code></pre><div style="height: 1px;"></div></div></div><div class="title"><strong>Response&nbsp;&nbsp;<code>404</code></strong><div class="collapse-button"><span class="close">Hide</span><span class="open">Show</span></div></div><div class="collapse-content"><div class="inner"><div class="description"><p>Not Found</p>
-</div><h5>Headers</h5><pre><code><span class="hljs-attribute">Content-Type</span>: <span class="hljs-string">application/json</span></code></pre><div style="height: 1px;"></div><h5>Body</h5><pre><code>{}</code></pre><div style="height: 1px;"></div><h5>Schema</h5><pre><code>{
+</div><h5>Headers</h5><pre><code><span class="hljs-attribute">Content-Type</span>: <span class="hljs-string">application/json</span></code></pre><div style="height: 1px;"></div><h5>Body</h5><pre><code>{
+  "<span class="hljs-attribute">message</span>": <span class="hljs-value"><span class="hljs-string">"sint quis"</span>
+</span>}</code></pre><div style="height: 1px;"></div><h5>Schema</h5><pre><code>{
   "<span class="hljs-attribute">type</span>": <span class="hljs-value"><span class="hljs-string">"object"</span></span>,
   "<span class="hljs-attribute">properties</span>": <span class="hljs-value">{
     "<span class="hljs-attribute">code</span>": <span class="hljs-value">{
@@ -486,11 +519,11 @@
 </span>}</code></pre><div style="height: 1px;"></div></div></div></div></div></section><section id="node-pools" class="resource-group"><h2 class="group-heading">node-pools <a href="#node-pools" class="permalink">&para;</a></h2><div id="node-pools-" class="resource"><h3 class="resource-heading">Lists node pools <a href="#node-pools-" class="permalink">&nbsp;&para;</a></h3><div id="node-pools-get" class="action get"><h4 class="action-heading"><div class="name">Lists node pools</div><a href="#node-pools-get" class="method get">GET</a><code class="uri">/v1/systems/{system}/node-pools</code></h4><p>list node pools</p>
 <h4>Example URI</h4><div class="definition"><span class="method get">GET</span>&nbsp;<span class="uri"><span class="hostname"></span>/v1/systems/<span class="hljs-attribute" title="system">system</span>/node-pools</span></div><div class="title"><strong>URI Parameters</strong><div class="collapse-button show"><span class="close">Hide</span><span class="open">Show</span></div></div><div class="collapse-content"><dl class="inner"><dt>system</dt><dd><code>string</code>&nbsp;<span class="required">(required)</span>&nbsp;</dd></dl></div><div class="title"><strong>Request</strong><div class="collapse-button"><span class="close">Hide</span><span class="open">Show</span></div></div><div class="collapse-content"><div class="inner"><h5>Headers</h5><pre><code><span class="hljs-attribute">Content-Type</span>: <span class="hljs-string">application/json</span><br><span class="hljs-attribute">Accept</span>: <span class="hljs-string">application/json</span></code></pre><div style="height: 1px;"></div></div></div><div class="title"><strong>Response&nbsp;&nbsp;<code>200</code></strong><div class="collapse-button"><span class="close">Hide</span><span class="open">Show</span></div></div><div class="collapse-content"><div class="inner"><div class="description"><p>OK</p>
 </div><h5>Headers</h5><pre><code><span class="hljs-attribute">Content-Type</span>: <span class="hljs-string">application/json</span></code></pre><div style="height: 1px;"></div><h5>Body</h5><pre><code>[
-  {
-    "<span class="hljs-attribute">path</span>": <span class="hljs-value"><span class="hljs-string">"incididunt pariatur consectetur"</span></span>,
-    "<span class="hljs-attribute">instanceType</span>": <span class="hljs-value"><span class="hljs-string">"veniam velit mollit"</span></span>,
-    "<span class="hljs-attribute">numInstances</span>": <span class="hljs-value"><span class="hljs-number">69984488</span>
-  </span>}
+  {},
+  {},
+  {},
+  {},
+  {}
 ]</code></pre><div style="height: 1px;"></div><h5>Schema</h5><pre><code>{
   "<span class="hljs-attribute">type</span>": <span class="hljs-value"><span class="hljs-string">"array"</span></span>,
   "<span class="hljs-attribute">items</span>": <span class="hljs-value">{
@@ -534,9 +567,7 @@
   </span>}
 </span>}</code></pre><div style="height: 1px;"></div></div></div></div></div><div id="node-pools--1" class="resource"><h3 class="resource-heading">Get node pool <a href="#node-pools--1" class="permalink">&nbsp;&para;</a></h3><div id="node-pools-get-1" class="action get"><h4 class="action-heading"><div class="name">Get node pool</div><a href="#node-pools-get-1" class="method get">GET</a><code class="uri">/v1/systems/{system}/node-pools/{id}</code></h4><p>get node pool</p>
 <h4>Example URI</h4><div class="definition"><span class="method get">GET</span>&nbsp;<span class="uri"><span class="hostname"></span>/v1/systems/<span class="hljs-attribute" title="system">system</span>/node-pools/<span class="hljs-attribute" title="id">id</span></span></div><div class="title"><strong>URI Parameters</strong><div class="collapse-button show"><span class="close">Hide</span><span class="open">Show</span></div></div><div class="collapse-content"><dl class="inner"><dt>system</dt><dd><code>string</code>&nbsp;<span class="required">(required)</span>&nbsp;</dd><dt>id</dt><dd><code>string</code>&nbsp;<span class="required">(required)</span>&nbsp;</dd></dl></div><div class="title"><strong>Request</strong><div class="collapse-button"><span class="close">Hide</span><span class="open">Show</span></div></div><div class="collapse-content"><div class="inner"><h5>Headers</h5><pre><code><span class="hljs-attribute">Content-Type</span>: <span class="hljs-string">application/json</span><br><span class="hljs-attribute">Accept</span>: <span class="hljs-string">application/json</span></code></pre><div style="height: 1px;"></div></div></div><div class="title"><strong>Response&nbsp;&nbsp;<code>200</code></strong><div class="collapse-button"><span class="close">Hide</span><span class="open">Show</span></div></div><div class="collapse-content"><div class="inner"><div class="description"><p>OK</p>
-</div><h5>Headers</h5><pre><code><span class="hljs-attribute">Content-Type</span>: <span class="hljs-string">application/json</span></code></pre><div style="height: 1px;"></div><h5>Body</h5><pre><code>{
-  "<span class="hljs-attribute">numInstances</span>": <span class="hljs-value">-<span class="hljs-number">5525454</span>
-</span>}</code></pre><div style="height: 1px;"></div><h5>Schema</h5><pre><code>{
+</div><h5>Headers</h5><pre><code><span class="hljs-attribute">Content-Type</span>: <span class="hljs-string">application/json</span></code></pre><div style="height: 1px;"></div><h5>Body</h5><pre><code>{}</code></pre><div style="height: 1px;"></div><h5>Schema</h5><pre><code>{
   "<span class="hljs-attribute">type</span>": <span class="hljs-value"><span class="hljs-string">"object"</span></span>,
   "<span class="hljs-attribute">properties</span>": <span class="hljs-value">{
     "<span class="hljs-attribute">failure_info</span>": <span class="hljs-value">{
@@ -575,7 +606,9 @@
     </span>}
   </span>}
 </span>}</code></pre><div style="height: 1px;"></div></div></div><div class="title"><strong>Request</strong><div class="collapse-button"><span class="close">Hide</span><span class="open">Show</span></div></div><div class="collapse-content"><div class="inner"><h5>Headers</h5><pre><code><span class="hljs-attribute">Content-Type</span>: <span class="hljs-string">application/json</span><br><span class="hljs-attribute">Accept</span>: <span class="hljs-string">application/json</span></code></pre><div style="height: 1px;"></div></div></div><div class="title"><strong>Response&nbsp;&nbsp;<code>404</code></strong><div class="collapse-button"><span class="close">Hide</span><span class="open">Show</span></div></div><div class="collapse-content"><div class="inner"><div class="description"><p>Not Found</p>
-</div><h5>Headers</h5><pre><code><span class="hljs-attribute">Content-Type</span>: <span class="hljs-string">application/json</span></code></pre><div style="height: 1px;"></div><h5>Body</h5><pre><code>{}</code></pre><div style="height: 1px;"></div><h5>Schema</h5><pre><code>{
+</div><h5>Headers</h5><pre><code><span class="hljs-attribute">Content-Type</span>: <span class="hljs-string">application/json</span></code></pre><div style="height: 1px;"></div><h5>Body</h5><pre><code>{
+  "<span class="hljs-attribute">message</span>": <span class="hljs-value"><span class="hljs-string">"Excepteur"</span>
+</span>}</code></pre><div style="height: 1px;"></div><h5>Schema</h5><pre><code>{
   "<span class="hljs-attribute">type</span>": <span class="hljs-value"><span class="hljs-string">"object"</span></span>,
   "<span class="hljs-attribute">properties</span>": <span class="hljs-value">{
     "<span class="hljs-attribute">code</span>": <span class="hljs-value">{
@@ -589,23 +622,15 @@
 </span>}</code></pre><div style="height: 1px;"></div></div></div></div></div></section><section id="secrets" class="resource-group"><h2 class="group-heading">secrets <a href="#secrets" class="permalink">&para;</a></h2><div id="secrets-" class="resource"><h3 class="resource-heading">Lists secrets <a href="#secrets-" class="permalink">&nbsp;&para;</a></h3><div id="secrets-get" class="action get"><h4 class="action-heading"><div class="name">Lists secrets</div><a href="#secrets-get" class="method get">GET</a><code class="uri">/v1/systems/{system}/secrets</code></h4><p>list secrets</p>
 <h4>Example URI</h4><div class="definition"><span class="method get">GET</span>&nbsp;<span class="uri"><span class="hostname"></span>/v1/systems/<span class="hljs-attribute" title="system">system</span>/secrets</span></div><div class="title"><strong>URI Parameters</strong><div class="collapse-button show"><span class="close">Hide</span><span class="open">Show</span></div></div><div class="collapse-content"><dl class="inner"><dt>system</dt><dd><code>string</code>&nbsp;<span class="required">(required)</span>&nbsp;</dd></dl></div><div class="title"><strong>Request</strong><div class="collapse-button"><span class="close">Hide</span><span class="open">Show</span></div></div><div class="collapse-content"><div class="inner"><h5>Headers</h5><pre><code><span class="hljs-attribute">Content-Type</span>: <span class="hljs-string">application/json</span><br><span class="hljs-attribute">Accept</span>: <span class="hljs-string">application/json</span></code></pre><div style="height: 1px;"></div></div></div><div class="title"><strong>Response&nbsp;&nbsp;<code>200</code></strong><div class="collapse-button"><span class="close">Hide</span><span class="open">Show</span></div></div><div class="collapse-content"><div class="inner"><div class="description"><p>OK</p>
 </div><h5>Headers</h5><pre><code><span class="hljs-attribute">Content-Type</span>: <span class="hljs-string">application/json</span></code></pre><div style="height: 1px;"></div><h5>Body</h5><pre><code>[
-  {
-    "<span class="hljs-attribute">value</span>": <span class="hljs-value"><span class="hljs-string">"anim occaecat dolore nisi sed"</span>
-  </span>},
-  {
-    "<span class="hljs-attribute">path</span>": <span class="hljs-value"><span class="hljs-string">"exercitation ea pariatur proident"</span></span>,
-    "<span class="hljs-attribute">value</span>": <span class="hljs-value"><span class="hljs-string">"ut proident est exercitation"</span>
-  </span>},
-  {
-    "<span class="hljs-attribute">name</span>": <span class="hljs-value"><span class="hljs-string">"sit mi"</span></span>,
-    "<span class="hljs-attribute">value</span>": <span class="hljs-value"><span class="hljs-string">"eu aliquip mollit"</span></span>,
-    "<span class="hljs-attribute">path</span>": <span class="hljs-value"><span class="hljs-string">"aute dolor tempor sunt n"</span>
-  </span>},
   {},
   {
-    "<span class="hljs-attribute">path</span>": <span class="hljs-value"><span class="hljs-string">"nulla sunt"</span></span>,
-    "<span class="hljs-attribute">value</span>": <span class="hljs-value"><span class="hljs-string">"aute dolor"</span></span>,
-    "<span class="hljs-attribute">name</span>": <span class="hljs-value"><span class="hljs-string">"deserunt id"</span>
+    "<span class="hljs-attribute">name</span>": <span class="hljs-value"><span class="hljs-string">"ullamco"</span></span>,
+    "<span class="hljs-attribute">path</span>": <span class="hljs-value"><span class="hljs-string">"reprehenderit consequat"</span>
+  </span>},
+  {
+    "<span class="hljs-attribute">name</span>": <span class="hljs-value"><span class="hljs-string">"tempor"</span></span>,
+    "<span class="hljs-attribute">path</span>": <span class="hljs-value"><span class="hljs-string">"enim non velit adipisicing aliqua"</span></span>,
+    "<span class="hljs-attribute">value</span>": <span class="hljs-value"><span class="hljs-string">"tempor consectetur"</span>
   </span>}
 ]</code></pre><div style="height: 1px;"></div><h5>Schema</h5><pre><code>{
   "<span class="hljs-attribute">type</span>": <span class="hljs-value"><span class="hljs-string">"array"</span></span>,
@@ -631,6 +656,7 @@
   "<span class="hljs-attribute">type</span>": <span class="hljs-value"><span class="hljs-string">"object"</span></span>,
   "<span class="hljs-attribute">properties</span>": <span class="hljs-value">{
     "<span class="hljs-attribute">value</span>": <span class="hljs-value">{
+      "<span class="hljs-attribute">description</span>": <span class="hljs-value"><span class="hljs-string">"TBD"</span></span>,
       "<span class="hljs-attribute">type</span>": <span class="hljs-value"><span class="hljs-string">"string"</span>
     </span>}
   </span>}
@@ -652,11 +678,12 @@
     </span>}
   </span>}
 </span>}</code></pre><div style="height: 1px;"></div></div></div><div class="title"><strong>Request</strong><div class="collapse-button"><span class="close">Hide</span><span class="open">Show</span></div></div><div class="collapse-content"><div class="inner"><h5>Headers</h5><pre><code><span class="hljs-attribute">Content-Type</span>: <span class="hljs-string">application/json</span><br><span class="hljs-attribute">Accept</span>: <span class="hljs-string">application/json</span></code></pre><div style="height: 1px;"></div><h5>Body</h5><pre><code>{
-  "<span class="hljs-attribute">value</span>": <span class="hljs-value"><span class="hljs-string">"exercitation enim aliqua"</span>
+  "<span class="hljs-attribute">value</span>": <span class="hljs-value"><span class="hljs-string">"aute aliqua proident anim sit"</span>
 </span>}</code></pre><div style="height: 1px;"></div><h5>Schema</h5><pre><code>{
   "<span class="hljs-attribute">type</span>": <span class="hljs-value"><span class="hljs-string">"object"</span></span>,
   "<span class="hljs-attribute">properties</span>": <span class="hljs-value">{
     "<span class="hljs-attribute">value</span>": <span class="hljs-value">{
+      "<span class="hljs-attribute">description</span>": <span class="hljs-value"><span class="hljs-string">"TBD"</span></span>,
       "<span class="hljs-attribute">type</span>": <span class="hljs-value"><span class="hljs-string">"string"</span>
     </span>}
   </span>}
@@ -674,7 +701,10 @@
   </span>}
 </span>}</code></pre><div style="height: 1px;"></div></div></div></div></div><div id="secrets--1" class="resource"><h3 class="resource-heading">Get secret <a href="#secrets--1" class="permalink">&nbsp;&para;</a></h3><div id="secrets-get-1" class="action get"><h4 class="action-heading"><div class="name">Get secret</div><a href="#secrets-get-1" class="method get">GET</a><code class="uri">/v1/systems/{system}/secrets/{secret}</code></h4><p>get secret</p>
 <h4>Example URI</h4><div class="definition"><span class="method get">GET</span>&nbsp;<span class="uri"><span class="hostname"></span>/v1/systems/<span class="hljs-attribute" title="system">system</span>/secrets/<span class="hljs-attribute" title="secret">secret</span></span></div><div class="title"><strong>URI Parameters</strong><div class="collapse-button show"><span class="close">Hide</span><span class="open">Show</span></div></div><div class="collapse-content"><dl class="inner"><dt>system</dt><dd><code>string</code>&nbsp;<span class="required">(required)</span>&nbsp;</dd><dt>secret</dt><dd><code>string</code>&nbsp;<span class="required">(required)</span>&nbsp;</dd></dl></div><div class="title"><strong>Request</strong><div class="collapse-button"><span class="close">Hide</span><span class="open">Show</span></div></div><div class="collapse-content"><div class="inner"><h5>Headers</h5><pre><code><span class="hljs-attribute">Content-Type</span>: <span class="hljs-string">application/json</span><br><span class="hljs-attribute">Accept</span>: <span class="hljs-string">application/json</span></code></pre><div style="height: 1px;"></div></div></div><div class="title"><strong>Response&nbsp;&nbsp;<code>200</code></strong><div class="collapse-button"><span class="close">Hide</span><span class="open">Show</span></div></div><div class="collapse-content"><div class="inner"><div class="description"><p>OK</p>
-</div><h5>Headers</h5><pre><code><span class="hljs-attribute">Content-Type</span>: <span class="hljs-string">application/json</span></code></pre><div style="height: 1px;"></div><h5>Body</h5><pre><code>{}</code></pre><div style="height: 1px;"></div><h5>Schema</h5><pre><code>{
+</div><h5>Headers</h5><pre><code><span class="hljs-attribute">Content-Type</span>: <span class="hljs-string">application/json</span></code></pre><div style="height: 1px;"></div><h5>Body</h5><pre><code>{
+  "<span class="hljs-attribute">value</span>": <span class="hljs-value"><span class="hljs-string">"pariatur commodo"</span></span>,
+  "<span class="hljs-attribute">path</span>": <span class="hljs-value"><span class="hljs-string">"est qui dolor magna do"</span>
+</span>}</code></pre><div style="height: 1px;"></div><h5>Schema</h5><pre><code>{
   "<span class="hljs-attribute">type</span>": <span class="hljs-value"><span class="hljs-string">"object"</span></span>,
   "<span class="hljs-attribute">properties</span>": <span class="hljs-value">{
     "<span class="hljs-attribute">name</span>": <span class="hljs-value">{
@@ -691,7 +721,9 @@
     </span>}
   </span>}
 </span>}</code></pre><div style="height: 1px;"></div></div></div><div class="title"><strong>Request</strong><div class="collapse-button"><span class="close">Hide</span><span class="open">Show</span></div></div><div class="collapse-content"><div class="inner"><h5>Headers</h5><pre><code><span class="hljs-attribute">Content-Type</span>: <span class="hljs-string">application/json</span><br><span class="hljs-attribute">Accept</span>: <span class="hljs-string">application/json</span></code></pre><div style="height: 1px;"></div></div></div><div class="title"><strong>Response&nbsp;&nbsp;<code>404</code></strong><div class="collapse-button"><span class="close">Hide</span><span class="open">Show</span></div></div><div class="collapse-content"><div class="inner"><div class="description"><p>Not Found</p>
-</div><h5>Headers</h5><pre><code><span class="hljs-attribute">Content-Type</span>: <span class="hljs-string">application/json</span></code></pre><div style="height: 1px;"></div><h5>Body</h5><pre><code>{}</code></pre><div style="height: 1px;"></div><h5>Schema</h5><pre><code>{
+</div><h5>Headers</h5><pre><code><span class="hljs-attribute">Content-Type</span>: <span class="hljs-string">application/json</span></code></pre><div style="height: 1px;"></div><h5>Body</h5><pre><code>{
+  "<span class="hljs-attribute">message</span>": <span class="hljs-value"><span class="hljs-string">"eiusmod aute minim"</span>
+</span>}</code></pre><div style="height: 1px;"></div><h5>Schema</h5><pre><code>{
   "<span class="hljs-attribute">type</span>": <span class="hljs-value"><span class="hljs-string">"object"</span></span>,
   "<span class="hljs-attribute">properties</span>": <span class="hljs-value">{
     "<span class="hljs-attribute">code</span>": <span class="hljs-value">{
@@ -707,7 +739,9 @@
 </div><h5>Headers</h5><pre><code><span class="hljs-attribute">Content-Type</span>: <span class="hljs-string">application/json</span></code></pre><div style="height: 1px;"></div><h5>Body</h5><pre><code>{}</code></pre><div style="height: 1px;"></div><h5>Schema</h5><pre><code>{
   "<span class="hljs-attribute">type</span>": <span class="hljs-value"><span class="hljs-string">"object"</span>
 </span>}</code></pre><div style="height: 1px;"></div></div></div><div class="title"><strong>Request</strong><div class="collapse-button"><span class="close">Hide</span><span class="open">Show</span></div></div><div class="collapse-content"><div class="inner"><h5>Headers</h5><pre><code><span class="hljs-attribute">Content-Type</span>: <span class="hljs-string">application/json</span><br><span class="hljs-attribute">Accept</span>: <span class="hljs-string">application/json</span></code></pre><div style="height: 1px;"></div></div></div><div class="title"><strong>Response&nbsp;&nbsp;<code>404</code></strong><div class="collapse-button"><span class="close">Hide</span><span class="open">Show</span></div></div><div class="collapse-content"><div class="inner"><div class="description"><p>Not Found</p>
-</div><h5>Headers</h5><pre><code><span class="hljs-attribute">Content-Type</span>: <span class="hljs-string">application/json</span></code></pre><div style="height: 1px;"></div><h5>Body</h5><pre><code>{}</code></pre><div style="height: 1px;"></div><h5>Schema</h5><pre><code>{
+</div><h5>Headers</h5><pre><code><span class="hljs-attribute">Content-Type</span>: <span class="hljs-string">application/json</span></code></pre><div style="height: 1px;"></div><h5>Body</h5><pre><code>{
+  "<span class="hljs-attribute">message</span>": <span class="hljs-value"><span class="hljs-string">"laborum cillum dolore proident"</span>
+</span>}</code></pre><div style="height: 1px;"></div><h5>Schema</h5><pre><code>{
   "<span class="hljs-attribute">type</span>": <span class="hljs-value"><span class="hljs-string">"object"</span></span>,
   "<span class="hljs-attribute">properties</span>": <span class="hljs-value">{
     "<span class="hljs-attribute">code</span>": <span class="hljs-value">{
@@ -722,7 +756,8 @@
 <h4>Example URI</h4><div class="definition"><span class="method get">GET</span>&nbsp;<span class="uri"><span class="hostname"></span>/v1/systems/<span class="hljs-attribute" title="system">system</span>/services</span></div><div class="title"><strong>URI Parameters</strong><div class="collapse-button show"><span class="close">Hide</span><span class="open">Show</span></div></div><div class="collapse-content"><dl class="inner"><dt>system</dt><dd><code>string</code>&nbsp;<span class="required">(required)</span>&nbsp;</dd></dl></div><div class="title"><strong>Request</strong><div class="collapse-button"><span class="close">Hide</span><span class="open">Show</span></div></div><div class="collapse-content"><div class="inner"><h5>Headers</h5><pre><code><span class="hljs-attribute">Content-Type</span>: <span class="hljs-string">application/json</span><br><span class="hljs-attribute">Accept</span>: <span class="hljs-string">application/json</span></code></pre><div style="height: 1px;"></div></div></div><div class="title"><strong>Response&nbsp;&nbsp;<code>200</code></strong><div class="collapse-button"><span class="close">Hide</span><span class="open">Show</span></div></div><div class="collapse-content"><div class="inner"><div class="description"><p>OK</p>
 </div><h5>Headers</h5><pre><code><span class="hljs-attribute">Content-Type</span>: <span class="hljs-string">application/json</span></code></pre><div style="height: 1px;"></div><h5>Body</h5><pre><code>[
   {
-    "<span class="hljs-attribute">updatedInstances</span>": <span class="hljs-value"><span class="hljs-number">67368669</span>
+    "<span class="hljs-attribute">message</span>": <span class="hljs-value"><span class="hljs-string">"amet in"</span></span>,
+    "<span class="hljs-attribute">terminatingInstances</span>": <span class="hljs-value"><span class="hljs-number">75871496</span>
   </span>}
 ]</code></pre><div style="height: 1px;"></div><h5>Schema</h5><pre><code>{
   "<span class="hljs-attribute">type</span>": <span class="hljs-value"><span class="hljs-string">"array"</span></span>,
@@ -775,7 +810,7 @@
         "<span class="hljs-attribute">type</span>": <span class="hljs-value"><span class="hljs-string">"integer"</span>
       </span>}</span>,
       "<span class="hljs-attribute">state</span>": <span class="hljs-value">{
-        "<span class="hljs-attribute">description</span>": <span class="hljs-value"><span class="hljs-string">"State"</span></span>,
+        "<span class="hljs-attribute">description</span>": <span class="hljs-value"><span class="hljs-string">"State. One of (pending, failed, deleting, stable, scaling, updating)"</span></span>,
         "<span class="hljs-attribute">type</span>": <span class="hljs-value"><span class="hljs-string">"object"</span>
       </span>}</span>,
       "<span class="hljs-attribute">terminatingInstances</span>": <span class="hljs-value">{
@@ -839,7 +874,7 @@
       "<span class="hljs-attribute">type</span>": <span class="hljs-value"><span class="hljs-string">"integer"</span>
     </span>}</span>,
     "<span class="hljs-attribute">state</span>": <span class="hljs-value">{
-      "<span class="hljs-attribute">description</span>": <span class="hljs-value"><span class="hljs-string">"State"</span></span>,
+      "<span class="hljs-attribute">description</span>": <span class="hljs-value"><span class="hljs-string">"State. One of (pending, failed, deleting, stable, scaling, updating)"</span></span>,
       "<span class="hljs-attribute">type</span>": <span class="hljs-value"><span class="hljs-string">"object"</span>
     </span>}</span>,
     "<span class="hljs-attribute">terminatingInstances</span>": <span class="hljs-value">{
@@ -852,9 +887,7 @@
     </span>}
   </span>}
 </span>}</code></pre><div style="height: 1px;"></div></div></div><div class="title"><strong>Request</strong><div class="collapse-button"><span class="close">Hide</span><span class="open">Show</span></div></div><div class="collapse-content"><div class="inner"><h5>Headers</h5><pre><code><span class="hljs-attribute">Content-Type</span>: <span class="hljs-string">application/json</span><br><span class="hljs-attribute">Accept</span>: <span class="hljs-string">application/json</span></code></pre><div style="height: 1px;"></div></div></div><div class="title"><strong>Response&nbsp;&nbsp;<code>404</code></strong><div class="collapse-button"><span class="close">Hide</span><span class="open">Show</span></div></div><div class="collapse-content"><div class="inner"><div class="description"><p>Not Found</p>
-</div><h5>Headers</h5><pre><code><span class="hljs-attribute">Content-Type</span>: <span class="hljs-string">application/json</span></code></pre><div style="height: 1px;"></div><h5>Body</h5><pre><code>{
-  "<span class="hljs-attribute">message</span>": <span class="hljs-value"><span class="hljs-string">"es"</span>
-</span>}</code></pre><div style="height: 1px;"></div><h5>Schema</h5><pre><code>{
+</div><h5>Headers</h5><pre><code><span class="hljs-attribute">Content-Type</span>: <span class="hljs-string">application/json</span></code></pre><div style="height: 1px;"></div><h5>Body</h5><pre><code>{}</code></pre><div style="height: 1px;"></div><h5>Schema</h5><pre><code>{
   "<span class="hljs-attribute">type</span>": <span class="hljs-value"><span class="hljs-string">"object"</span></span>,
   "<span class="hljs-attribute">properties</span>": <span class="hljs-value">{
     "<span class="hljs-attribute">code</span>": <span class="hljs-value">{
@@ -867,12 +900,10 @@
   </span>}
 </span>}</code></pre><div style="height: 1px;"></div></div></div></div><div id="services-get-2" class="action get"><h4 class="action-heading"><div class="name">Get service logs</div><a href="#services-get-2" class="method get">GET</a><code class="uri">/v1/systems/{system}/services/{id}/logs</code></h4><p>get service logs</p>
 <h4>Example URI</h4><div class="definition"><span class="method get">GET</span>&nbsp;<span class="uri"><span class="hostname"></span>/v1/systems/<span class="hljs-attribute" title="system">system</span>/services/<span class="hljs-attribute" title="id">id</span>/logs</span></div><div class="title"><strong>URI Parameters</strong><div class="collapse-button show"><span class="close">Hide</span><span class="open">Show</span></div></div><div class="collapse-content"><dl class="inner"><dt>system</dt><dd><code>string</code>&nbsp;<span class="required">(required)</span>&nbsp;</dd><dt>id</dt><dd><code>string</code>&nbsp;<span class="required">(required)</span>&nbsp;</dd><dt>instance</dt><dd><code>string</code>&nbsp;<span class="required">(required)</span>&nbsp;</dd><dt>sidecar</dt><dd><code>string</code>&nbsp;<span class="required">(required)</span>&nbsp;</dd><dt>follow</dt><dd><code>string</code>&nbsp;<span class="required">(required)</span>&nbsp;</dd><dt>previous</dt><dd><code>string</code>&nbsp;<span class="required">(required)</span>&nbsp;</dd><dt>timestamps</dt><dd><code>string</code>&nbsp;<span class="required">(required)</span>&nbsp;</dd><dt>tail</dt><dd><code>string</code>&nbsp;<span class="required">(required)</span>&nbsp;</dd><dt>since</dt><dd><code>string</code>&nbsp;<span class="required">(required)</span>&nbsp;</dd><dt>sinceTime</dt><dd><code>string</code>&nbsp;<span class="required">(required)</span>&nbsp;</dd></dl></div><div class="title"><strong>Request</strong><div class="collapse-button"><span class="close">Hide</span><span class="open">Show</span></div></div><div class="collapse-content"><div class="inner"><h5>Headers</h5><pre><code><span class="hljs-attribute">Content-Type</span>: <span class="hljs-string">application/json</span><br><span class="hljs-attribute">Accept</span>: <span class="hljs-string">application/json</span></code></pre><div style="height: 1px;"></div></div></div><div class="title"><strong>Response&nbsp;&nbsp;<code>200</code></strong><div class="collapse-button"><span class="close">Hide</span><span class="open">Show</span></div></div><div class="collapse-content"><div class="inner"><div class="description"><p>log stream</p>
-</div><h5>Headers</h5><pre><code><span class="hljs-attribute">Content-Type</span>: <span class="hljs-string">application/json</span></code></pre><div style="height: 1px;"></div><h5>Body</h5><pre><code>enim</code></pre><div style="height: 1px;"></div><h5>Schema</h5><pre><code>{
+</div><h5>Headers</h5><pre><code><span class="hljs-attribute">Content-Type</span>: <span class="hljs-string">application/json</span></code></pre><div style="height: 1px;"></div><h5>Body</h5><pre><code>nulla anim enim fug</code></pre><div style="height: 1px;"></div><h5>Schema</h5><pre><code>{
   "<span class="hljs-attribute">type</span>": <span class="hljs-value"><span class="hljs-string">"string"</span>
 </span>}</code></pre><div style="height: 1px;"></div></div></div><div class="title"><strong>Request</strong><div class="collapse-button"><span class="close">Hide</span><span class="open">Show</span></div></div><div class="collapse-content"><div class="inner"><h5>Headers</h5><pre><code><span class="hljs-attribute">Content-Type</span>: <span class="hljs-string">application/json</span><br><span class="hljs-attribute">Accept</span>: <span class="hljs-string">application/json</span></code></pre><div style="height: 1px;"></div></div></div><div class="title"><strong>Response&nbsp;&nbsp;<code>404</code></strong><div class="collapse-button"><span class="close">Hide</span><span class="open">Show</span></div></div><div class="collapse-content"><div class="inner"><div class="description"><p>Not Found</p>
-</div><h5>Headers</h5><pre><code><span class="hljs-attribute">Content-Type</span>: <span class="hljs-string">application/json</span></code></pre><div style="height: 1px;"></div><h5>Body</h5><pre><code>{
-  "<span class="hljs-attribute">message</span>": <span class="hljs-value"><span class="hljs-string">"sint eiusmod do tempor"</span>
-</span>}</code></pre><div style="height: 1px;"></div><h5>Schema</h5><pre><code>{
+</div><h5>Headers</h5><pre><code><span class="hljs-attribute">Content-Type</span>: <span class="hljs-string">application/json</span></code></pre><div style="height: 1px;"></div><h5>Body</h5><pre><code>{}</code></pre><div style="height: 1px;"></div><h5>Schema</h5><pre><code>{
   "<span class="hljs-attribute">type</span>": <span class="hljs-value"><span class="hljs-string">"object"</span></span>,
   "<span class="hljs-attribute">properties</span>": <span class="hljs-value">{
     "<span class="hljs-attribute">code</span>": <span class="hljs-value">{
@@ -886,6 +917,9 @@
 </span>}</code></pre><div style="height: 1px;"></div></div></div></div></div></section><section id="teardowns" class="resource-group"><h2 class="group-heading">teardowns <a href="#teardowns" class="permalink">&para;</a></h2><div id="teardowns-" class="resource"><h3 class="resource-heading">Lists teardowns <a href="#teardowns-" class="permalink">&nbsp;&para;</a></h3><div id="teardowns-get" class="action get"><h4 class="action-heading"><div class="name">Lists teardowns</div><a href="#teardowns-get" class="method get">GET</a><code class="uri">/v1/systems/{system}/teardowns</code></h4><p>list teardowns</p>
 <h4>Example URI</h4><div class="definition"><span class="method get">GET</span>&nbsp;<span class="uri"><span class="hostname"></span>/v1/systems/<span class="hljs-attribute" title="system">system</span>/teardowns</span></div><div class="title"><strong>URI Parameters</strong><div class="collapse-button show"><span class="close">Hide</span><span class="open">Show</span></div></div><div class="collapse-content"><dl class="inner"><dt>system</dt><dd><code>string</code>&nbsp;<span class="required">(required)</span>&nbsp;</dd></dl></div><div class="title"><strong>Request</strong><div class="collapse-button"><span class="close">Hide</span><span class="open">Show</span></div></div><div class="collapse-content"><div class="inner"><h5>Headers</h5><pre><code><span class="hljs-attribute">Content-Type</span>: <span class="hljs-string">application/json</span><br><span class="hljs-attribute">Accept</span>: <span class="hljs-string">application/json</span></code></pre><div style="height: 1px;"></div></div></div><div class="title"><strong>Response&nbsp;&nbsp;<code>200</code></strong><div class="collapse-button"><span class="close">Hide</span><span class="open">Show</span></div></div><div class="collapse-content"><div class="inner"><div class="description"><p>OK</p>
 </div><h5>Headers</h5><pre><code><span class="hljs-attribute">Content-Type</span>: <span class="hljs-string">application/json</span></code></pre><div style="height: 1px;"></div><h5>Body</h5><pre><code>[
+  {},
+  {},
+  {},
   {}
 ]</code></pre><div style="height: 1px;"></div><h5>Schema</h5><pre><code>{
   "<span class="hljs-attribute">type</span>": <span class="hljs-value"><span class="hljs-string">"array"</span></span>,
@@ -929,9 +963,7 @@
     </span>}
   </span>}
 </span>}</code></pre><div style="height: 1px;"></div></div></div><div class="title"><strong>Request</strong><div class="collapse-button"><span class="close">Hide</span><span class="open">Show</span></div></div><div class="collapse-content"><div class="inner"><h5>Headers</h5><pre><code><span class="hljs-attribute">Content-Type</span>: <span class="hljs-string">application/json</span><br><span class="hljs-attribute">Accept</span>: <span class="hljs-string">application/json</span></code></pre><div style="height: 1px;"></div></div></div><div class="title"><strong>Response&nbsp;&nbsp;<code>404</code></strong><div class="collapse-button"><span class="close">Hide</span><span class="open">Show</span></div></div><div class="collapse-content"><div class="inner"><div class="description"><p>Not Found</p>
-</div><h5>Headers</h5><pre><code><span class="hljs-attribute">Content-Type</span>: <span class="hljs-string">application/json</span></code></pre><div style="height: 1px;"></div><h5>Body</h5><pre><code>{
-  "<span class="hljs-attribute">message</span>": <span class="hljs-value"><span class="hljs-string">"quis cupidatat occaecat sint"</span>
-</span>}</code></pre><div style="height: 1px;"></div><h5>Schema</h5><pre><code>{
+</div><h5>Headers</h5><pre><code><span class="hljs-attribute">Content-Type</span>: <span class="hljs-string">application/json</span></code></pre><div style="height: 1px;"></div><h5>Body</h5><pre><code>{}</code></pre><div style="height: 1px;"></div><h5>Schema</h5><pre><code>{
   "<span class="hljs-attribute">type</span>": <span class="hljs-value"><span class="hljs-string">"object"</span></span>,
   "<span class="hljs-attribute">properties</span>": <span class="hljs-value">{
     "<span class="hljs-attribute">code</span>": <span class="hljs-value">{
@@ -957,9 +989,7 @@
     </span>}
   </span>}
 </span>}</code></pre><div style="height: 1px;"></div></div></div><div class="title"><strong>Request</strong><div class="collapse-button"><span class="close">Hide</span><span class="open">Show</span></div></div><div class="collapse-content"><div class="inner"><h5>Headers</h5><pre><code><span class="hljs-attribute">Content-Type</span>: <span class="hljs-string">application/json</span><br><span class="hljs-attribute">Accept</span>: <span class="hljs-string">application/json</span></code></pre><div style="height: 1px;"></div></div></div><div class="title"><strong>Response&nbsp;&nbsp;<code>404</code></strong><div class="collapse-button"><span class="close">Hide</span><span class="open">Show</span></div></div><div class="collapse-content"><div class="inner"><div class="description"><p>Not Found</p>
-</div><h5>Headers</h5><pre><code><span class="hljs-attribute">Content-Type</span>: <span class="hljs-string">application/json</span></code></pre><div style="height: 1px;"></div><h5>Body</h5><pre><code>{
-  "<span class="hljs-attribute">message</span>": <span class="hljs-value"><span class="hljs-string">"nisi occaecat esse"</span>
-</span>}</code></pre><div style="height: 1px;"></div><h5>Schema</h5><pre><code>{
+</div><h5>Headers</h5><pre><code><span class="hljs-attribute">Content-Type</span>: <span class="hljs-string">application/json</span></code></pre><div style="height: 1px;"></div><h5>Body</h5><pre><code>{}</code></pre><div style="height: 1px;"></div><h5>Schema</h5><pre><code>{
   "<span class="hljs-attribute">type</span>": <span class="hljs-value"><span class="hljs-string">"object"</span></span>,
   "<span class="hljs-attribute">properties</span>": <span class="hljs-value">{
     "<span class="hljs-attribute">code</span>": <span class="hljs-value">{
@@ -974,15 +1004,13 @@
 <h4>Example URI</h4><div class="definition"><span class="method get">GET</span>&nbsp;<span class="uri"><span class="hostname"></span>/v1/systems/<span class="hljs-attribute" title="system">system</span>/versions</span></div><div class="title"><strong>URI Parameters</strong><div class="collapse-button show"><span class="close">Hide</span><span class="open">Show</span></div></div><div class="collapse-content"><dl class="inner"><dt>system</dt><dd><code>string</code>&nbsp;<span class="required">(required)</span>&nbsp;</dd></dl></div><div class="title"><strong>Request</strong><div class="collapse-button"><span class="close">Hide</span><span class="open">Show</span></div></div><div class="collapse-content"><div class="inner"><h5>Headers</h5><pre><code><span class="hljs-attribute">Content-Type</span>: <span class="hljs-string">application/json</span><br><span class="hljs-attribute">Accept</span>: <span class="hljs-string">application/json</span></code></pre><div style="height: 1px;"></div></div></div><div class="title"><strong>Response&nbsp;&nbsp;<code>200</code></strong><div class="collapse-button"><span class="close">Hide</span><span class="open">Show</span></div></div><div class="collapse-content"><div class="inner"><div class="description"><p>OK</p>
 </div><h5>Headers</h5><pre><code><span class="hljs-attribute">Content-Type</span>: <span class="hljs-string">application/json</span></code></pre><div style="height: 1px;"></div><h5>Body</h5><pre><code>[
   {},
-  {},
-  {},
   {}
 ]</code></pre><div style="height: 1px;"></div><h5>Schema</h5><pre><code>{
   "<span class="hljs-attribute">type</span>": <span class="hljs-value"><span class="hljs-string">"array"</span></span>,
   "<span class="hljs-attribute">items</span>": <span class="hljs-value">{
     "<span class="hljs-attribute">type</span>": <span class="hljs-value"><span class="hljs-string">"object"</span>
   </span>}
-</span>}</code></pre><div style="height: 1px;"></div></div></div></div></div></section></div></div></div><p style="text-align: center;" class="text-muted">Generated by&nbsp;<a href="https://github.com/danielgtaylor/aglio" class="aglio">aglio</a>&nbsp;on 17 Aug 2018</p><script>/* eslint-env browser */
+</span>}</code></pre><div style="height: 1px;"></div></div></div></div></div></section></div></div></div><p style="text-align: center;" class="text-muted">Generated by&nbsp;<a href="https://github.com/danielgtaylor/aglio" class="aglio">aglio</a>&nbsp;on 20 Aug 2018</p><script>/* eslint-env browser */
 /* eslint quotes: [2, "single"] */
 'use strict';
 

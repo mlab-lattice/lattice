@@ -26,7 +26,7 @@ type Service struct {
 	ID ServiceID `json:"id"`
 	// Service Path
 	Path tree.NodePath `json:"path"`
-	// State
+	// State. One of (pending, failed, deleting, stable, scaling, updating)
 	State ServiceState `json:"state"`
 	// Message
 	Message *string `json:"message,omitempty"`
