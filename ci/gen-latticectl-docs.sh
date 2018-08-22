@@ -15,13 +15,6 @@ mkdir tar-temp
 
 tar -xvf latticectl-docs-markdown-bucket/latticectl-docs.tar.gz
 
-ls -la tar-temp
-
-rm -rf ./tar-temp/*
 ./docgen-binary/docgen --output-docs ./tar-temp/latticectl-reference-$TAG_NAME.md --input-docs ./lattice-repo/docs/cli
 
-
-
 tar cvzf ./tarball/latticectl-docs.tar.gz ./tar-temp/*
-
-#./docgen-binary/docgen --output-docs ./docs-html/latticectl-reference.md --input-docs ./lattice-repo/docs/cli
