@@ -18,7 +18,8 @@ const (
 	ParameterTypeObject ParameterType = "object"
 	ParameterTypeSecret ParameterType = "secret"
 
-	SecretParameterLVal = "$secret"
+	SecretParameterLVal    = "$secret"
+	SecretRefParameterLVal = "$secret_ref"
 )
 
 type ParameterTypeError struct {

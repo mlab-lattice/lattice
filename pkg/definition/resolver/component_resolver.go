@@ -39,11 +39,13 @@ type ResolutionInfo map[tree.Path]ResolutionNodeInfo
 
 // ResolutionNodeInfo contains information about the resolution of a subcomponent.
 type ResolutionNodeInfo struct {
-	Commit git.CommitReference `json:"commit"`
+	Commit       git.CommitReference    `json:"commit"`
+	SSHKeySecret *tree.PathSubcomponent `json:"sshKeySecret,omitempty"`
 }
 
 type resolutionContext struct {
 	FileReference *git.FileReference
+	SSHKeySecret  *tree.PathSubcomponent
 	SSHKey        []byte
 }
 
@@ -133,7 +135,10 @@ func (r *DefaultComponentResolver) resolveReference(
 	info ResolutionInfo,
 ) (component.Interface, error) {
 	if depth == 0 {
-		info[path] = ResolutionNodeInfo{Commit: ctx.FileReference.CommitReference}
+		info[path] = ResolutionNodeInfo{
+			Commit:       ctx.FileReference.CommitReference,
+			SSHKeySecret: ctx.SSHKeySecret,
+		}
 		return ref, nil
 	}
 
@@ -183,7 +188,10 @@ func (r *DefaultComponentResolver) resolveReference(
 		}
 	}
 
-	info[path] = ResolutionNodeInfo{Commit: resolvedCxt.FileReference.CommitReference}
+	info[path] = ResolutionNodeInfo{
+		Commit:       resolvedCxt.FileReference.CommitReference,
+		SSHKeySecret: resolvedCxt.SSHKeySecret,
+	}
 	return c, nil
 }
 
@@ -199,6 +207,7 @@ func (r *DefaultComponentResolver) resolveTemplate(
 
 	// Get the proper commit reference and file for the reference, potentially updating
 	// the context as well.
+	var sshKeySecret *tree.PathSubcomponent
 	var gitRef *git.Reference
 	var file string
 	switch {
@@ -216,6 +225,7 @@ func (r *DefaultComponentResolver) resolveTemplate(
 
 		var sshKey []byte
 		if ref.GitRepository.SSHKey != nil {
+			sshKeySecret = &ref.GitRepository.SSHKey.Value
 			sshKeyVal, err := r.secretStore.Get(systemID, ref.GitRepository.SSHKey.Value)
 			if err != nil {
 				return nil, nil, err
@@ -253,6 +263,7 @@ func (r *DefaultComponentResolver) resolveTemplate(
 	resolvedContext := &resolutionContext{
 		FileReference: fileRef,
 		SSHKey:        gitCtx.Options.SSHKey,
+		SSHKeySecret:  sshKeySecret,
 	}
 
 	// Only want to check the cache if no credentials are required.
@@ -417,7 +428,10 @@ func (r *DefaultComponentResolver) resolveSystemComponents(
 			system.Components[name] = resolved
 
 		default:
-			info[childPath] = ResolutionNodeInfo{Commit: ctx.FileReference.CommitReference}
+			info[childPath] = ResolutionNodeInfo{
+				Commit:       ctx.FileReference.CommitReference,
+				SSHKeySecret: ctx.SSHKeySecret,
+			}
 		}
 	}
 

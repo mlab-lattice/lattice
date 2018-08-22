@@ -105,10 +105,11 @@ func evaluateValue(path tree.Path, val interface{}, bindings map[string]interfac
 	}
 }
 
-func evaluateMap(path tree.Path, val, bindings map[string]interface{}) (map[string]interface{}, error) {
+func evaluateMap(path tree.Path, val, bindings map[string]interface{}) (interface{}, error) {
 	for k, v := range val {
 		// check to see if the map is a $secret
-		// TODO(kevindrosendahl): this seems a little tightly coupled, think of how to refactor
+		// TODO(kevindrosendahl): this is too tightly coupled, think of how to refactor
+		// TODO(kevindrosendahl): should check to make sure that $secret is the only key in the map
 		if k == SecretParameterLVal {
 			// Ensure the $secret key is a string
 			// TODO(kevindrosendahl): validate character set here?
@@ -125,10 +126,10 @@ func evaluateMap(path tree.Path, val, bindings map[string]interface{}) (map[stri
 				return nil, err
 			}
 
-			val[k] = &definitionv1.SecretRef{
+			secretRef := &definitionv1.SecretRef{
 				Value: secretRefPath,
 			}
-			continue
+			return secretRef, nil
 		}
 
 		result, err := evaluateValue(path, v, bindings)
@@ -142,7 +143,7 @@ func evaluateMap(path tree.Path, val, bindings map[string]interface{}) (map[stri
 	return val, nil
 }
 
-func evaluateArray(path tree.Path, val []interface{}, bindings map[string]interface{}) ([]interface{}, error) {
+func evaluateArray(path tree.Path, val []interface{}, bindings map[string]interface{}) (interface{}, error) {
 	for idx, v := range val {
 		result, err := evaluateValue(path, v, bindings)
 		if err != nil {
