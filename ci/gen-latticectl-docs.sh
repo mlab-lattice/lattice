@@ -9,7 +9,9 @@ cd lattice-repo
 TAG_NAME=$(git for-each-ref --format='%(refname:short)' refs/heads)
 cd ..
 
-echo "Building DOCS: ./docs-html/latticectl-referene-$TAG_NAME.md"
+echo "Building DOCS: latticectl-referene-$TAG_NAME.md"
+
+ls -la latticectl-docs-markdown-bucket
 
 mkdir tar-temp
 
