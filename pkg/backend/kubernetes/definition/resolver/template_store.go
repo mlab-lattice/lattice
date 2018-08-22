@@ -58,7 +58,7 @@ type KubernetesTemplateStore struct {
 }
 
 func (s *KubernetesTemplateStore) Ready() bool {
-	return cache.WaitForCacheSync(s.stopCh, s.templateListerHasSynced)
+	return cache.WaitForCacheSync(s.stopCh, s.gitTemplateListerHasSynced, s.templateListerHasSynced)
 }
 
 func (s *KubernetesTemplateStore) Put(

@@ -3,9 +3,12 @@ package template
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/mlab-lattice/lattice/pkg/definition/tree"
+	"reflect"
 	"regexp"
 	"strings"
+
+	"github.com/mlab-lattice/lattice/pkg/definition/tree"
+	definitionv1 "github.com/mlab-lattice/lattice/pkg/definition/v1"
 )
 
 const parametersField = "$parameters"
@@ -75,7 +78,7 @@ func (t *Template) Evaluate(path tree.Path, bindings map[string]interface{}) (ma
 
 	// evaluate each of the fields
 	for k, v := range t.Fields {
-		result, err := evaluateValue(v, bindings)
+		result, err := evaluateValue(path, v, bindings)
 		if err != nil {
 			return nil, err
 		}
@@ -86,25 +89,50 @@ func (t *Template) Evaluate(path tree.Path, bindings map[string]interface{}) (ma
 	return t.Fields, nil
 }
 
-func evaluateValue(val interface{}, bindings map[string]interface{}) (interface{}, error) {
+func evaluateValue(path tree.Path, val interface{}, bindings map[string]interface{}) (interface{}, error) {
 	switch v := val.(type) {
 	case map[string]interface{}:
-		return evaluateMap(v, bindings)
+		return evaluateMap(path, v, bindings)
 
 	case []interface{}:
-		return evaluateArray(v, bindings)
+		return evaluateArray(path, v, bindings)
 
 	case string:
-		return evaluateString(v, bindings)
+		return evaluateString(path, v, bindings)
 
 	default:
 		return val, nil
 	}
 }
 
-func evaluateMap(val, bindings map[string]interface{}) (map[string]interface{}, error) {
+func evaluateMap(path tree.Path, val, bindings map[string]interface{}) (interface{}, error) {
 	for k, v := range val {
-		result, err := evaluateValue(v, bindings)
+		// check to see if the map is a $secret
+		// TODO(kevindrosendahl): this is too tightly coupled, think of how to refactor
+		// TODO(kevindrosendahl): should check to make sure that $secret is the only key in the map
+		if k == SecretParameterLVal {
+			// Ensure the $secret key is a string
+			// TODO(kevindrosendahl): validate character set here?
+			name, ok := v.(string)
+			if !ok {
+				return nil, &ParameterTypeError{
+					Expected: string(ParameterTypeSecret),
+					Actual:   reflect.TypeOf(v).String(),
+				}
+			}
+
+			secretRefPath, err := tree.NewPathSubcomponentFromParts(path, name)
+			if err != nil {
+				return nil, err
+			}
+
+			secretRef := &definitionv1.SecretRef{
+				Value: secretRefPath,
+			}
+			return secretRef, nil
+		}
+
+		result, err := evaluateValue(path, v, bindings)
 		if err != nil {
 			return nil, err
 		}
@@ -115,9 +143,9 @@ func evaluateMap(val, bindings map[string]interface{}) (map[string]interface{}, 
 	return val, nil
 }
 
-func evaluateArray(val []interface{}, bindings map[string]interface{}) ([]interface{}, error) {
+func evaluateArray(path tree.Path, val []interface{}, bindings map[string]interface{}) (interface{}, error) {
 	for idx, v := range val {
-		result, err := evaluateValue(v, bindings)
+		result, err := evaluateValue(path, v, bindings)
 		if err != nil {
 			return nil, err
 		}
@@ -128,7 +156,7 @@ func evaluateArray(val []interface{}, bindings map[string]interface{}) ([]interf
 	return val, nil
 }
 
-func evaluateString(val string, bindings map[string]interface{}) (interface{}, error) {
+func evaluateString(path tree.Path, val string, bindings map[string]interface{}) (interface{}, error) {
 	// If the string is only a single variable (i.e. "${foo}"), we replace the variable with
 	// the true value of the assignment.
 	// For example, if foo was set to 3, we would return 3, not "3".
