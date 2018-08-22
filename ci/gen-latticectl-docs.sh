@@ -11,11 +11,9 @@ cd ..
 
 echo "Building DOCS: latticectl-referene-$TAG_NAME.md"
 
-rm -rf latticectl-docs-markdown-bucket/*
-
 mkdir tar-temp
 
-tar -xvf latticectl-docs-markdown-bucket/latticectl-docs.tar.gz -C tar-temp
+# tar -xvf latticectl-docs-markdown-bucket/latticectl-docs.tar.gz -C tar-temp
 
 ./docgen-binary/docgen --output-docs ./tar-temp/latticectl-reference-$TAG_NAME.md --input-docs ./lattice-repo/docs/cli
 
