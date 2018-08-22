@@ -9,7 +9,6 @@ import (
 
 type SecretStore interface {
 	Ready() bool
-	Put(systemID v1.SystemID, path tree.PathSubcomponent, v string) error
 	Get(systemID v1.SystemID, path tree.PathSubcomponent) (string, error)
 }
 
@@ -32,11 +31,6 @@ type MemorySecretStore struct {
 
 func (s *MemorySecretStore) Ready() bool {
 	return true
-}
-
-func (s *MemorySecretStore) Put(systemID v1.SystemID, path tree.PathSubcomponent, v string) error {
-	s.store[s.keyString(systemID, path)] = v
-	return nil
 }
 
 func (s *MemorySecretStore) Get(systemID v1.SystemID, path tree.PathSubcomponent) (string, error) {
