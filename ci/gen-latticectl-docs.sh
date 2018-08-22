@@ -23,6 +23,6 @@ ls -la tar-temp
 
 rm ./latticectl-docs-markdown-bucket/latticectl-docs.tar.gz
 
-tar cvzf ./latticectl-docs-markdown-bucket/latticectl-docs.tar.gz ./tar-temp
+tar cvzf ./tarball/latticectl-docs.tar.gz ./tar-temp
 
 #./docgen-binary/docgen --output-docs ./docs-html/latticectl-reference.md --input-docs ./lattice-repo/docs/cli

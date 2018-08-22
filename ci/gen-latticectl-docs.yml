@@ -8,5 +8,7 @@ inputs:
   - name: lattice-repo
   - name: docgen-binary
   - name: latticectl-docs-markdown-bucket
+outputs:
+  - name: tarball
 run:
   path: lattice-repo/ci/gen-latticectl-docs.sh
