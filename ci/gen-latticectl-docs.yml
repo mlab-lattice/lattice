@@ -7,7 +7,8 @@ image_resource:
 inputs:
   - name: lattice-repo
   - name: docgen-binary
+  - name: latticectl-docs-markdown-bucket
 outputs:
-  - name: docs-html
+  - name: latticectl-docs-markdown-bucket
 run:
   path: lattice-repo/ci/gen-latticectl-docs.sh
