@@ -11,7 +11,7 @@ cd ..
 
 echo "Building DOCS: latticectl-referene-$TAG_NAME.md"
 
-ls -la latticectl-docs-markdown-bucket
+rm -rf latticectl-docs-markdown-bucket/*
 
 mkdir tar-temp
 
