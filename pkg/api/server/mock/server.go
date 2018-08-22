@@ -10,5 +10,9 @@ const (
 )
 
 func RunMockNewRestServer() {
-	rest.RunNewRestServer(newMockBackend(), mockServerAPIPort, newMockSystemResolver(), mockServerAPIKey)
+	backend, err := newMockBackend()
+	if err != nil {
+		panic(err)
+	}
+	rest.RunNewRestServer(backend, newMockComponentResolver(), mockServerAPIPort, mockServerAPIKey)
 }

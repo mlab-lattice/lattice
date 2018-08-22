@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
+	"github.com/mlab-lattice/lattice/pkg/definition/resolver"
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 	definitionv1 "github.com/mlab-lattice/lattice/pkg/definition/v1"
 	"github.com/mlab-lattice/lattice/pkg/util/git"
@@ -16,12 +17,19 @@ import (
 type Backend struct {
 	systemRegistry map[v1.SystemID]*systemRecord
 	registryLock   sync.RWMutex
+	gitResolver    *git.Resolver
 }
 
-func newMockBackend() *Backend {
+func newMockBackend() (*Backend, error) {
+	gitResolver, err := git.NewResolver("/tmp/lattice-api-mock", true)
+
+	if err != nil {
+		return nil, err
+	}
 	return &Backend{
 		systemRegistry: make(map[v1.SystemID]*systemRecord),
-	}
+		gitResolver:    gitResolver,
+	}, nil
 }
 
 type systemRecord struct {
@@ -105,6 +113,7 @@ func (backend *Backend) DeleteSystem(systemID v1.SystemID) error {
 func (backend *Backend) Build(
 	systemID v1.SystemID,
 	def *definitionv1.SystemNode,
+	ri resolver.ResolutionInfo,
 	v v1.SystemVersion) (*v1.Build, error) {
 
 	record, err := backend.getSystemRecord(systemID)
@@ -113,7 +122,7 @@ func (backend *Backend) Build(
 	}
 
 	// validate definition URL
-	if !git.IsValidRepositoryURI(record.system.DefinitionURL) {
+	if !backend.gitResolver.IsValidRepositoryURI(record.system.DefinitionURL) {
 		return nil, fmt.Errorf("bad url: %v", record.system.DefinitionURL)
 	}
 	// validate version
@@ -165,7 +174,7 @@ func (backend *Backend) GetBuild(systemID v1.SystemID, buildID v1.BuildID) (*v1.
 func (backend *Backend) BuildLogs(
 	systemID v1.SystemID,
 	buildID v1.BuildID,
-	path tree.NodePath,
+	path tree.Path,
 	sidecar *string,
 	logOptions *v1.ContainerLogOptions,
 ) (io.ReadCloser, error) {
@@ -204,9 +213,10 @@ func (backend *Backend) DeployBuild(systemID v1.SystemID, buildID v1.BuildID) (*
 func (backend *Backend) DeployVersion(
 	systemID v1.SystemID,
 	def *definitionv1.SystemNode,
+	ri resolver.ResolutionInfo,
 	version v1.SystemVersion) (*v1.Deploy, error) {
 	// this ensures the system is created as well
-	build, err := backend.Build(systemID, def, version)
+	build, err := backend.Build(systemID, def, ri, version)
 	if err != nil {
 		return nil, err
 	}
@@ -332,7 +342,7 @@ func (backend *Backend) GetService(systemID v1.SystemID, serviceID v1.ServiceID)
 	return nil, v1.NewInvalidServiceIDError(serviceID)
 }
 
-func (backend *Backend) GetServiceByPath(systemID v1.SystemID, path tree.NodePath) (*v1.Service, error) {
+func (backend *Backend) GetServiceByPath(systemID v1.SystemID, path tree.Path) (*v1.Service, error) {
 	record, err := backend.getSystemRecord(systemID)
 	if err != nil {
 		return nil, err
@@ -370,7 +380,7 @@ func (backend *Backend) ListSystemSecrets(systemID v1.SystemID) ([]v1.Secret, er
 	return record.secrets, nil
 }
 
-func (backend *Backend) GetSystemSecret(systemID v1.SystemID, path tree.NodePath, name string) (*v1.Secret, error) {
+func (backend *Backend) GetSystemSecret(systemID v1.SystemID, path tree.Path, name string) (*v1.Secret, error) {
 	record, err := backend.getSystemRecord(systemID)
 	if err != nil {
 		return nil, err
@@ -389,7 +399,7 @@ func (backend *Backend) GetSystemSecret(systemID v1.SystemID, path tree.NodePath
 	return nil, v1.NewInvalidSystemSecretError(path, name)
 }
 
-func (backend *Backend) SetSystemSecret(systemID v1.SystemID, path tree.NodePath, name, value string) error {
+func (backend *Backend) SetSystemSecret(systemID v1.SystemID, path tree.Path, name, value string) error {
 	record, err := backend.getSystemRecord(systemID)
 	if err != nil {
 		return err
@@ -409,7 +419,7 @@ func (backend *Backend) SetSystemSecret(systemID v1.SystemID, path tree.NodePath
 	return nil
 }
 
-func (backend *Backend) UnsetSystemSecret(systemID v1.SystemID, path tree.NodePath, name string) error {
+func (backend *Backend) UnsetSystemSecret(systemID v1.SystemID, path tree.Path, name string) error {
 	record, err := backend.getSystemRecord(systemID)
 	if err != nil {
 		return err
@@ -460,7 +470,7 @@ func (backend *Backend) GetNodePool(systemID v1.SystemID, path v1.NodePoolPath) 
 }
 
 // Jobs
-func (backend *Backend) RunJob(systemID v1.SystemID, path tree.NodePath, command []string,
+func (backend *Backend) RunJob(systemID v1.SystemID, path tree.Path, command []string,
 	environment definitionv1.ContainerEnvironment,
 ) (*v1.Job, error) {
 	// TODO implement RunJob
@@ -506,12 +516,12 @@ func (backend *Backend) getSystemRecordForBuild(buildID v1.BuildID) *systemRecor
 }
 
 func (backend *Backend) newMockBuild(systemID v1.SystemID, v v1.SystemVersion) *v1.Build {
-	service1Path := tree.NodePath(fmt.Sprintf("/%s/api", systemID))
+	service1Path := tree.Path(fmt.Sprintf("/%s/api", systemID))
 	build := &v1.Build{
 		ID:      v1.BuildID(uuid.NewV4().String()),
 		State:   v1.BuildStatePending,
 		Version: v,
-		Services: map[tree.NodePath]v1.ServiceBuild{
+		Services: map[tree.Path]v1.ServiceBuild{
 			service1Path: {
 				ContainerBuild: v1.ContainerBuild{
 					State: v1.ContainerBuildStatePending,
@@ -570,7 +580,7 @@ func (backend *Backend) finishBuild(build *v1.Build) {
 
 	// update system services...
 	systemRecord := backend.getSystemRecordForBuild(build.ID)
-	services := make(map[tree.NodePath]v1.Service)
+	services := make(map[tree.Path]v1.Service)
 	for _, build := range systemRecord.builds {
 		for path := range build.Services {
 			services[path] = v1.Service{

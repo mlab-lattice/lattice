@@ -204,7 +204,7 @@ func buildAndDeploy(t *testing.T) {
 
 func testSecrets(t *testing.T) {
 	fmt.Println("Testing secrets...")
-	path, _ := tree.NewNodePath("/mock/test")
+	path, _ := tree.NewPath("/mock/test")
 	fmt.Println("set secret")
 	err := latticeClient.Systems().Secrets(mockSystemID).Set(path, "x", "1")
 	checkErr(err, t)
@@ -352,7 +352,7 @@ func testInvalidDefinition(t *testing.T) {
 	fmt.Println("Test invalid definition URL")
 
 	testID := v1.SystemID("test")
-	_, err := latticeClient.Systems().Create("test", "giddd://bad-url")
+	_, err := latticeClient.Systems().Create("test", "xxxxxxx")
 	checkErr(err, t)
 
 	_, err = latticeClient.Systems().Builds(testID).Create(mockSystemVersion)
