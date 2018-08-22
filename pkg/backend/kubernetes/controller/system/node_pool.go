@@ -161,7 +161,7 @@ func (c *Controller) syncSystemNodePools(
 
 func (c *Controller) createNewNodePool(
 	system *latticev1.System,
-	path tree.NodePath,
+	path tree.Path,
 	name string,
 	spec latticev1.NodePoolSpec,
 ) (*latticev1.NodePool, error) {
@@ -177,7 +177,7 @@ func (c *Controller) createNewNodePool(
 
 func (c *Controller) newNodePool(
 	system *latticev1.System,
-	path tree.NodePath,
+	path tree.Path,
 	name string,
 	spec latticev1.NodePoolSpec,
 ) *latticev1.NodePool {
@@ -217,7 +217,7 @@ func (c *Controller) deleteNodePool(nodePool *latticev1.NodePool) error {
 func (c *Controller) updateNodePool(
 	nodePool *latticev1.NodePool,
 	spec latticev1.NodePoolSpec,
-	path tree.NodePath,
+	path tree.Path,
 	name string,
 ) (*latticev1.NodePool, error) {
 	if !c.nodePoolNeedsUpdate(nodePool, spec, path, name) {
@@ -245,7 +245,7 @@ func (c *Controller) updateNodePool(
 func (c *Controller) nodePoolNeedsUpdate(
 	nodePool *latticev1.NodePool,
 	spec latticev1.NodePoolSpec,
-	path tree.NodePath,
+	path tree.Path,
 	name string,
 ) bool {
 	if !reflect.DeepEqual(nodePool.Spec, spec) {
@@ -261,7 +261,7 @@ func (c *Controller) nodePoolNeedsUpdate(
 	return currentPath != np
 }
 
-func (c *Controller) getNodePoolFromCache(namespace string, path tree.NodePath, name string) (*latticev1.NodePool, error) {
+func (c *Controller) getNodePoolFromCache(namespace string, path tree.Path, name string) (*latticev1.NodePool, error) {
 	selector, err := sharedNodePoolSelector(namespace, path, name)
 	if err != nil {
 		return nil, err
@@ -283,7 +283,7 @@ func (c *Controller) getNodePoolFromCache(namespace string, path tree.NodePath, 
 	return nodePools[0], nil
 }
 
-func (c *Controller) getNodePoolFromAPI(namespace string, path tree.NodePath, name string) (*latticev1.NodePool, error) {
+func (c *Controller) getNodePoolFromAPI(namespace string, path tree.Path, name string) (*latticev1.NodePool, error) {
 	selector, err := sharedNodePoolSelector(namespace, path, name)
 	if err != nil {
 		return nil, err
@@ -305,7 +305,7 @@ func (c *Controller) getNodePoolFromAPI(namespace string, path tree.NodePath, na
 	return &nodePools.Items[0], nil
 }
 
-func sharedNodePoolSelector(namespace string, path tree.NodePath, name string) (labels.Selector, error) {
+func sharedNodePoolSelector(namespace string, path tree.Path, name string) (labels.Selector, error) {
 	selector := labels.NewSelector()
 	requirement, err := labels.NewRequirement(
 		latticev1.NodePoolSystemSharedPathLabelKey,

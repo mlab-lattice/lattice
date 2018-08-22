@@ -58,13 +58,13 @@ func (s *Job) Description(namespacePrefix string) string {
 	return fmt.Sprintf("job %v (no path, system %v)", s.Name, systemID)
 }
 
-func (s *Job) PathLabel() (tree.NodePath, error) {
+func (s *Job) PathLabel() (tree.Path, error) {
 	path, ok := s.Labels[JobPathLabelKey]
 	if !ok {
 		return "", fmt.Errorf("job did not contain job path label")
 	}
 
-	return tree.NewNodePathFromDomain(path)
+	return tree.NewPathFromDomain(path)
 }
 
 func (s *Job) NodePoolAnnotation() (NodePoolAnnotationValue, error) {

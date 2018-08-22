@@ -17,7 +17,6 @@ const (
 	ErrorCodeInvalidBuildID       ErrorCode = "INVALID_BUILD_ID"
 	ErrorCodeInvalidDeployID      ErrorCode = "INVALID_DEPLOY_ID"
 	ErrorCodeInvalidTeardownID    ErrorCode = "INVALID_TEARDOWN_ID"
-	ErrorCodeInvalidServiceID     ErrorCode = "INVALID_SERVICE_ID"
 	ErrorCodeInvalidServicePath   ErrorCode = "INVALID_SERVICE_PATH"
 	ErrorCodeInvalidSidecar       ErrorCode = "INVALID_SIDECAR"
 	ErrorCodeInvalidSystemSecret  ErrorCode = "INVALID_SYSTEM_SECRET"
@@ -177,32 +176,14 @@ func (e *InvalidTeardownIDError) Code() ErrorCode {
 	return ErrorCodeInvalidTeardownID
 }
 
-func NewInvalidServiceIDError(id ServiceID) *InvalidServiceIDError {
-	return &InvalidServiceIDError{
-		ID: id,
-	}
-}
-
-type InvalidServiceIDError struct {
-	ID ServiceID `json:"id"`
-}
-
-func (e *InvalidServiceIDError) Error() string {
-	return fmt.Sprintf("invalid service %v", e.ID)
-}
-
-func (e *InvalidServiceIDError) Code() ErrorCode {
-	return ErrorCodeInvalidServiceID
-}
-
-func NewInvalidServicePathError(path tree.NodePath) *InvalidServicePathError {
+func NewInvalidServicePathError(path tree.Path) *InvalidServicePathError {
 	return &InvalidServicePathError{
 		Path: path,
 	}
 }
 
 type InvalidServicePathError struct {
-	Path tree.NodePath `json:"path"`
+	Path tree.Path `json:"path"`
 }
 
 func (e *InvalidServicePathError) Error() string {
@@ -231,7 +212,7 @@ func (e *InvalidSidecarError) Code() ErrorCode {
 	return ErrorCodeInvalidSidecar
 }
 
-func NewInvalidSystemSecretError(path tree.NodePath, name string) *InvalidSystemSecretError {
+func NewInvalidSystemSecretError(path tree.Path, name string) *InvalidSystemSecretError {
 	return &InvalidSystemSecretError{
 		Path: path,
 		Name: name,
@@ -239,8 +220,8 @@ func NewInvalidSystemSecretError(path tree.NodePath, name string) *InvalidSystem
 }
 
 type InvalidSystemSecretError struct {
-	Path tree.NodePath `json:"path"`
-	Name string        `json:"name"`
+	Path tree.Path `json:"path"`
+	Name string    `json:"name"`
 }
 
 func (e *InvalidSystemSecretError) Error() string {

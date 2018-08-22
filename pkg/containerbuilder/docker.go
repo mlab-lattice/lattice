@@ -8,7 +8,6 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	definitionv1 "github.com/mlab-lattice/lattice/pkg/definition/v1"
@@ -19,8 +18,8 @@ import (
 	"github.com/fatih/color"
 )
 
-func (b *Builder) buildDockerImageComponent() error {
-	sourceDockerImageFQN, err := getDockerImageFQNFromDockerImageBlock(b.ContainerBuild.DockerImage)
+func (b *Builder) buildDockerImageContainer(image *definitionv1.DockerImage) error {
+	sourceDockerImageFQN, err := getDockerImageFQNFromDockerImageBlock(image)
 	if err != nil {
 		return err
 	}
@@ -43,7 +42,7 @@ func (b *Builder) buildDockerImageComponent() error {
 	return b.pushDockerImage()
 }
 
-func (b *Builder) buildDockerImage(sourceDirectory string) error {
+func (b *Builder) buildDockerImage(sourceDirectory, baseImage, dockerfileCommand string) error {
 	color.Blue("Building docker image...")
 
 	if b.StatusUpdater != nil {
@@ -53,7 +52,7 @@ func (b *Builder) buildDockerImage(sourceDirectory string) error {
 	}
 
 	// Get Dockerfile contents and write them to the directory
-	dockerfileContents, err := b.getDockerfileContents(sourceDirectory)
+	dockerfileContents, err := b.getDockerfileContents(sourceDirectory, baseImage, dockerfileCommand)
 	if err != nil {
 		return newErrorInternal("could not get Dockerfile contents: " + err.Error())
 	}
@@ -107,16 +106,7 @@ func (b *Builder) buildDockerImage(sourceDirectory string) error {
 	return b.pushDockerImage()
 }
 
-func (b *Builder) getDockerfileContents(sourceDirectory string) (string, error) {
-	if b.ContainerBuild.Command == nil {
-		return "", newErrorUser("component build command cannot be nil")
-	}
-
-	baseDockerImage, err := b.getBaseDockerImage()
-	if err != nil {
-		return "", err
-	}
-
+func (b *Builder) getDockerfileContents(sourceDirectory, baseImage, dockerfileCommand string) (string, error) {
 	relativeSourceDirectory, err := filepath.Rel(b.WorkingDir, sourceDirectory)
 	if err != nil {
 		return "", newErrorInternal("could not get relative source directory: " + err.Error())
@@ -129,25 +119,13 @@ WORKDIR /usr/src/app
 
 COPY %v /usr/src/app
 
-RUN %v`,
-		baseDockerImage,
+%v`,
+		baseImage,
 		relativeSourceDirectory,
-		strings.Join(b.ContainerBuild.Command, " "),
+		dockerfileCommand,
 	)
 
 	return dockerfileContents, nil
-}
-
-func (b *Builder) getBaseDockerImage() (string, error) {
-	if b.ContainerBuild.BaseDockerImage != nil {
-		return getDockerImageFQNFromDockerImageBlock(b.ContainerBuild.BaseDockerImage)
-	}
-
-	if b.ContainerBuild.Language != nil {
-		return *b.ContainerBuild.Language, nil
-	}
-
-	return "", newErrorUser("component build must have base_docker_image or language")
 }
 
 func getDockerImageFQNFromDockerImageBlock(image *definitionv1.DockerImage) (string, error) {

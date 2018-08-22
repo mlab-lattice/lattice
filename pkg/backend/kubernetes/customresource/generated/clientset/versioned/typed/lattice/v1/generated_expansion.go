@@ -12,6 +12,8 @@ type ContainerBuildExpansion interface{}
 
 type DeployExpansion interface{}
 
+type GitTemplateExpansion interface{}
+
 type JobExpansion interface{}
 
 type JobRunExpansion interface{}
@@ -23,3 +25,5 @@ type ServiceExpansion interface{}
 type SystemExpansion interface{}
 
 type TeardownExpansion interface{}
+
+type TemplateExpansion interface{}

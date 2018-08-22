@@ -16,7 +16,7 @@ import (
 
 const (
 	V2ServiceAVersion          = "2.0.0"
-	V2ServiceAPath             = tree.NodePath("/test/a")
+	V2ServiceAPath             = tree.Path("/test/a")
 	V2ServiceAPublicPort int32 = 8080
 )
 

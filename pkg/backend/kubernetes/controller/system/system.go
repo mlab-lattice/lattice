@@ -11,7 +11,7 @@ import (
 
 func (c *Controller) syncSystemStatus(
 	system *latticev1.System,
-	services map[tree.NodePath]latticev1.SystemStatusService,
+	services map[tree.Path]latticev1.SystemStatusService,
 	nodePools map[string]latticev1.SystemStatusNodePool,
 ) error {
 	hasFailedService, hasUpdatingService, hasScalingService, err := servicesStateInfo(services)
@@ -45,7 +45,7 @@ func (c *Controller) syncSystemStatus(
 	return err
 }
 
-func servicesStateInfo(services map[tree.NodePath]latticev1.SystemStatusService) (bool, bool, bool, error) {
+func servicesStateInfo(services map[tree.Path]latticev1.SystemStatusService) (bool, bool, bool, error) {
 	hasFailedService := false
 	hasUpdatingService := false
 	hasScalingService := false
@@ -112,7 +112,7 @@ func nodePoolsStateInfo(nodePools map[string]latticev1.SystemStatusNodePool) (bo
 func (c *Controller) updateSystemStatus(
 	system *latticev1.System,
 	state latticev1.SystemState,
-	services map[tree.NodePath]latticev1.SystemStatusService,
+	services map[tree.Path]latticev1.SystemStatusService,
 ) (*latticev1.System, error) {
 	status := latticev1.SystemStatus{
 		ObservedGeneration: system.Generation,

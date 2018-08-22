@@ -67,13 +67,13 @@ func (s *Service) Description(namespacePrefix string) string {
 	return fmt.Sprintf("service %v (no path, system %v)", s.Name, systemID)
 }
 
-func (s *Service) PathLabel() (tree.NodePath, error) {
+func (s *Service) PathLabel() (tree.Path, error) {
 	path, ok := s.Labels[ServicePathLabelKey]
 	if !ok {
 		return "", fmt.Errorf("service did not contain service path label")
 	}
 
-	return tree.NewNodePathFromDomain(path)
+	return tree.NewPathFromDomain(path)
 }
 
 func (s *Service) NodePoolAnnotation() (NodePoolAnnotationValue, error) {

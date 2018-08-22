@@ -58,6 +58,17 @@ func (c *Controller) updateAddressAnnotations(address *latticev1.Address, annota
 	return result, nil
 }
 
+func (c *Controller) mergeAndUpdateAddressAnnotations(address *latticev1.Address, annotations map[string]string) (*latticev1.Address, error) {
+	annotations_ := make(map[string]string)
+	for k, v := range address.Annotations {
+		annotations_[k] = v
+	}
+	for k, v := range annotations {
+		annotations_[k] = v
+	}
+	return c.updateAddressAnnotations(address, annotations_)
+}
+
 func (c *Controller) addFinalizer(address *latticev1.Address) (*latticev1.Address, error) {
 	// Check to see if the finalizer already exists. If so nothing needs to be done.
 	for _, finalizer := range address.Finalizers {

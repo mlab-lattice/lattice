@@ -2,6 +2,7 @@ package envoy
 
 import (
 	"fmt"
+	"net"
 
 	kubeconstants "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/constants"
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
@@ -19,8 +20,7 @@ import (
 type LatticeBootstrapperOptions struct {
 	PrepareImage      string
 	Image             string
-	RedirectCIDRBlock string
-	XDSAPIVersion     string
+	RedirectCIDRBlock net.IPNet
 	XDSAPIImage       string
 	XDSAPIPort        int32
 }
@@ -50,7 +50,7 @@ func LatticeBootstrapperFlags() (cli.Flags, *LatticeBootstrapperOptions) {
 			Default: "envoyproxy/envoy-alpine",
 			Target:  &options.Image,
 		},
-		&cli.StringFlag{
+		&cli.IPNetFlag{
 			Name:     "redirect-cidr-block",
 			Required: true,
 			Target:   &options.RedirectCIDRBlock,
@@ -74,7 +74,7 @@ type DefaultEnvoylatticeBootstrapper struct {
 
 	prepareImage      string
 	image             string
-	redirectCIDRBlock string
+	redirectCIDRBlock net.IPNet
 	xdsAPIImage       string
 	xdsAPIPort        int32
 }
@@ -88,7 +88,7 @@ func (b *DefaultEnvoylatticeBootstrapper) BootstrapLatticeResources(resources *b
 			daemonSet.Spec.Template.Spec.Containers[0].Args = append(
 				daemonSet.Spec.Template.Spec.Containers[0].Args,
 				"--service-mesh", Envoy,
-				"--service-mesh-var", fmt.Sprintf("redirect-cidr-block=%v", b.redirectCIDRBlock),
+				"--service-mesh-var", fmt.Sprintf("redirect-cidr-block=%v", b.redirectCIDRBlock.String()),
 				"--service-mesh-var", fmt.Sprintf("xds-api-port=%v", b.xdsAPIPort),
 			)
 		}
@@ -177,6 +177,7 @@ func (b *DefaultEnvoylatticeBootstrapper) BootstrapLatticeResources(resources *b
 							Args: []string{
 								"-v", "5",
 								"-logtostderr",
+								"-redirect-cidr-block", b.redirectCIDRBlock.String(),
 							},
 							Image: b.xdsAPIImage,
 							Ports: []corev1.ContainerPort{
@@ -222,6 +223,12 @@ var envoyRBACPolicyRules = []rbacv1.PolicyRule{
 	{
 		APIGroups: []string{latticev1.GroupName},
 		Resources: []string{latticev1.ResourcePluralService},
+		Verbs:     []string{"get", "watch", "list"},
+	},
+	// Read lattice addresses
+	{
+		APIGroups: []string{latticev1.GroupName},
+		Resources: []string{latticev1.ResourcePluralAddress},
 		Verbs:     []string{"get", "watch", "list"},
 	},
 }

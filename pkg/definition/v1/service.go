@@ -14,6 +14,9 @@ var ServiceType = component.Type{
 	Type:       ComponentTypeService,
 }
 
+//  NOTE: if you update the Service struct, you _must_ update the
+//        serviceEncoder struct as well as the serviceIR struct
+
 type Service struct {
 	Description string
 
@@ -100,7 +103,7 @@ type serviceEncoder struct {
 	Container
 	Sidecars map[string]Container `json:"sidecars,omitempty"`
 
-	NumInstances int32                `json:"num_instances"`
-	NodePool     *NodePoolOrReference `json:"node_pool"`
-	InstanceType *string              `json:"instance_type"`
+	NumInstances int32                `json:"num_instances,omitempty"`
+	NodePool     *NodePoolOrReference `json:"node_pool,omitempty"`
+	InstanceType *string              `json:"instance_type,omitempty"`
 }

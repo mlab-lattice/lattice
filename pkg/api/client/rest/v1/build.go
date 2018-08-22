@@ -89,7 +89,7 @@ func (c *BuildClient) Get(id v1.BuildID) (*v1.Build, error) {
 
 func (c *BuildClient) Logs(
 	id v1.BuildID,
-	path tree.NodePath,
+	path tree.Path,
 	sidecar *string,
 	logOptions *v1.ContainerLogOptions,
 ) (io.ReadCloser, error) {

@@ -44,7 +44,7 @@ func (c *SystemSecretClient) List() ([]v1.Secret, error) {
 	return nil, HandleErrorStatusCode(statusCode, body)
 }
 
-func (c *SystemSecretClient) Get(path tree.NodePath, name string) (*v1.Secret, error) {
+func (c *SystemSecretClient) Get(path tree.Path, name string) (*v1.Secret, error) {
 	escapedPath := fmt.Sprintf("%v:%v", urlutil.PathEscape(string(path)), name)
 	url := fmt.Sprintf("%v%v", c.apiServerURL, fmt.Sprintf(v1rest.SystemSecretPathFormat, c.systemID, escapedPath))
 	body, statusCode, err := c.restClient.Get(url).Body()
@@ -62,7 +62,7 @@ func (c *SystemSecretClient) Get(path tree.NodePath, name string) (*v1.Secret, e
 	return nil, HandleErrorStatusCode(statusCode, body)
 }
 
-func (c *SystemSecretClient) Set(path tree.NodePath, name, value string) error {
+func (c *SystemSecretClient) Set(path tree.Path, name, value string) error {
 	request := &v1rest.SetSecretRequest{
 		Value: value,
 	}
@@ -86,7 +86,7 @@ func (c *SystemSecretClient) Set(path tree.NodePath, name, value string) error {
 	return HandleErrorStatusCode(statusCode, body)
 }
 
-func (c *SystemSecretClient) Unset(path tree.NodePath, name string) error {
+func (c *SystemSecretClient) Unset(path tree.Path, name string) error {
 	escapedPath := fmt.Sprintf("%v:%v", urlutil.PathEscape(string(path)), name)
 	url := fmt.Sprintf("%v%v", c.apiServerURL, fmt.Sprintf(v1rest.SystemSecretPathFormat, c.systemID, escapedPath))
 	body, statusCode, err := c.restClient.Delete(url).Body()

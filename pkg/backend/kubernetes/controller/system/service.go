@@ -15,7 +15,7 @@ import (
 	"github.com/satori/go.uuid"
 )
 
-func (c *Controller) syncSystemServices(system *latticev1.System) (map[tree.NodePath]latticev1.SystemStatusService, error) {
+func (c *Controller) syncSystemServices(system *latticev1.System) (map[tree.Path]latticev1.SystemStatusService, error) {
 	// N.B.: as it currently is, this controller does not allow for a "move" i.e.
 	// renaming a service (changing its path). When it comes time to implement that,
 	// a possible approach would be to add an annotation indicating what moves need to be made,
@@ -23,7 +23,7 @@ func (c *Controller) syncSystemServices(system *latticev1.System) (map[tree.Node
 	// Also when renaming a service it should probably also be done via an annotation, so other components
 	// can continue to just look at the label as the confirmed path of the service, as opposed to trying
 	// to figure out if a rename is in flight.
-	services := make(map[tree.NodePath]latticev1.SystemStatusService)
+	services := make(map[tree.Path]latticev1.SystemStatusService)
 	systemNamespace := system.ResourceNamespace(c.namespacePrefix)
 	serviceNames := mapset.NewSet()
 
@@ -155,7 +155,7 @@ func (c *Controller) syncSystemServices(system *latticev1.System) (map[tree.Node
 func (c *Controller) createNewService(
 	system *latticev1.System,
 	serviceInfo *latticev1.SystemSpecServiceInfo,
-	path tree.NodePath,
+	path tree.Path,
 ) (*latticev1.Service, error) {
 	service, err := c.newService(system, serviceInfo, path)
 	if err != nil {
@@ -173,7 +173,7 @@ func (c *Controller) createNewService(
 func (c *Controller) newService(
 	system *latticev1.System,
 	serviceInfo *latticev1.SystemSpecServiceInfo,
-	path tree.NodePath,
+	path tree.Path,
 ) (*latticev1.Service, error) {
 	systemNamespace := system.ResourceNamespace(c.namespacePrefix)
 	service := &latticev1.Service{
@@ -224,7 +224,7 @@ func (c *Controller) deleteService(service *latticev1.Service) error {
 	return nil
 }
 
-func (c *Controller) updateService(service *latticev1.Service, spec latticev1.ServiceSpec, path tree.NodePath) (*latticev1.Service, error) {
+func (c *Controller) updateService(service *latticev1.Service, spec latticev1.ServiceSpec, path tree.Path) (*latticev1.Service, error) {
 	if !c.serviceNeedsUpdate(service, spec, path) {
 		return service, nil
 	}
@@ -246,7 +246,7 @@ func (c *Controller) updateService(service *latticev1.Service, spec latticev1.Se
 	return result, err
 }
 
-func (c *Controller) serviceNeedsUpdate(service *latticev1.Service, spec latticev1.ServiceSpec, path tree.NodePath) bool {
+func (c *Controller) serviceNeedsUpdate(service *latticev1.Service, spec latticev1.ServiceSpec, path tree.Path) bool {
 	if !reflect.DeepEqual(service.Spec, spec) {
 		return true
 	}
@@ -259,7 +259,7 @@ func (c *Controller) serviceNeedsUpdate(service *latticev1.Service, spec lattice
 	return currentPath != path
 }
 
-func (c *Controller) getServiceFromCache(namespace string, path tree.NodePath) (*latticev1.Service, error) {
+func (c *Controller) getServiceFromCache(namespace string, path tree.Path) (*latticev1.Service, error) {
 	selector := labels.NewSelector()
 	requirement, err := labels.NewRequirement(latticev1.ServicePathLabelKey, selection.Equals, []string{path.ToDomain()})
 	if err != nil {
@@ -283,7 +283,7 @@ func (c *Controller) getServiceFromCache(namespace string, path tree.NodePath) (
 	return services[0], nil
 }
 
-func (c *Controller) getServiceFromAPI(namespace string, path tree.NodePath) (*latticev1.Service, error) {
+func (c *Controller) getServiceFromAPI(namespace string, path tree.Path) (*latticev1.Service, error) {
 	selector := labels.NewSelector()
 	requirement, err := labels.NewRequirement(latticev1.ServicePathLabelKey, selection.Equals, []string{path.ToDomain()})
 	if err != nil {

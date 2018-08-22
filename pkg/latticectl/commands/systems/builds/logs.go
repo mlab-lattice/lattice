@@ -73,7 +73,7 @@ func (c *LogsCommand) Base() (*latticectl.BaseCommand, error) {
 			},
 		},
 		Run: func(ctx latticectl.BuildCommandContext, args []string) {
-			path, err := tree.NewNodePath(pathStr)
+			path, err := tree.NewPath(pathStr)
 			if err != nil {
 				log.Fatal("invalid node path: " + pathStr)
 			}
@@ -110,7 +110,7 @@ func (c *LogsCommand) Base() (*latticectl.BaseCommand, error) {
 func GetBuildLogs(
 	client v1client.BuildClient,
 	buildID v1.BuildID,
-	path tree.NodePath,
+	path tree.Path,
 	sidecar *string,
 	logOptions *v1.ContainerLogOptions,
 	w io.Writer,
