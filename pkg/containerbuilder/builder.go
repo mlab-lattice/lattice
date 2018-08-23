@@ -3,25 +3,22 @@ package containerbuilder
 import (
 	"os"
 
+	dockerclient "github.com/docker/docker/client"
+	"github.com/fatih/color"
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	definitionv1 "github.com/mlab-lattice/lattice/pkg/definition/v1"
 	"github.com/mlab-lattice/lattice/pkg/util/docker"
 	"github.com/mlab-lattice/lattice/pkg/util/git"
-
-	dockerclient "github.com/docker/docker/client"
-	"github.com/fatih/color"
 )
 
 type Builder struct {
-	BuildID            v1.ContainerBuildID
-	SystemID           v1.SystemID
-	WorkingDir         string
-	ContainerBuild     *definitionv1.ContainerBuild
-	DockerOptions      *DockerOptions
-	DockerClient       *dockerclient.Client
-	GitResolver        *git.Resolver
-	GitResolverOptions *GitResolverOptions
-	StatusUpdater      StatusUpdater
+	BuildID       v1.ContainerBuildID
+	SystemID      v1.SystemID
+	WorkingDir    string
+	DockerOptions *DockerOptions
+	DockerClient  *dockerclient.Client
+	GitOptions    *git.Options
+	StatusUpdater StatusUpdater
 }
 
 type DockerOptions struct {
@@ -30,10 +27,6 @@ type DockerOptions struct {
 	Tag                  string
 	Push                 bool
 	RegistryAuthProvider docker.RegistryLoginProvider
-}
-
-type GitResolverOptions struct {
-	SSHKey []byte
 }
 
 type ErrorUser struct {
@@ -74,8 +67,7 @@ func NewBuilder(
 	systemID v1.SystemID,
 	workDirectory string,
 	dockerOptions *DockerOptions,
-	gitResolverOptions *GitResolverOptions,
-	containerBuild *definitionv1.ContainerBuild,
+	gitResolverOptions *git.Options,
 	updater StatusUpdater,
 ) (*Builder, error) {
 	if workDirectory == "" {
@@ -87,11 +79,7 @@ func NewBuilder(
 	}
 
 	if gitResolverOptions == nil {
-		gitResolverOptions = &GitResolverOptions{}
-	}
-
-	if containerBuild == nil {
-		return nil, newErrorInternal("containerBuild not supplied")
+		gitResolverOptions = &git.Options{}
 	}
 
 	dockerClient, err := dockerclient.NewEnvClient()
@@ -103,33 +91,32 @@ func NewBuilder(
 	color.NoColor = false
 
 	b := &Builder{
-		BuildID:            buildID,
-		SystemID:           systemID,
-		WorkingDir:         workDirectory,
-		ContainerBuild:     containerBuild,
-		DockerOptions:      dockerOptions,
-		DockerClient:       dockerClient,
-		GitResolverOptions: gitResolverOptions,
-		StatusUpdater:      updater,
+		BuildID:       buildID,
+		SystemID:      systemID,
+		WorkingDir:    workDirectory,
+		DockerOptions: dockerOptions,
+		DockerClient:  dockerClient,
+		GitOptions:    gitResolverOptions,
+		StatusUpdater: updater,
 	}
 	return b, nil
 }
 
-func (b *Builder) Build() error {
+func (b *Builder) Build(containerBuild *definitionv1.ContainerBuild) error {
 	err := os.MkdirAll(b.WorkingDir, 0777)
 	if err != nil {
 		return newErrorInternal("failed to create working directory: " + err.Error())
 	}
 
-	if b.ContainerBuild.GitRepository != nil {
-		return b.handleError(b.buildGitRepositoryComponent())
+	if containerBuild.CommandBuild != nil {
+		return b.handleError(b.buildCommandBuildContainer(containerBuild.CommandBuild))
 	}
 
-	if b.ContainerBuild.DockerImage != nil {
-		return b.handleError(b.buildDockerImageComponent())
+	if containerBuild.DockerImage != nil {
+		return b.handleError(b.buildDockerImageContainer(containerBuild.DockerImage))
 	}
 
-	return newErrorUser("unsupported component build type")
+	return newErrorUser("unsupported container build type")
 }
 
 func (b *Builder) handleError(err error) error {

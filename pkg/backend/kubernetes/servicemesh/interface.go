@@ -17,6 +17,8 @@ type Interface interface {
 
 	ServiceAnnotations(*latticev1.Service) (map[string]string, error)
 
+	ServiceAddressAnnotations(*latticev1.Address) (map[string]string, error)
+
 	// TransformServicePodTemplateSpec takes in the DeploymentSpec generated for a Service, and applies an service mesh
 	// related transforms necessary to a copy of the DeploymentSpec, and returns it.
 	TransformServicePodTemplateSpec(*latticev1.Service, *corev1.PodTemplateSpec) (*corev1.PodTemplateSpec, error)
@@ -31,12 +33,19 @@ type Interface interface {
 	// ServicePort returns the component port for a given port that the service mesh is listening on.
 	ServicePort(*latticev1.Service, int32) (int32, error)
 
-	// ServiceMeshPorts returns a map whose keys are service mesh ports and values are the component port for
+	// ServicehPorts returns a map whose keys are service mesh ports and values are the component port for
 	// which the service mesh is listening on for the given key.
 	ServicePorts(*latticev1.Service) (map[int32]int32, error)
 
-	// ServiceIP returns the IP address that should be registered in DNS for the service.
-	ServiceIP(service *latticev1.Service) (string, error)
+	// ServiceHasIP returns the assigned IP if there is one and the empty string otherwise
+	HasServiceIP(*latticev1.Address) (string, error)
+
+	// ServiceIP returns the IP address that should be registered in DNS (assigning one if need be)
+	// for the service and annotations that should be applied to the Address.
+	ServiceIP(*latticev1.Service, *latticev1.Address) (string, map[string]string, error)
+
+	// ReleaseServiceIP removes a service IP from the pool of currently leased IPs.
+	ReleaseServiceIP(*latticev1.Address) (map[string]string, error)
 
 	// IsDeploymentSpecUpdated checks to see if any part of the current DeploymentSpec that the service mesh is responsible
 	// for is out of date compared to the desired deployment spec. If the current DeploymentSpec is current, it also returns
@@ -55,11 +64,17 @@ type Options struct {
 }
 
 func NewServiceMesh(options *Options) (Interface, error) {
-	if options.Envoy != nil {
-		return envoy.NewEnvoyServiceMesh(options.Envoy), nil
+	var serviceMesh Interface
+	var err error
+
+	switch {
+	case options.Envoy != nil:
+		serviceMesh, err = envoy.NewEnvoyServiceMesh(options.Envoy)
+	default:
+		err = fmt.Errorf("must provide service mesh options")
 	}
 
-	return nil, fmt.Errorf("must provide service mesh options")
+	return serviceMesh, err
 }
 
 func OverlayConfigOptions(staticOptions *Options, dynamicConfig *latticev1.ConfigServiceMesh) (*Options, error) {
@@ -95,7 +110,7 @@ func Flag(serviceMesh *string) (cli.Flag, *Options) {
 		},
 		FlagChooser: func() (*string, error) {
 			if serviceMesh == nil {
-				return nil, fmt.Errorf("cloud provider cannot be nil")
+				return nil, fmt.Errorf("service mesh cannot be nil")
 			}
 
 			switch *serviceMesh {

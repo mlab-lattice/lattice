@@ -7,7 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func MountHandlers(router *gin.RouterGroup, backend serverv1.Interface, sysResolver resolver.SystemResolver) {
-	api := newLatticeAPI(router, backend, sysResolver)
+func MountHandlers(router *gin.RouterGroup, backend serverv1.Interface, resolver resolver.ComponentResolver) {
+	api := newLatticeAPI(router, backend, resolver)
 	api.setupAPI()
 }

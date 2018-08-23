@@ -22,33 +22,25 @@ const (
 )
 
 type NodePool struct {
-	// ID
-	ID string `json:"id"`
-	// Path
+	ID   string `json:"id"`
 	Path string `json:"path"`
+
 	// FIXME: how to deal with epochs?
-	// InstanceType
 	InstanceType string `json:"instanceType"`
-	// NumInstances
-	NumInstances int32 `json:"numInstances"`
-	// State
-	State NodePoolState `json:"state"`
-	// FailureInfo
+	NumInstances int32  `json:"numInstances"`
+
+	State       NodePoolState        `json:"state"`
 	FailureInfo *NodePoolFailureInfo `json:"failure_info"`
 }
 
 type NodePoolFailureInfo struct {
-	// Time
-	Time time.Time
-	// Message
+	Time    time.Time
 	Message string `json:"message"`
 }
 
 type NodePoolPath struct {
-	// Path
-	Path tree.NodePath `json:"path"`
-	// Name
-	Name *string `json:"name,omitempty"`
+	Path tree.Path `json:"path"`
+	Name *string   `json:"name,omitempty"`
 }
 
 func (p NodePoolPath) String() string {
@@ -80,11 +72,11 @@ func (p *NodePoolPath) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-func NewServiceNodePoolPath(path tree.NodePath) NodePoolPath {
+func NewServiceNodePoolPath(path tree.Path) NodePoolPath {
 	return NodePoolPath{Path: path}
 }
 
-func NewSystemSharedNodePoolPath(path tree.NodePath, name string) NodePoolPath {
+func NewSystemSharedNodePoolPath(path tree.Path, name string) NodePoolPath {
 	return NodePoolPath{
 		Path: path,
 		Name: &name,
@@ -97,7 +89,7 @@ func ParseNodePoolPath(path string) (NodePoolPath, error) {
 		return NodePoolPath{}, fmt.Errorf("invalid node pool path format")
 	}
 
-	p, err := tree.NewNodePath(parts[0])
+	p, err := tree.NewPath(parts[0])
 	if err != nil {
 		return NodePoolPath{}, err
 	}

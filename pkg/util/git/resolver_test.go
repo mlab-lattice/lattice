@@ -70,19 +70,20 @@ func testCloneGithubRepo(t *testing.T) {
 }
 
 func testTags(t *testing.T) {
-	resolver, err := NewResolver(testWorkDir)
+	resolver, err := NewResolver(testWorkDir, true)
 
 	if err != nil {
 		t.Fatalf("Got error: %v", err)
 	}
 
-	ctx := &Context{URI: localRepoURI1,
-		Options: &Options{},
+	ctx := &Context{
+		RepositoryURL: localRepoURI1,
+		Options:       &Options{},
 	}
 
 	fmt.Println("Testing tags")
 	// test tags
-	tags, err := resolver.GetTagNames(ctx)
+	tags, err := resolver.Tags(ctx)
 
 	if err != nil {
 		t.Fatalf("Failed to get tags: %s", err)
@@ -97,25 +98,29 @@ func testTags(t *testing.T) {
 }
 
 func testFileContents(t *testing.T) {
-	testFileContent(t, localRepoURI1+"#v1", "hello.txt", "hello")
-	testFileContent(t, localRepoURI1+"#v2", "hello.txt", "hello there")
+	v1 := "v1"
+	v2 := "v2"
+	testFileContent(t, localRepoURI1, &Reference{Tag: &v1}, "hello.txt", "hello")
+	testFileContent(t, localRepoURI1, &Reference{Tag: &v2}, "hello.txt", "hello there")
 }
 
-func testFileContent(t *testing.T, uri string, filename string, contents string) {
-	resolver, err := NewResolver(testWorkDir)
+func testFileContent(t *testing.T, uri string, ref *Reference, filename string, contents string) {
+	resolver, err := NewResolver(testWorkDir, true)
 
 	if err != nil {
 		t.Fatalf("Got error: %v", err)
 	}
 
-	ctx := &Context{URI: uri,
-		Options: &Options{},
+	ctx := &Context{
+		RepositoryURL: uri,
+		Options:       &Options{},
 	}
 
 	fmt.Printf("Testing file contents for uri '%v', file '%v' against '%v'\n",
 		uri, filename, contents)
 	// test tags
-	bytes, err := resolver.FileContents(ctx, filename)
+
+	bytes, err := resolver.FileContents(ctx, ref, filename)
 
 	if err != nil {
 		t.Fatalf("Got error getting file contents for uri '%v', file '%v'. Error: %v",
@@ -132,15 +137,16 @@ func testFileContent(t *testing.T, uri string, filename string, contents string)
 func testCloneURI(t *testing.T, uri string) {
 	fmt.Printf("Test clone %s\n", uri)
 
-	resolver, err := NewResolver(testWorkDir)
+	resolver, err := NewResolver(testWorkDir, true)
 
 	if err != nil {
 		t.Fatalf("Got error: %v", err)
 	}
 
 	// test clone
-	ctx := &Context{URI: uri,
-		Options: &Options{},
+	ctx := &Context{
+		RepositoryURL: uri,
+		Options:       &Options{},
 	}
 
 	_, err = resolver.Clone(ctx)
@@ -152,20 +158,21 @@ func testCloneURI(t *testing.T, uri string) {
 }
 
 func testInvalidURI(t *testing.T) {
-	resolver, err := NewResolver(testWorkDir)
+	resolver, err := NewResolver(testWorkDir, false)
 
 	if err != nil {
 		t.Fatalf("Got error: %v", err)
 	}
 
 	invalidURI := "this is a bad uri"
-	ctx := &Context{URI: invalidURI,
-		Options: &Options{},
+	ctx := &Context{
+		RepositoryURL: invalidURI,
+		Options:       &Options{},
 	}
 
 	_, err = resolver.Clone(ctx)
 
-	if err == nil || !strings.Contains(fmt.Sprintf("%v", err), "bad uri") {
+	if err == nil || !strings.Contains(fmt.Sprintf("%v", err), "bad git uri") {
 		t.Fatalf("Expected a bad uri error")
 	} else {
 		fmt.Printf("Got expected error: %v\n", err)

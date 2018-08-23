@@ -67,7 +67,7 @@ lattice_base_go_container_image(
 # lattice go container images
 lattice_go_container_image(
     name = "kubernetes-api-server-rest",
-    base_image = None,
+    base_image = "openssh-client",
     path = "cmd/kubernetes/api-server/rest",
 )
 
@@ -81,12 +81,6 @@ lattice_go_container_image(
     name = "kubernetes-envoy-prepare",
     base_image = "iptables",
     path = "cmd/kubernetes/envoy/prepare",
-)
-
-lattice_go_container_image(
-    name = "kubernetes-envoy-xds-api-rest-per-node",
-    base_image = None,
-    path = "cmd/kubernetes/envoy/xdsapi/v1/rest/per-node",
 )
 
 lattice_go_container_image(

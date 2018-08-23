@@ -22,7 +22,7 @@ type Job struct {
 	Sidecars map[string]Container
 
 	// FIXME: remove these
-	NodePool tree.NodePathSubcomponent `json:"node_pool"`
+	NodePool tree.PathSubcomponent `json:"node_pool"`
 }
 
 func (j *Job) Type() component.Type {
@@ -84,5 +84,5 @@ type jobEncoder struct {
 	Container
 	Sidecars map[string]Container `json:"sidecars,omitempty"`
 
-	NodePool tree.NodePathSubcomponent `json:"node_pool"`
+	NodePool tree.PathSubcomponent `json:"node_pool"`
 }

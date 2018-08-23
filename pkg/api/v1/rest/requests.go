@@ -7,34 +7,25 @@ import (
 )
 
 type CreateSystemRequest struct {
-	// TBD
-	ID v1.SystemID `json:"id"`
-	// TBD
-	DefinitionURL string `json:"definitionUrl" example:"git://github.com/foo/foo.git"`
+	ID            v1.SystemID `json:"id"`
+	DefinitionURL string      `json:"definitionUrl"`
 }
 
 type BuildRequest struct {
-	// TBD
 	Version v1.SystemVersion `json:"version"`
 }
 
 type DeployRequest struct {
-	// TBD
 	Version *v1.SystemVersion `json:"version,omitempty"`
-	// TBD
-	BuildID *v1.BuildID `json:"buildId,omitempty"`
+	BuildID *v1.BuildID       `json:"buildId,omitempty"`
 }
 
 type RunJobRequest struct {
-	// TBD
-	Path tree.NodePath `json:"path"`
-	// TBD
-	Command []string `json:"command"`
-	// TBD
+	Path        tree.Path                         `json:"path"`
+	Command     []string                          `json:"command"`
 	Environment definitionv1.ContainerEnvironment `json:"environment"`
 }
 
 type SetSecretRequest struct {
-	// TBD
 	Value string `json:"value"`
 }

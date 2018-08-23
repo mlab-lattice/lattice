@@ -247,13 +247,13 @@ func (c *Controller) addressSets(addresses []*latticev1.Address) (set.Set, set.S
 	for _, address := range addresses {
 		key := fmt.Sprintf("%v/%v", address.Namespace, address.Name)
 		if address.Spec.ExternalName != nil {
-			endpointKey := fmt.Sprintf("/%v" + *address.Spec.ExternalName)
+			endpointKey := fmt.Sprintf("/%v", *address.Spec.ExternalName)
 			externalNameAddresses.Add(key + endpointKey)
 			continue
 		}
 
 		if address.Spec.Service != nil {
-			ipKey := fmt.Sprintf("/%v" + address.Spec.Service.String())
+			ipKey := fmt.Sprintf("/%v", address.Spec.Service.String())
 			serviceAddresses.Add(key + ipKey)
 			continue
 		}
@@ -303,10 +303,12 @@ func (c *Controller) rewriteDnsmasqConfig(addresses []*latticev1.Address) error 
 				continue
 			}
 
-			fmt.Println(c.serviceMesh)
-			ip, err := c.serviceMesh.ServiceIP(service)
+			ip, err := c.serviceMesh.HasServiceIP(address)
 			if err != nil {
 				glog.Errorf("error getting service for value for %v (%v): %v, ignoring the address", address.Description(c.namespacePrefix), service.Description(c.namespacePrefix), err)
+				continue
+			} else if ip == "" {
+				glog.V(4).Infof("Service %v does not have a ServiceIP assigned yet, skipping...", path)
 				continue
 			}
 
@@ -331,7 +333,7 @@ func (c *Controller) rewriteDnsmasqConfig(addresses []*latticev1.Address) error 
 	return nil
 }
 
-func (c *Controller) service(namespace string, path tree.NodePath) (*latticev1.Service, error) {
+func (c *Controller) service(namespace string, path tree.Path) (*latticev1.Service, error) {
 	selector := labels.NewSelector()
 	requirement, err := labels.NewRequirement(latticev1.ServicePathLabelKey, selection.Equals, []string{path.ToDomain()})
 	if err != nil {

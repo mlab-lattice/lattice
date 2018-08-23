@@ -1,31 +1,43 @@
 package mock
 
 import (
+	"github.com/blang/semver"
+	"github.com/mlab-lattice/lattice/pkg/definition/resolver"
 	definitionv1 "github.com/mlab-lattice/lattice/pkg/definition/v1"
 
+	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	"github.com/mlab-lattice/lattice/pkg/definition/component"
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 	"github.com/mlab-lattice/lattice/pkg/util/git"
 )
 
-type SystemResolver struct {
+type DefaultMockComponentResolver struct {
 }
 
-func newMockSystemResolver() *SystemResolver {
-	return &SystemResolver{}
+func newMockComponentResolver() resolver.ComponentResolver {
+	return &DefaultMockComponentResolver{}
 }
 
-func (*SystemResolver) ResolveDefinition(uri string, gitResolveOptions *git.Options) (tree.Node, error) {
-	return getMockSystemDefinition()
+func (*DefaultMockComponentResolver) ResolveReference(
+	systemID v1.SystemID,
+	path tree.Path,
+	ctx *git.FileReference,
+	ref *definitionv1.Reference,
+	depth int32,
+) (*resolver.ResolutionResult, error) {
+
+	return &resolver.ResolutionResult{
+		Component: getMockSystem(),
+	}, nil
 }
 
-func (*SystemResolver) ListDefinitionVersions(uri string, gitResolveOptions *git.Options) ([]string, error) {
+func (*DefaultMockComponentResolver) Versions(repository string, semverRange semver.Range) ([]string, error) {
 	return []string{"1.0.0", "2.0.0"}, nil
 }
 
-func getMockSystemDefinition() (tree.Node, error) {
+func getMockSystem() *definitionv1.System {
 
-	system := &definitionv1.System{
+	return &definitionv1.System{
 		Description: "Mock System",
 		Components: map[string]component.Interface{
 			"api": &definitionv1.Service{
@@ -48,7 +60,5 @@ func getMockSystemDefinition() (tree.Node, error) {
 			},
 		},
 	}
-
-	return definitionv1.NewNode(system, "mock-system", nil)
 
 }

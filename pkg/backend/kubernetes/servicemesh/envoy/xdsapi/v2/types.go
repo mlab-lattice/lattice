@@ -1,14 +1,24 @@
 package v2
 
+import (
+	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/servicemesh/envoy"
+)
+
 type Service struct {
-	EgressPort  int32
+	EgressPorts envoy.EnvoyEgressPorts
 	Components  map[string]Component
-	IPAddresses []string
+	ServiceIP   string
+	EndpointIPs []string
 }
 
 type Component struct {
 	// Ports maps the Component's ports to their envoy ports.
-	Ports map[int32]int32
+	Ports map[int32]ListenerPort
+}
+
+type ListenerPort struct {
+	Port     int32
+	Protocol string
 }
 
 type EntityType int

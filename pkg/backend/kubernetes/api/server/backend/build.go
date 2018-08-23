@@ -15,16 +15,22 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
 
+	"github.com/mlab-lattice/lattice/pkg/definition/resolver"
 	"github.com/satori/go.uuid"
 )
 
-func (kb *KubernetesBackend) Build(systemID v1.SystemID, def *defintionv1.SystemNode, version v1.SystemVersion) (*v1.Build, error) {
+func (kb *KubernetesBackend) Build(
+	systemID v1.SystemID,
+	def *defintionv1.SystemNode,
+	ri resolver.ResolutionInfo,
+	version v1.SystemVersion,
+) (*v1.Build, error) {
 	// ensure the system exists
 	if _, err := kb.ensureSystemCreated(systemID); err != nil {
 		return nil, err
 	}
 
-	build, err := newBuild(def, version)
+	build, err := newBuild(def, ri, version)
 	if err != nil {
 		return nil, err
 	}
@@ -43,7 +49,7 @@ func (kb *KubernetesBackend) Build(systemID v1.SystemID, def *defintionv1.System
 	return &externalBuild, nil
 }
 
-func newBuild(def *defintionv1.SystemNode, version v1.SystemVersion) (*latticev1.Build, error) {
+func newBuild(def *defintionv1.SystemNode, ri resolver.ResolutionInfo, version v1.SystemVersion) (*latticev1.Build, error) {
 	labels := map[string]string{
 		latticev1.BuildDefinitionVersionLabelKey: string(version),
 	}
@@ -54,7 +60,8 @@ func newBuild(def *defintionv1.SystemNode, version v1.SystemVersion) (*latticev1
 			Labels: labels,
 		},
 		Spec: latticev1.BuildSpec{
-			Definition: def,
+			Definition:     def,
+			ResolutionInfo: ri,
 		},
 	}
 
@@ -114,7 +121,7 @@ func (kb *KubernetesBackend) GetBuild(systemID v1.SystemID, buildID v1.BuildID) 
 func (kb *KubernetesBackend) BuildLogs(
 	systemID v1.SystemID,
 	buildID v1.BuildID,
-	path tree.NodePath,
+	path tree.Path,
 	sidecar *string,
 	logOptions *v1.ContainerLogOptions,
 ) (io.ReadCloser, error) {
@@ -208,7 +215,7 @@ func (kb *KubernetesBackend) transformBuild(build *latticev1.Build) (v1.Build, e
 		CompletionTimestamp: completionTimestamp,
 
 		Version:  version,
-		Services: make(map[tree.NodePath]v1.ServiceBuild),
+		Services: make(map[tree.Path]v1.ServiceBuild),
 	}
 
 	for path, serviceInfo := range build.Status.Services {

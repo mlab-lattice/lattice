@@ -90,7 +90,7 @@ func (c *Controller) syncExistingDedicatedNodePool(nodePool *latticev1.NodePool,
 	return c.updateNodePoolSpec(nodePool, spec)
 }
 
-func sharedNodePoolSelector(namespace string, path tree.NodePath, name string) (labels.Selector, error) {
+func sharedNodePoolSelector(namespace string, path tree.Path, name string) (labels.Selector, error) {
 	selector := labels.NewSelector()
 	requirement, err := labels.NewRequirement(
 		latticev1.NodePoolSystemSharedPathLabelKey,

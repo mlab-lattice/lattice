@@ -5,10 +5,7 @@ import (
 )
 
 type Secret struct {
-	// Secret service path
-	Path tree.NodePath `json:"path"`
-	// Name
-	Name string `json:"name"`
-	// Value
-	Value string `json:"value"`
+	Path  tree.Path `json:"path"`
+	Name  string    `json:"name"`
+	Value string    `json:"value"`
 }

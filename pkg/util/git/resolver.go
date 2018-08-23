@@ -5,14 +5,15 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
-	"regexp"
 	"strings"
 
 	"golang.org/x/crypto/ssh"
 
-	git "gopkg.in/src-d/go-git.v4"
+	"github.com/blang/semver"
+	"gopkg.in/src-d/go-git.v4"
 	gitplumbing "gopkg.in/src-d/go-git.v4/plumbing"
 	gitplumbingobject "gopkg.in/src-d/go-git.v4/plumbing/object"
+	"gopkg.in/src-d/go-git.v4/plumbing/transport"
 	gitssh "gopkg.in/src-d/go-git.v4/plumbing/transport/ssh"
 )
 
@@ -24,21 +25,54 @@ const (
 // Resolver provides utility methods for manipulating git repositories
 // under a specific working directory on the filesystem.
 type Resolver struct {
-	WorkDirectory string
-}
-
-// Context contains information about the current operation being invoked.
-type Options struct {
-	SSHKey []byte
+	workDirectory   string
+	allowLocalRepos bool
 }
 
 // Context contains information about the current operation being invoked.
 type Context struct {
-	URI     string
-	Options *Options
+	RepositoryURL string
+	Options       *Options
 }
 
-func NewResolver(workDirectory string) (*Resolver, error) {
+// Reference is a union type containing a reference to a commit, tag, or branch.
+type Reference struct {
+	Commit  *string
+	Branch  *string
+	Tag     *string
+	Version *string
+}
+
+func (r *Reference) Validate() error {
+	if r.Commit == nil && r.Branch == nil && r.Tag == nil && r.Version == nil {
+		return fmt.Errorf("reference must contain a commit, branch, tag, or version")
+	}
+
+	if (r.Commit != nil && (r.Tag != nil || r.Branch != nil || r.Version != nil)) ||
+		(r.Tag != nil && (r.Branch != nil || r.Version != nil)) ||
+		(r.Branch != nil && r.Version != nil) {
+		return fmt.Errorf("reference can only contain a single commit, branch, tag, or version")
+	}
+
+	return nil
+}
+
+type CommitReference struct {
+	RepositoryURL string `json:"repositoryUrl"`
+	Commit        string `json:"commit"`
+}
+
+type FileReference struct {
+	CommitReference
+	File string `json:"file"`
+}
+
+// Options contains information about how to complete the operation.
+type Options struct {
+	SSHKey []byte
+}
+
+func NewResolver(workDirectory string, allowLocalRepos bool) (*Resolver, error) {
 	if workDirectory == "" {
 		return nil, fmt.Errorf("must supply workDirectory")
 	}
@@ -49,7 +83,8 @@ func NewResolver(workDirectory string) (*Resolver, error) {
 	}
 
 	sr := &Resolver{
-		WorkDirectory: workDirectory,
+		workDirectory:   workDirectory,
+		allowLocalRepos: allowLocalRepos,
 	}
 	return sr, nil
 }
@@ -57,12 +92,11 @@ func NewResolver(workDirectory string) (*Resolver, error) {
 // Clone will  open the repository and return it If the repository specified in the Context has already been cloned,
 // otherwise it will attempt to clone the repository and on success return the cloned repository
 func (r *Resolver) Clone(ctx *Context) (*git.Repository, error) {
-
 	// validate repo url
-	if !IsValidRepositoryURI(ctx.URI) {
-		return nil, fmt.Errorf("bad git uri '%v'", ctx.URI)
+	if !r.IsValidRepositoryURI(ctx.RepositoryURL) {
+		return nil, fmt.Errorf("bad git uri '%v'", ctx.RepositoryURL)
 	}
-	repoDir := r.GetRepositoryPath(ctx)
+	repoDir := r.RepositoryPath(ctx.RepositoryURL)
 
 	// If the repository already exists, simply open it.
 	repoExists, err := pathExists(repoDir)
@@ -77,7 +111,7 @@ func (r *Resolver) Clone(ctx *Context) (*git.Repository, error) {
 
 	// Otherwise try to clone the repository.
 	cloneOptions := git.CloneOptions{
-		URL:      ctx.URI,
+		URL:      ctx.RepositoryURL,
 		Progress: os.Stdout,
 	}
 
@@ -127,10 +161,14 @@ func (r *Resolver) Fetch(ctx *Context) error {
 	return nil
 }
 
-// GetCommit will parse the Ref (i.e. #<ref>) from the git uri and determine if its a branch/tag/commit.
+// Commit will parse the Ref (i.e. #<ref>) from the git uri and determine if its a branch/tag/commit.
 // Returns the actual commit object for that ref. Defaults to HEAD.
 // GetCommit will first fetch from origin.
-func (r *Resolver) GetCommit(ctx *Context) (*gitplumbingobject.Commit, error) {
+func (r *Resolver) GetCommit(ctx *Context, ref *Reference) (*gitplumbingobject.Commit, error) {
+	if err := ref.Validate(); err != nil {
+		return nil, err
+	}
+
 	err := r.Fetch(ctx)
 	if err != nil {
 		return nil, err
@@ -141,53 +179,95 @@ func (r *Resolver) GetCommit(ctx *Context) (*gitplumbingobject.Commit, error) {
 		return nil, err
 	}
 
-	// If no ref is specified, default to HEAD.
-	uriInfo := parseGitURI(ctx.URI)
-	if uriInfo.Ref == "" {
-		head, err := repository.Head()
+	var hash gitplumbing.Hash
+	switch {
+	case ref.Commit != nil:
+		hash = gitplumbing.NewHash(*ref.Commit)
+
+	case ref.Branch != nil:
+		refName := gitplumbing.ReferenceName(fmt.Sprintf("refs/remotes/origin/%s", *ref.Branch))
+		gitRef, _ := repository.Reference(refName, false)
+		if gitRef == nil {
+			return nil, fmt.Errorf("invalid branch name %v", *ref.Branch)
+		}
+
+		hash = gitRef.Hash()
+
+	case ref.Tag != nil:
+		refName := gitplumbing.ReferenceName(fmt.Sprintf("refs/tags/%s", *ref.Tag))
+		gitRef, _ := repository.Reference(refName, false)
+		if gitRef == nil {
+			return nil, fmt.Errorf("invalid tag name %v", *ref.Tag)
+		}
+
+		hash = gitRef.Hash()
+
+	case ref.Version != nil:
+		rng, err := semver.ParseRange(*ref.Version)
+
+		// If the tag is not a semver range, just use the tag
+		if err != nil {
+			return nil, fmt.Errorf("version is not a valid semver range")
+		}
+
+		versions, err := r.Versions(ctx, rng)
 		if err != nil {
 			return nil, err
 		}
 
-		return repository.CommitObject(head.Hash())
-	}
-
-	// Otherwise figure out what type of reference it is.
-	// First check if its a branch
-	refName := gitplumbing.ReferenceName(fmt.Sprintf("%s:refs/remotes/origin", uriInfo.Ref))
-	ref, _ := repository.Reference(refName, false)
-	if ref != nil {
-		return repository.CommitObject(ref.Hash())
-	}
-
-	// Next check if it's a tag.
-	refName = gitplumbing.ReferenceName(fmt.Sprintf("refs/tags/%s", uriInfo.Ref))
-	ref, _ = repository.Reference(refName, false)
-	if ref != nil {
-		// check if its an annotated tag
-		tag, _ := repository.TagObject(ref.Hash())
-		if tag != nil {
-			return tag.Commit()
+		if len(versions) == 0 {
+			return nil, fmt.Errorf("no tags match the requested version")
 		}
 
-		// otherwise, check if its a light-weight tag
-		return repository.CommitObject(ref.Hash())
-
+		tag := versions[len(versions)-1]
+		ref = &Reference{Tag: &tag}
+		return r.GetCommit(ctx, ref)
 	}
 
-	// Finally, if it's not a branch or a tag, just take it as a hash
-	refHash := gitplumbing.NewHash(uriInfo.Ref)
-	return repository.CommitObject(refHash)
+	return repository.CommitObject(hash)
+}
+
+func (r *Resolver) Versions(ctx *Context, semverRange semver.Range) ([]string, error) {
+	tags, err := r.Tags(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	var versions []semver.Version
+	for _, tag := range tags {
+		v, err := semver.Parse(tag)
+		if err != nil {
+			continue
+		}
+
+		// If a semver range was passed in, check to see if the version
+		// matches the range.
+		if semverRange != nil && !semverRange(v) {
+			continue
+		}
+		versions = append(versions, v)
+	}
+
+	semver.Sort(versions)
+	var v []string
+	for _, version := range versions {
+		v = append(v, version.String())
+	}
+	return v, nil
 }
 
 // Checkout will clone and fetch, then attempt to check out the ref specified in the context.
-func (r *Resolver) Checkout(ctx *Context) error {
+func (r *Resolver) Checkout(ctx *Context, ref *Reference) error {
+	if err := ref.Validate(); err != nil {
+		return err
+	}
+
 	repository, err := r.Clone(ctx)
 	if err != nil {
 		return err
 	}
 
-	commit, err := r.GetCommit(ctx)
+	commit, err := r.GetCommit(ctx, ref)
 	if err != nil {
 		return err
 	}
@@ -205,8 +285,12 @@ func (r *Resolver) Checkout(ctx *Context) error {
 
 // FileContents will clone, fetch, and checkout the proper reference, and if successful
 // will attempt to return the contents of the file at fileName.
-func (r *Resolver) FileContents(ctx *Context, fileName string) ([]byte, error) {
-	commit, err := r.GetCommit(ctx)
+func (r *Resolver) FileContents(ctx *Context, ref *Reference, fileName string) ([]byte, error) {
+	if err := ref.Validate(); err != nil {
+		return nil, err
+	}
+
+	commit, err := r.GetCommit(ctx, ref)
 	if err != nil {
 		return nil, err
 	}
@@ -224,13 +308,12 @@ func (r *Resolver) FileContents(ctx *Context, fileName string) ([]byte, error) {
 	return ioutil.ReadAll(reader)
 }
 
-func (r *Resolver) GetRepositoryPath(ctx *Context) string {
-	uriInfo := parseGitURI(ctx.URI)
-	return path.Join(r.WorkDirectory, stripProtocol(uriInfo.CloneURI))
+func (r *Resolver) RepositoryPath(url string) string {
+	return path.Join(r.workDirectory, stripProtocol(url))
 }
 
-// GetTagNames will clone and fetch, and if successful will return the repository's tags (annotated + light-weight).
-func (r *Resolver) GetTagNames(ctx *Context) ([]string, error) {
+// Tags will clone and fetch, and if successful will return the repository's tags (annotated + light-weight).
+func (r *Resolver) Tags(ctx *Context) ([]string, error) {
 	err := r.Fetch(ctx)
 	if err != nil {
 		return nil, err
@@ -247,7 +330,7 @@ func (r *Resolver) GetTagNames(ctx *Context) ([]string, error) {
 		return nil, err
 	}
 
-	tags := []string{}
+	tags := make([]string, 0)
 	err = tagRefs.ForEach(func(t *gitplumbing.Reference) error {
 		tagNameParts := strings.Split(t.Name().String(), "/")
 		tags = append(tags, tagNameParts[len(tagNameParts)-1])
@@ -257,43 +340,19 @@ func (r *Resolver) GetTagNames(ctx *Context) ([]string, error) {
 	return tags, nil
 }
 
-type uriInfo struct {
-	FullURI  string
-	CloneURI string
-	Ref      string
-	RepoName string
-}
-
-// regex for matching git repo urls
-var gitRepositoryURIRegex = regexp.MustCompile(`((?:git|file|ssh|https?|git@[-\w.]+)):(//)?(.*.git)(#(([-\d\w._])+)?)?$`)
-
-// IsValidRepositoryURI
-func IsValidRepositoryURI(uri string) bool {
-	return gitRepositoryURIRegex.MatchString(uri)
-}
-
-func parseGitURI(gitURI string) uriInfo {
-	partByRef := strings.Split(gitURI, "#")
-	cloneURI := partByRef[0]
-
-	// strip /.git from local repositories references
-	if strings.HasSuffix(cloneURI, "/.git") {
-		cloneURI = strings.Replace(cloneURI, "/.git", "", -1)
+// IsValidRepositoryURI returns a boolean indicating whether or not the
+// uri is a valid git repository.
+func (r *Resolver) IsValidRepositoryURI(uri string) bool {
+	e, err := transport.NewEndpoint(uri)
+	if err != nil {
+		return false
 	}
 
-	repoNameParts := strings.Split(cloneURI, "/")
-	repoName := strings.Replace(repoNameParts[len(repoNameParts)-1], ".git", "", 1)
+	if !r.allowLocalRepos {
+		return e.Protocol() != "file"
+	}
 
-	var ref string
-	if len(partByRef) == 2 {
-		ref = partByRef[1]
-	}
-	return uriInfo{
-		FullURI:  gitURI,
-		CloneURI: cloneURI,
-		RepoName: repoName,
-		Ref:      ref,
-	}
+	return true
 }
 
 func pathExists(path string) (bool, error) {

@@ -4,22 +4,22 @@ import (
 	"fmt"
 	"sort"
 
+	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	kubeutil "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/kubernetes"
+	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/latticeutil"
 	"github.com/mlab-lattice/lattice/pkg/definition/component"
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 	definitionv1 "github.com/mlab-lattice/lattice/pkg/definition/v1"
 
 	corev1 "k8s.io/api/core/v1"
 
-	"github.com/mlab-lattice/lattice/pkg/api/v1"
-	"github.com/mlab-lattice/lattice/pkg/util/sha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
 func PodTemplateSpecForComponent(
 	component component.Interface,
-	path tree.NodePath,
+	path tree.Path,
 	latticeID v1.LatticeID,
 	internalDNSDomain string,
 	namespacePrefix, namespace, name string,
@@ -45,6 +45,7 @@ func PodTemplateSpecForComponent(
 		containersComponent.MainContainer,
 		kubeutil.UserMainContainerName,
 		mainContainerBuildArtifact,
+		path,
 	)
 	if err != nil {
 		return nil, err
@@ -62,6 +63,7 @@ func PodTemplateSpecForComponent(
 			sidecar,
 			kubeutil.UserMainContainerName,
 			buildArtifact,
+			path,
 		)
 		if err != nil {
 			return nil, err
@@ -148,6 +150,7 @@ func KubeContainerForContainer(
 	container definitionv1.Container,
 	containerName string,
 	buildArtifacts ContainerBuildArtifacts,
+	componentPath tree.Path,
 ) (corev1.Container, error) {
 	var ports []corev1.ContainerPort
 	for portNum := range container.Ports {
@@ -165,8 +168,10 @@ func KubeContainerForContainer(
 	// so we can more easily check to see if the spec needs
 	// to be updated.
 	var envVarNames []string
-	for name := range container.Exec.Environment {
-		envVarNames = append(envVarNames, name)
+	if container.Exec != nil {
+		for name := range container.Exec.Environment {
+			envVarNames = append(envVarNames, name)
+		}
 	}
 
 	sort.Strings(envVarNames)
@@ -182,10 +187,17 @@ func KubeContainerForContainer(
 					Value: *envVar.Value,
 				},
 			)
-		} else if envVar.Secret != nil {
-			secretName, err := sha1.EncodeToHexString([]byte(envVar.Secret.NodePath().String()))
+		} else if envVar.SecretRef != nil {
+			secretName, err := latticeutil.HashPath(envVar.SecretRef.Value.Path())
 			if err != nil {
 				return corev1.Container{}, err
+			}
+
+			s := &corev1.SecretKeySelector{
+				LocalObjectReference: corev1.LocalObjectReference{
+					Name: secretName,
+				},
+				Key: envVar.SecretRef.Value.Subcomponent(),
 			}
 
 			envVars = append(
@@ -193,12 +205,7 @@ func KubeContainerForContainer(
 				corev1.EnvVar{
 					Name: name,
 					ValueFrom: &corev1.EnvVarSource{
-						SecretKeyRef: &corev1.SecretKeySelector{
-							LocalObjectReference: corev1.LocalObjectReference{
-								Name: secretName,
-							},
-							Key: envVar.Secret.Subcomponent(),
-						},
+						SecretKeyRef: s,
 					},
 				},
 			)

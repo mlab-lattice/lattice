@@ -42,6 +42,14 @@ type DeployListerExpansion interface{}
 // DeployNamespaceLister.
 type DeployNamespaceListerExpansion interface{}
 
+// GitTemplateListerExpansion allows custom methods to be added to
+// GitTemplateLister.
+type GitTemplateListerExpansion interface{}
+
+// GitTemplateNamespaceListerExpansion allows custom methods to be added to
+// GitTemplateNamespaceLister.
+type GitTemplateNamespaceListerExpansion interface{}
+
 // JobListerExpansion allows custom methods to be added to
 // JobLister.
 type JobListerExpansion interface{}
@@ -89,3 +97,11 @@ type TeardownListerExpansion interface{}
 // TeardownNamespaceListerExpansion allows custom methods to be added to
 // TeardownNamespaceLister.
 type TeardownNamespaceListerExpansion interface{}
+
+// TemplateListerExpansion allows custom methods to be added to
+// TemplateLister.
+type TemplateListerExpansion interface{}
+
+// TemplateNamespaceListerExpansion allows custom methods to be added to
+// TemplateNamespaceLister.
+type TemplateNamespaceListerExpansion interface{}

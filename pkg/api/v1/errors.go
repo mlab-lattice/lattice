@@ -15,6 +15,7 @@ const (
 	ErrorCodeInvalidSystemID      ErrorCode = "INVALID_SYSTEM_ID"
 	ErrorCodeInvalidSystemVersion ErrorCode = "INVALID_SYSTEM_VERSION"
 	ErrorCodeInvalidBuildID       ErrorCode = "INVALID_BUILD_ID"
+	ErrorCodeInvalidJobID         ErrorCode = "INVALID_JOB_ID"
 	ErrorCodeInvalidDeployID      ErrorCode = "INVALID_DEPLOY_ID"
 	ErrorCodeInvalidTeardownID    ErrorCode = "INVALID_TEARDOWN_ID"
 	ErrorCodeInvalidServiceID     ErrorCode = "INVALID_SERVICE_ID"
@@ -141,6 +142,24 @@ func (e *InvalidBuildIDError) Code() ErrorCode {
 	return ErrorCodeInvalidBuildID
 }
 
+func NewInvalidJobIDError(id JobID) *InvalidJobIDError {
+	return &InvalidJobIDError{
+		ID: id,
+	}
+}
+
+type InvalidJobIDError struct {
+	ID JobID `json:"id"`
+}
+
+func (e *InvalidJobIDError) Error() string {
+	return fmt.Sprintf("invalid job %v", e.ID)
+}
+
+func (e *InvalidJobIDError) Code() ErrorCode {
+	return ErrorCodeInvalidJobID
+}
+
 func NewInvalidDeployIDError(id DeployID) *InvalidDeployIDError {
 	return &InvalidDeployIDError{
 		ID: id,
@@ -195,14 +214,14 @@ func (e *InvalidServiceIDError) Code() ErrorCode {
 	return ErrorCodeInvalidServiceID
 }
 
-func NewInvalidServicePathError(path tree.NodePath) *InvalidServicePathError {
+func NewInvalidServicePathError(path tree.Path) *InvalidServicePathError {
 	return &InvalidServicePathError{
 		Path: path,
 	}
 }
 
 type InvalidServicePathError struct {
-	Path tree.NodePath `json:"path"`
+	Path tree.Path `json:"path"`
 }
 
 func (e *InvalidServicePathError) Error() string {
@@ -231,7 +250,7 @@ func (e *InvalidSidecarError) Code() ErrorCode {
 	return ErrorCodeInvalidSidecar
 }
 
-func NewInvalidSystemSecretError(path tree.NodePath, name string) *InvalidSystemSecretError {
+func NewInvalidSystemSecretError(path tree.Path, name string) *InvalidSystemSecretError {
 	return &InvalidSystemSecretError{
 		Path: path,
 		Name: name,
@@ -239,8 +258,8 @@ func NewInvalidSystemSecretError(path tree.NodePath, name string) *InvalidSystem
 }
 
 type InvalidSystemSecretError struct {
-	Path tree.NodePath `json:"path"`
-	Name string        `json:"name"`
+	Path tree.Path `json:"path"`
+	Name string    `json:"name"`
 }
 
 func (e *InvalidSystemSecretError) Error() string {

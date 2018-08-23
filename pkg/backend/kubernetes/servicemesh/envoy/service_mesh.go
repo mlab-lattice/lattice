@@ -7,11 +7,15 @@ import (
 	"strconv"
 	"strings"
 
-	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
-	kubeutil "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/kubernetes"
-	"github.com/mlab-lattice/lattice/pkg/util/cli"
+	"github.com/golang/glog"
 
 	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/lifecycle/system/bootstrap/bootstrapper"
+	"github.com/mlab-lattice/lattice/pkg/util/cli"
+
+	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
+	kubeutil "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/kubernetes"
+	netutil "github.com/mlab-lattice/lattice/pkg/util/net"
+
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 )
@@ -19,7 +23,8 @@ import (
 const (
 	annotationKeyAdminPort        = "envoy.servicemesh.lattice.mlab.com/admin-port"
 	annotationKeyServiceMeshPorts = "envoy.servicemesh.lattice.mlab.com/service-mesh-ports"
-	annotationKeyEgressPort       = "envoy.servicemesh.lattice.mlab.com/egress-port"
+	annotationKeyEgressPorts      = "envoy.servicemesh.lattice.mlab.com/egress-ports"
+	annotationKeyIP               = "envoy.servicemesh.lattice.mlab.com/ip"
 
 	deploymentResourcePrefix = "envoy-"
 
@@ -51,13 +56,23 @@ func NewOptions(staticOptions *Options, dynamicConfig *latticev1.ConfigServiceMe
 	return options, nil
 }
 
-func NewEnvoyServiceMesh(options *Options) *DefaultEnvoyServiceMesh {
+func NewEnvoyServiceMesh(options *Options) (*DefaultEnvoyServiceMesh, error) {
+	leaseManager, err := netutil.NewLeaseManager(options.RedirectCIDRBlock.String())
+	if err != nil {
+		return nil, err
+	}
+	// the network IP is reserved for HTTP services, ensure it will not be leased
+	err = leaseManager.Blacklist(options.RedirectCIDRBlock.IP.String())
+	if err != nil {
+		return nil, err
+	}
 	return &DefaultEnvoyServiceMesh{
 		prepareImage:      options.PrepareImage,
 		image:             options.Image,
 		redirectCIDRBlock: options.RedirectCIDRBlock,
 		xdsAPIPort:        options.XDSAPIPort,
-	}
+		leaseManager:      leaseManager,
+	}, nil
 }
 
 func Flags() (cli.Flags, *Options) {
@@ -83,6 +98,12 @@ type DefaultEnvoyServiceMesh struct {
 	image             string
 	redirectCIDRBlock net.IPNet
 	xdsAPIPort        int32
+	leaseManager      netutil.LeaseManager
+}
+
+type EnvoyEgressPorts struct {
+	HTTP int32 `json:"http"`
+	TCP  int32 `json:"tcp"`
 }
 
 func (sm *DefaultEnvoyServiceMesh) BootstrapSystemResources(resources *bootstrapper.SystemResources) {
@@ -99,13 +120,19 @@ func (sm *DefaultEnvoyServiceMesh) ServiceAnnotations(service *latticev1.Service
 		return nil, err
 	}
 
-	if len(remainingEnvoyPorts) != 2 {
-		return nil, fmt.Errorf("expected 2 remaining envoy ports, got %v", len(remainingEnvoyPorts))
+	if len(remainingEnvoyPorts) != 3 {
+		return nil, fmt.Errorf("expected 3 remaining envoy ports, got %v", len(remainingEnvoyPorts))
 	}
 
 	adminPort := remainingEnvoyPorts[0]
-	egressPort := remainingEnvoyPorts[1]
 
+	egressPortsJSON, err := json.Marshal(&EnvoyEgressPorts{
+		HTTP: remainingEnvoyPorts[1],
+		TCP:  remainingEnvoyPorts[2],
+	})
+	if err != nil {
+		return nil, err
+	}
 	componentPortsJSON, err := json.Marshal(componentPorts)
 	if err != nil {
 		return nil, err
@@ -114,7 +141,18 @@ func (sm *DefaultEnvoyServiceMesh) ServiceAnnotations(service *latticev1.Service
 	annotations := map[string]string{
 		annotationKeyAdminPort:        strconv.Itoa(int(adminPort)),
 		annotationKeyServiceMeshPorts: string(componentPortsJSON),
-		annotationKeyEgressPort:       strconv.Itoa(int(egressPort)),
+		annotationKeyEgressPorts:      string(egressPortsJSON),
+	}
+
+	return annotations, nil
+}
+
+func (sm *DefaultEnvoyServiceMesh) ServiceAddressAnnotations(
+	address *latticev1.Address) (map[string]string, error) {
+	ip := address.Annotations[annotationKeyIP]
+
+	annotations := map[string]string{
+		annotationKeyIP: ip,
 	}
 
 	return annotations, nil
@@ -125,13 +163,13 @@ func envoyPorts(service *latticev1.Service) ([]int32, error) {
 	var envoyPortIdx int32 = 10000
 	var envoyPorts []int32
 
-	// Need to find len(portSet) + 2 unique ports to use for envoy
-	// (one for egress, one for admin, and one per component port for ingress)
-	for i := 0; i <= len(ports)+1; i++ {
+	// Need to find len(portSet) + 3 unique ports to use for envoy
+	// (two for egress, one for admin, and one per component port for ingress)
+	for i := 0; i < len(ports)+3; i++ {
 
 		// Loop up to len(portSet) + 1 times to find an unused port
 		// we can use for envoy.
-		for j := 0; j <= len(ports); j++ {
+		for j := 0; j < len(ports)+1; j++ {
 
 			// If the current envoyPortIdx is not being used by a component,
 			// we'll use it for envoy. Otherwise, on to the next one.
@@ -145,7 +183,7 @@ func envoyPorts(service *latticev1.Service) ([]int32, error) {
 		}
 	}
 
-	if len(envoyPorts) != len(ports)+2 {
+	if len(envoyPorts) != len(ports)+3 {
 		return nil, fmt.Errorf("expected %v envoy ports but got %v", len(ports)+1, len(envoyPorts))
 	}
 
@@ -154,7 +192,7 @@ func envoyPorts(service *latticev1.Service) ([]int32, error) {
 
 func assignEnvoyPorts(service *latticev1.Service, envoyPorts []int32) (map[int32]int32, []int32, error) {
 	// Assign an envoy port to each component port, and pop the used envoy port off the slice each time.
-	componentPorts := map[int32]int32{}
+	componentPorts := make(map[int32]int32)
 	for portNum := range service.Spec.Definition.ContainerPorts() {
 		if len(envoyPorts) == 0 {
 			return nil, nil, fmt.Errorf("ran out of ports when assigning envoyPorts")
@@ -232,7 +270,7 @@ func (sm *DefaultEnvoyServiceMesh) ServiceMeshPorts(service *latticev1.Service) 
 		return nil, err
 	}
 
-	serviceMeshPorts := map[int32]int32{}
+	serviceMeshPorts := make(map[int32]int32)
 	err := json.Unmarshal([]byte(serviceMeshPortsJSON), &serviceMeshPorts)
 	if err != nil {
 		return nil, err
@@ -267,7 +305,7 @@ func (sm *DefaultEnvoyServiceMesh) ServicePorts(service *latticev1.Service) (map
 		return nil, err
 	}
 
-	servicePorts := map[int32]int32{}
+	servicePorts := make(map[int32]int32)
 	for servicePort, serviceMeshPort := range serviceMeshPorts {
 		servicePorts[serviceMeshPort] = servicePort
 	}
@@ -275,13 +313,119 @@ func (sm *DefaultEnvoyServiceMesh) ServicePorts(service *latticev1.Service) (map
 	return servicePorts, nil
 }
 
-func (sm *DefaultEnvoyServiceMesh) ServiceIP(service *latticev1.Service) (string, error) {
-	ip, _, err := net.ParseCIDR(sm.redirectCIDRBlock.String())
+func serviceProtocols(service *latticev1.Service) []string {
+	protocolSet := make(map[string]interface{})
+	for _, componentPort := range service.Spec.Definition.Ports {
+		protocolSet[componentPort.Protocol] = nil
+	}
+
+	protocols := make([]string, 0, 1)
+	for protocol := range protocolSet {
+		protocols = append(protocols, protocol)
+	}
+
+	return protocols
+}
+
+func (sm *DefaultEnvoyServiceMesh) HasServiceIP(address *latticev1.Address) (string, error) {
+	annotations, err := sm.ServiceAddressAnnotations(address)
 	if err != nil {
 		return "", err
 	}
+	ip := annotations[annotationKeyIP]
+	return ip, nil
+}
 
-	return ip.String(), nil
+func (sm *DefaultEnvoyServiceMesh) ServiceIP(
+	service *latticev1.Service, address *latticev1.Address) (string, map[string]string, error) {
+	ip := address.Annotations[annotationKeyIP]
+
+	protocols := serviceProtocols(service)
+	if len(protocols) != 1 {
+		return "", nil, fmt.Errorf("expected 1 protocol in component ports for service %s, found: %v",
+			service.Name, protocols)
+	}
+
+	switch protocols[0] {
+	case "HTTP":
+		netIP := sm.redirectCIDRBlock.IP.String()
+		if ip != "" && ip != netIP {
+			return "", nil, fmt.Errorf("got IP %s for service %s, expected %s", ip, service.Name, netIP)
+		} else {
+			ip = netIP
+		}
+	case "TCP":
+		var err error
+		ips := make([]string, 0, 1)
+		if ip != "" {
+			// the lease is already active
+			if present, err := sm.leaseManager.IsLeased(ip); err == nil && !present {
+				// if the lease manager does not know about the lease, then add it
+				// note, this can happen if the address controller dies and restarts
+				ips, err = sm.leaseManager.Lease(ip)
+			} else {
+				ips = append(ips, ip)
+			}
+		} else {
+			// get a new lease from the manager
+			ips, err = sm.leaseManager.Lease()
+		}
+		if err != nil {
+			return "", nil, err
+		}
+		ip = ips[0]
+	default:
+		return "", nil, fmt.Errorf("expected protocol type HTTP or TCP for service %s, got: %s",
+			service.Name, protocols[0])
+	}
+
+	annotations, err := sm.ServiceAddressAnnotations(address)
+	if err != nil {
+		return "", nil, err
+	}
+	annotations[annotationKeyIP] = ip
+
+	return ip, annotations, nil
+}
+
+func (sm *DefaultEnvoyServiceMesh) ReleaseServiceIP(address *latticev1.Address) (map[string]string, error) {
+	ip := address.Annotations[annotationKeyIP]
+
+	if ip == "" {
+		glog.V(4).Infof("tried to release service IP for %s but found none", address.Name)
+		return sm.ServiceAddressAnnotations(address)
+	}
+
+	// check if this ip is being managed by
+	// XXX <GEB>: race here with call to RemoveLeased, don't believe this is an issue in practice, but may
+	//            want to synchronize service mesh methods
+	isLeased, err := sm.leaseManager.IsLeased(ip)
+	if err != nil {
+		return nil, err
+	}
+
+	// only remove lease if actually leased (avoids trying to release blacklisted network IP used for
+	// HTTP services)
+	if isLeased {
+		err := sm.leaseManager.RemoveLeased(ip)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	annotations, err := sm.ServiceAddressAnnotations(address)
+	if err != nil {
+		return nil, err
+	}
+
+	// XXX <GEB>: we're setting empty here and passing back to the caller (address controller) to merge into
+	//            the Address's annotations. the caller is not expected to diff the current annotations with
+	//            the ones we return, so this ensures we overwrite the current lease recorded on the Address's
+	//            annotations. revisit and decide whether or not we should go further and actually remove the
+	//            key from the set of annotations as well or leave it as metadata (e.g., service mesh was here).
+	annotations[annotationKeyIP] = ""
+
+	return annotations, nil
 }
 
 func (sm *DefaultEnvoyServiceMesh) IsDeploymentSpecUpdated(
@@ -364,7 +508,7 @@ func checkExpectedContainers(currentContainers, desiredContainers []corev1.Conta
 	}
 
 	// Check to make sure all of the envoy containers exist
-	currentEnvoyContainers := map[string]struct{}{}
+	currentEnvoyContainers := make(map[string]interface{})
 	for _, container := range currentContainers {
 		if !isServiceMeshResource(container.Name) {
 			// not a service-mesh init container
@@ -380,7 +524,7 @@ func checkExpectedContainers(currentContainers, desiredContainers []corev1.Conta
 			return false, fmt.Sprintf("has out of date envoy%v container %v", containerType, container.Name)
 		}
 
-		currentEnvoyContainers[container.Name] = struct{}{}
+		currentEnvoyContainers[container.Name] = nil
 	}
 
 	// Make sure there aren't extra containers
@@ -451,7 +595,7 @@ func (sm *DefaultEnvoyServiceMesh) envoyContainers(service *latticev1.Service) (
 		return corev1.Container{}, corev1.Container{}, err
 	}
 
-	egressPort, err := sm.EgressPort(service)
+	egressPorts, err := sm.EgressPorts(service)
 	if err != nil {
 		return corev1.Container{}, corev1.Container{}, err
 	}
@@ -466,8 +610,12 @@ func (sm *DefaultEnvoyServiceMesh) envoyContainers(service *latticev1.Service) (
 		Image: sm.prepareImage,
 		Env: []corev1.EnvVar{
 			{
-				Name:  "EGRESS_PORT",
-				Value: strconv.Itoa(int(egressPort)),
+				Name:  "EGRESS_PORT_HTTP",
+				Value: strconv.FormatInt(int64(egressPorts.HTTP), 10),
+			},
+			{
+				Name:  "EGRESS_PORT_TCP",
+				Value: strconv.FormatInt(int64(egressPorts.TCP), 10),
 			},
 			{
 				Name:  "REDIRECT_EGRESS_CIDR_BLOCK",
@@ -560,18 +708,14 @@ func (sm *DefaultEnvoyServiceMesh) envoyContainers(service *latticev1.Service) (
 		ImagePullPolicy: corev1.PullIfNotPresent,
 		Command:         []string{"/usr/local/bin/envoy"},
 		Args: []string{
-			"-c",
-			fmt.Sprintf("%v/config.json", envoyConfigDirectory),
-			"--service-cluster",
-			service.Namespace,
-			"--service-node",
-			servicePath.ToDomain(),
+			"-c", fmt.Sprintf("%v/config.json", envoyConfigDirectory),
+			"--service-cluster", service.Namespace,
+			"--service-node", servicePath.ToDomain(),
 			// by default, the max cluster name size is 60.
 			// however, we use the cluster name to encode information, so the names can often be much longer.
 			// https://www.envoyproxy.io/docs/envoy/latest/operations/cli#cmdoption-max-obj-name-len
 			// FIXME: figure out what this should actually be set to
-			"--max-obj-name-len",
-			strconv.Itoa(256),
+			"--max-obj-name-len", strconv.Itoa(256),
 		},
 		Ports: envoyPorts,
 		VolumeMounts: []corev1.VolumeMount{
@@ -586,22 +730,23 @@ func (sm *DefaultEnvoyServiceMesh) envoyContainers(service *latticev1.Service) (
 	return prepareEnvoy, envoy, nil
 }
 
-func (sm *DefaultEnvoyServiceMesh) EgressPort(service *latticev1.Service) (int32, error) {
-	egressPortStr, ok := service.Annotations[annotationKeyEgressPort]
+func (sm *DefaultEnvoyServiceMesh) EgressPorts(service *latticev1.Service) (*EnvoyEgressPorts, error) {
+	egressPortsStr, ok := service.Annotations[annotationKeyEgressPorts]
 	if !ok {
 		err := fmt.Errorf(
 			"service %v/%v does not have expected annotation %v",
 			service.Namespace,
 			service.Name,
-			annotationKeyEgressPort,
+			annotationKeyEgressPorts,
 		)
-		return 0, err
+		return nil, err
 	}
 
-	egressPort, err := strconv.ParseInt(egressPortStr, 10, 32)
+	var egressPorts EnvoyEgressPorts
+	err := json.Unmarshal([]byte(egressPortsStr), &egressPorts)
 	if err != nil {
-		return 0, err
+		return nil, err
 	}
 
-	return int32(egressPort), nil
+	return &egressPorts, nil
 }

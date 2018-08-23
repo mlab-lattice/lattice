@@ -31,8 +31,9 @@ type Build struct {
 	// Version
 	Version SystemVersion `json:"version"`
 
-	// Services maps service paths (e.g. /foo/bar/buzz) to the status of the build for that service in the Build.
-	Services map[tree.NodePath]ServiceBuild `json:"services"`
+	// Services maps service paths (e.g. /foo/bar/buzz) to the
+	// status of the build for that service in the Build.
+	Services map[tree.Path]ServiceBuild `json:"services"`
 }
 
 type ServiceBuild struct {
