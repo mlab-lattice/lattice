@@ -15,6 +15,7 @@ const (
 	ErrorCodeInvalidSystemID      ErrorCode = "INVALID_SYSTEM_ID"
 	ErrorCodeInvalidSystemVersion ErrorCode = "INVALID_SYSTEM_VERSION"
 	ErrorCodeInvalidBuildID       ErrorCode = "INVALID_BUILD_ID"
+	ErrorCodeInvalidJobID         ErrorCode = "INVALID_JOB_ID"
 	ErrorCodeInvalidDeployID      ErrorCode = "INVALID_DEPLOY_ID"
 	ErrorCodeInvalidTeardownID    ErrorCode = "INVALID_TEARDOWN_ID"
 	ErrorCodeInvalidServiceID     ErrorCode = "INVALID_SERVICE_ID"
@@ -139,6 +140,24 @@ func (e *InvalidBuildIDError) Error() string {
 
 func (e *InvalidBuildIDError) Code() ErrorCode {
 	return ErrorCodeInvalidBuildID
+}
+
+func NewInvalidJobIDError(id JobID) *InvalidJobIDError {
+	return &InvalidJobIDError{
+		ID: id,
+	}
+}
+
+type InvalidJobIDError struct {
+	ID JobID `json:"id"`
+}
+
+func (e *InvalidJobIDError) Error() string {
+	return fmt.Sprintf("invalid job %v", e.ID)
+}
+
+func (e *InvalidJobIDError) Code() ErrorCode {
+	return ErrorCodeInvalidJobID
 }
 
 func NewInvalidDeployIDError(id DeployID) *InvalidDeployIDError {

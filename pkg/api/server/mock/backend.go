@@ -3,6 +3,8 @@ package mock
 import (
 	"fmt"
 	"io"
+	"io/ioutil"
+	"strings"
 	"sync"
 	"time"
 
@@ -39,6 +41,7 @@ type systemRecord struct {
 	teardowns  map[v1.TeardownID]*v1.Teardown
 	secrets    []v1.Secret
 	nodePools  []v1.NodePool
+	jobs       map[v1.JobID]*v1.Job
 	recordLock sync.RWMutex
 }
 
@@ -49,6 +52,7 @@ func newSystemRecord(system *v1.System) *systemRecord {
 		builds:    make(map[v1.BuildID]*v1.Build),
 		deploys:   make(map[v1.DeployID]*v1.Deploy),
 		teardowns: make(map[v1.TeardownID]*v1.Teardown),
+		jobs:      make(map[v1.JobID]*v1.Job),
 		secrets:   []v1.Secret{},
 		nodePools: []v1.NodePool{},
 	}
@@ -178,7 +182,7 @@ func (backend *Backend) BuildLogs(
 	sidecar *string,
 	logOptions *v1.ContainerLogOptions,
 ) (io.ReadCloser, error) {
-	return nil, nil
+	return ioutil.NopCloser(strings.NewReader("this is a long line")), nil
 }
 
 // Deploys
@@ -364,7 +368,8 @@ func (backend *Backend) ServiceLogs(
 	instance string,
 	logOptions *v1.ContainerLogOptions,
 ) (io.ReadCloser, error) {
-	return nil, nil
+
+	return ioutil.NopCloser(strings.NewReader("this is a long line")), nil
 }
 
 // Secrets
@@ -473,22 +478,57 @@ func (backend *Backend) GetNodePool(systemID v1.SystemID, path v1.NodePoolPath) 
 func (backend *Backend) RunJob(systemID v1.SystemID, path tree.Path, command []string,
 	environment definitionv1.ContainerEnvironment,
 ) (*v1.Job, error) {
-	// TODO implement RunJob
-	return nil, nil
+
+	record, err := backend.getSystemRecord(systemID)
+	if err != nil {
+		return nil, err
+	}
+
+	job := &v1.Job{
+		ID:    v1.JobID(uuid.NewV4().String()),
+		State: v1.JobStatePending,
+		Path:  path,
+	}
+
+	record.jobs[job.ID] = job
+
+	// run the job
+	go backend.runJob(job)
+
+	return job, nil
 }
 
-func (backend *Backend) ListJobs(v1.SystemID) ([]v1.Job, error) {
-	// TODO implement ListJobs
-	return nil, nil
+func (backend *Backend) ListJobs(systemID v1.SystemID) ([]v1.Job, error) {
+	record, err := backend.getSystemRecord(systemID)
+	if err != nil {
+		return nil, err
+	}
+
+	jobs := []v1.Job{}
+	for _, job := range record.jobs {
+		jobs = append(jobs, *job)
+	}
+	return jobs, nil
 }
-func (backend *Backend) GetJob(v1.SystemID, v1.JobID) (*v1.Job, error) {
-	// TODO implement GetJob
-	return nil, nil
+func (backend *Backend) GetJob(systemID v1.SystemID, jobID v1.JobID) (*v1.Job, error) {
+	record, err := backend.getSystemRecord(systemID)
+	if err != nil {
+		return nil, err
+	}
+
+	record.recordLock.RLock()
+	defer record.recordLock.RUnlock()
+	job, exists := record.jobs[jobID]
+
+	if !exists {
+		return nil, v1.NewInvalidJobIDError(jobID)
+	}
+
+	return job, nil
 }
 func (backend *Backend) JobLogs(systemID v1.SystemID, jobID v1.JobID, sidecar *string, logOptions *v1.ContainerLogOptions,
 ) (io.ReadCloser, error) {
-	// TODO implement JobLogs
-	return nil, nil
+	return ioutil.NopCloser(strings.NewReader("this is a long line")), nil
 }
 
 // helpers
@@ -663,4 +703,31 @@ func (backend *Backend) runTeardown(teardown *v1.Teardown) {
 
 	systemRecord.system.Services = nil
 	teardown.State = v1.TeardownStateSucceeded
+}
+
+func (backend *Backend) runJob(job *v1.Job) {
+	// try to simulate reality by making things take a little longer. Sleep for a bit...
+	time.Sleep(2 * time.Second)
+
+	// change state to running
+	job.State = v1.JobStateRunning
+	now := time.Now()
+	job.StartTimestamp = &now
+
+	// sleep
+	fmt.Printf("Mock: Running job %s. Sleeping for 7 seconds\n", job.ID)
+	time.Sleep(7 * time.Second)
+	backend.finishJob(job)
+
+}
+
+func (backend *Backend) finishJob(job *v1.Job) {
+	// change state to succeeded
+	now := time.Now()
+
+	job.CompletionTimestamp = &now
+	job.State = v1.JobStateSucceeded
+
+	fmt.Printf("Job %s finished\n", job.ID)
+
 }
