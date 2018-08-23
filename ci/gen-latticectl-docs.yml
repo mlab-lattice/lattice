@@ -7,7 +7,6 @@ image_resource:
 inputs:
   - name: lattice-repo
   - name: docgen-binary
-  - name: latticectl-docs-markdown-bucket
 outputs:
   - name: tarball
 run:
