@@ -62,7 +62,8 @@ func (api *LatticeAPI) handleDeploySystem(c *gin.Context) {
 	var deploy *v1.Deploy
 	var err error
 	if req.Version != nil {
-		root, err := getSystemDefinitionRoot(api.backend, api.sysResolver, systemID, *req.Version)
+		root, ri, err := getSystemDefinitionRoot(api.backend, api.resolver, systemID, *req.Version)
+
 		if err != nil {
 			handleError(c, err)
 			return
@@ -71,6 +72,7 @@ func (api *LatticeAPI) handleDeploySystem(c *gin.Context) {
 		deploy, err = api.backend.DeployVersion(
 			systemID,
 			root,
+			ri,
 			*req.Version,
 		)
 	} else {

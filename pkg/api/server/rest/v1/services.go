@@ -49,7 +49,7 @@ func (api *LatticeAPI) handleListServices(c *gin.Context) {
 	// check if its a query by service path
 
 	if servicePathParam != "" {
-		servicePath, err := tree.NewNodePath(servicePathParam)
+		servicePath, err := tree.NewPath(servicePathParam)
 		if err != nil {
 			handleError(c, err)
 			return

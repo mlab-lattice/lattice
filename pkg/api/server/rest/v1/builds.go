@@ -51,7 +51,8 @@ func (api *LatticeAPI) handleBuildSystem(c *gin.Context) {
 		return
 	}
 
-	root, err := getSystemDefinitionRoot(api.backend, api.sysResolver, systemID, req.Version)
+	root, ri, err := getSystemDefinitionRoot(api.backend, api.resolver, systemID, req.Version)
+
 	if err != nil {
 		handleError(c, err)
 		return
@@ -60,6 +61,7 @@ func (api *LatticeAPI) handleBuildSystem(c *gin.Context) {
 	build, err := api.backend.Build(
 		systemID,
 		root,
+		ri,
 		req.Version,
 	)
 
@@ -155,7 +157,7 @@ func (api *LatticeAPI) handleGetBuildLogs(c *gin.Context) {
 		return
 	}
 
-	nodePath, err := tree.NewNodePath(path)
+	nodePath, err := tree.NewPath(path)
 	if err != nil {
 		c.Status(http.StatusBadRequest)
 		return

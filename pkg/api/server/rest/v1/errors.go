@@ -1,13 +1,12 @@
 package v1
 
 import (
+	"fmt"
 	"net/http"
-
-	"github.com/mlab-lattice/cli/bazel-cli/external/go_sdk/src/fmt"
-	"github.com/mlab-lattice/lattice/pkg/api/v1"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang/glog"
+	"github.com/mlab-lattice/lattice/pkg/api/v1"
 )
 
 type ErrorResponse struct {

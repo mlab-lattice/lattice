@@ -32,7 +32,7 @@ func (api *LatticeAPI) setupVersionsEndpoints() {
 func (api *LatticeAPI) handleListSystemVersions(c *gin.Context) {
 	systemID := v1.SystemID(c.Param(systemIdentifier))
 
-	versionStrings, err := getSystemVersions(api.backend, api.sysResolver, systemID)
+	versionStrings, err := getSystemVersions(api.backend, api.resolver, systemID)
 	if err != nil {
 		handleError(c, err)
 		return

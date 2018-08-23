@@ -71,7 +71,7 @@ func (api *LatticeAPI) handleSetSecret(c *gin.Context) {
 		return
 	}
 
-	path, err := tree.NewNodePath(splitPath[0])
+	path, err := tree.NewPath(splitPath[0])
 	if err != nil {
 		// FIXME: send invalid secret error
 		c.Status(http.StatusBadRequest)
@@ -141,7 +141,7 @@ func (api *LatticeAPI) handleGetSecret(c *gin.Context) {
 		return
 	}
 
-	path, err := tree.NewNodePath(splitPath[0])
+	path, err := tree.NewPath(splitPath[0])
 	if err != nil {
 		// FIXME: send invalid secret error
 		c.Status(http.StatusBadRequest)
@@ -190,7 +190,7 @@ func (api *LatticeAPI) handleUnsetSecret(c *gin.Context) {
 		return
 	}
 
-	path, err := tree.NewNodePath(splitPath[0])
+	path, err := tree.NewPath(splitPath[0])
 	if err != nil {
 		// FIXME: send invalid secret error
 		c.Status(http.StatusBadRequest)

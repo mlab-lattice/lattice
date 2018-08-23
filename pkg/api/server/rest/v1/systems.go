@@ -8,8 +8,8 @@ import (
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	v1rest "github.com/mlab-lattice/lattice/pkg/api/v1/rest"
 	"github.com/mlab-lattice/lattice/pkg/definition/resolver"
+	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 	definitionv1 "github.com/mlab-lattice/lattice/pkg/definition/v1"
-	"github.com/mlab-lattice/lattice/pkg/util/git"
 
 	"io"
 	"strconv"
@@ -197,41 +197,48 @@ func serveLogFile(log io.ReadCloser, c *gin.Context) {
 
 func getSystemDefinitionRoot(
 	backend v1server.Interface,
-	sysResolver resolver.SystemResolver,
+	r resolver.ComponentResolver,
 	systemID v1.SystemID,
 	version v1.SystemVersion,
-) (*definitionv1.SystemNode, error) {
+) (*definitionv1.SystemNode, resolver.ResolutionInfo, error) {
 	system, err := backend.GetSystem(systemID)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	systemDefURI := fmt.Sprintf(
-		"%v#%v/%s",
-		system.DefinitionURL,
-		version,
-		definitionv1.SystemDefinitionRootPathDefault,
-	)
-
-	root, err := sysResolver.ResolveDefinition(systemDefURI, &git.Options{})
+	tag := string(version)
+	ref := &definitionv1.Reference{
+		GitRepository: &definitionv1.GitRepositoryReference{
+			GitRepository: &definitionv1.GitRepository{
+				URL: system.DefinitionURL,
+				Tag: &tag,
+			},
+		},
+	}
+	rr, err := r.ResolveReference(systemID, tree.RootPath(), nil, ref, resolver.DepthInfinite)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
+	}
+
+	root, err := definitionv1.NewNode(rr.Component, "", nil)
+	if err != nil {
+		return nil, nil, err
 	}
 
 	if def, ok := root.(*definitionv1.SystemNode); ok {
-		return def, nil
+		return def, rr.Info, nil
 	}
 
-	return nil, fmt.Errorf("definition is not a system")
+	return nil, nil, fmt.Errorf("definition is not a system")
 }
 
-func getSystemVersions(backend v1server.Interface, sysResolver resolver.SystemResolver, systemID v1.SystemID) ([]string, error) {
+func getSystemVersions(backend v1server.Interface, resolver resolver.ComponentResolver, systemID v1.SystemID) ([]string, error) {
 	system, err := backend.GetSystem(systemID)
 	if err != nil {
 		return nil, err
 	}
 
-	return sysResolver.ListDefinitionVersions(system.DefinitionURL, &git.Options{})
+	return resolver.Versions(system.DefinitionURL, nil)
 }
 
 type Result struct {

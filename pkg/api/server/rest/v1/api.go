@@ -11,16 +11,16 @@ import (
 )
 
 type LatticeAPI struct {
-	router      *gin.RouterGroup
-	backend     v1server.Interface
-	sysResolver resolver.SystemResolver
+	router   *gin.RouterGroup
+	backend  v1server.Interface
+	resolver resolver.ComponentResolver
 }
 
-func newLatticeAPI(router *gin.RouterGroup, backend v1server.Interface, sysResolver resolver.SystemResolver) *LatticeAPI {
+func newLatticeAPI(router *gin.RouterGroup, backend v1server.Interface, resolver resolver.ComponentResolver) *LatticeAPI {
 	return &LatticeAPI{
-		router:      router,
-		backend:     backend,
-		sysResolver: sysResolver,
+		router:   router,
+		backend:  backend,
+		resolver: resolver,
 	}
 }
 

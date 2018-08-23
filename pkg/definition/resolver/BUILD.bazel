@@ -5,6 +5,7 @@ go_library(
     srcs = [
         "component.go",
         "component_resolver.go",
+        "interface.go",
         "secret_store.go",
         "template_store.go",
     ],
