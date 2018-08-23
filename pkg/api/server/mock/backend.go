@@ -121,6 +121,9 @@ func (backend *Backend) Build(
 	v v1.SystemVersion) (*v1.Build, error) {
 
 	record, err := backend.getSystemRecord(systemID)
+	record.recordLock.Lock()
+	defer record.recordLock.Unlock()
+
 	if err != nil {
 		return nil, err
 	}
@@ -197,9 +200,6 @@ func (backend *Backend) DeployBuild(systemID v1.SystemID, buildID v1.BuildID) (*
 		return nil, err
 	}
 
-	record.recordLock.Lock()
-	defer record.recordLock.Unlock()
-
 	deploy := &v1.Deploy{
 		ID:      v1.DeployID(uuid.NewV4().String()),
 		BuildID: buildID,
@@ -209,7 +209,7 @@ func (backend *Backend) DeployBuild(systemID v1.SystemID, buildID v1.BuildID) (*
 	record.deploys[deploy.ID] = deploy
 
 	// run the deploy
-	go backend.monitorDeployBuild(deploy, buildID, systemID)
+	go backend.processDeploy(deploy, buildID, systemID)
 
 	return deploy, nil
 }
@@ -638,41 +638,56 @@ func (backend *Backend) finishBuild(build *v1.Build) {
 
 }
 
-func (backend *Backend) monitorDeployBuild(deploy *v1.Deploy, buildID v1.BuildID, systemID v1.SystemID) {
+func (backend *Backend) processDeploy(deploy *v1.Deploy, buildID v1.BuildID, systemID v1.SystemID) {
+	record, _ := backend.getSystemRecord(systemID)
+	record.recordLock.Lock()
 
+	fmt.Printf("Processing deploy %v...\n", deploy.ID)
+	// ensure that there is not other deploy accepted/running
+	for _, currentDeploy := range record.deploys {
+		if currentDeploy.State == v1.DeployStateAccepted || currentDeploy.State == v1.DeployStateInProgress {
+			deploy.State = v1.DeployStateFailed
+			fmt.Printf("ERROR: Failing deploy %v. Another deploy for system %v is already accepted/running\n",
+				deploy.ID, systemID)
+			return
+		}
+	}
+
+	fmt.Printf("ACCPETED deploy %v!\n", deploy.ID)
+	// set the deployment state to accepted
+	deploy.State = v1.DeployStateAccepted
+	// unlock!
+	record.recordLock.Unlock()
+
+	// wait until deploy goes in progress or succeeds
 	for i := 0; i <= 200; i++ {
 		build, _ := backend.GetBuild(systemID, buildID)
-		newState := getDeployStateByBuild(build.State)
-		if deploy.State != newState {
-			deploy.State = newState
-		}
-
-		if deploy.State == v1.DeployStateSucceeded || deploy.State == v1.DeployStateFailed {
+		// if build succeeds then go in progress
+		if build.State == v1.BuildStateSucceeded {
+			deploy.State = v1.DeployStateInProgress
+			break
+		} else if build.State == v1.BuildStateFailed { // build failure
+			fmt.Printf("ERROR: Failing deploy %v. Build %v failed", deploy.ID, build.ID)
+			deploy.State = v1.DeployStateFailed
 			return
 		}
 
 		time.Sleep(200 * time.Millisecond)
 	}
 
-	// timed out... fail
-	deploy.State = v1.DeployStateFailed
-
-}
-
-func getDeployStateByBuild(buildState v1.BuildState) v1.DeployState {
-	switch buildState {
-	case v1.BuildStatePending:
-		return v1.DeployStatePending
-	case v1.BuildStateRunning:
-		return v1.DeployStateInProgress
-	case v1.BuildStateFailed:
-		return v1.DeployStateFailed
-	case v1.BuildStateSucceeded:
-		return v1.DeployStateSucceeded
-	default:
-		return v1.DeployStateAccepted
+	// if status is till accepted then fail
+	if deploy.State == v1.DeployStateAccepted {
+		fmt.Printf("ERROR: Failing deploy %v. Timed out waiting for build to finish", deploy.ID)
+		deploy.State = v1.DeployStateFailed
+		return
 	}
+	// sleep for 5 seconds then succeed
+	fmt.Printf("Deploy %v is in progress now. Sleeping for 5 seconds", deploy.ID)
+
+	time.Sleep(5 * time.Second)
+	deploy.State = v1.DeployStateSucceeded
 }
+
 func (backend *Backend) getSystemRecordForTeardown(teardownID v1.TeardownID) *systemRecord {
 	for _, systemRecord := range backend.systemRegistry {
 		if _, exists := systemRecord.teardowns[teardownID]; exists {
