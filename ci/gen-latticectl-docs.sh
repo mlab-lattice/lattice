@@ -16,4 +16,4 @@ mkdir tar-temp
 ./docgen-binary/docgen --output-docs ./tar-temp/latticectl-reference-$TAG_NAME.md --input-docs ./lattice-repo/docs/cli
 
 # We use tarballs in case we want to add multiple files in the future
-tar cvzf ./tarball/latticectl-docsi-$TAG_NAME.tar.gz ./tar-temp/*
+tar cvzf ./tarball/latticectl-docs-$TAG_NAME.tar.gz ./tar-temp/*
