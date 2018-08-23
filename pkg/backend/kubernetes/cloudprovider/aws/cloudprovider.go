@@ -42,6 +42,9 @@ type Options struct {
 
 	TerraformModulePath     string
 	TerraformBackendOptions *terraform.BackendOptions
+
+	ApiServerAddress string
+	ApiServerPort    string
 }
 
 func NewOptions(staticOptions *Options, dynamicConfig *latticev1.ConfigCloudProviderAWS) (*Options, error) {
@@ -59,6 +62,9 @@ func NewOptions(staticOptions *Options, dynamicConfig *latticev1.ConfigCloudProv
 
 		TerraformModulePath:     staticOptions.TerraformModulePath,
 		TerraformBackendOptions: staticOptions.TerraformBackendOptions,
+
+		ApiServerAddress: staticOptions.ApiServerAddress,
+		ApiServerPort:    staticOptions.ApiServerPort,
 	}
 	return options, nil
 }
@@ -93,6 +99,9 @@ func NewCloudProvider(
 
 		terraformModulePath:     options.TerraformModulePath,
 		terraformBackendOptions: options.TerraformBackendOptions,
+
+		ApiServerAddress: options.ApiServerAddress,
+		ApiServerPort:    options.ApiServerPort,
 
 		kubeClient:        kubeClient,
 		kubeServiceLister: kubeInformerFactory.Core().V1().Services().Lister(),
@@ -170,6 +179,16 @@ func Flags() (cli.Flags, *Options) {
 			Required: true,
 			Target:   &terraformBackend,
 		},
+		&cli.StringFlag{
+			Name:     "api-server-address",
+			Required: false,
+			Target:   &options.ApiServerAddress,
+		},
+		&cli.StringFlag{
+			Name:     "api-server-port",
+			Required: false,
+			Target:   &options.ApiServerPort,
+		},
 		terraformBackendFlag,
 	}
 	return flags, options
@@ -193,6 +212,9 @@ type DefaultAWSCloudProvider struct {
 
 	terraformModulePath     string
 	terraformBackendOptions *terraform.BackendOptions
+
+	ApiServerAddress string
+	ApiServerPort    string
 
 	kubeClient kubeclientset.Interface
 

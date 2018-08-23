@@ -17,7 +17,7 @@ type ClusterBootstrapperOptions struct {
 
 func NewLatticeBootstrapper(latticeID v1.LatticeID, namespacePrefix, internalDNSDomain string, options *ClusterBootstrapperOptions) (clusterbootstrapper.Interface, error) {
 	if options.AWS != nil {
-		return aws.NewLatticeBootstrapper(options.AWS), nil
+		return aws.NewLatticeBootstrapper(internalDNSDomain, options.AWS), nil
 	}
 
 	if options.Local != nil {

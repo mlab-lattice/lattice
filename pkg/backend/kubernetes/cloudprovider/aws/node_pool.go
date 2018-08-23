@@ -12,18 +12,23 @@ import (
 
 	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/kubernetes"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
+	// note - will be GenerateBootstrapToken from "k8s.io/client-go/tools/bootstrap/token/util" at 1.10.4
+	tokenutil "k8s.io/kubernetes/cmd/kubeadm/app/util/token"
 )
 
 const (
 	AnnotationKeyNodePoolAutoscalingGroupName = "node-pool.aws.cloud-provider.lattice.mlab.com/autoscaling-group-name"
 	AnnotationKeyNodePoolSecurityGroupID      = "node-pool.aws.cloud-provider.lattice.mlab.com/security-group-id"
+	AnnotationKeyNodePoolBootstrapToken       = "node-pool.aws.cloud-provider.lattice.mlab.com/bootstrap-token"
 
 	terraformOutputNodePoolAutoscalingGroupID              = "autoscaling_group_id"
 	terraformOutputNodePoolAutoscalingGroupName            = "autoscaling_group_name"
 	terraformOutputNodePoolAutoscalingGroupDesiredCapacity = "autoscaling_group_desired_capacity"
 	terraformOutputNodePoolSecurityGroupID                 = "security_group_id"
+	terraformOutputBootstrapToken                          = "bootstrap_token"
 )
 
 func (cp *DefaultAWSCloudProvider) NodePoolNeedsNewEpoch(nodePool *latticev1.NodePool) (bool, error) {
@@ -57,6 +62,7 @@ func (cp *DefaultAWSCloudProvider) NodePoolAddAnnotations(
 
 	annotations[AnnotationKeyNodePoolAutoscalingGroupName] = info.AutoScalingGroupName
 	annotations[AnnotationKeyNodePoolSecurityGroupID] = info.SecurityGroupID
+	annotations[AnnotationKeyNodePoolBootstrapToken] = info.BootstrapToken
 	return nil
 }
 
@@ -102,7 +108,17 @@ func (cp *DefaultAWSCloudProvider) EnsureNodePoolEpoch(
 	nodePool *latticev1.NodePool,
 	epoch latticev1.NodePoolEpoch,
 ) error {
-	module := cp.nodePoolTerraformModule(latticeID, nodePool, epoch)
+	bootstrapToken := ""
+
+	module, err := cp.nodePoolTerraformModule(latticeID, nodePool, epoch, &bootstrapToken)
+	if err != nil {
+		return fmt.Errorf(
+			"error getting terraform module for %v epoch %v: %v",
+			nodePool.Description(cp.namespacePrefix),
+			epoch,
+			err,
+		)
+	}
 	config := cp.nodePoolTerraformConfig(latticeID, nodePool, epoch, module)
 
 	result, _, err := terraform.Plan(nodePoolWorkDirectory(nodePool.ID(epoch)), config, false)
@@ -117,6 +133,17 @@ func (cp *DefaultAWSCloudProvider) EnsureNodePoolEpoch(
 
 	switch result {
 	case terraform.PlanResultNotEmpty:
+		newBootstrapToken, err := cp.CreateBootstrapToken(latticeID)
+		if err != nil {
+			return fmt.Errorf(
+				"error making secret for %v epoch %v: %v",
+				nodePool.Description(cp.namespacePrefix),
+				epoch,
+				err,
+			)
+		}
+		bootstrapToken = newBootstrapToken
+
 		_, err = terraform.Apply(nodePoolWorkDirectory(nodePool.ID(epoch)), config)
 		if err != nil {
 			return fmt.Errorf(
@@ -139,6 +166,49 @@ func (cp *DefaultAWSCloudProvider) EnsureNodePoolEpoch(
 			epoch,
 		)
 	}
+}
+
+// TODO seems like this may be an inappropriate place to put this... investigate a better location
+func (cp *DefaultAWSCloudProvider) CreateBootstrapToken(
+	latticeId v1.LatticeID,
+) (string, error) {
+	bootstrapToken, err := tokenutil.GenerateToken()
+	if err != nil {
+		return "", fmt.Errorf(
+			"error generating bootstrap token: %v",
+			err,
+		)
+	}
+	tokenId, tokenSecret, err := tokenutil.ParseToken(bootstrapToken)
+	if err != nil {
+		return "", fmt.Errorf(
+			"error splitting bootstrap token into component parts: %v",
+			err,
+		)
+	}
+
+	secretMap := map[string]string{
+		"description":                    "Bootstrap token for node-pool on lattice " + string(latticeId),
+		"token-id":                       tokenId,
+		"token-secret":                   tokenSecret,
+		"usage-bootstrap-authentication": "true",
+		"usage-bootstrap-signing":        "true",
+		"auth-extra-groups":              "system:bootstrappers:kubeadm:default-node-token",
+	}
+	secret := &corev1.Secret{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "v1",
+			Kind:       "Secret",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "bootstrap-token-" + tokenId,
+			Namespace: "kube-system",
+		},
+		Type:       "bootstrap.kubernetes.io/token",
+		StringData: secretMap,
+	}
+	_, errr := cp.kubeClient.CoreV1().Secrets("kube-system").Create(secret)
+	return bootstrapToken, errr
 }
 
 func (cp *DefaultAWSCloudProvider) DestroyNodePoolEpoch(
@@ -170,9 +240,14 @@ func (cp *DefaultAWSCloudProvider) nodePoolEpochInfo(
 		terraformOutputNodePoolAutoscalingGroupName,
 		terraformOutputNodePoolAutoscalingGroupDesiredCapacity,
 		terraformOutputNodePoolSecurityGroupID,
+		terraformOutputBootstrapToken,
 	}
+	bootstrapToken := ""
 
-	module := cp.nodePoolTerraformModule(latticeID, nodePool, epoch)
+	module, err := cp.nodePoolTerraformModule(latticeID, nodePool, epoch, &bootstrapToken)
+	if err != nil {
+		return nodePoolInfo{}, err
+	}
 	config := cp.nodePoolTerraformConfig(latticeID, nodePool, epoch, module)
 	values, err := terraform.Output(nodePoolWorkDirectory(nodePool.ID(epoch)), config, outputVars)
 	if err != nil {
@@ -189,6 +264,7 @@ func (cp *DefaultAWSCloudProvider) nodePoolEpochInfo(
 		AutoScalingGroupName: values[terraformOutputNodePoolAutoscalingGroupName],
 		NumInstances:         int32(numInstances),
 		SecurityGroupID:      values[terraformOutputNodePoolSecurityGroupID],
+		BootstrapToken:       values[terraformOutputBootstrapToken],
 	}
 	return info, nil
 }
@@ -231,6 +307,9 @@ func (cp *DefaultAWSCloudProvider) nodePoolTerraformConfig(
 			terraformOutputNodePoolSecurityGroupID: {
 				Value: fmt.Sprintf("${module.node-pool.%v}", terraformOutputNodePoolSecurityGroupID),
 			},
+			terraformOutputBootstrapToken: {
+				Value: fmt.Sprintf("${module.node-pool.%v}", terraformOutputBootstrapToken),
+			},
 		}
 	}
 
@@ -241,8 +320,21 @@ func (cp *DefaultAWSCloudProvider) nodePoolTerraformModule(
 	latticeID v1.LatticeID,
 	nodePool *latticev1.NodePool,
 	epoch latticev1.NodePoolEpoch,
-) *kubetf.NodePool {
+	bootstrapSecret *string,
+) (*kubetf.NodePool, error) {
 	nodePoolID := nodePool.ID(epoch)
+	existingToken, hasToken := nodePool.Annotations[AnnotationKeyNodePoolBootstrapToken]
+	if hasToken {
+		*bootstrapSecret = existingToken
+	}
+
+	apiServerPort, err := strconv.ParseInt(cp.ApiServerPort, 10, 64)
+	if err != nil {
+		return &kubetf.NodePool{}, fmt.Errorf(
+			"error parsing apiserver port: %v",
+			err,
+		)
+	}
 
 	return &kubetf.NodePool{
 		Source: cp.terraformModulePath + kubetf.ModulePathNodePool,
@@ -260,7 +352,11 @@ func (cp *DefaultAWSCloudProvider) nodePoolTerraformModule(
 		Name:         nodePoolID,
 		NumInstances: nodePool.Spec.NumInstances,
 		InstanceType: nodePool.Spec.InstanceType,
-	}
+
+		KubeBootstrapToken:      bootstrapSecret,
+		LatticeApiServerAddress: cp.ApiServerAddress,
+		LatticeApiServerPort:    apiServerPort,
+	}, nil
 }
 
 type nodePoolInfo struct {
@@ -268,6 +364,7 @@ type nodePoolInfo struct {
 	AutoScalingGroupName string
 	NumInstances         int32
 	SecurityGroupID      string
+	BootstrapToken       string
 }
 
 func nodePoolWorkDirectory(nodePoolID string) string {

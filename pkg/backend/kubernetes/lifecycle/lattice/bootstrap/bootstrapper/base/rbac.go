@@ -7,4 +7,5 @@ var (
 	ReadAndUpdateVerbs             = []string{"get", "watch", "list", "update"}
 	ReadCreateAndDeleteVerbs       = []string{"get", "watch", "list", "create", "delete"}
 	ReadCreateUpdateAndDeleteVerbs = []string{"get", "watch", "list", "create", "update", "delete"}
+	CreateUpdateVerbs              = []string{"create", "update"}
 )

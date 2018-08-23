@@ -21,6 +21,10 @@ variable "kubelet_port" {
   default = 10250
 }
 
+variable "kube_bootstrap_token" {}
+variable "kube_apiserver_address" {}
+variable "kube_apiserver_port" {}
+
 ###############################################################################
 # Provider
 #
@@ -145,6 +149,10 @@ module "node" {
   key_name      = "${var.key_name}"
 
   iam_instance_profile_role_name = "${aws_iam_role.build_node_role.name}"
+
+  kube_bootstrap_token   = "${var.kube_bootstrap_token}"
+  kube_apiserver_address = "${var.kube_apiserver_address}"
+  kube_apiserver_port    = "${var.kube_apiserver_port}"
 }
 
 ###############################################################################

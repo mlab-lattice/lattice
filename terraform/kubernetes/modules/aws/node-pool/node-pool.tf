@@ -20,6 +20,10 @@ variable "kubelet_port" {
   default = 10250
 }
 
+variable "kube_bootstrap_token" {}
+variable "kube_apiserver_address" {}
+variable "kube_apiserver_port" {}
+
 ###############################################################################
 # Output
 #
@@ -38,6 +42,10 @@ output "autoscaling_group_desired_capacity" {
 
 output "security_group_id" {
   value = "${module.node.security_group_id}"
+}
+
+output "bootstrap_token" {
+  value = "${var.kube_bootstrap_token}"
 }
 
 ###############################################################################
@@ -138,6 +146,10 @@ module "node" {
   instance_type = "${var.instance_type}"
   ami_id        = "${var.worker_node_ami_id}"
   key_name      = "${var.key_name}"
+
+  kube_bootstrap_token   = "${var.kube_bootstrap_token}"
+  kube_apiserver_address = "${var.kube_apiserver_address}"
+  kube_apiserver_port    = "${var.kube_apiserver_port}"
 
   iam_instance_profile_role_name = "${aws_iam_role.node_pool_role.name}"
 }
