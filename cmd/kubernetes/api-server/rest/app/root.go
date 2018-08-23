@@ -12,6 +12,7 @@ import (
 	"github.com/mlab-lattice/lattice/pkg/definition/resolver"
 	"github.com/mlab-lattice/lattice/pkg/util/cli"
 
+	kubeinformers "k8s.io/client-go/informers"
 	kubeclientset "k8s.io/client-go/kubernetes"
 	kuberest "k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
@@ -90,8 +91,11 @@ func Command() *cli.Command {
 			backend := backend.NewKubernetesBackend(namespacePrefix, kubeClient, latticeClient)
 
 			latticeInformers := latticeinformers.NewSharedInformerFactory(latticeClient, time.Duration(12*time.Hour))
-			store := kuberesolver.NewKubernetesTemplateStore(namespacePrefix, latticeClient, latticeInformers, nil)
-			resolver, err := resolver.NewComponentResolver(workDirectory, false, store)
+			kubeInformers := kubeinformers.NewSharedInformerFactory(kubeClient, time.Duration(12*time.Hour))
+			templateStore := kuberesolver.NewKubernetesTemplateStore(namespacePrefix, latticeClient, latticeInformers, nil)
+			secretStore := kuberesolver.NewKubernetesSecretStore(namespacePrefix, kubeInformers, nil)
+
+			resolver, err := resolver.NewComponentResolver(workDirectory, false, templateStore, secretStore)
 			if err != nil {
 				panic(err)
 			}

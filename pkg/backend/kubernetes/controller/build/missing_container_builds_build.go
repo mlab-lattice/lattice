@@ -179,6 +179,13 @@ func (c *Controller) hydrateContainerBuild(
 			Commit: &i.Commit.Commit,
 		},
 	}
+
+	if i.SSHKeySecret != nil {
+		b.CommandBuild.Source.GitRepository.SSHKey = &definitionv1.SecretRef{
+			Value: *i.SSHKeySecret,
+		}
+	}
+
 	return b, nil
 }
 
