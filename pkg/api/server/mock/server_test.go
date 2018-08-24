@@ -39,6 +39,7 @@ func mockTests(t *testing.T) {
 func happyPathTest(t *testing.T) {
 	createSystem(t)
 	buildAndDeploy(t)
+	ensureSingleDeploy(t)
 	runJob(t)
 	testSecrets(t)
 	checkSystemHealth(t)
@@ -141,13 +142,6 @@ func buildAndDeploy(t *testing.T) {
 		t.Fatal("Timed out waiting for build to run")
 	}
 
-	// ensure that deploy has reached running state as well
-	deploy, err = latticeClient.Systems().Deploys(mockSystemID).Get(deploy.ID)
-
-	if deploy.State != v1.DeployStateInProgress {
-		t.Fatal("Deploy must be in the `In progress` state since build is running")
-	}
-
 	// check service builds
 	fmt.Println("Ensuring that service builds are running...")
 	if build.Services == nil || len(build.Services) == 0 {
@@ -175,13 +169,22 @@ func buildAndDeploy(t *testing.T) {
 
 	fmt.Printf("Build %v succeeded!\n", build.ID)
 
-	// ensure that deploy state has succeeded
-	fmt.Println("Verifying that deploy has succeeded...")
-	deploy, err = latticeClient.Systems().Deploys(mockSystemID).Get(deploy.ID)
+	fmt.Printf("Ensure that deploy %v enters in progress state!\n", deploy.ID)
+	// ensure that deploy enters in progress state as well
+	waitFor(func() bool {
+		deploy, err = latticeClient.Systems().Deploys(mockSystemID).Get(deploy.ID)
+		checkErr(err, t)
+		return deploy.State == v1.DeployStateInProgress
+	}, t)
 
-	if deploy.State != v1.DeployStateSucceeded {
-		t.Fatal("Deploy must be in the `succeeded` state since build has succeeded")
-	}
+	// ensure that deploy state has succeeded
+	fmt.Println("Wait until deploy succeeds")
+	waitFor(func() bool {
+		deploy, err = latticeClient.Systems().Deploys(mockSystemID).Get(deploy.ID)
+		checkErr(err, t)
+		return deploy.State == v1.DeployStateSucceeded
+	}, t)
+
 	fmt.Println("Deploy succeeded!")
 
 	// check service builds succeeded
@@ -225,6 +228,42 @@ func buildAndDeploy(t *testing.T) {
 	if "this is a long line" != buf.String() {
 		t.Fatal("Failed to get service logs")
 	}
+}
+
+func ensureSingleDeploy(t *testing.T) {
+	fmt.Println("Ensure that system can have one accepted/running deploy at time")
+	build, err := latticeClient.Systems().Builds(mockSystemID).Create(mockSystemVersion)
+	checkErr(err, t)
+
+	// Create first deploy
+	fmt.Println("Creating first Depoly")
+	deploy, err := latticeClient.Systems().Deploys(mockSystemID).CreateFromBuild(build.ID)
+	checkErr(err, t)
+
+	fmt.Printf("Created deploy %v\n", deploy.ID)
+
+	// wait for build to run
+	fmt.Printf("Waiting for deploy %v to enter accepted state\n", deploy.ID)
+	waitFor(func() bool {
+		deploy, err = latticeClient.Systems().Deploys(mockSystemID).Get(deploy.ID)
+		checkErr(err, t)
+		return deploy.State == v1.DeployStateAccepted
+	}, t)
+
+	fmt.Printf("Deploy %v is in accepted state!\n", deploy.ID)
+	fmt.Println("Attempt to create another deploy which should fail since there is one that is already accepted")
+	deploy2, err := latticeClient.Systems().Deploys(mockSystemID).CreateFromBuild(build.ID)
+
+	// wait for deploy to fail
+	fmt.Printf("Waiting for deploy %v to enter failed state\n", deploy2.ID)
+	waitFor(func() bool {
+		deploy2, err = latticeClient.Systems().Deploys(mockSystemID).Get(deploy2.ID)
+		checkErr(err, t)
+		return deploy2.State == v1.DeployStateFailed
+	}, t)
+
+	fmt.Printf("Deploy %v failed as expected!\n", deploy2.ID)
+
 }
 
 func runJob(t *testing.T) {
