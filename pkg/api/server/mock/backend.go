@@ -640,7 +640,6 @@ func (backend *Backend) finishBuild(build *v1.Build) {
 
 func (backend *Backend) processDeploy(deploy *v1.Deploy, buildID v1.BuildID, systemID v1.SystemID) {
 	record, _ := backend.getSystemRecord(systemID)
-	record.recordLock.Lock()
 
 	fmt.Printf("Processing deploy %v...\n", deploy.ID)
 	// ensure that there is not other deploy accepted/running
@@ -653,6 +652,7 @@ func (backend *Backend) processDeploy(deploy *v1.Deploy, buildID v1.BuildID, sys
 		}
 	}
 
+	record.recordLock.Lock()
 	fmt.Printf("ACCPETED deploy %v!\n", deploy.ID)
 	// set the deployment state to accepted
 	deploy.State = v1.DeployStateAccepted
