@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/mlab-lattice/lattice/pkg/api/server/mock"
 	"github.com/mlab-lattice/lattice/pkg/api/server/rest"
 	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/api/server/backend"
 	latticeclientset "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/generated/clientset/versioned"
@@ -38,6 +39,7 @@ func Command() *cli.Command {
 	var workDirectory string
 	var port int32
 	var apiAuthKey string
+	var isMock bool
 
 	command := &cli.Command{
 		Name: "api-server",
@@ -71,10 +73,22 @@ func Command() *cli.Command {
 				Default: "",
 				Target:  &apiAuthKey,
 			},
+			&cli.BoolFlag{
+				Name:    "mock",
+				Usage:   "Start a mock instance of api server",
+				Default: false,
+				Target:  &isMock,
+			},
 		},
 		Run: func(args []string) {
 			// https://github.com/kubernetes/kubernetes/issues/17162#issuecomment-225596212
 			goflag.CommandLine.Parse([]string{})
+
+			// check if its a mock instance
+			if isMock {
+				mock.RunMockNewRestServer(port, apiAuthKey)
+				return
+			}
 
 			var config *kuberest.Config
 			var err error
