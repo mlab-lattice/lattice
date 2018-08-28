@@ -14,6 +14,10 @@ variable "ami_id" {}
 variable "key_name" {}
 variable "iam_instance_profile_role_name" {}
 
+variable "root_block_device_volume_size" {
+  default = 8
+}
+
 variable "etc_lattice_config_content" {
   type = "string"
 
@@ -172,6 +176,10 @@ EOF
     "${aws_security_group.node_auto_scaling_group.id}",
     "${aws_security_group.temporary_ssh_group.id}",
   ]
+
+  root_block_device {
+    volume_size = "${var.root_block_device_volume_size}"
+  }
 
   # Needed to be able to talk to public internet for build deps
   associate_public_ip_address = true
