@@ -106,13 +106,13 @@ git.install-hooks:
 
 # docker
 DOCKER_IMAGES := kubernetes-api-server-rest             \
-                 mock-api-server                        \
                  kubernetes-container-builder           \
                  kubernetes-envoy-prepare               \
                  kubernetes-envoy-xds-api-grpc-per-node \
                  kubernetes-lattice-controller-manager  \
                  kubernetes-local-dns-controller        \
-                 latticectl
+                 latticectl                             \
+                 mock-api-server
 
 .PHONY: docker.push
 docker.push: gazelle \
