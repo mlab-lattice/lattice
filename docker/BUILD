@@ -72,6 +72,12 @@ lattice_go_container_image(
 )
 
 lattice_go_container_image(
+    name = "mock-api-server",
+    base_image = None,
+    path = "cmd/mock/api-server",
+)
+
+lattice_go_container_image(
     name = "kubernetes-container-builder",
     base_image = "openssh-client",
     path = "cmd/kubernetes/container-builder",

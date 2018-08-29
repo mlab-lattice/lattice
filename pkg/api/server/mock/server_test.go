@@ -20,6 +20,9 @@ const (
 
 	mockSystemVersion = v1.SystemVersion("1.0.0")
 	mockServicePath   = tree.Path("/mock-system/api")
+
+	mockServerAPIPort = 8876
+	mockServerAPIKey  = "abc"
 )
 
 var latticeClient = latticerest.NewClient(mockAPIServerURL, mockServerAPIKey).V1()
@@ -536,7 +539,7 @@ func checkErr(err error, t *testing.T) {
 func setupMockTest() {
 	fmt.Println("Setting up test. Starting API Server")
 	// run api server
-	go RunMockNewRestServer()
+	go RunMockNewRestServer(mockServerAPIPort, mockServerAPIKey)
 
 	fmt.Println("API server started")
 }

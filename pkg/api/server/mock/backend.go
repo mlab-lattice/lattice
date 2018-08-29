@@ -121,6 +121,10 @@ func (backend *Backend) Build(
 	v v1.SystemVersion) (*v1.Build, error) {
 
 	record, err := backend.getSystemRecord(systemID)
+	if err != nil {
+		return nil, err
+	}
+
 	record.recordLock.Lock()
 	defer record.recordLock.Unlock()
 
@@ -199,6 +203,10 @@ func (backend *Backend) DeployBuild(systemID v1.SystemID, buildID v1.BuildID) (*
 	if err != nil {
 		return nil, err
 	}
+
+	// lock system record
+	record.recordLock.Lock()
+	defer record.recordLock.Unlock()
 
 	deploy := &v1.Deploy{
 		ID:      v1.DeployID(uuid.NewV4().String()),
