@@ -136,13 +136,14 @@ module "node" {
   kubelet_labels = "node-role.kubernetes.io/build=true,node-role.lattice.mlab.com/build=true"
   kubelet_taints = "node-role.lattice.mlab.com/build=true:NoSchedule"
 
-  region        = "${var.region}"
-  vpc_id        = "${var.vpc_id}"
-  subnet_ids    = "${var.build_subnet_ids}"
-  num_instances = "${var.num_instances}"
-  instance_type = "${var.instance_type}"
-  ami_id        = "${var.worker_node_ami_id}"
-  key_name      = "${var.key_name}"
+  region                        = "${var.region}"
+  vpc_id                        = "${var.vpc_id}"
+  subnet_ids                    = "${var.build_subnet_ids}"
+  num_instances                 = "${var.num_instances}"
+  instance_type                 = "${var.instance_type}"
+  ami_id                        = "${var.worker_node_ami_id}"
+  key_name                      = "${var.key_name}"
+  root_block_device_volume_size = 50
 
   iam_instance_profile_role_name = "${aws_iam_role.build_node_role.name}"
 }
