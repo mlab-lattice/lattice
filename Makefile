@@ -106,6 +106,7 @@ git.install-hooks:
 
 # docker
 DOCKER_IMAGES := kubernetes-api-server-rest             \
+                 mock-api-server                        \
                  kubernetes-container-builder           \
                  kubernetes-envoy-prepare               \
                  kubernetes-envoy-xds-api-grpc-per-node \
