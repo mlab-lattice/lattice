@@ -1,0 +1,35 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "backend.go",
+        "resolver.go",
+        "server.go",
+    ],
+    importpath = "github.com/mlab-lattice/lattice/pkg/api/server/mock",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//pkg/api/server/rest:go_default_library",
+        "//pkg/api/v1:go_default_library",
+        "//pkg/definition/component:go_default_library",
+        "//pkg/definition/resolver:go_default_library",
+        "//pkg/definition/tree:go_default_library",
+        "//pkg/definition/v1:go_default_library",
+        "//pkg/util/git:go_default_library",
+        "@com_github_blang_semver//:go_default_library",
+        "@com_github_satori_go_uuid//:go_default_library",
+    ],
+)
+
+go_test(
+    name = "go_default_test",
+    srcs = ["server_test.go"],
+    embed = [":go_default_library"],
+    deps = [
+        "//pkg/api/client/rest:go_default_library",
+        "//pkg/api/v1:go_default_library",
+        "//pkg/definition/tree:go_default_library",
+        "//pkg/definition/v1:go_default_library",
+    ],
+)

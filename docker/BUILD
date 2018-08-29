@@ -106,3 +106,9 @@ lattice_go_container_image(
     base_image = None,
     path = "cmd/latticectl",
 )
+
+lattice_go_container_image(
+    name = "mock-api-server",
+    base_image = None,
+    path = "cmd/mock/api-server",
+)
