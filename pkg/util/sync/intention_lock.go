@@ -5,8 +5,7 @@ import (
 	"sync"
 )
 
-// LockGranularity defines the granularity with which
-// to obtain a lock.
+// LockGranularity defines the granularity with which to obtain a lock.
 type LockGranularity int32
 
 const (
@@ -61,7 +60,7 @@ func (l *IntentionLock) TryLock(granularity LockGranularity) *IntentionLockUnloc
 		l.exclusive = true
 
 	default:
-		return nil
+		panic(fmt.Sprintf("unrecognized lock granularity: %v", granularity))
 	}
 
 	return &IntentionLockUnlocker{
