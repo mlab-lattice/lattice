@@ -15,8 +15,10 @@ const (
 	ErrorCodeInvalidSystemID      ErrorCode = "INVALID_SYSTEM_ID"
 	ErrorCodeInvalidSystemVersion ErrorCode = "INVALID_SYSTEM_VERSION"
 	ErrorCodeInvalidBuildID       ErrorCode = "INVALID_BUILD_ID"
+	ErrorCodeInvalidJobID         ErrorCode = "INVALID_JOB_ID"
 	ErrorCodeInvalidDeployID      ErrorCode = "INVALID_DEPLOY_ID"
 	ErrorCodeInvalidTeardownID    ErrorCode = "INVALID_TEARDOWN_ID"
+	ErrorCodeInvalidServiceID     ErrorCode = "INVALID_SERVICE_ID"
 	ErrorCodeInvalidServicePath   ErrorCode = "INVALID_SERVICE_PATH"
 	ErrorCodeInvalidSidecar       ErrorCode = "INVALID_SIDECAR"
 	ErrorCodeInvalidSystemSecret  ErrorCode = "INVALID_SYSTEM_SECRET"
@@ -140,6 +142,24 @@ func (e *InvalidBuildIDError) Code() ErrorCode {
 	return ErrorCodeInvalidBuildID
 }
 
+func NewInvalidJobIDError(id JobID) *InvalidJobIDError {
+	return &InvalidJobIDError{
+		ID: id,
+	}
+}
+
+type InvalidJobIDError struct {
+	ID JobID `json:"id"`
+}
+
+func (e *InvalidJobIDError) Error() string {
+	return fmt.Sprintf("invalid job %v", e.ID)
+}
+
+func (e *InvalidJobIDError) Code() ErrorCode {
+	return ErrorCodeInvalidJobID
+}
+
 func NewInvalidDeployIDError(id DeployID) *InvalidDeployIDError {
 	return &InvalidDeployIDError{
 		ID: id,
@@ -174,6 +194,24 @@ func (e *InvalidTeardownIDError) Error() string {
 
 func (e *InvalidTeardownIDError) Code() ErrorCode {
 	return ErrorCodeInvalidTeardownID
+}
+
+func NewInvalidServiceIDError(id ServiceID) *InvalidServiceIDError {
+	return &InvalidServiceIDError{
+		ID: id,
+	}
+}
+
+type InvalidServiceIDError struct {
+	ID ServiceID `json:"id"`
+}
+
+func (e *InvalidServiceIDError) Error() string {
+	return fmt.Sprintf("invalid service %v", e.ID)
+}
+
+func (e *InvalidServiceIDError) Code() ErrorCode {
+	return ErrorCodeInvalidServiceID
 }
 
 func NewInvalidServicePathError(path tree.Path) *InvalidServicePathError {
