@@ -5,7 +5,7 @@ import (
 )
 
 func RunMockNewRestServer(port int32, apiAuthKey string) {
-	backend, err := newMockBackend()
+	backend, err := NewMockBackend()
 	if err != nil {
 		panic(err)
 	}

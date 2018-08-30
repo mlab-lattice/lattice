@@ -22,8 +22,8 @@ const (
 )
 
 type NodePool struct {
-	ID   string `json:"id"`
-	Path string `json:"path"`
+	ID   string                `json:"id"`
+	Path tree.PathSubcomponent `json:"path"`
 
 	// FIXME: how to deal with epochs?
 	InstanceType string `json:"instanceType"`

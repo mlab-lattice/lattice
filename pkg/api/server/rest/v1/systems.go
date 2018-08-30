@@ -2,23 +2,21 @@ package v1
 
 import (
 	"fmt"
-	"io"
-	"net/http"
-	"net/url"
-	"strconv"
-	"strings"
-
-	v1server "github.com/mlab-lattice/lattice/pkg/api/server/v1"
+	serverv1 "github.com/mlab-lattice/lattice/pkg/api/server/v1"
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	v1rest "github.com/mlab-lattice/lattice/pkg/api/v1/rest"
 	"github.com/mlab-lattice/lattice/pkg/definition/resolver"
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 	definitionv1 "github.com/mlab-lattice/lattice/pkg/definition/v1"
+	"io"
+	"net/http"
+	"net/url"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 )
 
-func mountSystemHandlers(router *gin.RouterGroup, backend v1server.Interface, resolver resolver.ComponentResolver) {
+func mountSystemHandlers(router *gin.RouterGroup, backend serverv1.Backend, resolver resolver.ComponentResolver) {
 	// create-system
 	router.POST(v1rest.SystemsPath, func(c *gin.Context) {
 		var req v1rest.CreateSystemRequest
@@ -27,7 +25,7 @@ func mountSystemHandlers(router *gin.RouterGroup, backend v1server.Interface, re
 			return
 		}
 
-		system, err := backend.CreateSystem(req.ID, req.DefinitionURL)
+		system, err := backend.Systems().Create(req.ID, req.DefinitionURL)
 		if err != nil {
 			handleError(c, err)
 			return
@@ -38,7 +36,7 @@ func mountSystemHandlers(router *gin.RouterGroup, backend v1server.Interface, re
 
 	// list-systems
 	router.GET(v1rest.SystemsPath, func(c *gin.Context) {
-		systems, err := backend.ListSystems()
+		systems, err := backend.Systems().List()
 		if err != nil {
 			handleError(c, err)
 			return
@@ -55,7 +53,7 @@ func mountSystemHandlers(router *gin.RouterGroup, backend v1server.Interface, re
 	router.GET(systemPath, func(c *gin.Context) {
 		systemID := v1.SystemID(c.Param(systemIdentifier))
 
-		system, err := backend.GetSystem(systemID)
+		system, err := backend.Systems().Get(systemID)
 		if err != nil {
 			handleError(c, err)
 			return
@@ -68,7 +66,7 @@ func mountSystemHandlers(router *gin.RouterGroup, backend v1server.Interface, re
 	router.DELETE(systemPath, func(c *gin.Context) {
 		systemID := v1.SystemID(c.Param(systemIdentifier))
 
-		err := backend.DeleteSystem(systemID)
+		err := backend.Systems().Delete(systemID)
 		if err != nil {
 			handleError(c, err)
 			return
@@ -87,7 +85,7 @@ func mountSystemHandlers(router *gin.RouterGroup, backend v1server.Interface, re
 	mountVersionHandlers(router, backend, resolver)
 }
 
-func mountBuildHandlers(router *gin.RouterGroup, backend v1server.Interface, resolver resolver.ComponentResolver) {
+func mountBuildHandlers(router *gin.RouterGroup, backend serverv1.Backend, resolver resolver.ComponentResolver) {
 	systemIdentifier := "system_id"
 	systemIdentifierPathComponent := fmt.Sprintf(":%v", systemIdentifier)
 	buildsPath := fmt.Sprintf(v1rest.BuildsPathFormat, systemIdentifierPathComponent)
@@ -102,19 +100,7 @@ func mountBuildHandlers(router *gin.RouterGroup, backend v1server.Interface, res
 			return
 		}
 
-		root, ri, err := getSystemDefinitionRoot(backend, resolver, systemID, req.Version)
-		if err != nil {
-			handleError(c, err)
-			return
-		}
-
-		build, err := backend.Build(
-			systemID,
-			root,
-			ri,
-			req.Version,
-		)
-
+		build, err := backend.Systems().Builds(systemID).Create(req.Version)
 		if err != nil {
 			handleError(c, err)
 			return
@@ -127,7 +113,7 @@ func mountBuildHandlers(router *gin.RouterGroup, backend v1server.Interface, res
 	router.GET(buildsPath, func(c *gin.Context) {
 		systemID := v1.SystemID(c.Param(systemIdentifier))
 
-		builds, err := backend.ListBuilds(systemID)
+		builds, err := backend.Systems().Builds(systemID).List()
 		if err != nil {
 			handleError(c, err)
 			return
@@ -145,7 +131,7 @@ func mountBuildHandlers(router *gin.RouterGroup, backend v1server.Interface, res
 		systemID := v1.SystemID(c.Param(systemIdentifier))
 		buildID := v1.BuildID(c.Param(buildIdentifier))
 
-		build, err := backend.GetBuild(systemID, buildID)
+		build, err := backend.Systems().Builds(systemID).Get(buildID)
 		if err != nil {
 			handleError(c, err)
 			return
@@ -190,7 +176,7 @@ func mountBuildHandlers(router *gin.RouterGroup, backend v1server.Interface, res
 			return
 		}
 
-		log, err := backend.BuildLogs(systemID, buildID, nodePath, sidecar, logOptions)
+		log, err := backend.Systems().Builds(systemID).Logs(buildID, nodePath, sidecar, logOptions)
 		if err != nil {
 			handleError(c, err)
 			return
@@ -205,7 +191,7 @@ func mountBuildHandlers(router *gin.RouterGroup, backend v1server.Interface, res
 	})
 }
 
-func mountDeployHandlers(router *gin.RouterGroup, backend v1server.Interface, resolver resolver.ComponentResolver) {
+func mountDeployHandlers(router *gin.RouterGroup, backend serverv1.Backend, resolver resolver.ComponentResolver) {
 	systemIdentifier := "system_id"
 	systemIdentifierPathComponent := fmt.Sprintf(":%v", systemIdentifier)
 	deploysPath := fmt.Sprintf(v1rest.DeploysPathFormat, systemIdentifierPathComponent)
@@ -233,23 +219,9 @@ func mountDeployHandlers(router *gin.RouterGroup, backend v1server.Interface, re
 		var deploy *v1.Deploy
 		var err error
 		if req.Version != nil {
-			root, ri, err := getSystemDefinitionRoot(backend, resolver, systemID, *req.Version)
-			if err != nil {
-				handleError(c, err)
-				return
-			}
-
-			deploy, err = backend.DeployVersion(
-				systemID,
-				root,
-				ri,
-				*req.Version,
-			)
+			deploy, err = backend.Systems().Deploys(systemID).CreateFromVersion(*req.Version)
 		} else {
-			deploy, err = backend.DeployBuild(
-				systemID,
-				*req.BuildID,
-			)
+			deploy, err = backend.Systems().Deploys(systemID).CreateFromBuild(*req.BuildID)
 		}
 
 		if err != nil {
@@ -264,7 +236,7 @@ func mountDeployHandlers(router *gin.RouterGroup, backend v1server.Interface, re
 	router.GET(deploysPath, func(c *gin.Context) {
 		systemID := v1.SystemID(c.Param(systemIdentifier))
 
-		deploys, err := backend.ListDeploys(systemID)
+		deploys, err := backend.Systems().Deploys(systemID).List()
 		if err != nil {
 			handleError(c, err)
 			return
@@ -282,7 +254,7 @@ func mountDeployHandlers(router *gin.RouterGroup, backend v1server.Interface, re
 		systemID := v1.SystemID(c.Param(systemIdentifier))
 		deployID := v1.DeployID(c.Param(deployIdentifier))
 
-		deploy, err := backend.GetDeploy(v1.SystemID(systemID), v1.DeployID(deployID))
+		deploy, err := backend.Systems().Deploys(systemID).Get(deployID)
 		if err != nil {
 			handleError(c, err)
 			return
@@ -292,7 +264,7 @@ func mountDeployHandlers(router *gin.RouterGroup, backend v1server.Interface, re
 	})
 }
 
-func mountNodePoolHandlers(router *gin.RouterGroup, backend v1server.Interface) {
+func mountNodePoolHandlers(router *gin.RouterGroup, backend serverv1.Backend) {
 	systemIdentifier := "system_id"
 	systemIdentifierPathComponent := fmt.Sprintf(":%v", systemIdentifier)
 	nodePoolsPath := fmt.Sprintf(v1rest.NodePoolsPathFormat, systemIdentifierPathComponent)
@@ -301,7 +273,7 @@ func mountNodePoolHandlers(router *gin.RouterGroup, backend v1server.Interface) 
 	router.GET(nodePoolsPath, func(c *gin.Context) {
 		systemID := v1.SystemID(c.Param(systemIdentifier))
 
-		nodePools, err := backend.ListNodePools(systemID)
+		nodePools, err := backend.Systems().NodePools(systemID).List()
 		if err != nil {
 			handleError(c, err)
 			return
@@ -326,14 +298,14 @@ func mountNodePoolHandlers(router *gin.RouterGroup, backend v1server.Interface) 
 			return
 		}
 
-		path, err := v1.ParseNodePoolPath(nodePoolPathString)
+		path, err := tree.NewPathSubcomponent(nodePoolPathString)
 		if err != nil {
 			// FIXME: send invalid nodePool error
 			c.Status(http.StatusBadRequest)
 			return
 		}
 
-		nodePool, err := backend.GetNodePool(systemID, path)
+		nodePool, err := backend.Systems().NodePools(systemID).Get(path)
 		if err != nil {
 			handleError(c, err)
 			return
@@ -343,7 +315,7 @@ func mountNodePoolHandlers(router *gin.RouterGroup, backend v1server.Interface) 
 	})
 }
 
-func mountServiceHandlers(router *gin.RouterGroup, backend v1server.Interface) {
+func mountServiceHandlers(router *gin.RouterGroup, backend serverv1.Backend) {
 	systemIdentifier := "system_id"
 	systemIdentifierPathComponent := fmt.Sprintf(":%v", systemIdentifier)
 	servicesPath := fmt.Sprintf(v1rest.ServicesPathFormat, systemIdentifierPathComponent)
@@ -362,7 +334,7 @@ func mountServiceHandlers(router *gin.RouterGroup, backend v1server.Interface) {
 				return
 			}
 
-			service, err := backend.GetServiceByPath(systemID, servicePath)
+			service, err := backend.Systems().Services(systemID).GetByPath(servicePath)
 
 			if err != nil {
 				handleError(c, err)
@@ -379,7 +351,7 @@ func mountServiceHandlers(router *gin.RouterGroup, backend v1server.Interface) {
 		}
 
 		// otherwise its just a normal list services request
-		services, err := backend.ListServices(systemID)
+		services, err := backend.Systems().Services(systemID).List()
 		if err != nil {
 			handleError(c, err)
 			return
@@ -397,7 +369,7 @@ func mountServiceHandlers(router *gin.RouterGroup, backend v1server.Interface) {
 		systemID := v1.SystemID(c.Param(systemIdentifier))
 		serviceID := v1.ServiceID(c.Param(serviceIdentifier))
 
-		service, err := backend.GetService(systemID, serviceID)
+		service, err := backend.Systems().Services(systemID).Get(serviceID)
 		if err != nil {
 			handleError(c, err)
 			return
@@ -432,8 +404,7 @@ func mountServiceHandlers(router *gin.RouterGroup, backend v1server.Interface) {
 			return
 		}
 
-		log, err := backend.ServiceLogs(systemID, serviceId, sidecar, instance, logOptions)
-
+		log, err := backend.Systems().Services(systemID).Logs(serviceId, sidecar, instance, logOptions)
 		if err != nil {
 			handleError(c, err)
 			return
@@ -449,7 +420,7 @@ func mountServiceHandlers(router *gin.RouterGroup, backend v1server.Interface) {
 	})
 }
 
-func mountJobHandlers(router *gin.RouterGroup, backend v1server.Interface) {
+func mountJobHandlers(router *gin.RouterGroup, backend serverv1.Backend) {
 	systemIdentifier := "system_id"
 	systemIdentifierPathComponent := fmt.Sprintf(":%v", systemIdentifier)
 	jobsPath := fmt.Sprintf(v1rest.JobsPathFormat, systemIdentifierPathComponent)
@@ -464,7 +435,7 @@ func mountJobHandlers(router *gin.RouterGroup, backend v1server.Interface) {
 			return
 		}
 
-		job, err := backend.RunJob(systemID, req.Path, req.Command, req.Environment)
+		job, err := backend.Systems().Jobs(systemID).Run(req.Path, req.Command, req.Environment)
 		if err != nil {
 			handleError(c, err)
 			return
@@ -477,7 +448,7 @@ func mountJobHandlers(router *gin.RouterGroup, backend v1server.Interface) {
 	router.GET(jobsPath, func(c *gin.Context) {
 		systemID := v1.SystemID(c.Param(systemIdentifier))
 
-		jobs, err := backend.ListJobs(systemID)
+		jobs, err := backend.Systems().Jobs(systemID).List()
 		if err != nil {
 			handleError(c, err)
 			return
@@ -495,7 +466,7 @@ func mountJobHandlers(router *gin.RouterGroup, backend v1server.Interface) {
 		systemID := v1.SystemID(c.Param(systemIdentifier))
 		jobID := v1.JobID(c.Param(jobIdentifier))
 
-		job, err := backend.GetJob(systemID, jobID)
+		job, err := backend.Systems().Jobs(systemID).Get(jobID)
 		if err != nil {
 			handleError(c, err)
 			return
@@ -528,7 +499,7 @@ func mountJobHandlers(router *gin.RouterGroup, backend v1server.Interface) {
 			return
 		}
 
-		log, err := backend.JobLogs(systemID, jobID, sidecar, logOptions)
+		log, err := backend.Systems().Jobs(systemID).Logs(jobID, sidecar, logOptions)
 		if err != nil {
 			handleError(c, err)
 			return
@@ -605,7 +576,7 @@ func serveLogFile(log io.ReadCloser, c *gin.Context) {
 	})
 }
 
-func mountSecretHandlers(router *gin.RouterGroup, backend v1server.Interface) {
+func mountSecretHandlers(router *gin.RouterGroup, backend serverv1.Backend) {
 	systemIdentifier := "system_id"
 	systemIdentifierPathComponent := fmt.Sprintf(":%v", systemIdentifier)
 	secretsPath := fmt.Sprintf(v1rest.SystemSecretsPathFormat, systemIdentifierPathComponent)
@@ -614,7 +585,7 @@ func mountSecretHandlers(router *gin.RouterGroup, backend v1server.Interface) {
 	router.GET(secretsPath, func(c *gin.Context) {
 		systemID := v1.SystemID(c.Param(systemIdentifier))
 
-		secrets, err := backend.ListSystemSecrets(systemID)
+		secrets, err := backend.Systems().Secrets(systemID).List()
 		if err != nil {
 			handleError(c, err)
 			return
@@ -639,23 +610,14 @@ func mountSecretHandlers(router *gin.RouterGroup, backend v1server.Interface) {
 			return
 		}
 
-		splitPath := strings.Split(secretPathString, ":")
-		if len(splitPath) != 2 {
-			// FIXME: send invalid secret error
-			c.Status(http.StatusBadRequest)
-			return
-		}
-
-		path, err := tree.NewPath(splitPath[0])
+		path, err := tree.NewPathSubcomponent(secretPathString)
 		if err != nil {
 			// FIXME: send invalid secret error
 			c.Status(http.StatusBadRequest)
 			return
 		}
 
-		name := splitPath[1]
-
-		secret, err := backend.GetSystemSecret(systemID, path, name)
+		secret, err := backend.Systems().Secrets(systemID).Get(path)
 		if err != nil {
 			// FIXME: send invalid secret error
 			c.Status(http.StatusBadRequest)
@@ -683,23 +645,14 @@ func mountSecretHandlers(router *gin.RouterGroup, backend v1server.Interface) {
 			return
 		}
 
-		splitPath := strings.Split(secretPathString, ":")
-		if len(splitPath) != 2 {
-			// FIXME: send invalid secret error
-			c.Status(http.StatusBadRequest)
-			return
-		}
-
-		path, err := tree.NewPath(splitPath[0])
+		path, err := tree.NewPathSubcomponent(secretPathString)
 		if err != nil {
 			// FIXME: send invalid secret error
 			c.Status(http.StatusBadRequest)
 			return
 		}
 
-		name := splitPath[1]
-
-		err = backend.SetSystemSecret(systemID, path, name, req.Value)
+		err = backend.Systems().Secrets(systemID).Set(path, req.Value)
 		if err != nil {
 			handleError(c, err)
 			return
@@ -720,23 +673,14 @@ func mountSecretHandlers(router *gin.RouterGroup, backend v1server.Interface) {
 			return
 		}
 
-		splitPath := strings.Split(secretPathString, ":")
-		if len(splitPath) != 2 {
-			// FIXME: send invalid secret error
-			c.Status(http.StatusBadRequest)
-			return
-		}
-
-		path, err := tree.NewPath(splitPath[0])
+		path, err := tree.NewPathSubcomponent(secretPathString)
 		if err != nil {
 			// FIXME: send invalid secret error
 			c.Status(http.StatusBadRequest)
 			return
 		}
 
-		name := splitPath[1]
-
-		err = backend.UnsetSystemSecret(systemID, path, name)
+		err = backend.Systems().Secrets(systemID).Unset(path)
 		if err != nil {
 			handleError(c, err)
 			return
@@ -746,7 +690,7 @@ func mountSecretHandlers(router *gin.RouterGroup, backend v1server.Interface) {
 	})
 }
 
-func mountTeardownHandlers(router *gin.RouterGroup, backend v1server.Interface) {
+func mountTeardownHandlers(router *gin.RouterGroup, backend serverv1.Backend) {
 	systemIdentifier := "system_id"
 	systemIdentifierPathComponent := fmt.Sprintf(":%v", systemIdentifier)
 	teardownsPath := fmt.Sprintf(v1rest.TeardownsPathFormat, systemIdentifierPathComponent)
@@ -755,7 +699,7 @@ func mountTeardownHandlers(router *gin.RouterGroup, backend v1server.Interface) 
 	router.POST(teardownsPath, func(c *gin.Context) {
 		systemID := v1.SystemID(c.Param(systemIdentifier))
 
-		teardown, err := backend.TearDown(systemID)
+		teardown, err := backend.Systems().Teardowns(systemID).Create()
 		if err != nil {
 			handleError(c, err)
 			return
@@ -768,7 +712,7 @@ func mountTeardownHandlers(router *gin.RouterGroup, backend v1server.Interface) 
 	router.GET(teardownsPath, func(c *gin.Context) {
 		systemID := v1.SystemID(c.Param(systemIdentifier))
 
-		teardowns, err := backend.ListTeardowns(systemID)
+		teardowns, err := backend.Systems().Teardowns(systemID).List()
 		if err != nil {
 			handleError(c, err)
 			return
@@ -786,7 +730,7 @@ func mountTeardownHandlers(router *gin.RouterGroup, backend v1server.Interface) 
 		systemID := v1.SystemID(c.Param(systemIdentifier))
 		teardownID := v1.TeardownID(c.Param(teardownIdentifier))
 
-		teardown, err := backend.GetTeardown(systemID, teardownID)
+		teardown, err := backend.Systems().Teardowns(systemID).Get(teardownID)
 		if err != nil {
 			handleError(c, err)
 			return
@@ -796,7 +740,7 @@ func mountTeardownHandlers(router *gin.RouterGroup, backend v1server.Interface) 
 	})
 }
 
-func mountVersionHandlers(router *gin.RouterGroup, backend v1server.Interface, resolver resolver.ComponentResolver) {
+func mountVersionHandlers(router *gin.RouterGroup, backend serverv1.Backend, resolver resolver.ComponentResolver) {
 	systemIDIdentifier := "system_id"
 	systemIDPathComponent := fmt.Sprintf(":%v", systemIDIdentifier)
 	versionsPath := fmt.Sprintf(v1rest.VersionsPathFormat, systemIDPathComponent)
@@ -839,12 +783,12 @@ func mountVersionHandlers(router *gin.RouterGroup, backend v1server.Interface, r
 }
 
 func getSystemDefinitionRoot(
-	backend v1server.Interface,
+	backend serverv1.Backend,
 	r resolver.ComponentResolver,
 	systemID v1.SystemID,
 	version v1.SystemVersion,
 ) (*definitionv1.SystemNode, resolver.ResolutionInfo, error) {
-	system, err := backend.GetSystem(systemID)
+	system, err := backend.Systems().Get(systemID)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -875,8 +819,8 @@ func getSystemDefinitionRoot(
 	return nil, nil, fmt.Errorf("definition is not a system")
 }
 
-func getSystemVersions(backend v1server.Interface, resolver resolver.ComponentResolver, systemID v1.SystemID) ([]string, error) {
-	system, err := backend.GetSystem(systemID)
+func getSystemVersions(backend serverv1.Backend, resolver resolver.ComponentResolver, systemID v1.SystemID) ([]string, error) {
+	system, err := backend.Systems().Get(systemID)
 	if err != nil {
 		return nil, err
 	}

@@ -5,7 +5,6 @@ import (
 )
 
 type Secret struct {
-	Path  tree.Path `json:"path"`
-	Name  string    `json:"name"`
-	Value string    `json:"value"`
+	Path  tree.PathSubcomponent `json:"path"`
+	Value string                `json:"value"`
 }

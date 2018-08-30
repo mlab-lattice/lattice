@@ -250,20 +250,18 @@ func (e *InvalidSidecarError) Code() ErrorCode {
 	return ErrorCodeInvalidSidecar
 }
 
-func NewInvalidSystemSecretError(path tree.Path, name string) *InvalidSystemSecretError {
+func NewInvalidSystemSecretError(path tree.PathSubcomponent) *InvalidSystemSecretError {
 	return &InvalidSystemSecretError{
 		Path: path,
-		Name: name,
 	}
 }
 
 type InvalidSystemSecretError struct {
-	Path tree.Path `json:"path"`
-	Name string    `json:"name"`
+	Path tree.PathSubcomponent `json:"path"`
 }
 
 func (e *InvalidSystemSecretError) Error() string {
-	return fmt.Sprintf("invalid secret %v:%v", e.Path, e.Name)
+	return fmt.Sprintf("invalid secret %v", e.Path)
 }
 
 func (e *InvalidSystemSecretError) Code() ErrorCode {
