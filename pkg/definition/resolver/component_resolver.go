@@ -42,6 +42,12 @@ type ResolutionNodeInfo struct {
 	Commit git.CommitReference `json:"commit"`
 }
 
+// ResolutionContext contains context to aid in the resolution of components.
+type ResultionContext struct {
+	FileReference *git.FileReference
+	Options       *git.Options
+}
+
 // ComponentResolver resolves references into fully hydrated (i.e. the template
 // engine has already acted upon it) component.
 type ComponentResolver interface {
@@ -50,7 +56,7 @@ type ComponentResolver interface {
 	ResolveReference(
 		systemID v1.SystemID,
 		path tree.Path,
-		ctx *git.FileReference,
+		ctx *ResolutionContext,
 		ref *definitionv1.Reference,
 		depth int32,
 	) (*ResolutionResult, error)
@@ -81,6 +87,7 @@ func NewComponentResolver(workDirectory string, allowLocalRepos bool, store Temp
 	return r, nil
 }
 
+// Versions fulfils the ComponentResolver interface.
 func (r *DefaultComponentResolver) Versions(repository string, semverRange semver.Range) ([]string, error) {
 	ctx := &git.Context{
 		RepositoryURL: repository,
@@ -93,7 +100,7 @@ func (r *DefaultComponentResolver) Versions(repository string, semverRange semve
 func (r *DefaultComponentResolver) ResolveReference(
 	systemID v1.SystemID,
 	path tree.Path,
-	ctx *git.FileReference,
+	ctx *ResolutionContext,
 	ref *definitionv1.Reference,
 	depth int32,
 ) (*ResolutionResult, error) {
@@ -113,7 +120,7 @@ func (r *DefaultComponentResolver) ResolveReference(
 func (r *DefaultComponentResolver) resolveReference(
 	systemID v1.SystemID,
 	path tree.Path,
-	ctx *git.FileReference,
+	ctx *ResolutionContext,
 	ref *definitionv1.Reference,
 	depth int32,
 	info ResolutionInfo,
@@ -133,7 +140,7 @@ func (r *DefaultComponentResolver) resolveReference(
 	}
 
 	// retrieve the template and its commit context
-	t, resolvedCxt, err := r.resolveTemplate(systemID, path, ctx, ref)
+	t, resolvedCtx, err := r.resolveTemplate(systemID, path, ctx, ref)
 	if err != nil {
 		return nil, err
 	}
@@ -149,36 +156,52 @@ func (r *DefaultComponentResolver) resolveReference(
 		return nil, err
 	}
 
+	if ref.GitRepository != nil {
+		if resolvedContext.Options == nil {
+			resolvedContext.Options = &git.Options{}
+		}
+		resolvedContext.O
+	}
+
 	// create a new component from the evaluated template
+	//
+	// GEB: first validates that the component's api version is supported, then
+	// returns the definition v<N> component for that version
 	c, err := NewComponent(result)
 	if err != nil {
 		return nil, err
 	}
 
-	// If the reference resolved to another reference, resolve that reference.
-	// FIXME(kevinrosendahl): detect cycles
-	if resolvedRef, ok := c.(*definitionv1.Reference); ok {
-		return r.resolveReference(systemID, path, resolvedCxt, resolvedRef, nextDepth, info)
-	}
-
-	// If the reference resolved to a systemID, resolve the system's components.
-	if system, ok := c.(*definitionv1.System); ok {
-		c, err = r.resolveSystemComponents(systemID, path, resolvedCxt, system, nextDepth, info)
+	switch c.(type) {
+	case *definitionv1.Reference:
+		// If the reference resolved to another reference, resolve that reference.
+		// FIXME(kevinrosendahl): detect cycles
+		return r.resolveReference(
+			systemID, path, resolvedCtx, c.(*definitionv1.Reference), nextDepth, info)
+	case *definitionv1.System:
+		// If the reference resolved to a systemID, resolve the system's components.
+		c, err = r.resolveSystemComponents(
+			systemID, path, resolvedCtx, c.(*definitionv1.System), nextDepth, info)
+		if err != nil {
+			return nil, err
+		}
+	case *definitionv1.Job, *definitionv1.Service:
+		err = r.hydrateBuild(c, resolvedCtx)
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	info[path] = ResolutionNodeInfo{Commit: resolvedCxt.CommitReference}
+	info[path] = ResolutionNodeInfo{Commit: resolvedCtx.CommitReference}
 	return c, nil
 }
 
 func (r *DefaultComponentResolver) resolveTemplate(
 	systemID v1.SystemID,
 	path tree.Path,
-	ctx *git.FileReference,
+	ctx *ResolutionContext,
 	ref *definitionv1.Reference,
-) (*template.Template, *git.FileReference, error) {
+) (*template.Template, *ResolutionContext, error) {
 	gitCtx := &git.Context{
 		Options: &git.Options{},
 	}
@@ -240,9 +263,13 @@ func (r *DefaultComponentResolver) resolveTemplate(
 		}
 	}
 
+	ctx_ = &ResolutionContext{
+		FileReference: fileRef,
+	}
+
 	// return the template that we found either from the store or from the repository
 	// as well as the commit reference that was used to find the template
-	return t, fileRef, nil
+	return t, ctx_, nil
 }
 
 func (r *DefaultComponentResolver) gitReferenceCommit(ref *definitionv1.GitRepositoryReference) (*gitplumbingobject.Commit, error) {
@@ -375,4 +402,52 @@ func (r *DefaultComponentResolver) resolveSystemComponents(
 	}
 
 	return system, nil
+}
+
+func (r *DefaultComponentResolver) hydrateBuild(c component.Interface, ctx git.FileReference) error {
+	var dockerBuild *definitionv1.DockerBuild
+
+	switch c.(type) {
+	case *definitionv1.Job:
+		dockerBuild := c.(*definitionv1.Job).Build.DockerBuild
+	case *definitionv1.Service:
+		dockerBuild := c.(*definitionv1.Service).Build.DockerBuild
+	default:
+		return fmt.Errorf(
+			"got component type %T, but required definitionv1.Job or definitionv1.Service", c)
+	}
+
+	if dockerBuild == nil {
+		// this is not a docker build, so move on
+		return
+	}
+
+	// if BuildContext is nil, initialize it
+	if dockerBuild.BuildContext == nil {
+		dockerBuild.BuildContext = &definitionv1.DockerBuildContext{
+			Location: nil,
+			Path:     definitionv1.DockerBuildDefaultPath,
+		}
+	}
+
+	// if DockerFile is nil, initialize it
+	if dockerBuild.DockerFile == nil {
+		dockerBuild.DockerFile = &definitionv1.DockerFile{
+			Location: nil,
+			Path:     definitionv1.DockerBuildDefaultPath,
+		}
+	}
+
+	// XXX: do we want the path to be relative to ctx.File?
+
+	// if BuildContext.Location is nil, then initialize it to point to the same repo
+	// that its definition was in
+	if dockerBuild.BuildContext.Location == nil {
+		dockerBuild.BuildContext.Location = &definitionv1.Location{
+			GitRepository: &defintionv1.GitRepository{
+				URL:    ctx.RepositoryURL,
+				Commit: ctx.Commit,
+			},
+		}
+	}
 }

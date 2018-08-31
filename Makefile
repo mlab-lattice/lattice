@@ -7,10 +7,12 @@ build: gazelle \
        build.no-gazelle
 
 .PHONY: build.no-gazelle
+build.no-gazelle: BUILD_ARGS ?=
 build.no-gazelle: PLATFORM ?=
 build.no-gazelle: TARGET ?= //cmd/... //e2e/... //pkg/...
 build.no-gazelle:
 	@bazel build \
+		$(BUILD_ARGS) \
 		$(PLATFORM) \
 		$(TARGET)
 

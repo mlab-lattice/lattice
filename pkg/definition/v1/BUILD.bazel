@@ -10,6 +10,7 @@ go_library(
         "git.go",
         "job.go",
         "job_node.go",
+        "location.go",
         "node.go",
         "node_pool.go",
         "reference.go",

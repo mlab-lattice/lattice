@@ -858,6 +858,11 @@ func getSystemDefinitionRoot(
 			},
 		},
 	}
+
+	// GEB: ResolutionResult should have a pointer to the top-level (root)
+	// definitionv1 system component and a map of all sub-paths that are not
+	// systems to their location/commit meta data
+
 	rr, err := r.ResolveReference(systemID, tree.RootPath(), nil, ref, resolver.DepthInfinite)
 	if err != nil {
 		return nil, nil, err
