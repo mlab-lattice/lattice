@@ -113,7 +113,8 @@ DOCKER_IMAGES := kubernetes-api-server-rest             \
                  kubernetes-envoy-xds-api-grpc-per-node \
                  kubernetes-lattice-controller-manager  \
                  kubernetes-local-dns-controller        \
-                 latticectl
+                 latticectl                             \
+                 mock-api-server
 
 .PHONY: docker.push
 docker.push: gazelle \

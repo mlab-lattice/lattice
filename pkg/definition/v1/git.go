@@ -1,7 +1,5 @@
 package v1
 
-import "github.com/mlab-lattice/lattice/pkg/definition/tree"
-
 type GitRepository struct {
 	URL string `json:"url"`
 
@@ -10,5 +8,5 @@ type GitRepository struct {
 	Tag     *string `json:"tag,omitempty"`
 	Version *string `json:"version,omitempty"`
 
-	SSHKey *tree.PathSubcomponent `json:"ssh_key,omitempty"`
+	SSHKey *SecretRef `json:"ssh_key,omitempty"`
 }

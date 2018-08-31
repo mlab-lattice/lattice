@@ -2,6 +2,11 @@ package app
 
 import (
 	goflag "flag"
+	"io/ioutil"
+	"log"
+	"os"
+	"os/exec"
+	"strings"
 	"time"
 
 	"github.com/mlab-lattice/lattice/pkg/api/server/rest"
@@ -12,11 +17,16 @@ import (
 	"github.com/mlab-lattice/lattice/pkg/definition/resolver"
 	"github.com/mlab-lattice/lattice/pkg/util/cli"
 
+	kubeinformers "k8s.io/client-go/informers"
 	kubeclientset "k8s.io/client-go/kubernetes"
 	kuberest "k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 
 	"github.com/spf13/pflag"
+)
+
+const (
+	sshAuthSockEnvVarName = "SSH_AUTH_SOCK"
 )
 
 func Command() *cli.Command {
@@ -87,11 +97,16 @@ func Command() *cli.Command {
 				panic(err)
 			}
 
+			setupSSH()
+
 			backend := backend.NewKubernetesBackend(namespacePrefix, kubeClient, latticeClient)
 
 			latticeInformers := latticeinformers.NewSharedInformerFactory(latticeClient, time.Duration(12*time.Hour))
-			store := kuberesolver.NewKubernetesTemplateStore(namespacePrefix, latticeClient, latticeInformers, nil)
-			resolver, err := resolver.NewComponentResolver(workDirectory, false, store)
+			kubeInformers := kubeinformers.NewSharedInformerFactory(kubeClient, time.Duration(12*time.Hour))
+			templateStore := kuberesolver.NewKubernetesTemplateStore(namespacePrefix, latticeClient, latticeInformers, nil)
+			secretStore := kuberesolver.NewKubernetesSecretStore(namespacePrefix, kubeInformers, nil)
+
+			resolver, err := resolver.NewComponentResolver(workDirectory, false, templateStore, secretStore)
 			if err != nil {
 				panic(err)
 			}
@@ -101,4 +116,33 @@ func Command() *cli.Command {
 	}
 
 	return command
+}
+
+func setupSSH() {
+	// Get the SSH_AUTH_SOCK.
+	// This probably isn't the best way of going about it.
+	// First tried "eval ssh-agent > /dev/null && echo $SSH_AUTH_SOCK"
+	// but since the subcommand isn't executed in a shell, this obviously didn't work.
+	out, err := exec.Command("/usr/bin/ssh-agent", "-c").Output()
+	if err != nil {
+		log.Fatal("error setting up ssh-agent: " + err.Error())
+	}
+
+	// This expects the output to look like:
+	// setenv SSH_AUTH_SOCK <file>;
+	// ...
+	lines := strings.Split(string(out), "\n")
+	sshAuthSockSplit := strings.Split(lines[0], " ")
+	sshAuthSock := strings.Split(sshAuthSockSplit[2], ";")[0]
+	os.Setenv(sshAuthSockEnvVarName, sshAuthSock)
+
+	out, err = exec.Command("/usr/bin/ssh-keyscan", "github.com").Output()
+	if err != nil {
+		log.Fatal("error setting up ssh-agent: " + err.Error())
+	}
+
+	err = ioutil.WriteFile("/etc/ssh/ssh_known_hosts", out, 0666)
+	if err != nil {
+		log.Fatal("error writing /etc/ssh/ssh_known_hosts: " + err.Error())
+	}
 }
