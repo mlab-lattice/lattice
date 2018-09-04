@@ -15,11 +15,11 @@ func Command() *cli.Command {
 
 	var port int32
 	var apiAuthKey string
+	var workDirectory string
 
 	command := &cli.Command{
 		Name: "api-server",
 		Flags: cli.Flags{
-
 			&cli.Int32Flag{
 				Name:    "port",
 				Usage:   "port to bind to",
@@ -32,10 +32,15 @@ func Command() *cli.Command {
 				Default: "",
 				Target:  &apiAuthKey,
 			},
+			&cli.StringFlag{
+				Name:    "work-directory",
+				Usage:   "directory used to download git repositories",
+				Default: "/tmp/lattice/mock/api-server",
+				Target:  &workDirectory,
+			},
 		},
 		Run: func(args []string) {
-
-			mock.RunMockNewRestServer(port, apiAuthKey)
+			mock.RunMockNewRestServer(port, apiAuthKey, workDirectory)
 		},
 	}
 

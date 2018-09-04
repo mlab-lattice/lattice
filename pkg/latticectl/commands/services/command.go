@@ -68,7 +68,7 @@ func (c *ListServicesCommand) Base() (*latticectl.BaseCommand, error) {
 	return cmd.Base()
 }
 
-func ListServices(client v1client.ServiceClient, format printer.Format, writer io.Writer) error {
+func ListServices(client v1client.SystemServiceClient, format printer.Format, writer io.Writer) error {
 	deploys, err := client.List()
 	if err != nil {
 		return err
@@ -80,7 +80,7 @@ func ListServices(client v1client.ServiceClient, format printer.Format, writer i
 	return nil
 }
 
-func WatchServices(client v1client.ServiceClient, format printer.Format, writer io.Writer) {
+func WatchServices(client v1client.SystemServiceClient, format printer.Format, writer io.Writer) {
 	serviceLists := make(chan []v1.Service)
 
 	lastHeight := 0

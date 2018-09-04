@@ -1,4 +1,4 @@
-package v1
+package system
 
 import (
 	"bytes"
@@ -9,6 +9,7 @@ import (
 
 	"io"
 
+	"github.com/mlab-lattice/lattice/pkg/api/client/rest/v1/errors"
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	v1rest "github.com/mlab-lattice/lattice/pkg/api/v1/rest"
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
@@ -21,7 +22,7 @@ type BuildClient struct {
 	systemID     v1.SystemID
 }
 
-func newBuildClient(c rest.Client, apiServerURL string, systemID v1.SystemID) *BuildClient {
+func NewBuildClient(c rest.Client, apiServerURL string, systemID v1.SystemID) *BuildClient {
 	return &BuildClient{
 		restClient:   c,
 		apiServerURL: apiServerURL,
@@ -51,7 +52,7 @@ func (c *BuildClient) Create(version v1.SystemVersion) (*v1.Build, error) {
 		return build, err
 	}
 
-	return nil, HandleErrorStatusCode(statusCode, body)
+	return nil, errors.HandleErrorStatusCode(statusCode, body)
 }
 
 func (c *BuildClient) List() ([]v1.Build, error) {
@@ -68,7 +69,7 @@ func (c *BuildClient) List() ([]v1.Build, error) {
 		return builds, err
 	}
 
-	return nil, HandleErrorStatusCode(statusCode, body)
+	return nil, errors.HandleErrorStatusCode(statusCode, body)
 }
 
 func (c *BuildClient) Get(id v1.BuildID) (*v1.Build, error) {
@@ -84,7 +85,7 @@ func (c *BuildClient) Get(id v1.BuildID) (*v1.Build, error) {
 		return build, err
 	}
 
-	return nil, HandleErrorStatusCode(statusCode, body)
+	return nil, errors.HandleErrorStatusCode(statusCode, body)
 }
 
 func (c *BuildClient) Logs(
@@ -115,5 +116,5 @@ func (c *BuildClient) Logs(
 		return body, nil
 	}
 
-	return nil, HandleErrorStatusCode(statusCode, body)
+	return nil, errors.HandleErrorStatusCode(statusCode, body)
 }

@@ -110,7 +110,7 @@ func (c *BuildCommand) Base() (*latticectl.BaseCommand, error) {
 }
 
 func RunJob(
-	client v1client.JobClient,
+	client v1client.SystemJobClient,
 	path tree.Path,
 	command []string,
 	environment definitionv1.ContainerEnvironment,

@@ -11,11 +11,11 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func WaitUntilSucceeded(client v1client.DeployClient, id v1.DeployID, interval, timeout time.Duration) {
+func WaitUntilSucceeded(client v1client.SystemDeployClient, id v1.DeployID, interval, timeout time.Duration) {
 	WaitUntilInState(client, id, v1.DeployStateSucceeded, interval, timeout)
 }
 
-func WaitUntilInState(client v1client.DeployClient, id v1.DeployID, state v1.DeployState, interval, timeout time.Duration) {
+func WaitUntilInState(client v1client.SystemDeployClient, id v1.DeployID, state v1.DeployState, interval, timeout time.Duration) {
 	err := wait.PollImmediate(interval, timeout, func() (bool, error) {
 		deploy, err := client.Get(id)
 		if err != nil {

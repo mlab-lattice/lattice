@@ -1,4 +1,4 @@
-package v1
+package system
 
 import (
 	"bytes"
@@ -7,27 +7,28 @@ import (
 	"net/http"
 	urlutil "net/url"
 
+	"github.com/mlab-lattice/lattice/pkg/api/client/rest/v1/errors"
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	v1rest "github.com/mlab-lattice/lattice/pkg/api/v1/rest"
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 	"github.com/mlab-lattice/lattice/pkg/util/rest"
 )
 
-type SystemSecretClient struct {
+type SecretClient struct {
 	restClient   rest.Client
 	apiServerURL string
 	systemID     v1.SystemID
 }
 
-func newSystemSecretClient(c rest.Client, apiServerURL string, systemID v1.SystemID) *SystemSecretClient {
-	return &SystemSecretClient{
+func NewSecretClient(c rest.Client, apiServerURL string, systemID v1.SystemID) *SecretClient {
+	return &SecretClient{
 		restClient:   c,
 		apiServerURL: apiServerURL,
 		systemID:     systemID,
 	}
 }
 
-func (c *SystemSecretClient) List() ([]v1.Secret, error) {
+func (c *SecretClient) List() ([]v1.Secret, error) {
 	url := fmt.Sprintf("%v%v", c.apiServerURL, fmt.Sprintf(v1rest.SystemSecretsPathFormat, c.systemID))
 	body, statusCode, err := c.restClient.Get(url).Body()
 	if err != nil {
@@ -41,11 +42,11 @@ func (c *SystemSecretClient) List() ([]v1.Secret, error) {
 		return secrets, err
 	}
 
-	return nil, HandleErrorStatusCode(statusCode, body)
+	return nil, errors.HandleErrorStatusCode(statusCode, body)
 }
 
-func (c *SystemSecretClient) Get(path tree.Path, name string) (*v1.Secret, error) {
-	escapedPath := fmt.Sprintf("%v:%v", urlutil.PathEscape(string(path)), name)
+func (c *SecretClient) Get(path tree.PathSubcomponent) (*v1.Secret, error) {
+	escapedPath := urlutil.PathEscape(path.String())
 	url := fmt.Sprintf("%v%v", c.apiServerURL, fmt.Sprintf(v1rest.SystemSecretPathFormat, c.systemID, escapedPath))
 	body, statusCode, err := c.restClient.Get(url).Body()
 	if err != nil {
@@ -59,10 +60,10 @@ func (c *SystemSecretClient) Get(path tree.Path, name string) (*v1.Secret, error
 		return secret, err
 	}
 
-	return nil, HandleErrorStatusCode(statusCode, body)
+	return nil, errors.HandleErrorStatusCode(statusCode, body)
 }
 
-func (c *SystemSecretClient) Set(path tree.Path, name, value string) error {
+func (c *SecretClient) Set(path tree.PathSubcomponent, value string) error {
 	request := &v1rest.SetSecretRequest{
 		Value: value,
 	}
@@ -71,7 +72,7 @@ func (c *SystemSecretClient) Set(path tree.Path, name, value string) error {
 		return err
 	}
 
-	escapedPath := fmt.Sprintf("%v:%v", urlutil.PathEscape(string(path)), name)
+	escapedPath := urlutil.PathEscape(path.String())
 	url := fmt.Sprintf("%v%v", c.apiServerURL, fmt.Sprintf(v1rest.SystemSecretPathFormat, c.systemID, escapedPath))
 	body, statusCode, err := c.restClient.PatchJSON(url, bytes.NewReader(requestJSON)).Body()
 	if err != nil {
@@ -83,11 +84,11 @@ func (c *SystemSecretClient) Set(path tree.Path, name, value string) error {
 		return nil
 	}
 
-	return HandleErrorStatusCode(statusCode, body)
+	return errors.HandleErrorStatusCode(statusCode, body)
 }
 
-func (c *SystemSecretClient) Unset(path tree.Path, name string) error {
-	escapedPath := fmt.Sprintf("%v:%v", urlutil.PathEscape(string(path)), name)
+func (c *SecretClient) Unset(path tree.PathSubcomponent) error {
+	escapedPath := urlutil.PathEscape(string(path))
 	url := fmt.Sprintf("%v%v", c.apiServerURL, fmt.Sprintf(v1rest.SystemSecretPathFormat, c.systemID, escapedPath))
 	body, statusCode, err := c.restClient.Delete(url).Body()
 	if err != nil {
@@ -99,5 +100,5 @@ func (c *SystemSecretClient) Unset(path tree.Path, name string) error {
 		return nil
 	}
 
-	return HandleErrorStatusCode(statusCode, body)
+	return errors.HandleErrorStatusCode(statusCode, body)
 }

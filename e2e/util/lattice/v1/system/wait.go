@@ -27,9 +27,12 @@ func WaitUntilDeleted(client v1client.SystemClient, id v1.SystemID, interval, ti
 	err := wait.PollImmediate(interval, timeout, func() (bool, error) {
 		_, err := client.Get(id)
 		if err != nil {
-			switch err.(type) {
-			case *v1.InvalidSystemIDError:
-				return true, nil
+			switch e2 := err.(type) {
+			case *v1.Error:
+				if e2.Code == v1.ErrorCodeInvalidSystemID {
+					return true, nil
+				}
+				return false, err
 			default:
 				return false, err
 			}

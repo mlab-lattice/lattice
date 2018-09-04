@@ -108,7 +108,7 @@ func (c *LogsCommand) Base() (*latticectl.BaseCommand, error) {
 }
 
 func GetBuildLogs(
-	client v1client.BuildClient,
+	client v1client.SystemBuildClient,
 	buildID v1.BuildID,
 	path tree.Path,
 	sidecar *string,

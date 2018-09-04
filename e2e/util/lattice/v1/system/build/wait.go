@@ -12,12 +12,12 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func WaitUntilSucceeded(client v1client.BuildClient, id v1.BuildID, interval, timeout time.Duration) {
+func WaitUntilSucceeded(client v1client.SystemBuildClient, id v1.BuildID, interval, timeout time.Duration) {
 	failed := v1.BuildStateFailed
 	WaitUntilInState(client, id, v1.BuildStateSucceeded, &failed, interval, timeout)
 }
 
-func WaitUntilInState(client v1client.BuildClient, id v1.BuildID, state v1.BuildState, failState *v1.BuildState, interval, timeout time.Duration) {
+func WaitUntilInState(client v1client.SystemBuildClient, id v1.BuildID, state v1.BuildState, failState *v1.BuildState, interval, timeout time.Duration) {
 	err := wait.PollImmediate(interval, timeout, func() (bool, error) {
 		build, err := client.Get(id)
 		if err != nil {

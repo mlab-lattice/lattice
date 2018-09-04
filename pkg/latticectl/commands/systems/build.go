@@ -59,7 +59,7 @@ func (c *BuildCommand) Base() (*latticectl.BaseCommand, error) {
 }
 
 func BuildSystem(
-	client v1client.BuildClient,
+	client v1client.SystemBuildClient,
 	version v1.SystemVersion,
 	format printer.Format,
 	writer io.Writer,

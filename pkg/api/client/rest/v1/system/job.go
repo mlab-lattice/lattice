@@ -1,4 +1,4 @@
-package v1
+package system
 
 import (
 	"bytes"
@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 
+	"github.com/mlab-lattice/lattice/pkg/api/client/rest/v1/errors"
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	v1rest "github.com/mlab-lattice/lattice/pkg/api/v1/rest"
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
@@ -20,7 +21,7 @@ type JobClient struct {
 	systemID     v1.SystemID
 }
 
-func newJobClient(c rest.Client, apiServerURL string, systemID v1.SystemID) *JobClient {
+func NewJobClient(c rest.Client, apiServerURL string, systemID v1.SystemID) *JobClient {
 	return &JobClient{
 		restClient:   c,
 		apiServerURL: apiServerURL,
@@ -52,7 +53,7 @@ func (c *JobClient) Create(path tree.Path, command []string, environment definit
 		return job, err
 	}
 
-	return nil, HandleErrorStatusCode(statusCode, body)
+	return nil, errors.HandleErrorStatusCode(statusCode, body)
 }
 
 func (c *JobClient) List() ([]v1.Job, error) {
@@ -69,7 +70,7 @@ func (c *JobClient) List() ([]v1.Job, error) {
 		return jobs, err
 	}
 
-	return nil, HandleErrorStatusCode(statusCode, body)
+	return nil, errors.HandleErrorStatusCode(statusCode, body)
 }
 
 func (c *JobClient) Get(id v1.JobID) (*v1.Job, error) {
@@ -85,7 +86,7 @@ func (c *JobClient) Get(id v1.JobID) (*v1.Job, error) {
 		return job, err
 	}
 
-	return nil, HandleErrorStatusCode(statusCode, body)
+	return nil, errors.HandleErrorStatusCode(statusCode, body)
 }
 
 func (c *JobClient) Logs(
@@ -113,5 +114,5 @@ func (c *JobClient) Logs(
 		return body, nil
 	}
 
-	return nil, HandleErrorStatusCode(statusCode, body)
+	return nil, errors.HandleErrorStatusCode(statusCode, body)
 }

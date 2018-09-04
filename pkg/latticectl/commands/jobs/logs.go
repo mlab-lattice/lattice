@@ -87,7 +87,7 @@ func (c *LogsCommand) Base() (*latticectl.BaseCommand, error) {
 }
 
 func GetJobLogs(
-	client v1client.JobClient,
+	client v1client.SystemJobClient,
 	jobID v1.JobID,
 	sidecar *string,
 	logOptions *v1.ContainerLogOptions,

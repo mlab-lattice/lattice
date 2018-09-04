@@ -68,7 +68,7 @@ func (c *StatusCommand) Base() (*latticectl.BaseCommand, error) {
 	return cmd.Base()
 }
 
-func GetBuild(client v1client.BuildClient, buildID v1.BuildID, format printer.Format, writer io.Writer) error {
+func GetBuild(client v1client.SystemBuildClient, buildID v1.BuildID, format printer.Format, writer io.Writer) error {
 	build, err := client.Get(buildID)
 	if err != nil {
 		return err
@@ -92,7 +92,7 @@ func GetBuild(client v1client.BuildClient, buildID v1.BuildID, format printer.Fo
 // the supplied io.Writer in the given printer.Format, unless the printer.Format is
 // printer.FormatTable, in which case it always writes to the terminal.
 func WatchBuild(
-	client v1client.BuildClient,
+	client v1client.SystemBuildClient,
 	buildID v1.BuildID,
 	format printer.Format,
 	writer io.Writer,

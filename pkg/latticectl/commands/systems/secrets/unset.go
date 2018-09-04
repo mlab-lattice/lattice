@@ -2,7 +2,6 @@ package secrets
 
 import (
 	"log"
-	"strings"
 
 	v1client "github.com/mlab-lattice/lattice/pkg/api/client/v1"
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
@@ -14,27 +13,24 @@ type UnsetCommand struct {
 }
 
 func (c *UnsetCommand) Base() (*latticectl.BaseCommand, error) {
-	var name string
+	var path string
 
 	cmd := &latticectl.SystemCommand{
 		Name: "unset",
 		Flags: cli.Flags{
 			&cli.StringFlag{
-				Name:     "name",
+				Name:     "path",
 				Required: true,
-				Target:   &name,
+				Target:   &path,
 			},
 		},
 		Run: func(ctx latticectl.SystemCommandContext, args []string) {
-			splitName := strings.Split(name, ":")
-			if len(splitName) != 2 {
-				log.Fatal("invalid secret name format")
+			secretPath, err := tree.NewPathSubcomponent(path)
+			if err != nil {
+				log.Fatal("invalid secret path format")
 			}
 
-			path := tree.Path(splitName[0])
-			name = splitName[1]
-
-			err := UnsetSecret(ctx.Client().Systems().Secrets(ctx.SystemID()), path, name)
+			err = UnsetSecret(ctx.Client().Systems().Secrets(ctx.SystemID()), secretPath)
 			if err != nil {
 				log.Fatal(err)
 			}
@@ -44,8 +40,8 @@ func (c *UnsetCommand) Base() (*latticectl.BaseCommand, error) {
 	return cmd.Base()
 }
 
-func UnsetSecret(client v1client.SecretClient, path tree.Path, name string) error {
-	err := client.Unset(path, name)
+func UnsetSecret(client v1client.SystemSecretClient, path tree.PathSubcomponent) error {
+	err := client.Unset(path)
 	if err != nil {
 		return err
 	}

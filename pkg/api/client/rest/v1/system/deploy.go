@@ -1,4 +1,4 @@
-package v1
+package system
 
 import (
 	"bytes"
@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/mlab-lattice/lattice/pkg/api/client/rest/v1/errors"
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	v1rest "github.com/mlab-lattice/lattice/pkg/api/v1/rest"
 	"github.com/mlab-lattice/lattice/pkg/util/rest"
@@ -17,7 +18,7 @@ type DeployClient struct {
 	systemID     v1.SystemID
 }
 
-func newDeployClient(c rest.Client, apiServerURL string, systemID v1.SystemID) *DeployClient {
+func NewDeployClient(c rest.Client, apiServerURL string, systemID v1.SystemID) *DeployClient {
 	return &DeployClient{
 		restClient:   c,
 		apiServerURL: apiServerURL,
@@ -48,7 +49,7 @@ func (c *DeployClient) CreateFromBuild(id v1.BuildID) (*v1.Deploy, error) {
 		return deploy, err
 	}
 
-	return nil, HandleErrorStatusCode(statusCode, body)
+	return nil, errors.HandleErrorStatusCode(statusCode, body)
 }
 
 func (c *DeployClient) CreateFromVersion(version v1.SystemVersion) (*v1.Deploy, error) {
@@ -74,7 +75,7 @@ func (c *DeployClient) CreateFromVersion(version v1.SystemVersion) (*v1.Deploy, 
 		return deploy, err
 	}
 
-	return nil, HandleErrorStatusCode(statusCode, body)
+	return nil, errors.HandleErrorStatusCode(statusCode, body)
 }
 
 func (c *DeployClient) List() ([]v1.Deploy, error) {
@@ -91,7 +92,7 @@ func (c *DeployClient) List() ([]v1.Deploy, error) {
 		return deploys, err
 	}
 
-	return nil, HandleErrorStatusCode(statusCode, body)
+	return nil, errors.HandleErrorStatusCode(statusCode, body)
 }
 
 func (c *DeployClient) Get(id v1.DeployID) (*v1.Deploy, error) {
@@ -108,5 +109,5 @@ func (c *DeployClient) Get(id v1.DeployID) (*v1.Deploy, error) {
 		return deploy, err
 	}
 
-	return nil, HandleErrorStatusCode(statusCode, body)
+	return nil, errors.HandleErrorStatusCode(statusCode, body)
 }

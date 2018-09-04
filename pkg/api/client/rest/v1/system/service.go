@@ -1,4 +1,4 @@
-package v1
+package system
 
 import (
 	"fmt"
@@ -6,6 +6,7 @@ import (
 	"net/http"
 	urlutil "net/url"
 
+	"github.com/mlab-lattice/lattice/pkg/api/client/rest/v1/errors"
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	v1rest "github.com/mlab-lattice/lattice/pkg/api/v1/rest"
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
@@ -18,7 +19,7 @@ type ServiceClient struct {
 	systemID     v1.SystemID
 }
 
-func newServiceClient(c rest.Client, apiServerURL string, systemID v1.SystemID) *ServiceClient {
+func NewServiceClient(c rest.Client, apiServerURL string, systemID v1.SystemID) *ServiceClient {
 	return &ServiceClient{
 		restClient:   c,
 		apiServerURL: apiServerURL,
@@ -40,7 +41,7 @@ func (c *ServiceClient) List() ([]v1.Service, error) {
 		return services, err
 	}
 
-	return nil, HandleErrorStatusCode(statusCode, body)
+	return nil, errors.HandleErrorStatusCode(statusCode, body)
 }
 
 func (c *ServiceClient) Get(id v1.ServiceID) (*v1.Service, error) {
@@ -57,7 +58,7 @@ func (c *ServiceClient) Get(id v1.ServiceID) (*v1.Service, error) {
 		return service, err
 	}
 
-	return nil, HandleErrorStatusCode(statusCode, body)
+	return nil, errors.HandleErrorStatusCode(statusCode, body)
 }
 
 func (c *ServiceClient) GetByServicePath(path tree.Path) (*v1.Service, error) {
@@ -84,7 +85,7 @@ func (c *ServiceClient) GetByServicePath(path tree.Path) (*v1.Service, error) {
 		return &services[0], err
 	}
 
-	return nil, HandleErrorStatusCode(statusCode, body)
+	return nil, errors.HandleErrorStatusCode(statusCode, body)
 }
 
 func (c *ServiceClient) Logs(
@@ -116,5 +117,5 @@ func (c *ServiceClient) Logs(
 		return body, nil
 	}
 
-	return nil, HandleErrorStatusCode(statusCode, body)
+	return nil, errors.HandleErrorStatusCode(statusCode, body)
 }

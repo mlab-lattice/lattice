@@ -12,7 +12,7 @@ import (
 	set "github.com/deckarep/golang-set"
 )
 
-func Create(client v1client.BuildClient, version v1.SystemVersion) v1.BuildID {
+func Create(client v1client.SystemBuildClient, version v1.SystemVersion) v1.BuildID {
 	build, err := client.Create(version)
 	Expect(err).NotTo(HaveOccurred(), "error building system")
 
@@ -23,13 +23,13 @@ func Create(client v1client.BuildClient, version v1.SystemVersion) v1.BuildID {
 	return build.ID
 }
 
-func BuildSuccessfully(client v1client.BuildClient, version v1.SystemVersion, interval, timeout time.Duration) v1.BuildID {
+func BuildSuccessfully(client v1client.SystemBuildClient, version v1.SystemVersion, interval, timeout time.Duration) v1.BuildID {
 	buildID := Create(client, version)
 	WaitUntilSucceeded(client, buildID, interval, timeout)
 	return buildID
 }
 
-func List(client v1client.BuildClient, expectedBuilds []v1.BuildID) {
+func List(client v1client.SystemBuildClient, expectedBuilds []v1.BuildID) {
 	builds, err := client.List()
 	Expect(err).NotTo(HaveOccurred(), "error listing builds")
 
@@ -50,7 +50,7 @@ func List(client v1client.BuildClient, expectedBuilds []v1.BuildID) {
 	}
 }
 
-func Get(client v1client.BuildClient, id v1.BuildID) *v1.Build {
+func Get(client v1client.SystemBuildClient, id v1.BuildID) *v1.Build {
 	build, err := client.Get(id)
 	Expect(err).NotTo(HaveOccurred(), "error getting build")
 

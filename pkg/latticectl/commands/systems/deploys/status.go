@@ -63,7 +63,7 @@ func (c *StatusCommand) Base() (*latticectl.BaseCommand, error) {
 	return cmd.Base()
 }
 
-func GetDeploy(client v1client.DeployClient, deployID v1.DeployID, format printer.Format, writer io.Writer) error {
+func GetDeploy(client v1client.SystemDeployClient, deployID v1.DeployID, format printer.Format, writer io.Writer) error {
 	deploy, err := client.Get(deployID)
 	if err != nil {
 		return err
@@ -74,7 +74,7 @@ func GetDeploy(client v1client.DeployClient, deployID v1.DeployID, format printe
 	return nil
 }
 
-func WatchDeploy(client v1client.DeployClient, deployID v1.DeployID, format printer.Format, writer io.Writer) {
+func WatchDeploy(client v1client.SystemDeployClient, deployID v1.DeployID, format printer.Format, writer io.Writer) {
 	deploys := make(chan *v1.Deploy)
 
 	lastHeight := 0

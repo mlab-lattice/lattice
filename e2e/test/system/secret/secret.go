@@ -33,15 +33,14 @@ var _ = Describe("secret", func() {
 		},
 	)
 
-	secretPath := tree.Path("/a/b")
-	secretName := "buzz"
+	secretPath := tree.PathSubcomponent("/a/b:buzz")
 	secretValue := "foobar"
 	setSecret := false
 	ConditionallyIt(
 		"should be able to set a secret",
 		ifSystemCreated,
 		func() {
-			secret.Set(context.TestContext.LatticeAPIClient.V1().Systems().Secrets(systemID), secretPath, secretName, secretValue)
+			secret.Set(context.TestContext.LatticeAPIClient.V1().Systems().Secrets(systemID), secretPath, secretValue)
 			setSecret = true
 		},
 	)
@@ -51,7 +50,7 @@ var _ = Describe("secret", func() {
 		"should be able to get the set secret",
 		ifSecretSet,
 		func() {
-			value := secret.Get(context.TestContext.LatticeAPIClient.V1().Systems().Secrets(systemID), secretPath, secretName)
+			value := secret.Get(context.TestContext.LatticeAPIClient.V1().Systems().Secrets(systemID), secretPath)
 			Expect(value).To(Equal(secretValue))
 		},
 	)
@@ -63,7 +62,6 @@ var _ = Describe("secret", func() {
 			secret.List(context.TestContext.LatticeAPIClient.V1().Systems().Secrets(systemID), []v1.Secret{
 				{
 					Path:  secretPath,
-					Name:  secretName,
 					Value: secretValue,
 				},
 			})
@@ -74,7 +72,7 @@ var _ = Describe("secret", func() {
 		"should be able to unset the set secret",
 		ifSecretSet,
 		func() {
-			secret.Unset(context.TestContext.LatticeAPIClient.V1().Systems().Secrets(systemID), secretPath, secretName)
+			secret.Unset(context.TestContext.LatticeAPIClient.V1().Systems().Secrets(systemID), secretPath)
 		},
 	)
 

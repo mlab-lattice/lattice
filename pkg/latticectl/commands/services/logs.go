@@ -106,7 +106,7 @@ func (c *LogsCommand) Base() (*latticectl.BaseCommand, error) {
 }
 
 func GetServiceLogs(
-	client v1client.ServiceClient,
+	client v1client.SystemServiceClient,
 	serviceID v1.ServiceID,
 	sidecar, instance *string,
 	logOptions *v1.ContainerLogOptions,

@@ -50,7 +50,7 @@ func (c *ListSecretsCommand) Base() (*latticectl.BaseCommand, error) {
 	return cmd.Base()
 }
 
-func ListSecrets(client v1client.SecretClient, format printer.Format, writer io.Writer) error {
+func ListSecrets(client v1client.SystemSecretClient, format printer.Format, writer io.Writer) error {
 	secrets, err := client.List()
 	if err != nil {
 		return err
@@ -65,22 +65,19 @@ func secretsPrinter(secrets []v1.Secret, format printer.Format) printer.Interfac
 	var p printer.Interface
 	switch format {
 	case printer.FormatTable:
-		headers := []string{"Path", "Name", "Value"}
+		headers := []string{"Path", "Value"}
 
 		headerColors := []tw.Colors{
-			{tw.Bold},
 			{tw.Bold},
 			{tw.Bold},
 		}
 
 		columnColors := []tw.Colors{
 			{tw.FgHiCyanColor},
-			{tw.FgHiCyanColor},
 			{},
 		}
 
 		columnAlignment := []int{
-			tw.ALIGN_LEFT,
 			tw.ALIGN_LEFT,
 			tw.ALIGN_LEFT,
 		}
@@ -90,7 +87,6 @@ func secretsPrinter(secrets []v1.Secret, format printer.Format) printer.Interfac
 
 			rows = append(rows, []string{
 				string(secret.Path),
-				string(secret.Name),
 				string(secret.Value),
 			})
 		}

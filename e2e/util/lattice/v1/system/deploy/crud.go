@@ -12,7 +12,7 @@ import (
 	set "github.com/deckarep/golang-set"
 )
 
-func CreateFromBuild(client v1client.DeployClient, buildID v1.BuildID) v1.DeployID {
+func CreateFromBuild(client v1client.SystemDeployClient, buildID v1.BuildID) v1.DeployID {
 	deploy, err := client.CreateFromBuild(buildID)
 	Expect(err).NotTo(HaveOccurred(), "error deploying system")
 
@@ -22,13 +22,13 @@ func CreateFromBuild(client v1client.DeployClient, buildID v1.BuildID) v1.Deploy
 	return deploy.ID
 }
 
-func DeploySuccessfullyFromBuild(client v1client.DeployClient, version v1.SystemVersion, interval, timeout time.Duration) v1.DeployID {
+func DeploySuccessfullyFromBuild(client v1client.SystemDeployClient, version v1.SystemVersion, interval, timeout time.Duration) v1.DeployID {
 	deployID := CreateFromVersion(client, version)
 	WaitUntilSucceeded(client, deployID, interval, timeout)
 	return deployID
 }
 
-func CreateFromVersion(client v1client.DeployClient, version v1.SystemVersion) v1.DeployID {
+func CreateFromVersion(client v1client.SystemDeployClient, version v1.SystemVersion) v1.DeployID {
 	deploy, err := client.CreateFromVersion(version)
 	Expect(err).NotTo(HaveOccurred(), "error deploying system")
 
@@ -38,13 +38,13 @@ func CreateFromVersion(client v1client.DeployClient, version v1.SystemVersion) v
 	return deploy.ID
 }
 
-func DeploySuccessfullyFromVersion(client v1client.DeployClient, version v1.SystemVersion, interval, timeout time.Duration) v1.DeployID {
+func DeploySuccessfullyFromVersion(client v1client.SystemDeployClient, version v1.SystemVersion, interval, timeout time.Duration) v1.DeployID {
 	deployID := CreateFromVersion(client, version)
 	WaitUntilSucceeded(client, deployID, interval, timeout)
 	return deployID
 }
 
-func List(client v1client.DeployClient, expectedDeploys []v1.DeployID) {
+func List(client v1client.SystemDeployClient, expectedDeploys []v1.DeployID) {
 	deploys, err := client.List()
 	Expect(err).NotTo(HaveOccurred(), "error listing deploys")
 
@@ -65,7 +65,7 @@ func List(client v1client.DeployClient, expectedDeploys []v1.DeployID) {
 	}
 }
 
-func Get(client v1client.DeployClient, id v1.DeployID) *v1.Deploy {
+func Get(client v1client.SystemDeployClient, id v1.DeployID) *v1.Deploy {
 	deploy, err := client.Get(id)
 	Expect(err).NotTo(HaveOccurred(), "error getting deploy")
 

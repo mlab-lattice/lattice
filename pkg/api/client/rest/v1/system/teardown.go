@@ -1,9 +1,10 @@
-package v1
+package system
 
 import (
 	"fmt"
 	"net/http"
 
+	"github.com/mlab-lattice/lattice/pkg/api/client/rest/v1/errors"
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	v1rest "github.com/mlab-lattice/lattice/pkg/api/v1/rest"
 	"github.com/mlab-lattice/lattice/pkg/util/rest"
@@ -15,7 +16,7 @@ type TeardownClient struct {
 	systemID     v1.SystemID
 }
 
-func newTeardownClient(c rest.Client, apiServerURL string, systemID v1.SystemID) *TeardownClient {
+func NewTeardownClient(c rest.Client, apiServerURL string, systemID v1.SystemID) *TeardownClient {
 	return &TeardownClient{
 		restClient:   c,
 		apiServerURL: apiServerURL,
@@ -37,7 +38,7 @@ func (c *TeardownClient) Create() (*v1.Teardown, error) {
 		return teardown, err
 	}
 
-	return nil, HandleErrorStatusCode(statusCode, body)
+	return nil, errors.HandleErrorStatusCode(statusCode, body)
 }
 
 func (c *TeardownClient) List() ([]v1.Teardown, error) {
@@ -54,7 +55,7 @@ func (c *TeardownClient) List() ([]v1.Teardown, error) {
 		return teardowns, err
 	}
 
-	return nil, HandleErrorStatusCode(statusCode, body)
+	return nil, errors.HandleErrorStatusCode(statusCode, body)
 }
 
 func (c *TeardownClient) Get(id v1.TeardownID) (*v1.Teardown, error) {
@@ -71,5 +72,5 @@ func (c *TeardownClient) Get(id v1.TeardownID) (*v1.Teardown, error) {
 		return teardown, err
 	}
 
-	return nil, HandleErrorStatusCode(statusCode, body)
+	return nil, errors.HandleErrorStatusCode(statusCode, body)
 }

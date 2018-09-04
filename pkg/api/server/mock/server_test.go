@@ -346,9 +346,9 @@ func runJob(t *testing.T) {
 
 func testSecrets(t *testing.T) {
 	fmt.Println("Testing secrets...")
-	path, _ := tree.NewPath("/mock/test")
+	path, _ := tree.NewPathSubcomponent("/test:x")
 	fmt.Println("set secret")
-	err := latticeClient.Systems().Secrets(mockSystemID).Set(path, "x", "1")
+	err := latticeClient.Systems().Secrets(mockSystemID).Set(path, "1")
 	checkErr(err, t)
 	secrets, err := latticeClient.Systems().Secrets(mockSystemID).List()
 	checkErr(err, t)
@@ -359,14 +359,14 @@ func testSecrets(t *testing.T) {
 	}
 
 	fmt.Println("get secret")
-	secret, err := latticeClient.Systems().Secrets(mockSystemID).Get(path, "x")
+	secret, err := latticeClient.Systems().Secrets(mockSystemID).Get(path)
 	checkErr(err, t)
 	if secret.Value != "1" {
 		t.Fatal("Bad secret.")
 	}
 
 	fmt.Println("unset secret")
-	err = latticeClient.Systems().Secrets(mockSystemID).Unset(path, "x")
+	err = latticeClient.Systems().Secrets(mockSystemID).Unset(path)
 	checkErr(err, t)
 
 	secrets, err = latticeClient.Systems().Secrets(mockSystemID).List()
