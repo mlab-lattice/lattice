@@ -1,28 +1,30 @@
-package backend
+package system
 
 import (
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
-	definitionv1 "github.com/mlab-lattice/lattice/pkg/definition/v1"
-
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"fmt"
-	"github.com/mlab-lattice/lattice/pkg/definition/resolver"
 	"github.com/satori/go.uuid"
 )
 
-func (kb *KubernetesBackend) DeployBuild(systemID v1.SystemID, buildID v1.BuildID) (*v1.Deploy, error) {
+type deployBackend struct {
+	backend *Backend
+	system  v1.SystemID
+}
+
+func (b *deployBackend) CreateFromBuild(id v1.BuildID) (*v1.Deploy, error) {
 	// this also ensures the system exists
-	build, err := kb.GetBuild(systemID, buildID)
+	build, err := b.backend.Builds(b.system).Get(id)
 	if err != nil {
 		return nil, err
 	}
 
 	deploy := newDeploy(build)
-	namespace := kb.systemNamespace(systemID)
-	deploy, err = kb.latticeClient.LatticeV1().Deploys(namespace).Create(deploy)
+	namespace := b.backend.systemNamespace(b.system)
+	deploy, err = b.backend.latticeClient.LatticeV1().Deploys(namespace).Create(deploy)
 	if err != nil {
 		return nil, err
 	}
@@ -35,31 +37,24 @@ func (kb *KubernetesBackend) DeployBuild(systemID v1.SystemID, buildID v1.BuildI
 	return &externalDeploy, nil
 }
 
-func (kb *KubernetesBackend) DeployVersion(
-	systemID v1.SystemID,
-	def *definitionv1.SystemNode,
-	ri resolver.ResolutionInfo,
-	version v1.SystemVersion,
-) (*v1.Deploy, error) {
+func (b *deployBackend) CreateFromVersion(version v1.SystemVersion) (*v1.Deploy, error) {
 	// this ensures the system is created as well
-	build, err := kb.Build(systemID, def, ri, version)
+	build, err := b.backend.Builds(b.system).Create(version)
 	if err != nil {
 		return nil, err
 	}
 
-	return kb.DeployBuild(systemID, build.ID)
+	return b.CreateFromBuild(build.ID)
 }
 
 func newDeploy(build *v1.Build) *latticev1.Deploy {
-	labels := map[string]string{
-		latticev1.DeployDefinitionVersionLabelKey: string(build.Version),
-		latticev1.BuildIDLabelKey:                 string(build.ID),
-	}
-
 	return &latticev1.Deploy{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:   uuid.NewV4().String(),
-			Labels: labels,
+			Name: uuid.NewV4().String(),
+			Labels: map[string]string{
+				latticev1.DeployDefinitionVersionLabelKey: string(build.Version),
+				latticev1.BuildIDLabelKey:                 string(build.ID),
+			},
 		},
 		Spec: latticev1.DeploySpec{
 			Build: string(build.ID),
@@ -67,13 +62,13 @@ func newDeploy(build *v1.Build) *latticev1.Deploy {
 	}
 }
 
-func (kb *KubernetesBackend) ListDeploys(systemID v1.SystemID) ([]v1.Deploy, error) {
-	if _, err := kb.ensureSystemCreated(systemID); err != nil {
+func (b *deployBackend) List() ([]v1.Deploy, error) {
+	if _, err := b.backend.ensureSystemCreated(b.system); err != nil {
 		return nil, err
 	}
 
-	namespace := kb.systemNamespace(systemID)
-	deploys, err := kb.latticeClient.LatticeV1().Deploys(namespace).List(metav1.ListOptions{})
+	namespace := b.backend.systemNamespace(b.system)
+	deploys, err := b.backend.latticeClient.LatticeV1().Deploys(namespace).List(metav1.ListOptions{})
 	if err != nil {
 		return nil, err
 	}
@@ -93,16 +88,16 @@ func (kb *KubernetesBackend) ListDeploys(systemID v1.SystemID) ([]v1.Deploy, err
 	return externalDeploys, nil
 }
 
-func (kb *KubernetesBackend) GetDeploy(systemID v1.SystemID, deployID v1.DeployID) (*v1.Deploy, error) {
-	if _, err := kb.ensureSystemCreated(systemID); err != nil {
+func (b *deployBackend) Get(id v1.DeployID) (*v1.Deploy, error) {
+	if _, err := b.backend.ensureSystemCreated(b.system); err != nil {
 		return nil, err
 	}
 
-	namespace := kb.systemNamespace(systemID)
-	deploy, err := kb.latticeClient.LatticeV1().Deploys(namespace).Get(string(deployID), metav1.GetOptions{})
+	namespace := b.backend.systemNamespace(b.system)
+	deploy, err := b.backend.latticeClient.LatticeV1().Deploys(namespace).Get(string(id), metav1.GetOptions{})
 	if err != nil {
 		if errors.IsNotFound(err) {
-			return nil, v1.NewInvalidDeployIDError(deployID)
+			return nil, v1.NewInvalidDeployIDError()
 		}
 
 		return nil, err

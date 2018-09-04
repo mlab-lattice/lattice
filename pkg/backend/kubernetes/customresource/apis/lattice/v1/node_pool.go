@@ -113,23 +113,28 @@ func (np *NodePool) ServiceDedicatedIDLabel() (string, bool) {
 	return serviceID, ok
 }
 
-func (np *NodePool) SystemSharedPathLabel() (v1.NodePoolPath, bool, error) {
+func (np *NodePool) SystemSharedPathLabel() (tree.PathSubcomponent, bool, error) {
 	pathLabel, ok := np.Labels[NodePoolSystemSharedPathLabelKey]
 	if !ok {
-		return v1.NodePoolPath{}, false, nil
+		return "", false, nil
 	}
 
 	nameLabel, ok := np.Labels[NodePoolSystemSharedNameLabelKey]
 	if !ok {
-		return v1.NodePoolPath{}, false, nil
+		return "", false, nil
 	}
 
 	path, err := tree.NewPathFromDomain(pathLabel)
 	if err != nil {
-		return v1.NodePoolPath{}, false, err
+		return "", false, err
 	}
 
-	return v1.NewSystemSharedNodePoolPath(path, nameLabel), true, nil
+	subcomponent, err := tree.NewPathSubcomponentFromParts(path, nameLabel)
+	if err != nil {
+		return "", false, err
+	}
+
+	return subcomponent, true, nil
 }
 
 func (np *NodePool) TypeDescription() string {

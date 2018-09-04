@@ -1,4 +1,4 @@
-package backend
+package system
 
 import (
 	"fmt"
@@ -8,40 +8,38 @@ import (
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
-	defintionv1 "github.com/mlab-lattice/lattice/pkg/definition/v1"
 
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
 
-	"github.com/mlab-lattice/lattice/pkg/definition/resolver"
 	"github.com/satori/go.uuid"
 )
 
-func (kb *KubernetesBackend) Build(
-	systemID v1.SystemID,
-	def *defintionv1.SystemNode,
-	ri resolver.ResolutionInfo,
-	version v1.SystemVersion,
-) (*v1.Build, error) {
+type buildBackend struct {
+	backend *Backend
+	system  v1.SystemID
+}
+
+func (b *buildBackend) Create(version v1.SystemVersion) (*v1.Build, error) {
 	// ensure the system exists
-	if _, err := kb.ensureSystemCreated(systemID); err != nil {
+	if _, err := b.backend.ensureSystemCreated(b.system); err != nil {
 		return nil, err
 	}
 
-	build, err := newBuild(def, ri, version)
+	build, err := newBuild(version)
 	if err != nil {
 		return nil, err
 	}
 
-	namespace := kb.systemNamespace(systemID)
-	build, err = kb.latticeClient.LatticeV1().Builds(namespace).Create(build)
+	namespace := b.backend.systemNamespace(b.system)
+	build, err = b.backend.latticeClient.LatticeV1().Builds(namespace).Create(build)
 	if err != nil {
 		return nil, err
 	}
 
-	externalBuild, err := kb.transformBuild(build)
+	externalBuild, err := b.transformBuild(build)
 	if err != nil {
 		return nil, err
 	}
@@ -49,32 +47,29 @@ func (kb *KubernetesBackend) Build(
 	return &externalBuild, nil
 }
 
-func newBuild(def *defintionv1.SystemNode, ri resolver.ResolutionInfo, version v1.SystemVersion) (*latticev1.Build, error) {
-	labels := map[string]string{
-		latticev1.BuildDefinitionVersionLabelKey: string(version),
-	}
-
+func newBuild(version v1.SystemVersion) (*latticev1.Build, error) {
 	build := &latticev1.Build{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:   uuid.NewV4().String(),
-			Labels: labels,
+			Name: uuid.NewV4().String(),
+			Labels: map[string]string{
+				latticev1.BuildDefinitionVersionLabelKey: string(version),
+			},
 		},
 		Spec: latticev1.BuildSpec{
-			Definition:     def,
-			ResolutionInfo: ri,
+			Version: version,
 		},
 	}
 
 	return build, nil
 }
 
-func (kb *KubernetesBackend) ListBuilds(systemID v1.SystemID) ([]v1.Build, error) {
-	if _, err := kb.ensureSystemCreated(systemID); err != nil {
+func (b *buildBackend) List() ([]v1.Build, error) {
+	if _, err := b.backend.ensureSystemCreated(b.system); err != nil {
 		return nil, err
 	}
 
-	namespace := kb.systemNamespace(systemID)
-	builds, err := kb.latticeClient.LatticeV1().Builds(namespace).List(metav1.ListOptions{})
+	namespace := b.backend.systemNamespace(b.system)
+	builds, err := b.backend.latticeClient.LatticeV1().Builds(namespace).List(metav1.ListOptions{})
 	if err != nil {
 		return nil, err
 	}
@@ -83,7 +78,7 @@ func (kb *KubernetesBackend) ListBuilds(systemID v1.SystemID) ([]v1.Build, error
 	// if builds.Items is empty
 	externalBuilds := make([]v1.Build, 0)
 	for _, build := range builds.Items {
-		externalBuild, err := kb.transformBuild(&build)
+		externalBuild, err := b.transformBuild(&build)
 		if err != nil {
 			return nil, err
 		}
@@ -94,23 +89,23 @@ func (kb *KubernetesBackend) ListBuilds(systemID v1.SystemID) ([]v1.Build, error
 	return externalBuilds, nil
 }
 
-func (kb *KubernetesBackend) GetBuild(systemID v1.SystemID, buildID v1.BuildID) (*v1.Build, error) {
+func (b *buildBackend) Get(id v1.BuildID) (*v1.Build, error) {
 	// Ensure the system exists
-	if _, err := kb.ensureSystemCreated(systemID); err != nil {
+	if _, err := b.backend.ensureSystemCreated(b.system); err != nil {
 		return nil, err
 	}
 
-	namespace := kb.systemNamespace(systemID)
-	build, err := kb.latticeClient.LatticeV1().Builds(namespace).Get(string(buildID), metav1.GetOptions{})
+	namespace := b.backend.systemNamespace(b.system)
+	build, err := b.backend.latticeClient.LatticeV1().Builds(namespace).Get(string(id), metav1.GetOptions{})
 	if err != nil {
 		if errors.IsNotFound(err) {
-			return nil, v1.NewInvalidBuildIDError(buildID)
+			return nil, v1.NewInvalidBuildIDError()
 		}
 
 		return nil, err
 	}
 
-	externalBuild, err := kb.transformBuild(build)
+	externalBuild, err := b.transformBuild(build)
 	if err != nil {
 		return nil, err
 	}
@@ -118,23 +113,22 @@ func (kb *KubernetesBackend) GetBuild(systemID v1.SystemID, buildID v1.BuildID) 
 	return &externalBuild, nil
 }
 
-func (kb *KubernetesBackend) BuildLogs(
-	systemID v1.SystemID,
-	buildID v1.BuildID,
+func (b *buildBackend) Logs(
+	id v1.BuildID,
 	path tree.Path,
 	sidecar *string,
 	logOptions *v1.ContainerLogOptions,
 ) (io.ReadCloser, error) {
 	// Ensure the system exists
-	if _, err := kb.ensureSystemCreated(systemID); err != nil {
+	if _, err := b.backend.ensureSystemCreated(b.system); err != nil {
 		return nil, err
 	}
 
-	namespace := kb.systemNamespace(systemID)
-	build, err := kb.latticeClient.LatticeV1().Builds(namespace).Get(string(buildID), metav1.GetOptions{})
+	namespace := b.backend.systemNamespace(b.system)
+	build, err := b.backend.latticeClient.LatticeV1().Builds(namespace).Get(string(id), metav1.GetOptions{})
 	if err != nil {
 		if errors.IsNotFound(err) {
-			return nil, v1.NewInvalidBuildIDError(buildID)
+			return nil, v1.NewInvalidBuildIDError()
 		}
 
 		return nil, err
@@ -143,7 +137,7 @@ func (kb *KubernetesBackend) BuildLogs(
 	service, ok := build.Status.Services[path]
 	if !ok {
 		if errors.IsNotFound(err) {
-			return nil, v1.NewInvalidServicePathError(path)
+			return nil, v1.NewInvalidServicePathError()
 		}
 
 		return nil, err
@@ -153,7 +147,7 @@ func (kb *KubernetesBackend) BuildLogs(
 	if sidecar != nil {
 		containerBuildID, ok = service.Sidecars[*sidecar]
 		if !ok {
-			return nil, v1.NewInvalidSidecarError(*sidecar)
+			return nil, v1.NewInvalidSidecarError()
 		}
 	}
 
@@ -164,7 +158,7 @@ func (kb *KubernetesBackend) BuildLogs(
 	}
 
 	selector = selector.Add(*requirement)
-	pods, err := kb.kubeClient.CoreV1().Pods(namespace).List(metav1.ListOptions{LabelSelector: selector.String()})
+	pods, err := b.backend.kubeClient.CoreV1().Pods(namespace).List(metav1.ListOptions{LabelSelector: selector.String()})
 	if err != nil {
 		return nil, err
 	}
@@ -182,11 +176,11 @@ func (kb *KubernetesBackend) BuildLogs(
 	if err != nil {
 		return nil, err
 	}
-	req := kb.kubeClient.CoreV1().Pods(namespace).GetLogs(pod.Name, podLogOptions)
+	req := b.backend.kubeClient.CoreV1().Pods(namespace).GetLogs(pod.Name, podLogOptions)
 	return req.Stream()
 }
 
-func (kb *KubernetesBackend) transformBuild(build *latticev1.Build) (v1.Build, error) {
+func (b *buildBackend) transformBuild(build *latticev1.Build) (v1.Build, error) {
 	state, err := getBuildState(build.Status.State)
 	if err != nil {
 		return v1.Build{}, err

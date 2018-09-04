@@ -1,9 +1,5 @@
 package v1
 
-import (
-	"github.com/mlab-lattice/lattice/pkg/definition/tree"
-)
-
 type (
 	SystemID      string
 	SystemState   string
@@ -22,8 +18,7 @@ const (
 )
 
 type System struct {
-	ID            SystemID              `json:"id"`
-	State         SystemState           `json:"state"`
-	DefinitionURL string                `json:"definitionUrl"`
-	Services      map[tree.Path]Service `json:"services"`
+	ID            SystemID    `json:"id"`
+	State         SystemState `json:"state"`
+	DefinitionURL string      `json:"definitionUrl"`
 }

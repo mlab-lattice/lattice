@@ -5,10 +5,10 @@ import (
 
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	kubeutil "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/kubernetes"
+	"github.com/mlab-lattice/lattice/pkg/definition/resolver"
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 	definitionv1 "github.com/mlab-lattice/lattice/pkg/definition/v1"
 
-	"github.com/mlab-lattice/lattice/pkg/definition/resolver"
 	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -58,15 +58,17 @@ func (b *Build) Description(namespacePrefix string) string {
 
 // +k8s:deepcopy-gen=false
 type BuildSpec struct {
-	Definition     *definitionv1.SystemNode `json:"definition"`
-	ResolutionInfo resolver.ResolutionInfo  `json:"resolutionInfo"`
+	Version v1.SystemVersion `json:"version"`
 }
 
 type BuildStatus struct {
-	// Builds are immutable so no need for ObservedGeneration
+	// Build specs are immutable so no need for ObservedGeneration
 
 	State   BuildState `json:"state"`
 	Message string     `json:"message"`
+
+	Definition     *definitionv1.SystemNode `json:"definition"`
+	ResolutionInfo resolver.ResolutionInfo  `json:"resolutionInfo"`
 
 	StartTimestamp      *metav1.Time `json:"startTimestamp,omitempty"`
 	CompletionTimestamp *metav1.Time `json:"completionTimestamp,omitempty"`

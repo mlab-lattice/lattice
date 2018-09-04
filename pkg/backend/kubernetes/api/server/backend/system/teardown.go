@@ -1,4 +1,4 @@
-package backend
+package system
 
 import (
 	"fmt"
@@ -12,16 +12,21 @@ import (
 	"github.com/satori/go.uuid"
 )
 
-func (kb *KubernetesBackend) TearDown(systemID v1.SystemID) (*v1.Teardown, error) {
+type teardownBackend struct {
+	backend *Backend
+	system  v1.SystemID
+}
+
+func (b *teardownBackend) Create() (*v1.Teardown, error) {
 	// ensure the system exists
-	if _, err := kb.ensureSystemCreated(systemID); err != nil {
+	if _, err := b.backend.ensureSystemCreated(b.system); err != nil {
 		return nil, err
 	}
 
 	teardown := newTeardown()
 
-	namespace := kb.systemNamespace(systemID)
-	teardown, err := kb.latticeClient.LatticeV1().Teardowns(namespace).Create(teardown)
+	namespace := b.backend.systemNamespace(b.system)
+	teardown, err := b.backend.latticeClient.LatticeV1().Teardowns(namespace).Create(teardown)
 	if err != nil {
 		return nil, err
 	}
@@ -43,14 +48,14 @@ func newTeardown() *latticev1.Teardown {
 	}
 }
 
-func (kb *KubernetesBackend) ListTeardowns(systemID v1.SystemID) ([]v1.Teardown, error) {
+func (b *teardownBackend) List() ([]v1.Teardown, error) {
 	// ensure the system exists
-	if _, err := kb.ensureSystemCreated(systemID); err != nil {
+	if _, err := b.backend.ensureSystemCreated(b.system); err != nil {
 		return nil, err
 	}
 
-	namespace := kb.systemNamespace(systemID)
-	teardowns, err := kb.latticeClient.LatticeV1().Teardowns(namespace).List(metav1.ListOptions{})
+	namespace := b.backend.systemNamespace(b.system)
+	teardowns, err := b.backend.latticeClient.LatticeV1().Teardowns(namespace).List(metav1.ListOptions{})
 	if err != nil {
 		return nil, err
 	}
@@ -68,17 +73,17 @@ func (kb *KubernetesBackend) ListTeardowns(systemID v1.SystemID) ([]v1.Teardown,
 	return externalTeardowns, nil
 }
 
-func (kb *KubernetesBackend) GetTeardown(systemID v1.SystemID, teardownID v1.TeardownID) (*v1.Teardown, error) {
+func (b *teardownBackend) Get(id v1.TeardownID) (*v1.Teardown, error) {
 	// ensure the system exists
-	if _, err := kb.ensureSystemCreated(systemID); err != nil {
+	if _, err := b.backend.ensureSystemCreated(b.system); err != nil {
 		return nil, err
 	}
 
-	namespace := kb.systemNamespace(systemID)
-	teardown, err := kb.latticeClient.LatticeV1().Teardowns(namespace).Get(string(teardownID), metav1.GetOptions{})
+	namespace := b.backend.systemNamespace(b.system)
+	teardown, err := b.backend.latticeClient.LatticeV1().Teardowns(namespace).Get(string(id), metav1.GetOptions{})
 	if err != nil {
 		if errors.IsNotFound(err) {
-			return nil, v1.NewInvalidTeardownIDError(teardownID)
+			return nil, v1.NewInvalidTeardownIDError()
 		}
 
 		return nil, err

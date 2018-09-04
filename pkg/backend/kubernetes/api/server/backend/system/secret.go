@@ -1,4 +1,4 @@
-package backend
+package system
 
 import (
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
@@ -13,9 +13,14 @@ import (
 	"k8s.io/apimachinery/pkg/selection"
 )
 
-func (kb *KubernetesBackend) ListSystemSecrets(systemID v1.SystemID) ([]v1.Secret, error) {
+type secretBackend struct {
+	backend *Backend
+	system  v1.SystemID
+}
+
+func (b *secretBackend) List() ([]v1.Secret, error) {
 	// ensure the system exists
-	if _, err := kb.ensureSystemCreated(systemID); err != nil {
+	if _, err := b.backend.ensureSystemCreated(b.system); err != nil {
 		return nil, err
 	}
 
@@ -28,8 +33,8 @@ func (kb *KubernetesBackend) ListSystemSecrets(systemID v1.SystemID) ([]v1.Secre
 	}
 	selector = selector.Add(*requirement)
 
-	namespace := kb.systemNamespace(systemID)
-	secrets, err := kb.kubeClient.CoreV1().Secrets(namespace).List(metav1.ListOptions{LabelSelector: selector.String()})
+	namespace := b.backend.systemNamespace(b.system)
+	secrets, err := b.backend.kubeClient.CoreV1().Secrets(namespace).List(metav1.ListOptions{LabelSelector: selector.String()})
 	if err != nil {
 		return nil, err
 	}
@@ -42,9 +47,13 @@ func (kb *KubernetesBackend) ListSystemSecrets(systemID v1.SystemID) ([]v1.Secre
 		}
 
 		for name, value := range secret.Data {
+			subcomponent, err := tree.NewPathSubcomponentFromParts(path, name)
+			if err != nil {
+				return nil, err
+			}
+
 			externalSecrets = append(externalSecrets, v1.Secret{
-				Path:  path,
-				Name:  name,
+				Path:  subcomponent,
 				Value: string(value),
 			})
 		}
@@ -53,65 +62,64 @@ func (kb *KubernetesBackend) ListSystemSecrets(systemID v1.SystemID) ([]v1.Secre
 	return externalSecrets, nil
 }
 
-func (kb *KubernetesBackend) GetSystemSecret(systemID v1.SystemID, path tree.Path, name string) (*v1.Secret, error) {
+func (b *secretBackend) Get(subcomponent tree.PathSubcomponent) (*v1.Secret, error) {
 	// ensure the system exists
-	if _, err := kb.ensureSystemCreated(systemID); err != nil {
+	if _, err := b.backend.ensureSystemCreated(b.system); err != nil {
 		return nil, err
 	}
 
-	kubeSecretName, err := kubeSecretName(path)
+	kubeSecretName, err := kubeSecretName(subcomponent.Path())
 	if err != nil {
 		return nil, err
 	}
 
-	namespace := kb.systemNamespace(systemID)
-	secret, err := kb.kubeClient.CoreV1().Secrets(namespace).Get(kubeSecretName, metav1.GetOptions{})
+	namespace := b.backend.systemNamespace(b.system)
+	secret, err := b.backend.kubeClient.CoreV1().Secrets(namespace).Get(kubeSecretName, metav1.GetOptions{})
 	if err != nil {
 		if errors.IsNotFound(err) {
-			return nil, v1.NewInvalidSystemSecretError(path, name)
+			return nil, v1.NewInvalidSecretError()
 		}
 
 		return nil, err
 	}
 
-	value, ok := secret.Data[name]
+	value, ok := secret.Data[subcomponent.Subcomponent()]
 	if !ok {
-		return nil, v1.NewInvalidSystemSecretError(path, name)
+		return nil, v1.NewInvalidSecretError()
 	}
 
 	externalSecret := &v1.Secret{
-		Path:  path,
-		Name:  name,
+		Path:  subcomponent,
 		Value: string(value),
 	}
 	return externalSecret, nil
 }
 
-func (kb *KubernetesBackend) SetSystemSecret(systemID v1.SystemID, path tree.Path, name, value string) error {
+func (b *secretBackend) Set(subcomponent tree.PathSubcomponent, value string) error {
 	// ensure the system exists
-	if _, err := kb.ensureSystemCreated(systemID); err != nil {
+	if _, err := b.backend.ensureSystemCreated(b.system); err != nil {
 		return err
 	}
 
-	kubeSecretName, err := kubeSecretName(path)
+	kubeSecretName, err := kubeSecretName(subcomponent.Path())
 	if err != nil {
 		return err
 	}
 
-	namespace := kb.systemNamespace(systemID)
-	secret, err := kb.kubeClient.CoreV1().Secrets(namespace).Get(kubeSecretName, metav1.GetOptions{})
+	namespace := b.backend.systemNamespace(b.system)
+	secret, err := b.backend.kubeClient.CoreV1().Secrets(namespace).Get(kubeSecretName, metav1.GetOptions{})
 	if err != nil {
 		if errors.IsNotFound(err) {
-			return kb.createSecret(systemID, path, name, value)
+			return b.createSecret(subcomponent, value)
 		}
 
 		return err
 	}
 
 	secret.StringData = map[string]string{
-		name: value,
+		subcomponent.Subcomponent(): value,
 	}
-	_, err = kb.kubeClient.CoreV1().Secrets(namespace).Update(secret)
+	_, err = b.backend.kubeClient.CoreV1().Secrets(namespace).Update(secret)
 	if err == nil {
 		return nil
 	}
@@ -119,48 +127,48 @@ func (kb *KubernetesBackend) SetSystemSecret(systemID v1.SystemID, path tree.Pat
 	// if there was a conflict or the secret no longer exists (i.e. it was deleted since we found it)
 	// return a conflict error
 	if errors.IsConflict(err) || errors.IsNotFound(err) {
-		return v1.NewConflictError("")
+		return v1.NewConflictError()
 	}
 
 	return err
 }
 
-func (kb *KubernetesBackend) createSecret(systemID v1.SystemID, path tree.Path, name, value string) error {
-	kubeSecretName, err := kubeSecretName(path)
+func (b *secretBackend) createSecret(subcomponent tree.PathSubcomponent, value string) error {
+	kubeSecretName, err := kubeSecretName(subcomponent.Path())
 	if err != nil {
 		return err
 	}
 
-	namespace := kb.systemNamespace(systemID)
+	namespace := b.backend.systemNamespace(b.system)
 	secret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: kubeSecretName,
 			Labels: map[string]string{
-				latticev1.SecretPathLabelKey: path.ToDomain(),
+				latticev1.SecretPathLabelKey: subcomponent.Path().ToDomain(),
 			},
 		},
 		StringData: map[string]string{
-			name: value,
+			subcomponent.Subcomponent(): value,
 		},
 	}
 
-	_, err = kb.kubeClient.CoreV1().Secrets(namespace).Create(secret)
+	_, err = b.backend.kubeClient.CoreV1().Secrets(namespace).Create(secret)
 	return err
 }
 
-func (kb *KubernetesBackend) UnsetSystemSecret(systemID v1.SystemID, path tree.Path, name string) error {
+func (b *secretBackend) Unset(subcomponent tree.PathSubcomponent) error {
 	// ensure the system exists
-	if _, err := kb.ensureSystemCreated(systemID); err != nil {
+	if _, err := b.backend.ensureSystemCreated(b.system); err != nil {
 		return err
 	}
 
-	kubeSecretName, err := kubeSecretName(path)
+	kubeSecretName, err := kubeSecretName(subcomponent.Path())
 	if err != nil {
 		return err
 	}
 
-	namespace := kb.systemNamespace(systemID)
-	secret, err := kb.kubeClient.CoreV1().Secrets(namespace).Get(kubeSecretName, metav1.GetOptions{})
+	namespace := b.backend.systemNamespace(b.system)
+	secret, err := b.backend.kubeClient.CoreV1().Secrets(namespace).Get(kubeSecretName, metav1.GetOptions{})
 	if err != nil {
 		// If we can't find the secret, then it is unset
 		if errors.IsNotFound(err) {
@@ -170,27 +178,27 @@ func (kb *KubernetesBackend) UnsetSystemSecret(systemID v1.SystemID, path tree.P
 		return err
 	}
 
-	delete(secret.Data, name)
+	delete(secret.Data, subcomponent.Subcomponent())
 	if len(secret.Data) == 0 {
-		err = kb.kubeClient.CoreV1().Secrets(namespace).Delete(secret.Name, nil)
+		err = b.backend.kubeClient.CoreV1().Secrets(namespace).Delete(secret.Name, nil)
 		if err != nil {
 			return nil
 		}
 
 		if errors.IsConflict(err) {
-			return v1.NewConflictError("")
+			return v1.NewConflictError()
 		}
 
 		return err
 	}
 
-	_, err = kb.kubeClient.CoreV1().Secrets(namespace).Update(secret)
+	_, err = b.backend.kubeClient.CoreV1().Secrets(namespace).Update(secret)
 	if err == nil {
 		return nil
 	}
 
 	if errors.IsConflict(err) {
-		return v1.NewConflictError("")
+		return v1.NewConflictError()
 	}
 
 	return err

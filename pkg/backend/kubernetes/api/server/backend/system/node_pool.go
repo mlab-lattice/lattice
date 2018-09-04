@@ -1,4 +1,4 @@
-package backend
+package system
 
 import (
 	"fmt"
@@ -6,32 +6,38 @@ import (
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 
+	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
 )
 
-func (kb *KubernetesBackend) ListNodePools(systemID v1.SystemID) ([]v1.NodePool, error) {
+type nodePoolBackend struct {
+	backend *Backend
+	system  v1.SystemID
+}
+
+func (b *nodePoolBackend) List() ([]v1.NodePool, error) {
 	// ensure the system exists
-	if _, err := kb.ensureSystemCreated(systemID); err != nil {
+	if _, err := b.backend.ensureSystemCreated(b.system); err != nil {
 		return nil, err
 	}
 
-	namespace := kb.systemNamespace(systemID)
-	nodePools, err := kb.latticeClient.LatticeV1().NodePools(namespace).List(metav1.ListOptions{})
+	namespace := b.backend.systemNamespace(b.system)
+	nodePools, err := b.backend.latticeClient.LatticeV1().NodePools(namespace).List(metav1.ListOptions{})
 	if err != nil {
 		return nil, err
 	}
 
 	var externalNodePools []v1.NodePool
 	for _, nodePool := range nodePools.Items {
-		path, err := kb.getNodePoolPath(&nodePool)
+		path, err := b.getNodePoolPath(&nodePool)
 		if err != nil {
 			return nil, err
 		}
 
-		externalNodePool, err := kb.transformNodePool(nodePool.Name, path, &nodePool.Status)
+		externalNodePool, err := b.transformNodePool(nodePool.Name, path, &nodePool.Status)
 		if err != nil {
 			return nil, err
 		}
@@ -42,33 +48,33 @@ func (kb *KubernetesBackend) ListNodePools(systemID v1.SystemID) ([]v1.NodePool,
 	return externalNodePools, nil
 }
 
-func (kb *KubernetesBackend) GetNodePool(systemID v1.SystemID, path v1.NodePoolPath) (*v1.NodePool, error) {
+func (b *nodePoolBackend) Get(path tree.PathSubcomponent) (*v1.NodePool, error) {
 	// ensure the system exists
-	if _, err := kb.ensureSystemCreated(systemID); err != nil {
+	if _, err := b.backend.ensureSystemCreated(b.system); err != nil {
 		return nil, err
 	}
 
-	namespace := kb.systemNamespace(systemID)
+	namespace := b.backend.systemNamespace(b.system)
 	var selector labels.Selector
-	if path.Name == nil {
+	if path.Subcomponent() == "" {
 		selector = labels.NewSelector()
 		requirement, err := labels.NewRequirement(
 			latticev1.ServicePathLabelKey,
 			selection.Equals,
-			[]string{path.Path.ToDomain()},
+			[]string{path.Path().ToDomain()},
 		)
 		if err != nil {
 			return nil, err
 		}
 
 		selector = selector.Add(*requirement)
-		services, err := kb.latticeClient.LatticeV1().Services(namespace).List(metav1.ListOptions{LabelSelector: selector.String()})
+		services, err := b.backend.latticeClient.LatticeV1().Services(namespace).List(metav1.ListOptions{LabelSelector: selector.String()})
 		if err != nil {
 			return nil, err
 		}
 
 		if len(services.Items) > 1 {
-			return nil, fmt.Errorf("found multiple services for path %v", path.Path.String())
+			return nil, fmt.Errorf("found multiple services for path %v", path.Path().String())
 		}
 
 		if len(services.Items) == 0 {
@@ -92,7 +98,7 @@ func (kb *KubernetesBackend) GetNodePool(systemID v1.SystemID, path v1.NodePoolP
 		requirement, err := labels.NewRequirement(
 			latticev1.NodePoolSystemSharedPathLabelKey,
 			selection.Equals,
-			[]string{path.Path.ToDomain()},
+			[]string{path.Path().ToDomain()},
 		)
 		if err != nil {
 			return nil, err
@@ -103,7 +109,7 @@ func (kb *KubernetesBackend) GetNodePool(systemID v1.SystemID, path v1.NodePoolP
 		requirement, err = labels.NewRequirement(
 			latticev1.NodePoolSystemSharedNameLabelKey,
 			selection.Equals,
-			[]string{*path.Name},
+			[]string{path.Subcomponent()},
 		)
 		if err != nil {
 			return nil, err
@@ -112,7 +118,7 @@ func (kb *KubernetesBackend) GetNodePool(systemID v1.SystemID, path v1.NodePoolP
 		selector = selector.Add(*requirement)
 	}
 
-	nodePools, err := kb.latticeClient.LatticeV1().NodePools(namespace).List(metav1.ListOptions{LabelSelector: selector.String()})
+	nodePools, err := b.backend.latticeClient.LatticeV1().NodePools(namespace).List(metav1.ListOptions{LabelSelector: selector.String()})
 	if err != nil {
 		return nil, err
 	}
@@ -126,7 +132,7 @@ func (kb *KubernetesBackend) GetNodePool(systemID v1.SystemID, path v1.NodePoolP
 	}
 
 	nodePool := &nodePools.Items[0]
-	externalNodePool, err := kb.transformNodePool(nodePool.Name, path, &nodePool.Status)
+	externalNodePool, err := b.transformNodePool(nodePool.Name, path, &nodePool.Status)
 	if err != nil {
 		return nil, err
 	}
@@ -134,39 +140,44 @@ func (kb *KubernetesBackend) GetNodePool(systemID v1.SystemID, path v1.NodePoolP
 	return &externalNodePool, nil
 }
 
-func (kb *KubernetesBackend) getNodePoolPath(nodePool *latticev1.NodePool) (v1.NodePoolPath, error) {
+func (b *nodePoolBackend) getNodePoolPath(nodePool *latticev1.NodePool) (tree.PathSubcomponent, error) {
 	serviceID, ok := nodePool.ServiceDedicatedIDLabel()
 	if ok {
-		service, err := kb.latticeClient.LatticeV1().Services(nodePool.Namespace).Get(serviceID, metav1.GetOptions{})
+		service, err := b.backend.latticeClient.LatticeV1().Services(nodePool.Namespace).Get(serviceID, metav1.GetOptions{})
 		if err != nil {
 			if !errors.IsNotFound(err) {
-				return v1.NodePoolPath{}, err
+				return "", err
 			}
 
-			return v1.NodePoolPath{}, nil
+			return "", nil
 		}
 
 		servicePath, err := service.PathLabel()
 		if err != nil {
-			return v1.NodePoolPath{}, err
+			return "", err
 		}
 
-		return v1.NewServiceNodePoolPath(servicePath), nil
+		path, err := tree.NewPathSubcomponentFromParts(servicePath, "node_pool")
+		if err != nil {
+			return "", err
+		}
+
+		return path, nil
 	}
 
 	path, ok, err := nodePool.SystemSharedPathLabel()
 	if err != nil {
-		return v1.NodePoolPath{}, err
+		return "", err
 	}
 
 	if ok {
 		return path, nil
 	}
 
-	return v1.NodePoolPath{}, fmt.Errorf("%v did not contain service id or system shared path labels", nodePool.Description(kb.namespacePrefix))
+	return "", fmt.Errorf("%v did not contain service id or system shared path labels", nodePool.Description(b.backend.namespacePrefix))
 }
 
-func (kb *KubernetesBackend) transformNodePool(id string, path v1.NodePoolPath, status *latticev1.NodePoolStatus) (v1.NodePool, error) {
+func (b *nodePoolBackend) transformNodePool(id string, path tree.PathSubcomponent, status *latticev1.NodePoolStatus) (v1.NodePool, error) {
 	state, err := getNodePoolState(status.State)
 	if err != nil {
 		return v1.NodePool{}, err
@@ -198,7 +209,7 @@ func (kb *KubernetesBackend) transformNodePool(id string, path v1.NodePoolPath, 
 
 	nodePool := v1.NodePool{
 		ID:   id,
-		Path: path.String(),
+		Path: path,
 
 		State:       state,
 		FailureInfo: failureInfo,

@@ -1,4 +1,4 @@
-package backend
+package system
 
 import (
 	"fmt"
@@ -20,18 +20,22 @@ import (
 	"github.com/satori/go.uuid"
 )
 
-func (kb *KubernetesBackend) RunJob(
-	systemID v1.SystemID,
+type jobBackend struct {
+	backend *Backend
+	system  v1.SystemID
+}
+
+func (b *jobBackend) Run(
 	path tree.Path,
 	command []string,
 	environment definitionv1.ContainerEnvironment,
 ) (*v1.Job, error) {
 	// ensure the system exists
-	if _, err := kb.ensureSystemCreated(systemID); err != nil {
+	if _, err := b.backend.ensureSystemCreated(b.system); err != nil {
 		return nil, err
 	}
 
-	namespace := kb.systemNamespace(systemID)
+	namespace := b.backend.systemNamespace(b.system)
 
 	selector := labels.NewSelector()
 	requirement, err := labels.NewRequirement(latticev1.JobPathLabelKey, selection.Equals, []string{path.ToDomain()})
@@ -40,7 +44,7 @@ func (kb *KubernetesBackend) RunJob(
 	}
 	selector = selector.Add(*requirement)
 
-	jobs, err := kb.latticeClient.LatticeV1().Jobs(namespace).List(metav1.ListOptions{LabelSelector: selector.String()})
+	jobs, err := b.backend.latticeClient.LatticeV1().Jobs(namespace).List(metav1.ListOptions{LabelSelector: selector.String()})
 	if err != nil {
 		return nil, err
 	}
@@ -69,12 +73,12 @@ func (kb *KubernetesBackend) RunJob(
 		},
 	}
 
-	result, err := kb.latticeClient.LatticeV1().JobRuns(namespace).Create(jobRun)
+	result, err := b.backend.latticeClient.LatticeV1().JobRuns(namespace).Create(jobRun)
 	if err != nil {
 		return nil, fmt.Errorf("error trying to create job run: %v", err)
 	}
 
-	externalJob, err := kb.transformJobRun(v1.JobID(result.Name), path, &result.Status, namespace)
+	externalJob, err := b.transformJobRun(v1.JobID(result.Name), path, &result.Status, namespace)
 	if err != nil {
 		return nil, err
 	}
@@ -82,14 +86,14 @@ func (kb *KubernetesBackend) RunJob(
 	return &externalJob, nil
 }
 
-func (kb *KubernetesBackend) ListJobs(systemID v1.SystemID) ([]v1.Job, error) {
+func (b *jobBackend) List() ([]v1.Job, error) {
 	// ensure the system exists
-	if _, err := kb.ensureSystemCreated(systemID); err != nil {
+	if _, err := b.backend.ensureSystemCreated(b.system); err != nil {
 		return nil, err
 	}
 
-	namespace := kb.systemNamespace(systemID)
-	jobRuns, err := kb.latticeClient.LatticeV1().JobRuns(namespace).List(metav1.ListOptions{})
+	namespace := b.backend.systemNamespace(b.system)
+	jobRuns, err := b.backend.latticeClient.LatticeV1().JobRuns(namespace).List(metav1.ListOptions{})
 	if err != nil {
 		return nil, err
 	}
@@ -101,7 +105,7 @@ func (kb *KubernetesBackend) ListJobs(systemID v1.SystemID) ([]v1.Job, error) {
 			return nil, err
 		}
 
-		externalJobRun, err := kb.transformJobRun(v1.JobID(jobRun.Name), path, &jobRun.Status, namespace)
+		externalJobRun, err := b.transformJobRun(v1.JobID(jobRun.Name), path, &jobRun.Status, namespace)
 		if err != nil {
 			return nil, err
 		}
@@ -112,14 +116,14 @@ func (kb *KubernetesBackend) ListJobs(systemID v1.SystemID) ([]v1.Job, error) {
 	return externalJobs, nil
 }
 
-func (kb *KubernetesBackend) GetJob(systemID v1.SystemID, jobID v1.JobID) (*v1.Job, error) {
+func (b *jobBackend) Get(id v1.JobID) (*v1.Job, error) {
 	// ensure the system exists
-	if _, err := kb.ensureSystemCreated(systemID); err != nil {
+	if _, err := b.backend.ensureSystemCreated(b.system); err != nil {
 		return nil, err
 	}
 
-	namespace := kb.systemNamespace(systemID)
-	jobRun, err := kb.latticeClient.LatticeV1().JobRuns(namespace).Get(string(jobID), metav1.GetOptions{})
+	namespace := b.backend.systemNamespace(b.system)
+	jobRun, err := b.backend.latticeClient.LatticeV1().JobRuns(namespace).Get(string(id), metav1.GetOptions{})
 	if err != nil {
 		return nil, err
 	}
@@ -129,7 +133,7 @@ func (kb *KubernetesBackend) GetJob(systemID v1.SystemID, jobID v1.JobID) (*v1.J
 		return nil, err
 	}
 
-	externalJob, err := kb.transformJobRun(v1.JobID(jobRun.Name), path, &jobRun.Status, namespace)
+	externalJob, err := b.transformJobRun(v1.JobID(jobRun.Name), path, &jobRun.Status, namespace)
 	if err != nil {
 		return nil, err
 	}
@@ -137,25 +141,24 @@ func (kb *KubernetesBackend) GetJob(systemID v1.SystemID, jobID v1.JobID) (*v1.J
 	return &externalJob, nil
 }
 
-func (kb *KubernetesBackend) JobLogs(
-	systemID v1.SystemID,
-	jobID v1.JobID,
+func (b *jobBackend) Logs(
+	id v1.JobID,
 	sidecar *string,
 	logOptions *v1.ContainerLogOptions,
 ) (io.ReadCloser, error) {
 	// Ensure the system exists
-	if _, err := kb.ensureSystemCreated(systemID); err != nil {
+	if _, err := b.backend.ensureSystemCreated(b.system); err != nil {
 		return nil, err
 	}
 
-	namespace := kb.systemNamespace(systemID)
+	namespace := b.backend.systemNamespace(b.system)
 
-	_, err := kb.latticeClient.LatticeV1().JobRuns(namespace).Get(string(jobID), metav1.GetOptions{})
+	_, err := b.backend.latticeClient.LatticeV1().JobRuns(namespace).Get(string(id), metav1.GetOptions{})
 	if err != nil {
 		return nil, err
 	}
 
-	pod, err := kb.findJobPod(jobID, namespace)
+	pod, err := b.findJobPod(id, namespace)
 
 	if err != nil {
 		return nil, err
@@ -172,13 +175,13 @@ func (kb *KubernetesBackend) JobLogs(
 	}
 	podLogOptions.Container = container
 
-	req := kb.kubeClient.CoreV1().Pods(namespace).GetLogs(pod.Name, podLogOptions)
+	req := b.backend.kubeClient.CoreV1().Pods(namespace).GetLogs(pod.Name, podLogOptions)
 	return req.Stream()
 
 }
 
 // findServicePod finds service pod by instance id or service's single pod if id was not specified
-func (kb *KubernetesBackend) findJobPod(jobID v1.JobID, namespace string) (*corev1.Pod, error) {
+func (b *jobBackend) findJobPod(jobID v1.JobID, namespace string) (*corev1.Pod, error) {
 	selector := labels.NewSelector()
 	requirement, err := labels.NewRequirement(latticev1.JobRunIDLabelKey, selection.Equals, []string{string(jobID)})
 	if err != nil {
@@ -186,7 +189,7 @@ func (kb *KubernetesBackend) findJobPod(jobID v1.JobID, namespace string) (*core
 	}
 
 	selector = selector.Add(*requirement)
-	pods, err := kb.kubeClient.CoreV1().Pods(namespace).List(metav1.ListOptions{LabelSelector: selector.String()})
+	pods, err := b.backend.kubeClient.CoreV1().Pods(namespace).List(metav1.ListOptions{LabelSelector: selector.String()})
 	if err != nil {
 		return nil, err
 	}
@@ -203,7 +206,7 @@ func (kb *KubernetesBackend) findJobPod(jobID v1.JobID, namespace string) (*core
 
 }
 
-func (kb *KubernetesBackend) transformJobRun(
+func (b *jobBackend) transformJobRun(
 	id v1.JobID,
 	path tree.Path,
 	status *latticev1.JobRunStatus,
