@@ -19,7 +19,7 @@ const (
 	mockAPIServerURL = "http://localhost:8876"
 
 	mockSystemVersion = v1.SystemVersion("1.0.0")
-	mockServicePath   = tree.Path("/mock-system/api")
+	mockServicePath   = tree.Path("/api")
 
 	mockServerAPIPort = 8876
 	mockServerAPIKey  = "abc"
@@ -223,8 +223,17 @@ func buildAndDeploy(t *testing.T) {
 
 	// test service logs
 	fmt.Println("Test Service logs")
-	reader, err = latticeClient.Systems().Services(mockSystemID).Logs(v1.ServiceID(build.Services["/mock-system/api"].ID),
-		nil, nil, v1.NewContainerLogOptions())
+	system, err := latticeClient.Systems().Get(mockSystemID)
+	if err != nil {
+		t.Fatalf("got err while retrieving system: %v", err)
+	}
+
+	reader, err = latticeClient.Systems().Services(mockSystemID).Logs(
+		system.Services[mockServicePath].ID,
+		nil,
+		nil,
+		v1.NewContainerLogOptions(),
+	)
 	checkErr(err, t)
 	buf = new(bytes.Buffer)
 	buf.ReadFrom(reader)
@@ -419,7 +428,7 @@ func teardownSystem(t *testing.T) {
 	// check that system services are nil after teardown
 	fmt.Println("Checking that system services are down after teardown...")
 	system, err := latticeClient.Systems().Get(mockSystemID)
-	if system.Services != nil {
+	if len(system.Services) != 0 {
 		t.Fatal("System services still up")
 	}
 
@@ -438,9 +447,15 @@ func deleteSystem(t *testing.T) {
 	latticeClient.Systems().Delete(mockSystemID)
 
 	_, err = latticeClient.Systems().Get(mockSystemID)
-	if _, isErr := err.(*v1.InvalidSystemIDError); !isErr {
+	v1err, ok := err.(*v1.Error)
+	if !ok {
 		t.Fatal("Expected an invalid system error")
 	}
+
+	if v1err.Code != v1.ErrorCodeInvalidSystemID {
+		t.Fatal("Expected an invalid system error")
+	}
+
 	fmt.Println("System deleted!")
 }
 
@@ -448,34 +463,61 @@ func testInvalidIDs(t *testing.T) {
 	fmt.Println("Test invalid IDs")
 
 	// test invalid system
-	fmt.Println("Test invalid system")
-	_, err := latticeClient.Systems().Get("no-such-system")
+	{
+		fmt.Println("Test invalid system")
+		_, err := latticeClient.Systems().Get("no-such-system")
+		v1err, ok := err.(*v1.Error)
+		if !ok {
+			t.Fatal("Expected an invalid system error")
+		}
 
-	if _, isErr := err.(*v1.InvalidSystemIDError); !isErr {
-		t.Fatal("Expected an invalid system error")
+		if v1err.Code != v1.ErrorCodeInvalidSystemID {
+			t.Fatal("Expected an invalid system error")
+		}
 	}
 
 	// test other stuff
 	testID := v1.SystemID("test")
-	_, err = latticeClient.Systems().Create(testID, mockSystemDefURL)
+	_, err := latticeClient.Systems().Create(testID, mockSystemDefURL)
 	checkErr(err, t)
 
 	// test invalid build id error
-	_, err = latticeClient.Systems().Builds(testID).Get("bad-build")
-	if _, isInvalidBuildError := err.(*v1.InvalidBuildIDError); !isInvalidBuildError {
-		t.Fatal("Expected an invalid build error")
+	{
+		_, err = latticeClient.Systems().Builds(testID).Get("bad-build")
+		v1err, ok := err.(*v1.Error)
+		if !ok {
+			t.Fatal("Expected an invalid build error")
+		}
+
+		if v1err.Code != v1.ErrorCodeInvalidBuildID {
+			t.Fatal("Expected an invalid build error")
+		}
 	}
 
 	// test invalid deploy id error
-	_, err = latticeClient.Systems().Deploys(testID).Get("bad-deploy")
-	if _, isInvalidDeployError := err.(*v1.InvalidDeployIDError); !isInvalidDeployError {
-		t.Fatal("Expected an invalid deploy error")
+	{
+		_, err = latticeClient.Systems().Deploys(testID).Get("bad-deploy")
+		v1err, ok := err.(*v1.Error)
+		if !ok {
+			t.Fatal("Expected an invalid deploy error")
+		}
+
+		if v1err.Code != v1.ErrorCodeInvalidDeployID {
+			t.Fatal("Expected an invalid deploy error")
+		}
 	}
 
 	// test invalid teardown id error
-	_, err = latticeClient.Systems().Teardowns(testID).Get("bad-teardown")
-	if _, isInvalidTeardownError := err.(*v1.InvalidTeardownIDError); !isInvalidTeardownError {
-		t.Fatal("Expected an invalid teardown error")
+	{
+		_, err = latticeClient.Systems().Teardowns(testID).Get("bad-teardown")
+		v1err, ok := err.(*v1.Error)
+		if !ok {
+			t.Fatal("Expected an invalid teardown error")
+		}
+
+		if v1err.Code != v1.ErrorCodeInvalidTeardownID {
+			t.Fatal("Expected an invalid teardown error")
+		}
 	}
 
 	latticeClient.Systems().Delete("test")
@@ -539,7 +581,7 @@ func checkErr(err error, t *testing.T) {
 func setupMockTest() {
 	fmt.Println("Setting up test. Starting API Server")
 	// run api server
-	go RunMockNewRestServer(mockServerAPIPort, mockServerAPIKey)
+	go RunMockNewRestServer(mockServerAPIPort, mockServerAPIKey, "/tmp/lattice/api/server/mock/test")
 
 	fmt.Println("API server started")
 }
@@ -547,7 +589,6 @@ func setupMockTest() {
 func waitFor(condition func() bool, t *testing.T) {
 	for i := 0; i <= 200; i++ {
 		if !condition() {
-			fmt.Println("...Waiting...")
 			time.Sleep(200 * time.Millisecond)
 		} else {
 			break

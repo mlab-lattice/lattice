@@ -1,0 +1,25 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "backend.go",
+        "build.go",
+        "controller.go",
+        "deploy.go",
+        "jobs.go",
+        "node_pool.go",
+        "secret.go",
+        "services.go",
+        "teardown.go",
+    ],
+    importpath = "github.com/mlab-lattice/lattice/pkg/api/server/mock/backend/system",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//pkg/api/server/v1:go_default_library",
+        "//pkg/api/v1:go_default_library",
+        "//pkg/definition/tree:go_default_library",
+        "//pkg/definition/v1:go_default_library",
+        "@com_github_satori_go_uuid//:go_default_library",
+    ],
+)

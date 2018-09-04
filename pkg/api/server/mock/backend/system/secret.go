@@ -12,52 +12,48 @@ type SecretBackend struct {
 
 // Secrets
 func (b *SecretBackend) List() ([]v1.Secret, error) {
-	b.backend.registryLock.RLock()
-	defer b.backend.registryLock.RUnlock()
+	b.backend.Lock()
+	defer b.backend.Unlock()
 
-	record, err := b.backend.getSystemRecordLocked(b.systemID)
+	record, err := b.backend.systemRecord(b.systemID)
 	if err != nil {
 		return nil, err
 	}
 
-	record.recordLock.RLock()
-	defer record.recordLock.RUnlock()
+	result := make([]v1.Secret, len(record.secrets))
+	copy(result, record.secrets)
 
-	return record.secrets, nil
+	return result, nil
 }
 
 func (b *SecretBackend) Get(path tree.PathSubcomponent) (*v1.Secret, error) {
-	b.backend.registryLock.RLock()
-	defer b.backend.registryLock.RUnlock()
+	b.backend.Lock()
+	defer b.backend.Unlock()
 
-	record, err := b.backend.getSystemRecordLocked(b.systemID)
+	record, err := b.backend.systemRecord(b.systemID)
 	if err != nil {
 		return nil, err
 	}
 
-	record.recordLock.RLock()
-	defer record.recordLock.RUnlock()
-
 	for _, secret := range record.secrets {
 		if secret.Path == path {
-			return &secret, nil
+			result := new(v1.Secret)
+			*result = secret
+			return result, nil
 		}
 	}
 
-	return nil, v1.NewInvalidSystemSecretError(path)
+	return nil, v1.NewInvalidSecretError()
 }
 
 func (b *SecretBackend) Set(path tree.PathSubcomponent, value string) error {
-	b.backend.registryLock.RLock()
-	defer b.backend.registryLock.RUnlock()
+	b.backend.Lock()
+	defer b.backend.Unlock()
 
-	record, err := b.backend.getSystemRecordLocked(b.systemID)
+	record, err := b.backend.systemRecord(b.systemID)
 	if err != nil {
 		return err
 	}
-
-	record.recordLock.Lock()
-	defer record.recordLock.Unlock()
 
 	for _, secret := range record.secrets {
 		if secret.Path == path {
@@ -77,16 +73,13 @@ func (b *SecretBackend) Set(path tree.PathSubcomponent, value string) error {
 }
 
 func (b *SecretBackend) Unset(path tree.PathSubcomponent) error {
-	b.backend.registryLock.RLock()
-	defer b.backend.registryLock.RUnlock()
+	b.backend.Lock()
+	defer b.backend.Unlock()
 
-	record, err := b.backend.getSystemRecordLocked(b.systemID)
+	record, err := b.backend.systemRecord(b.systemID)
 	if err != nil {
 		return err
 	}
-
-	record.recordLock.Lock()
-	defer record.recordLock.Unlock()
 
 	for i, secret := range record.secrets {
 		if secret.Path == path {
@@ -97,5 +90,5 @@ func (b *SecretBackend) Unset(path tree.PathSubcomponent) error {
 		}
 	}
 
-	return v1.NewInvalidSystemSecretError(path)
+	return v1.NewInvalidSecretError()
 }

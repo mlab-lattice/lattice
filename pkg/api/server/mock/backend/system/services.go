@@ -15,16 +15,13 @@ type ServiceBackend struct {
 
 // Secrets
 func (b *ServiceBackend) List() ([]v1.Service, error) {
-	b.backend.registryLock.RLock()
-	defer b.backend.registryLock.RUnlock()
+	b.backend.Lock()
+	defer b.backend.Unlock()
 
-	record, err := b.backend.getSystemRecordLocked(b.systemID)
+	record, err := b.backend.systemRecord(b.systemID)
 	if err != nil {
 		return nil, err
 	}
-
-	record.recordLock.RLock()
-	defer record.recordLock.RUnlock()
 
 	var services []v1.Service
 	for _, service := range record.system.Services {
@@ -35,44 +32,43 @@ func (b *ServiceBackend) List() ([]v1.Service, error) {
 }
 
 func (b *ServiceBackend) Get(id v1.ServiceID) (*v1.Service, error) {
-	b.backend.registryLock.RLock()
-	defer b.backend.registryLock.RUnlock()
+	b.backend.Lock()
+	defer b.backend.Unlock()
 
-	record, err := b.backend.getSystemRecordLocked(b.systemID)
+	record, err := b.backend.systemRecord(b.systemID)
 	if err != nil {
 		return nil, err
 	}
-
-	record.recordLock.RLock()
-	defer record.recordLock.RUnlock()
 
 	for _, service := range record.system.Services {
 		if service.ID == id {
-			return &service, nil
+			result := new(v1.Service)
+			*result = service
+			return result, nil
 		}
 	}
 
-	return nil, v1.NewInvalidServiceIDError(id)
+	return nil, v1.NewInvalidServiceIDError()
 }
 
 func (b *ServiceBackend) GetByPath(path tree.Path) (*v1.Service, error) {
-	b.backend.registryLock.RLock()
-	defer b.backend.registryLock.RUnlock()
+	b.backend.Lock()
+	defer b.backend.Unlock()
 
-	record, err := b.backend.getSystemRecordLocked(b.systemID)
+	record, err := b.backend.systemRecord(b.systemID)
 	if err != nil {
 		return nil, err
 	}
 
-	record.recordLock.RLock()
-	defer record.recordLock.RUnlock()
-
 	service, ok := record.system.Services[path]
 	if !ok {
-		return nil, v1.NewInvalidServicePathError(path)
+		return nil, v1.NewInvalidServicePathError()
 	}
 
-	return &service, nil
+	result := new(v1.Service)
+	*result = service
+
+	return result, nil
 }
 
 func (b *ServiceBackend) Logs(
@@ -81,5 +77,10 @@ func (b *ServiceBackend) Logs(
 	instance string,
 	logOptions *v1.ContainerLogOptions,
 ) (io.ReadCloser, error) {
+	_, err := b.Get(id)
+	if err != nil {
+		return nil, err
+	}
+
 	return ioutil.NopCloser(strings.NewReader("this is a long line")), nil
 }

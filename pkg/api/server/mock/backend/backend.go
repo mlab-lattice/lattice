@@ -1,7 +1,8 @@
-package mock
+package backend
 
 import (
 	"github.com/mlab-lattice/lattice/pkg/api/server/mock/backend/system"
+	"github.com/mlab-lattice/lattice/pkg/api/server/v1"
 )
 
 type MockBackend struct {
@@ -14,6 +15,6 @@ func NewMockBackend() *MockBackend {
 	}
 }
 
-func (b *MockBackend) Systems() *system.Backend {
+func (b *MockBackend) Systems() v1.SystemBackend {
 	return b.systems
 }

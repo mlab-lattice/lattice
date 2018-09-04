@@ -1,291 +1,102 @@
 package v1
 
-import (
-	"fmt"
-
-	"github.com/mlab-lattice/lattice/pkg/definition/tree"
-)
-
 type ErrorCode string
 
 const (
-	ErrorCodeUnknown              ErrorCode = "UNKNOWN"
-	ErrorCodeInvalidSystemOptions ErrorCode = "INVALID_SYSTEM_OPTIONS"
+	ErrorCodeUnknown  ErrorCode = "UNKNOWN"
+	ErrorCodeConflict ErrorCode = "CONFLICT"
+
+	ErrorCodeInvalidBuildID ErrorCode = "INVALID_BUILD_ID"
+
+	ErrorCodeInvalidDeployID ErrorCode = "INVALID_DEPLOY_ID"
+
+	ErrorCodeInvalidJobID ErrorCode = "INVALID_JOB_ID"
+
+	ErrorCodeInvalidNodePoolPath ErrorCode = "INVALID_NODE_POOL_PATH"
+
+	ErrorCodeInvalidSecret ErrorCode = "INVALID_SECRET"
+
+	ErrorCodeInvalidServiceID   ErrorCode = "INVALID_SERVICE_ID"
+	ErrorCodeInvalidServicePath ErrorCode = "INVALID_SERVICE_PATH"
+
+	ErrorCodeInvalidSidecar ErrorCode = "INVALID_SIDECAR"
+
 	ErrorCodeSystemAlreadyExists  ErrorCode = "SYSTEM_ALREADY_EXISTS"
 	ErrorCodeInvalidSystemID      ErrorCode = "INVALID_SYSTEM_ID"
+	ErrorCodeInvalidSystemOptions ErrorCode = "INVALID_SYSTEM_OPTIONS"
 	ErrorCodeInvalidSystemVersion ErrorCode = "INVALID_SYSTEM_VERSION"
-	ErrorCodeInvalidBuildID       ErrorCode = "INVALID_BUILD_ID"
-	ErrorCodeInvalidJobID         ErrorCode = "INVALID_JOB_ID"
-	ErrorCodeInvalidDeployID      ErrorCode = "INVALID_DEPLOY_ID"
-	ErrorCodeInvalidTeardownID    ErrorCode = "INVALID_TEARDOWN_ID"
-	ErrorCodeInvalidServiceID     ErrorCode = "INVALID_SERVICE_ID"
-	ErrorCodeInvalidServicePath   ErrorCode = "INVALID_SERVICE_PATH"
-	ErrorCodeInvalidSidecar       ErrorCode = "INVALID_SIDECAR"
-	ErrorCodeInvalidSystemSecret  ErrorCode = "INVALID_SYSTEM_SECRET"
-	ErrorCodeConflict             ErrorCode = "CONFLICT"
+
+	ErrorCodeInvalidTeardownID ErrorCode = "INVALID_TEARDOWN_ID"
 )
 
-type Error interface {
-	error
-	Code() ErrorCode
+type Error struct {
+	Code ErrorCode `json:"code"`
 }
 
-func NewUnknownError() *UnknownError {
-	return &UnknownError{}
+func NewError(code ErrorCode) *Error {
+	return &Error{code}
 }
 
-type UnknownError struct{}
-
-func (e *UnknownError) Error() string {
-	return fmt.Sprintf("unknown error")
+func (e *Error) Error() string {
+	return string(e.Code)
 }
 
-func (e *UnknownError) Code() ErrorCode {
-	return ErrorCodeUnknown
+func NewUnknownError() *Error {
+	return NewError(ErrorCodeUnknown)
 }
 
-type InvalidSystemOptionsError struct {
-	Reason string `json:"reason"`
+func NewConflictError() *Error {
+	return NewError(ErrorCodeConflict)
 }
 
-func (e *InvalidSystemOptionsError) Error() string {
-	return fmt.Sprintf("invalid system: %v", e.Reason)
+func NewInvalidBuildIDError() *Error {
+	return NewError(ErrorCodeInvalidBuildID)
 }
 
-func (e *InvalidSystemOptionsError) Code() ErrorCode {
-	return ErrorCodeInvalidSystemOptions
+func NewInvalidDeployIDError() *Error {
+	return NewError(ErrorCodeInvalidDeployID)
 }
 
-func NewSystemAlreadyExistsError(id SystemID) *SystemAlreadyExistsError {
-	return &SystemAlreadyExistsError{
-		ID: id,
-	}
+func NewInvalidJobIDError() *Error {
+	return NewError(ErrorCodeInvalidJobID)
 }
 
-type SystemAlreadyExistsError struct {
-	ID SystemID `json:"id"`
+func NewInvalidNodePoolPathError() *Error {
+	return NewError(ErrorCodeInvalidNodePoolPath)
 }
 
-func (e *SystemAlreadyExistsError) Error() string {
-	return fmt.Sprintf("system %v already exists", e.ID)
+func NewInvalidSecretError() *Error {
+	return NewError(ErrorCodeInvalidSecret)
 }
 
-func (e *SystemAlreadyExistsError) Code() ErrorCode {
-	return ErrorCodeSystemAlreadyExists
+func NewInvalidSidecarError() *Error {
+	return NewError(ErrorCodeInvalidSidecar)
 }
 
-func NewInvalidSystemIDError(id SystemID) *InvalidSystemIDError {
-	return &InvalidSystemIDError{
-		ID: id,
-	}
+func NewInvalidServiceIDError() *Error {
+	return NewError(ErrorCodeInvalidServiceID)
 }
 
-type InvalidSystemIDError struct {
-	ID SystemID `json:"id"`
+func NewInvalidServicePathError() *Error {
+	return NewError(ErrorCodeInvalidServicePath)
 }
 
-func (e *InvalidSystemIDError) Error() string {
-	return fmt.Sprintf("invalid system %v", e.ID)
+func NewSystemAlreadyExistsError() *Error {
+	return NewError(ErrorCodeSystemAlreadyExists)
 }
 
-func (e *InvalidSystemIDError) Code() ErrorCode {
-	return ErrorCodeInvalidSystemID
+func NewInvalidSystemIDError() *Error {
+	return NewError(ErrorCodeInvalidSystemID)
 }
 
-func NewSystemNotCreatedError(id SystemID, state SystemState) *SystemNotCreatedError {
-	return &SystemNotCreatedError{
-		ID:    id,
-		State: state,
-	}
+func NewInvalidSystemOptionsError() *Error {
+	return NewError(ErrorCodeInvalidSystemOptions)
 }
 
-type SystemNotCreatedError struct {
-	ID    SystemID    `json:"id"`
-	State SystemState `json:"state"`
+func NewInvalidSystemVersionError() *Error {
+	return NewError(ErrorCodeInvalidSystemVersion)
 }
 
-func (e *SystemNotCreatedError) Error() string {
-	return fmt.Sprintf("system %v is in state %v", e.ID, e.State)
-}
-
-func (e *SystemNotCreatedError) Code() ErrorCode {
-	return ErrorCodeInvalidSystemID
-}
-
-type InvalidSystemVersionError struct {
-	Version string `json:"version"`
-}
-
-func (e *InvalidSystemVersionError) Code() ErrorCode {
-	return ErrorCodeInvalidSystemVersion
-}
-
-func (e *InvalidSystemVersionError) Error() string {
-	return fmt.Sprintf("invalid system version %v", e.Version)
-}
-
-func NewInvalidBuildIDError(id BuildID) *InvalidBuildIDError {
-	return &InvalidBuildIDError{
-		ID: id,
-	}
-}
-
-type InvalidBuildIDError struct {
-	ID BuildID `json:"id"`
-}
-
-func (e *InvalidBuildIDError) Error() string {
-	return fmt.Sprintf("invalid build %v", e.ID)
-}
-
-func (e *InvalidBuildIDError) Code() ErrorCode {
-	return ErrorCodeInvalidBuildID
-}
-
-func NewInvalidJobIDError(id JobID) *InvalidJobIDError {
-	return &InvalidJobIDError{
-		ID: id,
-	}
-}
-
-type InvalidJobIDError struct {
-	ID JobID `json:"id"`
-}
-
-func (e *InvalidJobIDError) Error() string {
-	return fmt.Sprintf("invalid job %v", e.ID)
-}
-
-func (e *InvalidJobIDError) Code() ErrorCode {
-	return ErrorCodeInvalidJobID
-}
-
-func NewInvalidDeployIDError(id DeployID) *InvalidDeployIDError {
-	return &InvalidDeployIDError{
-		ID: id,
-	}
-}
-
-type InvalidDeployIDError struct {
-	ID DeployID `json:"id"`
-}
-
-func (e *InvalidDeployIDError) Error() string {
-	return fmt.Sprintf("invalid rollout %v", e.ID)
-}
-
-func (e *InvalidDeployIDError) Code() ErrorCode {
-	return ErrorCodeInvalidDeployID
-}
-
-func NewInvalidTeardownIDError(id TeardownID) *InvalidTeardownIDError {
-	return &InvalidTeardownIDError{
-		ID: id,
-	}
-}
-
-type InvalidTeardownIDError struct {
-	ID TeardownID `json:"id"`
-}
-
-func (e *InvalidTeardownIDError) Error() string {
-	return fmt.Sprintf("invalid teardown %v", e.ID)
-}
-
-func (e *InvalidTeardownIDError) Code() ErrorCode {
-	return ErrorCodeInvalidTeardownID
-}
-
-func NewInvalidServiceIDError(id ServiceID) *InvalidServiceIDError {
-	return &InvalidServiceIDError{
-		ID: id,
-	}
-}
-
-type InvalidServiceIDError struct {
-	ID ServiceID `json:"id"`
-}
-
-func (e *InvalidServiceIDError) Error() string {
-	return fmt.Sprintf("invalid service %v", e.ID)
-}
-
-func (e *InvalidServiceIDError) Code() ErrorCode {
-	return ErrorCodeInvalidServiceID
-}
-
-func NewInvalidServicePathError(path tree.Path) *InvalidServicePathError {
-	return &InvalidServicePathError{
-		Path: path,
-	}
-}
-
-type InvalidServicePathError struct {
-	Path tree.Path `json:"path"`
-}
-
-func (e *InvalidServicePathError) Error() string {
-	return fmt.Sprintf("invalid service %v", e.Path)
-}
-
-func (e *InvalidServicePathError) Code() ErrorCode {
-	return ErrorCodeInvalidServicePath
-}
-
-func NewInvalidSidecarError(sidecar string) *InvalidSidecarError {
-	return &InvalidSidecarError{
-		Sidecar: sidecar,
-	}
-}
-
-type InvalidSidecarError struct {
-	Sidecar string `json:"sidecar"`
-}
-
-func (e *InvalidSidecarError) Error() string {
-	return fmt.Sprintf("invalid component %v", e.Sidecar)
-}
-
-func (e *InvalidSidecarError) Code() ErrorCode {
-	return ErrorCodeInvalidSidecar
-}
-
-func NewInvalidSystemSecretError(path tree.PathSubcomponent) *InvalidSystemSecretError {
-	return &InvalidSystemSecretError{
-		Path: path,
-	}
-}
-
-type InvalidSystemSecretError struct {
-	Path tree.PathSubcomponent `json:"path"`
-}
-
-func (e *InvalidSystemSecretError) Error() string {
-	return fmt.Sprintf("invalid secret %v", e.Path)
-}
-
-func (e *InvalidSystemSecretError) Code() ErrorCode {
-	return ErrorCodeInvalidSystemSecret
-}
-
-func NewConflictError(reason string) *ConflictError {
-	return &ConflictError{
-		Reason: reason,
-	}
-}
-
-type ConflictError struct {
-	Reason string `json:"reason"`
-}
-
-func (e *ConflictError) Error() string {
-	msg := "conflict"
-	if e.Reason != "" {
-		msg += fmt.Sprintf(": %v", e.Reason)
-	}
-	return msg
-}
-
-func (e *ConflictError) Code() ErrorCode {
-	return ErrorCodeConflict
+func NewInvalidTeardownIDError() *Error {
+	return NewError(ErrorCodeInvalidTeardownID)
 }

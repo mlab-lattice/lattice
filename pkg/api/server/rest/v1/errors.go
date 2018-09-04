@@ -15,7 +15,7 @@ type ErrorResponse struct {
 }
 
 func handleError(c *gin.Context, err error) {
-	v1Error, ok := err.(v1.Error)
+	v1Error, ok := err.(*v1.Error)
 	if !ok {
 		glog.Errorf("encountered error: %v", err.Error())
 		c.String(http.StatusInternalServerError, "")
@@ -23,7 +23,7 @@ func handleError(c *gin.Context, err error) {
 	}
 
 	statusCode := http.StatusInternalServerError
-	code := v1Error.Code()
+	code := v1Error.Code
 	switch code {
 	case v1.ErrorCodeInvalidSystemOptions, v1.ErrorCodeInvalidSystemVersion:
 		statusCode = http.StatusBadRequest
@@ -31,7 +31,7 @@ func handleError(c *gin.Context, err error) {
 		statusCode = http.StatusConflict
 	case v1.ErrorCodeInvalidSystemID, v1.ErrorCodeInvalidBuildID,
 		v1.ErrorCodeInvalidDeployID, v1.ErrorCodeInvalidTeardownID,
-		v1.ErrorCodeInvalidServicePath, v1.ErrorCodeInvalidSystemSecret:
+		v1.ErrorCodeInvalidServicePath, v1.ErrorCodeInvalidSecret:
 		statusCode = http.StatusNotFound
 	}
 
