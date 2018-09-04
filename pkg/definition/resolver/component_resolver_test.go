@@ -1,17 +1,22 @@
 package resolver
 
 import (
+	"encoding/json"
 	"fmt"
+	"os"
+	"reflect"
 	"testing"
 
-	"encoding/json"
+	gitplumbing "gopkg.in/src-d/go-git.v4/plumbing"
+
+	"github.com/stretchr/testify/require"
+
+	definitionv1 "github.com/mlab-lattice/lattice/pkg/definition/v1"
+
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	"github.com/mlab-lattice/lattice/pkg/definition/component"
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
-	defintionv1 "github.com/mlab-lattice/lattice/pkg/definition/v1"
 	"github.com/mlab-lattice/lattice/pkg/util/git"
-	"os"
-	"reflect"
 )
 
 const workDir = "/tmp/lattice/test/pkg/definition/resolver/component_resolver"
@@ -20,23 +25,23 @@ var (
 	systemID   v1.SystemID = "foo"
 	remote1Dir             = fmt.Sprintf("%v/remote1", workDir)
 
-	service1 = defintionv1.Service{
-		Container: defintionv1.Container{
-			Exec: &defintionv1.ContainerExec{
+	service1 = definitionv1.Service{
+		Container: definitionv1.Container{
+			Exec: &definitionv1.ContainerExec{
 				Command: []string{"foo"},
 			},
 		},
 	}
-	service2 = defintionv1.Service{
-		Container: defintionv1.Container{
-			Exec: &defintionv1.ContainerExec{
+	service2 = definitionv1.Service{
+		Container: definitionv1.Container{
+			Exec: &definitionv1.ContainerExec{
 				Command: []string{"bar"},
 			},
 		},
 	}
-	service3 = defintionv1.Service{
-		Container: defintionv1.Container{
-			Exec: &defintionv1.ContainerExec{
+	service3 = definitionv1.Service{
+		Container: definitionv1.Container{
+			Exec: &definitionv1.ContainerExec{
 				Command: []string{"baz"},
 			},
 		},
@@ -80,7 +85,7 @@ func testFileReferenceResolve(t *testing.T) {
 		File: "foo",
 	}
 
-	ref := &defintionv1.Reference{
+	ref := &definitionv1.Reference{
 		File: &servicePath,
 	}
 
@@ -144,9 +149,9 @@ func testCommitGitReferenceResolve(t *testing.T) {
 			Description: "valid commit",
 			Test: func() error {
 				commitStr := commit.String()
-				ref := &defintionv1.Reference{
-					GitRepository: &defintionv1.GitRepositoryReference{
-						GitRepository: &defintionv1.GitRepository{
+				ref := &definitionv1.Reference{
+					GitRepository: &definitionv1.GitRepositoryReference{
+						GitRepository: &definitionv1.GitRepository{
 							URL:    fmt.Sprintf("file://%v", remote1Dir),
 							Commit: &commitStr,
 						},
@@ -161,9 +166,9 @@ func testCommitGitReferenceResolve(t *testing.T) {
 			Description: "default file",
 			Test: func() error {
 				commitStr := defaultCommit.String()
-				ref := &defintionv1.Reference{
-					GitRepository: &defintionv1.GitRepositoryReference{
-						GitRepository: &defintionv1.GitRepository{
+				ref := &definitionv1.Reference{
+					GitRepository: &definitionv1.GitRepositoryReference{
+						GitRepository: &definitionv1.GitRepository{
 							URL:    fmt.Sprintf("file://%v", remote1Dir),
 							Commit: &commitStr,
 						},
@@ -177,9 +182,9 @@ func testCommitGitReferenceResolve(t *testing.T) {
 			Description: "invalid file",
 			Test: func() error {
 				commitStr := commit.String()
-				ref := &defintionv1.Reference{
-					GitRepository: &defintionv1.GitRepositoryReference{
-						GitRepository: &defintionv1.GitRepository{
+				ref := &definitionv1.Reference{
+					GitRepository: &definitionv1.GitRepositoryReference{
+						GitRepository: &definitionv1.GitRepository{
 							URL:    fmt.Sprintf("file://%v", remote1Dir),
 							Commit: &commitStr,
 						},
@@ -194,9 +199,9 @@ func testCommitGitReferenceResolve(t *testing.T) {
 			Description: "invalid git commit",
 			Test: func() error {
 				commitStr := "0123456789012345678901234567890123456789"
-				ref := &defintionv1.Reference{
-					GitRepository: &defintionv1.GitRepositoryReference{
-						GitRepository: &defintionv1.GitRepository{
+				ref := &definitionv1.Reference{
+					GitRepository: &definitionv1.GitRepositoryReference{
+						GitRepository: &definitionv1.GitRepository{
 							URL:    fmt.Sprintf("file://%v", remote1Dir),
 							Commit: &commitStr,
 						},
@@ -251,9 +256,9 @@ func testBranchGitReferenceResolve(t *testing.T) {
 		{
 			Description: "valid branch",
 			Test: func() error {
-				ref := &defintionv1.Reference{
-					GitRepository: &defintionv1.GitRepositoryReference{
-						GitRepository: &defintionv1.GitRepository{
+				ref := &definitionv1.Reference{
+					GitRepository: &definitionv1.GitRepositoryReference{
+						GitRepository: &definitionv1.GitRepository{
 							URL:    fmt.Sprintf("file://%v", remote1Dir),
 							Branch: &branchName,
 						},
@@ -283,9 +288,9 @@ func testBranchGitReferenceResolve(t *testing.T) {
 					t.Fatal(err)
 				}
 
-				ref := &defintionv1.Reference{
-					GitRepository: &defintionv1.GitRepositoryReference{
-						GitRepository: &defintionv1.GitRepository{
+				ref := &definitionv1.Reference{
+					GitRepository: &definitionv1.GitRepositoryReference{
+						GitRepository: &definitionv1.GitRepository{
 							URL:    fmt.Sprintf("file://%v", remote1Dir),
 							Branch: &branchName,
 						},
@@ -311,9 +316,9 @@ func testBranchGitReferenceResolve(t *testing.T) {
 					t.Fatal(err)
 				}
 
-				ref := &defintionv1.Reference{
-					GitRepository: &defintionv1.GitRepositoryReference{
-						GitRepository: &defintionv1.GitRepository{
+				ref := &definitionv1.Reference{
+					GitRepository: &definitionv1.GitRepositoryReference{
+						GitRepository: &definitionv1.GitRepository{
 							URL:    fmt.Sprintf("file://%v", remote1Dir),
 							Branch: &branchName,
 						},
@@ -329,9 +334,9 @@ func testBranchGitReferenceResolve(t *testing.T) {
 			Test: func() error {
 				branchName := "bar"
 				foo := "foo"
-				ref := &defintionv1.Reference{
-					GitRepository: &defintionv1.GitRepositoryReference{
-						GitRepository: &defintionv1.GitRepository{
+				ref := &definitionv1.Reference{
+					GitRepository: &definitionv1.GitRepositoryReference{
+						GitRepository: &definitionv1.GitRepository{
 							URL:    fmt.Sprintf("file://%v", remote1Dir),
 							Branch: &branchName,
 						},
@@ -346,9 +351,9 @@ func testBranchGitReferenceResolve(t *testing.T) {
 			Description: "invalid branch",
 			Test: func() error {
 				branch := "invalid"
-				ref := &defintionv1.Reference{
-					GitRepository: &defintionv1.GitRepositoryReference{
-						GitRepository: &defintionv1.GitRepository{
+				ref := &definitionv1.Reference{
+					GitRepository: &definitionv1.GitRepositoryReference{
+						GitRepository: &definitionv1.GitRepository{
 							URL:    fmt.Sprintf("file://%v", remote1Dir),
 							Branch: &branch,
 						},
@@ -403,9 +408,9 @@ func testTagAndVersionGitReferenceResolve(t *testing.T) {
 					t.Fatal(err)
 				}
 
-				ref := &defintionv1.Reference{
-					GitRepository: &defintionv1.GitRepositoryReference{
-						GitRepository: &defintionv1.GitRepository{
+				ref := &definitionv1.Reference{
+					GitRepository: &definitionv1.GitRepositoryReference{
+						GitRepository: &definitionv1.GitRepository{
 							URL: fmt.Sprintf("file://%v", remote1Dir),
 							Tag: &tagName,
 						},
@@ -426,9 +431,9 @@ func testTagAndVersionGitReferenceResolve(t *testing.T) {
 				}
 
 				patchSemverTag := "1.0.x"
-				ref := &defintionv1.Reference{
-					GitRepository: &defintionv1.GitRepositoryReference{
-						GitRepository: &defintionv1.GitRepository{
+				ref := &definitionv1.Reference{
+					GitRepository: &definitionv1.GitRepositoryReference{
+						GitRepository: &definitionv1.GitRepository{
 							URL:     fmt.Sprintf("file://%v", remote1Dir),
 							Version: &patchSemverTag,
 						},
@@ -443,9 +448,9 @@ func testTagAndVersionGitReferenceResolve(t *testing.T) {
 			Description: "strict semver minor should initially resolve",
 			Test: func() error {
 				minorSemverTag := "1.x"
-				ref := &defintionv1.Reference{
-					GitRepository: &defintionv1.GitRepositoryReference{
-						GitRepository: &defintionv1.GitRepository{
+				ref := &definitionv1.Reference{
+					GitRepository: &definitionv1.GitRepositoryReference{
+						GitRepository: &definitionv1.GitRepository{
 							URL:     fmt.Sprintf("file://%v", remote1Dir),
 							Version: &minorSemverTag,
 						},
@@ -460,9 +465,9 @@ func testTagAndVersionGitReferenceResolve(t *testing.T) {
 			Description: "strict semver invalid major should not initially resolve",
 			Test: func() error {
 				invalidSemverTag := "2.x"
-				ref := &defintionv1.Reference{
-					GitRepository: &defintionv1.GitRepositoryReference{
-						GitRepository: &defintionv1.GitRepository{
+				ref := &definitionv1.Reference{
+					GitRepository: &definitionv1.GitRepositoryReference{
+						GitRepository: &definitionv1.GitRepository{
 							URL:     fmt.Sprintf("file://%v", remote1Dir),
 							Version: &invalidSemverTag,
 						},
@@ -494,9 +499,9 @@ func testTagAndVersionGitReferenceResolve(t *testing.T) {
 				}
 
 				patchTag := "1.0.x"
-				ref := &defintionv1.Reference{
-					GitRepository: &defintionv1.GitRepositoryReference{
-						GitRepository: &defintionv1.GitRepository{
+				ref := &definitionv1.Reference{
+					GitRepository: &definitionv1.GitRepositoryReference{
+						GitRepository: &definitionv1.GitRepository{
 							URL:     fmt.Sprintf("file://%v", remote1Dir),
 							Version: &patchTag,
 						},
@@ -511,9 +516,9 @@ func testTagAndVersionGitReferenceResolve(t *testing.T) {
 			Description: "strict semver minor resolve should update with patch update",
 			Test: func() error {
 				minorTag := "1.x"
-				ref := &defintionv1.Reference{
-					GitRepository: &defintionv1.GitRepositoryReference{
-						GitRepository: &defintionv1.GitRepository{
+				ref := &definitionv1.Reference{
+					GitRepository: &definitionv1.GitRepositoryReference{
+						GitRepository: &definitionv1.GitRepository{
 							URL:     fmt.Sprintf("file://%v", remote1Dir),
 							Version: &minorTag,
 						},
@@ -544,9 +549,9 @@ func testTagAndVersionGitReferenceResolve(t *testing.T) {
 				}
 
 				patchSemverTag := "1.0.x"
-				ref := &defintionv1.Reference{
-					GitRepository: &defintionv1.GitRepositoryReference{
-						GitRepository: &defintionv1.GitRepository{
+				ref := &definitionv1.Reference{
+					GitRepository: &definitionv1.GitRepositoryReference{
+						GitRepository: &definitionv1.GitRepository{
 							URL:     fmt.Sprintf("file://%v", remote1Dir),
 							Version: &patchSemverTag,
 						},
@@ -561,9 +566,9 @@ func testTagAndVersionGitReferenceResolve(t *testing.T) {
 			Description: "strict semver minor resolve should update with minor update",
 			Test: func() error {
 				minorSemverTag := "1.x"
-				ref := &defintionv1.Reference{
-					GitRepository: &defintionv1.GitRepositoryReference{
-						GitRepository: &defintionv1.GitRepository{
+				ref := &definitionv1.Reference{
+					GitRepository: &definitionv1.GitRepositoryReference{
+						GitRepository: &definitionv1.GitRepository{
 							URL:     fmt.Sprintf("file://%v", remote1Dir),
 							Version: &minorSemverTag,
 						},
@@ -594,9 +599,9 @@ func testTagAndVersionGitReferenceResolve(t *testing.T) {
 				}
 
 				patchSemverTag := "1.0.x"
-				ref := &defintionv1.Reference{
-					GitRepository: &defintionv1.GitRepositoryReference{
-						GitRepository: &defintionv1.GitRepository{
+				ref := &definitionv1.Reference{
+					GitRepository: &definitionv1.GitRepositoryReference{
+						GitRepository: &definitionv1.GitRepository{
 							URL:     fmt.Sprintf("file://%v", remote1Dir),
 							Version: &patchSemverTag,
 						},
@@ -611,9 +616,9 @@ func testTagAndVersionGitReferenceResolve(t *testing.T) {
 			Description: "strict semver minor resolve should not update with major update",
 			Test: func() error {
 				minorSemverTag := "1.x"
-				ref := &defintionv1.Reference{
-					GitRepository: &defintionv1.GitRepositoryReference{
-						GitRepository: &defintionv1.GitRepository{
+				ref := &definitionv1.Reference{
+					GitRepository: &definitionv1.GitRepositoryReference{
+						GitRepository: &definitionv1.GitRepository{
 							URL:     fmt.Sprintf("file://%v", remote1Dir),
 							Version: &minorSemverTag,
 						},
@@ -633,6 +638,360 @@ func testTagAndVersionGitReferenceResolve(t *testing.T) {
 	}
 }
 
+var (
+	dockerFile = `From ubuntu:18.04
+Maintainer Anna Domino <anna@example.com>
+`
+
+	locationCommitStr            = "0000000000000000000000000000000000000000"
+	serviceDockerBuildInheritAll = definitionv1.Service{
+		Container: definitionv1.Container{
+			Exec: &definitionv1.ContainerExec{
+				Command: []string{"foo"},
+			},
+			Build: &definitionv1.ContainerBuild{
+				DockerBuild: &definitionv1.DockerBuild{},
+			},
+		},
+	}
+	serviceDockerBuildInheritBuildContext = definitionv1.Service{
+		Container: definitionv1.Container{
+			Exec: &definitionv1.ContainerExec{
+				Command: []string{"bar"},
+			},
+			Build: &definitionv1.ContainerBuild{
+				DockerBuild: &definitionv1.DockerBuild{
+					DockerFile: &definitionv1.DockerFile{
+						Location: &definitionv1.Location{
+							GitRepository: &definitionv1.GitRepository{
+								URL:    fmt.Sprintf("file://%v", remote1Dir),
+								Commit: &locationCommitStr,
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+	serviceDockerBuildInheritDockerFile = definitionv1.Service{
+		Container: definitionv1.Container{
+			Exec: &definitionv1.ContainerExec{
+				Command: []string{"baz"},
+			},
+			Build: &definitionv1.ContainerBuild{
+				DockerBuild: &definitionv1.DockerBuild{
+					BuildContext: &definitionv1.DockerBuildContext{
+						Location: &definitionv1.Location{
+							GitRepository: &definitionv1.GitRepository{
+								URL:    fmt.Sprintf("file://%v", remote1Dir),
+								Commit: &locationCommitStr,
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+	serviceDockerBuildInheritNothing = definitionv1.Service{
+		Container: definitionv1.Container{
+			Exec: &definitionv1.ContainerExec{
+				Command: []string{"yaz"},
+			},
+			Build: &definitionv1.ContainerBuild{
+				DockerBuild: &definitionv1.DockerBuild{
+					DockerFile: &definitionv1.DockerFile{
+						Location: &definitionv1.Location{
+							GitRepository: &definitionv1.GitRepository{
+								URL:    fmt.Sprintf("file://%v", remote1Dir),
+								Commit: &locationCommitStr,
+							},
+						},
+					},
+					BuildContext: &definitionv1.DockerBuildContext{
+						Location: &definitionv1.Location{
+							GitRepository: &definitionv1.GitRepository{
+								URL:    fmt.Sprintf("file://%v", remote1Dir),
+								Commit: &locationCommitStr,
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+)
+
+func TestDockerBuildHydation(t *testing.T) {
+	testDockerBuildHydration(t)
+}
+
+func testDockerBuildHydration(t *testing.T) {
+	var commit gitplumbing.Hash
+	var r ComponentResolver
+
+	servicePath := "service.json"
+
+	setup := func(serviceBytes []byte) {
+		cleanReferenceResolverWorkDir(t)
+
+		err := git.Init(remote1Dir)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		commit, err = git.WriteAndCommitFile(remote1Dir, servicePath, serviceBytes, 0700, "my commit")
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		r, err = NewComponentResolver(workDir, true, NewMemoryTemplateStore(), NewMemorySecretStore())
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	serviceDockerBuildInheritAllBytes, err := json.Marshal(&serviceDockerBuildInheritAll)
+	if err != nil {
+		t.Fatal(err)
+	}
+	serviceDockerBuildInheritBuildContextBytes, err := json.Marshal(&serviceDockerBuildInheritBuildContext)
+	if err != nil {
+		t.Fatal(err)
+	}
+	serviceDockerBuildInheritDockerFileBytes, err := json.Marshal(&serviceDockerBuildInheritDockerFile)
+	if err != nil {
+		t.Fatal(err)
+	}
+	serviceDockerBuildInheritNothingBytes, err := json.Marshal(&serviceDockerBuildInheritNothing)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	tests := []struct {
+		Description  string
+		ServiceBytes []byte
+		Test         func(*testing.T)
+	}{
+		{
+			Description:  "Docker build inherit all",
+			ServiceBytes: serviceDockerBuildInheritAllBytes,
+			Test: func(t *testing.T) {
+				commitStr := commit.String()
+				ctx := &git.FileReference{
+					CommitReference: git.CommitReference{
+						RepositoryURL: fmt.Sprintf("file://%v", remote1Dir),
+						Commit:        commitStr,
+					},
+					File: "foo",
+				}
+
+				ref := &definitionv1.Reference{
+					GitRepository: &definitionv1.GitRepositoryReference{
+						GitRepository: &definitionv1.GitRepository{
+							URL:    fmt.Sprintf("file://%v", remote1Dir),
+							Commit: &commitStr,
+						},
+						File: &servicePath,
+					},
+				}
+				c, err := resolveReference(r, systemID, tree.RootPath(), ctx, ref, true)
+
+				require.Nil(t, err)
+				require.IsType(t, &definitionv1.Service{}, c)
+
+				service := c.(*definitionv1.Service)
+
+				require.Equal(t, &definitionv1.ContainerBuild{
+					DockerBuild: &definitionv1.DockerBuild{
+						DockerFile: &definitionv1.DockerFile{
+							Location: &definitionv1.Location{
+								GitRepository: &definitionv1.GitRepository{
+									URL:    fmt.Sprintf("file://%v", remote1Dir),
+									Commit: &commitStr,
+								},
+							},
+							Path: definitionv1.DockerBuildDefaultPath,
+						},
+						BuildContext: &definitionv1.DockerBuildContext{
+							Location: &definitionv1.Location{
+								GitRepository: &definitionv1.GitRepository{
+									URL:    fmt.Sprintf("file://%v", remote1Dir),
+									Commit: &commitStr,
+								},
+							},
+							Path: definitionv1.DockerBuildDefaultPath,
+						},
+					},
+				}, service.Container.Build)
+			},
+		},
+		{
+			Description:  "Docker build inherit build context",
+			ServiceBytes: serviceDockerBuildInheritBuildContextBytes,
+			Test: func(t *testing.T) {
+				commitStr := commit.String()
+				ctx := &git.FileReference{
+					CommitReference: git.CommitReference{
+						RepositoryURL: fmt.Sprintf("file://%v", remote1Dir),
+						Commit:        commitStr,
+					},
+					File: "foo",
+				}
+
+				ref := &definitionv1.Reference{
+					GitRepository: &definitionv1.GitRepositoryReference{
+						GitRepository: &definitionv1.GitRepository{
+							URL:    fmt.Sprintf("file://%v", remote1Dir),
+							Commit: &commitStr,
+						},
+						File: &servicePath,
+					},
+				}
+				c, err := resolveReference(r, systemID, tree.RootPath(), ctx, ref, true)
+
+				require.Nil(t, err)
+				require.IsType(t, &definitionv1.Service{}, c)
+
+				service := c.(*definitionv1.Service)
+
+				require.Equal(t, &definitionv1.ContainerBuild{
+					DockerBuild: &definitionv1.DockerBuild{
+						DockerFile: &definitionv1.DockerFile{
+							Location: &definitionv1.Location{
+								GitRepository: &definitionv1.GitRepository{
+									URL:    fmt.Sprintf("file://%v", remote1Dir),
+									Commit: &locationCommitStr,
+								},
+							},
+							Path: definitionv1.DockerBuildDefaultPath,
+						},
+						BuildContext: &definitionv1.DockerBuildContext{
+							Location: &definitionv1.Location{
+								GitRepository: &definitionv1.GitRepository{
+									URL:    fmt.Sprintf("file://%v", remote1Dir),
+									Commit: &commitStr,
+								},
+							},
+							Path: definitionv1.DockerBuildDefaultPath,
+						},
+					},
+				}, service.Container.Build)
+			},
+		},
+		{
+			Description:  "Docker build inherit docker file",
+			ServiceBytes: serviceDockerBuildInheritDockerFileBytes,
+			Test: func(t *testing.T) {
+				commitStr := commit.String()
+				ctx := &git.FileReference{
+					CommitReference: git.CommitReference{
+						RepositoryURL: fmt.Sprintf("file://%v", remote1Dir),
+						Commit:        commitStr,
+					},
+					File: "foo",
+				}
+
+				ref := &definitionv1.Reference{
+					GitRepository: &definitionv1.GitRepositoryReference{
+						GitRepository: &definitionv1.GitRepository{
+							URL:    fmt.Sprintf("file://%v", remote1Dir),
+							Commit: &commitStr,
+						},
+						File: &servicePath,
+					},
+				}
+				c, err := resolveReference(r, systemID, tree.RootPath(), ctx, ref, true)
+
+				require.Nil(t, err)
+				require.IsType(t, &definitionv1.Service{}, c)
+
+				service := c.(*definitionv1.Service)
+
+				require.Equal(t, &definitionv1.ContainerBuild{
+					DockerBuild: &definitionv1.DockerBuild{
+						DockerFile: &definitionv1.DockerFile{
+							Location: &definitionv1.Location{
+								GitRepository: &definitionv1.GitRepository{
+									URL:    fmt.Sprintf("file://%v", remote1Dir),
+									Commit: &commitStr,
+								},
+							},
+							Path: definitionv1.DockerBuildDefaultPath,
+						},
+						BuildContext: &definitionv1.DockerBuildContext{
+							Location: &definitionv1.Location{
+								GitRepository: &definitionv1.GitRepository{
+									URL:    fmt.Sprintf("file://%v", remote1Dir),
+									Commit: &locationCommitStr,
+								},
+							},
+							Path: definitionv1.DockerBuildDefaultPath,
+						},
+					},
+				}, service.Container.Build)
+			},
+		},
+		{
+			Description:  "Docker build inherit nothing",
+			ServiceBytes: serviceDockerBuildInheritNothingBytes,
+			Test: func(t *testing.T) {
+				commitStr := commit.String()
+				ctx := &git.FileReference{
+					CommitReference: git.CommitReference{
+						RepositoryURL: fmt.Sprintf("file://%v", remote1Dir),
+						Commit:        commitStr,
+					},
+					File: "foo",
+				}
+
+				ref := &definitionv1.Reference{
+					GitRepository: &definitionv1.GitRepositoryReference{
+						GitRepository: &definitionv1.GitRepository{
+							URL:    fmt.Sprintf("file://%v", remote1Dir),
+							Commit: &commitStr,
+						},
+						File: &servicePath,
+					},
+				}
+				c, err := resolveReference(r, systemID, tree.RootPath(), ctx, ref, true)
+
+				require.Nil(t, err)
+				require.IsType(t, &definitionv1.Service{}, c)
+
+				service := c.(*definitionv1.Service)
+
+				require.Equal(t, &definitionv1.ContainerBuild{
+					DockerBuild: &definitionv1.DockerBuild{
+						DockerFile: &definitionv1.DockerFile{
+							Location: &definitionv1.Location{
+								GitRepository: &definitionv1.GitRepository{
+									URL:    fmt.Sprintf("file://%v", remote1Dir),
+									Commit: &locationCommitStr,
+								},
+							},
+							Path: definitionv1.DockerBuildDefaultPath,
+						},
+						BuildContext: &definitionv1.DockerBuildContext{
+							Location: &definitionv1.Location{
+								GitRepository: &definitionv1.GitRepository{
+									URL:    fmt.Sprintf("file://%v", remote1Dir),
+									Commit: &locationCommitStr,
+								},
+							},
+							Path: definitionv1.DockerBuildDefaultPath,
+						},
+					},
+				}, service.Container.Build)
+			},
+		},
+	}
+
+	for _, test := range tests {
+		setup(test.ServiceBytes)
+		t.Run(test.Description, test.Test)
+	}
+}
+
 func cleanReferenceResolverWorkDir(t *testing.T) {
 	err := os.RemoveAll(workDir)
 	if err != nil {
@@ -642,8 +1001,8 @@ func cleanReferenceResolverWorkDir(t *testing.T) {
 
 func shouldResolveToService(
 	r ComponentResolver,
-	ref *defintionv1.Reference,
-	expected *defintionv1.Service,
+	ref *definitionv1.Reference,
+	expected *definitionv1.Service,
 ) error {
 	return shouldResolveToServiceCtx(r, &git.FileReference{}, ref, expected)
 }
@@ -651,8 +1010,8 @@ func shouldResolveToService(
 func shouldResolveToServiceCtx(
 	r ComponentResolver,
 	ctx *git.FileReference,
-	ref *defintionv1.Reference,
-	expected *defintionv1.Service,
+	ref *definitionv1.Reference,
+	expected *definitionv1.Service,
 ) error {
 	c, err := resolveReference(r, systemID, tree.RootPath(), ctx, ref, true)
 	if err != nil {
@@ -660,7 +1019,7 @@ func shouldResolveToServiceCtx(
 	}
 
 	switch typed := c.(type) {
-	case *defintionv1.Service:
+	case *definitionv1.Service:
 		if !reflect.DeepEqual(typed, expected) {
 			return fmt.Errorf("got invalid contents when resolving git branch reference")
 		}
@@ -674,7 +1033,7 @@ func shouldResolveToServiceCtx(
 
 func shouldFailToResolve(
 	r ComponentResolver,
-	ref *defintionv1.Reference,
+	ref *definitionv1.Reference,
 ) error {
 	return shouldFailToResolveCtx(r, &git.FileReference{}, ref)
 }
@@ -682,7 +1041,7 @@ func shouldFailToResolve(
 func shouldFailToResolveCtx(
 	r ComponentResolver,
 	ctx *git.FileReference,
-	ref *defintionv1.Reference,
+	ref *definitionv1.Reference,
 ) error {
 	_, err := resolveReference(r, systemID, tree.RootPath(), ctx, ref, false)
 	return err
@@ -693,7 +1052,7 @@ func resolveReference(
 	id v1.SystemID,
 	p tree.Path,
 	ctx *git.FileReference,
-	ref *defintionv1.Reference,
+	ref *definitionv1.Reference,
 	shouldSucceed bool,
 ) (component.Interface, error) {
 	rr, err := r.ResolveReference(id, p, ctx, ref, DepthInfinite)

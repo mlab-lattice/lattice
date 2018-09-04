@@ -57,7 +57,7 @@ type ComponentResolver interface {
 	ResolveReference(
 		systemID v1.SystemID,
 		path tree.Path,
-		ctx *ResolutionContext,
+		ctx *git.FileReference,
 		ref *definitionv1.Reference,
 		depth int32,
 	) (*ResolutionResult, error)
@@ -199,8 +199,8 @@ func (r *DefaultComponentResolver) resolveReference(
 	}
 
 	info[path] = ResolutionNodeInfo{
-		Commit:       resolvedCxt.FileReference.CommitReference,
-		SSHKeySecret: resolvedCxt.SSHKeySecret,
+		Commit:       resolvedCtx.FileReference.CommitReference,
+		SSHKeySecret: resolvedCtx.SSHKeySecret,
 	}
 	return c, nil
 }
@@ -300,10 +300,6 @@ func (r *DefaultComponentResolver) resolveTemplate(
 		if err = r.templateStore.Put(systemID, fileRef, t); err != nil {
 			return nil, nil, err
 		}
-	}
-
-	ctx_ = &ResolutionContext{
-		FileReference: fileRef,
 	}
 
 	// return the template that we found either from the store or from the repository
@@ -452,50 +448,79 @@ func (r *DefaultComponentResolver) resolveSystemComponents(
 	return system, nil
 }
 
-func (r *DefaultComponentResolver) hydrateBuild(c component.Interface, ctx git.FileReference) error {
+func (r *DefaultComponentResolver) hydrateBuild(c component.Interface, ctx *resolutionContext) error {
 	var dockerBuild *definitionv1.DockerBuild
+	var build *definitionv1.ContainerBuild
 
 	switch c.(type) {
 	case *definitionv1.Job:
-		dockerBuild := c.(*definitionv1.Job).Build.DockerBuild
+		build = c.(*definitionv1.Job).Build
 	case *definitionv1.Service:
-		dockerBuild := c.(*definitionv1.Service).Build.DockerBuild
+		build = c.(*definitionv1.Service).Build
 	default:
 		return fmt.Errorf(
 			"got component type %T, but required definitionv1.Job or definitionv1.Service", c)
 	}
 
+	if build == nil {
+		return nil
+	}
+	dockerBuild = build.DockerBuild
+
 	if dockerBuild == nil {
 		// this is not a docker build, so move on
-		return
+		return nil
 	}
 
 	// if BuildContext is nil, initialize it
 	if dockerBuild.BuildContext == nil {
-		dockerBuild.BuildContext = &definitionv1.DockerBuildContext{
-			Location: nil,
-			Path:     definitionv1.DockerBuildDefaultPath,
-		}
+		dockerBuild.BuildContext = &definitionv1.DockerBuildContext{}
+	}
+
+	if dockerBuild.BuildContext.Path == "" {
+		dockerBuild.BuildContext.Path = definitionv1.DockerBuildDefaultPath
 	}
 
 	// if DockerFile is nil, initialize it
 	if dockerBuild.DockerFile == nil {
-		dockerBuild.DockerFile = &definitionv1.DockerFile{
-			Location: nil,
-			Path:     definitionv1.DockerBuildDefaultPath,
-		}
+		dockerBuild.DockerFile = &definitionv1.DockerFile{}
+	}
+
+	if dockerBuild.DockerFile.Path == "" {
+		dockerBuild.DockerFile.Path = definitionv1.DockerBuildDefaultPath
 	}
 
 	// XXX: do we want the path to be relative to ctx.File?
+	var sshKey *definitionv1.SecretRef
+	if ctx.SSHKeySecret != nil {
+		sshKey = &definitionv1.SecretRef{
+			Value: *ctx.SSHKeySecret,
+		}
+	}
 
 	// if BuildContext.Location is nil, then initialize it to point to the same repo
 	// that its definition was in
 	if dockerBuild.BuildContext.Location == nil {
 		dockerBuild.BuildContext.Location = &definitionv1.Location{
-			GitRepository: &defintionv1.GitRepository{
-				URL:    ctx.RepositoryURL,
-				Commit: ctx.Commit,
+			GitRepository: &definitionv1.GitRepository{
+				URL:    ctx.FileReference.RepositoryURL,
+				Commit: &ctx.FileReference.Commit,
+				SSHKey: sshKey,
 			},
 		}
 	}
+
+	// if DockerFile.Location is nil, then initialize it to point to the same repo
+	// that its definition was in
+	if dockerBuild.DockerFile.Location == nil {
+		dockerBuild.DockerFile.Location = &definitionv1.Location{
+			GitRepository: &definitionv1.GitRepository{
+				URL:    ctx.FileReference.RepositoryURL,
+				Commit: &ctx.FileReference.Commit,
+				SSHKey: sshKey,
+			},
+		}
+	}
+
+	return nil
 }
