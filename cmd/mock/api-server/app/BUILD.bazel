@@ -6,7 +6,10 @@ go_library(
     importpath = "github.com/mlab-lattice/lattice/cmd/mock/api-server/app",
     visibility = ["//visibility:public"],
     deps = [
-        "//pkg/api/server/mock:go_default_library",
+        "//pkg/api/server/rest:go_default_library",
+        "//pkg/backend/mock/api/server/backend:go_default_library",
+        "//pkg/backend/mock/definition/resolver:go_default_library",
+        "//pkg/definition/resolver:go_default_library",
         "//pkg/util/cli:go_default_library",
         "@com_github_spf13_pflag//:go_default_library",
     ],

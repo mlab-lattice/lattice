@@ -3,7 +3,10 @@ package app
 import (
 	goflag "flag"
 
-	"github.com/mlab-lattice/lattice/pkg/api/server/mock"
+	"github.com/mlab-lattice/lattice/pkg/api/server/rest"
+	mockbackend "github.com/mlab-lattice/lattice/pkg/backend/mock/api/server/backend"
+	mockresolver "github.com/mlab-lattice/lattice/pkg/backend/mock/definition/resolver"
+	"github.com/mlab-lattice/lattice/pkg/definition/resolver"
 	"github.com/mlab-lattice/lattice/pkg/util/cli"
 
 	"github.com/spf13/pflag"
@@ -40,7 +43,17 @@ func Command() *cli.Command {
 			},
 		},
 		Run: func(args []string) {
-			mock.RunMockNewRestServer(port, apiAuthKey, workDirectory)
+			backend := mockbackend.NewMockBackend()
+
+			templateStore := mockresolver.NewMemoryTemplateStore()
+			secretStore := mockresolver.NewMemorySecretStore()
+
+			r, err := resolver.NewComponentResolver(workDirectory, false, templateStore, secretStore)
+			if err != nil {
+				panic(err)
+			}
+
+			rest.RunNewRestServer(backend, r, port, apiAuthKey)
 		},
 	}
 
