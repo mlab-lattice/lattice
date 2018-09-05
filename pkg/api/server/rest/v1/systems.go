@@ -220,7 +220,12 @@ func mountDeployHandlers(router *gin.RouterGroup, backend backendv1.Backend, res
 		var deploy *v1.Deploy
 		var err error
 		if req.Version != nil {
-			deploy, err = backend.Systems().Deploys(systemID).CreateFromVersion(*req.Version)
+			path := tree.RootPath()
+			if req.Version.Path != nil {
+				path = *req.Version.Path
+			}
+
+			deploy, err = backend.Systems().Deploys(systemID).CreateFromVersion(req.Version.Version, path)
 		} else {
 			deploy, err = backend.Systems().Deploys(systemID).CreateFromBuild(*req.BuildID)
 		}

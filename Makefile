@@ -93,8 +93,8 @@ install.govet:
 # git
 .PHONY: git.install-hooks
 git.install-hooks:
-	cp -f hack/git/pre-commit.sh .git/hooks/pre-commit
-	cp -f hack/git/pre-push.sh .git/hooks/pre-push
+	cp -f hack/git/pre-commit.sh $(DIR)/.git/hooks/pre-commit
+	cp -f hack/git/pre-push.sh $(DIR)/.git/hooks/pre-push
 
 
 # docker

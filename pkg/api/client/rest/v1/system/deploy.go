@@ -9,6 +9,7 @@ import (
 	"github.com/mlab-lattice/lattice/pkg/api/client/rest/v1/errors"
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	v1rest "github.com/mlab-lattice/lattice/pkg/api/v1/rest"
+	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 	"github.com/mlab-lattice/lattice/pkg/util/rest"
 )
 
@@ -52,9 +53,12 @@ func (c *DeployClient) CreateFromBuild(id v1.BuildID) (*v1.Deploy, error) {
 	return nil, errors.HandleErrorStatusCode(statusCode, body)
 }
 
-func (c *DeployClient) CreateFromVersion(version v1.SystemVersion) (*v1.Deploy, error) {
+func (c *DeployClient) CreateFromVersion(version v1.SystemVersion, path *tree.Path) (*v1.Deploy, error) {
 	request := v1rest.DeployRequest{
-		Version: &version,
+		Version: &v1rest.DeployVersionRequest{
+			Version: version,
+			Path:    path,
+		},
 	}
 
 	requestJSON, err := json.Marshal(request)

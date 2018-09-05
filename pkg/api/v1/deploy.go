@@ -15,6 +15,6 @@ const (
 
 type Deploy struct {
 	ID      DeployID    `json:"id"`
-	BuildID BuildID     `json:"buildId"`
+	BuildID *BuildID    `json:"buildId,omitempty"`
 	State   DeployState `json:"state"`
 }

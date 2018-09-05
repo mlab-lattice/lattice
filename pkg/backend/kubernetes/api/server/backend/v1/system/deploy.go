@@ -7,6 +7,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"fmt"
+	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 	"github.com/satori/go.uuid"
 )
 
@@ -16,20 +17,29 @@ type deployBackend struct {
 }
 
 func (b *deployBackend) CreateFromBuild(id v1.BuildID) (*v1.Deploy, error) {
-	// this also ensures the system exists
-	build, err := b.backend.Builds(b.system).Get(id)
+	// this ensures the system and build exist
+	_, err := b.backend.Builds(b.system).Get(id)
 	if err != nil {
 		return nil, err
 	}
 
-	deploy := newDeploy(build)
+	deploy := newBuildDeploy(id)
+	return b.createDeploy(deploy)
+}
+
+func (b *deployBackend) CreateFromVersion(version v1.SystemVersion, path tree.Path) (*v1.Deploy, error) {
+	deploy := newVersionDeploy(version, path)
+	return b.createDeploy(deploy)
+}
+
+func (b *deployBackend) createDeploy(deploy *latticev1.Deploy) (*v1.Deploy, error) {
 	namespace := b.backend.systemNamespace(b.system)
-	deploy, err = b.backend.latticeClient.LatticeV1().Deploys(namespace).Create(deploy)
+	result, err := b.backend.latticeClient.LatticeV1().Deploys(namespace).Create(deploy)
 	if err != nil {
 		return nil, err
 	}
 
-	externalDeploy, err := transformDeploy(deploy)
+	externalDeploy, err := transformDeploy(result)
 	if err != nil {
 		return nil, err
 	}
@@ -37,27 +47,33 @@ func (b *deployBackend) CreateFromBuild(id v1.BuildID) (*v1.Deploy, error) {
 	return &externalDeploy, nil
 }
 
-func (b *deployBackend) CreateFromVersion(version v1.SystemVersion) (*v1.Deploy, error) {
-	// this ensures the system is created as well
-	build, err := b.backend.Builds(b.system).Create(version)
-	if err != nil {
-		return nil, err
-	}
-
-	return b.CreateFromBuild(build.ID)
-}
-
-func newDeploy(build *v1.Build) *latticev1.Deploy {
+func newBuildDeploy(build v1.BuildID) *latticev1.Deploy {
 	return &latticev1.Deploy{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: uuid.NewV4().String(),
 			Labels: map[string]string{
-				latticev1.DeployDefinitionVersionLabelKey: string(build.Version),
-				latticev1.BuildIDLabelKey:                 string(build.ID),
+				latticev1.BuildIDLabelKey: string(build),
 			},
 		},
 		Spec: latticev1.DeploySpec{
-			Build: string(build.ID),
+			Build: &build,
+		},
+	}
+}
+
+func newVersionDeploy(version v1.SystemVersion, path tree.Path) *latticev1.Deploy {
+	return &latticev1.Deploy{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: uuid.NewV4().String(),
+			Labels: map[string]string{
+				latticev1.DeployDefinitionVersionLabelKey: string(version),
+			},
+		},
+		Spec: latticev1.DeploySpec{
+			Version: &latticev1.DeploySpecVersionInfo{
+				Version: version,
+				Path:    path,
+			},
 		},
 	}
 }
@@ -119,9 +135,10 @@ func transformDeploy(deploy *latticev1.Deploy) (v1.Deploy, error) {
 
 	externalDeploy := v1.Deploy{
 		ID:      v1.DeployID(deploy.Name),
-		BuildID: v1.BuildID(deploy.Spec.Build),
+		BuildID: deploy.Status.BuildID,
 		State:   state,
 	}
+
 	return externalDeploy, nil
 }
 

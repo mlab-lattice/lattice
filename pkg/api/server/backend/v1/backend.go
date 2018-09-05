@@ -41,7 +41,7 @@ type SystemBuildBackend interface {
 
 type SystemDeployBackend interface {
 	CreateFromBuild(v1.BuildID) (*v1.Deploy, error)
-	CreateFromVersion(v1.SystemVersion) (*v1.Deploy, error)
+	CreateFromVersion(v1.SystemVersion, tree.Path) (*v1.Deploy, error)
 	List() ([]v1.Deploy, error)
 	Get(v1.DeployID) (*v1.Deploy, error)
 }
