@@ -8,7 +8,7 @@ build: gazelle \
 
 .PHONY: build.no-gazelle
 build.no-gazelle: PLATFORM ?=
-build.no-gazelle: TARGET ?= //cmd/... //e2e/... //pkg/...
+build.no-gazelle: TARGET ?= //cmd/... //pkg/...
 build.no-gazelle:
 	@bazel build \
 		$(PLATFORM) \
@@ -20,11 +20,11 @@ build.platform.all: build.platform.darwin \
 
 .PHONY: build.platform.darwin
 build.platform.darwin: gazelle
-	@$(MAKE) build.no-gazelle PLATFORM=--platforms=@io_bazel_rules_go//go/toolchain:darwin_amd64 \
+	@$(MAKE) build.no-gazelle PLATFORM=--platforms=@io_bazel_rules_go//go/toolchain:darwin_amd64
 
 .PHONY: build.platform.linux
 build.platform.linux: gazelle
-	@$(MAKE) build.no-gazelle PLATFORM=--platforms=@io_bazel_rules_go//go/toolchain:linux_amd64 \
+	@$(MAKE) build.no-gazelle PLATFORM=--platforms=@io_bazel_rules_go//go/toolchain:linux_amd64
 
 .PHONY: gazelle
 gazelle:
@@ -38,28 +38,21 @@ clean:
 # testing
 .PHONY: test
 test: TARGET ?= //pkg/...
+test: OUTPUT ?= errors
+test: ARGS ?=
 test: gazelle
-	@bazel test --test_output=errors $(TARGET)
+	@bazel test \
+		$(ARGS) \
+		--test_output=$(OUTPUT) \
+		$(TARGET)
 
 .PHONY: test.no-cache
-test.no-cache: TARGET ?= //pkg/...
-test.no-cache: gazelle
-	@bazel test --cache_test_results=no --test_output=errors $(TARGET)
+test.no-cache:
+	@$(MAKE) test ARGS=--cache_test_results=no
 
 .PHONY: test.verbose
-test.verbose: TARGET ?= //pkg/...
-test.verbose: gazelle
-	@bazel test --test_output=all --test_env -v $(TARGET)
-
-
-# e2e testing
-.PHONY: e2e-test
-e2e-test: e2e-test.build
-	@$(DIR)/bazel-bin/e2e/test/darwin_amd64_stripped/go_default_test -cluster-url $(CLUSTER_URL)
-
-.PHONY: e2e-test.build
-e2e-test.build: gazelle
-	@bazel build //e2e/test/...
+test.verbose:
+	@$(MAKE) test OUTPUT=all ARGS="--test_env -v"
 
 
 # formatting/linting
@@ -67,7 +60,7 @@ e2e-test.build: gazelle
 check: gazelle \
        format  \
        vet     \
-       lint-no-export-comments
+       lint.no-export-comments
 
 .PHONY: format
 format:
@@ -78,8 +71,8 @@ format:
 lint: install.golint
 	@golint ./... | grep -v "customresource/generated" | grep -v "zz_generated."
 
-.PHONY: lint-no-export-comments
-lint-no-export-comments: install.golint
+.PHONY: lint.no-export-comments
+lint.no-export-comments: install.golint
 	@$(MAKE) lint | grep -v " or be unexported" | grep -v "comment on exported "
 
 .PHONY: vet
