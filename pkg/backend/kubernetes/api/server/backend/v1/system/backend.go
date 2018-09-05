@@ -3,7 +3,7 @@ package system
 import (
 	"fmt"
 
-	serverv1 "github.com/mlab-lattice/lattice/pkg/api/server/v1"
+	serverv1 "github.com/mlab-lattice/lattice/pkg/api/server/backend/v1"
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	latticeclientset "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/generated/clientset/versioned"

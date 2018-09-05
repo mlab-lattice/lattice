@@ -9,7 +9,8 @@ import (
 
 	clientrest "github.com/mlab-lattice/lattice/pkg/api/client/rest"
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
-	"github.com/mlab-lattice/lattice/pkg/backend/mock/api/server/backend"
+	mockbackend "github.com/mlab-lattice/lattice/pkg/backend/mock/api/server/backend"
+	mockresolver "github.com/mlab-lattice/lattice/pkg/backend/mock/definition/resolver"
 	"github.com/mlab-lattice/lattice/pkg/definition/resolver"
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 	definitionv1 "github.com/mlab-lattice/lattice/pkg/definition/v1"
@@ -584,12 +585,12 @@ func checkErr(err error, t *testing.T) {
 func setupMockTest() {
 	fmt.Println("Setting up test. Starting API Server")
 	// run api server
-	b := backend.NewMockBackend()
+	b := mockbackend.NewMockBackend()
 	r, err := resolver.NewComponentResolver(
 		"/tmp/lattice/api/server/mock/test",
 		true,
-		resolver.NewMemoryTemplateStore(),
-		resolver.NewMemorySecretStore(),
+		mockresolver.NewMemoryTemplateStore(),
+		mockresolver.NewMemorySecretStore(),
 	)
 	if err != nil {
 		panic(err)
