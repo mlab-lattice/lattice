@@ -1,17 +1,19 @@
-package resolver
+package test
 
 import (
+	"encoding/json"
 	"fmt"
+	"os"
+	"reflect"
 	"testing"
 
-	"encoding/json"
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
+	mockresolver "github.com/mlab-lattice/lattice/pkg/backend/mock/definition/resolver"
 	"github.com/mlab-lattice/lattice/pkg/definition/component"
+	. "github.com/mlab-lattice/lattice/pkg/definition/resolver"
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 	defintionv1 "github.com/mlab-lattice/lattice/pkg/definition/v1"
 	"github.com/mlab-lattice/lattice/pkg/util/git"
-	"os"
-	"reflect"
 )
 
 const workDir = "/tmp/lattice/test/pkg/definition/resolver/component_resolver"
@@ -67,7 +69,7 @@ func testFileReferenceResolve(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	r, err := NewComponentResolver(workDir, true, NewMemoryTemplateStore(), NewMemorySecretStore())
+	r, err := newResolver()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -129,7 +131,7 @@ func testCommitGitReferenceResolve(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	r, err := NewComponentResolver(workDir, true, NewMemoryTemplateStore(), NewMemorySecretStore())
+	r, err := newResolver()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -239,7 +241,7 @@ func testBranchGitReferenceResolve(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	r, err := NewComponentResolver(workDir, true, NewMemoryTemplateStore(), NewMemorySecretStore())
+	r, err := newResolver()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -386,7 +388,7 @@ func testTagAndVersionGitReferenceResolve(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	r, err := NewComponentResolver(workDir, true, NewMemoryTemplateStore(), NewMemorySecretStore())
+	r, err := newResolver()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -708,4 +710,8 @@ func resolveReference(
 		return nil, fmt.Errorf("expected referece resolution to return error but got nil")
 	}
 	return rr.Component, nil
+}
+
+func newResolver() (ComponentResolver, error) {
+	return NewComponentResolver(workDir, true, mockresolver.NewMemoryTemplateStore(), mockresolver.NewMemorySecretStore())
 }

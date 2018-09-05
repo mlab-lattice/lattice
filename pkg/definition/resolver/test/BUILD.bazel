@@ -1,0 +1,15 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_test")
+
+go_test(
+    name = "go_default_test",
+    srcs = ["component_resolver_test.go"],
+    deps = [
+        "//pkg/api/v1:go_default_library",
+        "//pkg/backend/mock/definition/resolver:go_default_library",
+        "//pkg/definition/component:go_default_library",
+        "//pkg/definition/resolver:go_default_library",
+        "//pkg/definition/tree:go_default_library",
+        "//pkg/definition/v1:go_default_library",
+        "//pkg/util/git:go_default_library",
+    ],
+)
