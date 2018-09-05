@@ -56,12 +56,12 @@ func (b *Build) Description(namespacePrefix string) string {
 	return fmt.Sprintf("build %v (version %v in system %v)", b.Name, version, systemID)
 }
 
-// +k8s:deepcopy-gen=false
 type BuildSpec struct {
 	Version v1.SystemVersion `json:"version"`
 	Path    tree.Path        `json:"path"`
 }
 
+// +k8s:deepcopy-gen=false
 type BuildStatus struct {
 	// Build specs are immutable so no need for ObservedGeneration
 
