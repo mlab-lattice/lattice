@@ -2,21 +2,22 @@ package v1
 
 import (
 	"fmt"
-	serverv1 "github.com/mlab-lattice/lattice/pkg/api/server/v1"
-	"github.com/mlab-lattice/lattice/pkg/api/v1"
-	v1rest "github.com/mlab-lattice/lattice/pkg/api/v1/rest"
-	"github.com/mlab-lattice/lattice/pkg/definition/resolver"
-	"github.com/mlab-lattice/lattice/pkg/definition/tree"
-	definitionv1 "github.com/mlab-lattice/lattice/pkg/definition/v1"
 	"io"
 	"net/http"
 	"net/url"
 	"strconv"
 
+	backendv1 "github.com/mlab-lattice/lattice/pkg/api/server/backend/v1"
+	"github.com/mlab-lattice/lattice/pkg/api/v1"
+	v1rest "github.com/mlab-lattice/lattice/pkg/api/v1/rest"
+	"github.com/mlab-lattice/lattice/pkg/definition/resolver"
+	"github.com/mlab-lattice/lattice/pkg/definition/tree"
+	definitionv1 "github.com/mlab-lattice/lattice/pkg/definition/v1"
+
 	"github.com/gin-gonic/gin"
 )
 
-func mountSystemHandlers(router *gin.RouterGroup, backend serverv1.Backend, resolver resolver.ComponentResolver) {
+func mountSystemHandlers(router *gin.RouterGroup, backend backendv1.Backend, resolver resolver.ComponentResolver) {
 	// create-system
 	router.POST(v1rest.SystemsPath, func(c *gin.Context) {
 		var req v1rest.CreateSystemRequest
@@ -85,7 +86,7 @@ func mountSystemHandlers(router *gin.RouterGroup, backend serverv1.Backend, reso
 	mountVersionHandlers(router, backend, resolver)
 }
 
-func mountBuildHandlers(router *gin.RouterGroup, backend serverv1.Backend, resolver resolver.ComponentResolver) {
+func mountBuildHandlers(router *gin.RouterGroup, backend backendv1.Backend, resolver resolver.ComponentResolver) {
 	systemIdentifier := "system_id"
 	systemIdentifierPathComponent := fmt.Sprintf(":%v", systemIdentifier)
 	buildsPath := fmt.Sprintf(v1rest.BuildsPathFormat, systemIdentifierPathComponent)
@@ -191,7 +192,7 @@ func mountBuildHandlers(router *gin.RouterGroup, backend serverv1.Backend, resol
 	})
 }
 
-func mountDeployHandlers(router *gin.RouterGroup, backend serverv1.Backend, resolver resolver.ComponentResolver) {
+func mountDeployHandlers(router *gin.RouterGroup, backend backendv1.Backend, resolver resolver.ComponentResolver) {
 	systemIdentifier := "system_id"
 	systemIdentifierPathComponent := fmt.Sprintf(":%v", systemIdentifier)
 	deploysPath := fmt.Sprintf(v1rest.DeploysPathFormat, systemIdentifierPathComponent)
@@ -264,7 +265,7 @@ func mountDeployHandlers(router *gin.RouterGroup, backend serverv1.Backend, reso
 	})
 }
 
-func mountNodePoolHandlers(router *gin.RouterGroup, backend serverv1.Backend) {
+func mountNodePoolHandlers(router *gin.RouterGroup, backend backendv1.Backend) {
 	systemIdentifier := "system_id"
 	systemIdentifierPathComponent := fmt.Sprintf(":%v", systemIdentifier)
 	nodePoolsPath := fmt.Sprintf(v1rest.NodePoolsPathFormat, systemIdentifierPathComponent)
@@ -315,7 +316,7 @@ func mountNodePoolHandlers(router *gin.RouterGroup, backend serverv1.Backend) {
 	})
 }
 
-func mountServiceHandlers(router *gin.RouterGroup, backend serverv1.Backend) {
+func mountServiceHandlers(router *gin.RouterGroup, backend backendv1.Backend) {
 	systemIdentifier := "system_id"
 	systemIdentifierPathComponent := fmt.Sprintf(":%v", systemIdentifier)
 	servicesPath := fmt.Sprintf(v1rest.ServicesPathFormat, systemIdentifierPathComponent)
@@ -420,7 +421,7 @@ func mountServiceHandlers(router *gin.RouterGroup, backend serverv1.Backend) {
 	})
 }
 
-func mountJobHandlers(router *gin.RouterGroup, backend serverv1.Backend) {
+func mountJobHandlers(router *gin.RouterGroup, backend backendv1.Backend) {
 	systemIdentifier := "system_id"
 	systemIdentifierPathComponent := fmt.Sprintf(":%v", systemIdentifier)
 	jobsPath := fmt.Sprintf(v1rest.JobsPathFormat, systemIdentifierPathComponent)
@@ -576,7 +577,7 @@ func serveLogFile(log io.ReadCloser, c *gin.Context) {
 	})
 }
 
-func mountSecretHandlers(router *gin.RouterGroup, backend serverv1.Backend) {
+func mountSecretHandlers(router *gin.RouterGroup, backend backendv1.Backend) {
 	systemIdentifier := "system_id"
 	systemIdentifierPathComponent := fmt.Sprintf(":%v", systemIdentifier)
 	secretsPath := fmt.Sprintf(v1rest.SystemSecretsPathFormat, systemIdentifierPathComponent)
@@ -690,7 +691,7 @@ func mountSecretHandlers(router *gin.RouterGroup, backend serverv1.Backend) {
 	})
 }
 
-func mountTeardownHandlers(router *gin.RouterGroup, backend serverv1.Backend) {
+func mountTeardownHandlers(router *gin.RouterGroup, backend backendv1.Backend) {
 	systemIdentifier := "system_id"
 	systemIdentifierPathComponent := fmt.Sprintf(":%v", systemIdentifier)
 	teardownsPath := fmt.Sprintf(v1rest.TeardownsPathFormat, systemIdentifierPathComponent)
@@ -740,7 +741,7 @@ func mountTeardownHandlers(router *gin.RouterGroup, backend serverv1.Backend) {
 	})
 }
 
-func mountVersionHandlers(router *gin.RouterGroup, backend serverv1.Backend, resolver resolver.ComponentResolver) {
+func mountVersionHandlers(router *gin.RouterGroup, backend backendv1.Backend, resolver resolver.ComponentResolver) {
 	systemIDIdentifier := "system_id"
 	systemIDPathComponent := fmt.Sprintf(":%v", systemIDIdentifier)
 	versionsPath := fmt.Sprintf(v1rest.VersionsPathFormat, systemIDPathComponent)
@@ -783,7 +784,7 @@ func mountVersionHandlers(router *gin.RouterGroup, backend serverv1.Backend, res
 }
 
 func getSystemDefinitionRoot(
-	backend serverv1.Backend,
+	backend backendv1.Backend,
 	r resolver.ComponentResolver,
 	systemID v1.SystemID,
 	version v1.SystemVersion,
@@ -819,7 +820,7 @@ func getSystemDefinitionRoot(
 	return nil, nil, fmt.Errorf("definition is not a system")
 }
 
-func getSystemVersions(backend serverv1.Backend, resolver resolver.ComponentResolver, systemID v1.SystemID) ([]string, error) {
+func getSystemVersions(backend backendv1.Backend, resolver resolver.ComponentResolver, systemID v1.SystemID) ([]string, error) {
 	system, err := backend.Systems().Get(systemID)
 	if err != nil {
 		return nil, err

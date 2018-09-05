@@ -3,7 +3,7 @@ package system
 import (
 	"sync"
 
-	serverv1 "github.com/mlab-lattice/lattice/pkg/api/server/v1"
+	backendv1 "github.com/mlab-lattice/lattice/pkg/api/server/backend/v1"
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 )
 
@@ -11,10 +11,11 @@ type systemRecord struct {
 	system    *v1.System
 	builds    map[v1.BuildID]*v1.Build
 	deploys   map[v1.DeployID]*v1.Deploy
-	teardowns map[v1.TeardownID]*v1.Teardown
-	secrets   []v1.Secret
-	nodePools []v1.NodePool
 	jobs      map[v1.JobID]*v1.Job
+	nodePools []*v1.NodePool
+	secrets   []*v1.Secret
+	services  map[v1.ServiceID]*v1.Service
+	teardowns map[v1.TeardownID]*v1.Teardown
 }
 
 type Backend struct {
@@ -46,10 +47,11 @@ func (b *Backend) Create(systemID v1.SystemID, definitionURL string) (*v1.System
 		},
 		builds:    make(map[v1.BuildID]*v1.Build),
 		deploys:   make(map[v1.DeployID]*v1.Deploy),
-		teardowns: make(map[v1.TeardownID]*v1.Teardown),
 		jobs:      make(map[v1.JobID]*v1.Job),
-		secrets:   []v1.Secret{},
-		nodePools: []v1.NodePool{},
+		secrets:   []*v1.Secret{},
+		services:  make(map[v1.ServiceID]*v1.Service),
+		nodePools: []*v1.NodePool{},
+		teardowns: make(map[v1.TeardownID]*v1.Teardown),
 	}
 
 	b.registry[systemID] = record
@@ -99,49 +101,49 @@ func (b *Backend) Delete(systemID v1.SystemID) error {
 	return nil
 }
 
-func (b *Backend) Builds(id v1.SystemID) serverv1.SystemBuildBackend {
+func (b *Backend) Builds(id v1.SystemID) backendv1.SystemBuildBackend {
 	return &BuildBackend{
 		backend:  b,
 		systemID: id,
 	}
 }
 
-func (b *Backend) Deploys(id v1.SystemID) serverv1.SystemDeployBackend {
+func (b *Backend) Deploys(id v1.SystemID) backendv1.SystemDeployBackend {
 	return &DeployBackend{
 		backend:  b,
 		systemID: id,
 	}
 }
 
-func (b *Backend) Jobs(id v1.SystemID) serverv1.SystemJobBackend {
+func (b *Backend) Jobs(id v1.SystemID) backendv1.SystemJobBackend {
 	return &JobBackend{
 		backend:  b,
 		systemID: id,
 	}
 }
 
-func (b *Backend) NodePools(id v1.SystemID) serverv1.SystemNodePoolBackend {
+func (b *Backend) NodePools(id v1.SystemID) backendv1.SystemNodePoolBackend {
 	return &NodePoolBackend{
 		backend:  b,
 		systemID: id,
 	}
 }
 
-func (b *Backend) Secrets(id v1.SystemID) serverv1.SystemSecretBackend {
+func (b *Backend) Secrets(id v1.SystemID) backendv1.SystemSecretBackend {
 	return &SecretBackend{
 		backend:  b,
 		systemID: id,
 	}
 }
 
-func (b *Backend) Services(id v1.SystemID) serverv1.SystemServiceBackend {
+func (b *Backend) Services(id v1.SystemID) backendv1.SystemServiceBackend {
 	return &ServiceBackend{
 		backend:  b,
 		systemID: id,
 	}
 }
 
-func (b *Backend) Teardowns(id v1.SystemID) serverv1.SystemTeardownBackend {
+func (b *Backend) Teardowns(id v1.SystemID) backendv1.SystemTeardownBackend {
 	return &TeardownBackend{
 		backend:  b,
 		systemID: id,

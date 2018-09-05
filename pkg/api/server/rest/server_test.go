@@ -1,4 +1,4 @@
-package mock
+package rest
 
 import (
 	"bytes"
@@ -7,8 +7,10 @@ import (
 	"testing"
 	"time"
 
-	latticerest "github.com/mlab-lattice/lattice/pkg/api/client/rest"
+	clientrest "github.com/mlab-lattice/lattice/pkg/api/client/rest"
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
+	"github.com/mlab-lattice/lattice/pkg/backend/mock/api/server/backend"
+	"github.com/mlab-lattice/lattice/pkg/definition/resolver"
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 	definitionv1 "github.com/mlab-lattice/lattice/pkg/definition/v1"
 )
@@ -25,7 +27,7 @@ const (
 	mockServerAPIKey  = "abc"
 )
 
-var latticeClient = latticerest.NewClient(mockAPIServerURL, mockServerAPIKey).V1()
+var latticeClient = clientrest.NewClient(mockAPIServerURL, mockServerAPIKey).V1()
 
 func TestMockServer(t *testing.T) {
 	setupMockTest()
@@ -63,9 +65,6 @@ func createSystem(t *testing.T) {
 		t.Fatalf("bad system url")
 	}
 
-	if system.Services != nil {
-		t.Fatalf("system must not have any services yet")
-	}
 	fmt.Println("System created successfully")
 
 	// test get system
@@ -223,13 +222,17 @@ func buildAndDeploy(t *testing.T) {
 
 	// test service logs
 	fmt.Println("Test Service logs")
-	system, err := latticeClient.Systems().Get(mockSystemID)
+	services, err := latticeClient.Systems().Services(mockSystemID).List()
 	if err != nil {
 		t.Fatalf("got err while retrieving system: %v", err)
 	}
 
+	if len(services) == 0 {
+		t.Fatal("no services listed")
+	}
+
 	reader, err = latticeClient.Systems().Services(mockSystemID).Logs(
-		system.Services[mockServicePath].ID,
+		services[0].ID,
 		nil,
 		nil,
 		v1.NewContainerLogOptions(),
@@ -379,13 +382,13 @@ func testSecrets(t *testing.T) {
 
 func checkSystemHealth(t *testing.T) {
 	// ensure that system services are up
-	system, err := latticeClient.Systems().Get(mockSystemID)
+	services, err := latticeClient.Systems().Services(mockSystemID).List()
 	checkErr(err, t)
-	if system.Services == nil {
-		t.Fatalf("system services are not set")
+	if len(services) == 0 {
+		t.Fatalf("no services in the system")
 	}
 
-	for _, service := range system.Services {
+	for _, service := range services {
 		if service.State != v1.ServiceStateStable {
 			t.Fatalf("Service state is not stable")
 		}
@@ -427,8 +430,8 @@ func teardownSystem(t *testing.T) {
 
 	// check that system services are nil after teardown
 	fmt.Println("Checking that system services are down after teardown...")
-	system, err := latticeClient.Systems().Get(mockSystemID)
-	if len(system.Services) != 0 {
+	services, err := latticeClient.Systems().Services(mockSystemID).List()
+	if len(services) != 0 {
 		t.Fatal("System services still up")
 	}
 
@@ -562,7 +565,7 @@ func authTest(t *testing.T) {
 	fmt.Println("Auth success!!")
 
 	fmt.Println("Testing auth with bad API key")
-	badClient := latticerest.NewClient(mockAPIServerURL, "bad api key").V1()
+	badClient := clientrest.NewClient(mockAPIServerURL, "bad api key").V1()
 	_, err = badClient.Systems().List()
 
 	if err != nil && !strings.Contains(fmt.Sprintf("%v", err), "status code 403") {
@@ -581,8 +584,18 @@ func checkErr(err error, t *testing.T) {
 func setupMockTest() {
 	fmt.Println("Setting up test. Starting API Server")
 	// run api server
-	go RunMockNewRestServer(mockServerAPIPort, mockServerAPIKey, "/tmp/lattice/api/server/mock/test")
+	b := backend.NewMockBackend()
+	r, err := resolver.NewComponentResolver(
+		"/tmp/lattice/api/server/mock/test",
+		true,
+		resolver.NewMemoryTemplateStore(),
+		resolver.NewMemorySecretStore(),
+	)
+	if err != nil {
+		panic(err)
+	}
 
+	go RunNewRestServer(b, r, mockServerAPIPort, mockServerAPIKey)
 	fmt.Println("API server started")
 }
 

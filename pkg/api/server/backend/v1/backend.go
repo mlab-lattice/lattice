@@ -35,7 +35,7 @@ type SystemBuildBackend interface {
 		id v1.BuildID,
 		path tree.Path,
 		sidecar *string,
-		logOptions *v1.ContainerLogOptions,
+		options *v1.ContainerLogOptions,
 	) (io.ReadCloser, error)
 }
 
@@ -55,7 +55,7 @@ type SystemJobBackend interface {
 	List() ([]v1.Job, error)
 	Get(v1.JobID) (*v1.Job, error)
 	Logs(
-		jobID v1.JobID,
+		id v1.JobID,
 		sidecar *string,
 		logOptions *v1.ContainerLogOptions,
 	) (io.ReadCloser, error)
@@ -78,10 +78,10 @@ type SystemServiceBackend interface {
 	Get(v1.ServiceID) (*v1.Service, error)
 	GetByPath(tree.Path) (*v1.Service, error)
 	Logs(
-		serviceID v1.ServiceID,
+		id v1.ServiceID,
 		sidecar *string,
 		instance string,
-		logOptions *v1.ContainerLogOptions,
+		options *v1.ContainerLogOptions,
 	) (io.ReadCloser, error)
 }
 

@@ -24,8 +24,8 @@ func (b *ServiceBackend) List() ([]v1.Service, error) {
 	}
 
 	var services []v1.Service
-	for _, service := range record.system.Services {
-		services = append(services, service)
+	for _, service := range record.services {
+		services = append(services, *service)
 	}
 
 	return services, nil
@@ -40,15 +40,15 @@ func (b *ServiceBackend) Get(id v1.ServiceID) (*v1.Service, error) {
 		return nil, err
 	}
 
-	for _, service := range record.system.Services {
-		if service.ID == id {
-			result := new(v1.Service)
-			*result = service
-			return result, nil
-		}
+	service, ok := record.services[id]
+	if !ok {
+		return nil, v1.NewInvalidServiceIDError()
 	}
 
-	return nil, v1.NewInvalidServiceIDError()
+	result := new(v1.Service)
+	*result = *service
+
+	return result, nil
 }
 
 func (b *ServiceBackend) GetByPath(path tree.Path) (*v1.Service, error) {
@@ -60,15 +60,16 @@ func (b *ServiceBackend) GetByPath(path tree.Path) (*v1.Service, error) {
 		return nil, err
 	}
 
-	service, ok := record.system.Services[path]
-	if !ok {
-		return nil, v1.NewInvalidServicePathError()
+	for _, service := range record.services {
+		if service.Path == path {
+			result := new(v1.Service)
+			*result = *service
+
+			return result, nil
+		}
 	}
 
-	result := new(v1.Service)
-	*result = service
-
-	return result, nil
+	return nil, v1.NewInvalidServicePathError()
 }
 
 func (b *ServiceBackend) Logs(

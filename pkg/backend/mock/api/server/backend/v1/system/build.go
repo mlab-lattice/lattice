@@ -40,7 +40,7 @@ func (b *BuildBackend) Create(v v1.SystemVersion) (*v1.Build, error) {
 	result := new(v1.Build)
 	*result = *build
 
-	return build, nil
+	return result, nil
 }
 
 func (b *BuildBackend) List() ([]v1.Build, error) {
@@ -58,7 +58,6 @@ func (b *BuildBackend) List() ([]v1.Build, error) {
 	}
 
 	return builds, nil
-
 }
 
 func (b *BuildBackend) Get(id v1.BuildID) (*v1.Build, error) {

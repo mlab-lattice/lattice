@@ -5,8 +5,6 @@ import (
 	"time"
 
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
-	"github.com/mlab-lattice/lattice/pkg/definition/tree"
-
 	"github.com/satori/go.uuid"
 )
 
@@ -150,10 +148,11 @@ Loop:
 		return
 	}
 
-	services := make(map[tree.Path]v1.Service)
+	services := make(map[v1.ServiceID]*v1.Service)
 	for path := range build.Services {
-		services[path] = v1.Service{
-			ID:                 v1.ServiceID(uuid.NewV4().String()),
+		id := v1.ServiceID(uuid.NewV4().String())
+		services[id] = &v1.Service{
+			ID:                 id,
 			State:              v1.ServiceStateStable,
 			Instances:          []string{uuid.NewV4().String()},
 			Path:               path,
@@ -165,7 +164,7 @@ Loop:
 	defer c.backend.Unlock()
 	log.Printf("completing deploy %v", deploy.ID)
 
-	record.system.Services = services
+	record.services = services
 	deploy.State = v1.DeployStateSucceeded
 }
 
@@ -202,9 +201,9 @@ func (c *controller) runTeardown(teardown *v1.Teardown, record *systemRecord) {
 		teardown.State = v1.TeardownStateInProgress
 
 		// tear down services
-		for path, s := range record.system.Services {
+		for id, s := range record.services {
 			s.State = v1.ServiceStateDeleting
-			record.system.Services[path] = s
+			record.services[id] = s
 		}
 	}()
 
@@ -214,6 +213,6 @@ func (c *controller) runTeardown(teardown *v1.Teardown, record *systemRecord) {
 	c.backend.Lock()
 	defer c.backend.Unlock()
 
-	record.system.Services = make(map[tree.Path]v1.Service)
+	record.services = make(map[v1.ServiceID]*v1.Service)
 	teardown.State = v1.TeardownStateSucceeded
 }

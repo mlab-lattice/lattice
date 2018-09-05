@@ -19,10 +19,12 @@ func (b *NodePoolBackend) List() ([]v1.NodePool, error) {
 		return nil, err
 	}
 
-	result := make([]v1.NodePool, len(record.nodePools))
-	copy(result, record.nodePools)
+	var nodePools []v1.NodePool
+	for _, nodePool := range record.nodePools {
+		nodePools = append(nodePools, *nodePool)
+	}
 
-	return result, nil
+	return nodePools, nil
 }
 
 func (b *NodePoolBackend) Get(path tree.PathSubcomponent) (*v1.NodePool, error) {
@@ -37,7 +39,7 @@ func (b *NodePoolBackend) Get(path tree.PathSubcomponent) (*v1.NodePool, error) 
 	for _, nodePool := range record.nodePools {
 		if nodePool.Path == path {
 			result := new(v1.NodePool)
-			*result = nodePool
+			*result = *nodePool
 			return result, nil
 		}
 	}
