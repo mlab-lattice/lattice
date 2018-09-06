@@ -39,6 +39,51 @@ type ResolutionInfo map[tree.Path]ResolutionNodeInfo
 
 // ResolutionNodeInfo contains information about the resolution of a subcomponent.
 type ResolutionNodeInfo struct {
+	// Component contains the hydrated but unresolved version of the component.
+	// That is, if the component is a system, it may contain unresolved references.
+	Component    component.Interface
+	Commit       git.CommitReference
+	SSHKeySecret *tree.PathSubcomponent
+}
+
+// TODO(kevindrosendahl): seems a little leaky that this is here
+func (r *ResolutionNodeInfo) MarshalJSON() ([]byte, error) {
+	componentBytes, err := json.Marshal(r.Component)
+	if err != nil {
+		return nil, err
+	}
+
+	d := resolutionNodeInfoDecoder{
+		Component:    componentBytes,
+		Commit:       r.Commit,
+		SSHKeySecret: r.SSHKeySecret,
+	}
+	return json.Marshal(&d)
+}
+
+func (r *ResolutionNodeInfo) UnmarshalJSON(data []byte) error {
+	var d resolutionNodeInfoDecoder
+	if err := json.Unmarshal(data, &d); err != nil {
+		return err
+	}
+
+	c, err := definitionv1.NewComponentFromJSON(d.Component)
+	if err != nil {
+		return err
+	}
+
+	rni := ResolutionNodeInfo{
+		Component:    c,
+		Commit:       d.Commit,
+		SSHKeySecret: d.SSHKeySecret,
+	}
+	*r = rni
+
+	return nil
+}
+
+type resolutionNodeInfoDecoder struct {
+	Component    json.RawMessage        `json:"component"`
 	Commit       git.CommitReference    `json:"commit"`
 	SSHKeySecret *tree.PathSubcomponent `json:"sshKeySecret,omitempty"`
 }
@@ -59,6 +104,13 @@ type ComponentResolver interface {
 		path tree.Path,
 		ctx *git.FileReference,
 		ref *definitionv1.Reference,
+		depth int32,
+	) (*ResolutionResult, error)
+	ResolveComponentReferences(
+		c component.Interface,
+		systemID v1.SystemID,
+		path tree.Path,
+		ctx *git.FileReference,
 		depth int32,
 	) (*ResolutionResult, error)
 }
@@ -126,6 +178,29 @@ func (r *DefaultComponentResolver) ResolveReference(
 	return rr, nil
 }
 
+// ResolveComponentReferences fulfils the ComponentResolver interface.
+func (r *DefaultComponentResolver) ResolveComponentReferences(
+	c component.Interface,
+	systemID v1.SystemID,
+	path tree.Path,
+	ctx *git.FileReference,
+	depth int32,
+) (*ResolutionResult, error) {
+	// TODO(kevindrosendahl): this here is why private system definitions aren't supported
+	rctx := &resolutionContext{FileReference: ctx}
+	info := make(ResolutionInfo)
+	c, err := r.resolveComponentReferences(c, systemID, path, rctx, depth, info)
+	if err != nil {
+		return nil, err
+	}
+
+	rr := &ResolutionResult{
+		Component: c,
+		Info:      info,
+	}
+	return rr, nil
+}
+
 func (r *DefaultComponentResolver) resolveReference(
 	systemID v1.SystemID,
 	path tree.Path,
@@ -174,25 +249,51 @@ func (r *DefaultComponentResolver) resolveReference(
 		return nil, err
 	}
 
+	return r.resolveComponentReferences(c, systemID, path, resolvedCxt, nextDepth, info)
+}
+
+func (r *DefaultComponentResolver) resolveComponentReferences(
+	c component.Interface,
+	systemID v1.SystemID,
+	path tree.Path,
+	ctx *resolutionContext,
+	depth int32,
+	info ResolutionInfo,
+) (component.Interface, error) {
 	// If the reference resolved to another reference, resolve that reference.
 	// FIXME(kevinrosendahl): detect cycles
 	if resolvedRef, ok := c.(*definitionv1.Reference); ok {
-		return r.resolveReference(systemID, path, resolvedCxt, resolvedRef, nextDepth, info)
-	}
-
-	// If the reference resolved to a systemID, resolve the system's components.
-	if system, ok := c.(*definitionv1.System); ok {
-		c, err = r.resolveSystemComponents(systemID, path, resolvedCxt, system, nextDepth, info)
-		if err != nil {
-			return nil, err
-		}
+		return r.resolveReference(systemID, path, ctx, resolvedRef, depth, info)
 	}
 
 	info[path] = ResolutionNodeInfo{
-		Commit:       resolvedCxt.FileReference.CommitReference,
-		SSHKeySecret: resolvedCxt.SSHKeySecret,
+		Component:    c,
+		Commit:       ctx.FileReference.CommitReference,
+		SSHKeySecret: ctx.SSHKeySecret,
 	}
-	return c, nil
+
+	// If the reference is not a system, then there's nothing more to do
+	system, ok := c.(*definitionv1.System)
+	if !ok {
+		return c, nil
+	}
+
+	return r.resolveSystemComponents(systemID, path, ctx, system, depth, info)
+}
+
+func (r *DefaultComponentResolver) resolveSystemComponents(
+	systemID v1.SystemID,
+	path tree.Path,
+	ctx *resolutionContext,
+	system *definitionv1.System,
+	depth int32,
+	info ResolutionInfo,
+) (*definitionv1.System, error) {
+	for name, c := range system.Components {
+		r.resolveComponentReferences(c, systemID, path.Child(name), ctx, depth, info)
+	}
+
+	return system, nil
 }
 
 func (r *DefaultComponentResolver) resolveTemplate(
@@ -391,49 +492,4 @@ func (r *DefaultComponentResolver) hydrateReferenceParameters(
 	}
 
 	return p, nil
-}
-
-func (r *DefaultComponentResolver) resolveSystemComponents(
-	systemID v1.SystemID,
-	path tree.Path,
-	ctx *resolutionContext,
-	system *definitionv1.System,
-	depth int32,
-	info ResolutionInfo,
-) (*definitionv1.System, error) {
-	// Loop through each of the components.
-	//  - If the component is a system, recursively resolve its components.
-	//  - If the component is a reference, resolve it (potentially also recursively resolving
-	//    system components if the reference was to a system).
-	for name, c := range system.Components {
-		childPath := path.Child(name)
-
-		switch typedComponent := c.(type) {
-		case *definitionv1.System:
-			// If the component is a system, recursively resolve the system and overwrite it in the components map
-			subSystem, err := r.resolveSystemComponents(systemID, childPath, ctx, typedComponent, depth, info)
-			if err != nil {
-				return nil, err
-			}
-
-			system.Components[name] = subSystem
-
-		case *definitionv1.Reference:
-			// If the component is a reference, resolve the reference.
-			resolved, err := r.resolveReference(systemID, childPath, ctx, typedComponent, depth, info)
-			if err != nil {
-				return nil, err
-			}
-
-			system.Components[name] = resolved
-
-		default:
-			info[childPath] = ResolutionNodeInfo{
-				Commit:       ctx.FileReference.CommitReference,
-				SSHKeySecret: ctx.SSHKeySecret,
-			}
-		}
-	}
-
-	return system, nil
 }
