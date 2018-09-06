@@ -137,9 +137,14 @@ func deploysPrinter(deploys []v1.Deploy, format printer.Format) printer.Interfac
 				stateColor = color.Warning
 			}
 
+			buildID := "-"
+			if deploy.BuildID != nil {
+				buildID = string(*deploy.BuildID)
+			}
+
 			rows = append(rows, []string{
 				string(deploy.ID),
-				string(deploy.BuildID),
+				buildID,
 				stateColor(string(deploy.State)),
 			})
 		}

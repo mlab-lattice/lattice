@@ -233,12 +233,19 @@ func getBuildState(state latticev1.BuildState) (v1.BuildState, error) {
 	switch state {
 	case latticev1.BuildStatePending:
 		return v1.BuildStatePending, nil
+
+	case latticev1.BuildStateAccepted:
+		return v1.BuildStateAccepted, nil
+
 	case latticev1.BuildStateRunning:
 		return v1.BuildStateRunning, nil
+
 	case latticev1.BuildStateSucceeded:
 		return v1.BuildStateSucceeded, nil
+
 	case latticev1.BuildStateFailed:
 		return v1.BuildStateFailed, nil
+
 	default:
 		return "", fmt.Errorf("invalid build state: %v", state)
 	}

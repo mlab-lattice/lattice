@@ -8,7 +8,9 @@ import (
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/cloudprovider"
 	latticeinformers "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/generated/informers/externalversions"
+	kuberesolver "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/definition/resolver"
 	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/servicemesh"
+	"github.com/mlab-lattice/lattice/pkg/definition/resolver"
 	"github.com/mlab-lattice/lattice/pkg/util/cli"
 
 	kubeinformers "k8s.io/client-go/informers"
@@ -28,6 +30,7 @@ func Command() *cli.Command {
 
 	var kubeconfig string
 	var namespacePrefix string
+	var workDirectory string
 	var latticeID string
 	var internalDNSDomain string
 
@@ -52,6 +55,12 @@ func Command() *cli.Command {
 				Usage:    "namespace prefix of the lattice",
 				Required: true,
 				Target:   &namespacePrefix,
+			},
+			&cli.StringFlag{
+				Name:    "work-directory",
+				Usage:   "work directory to use",
+				Default: "/tmp/lattice-api",
+				Target:  &workDirectory,
 			},
 			&cli.StringFlag{
 				Name:     "lattice-id",
@@ -103,6 +112,7 @@ func Command() *cli.Command {
 			// TODO: setting stop as nil for now, won't actually need it until leader-election is used
 			ctx, err := createControllerContext(
 				namespacePrefix,
+				workDirectory,
 				v1.LatticeID(latticeID),
 				internalDNSDomain,
 				config,
@@ -130,6 +140,7 @@ func Command() *cli.Command {
 
 func createControllerContext(
 	namespacePrefix string,
+	workDirectory string,
 	latticeID v1.LatticeID,
 	internalDNSDomain string,
 	kubeconfig *rest.Config,
@@ -150,9 +161,19 @@ func createControllerContext(
 	versionedLatticeClient := lcb.ClientOrDie("shared-latticeinformers")
 	latticeInformers := latticeinformers.NewSharedInformerFactory(versionedLatticeClient, time.Duration(12*time.Hour))
 
+	templateStore := kuberesolver.NewKubernetesTemplateStore(namespacePrefix, lcb.ClientOrDie("controller-manager-component-resolver"), latticeInformers, nil)
+	secretStore := kuberesolver.NewKubernetesSecretStore(namespacePrefix, kubeInformers, nil)
+
+	resolver, err := resolver.NewComponentResolver(workDirectory, false, templateStore, secretStore)
+	if err != nil {
+		panic(err)
+	}
+
 	ctx := controllers.Context{
 		NamespacePrefix: namespacePrefix,
 		LatticeID:       latticeID,
+
+		ComponentResolver: resolver,
 
 		InternalDNSDomain: internalDNSDomain,
 

@@ -13,6 +13,7 @@ type (
 
 const (
 	BuildStatePending   BuildState = "pending"
+	BuildStateAccepted  BuildState = "accepted"
 	BuildStateRunning   BuildState = "running"
 	BuildStateSucceeded BuildState = "succeeded"
 	BuildStateFailed    BuildState = "failed"

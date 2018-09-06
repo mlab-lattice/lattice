@@ -27,7 +27,7 @@ func (b *DeployBackend) CreateFromBuild(id v1.BuildID) (*v1.Deploy, error) {
 
 	deploy := &v1.Deploy{
 		ID:      v1.DeployID(uuid.NewV4().String()),
-		BuildID: id,
+		BuildID: &id,
 		State:   v1.DeployStatePending,
 	}
 

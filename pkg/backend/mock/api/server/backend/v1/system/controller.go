@@ -114,7 +114,7 @@ func (c *controller) runDeploy(deploy *v1.Deploy, record *systemRecord) {
 	log.Printf("waiting for build %v to complete for deploy %v", deploy.BuildID, deploy.ID)
 Loop:
 	for {
-		build, err := c.backend.Builds(record.system.ID).Get(deploy.BuildID)
+		build, err := c.backend.Builds(record.system.ID).Get(*deploy.BuildID)
 		if err != nil {
 			deploy.State = v1.DeployStateFailed
 			return
@@ -142,7 +142,7 @@ Loop:
 	// sleep for 5 seconds then succeed
 	time.Sleep(5 * time.Second)
 
-	build, err := c.backend.Builds(record.system.ID).Get(deploy.BuildID)
+	build, err := c.backend.Builds(record.system.ID).Get(*deploy.BuildID)
 	if err != nil {
 		deploy.State = v1.DeployStateFailed
 		return

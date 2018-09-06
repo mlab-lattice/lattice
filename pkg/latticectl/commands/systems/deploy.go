@@ -5,6 +5,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"time"
 
 	v1client "github.com/mlab-lattice/lattice/pkg/api/client/v1"
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
@@ -88,7 +89,7 @@ func DeploySystem(
 		deploy, err = client.Deploys(systemID).CreateFromBuild(buildID)
 	} else {
 		definition = fmt.Sprintf("version %s", color.ID(string(version)))
-		deploy, err = client.Deploys(systemID).CreateFromVersion(version)
+		deploy, err = client.Deploys(systemID).CreateFromVersion(version, nil)
 	}
 
 	if err != nil {
@@ -96,7 +97,27 @@ func DeploySystem(
 	}
 
 	if watch {
-		err = builds.WatchBuild(client.Builds(systemID), deploy.BuildID, format, writer, printBuildStateDuringDeploy)
+		// FIXME: probably want to fix this UX
+		var buildID v1.BuildID
+		for {
+			deploy, err := client.Deploys(systemID).Get(deploy.ID)
+			if err != nil {
+				return err
+			}
+
+			switch deploy.State {
+			case v1.DeployStatePending:
+				time.Sleep(100 * time.Millisecond)
+
+			case v1.DeployStateAccepted, v1.DeployStateInProgress, v1.DeployStateSucceeded:
+				buildID = *deploy.BuildID
+
+			default:
+				return fmt.Errorf("deploy %v failed", deploy.ID)
+			}
+		}
+
+		err = builds.WatchBuild(client.Builds(systemID), buildID, format, writer, printBuildStateDuringDeploy)
 		if err != nil {
 			return err
 		}
