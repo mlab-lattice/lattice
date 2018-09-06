@@ -21,7 +21,7 @@ func (c *Controller) syncInProgressTeardown(teardown *latticev1.Teardown) error 
 	// So instead we set the system.Spec in here to make sure it gets run even after failures.
 	services := make(map[tree.Path]latticev1.SystemSpecServiceInfo)
 	jobs := make(map[tree.Path]latticev1.SystemSpecJobInfo)
-	nodePools := make(map[string]latticev1.NodePoolSpec)
+	nodePools := make(map[tree.PathSubcomponent]latticev1.NodePoolSpec)
 
 	system, err = c.updateSystem(system, services, jobs, nodePools)
 	if err != nil {

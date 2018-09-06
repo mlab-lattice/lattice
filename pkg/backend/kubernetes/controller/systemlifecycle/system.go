@@ -57,7 +57,7 @@ func (c *Controller) updateSystem(
 	system *latticev1.System,
 	services map[tree.Path]latticev1.SystemSpecServiceInfo,
 	jobs map[tree.Path]latticev1.SystemSpecJobInfo,
-	nodePools map[string]latticev1.NodePoolSpec,
+	nodePools map[tree.PathSubcomponent]latticev1.NodePoolSpec,
 ) (*latticev1.System, error) {
 	spec := system.Spec.DeepCopy()
 	spec.Services = services
@@ -113,7 +113,7 @@ func (c *Controller) systemServices(
 	}
 
 	services := make(map[tree.Path]latticev1.SystemSpecServiceInfo)
-	for path, serviceNode := range build.Spec.Definition.AllServices() {
+	for path, serviceNode := range build.Status.Definition.AllServices() {
 		serviceInfo, ok := build.Status.Services[path]
 		if !ok {
 			// FIXME: send warn event
@@ -181,7 +181,7 @@ func (c *Controller) systemJobs(
 	}
 
 	jobs := make(map[tree.Path]latticev1.SystemSpecJobInfo)
-	for path, jobNode := range build.Spec.Definition.AllJobs() {
+	for path, jobNode := range build.Status.Definition.AllJobs() {
 		jobInfo, ok := build.Status.Jobs[path]
 		if !ok {
 			// FIXME: send warn event
@@ -237,19 +237,23 @@ func (c *Controller) systemJobs(
 
 func (c *Controller) systemNodePools(
 	build *latticev1.Build,
-) (map[string]latticev1.NodePoolSpec, error) {
-	nodePools := make(map[string]latticev1.NodePoolSpec)
-	err := build.Spec.Definition.Walk(func(n *defintionv1.SystemNode) error {
+) (map[tree.PathSubcomponent]latticev1.NodePoolSpec, error) {
+	nodePools := make(map[tree.PathSubcomponent]latticev1.NodePoolSpec)
+	err := build.Status.Definition.Walk(func(n *defintionv1.SystemNode) error {
 		path := n.Path()
 		pools := n.NodePools()
 
 		for name, nodePool := range pools {
-			p := v1.NewSystemSharedNodePoolPath(path, name)
+			subcomponent, err := tree.NewPathSubcomponentFromParts(path, name)
+			if err != nil {
+				return err
+			}
+
 			spec := latticev1.NodePoolSpec{
 				NumInstances: nodePool.NumInstances,
 				InstanceType: nodePool.InstanceType,
 			}
-			nodePools[p.String()] = spec
+			nodePools[subcomponent] = spec
 		}
 
 		return nil

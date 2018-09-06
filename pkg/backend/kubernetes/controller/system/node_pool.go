@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"reflect"
 
-	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 
@@ -19,20 +18,15 @@ import (
 
 func (c *Controller) syncSystemNodePools(
 	system *latticev1.System,
-) (map[string]latticev1.SystemStatusNodePool, error) {
+) (map[tree.PathSubcomponent]latticev1.SystemStatusNodePool, error) {
 	// N.B.: as it currently is, this controller does not allow for a "move" i.e.
 	// renaming a node pool (changing its path). (see nodePool.go for more information)
-	nodePools := make(map[string]latticev1.SystemStatusNodePool)
+	nodePools := make(map[tree.PathSubcomponent]latticev1.SystemStatusNodePool)
 	systemNamespace := system.ResourceNamespace(c.namespacePrefix)
 	nodePoolNames := mapset.NewSet()
 
 	// Loop through the nodePools defined in the system's Spec, and create/update any that need it
 	for path, spec := range system.Spec.NodePools {
-		p, err := v1.ParseNodePoolPath(path)
-		if err != nil || p.Name == nil {
-			// FIXME: all system level node pools should have a path, send a warn if it doesn't
-			continue
-		}
 		var nodePool *latticev1.NodePool
 
 		nodePoolStatus, ok := system.Status.NodePools[path]
@@ -42,7 +36,7 @@ func (c *Controller) syncSystemNodePools(
 
 			// First check our cache to see if the node pool exists.
 			var err error
-			nodePool, err = c.getNodePoolFromCache(systemNamespace, p.Path, *p.Name)
+			nodePool, err = c.getNodePoolFromCache(systemNamespace, path.Path(), path.Subcomponent())
 			if err != nil {
 				return nil, err
 			}
@@ -51,14 +45,14 @@ func (c *Controller) syncSystemNodePools(
 				// The nodePool wasn't in the cache, so do a quorum read to see if it was created.
 				// N.B.: could first loop through and check to see if we need to do a quorum read
 				// on any of the nodePools, then just do one list.
-				nodePool, err = c.getNodePoolFromAPI(systemNamespace, p.Path, *p.Name)
+				nodePool, err = c.getNodePoolFromAPI(systemNamespace, path.Path(), path.Subcomponent())
 				if err != nil {
 					return nil, err
 				}
 
 				if nodePool == nil {
 					// The nodePool actually doesn't exist yet. Create it with a new UUID as the name.
-					nodePool, err = c.createNewNodePool(system, p.Path, *p.Name, spec)
+					nodePool, err = c.createNewNodePool(system, path.Path(), path.Subcomponent(), spec)
 					if err != nil {
 						return nil, err
 					}
@@ -102,7 +96,7 @@ func (c *Controller) syncSystemNodePools(
 		}
 
 		// We found an existing nodePool, update it if needed
-		nodePool, err = c.updateNodePool(nodePool, spec, p.Path, *p.Name)
+		nodePool, err := c.updateNodePool(nodePool, spec, path)
 		if err != nil {
 			return nil, err
 		}
@@ -148,7 +142,7 @@ func (c *Controller) syncSystemNodePools(
 			status := nodePool.Status.DeepCopy()
 			status.State = latticev1.NodePoolStatePending
 
-			nodePools[path.String()] = latticev1.SystemStatusNodePool{
+			nodePools[path] = latticev1.SystemStatusNodePool{
 				Name:           nodePool.Name,
 				Generation:     nodePool.Generation,
 				NodePoolStatus: *status,
@@ -217,10 +211,9 @@ func (c *Controller) deleteNodePool(nodePool *latticev1.NodePool) error {
 func (c *Controller) updateNodePool(
 	nodePool *latticev1.NodePool,
 	spec latticev1.NodePoolSpec,
-	path tree.Path,
-	name string,
+	path tree.PathSubcomponent,
 ) (*latticev1.NodePool, error) {
-	if !c.nodePoolNeedsUpdate(nodePool, spec, path, name) {
+	if !c.nodePoolNeedsUpdate(nodePool, spec, path) {
 		return nodePool, nil
 	}
 
@@ -231,8 +224,8 @@ func (c *Controller) updateNodePool(
 	if nodePool.Labels == nil {
 		nodePool.Labels = make(map[string]string)
 	}
-	nodePool.Labels[latticev1.NodePoolSystemSharedPathLabelKey] = path.ToDomain()
-	nodePool.Labels[latticev1.NodePoolSystemSharedNameLabelKey] = name
+	nodePool.Labels[latticev1.NodePoolSystemSharedPathLabelKey] = path.Path().ToDomain()
+	nodePool.Labels[latticev1.NodePoolSystemSharedNameLabelKey] = path.Subcomponent()
 
 	result, err := c.latticeClient.LatticeV1().NodePools(nodePool.Namespace).Update(nodePool)
 	if err != nil {
@@ -245,8 +238,7 @@ func (c *Controller) updateNodePool(
 func (c *Controller) nodePoolNeedsUpdate(
 	nodePool *latticev1.NodePool,
 	spec latticev1.NodePoolSpec,
-	path tree.Path,
-	name string,
+	path tree.PathSubcomponent,
 ) bool {
 	if !reflect.DeepEqual(nodePool.Spec, spec) {
 		return true
@@ -257,8 +249,7 @@ func (c *Controller) nodePoolNeedsUpdate(
 		return true
 	}
 
-	np := v1.NewSystemSharedNodePoolPath(path, name)
-	return currentPath != np
+	return currentPath != path
 }
 
 func (c *Controller) getNodePoolFromCache(namespace string, path tree.Path, name string) (*latticev1.NodePool, error) {

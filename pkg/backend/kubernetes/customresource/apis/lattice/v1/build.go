@@ -69,7 +69,7 @@ type BuildStatus struct {
 	Message string     `json:"message"`
 
 	Definition     *definitionv1.SystemNode `json:"definition,omitempty"`
-	ResolutionInfo *resolver.ResolutionInfo `json:"resolutionInfo,omitempty"`
+	ResolutionInfo resolver.ResolutionInfo  `json:"resolutionInfo,omitempty"`
 
 	StartTimestamp      *metav1.Time `json:"startTimestamp,omitempty"`
 	CompletionTimestamp *metav1.Time `json:"completionTimestamp,omitempty"`
@@ -98,6 +98,7 @@ type BuildState string
 
 const (
 	BuildStatePending   BuildState = ""
+	BuildStateAccepted  BuildState = "accepted"
 	BuildStateRunning   BuildState = "running"
 	BuildStateSucceeded BuildState = "succeeded"
 	BuildStateFailed    BuildState = "failed"

@@ -41,6 +41,10 @@ type stateInfo struct {
 }
 
 func (c *Controller) calculateState(build *latticev1.Build) (stateInfo, error) {
+	if build.Status.Definition == nil {
+		return stateInfo{}, fmt.Errorf("cannot calculate state for build with no definition")
+	}
+
 	successfulContainerBuilds := make(map[string]*latticev1.ContainerBuild)
 	activeContainerBuilds := make(map[string]*latticev1.ContainerBuild)
 	failedContainerBuilds := make(map[string]*latticev1.ContainerBuild)
@@ -52,7 +56,7 @@ func (c *Controller) calculateState(build *latticev1.Build) (stateInfo, error) {
 	containerBuildJobs := make(map[string][]tree.Path)
 
 	// TODO: think about refactoring this and jobs to DRY it up
-	for path, service := range build.Spec.Definition.AllServices() {
+	for path, service := range build.Status.Definition.AllServices() {
 		serviceInfo, ok := build.Status.Services[path]
 		// If the service doesn't have build info yet, note that and continue
 		if !ok {
@@ -87,7 +91,7 @@ func (c *Controller) calculateState(build *latticev1.Build) (stateInfo, error) {
 		}
 	}
 
-	for path, job := range build.Spec.Definition.AllJobs() {
+	for path, job := range build.Status.Definition.AllJobs() {
 		jobInfo, ok := build.Status.Jobs[path]
 		// If the job doesn't have build info yet, note that and continue
 		if !ok {

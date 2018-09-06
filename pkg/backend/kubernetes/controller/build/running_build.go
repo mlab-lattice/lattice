@@ -155,6 +155,8 @@ func (c *Controller) syncRunningBuild(build *latticev1.Build, stateInfo stateInf
 	_, err := c.updateBuildStatus(
 		build,
 		latticev1.BuildStateRunning,
+		build.Status.Definition,
+		build.Status.ResolutionInfo,
 		message,
 		startTimestamp,
 		nil,

@@ -6,7 +6,9 @@ import (
 
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	kubeutil "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/kubernetes"
+	"github.com/mlab-lattice/lattice/pkg/definition/resolver"
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
+	definitionv1 "github.com/mlab-lattice/lattice/pkg/definition/v1"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -14,6 +16,8 @@ import (
 func (c *Controller) updateBuildStatus(
 	build *latticev1.Build,
 	state latticev1.BuildState,
+	definition *definitionv1.SystemNode,
+	resolutionInfo resolver.ResolutionInfo,
 	message string,
 	startTimestamp *metav1.Time,
 	completionTimestamp *metav1.Time,
@@ -24,6 +28,9 @@ func (c *Controller) updateBuildStatus(
 	status := latticev1.BuildStatus{
 		State:   state,
 		Message: message,
+
+		Definition:     definition,
+		ResolutionInfo: resolutionInfo,
 
 		StartTimestamp:      startTimestamp,
 		CompletionTimestamp: completionTimestamp,

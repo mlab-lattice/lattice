@@ -98,7 +98,6 @@ type resolutionContext struct {
 // engine has already acted upon it) component.
 type ComponentResolver interface {
 	Versions(repository string, semverRange semver.Range) ([]string, error)
-	// ResolveReference resolves the reference.
 	ResolveReference(
 		systemID v1.SystemID,
 		path tree.Path,

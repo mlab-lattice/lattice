@@ -82,6 +82,8 @@ func (c *Controller) syncMissingContainerBuildsBuild(build *latticev1.Build, sta
 	_, err := c.updateBuildStatus(
 		build,
 		latticev1.BuildStateRunning,
+		build.Status.Definition,
+		build.Status.ResolutionInfo,
 		"",
 		startTimestamp,
 		nil,
@@ -159,7 +161,7 @@ func (c *Controller) hydrateContainerBuild(
 		return containerBuild, nil
 	}
 
-	i, ok := build.Spec.ResolutionInfo[path]
+	i, ok := build.Status.ResolutionInfo[path]
 	if !ok {
 		err := fmt.Errorf(
 			"%v resolution info did not have information for %v",

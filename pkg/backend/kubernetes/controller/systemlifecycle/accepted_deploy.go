@@ -5,10 +5,34 @@ import (
 
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/satori/go.uuid"
 )
 
 func (c *Controller) syncAcceptedDeploy(deploy *latticev1.Deploy) error {
-	build, err := c.buildLister.Builds(deploy.Namespace).Get(deploy.Spec.Build)
+	if deploy.Spec.Version != nil {
+		build := &latticev1.Build{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: deploy.Namespace,
+				Name:      uuid.NewV4().String(),
+			},
+			Spec: latticev1.BuildSpec{
+				Version: deploy.Spec.Version.Version,
+				Path:    deploy.Spec.Version.Path,
+			},
+		}
+
+		_, err := c.latticeClient.LatticeV1().Builds(deploy.Namespace).Create(build)
+		return err
+	}
+
+	if deploy.Spec.Build == nil {
+		return fmt.Errorf("%v had neither version information or a build ID", deploy.Description(c.namespacePrefix))
+	}
+
+	build, err := c.buildLister.Builds(deploy.Namespace).Get(string(*deploy.Spec.Build))
 	if err != nil {
 		return fmt.Errorf(
 			"error getting build %v for %v: %v",
@@ -19,7 +43,7 @@ func (c *Controller) syncAcceptedDeploy(deploy *latticev1.Deploy) error {
 	}
 
 	switch build.Status.State {
-	case latticev1.BuildStatePending, latticev1.BuildStateRunning:
+	case latticev1.BuildStatePending, latticev1.BuildStateAccepted, latticev1.BuildStateRunning:
 		return nil
 
 	case latticev1.BuildStateFailed:

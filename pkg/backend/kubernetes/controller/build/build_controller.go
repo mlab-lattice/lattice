@@ -17,6 +17,7 @@ import (
 	"k8s.io/client-go/util/workqueue"
 
 	"github.com/golang/glog"
+	"github.com/mlab-lattice/lattice/pkg/definition/resolver"
 )
 
 type Controller struct {
@@ -26,6 +27,11 @@ type Controller struct {
 	namespacePrefix string
 
 	latticeClient latticeclientset.Interface
+
+	componentResolver resolver.ComponentResolver
+
+	systemLister       latticelisters.SystemLister
+	systemListerSynced cache.InformerSynced
 
 	buildLister       latticelisters.BuildLister
 	buildListerSynced cache.InformerSynced
@@ -39,6 +45,8 @@ type Controller struct {
 func NewController(
 	namespacePrefix string,
 	latticeClient latticeclientset.Interface,
+	componentResolver resolver.ComponentResolver,
+	systemInformer latticeinformers.SystemInformer,
 	buildInformer latticeinformers.BuildInformer,
 	containerBuildInformer latticeinformers.ContainerBuildInformer,
 ) *Controller {
@@ -47,11 +55,16 @@ func NewController(
 
 		latticeClient: latticeClient,
 
+		componentResolver: componentResolver,
+
 		queue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "build"),
 	}
 
 	sbc.enqueue = sbc.enqueueBuild
 	sbc.syncHandler = sbc.syncSystemBuild
+
+	sbc.systemLister = systemInformer.Lister()
+	sbc.systemListerSynced = systemInformer.Informer().HasSynced
 
 	buildInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    sbc.handleBuildAdd,
@@ -82,7 +95,7 @@ func (c *Controller) Run(workers int, stopCh <-chan struct{}) {
 	defer glog.Infof("shutting down build controller")
 
 	// wait for your secondary caches to fill before starting your work
-	if !cache.WaitForCacheSync(stopCh, c.buildListerSynced, c.containerBuildListerSynced) {
+	if !cache.WaitForCacheSync(stopCh, c.systemListerSynced, c.buildListerSynced, c.containerBuildListerSynced) {
 		return
 	}
 
@@ -189,6 +202,10 @@ func (c *Controller) syncSystemBuild(key string) error {
 	build, err = c.addFinalizer(build)
 	if err != nil {
 		return err
+	}
+
+	if build.Status.State == latticev1.BuildStatePending {
+		return c.syncPendingBuild(build)
 	}
 
 	stateInfo, err := c.calculateState(build)

@@ -61,9 +61,9 @@ func (s *System) Description() string {
 type SystemSpec struct {
 	DefinitionURL string `json:"definitionUrl"`
 
-	NodePools map[string]NodePoolSpec             `json:"nodePools"`
-	Services  map[tree.Path]SystemSpecServiceInfo `json:"services"`
-	Jobs      map[tree.Path]SystemSpecJobInfo     `json:"jobs"`
+	NodePools map[tree.PathSubcomponent]NodePoolSpec `json:"nodePools"`
+	Services  map[tree.Path]SystemSpecServiceInfo    `json:"services"`
+	Jobs      map[tree.Path]SystemSpecJobInfo        `json:"jobs"`
 }
 
 // +k8s:deepcopy-gen=false
@@ -88,8 +88,8 @@ type SystemStatus struct {
 
 	State SystemState `json:"state"`
 
-	Services  map[tree.Path]SystemStatusService `json:"services"`
-	NodePools map[string]SystemStatusNodePool   `json:"nodePools"`
+	Services  map[tree.Path]SystemStatusService              `json:"services"`
+	NodePools map[tree.PathSubcomponent]SystemStatusNodePool `json:"nodePools"`
 }
 
 type SystemStatusService struct {
@@ -108,6 +108,7 @@ type SystemState string
 
 const (
 	// lifecycle states
+	// note that the "deleting" state is implied by a non-nil metadata.DeletionTimestamp
 	SystemStatePending SystemState = ""
 	SystemStateFailed  SystemState = "failed"
 
