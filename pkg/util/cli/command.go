@@ -22,6 +22,7 @@ type Command struct {
 	Subcommands      []*Command
 	UsageFunc        func(*Command) error
 	HelpFunc         func(*Command)
+	GroupUsageTree bool
 	cobraCmd         *cobra.Command
 	isSpaceSeparated bool
 }
@@ -107,6 +108,9 @@ func (c *Command) defaultUsageFunc(*Command) error {
 	// TODO :: Seems like Usage & Help have the same use for us right now. (Perhaps just for default)
 	tmplName := template.DefaultTemplate
 	templateToExecute := template.DefaultUsageTemplate
+	if c.GroupUsageTree {
+		templateToExecute = template.DefaultUsageTemplateGrouped
+	}
 	return template.TryExecuteTemplate(tmplName, template.DefaultTemplate, templateToExecute, template.DefaultTemplateFuncs, c)
 }
 
@@ -114,6 +118,9 @@ func (c *Command) defaultUsageFunc(*Command) error {
 func (c *Command) defaultHelpFunc(*Command) {
 	tmplName := template.DefaultTemplate
 	templateToExecute := template.DefaultHelpTemplate
+	if c.GroupUsageTree {
+		templateToExecute = template.DefaultHelpTemplateGrouped
+	}
 	err := template.TryExecuteTemplate(tmplName, template.DefaultTemplate, templateToExecute, template.DefaultTemplateFuncs, c)
 	if err != nil {
 		log.Fatalf(err.Error())
