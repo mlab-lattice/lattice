@@ -12,7 +12,24 @@ import (
 )
 
 func (c *Controller) syncAcceptedDeploy(deploy *latticev1.Deploy) error {
-	if deploy.Spec.Version != nil {
+	if deploy.Spec.Version == nil && deploy.Spec.Build == nil {
+		return fmt.Errorf("%v had neither version nor build id", deploy.Description(c.namespacePrefix))
+	}
+
+	var build *latticev1.Build
+	var err error
+	switch {
+	case deploy.Spec.Version != nil:
+		// If we've already created a build and updated the status of the deploy with it, use that build ID
+		if deploy.Status.BuildID != nil {
+			build, err = c.buildLister.Builds(deploy.Namespace).Get(string(*deploy.Status.BuildID))
+			if err != nil {
+				return err
+			}
+			break
+		}
+
+		// Otherwise create the build and update the deploy's status
 		build := &latticev1.Build{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: deploy.Namespace,
@@ -24,22 +41,22 @@ func (c *Controller) syncAcceptedDeploy(deploy *latticev1.Deploy) error {
 			},
 		}
 
-		_, err := c.latticeClient.LatticeV1().Builds(deploy.Namespace).Create(build)
-		return err
-	}
+		build, err = c.latticeClient.LatticeV1().Builds(deploy.Namespace).Create(build)
+		if err != nil {
+			return err
+		}
 
-	if deploy.Spec.Build == nil {
-		return fmt.Errorf("%v had neither version information or a build ID", deploy.Description(c.namespacePrefix))
-	}
+		buildID := v1.BuildID(build.Name)
+		deploy, err = c.updateDeployStatus(deploy, latticev1.DeployStateAccepted, "", &buildID)
+		if err != nil {
+			return err
+		}
 
-	build, err := c.buildLister.Builds(deploy.Namespace).Get(string(*deploy.Spec.Build))
-	if err != nil {
-		return fmt.Errorf(
-			"error getting build %v for %v: %v",
-			deploy.Spec.Build,
-			deploy.Description(c.namespacePrefix),
-			err,
-		)
+	case deploy.Spec.Build != nil:
+		build, err = c.buildLister.Builds(deploy.Namespace).Get(string(*deploy.Status.BuildID))
+		if err != nil {
+			return err
+		}
 	}
 
 	switch build.Status.State {
@@ -51,6 +68,7 @@ func (c *Controller) syncAcceptedDeploy(deploy *latticev1.Deploy) error {
 			deploy,
 			latticev1.DeployStateFailed,
 			fmt.Sprintf("%v failed", build.Description(c.namespacePrefix)),
+			deploy.Status.BuildID,
 		)
 		if err != nil {
 			return err
@@ -101,7 +119,7 @@ func (c *Controller) syncAcceptedDeploy(deploy *latticev1.Deploy) error {
 			return err
 		}
 
-		_, err = c.updateDeployStatus(deploy, latticev1.DeployStateInProgress, "")
+		_, err = c.updateDeployStatus(deploy, latticev1.DeployStateInProgress, "", deploy.Status.BuildID)
 		return err
 
 	default:

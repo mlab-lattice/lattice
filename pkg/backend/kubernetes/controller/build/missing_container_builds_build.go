@@ -34,7 +34,7 @@ func (c *Controller) syncMissingContainerBuildsBuild(build *latticev1.Build, sta
 		containerBuilds := make(map[string]string)
 		err := c.getContainerBuilds(build, path, containers, containerBuilds, containerBuildHashes, containerBuildStatuses)
 		if err != nil {
-			return nil
+			return err
 		}
 
 		statusServiceInfo := latticev1.BuildStatusService{
@@ -59,7 +59,7 @@ func (c *Controller) syncMissingContainerBuildsBuild(build *latticev1.Build, sta
 		containerBuilds := make(map[string]string)
 		err := c.getContainerBuilds(build, path, containers, containerBuilds, containerBuildHashes, containerBuildStatuses)
 		if err != nil {
-			return nil
+			return err
 		}
 
 		statusJobInfo := latticev1.BuildStatusJob{

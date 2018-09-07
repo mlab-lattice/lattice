@@ -289,7 +289,12 @@ func (r *DefaultComponentResolver) resolveSystemComponents(
 	info ResolutionInfo,
 ) (*definitionv1.System, error) {
 	for name, c := range system.Components {
-		r.resolveComponentReferences(c, systemID, path.Child(name), ctx, depth, info)
+		c, err := r.resolveComponentReferences(c, systemID, path.Child(name), ctx, depth, info)
+		if err != nil {
+			return nil, err
+		}
+
+		system.Components[name] = c
 	}
 
 	return system, nil

@@ -57,6 +57,7 @@ func newBuild(version v1.SystemVersion) (*latticev1.Build, error) {
 		},
 		Spec: latticev1.BuildSpec{
 			Version: version,
+			Path:    tree.RootPath(),
 		},
 	}
 

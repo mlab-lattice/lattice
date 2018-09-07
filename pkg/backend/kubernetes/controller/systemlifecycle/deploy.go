@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"reflect"
 
+	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 )
 
@@ -11,10 +12,13 @@ func (c *Controller) updateDeployStatus(
 	deploy *latticev1.Deploy,
 	state latticev1.DeployState,
 	message string,
+	buildID *v1.BuildID,
 ) (*latticev1.Deploy, error) {
 	status := latticev1.DeployStatus{
 		State:   state,
 		Message: message,
+
+		BuildID: buildID,
 	}
 
 	if reflect.DeepEqual(deploy.Status, status) {

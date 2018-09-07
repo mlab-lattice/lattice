@@ -17,11 +17,16 @@ func (c *Controller) syncPendingDeploy(deploy *latticev1.Deploy) error {
 
 	if currentOwningAction != nil {
 		glog.V(5).Infof("Deploy %v/%v tried unsuccessfully to claim owning lifecycle action state", deploy.Namespace, deploy.Name)
-		_, err := c.updateDeployStatus(deploy, latticev1.DeployStateFailed, fmt.Sprintf("another lifecycle action is active: %v", currentOwningAction.String()))
+		_, err := c.updateDeployStatus(
+			deploy,
+			latticev1.DeployStateFailed,
+			fmt.Sprintf("another lifecycle action is active: %v", currentOwningAction.String()),
+			deploy.Status.BuildID,
+		)
 		return err
 	}
 
 	glog.V(5).Infof("Deploy %v/%v successfully claimed owning lifecycle action state", deploy.Namespace, deploy.Name)
-	_, err = c.updateDeployStatus(deploy, latticev1.DeployStateAccepted, "")
+	_, err = c.updateDeployStatus(deploy, latticev1.DeployStateAccepted, "", deploy.Status.BuildID)
 	return err
 }

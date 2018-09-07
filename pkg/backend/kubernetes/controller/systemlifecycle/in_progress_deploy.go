@@ -35,7 +35,7 @@ func (c *Controller) syncInProgressDeploy(deploy *latticev1.Deploy) error {
 		return fmt.Errorf("%v in unexpected state %v", system.Description(), system.Status.State)
 	}
 
-	deploy, err = c.updateDeployStatus(deploy, state, "")
+	deploy, err = c.updateDeployStatus(deploy, state, "", deploy.Status.BuildID)
 	if err != nil {
 		// FIXME: is it possible that the deploy is locked forever now?
 		return err
