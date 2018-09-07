@@ -22,7 +22,7 @@ type Command struct {
 	Subcommands      []*Command
 	UsageFunc        func(*Command) error
 	HelpFunc         func(*Command)
-	FlattenUsageTree bool
+	GroupUsageTree bool
 	cobraCmd         *cobra.Command
 	isSpaceSeparated bool
 }
@@ -107,9 +107,9 @@ func (c *Command) helpFuncWrapper(*cobra.Command, []string) {
 func (c *Command) defaultUsageFunc(*Command) error {
 	// TODO :: Seems like Usage & Help have the same use for us right now. (Perhaps just for default)
 	tmplName := template.DefaultTemplate
-	templateToExecute := template.DefaultUsageTemplateGrouped
-	if c.FlattenUsageTree {
-		templateToExecute = template.DefaultUsageTemplate
+	templateToExecute := template.DefaultUsageTemplate
+	if c.GroupUsageTree {
+		templateToExecute = template.DefaultUsageTemplateGrouped
 	}
 	return template.TryExecuteTemplate(tmplName, template.DefaultTemplate, templateToExecute, template.DefaultTemplateFuncs, c)
 }
@@ -117,9 +117,9 @@ func (c *Command) defaultUsageFunc(*Command) error {
 // defaultHelpFunc is the Help function that will be called if none is provided
 func (c *Command) defaultHelpFunc(*Command) {
 	tmplName := template.DefaultTemplate
-	templateToExecute := template.DefaultHelpTemplateGrouped
-	if c.FlattenUsageTree {
-		templateToExecute = template.DefaultHelpTemplate
+	templateToExecute := template.DefaultHelpTemplate
+	if c.GroupUsageTree {
+		templateToExecute = template.DefaultHelpTemplateGrouped
 	}
 	err := template.TryExecuteTemplate(tmplName, template.DefaultTemplate, templateToExecute, template.DefaultTemplateFuncs, c)
 	if err != nil {
