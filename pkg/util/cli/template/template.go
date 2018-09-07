@@ -31,7 +31,7 @@ Type {{.CommandPathBinary}}{{.CommandSeparator}}{{if .HasSubcommands}}{{ colored
 {{define "TemplateBody"}}{{template "Flags" .}}{{ $namePadding := 35 }}
 {{if .HasSubcommands}}
 {{ colored "Subcommands: " "white" }}{{range .AllSubcommands}}
-    {{ colored (rpad .CommandPathBinary $namePadding) "blue" }} {{ colored .Short "gray" }}{{end}}
+    {{ colored (rpad .CommandPathBinary $namePadding) "blue" }}{{.Short}}{{end}}
 {{end}}{{end}}
 
 {{define "TemplateGroupedBody"}}{{template "Flags" .}}{{ $namePadding := 35 }}
@@ -39,7 +39,7 @@ Type {{.CommandPathBinary}}{{.CommandSeparator}}{{if .HasSubcommands}}{{ colored
 {{ colored "Subcommands: " "white" }}
 {{range .SubcommandsByGroup}}
 {{ colored .GroupName "blue" }}: {{range .Commands}}
- {{ colored (rpad .Name $namePadding) "none" }} {{colored .Short "gray"}}{{end}}
+ {{ colored (rpad .Name $namePadding) "none" }}{{.Short}}{{end}}
 {{end}}{{end}}{{end}}
 
 {{define "HelpTemplate"}}{{template "HeaderHelp" .}}{{template "TemplateBody" .}}{{end}}
