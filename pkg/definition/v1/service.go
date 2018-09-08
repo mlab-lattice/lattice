@@ -33,7 +33,14 @@ func (s *Service) Type() component.Type {
 	return ServiceType
 }
 
-func (s *Service) Containers() []Container {
+func (s *Service) Containers() *WorkloadContainers {
+	return &WorkloadContainers{
+		Main:     s.Container,
+		Sidecars: s.Sidecars,
+	}
+}
+
+func (s *Service) containers() []Container {
 	containers := []Container{s.Container}
 	for _, sidecarContainer := range s.Sidecars {
 		containers = append(containers, sidecarContainer)
@@ -44,7 +51,7 @@ func (s *Service) Containers() []Container {
 
 func (s *Service) ContainerPorts() map[int32]ContainerPort {
 	ports := make(map[int32]ContainerPort)
-	for _, container := range s.Containers() {
+	for _, container := range s.containers() {
 		for portNum, port := range container.Ports {
 			ports[portNum] = port
 		}

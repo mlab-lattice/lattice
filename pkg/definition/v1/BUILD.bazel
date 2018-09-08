@@ -19,6 +19,8 @@ go_library(
         "service_node.go",
         "system.go",
         "system_node.go",
+        "tree.go",
+        "workload.go",
     ],
     importpath = "github.com/mlab-lattice/lattice/pkg/definition/v1",
     visibility = ["//visibility:public"],
