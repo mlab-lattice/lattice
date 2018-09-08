@@ -24,12 +24,24 @@ type InvalidPathError struct {
 	Message string
 }
 
-func NewInvalidNodePathError(message string) *InvalidPathError {
+func NewInvalidPathError(message string) *InvalidPathError {
 	return &InvalidPathError{message}
 }
 
 func (e *InvalidPathError) Error() string {
 	return e.Message
+}
+
+func NewInvalidDepthError(depth int) *InvalidDepthError {
+	return &InvalidDepthError{depth}
+}
+
+type InvalidDepthError struct {
+	depth int
+}
+
+func (e *InvalidDepthError) Error() string {
+	return fmt.Sprintf("invalid depth: %v", e.depth)
 }
 
 func RootPath() Path {
@@ -39,19 +51,19 @@ func RootPath() Path {
 // NewPath validates the string passed in and returns a Path.
 func NewPath(p string) (Path, error) {
 	if p == "" {
-		return "", NewInvalidNodePathError("cannot pass empty string as path")
+		return "", NewInvalidPathError("cannot pass empty string as path")
 	}
 
 	parts := strings.Split(p, PathSeparator)
 	if parts[0] != "" {
-		return "", NewInvalidNodePathError(fmt.Sprintf("path must start with '%v'", PathSeparator))
+		return "", NewInvalidPathError(fmt.Sprintf("path must start with '%v'", PathSeparator))
 	}
 
 	// allow for '/' (root), but other than that subpaths cannot be empty
 	if len(parts) > 2 {
 		for _, part := range parts[1:] {
 			if part == "" {
-				return "", NewInvalidNodePathError("path cannot contain empty subpath")
+				return "", NewInvalidPathError("path cannot contain empty subpath")
 			}
 		}
 	}
@@ -75,10 +87,10 @@ func NewPathFromDomain(d string) (Path, error) {
 // For example, child c of /a/b returns /a/b/c
 func (p Path) Child(child string) Path {
 	if p.IsRoot() {
-		return Path(fmt.Sprintf("/%v", child))
+		return Path(fmt.Sprintf("%v%v", PathSeparator, child))
 	}
 
-	return Path(fmt.Sprintf("%v/%v", p.String(), child))
+	return Path(fmt.Sprintf("%v%v%v", p.String(), PathSeparator, child))
 }
 
 // ToDomain returns the domain version of the path.
@@ -144,6 +156,35 @@ func (p Path) IsRoot() bool {
 	return p.Depth() == 0
 }
 
+// Prefix returns the path representing the first n subpaths of the path.
+// Returns an error if n > the path's length.
+func (p Path) Prefix(n int) (Path, error) {
+	if n == 0 {
+		return RootPath(), nil
+	}
+
+	if n < 0 {
+		return "", NewInvalidDepthError(n)
+	}
+
+	if p.Depth() < n {
+		return "", NewInvalidDepthError(n)
+	}
+
+	s := p.Subpaths()
+	return NewPath(fmt.Sprintf("%v%v", PathSeparator, strings.Join(s[:n], PathSeparator)))
+}
+
+// HasPrefix returns a bool indicating if the the path starts with the supplied prefix.
+func (p Path) HasPrefix(prefix Path) bool {
+	myPrefix, err := p.Prefix(prefix.Depth())
+	if err != nil {
+		return false
+	}
+
+	return prefix == myPrefix
+}
+
 // Shift returns a new Path shifted n components left as well as the components that were shifted out.
 // Returns an error if n > the path's length.
 // For example: /a/b/c shifted 2 would return /c and [a, b]
@@ -155,12 +196,7 @@ func (p Path) Shift(n int) (Path, []string, error) {
 	subpaths := p.Subpaths()
 	shifted := strings.Join(subpaths[n:], PathSeparator)
 
-	np, err := NewPath(fmt.Sprintf("%v%v", PathSeparator, shifted))
-	if err != nil {
-		// this shouldn't happen if p is a valid Path
-		return "", nil, err
-	}
-
+	np, _ := NewPath(fmt.Sprintf("%v%v", PathSeparator, shifted))
 	return np, subpaths[:n], nil
 }
 

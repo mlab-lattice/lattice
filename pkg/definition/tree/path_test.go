@@ -1,6 +1,7 @@
 package tree
 
 import (
+	"encoding/json"
 	"reflect"
 	"testing"
 )
@@ -244,6 +245,88 @@ func TestPath_Parent(t *testing.T) {
 	}
 }
 
+func TestPath_Prefix(t *testing.T) {
+	p := RootPath().Child("a").Child("b").Child("c")
+	_, err := p.Prefix(4)
+	if err == nil {
+		t.Errorf("expected error for long prefix but got none")
+	}
+
+	p2, err := p.Prefix(3)
+	if err != nil {
+		t.Errorf("expected no error for same length prefix but got one")
+	}
+
+	if p2 != p {
+		t.Errorf("expected paths to be the same for same length prefix but they were different (expected %v, got %v)", p.String(), p2.String())
+	}
+
+	p2, err = p.Prefix(2)
+	if err != nil {
+		t.Errorf("expected no error for smaller prefix but got one")
+	}
+
+	if p2 != RootPath().Child("a").Child("b") {
+		t.Errorf("unexpected prefix (expected %v, got %v)", RootPath().Child("a").Child("b").String(), p2.String())
+	}
+
+	p2, err = p.Prefix(1)
+	if err != nil {
+		t.Errorf("expected no error for smaller prefix but got one")
+	}
+
+	if p2 != RootPath().Child("a") {
+		t.Errorf("unexpected prefix (expected %v, got %v)", RootPath().Child("a").String(), p2.String())
+	}
+
+	p2, err = p.Prefix(0)
+	if err != nil {
+		t.Errorf("expected no error for 0 prefix but got one")
+	}
+
+	if p2 != RootPath() {
+		t.Errorf("unexpected prefix (expected %v, got %v)", p.String(), p2.String())
+	}
+
+	_, err = p.Prefix(-1)
+	if err == nil {
+		t.Errorf("expected error for negative depth prefix but got none")
+	}
+}
+
+func TestPath_HasPrefix(t *testing.T) {
+	p := RootPath().Child("a").Child("b").Child("c")
+	if !p.HasPrefix(p) {
+		t.Errorf("expected path to have itself as a prefix")
+	}
+
+	if !p.HasPrefix(RootPath().Child("a").Child("b")) {
+		t.Errorf("expected path to have its first two subpaths as a prefix")
+	}
+
+	if !p.HasPrefix(RootPath().Child("a")) {
+		t.Errorf("expected path to have its first subpath as a prefix")
+	}
+
+	if !p.HasPrefix(RootPath()) {
+		t.Errorf("expected path to have root as a prefix")
+	}
+
+	if p.HasPrefix(p.Child("d")) {
+		t.Errorf("expected path to not have a longer path as a prefix")
+	}
+
+	parent, _ := p.Parent()
+	if p.HasPrefix(parent.Child("d")) {
+		t.Errorf("expected path not to have a different leaf as a prefix")
+	}
+
+	grandparent, _ := parent.Parent()
+	if p.HasPrefix(grandparent.Child("d")) {
+		t.Errorf("expected path to not have different parent as prefix")
+	}
+}
+
 func TestPath_Shift(t *testing.T) {
 	tests := []struct {
 		d string
@@ -308,33 +391,81 @@ func TestPath_Shift(t *testing.T) {
 	}
 }
 
+func TestPathJSON(t *testing.T) {
+	p := RootPath().Child("a").Child("b")
+	data, err := json.Marshal(&p)
+	if err != nil {
+		t.Fatalf("got error marshalling path: %v", err)
+	}
+
+	p2 := Path("")
+	if err := json.Unmarshal(data, &p2); err != nil {
+		t.Fatalf("got error unmarshalling path: %v", err)
+	}
+
+	if p != p2 {
+		t.Errorf("marshalled path is not same as the original. expected %v, got %v", p.String(), p2.String())
+	}
+}
+
 func TestNewPathSubcomponent(t *testing.T) {
-	_, err := NewPathSubcomponentFromParts("/foo/Bar/BUZZ", "")
+	_, err := NewPathSubcomponent("/foo/Bar/BUZZ")
 	if err == nil {
 		t.Errorf("expected error for empty subcomponent but got nil")
 	}
 
-	_, err = NewPathSubcomponentFromParts("/foo/Bar/BUZZ", "bazz")
+	_, err = NewPathSubcomponent("/foo/Bar/BUZZ:")
+	if err == nil {
+		t.Errorf("expected error for empty subcomponent but got nil")
+	}
+
+	_, err = NewPathSubcomponent("/foo/Bar/BUZZ:bazz")
 	if err != nil {
 		t.Errorf("expected no error for valid path but got %v", err)
 	}
 }
 
-func TestPathSubcomponentParts(t *testing.T) {
-	n, err := NewPathSubcomponentFromParts("/foo/Bar/BUZZ", "bazz")
+func TestPathSubcomponent_Parts(t *testing.T) {
+	p := RootPath().Child("a").Child("b")
+	n, err := NewPathSubcomponentFromParts(p, "bazz")
 	if err != nil {
 		t.Errorf("expected no error for valid path subcomponent but got %v", err)
 	}
 
 	path, component := n.Parts()
-
-	expectedPath := "/foo/Bar/BUZZ"
-	if path.String() != expectedPath {
-		t.Errorf("expected path %v but got %v", expectedPath, path.String())
+	if path != p {
+		t.Errorf("expected path %v but got %v", p.String(), path.String())
 	}
 
 	expectedComponent := "bazz"
 	if component != expectedComponent {
-		t.Errorf("expected path %v but got %v", expectedPath, path.String())
+		t.Errorf("expected path %v but got %v", p.String(), path.String())
+	}
+
+	path = n.Path()
+	if path != p {
+		t.Errorf("expected path %v but got %v", p.String(), path.String())
+	}
+
+	if n.Subcomponent() != expectedComponent {
+		t.Errorf("expected component %v but got %v", expectedComponent, n.Subcomponent())
+	}
+}
+
+func TestPathSubcomponentJSON(t *testing.T) {
+	p := RootPath().Child("a").Child("b")
+	c, _ := NewPathSubcomponentFromParts(p, "foo")
+	data, err := json.Marshal(&c)
+	if err != nil {
+		t.Fatalf("got error marshalling path: %v", err)
+	}
+
+	c2 := PathSubcomponent("")
+	if err := json.Unmarshal(data, &c2); err != nil {
+		t.Fatalf("got error unmarshalling path: %v", err)
+	}
+
+	if c != c2 {
+		t.Errorf("marshalled path subcomponent is not same as the original. expected %v, got %v", c.String(), c2.String())
 	}
 }

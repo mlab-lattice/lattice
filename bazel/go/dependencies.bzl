@@ -76,6 +76,11 @@ GO_DEPENDENCIES = {
         },
     },
     "github.com/mlab-lattice/lattice": {
+        "github.com/armon/go-radix": {
+            "name": "com_github_armon_go_radix",
+            "tag": "v1.0.0",
+            "importpath": "github.com/armon/go-radix",
+        },
         "github.com/aws/aws-sdk-go": {
             "name": "com_github_aws_aws_sdk_go",
             "tag": "v1.12.35",
