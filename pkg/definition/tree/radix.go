@@ -52,6 +52,15 @@ func (r *Radix) Len() int {
 	return r.inner.Len()
 }
 
+// FIXME(kevindrosendahl): test this
+func (r *Radix) ReplacePrefix(p Path, other *Radix) {
+	r.DeletePrefix(p)
+	other.WalkPrefix(p, func(path Path, i interface{}) bool {
+		r.Insert(path, i)
+		return false
+	})
+}
+
 // Walk walks the tree in lexical order, invoking the supplied function
 // at each node.
 func (r *Radix) Walk(fn RadixWalkFn) {

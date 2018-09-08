@@ -66,6 +66,60 @@ func TestRadix_DeletePrefix(t *testing.T) {
 	})
 }
 
+func TestRadix_ReplacePrefix(t *testing.T) {
+	r1 := NewRadix()
+	r1.Insert(RootPath().Child("a"), 1)
+	r1.Insert(RootPath().Child("a").Child("b"), 1)
+	r1.Insert(RootPath().Child("a").Child("b").Child("c"), 1)
+	r1.Insert(RootPath().Child("a").Child("c"), 1)
+
+	r2 := NewRadix()
+	r2.Insert(RootPath().Child("a"), 2)
+	r2.Insert(RootPath().Child("b"), 2)
+	r2.Insert(RootPath().Child("a").Child("e").Child("f"), 2)
+	r2.Insert(RootPath().Child("a").Child("d"), 2)
+
+	overlap := []Path{
+		RootPath().Child("a").Child("b"),
+		RootPath().Child("a").Child("b").Child("c"),
+	}
+	for _, p := range overlap {
+		r2.Insert(p, 2)
+	}
+
+	r1.ReplacePrefix(RootPath().Child("a").Child("b"), r2)
+
+	if r1.Len() != 4 {
+		t.Fatalf("unexpected length. expected %v, got %v", 4, r1.Len())
+	}
+
+	_, ok := r1.Get(RootPath().Child("b"))
+	if ok {
+		t.Errorf("did not expect %v to be in tree", RootPath().Child("b"))
+	}
+
+	v, ok := r1.Get(RootPath().Child("a"))
+	if !ok {
+		t.Errorf("expected %v to be in the tree", RootPath().Child("a"))
+	}
+
+	if v != 1 {
+		t.Errorf("expected value for %v not to change", RootPath().Child("a"))
+	}
+
+	for _, p := range overlap {
+		v, ok := r1.Get(p)
+		if !ok {
+			t.Errorf("expected %v to be in the tree", RootPath().Child("a"))
+			continue
+		}
+
+		if v != 2 {
+			t.Errorf("expected %v to be 2", p)
+		}
+	}
+}
+
 func TestRadix_Walk(t *testing.T) {
 	r := NewRadix()
 	seedMixed(r)
