@@ -30,10 +30,10 @@ func (api *LatticeAPI) setupBuildEndpoints() {
 
 }
 
-// BuildSystem godoc
+// handleBuildSystem handler for build-system
 // @ID build-system
 // @Summary Build system
-// @Description build system
+// @Description Builds the system
 // @Router /systems/{system}/builds [post]
 // @Security ApiKeyAuth
 // @Tags builds
@@ -76,10 +76,10 @@ func (api *LatticeAPI) handleBuildSystem(c *gin.Context) {
 
 }
 
-// ListBuilds godoc
+// handleListBuilds handler for list-builds
 // @ID list-builds
-// @Summary Lists builds
-// @Description list builds
+// @Summary List builds
+// @Description List all builds for the system
 // @Router /systems/{system}/builds [get]
 // @Security ApiKeyAuth
 // @Tags builds
@@ -99,10 +99,10 @@ func (api *LatticeAPI) handleListBuilds(c *gin.Context) {
 	c.JSON(http.StatusOK, builds)
 }
 
-// GetBuild godoc
+// handleGetBuild handler for get-build
 // @ID get-build
 // @Summary Get build
-// @Description get build
+// @Description Gets the build object
 // @Router /systems/{system}/builds/{id} [get]
 // @Security ApiKeyAuth
 // @Tags builds
@@ -125,10 +125,10 @@ func (api *LatticeAPI) handleGetBuild(c *gin.Context) {
 	c.JSON(http.StatusOK, build)
 }
 
-// GetBuildLogs godoc
+// handleGetBuildLogs handler for get-build-logs
 // @ID get-build-logs
 // @Summary Get build logs
-// @Description get logs
+// @Description Retrieves/Streams logs for build
 // @Router /systems/{system}/builds/{id}/logs  [get]
 // @Security ApiKeyAuth
 // @Tags builds

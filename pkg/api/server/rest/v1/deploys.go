@@ -28,10 +28,10 @@ func (api *LatticeAPI) setupDeployEndpoints() {
 
 }
 
-// Deploy godoc
+// handleDeploySystem handler for deploy-system
 // @ID deploy-system
 // @Summary Deploy system
-// @Description build system
+// @Description Deploys the system
 // @Router /systems/{system}/deploys [post]
 // @Security ApiKeyAuth
 // @Tags deploys
@@ -91,10 +91,10 @@ func (api *LatticeAPI) handleDeploySystem(c *gin.Context) {
 	c.JSON(http.StatusCreated, deploy)
 }
 
-// ListDeploys godoc
+// handleListDeploys handler for list-deploys
 // @ID list-deploys
-// @Summary Lists deploys
-// @Description list deploys
+// @Summary List deploys
+// @Description Lists all deploys of the system
 // @Router /systems/{system}/deploys [get]
 // @Security ApiKeyAuth
 // @Tags deploys
@@ -114,10 +114,10 @@ func (api *LatticeAPI) handleListDeploys(c *gin.Context) {
 	c.JSON(http.StatusOK, deploys)
 }
 
-// GetDeploy godoc
+// handleGetDeploy handler for get-deploy
 // @ID get-deploy
 // @Summary Get deploy
-// @Description get deploy
+// @Description Gets the deploy object
 // @Router /systems/{system}/deploys/{id} [get]
 // @Security ApiKeyAuth
 // @Tags deploys

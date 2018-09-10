@@ -361,7 +361,7 @@ paths:
     get:
       consumes:
       - application/json
-      description: list builds
+      description: List all builds for the system
       operationId: list-builds
       parameters:
       - description: System ID
@@ -380,13 +380,13 @@ paths:
             type: array
       security:
       - ApiKeyAuth: []
-      summary: Lists builds
+      summary: List builds
       tags:
       - builds
     post:
       consumes:
       - application/json
-      description: build system
+      description: Builds the system
       operationId: build-system
       parameters:
       - description: System ID
@@ -424,7 +424,7 @@ paths:
     get:
       consumes:
       - application/json
-      description: get build
+      description: Gets the build object
       operationId: get-build
       parameters:
       - description: System ID
@@ -459,7 +459,7 @@ paths:
     get:
       consumes:
       - application/json
-      description: get logs
+      description: Retrieves/Streams logs for build
       operationId: get-build-logs
       parameters:
       - description: System ID
@@ -526,7 +526,7 @@ paths:
     get:
       consumes:
       - application/json
-      description: list deploys
+      description: Lists all deploys of the system
       operationId: list-deploys
       parameters:
       - description: System ID
@@ -545,13 +545,13 @@ paths:
             type: array
       security:
       - ApiKeyAuth: []
-      summary: Lists deploys
+      summary: List deploys
       tags:
       - deploys
     post:
       consumes:
       - application/json
-      description: build system
+      description: Deploys the system
       operationId: deploy-system
       parameters:
       - description: System ID
@@ -588,7 +588,7 @@ paths:
     get:
       consumes:
       - application/json
-      description: get deploy
+      description: Gets the deploy object
       operationId: get-deploy
       parameters:
       - description: System ID
@@ -623,7 +623,7 @@ paths:
     get:
       consumes:
       - application/json
-      description: list jobs
+      description: Lists all jobs
       operationId: list-jobs
       parameters:
       - description: System ID
@@ -649,7 +649,7 @@ paths:
     get:
       consumes:
       - application/json
-      description: get job
+      description: Gets the job object
       operationId: get-job
       parameters:
       - description: System ID
@@ -684,7 +684,7 @@ paths:
     get:
       consumes:
       - application/json
-      description: get job logs
+      description: Retrieves/Streams logs for job
       operationId: get-job-logs
       parameters:
       - description: System ID
@@ -772,7 +772,7 @@ paths:
     get:
       consumes:
       - application/json
-      description: get node pool
+      description: Gets the node pool object
       operationId: get-node-pool
       parameters:
       - description: System ID
@@ -807,7 +807,7 @@ paths:
     get:
       consumes:
       - application/json
-      description: list secrets
+      description: Lists all secrets
       operationId: list-secrets
       parameters:
       - description: System ID
@@ -832,7 +832,7 @@ paths:
     post:
       consumes:
       - application/json
-      description: set secret
+      description: Sets a new secret
       operationId: set-secret
       parameters:
       - description: System ID
@@ -869,8 +869,8 @@ paths:
     delete:
       consumes:
       - application/json
-      description: get system
-      operationId: delete-system
+      description: Unsets the specified secret
+      operationId: delete-secret
       parameters:
       - description: System ID
         in: path
@@ -897,13 +897,13 @@ paths:
             type: object
       security:
       - ApiKeyAuth: []
-      summary: Delete system
+      summary: Delete secret
       tags:
       - secrets
     get:
       consumes:
       - application/json
-      description: get secret
+      description: Gets the secret object
       operationId: get-secret
       parameters:
       - description: System ID
@@ -938,7 +938,7 @@ paths:
     get:
       consumes:
       - application/json
-      description: list services
+      description: Lists all services running in the system
       operationId: list-services
       parameters:
       - description: System ID
@@ -964,7 +964,7 @@ paths:
     get:
       consumes:
       - application/json
-      description: get service
+      description: Gets the service object
       operationId: get-service
       parameters:
       - description: System ID
@@ -999,7 +999,7 @@ paths:
     get:
       consumes:
       - application/json
-      description: get service logs
+      description: Retrieves/Streams logs for service
       operationId: get-service-logs
       parameters:
       - description: System ID
@@ -1066,7 +1066,7 @@ paths:
     get:
       consumes:
       - application/json
-      description: list teardowns
+      description: Lists all teardowns made to the system
       operationId: list-teardowns
       parameters:
       - description: System ID
@@ -1091,7 +1091,7 @@ paths:
     post:
       consumes:
       - application/json
-      description: teardown system
+      description: Tears the system down
       operationId: teardown-system
       parameters:
       - description: System ID
@@ -1126,7 +1126,7 @@ paths:
     get:
       consumes:
       - application/json
-      description: get teardown
+      description: Gets the teardown object
       operationId: get-teardown
       parameters:
       - description: System ID
@@ -1161,7 +1161,7 @@ paths:
     get:
       consumes:
       - application/json
-      description: list teardowns
+      description: List all versions of the specified system
       operationId: list-system-versions
       parameters:
       - description: System ID

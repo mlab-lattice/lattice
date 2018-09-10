@@ -25,7 +25,7 @@ func (api *LatticeAPI) setupNoodPoolEndpoints() {
 
 }
 
-// ListNodePools godoc
+// handleListNodePools handler for list-node-pools
 // @ID list-node-pools
 // @Summary Lists node pools
 // @Description list node pools
@@ -48,10 +48,10 @@ func (api *LatticeAPI) handleListNodePools(c *gin.Context) {
 	c.JSON(http.StatusOK, nodePools)
 }
 
-// GetNodePool godoc
+// handleGetNodePool handler for get-node-pool
 // @ID get-node-pool
 // @Summary Get node pool
-// @Description get node pool
+// @Description Gets the node pool object
 // @Router /systems/{system}/node-pools/{id} [get]
 // @Security ApiKeyAuth
 // @Tags node-pools

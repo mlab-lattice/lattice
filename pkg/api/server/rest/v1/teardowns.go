@@ -30,10 +30,10 @@ func (api *LatticeAPI) setupTeardownEndpoints() {
 
 }
 
-// Teardown godoc
+// handleTeardownSystem handler for teardown-system
 // @ID teardown-system
 // @Summary Teardown system
-// @Description teardown system
+// @Description Tears the system down
 // @Router /systems/{system}/teardowns [post]
 // @Security ApiKeyAuth
 // @Tags teardowns
@@ -55,10 +55,10 @@ func (api *LatticeAPI) handleTeardownSystem(c *gin.Context) {
 	c.JSON(http.StatusCreated, teardown)
 }
 
-// ListTeardowns godoc
+// handleListTeardowns handler for list-teardowns
 // @ID list-teardowns
 // @Summary Lists teardowns
-// @Description list teardowns
+// @Description Lists all teardowns made to the system
 // @Router /systems/{system}/teardowns [get]
 // @Security ApiKeyAuth
 // @Tags teardowns
@@ -78,10 +78,10 @@ func (api *LatticeAPI) handleListTeardowns(c *gin.Context) {
 	c.JSON(http.StatusOK, teardowns)
 }
 
-// GetTeardown godoc
+// handleGetTeardown handler for get-teardown
 // @ID get-teardown
 // @Summary Get teardown
-// @Description get teardown
+// @Description Gets the teardown object
 // @Router /systems/{system}/teardowns/{id} [get]
 // @Security ApiKeyAuth
 // @Tags teardowns

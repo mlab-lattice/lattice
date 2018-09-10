@@ -19,10 +19,10 @@ func (api *LatticeAPI) setupVersionsEndpoints() {
 
 }
 
-// ListSystemVersions godoc
+// handleListSystemVersions handler for list-system-versions
 // @ID list-system-versions
 // @Summary Lists system versions
-// @Description list teardowns
+// @Description List all versions of the specified system
 // @Router /systems/{system}/versions [get]
 // @Security ApiKeyAuth
 // @Tags versions

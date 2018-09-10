@@ -39,7 +39,7 @@ func (api *LatticeAPI) setupSystemEndpoints() {
 	api.router.DELETE(systemPath, api.handleDeleteSystem)
 }
 
-// CreateSystem godoc
+// handleCreateSystem handler for create-system
 // @ID create-system
 // @Summary Create system
 // @Description Create a new system
@@ -69,7 +69,7 @@ func (api *LatticeAPI) handleCreateSystem(c *gin.Context) {
 
 }
 
-// ListSystems godoc
+// handleListSystems handler for list-systems
 // @ID list-systems
 // @Summary List systems
 // @Description List systems
@@ -89,7 +89,7 @@ func (api *LatticeAPI) handleListSystems(c *gin.Context) {
 	c.JSON(http.StatusOK, systems)
 }
 
-// GetSystem godoc
+// handleGetSystem handler for get-system
 // @ID get-system
 // @Summary Get system
 // @Description get system
@@ -112,7 +112,7 @@ func (api *LatticeAPI) handleGetSystem(c *gin.Context) {
 	c.JSON(http.StatusOK, system)
 }
 
-// DeleteSystem godoc
+// handleDeleteSystem handler for delete-system
 // @ID delete-system
 // @Summary Delete system
 // @Description Delete system

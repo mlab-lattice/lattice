@@ -34,10 +34,10 @@ func (api *LatticeAPI) setupJobsEndpoints() {
 
 }
 
-// RunJob godoc
+// handleRunJob handler for run-job
 // @ID run-job
 // @Summary Run job
-// @Description run job
+// @Description Runs a new job
 // @Router /systems/{system}/builds [post]
 // @Security ApiKeyAuth
 // @Tags jobs
@@ -66,10 +66,10 @@ func (api *LatticeAPI) handleRunJob(c *gin.Context) {
 
 }
 
-// ListJobs godoc
+// handleListJobs handler for list-jobs
 // @ID list-jobs
 // @Summary Lists jobs
-// @Description list jobs
+// @Description Lists all jobs
 // @Router /systems/{system}/jobs [get]
 // @Security ApiKeyAuth
 // @Tags jobs
@@ -89,10 +89,10 @@ func (api *LatticeAPI) handleListJobs(c *gin.Context) {
 	c.JSON(http.StatusOK, jobs)
 }
 
-// GetJob godoc
+// handleGetJob handler for get-job
 // @ID get-job
 // @Summary Get job
-// @Description get job
+// @Description Gets the job object
 // @Router /systems/{system}/jobs/{id} [get]
 // @Security ApiKeyAuth
 // @Tags jobs
@@ -115,10 +115,10 @@ func (api *LatticeAPI) handleGetJob(c *gin.Context) {
 	c.JSON(http.StatusOK, job)
 }
 
-// GetJobLogs godoc
+// handleGetJobLogs handler for get-job-logs
 // @ID get-job-logs
 // @Summary Get job logs
-// @Description get job logs
+// @Description Retrieves/Streams logs for job
 // @Router /systems/{system}/jobs/{id}/logs  [get]
 // @Security ApiKeyAuth
 // @Tags jobs

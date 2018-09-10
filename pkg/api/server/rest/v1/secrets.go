@@ -35,10 +35,10 @@ func (api *LatticeAPI) setupSecretsEndpoints() {
 
 }
 
-// SetSecret godoc
+// handleSetSecret handler for set-secret
 // @ID set-secret
 // @Summary set secret
-// @Description set secret
+// @Description Sets a new secret
 // @Router /systems/{system}/secrets [post]
 // @Security ApiKeyAuth
 // @Tags secrets
@@ -90,10 +90,10 @@ func (api *LatticeAPI) handleSetSecret(c *gin.Context) {
 	c.Status(http.StatusOK)
 }
 
-// ListSecrets godoc
+// handleListSecrets handler for list-secrets
 // @ID list-secrets
 // @Summary Lists secrets
-// @Description list secrets
+// @Description Lists all secrets
 // @Router /systems/{system}/secrets [get]
 // @Security ApiKeyAuth
 // @Tags secrets
@@ -113,10 +113,10 @@ func (api *LatticeAPI) handleListSecrets(c *gin.Context) {
 	c.JSON(http.StatusOK, secrets)
 }
 
-// GetSecret godoc
+// handleGetSecret handler for get-secret
 // @ID get-secret
 // @Summary Get secret
-// @Description get secret
+// @Description Gets the secret object
 // @Router /systems/{system}/secrets/{secret} [get]
 // @Security ApiKeyAuth
 // @Tags secrets
@@ -163,10 +163,10 @@ func (api *LatticeAPI) handleGetSecret(c *gin.Context) {
 	c.JSON(http.StatusOK, secret)
 }
 
-// DeleteSystem godoc
-// @ID delete-system
-// @Summary Delete system
-// @Description get system
+// handleUnsetSecret handler for delete-secret
+// @ID delete-secret
+// @Summary Delete secret
+// @Description Unsets the specified secret
 // @Router /systems/{system}/secrets/{secret} [delete]
 // @Security ApiKeyAuth
 // @Tags secrets

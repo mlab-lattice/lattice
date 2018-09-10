@@ -32,10 +32,10 @@ func (api *LatticeAPI) setupServicesEndpoints() {
 
 }
 
-// ListServices godoc
+// handleListServices handler for list-services
 // @ID list-services
 // @Summary Lists services
-// @Description list services
+// @Description Lists all services running in the system
 // @Router /systems/{system}/services [get]
 // @Security ApiKeyAuth
 // @Tags services
@@ -82,10 +82,10 @@ func (api *LatticeAPI) handleListServices(c *gin.Context) {
 	c.JSON(http.StatusOK, services)
 }
 
-// handleGetService godoc
+// handleGetService handler for get-service
 // @ID get-service
 // @Summary Get service
-// @Description get service
+// @Description Gets the service object
 // @Router /systems/{system}/services/{id} [get]
 // @Security ApiKeyAuth
 // @Tags services
@@ -108,10 +108,10 @@ func (api *LatticeAPI) handleGetService(c *gin.Context) {
 	c.JSON(http.StatusOK, service)
 }
 
-// GetServiceLogs godoc
+// handleGetServiceLogs handler for get-service-logs
 // @ID get-service-logs
 // @Summary Get service logs
-// @Description get service logs
+// @Description Retrieves/Streams logs for service
 // @Router /systems/{system}/services/{id}/logs  [get]
 // @Security ApiKeyAuth
 // @Tags services

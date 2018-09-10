@@ -189,7 +189,7 @@
                         "ApiKeyAuth": []
                     }
                 ],
-                "description": "list builds",
+                "description": "List all builds for the system",
                 "consumes": [
                     "application/json"
                 ],
@@ -199,7 +199,7 @@
                 "tags": [
                     "builds"
                 ],
-                "summary": "Lists builds",
+                "summary": "List builds",
                 "operationId": "list-builds",
                 "parameters": [
                     {
@@ -231,7 +231,7 @@
                         "ApiKeyAuth": []
                     }
                 ],
-                "description": "build system",
+                "description": "Builds the system",
                 "consumes": [
                     "application/json"
                 ],
@@ -287,7 +287,7 @@
                         "ApiKeyAuth": []
                     }
                 ],
-                "description": "get build",
+                "description": "Gets the build object",
                 "consumes": [
                     "application/json"
                 ],
@@ -340,7 +340,7 @@
                         "ApiKeyAuth": []
                     }
                 ],
-                "description": "get logs",
+                "description": "Retrieves/Streams logs for build",
                 "consumes": [
                     "application/json"
                 ],
@@ -441,7 +441,7 @@
                         "ApiKeyAuth": []
                     }
                 ],
-                "description": "list deploys",
+                "description": "Lists all deploys of the system",
                 "consumes": [
                     "application/json"
                 ],
@@ -451,7 +451,7 @@
                 "tags": [
                     "deploys"
                 ],
-                "summary": "Lists deploys",
+                "summary": "List deploys",
                 "operationId": "list-deploys",
                 "parameters": [
                     {
@@ -480,7 +480,7 @@
                         "ApiKeyAuth": []
                     }
                 ],
-                "description": "build system",
+                "description": "Deploys the system",
                 "consumes": [
                     "application/json"
                 ],
@@ -536,7 +536,7 @@
                         "ApiKeyAuth": []
                     }
                 ],
-                "description": "get deploy",
+                "description": "Gets the deploy object",
                 "consumes": [
                     "application/json"
                 ],
@@ -589,7 +589,7 @@
                         "ApiKeyAuth": []
                     }
                 ],
-                "description": "list jobs",
+                "description": "Lists all jobs",
                 "consumes": [
                     "application/json"
                 ],
@@ -630,7 +630,7 @@
                         "ApiKeyAuth": []
                     }
                 ],
-                "description": "get job",
+                "description": "Gets the job object",
                 "consumes": [
                     "application/json"
                 ],
@@ -683,7 +683,7 @@
                         "ApiKeyAuth": []
                     }
                 ],
-                "description": "get job logs",
+                "description": "Retrieves/Streams logs for job",
                 "consumes": [
                     "application/json"
                 ],
@@ -818,7 +818,7 @@
                         "ApiKeyAuth": []
                     }
                 ],
-                "description": "get node pool",
+                "description": "Gets the node pool object",
                 "consumes": [
                     "application/json"
                 ],
@@ -871,7 +871,7 @@
                         "ApiKeyAuth": []
                     }
                 ],
-                "description": "list secrets",
+                "description": "Lists all secrets",
                 "consumes": [
                     "application/json"
                 ],
@@ -910,7 +910,7 @@
                         "ApiKeyAuth": []
                     }
                 ],
-                "description": "set secret",
+                "description": "Sets a new secret",
                 "consumes": [
                     "application/json"
                 ],
@@ -966,7 +966,7 @@
                         "ApiKeyAuth": []
                     }
                 ],
-                "description": "get secret",
+                "description": "Gets the secret object",
                 "consumes": [
                     "application/json"
                 ],
@@ -1017,7 +1017,7 @@
                         "ApiKeyAuth": []
                     }
                 ],
-                "description": "get system",
+                "description": "Unsets the specified secret",
                 "consumes": [
                     "application/json"
                 ],
@@ -1027,8 +1027,8 @@
                 "tags": [
                     "secrets"
                 ],
-                "summary": "Delete system",
-                "operationId": "delete-system",
+                "summary": "Delete secret",
+                "operationId": "delete-secret",
                 "parameters": [
                     {
                         "type": "string",
@@ -1070,7 +1070,7 @@
                         "ApiKeyAuth": []
                     }
                 ],
-                "description": "list services",
+                "description": "Lists all services running in the system",
                 "consumes": [
                     "application/json"
                 ],
@@ -1111,7 +1111,7 @@
                         "ApiKeyAuth": []
                     }
                 ],
-                "description": "get service",
+                "description": "Gets the service object",
                 "consumes": [
                     "application/json"
                 ],
@@ -1164,7 +1164,7 @@
                         "ApiKeyAuth": []
                     }
                 ],
-                "description": "get service logs",
+                "description": "Retrieves/Streams logs for service",
                 "consumes": [
                     "application/json"
                 ],
@@ -1265,7 +1265,7 @@
                         "ApiKeyAuth": []
                     }
                 ],
-                "description": "list teardowns",
+                "description": "Lists all teardowns made to the system",
                 "consumes": [
                     "application/json"
                 ],
@@ -1304,7 +1304,7 @@
                         "ApiKeyAuth": []
                     }
                 ],
-                "description": "teardown system",
+                "description": "Tears the system down",
                 "consumes": [
                     "application/json"
                 ],
@@ -1357,7 +1357,7 @@
                         "ApiKeyAuth": []
                     }
                 ],
-                "description": "get teardown",
+                "description": "Gets the teardown object",
                 "consumes": [
                     "application/json"
                 ],
@@ -1410,7 +1410,7 @@
                         "ApiKeyAuth": []
                     }
                 ],
-                "description": "list teardowns",
+                "description": "List all versions of the specified system",
                 "consumes": [
                     "application/json"
                 ],
