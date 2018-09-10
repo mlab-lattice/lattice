@@ -27,7 +27,7 @@ type System struct {
 	ID SystemID `json:"id"`
 	// State. One of (pending, failed, deleting, stable, degraded, scaling, updating)
 	State SystemState `json:"state"`
-	// git url for for where the definition lives in
+	// URL for for where the system definition resides in.
 	DefinitionURL string `json:"definitionUrl" example:"git://github.com/foo/foo.git"`
 	// map for service path and services currently running in the system
 	Services map[tree.Path]Service `json:"services"`

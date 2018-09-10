@@ -621,6 +621,60 @@
                         }
                     }
                 }
+            },
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Runs a new job",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "jobs"
+                ],
+                "summary": "Run job",
+                "operationId": "run-job",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "System ID",
+                        "name": "system",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Create build",
+                        "name": "jobRequest",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object",
+                            "$ref": "#/definitions/rest.RunJobRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "$ref": "#/definitions/v1.Job"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "$ref": "#/definitions/v1.ErrorResponse"
+                        }
+                    }
+                }
             }
         },
         "/systems/{system}/jobs/{id}": {
@@ -1450,6 +1504,7 @@
             "type": "object",
             "properties": {
                 "version": {
+                    "description": "Version of system to build",
                     "type": "object",
                     "$ref": "#/definitions/v1.SystemVersion"
                 }
@@ -1459,11 +1514,13 @@
             "type": "object",
             "properties": {
                 "definitionUrl": {
-                    "type": "string"
+                    "description": "URL for for where the system definition resides in.",
+                    "type": "string",
+                    "example": "git://github.com/foo/foo.git"
                 },
                 "id": {
-                    "type": "object",
-                    "$ref": "#/definitions/v1.SystemID"
+                    "description": "System ID",
+                    "type": "string"
                 }
             }
         },
@@ -1471,10 +1528,11 @@
             "type": "object",
             "properties": {
                 "buildId": {
-                    "type": "object",
-                    "$ref": "#/definitions/v1.BuildID"
+                    "description": "BuildID to deploy",
+                    "type": "string"
                 },
                 "version": {
+                    "description": "Version of system to deploy",
                     "type": "object",
                     "$ref": "#/definitions/v1.SystemVersion"
                 }
@@ -1484,15 +1542,18 @@
             "type": "object",
             "properties": {
                 "command": {
+                    "description": "Command to run",
                     "type": "array",
                     "items": {
                         "type": "string"
                     }
                 },
                 "environment": {
+                    "description": "Container environment",
                     "type": "string"
                 },
                 "path": {
+                    "description": "Path to run the job agsinst",
                     "type": "string"
                 }
             }
@@ -1501,6 +1562,7 @@
             "type": "object",
             "properties": {
                 "value": {
+                    "description": "Secret Value",
                     "type": "string"
                 }
             }
@@ -1514,8 +1576,7 @@
                 },
                 "id": {
                     "description": "ID",
-                    "type": "object",
-                    "$ref": "#/definitions/v1.BuildID"
+                    "type": "string"
                 },
                 "services": {
                     "description": "Services maps service paths (e.g. /foo/bar/buzz) to the\nstatus of the build for that service in the Build.",
@@ -1527,57 +1588,36 @@
                 },
                 "state": {
                     "description": "State",
-                    "type": "object",
-                    "$ref": "#/definitions/v1.BuildState"
+                    "type": "string"
                 },
                 "version": {
                     "description": "Version",
-                    "type": "object",
-                    "$ref": "#/definitions/v1.SystemVersion"
+                    "type": "string"
                 }
             }
-        },
-        "v1.BuildID": {
-            "type": "object"
-        },
-        "v1.BuildState": {
-            "type": "object"
         },
         "v1.Deploy": {
             "type": "object",
             "properties": {
                 "buildId": {
                     "description": "Build ID",
-                    "type": "object",
-                    "$ref": "#/definitions/v1.BuildID"
+                    "type": "string"
                 },
                 "id": {
                     "description": "ID",
-                    "type": "object",
-                    "$ref": "#/definitions/v1.DeployID"
+                    "type": "string"
                 },
                 "state": {
                     "description": "State",
-                    "type": "object",
-                    "$ref": "#/definitions/v1.DeployState"
+                    "type": "string"
                 }
             }
-        },
-        "v1.DeployID": {
-            "type": "object"
-        },
-        "v1.DeployState": {
-            "type": "object"
-        },
-        "v1.ErrorCode": {
-            "type": "object"
         },
         "v1.ErrorResponse": {
             "type": "object",
             "properties": {
                 "code": {
-                    "type": "object",
-                    "$ref": "#/definitions/v1.ErrorCode"
+                    "type": "string"
                 },
                 "message": {
                     "type": "string",
@@ -1592,8 +1632,7 @@
                     "type": "string"
                 },
                 "id": {
-                    "type": "object",
-                    "$ref": "#/definitions/v1.JobID"
+                    "type": "string"
                 },
                 "path": {
                     "type": "string"
@@ -1602,16 +1641,9 @@
                     "type": "string"
                 },
                 "state": {
-                    "type": "object",
-                    "$ref": "#/definitions/v1.JobState"
+                    "type": "string"
                 }
             }
-        },
-        "v1.JobID": {
-            "type": "object"
-        },
-        "v1.JobState": {
-            "type": "object"
         },
         "v1.NodePool": {
             "type": "object",
@@ -1634,8 +1666,7 @@
                     "type": "string"
                 },
                 "state": {
-                    "type": "object",
-                    "$ref": "#/definitions/v1.NodePoolState"
+                    "type": "string"
                 }
             }
         },
@@ -1649,9 +1680,6 @@
                     "type": "string"
                 }
             }
-        },
-        "v1.NodePoolState": {
-            "type": "object"
         },
         "v1.Result": {
             "type": "object"
@@ -1681,8 +1709,7 @@
                     "$ref": "#/definitions/v1.ServiceFailureInfo"
                 },
                 "id": {
-                    "type": "object",
-                    "$ref": "#/definitions/v1.ServiceID"
+                    "type": "string"
                 },
                 "instances": {
                     "type": "array",
@@ -1703,8 +1730,7 @@
                     "type": "integer"
                 },
                 "state": {
-                    "type": "object",
-                    "$ref": "#/definitions/v1.ServiceState"
+                    "type": "string"
                 },
                 "terminatingInstances": {
                     "type": "integer"
@@ -1725,24 +1751,17 @@
                 }
             }
         },
-        "v1.ServiceID": {
-            "type": "object"
-        },
-        "v1.ServiceState": {
-            "type": "object"
-        },
         "v1.System": {
             "type": "object",
             "properties": {
                 "definitionUrl": {
-                    "description": "git url for for where the definition lives in",
+                    "description": "URL for for where the system definition resides in.",
                     "type": "string",
                     "example": "git://github.com/foo/foo.git"
                 },
                 "id": {
                     "description": "System ID",
-                    "type": "object",
-                    "$ref": "#/definitions/v1.SystemID"
+                    "type": "string"
                 },
                 "services": {
                     "description": "map for service path and services currently running in the system",
@@ -1750,16 +1769,9 @@
                 },
                 "state": {
                     "description": "State. One of (pending, failed, deleting, stable, degraded, scaling, updating)",
-                    "type": "object",
-                    "$ref": "#/definitions/v1.SystemState"
+                    "type": "string"
                 }
             }
-        },
-        "v1.SystemID": {
-            "type": "object"
-        },
-        "v1.SystemState": {
-            "type": "object"
         },
         "v1.SystemVersion": {
             "type": "object"
@@ -1769,21 +1781,13 @@
             "properties": {
                 "id": {
                     "description": "ID",
-                    "type": "object",
-                    "$ref": "#/definitions/v1.TeardownID"
+                    "type": "string"
                 },
                 "state": {
                     "description": "State",
-                    "type": "object",
-                    "$ref": "#/definitions/v1.TeardownState"
+                    "type": "string"
                 }
             }
-        },
-        "v1.TeardownID": {
-            "type": "object"
-        },
-        "v1.TeardownState": {
-            "type": "object"
         }
     },
     "securityDefinitions": {

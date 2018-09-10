@@ -38,7 +38,7 @@ func (api *LatticeAPI) setupJobsEndpoints() {
 // @ID run-job
 // @Summary Run job
 // @Description Runs a new job
-// @Router /systems/{system}/builds [post]
+// @Router /systems/{system}/jobs [post]
 // @Security ApiKeyAuth
 // @Tags jobs
 // @Param system path string true "System ID"

@@ -4,39 +4,47 @@ definitions:
     properties:
       version:
         $ref: '#/definitions/v1.SystemVersion'
+        description: Version of system to build
         type: object
     type: object
   rest.CreateSystemRequest:
     properties:
       definitionUrl:
+        description: URL for for where the system definition resides in.
+        example: git://github.com/foo/foo.git
         type: string
       id:
-        $ref: '#/definitions/v1.SystemID'
-        type: object
+        description: System ID
+        type: string
     type: object
   rest.DeployRequest:
     properties:
       buildId:
-        $ref: '#/definitions/v1.BuildID'
-        type: object
+        description: BuildID to deploy
+        type: string
       version:
         $ref: '#/definitions/v1.SystemVersion'
+        description: Version of system to deploy
         type: object
     type: object
   rest.RunJobRequest:
     properties:
       command:
+        description: Command to run
         items:
           type: string
         type: array
       environment:
+        description: Container environment
         type: string
       path:
+        description: Path to run the job agsinst
         type: string
     type: object
   rest.SetSecretRequest:
     properties:
       value:
+        description: Secret Value
         type: string
     type: object
   v1.Build:
@@ -45,9 +53,8 @@ definitions:
         description: Completion timestamp
         type: string
       id:
-        $ref: '#/definitions/v1.BuildID'
         description: ID
-        type: object
+        type: string
       services:
         description: |-
           Services maps service paths (e.g. /foo/bar/buzz) to the
@@ -57,44 +64,28 @@ definitions:
         description: Start timestamp
         type: string
       state:
-        $ref: '#/definitions/v1.BuildState'
         description: State
-        type: object
+        type: string
       version:
-        $ref: '#/definitions/v1.SystemVersion'
         description: Version
-        type: object
-    type: object
-  v1.BuildID:
-    type: object
-  v1.BuildState:
+        type: string
     type: object
   v1.Deploy:
     properties:
       buildId:
-        $ref: '#/definitions/v1.BuildID'
         description: Build ID
-        type: object
+        type: string
       id:
-        $ref: '#/definitions/v1.DeployID'
         description: ID
-        type: object
+        type: string
       state:
-        $ref: '#/definitions/v1.DeployState'
         description: State
-        type: object
-    type: object
-  v1.DeployID:
-    type: object
-  v1.DeployState:
-    type: object
-  v1.ErrorCode:
+        type: string
     type: object
   v1.ErrorResponse:
     properties:
       code:
-        $ref: '#/definitions/v1.ErrorCode'
-        type: object
+        type: string
       message:
         example: status bad request
         type: string
@@ -104,19 +95,13 @@ definitions:
       completionTimestamp:
         type: string
       id:
-        $ref: '#/definitions/v1.JobID'
-        type: object
+        type: string
       path:
         type: string
       startTimestamp:
         type: string
       state:
-        $ref: '#/definitions/v1.JobState'
-        type: object
-    type: object
-  v1.JobID:
-    type: object
-  v1.JobState:
+        type: string
     type: object
   v1.NodePool:
     properties:
@@ -133,8 +118,7 @@ definitions:
       path:
         type: string
       state:
-        $ref: '#/definitions/v1.NodePoolState'
-        type: object
+        type: string
     type: object
   v1.NodePoolFailureInfo:
     properties:
@@ -142,8 +126,6 @@ definitions:
         type: string
       time:
         type: string
-    type: object
-  v1.NodePoolState:
     type: object
   v1.Result:
     type: object
@@ -164,8 +146,7 @@ definitions:
         $ref: '#/definitions/v1.ServiceFailureInfo'
         type: object
       id:
-        $ref: '#/definitions/v1.ServiceID'
-        type: object
+        type: string
       instances:
         items:
           type: string
@@ -179,8 +160,7 @@ definitions:
       staleInstances:
         type: integer
       state:
-        $ref: '#/definitions/v1.ServiceState'
-        type: object
+        type: string
       terminatingInstances:
         type: integer
       updatedInstances:
@@ -193,49 +173,33 @@ definitions:
       time:
         type: string
     type: object
-  v1.ServiceID:
-    type: object
-  v1.ServiceState:
-    type: object
   v1.System:
     properties:
       definitionUrl:
-        description: git url for for where the definition lives in
+        description: URL for for where the system definition resides in.
         example: git://github.com/foo/foo.git
         type: string
       id:
-        $ref: '#/definitions/v1.SystemID'
         description: System ID
-        type: object
+        type: string
       services:
         description: map for service path and services currently running in the system
         type: object
       state:
-        $ref: '#/definitions/v1.SystemState'
         description: State. One of (pending, failed, deleting, stable, degraded, scaling,
           updating)
-        type: object
-    type: object
-  v1.SystemID:
-    type: object
-  v1.SystemState:
+        type: string
     type: object
   v1.SystemVersion:
     type: object
   v1.Teardown:
     properties:
       id:
-        $ref: '#/definitions/v1.TeardownID'
         description: ID
-        type: object
+        type: string
       state:
-        $ref: '#/definitions/v1.TeardownState'
         description: State
-        type: object
-    type: object
-  v1.TeardownID:
-    type: object
-  v1.TeardownState:
+        type: string
     type: object
 host: localhost:8876
 info:
@@ -643,6 +607,42 @@ paths:
       security:
       - ApiKeyAuth: []
       summary: Lists jobs
+      tags:
+      - jobs
+    post:
+      consumes:
+      - application/json
+      description: Runs a new job
+      operationId: run-job
+      parameters:
+      - description: System ID
+        in: path
+        name: system
+        required: true
+        type: string
+      - description: Create build
+        in: body
+        name: jobRequest
+        required: true
+        schema:
+          $ref: '#/definitions/rest.RunJobRequest'
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/v1.Job'
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/v1.ErrorResponse'
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: Run job
       tags:
       - jobs
   /systems/{system}/jobs/{id}:
