@@ -26,7 +26,7 @@ type DeployRequest struct {
 }
 
 type RunJobRequest struct {
-	// Path to run the job agsinst
+	// Path to run the job against
 	Path tree.Path `json:"path"`
 	// Command to run
 	Command []string `json:"command"`
