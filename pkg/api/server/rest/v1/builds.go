@@ -35,7 +35,9 @@ func (api *LatticeAPI) setupBuildEndpoints() {
 // @Summary Build system
 // @Description build system
 // @Router /systems/{system}/builds [post]
+// @Security ApiKeyAuth
 // @Tags builds
+// @Security ApiKeyAuth
 // @Param system path string true "System ID"
 // @Param buildRequest body rest.BuildRequest true "Create build"
 // @Accept  json
@@ -79,6 +81,7 @@ func (api *LatticeAPI) handleBuildSystem(c *gin.Context) {
 // @Summary Lists builds
 // @Description list builds
 // @Router /systems/{system}/builds [get]
+// @Security ApiKeyAuth
 // @Tags builds
 // @Param system path string true "System ID"
 // @Accept  json
@@ -101,6 +104,7 @@ func (api *LatticeAPI) handleListBuilds(c *gin.Context) {
 // @Summary Get build
 // @Description get build
 // @Router /systems/{system}/builds/{id} [get]
+// @Security ApiKeyAuth
 // @Tags builds
 // @Param system path string true "System ID"
 // @Param id path string true "Build ID"
@@ -126,6 +130,7 @@ func (api *LatticeAPI) handleGetBuild(c *gin.Context) {
 // @Summary Get build logs
 // @Description get logs
 // @Router /systems/{system}/builds/{id}/logs  [get]
+// @Security ApiKeyAuth
 // @Tags builds
 // @Param system path string true "System ID"
 // @Param id path string true "Build ID"

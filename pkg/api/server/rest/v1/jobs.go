@@ -39,6 +39,7 @@ func (api *LatticeAPI) setupJobsEndpoints() {
 // @Summary Run job
 // @Description run job
 // @Router /systems/{system}/builds [post]
+// @Security ApiKeyAuth
 // @Tags jobs
 // @Param system path string true "System ID"
 // @Param jobRequest body rest.RunJobRequest true "Create build"
@@ -70,6 +71,7 @@ func (api *LatticeAPI) handleRunJob(c *gin.Context) {
 // @Summary Lists jobs
 // @Description list jobs
 // @Router /systems/{system}/jobs [get]
+// @Security ApiKeyAuth
 // @Tags jobs
 // @Param system path string true "System ID"
 // @Accept  json
@@ -92,6 +94,7 @@ func (api *LatticeAPI) handleListJobs(c *gin.Context) {
 // @Summary Get job
 // @Description get job
 // @Router /systems/{system}/jobs/{id} [get]
+// @Security ApiKeyAuth
 // @Tags jobs
 // @Param system path string true "System ID"
 // @Param id path string true "Job ID"
@@ -117,6 +120,7 @@ func (api *LatticeAPI) handleGetJob(c *gin.Context) {
 // @Summary Get job logs
 // @Description get job logs
 // @Router /systems/{system}/jobs/{id}/logs  [get]
+// @Security ApiKeyAuth
 // @Tags jobs
 // @Param system path string true "System ID"
 // @Param id path string true "Job ID"

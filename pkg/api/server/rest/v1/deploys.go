@@ -33,6 +33,7 @@ func (api *LatticeAPI) setupDeployEndpoints() {
 // @Summary Deploy system
 // @Description build system
 // @Router /systems/{system}/deploys [post]
+// @Security ApiKeyAuth
 // @Tags deploys
 // @Param system path string true "System ID"
 // @Param deployRequest body rest.DeployRequest true "Create deploy"
@@ -95,6 +96,7 @@ func (api *LatticeAPI) handleDeploySystem(c *gin.Context) {
 // @Summary Lists deploys
 // @Description list deploys
 // @Router /systems/{system}/deploys [get]
+// @Security ApiKeyAuth
 // @Tags deploys
 // @Param system path string true "System ID"
 // @Accept  json
@@ -117,6 +119,7 @@ func (api *LatticeAPI) handleListDeploys(c *gin.Context) {
 // @Summary Get deploy
 // @Description get deploy
 // @Router /systems/{system}/deploys/{id} [get]
+// @Security ApiKeyAuth
 // @Tags deploys
 // @Param system path string true "System ID"
 // @Param id path string true "Deploy ID"

@@ -44,6 +44,7 @@ func (api *LatticeAPI) setupSystemEndpoints() {
 // @Summary Create system
 // @Description Create a new system
 // @Router /systems [post]
+// @Security ApiKeyAuth
 // @Tags systems
 // @Param account body rest.CreateSystemRequest true "Create system"
 // @Accept  json
@@ -73,6 +74,7 @@ func (api *LatticeAPI) handleCreateSystem(c *gin.Context) {
 // @Summary List systems
 // @Description List systems
 // @Router /systems [get]
+// @Security ApiKeyAuth
 // @Tags systems
 // @Accept  json
 // @Produce  json
@@ -92,6 +94,7 @@ func (api *LatticeAPI) handleListSystems(c *gin.Context) {
 // @Summary Get system
 // @Description get system
 // @Router /systems/{system} [get]
+// @Security ApiKeyAuth
 // @Tags systems
 // @Param system path string true "System ID"
 // @Accept  json
@@ -114,6 +117,7 @@ func (api *LatticeAPI) handleGetSystem(c *gin.Context) {
 // @Summary Delete system
 // @Description Delete system
 // @Router /systems/{system} [delete]
+// @Security ApiKeyAuth
 // @Tags systems
 // @Accept  json
 // @Produce  json

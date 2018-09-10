@@ -35,6 +35,7 @@ func (api *LatticeAPI) setupTeardownEndpoints() {
 // @Summary Teardown system
 // @Description teardown system
 // @Router /systems/{system}/teardowns [post]
+// @Security ApiKeyAuth
 // @Tags teardowns
 // @Param system path string true "System ID"
 // @Accept  json
@@ -59,6 +60,7 @@ func (api *LatticeAPI) handleTeardownSystem(c *gin.Context) {
 // @Summary Lists teardowns
 // @Description list teardowns
 // @Router /systems/{system}/teardowns [get]
+// @Security ApiKeyAuth
 // @Tags teardowns
 // @Param system path string true "System ID"
 // @Accept  json
@@ -81,6 +83,7 @@ func (api *LatticeAPI) handleListTeardowns(c *gin.Context) {
 // @Summary Get teardown
 // @Description get teardown
 // @Router /systems/{system}/teardowns/{id} [get]
+// @Security ApiKeyAuth
 // @Tags teardowns
 // @Param system path string true "System ID"
 // @Param id path string true "Teardown ID"

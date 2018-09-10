@@ -37,6 +37,7 @@ func (api *LatticeAPI) setupServicesEndpoints() {
 // @Summary Lists services
 // @Description list services
 // @Router /systems/{system}/services [get]
+// @Security ApiKeyAuth
 // @Tags services
 // @Param system path string true "System ID"
 // @Accept  json
@@ -86,6 +87,7 @@ func (api *LatticeAPI) handleListServices(c *gin.Context) {
 // @Summary Get service
 // @Description get service
 // @Router /systems/{system}/services/{id} [get]
+// @Security ApiKeyAuth
 // @Tags services
 // @Param system path string true "System ID"
 // @Param id path string true "Service ID"
@@ -111,6 +113,7 @@ func (api *LatticeAPI) handleGetService(c *gin.Context) {
 // @Summary Get service logs
 // @Description get service logs
 // @Router /systems/{system}/services/{id}/logs  [get]
+// @Security ApiKeyAuth
 // @Tags services
 // @Param system path string true "System ID"
 // @Param id path string true "Service ID"
