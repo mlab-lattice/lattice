@@ -242,7 +242,7 @@ func (c *Controller) newDeployment(service *latticev1.Service, nodePool *lattice
 }
 
 func deploymentName(service *latticev1.Service) string {
-	// TODO(kevinrosendahl): May change this to UUID when a Service can have multiple Deployments (e.g. Blue/Green & Canary)
+	// TODO(kevindrosendahl): May change this to UUID when a Service can have multiple Deployments (e.g. Blue/Green & Canary)
 	return fmt.Sprintf("lattice-service-%s", service.Name)
 }
 

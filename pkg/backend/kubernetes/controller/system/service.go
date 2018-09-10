@@ -115,7 +115,7 @@ func (c *Controller) syncSystemServices(system *latticev1.System) (map[tree.Path
 
 	// Loop through all of the Services that exist in the System's namespace, and delete any
 	// that are no longer a part of the System's Spec
-	// TODO(kevinrosendahl): should we wait until all other services are successfully rolled out before deleting these?
+	// TODO(kevindrosendahl): should we wait until all other services are successfully rolled out before deleting these?
 	// need to figure out what the rollout/automatic roll-back strategy is
 	allServices, err := c.serviceLister.Services(systemNamespace).List(labels.Everything())
 	if err != nil {

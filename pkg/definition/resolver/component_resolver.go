@@ -260,7 +260,7 @@ func (r *DefaultComponentResolver) resolveComponentReferences(
 	info ResolutionInfo,
 ) (component.Interface, error) {
 	// If the reference resolved to another reference, resolve that reference.
-	// FIXME(kevinrosendahl): detect cycles
+	// FIXME(kevindrosendahl): detect cycles
 	if resolvedRef, ok := c.(*definitionv1.Reference); ok {
 		return r.resolveReference(systemID, path, ctx, resolvedRef, depth, info)
 	}

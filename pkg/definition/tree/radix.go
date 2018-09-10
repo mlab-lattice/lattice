@@ -52,7 +52,9 @@ func (r *Radix) Len() int {
 	return r.inner.Len()
 }
 
-// FIXME(kevindrosendahl): test this
+// ReplacePrefix removes all entries under the supplied prefix in the radix tree
+// and replaces them with the entries under the prefix from the other supplied
+// radix tree.
 func (r *Radix) ReplacePrefix(p Path, other *Radix) {
 	r.DeletePrefix(p)
 	other.WalkPrefix(p, func(path Path, i interface{}) bool {
@@ -99,16 +101,16 @@ type JSONRadix struct {
 
 // MarshalJSON fulfills the json.Marshaller interface.
 func (r *JSONRadix) MarshalJSON() ([]byte, error) {
-	out := make(map[string]json.RawMessage, r.inner.Len())
+	out := make(map[Path]json.RawMessage, r.inner.Len())
 	var err error
-	r.inner.Walk(func(k string, v interface{}) bool {
+	r.Walk(func(p Path, v interface{}) bool {
 		var data json.RawMessage
 		data, err = r.marshaller(v)
 		if err != nil {
 			return true
 		}
 
-		out[k] = data
+		out[p] = data
 		return false
 	})
 
@@ -121,21 +123,20 @@ func (r *JSONRadix) MarshalJSON() ([]byte, error) {
 
 // MarshalJSON fulfills the json.Unmarshaller interface.
 func (r *JSONRadix) UnmarshalJSON(data []byte) error {
-	in := make(map[string]json.RawMessage)
+	in := make(map[Path]json.RawMessage)
 	if err := json.Unmarshal(data, &in); err != nil {
 		return err
 	}
 
-	m := make(map[string]interface{}, len(in))
-	for k, v := range in {
+	r.Radix = NewRadix()
+	for p, v := range in {
 		i, err := r.unmarshaller(v)
 		if err != nil {
 			return err
 		}
 
-		m[k] = i
+		r.Insert(p, i)
 	}
 
-	r.inner = radix.NewFromMap(m)
 	return nil
 }

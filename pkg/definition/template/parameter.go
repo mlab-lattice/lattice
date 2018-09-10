@@ -128,7 +128,7 @@ func (p Parameters) Bind(path tree.Path, bindings map[string]interface{}) (map[s
 				}
 
 				// Ensure the $secret key is a string
-				// TODO(kevinrosendahl): validate character set here?
+				// TODO(kevindrosendahl): validate character set here?
 				name, ok := nameVal.(string)
 				if !ok {
 					return nil, &ParameterTypeError{
@@ -157,6 +157,6 @@ func (p Parameters) Bind(path tree.Path, bindings map[string]interface{}) (map[s
 		result[k] = a
 	}
 
-	// TODO(kevinrosendahl): we may want to validate that there are no extra bindings
+	// TODO(kevindrosendahl): we may want to validate that there are no extra bindings
 	return result, nil
 }

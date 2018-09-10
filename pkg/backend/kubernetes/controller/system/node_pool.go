@@ -111,7 +111,7 @@ func (c *Controller) syncSystemNodePools(
 
 	// Loop through all of the node pools that exist in the systems's namespace, and delete any
 	// that are no longer a part of the system's Spec
-	// TODO(kevinrosendahl): should we wait until all other node pools are successfully rolled out before deleting these?
+	// TODO(kevindrosendahl): should we wait until all other node pools are successfully rolled out before deleting these?
 	allNodePools, err := c.nodePoolLister.NodePools(systemNamespace).List(labels.Everything())
 	if err != nil {
 		return nil, err
