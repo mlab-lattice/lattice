@@ -5,10 +5,8 @@ import (
 
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	kubeutil "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/kubernetes"
-	"github.com/mlab-lattice/lattice/pkg/definition/resolver"
+	"github.com/mlab-lattice/lattice/pkg/definition/component/resolver"
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
-	definitionv1 "github.com/mlab-lattice/lattice/pkg/definition/v1"
-
 	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -68,30 +66,21 @@ type BuildStatus struct {
 	State   BuildState `json:"state"`
 	Message string     `json:"message"`
 
-	Definition     *definitionv1.SystemNode `json:"definition,omitempty"`
-	ResolutionInfo resolver.ResolutionInfo  `json:"resolutionInfo,omitempty"`
+	Definition *resolver.ComponentTree `json:"definition,omitempty"`
 
 	StartTimestamp      *metav1.Time `json:"startTimestamp,omitempty"`
 	CompletionTimestamp *metav1.Time `json:"completionTimestamp,omitempty"`
 
-	// Maps a service path to the information about its container builds
-	Services map[tree.Path]BuildStatusService `json:"services"`
+	// Maps a workload path to the information about its container builds
+	Workloads map[tree.Path]BuildStatusWorkload
 
-	// Maps a service path to the information about its container builds
-	Jobs map[tree.Path]BuildStatusJob `json:"jobs"`
-
-	// Maps a ServiceBuild.Name to the ServiceBuild.Status
-	ContainerBuildStatuses map[string]ContainerBuildStatus `json:"containerBuildStatuses"`
+	// Maps a container build's ID to its status
+	ContainerBuildStatuses map[v1.ContainerBuildID]ContainerBuildStatus `json:"containerBuildStatuses"`
 }
 
-type BuildStatusService struct {
-	MainContainer string            `json:"mainContainer"`
-	Sidecars      map[string]string `json:"sidecars"`
-}
-
-type BuildStatusJob struct {
-	MainContainer string            `json:"mainContainer"`
-	Sidecars      map[string]string `json:"sidecars"`
+type BuildStatusWorkload struct {
+	MainContainer v1.ContainerBuildID            `json:"mainContainer"`
+	Sidecars      map[string]v1.ContainerBuildID `json:"sidecars"`
 }
 
 type BuildState string
