@@ -3,11 +3,11 @@ package v1
 import (
 	"fmt"
 
+	"encoding/json"
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	kubeutil "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/kubernetes"
+	"github.com/mlab-lattice/lattice/pkg/definition/component/resolver"
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
-	definitionv1 "github.com/mlab-lattice/lattice/pkg/definition/v1"
-
 	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -61,25 +61,75 @@ func (s *System) Description() string {
 type SystemSpec struct {
 	DefinitionURL string `json:"definitionUrl"`
 
-	NodePools map[tree.PathSubcomponent]NodePoolSpec `json:"nodePools"`
-	Services  map[tree.Path]SystemSpecServiceInfo    `json:"services"`
-	Jobs      map[tree.Path]SystemSpecJobInfo        `json:"jobs"`
+	Definition             *resolver.ComponentTree           `json:"definition"`
+	WorkloadBuildArtifacts *SystemSpecWorkloadBuildArtifacts `json:"workloadBuildArtifacts"`
 }
 
 // +k8s:deepcopy-gen=false
-type SystemSpecServiceInfo struct {
-	Definition *definitionv1.Service `json:"definition"`
-
-	// ContainerBuildArtifacts maps container names to the artifacts created by their build
-	ContainerBuildArtifacts map[string]ContainerBuildArtifacts `json:"containerBuildArtifacts"`
+type SystemSpecWorkloadBuildArtifacts struct {
+	inner *tree.JSONRadix
 }
 
-// +k8s:deepcopy-gen=false
-type SystemSpecJobInfo struct {
-	Definition *definitionv1.Job `json:"definition"`
+type SystemSpecWorkloadBuildArtifactsWorkload struct {
+	MainContainer ContainerBuildArtifacts            `json:"mainContainer"`
+	Sidecars      map[string]ContainerBuildArtifacts `json:"sidecars"`
+}
 
-	// ContainerBuildArtifacts maps container names to the artifacts created by their build
-	ContainerBuildArtifacts map[string]ContainerBuildArtifacts `json:"containerBuildArtifacts"`
+func NewSystemSpecWorkloadBuildArtifacts() *SystemSpecWorkloadBuildArtifacts {
+	return &SystemSpecWorkloadBuildArtifacts{
+		inner: tree.NewJSONRadix(
+			func(i interface{}) (json.RawMessage, error) {
+				return json.Marshal(&i)
+			},
+			func(data json.RawMessage) (interface{}, error) {
+				var w SystemSpecWorkloadBuildArtifactsWorkload
+				if err := json.Unmarshal(data, &w); err != nil {
+					return nil, err
+				}
+
+				return w, nil
+			},
+		),
+	}
+}
+
+func (a *SystemSpecWorkloadBuildArtifacts) Insert(
+	p tree.Path,
+	w SystemSpecWorkloadBuildArtifactsWorkload,
+) (SystemSpecWorkloadBuildArtifactsWorkload, bool) {
+	i, ok := a.inner.Insert(p, w)
+	if !ok {
+		return SystemSpecWorkloadBuildArtifactsWorkload{}, false
+	}
+
+	return i.(SystemSpecWorkloadBuildArtifactsWorkload), true
+}
+
+func (a *SystemSpecWorkloadBuildArtifacts) Get(p tree.Path) (SystemSpecWorkloadBuildArtifactsWorkload, bool) {
+	i, ok := a.inner.Get(p)
+	if !ok {
+		return SystemSpecWorkloadBuildArtifactsWorkload{}, false
+	}
+
+	return i.(SystemSpecWorkloadBuildArtifactsWorkload), true
+}
+
+func (a *SystemSpecWorkloadBuildArtifacts) ReplacePrefix(p tree.Path, other *SystemSpecWorkloadBuildArtifacts) {
+	a.inner.ReplacePrefix(p, other.inner.Radix)
+}
+
+func (a *SystemSpecWorkloadBuildArtifacts) MarshalJSON() ([]byte, error) {
+	return json.Marshal(&a.inner)
+}
+
+func (a *SystemSpecWorkloadBuildArtifacts) UnmarshalJSON(data []byte) error {
+	a2 := NewSystemSpecWorkloadBuildArtifacts()
+	if err := json.Unmarshal(data, &a2.inner); err != nil {
+		return err
+	}
+
+	*a = *a2
+	return nil
 }
 
 // +k8s:deepcopy-gen=false

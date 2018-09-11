@@ -17,7 +17,7 @@ type (
 
 func NewComponentTree() *ComponentTree {
 	t := &ComponentTree{
-		JSONRadix: tree.NewJSONRadix(
+		inner: tree.NewJSONRadix(
 			func(i interface{}) (json.RawMessage, error) {
 				return json.Marshal(&i)
 			},
@@ -36,12 +36,12 @@ func NewComponentTree() *ComponentTree {
 }
 
 type ComponentTree struct {
-	*tree.JSONRadix
-	v1 *V1Tree
+	inner *tree.JSONRadix
+	v1    *V1Tree
 }
 
 func (t *ComponentTree) Insert(p tree.Path, c *ResolutionInfo) (*ResolutionInfo, bool) {
-	prev, replaced := t.JSONRadix.Insert(p, c)
+	prev, replaced := t.inner.Insert(p, c)
 	if !replaced {
 		return nil, false
 	}
@@ -50,7 +50,7 @@ func (t *ComponentTree) Insert(p tree.Path, c *ResolutionInfo) (*ResolutionInfo,
 }
 
 func (t *ComponentTree) Get(p tree.Path) (*ResolutionInfo, bool) {
-	c, ok := t.JSONRadix.Get(p)
+	c, ok := t.inner.Get(p)
 	if !ok {
 		return nil, false
 	}
@@ -59,7 +59,7 @@ func (t *ComponentTree) Get(p tree.Path) (*ResolutionInfo, bool) {
 }
 
 func (t *ComponentTree) Delete(p tree.Path) (*ResolutionInfo, bool) {
-	c, ok := t.JSONRadix.Delete(p)
+	c, ok := t.inner.Delete(p)
 	if !ok {
 		return nil, false
 	}
@@ -67,14 +67,32 @@ func (t *ComponentTree) Delete(p tree.Path) (*ResolutionInfo, bool) {
 	return c.(*ResolutionInfo), true
 }
 
+func (t *ComponentTree) ReplacePrefix(p tree.Path, other *ComponentTree) {
+	t.inner.ReplacePrefix(p, other.inner.Radix)
+}
+
 func (t *ComponentTree) Walk(fn ComponentTreeWalkFn) {
-	t.JSONRadix.Walk(func(path tree.Path, i interface{}) bool {
+	t.inner.Walk(func(path tree.Path, i interface{}) bool {
 		return fn(path, i.(*ResolutionInfo))
 	})
 }
 
 func (t *ComponentTree) V1() *V1Tree {
 	return t.v1
+}
+
+func (t *ComponentTree) MarshalJSON() ([]byte, error) {
+	return json.Marshal(&t.inner)
+}
+
+func (t *ComponentTree) UnmarshalJSON(data []byte) error {
+	t2 := NewComponentTree()
+	if err := json.Unmarshal(data, &t2.inner); err != nil {
+		return err
+	}
+
+	*t = *t2
+	return nil
 }
 
 type V1Tree struct {

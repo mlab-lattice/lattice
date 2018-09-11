@@ -5,6 +5,9 @@ import (
 
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
+	"github.com/mlab-lattice/lattice/pkg/definition/component/resolver"
+	"github.com/mlab-lattice/lattice/pkg/definition/tree"
+	definitionv1 "github.com/mlab-lattice/lattice/pkg/definition/v1"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -99,22 +102,82 @@ func (c *Controller) syncAcceptedDeploy(deploy *latticev1.Deploy) error {
 			return err
 		}
 
-		services, err := c.systemServices(build)
+		artifacts := latticev1.NewSystemSpecWorkloadBuildArtifacts()
+		err = nil
+		build.Status.Definition.V1().Workloads(func(path tree.Path, workload definitionv1.Workload, info *resolver.ResolutionInfo) bool {
+			workloadInfo, ok := build.Status.Workloads[path]
+			if !ok {
+				err = fmt.Errorf(
+					"%v had workload %v but no information about it",
+					build.Description(c.namespacePrefix),
+					path.String(),
+				)
+				return false
+			}
+
+			mainContainerBuild, ok := build.Status.ContainerBuildStatuses[workloadInfo.MainContainer]
+			if !ok {
+				err = fmt.Errorf(
+					"%v had workload %v container build %v but no information about it",
+					build.Description(c.namespacePrefix),
+					path.String(),
+					workloadInfo.MainContainer,
+				)
+				return false
+			}
+
+			if mainContainerBuild.Artifacts == nil {
+				err = fmt.Errorf(
+					"%v had workload %v container build %v but artifacts are nil",
+					build.Description(c.namespacePrefix),
+					path.String(),
+					workloadInfo.MainContainer,
+				)
+				return false
+			}
+
+			workloadArtifacts := latticev1.SystemSpecWorkloadBuildArtifactsWorkload{
+				MainContainer: *mainContainerBuild.Artifacts,
+				Sidecars:      make(map[string]latticev1.ContainerBuildArtifacts),
+			}
+
+			for sidecar, sidecarBuild := range workloadInfo.Sidecars {
+				containerBuild, ok := build.Status.ContainerBuildStatuses[sidecarBuild]
+				if !ok {
+					err = fmt.Errorf(
+						"%v had workload %v container build %v but no information about it",
+						build.Description(c.namespacePrefix),
+						path.String(),
+						sidecarBuild,
+					)
+					return false
+				}
+
+				if containerBuild.Artifacts == nil {
+					err = fmt.Errorf(
+						"%v had workload %v container build %v but artifacts are nil",
+						build.Description(c.namespacePrefix),
+						path.String(),
+						sidecarBuild,
+					)
+					return false
+				}
+
+				workloadArtifacts.Sidecars[sidecar] = *containerBuild.Artifacts
+			}
+
+			artifacts.Insert(path, workloadArtifacts)
+			return true
+		})
 		if err != nil {
-			return fmt.Errorf("error getting services for %v: %v", build.Description(c.namespacePrefix), err)
+			return err
 		}
 
-		jobs, err := c.systemJobs(build)
-		if err != nil {
-			return fmt.Errorf("error getting jobs for %v: %v", build.Description(c.namespacePrefix), err)
-		}
+		spec := system.Spec.DeepCopy()
+		spec.Definition.ReplacePrefix(build.Spec.Path, build.Status.Definition)
+		spec.WorkloadBuildArtifacts.ReplacePrefix(build.Spec.Path, artifacts)
 
-		nodePools, err := c.systemNodePools(build)
-		if err != nil {
-			return fmt.Errorf("error getting node pools for %v: %v", build.Description(c.namespacePrefix), err)
-		}
-
-		_, err = c.updateSystem(system, services, jobs, nodePools)
+		_, err = c.updateSystemSpec(system, spec)
 		if err != nil {
 			return err
 		}

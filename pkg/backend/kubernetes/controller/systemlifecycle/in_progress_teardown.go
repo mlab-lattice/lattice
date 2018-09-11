@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
-	"github.com/mlab-lattice/lattice/pkg/definition/tree"
+	"github.com/mlab-lattice/lattice/pkg/definition/component/resolver"
 )
 
 func (c *Controller) syncInProgressTeardown(teardown *latticev1.Teardown) error {
@@ -19,11 +19,10 @@ func (c *Controller) syncInProgressTeardown(teardown *latticev1.Teardown) error 
 	// we must update the teardown.Status.State first. If we were then to try to update system.Spec in syncPendingTeardown
 	// and it failed, it would never get rerun since syncInProgressTeardown would always be called from there on out.
 	// So instead we set the system.Spec in here to make sure it gets run even after failures.
-	services := make(map[tree.Path]latticev1.SystemSpecServiceInfo)
-	jobs := make(map[tree.Path]latticev1.SystemSpecJobInfo)
-	nodePools := make(map[tree.PathSubcomponent]latticev1.NodePoolSpec)
+	definition := resolver.NewComponentTree()
+	artifacts := latticev1.NewSystemSpecWorkloadBuildArtifacts()
 
-	system, err = c.updateSystem(system, services, jobs, nodePools)
+	system, err = c.updateSystem(system, definition, artifacts)
 	if err != nil {
 		return err
 	}
