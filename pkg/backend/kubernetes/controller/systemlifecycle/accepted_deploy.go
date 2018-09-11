@@ -33,7 +33,7 @@ func (c *Controller) syncAcceptedDeploy(deploy *latticev1.Deploy) error {
 		}
 
 		// Otherwise create the build and update the deploy's status
-		build := &latticev1.Build{
+		build = &latticev1.Build{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: deploy.Namespace,
 				Name:      uuid.NewV4().String(),
@@ -104,7 +104,7 @@ func (c *Controller) syncAcceptedDeploy(deploy *latticev1.Deploy) error {
 
 		artifacts := latticev1.NewSystemSpecWorkloadBuildArtifacts()
 		err = nil
-		build.Status.Definition.V1().Workloads(func(path tree.Path, workload definitionv1.Workload, info *resolver.ResolutionInfo) bool {
+		build.Status.Definition.V1().Workloads(func(path tree.Path, workload definitionv1.Workload, info *resolver.ResolutionInfo) tree.WalkContinuation {
 			workloadInfo, ok := build.Status.Workloads[path]
 			if !ok {
 				err = fmt.Errorf(
@@ -112,7 +112,7 @@ func (c *Controller) syncAcceptedDeploy(deploy *latticev1.Deploy) error {
 					build.Description(c.namespacePrefix),
 					path.String(),
 				)
-				return false
+				return tree.HaltWalk
 			}
 
 			mainContainerBuild, ok := build.Status.ContainerBuildStatuses[workloadInfo.MainContainer]
@@ -123,7 +123,7 @@ func (c *Controller) syncAcceptedDeploy(deploy *latticev1.Deploy) error {
 					path.String(),
 					workloadInfo.MainContainer,
 				)
-				return false
+				return tree.HaltWalk
 			}
 
 			if mainContainerBuild.Artifacts == nil {
@@ -133,7 +133,7 @@ func (c *Controller) syncAcceptedDeploy(deploy *latticev1.Deploy) error {
 					path.String(),
 					workloadInfo.MainContainer,
 				)
-				return false
+				return tree.HaltWalk
 			}
 
 			workloadArtifacts := latticev1.WorkloadContainerBuildArtifacts{
@@ -150,7 +150,7 @@ func (c *Controller) syncAcceptedDeploy(deploy *latticev1.Deploy) error {
 						path.String(),
 						sidecarBuild,
 					)
-					return false
+					return tree.HaltWalk
 				}
 
 				if containerBuild.Artifacts == nil {
@@ -160,20 +160,28 @@ func (c *Controller) syncAcceptedDeploy(deploy *latticev1.Deploy) error {
 						path.String(),
 						sidecarBuild,
 					)
-					return false
+					return tree.HaltWalk
 				}
 
 				workloadArtifacts.Sidecars[sidecar] = *containerBuild.Artifacts
 			}
 
 			artifacts.Insert(path, workloadArtifacts)
-			return true
+			return tree.ContinueWalk
 		})
 		if err != nil {
 			return err
 		}
 
 		spec := system.Spec.DeepCopy()
+		if spec.Definition == nil {
+			spec.Definition = resolver.NewComponentTree()
+		}
+
+		if spec.WorkloadBuildArtifacts == nil {
+			spec.WorkloadBuildArtifacts = latticev1.NewSystemSpecWorkloadBuildArtifacts()
+		}
+
 		spec.Definition.ReplacePrefix(build.Spec.Path, build.Status.Definition)
 		spec.WorkloadBuildArtifacts.ReplacePrefix(build.Spec.Path, artifacts)
 

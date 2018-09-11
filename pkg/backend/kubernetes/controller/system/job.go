@@ -22,61 +22,63 @@ func (c *Controller) syncSystemJobs(system *latticev1.System) error {
 	jobNames := mapset.NewSet()
 
 	// Loop through the jobs defined in the system's Spec, and create/update any that need it
-	var err error
-	system.Spec.Definition.V1().Jobs(func(path tree.Path, definition *definitionv1.Job, info *resolver.ResolutionInfo) bool {
-		artifacts, ok := system.Spec.WorkloadBuildArtifacts.Get(path)
-		if !ok {
-			err = fmt.Errorf(
-				"%v spec has job %v but does not have build information about it",
-				system.Description(),
-				path.String(),
-			)
-			return false
-		}
+	if system.Spec.Definition != nil {
+		var err error
+		system.Spec.Definition.V1().Jobs(func(path tree.Path, definition *definitionv1.Job, info *resolver.ResolutionInfo) tree.WalkContinuation {
+			artifacts, ok := system.Spec.WorkloadBuildArtifacts.Get(path)
+			if !ok {
+				err = fmt.Errorf(
+					"%v spec has job %v but does not have build information about it",
+					system.Description(),
+					path.String(),
+				)
+				return tree.HaltWalk
+			}
 
-		var job *latticev1.Job
+			var job *latticev1.Job
 
-		// First check our cache to see if the job exists.
-		job, err = c.getJobFromCache(systemNamespace, path)
-		if err != nil {
-			return false
-		}
-
-		if job == nil {
-			// The job wasn't in the cache, so do a quorum read to see if it was created.
-			// N.B.: could first loop through and check to see if we need to do a quorum read
-			// on any of the services, then just do one list.
-			job, err = c.getJobFromAPI(systemNamespace, path)
+			// First check our cache to see if the job exists.
+			job, err = c.getJobFromCache(systemNamespace, path)
 			if err != nil {
-				return false
+				return tree.HaltWalk
 			}
 
 			if job == nil {
-				// The job actually doesn't exist yet. Create it with a new UUID as the name.
-				job, err = c.createNewJob(system, path, definition, &artifacts)
+				// The job wasn't in the cache, so do a quorum read to see if it was created.
+				// N.B.: could first loop through and check to see if we need to do a quorum read
+				// on any of the services, then just do one list.
+				job, err = c.getJobFromAPI(systemNamespace, path)
 				if err != nil {
-					return false
+					return tree.HaltWalk
 				}
 
-				// Successfully created the job. No need to check if it needs to be updated.
-				jobNames.Add(job.Name)
-				return true
+				if job == nil {
+					// The job actually doesn't exist yet. Create it with a new UUID as the name.
+					job, err = c.createNewJob(system, path, definition, &artifacts)
+					if err != nil {
+						return tree.HaltWalk
+					}
+
+					// Successfully created the job. No need to check if it needs to be updated.
+					jobNames.Add(job.Name)
+					return tree.ContinueWalk
+				}
 			}
-		}
 
-		// We found an existing job. Calculate what its Spec should look like,
-		// and update the job if its current Spec is different.
-		spec := jobSpec(definition, &artifacts)
-		job, err = c.updateJob(job, spec, path)
+			// We found an existing job. Calculate what its Spec should look like,
+			// and update the job if its current Spec is different.
+			spec := jobSpec(definition, &artifacts)
+			job, err = c.updateJob(job, spec, path)
+			if err != nil {
+				return tree.HaltWalk
+			}
+
+			jobNames.Add(job.Name)
+			return tree.ContinueWalk
+		})
 		if err != nil {
-			return false
+			return err
 		}
-
-		jobNames.Add(job.Name)
-		return true
-	})
-	if err != nil {
-		return err
 	}
 
 	// Loop through all of the jobs that exist in the System's namespace, and delete any

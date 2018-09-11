@@ -58,7 +58,7 @@ var (
 		RequiredDuringSchedulingIgnoredDuringExecution: &AllNodePoolsSelector,
 	}
 
-	AllNodePoolTolleration = corev1.Toleration{
+	AllNodePoolToleration = corev1.Toleration{
 		Key:      NodePoolIDLabelKey,
 		Operator: corev1.TolerationOpExists,
 		Effect:   corev1.TaintEffectNoSchedule,

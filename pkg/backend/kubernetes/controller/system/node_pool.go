@@ -28,95 +28,97 @@ func (c *Controller) syncSystemNodePools(
 
 	// Loop through the nodePools defined in the system's Spec, and create/update any that need it
 	//for path, spec := range system.Spec.NodePools {
-	var err error
-	system.Spec.Definition.V1().NodePools(func(subcomponent tree.PathSubcomponent, definition *definitionv1.NodePool) bool {
-		var nodePool *latticev1.NodePool
+	if system.Spec.Definition != nil {
+		var err error
+		system.Spec.Definition.V1().NodePools(func(subcomponent tree.PathSubcomponent, definition *definitionv1.NodePool) tree.WalkContinuation {
+			var nodePool *latticev1.NodePool
 
-		nodePoolStatus, ok := system.Status.NodePools[subcomponent]
-		if !ok {
-			// If a status for this node pool's path hasn't been set, then either we haven't created the node pool yet,
-			// or we were unable to update the system's Status after creating the node pool
+			nodePoolStatus, ok := system.Status.NodePools[subcomponent]
+			if !ok {
+				// If a status for this node pool's path hasn't been set, then either we haven't created the node pool yet,
+				// or we were unable to update the system's Status after creating the node pool
 
-			// First check our cache to see if the node pool exists.
-			nodePool, err = c.getNodePoolFromCache(systemNamespace, subcomponent.Path(), subcomponent.Subcomponent())
-			if err != nil {
-				return false
-			}
-
-			if nodePool == nil {
-				// The nodePool wasn't in the cache, so do a quorum read to see if it was created.
-				// N.B.: could first loop through and check to see if we need to do a quorum read
-				// on any of the nodePools, then just do one list.
-				nodePool, err = c.getNodePoolFromAPI(systemNamespace, subcomponent.Path(), subcomponent.Subcomponent())
+				// First check our cache to see if the node pool exists.
+				nodePool, err = c.getNodePoolFromCache(systemNamespace, subcomponent.Path(), subcomponent.Subcomponent())
 				if err != nil {
-					return false
+					return tree.HaltWalk
 				}
 
 				if nodePool == nil {
-					// The nodePool actually doesn't exist yet. Create it with a new UUID as the name.
-					nodePool, err = c.createNewNodePool(system, subcomponent, definition)
+					// The nodePool wasn't in the cache, so do a quorum read to see if it was created.
+					// N.B.: could first loop through and check to see if we need to do a quorum read
+					// on any of the nodePools, then just do one list.
+					nodePool, err = c.getNodePoolFromAPI(systemNamespace, subcomponent.Path(), subcomponent.Subcomponent())
 					if err != nil {
-						return false
+						return tree.HaltWalk
 					}
 
-					// Successfully created the nodePool. No need to check if it needs to be updated.
-					nodePools[subcomponent] = latticev1.SystemStatusNodePool{
-						Name:           nodePool.Name,
-						Generation:     nodePool.Generation,
-						NodePoolStatus: nodePool.Status,
+					if nodePool == nil {
+						// The nodePool actually doesn't exist yet. Create it with a new UUID as the name.
+						nodePool, err = c.createNewNodePool(system, subcomponent, definition)
+						if err != nil {
+							return tree.HaltWalk
+						}
+
+						// Successfully created the nodePool. No need to check if it needs to be updated.
+						nodePools[subcomponent] = latticev1.SystemStatusNodePool{
+							Name:           nodePool.Name,
+							Generation:     nodePool.Generation,
+							NodePoolStatus: nodePool.Status,
+						}
+						nodePoolNames.Add(nodePool.Name)
+						return tree.ContinueWalk
 					}
-					nodePoolNames.Add(nodePool.Name)
-					return true
 				}
-			}
-			// We were able to find an existing nodePool for this path. We'll check below if it
-			// needs to be updated.
-		} else {
-			// There is supposedly already a nodePool for this path.
-			nodePoolName := nodePoolStatus.Name
-			var err error
+				// We were able to find an existing nodePool for this path. We'll check below if it
+				// needs to be updated.
+			} else {
+				// There is supposedly already a nodePool for this path.
+				nodePoolName := nodePoolStatus.Name
+				var err error
 
-			nodePool, err = c.nodePoolLister.NodePools(systemNamespace).Get(nodePoolName)
-			if err != nil {
-				if !errors.IsNotFound(err) {
-					err = fmt.Errorf("error trying to get cached node pool %v for %v", nodePoolName, system.Description())
-					return false
-				}
-
-				// The nodePool wasn't in the cache. Perhaps it was recently created. Do a quorum read.
-				nodePool, err = c.latticeClient.LatticeV1().NodePools(systemNamespace).Get(nodePoolName, metav1.GetOptions{})
+				nodePool, err = c.nodePoolLister.NodePools(systemNamespace).Get(nodePoolName)
 				if err != nil {
 					if !errors.IsNotFound(err) {
-						err = fmt.Errorf("error trying to get node pool %v for %v", nodePoolName, system.Description())
-						return false
+						err = fmt.Errorf("error trying to get cached node pool %v for %v", nodePoolName, system.Description())
+						return tree.HaltWalk
 					}
 
-					// FIXME: should we just recreate the nodePool here?
-					// what happens when a deploy doesnt fully succeed and there's a leftover terminating nodePool with
-					// the same path as a new nodePool?
-					err = fmt.Errorf("%v has reference to non existant nodePool %v", system.Description(), nodePoolName)
-					return false
+					// The nodePool wasn't in the cache. Perhaps it was recently created. Do a quorum read.
+					nodePool, err = c.latticeClient.LatticeV1().NodePools(systemNamespace).Get(nodePoolName, metav1.GetOptions{})
+					if err != nil {
+						if !errors.IsNotFound(err) {
+							err = fmt.Errorf("error trying to get node pool %v for %v", nodePoolName, system.Description())
+							return tree.HaltWalk
+						}
+
+						// FIXME: should we just recreate the nodePool here?
+						// what happens when a deploy doesnt fully succeed and there's a leftover terminating nodePool with
+						// the same path as a new nodePool?
+						err = fmt.Errorf("%v has reference to non existant nodePool %v", system.Description(), nodePoolName)
+						return tree.HaltWalk
+					}
 				}
 			}
-		}
 
-		// We found an existing nodePool, update it if needed
-		nodePool, err = c.updateNodePool(subcomponent, nodePool, definition)
+			// We found an existing nodePool, update it if needed
+			nodePool, err = c.updateNodePool(subcomponent, nodePool, definition)
+			if err != nil {
+				return tree.HaltWalk
+			}
+
+			nodePoolNames.Add(nodePool.Name)
+			nodePools[subcomponent] = latticev1.SystemStatusNodePool{
+				Name:           nodePool.Name,
+				Generation:     nodePool.Generation,
+				NodePoolStatus: nodePool.Status,
+			}
+
+			return tree.ContinueWalk
+		})
 		if err != nil {
-			return false
+			return nil, err
 		}
-
-		nodePoolNames.Add(nodePool.Name)
-		nodePools[subcomponent] = latticev1.SystemStatusNodePool{
-			Name:           nodePool.Name,
-			Generation:     nodePool.Generation,
-			NodePoolStatus: nodePool.Status,
-		}
-
-		return true
-	})
-	if err != nil {
-		return nil, err
 	}
 
 	// Loop through all of the node pools that exist in the systems's namespace, and delete any

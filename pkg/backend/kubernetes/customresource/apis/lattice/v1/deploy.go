@@ -72,13 +72,13 @@ func (d *Deploy) Description(namespacePrefix string) string {
 }
 
 type DeploySpec struct {
-	Build   *v1.BuildID `json:"build,omitempty"`
-	Version *DeploySpecVersionInfo
+	Build   *v1.BuildID            `json:"build,omitempty"`
+	Version *DeploySpecVersionInfo `json:"version,omitempty"`
 }
 
 type DeploySpecVersionInfo struct {
-	Version v1.SystemVersion
-	Path    tree.Path
+	Version v1.SystemVersion `json:"version"`
+	Path    tree.Path        `json:"path"`
 }
 
 type DeployStatus struct {

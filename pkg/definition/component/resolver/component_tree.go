@@ -8,13 +8,13 @@ import (
 )
 
 type (
-	ComponentTreeWalkFn   func(tree.Path, *ResolutionInfo) bool
-	V1TreeJobWalkFn       func(tree.Path, *definitionv1.Job, *ResolutionInfo) bool
-	V1TreeNodePoolWalkFn  func(tree.PathSubcomponent, *definitionv1.NodePool) bool
-	V1TreeReferenceWalkFn func(tree.Path, *definitionv1.Reference, *ResolutionInfo) bool
-	V1TreeServiceWalkFn   func(tree.Path, *definitionv1.Service, *ResolutionInfo) bool
-	V1TreeSystemWalkFn    func(tree.Path, *definitionv1.System, *ResolutionInfo) bool
-	V1TreeWorkloadWalkFn  func(tree.Path, definitionv1.Workload, *ResolutionInfo) bool
+	ComponentTreeWalkFn   func(tree.Path, *ResolutionInfo) tree.WalkContinuation
+	V1TreeJobWalkFn       func(tree.Path, *definitionv1.Job, *ResolutionInfo) tree.WalkContinuation
+	V1TreeNodePoolWalkFn  func(tree.PathSubcomponent, *definitionv1.NodePool) tree.WalkContinuation
+	V1TreeReferenceWalkFn func(tree.Path, *definitionv1.Reference, *ResolutionInfo) tree.WalkContinuation
+	V1TreeServiceWalkFn   func(tree.Path, *definitionv1.Service, *ResolutionInfo) tree.WalkContinuation
+	V1TreeSystemWalkFn    func(tree.Path, *definitionv1.System, *ResolutionInfo) tree.WalkContinuation
+	V1TreeWorkloadWalkFn  func(tree.Path, definitionv1.Workload, *ResolutionInfo) tree.WalkContinuation
 )
 
 func NewComponentTree() *ComponentTree {
@@ -74,7 +74,7 @@ func (t *ComponentTree) ReplacePrefix(p tree.Path, other *ComponentTree) {
 }
 
 func (t *ComponentTree) Walk(fn ComponentTreeWalkFn) {
-	t.inner.Walk(func(path tree.Path, i interface{}) bool {
+	t.inner.Walk(func(path tree.Path, i interface{}) tree.WalkContinuation {
 		return fn(path, i.(*ResolutionInfo))
 	})
 }
@@ -102,10 +102,10 @@ type V1Tree struct {
 }
 
 func (t *V1Tree) Jobs(fn V1TreeJobWalkFn) {
-	t.ComponentTree.Walk(func(path tree.Path, i *ResolutionInfo) bool {
+	t.ComponentTree.Walk(func(path tree.Path, i *ResolutionInfo) tree.WalkContinuation {
 		job, ok := i.Component.(*definitionv1.Job)
 		if !ok {
-			return false
+			return tree.ContinueWalk
 		}
 
 		return fn(path, job, i)
@@ -113,24 +113,24 @@ func (t *V1Tree) Jobs(fn V1TreeJobWalkFn) {
 }
 
 func (t *V1Tree) NodePools(fn V1TreeNodePoolWalkFn) {
-	t.Systems(func(path tree.Path, system *definitionv1.System, info *ResolutionInfo) bool {
+	t.Systems(func(path tree.Path, system *definitionv1.System, info *ResolutionInfo) tree.WalkContinuation {
 		for name, nodePool := range system.NodePools {
 			// FIXME(kevindrosendahl): what to do in the event of an empty string node pool?
 			subcomponent, _ := tree.NewPathSubcomponentFromParts(path, name)
 			if !fn(subcomponent, &nodePool) {
-				return false
+				return tree.HaltWalk
 			}
 		}
 
-		return true
+		return tree.ContinueWalk
 	})
 }
 
 func (t *V1Tree) References(fn V1TreeReferenceWalkFn) {
-	t.ComponentTree.Walk(func(path tree.Path, i *ResolutionInfo) bool {
+	t.ComponentTree.Walk(func(path tree.Path, i *ResolutionInfo) tree.WalkContinuation {
 		reference, ok := i.Component.(*definitionv1.Reference)
 		if !ok {
-			return false
+			return tree.ContinueWalk
 		}
 
 		return fn(path, reference, i)
@@ -138,10 +138,10 @@ func (t *V1Tree) References(fn V1TreeReferenceWalkFn) {
 }
 
 func (t *V1Tree) Services(fn V1TreeServiceWalkFn) {
-	t.ComponentTree.Walk(func(path tree.Path, i *ResolutionInfo) bool {
+	t.ComponentTree.Walk(func(path tree.Path, i *ResolutionInfo) tree.WalkContinuation {
 		service, ok := i.Component.(*definitionv1.Service)
 		if !ok {
-			return false
+			return tree.ContinueWalk
 		}
 
 		return fn(path, service, i)
@@ -149,10 +149,10 @@ func (t *V1Tree) Services(fn V1TreeServiceWalkFn) {
 }
 
 func (t *V1Tree) Systems(fn V1TreeSystemWalkFn) {
-	t.ComponentTree.Walk(func(path tree.Path, i *ResolutionInfo) bool {
+	t.ComponentTree.Walk(func(path tree.Path, i *ResolutionInfo) tree.WalkContinuation {
 		system, ok := i.Component.(*definitionv1.System)
 		if !ok {
-			return false
+			return tree.ContinueWalk
 		}
 
 		return fn(path, system, i)
@@ -160,10 +160,10 @@ func (t *V1Tree) Systems(fn V1TreeSystemWalkFn) {
 }
 
 func (t *V1Tree) Workloads(fn V1TreeWorkloadWalkFn) {
-	t.ComponentTree.Walk(func(path tree.Path, i *ResolutionInfo) bool {
+	t.ComponentTree.Walk(func(path tree.Path, i *ResolutionInfo) tree.WalkContinuation {
 		workload, ok := i.Component.(definitionv1.Workload)
 		if !ok {
-			return false
+			return tree.ContinueWalk
 		}
 
 		return fn(path, workload, i)

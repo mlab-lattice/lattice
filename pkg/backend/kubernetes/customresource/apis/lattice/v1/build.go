@@ -72,7 +72,7 @@ type BuildStatus struct {
 	CompletionTimestamp *metav1.Time `json:"completionTimestamp,omitempty"`
 
 	// Maps a workload path to the information about its container builds
-	Workloads map[tree.Path]BuildStatusWorkload
+	Workloads map[tree.Path]BuildStatusWorkload `json:"workloads"`
 
 	// Maps a container build's ID to its status
 	ContainerBuildStatuses map[v1.ContainerBuildID]ContainerBuildStatus `json:"containerBuildStatuses"`

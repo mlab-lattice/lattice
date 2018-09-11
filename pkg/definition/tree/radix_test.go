@@ -57,12 +57,12 @@ func TestRadix_DeletePrefix(t *testing.T) {
 		t.Fatalf("expected %v remaining entries, found %v", expectedLen, r.Len())
 	}
 
-	r.Walk(func(p Path, v interface{}) bool {
+	r.Walk(func(p Path, v interface{}) WalkContinuation {
 		if p.HasPrefix(prefix) {
 			t.Errorf("expected to not find any paths with prefix %v, found %v", prefix.String(), p.String())
 		}
 
-		return false
+		return ContinueWalk
 	})
 }
 
@@ -125,11 +125,11 @@ func TestRadix_Walk(t *testing.T) {
 	seedMixed(r)
 	last := RootPath()
 	first := true
-	r.Walk(func(p Path, v interface{}) bool {
+	r.Walk(func(p Path, v interface{}) WalkContinuation {
 		if first {
 			last = p
 			first = false
-			return false
+			return ContinueWalk
 		}
 
 		longer := last
@@ -145,7 +145,7 @@ func TestRadix_Walk(t *testing.T) {
 		}
 
 		last = p
-		return false
+		return ContinueWalk
 	})
 }
 
@@ -153,11 +153,11 @@ func TestRadix_WalkPrefix(t *testing.T) {
 	r := NewRadix()
 	seedMixed(r)
 	prefix := RootPath().Child("a").Child("b").Child("c")
-	r.WalkPrefix(prefix, func(p Path, v interface{}) bool {
+	r.WalkPrefix(prefix, func(p Path, v interface{}) WalkContinuation {
 		if !p.HasPrefix(prefix) {
 			t.Fatalf("expected prefix walk path %v to have prefix %v", p.String(), prefix.String())
 		}
-		return false
+		return ContinueWalk
 	})
 }
 
@@ -213,7 +213,7 @@ func TestJSONRadix(t *testing.T) {
 		t.Fatalf("expected marshalled radix to contain %v elements but it contains %v", r1.Len(), r2.Len())
 	}
 
-	r1.Walk(func(p Path, i interface{}) bool {
+	r1.Walk(func(p Path, i interface{}) WalkContinuation {
 		v, ok := r2.Get(p)
 		if !ok {
 			t.Fatalf("expected marshalled radix to contain %v but it does not", p.String())
@@ -223,7 +223,7 @@ func TestJSONRadix(t *testing.T) {
 			t.Fatalf("expected marshalled radix path %v to be %v but is %v", p.String(), i, v)
 		}
 
-		return false
+		return ContinueWalk
 	})
 }
 

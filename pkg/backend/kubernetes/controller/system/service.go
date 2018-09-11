@@ -31,104 +31,106 @@ func (c *Controller) syncSystemServices(system *latticev1.System) (map[tree.Path
 	serviceNames := mapset.NewSet()
 
 	// Loop through the services defined in the system's Spec, and create/update any that need it
-	var err error
-	system.Spec.Definition.V1().Services(func(path tree.Path, definition *definitionv1.Service, info *resolver.ResolutionInfo) bool {
-		artifacts, ok := system.Spec.WorkloadBuildArtifacts.Get(path)
-		if !ok {
-			err = fmt.Errorf(
-				"%v spec has job %v but does not have build information about it",
-				system.Description(),
-				path.String(),
-			)
-			return false
-		}
-
-		var service *latticev1.Service
-
-		serviceStatus, ok := system.Status.Services[path]
-		if !ok {
-			// If a status for this service path hasn't been set, then either we haven't created the service yet,
-			// or we were unable to update the system's Status after creating the service
-
-			// First check our cache to see if the service exists.
-			service, err = c.getServiceFromCache(systemNamespace, path)
-			if err != nil {
-				return false
+	if system.Spec.Definition != nil {
+		var err error
+		system.Spec.Definition.V1().Services(func(path tree.Path, definition *definitionv1.Service, info *resolver.ResolutionInfo) tree.WalkContinuation {
+			artifacts, ok := system.Spec.WorkloadBuildArtifacts.Get(path)
+			if !ok {
+				err = fmt.Errorf(
+					"%v spec has job %v but does not have build information about it",
+					system.Description(),
+					path.String(),
+				)
+				return tree.HaltWalk
 			}
 
-			if service == nil {
-				// The service wasn't in the cache, so do a quorum read to see if it was created.
-				// N.B.: could first loop through and check to see if we need to do a quorum read
-				// on any of the services, then just do one list.
-				service, err = c.getServiceFromAPI(systemNamespace, path)
+			var service *latticev1.Service
+
+			serviceStatus, ok := system.Status.Services[path]
+			if !ok {
+				// If a status for this service path hasn't been set, then either we haven't created the service yet,
+				// or we were unable to update the system's Status after creating the service
+
+				// First check our cache to see if the service exists.
+				service, err = c.getServiceFromCache(systemNamespace, path)
 				if err != nil {
-					return false
+					return tree.HaltWalk
 				}
 
 				if service == nil {
-					// The service actually doesn't exist yet. Create it with a new UUID as the name.
-					service, err = c.createNewService(system, path, definition, &artifacts)
+					// The service wasn't in the cache, so do a quorum read to see if it was created.
+					// N.B.: could first loop through and check to see if we need to do a quorum read
+					// on any of the services, then just do one list.
+					service, err = c.getServiceFromAPI(systemNamespace, path)
 					if err != nil {
-						return false
+						return tree.HaltWalk
 					}
 
-					// Successfully created the service. No need to check if it needs to be updated.
-					services[path] = latticev1.SystemStatusService{
-						Name:          service.Name,
-						Generation:    service.Generation,
-						ServiceStatus: service.Status,
+					if service == nil {
+						// The service actually doesn't exist yet. Create it with a new UUID as the name.
+						service, err = c.createNewService(system, path, definition, &artifacts)
+						if err != nil {
+							return tree.HaltWalk
+						}
+
+						// Successfully created the service. No need to check if it needs to be updated.
+						services[path] = latticev1.SystemStatusService{
+							Name:          service.Name,
+							Generation:    service.Generation,
+							ServiceStatus: service.Status,
+						}
+						serviceNames.Add(service.Name)
+						return tree.ContinueWalk
 					}
-					serviceNames.Add(service.Name)
-					return true
 				}
-			}
-			// We were able to find an existing service for this path. We'll check below if it
-			// needs to be updated.
-		} else {
-			// There is supposedly already a service for this path.
-			serviceName := serviceStatus.Name
+				// We were able to find an existing service for this path. We'll check below if it
+				// needs to be updated.
+			} else {
+				// There is supposedly already a service for this path.
+				serviceName := serviceStatus.Name
 
-			service, err = c.serviceLister.Services(systemNamespace).Get(serviceName)
-			if err != nil {
-				if !errors.IsNotFound(err) {
-					err = fmt.Errorf("error trying to get cached service %v for %v", serviceName, system.Description())
-					return false
-				}
-
-				// The service wasn't in the cache. Perhaps it was recently created. Do a quorum read.
-				service, err = c.latticeClient.LatticeV1().Services(systemNamespace).Get(serviceName, metav1.GetOptions{})
+				service, err = c.serviceLister.Services(systemNamespace).Get(serviceName)
 				if err != nil {
 					if !errors.IsNotFound(err) {
-						err = fmt.Errorf("error trying to get service %v for %v", serviceName, system.Description())
-						return false
+						err = fmt.Errorf("error trying to get cached service %v for %v", serviceName, system.Description())
+						return tree.HaltWalk
 					}
 
-					// FIXME: should we just recreate the service here?
-					// what happens when a deploy doesnt fully succeed and there's a leftover terminating service with
-					// the same path as a new service?
-					err = fmt.Errorf("%v has reference to non existant service %v", system.Description(), serviceName)
-					return false
+					// The service wasn't in the cache. Perhaps it was recently created. Do a quorum read.
+					service, err = c.latticeClient.LatticeV1().Services(systemNamespace).Get(serviceName, metav1.GetOptions{})
+					if err != nil {
+						if !errors.IsNotFound(err) {
+							err = fmt.Errorf("error trying to get service %v for %v", serviceName, system.Description())
+							return tree.HaltWalk
+						}
+
+						// FIXME: should we just recreate the service here?
+						// what happens when a deploy doesnt fully succeed and there's a leftover terminating service with
+						// the same path as a new service?
+						err = fmt.Errorf("%v has reference to non existant service %v", system.Description(), serviceName)
+						return tree.HaltWalk
+					}
 				}
 			}
-		}
 
-		// We found an existing service. Calculate what its Spec should look like,
-		// and update the service if its current Spec is different.
-		spec := serviceSpec(definition, &artifacts)
-		service, err = c.updateService(service, spec, path)
-		if err != nil {
-			return false
-		}
+			// We found an existing service. Calculate what its Spec should look like,
+			// and update the service if its current Spec is different.
+			spec := serviceSpec(definition, &artifacts)
+			service, err = c.updateService(service, spec, path)
+			if err != nil {
+				return tree.HaltWalk
+			}
 
-		serviceNames.Add(service.Name)
-		services[path] = latticev1.SystemStatusService{
-			Name:          service.Name,
-			Generation:    service.Generation,
-			ServiceStatus: service.Status,
-		}
+			serviceNames.Add(service.Name)
+			services[path] = latticev1.SystemStatusService{
+				Name:          service.Name,
+				Generation:    service.Generation,
+				ServiceStatus: service.Status,
+			}
 
-		return true
-	})
+			return tree.ContinueWalk
+		})
+	}
 
 	// Loop through all of the Workloads that exist in the System's namespace, and delete any
 	// that are no longer a part of the System's Spec

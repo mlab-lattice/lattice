@@ -22,7 +22,17 @@ type ResolutionInfo struct {
 }
 
 func (i *ResolutionInfo) MarshalJSON() ([]byte, error) {
-	return json.Marshal(&i)
+	componentData, err := json.Marshal(i.Component)
+	if err != nil {
+		return nil, err
+	}
+
+	d := &resolutionInfoDecoder{
+		Component:    componentData,
+		Commit:       i.Commit,
+		SSHKeySecret: i.SSHKeySecret,
+	}
+	return json.Marshal(&d)
 }
 
 func (i *ResolutionInfo) UnmarshalJSON(data []byte) error {
@@ -39,7 +49,7 @@ func (i *ResolutionInfo) UnmarshalJSON(data []byte) error {
 	var c component.Interface
 	switch t.APIVersion {
 	case definitionv1.APIVersion:
-		c, err = definitionv1.NewComponentFromJSON(data)
+		c, err = definitionv1.NewComponentFromJSON(d.Component)
 		if err != nil {
 			return err
 		}

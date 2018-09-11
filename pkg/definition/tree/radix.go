@@ -9,7 +9,13 @@ import (
 type (
 	JSONRadixMarshalFn   func(interface{}) (json.RawMessage, error)
 	JSONRadixUnmarshalFn func(json.RawMessage) (interface{}, error)
-	RadixWalkFn          func(Path, interface{}) bool
+	RadixWalkFn          func(Path, interface{}) WalkContinuation
+	WalkContinuation     bool
+)
+
+const (
+	ContinueWalk WalkContinuation = false
+	HaltWalk     WalkContinuation = true
 )
 
 // NewRadix returns a radix tree.
@@ -57,9 +63,9 @@ func (r *Radix) Len() int {
 // radix tree.
 func (r *Radix) ReplacePrefix(p Path, other *Radix) {
 	r.DeletePrefix(p)
-	other.WalkPrefix(p, func(path Path, i interface{}) bool {
+	other.WalkPrefix(p, func(path Path, i interface{}) WalkContinuation {
 		r.Insert(path, i)
-		return false
+		return ContinueWalk
 	})
 }
 
@@ -77,7 +83,7 @@ func (r *Radix) WalkPrefix(p Path, fn RadixWalkFn) {
 func walkFn(fn RadixWalkFn) radix.WalkFn {
 	return func(s string, v interface{}) bool {
 		p, _ := NewPath(s)
-		return fn(p, v)
+		return bool(fn(p, v))
 	}
 }
 
@@ -103,15 +109,15 @@ type JSONRadix struct {
 func (r *JSONRadix) MarshalJSON() ([]byte, error) {
 	out := make(map[Path]json.RawMessage, r.inner.Len())
 	var err error
-	r.Walk(func(p Path, v interface{}) bool {
+	r.Walk(func(p Path, v interface{}) WalkContinuation {
 		var data json.RawMessage
 		data, err = r.marshaller(v)
 		if err != nil {
-			return true
+			return HaltWalk
 		}
 
 		out[p] = data
-		return false
+		return ContinueWalk
 	})
 
 	if err != nil {

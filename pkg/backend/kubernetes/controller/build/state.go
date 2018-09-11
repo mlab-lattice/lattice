@@ -52,11 +52,11 @@ func (c *Controller) calculateState(build *latticev1.Build) (stateInfo, error) {
 	containerBuildWorkloads := make(map[v1.ContainerBuildID][]tree.Path)
 
 	var err error
-	build.Status.Definition.V1().Workloads(func(path tree.Path, workload definitionv1.Workload, info *resolver.ResolutionInfo) bool {
+	build.Status.Definition.V1().Workloads(func(path tree.Path, workload definitionv1.Workload, info *resolver.ResolutionInfo) tree.WalkContinuation {
 		buildInfo, ok := build.Status.Workloads[path]
 		if !ok {
 			workloadsNeedNewContainerBuilds[path] = workload
-			return true
+			return tree.ContinueWalk
 		}
 
 		workloads, ok := containerBuildWorkloads[buildInfo.MainContainer]
@@ -87,10 +87,10 @@ func (c *Controller) calculateState(build *latticev1.Build) (stateInfo, error) {
 			successfulContainerBuilds,
 		)
 		if err != nil {
-			return false
+			return tree.HaltWalk
 		}
 
-		return true
+		return tree.ContinueWalk
 	})
 
 	stateInfo := stateInfo{

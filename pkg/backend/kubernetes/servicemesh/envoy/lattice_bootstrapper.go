@@ -192,7 +192,7 @@ func (b *DefaultEnvoylatticeBootstrapper) BootstrapLatticeResources(resources *b
 					DNSPolicy:          corev1.DNSDefault,
 					ServiceAccountName: serviceAccount.Name,
 					Tolerations: []corev1.Toleration{
-						latticev1.AllNodePoolTolleration,
+						latticev1.AllNodePoolToleration,
 					},
 					Affinity: &corev1.Affinity{
 						NodeAffinity: &latticev1.AllNodePoolAffinity,
