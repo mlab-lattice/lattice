@@ -128,5 +128,6 @@ func initializeSystemLifecycleController(ctx Context) {
 		ctx.LatticeInformerFactory.Lattice().V1().Systems(),
 		ctx.LatticeInformerFactory.Lattice().V1().Builds(),
 		ctx.LatticeInformerFactory.Lattice().V1().ContainerBuilds(),
+		ctx.KubeInformerFactory.Core().V1().Namespaces(),
 	).Run(4, ctx.Stop)
 }

@@ -31,6 +31,10 @@ type Teardown struct {
 	Status            TeardownStatus `json:"status"`
 }
 
+func (t *Teardown) V1ID() v1.TeardownID {
+	return v1.TeardownID(t.Name)
+}
+
 func (t *Teardown) Description(namespacePrefix string) string {
 	systemID, err := kubeutil.SystemID(namespacePrefix, t.Namespace)
 	if err != nil {

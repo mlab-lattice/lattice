@@ -8,20 +8,18 @@ import (
 	latticeclientset "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/generated/clientset/versioned"
 	latticeinformers "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/generated/informers/externalversions/lattice/v1"
 	latticelisters "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/generated/listers/lattice/v1"
-
 	"k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
 
+	coreinformers "k8s.io/client-go/informers/core/v1"
 	kubeclientset "k8s.io/client-go/kubernetes"
+	corelisters "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
 
 	"github.com/golang/glog"
-	"github.com/mlab-lattice/lattice/pkg/api/v1"
-	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/kubernetes"
 )
 
 type lifecycleAction struct {
@@ -55,6 +53,9 @@ type Controller struct {
 	containerBuildLister       latticelisters.ContainerBuildLister
 	containerBuildListerSynced cache.InformerSynced
 
+	kubeNamespaceLister       corelisters.NamespaceLister
+	kubeNamespaceListerSynced cache.InformerSynced
+
 	deployQueue   workqueue.RateLimitingInterface
 	teardownQueue workqueue.RateLimitingInterface
 }
@@ -68,6 +69,7 @@ func NewController(
 	systemInformer latticeinformers.SystemInformer,
 	buildInformer latticeinformers.BuildInformer,
 	containerBuildInformer latticeinformers.ContainerBuildInformer,
+	kubeNamespaceInformer coreinformers.NamespaceInformer,
 ) *Controller {
 	c := &Controller{
 		namespacePrefix: namespacePrefix,
@@ -118,6 +120,9 @@ func NewController(
 	c.containerBuildLister = containerBuildInformer.Lister()
 	c.containerBuildListerSynced = containerBuildInformer.Informer().HasSynced
 
+	c.kubeNamespaceLister = kubeNamespaceInformer.Lister()
+	c.kubeNamespaceListerSynced = kubeNamespaceInformer.Informer().HasSynced
+
 	return c
 }
 
@@ -139,6 +144,7 @@ func (c *Controller) Run(workers int, stopCh <-chan struct{}) {
 		c.systemListerSynced,
 		c.buildListerSynced,
 		c.containerBuildListerSynced,
+		c.kubeNamespaceListerSynced,
 	) {
 		return
 	}
@@ -158,7 +164,7 @@ func (c *Controller) Run(workers int, stopCh <-chan struct{}) {
 	for i := 0; i < workers; i++ {
 		// runWorker will loop until "something bad" happens.  The .Until will
 		// then rekick the worker after one second
-		go wait.Until(c.runRolloutWorker, time.Second, stopCh)
+		go wait.Until(c.runDeployWorker, time.Second, stopCh)
 	}
 
 	for i := 0; i < workers; i++ {
@@ -192,9 +198,6 @@ func (c *Controller) enqueueTeardown(teardown *latticev1.Teardown) {
 }
 
 func (c *Controller) syncLifecycleActions() error {
-	c.owningLifecycleActionsLock.Lock()
-	defer c.owningLifecycleActionsLock.Unlock()
-
 	deploys, err := c.deployLister.List(labels.Everything())
 	if err != nil {
 		return err
@@ -205,23 +208,24 @@ func (c *Controller) syncLifecycleActions() error {
 			continue
 		}
 
-		namespace, err := c.kubeClient.CoreV1().Namespaces().Get(deploy.Namespace, metav1.GetOptions{})
+		if deploy.Status.BuildID == nil {
+			// this shouldn't happen
+			continue
+		}
+
+		build, err := c.buildLister.Builds(deploy.Namespace).Get(string(*deploy.Status.BuildID))
 		if err != nil {
 			return err
 		}
 
-		_, exists := c.owningLifecycleActions[namespace.UID]
-		if exists {
-			systemID := v1.SystemID(fmt.Sprintf("with namespace %v", deploy.Namespace))
-			if id, err := kubernetes.SystemID(c.namespacePrefix, deploy.Namespace); err != nil {
-				systemID = id
-			}
-
-			return fmt.Errorf("system %v has multiple owning actions", systemID)
-		}
-
-		c.owningLifecycleActions[namespace.UID] = &lifecycleAction{
-			deploy: deploy,
+		err = c.acquireDeployLock(deploy, build.Spec.Path)
+		if err != nil {
+			return fmt.Errorf(
+				"error attempting to acquire lock for %v %v: %v",
+				deploy.Description(c.namespacePrefix),
+				build.Spec.Path.String(),
+				err,
+			)
 		}
 	}
 
@@ -235,23 +239,13 @@ func (c *Controller) syncLifecycleActions() error {
 			continue
 		}
 
-		namespace, err := c.kubeClient.CoreV1().Namespaces().Get(teardown.Namespace, metav1.GetOptions{})
+		err = c.acquireTeardownLock(teardown)
 		if err != nil {
-			return err
-		}
-
-		_, exists := c.owningLifecycleActions[namespace.UID]
-		if exists {
-			systemID := v1.SystemID(fmt.Sprintf("with namespace %v", teardown.Namespace))
-			if id, err := kubernetes.SystemID(c.namespacePrefix, teardown.Namespace); err != nil {
-				systemID = id
-			}
-
-			return fmt.Errorf("system %v has multiple owning actions", systemID)
-		}
-
-		c.owningLifecycleActions[namespace.UID] = &lifecycleAction{
-			teardown: teardown,
+			return fmt.Errorf(
+				"error attempting to acquire lock for %v: %v",
+				teardown.Description(c.namespacePrefix),
+				err,
+			)
 		}
 	}
 
@@ -259,7 +253,7 @@ func (c *Controller) syncLifecycleActions() error {
 	return nil
 }
 
-func (c *Controller) runRolloutWorker() {
+func (c *Controller) runDeployWorker() {
 	// hot loop until we're told to stop.  processNextWorkItem will
 	// automatically wait until there's work available, so we don't worry
 	// about secondary waits

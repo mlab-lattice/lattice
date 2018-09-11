@@ -13,12 +13,6 @@ func (c *Controller) syncInProgressTeardown(teardown *latticev1.Teardown) error 
 		return err
 	}
 
-	// This needs to happen in here because we don't have an "Accepted" intermediate state like Deploy does.
-	// We can't atomically update both teardown.Status.State and change system.Spec, and we need to move teardown into
-	// "in progress" so on controller restart the controller can figure out that it is the owning object. Therefore,
-	// we must update the teardown.Status.State first. If we were then to try to update system.Spec in syncPendingTeardown
-	// and it failed, it would never get rerun since syncInProgressTeardown would always be called from there on out.
-	// So instead we set the system.Spec in here to make sure it gets run even after failures.
 	definition := resolver.NewComponentTree()
 	artifacts := latticev1.NewSystemSpecWorkloadBuildArtifacts()
 
@@ -55,14 +49,14 @@ func (c *Controller) syncInProgressTeardown(teardown *latticev1.Teardown) error 
 		return fmt.Errorf("%v in unexpected state %v", system.Description(), system.Status.State)
 	}
 
+	// need to update the teardown's status before releasing the lock. if we released the lock
+	// first it's possible that the teardown status update could fail, and another deploy or teardown
+	// successfully acquires the lock. if the controller then restarted, it could see
+	// conflicting locks when seeding the lifecycle actions
 	teardown, err = c.updateTeardownStatus(teardown, state, "")
 	if err != nil {
-		// FIXME: is it possible that the teardown is locked forever now?
 		return err
 	}
 
-	if teardown.Status.State == latticev1.TeardownStateSucceeded || teardown.Status.State == latticev1.TeardownStateFailed {
-		return c.relinquishTeardownOwningActionClaim(teardown)
-	}
-	return nil
+	return c.releaseTeardownLock(teardown)
 }

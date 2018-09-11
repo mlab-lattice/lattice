@@ -6,6 +6,7 @@ import (
 
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
+	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 )
 
 func (c *Controller) updateDeployStatus(
@@ -35,4 +36,23 @@ func (c *Controller) updateDeployStatus(
 	}
 
 	return result, nil
+}
+
+func (c *Controller) acquireDeployLock(deploy *latticev1.Deploy, path tree.Path) error {
+	namespace, err := c.kubeNamespaceLister.Get(deploy.Namespace)
+	if err != nil {
+		return err
+	}
+
+	return c.lifecycleActions.AcquireDeploy(namespace.UID, deploy.V1ID(), deploy.Spec.Version.Path)
+}
+
+func (c *Controller) releaseDeployLock(deploy *latticev1.Deploy) error {
+	namespace, err := c.kubeNamespaceLister.Get(deploy.Namespace)
+	if err != nil {
+		return err
+	}
+
+	c.lifecycleActions.ReleaseDeploy(namespace.UID, deploy.V1ID())
+	return nil
 }

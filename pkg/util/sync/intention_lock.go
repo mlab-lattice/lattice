@@ -72,18 +72,22 @@ func (l *IntentionLock) TryLock(granularity LockGranularity) (*IntentionLockUnlo
 
 // Unlock will unlock the corresponding IntentionLock for the granularity associated with
 // the IntentionLockUnlocker.
-func (l *IntentionLockUnlocker) Unlock() {
-	l.lock.lock.Lock()
-	defer l.lock.lock.Unlock()
+func (u *IntentionLockUnlocker) Unlock() {
+	u.lock.lock.Lock()
+	defer u.lock.lock.Unlock()
 
-	switch l.granularity {
+	switch u.granularity {
 	case LockGranularityIntentionExclusive:
-		l.lock.intention -= 1
+		u.lock.intention -= 1
 
 	case LockGranularityExclusive:
-		l.lock.exclusive = false
+		u.lock.exclusive = false
 
 	default:
-		panic(fmt.Sprintf("unrecognized lock granularity: %v", l.granularity))
+		panic(fmt.Sprintf("unrecognized lock granularity: %v", u.granularity))
 	}
+}
+
+func (u *IntentionLockUnlocker) Granularity() LockGranularity {
+	return u.granularity
 }

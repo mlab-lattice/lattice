@@ -2,21 +2,20 @@ package systemlifecycle
 
 import (
 	"fmt"
-
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 )
 
 func (c *Controller) syncPendingTeardown(teardown *latticev1.Teardown) error {
-	currentOwningAction, err := c.attemptToClaimTeardownOwningAction(teardown)
+	err := c.acquireTeardownLock(teardown)
 	if err != nil {
-		return err
-	}
+		_, ok := err.(*conflictingLifecycleActionError)
+		if !ok {
+			return err
+		}
 
-	if currentOwningAction != nil {
-		_, err := c.updateTeardownStatus(
-			teardown,
-			latticev1.TeardownStateFailed,
-			fmt.Sprintf("another lifecycle action is active: %v", currentOwningAction.String()),
+		_, err = c.updateTeardownStatus(
+			teardown, latticev1.TeardownStateFailed,
+			fmt.Sprintf("unable to acquire lifecycle lock: %v", err.Error()),
 		)
 		return err
 	}

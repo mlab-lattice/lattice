@@ -11,60 +11,29 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/kubernetes"
 	"github.com/satori/go.uuid"
 )
 
 func (c *Controller) syncAcceptedDeploy(deploy *latticev1.Deploy) error {
-	if deploy.Spec.Version == nil && deploy.Spec.Build == nil {
-		return fmt.Errorf("%v had neither version nor build id", deploy.Description(c.namespacePrefix))
-	}
-
-	isVersionBuild := deploy.Spec.Version != nil
-
-	// get the deploy's path so we can attempt to acquire the proper lifecycle lock
-	var path tree.Path
-	if isVersionBuild {
-		path = deploy.Spec.Version.Path
-	} else {
-		build, err := c.buildLister.Builds(deploy.Namespace).Get(string(*deploy.Status.BuildID))
-		if err != nil {
-			return err
-		}
-
-		path = build.Spec.Path
-	}
-
-	// attempt to acquire the proper lifecycle lock for the deploy. if we fail due to a locking conflict,
-	// fail the deploy.
-	err := c.acquireDeployLock(deploy, path)
-	if err != nil {
-		_, ok := err.(*conflictingLifecycleActionError)
-		if !ok {
-			return err
-		}
-
-		_, err = c.updateDeployStatus(
-			deploy,
-			latticev1.DeployStateFailed,
-			fmt.Sprintf("unable to acquire lifecycle lock: %v", err.Error()),
-			nil,
-		)
-		return err
-	}
-
 	// get the deploy's build
 	var build *latticev1.Build
-	if isVersionBuild {
+	if deploy.Spec.Version != nil {
+		var err error
 		deploy, build, err = c.syncAcceptedVersionDeploy(deploy)
 		if err != nil {
 			return err
 		}
 	} else {
+		var err error
 		build, err = c.buildLister.Builds(deploy.Namespace).Get(string(*deploy.Status.BuildID))
 		if err != nil {
 			return err
 		}
+	}
+
+	build, err := c.addBuildOwnerReference(deploy, build)
+	if err != nil {
+		return err
 	}
 
 	switch build.Status.State {
@@ -252,33 +221,4 @@ func (c *Controller) syncAcceptedDeployWithSuccessfulBuild(deploy *latticev1.Dep
 
 	_, err = c.updateDeployStatus(deploy, latticev1.DeployStateInProgress, "", deploy.Status.BuildID)
 	return err
-}
-
-func (c *Controller) acquireDeployLock(deploy *latticev1.Deploy, path tree.Path) error {
-	systemID, err := kubernetes.SystemID(c.namespacePrefix, deploy.Namespace)
-	if err != nil {
-		return err
-	}
-
-	system, err := c.systemLister.Systems(kubernetes.InternalNamespace(c.namespacePrefix)).Get(string(systemID))
-	if err != nil {
-		return err
-	}
-
-	return c.lifecycleActions.AcquireDeploy(system.UID, deploy.V1ID(), deploy.Spec.Version.Path)
-}
-
-func (c *Controller) releaseDeployLock(deploy *latticev1.Deploy) error {
-	systemID, err := kubernetes.SystemID(c.namespacePrefix, deploy.Namespace)
-	if err != nil {
-		return err
-	}
-
-	system, err := c.systemLister.Systems(kubernetes.InternalNamespace(c.namespacePrefix)).Get(string(systemID))
-	if err != nil {
-		return err
-	}
-
-	c.lifecycleActions.ReleaseDeploy(system.UID, deploy.V1ID())
-	return nil
 }

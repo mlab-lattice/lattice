@@ -33,3 +33,22 @@ func (c *Controller) updateTeardownStatus(
 
 	return result, nil
 }
+
+func (c *Controller) acquireTeardownLock(teardown *latticev1.Teardown) error {
+	namespace, err := c.kubeNamespaceLister.Get(teardown.Namespace)
+	if err != nil {
+		return err
+	}
+
+	return c.lifecycleActions.AcquireTeardown(namespace.UID, teardown.V1ID())
+}
+
+func (c *Controller) releaseTeardownLock(teardown *latticev1.Teardown) error {
+	namespace, err := c.kubeNamespaceLister.Get(teardown.Namespace)
+	if err != nil {
+		return err
+	}
+
+	c.lifecycleActions.ReleaseTeardown(namespace.UID, teardown.V1ID())
+	return nil
+}
