@@ -375,8 +375,8 @@ func (c *Controller) untransformedPodTemplateSpec(
 
 	tolerations := []corev1.Toleration{nodePool.Toleration(nodePoolEpoch)}
 
-	return latticev1.PodTemplateSpecForComponent(
-		service.Spec.Definition,
+	return latticev1.PodTemplateSpecForV1Workload(
+		&service.Spec.Definition,
 		path,
 		c.latticeID,
 		c.internalDNSDomain,

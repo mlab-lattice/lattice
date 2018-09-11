@@ -218,8 +218,8 @@ func (c *Controller) untransformedPodTemplateSpec(
 		Environment: jobRun.Spec.Environment,
 	}
 
-	return latticev1.PodTemplateSpecForComponent(
-		jobRun.Spec.Definition,
+	return latticev1.PodTemplateSpecForV1Workload(
+		&jobRun.Spec.Definition,
 		path,
 		c.latticeID,
 		c.internalDNSDomain,
