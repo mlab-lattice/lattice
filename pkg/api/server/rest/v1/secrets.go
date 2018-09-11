@@ -83,6 +83,9 @@ func (api *LatticeAPI) handleSetSecret(c *gin.Context) {
 		case v1.ErrorCodeInvalidSystemID:
 			c.JSON(http.StatusNotFound, v1err)
 
+		case v1.ErrorCodeConflict:
+			c.JSON(http.StatusConflict, v1err)
+
 		default:
 			c.Status(http.StatusInternalServerError)
 		}
@@ -216,6 +219,9 @@ func (api *LatticeAPI) handleUnsetSecret(c *gin.Context) {
 		switch v1err.Code {
 		case v1.ErrorCodeInvalidSystemID, v1.ErrorCodeInvalidSecret:
 			c.JSON(http.StatusNotFound, v1err)
+
+		case v1.ErrorCodeConflict:
+			c.JSON(http.StatusConflict, v1err)
 
 		default:
 			c.Status(http.StatusInternalServerError)

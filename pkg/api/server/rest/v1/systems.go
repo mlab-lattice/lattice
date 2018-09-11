@@ -151,7 +151,19 @@ func (api *LatticeAPI) handleDeleteSystem(c *gin.Context) {
 
 	err := api.backend.Systems().Delete(systemID)
 	if err != nil {
-		c.Status(http.StatusInternalServerError)
+		v1err, ok := err.(*v1.Error)
+		if !ok {
+			c.Status(http.StatusInternalServerError)
+			return
+		}
+
+		switch v1err.Code {
+		case v1.ErrorCodeConflict:
+			c.JSON(http.StatusConflict, v1err)
+
+		default:
+			c.Status(http.StatusInternalServerError)
+		}
 		return
 	}
 
