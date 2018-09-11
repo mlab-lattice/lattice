@@ -1,6 +1,9 @@
 # Lattice API doc generation
 
-Lattice API docs are generated with slate + swagger. Swagger files are generated using `swag` tool from annotations. The main API description live in the following file:
+Lattice API docs are generated with slate + swagger. The slate fork for lattice is located in https://github.com/mlab-lattice/lattice-api-docs
+
+
+Swagger files are generated using `swag` tool from annotations. The main API description live in the following file:
 
 https://github.com/mlab-lattice/lattice/blob/9e2b722210d01d338ad00d498c36fdc7c07b8b40/pkg/api/server/rest/v1/api.go#L33
 
