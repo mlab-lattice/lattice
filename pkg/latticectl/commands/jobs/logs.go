@@ -60,11 +60,13 @@ func (c *LogsCommand) Base() (*latticectl.BaseCommand, error) {
 		},
 		Run: func(ctx latticectl.JobCommandContext, args []string) {
 			c := ctx.Client().Systems().Jobs(ctx.SystemID())
-			logOptions := v1.NewContainerLogOptions()
-			logOptions.Follow = follow
-			logOptions.Timestamps = timestamps
-			logOptions.SinceTime = sinceTime
-			logOptions.Since = since
+
+			logOptions := &v1.ContainerLogOptions{
+				Follow:     follow,
+				Timestamps: timestamps,
+				SinceTime:  sinceTime,
+				Since:      since,
+			}
 
 			if tail != 0 {
 				tl := int64(tail)

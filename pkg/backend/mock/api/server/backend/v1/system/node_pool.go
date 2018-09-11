@@ -44,5 +44,5 @@ func (b *NodePoolBackend) Get(path tree.PathSubcomponent) (*v1.NodePool, error) 
 		}
 	}
 
-	return nil, v1.NewInvalidNodePoolPathError()
+	return nil, v1.NewInvalidPathError()
 }

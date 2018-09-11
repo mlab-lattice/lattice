@@ -138,7 +138,7 @@ func (b *buildBackend) Logs(
 	workload, ok := build.Status.Workloads[path]
 	if !ok {
 		if errors.IsNotFound(err) {
-			return nil, v1.NewInvalidServicePathError()
+			return nil, v1.NewInvalidPathError()
 		}
 
 		return nil, err

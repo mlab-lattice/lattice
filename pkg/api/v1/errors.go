@@ -12,14 +12,9 @@ const (
 
 	ErrorCodeInvalidJobID ErrorCode = "INVALID_JOB_ID"
 
-	ErrorCodeInvalidNodePoolPath ErrorCode = "INVALID_NODE_POOL_PATH"
-
 	ErrorCodeInvalidSecret ErrorCode = "INVALID_SECRET"
 
-	ErrorCodeInvalidServiceID   ErrorCode = "INVALID_SERVICE_ID"
-	ErrorCodeInvalidServicePath ErrorCode = "INVALID_SERVICE_PATH"
-
-	ErrorCodeInvalidSidecar ErrorCode = "INVALID_SIDECAR"
+	ErrorCodeInvalidServiceID ErrorCode = "INVALID_SERVICE_ID"
 
 	ErrorCodeSystemAlreadyExists  ErrorCode = "SYSTEM_ALREADY_EXISTS"
 	ErrorCodeInvalidSystemID      ErrorCode = "INVALID_SYSTEM_ID"
@@ -27,6 +22,10 @@ const (
 	ErrorCodeInvalidSystemVersion ErrorCode = "INVALID_SYSTEM_VERSION"
 
 	ErrorCodeInvalidTeardownID ErrorCode = "INVALID_TEARDOWN_ID"
+
+	ErrorCodeInvalidInstance ErrorCode = "INVALID_INSTANCE"
+	ErrorCodeInvalidPath     ErrorCode = "INVALID_PATH"
+	ErrorCodeInvalidSidecar  ErrorCode = "INVALID_SIDECAR"
 )
 
 type Error struct {
@@ -61,24 +60,12 @@ func NewInvalidJobIDError() *Error {
 	return NewError(ErrorCodeInvalidJobID)
 }
 
-func NewInvalidNodePoolPathError() *Error {
-	return NewError(ErrorCodeInvalidNodePoolPath)
-}
-
 func NewInvalidSecretError() *Error {
 	return NewError(ErrorCodeInvalidSecret)
 }
 
-func NewInvalidSidecarError() *Error {
-	return NewError(ErrorCodeInvalidSidecar)
-}
-
 func NewInvalidServiceIDError() *Error {
 	return NewError(ErrorCodeInvalidServiceID)
-}
-
-func NewInvalidServicePathError() *Error {
-	return NewError(ErrorCodeInvalidServicePath)
 }
 
 func NewSystemAlreadyExistsError() *Error {
@@ -99,4 +86,16 @@ func NewInvalidSystemVersionError() *Error {
 
 func NewInvalidTeardownIDError() *Error {
 	return NewError(ErrorCodeInvalidTeardownID)
+}
+
+func NewInvalidInstanceError() *Error {
+	return NewError(ErrorCodeInvalidInstance)
+}
+
+func NewInvalidPathError() *Error {
+	return NewError(ErrorCodeInvalidPath)
+}
+
+func NewInvalidSidecarError() *Error {
+	return NewError(ErrorCodeInvalidSidecar)
 }

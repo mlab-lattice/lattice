@@ -7,6 +7,9 @@ import (
 )
 
 func logOptionsToQueryString(logOptions *v1.ContainerLogOptions) string {
+	if logOptions == nil {
+		return ""
+	}
 	qs := fmt.Sprintf(
 		"follow=%v&timestamps=%v&previous=%v&since=%v&sinceTime=%v",
 		logOptions.Follow,

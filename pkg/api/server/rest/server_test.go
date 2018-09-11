@@ -214,7 +214,7 @@ func buildAndDeploy(t *testing.T) {
 
 	// test build logs
 	fmt.Println("Test Build logs")
-	reader, err := latticeClient.Systems().Builds(mockSystemID).Logs(build.ID, mockServicePath, nil, v1.NewContainerLogOptions())
+	reader, err := latticeClient.Systems().Builds(mockSystemID).Logs(build.ID, mockServicePath, nil, nil)
 	checkErr(err, t)
 	buf := new(bytes.Buffer)
 	buf.ReadFrom(reader)
@@ -237,7 +237,7 @@ func buildAndDeploy(t *testing.T) {
 		services[0].ID,
 		nil,
 		nil,
-		v1.NewContainerLogOptions(),
+		nil,
 	)
 	checkErr(err, t)
 	buf = new(bytes.Buffer)
@@ -339,7 +339,7 @@ func runJob(t *testing.T) {
 
 	// test job logs
 	fmt.Println("Test Job logs")
-	reader, err := latticeClient.Systems().Jobs(mockSystemID).Logs(job.ID, nil, v1.NewContainerLogOptions())
+	reader, err := latticeClient.Systems().Jobs(mockSystemID).Logs(job.ID, nil, nil)
 	checkErr(err, t)
 	buf := new(bytes.Buffer)
 	buf.ReadFrom(reader)

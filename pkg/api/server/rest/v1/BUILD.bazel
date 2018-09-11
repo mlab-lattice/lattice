@@ -3,9 +3,18 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library")
 go_library(
     name = "go_default_library",
     srcs = [
+        "api.go",
+        "builds.go",
+        "deploys.go",
         "errors.go",
         "handlers.go",
+        "jobs.go",
+        "node_pools.go",
+        "secrets.go",
+        "services.go",
         "systems.go",
+        "teardowns.go",
+        "versions.go",
     ],
     importpath = "github.com/mlab-lattice/lattice/pkg/api/server/rest/v1",
     visibility = ["//visibility:public"],
@@ -17,6 +26,7 @@ go_library(
         "//pkg/definition/tree:go_default_library",
         "//pkg/definition/v1:go_default_library",
         "@com_github_gin_gonic_gin//:go_default_library",
-        "@com_github_golang_glog//:go_default_library",
+        "@com_github_swaggo_gin_swagger//:go_default_library",
+        "@com_github_swaggo_gin_swagger//swaggerFiles:go_default_library",
     ],
 )

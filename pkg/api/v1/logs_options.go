@@ -9,7 +9,3 @@ type ContainerLogOptions struct {
 	SinceTime  string
 	Timestamps bool
 }
-
-func NewContainerLogOptions() *ContainerLogOptions {
-	return &ContainerLogOptions{}
-}

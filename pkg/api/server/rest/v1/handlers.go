@@ -8,5 +8,6 @@ import (
 )
 
 func MountHandlers(router *gin.RouterGroup, backend backendv1.Backend, resolver resolver.ComponentResolver) {
-	mountSystemHandlers(router, backend, resolver)
+	api := newLatticeAPI(router, backend, resolver)
+	api.setupAPI()
 }

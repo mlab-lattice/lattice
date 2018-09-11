@@ -69,7 +69,7 @@ func (b *ServiceBackend) GetByPath(path tree.Path) (*v1.Service, error) {
 		}
 	}
 
-	return nil, v1.NewInvalidServicePathError()
+	return nil, v1.NewInvalidPathError()
 }
 
 func (b *ServiceBackend) Logs(

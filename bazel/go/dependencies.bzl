@@ -153,6 +153,16 @@ GO_DEPENDENCIES = {
             "commit": "1be1d2841c773c01bee8289f55f7463b6e2c2539",
             "importpath": "github.com/spf13/cobra",
         },
+        "github.com/swaggo/swag": {
+            "name": "com_github_swaggo_swag",
+            "tag": "v1.3.2",
+            "importpath": "github.com/swaggo/swag",
+        },
+        "github.com/swaggo/gin-swagger": {
+            "name": "com_github_swaggo_gin_swagger",
+            "tag": "v1.0.0",
+            "importpath": "github.com/swaggo/gin-swagger",
+        },
         "github.com/tfogo/tablewriter": {
             "name": "com_github_tfogo_tablewriter",
             "commit": "4776fb554dc2ca114fbce4738142a47de1ea0929",

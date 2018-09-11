@@ -83,12 +83,13 @@ func (c *LogsCommand) Base() (*latticectl.BaseCommand, error) {
 				sidecar = &sidecarStr
 			}
 
-			logOptions := v1.NewContainerLogOptions()
-			logOptions.Follow = follow
-			logOptions.Previous = previous
-			logOptions.Timestamps = timestamps
-			logOptions.SinceTime = sinceTime
-			logOptions.Since = since
+			logOptions := &v1.ContainerLogOptions{
+				Follow:     follow,
+				Previous:   previous,
+				Timestamps: timestamps,
+				SinceTime:  sinceTime,
+				Since:      since,
+			}
 
 			if tail != 0 {
 				tl := int64(tail)
