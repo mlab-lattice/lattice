@@ -70,11 +70,6 @@ type SystemSpecWorkloadBuildArtifacts struct {
 	inner *tree.JSONRadix
 }
 
-type SystemSpecWorkloadBuildArtifactsWorkload struct {
-	MainContainer ContainerBuildArtifacts            `json:"mainContainer"`
-	Sidecars      map[string]ContainerBuildArtifacts `json:"sidecars"`
-}
-
 func NewSystemSpecWorkloadBuildArtifacts() *SystemSpecWorkloadBuildArtifacts {
 	return &SystemSpecWorkloadBuildArtifacts{
 		inner: tree.NewJSONRadix(
@@ -82,7 +77,7 @@ func NewSystemSpecWorkloadBuildArtifacts() *SystemSpecWorkloadBuildArtifacts {
 				return json.Marshal(&i)
 			},
 			func(data json.RawMessage) (interface{}, error) {
-				var w SystemSpecWorkloadBuildArtifactsWorkload
+				var w WorkloadContainerBuildArtifacts
 				if err := json.Unmarshal(data, &w); err != nil {
 					return nil, err
 				}
@@ -95,23 +90,23 @@ func NewSystemSpecWorkloadBuildArtifacts() *SystemSpecWorkloadBuildArtifacts {
 
 func (a *SystemSpecWorkloadBuildArtifacts) Insert(
 	p tree.Path,
-	w SystemSpecWorkloadBuildArtifactsWorkload,
-) (SystemSpecWorkloadBuildArtifactsWorkload, bool) {
+	w WorkloadContainerBuildArtifacts,
+) (WorkloadContainerBuildArtifacts, bool) {
 	i, ok := a.inner.Insert(p, w)
 	if !ok {
-		return SystemSpecWorkloadBuildArtifactsWorkload{}, false
+		return WorkloadContainerBuildArtifacts{}, false
 	}
 
-	return i.(SystemSpecWorkloadBuildArtifactsWorkload), true
+	return i.(WorkloadContainerBuildArtifacts), true
 }
 
-func (a *SystemSpecWorkloadBuildArtifacts) Get(p tree.Path) (SystemSpecWorkloadBuildArtifactsWorkload, bool) {
+func (a *SystemSpecWorkloadBuildArtifacts) Get(p tree.Path) (WorkloadContainerBuildArtifacts, bool) {
 	i, ok := a.inner.Get(p)
 	if !ok {
-		return SystemSpecWorkloadBuildArtifactsWorkload{}, false
+		return WorkloadContainerBuildArtifacts{}, false
 	}
 
-	return i.(SystemSpecWorkloadBuildArtifactsWorkload), true
+	return i.(WorkloadContainerBuildArtifacts), true
 }
 
 func (a *SystemSpecWorkloadBuildArtifacts) ReplacePrefix(p tree.Path, other *SystemSpecWorkloadBuildArtifacts) {

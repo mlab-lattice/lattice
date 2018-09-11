@@ -5,7 +5,10 @@ import (
 	"reflect"
 
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
+	"github.com/mlab-lattice/lattice/pkg/definition/component/resolver"
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
+	definitionv1 "github.com/mlab-lattice/lattice/pkg/definition/v1"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
@@ -19,14 +22,24 @@ func (c *Controller) syncSystemJobs(system *latticev1.System) error {
 	jobNames := mapset.NewSet()
 
 	// Loop through the jobs defined in the system's Spec, and create/update any that need it
-	for path, jobInfo := range system.Spec.Jobs {
+	var err error
+	system.Spec.Definition.V1().Jobs(func(path tree.Path, definition *definitionv1.Job, info *resolver.ResolutionInfo) bool {
+		artifacts, ok := system.Spec.WorkloadBuildArtifacts.Get(path)
+		if !ok {
+			err = fmt.Errorf(
+				"%v spec has job %v but does not have build information about it",
+				system.Description(),
+				path.String(),
+			)
+			return false
+		}
+
 		var job *latticev1.Job
 
 		// First check our cache to see if the job exists.
-		var err error
 		job, err = c.getJobFromCache(systemNamespace, path)
 		if err != nil {
-			return err
+			return false
 		}
 
 		if job == nil {
@@ -35,31 +48,35 @@ func (c *Controller) syncSystemJobs(system *latticev1.System) error {
 			// on any of the services, then just do one list.
 			job, err = c.getJobFromAPI(systemNamespace, path)
 			if err != nil {
-				return err
+				return false
 			}
 
 			if job == nil {
 				// The job actually doesn't exist yet. Create it with a new UUID as the name.
-				job, err = c.createNewJob(system, &jobInfo, path)
+				job, err = c.createNewJob(system, path, definition, &artifacts)
 				if err != nil {
-					return err
+					return false
 				}
 
 				// Successfully created the job. No need to check if it needs to be updated.
 				jobNames.Add(job.Name)
-				continue
+				return true
 			}
 		}
 
 		// We found an existing job. Calculate what its Spec should look like,
 		// and update the job if its current Spec is different.
-		spec := jobSpec(&jobInfo)
+		spec := jobSpec(definition, &artifacts)
 		job, err = c.updateJob(job, spec, path)
 		if err != nil {
-			return err
+			return false
 		}
 
 		jobNames.Add(job.Name)
+		return true
+	})
+	if err != nil {
+		return err
 	}
 
 	// Loop through all of the jobs that exist in the System's namespace, and delete any
@@ -85,10 +102,11 @@ func (c *Controller) syncSystemJobs(system *latticev1.System) error {
 
 func (c *Controller) createNewJob(
 	system *latticev1.System,
-	jobInfo *latticev1.SystemSpecJobInfo,
 	path tree.Path,
+	definition *definitionv1.Job,
+	artifacts *latticev1.WorkloadContainerBuildArtifacts,
 ) (*latticev1.Job, error) {
-	job, err := c.newJob(system, jobInfo, path)
+	job, err := c.newJob(system, path, definition, artifacts)
 	if err != nil {
 		return nil, fmt.Errorf("error getting new job for %v in %v: %v", path.String(), system.Description(), err)
 	}
@@ -103,8 +121,9 @@ func (c *Controller) createNewJob(
 
 func (c *Controller) newJob(
 	system *latticev1.System,
-	jobInfo *latticev1.SystemSpecJobInfo,
 	path tree.Path,
+	definition *definitionv1.Job,
+	artifacts *latticev1.WorkloadContainerBuildArtifacts,
 ) (*latticev1.Job, error) {
 	systemNamespace := system.ResourceNamespace(c.namespacePrefix)
 	job := &latticev1.Job{
@@ -116,23 +135,19 @@ func (c *Controller) newJob(
 				latticev1.JobPathLabelKey: path.ToDomain(),
 			},
 		},
-		Spec: jobSpec(jobInfo),
+		Spec: jobSpec(definition, artifacts),
 	}
-
-	//annotations, err := c.serviceMesh.JobAnnotations(job)
-	//if err != nil {
-	//	return nil, err
-	//}
-	//
-	//job.Annotations = annotations
 
 	return job, nil
 }
 
-func jobSpec(serviceInfo *latticev1.SystemSpecJobInfo) latticev1.JobSpec {
+func jobSpec(
+	definition *definitionv1.Job,
+	artifacts *latticev1.WorkloadContainerBuildArtifacts,
+) latticev1.JobSpec {
 	return latticev1.JobSpec{
-		Definition:              serviceInfo.Definition,
-		ContainerBuildArtifacts: serviceInfo.ContainerBuildArtifacts,
+		Definition:              *definition,
+		ContainerBuildArtifacts: *artifacts,
 	}
 }
 

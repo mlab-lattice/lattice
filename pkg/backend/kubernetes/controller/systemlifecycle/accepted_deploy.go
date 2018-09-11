@@ -136,7 +136,7 @@ func (c *Controller) syncAcceptedDeploy(deploy *latticev1.Deploy) error {
 				return false
 			}
 
-			workloadArtifacts := latticev1.SystemSpecWorkloadBuildArtifactsWorkload{
+			workloadArtifacts := latticev1.WorkloadContainerBuildArtifacts{
 				MainContainer: *mainContainerBuild.Artifacts,
 				Sidecars:      make(map[string]latticev1.ContainerBuildArtifacts),
 			}

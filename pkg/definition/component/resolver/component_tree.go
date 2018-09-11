@@ -10,8 +10,10 @@ import (
 type (
 	ComponentTreeWalkFn   func(tree.Path, *ResolutionInfo) bool
 	V1TreeJobWalkFn       func(tree.Path, *definitionv1.Job, *ResolutionInfo) bool
+	V1TreeNodePoolWalkFn  func(tree.PathSubcomponent, *definitionv1.NodePool) bool
 	V1TreeReferenceWalkFn func(tree.Path, *definitionv1.Reference, *ResolutionInfo) bool
 	V1TreeServiceWalkFn   func(tree.Path, *definitionv1.Service, *ResolutionInfo) bool
+	V1TreeSystemWalkFn    func(tree.Path, *definitionv1.System, *ResolutionInfo) bool
 	V1TreeWorkloadWalkFn  func(tree.Path, definitionv1.Workload, *ResolutionInfo) bool
 )
 
@@ -110,6 +112,20 @@ func (t *V1Tree) Jobs(fn V1TreeJobWalkFn) {
 	})
 }
 
+func (t *V1Tree) NodePools(fn V1TreeNodePoolWalkFn) {
+	t.Systems(func(path tree.Path, system *definitionv1.System, info *ResolutionInfo) bool {
+		for name, nodePool := range system.NodePools {
+			// FIXME(kevindrosendahl): what to do in the event of an empty string node pool?
+			subcomponent, _ := tree.NewPathSubcomponentFromParts(path, name)
+			if !fn(subcomponent, &nodePool) {
+				return false
+			}
+		}
+
+		return true
+	})
+}
+
 func (t *V1Tree) References(fn V1TreeReferenceWalkFn) {
 	t.ComponentTree.Walk(func(path tree.Path, i *ResolutionInfo) bool {
 		reference, ok := i.Component.(*definitionv1.Reference)
@@ -129,6 +145,17 @@ func (t *V1Tree) Services(fn V1TreeServiceWalkFn) {
 		}
 
 		return fn(path, service, i)
+	})
+}
+
+func (t *V1Tree) Systems(fn V1TreeSystemWalkFn) {
+	t.ComponentTree.Walk(func(path tree.Path, i *ResolutionInfo) bool {
+		system, ok := i.Component.(*definitionv1.System)
+		if !ok {
+			return false
+		}
+
+		return fn(path, system, i)
 	})
 }
 

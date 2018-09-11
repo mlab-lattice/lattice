@@ -107,6 +107,11 @@ type ContainerBuildArtifacts struct {
 	DockerImageFQN string `json:"dockerImageFqn"`
 }
 
+type WorkloadContainerBuildArtifacts struct {
+	MainContainer ContainerBuildArtifacts            `json:"mainContainer"`
+	Sidecars      map[string]ContainerBuildArtifacts `json:"sidecars"`
+}
+
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 type ContainerBuildList struct {
