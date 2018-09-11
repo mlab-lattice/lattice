@@ -1,3 +1,0 @@
-[submodule "pkg/api/docs/lattice-api-docs"]
-	path = pkg/api/docs/lattice-api-docs
-	url = https://github.com/mlab-lattice/lattice-api-docs
