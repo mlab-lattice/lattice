@@ -2,7 +2,6 @@ package systemlifecycle
 
 import (
 	"fmt"
-	"sync"
 	"time"
 
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
@@ -13,7 +12,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
 
@@ -39,17 +37,8 @@ type Controller struct {
 	kubeClient    kubeclientset.Interface
 	latticeClient latticeclientset.Interface
 
-	// Each system may only have one deploy going on at a time.
-	// A deploy is an "owning" deploy while it is rolling out, and until
-	// it has completed and a new deploy has been accepted and becomes the
-	// owning deploy. (e.g. we create Deploy A. It is accepted and becomes
-	// the owning deploy. It then runs to completion. It is still the owning
-	// deploy. Then Deploy B is created. It is accepted because the existing
-	// owning deploy is not running. Now B is the owning deploy)
-	// FIXME: rethink this. is there a simpler solution?
-	owningLifecycleActionsLock   sync.RWMutex
-	owningLifecycleActions       map[types.UID]*lifecycleAction
-	owningLifecycleActionsSynced chan struct{}
+	lifecycleActions       *lifecycleActions
+	lifecycleActionsSynced chan struct{}
 
 	deployLister       latticelisters.DeployLister
 	deployListerSynced cache.InformerSynced
@@ -86,8 +75,7 @@ func NewController(
 		kubeClient:    kubeClient,
 		latticeClient: latticeClient,
 
-		owningLifecycleActions:       make(map[types.UID]*lifecycleAction),
-		owningLifecycleActionsSynced: make(chan struct{}),
+		lifecycleActions: newLifecycleActions(),
 
 		deployQueue:   workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "deploy"),
 		teardownQueue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "teardown"),
@@ -160,7 +148,7 @@ func (c *Controller) Run(workers int, stopCh <-chan struct{}) {
 	// It's okay that we're racing with the System and Build informer add/update functions here.
 	// handleDeployAdd and handleDeployUpdate will enqueue all of the existing SystemRollouts already
 	// so it's okay if the other informers don't.
-	if err := c.syncOwningActions(); err != nil {
+	if err := c.syncLifecycleActions(); err != nil {
 		glog.Errorf("error syncing owning actions: %v", err)
 		return
 	}
@@ -203,7 +191,7 @@ func (c *Controller) enqueueTeardown(teardown *latticev1.Teardown) {
 	c.teardownQueue.Add(key)
 }
 
-func (c *Controller) syncOwningActions() error {
+func (c *Controller) syncLifecycleActions() error {
 	c.owningLifecycleActionsLock.Lock()
 	defer c.owningLifecycleActionsLock.Unlock()
 
@@ -267,7 +255,7 @@ func (c *Controller) syncOwningActions() error {
 		}
 	}
 
-	close(c.owningLifecycleActionsSynced)
+	close(c.lifecycleActionsSynced)
 	return nil
 }
 

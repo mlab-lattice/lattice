@@ -40,21 +40,21 @@ type IntentionLockUnlocker struct {
 // TryLock will attempt to lock the IntentionLock with the supplied LockGranularity
 // without blocking. If it succeeds it returns an IntentionLockUnlocker which must
 // later be used to unlock the lock. If it fails it returns nil.
-func (l *IntentionLock) TryLock(granularity LockGranularity) *IntentionLockUnlocker {
+func (l *IntentionLock) TryLock(granularity LockGranularity) (*IntentionLockUnlocker, bool) {
 	l.lock.Lock()
 	defer l.lock.Unlock()
 
 	switch granularity {
 	case LockGranularityIntentionExclusive:
 		if l.exclusive {
-			return nil
+			return nil, false
 		}
 
 		l.intention += 1
 
 	case LockGranularityExclusive:
 		if l.exclusive || l.intention > 0 {
-			return nil
+			return nil, false
 		}
 
 		l.exclusive = true
@@ -63,10 +63,11 @@ func (l *IntentionLock) TryLock(granularity LockGranularity) *IntentionLockUnloc
 		panic(fmt.Sprintf("unrecognized lock granularity: %v", granularity))
 	}
 
-	return &IntentionLockUnlocker{
+	unlocker := &IntentionLockUnlocker{
 		lock:        l,
 		granularity: granularity,
 	}
+	return unlocker, true
 }
 
 // Unlock will unlock the corresponding IntentionLock for the granularity associated with

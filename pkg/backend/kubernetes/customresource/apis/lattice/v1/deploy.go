@@ -35,6 +35,10 @@ type Deploy struct {
 	Status            DeployStatus `json:"status"`
 }
 
+func (d *Deploy) V1ID() v1.DeployID {
+	return v1.DeployID(d.Name)
+}
+
 func (d *Deploy) BuildIDLabel() (v1.BuildID, bool) {
 	id, ok := d.Labels[BuildIDLabelKey]
 	return v1.BuildID(id), ok

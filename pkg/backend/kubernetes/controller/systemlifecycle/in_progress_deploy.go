@@ -35,15 +35,14 @@ func (c *Controller) syncInProgressDeploy(deploy *latticev1.Deploy) error {
 		return fmt.Errorf("%v in unexpected state %v", system.Description(), system.Status.State)
 	}
 
+	// need to update the deploy's status before releasing the lock. if we released the lock
+	// first it's possible that the deployment status update could fail, and another deploy
+	// successfully acquires the lock. if the controller then restarted, it could see
+	// conflicting locks when seeding the lifecycle actions
 	deploy, err = c.updateDeployStatus(deploy, state, "", deploy.Status.BuildID)
 	if err != nil {
-		// FIXME: is it possible that the deploy is locked forever now?
 		return err
 	}
 
-	if deploy.Status.State == latticev1.DeployStateSucceeded || deploy.Status.State == latticev1.DeployStateFailed {
-		return c.relinquishDeployOwningActionClaim(deploy)
-	}
-
-	return nil
+	return c.releaseDeployLock(deploy)
 }

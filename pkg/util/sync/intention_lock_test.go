@@ -7,8 +7,8 @@ import (
 
 func TestIntentionLock_Exclusive(t *testing.T) {
 	var l IntentionLock
-	unlocker := l.TryLock(LockGranularityExclusive)
-	if unlocker == nil {
+	unlocker, ok := l.TryLock(LockGranularityExclusive)
+	if !ok {
 		t.Fatal("expected to be able to lock fresh IntentionLock exclusively, but returned nil")
 	}
 
@@ -18,8 +18,8 @@ func TestIntentionLock_Exclusive(t *testing.T) {
 		go func() {
 			defer wg.Done()
 
-			u := l.TryLock(LockGranularityExclusive)
-			if u != nil {
+			_, ok := l.TryLock(LockGranularityExclusive)
+			if ok {
 				t.Fatal("expected to not be able to lock exclusively locked lock exclusively, but was able to")
 			}
 		}()
@@ -33,8 +33,8 @@ func TestIntentionLock_Exclusive(t *testing.T) {
 		go func() {
 			defer wg2.Done()
 
-			u := l.TryLock(LockGranularityIntentionExclusive)
-			if u != nil {
+			_, ok := l.TryLock(LockGranularityIntentionExclusive)
+			if ok {
 				t.Fatal("expected to not be able to lock exclusively locked lock exclusively, but was able to")
 			}
 		}()
@@ -44,15 +44,16 @@ func TestIntentionLock_Exclusive(t *testing.T) {
 
 	unlocker.Unlock()
 
-	if l.TryLock(LockGranularityExclusive) == nil {
+	_, ok = l.TryLock(LockGranularityExclusive)
+	if !ok {
 		t.Fatal("expected to be able to re-lock lock exclusively")
 	}
 }
 
 func TestIntentionLock_IntentionExclusive(t *testing.T) {
 	var l IntentionLock
-	unlocker := l.TryLock(LockGranularityIntentionExclusive)
-	if unlocker == nil {
+	unlocker, ok := l.TryLock(LockGranularityIntentionExclusive)
+	if !ok {
 		t.Fatal("expected to be able to lock fresh IntentionLock with intention, but returned nil")
 	}
 
@@ -62,8 +63,8 @@ func TestIntentionLock_IntentionExclusive(t *testing.T) {
 		go func() {
 			defer wg.Done()
 
-			u := l.TryLock(LockGranularityExclusive)
-			if u != nil {
+			_, ok := l.TryLock(LockGranularityExclusive)
+			if ok {
 				t.Fatal("expected to not be able to lock exclusively locked lock exclusively, but was able to")
 			}
 		}()
@@ -80,8 +81,8 @@ func TestIntentionLock_IntentionExclusive(t *testing.T) {
 		go func() {
 			defer doneWg.Done()
 
-			u := l.TryLock(LockGranularityIntentionExclusive)
-			if u == nil {
+			u, ok := l.TryLock(LockGranularityIntentionExclusive)
+			if !ok {
 				t.Fatal("expected to be able to lock exclusively locked lock intention exclusively, but was not able to")
 			}
 
@@ -95,7 +96,8 @@ func TestIntentionLock_IntentionExclusive(t *testing.T) {
 
 	unlocker.Unlock()
 
-	if l.TryLock(LockGranularityExclusive) == nil {
+	_, ok = l.TryLock(LockGranularityExclusive)
+	if !ok {
 		t.Fatal("expected to be able to re-lock lock exclusively")
 	}
 }

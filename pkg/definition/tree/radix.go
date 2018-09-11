@@ -69,8 +69,7 @@ func (r *Radix) ReplacePrefix(p Path, other *Radix) {
 	})
 }
 
-// Walk walks the tree in lexical order, invoking the supplied function
-// at each node.
+// Walk walks the tree in order, invoking the supplied function at each node.
 func (r *Radix) Walk(fn RadixWalkFn) {
 	r.inner.Walk(walkFn(fn))
 }

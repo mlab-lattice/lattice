@@ -49,7 +49,7 @@ func (c *Controller) handleSystemUpdate(old, cur interface{}) {
 }
 
 func (c *Controller) handleSystemEvent(system *latticev1.System, verb string) {
-	<-c.owningLifecycleActionsSynced
+	<-c.lifecycleActionsSynced
 
 	glog.V(4).Infof("%v %v", system.Description(), verb)
 
@@ -89,7 +89,7 @@ func (c *Controller) handleBuildUpdate(old, cur interface{}) {
 }
 
 func (c *Controller) handleBuildEvent(build *latticev1.Build, verb string) {
-	<-c.owningLifecycleActionsSynced
+	<-c.lifecycleActionsSynced
 
 	glog.V(4).Infof("%v %v", build.Description(c.namespacePrefix), verb)
 
