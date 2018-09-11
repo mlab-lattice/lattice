@@ -8,9 +8,10 @@ go_library(
     deps = [
         "//pkg/api/server/rest:go_default_library",
         "//pkg/backend/mock/api/server/backend:go_default_library",
-        "//pkg/backend/mock/definition/resolver:go_default_library",
-        "//pkg/definition/resolver:go_default_library",
+        "//pkg/backend/mock/definition/component/resolver:go_default_library",
+        "//pkg/definition/component/resolver:go_default_library",
         "//pkg/util/cli:go_default_library",
+        "//pkg/util/git:go_default_library",
         "@com_github_spf13_pflag//:go_default_library",
     ],
 )

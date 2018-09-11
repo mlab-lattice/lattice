@@ -135,7 +135,7 @@ func (b *buildBackend) Logs(
 		return nil, err
 	}
 
-	service, ok := build.Status.Services[path]
+	workload, ok := build.Status.Workloads[path]
 	if !ok {
 		if errors.IsNotFound(err) {
 			return nil, v1.NewInvalidServicePathError()
@@ -144,16 +144,16 @@ func (b *buildBackend) Logs(
 		return nil, err
 	}
 
-	containerBuildID := service.MainContainer
+	containerBuildID := workload.MainContainer
 	if sidecar != nil {
-		containerBuildID, ok = service.Sidecars[*sidecar]
+		containerBuildID, ok = workload.Sidecars[*sidecar]
 		if !ok {
 			return nil, v1.NewInvalidSidecarError()
 		}
 	}
 
 	selector := labels.NewSelector()
-	requirement, err := labels.NewRequirement(latticev1.ContainerBuildIDLabelKey, selection.Equals, []string{containerBuildID})
+	requirement, err := labels.NewRequirement(latticev1.ContainerBuildIDLabelKey, selection.Equals, []string{string(containerBuildID)})
 	if err != nil {
 		return nil, fmt.Errorf("error creating requirement for %v/%v job lookup: %v", namespace, containerBuildID, err)
 	}
@@ -209,22 +209,22 @@ func (b *buildBackend) transformBuild(build *latticev1.Build) (v1.Build, error) 
 		StartTimestamp:      startTimestamp,
 		CompletionTimestamp: completionTimestamp,
 
-		Version:  version,
-		Services: make(map[tree.Path]v1.ServiceBuild),
+		Version:   version,
+		Workloads: make(map[tree.Path]v1.WorkloadBuild),
 	}
 
-	for path, serviceInfo := range build.Status.Services {
-		externalServiceBuild, err := transformServiceBuild(
+	for path, workload := range build.Status.Workloads {
+		externalServiceBuild, err := transformWorkloadBuild(
 			build.Namespace,
 			build.Name,
-			&serviceInfo,
+			&workload,
 			build.Status.ContainerBuildStatuses,
 		)
 		if err != nil {
 			return v1.Build{}, err
 		}
 
-		externalBuild.Services[path] = externalServiceBuild
+		externalBuild.Workloads[path] = externalServiceBuild
 	}
 
 	return externalBuild, nil
@@ -252,47 +252,47 @@ func getBuildState(state latticev1.BuildState) (v1.BuildState, error) {
 	}
 }
 
-func transformServiceBuild(
+func transformWorkloadBuild(
 	namespace, name string,
-	serviceInfo *latticev1.BuildStatusService,
-	containerBuildStatuses map[string]latticev1.ContainerBuildStatus,
-) (v1.ServiceBuild, error) {
-	mainContainerBuildStatus, ok := containerBuildStatuses[serviceInfo.MainContainer]
+	workload *latticev1.BuildStatusWorkload,
+	containerBuildStatuses map[v1.ContainerBuildID]latticev1.ContainerBuildStatus,
+) (v1.WorkloadBuild, error) {
+	mainContainerBuildStatus, ok := containerBuildStatuses[workload.MainContainer]
 	if !ok {
 		err := fmt.Errorf(
 			"build %v/%v but does not have status for container build %v",
 			namespace,
 			name,
-			serviceInfo.MainContainer,
+			workload.MainContainer,
 		)
-		return v1.ServiceBuild{}, err
+		return v1.WorkloadBuild{}, err
 	}
 
-	externalContainerBuild, err := transformContainerBuild(serviceInfo.MainContainer, mainContainerBuildStatus)
+	externalContainerBuild, err := transformContainerBuild(workload.MainContainer, mainContainerBuildStatus)
 	if err != nil {
-		return v1.ServiceBuild{}, err
+		return v1.WorkloadBuild{}, err
 	}
 
-	externalBuild := v1.ServiceBuild{
+	externalBuild := v1.WorkloadBuild{
 		ContainerBuild: externalContainerBuild,
 		Sidecars:       make(map[string]v1.ContainerBuild),
 	}
 
-	for sidecar, containerBuildID := range serviceInfo.Sidecars {
+	for sidecar, containerBuildID := range workload.Sidecars {
 		containerBuildStatus, ok := containerBuildStatuses[containerBuildID]
 		if !ok {
 			err := fmt.Errorf(
 				"build %v/%v but does not have status for container build %v",
 				namespace,
 				name,
-				serviceInfo.MainContainer,
+				workload.MainContainer,
 			)
-			return v1.ServiceBuild{}, err
+			return v1.WorkloadBuild{}, err
 		}
 
 		externalContainerBuild, err := transformContainerBuild(containerBuildID, containerBuildStatus)
 		if err != nil {
-			return v1.ServiceBuild{}, err
+			return v1.WorkloadBuild{}, err
 		}
 
 		externalBuild.Sidecars[sidecar] = externalContainerBuild
@@ -301,7 +301,7 @@ func transformServiceBuild(
 	return externalBuild, nil
 }
 
-func transformContainerBuild(containerBuildID string, status latticev1.ContainerBuildStatus) (v1.ContainerBuild, error) {
+func transformContainerBuild(id v1.ContainerBuildID, status latticev1.ContainerBuildStatus) (v1.ContainerBuild, error) {
 	state, err := getComponentBuildState(status.State)
 	if err != nil {
 		return v1.ContainerBuild{}, err
@@ -329,7 +329,7 @@ func transformContainerBuild(containerBuildID string, status latticev1.Container
 	}
 
 	externalBuild := v1.ContainerBuild{
-		ID:    v1.ContainerBuildID(containerBuildID),
+		ID:    id,
 		State: state,
 
 		StartTimestamp:      startTimestamp,

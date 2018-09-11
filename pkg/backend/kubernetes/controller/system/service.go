@@ -130,7 +130,7 @@ func (c *Controller) syncSystemServices(system *latticev1.System) (map[tree.Path
 		return true
 	})
 
-	// Loop through all of the Services that exist in the System's namespace, and delete any
+	// Loop through all of the Workloads that exist in the System's namespace, and delete any
 	// that are no longer a part of the System's Spec
 	// TODO(kevindrosendahl): should we wait until all other services are successfully rolled out before deleting these?
 	// need to figure out what the rollout/automatic roll-back strategy is

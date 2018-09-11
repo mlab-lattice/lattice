@@ -152,7 +152,7 @@ func PrintBuildStateDuringWatchBuild(writer io.Writer, s *spinner.Spinner, build
 
 		var containerErrors [][]string
 
-		for serviceName, service := range build.Services {
+		for serviceName, service := range build.Workloads {
 			if service.State == v1.ContainerBuildStateFailed {
 				containerFailureMessage := ""
 
@@ -244,7 +244,7 @@ func BuildPrinter(build *v1.Build, format printer.Format) printer.Interface {
 		}
 
 		var rows [][]string
-		for path, service := range build.Services {
+		for path, service := range build.Workloads {
 			var infoMessage string
 
 			if service.FailureMessage == nil {

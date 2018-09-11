@@ -56,13 +56,13 @@ func (c *controller) runBuild(build *v1.Build) {
 		build.State = v1.BuildStateRunning
 		build.StartTimestamp = &now
 
-		for sp, s := range build.Services {
+		for sp, s := range build.Workloads {
 			s.State = v1.ContainerBuildStateRunning
 			s.StartTimestamp = &now
 			s.ContainerBuild.State = v1.ContainerBuildStateRunning
 			s.ContainerBuild.StartTimestamp = &now
 
-			build.Services[sp] = s
+			build.Workloads[sp] = s
 		}
 	}()
 
@@ -75,13 +75,13 @@ func (c *controller) runBuild(build *v1.Build) {
 	now := time.Now()
 
 	// Complete service builds and build.
-	for sp, s := range build.Services {
+	for sp, s := range build.Workloads {
 		s.State = v1.ContainerBuildStateSucceeded
 		s.CompletionTimestamp = &now
 		s.ContainerBuild.CompletionTimestamp = &now
 		s.ContainerBuild.State = v1.ContainerBuildStateSucceeded
 		s.CompletionTimestamp = &now
-		build.Services[sp] = s
+		build.Workloads[sp] = s
 	}
 
 	build.State = v1.BuildStateSucceeded
@@ -149,7 +149,7 @@ Loop:
 	}
 
 	services := make(map[v1.ServiceID]*v1.Service)
-	for path := range build.Services {
+	for path := range build.Workloads {
 		id := v1.ServiceID(uuid.NewV4().String())
 		services[id] = &v1.Service{
 			ID:                 id,

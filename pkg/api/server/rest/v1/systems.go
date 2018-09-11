@@ -10,7 +10,7 @@ import (
 	backendv1 "github.com/mlab-lattice/lattice/pkg/api/server/backend/v1"
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	v1rest "github.com/mlab-lattice/lattice/pkg/api/v1/rest"
-	"github.com/mlab-lattice/lattice/pkg/definition/resolver"
+	"github.com/mlab-lattice/lattice/pkg/definition/component/resolver"
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 	definitionv1 "github.com/mlab-lattice/lattice/pkg/definition/v1"
 
@@ -768,61 +768,6 @@ func mountVersionHandlers(router *gin.RouterGroup, backend backendv1.Backend, re
 
 		c.JSON(http.StatusOK, versions)
 	})
-
-	versionIdentifier := "version_id"
-	versionIdentifierPathComponent := fmt.Sprintf(":%v", versionIdentifier)
-	versionPath := fmt.Sprintf(v1rest.VersionPathFormat, systemIDPathComponent, versionIdentifierPathComponent)
-
-	// get-system-version
-	router.GET(versionPath, func(c *gin.Context) {
-		systemID := v1.SystemID(c.Param(systemIDIdentifier))
-		version := v1.SystemVersion(c.Param(versionIdentifier))
-
-		root, _, err := getSystemDefinitionRoot(backend, resolver, systemID, version)
-		if err != nil {
-			handleError(c, err)
-			return
-		}
-
-		c.JSON(http.StatusOK, root)
-	})
-}
-
-func getSystemDefinitionRoot(
-	backend backendv1.Backend,
-	r resolver.ComponentResolver,
-	systemID v1.SystemID,
-	version v1.SystemVersion,
-) (*definitionv1.SystemNode, resolver.ResolutionInfo, error) {
-	system, err := backend.Systems().Get(systemID)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	tag := string(version)
-	ref := &definitionv1.Reference{
-		GitRepository: &definitionv1.GitRepositoryReference{
-			GitRepository: &definitionv1.GitRepository{
-				URL: system.DefinitionURL,
-				Tag: &tag,
-			},
-		},
-	}
-	rr, err := r.ResolveReference(systemID, tree.RootPath(), nil, ref, resolver.DepthInfinite)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	root, err := definitionv1.NewNode(rr.Component, "", nil)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	if def, ok := root.(*definitionv1.SystemNode); ok {
-		return def, rr.Info, nil
-	}
-
-	return nil, nil, fmt.Errorf("definition is not a system")
 }
 
 func getSystemVersions(backend backendv1.Backend, resolver resolver.ComponentResolver, systemID v1.SystemID) ([]string, error) {
@@ -831,5 +776,13 @@ func getSystemVersions(backend backendv1.Backend, resolver resolver.ComponentRes
 		return nil, err
 	}
 
-	return resolver.Versions(system.DefinitionURL, nil)
+	ref := &definitionv1.Reference{
+		GitRepository: &definitionv1.GitRepositoryReference{
+			GitRepository: &definitionv1.GitRepository{
+				URL: system.DefinitionURL,
+			},
+		},
+	}
+
+	return resolver.Versions(ref, nil)
 }

@@ -6,7 +6,7 @@ import (
 
 	"github.com/mlab-lattice/lattice/pkg/api/server/backend"
 	restv1 "github.com/mlab-lattice/lattice/pkg/api/server/rest/v1"
-	"github.com/mlab-lattice/lattice/pkg/definition/resolver"
+	"github.com/mlab-lattice/lattice/pkg/definition/component/resolver"
 
 	"github.com/gin-gonic/gin"
 )

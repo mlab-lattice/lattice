@@ -37,7 +37,7 @@ type services struct {
 	ns     string
 }
 
-// newServices returns a Services
+// newServices returns a Workloads
 func newServices(c *LatticeV1Client, namespace string) *services {
 	return &services{
 		client: c.RESTClient(),
@@ -58,7 +58,7 @@ func (c *services) Get(name string, options meta_v1.GetOptions) (result *v1.Serv
 	return
 }
 
-// List takes label and field selectors, and returns the list of Services that match those selectors.
+// List takes label and field selectors, and returns the list of Workloads that match those selectors.
 func (c *services) List(opts meta_v1.ListOptions) (result *v1.ServiceList, err error) {
 	result = &v1.ServiceList{}
 	err = c.client.Get().

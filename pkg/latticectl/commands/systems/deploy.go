@@ -152,7 +152,7 @@ func printBuildStateDuringDeploy(writer io.Writer, s *spinner.Spinner, build *v1
 
 		var containerBuildErrors [][]string
 
-		for path, service := range build.Services {
+		for path, service := range build.Workloads {
 			if service.State == v1.ContainerBuildStateFailed {
 				containerBuildErrors = append(containerBuildErrors, []string{
 					path.String(),

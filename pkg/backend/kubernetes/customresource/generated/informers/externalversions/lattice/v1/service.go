@@ -16,7 +16,7 @@ import (
 )
 
 // ServiceInformer provides access to a shared informer and lister for
-// Services.
+// Workloads.
 type ServiceInformer interface {
 	Informer() cache.SharedIndexInformer
 	Lister() v1.ServiceLister

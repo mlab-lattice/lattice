@@ -8,9 +8,9 @@ import (
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/cloudprovider"
 	latticeinformers "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/generated/informers/externalversions"
-	kuberesolver "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/definition/resolver"
+	kuberesolver "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/definition/component/resolver"
 	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/servicemesh"
-	"github.com/mlab-lattice/lattice/pkg/definition/resolver"
+	"github.com/mlab-lattice/lattice/pkg/definition/component/resolver"
 	"github.com/mlab-lattice/lattice/pkg/util/cli"
 
 	kubeinformers "k8s.io/client-go/informers"
@@ -18,6 +18,7 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 
 	"github.com/golang/glog"
+	"github.com/mlab-lattice/lattice/pkg/util/git"
 	"github.com/spf13/pflag"
 )
 
@@ -163,17 +164,17 @@ func createControllerContext(
 
 	templateStore := kuberesolver.NewKubernetesTemplateStore(namespacePrefix, lcb.ClientOrDie("controller-manager-component-resolver"), latticeInformers, nil)
 	secretStore := kuberesolver.NewKubernetesSecretStore(namespacePrefix, kubeInformers, nil)
-
-	resolver, err := resolver.NewComponentResolver(workDirectory, false, templateStore, secretStore)
+	gitResolver, err := git.NewResolver(workDirectory, false)
 	if err != nil {
-		panic(err)
+		return controllers.Context{}, err
 	}
 
+	r := resolver.NewComponentResolver(gitResolver, templateStore, secretStore)
 	ctx := controllers.Context{
 		NamespacePrefix: namespacePrefix,
 		LatticeID:       latticeID,
 
-		ComponentResolver: resolver,
+		ComponentResolver: r,
 
 		InternalDNSDomain: internalDNSDomain,
 

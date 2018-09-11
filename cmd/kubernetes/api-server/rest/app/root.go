@@ -13,8 +13,8 @@ import (
 	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/api/server/backend"
 	latticeclientset "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/generated/clientset/versioned"
 	latticeinformers "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/generated/informers/externalversions"
-	kuberesolver "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/definition/resolver"
-	"github.com/mlab-lattice/lattice/pkg/definition/resolver"
+	kuberesolver "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/definition/component/resolver"
+	"github.com/mlab-lattice/lattice/pkg/definition/component/resolver"
 	"github.com/mlab-lattice/lattice/pkg/util/cli"
 
 	kubeinformers "k8s.io/client-go/informers"
@@ -22,6 +22,7 @@ import (
 	kuberest "k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 
+	"github.com/mlab-lattice/lattice/pkg/util/git"
 	"github.com/spf13/pflag"
 )
 
@@ -105,13 +106,13 @@ func Command() *cli.Command {
 			kubeInformers := kubeinformers.NewSharedInformerFactory(kubeClient, time.Duration(12*time.Hour))
 			templateStore := kuberesolver.NewKubernetesTemplateStore(namespacePrefix, latticeClient, latticeInformers, nil)
 			secretStore := kuberesolver.NewKubernetesSecretStore(namespacePrefix, kubeInformers, nil)
-
-			resolver, err := resolver.NewComponentResolver(workDirectory, false, templateStore, secretStore)
+			gitResolver, err := git.NewResolver(workDirectory, false)
 			if err != nil {
 				panic(err)
 			}
 
-			rest.RunNewRestServer(backend, resolver, port, apiAuthKey)
+			r := resolver.NewComponentResolver(gitResolver, templateStore, secretStore)
+			rest.RunNewRestServer(backend, r, port, apiAuthKey)
 		},
 	}
 

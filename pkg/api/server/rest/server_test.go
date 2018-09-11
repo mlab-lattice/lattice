@@ -10,10 +10,11 @@ import (
 	clientrest "github.com/mlab-lattice/lattice/pkg/api/client/rest"
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	mockbackend "github.com/mlab-lattice/lattice/pkg/backend/mock/api/server/backend"
-	mockresolver "github.com/mlab-lattice/lattice/pkg/backend/mock/definition/resolver"
-	"github.com/mlab-lattice/lattice/pkg/definition/resolver"
+	mockresolver "github.com/mlab-lattice/lattice/pkg/backend/mock/definition/component/resolver"
+	"github.com/mlab-lattice/lattice/pkg/definition/component/resolver"
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 	definitionv1 "github.com/mlab-lattice/lattice/pkg/definition/v1"
+	"github.com/mlab-lattice/lattice/pkg/util/git"
 )
 
 const (
@@ -147,13 +148,13 @@ func buildAndDeploy(t *testing.T) {
 
 	// check service builds
 	fmt.Println("Ensuring that service builds are running...")
-	if build.Services == nil || len(build.Services) == 0 {
+	if build.Workloads == nil || len(build.Workloads) == 0 {
 		t.Fatal("No service builds running")
 	}
 
 	// ensure that build services are running
 
-	for _, service := range build.Services {
+	for _, service := range build.Workloads {
 		if service.State != v1.ContainerBuildStateRunning {
 			t.Fatal("Service build should be in running state")
 		}
@@ -192,7 +193,7 @@ func buildAndDeploy(t *testing.T) {
 
 	// check service builds succeeded
 	fmt.Println("Ensuring that service builds has succeeded...")
-	for _, service := range build.Services {
+	for _, service := range build.Workloads {
 		if service.State != v1.ContainerBuildStateSucceeded {
 			t.Fatal("Service build should be in running state")
 		}
@@ -586,15 +587,16 @@ func setupMockTest() {
 	fmt.Println("Setting up test. Starting API Server")
 	// run api server
 	b := mockbackend.NewMockBackend()
-	r, err := resolver.NewComponentResolver(
-		"/tmp/lattice/api/server/mock/test",
-		true,
-		mockresolver.NewMemoryTemplateStore(),
-		mockresolver.NewMemorySecretStore(),
-	)
+	gitResolver, err := git.NewResolver("/tmp/lattice/api/server/mock/test", true)
 	if err != nil {
 		panic(err)
 	}
+
+	r := resolver.NewComponentResolver(
+		gitResolver,
+		mockresolver.NewMemoryTemplateStore(),
+		mockresolver.NewMemorySecretStore(),
+	)
 
 	go RunNewRestServer(b, r, mockServerAPIPort, mockServerAPIKey)
 	fmt.Println("API server started")

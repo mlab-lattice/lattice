@@ -102,7 +102,7 @@ func newBuild(v v1.SystemVersion) *v1.Build {
 		ID:      v1.BuildID(uuid.NewV4().String()),
 		State:   v1.BuildStatePending,
 		Version: v,
-		Services: map[tree.Path]v1.ServiceBuild{
+		Workloads: map[tree.Path]v1.WorkloadBuild{
 			service1Path: {
 				ContainerBuild: v1.ContainerBuild{
 					ID:    v1.ContainerBuildID(uuid.NewV4().String()),

@@ -5,10 +5,11 @@ import (
 
 	"github.com/mlab-lattice/lattice/pkg/api/server/rest"
 	mockbackend "github.com/mlab-lattice/lattice/pkg/backend/mock/api/server/backend"
-	mockresolver "github.com/mlab-lattice/lattice/pkg/backend/mock/definition/resolver"
-	"github.com/mlab-lattice/lattice/pkg/definition/resolver"
+	mockresolver "github.com/mlab-lattice/lattice/pkg/backend/mock/definition/component/resolver"
+	"github.com/mlab-lattice/lattice/pkg/definition/component/resolver"
 	"github.com/mlab-lattice/lattice/pkg/util/cli"
 
+	"github.com/mlab-lattice/lattice/pkg/util/git"
 	"github.com/spf13/pflag"
 )
 
@@ -47,12 +48,12 @@ func Command() *cli.Command {
 
 			templateStore := mockresolver.NewMemoryTemplateStore()
 			secretStore := mockresolver.NewMemorySecretStore()
-
-			r, err := resolver.NewComponentResolver(workDirectory, false, templateStore, secretStore)
+			gitResolver, err := git.NewResolver(workDirectory, false)
 			if err != nil {
 				panic(err)
 			}
 
+			r := resolver.NewComponentResolver(gitResolver, templateStore, secretStore)
 			rest.RunNewRestServer(backend, r, port, apiAuthKey)
 		},
 	}

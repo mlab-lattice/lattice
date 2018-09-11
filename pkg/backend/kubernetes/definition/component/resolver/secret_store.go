@@ -1,14 +1,13 @@
 package resolver
 
 import (
-	"fmt"
-
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/kubernetes"
 	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/latticeutil"
-	"github.com/mlab-lattice/lattice/pkg/definition/resolver"
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 
+	"github.com/mlab-lattice/lattice/pkg/definition/component/resolver"
+	"k8s.io/apimachinery/pkg/api/errors"
 	kubeinformers "k8s.io/client-go/informers"
 	corelisters "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/tools/cache"
@@ -18,7 +17,7 @@ func NewKubernetesSecretStore(
 	namespacePrefix string,
 	kubeInformerFactory kubeinformers.SharedInformerFactory,
 	stopCh <-chan struct{},
-) resolver.SecretStore {
+) *KubernetesSecretStore {
 	s := &KubernetesSecretStore{
 		namespacePrefix: namespacePrefix,
 		stopCh:          stopCh,
@@ -53,12 +52,15 @@ func (s *KubernetesSecretStore) Get(systemID v1.SystemID, path tree.PathSubcompo
 	namespace := kubernetes.SystemNamespace(s.namespacePrefix, systemID)
 	secret, err := s.secretLister.Secrets(namespace).Get(name)
 	if err != nil {
+		if errors.IsNotFound(err) {
+			return "", &resolver.SecretDoesNotExistError{}
+		}
 		return "", err
 	}
 
 	data, ok := secret.Data[path.Subcomponent()]
 	if !ok {
-		return "", fmt.Errorf("secret %v does not exist", path.String())
+		return "", &resolver.SecretDoesNotExistError{}
 	}
 
 	return string(data), nil
