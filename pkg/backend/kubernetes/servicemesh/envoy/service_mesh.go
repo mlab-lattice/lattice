@@ -340,13 +340,16 @@ func (sm *DefaultEnvoyServiceMesh) ServiceIP(
 	service *latticev1.Service, address *latticev1.Address) (string, map[string]string, error) {
 	ip := address.Annotations[annotationKeyIP]
 
+	protocol := "NULL"
 	protocols := serviceProtocols(service)
-	if len(protocols) != 1 {
-		return "", nil, fmt.Errorf("expected 1 protocol in component ports for service %s, found: %v",
+	if len(protocols) > 1 {
+		return "", nil, fmt.Errorf("expected 0 or 1 protocols in component ports for service %s, found: %v",
 			service.Name, protocols)
+	} else if len(protocols) == 1 {
+		protocol = protocols[0]
 	}
 
-	switch protocols[0] {
+	switch protocol {
 	case "HTTP":
 		netIP := sm.redirectCIDRBlock.IP.String()
 		if ip != "" && ip != netIP {
@@ -354,7 +357,7 @@ func (sm *DefaultEnvoyServiceMesh) ServiceIP(
 		} else {
 			ip = netIP
 		}
-	case "TCP":
+	case "TCP", "NULL":
 		var err error
 		ips := make([]string, 0, 1)
 		if ip != "" {
