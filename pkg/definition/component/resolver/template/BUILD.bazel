@@ -6,7 +6,7 @@ go_library(
         "parameter.go",
         "template.go",
     ],
-    importpath = "github.com/mlab-lattice/lattice/pkg/definition/template",
+    importpath = "github.com/mlab-lattice/lattice/pkg/definition/component/resolver/template",
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/definition/tree:go_default_library",
