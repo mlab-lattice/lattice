@@ -17,15 +17,15 @@ import (
 func (c *Controller) syncAcceptedDeploy(deploy *latticev1.Deploy) error {
 	// get the deploy's build
 	var build *latticev1.Build
-	if deploy.Spec.Version != nil {
+	if deploy.Spec.Build != nil {
 		var err error
-		deploy, build, err = c.syncAcceptedVersionDeploy(deploy)
+		build, err = c.buildLister.Builds(deploy.Namespace).Get(string(*deploy.Status.BuildID))
 		if err != nil {
 			return err
 		}
 	} else {
 		var err error
-		build, err = c.buildLister.Builds(deploy.Namespace).Get(string(*deploy.Status.BuildID))
+		deploy, build, err = c.syncAcceptedBuildlessDeploy(deploy)
 		if err != nil {
 			return err
 		}
@@ -47,6 +47,7 @@ func (c *Controller) syncAcceptedDeploy(deploy *latticev1.Deploy) error {
 			deploy,
 			latticev1.DeployStateFailed,
 			fmt.Sprintf("%v failed", build.Description(c.namespacePrefix)),
+			nil,
 			deploy.Status.BuildID,
 		)
 		if err != nil {
@@ -65,7 +66,7 @@ func (c *Controller) syncAcceptedDeploy(deploy *latticev1.Deploy) error {
 	}
 }
 
-func (c *Controller) syncAcceptedVersionDeploy(deploy *latticev1.Deploy) (*latticev1.Deploy, *latticev1.Build, error) {
+func (c *Controller) syncAcceptedBuildlessDeploy(deploy *latticev1.Deploy) (*latticev1.Deploy, *latticev1.Build, error) {
 	// If we've already created a build and updated the status of the deploy with it, use that build ID
 	if deploy.Status.BuildID != nil {
 		build, err := c.buildLister.Builds(deploy.Namespace).Get(string(*deploy.Status.BuildID))
@@ -83,8 +84,8 @@ func (c *Controller) syncAcceptedVersionDeploy(deploy *latticev1.Deploy) (*latti
 			Name:      uuid.NewV4().String(),
 		},
 		Spec: latticev1.BuildSpec{
-			Version: deploy.Spec.Version.Version,
-			Path:    deploy.Spec.Version.Path,
+			Version: deploy.Spec.Version,
+			Path:    deploy.Spec.Path,
 		},
 	}
 
@@ -94,7 +95,7 @@ func (c *Controller) syncAcceptedVersionDeploy(deploy *latticev1.Deploy) (*latti
 	}
 
 	buildID := v1.BuildID(build.Name)
-	deploy, err = c.updateDeployStatus(deploy, latticev1.DeployStateAccepted, "", &buildID)
+	deploy, err = c.updateDeployStatus(deploy, latticev1.DeployStateAccepted, "", nil, &buildID)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -211,14 +212,19 @@ func (c *Controller) syncAcceptedDeployWithSuccessfulBuild(deploy *latticev1.Dep
 		spec.WorkloadBuildArtifacts = latticev1.NewSystemSpecWorkloadBuildArtifacts()
 	}
 
-	spec.Definition.ReplacePrefix(build.Spec.Path, build.Status.Definition)
-	spec.WorkloadBuildArtifacts.ReplacePrefix(build.Spec.Path, artifacts)
+	path := tree.RootPath()
+	if build.Spec.Path != nil {
+		path = *build.Spec.Path
+	}
+
+	spec.Definition.ReplacePrefix(path, build.Status.Definition)
+	spec.WorkloadBuildArtifacts.ReplacePrefix(path, artifacts)
 
 	_, err = c.updateSystemSpec(system, spec)
 	if err != nil {
 		return err
 	}
 
-	_, err = c.updateDeployStatus(deploy, latticev1.DeployStateInProgress, "", deploy.Status.BuildID)
+	_, err = c.updateDeployStatus(deploy, latticev1.DeployStateInProgress, "", nil, deploy.Status.BuildID)
 	return err
 }

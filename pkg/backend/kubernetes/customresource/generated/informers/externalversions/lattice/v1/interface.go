@@ -26,7 +26,7 @@ type Interface interface {
 	JobRuns() JobRunInformer
 	// NodePools returns a NodePoolInformer.
 	NodePools() NodePoolInformer
-	// Workloads returns a ServiceInformer.
+	// Services returns a ServiceInformer.
 	Services() ServiceInformer
 	// Systems returns a SystemInformer.
 	Systems() SystemInformer
@@ -92,7 +92,7 @@ func (v *version) NodePools() NodePoolInformer {
 	return &nodePoolInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
 }
 
-// Workloads returns a ServiceInformer.
+// Services returns a ServiceInformer.
 func (v *version) Services() ServiceInformer {
 	return &serviceInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
 }

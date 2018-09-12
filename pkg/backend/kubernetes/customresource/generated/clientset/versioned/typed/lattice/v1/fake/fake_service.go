@@ -33,7 +33,7 @@ func (c *FakeServices) Get(name string, options v1.GetOptions) (result *lattice_
 	return obj.(*lattice_v1.Service), err
 }
 
-// List takes label and field selectors, and returns the list of Workloads that match those selectors.
+// List takes label and field selectors, and returns the list of Services that match those selectors.
 func (c *FakeServices) List(opts v1.ListOptions) (result *lattice_v1.ServiceList, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewListAction(servicesResource, servicesKind, c.ns, opts), &lattice_v1.ServiceList{})

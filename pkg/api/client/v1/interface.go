@@ -28,15 +28,17 @@ type SystemClient interface {
 }
 
 type SystemBuildClient interface {
-	Create(version v1.SystemVersion) (*v1.Build, error)
+	CreateFromVersion(v1.SystemVersion) (*v1.Build, error)
+	CreateFromPath(path tree.Path) (*v1.Build, error)
 	List() ([]v1.Build, error)
 	Get(v1.BuildID) (*v1.Build, error)
-	Logs(id v1.BuildID, path tree.Path, sidecar *string, logOptions *v1.ContainerLogOptions) (io.ReadCloser, error)
+	Logs(id v1.BuildID, path tree.Path, sidecar *string, options *v1.ContainerLogOptions) (io.ReadCloser, error)
 }
 
 type SystemDeployClient interface {
 	CreateFromBuild(v1.BuildID) (*v1.Deploy, error)
-	CreateFromVersion(v1.SystemVersion, *tree.Path) (*v1.Deploy, error)
+	CreateFromPath(tree.Path) (*v1.Deploy, error)
+	CreateFromVersion(v1.SystemVersion) (*v1.Deploy, error)
 	List() ([]v1.Deploy, error)
 	Get(v1.DeployID) (*v1.Deploy, error)
 }
@@ -51,14 +53,14 @@ type SystemServiceClient interface {
 	List() ([]v1.Service, error)
 	Get(id v1.ServiceID) (*v1.Service, error)
 	GetByServicePath(path tree.Path) (*v1.Service, error)
-	Logs(id v1.ServiceID, sidecar, instance *string, logOptions *v1.ContainerLogOptions) (io.ReadCloser, error)
+	Logs(id v1.ServiceID, sidecar, instance *string, options *v1.ContainerLogOptions) (io.ReadCloser, error)
 }
 
 type SystemJobClient interface {
 	Create(path tree.Path, command []string, environment definitionv1.ContainerEnvironment) (*v1.Job, error)
 	List() ([]v1.Job, error)
 	Get(v1.JobID) (*v1.Job, error)
-	Logs(id v1.JobID, sidecar *string, logOptions *v1.ContainerLogOptions) (io.ReadCloser, error)
+	Logs(id v1.JobID, sidecar *string, options *v1.ContainerLogOptions) (io.ReadCloser, error)
 }
 
 type SystemSecretClient interface {

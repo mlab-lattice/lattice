@@ -30,8 +30,17 @@ func NewBuildClient(c rest.Client, apiServerURL string, systemID v1.SystemID) *B
 	}
 }
 
-func (c *BuildClient) Create(version v1.SystemVersion) (*v1.Build, error) {
+func (c *BuildClient) CreateFromPath(path tree.Path) (*v1.Build, error) {
+	return c.create(&path, nil)
+}
+
+func (c *BuildClient) CreateFromVersion(version v1.SystemVersion) (*v1.Build, error) {
+	return c.create(nil, &version)
+}
+
+func (c *BuildClient) create(path *tree.Path, version *v1.SystemVersion) (*v1.Build, error) {
 	request := &v1rest.BuildRequest{
+		Path:    path,
 		Version: version,
 	}
 	requestJSON, err := json.Marshal(request)
@@ -92,7 +101,7 @@ func (c *BuildClient) Logs(
 	id v1.BuildID,
 	path tree.Path,
 	sidecar *string,
-	logOptions *v1.ContainerLogOptions,
+	options *v1.ContainerLogOptions,
 ) (io.ReadCloser, error) {
 	escapedPath := urlutil.PathEscape(path.String())
 	url := fmt.Sprintf(
@@ -100,7 +109,7 @@ func (c *BuildClient) Logs(
 		c.apiServerURL,
 		fmt.Sprintf(v1rest.BuildLogsPathFormat, c.systemID, id),
 		escapedPath,
-		logOptionsToQueryString(logOptions),
+		logOptionsToQueryString(options),
 	)
 
 	if sidecar != nil {

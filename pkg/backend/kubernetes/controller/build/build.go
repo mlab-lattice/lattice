@@ -16,8 +16,9 @@ import (
 func (c *Controller) updateBuildStatus(
 	build *latticev1.Build,
 	state latticev1.BuildState,
-	definition *resolver.ComponentTree,
 	message string,
+	internalError *string,
+	definition *resolver.ComponentTree,
 	startTimestamp *metav1.Time,
 	completionTimestamp *metav1.Time,
 	workloads map[tree.Path]latticev1.BuildStatusWorkload,
@@ -26,6 +27,8 @@ func (c *Controller) updateBuildStatus(
 	status := latticev1.BuildStatus{
 		State:   state,
 		Message: message,
+
+		InternalError: internalError,
 
 		Definition: definition,
 

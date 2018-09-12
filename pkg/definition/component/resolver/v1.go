@@ -57,7 +57,7 @@ func (r *v1ComponentResolver) Resolve(
 	default:
 		info := &ResolutionInfo{
 			Component:    c,
-			Commit:       ctx.FileReference.CommitReference,
+			Commit:       ctx.CommitReference,
 			SSHKeySecret: ctx.SSHKeySecret,
 		}
 		result.Insert(path, info)
@@ -92,7 +92,7 @@ func (r *v1ComponentResolver) resolveReference(
 	if depth == 0 {
 		info := &ResolutionInfo{
 			Component:    ref,
-			Commit:       ctx.FileReference.CommitReference,
+			Commit:       ctx.CommitReference,
 			SSHKeySecret: ctx.SSHKeySecret,
 		}
 		result.Insert(path, info)
@@ -144,7 +144,7 @@ func (r *v1ComponentResolver) resolveSystem(
 ) error {
 	info := &ResolutionInfo{
 		Component:    system,
-		Commit:       ctx.FileReference.CommitReference,
+		Commit:       ctx.CommitReference,
 		SSHKeySecret: ctx.SSHKeySecret,
 	}
 	result.Insert(path, info)
@@ -210,24 +210,26 @@ func (r *v1ComponentResolver) resolveTemplate(
 	case ref.File != nil:
 		// if the reference is to a file, use the given context as the context, and set the
 		// file to file referenced.
-		gitCtx.RepositoryURL = ctx.FileReference.RepositoryURL
+		gitCtx.RepositoryURL = ctx.CommitReference.RepositoryURL
 		gitCtx.Options.SSHKey = ctx.SSHKey
-		gitRef = &git.Reference{Commit: &ctx.FileReference.Commit}
+		gitRef = &git.Reference{Commit: &ctx.CommitReference.Commit}
 		file = *ref.File
 	}
 
+	commitRef := &git.CommitReference{
+		RepositoryURL: gitCtx.RepositoryURL,
+		Commit:        *gitRef.Commit,
+	}
+
 	fileRef := &git.FileReference{
-		CommitReference: git.CommitReference{
-			RepositoryURL: gitCtx.RepositoryURL,
-			Commit:        *gitRef.Commit,
-		},
-		File: file,
+		CommitReference: *commitRef,
+		File:            file,
 	}
 
 	resolvedContext := &resolutionContext{
-		FileReference: fileRef,
-		SSHKey:        gitCtx.Options.SSHKey,
-		SSHKeySecret:  sshKeySecret,
+		CommitReference: commitRef,
+		SSHKey:          gitCtx.Options.SSHKey,
+		SSHKeySecret:    sshKeySecret,
 	}
 
 	// Only want to check the cache if no credentials are required.

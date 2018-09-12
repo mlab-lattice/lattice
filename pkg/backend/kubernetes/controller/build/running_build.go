@@ -93,8 +93,9 @@ func (c *Controller) syncRunningBuild(build *latticev1.Build, stateInfo stateInf
 	_, err := c.updateBuildStatus(
 		build,
 		latticev1.BuildStateRunning,
-		build.Status.Definition,
 		message,
+		nil,
+		build.Status.Definition,
 		startTimestamp,
 		nil,
 		build.Status.Workloads,

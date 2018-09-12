@@ -22,13 +22,21 @@ type buildBackend struct {
 	system  v1.SystemID
 }
 
-func (b *buildBackend) Create(version v1.SystemVersion) (*v1.Build, error) {
+func (b *buildBackend) CreateFromVersion(version v1.SystemVersion) (*v1.Build, error) {
+	return b.createBuild(&version, nil)
+}
+
+func (b *buildBackend) CreateFromPath(path tree.Path) (*v1.Build, error) {
+	return b.createBuild(nil, &path)
+}
+
+func (b *buildBackend) createBuild(version *v1.SystemVersion, path *tree.Path) (*v1.Build, error) {
 	// ensure the system exists
 	if _, err := b.backend.ensureSystemCreated(b.system); err != nil {
 		return nil, err
 	}
 
-	build, err := newBuild(version)
+	build, err := newBuild(version, path)
 	if err != nil {
 		return nil, err
 	}
@@ -47,17 +55,15 @@ func (b *buildBackend) Create(version v1.SystemVersion) (*v1.Build, error) {
 	return &externalBuild, nil
 }
 
-func newBuild(version v1.SystemVersion) (*latticev1.Build, error) {
+func newBuild(version *v1.SystemVersion, path *tree.Path) (*latticev1.Build, error) {
 	build := &latticev1.Build{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: uuid.NewV4().String(),
-			Labels: map[string]string{
-				latticev1.BuildDefinitionVersionLabelKey: string(version),
-			},
+			Name:   uuid.NewV4().String(),
+			Labels: map[string]string{},
 		},
 		Spec: latticev1.BuildSpec{
 			Version: version,
-			Path:    tree.RootPath(),
+			Path:    path,
 		},
 	}
 

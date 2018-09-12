@@ -58,8 +58,9 @@ func (c *Controller) syncMissingContainerBuildsBuild(build *latticev1.Build, sta
 	_, err := c.updateBuildStatus(
 		build,
 		latticev1.BuildStateRunning,
-		build.Status.Definition,
 		"",
+		nil,
+		build.Status.Definition,
 		startTimestamp,
 		nil,
 		workloads,

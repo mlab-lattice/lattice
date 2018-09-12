@@ -8,6 +8,7 @@ import (
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	v1rest "github.com/mlab-lattice/lattice/pkg/api/v1/rest"
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
+	reflectutil "github.com/mlab-lattice/lattice/pkg/util/reflect"
 )
 
 var (
@@ -55,7 +56,27 @@ func (api *LatticeAPI) handleBuildSystem(c *gin.Context) {
 		return
 	}
 
-	build, err := api.backend.Systems().Builds(systemID).Create(req.Version)
+	err := reflectutil.ValidateUnion(&req)
+	if err != nil {
+		switch err.(type) {
+		case *reflectutil.InvalidUnionNoFieldSetError, *reflectutil.InvalidUnionMultipleFieldSetError:
+			c.Status(http.StatusBadRequest)
+
+		default:
+			c.Status(http.StatusInternalServerError)
+		}
+		return
+	}
+
+	var build *v1.Build
+	switch {
+	case req.Path != nil:
+		build, err = api.backend.Systems().Builds(systemID).CreateFromPath(*req.Path)
+
+	case req.Version != nil:
+		build, err = api.backend.Systems().Builds(systemID).CreateFromVersion(*req.Version)
+	}
+
 	if err != nil {
 		v1err, ok := err.(*v1.Error)
 		if !ok {

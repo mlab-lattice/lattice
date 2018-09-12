@@ -28,37 +28,22 @@ func NewDeployClient(c rest.Client, apiServerURL string, systemID v1.SystemID) *
 }
 
 func (c *DeployClient) CreateFromBuild(id v1.BuildID) (*v1.Deploy, error) {
-	request := v1rest.DeployRequest{
-		BuildID: &id,
-	}
-
-	requestJSON, err := json.Marshal(request)
-	if err != nil {
-		return nil, err
-	}
-
-	url := fmt.Sprintf("%v%v", c.apiServerURL, fmt.Sprintf(v1rest.DeploysPathFormat, c.systemID))
-	body, statusCode, err := c.restClient.PostJSON(url, bytes.NewReader(requestJSON)).Body()
-	if err != nil {
-		return nil, err
-	}
-	defer body.Close()
-
-	if statusCode == http.StatusCreated {
-		deploy := &v1.Deploy{}
-		err = rest.UnmarshalBodyJSON(body, &deploy)
-		return deploy, err
-	}
-
-	return nil, errors.HandleErrorStatusCode(statusCode, body)
+	return c.create(&id, nil, nil)
 }
 
-func (c *DeployClient) CreateFromVersion(version v1.SystemVersion, path *tree.Path) (*v1.Deploy, error) {
+func (c *DeployClient) CreateFromPath(path tree.Path) (*v1.Deploy, error) {
+	return c.create(nil, &path, nil)
+}
+
+func (c *DeployClient) CreateFromVersion(version v1.SystemVersion) (*v1.Deploy, error) {
+	return c.create(nil, nil, &version)
+}
+
+func (c *DeployClient) create(id *v1.BuildID, path *tree.Path, version *v1.SystemVersion) (*v1.Deploy, error) {
 	request := v1rest.DeployRequest{
-		Version: &v1rest.DeployVersionRequest{
-			Version: version,
-			Path:    path,
-		},
+		BuildID: id,
+		Path:    path,
+		Version: version,
 	}
 
 	requestJSON, err := json.Marshal(request)

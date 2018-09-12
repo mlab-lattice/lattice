@@ -8,7 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	v1rest "github.com/mlab-lattice/lattice/pkg/api/v1/rest"
-	"github.com/mlab-lattice/lattice/pkg/definition/tree"
+	reflectutil "github.com/mlab-lattice/lattice/pkg/util/reflect"
 )
 
 const deployIdentifier = "deploy_id"
@@ -53,26 +53,28 @@ func (api *LatticeAPI) handleDeploySystem(c *gin.Context) {
 		return
 	}
 
-	if req.Version != nil && req.BuildID != nil {
-		c.String(http.StatusBadRequest, "can only specify version or buildId")
-		return
-	}
+	err := reflectutil.ValidateUnion(&req)
+	if err != nil {
+		switch err.(type) {
+		case *reflectutil.InvalidUnionNoFieldSetError, *reflectutil.InvalidUnionMultipleFieldSetError:
+			c.Status(http.StatusBadRequest)
 
-	if req.Version == nil && req.BuildID == nil {
-		c.String(http.StatusBadRequest, "must specify version or buildId")
+		default:
+			c.Status(http.StatusInternalServerError)
+		}
 		return
 	}
 
 	var deploy *v1.Deploy
-	var err error
-	if req.Version != nil {
-		path := tree.RootPath()
-		if req.Version.Path != nil {
-			path = *req.Version.Path
-		}
-		deploy, err = api.backend.Systems().Deploys(systemID).CreateFromVersion(req.Version.Version, path)
-	} else {
+	switch {
+	case req.BuildID != nil:
 		deploy, err = api.backend.Systems().Deploys(systemID).CreateFromBuild(*req.BuildID)
+
+	case req.Path != nil:
+		deploy, err = api.backend.Systems().Deploys(systemID).CreateFromPath(*req.Path)
+
+	case req.Version != nil:
+		deploy, err = api.backend.Systems().Deploys(systemID).CreateFromVersion(*req.Version)
 	}
 
 	if err != nil {

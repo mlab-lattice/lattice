@@ -13,11 +13,14 @@ func (c *Controller) updateDeployStatus(
 	deploy *latticev1.Deploy,
 	state latticev1.DeployState,
 	message string,
+	internalError *string,
 	buildID *v1.BuildID,
 ) (*latticev1.Deploy, error) {
 	status := latticev1.DeployStatus{
 		State:   state,
 		Message: message,
+
+		InternalError: internalError,
 
 		BuildID: buildID,
 	}
@@ -44,7 +47,7 @@ func (c *Controller) acquireDeployLock(deploy *latticev1.Deploy, path tree.Path)
 		return err
 	}
 
-	return c.lifecycleActions.AcquireDeploy(namespace.UID, deploy.V1ID(), deploy.Spec.Version.Path)
+	return c.lifecycleActions.AcquireDeploy(namespace.UID, deploy.V1ID(), path)
 }
 
 func (c *Controller) releaseDeployLock(deploy *latticev1.Deploy) error {

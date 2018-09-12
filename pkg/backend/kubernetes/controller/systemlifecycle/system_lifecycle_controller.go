@@ -20,6 +20,7 @@ import (
 	"k8s.io/client-go/util/workqueue"
 
 	"github.com/golang/glog"
+	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 )
 
 type lifecycleAction struct {
@@ -77,7 +78,8 @@ func NewController(
 		kubeClient:    kubeClient,
 		latticeClient: latticeClient,
 
-		lifecycleActions: newLifecycleActions(),
+		lifecycleActions:       newLifecycleActions(),
+		lifecycleActionsSynced: make(chan struct{}),
 
 		deployQueue:   workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "deploy"),
 		teardownQueue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "teardown"),
@@ -218,7 +220,12 @@ func (c *Controller) syncLifecycleActions() error {
 			return err
 		}
 
-		err = c.acquireDeployLock(deploy, build.Spec.Path)
+		path := tree.RootPath()
+		if build.Spec.Path != nil {
+			path = *build.Spec.Path
+		}
+
+		err = c.acquireDeployLock(deploy, path)
 		if err != nil {
 			return fmt.Errorf(
 				"error attempting to acquire lock for %v %v: %v",

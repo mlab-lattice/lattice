@@ -22,8 +22,9 @@ func (c *Controller) syncSucceededBuild(build *latticev1.Build, stateInfo stateI
 	_, err := c.updateBuildStatus(
 		build,
 		latticev1.BuildStateSucceeded,
-		build.Status.Definition,
 		"",
+		nil,
+		build.Status.Definition,
 		startTimestamp,
 		completionTimestamp,
 		build.Status.Workloads,

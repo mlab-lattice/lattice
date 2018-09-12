@@ -12,17 +12,14 @@ type CreateSystemRequest struct {
 }
 
 type BuildRequest struct {
-	Version v1.SystemVersion `json:"version"`
+	Path    *tree.Path        `json:"path,omitempty"`
+	Version *v1.SystemVersion `json:"version,omitempty"`
 }
 
 type DeployRequest struct {
-	Version *DeployVersionRequest `json:"version,omitempty"`
-	BuildID *v1.BuildID           `json:"buildId,omitempty"`
-}
-
-type DeployVersionRequest struct {
-	Version v1.SystemVersion `json:"version"`
-	Path    *tree.Path       `json:"path,omitempty"`
+	BuildID *v1.BuildID       `json:"buildId,omitempty"`
+	Path    *tree.Path        `json:"path,omitempty"`
+	Version *v1.SystemVersion `json:"version,omitempty"`
 }
 
 type RunJobRequest struct {

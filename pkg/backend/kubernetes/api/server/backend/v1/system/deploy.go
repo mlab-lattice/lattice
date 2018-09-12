@@ -23,16 +23,30 @@ func (b *deployBackend) CreateFromBuild(id v1.BuildID) (*v1.Deploy, error) {
 		return nil, err
 	}
 
-	deploy := newBuildDeploy(id)
-	return b.createDeploy(deploy)
+	return b.createDeploy(&id, nil, nil)
 }
 
-func (b *deployBackend) CreateFromVersion(version v1.SystemVersion, path tree.Path) (*v1.Deploy, error) {
-	deploy := newVersionDeploy(version, path)
-	return b.createDeploy(deploy)
+func (b *deployBackend) CreateFromPath(path tree.Path) (*v1.Deploy, error) {
+	_, err := b.backend.ensureSystemCreated(b.system)
+	if err != nil {
+		return nil, err
+	}
+
+	return b.createDeploy(nil, &path, nil)
 }
 
-func (b *deployBackend) createDeploy(deploy *latticev1.Deploy) (*v1.Deploy, error) {
+func (b *deployBackend) CreateFromVersion(version v1.SystemVersion) (*v1.Deploy, error) {
+	_, err := b.backend.ensureSystemCreated(b.system)
+	if err != nil {
+		return nil, err
+	}
+
+	return b.createDeploy(nil, nil, &version)
+}
+
+func (b *deployBackend) createDeploy(build *v1.BuildID, path *tree.Path, version *v1.SystemVersion) (*v1.Deploy, error) {
+	deploy := newDeploy(build, path, version)
+
 	namespace := b.backend.systemNamespace(b.system)
 	result, err := b.backend.latticeClient.LatticeV1().Deploys(namespace).Create(deploy)
 	if err != nil {
@@ -47,33 +61,15 @@ func (b *deployBackend) createDeploy(deploy *latticev1.Deploy) (*v1.Deploy, erro
 	return &externalDeploy, nil
 }
 
-func newBuildDeploy(build v1.BuildID) *latticev1.Deploy {
+func newDeploy(build *v1.BuildID, path *tree.Path, version *v1.SystemVersion) *latticev1.Deploy {
 	return &latticev1.Deploy{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: uuid.NewV4().String(),
-			Labels: map[string]string{
-				latticev1.BuildIDLabelKey: string(build),
-			},
 		},
 		Spec: latticev1.DeploySpec{
-			Build: &build,
-		},
-	}
-}
-
-func newVersionDeploy(version v1.SystemVersion, path tree.Path) *latticev1.Deploy {
-	return &latticev1.Deploy{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: uuid.NewV4().String(),
-			Labels: map[string]string{
-				latticev1.DeployDefinitionVersionLabelKey: string(version),
-			},
-		},
-		Spec: latticev1.DeploySpec{
-			Version: &latticev1.DeploySpecVersionInfo{
-				Version: version,
-				Path:    path,
-			},
+			Build:   build,
+			Path:    path,
+			Version: version,
 		},
 	}
 }

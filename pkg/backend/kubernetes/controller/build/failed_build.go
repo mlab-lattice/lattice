@@ -100,8 +100,9 @@ func (c *Controller) syncFailedBuild(build *latticev1.Build, stateInfo stateInfo
 	_, err := c.updateBuildStatus(
 		build,
 		latticev1.BuildStateFailed,
-		build.Status.Definition,
 		message,
+		nil,
+		build.Status.Definition,
 		startTimestamp,
 		completionTimestamp,
 		build.Status.Workloads,

@@ -76,13 +76,9 @@ func (d *Deploy) Description(namespacePrefix string) string {
 }
 
 type DeploySpec struct {
-	Build   *v1.BuildID            `json:"build,omitempty"`
-	Version *DeploySpecVersionInfo `json:"version,omitempty"`
-}
-
-type DeploySpecVersionInfo struct {
-	Version v1.SystemVersion `json:"version"`
-	Path    tree.Path        `json:"path"`
+	Build   *v1.BuildID       `json:"build,omitempty"`
+	Version *v1.SystemVersion `json:"version,omitempty"`
+	Path    *tree.Path        `json:"path"`
 }
 
 type DeployStatus struct {
@@ -90,6 +86,8 @@ type DeployStatus struct {
 
 	State   DeployState `json:"state"`
 	Message string      `json:"message,omitempty"`
+
+	InternalError *string `json:"internalError,omitempty"`
 
 	BuildID *v1.BuildID `json:"buildId,omitempty"`
 

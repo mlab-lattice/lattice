@@ -15,7 +15,7 @@ type ResolutionInfo struct {
 	// Component contains the hydrated but unresolved version of the component.
 	// That is, if the component is a v1/system, it may contain unresolved references.
 	Component component.Interface
-	Commit    git.CommitReference
+	Commit    *git.CommitReference
 	// TODO(kevindrosendahl): probably want to move this out when we have a more
 	// concrete theory on component resolution secrets.
 	SSHKeySecret *tree.PathSubcomponent
@@ -67,12 +67,12 @@ func (i *ResolutionInfo) UnmarshalJSON(data []byte) error {
 
 type resolutionInfoDecoder struct {
 	Component    json.RawMessage        `json:"component"`
-	Commit       git.CommitReference    `json:"commit"`
+	Commit       *git.CommitReference   `json:"commit"`
 	SSHKeySecret *tree.PathSubcomponent `json:"sshKeySecret"`
 }
 
 type resolutionContext struct {
-	FileReference *git.FileReference
-	SSHKeySecret  *tree.PathSubcomponent
-	SSHKey        []byte
+	CommitReference *git.CommitReference
+	SSHKeySecret    *tree.PathSubcomponent
+	SSHKey          []byte
 }

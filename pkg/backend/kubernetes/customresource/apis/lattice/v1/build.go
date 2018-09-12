@@ -55,8 +55,8 @@ func (b *Build) Description(namespacePrefix string) string {
 }
 
 type BuildSpec struct {
-	Version v1.SystemVersion `json:"version"`
-	Path    tree.Path        `json:"path"`
+	Version *v1.SystemVersion `json:"version"`
+	Path    *tree.Path        `json:"path"`
 }
 
 // +k8s:deepcopy-gen=false
@@ -65,6 +65,8 @@ type BuildStatus struct {
 
 	State   BuildState `json:"state"`
 	Message string     `json:"message"`
+
+	InternalError *string `json:"internalError,omitempty"`
 
 	Definition *resolver.ComponentTree `json:"definition,omitempty"`
 
