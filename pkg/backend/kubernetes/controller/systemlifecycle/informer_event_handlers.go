@@ -127,7 +127,7 @@ func (c *Controller) owningDeploys(build *latticev1.Build) ([]latticev1.Deploy, 
 
 	var matchingDeploys []latticev1.Deploy
 	for _, deploy := range deploys {
-		if owningDeploys.Contains(build.UID) {
+		if owningDeploys.Contains(deploy.UID) {
 			matchingDeploys = append(matchingDeploys, *deploy)
 		}
 	}

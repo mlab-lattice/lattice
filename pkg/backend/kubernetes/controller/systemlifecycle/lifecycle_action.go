@@ -255,6 +255,7 @@ func (t *lifecycleActionTree) AcquireTeardown(id v1.TeardownID) error {
 		ID:       id,
 		Unlocker: unlocker,
 	}
+	t.teardown = &id
 	return nil
 }
 

@@ -74,7 +74,7 @@ func (c *Controller) removeBuildOwnerReference(
 }
 
 func newOwnerReference(deploy *latticev1.Deploy) *metav1.OwnerReference {
-	gvk := latticev1.BuildKind
+	gvk := latticev1.DeployKind
 
 	// we don't want the existence of the build to prevent the
 	// deploy from being deleted.
