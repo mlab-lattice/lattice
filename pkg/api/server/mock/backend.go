@@ -597,7 +597,6 @@ func (backend *Backend) runBuild(build *v1.Build) {
 		s.StartTimestamp = &now
 		s.ContainerBuild.State = v1.ContainerBuildStateRunning
 		s.ContainerBuild.StartTimestamp = &now
-		s.Sidecars = make(map[string]v1.ContainerBuild)
 		build.Services[sp] = s
 	}
 
