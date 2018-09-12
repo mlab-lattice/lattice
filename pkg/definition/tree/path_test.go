@@ -245,6 +245,32 @@ func TestPath_Parent(t *testing.T) {
 	}
 }
 
+func TestPath_Leaf(t *testing.T) {
+	p := RootPath()
+	_, err := p.Leaf()
+	if err == nil {
+		t.Errorf("expected error for root leaf but got none")
+	}
+
+	p = RootPath().Child("a")
+	leaf, err := p.Leaf()
+	if err != nil {
+		t.Errorf("expected no error for short leaf but got %v", err)
+	}
+	if leaf != "a" {
+		t.Errorf("expected leaf to be a but got %v", leaf)
+	}
+
+	p = RootPath().Child("c").Child("b").Child("a")
+	leaf, err = p.Leaf()
+	if err != nil {
+		t.Errorf("expected no error for longer leaf but got %v", err)
+	}
+	if leaf != "a" {
+		t.Errorf("expected leaf to be a but got %v", leaf)
+	}
+}
+
 func TestPath_Prefix(t *testing.T) {
 	p := RootPath().Child("a").Child("b").Child("c")
 	_, err := p.Prefix(4)

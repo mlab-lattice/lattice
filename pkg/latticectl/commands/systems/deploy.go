@@ -17,6 +17,7 @@ import (
 	"github.com/mlab-lattice/lattice/pkg/util/cli/printer"
 
 	"github.com/briandowns/spinner"
+	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 )
 
 type DeployCommand struct {
@@ -31,6 +32,7 @@ func (c *DeployCommand) Base() (*latticectl.BaseCommand, error) {
 		Target: &watch,
 	}
 	var buildID string
+	var path tree.Path
 	var version string
 	cmd := &latticectl.SystemCommand{
 		Name: "deploy",
@@ -41,6 +43,11 @@ func (c *DeployCommand) Base() (*latticectl.BaseCommand, error) {
 				Name:     "build",
 				Required: false,
 				Target:   &buildID,
+			},
+			&flags.Path{
+				Name:    "path",
+				Default: tree.RootPath(),
+				Target:  &path,
 			},
 			&flags.String{
 				Name:     "version",
@@ -54,7 +61,7 @@ func (c *DeployCommand) Base() (*latticectl.BaseCommand, error) {
 				log.Fatal(err)
 			}
 
-			err = DeploySystem(ctx.Client().Systems(), ctx.SystemID(), v1.BuildID(buildID), v1.SystemVersion(version), os.Stdout, format, watch)
+			err = DeploySystem(ctx.Client().Systems(), ctx.SystemID(), v1.BuildID(buildID), v1.SystemVersion(version), path, os.Stdout, format, watch)
 			if err != nil {
 				//log.Fatal(err)
 				os.Exit(1)
@@ -70,17 +77,18 @@ func DeploySystem(
 	systemID v1.SystemID,
 	buildID v1.BuildID,
 	version v1.SystemVersion,
+	path tree.Path,
 	writer io.Writer,
 	format printer.Format,
 	watch bool,
 ) error {
-	if buildID == "" && version == "" {
-		return fmt.Errorf("must provide either build or version")
-	}
-
 	var deploy *v1.Deploy
 	var err error
 	var definition string
+	if buildID == "" && version == "" {
+		client.Deploys(systemID).CreateFromPath(path)
+		definition = fmt.Sprintf("path %s", color.ID(path.String()))
+	}
 
 	if buildID != "" {
 		if version != "" {
