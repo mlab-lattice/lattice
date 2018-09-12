@@ -574,6 +574,7 @@ func (backend *Backend) newMockBuild(systemID v1.SystemID, v v1.SystemVersion) *
 				ContainerBuild: v1.ContainerBuild{
 					State: v1.ContainerBuildStatePending,
 				},
+				Sidecars: make(map[string]v1.ContainerBuild),
 			},
 		},
 	}
@@ -596,7 +597,7 @@ func (backend *Backend) runBuild(build *v1.Build) {
 		s.StartTimestamp = &now
 		s.ContainerBuild.State = v1.ContainerBuildStateRunning
 		s.ContainerBuild.StartTimestamp = &now
-
+		s.Sidecars = make(map[string]v1.ContainerBuild)
 		build.Services[sp] = s
 	}
 
@@ -617,7 +618,6 @@ func (backend *Backend) finishBuild(build *v1.Build) {
 		s.CompletionTimestamp = &now
 		s.ContainerBuild.CompletionTimestamp = &now
 		s.ContainerBuild.State = v1.ContainerBuildStateSucceeded
-		s.CompletionTimestamp = &now
 		build.Services[sp] = s
 	}
 
