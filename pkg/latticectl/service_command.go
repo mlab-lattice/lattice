@@ -6,6 +6,7 @@ import (
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 	"github.com/mlab-lattice/lattice/pkg/util/cli"
+	"github.com/mlab-lattice/lattice/pkg/util/cli/flags"
 )
 
 type ServiceCommand struct {
@@ -33,7 +34,7 @@ func (c *serviceCommandContext) ServiceID() v1.ServiceID {
 
 func (c *ServiceCommand) Base() (*BaseCommand, error) {
 	var serviceStr string
-	serviceIDFlag := &cli.StringFlag{
+	serviceIDFlag := &flags.String{
 		Name:     "service",
 		Required: true,
 		Target:   &serviceStr,

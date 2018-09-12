@@ -13,6 +13,7 @@ import (
 	"github.com/mlab-lattice/lattice/pkg/latticectl/commands/systems/builds"
 	"github.com/mlab-lattice/lattice/pkg/util/cli"
 	"github.com/mlab-lattice/lattice/pkg/util/cli/color"
+	"github.com/mlab-lattice/lattice/pkg/util/cli/flags"
 	"github.com/mlab-lattice/lattice/pkg/util/cli/printer"
 
 	"github.com/briandowns/spinner"
@@ -36,12 +37,12 @@ func (c *DeployCommand) Base() (*latticectl.BaseCommand, error) {
 		Flags: []cli.Flag{
 			output.Flag(),
 			watchFlag.Flag(),
-			&cli.StringFlag{
+			&flags.String{
 				Name:     "build",
 				Required: false,
 				Target:   &buildID,
 			},
-			&cli.StringFlag{
+			&flags.String{
 				Name:     "version",
 				Required: false,
 				Target:   &version,

@@ -5,6 +5,7 @@ import (
 
 	clientv1 "github.com/mlab-lattice/lattice/pkg/api/client/v1"
 	"github.com/mlab-lattice/lattice/pkg/util/cli"
+	"github.com/mlab-lattice/lattice/pkg/util/cli/flags"
 )
 
 type LatticeCommandContext interface {
@@ -42,7 +43,7 @@ type LatticeCommand struct {
 
 func (c *LatticeCommand) Base() (*BaseCommand, error) {
 	var lattice string
-	latticeFlag := &cli.StringFlag{
+	latticeFlag := &flags.String{
 		Name:     "lattice",
 		Required: false,
 		Target:   &lattice,

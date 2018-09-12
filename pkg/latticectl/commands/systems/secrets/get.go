@@ -6,6 +6,7 @@ import (
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 	"github.com/mlab-lattice/lattice/pkg/latticectl"
 	"github.com/mlab-lattice/lattice/pkg/util/cli"
+	"github.com/mlab-lattice/lattice/pkg/util/cli/flags"
 	"github.com/mlab-lattice/lattice/pkg/util/cli/printer"
 	"io"
 	"log"
@@ -26,7 +27,7 @@ func (c *GetCommand) Base() (*latticectl.BaseCommand, error) {
 		Name: "get",
 		Flags: cli.Flags{
 			output.Flag(),
-			&cli.StringFlag{
+			&flags.String{
 				Name:     "path",
 				Required: true,
 				Target:   &path,

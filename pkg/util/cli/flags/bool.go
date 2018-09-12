@@ -1,4 +1,4 @@
-package cli
+package flags
 
 import (
 	"fmt"
@@ -6,7 +6,7 @@ import (
 	"github.com/spf13/pflag"
 )
 
-type BoolFlag struct {
+type Bool struct {
 	Name     string
 	Required bool
 	Default  bool
@@ -15,23 +15,23 @@ type BoolFlag struct {
 	Target   *bool
 }
 
-func (f *BoolFlag) GetName() string {
+func (f *Bool) GetName() string {
 	return f.Name
 }
 
-func (f *BoolFlag) IsRequired() bool {
+func (f *Bool) IsRequired() bool {
 	return f.Required
 }
 
-func (f *BoolFlag) GetShort() string {
+func (f *Bool) GetShort() string {
 	return f.Short
 }
 
-func (f *BoolFlag) GetUsage() string {
+func (f *Bool) GetUsage() string {
 	return f.Usage
 }
 
-func (f *BoolFlag) Validate() error {
+func (f *Bool) Validate() error {
 	if f.Name == "" {
 		return fmt.Errorf("name cannot be nil")
 	}
@@ -43,15 +43,15 @@ func (f *BoolFlag) Validate() error {
 	return nil
 }
 
-func (f *BoolFlag) GetTarget() interface{} {
+func (f *Bool) GetTarget() interface{} {
 	return f.Target
 }
 
-func (f *BoolFlag) Parse() func() error {
+func (f *Bool) Parse() func() error {
 	return nil
 }
 
-func (f *BoolFlag) AddToFlagSet(flags *pflag.FlagSet) {
+func (f *Bool) AddToFlagSet(flags *pflag.FlagSet) {
 	flags.BoolVarP(f.Target, f.Name, f.Short, f.Default, f.Usage)
 
 	if f.Required {

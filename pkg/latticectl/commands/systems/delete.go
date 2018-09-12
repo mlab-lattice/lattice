@@ -11,6 +11,7 @@ import (
 	"github.com/mlab-lattice/lattice/pkg/latticectl"
 	"github.com/mlab-lattice/lattice/pkg/util/cli"
 	"github.com/mlab-lattice/lattice/pkg/util/cli/color"
+	"github.com/mlab-lattice/lattice/pkg/util/cli/flags"
 )
 
 type DeleteCommand struct {
@@ -22,7 +23,7 @@ func (c *DeleteCommand) Base() (*latticectl.BaseCommand, error) {
 	cmd := &latticectl.LatticeCommand{
 		Name: "delete",
 		Flags: cli.Flags{
-			&cli.StringFlag{
+			&flags.String{
 				Name:     "system",
 				Required: true,
 				Target:   &system,

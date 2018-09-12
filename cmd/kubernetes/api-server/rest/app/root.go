@@ -16,6 +16,7 @@ import (
 	kuberesolver "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/definition/component/resolver"
 	"github.com/mlab-lattice/lattice/pkg/definition/component/resolver"
 	"github.com/mlab-lattice/lattice/pkg/util/cli"
+	"github.com/mlab-lattice/lattice/pkg/util/cli/flags"
 
 	kubeinformers "k8s.io/client-go/informers"
 	kubeclientset "k8s.io/client-go/kubernetes"
@@ -43,30 +44,30 @@ func Command() *cli.Command {
 	command := &cli.Command{
 		Name: "api-server",
 		Flags: cli.Flags{
-			&cli.StringFlag{
+			&flags.String{
 				Name:   "kubeconfig",
 				Usage:  "path to kubeconfig file",
 				Target: &kubeconfig,
 			},
-			&cli.StringFlag{
+			&flags.String{
 				Name:     "namespace-prefix",
 				Usage:    "namespace prefix of the lattice",
 				Required: true,
 				Target:   &namespacePrefix,
 			},
-			&cli.StringFlag{
+			&flags.String{
 				Name:    "work-directory",
 				Usage:   "work directory to use",
 				Default: "/tmp/lattice-api",
 				Target:  &workDirectory,
 			},
-			&cli.Int32Flag{
+			&flags.Int32{
 				Name:    "port",
 				Usage:   "port to bind to",
 				Default: 8080,
 				Target:  &port,
 			},
-			&cli.StringFlag{
+			&flags.String{
 				Name:    "api-auth-key",
 				Usage:   "if supplied, the required value of the API_KEY header",
 				Default: "",

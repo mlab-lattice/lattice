@@ -7,6 +7,7 @@ import (
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 	"github.com/mlab-lattice/lattice/pkg/latticectl"
 	"github.com/mlab-lattice/lattice/pkg/util/cli"
+	"github.com/mlab-lattice/lattice/pkg/util/cli/flags"
 )
 
 type UnsetCommand struct {
@@ -18,7 +19,7 @@ func (c *UnsetCommand) Base() (*latticectl.BaseCommand, error) {
 	cmd := &latticectl.SystemCommand{
 		Name: "unset",
 		Flags: cli.Flags{
-			&cli.StringFlag{
+			&flags.String{
 				Name:     "path",
 				Required: true,
 				Target:   &path,

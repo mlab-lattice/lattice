@@ -3,6 +3,7 @@ package latticectl
 import (
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	"github.com/mlab-lattice/lattice/pkg/util/cli"
+	"github.com/mlab-lattice/lattice/pkg/util/cli/flags"
 )
 
 type JobCommand struct {
@@ -30,7 +31,7 @@ func (c *jobCommandContext) JobID() v1.JobID {
 
 func (c *JobCommand) Base() (*BaseCommand, error) {
 	var jobID string
-	jobIDFlag := &cli.StringFlag{
+	jobIDFlag := &flags.String{
 		Name:     "job",
 		Required: true,
 		Target:   &jobID,

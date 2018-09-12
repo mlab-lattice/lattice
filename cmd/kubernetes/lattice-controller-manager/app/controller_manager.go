@@ -12,6 +12,7 @@ import (
 	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/servicemesh"
 	"github.com/mlab-lattice/lattice/pkg/definition/component/resolver"
 	"github.com/mlab-lattice/lattice/pkg/util/cli"
+	"github.com/mlab-lattice/lattice/pkg/util/cli/flags"
 
 	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/rest"
@@ -46,43 +47,43 @@ func Command() *cli.Command {
 	command := &cli.Command{
 		Name: "lattice-controller-manager",
 		Flags: cli.Flags{
-			&cli.StringFlag{
+			&flags.String{
 				Name:   "kubeconfig",
 				Usage:  "path to kubeconfig file",
 				Target: &kubeconfig,
 			},
-			&cli.StringFlag{
+			&flags.String{
 				Name:     "namespace-prefix",
 				Usage:    "namespace prefix of the lattice",
 				Required: true,
 				Target:   &namespacePrefix,
 			},
-			&cli.StringFlag{
+			&flags.String{
 				Name:    "work-directory",
 				Usage:   "work directory to use",
 				Default: "/tmp/lattice-api",
 				Target:  &workDirectory,
 			},
-			&cli.StringFlag{
+			&flags.String{
 				Name:     "lattice-id",
 				Usage:    "ID of the lattice",
 				Required: true,
 				Target:   &latticeID,
 			},
-			&cli.StringFlag{
+			&flags.String{
 				Name:     "internal-dns-domain",
 				Usage:    "domain to use for internal dns",
 				Required: true,
 				Target:   &internalDNSDomain,
 			},
-			&cli.StringSliceFlag{
+			&flags.StringSliceFlag{
 				Name:    "controllers",
 				Usage:   "controllers that should be run",
 				Default: []string{"*"},
 				Target:  &enabledControllers,
 			},
 
-			&cli.StringFlag{
+			&flags.String{
 				Name:     "cloud-provider",
 				Required: true,
 				Target:   &cloudProvider,
@@ -90,7 +91,7 @@ func Command() *cli.Command {
 			},
 			cloudProviderFlag,
 
-			&cli.StringFlag{
+			&flags.String{
 				Name:     "service-mesh",
 				Required: true,
 				Target:   &serviceMesh,

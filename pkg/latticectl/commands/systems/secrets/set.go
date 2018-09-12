@@ -5,6 +5,7 @@ import (
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 	"github.com/mlab-lattice/lattice/pkg/latticectl"
 	"github.com/mlab-lattice/lattice/pkg/util/cli"
+	"github.com/mlab-lattice/lattice/pkg/util/cli/flags"
 	"log"
 )
 
@@ -18,12 +19,12 @@ func (c *SetCommand) Base() (*latticectl.BaseCommand, error) {
 	cmd := &latticectl.SystemCommand{
 		Name: "set",
 		Flags: cli.Flags{
-			&cli.StringFlag{
+			&flags.String{
 				Name:     "path",
 				Required: true,
 				Target:   &path,
 			},
-			&cli.StringFlag{
+			&flags.String{
 				Name:     "value",
 				Required: true,
 				Target:   &value,

@@ -1,40 +1,42 @@
-package cli
+package flags
 
 import (
 	"fmt"
 
+	"github.com/mlab-lattice/lattice/pkg/util/cli"
+
 	"github.com/spf13/pflag"
 )
 
-// EmbeddedFlag is a Flag that allows you to parse multiple values from the same flag.
+// Embedded is a Flag that allows you to parse multiple values from the same flag.
 // For example, if c is an embedded flag with two string flags, bar and buzz,
 // you could say --c "bar=hello,buzz=world".
-type EmbeddedFlag struct {
+type Embedded struct {
 	Name     string
 	Required bool
 	Short    string
 	Usage    string
-	Flags    Flags
+	Flags    cli.Flags
 	target   []string
 }
 
-func (f *EmbeddedFlag) GetName() string {
+func (f *Embedded) GetName() string {
 	return f.Name
 }
 
-func (f *EmbeddedFlag) IsRequired() bool {
+func (f *Embedded) IsRequired() bool {
 	return f.Required
 }
 
-func (f *EmbeddedFlag) GetShort() string {
+func (f *Embedded) GetShort() string {
 	return f.Short
 }
 
-func (f *EmbeddedFlag) GetUsage() string {
+func (f *Embedded) GetUsage() string {
 	return f.Usage
 }
 
-func (f *EmbeddedFlag) Validate() error {
+func (f *Embedded) Validate() error {
 	if f.Name == "" {
 		return fmt.Errorf("name cannot be nil")
 	}
@@ -52,15 +54,15 @@ func (f *EmbeddedFlag) Validate() error {
 	return nil
 }
 
-func (f *EmbeddedFlag) GetTarget() interface{} {
+func (f *Embedded) GetTarget() interface{} {
 	return nil
 }
 
-func (f *EmbeddedFlag) Parse() func() error {
+func (f *Embedded) Parse() func() error {
 	return f.parse
 }
 
-func (f *EmbeddedFlag) parse() error {
+func (f *Embedded) parse() error {
 	flags := &pflag.FlagSet{}
 	for _, flag := range f.Flags {
 		flag.AddToFlagSet(flags)
@@ -93,7 +95,7 @@ func (f *EmbeddedFlag) parse() error {
 	return nil
 }
 
-func (f *EmbeddedFlag) AddToFlagSet(flags *pflag.FlagSet) {
+func (f *Embedded) AddToFlagSet(flags *pflag.FlagSet) {
 	flags.StringArrayVar(&f.target, f.Name, nil, f.Usage)
 
 	if f.Required {
@@ -101,34 +103,34 @@ func (f *EmbeddedFlag) AddToFlagSet(flags *pflag.FlagSet) {
 	}
 }
 
-type DelayedEmbeddedFlag struct {
+type DelayedEmbedded struct {
 	Name        string
 	Required    bool
 	Short       string
 	Usage       string
-	Flags       map[string]Flags
+	Flags       map[string]cli.Flags
 	Delimiter   string
 	FlagChooser func() (*string, error)
 	target      []string
 }
 
-func (f *DelayedEmbeddedFlag) GetName() string {
+func (f *DelayedEmbedded) GetName() string {
 	return f.Name
 }
 
-func (f *DelayedEmbeddedFlag) IsRequired() bool {
+func (f *DelayedEmbedded) IsRequired() bool {
 	return f.Required
 }
 
-func (f *DelayedEmbeddedFlag) GetShort() string {
+func (f *DelayedEmbedded) GetShort() string {
 	return f.Short
 }
 
-func (f *DelayedEmbeddedFlag) GetUsage() string {
+func (f *DelayedEmbedded) GetUsage() string {
 	return f.Usage
 }
 
-func (f *DelayedEmbeddedFlag) Validate() error {
+func (f *DelayedEmbedded) Validate() error {
 	if f.Name == "" {
 		return fmt.Errorf("name cannot be nil")
 	}
@@ -140,15 +142,15 @@ func (f *DelayedEmbeddedFlag) Validate() error {
 	return nil
 }
 
-func (f *DelayedEmbeddedFlag) GetTarget() interface{} {
+func (f *DelayedEmbedded) GetTarget() interface{} {
 	return nil
 }
 
-func (f *DelayedEmbeddedFlag) Parse() func() error {
+func (f *DelayedEmbedded) Parse() func() error {
 	return f.parse
 }
 
-func (f *DelayedEmbeddedFlag) parse() error {
+func (f *DelayedEmbedded) parse() error {
 	choice, err := f.FlagChooser()
 	if err != nil {
 		return err
@@ -168,7 +170,7 @@ func (f *DelayedEmbeddedFlag) parse() error {
 		return fmt.Errorf("invalid flag choice %v", choice)
 	}
 
-	embedded := &EmbeddedFlag{
+	embedded := &Embedded{
 		Name:     f.Name,
 		Required: f.Required,
 		Short:    f.Short,
@@ -184,7 +186,7 @@ func (f *DelayedEmbeddedFlag) parse() error {
 	return embedded.parse()
 }
 
-func (f *DelayedEmbeddedFlag) AddToFlagSet(flags *pflag.FlagSet) {
+func (f *DelayedEmbedded) AddToFlagSet(flags *pflag.FlagSet) {
 	flags.StringArrayVar(&f.target, f.Name, nil, f.Usage)
 
 	if f.Required {

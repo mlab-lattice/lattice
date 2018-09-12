@@ -10,6 +10,7 @@ import (
 	basebootstrapper "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/lifecycle/lattice/bootstrap/bootstrapper/base"
 	kubeutil "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/kubernetes"
 	"github.com/mlab-lattice/lattice/pkg/util/cli"
+	"github.com/mlab-lattice/lattice/pkg/util/cli/flags"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -56,16 +57,16 @@ func LatticeBootstrapperFlags() (cli.Flags, *LatticeBootstrapperOptions) {
 		DNS: &OptionsDNS{},
 	}
 	flags := cli.Flags{
-		&cli.StringFlag{
+		&flags.String{
 			Name:     "IP",
 			Required: true,
 			Target:   &options.IP,
 		},
-		&cli.EmbeddedFlag{
+		&flags.Embedded{
 			Name:     "dns-var",
 			Required: true,
 			Flags: cli.Flags{
-				&cli.StringFlag{
+				&flags.String{
 					Name:     "dnsmasq-nanny-image",
 					Required: true,
 					Target:   &options.DNS.DnsmasqNannyImage,
@@ -73,16 +74,16 @@ func LatticeBootstrapperFlags() (cli.Flags, *LatticeBootstrapperOptions) {
 				// the args for dnsmasq nanny contain commas, so use a
 				// StringArrayFlag so these don't try to be parsed as separate
 				// args
-				&cli.StringArrayFlag{
+				&flags.StringArrayFlag{
 					Name:   "dnsmasq-nanny-args",
 					Target: &options.DNS.DnsmasqNannyArgs,
 				},
-				&cli.StringFlag{
+				&flags.String{
 					Name:     "controller-image",
 					Required: true,
 					Target:   &options.DNS.ControllerImage,
 				},
-				&cli.StringSliceFlag{
+				&flags.StringSliceFlag{
 					Name:   "controller-args",
 					Target: &options.DNS.DnsmasqNannyArgs,
 				},

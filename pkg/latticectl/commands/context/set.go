@@ -6,6 +6,7 @@ import (
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	"github.com/mlab-lattice/lattice/pkg/latticectl"
 	"github.com/mlab-lattice/lattice/pkg/util/cli"
+	"github.com/mlab-lattice/lattice/pkg/util/cli/flags"
 )
 
 type SetCommand struct {
@@ -17,12 +18,12 @@ func (c *SetCommand) Base() (*latticectl.BaseCommand, error) {
 	cmd := &latticectl.BaseCommand{
 		Name: "set",
 		Flags: cli.Flags{
-			&cli.StringFlag{
+			&flags.String{
 				Name:     "lattice",
 				Required: false,
 				Target:   &lattice,
 			},
-			&cli.StringFlag{
+			&flags.String{
 				Name:     "system",
 				Required: false,
 				Target:   &system,

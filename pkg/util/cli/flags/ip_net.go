@@ -1,4 +1,4 @@
-package cli
+package flags
 
 import (
 	"fmt"
@@ -7,7 +7,7 @@ import (
 	"github.com/spf13/pflag"
 )
 
-type IPNetFlag struct {
+type IPNet struct {
 	Name     string
 	Required bool
 	Default  net.IPNet
@@ -16,23 +16,23 @@ type IPNetFlag struct {
 	Target   *net.IPNet
 }
 
-func (f *IPNetFlag) GetName() string {
+func (f *IPNet) GetName() string {
 	return f.Name
 }
 
-func (f *IPNetFlag) IsRequired() bool {
+func (f *IPNet) IsRequired() bool {
 	return f.Required
 }
 
-func (f *IPNetFlag) GetShort() string {
+func (f *IPNet) GetShort() string {
 	return f.Short
 }
 
-func (f *IPNetFlag) GetUsage() string {
+func (f *IPNet) GetUsage() string {
 	return f.Usage
 }
 
-func (f *IPNetFlag) Validate() error {
+func (f *IPNet) Validate() error {
 	if f.Name == "" {
 		return fmt.Errorf("name cannot be nil")
 	}
@@ -44,15 +44,15 @@ func (f *IPNetFlag) Validate() error {
 	return nil
 }
 
-func (f *IPNetFlag) GetTarget() interface{} {
+func (f *IPNet) GetTarget() interface{} {
 	return f.Target
 }
 
-func (f *IPNetFlag) Parse() func() error {
+func (f *IPNet) Parse() func() error {
 	return nil
 }
 
-func (f *IPNetFlag) AddToFlagSet(flags *pflag.FlagSet) {
+func (f *IPNet) AddToFlagSet(flags *pflag.FlagSet) {
 	flags.IPNetVarP(f.Target, f.Name, f.Short, f.Default, f.Usage)
 
 	if f.Required {

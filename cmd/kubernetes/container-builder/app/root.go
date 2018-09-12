@@ -14,6 +14,7 @@ import (
 	definitionv1 "github.com/mlab-lattice/lattice/pkg/definition/v1"
 	"github.com/mlab-lattice/lattice/pkg/util/aws"
 	"github.com/mlab-lattice/lattice/pkg/util/cli"
+	"github.com/mlab-lattice/lattice/pkg/util/cli/flags"
 	"github.com/mlab-lattice/lattice/pkg/util/git"
 )
 
@@ -43,65 +44,65 @@ func Command() *cli.Command {
 		Name:  "container-builder",
 		Short: "builds and optionally pushes a container for a lattice container build",
 		Flags: cli.Flags{
-			&cli.StringFlag{
+			&flags.String{
 				Name:     "container-build-id",
 				Usage:    "ID of the container build",
 				Required: true,
 				Target:   &containerBuildID,
 			},
-			&cli.StringFlag{
+			&flags.String{
 				Name:     "namespace-prefix",
 				Usage:    "namespace prefix of the lattice",
 				Required: true,
 				Target:   &namespacePrefix,
 			},
-			&cli.StringFlag{
+			&flags.String{
 				Name:     "system-id",
 				Usage:    "id of the system",
 				Required: true,
 				Target:   &systemIDString,
 			},
-			&cli.StringFlag{
+			&flags.String{
 				Name:     "container-build-definition",
 				Usage:    "JSON serialized version of the container build definition block",
 				Required: true,
 				Target:   &containerBuildDefinition,
 			},
-			&cli.StringFlag{
+			&flags.String{
 				Name:     "docker-registry",
 				Usage:    "registry to tag the docker image artifact with",
 				Required: true,
 				Target:   &dockerRegistry,
 			},
-			&cli.StringFlag{
+			&flags.String{
 				Name:   "docker-registry-auth-type",
 				Usage:  "registry to tag the docker image artifact with",
 				Target: &dockerRegistryAuthType,
 			},
-			&cli.StringFlag{
+			&flags.String{
 				Name:     "docker-repository",
 				Usage:    "repository to tag the docker image artifact with",
 				Required: true,
 				Target:   &dockerRepository,
 			},
-			&cli.StringFlag{
+			&flags.String{
 				Name:     "docker-tag",
 				Usage:    "tag to tag the docker image artifact with",
 				Required: true,
 				Target:   &dockerTag,
 			},
-			&cli.BoolFlag{
+			&flags.Bool{
 				Name:    "docker-push",
 				Usage:   "whether or not the image should be pushed to the registry",
 				Default: false,
 				Target:  &dockerPush,
 			},
-			&cli.StringFlag{
+			&flags.String{
 				Name:   "kubeconfig",
 				Usage:  "path to kubeconfig",
 				Target: &kubeconfig,
 			},
-			&cli.StringFlag{
+			&flags.String{
 				Name:    "work-directory",
 				Usage:   "path to use to store build artifacts",
 				Default: "/tmp/container-build",

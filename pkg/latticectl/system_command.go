@@ -5,6 +5,7 @@ import (
 
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	"github.com/mlab-lattice/lattice/pkg/util/cli"
+	"github.com/mlab-lattice/lattice/pkg/util/cli/flags"
 )
 
 type SystemCommand struct {
@@ -32,7 +33,7 @@ func (c *systemCommandContext) SystemID() v1.SystemID {
 
 func (c *SystemCommand) Base() (*BaseCommand, error) {
 	var system string
-	systemNameFlag := &cli.StringFlag{
+	systemNameFlag := &flags.String{
 		Name:     "system",
 		Required: false,
 		Target:   &system,

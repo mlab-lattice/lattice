@@ -12,6 +12,7 @@ import (
 	"github.com/mlab-lattice/lattice/pkg/latticectl/commands/systems/builds"
 	"github.com/mlab-lattice/lattice/pkg/util/cli"
 	"github.com/mlab-lattice/lattice/pkg/util/cli/color"
+	"github.com/mlab-lattice/lattice/pkg/util/cli/flags"
 	"github.com/mlab-lattice/lattice/pkg/util/cli/printer"
 )
 
@@ -32,7 +33,7 @@ func (c *BuildCommand) Base() (*latticectl.BaseCommand, error) {
 		Name: "build",
 		Flags: []cli.Flag{
 			output.Flag(),
-			&cli.StringFlag{
+			&flags.String{
 				Name:     "version",
 				Required: true,
 				Target:   &version,

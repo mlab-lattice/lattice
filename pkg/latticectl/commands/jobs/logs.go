@@ -9,6 +9,7 @@ import (
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	"github.com/mlab-lattice/lattice/pkg/latticectl"
 	"github.com/mlab-lattice/lattice/pkg/util/cli"
+	"github.com/mlab-lattice/lattice/pkg/util/cli/flags"
 )
 
 type LogsCommand struct {
@@ -25,33 +26,33 @@ func (c *LogsCommand) Base() (*latticectl.BaseCommand, error) {
 	cmd := &latticectl.JobCommand{
 		Name: "logs",
 		Flags: cli.Flags{
-			&cli.StringFlag{
+			&flags.String{
 				Name:   "sidecar",
 				Short:  "s",
 				Target: &sidecarStr,
 			},
-			&cli.BoolFlag{
+			&flags.Bool{
 				Name:    "follow",
 				Short:   "f",
 				Default: false,
 				Target:  &follow,
 			},
-			&cli.BoolFlag{
+			&flags.Bool{
 				Name:    "timestamps",
 				Default: false,
 				Target:  &timestamps,
 			},
-			&cli.StringFlag{
+			&flags.String{
 				Name:     "since-time",
 				Required: false,
 				Target:   &sinceTime,
 			},
-			&cli.StringFlag{
+			&flags.String{
 				Name:     "since",
 				Required: false,
 				Target:   &since,
 			},
-			&cli.IntFlag{
+			&flags.Int{
 				Name:     "tail",
 				Required: false,
 				Short:    "t",

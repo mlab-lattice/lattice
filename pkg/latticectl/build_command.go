@@ -3,6 +3,7 @@ package latticectl
 import (
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	"github.com/mlab-lattice/lattice/pkg/util/cli"
+	"github.com/mlab-lattice/lattice/pkg/util/cli/flags"
 )
 
 type BuildCommand struct {
@@ -30,7 +31,7 @@ func (c *buildCommandContext) BuildID() v1.BuildID {
 
 func (c *BuildCommand) Base() (*BaseCommand, error) {
 	var buildID string
-	buildIDFlag := &cli.StringFlag{
+	buildIDFlag := &flags.String{
 		Name:     "build",
 		Required: true,
 		Target:   &buildID,

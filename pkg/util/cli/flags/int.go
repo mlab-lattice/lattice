@@ -1,4 +1,4 @@
-package cli
+package flags
 
 import (
 	"fmt"
@@ -6,7 +6,7 @@ import (
 	"github.com/spf13/pflag"
 )
 
-type IntFlag struct {
+type Int struct {
 	Name     string
 	Required bool
 	Default  int
@@ -15,23 +15,23 @@ type IntFlag struct {
 	Target   *int
 }
 
-func (f *IntFlag) GetName() string {
+func (f *Int) GetName() string {
 	return f.Name
 }
 
-func (f *IntFlag) IsRequired() bool {
+func (f *Int) IsRequired() bool {
 	return f.Required
 }
 
-func (f *IntFlag) GetShort() string {
+func (f *Int) GetShort() string {
 	return f.Short
 }
 
-func (f *IntFlag) GetUsage() string {
+func (f *Int) GetUsage() string {
 	return f.Usage
 }
 
-func (f *IntFlag) Validate() error {
+func (f *Int) Validate() error {
 	if f.Name == "" {
 		return fmt.Errorf("name cannot be nil")
 	}
@@ -43,15 +43,15 @@ func (f *IntFlag) Validate() error {
 	return nil
 }
 
-func (f *IntFlag) GetTarget() interface{} {
+func (f *Int) GetTarget() interface{} {
 	return f.Target
 }
 
-func (f *IntFlag) Parse() func() error {
+func (f *Int) Parse() func() error {
 	return nil
 }
 
-func (f *IntFlag) AddToFlagSet(flags *pflag.FlagSet) {
+func (f *Int) AddToFlagSet(flags *pflag.FlagSet) {
 	flags.IntVarP(f.Target, f.Name, f.Short, f.Default, f.Usage)
 
 	if f.Required {

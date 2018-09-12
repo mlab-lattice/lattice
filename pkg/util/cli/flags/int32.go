@@ -1,4 +1,4 @@
-package cli
+package flags
 
 import (
 	"fmt"
@@ -6,7 +6,7 @@ import (
 	"github.com/spf13/pflag"
 )
 
-type Int32Flag struct {
+type Int32 struct {
 	Name     string
 	Required bool
 	Default  int32
@@ -15,23 +15,23 @@ type Int32Flag struct {
 	Target   *int32
 }
 
-func (f *Int32Flag) GetName() string {
+func (f *Int32) GetName() string {
 	return f.Name
 }
 
-func (f *Int32Flag) IsRequired() bool {
+func (f *Int32) IsRequired() bool {
 	return f.Required
 }
 
-func (f *Int32Flag) GetShort() string {
+func (f *Int32) GetShort() string {
 	return f.Short
 }
 
-func (f *Int32Flag) GetUsage() string {
+func (f *Int32) GetUsage() string {
 	return f.Usage
 }
 
-func (f *Int32Flag) Validate() error {
+func (f *Int32) Validate() error {
 	if f.Name == "" {
 		return fmt.Errorf("name cannot be nil")
 	}
@@ -43,15 +43,15 @@ func (f *Int32Flag) Validate() error {
 	return nil
 }
 
-func (f *Int32Flag) GetTarget() interface{} {
+func (f *Int32) GetTarget() interface{} {
 	return f.Target
 }
 
-func (f *Int32Flag) Parse() func() error {
+func (f *Int32) Parse() func() error {
 	return nil
 }
 
-func (f *Int32Flag) AddToFlagSet(flags *pflag.FlagSet) {
+func (f *Int32) AddToFlagSet(flags *pflag.FlagSet) {
 	flags.Int32VarP(f.Target, f.Name, f.Short, f.Default, f.Usage)
 
 	if f.Required {

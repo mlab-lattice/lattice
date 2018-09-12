@@ -3,6 +3,7 @@ package latticectl
 import (
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	"github.com/mlab-lattice/lattice/pkg/util/cli"
+	"github.com/mlab-lattice/lattice/pkg/util/cli/flags"
 )
 
 type DeployCommand struct {
@@ -30,7 +31,7 @@ func (c *deployCommandContext) DeployID() v1.DeployID {
 
 func (c *DeployCommand) Base() (*BaseCommand, error) {
 	var deployID string
-	deployIDFlag := &cli.StringFlag{
+	deployIDFlag := &flags.String{
 		Name:     "deploy",
 		Required: true,
 		Target:   &deployID,

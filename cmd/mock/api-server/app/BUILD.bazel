@@ -11,6 +11,7 @@ go_library(
         "//pkg/backend/mock/definition/component/resolver:go_default_library",
         "//pkg/definition/component/resolver:go_default_library",
         "//pkg/util/cli:go_default_library",
+        "//pkg/util/cli/flags:go_default_library",
         "//pkg/util/git:go_default_library",
         "@com_github_spf13_pflag//:go_default_library",
     ],

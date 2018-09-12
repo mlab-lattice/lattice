@@ -8,8 +8,9 @@ import (
 	mockresolver "github.com/mlab-lattice/lattice/pkg/backend/mock/definition/component/resolver"
 	"github.com/mlab-lattice/lattice/pkg/definition/component/resolver"
 	"github.com/mlab-lattice/lattice/pkg/util/cli"
-
+	"github.com/mlab-lattice/lattice/pkg/util/cli/flags"
 	"github.com/mlab-lattice/lattice/pkg/util/git"
+
 	"github.com/spf13/pflag"
 )
 
@@ -24,19 +25,19 @@ func Command() *cli.Command {
 	command := &cli.Command{
 		Name: "api-server",
 		Flags: cli.Flags{
-			&cli.Int32Flag{
+			&flags.Int32{
 				Name:    "port",
 				Usage:   "port to bind to",
 				Default: 8080,
 				Target:  &port,
 			},
-			&cli.StringFlag{
+			&flags.String{
 				Name:    "api-auth-key",
 				Usage:   "if supplied, the required value of the API_KEY header",
 				Default: "",
 				Target:  &apiAuthKey,
 			},
-			&cli.StringFlag{
+			&flags.String{
 				Name:    "work-directory",
 				Usage:   "directory used to download git repositories",
 				Default: "/tmp/lattice/mock/api-server",
