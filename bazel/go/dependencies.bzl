@@ -99,7 +99,7 @@ GO_DEPENDENCIES = {
         # master HEAD as of 3/6/18
         "github.com/buger/goterm": {
             "name": "com_github_buger_goterm",
-            "commit": "2f70ee476a85f692e8d4265963c615d8a57652da",
+            "commit": "6d19e6a8df12fdfc44a90a24b677a6d04a80b91f",
             "importpath": "github.com/buger/goterm",
         },
         "github.com/coreos/go-iptables": {

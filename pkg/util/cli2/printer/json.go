@@ -1,11 +1,9 @@
 package printer
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
-	"os"
 )
 
 type JSON struct {
@@ -13,7 +11,7 @@ type JSON struct {
 	Indent int
 }
 
-func (j *JSON) Print(writer io.Writer) error {
+func (j *JSON) Print(w io.Writer) error {
 	var data []byte
 	var err error
 
@@ -27,14 +25,12 @@ func (j *JSON) Print(writer io.Writer) error {
 		return err
 	}
 
-	_, err = writer.Write(data)
+	_, err = w.Write(data)
 	return err
 }
 
-// TODO: Refactor this part of the interface, it's currently ugly
 // Not overwriting, we just print json objects on new lines
-func (j *JSON) Overwrite(b bytes.Buffer, lastHeight int) int {
-	j.Print(os.Stdout)
-	fmt.Print("\n")
-	return 1 // Not used in JSON
+func (j *JSON) Stream(w io.Writer) {
+	j.Print(w)
+	fmt.Fprint(w, "\n")
 }

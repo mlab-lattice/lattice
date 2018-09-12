@@ -1,7 +1,6 @@
 package systems
 
 import (
-	"bytes"
 	"fmt"
 	"io"
 	"os"
@@ -56,26 +55,25 @@ func Command() *cli.Command {
 // printer.FormatTable, in which case it always writes to the terminal.
 func WatchSystems(client clientv1.SystemClient, format printer.Format, writer io.Writer) {
 	// Poll the API for the systems and send it to the channel
-	systemLists := make(chan []v1.System)
-	lastHeight := 0
-	var b bytes.Buffer
+	systems := make(chan []v1.System)
 
 	go wait.PollImmediateInfinite(
 		5*time.Second,
 		func() (bool, error) {
-			systemList, err := client.List()
+			s, err := client.List()
 			if err != nil {
 				return false, err
 			}
 
-			systemLists <- systemList
+			systems <- s
 			return false, nil
 		},
 	)
 
-	for systemList := range systemLists {
-		p := systemsPrinter(systemList, format)
-		lastHeight = p.Overwrite(b, lastHeight)
+	p := systemsPrinter(s, format)
+
+	for s := range systems {
+		p.Stream(writer)
 
 		// Note: Watching systems is never exitable.
 		// There is no fail state for an entire lattice of systems.
@@ -106,7 +104,7 @@ func systemsPrinter(systems []v1.System, format printer.Format) printer.Interfac
 					Alignment: printer.TableAlignLeft,
 				},
 				{
-
+					Header:    "Definition",
 					Alignment: printer.TableAlignLeft,
 				},
 				{

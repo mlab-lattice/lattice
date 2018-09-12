@@ -26,6 +26,8 @@ const (
 type Table struct {
 	Columns []TableColumn
 	rows    [][]string
+
+	lastHeight int
 }
 
 type TableColumn struct {
@@ -80,27 +82,26 @@ func (t *Table) Print(writer io.Writer) error {
 	return nil
 }
 
-func (t *Table) Overwrite(b bytes.Buffer, lastHeight int) int {
-
-	// Read the new printer's output
+func (t *Table) Stream(w io.Writer) {
+	// read the new printer's output
+	var b bytes.Buffer
 	t.Print(&b)
-	output := b.String()
-	// Remove the new printer's output from the buffer
-	b.Truncate(0)
 
-	for i := 0; i <= lastHeight; i++ {
+	// for each line written last time stream was called,
+	// return cursor to start of line and clear the rest of the line
+	for i := 0; i <= t.lastHeight; i++ {
 		if i != 0 {
 			goterm.MoveCursorUp(1)
-			// Return cursor to start of line and clear the rest of the line
-			// Waiting on burger/goterm#23 to be merged to use ResetLine
-			goterm.Print("\r\033[K")
+			goterm.ResetLine("")
 		}
 	}
 
+	// print the output we buffered
+	output := b.String()
 	goterm.Print(output)
 	goterm.Flush() // TODO: Fix for large outputs (e.g. systems:builds)
 
-	return len(strings.Split(output, "\n"))
+	t.lastHeight = len(strings.Split(output, "\n"))
 }
 
 func translateColor(c color.Color) tablewriter.Colors {

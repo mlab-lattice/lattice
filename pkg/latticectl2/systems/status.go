@@ -1,21 +1,23 @@
 package systems
 
 import (
-	"bytes"
 	"fmt"
-	"github.com/briandowns/spinner"
+	"io"
+	"os"
+	"sort"
+	"strings"
+	"time"
+
 	clientv1 "github.com/mlab-lattice/lattice/pkg/api/client/v1"
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	"github.com/mlab-lattice/lattice/pkg/latticectl2/command"
 	"github.com/mlab-lattice/lattice/pkg/util/cli2"
 	"github.com/mlab-lattice/lattice/pkg/util/cli2/color"
 	"github.com/mlab-lattice/lattice/pkg/util/cli2/printer"
-	"io"
+
 	"k8s.io/apimachinery/pkg/util/wait"
-	"os"
-	"sort"
-	"strings"
-	"time"
+
+	"github.com/briandowns/spinner"
 )
 
 func Status() *cli.Command {
@@ -87,13 +89,11 @@ func WatchSystem(client clientv1.SystemClient, id v1.SystemID, format printer.Fo
 			return false, nil
 		},
 	)
-	lastHeight := 0
-	var b bytes.Buffer
 	spin := spinner.New(spinner.CharSets[14], 100*time.Millisecond)
 
 	for s := range statuses {
 		p := systemPrinter(s.system, s.services, format)
-		lastHeight = p.Overwrite(b, lastHeight)
+		p.Stream(writer)
 
 		if format == printer.FormatTable {
 			printState(writer, spin, s.system, s.services)
