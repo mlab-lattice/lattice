@@ -19,7 +19,6 @@ go_library(
     importpath = "github.com/mlab-lattice/lattice/pkg/api/server/rest/v1",
     visibility = ["//visibility:public"],
     deps = [
-        "//pkg/api/docs:go_default_library",
         "//pkg/api/server/v1:go_default_library",
         "//pkg/api/v1:go_default_library",
         "//pkg/api/v1/rest:go_default_library",
