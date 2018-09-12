@@ -71,15 +71,26 @@ func (api *LatticeAPI) handleCreateSystem(c *gin.Context) {
 
 To generate lattice api docs, you need to install the following tools first:
 
-1- https://github.com/swaggo/swag: Converts Go annotations to swagger.
+1- Install golang (if you don't have it already) and add $GOPATH/bin to $PATH
+
+2- Install https://github.com/swaggo/swag: Converts Go annotations to swagger.
  
 ``$ go get -u github.com/swaggo/swag/cmd/swag``
 
-2- https://github.com/Mermade/widdershins: Generates slate docs from swagger.
+3- Make sure that `swag` is available in your $PATH. Run `swag --help`.
+
+4- Install https://github.com/Mermade/widdershins: Generates slate docs from swagger.
 
 ``$ npm install -g widdershins``
 
-3- https://bundler.io/ to be used to run middleman which will create static pages
+5- Install ruby (if you don't have it already)
+
+``
+$ brew update
+$ brew install ruby
+``
+
+6- https://bundler.io/ to be used to run middleman which will create static pages
 
 ``$ gem install bundler``  
 
@@ -89,4 +100,4 @@ After you have all these installed, run:
 
 ``$ make docs.api``
 
-This will generate `lattice/api-docs/build` which will contain the static pages for documentation
+This will generate `lattice/api-docs/build` which will contain the static pages for documentation.
