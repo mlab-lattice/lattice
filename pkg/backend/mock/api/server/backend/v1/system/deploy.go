@@ -1,6 +1,7 @@
 package system
 
 import (
+	"fmt"
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 	"github.com/satori/go.uuid"
@@ -43,9 +44,13 @@ func (b *DeployBackend) CreateFromBuild(id v1.BuildID) (*v1.Deploy, error) {
 	return result, nil
 }
 
-func (b *DeployBackend) CreateFromVersion(v v1.SystemVersion, p tree.Path) (*v1.Deploy, error) {
+func (b *DeployBackend) CreateFromPath(p tree.Path) (*v1.Deploy, error) {
+	return nil, fmt.Errorf("unimplemented")
+}
+
+func (b *DeployBackend) CreateFromVersion(v v1.SystemVersion) (*v1.Deploy, error) {
 	// this ensures the system is created as well
-	build, err := b.backend.Builds(b.systemID).Create(v)
+	build, err := b.backend.Builds(b.systemID).CreateFromVersion(v)
 	if err != nil {
 		return nil, err
 	}

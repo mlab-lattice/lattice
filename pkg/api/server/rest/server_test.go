@@ -95,7 +95,7 @@ func createSystem(t *testing.T) {
 func buildAndDeploy(t *testing.T) {
 	// create build
 	fmt.Println("Test Create Build")
-	build, err := latticeClient.Systems().Builds(mockSystemID).Create(mockSystemVersion)
+	build, err := latticeClient.Systems().Builds(mockSystemID).CreateFromVersion(mockSystemVersion)
 	checkErr(err, t)
 
 	fmt.Printf("Successfully created build. ID %v\n", build.ID)
@@ -249,7 +249,7 @@ func buildAndDeploy(t *testing.T) {
 
 func ensureSingleDeploy(t *testing.T) {
 	fmt.Println("Ensure that system can have one accepted/running deploy at time")
-	build, err := latticeClient.Systems().Builds(mockSystemID).Create(mockSystemVersion)
+	build, err := latticeClient.Systems().Builds(mockSystemID).CreateFromVersion(mockSystemVersion)
 	checkErr(err, t)
 
 	// Create first deploy
@@ -535,7 +535,7 @@ func testInvalidDefinition(t *testing.T) {
 	_, err := latticeClient.Systems().Create("test", "xxxxxxx")
 	checkErr(err, t)
 
-	_, err = latticeClient.Systems().Builds(testID).Create(mockSystemVersion)
+	_, err = latticeClient.Systems().Builds(testID).CreateFromVersion(mockSystemVersion)
 	if err == nil {
 		// TODO re-enable after fixing git resolver.IsValidRepositoryURI
 		//t.Fatal("Expected invalid definition url error")
@@ -546,7 +546,7 @@ func testInvalidDefinition(t *testing.T) {
 	_, err = latticeClient.Systems().Create("test2", mockSystemDefURL)
 	checkErr(err, t)
 
-	_, err = latticeClient.Systems().Builds(testID).Create("111")
+	_, err = latticeClient.Systems().Builds(testID).CreateFromVersion("111")
 	if err == nil {
 		t.Fatal("Expected invalid version error")
 	}

@@ -89,7 +89,7 @@ func DeploySystem(
 		deploy, err = client.Deploys(systemID).CreateFromBuild(buildID)
 	} else {
 		definition = fmt.Sprintf("version %s", color.ID(string(version)))
-		deploy, err = client.Deploys(systemID).CreateFromVersion(version, nil)
+		deploy, err = client.Deploys(systemID).CreateFromVersion(version)
 	}
 
 	if err != nil {

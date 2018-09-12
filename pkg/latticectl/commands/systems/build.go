@@ -65,7 +65,7 @@ func BuildSystem(
 	writer io.Writer,
 	watch bool,
 ) error {
-	build, err := client.Create(version)
+	build, err := client.CreateFromVersion(version)
 	if err != nil {
 		return err
 	}

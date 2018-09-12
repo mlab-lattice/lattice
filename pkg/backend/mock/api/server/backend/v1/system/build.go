@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"strings"
 
+	"fmt"
 	"github.com/satori/go.uuid"
 )
 
@@ -15,7 +16,11 @@ type BuildBackend struct {
 	backend  *Backend
 }
 
-func (b *BuildBackend) Create(v v1.SystemVersion) (*v1.Build, error) {
+func (b *BuildBackend) CreateFromPath(p tree.Path) (*v1.Build, error) {
+	return nil, fmt.Errorf("unimplemented")
+}
+
+func (b *BuildBackend) CreateFromVersion(v v1.SystemVersion) (*v1.Build, error) {
 	b.backend.Lock()
 	defer b.backend.Unlock()
 
