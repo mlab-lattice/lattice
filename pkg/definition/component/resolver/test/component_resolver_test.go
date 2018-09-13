@@ -3,6 +3,7 @@ package test
 import (
 	"fmt"
 	"os"
+	"reflect"
 	"testing"
 
 	. "github.com/mlab-lattice/lattice/pkg/definition/component/resolver"
@@ -12,9 +13,10 @@ import (
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 	definitionv1 "github.com/mlab-lattice/lattice/pkg/definition/v1"
 	"github.com/mlab-lattice/lattice/pkg/util/git"
+	testutil "github.com/mlab-lattice/lattice/pkg/util/test"
 
+	"github.com/mlab-lattice/lattice/pkg/definition/component"
 	gitplumbing "gopkg.in/src-d/go-git.v4/plumbing"
-	"reflect"
 )
 
 const workDir = "/tmp/lattice/test/pkg/definition/component/resolver/component_resolver"
@@ -52,6 +54,20 @@ var (
 		Container:   container1,
 		NodePool:    nodePool1Path,
 	}
+
+	service1 = &definitionv1.Service{
+		Description: "service 1",
+		Container:   container1,
+		NodePool:    nodePool1,
+	}
+
+	system1 = &definitionv1.System{
+		Description: "system 1",
+		Components: map[string]component.Interface{
+			"job":     job1,
+			"service": service1,
+		},
+	}
 )
 
 type commit struct {
@@ -68,10 +84,18 @@ type repo struct {
 }
 
 func TestComponentResolver(t *testing.T) {
+	type inputComponent struct {
+		c     component.Interface
+		p     tree.Path
+		ctx   *git.CommitReference
+		depth int
+	}
 	type phase struct {
 		description string
 		repos       []repo
-		test        func(ComponentResolver) error
+		inputs      map[string]inputComponent
+		// maps input names to a map mapping paths to the expected resolution info
+		expected map[string]map[tree.Path]*ResolutionInfo
 	}
 	tests := []struct {
 		description string
@@ -81,33 +105,32 @@ func TestComponentResolver(t *testing.T) {
 			description: "no references",
 			phases: []phase{
 				{
-					description: "job",
-					test: func(r ComponentResolver) error {
-						p := tree.RootPath().Child("job1")
-						t, err := r.Resolve(job1, system1ID, p, nil, DepthInfinite)
-						if err != nil {
-							return err
-						}
-
-						if t.Len() != 1 {
-							return fmt.Errorf("expected result to have 1 component, but has %v", t.Len())
-						}
-
-						i, ok := t.Get(p)
-						if !ok {
-							return fmt.Errorf("expected result to have component at %v but it does not", p.String())
-						}
-
-						j, ok := i.Component.(*definitionv1.Job)
-						if !ok {
-							return fmt.Errorf("expected component at %v to be a job, it was not", p.String())
-						}
-
-						if !reflect.DeepEqual(j, job1) {
-							return fmt.Errorf("expected component to match job1, it did not")
-						}
-
-						return nil
+					description: "test",
+					inputs: map[string]inputComponent{
+						"job": {
+							c:     job1,
+							p:     tree.RootPath().Child("job"),
+							depth: DepthInfinite,
+						},
+						"service": {
+							c:     service1,
+							p:     tree.RootPath().Child("service"),
+							depth: DepthInfinite,
+						},
+						"system": {
+							c:     system1,
+							p:     tree.RootPath(),
+							depth: DepthInfinite,
+						},
+					},
+					expected: map[string]map[tree.Path]*ResolutionInfo{
+						"job":     {tree.RootPath().Child("job"): {Component: job1}},
+						"service": {tree.RootPath().Child("service"): {Component: service1}},
+						"system": {
+							tree.RootPath():                  {Component: system1},
+							tree.RootPath().Child("job"):     {Component: job1},
+							tree.RootPath().Child("service"): {Component: service1},
+						},
 					},
 				},
 			},
@@ -121,7 +144,7 @@ func TestComponentResolver(t *testing.T) {
 			t.Fatalf("error creating git resolver: %v", err)
 		}
 
-		resolver := NewComponentResolver(gitResolver, mockresolver.NewMemoryTemplateStore(), mockresolver.NewMemorySecretStore())
+		r := NewComponentResolver(gitResolver, mockresolver.NewMemoryTemplateStore(), mockresolver.NewMemorySecretStore())
 		for _, phase := range test.phases {
 			for _, repo := range phase.repos {
 				err := seedRepo(&repo)
@@ -130,9 +153,35 @@ func TestComponentResolver(t *testing.T) {
 				}
 			}
 
-			err := phase.test(resolver)
+			err := func() error {
+				for name, input := range phase.inputs {
+					t, err := r.Resolve(input.c, system1ID, input.p, input.ctx, input.depth)
+					if err != nil {
+						return err
+					}
+
+					expected := phase.expected[name]
+
+					if t.Len() != len(expected) {
+						return fmt.Errorf("expected %v result to have %v components, but has %v", name, len(expected), t.Len())
+					}
+
+					for p, i := range expected {
+						info, ok := t.Get(p)
+						if !ok {
+							return fmt.Errorf("expected %v result to have component at %v but it does not", name, p.String())
+						}
+
+						if !reflect.DeepEqual(info, i) {
+							return fmt.Errorf(testutil.ErrorDiffsJSON(info, expected))
+						}
+					}
+				}
+
+				return nil
+			}()
 			if err != nil {
-				t.Errorf("test %v phase %v: %v", test.description, phase.description, err)
+				t.Errorf("test %v, phase %v: %v", test.description, phase.description, err)
 				break
 			}
 		}
