@@ -5,8 +5,6 @@ import (
 
 	v1server "github.com/mlab-lattice/lattice/pkg/api/server/v1"
 	"github.com/mlab-lattice/lattice/pkg/definition/resolver"
-	"github.com/swaggo/gin-swagger"
-	"github.com/swaggo/gin-swagger/swaggerFiles"
 )
 
 type LatticeAPI struct {
@@ -43,5 +41,4 @@ func (api *LatticeAPI) setupAPI() {
 	api.setupTeardownEndpoints()
 	api.setupSecretsEndpoints()
 	api.setupVersionsEndpoints()
-	api.router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 }
