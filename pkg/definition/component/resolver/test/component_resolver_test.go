@@ -97,24 +97,7 @@ var (
 		},
 	}
 	system1Bytes, _ = json.Marshal(&system1)
-
-	invalidCommit1 = "0123456789abcdef0123456789abcdef01234567"
-	masterBranch   = "master"
-	devBranch      = "dev"
 )
-
-//type commit struct {
-//	contents map[string][]byte
-//	branch   string
-//	tag      string
-//}
-//
-//type repo struct {
-//	name    string
-//	commits []commit
-//	// maps the name of the commit to its hash
-//	hashes []gitplumbing.Hash
-//}
 
 func TestComponentResolver_NoReferences(t *testing.T) {
 	r := resolver()
@@ -204,7 +187,7 @@ func TestComponentResolver_CommitReference(t *testing.T) {
 			},
 		},
 	}
-	result, err := r.Resolve(ref, system1ID, tree.RootPath(), ctx, DepthInfinite)
+	result, err := r.Resolve(ref, system1ID, tree.RootPath(), nil, DepthInfinite)
 	if err != nil {
 		t.Errorf("expected no error resolving plain job, got :%v", err)
 	}
@@ -229,7 +212,7 @@ func TestComponentResolver_CommitReference(t *testing.T) {
 			},
 		},
 	}
-	result, err = r.Resolve(ref, system1ID, tree.RootPath(), ctx, DepthInfinite)
+	result, err = r.Resolve(ref, system1ID, tree.RootPath(), nil, DepthInfinite)
 	if err != nil {
 		t.Errorf("expected no error resolving plain job, got :%v", err)
 	}
@@ -254,7 +237,7 @@ func TestComponentResolver_CommitReference(t *testing.T) {
 			},
 		},
 	}
-	result, err = r.Resolve(ref, system1ID, tree.RootPath(), ctx, DepthInfinite)
+	result, err = r.Resolve(ref, system1ID, tree.RootPath(), nil, DepthInfinite)
 	if err != nil {
 		t.Errorf("expected no error resolving plain job, got :%v", err)
 	}
@@ -272,6 +255,21 @@ func TestComponentResolver_CommitReference(t *testing.T) {
 		Commit:    ctx,
 	})
 	compareComponentTrees(t, "service", expected, result)
+
+	// invalid commit
+	invalidCommit := "0123456789abcdef0123456789abcdef01234567"
+	ref = &definitionv1.Reference{
+		GitRepository: &definitionv1.GitRepositoryReference{
+			GitRepository: &definitionv1.GitRepository{
+				URL:    repo,
+				Commit: &invalidCommit,
+			},
+		},
+	}
+	_, err = r.Resolve(ref, system1ID, tree.RootPath(), nil, DepthInfinite)
+	if err == nil {
+		t.Errorf("expected error resolving invalid commit but got none")
+	}
 }
 
 func compareComponentTrees(t *testing.T, name string, expected, actual *ComponentTree) {
