@@ -82,6 +82,11 @@ func (t *ComponentTree) Delete(p tree.Path) (*ResolutionInfo, bool) {
 	return c.(*ResolutionInfo), true
 }
 
+// Len returns the number of elements in the tree.
+func (t *ComponentTree) Len() int {
+	return t.inner.Len()
+}
+
 // ReplacePrefix removes existing component resolution information about a path
 // and all paths below it, and replaces it with the information from the supplied
 // ComponentTree.
