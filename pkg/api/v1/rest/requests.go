@@ -24,8 +24,8 @@ type DeployRequest struct {
 
 type RunJobRequest struct {
 	Path        tree.Path                         `json:"path"`
-	Command     []string                          `json:"command"`
-	Environment definitionv1.ContainerEnvironment `json:"environment"`
+	Command     []string                          `json:"command,omitempty"`
+	Environment definitionv1.ContainerEnvironment `json:"environment,omitempty"`
 }
 
 type SetSecretRequest struct {
