@@ -8,15 +8,23 @@ import (
 )
 
 type (
-	ComponentTreeWalkFn   func(tree.Path, *ResolutionInfo) tree.WalkContinuation
-	V1TreeJobWalkFn       func(tree.Path, *definitionv1.Job, *ResolutionInfo) tree.WalkContinuation
-	V1TreeNodePoolWalkFn  func(tree.PathSubcomponent, *definitionv1.NodePool) tree.WalkContinuation
+	// ComponentTreeWalkFn is the function type invoked during a component tree walk.
+	ComponentTreeWalkFn func(tree.Path, *ResolutionInfo) tree.WalkContinuation
+	// V1TreeJobWalkFn is the function type invoked during a v1 job walk.
+	V1TreeJobWalkFn func(tree.Path, *definitionv1.Job, *ResolutionInfo) tree.WalkContinuation
+	// V1TreeNodePoolWalkFn is the function type invoked during a v1 node pool walk.
+	V1TreeNodePoolWalkFn func(tree.PathSubcomponent, *definitionv1.NodePool) tree.WalkContinuation
+	// V1TreeReferenceWalkFn is the function type invoked during a v1 reference walk.
 	V1TreeReferenceWalkFn func(tree.Path, *definitionv1.Reference, *ResolutionInfo) tree.WalkContinuation
-	V1TreeServiceWalkFn   func(tree.Path, *definitionv1.Service, *ResolutionInfo) tree.WalkContinuation
-	V1TreeSystemWalkFn    func(tree.Path, *definitionv1.System, *ResolutionInfo) tree.WalkContinuation
-	V1TreeWorkloadWalkFn  func(tree.Path, definitionv1.Workload, *ResolutionInfo) tree.WalkContinuation
+	// V1TreeServiceWalkFn is the function type invoked during a v1 service walk.
+	V1TreeServiceWalkFn func(tree.Path, *definitionv1.Service, *ResolutionInfo) tree.WalkContinuation
+	// V1TreeSystemWalkFn is the function type invoked during a v1 system walk.
+	V1TreeSystemWalkFn func(tree.Path, *definitionv1.System, *ResolutionInfo) tree.WalkContinuation
+	// V1TreeWorkloadWalkFn is the function type invoked during a v1 workload walk.
+	V1TreeWorkloadWalkFn func(tree.Path, definitionv1.Workload, *ResolutionInfo) tree.WalkContinuation
 )
 
+// NewComponentTree returns an initialized ComponentTree.
 func NewComponentTree() *ComponentTree {
 	t := &ComponentTree{
 		inner: tree.NewJSONRadix(
@@ -37,11 +45,14 @@ func NewComponentTree() *ComponentTree {
 	return t
 }
 
+// ComponentTree provides efficient path-based access to info about the resolution of a given
+// tree of components.
 type ComponentTree struct {
 	inner *tree.JSONRadix
 	v1    *V1Tree
 }
 
+// Insert adds component resolution information about a path.
 func (t *ComponentTree) Insert(p tree.Path, c *ResolutionInfo) (*ResolutionInfo, bool) {
 	prev, replaced := t.inner.Insert(p, c)
 	if !replaced {
@@ -51,6 +62,7 @@ func (t *ComponentTree) Insert(p tree.Path, c *ResolutionInfo) (*ResolutionInfo,
 	return prev.(*ResolutionInfo), true
 }
 
+// Get retrieves component resolution information about a path.
 func (t *ComponentTree) Get(p tree.Path) (*ResolutionInfo, bool) {
 	c, ok := t.inner.Get(p)
 	if !ok {
@@ -60,6 +72,7 @@ func (t *ComponentTree) Get(p tree.Path) (*ResolutionInfo, bool) {
 	return c.(*ResolutionInfo), true
 }
 
+// Delete removes component resolution information about a path.
 func (t *ComponentTree) Delete(p tree.Path) (*ResolutionInfo, bool) {
 	c, ok := t.inner.Delete(p)
 	if !ok {
@@ -69,24 +82,31 @@ func (t *ComponentTree) Delete(p tree.Path) (*ResolutionInfo, bool) {
 	return c.(*ResolutionInfo), true
 }
 
+// ReplacePrefix removes existing component resolution information about a path
+// and all paths below it, and replaces it with the information from the supplied
+// ComponentTree.
 func (t *ComponentTree) ReplacePrefix(p tree.Path, other *ComponentTree) {
 	t.inner.ReplacePrefix(p, other.inner.Radix)
 }
 
+// Walk walks the Component tree, invoking the supplied function on each path.
 func (t *ComponentTree) Walk(fn ComponentTreeWalkFn) {
 	t.inner.Walk(func(path tree.Path, i interface{}) tree.WalkContinuation {
 		return fn(path, i.(*ResolutionInfo))
 	})
 }
 
+// V1 returns a V1 tree allowing retrieval of v1 components in the tree.
 func (t *ComponentTree) V1() *V1Tree {
 	return t.v1
 }
 
+// MarshalJSON fulfills the json.Marshaller interface.
 func (t *ComponentTree) MarshalJSON() ([]byte, error) {
 	return json.Marshal(&t.inner)
 }
 
+// MarshalJSON fulfills the json.Unmarshaller interface.
 func (t *ComponentTree) UnmarshalJSON(data []byte) error {
 	t2 := NewComponentTree()
 	if err := json.Unmarshal(data, &t2.inner); err != nil {
@@ -97,10 +117,12 @@ func (t *ComponentTree) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+// V1Tree provides an overlay on top of a Component tree to access v1 components in the tree.
 type V1Tree struct {
 	*ComponentTree
 }
 
+// Jobs walks the Component tree, invoking the supplied function on each path that contains a v1/job.
 func (t *V1Tree) Jobs(fn V1TreeJobWalkFn) {
 	t.ComponentTree.Walk(func(path tree.Path, i *ResolutionInfo) tree.WalkContinuation {
 		job, ok := i.Component.(*definitionv1.Job)
@@ -112,6 +134,7 @@ func (t *V1Tree) Jobs(fn V1TreeJobWalkFn) {
 	})
 }
 
+// NodePools walks the Component tree, invoking the supplied function on each path that contains a v1/node-pool.
 func (t *V1Tree) NodePools(fn V1TreeNodePoolWalkFn) {
 	t.Systems(func(path tree.Path, system *definitionv1.System, info *ResolutionInfo) tree.WalkContinuation {
 		for name, nodePool := range system.NodePools {
@@ -126,6 +149,7 @@ func (t *V1Tree) NodePools(fn V1TreeNodePoolWalkFn) {
 	})
 }
 
+// References walks the Component tree, invoking the supplied function on each path that contains a v1/reference.
 func (t *V1Tree) References(fn V1TreeReferenceWalkFn) {
 	t.ComponentTree.Walk(func(path tree.Path, i *ResolutionInfo) tree.WalkContinuation {
 		reference, ok := i.Component.(*definitionv1.Reference)
@@ -137,6 +161,7 @@ func (t *V1Tree) References(fn V1TreeReferenceWalkFn) {
 	})
 }
 
+// Services walks the Component tree, invoking the supplied function on each path that contains a v1/services.
 func (t *V1Tree) Services(fn V1TreeServiceWalkFn) {
 	t.ComponentTree.Walk(func(path tree.Path, i *ResolutionInfo) tree.WalkContinuation {
 		service, ok := i.Component.(*definitionv1.Service)
@@ -148,6 +173,7 @@ func (t *V1Tree) Services(fn V1TreeServiceWalkFn) {
 	})
 }
 
+// Systems walks the Component tree, invoking the supplied function on each path that contains a v1/system.
 func (t *V1Tree) Systems(fn V1TreeSystemWalkFn) {
 	t.ComponentTree.Walk(func(path tree.Path, i *ResolutionInfo) tree.WalkContinuation {
 		system, ok := i.Component.(*definitionv1.System)
@@ -159,6 +185,8 @@ func (t *V1Tree) Systems(fn V1TreeSystemWalkFn) {
 	})
 }
 
+// Workloads walks the Component tree, invoking the supplied function on each path whose
+// component fulfills the Workload interface.
 func (t *V1Tree) Workloads(fn V1TreeWorkloadWalkFn) {
 	t.ComponentTree.Walk(func(path tree.Path, i *ResolutionInfo) tree.WalkContinuation {
 		workload, ok := i.Component.(definitionv1.Workload)
