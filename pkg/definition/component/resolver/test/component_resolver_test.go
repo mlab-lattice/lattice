@@ -15,6 +15,7 @@ import (
 	"github.com/mlab-lattice/lattice/pkg/util/git"
 	testutil "github.com/mlab-lattice/lattice/pkg/util/test"
 
+	"encoding/json"
 	"github.com/mlab-lattice/lattice/pkg/definition/component"
 	gitplumbing "gopkg.in/src-d/go-git.v4/plumbing"
 )
@@ -54,12 +55,14 @@ var (
 		Container:   container1,
 		NodePool:    nodePool1Path,
 	}
+	job1Bytes, _ = json.Marshal(&job1)
 
 	service1 = &definitionv1.Service{
 		Description: "service 1",
 		Container:   container1,
 		NodePool:    nodePool1,
 	}
+	service1Bytes, _ = json.Marshal(&job1)
 
 	system1 = &definitionv1.System{
 		Description: "system 1",
@@ -68,6 +71,7 @@ var (
 			"service": service1,
 		},
 	}
+	system1Bytes, _ = json.Marshal(&job1)
 )
 
 type commit struct {
@@ -78,17 +82,22 @@ type commit struct {
 
 type repo struct {
 	name    string
-	commits map[string]commit
+	commits []commit
 	// maps the name of the commit to its hash
-	hashes map[string]gitplumbing.Hash
+	hashes []gitplumbing.Hash
 }
 
 func TestComponentResolver(t *testing.T) {
+	type inputCommitRef struct {
+		repo   int
+		commit int
+	}
 	type inputComponent struct {
-		c     component.Interface
-		p     tree.Path
-		ctx   *git.CommitReference
-		depth int
+		c         component.Interface
+		commitRef *inputCommitRef
+		p         tree.Path
+		ctx       *git.CommitReference
+		depth     int
 	}
 	type phase struct {
 		description string
@@ -135,6 +144,33 @@ func TestComponentResolver(t *testing.T) {
 				},
 			},
 		},
+		{
+			description: "basic references",
+			phases: []phase{
+				{
+					description: "commit",
+					repos: []repo{
+						{
+							name:    "repo1",
+							commits: []commit{{contents: map[string][]byte{DefaultFile: job1Bytes}}},
+						},
+					},
+					inputs: map[string]inputComponent{
+						"job": {
+							commitRef: &inputCommitRef{
+								repo:   0,
+								commit: 0,
+							},
+							p:     tree.RootPath().Child("job"),
+							depth: DepthInfinite,
+						},
+					},
+					expected: map[string]map[tree.Path]*ResolutionInfo{
+						"job": {tree.RootPath().Child("job"): {Component: job1}},
+					},
+				},
+			},
+		},
 	}
 
 	for _, test := range tests {
@@ -146,16 +182,31 @@ func TestComponentResolver(t *testing.T) {
 
 		r := NewComponentResolver(gitResolver, mockresolver.NewMemoryTemplateStore(), mockresolver.NewMemorySecretStore())
 		for _, phase := range test.phases {
-			for _, repo := range phase.repos {
+			for i, repo := range phase.repos {
 				err := seedRepo(&repo)
 				if err != nil {
 					t.Fatal(err)
 				}
+				phase.repos[i] = repo
 			}
 
 			err := func() error {
 				for name, input := range phase.inputs {
-					t, err := r.Resolve(input.c, system1ID, input.p, input.ctx, input.depth)
+					c := input.c
+					if input.commitRef != nil {
+						repo := phase.repos[input.commitRef.repo]
+						commit := repo.hashes[input.commitRef.commit].String()
+						c = &definitionv1.Reference{
+							GitRepository: &definitionv1.GitRepositoryReference{
+								GitRepository: &definitionv1.GitRepository{
+									URL:    repoURL(repo.name),
+									Commit: &commit,
+								},
+							},
+						}
+					}
+
+					t, err := r.Resolve(c, system1ID, input.p, input.ctx, input.depth)
 					if err != nil {
 						return err
 					}
@@ -172,8 +223,16 @@ func TestComponentResolver(t *testing.T) {
 							return fmt.Errorf("expected %v result to have component at %v but it does not", name, p.String())
 						}
 
+						if p == input.p && input.commitRef != nil {
+							ref := c.(*definitionv1.Reference)
+							i.Commit = &git.CommitReference{
+								RepositoryURL: ref.GitRepository.URL,
+								Commit:        *ref.GitRepository.Commit,
+							}
+						}
+
 						if !reflect.DeepEqual(info, i) {
-							return fmt.Errorf(testutil.ErrorDiffsJSON(info, expected))
+							return fmt.Errorf(testutil.ErrorDiffsJSON(info, i))
 						}
 					}
 				}
@@ -194,18 +253,23 @@ func repoURL(name string) string {
 
 func seedRepo(r *repo) error {
 	url := repoURL(r.name)
-	hashes := make(map[string]gitplumbing.Hash)
+
+	err := git.Init(url)
+	if err != nil {
+		return fmt.Errorf("error initializing repo: %v", err)
+	}
+
+	var hashes []gitplumbing.Hash
 	var lastHash gitplumbing.Hash
 
-	for name, c := range r.commits {
+	for _, c := range r.commits {
 		branch := "master"
 		if c.branch != "" {
 			branch = c.branch
-		}
-
-		if err := git.CheckoutBranch(url, branch); err != nil {
-			if err := git.CreateBranch(url, branch, lastHash); err != nil {
-				return fmt.Errorf("error initializing repo: %v", err)
+			if err := git.CheckoutBranch(url, branch); err != nil {
+				if err := git.CreateBranch(url, branch, lastHash); err != nil {
+					return fmt.Errorf("error initializing repo: %v", err)
+				}
 			}
 		}
 
@@ -215,12 +279,18 @@ func seedRepo(r *repo) error {
 				return fmt.Errorf("error initializing repo: %v", err)
 			}
 		}
-		hash, err := git.Commit(url, name)
+		hash, err := git.Commit(url, "commit")
 		if err != nil {
 			return fmt.Errorf("error initializing repo: %v", err)
 		}
 
-		hashes[name] = hash
+		if c.tag != "" {
+			if err = git.Tag(url, hash, c.tag); err != nil {
+				return fmt.Errorf("error initializing repo: %v", err)
+			}
+		}
+
+		hashes = append(hashes, hash)
 	}
 
 	r.hashes = hashes

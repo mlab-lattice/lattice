@@ -81,6 +81,41 @@ func (c *Controller) syncPendingBuild(build *latticev1.Build) error {
 		return err
 	}
 
+	// ensure that the component is a system if it's at the root
+	if path.IsRoot() {
+		root, ok := t.Get(tree.RootPath())
+		if !ok {
+			_, err := c.updateBuildStatus(
+				build,
+				latticev1.BuildStateFailed,
+				"system does not have root",
+				nil,
+				nil,
+				nil,
+				nil,
+				nil,
+				nil,
+			)
+			return err
+		}
+
+		_, ok = root.Component.(*definitionv1.System)
+		if !ok {
+			_, err := c.updateBuildStatus(
+				build,
+				latticev1.BuildStateFailed,
+				"root component must be a system",
+				nil,
+				t,
+				nil,
+				nil,
+				nil,
+				nil,
+			)
+			return err
+		}
+	}
+
 	_, err = c.updateBuildStatus(
 		build,
 		latticev1.BuildStateAccepted,
