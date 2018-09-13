@@ -62,7 +62,7 @@ var (
 		Container:   container1,
 		NodePool:    nodePool1,
 	}
-	service1Bytes, _ = json.Marshal(&job1)
+	service1Bytes, _ = json.Marshal(&service1)
 
 	system1 = &definitionv1.System{
 		Description: "system 1",
@@ -71,7 +71,9 @@ var (
 			"service": service1,
 		},
 	}
-	system1Bytes, _ = json.Marshal(&job1)
+	system1Bytes, _ = json.Marshal(&system1)
+
+	invalidCommit1 = "0123456789abcdef0123456789abcdef01234567"
 )
 
 type commit struct {
@@ -104,7 +106,8 @@ func TestComponentResolver(t *testing.T) {
 		repos       []repo
 		inputs      map[string]inputComponent
 		// maps input names to a map mapping paths to the expected resolution info
-		expected map[string]map[tree.Path]*ResolutionInfo
+		expected      map[string]map[tree.Path]*ResolutionInfo
+		expectFailure bool
 	}
 	tests := []struct {
 		description string
@@ -148,11 +151,14 @@ func TestComponentResolver(t *testing.T) {
 			description: "basic references",
 			phases: []phase{
 				{
-					description: "commit",
+					description: "valid commit",
 					repos: []repo{
 						{
-							name:    "repo1",
-							commits: []commit{{contents: map[string][]byte{DefaultFile: job1Bytes}}},
+							name: "repo1",
+							commits: []commit{
+								{contents: map[string][]byte{DefaultFile: job1Bytes}},
+								{contents: map[string][]byte{DefaultFile: service1Bytes}},
+							},
 						},
 					},
 					inputs: map[string]inputComponent{
@@ -164,10 +170,37 @@ func TestComponentResolver(t *testing.T) {
 							p:     tree.RootPath().Child("job"),
 							depth: DepthInfinite,
 						},
+						"service": {
+							commitRef: &inputCommitRef{
+								repo:   0,
+								commit: 1,
+							},
+							p:     tree.RootPath().Child("service"),
+							depth: DepthInfinite,
+						},
 					},
 					expected: map[string]map[tree.Path]*ResolutionInfo{
-						"job": {tree.RootPath().Child("job"): {Component: job1}},
+						"job":     {tree.RootPath().Child("job"): {Component: job1}},
+						"service": {tree.RootPath().Child("service"): {Component: service1}},
 					},
+				},
+				{
+					description: "invalid commit",
+					inputs: map[string]inputComponent{
+						"failure": {
+							c: &definitionv1.Reference{
+								GitRepository: &definitionv1.GitRepositoryReference{
+									GitRepository: &definitionv1.GitRepository{
+										URL:    repoURL("repo1"),
+										Commit: &invalidCommit1,
+									},
+								},
+							},
+							p:     tree.RootPath().Child("job"),
+							depth: DepthInfinite,
+						},
+					},
+					expectFailure: true,
 				},
 			},
 		},
@@ -207,8 +240,11 @@ func TestComponentResolver(t *testing.T) {
 					}
 
 					t, err := r.Resolve(c, system1ID, input.p, input.ctx, input.depth)
-					if err != nil {
-						return err
+					if phase.expectFailure && err == nil {
+						return fmt.Errorf("expected %v resolution to fail but got no error", name)
+					}
+					if !phase.expectFailure && err != nil {
+						return fmt.Errorf("expected %v resolution to succeed but got error: %v", name, err)
 					}
 
 					expected := phase.expected[name]
@@ -232,7 +268,7 @@ func TestComponentResolver(t *testing.T) {
 						}
 
 						if !reflect.DeepEqual(info, i) {
-							return fmt.Errorf(testutil.ErrorDiffsJSON(info, i))
+							return fmt.Errorf(fmt.Sprintf("%v (%v)\n%v", name, p.String(), testutil.ErrorDiffsJSON(info, i)))
 						}
 					}
 				}
