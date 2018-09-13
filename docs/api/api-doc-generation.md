@@ -71,26 +71,31 @@ func (api *LatticeAPI) handleCreateSystem(c *gin.Context) {
 
 To generate lattice api docs, you need to install the following tools first:
 
+
 1- Install golang (if you don't have it already) and add $GOPATH/bin to $PATH
 
-2- Install https://github.com/swaggo/swag: Converts Go annotations to swagger.
+2- Set `$GOPATH` if you don't have it. You can set it to `$HOME/go`.
+
+3- Clone this repository under `$GOPATH/src/github.com/mlab-lattice`. So your clone should be in `$GOPATH/src/github.com/mlab-lattice/lattice`
+` 
+4- Install https://github.com/swaggo/swag: Converts Go annotations to swagger.
  
 ``$ go get -u github.com/swaggo/swag/cmd/swag``
 
-3- Make sure that `swag` is available in your $PATH. Run `swag --help`.
+5- Make sure that `swag` is available in your $PATH. Run `swag --help`.
 
-4- Install https://github.com/Mermade/widdershins: Generates slate docs from swagger.
+6- Install https://github.com/Mermade/widdershins: Generates slate docs from swagger.
 
 ``$ npm install -g widdershins``
 
-5- Install ruby (if you don't have it already)
+7- Install ruby (if you don't have it already)
 
 ``
 $ brew update
 $ brew install ruby
 ``
 
-6- https://bundler.io/ to be used to run middleman which will create static pages
+8- https://bundler.io/ to be used to run middleman which will create static pages
 
 ``$ gem install bundler``  
 
@@ -100,4 +105,4 @@ After you have all these installed, run:
 
 ``$ make docs.api``
 
-This will generate `lattice/api-docs/build` which will contain the static pages for documentation.
+This will generate `$GOPATH/src/github.com/mlab-lattice/lattice/api-docs/build` which will contain the static pages for documentation.
