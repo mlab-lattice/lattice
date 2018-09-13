@@ -2,20 +2,28 @@ package cli
 
 import (
 	"fmt"
+	"log"
 	"os"
+	"sort"
+	"strings"
 
 	"github.com/spf13/cobra"
+
+	"github.com/mlab-lattice/lattice/pkg/util/cli/template"
 )
 
 type Command struct {
-	Name        string
-	Short       string
-	Args        Args
-	Flags       Flags
-	PreRun      func()
-	Run         func(args []string)
-	Subcommands []*Command
-	cobraCmd    *cobra.Command
+	Name             string
+	Short            string
+	Args             Args
+	Flags            Flags
+	PreRun           func()
+	Run              func(args []string)
+	Subcommands      []*Command
+	UsageFunc        func(*Command) error
+	HelpFunc         func(*Command)
+	cobraCmd         *cobra.Command
+	isSpaceSeparated bool
 }
 
 func (c *Command) Execute() {
@@ -30,13 +38,6 @@ func (c *Command) Init() error {
 	c.cobraCmd = &cobra.Command{
 		Use:   c.Name,
 		Short: c.Short,
-		Run: func(cmd *cobra.Command, args []string) {
-			if c.Run == nil {
-				cmd.Help()
-				os.Exit(1)
-			}
-			c.Run(args)
-		},
 	}
 
 	if err := c.addArgs(); err != nil {
@@ -51,6 +52,17 @@ func (c *Command) Init() error {
 		return fmt.Errorf("error initializing subcommands: %v", err)
 	}
 
+	c.cobraCmd.SetUsageFunc(c.usageFuncWrapper)
+	c.cobraCmd.SetHelpFunc(c.helpFuncWrapper)
+
+	c.cobraCmd.Run = func(cmd *cobra.Command, args []string) {
+		if c.Run == nil {
+			cmd.Help()
+			os.Exit(1)
+		}
+		c.Run(args)
+	}
+
 	c.cobraCmd.PreRun = func(cmd *cobra.Command, args []string) {
 		for name, parser := range c.getFlagParsers() {
 			err := parser()
@@ -62,10 +74,50 @@ func (c *Command) Init() error {
 
 		if c.PreRun != nil {
 			c.PreRun()
+			c.PreRun()
 		}
 	}
 
+	c.isSpaceSeparated = true
+
 	return nil
+}
+
+// usageFuncWrapper calls the correct usage function, and lets the usageFunction be called on a Command rather than a cobra.Command
+func (c *Command) usageFuncWrapper(*cobra.Command) error {
+	if c.UsageFunc != nil {
+		return c.UsageFunc(c)
+	}
+
+	return c.defaultUsageFunc(c)
+}
+
+// helpFuncWrapper calls the correct help function, and lets the usageFunction be called on a Command rather than a cobra.Command
+func (c *Command) helpFuncWrapper(*cobra.Command, []string) {
+	if c.HelpFunc != nil {
+		c.HelpFunc(c)
+		return
+	}
+
+	c.defaultHelpFunc(c)
+}
+
+// defaultUsageFunc is the Usage function that will be called if none is provided
+func (c *Command) defaultUsageFunc(*Command) error {
+	// TODO :: Seems like Usage & Help have the same use for us right now. (Perhaps just for default)
+	tmplName := template.DefaultTemplate
+	templateToExecute := template.DefaultUsageTemplate
+	return template.TryExecuteTemplate(tmplName, template.DefaultTemplate, templateToExecute, template.DefaultTemplateFuncs, c)
+}
+
+// defaultHelpFunc is the Help function that will be called if none is provided
+func (c *Command) defaultHelpFunc(*Command) {
+	tmplName := template.DefaultTemplate
+	templateToExecute := template.DefaultHelpTemplate
+	err := template.TryExecuteTemplate(tmplName, template.DefaultTemplate, templateToExecute, template.DefaultTemplateFuncs, c)
+	if err != nil {
+		log.Fatalf(err.Error())
+	}
 }
 
 func (c *Command) addArgs() error {
@@ -138,6 +190,10 @@ func (c *Command) Help() {
 	c.cobraCmd.Help()
 }
 
+func (c *Command) Usage() {
+	c.cobraCmd.Usage()
+}
+
 func (c *Command) ExecuteColon() {
 	if err := c.Init(); err != nil {
 		c.exit(err)
@@ -151,19 +207,6 @@ func (c *Command) ExecuteColon() {
 }
 
 func (c *Command) initColon() error {
-	c.cobraCmd = &cobra.Command{
-		Use:   c.Name,
-		Short: c.Short,
-		Run: func(cmd *cobra.Command, args []string) {
-			if c.Run == nil {
-				cmd.Help()
-				os.Exit(1)
-			}
-
-			c.Run(args)
-		},
-	}
-
 	for _, subcommand := range c.Subcommands {
 		if err := subcommand.Init(); err != nil {
 			return err
@@ -182,17 +225,14 @@ func (c *Command) initColon() error {
 		//  subcommand.Run is a pointer, we need to do this trickery)
 		subcommand.cobraCmd.Run = func(run func([]string)) func(*cobra.Command, []string) {
 			return func(cmd *cobra.Command, args []string) {
-				if run == nil {
-					cmd.Help()
-					os.Exit(1)
-				}
-
 				run(args)
 			}
 		}(subcommand.Run)
 
 		c.cobraCmd.AddCommand(subcommand.cobraCmd)
 	}
+
+	c.isSpaceSeparated = false
 
 	return nil
 }
@@ -225,4 +265,120 @@ func (c *Command) exit(err error) {
 	}
 
 	os.Exit(0)
+}
+
+// Template helpers
+
+// CommandSeparator returns the string needed to invoke a subcommand. This is either a space or ':'.
+func (c *Command) CommandSeparator() string {
+	if c.isSpaceSeparated {
+		return " "
+	}
+
+	return ":"
+}
+
+func (c *Command) IsRunnable() bool {
+	return c.cobraCmd.Runnable()
+}
+
+func (c *Command) HasSubcommands() bool {
+	return len(c.Subcommands) != 0
+}
+
+func (c *Command) HasFlags() bool {
+	return len(c.Flags) != 0
+}
+
+func (c *Command) CommandPath() string {
+	return c.cobraCmd.Name()
+}
+
+func (c *Command) CommandPathBinary() string {
+	return c.cobraCmd.CommandPath()
+}
+
+func (c *Command) FlagsSorted() Flags {
+	flags := c.Flags
+	sort.Sort(flags)
+	return flags
+}
+
+// AllSubcommands returns the recursive subcommand tree as one flat sorted array.
+func (c *Command) AllSubcommands() []*Command {
+	// found is a list of all flattened subcommands
+	found := make([]*Command, 0)
+	// queue is the list of Commands that still need to be flattened
+	queue := c.Subcommands
+
+	done := false
+	for done == false {
+		if len(queue) == 0 {
+			// nothing left to search, found contains all the subcommands
+			done = true
+		} else {
+			// explore the first element in the queue. Add this node to found and add each subcommand to the queue
+			found = append(found, queue[0])
+			queue = append(queue, queue[0].Subcommands...)
+			queue = queue[1:]
+		}
+	}
+
+	return SortCommands(found)
+}
+
+type CommandGroup struct {
+	Commands  []*Command
+	GroupName string
+}
+
+// SubcommandsByGroup returns commands grouped by immediate children of a node. The order is a pre order. The elements in each group are sorted.
+func (c *Command) SubcommandsByGroup() []*CommandGroup {
+	// found is a list of all flattened subcommands
+	found := make([]*CommandGroup, 0)
+	// queue is the list of Commands that still need to be flattened
+	queue := []*Command{c}
+
+	for {
+		if len(queue) == 0 {
+			// nothing left to search, found contains all the subcommands
+			break
+		} else {
+			// explore the first element in the queue. Add this node to found and add each subcommand to the queue
+			nextElem := queue[0]
+			queue = queue[1:]
+			if len(nextElem.Subcommands) == 0 {
+				continue
+			}
+
+			groupName := nextElem.CommandPathBinary()
+			newCmdGroup := &CommandGroup{
+				Commands:  SortCommands(nextElem.Subcommands),
+				GroupName: groupName,
+			}
+			found = append(found, newCmdGroup)
+			queue = append(queue, nextElem.Subcommands...)
+		}
+	}
+
+	return found
+}
+
+func SortCommands(commands CommandList) CommandList {
+	sort.Sort(commands)
+	return commands
+}
+
+type CommandList []*Command
+
+func (c CommandList) Len() int {
+	return len(c)
+}
+
+func (c CommandList) Swap(i, j int) {
+	c[i], c[j] = c[j], c[i]
+}
+
+func (c CommandList) Less(i, j int) bool {
+	return strings.Compare(c[i].CommandPath(), c[j].CommandPath()) == -1
 }
