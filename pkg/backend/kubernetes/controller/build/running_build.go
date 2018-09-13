@@ -78,7 +78,7 @@ func (c *Controller) syncRunningBuild(build *latticev1.Build, stateInfo stateInf
 			serviceMessage += fmt.Sprintf("%v sidecar", sidecar)
 		}
 
-		message = message + " " + serviceMessage
+		message = message + ") " + serviceMessage
 	}
 
 	// If we haven't logged a start timestamp yet, use now.

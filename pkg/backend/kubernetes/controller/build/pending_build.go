@@ -118,7 +118,7 @@ func (c *Controller) getBuildComponent(
 		_, err := c.updateBuildStatus(
 			build,
 			latticev1.BuildStateFailed,
-			fmt.Sprintf("system %v does not have any components, cannot build a path", system.Name),
+			fmt.Sprintf("system %v does not have any components, cannot build the system based off a path", system.Name),
 			nil,
 			nil,
 			nil,
