@@ -68,10 +68,22 @@ func (c *Controller) syncPendingDeploy(deploy *latticev1.Deploy) error {
 			}
 		}
 
-		path = tree.RootPath()
+		// There are many factors that could make an old partial system build incompatible with the
+		// current state of the system. Instead of trying to enumerate and handle them, for now
+		// we'll simply fail the deploy.
+		// May want to revisit this.
 		if build.Spec.Path != nil {
-			path = *build.Spec.Path
+			_, err := c.updateDeployStatus(
+				deploy,
+				latticev1.DeployStateFailed,
+				fmt.Sprintf("cannot deploy using a build id (%v) since it is only a partial system build", buildID),
+				nil,
+				deploy.Status.BuildID,
+			)
+			return err
 		}
+
+		path = tree.RootPath()
 
 	case deploy.Spec.Path != nil:
 		path = *deploy.Spec.Path
