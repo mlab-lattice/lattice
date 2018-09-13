@@ -2,7 +2,7 @@ package test
 
 import (
 	"fmt"
-	"os"
+	//"os"
 	"reflect"
 	"testing"
 
@@ -17,13 +17,14 @@ import (
 
 	"encoding/json"
 	"github.com/mlab-lattice/lattice/pkg/definition/component"
-	gitplumbing "gopkg.in/src-d/go-git.v4/plumbing"
+	//gitplumbing "gopkg.in/src-d/go-git.v4/plumbing"
 )
 
 const workDir = "/tmp/lattice/test/pkg/definition/component/resolver/component_resolver"
 
 var (
 	system1ID = v1.SystemID("test")
+	repo1     = "repo1"
 
 	container1 = definitionv1.Container{
 		Ports: map[int32]definitionv1.ContainerPort{
@@ -41,6 +42,23 @@ var (
 					Tag:        "16.04",
 				},
 				Command: []string{"npm install", "npm run build"},
+			},
+		},
+	}
+
+	container2 = definitionv1.Container{
+		Ports: map[int32]definitionv1.ContainerPort{
+			80: {
+				Protocol: "tcp",
+			},
+		},
+		Build: &definitionv1.ContainerBuild{
+			CommandBuild: &definitionv1.ContainerBuildCommand{
+				BaseImage: definitionv1.DockerImage{
+					Repository: "library/ubuntu",
+					Tag:        "16.04",
+				},
+				Command: []string{"./install.sh"},
 			},
 		},
 	}
@@ -64,6 +82,13 @@ var (
 	}
 	service1Bytes, _ = json.Marshal(&service1)
 
+	service2 = &definitionv1.Service{
+		Description: "service 2",
+		Container:   container2,
+		NodePool:    nodePool1,
+	}
+	service2Bytes, _ = json.Marshal(&service1)
+
 	system1 = &definitionv1.System{
 		Description: "system 1",
 		Components: map[string]component.Interface{
@@ -74,262 +99,211 @@ var (
 	system1Bytes, _ = json.Marshal(&system1)
 
 	invalidCommit1 = "0123456789abcdef0123456789abcdef01234567"
+	masterBranch   = "master"
+	devBranch      = "dev"
 )
 
-type commit struct {
-	contents map[string][]byte
-	branch   string
-	tag      string
+//type commit struct {
+//	contents map[string][]byte
+//	branch   string
+//	tag      string
+//}
+//
+//type repo struct {
+//	name    string
+//	commits []commit
+//	// maps the name of the commit to its hash
+//	hashes []gitplumbing.Hash
+//}
+
+func TestComponentResolver_NoReferences(t *testing.T) {
+	r := resolver()
+
+	// job
+	result, err := r.Resolve(job1, system1ID, tree.RootPath(), nil, DepthInfinite)
+	if err != nil {
+		t.Errorf("expected no error resolving plain job, got :%v", err)
+	}
+
+	expected := NewComponentTree()
+	expected.Insert(tree.RootPath(), &ResolutionInfo{Component: job1})
+	compareComponentTrees(t, "job", expected, result)
+
+	// service
+	result, err = r.Resolve(service1, system1ID, tree.RootPath(), nil, DepthInfinite)
+	if err != nil {
+		t.Errorf("expected no error resolving plain job, got :%v", err)
+	}
+
+	expected = NewComponentTree()
+	expected.Insert(tree.RootPath(), &ResolutionInfo{Component: service1})
+	compareComponentTrees(t, "service", expected, result)
+
+	// system
+	result, err = r.Resolve(system1, system1ID, tree.RootPath(), nil, DepthInfinite)
+	if err != nil {
+		t.Errorf("expected no error resolving plain job, got :%v", err)
+	}
+
+	expected = NewComponentTree()
+	expected.Insert(tree.RootPath(), &ResolutionInfo{Component: system1})
+	expected.Insert(tree.RootPath().Child("job"), &ResolutionInfo{Component: job1})
+	expected.Insert(tree.RootPath().Child("service"), &ResolutionInfo{Component: service1})
+	compareComponentTrees(t, "system", expected, result)
 }
 
-type repo struct {
-	name    string
-	commits []commit
-	// maps the name of the commit to its hash
-	hashes []gitplumbing.Hash
-}
+func TestComponentResolver_CommitReference(t *testing.T) {
+	r := resolver()
 
-func TestComponentResolver(t *testing.T) {
-	type inputCommitRef struct {
-		repo   int
-		commit int
+	// seed repo
+	repo := repoURL(repo1)
+	jobCommit, err := git.WriteAndCommitFile(
+		repo,
+		DefaultFile,
+		job1Bytes,
+		0700,
+		"job",
+	)
+	if err != nil {
+		t.Fatalf("error commiting to repo: %v", err)
 	}
-	type inputComponent struct {
-		c         component.Interface
-		commitRef *inputCommitRef
-		p         tree.Path
-		ctx       *git.CommitReference
-		depth     int
+
+	serviceCommit, err := git.WriteAndCommitFile(
+		repo,
+		DefaultFile,
+		service1Bytes,
+		0700,
+		"job",
+	)
+	if err != nil {
+		t.Fatalf("error commiting to repo: %v", err)
 	}
-	type phase struct {
-		description string
-		repos       []repo
-		inputs      map[string]inputComponent
-		// maps input names to a map mapping paths to the expected resolution info
-		expected      map[string]map[tree.Path]*ResolutionInfo
-		expectFailure bool
+
+	systemCommit, err := git.WriteAndCommitFile(
+		repo,
+		DefaultFile,
+		system1Bytes,
+		0700,
+		"job",
+	)
+	if err != nil {
+		t.Fatalf("error commiting to repo: %v", err)
 	}
-	tests := []struct {
-		description string
-		phases      []phase
-	}{
-		{
-			description: "no references",
-			phases: []phase{
-				{
-					description: "test",
-					inputs: map[string]inputComponent{
-						"job": {
-							c:     job1,
-							p:     tree.RootPath().Child("job"),
-							depth: DepthInfinite,
-						},
-						"service": {
-							c:     service1,
-							p:     tree.RootPath().Child("service"),
-							depth: DepthInfinite,
-						},
-						"system": {
-							c:     system1,
-							p:     tree.RootPath(),
-							depth: DepthInfinite,
-						},
-					},
-					expected: map[string]map[tree.Path]*ResolutionInfo{
-						"job":     {tree.RootPath().Child("job"): {Component: job1}},
-						"service": {tree.RootPath().Child("service"): {Component: service1}},
-						"system": {
-							tree.RootPath():                  {Component: system1},
-							tree.RootPath().Child("job"):     {Component: job1},
-							tree.RootPath().Child("service"): {Component: service1},
-						},
-					},
-				},
-			},
-		},
-		{
-			description: "basic references",
-			phases: []phase{
-				{
-					description: "valid commit",
-					repos: []repo{
-						{
-							name: "repo1",
-							commits: []commit{
-								{contents: map[string][]byte{DefaultFile: job1Bytes}},
-								{contents: map[string][]byte{DefaultFile: service1Bytes}},
-							},
-						},
-					},
-					inputs: map[string]inputComponent{
-						"job": {
-							commitRef: &inputCommitRef{
-								repo:   0,
-								commit: 0,
-							},
-							p:     tree.RootPath().Child("job"),
-							depth: DepthInfinite,
-						},
-						"service": {
-							commitRef: &inputCommitRef{
-								repo:   0,
-								commit: 1,
-							},
-							p:     tree.RootPath().Child("service"),
-							depth: DepthInfinite,
-						},
-					},
-					expected: map[string]map[tree.Path]*ResolutionInfo{
-						"job":     {tree.RootPath().Child("job"): {Component: job1}},
-						"service": {tree.RootPath().Child("service"): {Component: service1}},
-					},
-				},
-				{
-					description: "invalid commit",
-					inputs: map[string]inputComponent{
-						"failure": {
-							c: &definitionv1.Reference{
-								GitRepository: &definitionv1.GitRepositoryReference{
-									GitRepository: &definitionv1.GitRepository{
-										URL:    repoURL("repo1"),
-										Commit: &invalidCommit1,
-									},
-								},
-							},
-							p:     tree.RootPath().Child("job"),
-							depth: DepthInfinite,
-						},
-					},
-					expectFailure: true,
-				},
+
+	// job
+	jobCommitStr := jobCommit.String()
+	ctx := &git.CommitReference{
+		RepositoryURL: repo,
+		Commit:        jobCommitStr,
+	}
+	ref := &definitionv1.Reference{
+		GitRepository: &definitionv1.GitRepositoryReference{
+			GitRepository: &definitionv1.GitRepository{
+				URL:    repo,
+				Commit: &jobCommitStr,
 			},
 		},
 	}
-
-	for _, test := range tests {
-		os.RemoveAll(workDir)
-		gitResolver, err := git.NewResolver(fmt.Sprintf("%v/resolver", workDir), true)
-		if err != nil {
-			t.Fatalf("error creating git resolver: %v", err)
-		}
-
-		r := NewComponentResolver(gitResolver, mockresolver.NewMemoryTemplateStore(), mockresolver.NewMemorySecretStore())
-		for _, phase := range test.phases {
-			for i, repo := range phase.repos {
-				err := seedRepo(&repo)
-				if err != nil {
-					t.Fatal(err)
-				}
-				phase.repos[i] = repo
-			}
-
-			err := func() error {
-				for name, input := range phase.inputs {
-					c := input.c
-					if input.commitRef != nil {
-						repo := phase.repos[input.commitRef.repo]
-						commit := repo.hashes[input.commitRef.commit].String()
-						c = &definitionv1.Reference{
-							GitRepository: &definitionv1.GitRepositoryReference{
-								GitRepository: &definitionv1.GitRepository{
-									URL:    repoURL(repo.name),
-									Commit: &commit,
-								},
-							},
-						}
-					}
-
-					t, err := r.Resolve(c, system1ID, input.p, input.ctx, input.depth)
-					if phase.expectFailure && err == nil {
-						return fmt.Errorf("expected %v resolution to fail but got no error", name)
-					}
-					if !phase.expectFailure && err != nil {
-						return fmt.Errorf("expected %v resolution to succeed but got error: %v", name, err)
-					}
-
-					expected := phase.expected[name]
-
-					if t.Len() != len(expected) {
-						return fmt.Errorf("expected %v result to have %v components, but has %v", name, len(expected), t.Len())
-					}
-
-					for p, i := range expected {
-						info, ok := t.Get(p)
-						if !ok {
-							return fmt.Errorf("expected %v result to have component at %v but it does not", name, p.String())
-						}
-
-						if p == input.p && input.commitRef != nil {
-							ref := c.(*definitionv1.Reference)
-							i.Commit = &git.CommitReference{
-								RepositoryURL: ref.GitRepository.URL,
-								Commit:        *ref.GitRepository.Commit,
-							}
-						}
-
-						if !reflect.DeepEqual(info, i) {
-							return fmt.Errorf(fmt.Sprintf("%v (%v)\n%v", name, p.String(), testutil.ErrorDiffsJSON(info, i)))
-						}
-					}
-				}
-
-				return nil
-			}()
-			if err != nil {
-				t.Errorf("test %v, phase %v: %v", test.description, phase.description, err)
-				break
-			}
-		}
+	result, err := r.Resolve(ref, system1ID, tree.RootPath(), ctx, DepthInfinite)
+	if err != nil {
+		t.Errorf("expected no error resolving plain job, got :%v", err)
 	}
+	expected := NewComponentTree()
+	expected.Insert(tree.RootPath(), &ResolutionInfo{
+		Component: job1,
+		Commit:    ctx,
+	})
+	compareComponentTrees(t, "job", expected, result)
+
+	// service
+	serviceCommitStr := serviceCommit.String()
+	ctx = &git.CommitReference{
+		RepositoryURL: repo,
+		Commit:        serviceCommitStr,
+	}
+	ref = &definitionv1.Reference{
+		GitRepository: &definitionv1.GitRepositoryReference{
+			GitRepository: &definitionv1.GitRepository{
+				URL:    repo,
+				Commit: &serviceCommitStr,
+			},
+		},
+	}
+	result, err = r.Resolve(ref, system1ID, tree.RootPath(), ctx, DepthInfinite)
+	if err != nil {
+		t.Errorf("expected no error resolving plain job, got :%v", err)
+	}
+	expected = NewComponentTree()
+	expected.Insert(tree.RootPath(), &ResolutionInfo{
+		Component: service1,
+		Commit:    ctx,
+	})
+	compareComponentTrees(t, "service", expected, result)
+
+	//system
+	systemCommitStr := systemCommit.String()
+	ctx = &git.CommitReference{
+		RepositoryURL: repo,
+		Commit:        systemCommitStr,
+	}
+	ref = &definitionv1.Reference{
+		GitRepository: &definitionv1.GitRepositoryReference{
+			GitRepository: &definitionv1.GitRepository{
+				URL:    repo,
+				Commit: &systemCommitStr,
+			},
+		},
+	}
+	result, err = r.Resolve(ref, system1ID, tree.RootPath(), ctx, DepthInfinite)
+	if err != nil {
+		t.Errorf("expected no error resolving plain job, got :%v", err)
+	}
+	expected = NewComponentTree()
+	expected.Insert(tree.RootPath(), &ResolutionInfo{
+		Component: system1,
+		Commit:    ctx,
+	})
+	expected.Insert(tree.RootPath().Child("job"), &ResolutionInfo{
+		Component: job1,
+		Commit:    ctx,
+	})
+	expected.Insert(tree.RootPath().Child("service"), &ResolutionInfo{
+		Component: service1,
+		Commit:    ctx,
+	})
+	compareComponentTrees(t, "service", expected, result)
+}
+
+func compareComponentTrees(t *testing.T, name string, expected, actual *ComponentTree) {
+	if expected.Len() != actual.Len() {
+		t.Errorf("expected %v result to contain %v entries, found %v", name, expected.Len(), actual.Len())
+		return
+	}
+
+	expected.Walk(func(path tree.Path, info *ResolutionInfo) tree.WalkContinuation {
+		result, ok := actual.Get(path)
+		if !ok {
+			t.Errorf("expected %v result to contain %v but it did not", name, path.String())
+			return tree.ContinueWalk
+		}
+
+		if !reflect.DeepEqual(info, result) {
+			t.Errorf("result for %v path %v did not match expected \n%v", name, path.String(), testutil.ErrorDiffsJSON(info, result))
+		}
+
+		return tree.ContinueWalk
+	})
 }
 
 func repoURL(name string) string {
 	return fmt.Sprintf("%v/repos/%v", workDir, name)
 }
 
-func seedRepo(r *repo) error {
-	url := repoURL(r.name)
-
-	err := git.Init(url)
+func resolver() ComponentResolver {
+	gitResolver, err := git.NewResolver(fmt.Sprintf("%v/resolver", workDir), true)
 	if err != nil {
-		return fmt.Errorf("error initializing repo: %v", err)
+		panic(err)
 	}
 
-	var hashes []gitplumbing.Hash
-	var lastHash gitplumbing.Hash
-
-	for _, c := range r.commits {
-		branch := "master"
-		if c.branch != "" {
-			branch = c.branch
-			if err := git.CheckoutBranch(url, branch); err != nil {
-				if err := git.CreateBranch(url, branch, lastHash); err != nil {
-					return fmt.Errorf("error initializing repo: %v", err)
-				}
-			}
-		}
-
-		for file, contents := range c.contents {
-			err := git.WriteAndAddFile(url, file, contents, 0700)
-			if err != nil {
-				return fmt.Errorf("error initializing repo: %v", err)
-			}
-		}
-		hash, err := git.Commit(url, "commit")
-		if err != nil {
-			return fmt.Errorf("error initializing repo: %v", err)
-		}
-
-		if c.tag != "" {
-			if err = git.Tag(url, hash, c.tag); err != nil {
-				return fmt.Errorf("error initializing repo: %v", err)
-			}
-		}
-
-		hashes = append(hashes, hash)
-	}
-
-	r.hashes = hashes
-
-	return nil
+	return NewComponentResolver(gitResolver, mockresolver.NewMemoryTemplateStore(), mockresolver.NewMemorySecretStore())
 }
