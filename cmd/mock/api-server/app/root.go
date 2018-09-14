@@ -45,7 +45,6 @@ func Command() *cli.Command {
 			},
 		},
 		Run: func(args []string) {
-			backend := mockbackend.NewMockBackend(workDirectory)
 
 			templateStore := mockresolver.NewMemoryTemplateStore()
 			secretStore := mockresolver.NewMemorySecretStore()
@@ -55,6 +54,7 @@ func Command() *cli.Command {
 			}
 
 			r := resolver.NewComponentResolver(gitResolver, templateStore, secretStore)
+			backend := mockbackend.NewMockBackend(r)
 			rest.RunNewRestServer(backend, r, port, apiAuthKey)
 		},
 	}
