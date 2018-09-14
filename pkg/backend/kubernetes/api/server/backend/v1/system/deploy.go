@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 	"github.com/satori/go.uuid"
+	"time"
 )
 
 type deployBackend struct {
@@ -129,14 +130,24 @@ func transformDeploy(deploy *latticev1.Deploy) (v1.Deploy, error) {
 		return v1.Deploy{}, err
 	}
 
+	var startTimestamp *time.Time
+	if deploy.Status.StartTimestamp != nil {
+		startTimestamp = &deploy.Status.StartTimestamp.Time
+	}
+
+	var completionTimestamp *time.Time
+	if deploy.Status.CompletionTimestamp != nil {
+		startTimestamp = &deploy.Status.CompletionTimestamp.Time
+	}
+
 	externalDeploy := v1.Deploy{
 		ID:    v1.DeployID(deploy.Name),
 		State: state,
 
 		Build: deploy.Status.BuildID,
 
-		StartTimestamp:      &deploy.Status.StartTimestamp.Time,
-		CompletionTimestamp: &deploy.Status.CompletionTimestamp.Time,
+		StartTimestamp:      startTimestamp,
+		CompletionTimestamp: completionTimestamp,
 	}
 
 	return externalDeploy, nil
