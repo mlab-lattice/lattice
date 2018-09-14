@@ -21,6 +21,13 @@ import (
 	"os"
 )
 
+// TODO(kevindrosendahl): add tests for the following:
+//   - systems with references
+//   - resolution depth
+// TODO(kevindrosendahl): when implemented add tests for the following:
+//   - cycle detection
+//   - potential component resolution depth (if separate from reference resolution depth)
+
 const workDir = "/tmp/lattice/test/pkg/definition/component/resolver/component_resolver"
 
 var (
