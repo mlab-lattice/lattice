@@ -204,7 +204,6 @@ func TestComponentResolver_CommitReference(t *testing.T) {
 						},
 					},
 				},
-				p:     tree.RootPath(),
 				depth: DepthInfinite,
 				expected: map[tree.Path]*ResolutionInfo{
 					tree.RootPath(): {
@@ -226,7 +225,6 @@ func TestComponentResolver_CommitReference(t *testing.T) {
 						},
 					},
 				},
-				p:     tree.RootPath(),
 				depth: DepthInfinite,
 				expected: map[tree.Path]*ResolutionInfo{
 					tree.RootPath(): {
@@ -248,7 +246,6 @@ func TestComponentResolver_CommitReference(t *testing.T) {
 						},
 					},
 				},
-				p:     tree.RootPath(),
 				depth: DepthInfinite,
 				expected: map[tree.Path]*ResolutionInfo{
 					tree.RootPath(): {
@@ -277,21 +274,22 @@ func TestComponentResolver_CommitReference(t *testing.T) {
 		},
 	)
 
-	// invalid commit
-	// TODO(kevindrosendahl): classify expected error
 	invalidCommit := "0123456789abcdef0123456789abcdef01234567"
-	ref := &definitionv1.Reference{
-		GitRepository: &definitionv1.GitRepositoryReference{
-			GitRepository: &definitionv1.GitRepository{
-				URL:    repo,
-				Commit: &invalidCommit,
+	testResolutionFailure(
+		t,
+		r,
+		&failedResolutionTest{
+			name: "invalid commit",
+			c: &definitionv1.Reference{
+				GitRepository: &definitionv1.GitRepositoryReference{
+					GitRepository: &definitionv1.GitRepository{
+						URL:    repo,
+						Commit: &invalidCommit,
+					},
+				},
 			},
 		},
-	}
-	_, err = r.Resolve(ref, system1ID, tree.RootPath(), nil, DepthInfinite)
-	if err == nil {
-		t.Errorf("expected error resolving invalid commit but got none")
-	}
+	)
 }
 
 func TestComponentResolver_BranchReference(t *testing.T) {
@@ -346,7 +344,6 @@ func TestComponentResolver_BranchReference(t *testing.T) {
 					},
 				},
 			},
-			p:     tree.RootPath(),
 			depth: DepthInfinite,
 			expected: map[tree.Path]*ResolutionInfo{
 				tree.RootPath(): {
@@ -385,7 +382,6 @@ func TestComponentResolver_BranchReference(t *testing.T) {
 					},
 				},
 			},
-			p:     tree.RootPath(),
 			depth: DepthInfinite,
 			expected: map[tree.Path]*ResolutionInfo{
 				tree.RootPath(): {
@@ -399,21 +395,22 @@ func TestComponentResolver_BranchReference(t *testing.T) {
 		},
 	)
 
-	// invalid branch
-	// TODO(kevindrosendahl): classify expected error
 	invalidBranch := "foo"
-	ref := &definitionv1.Reference{
-		GitRepository: &definitionv1.GitRepositoryReference{
-			GitRepository: &definitionv1.GitRepository{
-				URL:    repo,
-				Branch: &invalidBranch,
+	testResolutionFailure(
+		t,
+		r,
+		&failedResolutionTest{
+			name: "invalid branch",
+			c: &definitionv1.Reference{
+				GitRepository: &definitionv1.GitRepositoryReference{
+					GitRepository: &definitionv1.GitRepository{
+						URL:    repo,
+						Branch: &invalidBranch,
+					},
+				},
 			},
 		},
-	}
-	_, err = r.Resolve(ref, system1ID, tree.RootPath(), nil, DepthInfinite)
-	if err == nil {
-		t.Errorf("expected error resolving invalid commit but got none")
-	}
+	)
 }
 
 func TestComponentResolver_TagReference(t *testing.T) {
@@ -475,7 +472,6 @@ func TestComponentResolver_TagReference(t *testing.T) {
 						},
 					},
 				},
-				p:     tree.RootPath(),
 				depth: DepthInfinite,
 				expected: map[tree.Path]*ResolutionInfo{
 					tree.RootPath(): {
@@ -497,7 +493,6 @@ func TestComponentResolver_TagReference(t *testing.T) {
 						},
 					},
 				},
-				p:     tree.RootPath(),
 				depth: DepthInfinite,
 				expected: map[tree.Path]*ResolutionInfo{
 					tree.RootPath(): {
@@ -512,21 +507,22 @@ func TestComponentResolver_TagReference(t *testing.T) {
 		},
 	)
 
-	// invalid tag
-	// TODO(kevindrosendahl): classify expected error
 	invalidTag := "invalid"
-	ref := &definitionv1.Reference{
-		GitRepository: &definitionv1.GitRepositoryReference{
-			GitRepository: &definitionv1.GitRepository{
-				URL: repo,
-				Tag: &invalidTag,
+	testResolutionFailure(
+		t,
+		r,
+		&failedResolutionTest{
+			name: "invalid branch",
+			c: &definitionv1.Reference{
+				GitRepository: &definitionv1.GitRepositoryReference{
+					GitRepository: &definitionv1.GitRepository{
+						URL: repo,
+						Tag: &invalidTag,
+					},
+				},
 			},
 		},
-	}
-	_, err = r.Resolve(ref, system1ID, tree.RootPath(), nil, DepthInfinite)
-	if err == nil {
-		t.Errorf("expected error resolving invalid tag but got none")
-	}
+	)
 }
 
 func TestComponentResolver_VersionReference(t *testing.T) {
@@ -590,7 +586,6 @@ func TestComponentResolver_VersionReference(t *testing.T) {
 						},
 					},
 				},
-				p:     tree.RootPath(),
 				depth: DepthInfinite,
 				expected: map[tree.Path]*ResolutionInfo{
 					tree.RootPath(): {
@@ -612,7 +607,6 @@ func TestComponentResolver_VersionReference(t *testing.T) {
 						},
 					},
 				},
-				p:     tree.RootPath(),
 				depth: DepthInfinite,
 				expected: map[tree.Path]*ResolutionInfo{
 					tree.RootPath(): {
@@ -634,7 +628,6 @@ func TestComponentResolver_VersionReference(t *testing.T) {
 						},
 					},
 				},
-				p:     tree.RootPath(),
 				depth: DepthInfinite,
 				expected: map[tree.Path]*ResolutionInfo{
 					tree.RootPath(): {
@@ -680,8 +673,6 @@ func TestComponentResolver_VersionReference(t *testing.T) {
 						},
 					},
 				},
-				p:     tree.RootPath(),
-				ctx:   nil,
 				depth: DepthInfinite,
 				expected: map[tree.Path]*ResolutionInfo{
 					tree.RootPath(): {
@@ -704,8 +695,6 @@ func TestComponentResolver_VersionReference(t *testing.T) {
 						},
 					},
 				},
-				p:     tree.RootPath(),
-				ctx:   nil,
 				depth: DepthInfinite,
 				expected: map[tree.Path]*ResolutionInfo{
 					tree.RootPath(): {
@@ -727,8 +716,6 @@ func TestComponentResolver_VersionReference(t *testing.T) {
 						},
 					},
 				},
-				p:     tree.RootPath(),
-				ctx:   nil,
 				depth: DepthInfinite,
 				expected: map[tree.Path]*ResolutionInfo{
 					tree.RootPath(): {
@@ -774,8 +761,6 @@ func TestComponentResolver_VersionReference(t *testing.T) {
 						},
 					},
 				},
-				p:     tree.RootPath(),
-				ctx:   nil,
 				depth: DepthInfinite,
 				expected: map[tree.Path]*ResolutionInfo{
 					tree.RootPath(): {
@@ -797,8 +782,6 @@ func TestComponentResolver_VersionReference(t *testing.T) {
 						},
 					},
 				},
-				p:     tree.RootPath(),
-				ctx:   nil,
 				depth: DepthInfinite,
 				expected: map[tree.Path]*ResolutionInfo{
 					tree.RootPath(): {
@@ -821,8 +804,6 @@ func TestComponentResolver_VersionReference(t *testing.T) {
 						},
 					},
 				},
-				p:     tree.RootPath(),
-				ctx:   nil,
 				depth: DepthInfinite,
 				expected: map[tree.Path]*ResolutionInfo{
 					tree.RootPath(): {
@@ -837,21 +818,22 @@ func TestComponentResolver_VersionReference(t *testing.T) {
 		},
 	)
 
-	// invalid version
-	// TODO(kevindrosendahl): classify expected error
 	invalidVersion := "foo"
-	ref := &definitionv1.Reference{
-		GitRepository: &definitionv1.GitRepositoryReference{
-			GitRepository: &definitionv1.GitRepository{
-				URL:     repo,
-				Version: &invalidVersion,
+	testResolutionFailure(
+		t,
+		r,
+		&failedResolutionTest{
+			name: "invalid branch",
+			c: &definitionv1.Reference{
+				GitRepository: &definitionv1.GitRepositoryReference{
+					GitRepository: &definitionv1.GitRepository{
+						URL:     repo,
+						Version: &invalidVersion,
+					},
+				},
 			},
 		},
-	}
-	_, err = r.Resolve(ref, system1ID, tree.RootPath(), nil, DepthInfinite)
-	if err == nil {
-		t.Errorf("expected error resolving invalid version but got none")
-	}
+	)
 }
 
 func TestComponentResolver_FileReference(t *testing.T) {
@@ -897,6 +879,7 @@ func TestComponentResolver_FileReference(t *testing.T) {
 		t,
 		r,
 		[]successfulResolutionTest{
+			// resolving a git reference with a specific file
 			{
 				name: "job file",
 				c: &definitionv1.Reference{
@@ -908,7 +891,6 @@ func TestComponentResolver_FileReference(t *testing.T) {
 						File: &jobFile,
 					},
 				},
-				p:     tree.RootPath(),
 				depth: DepthInfinite,
 				expected: map[tree.Path]*ResolutionInfo{
 					tree.RootPath(): {
@@ -931,7 +913,47 @@ func TestComponentResolver_FileReference(t *testing.T) {
 						File: &serviceFile,
 					},
 				},
-				p:     tree.RootPath(),
+				depth: DepthInfinite,
+				expected: map[tree.Path]*ResolutionInfo{
+					tree.RootPath(): {
+						Component: service1,
+						Commit: &git.CommitReference{
+							RepositoryURL: repo,
+							Commit:        commitStr,
+						},
+					},
+				},
+			},
+			// resolving a local file reference with context
+			{
+				name: "job file",
+				c: &definitionv1.Reference{
+					File: &jobFile,
+				},
+				ctx: &git.CommitReference{
+					RepositoryURL: repo,
+					Commit:        commitStr,
+				},
+				depth: DepthInfinite,
+				expected: map[tree.Path]*ResolutionInfo{
+					tree.RootPath(): {
+						Component: job1,
+						Commit: &git.CommitReference{
+							RepositoryURL: repo,
+							Commit:        commitStr,
+						},
+					},
+				},
+			},
+			{
+				name: "service file",
+				c: &definitionv1.Reference{
+					File: &serviceFile,
+				},
+				ctx: &git.CommitReference{
+					RepositoryURL: repo,
+					Commit:        commitStr,
+				},
 				depth: DepthInfinite,
 				expected: map[tree.Path]*ResolutionInfo{
 					tree.RootPath(): {
@@ -946,22 +968,70 @@ func TestComponentResolver_FileReference(t *testing.T) {
 		},
 	)
 
-	// invalid file
-	// TODO(kevindrosendahl): classify expected error
 	invalidFile := DefaultFile
-	ref := &definitionv1.Reference{
-		GitRepository: &definitionv1.GitRepositoryReference{
-			GitRepository: &definitionv1.GitRepository{
-				URL:    repo,
-				Commit: &commitStr,
+	invalidCommit := "0123456789abcdef0123456789abcdef01234567"
+	testResolutionFailures(
+		t,
+		r,
+		[]failedResolutionTest{
+			{
+				name: "invalid file with valid git reference",
+				c: &definitionv1.Reference{
+					GitRepository: &definitionv1.GitRepositoryReference{
+						GitRepository: &definitionv1.GitRepository{
+							URL:    repo,
+							Commit: &commitStr,
+						},
+						File: &invalidFile,
+					},
+				},
 			},
-			File: &invalidFile,
+			{
+				name: "invalid file with valid git context",
+				c: &definitionv1.Reference{
+					File: &invalidFile,
+				},
+				ctx: &git.CommitReference{
+					RepositoryURL: repo,
+					Commit:        commitStr,
+				},
+			},
+			{
+				name: "valid file with invalid git commit",
+				c: &definitionv1.Reference{
+					GitRepository: &definitionv1.GitRepositoryReference{
+						GitRepository: &definitionv1.GitRepository{
+							URL:    repo,
+							Commit: &invalidCommit,
+						},
+						File: &serviceFile,
+					},
+				},
+			},
+			{
+				name: "valid file with invalid git repo",
+				c: &definitionv1.Reference{
+					GitRepository: &definitionv1.GitRepositoryReference{
+						GitRepository: &definitionv1.GitRepository{
+							URL:    repoURL("invalid"),
+							Commit: &commitStr,
+						},
+						File: &serviceFile,
+					},
+				},
+			},
+			{
+				name: "valid file with invalid git context",
+				c: &definitionv1.Reference{
+					File: &serviceFile,
+				},
+				ctx: &git.CommitReference{
+					RepositoryURL: repo,
+					Commit:        invalidCommit,
+				},
+			},
 		},
-	}
-	_, err = r.Resolve(ref, system1ID, tree.RootPath(), nil, DepthInfinite)
-	if err == nil {
-		t.Errorf("expected error resolving invalid version but got none")
-	}
+	)
 }
 
 type successfulResolutionTest struct {
@@ -980,6 +1050,9 @@ func testResolutionSuccesses(t *testing.T, r ComponentResolver, tests []successf
 }
 
 func testResolutionSuccess(t *testing.T, r ComponentResolver, test *successfulResolutionTest) {
+	if test.p == "" {
+		test.p = tree.RootPath()
+	}
 	result, err := r.Resolve(test.c, system1ID, test.p, test.ctx, test.depth)
 	if err != nil {
 		t.Errorf("expected no error resolving %v, got :%v", test.name, err)
@@ -990,6 +1063,30 @@ func testResolutionSuccess(t *testing.T, r ComponentResolver, test *successfulRe
 		e.Insert(p, i)
 	}
 	compareComponentTrees(t, test.name, e, result)
+}
+
+type failedResolutionTest struct {
+	name string
+	c    component.Interface
+	p    tree.Path
+	ctx  *git.CommitReference
+	// TODO(kevindrosendahl): add expected error once errors are classified
+}
+
+func testResolutionFailures(t *testing.T, r ComponentResolver, tests []failedResolutionTest) {
+	for _, test := range tests {
+		testResolutionFailure(t, r, &test)
+	}
+}
+
+func testResolutionFailure(t *testing.T, r ComponentResolver, test *failedResolutionTest) {
+	if test.p == "" {
+		test.p = tree.RootPath()
+	}
+	_, err := r.Resolve(test.c, system1ID, test.p, test.ctx, DepthInfinite)
+	if err == nil {
+		t.Errorf("expected error resolving %v but got none", test.name)
+	}
 }
 
 func compareComponentTrees(t *testing.T, name string, expected, actual *ComponentTree) {
