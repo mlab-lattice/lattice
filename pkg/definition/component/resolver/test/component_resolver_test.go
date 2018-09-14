@@ -18,6 +18,7 @@ import (
 	"encoding/json"
 	"github.com/mlab-lattice/lattice/pkg/definition/component"
 	//gitplumbing "gopkg.in/src-d/go-git.v4/plumbing"
+	"os"
 )
 
 const workDir = "/tmp/lattice/test/pkg/definition/component/resolver/component_resolver"
@@ -140,6 +141,12 @@ func TestComponentResolver_CommitReference(t *testing.T) {
 
 	// seed repo
 	repo := repoURL(repo1)
+	os.RemoveAll(repo)
+	err := git.Init(repo)
+	if err != nil {
+		t.Fatalf("error initializing repo: %v", err)
+	}
+
 	jobCommit, err := git.WriteAndCommitFile(
 		repo,
 		DefaultFile,
@@ -263,6 +270,120 @@ func TestComponentResolver_CommitReference(t *testing.T) {
 			GitRepository: &definitionv1.GitRepository{
 				URL:    repo,
 				Commit: &invalidCommit,
+			},
+		},
+	}
+	_, err = r.Resolve(ref, system1ID, tree.RootPath(), nil, DepthInfinite)
+	if err == nil {
+		t.Errorf("expected error resolving invalid commit but got none")
+	}
+}
+
+func TestComponentResolver_BranchReference(t *testing.T) {
+	r := resolver()
+
+	// seed repo
+	repo := repoURL(repo1)
+	os.RemoveAll(repo)
+	err := git.Init(repo)
+	if err != nil {
+		t.Fatalf("error initializing repo: %v", err)
+	}
+
+	jobCommit, err := git.WriteAndCommitFile(
+		repo,
+		DefaultFile,
+		job1Bytes,
+		0700,
+		"job",
+	)
+	if err != nil {
+		t.Fatalf("error commiting to repo: %v", err)
+	}
+
+	devBranch := "dev"
+	err = git.CreateBranch(repo, devBranch, jobCommit)
+	if err != nil {
+		t.Fatalf("error checking out branch: %v", err)
+	}
+
+	serviceCommit, err := git.WriteAndCommitFile(
+		repo,
+		DefaultFile,
+		service1Bytes,
+		0700,
+		"job",
+	)
+	if err != nil {
+		t.Fatalf("error commiting to repo: %v", err)
+	}
+
+	ctx := &git.CommitReference{
+		RepositoryURL: repo,
+		Commit:        serviceCommit.String(),
+	}
+	ref := &definitionv1.Reference{
+		GitRepository: &definitionv1.GitRepositoryReference{
+			GitRepository: &definitionv1.GitRepository{
+				URL:    repo,
+				Branch: &devBranch,
+			},
+		},
+	}
+	result, err := r.Resolve(ref, system1ID, tree.RootPath(), nil, DepthInfinite)
+	if err != nil {
+		t.Errorf("expected no error resolving branch, got :%v", err)
+	}
+	expected := NewComponentTree()
+	expected.Insert(tree.RootPath(), &ResolutionInfo{
+		Component: service1,
+		Commit:    ctx,
+	})
+	compareComponentTrees(t, "service", expected, result)
+
+	// commit again and see the reference be updated
+	systemCommit, err := git.WriteAndCommitFile(
+		repo,
+		DefaultFile,
+		system1Bytes,
+		0700,
+		"job",
+	)
+	if err != nil {
+		t.Fatalf("error commiting to repo: %v", err)
+	}
+
+	ctx = &git.CommitReference{
+		RepositoryURL: repo,
+		Commit:        systemCommit.String(),
+	}
+	result, err = r.Resolve(ref, system1ID, tree.RootPath(), nil, DepthInfinite)
+	if err != nil {
+		t.Errorf("expected no error resolving branch, got :%v", err)
+	}
+
+	expected = NewComponentTree()
+	expected.Insert(tree.RootPath(), &ResolutionInfo{
+		Component: system1,
+		Commit:    ctx,
+	})
+	expected.Insert(tree.RootPath().Child("job"), &ResolutionInfo{
+		Component: job1,
+		Commit:    ctx,
+	})
+	expected.Insert(tree.RootPath().Child("service"), &ResolutionInfo{
+		Component: service1,
+		Commit:    ctx,
+	})
+	compareComponentTrees(t, "system", expected, result)
+
+	// invalid branch
+	invalidBranch := "foo"
+	ref = &definitionv1.Reference{
+		GitRepository: &definitionv1.GitRepositoryReference{
+			GitRepository: &definitionv1.GitRepository{
+				URL:    repo,
+				Branch: &invalidBranch,
 			},
 		},
 	}
