@@ -164,6 +164,7 @@ func TestComponentResolver_CommitReference(t *testing.T) {
 	if err != nil {
 		t.Fatalf("error commiting to repo: %v", err)
 	}
+	jobCommitStr := jobCommit.String()
 
 	serviceCommit, err := git.WriteAndCommitFile(
 		repo,
@@ -175,6 +176,7 @@ func TestComponentResolver_CommitReference(t *testing.T) {
 	if err != nil {
 		t.Fatalf("error commiting to repo: %v", err)
 	}
+	serviceCommitStr := serviceCommit.String()
 
 	systemCommit, err := git.WriteAndCommitFile(
 		repo,
@@ -186,93 +188,98 @@ func TestComponentResolver_CommitReference(t *testing.T) {
 	if err != nil {
 		t.Fatalf("error commiting to repo: %v", err)
 	}
-
-	// job
-	jobCommitStr := jobCommit.String()
-	ctx := &git.CommitReference{
-		RepositoryURL: repo,
-		Commit:        jobCommitStr,
-	}
-	ref := &definitionv1.Reference{
-		GitRepository: &definitionv1.GitRepositoryReference{
-			GitRepository: &definitionv1.GitRepository{
-				URL:    repo,
-				Commit: &jobCommitStr,
-			},
-		},
-	}
-	result, err := r.Resolve(ref, system1ID, tree.RootPath(), nil, DepthInfinite)
-	if err != nil {
-		t.Errorf("expected no error resolving plain job, got :%v", err)
-	}
-	expected := NewComponentTree()
-	expected.Insert(tree.RootPath(), &ResolutionInfo{
-		Component: job1,
-		Commit:    ctx,
-	})
-	compareComponentTrees(t, "job", expected, result)
-
-	// service
-	serviceCommitStr := serviceCommit.String()
-	ctx = &git.CommitReference{
-		RepositoryURL: repo,
-		Commit:        serviceCommitStr,
-	}
-	ref = &definitionv1.Reference{
-		GitRepository: &definitionv1.GitRepositoryReference{
-			GitRepository: &definitionv1.GitRepository{
-				URL:    repo,
-				Commit: &serviceCommitStr,
-			},
-		},
-	}
-	result, err = r.Resolve(ref, system1ID, tree.RootPath(), nil, DepthInfinite)
-	if err != nil {
-		t.Errorf("expected no error resolving plain job, got :%v", err)
-	}
-	expected = NewComponentTree()
-	expected.Insert(tree.RootPath(), &ResolutionInfo{
-		Component: service1,
-		Commit:    ctx,
-	})
-	compareComponentTrees(t, "service", expected, result)
-
-	//system
 	systemCommitStr := systemCommit.String()
-	ctx = &git.CommitReference{
-		RepositoryURL: repo,
-		Commit:        systemCommitStr,
-	}
-	ref = &definitionv1.Reference{
-		GitRepository: &definitionv1.GitRepositoryReference{
-			GitRepository: &definitionv1.GitRepository{
-				URL:    repo,
-				Commit: &systemCommitStr,
+
+	testResolutionSuccesses(
+		t,
+		r,
+		[]successfulResolutionTest{
+			{
+				name: "job",
+				c: &definitionv1.Reference{
+					GitRepository: &definitionv1.GitRepositoryReference{
+						GitRepository: &definitionv1.GitRepository{
+							URL:    repo,
+							Commit: &jobCommitStr,
+						},
+					},
+				},
+				p:     tree.RootPath(),
+				depth: DepthInfinite,
+				expected: map[tree.Path]*ResolutionInfo{
+					tree.RootPath(): {
+						Component: job1,
+						Commit: &git.CommitReference{
+							RepositoryURL: repo,
+							Commit:        jobCommit.String(),
+						},
+					},
+				},
+			},
+			{
+				name: "service",
+				c: &definitionv1.Reference{
+					GitRepository: &definitionv1.GitRepositoryReference{
+						GitRepository: &definitionv1.GitRepository{
+							URL:    repo,
+							Commit: &serviceCommitStr,
+						},
+					},
+				},
+				p:     tree.RootPath(),
+				depth: DepthInfinite,
+				expected: map[tree.Path]*ResolutionInfo{
+					tree.RootPath(): {
+						Component: service1,
+						Commit: &git.CommitReference{
+							RepositoryURL: repo,
+							Commit:        serviceCommitStr,
+						},
+					},
+				},
+			},
+			{
+				name: "system",
+				c: &definitionv1.Reference{
+					GitRepository: &definitionv1.GitRepositoryReference{
+						GitRepository: &definitionv1.GitRepository{
+							URL:    repo,
+							Commit: &systemCommitStr,
+						},
+					},
+				},
+				p:     tree.RootPath(),
+				depth: DepthInfinite,
+				expected: map[tree.Path]*ResolutionInfo{
+					tree.RootPath(): {
+						Component: system1,
+						Commit: &git.CommitReference{
+							RepositoryURL: repo,
+							Commit:        systemCommitStr,
+						},
+					},
+					tree.RootPath().Child("job"): {
+						Component: job1,
+						Commit: &git.CommitReference{
+							RepositoryURL: repo,
+							Commit:        systemCommitStr,
+						},
+					},
+					tree.RootPath().Child("service"): {
+						Component: service1,
+						Commit: &git.CommitReference{
+							RepositoryURL: repo,
+							Commit:        systemCommitStr,
+						},
+					},
+				},
 			},
 		},
-	}
-	result, err = r.Resolve(ref, system1ID, tree.RootPath(), nil, DepthInfinite)
-	if err != nil {
-		t.Errorf("expected no error resolving plain job, got :%v", err)
-	}
-	expected = NewComponentTree()
-	expected.Insert(tree.RootPath(), &ResolutionInfo{
-		Component: system1,
-		Commit:    ctx,
-	})
-	expected.Insert(tree.RootPath().Child("job"), &ResolutionInfo{
-		Component: job1,
-		Commit:    ctx,
-	})
-	expected.Insert(tree.RootPath().Child("service"), &ResolutionInfo{
-		Component: service1,
-		Commit:    ctx,
-	})
-	compareComponentTrees(t, "service", expected, result)
+	)
 
 	// invalid commit
 	invalidCommit := "0123456789abcdef0123456789abcdef01234567"
-	ref = &definitionv1.Reference{
+	ref := &definitionv1.Reference{
 		GitRepository: &definitionv1.GitRepositoryReference{
 			GitRepository: &definitionv1.GitRepository{
 				URL:    repo,
@@ -325,34 +332,38 @@ func TestComponentResolver_BranchReference(t *testing.T) {
 		t.Fatalf("error commiting to repo: %v", err)
 	}
 
-	ctx := &git.CommitReference{
-		RepositoryURL: repo,
-		Commit:        serviceCommit.String(),
-	}
-	ref := &definitionv1.Reference{
-		GitRepository: &definitionv1.GitRepositoryReference{
-			GitRepository: &definitionv1.GitRepository{
-				URL:    repo,
-				Branch: &devBranch,
+	testResolutionSuccess(
+		t,
+		r,
+		&successfulResolutionTest{
+			name: "initial branch commit",
+			c: &definitionv1.Reference{
+				GitRepository: &definitionv1.GitRepositoryReference{
+					GitRepository: &definitionv1.GitRepository{
+						URL:    repo,
+						Branch: &devBranch,
+					},
+				},
+			},
+			p:     tree.RootPath(),
+			depth: DepthInfinite,
+			expected: map[tree.Path]*ResolutionInfo{
+				tree.RootPath(): {
+					Component: service1,
+					Commit: &git.CommitReference{
+						RepositoryURL: repo,
+						Commit:        serviceCommit.String(),
+					},
+				},
 			},
 		},
-	}
-	result, err := r.Resolve(ref, system1ID, tree.RootPath(), nil, DepthInfinite)
-	if err != nil {
-		t.Errorf("expected no error resolving branch, got :%v", err)
-	}
-	expected := NewComponentTree()
-	expected.Insert(tree.RootPath(), &ResolutionInfo{
-		Component: service1,
-		Commit:    ctx,
-	})
-	compareComponentTrees(t, "service", expected, result)
+	)
 
 	// commit again and see the reference be updated
-	systemCommit, err := git.WriteAndCommitFile(
+	job2Commit, err := git.WriteAndCommitFile(
 		repo,
 		DefaultFile,
-		system1Bytes,
+		job2Bytes,
 		0700,
 		"job",
 	)
@@ -360,33 +371,36 @@ func TestComponentResolver_BranchReference(t *testing.T) {
 		t.Fatalf("error commiting to repo: %v", err)
 	}
 
-	ctx = &git.CommitReference{
-		RepositoryURL: repo,
-		Commit:        systemCommit.String(),
-	}
-	result, err = r.Resolve(ref, system1ID, tree.RootPath(), nil, DepthInfinite)
-	if err != nil {
-		t.Errorf("expected no error resolving branch, got :%v", err)
-	}
-
-	expected = NewComponentTree()
-	expected.Insert(tree.RootPath(), &ResolutionInfo{
-		Component: system1,
-		Commit:    ctx,
-	})
-	expected.Insert(tree.RootPath().Child("job"), &ResolutionInfo{
-		Component: job1,
-		Commit:    ctx,
-	})
-	expected.Insert(tree.RootPath().Child("service"), &ResolutionInfo{
-		Component: service1,
-		Commit:    ctx,
-	})
-	compareComponentTrees(t, "system", expected, result)
+	testResolutionSuccess(
+		t,
+		r,
+		&successfulResolutionTest{
+			name: "second branch commit",
+			c: &definitionv1.Reference{
+				GitRepository: &definitionv1.GitRepositoryReference{
+					GitRepository: &definitionv1.GitRepository{
+						URL:    repo,
+						Branch: &devBranch,
+					},
+				},
+			},
+			p:     tree.RootPath(),
+			depth: DepthInfinite,
+			expected: map[tree.Path]*ResolutionInfo{
+				tree.RootPath(): {
+					Component: job2,
+					Commit: &git.CommitReference{
+						RepositoryURL: repo,
+						Commit:        job2Commit.String(),
+					},
+				},
+			},
+		},
+	)
 
 	// invalid branch
 	invalidBranch := "foo"
-	ref = &definitionv1.Reference{
+	ref := &definitionv1.Reference{
 		GitRepository: &definitionv1.GitRepositoryReference{
 			GitRepository: &definitionv1.GitRepository{
 				URL:    repo,
@@ -445,57 +459,60 @@ func TestComponentResolver_TagReference(t *testing.T) {
 		t.Fatalf("error tagging repo: %v", err)
 	}
 
-	// first tag
-	ctx := &git.CommitReference{
-		RepositoryURL: repo,
-		Commit:        jobCommit.String(),
-	}
-	ref := &definitionv1.Reference{
-		GitRepository: &definitionv1.GitRepositoryReference{
-			GitRepository: &definitionv1.GitRepository{
-				URL: repo,
-				Tag: &fooTag,
+	testResolutionSuccesses(
+		t,
+		r,
+		[]successfulResolutionTest{
+			{
+				name: "foo tag",
+				c: &definitionv1.Reference{
+					GitRepository: &definitionv1.GitRepositoryReference{
+						GitRepository: &definitionv1.GitRepository{
+							URL: repo,
+							Tag: &fooTag,
+						},
+					},
+				},
+				p:     tree.RootPath(),
+				depth: DepthInfinite,
+				expected: map[tree.Path]*ResolutionInfo{
+					tree.RootPath(): {
+						Component: job1,
+						Commit: &git.CommitReference{
+							RepositoryURL: repo,
+							Commit:        jobCommit.String(),
+						},
+					},
+				},
+			},
+			{
+				name: "bar tag",
+				c: &definitionv1.Reference{
+					GitRepository: &definitionv1.GitRepositoryReference{
+						GitRepository: &definitionv1.GitRepository{
+							URL: repo,
+							Tag: &barTag,
+						},
+					},
+				},
+				p:     tree.RootPath(),
+				depth: DepthInfinite,
+				expected: map[tree.Path]*ResolutionInfo{
+					tree.RootPath(): {
+						Component: service1,
+						Commit: &git.CommitReference{
+							RepositoryURL: repo,
+							Commit:        serviceCommit.String(),
+						},
+					},
+				},
 			},
 		},
-	}
-	result, err := r.Resolve(ref, system1ID, tree.RootPath(), nil, DepthInfinite)
-	if err != nil {
-		t.Errorf("expected no error resolving plain job, got :%v", err)
-	}
-	expected := NewComponentTree()
-	expected.Insert(tree.RootPath(), &ResolutionInfo{
-		Component: job1,
-		Commit:    ctx,
-	})
-	compareComponentTrees(t, "job", expected, result)
-
-	// second tag
-	ctx = &git.CommitReference{
-		RepositoryURL: repo,
-		Commit:        serviceCommit.String(),
-	}
-	ref = &definitionv1.Reference{
-		GitRepository: &definitionv1.GitRepositoryReference{
-			GitRepository: &definitionv1.GitRepository{
-				URL: repo,
-				Tag: &barTag,
-			},
-		},
-	}
-	result, err = r.Resolve(ref, system1ID, tree.RootPath(), nil, DepthInfinite)
-	if err != nil {
-		t.Errorf("expected no error resolving plain job, got :%v", err)
-	}
-	expected = NewComponentTree()
-	expected.Insert(tree.RootPath(), &ResolutionInfo{
-		Component: service1,
-		Commit:    ctx,
-	})
-	compareComponentTrees(t, "service", expected, result)
+	)
 
 	// invalid tag
 	invalidTag := "invalid"
-	ref = &definitionv1.Reference{
+	ref := &definitionv1.Reference{
 		GitRepository: &definitionv1.GitRepositoryReference{
 			GitRepository: &definitionv1.GitRepository{
 				URL: repo,
@@ -552,81 +569,82 @@ func TestComponentResolver_VersionReference(t *testing.T) {
 		t.Fatalf("error tagging repo: %v", err)
 	}
 
-	// 1.0.0 tags
 	exactVersion := "1.0.0"
-	ctx := &git.CommitReference{
-		RepositoryURL: repo,
-		Commit:        jobCommit.String(),
-	}
-	ref := &definitionv1.Reference{
-		GitRepository: &definitionv1.GitRepositoryReference{
-			GitRepository: &definitionv1.GitRepository{
-				URL:     repo,
-				Version: &exactVersion,
-			},
-		},
-	}
-	result, err := r.Resolve(ref, system1ID, tree.RootPath(), nil, DepthInfinite)
-	if err != nil {
-		t.Errorf("expected no error resolving plain job, got :%v", err)
-	}
-	expected := NewComponentTree()
-	expected.Insert(tree.RootPath(), &ResolutionInfo{
-		Component: job1,
-		Commit:    ctx,
-	})
-	compareComponentTrees(t, "job", expected, result)
-
 	patchVersion := "1.0.x"
-	ref = &definitionv1.Reference{
-		GitRepository: &definitionv1.GitRepositoryReference{
-			GitRepository: &definitionv1.GitRepository{
-				URL:     repo,
-				Version: &patchVersion,
+	minorVersion := "1.x"
+
+	testResolutionSuccesses(
+		t,
+		r,
+		[]successfulResolutionTest{
+			{
+				name: "updated minor, exact ref",
+				c: &definitionv1.Reference{
+					GitRepository: &definitionv1.GitRepositoryReference{
+						GitRepository: &definitionv1.GitRepository{
+							URL:     repo,
+							Version: &exactVersion,
+						},
+					},
+				},
+				p:     tree.RootPath(),
+				depth: DepthInfinite,
+				expected: map[tree.Path]*ResolutionInfo{
+					tree.RootPath(): {
+						Component: job1,
+						Commit: &git.CommitReference{
+							RepositoryURL: repo,
+							Commit:        jobCommit.String(),
+						},
+					},
+				},
+			},
+			{
+				name: "updated minor, patch ref",
+				c: &definitionv1.Reference{
+					GitRepository: &definitionv1.GitRepositoryReference{
+						GitRepository: &definitionv1.GitRepository{
+							URL:     repo,
+							Version: &patchVersion,
+						},
+					},
+				},
+				p:     tree.RootPath(),
+				depth: DepthInfinite,
+				expected: map[tree.Path]*ResolutionInfo{
+					tree.RootPath(): {
+						Component: job1,
+						Commit: &git.CommitReference{
+							RepositoryURL: repo,
+							Commit:        jobCommit.String(),
+						},
+					},
+				},
+			},
+			{
+				name: "updated minor, minor ref",
+				c: &definitionv1.Reference{
+					GitRepository: &definitionv1.GitRepositoryReference{
+						GitRepository: &definitionv1.GitRepository{
+							URL:     repo,
+							Version: &minorVersion,
+						},
+					},
+				},
+				p:     tree.RootPath(),
+				depth: DepthInfinite,
+				expected: map[tree.Path]*ResolutionInfo{
+					tree.RootPath(): {
+						Component: job1,
+						Commit: &git.CommitReference{
+							RepositoryURL: repo,
+							Commit:        jobCommit.String(),
+						},
+					},
+				},
 			},
 		},
-	}
-	result, err = r.Resolve(ref, system1ID, tree.RootPath(), nil, DepthInfinite)
-	if err != nil {
-		t.Errorf("expected no error resolving plain job, got :%v", err)
-	}
-	compareComponentTrees(t, "job", expected, result)
-
-	minorVerson := "1.x"
-	ref = &definitionv1.Reference{
-		GitRepository: &definitionv1.GitRepositoryReference{
-			GitRepository: &definitionv1.GitRepository{
-				URL:     repo,
-				Version: &minorVerson,
-			},
-		},
-	}
-	result, err = r.Resolve(ref, system1ID, tree.RootPath(), nil, DepthInfinite)
-	if err != nil {
-		t.Errorf("expected no error resolving plain job, got :%v", err)
-	}
-	compareComponentTrees(t, "job", expected, result)
-
-	// TODO(kevindrosendahl): should this be supported?
-	//majorVersion := "x"
-	//ref = &definitionv1.Reference{
-	//	GitRepository: &definitionv1.GitRepositoryReference{
-	//		GitRepository: &definitionv1.GitRepository{
-	//			URL:     repo,
-	//			Version: &majorVersion,
-	//		},
-	//	},
-	//}
-	//result, err = r.Resolve(ref, system1ID, tree.RootPath(), nil, DepthInfinite)
-	//if err != nil {
-	//	t.Errorf("expected no error resolving plain job, got :%v", err)
-	//}
-	//expected = NewComponentTree()
-	//expected.Insert(tree.RootPath(), &ResolutionInfo{
-	//	Component: service1,
-	//	Commit:    ctx,
-	//})
-	//compareComponentTrees(t, "service", expected, result)
+	)
 
 	job2Commit, err := git.WriteAndCommitFile(
 		repo,
@@ -644,62 +662,83 @@ func TestComponentResolver_VersionReference(t *testing.T) {
 		t.Fatalf("error tagging repo: %v", err)
 	}
 
-	// exact version reference shouldn't have changed
-	ctx = &git.CommitReference{
-		RepositoryURL: repo,
-		Commit:        jobCommit.String(),
-	}
-	ref = &definitionv1.Reference{
-		GitRepository: &definitionv1.GitRepositoryReference{
-			GitRepository: &definitionv1.GitRepository{
-				URL:     repo,
-				Version: &exactVersion,
+	testResolutionSuccesses(
+		t,
+		r,
+		[]successfulResolutionTest{
+			// exact version reference shouldn't have changed
+			{
+				name: "updated minor, exact ref",
+				c: &definitionv1.Reference{
+					GitRepository: &definitionv1.GitRepositoryReference{
+						GitRepository: &definitionv1.GitRepository{
+							URL:     repo,
+							Version: &exactVersion,
+						},
+					},
+				},
+				p:     tree.RootPath(),
+				ctx:   nil,
+				depth: DepthInfinite,
+				expected: map[tree.Path]*ResolutionInfo{
+					tree.RootPath(): {
+						Component: job1,
+						Commit: &git.CommitReference{
+							RepositoryURL: repo,
+							Commit:        jobCommit.String(),
+						},
+					},
+				},
+			},
+			// minor and patch versions reference should have changed
+			{
+				name: "updated minor, patch ref",
+				c: &definitionv1.Reference{
+					GitRepository: &definitionv1.GitRepositoryReference{
+						GitRepository: &definitionv1.GitRepository{
+							URL:     repo,
+							Version: &patchVersion,
+						},
+					},
+				},
+				p:     tree.RootPath(),
+				ctx:   nil,
+				depth: DepthInfinite,
+				expected: map[tree.Path]*ResolutionInfo{
+					tree.RootPath(): {
+						Component: job2,
+						Commit: &git.CommitReference{
+							RepositoryURL: repo,
+							Commit:        job2Commit.String(),
+						},
+					},
+				},
+			},
+			{
+				name: "updated minor, minor ref",
+				c: &definitionv1.Reference{
+					GitRepository: &definitionv1.GitRepositoryReference{
+						GitRepository: &definitionv1.GitRepository{
+							URL:     repo,
+							Version: &minorVersion,
+						},
+					},
+				},
+				p:     tree.RootPath(),
+				ctx:   nil,
+				depth: DepthInfinite,
+				expected: map[tree.Path]*ResolutionInfo{
+					tree.RootPath(): {
+						Component: job2,
+						Commit: &git.CommitReference{
+							RepositoryURL: repo,
+							Commit:        job2Commit.String(),
+						},
+					},
+				},
 			},
 		},
-	}
-	result, err = r.Resolve(ref, system1ID, tree.RootPath(), nil, DepthInfinite)
-	if err != nil {
-		t.Errorf("expected no error resolving plain job, got :%v", err)
-	}
-	compareComponentTrees(t, "job", expected, result)
-
-	// patch and minor versions should have updated
-	ctx = &git.CommitReference{
-		RepositoryURL: repo,
-		Commit:        job2Commit.String(),
-	}
-	ref = &definitionv1.Reference{
-		GitRepository: &definitionv1.GitRepositoryReference{
-			GitRepository: &definitionv1.GitRepository{
-				URL:     repo,
-				Version: &patchVersion,
-			},
-		},
-	}
-	result, err = r.Resolve(ref, system1ID, tree.RootPath(), nil, DepthInfinite)
-	if err != nil {
-		t.Errorf("expected no error resolving plain job, got :%v", err)
-	}
-	expected = NewComponentTree()
-	expected.Insert(tree.RootPath(), &ResolutionInfo{
-		Component: job2,
-		Commit:    ctx,
-	})
-	compareComponentTrees(t, "updated patch, patch ref", expected, result)
-
-	ref = &definitionv1.Reference{
-		GitRepository: &definitionv1.GitRepositoryReference{
-			GitRepository: &definitionv1.GitRepository{
-				URL:     repo,
-				Version: &minorVerson,
-			},
-		},
-	}
-	result, err = r.Resolve(ref, system1ID, tree.RootPath(), nil, DepthInfinite)
-	if err != nil {
-		t.Errorf("expected no error resolving plain job, got :%v", err)
-	}
-	compareComponentTrees(t, "updated patch, minor ref", expected, result)
+	)
 
 	service2Commit, err := git.WriteAndCommitFile(
 		repo,
@@ -717,75 +756,111 @@ func TestComponentResolver_VersionReference(t *testing.T) {
 		t.Fatalf("error tagging repo: %v", err)
 	}
 
-	// exact and patch version references shouldn't have changed
-	ctx = &git.CommitReference{
-		RepositoryURL: repo,
-		Commit:        jobCommit.String(),
-	}
-	ref = &definitionv1.Reference{
-		GitRepository: &definitionv1.GitRepositoryReference{
-			GitRepository: &definitionv1.GitRepository{
-				URL:     repo,
-				Version: &exactVersion,
+	testResolutionSuccesses(
+		t,
+		r,
+		[]successfulResolutionTest{
+			// exact and patch version references shouldn't have changed
+			{
+				name: "updated minor, exact ref",
+				c: &definitionv1.Reference{
+					GitRepository: &definitionv1.GitRepositoryReference{
+						GitRepository: &definitionv1.GitRepository{
+							URL:     repo,
+							Version: &exactVersion,
+						},
+					},
+				},
+				p:     tree.RootPath(),
+				ctx:   nil,
+				depth: DepthInfinite,
+				expected: map[tree.Path]*ResolutionInfo{
+					tree.RootPath(): {
+						Component: job1,
+						Commit: &git.CommitReference{
+							RepositoryURL: repo,
+							Commit:        jobCommit.String(),
+						},
+					},
+				},
+			},
+			{
+				name: "updated minor, patch ref",
+				c: &definitionv1.Reference{
+					GitRepository: &definitionv1.GitRepositoryReference{
+						GitRepository: &definitionv1.GitRepository{
+							URL:     repo,
+							Version: &patchVersion,
+						},
+					},
+				},
+				p:     tree.RootPath(),
+				ctx:   nil,
+				depth: DepthInfinite,
+				expected: map[tree.Path]*ResolutionInfo{
+					tree.RootPath(): {
+						Component: job2,
+						Commit: &git.CommitReference{
+							RepositoryURL: repo,
+							Commit:        job2Commit.String(),
+						},
+					},
+				},
+			},
+			// minor version reference should have changed
+			{
+				name: "updated minor, minor ref",
+				c: &definitionv1.Reference{
+					GitRepository: &definitionv1.GitRepositoryReference{
+						GitRepository: &definitionv1.GitRepository{
+							URL:     repo,
+							Version: &minorVersion,
+						},
+					},
+				},
+				p:     tree.RootPath(),
+				ctx:   nil,
+				depth: DepthInfinite,
+				expected: map[tree.Path]*ResolutionInfo{
+					tree.RootPath(): {
+						Component: service2,
+						Commit: &git.CommitReference{
+							RepositoryURL: repo,
+							Commit:        service2Commit.String(),
+						},
+					},
+				},
 			},
 		},
-	}
-	result, err = r.Resolve(ref, system1ID, tree.RootPath(), nil, DepthInfinite)
-	if err != nil {
-		t.Errorf("expected no error resolving plain job, got :%v", err)
-	}
-	expected = NewComponentTree()
-	expected.Insert(tree.RootPath(), &ResolutionInfo{
-		Component: job1,
-		Commit:    ctx,
-	})
-	compareComponentTrees(t, "updated minor, exact ref", expected, result)
+	)
+}
 
-	ctx = &git.CommitReference{
-		RepositoryURL: repo,
-		Commit:        job2Commit.String(),
-	}
-	ref = &definitionv1.Reference{
-		GitRepository: &definitionv1.GitRepositoryReference{
-			GitRepository: &definitionv1.GitRepository{
-				URL:     repo,
-				Version: &patchVersion,
-			},
-		},
-	}
-	result, err = r.Resolve(ref, system1ID, tree.RootPath(), nil, DepthInfinite)
-	if err != nil {
-		t.Errorf("expected no error resolving plain job, got :%v", err)
-	}
-	expected = NewComponentTree()
-	expected.Insert(tree.RootPath(), &ResolutionInfo{
-		Component: job2,
-		Commit:    ctx,
-	})
-	compareComponentTrees(t, "updated minor, patch ref", expected, result)
+type successfulResolutionTest struct {
+	name     string
+	c        component.Interface
+	p        tree.Path
+	ctx      *git.CommitReference
+	depth    int
+	expected map[tree.Path]*ResolutionInfo
+}
 
-	ref = &definitionv1.Reference{
-		GitRepository: &definitionv1.GitRepositoryReference{
-			GitRepository: &definitionv1.GitRepository{
-				URL:     repo,
-				Version: &minorVerson,
-			},
-		},
+func testResolutionSuccesses(t *testing.T, r ComponentResolver, tests []successfulResolutionTest) {
+	for _, test := range tests {
+		testResolutionSuccess(t, r, &test)
 	}
-	ctx = &git.CommitReference{
-		RepositoryURL: repo,
-		Commit:        service2Commit.String(),
-	}
-	result, err = r.Resolve(ref, system1ID, tree.RootPath(), nil, DepthInfinite)
+}
+
+func testResolutionSuccess(t *testing.T, r ComponentResolver, test *successfulResolutionTest) {
+	result, err := r.Resolve(test.c, system1ID, test.p, test.ctx, test.depth)
 	if err != nil {
-		t.Errorf("expected no error resolving plain job, got :%v", err)
+		t.Errorf("expected no error resolving %v, got :%v", test.name, err)
 	}
-	expected = NewComponentTree()
-	expected.Insert(tree.RootPath(), &ResolutionInfo{
-		Component: service2,
-		Commit:    ctx,
-	})
-	compareComponentTrees(t, "updated minor, minor ref", expected, result)
+
+	e := NewComponentTree()
+	for p, i := range test.expected {
+		e.Insert(p, i)
+	}
+	compareComponentTrees(t, test.name, e, result)
 }
 
 func compareComponentTrees(t *testing.T, name string, expected, actual *ComponentTree) {
