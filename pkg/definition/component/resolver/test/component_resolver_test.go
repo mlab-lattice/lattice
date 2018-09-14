@@ -393,6 +393,115 @@ func TestComponentResolver_BranchReference(t *testing.T) {
 	}
 }
 
+func TestComponentResolver_TagReference(t *testing.T) {
+	r := resolver()
+
+	// seed repo
+	repo := repoURL(repo1)
+	os.RemoveAll(repo)
+	err := git.Init(repo)
+	if err != nil {
+		t.Fatalf("error initializing repo: %v", err)
+	}
+
+	jobCommit, err := git.WriteAndCommitFile(
+		repo,
+		DefaultFile,
+		job1Bytes,
+		0700,
+		"job",
+	)
+	if err != nil {
+		t.Fatalf("error commiting to repo: %v", err)
+	}
+
+	fooTag := "foo"
+	err = git.Tag(repo, jobCommit, fooTag)
+	if err != nil {
+		t.Fatalf("error tagging repo: %v", err)
+	}
+
+	serviceCommit, err := git.WriteAndCommitFile(
+		repo,
+		DefaultFile,
+		service1Bytes,
+		0700,
+		"service",
+	)
+	if err != nil {
+		t.Fatalf("error commiting to repo: %v", err)
+	}
+
+	barTag := "bar"
+	err = git.Tag(repo, serviceCommit, barTag)
+	if err != nil {
+		t.Fatalf("error tagging repo: %v", err)
+	}
+
+	// first tag
+	ctx := &git.CommitReference{
+		RepositoryURL: repo,
+		Commit:        jobCommit.String(),
+	}
+	ref := &definitionv1.Reference{
+		GitRepository: &definitionv1.GitRepositoryReference{
+			GitRepository: &definitionv1.GitRepository{
+				URL: repo,
+				Tag: &fooTag,
+			},
+		},
+	}
+	result, err := r.Resolve(ref, system1ID, tree.RootPath(), nil, DepthInfinite)
+	if err != nil {
+		t.Errorf("expected no error resolving plain job, got :%v", err)
+	}
+	expected := NewComponentTree()
+	expected.Insert(tree.RootPath(), &ResolutionInfo{
+		Component: job1,
+		Commit:    ctx,
+	})
+	compareComponentTrees(t, "job", expected, result)
+
+	// second tag
+	ctx = &git.CommitReference{
+		RepositoryURL: repo,
+		Commit:        serviceCommit.String(),
+	}
+	ref = &definitionv1.Reference{
+		GitRepository: &definitionv1.GitRepositoryReference{
+			GitRepository: &definitionv1.GitRepository{
+				URL: repo,
+				Tag: &barTag,
+			},
+		},
+	}
+	result, err = r.Resolve(ref, system1ID, tree.RootPath(), nil, DepthInfinite)
+	if err != nil {
+		t.Errorf("expected no error resolving plain job, got :%v", err)
+	}
+	expected = NewComponentTree()
+	expected.Insert(tree.RootPath(), &ResolutionInfo{
+		Component: service1,
+		Commit:    ctx,
+	})
+	compareComponentTrees(t, "service", expected, result)
+
+	// invalid tag
+	invalidTag := "invalid"
+	ref = &definitionv1.Reference{
+		GitRepository: &definitionv1.GitRepositoryReference{
+			GitRepository: &definitionv1.GitRepository{
+				URL: repo,
+				Tag: &invalidTag,
+			},
+		},
+	}
+	_, err = r.Resolve(ref, system1ID, tree.RootPath(), nil, DepthInfinite)
+	if err == nil {
+		t.Errorf("expected error resolving invalid tag but got none")
+	}
+}
+
 func compareComponentTrees(t *testing.T, name string, expected, actual *ComponentTree) {
 	if expected.Len() != actual.Len() {
 		t.Errorf("expected %v result to contain %v entries, found %v", name, expected.Len(), actual.Len())
