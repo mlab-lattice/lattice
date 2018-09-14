@@ -82,7 +82,7 @@ func (c *controller) runBuild(build *v1.Build, record *systemRecord) {
 		build.Workloads = make(map[tree.Path]v1.WorkloadBuild)
 
 		info := record.builds[build.ID]
-		info.ComponentTree.V1().Workloads(func(path tree.Path, workload definitionv1.Workload, info *resolver.ResolutionInfo) tree.WalkContinuation {
+		info.Definition.V1().Workloads(func(path tree.Path, workload definitionv1.Workload, info *resolver.ResolutionInfo) tree.WalkContinuation {
 			workloadBuild := v1.WorkloadBuild{
 				ContainerBuild: v1.ContainerBuild{
 					ID:    v1.ContainerBuildID(uuid.NewV4().String()),
@@ -237,7 +237,7 @@ func (c *controller) runTeardown(teardown *v1.Teardown, record *systemRecord) {
 	c.backend.Lock()
 	defer c.backend.Unlock()
 
-	record.definition = resolver.NewComponentTree()
+	record.definition = resolver.NewResolutionTree()
 	teardown.State = v1.TeardownStateSucceeded
 }
 
@@ -310,7 +310,7 @@ func (c *controller) resolveBuildComponent(build *v1.Build, record *systemRecord
 		}
 	}
 
-	buildInfo.ComponentTree = t
+	buildInfo.Definition = t
 	buildInfo.Build.State = v1.BuildStateAccepted
 	return true
 }
@@ -497,13 +497,13 @@ func (c *controller) waitForBuildTermination(deploy *v1.Deploy, record *systemRe
 }
 
 func (c *controller) deployBuild(deploy *v1.Deploy, path tree.Path, record *systemRecord) {
-	var build *resolver.ComponentTree
+	var definition *resolver.ResolutionTree
 
 	func() {
 		c.backend.Lock()
 		defer c.backend.Unlock()
 
-		build = c.backend.registry[record.system.ID].builds[*deploy.Build].ComponentTree
+		definition = c.backend.registry[record.system.ID].builds[*deploy.Build].Definition
 	}()
 
 	var wg sync.WaitGroup
@@ -519,7 +519,7 @@ func (c *controller) deployBuild(deploy *v1.Deploy, path tree.Path, record *syst
 			wg.Add(1)
 
 			// if the path is no longer in the tree, terminate the service
-			other, ok := build.Get(path)
+			other, ok := definition.Get(path)
 			if !ok {
 				go c.terminateService(path, record, &wg)
 				return tree.ContinueWalk
@@ -539,7 +539,7 @@ func (c *controller) deployBuild(deploy *v1.Deploy, path tree.Path, record *syst
 		log.Printf("creating new services")
 
 		// find new services to add
-		build.V1().Services(func(path tree.Path, service *definitionv1.Service, info *resolver.ResolutionInfo) tree.WalkContinuation {
+		definition.V1().Services(func(path tree.Path, service *definitionv1.Service, info *resolver.ResolutionInfo) tree.WalkContinuation {
 			// if this path is already a service, then we would have already addressed it above
 			if _, ok := record.servicePaths[path]; ok {
 				return tree.ContinueWalk
@@ -552,7 +552,7 @@ func (c *controller) deployBuild(deploy *v1.Deploy, path tree.Path, record *syst
 
 		// index the node pools in our build
 		nodePools := make(map[tree.PathSubcomponent]*definitionv1.NodePool)
-		build.V1().NodePools(func(subcomponent tree.PathSubcomponent, pool *definitionv1.NodePool) tree.WalkContinuation {
+		definition.V1().NodePools(func(subcomponent tree.PathSubcomponent, pool *definitionv1.NodePool) tree.WalkContinuation {
 			nodePools[subcomponent] = pool
 			return tree.ContinueWalk
 		})
@@ -592,7 +592,7 @@ func (c *controller) deployBuild(deploy *v1.Deploy, path tree.Path, record *syst
 
 		log.Printf("replacing system %v definition at %v", record.system.ID, path.String())
 
-		record.definition.ReplacePrefix(path, build)
+		record.definition.ReplacePrefix(path, definition)
 	}()
 
 	log.Print("waiting for deploy to finish")

@@ -54,7 +54,7 @@ func (c *Controller) updateSystemLabels(
 
 func (c *Controller) updateSystem(
 	system *latticev1.System,
-	definition *resolver.ComponentTree,
+	definition *resolver.ResolutionTree,
 	artifacts *latticev1.SystemSpecWorkloadBuildArtifacts,
 ) (*latticev1.System, error) {
 	spec := system.Spec.DeepCopy()

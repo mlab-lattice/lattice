@@ -13,7 +13,7 @@ func (c *Controller) syncInProgressTeardown(teardown *latticev1.Teardown) error 
 		return err
 	}
 
-	definition := resolver.NewComponentTree()
+	definition := resolver.NewResolutionTree()
 	artifacts := latticev1.NewSystemSpecWorkloadBuildArtifacts()
 
 	system, err = c.updateSystem(system, definition, artifacts)

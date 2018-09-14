@@ -45,7 +45,7 @@ func (r *v1ComponentResolver) Resolve(
 	path tree.Path,
 	ctx *resolutionContext,
 	depth int,
-	result *ComponentTree,
+	result *ResolutionTree,
 ) error {
 	switch v1Component := c.(type) {
 	case *definitionv1.Reference:
@@ -87,7 +87,7 @@ func (r *v1ComponentResolver) resolveReference(
 	path tree.Path,
 	ctx *resolutionContext,
 	depth int,
-	result *ComponentTree,
+	result *ResolutionTree,
 ) error {
 	if depth == 0 {
 		info := &ResolutionInfo{
@@ -140,7 +140,7 @@ func (r *v1ComponentResolver) resolveSystem(
 	path tree.Path,
 	ctx *resolutionContext,
 	depth int,
-	result *ComponentTree,
+	result *ResolutionTree,
 ) error {
 	info := &ResolutionInfo{
 		Component:    system,

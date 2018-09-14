@@ -205,7 +205,7 @@ func (c *Controller) syncAcceptedDeployWithSuccessfulBuild(deploy *latticev1.Dep
 
 	spec := system.Spec.DeepCopy()
 	if spec.Definition == nil {
-		spec.Definition = resolver.NewComponentTree()
+		spec.Definition = resolver.NewResolutionTree()
 	}
 
 	if spec.WorkloadBuildArtifacts == nil {

@@ -27,7 +27,7 @@ type ComponentResolver interface {
 		path tree.Path,
 		ctx *git.CommitReference,
 		depth int,
-	) (*ComponentTree, error)
+	) (*ResolutionTree, error)
 	Versions(component.Interface, semver.Range) ([]string, error)
 }
 
@@ -56,10 +56,10 @@ func (r *componentResolver) Resolve(
 	path tree.Path,
 	ctx *git.CommitReference,
 	depth int,
-) (*ComponentTree, error) {
+) (*ResolutionTree, error) {
 	// TODO(kevindrosendahl): this here is why private system definitions aren't supported
 	rctx := &resolutionContext{CommitReference: ctx}
-	result := NewComponentTree()
+	result := NewResolutionTree()
 	err := r.resolve(c, id, path, rctx, depth, result)
 	return result, err
 }
@@ -80,7 +80,7 @@ func (r *componentResolver) resolve(
 	path tree.Path,
 	ctx *resolutionContext,
 	depth int,
-	result *ComponentTree,
+	result *ResolutionTree,
 ) error {
 	switch c.Type().APIVersion {
 	case definitionv1.APIVersion:

@@ -14,7 +14,7 @@ import (
 
 type systemRecord struct {
 	system     *v1.System
-	definition *resolver.ComponentTree
+	definition *resolver.ResolutionTree
 
 	builds map[v1.BuildID]*buildInfo
 
@@ -33,8 +33,8 @@ type systemRecord struct {
 }
 
 type buildInfo struct {
-	Build         *v1.Build
-	ComponentTree *resolver.ComponentTree
+	Build      *v1.Build
+	Definition *resolver.ResolutionTree
 }
 
 type serviceInfo struct {
@@ -73,7 +73,7 @@ func (b *Backend) Create(systemID v1.SystemID, definitionURL string) (*v1.System
 			State:         v1.SystemStatePending,
 			DefinitionURL: definitionURL,
 		},
-		definition: resolver.NewComponentTree(),
+		definition: resolver.NewResolutionTree(),
 
 		builds: make(map[v1.BuildID]*buildInfo),
 

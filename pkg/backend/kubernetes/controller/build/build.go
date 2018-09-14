@@ -18,7 +18,7 @@ func (c *Controller) updateBuildStatus(
 	state latticev1.BuildState,
 	message string,
 	internalError *string,
-	definition *resolver.ComponentTree,
+	definition *resolver.ResolutionTree,
 	startTimestamp *metav1.Time,
 	completionTimestamp *metav1.Time,
 	workloads map[tree.Path]latticev1.BuildStatusWorkload,

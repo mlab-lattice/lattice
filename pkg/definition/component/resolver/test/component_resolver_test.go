@@ -116,7 +116,7 @@ func TestComponentResolver_NoReferences(t *testing.T) {
 		t.Errorf("expected no error resolving plain job, got :%v", err)
 	}
 
-	expected := NewComponentTree()
+	expected := NewResolutionTree()
 	expected.Insert(tree.RootPath(), &ResolutionInfo{Component: job1})
 	compareComponentTrees(t, "job", expected, result)
 
@@ -126,7 +126,7 @@ func TestComponentResolver_NoReferences(t *testing.T) {
 		t.Errorf("expected no error resolving plain job, got :%v", err)
 	}
 
-	expected = NewComponentTree()
+	expected = NewResolutionTree()
 	expected.Insert(tree.RootPath(), &ResolutionInfo{Component: service1})
 	compareComponentTrees(t, "service", expected, result)
 
@@ -136,7 +136,7 @@ func TestComponentResolver_NoReferences(t *testing.T) {
 		t.Errorf("expected no error resolving plain job, got :%v", err)
 	}
 
-	expected = NewComponentTree()
+	expected = NewResolutionTree()
 	expected.Insert(tree.RootPath(), &ResolutionInfo{Component: system1})
 	expected.Insert(tree.RootPath().Child("job"), &ResolutionInfo{Component: job1})
 	expected.Insert(tree.RootPath().Child("service"), &ResolutionInfo{Component: service1})
@@ -1058,7 +1058,7 @@ func testResolutionSuccess(t *testing.T, r ComponentResolver, test *successfulRe
 		t.Errorf("expected no error resolving %v, got :%v", test.name, err)
 	}
 
-	e := NewComponentTree()
+	e := NewResolutionTree()
 	for p, i := range test.expected {
 		e.Insert(p, i)
 	}
@@ -1089,7 +1089,7 @@ func testResolutionFailure(t *testing.T, r ComponentResolver, test *failedResolu
 	}
 }
 
-func compareComponentTrees(t *testing.T, name string, expected, actual *ComponentTree) {
+func compareComponentTrees(t *testing.T, name string, expected, actual *ResolutionTree) {
 	if expected.Len() != actual.Len() {
 		t.Errorf("expected %v result to contain %v entries, found %v", name, expected.Len(), actual.Len())
 		return
