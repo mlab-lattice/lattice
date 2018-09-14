@@ -278,6 +278,7 @@ func TestComponentResolver_CommitReference(t *testing.T) {
 	)
 
 	// invalid commit
+	// TODO(kevindrosendahl): classify expected error
 	invalidCommit := "0123456789abcdef0123456789abcdef01234567"
 	ref := &definitionv1.Reference{
 		GitRepository: &definitionv1.GitRepositoryReference{
@@ -399,6 +400,7 @@ func TestComponentResolver_BranchReference(t *testing.T) {
 	)
 
 	// invalid branch
+	// TODO(kevindrosendahl): classify expected error
 	invalidBranch := "foo"
 	ref := &definitionv1.Reference{
 		GitRepository: &definitionv1.GitRepositoryReference{
@@ -511,6 +513,7 @@ func TestComponentResolver_TagReference(t *testing.T) {
 	)
 
 	// invalid tag
+	// TODO(kevindrosendahl): classify expected error
 	invalidTag := "invalid"
 	ref := &definitionv1.Reference{
 		GitRepository: &definitionv1.GitRepositoryReference{
@@ -833,6 +836,132 @@ func TestComponentResolver_VersionReference(t *testing.T) {
 			},
 		},
 	)
+
+	// invalid version
+	// TODO(kevindrosendahl): classify expected error
+	invalidVersion := "foo"
+	ref := &definitionv1.Reference{
+		GitRepository: &definitionv1.GitRepositoryReference{
+			GitRepository: &definitionv1.GitRepository{
+				URL:     repo,
+				Version: &invalidVersion,
+			},
+		},
+	}
+	_, err = r.Resolve(ref, system1ID, tree.RootPath(), nil, DepthInfinite)
+	if err == nil {
+		t.Errorf("expected error resolving invalid version but got none")
+	}
+}
+
+func TestComponentResolver_FileReference(t *testing.T) {
+	r := resolver()
+
+	// seed repo
+	repo := repoURL(repo1)
+	os.RemoveAll(workDir)
+	err := git.Init(repo)
+	if err != nil {
+		t.Fatalf("error initializing repo: %v", err)
+	}
+
+	jobFile := "job1.json"
+	err = git.WriteAndAddFile(
+		repo,
+		jobFile,
+		job1Bytes,
+		0700,
+	)
+	if err != nil {
+		t.Fatalf("error adding file to repo: %v", err)
+	}
+
+	serviceFile := "service1.json"
+	err = git.WriteAndAddFile(
+		repo,
+		serviceFile,
+		service1Bytes,
+		0700,
+	)
+	if err != nil {
+		t.Fatalf("error adding file to repo: %v", err)
+	}
+
+	commit, err := git.Commit(repo, "commit")
+	if err != nil {
+		t.Fatalf("error commiting file to repo: %v", err)
+	}
+
+	commitStr := commit.String()
+	testResolutionSuccesses(
+		t,
+		r,
+		[]successfulResolutionTest{
+			{
+				name: "job file",
+				c: &definitionv1.Reference{
+					GitRepository: &definitionv1.GitRepositoryReference{
+						GitRepository: &definitionv1.GitRepository{
+							URL:    repo,
+							Commit: &commitStr,
+						},
+						File: &jobFile,
+					},
+				},
+				p:     tree.RootPath(),
+				depth: DepthInfinite,
+				expected: map[tree.Path]*ResolutionInfo{
+					tree.RootPath(): {
+						Component: job1,
+						Commit: &git.CommitReference{
+							RepositoryURL: repo,
+							Commit:        commitStr,
+						},
+					},
+				},
+			},
+			{
+				name: "service file",
+				c: &definitionv1.Reference{
+					GitRepository: &definitionv1.GitRepositoryReference{
+						GitRepository: &definitionv1.GitRepository{
+							URL:    repo,
+							Commit: &commitStr,
+						},
+						File: &serviceFile,
+					},
+				},
+				p:     tree.RootPath(),
+				depth: DepthInfinite,
+				expected: map[tree.Path]*ResolutionInfo{
+					tree.RootPath(): {
+						Component: service1,
+						Commit: &git.CommitReference{
+							RepositoryURL: repo,
+							Commit:        commitStr,
+						},
+					},
+				},
+			},
+		},
+	)
+
+	// invalid file
+	// TODO(kevindrosendahl): classify expected error
+	invalidFile := DefaultFile
+	ref := &definitionv1.Reference{
+		GitRepository: &definitionv1.GitRepositoryReference{
+			GitRepository: &definitionv1.GitRepository{
+				URL:    repo,
+				Commit: &commitStr,
+			},
+			File: &invalidFile,
+		},
+	}
+	_, err = r.Resolve(ref, system1ID, tree.RootPath(), nil, DepthInfinite)
+	if err == nil {
+		t.Errorf("expected error resolving invalid version but got none")
+	}
 }
 
 type successfulResolutionTest struct {
