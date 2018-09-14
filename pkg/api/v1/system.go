@@ -1,9 +1,9 @@
 package v1
 
 type (
-	SystemID      string
-	SystemState   string
-	SystemVersion string
+	SystemID    string
+	SystemState string
+	Version     string
 )
 
 const (

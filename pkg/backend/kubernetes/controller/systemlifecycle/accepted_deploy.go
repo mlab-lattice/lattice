@@ -109,7 +109,7 @@ func (c *Controller) syncAcceptedDeployWithSuccessfulBuild(deploy *latticev1.Dep
 		return err
 	}
 
-	version := v1.SystemVersion("unknown")
+	version := v1.Version("unknown")
 	if label, ok := deploy.DefinitionVersionLabel(); ok {
 		version = label
 	}

@@ -22,7 +22,7 @@ const (
 	mockSystemDefURL = "https://github.com/mlab-lattice/mock-system.git"
 	mockAPIServerURL = "http://localhost:8876"
 
-	mockSystemVersion = v1.SystemVersion("1.0.0")
+	mockSystemVersion = v1.Version("1.0.0")
 	mockServicePath   = tree.Path("/api")
 
 	mockServerAPIPort = 8876

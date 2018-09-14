@@ -54,8 +54,8 @@ func (c *BuildCommand) Base() (*latticectl.BaseCommand, error) {
 
 			c := ctx.Client().Systems().Builds(ctx.SystemID())
 
-			version := v1.SystemVersion(version)
-			var v *v1.SystemVersion
+			version := v1.Version(version)
+			var v *v1.Version
 			if version != "" {
 				v = &version
 			}
@@ -73,7 +73,7 @@ func (c *BuildCommand) Base() (*latticectl.BaseCommand, error) {
 
 func BuildSystem(
 	client v1client.SystemBuildClient,
-	version *v1.SystemVersion,
+	version *v1.Version,
 	path *tree.Path,
 	format printer.Format,
 	writer io.Writer,

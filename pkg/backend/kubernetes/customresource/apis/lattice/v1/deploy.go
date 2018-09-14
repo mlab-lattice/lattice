@@ -44,9 +44,9 @@ func (d *Deploy) BuildIDLabel() (v1.BuildID, bool) {
 	return v1.BuildID(id), ok
 }
 
-func (d *Deploy) DefinitionVersionLabel() (v1.SystemVersion, bool) {
+func (d *Deploy) DefinitionVersionLabel() (v1.Version, bool) {
 	version, ok := d.Labels[DeployDefinitionVersionLabelKey]
-	return v1.SystemVersion(version), ok
+	return v1.Version(version), ok
 }
 
 func (d *Deploy) Description(namespacePrefix string) string {
@@ -55,7 +55,7 @@ func (d *Deploy) Description(namespacePrefix string) string {
 		systemID = v1.SystemID(fmt.Sprintf("UNKNOWN (namespace: %v)", d.Namespace))
 	}
 
-	version := v1.SystemVersion("unknown")
+	version := v1.Version("unknown")
 	if label, ok := d.DefinitionVersionLabel(); ok {
 		version = label
 	}
@@ -76,9 +76,9 @@ func (d *Deploy) Description(namespacePrefix string) string {
 }
 
 type DeploySpec struct {
-	Build   *v1.BuildID       `json:"build,omitempty"`
-	Version *v1.SystemVersion `json:"version,omitempty"`
-	Path    *tree.Path        `json:"path"`
+	Build   *v1.BuildID `json:"build,omitempty"`
+	Version *v1.Version `json:"version,omitempty"`
+	Path    *tree.Path  `json:"path"`
 }
 
 type DeployStatus struct {

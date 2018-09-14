@@ -35,11 +35,11 @@ func (c *DeployClient) CreateFromPath(path tree.Path) (*v1.Deploy, error) {
 	return c.create(nil, &path, nil)
 }
 
-func (c *DeployClient) CreateFromVersion(version v1.SystemVersion) (*v1.Deploy, error) {
+func (c *DeployClient) CreateFromVersion(version v1.Version) (*v1.Deploy, error) {
 	return c.create(nil, nil, &version)
 }
 
-func (c *DeployClient) create(id *v1.BuildID, path *tree.Path, version *v1.SystemVersion) (*v1.Deploy, error) {
+func (c *DeployClient) create(id *v1.BuildID, path *tree.Path, version *v1.Version) (*v1.Deploy, error) {
 	request := v1rest.DeployRequest{
 		BuildID: id,
 		Path:    path,

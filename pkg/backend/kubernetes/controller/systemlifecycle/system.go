@@ -12,7 +12,7 @@ import (
 
 func (c *Controller) updateSystemLabels(
 	system *latticev1.System,
-	version *v1.SystemVersion,
+	version *v1.Version,
 	deployID *v1.DeployID,
 	buildID *v1.BuildID,
 ) (*latticev1.System, error) {

@@ -29,7 +29,7 @@ type SystemBackend interface {
 
 type SystemBuildBackend interface {
 	CreateFromPath(tree.Path) (*v1.Build, error)
-	CreateFromVersion(v1.SystemVersion) (*v1.Build, error)
+	CreateFromVersion(v1.Version) (*v1.Build, error)
 	List() ([]v1.Build, error)
 	Get(v1.BuildID) (*v1.Build, error)
 	Logs(id v1.BuildID, path tree.Path, sidecar *string, options *v1.ContainerLogOptions) (io.ReadCloser, error)
@@ -38,7 +38,7 @@ type SystemBuildBackend interface {
 type SystemDeployBackend interface {
 	CreateFromBuild(v1.BuildID) (*v1.Deploy, error)
 	CreateFromPath(tree.Path) (*v1.Deploy, error)
-	CreateFromVersion(v1.SystemVersion) (*v1.Deploy, error)
+	CreateFromVersion(v1.Version) (*v1.Deploy, error)
 	List() ([]v1.Deploy, error)
 	Get(v1.DeployID) (*v1.Deploy, error)
 }

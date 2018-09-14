@@ -61,7 +61,7 @@ func (c *DeployCommand) Base() (*latticectl.BaseCommand, error) {
 				log.Fatal(err)
 			}
 
-			err = DeploySystem(ctx.Client().Systems(), ctx.SystemID(), v1.BuildID(buildID), v1.SystemVersion(version), path, os.Stdout, format, watch)
+			err = DeploySystem(ctx.Client().Systems(), ctx.SystemID(), v1.BuildID(buildID), v1.Version(version), path, os.Stdout, format, watch)
 			if err != nil {
 				//log.Fatal(err)
 				os.Exit(1)
@@ -76,7 +76,7 @@ func DeploySystem(
 	client v1client.SystemClient,
 	systemID v1.SystemID,
 	buildID v1.BuildID,
-	version v1.SystemVersion,
+	version v1.Version,
 	path tree.Path,
 	writer io.Writer,
 	format printer.Format,

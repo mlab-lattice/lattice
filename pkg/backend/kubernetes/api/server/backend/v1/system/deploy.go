@@ -35,7 +35,7 @@ func (b *deployBackend) CreateFromPath(path tree.Path) (*v1.Deploy, error) {
 	return b.createDeploy(nil, &path, nil)
 }
 
-func (b *deployBackend) CreateFromVersion(version v1.SystemVersion) (*v1.Deploy, error) {
+func (b *deployBackend) CreateFromVersion(version v1.Version) (*v1.Deploy, error) {
 	_, err := b.backend.ensureSystemCreated(b.system)
 	if err != nil {
 		return nil, err
@@ -44,7 +44,7 @@ func (b *deployBackend) CreateFromVersion(version v1.SystemVersion) (*v1.Deploy,
 	return b.createDeploy(nil, nil, &version)
 }
 
-func (b *deployBackend) createDeploy(build *v1.BuildID, path *tree.Path, version *v1.SystemVersion) (*v1.Deploy, error) {
+func (b *deployBackend) createDeploy(build *v1.BuildID, path *tree.Path, version *v1.Version) (*v1.Deploy, error) {
 	deploy := newDeploy(build, path, version)
 
 	namespace := b.backend.systemNamespace(b.system)
@@ -61,7 +61,7 @@ func (b *deployBackend) createDeploy(build *v1.BuildID, path *tree.Path, version
 	return &externalDeploy, nil
 }
 
-func newDeploy(build *v1.BuildID, path *tree.Path, version *v1.SystemVersion) *latticev1.Deploy {
+func newDeploy(build *v1.BuildID, path *tree.Path, version *v1.Version) *latticev1.Deploy {
 	return &latticev1.Deploy{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: uuid.NewV4().String(),

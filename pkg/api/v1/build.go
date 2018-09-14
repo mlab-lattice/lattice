@@ -25,7 +25,8 @@ type Build struct {
 	StartTimestamp      *time.Time `json:"startTimestamp,omitempty"`
 	CompletionTimestamp *time.Time `json:"completionTimestamp,omitempty"`
 
-	Version SystemVersion `json:"version"`
+	Version *Version   `json:"version,omitempty"`
+	Path    *tree.Path `json:"path,omitempty"`
 
 	// Components maps component paths (e.g. /foo/bar/buzz) to the
 	// status of the build for that service in the Build.

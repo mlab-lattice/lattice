@@ -18,7 +18,7 @@ type SystemClient interface {
 	Get(v1.SystemID) (*v1.System, error)
 	Delete(v1.SystemID) error
 
-	Versions(v1.SystemID) ([]v1.SystemVersion, error)
+	Versions(v1.SystemID) ([]v1.Version, error)
 	Builds(v1.SystemID) SystemBuildClient
 	Deploys(v1.SystemID) SystemDeployClient
 	Teardowns(v1.SystemID) SystemTeardownClient
@@ -28,7 +28,7 @@ type SystemClient interface {
 }
 
 type SystemBuildClient interface {
-	CreateFromVersion(v1.SystemVersion) (*v1.Build, error)
+	CreateFromVersion(v1.Version) (*v1.Build, error)
 	CreateFromPath(path tree.Path) (*v1.Build, error)
 	List() ([]v1.Build, error)
 	Get(v1.BuildID) (*v1.Build, error)
@@ -38,7 +38,7 @@ type SystemBuildClient interface {
 type SystemDeployClient interface {
 	CreateFromBuild(v1.BuildID) (*v1.Deploy, error)
 	CreateFromPath(tree.Path) (*v1.Deploy, error)
-	CreateFromVersion(v1.SystemVersion) (*v1.Deploy, error)
+	CreateFromVersion(v1.Version) (*v1.Deploy, error)
 	List() ([]v1.Deploy, error)
 	Get(v1.DeployID) (*v1.Deploy, error)
 }

@@ -1,4 +1,4 @@
-package systemlifecycle
+package sync
 
 import (
 	"testing"
@@ -6,7 +6,7 @@ import (
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 
-	"k8s.io/apimachinery/pkg/types"
+	"github.com/satori/go.uuid"
 )
 
 func TestLifecycleActions(t *testing.T) {
@@ -176,11 +176,11 @@ func TestLifecycleActions(t *testing.T) {
 		},
 	}
 
-	namespace := types.UID("a")
+	namespace := v1.SystemID(uuid.NewV4().String())
 
 	for _, test := range tests {
 		passed := true
-		actions := newLifecycleActions()
+		actions := NewLifecycleActionManager()
 		for _, phase := range test.phases {
 			if phase.isRelease {
 				if phase.isTeardown {
