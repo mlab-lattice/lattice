@@ -49,6 +49,8 @@ func (c *Controller) syncAcceptedDeploy(deploy *latticev1.Deploy) error {
 			fmt.Sprintf("%v failed", build.Description(c.namespacePrefix)),
 			nil,
 			deploy.Status.BuildID,
+			deploy.Status.StartTimestamp,
+			deploy.Status.CompletionTimestamp,
 		)
 		if err != nil {
 			return err
@@ -95,7 +97,15 @@ func (c *Controller) syncAcceptedBuildlessDeploy(deploy *latticev1.Deploy) (*lat
 	}
 
 	buildID := v1.BuildID(build.Name)
-	deploy, err = c.updateDeployStatus(deploy, latticev1.DeployStateAccepted, "", nil, &buildID)
+	deploy, err = c.updateDeployStatus(
+		deploy,
+		latticev1.DeployStateAccepted,
+		"",
+		nil,
+		&buildID,
+		deploy.Status.StartTimestamp,
+		deploy.Status.CompletionTimestamp,
+	)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -225,6 +235,14 @@ func (c *Controller) syncAcceptedDeployWithSuccessfulBuild(deploy *latticev1.Dep
 		return err
 	}
 
-	_, err = c.updateDeployStatus(deploy, latticev1.DeployStateInProgress, "", nil, deploy.Status.BuildID)
+	_, err = c.updateDeployStatus(
+		deploy,
+		latticev1.DeployStateInProgress,
+		"",
+		nil,
+		deploy.Status.BuildID,
+		deploy.Status.StartTimestamp,
+		deploy.Status.CompletionTimestamp,
+	)
 	return err
 }

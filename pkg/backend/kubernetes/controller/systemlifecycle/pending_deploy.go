@@ -26,6 +26,8 @@ func (c *Controller) syncPendingDeploy(deploy *latticev1.Deploy) error {
 				fmt.Sprintf("%v must specify build, path, or version", deploy.Description(c.namespacePrefix)),
 				nil,
 				deploy.Status.BuildID,
+				nil,
+				nil,
 			)
 			return err
 
@@ -36,6 +38,8 @@ func (c *Controller) syncPendingDeploy(deploy *latticev1.Deploy) error {
 				fmt.Sprintf("%v must only specify one of build, path, or version", deploy.Description(c.namespacePrefix)),
 				nil,
 				deploy.Status.BuildID,
+				nil,
+				nil,
 			)
 			return err
 
@@ -47,6 +51,8 @@ func (c *Controller) syncPendingDeploy(deploy *latticev1.Deploy) error {
 				"internal error",
 				&msg,
 				deploy.Status.BuildID,
+				nil,
+				nil,
 			)
 			return err
 		}
@@ -71,6 +77,8 @@ func (c *Controller) syncPendingDeploy(deploy *latticev1.Deploy) error {
 					fmt.Sprintf("%v build %v does not exist", deploy.Description(c.namespacePrefix), buildID),
 					nil,
 					deploy.Status.BuildID,
+					nil,
+					nil,
 				)
 				return err
 			}
@@ -87,6 +95,8 @@ func (c *Controller) syncPendingDeploy(deploy *latticev1.Deploy) error {
 				fmt.Sprintf("cannot deploy using a build id (%v) since it is only a partial system build", buildID),
 				nil,
 				deploy.Status.BuildID,
+				nil,
+				nil,
 			)
 			return err
 		}
@@ -115,10 +125,24 @@ func (c *Controller) syncPendingDeploy(deploy *latticev1.Deploy) error {
 			fmt.Sprintf("unable to acquire lifecycle lock: %v", err.Error()),
 			nil,
 			nil,
+			nil,
+			nil,
 		)
 		return err
 	}
 
-	_, err = c.updateDeployStatus(deploy, latticev1.DeployStateAccepted, "", nil, deploy.Status.BuildID)
+	now := metav1.Now()
+	startTimestamp := &now
+	completionTimestamp := &now
+
+	_, err = c.updateDeployStatus(
+		deploy,
+		latticev1.DeployStateAccepted,
+		"",
+		nil,
+		deploy.Status.BuildID,
+		startTimestamp,
+		completionTimestamp,
+	)
 	return err
 }

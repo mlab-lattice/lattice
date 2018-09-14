@@ -53,7 +53,13 @@ func (c *Controller) syncInProgressTeardown(teardown *latticev1.Teardown) error 
 	// first it's possible that the teardown status update could fail, and another deploy or teardown
 	// successfully acquires the lock. if the controller then restarted, it could see
 	// conflicting locks when seeding the lifecycle actions
-	teardown, err = c.updateTeardownStatus(teardown, state, "")
+	teardown, err = c.updateTeardownStatus(
+		teardown,
+		state,
+		"",
+		teardown.Status.StartTimestamp,
+		teardown.Status.CompletionTimestamp,
+	)
 	if err != nil {
 		return err
 	}

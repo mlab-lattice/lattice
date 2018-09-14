@@ -210,6 +210,9 @@ func (c *controller) runTeardown(teardown *v1.Teardown, record *systemRecord) {
 	func() {
 		c.backend.Lock()
 		defer c.backend.Unlock()
+
+		now := time.Now()
+		teardown.StartTimestamp = &now
 		teardown.State = v1.TeardownStateInProgress
 
 		record.definition.V1().Services(func(path tree.Path, _ *definitionv1.Service, _ *resolver.ResolutionInfo) tree.WalkContinuation {
@@ -238,6 +241,8 @@ func (c *controller) runTeardown(teardown *v1.Teardown, record *systemRecord) {
 	defer c.backend.Unlock()
 
 	record.definition = resolver.NewResolutionTree()
+	now := time.Now()
+	teardown.CompletionTimestamp = &now
 	teardown.State = v1.TeardownStateSucceeded
 }
 

@@ -7,6 +7,8 @@ import (
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func (c *Controller) updateDeployStatus(
@@ -15,14 +17,19 @@ func (c *Controller) updateDeployStatus(
 	message string,
 	internalError *string,
 	buildID *v1.BuildID,
+	startTimestamp *metav1.Time,
+	completionTimestamp *metav1.Time,
 ) (*latticev1.Deploy, error) {
 	status := latticev1.DeployStatus{
-		State:   state,
-		Message: message,
+		State: state,
 
+		Message:       message,
 		InternalError: internalError,
 
 		BuildID: buildID,
+
+		StartTimestamp:      startTimestamp,
+		CompletionTimestamp: completionTimestamp,
 	}
 
 	if reflect.DeepEqual(deploy.Status, status) {

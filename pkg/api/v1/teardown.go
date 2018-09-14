@@ -1,5 +1,9 @@
 package v1
 
+import (
+	"time"
+)
+
 type (
 	TeardownID    string
 	TeardownState string
@@ -17,4 +21,7 @@ type Teardown struct {
 
 	State   TeardownState `json:"state"`
 	Message string        `json:"message,omitempty"`
+
+	StartTimestamp      *time.Time `json:"startTimestamp,omitempty"`
+	CompletionTimestamp *time.Time `json:"completionTimestamp,omitempty"`
 }
