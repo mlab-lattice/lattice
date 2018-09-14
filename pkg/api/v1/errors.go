@@ -18,14 +18,17 @@ const (
 
 	ErrorCodeSystemAlreadyExists  ErrorCode = "SYSTEM_ALREADY_EXISTS"
 	ErrorCodeInvalidSystemID      ErrorCode = "INVALID_SYSTEM_ID"
+	ErrorCodeSystemDeleting       ErrorCode = "SYSTEM_DELETING"
+	ErrorCodeSystemFailed         ErrorCode = "SYSTEM_FAILED"
+	ErrorCodeSystemPending        ErrorCode = "SYSTEM_PENDING"
 	ErrorCodeInvalidSystemOptions ErrorCode = "INVALID_SYSTEM_OPTIONS"
-	ErrorCodeInvalidSystemVersion ErrorCode = "INVALID_SYSTEM_VERSION"
 
 	ErrorCodeInvalidTeardownID ErrorCode = "INVALID_TEARDOWN_ID"
 
 	ErrorCodeInvalidInstance ErrorCode = "INVALID_INSTANCE"
 	ErrorCodeInvalidPath     ErrorCode = "INVALID_PATH"
 	ErrorCodeInvalidSidecar  ErrorCode = "INVALID_SIDECAR"
+	ErrorCodeInvalidVersion  ErrorCode = "INVALID_VERSION"
 )
 
 type Error struct {
@@ -72,6 +75,18 @@ func NewSystemAlreadyExistsError() *Error {
 	return NewError(ErrorCodeSystemAlreadyExists)
 }
 
+func NewSystemDeletingError() *Error {
+	return NewError(ErrorCodeSystemDeleting)
+}
+
+func NewSystemFailedError() *Error {
+	return NewError(ErrorCodeSystemFailed)
+}
+
+func NewSystemPendingError() *Error {
+	return NewError(ErrorCodeSystemPending)
+}
+
 func NewInvalidSystemIDError() *Error {
 	return NewError(ErrorCodeInvalidSystemID)
 }
@@ -80,8 +95,8 @@ func NewInvalidSystemOptionsError() *Error {
 	return NewError(ErrorCodeInvalidSystemOptions)
 }
 
-func NewInvalidSystemVersionError() *Error {
-	return NewError(ErrorCodeInvalidSystemVersion)
+func NewInvalidVersionError() *Error {
+	return NewError(ErrorCodeInvalidVersion)
 }
 
 func NewInvalidTeardownIDError() *Error {

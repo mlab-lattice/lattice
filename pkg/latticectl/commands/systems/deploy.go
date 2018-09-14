@@ -119,7 +119,7 @@ func DeploySystem(
 				time.Sleep(100 * time.Millisecond)
 
 			case v1.DeployStateAccepted, v1.DeployStateInProgress, v1.DeployStateSucceeded:
-				buildID = *deploy.BuildID
+				buildID = *deploy.Build
 
 			default:
 				return fmt.Errorf("deploy %v failed", deploy.ID)
@@ -148,14 +148,14 @@ func printBuildStateDuringDeploy(writer io.Writer, s *spinner.Spinner, build *v1
 	switch build.State {
 	case v1.BuildStatePending:
 		s.Start()
-		s.Suffix = fmt.Sprintf(" Build pending for version: %s...", color.ID(string(build.Version)))
+		s.Suffix = fmt.Sprintf(" Build pending for version: %s...", color.ID(string(*build.Version)))
 	case v1.BuildStateRunning:
 		s.Start()
-		s.Suffix = fmt.Sprintf(" Building version: %s...", color.ID(string(build.Version)))
+		s.Suffix = fmt.Sprintf(" Building version: %s...", color.ID(string(*build.Version)))
 	case v1.BuildStateSucceeded:
 		s.Stop()
 
-		fmt.Fprint(writer, color.BoldHiSuccess("✓ %s built successfully! Now deploying...\n", string(build.Version)))
+		fmt.Fprint(writer, color.BoldHiSuccess("✓ %s built successfully! Now deploying...\n", string(*build.Version)))
 	case v1.BuildStateFailed:
 		s.Stop()
 
@@ -179,7 +179,7 @@ func printBuildStateDuringDeploy(writer io.Writer, s *spinner.Spinner, build *v1
 			}
 		}
 
-		builds.PrintBuildFailure(writer, string(build.Version), containerBuildErrors)
+		builds.PrintBuildFailure(writer, string(*build.Version), containerBuildErrors)
 	}
 }
 

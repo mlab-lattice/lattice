@@ -14,7 +14,7 @@ func (b *NodePoolBackend) List() ([]v1.NodePool, error) {
 	b.backend.Lock()
 	defer b.backend.Unlock()
 
-	record, err := b.backend.systemRecord(b.systemID)
+	record, err := b.backend.systemRecordInitialized(b.systemID)
 	if err != nil {
 		return nil, err
 	}
@@ -31,18 +31,15 @@ func (b *NodePoolBackend) Get(path tree.PathSubcomponent) (*v1.NodePool, error) 
 	b.backend.Lock()
 	defer b.backend.Unlock()
 
-	record, err := b.backend.systemRecord(b.systemID)
+	record, err := b.backend.systemRecordInitialized(b.systemID)
 	if err != nil {
 		return nil, err
 	}
 
-	for _, nodePool := range record.nodePools {
-		if nodePool.Path == path {
-			result := new(v1.NodePool)
-			*result = *nodePool
-			return result, nil
-		}
+	nodePool, ok := record.nodePools[path]
+	if !ok {
+		return nil, v1.NewInvalidPathError()
 	}
 
-	return nil, v1.NewInvalidPathError()
+	return nodePool, nil
 }

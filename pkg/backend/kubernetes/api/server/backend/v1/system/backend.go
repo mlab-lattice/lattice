@@ -156,8 +156,12 @@ func (b *Backend) ensureSystemCreated(id v1.SystemID) (*v1.System, error) {
 	}
 
 	switch system.State {
-	case v1.SystemStatePending, v1.SystemStateFailed, v1.SystemStateDeleting:
-		return system, v1.NewInvalidSystemIDError()
+	case v1.SystemStateDeleting:
+		return system, v1.NewSystemDeletingError()
+	case v1.SystemStateFailed:
+		return system, v1.NewSystemFailedError()
+	case v1.SystemStatePending:
+		return system, v1.NewSystemPendingError()
 	case v1.SystemStateStable, v1.SystemStateDegraded, v1.SystemStateScaling, v1.SystemStateUpdating:
 		return system, nil
 	default:

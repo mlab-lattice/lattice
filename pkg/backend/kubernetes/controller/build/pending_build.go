@@ -78,6 +78,17 @@ func (c *Controller) syncPendingBuild(build *latticev1.Build) error {
 
 	t, err := c.componentResolver.Resolve(cmpnt, systemID, path, ctx, resolver.DepthInfinite)
 	if err != nil {
+		_, err := c.updateBuildStatus(
+			build,
+			latticev1.BuildStateFailed,
+			fmt.Sprintf("error resolving system: %v", err),
+			nil,
+			nil,
+			nil,
+			nil,
+			nil,
+			nil,
+		)
 		return err
 	}
 

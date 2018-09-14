@@ -3,19 +3,43 @@ package system
 import (
 	"sync"
 
+	"fmt"
 	backendv1 "github.com/mlab-lattice/lattice/pkg/api/server/backend/v1"
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
+	"github.com/mlab-lattice/lattice/pkg/definition/component/resolver"
+	"github.com/mlab-lattice/lattice/pkg/definition/tree"
+	definitionv1 "github.com/mlab-lattice/lattice/pkg/definition/v1"
+	syncutil "github.com/mlab-lattice/lattice/pkg/util/sync"
 )
 
 type systemRecord struct {
-	system    *v1.System
-	builds    map[v1.BuildID]*v1.Build
-	deploys   map[v1.DeployID]*v1.Deploy
-	jobs      map[v1.JobID]*v1.Job
-	nodePools []*v1.NodePool
-	secrets   []*v1.Secret
-	services  map[v1.ServiceID]*v1.Service
+	system     *v1.System
+	definition *resolver.ComponentTree
+
+	builds map[v1.BuildID]*buildInfo
+
+	deploys map[v1.DeployID]*v1.Deploy
+
+	jobs map[v1.JobID]*v1.Job
+
+	nodePools map[tree.PathSubcomponent]*v1.NodePool
+
+	secrets map[tree.PathSubcomponent]*v1.Secret
+
+	services     map[v1.ServiceID]*serviceInfo
+	servicePaths map[tree.Path]v1.ServiceID
+
 	teardowns map[v1.TeardownID]*v1.Teardown
+}
+
+type buildInfo struct {
+	Build         *v1.Build
+	ComponentTree *resolver.ComponentTree
+}
+
+type serviceInfo struct {
+	Service    *v1.Service
+	Definition *definitionv1.Service
 }
 
 type Backend struct {
@@ -24,9 +48,13 @@ type Backend struct {
 	sync.Mutex
 }
 
-func NewBackend() *Backend {
+func NewBackend(componentResolver resolver.ComponentResolver) *Backend {
 	b := &Backend{registry: make(map[v1.SystemID]*systemRecord)}
-	c := &controller{backend: b}
+	c := &controller{
+		backend:           b,
+		actions:           syncutil.NewLifecycleActionManager(),
+		componentResolver: componentResolver,
+	}
 	b.controller = c
 	return b
 }
@@ -45,12 +73,21 @@ func (b *Backend) Create(systemID v1.SystemID, definitionURL string) (*v1.System
 			State:         v1.SystemStatePending,
 			DefinitionURL: definitionURL,
 		},
-		builds:    make(map[v1.BuildID]*v1.Build),
-		deploys:   make(map[v1.DeployID]*v1.Deploy),
-		jobs:      make(map[v1.JobID]*v1.Job),
-		secrets:   []*v1.Secret{},
-		services:  make(map[v1.ServiceID]*v1.Service),
-		nodePools: []*v1.NodePool{},
+		definition: resolver.NewComponentTree(),
+
+		builds: make(map[v1.BuildID]*buildInfo),
+
+		deploys: make(map[v1.DeployID]*v1.Deploy),
+
+		jobs: make(map[v1.JobID]*v1.Job),
+
+		secrets: make(map[tree.PathSubcomponent]*v1.Secret),
+
+		services:     make(map[v1.ServiceID]*serviceInfo),
+		servicePaths: make(map[tree.Path]v1.ServiceID),
+
+		nodePools: make(map[tree.PathSubcomponent]*v1.NodePool),
+
 		teardowns: make(map[v1.TeardownID]*v1.Teardown),
 	}
 
@@ -151,11 +188,31 @@ func (b *Backend) Teardowns(id v1.SystemID) backendv1.SystemTeardownBackend {
 }
 
 // helpers
-func (b *Backend) systemRecord(systemID v1.SystemID) (*systemRecord, error) {
-	systemRecord, ok := b.registry[systemID]
+func (b *Backend) systemRecordInitialized(id v1.SystemID) (*systemRecord, error) {
+	record, err := b.systemRecord(id)
+	if err != nil {
+		return nil, err
+	}
+
+	switch record.system.State {
+	case v1.SystemStateDeleting:
+		return record, v1.NewSystemDeletingError()
+	case v1.SystemStateFailed:
+		return record, v1.NewSystemFailedError()
+	case v1.SystemStatePending:
+		return record, v1.NewSystemPendingError()
+	case v1.SystemStateStable, v1.SystemStateDegraded, v1.SystemStateScaling, v1.SystemStateUpdating:
+		return record, nil
+	default:
+		return nil, fmt.Errorf("invalid system state: %v", record.system.State)
+	}
+}
+
+func (b *Backend) systemRecord(id v1.SystemID) (*systemRecord, error) {
+	record, ok := b.registry[id]
 	if !ok {
 		return nil, v1.NewInvalidSystemIDError()
 	}
 
-	return systemRecord, nil
+	return record, nil
 }

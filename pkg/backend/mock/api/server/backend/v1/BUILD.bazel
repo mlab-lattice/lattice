@@ -8,5 +8,6 @@ go_library(
     deps = [
         "//pkg/api/server/backend/v1:go_default_library",
         "//pkg/backend/mock/api/server/backend/v1/system:go_default_library",
+        "//pkg/definition/component/resolver:go_default_library",
     ],
 )

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"reflect"
 
+	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 )
 
@@ -40,7 +41,9 @@ func (c *Controller) acquireTeardownLock(teardown *latticev1.Teardown) error {
 		return err
 	}
 
-	return c.lifecycleActions.AcquireTeardown(namespace.UID, teardown.V1ID())
+	// TODO(kevindrosendahl): switch to using actual system ID once they're UUIDs
+	uniqueSystemIdentifier := v1.SystemID(namespace.UID)
+	return c.lifecycleActions.AcquireTeardown(uniqueSystemIdentifier, teardown.V1ID())
 }
 
 func (c *Controller) releaseTeardownLock(teardown *latticev1.Teardown) error {
@@ -49,6 +52,8 @@ func (c *Controller) releaseTeardownLock(teardown *latticev1.Teardown) error {
 		return err
 	}
 
-	c.lifecycleActions.ReleaseTeardown(namespace.UID, teardown.V1ID())
+	// TODO(kevindrosendahl): switch to using actual system ID once they're UUIDs
+	uniqueSystemIdentifier := v1.SystemID(namespace.UID)
+	c.lifecycleActions.ReleaseTeardown(uniqueSystemIdentifier, teardown.V1ID())
 	return nil
 }

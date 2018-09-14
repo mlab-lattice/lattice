@@ -130,9 +130,13 @@ func transformDeploy(deploy *latticev1.Deploy) (v1.Deploy, error) {
 	}
 
 	externalDeploy := v1.Deploy{
-		ID:      v1.DeployID(deploy.Name),
-		BuildID: deploy.Status.BuildID,
-		State:   state,
+		ID:    v1.DeployID(deploy.Name),
+		State: state,
+
+		Build: deploy.Status.BuildID,
+
+		StartTimestamp:      &deploy.Status.StartTimestamp.Time,
+		CompletionTimestamp: &deploy.Status.CompletionTimestamp.Time,
 	}
 
 	return externalDeploy, nil

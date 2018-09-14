@@ -138,8 +138,8 @@ func deploysPrinter(deploys []v1.Deploy, format printer.Format) printer.Interfac
 			}
 
 			buildID := "-"
-			if deploy.BuildID != nil {
-				buildID = string(*deploy.BuildID)
+			if deploy.Build != nil {
+				buildID = string(*deploy.Build)
 			}
 
 			rows = append(rows, []string{

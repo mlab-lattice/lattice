@@ -85,8 +85,11 @@ func (api *LatticeAPI) handleBuildSystem(c *gin.Context) {
 		}
 
 		switch v1err.Code {
-		case v1.ErrorCodeInvalidSystemID, v1.ErrorCodeInvalidSystemVersion:
+		case v1.ErrorCodeInvalidSystemID:
 			c.JSON(http.StatusNotFound, v1err)
+
+		case v1.ErrorCodeSystemDeleting, v1.ErrorCodeSystemPending:
+			c.JSON(http.StatusConflict, v1err)
 
 		default:
 			c.Status(http.StatusInternalServerError)
@@ -123,6 +126,9 @@ func (api *LatticeAPI) handleListBuilds(c *gin.Context) {
 		switch v1err.Code {
 		case v1.ErrorCodeInvalidSystemID:
 			c.JSON(http.StatusNotFound, v1err)
+
+		case v1.ErrorCodeSystemDeleting, v1.ErrorCodeSystemPending:
+			c.JSON(http.StatusConflict, v1err)
 
 		default:
 			c.Status(http.StatusInternalServerError)
@@ -161,6 +167,9 @@ func (api *LatticeAPI) handleGetBuild(c *gin.Context) {
 		switch v1err.Code {
 		case v1.ErrorCodeInvalidSystemID, v1.ErrorCodeInvalidBuildID:
 			c.JSON(http.StatusNotFound, v1err)
+
+		case v1.ErrorCodeSystemDeleting, v1.ErrorCodeSystemPending:
+			c.JSON(http.StatusConflict, v1err)
 
 		default:
 			c.Status(http.StatusInternalServerError)
@@ -232,6 +241,9 @@ func (api *LatticeAPI) handleGetBuildLogs(c *gin.Context) {
 		case v1.ErrorCodeInvalidSystemID, v1.ErrorCodeInvalidBuildID,
 			v1.ErrorCodeInvalidPath, v1.ErrorCodeInvalidSidecar:
 			c.JSON(http.StatusNotFound, v1err)
+
+		case v1.ErrorCodeSystemDeleting, v1.ErrorCodeSystemPending:
+			c.JSON(http.StatusConflict, v1err)
 
 		default:
 			c.Status(http.StatusInternalServerError)

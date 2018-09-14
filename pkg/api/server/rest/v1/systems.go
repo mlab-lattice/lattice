@@ -65,6 +65,9 @@ func (api *LatticeAPI) handleCreateSystem(c *gin.Context) {
 		}
 
 		switch v1err.Code {
+		case v1.ErrorCodeSystemAlreadyExists:
+			c.JSON(http.StatusConflict, v1err)
+
 		case v1.ErrorCodeInvalidSystemOptions:
 			c.JSON(http.StatusBadRequest, v1err)
 
@@ -125,6 +128,9 @@ func (api *LatticeAPI) handleGetSystem(c *gin.Context) {
 		case v1.ErrorCodeInvalidSystemID:
 			c.JSON(http.StatusBadRequest, v1err)
 
+		case v1.ErrorCodeSystemDeleting, v1.ErrorCodeSystemPending:
+			c.JSON(http.StatusConflict, v1err)
+
 		default:
 			c.Status(http.StatusInternalServerError)
 		}
@@ -159,6 +165,9 @@ func (api *LatticeAPI) handleDeleteSystem(c *gin.Context) {
 
 		switch v1err.Code {
 		case v1.ErrorCodeConflict:
+			c.JSON(http.StatusConflict, v1err)
+
+		case v1.ErrorCodeSystemDeleting:
 			c.JSON(http.StatusConflict, v1err)
 
 		default:

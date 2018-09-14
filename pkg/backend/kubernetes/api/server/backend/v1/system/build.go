@@ -215,7 +215,7 @@ func (b *buildBackend) transformBuild(build *latticev1.Build) (v1.Build, error) 
 		StartTimestamp:      startTimestamp,
 		CompletionTimestamp: completionTimestamp,
 
-		Version:   version,
+		Version:   &version,
 		Workloads: make(map[tree.Path]v1.WorkloadBuild),
 	}
 

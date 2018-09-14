@@ -15,7 +15,7 @@ func (b *SecretBackend) List() ([]v1.Secret, error) {
 	b.backend.Lock()
 	defer b.backend.Unlock()
 
-	record, err := b.backend.systemRecord(b.systemID)
+	record, err := b.backend.systemRecordInitialized(b.systemID)
 	if err != nil {
 		return nil, err
 	}
@@ -32,7 +32,7 @@ func (b *SecretBackend) Get(path tree.PathSubcomponent) (*v1.Secret, error) {
 	b.backend.Lock()
 	defer b.backend.Unlock()
 
-	record, err := b.backend.systemRecord(b.systemID)
+	record, err := b.backend.systemRecordInitialized(b.systemID)
 	if err != nil {
 		return nil, err
 	}
@@ -52,7 +52,7 @@ func (b *SecretBackend) Set(path tree.PathSubcomponent, value string) error {
 	b.backend.Lock()
 	defer b.backend.Unlock()
 
-	record, err := b.backend.systemRecord(b.systemID)
+	record, err := b.backend.systemRecordInitialized(b.systemID)
 	if err != nil {
 		return err
 	}
@@ -69,7 +69,7 @@ func (b *SecretBackend) Set(path tree.PathSubcomponent, value string) error {
 		Value: value,
 	}
 
-	record.secrets = append(record.secrets, secret)
+	record.secrets[path] = secret
 
 	return nil
 }
@@ -78,19 +78,16 @@ func (b *SecretBackend) Unset(path tree.PathSubcomponent) error {
 	b.backend.Lock()
 	defer b.backend.Unlock()
 
-	record, err := b.backend.systemRecord(b.systemID)
+	record, err := b.backend.systemRecordInitialized(b.systemID)
 	if err != nil {
 		return err
 	}
 
-	for i, secret := range record.secrets {
-		if secret.Path == path {
-			// delete secret
-			record.secrets = append(record.secrets[:i], record.secrets[i+1:]...)
-
-			return nil
-		}
+	_, ok := record.secrets[path]
+	if !ok {
+		return v1.NewInvalidSecretError()
 	}
 
-	return v1.NewInvalidSecretError()
+	delete(record.secrets, path)
+	return nil
 }

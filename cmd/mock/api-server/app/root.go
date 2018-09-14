@@ -45,7 +45,7 @@ func Command() *cli.Command {
 			},
 		},
 		Run: func(args []string) {
-			backend := mockbackend.NewMockBackend()
+			backend := mockbackend.NewMockBackend(workDirectory)
 
 			templateStore := mockresolver.NewMemoryTemplateStore()
 			secretStore := mockresolver.NewMemorySecretStore()

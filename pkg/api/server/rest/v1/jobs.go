@@ -69,6 +69,12 @@ func (api *LatticeAPI) handleRunJob(c *gin.Context) {
 		case v1.ErrorCodeInvalidSystemID:
 			c.JSON(http.StatusNotFound, v1err)
 
+		case v1.ErrorCodeSystemDeleting, v1.ErrorCodeSystemPending:
+			c.JSON(http.StatusConflict, v1err)
+
+		case v1.ErrorCodeInvalidPath:
+			c.JSON(http.StatusNotFound, v1err)
+
 		default:
 			c.Status(http.StatusInternalServerError)
 		}
@@ -104,6 +110,9 @@ func (api *LatticeAPI) handleListJobs(c *gin.Context) {
 		switch v1err.Code {
 		case v1.ErrorCodeInvalidSystemID:
 			c.JSON(http.StatusNotFound, v1err)
+
+		case v1.ErrorCodeSystemDeleting, v1.ErrorCodeSystemPending:
+			c.JSON(http.StatusConflict, v1err)
 
 		default:
 			c.Status(http.StatusInternalServerError)
@@ -142,6 +151,9 @@ func (api *LatticeAPI) handleGetJob(c *gin.Context) {
 		switch v1err.Code {
 		case v1.ErrorCodeInvalidSystemID, v1.ErrorCodeInvalidJobID:
 			c.JSON(http.StatusNotFound, v1err)
+
+		case v1.ErrorCodeSystemDeleting, v1.ErrorCodeSystemPending:
+			c.JSON(http.StatusConflict, v1err)
 
 		default:
 			c.Status(http.StatusInternalServerError)
@@ -200,6 +212,9 @@ func (api *LatticeAPI) handleGetJobLogs(c *gin.Context) {
 		switch v1err.Code {
 		case v1.ErrorCodeInvalidSystemID, v1.ErrorCodeInvalidJobID:
 			c.JSON(http.StatusNotFound, v1err)
+
+		case v1.ErrorCodeSystemDeleting, v1.ErrorCodeSystemPending:
+			c.JSON(http.StatusConflict, v1err)
 
 		default:
 			c.Status(http.StatusInternalServerError)

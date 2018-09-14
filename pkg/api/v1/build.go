@@ -19,8 +19,10 @@ const (
 )
 
 type Build struct {
-	ID    BuildID    `json:"id"`
-	State BuildState `json:"state"`
+	ID BuildID `json:"id"`
+
+	State   BuildState `json:"state"`
+	Message string     `json:"message,omitempty"`
 
 	StartTimestamp      *time.Time `json:"startTimestamp,omitempty"`
 	CompletionTimestamp *time.Time `json:"completionTimestamp,omitempty"`
