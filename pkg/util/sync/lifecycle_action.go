@@ -1,4 +1,4 @@
-package systemlifecycle
+package sync
 
 import (
 	"fmt"
@@ -7,26 +7,27 @@ import (
 
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
-	syncutil "github.com/mlab-lattice/lattice/pkg/util/sync"
-
-	"k8s.io/apimachinery/pkg/types"
 )
 
-func newLifecycleActions() *lifecycleActions {
-	return &lifecycleActions{namespaces: make(map[types.UID]*lifecycleActionTree)}
+func NewLifecycleActionManager() *LifecycleActionManager {
+	return &LifecycleActionManager{systems: make(map[v1.SystemID]*lifecycleActionTree)}
 }
 
-type lifecycleActions struct {
+type LifecycleActionManager struct {
 	// this could be a RWMutex but trying to keep things "simple" to start
 	sync.Mutex
-	namespaces map[types.UID]*lifecycleActionTree
+
+	// important: systemIDs are assumed to be unique across time and space.
+	// that is, if a system is deleted and then another system is created,
+	// it is impossible that the new system will have the same name
+	systems map[v1.SystemID]*lifecycleActionTree
 }
 
-func (a *lifecycleActions) InProgressActions(namespace types.UID) ([]v1.DeployID, *v1.TeardownID) {
+func (a *LifecycleActionManager) InProgressActions(system v1.SystemID) ([]v1.DeployID, *v1.TeardownID) {
 	a.Lock()
 	defer a.Unlock()
 
-	t, ok := a.namespaces[namespace]
+	t, ok := a.systems[system]
 	if !ok {
 		return nil, nil
 	}
@@ -39,24 +40,24 @@ func (a *lifecycleActions) InProgressActions(namespace types.UID) ([]v1.DeployID
 	return deploys, t.teardown
 }
 
-func (a *lifecycleActions) AcquireDeploy(namespace types.UID, deploy v1.DeployID, path tree.Path) error {
+func (a *LifecycleActionManager) AcquireDeploy(system v1.SystemID, deploy v1.DeployID, path tree.Path) error {
 	a.Lock()
 	defer a.Unlock()
 
-	t, ok := a.namespaces[namespace]
+	t, ok := a.systems[system]
 	if !ok {
 		t = newLifecycleActionTree()
-		a.namespaces[namespace] = t
+		a.systems[system] = t
 	}
 
 	return t.AcquireDeploy(deploy, path)
 }
 
-func (a *lifecycleActions) ReleaseDeploy(namespace types.UID, deploy v1.DeployID) {
+func (a *LifecycleActionManager) ReleaseDeploy(system v1.SystemID, deploy v1.DeployID) {
 	a.Lock()
 	defer a.Unlock()
 
-	t, ok := a.namespaces[namespace]
+	t, ok := a.systems[system]
 	if !ok {
 		// this shouldn't happen
 		// TODO(kevindrosendahl): send warn event
@@ -66,24 +67,24 @@ func (a *lifecycleActions) ReleaseDeploy(namespace types.UID, deploy v1.DeployID
 	t.ReleaseDeploy(deploy)
 }
 
-func (a *lifecycleActions) AcquireTeardown(namespace types.UID, teardown v1.TeardownID) error {
+func (a *LifecycleActionManager) AcquireTeardown(system v1.SystemID, teardown v1.TeardownID) error {
 	a.Lock()
 	defer a.Unlock()
 
-	t, ok := a.namespaces[namespace]
+	t, ok := a.systems[system]
 	if !ok {
 		t = newLifecycleActionTree()
-		a.namespaces[namespace] = t
+		a.systems[system] = t
 	}
 
 	return t.AcquireTeardown(teardown)
 }
 
-func (a *lifecycleActions) ReleaseTeardown(namespace types.UID, teardown v1.TeardownID) {
+func (a *LifecycleActionManager) ReleaseTeardown(system v1.SystemID, teardown v1.TeardownID) {
 	a.Lock()
 	defer a.Unlock()
 
-	t, ok := a.namespaces[namespace]
+	t, ok := a.systems[system]
 	if !ok {
 		// this shouldn't happen
 		// TODO(kevindrosendahl): send warn event
@@ -104,7 +105,7 @@ func newLifecycleActionTree() *lifecycleActionTree {
 // down the tree to its path and exclusive locks at its full path, and teardowns
 // to attempt to acquire an exclusive lock on the entire system
 // important note: there is no synchronization inside the lifecycleActionTree,
-// it is assumed that the lifecycleActionTree is accessed via a lifecycleActions
+// it is assumed that the lifecycleActionTree is accessed via a LifecycleActionManager
 // which is coordinating synchronization
 type lifecycleActionTree struct {
 	inner *tree.Radix
@@ -115,28 +116,28 @@ type lifecycleActionTree struct {
 
 func newLifecycleActionTreeNode() *lifecycleActionTreeNode {
 	return &lifecycleActionTreeNode{
-		Deploys: make(map[v1.DeployID]*syncutil.IntentionLockUnlocker),
+		Deploys: make(map[v1.DeployID]*IntentionLockUnlocker),
 	}
 }
 
 type lifecycleActionTreeNode struct {
-	Lock     syncutil.IntentionLock
-	Deploys  map[v1.DeployID]*syncutil.IntentionLockUnlocker
+	Lock     IntentionLock
+	Deploys  map[v1.DeployID]*IntentionLockUnlocker
 	Teardown *lifecycleActionTreeNodeTeardown
 }
 
 type lifecycleActionTreeNodeTeardown struct {
 	ID       v1.TeardownID
-	Unlocker *syncutil.IntentionLockUnlocker
+	Unlocker *IntentionLockUnlocker
 }
 
 func (t *lifecycleActionTree) AcquireDeploy(id v1.DeployID, path tree.Path) error {
 	for i := 0; i <= path.Depth(); i++ {
 		// acquire intention locks all the way until the leaf of the path, and
 		// acquire an exclusive Lock on the leaf
-		granularity := syncutil.LockGranularityIntentionExclusive
+		granularity := LockGranularityIntentionExclusive
 		if i == path.Depth() {
-			granularity = syncutil.LockGranularityExclusive
+			granularity = LockGranularityExclusive
 		}
 
 		prefix, _ := path.Prefix(i)
@@ -232,7 +233,7 @@ func (t *lifecycleActionTree) AcquireTeardown(id v1.TeardownID) error {
 	n, ok := t.get(tree.RootPath())
 	if !ok {
 		n := newLifecycleActionTreeNode()
-		unlocker, ok := n.Lock.TryLock(syncutil.LockGranularityExclusive)
+		unlocker, ok := n.Lock.TryLock(LockGranularityExclusive)
 		if !ok {
 			return fmt.Errorf("unable to Lock freshly created lock for teardown %v", id)
 		}
@@ -246,7 +247,7 @@ func (t *lifecycleActionTree) AcquireTeardown(id v1.TeardownID) error {
 		return nil
 	}
 
-	unlocker, ok := n.Lock.TryLock(syncutil.LockGranularityExclusive)
+	unlocker, ok := n.Lock.TryLock(LockGranularityExclusive)
 	if !ok {
 		return newConflictingLifecycleActionError(n)
 	}
@@ -260,7 +261,7 @@ func (t *lifecycleActionTree) AcquireTeardown(id v1.TeardownID) error {
 }
 
 func (t *lifecycleActionTree) ReleaseTeardown(id v1.TeardownID) {
-	// bail out if it looks like this teardown doesn't actually own the namespaces
+	// bail out if it looks like this teardown doesn't actually own the systems
 	n, ok := t.get(tree.RootPath())
 	if !ok {
 		return
@@ -294,7 +295,7 @@ func (t *lifecycleActionTree) get(p tree.Path) (*lifecycleActionTreeNode, bool) 
 	return i.(*lifecycleActionTreeNode), true
 }
 
-func newConflictingLifecycleActionError(n *lifecycleActionTreeNode) *conflictingLifecycleActionError {
+func newConflictingLifecycleActionError(n *lifecycleActionTreeNode) *ConflictingLifecycleActionError {
 	var deploys []string
 	for id := range n.Deploys {
 		deploys = append(deploys, string(id))
@@ -305,18 +306,18 @@ func newConflictingLifecycleActionError(n *lifecycleActionTreeNode) *conflicting
 		teardownID = &n.Teardown.ID
 	}
 
-	return &conflictingLifecycleActionError{
+	return &ConflictingLifecycleActionError{
 		deploys:  deploys,
 		teardown: teardownID,
 	}
 }
 
-type conflictingLifecycleActionError struct {
+type ConflictingLifecycleActionError struct {
 	deploys  []string
 	teardown *v1.TeardownID
 }
 
-func (e *conflictingLifecycleActionError) Error() string {
+func (e *ConflictingLifecycleActionError) Error() string {
 	// this shouldn't happen
 	if len(e.deploys) > 0 && e.teardown != nil {
 		return fmt.Sprintf("locked by deploys %v and teardown %v", strings.Join(e.deploys, ", "), *e.teardown)

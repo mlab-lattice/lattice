@@ -140,13 +140,13 @@ func PrintBuildStateDuringWatchBuild(writer io.Writer, s *spinner.Spinner, build
 	switch build.State {
 	case v1.BuildStatePending:
 		s.Start()
-		s.Suffix = fmt.Sprintf(" Build pending for version: %s...", color.ID(string(build.Version)))
+		s.Suffix = fmt.Sprintf(" Build pending for version: %s...", color.ID(string(*build.Version)))
 	case v1.BuildStateRunning:
 		s.Start()
-		s.Suffix = fmt.Sprintf(" Building version: %s...", color.ID(string(build.Version)))
+		s.Suffix = fmt.Sprintf(" Building version: %s...", color.ID(string(*build.Version)))
 	case v1.BuildStateSucceeded:
 		s.Stop()
-		printBuildSuccess(writer, string(build.Version), build.ID)
+		printBuildSuccess(writer, string(*build.Version), build.ID)
 	case v1.BuildStateFailed:
 		s.Stop()
 
@@ -182,7 +182,7 @@ func PrintBuildStateDuringWatchBuild(writer io.Writer, s *spinner.Spinner, build
 			}
 		}
 
-		PrintBuildFailure(writer, string(build.Version), containerErrors)
+		PrintBuildFailure(writer, string(*build.Version), containerErrors)
 	}
 }
 

@@ -1,7 +1,6 @@
 package system
 
 import (
-	"fmt"
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 	"github.com/satori/go.uuid"
@@ -13,22 +12,31 @@ type DeployBackend struct {
 }
 
 func (b *DeployBackend) CreateFromBuild(id v1.BuildID) (*v1.Deploy, error) {
+	return b.create(&id, nil, nil)
+}
+
+func (b *DeployBackend) CreateFromPath(p tree.Path) (*v1.Deploy, error) {
+	return b.create(nil, &p, nil)
+}
+
+func (b *DeployBackend) CreateFromVersion(v v1.Version) (*v1.Deploy, error) {
+	return b.create(nil, nil, &v)
+}
+
+func (b *DeployBackend) create(id *v1.BuildID, p *tree.Path, v *v1.Version) (*v1.Deploy, error) {
 	b.backend.Lock()
 	defer b.backend.Unlock()
 
-	record, err := b.backend.systemRecord(b.systemID)
+	record, err := b.backend.systemRecordInitialized(b.systemID)
 	if err != nil {
 		return nil, err
 	}
 
-	_, ok := record.builds[id]
-	if !ok {
-		return nil, v1.NewInvalidBuildIDError()
-	}
-
 	deploy := &v1.Deploy{
 		ID:      v1.DeployID(uuid.NewV4().String()),
-		BuildID: &id,
+		Build:   id,
+		Path:    p,
+		Version: v,
 		State:   v1.DeployStatePending,
 	}
 
@@ -44,25 +52,11 @@ func (b *DeployBackend) CreateFromBuild(id v1.BuildID) (*v1.Deploy, error) {
 	return result, nil
 }
 
-func (b *DeployBackend) CreateFromPath(p tree.Path) (*v1.Deploy, error) {
-	return nil, fmt.Errorf("unimplemented")
-}
-
-func (b *DeployBackend) CreateFromVersion(v v1.SystemVersion) (*v1.Deploy, error) {
-	// this ensures the system is created as well
-	build, err := b.backend.Builds(b.systemID).CreateFromVersion(v)
-	if err != nil {
-		return nil, err
-	}
-
-	return b.CreateFromBuild(build.ID)
-}
-
 func (b *DeployBackend) List() ([]v1.Deploy, error) {
 	b.backend.Lock()
 	defer b.backend.Unlock()
 
-	record, err := b.backend.systemRecord(b.systemID)
+	record, err := b.backend.systemRecordInitialized(b.systemID)
 	if err != nil {
 		return nil, err
 	}
@@ -79,7 +73,7 @@ func (b *DeployBackend) Get(id v1.DeployID) (*v1.Deploy, error) {
 	b.backend.Lock()
 	defer b.backend.Unlock()
 
-	record, err := b.backend.systemRecord(b.systemID)
+	record, err := b.backend.systemRecordInitialized(b.systemID)
 	if err != nil {
 		return nil, err
 	}

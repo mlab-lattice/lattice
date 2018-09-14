@@ -1,5 +1,10 @@
 package v1
 
+import (
+	"github.com/mlab-lattice/lattice/pkg/definition/tree"
+	"time"
+)
+
 type (
 	DeployID    string
 	DeployState string
@@ -14,7 +19,15 @@ const (
 )
 
 type Deploy struct {
-	ID      DeployID    `json:"id"`
-	BuildID *BuildID    `json:"buildId,omitempty"`
+	ID DeployID `json:"id"`
+
+	Build   *BuildID   `json:"build,omitempty"`
+	Path    *tree.Path `json:"path,omitempty"`
+	Version *Version   `json:"version,omitempty"`
+
 	State   DeployState `json:"state"`
+	Message string      `json:"message,omitempty"`
+
+	StartTimestamp      *time.Time `json:"startTimestamp,omitempty"`
+	CompletionTimestamp *time.Time `json:"completionTimestamp,omitempty"`
 }

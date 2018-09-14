@@ -27,7 +27,7 @@ type NodePool struct {
 	NumInstances int32  `json:"numInstances"`
 
 	State       NodePoolState        `json:"state"`
-	FailureInfo *NodePoolFailureInfo `json:"failure_info"`
+	FailureInfo *NodePoolFailureInfo `json:"failureInfo,omitempty"`
 }
 
 type NodePoolFailureInfo struct {

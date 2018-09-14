@@ -30,7 +30,7 @@ func (api *LatticeAPI) setupVersionsEndpoints() {
 // @Param system path string true "System ID"
 // @Accept  json
 // @Produce  json
-// @Success 200 {array} v1.SystemVersion
+// @Success 200 {array} v1.Version
 func (api *LatticeAPI) handleListSystemVersions(c *gin.Context) {
 	systemID := v1.SystemID(c.Param(systemIdentifier))
 
@@ -66,9 +66,9 @@ func (api *LatticeAPI) handleListSystemVersions(c *gin.Context) {
 		return
 	}
 
-	versions := make([]v1.SystemVersion, 0)
+	versions := make([]v1.Version, 0)
 	for _, version := range v {
-		versions = append(versions, v1.SystemVersion(version))
+		versions = append(versions, v1.Version(version))
 	}
 
 	c.JSON(http.StatusOK, versions)

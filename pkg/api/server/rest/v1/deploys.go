@@ -85,8 +85,11 @@ func (api *LatticeAPI) handleDeploySystem(c *gin.Context) {
 		}
 
 		switch v1err.Code {
-		case v1.ErrorCodeInvalidSystemID, v1.ErrorCodeInvalidSystemVersion, v1.ErrorCodeInvalidBuildID:
+		case v1.ErrorCodeInvalidSystemID, v1.ErrorCodeInvalidBuildID:
 			c.JSON(http.StatusNotFound, v1err)
+
+		case v1.ErrorCodeSystemDeleting, v1.ErrorCodeSystemPending:
+			c.JSON(http.StatusConflict, v1err)
 
 		default:
 			c.Status(http.StatusInternalServerError)
@@ -122,6 +125,9 @@ func (api *LatticeAPI) handleListDeploys(c *gin.Context) {
 		switch v1err.Code {
 		case v1.ErrorCodeInvalidSystemID:
 			c.JSON(http.StatusNotFound, v1err)
+
+		case v1.ErrorCodeSystemDeleting, v1.ErrorCodeSystemPending:
+			c.JSON(http.StatusConflict, v1err)
 
 		default:
 			c.Status(http.StatusInternalServerError)
@@ -160,6 +166,9 @@ func (api *LatticeAPI) handleGetDeploy(c *gin.Context) {
 		switch v1err.Code {
 		case v1.ErrorCodeInvalidSystemID, v1.ErrorCodeInvalidDeployID:
 			c.JSON(http.StatusNotFound, v1err)
+
+		case v1.ErrorCodeSystemDeleting, v1.ErrorCodeSystemPending:
+			c.JSON(http.StatusConflict, v1err)
 
 		default:
 			c.Status(http.StatusInternalServerError)

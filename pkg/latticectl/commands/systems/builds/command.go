@@ -172,7 +172,7 @@ func buildsPrinter(builds []v1.Build, format printer.Format) printer.Interface {
 				string(build.ID),
 				startTimestamp,
 				completionTimestamp,
-				string(build.Version),
+				string(*build.Version),
 				stateColor(string(build.State)),
 			})
 		}

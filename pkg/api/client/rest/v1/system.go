@@ -101,7 +101,7 @@ func (c *SystemClient) Delete(id v1.SystemID) error {
 	return errors.HandleErrorStatusCode(statusCode, body)
 }
 
-func (c *SystemClient) Versions(id v1.SystemID) ([]v1.SystemVersion, error) {
+func (c *SystemClient) Versions(id v1.SystemID) ([]v1.Version, error) {
 	url := fmt.Sprintf("%v%v", c.apiServerURL, fmt.Sprintf(v1rest.VersionsPathFormat, id))
 	body, statusCode, err := c.restClient.Get(url).Body()
 	if err != nil {
@@ -110,7 +110,7 @@ func (c *SystemClient) Versions(id v1.SystemID) ([]v1.SystemVersion, error) {
 	defer body.Close()
 
 	if statusCode == http.StatusOK {
-		var versions []v1.SystemVersion
+		var versions []v1.Version
 		err = rest.UnmarshalBodyJSON(body, &versions)
 		return versions, err
 	}

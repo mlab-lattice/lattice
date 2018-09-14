@@ -7,29 +7,76 @@ import (
 	"testing"
 	"time"
 
+	"encoding/json"
 	clientrest "github.com/mlab-lattice/lattice/pkg/api/client/rest"
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	mockbackend "github.com/mlab-lattice/lattice/pkg/backend/mock/api/server/backend"
 	mockresolver "github.com/mlab-lattice/lattice/pkg/backend/mock/definition/component/resolver"
+	"github.com/mlab-lattice/lattice/pkg/definition/component"
 	"github.com/mlab-lattice/lattice/pkg/definition/component/resolver"
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 	definitionv1 "github.com/mlab-lattice/lattice/pkg/definition/v1"
 	"github.com/mlab-lattice/lattice/pkg/util/git"
+	"os"
 )
 
 const (
 	mockSystemID     = v1.SystemID("mock-system")
-	mockSystemDefURL = "https://github.com/mlab-lattice/mock-system.git"
+	mockRepoPath     = "/tmp/lattice/test/api/server/rest/remote"
 	mockAPIServerURL = "http://localhost:8876"
 
-	mockSystemVersion = v1.SystemVersion("1.0.0")
-	mockServicePath   = tree.Path("/api")
+	mockSystemVersion = v1.Version("1.0.0")
+	mockServicePath   = tree.Path("/job")
 
 	mockServerAPIPort = 8876
 	mockServerAPIKey  = "abc"
 )
 
-var latticeClient = clientrest.NewClient(mockAPIServerURL, mockServerAPIKey).V1()
+var (
+	latticeClient = clientrest.NewClient(mockAPIServerURL, mockServerAPIKey).V1()
+
+	mockSystemDefURL = fmt.Sprintf("file://%v", mockRepoPath)
+
+	mockSystem = &definitionv1.System{
+		Description: "Mock System",
+		NodePools: map[string]definitionv1.NodePool{
+			"main": {
+				InstanceType: "t2.small",
+				NumInstances: 1,
+			},
+		},
+		Components: map[string]component.Interface{
+			"api": &definitionv1.Service{
+				Description:  "api",
+				NumInstances: 1,
+				Container: definitionv1.Container{
+					Exec: &definitionv1.ContainerExec{
+						Command: []string{"foo api"},
+					},
+				},
+			},
+			"www": &definitionv1.Service{
+				Description:  "www",
+				NumInstances: 1,
+				Container: definitionv1.Container{
+					Exec: &definitionv1.ContainerExec{
+						Command: []string{"foo www"},
+					},
+				},
+			},
+			"job": &definitionv1.Job{
+				Description: "job",
+				NodePool:    "/:main",
+				Container: definitionv1.Container{
+					Exec: &definitionv1.ContainerExec{
+						Command: []string{"foo www"},
+					},
+				},
+			},
+		},
+	}
+	mockSystemBytes, _ = json.Marshal(&mockSystem)
+)
 
 func TestMockServer(t *testing.T) {
 	setupMockTest()
@@ -90,6 +137,12 @@ func createSystem(t *testing.T) {
 	if systems[0].ID != mockSystemID {
 		t.Fatal("bad list systems")
 	}
+
+	waitFor(func() bool {
+		s, err := latticeClient.Systems().Get(mockSystemID)
+		checkErr(err, t)
+		return s.State == v1.SystemStateStable
+	}, t)
 }
 
 func buildAndDeploy(t *testing.T) {
@@ -280,6 +333,13 @@ func ensureSingleDeploy(t *testing.T) {
 	}, t)
 
 	fmt.Printf("Deploy %v failed as expected!\n", deploy2.ID)
+
+	fmt.Printf("Waiting for deploy %v to finish\n", deploy.ID)
+	waitFor(func() bool {
+		deploy, err = latticeClient.Systems().Deploys(mockSystemID).Get(deploy.ID)
+		checkErr(err, t)
+		return deploy.State == v1.DeployStateSucceeded
+	}, t)
 
 }
 
@@ -485,6 +545,11 @@ func testInvalidIDs(t *testing.T) {
 	testID := v1.SystemID("test")
 	_, err := latticeClient.Systems().Create(testID, mockSystemDefURL)
 	checkErr(err, t)
+	waitFor(func() bool {
+		s, err := latticeClient.Systems().Get(testID)
+		checkErr(err, t)
+		return s.State == v1.SystemStateStable
+	}, t)
 
 	// test invalid build id error
 	{
@@ -535,23 +600,22 @@ func testInvalidDefinition(t *testing.T) {
 	_, err := latticeClient.Systems().Create("test", "xxxxxxx")
 	checkErr(err, t)
 
-	_, err = latticeClient.Systems().Builds(testID).CreateFromVersion(mockSystemVersion)
-	if err == nil {
-		// TODO re-enable after fixing git resolver.IsValidRepositoryURI
-		//t.Fatal("Expected invalid definition url error")
-	}
+	waitFor(func() bool {
+		s, err := latticeClient.Systems().Get(testID)
+		checkErr(err, t)
+		return s.State == v1.SystemStateStable
+	}, t)
 
-	fmt.Printf("Got expected error: %v\n", err)
-	// test invalid version
-	_, err = latticeClient.Systems().Create("test2", mockSystemDefURL)
+	build, err := latticeClient.Systems().Builds(testID).CreateFromVersion(mockSystemVersion)
 	checkErr(err, t)
 
-	_, err = latticeClient.Systems().Builds(testID).CreateFromVersion("111")
-	if err == nil {
-		t.Fatal("Expected invalid version error")
-	}
+	waitFor(func() bool {
+		b, err := latticeClient.Systems().Builds(testID).Get(build.ID)
+		checkErr(err, t)
+		return b.State == v1.BuildStateFailed
+	}, t)
 
-	fmt.Printf("Got expected error: %v\n", err)
+	fmt.Println("invalid build failed as expected")
 }
 
 func authTest(t *testing.T) {
@@ -585,9 +649,26 @@ func checkErr(err error, t *testing.T) {
 
 func setupMockTest() {
 	fmt.Println("Setting up test. Starting API Server")
+
+	os.RemoveAll(mockRepoPath)
+
+	err := git.Init(mockRepoPath)
+	if err != nil {
+		panic(err)
+	}
+
+	hash, err := git.WriteAndCommitFile(mockRepoPath, resolver.DefaultFile, mockSystemBytes, 0700, "commit")
+	if err != nil {
+		panic(err)
+	}
+
+	err = git.Tag(mockRepoPath, hash, string(mockSystemVersion))
+	if err != nil {
+		panic(err)
+	}
+
 	// run api server
-	b := mockbackend.NewMockBackend()
-	gitResolver, err := git.NewResolver("/tmp/lattice/api/server/mock/test", true)
+	gitResolver, err := git.NewResolver("/tmp/lattice/test/api/server/rest/resolver", true)
 	if err != nil {
 		panic(err)
 	}
@@ -598,6 +679,7 @@ func setupMockTest() {
 		mockresolver.NewMemorySecretStore(),
 	)
 
+	b := mockbackend.NewMockBackend(r)
 	go RunNewRestServer(b, r, mockServerAPIPort, mockServerAPIKey)
 	fmt.Println("API server started")
 }

@@ -151,6 +151,17 @@ func (p Path) Parent() (Path, error) {
 	return NewPath(fmt.Sprintf("%v%v", PathSeparator, strings.Join(parentSubpaths, PathSeparator)))
 }
 
+// Leaf returns the final subpath.
+// Returns an error if called on the root path.
+func (p Path) Leaf() (string, error) {
+	if p.IsRoot() {
+		return "", fmt.Errorf("cannot call Leaf on root path")
+	}
+
+	subpaths := p.Subpaths()
+	return subpaths[len(subpaths)-1], nil
+}
+
 // IsRoot returns a bool indicating if the node is the root node (i.e. "/")
 func (p Path) IsRoot() bool {
 	return p.Depth() == 0

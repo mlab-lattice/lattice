@@ -47,7 +47,9 @@ func (c *Controller) acquireDeployLock(deploy *latticev1.Deploy, path tree.Path)
 		return err
 	}
 
-	return c.lifecycleActions.AcquireDeploy(namespace.UID, deploy.V1ID(), path)
+	// TODO(kevindrosendahl): switch to using actual system ID once they're UUIDs
+	uniqueSystemIdentifier := v1.SystemID(namespace.UID)
+	return c.lifecycleActions.AcquireDeploy(uniqueSystemIdentifier, deploy.V1ID(), path)
 }
 
 func (c *Controller) releaseDeployLock(deploy *latticev1.Deploy) error {
@@ -56,6 +58,8 @@ func (c *Controller) releaseDeployLock(deploy *latticev1.Deploy) error {
 		return err
 	}
 
-	c.lifecycleActions.ReleaseDeploy(namespace.UID, deploy.V1ID())
+	// TODO(kevindrosendahl): switch to using actual system ID once they're UUIDs
+	uniqueSystemIdentifier := v1.SystemID(namespace.UID)
+	c.lifecycleActions.ReleaseDeploy(uniqueSystemIdentifier, deploy.V1ID())
 	return nil
 }

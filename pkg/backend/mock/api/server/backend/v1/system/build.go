@@ -1,13 +1,13 @@
 package system
 
 import (
-	"github.com/mlab-lattice/lattice/pkg/api/v1"
-	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 	"io"
 	"io/ioutil"
 	"strings"
 
-	"fmt"
+	"github.com/mlab-lattice/lattice/pkg/api/v1"
+	"github.com/mlab-lattice/lattice/pkg/definition/tree"
+
 	"github.com/satori/go.uuid"
 )
 
@@ -17,28 +17,34 @@ type BuildBackend struct {
 }
 
 func (b *BuildBackend) CreateFromPath(p tree.Path) (*v1.Build, error) {
-	return nil, fmt.Errorf("unimplemented")
+	return b.create(&p, nil)
 }
 
-func (b *BuildBackend) CreateFromVersion(v v1.SystemVersion) (*v1.Build, error) {
+func (b *BuildBackend) CreateFromVersion(v v1.Version) (*v1.Build, error) {
+	return b.create(nil, &v)
+}
+
+func (b *BuildBackend) create(p *tree.Path, v *v1.Version) (*v1.Build, error) {
 	b.backend.Lock()
 	defer b.backend.Unlock()
 
-	record, err := b.backend.systemRecord(b.systemID)
+	record, err := b.backend.systemRecordInitialized(b.systemID)
 	if err != nil {
 		return nil, err
 	}
 
-	// validate version
-	if v != "1.0.0" {
-		return nil, v1.NewInvalidSystemVersionError()
+	build := &v1.Build{
+		ID:      v1.BuildID(uuid.NewV4().String()),
+		State:   v1.BuildStatePending,
+		Path:    p,
+		Version: v,
+	}
+	record.builds[build.ID] = &buildInfo{
+		Build: build,
 	}
 
-	build := newBuild(v)
-	record.builds[build.ID] = build
-
 	// run the build
-	b.backend.controller.RunBuild(build)
+	b.backend.controller.RunBuild(build, record)
 
 	// copy the build so we don't return a pointer into the backend
 	// so we can release the lock
@@ -52,14 +58,14 @@ func (b *BuildBackend) List() ([]v1.Build, error) {
 	b.backend.Lock()
 	defer b.backend.Unlock()
 
-	record, err := b.backend.systemRecord(b.systemID)
+	record, err := b.backend.systemRecordInitialized(b.systemID)
 	if err != nil {
 		return nil, err
 	}
 
 	var builds []v1.Build
 	for _, build := range record.builds {
-		builds = append(builds, *build)
+		builds = append(builds, *build.Build)
 	}
 
 	return builds, nil
@@ -69,7 +75,7 @@ func (b *BuildBackend) Get(id v1.BuildID) (*v1.Build, error) {
 	b.backend.Lock()
 	defer b.backend.Unlock()
 
-	record, err := b.backend.systemRecord(b.systemID)
+	record, err := b.backend.systemRecordInitialized(b.systemID)
 	if err != nil {
 		return nil, err
 	}
@@ -82,7 +88,7 @@ func (b *BuildBackend) Get(id v1.BuildID) (*v1.Build, error) {
 	// copy the build so we don't return a pointer into the backend
 	// so we can release the lock
 	result := new(v1.Build)
-	*result = *build
+	*result = *build.Build
 
 	return result, nil
 }
@@ -99,23 +105,4 @@ func (b *BuildBackend) Logs(
 	}
 
 	return ioutil.NopCloser(strings.NewReader("this is a long line")), nil
-}
-
-func newBuild(v v1.SystemVersion) *v1.Build {
-	service1Path := tree.Path("/api")
-	build := &v1.Build{
-		ID:      v1.BuildID(uuid.NewV4().String()),
-		State:   v1.BuildStatePending,
-		Version: v,
-		Workloads: map[tree.Path]v1.WorkloadBuild{
-			service1Path: {
-				ContainerBuild: v1.ContainerBuild{
-					ID:    v1.ContainerBuildID(uuid.NewV4().String()),
-					State: v1.ContainerBuildStatePending,
-				},
-			},
-		},
-	}
-
-	return build
 }

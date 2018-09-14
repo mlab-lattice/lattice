@@ -8,6 +8,9 @@ import (
 	latticeclientset "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/generated/clientset/versioned"
 	latticeinformers "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/generated/informers/externalversions/lattice/v1"
 	latticelisters "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/generated/listers/lattice/v1"
+	"github.com/mlab-lattice/lattice/pkg/definition/tree"
+	syncutil "github.com/mlab-lattice/lattice/pkg/util/sync"
+
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/runtime"
@@ -20,13 +23,7 @@ import (
 	"k8s.io/client-go/util/workqueue"
 
 	"github.com/golang/glog"
-	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 )
-
-type lifecycleAction struct {
-	deploy   *latticev1.Deploy
-	teardown *latticev1.Teardown
-}
 
 type Controller struct {
 	syncHandler func(sysRolloutKey string) error
@@ -36,7 +33,7 @@ type Controller struct {
 	kubeClient    kubeclientset.Interface
 	latticeClient latticeclientset.Interface
 
-	lifecycleActions       *lifecycleActions
+	lifecycleActions       *syncutil.LifecycleActionManager
 	lifecycleActionsSynced chan struct{}
 
 	deployLister       latticelisters.DeployLister
@@ -78,7 +75,7 @@ func NewController(
 		kubeClient:    kubeClient,
 		latticeClient: latticeClient,
 
-		lifecycleActions:       newLifecycleActions(),
+		lifecycleActions:       syncutil.NewLifecycleActionManager(),
 		lifecycleActionsSynced: make(chan struct{}),
 
 		deployQueue:   workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "deploy"),

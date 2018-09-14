@@ -12,20 +12,20 @@ type CreateSystemRequest struct {
 }
 
 type BuildRequest struct {
-	Path    *tree.Path        `json:"path,omitempty"`
-	Version *v1.SystemVersion `json:"version,omitempty"`
+	Path    *tree.Path  `json:"path,omitempty"`
+	Version *v1.Version `json:"version,omitempty"`
 }
 
 type DeployRequest struct {
-	BuildID *v1.BuildID       `json:"buildId,omitempty"`
-	Path    *tree.Path        `json:"path,omitempty"`
-	Version *v1.SystemVersion `json:"version,omitempty"`
+	BuildID *v1.BuildID `json:"buildId,omitempty"`
+	Path    *tree.Path  `json:"path,omitempty"`
+	Version *v1.Version `json:"version,omitempty"`
 }
 
 type RunJobRequest struct {
 	Path        tree.Path                         `json:"path"`
-	Command     []string                          `json:"command"`
-	Environment definitionv1.ContainerEnvironment `json:"environment"`
+	Command     []string                          `json:"command,omitempty"`
+	Environment definitionv1.ContainerEnvironment `json:"environment,omitempty"`
 }
 
 type SetSecretRequest struct {

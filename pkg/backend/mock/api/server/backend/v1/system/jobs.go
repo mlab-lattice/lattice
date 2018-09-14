@@ -23,9 +23,19 @@ func (b *JobBackend) Run(
 	b.backend.Lock()
 	defer b.backend.Unlock()
 
-	record, err := b.backend.systemRecord(b.systemID)
+	record, err := b.backend.systemRecordInitialized(b.systemID)
 	if err != nil {
 		return nil, err
+	}
+
+	i, ok := record.definition.Get(path)
+	if !ok {
+		return nil, v1.NewInvalidPathError()
+	}
+
+	_, ok = i.Component.(*definitionv1.Job)
+	if !ok {
+		return nil, v1.NewInvalidPathError()
 	}
 
 	job := &v1.Job{
@@ -51,7 +61,7 @@ func (b *JobBackend) List() ([]v1.Job, error) {
 	b.backend.Lock()
 	defer b.backend.Unlock()
 
-	record, err := b.backend.systemRecord(b.systemID)
+	record, err := b.backend.systemRecordInitialized(b.systemID)
 	if err != nil {
 		return nil, err
 	}
@@ -67,7 +77,7 @@ func (b *JobBackend) Get(id v1.JobID) (*v1.Job, error) {
 	b.backend.Lock()
 	defer b.backend.Unlock()
 
-	record, err := b.backend.systemRecord(b.systemID)
+	record, err := b.backend.systemRecordInitialized(b.systemID)
 	if err != nil {
 		return nil, err
 	}

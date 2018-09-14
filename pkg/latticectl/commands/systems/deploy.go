@@ -17,6 +17,7 @@ import (
 	"github.com/mlab-lattice/lattice/pkg/util/cli/printer"
 
 	"github.com/briandowns/spinner"
+	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 )
 
 type DeployCommand struct {
@@ -31,6 +32,7 @@ func (c *DeployCommand) Base() (*latticectl.BaseCommand, error) {
 		Target: &watch,
 	}
 	var buildID string
+	var path tree.Path
 	var version string
 	cmd := &latticectl.SystemCommand{
 		Name: "deploy",
@@ -41,6 +43,11 @@ func (c *DeployCommand) Base() (*latticectl.BaseCommand, error) {
 				Name:     "build",
 				Required: false,
 				Target:   &buildID,
+			},
+			&flags.Path{
+				Name:    "path",
+				Default: tree.RootPath(),
+				Target:  &path,
 			},
 			&flags.String{
 				Name:     "version",
@@ -54,7 +61,7 @@ func (c *DeployCommand) Base() (*latticectl.BaseCommand, error) {
 				log.Fatal(err)
 			}
 
-			err = DeploySystem(ctx.Client().Systems(), ctx.SystemID(), v1.BuildID(buildID), v1.SystemVersion(version), os.Stdout, format, watch)
+			err = DeploySystem(ctx.Client().Systems(), ctx.SystemID(), v1.BuildID(buildID), v1.Version(version), path, os.Stdout, format, watch)
 			if err != nil {
 				//log.Fatal(err)
 				os.Exit(1)
@@ -69,18 +76,19 @@ func DeploySystem(
 	client v1client.SystemClient,
 	systemID v1.SystemID,
 	buildID v1.BuildID,
-	version v1.SystemVersion,
+	version v1.Version,
+	path tree.Path,
 	writer io.Writer,
 	format printer.Format,
 	watch bool,
 ) error {
-	if buildID == "" && version == "" {
-		return fmt.Errorf("must provide either build or version")
-	}
-
 	var deploy *v1.Deploy
 	var err error
 	var definition string
+	if buildID == "" && version == "" {
+		client.Deploys(systemID).CreateFromPath(path)
+		definition = fmt.Sprintf("path %s", color.ID(path.String()))
+	}
 
 	if buildID != "" {
 		if version != "" {
@@ -111,7 +119,7 @@ func DeploySystem(
 				time.Sleep(100 * time.Millisecond)
 
 			case v1.DeployStateAccepted, v1.DeployStateInProgress, v1.DeployStateSucceeded:
-				buildID = *deploy.BuildID
+				buildID = *deploy.Build
 
 			default:
 				return fmt.Errorf("deploy %v failed", deploy.ID)
@@ -140,14 +148,14 @@ func printBuildStateDuringDeploy(writer io.Writer, s *spinner.Spinner, build *v1
 	switch build.State {
 	case v1.BuildStatePending:
 		s.Start()
-		s.Suffix = fmt.Sprintf(" Build pending for version: %s...", color.ID(string(build.Version)))
+		s.Suffix = fmt.Sprintf(" Build pending for version: %s...", color.ID(string(*build.Version)))
 	case v1.BuildStateRunning:
 		s.Start()
-		s.Suffix = fmt.Sprintf(" Building version: %s...", color.ID(string(build.Version)))
+		s.Suffix = fmt.Sprintf(" Building version: %s...", color.ID(string(*build.Version)))
 	case v1.BuildStateSucceeded:
 		s.Stop()
 
-		fmt.Fprint(writer, color.BoldHiSuccess("✓ %s built successfully! Now deploying...\n", string(build.Version)))
+		fmt.Fprint(writer, color.BoldHiSuccess("✓ %s built successfully! Now deploying...\n", string(*build.Version)))
 	case v1.BuildStateFailed:
 		s.Stop()
 
@@ -171,7 +179,7 @@ func printBuildStateDuringDeploy(writer io.Writer, s *spinner.Spinner, build *v1
 			}
 		}
 
-		builds.PrintBuildFailure(writer, string(build.Version), containerBuildErrors)
+		builds.PrintBuildFailure(writer, string(*build.Version), containerBuildErrors)
 	}
 }
 

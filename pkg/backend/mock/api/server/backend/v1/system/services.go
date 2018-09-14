@@ -13,19 +13,19 @@ type ServiceBackend struct {
 	backend  *Backend
 }
 
-// Secrets
+// Services
 func (b *ServiceBackend) List() ([]v1.Service, error) {
 	b.backend.Lock()
 	defer b.backend.Unlock()
 
-	record, err := b.backend.systemRecord(b.systemID)
+	record, err := b.backend.systemRecordInitialized(b.systemID)
 	if err != nil {
 		return nil, err
 	}
 
 	var services []v1.Service
 	for _, service := range record.services {
-		services = append(services, *service)
+		services = append(services, *(service.Service))
 	}
 
 	return services, nil
@@ -35,7 +35,7 @@ func (b *ServiceBackend) Get(id v1.ServiceID) (*v1.Service, error) {
 	b.backend.Lock()
 	defer b.backend.Unlock()
 
-	record, err := b.backend.systemRecord(b.systemID)
+	record, err := b.backend.systemRecordInitialized(b.systemID)
 	if err != nil {
 		return nil, err
 	}
@@ -46,7 +46,7 @@ func (b *ServiceBackend) Get(id v1.ServiceID) (*v1.Service, error) {
 	}
 
 	result := new(v1.Service)
-	*result = *service
+	*result = *(service.Service)
 
 	return result, nil
 }
@@ -55,21 +55,22 @@ func (b *ServiceBackend) GetByPath(path tree.Path) (*v1.Service, error) {
 	b.backend.Lock()
 	defer b.backend.Unlock()
 
-	record, err := b.backend.systemRecord(b.systemID)
+	record, err := b.backend.systemRecordInitialized(b.systemID)
 	if err != nil {
 		return nil, err
 	}
 
-	for _, service := range record.services {
-		if service.Path == path {
-			result := new(v1.Service)
-			*result = *service
-
-			return result, nil
-		}
+	id, ok := record.servicePaths[path]
+	if !ok {
+		return nil, v1.NewInvalidPathError()
 	}
 
-	return nil, v1.NewInvalidPathError()
+	service := record.services[id]
+
+	result := new(v1.Service)
+	*result = *(service.Service)
+
+	return result, nil
 }
 
 func (b *ServiceBackend) Logs(

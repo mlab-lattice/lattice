@@ -1,7 +1,6 @@
 package v1
 
 import (
-	// TODO: feels a little weird to have to import this here. should type definitions under pkg/system be moved into pkg/types?
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 	"time"
 )
@@ -20,22 +19,25 @@ const (
 )
 
 type Build struct {
-	ID    BuildID    `json:"id"`
-	State BuildState `json:"state"`
+	ID BuildID `json:"id"`
+
+	State   BuildState `json:"state"`
+	Message string     `json:"message,omitempty"`
 
 	StartTimestamp      *time.Time `json:"startTimestamp,omitempty"`
 	CompletionTimestamp *time.Time `json:"completionTimestamp,omitempty"`
 
-	Version SystemVersion `json:"version"`
+	Version *Version   `json:"version,omitempty"`
+	Path    *tree.Path `json:"path,omitempty"`
 
 	// Components maps component paths (e.g. /foo/bar/buzz) to the
 	// status of the build for that service in the Build.
-	Workloads map[tree.Path]WorkloadBuild `json:"services"`
+	Workloads map[tree.Path]WorkloadBuild `json:"workloads"`
 }
 
 type WorkloadBuild struct {
 	ContainerBuild
-	Sidecars map[string]ContainerBuild `json:"sidecars"`
+	Sidecars map[string]ContainerBuild `json:"sidecars,omitempty"`
 }
 
 type (

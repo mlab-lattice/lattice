@@ -34,11 +34,11 @@ func (c *BuildClient) CreateFromPath(path tree.Path) (*v1.Build, error) {
 	return c.create(&path, nil)
 }
 
-func (c *BuildClient) CreateFromVersion(version v1.SystemVersion) (*v1.Build, error) {
+func (c *BuildClient) CreateFromVersion(version v1.Version) (*v1.Build, error) {
 	return c.create(nil, &version)
 }
 
-func (c *BuildClient) create(path *tree.Path, version *v1.SystemVersion) (*v1.Build, error) {
+func (c *BuildClient) create(path *tree.Path, version *v1.Version) (*v1.Build, error) {
 	request := &v1rest.BuildRequest{
 		Path:    path,
 		Version: version,

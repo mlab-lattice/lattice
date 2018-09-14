@@ -14,7 +14,7 @@ func (b *TeardownBackend) Create() (*v1.Teardown, error) {
 	b.backend.Lock()
 	defer b.backend.Unlock()
 
-	record, err := b.backend.systemRecord(b.systemID)
+	record, err := b.backend.systemRecordInitialized(b.systemID)
 	if err != nil {
 		return nil, err
 	}
@@ -39,7 +39,7 @@ func (b *TeardownBackend) List() ([]v1.Teardown, error) {
 	b.backend.Lock()
 	defer b.backend.Unlock()
 
-	record, err := b.backend.systemRecord(b.systemID)
+	record, err := b.backend.systemRecordInitialized(b.systemID)
 	if err != nil {
 		return nil, err
 	}
@@ -57,7 +57,7 @@ func (b *TeardownBackend) Get(id v1.TeardownID) (*v1.Teardown, error) {
 	b.backend.Lock()
 	defer b.backend.Unlock()
 
-	record, err := b.backend.systemRecord(b.systemID)
+	record, err := b.backend.systemRecordInitialized(b.systemID)
 	if err != nil {
 		return nil, err
 	}

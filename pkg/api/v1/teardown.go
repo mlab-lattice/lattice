@@ -13,6 +13,8 @@ const (
 )
 
 type Teardown struct {
-	ID    TeardownID    `json:"id"`
-	State TeardownState `json:"state"`
+	ID TeardownID `json:"id"`
+
+	State   TeardownState `json:"state"`
+	Message string        `json:"message,omitempty"`
 }

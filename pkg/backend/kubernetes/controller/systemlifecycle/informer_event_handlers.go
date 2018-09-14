@@ -61,7 +61,9 @@ func (c *Controller) handleSystemEvent(system *latticev1.System, verb string) {
 		return
 	}
 
-	deploys, teardown := c.lifecycleActions.InProgressActions(namespace.UID)
+	// TODO(kevindrosendahl): switch to using actual system ID once they're UUIDs
+	uniqueSystemIdentifier := v1.SystemID(namespace.UID)
+	deploys, teardown := c.lifecycleActions.InProgressActions(uniqueSystemIdentifier)
 	for _, id := range deploys {
 		deploy, err := c.deployLister.Deploys(systemNamespace).Get(string(id))
 		if err != nil {

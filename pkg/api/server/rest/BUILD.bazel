@@ -22,6 +22,7 @@ go_test(
         "//pkg/api/v1:go_default_library",
         "//pkg/backend/mock/api/server/backend:go_default_library",
         "//pkg/backend/mock/definition/component/resolver:go_default_library",
+        "//pkg/definition/component:go_default_library",
         "//pkg/definition/component/resolver:go_default_library",
         "//pkg/definition/tree:go_default_library",
         "//pkg/definition/v1:go_default_library",

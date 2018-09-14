@@ -2,13 +2,15 @@ package systemlifecycle
 
 import (
 	"fmt"
+
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
+	syncutil "github.com/mlab-lattice/lattice/pkg/util/sync"
 )
 
 func (c *Controller) syncPendingTeardown(teardown *latticev1.Teardown) error {
 	err := c.acquireTeardownLock(teardown)
 	if err != nil {
-		_, ok := err.(*conflictingLifecycleActionError)
+		_, ok := err.(*syncutil.ConflictingLifecycleActionError)
 		if !ok {
 			return err
 		}

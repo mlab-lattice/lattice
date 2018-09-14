@@ -6,10 +6,12 @@ go_library(
         "arg.go",
         "command.go",
         "flag.go",
+        "usage_functions.go",
     ],
     importpath = "github.com/mlab-lattice/lattice/pkg/util/cli",
     visibility = ["//visibility:public"],
     deps = [
+        "//pkg/util/cli/template:go_default_library",
         "@com_github_spf13_cobra//:go_default_library",
         "@com_github_spf13_pflag//:go_default_library",
     ],
