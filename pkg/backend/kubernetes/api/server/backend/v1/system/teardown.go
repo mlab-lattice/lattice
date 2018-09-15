@@ -10,6 +10,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/satori/go.uuid"
+	"time"
 )
 
 type teardownBackend struct {
@@ -103,9 +104,24 @@ func transformTeardown(teardown *latticev1.Teardown) (v1.Teardown, error) {
 		return v1.Teardown{}, err
 	}
 
+	var startTimestamp *time.Time
+	if teardown.Status.StartTimestamp != nil {
+		startTimestamp = &teardown.Status.StartTimestamp.Time
+	}
+
+	var completionTimestamp *time.Time
+	if teardown.Status.CompletionTimestamp != nil {
+		startTimestamp = &teardown.Status.CompletionTimestamp.Time
+	}
+
 	externalTeardown := v1.Teardown{
-		ID:    v1.TeardownID(teardown.Name),
-		State: state,
+		ID: v1.TeardownID(teardown.Name),
+
+		State:   state,
+		Message: teardown.Status.Message,
+
+		StartTimestamp:      startTimestamp,
+		CompletionTimestamp: completionTimestamp,
 	}
 
 	return externalTeardown, nil

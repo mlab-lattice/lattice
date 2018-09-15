@@ -108,7 +108,9 @@ func evaluateValue(path tree.Path, val interface{}, bindings map[string]interfac
 func evaluateMap(path tree.Path, val, bindings map[string]interface{}) (interface{}, error) {
 	for k, v := range val {
 		// check to see if the map is a $secret
-		// TODO(kevindrosendahl): this is too tightly coupled, think of how to refactor
+		// TODO(kevindrosendahl): this is too tightly coupled, may want to make these different
+		//                        resolution phases pluggable so different versions can implement
+		//                        their own parsers/validators in here
 		// TODO(kevindrosendahl): should check to make sure that $secret is the only key in the map
 		if k == SecretParameterLVal {
 			// Ensure the $secret key is a string

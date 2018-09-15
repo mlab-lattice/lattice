@@ -20,7 +20,7 @@ func (b *NodePoolBackend) List() ([]v1.NodePool, error) {
 	}
 
 	var nodePools []v1.NodePool
-	for _, nodePool := range record.nodePools {
+	for _, nodePool := range record.NodePools {
 		nodePools = append(nodePools, *nodePool)
 	}
 
@@ -36,7 +36,7 @@ func (b *NodePoolBackend) Get(path tree.PathSubcomponent) (*v1.NodePool, error) 
 		return nil, err
 	}
 
-	nodePool, ok := record.nodePools[path]
+	nodePool, ok := record.NodePools[path]
 	if !ok {
 		return nil, v1.NewInvalidPathError()
 	}

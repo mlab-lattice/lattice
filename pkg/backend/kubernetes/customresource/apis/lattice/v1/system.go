@@ -61,7 +61,7 @@ func (s *System) Description() string {
 type SystemSpec struct {
 	DefinitionURL string `json:"definitionUrl"`
 
-	Definition             *resolver.ComponentTree           `json:"definition"`
+	Definition             *resolver.ResolutionTree          `json:"definition"`
 	WorkloadBuildArtifacts *SystemSpecWorkloadBuildArtifacts `json:"workloadBuildArtifacts"`
 }
 

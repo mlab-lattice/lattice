@@ -68,7 +68,7 @@ type BuildStatus struct {
 
 	InternalError *string `json:"internalError,omitempty"`
 
-	Definition *resolver.ComponentTree `json:"definition,omitempty"`
+	Definition *resolver.ResolutionTree `json:"definition,omitempty"`
 
 	StartTimestamp      *metav1.Time `json:"startTimestamp,omitempty"`
 	CompletionTimestamp *metav1.Time `json:"completionTimestamp,omitempty"`

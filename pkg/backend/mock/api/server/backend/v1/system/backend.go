@@ -6,96 +6,65 @@ import (
 	"fmt"
 	backendv1 "github.com/mlab-lattice/lattice/pkg/api/server/backend/v1"
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
+	"github.com/mlab-lattice/lattice/pkg/backend/mock/api/server/backend/controller"
+	"github.com/mlab-lattice/lattice/pkg/backend/mock/api/server/backend/registry"
 	"github.com/mlab-lattice/lattice/pkg/definition/component/resolver"
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
-	definitionv1 "github.com/mlab-lattice/lattice/pkg/definition/v1"
-	syncutil "github.com/mlab-lattice/lattice/pkg/util/sync"
 )
 
-type systemRecord struct {
-	system     *v1.System
-	definition *resolver.ComponentTree
-
-	builds map[v1.BuildID]*buildInfo
-
-	deploys map[v1.DeployID]*v1.Deploy
-
-	jobs map[v1.JobID]*v1.Job
-
-	nodePools map[tree.PathSubcomponent]*v1.NodePool
-
-	secrets map[tree.PathSubcomponent]*v1.Secret
-
-	services     map[v1.ServiceID]*serviceInfo
-	servicePaths map[tree.Path]v1.ServiceID
-
-	teardowns map[v1.TeardownID]*v1.Teardown
-}
-
-type buildInfo struct {
-	Build         *v1.Build
-	ComponentTree *resolver.ComponentTree
-}
-
-type serviceInfo struct {
-	Service    *v1.Service
-	Definition *definitionv1.Service
-}
-
 type Backend struct {
-	controller *controller
-	registry   map[v1.SystemID]*systemRecord
 	sync.Mutex
+
+	registry   *registry.Registry
+	controller *controller.Controller
 }
 
 func NewBackend(componentResolver resolver.ComponentResolver) *Backend {
-	b := &Backend{registry: make(map[v1.SystemID]*systemRecord)}
-	c := &controller{
-		backend:           b,
-		actions:           syncutil.NewLifecycleActionManager(),
-		componentResolver: componentResolver,
+	r := registry.New()
+	c := controller.New(r, componentResolver)
+	return &Backend{
+		registry:   r,
+		controller: c,
 	}
-	b.controller = c
-	return b
 }
 
 func (b *Backend) Create(systemID v1.SystemID, definitionURL string) (*v1.System, error) {
 	b.Lock()
 	defer b.Unlock()
 
-	if _, exists := b.registry[systemID]; exists {
+	if _, exists := b.registry.Systems[systemID]; exists {
 		return nil, v1.NewSystemAlreadyExistsError()
 	}
 
-	record := &systemRecord{
-		system: &v1.System{
+	record := &registry.SystemRecord{
+		System: &v1.System{
 			ID:            systemID,
 			State:         v1.SystemStatePending,
 			DefinitionURL: definitionURL,
 		},
-		definition: resolver.NewComponentTree(),
+		Definition: resolver.NewResolutionTree(),
 
-		builds: make(map[v1.BuildID]*buildInfo),
+		Builds: make(map[v1.BuildID]*registry.BuildInfo),
 
-		deploys: make(map[v1.DeployID]*v1.Deploy),
+		Deploys: make(map[v1.DeployID]*v1.Deploy),
 
-		jobs: make(map[v1.JobID]*v1.Job),
+		Jobs: make(map[v1.JobID]*v1.Job),
 
-		secrets: make(map[tree.PathSubcomponent]*v1.Secret),
+		Secrets: make(map[tree.PathSubcomponent]*v1.Secret),
 
-		services:     make(map[v1.ServiceID]*serviceInfo),
-		servicePaths: make(map[tree.Path]v1.ServiceID),
+		Services:     make(map[v1.ServiceID]*registry.ServiceInfo),
+		ServicePaths: make(map[tree.Path]v1.ServiceID),
 
-		nodePools: make(map[tree.PathSubcomponent]*v1.NodePool),
+		NodePools: make(map[tree.PathSubcomponent]*v1.NodePool),
 
-		teardowns: make(map[v1.TeardownID]*v1.Teardown),
+		Teardowns: make(map[v1.TeardownID]*v1.Teardown),
 	}
 
-	b.registry[systemID] = record
+	b.registry.Systems[systemID] = record
 	b.controller.CreateSystem(record)
 
 	system := new(v1.System)
-	*system = *record.system
+	*system = *record.System
 	return system, nil
 }
 
@@ -104,8 +73,8 @@ func (b *Backend) List() ([]v1.System, error) {
 	defer b.Unlock()
 
 	var systems []v1.System
-	for _, v := range b.registry {
-		systems = append(systems, *v.system)
+	for _, s := range b.registry.Systems {
+		systems = append(systems, *s.System)
 	}
 
 	return systems, nil
@@ -121,7 +90,7 @@ func (b *Backend) Get(systemID v1.SystemID) (*v1.System, error) {
 	}
 
 	system := new(v1.System)
-	*system = *record.system
+	*system = *record.System
 	return system, nil
 }
 
@@ -134,7 +103,7 @@ func (b *Backend) Delete(systemID v1.SystemID) error {
 		return err
 	}
 
-	delete(b.registry, systemID)
+	delete(b.registry.Systems, systemID)
 	return nil
 }
 
@@ -188,13 +157,13 @@ func (b *Backend) Teardowns(id v1.SystemID) backendv1.SystemTeardownBackend {
 }
 
 // helpers
-func (b *Backend) systemRecordInitialized(id v1.SystemID) (*systemRecord, error) {
+func (b *Backend) systemRecordInitialized(id v1.SystemID) (*registry.SystemRecord, error) {
 	record, err := b.systemRecord(id)
 	if err != nil {
 		return nil, err
 	}
 
-	switch record.system.State {
+	switch record.System.State {
 	case v1.SystemStateDeleting:
 		return record, v1.NewSystemDeletingError()
 	case v1.SystemStateFailed:
@@ -204,12 +173,12 @@ func (b *Backend) systemRecordInitialized(id v1.SystemID) (*systemRecord, error)
 	case v1.SystemStateStable, v1.SystemStateDegraded, v1.SystemStateScaling, v1.SystemStateUpdating:
 		return record, nil
 	default:
-		return nil, fmt.Errorf("invalid system state: %v", record.system.State)
+		return nil, fmt.Errorf("invalid system state: %v", record.System.State)
 	}
 }
 
-func (b *Backend) systemRecord(id v1.SystemID) (*systemRecord, error) {
-	record, ok := b.registry[id]
+func (b *Backend) systemRecord(id v1.SystemID) (*registry.SystemRecord, error) {
+	record, ok := b.registry.Systems[id]
 	if !ok {
 		return nil, v1.NewInvalidSystemIDError()
 	}

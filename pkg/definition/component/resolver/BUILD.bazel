@@ -4,8 +4,8 @@ go_library(
     name = "go_default_library",
     srcs = [
         "component_resolver.go",
-        "component_tree.go",
         "resolution_info.go",
+        "resolution_tree.go",
         "secret_store.go",
         "template_store.go",
         "v1.go",

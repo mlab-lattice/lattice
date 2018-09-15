@@ -24,7 +24,7 @@ func (b *TeardownBackend) Create() (*v1.Teardown, error) {
 		State: v1.TeardownStatePending,
 	}
 
-	record.teardowns[teardown.ID] = teardown
+	record.Teardowns[teardown.ID] = teardown
 
 	// run the teardown
 	b.backend.controller.RunTeardown(teardown, record)
@@ -45,7 +45,7 @@ func (b *TeardownBackend) List() ([]v1.Teardown, error) {
 	}
 
 	var teardowns []v1.Teardown
-	for _, teardown := range record.teardowns {
+	for _, teardown := range record.Teardowns {
 		teardowns = append(teardowns, *teardown)
 	}
 
@@ -62,7 +62,7 @@ func (b *TeardownBackend) Get(id v1.TeardownID) (*v1.Teardown, error) {
 		return nil, err
 	}
 
-	teardown, ok := record.teardowns[id]
+	teardown, ok := record.Teardowns[id]
 	if !ok {
 		return nil, v1.NewInvalidTeardownIDError()
 	}

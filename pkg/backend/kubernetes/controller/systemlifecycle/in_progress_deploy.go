@@ -39,7 +39,15 @@ func (c *Controller) syncInProgressDeploy(deploy *latticev1.Deploy) error {
 	// first it's possible that the deployment status update could fail, and another deploy
 	// successfully acquires the lock. if the controller then restarted, it could see
 	// conflicting locks when seeding the lifecycle actions
-	deploy, err = c.updateDeployStatus(deploy, state, "", nil, deploy.Status.BuildID)
+	deploy, err = c.updateDeployStatus(
+		deploy,
+		state,
+		"",
+		nil,
+		deploy.Status.BuildID,
+		deploy.Status.StartTimestamp,
+		deploy.Status.CompletionTimestamp,
+	)
 	if err != nil {
 		return err
 	}

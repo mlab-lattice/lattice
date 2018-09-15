@@ -21,7 +21,7 @@ func (b *SecretBackend) List() ([]v1.Secret, error) {
 	}
 
 	var secrets []v1.Secret
-	for _, secret := range record.secrets {
+	for _, secret := range record.Secrets {
 		secrets = append(secrets, *secret)
 	}
 
@@ -37,7 +37,7 @@ func (b *SecretBackend) Get(path tree.PathSubcomponent) (*v1.Secret, error) {
 		return nil, err
 	}
 
-	for _, secret := range record.secrets {
+	for _, secret := range record.Secrets {
 		if secret.Path == path {
 			result := new(v1.Secret)
 			*result = *secret
@@ -57,7 +57,7 @@ func (b *SecretBackend) Set(path tree.PathSubcomponent, value string) error {
 		return err
 	}
 
-	for _, secret := range record.secrets {
+	for _, secret := range record.Secrets {
 		if secret.Path == path {
 			secret.Value = value
 			return nil
@@ -69,7 +69,7 @@ func (b *SecretBackend) Set(path tree.PathSubcomponent, value string) error {
 		Value: value,
 	}
 
-	record.secrets[path] = secret
+	record.Secrets[path] = secret
 
 	return nil
 }
@@ -83,11 +83,11 @@ func (b *SecretBackend) Unset(path tree.PathSubcomponent) error {
 		return err
 	}
 
-	_, ok := record.secrets[path]
+	_, ok := record.Secrets[path]
 	if !ok {
 		return v1.NewInvalidSecretError()
 	}
 
-	delete(record.secrets, path)
+	delete(record.Secrets, path)
 	return nil
 }

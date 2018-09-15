@@ -6,6 +6,8 @@ import (
 	"testing"
 )
 
+// TODO(kevindrosendahl): add more testing here, seems very incomplete
+
 func TestVariableRegex(t *testing.T) {
 	tests := []struct {
 		input      string
