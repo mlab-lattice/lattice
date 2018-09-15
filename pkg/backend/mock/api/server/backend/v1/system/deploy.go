@@ -40,7 +40,7 @@ func (b *DeployBackend) create(id *v1.BuildID, p *tree.Path, v *v1.Version) (*v1
 		State:   v1.DeployStatePending,
 	}
 
-	record.deploys[deploy.ID] = deploy
+	record.Deploys[deploy.ID] = deploy
 
 	b.backend.controller.RunDeploy(deploy, record)
 
@@ -62,7 +62,7 @@ func (b *DeployBackend) List() ([]v1.Deploy, error) {
 	}
 
 	var deploys []v1.Deploy
-	for _, deploy := range record.deploys {
+	for _, deploy := range record.Deploys {
 		deploys = append(deploys, *deploy)
 	}
 
@@ -78,7 +78,7 @@ func (b *DeployBackend) Get(id v1.DeployID) (*v1.Deploy, error) {
 		return nil, err
 	}
 
-	deploy, ok := record.deploys[id]
+	deploy, ok := record.Deploys[id]
 	if !ok {
 		return nil, v1.NewInvalidDeployIDError()
 	}

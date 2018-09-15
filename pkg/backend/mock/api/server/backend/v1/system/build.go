@@ -7,8 +7,6 @@ import (
 
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
-
-	"github.com/satori/go.uuid"
 )
 
 type BuildBackend struct {
@@ -33,15 +31,7 @@ func (b *BuildBackend) create(p *tree.Path, v *v1.Version) (*v1.Build, error) {
 		return nil, err
 	}
 
-	build := &v1.Build{
-		ID:      v1.BuildID(uuid.NewV4().String()),
-		State:   v1.BuildStatePending,
-		Path:    p,
-		Version: v,
-	}
-	record.builds[build.ID] = &buildInfo{
-		Build: build,
-	}
+	build := b.backend.registry.CreateBuild(p, v, record)
 
 	// run the build
 	b.backend.controller.RunBuild(build, record)
@@ -64,7 +54,7 @@ func (b *BuildBackend) List() ([]v1.Build, error) {
 	}
 
 	var builds []v1.Build
-	for _, build := range record.builds {
+	for _, build := range record.Builds {
 		builds = append(builds, *build.Build)
 	}
 
@@ -80,7 +70,7 @@ func (b *BuildBackend) Get(id v1.BuildID) (*v1.Build, error) {
 		return nil, err
 	}
 
-	build, ok := record.builds[id]
+	build, ok := record.Builds[id]
 	if !ok {
 		return nil, v1.NewInvalidBuildIDError()
 	}

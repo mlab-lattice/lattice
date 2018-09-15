@@ -28,7 +28,7 @@ func (b *JobBackend) Run(
 		return nil, err
 	}
 
-	i, ok := record.definition.Get(path)
+	i, ok := record.Definition.Get(path)
 	if !ok {
 		return nil, v1.NewInvalidPathError()
 	}
@@ -44,7 +44,7 @@ func (b *JobBackend) Run(
 		Path:  path,
 	}
 
-	record.jobs[job.ID] = job
+	record.Jobs[job.ID] = job
 
 	// run the job
 	b.backend.controller.RunJob(job)
@@ -67,7 +67,7 @@ func (b *JobBackend) List() ([]v1.Job, error) {
 	}
 
 	var jobs []v1.Job
-	for _, job := range record.jobs {
+	for _, job := range record.Jobs {
 		jobs = append(jobs, *job)
 	}
 
@@ -82,7 +82,7 @@ func (b *JobBackend) Get(id v1.JobID) (*v1.Job, error) {
 		return nil, err
 	}
 
-	job, ok := record.jobs[id]
+	job, ok := record.Jobs[id]
 	if !ok {
 		return nil, v1.NewInvalidJobIDError()
 	}
