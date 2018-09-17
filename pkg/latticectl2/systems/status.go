@@ -27,7 +27,7 @@ func Status() *cli.Command {
 			"watch":  command.WatchFlag(),
 		},
 		Run: func(ctx *command.SystemCommandContext, args []string, flags cli.Flags) {
-			format := printer.Format(flags["watch"].Value().(string))
+			format := printer.Format(flags["output"].Value().(string))
 
 			if flags["watch"].Value().(bool) {
 				WatchSystem(ctx.Client.V1().Systems(), ctx.System, format, os.Stdout)
@@ -44,24 +44,37 @@ func Status() *cli.Command {
 	return cmd.Command()
 }
 
-func GetSystem(client clientv1.SystemClient, id v1.SystemID, format printer.Format, writer io.Writer) error {
+func GetSystem(client clientv1.SystemClient, id v1.SystemID, format printer.Format, w io.Writer) error {
 	// TODO: Make requests in parallel
 	system, err := client.Get(id)
 	if err != nil {
 		return err
 	}
 
-	serviceList, err := client.Services(id).List()
-	if err != nil {
-		return err
+	switch format {
+	case printer.FormatTable:
+		services, err := client.Services(id).List()
+		if err != nil {
+			return err
+		}
+
+		t := systemTable(w)
+		r := systemTableRows(services)
+		t.AppendRows(r)
+		t.Print()
+
+	case printer.FormatJSON:
+		j := printer.NewJSON(w)
+		j.Print(system)
+
+	default:
+		return fmt.Errorf("unexpected format %v", format)
 	}
 
-	p := systemPrinter(system, serviceList, format)
-	p.Print(writer)
 	return nil
 }
 
-func WatchSystem(client clientv1.SystemClient, id v1.SystemID, format printer.Format, writer io.Writer) {
+func WatchSystem(client clientv1.SystemClient, id v1.SystemID, f printer.Format, w io.Writer) {
 	type status struct {
 		system   *v1.System
 		services []v1.Service
@@ -76,6 +89,11 @@ func WatchSystem(client clientv1.SystemClient, id v1.SystemID, format printer.Fo
 			// TODO: Make requests in parallel
 			system, err := client.Get(id)
 			if err != nil {
+				if e, ok := err.(*v1.Error); ok && e.Code == v1.ErrorCodeInvalidSystemID {
+					close(statuses)
+					return true, nil
+				}
+
 				return false, err
 			}
 
@@ -89,160 +107,135 @@ func WatchSystem(client clientv1.SystemClient, id v1.SystemID, format printer.Fo
 			return false, nil
 		},
 	)
-	spin := spinner.New(spinner.CharSets[14], 100*time.Millisecond)
 
-	for s := range statuses {
-		p := systemPrinter(s.system, s.services, format)
-		p.Stream(writer)
-
-		if format == printer.FormatTable {
-			printState(writer, spin, s.system, s.services)
-		}
-
-		switch s.system.State {
-		case v1.SystemStateStable, v1.SystemStateFailed:
-			return
-		}
-	}
-}
-
-func printState(writer io.Writer, s *spinner.Spinner, system *v1.System, services []v1.Service) {
-	switch system.State {
-	case v1.SystemStateScaling:
-		s.Start()
-		s.Suffix = fmt.Sprintf(" System %s is scaling...", color.ID(string(system.ID)))
-
-	case v1.SystemStateUpdating:
-		s.Start()
-		s.Suffix = fmt.Sprintf(" System %s is updating...", color.ID(string(system.ID)))
-
-	case v1.SystemStateDeleting:
-		s.Start()
-		s.Suffix = fmt.Sprintf(" System %s is terminating...", color.ID(string(system.ID)))
-
-	case v1.SystemStateStable:
-		s.Stop()
-		fmt.Fprint(writer, color.BoldHiSuccess("System %s is stable.", string(system.ID)))
-
-	case v1.SystemStateFailed:
-		s.Stop()
-		fmt.Fprint(writer, color.BoldHiFailure("System %s has failed.", string(system.ID)))
-
-		var serviceErrors [][]string
-
-		for _, service := range services {
-			if service.State == v1.ServiceStateFailed {
-				message := "unknown"
-				if service.FailureInfo != nil {
-					message = service.FailureInfo.Message
-				}
-
-				serviceErrors = append(serviceErrors, []string{
-					service.Path.String(),
-					message,
-				})
-			}
-		}
-
-		fmt.Fprint(writer, color.BoldHiFailure("✘ Error encountered in system "))
-		fmt.Fprint(writer, color.BoldHiFailure(string(system.ID)))
-		fmt.Fprint(writer, color.BoldHiFailure(":\n\n"))
-		for _, serviceError := range serviceErrors {
-			fmt.Fprintf(writer, color.Failure("Error in service %s, Error message:\n\n    %s\n"), serviceError[0], serviceError[1])
-		}
-	}
-}
-
-// Currently just prints systems. In the future, could print more details (e.g. jobs, node pools)
-func systemPrinter(system *v1.System, services []v1.Service, format printer.Format) printer.Interface {
-	var p printer.Interface
-	switch format {
+	var handle func(s status)
+	switch f {
 	case printer.FormatTable:
-		t := &printer.Table{
-			Columns: []printer.TableColumn{
-				{
-					Header:    "Service",
-					Color:     color.ID,
-					Alignment: printer.TableAlignLeft,
-				},
-				{
-					Header:    "State",
-					Alignment: printer.TableAlignLeft,
-				},
-				{
-					Header:    "Available",
-					Alignment: printer.TableAlignRight,
-				},
-				{
-					Header:    "Updated",
-					Alignment: printer.TableAlignRight,
-				},
-				{
-					Header:    "Stale",
-					Alignment: printer.TableAlignRight,
-				},
-				{
-					Header:    "Terminating",
-					Alignment: printer.TableAlignRight,
-				},
-				{
-					Header:    "Ports",
-					Alignment: printer.TableAlignLeft,
-				},
-				{
-					Header:    "Info",
-					Alignment: printer.TableAlignLeft,
-				},
-			},
+		t := systemTable(w)
+		s := spinner.New(spinner.CharSets[14], 100*time.Millisecond)
+		s.Start()
+		handle = func(status status) {
+			r := systemTableRows(status.services)
+			t.Overwrite(r)
+
+			switch status.system.State {
+			case v1.SystemStatePending:
+				s.Suffix = " pending..."
+
+			case v1.SystemStateDeleting:
+				s.Suffix = " deleting..."
+
+			case v1.SystemStateFailed:
+				s.Stop()
+				fmt.Fprintln(w, color.BoldHiFailureString(" ✘ system has failed"))
+
+			case v1.SystemStateScaling:
+				s.Suffix = " scaling..."
+
+			case v1.SystemStateUpdating:
+				s.Suffix = " updating..."
+
+			case v1.SystemStateStable:
+				s.Suffix = color.BoldHiSuccessString(" ✓ system is stable")
+
+			case v1.SystemStateDegraded:
+				s.Suffix = " system has become degraded"
+			}
 		}
-
-		var rows [][]string
-		for _, service := range services {
-			var message string
-			if service.Message != nil {
-				message = *service.Message
-			}
-			if service.FailureInfo != nil {
-				message = service.FailureInfo.Message
-			}
-
-			var stateColor color.Color
-			switch service.State {
-			case v1.ServiceStateStable:
-				stateColor = color.Success
-			case v1.ServiceStateFailed:
-				stateColor = color.Failure
-			default:
-				stateColor = color.Warning
-			}
-
-			var addresses []string
-			for port, address := range service.Ports {
-				addresses = append(addresses, fmt.Sprintf("%v: %v", port, address))
-			}
-
-			rows = append(rows, []string{
-				service.Path.String(),
-				stateColor(string(service.State)),
-				fmt.Sprintf("%d", service.AvailableInstances),
-				fmt.Sprintf("%d", service.UpdatedInstances),
-				fmt.Sprintf("%d", service.StaleInstances),
-				fmt.Sprintf("%d", service.TerminatingInstances),
-				strings.Join(addresses, ","),
-				string(message),
-			})
-
-		}
-
-		// sort the rows by service ID
-		sort.Slice(rows, func(i, j int) bool { return rows[i][0] < rows[j][0] })
-		t.AppendRows(rows)
 
 	case printer.FormatJSON:
-		p = &printer.JSON{
-			Value: system,
+		j := printer.NewJSON(w)
+		handle = func(status status) {
+			j.Stream(status.system)
 		}
+
+	default:
+		panic(fmt.Sprintf("unexpected format %v", f))
 	}
 
-	return p
+	for s := range statuses {
+		handle(s)
+	}
+}
+
+func systemTable(w io.Writer) *printer.Table {
+	return printer.NewTable(w, []printer.TableColumn{
+		{
+			Header:    "service",
+			Alignment: printer.TableAlignLeft,
+		},
+		{
+			Header:    "state",
+			Alignment: printer.TableAlignLeft,
+		},
+		{
+			Header:    "available",
+			Alignment: printer.TableAlignRight,
+		},
+		{
+			Header:    "updated",
+			Alignment: printer.TableAlignRight,
+		},
+		{
+			Header:    "stale",
+			Alignment: printer.TableAlignRight,
+		},
+		{
+			Header:    "terminating",
+			Alignment: printer.TableAlignRight,
+		},
+		{
+			Header:    "ports",
+			Alignment: printer.TableAlignLeft,
+		},
+		{
+			Header:    "info",
+			Alignment: printer.TableAlignLeft,
+		},
+	})
+}
+
+func systemTableRows(services []v1.Service) []printer.TableRow {
+	var rows []printer.TableRow
+	for _, service := range services {
+		var message string
+		if service.Message != nil {
+			message = *service.Message
+		}
+		if service.FailureInfo != nil {
+			message = service.FailureInfo.Message
+		}
+
+		var stateColor color.Formatter
+		switch service.State {
+		case v1.ServiceStateStable:
+			stateColor = color.SuccessString
+		case v1.ServiceStateFailed:
+			stateColor = color.FailureString
+		default:
+			stateColor = color.WarningString
+		}
+
+		var addresses []string
+		for port, address := range service.Ports {
+			addresses = append(addresses, fmt.Sprintf("%v: %v", port, address))
+		}
+
+		rows = append(rows, []string{
+			color.IDString(service.Path.String()),
+			stateColor(string(service.State)),
+			fmt.Sprintf("%d", service.AvailableInstances),
+			fmt.Sprintf("%d", service.UpdatedInstances),
+			fmt.Sprintf("%d", service.StaleInstances),
+			fmt.Sprintf("%d", service.TerminatingInstances),
+			strings.Join(addresses, ","),
+			string(message),
+		})
+
+	}
+
+	// sort the rows by service ID
+	sort.Slice(rows, func(i, j int) bool { return rows[i][0] < rows[j][0] })
+
+	return rows
 }

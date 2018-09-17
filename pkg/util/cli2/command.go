@@ -17,7 +17,7 @@ type Command struct {
 	Args        Args
 	Flags       Flags
 	PreRun      func()
-	Run         func(args []string)
+	Run         func(args []string, flags Flags)
 	Subcommands map[string]*Command
 	cobraCmd    *cobra.Command
 }
@@ -43,7 +43,7 @@ func (c *Command) Init(name string) error {
 				cmd.Help()
 				os.Exit(1)
 			}
-			c.Run(args)
+			c.Run(args, c.Flags)
 		},
 	}
 
@@ -156,7 +156,7 @@ func (c *Command) initColon(name string) error {
 				os.Exit(1)
 			}
 
-			c.Run(args)
+			c.Run(args, c.Flags)
 		},
 	}
 
@@ -176,14 +176,14 @@ func (c *Command) initColon(name string) error {
 		// answer here: https://www.ardanlabs.com/blog/2014/06/pitfalls-with-closures-in-go.html
 		// (n.b. subcommand.Name will be copied here since it's a string, but since
 		//  subcommand.Run is a pointer, we need to do this trickery)
-		subcommand.cobraCmd.Run = func(run func([]string)) func(*cobra.Command, []string) {
+		subcommand.cobraCmd.Run = func(run func([]string, Flags)) func(*cobra.Command, []string) {
 			return func(cmd *cobra.Command, args []string) {
 				if run == nil {
 					cmd.Help()
 					os.Exit(1)
 				}
 
-				run(args)
+				run(args, subcommand.Flags)
 			}
 		}(subcommand.Run)
 

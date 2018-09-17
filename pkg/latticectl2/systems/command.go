@@ -14,6 +14,7 @@ import (
 	"github.com/mlab-lattice/lattice/pkg/util/cli2/printer"
 
 	"k8s.io/apimachinery/pkg/util/wait"
+	"sort"
 )
 
 // ListSupportedFormats is the list of printer.Formats supported
@@ -30,7 +31,7 @@ func Command() *cli.Command {
 			"watch":  command.WatchFlag(),
 		},
 		Run: func(ctx *command.LatticeCommandContext, args []string, flags cli.Flags) {
-			format := printer.Format(flags["watch"].Value().(string))
+			format := printer.Format(flags["output"].Value().(string))
 
 			if flags["watch"].Value().(bool) {
 				WatchSystems(ctx.Client.V1().Systems(), format, os.Stdout)
@@ -109,20 +110,20 @@ func WatchSystems(client clientv1.SystemClient, format printer.Format, w io.Writ
 		handle = func(systems []v1.System) {
 			j.Stream(systems)
 		}
+
+	default:
+		panic(fmt.Sprintf("unexpected format %v", format))
 	}
 
 	for s := range systems {
 		handle(s)
 	}
-
-	panic(fmt.Sprintf("unexpected format %v", format))
 }
 
 func systemsTable(w io.Writer) *printer.Table {
 	return printer.NewTable(w, []printer.TableColumn{
 		{
 			Header:    "name",
-			Color:     color.ID,
 			Alignment: printer.TableAlignLeft,
 		},
 		{
@@ -139,22 +140,25 @@ func systemsTable(w io.Writer) *printer.Table {
 func systemsTableRows(systems []v1.System) []printer.TableRow {
 	var rows []printer.TableRow
 	for _, system := range systems {
-		var stateColor color.Color
+		var stateColor color.Formatter
 		switch system.State {
 		case v1.SystemStateStable:
-			stateColor = color.Success
+			stateColor = color.SuccessString
 		case v1.SystemStateFailed:
-			stateColor = color.Failure
+			stateColor = color.FailureString
 		default:
-			stateColor = color.Warning
+			stateColor = color.WarningString
 		}
 
 		rows = append(rows, []string{
-			string(system.ID),
+			color.IDString(string(system.ID)),
 			system.DefinitionURL,
 			stateColor(string(system.State)),
 		})
 	}
+
+	// sort the rows by system ID
+	sort.Slice(rows, func(i, j int) bool { return rows[i][0] < rows[j][0] })
 
 	return rows
 }

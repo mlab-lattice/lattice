@@ -24,11 +24,11 @@ type Context struct {
 
 type configFile struct {
 	Path      string
-	config    *Config
+	config    Config
 	configSet bool
 }
 
-func (c *configFile) GetContext() (*Context, error) {
+func (c *configFile) GetContext() (Context, error) {
 	// Want to ensure a consistent state of the config
 	// throughout a command, so once we read it in
 	// we don't want to read it again
@@ -38,7 +38,7 @@ func (c *configFile) GetContext() (*Context, error) {
 
 		cfg, err = c.readConfig()
 		if err != nil {
-			return nil, err
+			return Context{}, err
 		}
 
 		c.config = cfg
@@ -48,16 +48,12 @@ func (c *configFile) GetContext() (*Context, error) {
 	return c.config.Context, nil
 }
 
-func (c *configFile) SetContext(ctx *Context) error {
+func (c *configFile) SetContext(ctx Context) error {
 	// Want to read the freshest version of the config before overwritting it.
 	// N.B.: race condition here against setting other things in the config file
 	cfg, err := c.readConfig()
 	if err != nil {
 		return err
-	}
-
-	if cfg == nil {
-		cfg = &Config{}
 	}
 
 	cfg.Context = ctx
@@ -68,25 +64,22 @@ func (c *configFile) SetContext(ctx *Context) error {
 	return c.writeConfig(cfg)
 }
 
-func (c *configFile) readConfig() (*Config, error) {
+func (c *configFile) readConfig() (Config, error) {
+	cfg := Config{}
 	data, err := ioutil.ReadFile(c.configFilepath())
 	if err != nil {
 		if os.IsNotExist(err) {
-			return nil, nil
+			return cfg, nil
 		}
 
-		return nil, fmt.Errorf("unable to read config file: %v", err)
+		return cfg, fmt.Errorf("unable to read config file: %v", err)
 	}
 
-	cfg := Config{}
-	if err := json.Unmarshal(data, &cfg); err != nil {
-		return nil, fmt.Errorf("unable to unmarshal config file: %v", err)
-	}
-
-	return &cfg, nil
+	err = json.Unmarshal(data, &cfg)
+	return cfg, err
 }
 
-func (c *configFile) writeConfig(cfg *Config) error {
+func (c *configFile) writeConfig(cfg Config) error {
 	data, err := json.MarshalIndent(&cfg, "", "  ")
 	if err != nil {
 		return fmt.Errorf("unable to marshal config: %v", err)

@@ -41,7 +41,6 @@ type Table struct {
 
 type TableColumn struct {
 	Header    string
-	Color     color.Color
 	Alignment TableAlignment
 }
 
@@ -74,12 +73,11 @@ func (t *Table) print(w io.Writer) error {
 
 	var headers []string
 	var headerColors []tablewriter.Colors
-	var columnColors []tablewriter.Colors
 	var alignments []int
 	for _, c := range t.columns {
 		headers = append(headers, strings.ToUpper(c.Header))
 		headerColors = append(headerColors, translateColor(color.Bold))
-		columnColors = append(columnColors, translateColor(c.Color))
+		//columnColors = append(columnColors, translateColor(c.Color))
 		alignments = append(alignments, int(c.Alignment))
 	}
 
@@ -90,14 +88,13 @@ func (t *Table) print(w io.Writer) error {
 	table.SetHeader(headers)
 	table.SetAutoFormatHeaders(false)
 	table.SetBorder(false)
-	table.SetCenterSeparator(color.Black(" "))
-	table.SetColumnSeparator(color.Black(" "))
-	table.SetRowSeparator(color.Black("-"))
+	table.SetCenterSeparator(color.BlackString(" "))
+	table.SetColumnSeparator(color.BlackString(" "))
+	table.SetRowSeparator(color.BlackString("-"))
 	table.SetAutoWrapText(false)
 	table.SetReflowDuringAutoWrap(false)
 
 	table.SetHeaderColor(headerColors...)
-	table.SetColumnColor(columnColors...)
 	table.SetColumnAlignment(alignments)
 
 	for _, r := range t.rows {

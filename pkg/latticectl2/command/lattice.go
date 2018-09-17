@@ -10,7 +10,7 @@ import (
 )
 
 type LatticeCommandContext struct {
-	Context *Context
+	Context Context
 	Lattice string
 	Client  client.Interface
 }
@@ -32,8 +32,8 @@ func (c *LatticeCommand) Command() *cli.Command {
 		Short: c.Short,
 		Args:  c.Args,
 		Flags: c.Flags,
-		Run: func(args []string) {
-			configFile := &configFile{}
+		Run: func(args []string, flags cli.Flags) {
+			var configFile configFile
 			context, err := configFile.GetContext()
 			if err != nil {
 				// TODO(kevindrosendahl): better handling here
@@ -56,7 +56,7 @@ func (c *LatticeCommand) Command() *cli.Command {
 				// FIXME(kevindrosendahl): support api auth key
 				Client: rest.NewClient(lattice, ""),
 			}
-			c.Run(ctx, args)
+			c.Run(ctx, args, flags)
 		},
 		Subcommands: c.Subcommands,
 	}

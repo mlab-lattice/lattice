@@ -4,10 +4,8 @@ go_library(
     name = "go_default_library",
     srcs = [
         "format.go",
-        "interface.go",
         "json.go",
         "table.go",
-        "watcher.go",
     ],
     importpath = "github.com/mlab-lattice/lattice/pkg/util/cli2/printer",
     visibility = ["//visibility:public"],

@@ -1,5 +1,5 @@
 package command
 
 type Config struct {
-	Context *Context `json:"context"`
+	Context Context `json:"context"`
 }
