@@ -27,21 +27,18 @@ var ListSupportedFormats = []printer.Format{
 func Command() *cli.Command {
 	cmd := command.LatticeCommand{
 		Flags: map[string]cli.Flag{
-			"output": command.OutputFlag(ListSupportedFormats, printer.FormatTable),
-			"watch":  command.WatchFlag(),
+			command.OutputFlagName: command.OutputFlag(ListSupportedFormats, printer.FormatTable),
+			command.WatchFlagName:  command.WatchFlag(),
 		},
-		Run: func(ctx *command.LatticeCommandContext, args []string, flags cli.Flags) {
+		Run: func(ctx *command.LatticeCommandContext, args []string, flags cli.Flags) error {
 			format := printer.Format(flags["output"].Value().(string))
 
 			if flags["watch"].Value().(bool) {
 				WatchSystems(ctx.Client.V1().Systems(), format, os.Stdout)
-				return
+				return nil
 			}
 
-			err := ListSystems(ctx.Client.V1().Systems(), format, os.Stdout)
-			if err != nil {
-				panic(err)
-			}
+			return ListSystems(ctx.Client.V1().Systems(), format, os.Stdout)
 		},
 		Subcommands: map[string]*cli.Command{
 			"status": Status(),

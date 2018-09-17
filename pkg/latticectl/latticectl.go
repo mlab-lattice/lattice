@@ -10,7 +10,7 @@ import (
 
 func DefaultLatticeClient(lattice string) v1client.Interface {
 	// FIXME: add api key support
-	return rest.NewClient(lattice, "").V1()
+	return rest.NewUnauthenticatedClient(lattice).V1()
 }
 
 type Latticectl struct {

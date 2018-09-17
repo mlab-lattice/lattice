@@ -1,16 +1,15 @@
 package command
 
 import (
-	"log"
+	"fmt"
 
 	"github.com/mlab-lattice/lattice/pkg/api/client"
 	"github.com/mlab-lattice/lattice/pkg/api/client/rest"
 	"github.com/mlab-lattice/lattice/pkg/util/cli2"
-	"github.com/mlab-lattice/lattice/pkg/util/cli2/flags"
 )
 
 type LatticeCommandContext struct {
-	Context Context
+	Context *Context
 	Lattice string
 	Client  client.Interface
 }
@@ -19,44 +18,54 @@ type LatticeCommand struct {
 	Short       string
 	Args        cli.Args
 	Flags       cli.Flags
-	Run         func(ctx *LatticeCommandContext, args []string, flags cli.Flags)
+	Run         func(ctx *LatticeCommandContext, args []string, flags cli.Flags) error
 	Subcommands map[string]*cli.Command
 }
 
 func (c *LatticeCommand) Command() *cli.Command {
-	c.Flags["lattice"] = &flags.String{
-		Required: false,
-	}
+	c.Flags[ConfigFlagName] = ConfigFlag()
+	c.Flags[ContextFlagName] = ContextFlag()
 
 	cmd := &cli.Command{
 		Short: c.Short,
 		Args:  c.Args,
 		Flags: c.Flags,
-		Run: func(args []string, flags cli.Flags) {
-			var configFile configFile
-			context, err := configFile.GetContext()
+		Run: func(args []string, flags cli.Flags) error {
+			// if ConfigFile.Path is empty, it will look in $XDG_CONFIG_HOME/.latticectl/config.json
+			configPath := c.Flags[ConfigFlagName].Value().(string)
+			configFile := ConfigFile{Path: configPath}
+
+			contextName := c.Flags[ContextFlagName].Value().(string)
+			if contextName == "" {
+				var err error
+				contextName, err = configFile.CurrentContext()
+				if err != nil {
+					return err
+				}
+			}
+
+			context, err := configFile.Context(contextName)
 			if err != nil {
-				// TODO(kevindrosendahl): better handling here
-				panic(err)
+				return err
 			}
 
-			lattice := c.Flags["lattice"].Value().(string)
-			// Try to retrieve the lattice from the context if there is one
-			if lattice == "" {
-				lattice = context.Lattice
-			}
+			var client client.Interface
+			switch {
+			case context.Auth == nil:
+				client = rest.NewUnauthenticatedClient(context.Lattice)
 
-			if lattice == "" {
-				log.Fatal("required flag lattice must be set")
+			case context.Auth.BearerToken != nil:
+				client = rest.NewBearerTokenClient(context.Lattice, *context.Auth.BearerToken)
+
+			default:
+				return fmt.Errorf("invalid auth options for context %v", contextName)
 			}
 
 			ctx := &LatticeCommandContext{
 				Context: context,
-				Lattice: lattice,
-				// FIXME(kevindrosendahl): support api auth key
-				Client: rest.NewClient(lattice, ""),
+				Client:  client,
 			}
-			c.Run(ctx, args, flags)
+			return c.Run(ctx, args, flags)
 		},
 		Subcommands: c.Subcommands,
 	}

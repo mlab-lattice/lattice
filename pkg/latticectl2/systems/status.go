@@ -23,21 +23,18 @@ import (
 func Status() *cli.Command {
 	cmd := command.SystemCommand{
 		Flags: map[string]cli.Flag{
-			"output": command.OutputFlag(ListSupportedFormats, printer.FormatTable),
-			"watch":  command.WatchFlag(),
+			command.OutputFlagName: command.OutputFlag(ListSupportedFormats, printer.FormatTable),
+			command.WatchFlagName:  command.WatchFlag(),
 		},
-		Run: func(ctx *command.SystemCommandContext, args []string, flags cli.Flags) {
-			format := printer.Format(flags["output"].Value().(string))
+		Run: func(ctx *command.SystemCommandContext, args []string, flags cli.Flags) error {
+			format := printer.Format(flags[command.OutputFlagName].Value().(string))
 
-			if flags["watch"].Value().(bool) {
+			if flags[command.WatchFlagName].Value().(bool) {
 				WatchSystem(ctx.Client.V1().Systems(), ctx.System, format, os.Stdout)
-				return
+				return nil
 			}
 
-			err := GetSystem(ctx.Client.V1().Systems(), ctx.System, format, os.Stdout)
-			if err != nil {
-				panic(err)
-			}
+			return GetSystem(ctx.Client.V1().Systems(), ctx.System, format, os.Stdout)
 		},
 	}
 

@@ -1,6 +1,7 @@
 package latticectl2
 
 import (
+	"github.com/mlab-lattice/lattice/pkg/latticectl2/context"
 	"github.com/mlab-lattice/lattice/pkg/latticectl2/systems"
 	"github.com/mlab-lattice/lattice/pkg/util/cli2"
 )
@@ -10,6 +11,7 @@ var Command = cli.RootCommand{
 	Command: &cli.Command{
 		Short: "utility for interacting with lattices",
 		Subcommands: map[string]*cli.Command{
+			"context": context.Command(),
 			"systems": systems.Command(),
 		},
 	},

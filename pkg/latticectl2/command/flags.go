@@ -8,6 +8,22 @@ import (
 	"github.com/mlab-lattice/lattice/pkg/util/cli2/printer"
 )
 
+const (
+	ConfigFlagName  = "config"
+	ContextFlagName = "Context"
+	OutputFlagName  = "output"
+	SystemFlagName  = "system"
+	WatchFlagName   = "watch"
+)
+
+func ConfigFlag() *flags.String {
+	return &flags.String{}
+}
+
+func ContextFlag() *flags.String {
+	return &flags.String{}
+}
+
 func OutputFlag(supported []printer.Format, defaultFormat printer.Format) *flags.String {
 	if defaultFormat == "" {
 		defaultFormat = printer.FormatTable
@@ -33,8 +49,15 @@ func OutputFlag(supported []printer.Format, defaultFormat printer.Format) *flags
 	}
 }
 
+func SystemFlag() *flags.String {
+	return &flags.String{
+		Required: false,
+	}
+}
+
 func WatchFlag() *flags.Bool {
 	return &flags.Bool{
+		Short:    "w",
 		Required: false,
 	}
 }

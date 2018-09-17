@@ -33,7 +33,7 @@ const (
 )
 
 var (
-	latticeClient = clientrest.NewClient(mockAPIServerURL, mockServerAPIKey).V1()
+	latticeClient = clientrest.NewBearerTokenClient(mockAPIServerURL, mockServerAPIKey).V1()
 
 	mockSystemDefURL = fmt.Sprintf("file://%v", mockRepoPath)
 
@@ -631,7 +631,7 @@ func authTest(t *testing.T) {
 	fmt.Println("Auth success!!")
 
 	fmt.Println("Testing auth with bad API key")
-	badClient := clientrest.NewClient(mockAPIServerURL, "bad api key").V1()
+	badClient := clientrest.NewBearerTokenClient(mockAPIServerURL, "bad api key").V1()
 	_, err = badClient.Systems().List()
 
 	if err != nil && !strings.Contains(fmt.Sprintf("%v", err), "status code 403") {

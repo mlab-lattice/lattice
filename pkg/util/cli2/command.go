@@ -17,7 +17,7 @@ type Command struct {
 	Args        Args
 	Flags       Flags
 	PreRun      func()
-	Run         func(args []string, flags Flags)
+	Run         func(args []string, flags Flags) error
 	Subcommands map[string]*Command
 	cobraCmd    *cobra.Command
 }
@@ -43,7 +43,10 @@ func (c *Command) Init(name string) error {
 				cmd.Help()
 				os.Exit(1)
 			}
-			c.Run(args, c.Flags)
+
+			if err := c.Run(args, c.Flags); err != nil {
+				c.exit(err)
+			}
 		},
 	}
 
@@ -51,9 +54,7 @@ func (c *Command) Init(name string) error {
 		return fmt.Errorf("error adding args: %v", err)
 	}
 
-	if err := c.addFlags(); err != nil {
-		return fmt.Errorf("error adding flags: %v", err)
-	}
+	c.addFlags()
 
 	if err := c.addSubcommands(); err != nil {
 		return fmt.Errorf("error initializing subcommands: %v", err)
@@ -94,16 +95,10 @@ func (c *Command) addArgs() error {
 	return nil
 }
 
-func (c *Command) addFlags() error {
+func (c *Command) addFlags() {
 	for name, flag := range c.Flags {
-		if err := flag.Validate(); err != nil {
-			return fmt.Errorf("error validating flag %v: %v", name, err)
-		}
-
 		flag.AddToFlagSet(name, c.cobraCmd.Flags())
 	}
-
-	return nil
 }
 
 func (c *Command) getFlagParsers() map[string]func() error {
@@ -176,14 +171,16 @@ func (c *Command) initColon(name string) error {
 		// answer here: https://www.ardanlabs.com/blog/2014/06/pitfalls-with-closures-in-go.html
 		// (n.b. subcommand.Name will be copied here since it's a string, but since
 		//  subcommand.Run is a pointer, we need to do this trickery)
-		subcommand.cobraCmd.Run = func(run func([]string, Flags)) func(*cobra.Command, []string) {
+		subcommand.cobraCmd.Run = func(run func([]string, Flags) error) func(*cobra.Command, []string) {
 			return func(cmd *cobra.Command, args []string) {
 				if run == nil {
 					cmd.Help()
 					os.Exit(1)
 				}
 
-				run(args, subcommand.Flags)
+				if err := run(args, subcommand.Flags); err != nil {
+					c.exit(err)
+				}
 			}
 		}(subcommand.Run)
 
