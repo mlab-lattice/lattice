@@ -1,0 +1,1 @@
+Shows the lattice and system currently set in the context. These variables will be passed as defaults to the `--lattice` and `--system` flags of commands. These defaults can be overwritten on a command basis by manually setting the `--lattice` or `--system` commands. To change the context, see [`lattice context set`](#context-set).
