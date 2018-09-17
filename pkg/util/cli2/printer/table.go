@@ -16,6 +16,7 @@ import (
 
 type (
 	TableAlignment int
+	TableRow       []string
 )
 
 const (
@@ -23,10 +24,18 @@ const (
 	TableAlignRight = tablewriter.ALIGN_RIGHT
 )
 
-type Table struct {
-	Columns []TableColumn
-	rows    [][]string
+func NewTable(w io.Writer, columns []TableColumn) *Table {
+	return &Table{
+		columns: columns,
+		writer:  w,
+	}
+}
 
+type Table struct {
+	columns []TableColumn
+	rows    []TableRow
+
+	writer     io.Writer
 	lastHeight int
 }
 
@@ -36,22 +45,38 @@ type TableColumn struct {
 	Alignment TableAlignment
 }
 
-func (t *Table) AppendRow(row []string) {
+func (t *Table) AppendRow(row TableRow) {
 	t.rows = append(t.rows, row)
 }
 
-func (t *Table) AppendRows(rows [][]string) {
+func (t *Table) AppendRows(rows []TableRow) {
 	t.rows = append(t.rows, rows...)
 }
 
-func (t *Table) Print(writer io.Writer) error {
-	table := tablewriter.NewWriter(writer)
+func (t *Table) ClearRows() {
+	t.rows = []TableRow{}
+}
+
+func (t *Table) ReplaceRows(rows []TableRow) {
+	t.ClearRows()
+	t.AppendRows(rows)
+}
+
+func (t *Table) Print() error {
+	return t.print(t.writer)
+}
+
+func (t *Table) print(w io.Writer) error {
+	// right now we're creating a new table on each write
+	// this probably isn't necessary but for now need to do
+	// it so we can write the table to a buffer for Rewrite
+	table := tablewriter.NewWriter(w)
 
 	var headers []string
 	var headerColors []tablewriter.Colors
 	var columnColors []tablewriter.Colors
 	var alignments []int
-	for _, c := range t.Columns {
+	for _, c := range t.columns {
 		headers = append(headers, strings.ToUpper(c.Header))
 		headerColors = append(headerColors, translateColor(color.Bold))
 		columnColors = append(columnColors, translateColor(c.Color))
@@ -75,17 +100,19 @@ func (t *Table) Print(writer io.Writer) error {
 	table.SetColumnColor(columnColors...)
 	table.SetColumnAlignment(alignments)
 
-	table.AppendBulk(t.rows)
+	for _, r := range t.rows {
+		table.Append(r)
+	}
 
-	fmt.Fprintln(writer, "")
+	fmt.Fprintln(w, "")
 	table.Render()
 	return nil
 }
 
-func (t *Table) Stream(w io.Writer) {
+func (t *Table) Rewrite() {
 	// read the new printer's output
 	var b bytes.Buffer
-	t.Print(&b)
+	t.print(&b)
 
 	// for each line written last time stream was called,
 	// return cursor to start of line and clear the rest of the line
@@ -102,6 +129,11 @@ func (t *Table) Stream(w io.Writer) {
 	goterm.Flush() // TODO: Fix for large outputs (e.g. systems:builds)
 
 	t.lastHeight = len(strings.Split(output, "\n"))
+}
+
+func (t *Table) Overwrite(rows []TableRow) {
+	t.ReplaceRows(rows)
+	t.Rewrite()
 }
 
 func translateColor(c color.Color) tablewriter.Colors {

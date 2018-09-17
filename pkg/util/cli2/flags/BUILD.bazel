@@ -12,7 +12,7 @@ go_library(
         "string.go",
         "util.go",
     ],
-    importpath = "github.com/mlab-lattice/lattice/pkg/util/cli/flags",
+    importpath = "github.com/mlab-lattice/lattice/pkg/util/cli2/flags",
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/definition/tree:go_default_library",

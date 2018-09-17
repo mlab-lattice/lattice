@@ -23,7 +23,7 @@ import (
 func Status() *cli.Command {
 	cmd := command.SystemCommand{
 		Flags: map[string]cli.Flag{
-			"output": command.OutputFlag(SystemsSupportedFormats, printer.FormatTable),
+			"output": command.OutputFlag(ListSupportedFormats, printer.FormatTable),
 			"watch":  command.WatchFlag(),
 		},
 		Run: func(ctx *command.SystemCommandContext, args []string, flags cli.Flags) {

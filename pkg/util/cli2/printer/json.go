@@ -4,33 +4,44 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"strings"
 )
 
-type JSON struct {
-	Value  interface{}
-	Indent int
+func NewJSON(w io.Writer) *JSON {
+	return &JSON{writer: w}
 }
 
-func (j *JSON) Print(w io.Writer) error {
+func NewJSONIndented(w io.Writer, i int) *JSON {
+	return &JSON{
+		writer: w,
+		indent: i,
+	}
+}
+
+type JSON struct {
+	indent int
+	writer io.Writer
+}
+
+func (j *JSON) Print(v interface{}) error {
 	var data []byte
 	var err error
 
-	if j.Indent == 0 {
-		data, err = json.Marshal(j.Value)
+	if j.indent == 0 {
+		data, err = json.Marshal(v)
 	} else {
-		data, err = json.MarshalIndent(j.Value, "", "  ")
+		data, err = json.MarshalIndent(v, "", strings.Repeat(" ", j.indent))
 	}
 
 	if err != nil {
 		return err
 	}
 
-	_, err = w.Write(data)
+	_, err = j.writer.Write(data)
 	return err
 }
 
-// Not overwriting, we just print json objects on new lines
-func (j *JSON) Stream(w io.Writer) {
-	j.Print(w)
-	fmt.Fprint(w, "\n")
+func (j *JSON) Stream(v interface{}) {
+	j.Print(v)
+	fmt.Fprint(j.writer, "\n")
 }

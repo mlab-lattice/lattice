@@ -3,7 +3,7 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library")
 go_library(
     name = "go_default_library",
     srcs = ["docgen.go"],
-    importpath = "github.com/mlab-lattice/lattice/pkg/util/cli/docgen",
+    importpath = "github.com/mlab-lattice/lattice/pkg/util/cli2/docgen",
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/util/cli:go_default_library",

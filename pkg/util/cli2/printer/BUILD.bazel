@@ -9,11 +9,11 @@ go_library(
         "table.go",
         "watcher.go",
     ],
-    importpath = "github.com/mlab-lattice/lattice/pkg/util/cli/printer",
+    importpath = "github.com/mlab-lattice/lattice/pkg/util/cli2/printer",
     visibility = ["//visibility:public"],
     deps = [
+        "//pkg/util/cli2/color:go_default_library",
         "@com_github_buger_goterm//:go_default_library",
-        "@com_github_fatih_color//:go_default_library",
         "@com_github_tfogo_tablewriter//:go_default_library",
     ],
 )
