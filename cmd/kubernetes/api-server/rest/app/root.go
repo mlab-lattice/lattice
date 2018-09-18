@@ -111,7 +111,11 @@ func Command() *cli.Command {
 				panic(err)
 			}
 
-			rest.RunNewRestServer(backend, resolver, port, apiAuthKey)
+			options := rest.NewServerOptions()
+			options.AuthOptions.AuthType = rest.AuthTypeLegacy
+			options.AuthOptions.LegacyApiAuthKey = apiAuthKey
+
+			rest.RunNewRestServer(backend, resolver, port, options)
 		},
 	}
 

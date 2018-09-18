@@ -9,5 +9,9 @@ func RunMockNewRestServer(port int32, apiAuthKey string) {
 	if err != nil {
 		panic(err)
 	}
-	rest.RunNewRestServer(backend, newMockComponentResolver(), port, apiAuthKey)
+
+	options := rest.NewServerOptions()
+	options.AuthOptions.AuthType = rest.AuthTypeLegacy
+	options.AuthOptions.LegacyApiAuthKey = apiAuthKey
+	rest.RunNewRestServer(backend, newMockComponentResolver(), port, options)
 }
