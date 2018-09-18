@@ -5,6 +5,8 @@ import (
 	"os"
 
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
+	"strings"
 )
 
 type RootCommand struct {
@@ -13,13 +15,14 @@ type RootCommand struct {
 }
 
 type Command struct {
-	Short       string
-	Args        Args
-	Flags       Flags
-	PreRun      func()
-	Run         func(args []string, flags Flags) error
-	Subcommands map[string]*Command
-	cobraCmd    *cobra.Command
+	Short                  string
+	Args                   Args
+	Flags                  Flags
+	MutuallyExclusiveFlags [][]string
+	PreRun                 func()
+	Run                    func(args []string, flags Flags) error
+	Subcommands            map[string]*Command
+	cobraCmd               *cobra.Command
 }
 
 func (c *RootCommand) Execute() {
@@ -61,6 +64,66 @@ func (c *Command) Init(name string) error {
 	}
 
 	c.cobraCmd.PreRun = func(cmd *cobra.Command, args []string) {
+		// check to see if any of the flags are mutually exclusive
+		// first build up a set of flags that each flag conflicts with
+		conflictFlags := make(map[string][]string)
+		for _, mutexSet := range c.MutuallyExclusiveFlags {
+			for _, flag := range mutexSet {
+				conflicts, ok := conflictFlags[flag]
+				if !ok {
+					conflicts = make([]string, 0)
+				}
+
+				for _, conflict := range mutexSet {
+					// don't add self to our own conflict set
+					if conflict == flag {
+						continue
+					}
+					conflicts = append(conflicts, conflict)
+				}
+				conflictFlags[flag] = conflicts
+			}
+		}
+
+		// then go through each flag _that was set_. if we have already seen flags that conflict
+		// with this flag, set a conflict message
+		// otherwise, for each other flag that the flag conflicts with, create or add to a list of
+		// flags that conflict with the other flag. then go on to the next flag.
+		// this means that if the next flag conflicted with the current flag, it will see that the
+		// current flag is listed under flags that conflict with it, and it would set the conflict
+		// message
+		conflict := ""
+		pendingConflict := make(map[string][]string)
+		cmd.Flags().Visit(func(flag *pflag.Flag) {
+			// bail early if we already found a conflict
+			if conflict != "" {
+				return
+			}
+
+			// if this flag triggers a conflict, set the conflict string and return
+			pendingConflicts, ok := pendingConflict[flag.Name]
+			if ok {
+				conflict = fmt.Sprintf("flag %v is mutually exclusive with %v", flag.Name, strings.Join(pendingConflicts, ", "))
+				return
+			}
+
+			conflicts, ok := conflictFlags[flag.Name]
+			if ok {
+				for _, conflict := range conflicts {
+					existing, ok := pendingConflict[conflict]
+					if !ok {
+						existing = make([]string, 0)
+					}
+
+					pendingConflict[conflict] = append(existing, flag.Name)
+				}
+			}
+		})
+		if conflict != "" {
+			fmt.Printf("%v\n", conflict)
+			os.Exit(1)
+		}
+
 		for name, parser := range c.getFlagParsers() {
 			err := parser()
 			if err != nil {

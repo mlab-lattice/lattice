@@ -27,6 +27,14 @@ type Config struct {
 	Contexts       map[string]Context `json:"contexts"`
 }
 
+func (c *ConfigFile) Contexts() (map[string]Context, error) {
+	if err := c.load(); err != nil {
+		return nil, err
+	}
+
+	return c.config.Contexts, nil
+}
+
 func (c *ConfigFile) CurrentContext() (string, error) {
 	if err := c.load(); err != nil {
 		return "", err
@@ -73,6 +81,10 @@ func (c *ConfigFile) SetCurrentContext(context string) error {
 	cfg, err := c.Config()
 	if err != nil {
 		return err
+	}
+
+	if _, ok := cfg.Contexts[context]; !ok {
+		return NewInvalidContextError(context)
 	}
 
 	cfg.CurrentContext = context

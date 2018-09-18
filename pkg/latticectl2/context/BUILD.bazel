@@ -5,6 +5,9 @@ go_library(
     srcs = [
         "command.go",
         "create.go",
+        "list.go",
+        "switch.go",
+        "update.go",
     ],
     importpath = "github.com/mlab-lattice/lattice/pkg/latticectl2/context",
     visibility = ["//visibility:public"],

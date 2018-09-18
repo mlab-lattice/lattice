@@ -7,11 +7,11 @@ import (
 	"os"
 )
 
-var GetSupportedFormats = []printer.Format{
+var ListSupportedFormats = []printer.Format{
 	printer.FormatJSON,
 }
 
-func Command() *cli.Command {
+func List() *cli.Command {
 	return &cli.Command{
 		Flags: cli.Flags{
 			command.ConfigFlagName: command.ConfigFlag(),
@@ -22,33 +22,23 @@ func Command() *cli.Command {
 			configPath := flags[command.ConfigFlagName].Value().(string)
 			configFile := command.ConfigFile{Path: configPath}
 
-			contextName, err := configFile.CurrentContext()
-			if err != nil {
-				return err
-			}
-
-			context, err := configFile.Context(contextName)
+			contexts, err := configFile.Contexts()
 			if err != nil {
 				return err
 			}
 
 			format := printer.Format(flags[command.OutputFlagName].Value().(string))
-			return PrintContext(context, format)
-		},
-		Subcommands: map[string]*cli.Command{
-			"create": Create(),
-			"list":   List(),
-			"switch": Switch(),
+			return PrintContexts(contexts, format)
 		},
 	}
 }
 
-func PrintContext(ctx *command.Context, format printer.Format) error {
+func PrintContexts(contexts map[string]command.Context, format printer.Format) error {
 	// FIXME: probably want to support a more natural table-like format
 	switch format {
 	case printer.FormatJSON:
 		j := printer.NewJSONIndented(os.Stdout, 4)
-		j.Print(ctx)
+		j.Print(contexts)
 	}
 
 	return nil

@@ -7,18 +7,23 @@ import (
 )
 
 const (
-	createFlagBearerToken = "bearer-token"
-	createFlagName        = "name"
-	createFlagURL         = "url"
+	createFlagBearerToken     = "bearer-token"
+	createFlagUnauthenticated = "unauthenticated"
+	createFlagName            = "name"
+	createFlagURL             = "url"
 )
 
 func Create() *cli.Command {
 	return &cli.Command{
 		Flags: cli.Flags{
-			createFlagBearerToken:  &flags.String{},
-			createFlagName:         &flags.String{Required: true},
-			createFlagURL:          &flags.String{Required: true},
-			command.ConfigFlagName: command.ConfigFlag(),
+			createFlagBearerToken:     &flags.String{},
+			createFlagName:            &flags.String{Required: true},
+			createFlagUnauthenticated: &flags.Bool{},
+			createFlagURL:             &flags.String{Required: true},
+			command.ConfigFlagName:    command.ConfigFlag(),
+		},
+		MutuallyExclusiveFlags: [][]string{
+			{createFlagBearerToken, createFlagUnauthenticated},
 		},
 		Run: func(args []string, flags cli.Flags) error {
 			// if ConfigFile.Path is empty, it will look in $XDG_CONFIG_HOME/.latticectl/config.json
