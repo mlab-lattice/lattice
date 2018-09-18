@@ -57,6 +57,9 @@ func (f *Path) Set() bool {
 func (f *Path) AddToFlagSet(name string, flags *pflag.FlagSet) {
 	t := new(string)
 	f.target = t
+	f.name = name
+	f.flagSet = flags
+
 	flags.StringVarP(f.target, name, f.Short, f.Default.String(), f.Usage)
 
 	if f.Required {

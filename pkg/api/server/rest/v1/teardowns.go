@@ -51,7 +51,7 @@ func (api *LatticeAPI) handleTeardownSystem(c *gin.Context) {
 	if err != nil {
 		v1err, ok := err.(*v1.Error)
 		if !ok {
-			c.Status(http.StatusInternalServerError)
+			handleInternalError(c, err)
 			return
 		}
 
@@ -60,7 +60,7 @@ func (api *LatticeAPI) handleTeardownSystem(c *gin.Context) {
 			c.JSON(http.StatusConflict, v1err)
 
 		default:
-			c.Status(http.StatusInternalServerError)
+			handleInternalError(c, err)
 		}
 		return
 	}
@@ -86,7 +86,7 @@ func (api *LatticeAPI) handleListTeardowns(c *gin.Context) {
 	if err != nil {
 		v1err, ok := err.(*v1.Error)
 		if !ok {
-			c.Status(http.StatusInternalServerError)
+			handleInternalError(c, err)
 			return
 		}
 
@@ -98,7 +98,7 @@ func (api *LatticeAPI) handleListTeardowns(c *gin.Context) {
 			c.JSON(http.StatusConflict, v1err)
 
 		default:
-			c.Status(http.StatusInternalServerError)
+			handleInternalError(c, err)
 		}
 		return
 	}
@@ -127,7 +127,7 @@ func (api *LatticeAPI) handleGetTeardown(c *gin.Context) {
 	if err != nil {
 		v1err, ok := err.(*v1.Error)
 		if !ok {
-			c.Status(http.StatusInternalServerError)
+			handleInternalError(c, err)
 			return
 		}
 
@@ -139,7 +139,7 @@ func (api *LatticeAPI) handleGetTeardown(c *gin.Context) {
 			c.JSON(http.StatusConflict, v1err)
 
 		default:
-			c.Status(http.StatusInternalServerError)
+			handleInternalError(c, err)
 		}
 		return
 	}

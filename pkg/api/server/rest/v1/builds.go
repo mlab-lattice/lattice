@@ -63,7 +63,7 @@ func (api *LatticeAPI) handleBuildSystem(c *gin.Context) {
 			c.Status(http.StatusBadRequest)
 
 		default:
-			c.Status(http.StatusInternalServerError)
+			handleInternalError(c, err)
 		}
 		return
 	}
@@ -80,7 +80,7 @@ func (api *LatticeAPI) handleBuildSystem(c *gin.Context) {
 	if err != nil {
 		v1err, ok := err.(*v1.Error)
 		if !ok {
-			c.Status(http.StatusInternalServerError)
+			handleInternalError(c, err)
 			return
 		}
 
@@ -92,7 +92,7 @@ func (api *LatticeAPI) handleBuildSystem(c *gin.Context) {
 			c.JSON(http.StatusConflict, v1err)
 
 		default:
-			c.Status(http.StatusInternalServerError)
+			handleInternalError(c, err)
 		}
 		return
 	}
@@ -119,7 +119,7 @@ func (api *LatticeAPI) handleListBuilds(c *gin.Context) {
 	if err != nil {
 		v1err, ok := err.(*v1.Error)
 		if !ok {
-			c.Status(http.StatusInternalServerError)
+			handleInternalError(c, err)
 			return
 		}
 
@@ -131,7 +131,7 @@ func (api *LatticeAPI) handleListBuilds(c *gin.Context) {
 			c.JSON(http.StatusConflict, v1err)
 
 		default:
-			c.Status(http.StatusInternalServerError)
+			handleInternalError(c, err)
 		}
 		return
 	}
@@ -172,7 +172,7 @@ func (api *LatticeAPI) handleGetBuild(c *gin.Context) {
 			c.JSON(http.StatusConflict, v1err)
 
 		default:
-			c.Status(http.StatusInternalServerError)
+			handleInternalError(c, err)
 		}
 		return
 	}
@@ -233,7 +233,7 @@ func (api *LatticeAPI) handleGetBuildLogs(c *gin.Context) {
 	if err != nil {
 		v1err, ok := err.(*v1.Error)
 		if !ok {
-			c.Status(http.StatusInternalServerError)
+			handleInternalError(c, err)
 			return
 		}
 
@@ -246,7 +246,7 @@ func (api *LatticeAPI) handleGetBuildLogs(c *gin.Context) {
 			c.JSON(http.StatusConflict, v1err)
 
 		default:
-			c.Status(http.StatusInternalServerError)
+			handleInternalError(c, err)
 		}
 		return
 	}

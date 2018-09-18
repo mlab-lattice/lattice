@@ -61,7 +61,7 @@ func (api *LatticeAPI) handleListServices(c *gin.Context) {
 		if err != nil {
 			v1err, ok := err.(*v1.Error)
 			if !ok {
-				c.Status(http.StatusInternalServerError)
+				handleInternalError(c, err)
 				return
 			}
 
@@ -73,7 +73,7 @@ func (api *LatticeAPI) handleListServices(c *gin.Context) {
 				c.JSON(http.StatusOK, []*v1.Service{})
 
 			default:
-				c.Status(http.StatusInternalServerError)
+				handleInternalError(c, err)
 			}
 			return
 		}
@@ -87,7 +87,7 @@ func (api *LatticeAPI) handleListServices(c *gin.Context) {
 	if err != nil {
 		v1err, ok := err.(*v1.Error)
 		if !ok {
-			c.Status(http.StatusInternalServerError)
+			handleInternalError(c, err)
 			return
 		}
 
@@ -96,7 +96,7 @@ func (api *LatticeAPI) handleListServices(c *gin.Context) {
 			c.JSON(http.StatusNotFound, v1err)
 
 		default:
-			c.Status(http.StatusInternalServerError)
+			handleInternalError(c, err)
 		}
 		return
 	}
@@ -125,7 +125,7 @@ func (api *LatticeAPI) handleGetService(c *gin.Context) {
 	if err != nil {
 		v1err, ok := err.(*v1.Error)
 		if !ok {
-			c.Status(http.StatusInternalServerError)
+			handleInternalError(c, err)
 			return
 		}
 
@@ -134,7 +134,7 @@ func (api *LatticeAPI) handleGetService(c *gin.Context) {
 			c.JSON(http.StatusNotFound, v1err)
 
 		default:
-			c.Status(http.StatusInternalServerError)
+			handleInternalError(c, err)
 		}
 		return
 	}
@@ -185,7 +185,7 @@ func (api *LatticeAPI) handleGetServiceLogs(c *gin.Context) {
 	if err != nil {
 		v1err, ok := err.(*v1.Error)
 		if !ok {
-			c.Status(http.StatusInternalServerError)
+			handleInternalError(c, err)
 			return
 		}
 
@@ -195,7 +195,7 @@ func (api *LatticeAPI) handleGetServiceLogs(c *gin.Context) {
 			c.JSON(http.StatusNotFound, v1err)
 
 		default:
-			c.Status(http.StatusInternalServerError)
+			handleInternalError(c, err)
 		}
 		return
 	}

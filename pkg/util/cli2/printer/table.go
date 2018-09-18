@@ -123,7 +123,7 @@ func (t *Table) Rewrite() {
 	// print the output we buffered
 	output := b.String()
 	goterm.Print(output)
-	goterm.Flush() // TODO: Fix for large outputs (e.g. systems:builds)
+	goterm.Flush()
 
 	t.lastHeight = len(strings.Split(output, "\n"))
 }

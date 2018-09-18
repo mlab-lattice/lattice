@@ -47,7 +47,7 @@ func (api *LatticeAPI) handleListNodePools(c *gin.Context) {
 	if err != nil {
 		v1err, ok := err.(*v1.Error)
 		if !ok {
-			c.Status(http.StatusInternalServerError)
+			handleInternalError(c, err)
 			return
 		}
 
@@ -59,7 +59,7 @@ func (api *LatticeAPI) handleListNodePools(c *gin.Context) {
 			c.JSON(http.StatusConflict, v1err)
 
 		default:
-			c.Status(http.StatusInternalServerError)
+			handleInternalError(c, err)
 		}
 		return
 	}
@@ -100,7 +100,7 @@ func (api *LatticeAPI) handleGetNodePool(c *gin.Context) {
 	if err != nil {
 		v1err, ok := err.(*v1.Error)
 		if !ok {
-			c.Status(http.StatusInternalServerError)
+			handleInternalError(c, err)
 			return
 		}
 
@@ -112,7 +112,7 @@ func (api *LatticeAPI) handleGetNodePool(c *gin.Context) {
 			c.JSON(http.StatusConflict, v1err)
 
 		default:
-			c.Status(http.StatusInternalServerError)
+			handleInternalError(c, err)
 		}
 		return
 	}

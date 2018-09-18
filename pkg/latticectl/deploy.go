@@ -9,6 +9,7 @@ import (
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 	"github.com/mlab-lattice/lattice/pkg/latticectl/command"
+	"github.com/mlab-lattice/lattice/pkg/latticectl/deploys"
 	"github.com/mlab-lattice/lattice/pkg/util/cli2"
 	"github.com/mlab-lattice/lattice/pkg/util/cli2/color"
 	"github.com/mlab-lattice/lattice/pkg/util/cli2/flags"
@@ -60,12 +61,12 @@ func Deploy() *cli.Command {
 			case flags[deployPathFlag].Set():
 				return DeployPath(ctx.Client, ctx.System, path, os.Stdout, format, watch)
 
-			case flags[deployBuildFlag].Set():
+			case flags[deployVersionFlag].Set():
 				return DeployVersion(ctx.Client, ctx.System, v1.Version(version), os.Stdout, format, watch)
 
 			default:
 				// this shouldn't happen due to the mutually exclusive and required flag sets
-				return fmt.Errorf("build type not set")
+				return fmt.Errorf("deploy type not set")
 			}
 		},
 	}
@@ -102,7 +103,7 @@ func DeployPath(
 		return err
 	}
 
-	return displayDeploy(client, system, deploy, path.String(), w, f, watch)
+	return displayDeploy(client, system, deploy, fmt.Sprintf("path %v", path.String()), w, f, watch)
 }
 
 func DeployVersion(
@@ -131,22 +132,21 @@ func displayDeploy(
 	watch bool,
 ) error {
 	if watch {
-		return nil
-		//return deploys.WatchDeploy()
+		return deploys.WatchDeploy(client, system, deploy.ID, w, f)
 	}
 
 	fmt.Fprintf(
 		w,
-		"\nDeploying %s for system %s. Deploy ID: %s\n",
+		`
+deploying %s for system %s. deploy ID: %s
+
+to watch deploy, run:
+    latticectl deploys status --deploy %s -w
+`,
 		description,
 		color.IDString(string(system)),
 		color.IDString(string(deploy.ID)),
+		string(deploy.ID),
 	)
-	fmt.Fprint(w, `
-To watch deploy, run:
-    latticectl deploys status -w --deploy %s
-`,
-		string(deploy.ID))
-
 	return nil
 }

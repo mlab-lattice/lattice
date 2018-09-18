@@ -11,6 +11,7 @@ var Command = cli.RootCommand{
 		Subcommands: map[string]*cli.Command{
 			"context": Context(),
 			"deploy":  Deploy(),
+			"deploys": Deploys(),
 			"systems": Systems(),
 		},
 	},

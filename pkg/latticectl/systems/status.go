@@ -46,14 +46,14 @@ func Status() *cli.Command {
 				return nil
 			}
 
-			return GetSystem(ctx.Client, ctx.System, os.Stdout, format)
+			return PrintSystem(ctx.Client, ctx.System, os.Stdout, format)
 		},
 	}
 
 	return cmd.Command()
 }
 
-func GetSystem(client client.Interface, id v1.SystemID, w io.Writer, f printer.Format) error {
+func PrintSystem(client client.Interface, id v1.SystemID, w io.Writer, f printer.Format) error {
 	// TODO: Make requests in parallel
 	system, err := client.V1().Systems().Get(id)
 	if err != nil {

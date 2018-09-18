@@ -137,7 +137,7 @@ func transformDeploy(deploy *latticev1.Deploy) (v1.Deploy, error) {
 
 	var completionTimestamp *time.Time
 	if deploy.Status.CompletionTimestamp != nil {
-		startTimestamp = &deploy.Status.CompletionTimestamp.Time
+		completionTimestamp = &deploy.Status.CompletionTimestamp.Time
 	}
 
 	externalDeploy := v1.Deploy{

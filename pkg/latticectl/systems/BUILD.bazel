@@ -3,6 +3,8 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library")
 go_library(
     name = "go_default_library",
     srcs = [
+        "create.go",
+        "delete.go",
         "status.go",
         "versions.go",
     ],
@@ -14,6 +16,7 @@ go_library(
         "//pkg/latticectl/command:go_default_library",
         "//pkg/util/cli2:go_default_library",
         "//pkg/util/cli2/color:go_default_library",
+        "//pkg/util/cli2/flags:go_default_library",
         "//pkg/util/cli2/printer:go_default_library",
         "@com_github_briandowns_spinner//:go_default_library",
         "@io_k8s_apimachinery//pkg/util/wait:go_default_library",

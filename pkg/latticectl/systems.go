@@ -44,9 +44,11 @@ func Systems() *cli.Command {
 				return nil
 			}
 
-			return ListSystems(ctx.Client, format, os.Stdout)
+			return PrintSystems(ctx.Client, format, os.Stdout)
 		},
 		Subcommands: map[string]*cli.Command{
+			"create":   systems.Create(),
+			"delete":   systems.Delete(),
 			"status":   systems.Status(),
 			"versions": systems.Versions(),
 		},
@@ -55,8 +57,8 @@ func Systems() *cli.Command {
 	return cmd.Command()
 }
 
-// ListSystems writes the current Systems to the supplied io.Writer in the given printer.Format.
-func ListSystems(client client.Interface, format printer.Format, w io.Writer) error {
+// PrintSystems writes the current Systems to the supplied io.Writer in the given printer.Format.
+func PrintSystems(client client.Interface, format printer.Format, w io.Writer) error {
 	systems, err := client.V1().Systems().List()
 	if err != nil {
 		return err

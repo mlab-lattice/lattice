@@ -60,7 +60,7 @@ func (api *LatticeAPI) handleDeploySystem(c *gin.Context) {
 			c.Status(http.StatusBadRequest)
 
 		default:
-			c.Status(http.StatusInternalServerError)
+			handleInternalError(c, err)
 		}
 		return
 	}
@@ -80,7 +80,7 @@ func (api *LatticeAPI) handleDeploySystem(c *gin.Context) {
 	if err != nil {
 		v1err, ok := err.(*v1.Error)
 		if !ok {
-			c.Status(http.StatusInternalServerError)
+			handleInternalError(c, err)
 			return
 		}
 
@@ -92,7 +92,7 @@ func (api *LatticeAPI) handleDeploySystem(c *gin.Context) {
 			c.JSON(http.StatusConflict, v1err)
 
 		default:
-			c.Status(http.StatusInternalServerError)
+			handleInternalError(c, err)
 		}
 		return
 	}
@@ -118,7 +118,7 @@ func (api *LatticeAPI) handleListDeploys(c *gin.Context) {
 	if err != nil {
 		v1err, ok := err.(*v1.Error)
 		if !ok {
-			c.Status(http.StatusInternalServerError)
+			handleInternalError(c, err)
 			return
 		}
 
@@ -130,7 +130,7 @@ func (api *LatticeAPI) handleListDeploys(c *gin.Context) {
 			c.JSON(http.StatusConflict, v1err)
 
 		default:
-			c.Status(http.StatusInternalServerError)
+			handleInternalError(c, err)
 		}
 		return
 	}
@@ -159,7 +159,7 @@ func (api *LatticeAPI) handleGetDeploy(c *gin.Context) {
 	if err != nil {
 		v1err, ok := err.(*v1.Error)
 		if !ok {
-			c.Status(http.StatusInternalServerError)
+			handleInternalError(c, err)
 			return
 		}
 
@@ -171,7 +171,7 @@ func (api *LatticeAPI) handleGetDeploy(c *gin.Context) {
 			c.JSON(http.StatusConflict, v1err)
 
 		default:
-			c.Status(http.StatusInternalServerError)
+			handleInternalError(c, err)
 		}
 		return
 	}
