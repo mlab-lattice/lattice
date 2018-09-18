@@ -41,13 +41,19 @@ type stateInfo struct {
 }
 
 func (c *Controller) calculateState(build *latticev1.Build) (stateInfo, error) {
+	// existing container builds
 	successfulContainerBuilds := make(map[string]*latticev1.ContainerBuild)
 	activeContainerBuilds := make(map[string]*latticev1.ContainerBuild)
 	failedContainerBuilds := make(map[string]*latticev1.ContainerBuild)
+
+	// needed container builds
 	servicesNeedNewContainerBuilds := make(map[tree.Path]*definitionv1.Service)
 	jobsNeedNewContainerBuilds := make(map[tree.Path]*definitionv1.Job)
 
+	// container build statuses
 	containerBuildStatuses := make(map[string]latticev1.ContainerBuildStatus)
+
+	// service/job container builds (container build name to service path mappings)
 	containerBuildServices := make(map[string][]tree.Path)
 	containerBuildJobs := make(map[string][]tree.Path)
 

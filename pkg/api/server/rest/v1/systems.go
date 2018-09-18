@@ -8,6 +8,8 @@ import (
 	"strconv"
 	"strings"
 
+	"encoding/json"
+
 	v1server "github.com/mlab-lattice/lattice/pkg/api/server/v1"
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	v1rest "github.com/mlab-lattice/lattice/pkg/api/v1/rest"
@@ -104,9 +106,17 @@ func mountBuildHandlers(router *gin.RouterGroup, backend v1server.Interface, res
 
 		root, ri, err := getSystemDefinitionRoot(backend, resolver, systemID, req.Version)
 		if err != nil {
+			// XXX <GEB>: REMOVE
+			fmt.Printf("got error trying to retrieve system %v\n", systemID)
+			// XXX <GEB>: /REMOVE
 			handleError(c, err)
 			return
 		}
+
+		// XXX <GEB>: REMOVE
+		data, err := json.MarshalIndent(root, "", "  ")
+		fmt.Printf(string(data))
+		// XXX <GEB>: /REMOVE
 
 		build, err := backend.Build(
 			systemID,

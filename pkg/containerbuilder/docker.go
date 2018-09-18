@@ -18,6 +18,10 @@ import (
 	"github.com/fatih/color"
 )
 
+const (
+	defaultDockerFileName = "Dockerfile"
+)
+
 func (b *Builder) buildDockerImageContainer(image *definitionv1.DockerImage) error {
 	sourceDockerImageFQN, err := getDockerImageFQNFromDockerImageBlock(image)
 	if err != nil {
@@ -64,6 +68,154 @@ func (b *Builder) buildDockerImage(sourceDirectory, baseImage, dockerfileCommand
 
 	// Tar up the directory to send it as the build context to the docker daemon
 	buildContext, err := tar.ArchiveDirectory(b.WorkingDir)
+	if err != nil {
+		return newErrorInternal("docker build context could not be tar-ed: " + err.Error())
+	}
+
+	// Tag the image to be built with the desired FQN
+	dockerImageFQN := getDockerImageFQN(b.DockerOptions.Registry, b.DockerOptions.Repository, b.DockerOptions.Tag)
+	buildOptions := dockertypes.ImageBuildOptions{
+		Tags: []string{dockerImageFQN},
+	}
+
+	// FIXME <GEB>: ignoring options/environment meant for the build at the moment
+	response, err := b.DockerClient.ImageBuild(context.Background(), buildContext, buildOptions)
+	if err != nil {
+		// The build should at least be able to be sent to the daemon even if the user has an error, so
+		// if this fails, label it as internal.
+		return newErrorInternal("docker image build request failed: " + err.Error())
+	}
+	defer response.Body.Close()
+
+	// A little help here from https://github.com/docker/cli/blob/1ff73f867df382cb5a19df4579da3570f4daaff5/cli/command/image/build.go#L393-L426
+	err = jsonmessage.DisplayJSONMessagesStream(response.Body, os.Stdout, os.Stdout.Fd(), true, nil)
+	if err != nil {
+		if jerr, ok := err.(*jsonmessage.JSONError); ok {
+			// Build failed with a message, report this message as a user error.
+			return newErrorUser("docker image build failed: " + jerr.Message)
+		}
+
+		// If the displaying of the stream failed, it cannot be told whether the build succeeded or failed.
+		// Report this as a user error rather than swallowing it to take no chances.
+		// XXX <GEB>: this was `newErrorInternal("docker image build stream failed: " + err.Error())`, changed to user error
+		//            as per the comment.
+		return newErrorUser("docker image build stream failed: " + err.Error())
+	}
+
+	color.Green("✓ Success!")
+	fmt.Println()
+
+	// If the image is not to be pushed, there's no more to do
+	if !b.DockerOptions.Push {
+		return nil
+	}
+
+	return b.pushDockerImage()
+}
+
+func (b *Builder) buildDockerBuildContainer(dockerBuild *definitionv1.DockerBuild) error {
+	dockerFileDirectory, err := b.retrieveLocation(dockerBuild.DockerFile.Location)
+	if err != nil {
+		return err
+	}
+	// GEB: REMOVE
+	color.Blue(fmt.Sprintf("docker file directory: %v", dockerFileDirectory))
+	dirListing, err := ioutil.ReadDir(dockerFileDirectory)
+	if err != nil {
+		return err
+	}
+	color.Blue("docker file directory contents:\n")
+	for i := 0; i < len(dirListing); i++ {
+		color.Blue(dirListing[i].Name())
+	}
+
+	// GEB: /REMOVE
+
+	buildContextDirectory, err := b.retrieveLocation(dockerBuild.BuildContext.Location)
+	if err != nil {
+		return err
+	}
+	// GEB: REMOVE
+	color.Blue(fmt.Sprintf("build context directory: %v", dockerFileDirectory))
+	dirListing, err = ioutil.ReadDir(buildContextDirectory)
+	if err != nil {
+		return err
+	}
+	color.Blue("docker file directory contents:\n")
+	for i := 0; i < len(dirListing); i++ {
+		color.Blue(dirListing[i].Name())
+	}
+
+	bites, err := json.MarshalIndent(dockerBuild, "", "  ")
+	if err != nil {
+		return err
+	}
+	color.Blue(string(bites))
+
+	// XXX: /REMOVE
+
+	return b.buildDockerBuild(
+		dockerFileDirectory,
+		dockerBuild.DockerFile.Path,
+		buildContextDirectory,
+		dockerBuild.BuildContext.Path,
+		dockerBuild.Environment,
+		dockerBuild.Options)
+}
+
+func (b *Builder) buildDockerBuild(
+	dockerFileDirectory,
+	dockerFilePath,
+	buildContextDirectory,
+	buildContextPath string,
+	environment,
+	options map[string]definitionv1.ValueOrSecret) error {
+	color.Blue("Building docker build...")
+
+	if b.StatusUpdater != nil {
+		// For now ignore status update errors, don't need to fail a build because the status could
+		// not be updated.
+		b.StatusUpdater.UpdateProgress(b.BuildID, b.SystemID, v1.ContainerBuildPhaseBuildingDockerImage)
+	}
+
+	// FIXME <GEB>: docker file and build context paths are relative to the root of the repository they
+	//              reside in, not the template they are specified in
+
+	dockerFileFullPath := filepath.Join(dockerFileDirectory, dockerFilePath)
+	fi, err := os.Lstat(dockerFileFullPath)
+	if err != nil {
+		return err
+	}
+
+	if fi.IsDir() {
+		dockerFileFullPath = filepath.Join(dockerFileFullPath, defaultDockerFileName)
+	}
+
+	// Get Dockerfile contents and write them to the directory
+	dockerFileContents, err := ioutil.ReadFile(dockerFileFullPath)
+	if err != nil {
+		return newErrorUser("could not get Dockerfile contents: " + err.Error())
+	}
+
+	buildContextFullPath := filepath.Join(buildContextDirectory, buildContextPath)
+	fi, err = os.Lstat(buildContextFullPath)
+	if err != nil {
+		return newErrorUser("could not stat BuildContext location: " + err.Error())
+	}
+
+	if mode := fi.Mode(); !mode.IsDir() {
+		return newErrorUser(fmt.Sprintf("BuildContext location (%v) is not a directory: %v", buildContextFullPath, err.Error()))
+	}
+
+	// XXX <GEB>: warn if DockerFile exists at destination?
+
+	err = ioutil.WriteFile(filepath.Join(buildContextFullPath, "Dockerfile"), []byte(dockerFileContents), 0444)
+	if err != nil {
+		return newErrorInternal("Dockerfile could not be written: " + err.Error())
+	}
+
+	// Tar up the directory to send it as the build context to the docker daemon
+	buildContext, err := tar.ArchiveDirectory(buildContextFullPath)
 	if err != nil {
 		return newErrorInternal("docker build context could not be tar-ed: " + err.Error())
 	}
