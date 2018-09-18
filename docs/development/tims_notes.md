@@ -73,6 +73,8 @@ latticectl context:set --lattice <lattice-URI>
 You can write a system definition and upload it to a GitHub repo. The main file should be `lattice.yml`. Easiest thing
 is to make the repo public (public system definition repos are considered kosher).
 
+Here's an example system definititon (Note 4.0.0 is the most recent tag that should work): https://github.com/mlab-lattice/system__petflix/tree/4.0.0
+
 ## Creating a system
 
 Create a system with the UI or with the CLI. Give the system a name and the defintition repo (which is the github URL + `.git`).
@@ -88,3 +90,34 @@ Then you can deploy a version of the system with:
 ```
 latticectl systems:deploy --version <tag> --system <system-name>
 ```
+
+## Note on using lattice cli
+
+Currently the laas cli has all the functionality of latticectl too (but they are being pulled apart).
+
+Since latticectl isn't currently working, you can try using the laas commands:
+
+Set the context so you don't have to pass `--lattice <lattice-name> --system <system-name>` for every command.
+
+```
+lattice context set --lattice tim-lat --system petflix
+```
+
+Create a system:
+
+```
+lattice systems create --name petflix --definition https://github.com/mlab-lattice/system__petflix.git
+```
+
+View systems:
+
+```
+lattice systems
+```
+Deploy:
+
+```
+lattice systems deploy --version 4.0.0 -w
+```
+
+Looks like there are some issues with the lattice output - it isn't filling oiut tables for builds. The CLIs are in a lot of flux right now so if there are any rough edges just create a ticket for them.
