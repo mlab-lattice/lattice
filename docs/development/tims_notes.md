@@ -73,7 +73,7 @@ latticectl context:set --lattice <lattice-URI>
 You can write a system definition and upload it to a GitHub repo. The main file should be `lattice.yml`. Easiest thing
 is to make the repo public (public system definition repos are considered kosher).
 
-Here's an example system definititon (Note 4.0.0 is the most recent tag that should work): https://github.com/mlab-lattice/system__petflix/tree/4.0.0
+Here's an example system definititon (Note 1.0.0 is the most recent tag that should work): https://github.com/mlab-lattice/system__petflix/tree/1.0.0
 
 ## Creating a system
 
@@ -117,7 +117,7 @@ lattice systems
 Deploy:
 
 ```
-lattice systems deploy --version 4.0.0 -w
+lattice systems deploy --version 1.0.0 -w
 ```
 
 Looks like there are some issues with the lattice output - it isn't filling oiut tables for builds. The CLIs are in a lot of flux right now so if there are any rough edges just create a ticket for them.
