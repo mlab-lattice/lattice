@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/mlab-lattice/lattice/pkg/util/cli"
-	"github.com/mlab-lattice/lattice/pkg/util/cli/flags"
+	"github.com/mlab-lattice/lattice/pkg/util/cli2"
+	"github.com/mlab-lattice/lattice/pkg/util/cli2/flags"
 )
 
 const (
@@ -58,8 +58,7 @@ func (b S3BackendConfig) MarshalJSON() ([]byte, error) {
 func BackendS3Flags() (cli.Flags, *BackendOptionsS3) {
 	options := &BackendOptionsS3{}
 	flags := cli.Flags{
-		&flags.String{
-			Name:     "bucket",
+		"bucket": &flags.String{
 			Required: true,
 			Target:   &options.Bucket,
 		},
@@ -72,7 +71,6 @@ func BackendFlags(backend *string) (cli.Flag, *BackendOptions) {
 	options := &BackendOptions{}
 
 	flag := &flags.DelayedEmbedded{
-		Name:     "terraform-backend-var",
 		Required: false,
 		Usage:    "configuration for the terraform backend",
 		Flags: map[string]cli.Flags{

@@ -7,8 +7,8 @@ import (
 	kubeconstants "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/constants"
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/lifecycle/lattice/bootstrap/bootstrapper"
-	"github.com/mlab-lattice/lattice/pkg/util/cli"
-	"github.com/mlab-lattice/lattice/pkg/util/cli/flags"
+	"github.com/mlab-lattice/lattice/pkg/util/cli2"
+	"github.com/mlab-lattice/lattice/pkg/util/cli2/flags"
 	"github.com/mlab-lattice/lattice/pkg/util/terraform"
 )
 
@@ -59,67 +59,57 @@ func LatticeBootstrapperFlags() (cli.Flags, *LatticeBootstrapperOptions) {
 		},
 	}
 	flags := cli.Flags{
-		&flags.String{
-			Name:     "region",
+		"region": &flags.String{
 			Required: true,
 			Target:   &options.Region,
 		},
-		&flags.String{
-			Name:     "account-id",
+		"account-id": &flags.String{
 			Required: true,
 			Target:   &options.AccountID,
 		},
-		&flags.String{
-			Name:     "vpc-id",
+		"vpc-id": &flags.String{
 			Required: true,
 			Target:   &options.VPCID,
 		},
 
-		&flags.String{
-			Name:     "route53-private-zone-id",
+		"route53-private-zone-id": &flags.String{
 			Required: true,
 			Target:   &options.Route53PrivateZoneID,
 		},
-		&flags.StringSliceFlag{
-			Name:     "subnet-ids",
+		"subnet-ids": &flags.StringSliceFlag{
 			Required: true,
 			Target:   &options.SubnetIDs,
 		},
-		&flags.String{
-			Name:     "master-node-security-group-id",
+		"master-node-security-group-id": &flags.String{
 			Required: true,
 			Target:   &options.MasterNodeSecurityGroupID,
 		},
-		&flags.String{
-			Name:     "worker-node-ami-id",
+		"worker-node-ami-id": &flags.String{
 			Required: true,
 			Target:   &options.WorkerNodeAMIID,
 		},
-		&flags.String{
-			Name:     "key-name",
+		"key-name": &flags.String{
 			Required: true,
 			Target:   &options.KeyName,
 		},
 
-		&flags.Embedded{
-			Name:     "controller-manager-var",
+		"controller-manager-var": &flags.Embedded{
 			Required: true,
 			Flags: cli.Flags{
-				&flags.String{
-					Name:    "terraform-module-path",
+				"terraform-module-path": &flags.String{
 					Default: "/etc/terraform/modules/aws",
 					Target:  &options.ControllerManagerOptions.TerraformModulePath,
 				},
-				&flags.String{
-					Name:     "terraform-backend",
+				"terraform-backend": &flags.String{
 					Required: true,
 					Target:   &terraformBackend,
 				},
-				terraformBackendFlag,
+				"terraform-backend-var": terraformBackendFlag,
 			},
 		},
 
-		terraformBackendFlag,
+		// FIXME(kevindrosendahl): think this can be removed but leaving it just in case things break
+		//terraformBackendFlag,
 	}
 	return flags, options
 }

@@ -86,7 +86,6 @@ func (f *Embedded) AddToFlagSet(name string, flags *pflag.FlagSet) {
 }
 
 type DelayedEmbedded struct {
-	Name        string
 	Required    bool
 	Short       string
 	Usage       string
@@ -155,8 +154,8 @@ func (f *DelayedEmbedded) AddToFlagSet(name string, flags *pflag.FlagSet) {
 	f.name = name
 	f.flagSet = flags
 
-	flags.StringArrayVar(&f.target, f.Name, nil, f.Usage)
+	flags.StringArrayVar(&f.target, name, nil, f.Usage)
 	if f.Required {
-		markFlagRequired(f.Name, flags)
+		markFlagRequired(name, flags)
 	}
 }
