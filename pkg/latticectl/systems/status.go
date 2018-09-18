@@ -18,6 +18,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 
 	"github.com/briandowns/spinner"
+	"sync"
 )
 
 func Status() *cli.Command {
@@ -54,8 +55,23 @@ func Status() *cli.Command {
 }
 
 func PrintSystem(client client.Interface, id v1.SystemID, w io.Writer, f printer.Format) error {
-	// TODO: Make requests in parallel
-	system, err := client.V1().Systems().Get(id)
+	var system *v1.System
+	var services []v1.Service
+	var err error
+	var wg sync.WaitGroup
+	wg.Add(2)
+
+	go func() {
+		system, err = client.V1().Systems().Get(id)
+		wg.Done()
+	}()
+
+	go func() {
+		services, err = client.V1().Systems().Services(id).List()
+		wg.Done()
+	}()
+
+	wg.Wait()
 	if err != nil {
 		return err
 	}

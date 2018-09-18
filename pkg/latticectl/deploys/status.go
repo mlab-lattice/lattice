@@ -11,6 +11,7 @@ import (
 	"github.com/mlab-lattice/lattice/pkg/util/cli2"
 	"github.com/mlab-lattice/lattice/pkg/util/cli2/color"
 	"github.com/mlab-lattice/lattice/pkg/util/cli2/printer"
+	"time"
 )
 
 func Status() *cli.Command {
@@ -113,7 +114,7 @@ func WatchDeploy(client client.Interface, system v1.SystemID, id v1.DeployID, w 
 			return nil
 		}
 
-		//time.Sleep(5 * time.Second)
+		time.Sleep(5 * time.Second)
 	}
 }
 

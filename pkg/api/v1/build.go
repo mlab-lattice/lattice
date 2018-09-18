@@ -11,8 +11,9 @@ type (
 )
 
 const (
-	BuildStatePending   BuildState = "pending"
-	BuildStateAccepted  BuildState = "accepted"
+	BuildStatePending  BuildState = "pending"
+	BuildStateAccepted BuildState = "accepted"
+	// FIXME(kevindrosendahl): should probably standardize on running vs in progress
 	BuildStateRunning   BuildState = "running"
 	BuildStateSucceeded BuildState = "succeeded"
 	BuildStateFailed    BuildState = "failed"

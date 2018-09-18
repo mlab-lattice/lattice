@@ -63,7 +63,8 @@ func CreateSystem(client client.Interface, id v1.SystemID, definition string, w 
 	}
 
 	if watch {
-		return WatchSystemCreate(client, id, w, f)
+		WatchSystem(client, id, w, f)
+		return nil
 	}
 
 	fmt.Fprintf(
@@ -75,9 +76,5 @@ to watch progress, run:
 		color.IDString(string(id)),
 		string(id),
 	)
-	return nil
-}
-
-func WatchSystemCreate(client client.Interface, id v1.SystemID, w io.Writer, f printer.Format) error {
 	return nil
 }

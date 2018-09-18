@@ -18,8 +18,9 @@ const (
 )
 
 type System struct {
-	ID            SystemID `json:"id"`
-	DefinitionURL string   `json:"definitionUrl"`
+	ID SystemID `json:"id"`
+
+	DefinitionURL string `json:"definitionUrl"`
 
 	Status SystemStatus `json:"status"`
 }

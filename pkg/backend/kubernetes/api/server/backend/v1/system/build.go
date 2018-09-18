@@ -210,7 +210,8 @@ func (b *buildBackend) transformBuild(build *latticev1.Build) (v1.Build, error) 
 		Path:    build.Spec.Path,
 
 		Status: v1.BuildStatus{
-			State: state,
+			State:   state,
+			Message: build.Status.Message,
 
 			StartTimestamp:      startTimestamp,
 			CompletionTimestamp: completionTimestamp,

@@ -9,6 +9,8 @@ var Command = cli.RootCommand{
 	Command: &cli.Command{
 		Short: "utility for interacting with lattices",
 		Subcommands: map[string]*cli.Command{
+			"build":   Build(),
+			"builds":  Builds(),
 			"context": Context(),
 			"deploy":  Deploy(),
 			"deploys": Deploys(),
