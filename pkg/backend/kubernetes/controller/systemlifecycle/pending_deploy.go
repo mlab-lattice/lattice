@@ -133,7 +133,6 @@ func (c *Controller) syncPendingDeploy(deploy *latticev1.Deploy) error {
 
 	now := metav1.Now()
 	startTimestamp := &now
-	completionTimestamp := &now
 
 	_, err = c.updateDeployStatus(
 		deploy,
@@ -142,7 +141,7 @@ func (c *Controller) syncPendingDeploy(deploy *latticev1.Deploy) error {
 		nil,
 		deploy.Status.Build,
 		startTimestamp,
-		completionTimestamp,
+		nil,
 	)
 	return err
 }
