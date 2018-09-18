@@ -5,7 +5,10 @@ go_library(
     srcs = ["docgen.go"],
     importpath = "github.com/mlab-lattice/lattice/cmd/generate-latticectl-docs",
     visibility = ["//visibility:private"],
-    deps = ["//pkg/util/cli/docgen:go_default_library"],
+    deps = [
+        "//pkg/latticectl:go_default_library",
+        "//pkg/util/cli2/docgen:go_default_library",
+    ],
 )
 
 go_binary(

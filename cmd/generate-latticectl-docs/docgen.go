@@ -2,11 +2,11 @@ package main
 
 import (
 	"flag"
-	//"io/ioutil"
+	"io/ioutil"
 	"log"
 
-	"github.com/mlab-lattice/lattice/pkg/util/cli/docgen"
-	//"github.com/mlab-lattice/lattice/pkg/latticectl2"
+	"github.com/mlab-lattice/lattice/pkg/latticectl"
+	"github.com/mlab-lattice/lattice/pkg/util/cli2/docgen"
 )
 
 func main() {
@@ -23,24 +23,24 @@ func main() {
 	log.Printf("Input docs dir: '%s' \n", inputDocsDir)
 	log.Printf("Output docs file path: '%s' \n", outputDocsFilePath)
 
-	//latticectl := latticectl2.Command
-	//err := latticectl.Init()
-	//if err != nil {
-	//	log.Fatalf("FATAL: Error while initialising latticectl")
-	//}
-	//
-	//reader, err := docgen.GenerateMarkdown(latticectl)
-	//if err != nil {
-	//	log.Fatalf("FATAL: Error while generating markdown: %s", err)
-	//}
-	//
-	//markdownBytes, err := ioutil.ReadAll(reader)
-	//if err != nil {
-	//	log.Fatalf("FATAL: Error while reading from markdown buffer: %s", err)
-	//}
-	//
-	//writeError := ioutil.WriteFile(outputDocsFilePath, markdownBytes, 0755)
-	//if writeError != nil {
-	//	log.Fatalf("FATAL: Error while writing markdown buffer to file: %s", err)
-	//}
+	latticectl := latticectl.Command
+	err := latticectl.Init()
+	if err != nil {
+		log.Fatalf("FATAL: Error while initialising latticectl")
+	}
+
+	reader, err := docgen.GenerateMarkdown(&latticectl)
+	if err != nil {
+		log.Fatalf("FATAL: Error while generating markdown: %s", err)
+	}
+
+	markdownBytes, err := ioutil.ReadAll(reader)
+	if err != nil {
+		log.Fatalf("FATAL: Error while reading from markdown buffer: %s", err)
+	}
+
+	writeError := ioutil.WriteFile(outputDocsFilePath, markdownBytes, 0755)
+	if writeError != nil {
+		log.Fatalf("FATAL: Error while writing markdown buffer to file: %s", err)
+	}
 }
