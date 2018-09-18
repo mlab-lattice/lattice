@@ -16,15 +16,15 @@ const (
 	WatchFlagName   = "watch"
 )
 
-func ConfigFlag() *flags.String {
-	return &flags.String{}
+func ConfigFlag(target *string) *flags.String {
+	return &flags.String{Target: target}
 }
 
-func ContextFlag() *flags.String {
-	return &flags.String{}
+func ContextFlag(target *string) *flags.String {
+	return &flags.String{Target: target}
 }
 
-func OutputFlag(supported []printer.Format, defaultFormat printer.Format) *flags.String {
+func OutputFlag(target *string, supported []printer.Format, defaultFormat printer.Format) *flags.String {
 	if defaultFormat == "" {
 		defaultFormat = printer.FormatTable
 	}
@@ -46,18 +46,21 @@ func OutputFlag(supported []printer.Format, defaultFormat printer.Format) *flags
 		Short:   "o",
 		Usage:   usage,
 		Default: string(defaultFormat),
+		Target:  target,
 	}
 }
 
-func SystemFlag() *flags.String {
+func SystemFlag(target *string) *flags.String {
 	return &flags.String{
 		Required: false,
+		Target:   target,
 	}
 }
 
-func WatchFlag() *flags.Bool {
+func WatchFlag(target *bool) *flags.Bool {
 	return &flags.Bool{
 		Short:    "w",
 		Required: false,
+		Target:   target,
 	}
 }

@@ -21,14 +21,16 @@ type SystemCommandContext struct {
 }
 
 func (c *SystemCommand) Command() *cli.Command {
-	c.Flags[SystemFlagName] = SystemFlag()
+	var system string
+	c.Flags[SystemFlagName] = SystemFlag(&system)
 
 	cmd := &LatticeCommand{
 		Short: c.Short,
 		Args:  c.Args,
 		Flags: c.Flags,
 		Run: func(ctx *LatticeCommandContext, args []string, f cli.Flags) error {
-			system := v1.SystemID(c.Flags[SystemFlagName].Value().(string))
+			system := v1.SystemID(system)
+
 			// Try to retrieve the lattice from the context if there is one
 			if system == "" {
 				system = ctx.Context.System

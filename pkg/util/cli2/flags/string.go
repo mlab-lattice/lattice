@@ -11,8 +11,8 @@ type String struct {
 	Default  string
 	Short    string
 	Usage    string
+	Target   *string
 
-	target  string
 	name    string
 	flagSet *pflag.FlagSet
 }
@@ -38,7 +38,7 @@ func (f *String) Parse() func() error {
 }
 
 func (f *String) Value() interface{} {
-	return f.target
+	return f.Target
 }
 
 func (f *String) Set() bool {
@@ -46,7 +46,7 @@ func (f *String) Set() bool {
 }
 
 func (f *String) AddToFlagSet(name string, flags *pflag.FlagSet) {
-	flags.StringVarP(&f.target, name, f.Short, f.Default, f.Usage)
+	flags.StringVarP(f.Target, name, f.Short, f.Default, f.Usage)
 	f.name = name
 	f.flagSet = flags
 

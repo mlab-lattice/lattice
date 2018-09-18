@@ -25,15 +25,20 @@ var ListSupportedFormats = []printer.Format{
 }
 
 func Command() *cli.Command {
+	var (
+		output string
+		watch  bool
+	)
+
 	cmd := command.LatticeCommand{
 		Flags: map[string]cli.Flag{
-			command.OutputFlagName: command.OutputFlag(ListSupportedFormats, printer.FormatTable),
-			command.WatchFlagName:  command.WatchFlag(),
+			command.OutputFlagName: command.OutputFlag(&output, ListSupportedFormats, printer.FormatTable),
+			command.WatchFlagName:  command.WatchFlag(&watch),
 		},
 		Run: func(ctx *command.LatticeCommandContext, args []string, flags cli.Flags) error {
-			format := printer.Format(flags["output"].Value().(string))
+			format := printer.Format(output)
 
-			if flags["watch"].Value().(bool) {
+			if watch {
 				WatchSystems(ctx.Client.V1().Systems(), format, os.Stdout)
 				return nil
 			}
@@ -105,7 +110,7 @@ func WatchSystems(client clientv1.SystemClient, format printer.Format, w io.Writ
 	case printer.FormatJSON:
 		j := printer.NewJSON(w)
 		handle = func(systems []v1.System) {
-			j.Stream(systems)
+			j.Print(systems)
 		}
 
 	default:

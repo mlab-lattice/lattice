@@ -9,36 +9,48 @@ import (
 
 const (
 	flagBearerToken     = "bearer-token"
-	flagUnauthenticated = "unauthenticated"
 	flagName            = "name"
+	flagUnauthenticated = "unauthenticated"
 	flagURL             = "url"
 )
 
 var authFlags = []string{flagBearerToken, flagUnauthenticated}
 
 func Create() *cli.Command {
+	var (
+		bearerToken     string
+		configPath      string
+		name            string
+		system          string
+		unauthenticated bool
+		url             string
+	)
+
 	return &cli.Command{
 		Flags: cli.Flags{
-			flagBearerToken:        &flags.String{},
-			flagName:               &flags.String{Required: true},
-			flagUnauthenticated:    &flags.Bool{},
-			flagURL:                &flags.String{Required: true},
-			command.ConfigFlagName: command.ConfigFlag(),
-			command.SystemFlagName: command.SystemFlag(),
+			flagBearerToken:        &flags.String{Target: &bearerToken},
+			command.ConfigFlagName: command.ConfigFlag(&configPath),
+			flagName: &flags.String{
+				Required: true,
+				Target:   &name,
+			},
+			command.SystemFlagName: command.SystemFlag(&system),
+			flagUnauthenticated:    &flags.Bool{Target: &unauthenticated},
+			flagURL: &flags.String{
+				Required: true,
+				Target:   &url,
+			},
 		},
 		MutuallyExclusiveFlags: [][]string{authFlags},
 		RequiredFlagSet:        [][]string{authFlags},
 		Run: func(args []string, flags cli.Flags) error {
 			// if ConfigFile.Path is empty, it will look in $XDG_CONFIG_HOME/.latticectl/config.json
-			configPath := flags[command.ConfigFlagName].Value().(string)
 			configFile := command.ConfigFile{Path: configPath}
 
-			contextName := flags[flagName].Value().(string)
-
 			// if the context already exists, can't create it
-			_, err := configFile.Context(contextName)
+			_, err := configFile.Context(name)
 			if err == nil {
-				return command.NewContextAlreadyExistsError(contextName)
+				return command.NewContextAlreadyExistsError(name)
 			}
 
 			// if the error was something other than the context not existing,
@@ -48,17 +60,16 @@ func Create() *cli.Command {
 			}
 
 			var auth *command.AuthContext
-			bearerToken := flags[flagBearerToken].Value().(string)
 			if bearerToken != "" {
 				auth = &command.AuthContext{BearerToken: &bearerToken}
 			}
 
 			context := &command.Context{
-				URL:    flags[flagURL].Value().(string),
-				System: v1.SystemID(flags[command.SystemFlagName].Value().(string)),
+				URL:    url,
+				System: v1.SystemID(system),
 				Auth:   auth,
 			}
-			return configFile.CreateContext(contextName, context)
+			return configFile.CreateContext(name, context)
 		},
 	}
 }

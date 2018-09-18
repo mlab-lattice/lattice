@@ -23,8 +23,12 @@ type LatticeCommand struct {
 }
 
 func (c *LatticeCommand) Command() *cli.Command {
-	c.Flags[ConfigFlagName] = ConfigFlag()
-	c.Flags[ContextFlagName] = ContextFlag()
+	var (
+		configPath  string
+		contextName string
+	)
+	c.Flags[ConfigFlagName] = ConfigFlag(&configPath)
+	c.Flags[ContextFlagName] = ContextFlag(&contextName)
 
 	cmd := &cli.Command{
 		Short: c.Short,
@@ -32,10 +36,8 @@ func (c *LatticeCommand) Command() *cli.Command {
 		Flags: c.Flags,
 		Run: func(args []string, flags cli.Flags) error {
 			// if ConfigFile.Path is empty, it will look in $XDG_CONFIG_HOME/.latticectl/config.json
-			configPath := c.Flags[ConfigFlagName].Value().(string)
 			configFile := ConfigFile{Path: configPath}
 
-			contextName := c.Flags[ContextFlagName].Value().(string)
 			if contextName == "" {
 				var err error
 				contextName, err = configFile.CurrentContext()

@@ -9,7 +9,6 @@ type Flag interface {
 	GetShort() string
 	GetUsage() string
 	Parse() func() error
-	Value() interface{}
 	Set() bool
 	AddToFlagSet(name string, fs *pflag.FlagSet)
 }

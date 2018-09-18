@@ -9,8 +9,8 @@ type Bool struct {
 	Default  bool
 	Short    string
 	Usage    string
+	Target   *bool
 
-	target  bool
 	name    string
 	flagSet *pflag.FlagSet
 }
@@ -36,7 +36,7 @@ func (f *Bool) Parse() func() error {
 }
 
 func (f *Bool) Value() interface{} {
-	return f.target
+	return f.Target
 }
 
 func (f *Bool) Set() bool {
@@ -44,7 +44,7 @@ func (f *Bool) Set() bool {
 }
 
 func (f *Bool) AddToFlagSet(name string, flags *pflag.FlagSet) {
-	flags.BoolVarP(&f.target, name, f.Short, f.Default, f.Usage)
+	flags.BoolVarP(f.Target, name, f.Short, f.Default, f.Usage)
 	f.name = name
 	f.flagSet = flags
 

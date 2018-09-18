@@ -38,10 +38,6 @@ func (j *JSON) Print(v interface{}) error {
 	}
 
 	_, err = j.writer.Write(data)
-	return err
-}
-
-func (j *JSON) Stream(v interface{}) {
-	j.Print(v)
 	fmt.Fprint(j.writer, "\n")
+	return err
 }

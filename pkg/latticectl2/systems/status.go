@@ -21,15 +21,20 @@ import (
 )
 
 func Status() *cli.Command {
+	var (
+		output string
+		watch  bool
+	)
+
 	cmd := command.SystemCommand{
 		Flags: map[string]cli.Flag{
-			command.OutputFlagName: command.OutputFlag(ListSupportedFormats, printer.FormatTable),
-			command.WatchFlagName:  command.WatchFlag(),
+			command.OutputFlagName: command.OutputFlag(&output, ListSupportedFormats, printer.FormatTable),
+			command.WatchFlagName:  command.WatchFlag(&watch),
 		},
 		Run: func(ctx *command.SystemCommandContext, args []string, flags cli.Flags) error {
-			format := printer.Format(flags[command.OutputFlagName].Value().(string))
+			format := printer.Format(output)
 
-			if flags[command.WatchFlagName].Value().(bool) {
+			if watch {
 				WatchSystem(ctx.Client.V1().Systems(), ctx.System, format, os.Stdout)
 				return nil
 			}
@@ -143,7 +148,7 @@ func WatchSystem(client clientv1.SystemClient, id v1.SystemID, f printer.Format,
 	case printer.FormatJSON:
 		j := printer.NewJSON(w)
 		handle = func(status status) {
-			j.Stream(status.system)
+			j.Print(status.system)
 		}
 
 	default:

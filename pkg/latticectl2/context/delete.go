@@ -7,18 +7,23 @@ import (
 )
 
 func Delete() *cli.Command {
+	var (
+		configPath string
+		name       string
+	)
+
 	return &cli.Command{
 		Flags: cli.Flags{
-			flagName:               &flags.String{Required: true},
-			command.ConfigFlagName: command.ConfigFlag(),
+			command.ConfigFlagName: command.ConfigFlag(&configPath),
+			flagName: &flags.String{
+				Required: true,
+				Target:   &name,
+			},
 		},
 		Run: func(args []string, flags cli.Flags) error {
 			// if ConfigFile.Path is empty, it will look in $XDG_CONFIG_HOME/.latticectl/config.json
-			configPath := flags[command.ConfigFlagName].Value().(string)
 			configFile := command.ConfigFile{Path: configPath}
-
-			contextName := flags[flagName].Value().(string)
-			return configFile.DeleteContext(contextName)
+			return configFile.DeleteContext(name)
 		},
 	}
 }

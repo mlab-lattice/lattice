@@ -12,14 +12,18 @@ var ListSupportedFormats = []printer.Format{
 }
 
 func List() *cli.Command {
+	var (
+		configPath string
+		output     string
+	)
+
 	return &cli.Command{
 		Flags: cli.Flags{
-			command.ConfigFlagName: command.ConfigFlag(),
-			command.OutputFlagName: command.OutputFlag(GetSupportedFormats, printer.FormatJSON),
+			command.ConfigFlagName: command.ConfigFlag(&configPath),
+			command.OutputFlagName: command.OutputFlag(&output, GetSupportedFormats, printer.FormatJSON),
 		},
 		Run: func(args []string, flags cli.Flags) error {
 			// if ConfigFile.Path is empty, it will look in $XDG_CONFIG_HOME/.latticectl/config.json
-			configPath := flags[command.ConfigFlagName].Value().(string)
 			configFile := command.ConfigFile{Path: configPath}
 
 			contexts, err := configFile.Contexts()
@@ -27,7 +31,7 @@ func List() *cli.Command {
 				return err
 			}
 
-			format := printer.Format(flags[command.OutputFlagName].Value().(string))
+			format := printer.Format(output)
 			return PrintContexts(contexts, format)
 		},
 	}

@@ -11,25 +11,29 @@ const (
 )
 
 func Switch() *cli.Command {
+	var (
+		configPath string
+		name       string
+		none       bool
+	)
+
 	return &cli.Command{
 		Flags: cli.Flags{
-			flagName:               &flags.String{},
-			flagNone:               &flags.Bool{},
-			command.ConfigFlagName: command.ConfigFlag(),
+			flagName:               &flags.String{Target: &name},
+			flagNone:               &flags.Bool{Target: &none},
+			command.ConfigFlagName: command.ConfigFlag(&configPath),
 		},
 		MutuallyExclusiveFlags: [][]string{{flagName, flagNone}},
 		RequiredFlagSet:        [][]string{{flagName, flagNone}},
 		Run: func(args []string, flags cli.Flags) error {
 			// if ConfigFile.Path is empty, it will look in $XDG_CONFIG_HOME/.latticectl/config.json
-			configPath := flags[command.ConfigFlagName].Value().(string)
 			configFile := command.ConfigFile{Path: configPath}
 
-			if flags[flagNone].Value().(bool) {
+			if none {
 				return configFile.UnsetCurrentContext()
 			}
 
-			contextName := flags[flagName].Value().(string)
-			return configFile.SetCurrentContext(contextName)
+			return configFile.SetCurrentContext(name)
 		},
 	}
 }
