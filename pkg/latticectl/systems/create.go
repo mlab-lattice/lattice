@@ -35,7 +35,7 @@ func Create() *cli.Command {
 			},
 			"name": &flags.String{
 				Required: true,
-				Target:   &definition,
+				Target:   &name,
 			},
 			command.OutputFlagName: command.OutputFlag(
 				&output,

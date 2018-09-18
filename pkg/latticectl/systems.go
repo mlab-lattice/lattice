@@ -163,8 +163,9 @@ func systemsTableRows(systems []v1.System) []printer.TableRow {
 		})
 	}
 
-	// sort the rows by system ID
-	sort.Slice(rows, func(i, j int) bool { return rows[i][0] < rows[j][0] })
+	// sort the rows by id
+	idIdx := 0
+	sort.Slice(rows, func(i, j int) bool { return rows[i][idIdx] < rows[j][idIdx] })
 
 	return rows
 }
