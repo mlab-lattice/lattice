@@ -11,7 +11,7 @@ import (
 	"github.com/mlab-lattice/lattice/pkg/util/cli2/color"
 
 	"github.com/buger/goterm"
-	"github.com/tfogo/tablewriter"
+	"github.com/olekukonko/tablewriter"
 )
 
 type (

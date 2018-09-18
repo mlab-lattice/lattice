@@ -136,6 +136,11 @@ GO_DEPENDENCIES = {
             "tag": "v1.2",
             "importpath": "github.com/gin-gonic/gin",
         },
+        "github.com/olekukonko/tablewriter": {
+            "name": "com_github_olekukonko_tablewriter",
+            "commit": "be2c049b30ccd4d3fd795d6bf7dce74e42eeedaa",
+            "importpath": "github.com/olekukonko/tablewriter",
+        },
         "github.com/satori/go.uuid": {
             "name": "com_github_satori_go_uuid",
             "commit": "5bf94b69c6b68ee1b541973bb8e1144db23a194b",
@@ -163,6 +168,7 @@ GO_DEPENDENCIES = {
             "tag": "v1.0.0",
             "importpath": "github.com/swaggo/gin-swagger",
         },
+        # FIXME(kevindrosendahl): remove when removing old pkg/util/cli
         "github.com/tfogo/tablewriter": {
             "name": "com_github_tfogo_tablewriter",
             "commit": "4776fb554dc2ca114fbce4738142a47de1ea0929",

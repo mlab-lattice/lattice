@@ -93,6 +93,10 @@ func (b *Backend) Delete(id v1.SystemID) error {
 		return v1.NewConflictError()
 	}
 
+	if errors.IsNotFound(err) {
+		return v1.NewInvalidSystemIDError()
+	}
+
 	return err
 }
 

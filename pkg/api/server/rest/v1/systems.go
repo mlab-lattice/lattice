@@ -164,6 +164,9 @@ func (api *LatticeAPI) handleDeleteSystem(c *gin.Context) {
 		}
 
 		switch v1err.Code {
+		case v1.ErrorCodeInvalidSystemID:
+			c.JSON(http.StatusBadRequest, v1err)
+
 		case v1.ErrorCodeConflict:
 			c.JSON(http.StatusConflict, v1err)
 

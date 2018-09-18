@@ -6,12 +6,11 @@ go_library(
         "command.go",
         "status.go",
     ],
-    importpath = "github.com/mlab-lattice/lattice/pkg/latticectl/builds",
+    importpath = "github.com/mlab-lattice/lattice/pkg/latticectl/teardowns",
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/api/client:go_default_library",
         "//pkg/api/v1:go_default_library",
-        "//pkg/definition/tree:go_default_library",
         "//pkg/latticectl/command:go_default_library",
         "//pkg/util/cli2:go_default_library",
         "//pkg/util/cli2/color:go_default_library",
