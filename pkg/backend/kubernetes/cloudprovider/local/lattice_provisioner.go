@@ -216,7 +216,7 @@ func (p *DefaultLocalLatticeProvisioner) bootstrap(containerChannel, address str
 									"--service-mesh-var", fmt.Sprintf("xds-api-image=%v", getLatticeContainerImage(containerChannel, "kubernetes-envoy-xds-api-grpc-per-node")),
 									"--service-mesh-var", "redirect-cidr-block=172.16.0.0/16",
 									"--cloud-provider", "local",
-									"--cloud-provider-var", "IP=" + address,
+									"--cloud-provider-var", "ip=" + address,
 									"--cloud-provider-var", fmt.Sprintf("dns-var=controller-image=%v", getLatticeContainerImage(containerChannel, dockerImageDNSController)),
 									"--cloud-provider-var", fmt.Sprintf("dns-var=dnsmasq-nanny-image=%v", dockerImageDnsmasqNanny),
 								}...,

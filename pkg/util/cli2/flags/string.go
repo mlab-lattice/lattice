@@ -45,7 +45,7 @@ func (f *String) AddToFlagSet(name string, flags *pflag.FlagSet) {
 	}
 }
 
-type StringSliceFlag struct {
+type StringSlice struct {
 	Required bool
 	Default  []string
 	Short    string
@@ -56,27 +56,27 @@ type StringSliceFlag struct {
 	flagSet *pflag.FlagSet
 }
 
-func (f *StringSliceFlag) IsRequired() bool {
+func (f *StringSlice) IsRequired() bool {
 	return f.Required
 }
 
-func (f *StringSliceFlag) GetShort() string {
+func (f *StringSlice) GetShort() string {
 	return f.Short
 }
 
-func (f *StringSliceFlag) GetUsage() string {
+func (f *StringSlice) GetUsage() string {
 	return f.Usage
 }
 
-func (f *StringSliceFlag) Parse() func() error {
+func (f *StringSlice) Parse() func() error {
 	return nil
 }
 
-func (f *StringSliceFlag) Set() bool {
+func (f *StringSlice) Set() bool {
 	return f.flagSet.Changed(f.name)
 }
 
-func (f *StringSliceFlag) AddToFlagSet(name string, flags *pflag.FlagSet) {
+func (f *StringSlice) AddToFlagSet(name string, flags *pflag.FlagSet) {
 	f.name = name
 	f.flagSet = flags
 
@@ -86,7 +86,7 @@ func (f *StringSliceFlag) AddToFlagSet(name string, flags *pflag.FlagSet) {
 	}
 }
 
-type StringArrayFlag struct {
+type StringArray struct {
 	Required bool
 	Default  string
 	Short    string
@@ -97,27 +97,27 @@ type StringArrayFlag struct {
 	flagSet *pflag.FlagSet
 }
 
-func (f *StringArrayFlag) IsRequired() bool {
+func (f *StringArray) IsRequired() bool {
 	return f.Required
 }
 
-func (f *StringArrayFlag) GetShort() string {
+func (f *StringArray) GetShort() string {
 	return f.Short
 }
 
-func (f *StringArrayFlag) GetUsage() string {
+func (f *StringArray) GetUsage() string {
 	return f.Usage
 }
 
-func (f *StringArrayFlag) Parse() func() error {
+func (f *StringArray) Parse() func() error {
 	return nil
 }
 
-func (f *StringArrayFlag) Set() bool {
+func (f *StringArray) Set() bool {
 	return f.flagSet.Changed(f.name)
 }
 
-func (f *StringArrayFlag) AddToFlagSet(name string, flags *pflag.FlagSet) {
+func (f *StringArray) AddToFlagSet(name string, flags *pflag.FlagSet) {
 	f.name = name
 	f.flagSet = flags
 

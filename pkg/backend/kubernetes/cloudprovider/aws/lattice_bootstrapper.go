@@ -76,7 +76,7 @@ func LatticeBootstrapperFlags() (cli.Flags, *LatticeBootstrapperOptions) {
 			Required: true,
 			Target:   &options.Route53PrivateZoneID,
 		},
-		"subnet-ids": &flags.StringSliceFlag{
+		"subnet-ids": &flags.StringSlice{
 			Required: true,
 			Target:   &options.SubnetIDs,
 		},

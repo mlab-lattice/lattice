@@ -74,7 +74,7 @@ func Command() *cli.RootCommand {
 					Required: true,
 					Target:   &internalDNSDomain,
 				},
-				"controllers": &flags.StringSliceFlag{
+				"controllers": &flags.StringSlice{
 					Usage:   "controllers that should be run",
 					Default: []string{"*"},
 					Target:  &enabledControllers,

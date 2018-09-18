@@ -38,8 +38,7 @@ func (c *Controller) addService(
 		service = &v1.Service{
 			ID: v1.ServiceID(uuid.NewV4().String()),
 
-			Path:       path,
-			Definition: *definition,
+			Path: path,
 
 			Status: v1.ServiceStatus{
 				State: v1.ServiceStatePending,

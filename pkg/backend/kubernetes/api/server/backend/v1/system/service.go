@@ -235,8 +235,7 @@ func (b *serviceBackend) transformService(
 	externalService := v1.Service{
 		ID: v1.ServiceID(id),
 
-		Path:       path,
-		Definition: service.Spec.Definition,
+		Path: path,
 
 		Status: v1.ServiceStatus{
 			State:       state,

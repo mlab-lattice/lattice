@@ -34,7 +34,6 @@ func LatticeBoostrapperFlag(cloudProvider *string) (cli.Flag, *ClusterBootstrapp
 	options := &ClusterBootstrapperOptions{}
 
 	flag := &flags.DelayedEmbedded{
-		//Name:     "cloud-provider-var",
 		Required: true,
 		Usage:    "configuration for the cloud provider lattice bootstrapper",
 		Flags: map[string]cli.Flags{
