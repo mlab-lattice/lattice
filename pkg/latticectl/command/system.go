@@ -23,6 +23,10 @@ type SystemCommandContext struct {
 }
 
 func (c *SystemCommand) Command() *cli.Command {
+	if c.Flags == nil {
+		c.Flags = make(cli.Flags)
+	}
+
 	var system string
 	c.Flags[SystemFlagName] = SystemFlag(&system)
 

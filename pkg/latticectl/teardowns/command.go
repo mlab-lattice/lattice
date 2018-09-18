@@ -28,6 +28,10 @@ type TeardownCommandContext struct {
 }
 
 func (c *Command) Command() *cli.Command {
+	if c.Flags == nil {
+		c.Flags = make(cli.Flags)
+	}
+
 	var teardown string
 	c.Flags[teardownFlagName] = &flags.String{
 		Required: true,

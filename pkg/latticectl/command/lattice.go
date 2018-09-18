@@ -25,6 +25,10 @@ type LatticeCommand struct {
 }
 
 func (c *LatticeCommand) Command() *cli.Command {
+	if c.Flags == nil {
+		c.Flags = make(cli.Flags)
+	}
+
 	var (
 		configPath  string
 		contextName string

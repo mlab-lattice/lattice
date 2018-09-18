@@ -28,6 +28,10 @@ type SecretCommandContext struct {
 }
 
 func (c *Command) Command() *cli.Command {
+	if c.Flags == nil {
+		c.Flags = make(cli.Flags)
+	}
+
 	var secret tree.PathSubcomponent
 	c.Flags[secretFlagName] = &flags.PathSubcomponent{
 		Required: true,

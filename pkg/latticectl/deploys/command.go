@@ -28,6 +28,10 @@ type DeployCommandContext struct {
 }
 
 func (c *Command) Command() *cli.Command {
+	if c.Flags == nil {
+		c.Flags = make(cli.Flags)
+	}
+
 	var deploy string
 	c.Flags[deployFlagName] = &flags.String{
 		Required: true,

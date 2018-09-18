@@ -28,6 +28,10 @@ type BuildCommandContext struct {
 }
 
 func (c *Command) Command() *cli.Command {
+	if c.Flags == nil {
+		c.Flags = make(cli.Flags)
+	}
+
 	var build string
 	c.Flags[buildFlagName] = &flags.String{
 		Required: true,
