@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/gin-gonic/gin"
-	"github.com/mlab-lattice/lattice/pkg/users"
+	"github.com/mlab-lattice/lattice/pkg/api/users"
 )
 
 const (

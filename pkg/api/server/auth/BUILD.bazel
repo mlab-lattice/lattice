@@ -9,8 +9,7 @@ go_library(
     importpath = "github.com/mlab-lattice/lattice/pkg/api/server/auth",
     visibility = ["//visibility:public"],
     deps = [
-        "//pkg/user:go_default_library",
-        "//pkg/users:go_default_library",
+        "//pkg/api/users:go_default_library",
         "@com_github_gin_gonic_gin//:go_default_library",
     ],
 )

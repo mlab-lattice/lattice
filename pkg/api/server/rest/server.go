@@ -7,8 +7,8 @@ import (
 	"github.com/mlab-lattice/lattice/pkg/api/server/auth"
 	restv1 "github.com/mlab-lattice/lattice/pkg/api/server/rest/v1"
 	"github.com/mlab-lattice/lattice/pkg/api/server/v1"
+	"github.com/mlab-lattice/lattice/pkg/api/users"
 	"github.com/mlab-lattice/lattice/pkg/definition/resolver"
-	"github.com/mlab-lattice/lattice/pkg/users"
 
 	"github.com/gin-gonic/gin"
 )
