@@ -17,7 +17,9 @@ type Embedded struct {
 	Usage    string
 	Flags    cli.Flags
 
-	values []string
+	target  []string
+	name    string
+	flagSet *pflag.FlagSet
 }
 
 func (f *Embedded) IsRequired() bool {
@@ -32,20 +34,6 @@ func (f *Embedded) GetUsage() string {
 	return f.Usage
 }
 
-func (f *Embedded) Validate() error {
-	for name, flag := range f.Flags {
-		if flag.GetShort() != "" {
-			return fmt.Errorf("embedded flag %v cannot have a short", name)
-		}
-	}
-
-	return nil
-}
-
-func (f *Embedded) Value() interface{} {
-	return f.Flags
-}
-
 func (f *Embedded) Parse() func() error {
 	return f.parse
 }
@@ -57,7 +45,7 @@ func (f *Embedded) parse() error {
 	}
 
 	var dashedValues []string
-	for _, value := range f.values {
+	for _, value := range f.target {
 		dashedValues = append(dashedValues, fmt.Sprintf("--%v", value))
 	}
 
@@ -83,65 +71,92 @@ func (f *Embedded) parse() error {
 	return nil
 }
 
-func (f *Embedded) AddToFlagSet(name string, flags *pflag.FlagSet) {
-	flags.StringArrayVar(&f.values, name, nil, f.Usage)
+func (f *Embedded) Set() bool {
+	return f.flagSet.Changed(f.name)
+}
 
+func (f *Embedded) AddToFlagSet(name string, flags *pflag.FlagSet) {
+	f.name = name
+	f.flagSet = flags
+
+	flags.StringArrayVar(&f.target, name, nil, f.Usage)
 	if f.Required {
 		markFlagRequired(name, flags)
 	}
 }
 
-//
-//type EmbeddedStringChoice struct {
-//	ChoiceFlag *String
-//	Flags      map[string]cli.Flags
-//
-//	result cli.Flags
-//}
-//
-//func (f *EmbeddedStringChoice) IsRequired() bool {
-//	return f.ChoiceFlag.IsRequired()
-//}
-//
-//func (f *EmbeddedStringChoice) GetShort() string {
-//	return f.ChoiceFlag.GetShort()
-//}
-//
-//func (f *EmbeddedStringChoice) GetUsage() string {
-//	return f.ChoiceFlag.GetUsage()
-//}
-//
-//func (f *EmbeddedStringChoice) Value() interface{} {
-//	return f.result
-//}
-//
-//func (f *EmbeddedStringChoice) Parse() func() error {
-//	return f.parse
-//}
-//
-//func (f *EmbeddedStringChoice) parse() error {
-//	choice := f.ChoiceFlag.Value().(string)
-//	flags, ok := f.Flags[choice]
-//	if !ok {
-//		return fmt.Errorf("invalid flag choice: %v", choice)
-//	}
-//
-//	fs := &pflag.FlagSet{}
-//	var dashedValues []string
-//	for name, flag := range flags {
-//		flag.AddToFlagSet(name, fs)
-//		dashedValues = append(dashedValues, fmt.Sprintf("--%v", name))
-//	}
-//
-//	err := fs.Parse(dashedValues)
-//	if err != nil {
-//		return err
-//	}
-//
-//	f.result = flags
-//	return nil
-//}
-//
-//func (f *EmbeddedStringChoice) AddToFlagSet(name string, flags *pflag.FlagSet) {
-//	f.ChoiceFlag.AddToFlagSet(name, flags)
-//}
+type DelayedEmbedded struct {
+	Name        string
+	Required    bool
+	Short       string
+	Usage       string
+	Flags       map[string]cli.Flags
+	Delimiter   string
+	FlagChooser func() (*string, error)
+
+	target  []string
+	name    string
+	flagSet *pflag.FlagSet
+}
+
+func (f *DelayedEmbedded) IsRequired() bool {
+	return f.Required
+}
+
+func (f *DelayedEmbedded) GetShort() string {
+	return f.Short
+}
+
+func (f *DelayedEmbedded) GetUsage() string {
+	return f.Usage
+}
+
+func (f *DelayedEmbedded) Parse() func() error {
+	return f.parse
+}
+
+func (f *DelayedEmbedded) parse() error {
+	choice, err := f.FlagChooser()
+	if err != nil {
+		return err
+	}
+
+	if choice == nil {
+		if f.Required {
+			// TODO: pretty obtuse error for a user to receive
+			return fmt.Errorf("flag is required, but no choice was made")
+		}
+		return nil
+	}
+
+	flags, ok := f.Flags[*choice]
+	if !ok {
+		// TODO: pretty obtuse error for a user to receive
+		return fmt.Errorf("invalid flag choice %v", choice)
+	}
+
+	embedded := &Embedded{
+		Required: f.Required,
+		Short:    f.Short,
+		Usage:    f.Usage,
+		Flags:    flags,
+
+		target: f.target,
+	}
+
+	return embedded.parse()
+}
+
+func (f *DelayedEmbedded) Set() bool {
+	return f.flagSet.Changed(f.name)
+}
+
+func (f *DelayedEmbedded) AddToFlagSet(name string, flags *pflag.FlagSet) {
+	f.name = name
+	f.flagSet = flags
+
+	flags.StringArrayVar(&f.target, f.Name, nil, f.Usage)
+	if f.Required {
+		markFlagRequired(f.Name, flags)
+	}
+}

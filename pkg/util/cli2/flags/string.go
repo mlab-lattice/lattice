@@ -1,8 +1,6 @@
 package flags
 
 import (
-	"fmt"
-
 	"github.com/spf13/pflag"
 )
 
@@ -38,26 +36,24 @@ func (f *String) Set() bool {
 }
 
 func (f *String) AddToFlagSet(name string, flags *pflag.FlagSet) {
-	flags.StringVarP(f.Target, name, f.Short, f.Default, f.Usage)
 	f.name = name
 	f.flagSet = flags
 
+	flags.StringVarP(f.Target, name, f.Short, f.Default, f.Usage)
 	if f.Required {
 		markFlagRequired(name, flags)
 	}
 }
 
 type StringSliceFlag struct {
-	Name     string
 	Required bool
 	Default  []string
 	Short    string
 	Usage    string
 	Target   *[]string
-}
 
-func (f *StringSliceFlag) GetName() string {
-	return f.Name
+	name    string
+	flagSet *pflag.FlagSet
 }
 
 func (f *StringSliceFlag) IsRequired() bool {
@@ -72,45 +68,33 @@ func (f *StringSliceFlag) GetUsage() string {
 	return f.Usage
 }
 
-func (f *StringSliceFlag) Validate() error {
-	if f.Name == "" {
-		return fmt.Errorf("name cannot be nil")
-	}
-
-	if f.Target == nil {
-		return fmt.Errorf("target cannot be nil")
-	}
-
-	return nil
-}
-
-func (f *StringSliceFlag) GetTarget() interface{} {
-	return f.Target
-}
-
 func (f *StringSliceFlag) Parse() func() error {
 	return nil
 }
 
-func (f *StringSliceFlag) AddToFlagSet(flags *pflag.FlagSet) {
-	flags.StringSliceVarP(f.Target, f.Name, f.Short, f.Default, f.Usage)
+func (f *StringSliceFlag) Set() bool {
+	return f.flagSet.Changed(f.name)
+}
 
+func (f *StringSliceFlag) AddToFlagSet(name string, flags *pflag.FlagSet) {
+	f.name = name
+	f.flagSet = flags
+
+	flags.StringSliceVarP(f.Target, name, f.Short, f.Default, f.Usage)
 	if f.Required {
-		markFlagRequired(f.Name, flags)
+		markFlagRequired(name, flags)
 	}
 }
 
 type StringArrayFlag struct {
-	Name     string
 	Required bool
 	Default  string
 	Short    string
 	Usage    string
 	Target   *[]string
-}
 
-func (f *StringArrayFlag) GetName() string {
-	return f.Name
+	name    string
+	flagSet *pflag.FlagSet
 }
 
 func (f *StringArrayFlag) IsRequired() bool {
@@ -125,30 +109,20 @@ func (f *StringArrayFlag) GetUsage() string {
 	return f.Usage
 }
 
-func (f *StringArrayFlag) Validate() error {
-	if f.Name == "" {
-		return fmt.Errorf("name cannot be nil")
-	}
-
-	if f.Target == nil {
-		return fmt.Errorf("target cannot be nil")
-	}
-
-	return nil
-}
-
-func (f *StringArrayFlag) GetTarget() interface{} {
-	return f.Target
-}
-
 func (f *StringArrayFlag) Parse() func() error {
 	return nil
 }
 
-func (f *StringArrayFlag) AddToFlagSet(flags *pflag.FlagSet) {
-	flags.StringArrayVarP(f.Target, f.Name, f.Short, nil, f.Usage)
+func (f *StringArrayFlag) Set() bool {
+	return f.flagSet.Changed(f.name)
+}
 
+func (f *StringArrayFlag) AddToFlagSet(name string, flags *pflag.FlagSet) {
+	f.name = name
+	f.flagSet = flags
+
+	flags.StringArrayVarP(f.Target, name, f.Short, nil, f.Usage)
 	if f.Required {
-		markFlagRequired(f.Name, flags)
+		markFlagRequired(name, flags)
 	}
 }

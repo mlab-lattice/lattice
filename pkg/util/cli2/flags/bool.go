@@ -27,10 +27,6 @@ func (f *Bool) GetUsage() string {
 	return f.Usage
 }
 
-func (f *Bool) Validate() error {
-	return nil
-}
-
 func (f *Bool) Parse() func() error {
 	return nil
 }
@@ -44,10 +40,10 @@ func (f *Bool) Set() bool {
 }
 
 func (f *Bool) AddToFlagSet(name string, flags *pflag.FlagSet) {
-	flags.BoolVarP(f.Target, name, f.Short, f.Default, f.Usage)
 	f.name = name
 	f.flagSet = flags
 
+	flags.BoolVarP(f.Target, name, f.Short, f.Default, f.Usage)
 	if f.Required {
 		markFlagRequired(name, flags)
 	}
