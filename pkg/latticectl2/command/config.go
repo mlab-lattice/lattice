@@ -60,7 +60,28 @@ func (c *ConfigFile) Context(name string) (*Context, error) {
 	return &ctx, nil
 }
 
-func (c *ConfigFile) CreateContext(name string, context Context) error {
+func (c *ConfigFile) CreateContext(name string, context *Context) error {
+	cfg, err := c.Config()
+	if err != nil {
+		return err
+	}
+
+	c.UpdateContext(name, context)
+	cfg.CurrentContext = name
+	return c.save()
+}
+
+func (c *ConfigFile) DeleteContext(name string) error {
+	cfg, err := c.Config()
+	if err != nil {
+		return err
+	}
+
+	delete(cfg.Contexts, name)
+	return c.save()
+}
+
+func (c *ConfigFile) UpdateContext(name string, context *Context) error {
 	cfg, err := c.Config()
 	if err != nil {
 		return err
@@ -70,8 +91,7 @@ func (c *ConfigFile) CreateContext(name string, context Context) error {
 		cfg.Contexts = make(map[string]Context)
 	}
 
-	cfg.Contexts[name] = context
-	cfg.CurrentContext = name
+	cfg.Contexts[name] = *context
 	return c.save()
 }
 
@@ -88,6 +108,18 @@ func (c *ConfigFile) SetCurrentContext(context string) error {
 	}
 
 	cfg.CurrentContext = context
+	return c.save()
+}
+
+func (c *ConfigFile) UnsetCurrentContext() error {
+	// Want to read the freshest version of the config before overwritting it.
+	// N.B.: race condition here against setting other things in the config file
+	cfg, err := c.Config()
+	if err != nil {
+		return err
+	}
+
+	cfg.CurrentContext = ""
 	return c.save()
 }
 

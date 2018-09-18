@@ -5,9 +5,9 @@ import (
 )
 
 type Context struct {
-	Lattice string       `json:"lattice"`
-	System  v1.SystemID  `json:"system"`
-	Auth    *AuthContext `json:"auth"`
+	URL    string       `json:"lattice"`
+	System v1.SystemID  `json:"system,omitempty"`
+	Auth   *AuthContext `json:"auth"`
 }
 
 type AuthContext struct {

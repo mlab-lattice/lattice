@@ -8,8 +8,9 @@ type Flag interface {
 	IsRequired() bool
 	GetShort() string
 	GetUsage() string
-	Value() interface{}
 	Parse() func() error
+	Value() interface{}
+	Set() bool
 	AddToFlagSet(name string, fs *pflag.FlagSet)
 }
 

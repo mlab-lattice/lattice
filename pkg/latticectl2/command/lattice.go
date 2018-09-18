@@ -52,10 +52,10 @@ func (c *LatticeCommand) Command() *cli.Command {
 			var client client.Interface
 			switch {
 			case context.Auth == nil:
-				client = rest.NewUnauthenticatedClient(context.Lattice)
+				client = rest.NewUnauthenticatedClient(context.URL)
 
 			case context.Auth.BearerToken != nil:
-				client = rest.NewBearerTokenClient(context.Lattice, *context.Auth.BearerToken)
+				client = rest.NewBearerTokenClient(context.URL, *context.Auth.BearerToken)
 
 			default:
 				return fmt.Errorf("invalid auth options for context %v", contextName)

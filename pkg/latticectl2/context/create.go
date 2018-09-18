@@ -1,36 +1,39 @@
 package context
 
 import (
+	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	"github.com/mlab-lattice/lattice/pkg/latticectl2/command"
 	"github.com/mlab-lattice/lattice/pkg/util/cli2"
 	"github.com/mlab-lattice/lattice/pkg/util/cli2/flags"
 )
 
 const (
-	createFlagBearerToken     = "bearer-token"
-	createFlagUnauthenticated = "unauthenticated"
-	createFlagName            = "name"
-	createFlagURL             = "url"
+	flagBearerToken     = "bearer-token"
+	flagUnauthenticated = "unauthenticated"
+	flagName            = "name"
+	flagURL             = "url"
 )
+
+var authFlags = []string{flagBearerToken, flagUnauthenticated}
 
 func Create() *cli.Command {
 	return &cli.Command{
 		Flags: cli.Flags{
-			createFlagBearerToken:     &flags.String{},
-			createFlagName:            &flags.String{Required: true},
-			createFlagUnauthenticated: &flags.Bool{},
-			createFlagURL:             &flags.String{Required: true},
-			command.ConfigFlagName:    command.ConfigFlag(),
+			flagBearerToken:        &flags.String{},
+			flagName:               &flags.String{Required: true},
+			flagUnauthenticated:    &flags.Bool{},
+			flagURL:                &flags.String{Required: true},
+			command.ConfigFlagName: command.ConfigFlag(),
+			command.SystemFlagName: command.SystemFlag(),
 		},
-		MutuallyExclusiveFlags: [][]string{
-			{createFlagBearerToken, createFlagUnauthenticated},
-		},
+		MutuallyExclusiveFlags: [][]string{authFlags},
+		RequiredFlagSet:        [][]string{authFlags},
 		Run: func(args []string, flags cli.Flags) error {
 			// if ConfigFile.Path is empty, it will look in $XDG_CONFIG_HOME/.latticectl/config.json
 			configPath := flags[command.ConfigFlagName].Value().(string)
 			configFile := command.ConfigFile{Path: configPath}
 
-			contextName := flags[createFlagName].Value().(string)
+			contextName := flags[flagName].Value().(string)
 
 			// if the context already exists, can't create it
 			_, err := configFile.Context(contextName)
@@ -45,21 +48,17 @@ func Create() *cli.Command {
 			}
 
 			var auth *command.AuthContext
-			bearerToken := flags[createFlagBearerToken].Value().(string)
+			bearerToken := flags[flagBearerToken].Value().(string)
 			if bearerToken != "" {
 				auth = &command.AuthContext{BearerToken: &bearerToken}
 			}
 
-			context := command.Context{
-				Lattice: flags[createFlagURL].Value().(string),
-				Auth:    auth,
+			context := &command.Context{
+				URL:    flags[flagURL].Value().(string),
+				System: v1.SystemID(flags[command.SystemFlagName].Value().(string)),
+				Auth:   auth,
 			}
-			err = configFile.CreateContext(contextName, context)
-			if err != nil {
-				return err
-			}
-
-			return configFile.SetCurrentContext(contextName)
+			return configFile.CreateContext(contextName, context)
 		},
 	}
 }

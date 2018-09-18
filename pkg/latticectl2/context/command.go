@@ -37,8 +37,10 @@ func Command() *cli.Command {
 		},
 		Subcommands: map[string]*cli.Command{
 			"create": Create(),
+			"delete": Delete(),
 			"list":   List(),
 			"switch": Switch(),
+			"update": Update(),
 		},
 	}
 }

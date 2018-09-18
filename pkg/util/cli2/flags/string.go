@@ -11,7 +11,10 @@ type String struct {
 	Default  string
 	Short    string
 	Usage    string
-	target   string
+
+	target  string
+	name    string
+	flagSet *pflag.FlagSet
 }
 
 func (f *String) IsRequired() bool {
@@ -30,16 +33,22 @@ func (f *String) Validate() error {
 	return nil
 }
 
-func (f *String) Value() interface{} {
-	return f.target
-}
-
 func (f *String) Parse() func() error {
 	return nil
 }
 
+func (f *String) Value() interface{} {
+	return f.target
+}
+
+func (f *String) Set() bool {
+	return f.flagSet.Changed(f.name)
+}
+
 func (f *String) AddToFlagSet(name string, flags *pflag.FlagSet) {
 	flags.StringVarP(&f.target, name, f.Short, f.Default, f.Usage)
+	f.name = name
+	f.flagSet = flags
 
 	if f.Required {
 		markFlagRequired(name, flags)
