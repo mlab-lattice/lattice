@@ -110,8 +110,10 @@ func (b *Backend) transformSystem(system *latticev1.System) (*v1.System, error) 
 
 	externalSystem := &v1.System{
 		ID:            v1.SystemID(system.Name),
-		State:         state,
 		DefinitionURL: system.Spec.DefinitionURL,
+		Status: v1.SystemStatus{
+			State: state,
+		},
 	}
 
 	return externalSystem, nil
@@ -155,7 +157,7 @@ func (b *Backend) ensureSystemCreated(id v1.SystemID) (*v1.System, error) {
 		return nil, err
 	}
 
-	switch system.State {
+	switch system.Status.State {
 	case v1.SystemStateDeleting:
 		return system, v1.NewSystemDeletingError()
 	case v1.SystemStateFailed:
@@ -165,7 +167,7 @@ func (b *Backend) ensureSystemCreated(id v1.SystemID) (*v1.System, error) {
 	case v1.SystemStateStable, v1.SystemStateDegraded, v1.SystemStateScaling, v1.SystemStateUpdating:
 		return system, nil
 	default:
-		return nil, fmt.Errorf("invalid system state: %v", system.State)
+		return nil, fmt.Errorf("invalid system state: %v", system.Status.State)
 	}
 }
 

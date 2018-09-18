@@ -20,8 +20,11 @@ func (b *TeardownBackend) Create() (*v1.Teardown, error) {
 	}
 
 	teardown := &v1.Teardown{
-		ID:    v1.TeardownID(uuid.NewV4().String()),
-		State: v1.TeardownStatePending,
+		ID: v1.TeardownID(uuid.NewV4().String()),
+
+		Status: v1.TeardownStatus{
+			State: v1.TeardownStatePending,
+		},
 	}
 
 	record.Teardowns[teardown.ID] = teardown

@@ -18,8 +18,8 @@ func (c *Controller) runJob(job *v1.Job) {
 		c.registry.Lock()
 		defer c.registry.Unlock()
 		now := time.Now()
-		job.State = v1.JobStateRunning
-		job.StartTimestamp = &now
+		job.Status.State = v1.JobStateRunning
+		job.Status.StartTimestamp = &now
 	}()
 
 	// sleep
@@ -28,6 +28,6 @@ func (c *Controller) runJob(job *v1.Job) {
 	c.registry.Lock()
 	defer c.registry.Unlock()
 	now := time.Now()
-	job.State = v1.JobStateSucceeded
-	job.CompletionTimestamp = &now
+	job.Status.State = v1.JobStateSucceeded
+	job.Status.CompletionTimestamp = &now
 }

@@ -19,7 +19,7 @@ func (c *Controller) syncAcceptedDeploy(deploy *latticev1.Deploy) error {
 	var build *latticev1.Build
 	if deploy.Spec.Build != nil {
 		var err error
-		build, err = c.buildLister.Builds(deploy.Namespace).Get(string(*deploy.Status.BuildID))
+		build, err = c.buildLister.Builds(deploy.Namespace).Get(string(*deploy.Status.Build))
 		if err != nil {
 			return err
 		}
@@ -48,7 +48,7 @@ func (c *Controller) syncAcceptedDeploy(deploy *latticev1.Deploy) error {
 			latticev1.DeployStateFailed,
 			fmt.Sprintf("%v failed", build.Description(c.namespacePrefix)),
 			nil,
-			deploy.Status.BuildID,
+			deploy.Status.Build,
 			deploy.Status.StartTimestamp,
 			deploy.Status.CompletionTimestamp,
 		)
@@ -70,8 +70,8 @@ func (c *Controller) syncAcceptedDeploy(deploy *latticev1.Deploy) error {
 
 func (c *Controller) syncAcceptedBuildlessDeploy(deploy *latticev1.Deploy) (*latticev1.Deploy, *latticev1.Build, error) {
 	// If we've already created a build and updated the status of the deploy with it, use that build ID
-	if deploy.Status.BuildID != nil {
-		build, err := c.buildLister.Builds(deploy.Namespace).Get(string(*deploy.Status.BuildID))
+	if deploy.Status.Build != nil {
+		build, err := c.buildLister.Builds(deploy.Namespace).Get(string(*deploy.Status.Build))
 		if err != nil {
 			return nil, nil, err
 		}
@@ -240,7 +240,7 @@ func (c *Controller) syncAcceptedDeployWithSuccessfulBuild(deploy *latticev1.Dep
 		latticev1.DeployStateInProgress,
 		"",
 		nil,
-		deploy.Status.BuildID,
+		deploy.Status.Build,
 		deploy.Status.StartTimestamp,
 		deploy.Status.CompletionTimestamp,
 	)

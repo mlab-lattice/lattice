@@ -117,11 +117,13 @@ func transformTeardown(teardown *latticev1.Teardown) (v1.Teardown, error) {
 	externalTeardown := v1.Teardown{
 		ID: v1.TeardownID(teardown.Name),
 
-		State:   state,
-		Message: teardown.Status.Message,
+		Status: v1.TeardownStatus{
+			State:   state,
+			Message: teardown.Status.Message,
 
-		StartTimestamp:      startTimestamp,
-		CompletionTimestamp: completionTimestamp,
+			StartTimestamp:      startTimestamp,
+			CompletionTimestamp: completionTimestamp,
+		},
 	}
 
 	return externalTeardown, nil

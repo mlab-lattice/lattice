@@ -89,7 +89,7 @@ type DeployStatus struct {
 
 	InternalError *string `json:"internalError,omitempty"`
 
-	BuildID *v1.BuildID `json:"buildId,omitempty"`
+	Build *v1.BuildID `json:"build,omitempty"`
 
 	StartTimestamp      *metav1.Time `json:"startTimestamp,omitempty"`
 	CompletionTimestamp *metav1.Time `json:"completionTimestamp,omitempty"`

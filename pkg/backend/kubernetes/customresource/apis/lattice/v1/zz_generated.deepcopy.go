@@ -701,8 +701,8 @@ func (in *DeployStatus) DeepCopyInto(out *DeployStatus) {
 			**out = **in
 		}
 	}
-	if in.BuildID != nil {
-		in, out := &in.BuildID, &out.BuildID
+	if in.Build != nil {
+		in, out := &in.Build, &out.Build
 		if *in == nil {
 			*out = nil
 		} else {

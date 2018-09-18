@@ -22,12 +22,19 @@ type NodePool struct {
 	ID   string                `json:"id"`
 	Path tree.PathSubcomponent `json:"path"`
 
-	// FIXME: how to deal with epochs?
 	InstanceType string `json:"instanceType"`
 	NumInstances int32  `json:"numInstances"`
 
+	Status NodePoolStatus `json:"status"`
+}
+
+type NodePoolStatus struct {
 	State       NodePoolState        `json:"state"`
 	FailureInfo *NodePoolFailureInfo `json:"failureInfo,omitempty"`
+
+	// FIXME: how to deal with epochs?
+	InstanceType string `json:"instanceType"`
+	NumInstances int32  `json:"numInstances"`
 }
 
 type NodePoolFailureInfo struct {

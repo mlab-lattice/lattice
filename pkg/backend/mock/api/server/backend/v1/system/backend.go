@@ -39,8 +39,11 @@ func (b *Backend) Create(systemID v1.SystemID, definitionURL string) (*v1.System
 	record := &registry.SystemRecord{
 		System: &v1.System{
 			ID:            systemID,
-			State:         v1.SystemStatePending,
 			DefinitionURL: definitionURL,
+
+			Status: v1.SystemStatus{
+				State: v1.SystemStatePending,
+			},
 		},
 		Definition: resolver.NewResolutionTree(),
 
@@ -163,7 +166,7 @@ func (b *Backend) systemRecordInitialized(id v1.SystemID) (*registry.SystemRecor
 		return nil, err
 	}
 
-	switch record.System.State {
+	switch record.System.Status.State {
 	case v1.SystemStateDeleting:
 		return record, v1.NewSystemDeletingError()
 	case v1.SystemStateFailed:
@@ -173,7 +176,7 @@ func (b *Backend) systemRecordInitialized(id v1.SystemID) (*registry.SystemRecor
 	case v1.SystemStateStable, v1.SystemStateDegraded, v1.SystemStateScaling, v1.SystemStateUpdating:
 		return record, nil
 	default:
-		return nil, fmt.Errorf("invalid system state: %v", record.System.State)
+		return nil, fmt.Errorf("invalid system state: %v", record.System.Status.State)
 	}
 }
 

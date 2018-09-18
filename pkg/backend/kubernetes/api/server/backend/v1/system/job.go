@@ -228,12 +228,16 @@ func (b *jobBackend) transformJobRun(
 	}
 
 	job := v1.Job{
-		ID:    id,
-		Path:  path,
-		State: state,
+		ID: id,
 
-		StartTimestamp:      startTimestamp,
-		CompletionTimestamp: completionTimestamp,
+		Path: path,
+
+		Status: v1.JobStatus{
+			State: state,
+
+			StartTimestamp:      startTimestamp,
+			CompletionTimestamp: completionTimestamp,
+		},
 	}
 	return job, nil
 }

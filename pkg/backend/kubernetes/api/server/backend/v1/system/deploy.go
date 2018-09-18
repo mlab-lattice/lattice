@@ -141,13 +141,21 @@ func transformDeploy(deploy *latticev1.Deploy) (v1.Deploy, error) {
 	}
 
 	externalDeploy := v1.Deploy{
-		ID:    v1.DeployID(deploy.Name),
-		State: state,
+		ID: v1.DeployID(deploy.Name),
 
-		Build: deploy.Status.BuildID,
+		Build:   deploy.Spec.Build,
+		Path:    deploy.Spec.Path,
+		Version: deploy.Spec.Version,
 
-		StartTimestamp:      startTimestamp,
-		CompletionTimestamp: completionTimestamp,
+		Status: v1.DeployStatus{
+			State:   state,
+			Message: deploy.Status.Message,
+
+			Build: deploy.Status.Build,
+
+			StartTimestamp:      startTimestamp,
+			CompletionTimestamp: completionTimestamp,
+		},
 	}
 
 	return externalDeploy, nil

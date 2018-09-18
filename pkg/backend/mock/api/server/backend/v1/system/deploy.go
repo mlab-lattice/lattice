@@ -37,7 +37,9 @@ func (b *DeployBackend) create(id *v1.BuildID, p *tree.Path, v *v1.Version) (*v1
 		Build:   id,
 		Path:    p,
 		Version: v,
-		State:   v1.DeployStatePending,
+		Status: v1.DeployStatus{
+			State: v1.DeployStatePending,
+		},
 	}
 
 	record.Deploys[deploy.ID] = deploy

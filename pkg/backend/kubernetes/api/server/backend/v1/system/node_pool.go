@@ -37,7 +37,7 @@ func (b *nodePoolBackend) List() ([]v1.NodePool, error) {
 			return nil, err
 		}
 
-		externalNodePool, err := b.transformNodePool(nodePool.Name, path, &nodePool.Status)
+		externalNodePool, err := b.transformNodePool(nodePool.Name, path, &nodePool)
 		if err != nil {
 			return nil, err
 		}
@@ -132,7 +132,7 @@ func (b *nodePoolBackend) Get(path tree.PathSubcomponent) (*v1.NodePool, error) 
 	}
 
 	nodePool := &nodePools.Items[0]
-	externalNodePool, err := b.transformNodePool(nodePool.Name, path, &nodePool.Status)
+	externalNodePool, err := b.transformNodePool(nodePool.Name, path, nodePool)
 	if err != nil {
 		return nil, err
 	}
@@ -177,24 +177,24 @@ func (b *nodePoolBackend) getNodePoolPath(nodePool *latticev1.NodePool) (tree.Pa
 	return "", fmt.Errorf("%v did not contain service id or system shared path labels", nodePool.Description(b.backend.namespacePrefix))
 }
 
-func (b *nodePoolBackend) transformNodePool(id string, path tree.PathSubcomponent, status *latticev1.NodePoolStatus) (v1.NodePool, error) {
-	state, err := getNodePoolState(status.State)
+func (b *nodePoolBackend) transformNodePool(id string, path tree.PathSubcomponent, nodePool *latticev1.NodePool) (v1.NodePool, error) {
+	state, err := getNodePoolState(nodePool.Status.State)
 	if err != nil {
 		return v1.NodePool{}, err
 	}
 
 	var failureInfo *v1.NodePoolFailureInfo
-	if status.FailureInfo != nil {
+	if nodePool.Status.FailureInfo != nil {
 		failureInfo = &v1.NodePoolFailureInfo{
-			Time:    status.FailureInfo.Timestamp.Time,
-			Message: status.FailureInfo.Message,
+			Time:    nodePool.Status.FailureInfo.Timestamp.Time,
+			Message: nodePool.Status.FailureInfo.Message,
 		}
 	}
 
 	instanceType := "unknown"
-	currentEpoch, ok := status.Epochs.CurrentEpoch()
+	currentEpoch, ok := nodePool.Status.Epochs.CurrentEpoch()
 	if ok {
-		epoch, ok := status.Epochs.Epoch(currentEpoch)
+		epoch, ok := nodePool.Status.Epochs.Epoch(currentEpoch)
 		if !ok {
 			return v1.NodePool{}, fmt.Errorf("node pool %v had current epoch %v but does not have its status", id, currentEpoch)
 		}
@@ -203,22 +203,26 @@ func (b *nodePoolBackend) transformNodePool(id string, path tree.PathSubcomponen
 	}
 
 	var numInstances int32 = 0
-	for _, epoch := range status.Epochs {
+	for _, epoch := range nodePool.Status.Epochs {
 		numInstances += epoch.Status.NumInstances
 	}
 
-	nodePool := v1.NodePool{
+	externalNodePool := v1.NodePool{
 		ID:   id,
 		Path: path,
 
-		State:       state,
-		FailureInfo: failureInfo,
+		InstanceType: nodePool.Spec.InstanceType,
+		NumInstances: nodePool.Spec.NumInstances,
 
-		InstanceType: instanceType,
-		NumInstances: numInstances,
+		Status: v1.NodePoolStatus{
+			State:       state,
+			FailureInfo: failureInfo,
+
+			InstanceType: instanceType,
+			NumInstances: numInstances,
+		},
 	}
-
-	return nodePool, nil
+	return externalNodePool, nil
 }
 
 func getNodePoolState(state latticev1.NodePoolState) (v1.NodePoolState, error) {

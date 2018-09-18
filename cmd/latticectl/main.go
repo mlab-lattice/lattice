@@ -1,10 +1,9 @@
 package main
 
 import (
-	"github.com/mlab-lattice/lattice/cmd/latticectl/app"
+	"github.com/mlab-lattice/lattice/pkg/latticectl"
 )
 
 func main() {
-	latticectl := app.Latticectl
-	latticectl.ExecuteColon()
+	latticectl.Command.Execute()
 }

@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
+	definitionv1 "github.com/mlab-lattice/lattice/pkg/definition/v1"
 )
 
 type (
@@ -22,9 +23,15 @@ const (
 )
 
 type Service struct {
-	ID   ServiceID `json:"id"`
-	Path tree.Path `json:"path"`
+	ID ServiceID `json:"id"`
 
+	Path       tree.Path            `json:"path"`
+	Definition definitionv1.Service `json:"definition"`
+
+	Status ServiceStatus `json:"status"`
+}
+
+type ServiceStatus struct {
 	State       ServiceState        `json:"state"`
 	Message     *string             `json:"message,omitempty"`
 	FailureInfo *ServiceFailureInfo `json:"failureInfo,omitempty"`

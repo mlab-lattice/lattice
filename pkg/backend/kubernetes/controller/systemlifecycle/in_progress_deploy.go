@@ -44,7 +44,7 @@ func (c *Controller) syncInProgressDeploy(deploy *latticev1.Deploy) error {
 		state,
 		"",
 		nil,
-		deploy.Status.BuildID,
+		deploy.Status.Build,
 		deploy.Status.StartTimestamp,
 		deploy.Status.CompletionTimestamp,
 	)

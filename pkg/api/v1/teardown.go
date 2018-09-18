@@ -19,6 +19,10 @@ const (
 type Teardown struct {
 	ID TeardownID `json:"id"`
 
+	Status TeardownStatus `json:"status"`
+}
+
+type TeardownStatus struct {
 	State   TeardownState `json:"state"`
 	Message string        `json:"message,omitempty"`
 

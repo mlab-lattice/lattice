@@ -32,32 +32,38 @@ func (c *Controller) runBuild(build *v1.Build, record *registry.SystemRecord) {
 		log.Printf("running workload builds for build %v", build.ID)
 
 		now := time.Now()
-		build.State = v1.BuildStateRunning
-		build.StartTimestamp = &now
-		build.Workloads = make(map[tree.Path]v1.WorkloadBuild)
+		build.Status.State = v1.BuildStateRunning
+		build.Status.StartTimestamp = &now
+		build.Status.Workloads = make(map[tree.Path]v1.WorkloadBuild)
 
 		info := record.Builds[build.ID]
 		info.Definition.V1().Workloads(func(path tree.Path, workload definitionv1.Workload, info *resolver.ResolutionInfo) tree.WalkContinuation {
 			workloadBuild := v1.WorkloadBuild{
 				ContainerBuild: v1.ContainerBuild{
-					ID:    v1.ContainerBuildID(uuid.NewV4().String()),
-					State: v1.ContainerBuildStateRunning,
+					ID: v1.ContainerBuildID(uuid.NewV4().String()),
 
-					StartTimestamp: &now,
+					Status: v1.ContainerBuildStatus{
+						State: v1.ContainerBuildStateRunning,
+
+						StartTimestamp: &now,
+					},
 				},
 				Sidecars: make(map[string]v1.ContainerBuild),
 			}
 
 			for name := range workload.Containers().Sidecars {
 				workloadBuild.Sidecars[name] = v1.ContainerBuild{
-					ID:    v1.ContainerBuildID(uuid.NewV4().String()),
-					State: v1.ContainerBuildStateRunning,
+					ID: v1.ContainerBuildID(uuid.NewV4().String()),
 
-					StartTimestamp: &now,
+					Status: v1.ContainerBuildStatus{
+						State: v1.ContainerBuildStateRunning,
+
+						StartTimestamp: &now,
+					},
 				}
 			}
 
-			build.Workloads[path] = workloadBuild
+			build.Status.Workloads[path] = workloadBuild
 			return tree.ContinueWalk
 		})
 	}()
@@ -72,30 +78,36 @@ func (c *Controller) runBuild(build *v1.Build, record *registry.SystemRecord) {
 	now := time.Now()
 
 	// Complete service builds and build.
-	for path, workload := range build.Workloads {
+	for path, workload := range build.Status.Workloads {
 		workload.ContainerBuild = v1.ContainerBuild{
-			ID:    workload.ID,
-			State: v1.ContainerBuildStateSucceeded,
+			ID: workload.ID,
 
-			StartTimestamp:      workload.StartTimestamp,
-			CompletionTimestamp: &now,
+			Status: v1.ContainerBuildStatus{
+				State: v1.ContainerBuildStateSucceeded,
+
+				StartTimestamp:      workload.Status.StartTimestamp,
+				CompletionTimestamp: &now,
+			},
 		}
 
 		for sidecar, build := range workload.Sidecars {
 			workload.Sidecars[sidecar] = v1.ContainerBuild{
-				ID:    build.ID,
-				State: v1.ContainerBuildStateSucceeded,
+				ID: build.ID,
 
-				StartTimestamp:      build.StartTimestamp,
-				CompletionTimestamp: &now,
+				Status: v1.ContainerBuildStatus{
+					State: v1.ContainerBuildStateSucceeded,
+
+					StartTimestamp:      workload.Sidecars[sidecar].Status.StartTimestamp,
+					CompletionTimestamp: &now,
+				},
 			}
 		}
 
-		build.Workloads[path] = workload
+		build.Status.Workloads[path] = workload
 	}
 
-	build.State = v1.BuildStateSucceeded
-	build.CompletionTimestamp = &now
+	build.Status.State = v1.BuildStateSucceeded
+	build.Status.CompletionTimestamp = &now
 
 	log.Printf("build %v complete", build.ID)
 }
@@ -122,8 +134,8 @@ func (c *Controller) resolveBuildComponent(build *v1.Build, record *registry.Sys
 	defer c.registry.Unlock()
 
 	if err != nil {
-		build.State = v1.BuildStateFailed
-		build.Message = fmt.Sprintf("error resolving system: %v", err)
+		build.Status.State = v1.BuildStateFailed
+		build.Status.Message = fmt.Sprintf("error resolving system: %v", err)
 		return false
 	}
 
@@ -131,21 +143,21 @@ func (c *Controller) resolveBuildComponent(build *v1.Build, record *registry.Sys
 	if path.IsRoot() {
 		root, ok := t.Get(tree.RootPath())
 		if !ok {
-			buildInfo.Build.State = v1.BuildStateFailed
-			buildInfo.Build.Message = "system does not have root"
+			buildInfo.Build.Status.State = v1.BuildStateFailed
+			buildInfo.Build.Status.Message = "system does not have root"
 			return false
 		}
 
 		_, ok = root.Component.(*definitionv1.System)
 		if !ok {
-			buildInfo.Build.State = v1.BuildStateFailed
-			buildInfo.Build.Message = "root component must be a system"
+			buildInfo.Build.Status.State = v1.BuildStateFailed
+			buildInfo.Build.Status.Message = "root component must be a system"
 			return false
 		}
 	}
 
 	buildInfo.Definition = t
-	buildInfo.Build.State = v1.BuildStateAccepted
+	buildInfo.Build.Status.State = v1.BuildStateAccepted
 	return true
 }
 
@@ -173,16 +185,16 @@ func (c *Controller) getBuildComponent(
 
 	path := *build.Path
 	if record.Definition == nil {
-		build.State = v1.BuildStateFailed
-		build.Message = fmt.Sprintf("system %v does not have any components, cannot build the system based off a path", record.System.ID)
+		build.Status.State = v1.BuildStateFailed
+		build.Status.Message = fmt.Sprintf("system %v does not have any components, cannot build the system based off a path", record.System.ID)
 		return "", nil, nil, false
 	}
 
 	if path == tree.RootPath() {
 		info, ok := record.Definition.Get(path)
 		if !ok {
-			build.State = v1.BuildStateFailed
-			build.Message = fmt.Sprintf("system %v does not contain %v", record.System.ID, path.String())
+			build.Status.State = v1.BuildStateFailed
+			build.Status.Message = fmt.Sprintf("system %v does not contain %v", record.System.ID, path.String())
 			return "", nil, nil, false
 		}
 
@@ -193,22 +205,22 @@ func (c *Controller) getBuildComponent(
 	parent, _ := path.Parent()
 	parentInfo, ok := record.Definition.Get(parent)
 	if !ok {
-		build.State = v1.BuildStateFailed
-		build.Message = fmt.Sprintf("system %v does not contain %v", record.System.ID, path.String())
+		build.Status.State = v1.BuildStateFailed
+		build.Status.Message = fmt.Sprintf("system %v does not contain %v", record.System.ID, path.String())
 		return "", nil, nil, false
 	}
 
 	s, ok := parentInfo.Component.(*definitionv1.System)
 	if !ok {
-		build.State = v1.BuildStateFailed
-		build.Message = fmt.Sprintf("system %v internal node %v is not a system", record.System.ID, parent.String())
+		build.Status.State = v1.BuildStateFailed
+		build.Status.Message = fmt.Sprintf("system %v internal node %v is not a system", record.System.ID, parent.String())
 		return "", nil, nil, false
 	}
 
 	cmpnt, ok := s.Components[name]
 	if !ok {
-		build.State = v1.BuildStateFailed
-		build.Message = fmt.Sprintf("system %v does not contain %v", record.System.ID, path.String())
+		build.Status.State = v1.BuildStateFailed
+		build.Status.Message = fmt.Sprintf("system %v does not contain %v", record.System.ID, path.String())
 		return "", nil, nil, false
 	}
 
