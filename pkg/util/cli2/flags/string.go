@@ -29,16 +29,8 @@ func (f *String) GetUsage() string {
 	return f.Usage
 }
 
-func (f *String) Validate() error {
-	return nil
-}
-
 func (f *String) Parse() func() error {
 	return nil
-}
-
-func (f *String) Value() interface{} {
-	return f.Target
 }
 
 func (f *String) Set() bool {

@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	clientv1 "github.com/mlab-lattice/lattice/pkg/api/client/v1"
+	"github.com/mlab-lattice/lattice/pkg/api/client"
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	"github.com/mlab-lattice/lattice/pkg/latticectl2/command"
 	"github.com/mlab-lattice/lattice/pkg/util/cli2"
@@ -28,34 +28,41 @@ func Status() *cli.Command {
 
 	cmd := command.SystemCommand{
 		Flags: map[string]cli.Flag{
-			command.OutputFlagName: command.OutputFlag(&output, ListSupportedFormats, printer.FormatTable),
-			command.WatchFlagName:  command.WatchFlag(&watch),
+			command.OutputFlagName: command.OutputFlag(
+				&output,
+				[]printer.Format{
+					printer.FormatJSON,
+					printer.FormatTable,
+				},
+				printer.FormatTable,
+			),
+			command.WatchFlagName: command.WatchFlag(&watch),
 		},
 		Run: func(ctx *command.SystemCommandContext, args []string, flags cli.Flags) error {
 			format := printer.Format(output)
 
 			if watch {
-				WatchSystem(ctx.Client.V1().Systems(), ctx.System, format, os.Stdout)
+				WatchSystem(ctx.Client, ctx.System, os.Stdout, format)
 				return nil
 			}
 
-			return GetSystem(ctx.Client.V1().Systems(), ctx.System, format, os.Stdout)
+			return GetSystem(ctx.Client, ctx.System, os.Stdout, format)
 		},
 	}
 
 	return cmd.Command()
 }
 
-func GetSystem(client clientv1.SystemClient, id v1.SystemID, format printer.Format, w io.Writer) error {
+func GetSystem(client client.Interface, id v1.SystemID, w io.Writer, f printer.Format) error {
 	// TODO: Make requests in parallel
-	system, err := client.Get(id)
+	system, err := client.V1().Systems().Get(id)
 	if err != nil {
 		return err
 	}
 
-	switch format {
+	switch f {
 	case printer.FormatTable:
-		services, err := client.Services(id).List()
+		services, err := client.V1().Systems().Services(id).List()
 		if err != nil {
 			return err
 		}
@@ -70,13 +77,13 @@ func GetSystem(client clientv1.SystemClient, id v1.SystemID, format printer.Form
 		j.Print(system)
 
 	default:
-		return fmt.Errorf("unexpected format %v", format)
+		return fmt.Errorf("unexpected format %v", f)
 	}
 
 	return nil
 }
 
-func WatchSystem(client clientv1.SystemClient, id v1.SystemID, f printer.Format, w io.Writer) {
+func WatchSystem(client client.Interface, id v1.SystemID, w io.Writer, f printer.Format) {
 	type status struct {
 		system   *v1.System
 		services []v1.Service
@@ -89,7 +96,7 @@ func WatchSystem(client clientv1.SystemClient, id v1.SystemID, f printer.Format,
 		5*time.Second,
 		func() (bool, error) {
 			// TODO: Make requests in parallel
-			system, err := client.Get(id)
+			system, err := client.V1().Systems().Get(id)
 			if err != nil {
 				if e, ok := err.(*v1.Error); ok && e.Code == v1.ErrorCodeInvalidSystemID {
 					close(statuses)
@@ -99,7 +106,7 @@ func WatchSystem(client clientv1.SystemClient, id v1.SystemID, f printer.Format,
 				return false, err
 			}
 
-			services, err := client.Services(id).List()
+			services, err := client.V1().Systems().Services(id).List()
 			if err != nil {
 				return false, err
 			}

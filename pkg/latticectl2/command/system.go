@@ -7,12 +7,14 @@ import (
 )
 
 type SystemCommand struct {
-	Name        string
-	Short       string
-	Args        cli.Args
-	Flags       cli.Flags
-	Run         func(ctx *SystemCommandContext, args []string, flags cli.Flags) error
-	Subcommands map[string]*cli.Command
+	Name                   string
+	Short                  string
+	Args                   cli.Args
+	Flags                  cli.Flags
+	Run                    func(ctx *SystemCommandContext, args []string, flags cli.Flags) error
+	MutuallyExclusiveFlags [][]string
+	RequiredFlagSet        [][]string
+	Subcommands            map[string]*cli.Command
 }
 
 type SystemCommandContext struct {
@@ -28,6 +30,8 @@ func (c *SystemCommand) Command() *cli.Command {
 		Short: c.Short,
 		Args:  c.Args,
 		Flags: c.Flags,
+		MutuallyExclusiveFlags: c.MutuallyExclusiveFlags,
+		RequiredFlagSet:        c.RequiredFlagSet,
 		Run: func(ctx *LatticeCommandContext, args []string, f cli.Flags) error {
 			system := v1.SystemID(system)
 

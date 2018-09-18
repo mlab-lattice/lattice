@@ -15,11 +15,13 @@ type LatticeCommandContext struct {
 }
 
 type LatticeCommand struct {
-	Short       string
-	Args        cli.Args
-	Flags       cli.Flags
-	Run         func(ctx *LatticeCommandContext, args []string, flags cli.Flags) error
-	Subcommands map[string]*cli.Command
+	Short                  string
+	Args                   cli.Args
+	Flags                  cli.Flags
+	Run                    func(ctx *LatticeCommandContext, args []string, flags cli.Flags) error
+	MutuallyExclusiveFlags [][]string
+	RequiredFlagSet        [][]string
+	Subcommands            map[string]*cli.Command
 }
 
 func (c *LatticeCommand) Command() *cli.Command {
@@ -34,6 +36,8 @@ func (c *LatticeCommand) Command() *cli.Command {
 		Short: c.Short,
 		Args:  c.Args,
 		Flags: c.Flags,
+		MutuallyExclusiveFlags: c.MutuallyExclusiveFlags,
+		RequiredFlagSet:        c.RequiredFlagSet,
 		Run: func(args []string, flags cli.Flags) error {
 			// if ConfigFile.Path is empty, it will look in $XDG_CONFIG_HOME/.latticectl/config.json
 			configFile := ConfigFile{Path: configPath}

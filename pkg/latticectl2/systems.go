@@ -1,4 +1,4 @@
-package systems
+package latticectl2
 
 import (
 	"fmt"
@@ -6,25 +6,19 @@ import (
 	"os"
 	"time"
 
-	clientv1 "github.com/mlab-lattice/lattice/pkg/api/client/v1"
+	"github.com/mlab-lattice/lattice/pkg/api/client"
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	"github.com/mlab-lattice/lattice/pkg/latticectl2/command"
 	"github.com/mlab-lattice/lattice/pkg/util/cli2"
 	"github.com/mlab-lattice/lattice/pkg/util/cli2/color"
 	"github.com/mlab-lattice/lattice/pkg/util/cli2/printer"
 
+	"github.com/mlab-lattice/lattice/pkg/latticectl2/systems"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"sort"
 )
 
-// ListSupportedFormats is the list of printer.Formats supported
-// by the ListSystems function.
-var ListSupportedFormats = []printer.Format{
-	printer.FormatJSON,
-	printer.FormatTable,
-}
-
-func Command() *cli.Command {
+func Systems() *cli.Command {
 	var (
 		output string
 		watch  bool
@@ -32,21 +26,29 @@ func Command() *cli.Command {
 
 	cmd := command.LatticeCommand{
 		Flags: map[string]cli.Flag{
-			command.OutputFlagName: command.OutputFlag(&output, ListSupportedFormats, printer.FormatTable),
-			command.WatchFlagName:  command.WatchFlag(&watch),
+			command.OutputFlagName: command.OutputFlag(
+				&output,
+				[]printer.Format{
+					printer.FormatJSON,
+					printer.FormatTable,
+				},
+				printer.FormatTable,
+			),
+			command.WatchFlagName: command.WatchFlag(&watch),
 		},
 		Run: func(ctx *command.LatticeCommandContext, args []string, flags cli.Flags) error {
 			format := printer.Format(output)
 
 			if watch {
-				WatchSystems(ctx.Client.V1().Systems(), format, os.Stdout)
+				WatchSystems(ctx.Client, format, os.Stdout)
 				return nil
 			}
 
-			return ListSystems(ctx.Client.V1().Systems(), format, os.Stdout)
+			return ListSystems(ctx.Client, format, os.Stdout)
 		},
 		Subcommands: map[string]*cli.Command{
-			"status": Status(),
+			"status":   systems.Status(),
+			"versions": systems.Versions(),
 		},
 	}
 
@@ -54,8 +56,8 @@ func Command() *cli.Command {
 }
 
 // ListSystems writes the current Systems to the supplied io.Writer in the given printer.Format.
-func ListSystems(client clientv1.SystemClient, format printer.Format, w io.Writer) error {
-	systems, err := client.List()
+func ListSystems(client client.Interface, format printer.Format, w io.Writer) error {
+	systems, err := client.V1().Systems().List()
 	if err != nil {
 		return err
 	}
@@ -81,14 +83,14 @@ func ListSystems(client clientv1.SystemClient, format printer.Format, w io.Write
 // WatchSystems polls the API for the current Systems, and writes out the Systems to the
 // the supplied io.Writer in the given printer.Format, unless the printer.Format is
 // printer.FormatTable, in which case it always writes to the terminal.
-func WatchSystems(client clientv1.SystemClient, format printer.Format, w io.Writer) {
+func WatchSystems(client client.Interface, format printer.Format, w io.Writer) {
 	// Poll the API for the systems and send it to the channel
 	systems := make(chan []v1.System)
 
 	go wait.PollImmediateInfinite(
 		5*time.Second,
 		func() (bool, error) {
-			s, err := client.List()
+			s, err := client.V1().Systems().List()
 			if err != nil {
 				return false, err
 			}

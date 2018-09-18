@@ -4,12 +4,9 @@ import (
 	"github.com/mlab-lattice/lattice/pkg/latticectl2/command"
 	"github.com/mlab-lattice/lattice/pkg/util/cli2"
 	"github.com/mlab-lattice/lattice/pkg/util/cli2/printer"
+	"io"
 	"os"
 )
-
-var GetSupportedFormats = []printer.Format{
-	printer.FormatJSON,
-}
 
 func Command() *cli.Command {
 	var (
@@ -20,7 +17,7 @@ func Command() *cli.Command {
 	return &cli.Command{
 		Flags: cli.Flags{
 			command.ConfigFlagName: command.ConfigFlag(&configPath),
-			command.OutputFlagName: command.OutputFlag(&output, GetSupportedFormats, printer.FormatJSON),
+			command.OutputFlagName: command.OutputFlag(&output, []printer.Format{printer.FormatJSON}, printer.FormatJSON),
 		},
 		Run: func(args []string, flags cli.Flags) error {
 			// if ConfigFile.Path is empty, it will look in $XDG_CONFIG_HOME/.latticectl/config.json
@@ -37,7 +34,7 @@ func Command() *cli.Command {
 			}
 
 			format := printer.Format(output)
-			return PrintContext(context, format)
+			return PrintContext(context, os.Stdout, format)
 		},
 		Subcommands: map[string]*cli.Command{
 			"create": Create(),
@@ -49,9 +46,9 @@ func Command() *cli.Command {
 	}
 }
 
-func PrintContext(ctx *command.Context, format printer.Format) error {
+func PrintContext(ctx *command.Context, w io.Writer, f printer.Format) error {
 	// FIXME: probably want to support a more natural table-like format
-	switch format {
+	switch f {
 	case printer.FormatJSON:
 		j := printer.NewJSONIndented(os.Stdout, 4)
 		j.Print(ctx)

@@ -91,56 +91,57 @@ func (f *Embedded) AddToFlagSet(name string, flags *pflag.FlagSet) {
 	}
 }
 
-type EmbeddedStringChoice struct {
-	ChoiceFlag *String
-	Flags      map[string]cli.Flags
-
-	result cli.Flags
-}
-
-func (f *EmbeddedStringChoice) IsRequired() bool {
-	return f.ChoiceFlag.IsRequired()
-}
-
-func (f *EmbeddedStringChoice) GetShort() string {
-	return f.ChoiceFlag.GetShort()
-}
-
-func (f *EmbeddedStringChoice) GetUsage() string {
-	return f.ChoiceFlag.GetUsage()
-}
-
-func (f *EmbeddedStringChoice) Value() interface{} {
-	return f.result
-}
-
-func (f *EmbeddedStringChoice) Parse() func() error {
-	return f.parse
-}
-
-func (f *EmbeddedStringChoice) parse() error {
-	choice := f.ChoiceFlag.Value().(string)
-	flags, ok := f.Flags[choice]
-	if !ok {
-		return fmt.Errorf("invalid flag choice: %v", choice)
-	}
-
-	fs := &pflag.FlagSet{}
-	var dashedValues []string
-	for name, flag := range flags {
-		flag.AddToFlagSet(name, fs)
-		dashedValues = append(dashedValues, fmt.Sprintf("--%v", name))
-	}
-
-	err := fs.Parse(dashedValues)
-	if err != nil {
-		return err
-	}
-
-	f.result = flags
-	return nil
-}
-
-func (f *EmbeddedStringChoice) AddToFlagSet(name string, flags *pflag.FlagSet) {
-	f.ChoiceFlag.AddToFlagSet(name, flags)
-}
+//
+//type EmbeddedStringChoice struct {
+//	ChoiceFlag *String
+//	Flags      map[string]cli.Flags
+//
+//	result cli.Flags
+//}
+//
+//func (f *EmbeddedStringChoice) IsRequired() bool {
+//	return f.ChoiceFlag.IsRequired()
+//}
+//
+//func (f *EmbeddedStringChoice) GetShort() string {
+//	return f.ChoiceFlag.GetShort()
+//}
+//
+//func (f *EmbeddedStringChoice) GetUsage() string {
+//	return f.ChoiceFlag.GetUsage()
+//}
+//
+//func (f *EmbeddedStringChoice) Value() interface{} {
+//	return f.result
+//}
+//
+//func (f *EmbeddedStringChoice) Parse() func() error {
+//	return f.parse
+//}
+//
+//func (f *EmbeddedStringChoice) parse() error {
+//	choice := f.ChoiceFlag.Value().(string)
+//	flags, ok := f.Flags[choice]
+//	if !ok {
+//		return fmt.Errorf("invalid flag choice: %v", choice)
+//	}
+//
+//	fs := &pflag.FlagSet{}
+//	var dashedValues []string
+//	for name, flag := range flags {
+//		flag.AddToFlagSet(name, fs)
+//		dashedValues = append(dashedValues, fmt.Sprintf("--%v", name))
+//	}
+//
+//	err := fs.Parse(dashedValues)
+//	if err != nil {
+//		return err
+//	}
+//
+//	f.result = flags
+//	return nil
+//}
+//
+//func (f *EmbeddedStringChoice) AddToFlagSet(name string, flags *pflag.FlagSet) {
+//	f.ChoiceFlag.AddToFlagSet(name, flags)
+//}
