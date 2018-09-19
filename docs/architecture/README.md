@@ -1,76 +1,15 @@
 # Overview
 
-This documentation attempts to give an overview of the architecture of lattice, and this README should be used as the entrypoint to the documentation.
+This documentation attempts to give an overview of the architecture of lattice, and this `README` should be used as the entrypoint to the documentation.
 
-These documents to not attempt to explain what lattice is or how to use it, but instead how lattice is built and operates.
+These documents do not attempt to explain what lattice is or how to use it, but instead how lattice is built and operates.
 
-Familiarity with Golang is assumed.
+A working understanding of the user-facing concepts of lattice will be assumed, as will familiarity with `golang`.
 
-## API
+# API
 
-The interface that a lattice provides is exposed via an API.
+Documentation on the design of the API can be found in [api.md](api.md).
 
-Relevant type definitions for the API live in [`pkg/api`](../../pkg/api).
+# System Definitions
 
-### Versioning 
-
-The API is versioned, with `v1` being the only version currently provided.
-
-The types of objects returned by the `v1` API are defined in [`pkg/api/v1`](../../pkg/api/v1)
-
-### Client
-
-The `client.Interface` defined in [`pkg/api/client/interface.go`](../../pkg/api/client/interface.go) is a helpful way to get an overview of the capabilities supported by the API.
-
-As can be seen, there is a `V1` interface exposed that shows the capabilities of the `v1` API, which can be found at [`pkg/api/client/v1/interface.go`](../../pkg/api/client/v1/interface.go).
-
-### Server
-
-There are two sets of capabilities required of the API's server (often referred to as the `api-server`):
-
-- process health and transport layer
-- implementing the API's interface
-
-The `client.Interface` has a `Health` method, which should return the health of the `api-server` that is connected to. What it means for the `api-server` to be healthy depends on the implementation of the server. Additionally, `client.Interface` does not tie itself to a specific transport layer used to talk to an `api-server`. For that matter in theory it doesn't even tie itself to the idea an `api-server` existing at all, save for the `Health` method.
-
-This is all a long winded way to say that the `api-server` simply servers up an interface that is not specific to its implementation, and the implementation of this interface should be decoupled from the transport layer and process concerns of a given `api-server`.
-
-We use the `backend.Interface` defined in [pkg/api/server/backend/interface.go](../../pkg/api/server/backend/interface.go) to accomplish this decoupling. The `backend.Interface` should be implemented by different persistence and control backends. 
-
-When implementing an `api-server`, you should simply accept a `backend.Interface`. Doing so allows you to use the same transport layer implementation with different backend implementations (see immediately below).
-
-### Implementations
-
-Currently, there is one implementation of the `api-server`, and two `backend.Interface` implementations.
-
-#### api-server
-
-The only current implementation of the `api-server` provides a RESTful HTTP service. 
-
-The implementation of this server can be found in [pkg/api/server/rest](../../pkg/api/server/rest).
-
-There is also included an implementation of the `client.Interface` for interacting with the RESTful `api-server`. This can be found in [pkg/api/client/rest](../../pkg/api/client/rest).
-
-#### backend.Interface
-
-There are currently two implementations of `backend.Interface`, `kubernetes` and `mock`. However, as the `api-server` is simply consuming the `backend.Interface`, the same server implementation can be used with either backend.
-
-Notably however, there are currently two different binaries produced, one for `kubernetes` ([cmd/kubernetes/api-server/rest](../../cmd/kubernetes/api-server/rest)) and one for `mock` ([cmd/mock/api-server/rest](../../cmd/mock/api-server/rest)). This was done for simplicity's sake, but as the RESTful `api-server` is written as a library only dependent on `backend.Interface`, one binary could have been used instead.
-
-##### kubernetes
-
-Documentation about how `backend.Interface` is implemented on Kubernetes can be found in the [kubernetes folder](kubernetes).
-
-##### mock
-
-The `mock` backend implements a fairly simple in-memory simulation of a lattice. This should only be used for testing and prototyping.
-
-The `mock` backend implementation can be found at [pkg/backend/mock/api/server/backend](../../pkg/backend/mock/api/server/backend).
-
-At a high level, the mock is implemented by two components:
-- registry ([pkg/backend/mock/api/server/backend/registry](../../pkg/backend/mock/api/server/backend/registry))
-  - data structures holding the objects being managed by the system
-  - important to note that as these are all in-memory data structures that are not persisted to storage, the `mock` backend will not survive an `api-server` crash
-  - also, it is hopefully obvious by the name `mock`, but this backend does not actually deploy systems. there are no containers running anywhere as a result of the mock, so tests that check connectivity to rolled out services should not use the `mock` backend
-- controller ([pkg/backend/mock/api/server/backend/controller](../../pkg/backend/mock/api/server/backend/controller))
-  - control loops that simulate real-world actions acting upon API objects, e.g. scaling a `Service`
+Documentation on system definitions and the components implementing it can be found in [system-definition.md](definition-language.md).

@@ -20,7 +20,7 @@ const (
 	DefaultFile = "lattice.yaml"
 )
 
-type ComponentResolver interface {
+type Interface interface {
 	Resolve(
 		c component.Interface,
 		id v1.SystemID,
@@ -35,7 +35,7 @@ func NewComponentResolver(
 	gitResolver *git.Resolver,
 	templateStore TemplateStore,
 	secretStore SecretStore,
-) ComponentResolver {
+) Interface {
 	r := &componentResolver{
 		gitResolver: gitResolver,
 	}

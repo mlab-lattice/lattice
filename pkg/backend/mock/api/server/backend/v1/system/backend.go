@@ -19,7 +19,7 @@ type Backend struct {
 	controller *controller.Controller
 }
 
-func NewBackend(componentResolver resolver.ComponentResolver) *Backend {
+func NewBackend(componentResolver resolver.Interface) *Backend {
 	r := registry.New()
 	c := controller.New(r, componentResolver)
 	return &Backend{

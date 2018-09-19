@@ -48,7 +48,7 @@ type Context struct {
 
 	InternalDNSDomain string
 
-	ComponentResolver resolver.ComponentResolver
+	ComponentResolver resolver.Interface
 
 	CloudProviderOptions *cloudprovider.Options
 	ServiceMeshOptions   *servicemesh.Options
