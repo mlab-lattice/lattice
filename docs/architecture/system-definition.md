@@ -133,4 +133,4 @@ This is in fact what is in fact what is occurring when a user calls
 latticectl deploy --path /foo/bar
 ```
 
-For more information on this please see the documentation on [Lifecycle Action Locking](system-lifecycle.md#lifecycle-action-locking).
+For more information on this please see the documentation on [Lifecycle Action Locking](lifecycle/system.md#lifecycle-action-locking).

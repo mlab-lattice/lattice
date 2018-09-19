@@ -67,9 +67,11 @@ The `mock` backend implementation can be found at [`pkg/backend/mock/api/server/
 
 At a high level, the mock is implemented by two components:
 - registry ([`pkg/backend/mock/api/server/backend/registry`](../../pkg/backend/mock/api/server/backend/registry))
-  - data structures holding the objects being managed by the system
+  - ata structures holding the objects being managed by the system
   - important to note that as these are all in-memory data structures that are not persisted to storage, the `mock` backend will not survive an `api-server` crash
-  - also, it is hopefully obvious by the name `mock`, but this backend does not actually deploy systems. there are no containers running anywhere as a result of the mock, so tests that check connectivity to rolled out services should not use the `mock` backend
+  - also, it is hopefully obvious by the name `mock`, but this backend does not actually deploy systems
+    - there are no containers running anywhere as a result of the mock, so tests that check connectivity to rolled out services should not use the `mock` backend
+    - similarly, for simplicity's sake the `mock` backend for the most part does not simulate random failure. while there are delays in its actions to simulate reality, all operations succeed
 - controller ([`pkg/backend/mock/api/server/backend/controller`](../../pkg/backend/mock/api/server/backend/controller))
   - control loops that simulate real-world actions acting upon API objects, e.g. scaling a `service`
   
