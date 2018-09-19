@@ -1,5 +1,9 @@
 package rest
 
+import (
+	"io"
+)
+
 type ServerOptions struct {
 	AuthOptions *ServerAuthOptions
 }
@@ -10,13 +14,7 @@ func NewServerOptions() *ServerOptions {
 	}
 }
 
-type AuthenticationType string
-
-const (
-	AuthTypeLegacy AuthenticationType = "legacy"
-)
-
 type ServerAuthOptions struct {
-	AuthType         AuthenticationType
 	LegacyApiAuthKey string
+	BearerTokenFile  io.ReadCloser
 }

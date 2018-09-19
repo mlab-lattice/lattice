@@ -40,12 +40,22 @@ func RunNewRestServer(backend v1.Interface, resolver resolver.ComponentResolver,
 	s.router.Run(fmt.Sprintf(":%v", port))
 }
 func (r *restServer) initAuthenticators(options *ServerOptions) {
+
 	authenticators := make([]auth.Authenticator, 0)
 
 	// setup legacy authentication as needed
-	if options.AuthOptions.AuthType == AuthTypeLegacy {
+	if options.AuthOptions.LegacyApiAuthKey != "" {
 		fmt.Println("Setting up authentication with legacy api key header")
 		authenticators = append(authenticators, auth.NewLegacyApiKeyAuthenticator(options.AuthOptions.LegacyApiAuthKey))
+	}
+
+	// setup bearer token auth as needed
+	if options.AuthOptions.BearerTokenFile != nil {
+		bearerAuthenticator, err := auth.NewBearerTokenAuthenticator(options.AuthOptions.BearerTokenFile)
+		if err != nil {
+			panic(err)
+		}
+		authenticators = append(authenticators, bearerAuthenticator)
 	}
 	r.authenticators = authenticators
 }
@@ -56,7 +66,7 @@ func (r *restServer) mountHandlers(options *ServerOptions) {
 	})
 
 	routerGroup := r.router.Group("/")
-	// setup api key authentication if specified
+	r.setupAuthentication(routerGroup)
 
 	restv1.MountHandlers(routerGroup, r.backend, r.resolver)
 }

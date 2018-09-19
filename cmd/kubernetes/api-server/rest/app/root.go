@@ -112,7 +112,6 @@ func Command() *cli.Command {
 			}
 
 			options := rest.NewServerOptions()
-			options.AuthOptions.AuthType = rest.AuthTypeLegacy
 			options.AuthOptions.LegacyApiAuthKey = apiAuthKey
 
 			rest.RunNewRestServer(backend, resolver, port, options)
