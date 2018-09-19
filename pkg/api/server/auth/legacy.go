@@ -27,7 +27,9 @@ func NewLegacyApiKeyAuthenticator(apiKey string) *LegacyApiKeyAuthenticator {
 func (authenticator *LegacyApiKeyAuthenticator) AuthenticateRequest(c *gin.Context) (users.User, error) {
 	// grab request API key from header
 	requestAPIKey := c.Request.Header.Get(apiKeyHeader)
-	if requestAPIKey != "" && requestAPIKey != authenticator.apiKey {
+	if requestAPIKey == "" {
+		return nil, nil
+	} else if requestAPIKey != authenticator.apiKey {
 		return nil, fmt.Errorf("invalid '%v'", apiKeyHeader)
 	}
 
