@@ -8,6 +8,7 @@ import (
 	"time"
 
 	latticerest "github.com/mlab-lattice/lattice/pkg/api/client/rest"
+	"github.com/mlab-lattice/lattice/pkg/api/server/rest"
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 	definitionv1 "github.com/mlab-lattice/lattice/pkg/definition/v1"
@@ -539,7 +540,10 @@ func checkErr(err error, t *testing.T) {
 func setupMockTest() {
 	fmt.Println("Setting up test. Starting API Server")
 	// run api server
-	go RunMockNewRestServer(mockServerAPIPort, mockServerAPIKey)
+	options := rest.NewServerOptions()
+	options.AuthOptions.LegacyApiAuthKey = mockServerAPIKey
+
+	go RunMockNewRestServer(mockServerAPIPort, options)
 
 	fmt.Println("API server started")
 }

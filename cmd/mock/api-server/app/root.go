@@ -4,6 +4,7 @@ import (
 	goflag "flag"
 
 	"github.com/mlab-lattice/lattice/pkg/api/server/mock"
+	"github.com/mlab-lattice/lattice/pkg/api/server/rest"
 	"github.com/mlab-lattice/lattice/pkg/util/cli"
 
 	"github.com/spf13/pflag"
@@ -34,8 +35,9 @@ func Command() *cli.Command {
 			},
 		},
 		Run: func(args []string) {
-
-			mock.RunMockNewRestServer(port, apiAuthKey)
+			options := rest.NewServerOptions()
+			options.AuthOptions.LegacyApiAuthKey = apiAuthKey
+			mock.RunMockNewRestServer(port, options)
 		},
 	}
 
