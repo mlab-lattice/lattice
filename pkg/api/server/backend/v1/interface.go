@@ -8,7 +8,7 @@ import (
 	definitionv1 "github.com/mlab-lattice/lattice/pkg/definition/v1"
 )
 
-type Backend interface {
+type Interface interface {
 	Systems() SystemBackend
 }
 

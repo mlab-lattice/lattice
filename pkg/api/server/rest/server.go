@@ -17,11 +17,11 @@ const (
 
 type restServer struct {
 	router   *gin.Engine
-	backend  backend.Backend
+	backend  backend.Interface
 	resolver resolver.ComponentResolver
 }
 
-func RunNewRestServer(backend backend.Backend, resolver resolver.ComponentResolver, port int32, apiAuthKey string) {
+func RunNewRestServer(backend backend.Interface, resolver resolver.ComponentResolver, port int32, apiAuthKey string) {
 	router := gin.Default()
 	// Some of our paths use URL encoded paths, so don't have
 	// gin decode those

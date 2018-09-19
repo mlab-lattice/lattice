@@ -16,6 +16,6 @@ type MockBackend struct {
 	v1 *backendv1.Backend
 }
 
-func (b *MockBackend) V1() serverv1.Backend {
+func (b *MockBackend) V1() serverv1.Interface {
 	return b.v1
 }
