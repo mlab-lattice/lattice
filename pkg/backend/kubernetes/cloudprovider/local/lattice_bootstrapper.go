@@ -9,7 +9,8 @@ import (
 	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/lifecycle/lattice/bootstrap/bootstrapper"
 	basebootstrapper "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/lifecycle/lattice/bootstrap/bootstrapper/base"
 	kubeutil "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/kubernetes"
-	"github.com/mlab-lattice/lattice/pkg/util/cli"
+	"github.com/mlab-lattice/lattice/pkg/util/cli2"
+	"github.com/mlab-lattice/lattice/pkg/util/cli2/flags"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -56,34 +57,28 @@ func LatticeBootstrapperFlags() (cli.Flags, *LatticeBootstrapperOptions) {
 		DNS: &OptionsDNS{},
 	}
 	flags := cli.Flags{
-		&cli.StringFlag{
-			Name:     "IP",
+		"ip": &flags.String{
 			Required: true,
 			Target:   &options.IP,
 		},
-		&cli.EmbeddedFlag{
-			Name:     "dns-var",
+		"dns-var": &flags.Embedded{
 			Required: true,
 			Flags: cli.Flags{
-				&cli.StringFlag{
-					Name:     "dnsmasq-nanny-image",
+				"dnsmasq-nanny-image": &flags.String{
 					Required: true,
 					Target:   &options.DNS.DnsmasqNannyImage,
 				},
 				// the args for dnsmasq nanny contain commas, so use a
-				// StringArrayFlag so these don't try to be parsed as separate
+				// StringArray so these don't try to be parsed as separate
 				// args
-				&cli.StringArrayFlag{
-					Name:   "dnsmasq-nanny-args",
+				"dnsmasq-nanny-args": &flags.StringArray{
 					Target: &options.DNS.DnsmasqNannyArgs,
 				},
-				&cli.StringFlag{
-					Name:     "controller-image",
+				"controller-image": &flags.String{
 					Required: true,
 					Target:   &options.DNS.ControllerImage,
 				},
-				&cli.StringSliceFlag{
-					Name:   "controller-args",
+				"controller-args": &flags.StringSlice{
 					Target: &options.DNS.DnsmasqNannyArgs,
 				},
 			},

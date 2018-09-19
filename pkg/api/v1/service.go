@@ -22,9 +22,14 @@ const (
 )
 
 type Service struct {
-	ID   ServiceID `json:"id"`
+	ID ServiceID `json:"id"`
+
 	Path tree.Path `json:"path"`
 
+	Status ServiceStatus `json:"status"`
+}
+
+type ServiceStatus struct {
 	State       ServiceState        `json:"state"`
 	Message     *string             `json:"message,omitempty"`
 	FailureInfo *ServiceFailureInfo `json:"failureInfo,omitempty"`

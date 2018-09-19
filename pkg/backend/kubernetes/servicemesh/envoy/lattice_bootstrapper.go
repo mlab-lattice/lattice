@@ -8,7 +8,8 @@ import (
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/lifecycle/lattice/bootstrap/bootstrapper"
 	kubeutil "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/kubernetes"
-	"github.com/mlab-lattice/lattice/pkg/util/cli"
+	"github.com/mlab-lattice/lattice/pkg/util/cli2"
+	"github.com/mlab-lattice/lattice/pkg/util/cli2/flags"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -40,28 +41,23 @@ func NewLatticeBootstrapper(namespacePrefix string, options *LatticeBootstrapper
 func LatticeBootstrapperFlags() (cli.Flags, *LatticeBootstrapperOptions) {
 	options := &LatticeBootstrapperOptions{}
 	flags := cli.Flags{
-		&cli.StringFlag{
-			Name:     "prepare-image",
+		"prepare-image": &flags.String{
 			Required: true,
 			Target:   &options.PrepareImage,
 		},
-		&cli.StringFlag{
-			Name:    "image",
+		"image": &flags.String{
 			Default: "envoyproxy/envoy-alpine",
 			Target:  &options.Image,
 		},
-		&cli.IPNetFlag{
-			Name:     "redirect-cidr-block",
+		"redirect-cidr-block": &flags.IPNet{
 			Required: true,
 			Target:   &options.RedirectCIDRBlock,
 		},
-		&cli.StringFlag{
-			Name:     "xds-api-image",
+		"xds-api-image": &flags.String{
 			Required: true,
 			Target:   &options.XDSAPIImage,
 		},
-		&cli.Int32Flag{
-			Name:    "xds-api-port",
+		"xds-api-port": &flags.Int32{
 			Default: 8080,
 			Target:  &options.XDSAPIPort,
 		},
@@ -192,7 +188,7 @@ func (b *DefaultEnvoylatticeBootstrapper) BootstrapLatticeResources(resources *b
 					DNSPolicy:          corev1.DNSDefault,
 					ServiceAccountName: serviceAccount.Name,
 					Tolerations: []corev1.Toleration{
-						latticev1.AllNodePoolTolleration,
+						latticev1.AllNodePoolToleration,
 					},
 					Affinity: &corev1.Affinity{
 						NodeAffinity: &latticev1.AllNodePoolAffinity,

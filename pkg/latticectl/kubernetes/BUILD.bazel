@@ -1,0 +1,24 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = ["bootstrap.go"],
+    importpath = "github.com/mlab-lattice/lattice/pkg/latticectl/kubernetes",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//pkg/api/v1:go_default_library",
+        "//pkg/backend/kubernetes/cloudprovider:go_default_library",
+        "//pkg/backend/kubernetes/customresource/apis/lattice/v1:go_default_library",
+        "//pkg/backend/kubernetes/customresource/generated/clientset/versioned:go_default_library",
+        "//pkg/backend/kubernetes/lifecycle/lattice/bootstrap:go_default_library",
+        "//pkg/backend/kubernetes/lifecycle/lattice/bootstrap/bootstrapper:go_default_library",
+        "//pkg/backend/kubernetes/lifecycle/lattice/bootstrap/bootstrapper/base:go_default_library",
+        "//pkg/backend/kubernetes/servicemesh:go_default_library",
+        "//pkg/backend/kubernetes/util/kubernetes:go_default_library",
+        "//pkg/util/cli2:go_default_library",
+        "//pkg/util/cli2/flags:go_default_library",
+        "//pkg/util/terraform:go_default_library",
+        "@io_k8s_client_go//kubernetes:go_default_library",
+        "@io_k8s_client_go//rest:go_default_library",
+    ],
+)

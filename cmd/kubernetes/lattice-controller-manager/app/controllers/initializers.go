@@ -47,6 +47,8 @@ func initializeBuildController(ctx Context) {
 	go build.NewController(
 		ctx.NamespacePrefix,
 		ctx.LatticeClientBuilder.ClientOrDie(controllerName(BuildController)),
+		ctx.ComponentResolver,
+		ctx.LatticeInformerFactory.Lattice().V1().Systems(),
 		ctx.LatticeInformerFactory.Lattice().V1().Builds(),
 		ctx.LatticeInformerFactory.Lattice().V1().ContainerBuilds(),
 	).Run(4, ctx.Stop)
@@ -126,5 +128,6 @@ func initializeSystemLifecycleController(ctx Context) {
 		ctx.LatticeInformerFactory.Lattice().V1().Systems(),
 		ctx.LatticeInformerFactory.Lattice().V1().Builds(),
 		ctx.LatticeInformerFactory.Lattice().V1().ContainerBuilds(),
+		ctx.KubeInformerFactory.Core().V1().Namespaces(),
 	).Run(4, ctx.Stop)
 }

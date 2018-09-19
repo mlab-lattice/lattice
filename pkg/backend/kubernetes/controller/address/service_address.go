@@ -56,6 +56,10 @@ func (c *Controller) syncServiceAddress(address *latticev1.Address) error {
 	address_, err := c.mergeAndUpdateAddressAnnotations(address, annotations)
 	if err != nil {
 		address_ = address.DeepCopy()
+		if address_.Annotations == nil {
+			address_.Annotations = make(map[string]string)
+		}
+
 		for k, v := range annotations {
 			address_.Annotations[k] = v
 		}

@@ -10,7 +10,8 @@ import (
 	"github.com/golang/glog"
 
 	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/lifecycle/system/bootstrap/bootstrapper"
-	"github.com/mlab-lattice/lattice/pkg/util/cli"
+	"github.com/mlab-lattice/lattice/pkg/util/cli2"
+	"github.com/mlab-lattice/lattice/pkg/util/cli2/flags"
 
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	kubeutil "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/kubernetes"
@@ -79,13 +80,11 @@ func Flags() (cli.Flags, *Options) {
 	options := &Options{}
 
 	flags := cli.Flags{
-		&cli.IPNetFlag{
-			Name:     "redirect-cidr-block",
+		"redirect-cidr-block": &flags.IPNet{
 			Required: true,
 			Target:   &options.RedirectCIDRBlock,
 		},
-		&cli.Int32Flag{
-			Name:     "xds-api-port",
+		"xds-api-port": &flags.Int32{
 			Required: true,
 			Target:   &options.XDSAPIPort,
 		},

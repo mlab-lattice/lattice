@@ -8,9 +8,10 @@ import (
 	"github.com/mlab-lattice/lattice/pkg/api/server/rest/authentication/apikey"
 	"github.com/mlab-lattice/lattice/pkg/api/server/rest/authentication/bearertoken"
 	"github.com/mlab-lattice/lattice/pkg/api/server/rest/authentication/user"
+
+	"github.com/mlab-lattice/lattice/pkg/api/server/backend"
 	restv1 "github.com/mlab-lattice/lattice/pkg/api/server/rest/v1"
-	"github.com/mlab-lattice/lattice/pkg/api/server/v1"
-	"github.com/mlab-lattice/lattice/pkg/definition/resolver"
+	"github.com/mlab-lattice/lattice/pkg/definition/component/resolver"
 
 	"github.com/gin-gonic/gin"
 )
@@ -20,13 +21,13 @@ const (
 )
 
 type restServer struct {
-	router         *gin.Engine
-	backend        v1.Interface
-	resolver       resolver.ComponentResolver
+	router   *gin.Engine
+	backend  backend.Interface
+	resolver resolver.Interface
 	authenticators []authentication.Request
 }
 
-func RunNewRestServer(backend v1.Interface, resolver resolver.ComponentResolver, port int32, options *ServerOptions) {
+func RunNewRestServer(backend backend.Interface, resolver resolver.Interface, port int32, options *ServerOptions) {
 	router := gin.Default()
 	// Some of our paths use URL encoded paths, so don't have
 	// gin decode those
@@ -70,7 +71,7 @@ func (r *restServer) mountHandlers(options *ServerOptions) {
 	routerGroup := r.router.Group("/")
 	r.setupAuthentication(routerGroup)
 
-	restv1.MountHandlers(routerGroup, r.backend, r.resolver)
+	restv1.MountHandlers(routerGroup, r.backend.V1(), r.resolver)
 }
 
 func (r *restServer) setupAuthentication(router *gin.RouterGroup) {

@@ -76,6 +76,11 @@ GO_DEPENDENCIES = {
         },
     },
     "github.com/mlab-lattice/lattice": {
+        "github.com/armon/go-radix": {
+            "name": "com_github_armon_go_radix",
+            "tag": "v1.0.0",
+            "importpath": "github.com/armon/go-radix",
+        },
         "github.com/aws/aws-sdk-go": {
             "name": "com_github_aws_aws_sdk_go",
             "tag": "v1.12.35",
@@ -94,7 +99,7 @@ GO_DEPENDENCIES = {
         # master HEAD as of 3/6/18
         "github.com/buger/goterm": {
             "name": "com_github_buger_goterm",
-            "commit": "2f70ee476a85f692e8d4265963c615d8a57652da",
+            "commit": "6d19e6a8df12fdfc44a90a24b677a6d04a80b91f",
             "importpath": "github.com/buger/goterm",
         },
         "github.com/coreos/go-iptables": {
@@ -131,6 +136,11 @@ GO_DEPENDENCIES = {
             "tag": "v1.2",
             "importpath": "github.com/gin-gonic/gin",
         },
+        "github.com/olekukonko/tablewriter": {
+            "name": "com_github_olekukonko_tablewriter",
+            "commit": "be2c049b30ccd4d3fd795d6bf7dce74e42eeedaa",
+            "importpath": "github.com/olekukonko/tablewriter",
+        },
         "github.com/satori/go.uuid": {
             "name": "com_github_satori_go_uuid",
             "commit": "5bf94b69c6b68ee1b541973bb8e1144db23a194b",
@@ -148,6 +158,17 @@ GO_DEPENDENCIES = {
             "commit": "1be1d2841c773c01bee8289f55f7463b6e2c2539",
             "importpath": "github.com/spf13/cobra",
         },
+        "github.com/swaggo/swag": {
+            "name": "com_github_swaggo_swag",
+            "tag": "v1.3.2",
+            "importpath": "github.com/swaggo/swag",
+        },
+        "github.com/swaggo/gin-swagger": {
+            "name": "com_github_swaggo_gin_swagger",
+            "tag": "v1.0.0",
+            "importpath": "github.com/swaggo/gin-swagger",
+        },
+        # FIXME(kevindrosendahl): remove when removing old pkg/util/cli
         "github.com/tfogo/tablewriter": {
             "name": "com_github_tfogo_tablewriter",
             "commit": "4776fb554dc2ca114fbce4738142a47de1ea0929",

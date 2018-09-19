@@ -33,6 +33,8 @@ func (r *Reference) Type() component.Type {
 
 func (r *Reference) MarshalJSON() ([]byte, error) {
 	e := referenceEncoder{
+		Type: ReferenceType,
+
 		GitRepository: r.GitRepository,
 		File:          r.File,
 
@@ -84,6 +86,8 @@ func (r *Reference) UnmarshalJSON(data []byte) error {
 }
 
 type referenceEncoder struct {
+	Type component.Type `json:"type"`
+
 	GitRepository *GitRepositoryReference `json:"git_repository,omitempty"`
 	File          *string                 `json:"file,omitempty"`
 

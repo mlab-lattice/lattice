@@ -29,13 +29,11 @@ func (j *Job) Type() component.Type {
 	return JobType
 }
 
-func (j *Job) Containers() []Container {
-	containers := []Container{j.Container}
-	for _, sidecarContainer := range j.Sidecars {
-		containers = append(containers, sidecarContainer)
+func (j *Job) Containers() *WorkloadContainers {
+	return &WorkloadContainers{
+		Main:     j.Container,
+		Sidecars: j.Sidecars,
 	}
-
-	return containers
 }
 
 func (j *Job) MarshalJSON() ([]byte, error) {
