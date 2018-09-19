@@ -8,8 +8,10 @@ import (
 	"time"
 
 	"encoding/json"
-	"github.com/mlab-lattice/lattice/bazel-lattice/pkg/api/server/rest"
+	"os"
+
 	clientrest "github.com/mlab-lattice/lattice/pkg/api/client/rest"
+
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	mockbackend "github.com/mlab-lattice/lattice/pkg/backend/mock/api/server/backend"
 	mockresolver "github.com/mlab-lattice/lattice/pkg/backend/mock/definition/component/resolver"
@@ -18,7 +20,6 @@ import (
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 	definitionv1 "github.com/mlab-lattice/lattice/pkg/definition/v1"
 	"github.com/mlab-lattice/lattice/pkg/util/git"
-	"os"
 )
 
 const (
@@ -681,7 +682,7 @@ func setupMockTest() {
 	)
 
 	b := mockbackend.NewMockBackend(r)
-	options := rest.NewServerOptions()
+	options := NewServerOptions()
 	options.AuthOptions.LegacyApiAuthKey = mockServerAPIKey
 
 	go RunNewRestServer(b, r, mockServerAPIPort, options)

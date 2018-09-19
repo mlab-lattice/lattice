@@ -54,7 +54,9 @@ func Command() *cli.RootCommand {
 
 				r := resolver.NewComponentResolver(gitResolver, templateStore, secretStore)
 				backend := mockbackend.NewMockBackend(r)
-				rest.RunNewRestServer(backend, r, port, apiAuthKey)
+				options := rest.NewServerOptions()
+				options.AuthOptions.LegacyApiAuthKey = apiAuthKey
+				rest.RunNewRestServer(backend, r, port, options)
 				return nil
 			},
 		},

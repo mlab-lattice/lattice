@@ -21,9 +21,9 @@ const (
 )
 
 type restServer struct {
-	router   *gin.Engine
-	backend  backend.Interface
-	resolver resolver.Interface
+	router         *gin.Engine
+	backend        backend.Interface
+	resolver       resolver.Interface
 	authenticators []authentication.Request
 }
 

@@ -2,11 +2,18 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "go_default_library",
-    srcs = ["server.go"],
+    srcs = [
+        "options.go",
+        "server.go",
+    ],
     importpath = "github.com/mlab-lattice/lattice/pkg/api/server/rest",
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/api/server/backend:go_default_library",
+        "//pkg/api/server/rest/authentication:go_default_library",
+        "//pkg/api/server/rest/authentication/apikey:go_default_library",
+        "//pkg/api/server/rest/authentication/bearertoken:go_default_library",
+        "//pkg/api/server/rest/authentication/user:go_default_library",
         "//pkg/api/server/rest/v1:go_default_library",
         "//pkg/definition/component/resolver:go_default_library",
         "@com_github_gin_gonic_gin//:go_default_library",
