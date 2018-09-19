@@ -2,7 +2,7 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library")
 
 go_library(
     name = "go_default_library",
-    srcs = ["interface.go"],
-    importpath = "github.com/mlab-lattice/lattice/pkg/api/users",
+    srcs = ["user.go"],
+    importpath = "github.com/mlab-lattice/lattice/pkg/api/server/rest/authentication/user",
     visibility = ["//visibility:public"],
 )

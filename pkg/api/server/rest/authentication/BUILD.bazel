@@ -2,15 +2,11 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library")
 
 go_library(
     name = "go_default_library",
-    srcs = [
-        "bearertoken.go",
-        "interface.go",
-        "legacy.go",
-    ],
-    importpath = "github.com/mlab-lattice/lattice/pkg/api/server/auth",
+    srcs = ["interfaces.go"],
+    importpath = "github.com/mlab-lattice/lattice/pkg/api/server/rest/authentication",
     visibility = ["//visibility:public"],
     deps = [
-        "//pkg/api/users:go_default_library",
+        "//pkg/api/server/rest/authentication/user:go_default_library",
         "@com_github_gin_gonic_gin//:go_default_library",
     ],
 )

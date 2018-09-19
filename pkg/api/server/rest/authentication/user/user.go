@@ -1,4 +1,4 @@
-package users
+package user
 
 type User interface {
 	GetName() string
@@ -6,6 +6,12 @@ type User interface {
 
 type DefaultUser struct {
 	Username string
+}
+
+func NewDefaultUser(name string) User {
+	return &DefaultUser{
+		Username: name,
+	}
 }
 
 func (user *DefaultUser) GetName() string {

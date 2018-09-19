@@ -4,10 +4,12 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/mlab-lattice/lattice/pkg/api/server/auth"
+	"github.com/mlab-lattice/lattice/pkg/api/server/rest/authentication"
+	"github.com/mlab-lattice/lattice/pkg/api/server/rest/authentication/apikey"
+	"github.com/mlab-lattice/lattice/pkg/api/server/rest/authentication/bearertoken"
+	"github.com/mlab-lattice/lattice/pkg/api/server/rest/authentication/user"
 	restv1 "github.com/mlab-lattice/lattice/pkg/api/server/rest/v1"
 	"github.com/mlab-lattice/lattice/pkg/api/server/v1"
-	"github.com/mlab-lattice/lattice/pkg/api/users"
 	"github.com/mlab-lattice/lattice/pkg/definition/resolver"
 
 	"github.com/gin-gonic/gin"
@@ -21,7 +23,7 @@ type restServer struct {
 	router         *gin.Engine
 	backend        v1.Interface
 	resolver       resolver.ComponentResolver
-	authenticators []auth.Authenticator
+	authenticators []authentication.Request
 }
 
 func RunNewRestServer(backend v1.Interface, resolver resolver.ComponentResolver, port int32, options *ServerOptions) {
@@ -41,17 +43,17 @@ func RunNewRestServer(backend v1.Interface, resolver resolver.ComponentResolver,
 }
 func (r *restServer) initAuthenticators(options *ServerOptions) {
 
-	authenticators := make([]auth.Authenticator, 0)
+	authenticators := make([]authentication.Request, 0)
 
 	// setup legacy authentication as needed
 	if options.AuthOptions.LegacyApiAuthKey != "" {
 		fmt.Println("Setting up authentication with legacy api key header")
-		authenticators = append(authenticators, auth.NewLegacyApiKeyAuthenticator(options.AuthOptions.LegacyApiAuthKey))
+		authenticators = append(authenticators, apikey.New(options.AuthOptions.LegacyApiAuthKey))
 	}
 
 	// setup bearer token auth as needed
-	if options.AuthOptions.BearerTokenFile != nil {
-		bearerAuthenticator, err := auth.NewBearerTokenAuthenticator(options.AuthOptions.BearerTokenFile)
+	if options.AuthOptions.Token != nil {
+		bearerAuthenticator, err := bearertoken.New(options.AuthOptions.Token)
 		if err != nil {
 			panic(err)
 		}
@@ -84,14 +86,13 @@ func (r *restServer) setupAuthentication(router *gin.RouterGroup) {
 func (r *restServer) authenticateRequest() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		for _, authenticator := range r.authenticators {
-			userObject, err := authenticator.AuthenticateRequest(c)
+			userObject, ok, err := authenticator.AuthenticateRequest(c)
 
 			if err != nil {
-				c.AbortWithStatusJSON(http.StatusForbidden,
-					gin.H{"error": fmt.Sprintf("Failed to authenticate: %v", err)})
+				fmt.Printf("Failed to authenticated. Got error %v\n", err)
+				abortUnauthorized(c)
 				return
-			}
-			if userObject != nil { // Auth Success!
+			} else if ok { // Auth Success!
 				fmt.Printf("User %v successfully authenticated\n", userObject.GetName())
 				// Attach user to current context
 				c.Set(currentUserContextKey, userObject)
@@ -100,14 +101,18 @@ func (r *restServer) authenticateRequest() gin.HandlerFunc {
 
 		}
 
-		// Authentication failure
-		c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "No authentication provided"})
+		// No authentication provided
+		abortUnauthorized(c)
 	}
 }
 
-func GetCurrentUser(c *gin.Context) *users.User {
+func abortUnauthorized(c *gin.Context) {
+	c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "Unauthorized"})
+}
+
+func GetCurrentUser(c *gin.Context) user.User {
 	if currentUser, exists := c.Get(currentUserContextKey); exists {
-		return currentUser.(*users.User)
+		return currentUser.(user.User)
 	}
 	return nil
 }
