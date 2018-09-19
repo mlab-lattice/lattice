@@ -4,6 +4,7 @@ import (
 	goflag "flag"
 
 	"github.com/mlab-lattice/lattice/pkg/api/server/rest"
+	"github.com/mlab-lattice/lattice/pkg/api/server/rest/authentication/token/tokenfile"
 	mockbackend "github.com/mlab-lattice/lattice/pkg/backend/mock/api/server/backend"
 	mockresolver "github.com/mlab-lattice/lattice/pkg/backend/mock/definition/component/resolver"
 	"github.com/mlab-lattice/lattice/pkg/definition/component/resolver"
@@ -21,6 +22,7 @@ func Command() *cli.RootCommand {
 	var (
 		port          int32
 		apiAuthKey    string
+		tokenAuthFile string
 		workDirectory string
 	)
 
@@ -37,6 +39,11 @@ func Command() *cli.RootCommand {
 					Usage:   "if supplied, the required value of the API_KEY header",
 					Default: "",
 					Target:  &apiAuthKey,
+				},
+				"token-auth-file": &flags.String{
+					Usage:   "path for token file for bearer token authenticator",
+					Default: "",
+					Target:  &tokenAuthFile,
 				},
 				"work-directory": &flags.String{
 					Usage:   "directory used to download git repositories",
@@ -55,7 +62,8 @@ func Command() *cli.RootCommand {
 				r := resolver.NewComponentResolver(gitResolver, templateStore, secretStore)
 				backend := mockbackend.NewMockBackend(r)
 				options := rest.NewServerOptions()
-				options.AuthOptions.LegacyApiAuthKey = apiAuthKey
+				// apply auth options based on input
+				applyAuthenticationOptions(options, apiAuthKey, tokenAuthFile)
 				rest.RunNewRestServer(backend, r, port, options)
 				return nil
 			},
@@ -63,4 +71,20 @@ func Command() *cli.RootCommand {
 	}
 
 	return command
+}
+
+func applyAuthenticationOptions(options *rest.ServerOptions, apiAuthKey string, tokenAuthFile string) {
+	// enable api authentication key as needed
+	if apiAuthKey != "" {
+		options.AuthOptions.LegacyApiAuthKey = apiAuthKey
+	}
+
+	if tokenAuthFile != "" {
+		tokenAuthenticator, err := tokenfile.NewFromCSV(tokenAuthFile)
+		if err != nil {
+			panic(err)
+		}
+		options.AuthOptions.Token = tokenAuthenticator
+	}
+
 }
