@@ -207,12 +207,12 @@ func (c *Controller) syncLifecycleActions() error {
 			continue
 		}
 
-		if deploy.Status.BuildID == nil {
+		if deploy.Status.Build == nil {
 			// this shouldn't happen
 			continue
 		}
 
-		build, err := c.buildLister.Builds(deploy.Namespace).Get(string(*deploy.Status.BuildID))
+		build, err := c.buildLister.Builds(deploy.Namespace).Get(string(*deploy.Status.Build))
 		if err != nil {
 			return err
 		}

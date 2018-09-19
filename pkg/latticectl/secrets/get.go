@@ -1,0 +1,81 @@
+package secrets
+
+import (
+	"fmt"
+	"io"
+	"os"
+
+	"github.com/mlab-lattice/lattice/pkg/api/client"
+	"github.com/mlab-lattice/lattice/pkg/api/v1"
+	"github.com/mlab-lattice/lattice/pkg/definition/tree"
+	"github.com/mlab-lattice/lattice/pkg/latticectl/command"
+	"github.com/mlab-lattice/lattice/pkg/util/cli2"
+	"github.com/mlab-lattice/lattice/pkg/util/cli2/color"
+	"github.com/mlab-lattice/lattice/pkg/util/cli2/printer"
+)
+
+func Get() *cli.Command {
+	var (
+		output string
+	)
+
+	cmd := Command{
+		Flags: map[string]cli.Flag{
+			command.OutputFlagName: command.OutputFlag(
+				&output,
+				[]printer.Format{
+					printer.FormatJSON,
+					printer.FormatTable,
+				},
+				printer.FormatTable,
+			),
+		},
+		Run: func(ctx *SecretCommandContext, args []string, flags cli.Flags) error {
+			format := printer.Format(output)
+			return GetSecret(ctx.Client, ctx.System, ctx.Secret, os.Stdout, format)
+		},
+	}
+
+	return cmd.Command()
+}
+
+func GetSecret(
+	client client.Interface,
+	system v1.SystemID,
+	secret tree.PathSubcomponent,
+	w io.Writer,
+	f printer.Format,
+) error {
+	result, err := client.V1().Systems().Secrets(system).Get(secret)
+	if err != nil {
+		return err
+	}
+
+	switch f {
+	case printer.FormatTable:
+		dw := secretWriter(w)
+		s := secretString(result)
+		dw.Print(s)
+
+	case printer.FormatJSON:
+		j := printer.NewJSON(w)
+		j.Print(result)
+
+	default:
+		return fmt.Errorf("unexpected format %v", f)
+	}
+
+	return nil
+}
+func secretWriter(w io.Writer) *printer.Custom {
+	return printer.NewCustom(w)
+}
+
+func secretString(secret *v1.Secret) string {
+	return fmt.Sprintf(`secret %v
+  value: %v
+`,
+		color.IDString(secret.Path.String()),
+		secret.Value,
+	)
+}

@@ -193,11 +193,6 @@ func (b *buildBackend) transformBuild(build *latticev1.Build) (v1.Build, error) 
 		return v1.Build{}, err
 	}
 
-	version := v1.Version("unknown")
-	if label, ok := build.DefinitionVersionLabel(); ok {
-		version = label
-	}
-
 	var startTimestamp *time.Time
 	if build.Status.StartTimestamp != nil {
 		startTimestamp = &build.Status.StartTimestamp.Time
@@ -209,14 +204,20 @@ func (b *buildBackend) transformBuild(build *latticev1.Build) (v1.Build, error) 
 	}
 
 	externalBuild := v1.Build{
-		ID:    v1.BuildID(build.Name),
-		State: state,
+		ID: v1.BuildID(build.Name),
 
-		StartTimestamp:      startTimestamp,
-		CompletionTimestamp: completionTimestamp,
+		Version: build.Spec.Version,
+		Path:    build.Spec.Path,
 
-		Version:   &version,
-		Workloads: make(map[tree.Path]v1.WorkloadBuild),
+		Status: v1.BuildStatus{
+			State:   state,
+			Message: build.Status.Message,
+
+			StartTimestamp:      startTimestamp,
+			CompletionTimestamp: completionTimestamp,
+
+			Workloads: make(map[tree.Path]v1.WorkloadBuild),
+		},
 	}
 
 	for path, workload := range build.Status.Workloads {
@@ -230,7 +231,7 @@ func (b *buildBackend) transformBuild(build *latticev1.Build) (v1.Build, error) 
 			return v1.Build{}, err
 		}
 
-		externalBuild.Workloads[path] = externalServiceBuild
+		externalBuild.Status.Workloads[path] = externalServiceBuild
 	}
 
 	return externalBuild, nil
@@ -335,14 +336,17 @@ func transformContainerBuild(id v1.ContainerBuildID, status latticev1.ContainerB
 	}
 
 	externalBuild := v1.ContainerBuild{
-		ID:    id,
-		State: state,
+		ID: id,
 
-		StartTimestamp:      startTimestamp,
-		CompletionTimestamp: completionTimestamp,
+		Status: v1.ContainerBuildStatus{
+			State: state,
 
-		LastObservedPhase: phase,
-		FailureMessage:    failureMessage,
+			StartTimestamp:      startTimestamp,
+			CompletionTimestamp: completionTimestamp,
+
+			LastObservedPhase: phase,
+			FailureMessage:    failureMessage,
+		},
 	}
 
 	return externalBuild, nil

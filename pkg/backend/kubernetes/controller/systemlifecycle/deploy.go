@@ -26,7 +26,7 @@ func (c *Controller) updateDeployStatus(
 		Message:       message,
 		InternalError: internalError,
 
-		BuildID: buildID,
+		Build: buildID,
 
 		StartTimestamp:      startTimestamp,
 		CompletionTimestamp: completionTimestamp,

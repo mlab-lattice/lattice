@@ -39,9 +39,11 @@ func (b *JobBackend) Run(
 	}
 
 	job := &v1.Job{
-		ID:    v1.JobID(uuid.NewV4().String()),
-		State: v1.JobStatePending,
-		Path:  path,
+		ID:   v1.JobID(uuid.NewV4().String()),
+		Path: path,
+		Status: v1.JobStatus{
+			State: v1.JobStatePending,
+		},
 	}
 
 	record.Jobs[job.ID] = job

@@ -75,7 +75,7 @@ func (api *LatticeAPI) handleSetSecret(c *gin.Context) {
 	if err != nil {
 		v1err, ok := err.(*v1.Error)
 		if !ok {
-			c.Status(http.StatusInternalServerError)
+			handleInternalError(c, err)
 			return
 		}
 
@@ -90,7 +90,7 @@ func (api *LatticeAPI) handleSetSecret(c *gin.Context) {
 			c.JSON(http.StatusConflict, v1err)
 
 		default:
-			c.Status(http.StatusInternalServerError)
+			handleInternalError(c, err)
 		}
 		return
 	}
@@ -116,7 +116,7 @@ func (api *LatticeAPI) handleListSecrets(c *gin.Context) {
 	if err != nil {
 		v1err, ok := err.(*v1.Error)
 		if !ok {
-			c.Status(http.StatusInternalServerError)
+			handleInternalError(c, err)
 			return
 		}
 
@@ -128,7 +128,7 @@ func (api *LatticeAPI) handleListSecrets(c *gin.Context) {
 			c.JSON(http.StatusConflict, v1err)
 
 		default:
-			c.Status(http.StatusInternalServerError)
+			handleInternalError(c, err)
 		}
 		return
 	}
@@ -169,7 +169,7 @@ func (api *LatticeAPI) handleGetSecret(c *gin.Context) {
 	if err != nil {
 		v1err, ok := err.(*v1.Error)
 		if !ok {
-			c.Status(http.StatusInternalServerError)
+			handleInternalError(c, err)
 			return
 		}
 
@@ -181,7 +181,7 @@ func (api *LatticeAPI) handleGetSecret(c *gin.Context) {
 			c.JSON(http.StatusConflict, v1err)
 
 		default:
-			c.Status(http.StatusInternalServerError)
+			handleInternalError(c, err)
 		}
 		return
 	}
@@ -221,7 +221,7 @@ func (api *LatticeAPI) handleUnsetSecret(c *gin.Context) {
 	if err != nil {
 		v1err, ok := err.(*v1.Error)
 		if !ok {
-			c.Status(http.StatusInternalServerError)
+			handleInternalError(c, err)
 			return
 		}
 
@@ -236,7 +236,7 @@ func (api *LatticeAPI) handleUnsetSecret(c *gin.Context) {
 			c.JSON(http.StatusConflict, v1err)
 
 		default:
-			c.Status(http.StatusInternalServerError)
+			handleInternalError(c, err)
 		}
 		return
 	}

@@ -93,7 +93,7 @@ func (p *DefaultLocalLatticeProvisioner) Provision(id v1.LatticeID, containerCha
 	}
 
 	fmt.Println("Waiting for API server to be ready...")
-	clusterClient := rest.NewClient(address, "")
+	clusterClient := rest.NewUnauthenticatedClient(address)
 	err = wait.Poll(1*time.Second, 300*time.Second, func() (bool, error) {
 		ok, _ := clusterClient.Health()
 		return ok, nil
@@ -200,7 +200,7 @@ func (p *DefaultLocalLatticeProvisioner) bootstrap(containerChannel, address str
 							Args: append(
 								bootstrapArgs,
 								[]string{
-									"kubernetes:bootstrap",
+									"kubernetes bootstrap",
 									"--lattice-id", "local",
 									"--internal-dns-domain", "lattice.local",
 									"--controller-manager-var", fmt.Sprintf("image=%v", getLatticeContainerImage(containerChannel, "kubernetes-lattice-controller-manager")),
@@ -216,7 +216,7 @@ func (p *DefaultLocalLatticeProvisioner) bootstrap(containerChannel, address str
 									"--service-mesh-var", fmt.Sprintf("xds-api-image=%v", getLatticeContainerImage(containerChannel, "kubernetes-envoy-xds-api-grpc-per-node")),
 									"--service-mesh-var", "redirect-cidr-block=172.16.0.0/16",
 									"--cloud-provider", "local",
-									"--cloud-provider-var", "IP=" + address,
+									"--cloud-provider-var", "ip=" + address,
 									"--cloud-provider-var", fmt.Sprintf("dns-var=controller-image=%v", getLatticeContainerImage(containerChannel, dockerImageDNSController)),
 									"--cloud-provider-var", fmt.Sprintf("dns-var=dnsmasq-nanny-image=%v", dockerImageDnsmasqNanny),
 								}...,

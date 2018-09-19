@@ -38,7 +38,7 @@ func (api *LatticeAPI) handleListSystemVersions(c *gin.Context) {
 	if err != nil {
 		v1err, ok := err.(*v1.Error)
 		if !ok {
-			c.Status(http.StatusInternalServerError)
+			handleInternalError(c, err)
 			return
 		}
 
@@ -47,7 +47,7 @@ func (api *LatticeAPI) handleListSystemVersions(c *gin.Context) {
 			c.JSON(http.StatusNotFound, v1err)
 
 		default:
-			c.Status(http.StatusInternalServerError)
+			handleInternalError(c, err)
 		}
 		return
 	}
@@ -62,7 +62,7 @@ func (api *LatticeAPI) handleListSystemVersions(c *gin.Context) {
 
 	v, err := api.resolver.Versions(ref, nil)
 	if err != nil {
-		c.Status(http.StatusInternalServerError)
+		handleInternalError(c, err)
 		return
 	}
 

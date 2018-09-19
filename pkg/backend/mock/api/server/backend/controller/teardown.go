@@ -34,8 +34,8 @@ func (c *Controller) runTeardown(teardown *v1.Teardown, record *registry.SystemR
 		defer c.registry.Unlock()
 
 		now := time.Now()
-		teardown.StartTimestamp = &now
-		teardown.State = v1.TeardownStateInProgress
+		teardown.Status.StartTimestamp = &now
+		teardown.Status.State = v1.TeardownStateInProgress
 
 		record.Definition.V1().Services(func(path tree.Path, _ *definitionv1.Service, _ *resolver.ResolutionInfo) tree.WalkContinuation {
 			wg.Add(1)
@@ -64,8 +64,8 @@ func (c *Controller) runTeardown(teardown *v1.Teardown, record *registry.SystemR
 
 	record.Definition = resolver.NewResolutionTree()
 	now := time.Now()
-	teardown.CompletionTimestamp = &now
-	teardown.State = v1.TeardownStateSucceeded
+	teardown.Status.CompletionTimestamp = &now
+	teardown.Status.State = v1.TeardownStateSucceeded
 }
 
 func (c *Controller) lockTeardown(teardown *v1.Teardown, record *registry.SystemRecord) bool {
@@ -76,17 +76,17 @@ func (c *Controller) lockTeardown(teardown *v1.Teardown, record *registry.System
 	// fail the deploy.
 	err := c.actions.AcquireTeardown(record.System.ID, teardown.ID)
 	if err != nil {
-		teardown.State = v1.TeardownStateFailed
+		teardown.Status.State = v1.TeardownStateFailed
 		_, ok := err.(*syncutil.ConflictingLifecycleActionError)
 		if !ok {
-			teardown.Message = err.Error()
+			teardown.Status.Message = err.Error()
 			return false
 		}
 
-		teardown.Message = fmt.Sprintf("unable to acquire lifecycle lock: %v", err.Error())
+		teardown.Status.Message = fmt.Sprintf("unable to acquire lifecycle lock: %v", err.Error())
 		return false
 	}
 
-	teardown.State = v1.TeardownStateInProgress
+	teardown.Status.State = v1.TeardownStateInProgress
 	return true
 }

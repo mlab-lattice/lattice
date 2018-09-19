@@ -36,19 +36,22 @@ func (c *Controller) addService(
 		defer c.registry.Unlock()
 
 		service = &v1.Service{
-			ID:   v1.ServiceID(uuid.NewV4().String()),
+			ID: v1.ServiceID(uuid.NewV4().String()),
+
 			Path: path,
 
-			State: v1.ServiceStatePending,
+			Status: v1.ServiceStatus{
+				State: v1.ServiceStatePending,
 
-			AvailableInstances:   0,
-			UpdatedInstances:     0,
-			StaleInstances:       0,
-			TerminatingInstances: 0,
+				AvailableInstances:   0,
+				UpdatedInstances:     0,
+				StaleInstances:       0,
+				TerminatingInstances: 0,
 
-			Ports: make(map[int32]string),
+				Ports: make(map[int32]string),
 
-			Instances: make([]string, 0),
+				Instances: make([]string, 0),
+			},
 		}
 
 		record.Services[service.ID] = &registry.ServiceInfo{
@@ -74,26 +77,26 @@ func (c *Controller) addService(
 				float64(definition.NumInstances),
 			))
 
-			service.AvailableInstances = available
-			service.UpdatedInstances = available
+			service.Status.AvailableInstances = available
+			service.Status.UpdatedInstances = available
 
 			// add new instance ids
-			diff := available - service.AvailableInstances
+			diff := available - service.Status.AvailableInstances
 			var newInstances []string
 			for i := int32(0); i < diff; i++ {
 				newInstances = append(newInstances, uuid.NewV4().String())
 			}
 
-			service.Instances = append(service.Instances, newInstances...)
+			service.Status.Instances = append(service.Status.Instances, newInstances...)
 
 			// if we've reached the desired number of instances, we're done
-			return service.AvailableInstances == definition.NumInstances
+			return service.Status.AvailableInstances == definition.NumInstances
 		}()
 		if done {
 			c.registry.Lock()
 			defer c.registry.Unlock()
 
-			service.State = v1.ServiceStateStable
+			service.Status.State = v1.ServiceStateStable
 
 			log.Printf("done scaling service %v for system %v", path.String(), record.System.ID)
 			return
@@ -118,9 +121,9 @@ func (c *Controller) rollService(
 
 		id := record.ServicePaths[path]
 		service = record.Services[id].Service
-		service.State = v1.ServiceStateUpdating
-		service.StaleInstances = service.AvailableInstances
-		service.UpdatedInstances = 0
+		service.Status.State = v1.ServiceStateUpdating
+		service.Status.StaleInstances = service.Status.AvailableInstances
+		service.Status.UpdatedInstances = 0
 	}()
 
 	desired := definition.NumInstances
@@ -130,7 +133,7 @@ func (c *Controller) rollService(
 	}
 
 	var oldInstances []string
-	for _, i := range service.Instances {
+	for _, i := range service.Status.Instances {
 		oldInstances = append(oldInstances, i)
 	}
 
@@ -144,26 +147,26 @@ func (c *Controller) rollService(
 			log.Printf("rolling scaling service %v for system %v", path.String(), record.System.ID)
 
 			rev := int32(math.Ceil(float64(definition.NumInstances) * serviceScaleRate))
-			service.UpdatedInstances = int32(math.Min(float64(service.UpdatedInstances+rev), float64(desired)))
-			if service.StaleInstances == 0 {
-				service.TerminatingInstances = int32(math.Max(float64(service.TerminatingInstances-rev), 0))
+			service.Status.UpdatedInstances = int32(math.Min(float64(service.Status.UpdatedInstances+rev), float64(desired)))
+			if service.Status.StaleInstances == 0 {
+				service.Status.TerminatingInstances = int32(math.Max(float64(service.Status.TerminatingInstances-rev), 0))
 			} else {
-				service.StaleInstances = int32(math.Max(float64(service.TerminatingInstances-rev), 0))
+				service.Status.StaleInstances = int32(math.Max(float64(service.Status.TerminatingInstances-rev), 0))
 			}
 
-			service.AvailableInstances = service.UpdatedInstances + service.StaleInstances
-			service.Instances = append(
-				oldInstances[:(service.StaleInstances+service.TerminatingInstances)],
-				newInstances[:service.UpdatedInstances]...,
+			service.Status.AvailableInstances = service.Status.UpdatedInstances + service.Status.StaleInstances
+			service.Status.Instances = append(
+				oldInstances[:(service.Status.StaleInstances+service.Status.TerminatingInstances)],
+				newInstances[:service.Status.UpdatedInstances]...,
 			)
 
-			return service.UpdatedInstances == desired
+			return service.Status.UpdatedInstances == desired
 		}()
 		if done {
 			c.registry.Lock()
 			defer c.registry.Unlock()
 
-			service.State = v1.ServiceStateStable
+			service.Status.State = v1.ServiceStateStable
 
 			log.Printf("done rolling service %v for system %v", path.String(), record.System.ID)
 			return
@@ -183,7 +186,7 @@ func (c *Controller) terminateService(path tree.Path, record *registry.SystemRec
 
 		id := record.ServicePaths[path]
 		service = record.Services[id].Service
-		service.State = v1.ServiceStateDeleting
+		service.Status.State = v1.ServiceStateDeleting
 	}()
 
 	for {
@@ -195,15 +198,15 @@ func (c *Controller) terminateService(path tree.Path, record *registry.SystemRec
 
 			log.Printf("terminating service %v for system %v", path.String(), record.System.ID)
 
-			removeTerminating := int32(math.Ceil(float64(service.TerminatingInstances) * serviceScaleRate))
-			remainingTerminating := service.TerminatingInstances - removeTerminating + service.AvailableInstances + service.StaleInstances
-			service.AvailableInstances = 0
-			service.UpdatedInstances = 0
-			service.StaleInstances = 0
-			service.TerminatingInstances = remainingTerminating
-			service.Instances = service.Instances[:remainingTerminating]
+			removeTerminating := int32(math.Ceil(float64(service.Status.TerminatingInstances) * serviceScaleRate))
+			remainingTerminating := service.Status.TerminatingInstances - removeTerminating + service.Status.AvailableInstances + service.Status.StaleInstances
+			service.Status.AvailableInstances = 0
+			service.Status.UpdatedInstances = 0
+			service.Status.StaleInstances = 0
+			service.Status.TerminatingInstances = remainingTerminating
+			service.Status.Instances = service.Status.Instances[:remainingTerminating]
 
-			return service.TerminatingInstances == 0
+			return service.Status.TerminatingInstances == 0
 		}()
 		if done {
 			c.registry.Lock()

@@ -25,7 +25,7 @@ func (c *Controller) syncPendingDeploy(deploy *latticev1.Deploy) error {
 				latticev1.DeployStateFailed,
 				fmt.Sprintf("%v must specify build, path, or version", deploy.Description(c.namespacePrefix)),
 				nil,
-				deploy.Status.BuildID,
+				deploy.Status.Build,
 				nil,
 				nil,
 			)
@@ -37,7 +37,7 @@ func (c *Controller) syncPendingDeploy(deploy *latticev1.Deploy) error {
 				latticev1.DeployStateFailed,
 				fmt.Sprintf("%v must only specify one of build, path, or version", deploy.Description(c.namespacePrefix)),
 				nil,
-				deploy.Status.BuildID,
+				deploy.Status.Build,
 				nil,
 				nil,
 			)
@@ -50,7 +50,7 @@ func (c *Controller) syncPendingDeploy(deploy *latticev1.Deploy) error {
 				latticev1.DeployStateFailed,
 				"internal error",
 				&msg,
-				deploy.Status.BuildID,
+				deploy.Status.Build,
 				nil,
 				nil,
 			)
@@ -76,7 +76,7 @@ func (c *Controller) syncPendingDeploy(deploy *latticev1.Deploy) error {
 					latticev1.DeployStateFailed,
 					fmt.Sprintf("%v build %v does not exist", deploy.Description(c.namespacePrefix), buildID),
 					nil,
-					deploy.Status.BuildID,
+					deploy.Status.Build,
 					nil,
 					nil,
 				)
@@ -94,7 +94,7 @@ func (c *Controller) syncPendingDeploy(deploy *latticev1.Deploy) error {
 				latticev1.DeployStateFailed,
 				fmt.Sprintf("cannot deploy using a build id (%v) since it is only a partial system build", buildID),
 				nil,
-				deploy.Status.BuildID,
+				deploy.Status.Build,
 				nil,
 				nil,
 			)
@@ -133,16 +133,15 @@ func (c *Controller) syncPendingDeploy(deploy *latticev1.Deploy) error {
 
 	now := metav1.Now()
 	startTimestamp := &now
-	completionTimestamp := &now
 
 	_, err = c.updateDeployStatus(
 		deploy,
 		latticev1.DeployStateAccepted,
 		"",
 		nil,
-		deploy.Status.BuildID,
+		deploy.Status.Build,
 		startTimestamp,
-		completionTimestamp,
+		nil,
 	)
 	return err
 }

@@ -53,10 +53,14 @@ type ServiceInfo struct {
 // implemented here.
 func (r *Registry) CreateBuild(p *tree.Path, v *v1.Version, record *SystemRecord) *v1.Build {
 	build := &v1.Build{
-		ID:      v1.BuildID(uuid.NewV4().String()),
-		State:   v1.BuildStatePending,
+		ID: v1.BuildID(uuid.NewV4().String()),
+
 		Path:    p,
 		Version: v,
+
+		Status: v1.BuildStatus{
+			State: v1.BuildStatePending,
+		},
 	}
 	record.Builds[build.ID] = &BuildInfo{
 		Build: build,

@@ -10,24 +10,30 @@ import (
 )
 
 const (
-	apiKeyHeader = "API_KEY"
+	bearerTokenHeader = "API_KEY"
 )
 
 type Client struct {
-	restClient   rest.Client
-	apiServerURL string
+	restClient rest.Client
+	url        string
 }
 
-func NewClient(apiServerURL, apiAuthKey string) *Client {
+func NewUnauthenticatedClient(url string) *Client {
 	return &Client{
-		// FIXME: remove this or make it optional when we can
-		restClient:   rest.NewInsecureClient(map[string]string{apiKeyHeader: apiAuthKey}),
-		apiServerURL: apiServerURL,
+		restClient: rest.NewInsecureClient(nil),
+		url:        url,
+	}
+}
+
+func NewBearerTokenClient(url, bearerToken string) *Client {
+	return &Client{
+		restClient: rest.NewInsecureClient(map[string]string{bearerTokenHeader: bearerToken}),
+		url:        url,
 	}
 }
 
 func (c *Client) Health() (bool, error) {
-	resp, err := c.restClient.Get(fmt.Sprintf("%v/health", c.apiServerURL)).Do()
+	resp, err := c.restClient.Get(fmt.Sprintf("%v/health", c.url)).Do()
 	if err != nil {
 		return false, err
 	}
@@ -36,5 +42,5 @@ func (c *Client) Health() (bool, error) {
 }
 
 func (c *Client) V1() v1client.Interface {
-	return v1restclient.NewClient(c.restClient, c.apiServerURL)
+	return v1restclient.NewClient(c.restClient, c.url)
 }

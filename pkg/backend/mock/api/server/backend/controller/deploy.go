@@ -43,8 +43,8 @@ func (c *Controller) runDeploy(deploy *v1.Deploy, record *registry.SystemRecord)
 		log.Printf("running deploy %v", deploy.ID)
 
 		now := time.Now()
-		deploy.State = v1.DeployStateAccepted
-		deploy.StartTimestamp = &now
+		deploy.Status.State = v1.DeployStateAccepted
+		deploy.Status.StartTimestamp = &now
 	}()
 
 	if !c.waitForBuildTermination(deploy, record) {
@@ -57,8 +57,8 @@ func (c *Controller) runDeploy(deploy *v1.Deploy, record *registry.SystemRecord)
 	defer c.registry.Unlock()
 	now := time.Now()
 
-	deploy.State = v1.DeployStateSucceeded
-	deploy.CompletionTimestamp = &now
+	deploy.Status.State = v1.DeployStateSucceeded
+	deploy.Status.CompletionTimestamp = &now
 
 	log.Printf("deploy %v complete", deploy.ID)
 }
@@ -72,8 +72,8 @@ func (c *Controller) getDeployPath(deploy *v1.Deploy, record *registry.SystemRec
 		buildID := *deploy.Build
 		buildInfo, ok := record.Builds[buildID]
 		if !ok {
-			deploy.State = v1.DeployStateFailed
-			deploy.Message = fmt.Sprintf("deploy %v build %v does not exist", deploy.ID, buildID)
+			deploy.Status.State = v1.DeployStateFailed
+			deploy.Status.Message = fmt.Sprintf("deploy %v build %v does not exist", deploy.ID, buildID)
 			return "", false
 		}
 
@@ -82,8 +82,8 @@ func (c *Controller) getDeployPath(deploy *v1.Deploy, record *registry.SystemRec
 		// we'll simply fail the deploy.
 		// May want to revisit this.
 		if buildInfo.Build.Path != nil {
-			deploy.State = v1.DeployStateFailed
-			deploy.Message = fmt.Sprintf("cannot deploy using a build id (%v) since it is only a partial system build", buildID)
+			deploy.Status.State = v1.DeployStateFailed
+			deploy.Status.Message = fmt.Sprintf("cannot deploy using a build id (%v) since it is only a partial system build", buildID)
 			return "", false
 		}
 
@@ -105,18 +105,18 @@ func (c *Controller) lockDeploy(deploy *v1.Deploy, path tree.Path, record *regis
 	// fail the deploy.
 	err := c.actions.AcquireDeploy(record.System.ID, deploy.ID, path)
 	if err != nil {
-		deploy.State = v1.DeployStateFailed
+		deploy.Status.State = v1.DeployStateFailed
 		_, ok := err.(*syncutil.ConflictingLifecycleActionError)
 		if !ok {
-			deploy.Message = err.Error()
+			deploy.Status.Message = err.Error()
 			return false
 		}
 
-		deploy.Message = fmt.Sprintf("unable to acquire lifecycle lock: %v", err.Error())
+		deploy.Status.Message = fmt.Sprintf("unable to acquire lifecycle lock: %v", err.Error())
 		return false
 	}
 
-	deploy.State = v1.DeployStateAccepted
+	deploy.Status.State = v1.DeployStateAccepted
 	return true
 }
 
@@ -142,15 +142,15 @@ func (c *Controller) waitForBuildTermination(deploy *v1.Deploy, record *registry
 
 			build := record.Builds[*deploy.Build].Build
 
-			switch build.State {
+			switch build.Status.State {
 			case v1.BuildStateSucceeded:
 				log.Printf("build %v for deploy %v succeeded, moving deploy to in progress", deploy.Build, deploy.ID)
-				deploy.State = v1.DeployStateInProgress
+				deploy.Status.State = v1.DeployStateInProgress
 				return true, true
 
 			case v1.BuildStateFailed:
 				log.Printf("build %v for deploy %v failed, failing deploy", deploy.Build, deploy.ID)
-				deploy.State = v1.DeployStateFailed
+				deploy.Status.State = v1.DeployStateFailed
 				return true, false
 			}
 

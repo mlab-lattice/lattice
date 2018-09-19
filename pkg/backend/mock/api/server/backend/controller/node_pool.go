@@ -26,6 +26,13 @@ func (c *Controller) addNodePool(
 	record.NodePools[subcomponent] = &v1.NodePool{
 		InstanceType: definition.InstanceType,
 		NumInstances: definition.NumInstances,
+
+		Status: v1.NodePoolStatus{
+			State: v1.NodePoolStateStable,
+
+			InstanceType: definition.InstanceType,
+			NumInstances: definition.NumInstances,
+		},
 	}
 
 	// TODO: add node pool scaling
@@ -47,6 +54,13 @@ func (c *Controller) rollNodePool(
 	record.NodePools[subcomponent] = &v1.NodePool{
 		InstanceType: definition.InstanceType,
 		NumInstances: definition.NumInstances,
+
+		Status: v1.NodePoolStatus{
+			State: v1.NodePoolStateStable,
+
+			InstanceType: definition.InstanceType,
+			NumInstances: definition.NumInstances,
+		},
 	}
 
 	// TODO: add node pool scaling

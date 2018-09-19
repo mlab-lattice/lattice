@@ -62,23 +62,29 @@ func (c *Controller) syncRunningBuild(build *latticev1.Build, stateInfo stateInf
 		}
 
 		info := runningWorkloadsInfo[path]
-		serviceMessage := fmt.Sprintf("%v (", path.String())
-		previousFailure := false
+		serviceMessage := path.String()
 
-		if info.MainContainerRunning {
+		hasSidecars := len(info.RunningSidecars) != 0
+		if hasSidecars {
+			serviceMessage += "("
+		}
+
+		delim := ""
+		if info.MainContainerRunning && hasSidecars {
 			serviceMessage += "main container"
-			previousFailure = true
+			delim = ", "
 		}
 
 		for _, sidecar := range info.RunningSidecars {
-			if previousFailure {
-				serviceMessage += ", "
-			}
-
+			serviceMessage += delim
 			serviceMessage += fmt.Sprintf("%v sidecar", sidecar)
+			delim = ", "
 		}
 
-		message = message + ") " + serviceMessage
+		message += serviceMessage
+		if hasSidecars {
+			message += ")"
+		}
 	}
 
 	// If we haven't logged a start timestamp yet, use now.

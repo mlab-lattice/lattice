@@ -6,8 +6,8 @@ go_library(
     importpath = "github.com/mlab-lattice/lattice/cmd/generate-latticectl-docs",
     visibility = ["//visibility:private"],
     deps = [
-        "//cmd/latticectl/app:go_default_library",
-        "//pkg/util/cli/docgen:go_default_library",
+        "//pkg/latticectl:go_default_library",
+        "//pkg/util/cli2/docgen:go_default_library",
     ],
 )
 

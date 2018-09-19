@@ -11,8 +11,9 @@ type (
 )
 
 const (
-	BuildStatePending   BuildState = "pending"
-	BuildStateAccepted  BuildState = "accepted"
+	BuildStatePending  BuildState = "pending"
+	BuildStateAccepted BuildState = "accepted"
+	// FIXME(kevindrosendahl): should probably standardize on running vs in progress
 	BuildStateRunning   BuildState = "running"
 	BuildStateSucceeded BuildState = "succeeded"
 	BuildStateFailed    BuildState = "failed"
@@ -21,16 +22,20 @@ const (
 type Build struct {
 	ID BuildID `json:"id"`
 
+	Version *Version   `json:"version,omitempty"`
+	Path    *tree.Path `json:"path,omitempty"`
+
+	Status BuildStatus `json:"status"`
+}
+
+type BuildStatus struct {
 	State   BuildState `json:"state"`
 	Message string     `json:"message,omitempty"`
 
 	StartTimestamp      *time.Time `json:"startTimestamp,omitempty"`
 	CompletionTimestamp *time.Time `json:"completionTimestamp,omitempty"`
 
-	Version *Version   `json:"version,omitempty"`
-	Path    *tree.Path `json:"path,omitempty"`
-
-	// Components maps component paths (e.g. /foo/bar/buzz) to the
+	// Workloads maps component paths (e.g. /foo/bar/buzz) to the
 	// status of the build for that service in the Build.
 	Workloads map[tree.Path]WorkloadBuild `json:"workloads"`
 }
@@ -60,7 +65,12 @@ const (
 )
 
 type ContainerBuild struct {
-	ID    ContainerBuildID    `json:"id"`
+	ID ContainerBuildID `json:"id"`
+
+	Status ContainerBuildStatus `json:"status"`
+}
+
+type ContainerBuildStatus struct {
 	State ContainerBuildState `json:"state"`
 
 	StartTimestamp      *time.Time `json:"startTimestamp,omitempty"`

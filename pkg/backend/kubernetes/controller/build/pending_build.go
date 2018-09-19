@@ -71,6 +71,7 @@ func (c *Controller) syncPendingBuild(build *latticev1.Build) error {
 		return err
 	}
 
+	// find and resolve the build's component
 	path, cmpnt, ctx, err := c.getBuildComponent(system, build)
 	if err != nil {
 		return err
@@ -145,6 +146,8 @@ func (c *Controller) getBuildComponent(
 	system *latticev1.System,
 	build *latticev1.Build,
 ) (tree.Path, component.Interface, *git.CommitReference, error) {
+	// if the build is a version build, return a reference pointing
+	// at the version's tag on the system's definition repo
 	if build.Spec.Path == nil {
 		tag := string(*build.Spec.Version)
 		ref := &definitionv1.Reference{
@@ -159,6 +162,8 @@ func (c *Controller) getBuildComponent(
 		return tree.RootPath(), ref, nil, nil
 	}
 
+	// if it's a path build, first check to make sure that the system
+	// currently has a deployed definition
 	path := *build.Spec.Path
 	if system.Spec.Definition == nil {
 		_, err := c.updateBuildStatus(
@@ -175,6 +180,7 @@ func (c *Controller) getBuildComponent(
 		return "", nil, nil, err
 	}
 
+	// if we're just rebuilding the whole system, we can exit early for this simple case
 	if path == tree.RootPath() {
 		info, ok := system.Spec.Definition.Get(path)
 		if !ok {
@@ -195,6 +201,7 @@ func (c *Controller) getBuildComponent(
 		return path, info.Component, info.Commit, nil
 	}
 
+	// otherwise, if the path is not the root, get the path's parent
 	name, _ := path.Leaf()
 	parent, _ := path.Parent()
 	parentInfo, ok := system.Spec.Definition.Get(parent)
@@ -213,6 +220,7 @@ func (c *Controller) getBuildComponent(
 		return "", nil, nil, err
 	}
 
+	// since the parent is necessarily an internal node, ensure that it is a system
 	s, ok := parentInfo.Component.(*definitionv1.System)
 	if !ok {
 		_, err := c.updateBuildStatus(
@@ -229,6 +237,11 @@ func (c *Controller) getBuildComponent(
 		return "", nil, nil, err
 	}
 
+	// get the path's component from its parent system
+	// this may end up being a reference or an inlined component
+	// if it is a reference, it and all its descendant references
+	// will end up being fully re-resolved, allowing for new version tags
+	// or branch commits, etc if it is inlined, all its descendant will end up being re-resolved
 	cmpnt, ok := s.Components[name]
 	if !ok {
 		_, err := c.updateBuildStatus(

@@ -16,5 +16,5 @@ func (c *Controller) createSystem(record *registry.SystemRecord) {
 
 	c.registry.Lock()
 	defer c.registry.Unlock()
-	record.System.State = v1.SystemStateStable
+	record.System.Status.State = v1.SystemStateStable
 }

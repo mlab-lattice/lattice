@@ -40,7 +40,7 @@ func (b *serviceBackend) List() ([]v1.Service, error) {
 			return nil, err
 		}
 
-		externalService, err := b.transformService(v1.ServiceID(service.Name), servicePath, &service.Status, namespace)
+		externalService, err := b.transformService(v1.ServiceID(service.Name), servicePath, &service, namespace)
 		if err != nil {
 			return nil, err
 		}
@@ -69,7 +69,7 @@ func (b *serviceBackend) Get(id v1.ServiceID) (*v1.Service, error) {
 		return nil, err
 	}
 
-	externalService, err := b.transformService(v1.ServiceID(service.Name), servicePath, &service.Status, namespace)
+	externalService, err := b.transformService(v1.ServiceID(service.Name), servicePath, service, namespace)
 	if err != nil {
 		return nil, err
 	}
@@ -112,7 +112,7 @@ func (b *serviceBackend) GetByPath(path tree.Path) (*v1.Service, error) {
 	}
 
 	service := services.Items[0]
-	externalService, err := b.transformService(v1.ServiceID(service.Name), path, &service.Status, namespace)
+	externalService, err := b.transformService(v1.ServiceID(service.Name), path, &service, namespace)
 	if err != nil {
 		return nil, err
 	}
@@ -200,27 +200,27 @@ func (b *serviceBackend) findServicePod(serviceId v1.ServiceID, instance string,
 func (b *serviceBackend) transformService(
 	id v1.ServiceID,
 	path tree.Path,
-	status *latticev1.ServiceStatus,
+	service *latticev1.Service,
 	namespace string,
 ) (v1.Service, error) {
-	state, err := getServiceState(status.State)
+	state, err := getServiceState(service.Status.State)
 	if err != nil {
 		return v1.Service{}, err
 	}
 
-	message := status.Message
+	message := service.Status.Message
 
 	var failureInfo *v1.ServiceFailureInfo
-	if status.FailureInfo != nil {
+	if service.Status.FailureInfo != nil {
 		message = nil
 
-		failureMessage := status.FailureInfo.Message
-		if status.FailureInfo.Internal {
+		failureMessage := service.Status.FailureInfo.Message
+		if service.Status.FailureInfo.Internal {
 			failureMessage = "internal error"
 		}
 
 		failureInfo = &v1.ServiceFailureInfo{
-			Time:    status.FailureInfo.Timestamp.Time,
+			Time:    service.Status.FailureInfo.Timestamp.Time,
 			Message: failureMessage,
 		}
 	}
@@ -232,24 +232,26 @@ func (b *serviceBackend) transformService(
 		return v1.Service{}, err
 	}
 
-	service := v1.Service{
-		ID:   v1.ServiceID(id),
+	externalService := v1.Service{
+		ID: v1.ServiceID(id),
+
 		Path: path,
 
-		State:       state,
-		Message:     message,
-		FailureInfo: failureInfo,
+		Status: v1.ServiceStatus{
+			State:       state,
+			Message:     message,
+			FailureInfo: failureInfo,
 
-		AvailableInstances:   status.AvailableInstances,
-		UpdatedInstances:     status.UpdatedInstances,
-		StaleInstances:       status.StaleInstances,
-		TerminatingInstances: status.TerminatingInstances,
+			AvailableInstances:   service.Status.AvailableInstances,
+			UpdatedInstances:     service.Status.UpdatedInstances,
+			StaleInstances:       service.Status.StaleInstances,
+			TerminatingInstances: service.Status.TerminatingInstances,
 
-		Ports:     status.Ports,
-		Instances: instances,
+			Ports:     service.Status.Ports,
+			Instances: instances,
+		},
 	}
-
-	return service, nil
+	return externalService, nil
 }
 
 func getServiceState(state latticev1.ServiceState) (v1.ServiceState, error) {

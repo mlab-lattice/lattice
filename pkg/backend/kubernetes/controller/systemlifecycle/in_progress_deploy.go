@@ -4,6 +4,8 @@ import (
 	"fmt"
 
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func (c *Controller) syncInProgressDeploy(deploy *latticev1.Deploy) error {
@@ -35,6 +37,9 @@ func (c *Controller) syncInProgressDeploy(deploy *latticev1.Deploy) error {
 		return fmt.Errorf("%v in unexpected state %v", system.Description(), system.Status.State)
 	}
 
+	now := metav1.Now()
+	completionTimestamp := &now
+
 	// need to update the deploy's status before releasing the lock. if we released the lock
 	// first it's possible that the deployment status update could fail, and another deploy
 	// successfully acquires the lock. if the controller then restarted, it could see
@@ -44,9 +49,9 @@ func (c *Controller) syncInProgressDeploy(deploy *latticev1.Deploy) error {
 		state,
 		"",
 		nil,
-		deploy.Status.BuildID,
+		deploy.Status.Build,
 		deploy.Status.StartTimestamp,
-		deploy.Status.CompletionTimestamp,
+		completionTimestamp,
 	)
 	if err != nil {
 		return err

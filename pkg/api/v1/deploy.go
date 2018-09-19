@@ -25,8 +25,14 @@ type Deploy struct {
 	Path    *tree.Path `json:"path,omitempty"`
 	Version *Version   `json:"version,omitempty"`
 
+	Status DeployStatus `json:"status"`
+}
+
+type DeployStatus struct {
 	State   DeployState `json:"state"`
 	Message string      `json:"message,omitempty"`
+
+	Build *BuildID `json:"build,omitempty"`
 
 	StartTimestamp      *time.Time `json:"startTimestamp,omitempty"`
 	CompletionTimestamp *time.Time `json:"completionTimestamp,omitempty"`

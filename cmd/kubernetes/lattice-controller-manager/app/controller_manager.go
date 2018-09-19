@@ -11,129 +11,125 @@ import (
 	kuberesolver "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/definition/component/resolver"
 	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/servicemesh"
 	"github.com/mlab-lattice/lattice/pkg/definition/component/resolver"
-	"github.com/mlab-lattice/lattice/pkg/util/cli"
-	"github.com/mlab-lattice/lattice/pkg/util/cli/flags"
+	"github.com/mlab-lattice/lattice/pkg/util/cli2"
+	"github.com/mlab-lattice/lattice/pkg/util/cli2/flags"
+	"github.com/mlab-lattice/lattice/pkg/util/git"
 
 	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 
 	"github.com/golang/glog"
-	"github.com/mlab-lattice/lattice/pkg/util/git"
 	"github.com/spf13/pflag"
 )
 
-func Command() *cli.Command {
+func Command() *cli.RootCommand {
 	// Need to do a little hacking to make glog play nice
 	// https://flowerinthenight.com/blog/2017/12/01/golang-cobra-glog
 	pflag.CommandLine.AddGoFlagSet(goflag.CommandLine)
 	// https://github.com/kubernetes/kubernetes/issues/17162#issuecomment-225596212
 	goflag.CommandLine.Parse([]string{})
 
-	var kubeconfig string
-	var namespacePrefix string
-	var workDirectory string
-	var latticeID string
-	var internalDNSDomain string
+	var (
+		kubeconfig        string
+		namespacePrefix   string
+		workDirectory     string
+		latticeID         string
+		internalDNSDomain string
 
-	var enabledControllers []string
+		enabledControllers []string
 
-	var cloudProvider string
+		cloudProvider string
+		serviceMesh   string
+	)
+
 	cloudProviderFlag, cloudProviderOptions := cloudprovider.Flag(&cloudProvider)
-
-	var serviceMesh string
 	serviceMeshFlag, serviceMeshOptions := servicemesh.Flag(&serviceMesh)
 
-	command := &cli.Command{
+	command := &cli.RootCommand{
 		Name: "lattice-controller-manager",
-		Flags: cli.Flags{
-			&flags.String{
-				Name:   "kubeconfig",
-				Usage:  "path to kubeconfig file",
-				Target: &kubeconfig,
-			},
-			&flags.String{
-				Name:     "namespace-prefix",
-				Usage:    "namespace prefix of the lattice",
-				Required: true,
-				Target:   &namespacePrefix,
-			},
-			&flags.String{
-				Name:    "work-directory",
-				Usage:   "work directory to use",
-				Default: "/tmp/lattice-api",
-				Target:  &workDirectory,
-			},
-			&flags.String{
-				Name:     "lattice-id",
-				Usage:    "ID of the lattice",
-				Required: true,
-				Target:   &latticeID,
-			},
-			&flags.String{
-				Name:     "internal-dns-domain",
-				Usage:    "domain to use for internal dns",
-				Required: true,
-				Target:   &internalDNSDomain,
-			},
-			&flags.StringSliceFlag{
-				Name:    "controllers",
-				Usage:   "controllers that should be run",
-				Default: []string{"*"},
-				Target:  &enabledControllers,
-			},
+		Command: &cli.Command{
+			Flags: cli.Flags{
+				"kubeconfig": &flags.String{
+					Usage:  "path to kubeconfig file",
+					Target: &kubeconfig,
+				},
+				"namespace-prefix": &flags.String{
+					Usage:    "namespace prefix of the lattice",
+					Required: true,
+					Target:   &namespacePrefix,
+				},
+				"work-directory": &flags.String{
+					Usage:   "work directory to use",
+					Default: "/tmp/lattice-api",
+					Target:  &workDirectory,
+				},
+				"lattice-id": &flags.String{
+					Usage:    "ID of the lattice",
+					Required: true,
+					Target:   &latticeID,
+				},
+				"internal-dns-domain": &flags.String{
+					Usage:    "domain to use for internal dns",
+					Required: true,
+					Target:   &internalDNSDomain,
+				},
+				"controllers": &flags.StringSlice{
+					Usage:   "controllers that should be run",
+					Default: []string{"*"},
+					Target:  &enabledControllers,
+				},
 
-			&flags.String{
-				Name:     "cloud-provider",
-				Required: true,
-				Target:   &cloudProvider,
-				Usage:    "cloud provider that the kubernetes cluster is running on",
+				"cloud-provider": &flags.String{
+					Required: true,
+					Target:   &cloudProvider,
+					Usage:    "cloud provider that the kubernetes cluster is running on",
+				},
+				"cloud-provider-var": cloudProviderFlag,
+
+				"service-mesh": &flags.String{
+					Required: true,
+					Target:   &serviceMesh,
+					Usage:    "service mesh to use",
+				},
+				"service-mesh-var": serviceMeshFlag,
 			},
-			cloudProviderFlag,
+			Run: func(args []string, flags cli.Flags) error {
+				var config *rest.Config
+				var err error
+				if kubeconfig == "" {
+					config, err = rest.InClusterConfig()
+				} else {
+					config, err = clientcmd.BuildConfigFromFlags("", kubeconfig)
+				}
+				if err != nil {
+					return err
+				}
 
-			&flags.String{
-				Name:     "service-mesh",
-				Required: true,
-				Target:   &serviceMesh,
-				Usage:    "service mesh to use",
+				// TODO: setting stop as nil for now, won't actually need it until leader-election is used
+				ctx, err := createControllerContext(
+					namespacePrefix,
+					workDirectory,
+					v1.LatticeID(latticeID),
+					internalDNSDomain,
+					config,
+					cloudProviderOptions,
+					serviceMeshOptions,
+					nil,
+				)
+				if err != nil {
+					return err
+				}
+
+				glog.V(1).Info("Starting enabled controllers")
+				startControllers(ctx, enabledControllers)
+
+				glog.V(4).Info("Starting informer factory kubeinformers")
+				ctx.KubeInformerFactory.Start(ctx.Stop)
+				ctx.LatticeInformerFactory.Start(ctx.Stop)
+
+				select {}
 			},
-			serviceMeshFlag,
-		},
-		Run: func(args []string) {
-			var config *rest.Config
-			var err error
-			if kubeconfig == "" {
-				config, err = rest.InClusterConfig()
-			} else {
-				config, err = clientcmd.BuildConfigFromFlags("", kubeconfig)
-			}
-			if err != nil {
-				panic(err)
-			}
-
-			// TODO: setting stop as nil for now, won't actually need it until leader-election is used
-			ctx, err := createControllerContext(
-				namespacePrefix,
-				workDirectory,
-				v1.LatticeID(latticeID),
-				internalDNSDomain,
-				config,
-				cloudProviderOptions,
-				serviceMeshOptions,
-				nil,
-			)
-			if err != nil {
-				panic(err)
-			}
-
-			glog.V(1).Info("Starting enabled controllers")
-			startControllers(ctx, enabledControllers)
-
-			glog.V(4).Info("Starting informer factory kubeinformers")
-			ctx.KubeInformerFactory.Start(ctx.Stop)
-			ctx.LatticeInformerFactory.Start(ctx.Stop)
-
-			select {}
 		},
 	}
 
