@@ -73,7 +73,7 @@ func (c *ListBuildsCommand) Base() (*latticectl.BaseCommand, error) {
 }
 
 // ListBuilds writes the current Builds to the supplied io.Writer in the given printer.Format.
-func ListBuilds(client v1client.BuildClient, format printer.Format, writer io.Writer) error {
+func ListBuilds(client v1client.SystemBuildClient, format printer.Format, writer io.Writer) error {
 	builds, err := client.List()
 	if err != nil {
 		return err
@@ -87,7 +87,7 @@ func ListBuilds(client v1client.BuildClient, format printer.Format, writer io.Wr
 // WatchBuilds polls the API for the current Builds, and writes out the Builds to the
 // the supplied io.Writer in the given printer.Format, unless the printer.Format is
 // printer.FormatTable, in which case it always writes to the terminal.
-func WatchBuilds(client v1client.BuildClient, format printer.Format, writer io.Writer) {
+func WatchBuilds(client v1client.SystemBuildClient, format printer.Format, writer io.Writer) {
 	// Poll the API for the builds and send it to the channel
 	buildLists := make(chan []v1.Build)
 	lastHeight := 0
@@ -172,7 +172,7 @@ func buildsPrinter(builds []v1.Build, format printer.Format) printer.Interface {
 				string(build.ID),
 				startTimestamp,
 				completionTimestamp,
-				string(build.Version),
+				string(*build.Version),
 				stateColor(string(build.State)),
 			})
 		}

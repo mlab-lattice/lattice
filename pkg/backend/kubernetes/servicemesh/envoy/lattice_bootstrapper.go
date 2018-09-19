@@ -9,6 +9,7 @@ import (
 	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/lifecycle/lattice/bootstrap/bootstrapper"
 	kubeutil "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/kubernetes"
 	"github.com/mlab-lattice/lattice/pkg/util/cli"
+	"github.com/mlab-lattice/lattice/pkg/util/cli/flags"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -40,27 +41,27 @@ func NewLatticeBootstrapper(namespacePrefix string, options *LatticeBootstrapper
 func LatticeBootstrapperFlags() (cli.Flags, *LatticeBootstrapperOptions) {
 	options := &LatticeBootstrapperOptions{}
 	flags := cli.Flags{
-		&cli.StringFlag{
+		&flags.String{
 			Name:     "prepare-image",
 			Required: true,
 			Target:   &options.PrepareImage,
 		},
-		&cli.StringFlag{
+		&flags.String{
 			Name:    "image",
 			Default: "envoyproxy/envoy-alpine",
 			Target:  &options.Image,
 		},
-		&cli.IPNetFlag{
+		&flags.IPNet{
 			Name:     "redirect-cidr-block",
 			Required: true,
 			Target:   &options.RedirectCIDRBlock,
 		},
-		&cli.StringFlag{
+		&flags.String{
 			Name:     "xds-api-image",
 			Required: true,
 			Target:   &options.XDSAPIImage,
 		},
-		&cli.Int32Flag{
+		&flags.Int32{
 			Name:    "xds-api-port",
 			Default: 8080,
 			Target:  &options.XDSAPIPort,
@@ -192,7 +193,7 @@ func (b *DefaultEnvoylatticeBootstrapper) BootstrapLatticeResources(resources *b
 					DNSPolicy:          corev1.DNSDefault,
 					ServiceAccountName: serviceAccount.Name,
 					Tolerations: []corev1.Toleration{
-						latticev1.AllNodePoolTolleration,
+						latticev1.AllNodePoolToleration,
 					},
 					Affinity: &corev1.Affinity{
 						NodeAffinity: &latticev1.AllNodePoolAffinity,

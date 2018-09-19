@@ -8,6 +8,7 @@ import (
 	latticelisters "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/generated/listers/lattice/v1"
 	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/lifecycle/system/bootstrap/bootstrapper"
 	"github.com/mlab-lattice/lattice/pkg/util/cli"
+	"github.com/mlab-lattice/lattice/pkg/util/cli/flags"
 	"github.com/mlab-lattice/lattice/pkg/util/terraform"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -129,43 +130,43 @@ func Flags() (cli.Flags, *Options) {
 	}
 
 	flags := cli.Flags{
-		&cli.StringFlag{
+		&flags.String{
 			Name:     "region",
 			Required: true,
 			Target:   &options.Region,
 		},
-		&cli.StringFlag{
+		&flags.String{
 			Name:     "account-id",
 			Required: true,
 			Target:   &options.AccountID,
 		},
-		&cli.StringFlag{
+		&flags.String{
 			Name:     "vpc-id",
 			Required: true,
 			Target:   &options.VPCID,
 		},
 
-		&cli.StringFlag{
+		&flags.String{
 			Name:     "route53-private-zone-id",
 			Required: true,
 			Target:   &options.Route53PrivateZoneID,
 		},
-		&cli.StringSliceFlag{
+		&flags.StringSliceFlag{
 			Name:     "subnet-ids",
 			Required: true,
 			Target:   &options.SubnetIDs,
 		},
-		&cli.StringFlag{
+		&flags.String{
 			Name:     "master-node-security-group-id",
 			Required: true,
 			Target:   &options.MasterNodeSecurityGroupID,
 		},
-		&cli.StringFlag{
+		&flags.String{
 			Name:    "terraform-module-path",
 			Default: "/etc/terraform/modules/aws",
 			Target:  &options.TerraformModulePath,
 		},
-		&cli.StringFlag{
+		&flags.String{
 			Name:     "terraform-backend",
 			Required: true,
 			Target:   &terraformBackend,

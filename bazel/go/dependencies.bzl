@@ -76,6 +76,11 @@ GO_DEPENDENCIES = {
         },
     },
     "github.com/mlab-lattice/lattice": {
+        "github.com/armon/go-radix": {
+            "name": "com_github_armon_go_radix",
+            "tag": "v1.0.0",
+            "importpath": "github.com/armon/go-radix",
+        },
         "github.com/aws/aws-sdk-go": {
             "name": "com_github_aws_aws_sdk_go",
             "tag": "v1.12.35",
@@ -147,6 +152,16 @@ GO_DEPENDENCIES = {
             "name": "com_github_spf13_cobra",
             "commit": "1be1d2841c773c01bee8289f55f7463b6e2c2539",
             "importpath": "github.com/spf13/cobra",
+        },
+        "github.com/swaggo/swag": {
+            "name": "com_github_swaggo_swag",
+            "tag": "v1.3.2",
+            "importpath": "github.com/swaggo/swag",
+        },
+        "github.com/swaggo/gin-swagger": {
+            "name": "com_github_swaggo_gin_swagger",
+            "tag": "v1.0.0",
+            "importpath": "github.com/swaggo/gin-swagger",
         },
         "github.com/tfogo/tablewriter": {
             "name": "com_github_tfogo_tablewriter",

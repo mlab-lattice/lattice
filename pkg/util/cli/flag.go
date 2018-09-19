@@ -1,7 +1,8 @@
 package cli
 
 import (
-	"github.com/spf13/cobra"
+	"strings"
+
 	"github.com/spf13/pflag"
 )
 
@@ -18,6 +19,14 @@ type Flag interface {
 
 type Flags []Flag
 
-func markFlagRequired(name string, flags *pflag.FlagSet) {
-	cobra.MarkFlagRequired(flags, name)
+func (f Flags) Len() int {
+	return len(f)
+}
+
+func (f Flags) Swap(i, j int) {
+	f[i], f[j] = f[j], f[i]
+}
+
+func (f Flags) Less(i, j int) bool {
+	return strings.Compare(f[i].GetName(), f[j].GetName()) == -1
 }

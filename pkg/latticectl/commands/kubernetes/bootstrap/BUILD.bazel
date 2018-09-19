@@ -17,6 +17,7 @@ go_library(
         "//pkg/backend/kubernetes/util/kubernetes:go_default_library",
         "//pkg/latticectl:go_default_library",
         "//pkg/util/cli:go_default_library",
+        "//pkg/util/cli/flags:go_default_library",
         "//pkg/util/terraform:go_default_library",
         "@io_k8s_client_go//kubernetes:go_default_library",
         "@io_k8s_client_go//rest:go_default_library",

@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/mlab-lattice/lattice/pkg/util/cli"
+	"github.com/mlab-lattice/lattice/pkg/util/cli/flags"
 	"github.com/mlab-lattice/lattice/pkg/util/cli/printer"
 )
 
@@ -50,7 +51,7 @@ func (f *OutputFlag) Flag() cli.Flag {
 		usage = f.Usage
 	}
 
-	return &cli.StringFlag{
+	return &flags.String{
 		Name:   name,
 		Short:  short,
 		Usage:  usage,

@@ -1,24 +1,23 @@
 package secrets
 
 import (
-	"io"
-	"log"
-	"os"
-	"strings"
-
 	v1client "github.com/mlab-lattice/lattice/pkg/api/client/v1"
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 	"github.com/mlab-lattice/lattice/pkg/latticectl"
 	"github.com/mlab-lattice/lattice/pkg/util/cli"
+	"github.com/mlab-lattice/lattice/pkg/util/cli/flags"
 	"github.com/mlab-lattice/lattice/pkg/util/cli/printer"
+	"io"
+	"log"
+	"os"
 )
 
 type GetCommand struct {
 }
 
 func (c *GetCommand) Base() (*latticectl.BaseCommand, error) {
-	var name string
+	var path string
 
 	output := &latticectl.OutputFlag{
 		SupportedFormats: ListSecretsSupportedFormats,
@@ -28,10 +27,10 @@ func (c *GetCommand) Base() (*latticectl.BaseCommand, error) {
 		Name: "get",
 		Flags: cli.Flags{
 			output.Flag(),
-			&cli.StringFlag{
-				Name:     "name",
+			&flags.String{
+				Name:     "path",
 				Required: true,
-				Target:   &name,
+				Target:   &path,
 			},
 		},
 		Run: func(ctx latticectl.SystemCommandContext, args []string) {
@@ -40,15 +39,12 @@ func (c *GetCommand) Base() (*latticectl.BaseCommand, error) {
 				log.Fatal(err)
 			}
 
-			splitName := strings.Split(name, ":")
-			if len(splitName) != 2 {
-				log.Fatal("invalid secret name format")
+			secretPath, err := tree.NewPathSubcomponent(path)
+			if err != nil {
+				log.Fatal("invalid secret path format")
 			}
 
-			path := tree.Path(splitName[0])
-			name = splitName[1]
-
-			err = GetSecret(ctx.Client().Systems().Secrets(ctx.SystemID()), path, name, format, os.Stdout)
+			err = GetSecret(ctx.Client().Systems().Secrets(ctx.SystemID()), secretPath, format, os.Stdout)
 			if err != nil {
 				log.Fatal(err)
 			}
@@ -58,8 +54,8 @@ func (c *GetCommand) Base() (*latticectl.BaseCommand, error) {
 	return cmd.Base()
 }
 
-func GetSecret(client v1client.SecretClient, path tree.Path, name string, format printer.Format, writer io.Writer) error {
-	secret, err := client.Get(path, name)
+func GetSecret(client v1client.SystemSecretClient, path tree.PathSubcomponent, format printer.Format, writer io.Writer) error {
+	secret, err := client.Get(path)
 	if err != nil {
 		return err
 	}

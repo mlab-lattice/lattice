@@ -6,6 +6,7 @@ import (
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	kubeutil "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/kubernetes"
 
+	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -34,14 +35,18 @@ type Deploy struct {
 	Status            DeployStatus `json:"status"`
 }
 
+func (d *Deploy) V1ID() v1.DeployID {
+	return v1.DeployID(d.Name)
+}
+
 func (d *Deploy) BuildIDLabel() (v1.BuildID, bool) {
 	id, ok := d.Labels[BuildIDLabelKey]
 	return v1.BuildID(id), ok
 }
 
-func (d *Deploy) DefinitionVersionLabel() (v1.SystemVersion, bool) {
+func (d *Deploy) DefinitionVersionLabel() (v1.Version, bool) {
 	version, ok := d.Labels[DeployDefinitionVersionLabelKey]
-	return v1.SystemVersion(version), ok
+	return v1.Version(version), ok
 }
 
 func (d *Deploy) Description(namespacePrefix string) string {
@@ -50,7 +55,7 @@ func (d *Deploy) Description(namespacePrefix string) string {
 		systemID = v1.SystemID(fmt.Sprintf("UNKNOWN (namespace: %v)", d.Namespace))
 	}
 
-	version := v1.SystemVersion("unknown")
+	version := v1.Version("unknown")
 	if label, ok := d.DefinitionVersionLabel(); ok {
 		version = label
 	}
@@ -71,14 +76,20 @@ func (d *Deploy) Description(namespacePrefix string) string {
 }
 
 type DeploySpec struct {
-	Build string `json:"build"`
+	Build   *v1.BuildID `json:"build,omitempty"`
+	Version *v1.Version `json:"version,omitempty"`
+	Path    *tree.Path  `json:"path"`
 }
 
 type DeployStatus struct {
-	// Deploys are immutable so no need for ObservedGeneration
+	// Deploy specs are immutable so no need for ObservedGeneration
 
 	State   DeployState `json:"state"`
-	Message string      `json:"message"`
+	Message string      `json:"message,omitempty"`
+
+	InternalError *string `json:"internalError,omitempty"`
+
+	BuildID *v1.BuildID `json:"buildId,omitempty"`
 
 	StartTimestamp      *metav1.Time `json:"startTimestamp,omitempty"`
 	CompletionTimestamp *metav1.Time `json:"completionTimestamp,omitempty"`

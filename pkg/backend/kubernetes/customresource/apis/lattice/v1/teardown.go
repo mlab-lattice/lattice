@@ -31,6 +31,10 @@ type Teardown struct {
 	Status            TeardownStatus `json:"status"`
 }
 
+func (t *Teardown) V1ID() v1.TeardownID {
+	return v1.TeardownID(t.Name)
+}
+
 func (t *Teardown) Description(namespacePrefix string) string {
 	systemID, err := kubeutil.SystemID(namespacePrefix, t.Namespace)
 	if err != nil {
@@ -44,9 +48,13 @@ type TeardownSpec struct {
 }
 
 type TeardownStatus struct {
-	State              TeardownState `json:"state"`
-	ObservedGeneration int64         `json:"observedGeneration"`
-	Message            string        `json:"message"`
+	ObservedGeneration int64 `json:"observedGeneration"`
+
+	State   TeardownState `json:"state"`
+	Message string        `json:"message"`
+
+	StartTimestamp      *metav1.Time `json:"startTimestamp,omitempty"`
+	CompletionTimestamp *metav1.Time `json:"completionTimestamp,omitempty"`
 }
 
 type TeardownState string

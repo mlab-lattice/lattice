@@ -8,6 +8,7 @@ import (
 	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/cloudprovider/local"
 	"github.com/mlab-lattice/lattice/pkg/latticectl"
 	"github.com/mlab-lattice/lattice/pkg/util/cli"
+	"github.com/mlab-lattice/lattice/pkg/util/cli/flags"
 )
 
 type UpCommand struct {
@@ -22,22 +23,22 @@ func (c *UpCommand) Base() (*latticectl.BaseCommand, error) {
 	cmd := &latticectl.BaseCommand{
 		Name: "up",
 		Flags: cli.Flags{
-			&cli.StringFlag{
+			&flags.String{
 				Name:    "id",
 				Default: "lattice",
 				Target:  &id,
 			},
-			&cli.StringFlag{
+			&flags.String{
 				Name:    "container-channel",
 				Default: "gcr.io/lattice-dev/laas/alpha",
 				Target:  &channel,
 			},
-			&cli.StringFlag{
+			&flags.String{
 				Name:    "work-directory",
 				Default: "/tmp/latticectl/local",
 				Target:  &workDirectory,
 			},
-			&cli.StringFlag{
+			&flags.String{
 				Name:    "api-auth-key",
 				Default: "",
 				Target:  &apiAuthKey,

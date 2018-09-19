@@ -3,6 +3,7 @@ package latticectl
 import (
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	"github.com/mlab-lattice/lattice/pkg/util/cli"
+	"github.com/mlab-lattice/lattice/pkg/util/cli/flags"
 )
 
 type TeardownCommand struct {
@@ -30,7 +31,7 @@ func (c *teardownCommandContext) TeardownID() v1.TeardownID {
 
 func (c *TeardownCommand) Base() (*BaseCommand, error) {
 	var teardownID string
-	teardownIDFlag := &cli.StringFlag{
+	teardownIDFlag := &flags.String{
 		Name:     "teardown",
 		Required: true,
 		Target:   &teardownID,

@@ -72,7 +72,7 @@ func (c *ListTeardownsCommand) Base() (*latticectl.BaseCommand, error) {
 }
 
 // ListTeardowns writes the current Teardowns to the supplied io.Writer in the given printer.Format.
-func ListTeardowns(client v1cient.TeardownClient, format printer.Format, writer io.Writer) error {
+func ListTeardowns(client v1cient.SystemTeardownClient, format printer.Format, writer io.Writer) error {
 	teardowns, err := client.List()
 	if err != nil {
 		return err
@@ -86,7 +86,7 @@ func ListTeardowns(client v1cient.TeardownClient, format printer.Format, writer 
 // WatchTeardowns polls the API for the current Teardowns, and writes out the Teardowns to the
 // the supplied io.Writer in the given printer.Format, unless the printer.Format is
 // printer.FormatTable, in which case it always writes to the terminal.
-func WatchTeardowns(client v1cient.TeardownClient, format printer.Format, writer io.Writer) {
+func WatchTeardowns(client v1cient.SystemTeardownClient, format printer.Format, writer io.Writer) {
 	// Poll the API for the teardowns and send it to the channel
 	teardownLists := make(chan []v1.Teardown)
 

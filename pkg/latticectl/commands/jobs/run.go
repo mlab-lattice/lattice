@@ -13,6 +13,7 @@ import (
 	"github.com/mlab-lattice/lattice/pkg/latticectl"
 	"github.com/mlab-lattice/lattice/pkg/util/cli"
 	"github.com/mlab-lattice/lattice/pkg/util/cli/color"
+	"github.com/mlab-lattice/lattice/pkg/util/cli/flags"
 	"github.com/mlab-lattice/lattice/pkg/util/cli/printer"
 	"strings"
 	"time"
@@ -38,27 +39,27 @@ func (c *BuildCommand) Base() (*latticectl.BaseCommand, error) {
 	cmd := &latticectl.SystemCommand{
 		Name: "run",
 		Flags: []cli.Flag{
-			&cli.StringFlag{
+			&flags.String{
 				Name:     "path",
 				Required: true,
 				Target:   &pathStr,
 			},
-			&cli.BoolFlag{
+			&flags.Bool{
 				Name:   "follow",
 				Short:  "f",
 				Target: &follow,
 			},
-			&cli.StringFlag{
+			&flags.String{
 				Name:   "command",
 				Short:  "c",
 				Target: &command,
 			},
-			&cli.StringSliceFlag{
+			&flags.StringSliceFlag{
 				Name:   "arg",
 				Short:  "a",
 				Target: &jobArgs,
 			},
-			&cli.StringSliceFlag{
+			&flags.StringSliceFlag{
 				Name:   "env",
 				Short:  "e",
 				Target: &envStrings,
@@ -110,7 +111,7 @@ func (c *BuildCommand) Base() (*latticectl.BaseCommand, error) {
 }
 
 func RunJob(
-	client v1client.JobClient,
+	client v1client.SystemJobClient,
 	path tree.Path,
 	command []string,
 	environment definitionv1.ContainerEnvironment,

@@ -17,32 +17,24 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
-func PodTemplateSpecForComponent(
-	component component.Interface,
+func PodTemplateSpecForV1Workload(
+	workload definitionv1.Workload,
 	path tree.Path,
 	latticeID v1.LatticeID,
 	internalDNSDomain string,
 	namespacePrefix, namespace, name string,
 	labels map[string]string,
-	buildArtifacts map[string]ContainerBuildArtifacts,
+	buildArtifacts WorkloadContainerBuildArtifacts,
 	restartPolicy corev1.RestartPolicy,
 	affinity *corev1.Affinity,
 	tolerations []corev1.Toleration,
 ) (*corev1.PodTemplateSpec, error) {
 	// convert lattice containers into kube containers
-	containersComponent, err := newContainersComponent(component)
-	if err != nil {
-		return nil, err
-	}
-
 	var kubeContainers []corev1.Container
-	mainContainerBuildArtifact, ok := buildArtifacts[kubeutil.UserMainContainerName]
-	if !ok {
-		return nil, fmt.Errorf("build artifacts did not include artifact for main container")
-	}
+	mainContainerBuildArtifact := buildArtifacts.MainContainer
 
 	mainContainer, err := KubeContainerForContainer(
-		containersComponent.MainContainer,
+		workload.Containers().Main,
 		kubeutil.UserMainContainerName,
 		mainContainerBuildArtifact,
 		path,
@@ -53,8 +45,8 @@ func PodTemplateSpecForComponent(
 
 	kubeContainers = append(kubeContainers, mainContainer)
 
-	for name, sidecar := range containersComponent.Sidecars {
-		buildArtifact, ok := buildArtifacts[kubeutil.UserSidecarContainerName(name)]
+	for name, sidecar := range workload.Containers().Sidecars {
+		buildArtifact, ok := buildArtifacts.Sidecars[kubeutil.UserSidecarContainerName(name)]
 		if !ok {
 			return nil, fmt.Errorf("build artifacts did not include artifact for sidecar %v", name)
 		}

@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/mlab-lattice/lattice/pkg/util/cli"
+	"github.com/mlab-lattice/lattice/pkg/util/cli/flags"
 	"github.com/mlab-lattice/lattice/pkg/util/markdown"
 )
 
@@ -199,7 +200,7 @@ func writeFlagTableRow(w io.Writer, flag cli.Flag) {
 	name := fmt.Sprintf("--%s", flag.GetName())
 
 	// if the flag isn't a bool flag then print out a placeholder value with the name of the flag
-	if _, ok := flag.(*cli.BoolFlag); !ok {
+	if _, ok := flag.(*flags.Bool); !ok {
 		name += fmt.Sprintf(" %s", strings.ToUpper(flag.GetName()))
 	}
 	name = markdown.WrapInlineCode(name)

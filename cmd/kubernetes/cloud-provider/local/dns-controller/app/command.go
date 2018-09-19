@@ -15,6 +15,7 @@ import (
 	"github.com/golang/glog"
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	"github.com/mlab-lattice/lattice/pkg/util/cli"
+	"github.com/mlab-lattice/lattice/pkg/util/cli/flags"
 )
 
 func Command() *cli.Command {
@@ -31,43 +32,43 @@ func Command() *cli.Command {
 	command := &cli.Command{
 		Name: "dns-controller",
 		Flags: cli.Flags{
-			&cli.StringFlag{
+			&flags.String{
 				Name:   "kubeconfig",
 				Usage:  "path to kubeconfig file",
 				Target: &kubeconfig,
 			},
-			&cli.StringFlag{
+			&flags.String{
 				Name:     "namespace-prefix",
 				Usage:    "namespace prefix for the lattice",
 				Required: true,
 				Target:   &namespacePrefix,
 			},
-			&cli.StringFlag{
+			&flags.String{
 				Name:     "lattice-id",
 				Usage:    "ID of the lattice",
 				Required: true,
 				Target:   &latticeID,
 			},
-			&cli.StringFlag{
+			&flags.String{
 				Name:     "internal-dns-domain",
 				Usage:    "domain to use for internal dns",
 				Required: true,
 				Target:   &internalDNSDomain,
 			},
-			&cli.StringFlag{
+			&flags.String{
 				Name:    "dnsmasq-config-path",
 				Usage:   "path to the additional dnsmasq configuration file",
 				Default: "/var/run/lattice/dnsmasq.conf",
 				Target:  &dnsmasqConfigPath,
 			},
-			&cli.StringFlag{
+			&flags.String{
 				Name:    "dnsmasq-hosts-file-path",
 				Usage:   "path to the additional dnsmasq hosts",
 				Default: "/var/run/lattice/hosts",
 				Target:  &dnsmasqHostsFilePath,
 			},
 
-			&cli.StringFlag{
+			&flags.String{
 				Name:     "service-mesh",
 				Required: true,
 				Target:   &serviceMesh,

@@ -45,7 +45,7 @@ func (c *AddressCommand) Base() (*latticectl.BaseCommand, error) {
 	return cmd.Base()
 }
 
-func GetServiceAddresses(client v1client.ServiceClient, format printer.Format, writer io.Writer) error {
+func GetServiceAddresses(client v1client.SystemServiceClient, format printer.Format, writer io.Writer) error {
 	services, err := client.List()
 	if err != nil {
 		return err
@@ -61,7 +61,7 @@ func GetServiceAddresses(client v1client.ServiceClient, format printer.Format, w
 	return nil
 }
 
-func GetServiceAddress(client v1client.ServiceClient, serviceID v1.ServiceID, format printer.Format, writer io.Writer) error {
+func GetServiceAddress(client v1client.SystemServiceClient, serviceID v1.ServiceID, format printer.Format, writer io.Writer) error {
 	service, err := client.Get(serviceID)
 	if err != nil {
 		return err

@@ -6,14 +6,12 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/mlab-lattice/lattice/pkg/api/client/rest/v1/errors"
+	"github.com/mlab-lattice/lattice/pkg/api/client/rest/v1/system"
 	clientv1 "github.com/mlab-lattice/lattice/pkg/api/client/v1"
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	v1rest "github.com/mlab-lattice/lattice/pkg/api/v1/rest"
 	"github.com/mlab-lattice/lattice/pkg/util/rest"
-)
-
-const (
-	systemSubpath = "/systems"
 )
 
 type SystemClient struct {
@@ -51,7 +49,7 @@ func (c *SystemClient) Create(id v1.SystemID, definitionURL string) (*v1.System,
 		return system, err
 	}
 
-	return nil, HandleErrorStatusCode(statusCode, body)
+	return nil, errors.HandleErrorStatusCode(statusCode, body)
 }
 
 func (c *SystemClient) List() ([]v1.System, error) {
@@ -68,7 +66,7 @@ func (c *SystemClient) List() ([]v1.System, error) {
 		return systems, err
 	}
 
-	return nil, HandleErrorStatusCode(statusCode, body)
+	return nil, errors.HandleErrorStatusCode(statusCode, body)
 }
 
 func (c *SystemClient) Get(id v1.SystemID) (*v1.System, error) {
@@ -85,7 +83,7 @@ func (c *SystemClient) Get(id v1.SystemID) (*v1.System, error) {
 		return system, err
 	}
 
-	return nil, HandleErrorStatusCode(statusCode, body)
+	return nil, errors.HandleErrorStatusCode(statusCode, body)
 }
 
 func (c *SystemClient) Delete(id v1.SystemID) error {
@@ -100,10 +98,10 @@ func (c *SystemClient) Delete(id v1.SystemID) error {
 		return nil
 	}
 
-	return HandleErrorStatusCode(statusCode, body)
+	return errors.HandleErrorStatusCode(statusCode, body)
 }
 
-func (c *SystemClient) Versions(id v1.SystemID) ([]v1.SystemVersion, error) {
+func (c *SystemClient) Versions(id v1.SystemID) ([]v1.Version, error) {
 	url := fmt.Sprintf("%v%v", c.apiServerURL, fmt.Sprintf(v1rest.VersionsPathFormat, id))
 	body, statusCode, err := c.restClient.Get(url).Body()
 	if err != nil {
@@ -112,34 +110,34 @@ func (c *SystemClient) Versions(id v1.SystemID) ([]v1.SystemVersion, error) {
 	defer body.Close()
 
 	if statusCode == http.StatusOK {
-		var versions []v1.SystemVersion
+		var versions []v1.Version
 		err = rest.UnmarshalBodyJSON(body, &versions)
 		return versions, err
 	}
 
-	return nil, HandleErrorStatusCode(statusCode, body)
+	return nil, errors.HandleErrorStatusCode(statusCode, body)
 }
 
-func (c *SystemClient) Builds(id v1.SystemID) clientv1.BuildClient {
-	return newBuildClient(c.restClient, c.apiServerURL, id)
+func (c *SystemClient) Builds(id v1.SystemID) clientv1.SystemBuildClient {
+	return system.NewBuildClient(c.restClient, c.apiServerURL, id)
 }
 
-func (c *SystemClient) Deploys(id v1.SystemID) clientv1.DeployClient {
-	return newDeployClient(c.restClient, c.apiServerURL, id)
+func (c *SystemClient) Deploys(id v1.SystemID) clientv1.SystemDeployClient {
+	return system.NewDeployClient(c.restClient, c.apiServerURL, id)
 }
 
-func (c *SystemClient) Services(id v1.SystemID) clientv1.ServiceClient {
-	return newServiceClient(c.restClient, c.apiServerURL, id)
+func (c *SystemClient) Services(id v1.SystemID) clientv1.SystemServiceClient {
+	return system.NewServiceClient(c.restClient, c.apiServerURL, id)
 }
 
-func (c *SystemClient) Jobs(id v1.SystemID) clientv1.JobClient {
-	return newJobClient(c.restClient, c.apiServerURL, id)
+func (c *SystemClient) Jobs(id v1.SystemID) clientv1.SystemJobClient {
+	return system.NewJobClient(c.restClient, c.apiServerURL, id)
 }
 
-func (c *SystemClient) Secrets(id v1.SystemID) clientv1.SecretClient {
-	return newSystemSecretClient(c.restClient, c.apiServerURL, id)
+func (c *SystemClient) Secrets(id v1.SystemID) clientv1.SystemSecretClient {
+	return system.NewSecretClient(c.restClient, c.apiServerURL, id)
 }
 
-func (c *SystemClient) Teardowns(id v1.SystemID) clientv1.TeardownClient {
-	return newTeardownClient(c.restClient, c.apiServerURL, id)
+func (c *SystemClient) Teardowns(id v1.SystemID) clientv1.SystemTeardownClient {
+	return system.NewTeardownClient(c.restClient, c.apiServerURL, id)
 }

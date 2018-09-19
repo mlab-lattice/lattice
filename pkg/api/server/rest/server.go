@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/mlab-lattice/lattice/pkg/api/server/backend"
 	restv1 "github.com/mlab-lattice/lattice/pkg/api/server/rest/v1"
-	"github.com/mlab-lattice/lattice/pkg/api/server/v1"
-	"github.com/mlab-lattice/lattice/pkg/definition/resolver"
+	"github.com/mlab-lattice/lattice/pkg/definition/component/resolver"
 
 	"github.com/gin-gonic/gin"
 )
@@ -17,11 +17,11 @@ const (
 
 type restServer struct {
 	router   *gin.Engine
-	backend  v1.Interface
+	backend  backend.Backend
 	resolver resolver.ComponentResolver
 }
 
-func RunNewRestServer(backend v1.Interface, resolver resolver.ComponentResolver, port int32, apiAuthKey string) {
+func RunNewRestServer(backend backend.Backend, resolver resolver.ComponentResolver, port int32, apiAuthKey string) {
 	router := gin.Default()
 	// Some of our paths use URL encoded paths, so don't have
 	// gin decode those
@@ -51,7 +51,7 @@ func (r *restServer) mountHandlers(apiAuthKey string) {
 		fmt.Println("WARNING: Api key authentication not set")
 	}
 
-	restv1.MountHandlers(routerGroup, r.backend, r.resolver)
+	restv1.MountHandlers(routerGroup, r.backend.V1(), r.resolver)
 }
 
 // authenticateRequest authenticates the request against the configured authentication api key
