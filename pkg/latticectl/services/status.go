@@ -62,7 +62,7 @@ func PrintService(client client.Interface, system v1.SystemID, id v1.ServiceID, 
 
 	case printer.FormatJSON:
 		j := printer.NewJSON(w)
-		j.Print(system)
+		j.Print(service)
 
 	default:
 		return fmt.Errorf("unexpected format %v", f)

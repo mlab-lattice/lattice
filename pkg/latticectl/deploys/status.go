@@ -61,7 +61,7 @@ func PrintDeploy(client client.Interface, system v1.SystemID, id v1.DeployID, w 
 
 	case printer.FormatJSON:
 		j := printer.NewJSON(w)
-		j.Print(system)
+		j.Print(deploy)
 
 	default:
 		return fmt.Errorf("unexpected format %v", f)
@@ -95,7 +95,7 @@ func WatchDeploy(client client.Interface, system v1.SystemID, id v1.DeployID, w 
 	case printer.FormatJSON:
 		j := printer.NewJSON(w)
 		handle = func(deploy *v1.Deploy) bool {
-			j.Print(system)
+			j.Print(deploy)
 			return false
 		}
 

@@ -63,7 +63,7 @@ func PrintBuild(client client.Interface, system v1.SystemID, id v1.BuildID, w io
 
 	case printer.FormatJSON:
 		j := printer.NewJSON(w)
-		j.Print(system)
+		j.Print(build)
 
 	default:
 		return fmt.Errorf("unexpected format %v", f)

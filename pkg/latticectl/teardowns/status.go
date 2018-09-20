@@ -61,7 +61,7 @@ func PrintTeardown(client client.Interface, system v1.SystemID, id v1.TeardownID
 
 	case printer.FormatJSON:
 		j := printer.NewJSON(w)
-		j.Print(system)
+		j.Print(teardown)
 
 	default:
 		return fmt.Errorf("unexpected format %v", f)
@@ -96,7 +96,7 @@ func WatchTeardown(client client.Interface, system v1.SystemID, id v1.TeardownID
 	case printer.FormatJSON:
 		j := printer.NewJSON(w)
 		handle = func(teardown *v1.Teardown) bool {
-			j.Print(system)
+			j.Print(teardown)
 			return false
 		}
 
