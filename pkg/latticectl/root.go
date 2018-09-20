@@ -17,6 +17,7 @@ var Command = cli.RootCommand{
 			"kubernetes": Kubernetes(),
 			"local":      Local(),
 			"secrets":    Secrets(),
+			"services":   Services(),
 			"systems":    Systems(),
 			"teardown":   Teardown(),
 			"teardowns":  Teardowns(),

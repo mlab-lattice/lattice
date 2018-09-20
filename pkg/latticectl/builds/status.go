@@ -98,7 +98,7 @@ func WatchBuild(client client.Interface, system v1.SystemID, id v1.BuildID, w io
 	case printer.FormatJSON:
 		j := printer.NewJSON(w)
 		handle = func(build *v1.Build) bool {
-			j.Print(system)
+			j.Print(build)
 			return false
 		}
 
