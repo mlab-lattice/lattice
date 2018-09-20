@@ -47,6 +47,7 @@ func Builds() *cli.Command {
 			return PrintBuilds(ctx.Client, ctx.System, format, os.Stdout)
 		},
 		Subcommands: map[string]*cli.Command{
+			"logs":   builds.Logs(),
 			"status": builds.Status(),
 		},
 	}
