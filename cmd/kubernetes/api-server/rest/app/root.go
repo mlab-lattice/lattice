@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/mlab-lattice/lattice/pkg/api/server/rest"
+	"github.com/mlab-lattice/lattice/pkg/api/server/rest/authentication/token/tokenfile"
 	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/api/server/backend"
 	latticeclientset "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/generated/clientset/versioned"
 	latticeinformers "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/generated/informers/externalversions"
@@ -40,6 +41,7 @@ func Command() *cli.RootCommand {
 	var workDirectory string
 	var port int32
 	var apiAuthKey string
+	var tokenAuthFile string
 
 	command := &cli.RootCommand{
 		Name: "api-server",
@@ -68,6 +70,11 @@ func Command() *cli.RootCommand {
 					Usage:   "if supplied, the required value of the API_KEY header",
 					Default: "",
 					Target:  &apiAuthKey,
+				},
+				"token-auth-file": &flags.String{
+					Usage:   "path for token file for bearer token authenticator",
+					Default: "",
+					Target:  &tokenAuthFile,
 				},
 			},
 			Run: func(args []string, flags cli.Flags) error {
@@ -108,7 +115,7 @@ func Command() *cli.RootCommand {
 					return err
 				}
 				options := rest.NewServerOptions()
-				options.AuthOptions.LegacyApiAuthKey = apiAuthKey
+				applyAuthenticationOptions(options, apiAuthKey, tokenAuthFile)
 				r := resolver.NewComponentResolver(gitResolver, templateStore, secretStore)
 				rest.RunNewRestServer(backend, r, port, options)
 				return nil
@@ -146,4 +153,20 @@ func setupSSH() {
 	if err != nil {
 		log.Fatal("error writing /etc/ssh/ssh_known_hosts: " + err.Error())
 	}
+}
+
+func applyAuthenticationOptions(options *rest.ServerOptions, apiAuthKey string, tokenAuthFile string) {
+	// enable api authentication key as needed
+	if apiAuthKey != "" {
+		options.AuthOptions.LegacyApiAuthKey = apiAuthKey
+	}
+
+	if tokenAuthFile != "" {
+		tokenAuthenticator, err := tokenfile.NewFromCSV(tokenAuthFile)
+		if err != nil {
+			panic(err)
+		}
+		options.AuthOptions.Token = tokenAuthenticator
+	}
+
 }
