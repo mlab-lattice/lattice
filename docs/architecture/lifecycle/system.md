@@ -17,9 +17,9 @@ Note that all of the states (besides `does-not-exist`) can be found in [`pkg/api
 │does not exist│────────▶│   pending   │────────▶│   failed   │────────▶│   deleting   │
 │              │         │             │         │            │         │              │
 └──────────────┘         └─────────────┘         └────────────┘         └──────────────┘
-                                │                       │                       ▲       
-                     ┌ ─ ─ ─ ─ ─│─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─│─ ─ ─ ─ ─ ┐            │       
-                                ▼                       ▼                       │       
+                                │                                               ▲       
+                     ┌ ─ ─ ─ ─ ─│─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┐            │       
+                                ▼                                               │       
                      │   ┌────────────┐         ┌──────────────┐   │            │       
                          │            │         │              │                │       
                      │   │   stable   │◀───────▶│   updating   │   │            │       
@@ -109,7 +109,7 @@ The unlocker remembers the granularity you acquired the lock with, and will hand
 
 ### `LifecycleActionManager`
 
-The [`LifecycleActionManager`](../../../pkg/util/sync/lifecycle_action.go) uses a tree of `IntentionLock` per `system` to manage concurrent `deploy`s and `teardown`s.
+The [`LifecycleActionManager`](../../../pkg/util/sync/lifecycle_action.go) uses a tree of `IntentionLock`s per `system` to manage concurrent `deploy`s and `teardown`s.
 
 The `LifecycleActionManager` will for a given `deploy` (which has an associated `tree.Path`), attempt to acquire an `intention-exclusive` lock at each internal node in the path, and an `exclusive` lock at the leaf node.
 
@@ -122,5 +122,5 @@ All this results in the following semantics:
   - if a single `teardown` is running, all attempts to `deploy` or `teardown` will fail while the `teardown` is active
 - a `deploy` can run as long as
   - there is not a `teardown` running
-  - there is no `deploy` running whose `path` was an ancestor of the desired `deploy`'s `path`
+  - there is no `deploy` running whose `path` is an ancestor of the desired `deploy`'s `path`
 
