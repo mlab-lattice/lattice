@@ -28,7 +28,7 @@ type Controller struct {
 
 	latticeClient latticeclientset.Interface
 
-	componentResolver resolver.ComponentResolver
+	componentResolver resolver.Interface
 
 	systemLister       latticelisters.SystemLister
 	systemListerSynced cache.InformerSynced
@@ -45,7 +45,7 @@ type Controller struct {
 func NewController(
 	namespacePrefix string,
 	latticeClient latticeclientset.Interface,
-	componentResolver resolver.ComponentResolver,
+	componentResolver resolver.Interface,
 	systemInformer latticeinformers.SystemInformer,
 	buildInformer latticeinformers.BuildInformer,
 	containerBuildInformer latticeinformers.ContainerBuildInformer,

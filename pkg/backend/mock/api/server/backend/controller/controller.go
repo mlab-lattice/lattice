@@ -8,7 +8,7 @@ import (
 	"github.com/mlab-lattice/lattice/pkg/backend/mock/api/server/backend/registry"
 )
 
-func New(r *registry.Registry, cr resolver.ComponentResolver) *Controller {
+func New(r *registry.Registry, cr resolver.Interface) *Controller {
 	return &Controller{
 		registry:          r,
 		actions:           syncutil.NewLifecycleActionManager(),
@@ -19,7 +19,7 @@ func New(r *registry.Registry, cr resolver.ComponentResolver) *Controller {
 type Controller struct {
 	registry          *registry.Registry
 	actions           *syncutil.LifecycleActionManager
-	componentResolver resolver.ComponentResolver
+	componentResolver resolver.Interface
 }
 
 func (c *Controller) CreateSystem(system *registry.SystemRecord) {

@@ -22,6 +22,6 @@ type KubernetesBackend struct {
 	v1 *backendv1.Backend
 }
 
-func (b *KubernetesBackend) V1() serverv1.Backend {
+func (b *KubernetesBackend) V1() serverv1.Interface {
 	return b.v1
 }

@@ -6,7 +6,7 @@ import (
 	"github.com/mlab-lattice/lattice/pkg/definition/component/resolver"
 )
 
-func NewMockBackend(r resolver.ComponentResolver) *MockBackend {
+func NewMockBackend(r resolver.Interface) *MockBackend {
 	return &MockBackend{
 		v1: backendv1.NewBackend(r),
 	}
@@ -16,6 +16,6 @@ type MockBackend struct {
 	v1 *backendv1.Backend
 }
 
-func (b *MockBackend) V1() serverv1.Backend {
+func (b *MockBackend) V1() serverv1.Interface {
 	return b.v1
 }
