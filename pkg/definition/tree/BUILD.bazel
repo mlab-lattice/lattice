@@ -3,16 +3,20 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 go_library(
     name = "go_default_library",
     srcs = [
-        "node.go",
         "path.go",
+        "radix.go",
     ],
     importpath = "github.com/mlab-lattice/lattice/pkg/definition/tree",
     visibility = ["//visibility:public"],
+    deps = ["@com_github_armon_go_radix//:go_default_library"],
 )
 
 go_test(
     name = "go_default_test",
     size = "small",
-    srcs = ["path_test.go"],
+    srcs = [
+        "path_test.go",
+        "radix_test.go",
+    ],
     embed = [":go_default_library"],
 )

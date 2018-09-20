@@ -23,10 +23,11 @@ func (c *Controller) syncSucceededBuild(build *latticev1.Build, stateInfo stateI
 		build,
 		latticev1.BuildStateSucceeded,
 		"",
+		nil,
+		build.Status.Definition,
 		startTimestamp,
 		completionTimestamp,
-		build.Status.Services,
-		build.Status.Jobs,
+		build.Status.Workloads,
 		stateInfo.containerBuildStatuses,
 	)
 	return err

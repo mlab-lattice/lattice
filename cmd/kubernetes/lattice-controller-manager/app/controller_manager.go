@@ -8,14 +8,18 @@ import (
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/cloudprovider"
 	latticeinformers "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/generated/informers/externalversions"
+	kuberesolver "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/definition/component/resolver"
 	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/servicemesh"
+	"github.com/mlab-lattice/lattice/pkg/definition/component/resolver"
 	"github.com/mlab-lattice/lattice/pkg/util/cli"
+	"github.com/mlab-lattice/lattice/pkg/util/cli/flags"
 
 	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 
 	"github.com/golang/glog"
+	"github.com/mlab-lattice/lattice/pkg/util/git"
 	"github.com/spf13/pflag"
 )
 
@@ -28,6 +32,7 @@ func Command() *cli.Command {
 
 	var kubeconfig string
 	var namespacePrefix string
+	var workDirectory string
 	var latticeID string
 	var internalDNSDomain string
 
@@ -42,37 +47,43 @@ func Command() *cli.Command {
 	command := &cli.Command{
 		Name: "lattice-controller-manager",
 		Flags: cli.Flags{
-			&cli.StringFlag{
+			&flags.String{
 				Name:   "kubeconfig",
 				Usage:  "path to kubeconfig file",
 				Target: &kubeconfig,
 			},
-			&cli.StringFlag{
+			&flags.String{
 				Name:     "namespace-prefix",
 				Usage:    "namespace prefix of the lattice",
 				Required: true,
 				Target:   &namespacePrefix,
 			},
-			&cli.StringFlag{
+			&flags.String{
+				Name:    "work-directory",
+				Usage:   "work directory to use",
+				Default: "/tmp/lattice-api",
+				Target:  &workDirectory,
+			},
+			&flags.String{
 				Name:     "lattice-id",
 				Usage:    "ID of the lattice",
 				Required: true,
 				Target:   &latticeID,
 			},
-			&cli.StringFlag{
+			&flags.String{
 				Name:     "internal-dns-domain",
 				Usage:    "domain to use for internal dns",
 				Required: true,
 				Target:   &internalDNSDomain,
 			},
-			&cli.StringSliceFlag{
+			&flags.StringSliceFlag{
 				Name:    "controllers",
 				Usage:   "controllers that should be run",
 				Default: []string{"*"},
 				Target:  &enabledControllers,
 			},
 
-			&cli.StringFlag{
+			&flags.String{
 				Name:     "cloud-provider",
 				Required: true,
 				Target:   &cloudProvider,
@@ -80,7 +91,7 @@ func Command() *cli.Command {
 			},
 			cloudProviderFlag,
 
-			&cli.StringFlag{
+			&flags.String{
 				Name:     "service-mesh",
 				Required: true,
 				Target:   &serviceMesh,
@@ -103,6 +114,7 @@ func Command() *cli.Command {
 			// TODO: setting stop as nil for now, won't actually need it until leader-election is used
 			ctx, err := createControllerContext(
 				namespacePrefix,
+				workDirectory,
 				v1.LatticeID(latticeID),
 				internalDNSDomain,
 				config,
@@ -130,6 +142,7 @@ func Command() *cli.Command {
 
 func createControllerContext(
 	namespacePrefix string,
+	workDirectory string,
 	latticeID v1.LatticeID,
 	internalDNSDomain string,
 	kubeconfig *rest.Config,
@@ -150,9 +163,19 @@ func createControllerContext(
 	versionedLatticeClient := lcb.ClientOrDie("shared-latticeinformers")
 	latticeInformers := latticeinformers.NewSharedInformerFactory(versionedLatticeClient, time.Duration(12*time.Hour))
 
+	templateStore := kuberesolver.NewKubernetesTemplateStore(namespacePrefix, lcb.ClientOrDie("controller-manager-component-resolver"), latticeInformers, nil)
+	secretStore := kuberesolver.NewKubernetesSecretStore(namespacePrefix, kubeInformers, nil)
+	gitResolver, err := git.NewResolver(workDirectory, false)
+	if err != nil {
+		return controllers.Context{}, err
+	}
+
+	r := resolver.NewComponentResolver(gitResolver, templateStore, secretStore)
 	ctx := controllers.Context{
 		NamespacePrefix: namespacePrefix,
 		LatticeID:       latticeID,
+
+		ComponentResolver: r,
 
 		InternalDNSDomain: internalDNSDomain,
 

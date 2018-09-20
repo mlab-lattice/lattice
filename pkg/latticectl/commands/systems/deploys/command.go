@@ -65,7 +65,7 @@ func (c *ListDeploysCommand) Base() (*latticectl.BaseCommand, error) {
 	return cmd.Base()
 }
 
-func ListDeploys(client v1client.DeployClient, format printer.Format, writer io.Writer) error {
+func ListDeploys(client v1client.SystemDeployClient, format printer.Format, writer io.Writer) error {
 	deploys, err := client.List()
 	if err != nil {
 		return err
@@ -76,7 +76,7 @@ func ListDeploys(client v1client.DeployClient, format printer.Format, writer io.
 	return nil
 }
 
-func WatchDeploys(client v1client.DeployClient, format printer.Format, writer io.Writer) {
+func WatchDeploys(client v1client.SystemDeployClient, format printer.Format, writer io.Writer) {
 	deployLists := make(chan []v1.Deploy)
 
 	lastHeight := 0
@@ -137,9 +137,14 @@ func deploysPrinter(deploys []v1.Deploy, format printer.Format) printer.Interfac
 				stateColor = color.Warning
 			}
 
+			buildID := "-"
+			if deploy.Build != nil {
+				buildID = string(*deploy.Build)
+			}
+
 			rows = append(rows, []string{
 				string(deploy.ID),
-				string(deploy.BuildID),
+				buildID,
 				stateColor(string(deploy.State)),
 			})
 		}

@@ -10,6 +10,7 @@ import (
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 	"github.com/mlab-lattice/lattice/pkg/latticectl"
 	"github.com/mlab-lattice/lattice/pkg/util/cli"
+	"github.com/mlab-lattice/lattice/pkg/util/cli/flags"
 )
 
 type LogsCommand struct {
@@ -28,44 +29,44 @@ func (c *LogsCommand) Base() (*latticectl.BaseCommand, error) {
 	cmd := &latticectl.BuildCommand{
 		Name: "logs",
 		Flags: cli.Flags{
-			&cli.StringFlag{
+			&flags.String{
 				Name:     "path",
 				Short:    "p",
 				Required: true,
 				Target:   &pathStr,
 			},
-			&cli.StringFlag{
+			&flags.String{
 				Name:   "sidecar",
 				Short:  "s",
 				Target: &sidecarStr,
 			},
-			&cli.BoolFlag{
+			&flags.Bool{
 				Name:    "follow",
 				Short:   "f",
 				Default: false,
 				Target:  &follow,
 			},
-			&cli.BoolFlag{
+			&flags.Bool{
 				Name:    "previous",
 				Default: false,
 				Target:  &previous,
 			},
-			&cli.BoolFlag{
+			&flags.Bool{
 				Name:    "timestamps",
 				Default: false,
 				Target:  &timestamps,
 			},
-			&cli.StringFlag{
+			&flags.String{
 				Name:     "since-time",
 				Required: false,
 				Target:   &sinceTime,
 			},
-			&cli.StringFlag{
+			&flags.String{
 				Name:     "since",
 				Required: false,
 				Target:   &since,
 			},
-			&cli.IntFlag{
+			&flags.Int{
 				Name:     "tail",
 				Required: false,
 				Short:    "t",
@@ -83,12 +84,13 @@ func (c *LogsCommand) Base() (*latticectl.BaseCommand, error) {
 				sidecar = &sidecarStr
 			}
 
-			logOptions := v1.NewContainerLogOptions()
-			logOptions.Follow = follow
-			logOptions.Previous = previous
-			logOptions.Timestamps = timestamps
-			logOptions.SinceTime = sinceTime
-			logOptions.Since = since
+			logOptions := &v1.ContainerLogOptions{
+				Follow:     follow,
+				Previous:   previous,
+				Timestamps: timestamps,
+				SinceTime:  sinceTime,
+				Since:      since,
+			}
 
 			if tail != 0 {
 				tl := int64(tail)
@@ -108,7 +110,7 @@ func (c *LogsCommand) Base() (*latticectl.BaseCommand, error) {
 }
 
 func GetBuildLogs(
-	client v1client.BuildClient,
+	client v1client.SystemBuildClient,
 	buildID v1.BuildID,
 	path tree.Path,
 	sidecar *string,

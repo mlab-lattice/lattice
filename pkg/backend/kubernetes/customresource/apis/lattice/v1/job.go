@@ -82,10 +82,10 @@ func (s *Job) NodePoolAnnotation() (NodePoolAnnotationValue, error) {
 
 // +k8s:deepcopy-gen=false
 type JobSpec struct {
-	Definition *definitionv1.Job `json:"definition"`
+	Definition definitionv1.Job `json:"definition"`
 
 	// ContainerBuildArtifacts maps Sidecar names to the artifacts created by their build
-	ContainerBuildArtifacts map[string]ContainerBuildArtifacts `json:"containerBuildArtifacts"`
+	ContainerBuildArtifacts WorkloadContainerBuildArtifacts `json:"containerBuildArtifacts"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

@@ -6,7 +6,6 @@ import (
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 
-	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
 )
@@ -52,12 +51,8 @@ func (c *Controller) syncDedicatedNodePool(service *latticev1.Service, numInstan
 	return c.syncExistingDedicatedNodePool(nodePool, numInstances, instanceType)
 }
 
-func (c *Controller) syncSharedNodePool(namespace string, path v1.NodePoolPath) (*latticev1.NodePool, error) {
-	if path.Name == nil {
-		return nil, fmt.Errorf("expected shared node pool path to have name, only has path %v", path.Path.String())
-	}
-
-	selector, err := sharedNodePoolSelector(namespace, path.Path, *path.Name)
+func (c *Controller) syncSharedNodePool(namespace string, path tree.PathSubcomponent) (*latticev1.NodePool, error) {
+	selector, err := sharedNodePoolSelector(namespace, path.Path(), path.Subcomponent())
 	if err != nil {
 		return nil, err
 	}

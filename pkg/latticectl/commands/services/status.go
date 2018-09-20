@@ -62,7 +62,7 @@ func (c *StatusCommand) Base() (*latticectl.BaseCommand, error) {
 	return cmd.Base()
 }
 
-func GetService(client v1client.ServiceClient, serviceID v1.ServiceID, format printer.Format, writer io.Writer) error {
+func GetService(client v1client.SystemServiceClient, serviceID v1.ServiceID, format printer.Format, writer io.Writer) error {
 	service, err := client.Get(serviceID)
 	if err != nil {
 		return err
@@ -73,7 +73,7 @@ func GetService(client v1client.ServiceClient, serviceID v1.ServiceID, format pr
 	return nil
 }
 
-func WatchService(client v1client.ServiceClient, serviceID v1.ServiceID, format printer.Format, writer io.Writer) {
+func WatchService(client v1client.SystemServiceClient, serviceID v1.ServiceID, format printer.Format, writer io.Writer) {
 	services := make(chan *v1.Service)
 
 	lastHeight := 0

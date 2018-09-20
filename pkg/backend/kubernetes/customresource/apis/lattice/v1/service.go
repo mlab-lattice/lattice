@@ -101,10 +101,10 @@ func (s *Service) NeedsAddressLoadBalancer() bool {
 
 // +k8s:deepcopy-gen=false
 type ServiceSpec struct {
-	Definition *definitionv1.Service `json:"definition"`
+	Definition definitionv1.Service `json:"definition"`
 
 	// ContainerBuildArtifacts maps Sidecar names to the artifacts created by their build
-	ContainerBuildArtifacts map[string]ContainerBuildArtifacts `json:"containerBuildArtifacts"`
+	ContainerBuildArtifacts WorkloadContainerBuildArtifacts `json:"containerBuildArtifacts"`
 }
 
 type ServiceStatus struct {

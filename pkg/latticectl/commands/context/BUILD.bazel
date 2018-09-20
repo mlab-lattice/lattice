@@ -12,5 +12,6 @@ go_library(
         "//pkg/api/v1:go_default_library",
         "//pkg/latticectl:go_default_library",
         "//pkg/util/cli:go_default_library",
+        "//pkg/util/cli/flags:go_default_library",
     ],
 )

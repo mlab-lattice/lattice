@@ -3,7 +3,6 @@ package cli
 import (
 	"strings"
 
-	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 )
 
@@ -19,10 +18,6 @@ type Flag interface {
 }
 
 type Flags []Flag
-
-func markFlagRequired(name string, flags *pflag.FlagSet) {
-	cobra.MarkFlagRequired(flags, name)
-}
 
 func (f Flags) Len() int {
 	return len(f)

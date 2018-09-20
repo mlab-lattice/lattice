@@ -11,6 +11,7 @@ import (
 	"github.com/mlab-lattice/lattice/pkg/latticectl"
 	"github.com/mlab-lattice/lattice/pkg/util/cli"
 	"github.com/mlab-lattice/lattice/pkg/util/cli/color"
+	"github.com/mlab-lattice/lattice/pkg/util/cli/flags"
 )
 
 type CreateCommand struct {
@@ -22,12 +23,12 @@ func (c *CreateCommand) Base() (*latticectl.BaseCommand, error) {
 	cmd := &latticectl.LatticeCommand{
 		Name: "create",
 		Flags: []cli.Flag{
-			&cli.StringFlag{
+			&flags.String{
 				Name:     "definition",
 				Required: true,
 				Target:   &definitionURL,
 			},
-			&cli.StringFlag{
+			&flags.String{
 				Name:     "name",
 				Required: true,
 				Target:   &systemName,

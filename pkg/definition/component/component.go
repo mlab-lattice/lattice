@@ -41,6 +41,20 @@ func TypeFromString(s string) (Type, error) {
 	return t, nil
 }
 
+func TypeFromJSON(data []byte) (Type, error) {
+	t := typeDecoder{}
+	err := json.Unmarshal(data, &t)
+	if err != nil {
+		return Type{}, err
+	}
+
+	return t.Type, err
+}
+
+type typeDecoder struct {
+	Type Type `json:"type"`
+}
+
 type Type struct {
 	APIVersion string
 	Type       string

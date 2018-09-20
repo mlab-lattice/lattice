@@ -64,7 +64,7 @@ func (c *StatusCommand) Base() (*latticectl.BaseCommand, error) {
 	return cmd.Base()
 }
 
-func GetTeardown(client v1client.TeardownClient, teardownID v1.TeardownID, format printer.Format, writer io.Writer) error {
+func GetTeardown(client v1client.SystemTeardownClient, teardownID v1.TeardownID, format printer.Format, writer io.Writer) error {
 	teardown, err := client.Get(teardownID)
 	if err != nil {
 		return err
@@ -75,7 +75,7 @@ func GetTeardown(client v1client.TeardownClient, teardownID v1.TeardownID, forma
 	return nil
 }
 
-func WatchTeardown(client v1client.TeardownClient, teardownID v1.TeardownID, format printer.Format, writer io.Writer) {
+func WatchTeardown(client v1client.SystemTeardownClient, teardownID v1.TeardownID, format printer.Format, writer io.Writer) {
 	teardowns := make(chan *v1.Teardown)
 
 	lastHeight := 0

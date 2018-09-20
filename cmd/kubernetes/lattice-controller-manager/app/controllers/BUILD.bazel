@@ -22,6 +22,7 @@ go_library(
         "//pkg/backend/kubernetes/customresource/generated/clientset/versioned:go_default_library",
         "//pkg/backend/kubernetes/customresource/generated/informers/externalversions:go_default_library",
         "//pkg/backend/kubernetes/servicemesh:go_default_library",
+        "//pkg/definition/component/resolver:go_default_library",
         "@io_k8s_client_go//informers:go_default_library",
         "@io_k8s_client_go//kubernetes:go_default_library",
         "@io_k8s_client_go//rest:go_default_library",

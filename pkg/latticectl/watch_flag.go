@@ -2,6 +2,7 @@ package latticectl
 
 import (
 	"github.com/mlab-lattice/lattice/pkg/util/cli"
+	"github.com/mlab-lattice/lattice/pkg/util/cli/flags"
 )
 
 type WatchFlag struct {
@@ -27,7 +28,7 @@ func (f *WatchFlag) Flag() cli.Flag {
 		usage = f.Usage
 	}
 
-	return &cli.BoolFlag{
+	return &flags.Bool{
 		Name:    name,
 		Short:   short,
 		Usage:   usage,

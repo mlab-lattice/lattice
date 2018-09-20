@@ -7,6 +7,7 @@ import (
 	latticeinformers "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/generated/informers/externalversions"
 	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/servicemesh"
 
+	"github.com/mlab-lattice/lattice/pkg/definition/component/resolver"
 	kubeinformers "k8s.io/client-go/informers"
 	kubeclientset "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -46,6 +47,8 @@ type Context struct {
 	LatticeID       v1.LatticeID
 
 	InternalDNSDomain string
+
+	ComponentResolver resolver.ComponentResolver
 
 	CloudProviderOptions *cloudprovider.Options
 	ServiceMeshOptions   *servicemesh.Options

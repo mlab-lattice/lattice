@@ -66,7 +66,7 @@ func (c *ListJobsCommand) Base() (*latticectl.BaseCommand, error) {
 	return cmd.Base()
 }
 
-func ListJobs(client v1client.JobClient, format printer.Format, writer io.Writer) error {
+func ListJobs(client v1client.SystemJobClient, format printer.Format, writer io.Writer) error {
 	jobs, err := client.List()
 	if err != nil {
 		return err
@@ -77,7 +77,7 @@ func ListJobs(client v1client.JobClient, format printer.Format, writer io.Writer
 	return nil
 }
 
-func WatchJobs(client v1client.JobClient, format printer.Format, writer io.Writer) {
+func WatchJobs(client v1client.SystemJobClient, format printer.Format, writer io.Writer) {
 	jobsChan := make(chan []v1.Job)
 
 	lastHeight := 0

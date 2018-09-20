@@ -124,7 +124,7 @@ func (c *Controller) newKubeJob(jobRun *latticev1.JobRun, nodePool *latticev1.No
 }
 
 func kubeJobName(jobRun *latticev1.JobRun) string {
-	// TODO(kevinrosendahl): May change this to UUID when a Service can have multiple Deployments (e.g. Blue/Green & Canary)
+	// TODO(kevindrosendahl): May change this to UUID when a Service can have multiple Deployments (e.g. Blue/Green & Canary)
 	return fmt.Sprintf("lattice-job-run-%s", jobRun.Name)
 }
 
@@ -218,8 +218,8 @@ func (c *Controller) untransformedPodTemplateSpec(
 		Environment: jobRun.Spec.Environment,
 	}
 
-	return latticev1.PodTemplateSpecForComponent(
-		jobRun.Spec.Definition,
+	return latticev1.PodTemplateSpecForV1Workload(
+		&jobRun.Spec.Definition,
 		path,
 		c.latticeID,
 		c.internalDNSDomain,

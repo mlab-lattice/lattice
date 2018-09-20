@@ -6,6 +6,7 @@ import (
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/lifecycle/system/bootstrap/bootstrapper"
 	"github.com/mlab-lattice/lattice/pkg/util/cli"
+	"github.com/mlab-lattice/lattice/pkg/util/cli/flags"
 
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
@@ -76,7 +77,7 @@ func NewCloudProvider(
 func Flags() (cli.Flags, *Options) {
 	options := &Options{}
 	flags := cli.Flags{
-		&cli.StringFlag{
+		&flags.String{
 			Name:     "ip",
 			Required: true,
 			Target:   &options.IP,

@@ -7,6 +7,7 @@ import (
 	systembootstrapper "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/lifecycle/system/bootstrap/bootstrapper"
 	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/servicemesh/envoy"
 	"github.com/mlab-lattice/lattice/pkg/util/cli"
+	"github.com/mlab-lattice/lattice/pkg/util/cli/flags"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -101,7 +102,7 @@ func Flag(serviceMesh *string) (cli.Flag, *Options) {
 	envoyFlags, envoyOptions := envoy.Flags()
 	options := &Options{}
 
-	flag := &cli.DelayedEmbeddedFlag{
+	flag := &flags.DelayedEmbedded{
 		Name:     "service-mesh-var",
 		Required: true,
 		Usage:    "configuration for the service mesh",

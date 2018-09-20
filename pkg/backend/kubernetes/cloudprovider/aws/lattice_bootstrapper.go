@@ -8,6 +8,7 @@ import (
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/lifecycle/lattice/bootstrap/bootstrapper"
 	"github.com/mlab-lattice/lattice/pkg/util/cli"
+	"github.com/mlab-lattice/lattice/pkg/util/cli/flags"
 	"github.com/mlab-lattice/lattice/pkg/util/terraform"
 )
 
@@ -58,58 +59,58 @@ func LatticeBootstrapperFlags() (cli.Flags, *LatticeBootstrapperOptions) {
 		},
 	}
 	flags := cli.Flags{
-		&cli.StringFlag{
+		&flags.String{
 			Name:     "region",
 			Required: true,
 			Target:   &options.Region,
 		},
-		&cli.StringFlag{
+		&flags.String{
 			Name:     "account-id",
 			Required: true,
 			Target:   &options.AccountID,
 		},
-		&cli.StringFlag{
+		&flags.String{
 			Name:     "vpc-id",
 			Required: true,
 			Target:   &options.VPCID,
 		},
 
-		&cli.StringFlag{
+		&flags.String{
 			Name:     "route53-private-zone-id",
 			Required: true,
 			Target:   &options.Route53PrivateZoneID,
 		},
-		&cli.StringSliceFlag{
+		&flags.StringSliceFlag{
 			Name:     "subnet-ids",
 			Required: true,
 			Target:   &options.SubnetIDs,
 		},
-		&cli.StringFlag{
+		&flags.String{
 			Name:     "master-node-security-group-id",
 			Required: true,
 			Target:   &options.MasterNodeSecurityGroupID,
 		},
-		&cli.StringFlag{
+		&flags.String{
 			Name:     "worker-node-ami-id",
 			Required: true,
 			Target:   &options.WorkerNodeAMIID,
 		},
-		&cli.StringFlag{
+		&flags.String{
 			Name:     "key-name",
 			Required: true,
 			Target:   &options.KeyName,
 		},
 
-		&cli.EmbeddedFlag{
+		&flags.Embedded{
 			Name:     "controller-manager-var",
 			Required: true,
 			Flags: cli.Flags{
-				&cli.StringFlag{
+				&flags.String{
 					Name:    "terraform-module-path",
 					Default: "/etc/terraform/modules/aws",
 					Target:  &options.ControllerManagerOptions.TerraformModulePath,
 				},
-				&cli.StringFlag{
+				&flags.String{
 					Name:     "terraform-backend",
 					Required: true,
 					Target:   &terraformBackend,

@@ -68,7 +68,7 @@ func (c *StatusCommand) Base() (*latticectl.BaseCommand, error) {
 	return cmd.Base()
 }
 
-func GetBuild(client v1client.BuildClient, buildID v1.BuildID, format printer.Format, writer io.Writer) error {
+func GetBuild(client v1client.SystemBuildClient, buildID v1.BuildID, format printer.Format, writer io.Writer) error {
 	build, err := client.Get(buildID)
 	if err != nil {
 		return err
@@ -92,7 +92,7 @@ func GetBuild(client v1client.BuildClient, buildID v1.BuildID, format printer.Fo
 // the supplied io.Writer in the given printer.Format, unless the printer.Format is
 // printer.FormatTable, in which case it always writes to the terminal.
 func WatchBuild(
-	client v1client.BuildClient,
+	client v1client.SystemBuildClient,
 	buildID v1.BuildID,
 	format printer.Format,
 	writer io.Writer,
@@ -140,19 +140,19 @@ func PrintBuildStateDuringWatchBuild(writer io.Writer, s *spinner.Spinner, build
 	switch build.State {
 	case v1.BuildStatePending:
 		s.Start()
-		s.Suffix = fmt.Sprintf(" Build pending for version: %s...", color.ID(string(build.Version)))
+		s.Suffix = fmt.Sprintf(" Build pending for version: %s...", color.ID(string(*build.Version)))
 	case v1.BuildStateRunning:
 		s.Start()
-		s.Suffix = fmt.Sprintf(" Building version: %s...", color.ID(string(build.Version)))
+		s.Suffix = fmt.Sprintf(" Building version: %s...", color.ID(string(*build.Version)))
 	case v1.BuildStateSucceeded:
 		s.Stop()
-		printBuildSuccess(writer, string(build.Version), build.ID)
+		printBuildSuccess(writer, string(*build.Version), build.ID)
 	case v1.BuildStateFailed:
 		s.Stop()
 
 		var containerErrors [][]string
 
-		for serviceName, service := range build.Services {
+		for serviceName, service := range build.Workloads {
 			if service.State == v1.ContainerBuildStateFailed {
 				containerFailureMessage := ""
 
@@ -182,7 +182,7 @@ func PrintBuildStateDuringWatchBuild(writer io.Writer, s *spinner.Spinner, build
 			}
 		}
 
-		PrintBuildFailure(writer, string(build.Version), containerErrors)
+		PrintBuildFailure(writer, string(*build.Version), containerErrors)
 	}
 }
 
@@ -244,7 +244,7 @@ func BuildPrinter(build *v1.Build, format printer.Format) printer.Interface {
 		}
 
 		var rows [][]string
-		for path, service := range build.Services {
+		for path, service := range build.Workloads {
 			var infoMessage string
 
 			if service.FailureMessage == nil {

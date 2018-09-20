@@ -9,6 +9,7 @@ import (
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	"github.com/mlab-lattice/lattice/pkg/latticectl"
 	"github.com/mlab-lattice/lattice/pkg/util/cli"
+	"github.com/mlab-lattice/lattice/pkg/util/cli/flags"
 )
 
 type LogsCommand struct {
@@ -25,33 +26,33 @@ func (c *LogsCommand) Base() (*latticectl.BaseCommand, error) {
 	cmd := &latticectl.JobCommand{
 		Name: "logs",
 		Flags: cli.Flags{
-			&cli.StringFlag{
+			&flags.String{
 				Name:   "sidecar",
 				Short:  "s",
 				Target: &sidecarStr,
 			},
-			&cli.BoolFlag{
+			&flags.Bool{
 				Name:    "follow",
 				Short:   "f",
 				Default: false,
 				Target:  &follow,
 			},
-			&cli.BoolFlag{
+			&flags.Bool{
 				Name:    "timestamps",
 				Default: false,
 				Target:  &timestamps,
 			},
-			&cli.StringFlag{
+			&flags.String{
 				Name:     "since-time",
 				Required: false,
 				Target:   &sinceTime,
 			},
-			&cli.StringFlag{
+			&flags.String{
 				Name:     "since",
 				Required: false,
 				Target:   &since,
 			},
-			&cli.IntFlag{
+			&flags.Int{
 				Name:     "tail",
 				Required: false,
 				Short:    "t",
@@ -60,11 +61,13 @@ func (c *LogsCommand) Base() (*latticectl.BaseCommand, error) {
 		},
 		Run: func(ctx latticectl.JobCommandContext, args []string) {
 			c := ctx.Client().Systems().Jobs(ctx.SystemID())
-			logOptions := v1.NewContainerLogOptions()
-			logOptions.Follow = follow
-			logOptions.Timestamps = timestamps
-			logOptions.SinceTime = sinceTime
-			logOptions.Since = since
+
+			logOptions := &v1.ContainerLogOptions{
+				Follow:     follow,
+				Timestamps: timestamps,
+				SinceTime:  sinceTime,
+				Since:      since,
+			}
 
 			if tail != 0 {
 				tl := int64(tail)
@@ -87,7 +90,7 @@ func (c *LogsCommand) Base() (*latticectl.BaseCommand, error) {
 }
 
 func GetJobLogs(
-	client v1client.JobClient,
+	client v1client.SystemJobClient,
 	jobID v1.JobID,
 	sidecar *string,
 	logOptions *v1.ContainerLogOptions,

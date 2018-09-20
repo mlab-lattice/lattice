@@ -8,10 +8,12 @@ import (
 
 	v1client "github.com/mlab-lattice/lattice/pkg/api/client/v1"
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
+	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 	"github.com/mlab-lattice/lattice/pkg/latticectl"
 	"github.com/mlab-lattice/lattice/pkg/latticectl/commands/systems/builds"
 	"github.com/mlab-lattice/lattice/pkg/util/cli"
 	"github.com/mlab-lattice/lattice/pkg/util/cli/color"
+	"github.com/mlab-lattice/lattice/pkg/util/cli/flags"
 	"github.com/mlab-lattice/lattice/pkg/util/cli/printer"
 )
 
@@ -27,15 +29,20 @@ func (c *BuildCommand) Base() (*latticectl.BaseCommand, error) {
 		Target: &watch,
 	}
 	var version string
+	var path tree.Path
 
 	cmd := &latticectl.SystemCommand{
 		Name: "build",
 		Flags: []cli.Flag{
 			output.Flag(),
-			&cli.StringFlag{
-				Name:     "version",
-				Required: true,
-				Target:   &version,
+			&flags.Path{
+				Name:    "path",
+				Default: tree.RootPath(),
+				Target:  &path,
+			},
+			&flags.String{
+				Name:   "version",
+				Target: &version,
 			},
 			watchFlag.Flag(),
 		},
@@ -47,7 +54,13 @@ func (c *BuildCommand) Base() (*latticectl.BaseCommand, error) {
 
 			c := ctx.Client().Systems().Builds(ctx.SystemID())
 
-			err = BuildSystem(c, v1.SystemVersion(version), format, os.Stdout, watch)
+			version := v1.Version(version)
+			var v *v1.Version
+			if version != "" {
+				v = &version
+			}
+
+			err = BuildSystem(c, v, &path, format, os.Stdout, watch)
 			if err != nil {
 				//log.Fatal(err)
 				os.Exit(1)
@@ -59,13 +72,20 @@ func (c *BuildCommand) Base() (*latticectl.BaseCommand, error) {
 }
 
 func BuildSystem(
-	client v1client.BuildClient,
-	version v1.SystemVersion,
+	client v1client.SystemBuildClient,
+	version *v1.Version,
+	path *tree.Path,
 	format printer.Format,
 	writer io.Writer,
 	watch bool,
 ) error {
-	build, err := client.Create(version)
+	var build *v1.Build
+	var err error
+	if version != nil {
+		build, err = client.CreateFromVersion(*version)
+	} else {
+		build, err = client.CreateFromPath(*path)
+	}
 	if err != nil {
 		return err
 	}
@@ -77,7 +97,7 @@ func BuildSystem(
 		return builds.WatchBuild(client, build.ID, format, os.Stdout, builds.PrintBuildStateDuringWatchBuild)
 	}
 
-	fmt.Fprintf(writer, "Building version %s, Build ID: %s\n\n", version, color.ID(string(build.ID)))
+	fmt.Fprintf(writer, "Build ID: %s\n\n", color.ID(string(build.ID)))
 	fmt.Fprintf(writer, "To view the status of the build, run:\n\n    latticectl system:builds:status --build %s [--watch]\n", color.ID(string(build.ID)))
 	return nil
 }

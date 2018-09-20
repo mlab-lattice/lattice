@@ -15,6 +15,7 @@ import (
 	kubeutil "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/kubernetes"
 	"github.com/mlab-lattice/lattice/pkg/latticectl"
 	"github.com/mlab-lattice/lattice/pkg/util/cli"
+	"github.com/mlab-lattice/lattice/pkg/util/cli/flags"
 
 	"github.com/mlab-lattice/lattice/pkg/util/terraform"
 	kubeclientset "k8s.io/client-go/kubernetes"
@@ -60,57 +61,57 @@ func (c *Command) Base() (*latticectl.BaseCommand, error) {
 	cmd := &latticectl.BaseCommand{
 		Name: "bootstrap",
 		Flags: cli.Flags{
-			&cli.StringFlag{
+			&flags.String{
 				Name:     "lattice-id",
 				Required: true,
 				Target:   &latticeID,
 				Usage:    "ID of the Lattice to bootstrap",
 			},
 
-			&cli.StringFlag{
+			&flags.String{
 				Name:    "namespace-prefix",
 				Default: "lattice",
 				Target:  &namespacePrefix,
 				Usage:   "ID of the Lattice to bootstrap",
 			},
 
-			&cli.StringFlag{
+			&flags.String{
 				Name:     "internal-dns-domain",
 				Required: true,
 				Target:   &internalDNSDomain,
 				Usage:    "dns domain to use for internal domains",
 			},
 
-			&cli.StringFlag{
+			&flags.String{
 				Name:   "kubeconfig",
 				Target: &kubeConfigPath,
 				Usage:  "path to kubeconfig",
 			},
 
-			&cli.EmbeddedFlag{
+			&flags.Embedded{
 				Name:     "api-var",
 				Required: true,
 				Usage:    "configuration for the api",
 				Flags: cli.Flags{
-					&cli.StringFlag{
+					&flags.String{
 						Name:     "image",
 						Required: true,
 						Target:   &options.MasterComponents.APIServer.Image,
 						Usage:    "docker image to user for the api",
 					},
-					&cli.Int32Flag{
+					&flags.Int32{
 						Name:    "port",
 						Default: 80,
 						Target:  &options.MasterComponents.APIServer.Port,
 						Usage:   "port the api should listen on",
 					},
-					&cli.BoolFlag{
+					&flags.Bool{
 						Name:    "host-network",
 						Target:  &options.MasterComponents.APIServer.HostNetwork,
 						Default: false,
 						Usage:   "whether or not to run the api on the host network",
 					},
-					&cli.StringSliceFlag{
+					&flags.StringSliceFlag{
 						Name:   "args",
 						Target: &options.MasterComponents.APIServer.Args,
 						Usage:  "extra arguments to pass to the api",
@@ -118,18 +119,18 @@ func (c *Command) Base() (*latticectl.BaseCommand, error) {
 				},
 			},
 
-			&cli.EmbeddedFlag{
+			&flags.Embedded{
 				Name:     "controller-manager-var",
 				Required: true,
 				Usage:    "configuration for the controller manager",
 				Flags: cli.Flags{
-					&cli.StringFlag{
+					&flags.String{
 						Name:     "image",
 						Required: true,
 						Target:   &options.MasterComponents.LatticeControllerManager.Image,
 						Usage:    "docker image to user for the controller-manager",
 					},
-					&cli.StringSliceFlag{
+					&flags.StringSliceFlag{
 						Name:   "args",
 						Target: &options.MasterComponents.LatticeControllerManager.Args,
 						Usage:  "extra arguments to pass to the controller manager",
@@ -137,18 +138,18 @@ func (c *Command) Base() (*latticectl.BaseCommand, error) {
 				},
 			},
 
-			&cli.EmbeddedFlag{
+			&flags.Embedded{
 				Name:     "container-builder-var",
 				Required: true,
 				Usage:    "configuration for the container builder",
 				Flags: cli.Flags{
-					&cli.StringFlag{
+					&flags.String{
 						Name:     "image",
 						Required: true,
 						Target:   &options.Config.ContainerBuild.Builder.Image,
 						Usage:    "docker image to user for the container-builder",
 					},
-					&cli.StringFlag{
+					&flags.String{
 						Name:   "docker-api-version",
 						Target: &options.Config.ContainerBuild.Builder.DockerAPIVersion,
 						Usage:  "version of the docker API used by the build node docker daemon",
@@ -156,34 +157,34 @@ func (c *Command) Base() (*latticectl.BaseCommand, error) {
 				},
 			},
 
-			&cli.EmbeddedFlag{
+			&flags.Embedded{
 				Name:     "container-build-docker-artifact-var",
 				Required: true,
 				Usage:    "configuration for the docker artifacts produced by the container builder",
 				Flags: cli.Flags{
-					&cli.StringFlag{
+					&flags.String{
 						Name:     "registry",
 						Target:   &options.Config.ContainerBuild.DockerArtifact.Registry,
 						Required: true,
 						Usage:    "registry to tag container build docker artifacts with",
 					},
-					&cli.StringFlag{
+					&flags.String{
 						Name:   "registry-auth-type",
 						Target: &containerBuildRegistryAuthType,
 						Usage:  "type of auth to use for the container build registry",
 					},
-					&cli.BoolFlag{
+					&flags.Bool{
 						Name:    "repository-per-image",
 						Target:  &options.Config.ContainerBuild.DockerArtifact.RepositoryPerImage,
 						Default: false,
 						Usage:   "if false, one repository with a new tag for each artifact will be use, if true a new repository for each artifact will be used",
 					},
-					&cli.StringFlag{
+					&flags.String{
 						Name:   "repository",
 						Target: &options.Config.ContainerBuild.DockerArtifact.Repository,
 						Usage:  "repository to tag container build docker artifacts with, required if container-build-docker-artifact-repository-per-image is false",
 					},
-					&cli.BoolFlag{
+					&flags.Bool{
 						Name:    "push",
 						Target:  &options.Config.ContainerBuild.DockerArtifact.Push,
 						Default: true,
@@ -192,7 +193,7 @@ func (c *Command) Base() (*latticectl.BaseCommand, error) {
 				},
 			},
 
-			&cli.StringFlag{
+			&flags.String{
 				Name:     "cloud-provider",
 				Required: true,
 				Target:   &cloudProvider,
@@ -200,7 +201,7 @@ func (c *Command) Base() (*latticectl.BaseCommand, error) {
 			},
 			cloudBootstrapFlag,
 
-			&cli.StringFlag{
+			&flags.String{
 				Name:     "service-mesh",
 				Required: true,
 				Target:   &serviceMesh,
@@ -208,7 +209,7 @@ func (c *Command) Base() (*latticectl.BaseCommand, error) {
 			},
 			serviceMeshBootstrapFlag,
 
-			&cli.StringFlag{
+			&flags.String{
 				Name:     "terraform-backend",
 				Required: false,
 				Target:   &terraformBackend,
@@ -216,13 +217,13 @@ func (c *Command) Base() (*latticectl.BaseCommand, error) {
 			},
 			terraformBackendFlag,
 
-			&cli.BoolFlag{
+			&flags.Bool{
 				Name:    "dry-run",
 				Default: false,
 				Target:  &dryRun,
 				Usage:   "if set, will not actually bootstrap the cluster. useful with --print",
 			},
-			&cli.BoolFlag{
+			&flags.Bool{
 				Name:    "print",
 				Default: false,
 				Target:  &print,
