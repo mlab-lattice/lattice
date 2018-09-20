@@ -10,141 +10,85 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-type runningServiceInfo struct {
-	MainContainerFailed bool
-	FailedSidecars      []string
+type runningWorkloadInfo struct {
+	MainContainerRunning bool
+	RunningSidecars      []string
 }
 
 func (c *Controller) syncRunningBuild(build *latticev1.Build, stateInfo stateInfo) error {
-	runningServicesInfo := make(map[tree.Path]runningServiceInfo)
-	runningJobsInfo := make(map[tree.Path]runningServiceInfo)
-	var activeServices []tree.Path
-	var activeJobs []tree.Path
+	runningWorkloadsInfo := make(map[tree.Path]runningWorkloadInfo)
+	var runningWorkloads []tree.Path
 
-	for buildName := range stateInfo.activeContainerBuilds {
-		buildActiveServices, ok := stateInfo.containerBuildServices[buildName]
+	for containerBuild := range stateInfo.activeContainerBuilds {
+		workloads, ok := stateInfo.containerBuildWorkloads[containerBuild]
 		if !ok {
 			continue
 		}
 
-		activeServices = append(activeServices, buildActiveServices...)
+		runningWorkloads = append(runningWorkloads, workloads...)
 
-		for _, servicePath := range buildActiveServices {
-			serviceInfo, ok := build.Status.Services[servicePath]
+		for _, path := range workloads {
+			workloadInfo, ok := build.Status.Workloads[path]
 			if !ok {
 				// this really really shouldn't happen...
-				runningServicesInfo[servicePath] = runningServiceInfo{}
+				runningWorkloadsInfo[path] = runningWorkloadInfo{}
 				continue
 			}
 
-			info := runningServiceInfo{}
-			if serviceInfo.MainContainer == buildName {
-				info.MainContainerFailed = true
+			info := runningWorkloadInfo{}
+			if workloadInfo.MainContainer == containerBuild {
+				info.MainContainerRunning = true
 			}
 
-			for sidecar, sidecarBuild := range serviceInfo.Sidecars {
-				if sidecarBuild == buildName {
-					info.FailedSidecars = append(info.FailedSidecars, sidecar)
+			for sidecar, sidecarBuild := range workloadInfo.Sidecars {
+				if sidecarBuild == containerBuild {
+					info.RunningSidecars = append(info.RunningSidecars, sidecar)
 				}
 			}
 
-			runningServicesInfo[servicePath] = info
-		}
-
-		buildActiveJobs, ok := stateInfo.containerBuildJobs[buildName]
-		if !ok {
-			continue
-		}
-
-		activeJobs = append(activeJobs, buildActiveJobs...)
-
-		for _, jobPath := range buildActiveJobs {
-			jobInfo, ok := build.Status.Jobs[jobPath]
-			if !ok {
-				// this really really shouldn't happen...
-				runningJobsInfo[jobPath] = runningServiceInfo{}
-				continue
-			}
-
-			info := runningServiceInfo{}
-			if jobInfo.MainContainer == buildName {
-				info.MainContainerFailed = true
-			}
-
-			for sidecar, sidecarBuild := range jobInfo.Sidecars {
-				if sidecarBuild == buildName {
-					info.FailedSidecars = append(info.FailedSidecars, sidecar)
-				}
-			}
-
-			runningJobsInfo[jobPath] = info
+			runningWorkloadsInfo[path] = info
 		}
 	}
 
-	// Sort the service paths so the message is the same for the same failed container builds
-	sort.Slice(activeServices, func(i, j int) bool {
-		return string(activeServices[i]) < string(activeServices[j])
+	// Sort the workloads paths so the message is the same for the same failed container builds
+	sort.Slice(runningWorkloads, func(i, j int) bool {
+		return string(runningWorkloads[i]) < string(runningWorkloads[j])
 	})
 
-	message := "the following services are still building:"
-	for i, service := range activeServices {
+	message := "the following workloads are still building: "
+	for i, path := range runningWorkloads {
 		if i != 0 {
 			message = message + ","
 		}
 
-		info := runningServicesInfo[service]
-		serviceMessage := fmt.Sprintf("%v (", service.String())
-		previousFailure := false
+		info := runningWorkloadsInfo[path]
+		serviceMessage := path.String()
 
-		if info.MainContainerFailed {
+		hasSidecars := len(info.RunningSidecars) != 0
+		if hasSidecars {
+			serviceMessage += "("
+		}
+
+		delim := ""
+		if info.MainContainerRunning && hasSidecars {
 			serviceMessage += "main container"
-			previousFailure = true
+			delim = ", "
 		}
 
-		for _, sidecar := range info.FailedSidecars {
-			if previousFailure {
-				serviceMessage += ", "
-			}
-
+		for _, sidecar := range info.RunningSidecars {
+			serviceMessage += delim
 			serviceMessage += fmt.Sprintf("%v sidecar", sidecar)
+			delim = ", "
 		}
 
-		message = message + " " + serviceMessage
-	}
-
-	// Sort the job paths so the message is the same for the same failed container builds
-	sort.Slice(activeJobs, func(i, j int) bool {
-		return string(activeJobs[i]) < string(activeJobs[j])
-	})
-
-	message += "\nthe following jobs are still building:"
-	for i, job := range activeJobs {
-		if i != 0 {
-			message = message + ","
+		message += serviceMessage
+		if hasSidecars {
+			message += ")"
 		}
-
-		info := runningJobsInfo[job]
-		serviceMessage := fmt.Sprintf("%v (", job.String())
-		previousFailure := false
-
-		if info.MainContainerFailed {
-			serviceMessage += "main container"
-			previousFailure = true
-		}
-
-		for _, sidecar := range info.FailedSidecars {
-			if previousFailure {
-				serviceMessage += ", "
-			}
-
-			serviceMessage += fmt.Sprintf("%v sidecar", sidecar)
-		}
-
-		message = message + " " + serviceMessage
 	}
 
 	// If we haven't logged a start timestamp yet, use now.
-	// This should only happen if we created all of the service builds
+	// This should only happen if we created all of the path builds
 	// but then failed to update the status.
 	startTimestamp := build.Status.StartTimestamp
 	if startTimestamp == nil {
@@ -156,10 +100,11 @@ func (c *Controller) syncRunningBuild(build *latticev1.Build, stateInfo stateInf
 		build,
 		latticev1.BuildStateRunning,
 		message,
+		nil,
+		build.Status.Definition,
 		startTimestamp,
 		nil,
-		build.Status.Services,
-		build.Status.Jobs,
+		build.Status.Workloads,
 		stateInfo.containerBuildStatuses,
 	)
 	return err

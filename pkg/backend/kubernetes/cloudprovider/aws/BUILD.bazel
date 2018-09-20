@@ -22,6 +22,7 @@ go_library(
         "//pkg/backend/kubernetes/lifecycle/system/bootstrap/bootstrapper:go_default_library",
         "//pkg/backend/kubernetes/util/kubernetes:go_default_library",
         "//pkg/util/cli:go_default_library",
+        "//pkg/util/cli/flags:go_default_library",
         "//pkg/util/terraform:go_default_library",
         "//pkg/util/terraform/provider/aws:go_default_library",
         "@com_github_aws_aws_sdk_go//aws:go_default_library",

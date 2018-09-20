@@ -113,7 +113,7 @@ func NewController(
 		// It's assumed there is always one and only one config object.
 		AddFunc:    sc.handleConfigAdd,
 		UpdateFunc: sc.handleConfigUpdate,
-		// TODO(kevinrosendahl): for now it is assumed that ContainerBuilds are not deleted.
+		// TODO(kevindrosendahl): for now it is assumed that ContainerBuilds are not deleted.
 	})
 	sc.configLister = configInformer.Lister()
 	sc.configListerSynced = configInformer.Informer().HasSynced

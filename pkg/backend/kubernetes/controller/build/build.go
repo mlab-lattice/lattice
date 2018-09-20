@@ -4,8 +4,10 @@ import (
 	"fmt"
 	"reflect"
 
+	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	kubeutil "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/kubernetes"
+	"github.com/mlab-lattice/lattice/pkg/definition/component/resolver"
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -15,21 +17,25 @@ func (c *Controller) updateBuildStatus(
 	build *latticev1.Build,
 	state latticev1.BuildState,
 	message string,
+	internalError *string,
+	definition *resolver.ResolutionTree,
 	startTimestamp *metav1.Time,
 	completionTimestamp *metav1.Time,
-	services map[tree.Path]latticev1.BuildStatusService,
-	jobs map[tree.Path]latticev1.BuildStatusJob,
-	containerBuildStatuses map[string]latticev1.ContainerBuildStatus,
+	workloads map[tree.Path]latticev1.BuildStatusWorkload,
+	containerBuildStatuses map[v1.ContainerBuildID]latticev1.ContainerBuildStatus,
 ) (*latticev1.Build, error) {
 	status := latticev1.BuildStatus{
 		State:   state,
 		Message: message,
 
+		InternalError: internalError,
+
+		Definition: definition,
+
 		StartTimestamp:      startTimestamp,
 		CompletionTimestamp: completionTimestamp,
 
-		Services: services,
-		Jobs:     jobs,
+		Workloads:              workloads,
 		ContainerBuildStatuses: containerBuildStatuses,
 	}
 

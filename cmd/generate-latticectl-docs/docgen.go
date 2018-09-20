@@ -5,7 +5,7 @@ import (
 	"io/ioutil"
 	"log"
 
-	"github.com/mlab-lattice/lattice/cmd/latticectl/app"
+	"github.com/mlab-lattice/lattice/pkg/latticectl"
 	"github.com/mlab-lattice/lattice/pkg/util/cli/docgen"
 )
 
@@ -23,13 +23,13 @@ func main() {
 	log.Printf("Input docs dir: '%s' \n", inputDocsDir)
 	log.Printf("Output docs file path: '%s' \n", outputDocsFilePath)
 
-	latticectl := app.Latticectl
-	cmd, er := latticectl.Init()
-	if er != nil {
+	latticectl := latticectl.Command
+	err := latticectl.Init()
+	if err != nil {
 		log.Fatalf("FATAL: Error while initialising latticectl")
 	}
 
-	reader, err := docgen.GenerateMarkdown(cmd)
+	reader, err := docgen.GenerateMarkdown(&latticectl)
 	if err != nil {
 		log.Fatalf("FATAL: Error while generating markdown: %s", err)
 	}

@@ -3,11 +3,11 @@ package v1
 import (
 	"fmt"
 
+	"encoding/json"
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	kubeutil "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/kubernetes"
+	"github.com/mlab-lattice/lattice/pkg/definition/component/resolver"
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
-	definitionv1 "github.com/mlab-lattice/lattice/pkg/definition/v1"
-
 	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -61,25 +61,70 @@ func (s *System) Description() string {
 type SystemSpec struct {
 	DefinitionURL string `json:"definitionUrl"`
 
-	NodePools map[string]NodePoolSpec             `json:"nodePools"`
-	Services  map[tree.Path]SystemSpecServiceInfo `json:"services"`
-	Jobs      map[tree.Path]SystemSpecJobInfo     `json:"jobs"`
+	Definition             *resolver.ResolutionTree          `json:"definition"`
+	WorkloadBuildArtifacts *SystemSpecWorkloadBuildArtifacts `json:"workloadBuildArtifacts"`
 }
 
 // +k8s:deepcopy-gen=false
-type SystemSpecServiceInfo struct {
-	Definition *definitionv1.Service `json:"definition"`
-
-	// ContainerBuildArtifacts maps container names to the artifacts created by their build
-	ContainerBuildArtifacts map[string]ContainerBuildArtifacts `json:"containerBuildArtifacts"`
+type SystemSpecWorkloadBuildArtifacts struct {
+	inner *tree.JSONRadix
 }
 
-// +k8s:deepcopy-gen=false
-type SystemSpecJobInfo struct {
-	Definition *definitionv1.Job `json:"definition"`
+func NewSystemSpecWorkloadBuildArtifacts() *SystemSpecWorkloadBuildArtifacts {
+	return &SystemSpecWorkloadBuildArtifacts{
+		inner: tree.NewJSONRadix(
+			func(i interface{}) (json.RawMessage, error) {
+				return json.Marshal(&i)
+			},
+			func(data json.RawMessage) (interface{}, error) {
+				var w WorkloadContainerBuildArtifacts
+				if err := json.Unmarshal(data, &w); err != nil {
+					return nil, err
+				}
 
-	// ContainerBuildArtifacts maps container names to the artifacts created by their build
-	ContainerBuildArtifacts map[string]ContainerBuildArtifacts `json:"containerBuildArtifacts"`
+				return w, nil
+			},
+		),
+	}
+}
+
+func (a *SystemSpecWorkloadBuildArtifacts) Insert(
+	p tree.Path,
+	w WorkloadContainerBuildArtifacts,
+) (WorkloadContainerBuildArtifacts, bool) {
+	i, ok := a.inner.Insert(p, w)
+	if !ok {
+		return WorkloadContainerBuildArtifacts{}, false
+	}
+
+	return i.(WorkloadContainerBuildArtifacts), true
+}
+
+func (a *SystemSpecWorkloadBuildArtifacts) Get(p tree.Path) (WorkloadContainerBuildArtifacts, bool) {
+	i, ok := a.inner.Get(p)
+	if !ok {
+		return WorkloadContainerBuildArtifacts{}, false
+	}
+
+	return i.(WorkloadContainerBuildArtifacts), true
+}
+
+func (a *SystemSpecWorkloadBuildArtifacts) ReplacePrefix(p tree.Path, other *SystemSpecWorkloadBuildArtifacts) {
+	a.inner.ReplacePrefix(p, other.inner.Radix)
+}
+
+func (a *SystemSpecWorkloadBuildArtifacts) MarshalJSON() ([]byte, error) {
+	return json.Marshal(&a.inner)
+}
+
+func (a *SystemSpecWorkloadBuildArtifacts) UnmarshalJSON(data []byte) error {
+	a2 := NewSystemSpecWorkloadBuildArtifacts()
+	if err := json.Unmarshal(data, &a2.inner); err != nil {
+		return err
+	}
+
+	*a = *a2
+	return nil
 }
 
 // +k8s:deepcopy-gen=false
@@ -88,8 +133,8 @@ type SystemStatus struct {
 
 	State SystemState `json:"state"`
 
-	Services  map[tree.Path]SystemStatusService `json:"services"`
-	NodePools map[string]SystemStatusNodePool   `json:"nodePools"`
+	Services  map[tree.Path]SystemStatusService              `json:"services"`
+	NodePools map[tree.PathSubcomponent]SystemStatusNodePool `json:"nodePools"`
 }
 
 type SystemStatusService struct {
@@ -108,6 +153,7 @@ type SystemState string
 
 const (
 	// lifecycle states
+	// note that the "deleting" state is implied by a non-nil metadata.DeletionTimestamp
 	SystemStatePending SystemState = ""
 	SystemStateFailed  SystemState = "failed"
 
