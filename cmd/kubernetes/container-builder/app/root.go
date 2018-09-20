@@ -13,8 +13,8 @@ import (
 	"github.com/mlab-lattice/lattice/pkg/containerbuilder"
 	definitionv1 "github.com/mlab-lattice/lattice/pkg/definition/v1"
 	"github.com/mlab-lattice/lattice/pkg/util/aws"
-	"github.com/mlab-lattice/lattice/pkg/util/cli2"
-	"github.com/mlab-lattice/lattice/pkg/util/cli2/flags"
+	"github.com/mlab-lattice/lattice/pkg/util/cli"
+	"github.com/mlab-lattice/lattice/pkg/util/cli/flags"
 	"github.com/mlab-lattice/lattice/pkg/util/git"
 )
 

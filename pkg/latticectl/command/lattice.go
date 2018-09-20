@@ -5,7 +5,7 @@ import (
 
 	"github.com/mlab-lattice/lattice/pkg/api/client"
 	"github.com/mlab-lattice/lattice/pkg/api/client/rest"
-	"github.com/mlab-lattice/lattice/pkg/util/cli2"
+	"github.com/mlab-lattice/lattice/pkg/util/cli"
 )
 
 type LatticeCommandContext struct {

@@ -3,7 +3,7 @@ package flags
 import (
 	"fmt"
 
-	"github.com/mlab-lattice/lattice/pkg/util/cli2"
+	"github.com/mlab-lattice/lattice/pkg/util/cli"
 
 	"github.com/spf13/pflag"
 )

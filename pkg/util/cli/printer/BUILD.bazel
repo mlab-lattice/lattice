@@ -8,10 +8,10 @@ go_library(
         "json.go",
         "table.go",
     ],
-    importpath = "github.com/mlab-lattice/lattice/pkg/util/cli2/printer",
+    importpath = "github.com/mlab-lattice/lattice/pkg/util/cli/printer",
     visibility = ["//visibility:public"],
     deps = [
-        "//pkg/util/cli2/color:go_default_library",
+        "//pkg/util/cli/color:go_default_library",
         "@com_github_buger_goterm//:go_default_library",
         "@com_github_olekukonko_tablewriter//:go_default_library",
     ],

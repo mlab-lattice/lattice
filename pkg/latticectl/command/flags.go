@@ -3,8 +3,8 @@ package command
 import (
 	"strings"
 
-	"github.com/mlab-lattice/lattice/pkg/util/cli2/flags"
-	"github.com/mlab-lattice/lattice/pkg/util/cli2/printer"
+	"github.com/mlab-lattice/lattice/pkg/util/cli/flags"
+	"github.com/mlab-lattice/lattice/pkg/util/cli/printer"
 )
 
 const (

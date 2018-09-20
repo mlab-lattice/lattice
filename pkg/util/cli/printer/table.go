@@ -8,7 +8,7 @@ import (
 	//"time"
 	//"sync"
 
-	"github.com/mlab-lattice/lattice/pkg/util/cli2/color"
+	"github.com/mlab-lattice/lattice/pkg/util/cli/color"
 
 	"github.com/buger/goterm"
 	"github.com/olekukonko/tablewriter"
