@@ -1,5 +1,7 @@
 package v1
 
+import "time"
+
 type (
 	SystemID    string
 	SystemState string
@@ -27,4 +29,7 @@ type System struct {
 
 type SystemStatus struct {
 	State SystemState `json:"state"`
+
+	CreationTimestamp time.Time  `json:"createdTimestamp"`
+	DeletionTimestamp *time.Time `json:"deletionTimestamp"`
 }
