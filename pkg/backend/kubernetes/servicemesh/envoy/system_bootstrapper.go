@@ -2,7 +2,7 @@ package envoy
 
 import (
 	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/lifecycle/system/bootstrap/bootstrapper/noop"
-	"github.com/mlab-lattice/lattice/pkg/util/cli"
+	"github.com/mlab-lattice/lattice/pkg/util/cli2"
 )
 
 type SystemBootstrapperOptions struct {

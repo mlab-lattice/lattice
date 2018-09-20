@@ -14,6 +14,7 @@ var (
 	redirectCIDRBlock string
 )
 
+// FIXME(kevindrosendahl): convert this to pkg/util/cli
 func init() {
 	flag.StringVar(&kubeconfig, "kubeconfig", "", "path to kubeconfig file")
 	// XXX <GEB>: should we be using cli here?

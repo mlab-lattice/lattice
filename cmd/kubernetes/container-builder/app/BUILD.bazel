@@ -11,8 +11,8 @@ go_library(
         "//pkg/containerbuilder:go_default_library",
         "//pkg/definition/v1:go_default_library",
         "//pkg/util/aws:go_default_library",
-        "//pkg/util/cli:go_default_library",
-        "//pkg/util/cli/flags:go_default_library",
+        "//pkg/util/cli2:go_default_library",
+        "//pkg/util/cli2/flags:go_default_library",
         "//pkg/util/git:go_default_library",
     ],
 )
