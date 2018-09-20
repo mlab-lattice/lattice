@@ -68,13 +68,13 @@ func CreateSystem(client client.Interface, id v1.SystemID, definition string, w 
 	}
 
 	fmt.Fprintf(
-		w, `system %v initializing
+		w, `system %s initializing
 
 to watch progress, run:
-  latticectl systems status --system %v -w
+  latticectl systems status --system %s -w
 `,
 		color.IDString(string(id)),
-		string(id),
+		id,
 	)
 	return nil
 }

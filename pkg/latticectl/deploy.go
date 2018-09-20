@@ -141,12 +141,13 @@ func displayDeploy(
 deploying %s for system %s. deploy ID: %s
 
 to watch deploy, run:
-    latticectl deploys status --deploy %s -w
+    latticectl deploys status --system %s --deploy %s -w
 `,
 		description,
 		color.IDString(string(system)),
 		color.IDString(string(deploy.ID)),
-		string(deploy.ID),
+		system,
+		deploy.ID,
 	)
 	return nil
 }

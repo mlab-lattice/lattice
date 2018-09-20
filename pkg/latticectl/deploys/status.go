@@ -81,7 +81,7 @@ func WatchDeploy(client client.Interface, system v1.SystemID, id v1.DeployID, w 
 
 			switch deploy.Status.State {
 			case v1.DeployStateFailed:
-				fmt.Fprint(w, color.BoldHiSuccessString("✘ deploy failed\n"))
+				fmt.Fprint(w, color.BoldHiFailureString("✘ deploy failed\n"))
 				return true
 
 			case v1.DeployStateSucceeded:

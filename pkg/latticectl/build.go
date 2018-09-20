@@ -119,12 +119,13 @@ func displayBuild(
 building %s for system %s. build ID: %s
 
 to watch build, run:
-    latticectl builds status --build %s -w
+    latticectl builds status --system %s --build %s -w
 `,
 		description,
 		color.IDString(string(system)),
 		color.IDString(string(build.ID)),
-		string(build.ID),
+		system,
+		build.ID,
 	)
 	return nil
 }

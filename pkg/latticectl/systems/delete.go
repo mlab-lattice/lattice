@@ -66,10 +66,10 @@ func DeleteSystem(client client.Interface, id v1.SystemID, w io.Writer, f printe
 	}
 
 	fmt.Fprintf(
-		w, `system %v deleting
+		w, `system %s deleting
 
 to watch progress, run:
-  latticectl systems status --system %v -w
+  latticectl systems status --system %s -w
 `,
 		color.IDString(string(id)),
 		string(id),

@@ -82,11 +82,12 @@ func displayTeardown(
 tearing down system %s. teardown ID: %s
 
 to watch teardown, run:
-    latticectl teardowns status --teardown %s -w
+    latticectl teardowns status --system %s --teardown %s -w
 `,
 		color.IDString(string(system)),
 		color.IDString(string(teardown.ID)),
-		string(teardown.ID),
+		system,
+		teardown.ID,
 	)
 	return nil
 }

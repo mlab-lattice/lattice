@@ -119,12 +119,16 @@ func WatchSystem(client client.Interface, id v1.SystemID, w io.Writer, f printer
 					return true, nil
 				}
 
-				return false, err
+				// TODO: handle errors
+				return false, nil
+				//return false, err
 			}
 
 			services, err := client.V1().Systems().Services(id).List()
 			if err != nil {
-				return false, err
+				// TODO: handle errors
+				return false, nil
+				//return false, err
 			}
 
 			statuses <- status{system, services}
