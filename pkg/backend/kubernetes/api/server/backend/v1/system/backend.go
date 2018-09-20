@@ -112,11 +112,19 @@ func (b *Backend) transformSystem(system *latticev1.System) (*v1.System, error) 
 		}
 	}
 
+	var version *v1.Version
+	versionLabel, ok := system.DefinitionVersionLabel()
+	if !ok {
+		version = &versionLabel
+	}
+
 	externalSystem := &v1.System{
 		ID:            v1.SystemID(system.Name),
 		DefinitionURL: system.Spec.DefinitionURL,
 		Status: v1.SystemStatus{
 			State: state,
+
+			Version: version,
 		},
 	}
 

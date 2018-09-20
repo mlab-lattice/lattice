@@ -2,6 +2,7 @@ package build
 
 import (
 	"fmt"
+	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	kubeutil "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/kubernetes"
 	"github.com/mlab-lattice/lattice/pkg/definition/component"
@@ -10,6 +11,8 @@ import (
 	definitionv1 "github.com/mlab-lattice/lattice/pkg/definition/v1"
 	"github.com/mlab-lattice/lattice/pkg/util/git"
 	reflectutil "github.com/mlab-lattice/lattice/pkg/util/reflect"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func (c *Controller) syncPendingBuild(build *latticev1.Build) error {
@@ -27,6 +30,8 @@ func (c *Controller) syncPendingBuild(build *latticev1.Build) error {
 				nil,
 				nil,
 				nil,
+				nil,
+				nil,
 			)
 			return err
 
@@ -35,6 +40,8 @@ func (c *Controller) syncPendingBuild(build *latticev1.Build) error {
 				build,
 				latticev1.BuildStateFailed,
 				"only path or version can be set",
+				nil,
+				nil,
 				nil,
 				nil,
 				nil,
@@ -56,6 +63,8 @@ func (c *Controller) syncPendingBuild(build *latticev1.Build) error {
 				nil,
 				nil,
 				nil,
+				nil,
+				nil,
 			)
 			return err
 		}
@@ -72,7 +81,7 @@ func (c *Controller) syncPendingBuild(build *latticev1.Build) error {
 	}
 
 	// find and resolve the build's component
-	path, cmpnt, ctx, err := c.getBuildComponent(system, build)
+	path, cmpnt, ctx, version, err := c.getBuildComponent(system, build)
 	if err != nil {
 		return err
 	}
@@ -85,6 +94,8 @@ func (c *Controller) syncPendingBuild(build *latticev1.Build) error {
 			fmt.Sprintf("error resolving system: %v", err),
 			nil,
 			nil,
+			&path,
+			&version,
 			nil,
 			nil,
 			nil,
@@ -103,6 +114,8 @@ func (c *Controller) syncPendingBuild(build *latticev1.Build) error {
 				"system does not have root",
 				nil,
 				nil,
+				&path,
+				&version,
 				nil,
 				nil,
 				nil,
@@ -119,6 +132,8 @@ func (c *Controller) syncPendingBuild(build *latticev1.Build) error {
 				"root component must be a system",
 				nil,
 				t,
+				&path,
+				&version,
 				nil,
 				nil,
 				nil,
@@ -128,13 +143,16 @@ func (c *Controller) syncPendingBuild(build *latticev1.Build) error {
 		}
 	}
 
+	now := metav1.Now()
 	_, err = c.updateBuildStatus(
 		build,
 		latticev1.BuildStateAccepted,
 		"",
 		nil,
 		t,
-		nil,
+		&path,
+		&version,
+		&now,
 		nil,
 		nil,
 		nil,
@@ -145,7 +163,12 @@ func (c *Controller) syncPendingBuild(build *latticev1.Build) error {
 func (c *Controller) getBuildComponent(
 	system *latticev1.System,
 	build *latticev1.Build,
-) (tree.Path, component.Interface, *git.CommitReference, error) {
+) (
+	tree.Path, component.Interface,
+	*git.CommitReference,
+	v1.Version,
+	error,
+) {
 	// if the build is a version build, return a reference pointing
 	// at the version's tag on the system's definition repo
 	if build.Spec.Path == nil {
@@ -159,7 +182,7 @@ func (c *Controller) getBuildComponent(
 			},
 		}
 
-		return tree.RootPath(), ref, nil, nil
+		return tree.RootPath(), ref, nil, *build.Spec.Version, nil
 	}
 
 	// if it's a path build, first check to make sure that the system
@@ -172,12 +195,19 @@ func (c *Controller) getBuildComponent(
 			fmt.Sprintf("system %v does not have any components, cannot build the system based off a path", system.Name),
 			nil,
 			nil,
+			&path,
+			nil,
 			nil,
 			nil,
 			nil,
 			nil,
 		)
-		return "", nil, nil, err
+		return "", nil, nil, "", err
+	}
+
+	version, ok := system.DefinitionVersionLabel()
+	if !ok {
+		version = v1.Version("unknown")
 	}
 
 	// if we're just rebuilding the whole system, we can exit early for this simple case
@@ -190,15 +220,17 @@ func (c *Controller) getBuildComponent(
 				fmt.Sprintf("system %v does not contain %v", system.Name, path.String()),
 				nil,
 				nil,
+				&path,
+				&version,
 				nil,
 				nil,
 				nil,
 				nil,
 			)
-			return "", nil, nil, err
+			return "", nil, nil, "", err
 		}
 
-		return path, info.Component, info.Commit, nil
+		return path, info.Component, info.Commit, version, nil
 	}
 
 	// otherwise, if the path is not the root, get the path's parent
@@ -212,12 +244,14 @@ func (c *Controller) getBuildComponent(
 			fmt.Sprintf("system %v does not contain %v", system.Name, path.String()),
 			nil,
 			nil,
+			&path,
+			&version,
 			nil,
 			nil,
 			nil,
 			nil,
 		)
-		return "", nil, nil, err
+		return "", nil, nil, version, err
 	}
 
 	// since the parent is necessarily an internal node, ensure that it is a system
@@ -229,12 +263,14 @@ func (c *Controller) getBuildComponent(
 			fmt.Sprintf("system %v internal node %v is not a system", system.Name, parent.String()),
 			nil,
 			nil,
+			&path,
+			&version,
 			nil,
 			nil,
 			nil,
 			nil,
 		)
-		return "", nil, nil, err
+		return "", nil, nil, "", err
 	}
 
 	// get the path's component from its parent system
@@ -250,13 +286,15 @@ func (c *Controller) getBuildComponent(
 			fmt.Sprintf("system %v does not contain %v", system.Name, path.String()),
 			nil,
 			nil,
+			&path,
+			&version,
 			nil,
 			nil,
 			nil,
 			nil,
 		)
-		return "", nil, nil, err
+		return "", nil, nil, "", err
 	}
 
-	return path, cmpnt, parentInfo.Commit, nil
+	return path, cmpnt, parentInfo.Commit, version, nil
 }

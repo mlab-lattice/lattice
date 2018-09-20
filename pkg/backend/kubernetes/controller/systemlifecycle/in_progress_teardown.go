@@ -35,7 +35,7 @@ func (c *Controller) syncInProgressTeardown(teardown *latticev1.Teardown) error 
 		return nil
 
 	case latticev1.SystemStateStable:
-		system, err = c.updateSystemLabels(system, nil, nil, nil)
+		system, err = c.updateSystemLabels(system, nil)
 		if err != nil {
 			return err
 		}

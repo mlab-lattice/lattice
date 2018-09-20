@@ -206,8 +206,8 @@ func (b *buildBackend) transformBuild(build *latticev1.Build) (v1.Build, error) 
 	externalBuild := v1.Build{
 		ID: v1.BuildID(build.Name),
 
-		Version: build.Spec.Version,
 		Path:    build.Spec.Path,
+		Version: build.Spec.Version,
 
 		Status: v1.BuildStatus{
 			State:   state,
@@ -215,6 +215,9 @@ func (b *buildBackend) transformBuild(build *latticev1.Build) (v1.Build, error) 
 
 			StartTimestamp:      startTimestamp,
 			CompletionTimestamp: completionTimestamp,
+
+			Path:    build.Status.Path,
+			Version: build.Status.Version,
 
 			Workloads: make(map[tree.Path]v1.WorkloadBuild),
 		},

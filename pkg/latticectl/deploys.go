@@ -138,11 +138,19 @@ func deploysTable(w io.Writer) *printer.Table {
 			Alignment: printer.TableAlignLeft,
 		},
 		{
+			Header:    "message",
+			Alignment: printer.TableAlignLeft,
+		},
+		{
 			Header:    "build",
 			Alignment: printer.TableAlignLeft,
 		},
 		{
-			Header:    "message",
+			Header:    "path",
+			Alignment: printer.TableAlignLeft,
+		},
+		{
+			Header:    "version",
 			Alignment: printer.TableAlignLeft,
 		},
 		{
@@ -180,14 +188,24 @@ func deploysTableRows(deploys []v1.Deploy) []printer.TableRow {
 			target = fmt.Sprintf("version %v", *deploy.Version)
 		}
 
+		message := "-"
+		if deploy.Status.Message != "" {
+			message = deploy.Status.Message
+		}
+
 		build := "-"
 		if deploy.Status.Build != nil {
 			build = string(*deploy.Status.Build)
 		}
 
-		message := "-"
-		if deploy.Status.Message != "" {
-			message = deploy.Status.Message
+		path := "-"
+		if deploy.Status.Path != nil {
+			path = deploy.Status.Path.String()
+		}
+
+		version := "-"
+		if deploy.Status.Version != nil {
+			build = string(*deploy.Status.Version)
 		}
 
 		started := "-"
@@ -204,8 +222,10 @@ func deploysTableRows(deploys []v1.Deploy) []printer.TableRow {
 			color.IDString(string(deploy.ID)),
 			target,
 			stateColor(string(deploy.Status.State)),
-			build,
 			message,
+			build,
+			path,
+			version,
 			started,
 			completed,
 		})

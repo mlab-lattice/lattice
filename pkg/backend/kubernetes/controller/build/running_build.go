@@ -6,8 +6,6 @@ import (
 
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
-
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 type runningWorkloadInfo struct {
@@ -87,22 +85,15 @@ func (c *Controller) syncRunningBuild(build *latticev1.Build, stateInfo stateInf
 		}
 	}
 
-	// If we haven't logged a start timestamp yet, use now.
-	// This should only happen if we created all of the path builds
-	// but then failed to update the status.
-	startTimestamp := build.Status.StartTimestamp
-	if startTimestamp == nil {
-		now := metav1.Now()
-		startTimestamp = &now
-	}
-
 	_, err := c.updateBuildStatus(
 		build,
 		latticev1.BuildStateRunning,
 		message,
 		nil,
 		build.Status.Definition,
-		startTimestamp,
+		build.Status.Path,
+		build.Status.Version,
+		build.Status.StartTimestamp,
 		nil,
 		build.Status.Workloads,
 		stateInfo.containerBuildStatuses,

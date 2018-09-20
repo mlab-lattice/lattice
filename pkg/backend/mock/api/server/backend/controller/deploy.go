@@ -35,6 +35,8 @@ func (c *Controller) runDeploy(deploy *v1.Deploy, record *registry.SystemRecord)
 		if !c.createDeployBuild(deploy, record) {
 			return
 		}
+	} else {
+		deploy.Status.Build = deploy.Build
 	}
 
 	func() {
@@ -129,7 +131,7 @@ func (c *Controller) createDeployBuild(deploy *v1.Deploy, record *registry.Syste
 	build := c.registry.CreateBuild(deploy.Path, deploy.Version, record)
 
 	log.Printf("creating build %v for deploy %v", build.ID, deploy.ID)
-	deploy.Build = &build.ID
+	deploy.Status.Build = &build.ID
 	return true
 }
 
@@ -140,7 +142,9 @@ func (c *Controller) waitForBuildTermination(deploy *v1.Deploy, record *registry
 			c.registry.Lock()
 			defer c.registry.Unlock()
 
-			build := record.Builds[*deploy.Build].Build
+			build := record.Builds[*deploy.Status.Build].Build
+			deploy.Status.Path = build.Status.Path
+			deploy.Status.Version = build.Status.Version
 
 			switch build.Status.State {
 			case v1.BuildStateSucceeded:

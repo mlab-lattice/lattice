@@ -39,6 +39,11 @@ func (s *System) V1ID() v1.SystemID {
 	return v1.SystemID(s.Name)
 }
 
+func (s *System) DefinitionVersionLabel() (v1.Version, bool) {
+	v, ok := s.Labels[SystemDefinitionVersionLabelKey]
+	return v1.Version(v), ok
+}
+
 func (s *System) ResourceNamespace(namespacePrefix string) string {
 	return kubeutil.SystemNamespace(namespacePrefix, s.V1ID())
 }

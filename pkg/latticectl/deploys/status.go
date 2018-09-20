@@ -155,6 +155,27 @@ func deployString(deploy *v1.Deploy) string {
 		)
 	}
 
+	if deploy.Status.Build != nil {
+		additional += fmt.Sprintf(`
+  build: %s`,
+			string(*deploy.Status.Build),
+		)
+	}
+
+	if deploy.Status.Path != nil {
+		additional += fmt.Sprintf(`
+  path: %s`,
+			deploy.Status.Path.String(),
+		)
+	}
+
+	if deploy.Status.Version != nil {
+		additional += fmt.Sprintf(`
+  version: %s`,
+			string(*deploy.Status.Version),
+		)
+	}
+
 	if deploy.Status.StartTimestamp != nil {
 		additional += fmt.Sprintf(`
   started: %v`,

@@ -27,4 +27,6 @@ type System struct {
 
 type SystemStatus struct {
 	State SystemState `json:"state"`
+
+	Version *Version
 }

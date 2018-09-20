@@ -83,13 +83,6 @@ func (c *Controller) syncFailedBuild(build *latticev1.Build, stateInfo stateInfo
 		message = message + " " + serviceMessage
 	}
 
-	// if we haven't logged a start timestamp yet, use now
-	startTimestamp := build.Status.StartTimestamp
-	if startTimestamp == nil {
-		now := metav1.Now()
-		startTimestamp = &now
-	}
-
 	// if we haven't logged a completion timestamp yet, use now
 	completionTimestamp := build.Status.CompletionTimestamp
 	if completionTimestamp == nil {
@@ -103,7 +96,9 @@ func (c *Controller) syncFailedBuild(build *latticev1.Build, stateInfo stateInfo
 		message,
 		nil,
 		build.Status.Definition,
-		startTimestamp,
+		build.Status.Path,
+		build.Status.Version,
+		build.Status.StartTimestamp,
 		completionTimestamp,
 		build.Status.Workloads,
 		stateInfo.containerBuildStatuses,

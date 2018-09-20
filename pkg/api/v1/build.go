@@ -22,8 +22,8 @@ const (
 type Build struct {
 	ID BuildID `json:"id"`
 
-	Version *Version   `json:"version,omitempty"`
 	Path    *tree.Path `json:"path,omitempty"`
+	Version *Version   `json:"version,omitempty"`
 
 	Status BuildStatus `json:"status"`
 }
@@ -34,6 +34,9 @@ type BuildStatus struct {
 
 	StartTimestamp      *time.Time `json:"startTimestamp,omitempty"`
 	CompletionTimestamp *time.Time `json:"completionTimestamp,omitempty"`
+
+	Path    *tree.Path `json:"path,omitempty"`
+	Version *Version   `json:"version,omitempty"`
 
 	// Workloads maps component paths (e.g. /foo/bar/buzz) to the
 	// status of the build for that service in the Build.

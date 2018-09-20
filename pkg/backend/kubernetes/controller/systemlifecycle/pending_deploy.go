@@ -3,6 +3,7 @@ package systemlifecycle
 import (
 	"fmt"
 
+	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 	reflectutil "github.com/mlab-lattice/lattice/pkg/util/reflect"
@@ -25,7 +26,9 @@ func (c *Controller) syncPendingDeploy(deploy *latticev1.Deploy) error {
 				latticev1.DeployStateFailed,
 				fmt.Sprintf("%v must specify build, path, or version", deploy.Description(c.namespacePrefix)),
 				nil,
-				deploy.Status.Build,
+				nil,
+				nil,
+				nil,
 				nil,
 				nil,
 			)
@@ -37,7 +40,9 @@ func (c *Controller) syncPendingDeploy(deploy *latticev1.Deploy) error {
 				latticev1.DeployStateFailed,
 				fmt.Sprintf("%v must only specify one of build, path, or version", deploy.Description(c.namespacePrefix)),
 				nil,
-				deploy.Status.Build,
+				nil,
+				nil,
+				nil,
 				nil,
 				nil,
 			)
@@ -50,7 +55,9 @@ func (c *Controller) syncPendingDeploy(deploy *latticev1.Deploy) error {
 				latticev1.DeployStateFailed,
 				"internal error",
 				&msg,
-				deploy.Status.Build,
+				nil,
+				nil,
+				nil,
 				nil,
 				nil,
 			)
@@ -59,24 +66,30 @@ func (c *Controller) syncPendingDeploy(deploy *latticev1.Deploy) error {
 	}
 
 	// get the deploy's path so we can attempt to acquire the proper lifecycle lock
+	var buildID *v1.BuildID
 	var path tree.Path
+	var version *v1.Version
 	switch {
 	case deploy.Spec.Build != nil:
-		buildID := *deploy.Spec.Build
-		build, err := c.buildLister.Builds(deploy.Namespace).Get(string(buildID))
+		buildID = deploy.Spec.Build
+		path = tree.RootPath()
+
+		build, err := c.buildLister.Builds(deploy.Namespace).Get(string(*buildID))
 		if err != nil {
 			if !errors.IsNotFound(err) {
 				return err
 			}
 
-			build, err = c.latticeClient.LatticeV1().Builds(deploy.Namespace).Get(string(buildID), metav1.GetOptions{})
+			build, err = c.latticeClient.LatticeV1().Builds(deploy.Namespace).Get(string(*buildID), metav1.GetOptions{})
 			if err != nil {
 				_, err := c.updateDeployStatus(
 					deploy,
 					latticev1.DeployStateFailed,
-					fmt.Sprintf("%v build %v does not exist", deploy.Description(c.namespacePrefix), buildID),
+					fmt.Sprintf("%v build %v does not exist", deploy.Description(c.namespacePrefix), *buildID),
 					nil,
-					deploy.Status.Build,
+					buildID,
+					nil,
+					nil,
 					nil,
 					nil,
 				)
@@ -94,20 +107,21 @@ func (c *Controller) syncPendingDeploy(deploy *latticev1.Deploy) error {
 				latticev1.DeployStateFailed,
 				fmt.Sprintf("cannot deploy using a build id (%v) since it is only a partial system build", buildID),
 				nil,
-				deploy.Status.Build,
+				buildID,
+				build.Spec.Path,
+				build.Status.Version,
 				nil,
 				nil,
 			)
 			return err
 		}
 
-		path = tree.RootPath()
-
 	case deploy.Spec.Path != nil:
 		path = *deploy.Spec.Path
 
 	case deploy.Spec.Version != nil:
 		path = tree.RootPath()
+		version = deploy.Spec.Version
 	}
 
 	// attempt to acquire the proper lifecycle lock for the deploy. if we fail due to a locking conflict,
@@ -124,7 +138,9 @@ func (c *Controller) syncPendingDeploy(deploy *latticev1.Deploy) error {
 			latticev1.DeployStateFailed,
 			fmt.Sprintf("unable to acquire lifecycle lock: %v", err.Error()),
 			nil,
-			nil,
+			buildID,
+			&path,
+			version,
 			nil,
 			nil,
 		)
@@ -139,7 +155,9 @@ func (c *Controller) syncPendingDeploy(deploy *latticev1.Deploy) error {
 		latticev1.DeployStateAccepted,
 		"",
 		nil,
-		deploy.Status.Build,
+		buildID,
+		&path,
+		version,
 		startTimestamp,
 		nil,
 	)
