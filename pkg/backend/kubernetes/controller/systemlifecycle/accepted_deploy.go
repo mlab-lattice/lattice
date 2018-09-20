@@ -19,7 +19,7 @@ func (c *Controller) syncAcceptedDeploy(deploy *latticev1.Deploy) error {
 	var build *latticev1.Build
 	if deploy.Spec.Build != nil {
 		var err error
-		build, err = c.buildLister.Builds(deploy.Namespace).Get(string(*deploy.Status.Build))
+		build, err = c.buildLister.Builds(deploy.Namespace).Get(string(*deploy.Spec.Build))
 		if err != nil {
 			return err
 		}
