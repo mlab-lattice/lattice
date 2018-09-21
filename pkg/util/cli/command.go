@@ -35,10 +35,17 @@ func (c *RootCommand) Execute() {
 }
 
 func (c *RootCommand) Init() error {
-	return c.Command.Init(c.Name)
+	return c.Command.init(c.Name)
 }
 
-func (c *Command) Init(name string) error {
+func (c *Command) init(name string) error {
+	if err := c.initCommand(name); err != nil {
+		return err
+	}
+	return c.initSubcommands()
+}
+
+func (c *Command) initCommand(name string) error {
 	c.cobraCmd = &cobra.Command{
 		Use:   name,
 		Short: c.Short,
@@ -60,10 +67,6 @@ func (c *Command) Init(name string) error {
 
 	c.addFlags()
 
-	if err := c.addSubcommands(); err != nil {
-		return fmt.Errorf("error initializing subcommands: %v", err)
-	}
-
 	c.cobraCmd.PreRun = func(cmd *cobra.Command, args []string) {
 		c.checkMutexFlags(cmd)
 		c.checkRequiredFlagSets(cmd)
@@ -82,6 +85,54 @@ func (c *Command) Init(name string) error {
 	}
 
 	return nil
+}
+
+func (c *Command) initSubcommands() error {
+	for name, subcommand := range c.Subcommands {
+		if err := subcommand.init(name); err != nil {
+			return fmt.Errorf("error initializing subcommand %v: %v", name, err)
+		}
+
+		c.cobraCmd.AddCommand(subcommand.cobraCmd)
+	}
+
+	return nil
+}
+
+func (c *Command) addArgs() error {
+	if err := c.Args.validate(); err != nil {
+		return err
+	}
+
+	for _, arg := range c.Args {
+		c.cobraCmd.Use += fmt.Sprintf(" [%v]", arg.Name)
+	}
+
+	min, max := c.Args.num()
+	c.cobraCmd.Args = cobra.RangeArgs(min, max)
+	if min == max {
+		c.cobraCmd.Args = cobra.ExactArgs(min)
+	}
+
+	return nil
+}
+
+func (c *Command) addFlags() {
+	for name, flag := range c.Flags {
+		flag.AddToFlagSet(name, c.cobraCmd.Flags())
+	}
+}
+
+func (c *Command) getFlagParsers() map[string]func() error {
+	parsers := make(map[string]func() error)
+	for name, flag := range c.Flags {
+		parser := flag.Parse()
+		if parser != nil {
+			parsers[name] = parser
+		}
+	}
+
+	return parsers
 }
 
 func (c *Command) checkMutexFlags(cmd *cobra.Command) {
@@ -182,138 +233,49 @@ func (c *Command) checkRequiredFlagSets(cmd *cobra.Command) {
 	}
 }
 
-func (c *Command) addArgs() error {
-	if err := c.Args.validate(); err != nil {
-		return err
-	}
-
-	for _, arg := range c.Args {
-		c.cobraCmd.Use += fmt.Sprintf(" [%v]", arg.Name)
-	}
-
-	min, max := c.Args.num()
-	c.cobraCmd.Args = cobra.RangeArgs(min, max)
-	if min == max {
-		c.cobraCmd.Args = cobra.ExactArgs(min)
-	}
-
-	return nil
-}
-
-func (c *Command) addFlags() {
-	for name, flag := range c.Flags {
-		flag.AddToFlagSet(name, c.cobraCmd.Flags())
-	}
-}
-
-func (c *Command) getFlagParsers() map[string]func() error {
-	parsers := make(map[string]func() error)
-	for name, flag := range c.Flags {
-		parser := flag.Parse()
-		if parser != nil {
-			parsers[name] = parser
-		}
-	}
-
-	return parsers
-}
-
-func (c *Command) addSubcommands() error {
-	for name, subcommand := range c.Subcommands {
-		if err := subcommand.Init(name); err != nil {
-			return fmt.Errorf("error initializing subcommand %v: %v", name, err)
-		}
-
-		c.cobraCmd.AddCommand(subcommand.cobraCmd)
-	}
-
-	return nil
-}
-
 func (c *Command) Help() {
 	c.cobraCmd.Help()
 }
 
 func (c *RootCommand) ExecuteColon() {
-	if err := c.Init(); err != nil {
-		c.exit(err)
-	}
-
-	if err := c.initColon(c.Name); err != nil {
+	if err := c.InitColon(); err != nil {
 		c.exit(err)
 	}
 
 	c.exit(c.cobraCmd.Execute())
 }
 
-func (c *Command) initColon(name string) error {
-	c.cobraCmd = &cobra.Command{
-		Use:   name,
-		Short: c.Short,
-		Run: func(cmd *cobra.Command, args []string) {
-			if c.Run == nil {
-				cmd.Help()
-				os.Exit(1)
-			}
-
-			c.Run(args, c.Flags)
-		},
+func (c *RootCommand) InitColon() error {
+	if err := c.initCommand(c.Name); err != nil {
+		return err
 	}
 
-	for _, subcommand := range c.Subcommands {
-		if err := subcommand.Init(name); err != nil {
+	return c.Command.initColonSubcommands(c, "")
+}
+
+// initColonSubcommands currently just adds the subcommands to the root subcommand
+// this means that only <root-cmd> -h will show the commands
+// if you have foo and foo:bar, <root-cmd> -h will not show foo:bar as a subcommand
+// if we want to invest in colon commands this should probably be fixed through help
+// templates
+func (c *Command) initColonSubcommands(root *RootCommand, path string) error {
+	for name, subcommand := range c.Subcommands {
+		if path != "" {
+			name = fmt.Sprintf("%v:%v", path, name)
+		}
+
+		if err := subcommand.initCommand(name); err != nil {
+			return fmt.Errorf("error initializing subcommand %v: %v", name, err)
+		}
+
+		root.cobraCmd.AddCommand(subcommand.cobraCmd)
+
+		if err := subcommand.initColonSubcommands(root, name); err != nil {
 			return err
 		}
 	}
 
-	subcommands, err := c.getSubcommands2("", c.Subcommands)
-	if err != nil {
-		return err
-	}
-
-	for _, subcommand := range subcommands {
-		// why does this need to be an immediately invoked function?
-		// answer here: https://www.ardanlabs.com/blog/2014/06/pitfalls-with-closures-in-go.html
-		// (n.b. subcommand.Name will be copied here since it's a string, but since
-		//  subcommand.Run is a pointer, we need to do this trickery)
-		subcommand.cobraCmd.Run = func(run func([]string, Flags) error) func(*cobra.Command, []string) {
-			return func(cmd *cobra.Command, args []string) {
-				if run == nil {
-					cmd.Help()
-					os.Exit(1)
-				}
-
-				if err := run(args, subcommand.Flags); err != nil {
-					c.exit(err)
-				}
-			}
-		}(subcommand.Run)
-
-		c.cobraCmd.AddCommand(subcommand.cobraCmd)
-	}
-
 	return nil
-}
-
-func (c *Command) getSubcommands2(path string, subcommands map[string]*Command) ([]*Command, error) {
-	var ret []*Command
-	for name, subcommand := range subcommands {
-		name := fmt.Sprintf("%v%v", path, name)
-		subcommand.cobraCmd.Use = name
-		ret = append(ret, subcommand)
-
-		subsubcommands, err := c.getSubcommands2(fmt.Sprintf("%v:", name), subcommand.Subcommands)
-		if err != nil {
-			return nil, err
-		}
-
-		for _, subsubcommand := range subsubcommands {
-			ret = append(ret, subsubcommand)
-		}
-
-	}
-
-	return ret, nil
 }
 
 func (c *Command) exit(err error) {
