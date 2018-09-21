@@ -46,7 +46,7 @@ func (c *FakeAddresses) List(opts v1.ListOptions) (result *lattice_v1.AddressLis
 	if label == nil {
 		label = labels.Everything()
 	}
-	list := &lattice_v1.AddressList{}
+	list := &lattice_v1.AddressList{ListMeta: obj.(*lattice_v1.AddressList).ListMeta}
 	for _, item := range obj.(*lattice_v1.AddressList).Items {
 		if label.Matches(labels.Set(item.Labels)) {
 			list.Items = append(list.Items, item)
