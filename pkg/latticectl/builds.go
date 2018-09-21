@@ -138,19 +138,6 @@ func buildsTable(w io.Writer) *printer.Table {
 			Header:    "state",
 			Alignment: printer.TableAlignLeft,
 		},
-
-		{
-			Header:    "message",
-			Alignment: printer.TableAlignLeft,
-		},
-		{
-			Header:    "version",
-			Alignment: printer.TableAlignLeft,
-		},
-		{
-			Header:    "path",
-			Alignment: printer.TableAlignLeft,
-		},
 		{
 			Header:    "started",
 			Alignment: printer.TableAlignLeft,
@@ -183,45 +170,27 @@ func buildsTableRows(builds []v1.Build) []printer.TableRow {
 			target = fmt.Sprintf("version %v", *build.Version)
 		}
 
-		message := "-"
-		if build.Status.Message != "" {
-			message = build.Status.Message
-		}
-
-		version := "-"
-		if build.Status.Version != nil {
-			version = string(*build.Status.Version)
-		}
-
-		path := "-"
-		if build.Status.Path != nil {
-			path = build.Status.Path.String()
-		}
-
 		started := "-"
 		if build.Status.StartTimestamp != nil {
 			started = build.Status.StartTimestamp.Format(time.RFC1123)
 		}
 
 		completed := "-"
-		if build.Status.StartTimestamp != nil {
-			completed = build.Status.StartTimestamp.Format(time.RFC1123)
+		if build.Status.CompletionTimestamp != nil {
+			completed = build.Status.CompletionTimestamp.Format(time.RFC1123)
 		}
 
 		rows = append(rows, []string{
 			color.IDString(string(build.ID)),
 			target,
 			stateColor(string(build.Status.State)),
-			message,
-			version,
-			path,
 			started,
 			completed,
 		})
 	}
 
 	// sort the rows by start timestamp
-	startedIdx := 6
+	startedIdx := 3
 	sort.Slice(
 		rows,
 		func(i, j int) bool {

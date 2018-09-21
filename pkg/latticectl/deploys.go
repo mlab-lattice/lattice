@@ -178,8 +178,8 @@ func deploysTableRows(deploys []v1.Deploy) []printer.TableRow {
 		}
 
 		completed := "-"
-		if deploy.Status.StartTimestamp != nil {
-			completed = deploy.Status.StartTimestamp.Format(time.RFC1123)
+		if deploy.Status.CompletionTimestamp != nil {
+			completed = deploy.Status.CompletionTimestamp.Format(time.RFC1123)
 		}
 
 		rows = append(rows, []string{

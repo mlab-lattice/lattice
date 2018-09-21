@@ -5,17 +5,16 @@ import (
 	"io"
 	"os"
 	"sort"
-	"strings"
 	"time"
 
 	"github.com/mlab-lattice/lattice/pkg/api/client"
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	"github.com/mlab-lattice/lattice/pkg/latticectl/command"
+	"github.com/mlab-lattice/lattice/pkg/latticectl/services"
 	"github.com/mlab-lattice/lattice/pkg/util/cli"
 	"github.com/mlab-lattice/lattice/pkg/util/cli/color"
 	"github.com/mlab-lattice/lattice/pkg/util/cli/printer"
 
-	"github.com/mlab-lattice/lattice/pkg/latticectl/services"
 	"k8s.io/apimachinery/pkg/util/wait"
 )
 
@@ -154,28 +153,12 @@ func servicesTable(w io.Writer) *printer.Table {
 			Header:    "terminating",
 			Alignment: printer.TableAlignRight,
 		},
-		{
-			Header:    "ports",
-			Alignment: printer.TableAlignLeft,
-		},
-		{
-			Header:    "info",
-			Alignment: printer.TableAlignLeft,
-		},
 	})
 }
 
 func servicesTableRows(services []v1.Service) []printer.TableRow {
 	var rows []printer.TableRow
 	for _, service := range services {
-		var message string
-		if service.Status.Message != nil {
-			message = *service.Status.Message
-		}
-		if service.Status.FailureInfo != nil {
-			message = service.Status.FailureInfo.Message
-		}
-
 		var stateColor color.Formatter
 		switch service.Status.State {
 		case v1.ServiceStateStable:
@@ -198,8 +181,6 @@ func servicesTableRows(services []v1.Service) []printer.TableRow {
 			fmt.Sprintf("%d", service.Status.UpdatedInstances),
 			fmt.Sprintf("%d", service.Status.StaleInstances),
 			fmt.Sprintf("%d", service.Status.TerminatingInstances),
-			strings.Join(addresses, ","),
-			string(message),
 		})
 
 	}

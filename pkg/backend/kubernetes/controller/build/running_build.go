@@ -56,7 +56,7 @@ func (c *Controller) syncRunningBuild(build *latticev1.Build, stateInfo stateInf
 	message := "the following workloads are still building: "
 	for i, path := range runningWorkloads {
 		if i != 0 {
-			message = message + ","
+			message = message + ", "
 		}
 
 		info := runningWorkloadsInfo[path]
