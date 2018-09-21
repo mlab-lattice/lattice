@@ -37,21 +37,21 @@ func (c *Controller) syncInProgressDeploy(deploy *latticev1.Deploy) error {
 		return fmt.Errorf("%v in unexpected state %v", system.Description(), system.Status.State)
 	}
 
-	now := metav1.Now()
-	completionTimestamp := &now
-
 	// need to update the deploy's status before releasing the lock. if we released the lock
 	// first it's possible that the deployment status update could fail, and another deploy
 	// successfully acquires the lock. if the controller then restarted, it could see
 	// conflicting locks when seeding the lifecycle actions
+	now := metav1.Now()
 	deploy, err = c.updateDeployStatus(
 		deploy,
 		state,
 		"",
 		nil,
 		deploy.Status.Build,
+		deploy.Status.Path,
+		deploy.Status.Version,
 		deploy.Status.StartTimestamp,
-		completionTimestamp,
+		&now,
 	)
 	if err != nil {
 		return err

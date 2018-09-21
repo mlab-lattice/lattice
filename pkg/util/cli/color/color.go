@@ -4,15 +4,30 @@ import (
 	"github.com/fatih/color"
 )
 
-type Color func(format string, a ...interface{}) string
+type Color int
+
+const (
+	Success Color = iota
+	BoldHiSuccess
+	Failure
+	BoldHiFailure
+	Warning
+	BoldHiWarning
+	ID
+	Bold
+	Black
+)
+
+type Formatter func(format string, a ...interface{}) string
 
 var (
-	Success       Color = color.GreenString
-	BoldHiSuccess Color = color.New(color.Bold).Add(color.FgHiGreen).SprintfFunc()
-	Failure       Color = color.RedString
-	BoldHiFailure Color = color.New(color.Bold).Add(color.FgHiRed).SprintfFunc()
-	Warning       Color = color.YellowString
-	BoldHiWarning Color = color.New(color.Bold).Add(color.FgHiYellow).SprintfFunc()
-	ID            Color = color.HiCyanString
-	Bold          Color = color.New(color.Bold).SprintfFunc()
+	SuccessString       Formatter = color.GreenString
+	BoldHiSuccessString           = color.New(color.Bold).Add(color.FgHiGreen).SprintfFunc()
+	FailureString                 = color.RedString
+	BoldHiFailureString           = color.New(color.Bold).Add(color.FgHiRed).SprintfFunc()
+	WarningString                 = color.YellowString
+	BoldHiWarningString           = color.New(color.Bold).Add(color.FgHiYellow).SprintfFunc()
+	IDString                      = color.HiCyanString
+	BoldString                    = color.New(color.Bold).SprintfFunc()
+	BlackString                   = color.New(color.FgHiBlack).SprintfFunc()
 )

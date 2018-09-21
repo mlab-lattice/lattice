@@ -7,7 +7,7 @@ go_library(
     visibility = ["//visibility:private"],
     deps = [
         "//pkg/latticectl:go_default_library",
-        "//pkg/util/cli2/docgen:go_default_library",
+        "//pkg/util/cli/docgen:go_default_library",
     ],
 )
 

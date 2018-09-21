@@ -2,7 +2,7 @@ package latticectl
 
 import (
 	"github.com/mlab-lattice/lattice/pkg/latticectl/secrets"
-	"github.com/mlab-lattice/lattice/pkg/util/cli2"
+	"github.com/mlab-lattice/lattice/pkg/util/cli"
 )
 
 func Secrets() *cli.Command {

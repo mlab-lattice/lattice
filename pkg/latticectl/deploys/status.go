@@ -8,9 +8,9 @@ import (
 	"github.com/mlab-lattice/lattice/pkg/api/client"
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	"github.com/mlab-lattice/lattice/pkg/latticectl/command"
-	"github.com/mlab-lattice/lattice/pkg/util/cli2"
-	"github.com/mlab-lattice/lattice/pkg/util/cli2/color"
-	"github.com/mlab-lattice/lattice/pkg/util/cli2/printer"
+	"github.com/mlab-lattice/lattice/pkg/util/cli"
+	"github.com/mlab-lattice/lattice/pkg/util/cli/color"
+	"github.com/mlab-lattice/lattice/pkg/util/cli/printer"
 	"time"
 )
 
@@ -61,7 +61,7 @@ func PrintDeploy(client client.Interface, system v1.SystemID, id v1.DeployID, w 
 
 	case printer.FormatJSON:
 		j := printer.NewJSON(w)
-		j.Print(system)
+		j.Print(deploy)
 
 	default:
 		return fmt.Errorf("unexpected format %v", f)
@@ -81,7 +81,7 @@ func WatchDeploy(client client.Interface, system v1.SystemID, id v1.DeployID, w 
 
 			switch deploy.Status.State {
 			case v1.DeployStateFailed:
-				fmt.Fprint(w, color.BoldHiSuccessString("✘ deploy failed\n"))
+				fmt.Fprint(w, color.BoldHiFailureString("✘ deploy failed\n"))
 				return true
 
 			case v1.DeployStateSucceeded:
@@ -95,7 +95,7 @@ func WatchDeploy(client client.Interface, system v1.SystemID, id v1.DeployID, w 
 	case printer.FormatJSON:
 		j := printer.NewJSON(w)
 		handle = func(deploy *v1.Deploy) bool {
-			j.Print(system)
+			j.Print(deploy)
 			return false
 		}
 
@@ -152,6 +152,27 @@ func deployString(deploy *v1.Deploy) string {
 		additional += fmt.Sprintf(`
   message: %v`,
 			deploy.Status.Message,
+		)
+	}
+
+	if deploy.Status.Build != nil {
+		additional += fmt.Sprintf(`
+  build: %s`,
+			string(*deploy.Status.Build),
+		)
+	}
+
+	if deploy.Status.Path != nil {
+		additional += fmt.Sprintf(`
+  path: %s`,
+			deploy.Status.Path.String(),
+		)
+	}
+
+	if deploy.Status.Version != nil {
+		additional += fmt.Sprintf(`
+  version: %s`,
+			string(*deploy.Status.Version),
 		)
 	}
 

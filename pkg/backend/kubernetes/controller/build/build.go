@@ -19,6 +19,8 @@ func (c *Controller) updateBuildStatus(
 	message string,
 	internalError *string,
 	definition *resolver.ResolutionTree,
+	path *tree.Path,
+	version *v1.Version,
 	startTimestamp *metav1.Time,
 	completionTimestamp *metav1.Time,
 	workloads map[tree.Path]latticev1.BuildStatusWorkload,
@@ -31,6 +33,8 @@ func (c *Controller) updateBuildStatus(
 		InternalError: internalError,
 
 		Definition: definition,
+		Path:       path,
+		Version:    version,
 
 		StartTimestamp:      startTimestamp,
 		CompletionTimestamp: completionTimestamp,

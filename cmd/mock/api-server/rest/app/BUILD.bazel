@@ -3,15 +3,15 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library")
 go_library(
     name = "go_default_library",
     srcs = ["root.go"],
-    importpath = "github.com/mlab-lattice/lattice/cmd/mock/api-server/app",
+    importpath = "github.com/mlab-lattice/lattice/cmd/mock/api-server/rest/app",
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/api/server/rest:go_default_library",
         "//pkg/backend/mock/api/server/backend:go_default_library",
         "//pkg/backend/mock/definition/component/resolver:go_default_library",
         "//pkg/definition/component/resolver:go_default_library",
-        "//pkg/util/cli2:go_default_library",
-        "//pkg/util/cli2/flags:go_default_library",
+        "//pkg/util/cli:go_default_library",
+        "//pkg/util/cli/flags:go_default_library",
         "//pkg/util/git:go_default_library",
         "@com_github_spf13_pflag//:go_default_library",
     ],

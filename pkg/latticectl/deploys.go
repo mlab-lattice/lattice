@@ -11,9 +11,9 @@ import (
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	"github.com/mlab-lattice/lattice/pkg/latticectl/command"
 	"github.com/mlab-lattice/lattice/pkg/latticectl/deploys"
-	"github.com/mlab-lattice/lattice/pkg/util/cli2"
-	"github.com/mlab-lattice/lattice/pkg/util/cli2/color"
-	"github.com/mlab-lattice/lattice/pkg/util/cli2/printer"
+	"github.com/mlab-lattice/lattice/pkg/util/cli"
+	"github.com/mlab-lattice/lattice/pkg/util/cli/color"
+	"github.com/mlab-lattice/lattice/pkg/util/cli/printer"
 
 	"k8s.io/apimachinery/pkg/util/wait"
 )
@@ -138,14 +138,6 @@ func deploysTable(w io.Writer) *printer.Table {
 			Alignment: printer.TableAlignLeft,
 		},
 		{
-			Header:    "build",
-			Alignment: printer.TableAlignLeft,
-		},
-		{
-			Header:    "message",
-			Alignment: printer.TableAlignLeft,
-		},
-		{
 			Header:    "started",
 			Alignment: printer.TableAlignLeft,
 		},
@@ -180,39 +172,27 @@ func deploysTableRows(deploys []v1.Deploy) []printer.TableRow {
 			target = fmt.Sprintf("version %v", *deploy.Version)
 		}
 
-		build := "-"
-		if deploy.Status.Build != nil {
-			build = string(*deploy.Status.Build)
-		}
-
-		message := "-"
-		if deploy.Status.Message != "" {
-			message = deploy.Status.Message
-		}
-
 		started := "-"
 		if deploy.Status.StartTimestamp != nil {
 			started = deploy.Status.StartTimestamp.Format(time.RFC1123)
 		}
 
 		completed := "-"
-		if deploy.Status.StartTimestamp != nil {
-			completed = deploy.Status.StartTimestamp.Format(time.RFC1123)
+		if deploy.Status.CompletionTimestamp != nil {
+			completed = deploy.Status.CompletionTimestamp.Format(time.RFC1123)
 		}
 
 		rows = append(rows, []string{
 			color.IDString(string(deploy.ID)),
 			target,
 			stateColor(string(deploy.Status.State)),
-			build,
-			message,
 			started,
 			completed,
 		})
 	}
 
 	// sort the rows by start timestamp
-	startedIdx := 5
+	startedIdx := 3
 	sort.Slice(
 		rows,
 		func(i, j int) bool {

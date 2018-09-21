@@ -4,21 +4,14 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"sort"
-	"strings"
 	"time"
 
 	"github.com/mlab-lattice/lattice/pkg/api/client"
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	"github.com/mlab-lattice/lattice/pkg/latticectl/command"
-	"github.com/mlab-lattice/lattice/pkg/util/cli2"
-	"github.com/mlab-lattice/lattice/pkg/util/cli2/color"
-	"github.com/mlab-lattice/lattice/pkg/util/cli2/printer"
-
-	"k8s.io/apimachinery/pkg/util/wait"
-
-	"github.com/briandowns/spinner"
-	"sync"
+	"github.com/mlab-lattice/lattice/pkg/util/cli"
+	"github.com/mlab-lattice/lattice/pkg/util/cli/color"
+	"github.com/mlab-lattice/lattice/pkg/util/cli/printer"
 )
 
 func Status() *cli.Command {
@@ -55,38 +48,16 @@ func Status() *cli.Command {
 }
 
 func PrintSystem(client client.Interface, id v1.SystemID, w io.Writer, f printer.Format) error {
-	var system *v1.System
-	var services []v1.Service
-	var err error
-	var wg sync.WaitGroup
-	wg.Add(2)
-
-	go func() {
-		system, err = client.V1().Systems().Get(id)
-		wg.Done()
-	}()
-
-	go func() {
-		services, err = client.V1().Systems().Services(id).List()
-		wg.Done()
-	}()
-
-	wg.Wait()
+	system, err := client.V1().Systems().Get(id)
 	if err != nil {
 		return err
 	}
 
 	switch f {
 	case printer.FormatTable:
-		services, err := client.V1().Systems().Services(id).List()
-		if err != nil {
-			return err
-		}
-
-		t := systemTable(w)
-		r := systemTableRows(services)
-		t.AppendRows(r)
-		t.Print()
+		dw := systemWriter(w)
+		s := systemString(system)
+		dw.Print(s)
 
 	case printer.FormatJSON:
 		j := printer.NewJSON(w)
@@ -99,168 +70,60 @@ func PrintSystem(client client.Interface, id v1.SystemID, w io.Writer, f printer
 	return nil
 }
 
-func WatchSystem(client client.Interface, id v1.SystemID, w io.Writer, f printer.Format) {
-	type status struct {
-		system   *v1.System
-		services []v1.Service
-	}
-
-	statuses := make(chan status)
-
-	// Poll the API for the builds and send it to the channel
-	go wait.PollImmediateInfinite(
-		5*time.Second,
-		func() (bool, error) {
-			// TODO: Make requests in parallel
-			system, err := client.V1().Systems().Get(id)
-			if err != nil {
-				if e, ok := err.(*v1.Error); ok && e.Code == v1.ErrorCodeInvalidSystemID {
-					close(statuses)
-					return true, nil
-				}
-
-				return false, err
-			}
-
-			services, err := client.V1().Systems().Services(id).List()
-			if err != nil {
-				return false, err
-			}
-
-			statuses <- status{system, services}
-
-			return false, nil
-		},
-	)
-
-	var handle func(s status)
+func WatchSystem(client client.Interface, id v1.SystemID, w io.Writer, f printer.Format) error {
+	var handle func(*v1.System)
 	switch f {
 	case printer.FormatTable:
-		t := systemTable(w)
-		s := spinner.New(spinner.CharSets[14], 100*time.Millisecond)
-		s.Start()
-		handle = func(status status) {
-			r := systemTableRows(status.services)
-			t.Overwrite(r)
+		dw := systemWriter(w)
 
-			switch status.system.Status.State {
-			case v1.SystemStatePending:
-				s.Suffix = " pending..."
-
-			case v1.SystemStateDeleting:
-				s.Suffix = " deleting..."
-
-			case v1.SystemStateFailed:
-				s.Stop()
-				fmt.Fprintln(w, color.BoldHiFailureString(" ✘ system has failed"))
-
-			case v1.SystemStateScaling:
-				s.Suffix = " scaling..."
-
-			case v1.SystemStateUpdating:
-				s.Suffix = " updating..."
-
-			case v1.SystemStateStable:
-				s.Suffix = color.BoldHiSuccessString(" ✓ system is stable")
-
-			case v1.SystemStateDegraded:
-				s.Suffix = " system has become degraded"
-			}
+		handle = func(system *v1.System) {
+			s := systemString(system)
+			dw.Overwrite(s)
 		}
 
 	case printer.FormatJSON:
 		j := printer.NewJSON(w)
-		handle = func(status status) {
-			j.Print(status.system)
+		handle = func(system *v1.System) {
+			j.Print(system)
 		}
 
 	default:
-		panic(fmt.Sprintf("unexpected format %v", f))
+		return fmt.Errorf("unexpected format %v", f)
 	}
 
-	for s := range statuses {
-		handle(s)
+	for {
+		system, err := client.V1().Systems().Get(id)
+		if err != nil {
+			return err
+		}
+
+		handle(system)
+
+		time.Sleep(5 * time.Nanosecond)
 	}
 }
 
-func systemTable(w io.Writer) *printer.Table {
-	return printer.NewTable(w, []printer.TableColumn{
-		{
-			Header:    "service",
-			Alignment: printer.TableAlignLeft,
-		},
-		{
-			Header:    "state",
-			Alignment: printer.TableAlignLeft,
-		},
-		{
-			Header:    "available",
-			Alignment: printer.TableAlignRight,
-		},
-		{
-			Header:    "updated",
-			Alignment: printer.TableAlignRight,
-		},
-		{
-			Header:    "stale",
-			Alignment: printer.TableAlignRight,
-		},
-		{
-			Header:    "terminating",
-			Alignment: printer.TableAlignRight,
-		},
-		{
-			Header:    "ports",
-			Alignment: printer.TableAlignLeft,
-		},
-		{
-			Header:    "info",
-			Alignment: printer.TableAlignLeft,
-		},
-	})
+func systemWriter(w io.Writer) *printer.Custom {
+	return printer.NewCustom(w)
 }
 
-func systemTableRows(services []v1.Service) []printer.TableRow {
-	var rows []printer.TableRow
-	for _, service := range services {
-		var message string
-		if service.Status.Message != nil {
-			message = *service.Status.Message
-		}
-		if service.Status.FailureInfo != nil {
-			message = service.Status.FailureInfo.Message
-		}
+func systemString(system *v1.System) string {
+	stateColor := color.BoldString
+	switch system.Status.State {
+	case v1.SystemStatePending, v1.SystemStateScaling, v1.SystemStateUpdating:
+		stateColor = color.BoldHiWarningString
 
-		var stateColor color.Formatter
-		switch service.Status.State {
-		case v1.ServiceStateStable:
-			stateColor = color.SuccessString
-		case v1.ServiceStateFailed:
-			stateColor = color.FailureString
-		default:
-			stateColor = color.WarningString
-		}
+	case v1.SystemStateStable:
+		stateColor = color.BoldHiSuccessString
 
-		var addresses []string
-		for port, address := range service.Status.Ports {
-			addresses = append(addresses, fmt.Sprintf("%v: %v", port, address))
-		}
-
-		rows = append(rows, []string{
-			color.IDString(service.Path.String()),
-			stateColor(string(service.Status.State)),
-			fmt.Sprintf("%d", service.Status.AvailableInstances),
-			fmt.Sprintf("%d", service.Status.UpdatedInstances),
-			fmt.Sprintf("%d", service.Status.StaleInstances),
-			fmt.Sprintf("%d", service.Status.TerminatingInstances),
-			strings.Join(addresses, ","),
-			string(message),
-		})
-
+	case v1.SystemStateDegraded, v1.SystemStateDeleting:
+		stateColor = color.BoldHiFailureString
 	}
 
-	// sort the rows by service ID
-	sort.Slice(rows, func(i, j int) bool { return rows[i][0] < rows[j][0] })
-
-	return rows
+	return fmt.Sprintf(`system %s
+  state: %s
+`,
+		color.IDString(string(system.ID)),
+		stateColor(string(system.Status.State)),
+	)
 }

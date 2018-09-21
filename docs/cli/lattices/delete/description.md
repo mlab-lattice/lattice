@@ -1,0 +1,5 @@
+Enqueue the deletion of an existing lattice. If you run this command without passing in a `--lattice` flag, this command will not use the default lattice set in the context. You must explicitly say which lattice you want to delete by passing in the required `--lattice` flag. This is to protect against accidentally deleting a lattice you do not mean to delete.
+
+By default, this command will enqueue the deletion of the lattice then exit if the deletion was successfully enqueued. In order to make the command wait for the deletion to complete, pass the `-w, --watch` flag. This will update you with the status of the lattice every five seconds and will exit when the deletion has completed (or if there has been an error).
+
+If you enqueue the deletion of a lattice and decide after that you want to watch the deletion, you can run `lattice lattices:status --lattice LATTICE_NAME -w` to watch the status of the deletion. The `lattices:status -w` command will exit with status code 1 when the lattice has been deleted since it will no longer be able to find the lattice.

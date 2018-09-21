@@ -24,7 +24,12 @@ const (
 	examplesFile    = "examples.md"
 )
 
-func GenerateMarkdown(cmd *cli.Command) (io.Reader, error) {
+type flagInfo struct {
+	flag cli.Flag
+	name string
+}
+
+func GenerateMarkdown(cmd *cli.RootCommand) (io.Reader, error) {
 	var buffer bytes.Buffer
 	writer := bufio.NewWriter(&buffer)
 
@@ -39,7 +44,7 @@ func GenerateMarkdown(cmd *cli.Command) (io.Reader, error) {
 }
 
 // writeDoc writes command tree to file
-func writeDoc(bc *cli.Command, writer io.Writer) error {
+func writeDoc(bc *cli.RootCommand, writer io.Writer) error {
 	// header
 	fmt.Fprintf(writer, "%s \n", markdown.WrapH1(bc.Name))
 
@@ -62,9 +67,9 @@ func writeDoc(bc *cli.Command, writer io.Writer) error {
 	commandMapping := make(map[string]*cli.Command)
 
 	// reads the tree and appends commands into the commandMapping
-	for _, childCmd := range bc.Subcommands {
-		var cmds []cli.Command
-		recurse(childCmd, cmds, writer, commandMapping)
+	for name, childCmd := range bc.Subcommands {
+		var cmds []string
+		recurse(name, childCmd, cmds, writer, commandMapping)
 	}
 
 	// uses sorted map keys to iterate over the map in alphabetical order
@@ -85,25 +90,22 @@ func writeDoc(bc *cli.Command, writer io.Writer) error {
 
 // recurse recursively works through the command tree
 // ancestorCommands are commands that precede the current cmd in the hierarchy
-func recurse(cmd *cli.Command, ancestorCommands []cli.Command, writer io.Writer, commandMapping map[string]*cli.Command) {
-	if cmd.Name == "" {
+func recurse(name string, cmd *cli.Command, ancestorCommands []string, writer io.Writer, commandMapping map[string]*cli.Command) {
+	if name == "" {
 		return
 	}
 
 	// joins consecutive ancestor command names
-	var ancestorCmdsStr string
-	for _, tempCmd := range ancestorCommands {
-		ancestorCmdsStr += tempCmd.Name + ":"
-	}
-	ancestorCmdsStr += cmd.Name
+	ancestorCmdsStr := strings.Join(ancestorCommands, " ")
+	ancestorCmdsStr += name
 
 	commandMapping[ancestorCmdsStr] = cmd
 
 	// adds this command to the list of ancestor commands to be passed to its children when recursing
-	ancestorCommands = append(ancestorCommands, *cmd)
+	ancestorCommands = append(ancestorCommands, name)
 
-	for _, tempCmd := range cmd.Subcommands {
-		recurse(tempCmd, ancestorCommands, writer, commandMapping)
+	for name, subcmd := range cmd.Subcommands {
+		recurse(name, subcmd, ancestorCommands, writer, commandMapping)
 	}
 }
 
@@ -132,14 +134,20 @@ func printCommand(fullCmdName string, cmd *cli.Command, writer io.Writer) error 
 
 	// writes flags sorting them first by required/not required and then alphabetically
 	if len(cmd.Flags) > 0 {
-		sort.Slice(cmd.Flags, func(i, j int) bool {
-			result := cmd.Flags[i].IsRequired()
-			if cmd.Flags[i].IsRequired() == cmd.Flags[j].IsRequired() {
-				result = cmd.Flags[i].GetName() < cmd.Flags[j].GetName()
+
+		var info []flagInfo
+		for name, flag := range cmd.Flags {
+			info = append(info, flagInfo{flag, name})
+		}
+
+		sort.Slice(info, func(i, j int) bool {
+			if info[i].flag.IsRequired() == info[j].flag.IsRequired() {
+				return info[i].name < info[j].name
 			}
-			return result
+
+			return info[i].flag.IsRequired()
 		})
-		writeFlags(writer, cmd.Flags)
+		writeFlags(writer, info)
 	}
 
 	// includes any extra markdown command examples
@@ -183,25 +191,25 @@ func writeArgTableRow(w io.Writer, arg cli.Arg) {
 }
 
 // writeFlags writes flags section to a markdown table
-func writeFlags(writer io.Writer, cmdFlags cli.Flags) {
+func writeFlags(writer io.Writer, info []flagInfo) {
 	fmt.Fprintf(writer, "%s \n\n", markdown.WrapBold("Flags:"))
 
 	markdown.WriteTableHeader(writer, []string{"Name", "Description"})
 
-	for _, tempFlag := range cmdFlags {
-		writeFlagTableRow(writer, tempFlag)
+	for _, flagInfo := range info {
+		writeFlagTableRow(writer, flagInfo.name, flagInfo.flag)
 	}
 
 	fmt.Fprintln(writer, "")
 }
 
 // writeFlagTableRow writes flag table row
-func writeFlagTableRow(w io.Writer, flag cli.Flag) {
-	name := fmt.Sprintf("--%s", flag.GetName())
+func writeFlagTableRow(w io.Writer, flagName string, flag cli.Flag) {
+	name := fmt.Sprintf("--%s", flagName)
 
 	// if the flag isn't a bool flag then print out a placeholder value with the name of the flag
 	if _, ok := flag.(*flags.Bool); !ok {
-		name += fmt.Sprintf(" %s", strings.ToUpper(flag.GetName()))
+		name += fmt.Sprintf(" %s", strings.ToUpper(flagName))
 	}
 	name = markdown.WrapInlineCode(name)
 

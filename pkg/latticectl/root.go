@@ -1,7 +1,7 @@
 package latticectl
 
 import (
-	"github.com/mlab-lattice/lattice/pkg/util/cli2"
+	"github.com/mlab-lattice/lattice/pkg/util/cli"
 )
 
 var Command = cli.RootCommand{
@@ -17,6 +17,7 @@ var Command = cli.RootCommand{
 			"kubernetes": Kubernetes(),
 			"local":      Local(),
 			"secrets":    Secrets(),
+			"services":   Services(),
 			"systems":    Systems(),
 			"teardown":   Teardown(),
 			"teardowns":  Teardowns(),

@@ -17,6 +17,8 @@ func (c *Controller) updateDeployStatus(
 	message string,
 	internalError *string,
 	buildID *v1.BuildID,
+	path *tree.Path,
+	version *v1.Version,
 	startTimestamp *metav1.Time,
 	completionTimestamp *metav1.Time,
 ) (*latticev1.Deploy, error) {
@@ -26,7 +28,9 @@ func (c *Controller) updateDeployStatus(
 		Message:       message,
 		InternalError: internalError,
 
-		Build: buildID,
+		Build:   buildID,
+		Path:    path,
+		Version: version,
 
 		StartTimestamp:      startTimestamp,
 		CompletionTimestamp: completionTimestamp,

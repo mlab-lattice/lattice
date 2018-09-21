@@ -1,0 +1,13 @@
+---
+platform: linux
+image_resource:
+  type: docker-image
+  source:
+    repository: alpine/git
+inputs:
+  - name: lattice-repo
+  - name: docgen-binary
+outputs:
+  - name: tarball
+run:
+  path: lattice-repo/ci/gen-latticectl-docs.sh

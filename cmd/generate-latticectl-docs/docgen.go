@@ -6,7 +6,7 @@ import (
 	"log"
 
 	"github.com/mlab-lattice/lattice/pkg/latticectl"
-	"github.com/mlab-lattice/lattice/pkg/util/cli2/docgen"
+	"github.com/mlab-lattice/lattice/pkg/util/cli/docgen"
 )
 
 func main() {

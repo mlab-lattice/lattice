@@ -11,7 +11,7 @@ go_library(
     deps = [
         "//pkg/api/v1:go_default_library",
         "//pkg/backend/kubernetes/cloudprovider/local:go_default_library",
-        "//pkg/util/cli2:go_default_library",
-        "//pkg/util/cli2/flags:go_default_library",
+        "//pkg/util/cli:go_default_library",
+        "//pkg/util/cli/flags:go_default_library",
     ],
 )

@@ -52,8 +52,8 @@ type SystemTeardownClient interface {
 type SystemServiceClient interface {
 	List() ([]v1.Service, error)
 	Get(id v1.ServiceID) (*v1.Service, error)
-	GetByServicePath(path tree.Path) (*v1.Service, error)
-	Logs(id v1.ServiceID, sidecar, instance *string, options *v1.ContainerLogOptions) (io.ReadCloser, error)
+	GetByPath(path tree.Path) (*v1.Service, error)
+	Logs(id v1.ServiceID, instance, sidecar *string, options *v1.ContainerLogOptions) (io.ReadCloser, error)
 }
 
 type SystemJobClient interface {

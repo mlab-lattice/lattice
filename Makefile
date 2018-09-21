@@ -175,14 +175,26 @@ $(IMAGE_SAVES):
 	@$(MAKE) docker.save IMAGE=$(patsubst docker.save.%,%,$@)
 
 .PHONY: docker.run
-docker.run: docker.save
-	@docker run -it --entrypoint sh bazel/docker:$(IMAGE)
+docker.run: gazelle
+	@bazel run \
+		--platforms=@io_bazel_rules_go//go/toolchain:linux_amd64 \
+		//docker:$(IMAGE)
 
 IMAGE_RUNS := $(addprefix docker.run.,$(DOCKER_IMAGES))
 
 .PHONY: $(IMAGE_RUNS)
 $(IMAGE_RUNS):
 	@$(MAKE) docker.run IMAGE=$(patsubst docker.run.%,%,$@)
+
+.PHONY: docker.sh
+docker.sh: docker.save
+	@docker run -it --entrypoint sh bazel/docker:$(IMAGE)
+
+IMAGE_RUNS := $(addprefix docker.sh.,$(DOCKER_IMAGES))
+
+.PHONY: $(IMAGE_SHS)
+$(IMAGE_SHS):
+	@$(MAKE) docker.sh IMAGE=$(patsubst docker.sh.%,%,$@)
 
 # kubernetes
 .PHONY: kubernetes.update-dependencies

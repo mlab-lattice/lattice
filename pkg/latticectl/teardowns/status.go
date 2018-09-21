@@ -9,9 +9,9 @@ import (
 	"github.com/mlab-lattice/lattice/pkg/api/client"
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	"github.com/mlab-lattice/lattice/pkg/latticectl/command"
-	"github.com/mlab-lattice/lattice/pkg/util/cli2"
-	"github.com/mlab-lattice/lattice/pkg/util/cli2/color"
-	"github.com/mlab-lattice/lattice/pkg/util/cli2/printer"
+	"github.com/mlab-lattice/lattice/pkg/util/cli"
+	"github.com/mlab-lattice/lattice/pkg/util/cli/color"
+	"github.com/mlab-lattice/lattice/pkg/util/cli/printer"
 )
 
 func Status() *cli.Command {
@@ -61,7 +61,7 @@ func PrintTeardown(client client.Interface, system v1.SystemID, id v1.TeardownID
 
 	case printer.FormatJSON:
 		j := printer.NewJSON(w)
-		j.Print(system)
+		j.Print(teardown)
 
 	default:
 		return fmt.Errorf("unexpected format %v", f)
@@ -96,7 +96,7 @@ func WatchTeardown(client client.Interface, system v1.SystemID, id v1.TeardownID
 	case printer.FormatJSON:
 		j := printer.NewJSON(w)
 		handle = func(teardown *v1.Teardown) bool {
-			j.Print(system)
+			j.Print(teardown)
 			return false
 		}
 

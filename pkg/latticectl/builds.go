@@ -11,9 +11,9 @@ import (
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	"github.com/mlab-lattice/lattice/pkg/latticectl/builds"
 	"github.com/mlab-lattice/lattice/pkg/latticectl/command"
-	"github.com/mlab-lattice/lattice/pkg/util/cli2"
-	"github.com/mlab-lattice/lattice/pkg/util/cli2/color"
-	"github.com/mlab-lattice/lattice/pkg/util/cli2/printer"
+	"github.com/mlab-lattice/lattice/pkg/util/cli"
+	"github.com/mlab-lattice/lattice/pkg/util/cli/color"
+	"github.com/mlab-lattice/lattice/pkg/util/cli/printer"
 
 	"k8s.io/apimachinery/pkg/util/wait"
 )
@@ -47,6 +47,7 @@ func Builds() *cli.Command {
 			return PrintBuilds(ctx.Client, ctx.System, format, os.Stdout)
 		},
 		Subcommands: map[string]*cli.Command{
+			"logs":   builds.Logs(),
 			"status": builds.Status(),
 		},
 	}
@@ -138,10 +139,6 @@ func buildsTable(w io.Writer) *printer.Table {
 			Alignment: printer.TableAlignLeft,
 		},
 		{
-			Header:    "message",
-			Alignment: printer.TableAlignLeft,
-		},
-		{
 			Header:    "started",
 			Alignment: printer.TableAlignLeft,
 		},
@@ -173,33 +170,27 @@ func buildsTableRows(builds []v1.Build) []printer.TableRow {
 			target = fmt.Sprintf("version %v", *build.Version)
 		}
 
-		message := "-"
-		if build.Status.Message != "" {
-			message = build.Status.Message
-		}
-
 		started := "-"
 		if build.Status.StartTimestamp != nil {
 			started = build.Status.StartTimestamp.Format(time.RFC1123)
 		}
 
 		completed := "-"
-		if build.Status.StartTimestamp != nil {
-			completed = build.Status.StartTimestamp.Format(time.RFC1123)
+		if build.Status.CompletionTimestamp != nil {
+			completed = build.Status.CompletionTimestamp.Format(time.RFC1123)
 		}
 
 		rows = append(rows, []string{
 			color.IDString(string(build.ID)),
 			target,
 			stateColor(string(build.Status.State)),
-			message,
 			started,
 			completed,
 		})
 	}
 
 	// sort the rows by start timestamp
-	startedIdx := 4
+	startedIdx := 3
 	sort.Slice(
 		rows,
 		func(i, j int) bool {
