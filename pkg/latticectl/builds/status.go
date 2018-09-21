@@ -117,7 +117,7 @@ func WatchBuild(client client.Interface, system v1.SystemID, id v1.BuildID, w io
 			return nil
 		}
 
-		time.Sleep(5 * time.Nanosecond)
+		time.Sleep(5 * time.Second)
 	}
 }
 

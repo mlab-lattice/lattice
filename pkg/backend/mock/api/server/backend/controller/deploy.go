@@ -129,6 +129,7 @@ func (c *Controller) createDeployBuild(deploy *v1.Deploy, record *registry.Syste
 	defer c.registry.Unlock()
 
 	build := c.registry.CreateBuild(deploy.Path, deploy.Version, record)
+	c.RunBuild(build, record)
 
 	log.Printf("creating build %v for deploy %v", build.ID, deploy.ID)
 	deploy.Status.Build = &build.ID
@@ -148,12 +149,17 @@ func (c *Controller) waitForBuildTermination(deploy *v1.Deploy, record *registry
 
 			switch build.Status.State {
 			case v1.BuildStateSucceeded:
-				log.Printf("build %v for deploy %v succeeded, moving deploy to in progress", deploy.Build, deploy.ID)
+				log.Printf("build %v for deploy %v succeeded, moving deploy to in progress", deploy.Status.Build, deploy.ID)
 				deploy.Status.State = v1.DeployStateInProgress
+
+				// if this is a root deploy update the system's version
+				if deploy.Status.Path.IsRoot() {
+					record.System.Status.Version = deploy.Status.Version
+				}
 				return true, true
 
 			case v1.BuildStateFailed:
-				log.Printf("build %v for deploy %v failed, failing deploy", deploy.Build, deploy.ID)
+				log.Printf("build %v for deploy %v failed, failing deploy", deploy.Status.Build, deploy.ID)
 				deploy.Status.State = v1.DeployStateFailed
 				return true, false
 			}
@@ -175,7 +181,7 @@ func (c *Controller) deployBuild(deploy *v1.Deploy, path tree.Path, record *regi
 		c.registry.Lock()
 		defer c.registry.Unlock()
 
-		buildDefinition = record.Builds[*deploy.Build].Definition
+		buildDefinition = record.Builds[*deploy.Status.Build].Definition
 	}()
 
 	var wg sync.WaitGroup
