@@ -32,6 +32,6 @@ type SystemStatus struct {
 
 	Version *Version `json:"version,omitempty"`
 
-	CreationTimestamp time.Time  `json:"createdTimestamp"`
+	CreationTimestamp time.Time  `json:"creationTimestamp"`
 	DeletionTimestamp *time.Time `json:"deletionTimestamp,omitempty"`
 }
