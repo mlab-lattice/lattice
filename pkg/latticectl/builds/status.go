@@ -117,7 +117,7 @@ func WatchBuild(client client.Interface, system v1.SystemID, id v1.BuildID, w io
 			return nil
 		}
 
-		time.Sleep(5 * time.Nanosecond)
+		time.Sleep(5 * time.Second)
 	}
 }
 
@@ -129,10 +129,10 @@ func buildString(build *v1.Build) string {
 	var spec string
 	switch {
 	case build.Path != nil:
-		spec = fmt.Sprintf("path %v", build.Path.String())
+		spec = fmt.Sprintf("path %s", build.Path.String())
 
 	case build.Version != nil:
-		spec = fmt.Sprintf("version %v", *build.Version)
+		spec = fmt.Sprintf("version %s", *build.Version)
 	}
 
 	stateColor := color.BoldString
@@ -150,25 +150,43 @@ func buildString(build *v1.Build) string {
 	additional := ""
 	if build.Status.Message != "" {
 		additional += fmt.Sprintf(`
-  message: %v`,
+  message: %s`,
 			build.Status.Message,
 		)
 	}
 
 	if build.Status.StartTimestamp != nil {
 		additional += fmt.Sprintf(`
-  started: %v`,
+  started: %s`,
 			build.Status.StartTimestamp.String(),
 		)
 	}
 
 	if build.Status.CompletionTimestamp != nil {
 		additional += fmt.Sprintf(`
-  completed: %v`,
+  completed: %s`,
 			build.Status.CompletionTimestamp.String(),
 		)
 	}
 
+	if build.Status.Path != nil {
+		additional += fmt.Sprintf(`
+  path: %s`,
+			build.Status.Path.String(),
+		)
+	}
+
+	if build.Status.Version != nil {
+		additional += fmt.Sprintf(`
+  version: %s`,
+			string(*build.Status.Version),
+		)
+	}
+
+	if len(build.Status.Workloads) != 0 {
+		additional += `
+  workloads:`
+	}
 	var paths []string
 	for path := range build.Status.Workloads {
 		paths = append(paths, path.String())

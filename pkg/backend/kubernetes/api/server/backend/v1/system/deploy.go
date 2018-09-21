@@ -151,7 +151,9 @@ func transformDeploy(deploy *latticev1.Deploy) (v1.Deploy, error) {
 			State:   state,
 			Message: deploy.Status.Message,
 
-			Build: deploy.Status.Build,
+			Build:   deploy.Status.Build,
+			Path:    deploy.Status.Path,
+			Version: deploy.Status.Version,
 
 			StartTimestamp:      startTimestamp,
 			CompletionTimestamp: completionTimestamp,

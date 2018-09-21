@@ -113,6 +113,12 @@ func (b *Backend) transformSystem(system *latticev1.System) (*v1.System, error) 
 		}
 	}
 
+	var version *v1.Version
+	versionLabel, ok := system.DefinitionVersionLabel()
+	if ok {
+		version = &versionLabel
+	}
+
 	var deletionTimestamp *time.Time
 	if system.DeletionTimestamp != nil {
 		deletionTimestamp = &(*system.DeletionTimestamp).Time
@@ -123,6 +129,8 @@ func (b *Backend) transformSystem(system *latticev1.System) (*v1.System, error) 
 		DefinitionURL: system.Spec.DefinitionURL,
 		Status: v1.SystemStatus{
 			State: state,
+
+			Version: version,
 
 			CreationTimestamp: system.CreationTimestamp.Time,
 			DeletionTimestamp: deletionTimestamp,

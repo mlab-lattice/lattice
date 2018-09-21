@@ -138,14 +138,6 @@ func deploysTable(w io.Writer) *printer.Table {
 			Alignment: printer.TableAlignLeft,
 		},
 		{
-			Header:    "build",
-			Alignment: printer.TableAlignLeft,
-		},
-		{
-			Header:    "message",
-			Alignment: printer.TableAlignLeft,
-		},
-		{
 			Header:    "started",
 			Alignment: printer.TableAlignLeft,
 		},
@@ -180,16 +172,6 @@ func deploysTableRows(deploys []v1.Deploy) []printer.TableRow {
 			target = fmt.Sprintf("version %v", *deploy.Version)
 		}
 
-		build := "-"
-		if deploy.Status.Build != nil {
-			build = string(*deploy.Status.Build)
-		}
-
-		message := "-"
-		if deploy.Status.Message != "" {
-			message = deploy.Status.Message
-		}
-
 		started := "-"
 		if deploy.Status.StartTimestamp != nil {
 			started = deploy.Status.StartTimestamp.Format(time.RFC1123)
@@ -204,15 +186,13 @@ func deploysTableRows(deploys []v1.Deploy) []printer.TableRow {
 			color.IDString(string(deploy.ID)),
 			target,
 			stateColor(string(deploy.Status.State)),
-			build,
-			message,
 			started,
 			completed,
 		})
 	}
 
 	// sort the rows by start timestamp
-	startedIdx := 5
+	startedIdx := 3
 	sort.Slice(
 		rows,
 		func(i, j int) bool {

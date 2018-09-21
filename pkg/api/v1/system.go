@@ -30,6 +30,8 @@ type System struct {
 type SystemStatus struct {
 	State SystemState `json:"state"`
 
+	Version *Version `json:"version,omitempty"`
+
 	CreationTimestamp time.Time  `json:"createdTimestamp"`
 	DeletionTimestamp *time.Time `json:"deletionTimestamp,omitempty"`
 }

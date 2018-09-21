@@ -4,7 +4,7 @@ go_library(
     name = "go_default_library",
     srcs = ["main.go"],
     importpath = "github.com/mlab-lattice/lattice/cmd/mock/api-server/rest",
-    visibility = ["//visibility:private"],
+    visibility = ["//visibility:public"],
     deps = ["//cmd/mock/api-server/rest/app:go_default_library"],
 )
 

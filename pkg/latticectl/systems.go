@@ -137,6 +137,10 @@ func systemsTable(w io.Writer) *printer.Table {
 			Alignment: printer.TableAlignLeft,
 		},
 		{
+			Header:    "version",
+			Alignment: printer.TableAlignLeft,
+		},
+		{
 			Header:    "status",
 			Alignment: printer.TableAlignLeft,
 		},
@@ -156,9 +160,15 @@ func systemsTableRows(systems []v1.System) []printer.TableRow {
 			stateColor = color.WarningString
 		}
 
+		version := "-"
+		if system.Status.Version != nil {
+			version = string(*system.Status.Version)
+		}
+
 		rows = append(rows, []string{
 			color.IDString(string(system.ID)),
 			system.DefinitionURL,
+			version,
 			stateColor(string(system.Status.State)),
 		})
 	}

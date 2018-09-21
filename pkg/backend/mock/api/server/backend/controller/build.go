@@ -165,11 +165,20 @@ func (c *Controller) resolveBuildComponent(build *v1.Build, record *registry.Sys
 func (c *Controller) getBuildComponent(
 	build *v1.Build,
 	record *registry.SystemRecord,
-) (tree.Path, component.Interface, *git.CommitReference, bool) {
+) (
+	tree.Path,
+	component.Interface,
+	*git.CommitReference,
+	bool,
+) {
 	c.registry.Lock()
 	defer c.registry.Unlock()
 
 	if build.Path == nil {
+		root := tree.RootPath()
+		build.Status.Path = &root
+		build.Status.Version = build.Version
+
 		tag := string(*build.Version)
 		ref := &definitionv1.Reference{
 			GitRepository: &definitionv1.GitRepositoryReference{
@@ -184,11 +193,15 @@ func (c *Controller) getBuildComponent(
 	}
 
 	path := *build.Path
+	build.Status.Path = build.Path
+
 	if record.Definition == nil {
 		build.Status.State = v1.BuildStateFailed
 		build.Status.Message = fmt.Sprintf("system %v does not have any components, cannot build the system based off a path", record.System.ID)
 		return "", nil, nil, false
 	}
+
+	build.Status.Version = record.System.Status.Version
 
 	if path == tree.RootPath() {
 		info, ok := record.Definition.Get(path)

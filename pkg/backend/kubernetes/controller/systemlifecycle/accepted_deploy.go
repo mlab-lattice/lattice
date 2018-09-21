@@ -36,10 +36,23 @@ func (c *Controller) syncAcceptedDeploy(deploy *latticev1.Deploy) error {
 		return err
 	}
 
+	now := metav1.Now()
 	switch build.Status.State {
 	// if the build has not reached a terminal state, there's nothing to do yet
+	// still update the status in case we haven't picked up the build's version yet
 	case latticev1.BuildStatePending, latticev1.BuildStateAccepted, latticev1.BuildStateRunning:
-		return nil
+		_, err := c.updateDeployStatus(
+			deploy,
+			latticev1.DeployStateAccepted,
+			deploy.Status.Message,
+			nil,
+			deploy.Status.Build,
+			build.Status.Path,
+			build.Status.Version,
+			deploy.Status.StartTimestamp,
+			nil,
+		)
+		return err
 
 	// if the build failed, fail the deploy as well
 	case latticev1.BuildStateFailed:
@@ -49,12 +62,12 @@ func (c *Controller) syncAcceptedDeploy(deploy *latticev1.Deploy) error {
 			fmt.Sprintf("%v failed", build.Description(c.namespacePrefix)),
 			nil,
 			deploy.Status.Build,
+			build.Status.Path,
+			build.Status.Version,
 			deploy.Status.StartTimestamp,
-			deploy.Status.CompletionTimestamp,
+			&now,
 		)
-		if err != nil {
-			return err
-		}
+		return err
 
 		// release the deploy's lock so other deploys can deploy along this path
 		err = c.releaseDeployLock(deploy)
@@ -103,8 +116,10 @@ func (c *Controller) syncAcceptedBuildlessDeploy(deploy *latticev1.Deploy) (*lat
 		"",
 		nil,
 		&buildID,
+		build.Status.Path,
+		build.Status.Version,
 		deploy.Status.StartTimestamp,
-		deploy.Status.CompletionTimestamp,
+		nil,
 	)
 	if err != nil {
 		return nil, nil, err
@@ -119,21 +134,20 @@ func (c *Controller) syncAcceptedDeployWithSuccessfulBuild(deploy *latticev1.Dep
 		return err
 	}
 
-	version := v1.Version("unknown")
-	if label, ok := deploy.DefinitionVersionLabel(); ok {
-		version = label
+	if build.Status.Path == nil {
+		return fmt.Errorf(
+			"successful %v for %v does not have path",
+			build.Description(c.namespacePrefix),
+			deploy.Description(c.namespacePrefix),
+		)
 	}
 
-	buildID := v1.BuildID("unknown")
-	if label, ok := deploy.BuildIDLabel(); ok {
-		buildID = label
-	}
-
-	deployID := v1.DeployID(deploy.Name)
-
-	system, err = c.updateSystemLabels(system, &version, &deployID, &buildID)
-	if err != nil {
-		return err
+	// if we're redeploying the whole system, update the system's version
+	if build.Status.Path.IsRoot() {
+		system, err = c.updateSystemLabels(system, build.Status.Version)
+		if err != nil {
+			return err
+		}
 	}
 
 	// loop through all of the workloads and seed there artifacts into the artifacts
@@ -241,8 +255,10 @@ func (c *Controller) syncAcceptedDeployWithSuccessfulBuild(deploy *latticev1.Dep
 		"",
 		nil,
 		deploy.Status.Build,
+		build.Status.Path,
+		build.Status.Version,
 		deploy.Status.StartTimestamp,
-		deploy.Status.CompletionTimestamp,
+		nil,
 	)
 	return err
 }

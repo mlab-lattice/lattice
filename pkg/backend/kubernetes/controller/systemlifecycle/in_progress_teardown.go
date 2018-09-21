@@ -5,6 +5,8 @@ import (
 
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	"github.com/mlab-lattice/lattice/pkg/definition/component/resolver"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func (c *Controller) syncInProgressTeardown(teardown *latticev1.Teardown) error {
@@ -35,7 +37,7 @@ func (c *Controller) syncInProgressTeardown(teardown *latticev1.Teardown) error 
 		return nil
 
 	case latticev1.SystemStateStable:
-		system, err = c.updateSystemLabels(system, nil, nil, nil)
+		system, err = c.updateSystemLabels(system, nil)
 		if err != nil {
 			return err
 		}
@@ -53,12 +55,13 @@ func (c *Controller) syncInProgressTeardown(teardown *latticev1.Teardown) error 
 	// first it's possible that the teardown status update could fail, and another deploy or teardown
 	// successfully acquires the lock. if the controller then restarted, it could see
 	// conflicting locks when seeding the lifecycle actions
+	now := metav1.Now()
 	teardown, err = c.updateTeardownStatus(
 		teardown,
 		state,
 		"",
 		teardown.Status.StartTimestamp,
-		teardown.Status.CompletionTimestamp,
+		&now,
 	)
 	if err != nil {
 		return err

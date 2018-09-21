@@ -138,8 +138,17 @@ func buildsTable(w io.Writer) *printer.Table {
 			Header:    "state",
 			Alignment: printer.TableAlignLeft,
 		},
+
 		{
 			Header:    "message",
+			Alignment: printer.TableAlignLeft,
+		},
+		{
+			Header:    "version",
+			Alignment: printer.TableAlignLeft,
+		},
+		{
+			Header:    "path",
 			Alignment: printer.TableAlignLeft,
 		},
 		{
@@ -179,6 +188,16 @@ func buildsTableRows(builds []v1.Build) []printer.TableRow {
 			message = build.Status.Message
 		}
 
+		version := "-"
+		if build.Status.Version != nil {
+			version = string(*build.Status.Version)
+		}
+
+		path := "-"
+		if build.Status.Path != nil {
+			path = build.Status.Path.String()
+		}
+
 		started := "-"
 		if build.Status.StartTimestamp != nil {
 			started = build.Status.StartTimestamp.Format(time.RFC1123)
@@ -194,13 +213,15 @@ func buildsTableRows(builds []v1.Build) []printer.TableRow {
 			target,
 			stateColor(string(build.Status.State)),
 			message,
+			version,
+			path,
 			started,
 			completed,
 		})
 	}
 
 	// sort the rows by start timestamp
-	startedIdx := 4
+	startedIdx := 6
 	sort.Slice(
 		rows,
 		func(i, j int) bool {
