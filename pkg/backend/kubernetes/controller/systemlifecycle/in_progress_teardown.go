@@ -4,7 +4,9 @@ import (
 	"fmt"
 
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
-	"github.com/mlab-lattice/lattice/pkg/definition/tree"
+	"github.com/mlab-lattice/lattice/pkg/definition/component/resolver"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func (c *Controller) syncInProgressTeardown(teardown *latticev1.Teardown) error {
@@ -13,17 +15,10 @@ func (c *Controller) syncInProgressTeardown(teardown *latticev1.Teardown) error 
 		return err
 	}
 
-	// This needs to happen in here because we don't have an "Accepted" intermediate state like Deploy does.
-	// We can't atomically update both teardown.Status.State and change system.Spec, and we need to move teardown into
-	// "in progress" so on controller restart the controller can figure out that it is the owning object. Therefore,
-	// we must update the teardown.Status.State first. If we were then to try to update system.Spec in syncPendingTeardown
-	// and it failed, it would never get rerun since syncInProgressTeardown would always be called from there on out.
-	// So instead we set the system.Spec in here to make sure it gets run even after failures.
-	services := make(map[tree.Path]latticev1.SystemSpecServiceInfo)
-	jobs := make(map[tree.Path]latticev1.SystemSpecJobInfo)
-	nodePools := make(map[string]latticev1.NodePoolSpec)
+	definition := resolver.NewResolutionTree()
+	artifacts := latticev1.NewSystemSpecWorkloadBuildArtifacts()
 
-	system, err = c.updateSystem(system, services, jobs, nodePools)
+	system, err = c.updateSystem(system, definition, artifacts)
 	if err != nil {
 		return err
 	}
@@ -42,7 +37,7 @@ func (c *Controller) syncInProgressTeardown(teardown *latticev1.Teardown) error 
 		return nil
 
 	case latticev1.SystemStateStable:
-		system, err = c.updateSystemLabels(system, nil, nil, nil)
+		system, err = c.updateSystemLabels(system, nil)
 		if err != nil {
 			return err
 		}
@@ -56,14 +51,21 @@ func (c *Controller) syncInProgressTeardown(teardown *latticev1.Teardown) error 
 		return fmt.Errorf("%v in unexpected state %v", system.Description(), system.Status.State)
 	}
 
-	teardown, err = c.updateTeardownStatus(teardown, state, "")
+	// need to update the teardown's status before releasing the lock. if we released the lock
+	// first it's possible that the teardown status update could fail, and another deploy or teardown
+	// successfully acquires the lock. if the controller then restarted, it could see
+	// conflicting locks when seeding the lifecycle actions
+	now := metav1.Now()
+	teardown, err = c.updateTeardownStatus(
+		teardown,
+		state,
+		"",
+		teardown.Status.StartTimestamp,
+		&now,
+	)
 	if err != nil {
-		// FIXME: is it possible that the teardown is locked forever now?
 		return err
 	}
 
-	if teardown.Status.State == latticev1.TeardownStateSucceeded || teardown.Status.State == latticev1.TeardownStateFailed {
-		return c.relinquishTeardownOwningActionClaim(teardown)
-	}
-	return nil
+	return c.releaseTeardownLock(teardown)
 }

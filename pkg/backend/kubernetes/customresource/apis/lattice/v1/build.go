@@ -5,10 +5,8 @@ import (
 
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	kubeutil "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/kubernetes"
+	"github.com/mlab-lattice/lattice/pkg/definition/component/resolver"
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
-	definitionv1 "github.com/mlab-lattice/lattice/pkg/definition/v1"
-
-	"github.com/mlab-lattice/lattice/pkg/definition/resolver"
 	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -23,7 +21,6 @@ var (
 	BuildKind     = SchemeGroupVersion.WithKind("Build")
 	BuildListKind = SchemeGroupVersion.WithKind("BuildList")
 
-	BuildIDLabelKey                = fmt.Sprintf("build.%v/id", GroupName)
 	BuildDefinitionVersionLabelKey = fmt.Sprintf("build.%v/definition-version", GroupName)
 )
 
@@ -37,9 +34,9 @@ type Build struct {
 	Status            BuildStatus `json:"status,omitempty"`
 }
 
-func (b *Build) DefinitionVersionLabel() (v1.SystemVersion, bool) {
+func (b *Build) DefinitionVersionLabel() (v1.Version, bool) {
 	version, ok := b.Labels[BuildDefinitionVersionLabelKey]
-	return v1.SystemVersion(version), ok
+	return v1.Version(version), ok
 }
 
 func (b *Build) Description(namespacePrefix string) string {
@@ -48,7 +45,7 @@ func (b *Build) Description(namespacePrefix string) string {
 		systemID = v1.SystemID(fmt.Sprintf("UNKNOWN (namespace: %v)", b.Namespace))
 	}
 
-	version := v1.SystemVersion("unknown")
+	version := v1.Version("unknown")
 	if label, ok := b.DefinitionVersionLabel(); ok {
 		version = label
 	}
@@ -56,45 +53,44 @@ func (b *Build) Description(namespacePrefix string) string {
 	return fmt.Sprintf("build %v (version %v in system %v)", b.Name, version, systemID)
 }
 
-// +k8s:deepcopy-gen=false
 type BuildSpec struct {
-	Definition     *definitionv1.SystemNode `json:"definition"`
-	ResolutionInfo resolver.ResolutionInfo  `json:"resolutionInfo"`
+	Version *v1.Version `json:"version"`
+	Path    *tree.Path  `json:"path"`
 }
 
+// +k8s:deepcopy-gen=false
 type BuildStatus struct {
-	// Builds are immutable so no need for ObservedGeneration
+	// Build specs are immutable so no need for ObservedGeneration
 
 	State   BuildState `json:"state"`
 	Message string     `json:"message"`
 
+	InternalError *string `json:"internalError,omitempty"`
+
+	Definition *resolver.ResolutionTree `json:"definition,omitempty"`
+	Path       *tree.Path               `json:"path,omitempty"`
+	Version    *v1.Version              `json:"version,omitempty"`
+
 	StartTimestamp      *metav1.Time `json:"startTimestamp,omitempty"`
 	CompletionTimestamp *metav1.Time `json:"completionTimestamp,omitempty"`
 
-	// Maps a service path to the information about its container builds
-	Services map[tree.Path]BuildStatusService `json:"services"`
+	// Maps a workload path to the information about its container builds
+	Workloads map[tree.Path]BuildStatusWorkload `json:"workloads"`
 
-	// Maps a service path to the information about its container builds
-	Jobs map[tree.Path]BuildStatusJob `json:"jobs"`
-
-	// Maps a ServiceBuild.Name to the ServiceBuild.Status
-	ContainerBuildStatuses map[string]ContainerBuildStatus `json:"containerBuildStatuses"`
+	// Maps a container build's ID to its status
+	ContainerBuildStatuses map[v1.ContainerBuildID]ContainerBuildStatus `json:"containerBuildStatuses"`
 }
 
-type BuildStatusService struct {
-	MainContainer string            `json:"mainContainer"`
-	Sidecars      map[string]string `json:"sidecars"`
-}
-
-type BuildStatusJob struct {
-	MainContainer string            `json:"mainContainer"`
-	Sidecars      map[string]string `json:"sidecars"`
+type BuildStatusWorkload struct {
+	MainContainer v1.ContainerBuildID            `json:"mainContainer"`
+	Sidecars      map[string]v1.ContainerBuildID `json:"sidecars"`
 }
 
 type BuildState string
 
 const (
 	BuildStatePending   BuildState = ""
+	BuildStateAccepted  BuildState = "accepted"
 	BuildStateRunning   BuildState = "running"
 	BuildStateSucceeded BuildState = "succeeded"
 	BuildStateFailed    BuildState = "failed"

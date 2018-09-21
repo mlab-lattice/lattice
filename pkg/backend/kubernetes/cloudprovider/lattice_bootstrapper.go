@@ -8,6 +8,7 @@ import (
 	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/cloudprovider/local"
 	clusterbootstrapper "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/lifecycle/lattice/bootstrap/bootstrapper"
 	"github.com/mlab-lattice/lattice/pkg/util/cli"
+	"github.com/mlab-lattice/lattice/pkg/util/cli/flags"
 )
 
 type ClusterBootstrapperOptions struct {
@@ -32,8 +33,7 @@ func LatticeBoostrapperFlag(cloudProvider *string) (cli.Flag, *ClusterBootstrapp
 	localFlags, localOptions := local.LatticeBootstrapperFlags()
 	options := &ClusterBootstrapperOptions{}
 
-	flag := &cli.DelayedEmbeddedFlag{
-		Name:     "cloud-provider-var",
+	flag := &flags.DelayedEmbedded{
 		Required: true,
 		Usage:    "configuration for the cloud provider lattice bootstrapper",
 		Flags: map[string]cli.Flags{

@@ -11,6 +11,7 @@ import (
 	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/dnsprovider"
 	systembootstrapper "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/lifecycle/system/bootstrap/bootstrapper"
 	"github.com/mlab-lattice/lattice/pkg/util/cli"
+	"github.com/mlab-lattice/lattice/pkg/util/cli/flags"
 
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
@@ -162,8 +163,7 @@ func Flag(cloudProvider *string) (cli.Flag, *Options) {
 	localFlags, localOptions := local.Flags()
 	options := &Options{}
 
-	flag := &cli.DelayedEmbeddedFlag{
-		Name:     "cloud-provider-var",
+	flag := &flags.DelayedEmbedded{
 		Required: true,
 		Usage:    "configuration for the cloud provider",
 		Flags: map[string]cli.Flags{

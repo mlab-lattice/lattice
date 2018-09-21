@@ -1,0 +1,29 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "intention_lock.go",
+        "lifecycle_action.go",
+    ],
+    importpath = "github.com/mlab-lattice/lattice/pkg/util/sync",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//pkg/api/v1:go_default_library",
+        "//pkg/definition/tree:go_default_library",
+    ],
+)
+
+go_test(
+    name = "go_default_test",
+    srcs = [
+        "intention_lock_test.go",
+        "lifecycle_action_test.go",
+    ],
+    embed = [":go_default_library"],
+    deps = [
+        "//pkg/api/v1:go_default_library",
+        "//pkg/definition/tree:go_default_library",
+        "@com_github_satori_go_uuid//:go_default_library",
+    ],
+)

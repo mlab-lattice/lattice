@@ -12,7 +12,7 @@ import (
 func (c *Controller) syncSystemStatus(
 	system *latticev1.System,
 	services map[tree.Path]latticev1.SystemStatusService,
-	nodePools map[string]latticev1.SystemStatusNodePool,
+	nodePools map[tree.PathSubcomponent]latticev1.SystemStatusNodePool,
 ) error {
 	hasFailedService, hasUpdatingService, hasScalingService, err := servicesStateInfo(services)
 	if err != nil {
@@ -77,7 +77,7 @@ func servicesStateInfo(services map[tree.Path]latticev1.SystemStatusService) (bo
 	return hasFailedService, hasUpdatingService, hasScalingService, nil
 }
 
-func nodePoolsStateInfo(nodePools map[string]latticev1.SystemStatusNodePool) (bool, bool, bool, error) {
+func nodePoolsStateInfo(nodePools map[tree.PathSubcomponent]latticev1.SystemStatusNodePool) (bool, bool, bool, error) {
 	hasFailedNodePool := false
 	hasUpdatingNodePool := false
 	hasScalingNodePool := false

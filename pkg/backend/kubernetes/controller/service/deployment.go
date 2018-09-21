@@ -242,7 +242,7 @@ func (c *Controller) newDeployment(service *latticev1.Service, nodePool *lattice
 }
 
 func deploymentName(service *latticev1.Service) string {
-	// TODO(kevinrosendahl): May change this to UUID when a Service can have multiple Deployments (e.g. Blue/Green & Canary)
+	// TODO(kevindrosendahl): May change this to UUID when a Service can have multiple Deployments (e.g. Blue/Green & Canary)
 	return fmt.Sprintf("lattice-service-%s", service.Name)
 }
 
@@ -375,8 +375,8 @@ func (c *Controller) untransformedPodTemplateSpec(
 
 	tolerations := []corev1.Toleration{nodePool.Toleration(nodePoolEpoch)}
 
-	return latticev1.PodTemplateSpecForComponent(
-		service.Spec.Definition,
+	return latticev1.PodTemplateSpecForV1Workload(
+		&service.Spec.Definition,
 		path,
 		c.latticeID,
 		c.internalDNSDomain,
