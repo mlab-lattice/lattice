@@ -12,6 +12,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	kubeclientset "k8s.io/client-go/kubernetes"
+	"time"
 )
 
 func NewBackend(
@@ -112,11 +113,19 @@ func (b *Backend) transformSystem(system *latticev1.System) (*v1.System, error) 
 		}
 	}
 
+	var deletionTimestamp *time.Time
+	if system.DeletionTimestamp != nil {
+		deletionTimestamp = &(*system.DeletionTimestamp).Time
+	}
+
 	externalSystem := &v1.System{
 		ID:            v1.SystemID(system.Name),
 		DefinitionURL: system.Spec.DefinitionURL,
 		Status: v1.SystemStatus{
 			State: state,
+
+			CreationTimestamp: system.CreationTimestamp.Time,
+			DeletionTimestamp: deletionTimestamp,
 		},
 	}
 

@@ -1,9 +1,10 @@
 package system
 
 import (
-	"sync"
-
 	"fmt"
+	"sync"
+	"time"
+
 	backendv1 "github.com/mlab-lattice/lattice/pkg/api/server/backend/v1"
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	"github.com/mlab-lattice/lattice/pkg/backend/mock/api/server/backend/controller"
@@ -43,6 +44,8 @@ func (b *Backend) Create(systemID v1.SystemID, definitionURL string) (*v1.System
 
 			Status: v1.SystemStatus{
 				State: v1.SystemStatePending,
+
+				CreationTimestamp: time.Now(),
 			},
 		},
 		Definition: resolver.NewResolutionTree(),
