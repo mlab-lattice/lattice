@@ -16,6 +16,7 @@ import (
 )
 
 func (c *Controller) syncPendingBuild(build *latticev1.Build) error {
+	now := metav1.Now()
 	err := reflectutil.ValidateUnion(&build.Spec)
 	if err != nil {
 		switch err.(type) {
@@ -28,8 +29,8 @@ func (c *Controller) syncPendingBuild(build *latticev1.Build) error {
 				nil,
 				nil,
 				nil,
-				nil,
-				nil,
+				&now,
+				&now,
 				nil,
 				nil,
 			)
@@ -44,8 +45,8 @@ func (c *Controller) syncPendingBuild(build *latticev1.Build) error {
 				nil,
 				nil,
 				nil,
-				nil,
-				nil,
+				&now,
+				&now,
 				nil,
 				nil,
 			)
@@ -61,8 +62,8 @@ func (c *Controller) syncPendingBuild(build *latticev1.Build) error {
 				nil,
 				nil,
 				nil,
-				nil,
-				nil,
+				&now,
+				&now,
 				nil,
 				nil,
 			)
@@ -96,8 +97,8 @@ func (c *Controller) syncPendingBuild(build *latticev1.Build) error {
 			nil,
 			&path,
 			&version,
-			nil,
-			nil,
+			&now,
+			&now,
 			nil,
 			nil,
 		)
@@ -116,8 +117,8 @@ func (c *Controller) syncPendingBuild(build *latticev1.Build) error {
 				nil,
 				&path,
 				&version,
-				nil,
-				nil,
+				&now,
+				&now,
 				nil,
 				nil,
 			)
@@ -134,8 +135,8 @@ func (c *Controller) syncPendingBuild(build *latticev1.Build) error {
 				t,
 				&path,
 				&version,
-				nil,
-				nil,
+				&now,
+				&now,
 				nil,
 				nil,
 			)
@@ -143,7 +144,6 @@ func (c *Controller) syncPendingBuild(build *latticev1.Build) error {
 		}
 	}
 
-	now := metav1.Now()
 	_, err = c.updateBuildStatus(
 		build,
 		latticev1.BuildStateAccepted,
@@ -153,7 +153,7 @@ func (c *Controller) syncPendingBuild(build *latticev1.Build) error {
 		&path,
 		&version,
 		&now,
-		nil,
+		&now,
 		nil,
 		nil,
 	)
@@ -188,6 +188,7 @@ func (c *Controller) getBuildComponent(
 	// if it's a path build, first check to make sure that the system
 	// currently has a deployed definition
 	path := *build.Spec.Path
+	now := metav1.Now()
 	if system.Spec.Definition == nil {
 		_, err := c.updateBuildStatus(
 			build,
@@ -197,8 +198,8 @@ func (c *Controller) getBuildComponent(
 			nil,
 			&path,
 			nil,
-			nil,
-			nil,
+			&now,
+			&now,
 			nil,
 			nil,
 		)
@@ -222,8 +223,8 @@ func (c *Controller) getBuildComponent(
 				nil,
 				&path,
 				&version,
-				nil,
-				nil,
+				&now,
+				&now,
 				nil,
 				nil,
 			)
@@ -246,8 +247,8 @@ func (c *Controller) getBuildComponent(
 			nil,
 			&path,
 			&version,
-			nil,
-			nil,
+			&now,
+			&now,
 			nil,
 			nil,
 		)
@@ -265,8 +266,8 @@ func (c *Controller) getBuildComponent(
 			nil,
 			&path,
 			&version,
-			nil,
-			nil,
+			&now,
+			&now,
 			nil,
 			nil,
 		)
@@ -288,8 +289,8 @@ func (c *Controller) getBuildComponent(
 			nil,
 			&path,
 			&version,
-			nil,
-			nil,
+			&now,
+			&now,
 			nil,
 			nil,
 		)

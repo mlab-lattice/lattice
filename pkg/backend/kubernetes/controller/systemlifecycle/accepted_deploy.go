@@ -36,6 +36,7 @@ func (c *Controller) syncAcceptedDeploy(deploy *latticev1.Deploy) error {
 		return err
 	}
 
+	now := metav1.Now()
 	switch build.Status.State {
 	// if the build has not reached a terminal state, there's nothing to do yet
 	// still update the status in case we haven't picked up the build's version yet
@@ -49,7 +50,7 @@ func (c *Controller) syncAcceptedDeploy(deploy *latticev1.Deploy) error {
 			build.Status.Path,
 			build.Status.Version,
 			deploy.Status.StartTimestamp,
-			deploy.Status.CompletionTimestamp,
+			nil,
 		)
 		return err
 
@@ -64,7 +65,7 @@ func (c *Controller) syncAcceptedDeploy(deploy *latticev1.Deploy) error {
 			build.Status.Path,
 			build.Status.Version,
 			deploy.Status.StartTimestamp,
-			deploy.Status.CompletionTimestamp,
+			&now,
 		)
 		return err
 
@@ -118,7 +119,7 @@ func (c *Controller) syncAcceptedBuildlessDeploy(deploy *latticev1.Deploy) (*lat
 		build.Status.Path,
 		build.Status.Version,
 		deploy.Status.StartTimestamp,
-		deploy.Status.CompletionTimestamp,
+		nil,
 	)
 	if err != nil {
 		return nil, nil, err
@@ -257,7 +258,7 @@ func (c *Controller) syncAcceptedDeployWithSuccessfulBuild(deploy *latticev1.Dep
 		build.Status.Path,
 		build.Status.Version,
 		deploy.Status.StartTimestamp,
-		deploy.Status.CompletionTimestamp,
+		nil,
 	)
 	return err
 }

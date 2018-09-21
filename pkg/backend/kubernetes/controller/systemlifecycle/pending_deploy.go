@@ -17,6 +17,7 @@ import (
 
 func (c *Controller) syncPendingDeploy(deploy *latticev1.Deploy) error {
 	glog.V(5).Infof("syncing pending %v", deploy.Description(c.namespacePrefix))
+	now := metav1.Now()
 	err := reflectutil.ValidateUnion(&deploy.Spec)
 	if err != nil {
 		switch err.(type) {
@@ -29,8 +30,8 @@ func (c *Controller) syncPendingDeploy(deploy *latticev1.Deploy) error {
 				nil,
 				nil,
 				nil,
-				nil,
-				nil,
+				&now,
+				&now,
 			)
 			return err
 
@@ -43,8 +44,8 @@ func (c *Controller) syncPendingDeploy(deploy *latticev1.Deploy) error {
 				nil,
 				nil,
 				nil,
-				nil,
-				nil,
+				&now,
+				&now,
 			)
 			return err
 
@@ -58,8 +59,8 @@ func (c *Controller) syncPendingDeploy(deploy *latticev1.Deploy) error {
 				nil,
 				nil,
 				nil,
-				nil,
-				nil,
+				&now,
+				&now,
 			)
 			return err
 		}
@@ -90,8 +91,8 @@ func (c *Controller) syncPendingDeploy(deploy *latticev1.Deploy) error {
 					buildID,
 					nil,
 					nil,
-					nil,
-					nil,
+					&now,
+					&now,
 				)
 				return err
 			}
@@ -110,8 +111,8 @@ func (c *Controller) syncPendingDeploy(deploy *latticev1.Deploy) error {
 				buildID,
 				build.Spec.Path,
 				build.Status.Version,
-				nil,
-				nil,
+				&now,
+				&now,
 			)
 			return err
 		}
@@ -141,14 +142,11 @@ func (c *Controller) syncPendingDeploy(deploy *latticev1.Deploy) error {
 			buildID,
 			&path,
 			version,
-			nil,
-			nil,
+			&now,
+			&now,
 		)
 		return err
 	}
-
-	now := metav1.Now()
-	startTimestamp := &now
 
 	_, err = c.updateDeployStatus(
 		deploy,
@@ -158,7 +156,7 @@ func (c *Controller) syncPendingDeploy(deploy *latticev1.Deploy) error {
 		buildID,
 		&path,
 		version,
-		startTimestamp,
+		&now,
 		nil,
 	)
 	return err

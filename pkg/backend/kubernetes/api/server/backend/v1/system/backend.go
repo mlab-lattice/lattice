@@ -114,7 +114,7 @@ func (b *Backend) transformSystem(system *latticev1.System) (*v1.System, error) 
 
 	var version *v1.Version
 	versionLabel, ok := system.DefinitionVersionLabel()
-	if !ok {
+	if ok {
 		version = &versionLabel
 	}
 
