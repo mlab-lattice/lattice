@@ -31,5 +31,5 @@ type SystemStatus struct {
 	State SystemState `json:"state"`
 
 	CreationTimestamp time.Time  `json:"createdTimestamp"`
-	DeletionTimestamp *time.Time `json:"deletionTimestamp"`
+	DeletionTimestamp *time.Time `json:"deletionTimestamp,omitempty"`
 }
