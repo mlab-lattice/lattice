@@ -45,6 +45,9 @@ def lattice_go_container_image(name, base_image, path):
       name = name,
       base = base_image,
       embed = ["//" + path + ":go_default_library"],
+      goos = "linux",
+      goarch = "amd64",
+      pure = "on",
       visibility = ["//visibility:public"],
   )
 
@@ -61,6 +64,9 @@ def lattice_go_container_image(name, base_image, path):
       name = stripped_name,
       base = stripped_base_image,
       embed = ["//" + path + ":go_default_library"],
+      goos = "linux",
+      goarch = "amd64",
+      pure = "on",
       visibility = ["//visibility:public"],
   )
 

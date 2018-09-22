@@ -114,7 +114,6 @@ docker.push: gazelle \
 .PHONY: docker.push-no-gazelle
 docker.push-no-gazelle:
 	@bazel run \
-		--platforms=@io_bazel_rules_go//go/toolchain:linux_amd64 \
 		--workspace_status_command "REGISTRY=$(REGISTRY) CHANNEL=$(CHANNEL) $(DIR)/hack/bazel/docker-workspace-status.sh" \
 		//docker:push-$(IMAGE)
 
@@ -141,7 +140,6 @@ docker.push-stripped: gazelle \
 .PHONY: docker.push-stripped-no-gazelle
 docker.push-stripped-no-gazelle:
 	@bazel run \
-		--platforms=@io_bazel_rules_go//go/toolchain:linux_amd64 \
 		--workspace_status_command "REGISTRY=$(REGISTRY) CHANNEL=$(CHANNEL) $(DIR)/hack/bazel/docker-workspace-status.sh" \
 		//docker:push-$(IMAGE)-stripped
 
@@ -164,7 +162,6 @@ docker.push-stripped.all: gazelle
 .PHONY: docker.save
 docker.save: gazelle
 	@bazel run \
-		--platforms=@io_bazel_rules_go//go/toolchain:linux_amd64 \
 		//docker:$(IMAGE) \
 		-- --norun
 
@@ -176,9 +173,7 @@ $(IMAGE_SAVES):
 
 .PHONY: docker.run
 docker.run: gazelle
-	@bazel run \
-		--platforms=@io_bazel_rules_go//go/toolchain:linux_amd64 \
-		//docker:$(IMAGE)
+	@bazel run //docker:$(IMAGE)
 
 IMAGE_RUNS := $(addprefix docker.run.,$(DOCKER_IMAGES))
 
@@ -190,7 +185,7 @@ $(IMAGE_RUNS):
 docker.sh: docker.save
 	@docker run -it --entrypoint sh bazel/docker:$(IMAGE)
 
-IMAGE_RUNS := $(addprefix docker.sh.,$(DOCKER_IMAGES))
+IMAGE_SHS := $(addprefix docker.sh.,$(DOCKER_IMAGES))
 
 .PHONY: $(IMAGE_SHS)
 $(IMAGE_SHS):
