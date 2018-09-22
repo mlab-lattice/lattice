@@ -46,7 +46,7 @@ func (c *FakeDeploys) List(opts v1.ListOptions) (result *lattice_v1.DeployList, 
 	if label == nil {
 		label = labels.Everything()
 	}
-	list := &lattice_v1.DeployList{ListMeta: obj.(*lattice_v1.DeployList).ListMeta}
+	list := &lattice_v1.DeployList{}
 	for _, item := range obj.(*lattice_v1.DeployList).Items {
 		if label.Matches(labels.Set(item.Labels)) {
 			list.Items = append(list.Items, item)

@@ -46,7 +46,7 @@ func (c *FakeSystems) List(opts v1.ListOptions) (result *lattice_v1.SystemList, 
 	if label == nil {
 		label = labels.Everything()
 	}
-	list := &lattice_v1.SystemList{ListMeta: obj.(*lattice_v1.SystemList).ListMeta}
+	list := &lattice_v1.SystemList{}
 	for _, item := range obj.(*lattice_v1.SystemList).Items {
 		if label.Matches(labels.Set(item.Labels)) {
 			list.Items = append(list.Items, item)

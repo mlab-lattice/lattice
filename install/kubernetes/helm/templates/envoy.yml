@@ -1,0 +1,98 @@
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: service-mesh-envoy-xds-api
+  namespace: {{ .Values.prefix }}-internal
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ .Values.prefix }}-service-mesh-envoy-xds-api
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - endpoints
+  verbs:
+  - get
+  - watch
+  - list
+- apiGroups:
+  - lattice.mlab.com
+  resources:
+  - services
+  verbs:
+  - get
+  - watch
+  - list
+- apiGroups:
+  - lattice.mlab.com
+  resources:
+  - addresses
+  verbs:
+  - get
+  - watch
+  - list
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: service-mesh-envoy-xds-api
+  namespace: {{ .Values.prefix }}-internal
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ .Values.prefix }}-service-mesh-envoy-xds-api
+subjects:
+- kind: ServiceAccount
+  name: service-mesh-envoy-xds-api
+  namespace: {{ .Values.prefix }}-internal
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    envoy.servicemesh.lattice.mlab.com/xds-api: "true"
+  name: service-mesh-envoy-xds-api
+  namespace: {{ .Values.prefix }}-internal
+spec:
+  selector:
+    matchLabels:
+      envoy.servicemesh.lattice.mlab.com/xds-api: "true"
+  template:
+    metadata:
+      labels:
+        envoy.servicemesh.lattice.mlab.com/xds-api: "true"
+      name: service-mesh-envoy-xds-api
+    spec:
+      {{ if ne .Values.cloudProvider.name "local" }}
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: node-pool.lattice.mlab.com/id
+                operator: Exists
+      {{ end }}
+      containers:
+      - args:
+        - -v
+        - "5"
+        - -logtostderr
+        - -redirect-cidr-block
+        - {{ .Values.serviceMesh.envoy.redirectCidrBlock }}
+        image: {{ .Values.serviceMesh.envoy.xdsApiImage }}
+        imagePullPolicy: Always
+        name: envoy-xds-api
+        ports:
+        - containerPort: {{ .Values.serviceMesh.envoy.xdsApiPort }}
+          hostPort: {{ .Values.serviceMesh.envoy.xdsApiPort }}
+      hostNetwork: true
+      serviceAccountName: service-mesh-envoy-xds-api
+      {{ if ne .Values.cloudProvider.name "local" }}
+      tolerations:
+      - effect: NoSchedule
+        key: node-pool.lattice.mlab.com/id
+        operator: Exists
+      {{ end }}

@@ -12,7 +12,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
-	k8sappsv1 "k8s.io/kubernetes/pkg/apis/apps/v1"
 
 	"github.com/golang/glog"
 	"github.com/sergi/go-diff/diffmatchpatch"
@@ -593,7 +592,8 @@ func setDeploymentSpecDefaults(spec *appsv1.DeploymentSpec) *appsv1.DeploymentSp
 	deployment := &appsv1.Deployment{
 		Spec: *spec,
 	}
-	k8sappsv1.SetObjectDefaults_Deployment(deployment)
+	// FIXME: hash definition
+	//k8sappsv1.SetObjectDefaults_Deployment(deployment)
 
 	return &deployment.Spec
 }

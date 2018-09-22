@@ -1,0 +1,138 @@
+{{ if eq .Values.cloudProvider.name "local" }}
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: dns-controller
+  namespace: {{ .Values.prefix }}-internal
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ .Values.prefix }}dns-controller
+rules:
+- apiGroups:
+  - lattice.mlab.com
+  resources:
+  - configs
+  verbs:
+  - get
+  - watch
+  - list
+- apiGroups:
+  - lattice.mlab.com
+  resources:
+  - addresses
+  verbs:
+  - get
+  - watch
+  - list
+- apiGroups:
+  - lattice.mlab.com
+  resources:
+  - services
+  verbs:
+  - get
+  - watch
+  - list
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ .Values.prefix }}dns-controller
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ .Values.prefix }}dns-controller
+subjects:
+- kind: ServiceAccount
+  name: dns-controller
+  namespace: {{ .Values.prefix }}-internal
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    local.cloud-provider.lattice.mlab.com/dns-controller: dnsmasq-nanny
+  name: dns-controller
+  namespace: {{ .Values.prefix }}-internal
+spec:
+  selector:
+    matchLabels:
+      local.cloud-provider.lattice.mlab.com/dns-controller: dnsmasq-nanny
+  template:
+    metadata:
+      labels:
+        local.cloud-provider.lattice.mlab.com/dns-controller: dnsmasq-nanny
+      name: dns-controller
+    spec:
+      containers:
+      - args:
+        - --namespace-prefix
+        - {{ .Values.prefix }}
+        - --internal-dns-domain
+        - {{ .Values.internalDnsDomain }}
+        - --lattice-id
+        - {{ .Values.latticeId }}
+        {{ if eq .Values.serviceMesh.name "envoy" }}
+        - --service-mesh
+        - envoy
+        - --service-mesh-var
+        - redirect-cidr-block={{ .Values.serviceMesh.envoy.redirectCidrBlock }}
+        - --service-mesh-var
+        - xds-api-port={{ .Values.serviceMesh.envoy.xdsApiPort }}
+        {{ end }}
+        image: {{ .Values.cloudProvider.local.dnsControllerImage }}
+        imagePullPolicy: Always
+        name: dns-controller
+        volumeMounts:
+        - mountPath: /var/run/lattice
+          name: dns-config
+      - args:
+        - -v=2
+        - -logtostderr
+        - -restartDnsmasq=true
+        - -configDir=/var/run/lattice
+        - --
+        - -k
+        - --hostsdir=/var/run/lattice
+        - --conf-dir=/var/run/lattice,*.conf
+        image: {{ .Values.cloudProvider.local.dnsmasqNannyImage }}
+        imagePullPolicy: IfNotPresent
+        name: dnsmasq-nanny
+        ports:
+        - containerPort: 53
+          name: dns
+          protocol: UDP
+        volumeMounts:
+        - mountPath: /var/run/lattice
+          name: dns-config
+      serviceAccountName: {{ .Values.prefix }}-dns-controller
+      volumes:
+      - hostPath:
+          path: /var/run/lattice
+          type: ""
+        name: dns-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  creationTimestamp: 2018-09-20T16:18:37Z
+  labels:
+    local.cloud-provider.lattice.mlab.com/dns-controller: dnsmasq-nanny
+  name: dns-controller
+  namespace: {{ .Values.prefix }}-internal
+spec:
+  clusterIP: 10.96.0.53
+  ports:
+  - name: dns-tcp
+    port: 53
+    protocol: TCP
+    targetPort: 53
+  - name: dns-udp
+    port: 53
+    protocol: UDP
+    targetPort: 53
+  selector:
+    local.cloud-provider.lattice.mlab.com/dns-controller: dnsmasq-nanny
+  type: ClusterIP
+{{ end }}

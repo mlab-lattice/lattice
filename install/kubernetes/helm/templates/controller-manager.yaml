@@ -1,0 +1,213 @@
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: lattice-controller-manager
+  namespace: {{ .Values.prefix }}-internal
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ .Values.prefix }}-lattice-controller-manager
+rules:
+- apiGroups:
+  - lattice.mlab.com
+  resources:
+  - '*'
+  verbs:
+  - '*'
+- apiGroups:
+  - ""
+  resources:
+  - services
+  verbs:
+  - '*'
+- apiGroups:
+  - apps
+  resources:
+  - deployments
+  verbs:
+  - '*'
+- apiGroups:
+  - batch
+  resources:
+  - jobs
+  verbs:
+  - '*'
+- apiGroups:
+  - ""
+  resources:
+  - pods
+  verbs:
+  - get
+  - watch
+  - list
+- apiGroups:
+  - ""
+  resources:
+  - nodes
+  verbs:
+  - get
+  - watch
+  - list
+- apiGroups:
+  - ""
+  resources:
+  - endpoints
+  verbs:
+  - get
+  - watch
+  - list
+- apiGroups:
+  - ""
+  resources:
+  - namespaces
+  verbs:
+  - get
+  - watch
+  - list
+  - create
+  - delete
+- apiGroups:
+  - ""
+  resources:
+  - serviceaccounts
+  verbs:
+  - get
+  - watch
+  - list
+  - create
+  - delete
+- apiGroups:
+  - rbac.authorization.k8s.io
+  resources:
+  - rolebindings
+  verbs:
+  - get
+  - watch
+  - list
+  - create
+  - delete
+- apiGroups:
+  - apps
+  resources:
+  - daemonsets
+  verbs:
+  - get
+  - watch
+  - list
+  - create
+  - delete
+- apiGroups:
+  - ""
+  resources:
+  - secrets
+  verbs:
+  - get
+  - watch
+  - list
+  - create
+  - update
+  - delete
+- apiGroups:
+  - lattice.mlab.com
+  resources:
+  - containerbuilds
+  verbs:
+  - get
+  - watch
+  - list
+  - update
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ .Values.prefix }}-lattice-controller-manager
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ .Values.prefix }}-lattice-controller-manager
+subjects:
+- kind: ServiceAccount
+  name: lattice-controller-manager
+  namespace: {{ .Values.prefix }}-internal
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    control-plane.lattice.mlab.com/service: lattice-controller-manager
+  name: lattice-controller-manager
+  namespace: {{ .Values.prefix }}-internal
+spec:
+  selector:
+    matchLabels:
+      control-plane.lattice.mlab.com/service: lattice-controller-manager
+  template:
+    metadata:
+      labels:
+        control-plane.lattice.mlab.com/service: lattice-controller-manager
+      name: lattice-controller-manager
+    spec:
+      {{ if ne .Values.cloudProvider.name "local" }}
+      affinity: {{ .Values.controlPlane.affinity }}
+      {{ end }}
+      containers:
+      - args:
+        - --alsologtostderr
+        - -v=5
+        - --lattice-id
+        - {{ .Values.id }}
+        - --namespace-prefix
+        - {{ .Values.prefix }}
+        - --internal-dns-domain
+        - {{ .Values.internalDnsDomain }}
+
+        {{ if eq .Values.serviceMesh.name "envoy" }}
+        - --service-mesh
+        - envoy
+        - --service-mesh-var
+        - redirect-cidr-block={{ .Values.serviceMesh.envoy.redirectCidrBlock }}
+        - --service-mesh-var
+        - xds-api-port={{ .Values.serviceMesh.envoy.xdsApiPort }}
+        {{ end }}
+
+        {{ if eq .Values.cloudProvider.name "aws" }}
+        - --cloud-provider
+        - AWS
+        - --cloud-provider-var
+        - region={{ .Values.cloudProvider.aws.region }}
+        - --cloud-provider-var
+        - account-id={{ .Values.cloudProvider.aws.accountId }}
+        - --cloud-provider-var
+        - vpc-id={{ .Values.cloudProvider.aws.vpcId }}
+        - --cloud-provider-var
+        - route53-private-zone-id={{ .Values.cloudProvider.aws.route53PrivateZoneId }}
+        - --cloud-provider-var
+        - subnet-ids={{ .Values.cloudProvider.aws.subnetIds }}
+        - --cloud-provider-var
+        - master-node-security-group-id={{ .Values.cloudProvider.aws.masterNodeSecurityGroupId }}
+        - --cloud-provider-var
+        - terraform-module-path=/etc/terraform/modules/aws
+        - --cloud-provider-var
+        - terraform-backend=S3
+        - --cloud-provider-var
+        - terraform-backend-var={{ .Values.cloudProvider.aws.terraformS3Bucket }}
+        {{ else if eq .Values.cloudProvider.name "local" }}
+        - --cloud-provider
+        - local
+        - --cloud-provider-var
+        - ip={{ .Values.cloudProvider.local.ip }}
+        {{ end }}
+        image: {{ .Values.controlPlane.controllerManager.Image }}
+        imagePullPolicy: Always
+        name: lattice-controller-manager
+      serviceAccountName: lattice-controller-manager
+      {{ if ne .Values.cloudProvider.name "local" }}
+      tolerations: |-
+        {{- range .Values.controlPlane.tolerations }}
+        - effect: {{ .effect }}
+          key: {{ .key }}
+          operator: {{ .operator }}
+        {{- end }}
+      {{ end }}

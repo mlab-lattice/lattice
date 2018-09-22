@@ -7,14 +7,7 @@ import (
 	kubeutil "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/kubernetes"
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 
-	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-)
-
-const (
-	ResourceSingularAddress = "address"
-	ResourcePluralAddress   = "addresses"
-	ResourceScopeAddress    = apiextensionsv1beta1.NamespaceScoped
 )
 
 var (

@@ -46,7 +46,7 @@ func (c *FakeJobs) List(opts v1.ListOptions) (result *lattice_v1.JobList, err er
 	if label == nil {
 		label = labels.Everything()
 	}
-	list := &lattice_v1.JobList{ListMeta: obj.(*lattice_v1.JobList).ListMeta}
+	list := &lattice_v1.JobList{}
 	for _, item := range obj.(*lattice_v1.JobList).Items {
 		if label.Matches(labels.Set(item.Labels)) {
 			list.Items = append(list.Items, item)

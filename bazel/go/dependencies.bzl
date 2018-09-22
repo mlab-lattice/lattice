@@ -1,4 +1,4 @@
-load("@bazel_gazelle//:deps.bzl", "go_repository")
+load("@bazel_gazelle//:deps.bzl", "go_repository", "git_repository")
 
 GO_DEPENDENCIES = {
     "overlaps": {
@@ -198,26 +198,10 @@ GO_DEPENDENCIES = {
             "tag": "kubernetes-1.11.0",
             "importpath": "k8s.io/apimachinery",
         },
-        "k8s.io/apiextensions-apiserver": {
-            "name": "io_k8s_apiextensions_apiserver",
-            "build_external": "external",
-            # https://github.com/bazelbuild/rules_go/issues/964
-            "build_file_proto_mode": "disable",
-            "tag": "kubernetes-1.11.0",
-            "importpath": "k8s.io/apiextensions-apiserver",
-        },
         "k8s.io/client-go": {
             "name": "io_k8s_client_go",
             "tag": "kubernetes-1.11.0",
             "importpath": "k8s.io/client-go",
-        },
-        "k8s.io/kubernetes": {
-            "name": "io_k8s_kubernetes",
-            "build_file_generation": "on",
-            "build_file_name": "BUILD.bazel",
-            "build_external": "external",
-            "tag": "v1.11.0",
-            "importpath": "k8s.io/kubernetes",
         },
 
         # testing dependencies

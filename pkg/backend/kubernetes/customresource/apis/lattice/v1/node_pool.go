@@ -2,23 +2,16 @@ package v1
 
 import (
 	"fmt"
-
-	"github.com/mlab-lattice/lattice/pkg/api/v1"
-	kubeutil "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/kubernetes"
-
-	"github.com/mlab-lattice/lattice/pkg/definition/tree"
-	corev1 "k8s.io/api/core/v1"
-	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sort"
 	"strconv"
 	"strings"
-)
 
-const (
-	ResourceSingularNodePool = "nodepool"
-	ResourcePluralNodePool   = "nodepools"
-	ResourceScopeNodePool    = apiextensionsv1beta1.NamespaceScoped
+	"github.com/mlab-lattice/lattice/pkg/api/v1"
+	kubeutil "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/kubernetes"
+	"github.com/mlab-lattice/lattice/pkg/definition/tree"
+
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 var (

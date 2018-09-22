@@ -1,0 +1,52 @@
+id: lattice
+internalDnsDomain: lattice.local
+prefix: lattice
+
+containerBuilder:
+  dockerApiVersion: "1.35"
+  image: gcr.io/lattice-dev/kubernetes-container-builder
+  push: false
+  registry: lattice-local
+  registryAuthType: null
+  repository: ""
+  repositoryPerImage: true
+
+controlPlane:
+  apiServer:
+    image: gcr.io/lattice-dev/kubernetes-api-server-rest
+    port: 80
+  controllerManager:
+    image: gcr.io/lattice-dev/kubernetes-lattice-controller-manager
+
+  affinity: |+
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+        - matchExpressions:
+          - key: node-role.lattice.mlab.com/master
+            operator: In
+            values:
+            - "true"
+  tolerations:
+  - effect: NoSchedule
+    key: node-role.kubernetes.io/master
+    operator: Exists
+  - effect: NoSchedule
+    key: node-role.lattice.mlab.com/master
+    operator: Equal
+    value: "true"
+
+cloudProvider:
+  name: local
+  local:
+    ip: 192.168.99.100
+    dnsControllerImage:
+
+serviceMesh:
+  name: envoy
+  envoy:
+    redirectCidrBlock: 172.16.0.0/16
+    xdsApiPort: 8080
+    image: envoyproxy/envoy-alpine
+    prepareImage: gcr.io/lattice-dev/kubernetes-envoy-prepare
+    xdsApiImage: gcr.io/lattice-dev/kubernetes-envoy-xds-api-grpc-per-node

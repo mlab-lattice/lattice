@@ -1,0 +1,47 @@
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ .Values.prefix }}-container-builder
+rules:
+- apiGroups:
+  - lattice.mlab.com
+  resources:
+  - containerbuilds
+  verbs:
+  - get
+  - watch
+  - list
+  - update
+---
+apiVersion: lattice.mlab.com/v1
+kind: Config
+metadata:
+  name: global
+  namespace: {{ .Values.prefix }}-internal
+spec:
+  cloudProvider:
+    {{ if eq .Values.cloudProvider.name "aws" }}
+    aws:
+      keyName: {{ .Values.cloudProvider.aws.keyName }}
+      workerNodeAmiId: {{ .Values.cloudProvider.aws.workerNodeAmiId }}
+    {{ else if eq .Values.cloudProvider.name "local" }}
+    local: {}
+    {{ end }}
+  containerBuild:
+    builderConfig:
+      dockerApiVersion: {{ .Values.containerBuilder.dockerApiVersion }}
+      image:  {{ .Values.containerBuilder.image }}
+    dockerConfig:
+      push: {{ .Values.containerBuilder.push }}
+      registry:  {{ .Values.containerBuilder.registry }}
+      registryAuthType: {{ .Values.containerBuilder.registryAuthType }}
+      repository: {{ .Values.containerBuilder.repository }}
+      repositoryPerImage: {{ .Values.containerBuilder.repositoryPerImage }}
+  serviceMesh:
+    {{ if eq .Values.serviceMesh.name "envoy" }}
+    envoy:
+      image: {{ .Values.serviceMesh.envoy.image }}
+      prepareImage: {{ .Values.serviceMesh.envoy.prepareImage }}
+      xdsApiImage: {{ .Values.serviceMesh.envoy.xdsApiImage }}
+    {{ end }}

@@ -46,7 +46,7 @@ func (c *FakeContainerBuilds) List(opts v1.ListOptions) (result *lattice_v1.Cont
 	if label == nil {
 		label = labels.Everything()
 	}
-	list := &lattice_v1.ContainerBuildList{ListMeta: obj.(*lattice_v1.ContainerBuildList).ListMeta}
+	list := &lattice_v1.ContainerBuildList{}
 	for _, item := range obj.(*lattice_v1.ContainerBuildList).Items {
 		if label.Matches(labels.Set(item.Labels)) {
 			list.Items = append(list.Items, item)

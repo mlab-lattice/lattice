@@ -46,7 +46,7 @@ func (c *FakeNodePools) List(opts v1.ListOptions) (result *lattice_v1.NodePoolLi
 	if label == nil {
 		label = labels.Everything()
 	}
-	list := &lattice_v1.NodePoolList{ListMeta: obj.(*lattice_v1.NodePoolList).ListMeta}
+	list := &lattice_v1.NodePoolList{}
 	for _, item := range obj.(*lattice_v1.NodePoolList).Items {
 		if label.Matches(labels.Set(item.Labels)) {
 			list.Items = append(list.Items, item)
