@@ -150,7 +150,8 @@ spec:
       name: lattice-controller-manager
     spec:
       {{ if ne .Values.cloudProvider.name "local" }}
-      affinity: {{ .Values.controlPlane.affinity }}
+      affinity:
+{{ .Values.controlPlane.affinity | indent 8 }}
       {{ end }}
       containers:
       - args:
@@ -204,10 +205,6 @@ spec:
         name: lattice-controller-manager
       serviceAccountName: lattice-controller-manager
       {{ if ne .Values.cloudProvider.name "local" }}
-      tolerations: |-
-        {{- range .Values.controlPlane.tolerations }}
-        - effect: {{ .effect }}
-          key: {{ .key }}
-          operator: {{ .operator }}
-        {{- end }}
+      tolerations:
+{{ .Values.controlPlane.tolerations | indent 6 }}
       {{ end }}
