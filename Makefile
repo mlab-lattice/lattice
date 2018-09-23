@@ -106,6 +106,7 @@ DOCKER_IMAGES := kubernetes-api-server-rest             \
                  kubernetes-container-builder           \
                  kubernetes-envoy-prepare               \
                  kubernetes-envoy-xds-api-grpc-per-node \
+                 kubernetes-installer-helm              \
                  kubernetes-lattice-controller-manager  \
                  kubernetes-local-dns-controller        \
                  latticectl                             \
@@ -187,7 +188,7 @@ $(IMAGE_RUNS):
 
 .PHONY: docker.sh
 docker.sh: docker.save
-	@docker run -it --entrypoint sh bazel/docker:$(IMAGE)
+	docker run -it --entrypoint sh bazel/docker:$(IMAGE)
 
 IMAGE_SHS := $(addprefix docker.sh.,$(DOCKER_IMAGES))
 

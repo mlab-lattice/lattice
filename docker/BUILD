@@ -16,6 +16,30 @@ container_image(
 )
 
 container_image(
+    name = "base-helm-bin",
+    directory = "/usr/local/bin",
+    files = ["@helm_bin//:bin"],
+    visibility = ["//visibility:public"],
+)
+
+container_image(
+    name = "base-kubectl-bin",
+    directory = "/usr/local/bin",
+    files = ["@kubectl_bin//:bin"],
+    visibility = ["//visibility:public"],
+)
+
+container_image(
+    name = "base-kubernetes-installer-helm",
+    base = "@debian_slim_container_image//image",
+    tars = [
+        ":base-helm-bin",
+        ":base-kubectl-bin",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+container_image(
     name = "base-openssh-client",
     debs = [
         # See bazel/docker/dependencies.bzl for more info.
@@ -111,4 +135,12 @@ lattice_go_container_image(
     name = "mock-api-server",
     base_image = None,
     path = "cmd/mock/api-server/rest",
+)
+
+# installer image
+container_image(
+    name = "kubernetes-installer-helm",
+    base = ":base-kubernetes-installer-helm",
+    directory = "/etc/lattice/install/kubernetes/helm",
+    tars = ["//install/kubernetes/helm:tarball"],
 )
