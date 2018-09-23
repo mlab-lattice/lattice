@@ -97,6 +97,10 @@ git.install-hooks:
 	cp -f hack/git/pre-push.sh $(DIR)/.git/hooks/pre-push
 
 
+# docgen
+docgen.latticectl: build
+	@bazel run //cmd/latticectl:docgen -- --plugin cmd/latticectl/plugin.so
+
 # docker
 DOCKER_IMAGES := kubernetes-api-server-rest             \
                  kubernetes-container-builder           \

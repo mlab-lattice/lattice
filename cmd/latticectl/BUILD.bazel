@@ -8,6 +8,7 @@ go_library(
     deps = [
         "//pkg/latticectl:go_default_library",
         "//pkg/latticectl/command:go_default_library",
+        "//pkg/util/cli:go_default_library",
         "//pkg/util/xdg:go_default_library",
     ],
 )
@@ -16,4 +17,19 @@ go_binary(
     name = "latticectl",
     embed = [":go_default_library"],
     visibility = ["//visibility:public"],
+)
+
+go_binary(
+    name = "docgen",
+    embed = ["//cmd/docgen:go_default_library"],
+    data = [":plugin"],
+    visibility = ["//visibility:public"],
+)
+
+go_binary(
+    name = "plugin",
+    embed = [":go_default_library"],
+    out = "plugin.so",
+    linkmode = "plugin",
+    visibility = ["//visibility:private"],
 )

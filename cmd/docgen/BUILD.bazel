@@ -3,16 +3,17 @@ load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
 go_library(
     name = "go_default_library",
     srcs = ["docgen.go"],
-    importpath = "github.com/mlab-lattice/lattice/cmd/generate-latticectl-docs",
-    visibility = ["//visibility:private"],
+    importpath = "github.com/mlab-lattice/lattice/cmd/docgen",
+    visibility = ["//visibility:public"],
     deps = [
-        "//pkg/latticectl:go_default_library",
+        "//pkg/util/cli:go_default_library",
         "//pkg/util/cli/docgen:go_default_library",
+        "//pkg/util/cli/flags:go_default_library",
     ],
 )
 
 go_binary(
-    name = "generate-latticectl-docs",
+    name = "docgen",
     embed = [":go_default_library"],
     visibility = ["//visibility:public"],
 )
