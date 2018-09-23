@@ -1,10 +1,10 @@
+containerChannel: gcr.io/lattice-dev
 id: lattice
 internalDnsDomain: lattice.local
 prefix: lattice
 
 containerBuilder:
   dockerApiVersion: "1.35"
-  image: gcr.io/lattice-dev/kubernetes-container-builder
   push: false
   registry: lattice-local
   registryAuthType: null
@@ -13,10 +13,8 @@ containerBuilder:
 
 controlPlane:
   apiServer:
-    image: gcr.io/lattice-dev/kubernetes-api-server-rest
     port: 80
   controllerManager:
-    image: gcr.io/lattice-dev/kubernetes-lattice-controller-manager
 
   affinity: |-
     nodeAffinity:
@@ -37,7 +35,7 @@ controlPlane:
       value: "true"
 
 cloudProvider:
-  name: foo
+  name: local
   local:
     ip: 192.168.99.100
     dnsControllerImage:
@@ -48,5 +46,3 @@ serviceMesh:
     redirectCidrBlock: 172.16.0.0/16
     xdsApiPort: 8080
     image: envoyproxy/envoy-alpine
-    prepareImage: gcr.io/lattice-dev/kubernetes-envoy-prepare
-    xdsApiImage: gcr.io/lattice-dev/kubernetes-envoy-xds-api-grpc-per-node

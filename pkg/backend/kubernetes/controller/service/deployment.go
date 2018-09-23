@@ -3,23 +3,19 @@ package service
 import (
 	"encoding/json"
 	"fmt"
+	"reflect"
+
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
-	kubeutil "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/kubernetes"
+	"github.com/mlab-lattice/lattice/pkg/util/sha1"
+
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	"reflect"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
 
 	"github.com/golang/glog"
-	"github.com/sergi/go-diff/diffmatchpatch"
-)
-
-const (
-	ndotsValue     = "15"
-	dnsOptionNdots = "ndots"
 )
 
 func (c *Controller) syncDeployment(
@@ -131,7 +127,6 @@ func (c *Controller) syncExistingDeployment(
 	}
 
 	desiredSpec := c.deploymentSpec(service, deploymentLabels, desiredPodTemplateSpec)
-	currentSpec := deployment.Spec
 
 	untransformedPodTemplateSpec, err := c.untransformedPodTemplateSpec(service, name, deploymentLabels, nodePool)
 	if err != nil {
@@ -145,18 +140,19 @@ func (c *Controller) syncExistingDeployment(
 	}
 
 	untransformedSpec := c.deploymentSpec(service, deploymentLabels, untransformedPodTemplateSpec)
-	defaultedUntransformedSpec := setDeploymentSpecDefaults(&untransformedSpec)
-	defaultedDesiredSpec := setDeploymentSpecDefaults(&desiredSpec)
 
-	isUpdated, reason := c.isDeploymentSpecUpdated(service, &currentSpec, defaultedDesiredSpec, defaultedUntransformedSpec)
+	isUpdated, hash, err := c.isDeploymentSpecUpdated(service, &untransformedSpec)
+	if err != nil {
+		return nil, err
+	}
+
 	if !isUpdated {
 		glog.V(4).Infof(
-			"deployment %v for %v not up to date: %v",
+			"deployment %v for %v not up to date",
 			deployment.Name,
 			service.Description(c.namespacePrefix),
-			reason,
 		)
-		deployment, err = c.updateDeploymentSpec(service, deployment, desiredSpec)
+		service, deployment, err = c.updateDeploymentSpec(service, deployment, desiredSpec, hash)
 		if err != nil {
 			return nil, err
 		}
@@ -169,27 +165,45 @@ func (c *Controller) updateDeploymentSpec(
 	service *latticev1.Service,
 	deployment *appsv1.Deployment,
 	spec appsv1.DeploymentSpec,
-) (*appsv1.Deployment, error) {
-	if reflect.DeepEqual(deployment.Spec, spec) {
-		return deployment, nil
+	specHash string,
+) (*latticev1.Service, *appsv1.Deployment, error) {
+	if !reflect.DeepEqual(deployment.Spec, spec) {
+		// copy so the shared cache isn't mutated
+		deployment = deployment.DeepCopy()
+		deployment.Spec = spec
+
+		name := deployment.Name
+		var err error
+		deployment, err = c.kubeClient.AppsV1().Deployments(deployment.Namespace).Update(deployment)
+		if err != nil {
+			err := fmt.Errorf(
+				"error updating deployment %v for %v: %v",
+				name,
+				service.Description(c.namespacePrefix),
+				err,
+			)
+			return nil, nil, err
+		}
 	}
 
-	// Copy so the shared cache isn't mutated
-	deployment = deployment.DeepCopy()
-	deployment.Spec = spec
+	// copy so the shared cache isn't mutated
+	service = service.DeepCopy()
+	if service.Annotations == nil {
+		service.Annotations = make(map[string]string)
+	}
+	service.Annotations[latticev1.ServiceDeploymentSpecHashAnnotationKey] = specHash
 
-	result, err := c.kubeClient.AppsV1().Deployments(deployment.Namespace).Update(deployment)
+	result, err := c.latticeClient.LatticeV1().Services(service.Namespace).Update(service)
 	if err != nil {
 		err := fmt.Errorf(
-			"error updating deployment %v for %v: %v",
-			deployment.Name,
+			"error updating %v: %v",
 			service.Description(c.namespacePrefix),
 			err,
 		)
-		return nil, err
+		return nil, nil, err
 	}
 
-	return result, nil
+	return result, deployment, nil
 }
 
 func (c *Controller) createNewDeployment(
@@ -390,53 +404,23 @@ func (c *Controller) untransformedPodTemplateSpec(
 	)
 }
 
-func (c *Controller) isDeploymentSpecUpdated(
-	service *latticev1.Service,
-	current, desired, untransformed *appsv1.DeploymentSpec,
-) (bool, string) {
-	// NOTE: currently the only thing we change about the top level of the deployment spec (i.e. not in
-	// the pod template spec) is replicas. if we change other things we may want to reconsider this
-	// comparison strategy.
-	if current.Replicas == nil && desired.Replicas != nil {
-		return false, "num replicas is out of date"
+func (c *Controller) isDeploymentSpecUpdated(service *latticev1.Service, spec *appsv1.DeploymentSpec) (bool, string, error) {
+	data, err := json.Marshal(&spec)
+	if err != nil {
+		return false, "", err
 	}
 
-	if current.Replicas != nil && desired.Replicas == nil {
-		return false, "num replicas is out of date"
+	hash, err := sha1.EncodeToHexString(data)
+	if err != nil {
+		return false, "", err
 	}
 
-	if current.Replicas != nil && desired.Replicas != nil && *current.Replicas != *desired.Replicas {
-		return false, "num replicas is out of date"
+	currentHash, ok := service.DeploymentSpecHashAnnotation()
+	if !ok {
+		return false, hash, nil
 	}
 
-	// FIXME: is this actually true?
-	// IMPORTANT: the order of these IsDeploymentSpecUpdated and the order of the TransformServicePodTemplateSpec
-	// calls in deploymentSpec _must_ be inverses.
-	// That is, if we call serviceMesh then cloudProvider here, we _must_ call cloudProvider then serviceMesh
-	// in deploymentSpec.
-	// This is done so that IsDeploymentSpecUpdated can return what the spec should look like before it transformed it.
-	isUpdated, reason, transformed := c.cloudProvider.IsDeploymentSpecUpdated(service, current, desired, untransformed)
-	if !isUpdated {
-		return false, reason
-	}
-
-	isUpdated, reason, transformed = c.serviceMesh.IsDeploymentSpecUpdated(service, current, transformed, untransformed)
-	if !isUpdated {
-		return false, reason
-	}
-
-	isUpdated = kubeutil.PodTemplateSpecsSemanticallyEqual(&current.Template, &desired.Template)
-	if !isUpdated {
-		// FIXME: remove when confident this is working correctly
-		dmp := diffmatchpatch.New()
-		data1, _ := json.MarshalIndent(current.Template, "", "  ")
-		data2, _ := json.MarshalIndent(desired.Template, "", "  ")
-		diffs := dmp.DiffMain(string(data1), string(data2), true)
-		fmt.Printf("diff: %v\n", dmp.DiffPrettyText(diffs))
-		return false, "pod template spec is out of date"
-	}
-
-	return true, ""
+	return currentHash == hash, hash, nil
 }
 
 type deploymentStatus struct {
@@ -583,17 +567,4 @@ func (c *Controller) getDeploymentStatus(
 	}
 
 	return status, nil
-}
-
-func setDeploymentSpecDefaults(spec *appsv1.DeploymentSpec) *appsv1.DeploymentSpec {
-	// Copy so the shared cache isn't mutated
-	spec = spec.DeepCopy()
-
-	deployment := &appsv1.Deployment{
-		Spec: *spec,
-	}
-	// FIXME: hash definition
-	//k8sappsv1.SetObjectDefaults_Deployment(deployment)
-
-	return &deployment.Spec
 }

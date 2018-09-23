@@ -205,12 +205,12 @@ spec:
       containers:
       - args:
         - --port
-        - {{ .Values.controlPlane.apiServer.port }}
+        - {{ quote .Values.controlPlane.apiServer.port }}
         - --namespace-prefix
         - {{ .Values.prefix }}
         - --alsologtostderr
         # TODO: add auth here
-        image: {{ .Values.controlPlane.apiServer.image }}
+        image: {{ .Values.containerChannel }}/kubernetes-api-server-rest
         imagePullPolicy: Always
         name: api-server
         ports:

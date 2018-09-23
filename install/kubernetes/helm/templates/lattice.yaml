@@ -30,18 +30,22 @@ spec:
     {{ end }}
   containerBuild:
     builderConfig:
-      dockerApiVersion: {{ .Values.containerBuilder.dockerApiVersion }}
-      image:  {{ .Values.containerBuilder.image }}
+      dockerApiVersion: {{ quote .Values.containerBuilder.dockerApiVersion }}
+      image: {{ .Values.containerChannel }}/kubernetes-container-builder
     dockerConfig:
       push: {{ .Values.containerBuilder.push }}
       registry:  {{ .Values.containerBuilder.registry }}
+      {{ if .Values.containerBuilder.registryAuthType }}
       registryAuthType: {{ .Values.containerBuilder.registryAuthType }}
+      {{ end }}
+      {{ if .Values.containerBuilder.repository }}
       repository: {{ .Values.containerBuilder.repository }}
+      {{ end }}
       repositoryPerImage: {{ .Values.containerBuilder.repositoryPerImage }}
   serviceMesh:
     {{ if eq .Values.serviceMesh.name "envoy" }}
     envoy:
       image: {{ .Values.serviceMesh.envoy.image }}
-      prepareImage: {{ .Values.serviceMesh.envoy.prepareImage }}
-      xdsApiImage: {{ .Values.serviceMesh.envoy.xdsApiImage }}
+      prepareImage: {{ .Values.containerChannel }}/kubernetes-envoy-prepare
+      xdsApiImage: {{ .Values.containerChannel }}/kubernetes-envoy-xds-api-grpc-per-node
     {{ end }}

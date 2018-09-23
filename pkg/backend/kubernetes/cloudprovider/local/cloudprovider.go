@@ -95,10 +95,6 @@ type DefaultLocalCloudProvider struct {
 }
 
 func (cp *DefaultLocalCloudProvider) BootstrapSystemResources(resources *bootstrapper.SystemResources) {
-	for _, daemonSet := range resources.DaemonSets {
-		template := removePodTemplateSpecAffinity(&daemonSet.Spec.Template)
-		daemonSet.Spec.Template = *template
-	}
 }
 
 func (cp *DefaultLocalCloudProvider) TransformComponentBuildJobSpec(spec *batchv1.JobSpec) *batchv1.JobSpec {

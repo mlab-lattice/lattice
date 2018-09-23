@@ -163,7 +163,6 @@ spec:
         - {{ .Values.prefix }}
         - --internal-dns-domain
         - {{ .Values.internalDnsDomain }}
-
         {{ if eq .Values.serviceMesh.name "envoy" }}
         - --service-mesh
         - envoy
@@ -172,14 +171,13 @@ spec:
         - --service-mesh-var
         - xds-api-port={{ .Values.serviceMesh.envoy.xdsApiPort }}
         {{ end }}
-
         {{ if eq .Values.cloudProvider.name "aws" }}
         - --cloud-provider
         - AWS
         - --cloud-provider-var
         - region={{ .Values.cloudProvider.aws.region }}
         - --cloud-provider-var
-        - account-id={{ .Values.cloudProvider.aws.accountId }}
+        - account-id={{ quote .Values.cloudProvider.aws.accountId }}
         - --cloud-provider-var
         - vpc-id={{ .Values.cloudProvider.aws.vpcId }}
         - --cloud-provider-var
@@ -200,7 +198,7 @@ spec:
         - --cloud-provider-var
         - ip={{ .Values.cloudProvider.local.ip }}
         {{ end }}
-        image: {{ .Values.controlPlane.controllerManager.Image }}
+        image: {{ .Values.containerChannel }}/kubernetes-lattice-controller-manager
         imagePullPolicy: Always
         name: lattice-controller-manager
       serviceAccountName: lattice-controller-manager

@@ -8,7 +8,7 @@ metadata:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: {{ .Values.prefix }}dns-controller
+  name: {{ .Values.prefix }}-dns-controller
 rules:
 - apiGroups:
   - lattice.mlab.com
@@ -38,11 +38,11 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: {{ .Values.prefix }}dns-controller
+  name: {{ .Values.prefix }}-dns-controller
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: {{ .Values.prefix }}dns-controller
+  name: {{ .Values.prefix }}-dns-controller
 subjects:
 - kind: ServiceAccount
   name: dns-controller
@@ -72,7 +72,7 @@ spec:
         - --internal-dns-domain
         - {{ .Values.internalDnsDomain }}
         - --lattice-id
-        - {{ .Values.latticeId }}
+        - {{ .Values.id }}
         {{ if eq .Values.serviceMesh.name "envoy" }}
         - --service-mesh
         - envoy
@@ -81,7 +81,7 @@ spec:
         - --service-mesh-var
         - xds-api-port={{ .Values.serviceMesh.envoy.xdsApiPort }}
         {{ end }}
-        image: {{ .Values.cloudProvider.local.dnsControllerImage }}
+        image: {{ .Values.containerChannel }}/kubernetes-local-dns-controller
         imagePullPolicy: Always
         name: dns-controller
         volumeMounts:
@@ -96,7 +96,7 @@ spec:
         - -k
         - --hostsdir=/var/run/lattice
         - --conf-dir=/var/run/lattice,*.conf
-        image: {{ .Values.cloudProvider.local.dnsmasqNannyImage }}
+        image: gcr.io/google_containers/k8s-dns-dnsmasq-nanny-amd64:1.14.13
         imagePullPolicy: IfNotPresent
         name: dnsmasq-nanny
         ports:
@@ -106,7 +106,7 @@ spec:
         volumeMounts:
         - mountPath: /var/run/lattice
           name: dns-config
-      serviceAccountName: {{ .Values.prefix }}-dns-controller
+      serviceAccountName: dns-controller
       volumes:
       - hostPath:
           path: /var/run/lattice

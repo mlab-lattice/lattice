@@ -9,7 +9,6 @@ go_library(
         "//pkg/api/v1:go_default_library",
         "//pkg/backend/kubernetes/lifecycle/system/bootstrap/bootstrapper:go_default_library",
         "//pkg/backend/kubernetes/lifecycle/system/bootstrap/bootstrapper/base:go_default_library",
-        "@io_k8s_api//apps/v1:go_default_library",
         "@io_k8s_api//core/v1:go_default_library",
         "@io_k8s_api//rbac/v1:go_default_library",
         "@io_k8s_apimachinery//pkg/api/errors:go_default_library",

@@ -77,12 +77,11 @@ spec:
       {{ end }}
       containers:
       - args:
-        - -v
-        - "5"
+        - -v=5
         - -logtostderr
         - -redirect-cidr-block
         - {{ .Values.serviceMesh.envoy.redirectCidrBlock }}
-        image: {{ .Values.serviceMesh.envoy.xdsApiImage }}
+        image: {{ .Values.containerChannel }}/kubernetes-envoy-xds-api-grpc-per-node
         imagePullPolicy: Always
         name: envoy-xds-api
         ports:
