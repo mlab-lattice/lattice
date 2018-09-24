@@ -2,17 +2,12 @@ package v1
 
 import (
 	"fmt"
+	"io"
 	"net/http"
+	"strconv"
 
-	v1server "github.com/mlab-lattice/lattice/pkg/api/server/v1"
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	v1rest "github.com/mlab-lattice/lattice/pkg/api/v1/rest"
-	"github.com/mlab-lattice/lattice/pkg/definition/resolver"
-	"github.com/mlab-lattice/lattice/pkg/definition/tree"
-	definitionv1 "github.com/mlab-lattice/lattice/pkg/definition/v1"
-
-	"io"
-	"strconv"
 
 	"github.com/gin-gonic/gin"
 )
@@ -22,8 +17,10 @@ const (
 	buildIdentifier  = "build_id"
 )
 
-var systemIdentifierPathComponent = fmt.Sprintf(":%v", systemIdentifier)
-var systemPath = fmt.Sprintf(v1rest.SystemPathFormat, systemIdentifierPathComponent)
+var (
+	systemIdentifierPathComponent = fmt.Sprintf(":%v", systemIdentifier)
+	systemPath                    = fmt.Sprintf(v1rest.SystemPathFormat, systemIdentifierPathComponent)
+)
 
 func (api *LatticeAPI) setupSystemEndpoints() {
 	// create-system
@@ -59,9 +56,24 @@ func (api *LatticeAPI) handleCreateSystem(c *gin.Context) {
 		return
 	}
 
-	system, err := api.backend.CreateSystem(req.ID, req.DefinitionURL)
+	system, err := api.backend.Systems().Create(req.ID, req.DefinitionURL)
 	if err != nil {
-		handleError(c, err)
+		v1err, ok := err.(*v1.Error)
+		if !ok {
+			handleInternalError(c, err)
+			return
+		}
+
+		switch v1err.Code {
+		case v1.ErrorCodeSystemAlreadyExists:
+			c.JSON(http.StatusConflict, v1err)
+
+		case v1.ErrorCodeInvalidSystemOptions:
+			c.JSON(http.StatusBadRequest, v1err)
+
+		default:
+			handleInternalError(c, err)
+		}
 		return
 	}
 
@@ -80,9 +92,9 @@ func (api *LatticeAPI) handleCreateSystem(c *gin.Context) {
 // @Produce  json
 // @Success 200 {array} v1.System
 func (api *LatticeAPI) handleListSystems(c *gin.Context) {
-	systems, err := api.backend.ListSystems()
+	systems, err := api.backend.Systems().List()
 	if err != nil {
-		handleError(c, err)
+		handleInternalError(c, err)
 		return
 	}
 
@@ -103,9 +115,25 @@ func (api *LatticeAPI) handleListSystems(c *gin.Context) {
 // @Failure 404 {object} v1.ErrorResponse
 func (api *LatticeAPI) handleGetSystem(c *gin.Context) {
 	systemID := v1.SystemID(c.Param(systemIdentifier))
-	system, err := api.backend.GetSystem(systemID)
+
+	system, err := api.backend.Systems().Get(systemID)
 	if err != nil {
-		handleError(c, err)
+		v1err, ok := err.(*v1.Error)
+		if !ok {
+			handleInternalError(c, err)
+			return
+		}
+
+		switch v1err.Code {
+		case v1.ErrorCodeInvalidSystemID:
+			c.JSON(http.StatusBadRequest, v1err)
+
+		case v1.ErrorCodeSystemDeleting, v1.ErrorCodeSystemPending:
+			c.JSON(http.StatusConflict, v1err)
+
+		default:
+			handleInternalError(c, err)
+		}
 		return
 	}
 
@@ -127,9 +155,27 @@ func (api *LatticeAPI) handleGetSystem(c *gin.Context) {
 func (api *LatticeAPI) handleDeleteSystem(c *gin.Context) {
 	systemID := v1.SystemID(c.Param(systemIdentifier))
 
-	err := api.backend.DeleteSystem(systemID)
+	err := api.backend.Systems().Delete(systemID)
 	if err != nil {
-		handleError(c, err)
+		v1err, ok := err.(*v1.Error)
+		if !ok {
+			handleInternalError(c, err)
+			return
+		}
+
+		switch v1err.Code {
+		case v1.ErrorCodeInvalidSystemID:
+			c.JSON(http.StatusBadRequest, v1err)
+
+		case v1.ErrorCodeConflict:
+			c.JSON(http.StatusConflict, v1err)
+
+		case v1.ErrorCodeSystemDeleting:
+			c.JSON(http.StatusConflict, v1err)
+
+		default:
+			handleInternalError(c, err)
+		}
 		return
 	}
 
@@ -171,13 +217,14 @@ func requestedLogOptions(c *gin.Context) (*v1.ContainerLogOptions, error) {
 	// sinceTime
 	sinceTime := c.Query("sinceTime")
 
-	logOptions := v1.NewContainerLogOptions()
-	logOptions.Follow = follow
-	logOptions.Timestamps = timestamps
-	logOptions.Previous = previous
-	logOptions.Tail = tail
-	logOptions.Since = since
-	logOptions.SinceTime = sinceTime
+	logOptions := &v1.ContainerLogOptions{
+		Follow:     follow,
+		Timestamps: timestamps,
+		Previous:   previous,
+		Tail:       tail,
+		Since:      since,
+		SinceTime:  sinceTime,
+	}
 
 	return logOptions, nil
 }
@@ -197,53 +244,4 @@ func serveLogFile(log io.ReadCloser, c *gin.Context) {
 		w.Write(buff[:n])
 		return true
 	})
-}
-
-func getSystemDefinitionRoot(
-	backend v1server.Interface,
-	r resolver.ComponentResolver,
-	systemID v1.SystemID,
-	version v1.SystemVersion,
-) (*definitionv1.SystemNode, resolver.ResolutionInfo, error) {
-	system, err := backend.GetSystem(systemID)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	tag := string(version)
-	ref := &definitionv1.Reference{
-		GitRepository: &definitionv1.GitRepositoryReference{
-			GitRepository: &definitionv1.GitRepository{
-				URL: system.DefinitionURL,
-				Tag: &tag,
-			},
-		},
-	}
-	rr, err := r.ResolveReference(systemID, tree.RootPath(), nil, ref, resolver.DepthInfinite)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	root, err := definitionv1.NewNode(rr.Component, "", nil)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	if def, ok := root.(*definitionv1.SystemNode); ok {
-		return def, rr.Info, nil
-	}
-
-	return nil, nil, fmt.Errorf("definition is not a system")
-}
-
-func getSystemVersions(backend v1server.Interface, resolver resolver.ComponentResolver, systemID v1.SystemID) ([]string, error) {
-	system, err := backend.GetSystem(systemID)
-	if err != nil {
-		return nil, err
-	}
-
-	return resolver.Versions(system.DefinitionURL, nil)
-}
-
-type Result struct {
 }

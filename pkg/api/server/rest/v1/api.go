@@ -3,17 +3,20 @@ package v1
 import (
 	"github.com/gin-gonic/gin"
 
-	v1server "github.com/mlab-lattice/lattice/pkg/api/server/v1"
-	"github.com/mlab-lattice/lattice/pkg/definition/resolver"
+	backendv1 "github.com/mlab-lattice/lattice/pkg/api/server/backend/v1"
+	"github.com/mlab-lattice/lattice/pkg/definition/component/resolver"
+
+	"github.com/swaggo/gin-swagger"
+	"github.com/swaggo/gin-swagger/swaggerFiles"
 )
 
 type LatticeAPI struct {
 	router   *gin.RouterGroup
-	backend  v1server.Interface
-	resolver resolver.ComponentResolver
+	backend  backendv1.Interface
+	resolver resolver.Interface
 }
 
-func newLatticeAPI(router *gin.RouterGroup, backend v1server.Interface, resolver resolver.ComponentResolver) *LatticeAPI {
+func newLatticeAPI(router *gin.RouterGroup, backend backendv1.Interface, resolver resolver.Interface) *LatticeAPI {
 	return &LatticeAPI{
 		router:   router,
 		backend:  backend,
@@ -41,4 +44,5 @@ func (api *LatticeAPI) setupAPI() {
 	api.setupTeardownEndpoints()
 	api.setupSecretsEndpoints()
 	api.setupVersionsEndpoints()
+	api.router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 }

@@ -8,12 +8,15 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	v1rest "github.com/mlab-lattice/lattice/pkg/api/v1/rest"
+	reflectutil "github.com/mlab-lattice/lattice/pkg/util/reflect"
 )
 
 const deployIdentifier = "deploy_id"
 
-var deployIdentifierPathComponent = fmt.Sprintf(":%v", deployIdentifier)
-var deployPath = fmt.Sprintf(v1rest.DeployPathFormat, systemIdentifierPathComponent, deployIdentifierPathComponent)
+var (
+	deployIdentifierPathComponent = fmt.Sprintf(":%v", deployIdentifier)
+	deployPath                    = fmt.Sprintf(v1rest.DeployPathFormat, systemIdentifierPathComponent, deployIdentifierPathComponent)
+)
 
 func (api *LatticeAPI) setupDeployEndpoints() {
 	deploysPath := fmt.Sprintf(v1rest.DeploysPathFormat, systemIdentifierPathComponent)
@@ -50,41 +53,47 @@ func (api *LatticeAPI) handleDeploySystem(c *gin.Context) {
 		return
 	}
 
-	if req.Version != nil && req.BuildID != nil {
-		c.String(http.StatusBadRequest, "can only specify version or buildId")
-		return
-	}
+	err := reflectutil.ValidateUnion(&req)
+	if err != nil {
+		switch err.(type) {
+		case *reflectutil.InvalidUnionNoFieldSetError, *reflectutil.InvalidUnionMultipleFieldSetError:
+			c.Status(http.StatusBadRequest)
 
-	if req.Version == nil && req.BuildID == nil {
-		c.String(http.StatusBadRequest, "must specify version or buildId")
+		default:
+			handleInternalError(c, err)
+		}
 		return
 	}
 
 	var deploy *v1.Deploy
-	var err error
-	if req.Version != nil {
-		root, ri, err := getSystemDefinitionRoot(api.backend, api.resolver, systemID, *req.Version)
+	switch {
+	case req.BuildID != nil:
+		deploy, err = api.backend.Systems().Deploys(systemID).CreateFromBuild(*req.BuildID)
 
-		if err != nil {
-			handleError(c, err)
-			return
-		}
+	case req.Path != nil:
+		deploy, err = api.backend.Systems().Deploys(systemID).CreateFromPath(*req.Path)
 
-		deploy, err = api.backend.DeployVersion(
-			systemID,
-			root,
-			ri,
-			*req.Version,
-		)
-	} else {
-		deploy, err = api.backend.DeployBuild(
-			systemID,
-			*req.BuildID,
-		)
+	case req.Version != nil:
+		deploy, err = api.backend.Systems().Deploys(systemID).CreateFromVersion(*req.Version)
 	}
 
 	if err != nil {
-		handleError(c, err)
+		v1err, ok := err.(*v1.Error)
+		if !ok {
+			handleInternalError(c, err)
+			return
+		}
+
+		switch v1err.Code {
+		case v1.ErrorCodeInvalidSystemID, v1.ErrorCodeInvalidBuildID:
+			c.JSON(http.StatusNotFound, v1err)
+
+		case v1.ErrorCodeSystemDeleting, v1.ErrorCodeSystemPending:
+			c.JSON(http.StatusConflict, v1err)
+
+		default:
+			handleInternalError(c, err)
+		}
 		return
 	}
 
@@ -105,9 +114,24 @@ func (api *LatticeAPI) handleDeploySystem(c *gin.Context) {
 func (api *LatticeAPI) handleListDeploys(c *gin.Context) {
 	systemID := v1.SystemID(c.Param(systemIdentifier))
 
-	deploys, err := api.backend.ListDeploys(systemID)
+	deploys, err := api.backend.Systems().Deploys(systemID).List()
 	if err != nil {
-		handleError(c, err)
+		v1err, ok := err.(*v1.Error)
+		if !ok {
+			handleInternalError(c, err)
+			return
+		}
+
+		switch v1err.Code {
+		case v1.ErrorCodeInvalidSystemID:
+			c.JSON(http.StatusNotFound, v1err)
+
+		case v1.ErrorCodeSystemDeleting, v1.ErrorCodeSystemPending:
+			c.JSON(http.StatusConflict, v1err)
+
+		default:
+			handleInternalError(c, err)
+		}
 		return
 	}
 
@@ -131,9 +155,24 @@ func (api *LatticeAPI) handleGetDeploy(c *gin.Context) {
 	systemID := v1.SystemID(c.Param(systemIdentifier))
 	deployID := v1.DeployID(c.Param(deployIdentifier))
 
-	deploy, err := api.backend.GetDeploy(v1.SystemID(systemID), v1.DeployID(deployID))
+	deploy, err := api.backend.Systems().Deploys(systemID).Get(deployID)
 	if err != nil {
-		handleError(c, err)
+		v1err, ok := err.(*v1.Error)
+		if !ok {
+			handleInternalError(c, err)
+			return
+		}
+
+		switch v1err.Code {
+		case v1.ErrorCodeInvalidSystemID, v1.ErrorCodeInvalidDeployID:
+			c.JSON(http.StatusNotFound, v1err)
+
+		case v1.ErrorCodeSystemDeleting, v1.ErrorCodeSystemPending:
+			c.JSON(http.StatusConflict, v1err)
+
+		default:
+			handleInternalError(c, err)
+		}
 		return
 	}
 

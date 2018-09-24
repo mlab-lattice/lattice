@@ -1,13 +1,11 @@
 package v1
 
-import (
-	"github.com/mlab-lattice/lattice/pkg/definition/tree"
-)
+import "time"
 
 type (
-	SystemID      string
-	SystemState   string
-	SystemVersion string
+	SystemID    string
+	SystemState string
+	Version     string
 )
 
 const (
@@ -21,14 +19,19 @@ const (
 	SystemStateUpdating SystemState = "updating"
 )
 
-// System API object documentation goes here
 type System struct {
-	// System ID
 	ID SystemID `json:"id"`
-	// State. One of (pending, failed, deleting, stable, degraded, scaling, updating)
+
+	DefinitionURL string `json:"definitionUrl"`
+
+	Status SystemStatus `json:"status"`
+}
+
+type SystemStatus struct {
 	State SystemState `json:"state"`
-	// URL for for where the system definition resides in.
-	DefinitionURL string `json:"definitionUrl" example:"git://github.com/foo/foo.git"`
-	// map for service path and services currently running in the system
-	Services map[tree.Path]Service `json:"services"`
+
+	Version *Version `json:"version,omitempty"`
+
+	CreationTimestamp time.Time  `json:"creationTimestamp"`
+	DeletionTimestamp *time.Time `json:"deletionTimestamp,omitempty"`
 }

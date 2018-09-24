@@ -5,20 +5,21 @@ import (
 
 	"net/http"
 
-	"github.com/gin-gonic/gin"
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	v1rest "github.com/mlab-lattice/lattice/pkg/api/v1/rest"
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
+
+	"github.com/gin-gonic/gin"
 )
 
 const serviceIdentifier = "service_id"
 
-var serviceIdentifierPathComponent = fmt.Sprintf(":%v", serviceIdentifier)
-
-var servicesPath = fmt.Sprintf(v1rest.ServicesPathFormat, systemIdentifierPathComponent)
-var servicePath = fmt.Sprintf(v1rest.ServicePathFormat, systemIdentifierPathComponent, serviceIdentifierPathComponent)
-var serviceLogPath = fmt.Sprintf(v1rest.ServiceLogsPathFormat, systemIdentifierPathComponent,
-	serviceIdentifierPathComponent)
+var (
+	serviceIdentifierPathComponent = fmt.Sprintf(":%v", serviceIdentifier)
+	servicesPath                   = fmt.Sprintf(v1rest.ServicesPathFormat, systemIdentifierPathComponent)
+	servicePath                    = fmt.Sprintf(v1rest.ServicePathFormat, systemIdentifierPathComponent, serviceIdentifierPathComponent)
+	serviceLogPath                 = fmt.Sprintf(v1rest.ServiceLogsPathFormat, systemIdentifierPathComponent, serviceIdentifierPathComponent)
+)
 
 func (api *LatticeAPI) setupServicesEndpoints() {
 	// list-services
@@ -50,21 +51,30 @@ func (api *LatticeAPI) handleListServices(c *gin.Context) {
 	// check if its a query by service path
 
 	if servicePathParam != "" {
-		servicePath, err := tree.NewPath(servicePathParam)
+		path, err := tree.NewPath(servicePathParam)
 		if err != nil {
-			handleError(c, err)
+			c.JSON(http.StatusBadRequest, v1.NewInvalidPathError())
 			return
 		}
 
-		service, err := api.backend.GetServiceByPath(systemID, servicePath)
-
+		service, err := api.backend.Systems().Services(systemID).GetByPath(path)
 		if err != nil {
-			handleError(c, err)
-			return
-		}
+			v1err, ok := err.(*v1.Error)
+			if !ok {
+				handleInternalError(c, err)
+				return
+			}
 
-		if service == nil {
-			c.Status(http.StatusBadRequest)
+			switch v1err.Code {
+			case v1.ErrorCodeInvalidSystemID:
+				c.JSON(http.StatusNotFound, v1err)
+
+			case v1.ErrorCodeInvalidPath:
+				c.JSON(http.StatusOK, []*v1.Service{})
+
+			default:
+				handleInternalError(c, err)
+			}
 			return
 		}
 
@@ -73,9 +83,21 @@ func (api *LatticeAPI) handleListServices(c *gin.Context) {
 	}
 
 	// otherwise its just a normal list services request
-	services, err := api.backend.ListServices(systemID)
+	services, err := api.backend.Systems().Services(systemID).List()
 	if err != nil {
-		handleError(c, err)
+		v1err, ok := err.(*v1.Error)
+		if !ok {
+			handleInternalError(c, err)
+			return
+		}
+
+		switch v1err.Code {
+		case v1.ErrorCodeInvalidSystemID:
+			c.JSON(http.StatusNotFound, v1err)
+
+		default:
+			handleInternalError(c, err)
+		}
 		return
 	}
 
@@ -99,9 +121,21 @@ func (api *LatticeAPI) handleGetService(c *gin.Context) {
 	systemID := v1.SystemID(c.Param(systemIdentifier))
 	serviceID := v1.ServiceID(c.Param(serviceIdentifier))
 
-	service, err := api.backend.GetService(systemID, serviceID)
+	service, err := api.backend.Systems().Services(systemID).Get(serviceID)
 	if err != nil {
-		handleError(c, err)
+		v1err, ok := err.(*v1.Error)
+		if !ok {
+			handleInternalError(c, err)
+			return
+		}
+
+		switch v1err.Code {
+		case v1.ErrorCodeInvalidSystemID, v1.ErrorCodeInvalidServiceID:
+			c.JSON(http.StatusNotFound, v1err)
+
+		default:
+			handleInternalError(c, err)
+		}
 		return
 	}
 
@@ -147,10 +181,22 @@ func (api *LatticeAPI) handleGetServiceLogs(c *gin.Context) {
 		return
 	}
 
-	log, err := api.backend.ServiceLogs(systemID, serviceId, sidecar, instance, logOptions)
-
+	log, err := api.backend.Systems().Services(systemID).Logs(serviceId, sidecar, instance, logOptions)
 	if err != nil {
-		handleError(c, err)
+		v1err, ok := err.(*v1.Error)
+		if !ok {
+			handleInternalError(c, err)
+			return
+		}
+
+		switch v1err.Code {
+		case v1.ErrorCodeInvalidSystemID, v1.ErrorCodeInvalidServiceID,
+			v1.ErrorCodeInvalidInstance, v1.ErrorCodeInvalidSidecar:
+			c.JSON(http.StatusNotFound, v1err)
+
+		default:
+			handleInternalError(c, err)
+		}
 		return
 	}
 

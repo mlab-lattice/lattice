@@ -49,6 +49,7 @@ var envVars = []string{
 }
 
 // RootCmd represents the base command when called without any subcommands
+// FIXME(kevindrosendahl): convert this to pkg/util/cli
 var RootCmd = &cobra.Command{
 	Use:  "prepare-envoy",
 	Args: cobra.ExactArgs(0),

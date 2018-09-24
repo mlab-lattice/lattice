@@ -4,20 +4,21 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"strings"
 
-	"github.com/gin-gonic/gin"
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	v1rest "github.com/mlab-lattice/lattice/pkg/api/v1/rest"
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
+
+	"github.com/gin-gonic/gin"
 )
 
 const secretIdentifier = "secret_path"
 
-var secretIdentifierPathComponent = fmt.Sprintf(":%v", secretIdentifier)
-var secretPath = fmt.Sprintf(v1rest.SystemSecretPathFormat, systemIdentifierPathComponent, secretIdentifierPathComponent)
-
-var secretsPath = fmt.Sprintf(v1rest.SystemSecretsPathFormat, systemIdentifierPathComponent)
+var (
+	secretIdentifierPathComponent = fmt.Sprintf(":%v", secretIdentifier)
+	secretPath                    = fmt.Sprintf(v1rest.SystemSecretPathFormat, systemIdentifierPathComponent, secretIdentifierPathComponent)
+	secretsPath                   = fmt.Sprintf(v1rest.SystemSecretsPathFormat, systemIdentifierPathComponent)
+)
 
 func (api *LatticeAPI) setupSecretsEndpoints() {
 
@@ -60,30 +61,37 @@ func (api *LatticeAPI) handleSetSecret(c *gin.Context) {
 
 	secretPathString, err := url.PathUnescape(escapedSecretPath)
 	if err != nil {
-		// FIXME: send invalid secret error
-		c.Status(http.StatusBadRequest)
+		c.JSON(http.StatusBadRequest, v1.NewInvalidPathError())
 		return
 	}
 
-	splitPath := strings.Split(secretPathString, ":")
-	if len(splitPath) != 2 {
-		// FIXME: send invalid secret error
-		c.Status(http.StatusBadRequest)
-		return
-	}
-
-	path, err := tree.NewPath(splitPath[0])
+	path, err := tree.NewPathSubcomponent(secretPathString)
 	if err != nil {
-		// FIXME: send invalid secret error
-		c.Status(http.StatusBadRequest)
+		c.JSON(http.StatusBadRequest, v1.NewInvalidPathError())
 		return
 	}
 
-	name := splitPath[1]
-
-	err = api.backend.SetSystemSecret(systemID, path, name, req.Value)
+	err = api.backend.Systems().Secrets(systemID).Set(path, req.Value)
 	if err != nil {
-		handleError(c, err)
+		v1err, ok := err.(*v1.Error)
+		if !ok {
+			handleInternalError(c, err)
+			return
+		}
+
+		switch v1err.Code {
+		case v1.ErrorCodeInvalidSystemID:
+			c.JSON(http.StatusNotFound, v1err)
+
+		case v1.ErrorCodeSystemDeleting, v1.ErrorCodeSystemPending:
+			c.JSON(http.StatusConflict, v1err)
+
+		case v1.ErrorCodeConflict:
+			c.JSON(http.StatusConflict, v1err)
+
+		default:
+			handleInternalError(c, err)
+		}
 		return
 	}
 
@@ -104,9 +112,24 @@ func (api *LatticeAPI) handleSetSecret(c *gin.Context) {
 func (api *LatticeAPI) handleListSecrets(c *gin.Context) {
 	systemID := v1.SystemID(c.Param(systemIdentifier))
 
-	secrets, err := api.backend.ListSystemSecrets(systemID)
+	secrets, err := api.backend.Systems().Secrets(systemID).List()
 	if err != nil {
-		handleError(c, err)
+		v1err, ok := err.(*v1.Error)
+		if !ok {
+			handleInternalError(c, err)
+			return
+		}
+
+		switch v1err.Code {
+		case v1.ErrorCodeInvalidSystemID:
+			c.JSON(http.StatusNotFound, v1err)
+
+		case v1.ErrorCodeSystemDeleting, v1.ErrorCodeSystemPending:
+			c.JSON(http.StatusConflict, v1err)
+
+		default:
+			handleInternalError(c, err)
+		}
 		return
 	}
 
@@ -132,31 +155,34 @@ func (api *LatticeAPI) handleGetSecret(c *gin.Context) {
 
 	secretPathString, err := url.PathUnescape(escapedSecretPath)
 	if err != nil {
-		// FIXME: send invalid secret error
-		c.Status(http.StatusBadRequest)
+		c.JSON(http.StatusBadRequest, v1.NewInvalidPathError())
 		return
 	}
 
-	splitPath := strings.Split(secretPathString, ":")
-	if len(splitPath) != 2 {
-		// FIXME: send invalid secret error
-		c.Status(http.StatusBadRequest)
-		return
-	}
-
-	path, err := tree.NewPath(splitPath[0])
+	path, err := tree.NewPathSubcomponent(secretPathString)
 	if err != nil {
-		// FIXME: send invalid secret error
-		c.Status(http.StatusBadRequest)
+		c.JSON(http.StatusBadRequest, v1.NewInvalidPathError())
 		return
 	}
 
-	name := splitPath[1]
-
-	secret, err := api.backend.GetSystemSecret(systemID, path, name)
+	secret, err := api.backend.Systems().Secrets(systemID).Get(path)
 	if err != nil {
-		// FIXME: send invalid secret error
-		c.Status(http.StatusBadRequest)
+		v1err, ok := err.(*v1.Error)
+		if !ok {
+			handleInternalError(c, err)
+			return
+		}
+
+		switch v1err.Code {
+		case v1.ErrorCodeInvalidSystemID, v1.ErrorCodeInvalidSecret:
+			c.JSON(http.StatusNotFound, v1err)
+
+		case v1.ErrorCodeSystemDeleting, v1.ErrorCodeSystemPending:
+			c.JSON(http.StatusConflict, v1err)
+
+		default:
+			handleInternalError(c, err)
+		}
 		return
 	}
 
@@ -179,33 +205,39 @@ func (api *LatticeAPI) handleGetSecret(c *gin.Context) {
 func (api *LatticeAPI) handleUnsetSecret(c *gin.Context) {
 	systemID := v1.SystemID(c.Param(systemIdentifier))
 	escapedSecretPath := c.Param(secretIdentifier)
-
 	secretPathString, err := url.PathUnescape(escapedSecretPath)
 	if err != nil {
-		// FIXME: send invalid secret error
-		c.Status(http.StatusBadRequest)
+		c.JSON(http.StatusBadRequest, v1.NewInvalidPathError())
 		return
 	}
 
-	splitPath := strings.Split(secretPathString, ":")
-	if len(splitPath) != 2 {
-		// FIXME: send invalid secret error
-		c.Status(http.StatusBadRequest)
-		return
-	}
-
-	path, err := tree.NewPath(splitPath[0])
+	path, err := tree.NewPathSubcomponent(secretPathString)
 	if err != nil {
-		// FIXME: send invalid secret error
-		c.Status(http.StatusBadRequest)
+		c.JSON(http.StatusBadRequest, v1.NewInvalidPathError())
 		return
 	}
 
-	name := splitPath[1]
-
-	err = api.backend.UnsetSystemSecret(systemID, path, name)
+	err = api.backend.Systems().Secrets(systemID).Unset(path)
 	if err != nil {
-		handleError(c, err)
+		v1err, ok := err.(*v1.Error)
+		if !ok {
+			handleInternalError(c, err)
+			return
+		}
+
+		switch v1err.Code {
+		case v1.ErrorCodeInvalidSystemID, v1.ErrorCodeInvalidSecret:
+			c.JSON(http.StatusNotFound, v1err)
+
+		case v1.ErrorCodeSystemDeleting, v1.ErrorCodeSystemPending:
+			c.JSON(http.StatusConflict, v1err)
+
+		case v1.ErrorCodeConflict:
+			c.JSON(http.StatusConflict, v1err)
+
+		default:
+			handleInternalError(c, err)
+		}
 		return
 	}
 

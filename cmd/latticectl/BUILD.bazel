@@ -5,7 +5,11 @@ go_library(
     srcs = ["main.go"],
     importpath = "github.com/mlab-lattice/lattice/cmd/latticectl",
     visibility = ["//visibility:public"],
-    deps = ["//cmd/latticectl/app:go_default_library"],
+    deps = [
+        "//pkg/latticectl:go_default_library",
+        "//pkg/latticectl/command:go_default_library",
+        "//pkg/util/xdg:go_default_library",
+    ],
 )
 
 go_binary(

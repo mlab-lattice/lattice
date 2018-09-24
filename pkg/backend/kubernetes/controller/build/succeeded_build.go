@@ -13,20 +13,18 @@ func (c *Controller) syncSucceededBuild(build *latticev1.Build, stateInfo stateI
 		startTimestamp = &now
 	}
 
-	completionTimestamp := build.Status.CompletionTimestamp
-	if completionTimestamp == nil {
-		now := metav1.Now()
-		completionTimestamp = &now
-	}
-
+	now := metav1.Now()
 	_, err := c.updateBuildStatus(
 		build,
 		latticev1.BuildStateSucceeded,
 		"",
-		startTimestamp,
-		completionTimestamp,
-		build.Status.Services,
-		build.Status.Jobs,
+		nil,
+		build.Status.Definition,
+		build.Status.Path,
+		build.Status.Version,
+		build.Status.StartTimestamp,
+		&now,
+		build.Status.Workloads,
 		stateInfo.containerBuildStatuses,
 	)
 	return err

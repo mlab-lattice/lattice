@@ -8,12 +8,15 @@ import (
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	v1rest "github.com/mlab-lattice/lattice/pkg/api/v1/rest"
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
+	reflectutil "github.com/mlab-lattice/lattice/pkg/util/reflect"
 )
 
-var buildIdentifierPathComponent = fmt.Sprintf(":%v", buildIdentifier)
-var buildsPath = fmt.Sprintf(v1rest.BuildsPathFormat, systemIdentifierPathComponent)
-var buildPath = fmt.Sprintf(v1rest.BuildPathFormat, systemIdentifierPathComponent, buildIdentifierPathComponent)
-var buildsLogPath = fmt.Sprintf(v1rest.BuildLogsPathFormat, systemIdentifierPathComponent, buildIdentifierPathComponent)
+var (
+	buildIdentifierPathComponent = fmt.Sprintf(":%v", buildIdentifier)
+	buildsPath                   = fmt.Sprintf(v1rest.BuildsPathFormat, systemIdentifierPathComponent)
+	buildPath                    = fmt.Sprintf(v1rest.BuildPathFormat, systemIdentifierPathComponent, buildIdentifierPathComponent)
+	buildsLogPath                = fmt.Sprintf(v1rest.BuildLogsPathFormat, systemIdentifierPathComponent, buildIdentifierPathComponent)
+)
 
 func (api *LatticeAPI) setupBuildEndpoints() {
 	// build-system
@@ -53,22 +56,44 @@ func (api *LatticeAPI) handleBuildSystem(c *gin.Context) {
 		return
 	}
 
-	root, ri, err := getSystemDefinitionRoot(api.backend, api.resolver, systemID, req.Version)
-
+	err := reflectutil.ValidateUnion(&req)
 	if err != nil {
-		handleError(c, err)
+		switch err.(type) {
+		case *reflectutil.InvalidUnionNoFieldSetError, *reflectutil.InvalidUnionMultipleFieldSetError:
+			c.Status(http.StatusBadRequest)
+
+		default:
+			handleInternalError(c, err)
+		}
 		return
 	}
 
-	build, err := api.backend.Build(
-		systemID,
-		root,
-		ri,
-		req.Version,
-	)
+	var build *v1.Build
+	switch {
+	case req.Path != nil:
+		build, err = api.backend.Systems().Builds(systemID).CreateFromPath(*req.Path)
+
+	case req.Version != nil:
+		build, err = api.backend.Systems().Builds(systemID).CreateFromVersion(*req.Version)
+	}
 
 	if err != nil {
-		handleError(c, err)
+		v1err, ok := err.(*v1.Error)
+		if !ok {
+			handleInternalError(c, err)
+			return
+		}
+
+		switch v1err.Code {
+		case v1.ErrorCodeInvalidSystemID:
+			c.JSON(http.StatusNotFound, v1err)
+
+		case v1.ErrorCodeSystemDeleting, v1.ErrorCodeSystemPending:
+			c.JSON(http.StatusConflict, v1err)
+
+		default:
+			handleInternalError(c, err)
+		}
 		return
 	}
 
@@ -90,9 +115,24 @@ func (api *LatticeAPI) handleBuildSystem(c *gin.Context) {
 func (api *LatticeAPI) handleListBuilds(c *gin.Context) {
 	systemID := v1.SystemID(c.Param(systemIdentifier))
 
-	builds, err := api.backend.ListBuilds(systemID)
+	builds, err := api.backend.Systems().Builds(systemID).List()
 	if err != nil {
-		handleError(c, err)
+		v1err, ok := err.(*v1.Error)
+		if !ok {
+			handleInternalError(c, err)
+			return
+		}
+
+		switch v1err.Code {
+		case v1.ErrorCodeInvalidSystemID:
+			c.JSON(http.StatusNotFound, v1err)
+
+		case v1.ErrorCodeSystemDeleting, v1.ErrorCodeSystemPending:
+			c.JSON(http.StatusConflict, v1err)
+
+		default:
+			handleInternalError(c, err)
+		}
 		return
 	}
 
@@ -116,9 +156,24 @@ func (api *LatticeAPI) handleGetBuild(c *gin.Context) {
 	systemID := v1.SystemID(c.Param(systemIdentifier))
 	buildID := v1.BuildID(c.Param(buildIdentifier))
 
-	build, err := api.backend.GetBuild(systemID, buildID)
+	build, err := api.backend.Systems().Builds(systemID).Get(buildID)
 	if err != nil {
-		handleError(c, err)
+		v1err, ok := err.(*v1.Error)
+		if !ok {
+			c.Status(http.StatusInternalServerError)
+			return
+		}
+
+		switch v1err.Code {
+		case v1.ErrorCodeInvalidSystemID, v1.ErrorCodeInvalidBuildID:
+			c.JSON(http.StatusNotFound, v1err)
+
+		case v1.ErrorCodeSystemDeleting, v1.ErrorCodeSystemPending:
+			c.JSON(http.StatusConflict, v1err)
+
+		default:
+			handleInternalError(c, err)
+		}
 		return
 	}
 
@@ -149,7 +204,7 @@ func (api *LatticeAPI) handleGetBuild(c *gin.Context) {
 func (api *LatticeAPI) handleGetBuildLogs(c *gin.Context) {
 	systemID := v1.SystemID(c.Param(systemIdentifier))
 	buildID := v1.BuildID(c.Param(buildIdentifier))
-	path := c.Query("path")
+	pathStr := c.Query("path")
 
 	sidecarQuery, sidecarSet := c.GetQuery("sidecar")
 	var sidecar *string
@@ -157,27 +212,42 @@ func (api *LatticeAPI) handleGetBuildLogs(c *gin.Context) {
 		sidecar = &sidecarQuery
 	}
 
-	if path == "" {
+	if pathStr == "" {
 		c.Status(http.StatusBadRequest)
 		return
 	}
 
-	nodePath, err := tree.NewPath(path)
+	path, err := tree.NewPath(pathStr)
 	if err != nil {
 		c.Status(http.StatusBadRequest)
 		return
 	}
 
 	logOptions, err := requestedLogOptions(c)
-
 	if err != nil {
 		c.Status(http.StatusBadRequest)
 		return
 	}
 
-	log, err := api.backend.BuildLogs(systemID, buildID, nodePath, sidecar, logOptions)
+	log, err := api.backend.Systems().Builds(systemID).Logs(buildID, path, sidecar, logOptions)
 	if err != nil {
-		handleError(c, err)
+		v1err, ok := err.(*v1.Error)
+		if !ok {
+			handleInternalError(c, err)
+			return
+		}
+
+		switch v1err.Code {
+		case v1.ErrorCodeInvalidSystemID, v1.ErrorCodeInvalidBuildID,
+			v1.ErrorCodeInvalidPath, v1.ErrorCodeInvalidSidecar:
+			c.JSON(http.StatusNotFound, v1err)
+
+		case v1.ErrorCodeSystemDeleting, v1.ErrorCodeSystemPending:
+			c.JSON(http.StatusConflict, v1err)
+
+		default:
+			handleInternalError(c, err)
+		}
 		return
 	}
 

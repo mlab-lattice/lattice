@@ -433,7 +433,7 @@ func (c *Controller) resolveControllerRef(namespace string, controllerRef *metav
 
 	service, err := c.serviceLister.Services(namespace).Get(controllerRef.Name)
 	if err != nil {
-		// FIXME(kevinrosendahl): send error?
+		// FIXME(kevindrosendahl): send error?
 		return nil
 	}
 

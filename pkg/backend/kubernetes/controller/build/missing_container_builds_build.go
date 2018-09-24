@@ -2,91 +2,61 @@ package build
 
 import (
 	"encoding/json"
+	"fmt"
 
+	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	kubeutil "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/kubernetes"
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 	definitionv1 "github.com/mlab-lattice/lattice/pkg/definition/v1"
 	"github.com/mlab-lattice/lattice/pkg/util/sha1"
-
-	"fmt"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func (c *Controller) syncMissingContainerBuildsBuild(build *latticev1.Build, stateInfo stateInfo) error {
 	containerBuildStatuses := stateInfo.containerBuildStatuses
 	containerBuildHashes := make(map[string]*latticev1.ContainerBuild)
-	services := make(map[tree.Path]latticev1.BuildStatusService)
-	jobs := make(map[tree.Path]latticev1.BuildStatusJob)
+	workloads := make(map[tree.Path]latticev1.BuildStatusWorkload)
 
-	// look through all the containers of each service to see if there are any containers that
+	// look through all the containers of each workload to see if there are any containers that
 	// don't have builds yet
-	// TODO: think about how to refactor this to DRY it up
-	for path, service := range stateInfo.servicesNeedNewContainerBuilds {
+	for path, workload := range stateInfo.workloadsNeedNewContainerBuilds {
 		containers := map[string]definitionv1.Container{
-			kubeutil.UserMainContainerName: service.Container,
+			kubeutil.UserMainContainerName: workload.Containers().Main,
 		}
-		for name, sidecarContainer := range service.Sidecars {
+
+		for name, sidecarContainer := range workload.Containers().Sidecars {
 			containers[kubeutil.UserSidecarContainerName(name)] = sidecarContainer
 		}
 
-		// maps the service's container names to the container builds for them
-		containerBuilds := make(map[string]string)
+		// maps the workload's container names to the container builds for them
+		containerBuilds := make(map[string]v1.ContainerBuildID)
 		err := c.getContainerBuilds(build, path, containers, containerBuilds, containerBuildHashes, containerBuildStatuses)
 		if err != nil {
-			return nil
+			return err
 		}
 
-		statusServiceInfo := latticev1.BuildStatusService{
+		workloadInfo := latticev1.BuildStatusWorkload{
 			MainContainer: containerBuilds[kubeutil.UserMainContainerName],
-			Sidecars:      make(map[string]string),
+			Sidecars:      make(map[string]v1.ContainerBuildID),
 		}
-		for sidecar := range service.Sidecars {
-			statusServiceInfo.Sidecars[sidecar] = containerBuilds[kubeutil.UserSidecarContainerName(sidecar)]
-		}
-		services[path] = statusServiceInfo
-	}
-
-	for path, job := range stateInfo.jobsNeedNewContainerBuilds {
-		containers := map[string]definitionv1.Container{
-			kubeutil.UserMainContainerName: job.Container,
-		}
-		for name, sidecarContainer := range job.Sidecars {
-			containers[kubeutil.UserSidecarContainerName(name)] = sidecarContainer
+		for sidecar := range workload.Containers().Sidecars {
+			workloadInfo.Sidecars[sidecar] = containerBuilds[kubeutil.UserSidecarContainerName(sidecar)]
 		}
 
-		// maps the service's container names to the container builds for them
-		containerBuilds := make(map[string]string)
-		err := c.getContainerBuilds(build, path, containers, containerBuilds, containerBuildHashes, containerBuildStatuses)
-		if err != nil {
-			return nil
-		}
-
-		statusJobInfo := latticev1.BuildStatusJob{
-			MainContainer: containerBuilds[kubeutil.UserMainContainerName],
-			Sidecars:      make(map[string]string),
-		}
-		for sidecar := range job.Sidecars {
-			statusJobInfo.Sidecars[sidecar] = containerBuilds[kubeutil.UserSidecarContainerName(sidecar)]
-		}
-		jobs[path] = statusJobInfo
-	}
-
-	// If we haven't logged a start timestamp yet, use now.
-	startTimestamp := build.Status.StartTimestamp
-	if startTimestamp == nil {
-		now := metav1.Now()
-		startTimestamp = &now
+		workloads[path] = workloadInfo
 	}
 
 	_, err := c.updateBuildStatus(
 		build,
 		latticev1.BuildStateRunning,
 		"",
-		startTimestamp,
 		nil,
-		services,
-		jobs,
+		build.Status.Definition,
+		build.Status.Path,
+		build.Status.Version,
+		build.Status.StartTimestamp,
+		nil,
+		workloads,
 		containerBuildStatuses,
 	)
 	return err
@@ -96,9 +66,9 @@ func (c *Controller) getContainerBuilds(
 	build *latticev1.Build,
 	path tree.Path,
 	containers map[string]definitionv1.Container,
-	containerBuilds map[string]string,
+	containerBuilds map[string]v1.ContainerBuildID,
 	containerBuildHashes map[string]*latticev1.ContainerBuild,
-	containerBuildStatuses map[string]latticev1.ContainerBuildStatus,
+	containerBuildStatuses map[v1.ContainerBuildID]latticev1.ContainerBuildStatus,
 ) error {
 	for containerName, container := range containers {
 		buildDefinition, err := c.hydrateContainerBuild(build, path, container.Build)
@@ -128,9 +98,10 @@ func (c *Controller) getContainerBuilds(
 				return err
 			}
 
-			containerBuildStatuses[containerBuild.Name] = containerBuild.Status
+			id := v1.ContainerBuildID(containerBuild.Name)
+			containerBuildStatuses[id] = containerBuild.Status
 			containerBuildHashes[definitionHash] = containerBuild
-			containerBuilds[containerName] = containerBuild.Name
+			containerBuilds[containerName] = id
 			continue
 		}
 
@@ -140,9 +111,10 @@ func (c *Controller) getContainerBuilds(
 			return err
 		}
 
-		containerBuildStatuses[containerBuild.Name] = containerBuild.Status
+		id := v1.ContainerBuildID(containerBuild.Name)
+		containerBuildStatuses[id] = containerBuild.Status
 		containerBuildHashes[definitionHash] = containerBuild
-		containerBuilds[containerName] = containerBuild.Name
+		containerBuilds[containerName] = id
 	}
 
 	return nil
@@ -159,7 +131,7 @@ func (c *Controller) hydrateContainerBuild(
 		return containerBuild, nil
 	}
 
-	i, ok := build.Spec.ResolutionInfo[path]
+	i, ok := build.Status.Definition.Get(path)
 	if !ok {
 		err := fmt.Errorf(
 			"%v resolution info did not have information for %v",

@@ -15,6 +15,7 @@ go_library(
         "//pkg/backend/kubernetes/lifecycle/system/bootstrap/bootstrapper:go_default_library",
         "//pkg/backend/kubernetes/servicemesh/envoy:go_default_library",
         "//pkg/util/cli:go_default_library",
+        "//pkg/util/cli/flags:go_default_library",
         "@io_k8s_api//apps/v1:go_default_library",
         "@io_k8s_api//core/v1:go_default_library",
     ],

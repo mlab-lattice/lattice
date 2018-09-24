@@ -131,10 +131,10 @@ func service(path tree.Path, systemID v1.SystemID) latticev1.Service {
 			},
 		},
 		Spec: latticev1.ServiceSpec{
-			Definition: &definitionv1.Service{
+			Definition: definitionv1.Service{
 				Container: definitionv1.Container{
 					Ports: map[int32]definitionv1.ContainerPort{
-						8080: definitionv1.ContainerPort{
+						8080: {
 							Protocol: "HTTP",
 						},
 					},

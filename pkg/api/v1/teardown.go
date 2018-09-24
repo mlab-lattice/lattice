@@ -1,5 +1,9 @@
 package v1
 
+import (
+	"time"
+)
+
 type (
 	TeardownID    string
 	TeardownState string
@@ -13,8 +17,15 @@ const (
 )
 
 type Teardown struct {
-	// ID
 	ID TeardownID `json:"id"`
-	// State
-	State TeardownState `json:"state"`
+
+	Status TeardownStatus `json:"status"`
+}
+
+type TeardownStatus struct {
+	State   TeardownState `json:"state"`
+	Message string        `json:"message,omitempty"`
+
+	StartTimestamp      *time.Time `json:"startTimestamp,omitempty"`
+	CompletionTimestamp *time.Time `json:"completionTimestamp,omitempty"`
 }

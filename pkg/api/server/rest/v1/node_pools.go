@@ -5,16 +5,20 @@ import (
 	"net/http"
 	"net/url"
 
-	"github.com/gin-gonic/gin"
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	v1rest "github.com/mlab-lattice/lattice/pkg/api/v1/rest"
+	"github.com/mlab-lattice/lattice/pkg/definition/tree"
+
+	"github.com/gin-gonic/gin"
 )
 
 const nodePoolIdentifier = "node_pool_path"
 
-var nodePoolIdentifierPathComponent = fmt.Sprintf(":%v", nodePoolIdentifier)
-var nodePoolPath = fmt.Sprintf(v1rest.NodePoolPathFormat, systemIdentifierPathComponent, nodePoolIdentifierPathComponent)
-var nodePoolsPath = fmt.Sprintf(v1rest.NodePoolsPathFormat, systemIdentifierPathComponent)
+var (
+	nodePoolIdentifierPathComponent = fmt.Sprintf(":%v", nodePoolIdentifier)
+	nodePoolPath                    = fmt.Sprintf(v1rest.NodePoolPathFormat, systemIdentifierPathComponent, nodePoolIdentifierPathComponent)
+	nodePoolsPath                   = fmt.Sprintf(v1rest.NodePoolsPathFormat, systemIdentifierPathComponent)
+)
 
 func (api *LatticeAPI) setupNoodPoolEndpoints() {
 	// list-node-pools
@@ -39,9 +43,24 @@ func (api *LatticeAPI) setupNoodPoolEndpoints() {
 func (api *LatticeAPI) handleListNodePools(c *gin.Context) {
 	systemID := v1.SystemID(c.Param(systemIdentifier))
 
-	nodePools, err := api.backend.ListNodePools(systemID)
+	nodePools, err := api.backend.Systems().NodePools(systemID).List()
 	if err != nil {
-		handleError(c, err)
+		v1err, ok := err.(*v1.Error)
+		if !ok {
+			handleInternalError(c, err)
+			return
+		}
+
+		switch v1err.Code {
+		case v1.ErrorCodeInvalidSystemID:
+			c.JSON(http.StatusNotFound, v1err)
+
+		case v1.ErrorCodeSystemDeleting, v1.ErrorCodeSystemPending:
+			c.JSON(http.StatusConflict, v1err)
+
+		default:
+			handleInternalError(c, err)
+		}
 		return
 	}
 
@@ -67,21 +86,34 @@ func (api *LatticeAPI) handleGetNodePool(c *gin.Context) {
 
 	nodePoolPathString, err := url.PathUnescape(escapedNodePoolPath)
 	if err != nil {
-		// FIXME: send invalid nodePool error
-		c.Status(http.StatusBadRequest)
+		c.JSON(http.StatusBadRequest, v1.NewInvalidPathError())
 		return
 	}
 
-	path, err := v1.ParseNodePoolPath(nodePoolPathString)
+	path, err := tree.NewPathSubcomponent(nodePoolPathString)
 	if err != nil {
-		// FIXME: send invalid nodePool error
-		c.Status(http.StatusBadRequest)
+		c.JSON(http.StatusBadRequest, v1.NewInvalidPathError())
 		return
 	}
 
-	nodePool, err := api.backend.GetNodePool(systemID, path)
+	nodePool, err := api.backend.Systems().NodePools(systemID).Get(path)
 	if err != nil {
-		handleError(c, err)
+		v1err, ok := err.(*v1.Error)
+		if !ok {
+			handleInternalError(c, err)
+			return
+		}
+
+		switch v1err.Code {
+		case v1.ErrorCodeInvalidSystemID, v1.ErrorCodeInvalidPath:
+			c.JSON(http.StatusNotFound, v1err)
+
+		case v1.ErrorCodeSystemDeleting, v1.ErrorCodeSystemPending:
+			c.JSON(http.StatusConflict, v1err)
+
+		default:
+			handleInternalError(c, err)
+		}
 		return
 	}
 

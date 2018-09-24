@@ -313,7 +313,7 @@ func (c *Controller) resolveControllerRef(namespace string, controllerRef *metav
 
 	jobRun, err := c.jobRunLister.JobRuns(namespace).Get(controllerRef.Name)
 	if err != nil {
-		// FIXME(kevinrosendahl): send error?
+		// FIXME(kevindrosendahl): send error?
 		return nil
 	}
 

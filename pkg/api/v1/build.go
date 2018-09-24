@@ -1,10 +1,8 @@
 package v1
 
 import (
-	// TODO: feels a little weird to have to import this here. should type definitions under pkg/system be moved into pkg/types?
-	"time"
-
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
+	"time"
 )
 
 type (
@@ -13,34 +11,41 @@ type (
 )
 
 const (
-	BuildStatePending   BuildState = "pending"
+	BuildStatePending  BuildState = "pending"
+	BuildStateAccepted BuildState = "accepted"
+	// FIXME(kevindrosendahl): should probably standardize on running vs in progress
 	BuildStateRunning   BuildState = "running"
 	BuildStateSucceeded BuildState = "succeeded"
 	BuildStateFailed    BuildState = "failed"
 )
 
 type Build struct {
-	// ID
 	ID BuildID `json:"id"`
-	// State
-	State BuildState `json:"state"`
-	// Start timestamp
-	StartTimestamp *time.Time `json:"startTimestamp,omitempty"`
-	// Completion timestamp
-	CompletionTimestamp *time.Time `json:"completionTimestamp,omitempty"`
-	// Version
-	Version SystemVersion `json:"version"`
 
-	// Services maps service paths (e.g. /foo/bar/buzz) to the
-	// status of the build for that service in the Build.
-	Services map[tree.Path]ServiceBuild `json:"services"`
+	Path    *tree.Path `json:"path,omitempty"`
+	Version *Version   `json:"version,omitempty"`
+
+	Status BuildStatus `json:"status"`
 }
 
-type ServiceBuild struct {
-	// Container Build
+type BuildStatus struct {
+	State   BuildState `json:"state"`
+	Message string     `json:"message,omitempty"`
+
+	StartTimestamp      *time.Time `json:"startTimestamp,omitempty"`
+	CompletionTimestamp *time.Time `json:"completionTimestamp,omitempty"`
+
+	Path    *tree.Path `json:"path,omitempty"`
+	Version *Version   `json:"version,omitempty"`
+
+	// Workloads maps component paths (e.g. /foo/bar/buzz) to the
+	// status of the build for that service in the Build.
+	Workloads map[tree.Path]WorkloadBuild `json:"workloads"`
+}
+
+type WorkloadBuild struct {
 	ContainerBuild
-	// Sidecars
-	Sidecars map[string]ContainerBuild `json:"sidecars"`
+	Sidecars map[string]ContainerBuild `json:"sidecars,omitempty"`
 }
 
 type (
@@ -63,7 +68,12 @@ const (
 )
 
 type ContainerBuild struct {
-	ID    ContainerBuildID    `json:"id"`
+	ID ContainerBuildID `json:"id"`
+
+	Status ContainerBuildStatus `json:"status"`
+}
+
+type ContainerBuildStatus struct {
 	State ContainerBuildState `json:"state"`
 
 	StartTimestamp      *time.Time `json:"startTimestamp,omitempty"`

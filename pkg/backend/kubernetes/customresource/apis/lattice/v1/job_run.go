@@ -83,14 +83,14 @@ func (s *JobRun) NodePoolAnnotation() (NodePoolAnnotationValue, error) {
 
 // +k8s:deepcopy-gen=false
 type JobRunSpec struct {
-	Definition *definitionv1.Job `json:"definition"`
+	Definition definitionv1.Job `json:"definition"`
 
 	NumRetries  *int32                            `json:"numRetries"`
 	Command     []string                          `json:"command"`
 	Environment definitionv1.ContainerEnvironment `json:"environment"`
 
 	// ContainerBuildArtifacts maps container names to the artifacts created by their build
-	ContainerBuildArtifacts map[string]ContainerBuildArtifacts `json:"containerBuildArtifacts"`
+	ContainerBuildArtifacts WorkloadContainerBuildArtifacts `json:"containerBuildArtifacts"`
 }
 
 type JobRunStatus struct {
