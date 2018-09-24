@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"log"
 	"os"
 	"sort"
 	"strings"
@@ -251,6 +250,5 @@ func getMarkdownFileContent(cmdName string, fileName string) (string, error) {
 		return "", nil
 	}
 
-	log.Printf("Markdown file found: %s", markdownPath)
 	return string(buffer), nil
 }

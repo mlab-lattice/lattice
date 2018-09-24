@@ -100,7 +100,7 @@ git.install-hooks:
 # docgen
 .PHONY: docgen.latticectl
 docgen.latticectl:
-	@bazel run //cmd/latticectl:docgen -- --plugin cmd/latticectl/plugin.so
+	@bazel build //cmd/latticectl:docgen
 
 
 # local

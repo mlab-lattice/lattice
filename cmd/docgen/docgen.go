@@ -1,8 +1,9 @@
 package main
 
 import (
-	"io/ioutil"
+	"io"
 	"log"
+	"os"
 	"plugin"
 
 	"github.com/mlab-lattice/lattice/pkg/util/cli"
@@ -14,26 +15,23 @@ func main() {
 	Command().Execute()
 }
 
+const (
+	extraMarkdownFlag = "extra-markdown"
+)
+
 func Command() *cli.RootCommand {
 	var (
-		inputDir   string
-		outputDir  string
-		pluginPath string
+		extraMarkdown string
+		pluginPath    string
 	)
 
 	return &cli.RootCommand{
 		Name: "docgen",
 		Command: &cli.Command{
 			Flags: cli.Flags{
-				"input-docs": &flags.String{
-					Default: "./docs/cli",
-					Usage:   "extra markdown docs input directory",
-					Target:  &inputDir,
-				},
-				"output-docs": &flags.String{
-					Default: "./doc.md",
-					Usage:   "markdown docs output file path",
-					Target:  &outputDir,
+				extraMarkdownFlag: &flags.String{
+					Usage:  "path to extra markdown to be used when generating documentation",
+					Target: &extraMarkdown,
 				},
 				"plugin": &flags.String{
 					Usage:    "path to plugin file containing the command to generate documentation for",
@@ -42,9 +40,6 @@ func Command() *cli.RootCommand {
 				},
 			},
 			Run: func(args []string, flags cli.Flags) error {
-				log.Printf("Input docs dir: '%s' \n", inputDir)
-				log.Printf("Output docs file path: '%s' \n", outputDir)
-
 				p, err := plugin.Open(pluginPath)
 				if err != nil {
 					return err
@@ -61,21 +56,17 @@ func Command() *cli.RootCommand {
 					log.Fatalf("FATAL: Error while initialising latticectl")
 				}
 
+				if flags[extraMarkdownFlag].Set() {
+					docgen.InputDocsDir = extraMarkdown
+				}
+
 				reader, err := docgen.GenerateMarkdown(command)
 				if err != nil {
 					log.Fatalf("FATAL: Error while generating markdown: %s", err)
 				}
 
-				markdownBytes, err := ioutil.ReadAll(reader)
-				if err != nil {
-					log.Fatalf("FATAL: Error while reading from markdown buffer: %s", err)
-				}
-
-				writeError := ioutil.WriteFile(outputDir, markdownBytes, 0755)
-				if writeError != nil {
-					log.Fatalf("FATAL: Error while writing markdown buffer to file: %s", err)
-				}
-				return nil
+				_, err = io.Copy(os.Stdout, reader)
+				return err
 			},
 		},
 	}
