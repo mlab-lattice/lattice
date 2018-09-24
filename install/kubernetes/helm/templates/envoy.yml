@@ -81,7 +81,7 @@ spec:
         - -logtostderr
         - -redirect-cidr-block
         - {{ .Values.serviceMesh.envoy.redirectCidrBlock }}
-        image: {{ .Values.containerChannel }}/kubernetes-envoy-xds-api-grpc-per-node
+        image: {{ .Values.containerChannel }}/kubernetes/envoy-xds-api-grpc-per-node
         imagePullPolicy: Always
         name: envoy-xds-api
         ports:

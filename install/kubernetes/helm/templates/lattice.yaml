@@ -31,7 +31,7 @@ spec:
   containerBuild:
     builderConfig:
       dockerApiVersion: {{ quote .Values.containerBuilder.dockerApiVersion }}
-      image: {{ .Values.containerChannel }}/kubernetes-container-builder
+      image: {{ .Values.containerChannel }}/kubernetes/container-builder
     dockerConfig:
       push: {{ .Values.containerBuilder.push }}
       registry:  {{ .Values.containerBuilder.registry }}
@@ -46,6 +46,6 @@ spec:
     {{ if eq .Values.serviceMesh.name "envoy" }}
     envoy:
       image: {{ .Values.serviceMesh.envoy.image }}
-      prepareImage: {{ .Values.containerChannel }}/kubernetes-envoy-prepare
-      xdsApiImage: {{ .Values.containerChannel }}/kubernetes-envoy-xds-api-grpc-per-node
+      prepareImage: {{ .Values.containerChannel }}/kubernetes/envoy-prepare
+      xdsApiImage: {{ .Values.containerChannel }}/kubernetes/envoy-xds-api-grpc-per-node
     {{ end }}
