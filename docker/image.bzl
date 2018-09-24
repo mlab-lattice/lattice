@@ -30,12 +30,38 @@ def _lattice_base_go_container_image(name, base_layer_target, stripped=False):
       name = name,
       base = go_base_images[stripped],
       tars = [base_layer_target],
+      visibility = ["//visibility:public"],
   )
 
 
-# creates both go_image and container_push targets for both normal and stripped versions
+# creates a container_push target for the image
+def lattice_container_push(image, image_name):
+  container_push(
+      name = push_target_prefix + image,
+      format = "Docker",
+      image = image,
+      registry = "{REGISTRY}",
+      repository = "{REPOSITORY_PREFIX}/{CHANNEL}/" + image_name,
+      stamp = True,
+  )
+
+
+# creates a container_image and lattice_container_push for the given name, image_name,
+# and container_image arguments
+def lattice_container_image(name, image_name, **kwargs):
+  container_image(
+      name = name,
+      **kwargs
+  )
+
+  lattice_container_push(
+      image = name,
+      image_name = image_name,
+  )
+
+# creates both go_image and lattice_container_push targets for both normal and stripped versions
 # of the target
-def lattice_go_container_image(name, base_image, path):
+def lattice_go_container_image(name, image_name, base_image, path):
   stripped_name = name + stripped_target_suffix
 
   stripped_base_image = base_image + stripped_target_suffix if base_image else go_base_images[True]
@@ -51,13 +77,9 @@ def lattice_go_container_image(name, base_image, path):
       visibility = ["//visibility:public"],
   )
 
-  container_push(
-      name = push_target_prefix + name,
-      format = "Docker",
-      image = ":" + name,
-      registry = "{REGISTRY}",
-      repository = "{REPOSITORY_PREFIX}/{CHANNEL}/" + name,
-      stamp = True,
+  lattice_container_push(
+      image = name,
+      image_name = image_name,
   )
 
   go_image(
@@ -70,11 +92,7 @@ def lattice_go_container_image(name, base_image, path):
       visibility = ["//visibility:public"],
   )
 
-  container_push(
-      name = push_target_prefix + stripped_name,
-      format = "Docker",
-      image = ":" + stripped_name,
-      registry = "{REGISTRY}",
-      repository = "{REPOSITORY_PREFIX}/{CHANNEL}/stripped/" + name,
-      stamp = True,
+  lattice_container_push(
+      image = stripped_name,
+      image_name = "stripped/" + image_name,
   )

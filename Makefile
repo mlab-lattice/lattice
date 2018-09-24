@@ -2,14 +2,14 @@
 DIR := $(patsubst %/,%,$(dir $(abspath $(lastword $(MAKEFILE_LIST)))))
 
 # build
-.PHONY: build
-build: gazelle \
-       build.no-gazelle
+.PHONY: build.gazelle
+build.gazelle: gazelle \
+               build
 
-.PHONY: build.no-gazelle
-build.no-gazelle: PLATFORM ?=
-build.no-gazelle: TARGET ?= //cmd/... //pkg/...
-build.no-gazelle:
+.PHONY: build
+build: PLATFORM ?=
+build: TARGET ?= //cmd/... //pkg/...
+build:
 	@bazel build \
 		$(PLATFORM) \
 		$(TARGET)
@@ -98,103 +98,138 @@ git.install-hooks:
 
 
 # docgen
-docgen.latticectl: build
+.PHONY: docgen.latticectl
+docgen.latticectl:
 	@bazel run //cmd/latticectl:docgen -- --plugin cmd/latticectl/plugin.so
 
+
 # docker
-DOCKER_IMAGES := kubernetes-api-server-rest             \
-                 kubernetes-container-builder           \
-                 kubernetes-envoy-prepare               \
-                 kubernetes-envoy-xds-api-grpc-per-node \
-                 kubernetes-installer-helm              \
-                 kubernetes-lattice-controller-manager  \
-                 kubernetes-local-dns-controller        \
-                 latticectl                             \
-                 mock-api-server
+.PHONY: docker.build
+docker.build:
+	@bazel build //docker/...
+
+.PHONY: docker.all.push
+docker.all.push: docker.kubernetes.all.push \
+                 docker.mock.all.push
+
+KUBERNETES_DOCKER_IMAGES := api-server-rest             \
+                            container-builder           \
+                            envoy-prepare               \
+                            envoy-xds-api-grpc-per-node \
+                            installer-helm              \
+                            lattice-controller-manager  \
+                            local-dns-controller
+
+.PHONY: docker.kubernetes.push.all
+docker.kubernetes.all.push:
+	@for image in $(KUBERNETES_DOCKER_IMAGES); do \
+		$(MAKE) docker.kubernetes.push.$$image || exit 1; \
+	done
+
+# FIXME(kevindrosendahl): switch to docker.kubernetes.<image>.<action>
+KUBERNETES_IMAGE_PUSHES := $(addprefix docker.kubernetes.push.,$(KUBERNETES_DOCKER_IMAGES))
+.PHONY: $(KUBERNETES_IMAGE_PUSHES)
+$(KUBERNETES_IMAGE_PUSHES):
+	@$(MAKE) docker.push \
+    		TARGET_DIR=/kubernetes \
+    		TARGET=$(patsubst docker.kubernetes.push.%,%,$@)
+
+KUBERNETES_STRIPPED_IMAGE_PUSHES := $(addprefix docker.kubernetes.push.stripped.,$(KUBERNETES_DOCKER_IMAGES))
+.PHONY: $(KUBERNETES_STRIPPED_IMAGE_PUSHES))
+$(KUBERNETES_STRIPPED_IMAGE_PUSHES):
+	@$(MAKE) docker.push.stripped \
+    		TARGET_DIR=/kubernetes \
+    		TARGET=$(patsubst docker.kubernetes.push.stripped.%,%,$@)
+
+KUBERNETES_IMAGE_RUNS := $(addprefix docker.kubernetes.run.,$(KUBERNETES_DOCKER_IMAGES))
+.PHONY: $(KUBERNETES_IMAGE_RUNS)
+$(KUBERNETES_IMAGE_RUNS):
+	@$(MAKE) docker.run \
+    		TARGET_DIR=/kubernetes \
+    		TARGET=$(patsubst docker.kubernetes.run.%,%,$@)
+
+KUBERNETES_IMAGE_SAVES := $(addprefix docker.kubernetes.save.,$(KUBERNETES_DOCKER_IMAGES))
+.PHONY: $(KUBERNETES_IMAGE_SAVES)
+$(KUBERNETES_IMAGE_SAVES):
+	@$(MAKE) docker.save \
+		TARGET_DIR=/kubernetes \
+		TARGET=$(patsubst docker.kubernetes.save.%,%,$@)
+
+KUBERNETES_IMAGE_SHS := $(addprefix docker.kubernetes.sh.,$(KUBERNETES_DOCKER_IMAGES))
+.PHONY: $(KUBERNETES_IMAGE_SHS)
+$(KUBERNETES_IMAGE_SHS):
+	@$(MAKE) docker.sh \
+    		TARGET_DIR=/kubernetes \
+    		TARGET=$(patsubst docker.kubernetes.sh.%,%,$@)
+
+MOCK_DOCKER_IMAGES := api-server-rest
+
+.PHONY: docker.mock.push.all
+docker.mock.all.push:
+	@for image in $(MOCK_DOCKER_IMAGES); do \
+		$(MAKE) docker.mock.push.$$image || exit 1; \
+	done
+
+# FIXME(kevindrosendahl): switch to docker.mock.<image>.<action>
+MOCK_IMAGE_PUSHES := $(addprefix docker.mock.push.,$(MOCK_DOCKER_IMAGES))
+.PHONY: $(MOCK_IMAGE_PUSHES)
+$(MOCK_IMAGE_PUSHES):
+	@$(MAKE) docker.push \
+    		TARGET_DIR=/mock \
+    		TARGET=$(patsubst docker.mock.push.%,%,$@)
+
+MOCK_STRIPPED_IMAGE_PUSHES := $(addprefix docker.mock.push.stripped.,$(MOCK_DOCKER_IMAGES))
+.PHONY: $(MOCK_STRIPPED_IMAGE_PUSHES))
+$(MOCK_STRIPPED_IMAGE_PUSHES):
+	@$(MAKE) docker.push.stripped \
+    		TARGET_DIR=/mock \
+    		TARGET=$(patsubst docker.mock.push.stripped.%,%,$@)
+
+MOCK_IMAGE_RUNS := $(addprefix docker.mock.run.,$(MOCK_DOCKER_IMAGES))
+.PHONY: $(MOCK_IMAGE_RUNS)
+$(MOCK_IMAGE_RUNS):
+	@$(MAKE) docker.run \
+    		TARGET_DIR=/mock \
+    		TARGET=$(patsubst docker.mock.run.%,%,$@)
+
+MOCK_IMAGE_SAVES := $(addprefix docker.mock.save.,$(MOCK_DOCKER_IMAGES))
+.PHONY: $(MOCK_IMAGE_SAVES)
+$(MOCK_IMAGE_SAVES):
+	@$(MAKE) docker.save \
+		TARGET_DIR=/mock \
+		TARGET=$(patsubst docker.mock.save.%,%,$@)
+
+MOCK_IMAGE_SHS := $(addprefix docker.mock.sh.,$(MOCK_DOCKER_IMAGES))
+.PHONY: $(MOCK_IMAGE_SHS)
+$(MOCK_IMAGE_SHS):
+	@$(MAKE) docker.sh \
+    		TARGET_DIR=/mock \
+    		TARGET=$(patsubst docker.mock.sh.%,%,$@)
+
 
 .PHONY: docker.push
-docker.push: gazelle \
-             docker.push-no-gazelle
-
-.PHONY: docker.push-no-gazelle
-docker.push-no-gazelle:
+docker.push:
 	@bazel run \
 		--workspace_status_command "REGISTRY=$(REGISTRY) CHANNEL=$(CHANNEL) $(DIR)/hack/bazel/docker-workspace-status.sh" \
-		//docker:push-$(IMAGE)
+		//docker$(TARGET_DIR):push-$(TARGET)
 
-IMAGE_PUSHES := $(addprefix docker.push.,$(DOCKER_IMAGES))
-.PHONY: $(IMAGE_PUSHES)
-$(IMAGE_PUSHES):
-	@$(MAKE) docker.push IMAGE=$(patsubst docker.push.%,%,$@)
-
-IMAGE_PUSHES_NO_GAZELLE := $(addprefix docker.push-no-gazelle.,$(DOCKER_IMAGES))
-.PHONY: $(IMAGE_PUSHES_NO_GAZELLE)
-$(IMAGE_PUSHES_NO_GAZELLE):
-	@$(MAKE) docker.push-no-gazelle IMAGE=$(patsubst docker.push-no-gazelle.%,%,$@)
-
-.PHONY: docker.push.all
-docker.push.all: gazelle
-	@for image in $(DOCKER_IMAGES); do \
-		$(MAKE) docker.push-no-gazelle.$$image || exit 1; \
-	done
-
-.PHONY: docker.push-stripped
-docker.push-stripped: gazelle \
-                      docker.push-stripped-no-gazelle
-
-.PHONY: docker.push-stripped-no-gazelle
-docker.push-stripped-no-gazelle:
+.PHONY: docker.push.stripped
+docker.push.stripped:
 	@bazel run \
 		--workspace_status_command "REGISTRY=$(REGISTRY) CHANNEL=$(CHANNEL) $(DIR)/hack/bazel/docker-workspace-status.sh" \
-		//docker:push-$(IMAGE)-stripped
-
-STRIPPED_IMAGE_PUSHES := $(addprefix docker.push-stripped.,$(DOCKER_IMAGES))
-.PHONY: $(STRIPPED_IMAGE_PUSHES)
-$(STRIPPED_IMAGE_PUSHES):
-	@$(MAKE) docker.push-stripped IMAGE=$(patsubst docker.push-stripped.%,%,$@)
-
-STRIPPED_IMAGE_PUSHES_NO_GAZELLE := $(addprefix docker.push-stripped-no-gazelle.,$(DOCKER_IMAGES))
-.PHONY: $(STRIPPED_IMAGE_PUSHES_NO_GAZELLE)
-$(STRIPPED_IMAGE_PUSHES_NO_GAZELLE):
-	@$(MAKE) docker.push-stripped-no-gazelle IMAGE=$(patsubst docker.push-stripped-no-gazelle.%,%,$@)
-
-.PHONY: docker.push-stripped.all
-docker.push-stripped.all: gazelle
-	@for image in $(DOCKER_IMAGES); do \
-		$(MAKE) docker.push-stripped-no-gazelle.$$image || exit 1; \
-	done
-
-.PHONY: docker.save
-docker.save: gazelle
-	@bazel run \
-		//docker:$(IMAGE) \
-		-- --norun
-
-IMAGE_SAVES := $(addprefix docker.save.,$(DOCKER_IMAGES))
-
-.PHONY: $(IMAGE_SAVES)
-$(IMAGE_SAVES):
-	@$(MAKE) docker.save IMAGE=$(patsubst docker.save.%,%,$@)
+		//docker$(TARGET_DIR):push-$(TARGET)-stripped
 
 .PHONY: docker.run
-docker.run: gazelle
-	@bazel run //docker:$(IMAGE)
+docker.run:
+	@bazel run //docker$(TARGET_DIR):$(TARGET)
 
-IMAGE_RUNS := $(addprefix docker.run.,$(DOCKER_IMAGES))
-
-.PHONY: $(IMAGE_RUNS)
-$(IMAGE_RUNS):
-	@$(MAKE) docker.run IMAGE=$(patsubst docker.run.%,%,$@)
+.PHONY: docker.save
+docker.save:
+	@bazel run //docker$(TARGET_DIR):$(TARGET) -- --norun
 
 .PHONY: docker.sh
 docker.sh: docker.save
-	docker run -it --entrypoint sh bazel/docker:$(IMAGE)
-
-IMAGE_SHS := $(addprefix docker.sh.,$(DOCKER_IMAGES))
-
-.PHONY: $(IMAGE_SHS)
-$(IMAGE_SHS):
-	@$(MAKE) docker.sh IMAGE=$(patsubst docker.sh.%,%,$@)
+	docker run -it --entrypoint sh bazel/docker$(TARGET_DIR):$(TARGET)
 
 # kubernetes
 .PHONY: kubernetes.update-dependencies
