@@ -1,8 +1,8 @@
 # Kubernetes API
 
 It's recommended to go read the following:
-- https://kubernetes.io/docs/reference/api-overview/
-- https://kubernetes.io/docs/reference/api-concepts/
+- https://kubernetes.io/docs/reference/using-api/api-overview/
+- https://kubernetes.io/docs/reference/using-api/api-concepts/
 
 The general overview is that the kubernetes API is itself made up of many different versioned APIs. Different resources live under these different APIs.
 
