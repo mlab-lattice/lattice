@@ -1,0 +1,3 @@
+Enqueues a deploy of the system. You can provide a build ID to deploy, or provide a version of the definition repo and lattice will build then deploy that version. The version must be a tag of the git repo that hosts the system definition.
+
+Lattice will not accept a deploy while another deploy has been accepted. Note that currently lattice will allow you to enqueue a deploy while another deploy is accepted, but it will fail shortly thereafter. To watch the status of a deploy, use the `-w, --watch` flag. This will exit with exit code 0 if the deploy is successful. If there is an error, the error will be printed and it will exit with exit code of 1.

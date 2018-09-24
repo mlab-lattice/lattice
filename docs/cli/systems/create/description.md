@@ -1,0 +1,1 @@
+Create a new system in a lattice. Provide a name for the system and a git repository URL (ending in `.git`) where the system definition resides. This system definition repository will be used to build and deploy versions of the system based on the git tags of the repository.
