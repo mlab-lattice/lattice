@@ -81,7 +81,7 @@ spec:
         - --service-mesh-var
         - xds-api-port={{ .Values.serviceMesh.envoy.xdsApiPort }}
         {{ end }}
-        image: {{ .Values.containerChannel }}/kubernetes/local-dns-controller
+        image: {{ .Values.containerChannel }}/kubernetes/local/dns-controller
         imagePullPolicy: Always
         name: dns-controller
         volumeMounts:

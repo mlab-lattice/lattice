@@ -1,0 +1,18 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = ["root.go"],
+    importpath = "github.com/mlab-lattice/lattice/cmd/kubernetes/container-builder/app",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//pkg/api/v1:go_default_library",
+        "//pkg/backend/kubernetes/containerbuilder:go_default_library",
+        "//pkg/containerbuilder:go_default_library",
+        "//pkg/definition/v1:go_default_library",
+        "//pkg/util/aws:go_default_library",
+        "//pkg/util/cli:go_default_library",
+        "//pkg/util/cli/flags:go_default_library",
+        "//pkg/util/git:go_default_library",
+    ],
+)

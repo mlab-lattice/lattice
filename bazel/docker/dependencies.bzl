@@ -31,6 +31,7 @@ def _docker_dependencies_debian_pkg():
           # openssh-client and dependencies (from https://packages.debian.org/stretch/openssh-client)
           "openssh-client",
           "zlib1g",
+          "libssl1.0.2",
       ],
       sources = [
           "@debian_stretch//file:Packages.json",

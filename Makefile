@@ -2,9 +2,9 @@
 DIR := $(patsubst %/,%,$(dir $(abspath $(lastword $(MAKEFILE_LIST)))))
 
 # build
-.PHONY: build.gazelle
-build.gazelle: gazelle \
-               build
+.PHONY: all
+all: gazelle \
+     build
 
 .PHONY: build
 build: PLATFORM ?=
@@ -103,6 +103,17 @@ docgen.latticectl:
 	@bazel run //cmd/latticectl:docgen -- --plugin cmd/latticectl/plugin.so
 
 
+# local
+.PHONY: local.up
+local.up: CHANNEL=gcr.io/lattice-dev
+local.up:
+	@$(DIR)/hack/local/up.sh --set containerChannel=$(CHANNEL)
+
+.PHONY: local.down
+local.down:
+	@$(DIR)/hack/local/down.sh
+
+
 # docker
 .PHONY: docker.build
 docker.build:
@@ -112,12 +123,12 @@ docker.build:
 docker.all.push: docker.kubernetes.all.push \
                  docker.mock.all.push
 
-KUBERNETES_DOCKER_IMAGES := api-server-rest             \
+KUBERNETES_DOCKER_IMAGES := api-server                  \
                             container-builder           \
                             envoy-prepare               \
-                            envoy-xds-api-grpc-per-node \
+                            envoy-xds-api               \
                             installer-helm              \
-                            lattice-controller-manager  \
+                            controller-manager          \
                             local-dns-controller
 
 .PHONY: docker.kubernetes.push.all

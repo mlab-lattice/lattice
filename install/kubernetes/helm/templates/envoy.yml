@@ -50,7 +50,7 @@ subjects:
   namespace: {{ .Values.prefix }}-internal
 ---
 apiVersion: apps/v1
-kind: Deployment
+kind: DaemonSet
 metadata:
   labels:
     envoy.servicemesh.lattice.mlab.com/xds-api: "true"
@@ -81,7 +81,7 @@ spec:
         - -logtostderr
         - -redirect-cidr-block
         - {{ .Values.serviceMesh.envoy.redirectCidrBlock }}
-        image: {{ .Values.containerChannel }}/kubernetes/envoy-xds-api-grpc-per-node
+        image: {{ .Values.containerChannel }}/kubernetes/envoy/xds-api
         imagePullPolicy: Always
         name: envoy-xds-api
         ports:

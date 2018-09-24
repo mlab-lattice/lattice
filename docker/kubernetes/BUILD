@@ -59,54 +59,61 @@ container_image(
 # base container go images
 lattice_base_go_container_image(
     name = "go-iptables",
-    base_layer_target = ":base-iptables",
+    base = ":base-iptables",
 )
 
 lattice_base_go_container_image(
     name = "go-terraform",
-    base_layer_target = ":base-terraform",
+    base = ":base-terraform",
 )
 
 # go images
 kubernetes_go_container_image(
-    name = "api-server-rest",
+    name = "api-server",
+    image_name = "api-server",
     base_image = "//docker:go-openssh-client",
-    path = "cmd/backend/kubernetes/api-server/rest",
+    path = "cmd/kubernetes/api-server/rest",
 )
 
 kubernetes_go_container_image(
     name = "container-builder",
+    image_name = "container-builder",
     base_image = "//docker:go-openssh-client",
-    path = "cmd/backend/kubernetes/container-builder",
+    path = "cmd/kubernetes/container-builder",
 )
 
 kubernetes_go_container_image(
     name = "envoy-prepare",
+    image_name = "envoy/prepare",
     base_image = ":go-iptables",
-    path = "cmd/backend/kubernetes/envoy/prepare",
+    path = "cmd/kubernetes/envoy/prepare",
 )
 
 kubernetes_go_container_image(
-    name = "envoy-xds-api-grpc-per-node",
+    name = "envoy-xds-api",
+    image_name = "envoy/xds-api",
     base_image = None,
-    path = "cmd/backend/kubernetes/envoy/xdsapi/v2/grpc/per-node",
+    path = "cmd/kubernetes/envoy/xdsapi/v2/grpc/per-node",
 )
 
 kubernetes_go_container_image(
-    name = "lattice-controller-manager",
+    name = "controller-manager",
+    image_name = "controller-manager",
     base_image = ":go-terraform",
-    path = "cmd/backend/kubernetes/lattice-controller-manager",
+    path = "cmd/kubernetes/controller-manager",
 )
 
 kubernetes_go_container_image(
     name = "local-dns-controller",
+    image_name = "local/dns-controller",
     base_image = None,
-    path = "cmd/backend/kubernetes/cloud-provider/local/dns-controller",
+    path = "cmd/kubernetes/local/dns-controller",
 )
 
 # installer image
 kubernetes_container_image(
     name = "installer-helm",
+    image_name = "installer/helm",
     base = ":base-kubernetes-installer-helm",
     directory = "/etc/lattice/install/kubernetes/helm",
     tars = ["//install/kubernetes/helm:tarball"],

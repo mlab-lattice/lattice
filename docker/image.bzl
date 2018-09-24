@@ -11,25 +11,25 @@ stripped_target_suffix = "-stripped"
 
 # creates both normal and stripped versions of the base go image
 # the base_image argument should be the name of a container_image target
-def lattice_base_go_container_image(name, base_layer_target):
+def lattice_base_go_container_image(name, base):
   _lattice_base_go_container_image(
       name=name,
-      base_layer_target=base_layer_target,
+      base=base,
       stripped=False,
   )
 
   _lattice_base_go_container_image(
       name=name,
-      base_layer_target=base_layer_target,
+      base=base,
       stripped=True,
   )
 
-def _lattice_base_go_container_image(name, base_layer_target, stripped=False):
+def _lattice_base_go_container_image(name, base, stripped=False):
   name = name if not stripped else name + stripped_target_suffix
   container_image(
       name = name,
       base = go_base_images[stripped],
-      tars = [base_layer_target],
+      tars = [base],
       visibility = ["//visibility:public"],
   )
 

@@ -8,10 +8,11 @@ container_image(
         # See bazel/docker/dependencies.bzl for more info.
         packages["openssh-client"],
         packages["zlib1g"],
+        packages["libssl1.0.2"],
     ],
 )
 
 lattice_base_go_container_image(
     name = "go-openssh-client",
-    base_layer_target = ":base-openssh-client",
+    base = ":base-openssh-client",
 )

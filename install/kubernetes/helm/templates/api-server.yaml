@@ -171,7 +171,7 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: lattice-api-server
+  name: {{ .Values.prefix }}-api-server
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -210,7 +210,7 @@ spec:
         - {{ .Values.prefix }}
         - --alsologtostderr
         # TODO: add auth here
-        image: {{ .Values.containerChannel }}/kubernetes/api-server-rest
+        image: {{ .Values.containerChannel }}/kubernetes/api-server
         imagePullPolicy: Always
         name: api-server
         ports:
