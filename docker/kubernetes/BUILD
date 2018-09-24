@@ -110,5 +110,5 @@ kubernetes_container_image(
     base = ":base-kubernetes-installer-helm",
     directory = "/etc/lattice/install/kubernetes/helm",
     tars = ["//install/kubernetes/helm:tarball"],
-    entrypoint = "/etc/lattice/install/kubernetes/helm/install.sh"
+    entrypoint = "/etc/lattice/install/kubernetes/helm/install.sh",
 )
