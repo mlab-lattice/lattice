@@ -67,9 +67,9 @@ As such, if your objects require some uniqueness, you have two options:
 
 1. Name the object the unique name
 2. Acquire a global lock on the resource type and ensure that there are no other objects that contain the unique field.
-  * This usually means putting this logic into a controller that is globally responsible for that object type. Read more about controllers in their [documentation](controllers.md).
-  * Usually it can help to use a label for the field you are looking for so you can select objects by the label. This however will often bring up the [restriction on label value length](#label-value-length-limit).
-  * You cannot rely on a cached set of objects when checking for uniqueness. You must check all of the objects from the API. Often it can be helpful to do technique similar to two-phase locking, where you check your cache for an offending object, and only if one is not found, query the API.
+    1. This usually means putting this logic into a controller that is globally responsible for that object type. Read more about controllers in their [documentation](controllers.md).
+    2. Usually it can help to use a label for the field you are looking for so you can select objects by the label. This however will often bring up the [restriction on label value length](#label-value-length-limit).
+    3. You cannot rely on a cached set of objects when checking for uniqueness. You must check all of the objects from the API. Often it can be helpful to do technique similar to two-phase locking, where you check your cache for an offending object, and only if one is not found, query the API.
  
 #### Label value length limit
 
