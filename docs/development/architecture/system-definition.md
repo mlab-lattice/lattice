@@ -4,7 +4,7 @@ This document attempts to outline the components of the lattice code base used f
 
 ## `tree`
 
-At a high level, a `system` defines a tree of components. As such, lattice provides a number of utilities for working with trees in the [`pkg/definition/tree`](../../pkg/definition/tree) package.
+At a high level, a `system` defines a tree of components. As such, lattice provides a number of utilities for working with trees in the [`pkg/definition/tree`](../../../pkg/definition/tree) package.
 
 More information about the comonents discussed below can be found in the package's [documentation](https://godoc.org/github.com/mlab-lattice/lattice/pkg/definition/tree).
 
@@ -12,9 +12,9 @@ More information about the comonents discussed below can be found in the package
 
 A `tree.Path` is a `/slash/seperated/path` that is used in lattice to denote a component's location in a system tree.
 
-### `tree.Subcomponent`
+### `tree.PathSubcomponent`
 
-A `tree.Subcomponent` is a `/tree/path:with-a-selector`. This can be thought of a namespace scoped to the given path. The `/tree/path` is referred to as the `tree.Subcomponent`'s `Path`, and the `with-a-selector` is referred to as the `Subcomponent`.
+A `tree.PathSubcomponent` is a `/tree/path:with-a-selector`. This can be thought of a namespace scoped to the given path. The `/tree/path` is referred to as the `tree.PathSubcomponent`'s `Path`, and the `with-a-selector` is referred to as the `Subcomponent`.
 
 This is generally used for things such as `secrets` (e.g. `/my/service:mongo-url`).
 
@@ -28,7 +28,7 @@ A `tree.JSONRadix` is a `tree.Radix` with additional information allowing it to 
 
 ## `component`
 
-The [`component.Interface`](../../pkg/definition/component/interface.go) essentially establishes what it means to be a system component: having a `type` field with a value matching `api-version/type-name`.
+The [`component.Interface`](../../../pkg/definition/component/interface.go) essentially establishes what it means to be a system component: having a `type` field with a value matching `api-version/type-name`.
 
 As of writing, only well known types actually are able to resolve into being a `component.Interface`.
 
@@ -38,7 +38,7 @@ As mentioned above, a `component.Interface` is something that has a `type`. Curr
 
 #### v1
 
-The structs defining valid `v1` `components` are defined in [`pkg/definition/v1`](../../pkg/definition/v1). This package is commonly referred to as `definitionv1` to avoid confusion with the [`pkg/api/v1`](../../pkg/api/v1) package, which is commonly referred to as `v1`.
+The structs defining valid `v1` `components` are defined in [`pkg/definition/v1`](../../../pkg/definition/v1). This package is commonly referred to as `definitionv1` to avoid confusion with the [`pkg/api/v1`](../../../pkg/api/v1) package, which is commonly referred to as `v1`.
 
 Importantly, these structs define the valid structures of fully _resolved_ `components` (more on this below).
 
@@ -51,7 +51,7 @@ Importantly, these structs define the valid structures of fully _resolved_ `comp
 Currently, that essentially means:
 - if the component is a `v1/reference`
   - attempt to retrieve the `template` from wherever it is defined to be located
-  - inject any `parameters` into the `template` (the package that deals with this is located at [`pkg/definition/component/resolver/template`](../../pkg/definition/component/resolver/template))
+  - inject any `parameters` into the `template` (the package that deals with this is located at [`pkg/definition/component/resolver/template`](../../../pkg/definition/component/resolver/template))
   - attempt to create a `component.Interface` out of the `template` given the value of its `type` field
   - recursively call `Resolve` on the resolved `component.Interface`
 - if the component is a `v1/system`
@@ -65,9 +65,9 @@ Note that when `Resolve` is called, the `resolver.Interface` dispatches the work
 
 ### `resolver.ResolutionTree`
 
-When called, the `resolver.Interface`'s `Resolve` method returns a [`resolver.ResolutionTree`](../../pkg/definition/component/resolver/resolution_tree.go).
+When called, the `resolver.Interface`'s `Resolve` method returns a [`resolver.ResolutionTree`](../../../pkg/definition/component/resolver/resolution_tree.go).
 
-The `resolver.ResolutionTree` is a `tree.JSONRadix` that contains [`resolver.ResolutionInfo`](../../pkg/definition/component/resolver/resolution_info.go) about each `component` that was resolved during the `Resolve` call.
+The `resolver.ResolutionTree` is a `tree.JSONRadix` that contains [`resolver.ResolutionInfo`](../../../pkg/definition/component/resolver/resolution_info.go) about each `component` that was resolved during the `Resolve` call.
 
 The `resolver.ResolutionInfo` contains both the `component.Interface` resolved at that `tree.Path`, as well as information about how the `component` was resolved (e.g. information about the git repository the template lived in).
 

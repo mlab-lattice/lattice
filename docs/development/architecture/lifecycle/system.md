@@ -6,7 +6,7 @@ This document covers some of the different states a `system` can be in, and some
 
 The state diagram representing a `system`'s lifecycle is presented below.
 
-Note that all of the states (besides `does-not-exist`) can be found in [`pkg/api/v1/system.go`](../../../pkg/api/v1/system.go).
+Note that all of the states (besides `does-not-exist`) can be found in [`pkg/api/v1/system.go`](../../../../pkg/api/v1/system.go).
 
 ```
         ┌───────────────────────────────────────────────────────────────────────┐       
@@ -85,7 +85,7 @@ Only two actions can change a `system`'s desired definition: a `deploy` and a `t
 Lattice should allow maximal safe concurrency between deploys and teardowns. To accomplish this, we use [multiple granularity locking](https://en.wikipedia.org/wiki/Multiple_granularity_locking).
 
 ### `IntentionLock`
-The actual multi-granular lock is implemented in [`pkg/util/sync/intention_lock.go`](../../../pkg/util/sync/intention_lock.go). 
+The actual multi-granular lock is implemented in [`pkg/util/sync/intention_lock.go`](../../../../pkg/util/sync/intention_lock.go). 
 
 More information can be found in the [documentation](https://godoc.org/github.com/mlab-lattice/lattice/pkg/util/sync#IntentionLock), but the gist is that the lock is a non-blocking lock supporting exclusive and intention-exclusive lock modes.
 
@@ -109,7 +109,7 @@ The unlocker remembers the granularity you acquired the lock with, and will hand
 
 ### `LifecycleActionManager`
 
-The [`LifecycleActionManager`](../../../pkg/util/sync/lifecycle_action.go) uses a tree of `IntentionLock`s per `system` to manage concurrent `deploy`s and `teardown`s.
+The [`LifecycleActionManager`](../../../../pkg/util/sync/lifecycle_action.go) uses a tree of `IntentionLock`s per `system` to manage concurrent `deploy`s and `teardown`s.
 
 The `LifecycleActionManager` will for a given `deploy` (which has an associated `tree.Path`), attempt to acquire an `intention-exclusive` lock at each internal node in the path, and an `exclusive` lock at the leaf node.
 
