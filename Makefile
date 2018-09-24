@@ -131,91 +131,93 @@ KUBERNETES_DOCKER_IMAGES := api-server                  \
                             controller-manager          \
                             local-dns-controller
 
+KUBERNETES_IMAGE_TARGETS := $(addprefix docker.kubernetes.,$(KUBERNETES_DOCKER_IMAGES))
+
 .PHONY: docker.kubernetes.push.all
 docker.kubernetes.all.push:
 	@for image in $(KUBERNETES_DOCKER_IMAGES); do \
-		$(MAKE) docker.kubernetes.push.$$image || exit 1; \
+		$(MAKE) docker.kubernetes.$$image.push || exit 1; \
 	done
 
-# FIXME(kevindrosendahl): switch to docker.kubernetes.<image>.<action>
-KUBERNETES_IMAGE_PUSHES := $(addprefix docker.kubernetes.push.,$(KUBERNETES_DOCKER_IMAGES))
+KUBERNETES_IMAGE_PUSHES := $(addsuffix .push,$(KUBERNETES_IMAGE_TARGETS))
 .PHONY: $(KUBERNETES_IMAGE_PUSHES)
 $(KUBERNETES_IMAGE_PUSHES):
 	@$(MAKE) docker.push \
     		TARGET_DIR=/kubernetes \
-    		TARGET=$(patsubst docker.kubernetes.push.%,%,$@)
+    		TARGET=$(patsubst docker.kubernetes.%.push,%,$@)
 
-KUBERNETES_STRIPPED_IMAGE_PUSHES := $(addprefix docker.kubernetes.push.stripped.,$(KUBERNETES_DOCKER_IMAGES))
+KUBERNETES_STRIPPED_IMAGE_PUSHES := $(addsuffix .push.stripped,$(KUBERNETES_IMAGE_TARGETS))
 .PHONY: $(KUBERNETES_STRIPPED_IMAGE_PUSHES))
 $(KUBERNETES_STRIPPED_IMAGE_PUSHES):
 	@$(MAKE) docker.push.stripped \
     		TARGET_DIR=/kubernetes \
-    		TARGET=$(patsubst docker.kubernetes.push.stripped.%,%,$@)
+    		TARGET=$(patsubst docker.kubernetes.%.push.stripped,%,$@)
 
-KUBERNETES_IMAGE_RUNS := $(addprefix docker.kubernetes.run.,$(KUBERNETES_DOCKER_IMAGES))
+KUBERNETES_IMAGE_RUNS := $(addsuffix .run,$(KUBERNETES_IMAGE_TARGETS))
 .PHONY: $(KUBERNETES_IMAGE_RUNS)
 $(KUBERNETES_IMAGE_RUNS):
 	@$(MAKE) docker.run \
     		TARGET_DIR=/kubernetes \
-    		TARGET=$(patsubst docker.kubernetes.run.%,%,$@)
+    		TARGET=$(patsubst docker.kubernetes.%.run,%,$@)
 
-KUBERNETES_IMAGE_SAVES := $(addprefix docker.kubernetes.save.,$(KUBERNETES_DOCKER_IMAGES))
+KUBERNETES_IMAGE_SAVES := $(addsuffix .save,$(KUBERNETES_IMAGE_TARGETS))
 .PHONY: $(KUBERNETES_IMAGE_SAVES)
 $(KUBERNETES_IMAGE_SAVES):
 	@$(MAKE) docker.save \
 		TARGET_DIR=/kubernetes \
-		TARGET=$(patsubst docker.kubernetes.save.%,%,$@)
+		TARGET=$(patsubst docker.kubernetes.%.save,%,$@)
 
-KUBERNETES_IMAGE_SHS := $(addprefix docker.kubernetes.sh.,$(KUBERNETES_DOCKER_IMAGES))
+KUBERNETES_IMAGE_SHS := $(addsuffix .sh,$(KUBERNETES_IMAGE_TARGETS))
 .PHONY: $(KUBERNETES_IMAGE_SHS)
 $(KUBERNETES_IMAGE_SHS):
 	@$(MAKE) docker.sh \
     		TARGET_DIR=/kubernetes \
-    		TARGET=$(patsubst docker.kubernetes.sh.%,%,$@)
+    		TARGET=$(patsubst docker.kubernetes.%.sh,%,$@)
 
-MOCK_DOCKER_IMAGES := api-server-rest
+MOCK_DOCKER_IMAGES := api-server
+
+MOCK_IMAGE_TARGETS := $(addprefix docker.mock.,$(MOCK_DOCKER_IMAGES))
 
 .PHONY: docker.mock.push.all
 docker.mock.all.push:
 	@for image in $(MOCK_DOCKER_IMAGES); do \
-		$(MAKE) docker.mock.push.$$image || exit 1; \
+		$(MAKE) docker.mock.$$image.push || exit 1; \
 	done
 
-# FIXME(kevindrosendahl): switch to docker.mock.<image>.<action>
-MOCK_IMAGE_PUSHES := $(addprefix docker.mock.push.,$(MOCK_DOCKER_IMAGES))
+MOCK_IMAGE_PUSHES := $(addsuffix .push,$(MOCK_IMAGE_TARGETS))
 .PHONY: $(MOCK_IMAGE_PUSHES)
 $(MOCK_IMAGE_PUSHES):
 	@$(MAKE) docker.push \
     		TARGET_DIR=/mock \
-    		TARGET=$(patsubst docker.mock.push.%,%,$@)
+    		TARGET=$(patsubst docker.mock.%.push,%,$@)
 
-MOCK_STRIPPED_IMAGE_PUSHES := $(addprefix docker.mock.push.stripped.,$(MOCK_DOCKER_IMAGES))
+MOCK_STRIPPED_IMAGE_PUSHES := $(addsuffix .push.stripped,$(MOCK_IMAGE_TARGETS))
 .PHONY: $(MOCK_STRIPPED_IMAGE_PUSHES))
 $(MOCK_STRIPPED_IMAGE_PUSHES):
 	@$(MAKE) docker.push.stripped \
     		TARGET_DIR=/mock \
-    		TARGET=$(patsubst docker.mock.push.stripped.%,%,$@)
+    		TARGET=$(patsubst docker.mock.%.push.stripped,%,$@)
 
-MOCK_IMAGE_RUNS := $(addprefix docker.mock.run.,$(MOCK_DOCKER_IMAGES))
+MOCK_IMAGE_RUNS := $(addsuffix .run,$(MOCK_IMAGE_TARGETS))
 .PHONY: $(MOCK_IMAGE_RUNS)
 $(MOCK_IMAGE_RUNS):
 	@$(MAKE) docker.run \
     		TARGET_DIR=/mock \
-    		TARGET=$(patsubst docker.mock.run.%,%,$@)
+    		TARGET=$(patsubst docker.mock.%.run,%,$@)
 
-MOCK_IMAGE_SAVES := $(addprefix docker.mock.save.,$(MOCK_DOCKER_IMAGES))
+MOCK_IMAGE_SAVES := $(addsuffix .save,$(MOCK_IMAGE_TARGETS))
 .PHONY: $(MOCK_IMAGE_SAVES)
 $(MOCK_IMAGE_SAVES):
 	@$(MAKE) docker.save \
 		TARGET_DIR=/mock \
-		TARGET=$(patsubst docker.mock.save.%,%,$@)
+		TARGET=$(patsubst docker.mock.%.save,%,$@)
 
-MOCK_IMAGE_SHS := $(addprefix docker.mock.sh.,$(MOCK_DOCKER_IMAGES))
+MOCK_IMAGE_SHS := $(addsuffix .sh,$(MOCK_IMAGE_TARGETS))
 .PHONY: $(MOCK_IMAGE_SHS)
 $(MOCK_IMAGE_SHS):
 	@$(MAKE) docker.sh \
     		TARGET_DIR=/mock \
-    		TARGET=$(patsubst docker.mock.sh.%,%,$@)
+    		TARGET=$(patsubst docker.mock.%.sh,%,$@)
 
 
 .PHONY: docker.push
