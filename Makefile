@@ -12,7 +12,7 @@ build: FEATURES ?=
 build: OUTPUT_USER_ROOT ?=
 build: TARGET ?= //cmd/... //pkg/...
 build:
-	bazel \
+	@bazel \
 		$(addprefix --output_user_root=,$(OUTPUT_USER_ROOT)) \
 		build \
 		$(addprefix --platforms=@io_bazel_rules_go//go/toolchain:,$(PLATFORM)) \
@@ -44,16 +44,22 @@ clean:
 .PHONY: test
 test: TARGET ?= //pkg/...
 test: OUTPUT ?= errors
+build: FEATURES ?=
 test: ARGS ?=
 test: gazelle
 	@bazel test \
 		$(ARGS) \
+		$(addprefix --features=,$(FEATURES)) \
 		--test_output=$(OUTPUT) \
 		$(TARGET)
 
 .PHONY: test.no-cache
 test.no-cache:
 	@$(MAKE) test ARGS=--cache_test_results=no
+
+PHONY: test.race-detector
+test.race-detector:
+	@$(MAKE) test FEATURES=race
 
 .PHONY: test.verbose
 test.verbose:

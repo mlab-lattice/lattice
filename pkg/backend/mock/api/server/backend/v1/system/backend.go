@@ -2,7 +2,6 @@ package system
 
 import (
 	"fmt"
-	"sync"
 	"time"
 
 	backendv1 "github.com/mlab-lattice/lattice/pkg/api/server/backend/v1"
@@ -14,8 +13,6 @@ import (
 )
 
 type Backend struct {
-	sync.Mutex
-
 	registry   *registry.Registry
 	controller *controller.Controller
 }
@@ -30,8 +27,8 @@ func NewBackend(componentResolver resolver.Interface) *Backend {
 }
 
 func (b *Backend) Create(systemID v1.SystemID, definitionURL string) (*v1.System, error) {
-	b.Lock()
-	defer b.Unlock()
+	b.registry.Lock()
+	defer b.registry.Unlock()
 
 	if _, exists := b.registry.Systems[systemID]; exists {
 		return nil, v1.NewSystemAlreadyExistsError()
@@ -75,8 +72,8 @@ func (b *Backend) Create(systemID v1.SystemID, definitionURL string) (*v1.System
 }
 
 func (b *Backend) List() ([]v1.System, error) {
-	b.Lock()
-	defer b.Unlock()
+	b.registry.Lock()
+	defer b.registry.Unlock()
 
 	var systems []v1.System
 	for _, s := range b.registry.Systems {
@@ -87,8 +84,8 @@ func (b *Backend) List() ([]v1.System, error) {
 }
 
 func (b *Backend) Get(systemID v1.SystemID) (*v1.System, error) {
-	b.Lock()
-	defer b.Unlock()
+	b.registry.Lock()
+	defer b.registry.Unlock()
 
 	record, err := b.systemRecord(systemID)
 	if err != nil {
@@ -101,8 +98,8 @@ func (b *Backend) Get(systemID v1.SystemID) (*v1.System, error) {
 }
 
 func (b *Backend) Delete(systemID v1.SystemID) error {
-	b.Lock()
-	defer b.Unlock()
+	b.registry.Lock()
+	defer b.registry.Unlock()
 
 	_, err := b.systemRecord(systemID)
 	if err != nil {
