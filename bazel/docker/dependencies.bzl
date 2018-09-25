@@ -32,6 +32,11 @@ def _docker_dependencies_debian_pkg():
           "openssh-client",
           "zlib1g",
           "libssl1.0.2",
+
+          # jq
+          "jq",
+          "libjq1",
+          "libonig4",
       ],
       sources = [
           "@debian_stretch//file:Packages.json",

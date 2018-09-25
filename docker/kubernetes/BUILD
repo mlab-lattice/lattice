@@ -22,6 +22,15 @@ container_image(
 )
 
 container_image(
+    name = "base-jq-bin",
+    debs = [
+        packages["jq"],
+        packages["libjq1"],
+        packages["libonig4"],
+    ],
+)
+
+container_image(
     name = "base-kubectl-bin",
     directory = "/usr/local/bin",
     files = ["@kubectl_bin//:bin"],
@@ -32,6 +41,7 @@ container_image(
     base = "@debian_slim_container_image//image",
     tars = [
         ":base-helm-bin",
+        ":base-jq-bin",
         ":base-kubectl-bin",
     ],
 )
@@ -117,5 +127,5 @@ kubernetes_container_image(
     base = ":base-kubernetes-installer-helm",
     directory = "/etc/lattice/install/kubernetes/helm",
     tars = ["//install/kubernetes/helm:tarball"],
-    entrypoint = "/etc/lattice/install/kubernetes/helm/install.sh",
+    entrypoint = ["/etc/lattice/install/kubernetes/helm/install.sh"],
 )
