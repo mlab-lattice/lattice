@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	definitionv1 "github.com/mlab-lattice/lattice/pkg/definition/v1"
@@ -46,7 +47,11 @@ func (b *Builder) buildDockerImageContainer(image *definitionv1.DockerImage) err
 	return b.pushDockerImage()
 }
 
-func (b *Builder) buildDockerImage(sourceDirectory, baseImage, dockerfileCommand string) error {
+func (b *Builder) buildDockerImage(
+	sourceDirectory,
+	baseImage string,
+	dockerfileCommand []string,
+	buildArgs map[string]*string) error {
 	color.Blue("Building docker image...")
 
 	if b.StatusUpdater != nil {
@@ -56,7 +61,7 @@ func (b *Builder) buildDockerImage(sourceDirectory, baseImage, dockerfileCommand
 	}
 
 	// Get Dockerfile contents and write them to the directory
-	dockerfileContents, err := b.getDockerfileContents(sourceDirectory, baseImage, dockerfileCommand)
+	dockerfileContents, err := b.getDockerfileContents(sourceDirectory, baseImage, dockerfileCommand, buildArgs)
 	if err != nil {
 		return newErrorInternal("could not get Dockerfile contents: " + err.Error())
 	}
@@ -78,7 +83,13 @@ func (b *Builder) buildDockerImage(sourceDirectory, baseImage, dockerfileCommand
 		Tags: []string{dockerImageFQN},
 	}
 
-	// FIXME <GEB>: ignoring options/environment meant for the build at the moment
+	if len(buildArgs) > 0 {
+		buildOptions.BuildArgs = make(map[string]*string)
+		for k, v := range buildArgs {
+			buildOptions.BuildArgs[k] = v
+		}
+	}
+
 	response, err := b.DockerClient.ImageBuild(context.Background(), buildContext, buildOptions)
 	if err != nil {
 		// The build should at least be able to be sent to the daemon even if the user has an error, so
@@ -118,48 +129,18 @@ func (b *Builder) buildDockerBuildContainer(dockerBuild *definitionv1.DockerBuil
 	if err != nil {
 		return err
 	}
-	// GEB: REMOVE
-	color.Blue(fmt.Sprintf("docker file directory: %v", dockerFileDirectory))
-	dirListing, err := ioutil.ReadDir(dockerFileDirectory)
-	if err != nil {
-		return err
-	}
-	color.Blue("docker file directory contents:\n")
-	for i := 0; i < len(dirListing); i++ {
-		color.Blue(dirListing[i].Name())
-	}
-
-	// GEB: /REMOVE
 
 	buildContextDirectory, err := b.retrieveLocation(dockerBuild.BuildContext.Location)
 	if err != nil {
 		return err
 	}
-	// GEB: REMOVE
-	color.Blue(fmt.Sprintf("build context directory: %v", dockerFileDirectory))
-	dirListing, err = ioutil.ReadDir(buildContextDirectory)
-	if err != nil {
-		return err
-	}
-	color.Blue("docker file directory contents:\n")
-	for i := 0; i < len(dirListing); i++ {
-		color.Blue(dirListing[i].Name())
-	}
-
-	bites, err := json.MarshalIndent(dockerBuild, "", "  ")
-	if err != nil {
-		return err
-	}
-	color.Blue(string(bites))
-
-	// XXX: /REMOVE
 
 	return b.buildDockerBuild(
 		dockerFileDirectory,
 		dockerBuild.DockerFile.Path,
 		buildContextDirectory,
 		dockerBuild.BuildContext.Path,
-		dockerBuild.Environment,
+		dockerBuild.BuildArgs,
 		dockerBuild.Options)
 }
 
@@ -168,7 +149,7 @@ func (b *Builder) buildDockerBuild(
 	dockerFilePath,
 	buildContextDirectory,
 	buildContextPath string,
-	environment,
+	buildArgs map[string]*string,
 	options map[string]definitionv1.ValueOrSecret) error {
 	color.Blue("Building docker build...")
 
@@ -226,6 +207,13 @@ func (b *Builder) buildDockerBuild(
 		Tags: []string{dockerImageFQN},
 	}
 
+	if len(buildArgs) > 0 {
+		buildOptions.BuildArgs = make(map[string]*string)
+		for k, v := range buildArgs {
+			buildOptions.BuildArgs[k] = v
+		}
+	}
+
 	response, err := b.DockerClient.ImageBuild(context.Background(), buildContext, buildOptions)
 	if err != nil {
 		// The build should at least be able to be sent to the daemon even if the user has an error, so
@@ -258,14 +246,28 @@ func (b *Builder) buildDockerBuild(
 	return b.pushDockerImage()
 }
 
-func (b *Builder) getDockerfileContents(sourceDirectory, baseImage, dockerfileCommand string) (string, error) {
+func (b *Builder) getDockerfileContents(
+	sourceDirectory,
+	baseImage string,
+	dockerfileCommand []string,
+	buildArgs map[string]*string) (string, error) {
 	relativeSourceDirectory, err := filepath.Rel(b.WorkingDir, sourceDirectory)
 	if err != nil {
 		return "", newErrorInternal("could not get relative source directory: " + err.Error())
 	}
 
-	dockerfileContents := fmt.Sprintf(`FROM %v
+	command := fmt.Sprintf("RUN %v", strings.Join(dockerfileCommand, " "))
+	var buildArgsBuilder strings.Builder
+	if len(buildArgs) > 0 {
+		buildArgsBuilder.WriteString("\n")
+		for k, _ := range buildArgs {
+			fmt.Fprintf(&buildArgsBuilder, "ARG %v\n", k)
+		}
+		buildArgsBuilder.WriteString("\n")
+	}
 
+	dockerfileContents := fmt.Sprintf(`FROM %v
+%v
 RUN mkdir -p /usr/src/app
 WORKDIR /usr/src/app
 
@@ -273,8 +275,9 @@ COPY %v /usr/src/app
 
 %v`,
 		baseImage,
+		buildArgsBuilder.String(),
 		relativeSourceDirectory,
-		dockerfileCommand,
+		command,
 	)
 
 	return dockerfileContents, nil

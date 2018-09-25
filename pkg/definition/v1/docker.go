@@ -21,11 +21,11 @@ type DockerFile struct {
 }
 
 type DockerBuildOptions map[string]ValueOrSecret
-type DockerBuildEnvironment map[string]ValueOrSecret
+type DockerBuildArgs map[string]*string
 
 type DockerBuild struct {
-	BuildContext *DockerBuildContext    `json:"build_context,omitempty"`
-	DockerFile   *DockerFile            `json:"docker_file,omitempty"`
-	Environment  DockerBuildEnvironment `json:"environment,omitempty"`
-	Options      DockerBuildOptions     `json:"options,omitempty"`
+	BuildContext *DockerBuildContext `json:"build_context,omitempty"`
+	DockerFile   *DockerFile         `json:"docker_file,omitempty"`
+	BuildArgs    DockerBuildArgs     `json:"build_args,omitempty"`
+	Options      DockerBuildOptions  `json:"options,omitempty"`
 }

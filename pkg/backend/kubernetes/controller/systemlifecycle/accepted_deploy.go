@@ -136,7 +136,7 @@ func (c *Controller) syncAcceptedDeployWithSuccessfulBuild(deploy *latticev1.Dep
 		return err
 	}
 
-	// loop through all of the workloads and seed there artifacts into the artifacts
+	// loop through all of the workloads and seed their artifacts into the artifacts
 	// tree
 	err = nil
 	artifacts := latticev1.NewSystemSpecWorkloadBuildArtifacts()
@@ -208,6 +208,7 @@ func (c *Controller) syncAcceptedDeployWithSuccessfulBuild(deploy *latticev1.Dep
 		return tree.ContinueWalk
 	}
 
+	// get docker image FQNs for each container for a particular workload (i.e., containers that will run in a service pod)
 	build.Status.Definition.V1().Workloads(seedArtifacts)
 	if err != nil {
 		return err
@@ -222,12 +223,15 @@ func (c *Controller) syncAcceptedDeployWithSuccessfulBuild(deploy *latticev1.Dep
 		spec.WorkloadBuildArtifacts = latticev1.NewSystemSpecWorkloadBuildArtifacts()
 	}
 
+	// if the build specifies a path, isolate to that path
 	path := tree.RootPath()
 	if build.Spec.Path != nil {
 		path = *build.Spec.Path
 	}
 
+	// replace the system's definition at path with the build's resolved definition at path
 	spec.Definition.ReplacePrefix(path, build.Status.Definition)
+	// replace the workload build artifacts at path with the artifacts that we just seeded
 	spec.WorkloadBuildArtifacts.ReplacePrefix(path, artifacts)
 
 	_, err = c.updateSystemSpec(system, spec)
