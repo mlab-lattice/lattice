@@ -5,10 +5,10 @@ set -o pipefail
 set -o nounset
 # no xtrace so we don't print the private key on each run
 
-#mkdir /root/.ssh
-#echo "$PRIVATE_KEY" > /root/.ssh/id_rsa
-#ssh-keyscan github.com > /root/.ssh/known_hosts
-#chmod 400 /root/.ssh/id_rsa
+mkdir /root/.ssh
+echo "$PRIVATE_KEY" > /root/.ssh/id_rsa
+ssh-keyscan github.com > /root/.ssh/known_hosts
+chmod 400 /root/.ssh/id_rsa
 
 BINARY_DIRECTORY='../cli-binaries'
 METADATA_DIRECTORY='../cli-metadata'
