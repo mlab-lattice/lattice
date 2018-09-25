@@ -78,26 +78,10 @@ func (c *Controller) getContainerBuilds(
 	containerBuildStatuses map[v1.ContainerBuildID]latticev1.ContainerBuildStatus,
 ) error {
 	for containerName, container := range containers {
-		// XXX <GEB>: REMOVE
-		data, err := json.MarshalIndent(container.Build, "", "  ")
-		if err != nil {
-			return err
-		}
-		fmt.Printf("container.Build:\n%v\n", string(data))
-		// XXX <GEB>: /REMOVE
-
 		buildDefinition, err := c.hydrateContainerBuild(build, path, container.Build)
 		if err != nil {
 			return err
 		}
-
-		// XXX <GEB>: REMOVE
-		data, err = json.MarshalIndent(buildDefinition, "", "  ")
-		if err != nil {
-			return err
-		}
-		fmt.Printf("buildDefinition:\n%v\n", string(data))
-		// XXX <GEB>: /REMOVE
 
 		definitionHash, err := hashContainerBuild(buildDefinition)
 		if err != nil {
