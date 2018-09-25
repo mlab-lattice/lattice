@@ -47,7 +47,7 @@ func (api *LatticeAPI) setupSystemEndpoints() {
 // @Accept  json
 // @Produce  json
 // @Success 200 {object} v1.System
-// @Failure 400 {object} v1.ErrorResponse
+// @Failure 400 ""
 func (api *LatticeAPI) handleCreateSystem(c *gin.Context) {
 
 	var req v1rest.CreateSystemRequest
@@ -112,7 +112,7 @@ func (api *LatticeAPI) handleListSystems(c *gin.Context) {
 // @Accept  json
 // @Produce  json
 // @Success 200 {object} v1.System
-// @Failure 404 {object} v1.ErrorResponse
+// @Failure 404 ""
 func (api *LatticeAPI) handleGetSystem(c *gin.Context) {
 	systemID := v1.SystemID(c.Param(systemIdentifier))
 
@@ -150,8 +150,8 @@ func (api *LatticeAPI) handleGetSystem(c *gin.Context) {
 // @Accept  json
 // @Produce  json
 // @Param system path string true "System ID"
-// @Success 200 {object} v1.Result
-// @Failure 404 {object} v1.ErrorResponse
+// @Success 200 ""
+// @Failure 404 ""
 func (api *LatticeAPI) handleDeleteSystem(c *gin.Context) {
 	systemID := v1.SystemID(c.Param(systemIdentifier))
 

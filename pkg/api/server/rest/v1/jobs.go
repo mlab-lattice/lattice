@@ -47,7 +47,7 @@ func (api *LatticeAPI) setupJobsEndpoints() {
 // @Accept  json
 // @Produce  json
 // @Success 200 {object} v1.Job
-// @Failure 400 {object} v1.ErrorResponse
+// @Failure 400 ""
 func (api *LatticeAPI) handleRunJob(c *gin.Context) {
 	systemID := v1.SystemID(c.Param(systemIdentifier))
 
@@ -135,7 +135,7 @@ func (api *LatticeAPI) handleListJobs(c *gin.Context) {
 // @Accept  json
 // @Produce  json
 // @Success 200 {object} v1.Job
-// @Failure 404 {object} v1.ErrorResponse
+// @Failure 404 ""
 func (api *LatticeAPI) handleGetJob(c *gin.Context) {
 	systemID := v1.SystemID(c.Param(systemIdentifier))
 	jobID := v1.JobID(c.Param(jobIdentifier))
@@ -183,7 +183,7 @@ func (api *LatticeAPI) handleGetJob(c *gin.Context) {
 // @Accept  json
 // @Produce  json
 // @Success 200 {string} string "log stream"
-// @Failure 404 {object} v1.ErrorResponse
+// @Failure 404 ""
 func (api *LatticeAPI) handleGetJobLogs(c *gin.Context) {
 	systemID := v1.SystemID(c.Param(systemIdentifier))
 	jobID := v1.JobID(c.Param(jobIdentifier))

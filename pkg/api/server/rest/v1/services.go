@@ -116,7 +116,7 @@ func (api *LatticeAPI) handleListServices(c *gin.Context) {
 // @Accept  json
 // @Produce  json
 // @Success 200 {object} v1.Service
-// @Failure 404 {object} v1.ErrorResponse
+// @Failure 404 ""
 func (api *LatticeAPI) handleGetService(c *gin.Context) {
 	systemID := v1.SystemID(c.Param(systemIdentifier))
 	serviceID := v1.ServiceID(c.Param(serviceIdentifier))
@@ -162,7 +162,7 @@ func (api *LatticeAPI) handleGetService(c *gin.Context) {
 // @Accept  json
 // @Produce  json
 // @Success 200 {string} string "log stream"
-// @Failure 404 {object} v1.ErrorResponse
+// @Failure 404 ""
 func (api *LatticeAPI) handleGetServiceLogs(c *gin.Context) {
 	systemID := v1.SystemID(c.Param(systemIdentifier))
 	serviceId := v1.ServiceID(c.Param(serviceIdentifier))

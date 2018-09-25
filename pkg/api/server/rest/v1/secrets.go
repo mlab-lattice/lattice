@@ -48,7 +48,7 @@ func (api *LatticeAPI) setupSecretsEndpoints() {
 // @Accept  json
 // @Produce  json
 // @Success 200 {object} v1.Secret
-// @Failure 400 {object} v1.ErrorResponse
+// @Failure 400 ""
 func (api *LatticeAPI) handleSetSecret(c *gin.Context) {
 	var req v1rest.SetSecretRequest
 	if err := c.BindJSON(&req); err != nil {
@@ -148,7 +148,7 @@ func (api *LatticeAPI) handleListSecrets(c *gin.Context) {
 // @Accept  json
 // @Produce  json
 // @Success 200 {object} v1.Secret
-// @Failure 404 {object} v1.ErrorResponse
+// @Failure 404 ""
 func (api *LatticeAPI) handleGetSecret(c *gin.Context) {
 	systemID := v1.SystemID(c.Param(systemIdentifier))
 	escapedSecretPath := c.Param(secretIdentifier)
@@ -200,8 +200,8 @@ func (api *LatticeAPI) handleGetSecret(c *gin.Context) {
 // @Produce  json
 // @Param system path string true "System ID"
 // @Param secret path string true "Secret Path"
-// @Success 200 {object} v1.Result
-// @Failure 404 {object} v1.ErrorResponse
+// @Success 200 ""
+// @Failure 404 ""
 func (api *LatticeAPI) handleUnsetSecret(c *gin.Context) {
 	systemID := v1.SystemID(c.Param(systemIdentifier))
 	escapedSecretPath := c.Param(secretIdentifier)

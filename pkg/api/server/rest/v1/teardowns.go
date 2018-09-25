@@ -42,8 +42,8 @@ func (api *LatticeAPI) setupTeardownEndpoints() {
 // @Accept  json
 // @Produce  json
 // @Success 200 {object} v1.Teardown
-// @Failure 400 {object} v1.ErrorResponse
-// @Failure 404 {object} v1.ErrorResponse
+// @Failure 400 ""
+// @Failure 404 ""
 func (api *LatticeAPI) handleTeardownSystem(c *gin.Context) {
 	systemID := v1.SystemID(c.Param(systemIdentifier))
 
@@ -118,7 +118,7 @@ func (api *LatticeAPI) handleListTeardowns(c *gin.Context) {
 // @Accept  json
 // @Produce  json
 // @Success 200 {object} v1.Teardown
-// @Failure 404 {object} v1.ErrorResponse
+// @Failure 404 ""
 func (api *LatticeAPI) handleGetTeardown(c *gin.Context) {
 	systemID := v1.SystemID(c.Param(systemIdentifier))
 	teardownID := v1.TeardownID(c.Param(teardownIdentifier))
