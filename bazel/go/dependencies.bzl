@@ -179,16 +179,6 @@ GO_DEPENDENCIES = {
             "tag": "v1.0.6",
             "importpath": "github.com/tidwall/gjson",
         },
-        "github.com/swaggo/swag": {
-            "name": "com_github_swaggo_swag",
-            "tag": "v1.3.2",
-            "importpath": "github.com/swaggo/swag",
-        },
-        "github.com/swaggo/gin-swagger": {
-            "name": "com_github_swaggo_gin_swagger",
-            "tag": "v1.0.0",
-            "importpath": "github.com/swaggo/gin-swagger",
-        },
         "gopkg.in/src-d/go-git.v4": {
             "name": "in_gopkg_src_d_go_git_v4",
             "commit": "f9879dd043f84936a1f8acb8a53b74332a7ae135",
