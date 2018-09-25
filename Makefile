@@ -8,10 +8,15 @@ all: gazelle \
 
 .PHONY: build
 build: PLATFORM ?=
+build: FEATURES ?=
+build: OUTPUT_USER_ROOT ?=
 build: TARGET ?= //cmd/... //pkg/...
 build:
-	@bazel build \
-		$(PLATFORM) \
+	bazel \
+		$(addprefix --output_user_root=,$(OUTPUT_USER_ROOT)) \
+		build \
+		$(addprefix --platforms=@io_bazel_rules_go//go/toolchain:,$(PLATFORM)) \
+		$(addprefix --features=,$(FEATURES)) \
 		$(TARGET)
 
 .PHONY: build.platform.all
@@ -19,12 +24,12 @@ build.platform.all: build.platform.darwin \
                     build.platform.linux
 
 .PHONY: build.platform.darwin
-build.platform.darwin: gazelle
-	@$(MAKE) build.no-gazelle PLATFORM=--platforms=@io_bazel_rules_go//go/toolchain:darwin_amd64
+build.platform.darwin:
+	@$(MAKE) build PLATFORM=darwin_amd64
 
 .PHONY: build.platform.linux
-build.platform.linux: gazelle
-	@$(MAKE) build.no-gazelle PLATFORM=--platforms=@io_bazel_rules_go//go/toolchain:linux_amd64
+build.platform.linux:
+	@$(MAKE) build PLATFORM=linux_amd64
 
 .PHONY: gazelle
 gazelle:

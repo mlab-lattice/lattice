@@ -4,7 +4,7 @@ _plugin_suffix = "_plugin"
 _plugin_bin_suffix = "_plugin_bin"
 
 def go_binary_docgen(
-    name = "docgen",
+    name = "docs",
     output_file = "docs.md",
     embed = ":go_default_library"):
   plugin_name = name + _plugin_suffix
