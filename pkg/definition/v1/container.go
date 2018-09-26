@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/mlab-lattice/lattice/pkg/definition/component"
+	"github.com/mlab-lattice/lattice/pkg/definition"
 )
 
 const (
@@ -13,7 +13,7 @@ const (
 	ContainerBuildTypeDockerImage = "docker_image"
 )
 
-var ContainerType = component.Type{
+var ContainerType = definition.Type{
 	APIVersion: APIVersion,
 	Type:       ComponentTypeContainer,
 }

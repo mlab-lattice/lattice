@@ -4,27 +4,27 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/mlab-lattice/lattice/pkg/definition/component"
+	"github.com/mlab-lattice/lattice/pkg/definition"
 )
 
 const ComponentTypeSystem = "system"
 
-var SystemType = component.Type{
+var SystemType = definition.Type{
 	APIVersion: APIVersion,
 	Type:       ComponentTypeSystem,
 }
 
-// +k8s:deepcopy-gen:interfaces=github.com/mlab-lattice/lattice/pkg/definition/component.Interface
+// +k8s:deepcopy-gen:interfaces=github.com/mlab-lattice/lattice/pkg/definition.Component
 
 type System struct {
 	Description string
 
-	Components map[string]component.Interface
+	Components map[string]definition.Component
 	// FIXME: remove this
 	NodePools map[string]NodePool
 }
 
-func (s *System) Type() component.Type {
+func (s *System) Type() definition.Type {
 	return SystemType
 }
 
@@ -53,7 +53,7 @@ func (s *System) UnmarshalJSON(data []byte) error {
 		return fmt.Errorf("expected resource type %v but got %v", ComponentTypeSystem, e.Type.Type)
 	}
 
-	components := make(map[string]component.Interface)
+	components := make(map[string]definition.Component)
 	for n, d := range e.Components {
 		res, err := NewComponentFromJSON(d)
 		if err != nil {
@@ -74,16 +74,16 @@ func (s *System) UnmarshalJSON(data []byte) error {
 }
 
 type systemEncoder struct {
-	Type        component.Type `json:"type"`
-	Description string         `json:"description,omitempty"`
+	Type        definition.Type `json:"type"`
+	Description string          `json:"description,omitempty"`
 
-	Components map[string]component.Interface `json:"components"`
-	NodePools  map[string]NodePool            `json:"node_pools,omitempty"`
+	Components map[string]definition.Component `json:"components"`
+	NodePools  map[string]NodePool             `json:"node_pools,omitempty"`
 }
 
 type systemDecoder struct {
-	Type        component.Type `json:"type"`
-	Description string         `json:"description,omitempty"`
+	Type        definition.Type `json:"type"`
+	Description string          `json:"description,omitempty"`
 
 	Components map[string]json.RawMessage `json:"components"`
 	NodePools  map[string]NodePool        `json:"node_pools,omitempty"`

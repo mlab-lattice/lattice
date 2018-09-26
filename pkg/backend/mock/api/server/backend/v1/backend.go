@@ -3,7 +3,7 @@ package v1
 import (
 	"github.com/mlab-lattice/lattice/pkg/api/server/backend/v1"
 	"github.com/mlab-lattice/lattice/pkg/backend/mock/api/server/backend/v1/system"
-	"github.com/mlab-lattice/lattice/pkg/definition/component/resolver"
+	"github.com/mlab-lattice/lattice/pkg/definition/resolver"
 )
 
 type Backend struct {

@@ -8,7 +8,7 @@ import (
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	"github.com/mlab-lattice/lattice/pkg/backend/mock/api/server/backend/controller"
 	"github.com/mlab-lattice/lattice/pkg/backend/mock/api/server/backend/registry"
-	"github.com/mlab-lattice/lattice/pkg/definition/component/resolver"
+	"github.com/mlab-lattice/lattice/pkg/definition/resolver"
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 	timeutil "github.com/mlab-lattice/lattice/pkg/util/time"
 )

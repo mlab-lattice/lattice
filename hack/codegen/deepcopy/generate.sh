@@ -9,8 +9,8 @@ declare -a packages=(
     "api/v1"
     "definition/v1"
     "definition/tree"
-    "definition/component/resolver"
-    "definition/component/resolver/template"
+    "definition/resolver"
+    "definition/resolver/template"
 )
 
 ## now loop through the above array

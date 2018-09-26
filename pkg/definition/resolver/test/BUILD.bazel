@@ -7,8 +7,8 @@ go_test(
     deps = [
         "//pkg/api/v1:go_default_library",
         "//pkg/backend/mock/definition/component/resolver:go_default_library",
-        "//pkg/definition/component:go_default_library",
-        "//pkg/definition/component/resolver:go_default_library",
+        "//pkg/definition:go_default_library",
+        "//pkg/definition/resolver:go_default_library",
         "//pkg/definition/tree:go_default_library",
         "//pkg/definition/v1:go_default_library",
         "//pkg/util/git:go_default_library",
@@ -19,6 +19,6 @@ go_test(
 go_library(
     name = "go_default_library",
     srcs = ["doc.go"],
-    importpath = "github.com/mlab-lattice/lattice/pkg/definition/component/resolver/test",
+    importpath = "github.com/mlab-lattice/lattice/pkg/definition/resolver/test",
     visibility = ["//visibility:public"],
 )

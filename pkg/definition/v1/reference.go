@@ -4,18 +4,18 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/mlab-lattice/lattice/pkg/definition/component"
+	"github.com/mlab-lattice/lattice/pkg/definition"
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 )
 
 const ComponentTypeReference = "reference"
 
-var ReferenceType = component.Type{
+var ReferenceType = definition.Type{
 	APIVersion: APIVersion,
 	Type:       ComponentTypeReference,
 }
 
-// +k8s:deepcopy-gen:interfaces=github.com/mlab-lattice/lattice/pkg/definition/component.Interface
+// +k8s:deepcopy-gen:interfaces=github.com/mlab-lattice/lattice/pkg/definition.Component
 
 type Reference struct {
 	GitRepository *GitRepositoryReference
@@ -44,7 +44,7 @@ type GitRepositoryReference struct {
 	*GitRepository
 }
 
-func (r *Reference) Type() component.Type {
+func (r *Reference) Type() definition.Type {
 	return ReferenceType
 }
 
@@ -103,7 +103,7 @@ func (r *Reference) UnmarshalJSON(data []byte) error {
 }
 
 type referenceEncoder struct {
-	Type component.Type `json:"type"`
+	Type definition.Type `json:"type"`
 
 	GitRepository *GitRepositoryReference `json:"git_repository,omitempty"`
 	File          *string                 `json:"file,omitempty"`

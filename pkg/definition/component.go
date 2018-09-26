@@ -1,4 +1,4 @@
-package component
+package definition
 
 import (
 	"encoding/json"
@@ -10,11 +10,11 @@ const (
 	TypeField = "type"
 )
 
-type Interface interface {
+type Component interface {
 	Type() Type
 
 	// see: https://github.com/kubernetes/gengo/blob/master/examples/deepcopy-gen/main.go#L24-L31
-	DeepCopyInterface() Interface
+	DeepCopyComponent() Component
 }
 
 func TypeFromMap(m map[string]interface{}) (Type, error) {

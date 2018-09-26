@@ -4,7 +4,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	backendv1 "github.com/mlab-lattice/lattice/pkg/api/server/backend/v1"
-	"github.com/mlab-lattice/lattice/pkg/definition/component/resolver"
+	"github.com/mlab-lattice/lattice/pkg/definition/resolver"
 
 	"github.com/swaggo/gin-swagger"
 	"github.com/swaggo/gin-swagger/swaggerFiles"
