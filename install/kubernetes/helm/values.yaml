@@ -1,4 +1,4 @@
-containerChannel: gcr.io/lattice-dev
+containerChannel: gcr.io/lattice-dev/stable
 id: lattice
 internalDnsDomain: lattice.local
 prefix: lattice

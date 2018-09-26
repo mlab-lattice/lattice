@@ -116,9 +116,8 @@ docgen.latticectl:
 
 # local
 .PHONY: local.up
-local.up: CHANNEL=gcr.io/lattice-dev
 local.up:
-	@$(DIR)/hack/local/up.sh --set containerChannel=$(CHANNEL)
+	$(DIR)/hack/local/up.sh $(addprefix "--set containerChannel=",$(CHANNEL))
 
 .PHONY: local.down
 local.down:
