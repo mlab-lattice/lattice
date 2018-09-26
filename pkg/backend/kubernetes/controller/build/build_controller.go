@@ -204,8 +204,13 @@ func (c *Controller) syncSystemBuild(key string) error {
 		return err
 	}
 
-	if build.Status.State == latticev1.BuildStatePending {
+	switch build.Status.State {
+	case latticev1.BuildStatePending:
 		return c.syncPendingBuild(build)
+
+	// builds are already in a terminal state, don't need to re-process them
+	case latticev1.BuildStateFailed, latticev1.BuildStateSucceeded:
+		return nil
 	}
 
 	stateInfo, err := c.calculateState(build)

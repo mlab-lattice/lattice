@@ -10,10 +10,10 @@ import (
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 	"github.com/mlab-lattice/lattice/pkg/latticectl/builds"
 	"github.com/mlab-lattice/lattice/pkg/latticectl/command"
-	"github.com/mlab-lattice/lattice/pkg/util/cli2"
-	"github.com/mlab-lattice/lattice/pkg/util/cli2/color"
-	"github.com/mlab-lattice/lattice/pkg/util/cli2/flags"
-	"github.com/mlab-lattice/lattice/pkg/util/cli2/printer"
+	"github.com/mlab-lattice/lattice/pkg/util/cli"
+	"github.com/mlab-lattice/lattice/pkg/util/cli/color"
+	"github.com/mlab-lattice/lattice/pkg/util/cli/flags"
+	"github.com/mlab-lattice/lattice/pkg/util/cli/printer"
 )
 
 const (
@@ -119,12 +119,13 @@ func displayBuild(
 building %s for system %s. build ID: %s
 
 to watch build, run:
-    latticectl builds status --build %s -w
+    latticectl builds status --system %s --build %s -w
 `,
 		description,
 		color.IDString(string(system)),
 		color.IDString(string(build.ID)),
-		string(build.ID),
+		system,
+		build.ID,
 	)
 	return nil
 }

@@ -1,0 +1,244 @@
+---
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  name: addresses.lattice.mlab.com
+spec:
+  group: lattice.mlab.com
+  names:
+    categories:
+    - all
+    - lattice
+    kind: Address
+    listKind: AddressList
+    plural: addresses
+    singular: address
+  scope: Namespaced
+  subresources:
+    status: {}
+  version: v1
+---
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  name: builds.lattice.mlab.com
+spec:
+  group: lattice.mlab.com
+  names:
+    categories:
+    - all
+    - lattice
+    kind: Build
+    listKind: BuildList
+    plural: builds
+    singular: build
+  scope: Namespaced
+  subresources:
+    status: {}
+  version: v1
+---
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  name: containerbuilds.lattice.mlab.com
+spec:
+  group: lattice.mlab.com
+  names:
+    categories:
+    - all
+    - lattice
+    kind: ContainerBuild
+    listKind: ContainerBuildList
+    plural: containerbuilds
+    singular: containerbuild
+  scope: Namespaced
+  subresources:
+    status: {}
+  version: v1
+---
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  name: configs.lattice.mlab.com
+spec:
+  group: lattice.mlab.com
+  names:
+    categories:
+    - all
+    - lattice
+    kind: Config
+    listKind: ConfigList
+    plural: configs
+    singular: config
+  scope: Namespaced
+  version: v1
+---
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  name: deploys.lattice.mlab.com
+spec:
+  group: lattice.mlab.com
+  names:
+    categories:
+    - all
+    - lattice
+    kind: Deploy
+    listKind: DeployList
+    plural: deploys
+    singular: deploy
+  scope: Namespaced
+  subresources:
+    status: {}
+  version: v1
+---
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  name: gittemplates.lattice.mlab.com
+spec:
+  group: lattice.mlab.com
+  names:
+    categories:
+    - all
+    - lattice
+    kind: GitTemplate
+    listKind: GitTemplateList
+    plural: gittemplates
+    singular: gittemplate
+  scope: Namespaced
+  subresources:
+    status: {}
+  version: v1
+---
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  name: jobs.lattice.mlab.com
+spec:
+  group: lattice.mlab.com
+  names:
+    categories:
+    - all
+    - lattice
+    kind: Job
+    listKind: JobList
+    plural: jobs
+    singular: job
+  scope: Namespaced
+  version: v1
+---
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  name: jobruns.lattice.mlab.com
+spec:
+  group: lattice.mlab.com
+  names:
+    categories:
+    - all
+    - lattice
+    kind: JobRun
+    listKind: JobRunList
+    plural: jobruns
+    singular: jobrun
+  scope: Namespaced
+  subresources:
+    status: {}
+  version: v1
+---
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  name: nodepools.lattice.mlab.com
+spec:
+  group: lattice.mlab.com
+  names:
+    categories:
+    - all
+    - lattice
+    kind: NodePool
+    listKind: NodePoolList
+    plural: nodepools
+    singular: nodepool
+  scope: Namespaced
+  subresources:
+    status: {}
+  version: v1
+---
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  name: services.lattice.mlab.com
+spec:
+  group: lattice.mlab.com
+  names:
+    categories:
+    - all
+    - lattice
+    kind: Service
+    listKind: ServiceList
+    plural: services
+    singular: service
+  scope: Namespaced
+  subresources:
+    status: {}
+  version: v1
+---
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  name: systems.lattice.mlab.com
+spec:
+  group: lattice.mlab.com
+  names:
+    categories:
+    - all
+    - lattice
+    kind: System
+    listKind: SystemList
+    plural: systems
+    singular: system
+  scope: Namespaced
+  subresources:
+    status: {}
+  version: v1
+---
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  name: teardowns.lattice.mlab.com
+spec:
+  group: lattice.mlab.com
+  names:
+    categories:
+    - all
+    - lattice
+    kind: Teardown
+    listKind: TeardownList
+    plural: teardowns
+    singular: teardown
+  scope: Namespaced
+  subresources:
+    status: {}
+  version: v1
+---
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  name: templates.lattice.mlab.com
+spec:
+  group: lattice.mlab.com
+  names:
+    categories:
+    - all
+    - lattice
+    kind: Template
+    listKind: TemplateList
+    plural: templates
+    singular: template
+  scope: Namespaced
+  subresources:
+    status: {}
+  version: v1
+

@@ -6,8 +6,8 @@ import (
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	systembootstrapper "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/lifecycle/system/bootstrap/bootstrapper"
 	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/servicemesh/envoy"
-	"github.com/mlab-lattice/lattice/pkg/util/cli2"
-	"github.com/mlab-lattice/lattice/pkg/util/cli2/flags"
+	"github.com/mlab-lattice/lattice/pkg/util/cli"
+	"github.com/mlab-lattice/lattice/pkg/util/cli/flags"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"

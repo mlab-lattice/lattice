@@ -5,24 +5,14 @@ import (
 
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	kubeutil "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/kubernetes"
-
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
-	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-)
 
-const (
-	ResourceSingularDeploy = "deploy"
-	ResourcePluralDeploy   = "deploys"
-	ResourceScopeDeploy    = apiextensionsv1beta1.NamespaceScoped
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 var (
 	DeployKind     = SchemeGroupVersion.WithKind("Deploy")
 	DeployListKind = SchemeGroupVersion.WithKind("DeployList")
-
-	DeployIDLabelKey                = fmt.Sprintf("deploy.%v/id", GroupName)
-	DeployDefinitionVersionLabelKey = fmt.Sprintf("deploy.%v/definition-version", GroupName)
 )
 
 // +genclient
@@ -39,16 +29,6 @@ func (d *Deploy) V1ID() v1.DeployID {
 	return v1.DeployID(d.Name)
 }
 
-func (d *Deploy) BuildIDLabel() (v1.BuildID, bool) {
-	id, ok := d.Labels[BuildIDLabelKey]
-	return v1.BuildID(id), ok
-}
-
-func (d *Deploy) DefinitionVersionLabel() (v1.Version, bool) {
-	version, ok := d.Labels[DeployDefinitionVersionLabelKey]
-	return v1.Version(version), ok
-}
-
 func (d *Deploy) Description(namespacePrefix string) string {
 	systemID, err := kubeutil.SystemID(namespacePrefix, d.Namespace)
 	if err != nil {
@@ -56,13 +36,13 @@ func (d *Deploy) Description(namespacePrefix string) string {
 	}
 
 	version := v1.Version("unknown")
-	if label, ok := d.DefinitionVersionLabel(); ok {
-		version = label
+	if d.Status.Version != nil {
+		version = *d.Status.Version
 	}
 
 	buildID := v1.BuildID("unknown")
-	if label, ok := d.BuildIDLabel(); ok {
-		buildID = label
+	if d.Status.Build != nil {
+		buildID = *d.Status.Build
 	}
 
 	return fmt.Sprintf(
@@ -89,7 +69,9 @@ type DeployStatus struct {
 
 	InternalError *string `json:"internalError,omitempty"`
 
-	Build *v1.BuildID `json:"build,omitempty"`
+	Build   *v1.BuildID `json:"build,omitempty"`
+	Path    *tree.Path  `json:"path,omitempty"`
+	Version *v1.Version `json:"version,omitempty"`
 
 	StartTimestamp      *metav1.Time `json:"startTimestamp,omitempty"`
 	CompletionTimestamp *metav1.Time `json:"completionTimestamp,omitempty"`

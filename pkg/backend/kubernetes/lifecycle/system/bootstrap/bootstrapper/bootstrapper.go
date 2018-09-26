@@ -3,7 +3,6 @@ package bootstrapper
 import (
 	"fmt"
 
-	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 
@@ -18,7 +17,6 @@ type SystemResources struct {
 	Namespace       *corev1.Namespace
 	ServiceAccounts []*corev1.ServiceAccount
 	RoleBindings    []*rbacv1.RoleBinding
-	DaemonSets      []*appsv1.DaemonSet
 }
 
 func (r *SystemResources) String() (string, error) {
@@ -43,15 +41,6 @@ func (r *SystemResources) String() (string, error) {
 
 	for _, roleBinding := range r.RoleBindings {
 		data, err := yaml.Marshal(roleBinding)
-		if err != nil {
-			return "", err
-		}
-
-		output += fmt.Sprintf("%v%v", header, string(data))
-	}
-
-	for _, daemonSet := range r.DaemonSets {
-		data, err := yaml.Marshal(daemonSet)
 		if err != nil {
 			return "", err
 		}

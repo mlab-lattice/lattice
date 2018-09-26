@@ -11,12 +11,12 @@ import (
 	"github.com/mlab-lattice/lattice/pkg/api/client"
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	"github.com/mlab-lattice/lattice/pkg/latticectl/command"
-	"github.com/mlab-lattice/lattice/pkg/util/cli2"
-	"github.com/mlab-lattice/lattice/pkg/util/cli2/color"
-	"github.com/mlab-lattice/lattice/pkg/util/cli2/printer"
+	"github.com/mlab-lattice/lattice/pkg/util/cli"
+	"github.com/mlab-lattice/lattice/pkg/util/cli/color"
+	"github.com/mlab-lattice/lattice/pkg/util/cli/printer"
 	//"k8s.io/apimachinery/pkg/util/wait"
 	//"github.com/briandowns/spinner"
-	"github.com/mlab-lattice/lattice/pkg/util/cli2/flags"
+	"github.com/mlab-lattice/lattice/pkg/util/cli/flags"
 )
 
 func Create() *cli.Command {
@@ -68,13 +68,13 @@ func CreateSystem(client client.Interface, id v1.SystemID, definition string, w 
 	}
 
 	fmt.Fprintf(
-		w, `system %v initializing
+		w, `system %s initializing
 
 to watch progress, run:
-  latticectl systems status --system %v -w
+  latticectl systems status --system %s -w
 `,
 		color.IDString(string(id)),
-		string(id),
+		id,
 	)
 	return nil
 }

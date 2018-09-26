@@ -14,8 +14,8 @@ go_library(
     importpath = "github.com/mlab-lattice/lattice/pkg/util/terraform",
     visibility = ["//visibility:public"],
     deps = [
-        "//pkg/util/cli2:go_default_library",
-        "//pkg/util/cli2/flags:go_default_library",
+        "//pkg/util/cli:go_default_library",
+        "//pkg/util/cli/flags:go_default_library",
         "//pkg/util/exec:go_default_library",
     ],
 )

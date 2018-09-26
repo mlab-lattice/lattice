@@ -9,9 +9,9 @@ import (
 	"github.com/mlab-lattice/lattice/pkg/api/client"
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	"github.com/mlab-lattice/lattice/pkg/latticectl/command"
-	"github.com/mlab-lattice/lattice/pkg/util/cli2"
-	"github.com/mlab-lattice/lattice/pkg/util/cli2/color"
-	"github.com/mlab-lattice/lattice/pkg/util/cli2/printer"
+	"github.com/mlab-lattice/lattice/pkg/util/cli"
+	"github.com/mlab-lattice/lattice/pkg/util/cli/color"
+	"github.com/mlab-lattice/lattice/pkg/util/cli/printer"
 
 	"github.com/mlab-lattice/lattice/pkg/latticectl/systems"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -137,6 +137,10 @@ func systemsTable(w io.Writer) *printer.Table {
 			Alignment: printer.TableAlignLeft,
 		},
 		{
+			Header:    "version",
+			Alignment: printer.TableAlignLeft,
+		},
+		{
 			Header:    "status",
 			Alignment: printer.TableAlignLeft,
 		},
@@ -156,9 +160,15 @@ func systemsTableRows(systems []v1.System) []printer.TableRow {
 			stateColor = color.WarningString
 		}
 
+		version := "-"
+		if system.Status.Version != nil {
+			version = string(*system.Status.Version)
+		}
+
 		rows = append(rows, []string{
 			color.IDString(string(system.ID)),
 			system.DefinitionURL,
+			version,
 			stateColor(string(system.Status.State)),
 		})
 	}

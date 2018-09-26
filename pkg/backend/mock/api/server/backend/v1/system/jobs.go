@@ -20,8 +20,8 @@ func (b *JobBackend) Run(
 	command []string,
 	environment definitionv1.ContainerEnvironment,
 ) (*v1.Job, error) {
-	b.backend.Lock()
-	defer b.backend.Unlock()
+	b.backend.registry.Lock()
+	defer b.backend.registry.Unlock()
 
 	record, err := b.backend.systemRecordInitialized(b.systemID)
 	if err != nil {
@@ -60,8 +60,8 @@ func (b *JobBackend) Run(
 }
 
 func (b *JobBackend) List() ([]v1.Job, error) {
-	b.backend.Lock()
-	defer b.backend.Unlock()
+	b.backend.registry.Lock()
+	defer b.backend.registry.Unlock()
 
 	record, err := b.backend.systemRecordInitialized(b.systemID)
 	if err != nil {
@@ -76,8 +76,8 @@ func (b *JobBackend) List() ([]v1.Job, error) {
 	return jobs, nil
 }
 func (b *JobBackend) Get(id v1.JobID) (*v1.Job, error) {
-	b.backend.Lock()
-	defer b.backend.Unlock()
+	b.backend.registry.Lock()
+	defer b.backend.registry.Unlock()
 
 	record, err := b.backend.systemRecordInitialized(b.systemID)
 	if err != nil {

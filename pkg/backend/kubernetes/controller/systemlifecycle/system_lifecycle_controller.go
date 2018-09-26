@@ -207,27 +207,37 @@ func (c *Controller) syncLifecycleActions() error {
 			continue
 		}
 
-		if deploy.Status.Build == nil {
-			// this shouldn't happen
-			continue
+		var path tree.Path
+		switch {
+		case deploy.Spec.Build != nil:
+			build, err := c.buildLister.Builds(deploy.Namespace).Get(string(*deploy.Status.Build))
+			if err != nil {
+				return err
+			}
+
+			switch {
+			case build.Spec.Path != nil:
+				path = *build.Spec.Path
+
+			case build.Spec.Version != nil:
+				path = tree.RootPath()
+			}
+
+		case deploy.Spec.Path != nil:
+			path = *deploy.Spec.Path
+
+		case deploy.Spec.Version != nil:
+			path = tree.RootPath()
 		}
 
-		build, err := c.buildLister.Builds(deploy.Namespace).Get(string(*deploy.Status.Build))
-		if err != nil {
-			return err
-		}
-
-		path := tree.RootPath()
-		if build.Spec.Path != nil {
-			path = *build.Spec.Path
-		}
+		glog.V(5).Infof("attempting to acquire lock for %v at path %v", deploy.Description(c.namespacePrefix), path.String())
 
 		err = c.acquireDeployLock(deploy, path)
 		if err != nil {
 			return fmt.Errorf(
 				"error attempting to acquire lock for %v %v: %v",
 				deploy.Description(c.namespacePrefix),
-				build.Spec.Path.String(),
+				path.String(),
 				err,
 			)
 		}
@@ -242,6 +252,8 @@ func (c *Controller) syncLifecycleActions() error {
 		if teardown.Status.State != latticev1.TeardownStateInProgress {
 			continue
 		}
+
+		glog.V(5).Infof("attempting to acquire lock for %v", teardown.Description(c.namespacePrefix))
 
 		err = c.acquireTeardownLock(teardown)
 		if err != nil {

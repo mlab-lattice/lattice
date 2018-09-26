@@ -23,8 +23,8 @@ func (b *BuildBackend) CreateFromVersion(v v1.Version) (*v1.Build, error) {
 }
 
 func (b *BuildBackend) create(p *tree.Path, v *v1.Version) (*v1.Build, error) {
-	b.backend.Lock()
-	defer b.backend.Unlock()
+	b.backend.registry.Lock()
+	defer b.backend.registry.Unlock()
 
 	record, err := b.backend.systemRecordInitialized(b.systemID)
 	if err != nil {
@@ -45,8 +45,8 @@ func (b *BuildBackend) create(p *tree.Path, v *v1.Version) (*v1.Build, error) {
 }
 
 func (b *BuildBackend) List() ([]v1.Build, error) {
-	b.backend.Lock()
-	defer b.backend.Unlock()
+	b.backend.registry.Lock()
+	defer b.backend.registry.Unlock()
 
 	record, err := b.backend.systemRecordInitialized(b.systemID)
 	if err != nil {
@@ -62,8 +62,8 @@ func (b *BuildBackend) List() ([]v1.Build, error) {
 }
 
 func (b *BuildBackend) Get(id v1.BuildID) (*v1.Build, error) {
-	b.backend.Lock()
-	defer b.backend.Unlock()
+	b.backend.registry.Lock()
+	defer b.backend.registry.Unlock()
 
 	record, err := b.backend.systemRecordInitialized(b.systemID)
 	if err != nil {

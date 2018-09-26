@@ -2,31 +2,31 @@ package cli
 
 import (
 	"fmt"
-	"log"
 	"os"
-	"sort"
-	"strings"
 
 	"github.com/spf13/cobra"
-
-	"github.com/mlab-lattice/lattice/pkg/util/cli/template"
+	"github.com/spf13/pflag"
+	"strings"
 )
 
-type Command struct {
-	Name             string
-	Short            string
-	Args             Args
-	Flags            Flags
-	PreRun           func()
-	Run              func(args []string)
-	Subcommands      []*Command
-	UsageFunc        func(*Command) error
-	HelpFunc         func(*Command)
-	cobraCmd         *cobra.Command
-	isSpaceSeparated bool
+type RootCommand struct {
+	Name string
+	*Command
 }
 
-func (c *Command) Execute() {
+type Command struct {
+	Short                  string
+	Args                   Args
+	Flags                  Flags
+	MutuallyExclusiveFlags [][]string
+	RequiredFlagSet        [][]string
+	PreRun                 func()
+	Run                    func(args []string, flags Flags) error
+	Subcommands            map[string]*Command
+	cobraCmd               *cobra.Command
+}
+
+func (c *RootCommand) Execute() {
 	if err := c.Init(); err != nil {
 		c.exit(err)
 	}
@@ -34,36 +34,43 @@ func (c *Command) Execute() {
 	c.exit(c.cobraCmd.Execute())
 }
 
-func (c *Command) Init() error {
+func (c *RootCommand) Init() error {
+	return c.Command.init(c.Name)
+}
+
+func (c *Command) init(name string) error {
+	if err := c.initCommand(name); err != nil {
+		return err
+	}
+	return c.initSubcommands()
+}
+
+func (c *Command) initCommand(name string) error {
 	c.cobraCmd = &cobra.Command{
-		Use:   c.Name,
+		Use:   name,
 		Short: c.Short,
+		Run: func(cmd *cobra.Command, args []string) {
+			if c.Run == nil {
+				cmd.Help()
+				os.Exit(1)
+			}
+
+			if err := c.Run(args, c.Flags); err != nil {
+				c.exit(err)
+			}
+		},
 	}
 
 	if err := c.addArgs(); err != nil {
 		return fmt.Errorf("error adding args: %v", err)
 	}
 
-	if err := c.addFlags(); err != nil {
-		return fmt.Errorf("error adding flags: %v", err)
-	}
-
-	if err := c.addSubcommands(); err != nil {
-		return fmt.Errorf("error initializing subcommands: %v", err)
-	}
-
-	c.cobraCmd.SetUsageFunc(c.usageFuncWrapper)
-	c.cobraCmd.SetHelpFunc(c.helpFuncWrapper)
-
-	c.cobraCmd.Run = func(cmd *cobra.Command, args []string) {
-		if c.Run == nil {
-			cmd.Help()
-			os.Exit(1)
-		}
-		c.Run(args)
-	}
+	c.addFlags()
 
 	c.cobraCmd.PreRun = func(cmd *cobra.Command, args []string) {
+		c.checkMutexFlags(cmd)
+		c.checkRequiredFlagSets(cmd)
+
 		for name, parser := range c.getFlagParsers() {
 			err := parser()
 			if err != nil {
@@ -74,50 +81,22 @@ func (c *Command) Init() error {
 
 		if c.PreRun != nil {
 			c.PreRun()
-			c.PreRun()
 		}
 	}
-
-	c.isSpaceSeparated = true
 
 	return nil
 }
 
-// usageFuncWrapper calls the correct usage function, and lets the usageFunction be called on a Command rather than a cobra.Command
-func (c *Command) usageFuncWrapper(*cobra.Command) error {
-	if c.UsageFunc != nil {
-		return c.UsageFunc(c)
+func (c *Command) initSubcommands() error {
+	for name, subcommand := range c.Subcommands {
+		if err := subcommand.init(name); err != nil {
+			return fmt.Errorf("error initializing subcommand %v: %v", name, err)
+		}
+
+		c.cobraCmd.AddCommand(subcommand.cobraCmd)
 	}
 
-	return c.defaultUsageFunc(c)
-}
-
-// helpFuncWrapper calls the correct help function, and lets the usageFunction be called on a Command rather than a cobra.Command
-func (c *Command) helpFuncWrapper(*cobra.Command, []string) {
-	if c.HelpFunc != nil {
-		c.HelpFunc(c)
-		return
-	}
-
-	c.defaultHelpFunc(c)
-}
-
-// defaultUsageFunc is the Usage function that will be called if none is provided
-func (c *Command) defaultUsageFunc(*Command) error {
-	// TODO :: Seems like Usage & Help have the same use for us right now. (Perhaps just for default)
-	tmplName := template.DefaultTemplate
-	templateToExecute := template.DefaultUsageTemplate
-	return template.TryExecuteTemplate(tmplName, template.DefaultTemplate, templateToExecute, template.DefaultTemplateFuncs, c)
-}
-
-// defaultHelpFunc is the Help function that will be called if none is provided
-func (c *Command) defaultHelpFunc(*Command) {
-	tmplName := template.DefaultTemplate
-	templateToExecute := template.DefaultHelpTemplate
-	err := template.TryExecuteTemplate(tmplName, template.DefaultTemplate, templateToExecute, template.DefaultTemplateFuncs, c)
-	if err != nil {
-		log.Fatalf(err.Error())
-	}
+	return nil
 }
 
 func (c *Command) addArgs() error {
@@ -138,124 +117,165 @@ func (c *Command) addArgs() error {
 	return nil
 }
 
-func (c *Command) addFlags() error {
-	names := make(map[string]struct{})
-	for _, flag := range c.Flags {
-		if err := flag.Validate(); err != nil {
-			return fmt.Errorf("error validating flag %v: %v", flag.GetName(), err)
-		}
-
-		if _, ok := names[flag.GetName()]; ok {
-			return fmt.Errorf("multiple flags with the name %v", flag.GetName())
-		}
-
-		flag.AddToFlagSet(c.cobraCmd.Flags())
-		names[flag.GetName()] = struct{}{}
+func (c *Command) addFlags() {
+	for name, flag := range c.Flags {
+		flag.AddToFlagSet(name, c.cobraCmd.Flags())
 	}
-
-	return nil
 }
 
 func (c *Command) getFlagParsers() map[string]func() error {
 	parsers := make(map[string]func() error)
-	for _, flag := range c.Flags {
+	for name, flag := range c.Flags {
 		parser := flag.Parse()
 		if parser != nil {
-			parsers[flag.GetName()] = parser
+			parsers[name] = parser
 		}
 	}
 
 	return parsers
 }
 
-func (c *Command) addSubcommands() error {
-	names := make(map[string]struct{})
-	for _, subcommand := range c.Subcommands {
-		if _, ok := names[subcommand.Name]; ok {
-			return fmt.Errorf("multiple subcommands with the name %v", c.Name)
-		}
+func (c *Command) checkMutexFlags(cmd *cobra.Command) {
+	// check to see if any of the flags are mutually exclusive
+	// first build up a set of flags that each flag conflicts with
+	conflictFlags := make(map[string][]string)
+	for _, mutexSet := range c.MutuallyExclusiveFlags {
+		for _, flag := range mutexSet {
+			conflicts, ok := conflictFlags[flag]
+			if !ok {
+				conflicts = make([]string, 0)
+			}
 
-		if err := subcommand.Init(); err != nil {
-			return fmt.Errorf("error initializing subcommand %v: %v", c.Name, err)
+			for _, conflict := range mutexSet {
+				// don't add self to our own conflict set
+				if conflict == flag {
+					continue
+				}
+				conflicts = append(conflicts, conflict)
+			}
+			conflictFlags[flag] = conflicts
 		}
-
-		c.cobraCmd.AddCommand(subcommand.cobraCmd)
-		names[subcommand.Name] = struct{}{}
 	}
 
-	return nil
+	// then go through each flag _that was set_. if we have already seen flags that conflict
+	// with this flag, set a conflict message
+	// otherwise, for each other flag that the flag conflicts with, create or add to a list of
+	// flags that conflict with the other flag. then go on to the next flag.
+	// this means that if the next flag conflicted with the current flag, it will see that the
+	// current flag is listed under flags that conflict with it, and it would set the conflict
+	// message
+	conflict := ""
+	pendingConflict := make(map[string][]string)
+	cmd.Flags().Visit(func(flag *pflag.Flag) {
+		// bail early if we already found a conflict
+		if conflict != "" {
+			return
+		}
+
+		// if this flag triggers a conflict, set the conflict string and return
+		pendingConflicts, ok := pendingConflict[flag.Name]
+		if ok {
+			conflict = fmt.Sprintf("flag %v is mutually exclusive with %v", flag.Name, strings.Join(pendingConflicts, ", "))
+			return
+		}
+
+		conflicts, ok := conflictFlags[flag.Name]
+		if ok {
+			for _, conflict := range conflicts {
+				existing, ok := pendingConflict[conflict]
+				if !ok {
+					existing = make([]string, 0)
+				}
+
+				pendingConflict[conflict] = append(existing, flag.Name)
+			}
+		}
+	})
+	if conflict != "" {
+		fmt.Printf("%v\n", conflict)
+		os.Exit(1)
+	}
+}
+
+func (c *Command) checkRequiredFlagSets(cmd *cobra.Command) {
+	// get all flags and which requirement sets seeing each flag
+	// would fulfil
+	membership := make(map[string][]int)
+	unfulfilled := make(map[int]struct{})
+	for idx, requiredSets := range c.RequiredFlagSet {
+		unfulfilled[idx] = struct{}{}
+		for _, required := range requiredSets {
+			members, ok := membership[required]
+			if !ok {
+				members = make([]int, 0)
+			}
+
+			membership[required] = append(members, idx)
+		}
+	}
+
+	// for each flag, remove the indexes of its memberships from unfulfilled
+	cmd.Flags().Visit(func(flag *pflag.Flag) {
+		members, ok := membership[flag.Name]
+		if !ok {
+			return
+		}
+
+		for _, idx := range members {
+			delete(unfulfilled, idx)
+		}
+	})
+
+	// if there's unfulfilled requirement sets, print one of them
+	for idx := range unfulfilled {
+		fmt.Printf("must set one of %v\n", strings.Join(c.RequiredFlagSet[idx], ", "))
+		os.Exit(1)
+	}
 }
 
 func (c *Command) Help() {
 	c.cobraCmd.Help()
 }
 
-func (c *Command) Usage() {
-	c.cobraCmd.Usage()
-}
-
-func (c *Command) ExecuteColon() {
-	if err := c.Init(); err != nil {
-		c.exit(err)
-	}
-
-	if err := c.initColon(); err != nil {
+func (c *RootCommand) ExecuteColon() {
+	if err := c.InitColon(); err != nil {
 		c.exit(err)
 	}
 
 	c.exit(c.cobraCmd.Execute())
 }
 
-func (c *Command) initColon() error {
-	for _, subcommand := range c.Subcommands {
-		if err := subcommand.Init(); err != nil {
+func (c *RootCommand) InitColon() error {
+	if err := c.initCommand(c.Name); err != nil {
+		return err
+	}
+
+	return c.Command.initColonSubcommands(c, "")
+}
+
+// initColonSubcommands currently just adds the subcommands to the root subcommand
+// this means that only <root-cmd> -h will show the commands
+// if you have foo and foo:bar, <root-cmd> -h will not show foo:bar as a subcommand
+// if we want to invest in colon commands this should probably be fixed through help
+// templates
+func (c *Command) initColonSubcommands(root *RootCommand, path string) error {
+	for name, subcommand := range c.Subcommands {
+		if path != "" {
+			name = fmt.Sprintf("%v:%v", path, name)
+		}
+
+		if err := subcommand.initCommand(name); err != nil {
+			return fmt.Errorf("error initializing subcommand %v: %v", name, err)
+		}
+
+		root.cobraCmd.AddCommand(subcommand.cobraCmd)
+
+		if err := subcommand.initColonSubcommands(root, name); err != nil {
 			return err
 		}
 	}
 
-	subcommands, err := c.getSubcommands2("", c.Subcommands)
-	if err != nil {
-		return err
-	}
-
-	for _, subcommand := range subcommands {
-		// why does this need to be an immediately invoked function?
-		// answer here: https://www.ardanlabs.com/blog/2014/06/pitfalls-with-closures-in-go.html
-		// (n.b. subcommand.Name will be copied here since it's a string, but since
-		//  subcommand.Run is a pointer, we need to do this trickery)
-		subcommand.cobraCmd.Run = func(run func([]string)) func(*cobra.Command, []string) {
-			return func(cmd *cobra.Command, args []string) {
-				run(args)
-			}
-		}(subcommand.Run)
-
-		c.cobraCmd.AddCommand(subcommand.cobraCmd)
-	}
-
-	c.isSpaceSeparated = false
-
 	return nil
-}
-
-func (c *Command) getSubcommands2(path string, subcommands []*Command) ([]*Command, error) {
-	var ret []*Command
-	for _, subcommand := range subcommands {
-		name := fmt.Sprintf("%v%v", path, subcommand.Name)
-		subcommand.cobraCmd.Use = name
-		ret = append(ret, subcommand)
-
-		subsubcommands, err := c.getSubcommands2(fmt.Sprintf("%v:", name), subcommand.Subcommands)
-		if err != nil {
-			return nil, err
-		}
-
-		for _, subsubcommand := range subsubcommands {
-			ret = append(ret, subsubcommand)
-		}
-
-	}
-
-	return ret, nil
 }
 
 func (c *Command) exit(err error) {
@@ -265,120 +285,4 @@ func (c *Command) exit(err error) {
 	}
 
 	os.Exit(0)
-}
-
-// Template helpers
-
-// CommandSeparator returns the string needed to invoke a subcommand. This is either a space or ':'.
-func (c *Command) CommandSeparator() string {
-	if c.isSpaceSeparated {
-		return " "
-	}
-
-	return ":"
-}
-
-func (c *Command) IsRunnable() bool {
-	return c.cobraCmd.Runnable()
-}
-
-func (c *Command) HasSubcommands() bool {
-	return len(c.Subcommands) != 0
-}
-
-func (c *Command) HasFlags() bool {
-	return len(c.Flags) != 0
-}
-
-func (c *Command) CommandPath() string {
-	return c.cobraCmd.Name()
-}
-
-func (c *Command) CommandPathBinary() string {
-	return c.cobraCmd.CommandPath()
-}
-
-func (c *Command) FlagsSorted() Flags {
-	flags := c.Flags
-	sort.Sort(flags)
-	return flags
-}
-
-// AllSubcommands returns the recursive subcommand tree as one flat sorted array.
-func (c *Command) AllSubcommands() []*Command {
-	// found is a list of all flattened subcommands
-	found := make([]*Command, 0)
-	// queue is the list of Commands that still need to be flattened
-	queue := c.Subcommands
-
-	done := false
-	for done == false {
-		if len(queue) == 0 {
-			// nothing left to search, found contains all the subcommands
-			done = true
-		} else {
-			// explore the first element in the queue. Add this node to found and add each subcommand to the queue
-			found = append(found, queue[0])
-			queue = append(queue, queue[0].Subcommands...)
-			queue = queue[1:]
-		}
-	}
-
-	return SortCommands(found)
-}
-
-type CommandGroup struct {
-	Commands  []*Command
-	GroupName string
-}
-
-// SubcommandsByGroup returns commands grouped by immediate children of a node. The order is a pre order. The elements in each group are sorted.
-func (c *Command) SubcommandsByGroup() []*CommandGroup {
-	// found is a list of all flattened subcommands
-	found := make([]*CommandGroup, 0)
-	// queue is the list of Commands that still need to be flattened
-	queue := []*Command{c}
-
-	for {
-		if len(queue) == 0 {
-			// nothing left to search, found contains all the subcommands
-			break
-		} else {
-			// explore the first element in the queue. Add this node to found and add each subcommand to the queue
-			nextElem := queue[0]
-			queue = queue[1:]
-			if len(nextElem.Subcommands) == 0 {
-				continue
-			}
-
-			groupName := nextElem.CommandPathBinary()
-			newCmdGroup := &CommandGroup{
-				Commands:  SortCommands(nextElem.Subcommands),
-				GroupName: groupName,
-			}
-			found = append(found, newCmdGroup)
-			queue = append(queue, nextElem.Subcommands...)
-		}
-	}
-
-	return found
-}
-
-func SortCommands(commands CommandList) CommandList {
-	sort.Sort(commands)
-	return commands
-}
-
-type CommandList []*Command
-
-func (c CommandList) Len() int {
-	return len(c)
-}
-
-func (c CommandList) Swap(i, j int) {
-	c[i], c[j] = c[j], c[i]
-}
-
-func (c CommandList) Less(i, j int) bool {
-	return strings.Compare(c[i].CommandPath(), c[j].CommandPath()) == -1
 }

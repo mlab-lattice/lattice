@@ -1,4 +1,4 @@
-load("@io_bazel_rules_go//go:def.bzl", "go_repository")
+load("@bazel_gazelle//:deps.bzl", "go_repository", "git_repository")
 
 GO_DEPENDENCIES = {
     "overlaps": {
@@ -12,11 +12,11 @@ GO_DEPENDENCIES = {
         },
         # github.com/envoyproxy/go-control-plane:v0.2 -> ab9f9a6dab164b7d1246e0e688b0ab7b94d8553e
         # k8s.io:v1.9.3 -> 1643683e1b54a9e88ad26d98f81400c8c9d9f4f9
-        "github.com/golang/protobuf": {
-            "name": "com_github_golang_protobuf",
-            "commit": "ab9f9a6dab164b7d1246e0e688b0ab7b94d8553e",
-            "importpath": "github.com/golang/protobuf",
-        },
+#        "github.com/golang/protobuf": {
+#            "name": "com_github_golang_protobuf",
+#            "commit": "b4deda0973fb4c70b50d226b1af49f3da59f5265",
+#            "importpath": "github.com/golang/protobuf",
+#        },
         # github.com/envoyproxy/go-control-plane:v0.2 -> c155da19408a8799da419ed3eeb0cb5db0ad5dbc
         # github.com/docker/docker:1a57535aa277e0f2a3c1922c736551148c5b4351 -> v1.0.3
         "github.com/sirupsen/logrus": {
@@ -188,40 +188,20 @@ GO_DEPENDENCIES = {
             "name": "io_k8s_api",
             # https://github.com/bazelbuild/rules_go/issues/964
             "build_file_proto_mode": "disable",
-            "tag": "kubernetes-1.10.1",
+            "tag": "kubernetes-1.11.0",
             "importpath": "k8s.io/api",
         },
         "k8s.io/apimachinery": {
             "name": "io_k8s_apimachinery",
-            # Not sure why build files need to be forced to be generated here and that it has to be BUILD.bazel but it does
-            "build_file_generation": "on",
-            "build_file_name": "BUILD.bazel",
             # https://github.com/bazelbuild/rules_go/issues/964
             "build_file_proto_mode": "disable",
-            "tag": "kubernetes-1.10.1",
+            "tag": "kubernetes-1.11.0",
             "importpath": "k8s.io/apimachinery",
-        },
-        "k8s.io/apiextensions-apiserver": {
-            "name": "io_k8s_apiextensions_apiserver",
-            # Not sure why build files need to be forced to be generated here and that it has to be BUILD.bazel but it does
-            "build_file_generation": "on",
-            "build_file_name": "BUILD.bazel",
-            # https://github.com/bazelbuild/rules_go/issues/964
-            "build_file_proto_mode": "disable",
-            "tag": "kubernetes-1.10.1",
-            "importpath": "k8s.io/apiextensions-apiserver",
         },
         "k8s.io/client-go": {
             "name": "io_k8s_client_go",
-            "tag": "kubernetes-1.10.1",
+            "tag": "kubernetes-1.11.0",
             "importpath": "k8s.io/client-go",
-        },
-        "k8s.io/kubernetes": {
-            "name": "io_k8s_kubernetes",
-            "build_file_generation": "on",
-            "build_file_name": "BUILD.bazel",
-            "tag": "v1.10.1",
-            "importpath": "k8s.io/kubernetes",
         },
 
         # testing dependencies
@@ -334,14 +314,9 @@ GO_DEPENDENCIES = {
             "importpath": "github.com/gogo/googleapis",
             "build_file_proto_mode": "disable",
         },
-        "github.com/golang/protobuf": {
-            "name": "com_github_golang_protobuf",
-            "commit": "ab9f9a6dab164b7d1246e0e688b0ab7b94d8553e",
-            "importpath": "github.com/golang/protobuf",
-        },
         "github.com/lyft/protoc-gen-validate": {
             "name": "com_github_lyft_protoc_gen_validate",
-            "commit": "cae364899cd8c08b83bfdcabf4ce4dd4a68ca6da",
+            "commit": "2463485ae0c04eea7977c7f521549229f659e39a",
             "importpath": "github.com/lyft/protoc-gen-validate",
             "build_file_proto_mode": "disable",
         },
@@ -504,11 +479,6 @@ GO_DEPENDENCIES = {
             "commit": "a0d98a5f288019575c6d1f4bb1573fef2d1fcdc4",
             "importpath": "github.com/hashicorp/golang-lru",
         },
-        "github.com/howeyc/gopass": {
-            "name": "com_github_howeyc_gopass",
-            "commit": "bf9dde6d0d2c004a008c27aaee91170c786f6db8",
-            "importpath": "github.com/howeyc/gopass",
-        },
         "github.com/imdario/mergo": {
             "name": "com_github_imdario_mergo",
             "commit": "6633656539c1639d9d78127b7d47c622b5d7b6dc",
@@ -516,14 +486,9 @@ GO_DEPENDENCIES = {
         },
         "github.com/json-iterator/go": {
             "name": "com_github_json_iterator_go",
-            "commit": "13f86432b882000a51c6e610c620974462691a97",
+            "commit": "f2b4162afba35581b6d4a50d3b8f34e33c144682",
             "importpath": "github.com/json-iterator/go",
         },
-#        "github.com/juju/ratelimit": {
-#            "name": "com_github_juju_ratelimit",
-#            "commit": "5b9ff866471762aa2ab2dced63c9fb6f53921342",
-#            "importpath": "github.com/juju/ratelimit",
-#        },
         "github.com/mailru/easyjson": {
             "name": "com_github_mailru_easyjson",
             "commit": "2f5df55504ebc322e4d52d34df6a1f5b503bf26d",
@@ -560,11 +525,11 @@ GO_DEPENDENCIES = {
             "commit": "f51c12702a4d776e4c1fa9b0fabab841babae631",
             "importpath": "golang.org/x/time",
         },
-        "golang.org/x/tools": {
-            "name": "org_golang_x_tools",
-            "commit": "2382e3994d48b1d22acc2c86bcad0a2aff028e32",
-            "importpath": "golang.org/x/tools",
-        },
+#        "golang.org/x/tools": {
+#            "name": "org_golang_x_tools",
+#            "commit": "2382e3994d48b1d22acc2c86bcad0a2aff028e32",
+#            "importpath": "golang.org/x/tools",
+#        },
         "gopkg.in/inf.v0": {
             "name": "in_gopkg_inf_v0",
             "commit": "3887ee99ecf07df5b447e9b00d9c0b2adaa9f3e4",
@@ -578,14 +543,24 @@ GO_DEPENDENCIES = {
         },
         "k8s.io/apiserver": {
             "name": "io_k8s_apiserver",
-            "tag": "kubernetes-1.10.1",
+            "tag": "kubernetes-1.11.0",
             "importpath": "k8s.io/apiserver",
         },
         "k8s.io/kube-openapi": {
             "name": "io_k8s_kube_openapi",
-            "commit": "50ae88d24ede7b8bad68e23c805b5d3da5c8abaf",
+            "commit": "91cfa479c814065e420cee7ed227db0f63a5854e",
             "importpath": "k8s.io/kube-openapi",
         },
+        "github.com/modern-go/reflect2": {
+            "name": "com_github_modern_go_reflect2",
+            "commit": "05fbef0ca5da472bbf96c9322b84a53edc03c9fd",
+            "importpath": "github.com/modern-go/reflect2",
+        },
+        "github.com/modern-go/concurrent": {
+            "name": "com_github_modern_go_concurrent",
+            "commit": "bacd9c7ef1dd9b15be4a9909b8ac7a4e313eec94",
+            "importpath": "github.com/modern-go/concurrent",
+        }
     },
     
     "github.com/stretchr/testify": {

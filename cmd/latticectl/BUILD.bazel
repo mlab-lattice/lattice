@@ -1,11 +1,17 @@
 load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
+load("//bazel/go:docgen.bzl", "go_binary_docgen")
 
 go_library(
     name = "go_default_library",
     srcs = ["main.go"],
     importpath = "github.com/mlab-lattice/lattice/cmd/latticectl",
     visibility = ["//visibility:public"],
-    deps = ["//pkg/latticectl:go_default_library"],
+    deps = [
+        "//pkg/latticectl:go_default_library",
+        "//pkg/latticectl/command:go_default_library",
+        "//pkg/util/cli:go_default_library",
+        "//pkg/util/xdg:go_default_library",
+    ],
 )
 
 go_binary(
@@ -13,3 +19,5 @@ go_binary(
     embed = [":go_default_library"],
     visibility = ["//visibility:public"],
 )
+
+go_binary_docgen()

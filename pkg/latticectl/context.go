@@ -3,8 +3,8 @@ package latticectl
 import (
 	"github.com/mlab-lattice/lattice/pkg/latticectl/command"
 	"github.com/mlab-lattice/lattice/pkg/latticectl/context"
-	"github.com/mlab-lattice/lattice/pkg/util/cli2"
-	"github.com/mlab-lattice/lattice/pkg/util/cli2/printer"
+	"github.com/mlab-lattice/lattice/pkg/util/cli"
+	"github.com/mlab-lattice/lattice/pkg/util/cli/printer"
 	"os"
 )
 
