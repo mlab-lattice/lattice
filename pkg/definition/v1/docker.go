@@ -20,32 +20,25 @@ type DockerFile struct {
 	Path     string    `json:"path,omitempty"`
 }
 
-type DockerBuildOptions map[string]ValueOrSecret
 type DockerBuildArgs map[string]*string
 
 type DockerBuild struct {
 	BuildContext *DockerBuildContext `json:"build_context,omitempty"`
 	DockerFile   *DockerFile         `json:"docker_file,omitempty"`
 	BuildArgs    DockerBuildArgs     `json:"build_args,omitempty"`
-	Options      DockerBuildOptions  `json:"options,omitempty"`
+	Options      *DockerBuildOptions `json:"options,omitempty"`
 }
 
 type DockerBuildOptions struct {
-	// do we want to support additional tags?
-	Tags []string
 	// do not use local cache for intermediate layers
-	NoCache bool
+	NoCache bool `json:"no_cache,omitempty"`
 	// always attempt to pull a newer version of the image
-	PullParent bool
-	// image metadata
-	Labels map[string]string
-	// add these to /etc/hosts
-	ExtraHosts []string
+	PullParent bool `json:"pull_parent,omitempty"`
+	// add these to /etc/hosts of intermediate build images (overwritten on deploy)
+	ExtraHosts []string `json:"extra_hosts,omitempty"`
 	// when multiple build stages are present, this can be used to treat the stage it names as the
 	// final stage for the build
-	Target string
-	// Version specifies the version of the unerlying builder to use
-	Version BuilderVersion
+	Target string `json:"target,omitempty"`
 
 	// --------------------
 	// experimental options
@@ -86,20 +79,21 @@ type DockerBuildOptions struct {
 	// CgroupParent string: open issue for documentation here:
 	//                      https://github.com/moby/moby/issues/12849
 	//                      run containers used during the build process in this cgroup
-
 	// NetworkMode string: set networking mode for RUN instructions during build (default is
 	//                     "bridge", other options include: "none", "container:<name|id>", "host",
 	//                     "<network-name|network-id>")
-
 	// ShmSize int64: set the size of /dev/shm (i.e., tmpfs), format is "<number><unit>" where
 	//                "<unit>" is "b", "k", "m", or "g" (default is 64m). can be used to speed
 	//                builds up, supposedly.
-
 	// Ulimits []*units.Ulimit: run intermediate containers using these ulimits
 	// Squash bool: squash the resulting image's layers to the parent preserves the original
 	//              image and creates a new one from the parent with all the changes applied
 	//              to a single layer
-
 	// SecurityOpt []string: set various security parameters for intermediate images (see
 	//                       https://docs.docker.com/engine/reference/run/#security-configuration)
+	// Version BuilderVersion: specifies the version of the unerlying builder to use. only two
+	//                         options at present, "1" for v1 and "2" for experimental
+	//                         BuilderBuildKit
+	// Labels map[string]string: image metadata
+	// Tags []string: additional tags
 }

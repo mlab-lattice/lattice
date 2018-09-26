@@ -79,18 +79,11 @@ func (b *Builder) buildDockerImage(
 
 	// Tag the image to be built with the desired FQN
 	dockerImageFQN := getDockerImageFQN(b.DockerOptions.Registry, b.DockerOptions.Repository, b.DockerOptions.Tag)
-	buildOptions := dockertypes.ImageBuildOptions{
-		Tags: []string{dockerImageFQN},
-	}
 
-	if len(buildArgs) > 0 {
-		buildOptions.BuildArgs = make(map[string]*string)
-		for k, v := range buildArgs {
-			buildOptions.BuildArgs[k] = v
-		}
-	}
+	dockerClientBuildOptions := getImageBuildOptions(dockerImageFQN, buildArgs, nil)
 
-	response, err := b.DockerClient.ImageBuild(context.Background(), buildContext, buildOptions)
+	response, err := b.DockerClient.ImageBuild(
+		context.Background(), buildContext, dockerClientBuildOptions)
 	if err != nil {
 		// The build should at least be able to be sent to the daemon even if the user has an error, so
 		// if this fails, label it as internal.
@@ -150,7 +143,7 @@ func (b *Builder) buildDockerBuild(
 	buildContextDirectory,
 	buildContextPath string,
 	buildArgs map[string]*string,
-	options map[string]definitionv1.ValueOrSecret) error {
+	buildOptions *definitionv1.DockerBuildOptions) error {
 	color.Blue("Building docker build...")
 
 	if b.StatusUpdater != nil {
@@ -203,18 +196,11 @@ func (b *Builder) buildDockerBuild(
 
 	// Tag the image to be built with the desired FQN
 	dockerImageFQN := getDockerImageFQN(b.DockerOptions.Registry, b.DockerOptions.Repository, b.DockerOptions.Tag)
-	buildOptions := dockertypes.ImageBuildOptions{
-		Tags: []string{dockerImageFQN},
-	}
 
-	if len(buildArgs) > 0 {
-		buildOptions.BuildArgs = make(map[string]*string)
-		for k, v := range buildArgs {
-			buildOptions.BuildArgs[k] = v
-		}
-	}
+	dockerClientBuildOptions := getImageBuildOptions(dockerImageFQN, buildArgs, buildOptions)
 
-	response, err := b.DockerClient.ImageBuild(context.Background(), buildContext, buildOptions)
+	response, err := b.DockerClient.ImageBuild(
+		context.Background(), buildContext, dockerClientBuildOptions)
 	if err != nil {
 		// The build should at least be able to be sent to the daemon even if the user has an error, so
 		// if this fails, label it as internal.
@@ -409,4 +395,32 @@ func getDockerImageFQN(registry, repository, tag string) string {
 		return fmt.Sprintf("%v:%v", repository, tag)
 	}
 	return fmt.Sprintf("%v/%v:%v", registry, repository, tag)
+}
+
+func getImageBuildOptions(
+	dockerImageFQN string,
+	buildArgs map[string]*string,
+	buildOptions *definitionv1.DockerBuildOptions) dockertypes.ImageBuildOptions {
+	dockerClientBuildOptions := dockertypes.ImageBuildOptions{
+		Tags: []string{dockerImageFQN},
+	}
+
+	if len(buildArgs) > 0 {
+		dockerClientBuildOptions.BuildArgs = make(map[string]*string)
+		for k, v := range buildArgs {
+			dockerClientBuildOptions.BuildArgs[k] = v
+		}
+	}
+
+	if buildOptions != nil {
+		dockerClientBuildOptions.NoCache = buildOptions.NoCache
+		dockerClientBuildOptions.PullParent = buildOptions.PullParent
+		dockerClientBuildOptions.Target = buildOptions.Target
+		if len(buildOptions.ExtraHosts) > 0 {
+			dockerClientBuildOptions.ExtraHosts = make([]string, len(buildOptions.ExtraHosts))
+			copy(dockerClientBuildOptions.ExtraHosts, buildOptions.ExtraHosts)
+		}
+	}
+
+	return dockerClientBuildOptions
 }
