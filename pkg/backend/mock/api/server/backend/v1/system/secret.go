@@ -22,7 +22,7 @@ func (b *SecretBackend) List() ([]v1.Secret, error) {
 
 	var secrets []v1.Secret
 	for _, secret := range record.Secrets {
-		secrets = append(secrets, *secret)
+		secrets = append(secrets, *secret.DeepCopy())
 	}
 
 	return secrets, nil
@@ -39,9 +39,7 @@ func (b *SecretBackend) Get(path tree.PathSubcomponent) (*v1.Secret, error) {
 
 	for _, secret := range record.Secrets {
 		if secret.Path == path {
-			result := new(v1.Secret)
-			*result = *secret
-			return result, nil
+			return secret.DeepCopy(), nil
 		}
 	}
 

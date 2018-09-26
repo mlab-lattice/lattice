@@ -67,9 +67,7 @@ func (b *Backend) Create(systemID v1.SystemID, definitionURL string) (*v1.System
 	b.registry.Systems[systemID] = record
 	b.controller.CreateSystem(record)
 
-	system := new(v1.System)
-	*system = *record.System
-	return system, nil
+	return record.System.DeepCopy(), nil
 }
 
 func (b *Backend) List() ([]v1.System, error) {
@@ -78,7 +76,7 @@ func (b *Backend) List() ([]v1.System, error) {
 
 	var systems []v1.System
 	for _, s := range b.registry.Systems {
-		systems = append(systems, *s.System)
+		systems = append(systems, *s.System.DeepCopy())
 	}
 
 	return systems, nil
@@ -93,9 +91,7 @@ func (b *Backend) Get(systemID v1.SystemID) (*v1.System, error) {
 		return nil, err
 	}
 
-	system := new(v1.System)
-	*system = *record.System
-	return system, nil
+	return record.System.DeepCopy(), nil
 }
 
 func (b *Backend) Delete(systemID v1.SystemID) error {

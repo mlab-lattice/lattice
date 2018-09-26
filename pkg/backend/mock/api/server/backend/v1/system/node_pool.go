@@ -21,7 +21,7 @@ func (b *NodePoolBackend) List() ([]v1.NodePool, error) {
 
 	var nodePools []v1.NodePool
 	for _, nodePool := range record.NodePools {
-		nodePools = append(nodePools, *nodePool)
+		nodePools = append(nodePools, *nodePool.DeepCopy())
 	}
 
 	return nodePools, nil
@@ -41,5 +41,5 @@ func (b *NodePoolBackend) Get(path tree.PathSubcomponent) (*v1.NodePool, error) 
 		return nil, v1.NewInvalidPathError()
 	}
 
-	return nodePool, nil
+	return nodePool.DeepCopy(), nil
 }

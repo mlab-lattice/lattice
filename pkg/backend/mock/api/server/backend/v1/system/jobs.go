@@ -53,10 +53,7 @@ func (b *JobBackend) Run(
 
 	// copy the build so we don't return a pointer into the backend
 	// so we can release the lock
-	result := new(v1.Job)
-	*result = *job
-
-	return result, nil
+	return job.DeepCopy(), nil
 }
 
 func (b *JobBackend) List() ([]v1.Job, error) {
@@ -70,7 +67,7 @@ func (b *JobBackend) List() ([]v1.Job, error) {
 
 	var jobs []v1.Job
 	for _, job := range record.Jobs {
-		jobs = append(jobs, *job)
+		jobs = append(jobs, *job.DeepCopy())
 	}
 
 	return jobs, nil
@@ -91,10 +88,7 @@ func (b *JobBackend) Get(id v1.JobID) (*v1.Job, error) {
 
 	// copy the build so we don't return a pointer into the backend
 	// so we can release the lock
-	result := new(v1.Job)
-	*result = *job
-
-	return result, nil
+	return job.DeepCopy(), nil
 }
 
 func (b *JobBackend) Logs(
