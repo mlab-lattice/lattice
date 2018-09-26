@@ -13,7 +13,6 @@ type Location struct {
 	GitRepository *GitRepository `json:"git_repository,omitempty"`
 }
 
-// XXX <GEB>: should this be locationDecoder? following the convention in container.go for now
 type locationEncoder struct {
 	Type string `json:"type"`
 }

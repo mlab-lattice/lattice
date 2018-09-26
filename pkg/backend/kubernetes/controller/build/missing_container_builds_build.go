@@ -163,11 +163,11 @@ func (c *Controller) hydrateCommandBuild(
 		return nil, err
 	}
 
+	// XXX <GEB>: looks like this mutates the cache anyway since CommandBuild is a pointer?
+
 	// Copy so we don't mutate the cache
 	b := &definitionv1.ContainerBuild{}
 	*b = *containerBuild
-
-	// XXX <GEB>: looks like this mutates the cache anyway since CommandBuild is a pointer?
 
 	b.CommandBuild.Source = &definitionv1.ContainerBuildSource{
 		GitRepository: &definitionv1.GitRepository{
@@ -232,8 +232,6 @@ func (c *Controller) hydrateDockerBuild(
 			Value: *i.SSHKeySecret,
 		}
 	}
-
-	// XXX <GEB>: break out addition of sshKey?
 
 	// if BuildContext.Location is nil, then initialize it to point to the same repo
 	// that its definition was in
