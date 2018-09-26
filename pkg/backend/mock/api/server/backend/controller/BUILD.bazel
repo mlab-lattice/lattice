@@ -23,6 +23,7 @@ go_library(
         "//pkg/definition/v1:go_default_library",
         "//pkg/util/git:go_default_library",
         "//pkg/util/sync:go_default_library",
+        "//pkg/util/time:go_default_library",
         "@com_github_satori_go_uuid//:go_default_library",
     ],
 )

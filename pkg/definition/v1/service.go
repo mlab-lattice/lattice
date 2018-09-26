@@ -17,6 +17,8 @@ var ServiceType = component.Type{
 //  NOTE: if you update the Service struct, you _must_ update the
 //        serviceEncoder struct as well as the serviceIR struct
 
+// +k8s:deepcopy-gen:interfaces=github.com/mlab-lattice/lattice/pkg/definition/component.Interface
+
 type Service struct {
 	Description string
 

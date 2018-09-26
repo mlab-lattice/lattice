@@ -7,12 +7,12 @@ import (
 	"time"
 
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
+	"github.com/mlab-lattice/lattice/pkg/backend/mock/api/server/backend/registry"
 	"github.com/mlab-lattice/lattice/pkg/definition/component/resolver"
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 	definitionv1 "github.com/mlab-lattice/lattice/pkg/definition/v1"
 	syncutil "github.com/mlab-lattice/lattice/pkg/util/sync"
-
-	"github.com/mlab-lattice/lattice/pkg/backend/mock/api/server/backend/registry"
+	timeutil "github.com/mlab-lattice/lattice/pkg/util/time"
 )
 
 func (c *Controller) runTeardown(teardown *v1.Teardown, record *registry.SystemRecord) {
@@ -33,8 +33,7 @@ func (c *Controller) runTeardown(teardown *v1.Teardown, record *registry.SystemR
 		c.registry.Lock()
 		defer c.registry.Unlock()
 
-		now := time.Now()
-		teardown.Status.StartTimestamp = &now
+		teardown.Status.StartTimestamp = timeutil.New(time.Now())
 		teardown.Status.State = v1.TeardownStateInProgress
 
 		record.Definition.V1().Services(func(path tree.Path, _ *definitionv1.Service, _ *resolver.ResolutionInfo) tree.WalkContinuation {
@@ -63,8 +62,7 @@ func (c *Controller) runTeardown(teardown *v1.Teardown, record *registry.SystemR
 	defer c.registry.Unlock()
 
 	record.Definition = resolver.NewResolutionTree()
-	now := time.Now()
-	teardown.Status.CompletionTimestamp = &now
+	teardown.Status.CompletionTimestamp = timeutil.New(time.Now())
 	teardown.Status.State = v1.TeardownStateSucceeded
 }
 

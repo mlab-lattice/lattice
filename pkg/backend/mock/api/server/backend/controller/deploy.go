@@ -13,6 +13,7 @@ import (
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 	definitionv1 "github.com/mlab-lattice/lattice/pkg/definition/v1"
 	syncutil "github.com/mlab-lattice/lattice/pkg/util/sync"
+	timeutil "github.com/mlab-lattice/lattice/pkg/util/time"
 )
 
 func (c *Controller) runDeploy(deploy *v1.Deploy, record *registry.SystemRecord) {
@@ -48,9 +49,8 @@ func (c *Controller) runDeploy(deploy *v1.Deploy, record *registry.SystemRecord)
 		defer c.registry.Unlock()
 		log.Printf("running deploy %v", deploy.ID)
 
-		now := time.Now()
 		deploy.Status.State = v1.DeployStateAccepted
-		deploy.Status.StartTimestamp = &now
+		deploy.Status.StartTimestamp = timeutil.New(time.Now())
 	}()
 
 	if !c.waitForBuildTermination(deploy, record) {
@@ -61,10 +61,9 @@ func (c *Controller) runDeploy(deploy *v1.Deploy, record *registry.SystemRecord)
 
 	c.registry.Lock()
 	defer c.registry.Unlock()
-	now := time.Now()
 
 	deploy.Status.State = v1.DeployStateSucceeded
-	deploy.Status.CompletionTimestamp = &now
+	deploy.Status.CompletionTimestamp = timeutil.New(time.Now())
 
 	log.Printf("deploy %v complete", deploy.ID)
 }

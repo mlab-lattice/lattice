@@ -15,12 +15,18 @@ var ReferenceType = component.Type{
 	Type:       ComponentTypeReference,
 }
 
+// +k8s:deepcopy-gen:interfaces=github.com/mlab-lattice/lattice/pkg/definition/component.Interface
+
 type Reference struct {
 	GitRepository *GitRepositoryReference
 	File          *string
 
-	Parameters map[string]interface{}
+	Parameters ReferenceParameters
 }
+
+// +k8s:deepcopy-gen=false
+
+type ReferenceParameters map[string]interface{}
 
 type GitRepositoryReference struct {
 	File *string `json:"file"`
@@ -91,5 +97,5 @@ type referenceEncoder struct {
 	GitRepository *GitRepositoryReference `json:"git_repository,omitempty"`
 	File          *string                 `json:"file,omitempty"`
 
-	Parameters map[string]interface{} `json:"parameters"`
+	Parameters ReferenceParameters `json:"parameters"`
 }

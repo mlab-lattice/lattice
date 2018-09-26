@@ -10,6 +10,7 @@ import (
 	"github.com/mlab-lattice/lattice/pkg/backend/mock/api/server/backend/registry"
 	"github.com/mlab-lattice/lattice/pkg/definition/component/resolver"
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
+	timeutil "github.com/mlab-lattice/lattice/pkg/util/time"
 )
 
 type Backend struct {
@@ -42,7 +43,7 @@ func (b *Backend) Create(systemID v1.SystemID, definitionURL string) (*v1.System
 			Status: v1.SystemStatus{
 				State: v1.SystemStatePending,
 
-				CreationTimestamp: time.Now(),
+				CreationTimestamp: *timeutil.New(time.Now()),
 			},
 		},
 		Definition: resolver.NewResolutionTree(),

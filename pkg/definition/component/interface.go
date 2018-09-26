@@ -12,6 +12,9 @@ const (
 
 type Interface interface {
 	Type() Type
+
+	// see: https://github.com/kubernetes/gengo/blob/master/examples/deepcopy-gen/main.go#L24-L31
+	DeepCopyInterface() Interface
 }
 
 func TypeFromMap(m map[string]interface{}) (Type, error) {

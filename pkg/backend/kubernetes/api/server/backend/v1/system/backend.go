@@ -8,11 +8,11 @@ import (
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	latticeclientset "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/generated/clientset/versioned"
 	kubeutil "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/kubernetes"
+	"github.com/mlab-lattice/lattice/pkg/util/time"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	kubeclientset "k8s.io/client-go/kubernetes"
-	"time"
 )
 
 func NewBackend(
@@ -121,7 +121,7 @@ func (b *Backend) transformSystem(system *latticev1.System) (*v1.System, error) 
 
 	var deletionTimestamp *time.Time
 	if system.DeletionTimestamp != nil {
-		deletionTimestamp = &(*system.DeletionTimestamp).Time
+		deletionTimestamp = time.New((*system.DeletionTimestamp).Time)
 	}
 
 	externalSystem := &v1.System{
@@ -132,7 +132,7 @@ func (b *Backend) transformSystem(system *latticev1.System) (*v1.System, error) 
 
 			Version: version,
 
-			CreationTimestamp: system.CreationTimestamp.Time,
+			CreationTimestamp: *time.New(system.CreationTimestamp.Time),
 			DeletionTimestamp: deletionTimestamp,
 		},
 	}

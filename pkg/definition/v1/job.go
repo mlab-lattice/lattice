@@ -15,6 +15,8 @@ var JobType = component.Type{
 	Type:       ComponentTypeJob,
 }
 
+// +k8s:deepcopy-gen:interfaces=github.com/mlab-lattice/lattice/pkg/definition/component.Interface
+
 type Job struct {
 	Description string
 

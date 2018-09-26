@@ -5,6 +5,7 @@ go_library(
     srcs = [
         "build.go",
         "deploy.go",
+        "doc.go",
         "errors.go",
         "job.go",
         "lattice.go",
@@ -14,8 +15,12 @@ go_library(
         "service.go",
         "system.go",
         "teardown.go",
+        "zz_generated.deepcopy.go",
     ],
     importpath = "github.com/mlab-lattice/lattice/pkg/api/v1",
     visibility = ["//visibility:public"],
-    deps = ["//pkg/definition/tree:go_default_library"],
+    deps = [
+        "//pkg/definition/tree:go_default_library",
+        "//pkg/util/time:go_default_library",
+    ],
 )

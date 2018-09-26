@@ -14,6 +14,8 @@ var SystemType = component.Type{
 	Type:       ComponentTypeSystem,
 }
 
+// +k8s:deepcopy-gen:interfaces=github.com/mlab-lattice/lattice/pkg/definition/component.Interface
+
 type System struct {
 	Description string
 
