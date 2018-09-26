@@ -24,9 +24,20 @@ type Reference struct {
 	Parameters ReferenceParameters
 }
 
-// +k8s:deepcopy-gen=false
-
 type ReferenceParameters map[string]interface{}
+
+func (in *ReferenceParameters) DeepCopyInto(out *ReferenceParameters) {
+	// not sure what to do about errors here
+	// possible options:
+	//   - do nothing (current impl, not great)
+	//   - panic (not great)
+	//   - have some sort of canary value in ReferenceParameter, so after you can check to see if
+	//     the copy worked
+	//     - not feasible for when ReferenceParameters are deeply nested
+	data, _ := json.Marshal(&in)
+	json.Unmarshal(data, &out)
+	return
+}
 
 type GitRepositoryReference struct {
 	File *string `json:"file"`

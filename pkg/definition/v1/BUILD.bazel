@@ -6,7 +6,6 @@ go_library(
         "component.go",
         "constants.go",
         "container.go",
-        "deepcopy.go",
         "doc.go",
         "docker.go",
         "git.go",
