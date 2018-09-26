@@ -5,6 +5,7 @@ go_library(
     srcs = [
         "path.go",
         "radix.go",
+        "zz_generated.deepcopy.go",
     ],
     importpath = "github.com/mlab-lattice/lattice/pkg/definition/tree",
     visibility = ["//visibility:public"],

@@ -47,6 +47,7 @@ func NewResolutionTree() *ResolutionTree {
 
 // ResolutionTree provides efficient path-based access to info about the resolution of a given
 // tree of components.
+// +k8s:deepcopy-gen=true
 type ResolutionTree struct {
 	inner *tree.JSONRadix
 	v1    *V1Tree
@@ -123,6 +124,7 @@ func (t *ResolutionTree) UnmarshalJSON(data []byte) error {
 }
 
 // V1Tree provides an overlay on top of a resolution tree to access v1 components in the tree.
+// +k8s:deepcopy-gen=true
 type V1Tree struct {
 	*ResolutionTree
 }

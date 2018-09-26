@@ -98,10 +98,24 @@ func NewJSONRadix(marshaller JSONRadixMarshalFn, unmarshaller JSONRadixUnmarshal
 
 // JSONRadix is a Radix tree that is capable of being (de)serialized to/from
 // JSON using the supplied marshalling/unmarshalling functions.
+// +k8s:deepcopy-gen=true
 type JSONRadix struct {
 	*Radix
 	marshaller   JSONRadixMarshalFn
 	unmarshaller JSONRadixUnmarshalFn
+}
+
+func (in *JSONRadix) DeepCopyInto(out *JSONRadix) {
+	// not sure what to do about errors here
+	// possible options:
+	//   - do nothing (current impl, not great)
+	//   - panic (not great)
+	//   - have some sort of canary value in ReferenceParameter, so after you can check to see if
+	//     the copy worked
+	//     - not feasible for when ReferenceParameters are deeply nested
+	data, _ := json.Marshal(&in)
+	json.Unmarshal(data, &out)
+	return
 }
 
 // MarshalJSON fulfills the json.Marshaller interface.

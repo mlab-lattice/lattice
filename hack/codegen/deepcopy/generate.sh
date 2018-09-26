@@ -5,12 +5,14 @@ set -e
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 LATTICE_ROOT=${DIR}/../../..
 
-deepcopy-gen --alsologtostderr \
-    -h ${LATTICE_ROOT}/hack/codegen/go-header.txt \
-    --input-dirs github.com/mlab-lattice/lattice/pkg/api/v1 \
-    -O zz_generated.deepcopy
+declare -a packages=("api/v1" "definition/v1" "definition/tree" "definition/component/resolver")
 
-deepcopy-gen --alsologtostderr \
-    -h ${LATTICE_ROOT}/hack/codegen/go-header.txt \
-    --input-dirs github.com/mlab-lattice/lattice/pkg/definition/v1 \
-    -O zz_generated.deepcopy
+## now loop through the above array
+for p in "${packages[@]}"
+do
+    deepcopy-gen --alsologtostderr \
+        -h ${LATTICE_ROOT}/hack/codegen/go-header.txt \
+        --input-dirs github.com/mlab-lattice/lattice/pkg/${p} \
+        -O zz_generated.deepcopy
+done
+

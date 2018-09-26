@@ -9,6 +9,7 @@ go_library(
         "secret_store.go",
         "template_store.go",
         "v1.go",
+        "zz_generated.deepcopy.go",
     ],
     importpath = "github.com/mlab-lattice/lattice/pkg/definition/component/resolver",
     visibility = ["//visibility:public"],
