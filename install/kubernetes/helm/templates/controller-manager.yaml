@@ -129,7 +129,7 @@ roleRef:
   name: {{ .Values.prefix }}-controller-manager
 subjects:
 - kind: ServiceAccount
-  name: lattice-controller-manager
+  name: controller-manager
   namespace: {{ .Values.prefix }}-internal
 ---
 apiVersion: apps/v1

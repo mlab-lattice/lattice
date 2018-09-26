@@ -7,7 +7,6 @@ go_library(
         "build.go",
         "config.go",
         "container_build.go",
-        "deepcopy.go",
         "deploy.go",
         "doc.go",
         "git_template.go",

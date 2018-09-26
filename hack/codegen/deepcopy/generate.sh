@@ -5,7 +5,13 @@ set -e
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 LATTICE_ROOT=${DIR}/../../..
 
-declare -a packages=("api/v1" "definition/v1" "definition/tree" "definition/component/resolver")
+declare -a packages=(
+    "api/v1"
+    "definition/v1"
+    "definition/tree"
+    "definition/component/resolver"
+    "definition/component/resolver/template"
+)
 
 ## now loop through the above array
 for p in "${packages[@]}"

@@ -51,7 +51,6 @@ type BuildSpec struct {
 	Path    *tree.Path  `json:"path"`
 }
 
-// +k8s:deepcopy-gen=false
 type BuildStatus struct {
 	// Build specs are immutable so no need for ObservedGeneration
 

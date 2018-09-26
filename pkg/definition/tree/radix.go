@@ -25,6 +25,7 @@ func NewRadix() *Radix {
 
 // Radix provides efficient insertion, retrieval, and deletion,
 // as well as prefixed retrieval and deletion on paths.
+// +k8s:deepcopy-gen=false
 type Radix struct {
 	inner *radix.Tree
 }
@@ -98,7 +99,6 @@ func NewJSONRadix(marshaller JSONRadixMarshalFn, unmarshaller JSONRadixUnmarshal
 
 // JSONRadix is a Radix tree that is capable of being (de)serialized to/from
 // JSON using the supplied marshalling/unmarshalling functions.
-// +k8s:deepcopy-gen=true
 type JSONRadix struct {
 	*Radix
 	marshaller   JSONRadixMarshalFn
@@ -114,6 +114,8 @@ func (in *JSONRadix) DeepCopyInto(out *JSONRadix) {
 	//     the copy worked
 	//     - not feasible for when ReferenceParameters are deeply nested
 	data, _ := json.Marshal(&in)
+	out.marshaller = in.marshaller
+	out.unmarshaller = in.unmarshaller
 	json.Unmarshal(data, &out)
 	return
 }

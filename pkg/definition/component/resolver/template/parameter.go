@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"reflect"
 
+	"encoding/json"
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 	definitionv1 "github.com/mlab-lattice/lattice/pkg/definition/v1"
 )
@@ -34,6 +35,19 @@ func (e *ParameterTypeError) Error() string {
 type Parameter struct {
 	Type    ParameterType `json:"type"`
 	Default interface{}   `json:"default,omitempty"`
+}
+
+func (in *Parameter) DeepCopyInto(out *Parameter) {
+	// not sure what to do about errors here
+	// possible options:
+	//   - do nothing (current impl, not great)
+	//   - panic (not great)
+	//   - have some sort of canary value in ReferenceParameter, so after you can check to see if
+	//     the copy worked
+	//     - not feasible for when ReferenceParameters are deeply nested
+	data, _ := json.Marshal(&in)
+	json.Unmarshal(data, &out)
+	return
 }
 
 func (d Parameter) Validate(assignment interface{}) error {

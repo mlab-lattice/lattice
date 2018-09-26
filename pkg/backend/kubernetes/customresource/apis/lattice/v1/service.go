@@ -102,7 +102,6 @@ func (s *Service) NeedsAddressLoadBalancer() bool {
 	return false
 }
 
-// +k8s:deepcopy-gen=false
 type ServiceSpec struct {
 	Definition definitionv1.Service `json:"definition"`
 

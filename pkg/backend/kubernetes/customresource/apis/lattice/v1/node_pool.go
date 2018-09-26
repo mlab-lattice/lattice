@@ -339,10 +339,21 @@ type NodePoolList struct {
 //		"bar": { "abc": [1, 2] },
 //		"foo": { "xyz": [5] }
 //	}
-// +k8s:deepcopy-gen=false
 type NodePoolAnnotationValue map[string]NodePoolAnnotationValueNamespace
 
-// +k8s:deepcopy-gen=false
+func (in NodePoolAnnotationValue) DeepCopyInto(out *NodePoolAnnotationValue) {
+	{
+		in := &in
+		*out = make(NodePoolAnnotationValue, len(*in))
+		for key, val := range *in {
+			// generated deep copy kept trying to dereference the result of val.DeepCopy(),
+			// but in this case it's not a pointer so it shouldn't be dereferenced
+			(*out)[key] = val.DeepCopy()
+		}
+		return
+	}
+}
+
 type NodePoolAnnotationValueNamespace map[string][]NodePoolEpoch
 
 func (a NodePoolAnnotationValue) IsEmpty() bool {

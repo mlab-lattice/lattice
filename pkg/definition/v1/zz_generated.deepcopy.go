@@ -14,30 +14,48 @@ func (in *Container) DeepCopyInto(out *Container) {
 	*out = *in
 	if in.Build != nil {
 		in, out := &in.Build, &out.Build
-		*out = new(ContainerBuild)
-		(*in).DeepCopyInto(*out)
+		if *in == nil {
+			*out = nil
+		} else {
+			*out = new(ContainerBuild)
+			(*in).DeepCopyInto(*out)
+		}
 	}
 	if in.Exec != nil {
 		in, out := &in.Exec, &out.Exec
-		*out = new(ContainerExec)
-		(*in).DeepCopyInto(*out)
+		if *in == nil {
+			*out = nil
+		} else {
+			*out = new(ContainerExec)
+			(*in).DeepCopyInto(*out)
+		}
 	}
 	if in.Ports != nil {
 		in, out := &in.Ports, &out.Ports
 		*out = make(map[int32]ContainerPort, len(*in))
 		for key, val := range *in {
-			(*out)[key] = *val.DeepCopy()
+			newVal := new(ContainerPort)
+			val.DeepCopyInto(newVal)
+			(*out)[key] = *newVal
 		}
 	}
 	if in.HealthCheck != nil {
 		in, out := &in.HealthCheck, &out.HealthCheck
-		*out = new(ContainerHealthCheck)
-		(*in).DeepCopyInto(*out)
+		if *in == nil {
+			*out = nil
+		} else {
+			*out = new(ContainerHealthCheck)
+			(*in).DeepCopyInto(*out)
+		}
 	}
 	if in.Resources != nil {
 		in, out := &in.Resources, &out.Resources
-		*out = new(ContainerResources)
-		**out = **in
+		if *in == nil {
+			*out = nil
+		} else {
+			*out = new(ContainerResources)
+			**out = **in
+		}
 	}
 	return
 }
@@ -57,13 +75,21 @@ func (in *ContainerBuild) DeepCopyInto(out *ContainerBuild) {
 	*out = *in
 	if in.CommandBuild != nil {
 		in, out := &in.CommandBuild, &out.CommandBuild
-		*out = new(ContainerBuildCommand)
-		(*in).DeepCopyInto(*out)
+		if *in == nil {
+			*out = nil
+		} else {
+			*out = new(ContainerBuildCommand)
+			(*in).DeepCopyInto(*out)
+		}
 	}
 	if in.DockerImage != nil {
 		in, out := &in.DockerImage, &out.DockerImage
-		*out = new(DockerImage)
-		**out = **in
+		if *in == nil {
+			*out = nil
+		} else {
+			*out = new(DockerImage)
+			**out = **in
+		}
 	}
 	return
 }
@@ -83,8 +109,12 @@ func (in *ContainerBuildCommand) DeepCopyInto(out *ContainerBuildCommand) {
 	*out = *in
 	if in.Source != nil {
 		in, out := &in.Source, &out.Source
-		*out = new(ContainerBuildSource)
-		(*in).DeepCopyInto(*out)
+		if *in == nil {
+			*out = nil
+		} else {
+			*out = new(ContainerBuildSource)
+			(*in).DeepCopyInto(*out)
+		}
 	}
 	out.BaseImage = in.BaseImage
 	if in.Command != nil {
@@ -96,7 +126,9 @@ func (in *ContainerBuildCommand) DeepCopyInto(out *ContainerBuildCommand) {
 		in, out := &in.Environment, &out.Environment
 		*out = make(ContainerEnvironment, len(*in))
 		for key, val := range *in {
-			(*out)[key] = *val.DeepCopy()
+			newVal := new(ValueOrSecret)
+			val.DeepCopyInto(newVal)
+			(*out)[key] = *newVal
 		}
 	}
 	return
@@ -117,8 +149,12 @@ func (in *ContainerBuildSource) DeepCopyInto(out *ContainerBuildSource) {
 	*out = *in
 	if in.GitRepository != nil {
 		in, out := &in.GitRepository, &out.GitRepository
-		*out = new(GitRepository)
-		(*in).DeepCopyInto(*out)
+		if *in == nil {
+			*out = nil
+		} else {
+			*out = new(GitRepository)
+			(*in).DeepCopyInto(*out)
+		}
 	}
 	return
 }
@@ -139,7 +175,9 @@ func (in ContainerEnvironment) DeepCopyInto(out *ContainerEnvironment) {
 		in := &in
 		*out = make(ContainerEnvironment, len(*in))
 		for key, val := range *in {
-			(*out)[key] = *val.DeepCopy()
+			newVal := new(ValueOrSecret)
+			val.DeepCopyInto(newVal)
+			(*out)[key] = *newVal
 		}
 		return
 	}
@@ -167,7 +205,9 @@ func (in *ContainerExec) DeepCopyInto(out *ContainerExec) {
 		in, out := &in.Environment, &out.Environment
 		*out = make(ContainerEnvironment, len(*in))
 		for key, val := range *in {
-			(*out)[key] = *val.DeepCopy()
+			newVal := new(ValueOrSecret)
+			val.DeepCopyInto(newVal)
+			(*out)[key] = *newVal
 		}
 	}
 	return
@@ -188,8 +228,12 @@ func (in *ContainerHealthCheck) DeepCopyInto(out *ContainerHealthCheck) {
 	*out = *in
 	if in.HTTP != nil {
 		in, out := &in.HTTP, &out.HTTP
-		*out = new(ContainerHealthCheckHTTP)
-		**out = **in
+		if *in == nil {
+			*out = nil
+		} else {
+			*out = new(ContainerHealthCheckHTTP)
+			**out = **in
+		}
 	}
 	return
 }
@@ -225,8 +269,12 @@ func (in *ContainerPort) DeepCopyInto(out *ContainerPort) {
 	*out = *in
 	if in.ExternalAccess != nil {
 		in, out := &in.ExternalAccess, &out.ExternalAccess
-		*out = new(ContainerPortExternalAccess)
-		**out = **in
+		if *in == nil {
+			*out = nil
+		} else {
+			*out = new(ContainerPortExternalAccess)
+			**out = **in
+		}
 	}
 	return
 }
@@ -294,28 +342,48 @@ func (in *GitRepository) DeepCopyInto(out *GitRepository) {
 	*out = *in
 	if in.Branch != nil {
 		in, out := &in.Branch, &out.Branch
-		*out = new(string)
-		**out = **in
+		if *in == nil {
+			*out = nil
+		} else {
+			*out = new(string)
+			**out = **in
+		}
 	}
 	if in.Commit != nil {
 		in, out := &in.Commit, &out.Commit
-		*out = new(string)
-		**out = **in
+		if *in == nil {
+			*out = nil
+		} else {
+			*out = new(string)
+			**out = **in
+		}
 	}
 	if in.Tag != nil {
 		in, out := &in.Tag, &out.Tag
-		*out = new(string)
-		**out = **in
+		if *in == nil {
+			*out = nil
+		} else {
+			*out = new(string)
+			**out = **in
+		}
 	}
 	if in.Version != nil {
 		in, out := &in.Version, &out.Version
-		*out = new(string)
-		**out = **in
+		if *in == nil {
+			*out = nil
+		} else {
+			*out = new(string)
+			**out = **in
+		}
 	}
 	if in.SSHKey != nil {
 		in, out := &in.SSHKey, &out.SSHKey
-		*out = new(SecretRef)
-		**out = **in
+		if *in == nil {
+			*out = nil
+		} else {
+			*out = new(SecretRef)
+			**out = **in
+		}
 	}
 	return
 }
@@ -335,13 +403,21 @@ func (in *GitRepositoryReference) DeepCopyInto(out *GitRepositoryReference) {
 	*out = *in
 	if in.File != nil {
 		in, out := &in.File, &out.File
-		*out = new(string)
-		**out = **in
+		if *in == nil {
+			*out = nil
+		} else {
+			*out = new(string)
+			**out = **in
+		}
 	}
 	if in.GitRepository != nil {
 		in, out := &in.GitRepository, &out.GitRepository
-		*out = new(GitRepository)
-		(*in).DeepCopyInto(*out)
+		if *in == nil {
+			*out = nil
+		} else {
+			*out = new(GitRepository)
+			(*in).DeepCopyInto(*out)
+		}
 	}
 	return
 }
@@ -364,7 +440,9 @@ func (in *Job) DeepCopyInto(out *Job) {
 		in, out := &in.Sidecars, &out.Sidecars
 		*out = make(map[string]Container, len(*in))
 		for key, val := range *in {
-			(*out)[key] = *val.DeepCopy()
+			newVal := new(Container)
+			val.DeepCopyInto(newVal)
+			(*out)[key] = *newVal
 		}
 	}
 	return
@@ -409,13 +487,21 @@ func (in *NodePoolOrReference) DeepCopyInto(out *NodePoolOrReference) {
 	*out = *in
 	if in.NodePool != nil {
 		in, out := &in.NodePool, &out.NodePool
-		*out = new(NodePool)
-		**out = **in
+		if *in == nil {
+			*out = nil
+		} else {
+			*out = new(NodePool)
+			**out = **in
+		}
 	}
 	if in.NodePoolPath != nil {
 		in, out := &in.NodePoolPath, &out.NodePoolPath
-		*out = new(tree.PathSubcomponent)
-		**out = **in
+		if *in == nil {
+			*out = nil
+		} else {
+			*out = new(tree.PathSubcomponent)
+			**out = **in
+		}
 	}
 	return
 }
@@ -435,13 +521,21 @@ func (in *Reference) DeepCopyInto(out *Reference) {
 	*out = *in
 	if in.GitRepository != nil {
 		in, out := &in.GitRepository, &out.GitRepository
-		*out = new(GitRepositoryReference)
-		(*in).DeepCopyInto(*out)
+		if *in == nil {
+			*out = nil
+		} else {
+			*out = new(GitRepositoryReference)
+			(*in).DeepCopyInto(*out)
+		}
 	}
 	if in.File != nil {
 		in, out := &in.File, &out.File
-		*out = new(string)
-		**out = **in
+		if *in == nil {
+			*out = nil
+		} else {
+			*out = new(string)
+			**out = **in
+		}
 	}
 	out.Parameters = in.Parameters.DeepCopy()
 	return
@@ -499,18 +593,28 @@ func (in *Service) DeepCopyInto(out *Service) {
 		in, out := &in.Sidecars, &out.Sidecars
 		*out = make(map[string]Container, len(*in))
 		for key, val := range *in {
-			(*out)[key] = *val.DeepCopy()
+			newVal := new(Container)
+			val.DeepCopyInto(newVal)
+			(*out)[key] = *newVal
 		}
 	}
 	if in.NodePool != nil {
 		in, out := &in.NodePool, &out.NodePool
-		*out = new(NodePoolOrReference)
-		(*in).DeepCopyInto(*out)
+		if *in == nil {
+			*out = nil
+		} else {
+			*out = new(NodePoolOrReference)
+			(*in).DeepCopyInto(*out)
+		}
 	}
 	if in.InstanceType != nil {
 		in, out := &in.InstanceType, &out.InstanceType
-		*out = new(string)
-		**out = **in
+		if *in == nil {
+			*out = nil
+		} else {
+			*out = new(string)
+			**out = **in
+		}
 	}
 	return
 }
@@ -580,13 +684,21 @@ func (in *ValueOrSecret) DeepCopyInto(out *ValueOrSecret) {
 	*out = *in
 	if in.Value != nil {
 		in, out := &in.Value, &out.Value
-		*out = new(string)
-		**out = **in
+		if *in == nil {
+			*out = nil
+		} else {
+			*out = new(string)
+			**out = **in
+		}
 	}
 	if in.SecretRef != nil {
 		in, out := &in.SecretRef, &out.SecretRef
-		*out = new(SecretRef)
-		**out = **in
+		if *in == nil {
+			*out = nil
+		} else {
+			*out = new(SecretRef)
+			**out = **in
+		}
 	}
 	return
 }
@@ -609,7 +721,9 @@ func (in *WorkloadContainers) DeepCopyInto(out *WorkloadContainers) {
 		in, out := &in.Sidecars, &out.Sidecars
 		*out = make(map[string]Container, len(*in))
 		for key, val := range *in {
-			(*out)[key] = *val.DeepCopy()
+			newVal := new(Container)
+			val.DeepCopyInto(newVal)
+			(*out)[key] = *newVal
 		}
 	}
 	return

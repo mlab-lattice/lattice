@@ -72,7 +72,6 @@ func (s *Job) NodePoolAnnotation() (NodePoolAnnotationValue, error) {
 	return annotation, nil
 }
 
-// +k8s:deepcopy-gen=false
 type JobSpec struct {
 	Definition definitionv1.Job `json:"definition"`
 

@@ -21,8 +21,6 @@ type Template struct {
 	Spec              TemplateSpec `json:"spec"`
 }
 
-// +k8s:deepcopy-gen=false
-
 type TemplateSpec struct {
 	Template *template.Template `json:"template"`
 }

@@ -23,6 +23,19 @@ type Template struct {
 	Fields     map[string]interface{}
 }
 
+func (in *Template) DeepCopyInto(out *Template) {
+	// not sure what to do about errors here
+	// possible options:
+	//   - do nothing (current impl, not great)
+	//   - panic (not great)
+	//   - have some sort of canary value in ReferenceParameter, so after you can check to see if
+	//     the copy worked
+	//     - not feasible for when ReferenceParameters are deeply nested
+	data, _ := json.Marshal(&in)
+	json.Unmarshal(data, &out)
+	return
+}
+
 // UnmarshalJSON implements the json.Unmarshaller interface.
 // The JSON should be an object. UnmarshalJSON will see if
 // the object has a parameters field, and if it does try to

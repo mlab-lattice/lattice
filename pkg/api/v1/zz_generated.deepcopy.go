@@ -13,13 +13,21 @@ func (in *Build) DeepCopyInto(out *Build) {
 	*out = *in
 	if in.Path != nil {
 		in, out := &in.Path, &out.Path
-		*out = new(tree.Path)
-		**out = **in
+		if *in == nil {
+			*out = nil
+		} else {
+			*out = new(tree.Path)
+			**out = **in
+		}
 	}
 	if in.Version != nil {
 		in, out := &in.Version, &out.Version
-		*out = new(Version)
-		**out = **in
+		if *in == nil {
+			*out = nil
+		} else {
+			*out = new(Version)
+			**out = **in
+		}
 	}
 	in.Status.DeepCopyInto(&out.Status)
 	return
@@ -40,27 +48,45 @@ func (in *BuildStatus) DeepCopyInto(out *BuildStatus) {
 	*out = *in
 	if in.StartTimestamp != nil {
 		in, out := &in.StartTimestamp, &out.StartTimestamp
-		*out = (*in).DeepCopy()
+		if *in == nil {
+			*out = nil
+		} else {
+			*out = (*in).DeepCopy()
+		}
 	}
 	if in.CompletionTimestamp != nil {
 		in, out := &in.CompletionTimestamp, &out.CompletionTimestamp
-		*out = (*in).DeepCopy()
+		if *in == nil {
+			*out = nil
+		} else {
+			*out = (*in).DeepCopy()
+		}
 	}
 	if in.Path != nil {
 		in, out := &in.Path, &out.Path
-		*out = new(tree.Path)
-		**out = **in
+		if *in == nil {
+			*out = nil
+		} else {
+			*out = new(tree.Path)
+			**out = **in
+		}
 	}
 	if in.Version != nil {
 		in, out := &in.Version, &out.Version
-		*out = new(Version)
-		**out = **in
+		if *in == nil {
+			*out = nil
+		} else {
+			*out = new(Version)
+			**out = **in
+		}
 	}
 	if in.Workloads != nil {
 		in, out := &in.Workloads, &out.Workloads
 		*out = make(map[tree.Path]WorkloadBuild, len(*in))
 		for key, val := range *in {
-			(*out)[key] = *val.DeepCopy()
+			newVal := new(WorkloadBuild)
+			val.DeepCopyInto(newVal)
+			(*out)[key] = *newVal
 		}
 	}
 	return
@@ -114,21 +140,37 @@ func (in *ContainerBuildStatus) DeepCopyInto(out *ContainerBuildStatus) {
 	*out = *in
 	if in.StartTimestamp != nil {
 		in, out := &in.StartTimestamp, &out.StartTimestamp
-		*out = (*in).DeepCopy()
+		if *in == nil {
+			*out = nil
+		} else {
+			*out = (*in).DeepCopy()
+		}
 	}
 	if in.CompletionTimestamp != nil {
 		in, out := &in.CompletionTimestamp, &out.CompletionTimestamp
-		*out = (*in).DeepCopy()
+		if *in == nil {
+			*out = nil
+		} else {
+			*out = (*in).DeepCopy()
+		}
 	}
 	if in.LastObservedPhase != nil {
 		in, out := &in.LastObservedPhase, &out.LastObservedPhase
-		*out = new(ContainerBuildPhase)
-		**out = **in
+		if *in == nil {
+			*out = nil
+		} else {
+			*out = new(ContainerBuildPhase)
+			**out = **in
+		}
 	}
 	if in.FailureMessage != nil {
 		in, out := &in.FailureMessage, &out.FailureMessage
-		*out = new(string)
-		**out = **in
+		if *in == nil {
+			*out = nil
+		} else {
+			*out = new(string)
+			**out = **in
+		}
 	}
 	return
 }
@@ -148,8 +190,12 @@ func (in *ContainerLogOptions) DeepCopyInto(out *ContainerLogOptions) {
 	*out = *in
 	if in.Tail != nil {
 		in, out := &in.Tail, &out.Tail
-		*out = new(int64)
-		**out = **in
+		if *in == nil {
+			*out = nil
+		} else {
+			*out = new(int64)
+			**out = **in
+		}
 	}
 	return
 }
@@ -169,18 +215,30 @@ func (in *Deploy) DeepCopyInto(out *Deploy) {
 	*out = *in
 	if in.Build != nil {
 		in, out := &in.Build, &out.Build
-		*out = new(BuildID)
-		**out = **in
+		if *in == nil {
+			*out = nil
+		} else {
+			*out = new(BuildID)
+			**out = **in
+		}
 	}
 	if in.Path != nil {
 		in, out := &in.Path, &out.Path
-		*out = new(tree.Path)
-		**out = **in
+		if *in == nil {
+			*out = nil
+		} else {
+			*out = new(tree.Path)
+			**out = **in
+		}
 	}
 	if in.Version != nil {
 		in, out := &in.Version, &out.Version
-		*out = new(Version)
-		**out = **in
+		if *in == nil {
+			*out = nil
+		} else {
+			*out = new(Version)
+			**out = **in
+		}
 	}
 	in.Status.DeepCopyInto(&out.Status)
 	return
@@ -201,26 +259,46 @@ func (in *DeployStatus) DeepCopyInto(out *DeployStatus) {
 	*out = *in
 	if in.Build != nil {
 		in, out := &in.Build, &out.Build
-		*out = new(BuildID)
-		**out = **in
+		if *in == nil {
+			*out = nil
+		} else {
+			*out = new(BuildID)
+			**out = **in
+		}
 	}
 	if in.Path != nil {
 		in, out := &in.Path, &out.Path
-		*out = new(tree.Path)
-		**out = **in
+		if *in == nil {
+			*out = nil
+		} else {
+			*out = new(tree.Path)
+			**out = **in
+		}
 	}
 	if in.Version != nil {
 		in, out := &in.Version, &out.Version
-		*out = new(Version)
-		**out = **in
+		if *in == nil {
+			*out = nil
+		} else {
+			*out = new(Version)
+			**out = **in
+		}
 	}
 	if in.StartTimestamp != nil {
 		in, out := &in.StartTimestamp, &out.StartTimestamp
-		*out = (*in).DeepCopy()
+		if *in == nil {
+			*out = nil
+		} else {
+			*out = (*in).DeepCopy()
+		}
 	}
 	if in.CompletionTimestamp != nil {
 		in, out := &in.CompletionTimestamp, &out.CompletionTimestamp
-		*out = (*in).DeepCopy()
+		if *in == nil {
+			*out = nil
+		} else {
+			*out = (*in).DeepCopy()
+		}
 	}
 	return
 }
@@ -273,11 +351,19 @@ func (in *JobStatus) DeepCopyInto(out *JobStatus) {
 	*out = *in
 	if in.StartTimestamp != nil {
 		in, out := &in.StartTimestamp, &out.StartTimestamp
-		*out = (*in).DeepCopy()
+		if *in == nil {
+			*out = nil
+		} else {
+			*out = (*in).DeepCopy()
+		}
 	}
 	if in.CompletionTimestamp != nil {
 		in, out := &in.CompletionTimestamp, &out.CompletionTimestamp
-		*out = (*in).DeepCopy()
+		if *in == nil {
+			*out = nil
+		} else {
+			*out = (*in).DeepCopy()
+		}
 	}
 	return
 }
@@ -331,8 +417,12 @@ func (in *NodePoolStatus) DeepCopyInto(out *NodePoolStatus) {
 	*out = *in
 	if in.FailureInfo != nil {
 		in, out := &in.FailureInfo, &out.FailureInfo
-		*out = new(NodePoolFailureInfo)
-		(*in).DeepCopyInto(*out)
+		if *in == nil {
+			*out = nil
+		} else {
+			*out = new(NodePoolFailureInfo)
+			(*in).DeepCopyInto(*out)
+		}
 	}
 	return
 }
@@ -402,13 +492,21 @@ func (in *ServiceStatus) DeepCopyInto(out *ServiceStatus) {
 	*out = *in
 	if in.Message != nil {
 		in, out := &in.Message, &out.Message
-		*out = new(string)
-		**out = **in
+		if *in == nil {
+			*out = nil
+		} else {
+			*out = new(string)
+			**out = **in
+		}
 	}
 	if in.FailureInfo != nil {
 		in, out := &in.FailureInfo, &out.FailureInfo
-		*out = new(ServiceFailureInfo)
-		(*in).DeepCopyInto(*out)
+		if *in == nil {
+			*out = nil
+		} else {
+			*out = new(ServiceFailureInfo)
+			(*in).DeepCopyInto(*out)
+		}
 	}
 	if in.Ports != nil {
 		in, out := &in.Ports, &out.Ports
@@ -457,13 +555,21 @@ func (in *SystemStatus) DeepCopyInto(out *SystemStatus) {
 	*out = *in
 	if in.Version != nil {
 		in, out := &in.Version, &out.Version
-		*out = new(Version)
-		**out = **in
+		if *in == nil {
+			*out = nil
+		} else {
+			*out = new(Version)
+			**out = **in
+		}
 	}
 	in.CreationTimestamp.DeepCopyInto(&out.CreationTimestamp)
 	if in.DeletionTimestamp != nil {
 		in, out := &in.DeletionTimestamp, &out.DeletionTimestamp
-		*out = (*in).DeepCopy()
+		if *in == nil {
+			*out = nil
+		} else {
+			*out = (*in).DeepCopy()
+		}
 	}
 	return
 }
@@ -500,11 +606,19 @@ func (in *TeardownStatus) DeepCopyInto(out *TeardownStatus) {
 	*out = *in
 	if in.StartTimestamp != nil {
 		in, out := &in.StartTimestamp, &out.StartTimestamp
-		*out = (*in).DeepCopy()
+		if *in == nil {
+			*out = nil
+		} else {
+			*out = (*in).DeepCopy()
+		}
 	}
 	if in.CompletionTimestamp != nil {
 		in, out := &in.CompletionTimestamp, &out.CompletionTimestamp
-		*out = (*in).DeepCopy()
+		if *in == nil {
+			*out = nil
+		} else {
+			*out = (*in).DeepCopy()
+		}
 	}
 	return
 }
@@ -527,7 +641,9 @@ func (in *WorkloadBuild) DeepCopyInto(out *WorkloadBuild) {
 		in, out := &in.Sidecars, &out.Sidecars
 		*out = make(map[string]ContainerBuild, len(*in))
 		for key, val := range *in {
-			(*out)[key] = *val.DeepCopy()
+			newVal := new(ContainerBuild)
+			val.DeepCopyInto(newVal)
+			(*out)[key] = *newVal
 		}
 	}
 	return

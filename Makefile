@@ -258,7 +258,7 @@ codegen.deepcopy:
 
 .PHONY: codegen.kubernetes
 codegen.kubernetes:
-	KUBERNETES_VERSION=$(VERSION) @$(DIR)/hack/codegen/kubernetes/generate.sh
+	@KUBERNETES_VERSION=$(VERSION) $(DIR)/hack/codegen/kubernetes/generate.sh
 	@$(MAKE) gazelle
 
 
@@ -267,4 +267,3 @@ codegen.kubernetes:
 kubernetes.update-dependencies:
 	LATTICE_ROOT=$(DIR) KUBERNETES_VERSION=$(VERSION) $(DIR)/hack/kubernetes/dependencies/update-kubernetes-version.sh
 	$(MAKE) kubernetes.regenerate-custom-resource-clients VERSION=$(VERSION)
-

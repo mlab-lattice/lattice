@@ -53,6 +53,16 @@ type ResolutionTree struct {
 	v1    *V1Tree
 }
 
+func (in *ResolutionTree) DeepCopyInto(out *ResolutionTree) {
+	*out = *in
+	if in.inner != nil {
+		in, out := &in.inner, &out.inner
+		*out = (*in).DeepCopy()
+	}
+	out.v1 = &V1Tree{ResolutionTree: out}
+	return
+}
+
 // Insert adds component resolution information about a path.
 func (t *ResolutionTree) Insert(p tree.Path, c *ResolutionInfo) (*ResolutionInfo, bool) {
 	prev, replaced := t.inner.Insert(p, c)
@@ -124,7 +134,6 @@ func (t *ResolutionTree) UnmarshalJSON(data []byte) error {
 }
 
 // V1Tree provides an overlay on top of a resolution tree to access v1 components in the tree.
-// +k8s:deepcopy-gen=true
 type V1Tree struct {
 	*ResolutionTree
 }
