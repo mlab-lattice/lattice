@@ -6,7 +6,8 @@ _plugin_bin_suffix = "_plugin_bin"
 def go_binary_docgen(
     name = "docs",
     output_file = "docs.md",
-    embed = ":go_default_library"):
+    embed = ":go_default_library",
+    extra_markdown = None):
   plugin_name = name + _plugin_suffix
   plugin_bin_name = name + _plugin_bin_suffix
 
@@ -25,13 +26,16 @@ def go_binary_docgen(
       visibility = ["//visibility:private"],
   )
 
+  cmd = "$(location {}) --plugin $(location {})".format(plugin_bin_name, plugin_name)
+  srcs = [plugin_name, plugin_bin_name]
+  if extra_markdown != None:
+    cmd += " --extra-markdown={}".format(extra_markdown)
+    srcs += ["//{}:extra-markdown".format(extra_markdown)]
+
   native.genrule(
       name = name,
-      srcs = [
-          plugin_name,
-          plugin_bin_name,
-      ],
+      srcs = srcs,
       outs = [output_file],
-      cmd = "$(location {}) --plugin $(location {}) > $@".format(plugin_bin_name, plugin_name),
+      cmd = cmd + " > $@",
       visibility = ["//visibility:public"],
   )

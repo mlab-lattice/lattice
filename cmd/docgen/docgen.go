@@ -6,6 +6,7 @@ import (
 	"os"
 	"plugin"
 
+	//"fmt"
 	"github.com/mlab-lattice/lattice/pkg/util/cli"
 	"github.com/mlab-lattice/lattice/pkg/util/cli/docgen"
 	"github.com/mlab-lattice/lattice/pkg/util/cli/flags"
@@ -28,6 +29,9 @@ func Command() *cli.RootCommand {
 	return &cli.RootCommand{
 		Name: "docgen",
 		Command: &cli.Command{
+			Args: cli.Args{
+				AllowAdditional: true,
+			},
 			Flags: cli.Flags{
 				extraMarkdownFlag: &flags.String{
 					Usage:  "path to extra markdown to be used when generating documentation",
@@ -56,11 +60,8 @@ func Command() *cli.RootCommand {
 					log.Fatalf("FATAL: Error while initialising latticectl")
 				}
 
-				if flags[extraMarkdownFlag].Set() {
-					docgen.InputDocsDir = extraMarkdown
-				}
-
-				reader, err := docgen.GenerateMarkdown(command)
+				generator := docgen.NewGenerator(command, extraMarkdown)
+				reader, err := generator.Markdown()
 				if err != nil {
 					log.Fatalf("FATAL: Error while generating markdown: %s", err)
 				}
