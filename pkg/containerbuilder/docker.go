@@ -242,7 +242,6 @@ func (b *Builder) getDockerfileContents(
 		return "", newErrorInternal("could not get relative source directory: " + err.Error())
 	}
 
-	command := fmt.Sprintf("RUN %v", strings.Join(dockerfileCommand, " "))
 	var buildArgsBuilder strings.Builder
 	if len(buildArgs) > 0 {
 		buildArgsBuilder.WriteString("\n")
@@ -251,6 +250,8 @@ func (b *Builder) getDockerfileContents(
 		}
 		buildArgsBuilder.WriteString("\n")
 	}
+
+	command := fmt.Sprintf("RUN %v", strings.Join(dockerfileCommand, " "))
 
 	dockerfileContents := fmt.Sprintf(`FROM %v
 %v
