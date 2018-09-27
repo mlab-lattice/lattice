@@ -1,0 +1,230 @@
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: api-server
+  namespace: {{ .Values.prefix }}-internal
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ .Values.prefix }}-api-server
+rules:
+- apiGroups:
+  - lattice.mlab.com
+  resources:
+  - systems
+  verbs:
+  - get
+  - watch
+  - list
+  - create
+  - delete
+- apiGroups:
+  - lattice.mlab.com
+  resources:
+  - configs
+  verbs:
+  - get
+  - watch
+  - list
+- apiGroups:
+  - lattice.mlab.com
+  resources:
+  - builds
+  verbs:
+  - get
+  - watch
+  - list
+  - create
+- apiGroups:
+  - lattice.mlab.com
+  resources:
+  - containerbuilds
+  verbs:
+  - get
+  - watch
+  - list
+- apiGroups:
+  - lattice.mlab.com
+  resources:
+  - deploys
+  verbs:
+  - get
+  - watch
+  - list
+  - create
+- apiGroups:
+  - lattice.mlab.com
+  resources:
+  - teardowns
+  verbs:
+  - get
+  - watch
+  - list
+  - create
+- apiGroups:
+  - lattice.mlab.com
+  resources:
+  - services
+  verbs:
+  - get
+  - watch
+  - list
+- apiGroups:
+  - lattice.mlab.com
+  resources:
+  - jobs
+  verbs:
+  - get
+  - watch
+  - list
+- apiGroups:
+  - lattice.mlab.com
+  resources:
+  - jobruns
+  verbs:
+  - get
+  - watch
+  - list
+  - create
+- apiGroups:
+  - lattice.mlab.com
+  resources:
+  - nodepools
+  verbs:
+  - get
+  - watch
+  - list
+- apiGroups:
+  - lattice.mlab.com
+  resources:
+  - gittemplates
+  verbs:
+  - get
+  - watch
+  - list
+  - create
+- apiGroups:
+  - lattice.mlab.com
+  resources:
+  - templates
+  verbs:
+  - get
+  - watch
+  - list
+  - create
+- apiGroups:
+  - ""
+  resources:
+  - pods
+  verbs:
+  - get
+  - watch
+  - list
+  - delete
+- apiGroups:
+  - ""
+  resources:
+  - pods/log
+  verbs:
+  - get
+  - watch
+  - list
+- apiGroups:
+  - batch
+  resources:
+  - jobs
+  verbs:
+  - get
+  - watch
+  - list
+- apiGroups:
+  - ""
+  resources:
+  - services
+  verbs:
+  - get
+  - watch
+  - list
+- apiGroups:
+  - ""
+  resources:
+  - nodes
+  verbs:
+  - get
+  - watch
+  - list
+- apiGroups:
+  - ""
+  resources:
+  - secrets
+  verbs:
+  - get
+  - watch
+  - list
+  - create
+  - update
+  - delete
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ .Values.prefix }}-api-server
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ .Values.prefix }}-api-server
+subjects:
+- kind: ServiceAccount
+  name: api-server
+  namespace: {{ .Values.prefix }}-internal
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    control-plane.lattice.mlab.com/service: api-server
+  name: api-server
+  namespace: {{ .Values.prefix }}-internal
+spec:
+  selector:
+    matchLabels:
+      control-plane.lattice.mlab.com/service: api-server
+  template:
+    metadata:
+      labels:
+        control-plane.lattice.mlab.com/service: api-server
+      name: api-server
+    spec:
+      {{ if ne .Values.cloudProvider.name "local" }}
+      affinity:
+{{ .Values.controlPlane.affinity | indent 8 }}
+      {{ end }}
+      containers:
+      - args:
+        - --port
+        - {{ quote .Values.controlPlane.apiServer.port }}
+        - --namespace-prefix
+        - {{ .Values.prefix }}
+        - --alsologtostderr
+        {{ if .Values.controlPlane.apiServer.auth.apiKey }}
+        - --api-auth-key
+        - {{ .Values.controlPlane.apiServer.auth.apiKey }}
+        {{ end }}
+        image: {{ .Values.containerChannel }}/kubernetes/api-server
+        imagePullPolicy: Always
+        name: api-server
+        ports:
+        - containerPort: {{ .Values.controlPlane.apiServer.port }}
+          hostPort: {{ .Values.controlPlane.apiServer.port }}
+          containerPort: {{ .Values.controlPlane.apiServer.port }}
+          name: http
+      hostNetwork: true
+      dnsPolicy: Default
+      serviceAccountName: api-server
+      {{ if ne .Values.cloudProvider.name "local" }}
+      tolerations:
+{{ .Values.controlPlane.tolerations | indent 6 }}
+      {{ end }}

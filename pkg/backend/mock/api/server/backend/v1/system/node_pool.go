@@ -11,8 +11,8 @@ type NodePoolBackend struct {
 }
 
 func (b *NodePoolBackend) List() ([]v1.NodePool, error) {
-	b.backend.Lock()
-	defer b.backend.Unlock()
+	b.backend.registry.Lock()
+	defer b.backend.registry.Unlock()
 
 	record, err := b.backend.systemRecordInitialized(b.systemID)
 	if err != nil {
@@ -28,8 +28,8 @@ func (b *NodePoolBackend) List() ([]v1.NodePool, error) {
 }
 
 func (b *NodePoolBackend) Get(path tree.PathSubcomponent) (*v1.NodePool, error) {
-	b.backend.Lock()
-	defer b.backend.Unlock()
+	b.backend.registry.Lock()
+	defer b.backend.registry.Unlock()
 
 	record, err := b.backend.systemRecordInitialized(b.systemID)
 	if err != nil {

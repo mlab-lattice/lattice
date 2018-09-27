@@ -18,13 +18,13 @@ type SystemClient interface {
 	Get(v1.SystemID) (*v1.System, error)
 	Delete(v1.SystemID) error
 
-	Versions(v1.SystemID) ([]v1.Version, error)
 	Builds(v1.SystemID) SystemBuildClient
 	Deploys(v1.SystemID) SystemDeployClient
-	Teardowns(v1.SystemID) SystemTeardownClient
-	Services(v1.SystemID) SystemServiceClient
 	Jobs(v1.SystemID) SystemJobClient
 	Secrets(v1.SystemID) SystemSecretClient
+	Services(v1.SystemID) SystemServiceClient
+	Teardowns(v1.SystemID) SystemTeardownClient
+	Versions(v1.SystemID) ([]v1.Version, error)
 }
 
 type SystemBuildClient interface {
@@ -52,8 +52,8 @@ type SystemTeardownClient interface {
 type SystemServiceClient interface {
 	List() ([]v1.Service, error)
 	Get(id v1.ServiceID) (*v1.Service, error)
-	GetByServicePath(path tree.Path) (*v1.Service, error)
-	Logs(id v1.ServiceID, sidecar, instance *string, options *v1.ContainerLogOptions) (io.ReadCloser, error)
+	GetByPath(path tree.Path) (*v1.Service, error)
+	Logs(id v1.ServiceID, instance, sidecar *string, options *v1.ContainerLogOptions) (io.ReadCloser, error)
 }
 
 type SystemJobClient interface {

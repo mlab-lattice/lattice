@@ -1,7 +1,7 @@
 package latticectl
 
 import (
-	"github.com/mlab-lattice/lattice/pkg/util/cli2"
+	"github.com/mlab-lattice/lattice/pkg/util/cli"
 )
 
 var Command = cli.RootCommand{
@@ -9,17 +9,16 @@ var Command = cli.RootCommand{
 	Command: &cli.Command{
 		Short: "utility for interacting with lattices",
 		Subcommands: map[string]*cli.Command{
-			"build":      Build(),
-			"builds":     Builds(),
-			"context":    Context(),
-			"deploy":     Deploy(),
-			"deploys":    Deploys(),
-			"kubernetes": Kubernetes(),
-			"local":      Local(),
-			"secrets":    Secrets(),
-			"systems":    Systems(),
-			"teardown":   Teardown(),
-			"teardowns":  Teardowns(),
+			"build":     Build(),
+			"builds":    Builds(),
+			"context":   Context(),
+			"deploy":    Deploy(),
+			"deploys":   Deploys(),
+			"secrets":   Secrets(),
+			"services":  Services(),
+			"systems":   Systems(),
+			"teardown":  Teardown(),
+			"teardowns": Teardowns(),
 		},
 	},
 }

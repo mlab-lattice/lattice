@@ -1,0 +1,14 @@
+---
+platform: linux
+inputs:
+  - name: lattice-repo
+    path: src
+outputs:
+  - name: cli-binaries
+  - name: cli-metadata
+  - name: docgen-binary
+caches:
+  - path: cli-build-cache
+run:
+  path: ci/build-latticectl-binaries.sh
+  dir: src

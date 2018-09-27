@@ -28,7 +28,7 @@ type Controller struct {
 
 	latticeClient latticeclientset.Interface
 
-	componentResolver resolver.ComponentResolver
+	componentResolver resolver.Interface
 
 	systemLister       latticelisters.SystemLister
 	systemListerSynced cache.InformerSynced
@@ -45,7 +45,7 @@ type Controller struct {
 func NewController(
 	namespacePrefix string,
 	latticeClient latticeclientset.Interface,
-	componentResolver resolver.ComponentResolver,
+	componentResolver resolver.Interface,
 	systemInformer latticeinformers.SystemInformer,
 	buildInformer latticeinformers.BuildInformer,
 	containerBuildInformer latticeinformers.ContainerBuildInformer,
@@ -204,8 +204,13 @@ func (c *Controller) syncSystemBuild(key string) error {
 		return err
 	}
 
-	if build.Status.State == latticev1.BuildStatePending {
+	switch build.Status.State {
+	case latticev1.BuildStatePending:
 		return c.syncPendingBuild(build)
+
+	// builds are already in a terminal state, don't need to re-process them
+	case latticev1.BuildStateFailed, latticev1.BuildStateSucceeded:
+		return nil
 	}
 
 	stateInfo, err := c.calculateState(build)

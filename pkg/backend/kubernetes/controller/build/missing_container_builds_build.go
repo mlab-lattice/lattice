@@ -2,16 +2,14 @@ package build
 
 import (
 	"encoding/json"
+	"fmt"
 
+	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	latticev1 "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/apis/lattice/v1"
 	kubeutil "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/util/kubernetes"
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 	definitionv1 "github.com/mlab-lattice/lattice/pkg/definition/v1"
 	"github.com/mlab-lattice/lattice/pkg/util/sha1"
-
-	"fmt"
-	"github.com/mlab-lattice/lattice/pkg/api/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func (c *Controller) syncMissingContainerBuildsBuild(build *latticev1.Build, stateInfo stateInfo) error {
@@ -48,20 +46,15 @@ func (c *Controller) syncMissingContainerBuildsBuild(build *latticev1.Build, sta
 		workloads[path] = workloadInfo
 	}
 
-	// If we haven't logged a start timestamp yet, use now.
-	startTimestamp := build.Status.StartTimestamp
-	if startTimestamp == nil {
-		now := metav1.Now()
-		startTimestamp = &now
-	}
-
 	_, err := c.updateBuildStatus(
 		build,
 		latticev1.BuildStateRunning,
 		"",
 		nil,
 		build.Status.Definition,
-		startTimestamp,
+		build.Status.Path,
+		build.Status.Version,
+		build.Status.StartTimestamp,
 		nil,
 		workloads,
 		containerBuildStatuses,

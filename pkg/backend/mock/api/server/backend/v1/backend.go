@@ -10,7 +10,7 @@ type Backend struct {
 	systems *system.Backend
 }
 
-func NewBackend(componentResolver resolver.ComponentResolver) *Backend {
+func NewBackend(componentResolver resolver.Interface) *Backend {
 	return &Backend{system.NewBackend(componentResolver)}
 }
 

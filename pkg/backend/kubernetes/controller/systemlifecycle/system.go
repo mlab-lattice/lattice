@@ -13,8 +13,6 @@ import (
 func (c *Controller) updateSystemLabels(
 	system *latticev1.System,
 	version *v1.Version,
-	deployID *v1.DeployID,
-	buildID *v1.BuildID,
 ) (*latticev1.System, error) {
 	labels := make(map[string]string)
 	for k, v := range system.Labels {
@@ -24,16 +22,6 @@ func (c *Controller) updateSystemLabels(
 	delete(labels, latticev1.SystemDefinitionVersionLabelKey)
 	if version != nil {
 		labels[latticev1.SystemDefinitionVersionLabelKey] = string(*version)
-	}
-
-	delete(labels, latticev1.DeployIDLabelKey)
-	if deployID != nil {
-		labels[latticev1.DeployIDLabelKey] = string(*deployID)
-	}
-
-	delete(labels, latticev1.BuildIDLabelKey)
-	if buildID != nil {
-		labels[latticev1.BuildIDLabelKey] = string(*buildID)
 	}
 
 	if reflect.DeepEqual(labels, system.Labels) {

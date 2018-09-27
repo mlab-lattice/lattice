@@ -61,7 +61,7 @@ func (c *ServiceClient) Get(id v1.ServiceID) (*v1.Service, error) {
 	return nil, errors.HandleErrorStatusCode(statusCode, body)
 }
 
-func (c *ServiceClient) GetByServicePath(path tree.Path) (*v1.Service, error) {
+func (c *ServiceClient) GetByPath(path tree.Path) (*v1.Service, error) {
 	escapedPath := urlutil.PathEscape(path.String())
 	url := fmt.Sprintf("%v%v?path=%v", c.apiServerURL,
 		fmt.Sprintf(v1rest.ServicesPathFormat, c.systemID), escapedPath)
@@ -90,7 +90,7 @@ func (c *ServiceClient) GetByServicePath(path tree.Path) (*v1.Service, error) {
 
 func (c *ServiceClient) Logs(
 	id v1.ServiceID,
-	sidecar, instance *string,
+	instance, sidecar *string,
 	logOptions *v1.ContainerLogOptions,
 ) (io.ReadCloser, error) {
 	url := fmt.Sprintf(

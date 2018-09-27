@@ -1050,13 +1050,13 @@ type successfulResolutionTest struct {
 	expected map[tree.Path]*ResolutionInfo
 }
 
-func testResolutionSuccesses(t *testing.T, r ComponentResolver, tests []successfulResolutionTest) {
+func testResolutionSuccesses(t *testing.T, r Interface, tests []successfulResolutionTest) {
 	for _, test := range tests {
 		testResolutionSuccess(t, r, &test)
 	}
 }
 
-func testResolutionSuccess(t *testing.T, r ComponentResolver, test *successfulResolutionTest) {
+func testResolutionSuccess(t *testing.T, r Interface, test *successfulResolutionTest) {
 	if test.p == "" {
 		test.p = tree.RootPath()
 	}
@@ -1080,13 +1080,13 @@ type failedResolutionTest struct {
 	// TODO(kevindrosendahl): add expected error once errors are classified
 }
 
-func testResolutionFailures(t *testing.T, r ComponentResolver, tests []failedResolutionTest) {
+func testResolutionFailures(t *testing.T, r Interface, tests []failedResolutionTest) {
 	for _, test := range tests {
 		testResolutionFailure(t, r, &test)
 	}
 }
 
-func testResolutionFailure(t *testing.T, r ComponentResolver, test *failedResolutionTest) {
+func testResolutionFailure(t *testing.T, r Interface, test *failedResolutionTest) {
 	if test.p == "" {
 		test.p = tree.RootPath()
 	}
@@ -1121,7 +1121,7 @@ func repoURL(name string) string {
 	return fmt.Sprintf("%v/repos/%v", workDir, name)
 }
 
-func resolver() ComponentResolver {
+func resolver() Interface {
 	gitResolver, err := git.NewResolver(fmt.Sprintf("%v/resolver", workDir), true)
 	if err != nil {
 		panic(err)

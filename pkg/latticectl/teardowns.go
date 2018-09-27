@@ -11,9 +11,9 @@ import (
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	"github.com/mlab-lattice/lattice/pkg/latticectl/command"
 	"github.com/mlab-lattice/lattice/pkg/latticectl/teardowns"
-	"github.com/mlab-lattice/lattice/pkg/util/cli2"
-	"github.com/mlab-lattice/lattice/pkg/util/cli2/color"
-	"github.com/mlab-lattice/lattice/pkg/util/cli2/printer"
+	"github.com/mlab-lattice/lattice/pkg/util/cli"
+	"github.com/mlab-lattice/lattice/pkg/util/cli/color"
+	"github.com/mlab-lattice/lattice/pkg/util/cli/printer"
 
 	"k8s.io/apimachinery/pkg/util/wait"
 )
@@ -134,10 +134,6 @@ func teardownsTable(w io.Writer) *printer.Table {
 			Alignment: printer.TableAlignLeft,
 		},
 		{
-			Header:    "message",
-			Alignment: printer.TableAlignLeft,
-		},
-		{
 			Header:    "started",
 			Alignment: printer.TableAlignLeft,
 		},
@@ -160,32 +156,26 @@ func teardownsTableRows(teardowns []v1.Teardown) []printer.TableRow {
 			stateColor = color.FailureString
 		}
 
-		message := "-"
-		if teardown.Status.Message != "" {
-			message = teardown.Status.Message
-		}
-
 		started := "-"
 		if teardown.Status.StartTimestamp != nil {
-			started = teardown.Status.StartTimestamp.Format(time.RFC1123)
+			started = teardown.Status.StartTimestamp.Local().Format(time.RFC1123)
 		}
 
 		completed := "-"
 		if teardown.Status.StartTimestamp != nil {
-			completed = teardown.Status.StartTimestamp.Format(time.RFC1123)
+			completed = teardown.Status.StartTimestamp.Local().Format(time.RFC1123)
 		}
 
 		rows = append(rows, []string{
 			color.IDString(string(teardown.ID)),
 			stateColor(string(teardown.Status.State)),
-			message,
 			started,
 			completed,
 		})
 	}
 
 	// sort the rows by start timestamp
-	startedIdx := 3
+	startedIdx := 2
 	sort.Slice(
 		rows,
 		func(i, j int) bool {

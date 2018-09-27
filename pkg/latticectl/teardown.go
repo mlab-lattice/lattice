@@ -9,10 +9,10 @@ import (
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	"github.com/mlab-lattice/lattice/pkg/latticectl/command"
 	"github.com/mlab-lattice/lattice/pkg/latticectl/teardowns"
-	"github.com/mlab-lattice/lattice/pkg/util/cli2"
-	"github.com/mlab-lattice/lattice/pkg/util/cli2/color"
-	"github.com/mlab-lattice/lattice/pkg/util/cli2/flags"
-	"github.com/mlab-lattice/lattice/pkg/util/cli2/printer"
+	"github.com/mlab-lattice/lattice/pkg/util/cli"
+	"github.com/mlab-lattice/lattice/pkg/util/cli/color"
+	"github.com/mlab-lattice/lattice/pkg/util/cli/flags"
+	"github.com/mlab-lattice/lattice/pkg/util/cli/printer"
 )
 
 func Teardown() *cli.Command {
@@ -82,11 +82,12 @@ func displayTeardown(
 tearing down system %s. teardown ID: %s
 
 to watch teardown, run:
-    latticectl teardowns status --teardown %s -w
+    latticectl teardowns status --system %s --teardown %s -w
 `,
 		color.IDString(string(system)),
 		color.IDString(string(teardown.ID)),
-		string(teardown.ID),
+		system,
+		teardown.ID,
 	)
 	return nil
 }

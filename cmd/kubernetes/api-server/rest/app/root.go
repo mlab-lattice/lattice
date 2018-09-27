@@ -15,8 +15,8 @@ import (
 	latticeinformers "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/customresource/generated/informers/externalversions"
 	kuberesolver "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/definition/component/resolver"
 	"github.com/mlab-lattice/lattice/pkg/definition/component/resolver"
-	"github.com/mlab-lattice/lattice/pkg/util/cli2"
-	"github.com/mlab-lattice/lattice/pkg/util/cli2/flags"
+	"github.com/mlab-lattice/lattice/pkg/util/cli"
+	"github.com/mlab-lattice/lattice/pkg/util/cli/flags"
 
 	kubeinformers "k8s.io/client-go/informers"
 	kubeclientset "k8s.io/client-go/kubernetes"
@@ -125,7 +125,8 @@ func setupSSH() {
 	// but since the subcommand isn't executed in a shell, this obviously didn't work.
 	out, err := exec.Command("/usr/bin/ssh-agent", "-c").Output()
 	if err != nil {
-		log.Fatal("error setting up ssh-agent: " + err.Error())
+		log.Printf("error setting up ssh-agent: \n" + err.Error())
+		log.Fatalf("output: %v", out)
 	}
 
 	// This expects the output to look like:

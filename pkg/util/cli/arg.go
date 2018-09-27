@@ -10,11 +10,14 @@ type Arg struct {
 	Description string
 }
 
-type Args []Arg
+type Args struct {
+	Args            []Arg
+	AllowAdditional bool
+}
 
 func (a Args) validate() error {
 	var notRequired *string
-	for _, arg := range a {
+	for _, arg := range a.Args {
 		if !arg.Required {
 			notRequired = &arg.Name
 			continue
@@ -34,7 +37,7 @@ func (a Args) validate() error {
 
 func (a Args) names() []string {
 	var names []string
-	for _, arg := range a {
+	for _, arg := range a.Args {
 		names = append(names, arg.Name)
 	}
 
@@ -44,7 +47,7 @@ func (a Args) names() []string {
 func (a Args) num() (int, int) {
 	min := 0
 	max := 0
-	for _, arg := range a {
+	for _, arg := range a.Args {
 		if arg.Required {
 			min++
 		}

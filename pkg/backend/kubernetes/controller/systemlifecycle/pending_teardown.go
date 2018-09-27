@@ -10,6 +10,7 @@ import (
 )
 
 func (c *Controller) syncPendingTeardown(teardown *latticev1.Teardown) error {
+	now := metav1.Now()
 	err := c.acquireTeardownLock(teardown)
 	if err != nil {
 		_, ok := err.(*syncutil.ConflictingLifecycleActionError)
@@ -20,22 +21,18 @@ func (c *Controller) syncPendingTeardown(teardown *latticev1.Teardown) error {
 		_, err = c.updateTeardownStatus(
 			teardown, latticev1.TeardownStateFailed,
 			fmt.Sprintf("unable to acquire lifecycle lock: %v", err.Error()),
-			nil,
-			nil,
+			&now,
+			&now,
 		)
 		return err
 	}
-
-	now := metav1.Now()
-	startTimestamp := &now
-	completionTimestamp := &now
 
 	_, err = c.updateTeardownStatus(
 		teardown,
 		latticev1.TeardownStateInProgress,
 		"",
-		startTimestamp,
-		completionTimestamp,
+		&now,
+		nil,
 	)
 	return err
 }

@@ -24,8 +24,8 @@ func (b *DeployBackend) CreateFromVersion(v v1.Version) (*v1.Deploy, error) {
 }
 
 func (b *DeployBackend) create(id *v1.BuildID, p *tree.Path, v *v1.Version) (*v1.Deploy, error) {
-	b.backend.Lock()
-	defer b.backend.Unlock()
+	b.backend.registry.Lock()
+	defer b.backend.registry.Unlock()
 
 	record, err := b.backend.systemRecordInitialized(b.systemID)
 	if err != nil {
@@ -55,8 +55,8 @@ func (b *DeployBackend) create(id *v1.BuildID, p *tree.Path, v *v1.Version) (*v1
 }
 
 func (b *DeployBackend) List() ([]v1.Deploy, error) {
-	b.backend.Lock()
-	defer b.backend.Unlock()
+	b.backend.registry.Lock()
+	defer b.backend.registry.Unlock()
 
 	record, err := b.backend.systemRecordInitialized(b.systemID)
 	if err != nil {
@@ -72,8 +72,8 @@ func (b *DeployBackend) List() ([]v1.Deploy, error) {
 }
 
 func (b *DeployBackend) Get(id v1.DeployID) (*v1.Deploy, error) {
-	b.backend.Lock()
-	defer b.backend.Unlock()
+	b.backend.registry.Lock()
+	defer b.backend.registry.Unlock()
 
 	record, err := b.backend.systemRecordInitialized(b.systemID)
 	if err != nil {

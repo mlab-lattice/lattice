@@ -1,0 +1,51 @@
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ .Values.prefix }}-container-builder
+rules:
+- apiGroups:
+  - lattice.mlab.com
+  resources:
+  - containerbuilds
+  verbs:
+  - get
+  - watch
+  - list
+  - update
+---
+apiVersion: lattice.mlab.com/v1
+kind: Config
+metadata:
+  name: global
+  namespace: {{ .Values.prefix }}-internal
+spec:
+  cloudProvider:
+    {{ if eq .Values.cloudProvider.name "aws" }}
+    aws:
+      keyName: {{ .Values.cloudProvider.aws.keyName }}
+      workerNodeAmiId: {{ .Values.cloudProvider.aws.workerNodeAmiId }}
+    {{ else if eq .Values.cloudProvider.name "local" }}
+    local: {}
+    {{ end }}
+  containerBuild:
+    builderConfig:
+      dockerApiVersion: {{ quote .Values.containerBuilder.dockerApiVersion }}
+      image: {{ .Values.containerChannel }}/kubernetes/container-builder
+    dockerConfig:
+      push: {{ .Values.containerBuilder.push }}
+      registry:  {{ .Values.containerBuilder.registry }}
+      {{ if .Values.containerBuilder.registryAuthType }}
+      registryAuthType: {{ .Values.containerBuilder.registryAuthType }}
+      {{ end }}
+      {{ if .Values.containerBuilder.repository }}
+      repository: {{ .Values.containerBuilder.repository }}
+      {{ end }}
+      repositoryPerImage: {{ .Values.containerBuilder.repositoryPerImage }}
+  serviceMesh:
+    {{ if eq .Values.serviceMesh.name "envoy" }}
+    envoy:
+      image: {{ .Values.serviceMesh.envoy.image }}
+      prepareImage: {{ .Values.containerChannel }}/kubernetes/envoy/prepare
+      xdsApiImage: {{ .Values.containerChannel }}/kubernetes/envoy/xds-api
+    {{ end }}

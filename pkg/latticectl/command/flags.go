@@ -3,14 +3,15 @@ package command
 import (
 	"strings"
 
-	"github.com/mlab-lattice/lattice/pkg/util/cli2/flags"
-	"github.com/mlab-lattice/lattice/pkg/util/cli2/printer"
+	"github.com/mlab-lattice/lattice/pkg/util/cli/flags"
+	"github.com/mlab-lattice/lattice/pkg/util/cli/printer"
 )
 
 const (
 	ConfigFlagName  = "config"
 	ContextFlagName = "context"
 	OutputFlagName  = "output"
+	SidecarFlagName = "sidecar"
 	SystemFlagName  = "system"
 	WatchFlagName   = "watch"
 )
@@ -39,6 +40,10 @@ func OutputFlag(target *string, supported []printer.Format, defaultFormat printe
 		Default: string(defaultFormat),
 		Target:  target,
 	}
+}
+
+func SidecarFlag(target *string) *flags.String {
+	return &flags.String{Target: target}
 }
 
 func SystemFlag(target *string) *flags.String {

@@ -11,9 +11,9 @@ import (
 	"github.com/mlab-lattice/lattice/pkg/api/v1"
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 	"github.com/mlab-lattice/lattice/pkg/latticectl/command"
-	"github.com/mlab-lattice/lattice/pkg/util/cli2"
-	"github.com/mlab-lattice/lattice/pkg/util/cli2/color"
-	"github.com/mlab-lattice/lattice/pkg/util/cli2/printer"
+	"github.com/mlab-lattice/lattice/pkg/util/cli"
+	"github.com/mlab-lattice/lattice/pkg/util/cli/color"
+	"github.com/mlab-lattice/lattice/pkg/util/cli/printer"
 )
 
 func Status() *cli.Command {
@@ -63,7 +63,7 @@ func PrintBuild(client client.Interface, system v1.SystemID, id v1.BuildID, w io
 
 	case printer.FormatJSON:
 		j := printer.NewJSON(w)
-		j.Print(system)
+		j.Print(build)
 
 	default:
 		return fmt.Errorf("unexpected format %v", f)
@@ -98,7 +98,7 @@ func WatchBuild(client client.Interface, system v1.SystemID, id v1.BuildID, w io
 	case printer.FormatJSON:
 		j := printer.NewJSON(w)
 		handle = func(build *v1.Build) bool {
-			j.Print(system)
+			j.Print(build)
 			return false
 		}
 
@@ -117,7 +117,7 @@ func WatchBuild(client client.Interface, system v1.SystemID, id v1.BuildID, w io
 			return nil
 		}
 
-		time.Sleep(5 * time.Nanosecond)
+		time.Sleep(5 * time.Second)
 	}
 }
 
@@ -129,10 +129,10 @@ func buildString(build *v1.Build) string {
 	var spec string
 	switch {
 	case build.Path != nil:
-		spec = fmt.Sprintf("path %v", build.Path.String())
+		spec = fmt.Sprintf("path %s", build.Path.String())
 
 	case build.Version != nil:
-		spec = fmt.Sprintf("version %v", *build.Version)
+		spec = fmt.Sprintf("version %s", *build.Version)
 	}
 
 	stateColor := color.BoldString
@@ -150,25 +150,43 @@ func buildString(build *v1.Build) string {
 	additional := ""
 	if build.Status.Message != "" {
 		additional += fmt.Sprintf(`
-  message: %v`,
+  message: %s`,
 			build.Status.Message,
 		)
 	}
 
 	if build.Status.StartTimestamp != nil {
 		additional += fmt.Sprintf(`
-  started: %v`,
-			build.Status.StartTimestamp.String(),
+  started: %s`,
+			build.Status.StartTimestamp.Local().String(),
 		)
 	}
 
 	if build.Status.CompletionTimestamp != nil {
 		additional += fmt.Sprintf(`
-  completed: %v`,
-			build.Status.CompletionTimestamp.String(),
+  completed: %s`,
+			build.Status.CompletionTimestamp.Local().String(),
 		)
 	}
 
+	if build.Status.Path != nil {
+		additional += fmt.Sprintf(`
+  path: %s`,
+			build.Status.Path.String(),
+		)
+	}
+
+	if build.Status.Version != nil {
+		additional += fmt.Sprintf(`
+  version: %s`,
+			string(*build.Status.Version),
+		)
+	}
+
+	if len(build.Status.Workloads) != 0 {
+		additional += `
+  workloads:`
+	}
 	var paths []string
 	for path := range build.Status.Workloads {
 		paths = append(paths, path.String())

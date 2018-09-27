@@ -682,6 +682,9 @@ func setupMockTest() {
 	b := mockbackend.NewMockBackend(r)
 	go RunNewRestServer(b, r, mockServerAPIPort, mockServerAPIKey)
 	fmt.Println("API server started")
+
+	// wait a second to let server start
+	time.Sleep(time.Second)
 }
 
 func waitFor(condition func() bool, t *testing.T) {

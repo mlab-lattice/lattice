@@ -5,7 +5,6 @@ import (
 	"github.com/mlab-lattice/lattice/pkg/backend/kubernetes/lifecycle/system/bootstrap/bootstrapper"
 	basebootstrapper "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/lifecycle/system/bootstrap/bootstrapper/base"
 
-	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 
@@ -30,7 +29,7 @@ func Bootstrap(
 			return nil, err
 		}
 
-		namespace, err = kubeClient.CoreV1().Namespaces().Get(namespace.Name, metav1.GetOptions{})
+		namespace, err = kubeClient.CoreV1().Namespaces().Get(resources.Namespace.Name, metav1.GetOptions{})
 		if err != nil {
 			return nil, err
 		}
@@ -38,60 +37,42 @@ func Bootstrap(
 
 	var serviceAccounts []*corev1.ServiceAccount
 	for _, sa := range resources.ServiceAccounts {
-		sa, err = kubeClient.CoreV1().ServiceAccounts(namespace.Name).Create(sa)
+		result, err := kubeClient.CoreV1().ServiceAccounts(namespace.Name).Create(sa)
 		if err != nil {
 			if !errors.IsAlreadyExists(err) {
 				return nil, err
 			}
 
-			sa, err = kubeClient.CoreV1().ServiceAccounts(namespace.Name).Get(sa.Name, metav1.GetOptions{})
+			result, err = kubeClient.CoreV1().ServiceAccounts(namespace.Name).Get(sa.Name, metav1.GetOptions{})
 			if err != nil {
 				return nil, err
 			}
 		}
 
-		serviceAccounts = append(serviceAccounts, sa)
+		serviceAccounts = append(serviceAccounts, result)
 	}
 
 	var roleBindings []*rbacv1.RoleBinding
 	for _, roleBinding := range resources.RoleBindings {
-		roleBinding, err = kubeClient.RbacV1().RoleBindings(namespace.Name).Create(roleBinding)
+		result, err := kubeClient.RbacV1().RoleBindings(namespace.Name).Create(roleBinding)
 		if err != nil {
 			if !errors.IsAlreadyExists(err) {
 				return nil, err
 			}
 
-			roleBinding, err = kubeClient.RbacV1().RoleBindings(namespace.Name).Get(roleBinding.Name, metav1.GetOptions{})
+			result, err = kubeClient.RbacV1().RoleBindings(namespace.Name).Get(roleBinding.Name, metav1.GetOptions{})
 			if err != nil {
 				return nil, err
 			}
 		}
 
-		roleBindings = append(roleBindings, roleBinding)
-	}
-
-	var daemonSets []*appsv1.DaemonSet
-	for _, daemonSet := range resources.DaemonSets {
-		daemonSet, err = kubeClient.AppsV1().DaemonSets(namespace.Name).Create(daemonSet)
-		if err != nil {
-			if !errors.IsAlreadyExists(err) {
-				return nil, err
-			}
-
-			daemonSet, err = kubeClient.AppsV1().DaemonSets(namespace.Name).Get(daemonSet.Name, metav1.GetOptions{})
-			if err != nil {
-				return nil, err
-			}
-		}
-
-		daemonSets = append(daemonSets, daemonSet)
+		roleBindings = append(roleBindings, result)
 	}
 
 	resources = &bootstrapper.SystemResources{
 		Namespace:       namespace,
 		ServiceAccounts: serviceAccounts,
 		RoleBindings:    roleBindings,
-		DaemonSets:      daemonSets,
 	}
 	return resources, err
 }

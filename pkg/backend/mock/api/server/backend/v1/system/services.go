@@ -15,8 +15,8 @@ type ServiceBackend struct {
 
 // Services
 func (b *ServiceBackend) List() ([]v1.Service, error) {
-	b.backend.Lock()
-	defer b.backend.Unlock()
+	b.backend.registry.Lock()
+	defer b.backend.registry.Unlock()
 
 	record, err := b.backend.systemRecordInitialized(b.systemID)
 	if err != nil {
@@ -32,8 +32,8 @@ func (b *ServiceBackend) List() ([]v1.Service, error) {
 }
 
 func (b *ServiceBackend) Get(id v1.ServiceID) (*v1.Service, error) {
-	b.backend.Lock()
-	defer b.backend.Unlock()
+	b.backend.registry.Lock()
+	defer b.backend.registry.Unlock()
 
 	record, err := b.backend.systemRecordInitialized(b.systemID)
 	if err != nil {
@@ -52,8 +52,8 @@ func (b *ServiceBackend) Get(id v1.ServiceID) (*v1.Service, error) {
 }
 
 func (b *ServiceBackend) GetByPath(path tree.Path) (*v1.Service, error) {
-	b.backend.Lock()
-	defer b.backend.Unlock()
+	b.backend.registry.Lock()
+	defer b.backend.registry.Unlock()
 
 	record, err := b.backend.systemRecordInitialized(b.systemID)
 	if err != nil {

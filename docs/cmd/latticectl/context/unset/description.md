@@ -1,0 +1,1 @@
+Unsets the lattice and system from the context. By passing the `--system` flag, `lattice context unset` will only unset the system from the context. This command cannot unset only the lattice from the context.
