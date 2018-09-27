@@ -2,6 +2,11 @@ package app
 
 import (
 	goflag "flag"
+	"io/ioutil"
+	"log"
+	"os"
+	"os/exec"
+	"strings"
 	"time"
 
 	"github.com/mlab-lattice/lattice/cmd/kubernetes/controller-manager/app/controllers"
@@ -21,6 +26,10 @@ import (
 
 	"github.com/golang/glog"
 	"github.com/spf13/pflag"
+)
+
+const (
+	sshAuthSockEnvVarName = "SSH_AUTH_SOCK"
 )
 
 func Command() *cli.RootCommand {
@@ -61,7 +70,7 @@ func Command() *cli.RootCommand {
 				},
 				"work-directory": &flags.String{
 					Usage:   "work directory to use",
-					Default: "/tmp/lattice-api",
+					Default: "/tmp/lattice/controller-manager",
 					Target:  &workDirectory,
 				},
 				"lattice-id": &flags.String{
@@ -105,6 +114,8 @@ func Command() *cli.RootCommand {
 				if err != nil {
 					return err
 				}
+
+				setupSSH()
 
 				// TODO: setting stop as nil for now, won't actually need it until leader-election is used
 				ctx, err := createControllerContext(
@@ -222,4 +233,34 @@ func controllerEnabled(name string, enabledControllers []string) bool {
 	}
 
 	return true
+}
+
+func setupSSH() {
+	// Get the SSH_AUTH_SOCK.
+	// This probably isn't the best way of going about it.
+	// First tried "eval ssh-agent > /dev/null && echo $SSH_AUTH_SOCK"
+	// but since the subcommand isn't executed in a shell, this obviously didn't work.
+	out, err := exec.Command("/usr/bin/ssh-agent", "-c").Output()
+	if err != nil {
+		log.Printf("error setting up ssh-agent: \n" + err.Error())
+		log.Fatalf("output: %v", out)
+	}
+
+	// This expects the output to look like:
+	// setenv SSH_AUTH_SOCK <file>;
+	// ...
+	lines := strings.Split(string(out), "\n")
+	sshAuthSockSplit := strings.Split(lines[0], " ")
+	sshAuthSock := strings.Split(sshAuthSockSplit[2], ";")[0]
+	os.Setenv(sshAuthSockEnvVarName, sshAuthSock)
+
+	out, err = exec.Command("/usr/bin/ssh-keyscan", "github.com").Output()
+	if err != nil {
+		log.Fatal("error setting up ssh-agent: " + err.Error())
+	}
+
+	err = ioutil.WriteFile("/etc/ssh/ssh_known_hosts", out, 0666)
+	if err != nil {
+		log.Fatal("error writing /etc/ssh/ssh_known_hosts: " + err.Error())
+	}
 }

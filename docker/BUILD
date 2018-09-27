@@ -10,6 +10,7 @@ container_image(
         packages["zlib1g"],
         packages["libssl1.0.2"],
     ],
+    visibility = ["//visibility:public"],
 )
 
 lattice_base_go_container_image(
