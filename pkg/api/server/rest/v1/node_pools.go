@@ -29,17 +29,33 @@ func (api *LatticeAPI) setupNoodPoolEndpoints() {
 
 }
 
-// handleListNodePools handler for list-node-pools
-// @ID list-node-pools
-// @Summary Lists node pools
-// @Description list node pools
-// @Router /systems/{system}/node-pools [get]
-// @Security ApiKeyAuth
-// @Tags node-pools
-// @Param system path string true "System ID"
-// @Accept  json
-// @Produce  json
-// @Success 200 {array} v1.NodePool
+// swagger:operation GET /systems/{system}/node-pools node-pools ListNodePools
+//
+// Lists node-pools
+//
+// Lists node-pools
+// ---
+//     consumes:
+//     - application/json
+//     produces:
+//     - application/json
+//
+//     parameters:
+//       - description: System ID
+//         in: path
+//         name: system
+//         required: true
+//         type: string
+//
+//     responses:
+//         '200':
+//           description: node-pool list
+//           schema:
+//             type: array
+//             items:
+//               "$ref": "#/definitions/NodePool"
+//
+// handleListNodePools handler for ListNodePools
 func (api *LatticeAPI) handleListNodePools(c *gin.Context) {
 	systemID := v1.SystemID(c.Param(systemIdentifier))
 
@@ -67,19 +83,36 @@ func (api *LatticeAPI) handleListNodePools(c *gin.Context) {
 	c.JSON(http.StatusOK, nodePools)
 }
 
-// handleGetNodePool handler for get-node-pool
-// @ID get-node-pool
-// @Summary Get node pool
-// @Description Gets the node pool object
-// @Router /systems/{system}/node-pools/{id} [get]
-// @Security ApiKeyAuth
-// @Tags node-pools
-// @Param system path string true "System ID"
-// @Param id path string true "NodePool ID"
-// @Accept  json
-// @Produce  json
-// @Success 200 {object} v1.NodePool
-// @Failure 404 ""
+// swagger:operation GET /systems/{system}/node-pools/{nodePoolId} node-pools GetNodePool
+//
+// Get node-pool
+//
+// Get node-pool
+// ---
+//     consumes:
+//     - application/json
+//     produces:
+//     - application/json
+//
+//     parameters:
+//       - description: System ID
+//         in: path
+//         name: system
+//         required: true
+//         type: string
+//       - description: Build ID
+//         in: path
+//         name: nodePoolId
+//         required: true
+//         type: string
+//
+//     responses:
+//         '200':
+//           description: Build Object
+//           schema:
+//             "$ref": "#/definitions/NodePool"
+//
+// handleGetNodePool handler for GetNodePool
 func (api *LatticeAPI) handleGetNodePool(c *gin.Context) {
 	systemID := v1.SystemID(c.Param(systemIdentifier))
 	escapedNodePoolPath := c.Param(nodePoolIdentifier)

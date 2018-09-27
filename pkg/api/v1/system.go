@@ -19,6 +19,7 @@ const (
 	SystemStateUpdating SystemState = "updating"
 )
 
+// swagger:model System
 type System struct {
 	ID SystemID `json:"id"`
 

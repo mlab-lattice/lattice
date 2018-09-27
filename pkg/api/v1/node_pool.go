@@ -18,6 +18,7 @@ const (
 	NodePoolStateFailed   = "failed"
 )
 
+// swagger:model NodePool
 type NodePool struct {
 	ID   string                `json:"id"`
 	Path tree.PathSubcomponent `json:"path"`

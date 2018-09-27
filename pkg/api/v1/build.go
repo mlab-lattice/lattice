@@ -1,8 +1,9 @@
 package v1
 
 import (
-	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 	"time"
+
+	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 )
 
 type (
@@ -19,6 +20,7 @@ const (
 	BuildStateFailed    BuildState = "failed"
 )
 
+// swagger:model Build
 type Build struct {
 	ID BuildID `json:"id"`
 

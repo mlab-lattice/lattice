@@ -36,18 +36,29 @@ func (api *LatticeAPI) setupSystemEndpoints() {
 	api.router.DELETE(systemPath, api.handleDeleteSystem)
 }
 
-// handleCreateSystem handler for create-system
-// @ID create-system
-// @Summary Create system
-// @Description Create a new system
-// @Router /systems [post]
-// @Security ApiKeyAuth
-// @Tags systems
-// @Param account body rest.CreateSystemRequest true "Create system"
-// @Accept  json
-// @Produce  json
-// @Success 200 {object} v1.System
-// @Failure 400 ""
+// swagger:operation POST /systems systems CreateSystem
+//
+// Creates systems
+//
+// Creates new systems
+// ---
+//     consumes:
+//     - application/json
+//     produces:
+//     - application/json
+//
+//     parameters:
+//       - in: body
+//         schema:
+//           "$ref": "#/definitions/CreateSystemRequest"
+//     responses:
+//         default:
+//           description: System object
+//           schema:
+//             "$ref": "#/definitions/System"
+//
+
+// handleCreateSystem handler for CreateSystem
 func (api *LatticeAPI) handleCreateSystem(c *gin.Context) {
 
 	var req v1rest.CreateSystemRequest
@@ -81,16 +92,27 @@ func (api *LatticeAPI) handleCreateSystem(c *gin.Context) {
 
 }
 
-// handleListSystems handler for list-systems
-// @ID list-systems
-// @Summary List systems
-// @Description List systems
-// @Router /systems [get]
-// @Security ApiKeyAuth
-// @Tags systems
-// @Accept  json
-// @Produce  json
-// @Success 200 {array} v1.System
+// swagger:operation GET /systems systems ListSystems
+//
+// Lists systems
+//
+// List all systems
+// ---
+//     consumes:
+//     - application/json
+//     produces:
+//     - application/json
+//
+//
+//     responses:
+//         '200':
+//           description: system list
+//           schema:
+//             type: array
+//             items:
+//               "$ref": "#/definitions/System"
+//
+// handleListSystems handler for ListSystems
 func (api *LatticeAPI) handleListSystems(c *gin.Context) {
 	systems, err := api.backend.Systems().List()
 	if err != nil {
@@ -101,18 +123,31 @@ func (api *LatticeAPI) handleListSystems(c *gin.Context) {
 	c.JSON(http.StatusOK, systems)
 }
 
-// handleGetSystem handler for get-system
-// @ID get-system
-// @Summary Get system
-// @Description get system
-// @Router /systems/{system} [get]
-// @Security ApiKeyAuth
-// @Tags systems
-// @Param system path string true "System ID"
-// @Accept  json
-// @Produce  json
-// @Success 200 {object} v1.System
-// @Failure 404 ""
+// swagger:operation GET /systems/{systemId} systems GetSystem
+//
+// Get system
+//
+// Get system
+// ---
+//     consumes:
+//     - application/json
+//     produces:
+//     - application/json
+//
+//     parameters:
+//       - description: System ID
+//         in: path
+//         name: systemId
+//         required: true
+//         type: string
+//
+//     responses:
+//         '200':
+//           description: System Object
+//           schema:
+//             "$ref": "#/definitions/System"
+//
+// handleGetSystem handler for GetSystem
 func (api *LatticeAPI) handleGetSystem(c *gin.Context) {
 	systemID := v1.SystemID(c.Param(systemIdentifier))
 
@@ -140,18 +175,29 @@ func (api *LatticeAPI) handleGetSystem(c *gin.Context) {
 	c.JSON(http.StatusOK, system)
 }
 
-// handleDeleteSystem handler for delete-system
-// @ID delete-system
-// @Summary Delete system
-// @Description Delete system
-// @Router /systems/{system} [delete]
-// @Security ApiKeyAuth
-// @Tags systems
-// @Accept  json
-// @Produce  json
-// @Param system path string true "System ID"
-// @Success 200 ""
-// @Failure 404 ""
+// swagger:operation DELETE /systems/{systemId} systems DeleteSystem
+//
+// Delete system
+//
+// Delete system
+// ---
+//     consumes:
+//     - application/json
+//     produces:
+//     - application/json
+//
+//     parameters:
+//       - description: System ID
+//         in: path
+//         name: systemId
+//         required: true
+//         type: string
+//
+//     responses:
+//         '200':
+//
+
+// handleDeleteSystem handler for DeleteSystem
 func (api *LatticeAPI) handleDeleteSystem(c *gin.Context) {
 	systemID := v1.SystemID(c.Param(systemIdentifier))
 

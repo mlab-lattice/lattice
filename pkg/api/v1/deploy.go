@@ -1,8 +1,9 @@
 package v1
 
 import (
-	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 	"time"
+
+	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 )
 
 type (
@@ -18,6 +19,7 @@ const (
 	DeployStateFailed     DeployState = "failed"
 )
 
+// swagger:model Deploy
 type Deploy struct {
 	ID DeployID `json:"id"`
 

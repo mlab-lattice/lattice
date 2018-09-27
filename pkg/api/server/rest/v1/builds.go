@@ -33,20 +33,33 @@ func (api *LatticeAPI) setupBuildEndpoints() {
 
 }
 
-// handleBuildSystem handler for build-system
-// @ID build-system
-// @Summary Build system
-// @Description Builds the system
-// @Router /systems/{system}/builds [post]
-// @Security ApiKeyAuth
-// @Tags builds
-// @Security ApiKeyAuth
-// @Param system path string true "System ID"
-// @Param buildRequest body rest.BuildRequest true "Create build"
-// @Accept  json
-// @Produce  json
-// @Success 200 {object} v1.Build
-// @Failure 400 ""
+// swagger:operation POST /systems/{system}/builds builds BuildSystem
+//
+// Build system
+//
+// Builds the system
+// ---
+//     consumes:
+//     - application/json
+//     produces:
+//     - application/json
+//
+//     parameters:
+//       - description: System ID
+//         in: path
+//         name: system
+//         required: true
+//         type: string
+//       - in: body
+//         schema:
+//           "$ref": "#/definitions/BuildRequest"
+//     responses:
+//         '200':
+//           description: Build object
+//           schema:
+//             "$ref": "#/definitions/Build"
+
+// handleBuildSystem handler for BuildSystem
 func (api *LatticeAPI) handleBuildSystem(c *gin.Context) {
 	systemID := v1.SystemID(c.Param(systemIdentifier))
 
@@ -101,17 +114,34 @@ func (api *LatticeAPI) handleBuildSystem(c *gin.Context) {
 
 }
 
-// handleListBuilds handler for list-builds
-// @ID list-builds
-// @Summary List builds
-// @Description List all builds for the system
-// @Router /systems/{system}/builds [get]
-// @Security ApiKeyAuth
-// @Tags builds
-// @Param system path string true "System ID"
-// @Accept  json
-// @Produce  json
-// @Success 200 {array} v1.Build
+// swagger:operation GET /systems/{system}/builds builds ListBuilds
+//
+// Lists builds
+//
+// Lists builds for a system
+// ---
+//     consumes:
+//     - application/json
+//     produces:
+//     - application/json
+//
+//     parameters:
+//       - description: System ID
+//         in: path
+//         name: system
+//         required: true
+//         type: string
+//
+//     responses:
+//         '200':
+//           description: build list
+//           schema:
+//             type: array
+//             items:
+//               "$ref": "#/definitions/Build"
+//
+
+// handleListBuilds handler for ListBuilds
 func (api *LatticeAPI) handleListBuilds(c *gin.Context) {
 	systemID := v1.SystemID(c.Param(systemIdentifier))
 
@@ -139,19 +169,37 @@ func (api *LatticeAPI) handleListBuilds(c *gin.Context) {
 	c.JSON(http.StatusOK, builds)
 }
 
-// handleGetBuild handler for get-build
-// @ID get-build
-// @Summary Get build
-// @Description Gets the build object
-// @Router /systems/{system}/builds/{id} [get]
-// @Security ApiKeyAuth
-// @Tags builds
-// @Param system path string true "System ID"
-// @Param id path string true "Build ID"
-// @Accept  json
-// @Produce  json
-// @Success 200 {object} v1.Build
-// @Failure 404 ""
+// swagger:operation GET /systems/{system}/build/{buildId} builds GetBuild
+//
+// Get build
+//
+// Get build
+// ---
+//     consumes:
+//     - application/json
+//     produces:
+//     - application/json
+//
+//     parameters:
+//       - description: System ID
+//         in: path
+//         name: system
+//         required: true
+//         type: string
+//       - description: Build ID
+//         in: path
+//         name: buildId
+//         required: true
+//         type: string
+//
+//     responses:
+//         '200':
+//           description: Build Object
+//           schema:
+//             "$ref": "#/definitions/Build"
+//
+
+// handleGetBuild handler for GetBuild
 func (api *LatticeAPI) handleGetBuild(c *gin.Context) {
 	systemID := v1.SystemID(c.Param(systemIdentifier))
 	buildID := v1.BuildID(c.Param(buildIdentifier))
@@ -180,6 +228,70 @@ func (api *LatticeAPI) handleGetBuild(c *gin.Context) {
 	c.JSON(http.StatusOK, build)
 }
 
+// swagger:operation GET /systems/{system}/jobs/{jobId}/logs jobs getJobLogs
+//
+// Get job logs
+//
+// Returns a build log stream
+// ---
+//     consumes:
+//     - application/json
+//     produces:
+//     - application/json
+//
+//     parameters:
+//       - description: System ID
+//         in: path
+//         name: system
+//         required: true
+//         type: string
+//       - description: Buikld ID
+//         in: path
+//         name: buildId
+//         required: true
+//         type: string
+//       - description: Sidecar
+//         in: query
+//         name: sidecar
+//         required: false
+//         type: string
+//       - description: Follow
+//         in: query
+//         name: follow
+//         required: false
+//         type: boolean
+//       - description: Previous
+//         in: query
+//         name: previous
+//         required: false
+//         type: boolean
+//       - description: Timestamps
+//         in: query
+//         name: timestamps
+//         required: false
+//         type: boolean
+//       - description: Tail
+//         in: query
+//         name: tail
+//         required: false
+//         type: int
+//       - description: Since
+//         in: query
+//         name: since
+//         required: false
+//         type: string
+//       - description: Since Time
+//         in: query
+//         name: sinceTime
+//         required: false
+//         type: string
+//     responses:
+//         '200':
+//           description: log stream
+//           schema:
+//             type: string
+
+// handleGetJobLogs handler for GetJobLogs
 // handleGetBuildLogs handler for get-build-logs
 // @ID get-build-logs
 // @Summary Get build logs
