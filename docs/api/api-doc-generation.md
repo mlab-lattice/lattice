@@ -3,52 +3,71 @@
 Lattice API docs are generated with slate + swagger. The slate fork for lattice is located in https://github.com/mlab-lattice/lattice-api-docs
 
 
-Swagger files are generated using `swag` tool from annotations. The main API description live in the following file:
+Swagger files are generated using `goswagger` framework from annotations. The main API description live in the following file:
 
-https://github.com/mlab-lattice/lattice/blob/9e2b722210d01d338ad00d498c36fdc7c07b8b40/pkg/api/server/rest/v1/api.go#L33
+https://github.com/mlab-lattice/lattice/blob/19b06b31b003aef1431c841bb05724af70a75495/pkg/api/server/rest/v1/api.go#L1-L31
 
 ```go
- @title Lattice API Docs
-// @version 1.0
-// @description This document describes the lattice API.
-// @termsOfService TBD
-// @license.name Apache 2.0
-// @host localhost:8876
-// @BasePath /v1
-// @securityDefinitions.apikey ApiKeyAuth
-// @in header
-// @name apiKey
-func (api *LatticeAPI) setupAPI() {
-	api.setupSystemEndpoints()
-	api.setupBuildEndpoints()
-	api.setupDeployEndpoints()
-	api.setupNoodPoolEndpoints()
-	api.setupServicesEndpoints()
-	api.setupJobsEndpoints()
-	api.setupTeardownEndpoints()
-	api.setupSecretsEndpoints()
-	api.setupVersionsEndpoints()
-	api.router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
-}
-
+// Lattice API Documentation
+//
+// Welcome to lattice API.
+//
+// Terms Of Service:
+//
+// there are no TOS at this moment, use at your own risk we take no responsibility
+//
+//     Schemes: http, https
+//     Host: <your lattice host>
+//     BasePath: /v1
+//     Version: 0.0.1
+//     License: MIT http://opensource.org/licenses/MIT
+//     Contact: mLab Lattice Team<team@mlab-lattice.org> http://mlab-lattice.org
+//
+//     Consumes:
+//     - application/json
+//
+//     Produces:
+//     - application/json
+//
+//     Security:
+//     - api_key:
+//
+//     SecurityDefinitions:
+//     api_key:
+//          type: apiKey
+//          name: apiKey
+//          in: header
+//
+// swagger:meta
 ```
 
 Endpoint docs are annotated on each endpoint handler. For instance, systems endpoints are in
-https://github.com/mlab-lattice/lattice/blob/9e2b722210d01d338ad00d498c36fdc7c07b8b40/pkg/api/server/rest/v1/systems.go#L42
+https://github.com/mlab-lattice/lattice/blob/718f8c1c075998517d66bb6c1a24ba6af1a8ccfa/pkg/api/server/rest/v1/systems.go#L45
 
 ```go
-// handleCreateSystem handler for create-system
-// @ID create-system
-// @Summary Create system
-// @Description Create a new system
-// @Router /systems [post]
-// @Security ApiKeyAuth
-// @Tags systems
-// @Param account body rest.CreateSystemRequest true "Create system"
-// @Accept  json
-// @Produce  json
-// @Success 200 {object} v1.System
-// @Failure 400 {object} v1.ErrorResponse
+// swagger:operation POST /systems systems CreateSystem
+//
+// Creates systems
+//
+// Creates new systems
+// ---
+//     consumes:
+//     - application/json
+//     produces:
+//     - application/json
+//
+//     parameters:
+//       - in: body
+//         schema:
+//           "$ref": "#/definitions/CreateSystemRequest"
+//     responses:
+//         default:
+//           description: System object
+//           schema:
+//             "$ref": "#/definitions/System"
+//
+
+// handleCreateSystem handler for CreateSystem
 func (api *LatticeAPI) handleCreateSystem(c *gin.Context) {
 
 	var req v1rest.CreateSystemRequest
@@ -57,9 +76,24 @@ func (api *LatticeAPI) handleCreateSystem(c *gin.Context) {
 		return
 	}
 
-	system, err := api.backend.CreateSystem(req.ID, req.DefinitionURL)
+	system, err := api.backend.Systems().Create(req.ID, req.DefinitionURL)
 	if err != nil {
-		handleError(c, err)
+		v1err, ok := err.(*v1.Error)
+		if !ok {
+			handleInternalError(c, err)
+			return
+		}
+
+		switch v1err.Code {
+		case v1.ErrorCodeSystemAlreadyExists:
+			c.JSON(http.StatusConflict, v1err)
+
+		case v1.ErrorCodeInvalidSystemOptions:
+			c.JSON(http.StatusBadRequest, v1err)
+
+		default:
+			handleInternalError(c, err)
+		}
 		return
 	}
 
@@ -68,6 +102,18 @@ func (api *LatticeAPI) handleCreateSystem(c *gin.Context) {
 }
 ```
 
+Schemas docs are generated from go struct by annotating the go struct with `swagger:model [name]`. Here is the schema for `System` for instance:
+
+```go
+// swagger:model System
+type System struct {
+	ID SystemID `json:"id"`
+
+	DefinitionURL string `json:"definitionUrl"`
+
+	Status SystemStatus `json:"status"`
+}
+```
 
 To generate lattice api docs, you need to install the following tools first:
 
@@ -78,24 +124,23 @@ To generate lattice api docs, you need to install the following tools first:
 
 3- Clone this repository under `$GOPATH/src/github.com/mlab-lattice`. So your clone should be in `$GOPATH/src/github.com/mlab-lattice/lattice`
 ` 
-4- Install https://github.com/swaggo/swag: Converts Go annotations to swagger.
+4- Install https://goswagger.io: Converts Go annotations to swagger.
  
-``$ go get -u github.com/swaggo/swag/cmd/swag``
+``$ brew install go-swagger``
 
-5- Make sure that `swag` is available in your $PATH. Run `swag --help`.
 
-6- Install https://github.com/Mermade/widdershins: Generates slate docs from swagger.
+5- Install https://github.com/Mermade/widdershins: Generates slate docs from swagger.
 
 ``$ npm install -g widdershins``
 
-7- Install ruby (if you don't have it already)
+6- Install ruby (if you don't have it already)
 
 ``
 $ brew update
 $ brew install ruby
 ``
 
-8- https://bundler.io/ to be used to run middleman which will create static pages
+7- https://bundler.io/ to be used to run middleman which will create static pages
 
 ``$ gem install bundler``  
 
