@@ -40,7 +40,7 @@ do
     do
         DEST=${BINARY_DIRECTORY}/latticectl_${os}_${arch}_v${TAG_NAME}
         cp bazel-bin/cmd/latticectl/${os}_${arch}_pure_stripped/latticectl ${DEST}
-        echo ${DEST} > ${METADATA_DIRECTORY}/${DEST}_filename
+        echo ${DEST} > ${METADATA_DIRECTORY}/${os}_filename
         shasum -a 256 ${DEST} | awk '{printf $1}' > ${METADATA_DIRECTORY}/${os}_shasum
     done
 done
