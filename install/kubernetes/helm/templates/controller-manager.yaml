@@ -191,7 +191,7 @@ spec:
         - --cloud-provider-var
         - terraform-backend=S3
         - --cloud-provider-var
-        - terraform-backend-var={{ .Values.cloudProvider.aws.terraformS3Bucket }}
+        - terraform-backend-var=bucket={{ .Values.cloudProvider.aws.terraformS3Bucket }}
         {{ else if eq .Values.cloudProvider.name "local" }}
         - --cloud-provider
         - local
