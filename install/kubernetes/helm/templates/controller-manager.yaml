@@ -177,7 +177,7 @@ spec:
         - --cloud-provider-var
         - region={{ .Values.cloudProvider.aws.region }}
         - --cloud-provider-var
-        - account-id={{ quote .Values.cloudProvider.aws.accountId }}
+        - account-id={{ .Values.cloudProvider.aws.accountId }}
         - --cloud-provider-var
         - vpc-id={{ .Values.cloudProvider.aws.vpcId }}
         - --cloud-provider-var
@@ -191,7 +191,7 @@ spec:
         - --cloud-provider-var
         - terraform-backend=S3
         - --cloud-provider-var
-        - terraform-backend-var={{ .Values.cloudProvider.aws.terraformS3Bucket }}
+        - terraform-backend-var=bucket={{ .Values.cloudProvider.aws.terraformS3Bucket }}
         {{ else if eq .Values.cloudProvider.name "local" }}
         - --cloud-provider
         - local
@@ -201,6 +201,7 @@ spec:
         image: {{ .Values.containerChannel }}/kubernetes/controller-manager
         imagePullPolicy: Always
         name: controller-manager
+      dnsPolicy: Default
       serviceAccountName: controller-manager
       {{ if ne .Values.cloudProvider.name "local" }}
       tolerations:

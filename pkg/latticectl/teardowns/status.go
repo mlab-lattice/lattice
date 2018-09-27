@@ -82,7 +82,7 @@ func WatchTeardown(client client.Interface, system v1.SystemID, id v1.TeardownID
 
 			switch teardown.Status.State {
 			case v1.TeardownStateFailed:
-				fmt.Fprint(w, color.BoldHiSuccessString("✘ teardown failed\n"))
+				fmt.Fprint(w, color.BoldHiFailureString("✘ teardown failed\n"))
 				return true
 
 			case v1.TeardownStateSucceeded:
@@ -147,14 +147,14 @@ func teardownString(teardown *v1.Teardown) string {
 	if teardown.Status.StartTimestamp != nil {
 		additional += fmt.Sprintf(`
   started: %v`,
-			teardown.Status.StartTimestamp.String(),
+			teardown.Status.StartTimestamp.Local().String(),
 		)
 	}
 
 	if teardown.Status.CompletionTimestamp != nil {
 		additional += fmt.Sprintf(`
   completed: %v`,
-			teardown.Status.CompletionTimestamp.String(),
+			teardown.Status.CompletionTimestamp.Local().String(),
 		)
 	}
 

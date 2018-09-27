@@ -116,6 +116,10 @@ func (b *Builder) Build(containerBuild *definitionv1.ContainerBuild) error {
 		return b.handleError(b.buildDockerImageContainer(containerBuild.DockerImage))
 	}
 
+	if containerBuild.DockerBuild != nil {
+		return b.handleError(b.buildDockerBuildContainer(containerBuild.DockerBuild))
+	}
+
 	return newErrorUser("unsupported container build type")
 }
 

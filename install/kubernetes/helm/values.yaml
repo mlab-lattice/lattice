@@ -1,4 +1,4 @@
-containerChannel: gcr.io/lattice-dev
+containerChannel: gcr.io/lattice-dev/stable
 id: lattice
 internalDnsDomain: lattice.local
 prefix: lattice
@@ -14,6 +14,8 @@ containerBuilder:
 controlPlane:
   apiServer:
     port: 80
+    auth:
+      apiKey: null
   controllerManager:
 
   affinity: |-
@@ -36,9 +38,6 @@ controlPlane:
 
 cloudProvider:
   name: local
-  local:
-    ip: 192.168.99.100
-    dnsControllerImage:
 
 serviceMesh:
   name: envoy

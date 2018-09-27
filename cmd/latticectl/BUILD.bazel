@@ -20,4 +20,4 @@ go_binary(
     visibility = ["//visibility:public"],
 )
 
-go_binary_docgen()
+go_binary_docgen(extra_markdown = "docs/cmd/latticectl")

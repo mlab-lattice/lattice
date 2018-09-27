@@ -1,9 +1,6 @@
 package containerbuilder
 
 import (
-	"fmt"
-	"strings"
-
 	"github.com/mlab-lattice/lattice/pkg/definition/v1"
 )
 
@@ -18,6 +15,5 @@ func (b *Builder) buildCommandBuildContainer(commandBuild *v1.ContainerBuildComm
 		return err
 	}
 
-	dockerfileCommand := fmt.Sprintf("RUN %v", strings.Join(commandBuild.Command, " "))
-	return b.buildDockerImage(sourceDirectory, baseImage, dockerfileCommand)
+	return b.buildDockerImage(sourceDirectory, baseImage, commandBuild.Command, commandBuild.Environment)
 }

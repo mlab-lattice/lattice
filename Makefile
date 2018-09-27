@@ -12,6 +12,7 @@ build:
 	@bazel \
 		$(addprefix --output_user_root=,$(OUTPUT_USER_ROOT)) \
 		build \
+		$(addprefix --strip=,$(STRIP)) \
 		$(addprefix --platforms=@io_bazel_rules_go//go/toolchain:,$(PLATFORM)) \
 		$(addprefix --features=,$(FEATURES)) \
 		$(TARGET)
@@ -106,14 +107,18 @@ git.install-hooks:
 # docgen
 .PHONY: docgen.latticectl
 docgen.latticectl:
-	@bazel build //cmd/latticectl:docgen
+	@bazel build //cmd/latticectl:docs
+
+.PHONY: docgen.latticectl.tar
+docgen.latticectl.tar:
+	@bazel build //cmd/latticectl:docs-tar
 
 
 # local
 .PHONY: local.up
-local.up: CHANNEL=gcr.io/lattice-dev
+local.up: VM_DRIVER ?= virtualbox
 local.up:
-	@$(DIR)/hack/local/up.sh --set containerChannel=$(CHANNEL)
+	@VM_DRIVER=$(VM_DRIVER) $(DIR)/hack/local/up.sh $(addprefix "--set containerChannel=",$(CHANNEL))
 
 .PHONY: local.down
 local.down:
