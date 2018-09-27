@@ -36,7 +36,11 @@ func (c *Controller) runDeploy(deploy *v1.Deploy, record *registry.SystemRecord)
 			return
 		}
 	} else {
-		deploy.Status.Build = deploy.Build
+		func() {
+			c.registry.Lock()
+			defer c.registry.Unlock()
+			deploy.Status.Build = deploy.Build
+		}()
 	}
 
 	func() {

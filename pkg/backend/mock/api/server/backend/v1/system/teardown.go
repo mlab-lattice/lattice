@@ -11,8 +11,8 @@ type TeardownBackend struct {
 }
 
 func (b *TeardownBackend) Create() (*v1.Teardown, error) {
-	b.backend.Lock()
-	defer b.backend.Unlock()
+	b.backend.registry.Lock()
+	defer b.backend.registry.Unlock()
 
 	record, err := b.backend.systemRecordInitialized(b.systemID)
 	if err != nil {
@@ -39,8 +39,8 @@ func (b *TeardownBackend) Create() (*v1.Teardown, error) {
 }
 
 func (b *TeardownBackend) List() ([]v1.Teardown, error) {
-	b.backend.Lock()
-	defer b.backend.Unlock()
+	b.backend.registry.Lock()
+	defer b.backend.registry.Unlock()
 
 	record, err := b.backend.systemRecordInitialized(b.systemID)
 	if err != nil {
@@ -57,8 +57,8 @@ func (b *TeardownBackend) List() ([]v1.Teardown, error) {
 }
 
 func (b *TeardownBackend) Get(id v1.TeardownID) (*v1.Teardown, error) {
-	b.backend.Lock()
-	defer b.backend.Unlock()
+	b.backend.registry.Lock()
+	defer b.backend.registry.Unlock()
 
 	record, err := b.backend.systemRecordInitialized(b.systemID)
 	if err != nil {

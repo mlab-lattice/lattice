@@ -125,7 +125,8 @@ func setupSSH() {
 	// but since the subcommand isn't executed in a shell, this obviously didn't work.
 	out, err := exec.Command("/usr/bin/ssh-agent", "-c").Output()
 	if err != nil {
-		log.Fatal("error setting up ssh-agent: " + err.Error())
+		log.Printf("error setting up ssh-agent: \n" + err.Error())
+		log.Fatalf("output: %v", out)
 	}
 
 	// This expects the output to look like:

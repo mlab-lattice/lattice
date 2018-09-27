@@ -1,7 +1,6 @@
 package v1
 
 import (
-	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -16,144 +15,60 @@ var (
 	SchemeGroupVersion = schema.GroupVersion{Group: GroupName, Version: "v1"}
 
 	Resources = []struct {
-		Singular          string
-		Plural            string
-		Scope             apiextensionsv1beta1.ResourceScope
-		Kind              string
-		ListKind          string
-		Type              runtime.Object
-		ListType          runtime.Object
-		StatusSubresource bool
+		Type     runtime.Object
+		ListType runtime.Object
 	}{
 		{
-			Singular:          ResourceSingularAddress,
-			Plural:            ResourcePluralAddress,
-			Scope:             ResourceScopeAddress,
-			Kind:              AddressKind.Kind,
-			ListKind:          AddressListKind.Kind,
-			Type:              &Address{},
-			ListType:          &AddressList{},
-			StatusSubresource: true,
+			Type:     &Address{},
+			ListType: &AddressList{},
 		},
 		{
-			Singular:          ResourceSingularBuild,
-			Plural:            ResourcePluralBuild,
-			Scope:             ResourceScopeBuild,
-			Kind:              BuildKind.Kind,
-			ListKind:          BuildListKind.Kind,
-			Type:              &Build{},
-			ListType:          &BuildList{},
-			StatusSubresource: true,
+			Type:     &Build{},
+			ListType: &BuildList{},
 		},
 		{
-			Singular:          ResourceSingularContainerBuild,
-			Plural:            ResourcePluralContainerBuild,
-			Scope:             ResourceScopeContainerBuild,
-			Kind:              ContainerBuildKind.Kind,
-			ListKind:          ContainerBuildListKind.Kind,
-			Type:              &ContainerBuild{},
-			ListType:          &ContainerBuildList{},
-			StatusSubresource: true,
+			Type:     &ContainerBuild{},
+			ListType: &ContainerBuildList{},
 		},
 		{
-			Singular:          ResourceSingularConfig,
-			Plural:            ResourcePluralConfig,
-			Scope:             ResourceScopeConfig,
-			Kind:              ConfigKind.Kind,
-			ListKind:          ConfigListKind.Kind,
-			Type:              &Config{},
-			ListType:          &ConfigList{},
-			StatusSubresource: false,
+			Type:     &Config{},
+			ListType: &ConfigList{},
 		},
 		{
-			Singular:          ResourceSingularDeploy,
-			Plural:            ResourcePluralDeploy,
-			Scope:             ResourceScopeDeploy,
-			Kind:              DeployKind.Kind,
-			ListKind:          DeployListKind.Kind,
-			Type:              &Deploy{},
-			ListType:          &DeployList{},
-			StatusSubresource: true,
+			Type:     &Deploy{},
+			ListType: &DeployList{},
 		},
 		{
-			Singular:          ResourceSingularGitTemplate,
-			Plural:            ResourcePluralGitTemplate,
-			Scope:             ResourceScopeGitTemplate,
-			Kind:              GitTemplateKind.Kind,
-			ListKind:          GitTemplateListKind.Kind,
-			Type:              &GitTemplate{},
-			ListType:          &GitTemplateList{},
-			StatusSubresource: true,
+			Type:     &GitTemplate{},
+			ListType: &GitTemplateList{},
 		},
 		{
-			Singular:          ResourceSingularJob,
-			Plural:            ResourcePluralJob,
-			Scope:             ResourceScopeJob,
-			Kind:              JobKind.Kind,
-			ListKind:          JobListKind.Kind,
-			Type:              &Job{},
-			ListType:          &JobList{},
-			StatusSubresource: false,
+			Type:     &Job{},
+			ListType: &JobList{},
 		},
 		{
-			Singular:          ResourceSingularJobRun,
-			Plural:            ResourcePluralJobRun,
-			Scope:             ResourceScopeJobRun,
-			Kind:              JobRunKind.Kind,
-			ListKind:          JobRunListKind.Kind,
-			Type:              &JobRun{},
-			ListType:          &JobRunList{},
-			StatusSubresource: true,
+			Type:     &JobRun{},
+			ListType: &JobRunList{},
 		},
 		{
-			Singular:          ResourceSingularNodePool,
-			Plural:            ResourcePluralNodePool,
-			Scope:             ResourceScopeNodePool,
-			Kind:              NodePoolKind.Kind,
-			ListKind:          NodePoolListKind.Kind,
-			Type:              &NodePool{},
-			ListType:          &NodePoolList{},
-			StatusSubresource: true,
+			Type:     &NodePool{},
+			ListType: &NodePoolList{},
 		},
 		{
-			Singular:          ResourceSingularService,
-			Plural:            ResourcePluralService,
-			Scope:             ResourceScopeService,
-			Kind:              ServiceKind.Kind,
-			ListKind:          ServiceListKind.Kind,
-			Type:              &Service{},
-			ListType:          &ServiceList{},
-			StatusSubresource: true,
+			Type:     &Service{},
+			ListType: &ServiceList{},
 		},
 		{
-			Singular:          ResourceSingularSystem,
-			Plural:            ResourcePluralSystem,
-			Scope:             ResourceScopeSystem,
-			Kind:              SystemKind.Kind,
-			ListKind:          SystemListKind.Kind,
-			Type:              &System{},
-			ListType:          &SystemList{},
-			StatusSubresource: true,
+			Type:     &System{},
+			ListType: &SystemList{},
 		},
 		{
-			Singular:          ResourceSingularTeardown,
-			Plural:            ResourcePluralTeardown,
-			Scope:             ResourceScopeTeardown,
-			Kind:              TeardownKind.Kind,
-			ListKind:          TeardownListKind.Kind,
-			Type:              &Teardown{},
-			ListType:          &TeardownList{},
-			StatusSubresource: true,
+			Type:     &Teardown{},
+			ListType: &TeardownList{},
 		},
 		{
-			Singular:          ResourceSingularTemplate,
-			Plural:            ResourcePluralTemplate,
-			Scope:             ResourceScopeTemplate,
-			Kind:              TemplateKind.Kind,
-			ListKind:          TemplateListKind.Kind,
-			Type:              &Template{},
-			ListType:          &TemplateList{},
-			StatusSubresource: true,
+			Type:     &Template{},
+			ListType: &TemplateList{},
 		},
 	}
 )
@@ -178,43 +93,4 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 	}
 	metav1.AddToGroupVersion(scheme, SchemeGroupVersion)
 	return nil
-}
-
-func GetCustomResourceDefinitions() []*apiextensionsv1beta1.CustomResourceDefinition {
-	var definitions []*apiextensionsv1beta1.CustomResourceDefinition
-	for _, resource := range Resources {
-		name := resource.Plural + "." + GroupName
-
-		definition := &apiextensionsv1beta1.CustomResourceDefinition{
-			// Include TypeMeta so if this is a dry run it will be printed out
-			TypeMeta: metav1.TypeMeta{
-				Kind:       "CustomResourceDefinition",
-				APIVersion: apiextensionsv1beta1.GroupName + "/v1beta1",
-			},
-			ObjectMeta: metav1.ObjectMeta{
-				Name: name,
-			},
-			Spec: apiextensionsv1beta1.CustomResourceDefinitionSpec{
-				Group:   GroupName,
-				Version: SchemeGroupVersion.Version,
-				Scope:   resource.Scope,
-				Names: apiextensionsv1beta1.CustomResourceDefinitionNames{
-					Singular:   resource.Singular,
-					Plural:     resource.Plural,
-					Kind:       resource.Kind,
-					ListKind:   resource.ListKind,
-					Categories: []string{"all", "lattice"},
-				},
-			},
-		}
-
-		if resource.StatusSubresource {
-			definition.Spec.Subresources = &apiextensionsv1beta1.CustomResourceSubresources{
-				Status: &apiextensionsv1beta1.CustomResourceSubresourceStatus{},
-			}
-		}
-
-		definitions = append(definitions, definition)
-	}
-	return definitions
 }

@@ -67,11 +67,12 @@ func (c *Controller) syncAcceptedDeploy(deploy *latticev1.Deploy) error {
 			deploy.Status.StartTimestamp,
 			&now,
 		)
-		return err
+		if err != nil {
+			return err
+		}
 
 		// release the deploy's lock so other deploys can deploy along this path
-		err = c.releaseDeployLock(deploy)
-		return err
+		return c.releaseDeployLock(deploy)
 
 	case latticev1.BuildStateSucceeded:
 		return c.syncAcceptedDeployWithSuccessfulBuild(deploy, build)

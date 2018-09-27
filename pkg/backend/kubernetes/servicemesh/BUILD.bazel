@@ -5,13 +5,11 @@ go_library(
     srcs = [
         "constants.go",
         "interface.go",
-        "lattice_bootstrapper.go",
     ],
     importpath = "github.com/mlab-lattice/lattice/pkg/backend/kubernetes/servicemesh",
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/backend/kubernetes/customresource/apis/lattice/v1:go_default_library",
-        "//pkg/backend/kubernetes/lifecycle/lattice/bootstrap/bootstrapper:go_default_library",
         "//pkg/backend/kubernetes/lifecycle/system/bootstrap/bootstrapper:go_default_library",
         "//pkg/backend/kubernetes/servicemesh/envoy:go_default_library",
         "//pkg/util/cli:go_default_library",

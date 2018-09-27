@@ -9,15 +9,7 @@ import (
 	"github.com/mlab-lattice/lattice/pkg/definition/tree"
 	definitionv1 "github.com/mlab-lattice/lattice/pkg/definition/v1"
 
-	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-)
-
-const (
-	ResourceSingularJob = "job"
-	ResourcePluralJob   = "jobs"
-	ResourceScopeJob    = apiextensionsv1beta1.NamespaceScoped
 )
 
 var (

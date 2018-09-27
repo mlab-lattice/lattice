@@ -179,14 +179,14 @@ func deployString(deploy *v1.Deploy) string {
 	if deploy.Status.StartTimestamp != nil {
 		additional += fmt.Sprintf(`
   started: %v`,
-			deploy.Status.StartTimestamp.String(),
+			deploy.Status.StartTimestamp.Local().String(),
 		)
 	}
 
 	if deploy.Status.CompletionTimestamp != nil {
 		additional += fmt.Sprintf(`
   completed: %v`,
-			deploy.Status.CompletionTimestamp.String(),
+			deploy.Status.CompletionTimestamp.Local().String(),
 		)
 	}
 
