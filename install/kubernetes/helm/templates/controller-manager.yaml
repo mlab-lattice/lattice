@@ -201,7 +201,7 @@ spec:
         image: {{ .Values.containerChannel }}/kubernetes/controller-manager
         imagePullPolicy: Always
         name: controller-manager
-        dnsPolicy: Default
+      dnsPolicy: Default
       serviceAccountName: controller-manager
       {{ if ne .Values.cloudProvider.name "local" }}
       tolerations:
