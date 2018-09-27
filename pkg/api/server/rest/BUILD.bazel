@@ -26,6 +26,7 @@ go_test(
     embed = [":go_default_library"],
     deps = [
         "//pkg/api/client/rest:go_default_library",
+        "//pkg/api/server/rest/authentication/token/tokenfile:go_default_library",
         "//pkg/api/v1:go_default_library",
         "//pkg/backend/mock/api/server/backend:go_default_library",
         "//pkg/backend/mock/definition/component/resolver:go_default_library",
